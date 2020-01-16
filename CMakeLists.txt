@@ -177,7 +177,3 @@ add_custom_command(
 	DEPENDS zt_osdep zt_core zt_go_native
 )
 add_custom_target(build_zerotier ALL DEPENDS zerotier)
-
-#add_executable(zerotier-selftest selftest.cpp)
-#target_link_libraries(zerotier-selftest ${libs} zt_core zt_osdep)
-#target_compile_features(zerotier-selftest PUBLIC cxx_std_11)

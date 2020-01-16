@@ -124,6 +124,7 @@ bool Identity::locallyValidate() const
 			SHA384(digest,&_pub,ZT_C25519_PUBLIC_KEY_LEN + ZT_ECC384_PUBLIC_KEY_SIZE);
 			if (!ECC384ECDSAVerify(_pub.p384,digest,_pub.p384s))
 				return false;
+			break;
 		default:
 			return false;
 	}

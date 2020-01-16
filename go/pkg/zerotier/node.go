@@ -21,7 +21,6 @@ import "C"
 
 import (
 	"bytes"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -87,72 +86,21 @@ var (
 	nodesByUserPtrLock sync.RWMutex
 )
 
-func sockaddrStorageToIPNet(ss *C.struct_sockaddr_storage) *net.IPNet {
-	var a net.IPNet
-	switch ss.ss_family {
-	case AFInet:
-		sa4 := (*C.struct_sockaddr_in)(unsafe.Pointer(ss))
-		var ip4 [4]byte
-		copy(ip4[:], (*[4]byte)(unsafe.Pointer(&sa4.sin_addr))[:])
-		a.IP = ip4[:]
-		a.Mask = net.CIDRMask(int(binary.BigEndian.Uint16(((*[2]byte)(unsafe.Pointer(&sa4.sin_port)))[:])), 32)
-		return &a
-	case AFInet6:
-		sa6 := (*C.struct_sockaddr_in6)(unsafe.Pointer(ss))
-		var ip6 [16]byte
-		copy(ip6[:], (*[16]byte)(unsafe.Pointer(&sa6.sin6_addr))[:])
-		a.IP = ip6[:]
-		a.Mask = net.CIDRMask(int(binary.BigEndian.Uint16(((*[2]byte)(unsafe.Pointer(&sa6.sin6_port)))[:])), 128)
-		return &a
+// CSelfTest runs self-test functions from the core, sending results to stdout and returning true on success.
+func CSelfTest() bool {
+	if C.ZT_TestOther() != 0 {
+		return false
 	}
-	return nil
-}
-
-func sockaddrStorageToUDPAddr(ss *C.struct_sockaddr_storage) *net.UDPAddr {
-	var a net.UDPAddr
-	switch ss.ss_family {
-	case AFInet:
-		sa4 := (*C.struct_sockaddr_in)(unsafe.Pointer(ss))
-		var ip4 [4]byte
-		copy(ip4[:], (*[4]byte)(unsafe.Pointer(&sa4.sin_addr))[:])
-		a.IP = ip4[:]
-		a.Port = int(binary.BigEndian.Uint16(((*[2]byte)(unsafe.Pointer(&sa4.sin_port)))[:]))
-		return &a
-	case AFInet6:
-		sa6 := (*C.struct_sockaddr_in6)(unsafe.Pointer(ss))
-		var ip6 [16]byte
-		copy(ip6[:], (*[16]byte)(unsafe.Pointer(&sa6.sin6_addr))[:])
-		a.IP = ip6[:]
-		a.Port = int(binary.BigEndian.Uint16(((*[2]byte)(unsafe.Pointer(&sa6.sin6_port)))[:]))
-		return &a
+	fmt.Println()
+	if C.ZT_TestCrypto() != 0 {
+		return false
 	}
-	return nil
-}
-
-func sockaddrStorageToUDPAddr2(ss unsafe.Pointer) *net.UDPAddr {
-	return sockaddrStorageToUDPAddr((*C.struct_sockaddr_storage)(ss))
-}
-
-func makeSockaddrStorage(ip net.IP, port int, ss *C.struct_sockaddr_storage) bool {
-	C.memset(unsafe.Pointer(ss), 0, C.sizeof_struct_sockaddr_storage)
-	if len(ip) == 4 {
-		sa4 := (*C.struct_sockaddr_in)(unsafe.Pointer(ss))
-		sa4.sin_family = AFInet
-		copy(((*[4]byte)(unsafe.Pointer(&sa4.sin_addr)))[:], ip)
-		binary.BigEndian.PutUint16(((*[2]byte)(unsafe.Pointer(&sa4.sin_port)))[:], uint16(port))
-		return true
+	fmt.Println()
+	if C.ZT_TestIdentity() != 0 {
+		return false
 	}
-	if len(ip) == 16 {
-		sa6 := (*C.struct_sockaddr_in6)(unsafe.Pointer(ss))
-		sa6.sin6_family = AFInet6
-		copy(((*[16]byte)(unsafe.Pointer(&sa6.sin6_addr)))[:], ip)
-		binary.BigEndian.PutUint16(((*[2]byte)(unsafe.Pointer(&sa6.sin6_port)))[:], uint16(port))
-		return true
-	}
-	return false
+	return true
 }
-
-//////////////////////////////////////////////////////////////////////////////
 
 // Node is an instance of the ZeroTier core node and related C++ I/O code
 type Node struct {
@@ -615,11 +563,11 @@ func (n *Node) Peers() []*Peer {
 					a := sockaddrStorageToUDPAddr(&pt.address)
 					if a != nil {
 						p2.Paths = append(p2.Paths, Path{
-							IP:                     a.IP,
-							Port:                   a.Port,
-							LastSend:               int64(pt.lastSend),
-							LastReceive:            int64(pt.lastReceive),
-							TrustedPathID:          uint64(pt.trustedPathId),
+							IP:            a.IP,
+							Port:          a.Port,
+							LastSend:      int64(pt.lastSend),
+							LastReceive:   int64(pt.lastReceive),
+							TrustedPathID: uint64(pt.trustedPathId),
 						})
 					}
 				}

@@ -313,6 +313,68 @@ bool InetAddress::isNetwork() const
 	return false;
 }
 
+int InetAddress::marshal(uint8_t data[19]) const
+{
+	unsigned int port;
+	switch(ss_family) {
+		case AF_INET:
+			port = Utils::ntoh((uint16_t)reinterpret_cast<const sockaddr_in *>(this)->sin_port);
+			data[0] = 4;
+			data[1] = reinterpret_cast<const uint8_t *>(&(reinterpret_cast<const sockaddr_in *>(this)->sin_addr.s_addr))[0];
+			data[2] = reinterpret_cast<const uint8_t *>(&(reinterpret_cast<const sockaddr_in *>(this)->sin_addr.s_addr))[1];
+			data[3] = reinterpret_cast<const uint8_t *>(&(reinterpret_cast<const sockaddr_in *>(this)->sin_addr.s_addr))[2];
+			data[4] = reinterpret_cast<const uint8_t *>(&(reinterpret_cast<const sockaddr_in *>(this)->sin_addr.s_addr))[3];
+			data[5] = (uint8_t)(port >> 8U);
+			data[6] = (uint8_t)port;
+			return 7;
+		case AF_INET6:
+			port = Utils::ntoh((uint16_t)reinterpret_cast<const sockaddr_in6 *>(this)->sin6_port);
+			data[0] = 6;
+			for(int i=0;i<16;++i)
+				data[i+1] = reinterpret_cast<const sockaddr_in6 *>(this)->sin6_addr.s6_addr[i];
+			data[17] = (uint8_t)(port >> 8U);
+			data[18] = (uint8_t)port;
+			return 19;
+		default:
+			data[0] = 0;
+			return 1;
+	}
+}
+
+int InetAddress::unmarshal(const uint8_t *restrict data,const int len)
+{
+	if (len <= 0)
+		return -1;
+	switch(data[0]) {
+		case 0:
+			return 1;
+		case 4:
+			if (len < 7)
+				return -1;
+			memset(reinterpret_cast<void *>(this),0,sizeof(InetAddress));
+			reinterpret_cast<sockaddr_in *>(this)->sin_family = AF_INET;
+			reinterpret_cast<uint8_t *>(&(reinterpret_cast<sockaddr_in *>(this)->sin_addr.s_addr))[0] = data[1];
+			reinterpret_cast<uint8_t *>(&(reinterpret_cast<sockaddr_in *>(this)->sin_addr.s_addr))[1] = data[2];
+			reinterpret_cast<uint8_t *>(&(reinterpret_cast<sockaddr_in *>(this)->sin_addr.s_addr))[2] = data[3];
+			reinterpret_cast<uint8_t *>(&(reinterpret_cast<sockaddr_in *>(this)->sin_addr.s_addr))[3] = data[4];
+			reinterpret_cast<uint8_t *>(&(reinterpret_cast<sockaddr_in *>(this)->sin_port))[sizeof(reinterpret_cast<sockaddr_in *>(this)->sin_port)-2] = data[5];
+			reinterpret_cast<uint8_t *>(&(reinterpret_cast<sockaddr_in *>(this)->sin_port))[sizeof(reinterpret_cast<sockaddr_in *>(this)->sin_port)-1] = data[6];
+			return 7;
+		case 6:
+			if (len < 19)
+				return -1;
+			memset(reinterpret_cast<void *>(this),0,sizeof(InetAddress));
+			reinterpret_cast<sockaddr_in6 *>(this)->sin6_family = AF_INET6;
+			for(int i=0;i<16;i++)
+				(reinterpret_cast<sockaddr_in6 *>(this)->sin6_addr.s6_addr)[i] = data[i+1];
+			reinterpret_cast<uint8_t *>(&(reinterpret_cast<sockaddr_in6 *>(this)->sin6_port))[sizeof(reinterpret_cast<sockaddr_in6 *>(this)->sin6_port)-2] = data[17];
+			reinterpret_cast<uint8_t *>(&(reinterpret_cast<sockaddr_in6 *>(this)->sin6_port))[sizeof(reinterpret_cast<sockaddr_in6 *>(this)->sin6_port)-1] = data[18];
+			return 19;
+		default:
+			return -1;
+	}
+}
+
 bool InetAddress::operator==(const InetAddress &a) const
 {
 	if (ss_family == a.ss_family) {

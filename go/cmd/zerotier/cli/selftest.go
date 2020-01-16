@@ -11,15 +11,20 @@
  */
 /****/
 
-package zerotier
+package cli
 
-import "net"
+import (
+	"fmt"
+	"os"
 
-// Path is a path to another peer on the network
-type Path struct {
-	IP            net.IP `json:"ip"`
-	Port          int    `json:"port"`
-	LastSend      int64  `json:"lastSend"`
-	LastReceive   int64  `json:"lastReceive"`
-	TrustedPathID uint64 `json:"trustedPathID"`
+	"zerotier/pkg/zerotier"
+)
+
+func SelfTest() {
+	fmt.Print("Running ZeroTier core tests...\n\n")
+	if !zerotier.CSelfTest() {
+		fmt.Println("FAILED: at least one ZeroTier core test reported failure.")
+		os.Exit(1)
+	}
+	os.Exit(0)
 }

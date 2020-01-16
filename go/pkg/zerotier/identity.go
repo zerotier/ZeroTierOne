@@ -51,7 +51,7 @@ func newIdentityFromCIdentity(cid unsafe.Pointer) (*Identity, error) {
 		return nil, ErrInvalidParameter
 	}
 	var idStrBuf [4096]byte
-	idStr := C.ZT_Identity_toString(cid,(*C.char)(unsafe.Pointer(&idStrBuf[0])),4096,1)
+	idStr := C.ZT_Identity_toString(cid, (*C.char)(unsafe.Pointer(&idStrBuf[0])), 4096, 1)
 	if uintptr(unsafe.Pointer(idStr)) == 0 {
 		return nil, ErrInternal
 	}
@@ -192,7 +192,7 @@ func (id *Identity) Sign(msg []byte) ([]byte, error) {
 		dataP = unsafe.Pointer(&msg[0])
 	}
 	var sig [96]byte
-	sigLen := C.ZT_Identity_sign(cid,dataP,C.uint(len(msg)),unsafe.Pointer(&sig[0]),96)
+	sigLen := C.ZT_Identity_sign(cid, dataP, C.uint(len(msg)), unsafe.Pointer(&sig[0]), 96)
 	if sigLen <= 0 {
 		return nil, ErrInvalidKey
 	}
@@ -218,7 +218,7 @@ func (id *Identity) Verify(msg, sig []byte) bool {
 	if len(msg) > 0 {
 		dataP = unsafe.Pointer(&msg[0])
 	}
-	return C.ZT_Identity_verify(cid,dataP,C.uint(len(msg)),unsafe.Pointer(&sig[0]),C.uint(len(sig))) != 0
+	return C.ZT_Identity_verify(cid, dataP, C.uint(len(msg)), unsafe.Pointer(&sig[0]), C.uint(len(sig))) != 0
 }
 
 // MarshalJSON marshals this Identity in its string format (private key is never included)

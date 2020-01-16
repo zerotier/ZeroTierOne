@@ -11,41 +11,33 @@
  */
 /****/
 
-#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
 
-#include <stdexcept>
 #include <iostream>
 #include <string>
 #include <vector>
 #include <thread>
 
-#include "node/Constants.hpp"
-#include "node/Hashtable.hpp"
-#include "node/RuntimeEnvironment.hpp"
-#include "node/InetAddress.hpp"
-#include "node/Utils.hpp"
-#include "node/Identity.hpp"
-#include "node/Buffer.hpp"
-#include "node/Packet.hpp"
-#include "node/Salsa20.hpp"
-#include "node/AES.hpp"
-#include "node/Locator.hpp"
-#include "node/MAC.hpp"
-#include "node/NetworkConfig.hpp"
-#include "node/Peer.hpp"
-#include "node/Dictionary.hpp"
-#include "node/SHA512.hpp"
-#include "node/C25519.hpp"
-#include "node/ECC384.hpp"
-#include "node/Poly1305.hpp"
-#include "node/CertificateOfMembership.hpp"
-#include "node/Node.hpp"
-#include "node/IncomingPacket.hpp"
+#include "GoGlue.h"
 
-#include "osdep/OSUtils.hpp"
+#include "../../node/Constants.hpp"
+#include "../../node/InetAddress.hpp"
+#include "../../node/Utils.hpp"
+#include "../../node/Identity.hpp"
+#include "../../node/Buffer.hpp"
+#include "../../node/Salsa20.hpp"
+#include "../../node/AES.hpp"
+#include "../../node/Locator.hpp"
+#include "../../node/NetworkConfig.hpp"
+#include "../../node/Dictionary.hpp"
+#include "../../node/SHA512.hpp"
+#include "../../node/C25519.hpp"
+#include "../../node/ECC384.hpp"
+#include "../../node/Poly1305.hpp"
+
+#include "../../osdep/OSUtils.hpp"
 
 #ifdef __WINDOWS__
 #include <tchar.h>
@@ -53,10 +45,8 @@
 
 using namespace ZeroTier;
 
-//////////////////////////////////////////////////////////////////////////////
-
-#define KNOWN_GOOD_IDENTITY "8e4df28b72:0:ac3d46abe0c21f3cfe7a6c8d6a85cfcffcb82fbd55af6a4d6350657c68200843fa2e16f9418bbd9702cae365f2af5fb4c420908b803a681d4daef6114d78a2d7:bd8dd6e4ce7022d2f812797a80c6ee8ad180dc4ebf301dec8b06d1be08832bddd63a2f1cfa7b2c504474c75bdc8898ba476ef92e8e2d0509f8441985171ff16e"
-#define KNOWN_BAD_IDENTITY "9e4df28b72:0:ac3d46abe0c21f3cfe7a6c8d6a85cfcffcb82fbd55af6a4d6350657c68200843fa2e16f9418bbd9702cae365f2af5fb4c420908b803a681d4daef6114d78a2d7:bd8dd6e4ce7022d2f812797a80c6ee8ad180dc4ebf301dec8b06d1be08832bddd63a2f1cfa7b2c504474c75bdc8898ba476ef92e8e2d0509f8441985171ff16e"
+#define KNOWN_GOOD_IDENTITY_0 "8e4df28b72:0:ac3d46abe0c21f3cfe7a6c8d6a85cfcffcb82fbd55af6a4d6350657c68200843fa2e16f9418bbd9702cae365f2af5fb4c420908b803a681d4daef6114d78a2d7:bd8dd6e4ce7022d2f812797a80c6ee8ad180dc4ebf301dec8b06d1be08832bddd63a2f1cfa7b2c504474c75bdc8898ba476ef92e8e2d0509f8441985171ff16e"
+#define KNOWN_BAD_IDENTITY_0 "9e4df28b72:0:ac3d46abe0c21f3cfe7a6c8d6a85cfcffcb82fbd55af6a4d6350657c68200843fa2e16f9418bbd9702cae365f2af5fb4c420908b803a681d4daef6114d78a2d7:bd8dd6e4ce7022d2f812797a80c6ee8ad180dc4ebf301dec8b06d1be08832bddd63a2f1cfa7b2c504474c75bdc8898ba476ef92e8e2d0509f8441985171ff16e"
 
 // These were generated with some Go code using the NIST P-384 elliptic curve. There
 // are official P-384 test vectors but the format of these is funny and converting is
@@ -153,9 +143,7 @@ static const uint8_t AES_GMAC_VECTOR_2_IV[12] = { 0x00,0x01,0x02,0x03,0x04,0x05,
 static const uint8_t AES_GMAC_VECTOR_2_IN[541] = { 0xc8,0x36,0x38,0xe8,0x53,0xc8,0x86,0xa3,0xe3,0xad,0x9e,0x2a,0x91,0x47,0xb9,0x51,0xad,0xf7,0x78,0x89,0x9a,0xeb,0x80,0x41,0x67,0xa9,0x16,0xc4,0x93,0xcc,0x77,0x3d,0x8c,0xcf,0x4d,0xb5,0x0b,0xda,0xfd,0xc2,0x8c,0x83,0x5d,0x66,0x43,0x74,0x21,0xbd,0xc4,0xab,0x41,0xd8,0x40,0x53,0x34,0xe8,0x05,0xcb,0x89,0x45,0x09,0xb0,0xa4,0xa6,0x04,0x95,0x19,0x2c,0xab,0x94,0xe1,0x8d,0x7b,0x59,0x8b,0xb9,0x31,0xae,0x3c,0x25,0xd3,0x23,0xab,0x8f,0x95,0xa3,0x8b,0xa5,0xc1,0x66,0x8b,0x57,0xe4,0x88,0x70,0xc9,0xe0,0xa1,0x16,0x39,0xf8,0x12,0xb3,0xe5,0x95,0x38,0x3a,0x01,0x1d,0xcc,0xc0,0xc3,0xa9,0x1c,0x72,0xa7,0x46,0x79,0x51,0x05,0xb2,0x85,0x5a,0x97,0x16,0x97,0xa6,0x85,0xa4,0xf2,0x0b,0x3c,0x90,0x52,0xa3,0xe0,0xbe,0xad,0x06,0x1b,0x8e,0x04,0x22,0xeb,0x3a,0x48,0xb9,0x84,0x24,0x0b,0x24,0x42,0xd9,0xed,0x6b,0x5c,0xc1,0xb6,0x2e,0xa5,0xc0,0x07,0xfe,0x3e,0xbc,0x9a,0x92,0x26,0xb5,0xa6,0x5f,0x09,0x13,0x85,0x5a,0xcf,0x61,0x56,0x65,0x0f,0x4c,0x64,0x79,0xfa,0x0a,0xcf,0xc0,0x95,0x8d,0x4d,0xc6,0xbe,0xee,0xb3,0x67,0xd8,0xa7,0x40,0x90,0x61,0xe3,0xba,0xcb,0x18,0xe0,0x61,0x7b,0x33,0x86,0xf7,0xef,0x64,0xe5,0x36,0xf0,0x9c,0xb6,0x34,0xb1,0xe1,0x2a,0xd8,0xd8,0x5e,0x6b,0x61,0x92,0xa0,0x8e,0x04,0x7b,0xbf,0xa5,0x84,0x39,0x3a,0xe0,0x27,0xc7,0xb0,0x83,0x88,0x4f,0x3e,0x49,0x14,0xaa,0x34,0xde,0xb4,0xbb,0x4c,0xe4,0xbf,0xae,0x9a,0xf9,0x88,0x7a,0x1f,0x18,0xa0,0x8c,0x60,0xc0,0x5c,0x46,0xa1,0xd1,0x36,0x99,0x60,0x9b,0x73,0xa2,0x9a,0x0b,0x8d,0x6e,0x2f,0xe1,0x58,0x7a,0x39,0x71,0xed,0xfc,0x34,0xe4,0x98,0x57,0x7e,0x86,0xf1,0xe5,0x00,0x7d,0x1b,0x6a,0xfa,0xf8,0x6e,0x7b,0x12,0x44,0x04,0x60,0x02,0x81,0x12,0x09,0x00,0xb4,0x35,0x9e,0x03,0x73,0x79,0x9b,0x13,0xc5,0xd7,0x0e,0xce,0x49,0x87,0x48,0x1a,0x67,0x89,0x93,0xef,0xd1,0xdf,0x2d,0x48,0x6d,0x30,0xd5,0xec,0x49,0xfe,0x15,0x1b,0xa6,0x2b,0x6c,0x08,0x8e,0x39,0x73,0x68,0x87,0xa7,0x43,0x28,0x16,0x77,0x86,0xd1,0xcb,0x13,0xe4,0xd3,0xda,0x63,0xcd,0x3a,0x2a,0x35,0xd5,0xfa,0x36,0x67,0xc8,0x4c,0x6b,0xa1,0x8a,0xaf,0x7b,0x4c,0x43,0xb0,0x2f,0x4a,0xcc,0xc0,0x11,0xc6,0x30,0x8e,0xa3,0xd2,0x4a,0x1b,0x2a,0x4f,0xec,0x97,0x83,0xa6,0x4c,0xee,0x51,0xaf,0x06,0x0a,0x1d,0x80,0xd9,0xcf,0xb7,0x69,0x23,0x15,0x3a,0x26,0x04,0x34,0x33,0x76,0x30,0x9f,0xfb,0x56,0xb4,0x26,0xee,0xfa,0x54,0x6c,0x18,0xf9,0xd5,0x32,0x5d,0x03,0xcb,0x2c,0x20,0x30,0x0c,0xa0,0xbb,0xde,0x01,0x77,0x65,0xb0,0x18,0x30,0xd2,0x55,0x9f,0x9b,0xcf,0xb8,0x9b,0xb4,0xbc,0x0b,0x49,0x52,0x53,0x30,0x48,0xa5,0x12,0xe5,0x3b,0x47,0x84,0xff,0xf1,0x53,0x5d,0x5c,0x04,0x70,0x63,0x91,0xc3,0xc0,0xf0,0xea,0xcb,0x44,0x4f,0x8c,0x85,0x42,0x6a,0xc7,0xfa,0xc7,0xb5,0x30,0x03,0x12,0x65,0xca,0xba,0x4f,0x67,0xbb,0xef,0xb6,0xc6,0x3f,0x19,0xe2,0xb5,0x4b,0x8c,0xfc,0x9e,0x18,0xb0,0x33,0x89,0x6e,0xde,0x61,0x0a,0xe3,0x5e,0xa3,0x5d,0x2e,0x80,0x3e,0x53,0x67,0xfb,0x7b,0x7a,0xbf,0xd5,0xf4,0x47 };
 static const uint8_t AES_GMAC_VECTOR_2_OUT[16] = { 0x67,0x39,0x4f,0x00,0x04,0x28,0xaf,0xe9,0xb4,0x2e,0xb5,0x3c,0x42,0x24,0x86,0xa3 };
 
-//////////////////////////////////////////////////////////////////////////////
-
-static int testCrypto()
+extern "C" int ZT_TestCrypto()
 {
 	static uint8_t buf1[16384],buf2[16384],buf3[16384];
 	static char hexbuf[1024];
@@ -434,16 +422,16 @@ static int testCrypto()
 		}
 		std::cout << "[crypto]   ECDH Agree: " << Utils::hex(p384sec,sizeof(p384sec),p384hex) << ZT_EOL_S;
 
-		Utils::unhex(ECC384_TEST_PUBLIC,p384pub,sizeof(p384pub));
-		Utils::unhex(ECC384_TEST_PRIVATE,p384priv,sizeof(p384priv));
+		Utils::unhex(ECC384_TEST_PUBLIC,strlen(ECC384_TEST_PUBLIC),p384pub,sizeof(p384pub));
+		Utils::unhex(ECC384_TEST_PRIVATE,strlen(ECC384_TEST_PRIVATE),p384priv,sizeof(p384priv));
 		ECC384ECDH(p384pub,p384priv,p384sec);
-		Utils::unhex(ECC384_TEST_DH_SELF_AGREE,p384sec2,sizeof(p384sec2));
+		Utils::unhex(ECC384_TEST_DH_SELF_AGREE,strlen(ECC384_TEST_DH_SELF_AGREE),p384sec2,sizeof(p384sec2));
 		if (memcmp(p384sec,p384sec2,ZT_ECC384_SHARED_SECRET_SIZE)) {
 			std::cout << "[crypto]   ECDH Test Vector: FAILED (secrets do not match)" ZT_EOL_S;
 			return -1;
 		}
 		std::cout << "[crypto]   ECDH Test Vector: PASS" ZT_EOL_S;
-		Utils::unhex(ECC384_TEST_SIG,p384sig,sizeof(p384sig));
+		Utils::unhex(ECC384_TEST_SIG,strlen(ECC384_TEST_SIG),p384sig,sizeof(p384sig));
 		if (!ECC384ECDSAVerify(p384pub,p384pub,p384sig)) {
 			std::cout << "[crypto]   ECDSA Test Vector: FAILED (verify failed)" ZT_EOL_S;
 			return -1;
@@ -508,14 +496,14 @@ static int testCrypto()
 	return 0;
 }
 
-static int testIdentity()
+extern "C" int ZT_TestIdentity()
 {
 	Identity id;
 	Buffer<512> buf;
 	char buf2[1024];
 
 	std::cout << "[identity] Validate known-good identity... "; std::cout.flush();
-	if (!id.fromString(KNOWN_GOOD_IDENTITY)) {
+	if (!id.fromString(KNOWN_GOOD_IDENTITY_0)) {
 		std::cout << "FAIL (1)" ZT_EOL_S;
 		return -1;
 	}
@@ -530,7 +518,7 @@ static int testIdentity()
 	std::cout << "PASS (" << ((double)(vet - vst) / 10.0) << "ms per validation)" ZT_EOL_S;
 
 	std::cout << "[identity] Validate known-bad identity... "; std::cout.flush();
-	if (!id.fromString(KNOWN_BAD_IDENTITY)) {
+	if (!id.fromString(KNOWN_BAD_IDENTITY_0)) {
 		std::cout << "FAIL (1)" ZT_EOL_S;
 		return -1;
 	}
@@ -613,114 +601,7 @@ static int testIdentity()
 	return 0;
 }
 
-static int testCertificate()
-{
-	char buf[4096];
-
-	Identity authority;
-	std::cout << "[certificate] Generating identity to act as authority... "; std::cout.flush();
-	authority.generate(Identity::C25519);
-	std::cout << authority.address().toString(buf) << ZT_EOL_S;
-
-	Identity idA,idB;
-	std::cout << "[certificate] Generating identities A and B... "; std::cout.flush();
-	idA.generate(Identity::C25519);
-	idB.generate(Identity::C25519);
-	std::cout << idA.address().toString(buf) << ", " << idB.address().toString(buf) << ZT_EOL_S;
-
-	std::cout << "[certificate] Generating certificates A and B...";
-	CertificateOfMembership cA(10000,100,1,idA.address());
-	CertificateOfMembership cB(10099,100,1,idB.address());
-	std::cout << ZT_EOL_S;
-
-	std::cout << "[certificate] Signing certificates A and B with authority...";
-	cA.sign(authority);
-	cB.sign(authority);
-	std::cout << ZT_EOL_S;
-
-	//std::cout << "[certificate] A: " << cA.toString() << ZT_EOL_S;
-	//std::cout << "[certificate] B: " << cB.toString() << ZT_EOL_S;
-
-	std::cout << "[certificate] A agrees with B and B with A... ";
-	if (cA.agreesWith(cB))
-		std::cout << "yes, ";
-	else {
-		std::cout << "FAIL" ZT_EOL_S;
-		return -1;
-	}
-	if (cB.agreesWith(cA))
-		std::cout << "yes." ZT_EOL_S;
-	else {
-		std::cout << "FAIL" ZT_EOL_S;
-		return -1;
-	}
-
-	std::cout << "[certificate] Generating two certificates that should not agree...";
-	cA = CertificateOfMembership(10000,100,1,idA.address());
-	cB = CertificateOfMembership(10101,100,1,idB.address());
-	std::cout << ZT_EOL_S;
-
-	std::cout << "[certificate] A agrees with B and B with A... ";
-	if (!cA.agreesWith(cB))
-		std::cout << "no, ";
-	else {
-		std::cout << "FAIL" ZT_EOL_S;
-		return -1;
-	}
-	if (!cB.agreesWith(cA))
-		std::cout << "no." ZT_EOL_S;
-	else {
-		std::cout << "FAIL" ZT_EOL_S;
-		return -1;
-	}
-
-	return 0;
-}
-
-static int testPacket()
-{
-	unsigned char salsaKey[32];
-	Packet a,b;
-
-	a.burn();
-	b.burn();
-
-	for(unsigned int i=0;i<32;++i)
-		salsaKey[i] = (unsigned char)rand();
-
-	std::cout << "[packet] Testing Packet encoder/decoder... ";
-
-	a.reset(Address(),Address(),Packet::VERB_HELLO);
-	for(int i=0;i<32;++i)
-		a.append("supercalifragilisticexpealidocious",(unsigned int)strlen("supercalifragilisticexpealidocious"));
-
-	b = a;
-	if (a != b) {
-		std::cout << "FAIL (assign)" ZT_EOL_S;
-		return -1;
-	}
-
-	a.compress();
-	unsigned int complen = a.size();
-	a.uncompress();
-
-	std::cout << "(compressed: " << complen << ", decompressed: " << a.size() << ") ";
-	if (a != b) {
-		std::cout << "FAIL (compresssion)" ZT_EOL_S;
-		return -1;
-	}
-
-	a.armor(salsaKey,true);
-	if (!a.dearmor(salsaKey)) {
-		std::cout << "FAIL (encrypt-decrypt/verify)" ZT_EOL_S;
-		return -1;
-	}
-
-	std::cout << "PASS" ZT_EOL_S;
-	return 0;
-}
-
-static int testOther()
+extern "C" int ZT_TestOther()
 {
 	char buf[1024];
 	char buf2[4096];
@@ -768,7 +649,7 @@ static int testOther()
 	std::cout << "[other] Testing hex/unhex... "; std::cout.flush();
 	Utils::getSecureRandom(buf,(unsigned int)sizeof(buf));
 	Utils::hex(buf,(unsigned int)sizeof(buf),buf2);
-	Utils::unhex(buf2,buf3,(unsigned int)sizeof(buf3));
+	Utils::unhex(buf2,sizeof(buf2),buf3,(unsigned int)sizeof(buf3));
 	if (memcmp(buf,buf3,sizeof(buf)) == 0) {
 		std::cout << "PASS" ZT_EOL_S;
 	} else {
@@ -791,26 +672,6 @@ static int testOther()
 		}
 		int l2 = Utils::b32d(buf2,(uint8_t *)buf3,sizeof(buf3));
 		if (l2 != (int)i) {
-			std::cout << "FAIL (decode returned wrong count)" ZT_EOL_S;
-			return -1;
-		}
-		if (memcmp(buf,buf3,i) != 0) {
-			std::cout << "FAIL (decode result incorrect)" ZT_EOL_S;
-			return -1;
-		}
-	}
-	std::cout << "PASS" ZT_EOL_S;
-
-	std::cout << "[other] Testing base64... "; std::cout.flush();
-	for(unsigned int i=1;i<1024;++i) {
-		Utils::getSecureRandom(buf,(unsigned int)sizeof(buf));
-		unsigned int l = Utils::b64e((const uint8_t *)buf,i,buf2,sizeof(buf2));
-		if (l == 0) {
-			std::cout << "FAIL (encode returned 0)" ZT_EOL_S;
-			return -1;
-		}
-		unsigned int l2 = Utils::b64d(buf2,(uint8_t *)buf3,sizeof(buf3));
-		if (l2 != i) {
 			std::cout << "FAIL (decode returned wrong count)" ZT_EOL_S;
 			return -1;
 		}
@@ -883,36 +744,4 @@ static int testOther()
 	}
 
 	return 0;
-}
-
-#ifdef __WINDOWS__
-int __cdecl _tmain(int argc, _TCHAR* argv[])
-#else
-int main(int argc,char **argv)
-#endif
-{
-	int r = 0;
-
-#ifdef __WINDOWS__
-	WSADATA wsaData;
-	WSAStartup(MAKEWORD(2,2),&wsaData);
-#endif
-
-	std::cout << "[info] sizeof(void *) == " << sizeof(void *) << ZT_EOL_S;
-	std::cout << "[info] OSUtils::now() == " << OSUtils::now() << ZT_EOL_S;
-	std::cout << "[info] hardware concurrency == " << std::thread::hardware_concurrency() << ZT_EOL_S;
-	std::cout << "[info] sizeof(NetworkConfig) == " << sizeof(ZeroTier::NetworkConfig) << ZT_EOL_S;
-
-	srand((unsigned int)time(0));
-
-	r |= testOther();
-	r |= testCrypto();
-	r |= testPacket();
-	r |= testIdentity();
-	r |= testCertificate();
-
-	if (r)
-		std::cout << ZT_EOL_S << "SOMETHING FAILED!" ZT_EOL_S;
-
-	return r;
 }
