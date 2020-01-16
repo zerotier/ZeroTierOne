@@ -99,6 +99,7 @@
 #include <mutex>
 #include <list>
 #include <sstream>
+#include <iomanip>
 
 #include "geoip-html.h"
 
