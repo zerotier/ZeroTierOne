@@ -966,6 +966,33 @@ int main(int argc,char **argv)
 			res.set_content(o.str(),"text/plain");
 		});
 
+		apiServ.Get("/metrics",[](const httplib::Request &req, httplib::Response &res) {
+			std::ostringstream o;
+			int64_t now = OSUtils::now();
+
+			char buf[11];
+			const char *root_id = s_self.address().toString(buf);
+			o << "# HELP root_peers_online Number of active peers online" << ZT_EOL_S;
+			o << "# TYPE root_peers_online gauge" << ZT_EOL_S;
+			s_peersByIdentity_l.lock();
+			o << "root_peers_online{root_id=\"" << root_id << "\"} " << s_peersByIdentity.size() << ZT_EOL_S;
+			s_peersByIdentity_l.unlock();
+			o << "# HELP root_input_rate Input rate MiB/s" << ZT_EOL_S;
+			o << "# TYPE root_input_rate gauge" << ZT_EOL_S;
+			o << "root_input_rate{root_id=\"" <<  root_id << "\"} " << std::setprecision(5) << (s_inputRate.perSecond(now)/1048576.0) << ZT_EOL_S;
+			o << "# HELP root_output_rate Output rate MiB/s" << ZT_EOL_S;
+			o << "# TYPE root_output_rate gauge" << ZT_EOL_S;
+			o << "root_output_rate{root_id=\"" << root_id << "\"} " << std::setprecision(5) << (s_outputRate.perSecond(now)/1048576.0) << ZT_EOL_S;
+			o << "# HELP root_forwarded_rate Forwarded packet rate MiB/s" << ZT_EOL_S;
+			o << "# TYPE root_forwarded_rate gauge" << ZT_EOL_S;
+			o << "root_forwarded_rate{root_id=\"" << root_id << "\"} " << std::setprecision(5) << (s_forwardRate.perSecond(now)/1048576.0) << ZT_EOL_S;
+			o << "# HELP root_discarded_rate Discarded forwards MiB/s" << ZT_EOL_S;
+			o << "# TYPE root_discarded_rate gauge" << ZT_EOL_S;
+			o << "root_discarded_rate{root_id=\"" << root_id << "\"} " << std::setprecision(5) << (s_discardedForwardRate.perSecond(now)/1048576.0) << ZT_EOL_S;
+
+			res.set_content(o.str(), "text/plain");
+		});
+
 		// Peer list for compatibility with software that monitors regular nodes
 		apiServ.Get("/peer",[](const httplib::Request &req,httplib::Response &res) {
 			char tmp[256];
