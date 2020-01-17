@@ -173,7 +173,7 @@
 /**
  * Interval between direct path pushes in milliseconds if we don't have a path
  */
-#define ZT_DIRECT_PATH_PUSH_INTERVAL 15000
+#define ZT_DIRECT_PATH_PUSH_INTERVAL 30000
 
 /**
  * Interval between direct path pushes in milliseconds if we already have a path

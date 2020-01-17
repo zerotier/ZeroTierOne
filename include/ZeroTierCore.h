@@ -50,8 +50,11 @@ extern "C" {
 
 /**
  * Default UDP port for devices running a ZeroTier endpoint
+ *
+ * NOTE: as of V2 this has changed to 893 since many NATs (even symmetric)
+ * treat privileged ports in a special way. The old default was 9993.
  */
-#define ZT_DEFAULT_PORT 9993
+#define ZT_DEFAULT_PORT 893
 
 /**
  * Minimum MTU, which is the minimum allowed by IPv6 and several specs
@@ -108,7 +111,10 @@ extern "C" {
 #define ZT_MAX_ZT_ASSIGNED_ADDRESSES 32
 
 /**
- * Maximum number of "specialists" on a network -- bridges, anchors, etc.
+ * Maximum number of "specialists" on a network -- bridges, etc.
+ *
+ * A specialist is a node tagged with some special role like acting as
+ * a promiscuous bridge, open relay, administrator, etc.
  */
 #define ZT_MAX_NETWORK_SPECIALISTS 256
 
@@ -134,6 +140,10 @@ extern "C" {
 
 /**
  * Maximum number of direct network paths to a given peer
+ *
+ * Note that dual-stack configs may end up resulting in both IPv6 and IPv4
+ * paths existing. This gives enough headroom for multipath configs with
+ * dual stacks across the board.
  */
 #define ZT_MAX_PEER_NETWORK_PATHS 16
 
@@ -144,11 +154,18 @@ extern "C" {
 
 /**
  * Maximum number of rules per capability object
+ *
+ * Capabilities normally contain only a few rules. The rules in a capability
+ * should be short and to the point.
  */
 #define ZT_MAX_CAPABILITY_RULES 64
 
 /**
  * Maximum number of certificates of ownership to assign to a single network member
+ *
+ * Network members can have more than four IPs, etc., but right now there
+ * is a protocol limit on how many COOs can be assigned. If your config needs
+ * more than four authenticated IPs per node you may have personal problems.
  */
 #define ZT_MAX_CERTIFICATES_OF_OWNERSHIP 4
 
@@ -159,13 +176,10 @@ extern "C" {
 
 /**
  * Maximum number of multicast group subscriptions on a local virtual network interface
+ *
+ * This coincides with many operating systems' maximum values and is rather huge.
  */
 #define ZT_MAX_MULTICAST_SUBSCRIPTIONS 1024
-
-/**
- * Maximum value for link quality (min is 0)
- */
-#define ZT_PATH_LINK_QUALITY_MAX 255
 
 /* Rule specification contants **********************************************/
 
@@ -1395,8 +1409,9 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_new(ZT_Node **node,void *uptr,void *tptr,c
  * first. This can crash if processXXX() methods are in progress.
  *
  * @param node Node to delete
+ * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
  */
-ZT_SDK_API void ZT_Node_delete(ZT_Node *node);
+ZT_SDK_API void ZT_Node_delete(ZT_Node *node,void *tptr);
 
 /**
  * Process a packet received from the physical wire

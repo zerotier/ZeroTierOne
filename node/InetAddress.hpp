@@ -32,6 +32,8 @@ namespace ZeroTier {
  */
 #define ZT_INETADDRESS_MAX_SCOPE 7
 
+#define ZT_INETADDRESS_MARSHAL_SIZE_MAX 19
+
 /**
  * Extends sockaddr_storage with friendly C++ methods
  *
@@ -463,7 +465,7 @@ public:
 	 */
 	explicit ZT_ALWAYS_INLINE operator bool() const { return (ss_family != 0); }
 
-	static ZT_ALWAYS_INLINE int marshalSizeMax() { return 19; }
+	static ZT_ALWAYS_INLINE int marshalSizeMax() { return ZT_INETADDRESS_MARSHAL_SIZE_MAX; }
 	int marshal(uint8_t data[19]) const;
 	int unmarshal(const uint8_t *restrict data,const int len);
 
@@ -588,9 +590,19 @@ public:
 static ZT_ALWAYS_INLINE InetAddress *asInetAddress(sockaddr_in *p) { return reinterpret_cast<InetAddress *>(p); }
 static ZT_ALWAYS_INLINE InetAddress *asInetAddress(sockaddr_in6 *p) { return reinterpret_cast<InetAddress *>(p); }
 static ZT_ALWAYS_INLINE InetAddress *asInetAddress(sockaddr *p) { return reinterpret_cast<InetAddress *>(p); }
+static ZT_ALWAYS_INLINE InetAddress *asInetAddress(sockaddr_storage *p) { return reinterpret_cast<InetAddress *>(p); }
 static ZT_ALWAYS_INLINE const InetAddress *asInetAddress(const sockaddr_in *p) { return reinterpret_cast<const InetAddress *>(p); }
 static ZT_ALWAYS_INLINE const InetAddress *asInetAddress(const sockaddr_in6 *p) { return reinterpret_cast<const InetAddress *>(p); }
 static ZT_ALWAYS_INLINE const InetAddress *asInetAddress(const sockaddr *p) { return reinterpret_cast<const InetAddress *>(p); }
+static ZT_ALWAYS_INLINE const InetAddress *asInetAddress(const sockaddr_storage *p) { return reinterpret_cast<const InetAddress *>(p); }
+static ZT_ALWAYS_INLINE InetAddress &asInetAddress(sockaddr_in &p) { return *reinterpret_cast<InetAddress *>(&p); }
+static ZT_ALWAYS_INLINE InetAddress &asInetAddress(sockaddr_in6 &p) { return *reinterpret_cast<InetAddress *>(&p); }
+static ZT_ALWAYS_INLINE InetAddress &asInetAddress(sockaddr &p) { return *reinterpret_cast<InetAddress *>(&p); }
+static ZT_ALWAYS_INLINE InetAddress &asInetAddress(sockaddr_storage &p) { return *reinterpret_cast<InetAddress *>(&p); }
+static ZT_ALWAYS_INLINE const InetAddress &asInetAddress(const sockaddr_in &p) { return *reinterpret_cast<const InetAddress *>(&p); }
+static ZT_ALWAYS_INLINE const InetAddress &asInetAddress(const sockaddr_in6 &p) { return *reinterpret_cast<const InetAddress *>(&p); }
+static ZT_ALWAYS_INLINE const InetAddress &asInetAddress(const sockaddr &p) { return *reinterpret_cast<const InetAddress *>(&p); }
+static ZT_ALWAYS_INLINE const InetAddress &asInetAddress(const sockaddr_storage &p) { return *reinterpret_cast<const InetAddress *>(&p); }
 
 } // namespace ZeroTier
 

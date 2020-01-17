@@ -19,9 +19,7 @@
 #include "Constants.hpp"
 #include "SelfAwareness.hpp"
 #include "RuntimeEnvironment.hpp"
-#include "Node.hpp"
 #include "Topology.hpp"
-#include "Packet.hpp"
 #include "Peer.hpp"
 #include "Switch.hpp"
 #include "Trace.hpp"
@@ -34,20 +32,16 @@ namespace ZeroTier {
 class _ResetWithinScope
 {
 public:
-	inline _ResetWithinScope(void *tPtr,int64_t now,int inetAddressFamily,InetAddress::IpScope scope) :
+	ZT_ALWAYS_INLINE _ResetWithinScope(void *tPtr,int64_t now,int inetAddressFamily,InetAddress::IpScope scope) :
 		_now(now),
 		_tPtr(tPtr),
 		_family(inetAddressFamily),
 		_scope(scope) {}
 
-	inline bool operator()(const SharedPtr<Peer> &p)
-	{
-		p->resetWithinScope(_tPtr,_scope,_family,_now);
-		return true;
-	}
+	ZT_ALWAYS_INLINE void operator()(const SharedPtr<Peer> &p) { p->resetWithinScope(_tPtr,_scope,_family,_now); }
 
 private:
-	uint64_t _now;
+	int64_t _now;
 	void *_tPtr;
 	int _family;
 	InetAddress::IpScope _scope;
@@ -55,7 +49,13 @@ private:
 
 SelfAwareness::SelfAwareness(const RuntimeEnvironment *renv) :
 	RR(renv),
-	_phy(128) {}
+	_phy(256)
+{
+}
+
+SelfAwareness::~SelfAwareness()
+{
+}
 
 void SelfAwareness::iam(void *tPtr,const Address &reporter,const int64_t receivedOnLocalSocket,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,bool trusted,int64_t now)
 {
@@ -64,7 +64,7 @@ void SelfAwareness::iam(void *tPtr,const Address &reporter,const int64_t receive
 	if ((scope != reporterPhysicalAddress.ipScope())||(scope == InetAddress::IP_SCOPE_NONE)||(scope == InetAddress::IP_SCOPE_LOOPBACK)||(scope == InetAddress::IP_SCOPE_MULTICAST))
 		return;
 
-	Mutex::Lock _l(_phy_m);
+	Mutex::Lock l(_phy_l);
 	PhySurfaceEntry &entry = _phy[PhySurfaceKey(reporter,receivedOnLocalSocket,reporterPhysicalAddress,scope)];
 
 	if ( (trusted) && ((now - entry.ts) < ZT_SELFAWARENESS_ENTRY_TIMEOUT) && (!entry.mySurface.ipsEqual(myPhysicalAddress)) ) {
@@ -101,7 +101,7 @@ void SelfAwareness::iam(void *tPtr,const Address &reporter,const int64_t receive
 
 void SelfAwareness::clean(int64_t now)
 {
-	Mutex::Lock _l(_phy_m);
+	Mutex::Lock l(_phy_l);
 	Hashtable< PhySurfaceKey,PhySurfaceEntry >::Iterator i(_phy);
 	PhySurfaceKey *k = (PhySurfaceKey *)0;
 	PhySurfaceEntry *e = (PhySurfaceEntry *)0;
@@ -109,6 +109,28 @@ void SelfAwareness::clean(int64_t now)
 		if ((now - e->ts) >= ZT_SELFAWARENESS_ENTRY_TIMEOUT)
 			_phy.erase(*k);
 	}
+}
+
+std::multimap<unsigned long,InetAddress> SelfAwareness::externalAddresses(const int64_t now) const
+{
+	Hashtable<InetAddress,unsigned long> counts;
+	{
+		Mutex::Lock l(_phy_l);
+		Hashtable<PhySurfaceKey,PhySurfaceEntry>::Iterator i(const_cast<SelfAwareness *>(this)->_phy);
+		PhySurfaceKey *k = (PhySurfaceKey *)0;
+		PhySurfaceEntry *e = (PhySurfaceEntry *)0;
+		while (i.next(k,e)) {
+			if ((now - e->ts) < ZT_SELFAWARENESS_ENTRY_TIMEOUT)
+				++counts[e->mySurface];
+		}
+	}
+	std::multimap<unsigned long,InetAddress> r;
+	Hashtable<InetAddress,unsigned long>::Iterator i(counts);
+	InetAddress *k = (InetAddress *)0;
+	unsigned long *c = (unsigned long *)0;
+	while (i.next(k,c))
+		r.insert(std::pair<unsigned long,InetAddress>(*c,*k));
+	return r;
 }
 
 } // namespace ZeroTier

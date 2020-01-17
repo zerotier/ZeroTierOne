@@ -380,40 +380,70 @@ template<typename T>
 static ZT_ALWAYS_INLINE T ntoh(T n) { return n; }
 #endif
 
-static ZT_ALWAYS_INLINE uint64_t readUInt64(const void *const p)
+template<typename I>
+static ZT_ALWAYS_INLINE I loadBigEndian(const void *const p)
 {
 #ifdef ZT_NO_TYPE_PUNNING
-	const uint8_t *const b = reinterpret_cast<const uint8_t *>(p);
-	return (
-		((uint64_t)b[0] << 56) |
-		((uint64_t)b[1] << 48) |
-		((uint64_t)b[2] << 40) |
-		((uint64_t)b[3] << 32) |
-		((uint64_t)b[4] << 24) |
-		((uint64_t)b[5] << 16) |
-		((uint64_t)b[6] << 8) |
-		(uint64_t)b[7]);
+	I x = (I)0;
+	for(unsigned int k=0;k<sizeof(I);++k) {
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+		reinterpret_cast<uint8_t *>(&x)[k] = reinterpret_cast<const uint8_t *>(p)[(sizeof(I)-1)-k];
 #else
-	return ntoh(*reinterpret_cast<const uint64_t *>(p));
+		reinterpret_cast<uint8_t *>(&x)[k] = reinterpret_cast<const uint8_t *>(p)[k];
+#endif
+	}
+	return x;
+#else
+	return ntoh(*reinterpret_cast<const I *>(p));
 #endif
 }
 
-static ZT_ALWAYS_INLINE void putUInt64(void *const p,const uint64_t i)
+template<typename I>
+static ZT_ALWAYS_INLINE void storeBigEndian(void *const p,const I i)
 {
 #ifdef ZT_NO_TYPE_PUNNING
-	uint8_t *const b = reinterpret_cast<uint8_t *>(p);
-	p[0] = (uint8_t)(i << 56);
-	p[1] = (uint8_t)(i << 48);
-	p[2] = (uint8_t)(i << 40);
-	p[3] = (uint8_t)(i << 32);
-	p[4] = (uint8_t)(i << 24);
-	p[5] = (uint8_t)(i << 16);
-	p[6] = (uint8_t)(i << 8);
-	p[7] = (uint8_t)i;
+	for(unsigned int k=0;k<sizeof(I);++k) {
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+		reinterpret_cast<uint8_t *>(p)[k] = reinterpret_cast<const uint8_t *>(&i)[(sizeof(I)-1)-k];
 #else
-	*reinterpret_cast<uint64_t *>(p) = Utils::hton(i);
+		reinterpret_cast<uint8_t *>(p)[k] = reinterpret_cast<const uint8_t *>(&i)[k];
+#endif
+	}
+#else
+	*reinterpret_cast<I *>(p) = Utils::hton(i);
 #endif
 }
+
+#if 0
+template<typename T>
+static ZT_ALWAYS_INLINE bool isPrimitiveType() { return false; }
+template<>
+ZT_ALWAYS_INLINE bool isPrimitiveType<void *>() { return true; }
+template<>
+ZT_ALWAYS_INLINE bool isPrimitiveType<const void *>() { return true; }
+template<>
+ZT_ALWAYS_INLINE bool isPrimitiveType<bool>() { return true; }
+template<>
+ZT_ALWAYS_INLINE bool isPrimitiveType<float>() { return true; }
+template<>
+ZT_ALWAYS_INLINE bool isPrimitiveType<double>() { return true; }
+template<>
+ZT_ALWAYS_INLINE bool isPrimitiveType<int8_t>() { return true; }
+template<>
+ZT_ALWAYS_INLINE bool isPrimitiveType<int16_t>() { return true; }
+template<>
+ZT_ALWAYS_INLINE bool isPrimitiveType<int32_t>() { return true; }
+template<>
+ZT_ALWAYS_INLINE bool isPrimitiveType<int64_t>() { return true; }
+template<>
+ZT_ALWAYS_INLINE bool isPrimitiveType<uint8_t>() { return true; }
+template<>
+ZT_ALWAYS_INLINE bool isPrimitiveType<uint16_t>() { return true; }
+template<>
+ZT_ALWAYS_INLINE bool isPrimitiveType<uint32_t>() { return true; }
+template<>
+ZT_ALWAYS_INLINE bool isPrimitiveType<uint64_t>() { return true; }
+#endif
 
 } // namespace Utils
 

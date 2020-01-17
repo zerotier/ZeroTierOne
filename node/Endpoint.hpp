@@ -24,12 +24,16 @@
 #include "Address.hpp"
 #include "Utils.hpp"
 
-#define ZT_ENDPOINT_MARSHAL_SIZE_MAX (ZT_ENDPOINT_MAX_NAME_SIZE+3)
+// max name size + type byte + port (for DNS name/port) + 3x 16-bit coordinate for location
+#define ZT_ENDPOINT_MARSHAL_SIZE_MAX (ZT_ENDPOINT_MAX_NAME_SIZE+1+2+2+2+2)
 
 namespace ZeroTier {
 
 /**
  * Endpoint variant specifying some form of network endpoint
+ *
+ * This data structure supports a number of types that are not yet actually used:
+ * DNSNAME, URL, and ETHERNET. These are present to reserve them for future use.
  */
 class Endpoint
 {
@@ -52,10 +56,10 @@ public:
 	ZT_ALWAYS_INLINE Endpoint(const char *name,const int port) : _t(DNSNAME) { Utils::scopy(_v.dns.name,sizeof(_v.dns.name),name); _v.dns.port = port; }
 	explicit ZT_ALWAYS_INLINE Endpoint(const char *url) : _t(URL) { Utils::scopy(_v.url,sizeof(_v.url),url); }
 
-	ZT_ALWAYS_INLINE const InetAddress *sockaddr() const { return (_t == INETADDR) ? reinterpret_cast<const InetAddress *>(&_v.sa) : nullptr; }
+	ZT_ALWAYS_INLINE const InetAddress *inetAddr() const { return (_t == INETADDR) ? reinterpret_cast<const InetAddress *>(&_v.sa) : nullptr; }
 	ZT_ALWAYS_INLINE const char *dnsName() const { return (_t == DNSNAME) ? _v.dns.name : nullptr; }
 	ZT_ALWAYS_INLINE int dnsPort() const { return (_t == DNSNAME) ? _v.dns.port : -1; }
-	ZT_ALWAYS_INLINE Address ztAddress() const { return (_t == ZEROTIER) ? Address(_v.zt.a) : Address(); }
+	ZT_ALWAYS_INLINE Address ztAddress() const { return Address((_t == ZEROTIER) ? _v.zt.a : (uint64_t)0); }
 	ZT_ALWAYS_INLINE const uint8_t *ztIdentityHash() const { return (_t == ZEROTIER) ? _v.zt.idh : nullptr; }
 	ZT_ALWAYS_INLINE const char *url() const { return (_t == URL) ? _v.url : nullptr; }
 	ZT_ALWAYS_INLINE MAC ethernet() const { return (_t == ETHERNET) ? MAC(_v.eth) : MAC(); }
@@ -75,6 +79,7 @@ public:
 
 private:
 	Type _t;
+	int _l[3]; // X,Y,Z location in kilometers from the nearest gravitational center of mass
 	union {
 		struct sockaddr_storage sa;
 		struct {

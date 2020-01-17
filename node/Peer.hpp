@@ -27,10 +27,16 @@
 #include "AtomicCounter.hpp"
 #include "Hashtable.hpp"
 #include "Mutex.hpp"
+#include "Locator.hpp"
 
 #include <vector>
 
+// version, identity, locator, bootstrap, version info, length of any additional fields
+#define ZT_PEER_MARSHAL_SIZE_MAX (1 + ZT_IDENTITY_MARSHAL_SIZE_MAX + ZT_LOCATOR_MARSHAL_SIZE_MAX + ZT_INETADDRESS_MARSHAL_SIZE_MAX + (2*4) + 2)
+
 namespace ZeroTier {
+
+class Topology;
 
 /**
  * Peer on P2P Network (virtual layer 1)
@@ -38,22 +44,32 @@ namespace ZeroTier {
 class Peer
 {
 	friend class SharedPtr<Peer>;
+	friend class Topology;
 
 private:
 	ZT_ALWAYS_INLINE Peer() {}
 
 public:
+	/**
+	 * Create an uninitialized peer
+	 *
+	 * The peer will need to be initialized with init() or unmarshal() before
+	 * it can be used.
+	 *
+	 * @param renv Runtime environment
+	 */
+	Peer(const RuntimeEnvironment *renv);
+
 	ZT_ALWAYS_INLINE ~Peer() { Utils::burn(_key,sizeof(_key)); }
 
 	/**
-	 * Construct a new peer
+	 * Initialize peer with an identity
 	 *
-	 * @param renv Runtime environment
-	 * @param myIdentity Identity of THIS node (for key agreement)
-	 * @param peerIdentity Identity of peer
-	 * @throws std::runtime_error Key agreement with peer's identity failed
+	 * @param myIdentity This node's identity including secret key
+	 * @param peerIdentity The peer's identity
+	 * @return True if initialization was succcesful
 	 */
-	Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Identity &peerIdentity);
+	bool init(const Identity &myIdentity,const Identity &peerIdentity);
 
 	/**
 	 * @return This peer's ZT address (short for identity().address())
@@ -118,11 +134,9 @@ public:
 	 *
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param now Current time
-	 * @param v4SendCount Number of IPv4 packets sent (result parameter)
-	 * @param v6SendCount Number of IPv6 packets sent (result parameter)
 	 * @param pingAllAddressTypes If true, try to keep a link up for each address type/family
 	 */
-	void ping(void *tPtr,int64_t now,unsigned int &v4SendCount,unsigned int &v6SendCount,bool pingAllAddressTypes);
+	void ping(void *tPtr,int64_t now,bool pingAllAddressTypes);
 
 	/**
 	 * Reset paths within a given IP scope and address family
@@ -140,6 +154,15 @@ public:
 	void resetWithinScope(void *tPtr,InetAddress::IpScope scope,int inetAddressFamily,int64_t now);
 
 	/**
+	 * Update peer latency information
+	 *
+	 * This is called from packet parsing code.
+	 *
+	 * @param l New latency measurment (in milliseconds)
+	 */
+	void updateLatency(unsigned int l);
+
+	/**
 	 * @return Time of last receive of anything, whether direct or relayed
 	 */
 	ZT_ALWAYS_INLINE int64_t lastReceive() const { return _lastReceive; }
@@ -153,15 +176,6 @@ public:
 	 * @return Latency in milliseconds of best/aggregate path or 0xffff if unknown
 	 */
 	ZT_ALWAYS_INLINE unsigned int latency() const { return _latency; }
-
-	/**
-	 * Update peer latency information
-	 *
-	 * This is called from packet parsing code.
-	 *
-	 * @param l New latency measurment (in milliseconds)
-	 */
-	void updateLatency(const unsigned int l);
 
 	/**
 	 * @return 256-bit secret symmetric encryption key
@@ -227,18 +241,6 @@ public:
 	}
 
 	/**
-	 * Rate limit gate for trying externally defined or static path
-	 */
-	ZT_ALWAYS_INLINE bool rateGateTryStaticPath(const int64_t now)
-	{
-		if ((now - _lastTriedStaticPath) >= ZT_PEER_PING_PERIOD) {
-			_lastTriedStaticPath = now;
-			return true;
-		}
-		return false;
-	}
-
-	/**
 	 * Send directly if a direct path exists
 	 *
 	 * @param tPtr Thread pointer supplied by user
@@ -247,7 +249,7 @@ public:
 	 * @param now Current time
 	 * @return True if packet appears to have been sent, false if no path or send failed
 	 */
-	bool sendDirect(void *tPtr,const void *data,unsigned int len,const int64_t now);
+	bool sendDirect(void *tPtr,const void *data,unsigned int len,int64_t now);
 
 	/**
 	 * @return Current best path
@@ -261,6 +263,17 @@ public:
 	 */
 	void getAllPaths(std::vector< SharedPtr<Path> > &paths);
 
+	/**
+	 * Save the latest version of this peer to the data store
+	 */
+	void save(void *tPtr) const;
+
+	// NOTE: peer marshal/unmarshal only saves/restores the identity, locator, most
+	// recent bootstrap address, and version information.
+	static ZT_ALWAYS_INLINE int marshalSizeMax() { return ZT_PEER_MARSHAL_SIZE_MAX; }
+	int marshal(uint8_t data[ZT_PEER_MARSHAL_SIZE_MAX]) const;
+	int unmarshal(const uint8_t *restrict data,int len);
+
 private:
 	void _prioritizePaths(int64_t now);
 
@@ -272,18 +285,21 @@ private:
 	volatile int64_t _lastWhoisRequestReceived;
 	volatile int64_t _lastEchoRequestReceived;
 	volatile int64_t _lastPushDirectPathsReceived;
-	volatile int64_t _lastPushDirectPathsSent;
+	volatile int64_t _lastAttemptedP2PInit;
 	volatile int64_t _lastTriedStaticPath;
 	volatile int64_t _lastPrioritizedPaths;
 	volatile unsigned int _latency;
 
 	AtomicCounter __refCount;
 
+	RWMutex _lock; // locks _alivePathCount, _paths, _locator, and _bootstrap.
+
 	unsigned int _alivePathCount;
 	SharedPtr<Path> _paths[ZT_MAX_PEER_NETWORK_PATHS];
-	RWMutex _paths_l;
 
 	Identity _id;
+	Locator _locator;
+	InetAddress _bootstrap;
 
 	uint16_t _vProto;
 	uint16_t _vMajor;

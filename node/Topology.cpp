@@ -44,6 +44,19 @@ Topology::~Topology()
 {
 }
 
+SharedPtr<Peer> Topology::add(void *tPtr,const SharedPtr<Peer> &peer)
+{
+	RWMutex::Lock _l(_peers_l);
+	SharedPtr<Peer> &hp = _peers[peer->address()];
+	if (hp)
+		return hp;
+	_loadCached(tPtr,peer->address(),hp);
+	if (hp)
+		return hp;
+	hp = peer;
+	return peer;
+}
+
 void Topology::getAllPeers(std::vector< SharedPtr<Peer> > &allPeers) const
 {
 	RWMutex::RLock l(_peers_l);
@@ -97,8 +110,10 @@ void Topology::addRoot(const Identity &id)
 	std::pair< std::set<Identity>::iterator,bool > ir(_roots.insert(id));
 	if (ir.second) {
 		SharedPtr<Peer> &p = _peers[id.address()];
-		if (!p)
-			p.set(new Peer(RR,_myIdentity,id));
+		if (!p) {
+			p.set(new Peer(RR));
+			p->init(_myIdentity,id);
+		}
 		_rootPeers.push_back(p);
 	}
 }
@@ -126,7 +141,7 @@ void Topology::rankRoots(const int64_t now)
 	std::sort(_rootPeers.begin(),_rootPeers.end(),_RootSortComparisonOperator(now));
 }
 
-void Topology::doPeriodicTasks(const int64_t now)
+void Topology::doPeriodicTasks(void *tPtr,const int64_t now)
 {
 	{
 		RWMutex::Lock l1(_peers_l);
@@ -134,8 +149,10 @@ void Topology::doPeriodicTasks(const int64_t now)
 		Address *a = (Address *)0;
 		SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
 		while (i.next(a,p)) {
-			if ( (!(*p)->alive(now)) && (_roots.count((*p)->identity()) == 0) )
+			if ( (!(*p)->alive(now)) && (_roots.count((*p)->identity()) == 0) ) {
+				(*p)->save(tPtr);
 				_peers.erase(*a);
+			}
 		}
 	}
 	{
@@ -148,6 +165,23 @@ void Topology::doPeriodicTasks(const int64_t now)
 				_paths.erase(*k);
 		}
 	}
+}
+
+void Topology::saveAll(void *tPtr)
+{
+	RWMutex::RLock l(_peers_l);
+	Hashtable< Address,SharedPtr<Peer> >::Iterator i(_peers);
+	Address *a = (Address *)0;
+	SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
+	while (i.next(a,p)) {
+		if ( (!(*p)->alive(RR->node->now())) && (_roots.count((*p)->identity()) == 0) ) {
+			(*p)->save((void *)0);
+		}
+	}
+}
+
+void Topology::_loadCached(void *tPtr,const Address &zta,SharedPtr<Peer> &peer)
+{
 }
 
 } // namespace ZeroTier

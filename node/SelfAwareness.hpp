@@ -20,6 +20,8 @@
 #include "Address.hpp"
 #include "Mutex.hpp"
 
+#include <map>
+
 namespace ZeroTier {
 
 class RuntimeEnvironment;
@@ -30,10 +32,11 @@ class RuntimeEnvironment;
 class SelfAwareness
 {
 public:
-	SelfAwareness(const RuntimeEnvironment *renv);
+	explicit SelfAwareness(const RuntimeEnvironment *renv);
+	~SelfAwareness();
 
 	/**
-	 * Called when a trusted remote peer informs us of our external network address
+	 * Called when a remote peer informs us of our external network address
 	 *
 	 * @param reporter ZeroTier address of reporting peer
 	 * @param receivedOnLocalAddress Local address on which report was received
@@ -42,7 +45,7 @@ public:
 	 * @param trusted True if this peer is trusted as an authority to inform us of external address changes
 	 * @param now Current time
 	 */
-	void iam(void *tPtr,const Address &reporter,const int64_t receivedOnLocalSocket,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,bool trusted,int64_t now);
+	void iam(void *tPtr,const Address &reporter,int64_t receivedOnLocalSocket,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,bool trusted,int64_t now);
 
 	/**
 	 * Clean up database periodically
@@ -50,6 +53,14 @@ public:
 	 * @param now Current time
 	 */
 	void clean(int64_t now);
+
+	/**
+	 * Get external address consensus, which is the statistical "mode" of external addresses.
+	 *
+	 * @param now Current time
+	 * @return Map of count to IP/port representing how many endpoints reported each address
+	 */
+	std::multimap<unsigned long,InetAddress> externalAddresses(int64_t now) const;
 
 private:
 	struct PhySurfaceKey
@@ -59,13 +70,13 @@ private:
 		InetAddress reporterPhysicalAddress;
 		InetAddress::IpScope scope;
 
-		inline PhySurfaceKey() : reporter(),scope(InetAddress::IP_SCOPE_NONE) {}
-		inline PhySurfaceKey(const Address &r,const int64_t rol,const InetAddress &ra,InetAddress::IpScope s) : reporter(r),receivedOnLocalSocket(rol),reporterPhysicalAddress(ra),scope(s) {}
+		ZT_ALWAYS_INLINE PhySurfaceKey() {}
+		ZT_ALWAYS_INLINE PhySurfaceKey(const Address &r,const int64_t rol,const InetAddress &ra,InetAddress::IpScope s) : reporter(r),receivedOnLocalSocket(rol),reporterPhysicalAddress(ra),scope(s) {}
 
-		inline unsigned long hashCode() const { return ((unsigned long)reporter.toInt() + (unsigned long)scope); }
+		ZT_ALWAYS_INLINE unsigned long hashCode() const { return ((unsigned long)reporter.toInt() + (unsigned long)receivedOnLocalSocket + (unsigned long)scope); }
 
-		inline bool operator==(const PhySurfaceKey &k) const { return ((reporter == k.reporter)&&(receivedOnLocalSocket == k.receivedOnLocalSocket)&&(reporterPhysicalAddress == k.reporterPhysicalAddress)&&(scope == k.scope)); }
-		inline bool operator!=(const PhySurfaceKey &k) const { return (!(*this == k)); }
+		ZT_ALWAYS_INLINE bool operator==(const PhySurfaceKey &k) const { return ((reporter == k.reporter)&&(receivedOnLocalSocket == k.receivedOnLocalSocket)&&(reporterPhysicalAddress == k.reporterPhysicalAddress)&&(scope == k.scope)); }
+		ZT_ALWAYS_INLINE bool operator!=(const PhySurfaceKey &k) const { return (!(*this == k)); }
 	};
 	struct PhySurfaceEntry
 	{
@@ -73,14 +84,13 @@ private:
 		uint64_t ts;
 		bool trusted;
 
-		inline PhySurfaceEntry() : mySurface(),ts(0),trusted(false) {}
-		inline PhySurfaceEntry(const InetAddress &a,const uint64_t t) : mySurface(a),ts(t),trusted(false) {}
+		ZT_ALWAYS_INLINE PhySurfaceEntry() : mySurface(),ts(0),trusted(false) {}
+		ZT_ALWAYS_INLINE PhySurfaceEntry(const InetAddress &a,const uint64_t t) : mySurface(a),ts(t),trusted(false) {}
 	};
 
 	const RuntimeEnvironment *RR;
-
 	Hashtable< PhySurfaceKey,PhySurfaceEntry > _phy;
-	Mutex _phy_m;
+	Mutex _phy_l;
 };
 
 } // namespace ZeroTier

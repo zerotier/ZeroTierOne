@@ -53,13 +53,15 @@ bool Endpoint::operator<(const Endpoint &ep) const
 int Endpoint::marshal(uint8_t data[ZT_ENDPOINT_MARSHAL_SIZE_MAX]) const
 {
 	int p;
+	data[0] = (uint8_t)_t;
+	Utils::storeBigEndian(data + 1,(int16_t)_l[0]);
+	Utils::storeBigEndian(data + 3,(int16_t)_l[1]);
+	Utils::storeBigEndian(data + 5,(int16_t)_l[2]);
 	switch(_t) {
 		case INETADDR:
-			data[0] = (uint8_t)INETADDR;
-			return 1 + reinterpret_cast<const InetAddress *>(&_v.sa)->marshal(data+1);
+			return 7 + reinterpret_cast<const InetAddress *>(&_v.sa)->marshal(data+1);
 		case DNSNAME:
-			data[0] = (uint8_t)DNSNAME;
-			p = 1;
+			p = 7;
 			for (;;) {
 				if ((data[p] = (uint8_t)_v.dns.name[p-1]) == 0)
 					break;
@@ -71,17 +73,15 @@ int Endpoint::marshal(uint8_t data[ZT_ENDPOINT_MARSHAL_SIZE_MAX]) const
 			data[p++] = (uint8_t)_v.dns.port;
 			return p;
 		case ZEROTIER:
-			data[0] = (uint8_t)ZEROTIER;
-			data[1] = (uint8_t)(_v.zt.a >> 32U);
-			data[2] = (uint8_t)(_v.zt.a >> 24U);
-			data[3] = (uint8_t)(_v.zt.a >> 16U);
-			data[4] = (uint8_t)(_v.zt.a >> 8U);
-			data[5] = (uint8_t)_v.zt.a;
-			memcpy(data + 6,_v.zt.idh,ZT_IDENTITY_HASH_SIZE);
-			return (ZT_IDENTITY_HASH_SIZE + 6);
+			data[7] = (uint8_t)(_v.zt.a >> 32U);
+			data[8] = (uint8_t)(_v.zt.a >> 24U);
+			data[9] = (uint8_t)(_v.zt.a >> 16U);
+			data[10] = (uint8_t)(_v.zt.a >> 8U);
+			data[11] = (uint8_t)_v.zt.a;
+			memcpy(data + 12,_v.zt.idh,ZT_IDENTITY_HASH_SIZE);
+			return ZT_IDENTITY_HASH_SIZE + 12;
 		case URL:
-			data[0] = (uint8_t)URL;
-			p = 1;
+			p = 7;
 			for (;;) {
 				if ((data[p] = (uint8_t)_v.url[p-1]) == 0)
 					break;
@@ -91,65 +91,63 @@ int Endpoint::marshal(uint8_t data[ZT_ENDPOINT_MARSHAL_SIZE_MAX]) const
 			}
 			return p;
 		case ETHERNET:
-			data[0] = (uint8_t)ETHERNET;
-			data[1] = (uint8_t)(_v.eth >> 40U);
-			data[2] = (uint8_t)(_v.eth >> 32U);
-			data[3] = (uint8_t)(_v.eth >> 24U);
-			data[4] = (uint8_t)(_v.eth >> 16U);
-			data[5] = (uint8_t)(_v.eth >> 8U);
-			data[6] = (uint8_t)_v.eth;
-			return 7;
+			data[7] = (uint8_t)(_v.eth >> 40U);
+			data[8] = (uint8_t)(_v.eth >> 32U);
+			data[9] = (uint8_t)(_v.eth >> 24U);
+			data[10] = (uint8_t)(_v.eth >> 16U);
+			data[11] = (uint8_t)(_v.eth >> 8U);
+			data[12] = (uint8_t)_v.eth;
+			return 13;
 		default:
 			data[0] = (uint8_t)NIL;
-			return 1;
+			return 7;
 	}
 }
 
 int Endpoint::unmarshal(const uint8_t *restrict data,const int len)
 {
-	if (len <= 0)
+	if (len < 7)
 		return -1;
 	int p;
-	switch((Type)data[0]) {
+	_t = (Type)data[0];
+	_l[0] = Utils::loadBigEndian<int16_t>(data + 1);
+	_l[1] = Utils::loadBigEndian<int16_t>(data + 3);
+	_l[2] = Utils::loadBigEndian<int16_t>(data + 5);
+  switch(_t) {
 		case NIL:
-			_t = NIL;
-			return 1;
+			return 7;
 		case INETADDR:
-			_t = INETADDR;
-			return reinterpret_cast<InetAddress *>(&_v.sa)->unmarshal(data+1,len-1);
+			return 7 + reinterpret_cast<InetAddress *>(&_v.sa)->unmarshal(data+7,len-7);
 		case DNSNAME:
-			if (len < 4)
+			if (len < 10)
 				return -1;
-			_t = DNSNAME;
-			p = 1;
+			p = 7;
 			for (;;) {
 				if ((_v.dns.name[p-1] = (char)data[p]) == 0) {
 					++p;
 					break;
 				}
 				++p;
-				if ((p >= (ZT_ENDPOINT_MAX_NAME_SIZE+1))||(p >= (len-2)))
+				if ((p >= (ZT_ENDPOINT_MARSHAL_SIZE_MAX-2))||(p >= (len-2)))
 					return -1;
 			}
 			_v.dns.port = (uint16_t)(((unsigned int)data[p++]) << 8U);
 			_v.dns.port |= (uint16_t)data[p++];
 			return p;
 		case ZEROTIER:
-			if (len < (ZT_IDENTITY_HASH_SIZE + 6))
+			if (len < 60)
 				return -1;
-			_t = ZEROTIER;
-			_v.zt.a = ((uint64_t)data[1]) << 32U;
-			_v.zt.a |= ((uint64_t)data[2]) << 24U;
-			_v.zt.a |= ((uint64_t)data[3]) << 16U;
-			_v.zt.a |= ((uint64_t)data[4]) << 8U;
-			_v.zt.a |= (uint64_t)data[5];
-			memcpy(_v.zt.idh,data + 6,ZT_IDENTITY_HASH_SIZE);
-			return (ZT_IDENTITY_HASH_SIZE + 6);
+			_v.zt.a = ((uint64_t)data[7]) << 32U;
+			_v.zt.a |= ((uint64_t)data[8]) << 24U;
+			_v.zt.a |= ((uint64_t)data[9]) << 16U;
+			_v.zt.a |= ((uint64_t)data[10]) << 8U;
+			_v.zt.a |= (uint64_t)data[11];
+			memcpy(_v.zt.idh,data + 12,48);
+			return 60;
 		case URL:
-			if (len < 2)
+			if (len < 8)
 				return -1;
-			_t = URL;
-			p = 1;
+			p = 7;
 			for (;;) {
 				if ((_v.url[p-1] = (char)data[p]) == 0) {
 					++p;
@@ -161,25 +159,22 @@ int Endpoint::unmarshal(const uint8_t *restrict data,const int len)
 			}
 			return p;
 		case ETHERNET:
-			if (len < 7)
+			if (len < 13)
 				return -1;
-			_t = ZEROTIER;
-			_v.eth = ((uint64_t)data[1]) << 40U;
-			_v.eth |= ((uint64_t)data[2]) << 32U;
-			_v.eth |= ((uint64_t)data[3]) << 24U;
-			_v.eth |= ((uint64_t)data[4]) << 16U;
-			_v.eth |= ((uint64_t)data[5]) << 8U;
-			_v.eth |= (uint64_t)data[6];
-			return 7;
+			_v.eth = ((uint64_t)data[7]) << 40U;
+			_v.eth |= ((uint64_t)data[8]) << 32U;
+			_v.eth |= ((uint64_t)data[9]) << 24U;
+			_v.eth |= ((uint64_t)data[10]) << 16U;
+			_v.eth |= ((uint64_t)data[11]) << 8U;
+			_v.eth |= (uint64_t)data[12];
+			return 13;
 		default:
 			// Unrecognized endpoint types not yet specified must start with a byte
 			// length size so that older versions of ZeroTier can skip them.
-			if (len < 2)
+			if (len < 8)
 				return -1;
-			_t = UNRECOGNIZED;
-			return 1 + (int)data[1];
+			return 8 + (int)data[7];
 	}
-	return false;
 }
 
 } // namespace ZeroTier

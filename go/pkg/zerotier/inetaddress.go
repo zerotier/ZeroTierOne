@@ -24,20 +24,21 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"syscall"
 	"unsafe"
 )
 
 func sockaddrStorageToIPNet(ss *C.struct_sockaddr_storage) *net.IPNet {
 	var a net.IPNet
 	switch ss.ss_family {
-	case AFInet:
+	case syscall.AF_INET:
 		sa4 := (*C.struct_sockaddr_in)(unsafe.Pointer(ss))
 		var ip4 [4]byte
 		copy(ip4[:], (*[4]byte)(unsafe.Pointer(&sa4.sin_addr))[:])
 		a.IP = ip4[:]
 		a.Mask = net.CIDRMask(int(binary.BigEndian.Uint16(((*[2]byte)(unsafe.Pointer(&sa4.sin_port)))[:])), 32)
 		return &a
-	case AFInet6:
+	case syscall.AF_INET6:
 		sa6 := (*C.struct_sockaddr_in6)(unsafe.Pointer(ss))
 		var ip6 [16]byte
 		copy(ip6[:], (*[16]byte)(unsafe.Pointer(&sa6.sin6_addr))[:])
@@ -51,14 +52,14 @@ func sockaddrStorageToIPNet(ss *C.struct_sockaddr_storage) *net.IPNet {
 func sockaddrStorageToUDPAddr(ss *C.struct_sockaddr_storage) *net.UDPAddr {
 	var a net.UDPAddr
 	switch ss.ss_family {
-	case AFInet:
+	case syscall.AF_INET:
 		sa4 := (*C.struct_sockaddr_in)(unsafe.Pointer(ss))
 		var ip4 [4]byte
 		copy(ip4[:], (*[4]byte)(unsafe.Pointer(&sa4.sin_addr))[:])
 		a.IP = ip4[:]
 		a.Port = int(binary.BigEndian.Uint16(((*[2]byte)(unsafe.Pointer(&sa4.sin_port)))[:]))
 		return &a
-	case AFInet6:
+	case syscall.AF_INET6:
 		sa6 := (*C.struct_sockaddr_in6)(unsafe.Pointer(ss))
 		var ip6 [16]byte
 		copy(ip6[:], (*[16]byte)(unsafe.Pointer(&sa6.sin6_addr))[:])
@@ -77,14 +78,14 @@ func makeSockaddrStorage(ip net.IP, port int, ss *C.struct_sockaddr_storage) boo
 	C.memset(unsafe.Pointer(ss), 0, C.sizeof_struct_sockaddr_storage)
 	if len(ip) == 4 {
 		sa4 := (*C.struct_sockaddr_in)(unsafe.Pointer(ss))
-		sa4.sin_family = AFInet
+		sa4.sin_family = syscall.AF_INET
 		copy(((*[4]byte)(unsafe.Pointer(&sa4.sin_addr)))[:], ip)
 		binary.BigEndian.PutUint16(((*[2]byte)(unsafe.Pointer(&sa4.sin_port)))[:], uint16(port))
 		return true
 	}
 	if len(ip) == 16 {
 		sa6 := (*C.struct_sockaddr_in6)(unsafe.Pointer(ss))
-		sa6.sin6_family = AFInet6
+		sa6.sin6_family = syscall.AF_INET6
 		copy(((*[16]byte)(unsafe.Pointer(&sa6.sin6_addr)))[:], ip)
 		binary.BigEndian.PutUint16(((*[2]byte)(unsafe.Pointer(&sa6.sin6_port)))[:], uint16(port))
 		return true
@@ -158,9 +159,9 @@ func (ina *InetAddress) String() string {
 func (ina *InetAddress) Family() int {
 	switch len(ina.IP) {
 	case 4:
-		return AFInet
+		return syscall.AF_INET
 	case 16:
-		return AFInet6
+		return syscall.AF_INET6
 	}
 	return 0
 }

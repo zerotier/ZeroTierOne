@@ -24,6 +24,7 @@ import (
 	"net"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"unsafe"
 )
 
@@ -70,12 +71,12 @@ func (t *nativeTap) AddIP(ip *net.IPNet) error {
 		if bits > 128 || bits < 0 {
 			return ErrInvalidParameter
 		}
-		C.ZT_GoTap_addIp(t.tap, C.int(AFInet6), unsafe.Pointer(&ip.IP[0]), C.int(bits))
+		C.ZT_GoTap_addIp(t.tap, C.int(syscall.AF_INET6), unsafe.Pointer(&ip.IP[0]), C.int(bits))
 	} else if len(ip.IP) == 4 {
 		if bits > 32 || bits < 0 {
 			return ErrInvalidParameter
 		}
-		C.ZT_GoTap_addIp(t.tap, C.int(AFInet), unsafe.Pointer(&ip.IP[0]), C.int(bits))
+		C.ZT_GoTap_addIp(t.tap, C.int(syscall.AF_INET), unsafe.Pointer(&ip.IP[0]), C.int(bits))
 	}
 	return ErrInvalidParameter
 }
@@ -87,14 +88,14 @@ func (t *nativeTap) RemoveIP(ip *net.IPNet) error {
 		if bits > 128 || bits < 0 {
 			return ErrInvalidParameter
 		}
-		C.ZT_GoTap_removeIp(t.tap, C.int(AFInet6), unsafe.Pointer(&ip.IP[0]), C.int(bits))
+		C.ZT_GoTap_removeIp(t.tap, C.int(syscall.AF_INET6), unsafe.Pointer(&ip.IP[0]), C.int(bits))
 		return nil
 	}
 	if len(ip.IP) == 4 {
 		if bits > 32 || bits < 0 {
 			return ErrInvalidParameter
 		}
-		C.ZT_GoTap_removeIp(t.tap, C.int(AFInet), unsafe.Pointer(&ip.IP[0]), C.int(bits))
+		C.ZT_GoTap_removeIp(t.tap, C.int(syscall.AF_INET), unsafe.Pointer(&ip.IP[0]), C.int(bits))
 		return nil
 	}
 	return ErrInvalidParameter
@@ -115,7 +116,7 @@ func (t *nativeTap) IPs() (ips []net.IPNet, err error) {
 		af := int(ipbuf[ipptr])
 		ipptr++
 		switch af {
-		case AFInet:
+		case syscall.AF_INET:
 			var ip [4]byte
 			for j := 0; j < 4; j++ {
 				ip[j] = ipbuf[ipptr]
@@ -124,7 +125,7 @@ func (t *nativeTap) IPs() (ips []net.IPNet, err error) {
 			bits := ipbuf[ipptr]
 			ipptr++
 			ips = append(ips, net.IPNet{IP: net.IP(ip[:]), Mask: net.CIDRMask(int(bits), 32)})
-		case AFInet6:
+		case syscall.AF_INET6:
 			var ip [16]byte
 			for j := 0; j < 16; j++ {
 				ip[j] = ipbuf[ipptr]
@@ -168,16 +169,16 @@ func (t *nativeTap) AddRoute(r *Route) error {
 		if len(r.Target.IP) == 4 {
 			mask, _ := r.Target.Mask.Size()
 			if len(via) == 4 {
-				rc = int(C.ZT_GoTap_addRoute(t.tap, AFInet, unsafe.Pointer(&r.Target.IP[0]), C.int(mask), AFInet, unsafe.Pointer(&via[0]), C.uint(r.Metric)))
+				rc = int(C.ZT_GoTap_addRoute(t.tap, syscall.AF_INET, unsafe.Pointer(&r.Target.IP[0]), C.int(mask), syscall.AF_INET, unsafe.Pointer(&via[0]), C.uint(r.Metric)))
 			} else {
-				rc = int(C.ZT_GoTap_addRoute(t.tap, AFInet, unsafe.Pointer(&r.Target.IP[0]), C.int(mask), 0, nil, C.uint(r.Metric)))
+				rc = int(C.ZT_GoTap_addRoute(t.tap, syscall.AF_INET, unsafe.Pointer(&r.Target.IP[0]), C.int(mask), 0, nil, C.uint(r.Metric)))
 			}
 		} else if len(r.Target.IP) == 16 {
 			mask, _ := r.Target.Mask.Size()
 			if len(via) == 16 {
-				rc = int(C.ZT_GoTap_addRoute(t.tap, AFInet6, unsafe.Pointer(&r.Target.IP[0]), C.int(mask), AFInet6, unsafe.Pointer(&via[0]), C.uint(r.Metric)))
+				rc = int(C.ZT_GoTap_addRoute(t.tap, syscall.AF_INET6, unsafe.Pointer(&r.Target.IP[0]), C.int(mask), syscall.AF_INET6, unsafe.Pointer(&via[0]), C.uint(r.Metric)))
 			} else {
-				rc = int(C.ZT_GoTap_addRoute(t.tap, AFInet6, unsafe.Pointer(&r.Target.IP[0]), C.int(mask), 0, nil, C.uint(r.Metric)))
+				rc = int(C.ZT_GoTap_addRoute(t.tap, syscall.AF_INET6, unsafe.Pointer(&r.Target.IP[0]), C.int(mask), 0, nil, C.uint(r.Metric)))
 			}
 		}
 	}
@@ -198,16 +199,16 @@ func (t *nativeTap) RemoveRoute(r *Route) error {
 		if len(r.Target.IP) == 4 {
 			mask, _ := r.Target.Mask.Size()
 			if len(via) == 4 {
-				rc = int(C.ZT_GoTap_removeRoute(t.tap, AFInet, unsafe.Pointer(&r.Target.IP[0]), C.int(mask), AFInet, unsafe.Pointer(&(via[0])), C.uint(r.Metric)))
+				rc = int(C.ZT_GoTap_removeRoute(t.tap, syscall.AF_INET, unsafe.Pointer(&r.Target.IP[0]), C.int(mask), syscall.AF_INET, unsafe.Pointer(&(via[0])), C.uint(r.Metric)))
 			} else {
-				rc = int(C.ZT_GoTap_removeRoute(t.tap, AFInet, unsafe.Pointer(&r.Target.IP[0]), C.int(mask), 0, nil, C.uint(r.Metric)))
+				rc = int(C.ZT_GoTap_removeRoute(t.tap, syscall.AF_INET, unsafe.Pointer(&r.Target.IP[0]), C.int(mask), 0, nil, C.uint(r.Metric)))
 			}
 		} else if len(r.Target.IP) == 16 {
 			mask, _ := r.Target.Mask.Size()
 			if len(via) == 16 {
-				rc = int(C.ZT_GoTap_removeRoute(t.tap, AFInet6, unsafe.Pointer(&r.Target.IP[0]), C.int(mask), AFInet6, unsafe.Pointer(&via[0]), C.uint(r.Metric)))
+				rc = int(C.ZT_GoTap_removeRoute(t.tap, syscall.AF_INET6, unsafe.Pointer(&r.Target.IP[0]), C.int(mask), syscall.AF_INET6, unsafe.Pointer(&via[0]), C.uint(r.Metric)))
 			} else {
-				rc = int(C.ZT_GoTap_removeRoute(t.tap, AFInet6, unsafe.Pointer(&r.Target.IP[0]), C.int(mask), 0, nil, C.uint(r.Metric)))
+				rc = int(C.ZT_GoTap_removeRoute(t.tap, syscall.AF_INET6, unsafe.Pointer(&r.Target.IP[0]), C.int(mask), 0, nil, C.uint(r.Metric)))
 			}
 		}
 	}

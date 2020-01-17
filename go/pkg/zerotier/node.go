@@ -35,6 +35,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 	"unsafe"
 
@@ -64,12 +65,6 @@ const (
 
 	// CoreVersionBuild is the build version of the ZeroTier core
 	CoreVersionBuild int = C.ZEROTIER_ONE_VERSION_BUILD
-
-	// AFInet is the address family for IPv4
-	AFInet = C.AF_INET
-
-	// AFInet6 is the address family for IPv6
-	AFInet6 = C.AF_INET6
 
 	networkConfigOpUp     int = C.ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP
 	networkConfigOpUpdate int = C.ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE
@@ -136,15 +131,16 @@ func NewNode(basePath string) (n *Node, err error) {
 	}
 	n.localConfigPath = path.Join(basePath, "local.conf")
 
-	err = n.localConfig.Read(n.localConfigPath, true)
+	_, identitySecretNotFoundErr := os.Stat(path.Join(basePath,"identity.secret"))
+	err = n.localConfig.Read(n.localConfigPath, true, identitySecretNotFoundErr != nil)
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	if n.localConfig.Settings.LogSizeMax >= 0 {
-		n.logW, err = sizeLimitWriterOpen(path.Join(basePath, "service.log"))
+		n.logW, err = sizeLimitWriterOpen(path.Join(basePath, "node.log"))
 		if err != nil {
-			return nil, err
+			return
 		}
 		n.log = log.New(n.logW, "", log.LstdFlags)
 	} else {
@@ -155,50 +151,62 @@ func NewNode(basePath string) (n *Node, err error) {
 		portsChanged := false
 
 		portCheckCount := 0
-		for portCheckCount < 2048 {
+		origPort := n.localConfig.Settings.PrimaryPort
+		for portCheckCount < 256 {
 			portCheckCount++
 			if checkPort(n.localConfig.Settings.PrimaryPort) {
+				if n.localConfig.Settings.PrimaryPort != origPort {
+					n.log.Printf("primary port %d unavailable, found port %d (port search enabled)", origPort, n.localConfig.Settings.PrimaryPort)
+				}
 				break
 			}
-			n.log.Printf("primary port %d unavailable, trying next port (port search enabled)", n.localConfig.Settings.PrimaryPort)
-			n.localConfig.Settings.PrimaryPort++
-			n.localConfig.Settings.PrimaryPort &= 0xffff
+			n.localConfig.Settings.PrimaryPort = int(4096 + (randomUInt() % 16384))
 			portsChanged = true
 		}
-		if portCheckCount == 2048 {
+		if portCheckCount == 256 {
 			return nil, errors.New("unable to bind to primary port, tried 2048 later ports")
 		}
 
 		if n.localConfig.Settings.SecondaryPort > 0 {
 			portCheckCount = 0
-			for portCheckCount < 2048 {
+			origPort = n.localConfig.Settings.SecondaryPort
+			for portCheckCount < 256 {
 				portCheckCount++
 				if checkPort(n.localConfig.Settings.SecondaryPort) {
+					if n.localConfig.Settings.SecondaryPort != origPort {
+						n.log.Printf("secondary port %d unavailable, found port %d (port search enabled)", origPort, n.localConfig.Settings.SecondaryPort)
+					}
 					break
 				}
-				n.log.Printf("secondary port %d unavailable, trying next port (port search enabled)", n.localConfig.Settings.SecondaryPort)
-				n.localConfig.Settings.SecondaryPort++
-				n.localConfig.Settings.SecondaryPort &= 0xffff
+				n.log.Printf("secondary port %d unavailable, trying a random port (port search enabled)", n.localConfig.Settings.SecondaryPort)
+				if portCheckCount <= 64 {
+					n.localConfig.Settings.SecondaryPort = unassignedPrivilegedPorts[randomUInt() % uint(len(unassignedPrivilegedPorts))]
+				} else {
+					n.localConfig.Settings.SecondaryPort = int(16384 + (randomUInt() % 16384))
+				}
 				portsChanged = true
 			}
-			if portCheckCount == 2048 {
+			if portCheckCount == 256 {
 				n.localConfig.Settings.SecondaryPort = 0
 			}
 		}
 
 		if n.localConfig.Settings.TertiaryPort > 0 {
 			portCheckCount = 0
-			for portCheckCount < 2048 {
+			origPort = n.localConfig.Settings.TertiaryPort
+			for portCheckCount < 256 {
 				portCheckCount++
 				if checkPort(n.localConfig.Settings.TertiaryPort) {
+					if n.localConfig.Settings.TertiaryPort != origPort {
+						n.log.Printf("tertiary port %d unavailable, found port %d (port search enabled)", origPort, n.localConfig.Settings.TertiaryPort)
+					}
 					break
 				}
-				n.log.Printf("tertiary port %d unavailable, trying next port (port search enabled)", n.localConfig.Settings.TertiaryPort)
-				n.localConfig.Settings.TertiaryPort++
-				n.localConfig.Settings.TertiaryPort &= 0xffff
+				n.log.Printf("tertiary port %d unavailable, trying a random port (port search enabled)", n.localConfig.Settings.TertiaryPort)
+				n.localConfig.Settings.TertiaryPort = int(32768 + (randomUInt() % 16384))
 				portsChanged = true
 			}
-			if portCheckCount == 2048 {
+			if portCheckCount == 256 {
 				n.localConfig.Settings.TertiaryPort = 0
 			}
 		}
@@ -691,9 +699,9 @@ func goPathCheckFunc(gn unsafe.Pointer, ztAddress C.uint64_t, af C.int, ip unsaf
 	node := nodesByUserPtr[uintptr(gn)]
 	nodesByUserPtrLock.RUnlock()
 	var nip net.IP
-	if af == AFInet {
+	if af == syscall.AF_INET {
 		nip = ((*[4]byte)(ip))[:]
-	} else if af == AFInet6 {
+	} else if af == syscall.AF_INET6 {
 		nip = ((*[16]byte)(ip))[:]
 	} else {
 		return 0
@@ -717,16 +725,18 @@ func goPathLookupFunc(gn unsafe.Pointer, ztAddress C.uint64_t, desiredFamily int
 	if err != nil {
 		return 0
 	}
+
 	ip, port := node.pathLookup(id)
+
 	if len(ip) > 0 && port > 0 && port <= 65535 {
 		ip4 := ip.To4()
 		if len(ip4) == 4 {
-			*((*C.int)(familyP)) = C.int(AFInet)
+			*((*C.int)(familyP)) = C.int(syscall.AF_INET)
 			copy((*[4]byte)(ipP)[:], ip4)
 			*((*C.int)(portP)) = C.int(port)
 			return 1
 		} else if len(ip) == 16 {
-			*((*C.int)(familyP)) = C.int(AFInet6)
+			*((*C.int)(familyP)) = C.int(syscall.AF_INET6)
 			copy((*[16]byte)(ipP)[:], ip)
 			*((*C.int)(portP)) = C.int(port)
 			return 1

@@ -237,17 +237,7 @@
 /**
  * Signed locator for this node
  */
-#define ZT_PROTO_NODE_META_LOCATOR "L"
-
-/**
- * Dictionary mapping identity hash to timestamp to request newer locators for other nodes if known
- */
-#define ZT_PROTO_NODE_META_REFRESH_LOCATORS_IF_NEWER "lt"
-
-/**
- * Dictionary mapping identity hash to locator to supply newer revisions of requested locators
- */
-#define ZT_PROTO_NODE_META_REFRESH_LOCATORS "lr"
+#define ZT_PROTO_NODE_META_LOCATOR "l"
 
 /**
  * Ephemeral C25519 public key
@@ -523,16 +513,17 @@ public:
 		 *   [<[...] additional addresses to look up>
 		 *
 		 * OK response payload:
-		 *   <[...] binary serialized identity>
-		 *  [<[...] additional binary serialized identities>]
-		 *
-		 * If querying a cluster, duplicate OK responses may occasionally occur.
-		 * These must be tolerated, which is easy since they'll have info you
-		 * already have.
+		 *   <[...] identity>
+		 *   <[...] locator>
+		 *   [... additional identity/locator pairs]
 		 *
 		 * If the address is not found, no response is generated. The semantics
 		 * of WHOIS is similar to ARP and NDP in that persistent retrying can
 		 * be performed.
+		 *
+		 * It is possible for an identity but a null/empty locator to be returned
+		 * if no locator is known for a node. Older versions will also send no
+		 * locator field at all.
 		 */
 		VERB_WHOIS = 0x04,
 

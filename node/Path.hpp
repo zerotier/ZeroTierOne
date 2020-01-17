@@ -97,14 +97,14 @@ public:
 	 *
 	 * @param t Time of send
 	 */
-	ZT_ALWAYS_INLINE void sent(const uint64_t t) { _lastOut = t; }
+	ZT_ALWAYS_INLINE void sent(const int64_t t) { _lastOut = t; }
 
 	/**
 	 * Called when a packet is received from this remote path, regardless of content
 	 *
 	 * @param t Time of receive
 	 */
-	ZT_ALWAYS_INLINE void received(const uint64_t t) { _lastIn = t; }
+	ZT_ALWAYS_INLINE void received(const int64_t t) { _lastIn = t; }
 
 	/**
 	 * Check path aliveness

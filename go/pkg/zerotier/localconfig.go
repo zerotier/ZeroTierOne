@@ -16,7 +16,6 @@ package zerotier
 import (
 	"encoding/json"
 	"io/ioutil"
-	rand "math/rand"
 	"os"
 	"runtime"
 )
@@ -92,15 +91,21 @@ type LocalConfig struct {
 	Settings LocalConfigSettings `json:"settings,omitempty"`
 }
 
-// Read this local config from a file, initializing to defaults if the file does not exist
-func (lc *LocalConfig) Read(p string, saveDefaultsIfNotExist bool) error {
+// Read this local config from a file, initializing to defaults if the file does not exist.
+func (lc *LocalConfig) Read(p string, saveDefaultsIfNotExist bool,isTotallyNewNode bool) error {
 	if lc.Physical == nil {
 		lc.Physical = make(map[string]LocalConfigPhysicalPathConfiguration)
 		lc.Virtual = make(map[Address]LocalConfigVirtualAddressConfiguration)
 		lc.Network = make(map[NetworkID]NetworkLocalSettings)
-		lc.Settings.PrimaryPort = 9993
-		lc.Settings.SecondaryPort = 16384 + (rand.Int() % 16384)
-		lc.Settings.TertiaryPort = 32768 + (rand.Int() % 16384)
+
+		// LocalConfig default settings
+		if isTotallyNewNode {
+			lc.Settings.PrimaryPort = 893
+		} else {
+			lc.Settings.PrimaryPort = 9993
+		}
+		lc.Settings.SecondaryPort = unassignedPrivilegedPorts[randomUInt() % uint(len(unassignedPrivilegedPorts))]
+		lc.Settings.TertiaryPort = int(32768 + (randomUInt() % 16384))
 		lc.Settings.PortSearch = true
 		lc.Settings.PortMapping = true
 		lc.Settings.LogSizeMax = 128
@@ -108,6 +113,8 @@ func (lc *LocalConfig) Read(p string, saveDefaultsIfNotExist bool) error {
 		switch runtime.GOOS {
 		case "windows":
 			lc.Settings.InterfacePrefixBlacklist = []string{"loopback"}
+		case "darwin":
+			lc.Settings.InterfacePrefixBlacklist = []string{"lo","utun","feth"}
 		default:
 			lc.Settings.InterfacePrefixBlacklist = []string{"lo"}
 		}

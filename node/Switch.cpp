@@ -579,34 +579,20 @@ unsigned long Switch::doTimerTasks(void *tPtr,int64_t now)
 
 bool Switch::_trySend(void *tPtr,Packet &packet,bool encrypt)
 {
-	SharedPtr<Path> viaPath;
 	const int64_t now = RR->node->now();
-	const Address destination(packet.destination());
-
-	const SharedPtr<Peer> peer(RR->topology->get(destination));
+	const SharedPtr<Peer> peer(RR->topology->get(packet.destination()));
+	SharedPtr<Path> viaPath;
 	if (peer) {
 		viaPath = peer->path(now);
 		if (!viaPath) {
-			if (peer->rateGateTryStaticPath(now)) {
-				InetAddress tryAddr;
-				bool gotPath = RR->node->externalPathLookup(tPtr,peer->identity(),AF_INET6,tryAddr);
-				if ((gotPath)&&(tryAddr)) {
-					peer->sendHELLO(tPtr,-1,tryAddr,now);
-				} else {
-					gotPath = RR->node->externalPathLookup(tPtr,peer->identity(),AF_INET,tryAddr);
-					if ((gotPath)&&(tryAddr))
-						peer->sendHELLO(tPtr,-1,tryAddr,now);
-				}
-			}
-
 			const SharedPtr<Peer> relay(RR->topology->root());
 			if (relay) {
 				viaPath = relay->path(now);
 				if (!viaPath)
 					return false;
+			} else {
+				return false;
 			}
-
-			return false;
 		}
 	} else {
 		return false;

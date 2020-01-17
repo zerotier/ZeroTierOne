@@ -51,8 +51,17 @@ class Locator;
 class Node : public NetworkController::Sender
 {
 public:
-	Node(void *uPtr, void *tPtr, const struct ZT_Node_Callbacks *callbacks, int64_t now);
+	Node(void *uPtr,void *tPtr,const struct ZT_Node_Callbacks *callbacks,int64_t now);
 	virtual ~Node();
+
+	/**
+	 * Perform any operations that should be done prior to deleting a Node
+	 *
+	 * This is technically optional but recommended.
+	 *
+	 * @param tPtr Thread pointer to pass through to callbacks
+	 */
+	void shutdown(void *tPtr);
 
 	// Get rid of alignment warnings on 32-bit Windows and possibly improve performance
 #ifdef __WINDOWS__
@@ -101,8 +110,22 @@ public:
 
 	// Internal functions ------------------------------------------------------
 
+	/**
+	 * @return Most recent time value supplied to core via API
+	 */
 	ZT_ALWAYS_INLINE int64_t now() const { return _now; }
 
+	/**
+	 * Send packet to to the physical wire via callback
+	 *
+	 * @param tPtr Thread pointer
+	 * @param localSocket Local socket or -1 to use all/any
+	 * @param addr Destination address
+	 * @param data Data to send
+	 * @param len Length in bytes
+	 * @param ttl TTL or 0 for default/max
+	 * @return True if send appears successful
+	 */
 	ZT_ALWAYS_INLINE bool putPacket(void *tPtr,const int64_t localSocket,const InetAddress &addr,const void *data,unsigned int len,unsigned int ttl = 0)
 	{
 		return (_cb.wirePacketSendFunction(
@@ -116,6 +139,19 @@ public:
 			ttl) == 0);
 	}
 
+	/**
+	 * Inject frame into virtual Ethernet tap
+	 *
+	 * @param tPtr Thread pointer
+	 * @param nwid Network ID
+	 * @param nuptr Network-associated user pointer
+	 * @param source Source MAC address
+	 * @param dest Destination MAC address
+	 * @param etherType 16-bit Ethernet type
+	 * @param vlanId Ethernet VLAN ID (currently unused)
+	 * @param data Ethernet frame data
+	 * @param len Ethernet frame length in bytes
+	 */
 	ZT_ALWAYS_INLINE void putFrame(void *tPtr,uint64_t nwid,void **nuptr,const MAC &source,const MAC &dest,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
 	{
 		_cb.virtualNetworkFrameFunction(
@@ -132,30 +168,118 @@ public:
 			len);
 	}
 
+	/**
+	 * @param nwid Network ID
+	 * @return Network associated with ID
+	 */
 	ZT_ALWAYS_INLINE SharedPtr<Network> network(uint64_t nwid) const
 	{
-		Mutex::Lock _l(_networks_m);
-		const SharedPtr<Network> *n = _networks.get(nwid);
-		if (n)
-			return *n;
-		return SharedPtr<Network>();
+		RWMutex::RLock l(_networks_m);
+		return _networks[(unsigned long)((nwid + (nwid >> 32U)) & _networksMask)];
 	}
 
-	ZT_ALWAYS_INLINE std::vector<ZT_InterfaceAddress> directPaths() const
+	/**
+	 * @return Known local interface addresses for this node
+	 */
+	ZT_ALWAYS_INLINE std::vector<ZT_InterfaceAddress> localInterfaceAddresses() const
 	{
 		Mutex::Lock _l(_localInterfaceAddresses_m);
 		return _localInterfaceAddresses;
 	}
 
+	/**
+	 * Post an event via external callback
+	 *
+	 * @param tPtr Thread pointer
+	 * @param ev Event object
+	 * @param md Event data or NULL if none
+	 */
 	ZT_ALWAYS_INLINE void postEvent(void *tPtr,ZT_Event ev,const void *md = (const void *)0) { _cb.eventCallback(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,ev,md); }
+
+	/**
+	 * Post network port configuration via external callback
+	 *
+	 * @param tPtr Thread pointer
+	 * @param nwid Network ID
+	 * @param nuptr Network-associated user pointer
+	 * @param op Config operation or event type
+	 * @param nc Network config info
+	 */
 	ZT_ALWAYS_INLINE void configureVirtualNetworkPort(void *tPtr,uint64_t nwid,void **nuptr,ZT_VirtualNetworkConfigOperation op,const ZT_VirtualNetworkConfig *nc) { _cb.virtualNetworkConfigFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,nwid,nuptr,op,nc); }
+
+	/**
+	 * @return True if node appears online
+	 */
 	ZT_ALWAYS_INLINE bool online() const { return _online; }
+
+	/**
+	 * Get a state object
+	 *
+	 * @param tPtr Thread pointer
+	 * @param type Object type to get
+	 * @param id Object ID
+	 * @param data Data buffer
+	 * @param maxlen Maximum data length
+	 * @return Number of bytes actually read or 0 if not found
+	 */
 	ZT_ALWAYS_INLINE int stateObjectGet(void *const tPtr,ZT_StateObjectType type,const uint64_t id[2],void *const data,const unsigned int maxlen) { return _cb.stateGetFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,type,id,data,maxlen); }
+
+	/**
+	 * Store a state object
+	 *
+	 * @param tPtr Thread pointer
+	 * @param type Object type to get
+	 * @param id Object ID
+	 * @param data Data to store
+	 * @param len Length of data
+	 */
 	ZT_ALWAYS_INLINE void stateObjectPut(void *const tPtr,ZT_StateObjectType type,const uint64_t id[2],const void *const data,const unsigned int len) { _cb.statePutFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,type,id,data,(int)len); }
+
+	/**
+	 * Delete a state object
+	 *
+	 * @param tPtr Thread pointer
+	 * @param type Object type to delete
+	 * @param id Object ID
+	 */
 	ZT_ALWAYS_INLINE void stateObjectDelete(void *const tPtr,ZT_StateObjectType type,const uint64_t id[2]) { _cb.statePutFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,type,id,(const void *)0,-1); }
+
+	/**
+	 * Check whether a path should be used for ZeroTier traffic
+	 *
+	 * This performs internal checks and also calls out to an external callback if one is defined.
+	 *
+	 * @param tPtr Thread pointer
+	 * @param ztaddr ZeroTier address
+	 * @param localSocket Local socket or -1 if unknown
+	 * @param remoteAddress Remote address
+	 * @return True if path should be used
+	 */
 	bool shouldUsePathForZeroTierTraffic(void *tPtr,const Address &ztaddr,const int64_t localSocket,const InetAddress &remoteAddress);
+
+	/**
+	 * Query callback for a physical address for a peer
+	 *
+	 * @param tPtr Thread pointer
+	 * @param id Full identity of ZeroTier node
+	 * @param family Desired address family or -1 for any
+	 * @param addr Buffer to store address (result paramter)
+	 * @return True if addr was filled with something
+	 */
 	bool externalPathLookup(void *tPtr,const Identity &id,int family,InetAddress &addr);
+
+	/**
+	 * Set physical path configuration
+	 *
+	 * @param pathNetwork Physical path network/netmask bits (CIDR notation)
+	 * @param pathConfig Path configuration
+	 * @return Return to pass through to external API
+	 */
 	ZT_ResultCode setPhysicalPathConfiguration(const struct sockaddr_storage *pathNetwork,const ZT_PhysicalPathConfiguration *pathConfig);
+
+	/**
+	 * @return This node's identity
+	 */
 	ZT_ALWAYS_INLINE const Identity &identity() const { return _RR.identity; }
 
 	/**
@@ -212,22 +336,25 @@ public:
 		return false;
 	}
 
+	/**
+	 * Check whether a local controller has authorized a member on a network
+	 *
+	 * This is used by controllers to avoid needless certificate checks when we already
+	 * know if this has occurred. It's a bit of a hack but saves a massive amount of
+	 * controller CPU. It's easiest to put this here, and it imposes no overhead on
+	 * non-controllers.
+	 *
+	 * @param now Current time
+	 * @param nwid Network ID
+	 * @param addr Member address to check
+	 * @return True if member has been authorized
+	 */
+	bool localControllerHasAuthorized(int64_t now,uint64_t nwid,const Address &addr) const;
+
+	// Implementation of NetworkController::Sender interface
 	virtual void ncSendConfig(uint64_t nwid,uint64_t requestPacketId,const Address &destination,const NetworkConfig &nc,bool sendLegacyFormatConfig);
 	virtual void ncSendRevocation(const Address &destination,const Revocation &rev);
 	virtual void ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &destination,NetworkController::ErrorCode errorCode);
-
-	inline bool localControllerHasAuthorized(const int64_t now,const uint64_t nwid,const Address &addr) const
-	{
-		_localControllerAuthorizations_m.lock();
-		const int64_t *const at = _localControllerAuthorizations.get(_LocalControllerAuth(nwid,addr));
-		_localControllerAuthorizations_m.unlock();
-		if (at)
-			return ((now - *at) < (ZT_NETWORK_AUTOCONF_DELAY * 3));
-		return false;
-	}
-
-	inline void setMultipathMode(uint8_t mode) { _multipathMode = mode; }
-	inline uint8_t getMultipathMode() { return _multipathMode; }
 
 private:
 	RuntimeEnvironment _RR;
@@ -236,11 +363,11 @@ private:
 	void *_uPtr; // _uptr (lower case) is reserved in Visual Studio :P
 
 	// For tracking packet IDs to filter out OK/ERROR replies to packets we did not send
-	uint8_t _expectingRepliesToBucketPtr[ZT_EXPECTING_REPLIES_BUCKET_MASK1 + 1];
-	uint32_t _expectingRepliesTo[ZT_EXPECTING_REPLIES_BUCKET_MASK1 + 1][ZT_EXPECTING_REPLIES_BUCKET_MASK2 + 1];
+	volatile uint8_t _expectingRepliesToBucketPtr[ZT_EXPECTING_REPLIES_BUCKET_MASK1 + 1];
+	volatile uint32_t _expectingRepliesTo[ZT_EXPECTING_REPLIES_BUCKET_MASK1 + 1][ZT_EXPECTING_REPLIES_BUCKET_MASK2 + 1];
 
 	// Time of last identity verification indexed by InetAddress.rateGateHash() -- used in IncomingPacket::_doHELLO() via rateGateIdentityVerification()
-	int64_t _lastIdentityVerification[16384];
+	volatile int64_t _lastIdentityVerification[16384];
 
 	/* Map that remembers if we have recently sent a network config to someone
 	 * querying us as a controller. This is an optimization to allow network
@@ -256,21 +383,25 @@ private:
 		ZT_ALWAYS_INLINE bool operator!=(const _LocalControllerAuth &a) const { return ((a.nwid != nwid)||(a.address != address)); }
 	};
 	Hashtable< _LocalControllerAuth,int64_t > _localControllerAuthorizations;
-	Hashtable< uint64_t,SharedPtr<Network> > _networks;
+
+	// Networks are stored in a flat hash table that is resized on any network ID collision. This makes
+	// network lookup by network ID a few bitwise ops and an array index.
+	std::vector< SharedPtr<Network> > _networks;
+	uint64_t _networksMask;
+
 	std::vector< ZT_InterfaceAddress > _localInterfaceAddresses;
 
 	Mutex _localControllerAuthorizations_m;
-	Mutex _networks_m;
+	RWMutex _networks_m;
 	Mutex _localInterfaceAddresses_m;
 	Mutex _backgroundTasksLock;
 
-	uint8_t _multipathMode;
-
 	volatile int64_t _now;
-	int64_t _lastPing;
-	int64_t _lastHousekeepingRun;
-	int64_t _lastNetworkHousekeepingRun;
-	bool _online;
+	volatile int64_t _lastPing;
+	volatile int64_t _lastHousekeepingRun;
+	volatile int64_t _lastNetworkHousekeepingRun;
+	volatile int64_t _lastPathKeepaliveCheck;
+	volatile bool _online;
 };
 
 } // namespace ZeroTier

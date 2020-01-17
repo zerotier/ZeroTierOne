@@ -49,7 +49,7 @@ public:
 	~Topology();
 
 	/**
-	 * Add a peer to database
+	 * Add peer to database
 	 *
 	 * This will not replace existing peers. In that case the existing peer
 	 * record is returned.
@@ -57,14 +57,7 @@ public:
 	 * @param peer Peer to add
 	 * @return New or existing peer (should replace 'peer')
 	 */
-	ZT_ALWAYS_INLINE SharedPtr<Peer> add(const SharedPtr<Peer> &peer)
-	{
-		RWMutex::Lock _l(_peers_l);
-		SharedPtr<Peer> &hp = _peers[peer->address()];
-		if (!hp)
-			hp = peer;
-		return hp;
-	}
+	SharedPtr<Peer> add(void *tPtr,const SharedPtr<Peer> &peer);
 
 	/**
 	 * Get a peer from its address
@@ -73,29 +66,25 @@ public:
 	 * @param zta ZeroTier address of peer
 	 * @return Peer or NULL if not found
 	 */
-	ZT_ALWAYS_INLINE SharedPtr<Peer> get(const Address &zta) const
+	ZT_ALWAYS_INLINE SharedPtr<Peer> get(void *tPtr,const Address &zta)
 	{
-		RWMutex::RLock l1(_peers_l);
-		const SharedPtr<Peer> *const ap = _peers.get(zta);
-		return (ap) ? *ap : SharedPtr<Peer>();
-	}
-
-	/**
-	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
-	 * @param zta ZeroTier address of peer
-	 * @return Identity or NULL identity if not found
-	 */
-	ZT_ALWAYS_INLINE Identity getIdentity(void *tPtr,const Address &zta) const
-	{
-		if (zta == _myIdentity.address()) {
-			return _myIdentity;
-		} else {
+		{
 			RWMutex::RLock _l(_peers_l);
 			const SharedPtr<Peer> *const ap = _peers.get(zta);
 			if (ap)
-				return (*ap)->identity();
+				return *ap;
 		}
-		return Identity();
+
+		SharedPtr<Peer> p;
+		_loadCached(tPtr,zta,p);
+		if (p) {
+			RWMutex::Lock _l(_peers_l);
+			SharedPtr<Peer> &hp = _peers[zta];
+			if (!hp)
+				hp = p;
+		}
+
+		return p;
 	}
 
 	/**
@@ -171,8 +160,7 @@ public:
 		Address *a = (Address *)0;
 		SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
 		while (i.next(a,p)) {
-			if (!f(*((const SharedPtr<Peer> *)p)))
-				break;
+			f(*((const SharedPtr<Peer> *)p));
 		}
 	}
 
@@ -190,17 +178,42 @@ public:
 	{
 		RWMutex::RLock l(_peers_l);
 
-		std::vector<uintptr_t> rootPeerPtrs;
-		for(std::vector< SharedPtr<Peer> >::const_iterator i(_rootPeers.begin());i!=_rootPeers.end();++i)
-			rootPeerPtrs.push_back((uintptr_t)i->ptr());
-		std::sort(rootPeerPtrs.begin(),rootPeerPtrs.end());
+		const unsigned long rootPeerCnt = _rootPeers.size();
+		uintptr_t *const rootPeerPtrs = (uintptr_t *)malloc(sizeof(uintptr_t) * rootPeerCnt);
+		if (!rootPeerPtrs)
+			throw std::bad_alloc();
+		for(unsigned long i=0;i<rootPeerCnt;++i)
+			rootPeerPtrs[i] = (uintptr_t)_rootPeers[i].ptr();
+		std::sort(rootPeerPtrs,rootPeerPtrs + rootPeerCnt);
+		uintptr_t *const rootPeerPtrsEnd = rootPeerPtrs + rootPeerCnt;
 
-		Hashtable< Address,SharedPtr<Peer> >::Iterator i(const_cast<Topology *>(this)->_peers);
-		Address *a = (Address *)0;
-		SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
-		while (i.next(a,p)) {
-			if (!f(*((const SharedPtr<Peer> *)p),std::binary_search(rootPeerPtrs.begin(),rootPeerPtrs.end(),(uintptr_t)p->ptr())))
-				break;
+		try {
+			Hashtable< Address,SharedPtr<Peer> >::Iterator i(const_cast<Topology *>(this)->_peers);
+			Address *a = (Address *)0;
+			SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
+			while (i.next(a,p)) {
+				f(*((const SharedPtr<Peer> *)p),std::binary_search(rootPeerPtrs,rootPeerPtrsEnd,(uintptr_t)p->ptr()));
+			}
+		} catch ( ... ) {} // should not throw
+
+		free((void *)rootPeerPtrs);
+	}
+
+	/**
+	 * Iterate through all paths in the system
+	 *
+	 * @tparam F Function to call for each path
+	 * @param f
+	 */
+	template<typename F>
+	ZT_ALWAYS_INLINE void eachPath(F f) const
+	{
+		RWMutex::RLock l(_paths_l);
+		Hashtable< Path::HashKey,SharedPtr<Path> >::Iterator i(const_cast<Topology *>(this)->_paths);
+		Path::HashKey *k = (Path::HashKey *)0;
+		SharedPtr<Path> *p = (SharedPtr<Path> *)0;
+		while (i.next(k,p)) {
+			f(*((const SharedPtr<Peer> *)p));
 		}
 	}
 
@@ -284,14 +297,21 @@ public:
 	 *
 	 * @param now Current time
 	 */
-	void rankRoots(const int64_t now);
+	void rankRoots(int64_t now);
 
 	/**
 	 * Do periodic tasks such as database cleanup
 	 */
-	void doPeriodicTasks(const int64_t now);
+	void doPeriodicTasks(void *tPtr,int64_t now);
+
+	/**
+	 * Save all currently known peers to data store
+	 */
+	void saveAll(void *tPtr);
 
 private:
+	void _loadCached(void *tPtr,const Address &zta,SharedPtr<Peer> &peer);
+
 	const RuntimeEnvironment *const RR;
 	const Identity _myIdentity;
 

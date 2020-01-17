@@ -6,9 +6,8 @@ type Root struct {
 	Identity Identity `json:"identity"`
 
 	// Locator describes the endpoints where this root may be found.
-	Locator  Locator `json:"locator"`
+	Locator  Locator `json:"locator,omitempty"`
 
-	// URL is an optional URL where the latest Root may be fetched.
-	// This is one method of locator update, while in-band mechanisms are the other.
-	URL      string `json:"url"`
+	// Bootstrap is an array of IP/port locations where this root might be found if a locator is not known.
+	Bootstrap []InetAddress `json:"bootstrap,omitempty"`
 }

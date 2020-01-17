@@ -33,6 +33,15 @@
 #endif
 #endif
 
+#if !defined(__GCC__) && !defined (__clang__) && !defined(__INTEL_COMPILER)
+#define ZT_PACKED_STRUCT(D) __pragma(pack(push,1)) D __pragma(pack(pop))
+#pragma warning(disable : 4290)
+#pragma warning(disable : 4996)
+#pragma warning(disable : 4101)
+#else
+#define ZT_PACKED_STRUCT(D) D __attribute__((packed))
+#endif
+
 #if defined(_WIN32) || defined(_WIN64)
 #ifndef __WINDOWS__
 #define __WINDOWS__
@@ -42,14 +51,6 @@
 #endif
 #undef __UNIX_LIKE__
 #undef __BSD__
-#if !defined(__GNUC__) && !defined (__clang__) && !defined(__INTEL_COMPILER)
-#define ZT_PACKED_STRUCT(D) __pragma(pack(push,1)) D __pragma(pack(pop))
-#pragma warning(disable : 4290)
-#pragma warning(disable : 4996)
-#pragma warning(disable : 4101)
-#else
-#define ZT_PACKED_STRUCT(D) D __attribute__((packed))
-#endif
 #include <WinSock2.h>
 #include <Windows.h>
 #endif

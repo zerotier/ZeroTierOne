@@ -42,23 +42,25 @@ int Locator::marshal(uint8_t data[ZT_LOCATOR_MARSHAL_SIZE_MAX],const bool exclud
 	if ((_endpointCount > ZT_LOCATOR_MAX_ENDPOINTS)||(_signatureLength > ZT_SIGNATURE_BUFFER_SIZE))
 		return -1;
 
-	Utils::putUInt64(data,(uint64_t)_ts);
+	Utils::storeBigEndian<int64_t>(data,_ts);
 	int p = 8;
 
-	data[p++] = (uint8_t)(_endpointCount >> 8U);
-	data[p++] = (uint8_t)_endpointCount;
-	for(unsigned int i=0;i<_endpointCount;++i) {
-		int tmp = _at[i].marshal(data + p);
-		if (tmp < 0)
-			return -1;
-		p += tmp;
-	}
+	if (_ts > 0) {
+		data[p++] = (uint8_t)(_endpointCount >> 8U);
+		data[p++] = (uint8_t)_endpointCount;
+		for (unsigned int i = 0; i < _endpointCount; ++i) {
+			int tmp = _at[i].marshal(data + p);
+			if (tmp < 0)
+				return -1;
+			p += tmp;
+		}
 
-	if (!excludeSignature) {
-		data[p++] = (uint8_t)(_signatureLength >> 8U);
-		data[p++] = (uint8_t)_signatureLength;
-		memcpy(data + p,_signature,_signatureLength);
-		p += (int)_signatureLength;
+		if (!excludeSignature) {
+			data[p++] = (uint8_t)(_signatureLength >> 8U);
+			data[p++] = (uint8_t)_signatureLength;
+			memcpy(data + p,_signature,_signatureLength);
+			p += (int)_signatureLength;
+		}
 	}
 
 	return p;
@@ -69,34 +71,38 @@ int Locator::unmarshal(const uint8_t *restrict data,const int len)
 	if (len <= (8 + 2 + 48))
 		return -1;
 
-	_ts = (int64_t)Utils::readUInt64(data);
+	_ts = Utils::loadBigEndian<int64_t>(data);
 	int p = 8;
 
-	unsigned int ec = (int)data[p++];
-	ec <<= 8U;
-	ec |= data[p++];
-	if (ec > ZT_LOCATOR_MAX_ENDPOINTS)
-		return -1;
-	_endpointCount = ec;
-	for(int i=0;i<ec;++i) {
-		int tmp = _at[i].unmarshal(data + p,len - p);
-		if (tmp < 0)
+	if (_ts > 0) {
+		unsigned int ec = (int)data[p++];
+		ec <<= 8U;
+		ec |= data[p++];
+		if (ec > ZT_LOCATOR_MAX_ENDPOINTS)
 			return -1;
-		p += tmp;
-	}
+		_endpointCount = ec;
+		for (int i = 0; i < ec; ++i) {
+			int tmp = _at[i].unmarshal(data + p,len - p);
+			if (tmp < 0)
+				return -1;
+			p += tmp;
+		}
 
-	if ((p + 2) > len)
-		return -1;
-	unsigned int sl = data[p++];
-	sl <<= 8U;
-	sl |= data[p++];
-	if (sl > ZT_SIGNATURE_BUFFER_SIZE)
-		return -1;
-	_signatureLength = sl;
-	if ((p + sl) > len)
-		return -1;
-	memcpy(_signature,data + p,sl);
-	p += (int)sl;
+		if ((p + 2) > len)
+			return -1;
+		unsigned int sl = data[p++];
+		sl <<= 8U;
+		sl |= data[p++];
+		if (sl > ZT_SIGNATURE_BUFFER_SIZE)
+			return -1;
+		_signatureLength = sl;
+		if ((p + sl) > len)
+			return -1;
+		memcpy(_signature,data + p,sl);
+		p += (int)sl;
+	} else {
+		_ts = 0;
+	}
 
 	return p;
 }

@@ -29,8 +29,6 @@ const (
 	ErrTapInitFailed            Err = "unable to create native Tap instance"
 	ErrUnrecognizedIdentityType Err = "unrecognized identity type"
 	ErrInvalidKey               Err = "invalid key data"
-	ErrInvalidSignature         Err = "invalid signature"
-	ErrSecretKeyRequired        Err = "secret key required"
 )
 
 // APIErr is returned by the JSON API when a call fails
