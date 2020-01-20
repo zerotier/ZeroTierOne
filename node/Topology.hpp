@@ -45,7 +45,7 @@ class RuntimeEnvironment;
 class Topology
 {
 public:
-	Topology(const RuntimeEnvironment *renv,const Identity &myId);
+	Topology(const RuntimeEnvironment *renv,const Identity &myId,void *tPtr);
 	~Topology();
 
 	/**
@@ -280,9 +280,11 @@ public:
 	/**
 	 * Add a root server's identity to the root server set
 	 *
+	 * @param tPtr Thread pointer
 	 * @param id Root server identity
+	 * @param bootstrap If non-NULL, a bootstrap address to attempt to find this root
 	 */
-	void addRoot(const Identity &id);
+	void addRoot(void *tPtr,const Identity &id,const InetAddress &bootstrap);
 
 	/**
 	 * Remove a root server's identity from the root server set

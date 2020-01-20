@@ -14,6 +14,7 @@
 #ifndef ZT_C25519_HPP
 #define ZT_C25519_HPP
 
+#include "Constants.hpp"
 #include "Utils.hpp"
 
 namespace ZeroTier {
@@ -32,12 +33,7 @@ public:
 	/**
 	 * Generate a C25519 elliptic curve key pair
 	 */
-	static inline void generate(uint8_t pub[ZT_C25519_PUBLIC_KEY_LEN],uint8_t priv[ZT_C25519_PRIVATE_KEY_LEN])
-	{
-		Utils::getSecureRandom(priv,ZT_C25519_PRIVATE_KEY_LEN);
-		_calcPubDH(pub,priv);
-		_calcPubED(pub,priv);
-	}
+	static void generate(uint8_t pub[ZT_C25519_PUBLIC_KEY_LEN],uint8_t priv[ZT_C25519_PRIVATE_KEY_LEN]);
 
 	/**
 	 * Generate a key pair satisfying a condition
@@ -53,7 +49,7 @@ public:
 	 * @tparam F Type of 'cond'
 	 */
 	template<typename F>
-	static inline void generateSatisfying(F cond,uint8_t pub[ZT_C25519_PUBLIC_KEY_LEN],uint8_t priv[ZT_C25519_PRIVATE_KEY_LEN])
+	static ZT_ALWAYS_INLINE void generateSatisfying(F cond,uint8_t pub[ZT_C25519_PUBLIC_KEY_LEN],uint8_t priv[ZT_C25519_PRIVATE_KEY_LEN])
 	{
 		Utils::getSecureRandom(priv,ZT_C25519_PRIVATE_KEY_LEN);
 		_calcPubED(pub,priv); // do Ed25519 key -- bytes 32-63 of pub and priv

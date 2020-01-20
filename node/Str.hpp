@@ -20,15 +20,14 @@
 #include "MAC.hpp"
 #include "InetAddress.hpp"
 
-#include <string>
-
-#define ZT_STR_CAPACITY 1021
-
 namespace ZeroTier {
 
 /**
  * A short non-allocating replacement for std::string
+ *
+ * @tparam C Maximum capacity (default: 1021 to make total size 1024)
  */
+template<unsigned long C = 1021>
 class Str
 {
 public:
@@ -47,10 +46,7 @@ public:
 		_s[0] = 0;
 		(*this) << s;
 	}
-	ZT_ALWAYS_INLINE Str(const std::string &s)
-	{
-		*this = s;
-	}
+	ZT_ALWAYS_INLINE Str(const std::string &s) { *this = s; }
 
 	ZT_ALWAYS_INLINE Str &operator=(const Str &s)
 	{
@@ -66,7 +62,7 @@ public:
 	}
 	ZT_ALWAYS_INLINE Str &operator=(const std::string &s)
 	{
-		if (s.length() > ZT_STR_CAPACITY) {
+		if (s.length() > C) {
 			_l = 0;
 			_s[0] = 0;
 			throw ZT_EXCEPTION_OUT_OF_BOUNDS;
@@ -99,9 +95,9 @@ public:
 		if (likely(s != (const char *)0)) {
 			unsigned long l = _l;
 			while (*s) {
-				if (unlikely(l >= ZT_STR_CAPACITY)) {
-					_s[ZT_STR_CAPACITY] = 0;
-					_l = ZT_STR_CAPACITY;
+				if (unlikely(l >= C)) {
+					_s[C] = 0;
+					_l = C;
 					throw ZT_EXCEPTION_OUT_OF_BOUNDS;
 				}
 				_s[l++] = *(s++);
@@ -114,8 +110,8 @@ public:
 	ZT_ALWAYS_INLINE Str &operator<<(const Str &s) { return ((*this) << s._s); }
 	ZT_ALWAYS_INLINE Str &operator<<(const char c)
 	{
-		if (unlikely(_l >= ZT_STR_CAPACITY)) {
-			_s[ZT_STR_CAPACITY] = 0;
+		if (unlikely(_l >= C)) {
+			_s[C] = 0;
 			throw ZT_EXCEPTION_OUT_OF_BOUNDS;
 		}
 		_s[(unsigned long)(_l++)] = c;
@@ -157,9 +153,9 @@ public:
 			unsigned int c = 0;
 			while (*s) {
 				if (c++ >= max) break;
-				if (unlikely(l >= ZT_STR_CAPACITY)) {
-					_s[ZT_STR_CAPACITY] = 0;
-					_l = ZT_STR_CAPACITY;
+				if (unlikely(l >= C)) {
+					_s[C] = 0;
+					_l = C;
 					throw ZT_EXCEPTION_OUT_OF_BOUNDS;
 				}
 				_s[l++] = *s;
@@ -191,7 +187,7 @@ public:
 
 private:
 	uint16_t _l;
-	char _s[ZT_STR_CAPACITY+1];
+	char _s[C+1];
 };
 
 } // namespace ZeroTier

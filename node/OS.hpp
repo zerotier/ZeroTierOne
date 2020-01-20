@@ -145,6 +145,9 @@
 #define __CPP11__
 #endif
 #endif
+#ifndef __CPP11__
+#define nullptr (0)
+#endif
 
 #ifdef SOCKET
 #define ZT_SOCKET SOCKET

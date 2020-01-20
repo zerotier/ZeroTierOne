@@ -15,6 +15,7 @@
 
 namespace ZeroTier {
 
+// Sorts roots so as to put the lowest latency alive root first.
 struct _RootSortComparisonOperator
 {
 	ZT_ALWAYS_INLINE _RootSortComparisonOperator(const int64_t now) : _now(now) {}
@@ -26,18 +27,43 @@ struct _RootSortComparisonOperator
 				return (a->latency() < b->latency());
 			return true;
 		}
-		return false;
+		return a->bootstrap() >= b->bootstrap();
 	}
 	const int64_t _now;
 };
 
-Topology::Topology(const RuntimeEnvironment *renv,const Identity &myId) :
+Topology::Topology(const RuntimeEnvironment *renv,const Identity &myId,void *tPtr) :
 	RR(renv),
 	_myIdentity(myId),
 	_numConfiguredPhysicalPaths(0),
 	_peers(128),
 	_paths(256)
 {
+	uint64_t idtmp[2]; idtmp[0] = 0; idtmp[1] = 0;
+	std::vector<uint8_t> data(RR->node->stateObjectGet(tPtr,ZT_STATE_OBJECT_ROOTS,idtmp));
+	if (!data.empty()) {
+		uint8_t *dptr = data.data();
+		int drem = (int)data.size();
+		while (drem > 0) {
+			Identity id;
+			int l = id.unmarshal(dptr,drem);
+			if (l > 0) {
+				_roots.insert(id);
+				dptr += l;
+				drem -= l;
+			}
+		}
+	}
+
+	for(std::set<Identity>::const_iterator r(_roots.begin());r!=_roots.end();++r) {
+		SharedPtr<Peer> p;
+		_loadCached(tPtr,r->address(),p);
+		if ((!p)||(p->identity() != *r)) {
+			p.set(new Peer(RR));
+			p->init(myId,*r);
+		}
+		_rootPeers.push_back(p);
+	}
 }
 
 Topology::~Topology()
@@ -103,7 +129,7 @@ void Topology::setPhysicalPathConfiguration(const struct sockaddr_storage *pathN
 	}
 }
 
-void Topology::addRoot(const Identity &id)
+void Topology::addRoot(void *tPtr,const Identity &id,const InetAddress &bootstrap)
 {
 	if (id == _myIdentity) return; // sanity check
 	RWMutex::Lock l1(_peers_l);
@@ -113,8 +139,25 @@ void Topology::addRoot(const Identity &id)
 		if (!p) {
 			p.set(new Peer(RR));
 			p->init(_myIdentity,id);
+			if (bootstrap)
+				p->setBootstrap(Endpoint(bootstrap));
 		}
 		_rootPeers.push_back(p);
+
+		uint8_t *const roots = (uint8_t *)malloc(ZT_IDENTITY_MARSHAL_SIZE_MAX * _roots.size());
+		if (roots) {
+			int p = 0;
+			for(std::set<Identity>::const_iterator i(_roots.begin());i!=_roots.end();++i) {
+				int pp = i->marshal(roots + p,false);
+				if (pp > 0)
+					p += pp;
+			}
+			uint64_t id[2];
+			id[0] = 0;
+			id[1] = 0;
+			RR->node->stateObjectPut(tPtr,ZT_STATE_OBJECT_ROOTS,id,roots,(unsigned int)p);
+			free(roots);
+		}
 	}
 }
 
@@ -182,6 +225,25 @@ void Topology::saveAll(void *tPtr)
 
 void Topology::_loadCached(void *tPtr,const Address &zta,SharedPtr<Peer> &peer)
 {
+	uint64_t id[2];
+	id[0] = zta.toInt();
+	id[1] = 0;
+	std::vector<uint8_t> data(RR->node->stateObjectGet(tPtr,ZT_STATE_OBJECT_PEER,id));
+	if (!data.empty()) {
+		const uint8_t *d = data.data();
+		int dl = (int)data.size();
+		for(;;) {
+			Peer *const p = new Peer(RR);
+			int n = p->unmarshal(d,dl);
+			if (n > 0) {
+				// TODO: will eventually handle multiple peers
+				peer.set(p);
+				return;
+			} else {
+				delete p;
+			}
+		}
+	}
 }
 
 } // namespace ZeroTier

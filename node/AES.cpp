@@ -192,11 +192,11 @@ typedef unsigned uint128_t __attribute__((mode(TI)));
 
 static inline void s_bmul64(const uint64_t x,const uint64_t y,uint64_t &r_high,uint64_t &r_low)
 {
-	static uint128_t m1 = (uint128_t)0x2108421084210842ULL << 64 | 0x1084210842108421ULL;
-	static uint128_t m2 = (uint128_t)0x4210842108421084ULL << 64 | 0x2108421084210842ULL;
-	static uint128_t m3 = (uint128_t)0x8421084210842108ULL << 64 | 0x4210842108421084ULL;
-	static uint128_t m4 = (uint128_t)0x0842108421084210ULL << 64 | 0x8421084210842108ULL;
-	static uint128_t m5 = (uint128_t)0x1084210842108421ULL << 64 | 0x0842108421084210ULL;
+	static uint128_t m1 = (uint128_t)0x2108421084210842ULL << 64U | 0x1084210842108421ULL;
+	static uint128_t m2 = (uint128_t)0x4210842108421084ULL << 64U | 0x2108421084210842ULL;
+	static uint128_t m3 = (uint128_t)0x8421084210842108ULL << 64U | 0x4210842108421084ULL;
+	static uint128_t m4 = (uint128_t)0x0842108421084210ULL << 64U | 0x8421084210842108ULL;
+	static uint128_t m5 = (uint128_t)0x1084210842108421ULL << 64U | 0x0842108421084210ULL;
 	uint128_t x1 = x & m1;
 	uint128_t y1 = y & m1;
 	uint128_t x2 = x & m2;
@@ -377,5 +377,386 @@ void AES::_gmacSW(const uint8_t iv[12],const uint8_t *in,unsigned int len,uint8_
 	((uint64_t *)out)[1] = y1 ^ iv2[1];
 #endif
 }
+
+#ifdef ZT_AES_AESNI
+
+static ZT_ALWAYS_INLINE inline __m128i _mult_block_aesni(__m128i shuf,__m128i h,__m128i y)
+{
+	y = _mm_shuffle_epi8(y,shuf);
+	__m128i t1 = _mm_clmulepi64_si128(h,y,0x00);
+	__m128i t2 = _mm_clmulepi64_si128(h,y,0x01);
+	__m128i t3 = _mm_clmulepi64_si128(h,y,0x10);
+	__m128i t4 = _mm_clmulepi64_si128(h,y,0x11);
+	t2 = _mm_xor_si128(t2,t3);
+	t3 = _mm_slli_si128(t2,8);
+	t2 = _mm_srli_si128(t2,8);
+	t1 = _mm_xor_si128(t1,t3);
+	t4 = _mm_xor_si128(t4,t2);
+	__m128i t5 = _mm_srli_epi32(t1,31);
+	t1 = _mm_slli_epi32(t1,1);
+	__m128i t6 = _mm_srli_epi32(t4,31);
+	t4 = _mm_slli_epi32(t4,1);
+	t3 = _mm_srli_si128(t5,12);
+	t6 = _mm_slli_si128(t6,4);
+	t5 = _mm_slli_si128(t5,4);
+	t1 = _mm_or_si128(t1,t5);
+	t4 = _mm_or_si128(t4,t6);
+	t4 = _mm_or_si128(t4,t3);
+	t5 = _mm_slli_epi32(t1,31);
+	t6 = _mm_slli_epi32(t1,30);
+	t3 = _mm_slli_epi32(t1,25);
+	t5 = _mm_xor_si128(t5,t6);
+	t5 = _mm_xor_si128(t5,t3);
+	t6 = _mm_srli_si128(t5,4);
+	t4 = _mm_xor_si128(t4,t6);
+	t5 = _mm_slli_si128(t5,12);
+	t1 = _mm_xor_si128(t1,t5);
+	t4 = _mm_xor_si128(t4,t1);
+	t5 = _mm_srli_epi32(t1,1);
+	t2 = _mm_srli_epi32(t1,2);
+	t3 = _mm_srli_epi32(t1,7);
+	t4 = _mm_xor_si128(t4,t2);
+	t4 = _mm_xor_si128(t4,t3);
+	t4 = _mm_xor_si128(t4,t5);
+	return _mm_shuffle_epi8(t4,shuf);
+}
+static ZT_ALWAYS_INLINE __m128i _ghash_aesni(__m128i shuf,__m128i h,__m128i y,__m128i x)
+{
+	return _mult_block_aesni(shuf,h,_mm_xor_si128(y,x));
+}
+
+static ZT_ALWAYS_INLINE __m128i _init256_1_aesni(__m128i a,__m128i b)
+{
+	__m128i x,y;
+	b = _mm_shuffle_epi32(b,0xff);
+	y = _mm_slli_si128(a,0x04);
+	x = _mm_xor_si128(a,y);
+	y = _mm_slli_si128(y,0x04);
+	x = _mm_xor_si128(x,y);
+	y = _mm_slli_si128(y,0x04);
+	x = _mm_xor_si128(x,y);
+	x = _mm_xor_si128(x,b);
+	return x;
+}
+static ZT_ALWAYS_INLINE __m128i _init256_2_aesni(__m128i a,__m128i b)
+{
+	__m128i x,y,z;
+	y = _mm_aeskeygenassist_si128(a,0x00);
+	z = _mm_shuffle_epi32(y,0xaa);
+	y = _mm_slli_si128(b,0x04);
+	x = _mm_xor_si128(b,y);
+	y = _mm_slli_si128(y,0x04);
+	x = _mm_xor_si128(x,y);
+	y = _mm_slli_si128(y,0x04);
+	x = _mm_xor_si128(x,y);
+	x = _mm_xor_si128(x,z);
+	return x;
+}
+
+void AES::_init_aesni(const uint8_t key[32])
+{
+	__m128i t1,t2;
+	_k.ni.k[0] = t1 = _mm_loadu_si128((const __m128i *)key);
+	_k.ni.k[1] = t2 = _mm_loadu_si128((const __m128i *)(key+16));
+	_k.ni.k[2] = t1 = _init256_1_aesni(t1,_mm_aeskeygenassist_si128(t2,0x01));
+	_k.ni.k[3] = t2 = _init256_2_aesni(t1,t2);
+	_k.ni.k[4] = t1 = _init256_1_aesni(t1,_mm_aeskeygenassist_si128(t2,0x02));
+	_k.ni.k[5] = t2 = _init256_2_aesni(t1,t2);
+	_k.ni.k[6] = t1 = _init256_1_aesni(t1,_mm_aeskeygenassist_si128(t2,0x04));
+	_k.ni.k[7] = t2 = _init256_2_aesni(t1,t2);
+	_k.ni.k[8] = t1 = _init256_1_aesni(t1,_mm_aeskeygenassist_si128(t2,0x08));
+	_k.ni.k[9] = t2 = _init256_2_aesni(t1,t2);
+	_k.ni.k[10] = t1 = _init256_1_aesni(t1,_mm_aeskeygenassist_si128(t2,0x10));
+	_k.ni.k[11] = t2 = _init256_2_aesni(t1,t2);
+	_k.ni.k[12] = t1 = _init256_1_aesni(t1,_mm_aeskeygenassist_si128(t2,0x20));
+	_k.ni.k[13] = t2 = _init256_2_aesni(t1,t2);
+	_k.ni.k[14] = _init256_1_aesni(t1,_mm_aeskeygenassist_si128(t2,0x40));
+
+	__m128i h = _mm_xor_si128(_mm_setzero_si128(),_k.ni.k[0]);
+	h = _mm_aesenc_si128(h,_k.ni.k[1]);
+	h = _mm_aesenc_si128(h,_k.ni.k[2]);
+	h = _mm_aesenc_si128(h,_k.ni.k[3]);
+	h = _mm_aesenc_si128(h,_k.ni.k[4]);
+	h = _mm_aesenc_si128(h,_k.ni.k[5]);
+	h = _mm_aesenc_si128(h,_k.ni.k[6]);
+	h = _mm_aesenc_si128(h,_k.ni.k[7]);
+	h = _mm_aesenc_si128(h,_k.ni.k[8]);
+	h = _mm_aesenc_si128(h,_k.ni.k[9]);
+	h = _mm_aesenc_si128(h,_k.ni.k[10]);
+	h = _mm_aesenc_si128(h,_k.ni.k[11]);
+	h = _mm_aesenc_si128(h,_k.ni.k[12]);
+	h = _mm_aesenc_si128(h,_k.ni.k[13]);
+	h = _mm_aesenclast_si128(h,_k.ni.k[14]);
+
+	const __m128i shuf = _mm_set_epi8(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15);
+	__m128i hswap = _mm_shuffle_epi8(h,shuf);
+	__m128i hh = _mult_block_aesni(shuf,hswap,h);
+	__m128i hhh = _mult_block_aesni(shuf,hswap,hh);
+	__m128i hhhh = _mult_block_aesni(shuf,hswap,hhh);
+	_k.ni.h = hswap;
+	_k.ni.hh = _mm_shuffle_epi8(hh,shuf);
+	_k.ni.hhh = _mm_shuffle_epi8(hhh,shuf);
+	_k.ni.hhhh = _mm_shuffle_epi8(hhhh,shuf);
+}
+
+void AES::_gmac_aesni(const uint8_t iv[12],const uint8_t *in,const unsigned int len,uint8_t out[16]) const
+{
+	const __m128i *const ab = (const __m128i *)in;
+	const unsigned int blocks = len / 16;
+	const unsigned int pblocks = blocks - (blocks % 4);
+	const unsigned int rem = len % 16;
+
+	const __m128i shuf = _mm_set_epi8(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15);
+	__m128i y = _mm_setzero_si128();
+	unsigned int i = 0;
+	for (;i<pblocks;i+=4) {
+		__m128i d1 = _mm_shuffle_epi8(_mm_xor_si128(y,_mm_loadu_si128(ab + i + 0)),shuf);
+		__m128i d2 = _mm_shuffle_epi8(_mm_loadu_si128(ab + i + 1),shuf);
+		__m128i d3 = _mm_shuffle_epi8(_mm_loadu_si128(ab + i + 2),shuf);
+		__m128i d4 = _mm_shuffle_epi8(_mm_loadu_si128(ab + i + 3),shuf);
+		_mm_prefetch(ab + i + 4,_MM_HINT_T0);
+		__m128i t0 = _mm_clmulepi64_si128(_k.ni.hhhh,d1,0x00);
+		__m128i t1 = _mm_clmulepi64_si128(_k.ni.hhh,d2,0x00);
+		__m128i t2 = _mm_clmulepi64_si128(_k.ni.hh,d3,0x00);
+		__m128i t3 = _mm_clmulepi64_si128(_k.ni.h,d4,0x00);
+		__m128i t8 = _mm_xor_si128(t0,t1);
+		t8 = _mm_xor_si128(t8,t2);
+		t8 = _mm_xor_si128(t8,t3);
+		__m128i t4 = _mm_clmulepi64_si128(_k.ni.hhhh,d1,0x11);
+		__m128i t5 = _mm_clmulepi64_si128(_k.ni.hhh,d2,0x11);
+		__m128i t6 = _mm_clmulepi64_si128(_k.ni.hh,d3,0x11);
+		__m128i t7 = _mm_clmulepi64_si128(_k.ni.h,d4,0x11);
+		__m128i t9 = _mm_xor_si128(t4,t5);
+		t9 = _mm_xor_si128(t9,t6);
+		t9 = _mm_xor_si128(t9,t7);
+		t0 = _mm_shuffle_epi32(_k.ni.hhhh,78);
+		t4 = _mm_shuffle_epi32(d1,78);
+		t0 = _mm_xor_si128(t0,_k.ni.hhhh);
+		t4 = _mm_xor_si128(t4,d1);
+		t1 = _mm_shuffle_epi32(_k.ni.hhh,78);
+		t5 = _mm_shuffle_epi32(d2,78);
+		t1 = _mm_xor_si128(t1,_k.ni.hhh);
+		t5 = _mm_xor_si128(t5,d2);
+		t2 = _mm_shuffle_epi32(_k.ni.hh,78);
+		t6 = _mm_shuffle_epi32(d3,78);
+		t2 = _mm_xor_si128(t2,_k.ni.hh);
+		t6 = _mm_xor_si128(t6,d3);
+		t3 = _mm_shuffle_epi32(_k.ni.h,78);
+		t7 = _mm_shuffle_epi32(d4,78);
+		t3 = _mm_xor_si128(t3,_k.ni.h);
+		t7 = _mm_xor_si128(t7,d4);
+		t0 = _mm_clmulepi64_si128(t0,t4,0x00);
+		t1 = _mm_clmulepi64_si128(t1,t5,0x00);
+		t2 = _mm_clmulepi64_si128(t2,t6,0x00);
+		t3 = _mm_clmulepi64_si128(t3,t7,0x00);
+		t0 = _mm_xor_si128(t0,t8);
+		t0 = _mm_xor_si128(t0,t9);
+		t0 = _mm_xor_si128(t1,t0);
+		t0 = _mm_xor_si128(t2,t0);
+		t0 = _mm_xor_si128(t3,t0);
+		t4 = _mm_slli_si128(t0,8);
+		t0 = _mm_srli_si128(t0,8);
+		t3 = _mm_xor_si128(t4,t8);
+		t6 = _mm_xor_si128(t0,t9);
+		t7 = _mm_srli_epi32(t3,31);
+		t8 = _mm_srli_epi32(t6,31);
+		t3 = _mm_slli_epi32(t3,1);
+		t6 = _mm_slli_epi32(t6,1);
+		t9 = _mm_srli_si128(t7,12);
+		t8 = _mm_slli_si128(t8,4);
+		t7 = _mm_slli_si128(t7,4);
+		t3 = _mm_or_si128(t3,t7);
+		t6 = _mm_or_si128(t6,t8);
+		t6 = _mm_or_si128(t6,t9);
+		t7 = _mm_slli_epi32(t3,31);
+		t8 = _mm_slli_epi32(t3,30);
+		t9 = _mm_slli_epi32(t3,25);
+		t7 = _mm_xor_si128(t7,t8);
+		t7 = _mm_xor_si128(t7,t9);
+		t8 = _mm_srli_si128(t7,4);
+		t7 = _mm_slli_si128(t7,12);
+		t3 = _mm_xor_si128(t3,t7);
+		t2 = _mm_srli_epi32(t3,1);
+		t4 = _mm_srli_epi32(t3,2);
+		t5 = _mm_srli_epi32(t3,7);
+		t2 = _mm_xor_si128(t2,t4);
+		t2 = _mm_xor_si128(t2,t5);
+		t2 = _mm_xor_si128(t2,t8);
+		t3 = _mm_xor_si128(t3,t2);
+		t6 = _mm_xor_si128(t6,t3);
+		y = _mm_shuffle_epi8(t6,shuf);
+	}
+
+	for (;i<blocks;++i)
+		y = _ghash_aesni(shuf,_k.ni.h,y,_mm_loadu_si128(ab + i));
+
+	if (rem) {
+		__m128i last = _mm_setzero_si128();
+		memcpy(&last,ab + blocks,rem);
+		y = _ghash_aesni(shuf,_k.ni.h,y,last);
+	}
+
+	y = _ghash_aesni(shuf,_k.ni.h,y,_mm_set_epi64((__m64)0LL,(__m64)Utils::hton((uint64_t)len * (uint64_t)8)));
+
+	__m128i t = _mm_xor_si128(_mm_set_epi32(0x01000000,(int)*((const uint32_t *)(iv+8)),(int)*((const uint32_t *)(iv+4)),(int)*((const uint32_t *)(iv))),_k.ni.k[0]);
+	t = _mm_aesenc_si128(t,_k.ni.k[1]);
+	t = _mm_aesenc_si128(t,_k.ni.k[2]);
+	t = _mm_aesenc_si128(t,_k.ni.k[3]);
+	t = _mm_aesenc_si128(t,_k.ni.k[4]);
+	t = _mm_aesenc_si128(t,_k.ni.k[5]);
+	t = _mm_aesenc_si128(t,_k.ni.k[6]);
+	t = _mm_aesenc_si128(t,_k.ni.k[7]);
+	t = _mm_aesenc_si128(t,_k.ni.k[8]);
+	t = _mm_aesenc_si128(t,_k.ni.k[9]);
+	t = _mm_aesenc_si128(t,_k.ni.k[10]);
+	t = _mm_aesenc_si128(t,_k.ni.k[11]);
+	t = _mm_aesenc_si128(t,_k.ni.k[12]);
+	t = _mm_aesenc_si128(t,_k.ni.k[13]);
+	t = _mm_aesenclast_si128(t,_k.ni.k[14]);
+	_mm_storeu_si128((__m128i *)out,_mm_xor_si128(y,t));
+}
+
+#define ZT_AES_CTR_AESNI_ROUND(kk) c0 = _mm_aesenc_si128(c0,kk); c1 = _mm_aesenc_si128(c1,kk); c2 = _mm_aesenc_si128(c2,kk); c3 = _mm_aesenc_si128(c3,kk);
+void AES::_ctr_aesni(const __m128i key[14],const uint8_t iv[16],const uint8_t *in,unsigned int len,uint8_t *out)
+{
+	/* Because our CTR supports full 128-bit nonces, we must do a full 128-bit (big-endian)
+	 * increment to be compatible with canonical NIST-certified CTR implementations. That's
+	 * because it's possible to have a lot of bit saturation in the least significant 64
+	 * bits, which could on rare occasions actually cause a 64-bit wrap. If this happened
+	 * without carry it would result in incompatibility and quietly dropped packets. The
+	 * probability is low, so this would be a one in billions packet loss bug that would
+	 * probably never be found.
+	 *
+	 * This crazy code does a branch-free 128-bit increment by adding a one or a zero to
+	 * the most significant 64 bits of the 128-bit vector based on whether the add we want
+	 * to do to the least significant 64 bits would overflow. This can be computed by
+	 * NOTing those bits and comparing with what we want to add, since NOT is the same
+	 * as subtracting from uint64_max. This generates branch-free ASM on x64 with most
+	 * good compilers. */
+	__m128i swap128 = _mm_set_epi8(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15);
+	__m128i ctr0 = _mm_shuffle_epi8(_mm_loadu_si128((__m128i *)iv),swap128);
+	uint64_t notctr0msq = ~((uint64_t)_mm_extract_epi64(ctr0,0));
+	__m128i ctr1 = _mm_shuffle_epi8(_mm_add_epi64(ctr0,_mm_set_epi64x((long long)(notctr0msq < 1ULL),1LL)),swap128);
+	__m128i ctr2 = _mm_shuffle_epi8(_mm_add_epi64(ctr0,_mm_set_epi64x((long long)(notctr0msq < 2ULL),2LL)),swap128);
+	__m128i ctr3 = _mm_shuffle_epi8(_mm_add_epi64(ctr0,_mm_set_epi64x((long long)(notctr0msq < 3ULL),3LL)),swap128);
+	ctr0 = _mm_shuffle_epi8(ctr0,swap128);
+
+	__m128i k0 = key[0];
+	__m128i k1 = key[1];
+
+	while (len >= 64) {
+		__m128i ka = key[2];
+		__m128i c0 = _mm_xor_si128(ctr0,k0);
+		__m128i c1 = _mm_xor_si128(ctr1,k0);
+		__m128i c2 = _mm_xor_si128(ctr2,k0);
+		__m128i c3 = _mm_xor_si128(ctr3,k0);
+		ctr0 = _mm_shuffle_epi8(ctr0,swap128);
+		notctr0msq = ~((uint64_t)_mm_extract_epi64(ctr0,0));
+		ctr1 = _mm_shuffle_epi8(_mm_add_epi64(ctr0,_mm_set_epi64x((long long)(notctr0msq < 5ULL),5LL)),swap128);
+		ctr2 = _mm_shuffle_epi8(_mm_add_epi64(ctr0,_mm_set_epi64x((long long)(notctr0msq < 6ULL),6LL)),swap128);
+		ctr3 = _mm_shuffle_epi8(_mm_add_epi64(ctr0,_mm_set_epi64x((long long)(notctr0msq < 7ULL),7LL)),swap128);
+		ctr0 = _mm_shuffle_epi8(_mm_add_epi64(ctr0,_mm_set_epi64x((long long)(notctr0msq < 4ULL),4LL)),swap128);
+		__m128i kb = key[3];
+		ZT_AES_CTR_AESNI_ROUND(k1);
+		__m128i kc = key[4];
+		ZT_AES_CTR_AESNI_ROUND(ka);
+		__m128i kd = key[5];
+		ZT_AES_CTR_AESNI_ROUND(kb);
+		ka = key[6];
+		ZT_AES_CTR_AESNI_ROUND(kc);
+		kb = key[7];
+		ZT_AES_CTR_AESNI_ROUND(kd);
+		kc = key[8];
+		ZT_AES_CTR_AESNI_ROUND(ka);
+		kd = key[9];
+		ZT_AES_CTR_AESNI_ROUND(kb);
+		ka = key[10];
+		ZT_AES_CTR_AESNI_ROUND(kc);
+		kb = key[11];
+		ZT_AES_CTR_AESNI_ROUND(kd);
+		kc = key[12];
+		ZT_AES_CTR_AESNI_ROUND(ka);
+		kd = key[13];
+		ZT_AES_CTR_AESNI_ROUND(kb);
+		ka = key[14];
+		ZT_AES_CTR_AESNI_ROUND(kc);
+		ZT_AES_CTR_AESNI_ROUND(kd);
+		_mm_storeu_si128((__m128i *)out,_mm_xor_si128(_mm_loadu_si128((const __m128i *)in),_mm_aesenclast_si128(c0,ka)));
+		_mm_storeu_si128((__m128i *)(out + 16),_mm_xor_si128(_mm_loadu_si128((const __m128i *)(in + 16)),_mm_aesenclast_si128(c1,ka)));
+		_mm_storeu_si128((__m128i *)(out + 32),_mm_xor_si128(_mm_loadu_si128((const __m128i *)(in + 32)),_mm_aesenclast_si128(c2,ka)));
+		_mm_storeu_si128((__m128i *)(out + 48),_mm_xor_si128(_mm_loadu_si128((const __m128i *)(in + 48)),_mm_aesenclast_si128(c3,ka)));
+		in += 64;
+		out += 64;
+		len -= 64;
+	}
+
+	__m128i k2 = key[2];
+	__m128i k3 = key[3];
+	__m128i k4 = key[4];
+	__m128i k5 = key[5];
+	__m128i k6 = key[6];
+	__m128i k7 = key[7];
+
+	while (len >= 16) {
+		__m128i c0 = _mm_xor_si128(ctr0,k0);
+		ctr0 = _mm_shuffle_epi8(ctr0,swap128);
+		ctr0 = _mm_shuffle_epi8(_mm_add_epi64(ctr0,_mm_set_epi64x((long long)((~((uint64_t)_mm_extract_epi64(ctr0,0))) < 1ULL),1LL)),swap128);
+		c0 = _mm_aesenc_si128(c0,k1);
+		c0 = _mm_aesenc_si128(c0,k2);
+		c0 = _mm_aesenc_si128(c0,k3);
+		c0 = _mm_aesenc_si128(c0,k4);
+		c0 = _mm_aesenc_si128(c0,k5);
+		c0 = _mm_aesenc_si128(c0,k6);
+		__m128i ka = key[8];
+		c0 = _mm_aesenc_si128(c0,k7);
+		__m128i kb = key[9];
+		c0 = _mm_aesenc_si128(c0,ka);
+		ka = key[10];
+		c0 = _mm_aesenc_si128(c0,kb);
+		kb = key[11];
+		c0 = _mm_aesenc_si128(c0,ka);
+		ka = key[12];
+		c0 = _mm_aesenc_si128(c0,kb);
+		kb = key[13];
+		c0 = _mm_aesenc_si128(c0,ka);
+		ka = key[14];
+		c0 = _mm_aesenc_si128(c0,kb);
+		_mm_storeu_si128((__m128i *)out,_mm_xor_si128(_mm_loadu_si128((const __m128i *)in),_mm_aesenclast_si128(c0,ka)));
+		in += 16;
+		out += 16;
+		len -= 16;
+	}
+
+	if (len) {
+		__m128i c0 = _mm_xor_si128(ctr0,k0);
+		k0 = key[8];
+		c0 = _mm_aesenc_si128(c0,k1);
+		c0 = _mm_aesenc_si128(c0,k2);
+		k1 = key[9];
+		c0 = _mm_aesenc_si128(c0,k3);
+		c0 = _mm_aesenc_si128(c0,k4);
+		k2 = key[10];
+		c0 = _mm_aesenc_si128(c0,k5);
+		c0 = _mm_aesenc_si128(c0,k6);
+		k3 = key[11];
+		c0 = _mm_aesenc_si128(c0,k7);
+		c0 = _mm_aesenc_si128(c0,k0);
+		k0 = key[12];
+		c0 = _mm_aesenc_si128(c0,k1);
+		c0 = _mm_aesenc_si128(c0,k2);
+		k1 = key[13];
+		c0 = _mm_aesenc_si128(c0,k3);
+		c0 = _mm_aesenc_si128(c0,k0);
+		k2 = key[14];
+		c0 = _mm_aesenc_si128(c0,k1);
+		c0 = _mm_aesenclast_si128(c0,k2);
+		uint8_t tmp[16];
+		_mm_storeu_si128((__m128i *)tmp,c0);
+		for(unsigned int i=0;i<len;++i)
+			out[i] = in[i] ^ tmp[i];
+	}
+}
+
+#endif // ZT_AES_AESNI
 
 } // namespace ZeroTier

@@ -1,4 +1,4 @@
-package zerotier
+package attic
 
 import (
 	"encoding/binary"

@@ -95,8 +95,8 @@ public:
 	ZT_ResultCode leave(uint64_t nwid,void **uptr,void *tptr);
 	ZT_ResultCode multicastSubscribe(void *tptr,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
 	ZT_ResultCode multicastUnsubscribe(uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
-	ZT_ResultCode addRoot(const char *identity);
-	ZT_ResultCode removeRoot(const char *identity);
+	ZT_ResultCode addRoot(void *tptr,const ZT_Identity *identity,const sockaddr_storage *bootstrap);
+	ZT_ResultCode removeRoot(void *tptr,const ZT_Identity *identity);
 	uint64_t address() const;
 	void status(ZT_NodeStatus *status) const;
 	ZT_PeerList *peers() const;
@@ -194,7 +194,10 @@ public:
 	 * @param ev Event object
 	 * @param md Event data or NULL if none
 	 */
-	ZT_ALWAYS_INLINE void postEvent(void *tPtr,ZT_Event ev,const void *md = (const void *)0) { _cb.eventCallback(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,ev,md); }
+	ZT_ALWAYS_INLINE void postEvent(void *tPtr,ZT_Event ev,const void *md = (const void *)0)
+	{
+		_cb.eventCallback(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,ev,md);
+	}
 
 	/**
 	 * Post network port configuration via external callback
@@ -205,7 +208,10 @@ public:
 	 * @param op Config operation or event type
 	 * @param nc Network config info
 	 */
-	ZT_ALWAYS_INLINE void configureVirtualNetworkPort(void *tPtr,uint64_t nwid,void **nuptr,ZT_VirtualNetworkConfigOperation op,const ZT_VirtualNetworkConfig *nc) { _cb.virtualNetworkConfigFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,nwid,nuptr,op,nc); }
+	ZT_ALWAYS_INLINE void configureVirtualNetworkPort(void *tPtr,uint64_t nwid,void **nuptr,ZT_VirtualNetworkConfigOperation op,const ZT_VirtualNetworkConfig *nc)
+	{
+		_cb.virtualNetworkConfigFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,nwid,nuptr,op,nc);
+	}
 
 	/**
 	 * @return True if node appears online
@@ -218,11 +224,9 @@ public:
 	 * @param tPtr Thread pointer
 	 * @param type Object type to get
 	 * @param id Object ID
-	 * @param data Data buffer
-	 * @param maxlen Maximum data length
-	 * @return Number of bytes actually read or 0 if not found
+	 * @return Vector containing data or empty vector if not found or empty
 	 */
-	ZT_ALWAYS_INLINE int stateObjectGet(void *const tPtr,ZT_StateObjectType type,const uint64_t id[2],void *const data,const unsigned int maxlen) { return _cb.stateGetFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,type,id,data,maxlen); }
+	std::vector<uint8_t> stateObjectGet(void *const tPtr,ZT_StateObjectType type,const uint64_t id[2]);
 
 	/**
 	 * Store a state object
@@ -233,7 +237,11 @@ public:
 	 * @param data Data to store
 	 * @param len Length of data
 	 */
-	ZT_ALWAYS_INLINE void stateObjectPut(void *const tPtr,ZT_StateObjectType type,const uint64_t id[2],const void *const data,const unsigned int len) { _cb.statePutFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,type,id,data,(int)len); }
+	ZT_ALWAYS_INLINE void stateObjectPut(void *const tPtr,ZT_StateObjectType type,const uint64_t id[2],const void *const data,const unsigned int len)
+	{
+		if (_cb.statePutFunction)
+			_cb.statePutFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,type,id,data,(int)len);
+	}
 
 	/**
 	 * Delete a state object
@@ -242,7 +250,11 @@ public:
 	 * @param type Object type to delete
 	 * @param id Object ID
 	 */
-	ZT_ALWAYS_INLINE void stateObjectDelete(void *const tPtr,ZT_StateObjectType type,const uint64_t id[2]) { _cb.statePutFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,type,id,(const void *)0,-1); }
+	ZT_ALWAYS_INLINE void stateObjectDelete(void *const tPtr,ZT_StateObjectType type,const uint64_t id[2])
+	{
+		if (_cb.statePutFunction)
+			_cb.statePutFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,type,id,(const void *)0,-1);
+	}
 
 	/**
 	 * Check whether a path should be used for ZeroTier traffic
@@ -250,12 +262,12 @@ public:
 	 * This performs internal checks and also calls out to an external callback if one is defined.
 	 *
 	 * @param tPtr Thread pointer
-	 * @param ztaddr ZeroTier address
+	 * @param id Identity of peer
 	 * @param localSocket Local socket or -1 if unknown
 	 * @param remoteAddress Remote address
 	 * @return True if path should be used
 	 */
-	bool shouldUsePathForZeroTierTraffic(void *tPtr,const Address &ztaddr,const int64_t localSocket,const InetAddress &remoteAddress);
+	bool shouldUsePathForZeroTierTraffic(void *tPtr,const Identity &id,const int64_t localSocket,const InetAddress &remoteAddress);
 
 	/**
 	 * Query callback for a physical address for a peer

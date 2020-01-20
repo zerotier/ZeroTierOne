@@ -1033,6 +1033,11 @@ typedef struct
 	const ZT_Identity *identity;
 
 	/**
+	 * Hash of identity public key(s)
+	 */
+	uint8_t identityHash[48];
+
+	/**
 	 * Remote major version or -1 if not known
 	 */
 	int versionMajor;
@@ -1056,6 +1061,15 @@ typedef struct
 	 * What trust hierarchy role does this device have?
 	 */
 	enum ZT_PeerRole role;
+
+	/**
+	 * Bootstrap address
+	 *
+	 * This is a memo-ized recently valid address that can be saved and used
+	 * to attempt rapid reconnection with this peer. If the ss_family field
+	 * is 0 this field is considered null/empty.
+	 */
+	struct sockaddr_storage bootstrap;
 
 	/**
 	 * Number of paths (size of paths[])
@@ -1090,7 +1104,7 @@ enum ZT_StateObjectType
 	/**
 	 * Public address and public key
 	 *
-	 * Object ID: this node's address if known, or 0 if unknown (first query)
+	 * Object ID: (unused)
 	 * Canonical path: <HOME>/identity.public
    * Persistence: required
 	 */
@@ -1099,7 +1113,7 @@ enum ZT_StateObjectType
 	/**
 	 * Full identity with secret key
 	 *
-	 * Object ID: this node's address if known, or 0 if unknown (first query)
+	 * Object ID: (unused)
 	 * Canonical path: <HOME>/identity.secret
    * Persistence: required, should be stored with restricted permissions e.g. mode 0600 on *nix
 	 */
@@ -1108,7 +1122,7 @@ enum ZT_StateObjectType
 	/**
 	 * This node's locator
 	 *
-	 * Object ID: 0
+	 * Object ID: (unused)
 	 * Canonical path: <HOME>/locator
 	 * Persistence: optional
 	 */
@@ -1126,7 +1140,7 @@ enum ZT_StateObjectType
 	/**
 	 * Network configuration
 	 *
-	 * Object ID: peer address
+	 * Object ID: network ID
 	 * Canonical path: <HOME>/networks.d/<NETWORKID>.conf (16-digit hex ID)
 	 * Persistence: required if network memberships should persist
 	 */
@@ -1135,7 +1149,7 @@ enum ZT_StateObjectType
 	/**
 	 * Root list
 	 *
-	 * Object ID: 0
+	 * Object ID: (unused)
 	 * Canonical path: <HOME>/roots
 	 * Persistence: required if root settings should persist
 	 */
@@ -1235,8 +1249,10 @@ typedef void (*ZT_StatePutFunction)(
  * Callback for retrieving stored state information
  *
  * This function should return the number of bytes actually stored to the
- * buffer or -1 if the state object was not found or the buffer was too
- * small to store it.
+ * buffer or -1 if the state object was not found. The buffer itself should
+ * be set to point to the data, and the last result parameter must point to
+ * a function that will be used to free the buffer when the core is done
+ * with it. This is very often just a pointer to free().
  */
 typedef int (*ZT_StateGetFunction)(
 	ZT_Node *,                             /* Node */
@@ -1244,8 +1260,8 @@ typedef int (*ZT_StateGetFunction)(
 	void *,                                /* Thread ptr */
 	enum ZT_StateObjectType,               /* State object type */
 	const uint64_t [2],                    /* State object ID (if applicable) */
-	void *,                                /* Buffer to store state object data */
-	unsigned int);                         /* Length of data buffer in bytes */
+	void **,                               /* Result parameter: data */
+	void (**)(void *));                    /* Result parameter: data free function */
 
 /**
  * Function to send a ZeroTier packet out over the physical wire (L2/L3)
@@ -1288,8 +1304,9 @@ typedef int (*ZT_WirePacketSendFunction)(
  *  (1) Node
  *  (2) User pointer
  *  (3) ZeroTier address or 0 for none/any
- *  (4) Local socket or -1 if unknown
- *  (5) Remote address
+ *  (4) Full identity or NULL for none/any
+ *  (5) Local socket or -1 if unknown
+ *  (6) Remote address
  *
  * This function must return nonzero (true) if the path should be used.
  *
@@ -1307,6 +1324,7 @@ typedef int (*ZT_PathCheckFunction)(
 	void *,                           /* User ptr */
 	void *,                           /* Thread ptr */
 	uint64_t,                         /* ZeroTier address */
+	const ZT_Identity *,              /* Full identity of node */
 	int64_t,                          /* Local socket or -1 if unknown */
 	const struct sockaddr_storage *); /* Remote address */
 
@@ -1563,10 +1581,12 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_multicastUnsubscribe(ZT_Node *node,uint64_
  * Add a root server (has no effect if already added)
  *
  * @param node Node instance
- * @param identity Identity of this root server in string format
+ * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
+ * @param identity Identity of this root server
+ * @param bootstrap Optional bootstrap address for initial contact
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-ZT_SDK_API enum ZT_ResultCode ZT_Node_addRoot(ZT_Node *node,const char *identity);
+ZT_SDK_API enum ZT_ResultCode ZT_Node_addRoot(ZT_Node *node,void *tptr,const ZT_Identity *identity,const struct sockaddr_storage *bootstrap);
 
 /**
  * Remove a root server
@@ -1575,10 +1595,11 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_addRoot(ZT_Node *node,const char *identity
  * from communicating with it or close active paths to it.
  *
  * @param node Node instance
- * @param identity Identity in string format
+ * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
+ * @param identity Identity to remove
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-ZT_SDK_API enum ZT_ResultCode ZT_Node_removeRoot(ZT_Node *node,const char *identity);
+ZT_SDK_API enum ZT_ResultCode ZT_Node_removeRoot(ZT_Node *node,void *tptr,const ZT_Identity *identity);
 
 /**
  * Get this node's 40-bit ZeroTier address

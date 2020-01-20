@@ -37,13 +37,13 @@ namespace ZeroTier {
 /* Public Node interface (C++, exposed via CAPI bindings)                   */
 /****************************************************************************/
 
-Node::Node(void *uPtr, void *tPtr, const struct ZT_Node_Callbacks *callbacks, int64_t now) :
+Node::Node(void *uPtr,void *tPtr,const struct ZT_Node_Callbacks *callbacks,int64_t now) :
 	_RR(this),
 	RR(&_RR),
 	_cb(*callbacks),
 	_uPtr(uPtr),
 	_networks(),
-	_networksMask(255),
+	_networksMask(63),
 	_now(now),
 	_lastPing(0),
 	_lastHousekeepingRun(0),
@@ -51,68 +51,58 @@ Node::Node(void *uPtr, void *tPtr, const struct ZT_Node_Callbacks *callbacks, in
 	_lastPathKeepaliveCheck(0),
 	_online(false)
 {
-	_networks.resize(256); // _networksMask + 1, must be power of two
+	_networks.resize(64); // _networksMask + 1, must be power of two
 
 	memset((void *)_expectingRepliesToBucketPtr,0,sizeof(_expectingRepliesToBucketPtr));
 	memset((void *)_expectingRepliesTo,0,sizeof(_expectingRepliesTo));
 	memset((void *)_lastIdentityVerification,0,sizeof(_lastIdentityVerification));
 
-	uint64_t idtmp[2];
-	idtmp[0] = 0; idtmp[1] = 0;
-	char tmp[2048];
-	int n = stateObjectGet(tPtr, ZT_STATE_OBJECT_IDENTITY_SECRET, idtmp, tmp, sizeof(tmp) - 1);
-	if (n > 0) {
-		tmp[n] = (char)0;
-		if (RR->identity.fromString(tmp)) {
+	uint64_t idtmp[2]; idtmp[0] = 0; idtmp[1] = 0;
+	std::vector<uint8_t> data(stateObjectGet(tPtr,ZT_STATE_OBJECT_IDENTITY_SECRET,idtmp));
+	bool haveIdentity = false;
+	if (!data.empty()) {
+		data.push_back(0); // zero-terminate string
+		if (RR->identity.fromString((const char *)data.data())) {
 			RR->identity.toString(false,RR->publicIdentityStr);
 			RR->identity.toString(true,RR->secretIdentityStr);
-		} else {
-			n = -1;
+			haveIdentity = true;
 		}
 	}
 
-	if (n <= 0) {
+	if (!haveIdentity) {
 		RR->identity.generate(Identity::C25519);
 		RR->identity.toString(false,RR->publicIdentityStr);
 		RR->identity.toString(true,RR->secretIdentityStr);
 		idtmp[0] = RR->identity.address().toInt(); idtmp[1] = 0;
-		stateObjectPut(tPtr, ZT_STATE_OBJECT_IDENTITY_SECRET, idtmp, RR->secretIdentityStr, (unsigned int)strlen(RR->secretIdentityStr));
-		stateObjectPut(tPtr, ZT_STATE_OBJECT_IDENTITY_PUBLIC, idtmp, RR->publicIdentityStr, (unsigned int)strlen(RR->publicIdentityStr));
+		stateObjectPut(tPtr,ZT_STATE_OBJECT_IDENTITY_SECRET,idtmp,RR->secretIdentityStr,(unsigned int)strlen(RR->secretIdentityStr));
+		stateObjectPut(tPtr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,idtmp,RR->publicIdentityStr,(unsigned int)strlen(RR->publicIdentityStr));
 	} else {
 		idtmp[0] = RR->identity.address().toInt(); idtmp[1] = 0;
-		n = stateObjectGet(tPtr, ZT_STATE_OBJECT_IDENTITY_PUBLIC, idtmp, tmp, sizeof(tmp) - 1);
-		if ((n > 0)&&(n < (int)sizeof(RR->publicIdentityStr))&&(n < (int)sizeof(tmp))) {
-			if (memcmp(tmp,RR->publicIdentityStr,n) != 0)
-				stateObjectPut(tPtr, ZT_STATE_OBJECT_IDENTITY_PUBLIC, idtmp, RR->publicIdentityStr, (unsigned int)strlen(RR->publicIdentityStr));
-		}
+		data = stateObjectGet(tPtr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,idtmp);
+		if ((data.empty())||(memcmp(data.data(),RR->publicIdentityStr,strlen(RR->publicIdentityStr)) != 0))
+			stateObjectPut(tPtr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,idtmp,RR->publicIdentityStr,(unsigned int)strlen(RR->publicIdentityStr));
 	}
 
-	char *m = (char *)0;
+	char *m = nullptr;
 	try {
-		const unsigned long ts = sizeof(Trace) + (((sizeof(Trace) & 0xf) != 0) ? (16 - (sizeof(Trace) & 0xf)) : 0);
-		const unsigned long sws = sizeof(Switch) + (((sizeof(Switch) & 0xf) != 0) ? (16 - (sizeof(Switch) & 0xf)) : 0);
-		const unsigned long topologys = sizeof(Topology) + (((sizeof(Topology) & 0xf) != 0) ? (16 - (sizeof(Topology) & 0xf)) : 0);
-		const unsigned long sas = sizeof(SelfAwareness) + (((sizeof(SelfAwareness) & 0xf) != 0) ? (16 - (sizeof(SelfAwareness) & 0xf)) : 0);
-
-		m = reinterpret_cast<char *>(malloc(16 + ts + sws + topologys + sas));
+		m = reinterpret_cast<char *>(malloc(16 + sizeof(Trace) + sizeof(Switch) + sizeof(Topology) + sizeof(SelfAwareness)));
 		if (!m)
 			throw std::bad_alloc();
 		RR->rtmem = m;
 		while (((uintptr_t)m & 0xfU) != 0) ++m;
-
 		RR->t = new (m) Trace(RR);
-		m += ts;
+		m += sizeof(Trace);
 		RR->sw = new (m) Switch(RR);
-		m += sws;
-		RR->topology = new (m) Topology(RR,RR->identity);
-		m += topologys;
+		m += sizeof(Switch);
+		RR->topology = new (m) Topology(RR,RR->identity,tPtr);
+		m += sizeof(Topology);
 		RR->sa = new (m) SelfAwareness(RR);
 	} catch ( ... ) {
 		if (RR->sa) RR->sa->~SelfAwareness();
 		if (RR->topology) RR->topology->~Topology();
 		if (RR->sw) RR->sw->~Switch();
 		if (RR->t) RR->t->~Trace();
-		::free(m);
+		if (m) ::free(m);
 		throw;
 	}
 
@@ -123,7 +113,8 @@ Node::~Node()
 {
 	{
 		RWMutex::Lock _l(_networks_m);
-		_networks.clear(); // destroy all networks before shutdown
+		for(std::vector< SharedPtr<Network> >::iterator i(_networks.begin());i!=_networks.end();++i)
+			i->zero();
 	}
 	if (RR->sa) RR->sa->~SelfAwareness();
 	if (RR->topology) RR->topology->~Topology();
@@ -375,25 +366,22 @@ ZT_ResultCode Node::multicastUnsubscribe(uint64_t nwid,uint64_t multicastGroup,u
 	} else return ZT_RESULT_ERROR_NETWORK_NOT_FOUND;
 }
 
-ZT_ResultCode Node::addRoot(const char *identity)
+ZT_ResultCode Node::addRoot(void *tptr,const ZT_Identity *identity,const sockaddr_storage *bootstrap)
 {
 	if (!identity)
 		return ZT_RESULT_ERROR_BAD_PARAMETER;
-	Identity id;
-	if (!id.fromString(identity))
-		return ZT_RESULT_ERROR_BAD_PARAMETER;
-	RR->topology->addRoot(id);
+	InetAddress a;
+	if (bootstrap)
+		a = bootstrap;
+	RR->topology->addRoot(tptr,*reinterpret_cast<const Identity *>(identity),a);
 	return ZT_RESULT_OK;
 }
 
-ZT_ResultCode Node::removeRoot(const char *identity)
+ZT_ResultCode Node::removeRoot(void *tptr,const ZT_Identity *identity)
 {
 	if (!identity)
 		return ZT_RESULT_ERROR_BAD_PARAMETER;
-	Identity id;
-	if (!id.fromString(identity))
-		return ZT_RESULT_ERROR_BAD_PARAMETER;
-	RR->topology->removeRoot(id);
+	RR->topology->removeRoot(*reinterpret_cast<const Identity *>(identity));
 	return ZT_RESULT_OK;
 }
 
@@ -434,6 +422,7 @@ ZT_PeerList *Node::peers() const
 		p->address = (*pi)->address().toInt();
 		identities[pl->peerCount] = (*pi)->identity(); // need to make a copy in case peer gets deleted
 		p->identity = &identities[pl->peerCount];
+		(*pi)->identity().hash(p->identityHash,false);
 		if ((*pi)->remoteVersionKnown()) {
 			p->versionMajor = (int)(*pi)->remoteVersionMajor();
 			p->versionMinor = (int)(*pi)->remoteVersionMinor();
@@ -447,6 +436,7 @@ ZT_PeerList *Node::peers() const
 		if (p->latency >= 0xffff)
 			p->latency = -1;
 		p->role = RR->topology->isRoot((*pi)->identity()) ? ZT_PEER_ROLE_ROOT : ZT_PEER_ROLE_LEAF;
+		memcpy(&p->bootstrap,&((*pi)->bootstrap()),sizeof(sockaddr_storage));
 
 		std::vector< SharedPtr<Path> > paths;
 		(*pi)->getAllPaths(paths);
@@ -561,7 +551,29 @@ void Node::setController(void *networkControllerInstance)
 /* Node methods used only within node/                                      */
 /****************************************************************************/
 
-bool Node::shouldUsePathForZeroTierTraffic(void *tPtr,const Address &ztaddr,const int64_t localSocket,const InetAddress &remoteAddress)
+std::vector<uint8_t> Node::stateObjectGet(void *const tPtr,ZT_StateObjectType type,const uint64_t id[2])
+{
+	std::vector<uint8_t> r;
+	if (_cb.stateGetFunction) {
+		void *data = 0;
+		void (*freeFunc)(void *) = 0;
+		int l = _cb.stateGetFunction(
+			reinterpret_cast<ZT_Node *>(this),
+			_uPtr,
+			tPtr,
+			type,
+			id,
+			&data,
+			&freeFunc);
+		if ((l > 0)&&(data)&&(freeFunc)) {
+			r.assign(reinterpret_cast<const uint8_t *>(data),reinterpret_cast<const uint8_t *>(data) + l);
+			freeFunc(data);
+		}
+	}
+	return r;
+}
+
+bool Node::shouldUsePathForZeroTierTraffic(void *tPtr,const Identity &id,const int64_t localSocket,const InetAddress &remoteAddress)
 {
 	if (Path::isAddressValidForPath(remoteAddress)) {
 		RWMutex::RLock l(_networks_m);
@@ -576,7 +588,17 @@ bool Node::shouldUsePathForZeroTierTraffic(void *tPtr,const Address &ztaddr,cons
 	} else {
 		return false;
 	}
-	return ((_cb.pathCheckFunction) ? (_cb.pathCheckFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,ztaddr.toInt(),localSocket,reinterpret_cast<const struct sockaddr_storage *>(&remoteAddress)) != 0) : true);
+	if (_cb.pathCheckFunction) {
+		return (_cb.pathCheckFunction(
+			reinterpret_cast<ZT_Node *>(this),
+			_uPtr,
+			tPtr,
+			id.address().toInt(),
+			(const ZT_Identity *)&id,
+			localSocket,
+			reinterpret_cast<const struct sockaddr_storage *>(&remoteAddress)) != 0);
+	}
+	return true;
 }
 
 bool Node::externalPathLookup(void *tPtr,const Identity &id,int family,InetAddress &addr)
@@ -840,10 +862,10 @@ enum ZT_ResultCode ZT_Node_multicastUnsubscribe(ZT_Node *node,uint64_t nwid,uint
 	}
 }
 
-enum ZT_ResultCode ZT_Node_addRoot(ZT_Node *node,const char *identity)
+enum ZT_ResultCode ZT_Node_addRoot(ZT_Node *node,void *tptr,const ZT_Identity *identity,const struct sockaddr_storage *bootstrap)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->addRoot(identity);
+		return reinterpret_cast<ZeroTier::Node *>(node)->addRoot(tptr,identity,bootstrap);
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch ( ... ) {
@@ -851,10 +873,10 @@ enum ZT_ResultCode ZT_Node_addRoot(ZT_Node *node,const char *identity)
 	}
 }
 
-enum ZT_ResultCode ZT_Node_removeRoot(ZT_Node *node,const char *identity)
+enum ZT_ResultCode ZT_Node_removeRoot(ZT_Node *node,void *tptr,const ZT_Identity *identity)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->removeRoot(identity);
+		return reinterpret_cast<ZeroTier::Node *>(node)->removeRoot(tptr,identity);
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch ( ... ) {

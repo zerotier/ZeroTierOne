@@ -103,33 +103,65 @@ void SelfAwareness::clean(int64_t now)
 {
 	Mutex::Lock l(_phy_l);
 	Hashtable< PhySurfaceKey,PhySurfaceEntry >::Iterator i(_phy);
-	PhySurfaceKey *k = (PhySurfaceKey *)0;
-	PhySurfaceEntry *e = (PhySurfaceEntry *)0;
+	PhySurfaceKey *k = nullptr;
+	PhySurfaceEntry *e = nullptr;
 	while (i.next(k,e)) {
 		if ((now - e->ts) >= ZT_SELFAWARENESS_ENTRY_TIMEOUT)
 			_phy.erase(*k);
 	}
 }
 
-std::multimap<unsigned long,InetAddress> SelfAwareness::externalAddresses(const int64_t now) const
+bool SelfAwareness::symmetricNat(const int64_t now) const
 {
-	Hashtable<InetAddress,unsigned long> counts;
+	Hashtable< InetAddress,std::pair< std::set<int>,std::set<int64_t> > > ipToPortsAndLocalSockets(16);
+
 	{
 		Mutex::Lock l(_phy_l);
 		Hashtable<PhySurfaceKey,PhySurfaceEntry>::Iterator i(const_cast<SelfAwareness *>(this)->_phy);
-		PhySurfaceKey *k = (PhySurfaceKey *)0;
-		PhySurfaceEntry *e = (PhySurfaceEntry *)0;
+		PhySurfaceKey *k = nullptr;
+		PhySurfaceEntry *e = nullptr;
+		while (i.next(k,e)) {
+			if ((now - e->ts) < ZT_SELFAWARENESS_ENTRY_TIMEOUT) {
+				std::pair< std::set<int>,std::set<int64_t> > &ii = ipToPortsAndLocalSockets[e->mySurface.ipOnly()];
+				ii.first.insert(e->mySurface.port());
+				if (k->receivedOnLocalSocket != -1)
+					ii.second.insert(k->receivedOnLocalSocket);
+			}
+		}
+	}
+
+	Hashtable< InetAddress,std::pair< std::set<int>,std::set<int64_t> > >::Iterator i(ipToPortsAndLocalSockets);
+	InetAddress *k = nullptr;
+	std::pair< std::set<int>,std::set<int64_t> > *v = nullptr;
+	while (i.next(k,v)) {
+		if (v->first.size() > v->second.size()) // more external ports than local sockets for a given external IP
+			return true;
+	}
+	return false;
+}
+
+std::multimap<unsigned long,InetAddress> SelfAwareness::externalAddresses(const int64_t now) const
+{
+	std::multimap<unsigned long,InetAddress> r;
+	Hashtable<InetAddress,unsigned long> counts(16);
+
+	{
+		Mutex::Lock l(_phy_l);
+		Hashtable<PhySurfaceKey,PhySurfaceEntry>::Iterator i(const_cast<SelfAwareness *>(this)->_phy);
+		PhySurfaceKey *k = nullptr;
+		PhySurfaceEntry *e = nullptr;
 		while (i.next(k,e)) {
 			if ((now - e->ts) < ZT_SELFAWARENESS_ENTRY_TIMEOUT)
 				++counts[e->mySurface];
 		}
 	}
-	std::multimap<unsigned long,InetAddress> r;
+
 	Hashtable<InetAddress,unsigned long>::Iterator i(counts);
-	InetAddress *k = (InetAddress *)0;
-	unsigned long *c = (unsigned long *)0;
+	InetAddress *k = nullptr;
+	unsigned long *c = nullptr;
 	while (i.next(k,c))
 		r.insert(std::pair<unsigned long,InetAddress>(*c,*k));
+
 	return r;
 }
 

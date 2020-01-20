@@ -101,16 +101,16 @@ char *decimal(unsigned long n,char s[24])
 
 char *hex10(uint64_t i,char s[11])
 {
-	s[0] = HEXCHARS[(i >> 36) & 0xf];
-	s[1] = HEXCHARS[(i >> 32) & 0xf];
-	s[2] = HEXCHARS[(i >> 28) & 0xf];
-	s[3] = HEXCHARS[(i >> 24) & 0xf];
-	s[4] = HEXCHARS[(i >> 20) & 0xf];
-	s[5] = HEXCHARS[(i >> 16) & 0xf];
-	s[6] = HEXCHARS[(i >> 12) & 0xf];
-	s[7] = HEXCHARS[(i >> 8) & 0xf];
-	s[8] = HEXCHARS[(i >> 4) & 0xf];
-	s[9] = HEXCHARS[i & 0xf];
+	s[0] = HEXCHARS[(i >> 36U) & 0xfU];
+	s[1] = HEXCHARS[(i >> 32U) & 0xfU];
+	s[2] = HEXCHARS[(i >> 28U) & 0xfU];
+	s[3] = HEXCHARS[(i >> 24U) & 0xfU];
+	s[4] = HEXCHARS[(i >> 20U) & 0xfU];
+	s[5] = HEXCHARS[(i >> 16U) & 0xfU];
+	s[6] = HEXCHARS[(i >> 12U) & 0xfU];
+	s[7] = HEXCHARS[(i >> 8U) & 0xfU];
+	s[8] = HEXCHARS[(i >> 4U) & 0xfU];
+	s[9] = HEXCHARS[i & 0xfU];
 	s[10] = (char)0;
 	return s;
 }
@@ -120,8 +120,8 @@ char *hex(const void *d,unsigned int l,char *s)
 	char *const save = s;
 	for(unsigned int i=0;i<l;++i) {
 		const unsigned int b = reinterpret_cast<const uint8_t *>(d)[i];
-		*(s++) = HEXCHARS[b >> 4];
-		*(s++) = HEXCHARS[b & 0xf];
+		*(s++) = HEXCHARS[b >> 4U];
+		*(s++) = HEXCHARS[b & 0xfU];
 	}
 	*s = (char)0;
 	return save;
@@ -166,7 +166,7 @@ void getSecureRandom(void *buf,unsigned int bytes)
 	static Mutex globalLock;
 	static bool initialized = false;
 	static uint64_t randomState[4];
-	static uint8_t randomBuf[16384];
+	static uint8_t randomBuf[65536];
 	static unsigned long randomPtr = sizeof(randomBuf);
 
 	Mutex::Lock gl(globalLock);
@@ -225,10 +225,7 @@ void getSecureRandom(void *buf,unsigned int bytes)
 #endif
 			}
 
-			for(unsigned int k=0;k<4;++k) { // treat random state like a 256-bit counter; endian-ness is irrelevant since we just want random
-				if (++randomState[k] != 0)
-					break;
-			}
+			for(int k=0;k<4;++k) { if (++randomState[k] != 0) break; }
 			uint8_t h[48];
 			HMACSHA384((const uint8_t *)randomState,randomBuf,sizeof(randomBuf),h); // compute HMAC on random buffer using state as secret key
 			AES c(h);
@@ -253,8 +250,8 @@ int b32e(const uint8_t *data,int length,char *result,int bufSize)
     while (count < bufSize && (bitsLeft > 0 || next < length)) {
       if (bitsLeft < 5) {
         if (next < length) {
-          buffer <<= 8;
-          buffer |= data[next++] & 0xFF;
+          buffer <<= 8U;
+          buffer |= data[next++] & 0xffU;
           bitsLeft += 8;
         } else {
           int pad = 5 - bitsLeft;
@@ -262,7 +259,7 @@ int b32e(const uint8_t *data,int length,char *result,int bufSize)
           bitsLeft += pad;
         }
       }
-      int index = 0x1F & (buffer >> (bitsLeft - 5));
+      int index = 0x1f & (buffer >> (unsigned int)(bitsLeft - 5));
       bitsLeft -= 5;
       result[count++] = "abcdefghijklmnopqrstuvwxyz234567"[index];
     }
@@ -296,7 +293,7 @@ int b32d(const char *encoded,uint8_t *result,int bufSize)
     }
 
     if ((ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z')) {
-      ch = (ch & 0x1F) - 1;
+      ch = (ch & 0x1f) - 1;
     } else if (ch >= '2' && ch <= '7') {
       ch -= '2' - 26;
     } else {

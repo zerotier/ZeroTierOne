@@ -27,7 +27,9 @@ namespace ZeroTier {
 class RuntimeEnvironment;
 
 /**
- * Tracks changes to this peer's real world addresses
+ * SelfAwareness manages awareness of this peer's external address(es) and NAT situation.
+ *
+ * This code should not be capable of achieving sentience and triggering the Terminator wars.
  */
 class SelfAwareness
 {
@@ -53,6 +55,14 @@ public:
 	 * @param now Current time
 	 */
 	void clean(int64_t now);
+
+	/**
+	 * Check whether this node appears to be behind a symmetric NAT
+	 *
+	 * @param now Current time
+	 * @return True if it looks like we're behind a symmetric NAT
+	 */
+	bool symmetricNat(int64_t now) const;
 
 	/**
 	 * Get external address consensus, which is the statistical "mode" of external addresses.

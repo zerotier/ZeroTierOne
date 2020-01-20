@@ -2366,6 +2366,13 @@ static inline void get_hram(unsigned char *hram, const unsigned char *sm, const 
 
 namespace ZeroTier {
 
+void C25519::generate(uint8_t pub[ZT_C25519_PUBLIC_KEY_LEN],uint8_t priv[ZT_C25519_PRIVATE_KEY_LEN])
+{
+	Utils::getSecureRandom(priv,ZT_C25519_PRIVATE_KEY_LEN);
+	_calcPubDH(pub,priv);
+	_calcPubED(pub,priv);
+}
+
 void C25519::agree(const uint8_t mine[ZT_C25519_PRIVATE_KEY_LEN],const uint8_t their[ZT_C25519_PUBLIC_KEY_LEN],uint8_t rawkey[32])
 {
 	crypto_scalarmult(rawkey,mine,their);

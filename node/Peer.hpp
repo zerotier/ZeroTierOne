@@ -27,6 +27,7 @@
 #include "AtomicCounter.hpp"
 #include "Hashtable.hpp"
 #include "Mutex.hpp"
+#include "Endpoint.hpp"
 #include "Locator.hpp"
 
 #include <vector>
@@ -161,6 +162,23 @@ public:
 	 * @param l New latency measurment (in milliseconds)
 	 */
 	void updateLatency(unsigned int l);
+
+	/**
+	 * @return Bootstrap address or NULL if none
+	 */
+	ZT_ALWAYS_INLINE const Endpoint &bootstrap() const { return _bootstrap; }
+
+	/**
+	 * Set bootstrap endpoint
+	 *
+	 * @param ep Bootstrap endpoint
+	 */
+	ZT_ALWAYS_INLINE void setBootstrap(const Endpoint &ep)
+	{
+		_lock.lock();
+		_bootstrap = ep;
+		_lock.unlock();
+	}
 
 	/**
 	 * @return Time of last receive of anything, whether direct or relayed
@@ -299,7 +317,7 @@ private:
 
 	Identity _id;
 	Locator _locator;
-	InetAddress _bootstrap;
+	Endpoint _bootstrap; // right now only InetAddress endpoints are supported for bootstrap
 
 	uint16_t _vProto;
 	uint16_t _vMajor;

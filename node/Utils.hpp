@@ -26,7 +26,6 @@
 #include <immintrin.h>
 #endif
 
-#include <string>
 #include <stdexcept>
 #include <vector>
 #include <map>
@@ -64,7 +63,12 @@ extern const char HEXCHARS[16];
 bool secureEq(const void *a,const void *b,unsigned int len);
 
 /**
- * Zero memory, ensuring to avoid any compiler optimizations or other things that may stop this.
+ * Be absolutely sure to zero memory
+ *
+ * This uses some hacks to be totally sure the compiler does not optimize it out.
+ *
+ * @param ptr Memory to zero
+ * @param len Length of memory in bytes
  */
 void burn(void *ptr,unsigned int len);
 
@@ -174,6 +178,14 @@ uint64_t random();
  */
 bool scopy(char *dest,unsigned int len,const char *src);
 
+/**
+ * Wrapper around reentrant strtok functions, which differ in name by platform
+ *
+ * @param str String to tokenize or NULL for subsequent calls
+ * @param delim Delimiter
+ * @param saveptr Pointer to pointer where function can save state
+ * @return Next token or NULL if none
+ */
 static ZT_ALWAYS_INLINE char *stok(char *str,const char *delim,char **saveptr)
 {
 #ifdef __WINDOWS__

@@ -49,22 +49,96 @@ public:
 		UNRECOGNIZED = 255 // Unrecognized endpoint type encountered in stream
 	};
 
-	ZT_ALWAYS_INLINE Endpoint() { memset(reinterpret_cast<void *>(this),0,sizeof(Endpoint)); }
+	ZT_ALWAYS_INLINE Endpoint()
+	{
+		memset(reinterpret_cast<void *>(this),0,sizeof(Endpoint));
+	}
 
-	explicit ZT_ALWAYS_INLINE Endpoint(const InetAddress &sa) : _t(INETADDR) { _v.sa = sa; }
-	ZT_ALWAYS_INLINE Endpoint(const Address &zt,const uint8_t identityHash[ZT_IDENTITY_HASH_SIZE]) : _t(ZEROTIER) { _v.zt.a = zt.toInt(); memcpy(_v.zt.idh,identityHash,ZT_IDENTITY_HASH_SIZE); }
-	ZT_ALWAYS_INLINE Endpoint(const char *name,const int port) : _t(DNSNAME) { Utils::scopy(_v.dns.name,sizeof(_v.dns.name),name); _v.dns.port = port; }
-	explicit ZT_ALWAYS_INLINE Endpoint(const char *url) : _t(URL) { Utils::scopy(_v.url,sizeof(_v.url),url); }
+	ZT_ALWAYS_INLINE Endpoint(const Endpoint &ep)
+	{
+		memcpy(reinterpret_cast<void *>(this),&ep,sizeof(Endpoint));
+	}
 
-	ZT_ALWAYS_INLINE const InetAddress *inetAddr() const { return (_t == INETADDR) ? reinterpret_cast<const InetAddress *>(&_v.sa) : nullptr; }
-	ZT_ALWAYS_INLINE const char *dnsName() const { return (_t == DNSNAME) ? _v.dns.name : nullptr; }
+	explicit ZT_ALWAYS_INLINE Endpoint(const InetAddress &sa) :
+		_t(INETADDR)
+	{
+		_v.sa = sa;
+	}
+
+	ZT_ALWAYS_INLINE Endpoint(const Address &zt,const uint8_t identityHash[ZT_IDENTITY_HASH_SIZE]) :
+		_t(ZEROTIER)
+	{
+		_v.zt.a = zt.toInt();
+		memcpy(_v.zt.idh,identityHash,ZT_IDENTITY_HASH_SIZE);
+	}
+
+	ZT_ALWAYS_INLINE Endpoint(const char *name,const int port) :
+		_t(DNSNAME)
+	{
+		_v.dns.port = port;
+		Utils::scopy(_v.dns.name,sizeof(_v.dns.name),name);
+	}
+
+	explicit ZT_ALWAYS_INLINE Endpoint(const char *url) :
+		_t(URL)
+	{
+		Utils::scopy(_v.url,sizeof(_v.url),url);
+	}
+
+	ZT_ALWAYS_INLINE Endpoint &operator=(const Endpoint &ep)
+	{
+		memcpy(reinterpret_cast<void *>(this),&ep,sizeof(Endpoint));
+		return *this;
+	}
+
+	ZT_ALWAYS_INLINE Endpoint &operator=(const InetAddress &sa)
+	{
+		_t = INETADDR;
+		_v.sa = sa;
+		return *this;
+	}
+
+	/**
+	 * @return InetAddress or NIL if not of this type
+	 */
+	ZT_ALWAYS_INLINE const InetAddress &inetAddr() const { return (_t == INETADDR) ? *reinterpret_cast<const InetAddress *>(&_v.sa) : InetAddress::NIL; }
+
+	/**
+	 * @return DNS name or empty string if not of this type
+	 */
+	ZT_ALWAYS_INLINE const char *dnsName() const { return (_t == DNSNAME) ? _v.dns.name : ""; }
+
+	/**
+	 * @return Port associated with DNS name or -1 if not of this type
+	 */
 	ZT_ALWAYS_INLINE int dnsPort() const { return (_t == DNSNAME) ? _v.dns.port : -1; }
+
+	/**
+	 * @return ZeroTier address or NIL if not of this type
+	 */
 	ZT_ALWAYS_INLINE Address ztAddress() const { return Address((_t == ZEROTIER) ? _v.zt.a : (uint64_t)0); }
+
+	/**
+	 * @return 384-bit hash of identity keys or NULL if not of this type
+	 */
 	ZT_ALWAYS_INLINE const uint8_t *ztIdentityHash() const { return (_t == ZEROTIER) ? _v.zt.idh : nullptr; }
-	ZT_ALWAYS_INLINE const char *url() const { return (_t == URL) ? _v.url : nullptr; }
+
+	/**
+	 * @return URL or empty string if not of this type
+	 */
+	ZT_ALWAYS_INLINE const char *url() const { return (_t == URL) ? _v.url : ""; }
+
+	/**
+	 * @return Ethernet address or NIL if not of this type
+	 */
 	ZT_ALWAYS_INLINE MAC ethernet() const { return (_t == ETHERNET) ? MAC(_v.eth) : MAC(); }
 
+	/**
+	 * @return Endpoint type or NIL if unset/empty
+	 */
 	ZT_ALWAYS_INLINE Type type() const { return _t; }
+
+	explicit ZT_ALWAYS_INLINE operator bool() const { return _t != NIL; }
 
 	bool operator==(const Endpoint &ep) const;
 	ZT_ALWAYS_INLINE bool operator!=(const Endpoint &ep) const { return (!(*this == ep)); }
@@ -82,14 +156,14 @@ private:
 	int _l[3]; // X,Y,Z location in kilometers from the nearest gravitational center of mass
 	union {
 		struct sockaddr_storage sa;
-		struct {
-			char name[ZT_ENDPOINT_MAX_NAME_SIZE];
+		ZT_PACKED_STRUCT(struct {
 			uint16_t port;
-		} dns;
-		struct {
+			char name[ZT_ENDPOINT_MAX_NAME_SIZE];
+		}) dns;
+		ZT_PACKED_STRUCT(struct {
 			uint64_t a;
 			uint8_t idh[ZT_IDENTITY_HASH_SIZE];
-		} zt;
+		}) zt;
 		char url[ZT_ENDPOINT_MAX_NAME_SIZE];
 		uint64_t eth;
 	} _v;

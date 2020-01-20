@@ -114,7 +114,7 @@ void Peer::received(
 			_prioritizePaths(now);
 			RR->t->peerLearnedNewPath(tPtr,networkId,*this,path,packetId);
 		} else {
-			if (RR->node->shouldUsePathForZeroTierTraffic(tPtr,_id.address(),path->localSocket(),path->address())) {
+			if (RR->node->shouldUsePathForZeroTierTraffic(tPtr,_id,path->localSocket(),path->address())) {
 				sendHELLO(tPtr,path->localSocket(),path->address(),now);
 				path->sent(now);
 				RR->t->peerConfirmingUnknownPath(tPtr,networkId,*this,path,packetId,verb);
@@ -128,10 +128,10 @@ path_check_done:
 		_lastAttemptedP2PInit = now;
 
 		InetAddress addr;
-		if (_bootstrap)
-			sendHELLO(tPtr,-1,_bootstrap,now);
+		if (_bootstrap.type() == Endpoint::INETADDR)
+			sendHELLO(tPtr,-1,_bootstrap.inetAddr(),now);
 		if (RR->node->externalPathLookup(tPtr,_id,-1,addr)) {
-			if (RR->node->shouldUsePathForZeroTierTraffic(tPtr,_id.address(),-1,addr))
+			if (RR->node->shouldUsePathForZeroTierTraffic(tPtr,_id,-1,addr))
 				sendHELLO(tPtr,-1,addr,now);
 		}
 
@@ -212,7 +212,7 @@ bool Peer::shouldTryPath(void *tPtr,int64_t now,const SharedPtr<Peer> &suggested
 			}
 		}
 	}
-	return ( ((int)addr.ipScope() > maxHaveScope) && RR->node->shouldUsePathForZeroTierTraffic(tPtr,_id.address(),-1,addr) );
+	return ( ((int)addr.ipScope() > maxHaveScope) && RR->node->shouldUsePathForZeroTierTraffic(tPtr,_id,-1,addr) );
 }
 
 void Peer::sendHELLO(void *tPtr,const int64_t localSocket,const InetAddress &atAddress,int64_t now)
@@ -254,11 +254,11 @@ void Peer::ping(void *tPtr,int64_t now,const bool pingAllAddressTypes)
 		return;
 	}
 
-	if (_bootstrap)
-		sendHELLO(tPtr,-1,_bootstrap,now);
+	if (_bootstrap.type() == Endpoint::INETADDR)
+		sendHELLO(tPtr,-1,_bootstrap.inetAddr(),now);
 
 	SharedPtr<Peer> r(RR->topology->root());
-	if (r) {
+	if ((r)&&(r.ptr() != this)) {
 		SharedPtr<Path> rp(r->path(now));
 		if (rp) {
 			sendHELLO(tPtr,rp->localSocket(),rp->address(),now);
