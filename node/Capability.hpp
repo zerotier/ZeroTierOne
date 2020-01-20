@@ -58,9 +58,9 @@ class Capability : public Credential
 	friend class Credential;
 
 public:
-	static inline Credential::Type credentialType() { return Credential::CREDENTIAL_TYPE_CAPABILITY; }
+	static ZT_ALWAYS_INLINE Credential::Type credentialType() { return Credential::CREDENTIAL_TYPE_CAPABILITY; }
 
-	inline Capability() :
+	ZT_ALWAYS_INLINE Capability() :
 		_nwid(0),
 		_ts(0),
 		_id(0),
@@ -79,7 +79,7 @@ public:
 	 * @param rules Network flow rules for this capability
 	 * @param ruleCount Number of flow rules
 	 */
-	inline Capability(uint32_t id,uint64_t nwid,int64_t ts,unsigned int mccl,const ZT_VirtualNetworkRule *rules,unsigned int ruleCount) :
+	ZT_ALWAYS_INLINE Capability(uint32_t id,uint64_t nwid,int64_t ts,unsigned int mccl,const ZT_VirtualNetworkRule *rules,unsigned int ruleCount) :
 		_nwid(nwid),
 		_ts(ts),
 		_id(id),
@@ -93,32 +93,32 @@ public:
 	/**
 	 * @return Rules -- see ruleCount() for size of array
 	 */
-	inline const ZT_VirtualNetworkRule *rules() const { return _rules; }
+	ZT_ALWAYS_INLINE const ZT_VirtualNetworkRule *rules() const { return _rules; }
 
 	/**
 	 * @return Number of rules in rules()
 	 */
-	inline unsigned int ruleCount() const { return _ruleCount; }
+	ZT_ALWAYS_INLINE unsigned int ruleCount() const { return _ruleCount; }
 
 	/**
 	 * @return ID and evaluation order of this capability in network
 	 */
-	inline uint32_t id() const { return _id; }
+	ZT_ALWAYS_INLINE uint32_t id() const { return _id; }
 
 	/**
 	 * @return Network ID for which this capability was issued
 	 */
-	inline uint64_t networkId() const { return _nwid; }
+	ZT_ALWAYS_INLINE uint64_t networkId() const { return _nwid; }
 
 	/**
 	 * @return Timestamp
 	 */
-	inline int64_t timestamp() const { return _ts; }
+	ZT_ALWAYS_INLINE int64_t timestamp() const { return _ts; }
 
 	/**
 	 * @return Last 'to' address in chain of custody
 	 */
-	inline Address issuedTo() const
+	ZT_ALWAYS_INLINE Address issuedTo() const
 	{
 		Address i2;
 		for(unsigned int i=0;i<ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH;++i) {
@@ -142,29 +142,14 @@ public:
 	 * @param to Recipient of this signature
 	 * @return True if signature successful and chain of custody appended
 	 */
-	inline bool sign(const Identity &from,const Address &to)
-	{
-		try {
-			for(unsigned int i=0;((i<_maxCustodyChainLength)&&(i<ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH));++i) {
-				if (!(_custody[i].to)) {
-					Buffer<(sizeof(Capability) * 2)> tmp;
-					this->serialize(tmp,true);
-					_custody[i].to = to;
-					_custody[i].from = from.address();
-					_custody[i].signatureLength = from.sign(tmp.data(),tmp.size(),_custody[i].signature,sizeof(_custody[i].signature));
-					return true;
-				}
-			}
-		} catch ( ... ) {}
-		return false;
-	}
+	bool sign(const Identity &from,const Address &to);
 
 	/**
 	 * Verify this capability's chain of custody and signatures
 	 *
 	 * @param RR Runtime environment to provide for peer lookup, etc.
 	 */
-	inline Credential::VerifyResult verify(const RuntimeEnvironment *RR,void *tPtr) const { return _verify(RR,tPtr,*this); }
+	ZT_ALWAYS_INLINE Credential::VerifyResult verify(const RuntimeEnvironment *RR,void *tPtr) const { return _verify(RR,tPtr,*this); }
 
 	template<unsigned int C>
 	static inline void serializeRules(Buffer<C> &b,const ZT_VirtualNetworkRule *rules,unsigned int ruleCount)
@@ -459,10 +444,10 @@ public:
 	}
 
 	// Provides natural sort order by ID
-	inline bool operator<(const Capability &c) const { return (_id < c._id); }
+	ZT_ALWAYS_INLINE bool operator<(const Capability &c) const { return (_id < c._id); }
 
-	inline bool operator==(const Capability &c) const { return (memcmp(this,&c,sizeof(Capability)) == 0); }
-	inline bool operator!=(const Capability &c) const { return (memcmp(this,&c,sizeof(Capability)) != 0); }
+	ZT_ALWAYS_INLINE bool operator==(const Capability &c) const { return (memcmp(this,&c,sizeof(Capability)) == 0); }
+	ZT_ALWAYS_INLINE bool operator!=(const Capability &c) const { return (memcmp(this,&c,sizeof(Capability)) != 0); }
 
 private:
 	uint64_t _nwid;

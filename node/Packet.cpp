@@ -18,9 +18,16 @@
 #include "Mutex.hpp"
 #include "LZ4.hpp"
 
+#if (defined(_MSC_VER) || defined(__GNUC__) || defined(__clang)) && (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
+#define ZT_PACKET_USE_ATOMIC_INTRINSICS
+#endif
+#ifndef ZT_PACKET_USE_ATOMIC_INTRINSICS
+#include <atomic>
+#endif
+
 namespace ZeroTier {
 
-const unsigned char Packet::ZERO_KEY[32] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
+const uint8_t Packet::ZERO_KEY[32] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
 
 void Packet::armor(const void *key,bool encryptPayload)
 {
@@ -116,24 +123,27 @@ bool Packet::uncompress()
 	return true;
 }
 
+static unsigned long long s_initPacketID()
+{
+	unsigned long long tmp = 0;
+	Utils::getSecureRandom(&tmp,sizeof(tmp));
+	tmp >>= 31U;
+	tmp |= (((uint64_t)time(nullptr)) & 0xffffffffULL) << 33U;
+	return tmp;
+}
+#ifdef ZT_PACKET_USE_ATOMIC_INTRINSICS
+static unsigned long long s_packetIdCtr = s_initPacketID();
+#else
+static std::atomic<unsigned long long> s_packetIdCtr(s_initPacketID());
+#endif
+
 uint64_t Packet::nextPacketId()
 {
-	// The packet ID which is also the packet's nonce/IV can be sequential but
-	// it should never repeat. This scheme minimizes the chance of nonce
-	// repetition if (as will usually be the case) the clock is relatively
-	// accurate.
-
-	static uint64_t ctr = 0;
-	static Mutex lock;
-	lock.lock();
-	while (ctr == 0) {
-		Utils::getSecureRandom(&ctr,sizeof(ctr));
-		ctr >>= 32;
-		ctr |= (((uint64_t)time(nullptr)) & 0xffffffffULL) << 32;
-	}
-	const uint64_t i = ctr++;
-	lock.unlock();
-	return i;
+#ifdef ZT_PACKET_USE_ATOMIC_INTRINSICS
+	return __sync_add_and_fetch(&s_packetIdCtr,1ULL);
+#else
+	return ++s_packetIdCtr;
+#endif
 }
 
 } // namespace ZeroTier

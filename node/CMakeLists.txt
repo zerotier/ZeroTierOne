@@ -51,6 +51,7 @@ set(core_src
 	AES.cpp
 	Buf.cpp
 	C25519.cpp
+	Capability.cpp
 	Credential.cpp
 	ECC384.cpp
 	Endpoint.cpp

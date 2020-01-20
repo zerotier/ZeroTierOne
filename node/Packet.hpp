@@ -1174,8 +1174,7 @@ public:
 	bool uncompress();
 
 private:
-	static const unsigned char ZERO_KEY[32];
-
+	static const uint8_t ZERO_KEY[32];
 	static uint64_t nextPacketId();
 
 	/**
@@ -1189,9 +1188,9 @@ private:
 	 * @param in Input key (32 bytes)
 	 * @param out Output buffer (32 bytes)
 	 */
-	inline void _salsa20MangleKey(const unsigned char *in,unsigned char *out) const
+	ZT_ALWAYS_INLINE void _salsa20MangleKey(const uint8_t *in,uint8_t *out) const
 	{
-		const unsigned char *d = (const unsigned char *)data();
+		const uint8_t *const d = (const unsigned char *)data();
 
 		// IV and source/destination addresses. Using the addresses divides the
 		// key space into two halves-- A->B and B->A (since order will change).
@@ -1201,12 +1200,12 @@ private:
 		// Flags, but with hop count masked off. Hop count is altered by forwarding
 		// nodes. It's one of the only parts of a packet modifiable by people
 		// without the key.
-		out[18] = in[18] ^ (d[ZT_PACKET_IDX_FLAGS] & 0xf8);
+		out[18] = in[18] ^ (d[ZT_PACKET_IDX_FLAGS] & 0xf8U);
 
 		// Raw packet size in bytes -- thus each packet size defines a new
 		// key space.
-		out[19] = in[19] ^ (unsigned char)(size() & 0xff);
-		out[20] = in[20] ^ (unsigned char)((size() >> 8) & 0xff); // little endian
+		out[19] = in[19] ^ (uint8_t)size();
+		out[20] = in[20] ^ (uint8_t)(size() >> 8U); // little endian
 
 		// Rest of raw key is used unchanged
 		for(unsigned int i=21;i<32;++i)

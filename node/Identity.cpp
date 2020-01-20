@@ -264,7 +264,7 @@ char *Identity::toString(bool includePrivate,char buf[ZT_IDENTITY_STRING_BUFFER_
 			}
 			*p = (char)0;
 			return buf;
-		} break;
+		}
 
 		case P384: {
 			char *p = buf;
@@ -284,7 +284,7 @@ char *Identity::toString(bool includePrivate,char buf[ZT_IDENTITY_STRING_BUFFER_
 			}
 			*p = (char)0;
 			return buf;
-		}	break;
+		}
 
 	}
 	return nullptr;
