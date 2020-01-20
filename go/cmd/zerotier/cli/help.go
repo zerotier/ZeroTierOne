@@ -40,35 +40,41 @@ Commands:
   selftest                             Run internal tests
   service                              Start as service
   status                               Show ZeroTier status and config
-  peers                                Show VL1 peers
-  roots                                Show configured VL1 root servers
-  addroot <identity> [IP/port]         Add VL1 root
+  peers                                Show VL1 peers and link information
+  join <network ID>                    Join a virtual network
+  leave <network ID>                   Leave a virtual network
+  networks                             List joined VL2 virtual networks
+  network <network ID>                 Show verbose network info
+  addroot <identity> [IP/port]         Add VL1 root with optional bootstrap IP
   removeroot <identity|address>        Remove VL1 root server
+  roots                                Show configured VL1 root servers
+  set <network ID> [option] [value]    Get or set a network config option
+    manageips <boolean>                Is IP management allowed?
+    manageroutes <boolean>             Is route management allowed?
+    globalips <boolean>                Allow assignment of global IPs?
+    globalroutes <boolean>             Can global IP space routes be set?
+    defaultroute <boolean>             Can default route be overridden?
+  set [option] [value]                 Get or set a service config option
+    phy <IP/bits> blacklist <boolean>  Set or clear blacklist for CIDR
+    phy <IP/bits> trust <path ID/0>    Set or clear trusted path ID for CIDR
+  * port <port>                        Set primary port for P2P links
+  * secondaryport <port/0>             Set secondary P2P port (0 disables)
+    portsearch <boolean>               Enable/disable port search on startup
+    portmapping <boolean>              Enable/disable use of uPnP/NAT-PMP
   identity <command> [args]            Identity management commands
     new [c25519|p384]                  Create identity (including secret)
     getpublic <identity>               Extract only public part of identity
     validate <identity>                Locally validate an identity
     sign <identity> <file>             Sign a file with an identity's key
     verify <identity> <file> <sig>     Verify a signature
-  networks                             List joined VL2 virtual networks
-  network <network ID>                 Show verbose network info
-  join <network ID>                    Join a virtual network
-  leave <network ID>                   Leave a virtual network
-  set <network ID> <option> <value>    Set a network local config option
-    manageips <boolean>                Is IP management allowed?
-    manageroutes <boolean>             Is route management allowed?
-    globalips <boolean>                Allow assignment of global IPs?
-    globalroutes <boolean>             Can global IP space routes be set?
-    defaultroute <boolean>             Can default route be overridden?
-  set <local config option> <value>    Set a local configuration option
-    phy <IP/bits> blacklist <boolean>  Set or clear blacklist for CIDR
-    phy <IP/bits> trust <path ID/0>    Set or clear trusted path ID for CIDR
-    virt <address> try <IP/port> [...] Set explicit IPs for reaching a peer
-    port <port>                        Set primary local port for VL1 P2P
-    secondaryport <port/0>             Set or disable secondary VL1 P2P port
-    tertiaryport <port/0>              Set or disable tertiary VL1 P2P port
-    portsearch <boolean>               Set or disable port search on startup
-    portmapping <boolean>              Set or disable use of uPnP/NAT-PMP
+
+The 'service' command does not exit until the service receives a signal.
+This is typically run from launchd (Mac), systemd or init (Linux), etc.
+
+If 'set' is followed by a 16-digit hex number it will get/set network config
+options. Otherwise it will get/set service options. Run with no arguments to
+see all options. Settings with a '*' alongside require a service restart.
+A few rarely used options require manual editing of local.conf and restart.
 
 Most commands require a secret token to permit control of a running ZeroTier
 service. The CLI will automatically try to read this token from the

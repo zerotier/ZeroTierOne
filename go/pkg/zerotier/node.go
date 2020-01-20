@@ -191,26 +191,6 @@ func NewNode(basePath string) (n *Node, err error) {
 			}
 		}
 
-		if n.localConfig.Settings.TertiaryPort > 0 {
-			portCheckCount = 0
-			origPort = n.localConfig.Settings.TertiaryPort
-			for portCheckCount < 256 {
-				portCheckCount++
-				if checkPort(n.localConfig.Settings.TertiaryPort) {
-					if n.localConfig.Settings.TertiaryPort != origPort {
-						n.log.Printf("tertiary port %d unavailable, found port %d (port search enabled)", origPort, n.localConfig.Settings.TertiaryPort)
-					}
-					break
-				}
-				n.log.Printf("tertiary port %d unavailable, trying a random port (port search enabled)", n.localConfig.Settings.TertiaryPort)
-				n.localConfig.Settings.TertiaryPort = int(32768 + (randomUInt() % 16384))
-				portsChanged = true
-			}
-			if portCheckCount == 256 {
-				n.localConfig.Settings.TertiaryPort = 0
-			}
-		}
-
 		if portsChanged {
 			_ = n.localConfig.Write(n.localConfigPath)
 		}
@@ -306,9 +286,6 @@ func NewNode(basePath string) (n *Node, err error) {
 				}
 				if n.localConfig.Settings.SecondaryPort > 0 && n.localConfig.Settings.SecondaryPort < 65536 {
 					ports = append(ports, n.localConfig.Settings.SecondaryPort)
-				}
-				if n.localConfig.Settings.TertiaryPort > 0 && n.localConfig.Settings.TertiaryPort < 65536 {
-					ports = append(ports, n.localConfig.Settings.TertiaryPort)
 				}
 
 				// Open or close locally bound UDP ports for each local interface address.
@@ -452,7 +429,7 @@ func (n *Node) SetLocalConfig(lc *LocalConfig) (restartRequired bool, err error)
 		}
 	}
 
-	if n.localConfig.Settings.PrimaryPort != lc.Settings.PrimaryPort || n.localConfig.Settings.SecondaryPort != lc.Settings.SecondaryPort || n.localConfig.Settings.TertiaryPort != lc.Settings.TertiaryPort {
+	if n.localConfig.Settings.PrimaryPort != lc.Settings.PrimaryPort || n.localConfig.Settings.SecondaryPort != lc.Settings.SecondaryPort {
 		restartRequired = true
 	}
 	if lc.Settings.LogSizeMax < 0 {

@@ -51,9 +51,6 @@ type LocalConfigSettings struct {
 	// SecondaryPort is the secondary UDP port, set to 0 to disbale (picked at random by default)
 	SecondaryPort int `json:"secondaryPort"`
 
-	// TertiaryPort is a third UDP port, set to 0 to disable (picked at random by default)
-	TertiaryPort int `json:"tertiaryPort"`
-
 	// PortSearch causes ZeroTier to try other ports automatically if it can't bind to configured ports
 	PortSearch bool `json:"portSearch"`
 
@@ -105,7 +102,6 @@ func (lc *LocalConfig) Read(p string, saveDefaultsIfNotExist bool,isTotallyNewNo
 			lc.Settings.PrimaryPort = 9993
 		}
 		lc.Settings.SecondaryPort = unassignedPrivilegedPorts[randomUInt() % uint(len(unassignedPrivilegedPorts))]
-		lc.Settings.TertiaryPort = int(32768 + (randomUInt() % 16384))
 		lc.Settings.PortSearch = true
 		lc.Settings.PortMapping = true
 		lc.Settings.LogSizeMax = 128
