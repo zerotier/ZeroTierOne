@@ -1,10 +1,10 @@
 /*
- * Copyright (c)2019 ZeroTier, Inc.
+ * Copyright (c)2013-2020 ZeroTier, Inc.
  *
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2023-01-01
+ * Change Date: 2024-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -20,7 +20,7 @@ import (
 )
 
 var copyrightText = fmt.Sprintf(`ZeroTier Network Virtualization Service Version %d.%d.%d
-(c)2019 ZeroTier, Inc.
+(c)2013-2020 ZeroTier, Inc.
 Licensed under the ZeroTier BSL (see LICENSE.txt)`, zerotier.CoreVersionMajor, zerotier.CoreVersionMinor, zerotier.CoreVersionRevision)
 
 // Help dumps help to stdout
@@ -62,7 +62,7 @@ Commands:
     portsearch <boolean>               Enable/disable port search on startup
     portmapping <boolean>              Enable/disable use of uPnP/NAT-PMP
   identity <command> [args]            Identity management commands
-    new [c25519|p384]                  Create identity (including secret)
+    new [c25519|p384]                  Create identity pair (default: c25519)
     getpublic <identity>               Extract only public part of identity
     validate <identity>                Locally validate an identity
     sign <identity> <file>             Sign a file with an identity's key
@@ -76,10 +76,12 @@ options. Otherwise it will get/set service options. Run with no arguments to
 see all options. Settings with a '*' alongside require a service restart.
 A few rarely used options require manual editing of local.conf and restart.
 
-Most commands require a secret token to permit control of a running ZeroTier
+An identity can be specified as a file or directly. This is auto-detected.
+
+Most commands require a secret token to permit control of a running
 service. The CLI will automatically try to read this token from the
 authtoken.secret file in the service's working directory and then from a
-file called .zerotierauth in the user's home directory. The -t option can be
-used to explicitly specify a location.`)
+file called .zerotierauth in the user's home directory. The -t option can
+be used to explicitly specify a location.`)
 	fmt.Println()
 }

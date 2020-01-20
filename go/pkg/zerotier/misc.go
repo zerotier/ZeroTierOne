@@ -1,10 +1,10 @@
 /*
- * Copyright (c)2019 ZeroTier, Inc.
+ * Copyright (c)2013-2020 ZeroTier, Inc.
  *
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2023-01-01
+ * Change Date: 2024-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -29,6 +29,9 @@ const LogoChar = "⏁"
 // Base32StdLowerCase is a base32 encoder/decoder using a lower-case standard alphabet and no padding.
 var Base32StdLowerCase = base32.NewEncoding("abcdefghijklmnopqrstuvwxyz234567").WithPadding(base32.NoPadding)
 
+// unassignedPrivilegedPorts are ports below 1024 that do not appear to be assigned by IANA.
+// The new 2.0+ ZeroTier default is 893, which we will eventually seek to have assigned. These
+// are searched as backups if this port is already in use on a system.
 var unassignedPrivilegedPorts = []int{
 	4,
 	6,

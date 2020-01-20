@@ -1,10 +1,10 @@
 /*
- * Copyright (c)2019 ZeroTier, Inc.
+ * Copyright (c)2013-2020 ZeroTier, Inc.
  *
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2023-01-01
+ * Change Date: 2024-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -13,7 +13,7 @@
 
 // This is glue code to ease the use of the NIST P-384 elliptic curve.
 
-// Note that most of the code inside ECC384.cpp is third party code and
+// Note that the code inside ECC384.cpp is third party code and
 // is under the BSD 2-clause license rather than ZeroTier's license.
 
 #ifndef ZT_ECC384_HPP
