@@ -11,19 +11,11 @@
  */
 /****/
 
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-
-#ifndef _WIN32
-#include <sys/time.h>
-#endif
-#include <sys/types.h>
-
+#include <cstdint>
+#include <cstdio>
+#include <ctime>
+#include <cstring>
 #include <algorithm>
-#include <utility>
 #include <stdexcept>
 #include <map>
 #include <thread>
@@ -35,8 +27,6 @@
 #include "../node/NetworkConfig.hpp"
 #include "../node/Dictionary.hpp"
 #include "../node/MAC.hpp"
-
-#include "../include/ZeroTierOne.h"
 
 #include "EmbeddedNetworkController.hpp"
 #include "LFDB.hpp"

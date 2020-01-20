@@ -16,8 +16,6 @@
 
 #include <cstdint>
 
-#include "../include/ZeroTierOne.h"
-
 #include "Constants.hpp"
 #include "Credential.hpp"
 #include "Hashtable.hpp"

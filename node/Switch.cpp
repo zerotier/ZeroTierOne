@@ -18,8 +18,6 @@
 #include <utility>
 #include <stdexcept>
 
-#include "../include/ZeroTierOne.h"
-
 #include "Constants.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "Switch.hpp"
@@ -57,7 +55,7 @@ void Switch::onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddre
 				if (destination != RR->identity.address()) {
 					if (fragment.hops() < ZT_RELAY_MAX_HOPS) {
 						fragment.incrementHops();
-						SharedPtr<Peer> relayTo = RR->topology->get(destination);
+						SharedPtr<Peer> relayTo = RR->topology->get(tPtr,destination);
 						if ((!relayTo)||(!relayTo->sendDirect(tPtr,fragment.data(),fragment.size(),now))) {
 							relayTo = RR->topology->root();
 							if (relayTo)
@@ -125,7 +123,7 @@ void Switch::onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddre
 					Packet packet(data,len);
 					if (packet.hops() < ZT_RELAY_MAX_HOPS) {
 						packet.incrementHops();
-						SharedPtr<Peer> relayTo = RR->topology->get(destination);
+						SharedPtr<Peer> relayTo = RR->topology->get(tPtr,destination);
 						if ((!relayTo)||(!relayTo->sendDirect(tPtr,packet.data(),packet.size(),now))) {
 							relayTo = RR->topology->root();
 							if ((relayTo)&&(relayTo->address() != source))
@@ -364,7 +362,7 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 		// Destination is another ZeroTier peer on the same network --------------
 
 		Address toZT(to.toAddress(network->id())); // since in-network MACs are derived from addresses and network IDs, we can reverse this
-		SharedPtr<Peer> toPeer(RR->topology->get(toZT));
+		SharedPtr<Peer> toPeer(RR->topology->get(tPtr,toZT));
 
 		if (!network->filterOutgoingPacket(tPtr,false,RR->identity.address(),toZT,from,to,(const uint8_t *)data,len,etherType,vlanId,qosBucket)) {
 			RR->t->outgoingNetworkFrameDropped(tPtr,network,from,to,etherType,vlanId,len,"filter blocked");
@@ -463,7 +461,7 @@ void Switch::send(void *tPtr,Packet &packet,bool encrypt)
 			}
 			_txQueue.push_back(TXQueueEntry(dest,RR->node->now(),packet,encrypt));
 		}
-		if (!RR->topology->get(dest))
+		if (!RR->topology->get(tPtr,dest))
 			requestWhois(tPtr,RR->node->now(),dest);
 	}
 }
@@ -540,7 +538,7 @@ unsigned long Switch::doTimerTasks(void *tPtr,int64_t now)
 			} else if ((now - txi->creationTime) > ZT_TRANSMIT_QUEUE_TIMEOUT) {
 				_txQueue.erase(txi++);
 			} else {
-				if (!RR->topology->get(txi->dest))
+				if (!RR->topology->get(tPtr,txi->dest))
 					needWhois.push_back(txi->dest);
 				++txi;
 			}
@@ -557,7 +555,7 @@ unsigned long Switch::doTimerTasks(void *tPtr,int64_t now)
 				rq->timestamp = 0;
 			} else {
 				const Address src(rq->frag0.source());
-				if (!RR->topology->get(src))
+				if (!RR->topology->get(tPtr,src))
 					requestWhois(tPtr,now,src);
 			}
 		}
@@ -580,7 +578,7 @@ unsigned long Switch::doTimerTasks(void *tPtr,int64_t now)
 bool Switch::_trySend(void *tPtr,Packet &packet,bool encrypt)
 {
 	const int64_t now = RR->node->now();
-	const SharedPtr<Peer> peer(RR->topology->get(packet.destination()));
+	const SharedPtr<Peer> peer(RR->topology->get(tPtr,packet.destination()));
 	SharedPtr<Path> viaPath;
 	if (peer) {
 		viaPath = peer->path(now);

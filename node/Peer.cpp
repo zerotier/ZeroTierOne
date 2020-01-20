@@ -49,6 +49,8 @@ Peer::Peer(const RuntimeEnvironment *renv) :
 
 bool Peer::init(const Identity &myIdentity,const Identity &peerIdentity)
 {
+	if (_id == peerIdentity)
+		return true;
 	_id = peerIdentity;
 	_vProto = 0;
 	_vMajor = 0;

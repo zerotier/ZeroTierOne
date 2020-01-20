@@ -98,11 +98,11 @@ const char *ZT_PLATFORM_DEFAULT_HOMEPATH = defaultHomePath.c_str();
 
 /****************************************************************************/
 
-/* These functions are implemented in Go in pkg/ztnode/node-callbacks.go */
-extern "C" int goPathCheckFunc(void *,uint64_t,int,const void *,int);
+/* These functions are implemented in Go in pkg/zerotier/node.go */
+extern "C" int goPathCheckFunc(void *,const ZT_Identity *,int,const void *,int);
 extern "C" int goPathLookupFunc(void *,uint64_t,int,const ZT_Identity *,int *,uint8_t [16],int *);
 extern "C" void goStateObjectPutFunc(void *,int,const uint64_t [2],const void *,int);
-extern "C" int goStateObjectGetFunc(void *,int,const uint64_t [2],void *,unsigned int);
+extern "C" int goStateObjectGetFunc(void *,int,const uint64_t [2],void **);
 extern "C" void goVirtualNetworkConfigFunc(void *,ZT_GoTap *,uint64_t,int,const ZT_VirtualNetworkConfig *);
 extern "C" void goZtEvent(void *,int,const void *);
 extern "C" void goHandleTapAddedMulticastGroup(void *,ZT_GoTap *,uint64_t,uint64_t,uint32_t);
@@ -170,15 +170,15 @@ static int ZT_GoNode_StateGetFunction(
 	void *tptr,
 	enum ZT_StateObjectType objType,
 	const uint64_t id[2],
-	void *buf,
-	unsigned int buflen)
+	void **data,
+	void (**freeFunc)(void *))
 {
+	*freeFunc = free;
 	return goStateObjectGetFunc(
 		reinterpret_cast<ZT_GoNode *>(uptr)->goUserPtr,
 		(int)objType,
 		id,
-		buf,
-		buflen);
+		data);
 }
 
 static ZT_ALWAYS_INLINE void doUdpSend(ZT_SOCKET sock,const struct sockaddr_storage *addr,const void *data,const unsigned int len,const unsigned int ipTTL)
@@ -240,6 +240,7 @@ static int ZT_GoNode_PathCheckFunction(
 	void *uptr,
 	void *tptr,
 	uint64_t ztAddress,
+	const ZT_Identity *id,
 	int64_t localSocket,
 	const struct sockaddr_storage *sa)
 {
@@ -247,14 +248,14 @@ static int ZT_GoNode_PathCheckFunction(
 		case AF_INET:
 			return goPathCheckFunc(
 				reinterpret_cast<ZT_GoNode *>(uptr)->goUserPtr,
-				ztAddress,
+				id,
 				AF_INET,
 				&(reinterpret_cast<const struct sockaddr_in *>(sa)->sin_addr.s_addr),
 				Utils::ntoh((uint16_t)reinterpret_cast<const struct sockaddr_in *>(sa)->sin_port));
 		case AF_INET6:
 			return goPathCheckFunc(
 				reinterpret_cast<ZT_GoNode *>(uptr)->goUserPtr,
-				ztAddress,
+				id,
 				AF_INET6,
 				reinterpret_cast<const struct sockaddr_in6 *>(sa)->sin6_addr.s6_addr,
 				Utils::ntoh((uint16_t)reinterpret_cast<const struct sockaddr_in6 *>(sa)->sin6_port));

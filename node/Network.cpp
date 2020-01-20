@@ -563,16 +563,19 @@ Network::Network(const RuntimeEnvironment *renv,void *tPtr,uint64_t nwid,void *u
 		bool got = false;
 		ScopedPtr< Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> > dict(new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>());
 		try {
-			int n = RR->node->stateObjectGet(tPtr,ZT_STATE_OBJECT_NETWORK_CONFIG,tmp,dict->unsafeData(),ZT_NETWORKCONFIG_DICT_CAPACITY - 1);
-			if (n > 1) {
-				try {
-					ScopedPtr<NetworkConfig> nconf2(new NetworkConfig());
-					if (nconf2->fromDictionary(*dict)) {
-						this->setConfiguration(tPtr,*nconf2,false);
-						_lastConfigUpdate = 0; // still want to re-request an update since it's likely outdated
-						got = true;
-					}
-				} catch ( ... ) {}
+			std::vector<uint8_t> nconfData(RR->node->stateObjectGet(tPtr,ZT_STATE_OBJECT_NETWORK_CONFIG,tmp));
+			if (nconfData.size() > 2) {
+				nconfData.push_back(0);
+				if (dict->load((const char *)nconfData.data())) {
+					try {
+						ScopedPtr<NetworkConfig> nconf2(new NetworkConfig());
+						if (nconf2->fromDictionary(*dict)) {
+							this->setConfiguration(tPtr,*nconf2,false);
+							_lastConfigUpdate = 0; // still want to re-request an update since it's likely outdated
+							got = true;
+						}
+					} catch (...) {}
+				}
 			}
 		} catch ( ... ) {}
 
@@ -894,10 +897,10 @@ uint64_t Network::handleConfigChunk(void *tPtr,const uint64_t packetId,const Add
 			}
 
 			// If it's not a duplicate, check chunk signature
-			const Identity controllerId(RR->topology->getIdentity(tPtr,controller()));
-			if (!controllerId) // we should always have the controller identity by now, otherwise how would we have queried it the first time?
+			const SharedPtr<Peer> controllerPeer(RR->topology->get(tPtr,controller()));
+			if (!controllerPeer)
 				return 0;
-			if (!controllerId.verify(chunk.field(start,ptr - start),ptr - start,sig,ZT_C25519_SIGNATURE_LEN))
+			if (!controllerPeer->identity().verify(chunk.field(start,ptr - start),ptr - start,sig,ZT_C25519_SIGNATURE_LEN))
 				return 0;
 
 			// New properly verified chunks can be flooded "virally" through the network
@@ -1010,7 +1013,6 @@ int Network::setConfiguration(void *tPtr,const NetworkConfig &nconf,bool saveToD
 
 bool Network::gate(void *tPtr,const SharedPtr<Peer> &peer)
 {
-	const int64_t now = RR->node->now();
 	Mutex::Lock l(_memberships_l);
 	try {
 		if (_config) {
@@ -1037,8 +1039,8 @@ void Network::doPeriodicTasks(void *tPtr,const int64_t now)
 		Mutex::Lock l1(_memberships_l);
 
 		{
-			Address *a = (Address *)0;
-			Membership *m = (Membership *)0;
+			Address *a = nullptr;
+			Membership *m = nullptr;
 			Hashtable<Address,Membership>::Iterator i(_memberships);
 			while (i.next(a,m))
 				m->clean(now,_config);
@@ -1074,8 +1076,8 @@ void Network::learnBridgeRoute(const MAC &mac,const Address &addr)
 		Address maxAddr;
 		unsigned long maxCount = 0;
 
-		MAC *m = (MAC *)0;
-		Address *a = (Address *)0;
+		MAC *m = nullptr;
+		Address *a = nullptr;
 
 		// Find the address responsible for the most entries
 		{
@@ -1365,12 +1367,11 @@ void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const
 void Network::_announceMulticastGroups(void *tPtr,bool force)
 {
 	// Assumes _myMulticastGroups_l and _memberships_l are locked
-	const int64_t now = RR->node->now();
 	const std::vector<MulticastGroup> groups(_allMulticastGroups());
 	_announceMulticastGroupsTo(tPtr,controller(),groups);
 	{
-		Address *a = (Address *)0;
-		Membership *m = (Membership *)0;
+		Address *a = nullptr;
+		Membership *m = nullptr;
 		Hashtable<Address,Membership>::Iterator i(_memberships);
 		while (i.next(a,m)) {
 			// TODO

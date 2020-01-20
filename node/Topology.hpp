@@ -14,17 +14,13 @@
 #ifndef ZT_TOPOLOGY_HPP
 #define ZT_TOPOLOGY_HPP
 
-#include <cstdio>
 #include <cstring>
-
 #include <vector>
 #include <algorithm>
 #include <utility>
 #include <set>
 
 #include "Constants.hpp"
-#include "../include/ZeroTierOne.h"
-
 #include "Address.hpp"
 #include "Identity.hpp"
 #include "Peer.hpp"
@@ -157,8 +153,8 @@ public:
 	{
 		RWMutex::RLock l(_peers_l);
 		Hashtable< Address,SharedPtr<Peer> >::Iterator i(const_cast<Topology *>(this)->_peers);
-		Address *a = (Address *)0;
-		SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
+		Address *a = nullptr;
+		SharedPtr<Peer> *p = nullptr;
 		while (i.next(a,p)) {
 			f(*((const SharedPtr<Peer> *)p));
 		}
@@ -189,8 +185,8 @@ public:
 
 		try {
 			Hashtable< Address,SharedPtr<Peer> >::Iterator i(const_cast<Topology *>(this)->_peers);
-			Address *a = (Address *)0;
-			SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
+			Address *a = nullptr;
+			SharedPtr<Peer> *p = nullptr;
 			while (i.next(a,p)) {
 				f(*((const SharedPtr<Peer> *)p),std::binary_search(rootPeerPtrs,rootPeerPtrsEnd,(uintptr_t)p->ptr()));
 			}
@@ -210,10 +206,10 @@ public:
 	{
 		RWMutex::RLock l(_paths_l);
 		Hashtable< Path::HashKey,SharedPtr<Path> >::Iterator i(const_cast<Topology *>(this)->_paths);
-		Path::HashKey *k = (Path::HashKey *)0;
-		SharedPtr<Path> *p = (SharedPtr<Path> *)0;
+		Path::HashKey *k = nullptr;
+		SharedPtr<Path> *p = nullptr;
 		while (i.next(k,p)) {
-			f(*((const SharedPtr<Peer> *)p));
+			f(*((const SharedPtr<Path> *)p));
 		}
 	}
 

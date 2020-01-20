@@ -11,10 +11,9 @@
  */
 /****/
 
+#include "../node/Constants.hpp"
 #include "NeighborDiscovery.hpp"
 #include "OSUtils.hpp"
-
-#include "../include/ZeroTierOne.h"
 
 #include <assert.h>
 

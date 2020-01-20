@@ -435,13 +435,16 @@ typedef void ZT_Identity;
  * levels of authentication or access control that are required. Any node
  * in the world can send you a user message! (Unless your network is air
  * gapped.)
+ *
+ * Pointers to id and data might not remain valid after the event is
+ * received.
  */
 typedef struct
 {
 	/**
-	 * ZeroTier address of sender (least significant 40 bits)
+	 * Identity of sender
 	 */
-	uint64_t origin;
+	const ZT_Identity *id;
 
 	/**
 	 * User message type ID
@@ -449,7 +452,7 @@ typedef struct
 	uint64_t typeId;
 
 	/**
-	 * User message data (not including type ID)
+	 * User message data
 	 */
 	const void *data;
 

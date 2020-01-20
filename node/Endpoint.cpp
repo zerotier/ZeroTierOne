@@ -19,7 +19,7 @@ bool Endpoint::operator==(const Endpoint &ep) const
 {
 	if (_t == ep._t) {
 		switch(_t) {
-			case INETADDR: return (*sockaddr() == *ep.sockaddr());
+			case INETADDR: return (inetAddr() == ep.inetAddr());
 			case DNSNAME:  return ((_v.dns.port == ep._v.dns.port)&&(strcmp(_v.dns.name,ep._v.dns.name) == 0));
 			case ZEROTIER: return ((_v.zt.a == ep._v.zt.a)&&(memcmp(_v.zt.idh,ep._v.zt.idh,sizeof(_v.zt.idh)) == 0));
 			case URL:      return (strcmp(_v.url,ep._v.url) == 0);
@@ -37,7 +37,7 @@ bool Endpoint::operator<(const Endpoint &ep) const
 	} else if (_t == ep._t) {
 		int ncmp;
 		switch(_t) {
-			case INETADDR: return (*sockaddr() < *ep.sockaddr());
+			case INETADDR: return (inetAddr() < ep.inetAddr());
 			case DNSNAME:
 				ncmp = strcmp(_v.dns.name,ep._v.dns.name);
 				return ((ncmp < 0) ? true : (ncmp == 0)&&(_v.dns.port < ep._v.dns.port));

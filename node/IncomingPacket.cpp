@@ -11,8 +11,6 @@
  */
 /****/
 
-#include "../include/ZeroTierOne.h"
-
 #include "Constants.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "IncomingPacket.hpp"
@@ -75,7 +73,7 @@ ZT_ALWAYS_INLINE bool _doHELLO(IncomingPacket &pkt,const RuntimeEnvironment *con
 		return true;
 	}
 
-	SharedPtr<Peer> peer(RR->topology->get(id.address()));
+	SharedPtr<Peer> peer(RR->topology->get(tPtr,id.address()));
 	if (peer) {
 		// We already have an identity with this address -- check for collisions
 		if (!alreadyAuthenticated) {
@@ -131,7 +129,11 @@ ZT_ALWAYS_INLINE bool _doHELLO(IncomingPacket &pkt,const RuntimeEnvironment *con
 		}
 
 		// Check packet integrity and MAC (this is faster than locallyValidate() so do it first to filter out total crap)
-		SharedPtr<Peer> newPeer(new Peer(RR,RR->identity,id));
+		SharedPtr<Peer> newPeer(new Peer(RR));
+		if (!newPeer->init(RR->identity,id)) {
+			RR->t->incomingPacketDroppedHELLO(tPtr,path,pid,fromAddress,"error initializing peer");
+			return true;
+		}
 		if (!pkt.dearmor(newPeer->key())) {
 			RR->t->incomingPacketMessageAuthenticationFailure(tPtr,path,pid,fromAddress,pkt.hops(),"invalid MAC");
 			return true;
@@ -143,7 +145,7 @@ ZT_ALWAYS_INLINE bool _doHELLO(IncomingPacket &pkt,const RuntimeEnvironment *con
 			return true;
 		}
 
-		peer = RR->topology->add(newPeer);
+		peer = RR->topology->add(tPtr,newPeer);
 
 		// Continue at // VALID
 	}
@@ -283,8 +285,11 @@ ZT_ALWAYS_INLINE bool _doOK(IncomingPacket &pkt,const RuntimeEnvironment *const 
 					try {
 						Identity id;
 						p += id.deserialize(pkt,p);
-						if (id)
-							RR->sw->doAnythingWaitingForPeer(tPtr,RR->topology->add(SharedPtr<Peer>(new Peer(RR,RR->identity,id))));
+						if (id) {
+							SharedPtr<Peer> ptmp(RR->topology->add(tPtr,SharedPtr<Peer>(new Peer(RR))));
+							ptmp->init(RR->identity,id);
+							RR->sw->doAnythingWaitingForPeer(tPtr,ptmp);
+						}
 					} catch ( ... ) {
 						break;
 					}
@@ -325,9 +330,9 @@ ZT_ALWAYS_INLINE bool _doWHOIS(IncomingPacket &pkt,const RuntimeEnvironment *con
 		const Address addr(pkt.field(ptr,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
 		ptr += ZT_ADDRESS_LENGTH;
 
-		const Identity id(RR->topology->getIdentity(tPtr,addr));
-		if (id) {
-			id.serialize(outp,false);
+		const SharedPtr<Peer> ptmp(RR->topology->get(tPtr,addr));
+		if (ptmp) {
+			ptmp->identity().serialize(outp,false);
 			++count;
 		} else {
 			// Request unknown WHOIS from upstream from us (if we have one)
@@ -350,7 +355,7 @@ ZT_ALWAYS_INLINE bool _doRENDEZVOUS(IncomingPacket &pkt,const RuntimeEnvironment
 	if (RR->topology->isRoot(peer->identity())) {
 		uint16_t junk = (uint16_t)Utils::random();
 		const Address with(pkt.field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ZTADDRESS,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
-		const SharedPtr<Peer> rendezvousWith(RR->topology->get(with));
+		const SharedPtr<Peer> rendezvousWith(RR->topology->get(tPtr,with));
 		if (rendezvousWith) {
 			const unsigned int port = pkt.at<uint16_t>(ZT_PROTO_VERB_RENDEZVOUS_IDX_PORT);
 			const unsigned int addrlen = pkt[ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRLEN];
@@ -712,7 +717,7 @@ ZT_ALWAYS_INLINE bool _doUSER_MESSAGE(IncomingPacket &pkt,const RuntimeEnvironme
 {
 	if (likely(pkt.size() >= (ZT_PACKET_IDX_PAYLOAD + 8))) {
 		ZT_UserMessage um;
-		um.origin = peer->address().toInt();
+		um.id = (const ZT_Identity *)(&(peer->identity()));
 		um.typeId = pkt.at<uint64_t>(ZT_PACKET_IDX_PAYLOAD);
 		um.data = reinterpret_cast<const void *>(reinterpret_cast<const uint8_t *>(pkt.data()) + ZT_PACKET_IDX_PAYLOAD + 8);
 		um.length = pkt.size() - (ZT_PACKET_IDX_PAYLOAD + 8);
@@ -749,7 +754,7 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,void *tPtr)
 			return _doHELLO(*this,RR,tPtr,false,_path);
 		}
 
-		const SharedPtr<Peer> peer(RR->topology->get(sourceAddress));
+		const SharedPtr<Peer> peer(RR->topology->get(tPtr,sourceAddress));
 		if (peer) {
 			if (!trusted) {
 				if (!dearmor(peer->key())) {

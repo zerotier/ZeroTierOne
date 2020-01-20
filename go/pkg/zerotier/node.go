@@ -573,7 +573,7 @@ func (n *Node) multicastUnsubscribe(nwid uint64, mg *MulticastGroup) {
 	C.ZT_Node_multicastUnsubscribe(unsafe.Pointer(n.zn), C.uint64_t(nwid), C.uint64_t(mg.MAC), C.ulong(mg.ADI))
 }
 
-func (n *Node) pathCheck(ztAddress Address, af int, ip net.IP, port int) bool {
+func (n *Node) pathCheck(ip net.IP) bool {
 	n.localConfigLock.RLock()
 	defer n.localConfigLock.RUnlock()
 	for cidr, phy := range n.localConfig.Physical {
@@ -661,17 +661,17 @@ func (n *Node) handleTrace(traceMessage string) {
 	}
 }
 
-func (n *Node) handleUserMessage(originAddress, messageTypeID uint64, data []byte) {
+func (n *Node) handleUserMessage(origin *Identity, messageTypeID uint64, data []byte) {
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 // These are callbacks called by the core and GoGlue stuff to talk to the
-// service. These launch gorountines to do their work where possible to
+// service. These launch goroutines to do their work where possible to
 // avoid blocking anything in the core.
 
 //export goPathCheckFunc
-func goPathCheckFunc(gn unsafe.Pointer, ztAddress C.uint64_t, af C.int, ip unsafe.Pointer, port C.int) C.int {
+func goPathCheckFunc(gn, _ unsafe.Pointer, af C.int, ip unsafe.Pointer, _ C.int) C.int {
 	nodesByUserPtrLock.RLock()
 	node := nodesByUserPtr[uintptr(gn)]
 	nodesByUserPtrLock.RUnlock()
@@ -683,14 +683,14 @@ func goPathCheckFunc(gn unsafe.Pointer, ztAddress C.uint64_t, af C.int, ip unsaf
 	} else {
 		return 0
 	}
-	if node != nil && len(nip) > 0 && node.pathCheck(Address(ztAddress), int(af), nip, int(port)) {
+	if node != nil && len(nip) > 0 && node.pathCheck(nip) {
 		return 1
 	}
 	return 0
 }
 
 //export goPathLookupFunc
-func goPathLookupFunc(gn unsafe.Pointer, ztAddress C.uint64_t, desiredFamily int, identity, familyP, ipP, portP unsafe.Pointer) C.int {
+func goPathLookupFunc(gn unsafe.Pointer, _ C.uint64_t, _ int, identity, familyP, ipP, portP unsafe.Pointer) C.int {
 	nodesByUserPtrLock.RLock()
 	node := nodesByUserPtr[uintptr(gn)]
 	nodesByUserPtrLock.RUnlock()
@@ -741,18 +741,21 @@ func goStateObjectPutFunc(gn unsafe.Pointer, objType C.int, id, data unsafe.Poin
 }
 
 //export goStateObjectGetFunc
-func goStateObjectGetFunc(gn unsafe.Pointer, objType C.int, id, data unsafe.Pointer, bufSize C.uint) C.int {
+func goStateObjectGetFunc(gn unsafe.Pointer, objType C.int, id, dataP unsafe.Pointer) C.int {
 	nodesByUserPtrLock.RLock()
 	node := nodesByUserPtr[uintptr(gn)]
 	nodesByUserPtrLock.RUnlock()
 	if node == nil {
 		return -1
 	}
+	*((*uintptr)(dataP)) = 0
 	tmp, found := node.stateObjectGet(int(objType), *((*[2]uint64)(id)))
-	if found && len(tmp) < int(bufSize) {
-		if len(tmp) > 0 {
-			C.memcpy(data, unsafe.Pointer(&(tmp[0])), C.ulong(len(tmp)))
+	if found && len(tmp) > 0 {
+		cData := C.malloc(C.ulong(len(tmp)))
+		if uintptr(cData) == 0 {
+			return -1
 		}
+		*((*uintptr)(dataP)) = uintptr(cData)
 		return C.int(len(tmp))
 	}
 	return -1
@@ -835,7 +838,10 @@ func goZtEvent(gn unsafe.Pointer, eventType C.int, data unsafe.Pointer) {
 			node.handleTrace(C.GoString((*C.char)(data)))
 		case C.ZT_EVENT_USER_MESSAGE:
 			um := (*C.ZT_UserMessage)(data)
-			node.handleUserMessage(uint64(um.origin), uint64(um.typeId), C.GoBytes(um.data, C.int(um.length)))
+			id, err := newIdentityFromCIdentity(unsafe.Pointer(um.id))
+			if err != nil {
+				node.handleUserMessage(id, uint64(um.typeId), C.GoBytes(um.data, C.int(um.length)))
+			}
 		}
 	}()
 }

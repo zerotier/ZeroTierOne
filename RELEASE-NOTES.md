@@ -1,6 +1,30 @@
 ZeroTier Release Notes
 ======
 
+# Version 2.0.0
+
+### This is a major milestone release with numerous changes. It's technically backward compatibile with older nodes but we highly recommend upgrading as soon as possible. We will not force upgrade however as this is a major release and contains changes that may require updates to some configurations, such as CLI changes that may required updates to scripts.
+
+ * Migrated from GNU make to cmake for easier cross platform builds and simplified build files.
+ * Service management code for desktop, laptop, and server ZeroTier service is now written in Go. Core and packet handling (performance critical) code remains in C++.
+ * Reworked CLI for improved ease of use, more readable and detailed display output, and added new root management commands.
+ * "Moon" and "planet" terminology and associated commands are now gone in favor of fully decentralized roots.
+ * Service now has a fully multithreaded UDP I/O path written in C++ for superior scaling on large systems.
+ * Entirely new P2P based multicast propagation algorithm for improved multi-data-center and global scale multicast propagation and improved multicast discovery. Some backward compatibility is included with pre-2.0 but upgrading of all nodes is recommended if you depend on multicast for anything but ARP, NDP, and occasional service advertisements. 
+ * ZeroTier now implements ephemeral keys with continuos re-keying for forward secrecy! (FINALLY!)
+ * Separated root into its own highly optimized code base.
+ * Changed default primary ZeroTier port to 893 (for new nodes) to exploit friendlier NAT behavior on ports numbered under 1024. Added some more aggressive NAT-t techniques that work with this and can often traverse symmetric NATs.
+ * Added stubs for future support for alternative transports including HTTP/HTTPS, WebRTC, Web Sockets, and "naked" Ethernet (on LAN).
+ * Improved packet assemble/decode performance by moving to a lock-free bounds-checking scheme for buffers and a shared memory buffer pool.
+ * Added support for a new identity type with NIST P-384 curves for future FIPS compliance. Curve25519 is still the default.
+ * AES encryption is now the default for communicating with 2.0+ nodes. AES uses a GMAC-based "SIV" mode for improved resilience against nonce reuse, but constructed in a way that could be FIPS certified.
+ * Compression is now only enabled for control packets as most data these days is encrypted or already compressed. This improves performance in almost all cases.
+ * Minor API changes (for those who use the core directly) to support faster buffer handling, reduced memory copying, exposure of identity functions and full node identity, and improved state object load/store semantics.
+
+---
+
+# Older version release notes
+
 # 2019-08-30 -- Version 1.4.6
 
  * Update default root list to latest

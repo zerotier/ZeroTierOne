@@ -20,7 +20,6 @@
 #include <cstdint>
 
 #include "Constants.hpp"
-#include "../include/ZeroTierOne.h"
 #include "Credential.hpp"
 #include "Address.hpp"
 #include "C25519.hpp"

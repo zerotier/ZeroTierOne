@@ -18,8 +18,6 @@
 #include <cstring>
 #include <cstdint>
 
-#include "../include/ZeroTierOne.h"
-
 #include "Constants.hpp"
 #include "Utils.hpp"
 #include "MAC.hpp"

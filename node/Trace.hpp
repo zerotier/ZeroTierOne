@@ -19,8 +19,6 @@
 #include <cstring>
 #include <cstdlib>
 
-#include "../include/ZeroTierOne.h"
-
 #include "Constants.hpp"
 #include "SharedPtr.hpp"
 #include "Packet.hpp"

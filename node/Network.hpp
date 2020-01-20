@@ -15,9 +15,6 @@
 #define ZT_NETWORK_HPP
 
 #include <cstdint>
-
-#include "../include/ZeroTierOne.h"
-
 #include <string>
 #include <map>
 #include <vector>

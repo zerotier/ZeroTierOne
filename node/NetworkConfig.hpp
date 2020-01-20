@@ -22,8 +22,6 @@
 #include <stdexcept>
 #include <algorithm>
 
-#include "../include/ZeroTierOne.h"
-
 #include "Constants.hpp"
 #include "Buffer.hpp"
 #include "InetAddress.hpp"

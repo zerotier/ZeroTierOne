@@ -2,6 +2,7 @@ cmake_minimum_required (VERSION 2.8)
 project(zt_core)
 
 set(core_headers
+	../include/ZeroTierCore.h
 	Address.hpp
 	AtomicCounter.hpp
 	Buf.hpp

@@ -22,9 +22,6 @@
 #include <vector>
 
 #include "Constants.hpp"
-
-#include "../include/ZeroTierOne.h"
-
 #include "RuntimeEnvironment.hpp"
 #include "InetAddress.hpp"
 #include "Mutex.hpp"

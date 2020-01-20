@@ -25,7 +25,6 @@
 #include "Utils.hpp"
 #include "Buffer.hpp"
 #include "Identity.hpp"
-#include "../include/ZeroTierOne.h"
 
 namespace ZeroTier {
 
