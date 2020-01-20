@@ -9,7 +9,7 @@
  * Java JNI Interface to enable Android application development, and Android app itself (code for that is elsewhere)<br>
    Grant Limberg / glimberg@gmail.com
 
- * ZeroTier SDK (formerly known as Network Containers)<br>
+ * ZeroTier SDK / libzt<br>
    Joseph Henry / joseph.henry@zerotier.com
 
 ## Third Party Contributors
@@ -32,32 +32,30 @@ ZeroTier includes the following third party code, either in ext/ or incorporated
 
  * LZ4 compression algorithm by Yann Collet
 
-   * Files: node/Packet.cpp (bundled within anonymous namespace)
+   * Files: node/LZ4.cpp
    * Home page: http://code.google.com/p/lz4/
-   * License grant: BSD 2-clause
+   * License: BSD 2-clause
 
  * C++11 json (nlohmann/json) by Niels Lohmann
 
    * Files: ext/json/*
    * Home page: https://github.com/nlohmann/json
-   * License grant: MIT
+   * License: MIT
 
  * tap-windows6 by the OpenVPN project
 
    * Files: windows/TapDriver6/*
    * Home page: https://github.com/OpenVPN/tap-windows6/
-   * License grant: GNU GPL v2
-   * ZeroTier Modifications: change name of driver to ZeroTier, add ioctl() to get L2 multicast memberships (source is in ext/ and modifications inherit GPL)
+   * License: GNU GPL v2
 
  * Salsa20 stream cipher, Curve25519 elliptic curve cipher, Ed25519 digital signature algorithm, and Poly1305 MAC algorithm, all by Daniel J. Bernstein
 
    * Files: node/Salsa20.* node/C25519.* node/Poly1305.*
    * Home page: http://cr.yp.to/
-   * License grant: public domain
-   * ZeroTier Modifications: slight cryptographically-irrelevant modifications for inclusion into ZeroTier core
+   * License: public domain
 
  * cpp-httplib by yhirose
 
    * Files: ext/cpp-httplib/*
    * Home page: https://github.com/yhirose/cpp-httplib
-   * License grant: MIT
+   * License: MIT

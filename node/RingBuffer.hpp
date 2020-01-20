@@ -293,25 +293,6 @@ public:
 		}
 		return cnt;
 	}
-
-	/**
-	 * Print the contents of the buffer
-	 */
-	/*
-	inline void dump()
-	{
-		size_t iterator = begin;
-		for (size_t i=0; i<S; i++) {
-			iterator = (iterator + S - 1) % S;
-			if (typeid(T) == typeid(int)) {
-				 //DEBUG_INFO("buf[%2zu]=%2d", iterator, (int)*(buf + iterator));
-			}
-			else {
-				 //DEBUG_INFO("buf[%2zu]=%2f", iterator, (float)*(buf + iterator));
-			}
-		}
-	}
-	*/
 };
 
 } // namespace ZeroTier

@@ -150,7 +150,7 @@ private:
 	AtomicCounter _rxQueuePtr;
 
 	// Returns matching or next available RX queue entry
-	inline RXQueueEntry *_findRXQueueEntry(uint64_t packetId)
+	ZT_ALWAYS_INLINE RXQueueEntry *_findRXQueueEntry(uint64_t packetId)
 	{
 		const unsigned int current = static_cast<unsigned int>(_rxQueuePtr.load());
 		for(unsigned int k=1;k<=ZT_RX_QUEUE_SIZE;++k) {
@@ -163,7 +163,7 @@ private:
 	}
 
 	// Returns current entry in rx queue ring buffer and increments ring pointer
-	inline RXQueueEntry *_nextRXQueueEntry()
+	ZT_ALWAYS_INLINE RXQueueEntry *_nextRXQueueEntry()
 	{
 		return &(_rxQueue[static_cast<unsigned int>((++_rxQueuePtr) - 1) % ZT_RX_QUEUE_SIZE]);
 	}

@@ -14,7 +14,6 @@
 #ifndef ZT_SALSA20_HPP
 #define ZT_SALSA20_HPP
 
-#include <cstdio>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
@@ -22,11 +21,10 @@
 #include "Constants.hpp"
 #include "Utils.hpp"
 
-#ifndef ZT_SALSA20_SSE
 #if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
+#include <xmmintrin.h>
 #include <emmintrin.h>
 #define ZT_SALSA20_SSE 1
-#endif
 #endif
 
 namespace ZeroTier {

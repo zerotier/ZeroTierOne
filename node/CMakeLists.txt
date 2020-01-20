@@ -18,6 +18,7 @@ set(core_headers
 	Identity.hpp
 	InetAddress.hpp
 	Locator.hpp
+	LZ4.hpp
 	MAC.hpp
 	Membership.hpp
 	MulticastGroup.hpp
@@ -56,6 +57,7 @@ set(core_src
 	IncomingPacket.cpp
 	InetAddress.cpp
 	Locator.cpp
+	LZ4.cpp
 	Membership.cpp
 	Network.cpp
 	NetworkConfig.cpp
