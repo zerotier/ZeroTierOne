@@ -239,6 +239,9 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 
 	s_inputRate.log(now,pkt.size());
 
+	if ((!fragment)&&(pkt.size() < ZT_PROTO_MIN_PACKET_LENGTH))
+		return;
+
 	if ((!fragment)&&(!pkt.fragmented())&&(dest == s_self.address())) {
 		SharedPtr<RootPeer> peer;
 
