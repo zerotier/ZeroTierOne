@@ -186,9 +186,14 @@ public:
 	ZT_ALWAYS_INLINE int64_t lastReceive() const { return _lastReceive; }
 
 	/**
+	 * @return True if we've heard from this peer in less than ZT_PEER_ALIVE_TIMEOUT
+	 */
+	ZT_ALWAYS_INLINE bool alive(const int64_t now) const { return ((now - _lastReceive) < ZT_PEER_ALIVE_TIMEOUT); }
+
+	/**
 	 * @return True if we've heard from this peer in less than ZT_PEER_ACTIVITY_TIMEOUT
 	 */
-	ZT_ALWAYS_INLINE bool alive(const int64_t now) const { return ((now - _lastReceive) < ZT_PEER_ACTIVITY_TIMEOUT); }
+	ZT_ALWAYS_INLINE bool active(const int64_t now) const { return ((now - _lastReceive) < ZT_PEER_ACTIVITY_TIMEOUT); }
 
 	/**
 	 * @return Latency in milliseconds of best/aggregate path or 0xffff if unknown

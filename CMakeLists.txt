@@ -131,49 +131,18 @@ set(
 	zt_go_native
 )
 
-if(WIN32)
-	set(libs ${libs} wsock32 ws2_32 rpcrt4 iphlpapi)
-else(WIN32)
-	set(libs ${libs} pthread)
-endif(WIN32)
-
-#if(WIN32)
-#	add_subdirectory("windows/WinUI")
-#	add_subdirectory("windows/copyutil")
-#	add_definitions(-DNOMINMAX)
-#endif(WIN32)
-
 #if(WIN32)
 #	set(libs ${libs} wsock32 ws2_32 rpcrt4 iphlpapi)
-#	set(src
-#		${src}
-#		"windows/ZeroTierOne/ServiceBase.cpp"
-#		"windows/ZeroTierOne/ServiceInstaller.cpp"
-#		"windows/ZeroTierOne/ZeroTierOneService.cpp"
-#		"windows/ZeroTierOne/ZeroTierOne.rc"
-#	)
-#	set(headers
-#		${headers}
-#		"windows/ZeroTierOne/ServiceBase.h"
-#		"windows/ZeroTierOne/ServiceInstaller.h"
-#		"windows/ZeroTierOne/ZeroTierOneService.h"
-#	)
 #else(WIN32)
-#	set(libs ${libs} pthread resolv)
+#	set(libs ${libs} pthread)
 #endif(WIN32)
 
 #if(BUILD_CENTRAL_CONTROLLER)
 #	set(libs ${libs} rabbitmq-static ${PostgreSQL_LIBRARIES})
 #endif(BUILD_CENTRAL_CONTROLLER)
 
-#add_executable(${PROJECT_NAME} ${src} ${headers})
-#target_link_libraries(${PROJECT_NAME} ${libs})
-#target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_BINARY_DIR})
-
-add_custom_command(
-	OUTPUT zerotier
+add_custom_target(zerotier ALL
 	WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/go
-	COMMAND go build -trimpath -ldflags -s -o ../build/zerotier cmd/zerotier/zerotier.go
-	DEPENDS zt_osdep zt_core zt_go_native
+	COMMAND rm -f ../build/zerotier && go build -trimpath -ldflags -s -o ../build/zerotier cmd/zerotier/zerotier.go
 )
-add_custom_target(build_zerotier ALL DEPENDS zerotier)
+add_dependencies(zerotier zt_osdep zt_core zt_go_native)

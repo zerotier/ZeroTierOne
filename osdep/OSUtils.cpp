@@ -11,25 +11,24 @@
  */
 /****/
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdarg.h>
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
+#include <cstdarg>
 #include <sys/stat.h>
-#include <stdlib.h>
 
 #include "../node/Constants.hpp"
 #include "../node/Utils.hpp"
 
 #ifdef __UNIX_LIKE__
 #include <unistd.h>
-#include <errno.h>
 #include <fcntl.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/stat.h>
 #include <sys/uio.h>
 #include <dirent.h>
+#endif
+
+#ifdef __GCC__
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
 
 #ifdef __WINDOWS__
@@ -39,8 +38,6 @@
 #include <netioapi.h>
 #include <iphlpapi.h>
 #endif
-
-#include <atomic>
 
 #include "OSUtils.hpp"
 
@@ -120,64 +117,6 @@ std::vector<std::string> OSUtils::listDirectory(const char *path,bool includeDir
 #endif
 
 	return r;
-}
-
-long OSUtils::cleanDirectory(const char *path,const int64_t olderThan)
-{
-	long cleaned = 0;
-
-#ifdef __WINDOWS__
-	HANDLE hFind;
-	WIN32_FIND_DATAA ffd;
-	LARGE_INTEGER date,adjust;
-	adjust.QuadPart = 11644473600000 * 10000;
-	char tmp[4096];
-	if ((hFind = FindFirstFileA((std::string(path) + "\\*").c_str(),&ffd)) != INVALID_HANDLE_VALUE) {
-		do {
-			if ((strcmp(ffd.cFileName,"."))&&(strcmp(ffd.cFileName,".."))&&((ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0)) {
-					date.HighPart = ffd.ftLastWriteTime.dwHighDateTime;
-					date.LowPart = ffd.ftLastWriteTime.dwLowDateTime;
-					if (date.QuadPart > 0) {
-							date.QuadPart -= adjust.QuadPart;
-							if ((int64_t)((date.QuadPart / 10000000) * 1000) < olderThan) {
-									ztsnprintf(tmp, sizeof(tmp), "%s\\%s", path, ffd.cFileName);
-									if (DeleteFileA(tmp))
-											++cleaned;
-							}
-					}
-			}
-		} while (FindNextFileA(hFind,&ffd));
-		FindClose(hFind);
-	}
-#else
-	struct dirent de;
-	struct dirent *dptr;
-	struct stat st;
-	char tmp[4096];
-	DIR *d = opendir(path);
-	if (!d)
-		return -1;
-	dptr = (struct dirent *)0;
-	for(;;) {
-		if (readdir_r(d,&de,&dptr))
-			break;
-		if (dptr) {
-			if ((strcmp(dptr->d_name,"."))&&(strcmp(dptr->d_name,".."))&&(dptr->d_type == DT_REG)) {
-				ztsnprintf(tmp,sizeof(tmp),"%s/%s",path,dptr->d_name);
-				if (stat(tmp,&st) == 0) {
-					int64_t mt = (int64_t)(st.st_mtime);
-					if ((mt > 0)&&((mt * 1000) < olderThan)) {
-						if (unlink(tmp) == 0)
-							++cleaned;
-					}
-				}
-			}
-		} else break;
-	}
-	closedir(d);
-#endif
-
-	return cleaned;
 }
 
 bool OSUtils::rmDashRf(const char *path)

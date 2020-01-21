@@ -79,7 +79,7 @@
 /**
  * Maximum delay between timer task checks (should be a fraction of smallest housekeeping interval)
  */
-#define ZT_MAX_TIMER_TASK_INTERVAL 3000
+#define ZT_MAX_TIMER_TASK_INTERVAL 5000
 
 /**
  * How often most internal cleanup and housekeeping tasks are performed
@@ -92,7 +92,7 @@
  * Note that this affects how frequently we re-request network configurations
  * from network controllers if we haven't received one yet.
  */
-#define ZT_NETWORK_HOUSEKEEPING_PERIOD 12000
+#define ZT_NETWORK_HOUSEKEEPING_PERIOD 15000
 
 /**
  * Delay between WHOIS retries in ms
@@ -139,7 +139,12 @@
 /**
  * Timeout for overall peer activity (measured from last receive)
  */
-#define ZT_PEER_ACTIVITY_TIMEOUT ((ZT_PEER_PING_PERIOD * 2) + 5000)
+#define ZT_PEER_ALIVE_TIMEOUT ((ZT_PEER_PING_PERIOD * 2) + 5000)
+
+/**
+ * Timeout for overall peer activity (measured from last receive)
+ */
+#define ZT_PEER_ACTIVITY_TIMEOUT (ZT_PEER_PING_PERIOD + 5000)
 
 /**
  * Maximum interval between sort/prioritize of paths for a peer

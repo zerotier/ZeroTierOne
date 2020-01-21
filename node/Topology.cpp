@@ -22,12 +22,12 @@ struct _RootSortComparisonOperator
 	ZT_ALWAYS_INLINE bool operator()(const SharedPtr<Peer> &a,const SharedPtr<Peer> &b)
 	{
 		const int64_t now = _now;
-		if (a->alive(now)) {
-			if (b->alive(now))
+		if (a->active(now)) {
+			if (b->active(now))
 				return (a->latency() < b->latency());
 			return true;
 		}
-		return a->bootstrap() >= b->bootstrap();
+		return a->lastReceive() < b->lastReceive();
 	}
 	const int64_t _now;
 };

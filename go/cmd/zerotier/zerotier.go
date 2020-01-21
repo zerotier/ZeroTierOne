@@ -20,6 +20,7 @@ import (
 	"os"
 	"path"
 	"runtime"
+	"runtime/debug"
 	"strings"
 
 	"zerotier/cmd/zerotier/cli"
@@ -63,6 +64,18 @@ func authTokenRequired(authToken string) {
 }
 
 func main() {
+	// Reduce Go's threads to 1-2 depending on whether this is single core or
+	// multi-core. Note that I/O threads are in C++ and are separate and Go
+	// code only does service control and CLI stuff, so this reduces memory
+	// use and competition with I/O but shouldn't impact throughput. We also
+	// crank up the GC to reduce memory usage a little bit.
+	if runtime.NumCPU() >= 2 {
+		runtime.GOMAXPROCS(2)
+	} else {
+		runtime.GOMAXPROCS(1)
+	}
+	debug.SetGCPercent(25)
+
 	globalOpts := flag.NewFlagSet("global", flag.ContinueOnError)
 	hflag := globalOpts.Bool("h", false, "") // support -h to be canonical with other Unix utilities
 	jflag := globalOpts.Bool("j", false, "")

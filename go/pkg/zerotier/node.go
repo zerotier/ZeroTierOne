@@ -89,6 +89,8 @@ type Node struct {
 	networksLock           sync.RWMutex
 	interfaceAddresses     map[string]net.IP // physical external IPs on the machine
 	interfaceAddressesLock sync.Mutex
+	online                 uint32
+	running                uint32
 	basePath               string
 	peersPath              string
 	networksPath           string
@@ -102,8 +104,6 @@ type Node struct {
 	id                     *Identity
 	namedSocketApiServer   *http.Server
 	tcpApiServer           *http.Server
-	online                 uint32
-	running                uint32
 	runWaitGroup           sync.WaitGroup
 }
 

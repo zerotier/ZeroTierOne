@@ -170,15 +170,21 @@ struct _processBackgroundTasks_ping_eachPeer
 	Node *parent;
 	void *tPtr;
 	bool online;
+	std::vector<Address> rootsNotOnline;
 	ZT_ALWAYS_INLINE void operator()(const SharedPtr<Peer> &peer,const bool isRoot)
 	{
 		peer->ping(tPtr,now,isRoot);
-		if ((isRoot)&&((now - peer->lastReceive()) <= (ZT_PEER_PING_PERIOD + 5000)))
-			online = true;
+		if (isRoot) {
+			if (peer->active(now)) {
+				online = true;
+			} else {
+				rootsNotOnline.push_back(peer->address());
+			}
+		}
 	}
 };
 
-static uint16_t junk = 0;
+static uint8_t junk = 0; // junk payload for keepalive packets
 struct _processBackgroundTasks_path_keepalive
 {
 	int64_t now;
@@ -215,6 +221,15 @@ ZT_ResultCode Node::processBackgroundTasks(void *tPtr, int64_t now, volatile int
 			}
 
 			RR->topology->rankRoots(now);
+
+			if (pf.online) {
+				// If we have at least one online root, request whois for roots not online.
+				// This will give us updated locators for these roots which may contain new
+				// IP addresses. It will also auto-discover IPs for roots that were not added
+				// with an initial bootstrap address.
+				for (std::vector<Address>::const_iterator r(pf.rootsNotOnline.begin()); r != pf.rootsNotOnline.end(); ++r)
+					RR->sw->requestWhois(tPtr,now,*r);
+			}
 		} catch ( ... ) {
 			return ZT_RESULT_FATAL_ERROR_INTERNAL;
 		}
@@ -286,7 +301,7 @@ ZT_ResultCode Node::join(uint64_t nwid,void *uptr,void *tptr)
 	if (*nw) {
 		unsigned long newNetworksSize = (unsigned long)_networks.size();
 		std::vector< SharedPtr<Network> > newNetworks;
-		uint64_t newNetworksMask;
+		uint64_t newNetworksMask,id;
 		std::vector< SharedPtr<Network> >::const_iterator i;
 
 try_larger_network_hashtable:
@@ -296,7 +311,7 @@ try_larger_network_hashtable:
 		newNetworksMask = (uint64_t)(newNetworksSize - 1);
 
 		for(i=_networks.begin();i!=_networks.end();++i) {
-			const uint64_t id = (*i)->id();
+			id = (*i)->id();
 			nw = &(newNetworks[(unsigned long)((id + (id >> 32U)) & newNetworksMask)]);
 			if (*nw)
 				goto try_larger_network_hashtable;
