@@ -57,8 +57,8 @@ Commands:
   set [option] [value]                 Get or set a service config option
     phy <IP/bits> blacklist <boolean>  Set or clear blacklist for CIDR
     phy <IP/bits> trust <path ID/0>    Set or clear trusted path ID for CIDR
-  * port <port>                        Set primary port for P2P links
-  * secondaryport <port/0>             Set secondary P2P port (0 disables)
+    port <port>                        Set primary port for P2P links
+    secondaryport <port/0>             Set secondary P2P port (0 disables)
     portsearch <boolean>               Enable/disable port search on startup
     portmapping <boolean>              Enable/disable use of uPnP/NAT-PMP
   identity <command> [args]            Identity management commands
@@ -73,8 +73,7 @@ This is typically run from launchd (Mac), systemd or init (Linux), etc.
 
 If 'set' is followed by a 16-digit hex number it will get/set network config
 options. Otherwise it will get/set service options. Run with no arguments to
-see all options. Settings with a '*' alongside require a service restart.
-A few rarely used options require manual editing of local.conf and restart.
+see all options.
 
 An identity can be specified as a file or directly. This is auto-detected.
 

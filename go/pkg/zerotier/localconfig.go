@@ -60,9 +60,6 @@ type LocalConfigSettings struct {
 	// LogSizeMax is the maximum size of the log in kilobytes or 0 for no limit and -1 to disable logging
 	LogSizeMax int `json:"logSizeMax"`
 
-	// MultipathMode sets the multipath link aggregation mode
-	MuiltipathMode int `json:"multipathMode"`
-
 	// IP/port to bind for TCP access to control API (disabled if null)
 	APITCPBindAddress *InetAddress `json:"apiTCPBindAddress,omitempty"`
 
@@ -85,17 +82,21 @@ type LocalConfig struct {
 	Network map[NetworkID]NetworkLocalSettings `json:"network,omitempty"`
 
 	// LocalConfigSettings contains other local settings for this node
-	Settings LocalConfigSettings `json:"settings,omitempty"`
+	Settings LocalConfigSettings `json:"settings"`
+
+	initialized bool
 }
 
 // Read this local config from a file, initializing to defaults if the file does not exist.
 func (lc *LocalConfig) Read(p string, saveDefaultsIfNotExist bool, isTotallyNewNode bool) error {
-	if lc.Physical == nil {
+	// Initialize defaults, which may be replaced if we read a file from disk.
+	if !lc.initialized {
+		lc.initialized = true
+
 		lc.Physical = make(map[string]LocalConfigPhysicalPathConfiguration)
 		lc.Virtual = make(map[Address]LocalConfigVirtualAddressConfiguration)
 		lc.Network = make(map[NetworkID]NetworkLocalSettings)
 
-		// LocalConfig default settings
 		if isTotallyNewNode {
 			lc.Settings.PrimaryPort = 893
 		} else {
@@ -105,7 +106,9 @@ func (lc *LocalConfig) Read(p string, saveDefaultsIfNotExist bool, isTotallyNewN
 		lc.Settings.PortSearch = true
 		lc.Settings.PortMapping = true
 		lc.Settings.LogSizeMax = 128
-		lc.Settings.MuiltipathMode = 0
+		if !isTotallyNewNode {
+			lc.Settings.APITCPBindAddress = NewInetAddressFromString("127.0.0.1/9993")
+		}
 		switch runtime.GOOS {
 		case "windows":
 			lc.Settings.InterfacePrefixBlacklist = []string{"loopback"}

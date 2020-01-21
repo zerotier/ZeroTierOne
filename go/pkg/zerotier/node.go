@@ -86,25 +86,25 @@ var (
 type Node struct {
 	networks               map[NetworkID]*Network
 	networksByMAC          map[MAC]*Network  // locked by networksLock
+	networksLock           sync.RWMutex
 	interfaceAddresses     map[string]net.IP // physical external IPs on the machine
+	interfaceAddressesLock sync.Mutex
 	basePath               string
 	peersPath              string
 	networksPath           string
 	localConfigPath        string
 	localConfig            LocalConfig
 	localConfigLock        sync.RWMutex
-	networksLock           sync.RWMutex
-	interfaceAddressesLock sync.Mutex
 	logW                   *sizeLimitWriter
 	log                    *log.Logger
 	gn                     *C.ZT_GoNode
 	zn                     *C.ZT_Node
 	id                     *Identity
-	apiServer              *http.Server
+	namedSocketApiServer   *http.Server
 	tcpApiServer           *http.Server
 	online                 uint32
 	running                uint32
-	runLock                sync.Mutex
+	runWaitGroup           sync.WaitGroup
 }
 
 // NewNode creates and initializes a new instance of the ZeroTier node service
@@ -113,6 +113,8 @@ func NewNode(basePath string) (n *Node, err error) {
 	n.networks = make(map[NetworkID]*Network)
 	n.networksByMAC = make(map[MAC]*Network)
 	n.interfaceAddresses = make(map[string]net.IP)
+	n.online = 0
+	n.running = 1
 
 	_ = os.MkdirAll(basePath, 0755)
 	if _, err = os.Stat(basePath); err != nil {
@@ -199,6 +201,12 @@ func NewNode(basePath string) (n *Node, err error) {
 		return nil, errors.New("unable to bind to primary port")
 	}
 
+	n.namedSocketApiServer, n.tcpApiServer, err = createAPIServer(basePath, n)
+	if err != nil {
+		n.log.Printf("FATAL: unable to start API server: %s", err.Error())
+		return nil, err
+	}
+
 	nodesByUserPtrLock.Lock()
 	nodesByUserPtr[uintptr(unsafe.Pointer(n))] = n
 	nodesByUserPtrLock.Unlock()
@@ -215,12 +223,9 @@ func NewNode(basePath string) (n *Node, err error) {
 	}
 	n.zn = (*C.ZT_Node)(C.ZT_GoNode_getNode(n.gn))
 
-	var ns C.ZT_NodeStatus
-	C.ZT_Node_status(unsafe.Pointer(n.zn), &ns)
-	idString := C.GoString(ns.secretIdentity)
-	n.id, err = NewIdentityFromString(idString)
+	n.id, err = newIdentityFromCIdentity(C.ZT_Node_identity(unsafe.Pointer(n.zn)))
 	if err != nil {
-		n.log.Printf("FATAL: node's identity does not seem valid (%s)", string(idString))
+		n.log.Printf("FATAL: error obtaining node's identity")
 		nodesByUserPtrLock.Lock()
 		delete(nodesByUserPtr, uintptr(unsafe.Pointer(n)))
 		nodesByUserPtrLock.Unlock()
@@ -228,30 +233,20 @@ func NewNode(basePath string) (n *Node, err error) {
 		return nil, err
 	}
 
-	n.apiServer, n.tcpApiServer, err = createAPIServer(basePath, n)
-	if err != nil {
-		n.log.Printf("FATAL: unable to start API server: %s", err.Error())
-		nodesByUserPtrLock.Lock()
-		delete(nodesByUserPtr, uintptr(unsafe.Pointer(n)))
-		nodesByUserPtrLock.Unlock()
-		C.ZT_GoNode_delete(n.gn)
-		return nil, err
-	}
-
-	n.online = 0
-	n.running = 1
-
-	n.runLock.Lock() // used to block Close() until below gorountine exits
+	n.runWaitGroup.Add(1)
 	go func() {
+		defer n.runWaitGroup.Done()
+		var previousExplicitExternalAddresses []ExternalAddress // empty at first so these will be configured
 		lastMaintenanceRun := int64(0)
-		var previousExplicitExternalAddresses []ExternalAddress
-		var portsA [3]int
-		for atomic.LoadUint32(&n.running) != 0 {
-			time.Sleep(1 * time.Second)
 
-			now := TimeMs()
-			if (now - lastMaintenanceRun) >= 30000 {
-				lastMaintenanceRun = now
+		for atomic.LoadUint32(&n.running) != 0 {
+			time.Sleep(500 * time.Millisecond)
+
+			nowS := time.Now().Unix()
+			if (nowS - lastMaintenanceRun) >= 30 {
+				lastMaintenanceRun = nowS
+
+				//////////////////////////////////////////////////////////////////////
 				n.localConfigLock.RLock()
 
 				// Get local physical interface addresses, excluding blacklisted and ZeroTier-created interfaces
@@ -280,26 +275,29 @@ func NewNode(basePath string) (n *Node, err error) {
 					n.networksLock.RUnlock()
 				}
 
+				// Open or close locally bound UDP ports for each local interface address.
+				// This opens ports if they are not already open and then closes ports if
+				// they are open but no longer seem to exist.
 				interfaceAddressesChanged := false
-				ports := portsA[:0]
+				ports := make([]int, 0, 2)
 				if n.localConfig.Settings.PrimaryPort > 0 && n.localConfig.Settings.PrimaryPort < 65536 {
 					ports = append(ports, n.localConfig.Settings.PrimaryPort)
 				}
 				if n.localConfig.Settings.SecondaryPort > 0 && n.localConfig.Settings.SecondaryPort < 65536 {
 					ports = append(ports, n.localConfig.Settings.SecondaryPort)
 				}
-
-				// Open or close locally bound UDP ports for each local interface address.
-				// This opens ports if they are not already open and then closes ports if
-				// they are open but no longer seem to exist.
 				n.interfaceAddressesLock.Lock()
 				for astr, ipn := range interfaceAddresses {
 					if _, alreadyKnown := n.interfaceAddresses[astr]; !alreadyKnown {
 						interfaceAddressesChanged = true
 						ipCstr := C.CString(ipn.String())
-						for _, p := range ports {
+						for pn, p := range ports {
 							n.log.Printf("UDP binding to port %d on interface %s", p, astr)
-							C.ZT_GoNode_phyStartListen(n.gn, nil, ipCstr, C.int(p))
+							primary := C.int(0)
+							if pn == 0 {
+								primary = 1
+							}
+							C.ZT_GoNode_phyStartListen(n.gn, nil, ipCstr, C.int(p), primary)
 						}
 						C.free(unsafe.Pointer(ipCstr))
 					}
@@ -318,8 +316,11 @@ func NewNode(basePath string) (n *Node, err error) {
 				n.interfaceAddresses = interfaceAddresses
 				n.interfaceAddressesLock.Unlock()
 
-				// Update node's understanding of our interface addressaes if they've changed
+				// Update node's understanding of our interface addresses if they've changed
 				if interfaceAddressesChanged || reflect.DeepEqual(n.localConfig.Settings.ExplicitAddresses, previousExplicitExternalAddresses) {
+					previousExplicitExternalAddresses = n.localConfig.Settings.ExplicitAddresses
+
+					// Consolidate explicit and detected interface addresses, removing duplicates.
 					externalAddresses := make(map[[3]uint64]*ExternalAddress)
 					for _, ip := range interfaceAddresses {
 						for _, p := range ports {
@@ -336,14 +337,16 @@ func NewNode(basePath string) (n *Node, err error) {
 					for _, a := range n.localConfig.Settings.ExplicitAddresses {
 						externalAddresses[a.key()] = &a
 					}
+
 					if len(externalAddresses) > 0 {
 						cAddrs := make([]C.ZT_InterfaceAddress, len(externalAddresses))
 						cAddrCount := 0
 						for _, a := range externalAddresses {
 							makeSockaddrStorage(a.IP, a.Port, &(cAddrs[cAddrCount].address))
-							cAddrs[cAddrCount].permanent = 0
 							if a.Permanent {
 								cAddrs[cAddrCount].permanent = 1
+							} else {
+								cAddrs[cAddrCount].permanent = 0
 							}
 							cAddrCount++
 						}
@@ -359,9 +362,9 @@ func NewNode(basePath string) (n *Node, err error) {
 				}
 
 				n.localConfigLock.RUnlock()
+				//////////////////////////////////////////////////////////////////////
 			}
 		}
-		n.runLock.Unlock() // signal Close() that maintenance goroutine is done
 	}()
 
 	return n, nil
@@ -370,8 +373,8 @@ func NewNode(basePath string) (n *Node, err error) {
 // Close closes this Node and frees its underlying C++ Node structures
 func (n *Node) Close() {
 	if atomic.SwapUint32(&n.running, 0) != 0 {
-		if n.apiServer != nil {
-			_ = n.apiServer.Close()
+		if n.namedSocketApiServer != nil {
+			_ = n.namedSocketApiServer.Close()
 		}
 		if n.tcpApiServer != nil {
 			_ = n.tcpApiServer.Close()
@@ -379,8 +382,7 @@ func (n *Node) Close() {
 
 		C.ZT_GoNode_delete(n.gn)
 
-		n.runLock.Lock() // wait for maintenance gorountine to die
-		n.runLock.Unlock()
+		n.runWaitGroup.Wait()
 
 		nodesByUserPtrLock.Lock()
 		delete(nodesByUserPtr, uintptr(unsafe.Pointer(n)))
@@ -610,6 +612,8 @@ func (n *Node) makeStateObjectPath(objType int, id [2]uint64) (string, bool) {
 	case C.ZT_STATE_OBJECT_IDENTITY_SECRET:
 		fp = path.Join(n.basePath, "identity.secret")
 		secret = true
+	case C.ZT_STATE_OBJECT_LOCATOR:
+		fp = path.Join(n.basePath, "locator")
 	case C.ZT_STATE_OBJECT_PEER:
 		fp = path.Join(n.basePath, "peers.d")
 		_ = os.Mkdir(fp, 0700)
@@ -664,8 +668,8 @@ func (n *Node) handleTrace(traceMessage string) {
 	}
 }
 
-func (n *Node) handleUserMessage(origin *Identity, messageTypeID uint64, data []byte) {
-}
+// func (n *Node) handleUserMessage(origin *Identity, messageTypeID uint64, data []byte) {
+// }
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -728,18 +732,27 @@ func goPathLookupFunc(gn unsafe.Pointer, _ C.uint64_t, _ int, identity, familyP,
 
 //export goStateObjectPutFunc
 func goStateObjectPutFunc(gn unsafe.Pointer, objType C.int, id, data unsafe.Pointer, len C.int) {
+	id2 := *((*[2]uint64)(id))
+	var data2 []byte
+	if len > 0 {
+		data2 = C.GoBytes(data, len)
+	}
+
+	nodesByUserPtrLock.RLock()
+	node := nodesByUserPtr[uintptr(gn)]
+	nodesByUserPtrLock.RUnlock()
+	if node == nil {
+		return
+	}
+
+	node.runWaitGroup.Add(1)
 	go func() {
-		nodesByUserPtrLock.RLock()
-		node := nodesByUserPtr[uintptr(gn)]
-		nodesByUserPtrLock.RUnlock()
-		if node == nil {
-			return
-		}
 		if len < 0 {
-			node.stateObjectDelete(int(objType), *((*[2]uint64)(id)))
+			node.stateObjectDelete(int(objType), id2)
 		} else {
-			node.stateObjectPut(int(objType), *((*[2]uint64)(id)), C.GoBytes(data, len))
+			node.stateObjectPut(int(objType), id2, data2)
 		}
+		node.runWaitGroup.Done()
 	}()
 }
 
@@ -754,7 +767,7 @@ func goStateObjectGetFunc(gn unsafe.Pointer, objType C.int, id, dataP unsafe.Poi
 	*((*uintptr)(dataP)) = 0
 	tmp, found := node.stateObjectGet(int(objType), *((*[2]uint64)(id)))
 	if found && len(tmp) > 0 {
-		cData := C.malloc(C.ulong(len(tmp)))
+		cData := C.malloc(C.ulong(len(tmp))) // GoGlue sends free() to the core as the free function
 		if uintptr(cData) == 0 {
 			return -1
 		}
@@ -766,85 +779,81 @@ func goStateObjectGetFunc(gn unsafe.Pointer, objType C.int, id, dataP unsafe.Poi
 
 //export goVirtualNetworkConfigFunc
 func goVirtualNetworkConfigFunc(gn, _ unsafe.Pointer, nwid C.uint64_t, op C.int, conf unsafe.Pointer) {
-	go func() {
-		nodesByUserPtrLock.RLock()
-		node := nodesByUserPtr[uintptr(gn)]
-		nodesByUserPtrLock.RUnlock()
-		if node == nil {
-			return
-		}
+	nodesByUserPtrLock.RLock()
+	node := nodesByUserPtr[uintptr(gn)]
+	nodesByUserPtrLock.RUnlock()
+	if node == nil {
+		return
+	}
 
-		node.networksLock.RLock()
-		network := node.networks[NetworkID(nwid)]
-		node.networksLock.RUnlock()
+	node.networksLock.RLock()
+	network := node.networks[NetworkID(nwid)]
+	node.networksLock.RUnlock()
 
-		if network != nil {
-			switch int(op) {
-			case networkConfigOpUp, networkConfigOpUpdate:
-				ncc := (*C.ZT_VirtualNetworkConfig)(conf)
-				if network.networkConfigRevision() > uint64(ncc.netconfRevision) {
-					return
-				}
-				var nc NetworkConfig
-				nc.ID = NetworkID(ncc.nwid)
-				nc.MAC = MAC(ncc.mac)
-				nc.Name = C.GoString(&ncc.name[0])
-				nc.Status = int(ncc.status)
-				nc.Type = int(ncc._type)
-				nc.MTU = int(ncc.mtu)
-				nc.Bridge = ncc.bridge != 0
-				nc.BroadcastEnabled = ncc.broadcastEnabled != 0
-				nc.NetconfRevision = uint64(ncc.netconfRevision)
-				for i := 0; i < int(ncc.assignedAddressCount); i++ {
-					a := sockaddrStorageToIPNet(&ncc.assignedAddresses[i])
-					if a != nil {
-						nc.AssignedAddresses = append(nc.AssignedAddresses, *a)
-					}
-				}
-				for i := 0; i < int(ncc.routeCount); i++ {
-					tgt := sockaddrStorageToIPNet(&ncc.routes[i].target)
-					viaN := sockaddrStorageToIPNet(&ncc.routes[i].via)
-					var via *net.IP
-					if viaN != nil && len(viaN.IP) > 0 {
-						via = &viaN.IP
-					}
-					if tgt != nil {
-						nc.Routes = append(nc.Routes, Route{
-							Target: *tgt,
-							Via:    via,
-							Flags:  uint16(ncc.routes[i].flags),
-							Metric: uint16(ncc.routes[i].metric),
-						})
-					}
-				}
-				network.updateConfig(&nc, nil)
+	if network != nil {
+		switch int(op) {
+		case networkConfigOpUp, networkConfigOpUpdate:
+			ncc := (*C.ZT_VirtualNetworkConfig)(conf)
+			if network.networkConfigRevision() > uint64(ncc.netconfRevision) {
+				return
 			}
+			var nc NetworkConfig
+			nc.ID = NetworkID(ncc.nwid)
+			nc.MAC = MAC(ncc.mac)
+			nc.Name = C.GoString(&ncc.name[0])
+			nc.Status = int(ncc.status)
+			nc.Type = int(ncc._type)
+			nc.MTU = int(ncc.mtu)
+			nc.Bridge = ncc.bridge != 0
+			nc.BroadcastEnabled = ncc.broadcastEnabled != 0
+			nc.NetconfRevision = uint64(ncc.netconfRevision)
+			for i := 0; i < int(ncc.assignedAddressCount); i++ {
+				a := sockaddrStorageToIPNet(&ncc.assignedAddresses[i])
+				if a != nil {
+					nc.AssignedAddresses = append(nc.AssignedAddresses, *a)
+				}
+			}
+			for i := 0; i < int(ncc.routeCount); i++ {
+				tgt := sockaddrStorageToIPNet(&ncc.routes[i].target)
+				viaN := sockaddrStorageToIPNet(&ncc.routes[i].via)
+				var via *net.IP
+				if viaN != nil && len(viaN.IP) > 0 {
+					via = &viaN.IP
+				}
+				if tgt != nil {
+					nc.Routes = append(nc.Routes, Route{
+						Target: *tgt,
+						Via:    via,
+						Flags:  uint16(ncc.routes[i].flags),
+						Metric: uint16(ncc.routes[i].metric),
+					})
+				}
+			}
+
+			node.runWaitGroup.Add(1)
+			go func() {
+				network.updateConfig(&nc, nil)
+				node.runWaitGroup.Done()
+			}()
 		}
-	}()
+	}
 }
 
 //export goZtEvent
 func goZtEvent(gn unsafe.Pointer, eventType C.int, data unsafe.Pointer) {
-	go func() {
-		nodesByUserPtrLock.RLock()
-		node := nodesByUserPtr[uintptr(gn)]
-		nodesByUserPtrLock.RUnlock()
-		if node == nil {
-			return
-		}
-		switch eventType {
-		case C.ZT_EVENT_OFFLINE:
-			atomic.StoreUint32(&node.online, 0)
-		case C.ZT_EVENT_ONLINE:
-			atomic.StoreUint32(&node.online, 1)
-		case C.ZT_EVENT_TRACE:
-			node.handleTrace(C.GoString((*C.char)(data)))
-		case C.ZT_EVENT_USER_MESSAGE:
-			um := (*C.ZT_UserMessage)(data)
-			id, err := newIdentityFromCIdentity(unsafe.Pointer(um.id))
-			if err != nil {
-				node.handleUserMessage(id, uint64(um.typeId), C.GoBytes(um.data, C.int(um.length)))
-			}
-		}
-	}()
+	nodesByUserPtrLock.RLock()
+	node := nodesByUserPtr[uintptr(gn)]
+	nodesByUserPtrLock.RUnlock()
+	if node == nil {
+		return
+	}
+
+	switch eventType {
+	case C.ZT_EVENT_OFFLINE:
+		atomic.StoreUint32(&node.online, 0)
+	case C.ZT_EVENT_ONLINE:
+		atomic.StoreUint32(&node.online, 1)
+	case C.ZT_EVENT_TRACE:
+		node.handleTrace(C.GoString((*C.char)(data)))
+	}
 }

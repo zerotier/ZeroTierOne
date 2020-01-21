@@ -49,7 +49,7 @@ void ZT_GoNode_delete(ZT_GoNode *gn);
 ZT_Node *ZT_GoNode_getNode(ZT_GoNode *gn);
 
 /* This can be called more than once to start multiple listener threads */
-int ZT_GoNode_phyStartListen(ZT_GoNode *gn,const char *dev,const char *ip,int port);
+int ZT_GoNode_phyStartListen(ZT_GoNode *gn,const char *dev,const char *ip,int port,int primary);
 
 /* Close all listener threads for a given local IP and port */
 int ZT_GoNode_phyStopListen(ZT_GoNode *gn,const char *dev,const char *ip,int port);

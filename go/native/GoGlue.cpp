@@ -71,6 +71,7 @@ struct ZT_GoNodeThread
 	std::string ip;
 	int port;
 	int af;
+	bool primary;
 	std::atomic<bool> run;
 	std::thread thr;
 };
@@ -219,17 +220,15 @@ static int ZT_GoNode_WirePacketSendFunction(
 	unsigned int len,
 	unsigned int ipTTL)
 {
-	if ((localSocket != -1)&&(localSocket != ZT_INVALID_SOCKET)) {
+	if (localSocket > 0) {
 		doUdpSend((ZT_SOCKET)localSocket,addr,data,len,ipTTL);
 	} else {
 		ZT_GoNode *const gn = reinterpret_cast<ZT_GoNode *>(uptr);
-		std::set<std::string> ipsSentFrom;
 		std::lock_guard<std::mutex> l(gn->threads_l);
 		for(auto t=gn->threads.begin();t!=gn->threads.end();++t) {
-			if (t->second.af == addr->ss_family) {
-				if (ipsSentFrom.insert(t->second.ip).second) {
-					doUdpSend(t->first,addr,data,len,ipTTL);
-				}
+			if ((t->second.af == addr->ss_family)&&(t->second.primary)) {
+				doUdpSend(t->first,addr,data,len,ipTTL);
+				break;
 			}
 		}
 	}
@@ -444,7 +443,7 @@ static void setCommonUdpSocketSettings(ZT_SOCKET udpSock,const char *dev)
 #endif
 }
 
-extern "C" int ZT_GoNode_phyStartListen(ZT_GoNode *gn,const char *dev,const char *ip,const int port)
+extern "C" int ZT_GoNode_phyStartListen(ZT_GoNode *gn,const char *dev,const char *ip,const int port,const int primary)
 {
 	if (strchr(ip,':')) {
 		struct sockaddr_in6 in6;
@@ -474,6 +473,7 @@ extern "C" int ZT_GoNode_phyStartListen(ZT_GoNode *gn,const char *dev,const char
 			gnt.ip = ip;
 			gnt.port = port;
 			gnt.af = AF_INET6;
+			gnt.primary = (primary != 0);
 			gnt.run = true;
 			gnt.thr = std::thread([udpSock,gn,&gnt] {
 				struct sockaddr_in6 in6;
@@ -519,6 +519,7 @@ extern "C" int ZT_GoNode_phyStartListen(ZT_GoNode *gn,const char *dev,const char
 			gnt.ip = ip;
 			gnt.port = port;
 			gnt.af = AF_INET6;
+			gnt.primary = (primary != 0);
 			gnt.run = true;
 			gnt.thr = std::thread([udpSock,gn,&gnt] {
 				struct sockaddr_in in4;

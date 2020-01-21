@@ -182,7 +182,7 @@ func apiSetStandardHeaders(out http.ResponseWriter) {
 	h.Set("Pragma", "no-cache")
 	t := time.Now().UTC()
 	h.Set("Date", t.Format(time.RFC1123))
-	h.Set("X-ZT-Clock", strconv.FormatInt(t.UnixNano() / int64(1000000), 10))
+	h.Set("X-ZT-Clock", strconv.FormatInt(t.UnixNano()/int64(1000000), 10))
 }
 
 func apiSendObj(out http.ResponseWriter, req *http.Request, httpStatusCode int, obj interface{}) error {
