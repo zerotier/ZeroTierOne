@@ -380,7 +380,7 @@ void AES::_gmacSW(const uint8_t iv[12],const uint8_t *in,unsigned int len,uint8_
 
 #ifdef ZT_AES_AESNI
 
-static ZT_ALWAYS_INLINE inline __m128i _mult_block_aesni(__m128i shuf,__m128i h,__m128i y)
+static ZT_ALWAYS_INLINE __m128i _mult_block_aesni(__m128i shuf,__m128i h,__m128i y)
 {
 	y = _mm_shuffle_epi8(y,shuf);
 	__m128i t1 = _mm_clmulepi64_si128(h,y,0x00);

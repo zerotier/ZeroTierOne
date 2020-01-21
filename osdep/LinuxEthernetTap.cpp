@@ -415,7 +415,7 @@ void LinuxEthernetTap::scanMulticastGroups(std::vector<MulticastGroup> &added,st
 						mcastmac = f;
 					++fno;
 				}
-				if ((devname)&&(!strcmp(devname,_dev.c_str()))&&(mcastmac)&&(Utils::unhex(mcastmac,mac,6) == 6))
+				if ((devname)&&(!strcmp(devname,_dev.c_str()))&&(mcastmac)&&(Utils::unhex(mcastmac,strlen(mcastmac),mac,6) == 6))
 					newGroups.push_back(MulticastGroup(MAC(mac,6),0));
 			}
 		}

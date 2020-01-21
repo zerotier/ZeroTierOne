@@ -45,6 +45,8 @@
 
 using namespace ZeroTier;
 
+static volatile uint8_t foo = 0;
+
 #define KNOWN_GOOD_IDENTITY_0 "8e4df28b72:0:ac3d46abe0c21f3cfe7a6c8d6a85cfcffcb82fbd55af6a4d6350657c68200843fa2e16f9418bbd9702cae365f2af5fb4c420908b803a681d4daef6114d78a2d7:bd8dd6e4ce7022d2f812797a80c6ee8ad180dc4ebf301dec8b06d1be08832bddd63a2f1cfa7b2c504474c75bdc8898ba476ef92e8e2d0509f8441985171ff16e"
 #define KNOWN_BAD_IDENTITY_0 "9e4df28b72:0:ac3d46abe0c21f3cfe7a6c8d6a85cfcffcb82fbd55af6a4d6350657c68200843fa2e16f9418bbd9702cae365f2af5fb4c420908b803a681d4daef6114d78a2d7:bd8dd6e4ce7022d2f812797a80c6ee8ad180dc4ebf301dec8b06d1be08832bddd63a2f1cfa7b2c504474c75bdc8898ba476ef92e8e2d0509f8441985171ff16e"
 
@@ -147,7 +149,6 @@ extern "C" int ZT_TestCrypto()
 {
 	static uint8_t buf1[16384],buf2[16384],buf3[16384];
 	static char hexbuf[1024];
-	volatile unsigned char *dummy = (volatile unsigned char *)&(buf1[100]);
 
 	for(int i=0;i<3;++i) {
 		Utils::getSecureRandom(buf1,64);
@@ -385,7 +386,6 @@ extern "C" int ZT_TestCrypto()
 	std::cout << "[crypto] Benchmarking asymmetric crypto..." ZT_EOL_S;
 	{
 		uint8_t pub[128],priv[128],hash[128],sig[128];
-		volatile uint8_t foo = 0;
 		Utils::getSecureRandom(hash,sizeof(hash));
 
 		C25519::generate(pub,priv);

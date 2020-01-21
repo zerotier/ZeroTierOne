@@ -17,6 +17,7 @@
 #include "Constants.hpp"
 
 #include <cstdlib>
+#include <cstring>
 #include <stdexcept>
 #include <vector>
 

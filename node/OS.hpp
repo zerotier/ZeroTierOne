@@ -117,7 +117,7 @@
 #endif
 
 #if (defined(__GNUC__) && (__GNUC__ >= 3)) || (defined(__INTEL_COMPILER) && (__INTEL_COMPILER >= 800)) || defined(__clang__)
-#define ZT_ALWAYS_INLINE __attribute__((always_inline))
+#define ZT_ALWAYS_INLINE __attribute__((always_inline)) inline
 #ifndef restrict
 #define restrict __restrict__
 #endif
