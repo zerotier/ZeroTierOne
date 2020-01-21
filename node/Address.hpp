@@ -37,7 +37,7 @@ class Address
 {
 public:
 	ZT_ALWAYS_INLINE Address() : _a(0) {}
-	explicit ZT_ALWAYS_INLINE Address(uint64_t a) : _a(a & 0xffffffffffULL) {}
+	explicit ZT_ALWAYS_INLINE Address(const uint64_t a) : _a(a & 0xffffffffffULL) {}
 
 	/**
 	 * @param bits Raw address -- 5 bytes, big-endian byte order

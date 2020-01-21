@@ -89,7 +89,7 @@ type LocalConfig struct {
 }
 
 // Read this local config from a file, initializing to defaults if the file does not exist.
-func (lc *LocalConfig) Read(p string, saveDefaultsIfNotExist bool,isTotallyNewNode bool) error {
+func (lc *LocalConfig) Read(p string, saveDefaultsIfNotExist bool, isTotallyNewNode bool) error {
 	if lc.Physical == nil {
 		lc.Physical = make(map[string]LocalConfigPhysicalPathConfiguration)
 		lc.Virtual = make(map[Address]LocalConfigVirtualAddressConfiguration)
@@ -101,7 +101,7 @@ func (lc *LocalConfig) Read(p string, saveDefaultsIfNotExist bool,isTotallyNewNo
 		} else {
 			lc.Settings.PrimaryPort = 9993
 		}
-		lc.Settings.SecondaryPort = unassignedPrivilegedPorts[randomUInt() % uint(len(unassignedPrivilegedPorts))]
+		lc.Settings.SecondaryPort = unassignedPrivilegedPorts[randomUInt()%uint(len(unassignedPrivilegedPorts))]
 		lc.Settings.PortSearch = true
 		lc.Settings.PortMapping = true
 		lc.Settings.LogSizeMax = 128
@@ -110,7 +110,7 @@ func (lc *LocalConfig) Read(p string, saveDefaultsIfNotExist bool,isTotallyNewNo
 		case "windows":
 			lc.Settings.InterfacePrefixBlacklist = []string{"loopback"}
 		case "darwin":
-			lc.Settings.InterfacePrefixBlacklist = []string{"lo","utun","feth"}
+			lc.Settings.InterfacePrefixBlacklist = []string{"lo", "utun", "feth"}
 		default:
 			lc.Settings.InterfacePrefixBlacklist = []string{"lo"}
 		}

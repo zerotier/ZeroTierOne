@@ -616,8 +616,8 @@ void AES::_gmac_aesni(const uint8_t iv[12],const uint8_t *in,const unsigned int 
 	_mm_storeu_si128((__m128i *)out,_mm_xor_si128(y,t));
 }
 
-#define ZT_AES_CTR_AESNI_ROUND(kk) c0 = _mm_aesenc_si128(c0,kk); c1 = _mm_aesenc_si128(c1,kk); c2 = _mm_aesenc_si128(c2,kk); c3 = _mm_aesenc_si128(c3,kk);
-void AES::_ctr_aesni(const __m128i key[14],const uint8_t iv[16],const uint8_t *in,unsigned int len,uint8_t *out)
+#define ZT_AES_CTR_AESNI_ROUND(kk) c0 = _mm_aesenc_si128(c0,kk); c1 = _mm_aesenc_si128(c1,kk); c2 = _mm_aesenc_si128(c2,kk); c3 = _mm_aesenc_si128(c3,kk)
+void AES::_ctr_aesni(const uint8_t iv[16],const uint8_t *in,unsigned int len,uint8_t *out) const
 {
 	/* Because our CTR supports full 128-bit nonces, we must do a full 128-bit (big-endian)
 	 * increment to be compatible with canonical NIST-certified CTR implementations. That's
@@ -641,11 +641,11 @@ void AES::_ctr_aesni(const __m128i key[14],const uint8_t iv[16],const uint8_t *i
 	__m128i ctr3 = _mm_shuffle_epi8(_mm_add_epi64(ctr0,_mm_set_epi64x((long long)(notctr0msq < 3ULL),3LL)),swap128);
 	ctr0 = _mm_shuffle_epi8(ctr0,swap128);
 
-	__m128i k0 = key[0];
-	__m128i k1 = key[1];
+	__m128i k0 = _k.ni.k[0];
+	__m128i k1 = _k.ni.k[1];
 
 	while (len >= 64) {
-		__m128i ka = key[2];
+		__m128i ka = _k.ni.k[2];
 		__m128i c0 = _mm_xor_si128(ctr0,k0);
 		__m128i c1 = _mm_xor_si128(ctr1,k0);
 		__m128i c2 = _mm_xor_si128(ctr2,k0);
@@ -656,29 +656,29 @@ void AES::_ctr_aesni(const __m128i key[14],const uint8_t iv[16],const uint8_t *i
 		ctr2 = _mm_shuffle_epi8(_mm_add_epi64(ctr0,_mm_set_epi64x((long long)(notctr0msq < 6ULL),6LL)),swap128);
 		ctr3 = _mm_shuffle_epi8(_mm_add_epi64(ctr0,_mm_set_epi64x((long long)(notctr0msq < 7ULL),7LL)),swap128);
 		ctr0 = _mm_shuffle_epi8(_mm_add_epi64(ctr0,_mm_set_epi64x((long long)(notctr0msq < 4ULL),4LL)),swap128);
-		__m128i kb = key[3];
+		__m128i kb = _k.ni.k[3];
 		ZT_AES_CTR_AESNI_ROUND(k1);
-		__m128i kc = key[4];
+		__m128i kc = _k.ni.k[4];
 		ZT_AES_CTR_AESNI_ROUND(ka);
-		__m128i kd = key[5];
+		__m128i kd = _k.ni.k[5];
 		ZT_AES_CTR_AESNI_ROUND(kb);
-		ka = key[6];
+		ka = _k.ni.k[6];
 		ZT_AES_CTR_AESNI_ROUND(kc);
-		kb = key[7];
+		kb = _k.ni.k[7];
 		ZT_AES_CTR_AESNI_ROUND(kd);
-		kc = key[8];
+		kc = _k.ni.k[8];
 		ZT_AES_CTR_AESNI_ROUND(ka);
-		kd = key[9];
+		kd = _k.ni.k[9];
 		ZT_AES_CTR_AESNI_ROUND(kb);
-		ka = key[10];
+		ka = _k.ni.k[10];
 		ZT_AES_CTR_AESNI_ROUND(kc);
-		kb = key[11];
+		kb = _k.ni.k[11];
 		ZT_AES_CTR_AESNI_ROUND(kd);
-		kc = key[12];
+		kc = _k.ni.k[12];
 		ZT_AES_CTR_AESNI_ROUND(ka);
-		kd = key[13];
+		kd = _k.ni.k[13];
 		ZT_AES_CTR_AESNI_ROUND(kb);
-		ka = key[14];
+		ka = _k.ni.k[14];
 		ZT_AES_CTR_AESNI_ROUND(kc);
 		ZT_AES_CTR_AESNI_ROUND(kd);
 		_mm_storeu_si128((__m128i *)out,_mm_xor_si128(_mm_loadu_si128((const __m128i *)in),_mm_aesenclast_si128(c0,ka)));
@@ -690,12 +690,12 @@ void AES::_ctr_aesni(const __m128i key[14],const uint8_t iv[16],const uint8_t *i
 		len -= 64;
 	}
 
-	__m128i k2 = key[2];
-	__m128i k3 = key[3];
-	__m128i k4 = key[4];
-	__m128i k5 = key[5];
-	__m128i k6 = key[6];
-	__m128i k7 = key[7];
+	__m128i k2 = _k.ni.k[2];
+	__m128i k3 = _k.ni.k[3];
+	__m128i k4 = _k.ni.k[4];
+	__m128i k5 = _k.ni.k[5];
+	__m128i k6 = _k.ni.k[6];
+	__m128i k7 = _k.ni.k[7];
 
 	while (len >= 16) {
 		__m128i c0 = _mm_xor_si128(ctr0,k0);
@@ -707,19 +707,19 @@ void AES::_ctr_aesni(const __m128i key[14],const uint8_t iv[16],const uint8_t *i
 		c0 = _mm_aesenc_si128(c0,k4);
 		c0 = _mm_aesenc_si128(c0,k5);
 		c0 = _mm_aesenc_si128(c0,k6);
-		__m128i ka = key[8];
+		__m128i ka = _k.ni.k[8];
 		c0 = _mm_aesenc_si128(c0,k7);
-		__m128i kb = key[9];
+		__m128i kb = _k.ni.k[9];
 		c0 = _mm_aesenc_si128(c0,ka);
-		ka = key[10];
+		ka = _k.ni.k[10];
 		c0 = _mm_aesenc_si128(c0,kb);
-		kb = key[11];
+		kb = _k.ni.k[11];
 		c0 = _mm_aesenc_si128(c0,ka);
-		ka = key[12];
+		ka = _k.ni.k[12];
 		c0 = _mm_aesenc_si128(c0,kb);
-		kb = key[13];
+		kb = _k.ni.k[13];
 		c0 = _mm_aesenc_si128(c0,ka);
-		ka = key[14];
+		ka = _k.ni.k[14];
 		c0 = _mm_aesenc_si128(c0,kb);
 		_mm_storeu_si128((__m128i *)out,_mm_xor_si128(_mm_loadu_si128((const __m128i *)in),_mm_aesenclast_si128(c0,ka)));
 		in += 16;
@@ -729,25 +729,25 @@ void AES::_ctr_aesni(const __m128i key[14],const uint8_t iv[16],const uint8_t *i
 
 	if (len) {
 		__m128i c0 = _mm_xor_si128(ctr0,k0);
-		k0 = key[8];
+		k0 = _k.ni.k[8];
 		c0 = _mm_aesenc_si128(c0,k1);
 		c0 = _mm_aesenc_si128(c0,k2);
-		k1 = key[9];
+		k1 = _k.ni.k[9];
 		c0 = _mm_aesenc_si128(c0,k3);
 		c0 = _mm_aesenc_si128(c0,k4);
-		k2 = key[10];
+		k2 = _k.ni.k[10];
 		c0 = _mm_aesenc_si128(c0,k5);
 		c0 = _mm_aesenc_si128(c0,k6);
-		k3 = key[11];
+		k3 = _k.ni.k[11];
 		c0 = _mm_aesenc_si128(c0,k7);
 		c0 = _mm_aesenc_si128(c0,k0);
-		k0 = key[12];
+		k0 = _k.ni.k[12];
 		c0 = _mm_aesenc_si128(c0,k1);
 		c0 = _mm_aesenc_si128(c0,k2);
-		k1 = key[13];
+		k1 = _k.ni.k[13];
 		c0 = _mm_aesenc_si128(c0,k3);
 		c0 = _mm_aesenc_si128(c0,k0);
-		k2 = key[14];
+		k2 = _k.ni.k[14];
 		c0 = _mm_aesenc_si128(c0,k1);
 		c0 = _mm_aesenclast_si128(c0,k2);
 		uint8_t tmp[16];

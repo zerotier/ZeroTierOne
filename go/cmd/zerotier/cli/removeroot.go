@@ -13,27 +13,6 @@
 
 package cli
 
-import (
-	"fmt"
-	"net/http"
-	"net/url"
-	"os"
-	"strings"
-
-	"zerotier/pkg/zerotier"
-)
-
 // RemoveRoot CLI command
 func RemoveRoot(basePath, authToken string, args []string) {
-	if len(args) != 1 {
-		Help()
-		os.Exit(1)
-	}
-	result, _ := zerotier.APIDelete(basePath, zerotier.APISocketName, authToken, "/root/"+url.PathEscape(strings.TrimSpace(args[0])), nil)
-	if result == http.StatusOK {
-		fmt.Printf("%s removed\n", args[0])
-		os.Exit(0)
-	}
-	fmt.Printf("ERROR: root %s not found or another error occurred: status code %d\n", args[0], result)
-	os.Exit(1)
 }

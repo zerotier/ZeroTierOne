@@ -106,175 +106,11 @@ public:
 	{
 #ifdef ZT_AES_AESNI
 		if (likely(Utils::CPUID.aes)) {
-			_ctr_aesni(_k.ni.k,iv,(const uint8_t *)in,len,(uint8_t *)out);
+			_ctr_aesni(iv,(const uint8_t *)in,len,(uint8_t *)out);
 			return;
 		}
 #endif
 		_ctrSW(iv,in,len,out);
-	}
-
-	/**
-	 * Perform AES-GMAC-SIV encryption
-	 *
-	 * This is basically AES-CMAC-SIV but with GMAC in place of CMAC after
-	 * GMAC is run through AES as a keyed hash to make it behave like a
-	 * proper PRF.
-	 *
-	 * See: https://github.com/miscreant/meta/wiki/AES-SIV
-	 *
-	 * The advantage is that this can be described in terms of FIPS and NSA
-	 * ceritifable primitives that are present in FIPS-compliant crypto
-	 * modules.
-	 *
-	 * The extra AES-ECB (keyed hash) encryption of the AES-CTR IV prior
-	 * to use makes the IV itself a secret. This is not strictly necessary
-	 * but comes at little cost.
-	 *
-	 * This code is ZeroTier-specific in a few ways, like the way the IV
-	 * is specified, but would not be hard to generalize.
-	 *
-	 * @param k1 GMAC key
-	 * @param k2 GMAC auth tag keyed hash key
-	 * @param k3 CTR IV keyed hash key
-	 * @param k4 AES-CTR key
-	 * @param iv 64-bit packet IV
-	 * @param pc Packet characteristics byte
-	 * @param in Message plaintext
-	 * @param len Length of plaintext
-	 * @param out Output buffer to receive ciphertext
-	 * @param tag Output buffer to receive 64-bit authentication tag
-	 */
-	static inline void gmacSivEncrypt(const AES &k1,const AES &k2,const AES &k3,const AES &k4,const uint8_t iv[8],const uint8_t pc,const void *in,const unsigned int len,void *out,uint8_t tag[8])
-	{
-#ifdef __GNUC__
-		uint8_t __attribute__ ((aligned (16))) miv[12];
-		uint8_t __attribute__ ((aligned (16))) ctrIv[16];
-#else
-		uint8_t miv[12];
-		uint8_t ctrIv[16];
-#endif
-
-		// GMAC IV is 64-bit packet IV followed by other packet attributes to extend to 96 bits
-#ifndef __GNUC__
-		for(unsigned int i=0;i<8;++i) miv[i] = iv[i];
-#else
-		*((uint64_t *)miv) = *((const uint64_t *)iv);
-#endif
-		miv[8] = pc;
-		miv[9] = (uint8_t)(len >> 16);
-		miv[10] = (uint8_t)(len >> 8);
-		miv[11] = (uint8_t)len;
-
-		// Compute auth tag: AES-ECB[k2](GMAC[k1](miv,plaintext))[0:8]
-		k1.gmac(miv,in,len,ctrIv);
-		k2.encrypt(ctrIv,ctrIv); // ECB mode encrypt step is because GMAC is not a PRF
-#ifdef ZT_NO_TYPE_PUNNING
-		for(unsigned int i=0;i<8;++i) tag[i] = ctrIv[i];
-#else
-		*((uint64_t *)tag) = *((uint64_t *)ctrIv);
-#endif
-
-		// Create synthetic CTR IV: AES-ECB[k3](TAG | MIV[0:4] | (MIV[4:8] XOR MIV[8:12]))
-#ifndef __GNUC__
-		for(unsigned int i=0;i<4;++i) ctrIv[i+8] = miv[i];
-		for(unsigned int i=4;i<8;++i) ctrIv[i+8] = miv[i] ^ miv[i+4];
-#else
-		((uint32_t *)ctrIv)[2] = ((const uint32_t *)miv)[0];
-		((uint32_t *)ctrIv)[3] = ((const uint32_t *)miv)[1] ^ ((const uint32_t *)miv)[2];
-#endif
-		k3.encrypt(ctrIv,ctrIv);
-
-		// Encrypt with AES[k4]-CTR
-		k4.ctr(ctrIv,in,len,out);
-	}
-
-	/**
-	 * Decrypt a message encrypted with AES-GMAC-SIV and check its authenticity
-	 *
-	 * @param k1 GMAC key
-	 * @param k2 GMAC auth tag keyed hash key
-	 * @param k3 CTR IV keyed hash key
-	 * @param k4 AES-CTR key
-	 * @param iv 64-bit message IV
-	 * @param pc Packet characteristics byte
-	 * @param in Message ciphertext
-	 * @param len Length of ciphertext
-	 * @param out Output buffer to receive plaintext
-	 * @param tag Authentication tag supplied with message
-	 * @return True if authentication tags match and message appears authentic
-	 */
-	static inline bool gmacSivDecrypt(const AES &k1,const AES &k2,const AES &k3,const AES &k4,const uint8_t iv[8],const uint8_t pc,const void *in,const unsigned int len,void *out,const uint8_t tag[8])
-	{
-#ifdef __GNUC__
-		uint8_t __attribute__ ((aligned (16))) miv[12];
-		uint8_t __attribute__ ((aligned (16))) ctrIv[16];
-		uint8_t __attribute__ ((aligned (16))) gmacOut[16];
-#else
-		uint8_t miv[12];
-		uint8_t ctrIv[16];
-		uint8_t gmacOut[16];
-#endif
-
-		// Extend packet IV to 96-bit message IV using direction byte and message length
-#ifdef ZT_NO_TYPE_PUNNING
-		for(unsigned int i=0;i<8;++i) miv[i] = iv[i];
-#else
-		*((uint64_t *)miv) = *((const uint64_t *)iv);
-#endif
-		miv[8] = pc;
-		miv[9] = (uint8_t)(len >> 16);
-		miv[10] = (uint8_t)(len >> 8);
-		miv[11] = (uint8_t)len;
-
-		// Recover synthetic and secret CTR IV from auth tag and packet IV
-#ifndef __GNUC__
-		for(unsigned int i=0;i<8;++i) ctrIv[i] = tag[i];
-		for(unsigned int i=0;i<4;++i) ctrIv[i+8] = miv[i];
-		for(unsigned int i=4;i<8;++i) ctrIv[i+8] = miv[i] ^ miv[i+4];
-#else
-		*((uint64_t *)ctrIv) = *((const uint64_t *)tag);
-		((uint32_t *)ctrIv)[2] = ((const uint32_t *)miv)[0];
-		((uint32_t *)ctrIv)[3] = ((const uint32_t *)miv)[1] ^ ((const uint32_t *)miv)[2];
-#endif
-		k3.encrypt(ctrIv,ctrIv);
-
-		// Decrypt with AES[k4]-CTR
-		k4.ctr(ctrIv,in,len,out);
-
-		// Compute AES[k2](GMAC[k1](iv,plaintext))
-		k1.gmac(miv,out,len,gmacOut);
-		k2.encrypt(gmacOut,gmacOut);
-
-		// Check that packet's auth tag matches first 64 bits of AES(GMAC)
-#ifdef ZT_NO_TYPE_PUNNING
-		return Utils::secureEq(gmacOut,tag,8);
-#else
-		return (*((const uint64_t *)gmacOut) == *((const uint64_t *)tag));
-#endif
-	}
-
-	/**
-	 * Use KBKDF with HMAC-SHA-384 to derive four sub-keys for AES-GMAC-SIV from a single master key
-	 *
-	 * See section 5.1 at https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-108.pdf
-	 *
-	 * @param masterKey Master 256-bit key
-	 * @param k1 GMAC key
-	 * @param k2 GMAC auth tag keyed hash key
-	 * @param k3 CTR IV keyed hash key
-	 * @param k4 AES-CTR key
-	 */
-	static inline void initGmacCtrKeys(const uint8_t masterKey[32],AES &k1,AES &k2,AES &k3,AES &k4)
-	{
-		uint8_t k[32];
-		KBKDFHMACSHA384(masterKey,ZT_PROTO_KBKDF_LABEL_KEY_USE_AES_GMAC_SIV_K1,0,0,k);
-		k1.init(k);
-		KBKDFHMACSHA384(masterKey,ZT_PROTO_KBKDF_LABEL_KEY_USE_AES_GMAC_SIV_K2,0,0,k);
-		k2.init(k);
-		KBKDFHMACSHA384(masterKey,ZT_PROTO_KBKDF_LABEL_KEY_USE_AES_GMAC_SIV_K3,0,0,k);
-		k3.init(k);
-		KBKDFHMACSHA384(masterKey,ZT_PROTO_KBKDF_LABEL_KEY_USE_AES_GMAC_SIV_K4,0,0,k);
-		k4.init(k);
 	}
 
 private:
@@ -400,7 +236,7 @@ private:
 #ifdef ZT_AES_AESNI /********************************************************/
 	void _init_aesni(const uint8_t key[32]);
 
-	ZT_ALWAYS_INLINE void _encrypt_aesni(const void *in,void *out) const
+	ZT_ALWAYS_INLINE void _encrypt_aesni(const void *const in,void *const out) const
 	{
 		__m128i tmp;
 		tmp = _mm_loadu_si128((const __m128i *)in);
@@ -421,8 +257,8 @@ private:
 		_mm_storeu_si128((__m128i *)out,_mm_aesenclast_si128(tmp,_k.ni.k[14]));
 	}
 
-	void _gmac_aesni(const uint8_t iv[12],const uint8_t *in,const unsigned int len,uint8_t out[16]) const;
-	static void _ctr_aesni(const __m128i key[14],const uint8_t iv[16],const uint8_t *in,unsigned int len,uint8_t *out);
+	void _gmac_aesni(const uint8_t iv[12],const uint8_t *in,unsigned int len,uint8_t out[16]) const;
+	void _ctr_aesni(const uint8_t iv[16],const uint8_t *in,unsigned int len,uint8_t *out) const;
 #endif /* ZT_AES_AESNI ******************************************************/
 };
 

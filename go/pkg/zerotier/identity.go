@@ -20,6 +20,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"runtime"
 	"strings"
 	"unsafe"
 )
@@ -44,28 +45,42 @@ type Identity struct {
 	idtype     int
 	publicKey  []byte
 	privateKey []byte
+	cid        unsafe.Pointer
+}
+
+func identityFinalizer(obj interface{}) {
+	id, _ := obj.(*Identity)
+	if id != nil && uintptr(id.cid) != 0 {
+		defer C.ZT_Identity_delete(id.cid)
+	}
 }
 
 func newIdentityFromCIdentity(cid unsafe.Pointer) (*Identity, error) {
 	if uintptr(cid) == 0 {
 		return nil, ErrInvalidParameter
 	}
+
 	var idStrBuf [4096]byte
 	idStr := C.ZT_Identity_toString(cid, (*C.char)(unsafe.Pointer(&idStrBuf[0])), 4096, 1)
 	if uintptr(unsafe.Pointer(idStr)) == 0 {
 		return nil, ErrInternal
 	}
-	return NewIdentityFromString(C.GoString(idStr))
+
+	id, err := NewIdentityFromString(C.GoString(idStr))
+	if err != nil {
+		return nil, err
+	}
+
+	id.cid = cid
+
+	runtime.SetFinalizer(id, identityFinalizer)
+
+	return id, nil
 }
 
 // NewIdentity generates a new identity of the selected type
 func NewIdentity(identityType int) (*Identity, error) {
-	cid := C.ZT_Identity_new(C.enum_ZT_Identity_Type(identityType))
-	if uintptr(unsafe.Pointer(cid)) == 0 {
-		return nil, ErrInternal
-	}
-	defer C.ZT_Identity_delete(cid)
-	return newIdentityFromCIdentity(cid)
+	return newIdentityFromCIdentity(C.ZT_Identity_new(C.enum_ZT_Identity_Type(identityType)))
 }
 
 // NewIdentityFromString generates a new identity from its string representation.
@@ -77,7 +92,7 @@ func NewIdentityFromString(s string) (*Identity, error) {
 	}
 
 	var err error
-	var id Identity
+	id := new(Identity)
 	id.address, err = NewAddressFromString(ss[0])
 	if err != nil {
 		return nil, err
@@ -125,7 +140,9 @@ func NewIdentityFromString(s string) (*Identity, error) {
 
 	}
 
-	return &id, nil
+	runtime.SetFinalizer(id, identityFinalizer)
+
+	return id, nil
 }
 
 // Address returns this identity's address
@@ -167,32 +184,34 @@ func (id *Identity) String() string {
 
 // LocallyValidate performs local self-validation of this identity
 func (id *Identity) LocallyValidate() bool {
-	idCStr := C.CString(id.String())
-	defer C.free(unsafe.Pointer(idCStr))
-	cid := C.ZT_Identity_fromString(idCStr)
-	if uintptr(cid) == 0 {
-		return false
+	if uintptr(id.cid) == 0 {
+		idCStr := C.CString(id.String())
+		defer C.free(unsafe.Pointer(idCStr))
+		id.cid = C.ZT_Identity_fromString(idCStr)
+		if uintptr(id.cid) == 0 {
+			return false
+		}
 	}
-	defer C.ZT_Identity_delete(cid)
-	return C.ZT_Identity_validate(cid) != 0
+	return C.ZT_Identity_validate(id.cid) != 0
 }
 
 // Sign signs a message with this identity
 func (id *Identity) Sign(msg []byte) ([]byte, error) {
-	idCStr := C.CString(id.PrivateKeyString())
-	defer C.free(unsafe.Pointer(idCStr))
-	cid := C.ZT_Identity_fromString(idCStr)
-	if uintptr(cid) == 0 {
-		return nil, ErrInvalidKey
+	if uintptr(id.cid) == 0 {
+		idCStr := C.CString(id.String())
+		defer C.free(unsafe.Pointer(idCStr))
+		id.cid = C.ZT_Identity_fromString(idCStr)
+		if uintptr(id.cid) == 0 {
+			return nil, ErrInvalidKey
+		}
 	}
-	defer C.ZT_Identity_delete(cid)
 
 	var dataP unsafe.Pointer
 	if len(msg) > 0 {
 		dataP = unsafe.Pointer(&msg[0])
 	}
 	var sig [96]byte
-	sigLen := C.ZT_Identity_sign(cid, dataP, C.uint(len(msg)), unsafe.Pointer(&sig[0]), 96)
+	sigLen := C.ZT_Identity_sign(id.cid, dataP, C.uint(len(msg)), unsafe.Pointer(&sig[0]), 96)
 	if sigLen <= 0 {
 		return nil, ErrInvalidKey
 	}
@@ -206,19 +225,20 @@ func (id *Identity) Verify(msg, sig []byte) bool {
 		return false
 	}
 
-	idCStr := C.CString(id.String())
-	defer C.free(unsafe.Pointer(idCStr))
-	cid := C.ZT_Identity_fromString(idCStr)
-	if uintptr(cid) == 0 {
-		return false
+	if uintptr(id.cid) == 0 {
+		idCStr := C.CString(id.String())
+		defer C.free(unsafe.Pointer(idCStr))
+		id.cid = C.ZT_Identity_fromString(idCStr)
+		if uintptr(id.cid) == 0 {
+			return false
+		}
 	}
-	defer C.ZT_Identity_delete(cid)
 
 	var dataP unsafe.Pointer
 	if len(msg) > 0 {
 		dataP = unsafe.Pointer(&msg[0])
 	}
-	return C.ZT_Identity_verify(cid, dataP, C.uint(len(msg)), unsafe.Pointer(&sig[0]), C.uint(len(sig))) != 0
+	return C.ZT_Identity_verify(id.cid, dataP, C.uint(len(msg)), unsafe.Pointer(&sig[0]), C.uint(len(sig))) != 0
 }
 
 // MarshalJSON marshals this Identity in its string format (private key is never included)

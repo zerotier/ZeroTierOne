@@ -23,7 +23,7 @@ import (
 // Peers CLI command
 func Peers(basePath, authToken string, args []string, jsonOutput bool) {
 	var peers []zerotier.Peer
-	apiGet(basePath, authToken, "/peer", &peers)
+	clock := apiGet(basePath, authToken, "/peer", &peers)
 
 	if jsonOutput {
 		fmt.Println(jsonDump(&peers))
@@ -36,7 +36,7 @@ func Peers(basePath, authToken string, args []string, jsonOutput bool) {
 			address := ""
 			if len(peer.Paths) > 0 {
 				link = "DIRECT"
-				lastTX, lastRX = peer.Clock-peer.Paths[0].LastSend, peer.Clock-peer.Paths[0].LastReceive
+				lastTX, lastRX = clock-peer.Paths[0].LastSend, clock-peer.Paths[0].LastReceive
 				if lastTX < 0 {
 					lastTX = 0
 				}

@@ -45,8 +45,8 @@ Commands:
   leave <network ID>                   Leave a virtual network
   networks                             List joined VL2 virtual networks
   network <network ID>                 Show verbose network info
-  addroot <identity> [IP/port]         Add VL1 root with optional bootstrap IP
-  removeroot <identity|address>        Remove VL1 root server
+  addroot <identity> [IP/port]         Add root with optional bootstrap IP
+  removeroot <identity|address>        Remove root
   roots                                Show configured VL1 root servers
   set <network ID> [option] [value]    Get or set a network config option
     manageips <boolean>                Is IP management allowed?

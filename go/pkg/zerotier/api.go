@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"path"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -35,76 +36,91 @@ const APISocketName = "apisocket"
 var startTime = TimeMs()
 
 // APIGet makes a query to the API via a Unix domain or windows pipe socket
-func APIGet(basePath, socketName, authToken, queryPath string, obj interface{}) (int, error) {
+func APIGet(basePath, socketName, authToken, queryPath string, obj interface{}) (int, int64, error) {
 	client, err := createNamedSocketHTTPClient(basePath, socketName)
 	if err != nil {
-		return http.StatusTeapot, err
+		return http.StatusTeapot, 0, err
 	}
 	req, err := http.NewRequest("GET", "http://socket"+queryPath, nil)
 	if err != nil {
-		return http.StatusTeapot, err
+		return http.StatusTeapot, 0, err
 	}
 	req.Header.Add("Authorization", "bearer "+authToken)
 	resp, err := client.Do(req)
 	if err != nil {
-		return http.StatusTeapot, err
+		return http.StatusTeapot, 0, err
 	}
 	err = json.NewDecoder(resp.Body).Decode(obj)
-	return resp.StatusCode, err
+	ts := resp.Header.Get("X-ZT-Clock")
+	t := int64(0)
+	if len(ts) > 0 {
+		t, _ = strconv.ParseInt(ts, 10, 64)
+	}
+	return resp.StatusCode, t, err
 }
 
 // APIPost posts a JSON object to the API via a Unix domain or windows pipe socket and reads a response
-func APIPost(basePath, socketName, authToken, queryPath string, post, result interface{}) (int, error) {
+func APIPost(basePath, socketName, authToken, queryPath string, post, result interface{}) (int, int64, error) {
 	client, err := createNamedSocketHTTPClient(basePath, socketName)
 	if err != nil {
-		return http.StatusTeapot, err
+		return http.StatusTeapot, 0, err
 	}
 	var data []byte
 	if post != nil {
 		data, err = json.Marshal(post)
 		if err != nil {
-			return http.StatusTeapot, err
+			return http.StatusTeapot, 0, err
 		}
 	} else {
 		data = []byte("null")
 	}
 	req, err := http.NewRequest("POST", "http://socket"+queryPath, bytes.NewReader(data))
 	if err != nil {
-		return http.StatusTeapot, err
+		return http.StatusTeapot, 0, err
 	}
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Authorization", "bearer "+authToken)
 	resp, err := client.Do(req)
 	if err != nil {
-		return http.StatusTeapot, err
+		return http.StatusTeapot, 0, err
+	}
+	ts := resp.Header.Get("X-ZT-Clock")
+	t := int64(0)
+	if len(ts) > 0 {
+		t, _ = strconv.ParseInt(ts, 10, 64)
 	}
 	if result != nil {
 		err = json.NewDecoder(resp.Body).Decode(result)
-		return resp.StatusCode, err
+		return resp.StatusCode, t, err
 	}
-	return resp.StatusCode, nil
+	return resp.StatusCode, t, nil
 }
 
 // APIDelete posts DELETE to a path and fills result with the outcome (if any) if result is non-nil
-func APIDelete(basePath, socketName, authToken, queryPath string, result interface{}) (int, error) {
+func APIDelete(basePath, socketName, authToken, queryPath string, result interface{}) (int, int64, error) {
 	client, err := createNamedSocketHTTPClient(basePath, socketName)
 	if err != nil {
-		return http.StatusTeapot, err
+		return http.StatusTeapot, 0, err
 	}
 	req, err := http.NewRequest("DELETE", "http://socket"+queryPath, nil)
 	if err != nil {
-		return http.StatusTeapot, err
+		return http.StatusTeapot, 0, err
 	}
 	req.Header.Add("Authorization", "bearer "+authToken)
 	resp, err := client.Do(req)
 	if err != nil {
-		return http.StatusTeapot, err
+		return http.StatusTeapot, 0, err
+	}
+	ts := resp.Header.Get("X-ZT-Clock")
+	t := int64(0)
+	if len(ts) > 0 {
+		t, _ = strconv.ParseInt(ts, 10, 64)
 	}
 	if result != nil {
 		err = json.NewDecoder(resp.Body).Decode(result)
-		return resp.StatusCode, err
+		return resp.StatusCode, t, err
 	}
-	return resp.StatusCode, nil
+	return resp.StatusCode, t, nil
 }
 
 // APIStatus is the object returned by API status inquiries
@@ -164,7 +180,9 @@ func apiSetStandardHeaders(out http.ResponseWriter) {
 	h.Set("Cache-Control", "no-cache, no-store, must-revalidate")
 	h.Set("Expires", "0")
 	h.Set("Pragma", "no-cache")
-	h.Set("Date", time.Now().UTC().Format(time.RFC1123))
+	t := time.Now().UTC()
+	h.Set("Date", t.Format(time.RFC1123))
+	h.Set("X-ZT-Clock", strconv.FormatInt(t.UnixNano() / int64(1000000), 10))
 }
 
 func apiSendObj(out http.ResponseWriter, req *http.Request, httpStatusCode int, obj interface{}) error {
@@ -342,7 +360,12 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 			}
 		}
 
-		if req.Method == http.MethodGet || req.Method == http.MethodHead {
+		if req.Method == http.MethodPost || req.Method == http.MethodPut {
+			if queriedID == 0 {
+				_ = apiSendObj(out, req, http.StatusNotFound, &APIErr{"peer not found"})
+				return
+			}
+		} else if req.Method == http.MethodGet || req.Method == http.MethodHead {
 			peers := node.Peers()
 			if queriedID != 0 {
 				for _, p := range peers {
@@ -356,7 +379,7 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 				_ = apiSendObj(out, req, http.StatusOK, peers)
 			}
 		} else {
-			out.Header().Set("Allow", "GET, HEAD")
+			out.Header().Set("Allow", "GET, HEAD, PUT, POST")
 			_ = apiSendObj(out, req, http.StatusMethodNotAllowed, &APIErr{"peers are read only"})
 		}
 	})
@@ -442,35 +465,6 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 		} else {
 			out.Header().Set("Allow", "GET, HEAD, PUT, POST, DELETE")
 			_ = apiSendObj(out, req, http.StatusMethodNotAllowed, &APIErr{"unsupported method " + req.Method})
-		}
-	})
-
-	////////////////////////////////////////////////////////////////////////////
-
-	smux.HandleFunc("/root/", func(out http.ResponseWriter, req *http.Request) {
-		defer func() {
-			e := recover()
-			if e != nil {
-				_ = apiSendObj(out, req, http.StatusInternalServerError, &APIErr{"caught unexpected error in request handler"})
-			}
-		}()
-
-		if !apiCheckAuth(out, req, authToken) {
-			return
-		}
-		apiSetStandardHeaders(out)
-
-		//var queriedName string
-		//if len(req.URL.Path) > 6 {
-		//	queriedName = req.URL.Path[6:]
-		//}
-
-		if req.Method == http.MethodDelete {
-		} else if req.Method == http.MethodPost || req.Method == http.MethodPut {
-		} else if req.Method == http.MethodGet || req.Method == http.MethodHead {
-		} else {
-			out.Header().Set("Allow", "GET, HEAD, PUT, POST, DELETE")
-			_ = apiSendObj(out, req, http.StatusMethodNotAllowed, &APIErr{"unsupported method: " + req.Method})
 		}
 	})
 

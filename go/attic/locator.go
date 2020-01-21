@@ -26,7 +26,7 @@ func (l Locator) Nil() bool {
 }
 
 // Endpoints obtains the endpoints described by this locator.
-func (l Locator) Endpoints() (eps []Endpoint,err error) {
+func (l Locator) Endpoints() (eps []Endpoint, err error) {
 	if len(l) < 8 {
 		err = ErrInvalidLocator
 		return

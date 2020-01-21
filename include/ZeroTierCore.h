@@ -1016,8 +1016,8 @@ typedef struct
  */
 enum ZT_PeerRole
 {
-	ZT_PEER_ROLE_LEAF = 0,       // ordinary node
-	ZT_PEER_ROLE_ROOT = 1        // root server
+	ZT_PEER_ROLE_LEAF = 0,
+	ZT_PEER_ROLE_ROOT = 1
 };
 
 /**
@@ -1611,6 +1611,17 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_removeRoot(ZT_Node *node,void *tptr,const 
  * @return ZeroTier address (least significant 40 bits of 64-bit int)
  */
 ZT_SDK_API uint64_t ZT_Node_address(ZT_Node *node);
+
+/**
+ * Get this node's identity
+ *
+ * The identity pointer returned by this function need not and should not be
+ * freed with ZT_Identity_delete(). It's valid until the node is deleted.
+ *
+ * @param node Node instance
+ * @return Identity
+ */
+ZT_SDK_API const ZT_Identity *ZT_Node_identity(ZT_Node *node);
 
 /**
  * Get the status of this node

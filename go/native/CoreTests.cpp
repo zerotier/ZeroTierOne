@@ -155,65 +155,6 @@ extern "C" int ZT_TestCrypto()
 	}
 
 	{
-		std::cout << "[crypto] Testing and benchmarking AES-256..." ZT_EOL_S << "  AES-256 (test vectors): "; std::cout.flush();
-		{
-			AES tv(AES_TEST_VECTOR_0_KEY);
-			tv.encrypt(AES_TEST_VECTOR_0_IN,(uint8_t *)buf1);
-			if (memcmp(buf1,AES_TEST_VECTOR_0_OUT,16) != 0) {
-				std::cout << "FAILED (test vector 0 encrypt)" ZT_EOL_S;
-				return -1;
-			}
-			std::cout << "OK" ZT_EOL_S << "  GMAC-AES-256 (test vectors): "; std::cout.flush();
-			tv.init(AES_GMAC_VECTOR_0_KEY);
-			tv.gmac(AES_GMAC_VECTOR_0_IV,AES_GMAC_VECTOR_0_IN,sizeof(AES_GMAC_VECTOR_0_IN),(uint8_t *)buf2);
-			if (memcmp(buf2,AES_GMAC_VECTOR_0_OUT,16) != 0) {
-				std::cout << "FAILED (test vector 0) (" << Utils::hex(buf2,16,hexbuf) << ")" ZT_EOL_S;
-				return -1;
-			}
-			tv.init(AES_GMAC_VECTOR_1_KEY);
-			tv.gmac(AES_GMAC_VECTOR_1_IV,AES_GMAC_VECTOR_1_IN,sizeof(AES_GMAC_VECTOR_1_IN),(uint8_t *)buf2);
-			if (memcmp(buf2,AES_GMAC_VECTOR_1_OUT,16) != 0) {
-				std::cout << "FAILED (test vector 1) (" << Utils::hex(buf2,16,hexbuf) << ")" ZT_EOL_S;
-				return -1;
-			}
-			tv.init(AES_GMAC_VECTOR_2_KEY);
-			tv.gmac(AES_GMAC_VECTOR_2_IV,AES_GMAC_VECTOR_2_IN,sizeof(AES_GMAC_VECTOR_2_IN),(uint8_t *)buf2);
-			if (memcmp(buf2,AES_GMAC_VECTOR_2_OUT,16) != 0) {
-				std::cout << "FAILED (test vector 2) (" << Utils::hex(buf2,16,hexbuf) << ")" ZT_EOL_S;
-				return -1;
-			}
-			std::cout << "OK" ZT_EOL_S << "  GMAC-AES-256 (benchmark): "; std::cout.flush();
-			int64_t start = OSUtils::now();
-			for(unsigned long i=0;i<500000;++i) {
-				tv.gmac((const uint8_t *)buf1,buf1,ZT_DEFAULT_MTU,(uint8_t *)buf1);
-			}
-			int64_t end = OSUtils::now();
-			*dummy = hexbuf[0];
-			std::cout << (((double)(500000 * ZT_DEFAULT_MTU) / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second (dummy: " << (unsigned int)*dummy << ")" ZT_EOL_S;
-			std::cout << "  AES-256-CTR (benchmark): "; std::cout.flush();
-			start = OSUtils::now();
-			for(unsigned long i=0;i<1000000;++i) {
-				tv.ctr((const uint8_t *)hexbuf,buf1,ZT_DEFAULT_MTU,buf1);
-				*dummy = buf1[0];
-			}
-			end = OSUtils::now();
-			std::cout << (((1000000.0 * (double)ZT_DEFAULT_MTU) / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second (dummy: " << (unsigned int)*dummy << ")" ZT_EOL_S;
-		}
-		{
-			std::cout << "  AES-256-GMAC-SIV (benchmark): "; std::cout.flush();
-			AES k1,k2,k3,k4;
-			AES::initGmacCtrKeys(AES_TEST_VECTOR_0_KEY,k1,k2,k3,k4);
-			int64_t start = OSUtils::now();
-			for(unsigned long i=0;i<500000;++i) {
-				AES::gmacSivEncrypt(k1,k2,k3,k4,(const uint8_t *)hexbuf,0,buf1,ZT_DEFAULT_MTU,buf1,(uint8_t *)(hexbuf + 8));
-				*dummy = buf1[0];
-			}
-			int64_t end = OSUtils::now();
-			std::cout << (((double)(500000 * ZT_DEFAULT_MTU) / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second (dummy: " << (unsigned int)*dummy << ")" ZT_EOL_S;
-		}
-	}
-
-	{
 		std::cout << "[crypto] Testing Salsa20... "; std::cout.flush();
 		for(unsigned int i=0;i<4;++i) {
 			for(unsigned int k=0;k<sizeof(buf1);++k)

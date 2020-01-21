@@ -16,8 +16,8 @@ ZeroTier Release Notes
  * Changed default primary ZeroTier port to 893 (for new nodes) to exploit friendlier NAT behavior on ports numbered under 1024. Added some more aggressive NAT-t techniques that work with this and can often traverse symmetric NATs.
  * Added stubs for future support for alternative transports including HTTP/HTTPS, WebRTC, Web Sockets, and "naked" Ethernet (on LAN).
  * Improved packet assemble/decode performance by moving to a lock-free bounds-checking scheme for buffers and a shared memory buffer pool.
+ * AES encryption is now the default for communicating with 2.0+ nodes.
  * Added support for a new identity type with NIST P-384 curves for future FIPS compliance. Curve25519 is still the default.
- * AES encryption is now the default for communicating with 2.0+ nodes. AES uses a GMAC-based "SIV" mode for improved resilience against nonce reuse, but constructed in a way that could be FIPS certified.
  * Compression is now only enabled for control packets as most data these days is encrypted or already compressed. This improves performance in almost all cases.
  * Minor API changes (for those who use the core directly) to support faster buffer handling, reduced memory copying, exposure of identity functions and full node identity, and improved state object load/store semantics.
 

@@ -24,12 +24,12 @@ import (
 	"zerotier/pkg/zerotier"
 )
 
-func apiGet(basePath, authToken, urlPath string, result interface{}) {
-	statusCode, err := zerotier.APIGet(basePath, zerotier.APISocketName, authToken, urlPath, result)
+func apiGet(basePath, authToken, urlPath string, result interface{}) int64 {
+	statusCode, clock, err := zerotier.APIGet(basePath, zerotier.APISocketName, authToken, urlPath, result)
 	if err != nil {
 		fmt.Printf("FATAL: API response code %d: %s\n", statusCode, err.Error())
 		os.Exit(1)
-		return
+		return 0
 	}
 	if statusCode != http.StatusOK {
 		if statusCode == http.StatusUnauthorized {
@@ -37,16 +37,17 @@ func apiGet(basePath, authToken, urlPath string, result interface{}) {
 		}
 		fmt.Printf("FATAL: API response code %d\n", statusCode)
 		os.Exit(1)
-		return
+		return 0
 	}
+	return clock
 }
 
-func apiPost(basePath, authToken, urlPath string, post, result interface{}) {
-	statusCode, err := zerotier.APIPost(basePath, zerotier.APISocketName, authToken, urlPath, post, result)
+func apiPost(basePath, authToken, urlPath string, post, result interface{}) int64 {
+	statusCode, clock, err := zerotier.APIPost(basePath, zerotier.APISocketName, authToken, urlPath, post, result)
 	if err != nil {
 		fmt.Printf("FATAL: API response code %d: %s\n", statusCode, err.Error())
 		os.Exit(1)
-		return
+		return 0
 	}
 	if statusCode != http.StatusOK {
 		if statusCode == http.StatusUnauthorized {
@@ -54,16 +55,17 @@ func apiPost(basePath, authToken, urlPath string, post, result interface{}) {
 		}
 		fmt.Printf("FATAL: API response code %d\n", statusCode)
 		os.Exit(1)
-		return
+		return 0
 	}
+	return clock
 }
 
-func apiDelete(basePath, authToken, urlPath string, result interface{}) {
-	statusCode, err := zerotier.APIDelete(basePath, zerotier.APISocketName, authToken, urlPath, result)
+func apiDelete(basePath, authToken, urlPath string, result interface{}) int64 {
+	statusCode, clock, err := zerotier.APIDelete(basePath, zerotier.APISocketName, authToken, urlPath, result)
 	if err != nil {
 		fmt.Printf("FATAL: API response code %d: %s\n", statusCode, err.Error())
 		os.Exit(1)
-		return
+		return 0
 	}
 	if statusCode != http.StatusOK {
 		if statusCode == http.StatusUnauthorized {
@@ -71,8 +73,9 @@ func apiDelete(basePath, authToken, urlPath string, result interface{}) {
 		}
 		fmt.Printf("FATAL: API response code %d\n", statusCode)
 		os.Exit(1)
-		return
+		return 0
 	}
+	return clock
 }
 
 func enabledDisabled(f bool) string {

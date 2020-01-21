@@ -889,6 +889,11 @@ uint64_t ZT_Node_address(ZT_Node *node)
 	return reinterpret_cast<ZeroTier::Node *>(node)->address();
 }
 
+const ZT_Identity *ZT_Node_identity(ZT_Node *node)
+{
+	return (const ZT_Identity *)(&(reinterpret_cast<ZeroTier::Node *>(node)->identity()));
+}
+
 void ZT_Node_status(ZT_Node *node,ZT_NodeStatus *status)
 {
 	try {

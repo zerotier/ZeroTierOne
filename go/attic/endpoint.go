@@ -19,10 +19,10 @@ const (
 // Endpoint wraps a variety of different ways of describing a node's physical network location.
 type Endpoint struct {
 	// Type is this endpoint's type
-	Type          int
+	Type int
 
 	// Location is the X, Y, Z coordinate of this endpoint or 0,0,0 if unspecified.
-	Location      [3]int
+	Location [3]int
 
 	value, value2 interface{}
 }
@@ -60,11 +60,11 @@ func (ep *Endpoint) unmarshalZT(b []byte) (int, error) {
 				break
 			}
 		}
-		if stringEnd == 0 || (stringEnd + 2) > len(b) {
+		if stringEnd == 0 || (stringEnd+2) > len(b) {
 			return 0, ErrInvalidEndpoint
 		}
 		ep.value = string(b[7:stringEnd])
-		port := binary.BigEndian.Uint16(b[stringEnd:stringEnd+2])
+		port := binary.BigEndian.Uint16(b[stringEnd : stringEnd+2])
 		ep.value2 = &port
 		return stringEnd + 2, nil
 	case EndpointTypeZeroTier:
@@ -76,7 +76,7 @@ func (ep *Endpoint) unmarshalZT(b []byte) (int, error) {
 			return 0, err
 		}
 		ep.value = a
-		ep.value2 = append(make([]byte,0,48),b[12:60]...)
+		ep.value2 = append(make([]byte, 0, 48), b[12:60]...)
 		return 60, nil
 	case EndpointTypeUrl:
 		stringEnd := 0

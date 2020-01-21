@@ -21,6 +21,7 @@ import "C"
 
 import (
 	"bytes"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -131,7 +132,7 @@ func NewNode(basePath string) (n *Node, err error) {
 	}
 	n.localConfigPath = path.Join(basePath, "local.conf")
 
-	_, identitySecretNotFoundErr := os.Stat(path.Join(basePath,"identity.secret"))
+	_, identitySecretNotFoundErr := os.Stat(path.Join(basePath, "identity.secret"))
 	err = n.localConfig.Read(n.localConfigPath, true, identitySecretNotFoundErr != nil)
 	if err != nil {
 		return
@@ -180,7 +181,7 @@ func NewNode(basePath string) (n *Node, err error) {
 				}
 				n.log.Printf("secondary port %d unavailable, trying a random port (port search enabled)", n.localConfig.Settings.SecondaryPort)
 				if portCheckCount <= 64 {
-					n.localConfig.Settings.SecondaryPort = unassignedPrivilegedPorts[randomUInt() % uint(len(unassignedPrivilegedPorts))]
+					n.localConfig.Settings.SecondaryPort = unassignedPrivilegedPorts[randomUInt()%uint(len(unassignedPrivilegedPorts))]
 				} else {
 					n.localConfig.Settings.SecondaryPort = int(16384 + (randomUInt() % 16384))
 				}
@@ -531,12 +532,15 @@ func (n *Node) Peers() []*Peer {
 			p := (*C.ZT_Peer)(unsafe.Pointer(uintptr(unsafe.Pointer(pl.peers)) + (i * C.sizeof_ZT_Peer)))
 			p2 := new(Peer)
 			p2.Address = Address(p.address)
+			p2.Identity, _ = newIdentityFromCIdentity(unsafe.Pointer(p.identity))
+			p2.IdentityHash = hex.EncodeToString((*[48]byte)(unsafe.Pointer(&p.identityHash[0]))[:])
 			p2.Version = [3]int{int(p.versionMajor), int(p.versionMinor), int(p.versionRev)}
 			p2.Latency = int(p.latency)
 			p2.Role = int(p.role)
+			p2.Bootstrap = NewInetAddressFromSockaddr(unsafe.Pointer(&p.bootstrap))
 
 			p2.Paths = make([]Path, 0, int(p.pathCount))
-			for j := uintptr(0); j < uintptr(p.pathCount); j++ {
+			for j := 0; j < len(p2.Paths); j++ {
 				pt := &p.paths[j]
 				if pt.alive != 0 {
 					a := sockaddrStorageToUDPAddr(&pt.address)
@@ -552,7 +556,6 @@ func (n *Node) Peers() []*Peer {
 				}
 			}
 
-			p2.Clock = TimeMs()
 			peers = append(peers, p2)
 		}
 		C.ZT_Node_freeQueryResult(unsafe.Pointer(n.zn), unsafe.Pointer(pl))

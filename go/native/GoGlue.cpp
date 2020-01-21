@@ -164,6 +164,7 @@ static void ZT_GoNode_StatePutFunction(
 		len);
 }
 
+static void _freeFunc(void *p) { if (p) free(p); }
 static int ZT_GoNode_StateGetFunction(
 	ZT_Node *node,
 	void *uptr,
@@ -173,7 +174,7 @@ static int ZT_GoNode_StateGetFunction(
 	void **data,
 	void (**freeFunc)(void *))
 {
-	*freeFunc = free;
+	*freeFunc = &_freeFunc;
 	return goStateObjectGetFunc(
 		reinterpret_cast<ZT_GoNode *>(uptr)->goUserPtr,
 		(int)objType,
@@ -380,7 +381,9 @@ extern "C" void ZT_GoNode_delete(ZT_GoNode *gn)
 
 	gn->backgroundTaskThread.join();
 
+	gn->node->shutdown(nullptr);
 	delete gn->node;
+
 	delete gn;
 }
 
