@@ -14,32 +14,22 @@
 #ifndef ZT_OSUTILS_HPP
 #define ZT_OSUTILS_HPP
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
-#include <time.h>
+#include "../node/Constants.hpp"
 
+#include <cstdio>
+#include <cstdlib>
+#include <cstdint>
+#include <cstring>
+#include <cstdarg>
+#include <ctime>
 #include <stdexcept>
 #include <vector>
 #include <map>
 
-#include "../node/Constants.hpp"
-#include "../node/InetAddress.hpp"
-
-#ifdef __WINDOWS__
-#include <WinSock2.h>
-#include <Windows.h>
-#include <Shlwapi.h>
-#else
-#include <unistd.h>
-#include <errno.h>
+#ifndef __WINDOWS__
 #include <sys/time.h>
 #include <sys/stat.h>
-#include <arpa/inet.h>
-#ifdef __LINUX__
-#include <sys/syscall.h>
-#endif
+#include <unistd.h>
 #endif
 
 #ifndef OMIT_JSON_SUPPORT
@@ -79,8 +69,7 @@ public:
 	 * @param stderrPath Path to file to use for stderr, or NULL for same as stdout (default)
 	 * @return True on success
 	 */
-	static bool redirectUnixOutputs(const char *stdoutPath,const char *stderrPath = (const char *)0)
-		throw();
+	static bool redirectUnixOutputs(const char *stdoutPath,const char *stderrPath = nullptr);
 #endif // __UNIX_LIKE__
 
 	/**
@@ -89,7 +78,7 @@ public:
 	 * @param path Path to delete
 	 * @return True if delete was successful
 	 */
-	static inline bool rm(const char *path)
+	static ZT_ALWAYS_INLINE bool rm(const char *path)
 	{
 #ifdef __WINDOWS__
 		return (DeleteFileA(path) != FALSE);
@@ -97,9 +86,9 @@ public:
 		return (unlink(path) == 0);
 #endif
 	}
-	static inline bool rm(const std::string &path) { return rm(path.c_str()); }
+	static ZT_ALWAYS_INLINE bool rm(const std::string &path) { return rm(path.c_str()); }
 
-	static inline bool mkdir(const char *path)
+	static ZT_ALWAYS_INLINE bool mkdir(const char *path)
 	{
 #ifdef __WINDOWS__
 		if (::PathIsDirectoryA(path))
@@ -111,9 +100,9 @@ public:
 		return true;
 #endif
 	}
-	static inline bool mkdir(const std::string &path) { return OSUtils::mkdir(path.c_str()); }
+	static ZT_ALWAYS_INLINE bool mkdir(const std::string &path) { return OSUtils::mkdir(path.c_str()); }
 
-	static inline bool rename(const char *o,const char *n)
+	static ZT_ALWAYS_INLINE bool rename(const char *o,const char *n)
 	{
 #ifdef __WINDOWS__
 		DeleteFileA(n);
@@ -152,17 +141,6 @@ public:
 	static void lockDownFile(const char *path,bool isDir);
 
 	/**
-	 * Get file last modification time
-	 *
-	 * Resolution is often only second, not millisecond, but the return is
-	 * always in ms for comparison against now().
-	 *
-	 * @param path Path to file to get time
-	 * @return Last modification time in ms since epoch or 0 if not found
-	 */
-	static uint64_t getLastModified(const char *path);
-
-	/**
 	 * @param path Path to check
 	 * @param followLinks Follow links (on platforms with that concept)
 	 * @return True if file or directory exists at path location
@@ -170,15 +148,9 @@ public:
 	static bool fileExists(const char *path,bool followLinks = true);
 
 	/**
-	 * @param path Path to file
-	 * @return File size or -1 if nonexistent or other failure
-	 */
-	static int64_t getFileSize(const char *path);
-
-	/**
 	 * @return Current time in milliseconds since epoch
 	 */
-	static inline int64_t now()
+	static ZT_ALWAYS_INLINE int64_t now()
 	{
 #ifdef __WINDOWS__
 		FILETIME ft;
@@ -190,12 +162,12 @@ public:
 		tmp.HighPart = ft.dwHighDateTime;
 		return (int64_t)( ((tmp.QuadPart - 116444736000000000LL) / 10000L) + st.wMilliseconds );
 #else
-		struct timeval tv;
-#ifdef __LINUX__
-		syscall(SYS_gettimeofday,&tv,0); /* fix for musl libc broken gettimeofday bug */
-#else
+		timeval tv;
+// #ifdef __LINUX__
+// 		syscall(SYS_gettimeofday,&tv,0); /* fix for musl libc broken gettimeofday bug */
+// #else
 		gettimeofday(&tv,(struct timezone *)0);
-#endif
+// #endif
 		return ( (1000LL * (int64_t)tv.tv_sec) + (int64_t)(tv.tv_usec / 1000) );
 #endif
 	};
@@ -234,41 +206,13 @@ public:
 	static std::vector<std::string> split(const char *s,const char *const sep,const char *esc,const char *quot);
 
 	/**
-	 * Trim whitespace from beginning and end of string
-	 */
-	static inline std::string trimString(const std::string &s)
-	{
-		unsigned long end = (unsigned long)s.length();
-		while (end) {
-			char c = s[end - 1];
-			if ((c == ' ')||(c == '\r')||(c == '\n')||(!c)||(c == '\t'))
-				--end;
-			else break;
-		}
-		unsigned long start = 0;
-		while (start < end) {
-			char c = s[start];
-			if ((c == ' ')||(c == '\r')||(c == '\n')||(!c)||(c == '\t'))
-				++start;
-			else break;
-		}
-		return s.substr(start,end - start);
-	}
-
-	/**
 	 * Write a block of data to disk, replacing any current file contents
 	 *
 	 * @param path Path to write
 	 * @param s Data to write
 	 * @return True if entire file was successfully written
 	 */
-	static inline bool writeFile(const char *path,const std::string &s) { return writeFile(path,s.data(),(unsigned int)s.length()); }
-
-	/**
-	 * @param c ASCII character to convert
-	 * @return Lower case ASCII character or unchanged if not a letter
-	 */
-	static inline char toLower(char c) throw() { return (char)OSUtils::TOLOWER_TABLE[(unsigned long)c]; }
+	static ZT_ALWAYS_INLINE bool writeFile(const char *path,const std::string &s) { return writeFile(path,s.data(),(unsigned int)s.length()); }
 
 	/**
 	 * @return Platform default ZeroTier One home path
@@ -283,9 +227,6 @@ public:
 	static bool jsonBool(const nlohmann::json &jv,const bool dfl);
 	static std::string jsonString(const nlohmann::json &jv,const char *dfl);
 #endif // OMIT_JSON_SUPPORT
-
-private:
-	static const unsigned char TOLOWER_TABLE[256];
 };
 
 } // namespace ZeroTier
