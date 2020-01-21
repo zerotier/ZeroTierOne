@@ -159,7 +159,7 @@ func NewNode(basePath string) (n *Node, err error) {
 			portCheckCount++
 			if checkPort(n.localConfig.Settings.PrimaryPort) {
 				if n.localConfig.Settings.PrimaryPort != origPort {
-					n.log.Printf("primary port %d unavailable, found port %d (port search enabled)", origPort, n.localConfig.Settings.PrimaryPort)
+					n.log.Printf("primary port %d unavailable, found port %d and saved in local.conf", origPort, n.localConfig.Settings.PrimaryPort)
 				}
 				break
 			}
@@ -167,7 +167,7 @@ func NewNode(basePath string) (n *Node, err error) {
 			portsChanged = true
 		}
 		if portCheckCount == 256 {
-			return nil, errors.New("unable to bind to primary port, tried 2048 later ports")
+			return nil, errors.New("unable to bind to primary port: tried configured port and 256 other random ports")
 		}
 
 		if n.localConfig.Settings.SecondaryPort > 0 {
@@ -189,16 +189,20 @@ func NewNode(basePath string) (n *Node, err error) {
 				}
 				portsChanged = true
 			}
-			if portCheckCount == 256 {
-				n.localConfig.Settings.SecondaryPort = 0
-			}
 		}
 
 		if portsChanged {
 			_ = n.localConfig.Write(n.localConfigPath)
 		}
-	} else if !checkPort(n.localConfig.Settings.PrimaryPort) {
-		return nil, errors.New("unable to bind to primary port")
+	} else {
+		if !checkPort(n.localConfig.Settings.PrimaryPort) {
+			return nil, errors.New("unable to bind to primary port")
+		}
+		if n.localConfig.Settings.SecondaryPort > 0 && n.localConfig.Settings.SecondaryPort < 65536 {
+			if !checkPort(n.localConfig.Settings.SecondaryPort) {
+				n.log.Printf("WARNING: unable to bind secondary port %d",n.localConfig.Settings.SecondaryPort)
+			}
+		}
 	}
 
 	n.namedSocketApiServer, n.tcpApiServer, err = createAPIServer(basePath, n)
