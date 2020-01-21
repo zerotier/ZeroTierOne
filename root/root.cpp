@@ -901,16 +901,16 @@ int main(int argc,char **argv)
 
 			threads.push_back(std::thread([s6,s4]() {
 				struct sockaddr_in6 in6;
-				Packet pkt;
-				memset(&in6,0,sizeof(in6));
+				Packet *pkt = new Packet();
 				for(;;) {
+					memset(&in6,0,sizeof(in6));
 					socklen_t sl = sizeof(in6);
-					const int pl = (int)recvfrom(s6,pkt.unsafeData(),pkt.capacity(),RECVFROM_FLAGS,(struct sockaddr *)&in6,&sl);
+					const int pl = (int)recvfrom(s6,pkt->unsafeData(),pkt->capacity(),RECVFROM_FLAGS,(struct sockaddr *)&in6,&sl);
 					if (pl > 0) {
-						if (pl >= ZT_PROTO_MIN_FRAGMENT_LENGTH) {
+						if ((pl >= ZT_PROTO_MIN_FRAGMENT_LENGTH)&&(pl <= ZT_PROTO_MAX_PACKET_LENGTH)) {
 							try {
-								pkt.setSize((unsigned int)pl);
-								handlePacket(s4,s6,reinterpret_cast<const InetAddress *>(&in6),pkt);
+								pkt->setSize((unsigned int)pl);
+								handlePacket(s4,s6,reinterpret_cast<const InetAddress *>(&in6),*pkt);
 							} catch (std::exception &exc) {
 								char ipstr[128];
 								printf("WARNING: unexpected exception handling packet from %s: %s" ZT_EOL_S,reinterpret_cast<const InetAddress *>(&in6)->toString(ipstr),exc.what());
@@ -926,20 +926,21 @@ int main(int argc,char **argv)
 						break;
 					}
 				}
+				delete pkt;
 			}));
 
 			threads.push_back(std::thread([s6,s4]() {
 				struct sockaddr_in in4;
-				Packet pkt;
-				memset(&in4,0,sizeof(in4));
+				Packet *pkt = new Packet();
 				for(;;) {
+					memset(&in4,0,sizeof(in4));
 					socklen_t sl = sizeof(in4);
-					const int pl = (int)recvfrom(s4,pkt.unsafeData(),pkt.capacity(),RECVFROM_FLAGS,(struct sockaddr *)&in4,&sl);
+					const int pl = (int)recvfrom(s4,pkt->unsafeData(),pkt->capacity(),RECVFROM_FLAGS,(struct sockaddr *)&in4,&sl);
 					if (pl > 0) {
-						if (pl >= ZT_PROTO_MIN_FRAGMENT_LENGTH) {
+						if ((pl >= ZT_PROTO_MIN_FRAGMENT_LENGTH)&&(pl <= ZT_PROTO_MAX_PACKET_LENGTH)) {
 							try {
-								pkt.setSize((unsigned int)pl);
-								handlePacket(s4,s6,reinterpret_cast<const InetAddress *>(&in4),pkt);
+								pkt->setSize((unsigned int)pl);
+								handlePacket(s4,s6,reinterpret_cast<const InetAddress *>(&in4),*pkt);
 							} catch (std::exception &exc) {
 								char ipstr[128];
 								printf("WARNING: unexpected exception handling packet from %s: %s" ZT_EOL_S,reinterpret_cast<const InetAddress *>(&in4)->toString(ipstr),exc.what());
@@ -955,6 +956,7 @@ int main(int argc,char **argv)
 						break;
 					}
 				}
+				delete pkt;
 			}));
 		}
 	}
