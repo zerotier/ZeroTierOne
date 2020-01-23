@@ -1,7 +1,4 @@
 #!/usr/bin/env groovy
-options {
-    disableConcurrentBuilds()
-}
 
 def alpineStaticTask(distro, platform) {
     def myNode = {
