@@ -12,18 +12,14 @@
 /****/
 
 #include <cstdio>
-#include <cstdlib>
-
 #include <algorithm>
 #include <utility>
-#include <stdexcept>
 
 #include "Constants.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "Switch.hpp"
 #include "Node.hpp"
 #include "InetAddress.hpp"
-#include "Topology.hpp"
 #include "Peer.hpp"
 #include "SelfAwareness.hpp"
 #include "Packet.hpp"
@@ -211,7 +207,7 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 	bool fromBridged;
 	if ((fromBridged = (from != network->mac()))) {
 		if (!network->config().permitsBridging(RR->identity.address())) {
-			RR->t->outgoingNetworkFrameDropped(tPtr,network,from,to,etherType,vlanId,len,ZT_TRACE_FRAME_DROP_REASON_BRIDGING_NOT_ALLOWED_LOCAL);
+			RR->t->outgoingNetworkFrameDropped(tPtr,network->id(),from,to,(uint16_t)etherType,(uint16_t)len,(const uint8_t *)data,ZT_TRACE_FRAME_DROP_REASON_BRIDGING_NOT_ALLOWED_LOCAL);
 			return;
 		}
 	}
@@ -235,7 +231,7 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 				multicastGroup = MulticastGroup::deriveMulticastGroupForAddressResolution(InetAddress(((const unsigned char *)data) + 24,4,0));
 			} else if (!network->config().enableBroadcast()) {
 				// Don't transmit broadcasts if this network doesn't want them
-				RR->t->outgoingNetworkFrameDropped(tPtr,network,from,to,etherType,vlanId,len,ZT_TRACE_FRAME_DROP_REASON_BROADCAST_DISABLED);
+				RR->t->outgoingNetworkFrameDropped(tPtr,network->id(),from,to,(uint16_t)etherType,(uint16_t)len,(const uint8_t *)data,ZT_TRACE_FRAME_DROP_REASON_BROADCAST_DISABLED);
 				return;
 			}
 		} else if ((etherType == ZT_ETHERTYPE_IPV6)&&(len >= (40 + 8 + 16))) {
@@ -323,7 +319,7 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 
 		// Check this after NDP emulation, since that has to be allowed in exactly this case
 		if (network->config().multicastLimit == 0) {
-			RR->t->outgoingNetworkFrameDropped(tPtr,network,from,to,etherType,vlanId,len,ZT_TRACE_FRAME_DROP_REASON_MULTICAST_DISABLED);
+			RR->t->outgoingNetworkFrameDropped(tPtr,network->id(),from,to,(uint16_t)etherType,(uint16_t)len,(const uint8_t *)data,ZT_TRACE_FRAME_DROP_REASON_MULTICAST_DISABLED);
 			return;
 		}
 
@@ -336,7 +332,7 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 
 		// First pass sets noTee to false, but noTee is set to true in OutboundMulticast to prevent duplicates.
 		if (!network->filterOutgoingPacket(tPtr,false,RR->identity.address(),Address(),from,to,(const uint8_t *)data,len,etherType,vlanId,qosBucket)) {
-			RR->t->outgoingNetworkFrameDropped(tPtr,network,from,to,etherType,vlanId,len,ZT_TRACE_FRAME_DROP_REASON_FILTER_BLOCKED);
+			RR->t->outgoingNetworkFrameDropped(tPtr,network->id(),from,to,(uint16_t)etherType,(uint16_t)len,(const uint8_t *)data,ZT_TRACE_FRAME_DROP_REASON_FILTER_BLOCKED);
 			return;
 		}
 
@@ -365,7 +361,7 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 		SharedPtr<Peer> toPeer(RR->topology->get(tPtr,toZT));
 
 		if (!network->filterOutgoingPacket(tPtr,false,RR->identity.address(),toZT,from,to,(const uint8_t *)data,len,etherType,vlanId,qosBucket)) {
-			RR->t->outgoingNetworkFrameDropped(tPtr,network,from,to,etherType,vlanId,len,ZT_TRACE_FRAME_DROP_REASON_FILTER_BLOCKED);
+			RR->t->outgoingNetworkFrameDropped(tPtr,network->id(),from,to,(uint16_t)etherType,(uint16_t)len,(const uint8_t *)data,ZT_TRACE_FRAME_DROP_REASON_FILTER_BLOCKED);
 			return;
 		}
 
@@ -392,7 +388,7 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 		// for each ZT destination are also done below. This is the same rationale
 		// and design as for multicast.
 		if (!network->filterOutgoingPacket(tPtr,false,RR->identity.address(),Address(),from,to,(const uint8_t *)data,len,etherType,vlanId,qosBucket)) {
-			RR->t->outgoingNetworkFrameDropped(tPtr,network,from,to,etherType,vlanId,len,ZT_TRACE_FRAME_DROP_REASON_FILTER_BLOCKED);
+			RR->t->outgoingNetworkFrameDropped(tPtr,network->id(),from,to,(uint16_t)etherType,(uint16_t)len,(const uint8_t *)data,ZT_TRACE_FRAME_DROP_REASON_FILTER_BLOCKED);
 			return;
 		}
 
@@ -442,7 +438,7 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 				outp.append((uint16_t)etherType);
 				outp.append(data,len);
 			} else {
-				RR->t->outgoingNetworkFrameDropped(tPtr,network,from,to,etherType,vlanId,len,ZT_TRACE_FRAME_DROP_REASON_FILTER_BLOCKED_AT_BRIDGE_REPLICATION);
+				RR->t->outgoingNetworkFrameDropped(tPtr,network->id(),from,to,(uint16_t)etherType,(uint16_t)len,(const uint8_t *)data,ZT_TRACE_FRAME_DROP_REASON_FILTER_BLOCKED_AT_BRIDGE_REPLICATION);
 			}
 		}
 	}

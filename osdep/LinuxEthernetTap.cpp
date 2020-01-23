@@ -15,6 +15,10 @@
 
 #ifdef __LINUX__
 
+#ifdef __GCC__
+#pragma GCC diagnostic ignored "-Wrestrict"
+#endif
+
 #include "../node/Utils.hpp"
 #include "../node/Mutex.hpp"
 #include "../node/Dictionary.hpp"

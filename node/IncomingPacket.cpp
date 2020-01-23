@@ -355,8 +355,9 @@ ZT_ALWAYS_INLINE bool _doRENDEZVOUS(IncomingPacket &pkt,const RuntimeEnvironment
 				InetAddress atAddr(pkt.field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRESS,addrlen),addrlen,port);
 				if (rendezvousWith->shouldTryPath(tPtr,RR->node->now(),peer,atAddr)) {
 					if (atAddr.isV4())
-						RR->node->putPacket(tPtr,path->localSocket(),atAddr,&junk,2,2); // IPv4 "firewall opener"
+						RR->node->putPacket(tPtr,path->localSocket(),atAddr,&junk,2,2); // IPv4 "firewall opener" hack
 					rendezvousWith->sendHELLO(tPtr,path->localSocket(),atAddr,RR->node->now());
+					RR->t->tryingNewPath(tPtr,rendezvousWith->identity(),atAddr,path->address(),pkt.packetId(),Packet::VERB_RENDEZVOUS,peer->address(),peer->identity().hash(),ZT_TRACE_TRYING_NEW_PATH_REASON_RENDEZVOUS);
 				}
 			}
 		}
@@ -401,7 +402,7 @@ ZT_ALWAYS_INLINE bool _doEXT_FRAME(IncomingPacket &pkt,const RuntimeEnvironment 
 			CertificateOfMembership com;
 			comLen = com.deserialize(pkt,ZT_PROTO_VERB_EXT_FRAME_IDX_COM);
 			if (com)
-				network->addCredential(tPtr,com);
+				network->addCredential(tPtr,peer->identity(),com);
 		}
 
 		if (!network->gate(tPtr,peer)) {
@@ -501,7 +502,7 @@ ZT_ALWAYS_INLINE bool _doNETWORK_CREDENTIALS(IncomingPacket &pkt,const RuntimeEn
 		if (com) {
 			network = RR->node->network(com.networkId());
 			if (network) {
-				if (network->addCredential(tPtr,com) == Membership::ADD_DEFERRED_FOR_WHOIS)
+				if (network->addCredential(tPtr,peer->identity(),com) == Membership::ADD_DEFERRED_FOR_WHOIS)
 					return false;
 			}
 		}
@@ -515,7 +516,7 @@ ZT_ALWAYS_INLINE bool _doNETWORK_CREDENTIALS(IncomingPacket &pkt,const RuntimeEn
 			if ((!network)||(network->id() != cap.networkId()))
 				network = RR->node->network(cap.networkId());
 			if (network) {
-				if (network->addCredential(tPtr,cap) == Membership::ADD_DEFERRED_FOR_WHOIS)
+				if (network->addCredential(tPtr,peer->identity(),cap) == Membership::ADD_DEFERRED_FOR_WHOIS)
 					return false;
 			}
 		}
@@ -528,7 +529,7 @@ ZT_ALWAYS_INLINE bool _doNETWORK_CREDENTIALS(IncomingPacket &pkt,const RuntimeEn
 			if ((!network)||(network->id() != tag.networkId()))
 				network = RR->node->network(tag.networkId());
 			if (network) {
-				if (network->addCredential(tPtr,tag) == Membership::ADD_DEFERRED_FOR_WHOIS)
+				if (network->addCredential(tPtr,peer->identity(),tag) == Membership::ADD_DEFERRED_FOR_WHOIS)
 					return false;
 			}
 		}
@@ -541,7 +542,7 @@ ZT_ALWAYS_INLINE bool _doNETWORK_CREDENTIALS(IncomingPacket &pkt,const RuntimeEn
 			if ((!network)||(network->id() != revocation.networkId()))
 				network = RR->node->network(revocation.networkId());
 			if (network) {
-				if (network->addCredential(tPtr,peer->address(),revocation) == Membership::ADD_DEFERRED_FOR_WHOIS)
+				if (network->addCredential(tPtr,peer->identity(),revocation) == Membership::ADD_DEFERRED_FOR_WHOIS)
 					return false;
 			}
 		}
@@ -554,7 +555,7 @@ ZT_ALWAYS_INLINE bool _doNETWORK_CREDENTIALS(IncomingPacket &pkt,const RuntimeEn
 			if ((!network)||(network->id() != coo.networkId()))
 				network = RR->node->network(coo.networkId());
 			if (network) {
-				if (network->addCredential(tPtr,coo) == Membership::ADD_DEFERRED_FOR_WHOIS)
+				if (network->addCredential(tPtr,peer->identity(),coo) == Membership::ADD_DEFERRED_FOR_WHOIS)
 					return false;
 			}
 		}
@@ -619,12 +620,13 @@ ZT_ALWAYS_INLINE bool _doMULTICAST_GATHER(IncomingPacket &pkt,const RuntimeEnvir
 
 	const SharedPtr<Network> network(RR->node->network(nwid));
 
-	if ((flags & 0x01) != 0) {
+	// LEGACY: older versions would send this
+	if ((flags & 0x01U) != 0) {
 		try {
 			CertificateOfMembership com;
 			com.deserialize(pkt,ZT_PROTO_VERB_MULTICAST_GATHER_IDX_COM);
 			if ((com)&&(network))
-				network->addCredential(tPtr,com);
+				network->addCredential(tPtr,peer->identity(),com);
 		} catch ( ... ) {} // discard invalid COMs
 	}
 
@@ -658,6 +660,7 @@ ZT_ALWAYS_INLINE bool _doMULTICAST_GATHER(IncomingPacket &pkt,const RuntimeEnvir
 	return true;
 }
 
+volatile uint16_t junk = 0;
 ZT_ALWAYS_INLINE bool _doPUSH_DIRECT_PATHS(IncomingPacket &pkt,const RuntimeEnvironment *const RR,void *const tPtr,const SharedPtr<Peer> &peer,const SharedPtr<Path> &path)
 {
 	const int64_t now = RR->node->now();
@@ -668,7 +671,6 @@ ZT_ALWAYS_INLINE bool _doPUSH_DIRECT_PATHS(IncomingPacket &pkt,const RuntimeEnvi
 
 		unsigned int count = pkt.at<uint16_t>(ZT_PACKET_IDX_PAYLOAD);
 		unsigned int ptr = ZT_PACKET_IDX_PAYLOAD + 2;
-		uint16_t junk = (uint16_t)Utils::random();
 
 		while (count--) {
 			/* unsigned int flags = (*this)[ptr++]; */ ++ptr;
@@ -682,17 +684,20 @@ ZT_ALWAYS_INLINE bool _doPUSH_DIRECT_PATHS(IncomingPacket &pkt,const RuntimeEnvi
 					const InetAddress a(pkt.field(ptr,4),4,pkt.at<uint16_t>(ptr + 4));
 					if (peer->shouldTryPath(tPtr,now,peer,a)) {
 						if (++countPerScope[(int)a.ipScope()][0] <= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY) {
-							RR->node->putPacket(tPtr,path->localSocket(),a,&junk,2,2); // IPv4 "firewall opener"
+							RR->node->putPacket(tPtr,path->localSocket(),a,(const void *)&junk,sizeof(junk),2); // IPv4 "firewall opener"
 							++junk;
 							peer->sendHELLO(tPtr,-1,a,now);
+							RR->t->tryingNewPath(tPtr,peer->identity(),a,path->address(),pkt.packetId(),Packet::VERB_PUSH_DIRECT_PATHS,peer->address(),peer->identity().hash(),ZT_TRACE_TRYING_NEW_PATH_REASON_RECEIVED_PUSH_DIRECT_PATHS);
 						}
 					}
 				}	break;
 				case 6: {
 					const InetAddress a(pkt.field(ptr,16),16,pkt.at<uint16_t>(ptr + 16));
 					if (peer->shouldTryPath(tPtr,now,peer,a)) {
-						if (++countPerScope[(int)a.ipScope()][1] <= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY)
+						if (++countPerScope[(int)a.ipScope()][1] <= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY) {
 							peer->sendHELLO(tPtr,-1,a,now);
+							RR->t->tryingNewPath(tPtr,peer->identity(),a,path->address(),pkt.packetId(),Packet::VERB_PUSH_DIRECT_PATHS,peer->address(),peer->identity().hash(),ZT_TRACE_TRYING_NEW_PATH_REASON_RECEIVED_PUSH_DIRECT_PATHS);
+						}
 					}
 				}	break;
 			}

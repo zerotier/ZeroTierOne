@@ -1123,7 +1123,7 @@ void EmbeddedNetworkController::onNetworkMemberUpdate(const void *db,uint64_t ne
 void EmbeddedNetworkController::onNetworkMemberDeauthorize(const void *db,uint64_t networkId,uint64_t memberId)
 {
 	const int64_t now = OSUtils::now();
-	Revocation rev((uint32_t)Utils::random(),networkId,0,now,ZT_REVOCATION_FLAG_FAST_PROPAGATE,Address(memberId),Revocation::CREDENTIAL_TYPE_COM);
+	Revocation rev((uint32_t)Utils::random(),networkId,0,now,ZT_REVOCATION_FLAG_FAST_PROPAGATE,Address(memberId),ZT_CREDENTIAL_TYPE_COM);
 	rev.sign(_signingId);
 	{
 		std::lock_guard<std::mutex> l(_memberStatus_l);

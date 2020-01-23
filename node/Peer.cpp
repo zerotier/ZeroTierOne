@@ -109,30 +109,35 @@ void Peer::received(
 			}
 
 			_lastPrioritizedPaths = now;
+			InetAddress old;
+			if (_paths[lastReceiveTimeMaxAt])
+				old = _paths[lastReceiveTimeMaxAt]->address();
 			_paths[lastReceiveTimeMaxAt] = path;
 			_bootstrap = path->address();
 			_prioritizePaths(now);
-			RR->t->peerLearnedNewPath(tPtr,networkId,*this,path,packetId);
+			RR->t->learnedNewPath(tPtr,packetId,_id,path->address(),old);
 		} else {
 			if (RR->node->shouldUsePathForZeroTierTraffic(tPtr,_id,path->localSocket(),path->address())) {
+				RR->t->tryingNewPath(tPtr,_id,path->address(),path->address(),packetId,(uint8_t)verb,_id.address(),_id.hash(),ZT_TRACE_TRYING_NEW_PATH_REASON_PACKET_RECEIVED_FROM_UNKNOWN_PATH);
 				sendHELLO(tPtr,path->localSocket(),path->address(),now);
 				path->sent(now);
-				RR->t->peerConfirmingUnknownPath(tPtr,networkId,*this,path,packetId,verb);
 			}
 		}
 	}
 
 path_check_done:
-	const int64_t sinceLastP2PInit = now - _lastAttemptedP2PInit;
-	if (sinceLastP2PInit >= ((hops == 0) ? ZT_DIRECT_PATH_PUSH_INTERVAL_HAVEPATH : ZT_DIRECT_PATH_PUSH_INTERVAL)) {
+	if ((now - _lastAttemptedP2PInit) >= ((hops == 0) ? ZT_DIRECT_PATH_PUSH_INTERVAL_HAVEPATH : ZT_DIRECT_PATH_PUSH_INTERVAL)) {
 		_lastAttemptedP2PInit = now;
 
 		InetAddress addr;
-		if ((_bootstrap.type() == Endpoint::INETADDR_V4)||(_bootstrap.type() == Endpoint::INETADDR_V6))
+		if ((_bootstrap.type() == Endpoint::INETADDR_V4)||(_bootstrap.type() == Endpoint::INETADDR_V6)) {
+			RR->t->tryingNewPath(tPtr,_id,_bootstrap.inetAddr(),InetAddress::NIL,0,0,0,nullptr,ZT_TRACE_TRYING_NEW_PATH_REASON_BOOTSTRAP_ADDRESS);
 			sendHELLO(tPtr,-1,_bootstrap.inetAddr(),now);
-		if (RR->node->externalPathLookup(tPtr,_id,-1,addr)) {
-			if (RR->node->shouldUsePathForZeroTierTraffic(tPtr,_id,-1,addr))
+		} if (RR->node->externalPathLookup(tPtr,_id,-1,addr)) {
+			if (RR->node->shouldUsePathForZeroTierTraffic(tPtr,_id,-1,addr)) {
+				RR->t->tryingNewPath(tPtr,_id,_bootstrap.inetAddr(),InetAddress::NIL,0,0,0,nullptr,ZT_TRACE_TRYING_NEW_PATH_REASON_EXPLICITLY_SUGGESTED_ADDRESS);
 				sendHELLO(tPtr,-1,addr,now);
+			}
 		}
 
 		std::vector<ZT_InterfaceAddress> localInterfaceAddresses(RR->node->localInterfaceAddresses());
@@ -157,7 +162,7 @@ path_check_done:
 				uint8_t addressType = 4;
 				uint8_t addressLength = 6;
 				unsigned int ipLength = 4;
-				const void *rawIpData = (const void *)0;
+				const void *rawIpData = nullptr;
 				uint16_t port = 0;
 				switch(a->ss_family) {
 					case AF_INET:

@@ -698,7 +698,7 @@ void Node::ncSendRevocation(const Address &destination,const Revocation &rev)
 	if (destination == RR->identity.address()) {
 		SharedPtr<Network> n(network(rev.networkId()));
 		if (!n) return;
-		n->addCredential((void *)0,RR->identity.address(),rev);
+		n->addCredential((void *)0,RR->identity,rev);
 	} else {
 		Packet outp(destination,RR->identity.address(),Packet::VERB_NETWORK_CREDENTIALS);
 		outp.append((uint8_t)0x00);
