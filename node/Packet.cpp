@@ -66,7 +66,7 @@ bool Packet::dearmor(const void *key)
 		s20.crypt12(ZERO_KEY,macKey,sizeof(macKey));
 		uint64_t mac[2];
 		poly1305(mac,payload,payloadLen,macKey);
-#ifdef ZT_NO_TYPE_PUNNING
+#ifdef ZT_NO_UNALIGNED_ACCESS
 		if (!Utils::secureEq(mac,data + ZT_PACKET_IDX_MAC,8))
 			return false;
 #else

@@ -218,7 +218,7 @@ void HMACSHA384(const uint8_t key[32],const void *msg,const unsigned int msglen,
 	uint64_t kInPadded[16]; // input padded key
 	uint64_t outer[22]; // output padded key | H(input padded key | msg)
 
-#ifdef ZT_NO_TYPE_PUNNING
+#ifdef ZT_NO_UNALIGNED_ACCESS
 	for(int i=0;i<32;++i) ((uint8_t *)kInPadded)[i] = key[i] ^ 0x36;
 	for(int i=4;i<16;++i) kInPadded[i] = 0x3636363636363636ULL;
 	for(int i=0;i<32;++i) ((uint8_t *)outer)[i] = key[i] ^ 0x5c;

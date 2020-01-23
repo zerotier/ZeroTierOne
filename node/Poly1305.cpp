@@ -70,7 +70,7 @@ typedef struct poly1305_state_internal_t {
   unsigned char final;
 } poly1305_state_internal_t;
 
-#if defined(ZT_NO_TYPE_PUNNING) || (__BYTE_ORDER != __LITTLE_ENDIAN)
+#if defined(ZT_NO_UNALIGNED_ACCESS) || (__BYTE_ORDER != __LITTLE_ENDIAN)
 static inline unsigned long long U8TO64(const unsigned char *p)
 {
   return
@@ -87,7 +87,7 @@ static inline unsigned long long U8TO64(const unsigned char *p)
 #define U8TO64(p) (*reinterpret_cast<const unsigned long long *>(p))
 #endif
 
-#if defined(ZT_NO_TYPE_PUNNING) || (__BYTE_ORDER != __LITTLE_ENDIAN)
+#if defined(ZT_NO_UNALIGNED_ACCESS) || (__BYTE_ORDER != __LITTLE_ENDIAN)
 static inline void U64TO8(unsigned char *p, unsigned long long v)
 {
   p[0] = (v      ) & 0xff;

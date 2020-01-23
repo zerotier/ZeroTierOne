@@ -44,7 +44,7 @@ class Revocation : public Credential
 	friend class Credential;
 
 public:
-	static ZT_ALWAYS_INLINE Credential::Type credentialType() { return Credential::CREDENTIAL_TYPE_REVOCATION; }
+	static ZT_ALWAYS_INLINE ZT_CredentialType credentialType() { return ZT_CREDENTIAL_TYPE_REVOCATION; }
 
 	ZT_ALWAYS_INLINE Revocation() :
 		_id(0),
@@ -54,7 +54,7 @@ public:
 		_flags(0),
 		_target(),
 		_signedBy(),
-		_type(Credential::CREDENTIAL_TYPE_NULL),
+		_type(ZT_CREDENTIAL_TYPE_NULL),
 		_signatureLength(0)
 	{
 	}
@@ -68,7 +68,7 @@ public:
 	 * @param tgt Target node whose credential(s) are being revoked
 	 * @param ct Credential type being revoked
 	 */
-	ZT_ALWAYS_INLINE Revocation(const uint32_t i,const uint64_t nwid,const uint32_t cid,const uint64_t thr,const uint64_t fl,const Address &tgt,const Credential::Type ct) :
+	ZT_ALWAYS_INLINE Revocation(const uint32_t i,const uint64_t nwid,const uint32_t cid,const uint64_t thr,const uint64_t fl,const Address &tgt,const ZT_CredentialType ct) :
 		_id(i),
 		_credentialId(cid),
 		_networkId(nwid),
@@ -87,7 +87,7 @@ public:
 	ZT_ALWAYS_INLINE int64_t threshold() const { return _threshold; }
 	ZT_ALWAYS_INLINE const Address &target() const { return _target; }
 	ZT_ALWAYS_INLINE const Address &signer() const { return _signedBy; }
-	ZT_ALWAYS_INLINE Credential::Type type() const { return _type; }
+	ZT_ALWAYS_INLINE ZT_CredentialType typeBeingRevoked() const { return _type; }
 	ZT_ALWAYS_INLINE const uint8_t *signature() const { return _signature; }
 	ZT_ALWAYS_INLINE unsigned int signatureLength() const { return _signatureLength; }
 	ZT_ALWAYS_INLINE bool fastPropagate() const { return ((_flags & ZT_REVOCATION_FLAG_FAST_PROPAGATE) != 0); }
@@ -160,7 +160,7 @@ public:
 		_flags = b.template at<uint64_t>(p); p += 8;
 		_target.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); p += ZT_ADDRESS_LENGTH;
 		_signedBy.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); p += ZT_ADDRESS_LENGTH;
-		_type = (Credential::Type)b[p++];
+		_type = (ZT_CredentialType)b[p++];
 
 		if (b[p++] == 1) {
 			_signatureLength = b.template at<uint16_t>(p);
@@ -186,7 +186,7 @@ private:
 	uint64_t _flags;
 	Address _target;
 	Address _signedBy;
-	Credential::Type _type;
+	ZT_CredentialType _type;
 	unsigned int _signatureLength;
 	uint8_t _signature[ZT_SIGNATURE_BUFFER_SIZE];
 };

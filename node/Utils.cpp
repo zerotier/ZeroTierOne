@@ -331,7 +331,7 @@ uint64_t random()
 
 	l.lock();
 	const uint64_t result = ROL64(s1 * 5,7) * 9;
-	const uint64_t t = s1 << 17;
+	const uint64_t t = s1 << 17U;
 	s2 ^= s0;
 	s3 ^= s1;
 	s1 ^= s2;

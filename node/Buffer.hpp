@@ -25,7 +25,7 @@
 #include "Constants.hpp"
 #include "Utils.hpp"
 
-#if defined(__GNUC__) && (!defined(ZT_NO_TYPE_PUNNING))
+#if defined(__GNUC__) && (!defined(ZT_NO_UNALIGNED_ACCESS))
 #define ZT_VAR_MAY_ALIAS __attribute__((__may_alias__))
 #else
 #define ZT_VAR_MAY_ALIAS
@@ -171,7 +171,7 @@ public:
 	{
 		if (unlikely((i + sizeof(T)) > _l))
 			throw ZT_EXCEPTION_OUT_OF_BOUNDS;
-#ifdef ZT_NO_TYPE_PUNNING
+#ifdef ZT_NO_UNALIGNED_ACCESS
 		uint8_t *p = reinterpret_cast<uint8_t *>(_b + i);
 		for(unsigned int x=1;x<=sizeof(T);++x)
 			*(p++) = (uint8_t)(v >> (8 * (sizeof(T) - x)));
@@ -193,7 +193,7 @@ public:
 	{
 		if (unlikely((i + sizeof(T)) > _l))
 			throw ZT_EXCEPTION_OUT_OF_BOUNDS;
-#ifdef ZT_NO_TYPE_PUNNING
+#ifdef ZT_NO_UNALIGNED_ACCESS
 		T v = 0;
 		const uint8_t *p = reinterpret_cast<const uint8_t *>(_b + i);
 		for(unsigned int x=0;x<sizeof(T);++x) {
@@ -219,7 +219,7 @@ public:
 	{
 		if (unlikely((_l + sizeof(T)) > C))
 			throw ZT_EXCEPTION_OUT_OF_BOUNDS;
-#ifdef ZT_NO_TYPE_PUNNING
+#ifdef ZT_NO_UNALIGNED_ACCESS
 		uint8_t *p = reinterpret_cast<uint8_t *>(_b + _l);
 		for(unsigned int x=1;x<=sizeof(T);++x)
 			*(p++) = (uint8_t)(v >> (8 * (sizeof(T) - x)));

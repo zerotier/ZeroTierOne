@@ -24,6 +24,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -82,29 +83,53 @@ var (
 	nodesByUserPtrLock sync.RWMutex
 )
 
-// Node is an instance of the ZeroTier core node and related C++ I/O code
+// Node is an instance of a virtual port on the global switch.
 type Node struct {
-	networks               map[NetworkID]*Network
-	networksByMAC          map[MAC]*Network  // locked by networksLock
-	networksLock           sync.RWMutex
-	interfaceAddresses     map[string]net.IP // physical external IPs on the machine
+	// networks contains networks we have joined, and networksByMAC by their local MAC address
+	networks      map[NetworkID]*Network
+	networksByMAC map[MAC]*Network // locked by networksLock
+	networksLock  sync.RWMutex
+
+	// interfaceAddresses are physical IPs assigned to the local machine (detected, not configured)
+	interfaceAddresses     map[string]net.IP
 	interfaceAddressesLock sync.Mutex
-	online                 uint32
-	running                uint32
-	basePath               string
-	peersPath              string
-	networksPath           string
-	localConfigPath        string
-	localConfig            LocalConfig
-	localConfigLock        sync.RWMutex
-	logW                   *sizeLimitWriter
-	log                    *log.Logger
-	gn                     *C.ZT_GoNode
-	zn                     *C.ZT_Node
-	id                     *Identity
-	namedSocketApiServer   *http.Server
-	tcpApiServer           *http.Server
-	runWaitGroup           sync.WaitGroup
+
+	// online and running are atomic flags set to control and monitor background tasks
+	online  uint32
+	running uint32
+
+	basePath        string
+	peersPath       string
+	networksPath    string
+	localConfigPath string
+
+	// localConfig is the current state of local.conf
+	localConfig     LocalConfig
+	localConfigLock sync.RWMutex
+
+	// logs for information, errors, and trace output
+	infoLogW  *sizeLimitWriter
+	errLogW   *sizeLimitWriter
+	traceLogW io.Writer
+	infoLog   *log.Logger
+	errLog    *log.Logger
+	traceLog  *log.Logger
+
+	// gn is the instance of GoNode, the Go wrapper and multithreaded I/O engine
+	gn *C.ZT_GoNode
+
+	// zn is the underlying instance of the ZeroTier core
+	zn *C.ZT_Node
+
+	// id is the identity of this node
+	id *Identity
+
+	// HTTP server instances: one for a named socket (Unix domain or Windows named pipe) and one on a local TCP socket
+	namedSocketApiServer *http.Server
+	tcpApiServer         *http.Server
+
+	// runWaitGroup is used to wait for all node goroutines on shutdown
+	runWaitGroup sync.WaitGroup
 }
 
 // NewNode creates and initializes a new instance of the ZeroTier node service
@@ -141,13 +166,18 @@ func NewNode(basePath string) (n *Node, err error) {
 	}
 
 	if n.localConfig.Settings.LogSizeMax >= 0 {
-		n.logW, err = sizeLimitWriterOpen(path.Join(basePath, "node.log"))
+		n.infoLogW, err = sizeLimitWriterOpen(path.Join(basePath, "info.log"))
 		if err != nil {
 			return
 		}
-		n.log = log.New(n.logW, "", log.LstdFlags)
+		n.errLogW, err = sizeLimitWriterOpen(path.Join(basePath, "error.log"))
+		if err != nil {
+			return
+		}
+		n.infoLog = log.New(n.infoLogW, "", log.LstdFlags)
+		n.errLog = log.New(n.errLogW, "", log.LstdFlags)
 	} else {
-		n.log = nullLogger
+		n.infoLog = nullLogger
 	}
 
 	if n.localConfig.Settings.PortSearch {
@@ -159,7 +189,7 @@ func NewNode(basePath string) (n *Node, err error) {
 			portCheckCount++
 			if checkPort(n.localConfig.Settings.PrimaryPort) {
 				if n.localConfig.Settings.PrimaryPort != origPort {
-					n.log.Printf("primary port %d unavailable, found port %d and saved in local.conf", origPort, n.localConfig.Settings.PrimaryPort)
+					n.infoLog.Printf("primary port %d unavailable, found port %d and saved in local.conf", origPort, n.localConfig.Settings.PrimaryPort)
 				}
 				break
 			}
@@ -177,11 +207,11 @@ func NewNode(basePath string) (n *Node, err error) {
 				portCheckCount++
 				if checkPort(n.localConfig.Settings.SecondaryPort) {
 					if n.localConfig.Settings.SecondaryPort != origPort {
-						n.log.Printf("secondary port %d unavailable, found port %d (port search enabled)", origPort, n.localConfig.Settings.SecondaryPort)
+						n.infoLog.Printf("secondary port %d unavailable, found port %d (port search enabled)", origPort, n.localConfig.Settings.SecondaryPort)
 					}
 					break
 				}
-				n.log.Printf("secondary port %d unavailable, trying a random port (port search enabled)", n.localConfig.Settings.SecondaryPort)
+				n.infoLog.Printf("secondary port %d unavailable, trying a random port (port search enabled)", n.localConfig.Settings.SecondaryPort)
 				if portCheckCount <= 64 {
 					n.localConfig.Settings.SecondaryPort = unassignedPrivilegedPorts[randomUInt()%uint(len(unassignedPrivilegedPorts))]
 				} else {
@@ -200,14 +230,14 @@ func NewNode(basePath string) (n *Node, err error) {
 		}
 		if n.localConfig.Settings.SecondaryPort > 0 && n.localConfig.Settings.SecondaryPort < 65536 {
 			if !checkPort(n.localConfig.Settings.SecondaryPort) {
-				n.log.Printf("WARNING: unable to bind secondary port %d",n.localConfig.Settings.SecondaryPort)
+				n.infoLog.Printf("WARNING: unable to bind secondary port %d", n.localConfig.Settings.SecondaryPort)
 			}
 		}
 	}
 
 	n.namedSocketApiServer, n.tcpApiServer, err = createAPIServer(basePath, n)
 	if err != nil {
-		n.log.Printf("FATAL: unable to start API server: %s", err.Error())
+		n.infoLog.Printf("FATAL: unable to start API server: %s", err.Error())
 		return nil, err
 	}
 
@@ -215,21 +245,21 @@ func NewNode(basePath string) (n *Node, err error) {
 	nodesByUserPtr[uintptr(unsafe.Pointer(n))] = n
 	nodesByUserPtrLock.Unlock()
 
+	// Instantiate GoNode and friends from the land of C/C++
 	cPath := C.CString(basePath)
 	n.gn = C.ZT_GoNode_new(cPath, C.uintptr_t(uintptr(unsafe.Pointer(n))))
 	C.free(unsafe.Pointer(cPath))
 	if n.gn == nil {
-		n.log.Println("FATAL: node initialization failed")
+		n.infoLog.Println("FATAL: node initialization failed")
 		nodesByUserPtrLock.Lock()
 		delete(nodesByUserPtr, uintptr(unsafe.Pointer(n)))
 		nodesByUserPtrLock.Unlock()
 		return nil, ErrNodeInitFailed
 	}
 	n.zn = (*C.ZT_Node)(C.ZT_GoNode_getNode(n.gn))
-
 	n.id, err = newIdentityFromCIdentity(C.ZT_Node_identity(unsafe.Pointer(n.zn)))
 	if err != nil {
-		n.log.Printf("FATAL: error obtaining node's identity")
+		n.infoLog.Printf("FATAL: error obtaining node's identity")
 		nodesByUserPtrLock.Lock()
 		delete(nodesByUserPtr, uintptr(unsafe.Pointer(n)))
 		nodesByUserPtrLock.Unlock()
@@ -237,6 +267,8 @@ func NewNode(basePath string) (n *Node, err error) {
 		return nil, err
 	}
 
+	// Background maintenance goroutine that handles polling for local network changes, cleaning internal data
+	// structures, syncing local config changes, and numerous other things that must happen from time to time.
 	n.runWaitGroup.Add(1)
 	go func() {
 		defer n.runWaitGroup.Done()
@@ -296,7 +328,7 @@ func NewNode(basePath string) (n *Node, err error) {
 						interfaceAddressesChanged = true
 						ipCstr := C.CString(ipn.String())
 						for pn, p := range ports {
-							n.log.Printf("UDP binding to port %d on interface %s", p, astr)
+							n.infoLog.Printf("UDP binding to port %d on interface %s", p, astr)
 							primary := C.int(0)
 							if pn == 0 {
 								primary = 1
@@ -311,7 +343,7 @@ func NewNode(basePath string) (n *Node, err error) {
 						interfaceAddressesChanged = true
 						ipCstr := C.CString(ipn.String())
 						for _, p := range ports {
-							n.log.Printf("UDP closing socket bound to port %d on interface %s", p, astr)
+							n.infoLog.Printf("UDP closing socket bound to port %d on interface %s", p, astr)
 							C.ZT_GoNode_phyStopListen(n.gn, nil, ipCstr, C.int(p))
 						}
 						C.free(unsafe.Pointer(ipCstr))
@@ -360,9 +392,9 @@ func NewNode(basePath string) (n *Node, err error) {
 					}
 				}
 
-				// Trim log if it's gone over its size limit
-				if n.localConfig.Settings.LogSizeMax > 0 && n.logW != nil {
-					_ = n.logW.trim(n.localConfig.Settings.LogSizeMax*1024, 0.5, true)
+				// Trim infoLog if it's gone over its size limit
+				if n.localConfig.Settings.LogSizeMax > 0 && n.infoLogW != nil {
+					_ = n.infoLogW.trim(n.localConfig.Settings.LogSizeMax*1024, 0.5, true)
 				}
 
 				n.localConfigLock.RUnlock()
@@ -440,16 +472,16 @@ func (n *Node) SetLocalConfig(lc *LocalConfig) (restartRequired bool, err error)
 		restartRequired = true
 	}
 	if lc.Settings.LogSizeMax < 0 {
-		n.log = nullLogger
-		_ = n.logW.Close()
-		n.logW = nil
-	} else if n.logW != nil {
-		n.logW, err = sizeLimitWriterOpen(path.Join(n.basePath, "service.log"))
+		n.infoLog = nullLogger
+		_ = n.infoLogW.Close()
+		n.infoLogW = nil
+	} else if n.infoLogW != nil {
+		n.infoLogW, err = sizeLimitWriterOpen(path.Join(n.basePath, "service.infoLog"))
 		if err == nil {
-			n.log = log.New(n.logW, "", log.LstdFlags)
+			n.infoLog = log.New(n.infoLogW, "", log.LstdFlags)
 		} else {
-			n.log = nullLogger
-			n.logW = nil
+			n.infoLog = nullLogger
+			n.infoLogW = nil
 		}
 	}
 
@@ -458,12 +490,12 @@ func (n *Node) SetLocalConfig(lc *LocalConfig) (restartRequired bool, err error)
 	return
 }
 
-// Join joins a network
+// Join a network.
 // If tap is nil, the default system tap for this OS/platform is used (if available).
 func (n *Node) Join(nwid NetworkID, settings *NetworkLocalSettings, tap Tap) (*Network, error) {
 	n.networksLock.RLock()
 	if nw, have := n.networks[nwid]; have {
-		n.log.Printf("join network %.16x ignored: already a member", nwid)
+		n.infoLog.Printf("join network %.16x ignored: already a member", nwid)
 		if settings != nil {
 			nw.SetLocalSettings(settings)
 		}
@@ -476,13 +508,13 @@ func (n *Node) Join(nwid NetworkID, settings *NetworkLocalSettings, tap Tap) (*N
 	}
 	ntap := C.ZT_GoNode_join(n.gn, C.uint64_t(nwid))
 	if ntap == nil {
-		n.log.Printf("join network %.16x failed: tap device failed to initialize (check drivers / kernel modules)", uint64(nwid))
+		n.infoLog.Printf("join network %.16x failed: tap device failed to initialize (check drivers / kernel modules)", uint64(nwid))
 		return nil, ErrTapInitFailed
 	}
 
 	nw, err := newNetwork(n, nwid, &nativeTap{tap: unsafe.Pointer(ntap), enabled: 1})
 	if err != nil {
-		n.log.Printf("join network %.16x failed: network failed to initialize: %s", nwid, err.Error())
+		n.infoLog.Printf("join network %.16x failed: network failed to initialize: %s", nwid, err.Error())
 		C.ZT_GoNode_leave(n.gn, C.uint64_t(nwid))
 		return nil, err
 	}
@@ -496,14 +528,14 @@ func (n *Node) Join(nwid NetworkID, settings *NetworkLocalSettings, tap Tap) (*N
 	return nw, nil
 }
 
-// Leave leaves a network
+// Leave a network.
 func (n *Node) Leave(nwid NetworkID) error {
-	n.log.Printf("leaving network %.16x", nwid)
 	n.networksLock.Lock()
 	nw := n.networks[nwid]
 	delete(n.networks, nwid)
 	n.networksLock.Unlock()
 	if nw != nil {
+		n.infoLog.Printf("leaving network %.16x", nwid)
 		nw.leaving()
 	}
 	C.ZT_GoNode_leave(n.gn, C.uint64_t(nwid))
@@ -668,7 +700,7 @@ func (n *Node) stateObjectGet(objType int, id [2]uint64) ([]byte, bool) {
 
 func (n *Node) handleTrace(traceMessage string) {
 	if len(traceMessage) > 0 {
-		n.log.Print("TRACE: " + traceMessage)
+		n.infoLog.Print("TRACE: " + traceMessage)
 	}
 }
 

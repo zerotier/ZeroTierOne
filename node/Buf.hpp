@@ -145,7 +145,7 @@ public:
 	{
 		const unsigned int s = (unsigned int)ii & ZT_BUF_MEM_MASK;
 		ii += 2;
-#ifdef ZT_NO_TYPE_PUNNING
+#ifdef ZT_NO_UNALIGNED_ACCESS
 		return (
 			((uint16_t)data[s] << 8U) |
 			(uint16_t)data[s + 1]);
@@ -164,7 +164,7 @@ public:
 	{
 		const unsigned int s = (unsigned int)ii & ZT_BUF_MEM_MASK;
 		ii += 4;
-#ifdef ZT_NO_TYPE_PUNNING
+#ifdef ZT_NO_UNALIGNED_ACCESS
 		return (
 			((uint32_t)data[s] << 24U) |
 			((uint32_t)data[s + 1] << 16U) |
@@ -185,7 +185,7 @@ public:
 	{
 		const unsigned int s = (unsigned int)ii & ZT_BUF_MEM_MASK;
 		ii += 8;
-#ifdef ZT_NO_TYPE_PUNNING
+#ifdef ZT_NO_UNALIGNED_ACCESS
 		return (
 			((uint64_t)data[s] << 56U) |
 			((uint64_t)data[s + 1] << 48U) |
@@ -340,7 +340,7 @@ public:
 	{
 		const unsigned int s = ((unsigned int)ii) & ZT_BUF_MEM_MASK;
 		ii += 2;
-#ifdef ZT_NO_TYPE_PUNNING
+#ifdef ZT_NO_UNALIGNED_ACCESS
 		data[s] = (uint8_t)(n >> 8U);
 		data[s + 1] = (uint8_t)n;
 #else
@@ -358,7 +358,7 @@ public:
 	{
 		const unsigned int s = ((unsigned int)ii) & ZT_BUF_MEM_MASK;
 		ii += 4;
-#ifdef ZT_NO_TYPE_PUNNING
+#ifdef ZT_NO_UNALIGNED_ACCESS
 		data[s] = (uint8_t)(n >> 24U);
 		data[s + 1] = (uint8_t)(n >> 16U);
 		data[s + 2] = (uint8_t)(n >> 8U);
@@ -378,7 +378,7 @@ public:
 	{
 		const unsigned int s = ((unsigned int)ii) & ZT_BUF_MEM_MASK;
 		ii += 8;
-#ifdef ZT_NO_TYPE_PUNNING
+#ifdef ZT_NO_UNALIGNED_ACCESS
 		data[s] = (uint8_t)(n >> 56U);
 		data[s + 1] = (uint8_t)(n >> 48U);
 		data[s + 2] = (uint8_t)(n >> 40U);

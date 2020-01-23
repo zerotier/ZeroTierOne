@@ -57,7 +57,7 @@ type LocalConfigSettings struct {
 	// PortMapping enables uPnP and NAT-PMP support
 	PortMapping bool `json:"portMapping"`
 
-	// LogSizeMax is the maximum size of the log in kilobytes or 0 for no limit and -1 to disable logging
+	// LogSizeMax is the maximum size of the infoLog in kilobytes or 0 for no limit and -1 to disable logging
 	LogSizeMax int `json:"logSizeMax"`
 
 	// IP/port to bind for TCP access to control API (disabled if null)

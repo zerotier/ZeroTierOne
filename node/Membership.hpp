@@ -25,8 +25,6 @@
 #include "Revocation.hpp"
 #include "NetworkConfig.hpp"
 
-#define ZT_MEMBERSHIP_CRED_ID_UNUSED 0xffffffffffffffffULL
-
 namespace ZeroTier {
 
 class RuntimeEnvironment;
@@ -61,7 +59,7 @@ public:
 	 * @param peerAddress Address of member peer (the one that this Membership describes)
 	 * @param nconf My network config
 	 */
-	void pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const int64_t now,const Address &peerAddress,const NetworkConfig &nconf);
+	void pushCredentials(const RuntimeEnvironment *RR,void *tPtr,int64_t now,const Address &peerAddress,const NetworkConfig &nconf);
 
 	/**
 	 * @return Time we last pushed credentials to this member
@@ -94,8 +92,8 @@ public:
 	{
 		if (_isUnspoofableAddress(nconf,r))
 			return true;
-		uint32_t *k = (uint32_t *)0;
-		CertificateOfOwnership *v = (CertificateOfOwnership *)0;
+		uint32_t *k = nullptr;
+		CertificateOfOwnership *v = nullptr;
 		Hashtable< uint32_t,CertificateOfOwnership >::Iterator i(*(const_cast< Hashtable< uint32_t,CertificateOfOwnership> *>(&_remoteCoos)));
 		while (i.next(k,v)) {
 			if (_isCredentialTimestampValid(nconf,*v)&&(v->owns(r)))
@@ -117,12 +115,6 @@ public:
 		return (((t)&&(_isCredentialTimestampValid(nconf,*t))) ? t : (Tag *)0);
 	}
 
-	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const NetworkConfig &nconf,const CertificateOfMembership &com);
-	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const NetworkConfig &nconf,const Tag &tag);
-	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const NetworkConfig &nconf,const Capability &cap);
-	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const NetworkConfig &nconf,const CertificateOfOwnership &coo);
-	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const NetworkConfig &nconf,const Revocation &rev);
-
 	/**
 	 * Clean internal databases of stale entries
 	 *
@@ -134,70 +126,20 @@ public:
 	/**
 	 * Generates a key for internal use in indexing credentials by type and credential ID
 	 */
-	static uint64_t credentialKey(const Credential::Type &t,const uint32_t i) { return (((uint64_t)t << 32) | (uint64_t)i); }
+	static ZT_ALWAYS_INLINE uint64_t credentialKey(const ZT_CredentialType &t,const uint32_t i) { return (((uint64_t)t << 32U) | (uint64_t)i); }
 
-	/**
-	 * @return Bytes received so far
-	 */
-	ZT_ALWAYS_INLINE uint64_t receivedBytes() const { return _received; }
-
-	/**
-	 * @return Bytes sent so far
-	 */
-	ZT_ALWAYS_INLINE uint64_t sentBytes() const { return _sent; }
-
-	/**
-	 * @param bytes Bytes received
-	 */
-	ZT_ALWAYS_INLINE void logReceivedBytes(const unsigned int bytes) { _received = (uint64_t)bytes; }
-
-	/**
-	 * @param bytes Bytes sent
-	 */
-	ZT_ALWAYS_INLINE void logSentBytes(const unsigned int bytes) { _sent = (uint64_t)bytes; }
+	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const Identity &sourcePeerIdentity,const NetworkConfig &nconf,const CertificateOfMembership &com);
+	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const Identity &sourcePeerIdentity,const NetworkConfig &nconf,const Tag &tag);
+	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const Identity &sourcePeerIdentity,const NetworkConfig &nconf,const Capability &cap);
+	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const Identity &sourcePeerIdentity,const NetworkConfig &nconf,const CertificateOfOwnership &coo);
+	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const Identity &sourcePeerIdentity,const NetworkConfig &nconf,const Revocation &rev);
 
 private:
 	// This returns true if a resource is an IPv6 NDP-emulated address. These embed the ZT
 	// address of the peer and therefore cannot be spoofed, causing peerOwnsAddress() to
 	// always return true for them. A certificate is not required for these.
 	ZT_ALWAYS_INLINE bool _isUnspoofableAddress(const NetworkConfig &nconf,const MAC &m) const { return false; }
-	ZT_ALWAYS_INLINE bool _isUnspoofableAddress(const NetworkConfig &nconf,const InetAddress &ip) const
-	{
-		if ((ip.isV6())&&(nconf.ndpEmulation())) {
-			const InetAddress sixpl(InetAddress::makeIpv66plane(nconf.networkId,nconf.issuedTo.toInt()));
-			for(unsigned int i=0;i<nconf.staticIpCount;++i) {
-				if (nconf.staticIps[i].ipsEqual(sixpl)) {
-					bool prefixMatches = true;
-					for(unsigned int j=0;j<5;++j) { // check for match on /40
-						if ((((const struct sockaddr_in6 *)&ip)->sin6_addr.s6_addr)[j] != (((const struct sockaddr_in6 *)&sixpl)->sin6_addr.s6_addr)[j]) {
-							prefixMatches = false;
-							break;
-						}
-					}
-					if (prefixMatches)
-						return true;
-					break;
-				}
-			}
-
-			const InetAddress rfc4193(InetAddress::makeIpv6rfc4193(nconf.networkId,nconf.issuedTo.toInt()));
-			for(unsigned int i=0;i<nconf.staticIpCount;++i) {
-				if (nconf.staticIps[i].ipsEqual(rfc4193)) {
-					bool prefixMatches = true;
-					for(unsigned int j=0;j<11;++j) { // check for match on /88
-						if ((((const struct sockaddr_in6 *)&ip)->sin6_addr.s6_addr)[j] != (((const struct sockaddr_in6 *)&rfc4193)->sin6_addr.s6_addr)[j]) {
-							prefixMatches = false;
-							break;
-						}
-					}
-					if (prefixMatches)
-						return true;
-					break;
-				}
-			}
-		}
-		return false;
-	}
+	bool _isUnspoofableAddress(const NetworkConfig &nconf,const InetAddress &ip) const;
 
 	// This compares the remote credential's timestamp to the timestamp in our network config
 	// plus or minus the permitted maximum timestamp delta.
@@ -213,10 +155,10 @@ private:
 	}
 
 	template<typename C>
-	inline void _cleanCredImpl(const NetworkConfig &nconf,Hashtable<uint32_t,C> &remoteCreds)
+	ZT_ALWAYS_INLINE void _cleanCredImpl(const NetworkConfig &nconf,Hashtable<uint32_t,C> &remoteCreds)
 	{
-		uint32_t *k = (uint32_t *)0;
-		C *v = (C *)0;
+		uint32_t *k = nullptr;
+		C *v = nullptr;
 		typename Hashtable<uint32_t,C>::Iterator i(remoteCreds);
 		while (i.next(k,v)) {
 			if (!_isCredentialTimestampValid(nconf,*v))
@@ -232,12 +174,6 @@ private:
 
 	// Time we last pushed credentials
 	int64_t _lastPushedCredentials;
-
-	// Number of Ethernet frame bytes received
-	uint64_t _received;
-
-	// Number of Ethernet frame bytes sent
-	uint64_t _sent;
 
 	// Remote member's latest network COM
 	CertificateOfMembership _com;
@@ -256,8 +192,8 @@ public:
 	public:
 		ZT_ALWAYS_INLINE CapabilityIterator(Membership &m,const NetworkConfig &nconf) :
 			_hti(m._remoteCaps),
-			_k((uint32_t *)0),
-			_c((Capability *)0),
+			_k(nullptr),
+			_c(nullptr),
 			_m(m),
 			_nconf(nconf)
 		{
@@ -269,7 +205,7 @@ public:
 				if (_m._isCredentialTimestampValid(_nconf,*_c))
 					return _c;
 			}
-			return (Capability *)0;
+			return nullptr;
 		}
 
 	private:

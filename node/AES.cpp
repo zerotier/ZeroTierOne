@@ -20,7 +20,7 @@
 
 namespace ZeroTier {
 
-#ifdef ZT_NO_TYPE_PUNNING
+#ifdef ZT_NO_UNALIGNED_ACCESS
 static inline uint32_t readuint32_t(const void *in)
 {
 	uint32_t v = ((const uint8_t *)in)[0];
@@ -161,7 +161,7 @@ void AES::_ctrSW(const uint8_t iv[16],const void *in,unsigned int len,void *out)
 	while (len >= 16) {
 		_encryptSW((const uint8_t *)ctr,(uint8_t *)cenc);
 		ctr[1] = Utils::hton(++bctr);
-#ifdef ZT_NO_TYPE_PUNNING
+#ifdef ZT_NO_UNALIGNED_ACCESS
 		for(unsigned int k=0;k<16;++k)
 				*(o++) = *(i++) ^ ((uint8_t *)cenc)[k];
 #else
@@ -339,7 +339,7 @@ void AES::_gmacSW(const uint8_t iv[12],const uint8_t *in,unsigned int len,uint8_
 	uint64_t y0 = 0,y1 = 0;
 
 	while (len >= 16) {
-#ifdef ZT_NO_TYPE_PUNNING
+#ifdef ZT_NO_UNALIGNED_ACCESS
 		for(unsigned int i=0;i<8;++i) ((uint8_t *)&y0)[i] ^= *(in++);
 		for(unsigned int i=0;i<8;++i) ((uint8_t *)&y1)[i] ^= *(in++);
 #else
@@ -369,7 +369,7 @@ void AES::_gmacSW(const uint8_t iv[12],const uint8_t *in,unsigned int len,uint8_
 	((uint8_t *)iv2)[14] = 0;
 	((uint8_t *)iv2)[15] = 1;
 	_encryptSW((const uint8_t *)iv2,(uint8_t *)iv2);
-#ifdef ZT_NO_TYPE_PUNNING
+#ifdef ZT_NO_UNALIGNED_ACCESS
 	for(unsigned int i=0;i<8;++i) out[i] = ((const uint8_t *)&y0)[i] ^ ((const uint8_t *)iv2)[i];
 	for(unsigned int i=8;i<16;++i) out[i] = ((const uint8_t *)&y1)[i-8] ^ ((const uint8_t *)iv2)[i];
 #else

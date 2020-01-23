@@ -101,12 +101,21 @@ public:
 	ZT_ALWAYS_INLINE bool hasPrivate() const { return _hasPrivate; }
 
 	/**
-	 * This generates a SHA384 hash of this identity's keys.
-	 *
-	 * @param h Buffer to receive SHA384 of public key(s)
-	 * @param includePrivate If true, hash private key(s) as well
+	 * @return 384-bit/48-byte hash of this identity's public key(s)
 	 */
-	bool hash(uint8_t h[48],bool includePrivate = false) const;
+	ZT_ALWAYS_INLINE const uint8_t *hash() const
+	{
+		if (_hash[0] == 0)
+			const_cast<Identity *>(this)->_computeHash();
+		return reinterpret_cast<const uint8_t *>(_hash);
+	}
+
+	/**
+	 * Compute a hash of this identity's public and private keys
+	 *
+	 * @param h Buffer to store SHA384 hash
+	 */
+	void hashWithPrivate(uint8_t h[48]) const;
 
 	/**
 	 * Sign a message with this identity (private key required)
@@ -311,91 +320,15 @@ public:
 
 	ZT_ALWAYS_INLINE unsigned long hashCode() const { return ((unsigned long)_address.toInt() + (unsigned long)_pub.c25519[0] + (unsigned long)_pub.c25519[1] + (unsigned long)_pub.c25519[2]); }
 
-	// Marshal interface ///////////////////////////////////////////////////////
 	static ZT_ALWAYS_INLINE int marshalSizeMax() { return ZT_IDENTITY_MARSHAL_SIZE_MAX; }
-	inline int marshal(uint8_t data[ZT_IDENTITY_MARSHAL_SIZE_MAX],const bool includePrivate = false) const
-	{
-		_address.copyTo(data,ZT_ADDRESS_LENGTH);
-		switch(_type) {
-
-			case C25519:
-				data[ZT_ADDRESS_LENGTH] = (uint8_t)C25519;
-				memcpy(data + ZT_ADDRESS_LENGTH + 1,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
-				if ((includePrivate)&&(_hasPrivate)) {
-					data[ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN] = ZT_C25519_PRIVATE_KEY_LEN;
-					memcpy(data + ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1,_priv.c25519,ZT_C25519_PRIVATE_KEY_LEN);
-					return (ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1 + ZT_C25519_PRIVATE_KEY_LEN);
-				}
-				data[ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN] = 0;
-				return (ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1);
-
-			case P384:
-				data[ZT_ADDRESS_LENGTH] = (uint8_t)P384;
-				memcpy(data + ZT_ADDRESS_LENGTH + 1,&_pub,ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE);
-				if ((includePrivate)&&(_hasPrivate)) {
-					data[ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE] = ZT_C25519_PRIVATE_KEY_LEN + ZT_ECC384_PRIVATE_KEY_SIZE;
-					memcpy(data + ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1,&_priv,ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE);
-					data[ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1 + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE] = 0;
-					return (ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1 + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE + 1);
-				}
-				data[ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE] = 0;
-				data[ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1] = 0;
-				return (ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 2);
-
-		}
-		return -1;
-	}
-	inline int unmarshal(const uint8_t *restrict data,const int len)
-	{
-		if (len < (ZT_ADDRESS_LENGTH + 1))
-			return -1;
-		unsigned int privlen;
-		switch((_type = (Type)data[ZT_ADDRESS_LENGTH])) {
-
-			case C25519:
-				if (len < (ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1))
-					return -1;
-				memcpy(_pub.c25519,data + ZT_ADDRESS_LENGTH + 1,ZT_C25519_PUBLIC_KEY_LEN);
-				privlen = data[ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN];
-				if (privlen == ZT_C25519_PRIVATE_KEY_LEN) {
-					if (len < (ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1 + ZT_C25519_PRIVATE_KEY_LEN))
-						return -1;
-					_hasPrivate = true;
-					memcpy(_priv.c25519,data + ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1,ZT_C25519_PRIVATE_KEY_LEN);
-					return (ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1 + ZT_C25519_PRIVATE_KEY_LEN);
-				} else if (privlen == 0) {
-					_hasPrivate = false;
-					return (ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1);
-				}
-				break;
-
-			case P384:
-				if (len < (ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 2))
-					return -1;
-				memcpy(&_pub,data + ZT_ADDRESS_LENGTH + 1,ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE);
-				privlen = data[ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE];
-				if (privlen == ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE) {
-					if (len < (ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1 + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE + 1))
-						return -1;
-					_hasPrivate = true;
-					memcpy(&_priv,data + ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1,ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE);
-					privlen = data[ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1 + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE];
-					if (len < (int)(privlen + (ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1 + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE + 1)))
-						return -1;
-					return (int)(privlen + (unsigned int)(ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1 + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE + 1));
-				} else if (privlen == 0) {
-					_hasPrivate = false;
-					return (ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 2);
-				}
-				break;
-
-		}
-		return -1;
-	}
-	////////////////////////////////////////////////////////////////////////////
+	int marshal(uint8_t data[ZT_IDENTITY_MARSHAL_SIZE_MAX],bool includePrivate = false) const;
+	int unmarshal(const uint8_t *data,int len);
 
 private:
+	void _computeHash(); // recompute _hash
+
 	Address _address;
+	uint64_t _hash[6]; // hash of public key memo-ized for performance, recalculated when _hash[0] == 0
 	Type _type; // _type determines which fields in _priv and _pub are used
 	bool _hasPrivate;
 	ZT_PACKED_STRUCT(struct { // don't re-order these

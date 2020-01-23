@@ -420,6 +420,37 @@ public:
 	}
 
 	/**
+	 * Fill out a ZT_TraceEventPathAddress from this InetAddress
+	 *
+	 * @param ta ZT_TraceEventPathAddress to fill
+	 */
+	ZT_ALWAYS_INLINE void forTrace(ZT_TraceEventPathAddress &ta) const
+	{
+		uint32_t tmp;
+		switch(ss_family) {
+			default:
+				memset(&ta,0,sizeof(ZT_TraceEventPathAddress));
+				break;
+			case AF_INET:
+				ta.type = ZT_TRACE_EVENT_PATH_TYPE_INETADDR_V4;
+				tmp = (uint32_t)(reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr);
+				ta.address[0] = reinterpret_cast<const uint8_t *>(&tmp)[0];
+				ta.address[1] = reinterpret_cast<const uint8_t *>(&tmp)[1];
+				ta.address[2] = reinterpret_cast<const uint8_t *>(&tmp)[2];
+				ta.address[3] = reinterpret_cast<const uint8_t *>(&tmp)[3];
+				memset(ta.address + 4,0,sizeof(ta.address) - 4);
+				ta.port = reinterpret_cast<const struct sockaddr_in *>(this)->sin_port;
+				break;
+			case AF_INET6:
+				ta.type = ZT_TRACE_EVENT_PATH_TYPE_INETADDR_V6;
+				memcpy(ta.address,reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr,16);
+				memset(ta.address + 16,0,sizeof(ta.address) - 16);
+				ta.port = reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_port;
+				break;
+		}
+	}
+
+	/**
 	 * Set to null/zero
 	 */
 	ZT_ALWAYS_INLINE void zero() { memset(this,0,sizeof(InetAddress)); }

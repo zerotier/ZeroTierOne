@@ -40,13 +40,14 @@ class Endpoint
 public:
 	enum Type
 	{
-		NIL =      0,      // NIL value
-		INETADDR = 1,      // InetAddress (v4 or v6)
-		DNSNAME =  2,      // DNS name and port that resolves to InetAddress
-		ZEROTIER = 3,      // ZeroTier Address (for relaying and meshy behavior)
-		URL =      4,      // URL for http/https/ws/etc. (not implemented yet)
-		ETHERNET = 5,      // 48-bit LAN-local Ethernet address
-		UNRECOGNIZED = 255 // Unrecognized endpoint type encountered in stream
+		NIL =          0,   // NIL value
+		INETADDR_V4 =  1,   // IPv4
+		INETADDR_V6 =  2,   // IPv6
+		DNSNAME =      3,   // DNS name and port that resolves to InetAddress
+		ZEROTIER =     4,   // ZeroTier Address (for relaying and meshy behavior)
+		URL =          5,   // URL for http/https/ws/etc. (not implemented yet)
+		ETHERNET =     6,   // 48-bit LAN-local Ethernet address
+		UNRECOGNIZED = 255  // Unrecognized endpoint type encountered in stream
 	};
 
 	ZT_ALWAYS_INLINE Endpoint()
@@ -56,13 +57,12 @@ public:
 
 	ZT_ALWAYS_INLINE Endpoint(const Endpoint &ep)
 	{
-		memcpy(reinterpret_cast<void *>(this),&ep,sizeof(Endpoint));
+		memcpy(reinterpret_cast<void *>(this),reinterpret_cast<const void *>(&ep),sizeof(Endpoint));
 	}
 
-	explicit ZT_ALWAYS_INLINE Endpoint(const InetAddress &sa) :
-		_t(INETADDR)
+	explicit ZT_ALWAYS_INLINE Endpoint(const InetAddress &sa)
 	{
-		_v.sa = sa;
+		*this = sa;
 	}
 
 	ZT_ALWAYS_INLINE Endpoint(const Address &zt,const uint8_t identityHash[ZT_IDENTITY_HASH_SIZE]) :
@@ -93,7 +93,17 @@ public:
 
 	ZT_ALWAYS_INLINE Endpoint &operator=(const InetAddress &sa)
 	{
-		_t = INETADDR;
+		switch(sa.ss_family) {
+			case AF_INET:
+				_t = INETADDR_V4;
+				break;
+			case AF_INET6:
+				_t = INETADDR_V6;
+				break;
+			default:
+				_t = NIL;
+				return *this;
+		}
 		_v.sa = sa;
 		return *this;
 	}
@@ -101,7 +111,7 @@ public:
 	/**
 	 * @return InetAddress or NIL if not of this type
 	 */
-	ZT_ALWAYS_INLINE const InetAddress &inetAddr() const { return (_t == INETADDR) ? *reinterpret_cast<const InetAddress *>(&_v.sa) : InetAddress::NIL; }
+	ZT_ALWAYS_INLINE const InetAddress &inetAddr() const { return ((_t == INETADDR_V4)||(_t == INETADDR_V6)) ? *reinterpret_cast<const InetAddress *>(&_v.sa) : InetAddress::NIL; }
 
 	/**
 	 * @return DNS name or empty string if not of this type
@@ -156,14 +166,14 @@ private:
 	int _l[3]; // X,Y,Z location in kilometers from the nearest gravitational center of mass
 	union {
 		struct sockaddr_storage sa;
-		ZT_PACKED_STRUCT(struct {
+		struct {
 			uint16_t port;
 			char name[ZT_ENDPOINT_MAX_NAME_SIZE];
-		}) dns;
-		ZT_PACKED_STRUCT(struct {
+		} dns;
+		struct {
 			uint64_t a;
 			uint8_t idh[ZT_IDENTITY_HASH_SIZE];
-		}) zt;
+		} zt;
 		char url[ZT_ENDPOINT_MAX_NAME_SIZE];
 		uint64_t eth;
 	} _v;

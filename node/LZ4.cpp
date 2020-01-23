@@ -101,7 +101,7 @@ union LZ4_streamDecode_u {
 #define HEAPMODE 0
 #endif
 
-#ifdef ZT_NO_TYPE_PUNNING
+#ifdef ZT_NO_UNALIGNED_ACCESS
 #define LZ4_FORCE_MEMORY_ACCESS 0
 #else
 #define LZ4_FORCE_MEMORY_ACCESS 2

@@ -395,7 +395,7 @@ static ZT_ALWAYS_INLINE T ntoh(T n) { return n; }
 template<typename I>
 static ZT_ALWAYS_INLINE I loadBigEndian(const void *const p)
 {
-#ifdef ZT_NO_TYPE_PUNNING
+#ifdef ZT_NO_UNALIGNED_ACCESS
 	I x = (I)0;
 	for(unsigned int k=0;k<sizeof(I);++k) {
 #if __BYTE_ORDER == __LITTLE_ENDIAN
@@ -413,7 +413,7 @@ static ZT_ALWAYS_INLINE I loadBigEndian(const void *const p)
 template<typename I>
 static ZT_ALWAYS_INLINE void storeBigEndian(void *const p,const I i)
 {
-#ifdef ZT_NO_TYPE_PUNNING
+#ifdef ZT_NO_UNALIGNED_ACCESS
 	for(unsigned int k=0;k<sizeof(I);++k) {
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 		reinterpret_cast<uint8_t *>(p)[k] = reinterpret_cast<const uint8_t *>(&i)[(sizeof(I)-1)-k];
@@ -422,7 +422,7 @@ static ZT_ALWAYS_INLINE void storeBigEndian(void *const p,const I i)
 #endif
 	}
 #else
-	*reinterpret_cast<I *>(p) = Utils::hton(i);
+	*reinterpret_cast<I *>(p) = hton(i);
 #endif
 }
 

@@ -58,7 +58,7 @@ public:
 	/**
 	 * Compute primary controller device ID from network ID
 	 */
-	static inline Address controllerFor(uint64_t nwid) { return Address(nwid >> 24); }
+	static ZT_ALWAYS_INLINE Address controllerFor(uint64_t nwid) { return Address(nwid >> 24U); }
 
 	/**
 	 * Construct a new network
@@ -76,14 +76,14 @@ public:
 
 	~Network();
 
-	inline uint64_t id() const { return _id; }
-	inline Address controller() const { return Address(_id >> 24); }
-	inline bool multicastEnabled() const { return (_config.multicastLimit > 0); }
-	inline bool hasConfig() const { return (_config); }
-	inline uint64_t lastConfigUpdate() const { return _lastConfigUpdate; }
-	inline ZT_VirtualNetworkStatus status() const { return _status(); }
-	inline const NetworkConfig &config() const { return _config; }
-	inline const MAC &mac() const { return _mac; }
+	ZT_ALWAYS_INLINE uint64_t id() const { return _id; }
+	ZT_ALWAYS_INLINE Address controller() const { return Address(_id >> 24); }
+	ZT_ALWAYS_INLINE bool multicastEnabled() const { return (_config.multicastLimit > 0); }
+	ZT_ALWAYS_INLINE bool hasConfig() const { return (_config); }
+	ZT_ALWAYS_INLINE uint64_t lastConfigUpdate() const { return _lastConfigUpdate; }
+	ZT_ALWAYS_INLINE ZT_VirtualNetworkStatus status() const { return _status(); }
+	ZT_ALWAYS_INLINE const NetworkConfig &config() const { return _config; }
+	ZT_ALWAYS_INLINE const MAC &mac() const { return _mac; }
 
 	/**
 	 * Apply filters to an outgoing packet
@@ -107,15 +107,15 @@ public:
 	 */
 	bool filterOutgoingPacket(
 		void *tPtr,
-		const bool noTee,
+		bool noTee,
 		const Address &ztSource,
 		const Address &ztDest,
 		const MAC &macSource,
 		const MAC &macDest,
 		const uint8_t *frameData,
-		const unsigned int frameLen,
-		const unsigned int etherType,
-		const unsigned int vlanId,
+		unsigned int frameLen,
+		unsigned int etherType,
+		unsigned int vlanId,
 		uint8_t &qosBucket);
 
 	/**
@@ -144,9 +144,9 @@ public:
 		const MAC &macSource,
 		const MAC &macDest,
 		const uint8_t *frameData,
-		const unsigned int frameLen,
-		const unsigned int etherType,
-		const unsigned int vlanId);
+		unsigned int frameLen,
+		unsigned int etherType,
+		unsigned int vlanId);
 
 	/**
 	 * Check whether we are subscribed to a multicast group
@@ -155,7 +155,7 @@ public:
 	 * @param includeBridgedGroups If true, also check groups we've learned via bridging
 	 * @return True if this network endpoint / peer is a member
 	 */
-	inline bool subscribedToMulticastGroup(const MulticastGroup &mg,const bool includeBridgedGroups) const
+	ZT_ALWAYS_INLINE bool subscribedToMulticastGroup(const MulticastGroup &mg,const bool includeBridgedGroups) const
 	{
 		Mutex::Lock l(_myMulticastGroups_l);
 		if (std::binary_search(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg))
@@ -171,28 +171,14 @@ public:
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param mg New multicast group
 	 */
-	inline void multicastSubscribe(void *tPtr,const MulticastGroup &mg)
-	{
-		Mutex::Lock l(_myMulticastGroups_l);
-		if (!std::binary_search(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg)) {
-			_myMulticastGroups.insert(std::upper_bound(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg),mg);
-			Mutex::Lock l2(_memberships_l);
-			_announceMulticastGroups(tPtr,true);
-		}
-	}
+	void multicastSubscribe(void *tPtr,const MulticastGroup &mg);
 
 	/**
 	 * Unsubscribe from a multicast group
 	 *
 	 * @param mg Multicast group
 	 */
-	inline void multicastUnsubscribe(const MulticastGroup &mg)
-	{
-		Mutex::Lock l(_myMulticastGroups_l);
-		std::vector<MulticastGroup>::iterator i(std::lower_bound(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg));
-		if ( (i != _myMulticastGroups.end()) && (*i == mg) )
-			_myMulticastGroups.erase(i);
-	}
+	void multicastUnsubscribe(const MulticastGroup &mg);
 
 	/**
 	 * Handle an inbound network config chunk
@@ -208,7 +194,7 @@ public:
 	 * @param ptr Index of chunk and related fields in packet
 	 * @return Update ID if update was fully assembled and accepted or 0 otherwise
 	 */
-	uint64_t handleConfigChunk(void *tPtr,const uint64_t packetId,const Address &source,const Buffer<ZT_PROTO_MAX_PACKET_LENGTH> &chunk,unsigned int ptr);
+	uint64_t handleConfigChunk(void *tPtr,uint64_t packetId,const Address &source,const Buffer<ZT_PROTO_MAX_PACKET_LENGTH> &chunk,unsigned int ptr);
 
 	/**
 	 * Set network configuration
@@ -227,12 +213,12 @@ public:
 	/**
 	 * Set netconf failure to 'access denied' -- called in IncomingPacket when controller reports this
 	 */
-	inline void setAccessDenied() { _netconfFailure = NETCONF_FAILURE_ACCESS_DENIED; }
+	ZT_ALWAYS_INLINE void setAccessDenied() { _netconfFailure = NETCONF_FAILURE_ACCESS_DENIED; }
 
 	/**
 	 * Set netconf failure to 'not found' -- called by IncomingPacket when controller reports this
 	 */
-	inline void setNotFound() { _netconfFailure = NETCONF_FAILURE_NOT_FOUND; }
+	ZT_ALWAYS_INLINE void setNotFound() { _netconfFailure = NETCONF_FAILURE_NOT_FOUND; }
 
 	/**
 	 * Determine whether this peer is permitted to communicate on this network
@@ -245,7 +231,7 @@ public:
 	/**
 	 * Do periodic cleanup and housekeeping tasks
 	 */
-	void doPeriodicTasks(void *tPtr,const int64_t now);
+	void doPeriodicTasks(void *tPtr,int64_t now);
 
 	/**
 	 * Find the node on this network that has this MAC behind it (if any)
@@ -253,17 +239,12 @@ public:
 	 * @param mac MAC address
 	 * @return ZeroTier address of bridge to this MAC
 	 */
-	inline Address findBridgeTo(const MAC &mac) const
+	ZT_ALWAYS_INLINE Address findBridgeTo(const MAC &mac) const
 	{
 		Mutex::Lock _l(_remoteBridgeRoutes_l);
 		const Address *const br = _remoteBridgeRoutes.get(mac);
 		return ((br) ? *br : Address());
 	}
-
-	/**
-	 * @return True if QoS is in effect for this network
-	 */
-	inline bool qosEnabled() { return false; }
 
 	/**
 	 * Set a bridge route
@@ -280,7 +261,7 @@ public:
 	 * @param mg Multicast group
 	 * @param now Current time
 	 */
-	inline void learnBridgedMulticastGroup(void *tPtr,const MulticastGroup &mg,int64_t now)
+	ZT_ALWAYS_INLINE void learnBridgedMulticastGroup(void *tPtr,const MulticastGroup &mg,int64_t now)
 	{
 		Mutex::Lock l(_myMulticastGroups_l);
 		_multicastGroupsBehindMe.set(mg,now);
@@ -289,51 +270,27 @@ public:
 	/**
 	 * Validate a credential and learn it if it passes certificate and other checks
 	 */
-	inline Membership::AddCredentialResult addCredential(void *tPtr,const CertificateOfMembership &com)
-	{
-		if (com.networkId() != _id)
-			return Membership::ADD_REJECTED;
-		Mutex::Lock _l(_memberships_l);
-		return _memberships[com.issuedTo()].addCredential(RR,tPtr,_config,com);
-	}
+	Membership::AddCredentialResult addCredential(void *tPtr,const Identity &sourcePeerIdentity,const CertificateOfMembership &com);
 
 	/**
 	 * Validate a credential and learn it if it passes certificate and other checks
 	 */
-	inline Membership::AddCredentialResult addCredential(void *tPtr,const Capability &cap)
-	{
-		if (cap.networkId() != _id)
-			return Membership::ADD_REJECTED;
-		Mutex::Lock _l(_memberships_l);
-		return _memberships[cap.issuedTo()].addCredential(RR,tPtr,_config,cap);
-	}
+	Membership::AddCredentialResult addCredential(void *tPtr,const Identity &sourcePeerIdentity,const Capability &cap);
 
 	/**
 	 * Validate a credential and learn it if it passes certificate and other checks
 	 */
-	inline Membership::AddCredentialResult addCredential(void *tPtr,const Tag &tag)
-	{
-		if (tag.networkId() != _id)
-			return Membership::ADD_REJECTED;
-		Mutex::Lock _l(_memberships_l);
-		return _memberships[tag.issuedTo()].addCredential(RR,tPtr,_config,tag);
-	}
+	Membership::AddCredentialResult addCredential(void *tPtr,const Identity &sourcePeerIdentity,const Tag &tag);
 
 	/**
 	 * Validate a credential and learn it if it passes certificate and other checks
 	 */
-	Membership::AddCredentialResult addCredential(void *tPtr,const Address &sentFrom,const Revocation &rev);
+	Membership::AddCredentialResult addCredential(void *tPtr,const Identity &sourcePeerIdentity,const Revocation &rev);
 
 	/**
 	 * Validate a credential and learn it if it passes certificate and other checks
 	 */
-	inline Membership::AddCredentialResult addCredential(void *tPtr,const CertificateOfOwnership &coo)
-	{
-		if (coo.networkId() != _id)
-			return Membership::ADD_REJECTED;
-		Mutex::Lock _l(_memberships_l);
-		return _memberships[coo.issuedTo()].addCredential(RR,tPtr,_config,coo);
-	}
+	Membership::AddCredentialResult addCredential(void *tPtr,const Identity &sourcePeerIdentity,const CertificateOfOwnership &coo);
 
 	/**
 	 * Force push credentials (COM, etc.) to a peer now
@@ -342,11 +299,7 @@ public:
 	 * @param to Destination peer address
 	 * @param now Current time
 	 */
-	inline void pushCredentialsNow(void *tPtr,const Address &to,const int64_t now)
-	{
-		Mutex::Lock _l(_memberships_l);
-		_memberships[to].pushCredentials(RR,tPtr,now,to,_config);
-	}
+	void pushCredentialsNow(void *tPtr,const Address &to,int64_t now);
 
 	/**
 	 * Push credentials if we haven't done so in a long time
@@ -355,7 +308,7 @@ public:
 	 * @param to Destination peer address
 	 * @param now Current time
 	 */
-	inline void pushCredentialsIfNeeded(void *tPtr,const Address &to,const int64_t now)
+	ZT_ALWAYS_INLINE void pushCredentialsIfNeeded(void *tPtr,const Address &to,const int64_t now)
 	{
 		const int64_t tout = std::min(_config.credentialTimeMaxDelta,(int64_t)ZT_PEER_ACTIVITY_TIMEOUT);
 		Mutex::Lock _l(_memberships_l);
@@ -370,25 +323,14 @@ public:
 	 * This sets the network to completely remove itself on delete. This also prevents the
 	 * call of the normal port shutdown event on delete.
 	 */
-	inline void destroy()
-	{
-		_memberships_l.lock();
-		_config_l.lock();
-		_destroyed = true;
-		_config_l.unlock();
-		_memberships_l.unlock();
-	}
+	void destroy();
 
 	/**
 	 * Get this network's config for export via the ZT core API
 	 *
 	 * @param ec Buffer to fill with externally-visible network configuration
 	 */
-	inline void externalConfig(ZT_VirtualNetworkConfig *ec) const
-	{
-		Mutex::Lock _l(_config_l);
-		_externalConfig(ec);
-	}
+	void externalConfig(ZT_VirtualNetworkConfig *ec) const;
 
 	/**
 	 * Iterate through memberships
@@ -396,7 +338,7 @@ public:
 	 * @param f Function of (const Address,const Membership)
 	 */
 	template<typename F>
-	inline void eachMember(F f)
+	ZT_ALWAYS_INLINE void eachMember(F f)
 	{
 		Mutex::Lock ml(_memberships_l);
 		Hashtable<Address,Membership>::Iterator i(_memberships);
@@ -411,13 +353,12 @@ public:
 	/**
 	 * @return Externally usable pointer-to-pointer exported via the core API
 	 */
-	inline void **userPtr() { return &_uPtr; }
+	ZT_ALWAYS_INLINE void **userPtr() { return &_uPtr; }
 
 private:
 	void _requestConfiguration(void *tPtr);
 	ZT_VirtualNetworkStatus _status() const;
 	void _externalConfig(ZT_VirtualNetworkConfig *ec) const; // assumes _lock is locked
-	bool _gate(const SharedPtr<Peer> &peer);
 	void _announceMulticastGroups(void *tPtr,bool force);
 	void _announceMulticastGroupsTo(void *tPtr,const Address &peer,const std::vector<MulticastGroup> &allMulticastGroups);
 	std::vector<MulticastGroup> _allMulticastGroups() const;
@@ -433,11 +374,11 @@ private:
 	Hashtable< MAC,Address > _remoteBridgeRoutes; // remote addresses where given MACs are reachable (for tracking devices behind remote bridges)
 
 	NetworkConfig _config;
-	uint64_t _lastConfigUpdate;
+	volatile uint64_t _lastConfigUpdate;
 
 	struct _IncomingConfigChunk
 	{
-		inline _IncomingConfigChunk() : ts(0),updateId(0),haveChunks(0),haveBytes(0),data() {}
+		ZT_ALWAYS_INLINE _IncomingConfigChunk() : ts(0),updateId(0),haveChunks(0),haveBytes(0),data() {}
 		uint64_t ts;
 		uint64_t updateId;
 		uint64_t haveChunkIds[ZT_NETWORK_MAX_UPDATE_CHUNKS];

@@ -41,19 +41,6 @@ class Credential
 {
 public:
 	/**
-	 * Do not change type code IDs -- these are used in Revocation objects and elsewhere
-	 */
-	enum Type
-	{
-		CREDENTIAL_TYPE_NULL = 0,
-		CREDENTIAL_TYPE_COM = 1,        // CertificateOfMembership
-		CREDENTIAL_TYPE_CAPABILITY = 2,
-		CREDENTIAL_TYPE_TAG = 3,
-		CREDENTIAL_TYPE_COO = 4,        // CertificateOfOwnership
-		CREDENTIAL_TYPE_REVOCATION = 6
-	};
-
-	/**
 	 * Result of verify() operations
 	 */
 	enum VerifyResult

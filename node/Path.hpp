@@ -111,7 +111,14 @@ public:
 	 *
 	 * @param now Current time
 	 */
-	ZT_ALWAYS_INLINE bool alive(const int64_t now) const { return ((now - _lastIn) < ZT_PATH_ACTIVITY_TIMEOUT); }
+	ZT_ALWAYS_INLINE bool alive(const int64_t now) const { return ((now - _lastIn) < ZT_PATH_ALIVE_TIMEOUT); }
+
+	/**
+	 * Check if path is considered active
+	 *
+	 * @param now Current time
+	 */
+	ZT_ALWAYS_INLINE bool active(const int64_t now) const { return ((now - _lastIn) < ZT_PATH_ACTIVITY_TIMEOUT); }
 
 	/**
 	 * @return Physical address

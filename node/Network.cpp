@@ -11,12 +11,8 @@
  */
 /****/
 
-#include <cstdio>
 #include <cstring>
 #include <cstdlib>
-#include <cmath>
-
-#include "../include/ZeroTierDebug.h"
 
 #include "Constants.hpp"
 #include "Network.hpp"
@@ -28,7 +24,6 @@
 #include "Buffer.hpp"
 #include "Packet.hpp"
 #include "NetworkController.hpp"
-#include "Node.hpp"
 #include "Peer.hpp"
 #include "Trace.hpp"
 #include "ScopedPtr.hpp"
@@ -40,7 +35,7 @@ namespace ZeroTier {
 namespace {
 
 // Returns true if packet appears valid; pos and proto will be set
-static bool _ipv6GetPayload(const uint8_t *frameData,unsigned int frameLen,unsigned int &pos,unsigned int &proto)
+bool _ipv6GetPayload(const uint8_t *frameData,unsigned int frameLen,unsigned int &pos,unsigned int &proto)
 {
 	if (frameLen < 40)
 		return false;
@@ -77,7 +72,7 @@ enum _doZtFilterResult
 	DOZTFILTER_SUPER_ACCEPT
 };
 
-static _doZtFilterResult _doZtFilter(
+_doZtFilterResult _doZtFilter(
 	const RuntimeEnvironment *RR,
 	Trace::RuleResultLog &rrl,
 	const NetworkConfig &nconf,
@@ -108,14 +103,14 @@ static _doZtFilterResult _doZtFilter(
 	rrl.clear();
 
 	for(unsigned int rn=0;rn<ruleCount;++rn) {
-		const ZT_VirtualNetworkRuleType rt = (ZT_VirtualNetworkRuleType)(rules[rn].t & 0x3f);
+		const ZT_VirtualNetworkRuleType rt = (ZT_VirtualNetworkRuleType)(rules[rn].t & 0x3fU);
 
 		// First check if this is an ACTION
 		if ((unsigned int)rt <= (unsigned int)ZT_NETWORK_RULE_ACTION__MAX_ID) {
 			if (thisSetMatches) {
 				switch(rt) {
 					case ZT_NETWORK_RULE_ACTION_PRIORITY:
-						qosBucket = (rules[rn].v.qosBucket >= 0 || rules[rn].v.qosBucket <= 8) ? rules[rn].v.qosBucket : 4; // 4 = default bucket (no priority)
+						qosBucket = (rules[rn].v.qosBucket >= 0 && rules[rn].v.qosBucket <= 8) ? rules[rn].v.qosBucket : 4; // 4 = default bucket (no priority)
 						return DOZTFILTER_ACCEPT;
 
 					case ZT_NETWORK_RULE_ACTION_DROP:
@@ -180,7 +175,7 @@ static _doZtFilterResult _doZtFilter(
 
 		// Circuit breaker: no need to evaluate an AND if the set's match state
 		// is currently false since anything AND false is false.
-		if ((!thisSetMatches)&&(!(rules[rn].t & 0x40))) {
+		if ((!thisSetMatches)&&(!(rules[rn].t & 0x40U))) {
 			rrl.logSkipped(rn,thisSetMatches);
 			continue;
 		}
@@ -245,7 +240,7 @@ static _doZtFilterResult _doZtFilter(
 					const uint8_t tosMasked = frameData[1] & rules[rn].v.ipTos.mask;
 					thisRuleMatches = (uint8_t)((tosMasked >= rules[rn].v.ipTos.value[0])&&(tosMasked <= rules[rn].v.ipTos.value[1]));
 				} else if ((etherType == ZT_ETHERTYPE_IPV6)&&(frameLen >= 40)) {
-					const uint8_t tosMasked = (((frameData[0] << 4) & 0xf0) | ((frameData[1] >> 4) & 0x0f)) & rules[rn].v.ipTos.mask;
+					const uint8_t tosMasked = (((frameData[0] << 4U) & 0xf0U) | ((frameData[1] >> 4U) & 0x0fU)) & rules[rn].v.ipTos.mask;
 					thisRuleMatches = (uint8_t)((tosMasked >= rules[rn].v.ipTos.value[0])&&(tosMasked <= rules[rn].v.ipTos.value[1]));
 				} else {
 					thisRuleMatches = 0;
@@ -271,7 +266,7 @@ static _doZtFilterResult _doZtFilter(
 			case ZT_NETWORK_RULE_MATCH_ICMP:
 				if ((etherType == ZT_ETHERTYPE_IPV4)&&(frameLen >= 20)) {
 					if (frameData[9] == 0x01) { // IP protocol == ICMP
-						const unsigned int ihl = (frameData[0] & 0xf) * 4;
+						const unsigned int ihl = (frameData[0] & 0xfU) * 4;
 						if (frameLen >= (ihl + 2)) {
 							if (rules[rn].v.icmp.type == frameData[ihl]) {
 								if ((rules[rn].v.icmp.flags & 0x01) != 0) {
@@ -314,7 +309,7 @@ static _doZtFilterResult _doZtFilter(
 			case ZT_NETWORK_RULE_MATCH_IP_SOURCE_PORT_RANGE:
 			case ZT_NETWORK_RULE_MATCH_IP_DEST_PORT_RANGE:
 				if ((etherType == ZT_ETHERTYPE_IPV4)&&(frameLen >= 20)) {
-					const unsigned int headerLen = 4 * (frameData[0] & 0xf);
+					const unsigned int headerLen = 4 * (frameData[0] & 0xfU);
 					int p = -1;
 					switch(frameData[9]) { // IP protocol number
 						// All these start with 16-bit source and destination port in that order
@@ -324,7 +319,7 @@ static _doZtFilterResult _doZtFilter(
 						case 0x88: // UDPLite
 							if (frameLen > (headerLen + 4)) {
 								unsigned int pos = headerLen + ((rt == ZT_NETWORK_RULE_MATCH_IP_DEST_PORT_RANGE) ? 2 : 0);
-								p = (int)frameData[pos++] << 8;
+								p = (int)(frameData[pos++] << 8U);
 								p |= (int)frameData[pos];
 							}
 							break;
@@ -343,7 +338,7 @@ static _doZtFilterResult _doZtFilter(
 							case 0x88: // UDPLite
 								if (frameLen > (pos + 4)) {
 									if (rt == ZT_NETWORK_RULE_MATCH_IP_DEST_PORT_RANGE) pos += 2;
-									p = (int)frameData[pos++] << 8;
+									p = (int)(frameData[pos++] << 8U);
 									p |= (int)frameData[pos];
 								}
 								break;
@@ -402,15 +397,15 @@ static _doZtFilterResult _doZtFilter(
 				}
 				cf |= ownershipVerificationMask;
 				if ((etherType == ZT_ETHERTYPE_IPV4)&&(frameLen >= 20)&&(frameData[9] == 0x06)) {
-					const unsigned int headerLen = 4 * (frameData[0] & 0xf);
+					const unsigned int headerLen = 4 * (frameData[0] & 0xfU);
 					cf |= (uint64_t)frameData[headerLen + 13];
-					cf |= (((uint64_t)(frameData[headerLen + 12] & 0x0f)) << 8);
+					cf |= (((uint64_t)(frameData[headerLen + 12] & 0x0fU)) << 8U);
 				} else if (etherType == ZT_ETHERTYPE_IPV6) {
 					unsigned int pos = 0,proto = 0;
 					if (_ipv6GetPayload(frameData,frameLen,pos,proto)) {
 						if ((proto == 0x06)&&(frameLen > (pos + 14))) {
 							cf |= (uint64_t)frameData[pos + 13];
-							cf |= (((uint64_t)(frameData[pos + 12] & 0x0f)) << 8);
+							cf |= (((uint64_t)(frameData[pos + 12] & 0x0fU)) << 8U);
 						}
 					}
 				}
@@ -491,15 +486,15 @@ static _doZtFilterResult _doZtFilter(
 			}	break;
 			case ZT_NETWORK_RULE_MATCH_INTEGER_RANGE: {
 				uint64_t integer = 0;
-				const unsigned int bits = (rules[rn].v.intRange.format & 63) + 1;
+				const unsigned int bits = (rules[rn].v.intRange.format & 63U) + 1;
 				const unsigned int bytes = ((bits + 8 - 1) / 8); // integer ceiling of division by 8
-				if ((rules[rn].v.intRange.format & 0x80) == 0) {
+				if ((rules[rn].v.intRange.format & 0x80U) == 0) {
 					// Big-endian
 					unsigned int idx = rules[rn].v.intRange.idx + (8 - bytes);
 					const unsigned int eof = idx + bytes;
 					if (eof <= frameLen) {
 						while (idx < eof) {
-							integer <<= 8;
+							integer <<= 8U;
 							integer |= frameData[idx++];
 						}
 					}
@@ -510,8 +505,8 @@ static _doZtFilterResult _doZtFilter(
 					const unsigned int eof = idx + bytes;
 					if (eof <= frameLen) {
 						while (idx < eof) {
-							integer >>= 8;
-							integer |= ((uint64_t)frameData[idx++]) << 56;
+							integer >>= 8U;
+							integer |= ((uint64_t)frameData[idx++]) << 56U;
 						}
 					}
 					integer >>= (64 - bits);
@@ -528,9 +523,9 @@ static _doZtFilterResult _doZtFilter(
 
 		rrl.log(rn,thisRuleMatches,thisSetMatches);
 
-		if ((rules[rn].t & 0x40))
-			thisSetMatches |= (thisRuleMatches ^ ((rules[rn].t >> 7) & 1));
-		else thisSetMatches &= (thisRuleMatches ^ ((rules[rn].t >> 7) & 1));
+		if ((rules[rn].t & 0x40U))
+			thisSetMatches |= (thisRuleMatches ^ ((rules[rn].t >> 7U) & 1U));
+		else thisSetMatches &= (thisRuleMatches ^ ((rules[rn].t >> 7U) & 1U));
 	}
 
 	return DOZTFILTER_NO_MATCH;
@@ -622,10 +617,10 @@ bool Network::filterOutgoingPacket(
 	const unsigned int vlanId,
 	uint8_t &qosBucket)
 {
+	Trace::RuleResultLog rrl,crrl;
 	Address ztFinalDest(ztDest);
 	int localCapabilityIndex = -1;
 	int accept = 0;
-	Trace::RuleResultLog rrl,crrl;
 	Address cc;
 	unsigned int ccLength = 0;
 	bool ccWatch = false;
@@ -674,8 +669,7 @@ bool Network::filterOutgoingPacket(
 		}	break;
 
 		case DOZTFILTER_DROP:
-			//if (_config.remoteTraceTarget)
-			//	RR->t->networkFilter(tPtr,*this,rrl,(Trace::RuleResultLog *)0,(Capability *)0,ztSource,ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,noTee,false,0);
+			RR->t->networkFilter(tPtr,_id,rrl.l,nullptr,0,0,ztSource,ztDest,macSource,macDest,(uint16_t)frameLen,frameData,(uint16_t)etherType,(uint16_t)vlanId,noTee,false,0);
 			return false;
 
 		case DOZTFILTER_REDIRECT: // interpreted as ACCEPT but ztFinalDest will have been changed in _doZtFilter()
@@ -688,10 +682,7 @@ bool Network::filterOutgoingPacket(
 			break;
 	}
 
-	if (accept) {
-		if (membership)
-			membership->logSentBytes(frameLen);
-
+	if (accept != 0) {
 		if ((!noTee)&&(cc)) {
 			Packet outp(cc,RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(_id);
@@ -715,19 +706,19 @@ bool Network::filterOutgoingPacket(
 			outp.compress();
 			RR->sw->send(tPtr,outp,true);
 
-			//if (_config.remoteTraceTarget)
-			//	RR->t->networkFilter(tPtr,*this,rrl,(localCapabilityIndex >= 0) ? &crrl : (Trace::RuleResultLog *)0,(localCapabilityIndex >= 0) ? &(_config.capabilities[localCapabilityIndex]) : (Capability *)0,ztSource,ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,noTee,false,0);
-			return false; // DROP locally, since we redirected
-		} else {
-			//if (_config.remoteTraceTarget)
-			//	RR->t->networkFilter(tPtr,*this,rrl,(localCapabilityIndex >= 0) ? &crrl : (Trace::RuleResultLog *)0,(localCapabilityIndex >= 0) ? &(_config.capabilities[localCapabilityIndex]) : (Capability *)0,ztSource,ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,noTee,false,1);
-			return true;
+			// DROP locally since we redirected
+			accept = 0;
 		}
-	} else {
-		//if (_config.remoteTraceTarget)
-		//	RR->t->networkFilter(tPtr,*this,rrl,(localCapabilityIndex >= 0) ? &crrl : (Trace::RuleResultLog *)0,(localCapabilityIndex >= 0) ? &(_config.capabilities[localCapabilityIndex]) : (Capability *)0,ztSource,ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,noTee,false,0);
-		return false;
 	}
+
+	if (localCapabilityIndex >= 0) {
+		const Capability &cap = _config.capabilities[localCapabilityIndex];
+		RR->t->networkFilter(tPtr,_id,rrl.l,crrl.l,cap.id(),cap.timestamp(),ztSource,ztDest,macSource,macDest,(uint16_t)frameLen,frameData,(uint16_t)etherType,(uint16_t)vlanId,noTee,false,accept);
+	} else {
+		RR->t->networkFilter(tPtr,_id,rrl.l,nullptr,0,0,ztSource,ztDest,macSource,macDest,(uint16_t)frameLen,frameData,(uint16_t)etherType,(uint16_t)vlanId,noTee,false,accept);
+	}
+
+	return (accept != 0);
 }
 
 int Network::filterIncomingPacket(
@@ -810,8 +801,6 @@ int Network::filterIncomingPacket(
 	}
 
 	if (accept) {
-		membership.logReceivedBytes(frameLen);
-
 		if (cc) {
 			Packet outp(cc,RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(_id);
@@ -846,6 +835,24 @@ int Network::filterIncomingPacket(
 	return accept;
 }
 
+void Network::multicastSubscribe(void *tPtr,const MulticastGroup &mg)
+{
+	Mutex::Lock l(_myMulticastGroups_l);
+	if (!std::binary_search(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg)) {
+		_myMulticastGroups.insert(std::upper_bound(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg),mg);
+		Mutex::Lock l2(_memberships_l);
+		_announceMulticastGroups(tPtr,true);
+	}
+}
+
+void Network::multicastUnsubscribe(const MulticastGroup &mg)
+{
+	Mutex::Lock l(_myMulticastGroups_l);
+	std::vector<MulticastGroup>::iterator i(std::lower_bound(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg));
+	if ( (i != _myMulticastGroups.end()) && (*i == mg) )
+		_myMulticastGroups.erase(i);
+}
+
 uint64_t Network::handleConfigChunk(void *tPtr,const uint64_t packetId,const Address &source,const Buffer<ZT_PROTO_MAX_PACKET_LENGTH> &chunk,unsigned int ptr)
 {
 	if (_destroyed)
@@ -861,11 +868,11 @@ uint64_t Network::handleConfigChunk(void *tPtr,const uint64_t packetId,const Add
 	{
 		Mutex::Lock l1(_config_l);
 
-		_IncomingConfigChunk *c = (_IncomingConfigChunk *)0;
+		_IncomingConfigChunk *c = nullptr;
 		uint64_t chunkId = 0;
 		unsigned long totalLength,chunkIndex;
 		if (ptr < chunk.size()) {
-			const bool fastPropagate = ((chunk[ptr++] & 0x01) != 0);
+			const bool fastPropagate = ((chunk[ptr++] & 0x01U) != 0);
 			configUpdateId = chunk.at<uint64_t>(ptr); ptr += 8;
 			totalLength = chunk.at<uint32_t>(ptr); ptr += 4;
 			chunkIndex = chunk.at<uint32_t>(ptr); ptr += 4;
@@ -906,8 +913,8 @@ uint64_t Network::handleConfigChunk(void *tPtr,const uint64_t packetId,const Add
 			// New properly verified chunks can be flooded "virally" through the network
 			if (fastPropagate) {
 				Mutex::Lock l2(_memberships_l);
-				Address *a = (Address *)0;
-				Membership *m = (Membership *)0;
+				Address *a = nullptr;
+				Membership *m = nullptr;
 				Hashtable<Address,Membership>::Iterator i(_memberships);
 				while (i.next(a,m)) {
 					if ((*a != source)&&(*a != controller())) {
@@ -1102,7 +1109,31 @@ void Network::learnBridgeRoute(const MAC &mac,const Address &addr)
 	}
 }
 
-Membership::AddCredentialResult Network::addCredential(void *tPtr,const Address &sentFrom,const Revocation &rev)
+Membership::AddCredentialResult Network::addCredential(void *tPtr,const Identity &sourcePeerIdentity,const CertificateOfMembership &com)
+{
+	if (com.networkId() != _id)
+		return Membership::ADD_REJECTED;
+	Mutex::Lock _l(_memberships_l);
+	return _memberships[com.issuedTo()].addCredential(RR,tPtr,sourcePeerIdentity,_config,com);
+}
+
+Membership::AddCredentialResult Network::addCredential(void *tPtr,const Identity &sourcePeerIdentity,const Capability &cap)
+{
+	if (cap.networkId() != _id)
+		return Membership::ADD_REJECTED;
+	Mutex::Lock _l(_memberships_l);
+	return _memberships[cap.issuedTo()].addCredential(RR,tPtr,sourcePeerIdentity,_config,cap);
+}
+
+Membership::AddCredentialResult Network::addCredential(void *tPtr,const Identity &sourcePeerIdentity,const Tag &tag)
+{
+	if (tag.networkId() != _id)
+		return Membership::ADD_REJECTED;
+	Mutex::Lock _l(_memberships_l);
+	return _memberships[tag.issuedTo()].addCredential(RR,tPtr,sourcePeerIdentity,_config,tag);
+}
+
+Membership::AddCredentialResult Network::addCredential(void *tPtr,const Identity &sourcePeerIdentity,const Revocation &rev)
 {
 	if (rev.networkId() != _id)
 		return Membership::ADD_REJECTED;
@@ -1110,14 +1141,14 @@ Membership::AddCredentialResult Network::addCredential(void *tPtr,const Address 
 	Mutex::Lock l1(_memberships_l);
 	Membership &m = _memberships[rev.target()];
 
-	const Membership::AddCredentialResult result = m.addCredential(RR,tPtr,_config,rev);
+	const Membership::AddCredentialResult result = m.addCredential(RR,tPtr,sourcePeerIdentity,_config,rev);
 
 	if ((result == Membership::ADD_ACCEPTED_NEW)&&(rev.fastPropagate())) {
-		Address *a = (Address *)0;
-		Membership *m = (Membership *)0;
+		Address *a = nullptr;
+		Membership *m = nullptr;
 		Hashtable<Address,Membership>::Iterator i(_memberships);
 		while (i.next(a,m)) {
-			if ((*a != sentFrom)&&(*a != rev.signer())) {
+			if ((*a != sourcePeerIdentity.address())&&(*a != rev.signer())) {
 				Packet outp(*a,RR->identity.address(),Packet::VERB_NETWORK_CREDENTIALS);
 				outp.append((uint8_t)0x00); // no COM
 				outp.append((uint16_t)0); // no capabilities
@@ -1133,15 +1164,44 @@ Membership::AddCredentialResult Network::addCredential(void *tPtr,const Address 
 	return result;
 }
 
+Membership::AddCredentialResult Network::addCredential(void *tPtr,const Identity &sourcePeerIdentity,const CertificateOfOwnership &coo)
+{
+	if (coo.networkId() != _id)
+		return Membership::ADD_REJECTED;
+	Mutex::Lock _l(_memberships_l);
+	return _memberships[coo.issuedTo()].addCredential(RR,tPtr,sourcePeerIdentity,_config,coo);
+}
+
+void Network::pushCredentialsNow(void *tPtr,const Address &to,const int64_t now)
+{
+	Mutex::Lock _l(_memberships_l);
+	_memberships[to].pushCredentials(RR,tPtr,now,to,_config);
+}
+
+void Network::destroy()
+{
+	_memberships_l.lock();
+	_config_l.lock();
+	_destroyed = true;
+	_config_l.unlock();
+	_memberships_l.unlock();
+}
+
+void Network::externalConfig(ZT_VirtualNetworkConfig *ec) const
+{
+	Mutex::Lock _l(_config_l);
+	_externalConfig(ec);
+}
+
 void Network::_requestConfiguration(void *tPtr)
 {
 	if (_destroyed)
 		return;
 
-	if ((_id >> 56) == 0xff) {
-		if ((_id & 0xffffff) == 0) {
-			const uint16_t startPortRange = (uint16_t)((_id >> 40) & 0xffff);
-			const uint16_t endPortRange = (uint16_t)((_id >> 24) & 0xffff);
+	if ((_id >> 56U) == 0xff) {
+		if ((_id & 0xffffffU) == 0) {
+			const uint16_t startPortRange = (uint16_t)((_id >> 40U) & 0xffff);
+			const uint16_t endPortRange = (uint16_t)((_id >> 24U) & 0xffff);
 			if (endPortRange >= startPortRange) {
 				ScopedPtr<NetworkConfig> nconf(new NetworkConfig());
 
@@ -1158,7 +1218,7 @@ void Network::_requestConfiguration(void *tPtr)
 				nconf->staticIps[0] = InetAddress::makeIpv66plane(_id,RR->identity.address().toInt());
 
 				// Drop everything but IPv6
-				nconf->rules[0].t = (uint8_t)ZT_NETWORK_RULE_MATCH_ETHERTYPE | 0x80; // NOT
+				nconf->rules[0].t = (uint8_t)ZT_NETWORK_RULE_MATCH_ETHERTYPE | 0x80U; // NOT
 				nconf->rules[0].v.etherType = 0x86dd; // IPv6
 				nconf->rules[1].t = (uint8_t)ZT_NETWORK_RULE_ACTION_DROP;
 
@@ -1170,7 +1230,7 @@ void Network::_requestConfiguration(void *tPtr)
 				// Allow destination ports within range
 				nconf->rules[4].t = (uint8_t)ZT_NETWORK_RULE_MATCH_IP_PROTOCOL;
 				nconf->rules[4].v.ipProtocol = 0x11; // UDP
-				nconf->rules[5].t = (uint8_t)ZT_NETWORK_RULE_MATCH_IP_PROTOCOL | 0x40; // OR
+				nconf->rules[5].t = (uint8_t)ZT_NETWORK_RULE_MATCH_IP_PROTOCOL | 0x40U; // OR
 				nconf->rules[5].v.ipProtocol = 0x06; // TCP
 				nconf->rules[6].t = (uint8_t)ZT_NETWORK_RULE_MATCH_IP_DEST_PORT_RANGE;
 				nconf->rules[6].v.port[0] = startPortRange;
@@ -1178,7 +1238,7 @@ void Network::_requestConfiguration(void *tPtr)
 				nconf->rules[7].t = (uint8_t)ZT_NETWORK_RULE_ACTION_ACCEPT;
 
 				// Allow non-SYN TCP packets to permit non-connection-initiating traffic
-				nconf->rules[8].t = (uint8_t)ZT_NETWORK_RULE_MATCH_CHARACTERISTICS | 0x80; // NOT
+				nconf->rules[8].t = (uint8_t)ZT_NETWORK_RULE_MATCH_CHARACTERISTICS | 0x80U; // NOT
 				nconf->rules[8].v.characteristics = ZT_RULE_PACKET_CHARACTERISTICS_TCP_SYN;
 				nconf->rules[9].t = (uint8_t)ZT_NETWORK_RULE_ACTION_ACCEPT;
 
@@ -1208,16 +1268,16 @@ void Network::_requestConfiguration(void *tPtr)
 			} else {
 				this->setNotFound();
 			}
-		} else if ((_id & 0xff) == 0x01) {
+		} else if ((_id & 0xffU) == 0x01) {
 			// ffAAaaaaaaaaaa01 -- where AA is the IPv4 /8 to use and aaaaaaaaaa is the anchor node for multicast gather and replication
 			const uint64_t myAddress = RR->identity.address().toInt();
-			const uint64_t networkHub = (_id >> 8) & 0xffffffffffULL;
+			const uint64_t networkHub = (_id >> 8U) & 0xffffffffffULL;
 
 			uint8_t ipv4[4];
-			ipv4[0] = (uint8_t)((_id >> 48) & 0xff);
-			ipv4[1] = (uint8_t)((myAddress >> 16) & 0xff);
-			ipv4[2] = (uint8_t)((myAddress >> 8) & 0xff);
-			ipv4[3] = (uint8_t)(myAddress & 0xff);
+			ipv4[0] = (uint8_t)(_id >> 48U);
+			ipv4[1] = (uint8_t)(myAddress >> 16U);
+			ipv4[2] = (uint8_t)(myAddress >> 8U);
+			ipv4[3] = (uint8_t)myAddress;
 
 			char v4ascii[24];
 			Utils::decimal(ipv4[0],v4ascii);
@@ -1282,7 +1342,7 @@ void Network::_requestConfiguration(void *tPtr)
 	rmd->add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_FLAGS,(uint64_t)0);
 	rmd->add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_RULES_ENGINE_REV,(uint64_t)ZT_RULES_ENGINE_REVISION);
 
-	RR->t->networkConfigRequestSent(tPtr,*this,ctrl);
+	RR->t->networkConfigRequestSent(tPtr,_id);
 
 	if (ctrl == RR->identity.address()) {
 		if (RR->localNetworkController) {

@@ -89,6 +89,7 @@ void Identity::generate(const Type t)
 
 	_type = t;
 	_hasPrivate = true;
+	_hash[0] = 0; // force hash recompute
 
 	char *const genmem = new char[ZT_IDENTITY_GEN_MEMORY];
 	do {
@@ -142,24 +143,13 @@ bool Identity::locallyValidate() const
 	return false;
 }
 
-bool Identity::hash(uint8_t h[48],const bool includePrivate) const
+void Identity::hashWithPrivate(uint8_t h[48]) const
 {
 	switch(_type) {
-
-	case C25519:
-		if ((_hasPrivate)&&(includePrivate))
-			SHA384(h,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN,_priv.c25519,ZT_C25519_PRIVATE_KEY_LEN);
-		else SHA384(h,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
-		return true;
-
-	case P384:
-		if ((_hasPrivate)&&(includePrivate))
-			SHA384(h,&_pub,sizeof(_pub),&_priv,sizeof(_priv));
-		else SHA384(h,&_pub,sizeof(_pub));
-		return true;
-
+		case C25519: SHA384(h,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN,_priv.c25519,ZT_C25519_PRIVATE_KEY_LEN); break;
+		case P384: SHA384(h,&_pub,sizeof(_pub),&_priv,sizeof(_priv)); break;
+		default: memset(h,0,48);
 	}
-	return false;
 }
 
 unsigned int Identity::sign(const void *data,unsigned int len,void *sig,unsigned int siglen) const
@@ -293,6 +283,7 @@ char *Identity::toString(bool includePrivate,char buf[ZT_IDENTITY_STRING_BUFFER_
 bool Identity::fromString(const char *str)
 {
 	_hasPrivate = false;
+	_hash[0] = 0; // force hash recompute
 
 	if (!str) {
 		_address.zero();
@@ -386,6 +377,97 @@ bool Identity::fromString(const char *str)
 	return true;
 }
 
+int Identity::marshal(uint8_t data[ZT_IDENTITY_MARSHAL_SIZE_MAX],const bool includePrivate) const
+{
+	_address.copyTo(data,ZT_ADDRESS_LENGTH);
+	switch(_type) {
+
+		case C25519:
+			data[ZT_ADDRESS_LENGTH] = (uint8_t)C25519;
+			memcpy(data + ZT_ADDRESS_LENGTH + 1,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
+			if ((includePrivate)&&(_hasPrivate)) {
+				data[ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN] = ZT_C25519_PRIVATE_KEY_LEN;
+				memcpy(data + ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1,_priv.c25519,ZT_C25519_PRIVATE_KEY_LEN);
+				return (ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1 + ZT_C25519_PRIVATE_KEY_LEN);
+			}
+			data[ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN] = 0;
+			return (ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1);
+
+		case P384:
+			data[ZT_ADDRESS_LENGTH] = (uint8_t)P384;
+			memcpy(data + ZT_ADDRESS_LENGTH + 1,&_pub,ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE);
+			if ((includePrivate)&&(_hasPrivate)) {
+				data[ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE] = ZT_C25519_PRIVATE_KEY_LEN + ZT_ECC384_PRIVATE_KEY_SIZE;
+				memcpy(data + ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1,&_priv,ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE);
+				data[ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1 + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE] = 0;
+				return (ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1 + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE + 1);
+			}
+			data[ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE] = 0;
+			data[ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1] = 0;
+			return (ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 2);
+
+	}
+	return -1;
+}
+
+int Identity::unmarshal(const uint8_t *data,const int len)
+{
+	if (len < (ZT_ADDRESS_LENGTH + 1))
+		return -1;
+	_hash[0] = 0; // force hash recompute
+	unsigned int privlen;
+	switch((_type = (Type)data[ZT_ADDRESS_LENGTH])) {
+
+		case C25519:
+			if (len < (ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1))
+				return -1;
+			memcpy(_pub.c25519,data + ZT_ADDRESS_LENGTH + 1,ZT_C25519_PUBLIC_KEY_LEN);
+			privlen = data[ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN];
+			if (privlen == ZT_C25519_PRIVATE_KEY_LEN) {
+				if (len < (ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1 + ZT_C25519_PRIVATE_KEY_LEN))
+					return -1;
+				_hasPrivate = true;
+				memcpy(_priv.c25519,data + ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1,ZT_C25519_PRIVATE_KEY_LEN);
+				return (ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1 + ZT_C25519_PRIVATE_KEY_LEN);
+			} else if (privlen == 0) {
+				_hasPrivate = false;
+				return (ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1);
+			}
+			break;
+
+		case P384:
+			if (len < (ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 2))
+				return -1;
+			memcpy(&_pub,data + ZT_ADDRESS_LENGTH + 1,ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE);
+			privlen = data[ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE];
+			if (privlen == ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE) {
+				if (len < (ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1 + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE + 1))
+					return -1;
+				_hasPrivate = true;
+				memcpy(&_priv,data + ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1,ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE);
+				privlen = data[ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1 + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE];
+				if (len < (int)(privlen + (ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1 + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE + 1)))
+					return -1;
+				return (int)(privlen + (unsigned int)(ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1 + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE + 1));
+			} else if (privlen == 0) {
+				_hasPrivate = false;
+				return (ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 2);
+			}
+			break;
+
+	}
+	return -1;
+}
+
+void Identity::_computeHash()
+{
+	switch(_type) {
+		case C25519: SHA384(_hash,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN); break;
+		case P384: SHA384(_hash,&_pub,sizeof(_pub)); break;
+		default: memset(_hash,0,48);
+	}
+}
+
 } // namespace ZeroTier
 
 extern "C" {
@@ -473,7 +555,9 @@ uint64_t ZT_Identity_address(const ZT_Identity *id)
 
 void ZT_Identity_hash(const ZT_Identity *id,uint8_t h[48],int includePrivate)
 {
-	reinterpret_cast<const ZeroTier::Identity *>(id)->hash(h,includePrivate != 0);
+	if (includePrivate)
+		reinterpret_cast<const ZeroTier::Identity *>(id)->hashWithPrivate(h);
+	else memcpy(h,reinterpret_cast<const ZeroTier::Identity *>(id)->hash(),48);
 }
 
 ZT_SDK_API void ZT_Identity_delete(ZT_Identity *id)

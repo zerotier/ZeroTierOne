@@ -203,7 +203,7 @@ public:
 	 * @param quot Zero or more quote characters
 	 * @return Vector of tokens
 	 */
-	static std::vector<std::string> split(const char *s,const char *const sep,const char *esc,const char *quot);
+	static std::vector<std::string> split(const char *s,const char *sep,const char *esc,const char *quot);
 
 	/**
 	 * Write a block of data to disk, replacing any current file contents
@@ -222,9 +222,9 @@ public:
 #ifndef OMIT_JSON_SUPPORT
 	static nlohmann::json jsonParse(const std::string &buf);
 	static std::string jsonDump(const nlohmann::json &j,int indentation = 1);
-	static uint64_t jsonInt(const nlohmann::json &jv,const uint64_t dfl);
-	static uint64_t jsonIntHex(const nlohmann::json &jv,const uint64_t dfl);
-	static bool jsonBool(const nlohmann::json &jv,const bool dfl);
+	static uint64_t jsonInt(const nlohmann::json &jv,uint64_t dfl);
+	static uint64_t jsonIntHex(const nlohmann::json &jv,uint64_t dfl);
+	static bool jsonBool(const nlohmann::json &jv,bool dfl);
 	static std::string jsonString(const nlohmann::json &jv,const char *dfl);
 #endif // OMIT_JSON_SUPPORT
 };

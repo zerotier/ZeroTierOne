@@ -235,64 +235,6 @@ public:
 		}
 		return curr_cnt ? subtotal / (float)curr_cnt : 0;
 	}
-
-	/**
-	 * @return The sample standard deviation of element values
-	 */
-	inline float stddev() { return sqrt(variance()); }
-
-	/**
-	 * @return The variance of element values
-	 */
-	inline float variance()
-	{
-		size_t iterator = begin;
-		float cached_mean = mean();
-		size_t curr_cnt = count();
-		T sum_of_squared_deviations = 0;
-		for (size_t i=0; i<curr_cnt; i++) {
-			iterator = (iterator + S - 1) % curr_cnt;
-			float deviation = (buf[i] - cached_mean);
-			sum_of_squared_deviations += (T)(deviation*deviation);
-		}
-		float variance = (float)sum_of_squared_deviations / (float)(S - 1);
-		return variance;
-	}
-
-	/**
-	 * @return The number of elements of zero value
-	 */
-	inline size_t zeroCount()
-	{
-		size_t iterator = begin;
-		size_t zeros = 0;
-		size_t curr_cnt = count();
-		for (size_t i=0; i<curr_cnt; i++) {
-			iterator = (iterator + S - 1) % curr_cnt;
-			if (*(buf + iterator) == 0) {
-				zeros++;
-			}
-		}
-		return zeros;
-	}
-
-	/**
-	 * @param value Value to match against in buffer
-	 * @return The number of values held in the ring buffer which match a given value
-	 */
-	inline size_t countValue(T value)
-	{
-		size_t iterator = begin;
-		size_t cnt = 0;
-		size_t curr_cnt = count();
-		for (size_t i=0; i<curr_cnt; i++) {
-			iterator = (iterator + S - 1) % curr_cnt;
-			if (*(buf + iterator) == value) {
-				cnt++;
-			}
-		}
-		return cnt;
-	}
 };
 
 } // namespace ZeroTier

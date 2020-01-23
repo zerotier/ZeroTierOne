@@ -33,10 +33,6 @@
 
 namespace ZeroTier {
 
-/****************************************************************************/
-/* Public Node interface (C++, exposed via CAPI bindings)                   */
-/****************************************************************************/
-
 Node::Node(void *uPtr,void *tPtr,const struct ZT_Node_Callbacks *callbacks,int64_t now) :
 	_RR(this),
 	RR(&_RR),
@@ -437,7 +433,7 @@ ZT_PeerList *Node::peers() const
 		p->address = (*pi)->address().toInt();
 		identities[pl->peerCount] = (*pi)->identity(); // need to make a copy in case peer gets deleted
 		p->identity = &identities[pl->peerCount];
-		(*pi)->identity().hash(p->identityHash,false);
+		memcpy(p->identityHash,(*pi)->identity().hash(),sizeof(p->identityHash));
 		if ((*pi)->remoteVersionKnown()) {
 			p->versionMajor = (int)(*pi)->remoteVersionMajor();
 			p->versionMinor = (int)(*pi)->remoteVersionMinor();

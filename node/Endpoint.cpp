@@ -19,12 +19,13 @@ bool Endpoint::operator==(const Endpoint &ep) const
 {
 	if (_t == ep._t) {
 		switch(_t) {
-			case INETADDR: return (inetAddr() == ep.inetAddr());
-			case DNSNAME:  return ((_v.dns.port == ep._v.dns.port)&&(strcmp(_v.dns.name,ep._v.dns.name) == 0));
-			case ZEROTIER: return ((_v.zt.a == ep._v.zt.a)&&(memcmp(_v.zt.idh,ep._v.zt.idh,sizeof(_v.zt.idh)) == 0));
-			case URL:      return (strcmp(_v.url,ep._v.url) == 0);
-			case ETHERNET: return (_v.eth == ep._v.eth);
-			default:       return true;
+			default:          return true;
+			case INETADDR_V4:
+			case INETADDR_V6: return (inetAddr() == ep.inetAddr());
+			case DNSNAME:     return ((_v.dns.port == ep._v.dns.port)&&(strcmp(_v.dns.name,ep._v.dns.name) == 0));
+			case ZEROTIER:    return ((_v.zt.a == ep._v.zt.a)&&(memcmp(_v.zt.idh,ep._v.zt.idh,sizeof(_v.zt.idh)) == 0));
+			case URL:         return (strcmp(_v.url,ep._v.url) == 0);
+			case ETHERNET:    return (_v.eth == ep._v.eth);
 		}
 	}
 	return false;
@@ -37,7 +38,9 @@ bool Endpoint::operator<(const Endpoint &ep) const
 	} else if (_t == ep._t) {
 		int ncmp;
 		switch(_t) {
-			case INETADDR: return (inetAddr() < ep.inetAddr());
+			case INETADDR_V4:
+			case INETADDR_V6:
+				return (inetAddr() < ep.inetAddr());
 			case DNSNAME:
 				ncmp = strcmp(_v.dns.name,ep._v.dns.name);
 				return ((ncmp < 0) ? true : (ncmp == 0)&&(_v.dns.port < ep._v.dns.port));
@@ -58,7 +61,8 @@ int Endpoint::marshal(uint8_t data[ZT_ENDPOINT_MARSHAL_SIZE_MAX]) const
 	Utils::storeBigEndian(data + 3,(int16_t)_l[1]);
 	Utils::storeBigEndian(data + 5,(int16_t)_l[2]);
 	switch(_t) {
-		case INETADDR:
+		case INETADDR_V4:
+		case INETADDR_V6:
 			return 7 + reinterpret_cast<const InetAddress *>(&_v.sa)->marshal(data+1);
 		case DNSNAME:
 			p = 7;
@@ -116,7 +120,8 @@ int Endpoint::unmarshal(const uint8_t *restrict data,const int len)
   switch(_t) {
 		case NIL:
 			return 7;
-		case INETADDR:
+		case INETADDR_V4:
+		case INETADDR_V6:
 			return 7 + reinterpret_cast<InetAddress *>(&_v.sa)->unmarshal(data+7,len-7);
 		case DNSNAME:
 			if (len < 10)

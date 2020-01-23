@@ -35,9 +35,6 @@
 namespace ZeroTier {
 
 namespace {
-//////////////////////////////////////////////////////////////////////////////
-// Implementation of each protocol verb                                     //
-//////////////////////////////////////////////////////////////////////////////
 
 void _sendErrorNeedCredentials(IncomingPacket &pkt,const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer,const uint64_t nwid,const SharedPtr<Path> &path)
 {
@@ -65,11 +62,11 @@ ZT_ALWAYS_INLINE bool _doHELLO(IncomingPacket &pkt,const RuntimeEnvironment *con
 	unsigned int ptr = ZT_PROTO_VERB_HELLO_IDX_IDENTITY + id.deserialize(pkt,ZT_PROTO_VERB_HELLO_IDX_IDENTITY);
 
 	if (protoVersion < ZT_PROTO_VERSION_MIN) {
-		RR->t->incomingPacketDroppedHELLO(tPtr,path,pid,fromAddress,"protocol version too old");
+		RR->t->incomingPacketDropped(tPtr,pid,0,id,path->address(),pkt.hops(),Packet::VERB_HELLO,ZT_TRACE_PACKET_DROP_REASON_PEER_TOO_OLD);
 		return true;
 	}
 	if (fromAddress != id.address()) {
-		RR->t->incomingPacketDroppedHELLO(tPtr,path,pid,fromAddress,"identity/address mismatch");
+		RR->t->incomingPacketDropped(tPtr,pid,0,id,path->address(),pkt.hops(),Packet::VERB_HELLO,ZT_TRACE_PACKET_DROP_REASON_MALFORMED_PACKET);
 		return true;
 	}
 
@@ -87,18 +84,13 @@ ZT_ALWAYS_INLINE bool _doHELLO(IncomingPacket &pkt,const RuntimeEnvironment *con
 				uint8_t key[ZT_PEER_SECRET_KEY_LENGTH];
 				if (RR->identity.agree(id,key)) {
 					if (pkt.dearmor(key)) { // ensure packet is authentic, otherwise drop
-						RR->t->incomingPacketDroppedHELLO(tPtr,path,pid,fromAddress,"address collision");
-						Packet outp(id.address(),RR->identity.address(),Packet::VERB_ERROR);
-						outp.append((uint8_t)Packet::VERB_HELLO);
-						outp.append((uint64_t)pid);
-						outp.append((uint8_t)Packet::ERROR_IDENTITY_COLLISION);
-						outp.armor(key,true);
-						path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());
+						RR->t->incomingPacketDropped(tPtr,pid,0,id,path->address(),pkt.hops(),Packet::VERB_HELLO,ZT_TRACE_PACKET_DROP_REASON_MALFORMED_PACKET);
+						// TODO: we handle identity collisions differently now
 					} else {
-						RR->t->incomingPacketMessageAuthenticationFailure(tPtr,path,pid,fromAddress,pkt.hops(),"invalid MAC");
+						RR->t->incomingPacketDropped(tPtr,pid,0,id,path->address(),pkt.hops(),Packet::VERB_HELLO,ZT_TRACE_PACKET_DROP_REASON_MAC_FAILED);
 					}
 				} else {
-					RR->t->incomingPacketMessageAuthenticationFailure(tPtr,path,pid,fromAddress,pkt.hops(),"invalid identity");
+					RR->t->incomingPacketDropped(tPtr,pid,0,id,path->address(),pkt.hops(),Packet::VERB_HELLO,ZT_TRACE_PACKET_DROP_REASON_MALFORMED_PACKET);
 				}
 
 				return true;
@@ -106,7 +98,7 @@ ZT_ALWAYS_INLINE bool _doHELLO(IncomingPacket &pkt,const RuntimeEnvironment *con
 				// Identity is the same as the one we already have -- check packet integrity
 
 				if (!pkt.dearmor(peer->key())) {
-					RR->t->incomingPacketMessageAuthenticationFailure(tPtr,path,pid,fromAddress,pkt.hops(),"invalid MAC");
+					RR->t->incomingPacketDropped(tPtr,pid,0,id,path->address(),pkt.hops(),Packet::VERB_HELLO,ZT_TRACE_PACKET_DROP_REASON_MAC_FAILED);
 					return true;
 				}
 
@@ -118,30 +110,30 @@ ZT_ALWAYS_INLINE bool _doHELLO(IncomingPacket &pkt,const RuntimeEnvironment *con
 
 		// Sanity check: this basically can't happen
 		if (alreadyAuthenticated) {
-			RR->t->incomingPacketDroppedHELLO(tPtr,path,pid,fromAddress,"illegal alreadyAuthenticated state");
+			RR->t->incomingPacketDropped(tPtr,pid,0,id,path->address(),pkt.hops(),Packet::VERB_HELLO,ZT_TRACE_PACKET_DROP_REASON_UNSPECIFIED);
 			return true;
 		}
 
 		// Check rate limits
 		if (!RR->node->rateGateIdentityVerification(now,path->address())) {
-			RR->t->incomingPacketDroppedHELLO(tPtr,path,pid,fromAddress,"rate limit exceeded");
+			RR->t->incomingPacketDropped(tPtr,pid,0,id,path->address(),pkt.hops(),Packet::VERB_HELLO,ZT_TRACE_PACKET_DROP_REASON_RATE_LIMIT_EXCEEDED);
 			return true;
 		}
 
 		// Check packet integrity and MAC (this is faster than locallyValidate() so do it first to filter out total crap)
 		SharedPtr<Peer> newPeer(new Peer(RR));
 		if (!newPeer->init(RR->identity,id)) {
-			RR->t->incomingPacketDroppedHELLO(tPtr,path,pid,fromAddress,"error initializing peer");
+			RR->t->incomingPacketDropped(tPtr,pid,0,id,path->address(),pkt.hops(),Packet::VERB_HELLO,ZT_TRACE_PACKET_DROP_REASON_UNSPECIFIED);
 			return true;
 		}
 		if (!pkt.dearmor(newPeer->key())) {
-			RR->t->incomingPacketMessageAuthenticationFailure(tPtr,path,pid,fromAddress,pkt.hops(),"invalid MAC");
+			RR->t->incomingPacketDropped(tPtr,pid,0,id,path->address(),pkt.hops(),Packet::VERB_HELLO,ZT_TRACE_PACKET_DROP_REASON_MAC_FAILED);
 			return true;
 		}
 
 		// Check that identity's address is valid as per the derivation function
 		if (!id.locallyValidate()) {
-			RR->t->incomingPacketDroppedHELLO(tPtr,path,pid,fromAddress,"invalid identity");
+			RR->t->incomingPacketDropped(tPtr,pid,0,id,path->address(),pkt.hops(),Packet::VERB_HELLO,ZT_TRACE_PACKET_DROP_REASON_INVALID_OBJECT);
 			return true;
 		}
 
@@ -158,7 +150,7 @@ ZT_ALWAYS_INLINE bool _doHELLO(IncomingPacket &pkt,const RuntimeEnvironment *con
 		if (ptr < pkt.size()) {
 			ptr += externalSurfaceAddress.deserialize(pkt,ptr);
 			if ((externalSurfaceAddress)&&(pkt.hops() == 0))
-				RR->sa->iam(tPtr,id.address(),path->localSocket(),path->address(),externalSurfaceAddress,RR->topology->isRoot(id),now);
+				RR->sa->iam(tPtr,id,path->localSocket(),path->address(),externalSurfaceAddress,RR->topology->isRoot(id),now);
 		}
 	}
 
@@ -270,7 +262,7 @@ ZT_ALWAYS_INLINE bool _doOK(IncomingPacket &pkt,const RuntimeEnvironment *const 
 					InetAddress externalSurfaceAddress;
 					externalSurfaceAddress.deserialize(pkt,ZT_PROTO_VERB_HELLO__OK__IDX_REVISION + 2);
 					if (externalSurfaceAddress)
-						RR->sa->iam(tPtr,peer->address(),path->localSocket(),path->address(),externalSurfaceAddress,RR->topology->isRoot(peer->identity()),RR->node->now());
+						RR->sa->iam(tPtr,peer->identity(),path->localSocket(),path->address(),externalSurfaceAddress,RR->topology->isRoot(peer->identity()),RR->node->now());
 				}
 			}
 
@@ -388,6 +380,7 @@ ZT_ALWAYS_INLINE bool _doFRAME(IncomingPacket &pkt,const RuntimeEnvironment *con
 					RR->node->putFrame(tPtr,nwid,network->userPtr(),sourceMac,network->mac(),etherType,0,(const void *)frameData,frameLen);
 			}
 		} else {
+			RR->t->incomingNetworkFrameDropped(tPtr,nwid,MAC(),MAC(),peer->identity(),path->address(),pkt.hops(),0,nullptr,Packet::VERB_FRAME,true,ZT_TRACE_FRAME_DROP_REASON_PERMISSION_DENIED);
 			_sendErrorNeedCredentials(pkt,RR,tPtr,peer,nwid,path);
 			return false;
 		}
@@ -412,7 +405,7 @@ ZT_ALWAYS_INLINE bool _doEXT_FRAME(IncomingPacket &pkt,const RuntimeEnvironment 
 		}
 
 		if (!network->gate(tPtr,peer)) {
-			RR->t->incomingNetworkAccessDenied(tPtr,network,path,pkt.packetId(),pkt.size(),peer->address(),Packet::VERB_EXT_FRAME,true);
+			RR->t->incomingNetworkFrameDropped(tPtr,nwid,MAC(),MAC(),peer->identity(),path->address(),pkt.hops(),0,nullptr,Packet::VERB_EXT_FRAME,true,ZT_TRACE_FRAME_DROP_REASON_PERMISSION_DENIED);
 			_sendErrorNeedCredentials(pkt,RR,tPtr,peer,nwid,path);
 			return false;
 		}
@@ -435,19 +428,19 @@ ZT_ALWAYS_INLINE bool _doEXT_FRAME(IncomingPacket &pkt,const RuntimeEnvironment 
 						if (network->config().permitsBridging(peer->address())) {
 							network->learnBridgeRoute(from,peer->address());
 						} else {
-							RR->t->incomingNetworkFrameDropped(tPtr,network,path,pkt.packetId(),pkt.size(),peer->address(),Packet::VERB_EXT_FRAME,from,to,"bridging not allowed (remote)");
+							RR->t->incomingNetworkFrameDropped(tPtr,nwid,from,to,peer->identity(),path->address(),pkt.hops(),(uint16_t)frameLen,frameData,Packet::VERB_EXT_FRAME,true,ZT_TRACE_FRAME_DROP_REASON_BRIDGING_NOT_ALLOWED_REMOTE);
 							peer->received(tPtr,path,pkt.hops(),pkt.packetId(),pkt.payloadLength(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,nwid);
 							return true;
 						}
 					} else if (to != network->mac()) {
 						if (to.isMulticast()) {
 							if (network->config().multicastLimit == 0) {
-								RR->t->incomingNetworkFrameDropped(tPtr,network,path,pkt.packetId(),pkt.size(),peer->address(),Packet::VERB_EXT_FRAME,from,to,"multicast disabled");
+								RR->t->incomingNetworkFrameDropped(tPtr,nwid,from,to,peer->identity(),path->address(),pkt.hops(),(uint16_t)frameLen,frameData,Packet::VERB_EXT_FRAME,true,ZT_TRACE_FRAME_DROP_REASON_MULTICAST_DISABLED);
 								peer->received(tPtr,path,pkt.hops(),pkt.packetId(),pkt.payloadLength(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,nwid);
 								return true;
 							}
 						} else if (!network->config().permitsBridging(RR->identity.address())) {
-							RR->t->incomingNetworkFrameDropped(tPtr,network,path,pkt.packetId(),pkt.size(),peer->address(),Packet::VERB_EXT_FRAME,from,to,"bridging not allowed (local)");
+							RR->t->incomingNetworkFrameDropped(tPtr,nwid,from,to,peer->identity(),path->address(),pkt.hops(),(uint16_t)frameLen,frameData,Packet::VERB_EXT_FRAME,true,ZT_TRACE_FRAME_DROP_REASON_BRIDGING_NOT_ALLOWED_LOCAL);
 							peer->received(tPtr,path,pkt.hops(),pkt.packetId(),pkt.payloadLength(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,nwid);
 							return true;
 						}
@@ -733,6 +726,7 @@ ZT_ALWAYS_INLINE bool _doUSER_MESSAGE(IncomingPacket &pkt,const RuntimeEnvironme
 bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,void *tPtr)
 {
 	const Address sourceAddress(source());
+	const SharedPtr<Peer> peer(RR->topology->get(tPtr,sourceAddress));
 
 	try {
 		// Check for trusted paths or unencrypted HELLOs (HELLO is the only packet sent in the clear)
@@ -746,7 +740,8 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,void *tPtr)
 			if (RR->topology->shouldInboundPathBeTrusted(_path->address(),tpid)) {
 				trusted = true;
 			} else {
-				RR->t->incomingPacketMessageAuthenticationFailure(tPtr,_path,packetId(),sourceAddress,hops(),"path not trusted");
+				if (peer)
+					RR->t->incomingPacketDropped(tPtr,packetId(),0,peer->identity(),_path->address(),hops(),Packet::VERB_HELLO,ZT_TRACE_PACKET_DROP_REASON_MAC_FAILED);
 				return true;
 			}
 		} else if ((c == ZT_PROTO_CIPHER_SUITE__POLY1305_NONE)&&(verb() == Packet::VERB_HELLO)) {
@@ -754,54 +749,54 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,void *tPtr)
 			return _doHELLO(*this,RR,tPtr,false,_path);
 		}
 
-		const SharedPtr<Peer> peer(RR->topology->get(tPtr,sourceAddress));
-		if (peer) {
-			if (!trusted) {
-				if (!dearmor(peer->key())) {
-					RR->t->incomingPacketMessageAuthenticationFailure(tPtr,_path,packetId(),sourceAddress,hops(),"invalid MAC");
-					return true;
-				}
-			}
-
-			if (!uncompress()) {
-				RR->t->incomingPacketInvalid(tPtr,_path,packetId(),sourceAddress,hops(),Packet::VERB_NOP,"LZ4 decompression failed");
-				return true;
-			}
-
-			const Packet::Verb v = verb();
-			bool r = true;
-			switch(v) {
-				//case Packet::VERB_NOP:
-				default: // ignore unknown verbs, but if they pass auth check they are "received"
-					peer->received(tPtr,_path,hops(),packetId(),payloadLength(),v,0,Packet::VERB_NOP,0);
-					break;
-				case Packet::VERB_HELLO:                      r = _doHELLO(*this,RR,tPtr,true,_path);                  break;
-				case Packet::VERB_ERROR:                      r = _doERROR(*this,RR,tPtr,peer,_path);                  break;
-				case Packet::VERB_OK:                         r = _doOK(*this,RR,tPtr,peer,_path);                     break;
-				case Packet::VERB_WHOIS:                      r = _doWHOIS(*this,RR,tPtr,peer,_path);                  break;
-				case Packet::VERB_RENDEZVOUS:                 r = _doRENDEZVOUS(*this,RR,tPtr,peer,_path);             break;
-				case Packet::VERB_FRAME:                      r = _doFRAME(*this,RR,tPtr,peer,_path);                  break;
-				case Packet::VERB_EXT_FRAME:                  r = _doEXT_FRAME(*this,RR,tPtr,peer,_path);              break;
-				case Packet::VERB_ECHO:                       r = _doECHO(*this,RR,tPtr,peer,_path);                   break;
-				case Packet::VERB_NETWORK_CREDENTIALS:        r = _doNETWORK_CREDENTIALS(*this,RR,tPtr,peer,_path);    break;
-				case Packet::VERB_NETWORK_CONFIG_REQUEST:     r = _doNETWORK_CONFIG_REQUEST(*this,RR,tPtr,peer,_path); break;
-				case Packet::VERB_NETWORK_CONFIG:             r = _doNETWORK_CONFIG(*this,RR,tPtr,peer,_path);         break;
-				case Packet::VERB_MULTICAST_GATHER:           r = _doMULTICAST_GATHER(*this,RR,tPtr,peer,_path);       break;
-				case Packet::VERB_PUSH_DIRECT_PATHS:          r = _doPUSH_DIRECT_PATHS(*this,RR,tPtr,peer,_path);      break;
-				case Packet::VERB_USER_MESSAGE:               r = _doUSER_MESSAGE(*this,RR,tPtr,peer,_path);           break;
-			}
-			return r;
-		} else {
+		if (!peer) {
 			RR->sw->requestWhois(tPtr,RR->node->now(),sourceAddress);
 			return false;
 		}
+
+		if (!trusted) {
+			if (!dearmor(peer->key())) {
+				RR->t->incomingPacketDropped(tPtr,packetId(),0,peer->identity(),_path->address(),hops(),Packet::VERB_HELLO,ZT_TRACE_PACKET_DROP_REASON_MAC_FAILED);
+				return true;
+			}
+		}
+
+		if (!uncompress()) {
+			RR->t->incomingPacketDropped(tPtr,packetId(),0,peer->identity(),_path->address(),hops(),Packet::VERB_HELLO,ZT_TRACE_PACKET_DROP_REASON_INVALID_COMPRESSED_DATA);
+			return true;
+		}
+
+		const Packet::Verb v = verb();
+		bool r = true;
+		switch(v) {
+			default: // ignore unknown verbs, but if they pass auth check they are "received" and considered NOPs by peer->receive()
+				RR->t->incomingPacketDropped(tPtr,packetId(),0,peer->identity(),_path->address(),hops(),Packet::VERB_HELLO,ZT_TRACE_PACKET_DROP_REASON_UNRECOGNIZED_VERB);
+				// fall through
+			case Packet::VERB_NOP:
+				peer->received(tPtr,_path,hops(),packetId(),payloadLength(),v,0,Packet::VERB_NOP,0);
+				break;
+			case Packet::VERB_HELLO:                      r = _doHELLO(*this,RR,tPtr,true,_path);                  break;
+			case Packet::VERB_ERROR:                      r = _doERROR(*this,RR,tPtr,peer,_path);                  break;
+			case Packet::VERB_OK:                         r = _doOK(*this,RR,tPtr,peer,_path);                     break;
+			case Packet::VERB_WHOIS:                      r = _doWHOIS(*this,RR,tPtr,peer,_path);                  break;
+			case Packet::VERB_RENDEZVOUS:                 r = _doRENDEZVOUS(*this,RR,tPtr,peer,_path);             break;
+			case Packet::VERB_FRAME:                      r = _doFRAME(*this,RR,tPtr,peer,_path);                  break;
+			case Packet::VERB_EXT_FRAME:                  r = _doEXT_FRAME(*this,RR,tPtr,peer,_path);              break;
+			case Packet::VERB_ECHO:                       r = _doECHO(*this,RR,tPtr,peer,_path);                   break;
+			case Packet::VERB_NETWORK_CREDENTIALS:        r = _doNETWORK_CREDENTIALS(*this,RR,tPtr,peer,_path);    break;
+			case Packet::VERB_NETWORK_CONFIG_REQUEST:     r = _doNETWORK_CONFIG_REQUEST(*this,RR,tPtr,peer,_path); break;
+			case Packet::VERB_NETWORK_CONFIG:             r = _doNETWORK_CONFIG(*this,RR,tPtr,peer,_path);         break;
+			case Packet::VERB_MULTICAST_GATHER:           r = _doMULTICAST_GATHER(*this,RR,tPtr,peer,_path);       break;
+			case Packet::VERB_PUSH_DIRECT_PATHS:          r = _doPUSH_DIRECT_PATHS(*this,RR,tPtr,peer,_path);      break;
+			case Packet::VERB_USER_MESSAGE:               r = _doUSER_MESSAGE(*this,RR,tPtr,peer,_path);           break;
+		}
+		return r;
 	} catch (int ztExcCode) {
-		RR->t->incomingPacketInvalid(tPtr,_path,packetId(),sourceAddress,hops(),verb(),"unexpected exception in tryDecode()");
-		return true;
-	} catch ( ... ) {
-		RR->t->incomingPacketInvalid(tPtr,_path,packetId(),sourceAddress,hops(),verb(),"unexpected exception in tryDecode()");
-		return true;
-	}
+	} catch ( ... ) {}
+
+	if (peer)
+		RR->t->incomingPacketDropped(tPtr,packetId(),0,peer->identity(),_path->address(),hops(),Packet::VERB_HELLO,ZT_TRACE_PACKET_DROP_REASON_UNSPECIFIED);
+	return true;
 }
 
 } // namespace ZeroTier

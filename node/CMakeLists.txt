@@ -73,6 +73,7 @@ set(core_src
 	SHA512.cpp
 	Switch.cpp
 	Topology.cpp
+	Trace.cpp
 	Utils.cpp
 )
 

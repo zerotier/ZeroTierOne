@@ -23,7 +23,7 @@
 #include "Identity.hpp"
 
 #define ZT_LOCATOR_MAX_ENDPOINTS 8
-#define ZT_LOCATOR_MARSHAL_SIZE_MAX (8 + 2 + (ZT_ENDPOINT_MARSHAL_SIZE_MAX * ZT_LOCATOR_MAX_ENDPOINTS) + 2 + ZT_SIGNATURE_BUFFER_SIZE)
+#define ZT_LOCATOR_MARSHAL_SIZE_MAX (8 + 2 + (ZT_ENDPOINT_MARSHAL_SIZE_MAX * ZT_LOCATOR_MAX_ENDPOINTS) + 2 + 2 + ZT_SIGNATURE_BUFFER_SIZE)
 
 namespace ZeroTier {
 
@@ -120,6 +120,7 @@ private:
 	unsigned int _endpointCount;
 	unsigned int _signatureLength;
 	Endpoint _at[ZT_LOCATOR_MAX_ENDPOINTS];
+	uint16_t _flags;
 	uint8_t _signature[ZT_SIGNATURE_BUFFER_SIZE];
 };
 

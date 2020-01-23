@@ -19,7 +19,7 @@
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 
-#ifdef ZT_NO_TYPE_PUNNING
+#ifdef ZT_NO_UNALIGNED_ACCESS
 // Slower version that does not use type punning
 #define U8TO32_LITTLE(p) ( ((uint32_t)(p)[0]) | ((uint32_t)(p)[1] << 8) | ((uint32_t)(p)[2] << 16) | ((uint32_t)(p)[3] << 24) )
 static inline void U32TO8_LITTLE(uint8_t *const c,const uint32_t v) { c[0] = (uint8_t)v; c[1] = (uint8_t)(v >> 8); c[2] = (uint8_t)(v >> 16); c[3] = (uint8_t)(v >> 24); }
@@ -27,7 +27,7 @@ static inline void U32TO8_LITTLE(uint8_t *const c,const uint32_t v) { c[0] = (ui
 // Fast version that just does 32-bit load/store
 #define U8TO32_LITTLE(p) (*((const uint32_t *)((const void *)(p))))
 #define U32TO8_LITTLE(c,v) *((uint32_t *)((void *)(c))) = (v)
-#endif // ZT_NO_TYPE_PUNNING
+#endif // ZT_NO_UNALIGNED_ACCESS
 
 #else // __BYTE_ORDER == __BIG_ENDIAN (we don't support anything else... does MIDDLE_ENDIAN even still exist?)
 

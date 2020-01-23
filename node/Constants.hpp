@@ -118,18 +118,18 @@
 
 /**
  * Period between keepalives sent to paths if no other traffic has been sent
- *
- * See https://conferences.sigcomm.org/imc/2010/papers/p260.pdf for
- * some real world data on NAT UDP timeouts. From the paper: "the
- * lowest measured timeout when a binding has seen bidirectional
- * traffic is 54 sec." 30 seconds is faster than really necessary.
  */
-#define ZT_PATH_KEEPALIVE_PERIOD 30000
+#define ZT_PATH_KEEPALIVE_PERIOD 20000
 
 /**
- * Timeout for path aliveness (measured from last receive)
+ * Timeout for path alive-ness (measured from last receive)
  */
-#define ZT_PATH_ACTIVITY_TIMEOUT ((ZT_PATH_KEEPALIVE_PERIOD * 2) + 5000)
+#define ZT_PATH_ALIVE_TIMEOUT ((ZT_PATH_KEEPALIVE_PERIOD * 2) + 5000)
+
+/**
+ * Timeout for path active-ness (measured from last receive)
+ */
+#define ZT_PATH_ACTIVITY_TIMEOUT (ZT_PATH_KEEPALIVE_PERIOD + 5000)
 
 /**
  * Delay between full HELLO messages between peers
@@ -137,12 +137,12 @@
 #define ZT_PEER_PING_PERIOD 60000
 
 /**
- * Timeout for overall peer activity (measured from last receive)
+ * Timeout for peer alive-ness (measured from last receive)
  */
 #define ZT_PEER_ALIVE_TIMEOUT ((ZT_PEER_PING_PERIOD * 2) + 5000)
 
 /**
- * Timeout for overall peer activity (measured from last receive)
+ * Timeout for peer active-ness (measured from last receive)
  */
 #define ZT_PEER_ACTIVITY_TIMEOUT (ZT_PEER_PING_PERIOD + 5000)
 

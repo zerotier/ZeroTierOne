@@ -25,7 +25,7 @@
 #include "Trace.hpp"
 
 // Entry timeout -- make it fairly long since this is just to prevent stale buildup
-#define ZT_SELFAWARENESS_ENTRY_TIMEOUT 600000
+#define ZT_SELFAWARENESS_ENTRY_TIMEOUT 300000
 
 namespace ZeroTier {
 
@@ -53,11 +53,7 @@ SelfAwareness::SelfAwareness(const RuntimeEnvironment *renv) :
 {
 }
 
-SelfAwareness::~SelfAwareness()
-{
-}
-
-void SelfAwareness::iam(void *tPtr,const Address &reporter,const int64_t receivedOnLocalSocket,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,bool trusted,int64_t now)
+void SelfAwareness::iam(void *tPtr,const Identity &reporter,const int64_t receivedOnLocalSocket,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,bool trusted,int64_t now)
 {
 	const InetAddress::IpScope scope = myPhysicalAddress.ipScope();
 
@@ -65,12 +61,10 @@ void SelfAwareness::iam(void *tPtr,const Address &reporter,const int64_t receive
 		return;
 
 	Mutex::Lock l(_phy_l);
-	PhySurfaceEntry &entry = _phy[PhySurfaceKey(reporter,receivedOnLocalSocket,reporterPhysicalAddress,scope)];
+	PhySurfaceEntry &entry = _phy[PhySurfaceKey(reporter.address(),receivedOnLocalSocket,reporterPhysicalAddress,scope)];
 
 	if ( (trusted) && ((now - entry.ts) < ZT_SELFAWARENESS_ENTRY_TIMEOUT) && (!entry.mySurface.ipsEqual(myPhysicalAddress)) ) {
 		// Changes to external surface reported by trusted peers causes path reset in this scope
-		RR->t->resettingPathsInScope(tPtr,reporter,reporterPhysicalAddress,myPhysicalAddress,scope);
-
 		entry.mySurface = myPhysicalAddress;
 		entry.ts = now;
 		entry.trusted = trusted;
@@ -80,10 +74,10 @@ void SelfAwareness::iam(void *tPtr,const Address &reporter,const int64_t receive
 		// Don't use 'entry' after this since hash table gets modified.
 		{
 			Hashtable< PhySurfaceKey,PhySurfaceEntry >::Iterator i(_phy);
-			PhySurfaceKey *k = (PhySurfaceKey *)0;
-			PhySurfaceEntry *e = (PhySurfaceEntry *)0;
+			PhySurfaceKey *k = nullptr;
+			PhySurfaceEntry *e = nullptr;
 			while (i.next(k,e)) {
-				if ((k->reporterPhysicalAddress != reporterPhysicalAddress)&&(k->scope == scope))
+				if ((k->scope == scope)&&(k->reporterPhysicalAddress != reporterPhysicalAddress))
 					_phy.erase(*k);
 			}
 		}
@@ -91,6 +85,8 @@ void SelfAwareness::iam(void *tPtr,const Address &reporter,const int64_t receive
 		// Reset all paths within this scope and address family
 		_ResetWithinScope rset(tPtr,now,myPhysicalAddress.ss_family,(InetAddress::IpScope)scope);
 		RR->topology->eachPeer<_ResetWithinScope &>(rset);
+
+		RR->t->resettingPathsInScope(tPtr,reporter,reporterPhysicalAddress,entry.mySurface,myPhysicalAddress,scope);
 	} else {
 		// Otherwise just update DB to use to determine external surface info
 		entry.mySurface = myPhysicalAddress;
@@ -109,35 +105,6 @@ void SelfAwareness::clean(int64_t now)
 		if ((now - e->ts) >= ZT_SELFAWARENESS_ENTRY_TIMEOUT)
 			_phy.erase(*k);
 	}
-}
-
-bool SelfAwareness::symmetricNat(const int64_t now) const
-{
-	Hashtable< InetAddress,std::pair< std::set<int>,std::set<int64_t> > > ipToPortsAndLocalSockets(16);
-
-	{
-		Mutex::Lock l(_phy_l);
-		Hashtable<PhySurfaceKey,PhySurfaceEntry>::Iterator i(const_cast<SelfAwareness *>(this)->_phy);
-		PhySurfaceKey *k = nullptr;
-		PhySurfaceEntry *e = nullptr;
-		while (i.next(k,e)) {
-			if ((now - e->ts) < ZT_SELFAWARENESS_ENTRY_TIMEOUT) {
-				std::pair< std::set<int>,std::set<int64_t> > &ii = ipToPortsAndLocalSockets[e->mySurface.ipOnly()];
-				ii.first.insert(e->mySurface.port());
-				if (k->receivedOnLocalSocket != -1)
-					ii.second.insert(k->receivedOnLocalSocket);
-			}
-		}
-	}
-
-	Hashtable< InetAddress,std::pair< std::set<int>,std::set<int64_t> > >::Iterator i(ipToPortsAndLocalSockets);
-	InetAddress *k = nullptr;
-	std::pair< std::set<int>,std::set<int64_t> > *v = nullptr;
-	while (i.next(k,v)) {
-		if (v->first.size() > v->second.size()) // more external ports than local sockets for a given external IP
-			return true;
-	}
-	return false;
 }
 
 std::multimap<unsigned long,InetAddress> SelfAwareness::externalAddresses(const int64_t now) const

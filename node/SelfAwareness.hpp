@@ -24,6 +24,7 @@
 
 namespace ZeroTier {
 
+class Identity;
 class RuntimeEnvironment;
 
 /**
@@ -35,19 +36,18 @@ class SelfAwareness
 {
 public:
 	explicit SelfAwareness(const RuntimeEnvironment *renv);
-	~SelfAwareness();
 
 	/**
 	 * Called when a remote peer informs us of our external network address
 	 *
-	 * @param reporter ZeroTier address of reporting peer
+	 * @param reporter Identity of reporting peer
 	 * @param receivedOnLocalAddress Local address on which report was received
 	 * @param reporterPhysicalAddress Physical address that reporting peer seems to have
 	 * @param myPhysicalAddress Physical address that peer says we have
 	 * @param trusted True if this peer is trusted as an authority to inform us of external address changes
 	 * @param now Current time
 	 */
-	void iam(void *tPtr,const Address &reporter,int64_t receivedOnLocalSocket,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,bool trusted,int64_t now);
+	void iam(void *tPtr,const Identity &reporter,int64_t receivedOnLocalSocket,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,bool trusted,int64_t now);
 
 	/**
 	 * Clean up database periodically
@@ -55,14 +55,6 @@ public:
 	 * @param now Current time
 	 */
 	void clean(int64_t now);
-
-	/**
-	 * Check whether this node appears to be behind a symmetric NAT
-	 *
-	 * @param now Current time
-	 * @return True if it looks like we're behind a symmetric NAT
-	 */
-	bool symmetricNat(int64_t now) const;
 
 	/**
 	 * Get external address consensus, which is the statistical "mode" of external addresses.

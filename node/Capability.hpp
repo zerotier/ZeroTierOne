@@ -58,7 +58,7 @@ class Capability : public Credential
 	friend class Credential;
 
 public:
-	static ZT_ALWAYS_INLINE Credential::Type credentialType() { return Credential::CREDENTIAL_TYPE_CAPABILITY; }
+	static ZT_ALWAYS_INLINE ZT_CredentialType credentialType() { return ZT_CREDENTIAL_TYPE_CAPABILITY; }
 
 	ZT_ALWAYS_INLINE Capability() :
 		_nwid(0),

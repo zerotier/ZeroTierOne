@@ -495,7 +495,7 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 			Port: tcpBindAddr.Port,
 		})
 		if err != nil {
-			node.log.Printf("ERROR: unable to start API HTTP server at TCP bind address %s: %s (continuing anyway)", tcpBindAddr.String(), err.Error())
+			node.infoLog.Printf("ERROR: unable to start API HTTP server at TCP bind address %s: %s (named socket listener startd, continuing anyway)", tcpBindAddr.String(), err.Error())
 		} else {
 			tcpHttpServer = &http.Server{
 				MaxHeaderBytes: 4096,

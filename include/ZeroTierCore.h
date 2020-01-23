@@ -19,6 +19,25 @@
 #ifndef ZT_ZEROTIER_API_H
 #define ZT_ZEROTIER_API_H
 
+/* ZT_PACKED_STRUCT encloses structs whose contents should be bit-packed.
+ * Nearly all compilers support this. These macros detect the compiler and
+ * define it correctly for gcc/icc/clang or MSC. */
+#ifndef ZT_PACKED_STRUCT
+#if defined(__GCC__) || defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1) || defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2) || defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4) || defined(__INTEL_COMPILER) || defined(__clang__)
+#define ZT_PACKED_STRUCT(D) D __attribute__((packed))
+#define ZT_PACKED_STRUCT_START
+#define ZT_PACKED_STRUCT_END __attribute__((packed))
+#endif
+#ifdef _MSC_VER
+#define ZT_PACKED_STRUCT(D) __pragma(pack(push,1)) D __pragma(pack(pop))
+#define ZT_PACKED_STRUCT_START __pragma(pack(push,1))
+#define ZT_PACKED_STRUCT_END __pragma(pack(pop))
+#endif
+#endif
+#ifndef ZT_PACKED_STRUCT
+#error Missing a macro to define ZT_PACKED_STRUCT for your compiler.
+#endif
+
 #ifdef __cplusplus
 #include <cstdint>
 extern "C" {
@@ -26,26 +45,21 @@ extern "C" {
 #include <stdint.h>
 #endif
 
-/* For struct sockaddr_storage, which is referenced here. */
 #if defined(_WIN32) || defined(_WIN64)
 #include <WinSock2.h>
 #include <WS2tcpip.h>
 #include <Windows.h>
-#else /* not Windows */
+#else
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-#endif /* Windows or not */
+#endif
 
-/* This symbol may be defined in a build environment or before including this
- * header if you need to prepend something to function specifications. */
 #ifndef ZT_SDK_API
 #define ZT_SDK_API
 #endif
 
-/****************************************************************************/
-/* Core constants                                                           */
 /****************************************************************************/
 
 /**
@@ -174,13 +188,6 @@ extern "C" {
  */
 #define ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH 7
 
-/**
- * Maximum number of multicast group subscriptions on a local virtual network interface
- *
- * This coincides with many operating systems' maximum values and is rather huge.
- */
-#define ZT_MAX_MULTICAST_SUBSCRIPTIONS 1024
-
 /* Rule specification contants **********************************************/
 
 /**
@@ -269,7 +276,310 @@ extern "C" {
 #define ZT_RULE_PACKET_CHARACTERISTICS_TCP_FIN 0x0000000000000001ULL
 
 /****************************************************************************/
-/* Structures and other types                                               */
+
+/**
+ * Credential type IDs
+ *
+ * These are mostly used internally but are declared here so they can be used
+ * in trace messages.
+ */
+enum ZT_CredentialType
+{
+	ZT_CREDENTIAL_TYPE_NULL = 0,
+	ZT_CREDENTIAL_TYPE_COM = 1,
+	ZT_CREDENTIAL_TYPE_CAPABILITY = 2,
+	ZT_CREDENTIAL_TYPE_TAG = 3,
+	ZT_CREDENTIAL_TYPE_COO = 4,
+	ZT_CREDENTIAL_TYPE_REVOCATION = 6
+};
+
+/* Trace events are sent and received as packed structures of a fixed size.
+ * Normally we don't use this form of brittle encoding but in this case the
+ * performance benefit is non-trivial as events are generated in critical
+ * areas of the code.
+ *
+ * NOTE: all integer fields larger than one byte are stored in big-endian
+ * "network" byte order in these structures. */
+
+/**
+ * Flag indicating that VL1 tracing should be generated
+ */
+#define ZT_TRACE_FLAG_VL1           0x01
+
+/**
+ * Flag indicating that VL2 (virtual network) tracing should be generated
+ */
+#define ZT_TRACE_FLAG_VL2           0x02
+
+/**
+ * Flag indicating that VL2 network filter tracing should be generated (separate because this can be very verbose)
+ */
+#define ZT_TRACE_FLAG_VL2_FILTER    0x04
+
+/**
+ * Flag indicating that VL2 multicast propagation should be reported
+ */
+#define ZT_TRACE_FLAG_VL2_MULTICAST 0x08
+
+/**
+ * Trace event types
+ *
+ * All trace event structures start with a size and type.
+ */
+enum ZT_TraceEventType
+{
+	/* VL1 events related to the peer-to-peer layer */
+	ZT_TRACE_VL1_RESETTING_PATHS_IN_SCOPE = 1,
+	ZT_TRACE_VL1_TRYING_NEW_PATH = 2,
+	ZT_TRACE_VL1_LEARNED_NEW_PATH = 3,
+	ZT_TRACE_VL1_INCOMING_PACKET_DROPPED = 4,
+
+	/* VL2 events relate to virtual networks, packet filtering, and authentication */
+	ZT_TRACE_VL2_OUTGOING_FRAME_DROPPED = 100,
+	ZT_TRACE_VL2_INCOMING_FRAME_DROPPED = 101,
+	ZT_TRACE_VL2_NETWORK_CONFIG_REQUESTED = 102,
+	ZT_TRACE_VL2_NETWORK_FILTER = 103
+};
+
+/**
+ * Trace VL1 packet drop reasons
+ */
+enum ZT_TracePacketDropReason
+{
+	ZT_TRACE_PACKET_DROP_REASON_UNSPECIFIED = 0,
+	ZT_TRACE_PACKET_DROP_REASON_PEER_TOO_OLD = 1,
+	ZT_TRACE_PACKET_DROP_REASON_MALFORMED_PACKET = 2,
+	ZT_TRACE_PACKET_DROP_REASON_MAC_FAILED = 3,
+	ZT_TRACE_PACKET_DROP_REASON_RATE_LIMIT_EXCEEDED = 4,
+	ZT_TRACE_PACKET_DROP_REASON_INVALID_OBJECT = 5,
+	ZT_TRACE_PACKET_DROP_REASON_INVALID_COMPRESSED_DATA = 6,
+	ZT_TRACE_PACKET_DROP_REASON_UNRECOGNIZED_VERB = 7
+};
+
+/**
+ * Trace VL2 frame drop reasons
+ */
+enum ZT_TraceFrameDropReason
+{
+	ZT_TRACE_FRAME_DROP_REASON_UNSPECIFIED = 0,
+	ZT_TRACE_FRAME_DROP_REASON_BRIDGING_NOT_ALLOWED_REMOTE = 1,
+	ZT_TRACE_FRAME_DROP_REASON_BRIDGING_NOT_ALLOWED_LOCAL = 2,
+	ZT_TRACE_FRAME_DROP_REASON_MULTICAST_DISABLED = 3,
+	ZT_TRACE_FRAME_DROP_REASON_BROADCAST_DISABLED = 4,
+	ZT_TRACE_FRAME_DROP_REASON_FILTER_BLOCKED = 5,
+	ZT_TRACE_FRAME_DROP_REASON_FILTER_BLOCKED_AT_BRIDGE_REPLICATION = 6,
+	ZT_TRACE_FRAME_DROP_REASON_PERMISSION_DENIED = 7
+};
+
+/**
+ * Address types for ZT_TraceEventPathAddress
+ *
+ * These are currently the same as the types in Endpoint.hpp and should remain so
+ * if possible for consistency. Not all of these are used (yet?) but they are defined
+ * for possible future use and the structure is sized to support them.
+ */
+enum ZT_TraceEventPathAddressType
+{
+	ZT_TRACE_EVENT_PATH_TYPE_NIL =          0, /* none/empty */
+	ZT_TRACE_EVENT_PATH_TYPE_INETADDR_V4 =  1, /* 4-byte IPv4 */
+	ZT_TRACE_EVENT_PATH_TYPE_INETADDR_V6 =  2, /* 16-byte IPv6 */
+	ZT_TRACE_EVENT_PATH_TYPE_DNSNAME =      3, /* C string */
+	ZT_TRACE_EVENT_PATH_TYPE_ZEROTIER =     4, /* 5-byte ZeroTier + 48-byte identity hash */
+	ZT_TRACE_EVENT_PATH_TYPE_URL =          5, /* C string */
+	ZT_TRACE_EVENT_PATH_TYPE_ETHERNET =     6  /* 6-byte Ethernet */
+};
+
+/**
+ * Reasons for trying new paths
+ */
+enum ZT_TraceTryingNewPathReason
+{
+	ZT_TRACE_TRYING_NEW_PATH_REASON_PACKET_RECEIVED_FROM_UNKNOWN_PATH = 1,
+	ZT_TRACE_TRYING_NEW_PATH_REASON_RECEIVED_PUSH_DIRECT_PATHS = 2,
+	ZT_TRACE_TRYING_NEW_PATH_REASON_RENDEZVOUS = 3
+};
+
+/**
+ * Reasons for credential rejection
+ */
+enum ZT_TraceCredentialRejectionReason
+{
+	ZT_TRACE_CREDENTIAL_REJECTION_REASON_SIGNATURE_VERIFICATION_FAILED = 1,
+	ZT_TRACE_CREDENTIAL_REJECTION_REASON_REVOKED = 2,
+	ZT_TRACE_CREDENTIAL_REJECTION_REASON_OLDER_THAN_LATEST = 3,
+	ZT_TRACE_CREDENTIAL_REJECTION_REASON_INVALID = 4
+};
+
+/**
+ * Physical path address from a trace event
+ *
+ * This is a special packed address format that roughly mirrors Endpoint in the core
+ * and is designed to support both present and future address types.
+ */
+ZT_PACKED_STRUCT(struct ZT_TraceEventPathAddress
+{
+	uint8_t type;        /* ZT_TraceEventPathAddressType */
+	uint8_t address[63]; /* Type-dependent address: 4-byte IPv4, 16-byte IPV6, etc. */
+	uint16_t port;       /* UDP/TCP port for address types for which this is meaningful */
+});
+
+/**
+ * Header for all trace events
+ *
+ * All packet types begin with these fields in this order.
+ */
+ZT_PACKED_STRUCT(struct ZT_TraceEvent
+{
+	uint16_t evSize;     /* sizeof(ZT_TraceEvent_XX structure) (inclusive size in bytes) */
+	uint16_t evType;     /* ZT_TraceEventType */
+});
+
+/* Temporary macros to make it easier to declare all ZT_TraceEvent's sub-types */
+#define _ZT_TRACE_EVENT_STRUCT_START(e) ZT_PACKED_STRUCT_START struct ZT_TraceEvent_##e { \
+	uint16_t evSize; \
+	uint16_t evType;
+#define _ZT_TRACE_EVENT_STRUCT_END() } ZT_PACKED_STRUCT_END;
+
+/**
+ * Node is resetting all paths in a given address scope
+ *
+ * This happens when the node detects and external surface IP addressing change
+ * via a trusted (usually root) peer. It's used to renegotiate links when nodes
+ * move around on the network.
+ */
+_ZT_TRACE_EVENT_STRUCT_START(VL1_RESETTING_PATHS_IN_SCOPE)
+	uint64_t reporter;                               /* ZeroTier address that triggered the reset */
+	uint8_t reporterIdentityHash[48];                /* full identity hash of triggering node's identity */
+	struct ZT_TraceEventPathAddress from;            /* physical origin of triggering packet */
+	struct ZT_TraceEventPathAddress oldExternal;     /* previous detected external address */
+	struct ZT_TraceEventPathAddress newExternal;     /* new detected external address */
+	uint8_t scope;                                   /* IP scope being reset */
+_ZT_TRACE_EVENT_STRUCT_END()
+
+/**
+ * Node is trying a new path
+ *
+ * Paths are tried in response to PUSH_DIRECT_PATHS, RENDEZVOUS, and other places
+ * we might hear of them. A node tries a path by sending a trial message to it.
+ */
+_ZT_TRACE_EVENT_STRUCT_START(VL1_TRYING_NEW_PATH)
+	uint64_t address;                                /* short address of node we're trying to reach */
+	uint8_t identityHash[48];                        /* identity hash of node we're trying to reach */
+	struct ZT_TraceEventPathAddress physicalAddress; /* physical address being tried */
+	struct ZT_TraceEventPathAddress triggerAddress;  /* physical origin of triggering packet */
+	uint64_t triggeringPacketId;                     /* packet ID of triggering packet */
+	uint8_t triggeringPacketVerb;                    /* packet verb of triggering packet */
+	uint64_t triggeredByAddress;                     /* short address of node triggering attempt */
+	uint8_t triggeredByIdentityHash[48];             /* full identity hash of node triggering attempt */
+	uint8_t reason;                                  /* ZT_TraceTryingNewPathReason */
+_ZT_TRACE_EVENT_STRUCT_END()
+
+/**
+ * Node has learned a new path to another node
+ */
+_ZT_TRACE_EVENT_STRUCT_START(VL1_LEARNED_NEW_PATH)
+	uint64_t packetId;                               /* packet ID of confirming packet */
+	uint64_t address;                                /* short address of learned peer */
+	uint8_t identityHash[48];                        /* full identity hash of learned peer */
+	struct ZT_TraceEventPathAddress physicalAddress; /* physical address learned */
+	struct ZT_TraceEventPathAddress replaced;        /* if non-empty, an older address that was replaced */
+_ZT_TRACE_EVENT_STRUCT_END()
+
+/**
+ * An incoming packet was dropped at the VL1 level
+ *
+ * This indicates a packet that passed MAC check but was dropped for some other
+ * reason such as rate limits, being malformed, etc.
+ */
+_ZT_TRACE_EVENT_STRUCT_START(VL1_INCOMING_PACKET_DROPPED)
+	uint64_t packetId;                               /* packet ID of failed packet */
+	uint64_t networkId;                              /* VL2 network ID or 0 if unrelated to a network or unknown */
+	uint64_t address;                                /* short address that sent packet */
+	uint8_t identityHash[48];                        /* full identity hash of sending node */
+	struct ZT_TraceEventPathAddress physicalAddress; /* physical origin address of packet */
+	uint8_t hops;                                    /* hop count of packet */
+	uint8_t verb;                                    /* packet verb */
+	uint8_t reason;                                  /* ZT_TracePacketDropReason */
+_ZT_TRACE_EVENT_STRUCT_END()
+
+/**
+ * Node declined to send a packet read from a local network port/tap
+ */
+_ZT_TRACE_EVENT_STRUCT_START(VL2_OUTGOING_FRAME_DROPPED)
+	uint64_t networkId;                              /* network ID */
+	uint64_t sourceMac;                              /* source MAC address */
+	uint64_t destMac;                                /* destination MAC address */
+	uint16_t etherType;                              /* Ethernet type of frame */
+	uint16_t frameLength;                            /* length of dropped frame */
+	uint8_t frameHead[64];                           /* first up to 64 bytes of dropped frame */
+	uint8_t reason;                                  /* ZT_TraceFrameDropReason */
+_ZT_TRACE_EVENT_STRUCT_END()
+
+/**
+ * An incoming frame was dropped
+ */
+_ZT_TRACE_EVENT_STRUCT_START(VL2_INCOMING_FRAME_DROPPED)
+	uint64_t packetId;                               /* VL1 packet ID */
+	uint64_t networkId;                              /* VL2 network ID */
+	uint64_t sourceMac;                              /* 48-bit source MAC */
+	uint64_t destMac;                                /* 48-bit destination MAC */
+	uint64_t address;                                /* short address of sending peer */
+	struct ZT_TraceEventPathAddress physicalAddress; /* physical source address of packet */
+	uint8_t hops;                                    /* hop count of packet */
+	uint16_t frameLength;                            /* length of frame in bytes */
+	uint8_t frameHead[64];                           /* first up to 64 bytes of dropped frame */
+	uint8_t verb;                                    /* packet verb indicating how frame was sent */
+	uint8_t credentialRequestSent;                   /* if non-zero a request for credentials was sent */
+	uint8_t reason;                                  /* ZT_TraceFrameDropReason */
+_ZT_TRACE_EVENT_STRUCT_END()
+
+/**
+ * Node is requesting a new network config and certificate from a network controller
+ */
+_ZT_TRACE_EVENT_STRUCT_START(VL2_NETWORK_CONFIG_REQUESTED)
+	uint64_t networkId;                              /* VL2 network ID */
+_ZT_TRACE_EVENT_STRUCT_END()
+
+/**
+ * Network filter trace results
+ *
+ * These are generated when filter tracing is enabled to allow filters to be debugged.
+ * Format for rule set logs is documented elsewhere.
+ */
+_ZT_TRACE_EVENT_STRUCT_START(VL2_NETWORK_FILTER)
+	uint64_t networkId;                              /* VL2 network ID */
+	uint8_t primaryRuleSetLog[512];                  /* primary rule set log */
+	uint8_t matchingCapabilityRuleSetLog[512];       /* capability rule set log (if any) */
+	uint32_t matchingCapabilityId;                   /* capability ID or 0 if none */
+	int64_t matchingCapabilityTimestamp;             /* capability timestamp or 0 if none */
+	uint64_t source;                                 /* source ZeroTier address */
+	uint64_t dest;                                   /* destination ZeroTier address */
+	uint64_t sourceMac;                              /* packet source MAC */
+	uint64_t destMac;                                /* packet destination MAC */
+	uint16_t frameLength;                            /* length of filtered frame */
+	uint8_t frameHead[64];                           /* first up to 64 bytes of filtered frame */
+	uint16_t etherType;                              /* frame Ethernet type */
+	uint16_t vlanId;                                 /* frame VLAN ID (currently unused, always 0) */
+	uint8_t noTee;                                   /* if true noTee flag was set in filter */
+	uint8_t inbound;                                 /* direction: 1 for inbound, 0 for outbound */
+	int8_t accept;                                   /* 0: drop, 1: accept, 2: "super-accept" */
+_ZT_TRACE_EVENT_STRUCT_END()
+
+/**
+ * An incoming credential from a peer was rejected
+ */
+_ZT_TRACE_EVENT_STRUCT_START(VL2_CREDENTIAL_REJECTED)
+	uint64_t networkId;                              /* VL2 network ID */
+	uint64_t address;                                /* short address of sender */
+	uint32_t credentialId;                           /* credential ID */
+	int64_t credentialTimestamp;                     /* credential timestamp */
+	uint8_t credentialType;                          /* credential type */
+	uint8_t reason;                                  /* ZT_TraceCredentialRejectionReason */
+_ZT_TRACE_EVENT_STRUCT_END()
+
+#undef _ZT_TRACE_EVENT_STRUCT_START
+#undef _ZT_TRACE_EVENT_STRUCT_END
+
 /****************************************************************************/
 
 /**
@@ -390,7 +700,7 @@ enum ZT_Event
 	 * These events are only generated if this is a TRACE-enabled build.
 	 * This is for local debug traces, not remote trace diagnostics.
 	 *
-	 * Meta-data: C string, TRACE message
+	 * Meta-data: struct of type ZT_Trace_*
 	 */
 	ZT_EVENT_TRACE = 5,
 
@@ -1165,8 +1475,6 @@ enum ZT_StateObjectType
 typedef void ZT_Node;
 
 /****************************************************************************/
-/* Callbacks used by Node API                                               */
-/****************************************************************************/
 
 /**
  * Callback called to update virtual network port configuration
@@ -1356,8 +1664,6 @@ typedef int (*ZT_PathLookupFunction)(
 	int,                              /* Desired ss_family or -1 for any */
 	struct sockaddr_storage *);       /* Result buffer */
 
-/****************************************************************************/
-/* C Node API                                                               */
 /****************************************************************************/
 
 /**
@@ -1735,6 +2041,8 @@ ZT_SDK_API void ZT_Node_setController(ZT_Node *node,void *networkConfigMasterIns
  */
 ZT_SDK_API enum ZT_ResultCode ZT_Node_setPhysicalPathConfiguration(ZT_Node *node,const struct sockaddr_storage *pathNetwork,const ZT_PhysicalPathConfiguration *pathConfig);
 
+/****************************************************************************/
+
 /**
  * Generate a new identity
  *
@@ -1843,6 +2151,8 @@ ZT_SDK_API void ZT_Identity_hash(const ZT_Identity *id,uint8_t h[48],int include
  * @param id Identity to delete
  */
 ZT_SDK_API void ZT_Identity_delete(ZT_Identity *id);
+
+/****************************************************************************/
 
 /**
  * Get ZeroTier One version

@@ -264,7 +264,7 @@ public:
 	 * @param remoteAddress Remote address
 	 * @return True if path should be used
 	 */
-	bool shouldUsePathForZeroTierTraffic(void *tPtr,const Identity &id,const int64_t localSocket,const InetAddress &remoteAddress);
+	bool shouldUsePathForZeroTierTraffic(void *tPtr,const Identity &id,int64_t localSocket,const InetAddress &remoteAddress);
 
 	/**
 	 * Query callback for a physical address for a peer

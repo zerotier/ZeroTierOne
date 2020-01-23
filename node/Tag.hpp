@@ -52,7 +52,7 @@ class Tag : public Credential
 	friend class Credential;
 
 public:
-	static ZT_ALWAYS_INLINE Credential::Type credentialType() { return Credential::CREDENTIAL_TYPE_TAG; }
+	static ZT_ALWAYS_INLINE ZT_CredentialType credentialType() { return ZT_CREDENTIAL_TYPE_TAG; }
 
 	ZT_ALWAYS_INLINE Tag() :
 		_id(0),

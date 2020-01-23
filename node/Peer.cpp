@@ -92,9 +92,7 @@ void Peer::received(
 				if ((_paths[i]->address().ss_family == path->address().ss_family) &&
 				    (_paths[i]->localSocket() == path->localSocket()) && // TODO: should be localInterface when multipath is integrated
 				    (_paths[i]->address().ipsEqual2(path->address()))) {
-					// If this is another path to the same place, swap it out as the
-					// one we just received from may replace an old one but don't
-					// learn it as a new path.
+					// Replace older path if everything is the same except the port number.
 					_paths[i] = path;
 					goto path_check_done;
 				} else {
@@ -130,7 +128,7 @@ path_check_done:
 		_lastAttemptedP2PInit = now;
 
 		InetAddress addr;
-		if (_bootstrap.type() == Endpoint::INETADDR)
+		if ((_bootstrap.type() == Endpoint::INETADDR_V4)||(_bootstrap.type() == Endpoint::INETADDR_V6))
 			sendHELLO(tPtr,-1,_bootstrap.inetAddr(),now);
 		if (RR->node->externalPathLookup(tPtr,_id,-1,addr)) {
 			if (RR->node->shouldUsePathForZeroTierTraffic(tPtr,_id,-1,addr))
@@ -256,7 +254,7 @@ void Peer::ping(void *tPtr,int64_t now,const bool pingAllAddressTypes)
 		return;
 	}
 
-	if (_bootstrap.type() == Endpoint::INETADDR)
+	if ((_bootstrap.type() == Endpoint::INETADDR_V4)||(_bootstrap.type() == Endpoint::INETADDR_V6))
 		sendHELLO(tPtr,-1,_bootstrap.inetAddr(),now);
 
 	SharedPtr<Peer> r(RR->topology->root());

@@ -28,18 +28,15 @@
 //
 
 #ifndef __GCC__
-#if defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1) || defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2) || defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4)
+#if defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1) || defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2) || defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4) || defined(__INTEL_COMPILER) || defined(__clang__)
 #define __GCC__
 #endif
 #endif
 
-#if !defined(__GCC__) && !defined (__clang__) && !defined(__INTEL_COMPILER)
-#define ZT_PACKED_STRUCT(D) __pragma(pack(push,1)) D __pragma(pack(pop))
+#ifdef _MSC_VER
 #pragma warning(disable : 4290)
 #pragma warning(disable : 4996)
 #pragma warning(disable : 4101)
-#else
-#define ZT_PACKED_STRUCT(D) D __attribute__((packed))
 #endif
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -98,8 +95,8 @@
 
 // Avoid unaligned type casts on all but x86/x64 architecture.
 #if (!(defined(__amd64__) || defined(__amd64) || defined(__x86_64__) || defined(__x86_64) || defined(_M_AMD64) || defined(_M_X64) || defined(i386) || defined(__i386) || defined(__i386__) || defined(__i486__) || defined(__i586__) || defined(__i686__) || defined(_M_IX86) || defined(__X86__) || defined(_X86_) || defined(__I86__) || defined(__INTEL__) || defined(__386)))
-#ifndef ZT_NO_TYPE_PUNNING
-#define ZT_NO_TYPE_PUNNING
+#ifndef ZT_NO_UNALIGNED_ACCESS
+#define ZT_NO_UNALIGNED_ACCESS
 #endif
 #endif
 
