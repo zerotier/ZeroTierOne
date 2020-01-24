@@ -35,11 +35,11 @@ public:
 	ZT_ALWAYS_INLINE MAC(const MAC &m) : _m(m._m) {}
 
 	ZT_ALWAYS_INLINE MAC(const unsigned char a,const unsigned char b,const unsigned char c,const unsigned char d,const unsigned char e,const unsigned char f) :
-		_m( ((((uint64_t)a) & 0xffULL) << 40) |
-		    ((((uint64_t)b) & 0xffULL) << 32) |
-		    ((((uint64_t)c) & 0xffULL) << 24) |
-		    ((((uint64_t)d) & 0xffULL) << 16) |
-		    ((((uint64_t)e) & 0xffULL) << 8) |
+		_m( ((((uint64_t)a) & 0xffULL) << 40U) |
+		    ((((uint64_t)b) & 0xffULL) << 32U) |
+		    ((((uint64_t)c) & 0xffULL) << 24U) |
+		    ((((uint64_t)d) & 0xffULL) << 16U) |
+		    ((((uint64_t)e) & 0xffULL) << 8U) |
 		    (((uint64_t)f) & 0xffULL) ) {}
 	ZT_ALWAYS_INLINE MAC(const void *bits,unsigned int len) { setTo(bits,len); }
 	ZT_ALWAYS_INLINE MAC(const Address &ztaddr,uint64_t nwid) { fromAddress(ztaddr,nwid); }
@@ -70,13 +70,13 @@ public:
 			_m = 0ULL;
 			return;
 		}
-		const unsigned char *b = (const unsigned char *)bits;
-		_m =  ((((uint64_t)*b) & 0xff) << 40); ++b;
-		_m |= ((((uint64_t)*b) & 0xff) << 32); ++b;
-		_m |= ((((uint64_t)*b) & 0xff) << 24); ++b;
-		_m |= ((((uint64_t)*b) & 0xff) << 16); ++b;
-		_m |= ((((uint64_t)*b) & 0xff) << 8); ++b;
-		_m |= (((uint64_t)*b) & 0xff);
+		const uint8_t *const b = (const uint8_t *)bits;
+		_m =  (uint64_t)b[0] << 40U;
+		_m |= (uint64_t)b[1] << 32U;
+		_m |= (uint64_t)b[2] << 24U;
+		_m |= (uint64_t)b[3] << 16U;
+		_m |= (uint64_t)b[4] << 8U;
+		_m |= (uint64_t)b[5];
 	}
 
 	/**
@@ -87,13 +87,13 @@ public:
 	{
 		if (len < 6)
 			return;
-		unsigned char *b = (unsigned char *)buf;
-		*(b++) = (unsigned char)((_m >> 40) & 0xff);
-		*(b++) = (unsigned char)((_m >> 32) & 0xff);
-		*(b++) = (unsigned char)((_m >> 24) & 0xff);
-		*(b++) = (unsigned char)((_m >> 16) & 0xff);
-		*(b++) = (unsigned char)((_m >> 8) & 0xff);
-		*b = (unsigned char)(_m & 0xff);
+		uint8_t *const b = (uint8_t *)buf;
+		b[0] = (uint8_t)(_m >> 40U);
+		b[1] = (uint8_t)(_m >> 32U);
+		b[2] = (uint8_t)(_m >> 24U);
+		b[3] = (uint8_t)(_m >> 16U);
+		b[4] = (uint8_t)(_m >> 8U);
+		b[5] = (uint8_t)_m;
 	}
 
 	/**
@@ -104,7 +104,7 @@ public:
 	template<unsigned int C>
 	ZT_ALWAYS_INLINE void appendTo(Buffer<C> &b) const
 	{
-		unsigned char *p = (unsigned char *)b.appendField(6);
+		uint8_t *p = (uint8_t *)b.appendField(6);
 		*(p++) = (unsigned char)((_m >> 40) & 0xff);
 		*(p++) = (unsigned char)((_m >> 32) & 0xff);
 		*(p++) = (unsigned char)((_m >> 24) & 0xff);
@@ -122,11 +122,6 @@ public:
 	 * @return True if this is a multicast MAC
 	 */
 	ZT_ALWAYS_INLINE bool isMulticast() const { return ((_m & 0x010000000000ULL) != 0ULL); }
-
-	/**
-	 * @param True if this is a locally-administered MAC
-	 */
-	ZT_ALWAYS_INLINE bool isLocallyAdministered() const { return ((_m & 0x020000000000ULL) != 0ULL); }
 
 	/**
 	 * Set this MAC to a MAC derived from an address and a network ID
@@ -187,25 +182,25 @@ public:
 
 	ZT_ALWAYS_INLINE unsigned long hashCode() const { return (unsigned long)_m; }
 
-	inline char *toString(char buf[18]) const
+	ZT_ALWAYS_INLINE char *toString(char buf[18]) const
 	{
-		buf[0] = Utils::HEXCHARS[(_m >> 44) & 0xf];
-		buf[1] = Utils::HEXCHARS[(_m >> 40) & 0xf];
+		buf[0] = Utils::HEXCHARS[(_m >> 44U) & 0xfU];
+		buf[1] = Utils::HEXCHARS[(_m >> 40U) & 0xfU];
 		buf[2] = ':';
-		buf[3] = Utils::HEXCHARS[(_m >> 36) & 0xf];
-		buf[4] = Utils::HEXCHARS[(_m >> 32) & 0xf];
+		buf[3] = Utils::HEXCHARS[(_m >> 36U) & 0xfU];
+		buf[4] = Utils::HEXCHARS[(_m >> 32U) & 0xfU];
 		buf[5] = ':';
-		buf[6] = Utils::HEXCHARS[(_m >> 28) & 0xf];
-		buf[7] = Utils::HEXCHARS[(_m >> 24) & 0xf];
+		buf[6] = Utils::HEXCHARS[(_m >> 28U) & 0xfU];
+		buf[7] = Utils::HEXCHARS[(_m >> 24U) & 0xfU];
 		buf[8] = ':';
-		buf[9] = Utils::HEXCHARS[(_m >> 20) & 0xf];
-		buf[10] = Utils::HEXCHARS[(_m >> 16) & 0xf];
+		buf[9] = Utils::HEXCHARS[(_m >> 20U) & 0xfU];
+		buf[10] = Utils::HEXCHARS[(_m >> 16U) & 0xfU];
 		buf[11] = ':';
-		buf[12] = Utils::HEXCHARS[(_m >> 12) & 0xf];
-		buf[13] = Utils::HEXCHARS[(_m >> 8) & 0xf];
+		buf[12] = Utils::HEXCHARS[(_m >> 12U) & 0xfU];
+		buf[13] = Utils::HEXCHARS[(_m >> 8U) & 0xfU];
 		buf[14] = ':';
-		buf[15] = Utils::HEXCHARS[(_m >> 4) & 0xf];
-		buf[16] = Utils::HEXCHARS[_m & 0xf];
+		buf[15] = Utils::HEXCHARS[(_m >> 4U) & 0xfU];
+		buf[16] = Utils::HEXCHARS[_m & 0xfU];
 		buf[17] = (char)0;
 		return buf;
 	}

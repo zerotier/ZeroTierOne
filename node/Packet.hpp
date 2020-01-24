@@ -254,6 +254,21 @@
  */
 #define ZT_PROTO_NODE_META_WILL_RELAY_TO "r"
 
+/**
+ * X coordinate of your node (sent in OK(HELLO))
+ */
+#define ZT_PROTO_NODE_META_LOCATION_X "gX"
+
+/**
+ * Y coordinate of your node (sent in OK(HELLO))
+ */
+#define ZT_PROTO_NODE_META_LOCATION_Y "gY"
+
+/**
+ * Z coordinate of your node (sent in OK(HELLO))
+ */
+#define ZT_PROTO_NODE_META_LOCATION_Z "gZ"
+
 // ---------------------------------------------------------------------------
 
 namespace ZeroTier {

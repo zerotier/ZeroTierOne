@@ -226,6 +226,12 @@ func apiCheckAuth(out http.ResponseWriter, req *http.Request, token string) bool
 	return false
 }
 
+type peerMutableFields struct {
+	Identity  *Identity    `json:"identity"`
+	Role      *int         `json:"role"`
+	Bootstrap *InetAddress `json:"bootstrap,omitempty"`
+}
+
 // createAPIServer creates and starts an HTTP server for a given node
 func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, error) {
 	// Read authorization token, automatically generating one if it's missing
@@ -360,12 +366,35 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 			}
 		}
 
+		// Right now POST/PUT is only used with peers to add or remove root servers.
 		if req.Method == http.MethodPost || req.Method == http.MethodPut {
 			if queriedID == 0 {
 				_ = apiSendObj(out, req, http.StatusNotFound, &APIErr{"peer not found"})
 				return
 			}
-		} else if req.Method == http.MethodGet || req.Method == http.MethodHead {
+			var peerChanges peerMutableFields
+			if apiReadObj(out, req, &peerChanges) == nil {
+				if peerChanges.Role != nil || peerChanges.Bootstrap != nil {
+					peers := node.Peers()
+					for _, p := range peers {
+						if p.Address == queriedID && (peerChanges.Identity == nil || peerChanges.Identity.Equals(p.Identity)) {
+							if peerChanges.Role != nil && *peerChanges.Role != p.Role {
+								if *peerChanges.Role == PeerRoleRoot {
+									_ = node.AddRoot(p.Identity, peerChanges.Bootstrap)
+								} else {
+									node.RemoveRoot(p.Identity)
+								}
+							}
+							break
+						}
+					}
+				}
+			} else {
+				return
+			}
+		}
+
+		if req.Method == http.MethodGet || req.Method == http.MethodHead || req.Method == http.MethodPost || req.Method == http.MethodPut {
 			peers := node.Peers()
 			if queriedID != 0 {
 				for _, p := range peers {

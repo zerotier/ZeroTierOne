@@ -17,6 +17,7 @@ package zerotier
 import "C"
 
 import (
+	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -51,7 +52,7 @@ type Identity struct {
 func identityFinalizer(obj interface{}) {
 	id, _ := obj.(*Identity)
 	if id != nil && uintptr(id.cid) != 0 {
-		defer C.ZT_Identity_delete(id.cid)
+		C.ZT_Identity_delete(id.cid)
 	}
 }
 
@@ -72,10 +73,23 @@ func newIdentityFromCIdentity(cid unsafe.Pointer) (*Identity, error) {
 	}
 
 	id.cid = cid
-
 	runtime.SetFinalizer(id, identityFinalizer)
 
 	return id, nil
+}
+
+// cIdentity returns a pointer to the core ZT_Identity instance or nil/0 on error.
+func (id *Identity) cIdentity() unsafe.Pointer {
+	if uintptr(id.cid) == 0 {
+		idCStr := C.CString(id.String())
+		defer C.free(unsafe.Pointer(idCStr))
+		id.cid = C.ZT_Identity_fromString(idCStr)
+		if uintptr(id.cid) == 0 {
+			return nil
+		}
+		runtime.SetFinalizer(id, identityFinalizer)
+	}
+	return id.cid
 }
 
 // NewIdentity generates a new identity of the selected type
@@ -140,8 +154,6 @@ func NewIdentityFromString(s string) (*Identity, error) {
 
 	}
 
-	runtime.SetFinalizer(id, identityFinalizer)
-
 	return id, nil
 }
 
@@ -184,26 +196,18 @@ func (id *Identity) String() string {
 
 // LocallyValidate performs local self-validation of this identity
 func (id *Identity) LocallyValidate() bool {
+	id.cIdentity()
 	if uintptr(id.cid) == 0 {
-		idCStr := C.CString(id.String())
-		defer C.free(unsafe.Pointer(idCStr))
-		id.cid = C.ZT_Identity_fromString(idCStr)
-		if uintptr(id.cid) == 0 {
-			return false
-		}
+		return false
 	}
 	return C.ZT_Identity_validate(id.cid) != 0
 }
 
 // Sign signs a message with this identity
 func (id *Identity) Sign(msg []byte) ([]byte, error) {
+	id.cIdentity()
 	if uintptr(id.cid) == 0 {
-		idCStr := C.CString(id.String())
-		defer C.free(unsafe.Pointer(idCStr))
-		id.cid = C.ZT_Identity_fromString(idCStr)
-		if uintptr(id.cid) == 0 {
-			return nil, ErrInvalidKey
-		}
+		return nil, ErrInvalidKey
 	}
 
 	var dataP unsafe.Pointer
@@ -225,13 +229,9 @@ func (id *Identity) Verify(msg, sig []byte) bool {
 		return false
 	}
 
+	id.cIdentity()
 	if uintptr(id.cid) == 0 {
-		idCStr := C.CString(id.String())
-		defer C.free(unsafe.Pointer(idCStr))
-		id.cid = C.ZT_Identity_fromString(idCStr)
-		if uintptr(id.cid) == 0 {
-			return false
-		}
+		return false
 	}
 
 	var dataP unsafe.Pointer
@@ -239,6 +239,17 @@ func (id *Identity) Verify(msg, sig []byte) bool {
 		dataP = unsafe.Pointer(&msg[0])
 	}
 	return C.ZT_Identity_verify(id.cid, dataP, C.uint(len(msg)), unsafe.Pointer(&sig[0]), C.uint(len(sig))) != 0
+}
+
+// Equals performs a deep equality test between this and another identity
+func (id *Identity) Equals(id2 *Identity) bool {
+	if id2 == nil {
+		return id == nil
+	}
+	if id == nil {
+		return false
+	}
+	return id.address == id2.address && id.idtype == id2.idtype && bytes.Equal(id.publicKey, id2.publicKey) && bytes.Equal(id.privateKey, id2.privateKey)
 }
 
 // MarshalJSON marshals this Identity in its string format (private key is never included)

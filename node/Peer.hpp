@@ -59,7 +59,7 @@ public:
 	 *
 	 * @param renv Runtime environment
 	 */
-	Peer(const RuntimeEnvironment *renv);
+	explicit Peer(const RuntimeEnvironment *renv);
 
 	ZT_ALWAYS_INLINE ~Peer() { Utils::burn(_key,sizeof(_key)); }
 

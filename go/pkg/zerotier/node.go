@@ -542,6 +542,32 @@ func (n *Node) Leave(nwid NetworkID) error {
 	return nil
 }
 
+// AddRoot adds a root server with an optional bootstrap address for establishing first contact.
+// If you're already using roots backed by proper global LF data stores the bootstrap address may
+// be unnecessary as your node can probably find the new root automatically.
+func (n *Node) AddRoot(id *Identity, bootstrap *InetAddress) error {
+	if id == nil {
+		return ErrInvalidParameter
+	}
+	var cBootstrap C.struct_sockaddr_storage
+	if bootstrap != nil {
+		makeSockaddrStorage(bootstrap.IP, bootstrap.Port, &cBootstrap)
+	} else {
+		zeroSockaddrStorage(&cBootstrap)
+	}
+	C.ZT_Node_addRoot(n.zn, nil, id.cIdentity(), &cBootstrap)
+	return nil
+}
+
+// RemoveRoot removes a root server for this node.
+// This doesn't instantly close paths to the given peer or forget about it. It just
+// demotes it to a normal peer.
+func (n *Node) RemoveRoot(id *Identity) {
+	if id != nil {
+		C.ZT_Node_removeRoot(n.zn, nil, id.cIdentity())
+	}
+}
+
 // GetNetwork looks up a network by ID or returns nil if not joined
 func (n *Node) GetNetwork(nwid NetworkID) *Network {
 	n.networksLock.RLock()
@@ -883,13 +909,10 @@ func goZtEvent(gn unsafe.Pointer, eventType C.int, data unsafe.Pointer) {
 	if node == nil {
 		return
 	}
-
 	switch eventType {
 	case C.ZT_EVENT_OFFLINE:
 		atomic.StoreUint32(&node.online, 0)
 	case C.ZT_EVENT_ONLINE:
 		atomic.StoreUint32(&node.online, 1)
-	case C.ZT_EVENT_TRACE:
-		node.handleTrace(C.GoString((*C.char)(data)))
 	}
 }

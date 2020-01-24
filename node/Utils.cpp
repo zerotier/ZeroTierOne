@@ -85,7 +85,7 @@ static unsigned long _Utils_itoa(unsigned long n,char *s)
 	unsigned long pos = _Utils_itoa(n / 10,s);
 	if (pos >= 22) // sanity check,should be impossible
 		pos = 22;
-	s[pos] = '0' + (char)(n % 10);
+	s[pos] = (char)('0' + (n % 10));
 	return pos + 1;
 }
 char *decimal(unsigned long n,char s[24])

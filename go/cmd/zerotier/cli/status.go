@@ -34,7 +34,11 @@ func Status(basePath, authToken string, args []string, jsonOutput bool) {
 		}
 		fmt.Printf("%.10x: %s %s\n", uint64(status.Address), online, status.Version)
 		fmt.Printf("\tidentity:\t%s\n", status.Identity.String())
-		fmt.Printf("\tports:\tprimary: %d secondary: %d\n", status.Config.Settings.PrimaryPort, status.Config.Settings.SecondaryPort)
+		if status.Config.Settings.SecondaryPort > 0 && status.Config.Settings.SecondaryPort < 65536 {
+			fmt.Printf("\tports:\t%d %d\n", status.Config.Settings.PrimaryPort, status.Config.Settings.SecondaryPort)
+		} else {
+			fmt.Printf("\tports:\t%d\n", status.Config.Settings.PrimaryPort)
+		}
 		fmt.Printf("\tport search:\t%s\n", enabledDisabled(status.Config.Settings.PortSearch))
 		fmt.Printf("\tport mapping (uPnP/NAT-PMP):\t%s\n", enabledDisabled(status.Config.Settings.PortMapping))
 		fmt.Printf("\tblacklisted interface prefixes:\t")

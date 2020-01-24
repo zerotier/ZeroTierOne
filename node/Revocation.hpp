@@ -96,7 +96,7 @@ public:
 	 * @param signer Signing identity, must have private key
 	 * @return True if signature was successful
 	 */
-	inline bool sign(const Identity &signer)
+	ZT_ALWAYS_INLINE bool sign(const Identity &signer)
 	{
 		if (signer.hasPrivate()) {
 			Buffer<sizeof(Revocation) + 64> tmp;

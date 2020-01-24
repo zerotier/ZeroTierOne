@@ -74,8 +74,12 @@ func sockaddrStorageToUDPAddr2(ss unsafe.Pointer) *net.UDPAddr {
 	return sockaddrStorageToUDPAddr((*C.struct_sockaddr_storage)(ss))
 }
 
-func makeSockaddrStorage(ip net.IP, port int, ss *C.struct_sockaddr_storage) bool {
+func zeroSockaddrStorage(ss *C.struct_sockaddr_storage) {
 	C.memset(unsafe.Pointer(ss), 0, C.sizeof_struct_sockaddr_storage)
+}
+
+func makeSockaddrStorage(ip net.IP, port int, ss *C.struct_sockaddr_storage) bool {
+	zeroSockaddrStorage(ss)
 	if len(ip) == 4 {
 		sa4 := (*C.struct_sockaddr_in)(unsafe.Pointer(ss))
 		sa4.sin_family = syscall.AF_INET

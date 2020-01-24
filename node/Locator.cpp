@@ -83,7 +83,7 @@ int Locator::unmarshal(const uint8_t *restrict data,const int len)
 		if (ec > ZT_LOCATOR_MAX_ENDPOINTS)
 			return -1;
 		_endpointCount = ec;
-		for (int i = 0; i < ec; ++i) {
+		for (unsigned int i = 0; i < ec; ++i) {
 			int tmp = _at[i].unmarshal(data + p,len - p);
 			if (tmp < 0)
 				return -1;
@@ -97,7 +97,7 @@ int Locator::unmarshal(const uint8_t *restrict data,const int len)
 		if (sl > ZT_SIGNATURE_BUFFER_SIZE)
 			return -1;
 		_signatureLength = sl;
-		if ((p + sl) > len)
+		if ((p + (int)sl) > len)
 			return -1;
 		memcpy(_signature,data + p,sl);
 		p += (int)sl;

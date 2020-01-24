@@ -134,7 +134,7 @@ func main() {
 	case "peers", "listpeers":
 		authTokenRequired(authToken)
 		cli.Peers(basePath, authToken, cmdArgs, *jflag)
-	case "roots", "listroots", "listmoons":
+	case "roots", "listroots":
 		authTokenRequired(authToken)
 		cli.Roots(basePath, authToken, cmdArgs, *jflag)
 	case "addroot":
