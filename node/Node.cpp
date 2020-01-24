@@ -446,7 +446,7 @@ ZT_PeerList *Node::peers() const
 		p->latency = (int)(*pi)->latency();
 		if (p->latency >= 0xffff)
 			p->latency = -1;
-		p->role = RR->topology->isRoot((*pi)->identity()) ? ZT_PEER_ROLE_ROOT : ZT_PEER_ROLE_LEAF;
+		p->root = RR->topology->isRoot((*pi)->identity()) ? 1 : 0;
 		memcpy(&p->bootstrap,&((*pi)->bootstrap()),sizeof(sockaddr_storage));
 
 		std::vector< SharedPtr<Path> > paths;

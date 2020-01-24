@@ -41,13 +41,13 @@ Commands:
   service                              Start as service
   status                               Show ZeroTier status and config
   peers                                Show VL1 peers and link information
+  roots                                Show only root peers
+  addroot <identity> [IP/port]         Add root with optional bootstrap IP
+  removeroot <address|identity>        Remove root
   join <network ID>                    Join a virtual network
   leave <network ID>                   Leave a virtual network
   networks                             List joined VL2 virtual networks
   network <network ID>                 Show verbose network info
-  addroot <identity> [IP/port]         Add root with optional bootstrap IP
-  removeroot <identity|address>        Remove root
-  roots                                Show configured VL1 root servers
   set <network ID> [option] [value]    Get or set a network config option
     manageips <boolean>                Is IP management allowed?
     manageroutes <boolean>             Is route management allowed?

@@ -13,14 +13,6 @@
 
 package zerotier
 
-// Peer roles must be the same as in ZeroTierCore.h.
-
-// PeerRoleLeaf indicates a normal leaf node.
-const PeerRoleLeaf = 0
-
-// PeerRoleRoot indicates a root peer.
-const PeerRoleRoot = 1
-
 // Peer is another ZeroTier node
 type Peer struct {
 	Address      Address      `json:"address"`
@@ -28,7 +20,14 @@ type Peer struct {
 	IdentityHash string       `json:"identityHash"`
 	Version      [3]int       `json:"version"`
 	Latency      int          `json:"latency"`
-	Role         int          `json:"role"`
+	Root         bool         `json:"root"`
 	Bootstrap    *InetAddress `json:"bootstrap,omitempty"`
 	Paths        []Path       `json:"paths,omitempty"`
+}
+
+// PeerMutableFields contains only the mutable fields of Peer as nullable pointers.
+type PeerMutableFields struct {
+	Identity  *Identity    `json:"identity"`
+	Root      *bool        `json:"root"`
+	Bootstrap *InetAddress `json:"bootstrap,omitempty"`
 }

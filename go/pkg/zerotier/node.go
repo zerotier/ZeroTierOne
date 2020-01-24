@@ -80,6 +80,7 @@ var (
 
 	// This map is used to get the Go Node object from a pointer passed back in via C callbacks
 	nodesByUserPtr     = make(map[uintptr]*Node)
+	nodesByUserPtrCtr  = uintptr(0)
 	nodesByUserPtrLock sync.RWMutex
 )
 
@@ -130,6 +131,9 @@ type Node struct {
 
 	// runWaitGroup is used to wait for all node goroutines on shutdown
 	runWaitGroup sync.WaitGroup
+
+	// an arbitrary uintptr given to the core as its pointer back to Go's Node instance
+	cPtr uintptr
 }
 
 // NewNode creates and initializes a new instance of the ZeroTier node service
@@ -242,17 +246,18 @@ func NewNode(basePath string) (n *Node, err error) {
 	}
 
 	nodesByUserPtrLock.Lock()
-	nodesByUserPtr[uintptr(unsafe.Pointer(n))] = n
+	nodesByUserPtrCtr++
+	n.cPtr = nodesByUserPtrCtr
+	nodesByUserPtr[n.cPtr] = n
 	nodesByUserPtrLock.Unlock()
 
-	// Instantiate GoNode and friends from the land of C/C++
 	cPath := C.CString(basePath)
-	n.gn = C.ZT_GoNode_new(cPath, C.uintptr_t(uintptr(unsafe.Pointer(n))))
+	n.gn = C.ZT_GoNode_new(cPath, C.uintptr_t(n.cPtr))
 	C.free(unsafe.Pointer(cPath))
 	if n.gn == nil {
 		n.infoLog.Println("FATAL: node initialization failed")
 		nodesByUserPtrLock.Lock()
-		delete(nodesByUserPtr, uintptr(unsafe.Pointer(n)))
+		delete(nodesByUserPtr, n.cPtr)
 		nodesByUserPtrLock.Unlock()
 		return nil, ErrNodeInitFailed
 	}
@@ -261,7 +266,7 @@ func NewNode(basePath string) (n *Node, err error) {
 	if err != nil {
 		n.infoLog.Printf("FATAL: error obtaining node's identity")
 		nodesByUserPtrLock.Lock()
-		delete(nodesByUserPtr, uintptr(unsafe.Pointer(n)))
+		delete(nodesByUserPtr, n.cPtr)
 		nodesByUserPtrLock.Unlock()
 		C.ZT_GoNode_delete(n.gn)
 		return nil, err
@@ -600,7 +605,7 @@ func (n *Node) Peers() []*Peer {
 			p2.IdentityHash = hex.EncodeToString((*[48]byte)(unsafe.Pointer(&p.identityHash[0]))[:])
 			p2.Version = [3]int{int(p.versionMajor), int(p.versionMinor), int(p.versionRev)}
 			p2.Latency = int(p.latency)
-			p2.Role = int(p.role)
+			p2.Root = p.root != 0
 			p2.Bootstrap = NewInetAddressFromSockaddr(unsafe.Pointer(&p.bootstrap))
 
 			p2.Paths = make([]Path, 0, int(p.pathCount))

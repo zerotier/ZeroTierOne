@@ -105,6 +105,11 @@ type InetAddress struct {
 	Port int
 }
 
+// Nil returns true if this InetAddress is empty.
+func (ina *InetAddress) Nil() bool {
+	return len(ina.IP) == 0
+}
+
 // Less returns true if this IP/port is lexicographically less than another
 func (ina *InetAddress) Less(i2 *InetAddress) bool {
 	c := bytes.Compare(ina.IP, i2.IP)

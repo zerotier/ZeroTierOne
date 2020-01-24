@@ -133,16 +133,16 @@ func main() {
 		cli.Status(basePath, authToken, cmdArgs, *jflag)
 	case "peers", "listpeers":
 		authTokenRequired(authToken)
-		cli.Peers(basePath, authToken, cmdArgs, *jflag)
+		cli.Peers(basePath, authToken, cmdArgs, *jflag, false)
 	case "roots", "listroots":
 		authTokenRequired(authToken)
-		cli.Roots(basePath, authToken, cmdArgs, *jflag)
+		cli.Peers(basePath, authToken, cmdArgs, *jflag, true)
 	case "addroot":
 		authTokenRequired(authToken)
-		cli.AddRoot(basePath, authToken, cmdArgs)
+		cli.SetRoot(basePath, authToken, cmdArgs, true)
 	case "removeroot":
 		authTokenRequired(authToken)
-		cli.RemoveRoot(basePath, authToken, cmdArgs)
+		cli.SetRoot(basePath, authToken, cmdArgs, false)
 	case "identity":
 		cli.Identity(cmdArgs)
 	case "networks", "listnetworks":

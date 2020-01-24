@@ -1324,15 +1324,6 @@ typedef struct
 } ZT_PeerPhysicalPath;
 
 /**
- * What trust hierarchy role does this peer have?
- */
-enum ZT_PeerRole
-{
-	ZT_PEER_ROLE_LEAF = 0,
-	ZT_PEER_ROLE_ROOT = 1
-};
-
-/**
  * Peer status result buffer
  */
 typedef struct
@@ -1373,9 +1364,9 @@ typedef struct
 	int latency;
 
 	/**
-	 * What trust hierarchy role does this device have?
+	 * If non-zero this peer is a root
 	 */
-	enum ZT_PeerRole role;
+	int root;
 
 	/**
 	 * Bootstrap address
