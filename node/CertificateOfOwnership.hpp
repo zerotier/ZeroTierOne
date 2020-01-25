@@ -24,7 +24,6 @@
 #include "C25519.hpp"
 #include "Address.hpp"
 #include "Identity.hpp"
-#include "Buffer.hpp"
 #include "InetAddress.hpp"
 #include "MAC.hpp"
 
@@ -33,6 +32,8 @@
 
 // Maximum size of a thing's value field in bytes
 #define ZT_CERTIFICATEOFOWNERSHIP_MAX_THING_VALUE_SIZE 16
+
+#define ZT_CERTIFICATEOFOWNERSHIP_MARSHAL_SIZE_MAX (8 + 8 + 8 + 4 + 2 + ((1 + ZT_CERTIFICATEOFOWNERSHIP_MAX_THING_VALUE_SIZE) * ZT_CERTIFICATEOFOWNERSHIP_MAX_THINGS) + 5 + 5 + 1 + 2 + ZT_SIGNATURE_BUFFER_SIZE + 2)
 
 namespace ZeroTier {
 
@@ -98,112 +99,20 @@ public:
 		return this->_owns(THING_MAC_ADDRESS,tmp,6);
 	}
 
-	ZT_ALWAYS_INLINE void addThing(const InetAddress &ip)
-	{
-		if (_thingCount >= ZT_CERTIFICATEOFOWNERSHIP_MAX_THINGS) return;
-		if (ip.ss_family == AF_INET) {
-			_thingTypes[_thingCount] = THING_IPV4_ADDRESS;
-			memcpy(_thingValues[_thingCount],&(reinterpret_cast<const struct sockaddr_in *>(&ip)->sin_addr.s_addr),4);
-			++_thingCount;
-		} else if (ip.ss_family == AF_INET6) {
-			_thingTypes[_thingCount] = THING_IPV6_ADDRESS;
-			memcpy(_thingValues[_thingCount],reinterpret_cast<const struct sockaddr_in6 *>(&ip)->sin6_addr.s6_addr,16);
-			++_thingCount;
-		}
-	}
-
-	ZT_ALWAYS_INLINE void addThing(const MAC &mac)
-	{
-		if (_thingCount >= ZT_CERTIFICATEOFOWNERSHIP_MAX_THINGS) return;
-		_thingTypes[_thingCount] = THING_MAC_ADDRESS;
-		mac.copyTo(_thingValues[_thingCount],6);
-		++_thingCount;
-	}
+	void addThing(const InetAddress &ip);
+	void addThing(const MAC &mac);
 
 	/**
 	 * @param signer Signing identity, must have private key
 	 * @return True if signature was successful
 	 */
-	ZT_ALWAYS_INLINE bool sign(const Identity &signer)
-	{
-		if (signer.hasPrivate()) {
-			Buffer<sizeof(CertificateOfOwnership) + 64> tmp;
-			_signedBy = signer.address();
-			this->serialize(tmp,true);
-			_signatureLength = signer.sign(tmp.data(),tmp.size(),_signature,sizeof(_signature));
-			return true;
-		}
-		return false;
-	}
+	bool sign(const Identity &signer);
 
 	ZT_ALWAYS_INLINE Credential::VerifyResult verify(const RuntimeEnvironment *RR,void *tPtr) const { return _verify(RR,tPtr,*this); }
 
-	template<unsigned int C>
-	inline void serialize(Buffer<C> &b,const bool forSign = false) const
-	{
-		if (forSign) b.append((uint64_t)0x7f7f7f7f7f7f7f7fULL);
-
-		b.append(_networkId);
-		b.append(_ts);
-		b.append(_flags);
-		b.append(_id);
-		b.append((uint16_t)_thingCount);
-		for(unsigned int i=0,j=_thingCount;i<j;++i) {
-			b.append((uint8_t)_thingTypes[i]);
-			b.append(_thingValues[i],ZT_CERTIFICATEOFOWNERSHIP_MAX_THING_VALUE_SIZE);
-		}
-
-		_issuedTo.appendTo(b);
-		_signedBy.appendTo(b);
-		if (!forSign) {
-			b.append((uint8_t)1);
-			b.append((uint16_t)_signatureLength); // length of signature
-			b.append(_signature,_signatureLength);
-		}
-
-		b.append((uint16_t)0); // length of additional fields, currently 0
-
-		if (forSign) b.append((uint64_t)0x7f7f7f7f7f7f7f7fULL);
-	}
-
-	template<unsigned int C>
-	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
-	{
-		unsigned int p = startAt;
-
-		*this = CertificateOfOwnership();
-
-		_networkId = b.template at<uint64_t>(p); p += 8;
-		_ts = b.template at<uint64_t>(p); p += 8;
-		_flags = b.template at<uint64_t>(p); p += 8;
-		_id = b.template at<uint32_t>(p); p += 4;
-		_thingCount = b.template at<uint16_t>(p); p += 2;
-		for(unsigned int i=0,j=_thingCount;i<j;++i) {
-			if (i < ZT_CERTIFICATEOFOWNERSHIP_MAX_THINGS) {
-				_thingTypes[i] = (uint8_t)b[p++];
-				memcpy(_thingValues[i],b.field(p,ZT_CERTIFICATEOFOWNERSHIP_MAX_THING_VALUE_SIZE),ZT_CERTIFICATEOFOWNERSHIP_MAX_THING_VALUE_SIZE);
-				p += ZT_CERTIFICATEOFOWNERSHIP_MAX_THING_VALUE_SIZE;
-			}
-		}
-
-		_issuedTo.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); p += ZT_ADDRESS_LENGTH;
-		_signedBy.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); p += ZT_ADDRESS_LENGTH;
-		if (b[p++] == 1) {
-			_signatureLength = b.template at<uint16_t>(p);
-			if (_signatureLength > sizeof(_signature))
-				throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_CRYPTOGRAPHIC_TOKEN;
-			p += 2;
-			memcpy(_signature,b.field(p,_signatureLength),_signatureLength); p += _signatureLength;
-		} else {
-			p += 2 + b.template at<uint16_t>(p);
-		}
-
-		p += 2 + b.template at<uint16_t>(p);
-		if (p > b.size())
-			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW;
-
-		return (p - startAt);
-	}
+	static ZT_ALWAYS_INLINE int marshalSizeMax() { return ZT_CERTIFICATEOFOWNERSHIP_MARSHAL_SIZE_MAX; }
+	int marshal(uint8_t data[ZT_CERTIFICATEOFOWNERSHIP_MARSHAL_SIZE_MAX],bool forSign = false) const;
+	int unmarshal(const uint8_t *data,int len);
 
 	// Provides natural sort order by ID
 	ZT_ALWAYS_INLINE bool operator<(const CertificateOfOwnership &coo) const { return (_id < coo._id); }

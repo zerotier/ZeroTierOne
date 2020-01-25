@@ -21,7 +21,6 @@
 #include "Utils.hpp"
 #include "Address.hpp"
 #include "C25519.hpp"
-#include "Buffer.hpp"
 #include "SHA512.hpp"
 #include "ECC384.hpp"
 
@@ -157,108 +156,6 @@ public:
 	 * @return This identity's address
 	 */
 	ZT_ALWAYS_INLINE const Address &address() const { return _address; }
-
-	/**
-	 * Serialize this identity (binary)
-	 *
-	 * @param b Destination buffer to append to
-	 * @param includePrivate If true, include private key component (if present) (default: false)
-	 */
-	template<unsigned int C>
-	inline void serialize(Buffer<C> &b,bool includePrivate = false) const
-	{
-		_address.appendTo(b);
-		switch(_type) {
-
-			case C25519:
-				b.append((uint8_t)C25519);
-				b.append(_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
-				if ((_hasPrivate)&&(includePrivate)) {
-					b.append((uint8_t)ZT_C25519_PRIVATE_KEY_LEN);
-					b.append(_priv.c25519,ZT_C25519_PRIVATE_KEY_LEN);
-				} else {
-					b.append((uint8_t)0);
-				}
-				break;
-
-			case P384:
-				b.append((uint8_t)P384);
-				b.append(&_pub,ZT_C25519_PUBLIC_KEY_LEN + ZT_ECC384_PUBLIC_KEY_SIZE + ZT_C25519_SIGNATURE_LEN + ZT_ECC384_SIGNATURE_SIZE);
-				if ((_hasPrivate)&&(includePrivate)) {
-					b.append((uint8_t)(ZT_C25519_PRIVATE_KEY_LEN + ZT_ECC384_PRIVATE_KEY_SIZE));
-					b.append(_priv.c25519,ZT_C25519_PRIVATE_KEY_LEN);
-					b.append(_priv.p384,ZT_ECC384_PRIVATE_KEY_SIZE);
-				} else {
-					b.append((uint8_t)0);
-				}
-				b.append((uint8_t)0); // size of additional fields (should have included such a thing in v0!)
-				break;
-
-		}
-	}
-
-	/**
-	 * Deserialize a binary serialized identity
-	 *
-	 * If an exception is thrown, the Identity object is left in an undefined
-	 * state and should not be used.
-	 *
-	 * @param b Buffer containing serialized data
-	 * @param startAt Index within buffer of serialized data (default: 0)
-	 * @return Length of serialized data read from buffer
-	 */
-	template<unsigned int C>
-	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
-	{
-		_hasPrivate = false;
-		unsigned int p = startAt;
-		unsigned int pkl;
-
-		_address.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
-		p += ZT_ADDRESS_LENGTH;
-
-		switch((_type = (Type)b[p++])) {
-
-			case C25519:
-				memcpy(_pub.c25519,b.field(p,ZT_C25519_PUBLIC_KEY_LEN),ZT_C25519_PUBLIC_KEY_LEN);
-				p += ZT_C25519_PUBLIC_KEY_LEN;
-				pkl = (unsigned int)b[p++];
-				if (pkl) {
-					if (pkl != ZT_C25519_PRIVATE_KEY_LEN)
-						throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_CRYPTOGRAPHIC_TOKEN;
-					_hasPrivate = true;
-					memcpy(_priv.c25519,b.field(p,ZT_C25519_PRIVATE_KEY_LEN),ZT_C25519_PRIVATE_KEY_LEN);
-					p += ZT_C25519_PRIVATE_KEY_LEN;
-				} else {
-					_hasPrivate = false;
-				}
-				break;
-
-			case P384:
-				memcpy(&_pub,b.field(p,ZT_C25519_PUBLIC_KEY_LEN + ZT_ECC384_PUBLIC_KEY_SIZE + ZT_C25519_SIGNATURE_LEN + ZT_ECC384_SIGNATURE_SIZE),ZT_C25519_PUBLIC_KEY_LEN + ZT_ECC384_PUBLIC_KEY_SIZE + ZT_C25519_SIGNATURE_LEN + ZT_ECC384_SIGNATURE_SIZE);
-				p += ZT_C25519_PUBLIC_KEY_LEN + ZT_ECC384_PUBLIC_KEY_SIZE + ZT_C25519_SIGNATURE_LEN + ZT_ECC384_SIGNATURE_SIZE;
-				pkl = (unsigned int)b[p++];
-				if (pkl) {
-					if (pkl != (ZT_C25519_PRIVATE_KEY_LEN + ZT_ECC384_PRIVATE_KEY_SIZE))
-						throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_CRYPTOGRAPHIC_TOKEN;
-					_hasPrivate = true;
-					memcpy(_priv.c25519,b.field(p,ZT_C25519_PRIVATE_KEY_LEN),ZT_C25519_PRIVATE_KEY_LEN);
-					p += ZT_C25519_PRIVATE_KEY_LEN;
-					memcpy(_priv.p384,b.field(p,ZT_ECC384_PRIVATE_KEY_SIZE),ZT_ECC384_PRIVATE_KEY_SIZE);
-					p += ZT_ECC384_PRIVATE_KEY_SIZE;
-				} else {
-					_hasPrivate = false;
-				}
-				p += b.template at<uint8_t>(p) + 2;
-				break;
-
-			default:
-				throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_TYPE;
-
-		}
-
-		return (p - startAt);
-	}
 
 	/**
 	 * Serialize to a more human-friendly string

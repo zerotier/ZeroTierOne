@@ -15,7 +15,10 @@
 #include <cstdlib>
 #include <ctime>
 
-#include "Constants.hpp"
+#include "Utils.hpp"
+#include "Mutex.hpp"
+#include "AES.hpp"
+#include "SHA512.hpp"
 
 #ifdef __UNIX_LIKE__
 #include <unistd.h>
@@ -26,11 +29,6 @@
 #ifdef __WINDOWS__
 #include <wincrypt.h>
 #endif
-
-#include "Utils.hpp"
-#include "Mutex.hpp"
-#include "AES.hpp"
-#include "SHA512.hpp"
 
 namespace ZeroTier {
 
@@ -166,13 +164,13 @@ void getSecureRandom(void *buf,unsigned int bytes)
 	static Mutex globalLock;
 	static bool initialized = false;
 	static uint64_t randomState[8];
-	static uint8_t randomBuf[65536];
-	static unsigned long randomPtr = sizeof(randomBuf);
+	static uint64_t randomBuf[8192];
+	static unsigned int randomPtr = 65536;
 
 	Mutex::Lock gl(globalLock);
 
 	for(unsigned int i=0;i<bytes;++i) {
-		if (randomPtr >= sizeof(randomBuf)) {
+		if (randomPtr >= 65536) {
 			randomPtr = 0;
 
 			if (!initialized) {
@@ -225,18 +223,22 @@ void getSecureRandom(void *buf,unsigned int bytes)
 #endif
 			}
 
+			++randomState[0];
 			SHA512(randomState,randomState,sizeof(randomState));
 			AES aes(reinterpret_cast<const uint8_t *>(randomState));
-			uint64_t ctr[2];
+			uint64_t ctr[2],tmp[2];
 			ctr[0] = randomState[6];
 			ctr[1] = randomState[7];
-			for(unsigned long i=0;i<sizeof(randomBuf);i+=16) {
+			for(int k=0;k<8192;) {
 				++ctr[0];
-				aes.encrypt(reinterpret_cast<const uint8_t *>(ctr),randomBuf + i);
+				aes.encrypt(reinterpret_cast<const uint8_t *>(ctr),reinterpret_cast<uint8_t *>(tmp));
+				randomBuf[k] ^= tmp[0];
+				randomBuf[k+1] ^= tmp[1];
+				k += 2;
 			}
 		}
 
-		reinterpret_cast<uint8_t *>(buf)[i] = randomBuf[randomPtr++];
+		reinterpret_cast<uint8_t *>(buf)[i] = reinterpret_cast<uint8_t *>(randomBuf)[randomPtr++];
 	}
 }
 

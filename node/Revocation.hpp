@@ -24,7 +24,6 @@
 #include "Address.hpp"
 #include "C25519.hpp"
 #include "Utils.hpp"
-#include "Buffer.hpp"
 #include "Identity.hpp"
 
 /**

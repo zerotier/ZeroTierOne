@@ -22,7 +22,6 @@
 #include "Constants.hpp"
 #include "Mutex.hpp"
 #include "MAC.hpp"
-#include "Packet.hpp"
 #include "Utils.hpp"
 #include "InetAddress.hpp"
 #include "Topology.hpp"
@@ -30,6 +29,7 @@
 #include "SharedPtr.hpp"
 #include "IncomingPacket.hpp"
 #include "Hashtable.hpp"
+#include "Protocol.hpp"
 
 namespace ZeroTier {
 

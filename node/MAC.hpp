@@ -21,7 +21,6 @@
 #include "Constants.hpp"
 #include "Utils.hpp"
 #include "Address.hpp"
-#include "Buffer.hpp"
 
 namespace ZeroTier {
 
@@ -39,9 +38,9 @@ public:
 		    ((((uint64_t)d) & 0xffULL) << 16U) |
 		    ((((uint64_t)e) & 0xffULL) << 8U) |
 		    (((uint64_t)f) & 0xffULL) ) {}
-	ZT_ALWAYS_INLINE MAC(const uint8_t b[6]) { setTo(b); }
+	explicit ZT_ALWAYS_INLINE MAC(const uint8_t b[6]) { setTo(b); }
 	ZT_ALWAYS_INLINE MAC(const Address &ztaddr,uint64_t nwid) { fromAddress(ztaddr,nwid); }
-	ZT_ALWAYS_INLINE MAC(const uint64_t m) : _m(m & 0xffffffffffffULL) {}
+	explicit ZT_ALWAYS_INLINE MAC(const uint64_t m) : _m(m & 0xffffffffffffULL) {}
 
 	/**
 	 * @return MAC in 64-bit integer

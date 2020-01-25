@@ -22,7 +22,6 @@
 #include "InetAddress.hpp"
 #include "Peer.hpp"
 #include "SelfAwareness.hpp"
-#include "Packet.hpp"
 #include "Trace.hpp"
 
 namespace ZeroTier {

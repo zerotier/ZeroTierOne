@@ -29,6 +29,7 @@
 #include "Mutex.hpp"
 #include "Endpoint.hpp"
 #include "Locator.hpp"
+#include "Protocol.hpp"
 
 #include <vector>
 
@@ -103,9 +104,9 @@ public:
 		unsigned int hops,
 		uint64_t packetId,
 		unsigned int payloadLength,
-		Packet::Verb verb,
+		Protocol::Verb verb,
 		uint64_t inRePacketId,
-		Packet::Verb inReVerb,
+		Protocol::Verb inReVerb,
 		uint64_t networkId);
 
 	/**

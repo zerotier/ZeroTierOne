@@ -19,18 +19,17 @@
 #include <cstdint>
 #include <cstring>
 #include <ctime>
+#include <stdexcept>
+#include <vector>
+#include <map>
+
+#include "Constants.hpp"
 
 #if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
 #include <emmintrin.h>
 #include <xmmintrin.h>
 #include <immintrin.h>
 #endif
-
-#include <stdexcept>
-#include <vector>
-#include <map>
-
-#include "Constants.hpp"
 
 namespace ZeroTier {
 
@@ -87,7 +86,7 @@ char *decimal(unsigned long n,char s[24]);
  * @return Pointer to s containing hex string with trailing zero byte
  */
 template<typename I>
-static inline char *hex(I x,char *s)
+static ZT_ALWAYS_INLINE char *hex(I x,char *s)
 {
 	char *const r = s;
 	for(unsigned int i=0,b=(sizeof(x)*8);i<sizeof(x);++i) {

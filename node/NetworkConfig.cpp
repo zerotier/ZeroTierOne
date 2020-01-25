@@ -20,7 +20,28 @@
 
 namespace ZeroTier {
 
-bool NetworkConfig::toDictionary(Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d,bool includeLegacy) const
+NetworkConfig::NetworkConfig() :
+	networkId(0),
+	timestamp(0),
+	credentialTimeMaxDelta(0),
+	revision(0),
+	issuedTo(),
+	flags(0),
+	mtu(0),
+	multicastLimit(0),
+	specialistCount(0),
+	routeCount(0),
+	staticIpCount(0),
+	ruleCount(0),
+	capabilityCount(0),
+	tagCount(0),
+	certificateOfOwnershipCount(0),
+	type(ZT_NETWORK_TYPE_PRIVATE)
+{
+	name[0] = 0;
+}
+
+bool NetworkConfig::toDictionary(Dictionary &d,bool includeLegacy) const
 {
 	ScopedPtr< Buffer<ZT_NETWORKCONFIG_DICT_CAPACITY> > tmp(new Buffer<ZT_NETWORKCONFIG_DICT_CAPACITY>());
 	char tmp2[128];
@@ -105,7 +126,7 @@ bool NetworkConfig::toDictionary(Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d,b
 	return true;
 }
 
-bool NetworkConfig::fromDictionary(const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d)
+bool NetworkConfig::fromDictionary(const Dictionary &d)
 {
 	static const NetworkConfig NIL_NC;
 	ScopedPtr< Buffer<ZT_NETWORKCONFIG_DICT_CAPACITY> > tmp(new Buffer<ZT_NETWORKCONFIG_DICT_CAPACITY>());
@@ -216,6 +237,22 @@ bool NetworkConfig::fromDictionary(const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACI
 	} catch ( ... ) {
 		return false;
 	}
+}
+
+bool NetworkConfig::addSpecialist(const Address &a,const uint64_t f)
+{
+	const uint64_t aint = a.toInt();
+	for(unsigned int i=0;i<specialistCount;++i) {
+		if ((specialists[i] & 0xffffffffffULL) == aint) {
+			specialists[i] |= f;
+			return true;
+		}
+	}
+	if (specialistCount < ZT_MAX_NETWORK_SPECIALISTS) {
+		specialists[specialistCount++] = f | aint;
+		return true;
+	}
+	return false;
 }
 
 } // namespace ZeroTier

@@ -21,8 +21,6 @@
 #include "NetworkController.hpp"
 #include "Switch.hpp"
 #include "Topology.hpp"
-#include "Buffer.hpp"
-#include "Packet.hpp"
 #include "Address.hpp"
 #include "Identity.hpp"
 #include "SelfAwareness.hpp"
@@ -30,6 +28,7 @@
 #include "Trace.hpp"
 #include "ScopedPtr.hpp"
 #include "Locator.hpp"
+#include "Protocol.hpp"
 
 namespace ZeroTier {
 

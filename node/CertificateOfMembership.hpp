@@ -23,7 +23,6 @@
 
 #include "Constants.hpp"
 #include "Credential.hpp"
-#include "Buffer.hpp"
 #include "Address.hpp"
 #include "C25519.hpp"
 #include "Identity.hpp"
@@ -33,6 +32,8 @@
  * Maximum number of qualifiers allowed in a COM (absolute max: 65535)
  */
 #define ZT_NETWORK_COM_MAX_QUALIFIERS 8
+
+#define ZT_CERTIFICATEOFMEMBERSHIP_MARSHAL_SIZE_MAX (1 + 2 + (24 * ZT_NETWORK_COM_MAX_QUALIFIERS) + 5 + ZT_SIGNATURE_BUFFER_SIZE)
 
 namespace ZeroTier {
 
@@ -113,29 +114,7 @@ public:
 	 * @param nwid Network ID
 	 * @param issuedTo Certificate recipient
 	 */
-	ZT_ALWAYS_INLINE CertificateOfMembership(uint64_t timestamp,uint64_t timestampMaxDelta,uint64_t nwid,const Address &issuedTo)
-	{
-		_qualifiers[0].id = COM_RESERVED_ID_TIMESTAMP;
-		_qualifiers[0].value = timestamp;
-		_qualifiers[0].maxDelta = timestampMaxDelta;
-		_qualifiers[1].id = COM_RESERVED_ID_NETWORK_ID;
-		_qualifiers[1].value = nwid;
-		_qualifiers[1].maxDelta = 0;
-		_qualifiers[2].id = COM_RESERVED_ID_ISSUED_TO;
-		_qualifiers[2].value = issuedTo.toInt();
-		_qualifiers[2].maxDelta = 0xffffffffffffffffULL;
-		_qualifierCount = 3;
-		_signatureLength = 0;
-	}
-
-	/**
-	 * Create from binary-serialized COM in buffer
-	 *
-	 * @param b Buffer to deserialize from
-	 * @param startAt Position to start in buffer
-	 */
-	template<unsigned int C>
-	ZT_ALWAYS_INLINE CertificateOfMembership(const Buffer<C> &b,unsigned int startAt = 0) { deserialize(b,startAt); }
+	CertificateOfMembership(uint64_t timestamp,uint64_t timestampMaxDelta,uint64_t nwid,const Address &issuedTo);
 
 	/**
 	 * @return True if there's something here
@@ -192,24 +171,7 @@ public:
 	 * @param value Qualifier value
 	 * @param maxDelta Qualifier maximum allowed difference (absolute value of difference)
 	 */
-	ZT_ALWAYS_INLINE void setQualifier(uint64_t id,uint64_t value,uint64_t maxDelta)
-	{
-		_signedBy.zero();
-		for(unsigned int i=0;i<_qualifierCount;++i) {
-			if (_qualifiers[i].id == id) {
-				_qualifiers[i].value = value;
-				_qualifiers[i].maxDelta = maxDelta;
-				return;
-			}
-		}
-		if (_qualifierCount < ZT_NETWORK_COM_MAX_QUALIFIERS) {
-			_qualifiers[_qualifierCount].id = id;
-			_qualifiers[_qualifierCount].value = value;
-			_qualifiers[_qualifierCount].maxDelta = maxDelta;
-			++_qualifierCount;
-			std::sort(&(_qualifiers[0]),&(_qualifiers[_qualifierCount]));
-		}
-	}
+	void setQualifier(uint64_t id,uint64_t value,uint64_t maxDelta);
 
 	ZT_ALWAYS_INLINE void setQualifier(ReservedId id,uint64_t value,uint64_t maxDelta) { setQualifier((uint64_t)id,value,maxDelta); }
 
@@ -268,25 +230,7 @@ public:
 	 * @param with Identity to sign with, must include private key
 	 * @return True if signature was successful
 	 */
-	ZT_ALWAYS_INLINE bool sign(const Identity &with)
-	{
-		uint64_t buf[ZT_NETWORK_COM_MAX_QUALIFIERS * 3];
-		unsigned int ptr = 0;
-		for(unsigned int i=0;i<_qualifierCount;++i) {
-			buf[ptr++] = Utils::hton(_qualifiers[i].id);
-			buf[ptr++] = Utils::hton(_qualifiers[i].value);
-			buf[ptr++] = Utils::hton(_qualifiers[i].maxDelta);
-		}
-
-		try {
-			_signatureLength = with.sign(buf,ptr * sizeof(uint64_t),_signature,sizeof(_signature));
-			_signedBy = with.address();
-			return true;
-		} catch ( ... ) {
-			_signedBy.zero();
-			return false;
-		}
-	}
+	bool sign(const Identity &with);
 
 	/**
 	 * Verify this COM and its signature
@@ -301,95 +245,21 @@ public:
 	 */
 	ZT_ALWAYS_INLINE const Address &signedBy() const { return _signedBy; }
 
-	template<unsigned int C>
-	inline void serialize(Buffer<C> &b) const
-	{
-		b.append((uint8_t)1);
-		b.append((uint16_t)_qualifierCount);
-		for(unsigned int i=0;i<_qualifierCount;++i) {
-			b.append(_qualifiers[i].id);
-			b.append(_qualifiers[i].value);
-			b.append(_qualifiers[i].maxDelta);
-		}
-		_signedBy.appendTo(b);
-		if ((_signedBy)&&(_signatureLength == 96)) {
-			// UGLY: Ed25519 signatures in ZT are 96 bytes (64 + 32 bytes of hash).
-			// P-384 signatures are also 96 bytes, praise the horned one. That means
-			// we don't need to include a length. If we ever do we will need a new
-			// serialized object version, but only for those with length != 96.
-			b.append(_signature,96);
-		}
-	}
+	static ZT_ALWAYS_INLINE int marshalSizeMax() { return ZT_CERTIFICATEOFMEMBERSHIP_MARSHAL_SIZE_MAX; }
+	int marshal(uint8_t data[ZT_CERTIFICATEOFMEMBERSHIP_MARSHAL_SIZE_MAX]) const;
+	int unmarshal(const uint8_t *data,int len);
 
-	template<unsigned int C>
-	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
-	{
-		unsigned int p = startAt;
-
-		_signedBy.zero();
-		_qualifierCount = 0;
-		_signatureLength = 0;
-
-		if (b[p++] != 1)
-			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_TYPE;
-
-		unsigned int numq = b.template at<uint16_t>(p); p += sizeof(uint16_t);
-		uint64_t lastId = 0;
-		for(unsigned int i=0;i<numq;++i) {
-			const uint64_t qid = b.template at<uint64_t>(p);
-			if (qid < lastId)
-				throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_BAD_ENCODING;
-			else lastId = qid;
-			if (_qualifierCount < ZT_NETWORK_COM_MAX_QUALIFIERS) {
-				_qualifiers[_qualifierCount].id = qid;
-				_qualifiers[_qualifierCount].value = b.template at<uint64_t>(p + 8);
-				_qualifiers[_qualifierCount].maxDelta = b.template at<uint64_t>(p + 16);
-				p += 24;
-				++_qualifierCount;
-			} else {
-				throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW;
-			}
-		}
-
-		_signedBy.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
-		p += ZT_ADDRESS_LENGTH;
-
-		if (_signedBy) {
-			// See "UGLY" comment in serialize()...
-			_signatureLength = 96;
-			memcpy(_signature,b.field(p,96),96);
-			p += 96;
-		}
-
-		return (p - startAt);
-	}
-
-	ZT_ALWAYS_INLINE bool operator==(const CertificateOfMembership &c) const
-	{
-		if (_signedBy != c._signedBy)
-			return false;
-		if (_qualifierCount != c._qualifierCount)
-			return false;
-		if (_signatureLength != c._signatureLength)
-			return false;
-		for(unsigned int i=0;i<_qualifierCount;++i) {
-			const _Qualifier &a = _qualifiers[i];
-			const _Qualifier &b = c._qualifiers[i];
-			if ((a.id != b.id)||(a.value != b.value)||(a.maxDelta != b.maxDelta))
-				return false;
-		}
-		return (memcmp(_signature,c._signature,_signatureLength) == 0);
-	}
+	bool operator==(const CertificateOfMembership &c) const;
 	ZT_ALWAYS_INLINE bool operator!=(const CertificateOfMembership &c) const { return (!(*this == c)); }
 
 private:
 	struct _Qualifier
 	{
-		_Qualifier() : id(0),value(0),maxDelta(0) {}
+		ZT_ALWAYS_INLINE _Qualifier() : id(0),value(0),maxDelta(0) {}
 		uint64_t id;
 		uint64_t value;
 		uint64_t maxDelta;
-		inline bool operator<(const _Qualifier &q) const { return (id < q.id); } // sort order
+		ZT_ALWAYS_INLINE bool operator<(const _Qualifier &q) const { return (id < q.id); } // sort order
 	};
 
 	Address _signedBy;

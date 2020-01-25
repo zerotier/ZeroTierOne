@@ -51,7 +51,10 @@ set(core_src
 	Buf.cpp
 	C25519.cpp
 	Capability.cpp
+	CertificateOfMembership.cpp
+	CertificateOfOwnership.cpp
 	Credential.cpp
+	Dictionary.cpp
 	ECC384.cpp
 	Endpoint.cpp
 	Identity.cpp

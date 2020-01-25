@@ -24,7 +24,6 @@
 #include "C25519.hpp"
 #include "Address.hpp"
 #include "Identity.hpp"
-#include "Buffer.hpp"
 
 namespace ZeroTier {
 

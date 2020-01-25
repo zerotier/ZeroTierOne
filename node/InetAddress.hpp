@@ -21,7 +21,6 @@
 #include "Constants.hpp"
 #include "Utils.hpp"
 #include "MAC.hpp"
-#include "Buffer.hpp"
 
 namespace ZeroTier {
 
@@ -497,62 +496,6 @@ public:
 	static ZT_ALWAYS_INLINE int marshalSizeMax() { return ZT_INETADDRESS_MARSHAL_SIZE_MAX; }
 	int marshal(uint8_t data[19]) const;
 	int unmarshal(const uint8_t *restrict data,const int len);
-
-	template<unsigned int C>
-	inline void serialize(Buffer<C> &b) const
-	{
-		// This is used in the protocol and must be the same as describe in places
-		// like VERB_HELLO in Packet.hpp.
-		switch(ss_family) {
-			case AF_INET:
-				b.append((uint8_t)0x04);
-				b.append(&(reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr),4);
-				b.append((uint16_t)port()); // just in case sin_port != uint16_t
-				return;
-			case AF_INET6:
-				b.append((uint8_t)0x06);
-				b.append(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr,16);
-				b.append((uint16_t)port()); // just in case sin_port != uint16_t
-				return;
-			default:
-				b.append((uint8_t)0);
-				return;
-		}
-	}
-
-	template<unsigned int C>
-	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
-	{
-		memset(this,0,sizeof(InetAddress));
-		unsigned int p = startAt;
-		switch(b[p++]) {
-			case 0:
-				return 1;
-			case 0x01:
-				// TODO: Ethernet address (but accept for forward compatibility)
-				return 7;
-			case 0x02:
-				// TODO: Bluetooth address (but accept for forward compatibility)
-				return 7;
-			case 0x03:
-				// TODO: Other address types (but accept for forward compatibility)
-				// These could be extended/optional things like AF_UNIX, LTE Direct, shared memory, etc.
-				return (unsigned int)(b.template at<uint16_t>(p) + 3); // other addresses begin with 16-bit non-inclusive length
-			case 0x04:
-				ss_family = AF_INET;
-				memcpy(&(reinterpret_cast<struct sockaddr_in *>(this)->sin_addr.s_addr),b.field(p,4),4); p += 4;
-				reinterpret_cast<struct sockaddr_in *>(this)->sin_port = Utils::hton(b.template at<uint16_t>(p)); p += 2;
-				break;
-			case 0x06:
-				ss_family = AF_INET6;
-				memcpy(reinterpret_cast<struct sockaddr_in6 *>(this)->sin6_addr.s6_addr,b.field(p,16),16); p += 16;
-				reinterpret_cast<struct sockaddr_in *>(this)->sin_port = Utils::hton(b.template at<uint16_t>(p)); p += 2;
-				break;
-			default:
-				throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_BAD_ENCODING;
-		}
-		return (p - startAt);
-	}
 
 	bool operator==(const InetAddress &a) const;
 	bool operator<(const InetAddress &a) const;

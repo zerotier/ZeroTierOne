@@ -18,7 +18,6 @@
 #include "Peer.hpp"
 #include "Topology.hpp"
 #include "Switch.hpp"
-#include "Packet.hpp"
 #include "Node.hpp"
 
 namespace ZeroTier {

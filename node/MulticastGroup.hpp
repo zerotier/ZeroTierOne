@@ -63,7 +63,7 @@ public:
 			// multicast address directly from the IP address, and it gives us
 			// 24 bits of uniqueness. Collisions aren't likely to be common enough
 			// to care about.
-			const unsigned char *a = (const unsigned char *)ip.rawIpData();
+			const uint8_t *a = (const uint8_t *)ip.rawIpData();
 			return MulticastGroup(MAC(0x33,0x33,0xff,a[13],a[14],a[15]),0);
 		}
 		return MulticastGroup();
