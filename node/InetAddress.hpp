@@ -494,7 +494,7 @@ public:
 	explicit ZT_ALWAYS_INLINE operator bool() const { return (ss_family != 0); }
 
 	static ZT_ALWAYS_INLINE int marshalSizeMax() { return ZT_INETADDRESS_MARSHAL_SIZE_MAX; }
-	int marshal(uint8_t data[19]) const;
+	int marshal(uint8_t data[ZT_INETADDRESS_MARSHAL_SIZE_MAX]) const;
 	int unmarshal(const uint8_t *restrict data,const int len);
 
 	bool operator==(const InetAddress &a) const;

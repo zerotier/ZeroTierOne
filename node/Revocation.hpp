@@ -31,6 +31,8 @@
  */
 #define ZT_REVOCATION_FLAG_FAST_PROPAGATE 0x1ULL
 
+#define ZT_REVOCATION_MARSHAL_SIZE_MAX (4 + 4 + 8 + 4 + 4 + 8 + 8 + 5 + 5 + 1 + 1 + 2 + ZT_SIGNATURE_BUFFER_SIZE + 2)
+
 namespace ZeroTier {
 
 class RuntimeEnvironment;
@@ -95,17 +97,7 @@ public:
 	 * @param signer Signing identity, must have private key
 	 * @return True if signature was successful
 	 */
-	ZT_ALWAYS_INLINE bool sign(const Identity &signer)
-	{
-		if (signer.hasPrivate()) {
-			Buffer<sizeof(Revocation) + 64> tmp;
-			_signedBy = signer.address();
-			this->serialize(tmp,true);
-			_signatureLength = signer.sign(tmp.data(),tmp.size(),_signature,sizeof(_signature));
-			return true;
-		}
-		return false;
-	}
+	bool sign(const Identity &signer);
 
 	/**
 	 * Verify this revocation's signature
@@ -115,67 +107,9 @@ public:
 	 */
 	ZT_ALWAYS_INLINE Credential::VerifyResult verify(const RuntimeEnvironment *RR,void *tPtr) const { return _verify(RR,tPtr,*this); }
 
-	template<unsigned int C>
-	inline void serialize(Buffer<C> &b,const bool forSign = false) const
-	{
-		if (forSign) b.append((uint64_t)0x7f7f7f7f7f7f7f7fULL);
-
-		b.append((uint32_t)0); // 4 unused bytes, currently set to 0
-		b.append(_id);
-		b.append(_networkId);
-		b.append((uint32_t)0); // 4 unused bytes, currently set to 0
-		b.append(_credentialId);
-		b.append(_threshold);
-		b.append(_flags);
-		_target.appendTo(b);
-		_signedBy.appendTo(b);
-		b.append((uint8_t)_type);
-
-		if (!forSign) {
-			b.append((uint8_t)1);
-			b.append((uint16_t)_signatureLength);
-			b.append(_signature,_signatureLength);
-		}
-
-		// This is the size of any additional fields, currently 0.
-		b.append((uint16_t)0);
-
-		if (forSign) b.append((uint64_t)0x7f7f7f7f7f7f7f7fULL);
-	}
-
-	template<unsigned int C>
-	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
-	{
-		*this = Revocation();
-
-		unsigned int p = startAt;
-
-		p += 4; // 4 bytes, currently unused
-		_id = b.template at<uint32_t>(p); p += 4;
-		_networkId = b.template at<uint64_t>(p); p += 8;
-		p += 4; // 4 bytes, currently unused
-		_credentialId = b.template at<uint32_t>(p); p += 4;
-		_threshold = b.template at<uint64_t>(p); p += 8;
-		_flags = b.template at<uint64_t>(p); p += 8;
-		_target.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); p += ZT_ADDRESS_LENGTH;
-		_signedBy.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); p += ZT_ADDRESS_LENGTH;
-		_type = (ZT_CredentialType)b[p++];
-
-		if (b[p++] == 1) {
-			_signatureLength = b.template at<uint16_t>(p);
-			if (_signatureLength > sizeof(_signature))
-				throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_CRYPTOGRAPHIC_TOKEN;
-			memcpy(_signature,b.field(p,_signatureLength),_signatureLength);
-		} else {
-			p += 2 + b.template at<uint16_t>(p);
-		}
-
-		p += 2 + b.template at<uint16_t>(p);
-		if (p > b.size())
-			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW;
-
-		return (p - startAt);
-	}
+	static ZT_ALWAYS_INLINE int marshalSizeMax() { return ZT_REVOCATION_MARSHAL_SIZE_MAX; }
+	int marshal(uint8_t data[ZT_REVOCATION_MARSHAL_SIZE_MAX],bool forSign = false) const;
+	int unmarshal(const uint8_t *restrict data,const int len);
 
 private:
 	uint32_t _id;

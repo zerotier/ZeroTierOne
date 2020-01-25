@@ -43,7 +43,8 @@ NetworkConfig::NetworkConfig() :
 
 bool NetworkConfig::toDictionary(Dictionary &d,bool includeLegacy) const
 {
-	ScopedPtr< Buffer<ZT_NETWORKCONFIG_DICT_CAPACITY> > tmp(new Buffer<ZT_NETWORKCONFIG_DICT_CAPACITY>());
+	uint8_t tmp[16384];
+	std::vector<uint8_t> buf;
 	char tmp2[128];
 
 	d.clear();
@@ -64,62 +65,90 @@ bool NetworkConfig::toDictionary(Dictionary &d,bool includeLegacy) const
 	// Then add binary blobs
 
 	if (this->com) {
-		tmp->clear();
-		this->com.serialize(*tmp);
-		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_COM,*tmp)) return false;
+		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_COM,(const char *)tmp,this->com.marshal(tmp)))
+			return false;
 	}
 
-	tmp->clear();
-	for(unsigned int i=0;i<this->capabilityCount;++i)
-		this->capabilities[i].serialize(*tmp);
-	if (tmp->size()) {
-		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_CAPABILITIES,*tmp)) return false;
+	buf.clear();
+	for(unsigned int i=0;i<this->capabilityCount;++i) {
+		int l = this->capabilities[i].marshal(tmp);
+		if (l < 0)
+			return false;
+		buf.insert(buf.end(),tmp,tmp + l);
+	}
+	if (!buf.empty()) {
+		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_CAPABILITIES,(const char *)buf.data(),(int)buf.size()))
+			return false;
 	}
 
-	tmp->clear();
-	for(unsigned int i=0;i<this->tagCount;++i)
-		this->tags[i].serialize(*tmp);
-	if (tmp->size()) {
-		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_TAGS,*tmp)) return false;
+	buf.clear();
+	for(unsigned int i=0;i<this->tagCount;++i) {
+		int l = this->tags[i].marshal(tmp);
+		if (l < 0)
+			return false;
+		buf.insert(buf.end(),tmp,tmp + l);
+	}
+	if (!buf.empty()) {
+		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_TAGS,(const char *)buf.data(),(int)buf.size()))
+			return false;
 	}
 
-	tmp->clear();
-	for(unsigned int i=0;i<this->certificateOfOwnershipCount;++i)
-		this->certificatesOfOwnership[i].serialize(*tmp);
-	if (tmp->size()) {
-		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATES_OF_OWNERSHIP,*tmp)) return false;
+	buf.clear();
+	for(unsigned int i=0;i<this->certificateOfOwnershipCount;++i) {
+		int l = this->certificatesOfOwnership[i].marshal(tmp);
+		if (l < 0)
+			return false;
+		buf.insert(buf.end(),tmp,tmp + l);
+	}
+	if (!buf.empty()) {
+		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATES_OF_OWNERSHIP,(const char *)buf.data(),(int)buf.size()))
+			return false;
 	}
 
-	tmp->clear();
-	for(unsigned int i=0;i<this->specialistCount;++i)
-		tmp->append((uint64_t)this->specialists[i]);
-	if (tmp->size()) {
-		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_SPECIALISTS,*tmp)) return false;
+	buf.clear();
+	for(unsigned int i=0;i<this->specialistCount;++i) {
+		Utils::storeBigEndian<uint64_t>(tmp,this->specialists[i]);
+		buf.insert(buf.end(),tmp,tmp + 8);
+	}
+	if (!buf.empty()) {
+		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_SPECIALISTS,(const char *)buf.data(),(int)buf.size()))
+			return false;
 	}
 
-	tmp->clear();
+	buf.clear();
 	for(unsigned int i=0;i<this->routeCount;++i) {
-		reinterpret_cast<const InetAddress *>(&(this->routes[i].target))->serialize(*tmp);
-		reinterpret_cast<const InetAddress *>(&(this->routes[i].via))->serialize(*tmp);
-		tmp->append((uint16_t)this->routes[i].flags);
-		tmp->append((uint16_t)this->routes[i].metric);
+		int l = asInetAddress(this->routes[i].target).marshal(tmp);
+		if (l < 0)
+			return false;
+		buf.insert(buf.end(),tmp,tmp + l);
+		l = asInetAddress(this->routes[i].via).marshal(tmp);
+		if (l < 0)
+			return false;
+		buf.insert(buf.end(),tmp,tmp + l);
 	}
-	if (tmp->size()) {
-		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_ROUTES,*tmp)) return false;
+	if (!buf.empty()) {
+		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_ROUTES,(const char *)buf.data(),(int)buf.size()))
+			return false;
 	}
 
-	tmp->clear();
-	for(unsigned int i=0;i<this->staticIpCount;++i)
-		this->staticIps[i].serialize(*tmp);
-	if (tmp->size()) {
-		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_STATIC_IPS,*tmp)) return false;
+	buf.clear();
+	for(unsigned int i=0;i<this->staticIpCount;++i) {
+		int l = this->staticIps[i].marshal(tmp);
+		if (l < 0)
+			return false;
+		buf.insert(buf.end(),tmp,tmp + l);
+	}
+	if (!buf.empty()) {
+		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_STATIC_IPS,(const char *)buf.data(),(int)buf.size()))
+			return false;
 	}
 
 	if (this->ruleCount) {
-		tmp->clear();
-		Capability::serializeRules(*tmp,rules,ruleCount);
-		if (tmp->size()) {
-			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_RULES,*tmp)) return false;
+		buf.resize(ruleCount * ZT_VIRTUALNETWORKRULE_MARSHAL_SIZE_MAX);
+		int l = Capability::marshalVirtualNetworkRules(buf.data(),rules,ruleCount);
+		if (l > 0) {
+			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_RULES,(const char *)buf.data(),l))
+				return false;
 		}
 	}
 

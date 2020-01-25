@@ -27,7 +27,7 @@ namespace Protocol {
 
 namespace {
 
-const uint8_t ZEROES32[32] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
+const uint64_t ZEROES32[4] = { 0,0,0,0 };
 
 /**
  * Deterministically mangle a 256-bit crypto key based on packet

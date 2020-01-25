@@ -122,7 +122,7 @@ int Capability::unmarshal(const uint8_t *data,int len)
 	return p;
 }
 
-int Capability::marshalVirtualNetworkRules(uint8_t data[ZT_VIRTUALNETWORKRULE_MARSHAL_SIZE_MAX],const ZT_VirtualNetworkRule *const rules,const unsigned int ruleCount)
+int Capability::marshalVirtualNetworkRules(uint8_t *data,const ZT_VirtualNetworkRule *const rules,const unsigned int ruleCount)
 {
 	int p = 0;
 	for(unsigned int i=0;i<ruleCount;++i) {

@@ -70,10 +70,12 @@ set(core_src
 	Peer.cpp
 	Poly1305.cpp
 	Protocol.cpp
+	Revocation.cpp
 	Salsa20.cpp
 	SelfAwareness.cpp
 	SHA512.cpp
 	Switch.cpp
+	Tag.cpp
 	Topology.cpp
 	Trace.cpp
 	Utils.cpp

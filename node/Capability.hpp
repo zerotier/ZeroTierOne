@@ -159,7 +159,7 @@ public:
 	int marshal(uint8_t data[ZT_CAPABILITY_MARSHAL_SIZE_MAX],bool forSign = false) const;
 	int unmarshal(const uint8_t *data,int len);
 
-	static int marshalVirtualNetworkRules(uint8_t data[ZT_VIRTUALNETWORKRULE_MARSHAL_SIZE_MAX],const ZT_VirtualNetworkRule *rules,unsigned int ruleCount);
+	static int marshalVirtualNetworkRules(uint8_t *data,const ZT_VirtualNetworkRule *rules,unsigned int ruleCount);
 	static int unmarshalVirtualNetworkRules(const uint8_t *data,int len,ZT_VirtualNetworkRule *rules,unsigned int &ruleCount,unsigned int maxRuleCount);
 
 	// Provides natural sort order by ID

@@ -25,6 +25,8 @@
 #include "Address.hpp"
 #include "Identity.hpp"
 
+#define ZT_TAG_MARSHAL_SIZE_MAX (8 + 8 + 4 + 4 + 5 + 5 + 1 + 2 + ZT_SIGNATURE_BUFFER_SIZE + 2)
+
 namespace ZeroTier {
 
 class RuntimeEnvironment;
@@ -95,17 +97,7 @@ public:
 	 * @param signer Signing identity, must have private key
 	 * @return True if signature was successful
 	 */
-	inline bool sign(const Identity &signer)
-	{
-		if (signer.hasPrivate()) {
-			Buffer<sizeof(Tag) + 64> tmp;
-			_signedBy = signer.address();
-			this->serialize(tmp,true);
-			_signatureLength = signer.sign(tmp.data(),tmp.size(),_signature,sizeof(_signature));
-			return true;
-		}
-		return false;
-	}
+	bool sign(const Identity &signer);
 
 	/**
 	 * Check this tag's signature
@@ -115,60 +107,9 @@ public:
 	 */
 	ZT_ALWAYS_INLINE Credential::VerifyResult verify(const RuntimeEnvironment *RR,void *tPtr) const { return _verify(RR,tPtr,*this); }
 
-	template<unsigned int C>
-	inline void serialize(Buffer<C> &b,const bool forSign = false) const
-	{
-		if (forSign) b.append((uint64_t)0x7f7f7f7f7f7f7f7fULL);
-
-		b.append(_networkId);
-		b.append(_ts);
-		b.append(_id);
-		b.append(_value);
-
-		_issuedTo.appendTo(b);
-		_signedBy.appendTo(b);
-		if (!forSign) {
-			b.append((uint8_t)1);
-			b.append((uint16_t)_signatureLength);
-			b.append(_signature,_signatureLength);
-		}
-
-		b.append((uint16_t)0); // length of additional fields, currently 0
-
-		if (forSign) b.append((uint64_t)0x7f7f7f7f7f7f7f7fULL);
-	}
-
-	template<unsigned int C>
-	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
-	{
-		unsigned int p = startAt;
-
-		*this = Tag();
-
-		_networkId = b.template at<uint64_t>(p); p += 8;
-		_ts = b.template at<uint64_t>(p); p += 8;
-		_id = b.template at<uint32_t>(p); p += 4;
-
-		_value = b.template at<uint32_t>(p); p += 4;
-
-		_issuedTo.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); p += ZT_ADDRESS_LENGTH;
-		_signedBy.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); p += ZT_ADDRESS_LENGTH;
-		if (b[p++] == 1) {
-			_signatureLength = b.template at<uint16_t>(p);
-			if (_signatureLength > sizeof(_signature))
-				throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_CRYPTOGRAPHIC_TOKEN;
-			p += 2;
-			memcpy(_signature,b.field(p,_signatureLength),_signatureLength); p += _signatureLength;
-		} else {
-			p += 2 + b.template at<uint16_t>(p);
-		}
-
-		p += 2 + b.template at<uint16_t>(p);
-		if (p > b.size())
-			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW;
-
-		return (p - startAt);
-	}
+	static ZT_ALWAYS_INLINE int marshalSizeMax() { return ZT_TAG_MARSHAL_SIZE_MAX; }
+	int marshal(uint8_t data[ZT_TAG_MARSHAL_SIZE_MAX],bool forSign = false) const;
+	int unmarshal(const uint8_t *data,int len);
 
 	// Provides natural sort order by ID
 	ZT_ALWAYS_INLINE bool operator<(const Tag &t) const { return (_id < t._id); }

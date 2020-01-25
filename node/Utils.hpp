@@ -212,14 +212,14 @@ static ZT_ALWAYS_INLINE unsigned long hexStrToULong(const char *s) { return strt
 static ZT_ALWAYS_INLINE long hexStrToLong(const char *s) { return strtol(s,(char **)0,16); }
 #endif
 
-static ZT_ALWAYS_INLINE unsigned int strToUInt(const char *s) { return (unsigned int)strtoul(s,(char **)0,10); }
+static ZT_ALWAYS_INLINE unsigned int strToUInt(const char *s) { return (unsigned int)strtoul(s,nullptr,10); }
 
 static ZT_ALWAYS_INLINE unsigned long long strToU64(const char *s)
 {
 #ifdef __WINDOWS__
 	return (unsigned long long)_strtoui64(s,(char **)0,10);
 #else
-	return strtoull(s,(char **)0,10);
+	return strtoull(s,nullptr,10);
 #endif
 }
 
@@ -228,16 +228,16 @@ static ZT_ALWAYS_INLINE long long hexStrTo64(const char *s)
 #ifdef __WINDOWS__
 	return (long long)_strtoi64(s,(char **)0,16);
 #else
-	return strtoll(s,(char **)0,16);
+	return strtoll(s,nullptr,16);
 #endif
 }
 
 static ZT_ALWAYS_INLINE unsigned long long hexStrToU64(const char *s)
 {
 #ifdef __WINDOWS__
-	return (unsigned long long)_strtoui64(s,(char **)0,16);
+	return (unsigned long long)_strtoui64(s,nullptr,16);
 #else
-	return strtoull(s,(char **)0,16);
+	return strtoull(s,nullptr,16);
 #endif
 }
 

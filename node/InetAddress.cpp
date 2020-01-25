@@ -313,7 +313,7 @@ bool InetAddress::isNetwork() const
 	return false;
 }
 
-int InetAddress::marshal(uint8_t data[19]) const
+int InetAddress::marshal(uint8_t data[ZT_INETADDRESS_MARSHAL_SIZE_MAX]) const
 {
 	unsigned int port;
 	switch(ss_family) {
