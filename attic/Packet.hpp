@@ -234,41 +234,6 @@
 #define ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_FLAGS (ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_ADI + 4)
 #define ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_COM_AND_GATHER_RESULTS (ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_FLAGS + 1)
 
-/**
- * Signed locator for this node
- */
-#define ZT_PROTO_NODE_META_LOCATOR "l"
-
-/**
- * Ephemeral C25519 public key
- */
-#define ZT_PROTO_NODE_META_EPHEMERAL_KEY_C25519 "e0"
-
-/**
- * Ephemeral NIST P-384 public key
- */
-#define ZT_PROTO_NODE_META_EPHEMERAL_KEY_P384 "e1"
-
-/**
- * Addresses of ZeroTier nodes to whom this node will relay or one entry for 0000000000 if promiscuous.
- */
-#define ZT_PROTO_NODE_META_WILL_RELAY_TO "r"
-
-/**
- * X coordinate of your node (sent in OK(HELLO))
- */
-#define ZT_PROTO_NODE_META_LOCATION_X "gX"
-
-/**
- * Y coordinate of your node (sent in OK(HELLO))
- */
-#define ZT_PROTO_NODE_META_LOCATION_Y "gY"
-
-/**
- * Z coordinate of your node (sent in OK(HELLO))
- */
-#define ZT_PROTO_NODE_META_LOCATION_Z "gZ"
-
 // ---------------------------------------------------------------------------
 
 namespace ZeroTier {
@@ -878,6 +843,9 @@ public:
 		 * "dumb" relaying. The latter is faster but secure relaying has roles
 		 * where endpoint privacy is desired. Multiply nested ENCAP packets
 		 * could allow ZeroTier to act as an onion router.
+		 *
+		 * When encapsulated packets are forwarded they do have their hop count
+		 * field incremented.
 		 */
 		VERB_ENCAP = 0x17
 

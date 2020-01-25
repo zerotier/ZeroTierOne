@@ -6,7 +6,6 @@ set(core_headers
 	Address.hpp
 	AtomicCounter.hpp
 	Buf.hpp
-	Buffer.hpp
 	C25519.hpp
 	Capability.hpp
 	CertificateOfMembership.hpp
@@ -28,10 +27,10 @@ set(core_headers
 	NetworkConfig.hpp
 	Node.hpp
 	OS.hpp
-	Packet.hpp
 	Path.hpp
 	Peer.hpp
 	Poly1305.hpp
+	Protocol.hpp
 	RingBuffer.hpp
 	RuntimeEnvironment.hpp
 	Salsa20.hpp
@@ -64,10 +63,10 @@ set(core_src
 	Network.cpp
 	NetworkConfig.cpp
 	Node.cpp
-	Packet.cpp
 	Path.cpp
 	Peer.cpp
 	Poly1305.cpp
+	Protocol.cpp
 	Salsa20.cpp
 	SelfAwareness.cpp
 	SHA512.cpp

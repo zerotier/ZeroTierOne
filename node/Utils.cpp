@@ -165,7 +165,7 @@ void getSecureRandom(void *buf,unsigned int bytes)
 {
 	static Mutex globalLock;
 	static bool initialized = false;
-	static uint64_t randomState[4];
+	static uint64_t randomState[8];
 	static uint8_t randomBuf[65536];
 	static unsigned long randomPtr = sizeof(randomBuf);
 
@@ -175,7 +175,7 @@ void getSecureRandom(void *buf,unsigned int bytes)
 		if (randomPtr >= sizeof(randomBuf)) {
 			randomPtr = 0;
 
-			if (unlikely(!initialized)) {
+			if (!initialized) {
 				initialized = true;
 #ifdef __WINDOWS__
 				HCRYPTPROV cryptProvider = NULL;
@@ -225,14 +225,18 @@ void getSecureRandom(void *buf,unsigned int bytes)
 #endif
 			}
 
-			for(int k=0;k<4;++k) { if (++randomState[k] != 0) break; }
-			uint8_t h[48];
-			HMACSHA384((const uint8_t *)randomState,randomBuf,sizeof(randomBuf),h); // compute HMAC on random buffer using state as secret key
-			AES c(h);
-			c.ctr(h + 32,randomBuf,sizeof(randomBuf),randomBuf); // encrypt random buffer with AES-CTR using HMAC result as key
+			SHA512(randomState,randomState,sizeof(randomState));
+			AES aes(reinterpret_cast<const uint8_t *>(randomState));
+			uint64_t ctr[2];
+			ctr[0] = randomState[6];
+			ctr[1] = randomState[7];
+			for(unsigned long i=0;i<sizeof(randomBuf);i+=16) {
+				++ctr[0];
+				aes.encrypt(reinterpret_cast<const uint8_t *>(ctr),randomBuf + i);
+			}
 		}
 
-		((uint8_t *)buf)[i] = randomBuf[randomPtr++];
+		reinterpret_cast<uint8_t *>(buf)[i] = randomBuf[randomPtr++];
 	}
 }
 

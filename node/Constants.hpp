@@ -52,9 +52,9 @@
 #define ZT_DEFAULT_MTU 2800
 
 /**
- * Maximum number of packet fragments we'll support (protocol limit: 16)
+ * Maximum number of packet fragments we'll support (11 is the maximum that will fit in a Buf)
  */
-#define ZT_MAX_PACKET_FRAGMENTS 12
+#define ZT_MAX_PACKET_FRAGMENTS 11
 
 /**
  * Size of RX queue in packets

@@ -77,6 +77,9 @@ extern std::atomic<uintptr_t> Buf_pool;
  * union as 'fields.' This must be a basic plain data type and must be no larger than
  * ZT_BUF_MEM_SIZE. It's typically a packed struct.
  *
+ * Buf instances with different template parameters can freely be cast to one another
+ * as there is no actual difference in size or layout.
+ *
  * @tparam U Type to overlap with data bytes in data union (can't be larger than ZT_BUF_MEM_SIZE)
  */
 template<typename U = void>
@@ -86,12 +89,10 @@ class Buf
 
 private:
 	// Direct construction isn't allowed; use get().
-	ZT_ALWAYS_INLINE Buf()
-	{}
+	ZT_ALWAYS_INLINE Buf() {}
 
 	template<typename X>
-	ZT_ALWAYS_INLINE Buf(const Buf<X> &b)
-	{ memcpy(data.bytes,b.data.bytes,ZT_BUF_MEM_SIZE); }
+	ZT_ALWAYS_INLINE Buf(const Buf<X> &b) { memcpy(data.bytes,b.data.bytes,ZT_BUF_MEM_SIZE); }
 
 public:
 	static void operator delete(void *ptr,std::size_t sz)
@@ -203,8 +204,7 @@ public:
 	 * @param ii Iterator to check
 	 * @return True if iterator has read past the size of the buffer
 	 */
-	static ZT_ALWAYS_INLINE bool writeOverflow(const int &ii)
-	{ return ((ii - ZT_BUF_MEM_SIZE) > 0); }
+	static ZT_ALWAYS_INLINE bool writeOverflow(const int &ii) { return ((ii - ZT_BUF_MEM_SIZE) > 0); }
 
 	/**
 	 * Check for overflow beyond the size of the data that should be in the buffer
@@ -216,8 +216,7 @@ public:
 	 * @param size Size of data that should be in buffer
 	 * @return True if iterator has read past the size of the data
 	 */
-	static ZT_ALWAYS_INLINE bool readOverflow(const int &ii,const unsigned int size)
-	{ return ((ii - (int)size) > 0); }
+	static ZT_ALWAYS_INLINE bool readOverflow(const int &ii,const unsigned int size) { return ((ii - (int)size) > 0); }
 
 	template<typename X>
 	ZT_ALWAYS_INLINE Buf &operator=(const Buf<X> &b) const
@@ -225,6 +224,24 @@ public:
 		memcpy(data.bytes,b.data.bytes,ZT_BUF_MEM_SIZE);
 		return *this;
 	}
+
+	/**
+	 * Shortcut to cast between buffers whose data can be viewed through a different struct type
+	 *
+	 * @tparam X A packed struct or other primitive type that should be placed in the data union
+	 * @return Reference to this Buf templated with the supplied parameter
+	 */
+	template<typename X>
+	ZT_ALWAYS_INLINE Buf<X> &view() { return *reinterpret_cast< Buf<X> * >(this); }
+
+	/**
+	 * Shortcut to cast between buffers whose data can be viewed through a different struct type
+	 *
+	 * @tparam X A packed struct or other primitive type that should be placed in the data union
+	 * @return Reference to this Buf templated with the supplied parameter
+	 */
+	template<typename X>
+	ZT_ALWAYS_INLINE const Buf<X> &view() const { return *reinterpret_cast< Buf<X> * >(this); }
 
 	/**
 	 * Zero memory
@@ -241,8 +258,8 @@ public:
 	 */
 	ZT_ALWAYS_INLINE uint8_t rI8(int &ii) const
 	{
-		const unsigned int s = (unsigned int)ii++;
-		return data.bytes[s & ZT_BUF_MEM_MASK];
+		const int s = ii++;
+		return data.bytes[(unsigned int)s & ZT_BUF_MEM_MASK];
 	}
 
 	/**
@@ -432,8 +449,8 @@ public:
 	 */
 	ZT_ALWAYS_INLINE void wI(int &ii,uint8_t n)
 	{
-		const unsigned int s = (unsigned int)ii++;
-		data[s & ZT_BUF_MEM_MASK] = n;
+		const int s = ii++;
+		data[(unsigned int)s & ZT_BUF_MEM_MASK] = n;
 	}
 
 	/**
@@ -508,7 +525,7 @@ public:
 	template<typename T>
 	ZT_ALWAYS_INLINE void wO(int &ii,T &t)
 	{
-		const unsigned int s = (unsigned int)ii;
+		const int s = ii;
 		if ((s + T::marshalSizeMax()) <= ZT_BUF_MEM_SIZE) {
 			int ms = t.marshal(data.bytes + s);
 			if (ms > 0)
@@ -546,7 +563,7 @@ public:
 	 */
 	ZT_ALWAYS_INLINE void wB(int &ii,const void *const bytes,const unsigned int len)
 	{
-		unsigned int s = (unsigned int)ii;
+		const int s = ii;
 		if ((ii += (int)len) <= ZT_BUF_MEM_SIZE)
 			memcpy(data.bytes + s,bytes,len);
 	}

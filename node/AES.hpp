@@ -37,7 +37,7 @@ class AES
 {
 public:
 	ZT_ALWAYS_INLINE AES() {}
-	ZT_ALWAYS_INLINE AES(const uint8_t key[32]) { this->init(key); }
+	explicit ZT_ALWAYS_INLINE AES(const uint8_t key[32]) { this->init(key); }
 	ZT_ALWAYS_INLINE ~AES() { Utils::burn(&_k,sizeof(_k)); }
 
 	/**
@@ -71,46 +71,9 @@ public:
 		_encryptSW(in,out);
 	}
 
-	/**
-	 * Compute GMAC-AES256 (GCM without ciphertext)
-	 *
-	 * @param iv 96-bit IV
-	 * @param in Input data
-	 * @param len Length of input
-	 * @param out 128-bit authorization tag from GMAC
-	 */
-	ZT_ALWAYS_INLINE void gmac(const uint8_t iv[12],const void *in,const unsigned int len,uint8_t out[16]) const
+	ZT_ALWAYS_INLINE void gcm(const uint8_t iv[12],const void *in,const unsigned int len,uint8_t out[16],uint8_t tag[16]) const
 	{
-#ifdef ZT_AES_AESNI
-		if (likely(Utils::CPUID.aes)) {
-			_gmac_aesni(iv,(const uint8_t *)in,len,out);
-			return;
-		}
-#endif
-		_gmacSW(iv,(const uint8_t *)in,len,out);
-	}
-
-	/**
-	 * Encrypt or decrypt (they're the same) using AES256-CTR
-	 *
-	 * The counter here is a 128-bit big-endian that starts at the IV. The code only
-	 * increments the least significant 64 bits, making it only safe to use for a
-	 * maximum of 2^64-1 bytes (much larger than we ever do).
-	 *
-	 * @param iv 128-bit CTR IV
-	 * @param in Input plaintext or ciphertext
-	 * @param len Length of input
-	 * @param out Output plaintext or ciphertext
-	 */
-	ZT_ALWAYS_INLINE void ctr(const uint8_t iv[16],const void *in,unsigned int len,void *out) const
-	{
-#ifdef ZT_AES_AESNI
-		if (likely(Utils::CPUID.aes)) {
-			_ctr_aesni(iv,(const uint8_t *)in,len,(uint8_t *)out);
-			return;
-		}
-#endif
-		_ctrSW(iv,in,len,out);
+		// TODO
 	}
 
 private:
@@ -122,7 +85,6 @@ private:
 
 	void _initSW(const uint8_t key[32]);
 	void _encryptSW(const uint8_t in[16],uint8_t out[16]) const;
-	void _ctrSW(const uint8_t iv[16],const void *in,unsigned int len,void *out) const;
 	void _gmacSW(const uint8_t iv[12],const uint8_t *in,unsigned int len,uint8_t out[16]) const;
 
 	/**************************************************************************/
@@ -258,7 +220,6 @@ private:
 	}
 
 	void _gmac_aesni(const uint8_t iv[12],const uint8_t *in,unsigned int len,uint8_t out[16]) const;
-	void _ctr_aesni(const uint8_t iv[16],const uint8_t *in,unsigned int len,uint8_t *out) const;
 #endif /* ZT_AES_AESNI ******************************************************/
 };
 

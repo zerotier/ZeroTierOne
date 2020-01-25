@@ -18,7 +18,7 @@
 #include "Mutex.hpp"
 #include "LZ4.hpp"
 
-#if (defined(_MSC_VER) || defined(__GNUC__) || defined(__clang)) && (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
+#if defined(__GCC__) && (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
 #define ZT_PACKET_USE_ATOMIC_INTRINSICS
 #endif
 #ifndef ZT_PACKET_USE_ATOMIC_INTRINSICS
@@ -137,7 +137,7 @@ static unsigned long long s_packetIdCtr = s_initPacketID();
 static std::atomic<unsigned long long> s_packetIdCtr(s_initPacketID());
 #endif
 
-uint64_t Packet::nextPacketId()
+uint64_t getPacketId()
 {
 #ifdef ZT_PACKET_USE_ATOMIC_INTRINSICS
 	return __sync_add_and_fetch(&s_packetIdCtr,1ULL);

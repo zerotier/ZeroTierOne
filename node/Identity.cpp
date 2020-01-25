@@ -94,7 +94,7 @@ void Identity::generate(const Type t)
 	char *const genmem = new char[ZT_IDENTITY_GEN_MEMORY];
 	do {
 		C25519::generateSatisfying(_Identity_generate_cond(digest,genmem),_pub.c25519,_priv.c25519);
-		_address.setTo(digest + 59,ZT_ADDRESS_LENGTH); // last 5 bytes are address
+		_address.setTo(digest + 59); // last 5 bytes are address
 	} while (_address.isReserved());
 	delete [] genmem;
 
@@ -379,7 +379,7 @@ bool Identity::fromString(const char *str)
 
 int Identity::marshal(uint8_t data[ZT_IDENTITY_MARSHAL_SIZE_MAX],const bool includePrivate) const
 {
-	_address.copyTo(data,ZT_ADDRESS_LENGTH);
+	_address.copyTo(data);
 	switch(_type) {
 
 		case C25519:

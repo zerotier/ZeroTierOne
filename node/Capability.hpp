@@ -23,8 +23,12 @@
 #include "Address.hpp"
 #include "C25519.hpp"
 #include "Utils.hpp"
-#include "Buffer.hpp"
 #include "Identity.hpp"
+
+#define ZT_VIRTUALNETWORKRULE_MARSHAL_SIZE_MAX 21
+
+#define ZT_CAPABILITY__CUSTODY_CHAIN_ITEM_MARSHAL_SIZE_MAX (5 + 5 + 2 + ZT_SIGNATURE_BUFFER_SIZE)
+#define ZT_CAPABILITY_MARSHAL_SIZE_MAX (8 + 8 + 4 + 1 + 2 + (ZT_VIRTUALNETWORKRULE_MARSHAL_SIZE_MAX * ZT_MAX_CAPABILITY_RULES) + 2 + (ZT_CAPABILITY__CUSTODY_CHAIN_ITEM_MARSHAL_SIZE_MAX * ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH))
 
 namespace ZeroTier {
 
@@ -79,7 +83,7 @@ public:
 	 * @param rules Network flow rules for this capability
 	 * @param ruleCount Number of flow rules
 	 */
-	ZT_ALWAYS_INLINE Capability(uint32_t id,uint64_t nwid,int64_t ts,unsigned int mccl,const ZT_VirtualNetworkRule *rules,unsigned int ruleCount) :
+	ZT_ALWAYS_INLINE Capability(const uint32_t id,const uint64_t nwid,const int64_t ts,const unsigned int mccl,const ZT_VirtualNetworkRule *const rules,const unsigned int ruleCount) :
 		_nwid(nwid),
 		_ts(ts),
 		_id(id),
@@ -121,7 +125,7 @@ public:
 	ZT_ALWAYS_INLINE Address issuedTo() const
 	{
 		Address i2;
-		for(unsigned int i=0;i<ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH;++i) {
+		for(int i=0;i<ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH;++i) {
 			if (!_custody[i].to)
 				return i2;
 			else i2 = _custody[i].to;
@@ -151,297 +155,12 @@ public:
 	 */
 	ZT_ALWAYS_INLINE Credential::VerifyResult verify(const RuntimeEnvironment *RR,void *tPtr) const { return _verify(RR,tPtr,*this); }
 
-	template<unsigned int C>
-	static inline void serializeRules(Buffer<C> &b,const ZT_VirtualNetworkRule *rules,unsigned int ruleCount)
-	{
-		for(unsigned int i=0;i<ruleCount;++i) {
-			// Each rule consists of its 8-bit type followed by the size of that type's
-			// field followed by field data. The inclusion of the size will allow non-supported
-			// rules to be ignored but still parsed.
-			b.append((uint8_t)rules[i].t);
-			switch((ZT_VirtualNetworkRuleType)(rules[i].t & 0x3f)) {
-				default:
-					b.append((uint8_t)0);
-					break;
-				case ZT_NETWORK_RULE_ACTION_TEE:
-				case ZT_NETWORK_RULE_ACTION_WATCH:
-				case ZT_NETWORK_RULE_ACTION_REDIRECT:
-					b.append((uint8_t)14);
-					b.append((uint64_t)rules[i].v.fwd.address);
-					b.append((uint32_t)rules[i].v.fwd.flags);
-					b.append((uint16_t)rules[i].v.fwd.length); // unused for redirect
-					break;
-				case ZT_NETWORK_RULE_MATCH_SOURCE_ZEROTIER_ADDRESS:
-				case ZT_NETWORK_RULE_MATCH_DEST_ZEROTIER_ADDRESS:
-					b.append((uint8_t)5);
-					Address(rules[i].v.zt).appendTo(b);
-					break;
-				case ZT_NETWORK_RULE_MATCH_VLAN_ID:
-					b.append((uint8_t)2);
-					b.append((uint16_t)rules[i].v.vlanId);
-					break;
-				case ZT_NETWORK_RULE_MATCH_VLAN_PCP:
-					b.append((uint8_t)1);
-					b.append((uint8_t)rules[i].v.vlanPcp);
-					break;
-				case ZT_NETWORK_RULE_MATCH_VLAN_DEI:
-					b.append((uint8_t)1);
-					b.append((uint8_t)rules[i].v.vlanDei);
-					break;
-				case ZT_NETWORK_RULE_MATCH_MAC_SOURCE:
-				case ZT_NETWORK_RULE_MATCH_MAC_DEST:
-					b.append((uint8_t)6);
-					b.append(rules[i].v.mac,6);
-					break;
-				case ZT_NETWORK_RULE_MATCH_IPV4_SOURCE:
-				case ZT_NETWORK_RULE_MATCH_IPV4_DEST:
-					b.append((uint8_t)5);
-					b.append(&(rules[i].v.ipv4.ip),4);
-					b.append((uint8_t)rules[i].v.ipv4.mask);
-					break;
-				case ZT_NETWORK_RULE_MATCH_IPV6_SOURCE:
-				case ZT_NETWORK_RULE_MATCH_IPV6_DEST:
-					b.append((uint8_t)17);
-					b.append(rules[i].v.ipv6.ip,16);
-					b.append((uint8_t)rules[i].v.ipv6.mask);
-					break;
-				case ZT_NETWORK_RULE_MATCH_IP_TOS:
-					b.append((uint8_t)3);
-					b.append((uint8_t)rules[i].v.ipTos.mask);
-					b.append((uint8_t)rules[i].v.ipTos.value[0]);
-					b.append((uint8_t)rules[i].v.ipTos.value[1]);
-					break;
-				case ZT_NETWORK_RULE_MATCH_IP_PROTOCOL:
-					b.append((uint8_t)1);
-					b.append((uint8_t)rules[i].v.ipProtocol);
-					break;
-				case ZT_NETWORK_RULE_MATCH_ETHERTYPE:
-					b.append((uint8_t)2);
-					b.append((uint16_t)rules[i].v.etherType);
-					break;
-				case ZT_NETWORK_RULE_MATCH_ICMP:
-					b.append((uint8_t)3);
-					b.append((uint8_t)rules[i].v.icmp.type);
-					b.append((uint8_t)rules[i].v.icmp.code);
-					b.append((uint8_t)rules[i].v.icmp.flags);
-					break;
-				case ZT_NETWORK_RULE_MATCH_IP_SOURCE_PORT_RANGE:
-				case ZT_NETWORK_RULE_MATCH_IP_DEST_PORT_RANGE:
-					b.append((uint8_t)4);
-					b.append((uint16_t)rules[i].v.port[0]);
-					b.append((uint16_t)rules[i].v.port[1]);
-					break;
-				case ZT_NETWORK_RULE_MATCH_CHARACTERISTICS:
-					b.append((uint8_t)8);
-					b.append((uint64_t)rules[i].v.characteristics);
-					break;
-				case ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE:
-					b.append((uint8_t)4);
-					b.append((uint16_t)rules[i].v.frameSize[0]);
-					b.append((uint16_t)rules[i].v.frameSize[1]);
-					break;
-				case ZT_NETWORK_RULE_MATCH_RANDOM:
-					b.append((uint8_t)4);
-					b.append((uint32_t)rules[i].v.randomProbability);
-					break;
-				case ZT_NETWORK_RULE_MATCH_TAGS_DIFFERENCE:
-				case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_AND:
-				case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_OR:
-				case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_XOR:
-				case ZT_NETWORK_RULE_MATCH_TAGS_EQUAL:
-				case ZT_NETWORK_RULE_MATCH_TAG_SENDER:
-				case ZT_NETWORK_RULE_MATCH_TAG_RECEIVER:
-					b.append((uint8_t)8);
-					b.append((uint32_t)rules[i].v.tag.id);
-					b.append((uint32_t)rules[i].v.tag.value);
-					break;
-				case ZT_NETWORK_RULE_MATCH_INTEGER_RANGE:
-					b.append((uint8_t)19);
-					b.append((uint64_t)rules[i].v.intRange.start);
-					b.append((uint64_t)(rules[i].v.intRange.start + (uint64_t)rules[i].v.intRange.end)); // more future-proof
-					b.append((uint16_t)rules[i].v.intRange.idx);
-					b.append((uint8_t)rules[i].v.intRange.format);
-					break;
-			}
-		}
-	}
+	static ZT_ALWAYS_INLINE int marshalSizeMax() { return ZT_CAPABILITY_MARSHAL_SIZE_MAX; }
+	int marshal(uint8_t data[ZT_CAPABILITY_MARSHAL_SIZE_MAX],bool forSign = false) const;
+	int unmarshal(const uint8_t *data,int len);
 
-	template<unsigned int C>
-	static inline void deserializeRules(const Buffer<C> &b,unsigned int &p,ZT_VirtualNetworkRule *rules,unsigned int &ruleCount,const unsigned int maxRuleCount)
-	{
-		while ((ruleCount < maxRuleCount)&&(p < b.size())) {
-			rules[ruleCount].t = (uint8_t)b[p++];
-			const unsigned int fieldLen = (unsigned int)b[p++];
-			switch((ZT_VirtualNetworkRuleType)(rules[ruleCount].t & 0x3f)) {
-				default:
-					break;
-				case ZT_NETWORK_RULE_ACTION_TEE:
-				case ZT_NETWORK_RULE_ACTION_WATCH:
-				case ZT_NETWORK_RULE_ACTION_REDIRECT:
-					rules[ruleCount].v.fwd.address = b.template at<uint64_t>(p);
-					rules[ruleCount].v.fwd.flags = b.template at<uint32_t>(p + 8);
-					rules[ruleCount].v.fwd.length = b.template at<uint16_t>(p + 12);
-					break;
-				case ZT_NETWORK_RULE_MATCH_SOURCE_ZEROTIER_ADDRESS:
-				case ZT_NETWORK_RULE_MATCH_DEST_ZEROTIER_ADDRESS:
-					rules[ruleCount].v.zt = Address(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH).toInt();
-					break;
-				case ZT_NETWORK_RULE_MATCH_VLAN_ID:
-					rules[ruleCount].v.vlanId = b.template at<uint16_t>(p);
-					break;
-				case ZT_NETWORK_RULE_MATCH_VLAN_PCP:
-					rules[ruleCount].v.vlanPcp = (uint8_t)b[p];
-					break;
-				case ZT_NETWORK_RULE_MATCH_VLAN_DEI:
-					rules[ruleCount].v.vlanDei = (uint8_t)b[p];
-					break;
-				case ZT_NETWORK_RULE_MATCH_MAC_SOURCE:
-				case ZT_NETWORK_RULE_MATCH_MAC_DEST:
-					memcpy(rules[ruleCount].v.mac,b.field(p,6),6);
-					break;
-				case ZT_NETWORK_RULE_MATCH_IPV4_SOURCE:
-				case ZT_NETWORK_RULE_MATCH_IPV4_DEST:
-					memcpy(&(rules[ruleCount].v.ipv4.ip),b.field(p,4),4);
-					rules[ruleCount].v.ipv4.mask = (uint8_t)b[p + 4];
-					break;
-				case ZT_NETWORK_RULE_MATCH_IPV6_SOURCE:
-				case ZT_NETWORK_RULE_MATCH_IPV6_DEST:
-					memcpy(rules[ruleCount].v.ipv6.ip,b.field(p,16),16);
-					rules[ruleCount].v.ipv6.mask = (uint8_t)b[p + 16];
-					break;
-				case ZT_NETWORK_RULE_MATCH_IP_TOS:
-					rules[ruleCount].v.ipTos.mask = (uint8_t)b[p];
-					rules[ruleCount].v.ipTos.value[0] = (uint8_t)b[p+1];
-					rules[ruleCount].v.ipTos.value[1] = (uint8_t)b[p+2];
-					break;
-				case ZT_NETWORK_RULE_MATCH_IP_PROTOCOL:
-					rules[ruleCount].v.ipProtocol = (uint8_t)b[p];
-					break;
-				case ZT_NETWORK_RULE_MATCH_ETHERTYPE:
-					rules[ruleCount].v.etherType = b.template at<uint16_t>(p);
-					break;
-				case ZT_NETWORK_RULE_MATCH_ICMP:
-					rules[ruleCount].v.icmp.type = (uint8_t)b[p];
-					rules[ruleCount].v.icmp.code = (uint8_t)b[p+1];
-					rules[ruleCount].v.icmp.flags = (uint8_t)b[p+2];
-					break;
-				case ZT_NETWORK_RULE_MATCH_IP_SOURCE_PORT_RANGE:
-				case ZT_NETWORK_RULE_MATCH_IP_DEST_PORT_RANGE:
-					rules[ruleCount].v.port[0] = b.template at<uint16_t>(p);
-					rules[ruleCount].v.port[1] = b.template at<uint16_t>(p + 2);
-					break;
-				case ZT_NETWORK_RULE_MATCH_CHARACTERISTICS:
-					rules[ruleCount].v.characteristics = b.template at<uint64_t>(p);
-					break;
-				case ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE:
-					rules[ruleCount].v.frameSize[0] = b.template at<uint16_t>(p);
-					rules[ruleCount].v.frameSize[1] = b.template at<uint16_t>(p + 2);
-					break;
-				case ZT_NETWORK_RULE_MATCH_RANDOM:
-					rules[ruleCount].v.randomProbability = b.template at<uint32_t>(p);
-					break;
-				case ZT_NETWORK_RULE_MATCH_TAGS_DIFFERENCE:
-				case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_AND:
-				case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_OR:
-				case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_XOR:
-				case ZT_NETWORK_RULE_MATCH_TAGS_EQUAL:
-				case ZT_NETWORK_RULE_MATCH_TAG_SENDER:
-				case ZT_NETWORK_RULE_MATCH_TAG_RECEIVER:
-					rules[ruleCount].v.tag.id = b.template at<uint32_t>(p);
-					rules[ruleCount].v.tag.value = b.template at<uint32_t>(p + 4);
-					break;
-				case ZT_NETWORK_RULE_MATCH_INTEGER_RANGE:
-					rules[ruleCount].v.intRange.start = b.template at<uint64_t>(p);
-					rules[ruleCount].v.intRange.end = (uint32_t)(b.template at<uint64_t>(p + 8) - rules[ruleCount].v.intRange.start);
-					rules[ruleCount].v.intRange.idx = b.template at<uint16_t>(p + 16);
-					rules[ruleCount].v.intRange.format = (uint8_t)b[p + 18];
-					break;
-			}
-			p += fieldLen;
-			++ruleCount;
-		}
-	}
-
-	template<unsigned int C>
-	inline void serialize(Buffer<C> &b,const bool forSign = false) const
-	{
-		if (forSign) b.append((uint64_t)0x7f7f7f7f7f7f7f7fULL);
-
-		// These are the same between Tag and Capability
-		b.append(_nwid);
-		b.append(_ts);
-		b.append(_id);
-
-		b.append((uint16_t)_ruleCount);
-		serializeRules(b,_rules,_ruleCount);
-		b.append((uint8_t)_maxCustodyChainLength);
-
-		if (!forSign) {
-			for(unsigned int i=0;;++i) {
-				if ((i < _maxCustodyChainLength)&&(i < ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH)&&(_custody[i].to)) {
-					_custody[i].to.appendTo(b);
-					_custody[i].from.appendTo(b);
-					b.append((uint8_t)1);
-					b.append((uint16_t)_custody[i].signatureLength);
-					b.append(_custody[i].signature,_custody[i].signatureLength);
-				} else {
-					b.append((unsigned char)0,ZT_ADDRESS_LENGTH); // zero 'to' terminates chain
-					break;
-				}
-			}
-		}
-
-		// This is the size of any additional fields, currently 0.
-		b.append((uint16_t)0);
-
-		if (forSign) b.append((uint64_t)0x7f7f7f7f7f7f7f7fULL);
-	}
-
-	template<unsigned int C>
-	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
-	{
-		*this = Capability();
-
-		unsigned int p = startAt;
-
-		_nwid = b.template at<uint64_t>(p); p += 8;
-		_ts = b.template at<uint64_t>(p); p += 8;
-		_id = b.template at<uint32_t>(p); p += 4;
-
-		const unsigned int rc = b.template at<uint16_t>(p); p += 2;
-		if (rc > ZT_MAX_CAPABILITY_RULES)
-			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW;
-		deserializeRules(b,p,_rules,_ruleCount,rc);
-
-		_maxCustodyChainLength = (unsigned int)b[p++];
-		if ((_maxCustodyChainLength < 1)||(_maxCustodyChainLength > ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH))
-			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW;
-
-		for(unsigned int i=0;;++i) {
-			const Address to(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); p += ZT_ADDRESS_LENGTH;
-			if (!to)
-				break;
-			if ((i >= _maxCustodyChainLength)||(i >= ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH))
-				throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW;
-			_custody[i].to = to;
-			_custody[i].from.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); p += ZT_ADDRESS_LENGTH;
-			if (b[p++] == 1) {
-				_custody[i].signatureLength = b.template at<uint16_t>(p);
-				if (_custody[i].signatureLength > sizeof(_custody[i].signature))
-					throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_CRYPTOGRAPHIC_TOKEN;
-				p += 2;
-				memcpy(_custody[i].signature,b.field(p,_custody[i].signatureLength),_custody[i].signatureLength); p += _custody[i].signatureLength;
-			} else {
-				p += 2 + b.template at<uint16_t>(p);
-			}
-		}
-
-		p += 2 + b.template at<uint16_t>(p);
-		if (p > b.size())
-			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW;
-
-		return (p - startAt);
-	}
+	static int marshalVirtualNetworkRules(uint8_t data[ZT_VIRTUALNETWORKRULE_MARSHAL_SIZE_MAX],const ZT_VirtualNetworkRule *rules,unsigned int ruleCount);
+	static int unmarshalVirtualNetworkRules(const uint8_t *data,int len,ZT_VirtualNetworkRule *rules,unsigned int &ruleCount,unsigned int maxRuleCount);
 
 	// Provides natural sort order by ID
 	ZT_ALWAYS_INLINE bool operator<(const Capability &c) const { return (_id < c._id); }

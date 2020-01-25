@@ -26,7 +26,6 @@
 
 #include "Constants.hpp"
 #include "Utils.hpp"
-#include "Buffer.hpp"
 
 namespace ZeroTier {
 
@@ -37,13 +36,8 @@ class Address
 {
 public:
 	ZT_ALWAYS_INLINE Address() : _a(0) {}
+	explicit ZT_ALWAYS_INLINE Address(const uint8_t b[5]) : _a(((uint64_t)b[0] << 32U) | ((uint64_t)b[1] << 24U) | ((uint64_t)b[2] << 16U) | ((uint64_t)b[3] << 8U) | (uint64_t)b[4]) {}
 	explicit ZT_ALWAYS_INLINE Address(const uint64_t a) : _a(a & 0xffffffffffULL) {}
-
-	/**
-	 * @param bits Raw address -- 5 bytes, big-endian byte order
-	 * @param len Length of array
-	 */
-	ZT_ALWAYS_INLINE Address(const void *bits,unsigned int len) { setTo(bits,len); }
 
 	ZT_ALWAYS_INLINE Address &operator=(const uint64_t a) { _a = (a & 0xffffffffffULL); return *this; }
 
@@ -51,51 +45,22 @@ public:
 	 * @param bits Raw address -- 5 bytes, big-endian byte order
 	 * @param len Length of array
 	 */
-	ZT_ALWAYS_INLINE void setTo(const void *bits,const unsigned int len)
+	ZT_ALWAYS_INLINE void setTo(const uint8_t b[5])
 	{
-		if (len < ZT_ADDRESS_LENGTH) {
-			_a = 0;
-			return;
-		}
-		const unsigned char *b = (const unsigned char *)bits;
-		uint64_t a = ((uint64_t)*b++) << 32;
-		a |= ((uint64_t)*b++) << 24;
-		a |= ((uint64_t)*b++) << 16;
-		a |= ((uint64_t)*b++) << 8;
-		a |= ((uint64_t)*b);
-		_a = a;
+		_a = ((uint64_t)b[0] << 32U) | ((uint64_t)b[1] << 24U) | ((uint64_t)b[2] << 16U) | ((uint64_t)b[3] << 8U) | (uint64_t)b[4];
 	}
 
 	/**
 	 * @param bits Buffer to hold 5-byte address in big-endian byte order
 	 * @param len Length of array
 	 */
-	ZT_ALWAYS_INLINE void copyTo(void *const bits,const unsigned int len) const
+	ZT_ALWAYS_INLINE void copyTo(uint8_t b[5]) const
 	{
-		if (len < ZT_ADDRESS_LENGTH)
-			return;
-		unsigned char *b = (unsigned char *)bits;
-		*(b++) = (unsigned char)((_a >> 32) & 0xff);
-		*(b++) = (unsigned char)((_a >> 24) & 0xff);
-		*(b++) = (unsigned char)((_a >> 16) & 0xff);
-		*(b++) = (unsigned char)((_a >> 8) & 0xff);
-		*b = (unsigned char)(_a & 0xff);
-	}
-
-	/**
-	 * Append to a buffer in big-endian byte order
-	 *
-	 * @param b Buffer to append to
-	 */
-	template<unsigned int C>
-	ZT_ALWAYS_INLINE void appendTo(Buffer<C> &b) const
-	{
-		unsigned char *p = (unsigned char *)b.appendField(ZT_ADDRESS_LENGTH);
-		*(p++) = (unsigned char)((_a >> 32) & 0xff);
-		*(p++) = (unsigned char)((_a >> 24) & 0xff);
-		*(p++) = (unsigned char)((_a >> 16) & 0xff);
-		*(p++) = (unsigned char)((_a >> 8) & 0xff);
-		*p = (unsigned char)(_a & 0xff);
+		b[0] = (uint8_t)(_a >> 32U);
+		b[1] = (uint8_t)(_a >> 24U);
+		b[2] = (uint8_t)(_a >> 16U);
+		b[3] = (uint8_t)(_a >> 8U);
+		b[4] = (uint8_t)_a;
 	}
 
 	/**
@@ -131,9 +96,6 @@ public:
 	ZT_ALWAYS_INLINE uint8_t operator[](unsigned int i) const { return (uint8_t)(_a >> (32 - (i * 8))); }
 
 	ZT_ALWAYS_INLINE operator bool() const { return (_a != 0); }
-	ZT_ALWAYS_INLINE operator unsigned int() const { return (unsigned int)_a; }
-	ZT_ALWAYS_INLINE operator unsigned long() const { return (unsigned long)_a; }
-	ZT_ALWAYS_INLINE operator unsigned long long() const { return (unsigned long long)_a; }
 
 	ZT_ALWAYS_INLINE void zero() { _a = 0; }
 

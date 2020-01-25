@@ -32,8 +32,6 @@ class MAC
 {
 public:
 	ZT_ALWAYS_INLINE MAC() : _m(0ULL) {}
-	ZT_ALWAYS_INLINE MAC(const MAC &m) : _m(m._m) {}
-
 	ZT_ALWAYS_INLINE MAC(const unsigned char a,const unsigned char b,const unsigned char c,const unsigned char d,const unsigned char e,const unsigned char f) :
 		_m( ((((uint64_t)a) & 0xffULL) << 40U) |
 		    ((((uint64_t)b) & 0xffULL) << 32U) |
@@ -41,7 +39,7 @@ public:
 		    ((((uint64_t)d) & 0xffULL) << 16U) |
 		    ((((uint64_t)e) & 0xffULL) << 8U) |
 		    (((uint64_t)f) & 0xffULL) ) {}
-	ZT_ALWAYS_INLINE MAC(const void *bits,unsigned int len) { setTo(bits,len); }
+	ZT_ALWAYS_INLINE MAC(const uint8_t b[6]) { setTo(b); }
 	ZT_ALWAYS_INLINE MAC(const Address &ztaddr,uint64_t nwid) { fromAddress(ztaddr,nwid); }
 	ZT_ALWAYS_INLINE MAC(const uint64_t m) : _m(m & 0xffffffffffffULL) {}
 
@@ -64,53 +62,23 @@ public:
 	 * @param bits Raw MAC in big-endian byte order
 	 * @param len Length, must be >= 6 or result is zero
 	 */
-	ZT_ALWAYS_INLINE void setTo(const void *bits,unsigned int len)
+	ZT_ALWAYS_INLINE void setTo(const uint8_t b[6])
 	{
-		if (len < 6) {
-			_m = 0ULL;
-			return;
-		}
-		const uint8_t *const b = (const uint8_t *)bits;
-		_m =  (uint64_t)b[0] << 40U;
-		_m |= (uint64_t)b[1] << 32U;
-		_m |= (uint64_t)b[2] << 24U;
-		_m |= (uint64_t)b[3] << 16U;
-		_m |= (uint64_t)b[4] << 8U;
-		_m |= (uint64_t)b[5];
+		_m = ((uint64_t)b[0] << 40U) | ((uint64_t)b[1] << 32U) | ((uint64_t)b[2] << 24U) | ((uint64_t)b[3] << 16U) | ((uint64_t)b[4] << 8U) | (uint64_t)b[5];
 	}
 
 	/**
 	 * @param buf Destination buffer for MAC in big-endian byte order
 	 * @param len Length of buffer, must be >= 6 or nothing is copied
 	 */
-	ZT_ALWAYS_INLINE void copyTo(void *buf,unsigned int len) const
+	ZT_ALWAYS_INLINE void copyTo(uint8_t b[6]) const
 	{
-		if (len < 6)
-			return;
-		uint8_t *const b = (uint8_t *)buf;
 		b[0] = (uint8_t)(_m >> 40U);
 		b[1] = (uint8_t)(_m >> 32U);
 		b[2] = (uint8_t)(_m >> 24U);
 		b[3] = (uint8_t)(_m >> 16U);
 		b[4] = (uint8_t)(_m >> 8U);
 		b[5] = (uint8_t)_m;
-	}
-
-	/**
-	 * Append to a buffer in big-endian byte order
-	 *
-	 * @param b Buffer to append to
-	 */
-	template<unsigned int C>
-	ZT_ALWAYS_INLINE void appendTo(Buffer<C> &b) const
-	{
-		uint8_t *p = (uint8_t *)b.appendField(6);
-		*(p++) = (unsigned char)((_m >> 40) & 0xff);
-		*(p++) = (unsigned char)((_m >> 32) & 0xff);
-		*(p++) = (unsigned char)((_m >> 24) & 0xff);
-		*(p++) = (unsigned char)((_m >> 16) & 0xff);
-		*(p++) = (unsigned char)((_m >> 8) & 0xff);
-		*p = (unsigned char)(_m & 0xff);
 	}
 
 	/**
@@ -131,13 +99,13 @@ public:
 	 */
 	ZT_ALWAYS_INLINE void fromAddress(const Address &ztaddr,uint64_t nwid)
 	{
-		uint64_t m = ((uint64_t)firstOctetForNetwork(nwid)) << 40;
+		uint64_t m = ((uint64_t)firstOctetForNetwork(nwid)) << 40U;
 		m |= ztaddr.toInt(); // a is 40 bits
-		m ^= ((nwid >> 8) & 0xff) << 32;
-		m ^= ((nwid >> 16) & 0xff) << 24;
-		m ^= ((nwid >> 24) & 0xff) << 16;
-		m ^= ((nwid >> 32) & 0xff) << 8;
-		m ^= (nwid >> 40) & 0xff;
+		m ^= ((nwid >> 8U) & 0xffU) << 32U;
+		m ^= ((nwid >> 16U) & 0xffU) << 24U;
+		m ^= ((nwid >> 24U) & 0xffU) << 16U;
+		m ^= ((nwid >> 32U) & 0xffU) << 8U;
+		m ^= (nwid >> 40U) & 0xffU;
 		_m = m;
 	}
 
@@ -151,11 +119,11 @@ public:
 	ZT_ALWAYS_INLINE Address toAddress(uint64_t nwid) const
 	{
 		uint64_t a = _m & 0xffffffffffULL; // least significant 40 bits of MAC are formed from address
-		a ^= ((nwid >> 8) & 0xff) << 32; // ... XORed with bits 8-48 of the nwid in little-endian byte order, so unmask it
-		a ^= ((nwid >> 16) & 0xff) << 24;
-		a ^= ((nwid >> 24) & 0xff) << 16;
-		a ^= ((nwid >> 32) & 0xff) << 8;
-		a ^= (nwid >> 40) & 0xff;
+		a ^= ((nwid >> 8U) & 0xffU) << 32U; // ... XORed with bits 8-48 of the nwid in little-endian byte order, so unmask it
+		a ^= ((nwid >> 16U) & 0xffU) << 24U;
+		a ^= ((nwid >> 24U) & 0xffU) << 16U;
+		a ^= ((nwid >> 32U) & 0xffU) << 8U;
+		a ^= (nwid >> 40U) & 0xffU;
 		return Address(a);
 	}
 
@@ -165,7 +133,7 @@ public:
 	 */
 	static ZT_ALWAYS_INLINE unsigned char firstOctetForNetwork(uint64_t nwid)
 	{
-		unsigned char a = ((unsigned char)(nwid & 0xfe) | 0x02); // locally administered, not multicast, from LSB of network ID
+		const uint8_t a = ((uint8_t)(nwid & 0xfeU) | 0x02U); // locally administered, not multicast, from LSB of network ID
 		return ((a == 0x52) ? 0x32 : a); // blacklist 0x52 since it's used by KVM, libvirt, and other popular virtualization engines... seems de-facto standard on Linux
 	}
 
@@ -205,11 +173,6 @@ public:
 		return buf;
 	}
 
-	ZT_ALWAYS_INLINE MAC &operator=(const MAC &m)
-	{
-		_m = m._m;
-		return *this;
-	}
 	ZT_ALWAYS_INLINE MAC &operator=(const uint64_t m)
 	{
 		_m = m & 0xffffffffffffULL;
