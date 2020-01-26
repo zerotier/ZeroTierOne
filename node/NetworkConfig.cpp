@@ -44,138 +44,105 @@ NetworkConfig::NetworkConfig() :
 bool NetworkConfig::toDictionary(Dictionary &d,bool includeLegacy) const
 {
 	uint8_t tmp[16384];
-	std::vector<uint8_t> buf;
-	char tmp2[128];
+	try {
+		d.clear();
 
-	d.clear();
+		d.add(ZT_NETWORKCONFIG_DICT_KEY_NETWORK_ID,this->networkId);
+		d.add(ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP,this->timestamp);
+		d.add(ZT_NETWORKCONFIG_DICT_KEY_CREDENTIAL_TIME_MAX_DELTA,this->credentialTimeMaxDelta);
+		d.add(ZT_NETWORKCONFIG_DICT_KEY_REVISION,this->revision);
+		d.add(ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO,this->issuedTo.toString((char *)tmp));
+		d.add(ZT_NETWORKCONFIG_DICT_KEY_FLAGS,this->flags);
+		d.add(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT,(uint64_t)this->multicastLimit);
+		d.add(ZT_NETWORKCONFIG_DICT_KEY_TYPE,(uint16_t)this->type);
+		d.add(ZT_NETWORKCONFIG_DICT_KEY_NAME,this->name);
+		d.add(ZT_NETWORKCONFIG_DICT_KEY_MTU,this->mtu);
 
-	// Try to put the more human-readable fields first
+		if (this->com)
+			d.add(ZT_NETWORKCONFIG_DICT_KEY_COM,tmp,this->com.marshal(tmp));
 
-	if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_NETWORK_ID,this->networkId)) return false;
-	if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP,this->timestamp)) return false;
-	if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_CREDENTIAL_TIME_MAX_DELTA,this->credentialTimeMaxDelta)) return false;
-	if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_REVISION,this->revision)) return false;
-	if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO,this->issuedTo.toString(tmp2))) return false;
-	if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_FLAGS,this->flags)) return false;
-	if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT,(uint64_t)this->multicastLimit)) return false;
-	if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_TYPE,(uint64_t)this->type)) return false;
-	if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_NAME,this->name)) return false;
-	if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_MTU,(uint64_t)this->mtu)) return false;
-
-	// Then add binary blobs
-
-	if (this->com) {
-		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_COM,(const char *)tmp,this->com.marshal(tmp)))
-			return false;
-	}
-
-	buf.clear();
-	for(unsigned int i=0;i<this->capabilityCount;++i) {
-		int l = this->capabilities[i].marshal(tmp);
-		if (l < 0)
-			return false;
-		buf.insert(buf.end(),tmp,tmp + l);
-	}
-	if (!buf.empty()) {
-		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_CAPABILITIES,(const char *)buf.data(),(int)buf.size()))
-			return false;
-	}
-
-	buf.clear();
-	for(unsigned int i=0;i<this->tagCount;++i) {
-		int l = this->tags[i].marshal(tmp);
-		if (l < 0)
-			return false;
-		buf.insert(buf.end(),tmp,tmp + l);
-	}
-	if (!buf.empty()) {
-		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_TAGS,(const char *)buf.data(),(int)buf.size()))
-			return false;
-	}
-
-	buf.clear();
-	for(unsigned int i=0;i<this->certificateOfOwnershipCount;++i) {
-		int l = this->certificatesOfOwnership[i].marshal(tmp);
-		if (l < 0)
-			return false;
-		buf.insert(buf.end(),tmp,tmp + l);
-	}
-	if (!buf.empty()) {
-		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATES_OF_OWNERSHIP,(const char *)buf.data(),(int)buf.size()))
-			return false;
-	}
-
-	buf.clear();
-	for(unsigned int i=0;i<this->specialistCount;++i) {
-		Utils::storeBigEndian<uint64_t>(tmp,this->specialists[i]);
-		buf.insert(buf.end(),tmp,tmp + 8);
-	}
-	if (!buf.empty()) {
-		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_SPECIALISTS,(const char *)buf.data(),(int)buf.size()))
-			return false;
-	}
-
-	buf.clear();
-	for(unsigned int i=0;i<this->routeCount;++i) {
-		int l = asInetAddress(this->routes[i].target).marshal(tmp);
-		if (l < 0)
-			return false;
-		buf.insert(buf.end(),tmp,tmp + l);
-		l = asInetAddress(this->routes[i].via).marshal(tmp);
-		if (l < 0)
-			return false;
-		buf.insert(buf.end(),tmp,tmp + l);
-	}
-	if (!buf.empty()) {
-		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_ROUTES,(const char *)buf.data(),(int)buf.size()))
-			return false;
-	}
-
-	buf.clear();
-	for(unsigned int i=0;i<this->staticIpCount;++i) {
-		int l = this->staticIps[i].marshal(tmp);
-		if (l < 0)
-			return false;
-		buf.insert(buf.end(),tmp,tmp + l);
-	}
-	if (!buf.empty()) {
-		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_STATIC_IPS,(const char *)buf.data(),(int)buf.size()))
-			return false;
-	}
-
-	if (this->ruleCount) {
-		buf.resize(ruleCount * ZT_VIRTUALNETWORKRULE_MARSHAL_SIZE_MAX);
-		int l = Capability::marshalVirtualNetworkRules(buf.data(),rules,ruleCount);
-		if (l > 0) {
-			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_RULES,(const char *)buf.data(),l))
+		std::vector<uint8_t> *blob = &(d[ZT_NETWORKCONFIG_DICT_KEY_CAPABILITIES]);
+		for (unsigned int i = 0; i < this->capabilityCount; ++i) {
+			int l = this->capabilities[i].marshal(tmp);
+			if (l < 0)
 				return false;
+			blob->insert(blob->end(),tmp,tmp + l);
 		}
-	}
 
-	return true;
+		blob = &(d[ZT_NETWORKCONFIG_DICT_KEY_TAGS]);
+		for (unsigned int i = 0; i < this->tagCount; ++i) {
+			int l = this->tags[i].marshal(tmp);
+			if (l < 0)
+				return false;
+			blob->insert(blob->end(),tmp,tmp + l);
+		}
+
+		blob = &(d[ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATES_OF_OWNERSHIP]);
+		for (unsigned int i = 0; i < this->certificateOfOwnershipCount; ++i) {
+			int l = this->certificatesOfOwnership[i].marshal(tmp);
+			if (l < 0)
+				return false;
+			blob->insert(blob->end(),tmp,tmp + l);
+		}
+
+		blob = &(d[ZT_NETWORKCONFIG_DICT_KEY_SPECIALISTS]);
+		for (unsigned int i = 0; i < this->specialistCount; ++i) {
+			Utils::storeBigEndian<uint64_t>(tmp,this->specialists[i]);
+			blob->insert(blob->end(),tmp,tmp + 8);
+		}
+
+		blob = &(d[ZT_NETWORKCONFIG_DICT_KEY_ROUTES]);
+		for (unsigned int i = 0; i < this->routeCount; ++i) {
+			int l = asInetAddress(this->routes[i].target).marshal(tmp);
+			if (l < 0)
+				return false;
+			blob->insert(blob->end(),tmp,tmp + l);
+			l = asInetAddress(this->routes[i].via).marshal(tmp);
+			if (l < 0)
+				return false;
+			blob->insert(blob->end(),tmp,tmp + l);
+		}
+
+		blob = &(d[ZT_NETWORKCONFIG_DICT_KEY_STATIC_IPS]);
+		for (unsigned int i = 0; i < this->staticIpCount; ++i) {
+			int l = this->staticIps[i].marshal(tmp);
+			if (l < 0)
+				return false;
+			blob->insert(blob->end(),tmp,tmp + l);
+		}
+
+		blob = &(d[ZT_NETWORKCONFIG_DICT_KEY_RULES]);
+		if (this->ruleCount) {
+			blob->resize(ruleCount * ZT_VIRTUALNETWORKRULE_MARSHAL_SIZE_MAX);
+			int l = Capability::marshalVirtualNetworkRules(blob->data(),rules,ruleCount);
+			if (l > 0)
+				blob->resize(l);
+		}
+
+		return true;
+	} catch ( ... ) {}
+	return false;
 }
 
 bool NetworkConfig::fromDictionary(const Dictionary &d)
 {
 	static const NetworkConfig NIL_NC;
-	ScopedPtr< Buffer<ZT_NETWORKCONFIG_DICT_CAPACITY> > tmp(new Buffer<ZT_NETWORKCONFIG_DICT_CAPACITY>());
-
 	try {
 		*this = NIL_NC;
 
-		// Fields that are always present, new or old
 		this->networkId = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_NETWORK_ID,0);
 		if (!this->networkId)
 			return false;
 		this->timestamp = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP,0);
+		if (this->timestamp <= 0)
+			return false;
 		this->credentialTimeMaxDelta = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_CREDENTIAL_TIME_MAX_DELTA,0);
 		this->revision = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_REVISION,0);
 		this->issuedTo = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO,0);
 		if (!this->issuedTo)
 			return false;
 		this->multicastLimit = (unsigned int)d.getUI(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT,0);
-		d.get(ZT_NETWORKCONFIG_DICT_KEY_NAME,this->name,sizeof(this->name));
-
+		d.getS(ZT_NETWORKCONFIG_DICT_KEY_NAME,this->name,sizeof(this->name));
 		this->mtu = (unsigned int)d.getUI(ZT_NETWORKCONFIG_DICT_KEY_MTU,ZT_DEFAULT_MTU);
 		if (this->mtu < 1280)
 			this->mtu = 1280; // minimum MTU allowed by IPv6 standard and others
@@ -185,87 +152,120 @@ bool NetworkConfig::fromDictionary(const Dictionary &d)
 		if (d.getUI(ZT_NETWORKCONFIG_DICT_KEY_VERSION,0) < 6) {
 			return false;
 		} else {
-			// Otherwise we can use the new fields
 			this->flags = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_FLAGS,0);
 			this->type = (ZT_VirtualNetworkType)d.getUI(ZT_NETWORKCONFIG_DICT_KEY_TYPE,(uint64_t)ZT_NETWORK_TYPE_PRIVATE);
 
-			if (d.get(ZT_NETWORKCONFIG_DICT_KEY_COM,*tmp))
-				this->com.deserialize(*tmp,0);
+			const std::vector<uint8_t> *blob = &(d[ZT_NETWORKCONFIG_DICT_KEY_COM]);
+			if (!blob->empty()) {
+				if (this->com.unmarshal(blob->data(),(int)(blob->size()) < 0))
+					return false;
+			}
 
-			if (d.get(ZT_NETWORKCONFIG_DICT_KEY_CAPABILITIES,*tmp)) {
+			blob = &(d[ZT_NETWORKCONFIG_DICT_KEY_CAPABILITIES]);
+			if (!blob->empty()) {
 				try {
 					unsigned int p = 0;
-					while (p < tmp->size()) {
+					while (p < blob->size()) {
 						Capability cap;
-						p += cap.deserialize(*tmp,p);
-						this->capabilities[this->capabilityCount++] = cap;
+						int l = cap.unmarshal(blob->data() + p,(int)(blob->size() - p));
+						if (l < 0)
+							return false;
+						p += l;
+						if (this->capabilityCount < ZT_MAX_NETWORK_CAPABILITIES)
+							this->capabilities[this->capabilityCount++] = cap;
 					}
 				} catch ( ... ) {}
 				std::sort(&(this->capabilities[0]),&(this->capabilities[this->capabilityCount]));
 			}
 
-			if (d.get(ZT_NETWORKCONFIG_DICT_KEY_TAGS,*tmp)) {
+			blob = &(d[ZT_NETWORKCONFIG_DICT_KEY_TAGS]);
+			if (!blob->empty()) {
 				try {
 					unsigned int p = 0;
-					while (p < tmp->size()) {
+					while (p < blob->size()) {
 						Tag tag;
-						p += tag.deserialize(*tmp,p);
-						this->tags[this->tagCount++] = tag;
+						int l = tag.unmarshal(blob->data() + p,(int)(blob->size() - p));
+						if (l < 0)
+							return false;
+						p += l;
+						if (this->tagCount < ZT_MAX_NETWORK_TAGS)
+							this->tags[this->tagCount++] = tag;
 					}
 				} catch ( ... ) {}
 				std::sort(&(this->tags[0]),&(this->tags[this->tagCount]));
 			}
 
-			if (d.get(ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATES_OF_OWNERSHIP,*tmp)) {
-				unsigned int p = 0;
-				while (p < tmp->size()) {
-					if (certificateOfOwnershipCount < ZT_MAX_CERTIFICATES_OF_OWNERSHIP)
-						p += certificatesOfOwnership[certificateOfOwnershipCount++].deserialize(*tmp,p);
-					else {
-						CertificateOfOwnership foo;
-						p += foo.deserialize(*tmp,p);
+			blob = &(d[ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATES_OF_OWNERSHIP]);
+			if (!blob->empty()) {
+				try {
+					unsigned int p = 0;
+					while (p < blob->size()) {
+						CertificateOfOwnership coo;
+						int l = coo.unmarshal(blob->data() + p,(int)(blob->size() - p));
+						if (l < 0)
+							return false;
+						p += l;
+						if (this->certificateOfOwnershipCount < ZT_MAX_CERTIFICATES_OF_OWNERSHIP)
+							this->certificatesOfOwnership[certificateOfOwnershipCount++] = coo;
 					}
-				}
+				} catch ( ... ) {}
+				std::sort(&(this->certificatesOfOwnership[0]),&(this->certificatesOfOwnership[this->certificateOfOwnershipCount]));
 			}
 
-			if (d.get(ZT_NETWORKCONFIG_DICT_KEY_SPECIALISTS,*tmp)) {
+			blob = &(d[ZT_NETWORKCONFIG_DICT_KEY_SPECIALISTS]);
+			if (!blob->empty()) {
 				unsigned int p = 0;
-				while ((p + 8) <= tmp->size()) {
-					if (specialistCount < ZT_MAX_NETWORK_SPECIALISTS)
-						this->specialists[this->specialistCount++] = tmp->at<uint64_t>(p);
+				while (((p + 8) <= blob->size())&&(specialistCount < ZT_MAX_NETWORK_SPECIALISTS)) {
+					this->specialists[this->specialistCount++] = Utils::loadBigEndian<uint64_t>(blob->data() + p);
 					p += 8;
 				}
 			}
 
-			if (d.get(ZT_NETWORKCONFIG_DICT_KEY_ROUTES,*tmp)) {
+			blob = &(d[ZT_NETWORKCONFIG_DICT_KEY_ROUTES]);
+			if (!blob->empty()) {
 				unsigned int p = 0;
-				while ((p < tmp->size())&&(routeCount < ZT_MAX_NETWORK_ROUTES)) {
-					p += reinterpret_cast<InetAddress *>(&(this->routes[this->routeCount].target))->deserialize(*tmp,p);
-					p += reinterpret_cast<InetAddress *>(&(this->routes[this->routeCount].via))->deserialize(*tmp,p);
-					this->routes[this->routeCount].flags = tmp->at<uint16_t>(p); p += 2;
-					this->routes[this->routeCount].metric = tmp->at<uint16_t>(p); p += 2;
+				while ((p < blob->size())&&(routeCount < ZT_MAX_NETWORK_ROUTES)) {
+					int l = asInetAddress(this->routes[this->routeCount].target).unmarshal(blob->data(),(int)(blob->size() - p));
+					if (l < 0)
+						return false;
+					p += l;
+					if (p >= blob->size())
+						return false;
+					l = asInetAddress(this->routes[this->routeCount].via).unmarshal(blob->data(),(int)(blob->size() - p));
+					if (l < 0)
+						return false;
+					p += l;
+					if ((p + 4) > blob->size())
+						return false;
+					this->routes[this->routeCount].flags = Utils::loadBigEndian<uint16_t>(blob->data() + p); p += 2;
+					this->routes[this->routeCount].metric = Utils::loadBigEndian<uint16_t>(blob->data() + p); p += 2;
 					++this->routeCount;
 				}
 			}
 
-			if (d.get(ZT_NETWORKCONFIG_DICT_KEY_STATIC_IPS,*tmp)) {
+			blob = &(d[ZT_NETWORKCONFIG_DICT_KEY_STATIC_IPS]);
+			if (!blob->empty()) {
 				unsigned int p = 0;
-				while ((p < tmp->size())&&(staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES)) {
-					p += this->staticIps[this->staticIpCount++].deserialize(*tmp,p);
+				while ((p < blob->size())&&(staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES)) {
+					int l = this->staticIps[this->staticIpCount].unmarshal(blob->data() + p,(int)(blob->size() - p));
+					if (l < 0)
+						return false;
+					p += l;
+					++this->staticIpCount;
 				}
 			}
 
-			if (d.get(ZT_NETWORKCONFIG_DICT_KEY_RULES,*tmp)) {
+			blob = &(d[ZT_NETWORKCONFIG_DICT_KEY_RULES]);
+			if (!blob->empty()) {
 				this->ruleCount = 0;
-				unsigned int p = 0;
-				Capability::deserializeRules(*tmp,p,this->rules,this->ruleCount,ZT_MAX_NETWORK_RULES);
+				if (Capability::unmarshalVirtualNetworkRules(blob->data(),(int)blob->size(),this->rules,this->ruleCount,ZT_MAX_NETWORK_RULES) < 0)
+					return false;
 			}
 		}
 
 		return true;
-	} catch ( ... ) {
-		return false;
-	}
+	} catch ( ... ) {}
+	return false;
 }
 
 bool NetworkConfig::addSpecialist(const Address &a,const uint64_t f)

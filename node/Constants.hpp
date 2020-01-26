@@ -231,9 +231,6 @@
 #define ZT_CRYPTO_ALG_C25519 0
 #define ZT_CRYPTO_ALG_P384 1
 
-// Exceptions thrown in core ZT code
-#define ZT_EXCEPTION_OUT_OF_BOUNDS 100
-
 /* Ethernet frame types that might be relevant to us */
 #define ZT_ETHERTYPE_IPV4 0x0800
 #define ZT_ETHERTYPE_ARP 0x0806

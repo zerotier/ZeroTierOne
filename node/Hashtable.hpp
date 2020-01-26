@@ -35,7 +35,7 @@ private:
 	struct _Bucket
 	{
 		ZT_ALWAYS_INLINE _Bucket(const K &k,const V &v) : k(k),v(v) {}
-		ZT_ALWAYS_INLINE _Bucket(const K &k) : k(k),v() {}
+		explicit ZT_ALWAYS_INLINE _Bucket(const K &k) : k(k),v() {}
 		ZT_ALWAYS_INLINE _Bucket(const _Bucket &b) : k(b.k),v(b.v) {}
 		ZT_ALWAYS_INLINE _Bucket &operator=(const _Bucket &b) { k = b.k; v = b.v; return *this; }
 		_Bucket *next; // must be set manually for each _Bucket
@@ -57,7 +57,7 @@ public:
 		/**
 		 * @param ht Hash table to iterate over
 		 */
-		ZT_ALWAYS_INLINE Iterator(Hashtable &ht) :
+		explicit ZT_ALWAYS_INLINE Iterator(Hashtable &ht) :
 			_idx(0),
 			_ht(&ht),
 			_b(ht._t[0])
@@ -95,7 +95,7 @@ public:
 	/**
 	 * @param bc Initial capacity in buckets (default: 32, must be nonzero)
 	 */
-	ZT_ALWAYS_INLINE Hashtable(unsigned long bc = 32) :
+	explicit ZT_ALWAYS_INLINE Hashtable(unsigned long bc = 32) :
 		_t(reinterpret_cast<_Bucket **>(::malloc(sizeof(_Bucket *) * bc))),
 		_bc(bc),
 		_s(0)

@@ -23,6 +23,7 @@
 #include <cstdint>
 #include <cstring>
 #include <cstdlib>
+#include <stdexcept>
 
 #ifndef __GNUC__
 #include <atomic>
@@ -37,10 +38,21 @@
 namespace ZeroTier {
 
 #ifdef __GNUC__
-extern uintptr_t Buf_pool;
+extern uintptr_t _Buf_pool;
 #else
-extern std::atomic<uintptr_t> Buf_pool;
+extern std::atomic<uintptr_t> _Buf_pool;
 #endif
+void _Buf_release(void *ptr,std::size_t sz);
+void *_Buf_get();
+
+/**
+ * Free buffers in the pool
+ *
+ * New buffers will be created and the pool repopulated if get() is called
+ * and outstanding buffers will still be returned to the pool. This just
+ * frees buffers currently held in reserve.
+ */
+void freeBufPool();
 
 /**
  * Buffer and methods for branch-free bounds-checked data assembly and parsing
@@ -82,10 +94,13 @@ extern std::atomic<uintptr_t> Buf_pool;
  *
  * @tparam U Type to overlap with data bytes in data union (can't be larger than ZT_BUF_MEM_SIZE)
  */
-template<typename U = void>
+template<typename U = int>
 class Buf
 {
 	friend class SharedPtr< Buf<U> >;
+	friend void _Buf_release(void *,std::size_t);
+	friend void *_Buf_get();
+	friend void freeBufPool();
 
 private:
 	// Direct construction isn't allowed; use get().
@@ -95,104 +110,19 @@ private:
 	ZT_ALWAYS_INLINE Buf(const Buf<X> &b) { memcpy(data.bytes,b.data.bytes,ZT_BUF_MEM_SIZE); }
 
 public:
-	static void operator delete(void *ptr,std::size_t sz)
-	{
-		if (ptr) {
-			uintptr_t bb;
-			const uintptr_t locked = ~((uintptr_t)0);
-			for (;;) {
-#ifdef __GNUC__
-				bb = __sync_fetch_and_or(&Buf_pool,locked); // get value of s_pool and "lock" by filling with all 1's
-#else
-				bb = s_pool.fetch_or(locked);
-#endif
-				if (bb != locked)
-					break;
-			}
-
-			((Buf *)ptr)->__nextInPool = bb;
-#ifdef __GNUC__
-			__sync_fetch_and_and(&Buf_pool,(uintptr_t)ptr);
-#else
-			s_pool.store((uintptr_t)ptr);
-#endif
-		}
-	}
+	static void operator delete(void *ptr,std::size_t sz) { _Buf_release(ptr,sz); }
 
 	/**
 	 * Get obtains a buffer from the pool or allocates a new buffer if the pool is empty
 	 *
-	 * @return Buffer
+	 * @return Buffer instance
 	 */
 	static ZT_ALWAYS_INLINE SharedPtr< Buf<U> > get()
 	{
-		uintptr_t bb;
-		const uintptr_t locked = ~((uintptr_t)0);
-		for (;;) {
-#ifdef __GNUC__
-			bb = __sync_fetch_and_or(&Buf_pool,locked); // get value of s_pool and "lock" by filling with all 1's
-#else
-			bb = s_pool.fetch_or(locked);
-#endif
-			if (bb != locked)
-				break;
-		}
-
-		Buf *b;
-		if (bb == 0) {
-#ifdef __GNUC__
-			__sync_fetch_and_and(&Buf_pool,bb);
-#else
-			s_pool.store(bb);
-#endif
-			b = (Buf *)malloc(sizeof(Buf));
-			if (!b)
-				return SharedPtr<Buf>();
-		} else {
-			b = (Buf *)bb;
-#ifdef __GNUC__
-			__sync_fetch_and_and(&Buf_pool,b->__nextInPool);
-#else
-			s_pool.store(b->__nextInPool);
-#endif
-		}
-
-		b->__refCount.zero();
-		return SharedPtr<Buf>(b);
-	}
-
-	/**
-	 * Free buffers in the pool
-	 *
-	 * New buffers will be created and the pool repopulated if get() is called
-	 * and outstanding buffers will still be returned to the pool. This just
-	 * frees buffers currently held in reserve.
-	 */
-	static inline void freePool()
-	{
-		uintptr_t bb;
-		const uintptr_t locked = ~((uintptr_t)0);
-		for (;;) {
-#ifdef __GNUC__
-			bb = __sync_fetch_and_or(&Buf_pool,locked); // get value of s_pool and "lock" by filling with all 1's
-#else
-			bb = s_pool.fetch_or(locked);
-#endif
-			if (bb != locked)
-				break;
-		}
-
-#ifdef __GNUC__
-		__sync_fetch_and_and(&Buf_pool,(uintptr_t)0);
-#else
-		s_pool.store((uintptr_t)0);
-#endif
-
-		while (bb != 0) {
-			uintptr_t next = ((Buf *)bb)->__nextInPool;
-			free((void *)bb);
-			bb = next;
-		}
+		void *const b = _Buf_get();
+		if (b)
+			return SharedPtr<Buf>((Buf *)b);
+		throw std::bad_alloc();
 	}
 
 	/**

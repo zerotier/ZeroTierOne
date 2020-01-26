@@ -34,50 +34,30 @@ public:
 	typedef char * iterator;
 	typedef const char * const_iterator;
 
-	ZT_ALWAYS_INLINE Str() { _l = 0; _s[0] = 0; }
-	ZT_ALWAYS_INLINE Str(const Str &s)
-	{
-		_l = s._l;
-		memcpy(_s,s._s,_l+1);
-	}
-	ZT_ALWAYS_INLINE Str(const char *s)
-	{
-		_l = 0;
-		_s[0] = 0;
-		(*this) << s;
-	}
-	ZT_ALWAYS_INLINE Str(const std::string &s) { *this = s; }
+	ZT_ALWAYS_INLINE Str() { memset(reinterpret_cast<void *>(this),0,sizeof(Str)); }
+	explicit ZT_ALWAYS_INLINE Str(const char *s) { *this = s; }
 
-	ZT_ALWAYS_INLINE Str &operator=(const Str &s)
-	{
-		_l = s._l;
-		memcpy(_s,s._s,_l+1);
-		return *this;
-	}
 	ZT_ALWAYS_INLINE Str &operator=(const char *s)
 	{
-		_l = 0;
-		_s[0] = 0;
-		return ((*this) << s);
-	}
-	ZT_ALWAYS_INLINE Str &operator=(const std::string &s)
-	{
-		if (s.length() > C) {
+		if (s) {
+			unsigned int l = 0;
+			while (l < C) {
+				char c = s[l];
+				if (!c) break;
+				_s[l++] = c;
+			}
+			_s[l] = 0;
+			_l = (uint16_t)l;
+		} else {
 			_l = 0;
 			_s[0] = 0;
-			throw ZT_EXCEPTION_OUT_OF_BOUNDS;
-		} else {
-			_l = (uint8_t)s.length();
-			memcpy(_s,s.data(),s.length());
-			_s[s.length()] = 0;
 		}
-		return *this;
 	}
 
 	ZT_ALWAYS_INLINE char operator[](const unsigned int i) const
 	{
-		if (unlikely(i >= (unsigned int)_l))
-			throw ZT_EXCEPTION_OUT_OF_BOUNDS;
+		if (i >= (unsigned int)_l)
+			return 0;
 		return _s[i];
 	}
 
@@ -85,6 +65,7 @@ public:
 	ZT_ALWAYS_INLINE const char *c_str() const { return _s; }
 	ZT_ALWAYS_INLINE unsigned int length() const { return (unsigned int)_l; }
 	ZT_ALWAYS_INLINE bool empty() const { return (_l == 0); }
+
 	ZT_ALWAYS_INLINE iterator begin() { return (iterator)_s; }
 	ZT_ALWAYS_INLINE iterator end() { return (iterator)(_s + (unsigned long)_l); }
 	ZT_ALWAYS_INLINE const_iterator begin() const { return (const_iterator)_s; }
@@ -92,44 +73,27 @@ public:
 
 	ZT_ALWAYS_INLINE Str &operator<<(const char *s)
 	{
-		if (likely(s != (const char *)0)) {
-			unsigned long l = _l;
-			while (*s) {
-				if (unlikely(l >= C)) {
-					_s[C] = 0;
-					_l = C;
-					throw ZT_EXCEPTION_OUT_OF_BOUNDS;
-				}
-				_s[l++] = *(s++);
+		if (s) {
+			unsigned int l = _l;
+			while (l < C) {
+				char c = s[l];
+				if (!c) break;
+				_s[l++] = c;
 			}
 			_s[l] = 0;
-			_l = (uint8_t)l;
+			_l = (uint16_t)l;
 		}
-		return *this;
 	}
 	ZT_ALWAYS_INLINE Str &operator<<(const Str &s) { return ((*this) << s._s); }
 	ZT_ALWAYS_INLINE Str &operator<<(const char c)
 	{
-		if (unlikely(_l >= C)) {
-			_s[C] = 0;
-			throw ZT_EXCEPTION_OUT_OF_BOUNDS;
+		if (_l < C) {
+			_s[_l++] = c;
+			_s[_l] = 0;
 		}
-		_s[(unsigned long)(_l++)] = c;
-		_s[(unsigned long)_l] = 0;
 		return *this;
 	}
-	ZT_ALWAYS_INLINE Str &operator<<(const unsigned long n)
-	{
-		char tmp[32];
-		Utils::decimal(n,tmp);
-		return ((*this) << tmp);
-	}
-	ZT_ALWAYS_INLINE Str &operator<<(const unsigned int n)
-	{
-		char tmp[32];
-		Utils::decimal((unsigned long)n,tmp);
-		return ((*this) << tmp);
-	}
+
 	ZT_ALWAYS_INLINE Str &operator<<(const Address &a)
 	{
 		char tmp[32];
@@ -144,27 +108,6 @@ public:
 	{
 		char tmp[64];
 		return ((*this) << a.toString(tmp));
-	}
-
-	inline Str &append(const char *s,const unsigned int max)
-	{
-		if (likely(s != (const char *)0)) {
-			unsigned long l = _l;
-			unsigned int c = 0;
-			while (*s) {
-				if (c++ >= max) break;
-				if (unlikely(l >= C)) {
-					_s[C] = 0;
-					_l = C;
-					throw ZT_EXCEPTION_OUT_OF_BOUNDS;
-				}
-				_s[l++] = *s;
-				++s;
-			}
-			_s[l] = 0;
-			_l = (uint8_t)l;
-		}
-		return *this;
 	}
 
 	ZT_ALWAYS_INLINE operator bool() const { return (_l != 0); }

@@ -38,7 +38,6 @@ set(core_headers
 	SelfAwareness.hpp
 	SHA512.hpp
 	SharedPtr.hpp
-	Str.hpp
 	Switch.hpp
 	Tag.hpp
 	Topology.hpp

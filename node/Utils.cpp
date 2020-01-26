@@ -97,6 +97,85 @@ char *decimal(unsigned long n,char s[24])
 	return s;
 }
 
+char *hex(uint8_t i,char s[3])
+{
+	s[0] = HEXCHARS[(i >> 4U) & 0xfU];
+	s[1] = HEXCHARS[i & 0xfU];
+	s[2] = 0;
+	return s;
+}
+
+char *hex(uint16_t i,char s[5])
+{
+	s[0] = HEXCHARS[(i >> 12U) & 0xfU];
+	s[1] = HEXCHARS[(i >> 8U) & 0xfU];
+	s[2] = HEXCHARS[(i >> 4U) & 0xfU];
+	s[3] = HEXCHARS[i & 0xfU];
+	s[4] = 0;
+	return s;
+}
+
+char *hex(uint32_t i,char s[9])
+{
+	s[0] = HEXCHARS[(i >> 28U) & 0xfU];
+	s[1] = HEXCHARS[(i >> 24U) & 0xfU];
+	s[2] = HEXCHARS[(i >> 20U) & 0xfU];
+	s[3] = HEXCHARS[(i >> 16U) & 0xfU];
+	s[4] = HEXCHARS[(i >> 12U) & 0xfU];
+	s[5] = HEXCHARS[(i >> 8U) & 0xfU];
+	s[6] = HEXCHARS[(i >> 4U) & 0xfU];
+	s[7] = HEXCHARS[i & 0xfU];
+	s[8] = 0;
+	return s;
+}
+
+char *hex(uint64_t i,char s[17])
+{
+	s[0] = HEXCHARS[(i >> 60U) & 0xfU];
+	s[1] = HEXCHARS[(i >> 56U) & 0xfU];
+	s[2] = HEXCHARS[(i >> 52U) & 0xfU];
+	s[3] = HEXCHARS[(i >> 48U) & 0xfU];
+	s[4] = HEXCHARS[(i >> 44U) & 0xfU];
+	s[5] = HEXCHARS[(i >> 40U) & 0xfU];
+	s[6] = HEXCHARS[(i >> 36U) & 0xfU];
+	s[7] = HEXCHARS[(i >> 32U) & 0xfU];
+	s[8] = HEXCHARS[(i >> 28U) & 0xfU];
+	s[9] = HEXCHARS[(i >> 24U) & 0xfU];
+	s[10] = HEXCHARS[(i >> 20U) & 0xfU];
+	s[11] = HEXCHARS[(i >> 16U) & 0xfU];
+	s[12] = HEXCHARS[(i >> 12U) & 0xfU];
+	s[13] = HEXCHARS[(i >> 8U) & 0xfU];
+	s[14] = HEXCHARS[(i >> 4U) & 0xfU];
+	s[15] = HEXCHARS[i & 0xfU];
+	s[16] = 0;
+	return s;
+}
+
+uint64_t unhex(const char *s)
+{
+	uint64_t n = 0;
+	if (s) {
+		int k = 0;
+		while (k < 16) {
+			char hc = *(s++);
+			if (!hc) break;
+
+			uint8_t c = 0;
+			if ((hc >= 48)&&(hc <= 57))
+				c = hc - 48;
+			else if ((hc >= 97)&&(hc <= 102))
+				c = hc - 87;
+			else if ((hc >= 65)&&(hc <= 70))
+				c = hc - 55;
+
+			n <<= 4U;
+			n |= (uint64_t)c;
+			++k;
+		}
+	}
+	return n;
+}
+
 char *hex10(uint64_t i,char s[11])
 {
 	s[0] = HEXCHARS[(i >> 36U) & 0xfU];

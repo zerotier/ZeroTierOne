@@ -18,181 +18,157 @@
 #include "Utils.hpp"
 #include "Address.hpp"
 #include "Buf.hpp"
+#include "Hashtable.hpp"
 
 #include <cstdint>
-
-#define ZT_DICTIONARY_MAX_CAPACITY 65536
+#include <vector>
 
 namespace ZeroTier {
 
 /**
- * A small (in code and data) packed key=value store
+ * A simple key-value store for short keys
  *
- * This stores data in the form of a compact blob that is sort of human
- * readable (depending on whether you put binary data in it) and is backward
- * compatible with older versions. Binary data is escaped such that the
- * serialized form of a Dictionary is always a valid null-terminated C string.
+ * This data structure is used for network configurations, node meta-data,
+ * and other open-definition protocol objects. It consists of a key-value
+ * store with short (under 8 characters) keys that map to strings, blobs,
+ * or integers with the latter being by convention in hex format.
  *
- * Keys are restricted: no binary data, no CR/LF, and no equals (=). If a key
- * contains these characters it may not be retrievable. This is not checked.
- *
- * Lookup is via linear search and will be slow with a lot of keys. It's
- * designed for small things.
- *
- * There is code to test and fuzz this in selftest.cpp. Fuzzing a blob of
- * pointer tricks like this is important after any modifications.
- *
- * This is used for network configurations and for saving some things on disk
- * in the ZeroTier One service code.
- *
- * @tparam C Dictionary max capacity in bytes
+ * If this seems a little odd, it is. It dates back to the very first alpha
+ * versions of ZeroTier and if it were redesigned today we'd use some kind
+ * of simple or standardized binary encoding. Nevertheless it is efficient
+ * and it works so there is no need to change it and break backward
+ * compatibility.
  */
 class Dictionary
 {
 public:
-	ZT_ALWAYS_INLINE Dictionary() { _d[0] = 0; }
-	explicit ZT_ALWAYS_INLINE Dictionary(const char *s) { this->load(s); }
-	Dictionary(const char *s,unsigned int len);
-
-	ZT_ALWAYS_INLINE operator bool() const { return (_d[0] != 0); }
+	Dictionary();
+	~Dictionary();
 
 	/**
-	 * Load a dictionary from a C-string
+	 * Get a reference to a value
 	 *
-	 * @param s Dictionary in string form
-	 * @return False if 's' was longer than our capacity
+	 * @param k Key to look up
+	 * @return Reference to value
 	 */
-	bool load(const char *s);
+	std::vector<uint8_t> &operator[](const char *k);
 
 	/**
-	 * Delete all entries
-	 */
-	ZT_ALWAYS_INLINE void clear() { memset(_d,0,sizeof(_d)); }
-
-	/**
-	 * Get an entry
+	 * Get a const reference to a value
 	 *
-	 * Note that to get binary values, dest[] should be at least one more than
-	 * the maximum size of the value being retrieved. That's because even if
-	 * the data is binary a terminating 0 is still appended to dest[] after it.
+	 * @param k Key to look up
+	 * @return Reference to value or to empty vector if not found
+	 */
+	const std::vector<uint8_t> &operator[](const char *k) const;
+
+	/**
+	 * Add a boolean as '1' or '0'
+	 */
+	void add(const char *k,bool v);
+
+	/**
+	 * Add an integer as a hexadecimal string value
+	 */
+	void add(const char *k,uint16_t v);
+
+	/**
+	 * Add an integer as a hexadecimal string value
+	 */
+	void add(const char *k,uint32_t v);
+
+	/**
+	 * Add an integer as a hexadecimal string value
+	 */
+	void add(const char *k,uint64_t v);
+
+	ZT_ALWAYS_INLINE void add(const char *k,int16_t v) { add(k,(uint16_t)v); }
+	ZT_ALWAYS_INLINE void add(const char *k,int32_t v) { add(k,(uint32_t)v); }
+	ZT_ALWAYS_INLINE void add(const char *k,int64_t v) { add(k,(uint64_t)v); }
+
+	/**
+	 * Add an address in 10-digit hex string format
+	 */
+	void add(const char *k,const Address &v);
+
+	/**
+	 * Add a C string as a value
+	 */
+	void add(const char *k,const char *v);
+
+	/**
+	 * Add a binary blob as a value
+	 */
+	void add(const char *k,const void *data,unsigned int len);
+
+	/**
+	 * Get a boolean
 	 *
-	 * If the key is not found, dest[0] is set to 0 to make dest[] an empty
-	 * C string in that case. The dest[] array will *never* be unterminated
-	 * after this call.
+	 * @param k Key to look up
+	 * @param dfl Default value (default: false)
+	 * @return Value of key or default if not found
+	 */
+	bool getB(const char *k,bool dfl = false) const;
+
+	/**
+	 * Get an integer
 	 *
-	 * Security note: if 'key' is ever directly based on anything that is not
-	 * a hard-code or internally-generated name, it must be checked to ensure
-	 * that the buffer is NULL-terminated since key[] does not take a secondary
-	 * size parameter. In NetworkConfig all keys are hard-coded strings so this
-	 * isn't a problem in the core.
+	 * @param k Key to look up
+	 * @param dfl Default value (default: 0)
+	 * @return Value of key or default if not found
+	 */
+	uint64_t getUI(const char *k,uint64_t dfl = 0) const;
+
+	/**
+	 * Get a C string
 	 *
-	 * @param key Key to look up
-	 * @param dest Destination buffer
-	 * @param destlen Size of destination buffer
-	 * @return -1 if not found, or actual number of bytes stored in dest[] minus trailing 0
-	 */
-	int get(const char *key,char *dest,unsigned int destlen) const;
-
-	/**
-	 * Get a boolean value
+	 * If the buffer is too small the string will be truncated, but the
+	 * buffer will always end in a terminating null no matter what.
 	 *
-	 * @param key Key to look up
-	 * @param dfl Default value if not found in dictionary
-	 * @return Boolean value of key or 'dfl' if not found
+	 * @param k Key to look up
+	 * @param v Buffer to hold string
+	 * @param cap Maximum size of string (including terminating null)
 	 */
-	ZT_ALWAYS_INLINE bool getB(const char *key,bool dfl = false) const
-	{
-		char tmp[4];
-		if (this->get(key,tmp,sizeof(tmp)) >= 0)
-			return ((*tmp == '1')||(*tmp == 't')||(*tmp == 'T'));
-		return dfl;
-	}
+	void getS(const char *k,char *v,unsigned int cap) const;
 
 	/**
-	 * Get an unsigned int64 stored as hex in the dictionary
+	 * Erase all entries in dictionary
+	 */
+	void clear();
+
+	/**
+	 * @return Number of entries
+	 */
+	ZT_ALWAYS_INLINE unsigned int size() const { return _t.size(); }
+
+	/**
+	 * @return True if dictionary is not empty
+	 */
+	ZT_ALWAYS_INLINE bool empty() const { return _t.empty(); }
+
+	/**
+	 * Encode to a string in the supplied vector
 	 *
-	 * @param key Key to look up
-	 * @param dfl Default value or 0 if unspecified
-	 * @return Decoded hex UInt value or 'dfl' if not found
-	 */
-	ZT_ALWAYS_INLINE uint64_t getUI(const char *key,uint64_t dfl = 0) const
-	{
-		char tmp[128];
-		if (this->get(key,tmp,sizeof(tmp)) >= 1)
-			return Utils::hexStrToU64(tmp);
-		return dfl;
-	}
-
-	/**
-	 * Get an unsigned int64 stored as hex in the dictionary
+	 * This does not add a terminating zero. This must be pushed afterwords
+	 * if the result is to be handled as a C string.
 	 *
-	 * @param key Key to look up
-	 * @param dfl Default value or 0 if unspecified
-	 * @return Decoded hex UInt value or 'dfl' if not found
+	 * @param out String encoded dictionary
 	 */
-	ZT_ALWAYS_INLINE int64_t getI(const char *key,int64_t dfl = 0) const
-	{
-		char tmp[128];
-		if (this->get(key,tmp,sizeof(tmp)) >= 1)
-			return Utils::hexStrTo64(tmp);
-		return dfl;
-	}
+	void encode(std::vector<uint8_t> &out) const;
 
 	/**
-	 * Add a new key=value pair
+	 * Decode a string encoded dictionary
 	 *
-	 * If the key is already present this will append another, but the first
-	 * will always be returned by get(). This is not checked. If you want to
-	 * ensure a key is not present use erase() first.
+	 * This will decode up to 'len' but will also abort if it finds a
+	 * null/zero as this could be a C string.
 	 *
-	 * Use the vlen parameter to add binary values. Nulls will be escaped.
-	 *
-	 * @param key Key -- nulls, CR/LF, and equals (=) are illegal characters
-	 * @param value Value to set
-	 * @param vlen Length of value in bytes or -1 to treat value[] as a C-string and look for terminating 0
-	 * @return True if there was enough room to add this key=value pair
+	 * @param data Data to decode
+	 * @param len Length of data
+	 * @return True if dictionary was formatted correctly and valid, false on error
 	 */
-	bool add(const char *key,const char *value,int vlen = -1);
-
-	/**
-	 * Add a boolean as a '1' or a '0'
-	 */
-	bool add(const char *key,bool value);
-
-	/**
-	 * Add a 64-bit integer (unsigned) as a hex value
-	 */
-	bool add(const char *key,uint64_t value);
-
-	/**
-	 * Add a 64-bit integer (unsigned) as a hex value
-	 */
-	bool add(const char *key,int64_t value);
-
-	/**
-	 * Add a 64-bit integer (unsigned) as a hex value
-	 */
-	bool add(const char *key,const Address &a);
-
-	/**
-	 * @param key Key to check
-	 * @return True if key is present
-	 */
-	ZT_ALWAYS_INLINE bool contains(const char *key) const
-	{
-		char tmp[2];
-		return (this->get(key,tmp,2) >= 0);
-	}
-
-	/**
-	 * @return Value of C template parameter
-	 */
-	ZT_ALWAYS_INLINE unsigned int capacity() const { return sizeof(_d); }
-
-	ZT_ALWAYS_INLINE const char *data() const { return _d; }
+	bool decode(const void *data,unsigned int len);
 
 private:
-	char _d[ZT_DICTIONARY_MAX_CAPACITY];
+	Hashtable< uint64_t,std::vector<uint8_t> > _t;
 };
 
 } // namespace ZeroTier

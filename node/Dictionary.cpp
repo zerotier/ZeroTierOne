@@ -15,210 +15,264 @@
 
 namespace ZeroTier {
 
-Dictionary::Dictionary(const char *s,unsigned int len)
+static uint64_t _toKey(const char *k)
 {
-	for(unsigned int i=0;i<ZT_DICTIONARY_MAX_CAPACITY;++i) {
-		if ((s)&&(i < len)) {
-			if (!(_d[i] = *s))
-				s = (const char *)0;
-			else ++s;
-		} else _d[i] = (char)0;
+	uint64_t n = 0;
+	unsigned int i = 0;
+	for(;;) {
+		char c = k[i];
+		if (!c) break;
+		reinterpret_cast<uint8_t *>(&n)[i & 7U] ^= (uint8_t)c;
+		++i;
 	}
-	_d[ZT_DICTIONARY_MAX_CAPACITY-1] = (char)0;
+	return n;
 }
 
-bool Dictionary::load(const char *s)
+Dictionary::Dictionary()
 {
-	for(unsigned int i=0;i<ZT_DICTIONARY_MAX_CAPACITY;++i) {
-		if (s) {
-			if (!(_d[i] = *s))
-				s = (const char *)0;
-			else ++s;
-		} else _d[i] = (char)0;
-	}
-	_d[ZT_DICTIONARY_MAX_CAPACITY - 1] = (char)0;
-	return (!s);
 }
 
-int Dictionary::get(const char *key,char *dest,unsigned int destlen) const
+Dictionary::~Dictionary()
 {
-	const char *p = _d;
-	const char *const eof = p + ZT_DICTIONARY_MAX_CAPACITY;
-	const char *k;
-	bool esc;
-	int j;
+}
 
-	if (!destlen) // sanity check
-		return -1;
+std::vector<uint8_t> &Dictionary::operator[](const char *k)
+{
+	return _t[_toKey(k)];
+}
 
-	while (*p) {
-		k = key;
-		while ((*k)&&(*p)) {
-			if (*p != *k)
-				break;
-			++k;
-			if (++p == eof) {
-				dest[0] = (char)0;
-				return -1;
-			}
-		}
+const std::vector<uint8_t> &Dictionary::operator[](const char *k) const
+{
+	static const std::vector<uint8_t> emptyEntry;
+	const std::vector<uint8_t> *const e = _t.get(_toKey(k));
+	return (e) ? *e : emptyEntry;
+}
 
-		if ((!*k)&&(*p == '=')) {
-			j = 0;
-			esc = false;
-			++p;
-			while ((*p != 0)&&(*p != 13)&&(*p != 10)) {
-				if (esc) {
-					esc = false;
-					switch(*p) {
-						case 'r': dest[j++] = 13; break;
-						case 'n': dest[j++] = 10; break;
-						case '0': dest[j++] = (char)0; break;
-						case 'e': dest[j++] = '='; break;
-						default: dest[j++] = *p; break;
-					}
-					if (j == (int)destlen) {
-						dest[j-1] = (char)0;
-						return j-1;
-					}
-				} else if (*p == '\\') {
-					esc = true;
-				} else {
-					dest[j++] = *p;
-					if (j == (int)destlen) {
-						dest[j-1] = (char)0;
-						return j-1;
-					}
-				}
-				if (++p == eof) {
-					dest[0] = (char)0;
-					return -1;
-				}
-			}
-			dest[j] = (char)0;
-			return j;
-		} else {
-			while ((*p)&&(*p != 13)&&(*p != 10)) {
-				if (++p == eof) {
-					dest[0] = (char)0;
-					return -1;
-				}
-			}
-			if (*p) {
-				if (++p == eof) {
-					dest[0] = (char)0;
-					return -1;
-				}
-			}
-			else break;
+void Dictionary::add(const char *k,bool v)
+{
+	std::vector<uint8_t> &e = (*this)[k];
+	e.resize(2);
+	e[0] = (uint8_t)(v ? '1' : '0');
+	e[1] = 0;
+}
+
+void Dictionary::add(const char *k,uint16_t v)
+{
+	std::vector<uint8_t> &e = (*this)[k];
+	e.resize(5);
+	Utils::hex(v,(char *)e.data());
+}
+
+void Dictionary::add(const char *k,uint32_t v)
+{
+	std::vector<uint8_t> &e = (*this)[k];
+	e.resize(9);
+	Utils::hex(v,(char *)e.data());
+}
+
+void Dictionary::add(const char *k,uint64_t v)
+{
+	std::vector<uint8_t> &e = (*this)[k];
+	e.resize(17);
+	Utils::hex(v,(char *)e.data());
+}
+
+void Dictionary::add(const char *k,const Address &v)
+{
+	std::vector<uint8_t> &e = (*this)[k];
+	e.resize(11);
+	v.toString((char *)e.data());
+}
+
+void Dictionary::add(const char *k,const char *v)
+{
+	std::vector<uint8_t> &e = (*this)[k];
+	e.clear();
+	if (v) {
+		for(;;) {
+			const uint8_t c = (uint8_t)*(v++);
+			e.push_back(c);
+			if (!c) break;
 		}
 	}
-
-	dest[0] = (char)0;
-	return -1;
 }
 
-bool Dictionary::add(const char *key,const char *value,int vlen)
+void Dictionary::add(const char *k,const void *data,unsigned int len)
 {
-	for(unsigned int i=0;i<ZT_DICTIONARY_MAX_CAPACITY;++i) {
-		if (!_d[i]) {
-			unsigned int j = i;
+	std::vector<uint8_t> &e = (*this)[k];
+	if (len != 0) {
+		e.assign((const uint8_t *)data,(const uint8_t *)data + len);
+	} else {
+		e.clear();
+	}
+}
 
-			if (j > 0) {
-				_d[j++] = (char)10;
-				if (j == ZT_DICTIONARY_MAX_CAPACITY) {
-					_d[i] = (char)0;
-					return false;
-				}
-			}
-
-			const char *p = key;
-			while (*p) {
-				_d[j++] = *(p++);
-				if (j == ZT_DICTIONARY_MAX_CAPACITY) {
-					_d[i] = (char)0;
-					return false;
-				}
-			}
-
-			_d[j++] = '=';
-			if (j == ZT_DICTIONARY_MAX_CAPACITY) {
-				_d[i] = (char)0;
+bool Dictionary::getB(const char *k,bool dfl) const
+{
+	bool v = dfl;
+	const std::vector<uint8_t> &e = (*this)[k];
+	if (!e.empty()) {
+		switch ((char)e[0]) {
+			case '1':
+			case 't':
+			case 'T':
+			case 'y':
+			case 'Y':
+				return true;
+			default:
 				return false;
-			}
+		}
+	}
+	return v;
+}
 
-			p = value;
-			int k = 0;
-			while ( ((vlen < 0)&&(*p)) || (k < vlen) ) {
-				switch(*p) {
-					case 0:
-					case 13:
-					case 10:
-					case '\\':
-					case '=':
-						_d[j++] = '\\';
-						if (j == ZT_DICTIONARY_MAX_CAPACITY) {
-							_d[i] = (char)0;
-							return false;
-						}
-						switch(*p) {
-							case 0: _d[j++] = '0'; break;
-							case 13: _d[j++] = 'r'; break;
-							case 10: _d[j++] = 'n'; break;
-							case '\\': _d[j++] = '\\'; break;
-							case '=': _d[j++] = 'e'; break;
-						}
-						if (j == ZT_DICTIONARY_MAX_CAPACITY) {
-							_d[i] = (char)0;
-							return false;
-						}
+uint64_t Dictionary::getUI(const char *k,uint64_t dfl) const
+{
+	uint8_t tmp[18];
+	uint64_t v = dfl;
+	const std::vector<uint8_t> &e = (*this)[k];
+	if (!e.empty()) {
+		if (e.back() != 0) {
+			const unsigned long sl = e.size();
+			memcpy(tmp,e.data(),(sl > 17) ? 17 : sl);
+			tmp[17] = 0;
+			return Utils::unhex((const char *)tmp);
+		}
+		return Utils::unhex((const char *)e.data());
+	}
+	return v;
+}
+
+void Dictionary::getS(const char *k,char *v,unsigned int cap) const
+{
+	if (cap == 0) // sanity check
+		return;
+	const std::vector<uint8_t> &e = (*this)[k];
+	unsigned int i = 0;
+	const unsigned int last = cap - 1;
+	for(;;) {
+		if ((i == last)||(i >= (unsigned int)e.size()))
+			break;
+		v[i] = (char)e[i];
+		++i;
+	}
+	v[i] = 0;
+}
+
+void Dictionary::clear()
+{
+	_t.clear();
+}
+
+void Dictionary::encode(std::vector<uint8_t> &out) const
+{
+	uint64_t str[2] = { 0,0 }; // second entry causes all strings to be null-terminated even if 8 chars in length
+
+	out.clear();
+
+	Hashtable< uint64_t,std::vector<uint8_t> >::Iterator ti(const_cast<Dictionary *>(this)->_t);
+	uint64_t *kk = nullptr;
+	std::vector<uint8_t> *vv = nullptr;
+	while (ti.next(kk,vv)) {
+		str[0] = *kk;
+		const char *k = (const char *)str;
+
+		for(;;) {
+			char kc = *(k++);
+			if (!kc) break;
+			if ((kc >= 33)&&(kc <= 126)&&(kc != 61)&&(kc != 92)) // printable ASCII with no spaces, equals, or backslash
+				out.push_back((uint8_t)kc);
+		}
+
+		out.push_back(61); // =
+
+		for(std::vector<uint8_t>::const_iterator i(vv->begin());i!=vv->end();++i) {
+			uint8_t c = *i;
+			switch(c) {
+				case 0:
+					out.push_back(92);
+					out.push_back(48);
+					break;
+				case 10:
+					out.push_back(92);
+					out.push_back(110);
+					break;
+				case 13:
+					out.push_back(92);
+					out.push_back(114);
+					break;
+				case 61:
+					out.push_back(92);
+					out.push_back(101);
+					break;
+				case 92:
+					out.push_back(92);
+					out.push_back(92);
+					break;
+				default:
+					out.push_back(c);
+					break;
+			}
+		}
+
+		out.push_back(10);
+	}
+}
+
+bool Dictionary::decode(const void *data,unsigned int len)
+{
+	clear();
+
+	uint64_t k = 0;
+	unsigned int ki = 0;
+	std::vector<uint8_t> *v = nullptr;
+	bool escape = false;
+	for(unsigned int di=0;di<len;++di) {
+		uint8_t c = reinterpret_cast<const uint8_t *>(data)[di];
+		if (!c) break;
+		if (v) {
+			if (escape) {
+				escape = false;
+				switch(c) {
+					case 48:
+						v->push_back(0);
+						break;
+					case 101:
+						v->push_back(61);
+						break;
+					case 110:
+						v->push_back(10);
+						break;
+					case 114:
+						v->push_back(13);
 						break;
 					default:
-						_d[j++] = *p;
-						if (j == ZT_DICTIONARY_MAX_CAPACITY) {
-							_d[i] = (char)0;
-							return false;
-						}
+						v->push_back(c);
 						break;
 				}
-				++p;
-				++k;
+			} else {
+				if (c == 10) {
+					k = 0;
+					ki = 0;
+					v = nullptr;
+				} else if (c == 92) {
+					escape = true;
+				} else {
+					v->push_back(c);
+				}
 			}
-
-			_d[j] = (char)0;
-
-			return true;
+		} else {
+			if ((c < 33)||(c > 126)||(c == 92)) {
+				return false;
+			} else if (c == 61) {
+				v = &_t[k];
+			} else {
+				reinterpret_cast<uint8_t *>(&k)[ki & 7U] ^= c;
+			}
 		}
 	}
-	return false;
-}
 
-bool Dictionary::add(const char *key,bool value)
-{
-	return this->add(key,(value) ? "1" : "0",1);
-}
-
-bool Dictionary::add(const char *key,uint64_t value)
-{
-	char tmp[32];
-	return this->add(key,Utils::hex(value,tmp),-1);
-}
-
-bool Dictionary::add(const char *key,int64_t value)
-{
-	char tmp[32];
-	if (value >= 0) {
-		return this->add(key,Utils::hex((uint64_t)value,tmp),-1);
-	} else {
-		tmp[0] = '-';
-		return this->add(key,Utils::hex((uint64_t)(value * -1),tmp+1),-1);
-	}
-}
-
-bool Dictionary::add(const char *key,const Address &a)
-{
-	char tmp[32];
-	return this->add(key,Utils::hex(a.toInt(),tmp),-1);
+	return true;
 }
 
 } // namespace ZeroTier

@@ -85,17 +85,18 @@ char *decimal(unsigned long n,char s[24]);
  * @param s Buffer to receive hex, must be at least (2*sizeof(i))+1 in size or overflow will occur.
  * @return Pointer to s containing hex string with trailing zero byte
  */
-template<typename I>
-static ZT_ALWAYS_INLINE char *hex(I x,char *s)
-{
-	char *const r = s;
-	for(unsigned int i=0,b=(sizeof(x)*8);i<sizeof(x);++i) {
-		*(s++) = HEXCHARS[(x >> (b -= 4)) & 0xf];
-		*(s++) = HEXCHARS[(x >> (b -= 4)) & 0xf];
-	}
-	*s = (char)0;
-	return r;
-}
+char *hex(uint8_t i,char s[3]);
+char *hex(uint16_t i,char s[5]);
+char *hex(uint32_t i,char s[9]);
+char *hex(uint64_t i,char s[17]);
+
+/**
+ * Decode an unsigned integer in hex format
+ *
+ * @param s String to decode, non-hex chars are ignored
+ * @return Unsigned integer
+ */
+uint64_t unhex(const char *s);
 
 /**
  * Convert the least significant 40 bits of a uint64_t to hex
