@@ -390,7 +390,7 @@ uninstall:	FORCE
 # These are just for convenience for building Linux packages
 
 debian:	FORCE
-	debuild -I -i -us -uc -nc -b
+	debuild --no-lintian -I -i -us -uc -nc -b 
 
 debian-clean: FORCE
 	rm -rf debian/files debian/zerotier-one*.debhelper debian/zerotier-one.substvars debian/*.log debian/zerotier-one debian/.debhelper debian/debhelper-build-stamp
