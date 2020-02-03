@@ -26,13 +26,13 @@ pipeline {
                 }
             }
         }
-        stage ("Package Static") {
-            steps {
-                script {
-                    parallel packageStatic()
-                }
-            }
-        }
+        // stage ("Package Static") {
+        //     steps {
+        //         script {
+        //             parallel packageStatic()
+        //         }
+        //     }
+        // }
     }
 }
 
@@ -285,11 +285,11 @@ def buildDebianNative() {
                 def runtime = docker.image("ztbuild/${distro}-${arch}:latest")
                 runtime.inside {
                     dir("build") {
-                        sh 'make debian'
+                        sh 'make -j4'
                     }
-                    sh "mkdir -p ${distro}"
-                    sh "mv *.deb ${distro}"
-                    archiveArtifacts artifacts: "${distro}/*.deb", onlyIfSuccessful: true
+                    // sh "mkdir -p ${distro}"
+                    // sh "mv *.deb ${distro}"
+                    // archiveArtifacts artifacts: "${distro}/*.deb", onlyIfSuccessful: true
                     cleanWs deleteDirs: true, disableDeferredWipeout: true, notFailBuild: true
                 }
             }
@@ -338,10 +338,10 @@ def buildCentosNative() {
                 runtime.inside {
                     dir("build") {
                         sh 'make -j4'
-                        sh 'make redhat'
-                        sh "mkdir -p ${distro}"
-                        sh "cp -av `find ~/rpmbuild/ -type f -name \"*.rpm\"` ${distro}/"
-                        archiveArtifacts artifacts: "${distro}/*.rpm", onlyIfSuccessful: true
+                        // sh 'make redhat'
+                        // sh "mkdir -p ${distro}"
+                        // sh "cp -av `find ~/rpmbuild/ -type f -name \"*.rpm\"` ${distro}/"
+                        // archiveArtifacts artifacts: "${distro}/*.rpm", onlyIfSuccessful: true
                     }
                     
                     cleanWs deleteDirs: true, disableDeferredWipeout: true, notFailBuild: true
