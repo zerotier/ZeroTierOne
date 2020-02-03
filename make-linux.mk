@@ -260,12 +260,12 @@ endif
 # ARM32 hell -- use conservative CFLAGS
 ifeq ($(ZT_ARCHITECTURE),3)
 	ifeq ($(shell if [ -e /usr/bin/dpkg ]; then dpkg --print-architecture; fi),armel)
-		override CFLAGS+=-march=armv5 -mfloat-abi=soft -msoft-float -mno-unaligned-access -marm
-		override CXXFLAGS+=-march=armv5 -mfloat-abi=soft -msoft-float -mno-unaligned-access -marm
+		override CFLAGS+=-march=armv5t -mfloat-abi=soft -msoft-float -mno-unaligned-access -marm
+		override CXXFLAGS+=-march=armv5t -mfloat-abi=soft -msoft-float -mno-unaligned-access -marm
 		ZT_USE_ARM32_NEON_ASM_CRYPTO=0
 	else
-		override CFLAGS+=-march=armv5 -mno-unaligned-access -marm -fexceptions
-		override CXXFLAGS+=-march=armv5 -mno-unaligned-access -marm -fexceptions
+		override CFLAGS+=-march=armv5t -mno-unaligned-access -marm -fexceptions
+		override CXXFLAGS+=-march=armv5t -mno-unaligned-access -marm -fexceptions
 		ZT_USE_ARM32_NEON_ASM_CRYPTO=0
 	endif
 endif
@@ -390,7 +390,7 @@ uninstall:	FORCE
 # These are just for convenience for building Linux packages
 
 debian:	FORCE
-	debuild -I -i -us -uc -nc -b
+	debuild --no-lintian -I -i -us -uc -nc -b 
 
 debian-clean: FORCE
 	rm -rf debian/files debian/zerotier-one*.debhelper debian/zerotier-one.substvars debian/*.log debian/zerotier-one debian/.debhelper debian/debhelper-build-stamp
