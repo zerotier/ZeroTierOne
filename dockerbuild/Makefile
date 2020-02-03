@@ -1,6 +1,6 @@
 .PHONY: all
 
-all:	alpine centos debian ubuntu
+all:	alpine centos debian ubuntu kali-rolling
 
 alpine:
 	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go1.13.6.linux-arm64.tar.gz" --platform linux/arm64 -f Dockerfile.alpine . -t ztbuild/alpine-arm64 --load
@@ -102,3 +102,7 @@ ubuntu-eoan:
 	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go1.13.6.linux-386.tar.gz" --platform linux/386 -f Dockerfile.ubuntu-eoan . -t ztbuild/ubuntu-eoan-i386 --load
 	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go1.13.6.linux-ppc64le.tar.gz" --platform linux/ppc64le -f Dockerfile.ubuntu-eoan . -t ztbuild/ubuntu-eoan-ppc64le --load
 	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go1.13.6.linux-s390x.tar.gz" --platform linux/s390x -f Dockerfile.ubuntu-eoan . -t ztbuild/ubuntu-eoan-s390x --load
+
+kali-rolling:
+	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go1.13.6.linux-amd64.tar.gz" --platform linux/amd64 -f Dockerfile.kali-rolling . -t ztbuild/kali-rolling-amd64 --load
+
