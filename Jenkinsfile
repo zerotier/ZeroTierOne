@@ -7,6 +7,9 @@ pipeline {
     parameters {
         booleanParam(name: "BUILD_ALL", defaultValue: false, description: "Build all supported platform/architecture combos.  Defaults to x86/x64 only")
     }
+    environment {
+        PATH = "$PATH:/usr/local/go/bin:$HOME/go/bin"
+    }
     
     agent none
     
