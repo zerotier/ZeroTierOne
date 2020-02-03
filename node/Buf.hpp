@@ -55,6 +55,11 @@ void *_Buf_get();
 void freeBufPool();
 
 /**
+ * Macro to declare and get a new buffer templated with the given type
+ */
+#define ZT_GET_NEW_BUF(vvv,xxx) SharedPtr< Buf<xxx> > vvv(reinterpret_cast< Buf<xxx> * >(_Buf_get()))
+
+/**
  * Buffer and methods for branch-free bounds-checked data assembly and parsing
  *
  * This implements an extremely fast buffer for packet assembly and parsing that avoids
@@ -102,28 +107,48 @@ class Buf
 	friend void *_Buf_get();
 	friend void freeBufPool();
 
-private:
-	// Direct construction isn't allowed; use get().
+public:
+	static void operator delete(void *ptr,std::size_t sz) { _Buf_release(ptr,sz); }
+
+	/**
+	 * Slice is almost exactly like the built-in slice data structure in Go
+	 */
+	struct Slice
+	{
+		ZT_ALWAYS_INLINE Slice(const SharedPtr<Buf> &b_,const unsigned int s_,const unsigned int e_) : b(b_),s(s_),e(e_) {}
+		ZT_ALWAYS_INLINE Slice() : b(),s(0),e(0) {}
+
+		ZT_ALWAYS_INLINE operator bool() const { return (b); }
+		ZT_ALWAYS_INLINE unsigned int size() const { return (e - s); }
+		ZT_ALWAYS_INLINE void zero() { b.zero(); s = 0; e = 0; }
+
+		/**
+		 * Buffer holding slice data
+		 */
+		SharedPtr<Buf> b;
+
+		/**
+		 * Index of start of data in slice
+		 */
+		unsigned int s;
+
+		/**
+		 * Index of end of data in slice (make sure it's greater than or equal to 's'!)
+		 */
+		unsigned int e;
+	};
+
 	ZT_ALWAYS_INLINE Buf() {}
 
 	template<typename X>
 	ZT_ALWAYS_INLINE Buf(const Buf<X> &b) { memcpy(data.bytes,b.data.bytes,ZT_BUF_MEM_SIZE); }
-
-public:
-	static void operator delete(void *ptr,std::size_t sz) { _Buf_release(ptr,sz); }
 
 	/**
 	 * Get obtains a buffer from the pool or allocates a new buffer if the pool is empty
 	 *
 	 * @return Buffer instance
 	 */
-	static ZT_ALWAYS_INLINE SharedPtr< Buf<U> > get()
-	{
-		void *const b = _Buf_get();
-		if (b)
-			return SharedPtr<Buf>((Buf *)b);
-		throw std::bad_alloc();
-	}
+	static ZT_ALWAYS_INLINE SharedPtr< Buf<U> > get() { return SharedPtr<Buf>((Buf *)_Buf_get()); }
 
 	/**
 	 * Check for overflow beyond the size of the buffer
@@ -147,13 +172,6 @@ public:
 	 * @return True if iterator has read past the size of the data
 	 */
 	static ZT_ALWAYS_INLINE bool readOverflow(const int &ii,const unsigned int size) { return ((ii - (int)size) > 0); }
-
-	template<typename X>
-	ZT_ALWAYS_INLINE Buf &operator=(const Buf<X> &b) const
-	{
-		memcpy(data.bytes,b.data.bytes,ZT_BUF_MEM_SIZE);
-		return *this;
-	}
 
 	/**
 	 * Shortcut to cast between buffers whose data can be viewed through a different struct type
@@ -342,12 +360,11 @@ public:
 	 * @param len Length of buffer
 	 * @return Pointer to data or NULL on overflow or error
 	 */
-	ZT_ALWAYS_INLINE void *rB(int &ii,void *bytes,unsigned int len) const
+	ZT_ALWAYS_INLINE uint8_t *rB(int &ii,void *bytes,unsigned int len) const
 	{
-		const void *const b = (const void *)(data.bytes + ii);
 		if ((ii += (int)len) <= ZT_BUF_MEM_SIZE) {
-			memcpy(bytes,b,len);
-			return bytes;
+			memcpy(bytes,data.bytes + ii,len);
+			return reinterpret_cast<uint8_t *>(bytes);
 		}
 		return nullptr;
 	}
@@ -365,9 +382,9 @@ public:
 	 * @param len Length of data field to obtain a pointer to
 	 * @return Pointer to field or NULL on overflow
 	 */
-	ZT_ALWAYS_INLINE const void *rBnc(int &ii,unsigned int len) const
+	ZT_ALWAYS_INLINE const uint8_t *rBnc(int &ii,unsigned int len) const
 	{
-		const void *const b = (const void *)(data.bytes + ii);
+		const uint8_t *const b = data.bytes + ii;
 		return ((ii += (int)len) <= ZT_BUF_MEM_SIZE) ? b : nullptr;
 	}
 
@@ -498,6 +515,26 @@ public:
 			memcpy(data.bytes + s,bytes,len);
 	}
 
+	template<typename X>
+	ZT_ALWAYS_INLINE Buf &operator=(const Buf<X> &b) const
+	{
+		memcpy(data.bytes,b.data.bytes,ZT_BUF_MEM_SIZE);
+		return *this;
+	}
+
+	template<typename X>
+	ZT_ALWAYS_INLINE bool operator==(const Buf<X> &b) const { return (memcmp(data.bytes,b.data.bytes,ZT_BUF_MEM_SIZE) == 0); }
+	template<typename X>
+	ZT_ALWAYS_INLINE bool operator!=(const Buf<X> &b) const { return (memcmp(data.bytes,b.data.bytes,ZT_BUF_MEM_SIZE) != 0); }
+	template<typename X>
+	ZT_ALWAYS_INLINE bool operator<(const Buf<X> &b) const { return (memcmp(data.bytes,b.data.bytes,ZT_BUF_MEM_SIZE) < 0); }
+	template<typename X>
+	ZT_ALWAYS_INLINE bool operator<=(const Buf<X> &b) const { return (memcmp(data.bytes,b.data.bytes,ZT_BUF_MEM_SIZE) <= 0); }
+	template<typename X>
+	ZT_ALWAYS_INLINE bool operator>(const Buf<X> &b) const { return (memcmp(data.bytes,b.data.bytes,ZT_BUF_MEM_SIZE) > 0); }
+	template<typename X>
+	ZT_ALWAYS_INLINE bool operator>=(const Buf<X> &b) const { return (memcmp(data.bytes,b.data.bytes,ZT_BUF_MEM_SIZE) >= 0); }
+
 	/**
 	 * Raw data and fields (if U template parameter is set)
 	 *
@@ -511,7 +548,7 @@ public:
 
 private:
 	volatile uintptr_t __nextInPool; // next item in free pool if this Buf is in Buf_pool
-	AtomicCounter __refCount;
+	AtomicCounter<int> __refCount;
 };
 
 } // namespace ZeroTier

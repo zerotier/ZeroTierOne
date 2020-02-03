@@ -22,7 +22,6 @@
 #include "Constants.hpp"
 #include "SharedPtr.hpp"
 #include "Mutex.hpp"
-#include "Packet.hpp"
 #include "InetAddress.hpp"
 #include "Address.hpp"
 #include "MAC.hpp"

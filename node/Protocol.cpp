@@ -40,7 +40,7 @@ const uint64_t ZEROES32[4] = { 0,0,0,0 };
  * @param in Input key (32 bytes)
  * @param out Output buffer (32 bytes)
  */
-ZT_ALWAYS_INLINE void _salsa20MangleKey(const uint8_t *const in,uint8_t *const out,const Buf< Header<> > &packet,const unsigned int packetSize)
+ZT_ALWAYS_INLINE void _salsa20MangleKey(const uint8_t *const in,uint8_t *const out,const Buf< Header > &packet,const unsigned int packetSize)
 {
 	// IV and source/destination addresses. Using the addresses divides the
 	// key space into two halves-- A->B and B->A (since order will change).
@@ -78,7 +78,7 @@ static std::atomic<unsigned long long> _packetIdCtr(_initPacketID());
 
 } // anonymous namespace
 
-void armor(Buf< Header<> > &packet,const unsigned int packetSize,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH],const uint8_t cipherSuite)
+void _armor(Buf< Header > &packet,const unsigned int packetSize,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH],const uint8_t cipherSuite)
 {
 	packet.data.fields.flags = (packet.data.fields.flags & 0xc7U) | ((cipherSuite << 3U) & 0x38U); // FFCCCHHH
 	if (cipherSuite == ZT_PROTO_CIPHER_SUITE__AES_GCM) {
@@ -102,7 +102,7 @@ void armor(Buf< Header<> > &packet,const unsigned int packetSize,const uint8_t k
 	}
 }
 
-int dearmor(Buf< Header<> > &packet,const unsigned int packetSize,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH])
+int _dearmor(Buf< Header > &packet,const unsigned int packetSize,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH])
 {
 	const int cipherSuite = (int)(packet.data.fields.flags & 0x38U);
 	if (cipherSuite == ZT_PROTO_CIPHER_SUITE__AES_GCM) {
@@ -128,7 +128,7 @@ int dearmor(Buf< Header<> > &packet,const unsigned int packetSize,const uint8_t 
 	return cipherSuite;
 }
 
-unsigned int compress(Buf< Header<> > &packet,const unsigned int packetSize)
+unsigned int _compress(Buf< Header > &packet,const unsigned int packetSize)
 {
 	uint8_t tmp[ZT_BUF_MEM_SIZE + 32];
 
@@ -140,8 +140,7 @@ unsigned int compress(Buf< Header<> > &packet,const unsigned int packetSize)
 		reinterpret_cast<const char *>(packet.data.bytes + ZT_PROTO_PACKET_PAYLOAD_START),
 	  reinterpret_cast<char *>(tmp),
 		(int)uncompressedLen,
-		sizeof(tmp) - ZT_PROTO_PACKET_PAYLOAD_START,
-		2);
+		sizeof(tmp) - ZT_PROTO_PACKET_PAYLOAD_START);
 	if ((compressedLen > 0)&&(compressedLen < uncompressedLen)) {
 		packet.data.fields.verb |= ZT_PROTO_VERB_FLAG_COMPRESSED;
 		memcpy(packet.data.bytes + ZT_PROTO_PACKET_PAYLOAD_START,tmp,compressedLen);
@@ -151,7 +150,7 @@ unsigned int compress(Buf< Header<> > &packet,const unsigned int packetSize)
 	return packetSize;
 }
 
-int uncompress(Buf< Header<> > &packet,const unsigned int packetSize)
+int _uncompress(Buf< Header > &packet,const unsigned int packetSize)
 {
 	uint8_t tmp[ZT_BUF_MEM_SIZE];
 

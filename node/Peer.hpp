@@ -22,7 +22,6 @@
 #include "Utils.hpp"
 #include "Identity.hpp"
 #include "InetAddress.hpp"
-#include "Packet.hpp"
 #include "SharedPtr.hpp"
 #include "AtomicCounter.hpp"
 #include "Hashtable.hpp"
@@ -82,6 +81,15 @@ public:
 	 * @return This peer's identity
 	 */
 	ZT_ALWAYS_INLINE const Identity &identity() const { return _id; }
+
+	/**
+	 * @return Copy of current locator
+	 */
+	ZT_ALWAYS_INLINE Locator locator() const
+	{
+		RWMutex::RLock l(_lock);
+		return _locator;
+	}
 
 	/**
 	 * Log receipt of an authenticated packet
@@ -314,7 +322,7 @@ private:
 	volatile int64_t _lastPrioritizedPaths;
 	volatile unsigned int _latency;
 
-	AtomicCounter __refCount;
+	AtomicCounter<int> __refCount;
 
 	RWMutex _lock; // locks _alivePathCount, _paths, _locator, and _bootstrap.
 

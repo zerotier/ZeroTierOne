@@ -21,26 +21,22 @@
 #include "Constants.hpp"
 #include "Utils.hpp"
 #include "Address.hpp"
+#include "TriviallyCopyable.hpp"
 
 namespace ZeroTier {
 
 /**
  * 48-byte Ethernet MAC address
  */
-class MAC
+class MAC : public TriviallyCopyable
 {
 public:
 	ZT_ALWAYS_INLINE MAC() : _m(0ULL) {}
-	ZT_ALWAYS_INLINE MAC(const unsigned char a,const unsigned char b,const unsigned char c,const unsigned char d,const unsigned char e,const unsigned char f) :
-		_m( ((((uint64_t)a) & 0xffULL) << 40U) |
-		    ((((uint64_t)b) & 0xffULL) << 32U) |
-		    ((((uint64_t)c) & 0xffULL) << 24U) |
-		    ((((uint64_t)d) & 0xffULL) << 16U) |
-		    ((((uint64_t)e) & 0xffULL) << 8U) |
-		    (((uint64_t)f) & 0xffULL) ) {}
+	ZT_ALWAYS_INLINE MAC(const uint8_t a,const uint8_t b,const uint8_t c,const uint8_t d,const uint8_t e,const uint8_t f) :
+		_m( (((uint64_t)a) << 40U) | (((uint64_t)b) << 32U) | (((uint64_t)c) << 24U) | (((uint64_t)d) << 16U) | (((uint64_t)e) << 8U) | ((uint64_t)f) ) {}
+	explicit ZT_ALWAYS_INLINE MAC(const uint64_t m) : _m(m & 0xffffffffffffULL) {}
 	explicit ZT_ALWAYS_INLINE MAC(const uint8_t b[6]) { setTo(b); }
 	ZT_ALWAYS_INLINE MAC(const Address &ztaddr,uint64_t nwid) { fromAddress(ztaddr,nwid); }
-	explicit ZT_ALWAYS_INLINE MAC(const uint64_t m) : _m(m & 0xffffffffffffULL) {}
 
 	/**
 	 * @return MAC in 64-bit integer

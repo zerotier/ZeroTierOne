@@ -195,24 +195,6 @@ static ZT_ALWAYS_INLINE char *stok(char *str,const char *delim,char **saveptr)
 #endif
 }
 
-#if 0
-static ZT_ALWAYS_INLINE int strToInt(const char *s) { return (int)strtol(s,(char **)0,10); }
-static ZT_ALWAYS_INLINE unsigned long strToULong(const char *s) { return strtoul(s,(char **)0,10); }
-static ZT_ALWAYS_INLINE long strToLong(const char *s) { return strtol(s,(char **)0,10); }
-static ZT_ALWAYS_INLINE long long strTo64(const char *s)
-{
-#ifdef __WINDOWS__
-	return (long long)_strtoi64(s,(char **)0,10);
-#else
-	return strtoll(s,(char **)0,10);
-#endif
-}
-static ZT_ALWAYS_INLINE unsigned int hexStrToUInt(const char *s) { return (unsigned int)strtoul(s,(char **)0,16); }
-static ZT_ALWAYS_INLINE int hexStrToInt(const char *s) { return (int)strtol(s,(char **)0,16); }
-static ZT_ALWAYS_INLINE unsigned long hexStrToULong(const char *s) { return strtoul(s,(char **)0,16); }
-static ZT_ALWAYS_INLINE long hexStrToLong(const char *s) { return strtol(s,(char **)0,16); }
-#endif
-
 static ZT_ALWAYS_INLINE unsigned int strToUInt(const char *s) { return (unsigned int)strtoul(s,nullptr,10); }
 
 static ZT_ALWAYS_INLINE unsigned long long strToU64(const char *s)
@@ -221,15 +203,6 @@ static ZT_ALWAYS_INLINE unsigned long long strToU64(const char *s)
 	return (unsigned long long)_strtoui64(s,(char **)0,10);
 #else
 	return strtoull(s,nullptr,10);
-#endif
-}
-
-static ZT_ALWAYS_INLINE long long hexStrTo64(const char *s)
-{
-#ifdef __WINDOWS__
-	return (long long)_strtoi64(s,(char **)0,16);
-#else
-	return strtoll(s,nullptr,16);
 #endif
 }
 
@@ -425,37 +398,6 @@ static ZT_ALWAYS_INLINE void storeBigEndian(void *const p,const I i)
 	*reinterpret_cast<I *>(p) = hton(i);
 #endif
 }
-
-#if 0
-template<typename T>
-static ZT_ALWAYS_INLINE bool isPrimitiveType() { return false; }
-template<>
-ZT_ALWAYS_INLINE bool isPrimitiveType<void *>() { return true; }
-template<>
-ZT_ALWAYS_INLINE bool isPrimitiveType<const void *>() { return true; }
-template<>
-ZT_ALWAYS_INLINE bool isPrimitiveType<bool>() { return true; }
-template<>
-ZT_ALWAYS_INLINE bool isPrimitiveType<float>() { return true; }
-template<>
-ZT_ALWAYS_INLINE bool isPrimitiveType<double>() { return true; }
-template<>
-ZT_ALWAYS_INLINE bool isPrimitiveType<int8_t>() { return true; }
-template<>
-ZT_ALWAYS_INLINE bool isPrimitiveType<int16_t>() { return true; }
-template<>
-ZT_ALWAYS_INLINE bool isPrimitiveType<int32_t>() { return true; }
-template<>
-ZT_ALWAYS_INLINE bool isPrimitiveType<int64_t>() { return true; }
-template<>
-ZT_ALWAYS_INLINE bool isPrimitiveType<uint8_t>() { return true; }
-template<>
-ZT_ALWAYS_INLINE bool isPrimitiveType<uint16_t>() { return true; }
-template<>
-ZT_ALWAYS_INLINE bool isPrimitiveType<uint32_t>() { return true; }
-template<>
-ZT_ALWAYS_INLINE bool isPrimitiveType<uint64_t>() { return true; }
-#endif
 
 } // namespace Utils
 

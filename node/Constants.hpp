@@ -57,6 +57,11 @@
 #define ZT_MAX_PACKET_FRAGMENTS 11
 
 /**
+ * Sanity limit on the maximum size of a network config object
+ */
+#define ZT_MAX_NETWORK_CONFIG_BYTES 131072
+
+/**
  * Size of RX queue in packets
  */
 #define ZT_RX_QUEUE_SIZE 32

@@ -43,7 +43,7 @@ public:
 		const int64_t since = now - _ts;
 		if (since >= ZT_METER_HISTORY_TICK_DURATION) {
 			_ts = now;
-			_history[(unsigned int)(++_hptr) % ZT_METER_HISTORY_LENGTH] = (double)_count / ((double)since / 1000.0);
+			_history[++_hptr % ZT_METER_HISTORY_LENGTH] = (double)_count / ((double)since / 1000.0);
 			_count = (uint64_t)count;
 		} else {
 			_count += (uint64_t)count;
@@ -69,7 +69,7 @@ private:
 	volatile double _history[ZT_METER_HISTORY_LENGTH];
 	volatile int64_t _ts;
 	volatile uint64_t _count;
-	AtomicCounter _hptr;
+	AtomicCounter<unsigned int> _hptr;
 };
 
 } // namespace ZeroTier

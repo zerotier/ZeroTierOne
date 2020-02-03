@@ -17,9 +17,9 @@
 #include <cstdint>
 #include <cstring>
 #include <cstdlib>
-
 #include <stdexcept>
 #include <algorithm>
+#include <set>
 
 #include "Constants.hpp"
 #include "InetAddress.hpp"
@@ -32,12 +32,19 @@ namespace ZeroTier {
 
 class RuntimeEnvironment;
 
+template<unsigned int MF>
+class Defragmenter;
+
 /**
  * A path across the physical network
  */
 class Path
 {
 	friend class SharedPtr<Path>;
+
+	// Allow defragmenter to access fragment in flight info stored in Path for performance reasons.
+	template<unsigned int MF>
+	friend class Defragmenter;
 
 public:
 	/**
@@ -75,8 +82,7 @@ public:
 		_localSocket(l),
 		_lastIn(0),
 		_lastOut(0),
-		_addr(r),
-		__refCount()
+		_addr(r)
 	{
 	}
 
@@ -156,7 +162,14 @@ private:
 	int64_t _lastIn;
 	int64_t _lastOut;
 	InetAddress _addr;
-	AtomicCounter __refCount;
+
+	// These fields belong to Defragmenter but are kept in Path for performance
+	// as it's much faster this way than having Defragmenter maintain another
+	// mapping from paths to inbound message IDs.
+	std::set<uint64_t> _inboundFragmentedMessages;
+	Mutex _inboundFragmentedMessages_l;
+
+	AtomicCounter<int> __refCount;
 };
 
 } // namespace ZeroTier

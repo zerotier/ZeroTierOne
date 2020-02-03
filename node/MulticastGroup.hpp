@@ -20,6 +20,7 @@
 #include "MAC.hpp"
 #include "InetAddress.hpp"
 #include "Utils.hpp"
+#include "TriviallyCopyable.hpp"
 
 namespace ZeroTier {
 
@@ -38,7 +39,7 @@ namespace ZeroTier {
  *
  * MulticastGroup behaves as an immutable value object.
  */
-class MulticastGroup
+class MulticastGroup : public TriviallyCopyable
 {
 public:
 	ZT_ALWAYS_INLINE MulticastGroup() : _mac(),_adi(0) {}

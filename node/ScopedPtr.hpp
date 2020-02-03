@@ -15,6 +15,7 @@
 #define ZT_SCOPEDPTR_HPP
 
 #include "Constants.hpp"
+#include "TriviallyCopyable.hpp"
 
 namespace ZeroTier {
 
@@ -24,7 +25,7 @@ namespace ZeroTier {
  * This is used in the core to avoid requiring C++11 and because auto_ptr is weird.
  */
 template<typename T>
-class ScopedPtr
+class ScopedPtr : public TriviallyCopyable
 {
 public:
 	explicit ZT_ALWAYS_INLINE ScopedPtr(T *const p) : _p(p) {}
@@ -51,6 +52,7 @@ private:
 	ZT_ALWAYS_INLINE ScopedPtr() {}
 	ZT_ALWAYS_INLINE ScopedPtr(const ScopedPtr &p) : _p(nullptr) {}
 	ZT_ALWAYS_INLINE ScopedPtr &operator=(const ScopedPtr &p) { return *this; }
+
 	T *const _p;
 };
 

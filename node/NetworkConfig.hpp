@@ -34,6 +34,7 @@
 #include "Identity.hpp"
 #include "Utils.hpp"
 #include "Trace.hpp"
+#include "TriviallyCopyable.hpp"
 
 namespace ZeroTier {
 
@@ -79,15 +80,9 @@ namespace ZeroTier {
 #define ZT_NETWORKCONFIG_SPECIALIST_TYPE_MULTICAST_REPLICATOR 0x0000040000000000ULL
 
 /**
- * Device that is allowed to remotely debug connectivity on this network
+ * Device that is allowed to remotely debug this network and query other peers for e.g. remote trace data
  */
 #define ZT_NETWORKCONFIG_SPECIALIST_TYPE_DIAGNOSTICIAN 0x0000080000000000ULL
-
-// Dictionary capacity needed for max size network config
-#define ZT_NETWORKCONFIG_DICT_CAPACITY (1024 + (sizeof(ZT_VirtualNetworkRule) * ZT_MAX_NETWORK_RULES) + (sizeof(Capability) * ZT_MAX_NETWORK_CAPABILITIES) + (sizeof(Tag) * ZT_MAX_NETWORK_TAGS) + (sizeof(CertificateOfOwnership) * ZT_MAX_CERTIFICATES_OF_OWNERSHIP))
-
-// Dictionary capacity needed for max size network meta-data
-#define ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY 8192
 
 // Fields for meta-data sent with network config requests
 
@@ -164,9 +159,9 @@ namespace ZeroTier {
  * This is a memcpy()'able structure and is safe (in a crash sense) to modify
  * without locks.
  */
-struct NetworkConfig
+struct NetworkConfig : TriviallyCopyable
 {
-	NetworkConfig();
+	ZT_ALWAYS_INLINE NetworkConfig() { memoryZero(this); }
 
 	/**
 	 * Write this network config to a dictionary for transport
@@ -232,7 +227,7 @@ struct NetworkConfig
 	 * @param f Flags (OR of specialist role/type flags)
 	 * @return True if successfully masked or added
 	 */
-	bool addSpecialist(const Address &a,const uint64_t f);
+	bool addSpecialist(const Address &a,uint64_t f);
 
 	ZT_ALWAYS_INLINE const Capability *capability(const uint32_t id) const
 	{
@@ -276,6 +271,13 @@ struct NetworkConfig
 	 * Address of device to which this config is issued
 	 */
 	Address issuedTo;
+
+	/**
+	 * Hash of identity public key(s) of node to whom this is issued
+	 *
+	 * TODO
+	 */
+	uint8_t issuedToIdentityHash[ZT_IDENTITY_HASH_SIZE];
 
 	/**
 	 * Flags (64-bit)

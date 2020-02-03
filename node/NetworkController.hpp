@@ -103,7 +103,7 @@ public:
 		const InetAddress &fromAddr,
 		uint64_t requestPacketId,
 		const Identity &identity,
-		const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData) = 0;
+		const Dictionary &metaData) = 0;
 };
 
 } // namespace ZeroTier

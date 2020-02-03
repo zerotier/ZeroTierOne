@@ -17,33 +17,13 @@
 
 #include "NetworkConfig.hpp"
 #include "ScopedPtr.hpp"
+#include "Buf.hpp"
 
 namespace ZeroTier {
 
-NetworkConfig::NetworkConfig() :
-	networkId(0),
-	timestamp(0),
-	credentialTimeMaxDelta(0),
-	revision(0),
-	issuedTo(),
-	flags(0),
-	mtu(0),
-	multicastLimit(0),
-	specialistCount(0),
-	routeCount(0),
-	staticIpCount(0),
-	ruleCount(0),
-	capabilityCount(0),
-	tagCount(0),
-	certificateOfOwnershipCount(0),
-	type(ZT_NETWORK_TYPE_PRIVATE)
-{
-	name[0] = 0;
-}
-
 bool NetworkConfig::toDictionary(Dictionary &d,bool includeLegacy) const
 {
-	uint8_t tmp[16384];
+	uint8_t tmp[ZT_BUF_MEM_SIZE];
 	try {
 		d.clear();
 

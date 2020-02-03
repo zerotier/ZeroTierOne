@@ -64,16 +64,7 @@ class Capability : public Credential
 public:
 	static ZT_ALWAYS_INLINE ZT_CredentialType credentialType() { return ZT_CREDENTIAL_TYPE_CAPABILITY; }
 
-	ZT_ALWAYS_INLINE Capability() :
-		_nwid(0),
-		_ts(0),
-		_id(0),
-		_maxCustodyChainLength(0),
-		_ruleCount(0)
-	{
-		memset(_rules,0,sizeof(_rules));
-		memset(_custody,0,sizeof(_custody));
-	}
+	ZT_ALWAYS_INLINE Capability() { memoryZero(this); }
 
 	/**
 	 * @param id Capability ID

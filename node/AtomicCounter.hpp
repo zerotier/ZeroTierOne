@@ -23,40 +23,43 @@
 namespace ZeroTier {
 
 /**
- * Simple atomic counter supporting increment and decrement
+ * Simple atomic counter
  *
- * This is used as the reference counter in reference counted objects that
- * work with SharedPtr<>.
+ * @tparam T Type of underlying integer (default: int)
  */
+template<typename T = int>
 class AtomicCounter
 {
 public:
-	ZT_ALWAYS_INLINE AtomicCounter() : _v(0) {}
+	explicit ZT_ALWAYS_INLINE AtomicCounter(T iv = T(0)) : _v(iv) {}
 
-	ZT_ALWAYS_INLINE int load() const
+	ZT_ALWAYS_INLINE T load() const
 	{
 #ifdef __GNUC__
-		return _v;
+		return __sync_or_and_fetch(&_v,0);
 #else
 		return _v.load();
 #endif
 	}
 
-	ZT_ALWAYS_INLINE void zero() { _v = 0; }
+	ZT_ALWAYS_INLINE void zero()
+	{
+		_v = T(0);
+	}
 
-	ZT_ALWAYS_INLINE int operator++()
+	ZT_ALWAYS_INLINE T operator++()
 	{
 #ifdef __GNUC__
-		return __sync_add_and_fetch((int *)&_v,1);
+		return __sync_add_and_fetch(&_v,1);
 #else
 		return ++_v;
 #endif
 	}
 
-	ZT_ALWAYS_INLINE int operator--()
+	ZT_ALWAYS_INLINE T operator--()
 	{
 #ifdef __GNUC__
-		return __sync_sub_and_fetch((int *)&_v,1);
+		return __sync_sub_and_fetch(&_v,1);
 #else
 		return --_v;
 #endif
@@ -67,9 +70,9 @@ private:
 	ZT_ALWAYS_INLINE const AtomicCounter &operator=(const AtomicCounter &) { return *this; }
 
 #ifdef __GNUC__
-	volatile int _v;
+	T _v;
 #else
-	std::atomic_int _v;
+	typename std::atomic<T> _v;
 #endif
 };
 

@@ -29,13 +29,13 @@
 #include "AtomicCounter.hpp"
 #include "MulticastGroup.hpp"
 #include "MAC.hpp"
+#include "Buf.hpp"
 #include "Dictionary.hpp"
 #include "Membership.hpp"
 #include "NetworkConfig.hpp"
 #include "CertificateOfMembership.hpp"
 
 #define ZT_NETWORK_MAX_INCOMING_UPDATES 3
-#define ZT_NETWORK_MAX_UPDATE_CHUNKS ((ZT_NETWORKCONFIG_DICT_CAPACITY / 1024) + 1)
 
 namespace ZeroTier {
 
@@ -181,20 +181,22 @@ public:
 	void multicastUnsubscribe(const MulticastGroup &mg);
 
 	/**
-	 * Handle an inbound network config chunk
+	 * Parse, verify, and handle an inbound network config chunk
 	 *
 	 * This is called from IncomingPacket to handle incoming network config
-	 * chunks via OK(NETWORK_CONFIG_REQUEST) or NETWORK_CONFIG. It verifies
-	 * each chunk and once assembled applies the configuration.
+	 * chunks via OK(NETWORK_CONFIG_REQUEST) or NETWORK_CONFIG. It's a common
+	 * bit of packet parsing code that also verifies chunks and replicates
+	 * them (via rumor mill flooding) if their fast propagate flag is set.
 	 *
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param packetId Packet ID or 0 if none (e.g. via cluster path)
 	 * @param source Address of sender of chunk or NULL if none (e.g. via cluster path)
 	 * @param chunk Buffer containing chunk
-	 * @param ptr Index of chunk and related fields in packet
+	 * @param ptr Index of chunk and related fields in packet (starting with network ID)
+	 * @param size Size of data in chunk buffer (total, not relative to ptr)
 	 * @return Update ID if update was fully assembled and accepted or 0 otherwise
 	 */
-	uint64_t handleConfigChunk(void *tPtr,uint64_t packetId,const Address &source,const Buffer<ZT_PROTO_MAX_PACKET_LENGTH> &chunk,unsigned int ptr);
+	uint64_t handleConfigChunk(void *tPtr,uint64_t packetId,const Address &source,const Buf<> &chunk,int ptr,int size);
 
 	/**
 	 * Set network configuration
@@ -374,17 +376,14 @@ private:
 	Hashtable< MAC,Address > _remoteBridgeRoutes; // remote addresses where given MACs are reachable (for tracking devices behind remote bridges)
 
 	NetworkConfig _config;
-	volatile uint64_t _lastConfigUpdate;
+	volatile int64_t _lastConfigUpdate;
 
 	struct _IncomingConfigChunk
 	{
-		ZT_ALWAYS_INLINE _IncomingConfigChunk() : ts(0),updateId(0),haveChunks(0),haveBytes(0),data() {}
-		uint64_t ts;
+		ZT_ALWAYS_INLINE _IncomingConfigChunk() : touchCtr(0),updateId(0) {}
+		uint64_t touchCtr;
 		uint64_t updateId;
-		uint64_t haveChunkIds[ZT_NETWORK_MAX_UPDATE_CHUNKS];
-		unsigned long haveChunks;
-		unsigned long haveBytes;
-		Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> data;
+		std::map< int,std::vector<uint8_t> > chunks;
 	};
 	_IncomingConfigChunk _incomingConfigChunks[ZT_NETWORK_MAX_INCOMING_UPDATES];
 

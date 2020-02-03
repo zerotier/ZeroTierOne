@@ -26,13 +26,14 @@
 
 #include "Constants.hpp"
 #include "Utils.hpp"
+#include "TriviallyCopyable.hpp"
 
 namespace ZeroTier {
 
 /**
  * A ZeroTier address
  */
-class Address
+class Address : public TriviallyCopyable
 {
 public:
 	ZT_ALWAYS_INLINE Address() : _a(0) {}

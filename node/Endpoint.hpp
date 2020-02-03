@@ -23,6 +23,7 @@
 #include "InetAddress.hpp"
 #include "Address.hpp"
 #include "Utils.hpp"
+#include "TriviallyCopyable.hpp"
 
 // max name size + type byte + port (for DNS name/port) + 3x 16-bit coordinate for location
 #define ZT_ENDPOINT_MARSHAL_SIZE_MAX (ZT_ENDPOINT_MAX_NAME_SIZE+1+2+2+2+2)
@@ -35,7 +36,7 @@ namespace ZeroTier {
  * This data structure supports a number of types that are not yet actually used:
  * DNSNAME, URL, and ETHERNET. These are present to reserve them for future use.
  */
-class Endpoint
+class Endpoint : public TriviallyCopyable
 {
 public:
 	enum Type
@@ -50,15 +51,7 @@ public:
 		UNRECOGNIZED = 255  // Unrecognized endpoint type encountered in stream
 	};
 
-	ZT_ALWAYS_INLINE Endpoint()
-	{
-		memset(reinterpret_cast<void *>(this),0,sizeof(Endpoint));
-	}
-
-	ZT_ALWAYS_INLINE Endpoint(const Endpoint &ep)
-	{
-		memcpy(reinterpret_cast<void *>(this),reinterpret_cast<const void *>(&ep),sizeof(Endpoint));
-	}
+	ZT_ALWAYS_INLINE Endpoint() { memoryZero(this); }
 
 	explicit ZT_ALWAYS_INLINE Endpoint(const InetAddress &sa)
 	{
@@ -83,12 +76,6 @@ public:
 		_t(URL)
 	{
 		Utils::scopy(_v.url,sizeof(_v.url),url);
-	}
-
-	ZT_ALWAYS_INLINE Endpoint &operator=(const Endpoint &ep)
-	{
-		memcpy(reinterpret_cast<void *>(this),&ep,sizeof(Endpoint));
-		return *this;
 	}
 
 	ZT_ALWAYS_INLINE Endpoint &operator=(const InetAddress &sa)
@@ -159,7 +146,7 @@ public:
 
 	static ZT_ALWAYS_INLINE int marshalSizeMax() { return ZT_ENDPOINT_MARSHAL_SIZE_MAX; }
 	int marshal(uint8_t data[ZT_ENDPOINT_MARSHAL_SIZE_MAX]) const;
-	int unmarshal(const uint8_t *restrict data,const int len);
+	int unmarshal(const uint8_t *restrict data,int len);
 
 private:
 	Type _t;

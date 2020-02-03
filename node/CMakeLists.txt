@@ -12,6 +12,7 @@ set(core_headers
 	CertificateOfOwnership.hpp
 	Constants.hpp
 	Credential.hpp
+	Defragmenter.hpp
 	Dictionary.hpp
 	ECC384.hpp
 	Hashtable.hpp
@@ -42,6 +43,7 @@ set(core_headers
 	Tag.hpp
 	Topology.hpp
 	Trace.hpp
+	TriviallyCopyable.hpp
 	Utils.hpp
 )
 

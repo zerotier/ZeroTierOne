@@ -30,7 +30,7 @@ class SharedPtr
 {
 public:
 	ZT_ALWAYS_INLINE SharedPtr() : _ptr((T *)0) {}
-	ZT_ALWAYS_INLINE SharedPtr(T *obj) : _ptr(obj) { ++obj->__refCount; }
+	explicit ZT_ALWAYS_INLINE SharedPtr(T *obj) : _ptr(obj) { ++obj->__refCount; }
 	ZT_ALWAYS_INLINE SharedPtr(const SharedPtr &sp) : _ptr(sp._getAndInc()) {}
 
 	ZT_ALWAYS_INLINE ~SharedPtr()
@@ -81,7 +81,22 @@ public:
 		with._ptr = tmp;
 	}
 
-	ZT_ALWAYS_INLINE operator bool() const { return (_ptr != (T *)0); }
+	/**
+	 * Set this value to one from another pointer and set that pointer to zero (avoids ref count changes)
+	 *
+	 * @param from Origin pointer; will be zeroed
+	 */
+	ZT_ALWAYS_INLINE void move(SharedPtr &from)
+	{
+		if (_ptr) {
+			if (--_ptr->__refCount <= 0)
+				delete _ptr;
+		}
+		_ptr = from._ptr;
+		from._ptr = nullptr;
+	}
+
+	ZT_ALWAYS_INLINE operator bool() const { return (_ptr != nullptr); }
 	ZT_ALWAYS_INLINE T &operator*() const { return *_ptr; }
 	ZT_ALWAYS_INLINE T *operator->() const { return _ptr; }
 

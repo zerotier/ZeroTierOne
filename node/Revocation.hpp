@@ -47,18 +47,7 @@ class Revocation : public Credential
 public:
 	static ZT_ALWAYS_INLINE ZT_CredentialType credentialType() { return ZT_CREDENTIAL_TYPE_REVOCATION; }
 
-	ZT_ALWAYS_INLINE Revocation() :
-		_id(0),
-		_credentialId(0),
-		_networkId(0),
-		_threshold(0),
-		_flags(0),
-		_target(),
-		_signedBy(),
-		_type(ZT_CREDENTIAL_TYPE_NULL),
-		_signatureLength(0)
-	{
-	}
+	ZT_ALWAYS_INLINE Revocation() { memoryZero(this); }
 
 	/**
 	 * @param i ID (arbitrary for revocations, currently random)
@@ -109,7 +98,7 @@ public:
 
 	static ZT_ALWAYS_INLINE int marshalSizeMax() { return ZT_REVOCATION_MARSHAL_SIZE_MAX; }
 	int marshal(uint8_t data[ZT_REVOCATION_MARSHAL_SIZE_MAX],bool forSign = false) const;
-	int unmarshal(const uint8_t *restrict data,const int len);
+	int unmarshal(const uint8_t *restrict data,int len);
 
 private:
 	uint32_t _id;

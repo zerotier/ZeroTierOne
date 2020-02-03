@@ -24,6 +24,7 @@
 #include <cstring>
 
 #include "Constants.hpp"
+#include "TriviallyCopyable.hpp"
 
 namespace ZeroTier {
 
@@ -37,7 +38,7 @@ class RuntimeEnvironment;
 /**
  * Base class for credentials
  */
-class Credential
+class Credential : public TriviallyCopyable
 {
 public:
 	/**

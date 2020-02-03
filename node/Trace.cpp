@@ -23,6 +23,8 @@
 #define CONST_TO_BE_UINT16(x) ((uint16_t)(x))
 #endif
 
+// NOTE: packet IDs are always handled in network byte order, so no need to convert them.
+
 namespace ZeroTier {
 
 Trace::Trace(const RuntimeEnvironment *renv) :
@@ -72,7 +74,7 @@ void Trace::_tryingNewPath(
 	memcpy(ev.identityHash,trying.hash(),48);
 	physicalAddress.forTrace(ev.physicalAddress);
 	triggerAddress.forTrace(ev.triggerAddress);
-	ev.triggeringPacketId = Utils::hton(triggeringPacketId);
+	ev.triggeringPacketId = triggeringPacketId;
 	ev.triggeringPacketVerb = triggeringPacketVerb;
 	ev.triggeredByAddress = Utils::hton(triggeredByAddress);
 	if (triggeredByIdentityHash)
@@ -93,7 +95,7 @@ void Trace::_learnedNewPath(
 	ZT_TraceEvent_VL1_LEARNED_NEW_PATH ev;
 	ev.evSize = CONST_TO_BE_UINT16(sizeof(ev));
 	ev.evType = CONST_TO_BE_UINT16(ZT_TRACE_VL1_LEARNED_NEW_PATH);
-	ev.packetId = Utils::hton(packetId);
+	ev.packetId = packetId;
 	ev.address = Utils::hton(peerIdentity.address().toInt());
 	memcpy(ev.identityHash,peerIdentity.hash(),48);
 	physicalAddress.forTrace(ev.physicalAddress);
@@ -115,10 +117,15 @@ void Trace::_incomingPacketDropped(
 	ZT_TraceEvent_VL1_INCOMING_PACKET_DROPPED ev;
 	ev.evSize = CONST_TO_BE_UINT16(sizeof(ev));
 	ev.evType = CONST_TO_BE_UINT16(ZT_TRACE_VL1_INCOMING_PACKET_DROPPED);
-	ev.packetId = Utils::hton(packetId);
+	ev.packetId = packetId;
 	ev.networkId = Utils::hton(networkId);
-	ev.address = Utils::hton(peerIdentity.address().toInt());
-	memcpy(ev.identityHash,peerIdentity.hash(),48);
+	if (peerIdentity) {
+		ev.address = Utils::hton(peerIdentity.address().toInt());
+		memcpy(ev.identityHash,peerIdentity.hash(),48);
+	} else {
+		ev.address = 0;
+		memset(ev.identityHash,0,48);
+	}
 	physicalAddress.forTrace(ev.physicalAddress);
 	ev.hops = hops;
 	ev.verb = verb;

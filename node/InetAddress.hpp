@@ -21,13 +21,9 @@
 #include "Constants.hpp"
 #include "Utils.hpp"
 #include "MAC.hpp"
+#include "TriviallyCopyable.hpp"
 
 namespace ZeroTier {
-
-/**
- * Maximum integer value of enum IpScope
- */
-#define ZT_INETADDRESS_MAX_SCOPE 7
 
 #define ZT_INETADDRESS_MARSHAL_SIZE_MAX 19
 
@@ -39,15 +35,16 @@ namespace ZeroTier {
  * sockaddr_storage and used interchangeably. DO NOT change this by e.g.
  * adding non-static fields, since much code depends on this identity.
  */
-struct InetAddress : public sockaddr_storage
+struct InetAddress : public sockaddr_storage,public TriviallyCopyable
 {
 private:
+	// Internal function to copy any sockaddr_X structure to this one even if it's smaller and unpadded.
 	template<typename SA>
 	ZT_ALWAYS_INLINE void copySockaddrToThis(const SA *sa)
 	{
 		memcpy(reinterpret_cast<void *>(this),sa,sizeof(SA));
 		if (sizeof(SA) < sizeof(InetAddress))
-			memset(reinterpret_cast<char *>(this) + sizeof(SA),0,sizeof(InetAddress) - sizeof(SA));
+			memset(reinterpret_cast<uint8_t *>(this) + sizeof(SA),0,sizeof(InetAddress) - sizeof(SA));
 	}
 
 public:
@@ -88,7 +85,8 @@ public:
 	// Hasher for unordered sets and maps in C++11
 	struct Hasher { ZT_ALWAYS_INLINE std::size_t operator()(const InetAddress &a) const { return (std::size_t)a.hashCode(); } };
 
-	ZT_ALWAYS_INLINE InetAddress() { memset(reinterpret_cast<void *>(this),0,sizeof(InetAddress)); }
+	ZT_ALWAYS_INLINE InetAddress() { memoryZero(this); }
+	ZT_ALWAYS_INLINE InetAddress(const InetAddress &a) { memoryCopy(this,&a); }
 	explicit ZT_ALWAYS_INLINE InetAddress(const struct sockaddr_storage &ss) { *this = ss; }
 	explicit ZT_ALWAYS_INLINE InetAddress(const struct sockaddr_storage *ss) { *this = ss; }
 	explicit ZT_ALWAYS_INLINE InetAddress(const struct sockaddr &sa) { *this = sa; }
@@ -101,19 +99,19 @@ public:
 	ZT_ALWAYS_INLINE InetAddress(const uint32_t ipv4,unsigned int port) { this->set(&ipv4,4,port); }
 	explicit ZT_ALWAYS_INLINE InetAddress(const char *ipSlashPort) { this->fromString(ipSlashPort); }
 
-	ZT_ALWAYS_INLINE void clear() { memset(reinterpret_cast<void *>(this),0,sizeof(InetAddress)); }
+	ZT_ALWAYS_INLINE void clear() { memoryZero(this); }
 
 	ZT_ALWAYS_INLINE InetAddress &operator=(const struct sockaddr_storage &ss)
 	{
-		memcpy(reinterpret_cast<void *>(this),&ss,sizeof(InetAddress));
+		memoryCopyUnsafe(this,&ss);
 		return *this;
 	}
 
 	ZT_ALWAYS_INLINE InetAddress &operator=(const struct sockaddr_storage *ss)
 	{
 		if (ss)
-			memcpy(reinterpret_cast<void *>(this),ss,sizeof(InetAddress));
-		else memset(reinterpret_cast<void *>(this),0,sizeof(InetAddress));
+			memoryCopyUnsafe(this,ss);
+		else memoryZero(this);
 		return *this;
 	}
 
@@ -162,9 +160,10 @@ public:
 				copySockaddrToThis(reinterpret_cast<const sockaddr_in *>(sa));
 			else if (sa->sa_family == AF_INET6)
 				copySockaddrToThis(reinterpret_cast<const sockaddr_in6 *>(sa));
-			return *this;
+			else memoryZero(this);
+		} else {
+			memoryZero(this);
 		}
-		memset(reinterpret_cast<void *>(this),0,sizeof(InetAddress));
 		return *this;
 	}
 
@@ -338,7 +337,7 @@ public:
 		switch(ss_family) {
 			case AF_INET: return (const void *)&(reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr);
 			case AF_INET6: return (const void *)(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr);
-			default: return 0;
+			default: return nullptr;
 		}
 	}
 
@@ -450,11 +449,6 @@ public:
 	}
 
 	/**
-	 * Set to null/zero
-	 */
-	ZT_ALWAYS_INLINE void zero() { memset(this,0,sizeof(InetAddress)); }
-
-	/**
 	 * Check whether this is a network/route rather than an IP assignment
 	 *
 	 * A network is an IP/netmask where everything after the netmask is
@@ -495,7 +489,7 @@ public:
 
 	static ZT_ALWAYS_INLINE int marshalSizeMax() { return ZT_INETADDRESS_MARSHAL_SIZE_MAX; }
 	int marshal(uint8_t data[ZT_INETADDRESS_MARSHAL_SIZE_MAX]) const;
-	int unmarshal(const uint8_t *restrict data,const int len);
+	int unmarshal(const uint8_t *restrict data,int len);
 
 	bool operator==(const InetAddress &a) const;
 	bool operator<(const InetAddress &a) const;

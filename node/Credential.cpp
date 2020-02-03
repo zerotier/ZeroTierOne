@@ -21,28 +21,50 @@
 #include "Revocation.hpp"
 #include "Switch.hpp"
 #include "Network.hpp"
-#include "ScopedPtr.hpp"
+
+// These are compile-time asserts to make sure temporary marshal buffers here and
+// also in NtworkConfig.cpp are always large enough to marshal all credential types.
+#if ZT_TAG_MARSHAL_SIZE_MAX > ZT_BUF_MEM_SIZE
+#error ZT_TAG_MARSHAL_SIZE_MAX exceeds maximum buffer size
+#endif
+#if ZT_CAPABILITY_MARSHAL_SIZE_MAX > ZT_BUF_MEM_SIZE
+#error ZT_CAPABILITY_MARSHAL_SIZE_MAX exceeds maximum buffer size
+#endif
+#if ZT_REVOCATION_MARSHAL_SIZE_MAX > ZT_BUF_MEM_SIZE
+#error ZT_REVOCATION_MARSHAL_SIZE_MAX exceeds maximum buffer size
+#endif
+#if ZT_CERTIFICATEOFOWNERSHIP_MARSHAL_SIZE_MAX > ZT_BUF_MEM_SIZE
+#error ZT_CERTIFICATEOFOWNERSHIP_MARSHAL_SIZE_MAX exceeds maximum buffer size
+#endif
+#if ZT_CERTIFICATEOFMEMBERSHIP_MARSHAL_SIZE_MAX > ZT_BUF_MEM_SIZE
+#error ZT_CERTIFICATEOFMEMBERSHIP_MARSHAL_SIZE_MAX exceeds maximum buffer size
+#endif
 
 namespace ZeroTier {
 
 template<typename CRED>
-static inline Credential::VerifyResult _credVerify(const RuntimeEnvironment *const RR,void *tPtr,CRED credential)
+static ZT_ALWAYS_INLINE Credential::VerifyResult _credVerify(const RuntimeEnvironment *RR,void *tPtr,CRED credential)
 {
+	uint8_t tmp[ZT_BUF_MEM_SIZE + 16];
+
 	const Address signedBy(credential.signer());
 	const uint64_t networkId = credential.networkId();
 	if ((!signedBy)||(signedBy != Network::controllerFor(networkId)))
 		return Credential::VERIFY_BAD_SIGNATURE;
+
 	const SharedPtr<Peer> peer(RR->topology->get(tPtr,signedBy));
 	if (!peer) {
 		RR->sw->requestWhois(tPtr,RR->node->now(),signedBy);
 		return Credential::VERIFY_NEED_IDENTITY;
 	}
+
 	try {
-		ScopedPtr< Buffer<(sizeof(CRED) + 64)> > tmp(new Buffer<(sizeof(CRED) + 64)>());
-		credential.serialize(*tmp,true);
-		const Credential::VerifyResult result = (peer->identity().verify(tmp->data(),tmp->size(),credential.signature(),credential.signatureLength()) ? Credential::VERIFY_OK : Credential::VERIFY_BAD_SIGNATURE);
-		return result;
+		int l = credential.marshal(tmp,true);
+		if (l <= 0)
+			return Credential::VERIFY_BAD_SIGNATURE;
+		return (peer->identity().verify(tmp,(unsigned int)l,credential.signature(),credential.signatureLength()) ? Credential::VERIFY_OK : Credential::VERIFY_BAD_SIGNATURE);
 	} catch ( ... ) {}
+
 	return Credential::VERIFY_BAD_SIGNATURE;
 }
 
@@ -74,14 +96,17 @@ Credential::VerifyResult Credential::_verify(const RuntimeEnvironment *const RR,
 
 Credential::VerifyResult Credential::_verify(const RuntimeEnvironment *RR,void *tPtr,const Capability &credential) const
 {
+	uint8_t tmp[ZT_CAPABILITY_MARSHAL_SIZE_MAX + 16];
 	try {
 		// There must be at least one entry, and sanity check for bad chain max length
 		if ((credential._maxCustodyChainLength < 1)||(credential._maxCustodyChainLength > ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH))
 			return Credential::VERIFY_BAD_SIGNATURE;
 
+		int l = credential.marshal(tmp,true);
+		if (l <= 0)
+			return Credential::VERIFY_BAD_SIGNATURE;
+
 		// Validate all entries in chain of custody
-		Buffer<(sizeof(Capability) * 2)> tmp;
-		credential.serialize(tmp,true);
 		for(unsigned int c=0;c<credential._maxCustodyChainLength;++c) {
 			if (c == 0) {
 				if ((!credential._custody[c].to)||(!credential._custody[c].from)||(credential._custody[c].from != Network::controllerFor(credential._nwid)))
@@ -95,7 +120,7 @@ Credential::VerifyResult Credential::_verify(const RuntimeEnvironment *RR,void *
 
 			const SharedPtr<Peer> peer(RR->topology->get(tPtr,credential._custody[c].from));
 			if (peer) {
-				if (!peer->identity().verify(tmp.data(),tmp.size(),credential._custody[c].signature,credential._custody[c].signatureLength))
+				if (!peer->identity().verify(tmp,(unsigned int)l,credential._custody[c].signature,credential._custody[c].signatureLength))
 					return Credential::VERIFY_BAD_SIGNATURE;
 			} else {
 				RR->sw->requestWhois(tPtr,RR->node->now(),credential._custody[c].from);

@@ -55,14 +55,7 @@ class Tag : public Credential
 public:
 	static ZT_ALWAYS_INLINE ZT_CredentialType credentialType() { return ZT_CREDENTIAL_TYPE_TAG; }
 
-	ZT_ALWAYS_INLINE Tag() :
-		_id(0),
-		_value(0),
-		_networkId(0),
-		_ts(0),
-		_signatureLength(0)
-	{
-	}
+	ZT_ALWAYS_INLINE Tag() { memoryZero(this); }
 
 	/**
 	 * @param nwid Network ID

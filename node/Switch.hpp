@@ -147,7 +147,7 @@ private:
 		Mutex lock;
 	};
 	RXQueueEntry _rxQueue[ZT_RX_QUEUE_SIZE];
-	AtomicCounter _rxQueuePtr;
+	AtomicCounter<unsigned int> _rxQueuePtr;
 
 	// Returns matching or next available RX queue entry
 	ZT_ALWAYS_INLINE RXQueueEntry *_findRXQueueEntry(uint64_t packetId)

@@ -20,6 +20,7 @@
 
 #include "Constants.hpp"
 #include "Utils.hpp"
+#include "TriviallyCopyable.hpp"
 
 #if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
 #include <xmmintrin.h>
@@ -32,7 +33,7 @@ namespace ZeroTier {
 /**
  * Salsa20 stream cipher
  */
-class Salsa20
+class Salsa20 : public TriviallyCopyable
 {
 public:
 	ZT_ALWAYS_INLINE Salsa20() {}

@@ -68,7 +68,7 @@ void *_Buf_get()
 #endif
 		b = (Buf<> *)malloc(sizeof(Buf<>));
 		if (!b)
-			return nullptr;
+			throw std::bad_alloc();
 	} else {
 		b = (Buf<> *)bb;
 #ifdef __GNUC__

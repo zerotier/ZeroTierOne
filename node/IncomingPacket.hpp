@@ -14,11 +14,12 @@
 #ifndef ZT_INCOMINGPACKET_HPP
 #define ZT_INCOMINGPACKET_HPP
 
-#include "Packet.hpp"
 #include "Path.hpp"
 #include "Utils.hpp"
 #include "MulticastGroup.hpp"
 #include "Peer.hpp"
+#include "Buf.hpp"
+#include "Protocol.hpp"
 
 /*
  * The big picture:
@@ -41,41 +42,20 @@ namespace ZeroTier {
 class RuntimeEnvironment;
 class Network;
 
-class IncomingPacket : public Packet
+class IncomingPacket
 {
 public:
-	ZT_ALWAYS_INLINE IncomingPacket() : Packet(),_receiveTime(0),_path() {}
+	ZT_ALWAYS_INLINE IncomingPacket() {}
 
-	/**
-	 * Create a new packet-in-decode
-	 *
-	 * @param data Packet data
-	 * @param len Packet length
-	 * @param path Path over which packet arrived
-	 * @param now Current time
-	 * @throws std::out_of_range Range error processing packet
-	 */
-	ZT_ALWAYS_INLINE IncomingPacket(const void *data,unsigned int len,const SharedPtr<Path> &path,int64_t now) :
-		Packet(data,len),
-		_receiveTime(now),
-		_path(path)
+	template<typename X>
+	ZT_ALWAYS_INLINE void set(const SharedPtr< Buf<X> > &pkt_,const unsigned int pktSize_,const SharedPtr<Path> &path_,const int64_t now_)
 	{
-	}
-
-	/**
-	 * Init packet-in-decode in place
-	 *
-	 * @param data Packet data
-	 * @param len Packet length
-	 * @param path Path over which packet arrived
-	 * @param now Current time
-	 * @throws std::out_of_range Range error processing packet
-	 */
-	ZT_ALWAYS_INLINE void init(const void *data,unsigned int len,const SharedPtr<Path> &path,int64_t now)
-	{
-		copyFrom(data,len);
-		_receiveTime = now;
-		_path = path;
+		idBE = 0; // initially zero, set when decryption/auth occurs
+		receiveTime = now_;
+		path = path_;
+		pkt = reinterpret_cast< SharedPtr< Buf< Protocol::Header > > >(pkt_);
+		size = pktSize_;
+		hops = Protocol::packetHops(pkt->data.fields);
 	}
 
 	/**
@@ -94,13 +74,34 @@ public:
 	bool tryDecode(const RuntimeEnvironment *RR,void *tPtr);
 
 	/**
-	 * @return Time of packet receipt / start of decode
+	 * Packet ID in big-endian byte order or 0 if not decrypted/dearmored yet
 	 */
-	ZT_ALWAYS_INLINE uint64_t receiveTime() const { return _receiveTime; }
+	uint64_t idBE;
 
-private:
-	uint64_t _receiveTime;
-	SharedPtr<Path> _path;
+	/**
+	 * Time packet was received
+	 */
+	int64_t receiveTime;
+
+	/**
+	 * Path over which packet was received
+	 */
+	SharedPtr< Path > path;
+
+	/**
+	 * Packet itself
+	 */
+	SharedPtr< Buf< Protocol::Header > > pkt;
+
+	/**
+	 * Size of packet in bytes
+	 */
+	unsigned int size;
+
+	/**
+	 * Hop count for received packet
+	 */
+	uint8_t hops;
 };
 
 } // namespace ZeroTier

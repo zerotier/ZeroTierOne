@@ -21,12 +21,11 @@
 #include "Address.hpp"
 #include "InetAddress.hpp"
 #include "Switch.hpp"
-#include "Buffer.hpp"
-#include "Packet.hpp"
 #include "NetworkController.hpp"
 #include "Peer.hpp"
 #include "Trace.hpp"
 #include "ScopedPtr.hpp"
+#include "Buf.hpp"
 
 #include <set>
 
@@ -202,10 +201,10 @@ _doZtFilterResult _doZtFilter(
 				thisRuleMatches = (uint8_t)(rules[rn].v.vlanDei == 0);
 				break;
 			case ZT_NETWORK_RULE_MATCH_MAC_SOURCE:
-				thisRuleMatches = (uint8_t)(MAC(rules[rn].v.mac,6) == macSource);
+				thisRuleMatches = (uint8_t)(MAC(rules[rn].v.mac) == macSource);
 				break;
 			case ZT_NETWORK_RULE_MATCH_MAC_DEST:
-				thisRuleMatches = (uint8_t)(MAC(rules[rn].v.mac,6) == macDest);
+				thisRuleMatches = (uint8_t)(MAC(rules[rn].v.mac) == macDest);
 				break;
 			case ZT_NETWORK_RULE_MATCH_IPV4_SOURCE:
 				if ((etherType == ZT_ETHERTYPE_IPV4)&&(frameLen >= 20)) {
@@ -545,9 +544,6 @@ Network::Network(const RuntimeEnvironment *renv,void *tPtr,uint64_t nwid,void *u
 	_destroyed(false),
 	_netconfFailure(NETCONF_FAILURE_NONE)
 {
-	for(int i=0;i<ZT_NETWORK_MAX_INCOMING_UPDATES;++i)
-		_incomingConfigChunks[i].ts = 0;
-
 	if (nconf) {
 		this->setConfiguration(tPtr,*nconf,false);
 		_lastConfigUpdate = 0; // still want to re-request since it's likely outdated
@@ -556,15 +552,15 @@ Network::Network(const RuntimeEnvironment *renv,void *tPtr,uint64_t nwid,void *u
 		tmp[0] = nwid; tmp[1] = 0;
 
 		bool got = false;
-		ScopedPtr< Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> > dict(new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>());
 		try {
+			Dictionary dict;
 			std::vector<uint8_t> nconfData(RR->node->stateObjectGet(tPtr,ZT_STATE_OBJECT_NETWORK_CONFIG,tmp));
 			if (nconfData.size() > 2) {
 				nconfData.push_back(0);
-				if (dict->load((const char *)nconfData.data())) {
+				if (dict.decode(nconfData.data(),(unsigned int)nconfData.size())) {
 					try {
 						ScopedPtr<NetworkConfig> nconf2(new NetworkConfig());
-						if (nconf2->fromDictionary(*dict)) {
+						if (nconf2->fromDictionary(dict)) {
 							this->setConfiguration(tPtr,*nconf2,false);
 							_lastConfigUpdate = 0; // still want to re-request an update since it's likely outdated
 							got = true;
@@ -853,122 +849,134 @@ void Network::multicastUnsubscribe(const MulticastGroup &mg)
 		_myMulticastGroups.erase(i);
 }
 
-uint64_t Network::handleConfigChunk(void *tPtr,const uint64_t packetId,const Address &source,const Buffer<ZT_PROTO_MAX_PACKET_LENGTH> &chunk,unsigned int ptr)
+uint64_t Network::handleConfigChunk(void *tPtr,uint64_t packetId,const Address &source,const Buf<> &chunk,int ptr,int size)
 {
 	if (_destroyed)
 		return 0;
 
-	const unsigned int start = ptr;
-
+	const unsigned int chunkPayloadStart = ptr;
 	ptr += 8; // skip network ID, which is already obviously known
-	const unsigned int chunkLen = chunk.at<uint16_t>(ptr); ptr += 2;
-	const void *chunkData = chunk.field(ptr,chunkLen); ptr += chunkLen;
+	const unsigned int chunkLen = chunk.rI16(ptr);
+	const uint8_t *chunkData = chunk.rBnc(ptr,chunkLen);
+	if (Buf<>::readOverflow(ptr,size))
+		return 0;
 
+	Mutex::Lock l1(_config_l);
+
+	_IncomingConfigChunk *c = nullptr;
 	uint64_t configUpdateId;
-	{
-		Mutex::Lock l1(_config_l);
+	int totalLength = 0,chunkIndex = 0;
+	if (ptr < size) {
+		// If there is more data after the chunk / dictionary, it means this is a new controller
+		// that sends signed chunks. We still support really old controllers, but probably not forever.
+		const bool fastPropagate = ((chunk.rI8(ptr) & Protocol::NETWORK_CONFIG_FLAG_FAST_PROPAGATE) != 0);
+		configUpdateId = chunk.rI64(ptr);
+		totalLength = chunk.rI32(ptr);
+		chunkIndex = chunk.rI32(ptr);
+		++ptr; // skip unused signature type field
+		const unsigned int signatureSize = chunk.rI16(ptr);
+		const uint8_t *signature = chunk.rBnc(ptr,signatureSize);
+		if ((Buf<>::readOverflow(ptr,size))||((chunkIndex + chunkLen) > totalLength)||(totalLength >= ZT_MAX_NETWORK_CONFIG_BYTES)||(signatureSize > ZT_SIGNATURE_BUFFER_SIZE)||(!signature))
+			return 0;
+		const unsigned int chunkPayloadSize = (unsigned int)ptr - chunkPayloadStart;
 
-		_IncomingConfigChunk *c = nullptr;
-		uint64_t chunkId = 0;
-		unsigned long totalLength,chunkIndex;
-		if (ptr < chunk.size()) {
-			const bool fastPropagate = ((chunk[ptr++] & 0x01U) != 0);
-			configUpdateId = chunk.at<uint64_t>(ptr); ptr += 8;
-			totalLength = chunk.at<uint32_t>(ptr); ptr += 4;
-			chunkIndex = chunk.at<uint32_t>(ptr); ptr += 4;
+		// Find existing or new slot for this update and its chunk(s).
+		for(int i=0;i<ZT_NETWORK_MAX_INCOMING_UPDATES;++i) {
+			if (_incomingConfigChunks[i].updateId == configUpdateId) {
+				c = &(_incomingConfigChunks[i]);
+				if (c->chunks.find(chunkIndex) != c->chunks.end())
+					return 0; // we already have this chunk!
+				break;
+			} else if ((!c)||(_incomingConfigChunks[i].touchCtr < c->touchCtr)) {
+				c = &(_incomingConfigChunks[i]);
+			}
+		}
+		if (!c) // sanity check; should not be possible
+			return 0;
 
-			if (((chunkIndex + chunkLen) > totalLength)||(totalLength >= ZT_NETWORKCONFIG_DICT_CAPACITY)) // >= since we need room for a null at the end
-				return 0;
-			if ((chunk[ptr] != 1)||(chunk.at<uint16_t>(ptr + 1) != ZT_C25519_SIGNATURE_LEN))
-				return 0;
-			const uint8_t *sig = reinterpret_cast<const uint8_t *>(chunk.field(ptr + 3,ZT_C25519_SIGNATURE_LEN));
+		// Verify this chunk's signature
+		const SharedPtr<Peer> controllerPeer(RR->topology->get(tPtr,controller()));
+		if ((!controllerPeer)||(!controllerPeer->identity().verify(chunk.data.bytes + chunkPayloadStart,chunkPayloadSize,signature,signatureSize)))
+			return 0;
 
-			// We can use the signature, which is unique per chunk, to get a per-chunk ID for local deduplication use
-			for(unsigned int i=0;i<16;++i)
-				reinterpret_cast<uint8_t *>(&chunkId)[i & 7] ^= sig[i];
+		// New properly verified chunks can be flooded "virally" through the network via an aggressive
+		// exponential rumor mill algorithm.
+		if (fastPropagate) {
+			Mutex::Lock l2(_memberships_l);
+			Address *a = nullptr;
+			Membership *m = nullptr;
+			Hashtable<Address,Membership>::Iterator i(_memberships);
+			while (i.next(a,m)) {
+				if ((*a != source)&&(*a != controller())) {
+					ZT_GET_NEW_BUF(outp,Protocol::Header);
 
-			// Find existing or new slot for this update and check if this is a duplicate chunk
-			for(int i=0;i<ZT_NETWORK_MAX_INCOMING_UPDATES;++i) {
-				if (_incomingConfigChunks[i].updateId == configUpdateId) {
-					c = &(_incomingConfigChunks[i]);
+					outp->data.fields.packetId = Protocol::getPacketId();
+					a->copyTo(outp->data.fields.destination);
+					RR->identity.address().copyTo(outp->data.fields.source);
+					outp->data.fields.flags = 0;
+					outp->data.fields.verb = Protocol::VERB_NETWORK_CONFIG;
 
-					for(unsigned long j=0;j<c->haveChunks;++j) {
-						if (c->haveChunkIds[j] == chunkId)
-							return 0;
-					}
+					int outl = sizeof(Protocol::Header);
+					outp->wB(outl,chunk.data.bytes + chunkPayloadStart,chunkPayloadSize);
 
-					break;
-				} else if ((!c)||(_incomingConfigChunks[i].ts < c->ts)) {
-					c = &(_incomingConfigChunks[i]);
+					if (Buf<>::writeOverflow(outl)) // sanity check... it fit before!
+						break;
+
+					RR->sw->send(tPtr,outp,true);
 				}
 			}
+		}
+	} else if ((source == controller())||(!source)) {
+		// Legacy support for OK(NETWORK_CONFIG_REQUEST) from older controllers that don't sign chunks and don't
+		// support multiple chunks. Since old controllers don't sign chunks we only accept the message if it comes
+		// directly from the controller.
+		configUpdateId = packetId;
+		totalLength = (int)chunkLen;
+		if (totalLength > ZT_MAX_NETWORK_CONFIG_BYTES)
+			return 0;
 
-			// If it's not a duplicate, check chunk signature
-			const SharedPtr<Peer> controllerPeer(RR->topology->get(tPtr,controller()));
-			if (!controllerPeer)
-				return 0;
-			if (!controllerPeer->identity().verify(chunk.field(start,ptr - start),ptr - start,sig,ZT_C25519_SIGNATURE_LEN))
-				return 0;
+		for(int i=0;i<ZT_NETWORK_MAX_INCOMING_UPDATES;++i) {
+			if ((!c)||(_incomingConfigChunks[i].touchCtr < c->touchCtr))
+				c = &(_incomingConfigChunks[i]);
+		}
+	} else {
+		// Not signed, not from controller -> reject.
+		return 0;
+	}
 
-			// New properly verified chunks can be flooded "virally" through the network
-			if (fastPropagate) {
-				Mutex::Lock l2(_memberships_l);
-				Address *a = nullptr;
-				Membership *m = nullptr;
-				Hashtable<Address,Membership>::Iterator i(_memberships);
-				while (i.next(a,m)) {
-					if ((*a != source)&&(*a != controller())) {
-						Packet outp(*a,RR->identity.address(),Packet::VERB_NETWORK_CONFIG);
-						outp.append(reinterpret_cast<const uint8_t *>(chunk.data()) + start,chunk.size() - start);
-						RR->sw->send(tPtr,outp,true);
-					}
-				}
-			}
-		} else if ((source == controller())||(!source)) { // since old chunks aren't signed, only accept from controller itself (or via cluster backplane)
-			// Legacy support for OK(NETWORK_CONFIG_REQUEST) from older controllers
-			chunkId = packetId;
-			configUpdateId = chunkId;
-			totalLength = chunkLen;
-			chunkIndex = 0;
+	try {
+		++c->touchCtr;
+		if (c->updateId != configUpdateId) {
+			c->updateId = configUpdateId;
+			c->chunks.clear();
+		}
+		c->chunks[chunkIndex].assign(chunkData,chunkData + chunkLen);
 
-			if (totalLength >= ZT_NETWORKCONFIG_DICT_CAPACITY)
-				return 0;
-
-			for(int i=0;i<ZT_NETWORK_MAX_INCOMING_UPDATES;++i) {
-				if ((!c)||(_incomingConfigChunks[i].ts < c->ts))
-					c = &(_incomingConfigChunks[i]);
-			}
-		} else {
-			// Single-chunk unsigned legacy configs are only allowed from the controller itself
+		int haveLength = 0;
+		for(std::map< int,std::vector<uint8_t> >::const_iterator ch(c->chunks.begin());ch!=c->chunks.end();++ch)
+			haveLength += (int)ch->second.size();
+		if (haveLength > ZT_MAX_NETWORK_CONFIG_BYTES) {
+			c->touchCtr = 0;
+			c->updateId = 0;
+			c->chunks.clear();
 			return 0;
 		}
 
-		++c->ts; // newer is higher, that's all we need
+		if (haveLength == totalLength) {
+			std::vector<uint8_t> assembledConfig;
+			for(std::map< int,std::vector<uint8_t> >::const_iterator ch(c->chunks.begin());ch!=c->chunks.end();++ch)
+				assembledConfig.insert(assembledConfig.end(),ch->second.begin(),ch->second.end());
 
-		if (c->updateId != configUpdateId) {
-			c->updateId = configUpdateId;
-			c->haveChunks = 0;
-			c->haveBytes = 0;
-		}
-		if (c->haveChunks >= ZT_NETWORK_MAX_UPDATE_CHUNKS)
-			return false;
-		c->haveChunkIds[c->haveChunks++] = chunkId;
-
-		memcpy(c->data.unsafeData() + chunkIndex,chunkData,chunkLen);
-		c->haveBytes += chunkLen;
-
-		if (c->haveBytes == totalLength) {
-			c->data.unsafeData()[c->haveBytes] = (char)0; // ensure null terminated
-
-			ScopedPtr<NetworkConfig> nc(new NetworkConfig());
-			try {
-				if (nc->fromDictionary(c->data)) {
+			Dictionary dict;
+			if (dict.decode(assembledConfig.data(),(unsigned int)assembledConfig.size())) {
+				ScopedPtr<NetworkConfig> nc(new NetworkConfig());
+				if (nc->fromDictionary(dict)) {
 					this->setConfiguration(tPtr,*nc,true);
 					return configUpdateId;
 				}
-			} catch ( ... ) {}
+			}
 		}
-	}
+	} catch (...) {}
 
 	return 0;
 }
@@ -1004,11 +1012,13 @@ int Network::setConfiguration(void *tPtr,const NetworkConfig &nconf,bool saveToD
 
 		if (saveToDisk) {
 			try {
-				ScopedPtr< Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> > d(new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>());
-				if (nconf.toDictionary(*d,false)) {
+				Dictionary d;
+				if (nconf.toDictionary(d,false)) {
 					uint64_t tmp[2];
 					tmp[0] = _id; tmp[1] = 0;
-					RR->node->stateObjectPut(tPtr,ZT_STATE_OBJECT_NETWORK_CONFIG,tmp,d->data(),d->sizeBytes());
+					std::vector<uint8_t> d2;
+					d.encode(d2);
+					RR->node->stateObjectPut(tPtr,ZT_STATE_OBJECT_NETWORK_CONFIG,tmp,d2.data(),(unsigned int)d2.size());
 				}
 			} catch ( ... ) {}
 		}
@@ -1320,7 +1330,7 @@ void Network::_requestConfiguration(void *tPtr)
 			nconf->name[nn++] = '0';
 			nconf->name[nn++] = '.';
 			nconf->name[nn++] = '0';
-			nconf->name[nn++] = (char)0;
+			nconf->name[nn] = (char)0;
 
 			this->setConfiguration(tPtr,*nconf,false);
 		}
@@ -1329,24 +1339,24 @@ void Network::_requestConfiguration(void *tPtr)
 
 	const Address ctrl(controller());
 
-	ScopedPtr< Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> > rmd(new Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY>());
-	rmd->add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_VENDOR,(uint64_t)1); // 1 == ZeroTier, no other vendors at the moment
-	rmd->add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_PROTOCOL_VERSION,(uint64_t)ZT_PROTO_VERSION);
-	rmd->add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MAJOR_VERSION,(uint64_t)ZEROTIER_ONE_VERSION_MAJOR);
-	rmd->add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MINOR_VERSION,(uint64_t)ZEROTIER_ONE_VERSION_MINOR);
-	rmd->add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_REVISION,(uint64_t)ZEROTIER_ONE_VERSION_REVISION);
-	rmd->add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_NETWORK_RULES,(uint64_t)ZT_MAX_NETWORK_RULES);
-	rmd->add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_NETWORK_CAPABILITIES,(uint64_t)ZT_MAX_NETWORK_CAPABILITIES);
-	rmd->add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_CAPABILITY_RULES,(uint64_t)ZT_MAX_CAPABILITY_RULES);
-	rmd->add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_NETWORK_TAGS,(uint64_t)ZT_MAX_NETWORK_TAGS);
-	rmd->add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_FLAGS,(uint64_t)0);
-	rmd->add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_RULES_ENGINE_REV,(uint64_t)ZT_RULES_ENGINE_REVISION);
+	Dictionary rmd;
+	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_VENDOR,(uint64_t)1); // 1 == ZeroTier, no other vendors at the moment
+	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_PROTOCOL_VERSION,(uint64_t)ZT_PROTO_VERSION);
+	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MAJOR_VERSION,(uint64_t)ZEROTIER_ONE_VERSION_MAJOR);
+	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MINOR_VERSION,(uint64_t)ZEROTIER_ONE_VERSION_MINOR);
+	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_REVISION,(uint64_t)ZEROTIER_ONE_VERSION_REVISION);
+	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_NETWORK_RULES,(uint64_t)ZT_MAX_NETWORK_RULES);
+	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_NETWORK_CAPABILITIES,(uint64_t)ZT_MAX_NETWORK_CAPABILITIES);
+	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_CAPABILITY_RULES,(uint64_t)ZT_MAX_CAPABILITY_RULES);
+	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_MAX_NETWORK_TAGS,(uint64_t)ZT_MAX_NETWORK_TAGS);
+	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_FLAGS,(uint64_t)0);
+	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_RULES_ENGINE_REV,(uint64_t)ZT_RULES_ENGINE_REVISION);
 
 	RR->t->networkConfigRequestSent(tPtr,_id);
 
 	if (ctrl == RR->identity.address()) {
 		if (RR->localNetworkController) {
-			RR->localNetworkController->request(_id,InetAddress(),0xffffffffffffffffULL,RR->identity,*rmd);
+			RR->localNetworkController->request(_id,InetAddress(),0xffffffffffffffffULL,RR->identity,rmd);
 		} else {
 			this->setNotFound();
 		}

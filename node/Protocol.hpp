@@ -47,8 +47,7 @@
  *    + Tags and Capabilities
  *    + inline push of CertificateOfMembership deprecated
  * 9  - 1.2.0 ... 1.2.14
- * 10 - 1.4.0 ... 1.6.0
- *    + Multipath capability and load balancing
+ * 10 - 1.4.0 ... 1.4.6
  * 11 - 2.0.0 ... CURRENT
  *    + Peer-to-peer multicast replication
  *    + Old planet/moon stuff is DEAD!
@@ -59,12 +58,20 @@
 #define ZT_PROTO_VERSION 11
 
 /**
+ * Minimum supported protocol version
+ *
+ * As of v2 we don't "officially" support anything older than 1.2.14, but this
+ * is the hard cutoff before which peers will be flat out rejected.
+ */
+#define ZT_PROTO_VERSION_MIN 6
+
+/**
  * Packet buffer size (can be changed)
  */
 #define ZT_PROTO_MAX_PACKET_LENGTH (ZT_MAX_PACKET_FRAGMENTS * ZT_DEFAULT_PHYSMTU)
 
 /**
- * Minimum viable packet length (a.k.a. header length)
+ * Minimum viable packet length (outer header + verb)
  */
 #define ZT_PROTO_MIN_PACKET_LENGTH 28
 
@@ -72,7 +79,6 @@
  * Index at which the encrypted section of a packet begins
  */
 #define ZT_PROTO_PACKET_ENCRYPTED_SECTION_START 27
-
 
 /**
  * Index at which packet payload begins (after verb)
@@ -106,9 +112,9 @@
 #define ZT_PROTO_CIPHER_SUITE__NONE 2
 
 /**
- * AES-GCM with AES-256
+ * AES-GCM-NRH (AES-GCM with nonce reuse hardening) w/AES-256
  */
-#define ZT_PROTO_CIPHER_SUITE__AES_GCM 3
+#define ZT_PROTO_CIPHER_SUITE__AES_GCM_NRH 3
 
 /**
  * Magic number indicating a fragment
@@ -116,7 +122,7 @@
 #define ZT_PACKET_FRAGMENT_INDICATOR 0xff
 
 /**
- * Minimum viable fragment length
+ * Minimum viable length for a fragment
  */
 #define ZT_PROTO_MIN_FRAGMENT_LENGTH 16
 
@@ -136,37 +142,37 @@
 #define ZT_PROTO_VERB_FLAG_COMPRESSED 0x80
 
 /**
- * Signed locator for this node
+ * HELLO exchange meta-data: signed locator for this node
  */
 #define ZT_PROTO_HELLO_NODE_META_LOCATOR "l"
 
 /**
- * Ephemeral C25519 public key
+ * HELLO exchange meta-data: ephemeral C25519 public key
  */
 #define ZT_PROTO_HELLO_NODE_META_EPHEMERAL_KEY_C25519 "e0"
 
 /**
- * Ephemeral NIST P-384 public key
+ * HELLO exchange meta-data: ephemeral NIST P-384 public key
  */
 #define ZT_PROTO_HELLO_NODE_META_EPHEMERAL_KEY_P384 "e1"
 
 /**
- * Addresses of ZeroTier nodes to whom this node will relay or one entry for 0000000000 if promiscuous.
+ * HELLO exchange meta-data: address(es) of nodes to whom this node will relay
  */
-#define ZT_PROTO_HELLO_NODE_META_WILL_RELAY_TO "r"
+#define ZT_PROTO_HELLO_NODE_META_WILL_RELAY_TO "wr"
 
 /**
- * X coordinate of your node (sent in OK(HELLO))
+ * HELLO exchange meta-data: X coordinate of your node (sent in OK(HELLO))
  */
 #define ZT_PROTO_HELLO_NODE_META_LOCATION_X "gX"
 
 /**
- * Y coordinate of your node (sent in OK(HELLO))
+ * HELLO exchange meta-data: Y coordinate of your node (sent in OK(HELLO))
  */
 #define ZT_PROTO_HELLO_NODE_META_LOCATION_Y "gY"
 
 /**
- * Z coordinate of your node (sent in OK(HELLO))
+ * HELLO exchange meta-data: Z coordinate of your node (sent in OK(HELLO))
  */
 #define ZT_PROTO_HELLO_NODE_META_LOCATION_Z "gZ"
 
@@ -206,11 +212,11 @@
  * first fragment it receives.
  *
  * Fragments are sent with the following format:
- *   <[8] packet ID of packet whose fragment this belongs to>
+ *   <[8] packet ID of packet to which this fragment belongs>
  *   <[5] destination ZT address>
- *   <[1] 0xff, a reserved address, signals that this isn't a normal packet>
+ *   <[1] 0xff here signals that this is a fragment>
  *   <[1] total fragments (most significant 4 bits), fragment no (LS 4 bits)>
- *   <[1] ZT hop count (top 5 bits unused and must be zero)>
+ *   <[1] ZT hop count (least significant 3 bits; others are reserved)>
  *   <[...] fragment data>
  *
  * The protocol supports a maximum of 16 fragments. If a fragment is received
@@ -452,38 +458,12 @@ enum Verb
 	 *   <[8] 64-bit timestamp of netconf we currently have>
 	 *
 	 * This message requests network configuration from a node capable of
-	 * providing it.
-	 *
-	 * Responses to this are always whole configs intended for the recipient.
-	 * For patches and other updates a NETWORK_CONFIG is sent instead.
-	 *
-	 * It would be valid and correct as of 1.2.0 to use NETWORK_CONFIG always,
-	 * but OK(NETWORK_CONFIG_REQUEST) should be sent for compatibility.
+	 * providing it. Responses can be sent as OK(NETWORK_CONFIG_REQUEST)
+	 * or NETWORK_CONFIG messages. NETWORK_CONFIG can also be sent by
+	 * network controllers or other nodes unsolicited.
 	 *
 	 * OK response payload:
-	 *   <[8] 64-bit network ID>
-	 *   <[2] 16-bit length of network configuration dictionary chunk>
-	 *   <[...] network configuration dictionary (may be incomplete)>
-	 *   [ ... end of legacy single chunk response ... ]
-	 *   <[1] 8-bit flags>
-	 *   <[8] 64-bit config update ID (should never be 0)>
-	 *   <[4] 32-bit total length of assembled dictionary>
-	 *   <[4] 32-bit index of chunk>
-	 *   [ ... end signed portion ... ]
-	 *   <[1] 8-bit chunk signature type>
-	 *   <[2] 16-bit length of chunk signature>
-	 *   <[...] chunk signature>
-	 *
-	 * The chunk signature signs the entire payload of the OK response.
-	 * Currently only one signature type is supported: ed25519 (1).
-	 *
-	 * Each config chunk is signed to prevent memory exhaustion or
-	 * traffic crowding DOS attacks against config fragment assembly.
-	 *
-	 * If the packet is from the network controller it is permitted to end
-	 * before the config update ID or other chunking related or signature
-	 * fields. This is to support older controllers that don't include
-	 * these fields and may be removed in the future.
+	 *   (same as VERB_NETWORK_CONFIG payload)
 	 *
 	 * ERROR response payload:
 	 *   <[8] 64-bit network ID>
@@ -500,19 +480,19 @@ enum Verb
 	 *   <[4] 32-bit total length of assembled dictionary>
 	 *   <[4] 32-bit index of chunk>
 	 *   [ ... end signed portion ... ]
-	 *   <[1] 8-bit chunk signature type>
+	 *   <[1] 8-bit reserved field (legacy)>
 	 *   <[2] 16-bit length of chunk signature>
 	 *   <[...] chunk signature>
 	 *
-	 * This is a direct push variant for network config updates. It otherwise
-	 * carries the same payload as OK(NETWORK_CONFIG_REQUEST) and has the same
-	 * semantics.
-	 *
-	 * The legacy mode missing the additional chunking fields is not supported
-	 * here.
+	 * Network configurations can come from network controllers or theoretically
+	 * any other node, but each chunk must be signed by the network controller
+	 * that generated it originally. The config update ID is arbitrary and is merely
+	 * used by the receiver to group chunks. Chunk indexes must be sequential and
+	 * the total delivered chunks must yield a total network config equal to the
+	 * specified total length.
 	 *
 	 * Flags:
-	 *   0x01 - Use fast propagation
+	 *   0x01 - Use fast propagation -- rumor mill flood this chunk to other members
 	 *
 	 * An OK should be sent if the config is successfully received and
 	 * accepted.
@@ -688,12 +668,15 @@ enum ErrorCode
 	/* Tried to join network, but you're not a member */
 	ERROR_NETWORK_ACCESS_DENIED_ = 0x07, /* extra _ at end to avoid Windows name conflict */
 
-	/* Cannot deliver a forwarded ZeroTier packet (e.g. hops exceeded, no routes) */
+	/* Cannot deliver a forwarded ZeroTier packet (for any reason) */
 	ERROR_CANNOT_DELIVER = 0x09
 };
 
 /**
  * EXT_FRAME subtypes, which are packed into three bits in the flags field.
+ *
+ * This allows the node to know whether this is a normal frame or one generated
+ * by a special tee or redirect type flow rule.
  */
 enum ExtFrameSubtype
 {
@@ -711,9 +694,28 @@ enum ExtFrameSubtype
  */
 enum ExtFrameFlag
 {
+	/**
+	 * A certifiate of membership was included (no longer used but still accepted)
+	 */
 	EXT_FRAME_FLAG_COM_ATTACHED_deprecated = 0x01,
-	// bits 0x02, 0x04, and 0x08 are occupied by the ExtFrameSubtype
+
+	// bits 0x02, 0x04, and 0x08 are occupied by the 3-bit ExtFrameSubtype value.
+
+	/**
+	 * An OK(EXT_FRAME) acknowledgement was requested by the sender.
+	 */
 	EXT_FRAME_FLAG_ACK_REQUESTED = 0x10
+};
+
+/**
+ * NETWORK_CONFIG (or OK(NETWORK_CONFIG_REQUEST)) flags
+ */
+enum NetworkConfigFlag
+{
+	/**
+	 * Indicates that this network config chunk should be fast propagated via rumor mill flooding.
+	 */
+	NETWORK_CONFIG_FLAG_FAST_PROPAGATE = 0x01
 };
 
 /****************************************************************************/
@@ -727,50 +729,114 @@ enum ExtFrameFlag
  * All fields larger than one byte are in big-endian byte order on the wire.
  */
 
-ZT_PACKED_STRUCT(struct HELLO {
+/**
+ * Normal packet header
+ *
+ * @tparam PT Packet payload type (default: uint8_t[])
+ */
+ZT_PACKED_STRUCT(struct Header
+{
+	uint64_t packetId;
+	uint8_t destination[5];
+	uint8_t source[5];
+	uint8_t flags;
+	uint64_t mac;
+	// --- begin encrypted envelope ---
+	uint8_t verb;
+});
+
+/**
+ * Packet fragment header
+ */
+ZT_PACKED_STRUCT(struct FragmentHeader
+{
+	uint64_t packetId;
+	uint8_t destination[5];
+	uint8_t fragmentIndicator; // always 0xff for fragments
+	uint8_t counts; // total: most significant four bits, number: least significant four bits
+	uint8_t hops; // top 5 bits unused and must be zero
+	uint8_t p[];
+});
+
+ZT_PACKED_STRUCT(struct HELLO
+{
+	Header h;
 	uint8_t versionProtocol;
 	uint8_t versionMajor;
 	uint8_t versionMinor;
 	uint16_t versionRev;
 	uint64_t timestamp;
+	uint8_t p[];
 });
 
-ZT_PACKED_STRUCT(struct RENDEZVOUS {
+ZT_PACKED_STRUCT(struct RENDEZVOUS
+{
+	Header h;
 	uint8_t flags;
 	uint8_t peerAddress[5];
 	uint16_t port;
 	uint8_t addressLength;
-	uint8_t address[16];
+	uint8_t address[];
 });
 
-ZT_PACKED_STRUCT(struct FRAME {
+ZT_PACKED_STRUCT(struct FRAME
+{
+	Header h;
 	uint64_t networkId;
 	uint16_t etherType;
 	uint8_t data[];
 });
 
-ZT_PACKED_STRUCT(struct EXT_FRAME {
+ZT_PACKED_STRUCT(struct EXT_FRAME
+{
+	Header h;
 	uint64_t networkId;
 	uint8_t flags;
-	uint8_t destMac[6];
-	uint8_t sourceMac[6];
-	uint16_t etherType;
-	uint8_t data[];
+	uint8_t p[];
 });
 
-ZT_PACKED_STRUCT(struct MULTICAST_LIKE_Entry {
-	uint64_t networkId;
-	uint8_t mac[6];
-	uint32_t adi;
-});
+ZT_PACKED_STRUCT(struct MULTICAST_LIKE
+{
+	ZT_PACKED_STRUCT(struct Entry
+	{
+		uint64_t networkId;
+		uint8_t mac[6];
+		uint32_t adi;
+	});
 
-ZT_PACKED_STRUCT(struct MULTICAST_LIKE {
-	MULTICAST_LIKE_Entry groups[];
+	Header h;
+	Entry groups[];
 });
 
 namespace OK {
 
-ZT_PACKED_STRUCT(struct HELLO {
+/**
+ * OK response header
+ *
+ * @tparam PT OK payload type (default: uint8_t[])
+ */
+ZT_PACKED_STRUCT(struct Header
+{
+	uint8_t inReVerb;
+	uint64_t inRePacketId;
+});
+
+ZT_PACKED_STRUCT(struct WHOIS
+{
+	Protocol::Header h;
+	OK::Header oh;
+});
+
+ZT_PACKED_STRUCT(struct ECHO
+{
+	Protocol::Header h;
+	OK::Header oh;
+});
+
+ZT_PACKED_STRUCT(struct HELLO
+{
+	Protocol::Header h;
+	OK::Header oh;
 	uint64_t timestampEcho;
 	uint8_t versionProtocol;
 	uint8_t versionMajor;
@@ -778,26 +844,15 @@ ZT_PACKED_STRUCT(struct HELLO {
 	uint16_t versionRev;
 });
 
-ZT_PACKED_STRUCT(struct EXT_FRAME {
+ZT_PACKED_STRUCT(struct EXT_FRAME
+{
+	Protocol::Header h;
+	OK::Header oh;
 	uint64_t networkId;
 	uint8_t flags;
 	uint8_t destMac[6];
 	uint8_t sourceMac[6];
 	uint16_t etherType;
-});
-
-/**
- * OK response header
- *
- * The OK header comes after the packet header but before type-specific payloads.
- *
- * @tparam PT OK payload type (default: uint8_t[])
- */
-template<typename PT = uint8_t[]>
-ZT_PACKED_STRUCT(struct Header {
-	uint8_t inReVerb;
-	uint64_t inRePacketId;
-	PT p;
 });
 
 } // namespace OK
@@ -811,68 +866,58 @@ namespace ERROR {
  *
  * @tparam PT Error payload type (default: uint8_t[])
  */
-template<typename PT = uint8_t[]>
-ZT_PACKED_STRUCT(struct Header {
-	uint8_t inReVerb;
+ZT_PACKED_STRUCT(struct Header
+{
+	int8_t inReVerb;
 	uint64_t inRePacketId;
 	uint8_t error;
-	PT p;
+});
+
+ZT_PACKED_STRUCT(struct NEED_MEMBERSHIP_CERTIFICATE
+{
+	Protocol::Header h;
+	ERROR::Header eh;
+	uint64_t networkId;
+});
+
+ZT_PACKED_STRUCT(struct UNSUPPORTED_OPERATION__NETWORK_CONFIG_REQUEST
+{
+	Protocol::Header h;
+	ERROR::Header eh;
+	uint64_t networkId;
 });
 
 } // namespace ERROR
-
-/**
- * Normal packet header
- *
- * @tparam PT Packet payload type (default: uint8_t[])
- */
-template<typename PT = uint8_t[]>
-ZT_PACKED_STRUCT(struct Header {
-	uint64_t packetId;
-	uint8_t destination[5];
-	uint8_t source[5];
-	uint8_t flags;
-	uint64_t mac;
-	// --- begin encrypted envelope ---
-	uint8_t verb;
-	PT p;
-});
-
-/**
- * Packet fragment header
- */
-ZT_PACKED_STRUCT(struct FragmentHeader {
-	uint64_t packetId;
-	uint8_t destination[5];
-	uint8_t fragmentIndicator; // always 0xff for fragments
-	uint8_t counts; // total: most significant four bits, number: least significant four bits
-	uint8_t hops; // top 5 bits unused and must be zero
-	uint8_t p[];
-});
 
 /****************************************************************************/
 
 /**
  * Increment the 3-bit hops field embedded in the packet flags field
- *
- * @return New hop count (can be greater than allowed if there is an overflow)
  */
-template<typename X>
-ZT_ALWAYS_INLINE unsigned int incrementPacketHops(Buf< Header<X> > &packet)
+ZT_ALWAYS_INLINE unsigned int incrementPacketHops(Header &h)
 {
-	uint8_t f = packet.data.fields.flags;
-	uint8_t h = f;
-	f &= 0xf8U;
-	++h;
-	packet.data.fields.flags = f | (h & 0x07U);
-	return h;
+	uint8_t flags = h.flags;
+	uint8_t hops = flags;
+	flags &= 0xf8U;
+	++hops;
+	h.flags = flags | (hops & 0x07U);
+	return (unsigned int)hops;
 }
 
 /**
  * @return 3-bit hops field embedded in packet flags field
  */
-template<typename X>
-ZT_ALWAYS_INLINE unsigned int packetHops(Buf< Header<X> > &packet) const { return (packet.data.fields.flags & 0x07U); }
+ZT_ALWAYS_INLINE uint8_t packetHops(const Header &h) { return (h.flags & 0x07U); }
+
+/**
+ * @return 3-bit cipher field embedded in packet flags field
+ */
+ZT_ALWAYS_INLINE uint8_t packetCipher(const Header &h) { return ((h.flags >> 3U) & 0x07U); }
+
+void _armor(Buf< Header > &packet,unsigned int packetSize,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH],uint8_t cipherSuite);
+int _dearmor(Buf< Header > &packet,unsigned int packetSize,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH]);
+unsigned int _compress(Buf< Header > &packet,unsigned int packetSize);
+int _uncompress(Buf< Header > &packet,unsigned int packetSize);
 
 /**
  * Armor a packet for transport
@@ -882,7 +927,9 @@ ZT_ALWAYS_INLINE unsigned int packetHops(Buf< Header<X> > &packet) const { retur
  * @param key 256-bit symmetric key
  * @param cipherSuite Cipher suite to apply
  */
-void armor(Buf< Header<> > &packet,unsigned int packetSize,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH],uint8_t cipherSuite);
+template<typename X>
+static ZT_ALWAYS_INLINE void armor(Buf< X > &packet,unsigned int packetSize,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH],uint8_t cipherSuite)
+{ _armor(reinterpret_cast< Buf< Header > & >(packet),packetSize,key,cipherSuite); }
 
 /**
  * Dearmor a packet and check message authentication code
@@ -895,7 +942,9 @@ void armor(Buf< Header<> > &packet,unsigned int packetSize,const uint8_t key[ZT_
  * @param key 256-bit symmetric key
  * @return Cipher suite or -1 if MAC validation failed
  */
-int dearmor(Buf< Header<> > &packet,unsigned int packetSize,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH]);
+template<typename X>
+static ZT_ALWAYS_INLINE int dearmor(Buf< X > &packet,unsigned int packetSize,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH])
+{ return _dearmor(reinterpret_cast< Buf < Header > & >(packet),packetSize,key); }
 
 /**
  * Compress packet payload
@@ -904,7 +953,9 @@ int dearmor(Buf< Header<> > &packet,unsigned int packetSize,const uint8_t key[ZT
  * @param packetSize Original packet size
  * @return New packet size (returns original size of compression didn't help, in which case packet is unmodified)
  */
-unsigned int compress(Buf< Header<> > &packet,unsigned int packetSize);
+template<typename X>
+static ZT_ALWAYS_INLINE unsigned int compress(Buf< X > &packet,unsigned int packetSize)
+{ return _compress(reinterpret_cast< Buf< Header > & >(packet),packetSize); }
 
 /**
  * Uncompress packet payload (if compressed)
@@ -913,7 +964,9 @@ unsigned int compress(Buf< Header<> > &packet,unsigned int packetSize);
  * @param packetSize Original packet size
  * @return New packet size or -1 on decompression error (returns original packet size if packet wasn't compressed)
  */
-int uncompress(Buf< Header<> > &packet,unsigned int packetSize);
+template<typename X>
+static ZT_ALWAYS_INLINE int uncompress(Buf< X > &packet,unsigned int packetSize)
+{ return _uncompress(reinterpret_cast< Buf< Header > & >(packet),packetSize); }
 
 /**
  * Get a sequential non-repeating packet ID for the next packet (thread-safe)

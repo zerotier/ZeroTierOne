@@ -23,6 +23,7 @@
 #include "C25519.hpp"
 #include "SHA512.hpp"
 #include "ECC384.hpp"
+#include "TriviallyCopyable.hpp"
 
 #define ZT_IDENTITY_STRING_BUFFER_LENGTH 1024
 
@@ -43,7 +44,7 @@ namespace ZeroTier {
  * search for a different public key that duplicates an existing address. (See
  * code for deriveAddress() for this algorithm.)
  */
-class Identity
+class Identity : public TriviallyCopyable
 {
 public:
 	/**
@@ -55,7 +56,7 @@ public:
 		P384 = ZT_CRYPTO_ALG_P384      // Type 1 -- NIST P-384 with linked Curve25519/Ed25519 secondaries (2.x+)
 	};
 
-	ZT_ALWAYS_INLINE Identity() { memset(reinterpret_cast<void *>(this),0,sizeof(Identity)); }
+	ZT_ALWAYS_INLINE Identity() { memoryZero(this); }
 	ZT_ALWAYS_INLINE ~Identity() { Utils::burn(reinterpret_cast<void *>(&this->_priv),sizeof(this->_priv)); }
 
 	/**
@@ -71,7 +72,7 @@ public:
 	/**
 	 * Set identity to NIL value (all zero)
 	 */
-	ZT_ALWAYS_INLINE void zero() { memset(reinterpret_cast<void *>(this),0,sizeof(Identity)); }
+	ZT_ALWAYS_INLINE void zero() { memoryZero(this); }
 
 	/**
 	 * @return Identity type (undefined if identity is null or invalid)

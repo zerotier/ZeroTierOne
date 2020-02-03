@@ -21,6 +21,7 @@
 #include "Constants.hpp"
 #include "Endpoint.hpp"
 #include "Identity.hpp"
+#include "TriviallyCopyable.hpp"
 
 #define ZT_LOCATOR_MAX_ENDPOINTS 8
 #define ZT_LOCATOR_MARSHAL_SIZE_MAX (8 + 2 + (ZT_ENDPOINT_MARSHAL_SIZE_MAX * ZT_LOCATOR_MAX_ENDPOINTS) + 2 + 2 + ZT_SIGNATURE_BUFFER_SIZE)
@@ -33,7 +34,7 @@ namespace ZeroTier {
  * A locator contains long-lived endpoints for a node such as IP/port pairs,
  * URLs, or other nodes, and is signed by the node it describes.
  */
-class Locator
+class Locator : public TriviallyCopyable
 {
 public:
 	ZT_ALWAYS_INLINE Locator() { this->clear(); }

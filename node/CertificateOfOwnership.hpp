@@ -57,10 +57,7 @@ public:
 		THING_IPV6_ADDRESS = 3
 	};
 
-	ZT_ALWAYS_INLINE CertificateOfOwnership()
-	{
-		memset(reinterpret_cast<void *>(this),0,sizeof(CertificateOfOwnership));
-	}
+	ZT_ALWAYS_INLINE CertificateOfOwnership() { memoryZero(this); }
 
 	ZT_ALWAYS_INLINE CertificateOfOwnership(const uint64_t nwid,const int64_t ts,const Address &issuedTo,const uint32_t id)
 	{
@@ -95,7 +92,7 @@ public:
 	ZT_ALWAYS_INLINE bool owns(const MAC &mac) const
 	{
 		uint8_t tmp[6];
-		mac.copyTo(tmp,6);
+		mac.copyTo(tmp);
 		return this->_owns(THING_MAC_ADDRESS,tmp,6);
 	}
 

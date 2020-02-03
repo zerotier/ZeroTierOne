@@ -102,9 +102,7 @@ public:
 	/**
 	 * Create an empty certificate of membership
 	 */
-	ZT_ALWAYS_INLINE CertificateOfMembership() :
-		_qualifierCount(0),
-		_signatureLength(0) {}
+	ZT_ALWAYS_INLINE CertificateOfMembership() { memoryZero(this); }
 
 	/**
 	 * Create from required fields common to all networks
