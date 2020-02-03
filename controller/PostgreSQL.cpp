@@ -760,7 +760,7 @@ void PostgreSQL::networksDbWatcher()
 		fprintf(stderr, "ERROR: %s networksDbWatcher should still be running! Exiting Controller.\n", _myAddressStr.c_str());
 		exit(8);
 	}
-	fprintf(stderr, "Exited membersDbWatcher\n");
+	fprintf(stderr, "Exited networksDbWatcher\n");
 }
 
 void PostgreSQL::_networksWatcher_Postgres(PGconn *conn) {

@@ -75,7 +75,15 @@ namespace WinUI
             {
                 byte[] tmp = File.ReadAllBytes(centralConfigPath);
                 string json = Encoding.UTF8.GetString(tmp).Trim();
-                Central = JsonConvert.DeserializeObject<CentralServer>(json);
+                CentralServer ctmp = JsonConvert.DeserializeObject<CentralServer>(json);
+                if (ctmp != null)
+                {
+                    Central = ctmp;
+                } 
+                else
+                {
+                    Central = new CentralServer();
+                }
             }
             else
             {
@@ -105,7 +113,10 @@ namespace WinUI
         {
             string json = JsonConvert.SerializeObject(Central);
             byte[] tmp = Encoding.UTF8.GetBytes(json);
-            File.WriteAllBytes(CentralConfigFile(), tmp);
+            if (tmp != null)
+            {
+                File.WriteAllBytes(CentralConfigFile(), tmp);
+            }
         }
 
         private void UpdateRequestHeaders()
