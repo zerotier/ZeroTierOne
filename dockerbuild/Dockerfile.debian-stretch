@@ -2,7 +2,7 @@ FROM debian:stretch-20191224
 
 ARG go_pkg_url
 
-RUN apt-get update && apt-get -y install build-essential curl ca-certificates devscripts dh-systemd
+RUN apt-get update && apt-get -y install build-essential curl ca-certificates devscripts dh-systemd  libssl-dev
 
 RUN curl -sL https://github.com/Kitware/CMake/releases/download/v3.16.3/cmake-3.16.3.tar.gz -o cmake.tar.gz && \
     tar -xzf cmake.tar.gz && \
