@@ -5,6 +5,13 @@ ARG go_pkg_url
 RUN yum update -y
 RUN yum install -y curl git wget openssh-server sudo make rpmdevtools && yum clean all
 
+RUN curl -sL https://github.com/Kitware/CMake/releases/download/v3.16.3/cmake-3.16.3.tar.gz -o cmake.tar.gz && \
+    tar -xzf cmake.tar.gz && \
+    cd cmake-3.16.3 && \
+    ./bootstrap && \
+    make -j4 && \
+    make install
+
 RUN curl -s $go_pkg_url -o go.tar.gz && \
     tar -C /usr/local -xzf go.tar.gz && \
    rm go.tar.gz

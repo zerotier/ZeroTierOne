@@ -1,6 +1,6 @@
 .PHONY: all
 
-all:	alpine centos debian ubuntu kali-rolling
+all:	alpine centos clefos debian ubuntu kali-rolling
 
 alpine:
 	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go1.13.6.linux-arm64.tar.gz" --platform linux/arm64 -f Dockerfile.alpine . -t ztbuild/alpine-arm64 --load
@@ -19,6 +19,9 @@ centos:
 	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go1.13.6.linux-amd64.tar.gz" --platform linux/amd64 -f Dockerfile.centos8 . -t ztbuild/centos8-amd64 --load
 	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go1.13.6.linux-arm64.tar.gz" --platform linux/arm64 -f Dockerfile.centos8 . -t ztbuild/centos8-arm64 --load
 	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go1.13.6.linux-ppc64le.tar.gz" --platform linux/ppc64le -f Dockerfile.centos8 . -t ztbuild/centos8-ppc64le --load
+
+clefos:
+	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go1.13.6.linux-s390x.tar.gz" --platform linux/s390x -f Dockerfile.clefos-s390x . -t ztbuild/clefos-s390x --load
 
 debian:	debian-wheezy debian-jessie debian-buster debian-stretch debian-bullseye debian-sid
 

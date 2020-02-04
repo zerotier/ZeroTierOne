@@ -3,7 +3,7 @@ FROM centos:8
 ARG go_pkg_url
 
 RUN yum install -y epel-release
-RUN yum install -y curl git wget openssh-server sudo make rpmdevtools clang gcc-c++ ruby ruby-devel && yum clean all
+RUN yum install -y curl git wget openssh-server sudo make rpmdevtools clang gcc-c++ ruby ruby-devel cmake && yum clean all
 
 RUN curl -s $go_pkg_url -o go.tar.gz && \
     tar -C /usr/local -xzf go.tar.gz && \
