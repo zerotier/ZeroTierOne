@@ -8,7 +8,7 @@ pipeline {
         booleanParam(name: "BUILD_ALL", defaultValue: false, description: "Build all supported platform/architecture combos.  Defaults to x86/x64 only")
     }
     environment {
-        PATH = "$PATH:/usr/local/go/bin:$HOME/go/bin"
+        PATH = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin:/home/jenkins-build/go/bin"
     }
     
     agent none
