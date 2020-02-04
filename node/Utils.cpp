@@ -321,6 +321,13 @@ void getSecureRandom(void *buf,unsigned int bytes)
 	}
 }
 
+uint64_t getSecureRandomU64()
+{
+	uint64_t tmp = 0;
+	getSecureRandom(&tmp,sizeof(tmp));
+	return tmp;
+}
+
 int b32e(const uint8_t *data,int length,char *result,int bufSize)
 {
   if (length < 0 || length > (1 << 28)) {
@@ -397,22 +404,15 @@ int b32d(const char *encoded,uint8_t *result,int bufSize)
   return count;
 }
 
-static uint64_t _secureRandom64()
-{
-	uint64_t tmp = 0;
-	getSecureRandom(&tmp,sizeof(tmp));
-	return tmp;
-}
-
 #define ROL64(x,k) (((x) << (k)) | ((x) >> (64 - (k))))
 uint64_t random()
 {
 	// https://en.wikipedia.org/wiki/Xorshift#xoshiro256**
 	static Mutex l;
-	static uint64_t s0 = _secureRandom64();
-	static uint64_t s1 = _secureRandom64();
-	static uint64_t s2 = _secureRandom64();
-	static uint64_t s3 = _secureRandom64();
+	static uint64_t s0 = getSecureRandomU64();
+	static uint64_t s1 = getSecureRandomU64();
+	static uint64_t s2 = getSecureRandomU64();
+	static uint64_t s3 = getSecureRandomU64();
 
 	l.lock();
 	const uint64_t result = ROL64(s1 * 5,7) * 9;

@@ -855,6 +855,14 @@ ZT_PACKED_STRUCT(struct EXT_FRAME
 	uint16_t etherType;
 });
 
+ZT_PACKED_STRUCT(struct NETWORK_CONFIG
+{
+	Protocol::Header h;
+	OK::Header oh;
+	uint64_t networkId;
+	uint64_t configUpdateId;
+});
+
 } // namespace OK
 
 namespace ERROR {

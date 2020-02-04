@@ -19,6 +19,7 @@
 #include "Utils.hpp"
 #include "SharedPtr.hpp"
 #include "Mutex.hpp"
+#include "TriviallyCopyable.hpp"
 
 #include <cstdint>
 #include <cstring>
@@ -113,7 +114,7 @@ public:
 	/**
 	 * Slice is almost exactly like the built-in slice data structure in Go
 	 */
-	struct Slice
+	struct Slice : TriviallyCopyable
 	{
 		ZT_ALWAYS_INLINE Slice(const SharedPtr<Buf> &b_,const unsigned int s_,const unsigned int e_) : b(b_),s(s_),e(e_) {}
 		ZT_ALWAYS_INLINE Slice() : b(),s(0),e(0) {}

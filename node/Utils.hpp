@@ -140,6 +140,11 @@ unsigned int unhex(const char *h,unsigned int hlen,void *buf,unsigned int buflen
 void getSecureRandom(void *buf,unsigned int bytes);
 
 /**
+ * @return Secure random 64-bit integer
+ */
+uint64_t getSecureRandomU64();
+
+/**
  * Encode string to base32
  *
  * @param data Binary data to encode
@@ -177,6 +182,41 @@ uint64_t random();
  * @return True on success, false on overflow (buffer will still be 0-terminated)
  */
 bool scopy(char *dest,unsigned int len,const char *src);
+
+/**
+ * Mix bits in a 64-bit integer
+ *
+ * https://nullprogram.com/blog/2018/07/31/
+ *
+ * @param x Integer to mix
+ * @return Hashed value
+ */
+static ZT_ALWAYS_INLINE uint64_t hash64(uint64_t x)
+{
+	x ^= x >> 30U;
+	x *= 0xbf58476d1ce4e5b9ULL;
+	x ^= x >> 27U;
+	x *= 0x94d049bb133111ebULL;
+	x ^= x >> 31U;
+	return x;
+}
+
+/**
+ * @param b Buffer to check
+ * @param l Length of buffer
+ * @return True if buffer is all zero
+ */
+static ZT_ALWAYS_INLINE bool allZero(const void *const b,const unsigned int l)
+{
+	const uint8_t *x = reinterpret_cast<const uint8_t *>(b);
+	const uint8_t *const y = x + l;
+	while (x != y) {
+		if (*x != 0)
+			return false;
+		++x;
+	}
+	return true;
+}
 
 /**
  * Wrapper around reentrant strtok functions, which differ in name by platform

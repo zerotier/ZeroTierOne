@@ -15,23 +15,25 @@
 #define ZT_ATOMICCOUNTER_HPP
 
 #include "Constants.hpp"
+#include "TriviallyCopyable.hpp"
 
 #ifndef __GNUC__
-#include <atomic>
+#include <intrin.h>
 #endif
 
 namespace ZeroTier {
 
 /**
- * Simple atomic counter
+ * Simple atomic integer used for reference and other counters
  *
  * @tparam T Type of underlying integer (default: int)
  */
 template<typename T = int>
-class AtomicCounter
+class AtomicCounter : public TriviallyCopyable
 {
 public:
-	explicit ZT_ALWAYS_INLINE AtomicCounter(T iv = T(0)) : _v(iv) {}
+	ZT_ALWAYS_INLINE AtomicCounter() : _v(0) {}
+	explicit ZT_ALWAYS_INLINE AtomicCounter(T iv) : _v(iv) {}
 
 	ZT_ALWAYS_INLINE T load() const
 	{
@@ -42,10 +44,7 @@ public:
 #endif
 	}
 
-	ZT_ALWAYS_INLINE void zero()
-	{
-		_v = T(0);
-	}
+	ZT_ALWAYS_INLINE void zero() { _v = 0; }
 
 	ZT_ALWAYS_INLINE T operator++()
 	{

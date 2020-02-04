@@ -336,7 +336,7 @@ ZT_ALWAYS_INLINE bool _doOK(IncomingPacket &p,const RuntimeEnvironment *const RR
 			networkId = pkt.rI64(ptr);
 			const SharedPtr<Network> network(RR->node->network(networkId));
 			if (network)
-				network->handleConfigChunk(tPtr,p.idBE,peer->address(),pkt,sizeof(Protocol::OK::Header),(int)p.size);
+				network->handleConfigChunk(tPtr,p.idBE,peer,pkt,sizeof(Protocol::OK::Header),(int)p.size);
 		}	break;
 
 		case Protocol::VERB_MULTICAST_GATHER: {
@@ -782,33 +782,34 @@ ZT_ALWAYS_INLINE bool _doNETWORK_CONFIG_REQUEST(IncomingPacket &p,const RuntimeE
 ZT_ALWAYS_INLINE bool _doNETWORK_CONFIG(IncomingPacket &p,const RuntimeEnvironment *const RR,void *const tPtr,const SharedPtr<Peer> &peer)
 {
 	int ptr = sizeof(Protocol::Header);
-
 	const uint64_t nwid = p.pkt->rI64(ptr);
-	if (Buf<>::readOverflow(ptr,p.size)) {
-		RR->t->incomingPacketDropped(tPtr,p.idBE,0,peer->identity(),p.path->address(),p.hops,Protocol::VERB_NETWORK_CONFIG_REQUEST,ZT_TRACE_PACKET_DROP_REASON_MALFORMED_PACKET);
+	if (ptr >= (int)p.size) {
+		RR->t->incomingPacketDropped(tPtr,p.idBE,0,peer->identity(),p.path->address(),p.hops,Protocol::VERB_NETWORK_CONFIG,ZT_TRACE_PACKET_DROP_REASON_MALFORMED_PACKET);
 		return true;
 	}
 
 	const SharedPtr<Network> network(RR->node->network(nwid));
 	if (network) {
-	}
+		const uint64_t configUpdateId = network->handleConfigChunk(tPtr,p.idBE,peer,*p.pkt,ptr,(int)p.size - ptr);
+		if (configUpdateId != 0) {
+			ZT_GET_NEW_BUF(outp,Protocol::OK::NETWORK_CONFIG);
 
-	/*
-	const SharedPtr<Network> network(RR->node->network(pkt.at<uint64_t>(ZT_PACKET_IDX_PAYLOAD)));
-	if (network) {
-		const uint64_t configUpdateId = network->handleConfigChunk(tPtr,pkt.packetId(),pkt.source(),pkt,ZT_PACKET_IDX_PAYLOAD);
-		if (configUpdateId) {
-			Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
-			outp.append((uint8_t)Packet::VERB_ECHO);
-			outp.append((uint64_t)pkt.packetId());
-			outp.append((uint64_t)network->id());
-			outp.append((uint64_t)configUpdateId);
-			outp.armor(peer->key(),true);
-			path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());
+			outp->data.fields.h.packetId = Protocol::getPacketId();
+			peer->address().copyTo(outp->data.fields.h.destination);
+			RR->identity.address().copyTo(outp->data.fields.h.source);
+			outp->data.fields.h.flags = 0;
+			outp->data.fields.h.verb = Protocol::VERB_OK;
+
+			outp->data.fields.oh.inReVerb = Protocol::VERB_NETWORK_CONFIG;
+			outp->data.fields.oh.inRePacketId = p.idBE;
+
+			outp->data.fields.networkId = Utils::hton(nwid);
+			outp->data.fields.configUpdateId = Utils::hton(configUpdateId);
+
+			Protocol::armor(*outp,sizeof(Protocol::OK::NETWORK_CONFIG),peer->key(),ZT_PROTO_CIPHER_SUITE__POLY1305_SALSA2012);
+			p.path->send(RR,tPtr,outp->data.bytes,sizeof(Protocol::OK::NETWORK_CONFIG),RR->node->now());
 		}
 	}
-	peer->received(tPtr,path,pkt.hops(),pkt.packetId(),pkt.payloadLength(),Packet::VERB_NETWORK_CONFIG,0,Packet::VERB_NOP,(network) ? network->id() : 0);
-	 */
 
 	peer->received(tPtr,p.path,p.hops,p.idBE,p.size,Protocol::VERB_NETWORK_CONFIG,0,Protocol::VERB_NOP,nwid);
 	return true;
@@ -873,17 +874,17 @@ ZT_ALWAYS_INLINE bool _doPUSH_DIRECT_PATHS(IncomingPacket &p,const RuntimeEnviro
 
 ZT_ALWAYS_INLINE bool _doUSER_MESSAGE(IncomingPacket &p,const RuntimeEnvironment *const RR,void *const tPtr,const SharedPtr<Peer> &peer)
 {
-	/*
-	if (likely(pkt.size() >= (ZT_PACKET_IDX_PAYLOAD + 8))) {
-		ZT_UserMessage um;
-		um.id = (const ZT_Identity *)(&(peer->identity()));
-		um.typeId = pkt.at<uint64_t>(ZT_PACKET_IDX_PAYLOAD);
-		um.data = reinterpret_cast<const void *>(reinterpret_cast<const uint8_t *>(pkt.data()) + ZT_PACKET_IDX_PAYLOAD + 8);
-		um.length = pkt.size() - (ZT_PACKET_IDX_PAYLOAD + 8);
+	ZT_UserMessage um;
+	int ptr = sizeof(Protocol::Header);
+	um.id = reinterpret_cast<const ZT_Identity *>(&(peer->identity()));
+	um.typeId = p.pkt->rI64(ptr);
+	int ds = (int)p.size - ptr;
+	if (ds > 0) {
+		um.data = p.pkt->data.bytes + ptr;
+		um.length = (unsigned int)ds;
 		RR->node->postEvent(tPtr,ZT_EVENT_USER_MESSAGE,reinterpret_cast<const void *>(&um));
 	}
-	peer->received(tPtr,path,pkt.hops(),pkt.packetId(),pkt.payloadLength(),Packet::VERB_USER_MESSAGE,0,Packet::VERB_NOP,0);
-	 */
+	peer->received(tPtr,p.path,p.hops,p.idBE,p.size,Protocol::VERB_USER_MESSAGE,0,Protocol::VERB_NOP,0);
 	return true;
 }
 

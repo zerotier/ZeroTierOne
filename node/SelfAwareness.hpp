@@ -80,6 +80,7 @@ private:
 		ZT_ALWAYS_INLINE bool operator==(const PhySurfaceKey &k) const { return ((reporter == k.reporter)&&(receivedOnLocalSocket == k.receivedOnLocalSocket)&&(reporterPhysicalAddress == k.reporterPhysicalAddress)&&(scope == k.scope)); }
 		ZT_ALWAYS_INLINE bool operator!=(const PhySurfaceKey &k) const { return (!(*this == k)); }
 	};
+
 	struct PhySurfaceEntry
 	{
 		InetAddress mySurface;

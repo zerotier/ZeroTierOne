@@ -57,11 +57,11 @@ uint32_t Arp::processIncomingArp(const void *arp,unsigned int len,void *response
 			_ArpEntry *targetEntry = _cache.get(reinterpret_cast<const uint32_t *>(arp)[6]);
 			if ((targetEntry)&&(targetEntry->local)) {
 				memcpy(response,ARP_RESPONSE_HEADER,8);
-				targetEntry->mac.copyTo(reinterpret_cast<uint8_t *>(response) + 8,6);
+				targetEntry->mac.copyTo(reinterpret_cast<uint8_t *>(response) + 8);
 				memcpy(reinterpret_cast<uint8_t *>(response) + 14,reinterpret_cast<const uint8_t *>(arp) + 24,4);
 				memcpy(reinterpret_cast<uint8_t *>(response) + 18,reinterpret_cast<const uint8_t *>(arp) + 8,10);
 				responseLen = 28;
-				responseDest.setTo(reinterpret_cast<const uint8_t *>(arp) + 8,6);
+				responseDest.setTo(reinterpret_cast<const uint8_t *>(arp) + 8);
 			}
 		} else if (!memcmp(arp,ARP_RESPONSE_HEADER,8)) {
 			// Learn cache entries for remote IPs from relevant ARP replies
@@ -70,7 +70,7 @@ uint32_t Arp::processIncomingArp(const void *arp,unsigned int len,void *response
 			_ArpEntry *queryEntry = _cache.get(responseIp);
 			if ((queryEntry)&&(!queryEntry->local)&&((now - queryEntry->lastQuerySent) <= ZT_ARP_QUERY_MAX_TTL)) {
 				queryEntry->lastResponseReceived = now;
-				queryEntry->mac.setTo(reinterpret_cast<const uint8_t *>(arp) + 8,6);
+				queryEntry->mac.setTo(reinterpret_cast<const uint8_t *>(arp) + 8);
 				ip = responseIp;
 			}
 		}
@@ -102,7 +102,7 @@ MAC Arp::query(const MAC &localMac,uint32_t localIp,uint32_t targetIp,void *quer
 
 		uint8_t *q = reinterpret_cast<uint8_t *>(query);
 		memcpy(q,ARP_REQUEST_HEADER,8); q += 8; // ARP request header information, always the same
-		localMac.copyTo(q,6); q += 6; // sending host MAC address
+		localMac.copyTo(q); q += 6; // sending host MAC address
         memcpy(q,&localIp,4); q += 4; // sending host IP (IP already in big-endian byte order)
 		memset(q,0,6); q += 6; // sending zeros for target MAC address as thats what we want to find
 		memcpy(q,&targetIp,4); // target IP address for resolution (IP already in big-endian byte order)

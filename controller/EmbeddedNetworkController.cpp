@@ -522,7 +522,7 @@ void EmbeddedNetworkController::request(
 	const InetAddress &fromAddr,
 	uint64_t requestPacketId,
 	const Identity &identity,
-	const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData)
+	const Dictionary &metaData)
 {
 	if (((!_signingId)||(!_signingId.hasPrivate()))||(_signingId.address().toInt() != (nwid >> 24))||(!_sender))
 		return;
@@ -1104,7 +1104,7 @@ void EmbeddedNetworkController::onNetworkUpdate(const void *db,uint64_t networkI
 	const int64_t now = OSUtils::now();
 	std::lock_guard<std::mutex> l(_memberStatus_l);
 	for(auto i=_memberStatus.begin();i!=_memberStatus.end();++i) {
-		if ((i->first.networkId == networkId)&&(i->second.online(now))&&(i->second.lastRequestMetaData))
+		if ((i->first.networkId == networkId)&&(i->second.online(now))&&(i->second.lastRequestMetaData.size() > 0))
 			request(networkId,InetAddress(),0,i->second.identity,i->second.lastRequestMetaData);
 	}
 }
@@ -1115,7 +1115,7 @@ void EmbeddedNetworkController::onNetworkMemberUpdate(const void *db,uint64_t ne
 	try {
 		std::lock_guard<std::mutex> l(_memberStatus_l);
 		_MemberStatus &ms = _memberStatus[_MemberStatusKey(networkId,memberId)];
-		if ((ms.online(OSUtils::now()))&&(ms.lastRequestMetaData))
+		if ((ms.online(OSUtils::now()))&&(ms.lastRequestMetaData.size() > 0))
 			request(networkId,InetAddress(),0,ms.identity,ms.lastRequestMetaData);
 	} catch ( ... ) {}
 }
@@ -1139,7 +1139,7 @@ void EmbeddedNetworkController::_request(
 	const InetAddress &fromAddr,
 	uint64_t requestPacketId,
 	const Identity &identity,
-	const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData)
+	const Dictionary &metaData)
 {
 	char nwids[24];
 	DB::NetworkSummaryInfo ns;
@@ -1212,19 +1212,18 @@ void EmbeddedNetworkController::_request(
 		autoAuthCredentialType = "public";
 	} else {
 		char presentedAuth[512];
-		if (metaData.get(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_AUTH,presentedAuth,sizeof(presentedAuth)) > 0) {
-			presentedAuth[511] = (char)0; // sanity check
-			if ((strlen(presentedAuth) > 6)&&(!strncmp(presentedAuth,"token:",6))) {
-				const char *const presentedToken = presentedAuth + 6;
-				json authTokens(network["authTokens"]);
-				json &tokenExpires = authTokens[presentedToken];
-				if (tokenExpires.is_number()) {
-					if ((tokenExpires == 0)||(tokenExpires > now)) {
-						authorized = true;
-						autoAuthorized = true;
-						autoAuthCredentialType = "token";
-						autoAuthCredential = presentedToken;
-					}
+		metaData.getS(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_AUTH,presentedAuth,sizeof(presentedAuth));
+		presentedAuth[511] = 0; // sanity check, make sure always terminated
+		if ((strlen(presentedAuth) > 6)&&(!strncmp(presentedAuth,"token:",6))) {
+			const char *const presentedToken = presentedAuth + 6;
+			json authTokens(network["authTokens"]);
+			json &tokenExpires = authTokens[presentedToken];
+			if (tokenExpires.is_number()) {
+				if ((tokenExpires == 0)||(tokenExpires > now)) {
+					authorized = true;
+					autoAuthorized = true;
+					autoAuthCredentialType = "token";
+					autoAuthCredential = presentedToken;
 				}
 			}
 		}
@@ -1296,6 +1295,7 @@ void EmbeddedNetworkController::_request(
 	nc->credentialTimeMaxDelta = credentialtmd;
 	nc->revision = OSUtils::jsonInt(network["revision"],0ULL);
 	nc->issuedTo = identity.address();
+	memcpy(nc->issuedToIdentityHash,identity.hash(),sizeof(nc->issuedToIdentityHash));
 	if (OSUtils::jsonBool(network["enableBroadcast"],true)) nc->flags |= ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST;
 	Utils::scopy(nc->name,sizeof(nc->name),OSUtils::jsonString(network["name"],"").c_str());
 	nc->mtu = std::max(std::min((unsigned int)OSUtils::jsonInt(network["mtu"],ZT_DEFAULT_MTU),(unsigned int)ZT_MAX_MTU),(unsigned int)ZT_MIN_MTU);

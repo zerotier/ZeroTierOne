@@ -275,7 +275,8 @@ struct NetworkConfig : TriviallyCopyable
 	/**
 	 * Hash of identity public key(s) of node to whom this is issued
 	 *
-	 * TODO
+	 * If this field is all zero it is treated as undefined since old controllers
+	 * do not set it.
 	 */
 	uint8_t issuedToIdentityHash[ZT_IDENTITY_HASH_SIZE];
 

@@ -92,7 +92,7 @@ public:
 	 */
 	ZT_ALWAYS_INLINE SharedPtr<Path> getPath(const int64_t l,const InetAddress &r)
 	{
-		const Path::HashKey k(l,r);
+		const uint64_t k = _pathHash(l,r);
 
 		_paths_l.rlock();
 		SharedPtr<Path> p(_paths[k]);
@@ -205,8 +205,8 @@ public:
 	ZT_ALWAYS_INLINE void eachPath(F f) const
 	{
 		RWMutex::RLock l(_paths_l);
-		Hashtable< Path::HashKey,SharedPtr<Path> >::Iterator i(const_cast<Topology *>(this)->_paths);
-		Path::HashKey *k = nullptr;
+		Hashtable< uint64_t,SharedPtr<Path> >::Iterator i(const_cast<Topology *>(this)->_paths);
+		uint64_t *k = nullptr;
 		SharedPtr<Path> *p = nullptr;
 		while (i.next(k,p)) {
 			f(*((const SharedPtr<Path> *)p));
@@ -310,6 +310,31 @@ public:
 private:
 	void _loadCached(void *tPtr,const Address &zta,SharedPtr<Peer> &peer);
 
+	// This is a secure random integer created at startup to salt the calculation of path hash map keys
+	static const uint64_t s_pathHashSalt;
+
+	// Get a hash key for looking up paths by their local port and destination address
+	ZT_ALWAYS_INLINE uint64_t _pathHash(int64_t l,const InetAddress &r) const
+	{
+		if (r.ss_family == AF_INET) {
+			return Utils::hash64(s_pathHashSalt ^ (uint64_t)(reinterpret_cast<const struct sockaddr_in *>(&r)->sin_addr.s_addr)) + (uint64_t)Utils::ntoh(reinterpret_cast<const struct sockaddr_in *>(&r)->sin_port) + (uint64_t)l;
+		} else if (r.ss_family == AF_INET6) {
+#ifdef ZT_NO_UNALIGNED_ACCESS
+			uint64_t h = s_pathHashSalt;
+			for(int i=0;i<16;++i) {
+				h += (uint64_t)((reinterpret_cast<const struct sockaddr_in6 *>(&r)->sin6_addr.s6_addr)[i]);
+				h += (h << 10U);
+				h ^= (h >> 6U);
+			}
+#else
+			uint64_t h = Utils::hash64(s_pathHashSalt ^ (reinterpret_cast<const uint64_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&r)->sin6_addr.s6_addr)[0] + reinterpret_cast<const uint64_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&r)->sin6_addr.s6_addr)[1]));
+#endif
+			return h + (uint64_t)Utils::ntoh(reinterpret_cast<const struct sockaddr_in6 *>(&r)->sin6_port) + (uint64_t)l;
+		} else {
+			return Utils::hashString(reinterpret_cast<const void *>(&r),sizeof(InetAddress)) + (uint64_t)l;
+		}
+	}
+
 	const RuntimeEnvironment *const RR;
 	const Identity _myIdentity;
 
@@ -320,7 +345,7 @@ private:
 	unsigned int _numConfiguredPhysicalPaths;
 
 	Hashtable< Address,SharedPtr<Peer> > _peers;
-	Hashtable< Path::HashKey,SharedPtr<Path> > _paths;
+	Hashtable< uint64_t,SharedPtr<Path> > _paths;
 	std::set< Identity > _roots; // locked by _peers_l
 	std::vector< SharedPtr<Peer> > _rootPeers; // locked by _peers_l
 };

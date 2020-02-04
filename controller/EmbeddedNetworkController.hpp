@@ -64,7 +64,7 @@ public:
 		const InetAddress &fromAddr,
 		uint64_t requestPacketId,
 		const Identity &identity,
-		const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData);
+		const Dictionary &metaData);
 
 	unsigned int handleControlPlaneHttpGET(
 		const std::vector<std::string> &path,
@@ -87,7 +87,7 @@ public:
 	virtual void onNetworkMemberDeauthorize(const void *db,uint64_t networkId,uint64_t memberId);
 
 private:
-	void _request(uint64_t nwid,const InetAddress &fromAddr,uint64_t requestPacketId,const Identity &identity,const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData);
+	void _request(uint64_t nwid,const InetAddress &fromAddr,uint64_t requestPacketId,const Identity &identity,const Dictionary &metaData);
 	void _startThreads();
 
 	struct _RQEntry
@@ -96,31 +96,34 @@ private:
 		uint64_t requestPacketId;
 		InetAddress fromAddr;
 		Identity identity;
-		Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> metaData;
+		Dictionary metaData;
 		enum {
 			RQENTRY_TYPE_REQUEST = 0
 		} type;
 	};
+
 	struct _MemberStatusKey
 	{
-		_MemberStatusKey() : networkId(0),nodeId(0) {}
-		_MemberStatusKey(const uint64_t nwid,const uint64_t nid) : networkId(nwid),nodeId(nid) {}
+		ZT_ALWAYS_INLINE _MemberStatusKey() : networkId(0),nodeId(0) {}
+		ZT_ALWAYS_INLINE _MemberStatusKey(const uint64_t nwid,const uint64_t nid) : networkId(nwid),nodeId(nid) {}
 		uint64_t networkId;
 		uint64_t nodeId;
 		inline bool operator==(const _MemberStatusKey &k) const { return ((k.networkId == networkId)&&(k.nodeId == nodeId)); }
 	};
+
 	struct _MemberStatus
 	{
-		_MemberStatus() : lastRequestTime(0),vMajor(-1),vMinor(-1),vRev(-1),vProto(-1) {}
+		ZT_ALWAYS_INLINE _MemberStatus() : lastRequestTime(0),vMajor(-1),vMinor(-1),vRev(-1),vProto(-1) {}
 		uint64_t lastRequestTime;
 		int vMajor,vMinor,vRev,vProto;
-		Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> lastRequestMetaData;
+		Dictionary lastRequestMetaData;
 		Identity identity;
 		inline bool online(const int64_t now) const { return ((now - lastRequestTime) < (ZT_NETWORK_AUTOCONF_DELAY * 2)); }
 	};
+
 	struct _MemberStatusHash
 	{
-		inline std::size_t operator()(const _MemberStatusKey &networkIdNodeId) const
+		ZT_ALWAYS_INLINE std::size_t operator()(const _MemberStatusKey &networkIdNodeId) const
 		{
 			return (std::size_t)(networkIdNodeId.networkId + networkIdNodeId.nodeId);
 		}

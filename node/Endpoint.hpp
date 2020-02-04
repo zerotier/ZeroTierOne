@@ -53,10 +53,7 @@ public:
 
 	ZT_ALWAYS_INLINE Endpoint() { memoryZero(this); }
 
-	explicit ZT_ALWAYS_INLINE Endpoint(const InetAddress &sa)
-	{
-		*this = sa;
-	}
+	explicit ZT_ALWAYS_INLINE Endpoint(const InetAddress &sa) { *this = sa; }
 
 	ZT_ALWAYS_INLINE Endpoint(const Address &zt,const uint8_t identityHash[ZT_IDENTITY_HASH_SIZE]) :
 		_t(ZEROTIER)
@@ -74,9 +71,7 @@ public:
 
 	explicit ZT_ALWAYS_INLINE Endpoint(const char *url) :
 		_t(URL)
-	{
-		Utils::scopy(_v.url,sizeof(_v.url),url);
-	}
+	{ Utils::scopy(_v.url,sizeof(_v.url),url); }
 
 	ZT_ALWAYS_INLINE Endpoint &operator=(const InetAddress &sa)
 	{

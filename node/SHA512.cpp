@@ -250,9 +250,9 @@ void KBKDFHMACSHA384(const uint8_t key[32],const char label,const char context,c
 {
 	uint8_t kbkdfMsg[13];
 	uint8_t kbuf[48];
-	kbkdfMsg[0] = (uint8_t)(iter >> 24);
-	kbkdfMsg[1] = (uint8_t)(iter >> 16);
-	kbkdfMsg[2] = (uint8_t)(iter >> 8);
+	kbkdfMsg[0] = (uint8_t)(iter >> 24U);
+	kbkdfMsg[1] = (uint8_t)(iter >> 16U);
+	kbkdfMsg[2] = (uint8_t)(iter >> 8U);
 	kbkdfMsg[3] = (uint8_t)iter;
 	kbkdfMsg[4] = (uint8_t)'Z';
 	kbkdfMsg[5] = (uint8_t)'T'; // preface our labels with something ZT-specific

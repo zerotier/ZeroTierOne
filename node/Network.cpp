@@ -849,7 +849,7 @@ void Network::multicastUnsubscribe(const MulticastGroup &mg)
 		_myMulticastGroups.erase(i);
 }
 
-uint64_t Network::handleConfigChunk(void *tPtr,uint64_t packetId,const Address &source,const Buf<> &chunk,int ptr,int size)
+uint64_t Network::handleConfigChunk(void *tPtr,uint64_t packetId,const SharedPtr<Peer> &source,const Buf<> &chunk,int ptr,int size)
 {
 	if (_destroyed)
 		return 0;
@@ -907,7 +907,7 @@ uint64_t Network::handleConfigChunk(void *tPtr,uint64_t packetId,const Address &
 			Membership *m = nullptr;
 			Hashtable<Address,Membership>::Iterator i(_memberships);
 			while (i.next(a,m)) {
-				if ((*a != source)&&(*a != controller())) {
+				if ((*a != source->address())&&(*a != controller())) {
 					ZT_GET_NEW_BUF(outp,Protocol::Header);
 
 					outp->data.fields.packetId = Protocol::getPacketId();
@@ -926,7 +926,7 @@ uint64_t Network::handleConfigChunk(void *tPtr,uint64_t packetId,const Address &
 				}
 			}
 		}
-	} else if ((source == controller())||(!source)) {
+	} else if ((!source)||(source->address() != this->controller())) {
 		// Legacy support for OK(NETWORK_CONFIG_REQUEST) from older controllers that don't sign chunks and don't
 		// support multiple chunks. Since old controllers don't sign chunks we only accept the message if it comes
 		// directly from the controller.
@@ -990,6 +990,9 @@ int Network::setConfiguration(void *tPtr,const NetworkConfig &nconf,bool saveToD
 	try {
 		if ((nconf.issuedTo != RR->identity.address())||(nconf.networkId != _id))
 			return 0; // invalid config that is not for us or not for this network
+		if ((!Utils::allZero(nconf.issuedToIdentityHash,ZT_IDENTITY_HASH_SIZE))&&(memcmp(nconf.issuedToIdentityHash,RR->identity.hash(),ZT_IDENTITY_HASH_SIZE) != 0))
+			return 0; // full identity hash is present and does not match
+
 		if (_config == nconf)
 			return 1; // OK config, but duplicate of what we already have
 

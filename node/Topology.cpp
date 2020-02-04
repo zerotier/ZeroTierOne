@@ -15,6 +15,8 @@
 
 namespace ZeroTier {
 
+const uint64_t Topology::s_pathHashSalt = Utils::getSecureRandomU64();
+
 // Sorts roots so as to put the lowest latency alive root first.
 struct _RootSortComparisonOperator
 {
@@ -89,8 +91,8 @@ void Topology::getAllPeers(std::vector< SharedPtr<Peer> > &allPeers) const
 	allPeers.clear();
 	allPeers.reserve(_peers.size());
 	Hashtable< Address,SharedPtr<Peer> >::Iterator i(*(const_cast<Hashtable< Address,SharedPtr<Peer> > *>(&_peers)));
-	Address *a = (Address *)0;
-	SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
+	Address *a = nullptr;
+	SharedPtr<Peer> *p = nullptr;
 	while (i.next(a,p))
 		allPeers.push_back(*p);
 }
@@ -189,8 +191,8 @@ void Topology::doPeriodicTasks(void *tPtr,const int64_t now)
 	{
 		RWMutex::Lock l1(_peers_l);
 		Hashtable< Address,SharedPtr<Peer> >::Iterator i(_peers);
-		Address *a = (Address *)0;
-		SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
+		Address *a = nullptr;
+		SharedPtr<Peer> *p = nullptr;
 		while (i.next(a,p)) {
 			if ( (!(*p)->alive(now)) && (_roots.count((*p)->identity()) == 0) ) {
 				(*p)->save(tPtr);
@@ -200,9 +202,9 @@ void Topology::doPeriodicTasks(void *tPtr,const int64_t now)
 	}
 	{
 		RWMutex::Lock l1(_paths_l);
-		Hashtable< Path::HashKey,SharedPtr<Path> >::Iterator i(_paths);
-		Path::HashKey *k = (Path::HashKey *)0;
-		SharedPtr<Path> *p = (SharedPtr<Path> *)0;
+		Hashtable< uint64_t,SharedPtr<Path> >::Iterator i(_paths);
+		uint64_t *k = nullptr;
+		SharedPtr<Path> *p = nullptr;
 		while (i.next(k,p)) {
 			if (p->references() <= 1)
 				_paths.erase(*k);
@@ -214,8 +216,8 @@ void Topology::saveAll(void *tPtr)
 {
 	RWMutex::RLock l(_peers_l);
 	Hashtable< Address,SharedPtr<Peer> >::Iterator i(_peers);
-	Address *a = (Address *)0;
-	SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
+	Address *a = nullptr;
+	SharedPtr<Peer> *p = nullptr;
 	while (i.next(a,p)) {
 		if ( (!(*p)->alive(RR->node->now())) && (_roots.count((*p)->identity()) == 0) ) {
 			(*p)->save((void *)0);

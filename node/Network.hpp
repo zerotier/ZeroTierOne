@@ -77,7 +77,7 @@ public:
 	~Network();
 
 	ZT_ALWAYS_INLINE uint64_t id() const { return _id; }
-	ZT_ALWAYS_INLINE Address controller() const { return Address(_id >> 24); }
+	ZT_ALWAYS_INLINE Address controller() const { return Address(_id >> 24U); }
 	ZT_ALWAYS_INLINE bool multicastEnabled() const { return (_config.multicastLimit > 0); }
 	ZT_ALWAYS_INLINE bool hasConfig() const { return (_config); }
 	ZT_ALWAYS_INLINE uint64_t lastConfigUpdate() const { return _lastConfigUpdate; }
@@ -190,13 +190,13 @@ public:
 	 *
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param packetId Packet ID or 0 if none (e.g. via cluster path)
-	 * @param source Address of sender of chunk or NULL if none (e.g. via cluster path)
+	 * @param source Peer that actually sent this chunk (probably controller)
 	 * @param chunk Buffer containing chunk
 	 * @param ptr Index of chunk and related fields in packet (starting with network ID)
 	 * @param size Size of data in chunk buffer (total, not relative to ptr)
 	 * @return Update ID if update was fully assembled and accepted or 0 otherwise
 	 */
-	uint64_t handleConfigChunk(void *tPtr,uint64_t packetId,const Address &source,const Buf<> &chunk,int ptr,int size);
+	uint64_t handleConfigChunk(void *tPtr,uint64_t packetId,const SharedPtr<Peer> &source,const Buf<> &chunk,int ptr,int size);
 
 	/**
 	 * Set network configuration
@@ -403,7 +403,7 @@ private:
 	Mutex _config_l;
 	Mutex _memberships_l;
 
-	AtomicCounter __refCount;
+	AtomicCounter<int> __refCount;
 };
 
 } // namespace ZeroTier

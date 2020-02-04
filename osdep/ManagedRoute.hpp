@@ -14,9 +14,6 @@
 #ifndef ZT_MANAGEDROUTE_HPP
 #define ZT_MANAGEDROUTE_HPP
 
-#include <stdlib.h>
-#include <string.h>
-
 #include "../node/InetAddress.hpp"
 #include "../node/Utils.hpp"
 #include "../node/SharedPtr.hpp"
@@ -25,6 +22,8 @@
 #include <stdexcept>
 #include <vector>
 #include <map>
+#include <cstdlib>
+#include <cstring>
 
 namespace ZeroTier {
 
@@ -84,7 +83,7 @@ private:
 	char _device[128];
 	char _systemDevice[128]; // for route overrides
 
-	AtomicCounter __refCount;
+	AtomicCounter<int> __refCount;
 };
 
 } // namespace ZeroTier

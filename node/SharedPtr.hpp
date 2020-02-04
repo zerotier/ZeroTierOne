@@ -15,6 +15,7 @@
 #define ZT_SHAREDPTR_HPP
 
 #include "AtomicCounter.hpp"
+#include "TriviallyCopyable.hpp"
 
 namespace ZeroTier {
 
@@ -26,7 +27,7 @@ namespace ZeroTier {
  * AtomicCounter called __refCount.
  */
 template<typename T>
-class SharedPtr
+class SharedPtr : public TriviallyCopyable
 {
 public:
 	ZT_ALWAYS_INLINE SharedPtr() : _ptr((T *)0) {}

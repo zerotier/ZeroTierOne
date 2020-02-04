@@ -88,6 +88,7 @@ public:
 	struct Result
 	{
 		ZT_ALWAYS_INLINE Result() : message(),messageFragmentCount(0),error(Defragmenter::ERR_NONE) {}
+		explicit ZT_ALWAYS_INLINE Result(const Defragmenter::ErrorCode e) : message(),messageFragmentCount(0),error(e) {}
 
 		/**
 		 * Fully assembled message as a series of slices of fragments
@@ -186,25 +187,21 @@ public:
 		const unsigned long messageQueueSizeTarget,
 		const unsigned long messageQueueSizeGCTrigger)
 	{
-		Result r;
-
 		// Sanity checks for malformed fragments or invalid input parameters.
-		if ((fragmentNo >= totalFragmentsExpected)||(totalFragmentsExpected > MF)||(totalFragmentsExpected == 0)) {
-			r.error = ERR_INVALID_FRAGMENT;
-			return r;
-		}
+		if ((fragmentNo >= totalFragmentsExpected)||(totalFragmentsExpected > MF)||(totalFragmentsExpected == 0))
+			return Result(ERR_INVALID_FRAGMENT);
 
 		// If there is only one fragment just return that fragment and we are done.
 		if (totalFragmentsExpected < 2) {
 			if (fragmentNo == 0) {
+				Result r;
 				r.message[0].b.move(fragment);
 				r.message[0].s = fragmentDataIndex;
 				r.message[0].e = fragmentDataSize;
 				r.messageFragmentCount = 1;
 				return r;
 			} else {
-				r.error = ERR_INVALID_FRAGMENT;
-				return r;
+				return Result(ERR_INVALID_FRAGMENT);
 			}
 		}
 
@@ -246,8 +243,7 @@ public:
 					_messages_l.lock();
 					_messages.clear();
 					_messages_l.unlock();
-					r.error = ERR_OUT_OF_MEMORY;
-					return r;
+					return Result(ERR_OUT_OF_MEMORY);
 				}
 			}
 		}
@@ -260,8 +256,7 @@ public:
 				RWMutex::Lock ml(_messages_l);
 				e = &(_messages[messageId]);
 			} catch ( ... ) {
-				r.error = ERR_OUT_OF_MEMORY;
-				return r;
+				return Result(ERR_OUT_OF_MEMORY);
 			}
 			e->id = messageId;
 		}
@@ -292,8 +287,7 @@ public:
 			}
 			via->_inboundFragmentedMessages_l.unlock();
 			if (tooManyPerPath) {
-				r.error = ERR_TOO_MANY_FRAGMENTS_FOR_PATH;
-				return r;
+				return Result(ERR_TOO_MANY_FRAGMENTS_FOR_PATH);
 			}
 		}
 
@@ -305,11 +299,9 @@ public:
 		// data would just mean the transfer is corrupt and would be detected
 		// later e.g. by packet MAC check. Other use cases of this code like
 		// network configs check each fragment so this basically can't happen.
-		Buf<>::Slice &s = e->fragment[fragmentNo];
-		if (s.b) {
-			r.error = ERR_DUPLICATE_FRAGMENT;
-			return r;
-		}
+		Buf<>::Slice &s = e->result.message[fragmentNo];
+		if (s.b)
+			return Result(ERR_DUPLICATE_FRAGMENT);
 
 		// Take ownership of fragment, setting 'fragment' pointer to NULL. The simple
 		// transfer of the pointer avoids a synchronized increment/decrement of the object's
@@ -319,7 +311,7 @@ public:
 		s.e = fragmentDataIndex + fragmentDataSize;
 
 		// If we now have all fragments then assemble them.
-		if (++e->fragmentCount >= totalFragmentsExpected) {
+		if (++e->result.messageFragmentCount >= totalFragmentsExpected) {
 			// This message is done so de-register it with its path if one is associated.
 			if (e->via) {
 				e->via->_inboundFragmentedMessages_l.lock();
@@ -328,18 +320,10 @@ public:
 				e->via.zero();
 			}
 
-			// PERFORMANCE HACK: SharedPtr<> is introspective and only holds a pointer, so we
-			// can 'move' the pointers it holds very quickly by bulk copying the source
-			// slices and then zeroing the originals. This is only okay if the destination
-			// currently holds no pointers, which should always be the case. Don't try this
-			// at home kids.
-			unsigned int msize = e->fragmentCount * sizeof(Buf<>::Slice);
-			memcpy(reinterpret_cast<void *>(r.message),reinterpret_cast<const void *>(e->fragment),msize);
-			memset(reinterpret_cast<void *>(e->fragment),0,msize);
-			r.messageFragmentCount = e->fragmentCount;
+			return e->result;
 		}
 
-		return r;
+		return Result(ERR_NONE);
 	}
 
 	/**
@@ -354,7 +338,7 @@ public:
 private:
 	struct _E
 	{
-		ZT_ALWAYS_INLINE _E() : id(0),lastUsed(0),via(),fragmentCount(0) {}
+		ZT_ALWAYS_INLINE _E() : id(0),lastUsed(0),via() {}
 		ZT_ALWAYS_INLINE ~_E()
 		{
 			// Ensure that this entry is not in use while it is being deleted!
@@ -369,8 +353,7 @@ private:
 		uint64_t id;
 		volatile int64_t lastUsed;
 		SharedPtr<Path> via;
-		Buf<>::Slice fragment[MF];
-		unsigned int fragmentCount;
+		Result result;
 		Mutex lock;
 	};
 

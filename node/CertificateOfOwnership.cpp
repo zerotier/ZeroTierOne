@@ -33,7 +33,7 @@ void CertificateOfOwnership::addThing(const MAC &mac)
 {
 	if (_thingCount >= ZT_CERTIFICATEOFOWNERSHIP_MAX_THINGS) return;
 	_thingTypes[_thingCount] = THING_MAC_ADDRESS;
-	mac.copyTo(_thingValues[_thingCount],6);
+	mac.copyTo(_thingValues[_thingCount]);
 	++_thingCount;
 }
 

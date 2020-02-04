@@ -18,7 +18,6 @@
 #include <cstdlib>
 #include <cstring>
 
-#include <map>
 #include <vector>
 
 #include "Constants.hpp"
