@@ -4,7 +4,7 @@ ARG go_pkg_url
 
 RUN echo i386 > /etc/yum/vars/basearch && echo i686 > /etc/yum/vars/arch
 
-RUN yum install -y curl git wget openssh-server sudo make rpmdevtools && yum clean all
+RUN yum install -y curl git wget openssh-server sudo make rpmdevtools openssl-devel && yum clean all
 
 RUN curl -sL https://github.com/Kitware/CMake/releases/download/v3.16.3/cmake-3.16.3.tar.gz -o cmake.tar.gz && \
     tar -xzf cmake.tar.gz && \
