@@ -52,12 +52,10 @@ def buildStaticBinaries() {
                 dir ("build") {
                     checkout scm
                 }
-                sh "echo ${distro}-${platform}"
                 def runtime = docker.image("ztbuild/${distro}-${platform}:latest")
                 runtime.inside {
                     dir("build") {
                         sh 'make -j8 ZT_STATIC=1 all'
-                        sh "file ./zerotier-one"
                         sh "mv zerotier-one zerotier-one-static-${platform}"
                         stash includes: 'zerotier-one-static-*', name: "static-${platform}"
                     }
