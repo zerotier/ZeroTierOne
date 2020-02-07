@@ -33,7 +33,6 @@ set(core_headers
 	Peer.hpp
 	Poly1305.hpp
 	Protocol.hpp
-	RingBuffer.hpp
 	RuntimeEnvironment.hpp
 	Salsa20.hpp
 	ScopedPtr.hpp
@@ -81,6 +80,7 @@ set(core_src
 	Trace.cpp
 	Utils.cpp
 	VL1.cpp
+	VL2.cpp
 )
 
 add_library(${PROJECT_NAME} STATIC ${core_src} ${core_headers})

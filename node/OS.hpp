@@ -172,4 +172,11 @@
 #define ZT_ALWAYS_INLINE inline
 #endif
 
+// Macro to avoid calling hton() on values known at compile time.
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+#define ZT_CONST_TO_BE_UINT16(x) ((uint16_t)((uint16_t)((uint16_t)(x) << 8U) | (uint16_t)((uint16_t)(x) >> 8U)))
+#else
+#define ZT_CONST_TO_BE_UINT16(x) ((uint16_t)(x))
+#endif
+
 #endif

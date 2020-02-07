@@ -16,13 +16,6 @@
 #include "Node.hpp"
 #include "Peer.hpp"
 
-// Macro to avoid calling hton() on values known at compile time.
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-#define CONST_TO_BE_UINT16(x) ((uint16_t)((uint16_t)((uint16_t)(x) << 8U) | (uint16_t)((uint16_t)(x) >> 8U)))
-#else
-#define CONST_TO_BE_UINT16(x) ((uint16_t)(x))
-#endif
-
 // NOTE: packet IDs are always handled in network byte order, so no need to convert them.
 
 namespace ZeroTier {

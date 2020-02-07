@@ -57,6 +57,7 @@ CPUIDRegisters::CPUIDRegisters()
 CPUIDRegisters CPUID;
 #endif
 
+const uint64_t ZERO256[4] = { 0,0,0,0 };
 const char HEXCHARS[16] = { '0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f' };
 
 bool secureEq(const void *a,const void *b,unsigned int len)

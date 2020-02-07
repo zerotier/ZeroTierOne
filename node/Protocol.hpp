@@ -147,6 +147,16 @@
 #define ZT_PROTO_VERB_FLAG_COMPRESSED 0x80U
 
 /**
+ * Mask to extract just the verb from the verb field, which also includes flags
+ */
+#define ZT_PROTO_VERB_MASK 0x1fU
+
+/**
+ * Key derivation function label for the key used with HMAC-384 in HELLO
+ */
+#define ZT_PROTO_KDF_KEY_LABEL_HELLO_HMAC 'H'
+
+/**
  * HELLO exchange meta-data: signed locator for this node
  */
 #define ZT_PROTO_HELLO_NODE_META_LOCATOR "l"
@@ -240,6 +250,7 @@ enum Verb
 
 	/**
 	 * Announcement of a node's existence and vitals:
+	 *   [... HMAC-384 starts here ...]
 	 *   <[1] protocol version>
 	 *   <[1] software major version>
 	 *   <[1] software minor version>
@@ -251,8 +262,9 @@ enum Verb
 	 *   <[2] 16-bit reserved (legacy) field, always 0>
 	 *   <[2] 16-bit length of meta-data dictionary>
 	 *   <[...] meta-data dictionary>
+	 *   <[2] 16-bit length of any additional fields>
+	 *   <[48] HMAC-SHA384 of full plaintext payload>
 	 *   [... end encrypted region ...]
-	 *   <[48] HMAC-SHA384 of all fields to this point (as plaintext)>
 	 *
 	 * HELLO is sent with authentication but without the usual encryption so
 	 * that peers can exchange identities.
@@ -967,11 +979,29 @@ ZT_ALWAYS_INLINE void salsa2012DeriveKey(const uint8_t *const in,uint8_t *const 
  */
 uint64_t getPacketId();
 
-void armor(Buf &packet,unsigned int packetSize,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH],uint8_t cipherSuite);
+/**
+ * Encrypt and compute packet MAC
+ *
+ * @param pkt Packet data to encrypt (in place)
+ * @param packetSize Packet size, must be at least ZT_PROTO_MIN_PACKET_LENGTH or crash will occur
+ * @param key Key to use for encryption (not per-packet key)
+ * @param cipherSuite Cipher suite to use for AEAD encryption or just MAC
+ */
+void armor(Buf &pkt,unsigned int packetSize,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH],uint8_t cipherSuite);
 
-unsigned int compress(Buf &packet,unsigned int packetSize);
-
-int uncompress(Buf &packet,unsigned int packetSize);
+/**
+ * Attempt to compress packet payload
+ *
+ * This attempts compression and swaps the pointer in 'pkt' for a buffer holding
+ * compressed data on success. If compression did not shrink the packet, the original
+ * packet size is returned and 'pkt' remains unchanged. If compression is successful
+ * the compressed verb flag is also set.
+ *
+ * @param pkt Packet buffer value/result parameter: pointer may be swapped if compression is successful
+ * @param packetSize Total size of packet in bytes (including headers)
+ * @return New size of packet after compression or original size of compression wasn't helpful
+ */
+unsigned int compress(SharedPtr<Buf> &pkt,unsigned int packetSize);
 
 } // namespace Protocol
 } // namespace ZeroTier

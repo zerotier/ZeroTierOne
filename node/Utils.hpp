@@ -47,6 +47,11 @@ extern CPUIDRegisters CPUID;
 #endif
 
 /**
+ * 256 zero bits
+ */
+extern const uint64_t ZERO256[4];
+
+/**
  * Hexadecimal characters 0-f
  */
 extern const char HEXCHARS[16];

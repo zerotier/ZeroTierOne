@@ -66,53 +66,71 @@ uint64_t getPacketId()
 #endif
 }
 
-#if 0
-void _armor(Buf< Header > &packet,const unsigned int packetSize,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH],const uint8_t cipherSuite)
+void armor(Buf &pkt,unsigned int packetSize,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH],uint8_t cipherSuite)
 {
-	packet.data.fields.flags = (packet.data.fields.flags & 0xc7U) | ((cipherSuite << 3U) & 0x38U); // FFCCCHHH
-	if (cipherSuite == ZT_PROTO_CIPHER_SUITE__AES_GCM) {
-		// TODO
-	} else if (cipherSuite != ZT_PROTO_CIPHER_SUITE__NONE) {
-		uint8_t mangledKey[ZT_PEER_SECRET_KEY_LENGTH],macKey[ZT_POLY1305_KEY_LEN];
-		uint64_t mac[2];
+	Protocol::Header &ph = pkt.as<Protocol::Header>();
+	ph.flags = (ph.flags & 0xc7U) | ((cipherSuite << 3U) & 0x38U); // flags: FFCCCHHH where CCC is cipher
 
-		_salsa20MangleKey(key,mangledKey,packet,packetSize);
-		Salsa20 s20(mangledKey,&(packet.data.fields.packetId));
-		s20.crypt12(ZEROES32,macKey,sizeof(macKey));
+	switch(cipherSuite) {
+		case ZT_PROTO_CIPHER_SUITE__POLY1305_NONE: {
+			uint8_t perPacketKey[ZT_PEER_SECRET_KEY_LENGTH];
+			salsa2012DeriveKey(key,perPacketKey,pkt,packetSize);
+			Salsa20 s20(perPacketKey,&ph.packetId);
 
-		uint8_t *payload = packet.data.bytes + ZT_PROTO_PACKET_ENCRYPTED_SECTION_START;
-		const unsigned int payloadLen = packetSize - ZT_PROTO_PACKET_ENCRYPTED_SECTION_START;
+			uint8_t macKey[ZT_POLY1305_KEY_LEN];
+			s20.crypt12(Utils::ZERO256,macKey,ZT_POLY1305_KEY_LEN);
 
-		if (cipherSuite == ZT_PROTO_CIPHER_SUITE__POLY1305_SALSA2012)
-			s20.crypt12(payload,payload,payloadLen);
+			// only difference here is that we don't encrypt the payload
 
-		poly1305(mac,payload,payloadLen,macKey);
-		packet.data.fields.mac = mac[0];
+			uint64_t mac[2];
+			poly1305(mac,pkt.b + ZT_PROTO_PACKET_ENCRYPTED_SECTION_START,packetSize - ZT_PROTO_PACKET_ENCRYPTED_SECTION_START,macKey);
+			ph.mac = mac[0];
+		} break;
+
+		case ZT_PROTO_CIPHER_SUITE__POLY1305_SALSA2012: {
+			uint8_t perPacketKey[ZT_PEER_SECRET_KEY_LENGTH];
+			salsa2012DeriveKey(key,perPacketKey,pkt,packetSize);
+			Salsa20 s20(perPacketKey,&ph.packetId);
+
+			uint8_t macKey[ZT_POLY1305_KEY_LEN];
+			s20.crypt12(Utils::ZERO256,macKey,ZT_POLY1305_KEY_LEN);
+
+			const unsigned int encLen = packetSize - ZT_PROTO_PACKET_ENCRYPTED_SECTION_START;
+			s20.crypt12(pkt.b + ZT_PROTO_PACKET_ENCRYPTED_SECTION_START,pkt.b + ZT_PROTO_PACKET_ENCRYPTED_SECTION_START,encLen);
+
+			uint64_t mac[2];
+			poly1305(mac,pkt.b + ZT_PROTO_PACKET_ENCRYPTED_SECTION_START,encLen,macKey);
+			ph.mac = mac[0];
+		} break;
+
+		case ZT_PROTO_CIPHER_SUITE__AES_GCM_NRH: {
+		} break;
 	}
 }
 
-unsigned int _compress(Buf< Header > &packet,const unsigned int packetSize)
+unsigned int compress(SharedPtr<Buf> &pkt,unsigned int packetSize)
 {
-	uint8_t tmp[ZT_BUF_MEM_SIZE + 32];
-
-	if ((packet.data.fields.verb & ZT_PROTO_VERB_FLAG_COMPRESSED) != 0) // sanity check for multiple calls to compress()
+	if (packetSize <= 128)
 		return packetSize;
+
+	SharedPtr<Buf> pkt2(Buf::get());
+	if (!pkt2) return packetSize;
 
 	const unsigned int uncompressedLen = packetSize - ZT_PROTO_PACKET_PAYLOAD_START;
 	const int compressedLen = LZ4_compress_fast(
-		reinterpret_cast<const char *>(packet.data.bytes + ZT_PROTO_PACKET_PAYLOAD_START),
-	  reinterpret_cast<char *>(tmp),
+		reinterpret_cast<const char *>(pkt->b + ZT_PROTO_PACKET_PAYLOAD_START),
+		reinterpret_cast<char *>(pkt2->b + ZT_PROTO_PACKET_PAYLOAD_START),
 		(int)uncompressedLen,
-		sizeof(tmp) - ZT_PROTO_PACKET_PAYLOAD_START);
-	if ((compressedLen > 0)&&(compressedLen < uncompressedLen)) {
-		packet.data.fields.verb |= ZT_PROTO_VERB_FLAG_COMPRESSED;
-		memcpy(packet.data.bytes + ZT_PROTO_PACKET_PAYLOAD_START,tmp,compressedLen);
+		ZT_BUF_MEM_SIZE - ZT_PROTO_PACKET_PAYLOAD_START);
+	if ((compressedLen > 0)&&(compressedLen < (int)uncompressedLen)) {
+		memcpy(pkt2->b,pkt->b,ZT_PROTO_PACKET_PAYLOAD_START);
+		pkt.swap(pkt2);
+		pkt->as<Protocol::Header>().verb |= ZT_PROTO_VERB_FLAG_COMPRESSED;
 		return (unsigned int)compressedLen + ZT_PROTO_PACKET_PAYLOAD_START;
 	}
 
 	return packetSize;
 }
-#endif
 
 } // namespace Protocol
 } // namespace ZeroTier
