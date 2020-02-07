@@ -544,16 +544,20 @@ public:
 			// than one device behind the same NAT tries to use the same internal
 			// private address port number. Buggy NATs are a running theme.
 			if (_allowSecondaryPort) {
-				_ports[1] = (_secondaryPort == 0) ? 20000 + ((unsigned int)_node->address() % 45500) : _secondaryPort;
-				for(int i=0;;++i) {
-					if (i > 1000) {
-						_ports[1] = 0;
-						break;
-					} else if (++_ports[1] >= 65536) {
-						_ports[1] = 20000;
+				if (_secondaryPort) {
+					_ports[1] = _secondaryPort;
+				} else {
+					_ports[1] = 20000 + ((unsigned int)_node->address() % 45500);
+					for(int i=0;;++i) {
+						if (i > 1000) {
+							_ports[1] = 0;
+							break;
+						} else if (++_ports[1] >= 65536) {
+							_ports[1] = 20000;
+						}
+						if (_trialBind(_ports[1]))
+							break;
 					}
-					if (_trialBind(_ports[1]))
-						break;
 				}
 			}
 
@@ -562,21 +566,25 @@ public:
 				// use the other two ports for that because some NATs do really funky
 				// stuff with ports that are explicitly mapped that breaks things.
 				if (_ports[1]) {
-					_ports[2] = (_tertiaryPort == 0) ? _ports[1] : _tertiaryPort;
-					for(int i=0;;++i) {
-						if (i > 1000) {
-							_ports[2] = 0;
-							break;
-						} else if (++_ports[2] >= 65536) {
-							_ports[2] = 20000;
+					if (_tertiaryPort) {
+						_ports[2] = _tertiaryPort;
+					} else {
+						_ports[2] = _ports[1];
+						for(int i=0;;++i) {
+							if (i > 1000) {
+								_ports[2] = 0;
+								break;
+							} else if (++_ports[2] >= 65536) {
+								_ports[2] = 20000;
+							}
+							if (_trialBind(_ports[2]))
+								break;
 						}
-						if (_trialBind(_ports[2]))
-							break;
-					}
-					if (_ports[2]) {
-						char uniqueName[64];
-						OSUtils::ztsnprintf(uniqueName,sizeof(uniqueName),"ZeroTier/%.10llx@%u",_node->address(),_ports[2]);
-						_portMapper = new PortMapper(_ports[2],uniqueName);
+						if (_ports[2]) {
+							char uniqueName[64];
+							OSUtils::ztsnprintf(uniqueName,sizeof(uniqueName),"ZeroTier/%.10llx@%u",_node->address(),_ports[2]);
+							_portMapper = new PortMapper(_ports[2],uniqueName);
+						}
 					}
 				}
 			}
@@ -828,9 +836,9 @@ public:
 				fprintf(stderr, "Reading RabbitMQ Config\n");
 				_mqc = new MQConfig;
 				_mqc->port = rmq["port"];
-				_mqc->host = OSUtils::jsonString(rmq["host"], "").c_str();
-				_mqc->username = OSUtils::jsonString(rmq["username"], "").c_str();
-				_mqc->password = OSUtils::jsonString(rmq["password"], "").c_str();
+				_mqc->host = OSUtils::jsonString(rmq["host"], "");
+				_mqc->username = OSUtils::jsonString(rmq["username"], "");
+				_mqc->password = OSUtils::jsonString(rmq["password"], "");
 			}
 
 			// Bind to wildcard instead of to specific interfaces (disables full tunnel capability)

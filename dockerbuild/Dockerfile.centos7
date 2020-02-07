@@ -1,0 +1,32 @@
+FROM centos:7
+
+ARG go_pkg_url
+
+RUN yum install -y epel-release
+RUN yum install -y curl git wget openssh-server sudo make development-tools rpmdevtools clang gcc-c++ ruby ruby-devel centos-release-scl devtoolset-8 llvm-toolset-7 openssl-devel && yum clean all
+
+RUN curl -sL https://github.com/Kitware/CMake/releases/download/v3.16.3/cmake-3.16.3.tar.gz -o cmake.tar.gz && \
+    tar -xzf cmake.tar.gz && \
+    cd cmake-3.16.3 && \
+    ./bootstrap && \
+    make -j4 && \
+    make install
+
+RUN curl -s $go_pkg_url -o go.tar.gz && \
+    tar -C /usr/local -xzf go.tar.gz && \
+    rm go.tar.gz
+
+RUN wget -qO- "https://cmake.org/files/v3.15/cmake-3.15.1-Linux-x86_64.tar.gz" | tar --strip-components=1 -xz -C /usr/local
+
+RUN /usr/bin/ssh-keygen -A
+RUN useradd jenkins-build
+
+RUN echo $'\n\
+  export PATH=$PATH:/usr/local/go/bin:$HOME/go/bin\n\
+  source scl_source enable devtoolset-8 llvm-toolset-7\n'\
+  >> ~/.bash_profile
+
+RUN mkdir /rpmbuild && chmod 777 /rpmbuild
+
+CMD ["/usr/sbin/sshd", "-D"]
+

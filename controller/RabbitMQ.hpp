@@ -15,14 +15,15 @@
 #define ZT_CONTROLLER_RABBITMQ_HPP
 
 #include "DB.hpp"
+#include <string>
 
 namespace ZeroTier
 {
 struct MQConfig {
-	const char *host;
+	std::string host;
 	int port;
-	const char *username;
-	const char *password;
+	std::string username;
+	std::string password;
 };
 }
 
@@ -32,7 +33,7 @@ struct MQConfig {
 
 #include <amqp.h>
 #include <amqp_tcp_socket.h>
-#include <string>
+
 
 namespace ZeroTier
 {
