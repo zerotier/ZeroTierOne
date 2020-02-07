@@ -53,7 +53,7 @@ public:
 
 private:
 	void _relay(void *tPtr,const SharedPtr<Path> &path,const Address &destination,SharedPtr<Buf> &data,unsigned int len);
-	void _sendPendingWhois();
+	void _sendPendingWhois(void *tPtr,int64_t now);
 
 	// Handlers for VL1 verbs
 	void _HELLO(void *tPtr,const SharedPtr<Path> &path,SharedPtr<Peer> &peer,Buf &pkt,int packetSize,bool authenticated);
@@ -67,7 +67,6 @@ private:
 	void _ENCAP(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &peer,Buf &pkt,int packetSize,bool authenticated);
 
 	const RuntimeEnvironment *RR;
-	VL2 *const _vl2;
 
 	struct _WhoisQueueItem
 	{

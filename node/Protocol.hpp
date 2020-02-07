@@ -50,6 +50,7 @@
  * 10 - 1.4.0 ... 1.4.6
  * 11 - 2.0.0 ... CURRENT
  *    + Peer-to-peer multicast replication
+ *    + HELLO and OK(HELLO) include an extra HMAC to further harden auth
  *    + Old planet/moon stuff is DEAD!
  *    + AES encryption support
  *    + NIST P-384 (type 1) identities
@@ -152,7 +153,10 @@
 #define ZT_PROTO_VERB_MASK 0x1fU
 
 /**
- * Key derivation function label for the key used with HMAC-384 in HELLO
+ * Key derivation function label for the keys used with HMAC-384 in HELLO
+ *
+ * With the KDF the 'iter' parameter is 0 for the key used for
+ * HMAC in HELLO and 1 for the one used in OK(HELLO).
  */
 #define ZT_PROTO_KDF_KEY_LABEL_HELLO_HMAC 'H'
 
@@ -284,6 +288,7 @@ enum Verb
 	 * ordinary packet authentication.
 	 *
 	 * OK payload:
+	 *   [... HMAC-384 starts here ...]
 	 *   <[8] HELLO timestamp field echo>
 	 *   <[1] protocol version>
 	 *   <[1] software major version>
@@ -293,6 +298,7 @@ enum Verb
 	 *   <[2] 16-bit reserved (legacy) field, always 0>
 	 *   <[2] 16-bit length of meta-data dictionary>
 	 *   <[...] meta-data dictionary>
+	 *   <[2] 16-bit length of any additional fields>
 	 *   <[48] HMAC-SHA384 of all fields to this point (as plaintext)>
 	 *
 	 * With the exception of the timestamp, the other fields pertain to the
@@ -824,26 +830,24 @@ namespace OK {
  */
 ZT_PACKED_STRUCT(struct Header
 {
+	Protocol::Header h;
 	uint8_t inReVerb;
 	uint64_t inRePacketId;
 });
 
 ZT_PACKED_STRUCT(struct WHOIS
 {
-	Protocol::Header h;
-	OK::Header oh;
+	OK::Header h;
 });
 
 ZT_PACKED_STRUCT(struct ECHO
 {
-	Protocol::Header h;
-	OK::Header oh;
+	OK::Header h;
 });
 
 ZT_PACKED_STRUCT(struct HELLO
 {
-	Protocol::Header h;
-	OK::Header oh;
+	OK::Header h;
 	uint64_t timestampEcho;
 	uint8_t versionProtocol;
 	uint8_t versionMajor;
@@ -853,8 +857,7 @@ ZT_PACKED_STRUCT(struct HELLO
 
 ZT_PACKED_STRUCT(struct EXT_FRAME
 {
-	Protocol::Header h;
-	OK::Header oh;
+	OK::Header h;
 	uint64_t networkId;
 	uint8_t flags;
 	uint8_t destMac[6];
@@ -864,8 +867,7 @@ ZT_PACKED_STRUCT(struct EXT_FRAME
 
 ZT_PACKED_STRUCT(struct NETWORK_CONFIG
 {
-	Protocol::Header h;
-	OK::Header oh;
+	OK::Header h;
 	uint64_t networkId;
 	uint64_t configUpdateId;
 });
@@ -883,6 +885,7 @@ namespace ERROR {
  */
 ZT_PACKED_STRUCT(struct Header
 {
+	Protocol::Header h;
 	int8_t inReVerb;
 	uint64_t inRePacketId;
 	uint8_t error;
@@ -890,34 +893,19 @@ ZT_PACKED_STRUCT(struct Header
 
 ZT_PACKED_STRUCT(struct NEED_MEMBERSHIP_CERTIFICATE
 {
-	Protocol::Header h;
-	ERROR::Header eh;
+	ERROR::Header h;
 	uint64_t networkId;
 });
 
 ZT_PACKED_STRUCT(struct UNSUPPORTED_OPERATION__NETWORK_CONFIG_REQUEST
 {
-	Protocol::Header h;
-	ERROR::Header eh;
+	ERROR::Header h;
 	uint64_t networkId;
 });
 
 } // namespace ERROR
 
 /****************************************************************************/
-
-/**
- * Increment the 3-bit hops field embedded in the packet flags field
- */
-ZT_ALWAYS_INLINE unsigned int incrementPacketHops(Header &h)
-{
-	uint8_t flags = h.flags;
-	uint8_t hops = flags;
-	flags &= 0xf8U;
-	++hops;
-	h.flags = flags | (hops & 0x07U);
-	return (unsigned int)hops;
-}
 
 /**
  * @return 3-bit hops field embedded in packet flags field

@@ -44,8 +44,12 @@ unsigned long long _packetIdCtr = _initPacketID();
 static std::atomic<unsigned long long> _packetIdCtr(_initPacketID());
 #endif
 
-uintptr_t _checkStructureSizing()
+uintptr_t _checkSizes()
 {
+	// These are compiled time checked assertions that make sure our platform/compiler is sane
+	// and that packed structures are working properly.
+	if (ZT_PROTO_MAX_PACKET_LENGTH > ZT_BUF_MEM_SIZE)
+		throw std::runtime_error("ZT_PROTO_MAX_PACKET_LENGTH > ZT_BUF_MEM_SIZE");
 	if (sizeof(Header) != ZT_PROTO_MIN_PACKET_LENGTH)
 		throw std::runtime_error("sizeof(Header) != ZT_PROTO_MIN_PACKET_LENGTH");
 	if (sizeof(FragmentHeader) != ZT_PROTO_MIN_FRAGMENT_LENGTH)
@@ -55,7 +59,8 @@ uintptr_t _checkStructureSizing()
 
 } // anonymous namespace
 
-volatile uintptr_t _compileTimeStructCheckHappened = _checkStructureSizing();
+// Make compiler compile and "run" _checkSizes()
+volatile uintptr_t _checkSizesIMeanIt = _checkSizes();
 
 uint64_t getPacketId()
 {

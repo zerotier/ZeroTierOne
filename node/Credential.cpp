@@ -19,8 +19,8 @@
 #include "CertificateOfMembership.hpp"
 #include "CertificateOfOwnership.hpp"
 #include "Revocation.hpp"
-#include "Switch.hpp"
 #include "Network.hpp"
+#include "Topology.hpp"
 
 // These are compile-time asserts to make sure temporary marshal buffers here and
 // also in NtworkConfig.cpp are always large enough to marshal all credential types.

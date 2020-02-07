@@ -1,14 +1,13 @@
 // This code is public domain, taken from a PD crypto source file on GitHub.
 
-#include <cstdint>
-#include <cstdlib>
-#include <cstring>
-
 #include "SHA512.hpp"
 #include "Utils.hpp"
 
 #include <utility>
 #include <algorithm>
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
 
 namespace ZeroTier {
 

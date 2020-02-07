@@ -12,14 +12,15 @@
 /****/
 
 #include "Constants.hpp"
+#include "RuntimeEnvironment.hpp"
+#include "Trace.hpp"
 #include "Peer.hpp"
+#include "Topology.hpp"
 #include "Node.hpp"
-#include "Switch.hpp"
 #include "Network.hpp"
 #include "SelfAwareness.hpp"
-#include "Packet.hpp"
-#include "Trace.hpp"
 #include "InetAddress.hpp"
+#include "Protocol.hpp"
 
 #include <set>
 
@@ -43,7 +44,11 @@ Peer::Peer(const RuntimeEnvironment *renv) :
 	_lastTriedStaticPath(0),
 	_lastPrioritizedPaths(0),
 	_latency(0xffff),
-	_alivePathCount(0)
+	_alivePathCount(0),
+	_vProto(0),
+	_vMajor(0),
+	_vMinor(0),
+	_vRevision(0)
 {
 }
 
@@ -52,10 +57,6 @@ bool Peer::init(const Identity &myIdentity,const Identity &peerIdentity)
 	if (_id == peerIdentity)
 		return true;
 	_id = peerIdentity;
-	_vProto = 0;
-	_vMajor = 0;
-	_vMinor = 0;
-	_vRevision = 0;
 	return myIdentity.agree(peerIdentity,_key);
 }
 
@@ -65,9 +66,9 @@ void Peer::received(
 	const unsigned int hops,
 	const uint64_t packetId,
 	const unsigned int payloadLength,
-	const Packet::Verb verb,
+	const Protocol::Verb verb,
 	const uint64_t inRePacketId,
-	const Packet::Verb inReVerb,
+	const Protocol::Verb inReVerb,
 	const uint64_t networkId)
 {
 	const int64_t now = RR->node->now();
@@ -83,7 +84,7 @@ void Peer::received(
 		}
 		_lock.runlock();
 
-		if (verb == Packet::VERB_OK) {
+		if (verb == Protocol::VERB_OK) {
 			RWMutex::Lock l(_lock);
 
 			int64_t lastReceiveTimeMax = 0;
@@ -115,10 +116,10 @@ void Peer::received(
 			_paths[lastReceiveTimeMaxAt] = path;
 			_bootstrap = path->address();
 			_prioritizePaths(now);
-			RR->t->learnedNewPath(tPtr,packetId,_id,path->address(),old);
+			RR->t->learnedNewPath(tPtr,0x582fabdd,packetId,_id,path->address(),old);
 		} else {
 			if (RR->node->shouldUsePathForZeroTierTraffic(tPtr,_id,path->localSocket(),path->address())) {
-				RR->t->tryingNewPath(tPtr,_id,path->address(),path->address(),packetId,(uint8_t)verb,_id.address(),_id.hash(),ZT_TRACE_TRYING_NEW_PATH_REASON_PACKET_RECEIVED_FROM_UNKNOWN_PATH);
+				RR->t->tryingNewPath(tPtr,0xb7747ddd,_id,path->address(),path->address(),packetId,(uint8_t)verb,_id.address(),_id.hash(),ZT_TRACE_TRYING_NEW_PATH_REASON_PACKET_RECEIVED_FROM_UNKNOWN_PATH);
 				sendHELLO(tPtr,path->localSocket(),path->address(),now);
 				path->sent(now);
 			}
@@ -131,11 +132,11 @@ path_check_done:
 
 		InetAddress addr;
 		if ((_bootstrap.type() == Endpoint::INETADDR_V4)||(_bootstrap.type() == Endpoint::INETADDR_V6)) {
-			RR->t->tryingNewPath(tPtr,_id,_bootstrap.inetAddr(),InetAddress::NIL,0,0,0,nullptr,ZT_TRACE_TRYING_NEW_PATH_REASON_BOOTSTRAP_ADDRESS);
+			RR->t->tryingNewPath(tPtr,0x0a009444,_id,_bootstrap.inetAddr(),InetAddress::NIL,0,0,0,nullptr,ZT_TRACE_TRYING_NEW_PATH_REASON_BOOTSTRAP_ADDRESS);
 			sendHELLO(tPtr,-1,_bootstrap.inetAddr(),now);
 		} if (RR->node->externalPathLookup(tPtr,_id,-1,addr)) {
 			if (RR->node->shouldUsePathForZeroTierTraffic(tPtr,_id,-1,addr)) {
-				RR->t->tryingNewPath(tPtr,_id,_bootstrap.inetAddr(),InetAddress::NIL,0,0,0,nullptr,ZT_TRACE_TRYING_NEW_PATH_REASON_EXPLICITLY_SUGGESTED_ADDRESS);
+				RR->t->tryingNewPath(tPtr,0x84a10000,_id,_bootstrap.inetAddr(),InetAddress::NIL,0,0,0,nullptr,ZT_TRACE_TRYING_NEW_PATH_REASON_EXPLICITLY_SUGGESTED_ADDRESS);
 				sendHELLO(tPtr,-1,addr,now);
 			}
 		}
@@ -155,6 +156,7 @@ path_check_done:
 		}
 
 		if (!addrs.empty()) {
+#if 0
 			ScopedPtr<Packet> outp(new Packet(_id.address(),RR->identity.address(),Packet::VERB_PUSH_DIRECT_PATHS));
 			outp->addSize(2); // leave room for count
 			unsigned int count = 0;
@@ -197,6 +199,7 @@ path_check_done:
 				outp->armor(_key,true);
 				path->send(RR,tPtr,outp->data(),outp->size(),now);
 			}
+#endif
 		}
 	}
 }
@@ -222,6 +225,7 @@ bool Peer::shouldTryPath(void *tPtr,int64_t now,const SharedPtr<Peer> &suggested
 
 void Peer::sendHELLO(void *tPtr,const int64_t localSocket,const InetAddress &atAddress,int64_t now)
 {
+#if 0
 	Packet outp(_id.address(),RR->identity.address(),Packet::VERB_HELLO);
 
 	outp.append((unsigned char)ZT_PROTO_VERSION);
@@ -240,6 +244,7 @@ void Peer::sendHELLO(void *tPtr,const int64_t localSocket,const InetAddress &atA
 	} else {
 		RR->sw->send(tPtr,outp,false); // false == don't encrypt full payload, but add MAC
 	}
+#endif
 }
 
 void Peer::ping(void *tPtr,int64_t now,const bool pingAllAddressTypes)

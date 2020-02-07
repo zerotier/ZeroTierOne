@@ -13,10 +13,13 @@
 
 #include "VL2.hpp"
 #include "RuntimeEnvironment.hpp"
+#include "Node.hpp"
 #include "VL1.hpp"
 #include "Topology.hpp"
 #include "Peer.hpp"
 #include "Path.hpp"
+#include "Network.hpp"
+#include "MAC.hpp"
 
 namespace ZeroTier {
 
@@ -25,6 +28,10 @@ VL2::VL2(const RuntimeEnvironment *renv)
 }
 
 VL2::~VL2()
+{
+}
+
+void VL2::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const MAC &from,const MAC &to,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
 {
 }
 

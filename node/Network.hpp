@@ -196,7 +196,7 @@ public:
 	 * @param size Size of data in chunk buffer (total, not relative to ptr)
 	 * @return Update ID if update was fully assembled and accepted or 0 otherwise
 	 */
-	uint64_t handleConfigChunk(void *tPtr,uint64_t packetId,const SharedPtr<Peer> &source,const Buf<> &chunk,int ptr,int size);
+	uint64_t handleConfigChunk(void *tPtr,uint64_t packetId,const SharedPtr<Peer> &source,const Buf &chunk,int ptr,int size);
 
 	/**
 	 * Set network configuration

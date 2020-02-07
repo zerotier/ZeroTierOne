@@ -22,8 +22,8 @@
 
 namespace ZeroTier {
 
-class NodeConfig;
-class Switch;
+class VL1;
+class VL2;
 class Topology;
 class Node;
 class NetworkController;
@@ -36,19 +36,24 @@ class Trace;
 class RuntimeEnvironment
 {
 public:
-	inline RuntimeEnvironment(Node *n) :
-		node(n)
-		,localNetworkController((NetworkController *)0)
-		,rtmem((void *)0)
-		,sw((Switch *)0)
-		,topology((Topology *)0)
-		,sa((SelfAwareness *)0)
+	ZT_ALWAYS_INLINE RuntimeEnvironment(Node *n) :
+		node(n),
+		localNetworkController(nullptr),
+		rtmem(nullptr),
+		t(nullptr),
+		vl2(nullptr),
+		vl1(nullptr),
+		topology(nullptr),
+		sa(nullptr)
 	{
 		publicIdentityStr[0] = (char)0;
 		secretIdentityStr[0] = (char)0;
 	}
 
-	inline ~RuntimeEnvironment() { Utils::burn(secretIdentityStr,sizeof(secretIdentityStr)); }
+	ZT_ALWAYS_INLINE ~RuntimeEnvironment()
+	{
+		Utils::burn(secretIdentityStr,sizeof(secretIdentityStr));
+	}
 
 	// Node instance that owns this RuntimeEnvironment
 	Node *const node;
@@ -66,7 +71,8 @@ public:
 	 * These are constant and never null after startup unless indicated. */
 
 	Trace *t;
-	Switch *sw;
+	VL2 *vl2;
+	VL1 *vl1;
 	Topology *topology;
 	SelfAwareness *sa;
 

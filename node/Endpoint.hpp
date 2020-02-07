@@ -14,16 +14,16 @@
 #ifndef ZT_ENDPOINT_HPP
 #define ZT_ENDPOINT_HPP
 
-#include <cstdio>
-#include <cstdlib>
-#include <cstdint>
-#include <cstring>
-
 #include "Constants.hpp"
 #include "InetAddress.hpp"
 #include "Address.hpp"
 #include "Utils.hpp"
 #include "TriviallyCopyable.hpp"
+
+#include <cstdio>
+#include <cstdlib>
+#include <cstdint>
+#include <cstring>
 
 // max name size + type byte + port (for DNS name/port) + 3x 16-bit coordinate for location
 #define ZT_ENDPOINT_MARSHAL_SIZE_MAX (ZT_ENDPOINT_MAX_NAME_SIZE+1+2+2+2+2)

@@ -21,7 +21,6 @@
 #include "RuntimeEnvironment.hpp"
 #include "Topology.hpp"
 #include "Peer.hpp"
-#include "Switch.hpp"
 #include "Trace.hpp"
 
 // Entry timeout -- make it fairly long since this is just to prevent stale buildup
@@ -86,7 +85,7 @@ void SelfAwareness::iam(void *tPtr,const Identity &reporter,const int64_t receiv
 		_ResetWithinScope rset(tPtr,now,myPhysicalAddress.ss_family,(InetAddress::IpScope)scope);
 		RR->topology->eachPeer<_ResetWithinScope &>(rset);
 
-		RR->t->resettingPathsInScope(tPtr,reporter,reporterPhysicalAddress,entry.mySurface,myPhysicalAddress,scope);
+		RR->t->resettingPathsInScope(tPtr,0x9afff100,reporter,reporterPhysicalAddress,entry.mySurface,myPhysicalAddress,scope);
 	} else {
 		// Otherwise just update DB to use to determine external surface info
 		entry.mySurface = myPhysicalAddress;

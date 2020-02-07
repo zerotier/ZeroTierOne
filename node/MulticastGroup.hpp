@@ -14,13 +14,13 @@
 #ifndef ZT_MULTICASTGROUP_HPP
 #define ZT_MULTICASTGROUP_HPP
 
-#include <cstdint>
-
 #include "Constants.hpp"
 #include "MAC.hpp"
 #include "InetAddress.hpp"
 #include "Utils.hpp"
 #include "TriviallyCopyable.hpp"
+
+#include <cstdint>
 
 namespace ZeroTier {
 
@@ -64,7 +64,7 @@ public:
 			// multicast address directly from the IP address, and it gives us
 			// 24 bits of uniqueness. Collisions aren't likely to be common enough
 			// to care about.
-			const uint8_t *a = (const uint8_t *)ip.rawIpData();
+			const uint8_t *const a = reinterpret_cast<const uint8_t *>(ip.rawIpData());
 			return MulticastGroup(MAC(0x33,0x33,0xff,a[13],a[14],a[15]),0);
 		}
 		return MulticastGroup();

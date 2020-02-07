@@ -66,7 +66,7 @@ void *_Buf_get()
 #else
 		s_pool.store(bb);
 #endif
-		b = (Buf *)malloc(sizeof(Buf<>));
+		b = (Buf *)malloc(sizeof(Buf));
 		if (!b)
 			throw std::bad_alloc();
 	} else {

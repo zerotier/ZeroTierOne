@@ -65,7 +65,7 @@ public:
 	void operator delete(void* p) { _mm_free(p); }
 #endif
 
-	// Public API Functions ----------------------------------------------------
+	// Public API Functions ---------------------------------------------------------------------------------------------
 
 	ZT_ResultCode processWirePacket(
 		void *tptr,
@@ -104,7 +104,7 @@ public:
 	int sendUserMessage(void *tptr,uint64_t dest,uint64_t typeId,const void *data,unsigned int len);
 	void setController(void *networkControllerInstance);
 
-	// Internal functions ------------------------------------------------------
+	// Internal functions -----------------------------------------------------------------------------------------------
 
 	/**
 	 * @return Most recent time value supplied to core via API

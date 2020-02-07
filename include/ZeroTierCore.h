@@ -328,6 +328,9 @@ enum ZT_CredentialType
  */
 enum ZT_TraceEventType
 {
+	/* An unexpected error is an internal assertion / sanity check failure, out of memory, etc. */
+	ZT_TRACE_UNEXPECTED_ERROR = 0,
+
 	/* VL1 events related to the peer-to-peer layer */
 	ZT_TRACE_VL1_RESETTING_PATHS_IN_SCOPE = 1,
 	ZT_TRACE_VL1_TRYING_NEW_PATH = 2,
@@ -433,15 +436,24 @@ ZT_PACKED_STRUCT(struct ZT_TraceEventPathAddress
  */
 ZT_PACKED_STRUCT(struct ZT_TraceEvent
 {
-	uint16_t evSize;     /* sizeof(ZT_TraceEvent_XX structure) (inclusive size in bytes) */
-	uint16_t evType;     /* ZT_TraceEventType */
+	uint16_t evSize;                                  /* sizeof(ZT_TraceEvent_XX structure) (inclusive) */
+	uint16_t evType;                                  /* ZT_TraceEventType */
+	uint32_t codeLocation;                            /* arbitrary identifier of location in source code */
 });
 
 /* Temporary macros to make it easier to declare all ZT_TraceEvent's sub-types */
 #define _ZT_TRACE_EVENT_STRUCT_START(e) ZT_PACKED_STRUCT_START struct ZT_TraceEvent_##e { \
 	uint16_t evSize; \
-	uint16_t evType;
+	uint16_t evType; \
+	uint32_t codeLocation;
 #define _ZT_TRACE_EVENT_STRUCT_END() } ZT_PACKED_STRUCT_END;
+
+/**
+ * An unexpected or internal error occurred
+ */
+_ZT_TRACE_EVENT_STRUCT_START(UNEXPECTED_ERROR)
+	char message[256];                               /* arbitrary human-readable message */
+_ZT_TRACE_EVENT_STRUCT_END()
 
 /**
  * Node is resetting all paths in a given address scope

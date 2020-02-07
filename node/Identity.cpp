@@ -83,6 +83,8 @@ struct _Identity_generate_cond
 
 } // anonymous namespace
 
+const Identity Identity::NIL;
+
 void Identity::generate(const Type t)
 {
 	uint8_t digest[64];

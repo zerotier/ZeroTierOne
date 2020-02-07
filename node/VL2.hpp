@@ -28,6 +28,8 @@ class Path;
 class Peer;
 class RuntimeEnvironment;
 class VL1;
+class Network;
+class MAC;
 
 class VL2
 {
@@ -36,6 +38,20 @@ class VL2
 public:
 	VL2(const RuntimeEnvironment *renv);
 	~VL2();
+
+	/**
+	 * Called when a packet comes from a local Ethernet tap
+	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
+	 * @param network Which network's TAP did this packet come from?
+	 * @param from Originating MAC address
+	 * @param to Destination MAC address
+	 * @param etherType Ethernet packet type
+	 * @param vlanId VLAN ID or 0 if none
+	 * @param data Ethernet payload
+	 * @param len Frame length
+	 */
+	void onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const MAC &from,const MAC &to,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len);
 
 protected:
 	void _FRAME(void *tPtr,const SharedPtr<Path> &path,SharedPtr<Peer> &peer,Buf &pkt,int packetSize,bool authenticated);

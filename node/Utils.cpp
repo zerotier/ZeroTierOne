@@ -409,22 +409,27 @@ int b32d(const char *encoded,uint8_t *result,int bufSize)
 uint64_t random()
 {
 	// https://en.wikipedia.org/wiki/Xorshift#xoshiro256**
-	static Mutex l;
-	static uint64_t s0 = getSecureRandomU64();
-	static uint64_t s1 = getSecureRandomU64();
-	static uint64_t s2 = getSecureRandomU64();
-	static uint64_t s3 = getSecureRandomU64();
+	static volatile uint64_t s_s0 = getSecureRandomU64();
+	static volatile uint64_t s_s1 = getSecureRandomU64();
+	static volatile uint64_t s_s2 = getSecureRandomU64();
+	static volatile uint64_t s_s3 = getSecureRandomU64();
 
-	l.lock();
-	const uint64_t result = ROL64(s1 * 5,7) * 9;
+	uint64_t s0 = s_s0;
+	uint64_t s1 = s_s1;
+	uint64_t s2 = s_s2;
+	uint64_t s3 = s_s3;
+	const uint64_t result = ROL64(s1 * 5,7U) * 9;
 	const uint64_t t = s1 << 17U;
 	s2 ^= s0;
 	s3 ^= s1;
 	s1 ^= s2;
 	s0 ^= s3;
 	s2 ^= t;
-	s3 = ROL64(s3,45);
-	l.unlock();
+	s3 = ROL64(s3,45U);
+	s_s0 = s0;
+	s_s1 = s1;
+	s_s2 = s2;
+	s_s3 = s3;
 
 	return result;
 }

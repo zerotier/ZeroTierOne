@@ -14,6 +14,7 @@
 #ifndef ZT_SHAREDPTR_HPP
 #define ZT_SHAREDPTR_HPP
 
+#include "Constants.hpp"
 #include "AtomicCounter.hpp"
 #include "TriviallyCopyable.hpp"
 

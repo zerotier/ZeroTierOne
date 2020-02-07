@@ -56,6 +56,11 @@ public:
 		P384 = ZT_CRYPTO_ALG_P384      // Type 1 -- NIST P-384 with linked Curve25519/Ed25519 secondaries (2.x+)
 	};
 
+	/**
+	 * A nil/empty identity instance
+	 */
+	static const Identity NIL;
+
 	ZT_ALWAYS_INLINE Identity() { memoryZero(this); }
 	ZT_ALWAYS_INLINE ~Identity() { Utils::burn(reinterpret_cast<void *>(&this->_priv),sizeof(this->_priv)); }
 

@@ -16,6 +16,10 @@
 #include "Node.hpp"
 #include "Peer.hpp"
 
+#include <cstdio>
+#include <cstdlib>
+#include <cstdarg>
+
 // NOTE: packet IDs are always handled in network byte order, so no need to convert them.
 
 namespace ZeroTier {
@@ -25,13 +29,31 @@ Trace::Trace(const RuntimeEnvironment *renv) :
 	_vl1(false),
 	_vl2(false),
 	_vl2Filter(false),
-	_vl2Multicast(false),
-	_eventBufSize(0)
+	_vl2Multicast(false)
 {
+}
+
+void Trace::unexpectedError(
+	void *tPtr,
+	uint32_t codeLocation,
+	const char *message,
+	...)
+{
+	va_list ap;
+	ZT_TraceEvent_UNEXPECTED_ERROR ev;
+	ev.evSize = ZT_CONST_TO_BE_UINT16(sizeof(ev));
+	ev.evType = ZT_CONST_TO_BE_UINT16(ZT_TRACE_UNEXPECTED_ERROR);
+	ev.codeLocation = codeLocation;
+	memset(ev.message,0,sizeof(ev.message));
+	va_start(ap,message);
+	vsnprintf(ev.message,sizeof(ev.message),message,ap);
+	va_end(ap);
+	RR->node->postEvent(tPtr,ZT_EVENT_TRACE,&ev);
 }
 
 void Trace::_resettingPathsInScope(
 	void *const tPtr,
+	const uint32_t codeLocation,
 	const Identity &reporter,
 	const InetAddress &from,
 	const InetAddress &oldExternal,
@@ -39,30 +61,32 @@ void Trace::_resettingPathsInScope(
 	const InetAddress::IpScope scope)
 {
 	ZT_TraceEvent_VL1_RESETTING_PATHS_IN_SCOPE ev;
-	ev.evSize = CONST_TO_BE_UINT16(sizeof(ev));
-	ev.evType = CONST_TO_BE_UINT16(ZT_TRACE_VL1_RESETTING_PATHS_IN_SCOPE);
+	ev.evSize = ZT_CONST_TO_BE_UINT16(sizeof(ev));
+	ev.evType = ZT_CONST_TO_BE_UINT16(ZT_TRACE_VL1_RESETTING_PATHS_IN_SCOPE);
+	ev.codeLocation = Utils::hton(codeLocation);
 	from.forTrace(ev.from);
 	oldExternal.forTrace(ev.oldExternal);
 	newExternal.forTrace(ev.newExternal);
 	ev.scope = (uint8_t)scope;
-
 	RR->node->postEvent(tPtr,ZT_EVENT_TRACE,&ev);
 }
 
 void Trace::_tryingNewPath(
 	void *const tPtr,
+	const uint32_t codeLocation,
 	const Identity &trying,
 	const InetAddress &physicalAddress,
 	const InetAddress &triggerAddress,
-	uint64_t triggeringPacketId,
-	uint8_t triggeringPacketVerb,
-	uint64_t triggeredByAddress,
+	const uint64_t triggeringPacketId,
+	const uint8_t triggeringPacketVerb,
+	const uint64_t triggeredByAddress,
 	const uint8_t *triggeredByIdentityHash,
-	ZT_TraceTryingNewPathReason reason)
+	const ZT_TraceTryingNewPathReason reason)
 {
 	ZT_TraceEvent_VL1_TRYING_NEW_PATH ev;
-	ev.evSize = CONST_TO_BE_UINT16(sizeof(ev));
-	ev.evType = CONST_TO_BE_UINT16(ZT_TRACE_VL1_TRYING_NEW_PATH);
+	ev.evSize = ZT_CONST_TO_BE_UINT16(sizeof(ev));
+	ev.evType = ZT_CONST_TO_BE_UINT16(ZT_TRACE_VL1_TRYING_NEW_PATH);
+	ev.codeLocation = Utils::hton(codeLocation);
 	ev.address = Utils::hton(trying.address().toInt());
 	memcpy(ev.identityHash,trying.hash(),48);
 	physicalAddress.forTrace(ev.physicalAddress);
@@ -74,21 +98,22 @@ void Trace::_tryingNewPath(
 		memcpy(ev.triggeredByIdentityHash,triggeredByIdentityHash,48);
 	else memset(ev.triggeredByIdentityHash,0,48);
 	ev.reason = (uint8_t)reason;
-
 	RR->node->postEvent(tPtr,ZT_EVENT_TRACE,&ev);
 }
 
 void Trace::_learnedNewPath(
 	void *const tPtr,
-	uint64_t packetId,
+	const uint32_t codeLocation,
+	const uint64_t packetId,
 	const Identity &peerIdentity,
 	const InetAddress &physicalAddress,
 	const InetAddress &replaced)
 {
 	ZT_TraceEvent_VL1_LEARNED_NEW_PATH ev;
-	ev.evSize = CONST_TO_BE_UINT16(sizeof(ev));
-	ev.evType = CONST_TO_BE_UINT16(ZT_TRACE_VL1_LEARNED_NEW_PATH);
-	ev.packetId = packetId;
+	ev.evSize = ZT_CONST_TO_BE_UINT16(sizeof(ev));
+	ev.evType = ZT_CONST_TO_BE_UINT16(ZT_TRACE_VL1_LEARNED_NEW_PATH);
+	ev.codeLocation = Utils::hton(codeLocation);
+	ev.packetId = packetId; // packet IDs are kept in big-endian
 	ev.address = Utils::hton(peerIdentity.address().toInt());
 	memcpy(ev.identityHash,peerIdentity.hash(),48);
 	physicalAddress.forTrace(ev.physicalAddress);
@@ -99,18 +124,20 @@ void Trace::_learnedNewPath(
 
 void Trace::_incomingPacketDropped(
 	void *const tPtr,
-	uint64_t packetId,
-	uint64_t networkId,
+	const uint32_t codeLocation,
+	const uint64_t packetId,
+	const uint64_t networkId,
 	const Identity &peerIdentity,
 	const InetAddress &physicalAddress,
-	uint8_t hops,
-	uint8_t verb,
-	ZT_TracePacketDropReason reason)
+	const uint8_t hops,
+	const uint8_t verb,
+	const ZT_TracePacketDropReason reason)
 {
 	ZT_TraceEvent_VL1_INCOMING_PACKET_DROPPED ev;
-	ev.evSize = CONST_TO_BE_UINT16(sizeof(ev));
-	ev.evType = CONST_TO_BE_UINT16(ZT_TRACE_VL1_INCOMING_PACKET_DROPPED);
-	ev.packetId = packetId;
+	ev.evSize = ZT_CONST_TO_BE_UINT16(sizeof(ev));
+	ev.evType = ZT_CONST_TO_BE_UINT16(ZT_TRACE_VL1_INCOMING_PACKET_DROPPED);
+	ev.codeLocation = Utils::hton(codeLocation);
+	ev.packetId = packetId; // packet IDs are kept in big-endian
 	ev.networkId = Utils::hton(networkId);
 	if (peerIdentity) {
 		ev.address = Utils::hton(peerIdentity.address().toInt());
@@ -129,17 +156,19 @@ void Trace::_incomingPacketDropped(
 
 void Trace::_outgoingNetworkFrameDropped(
 	void *const tPtr,
-	uint64_t networkId,
+	const uint32_t codeLocation,
+	const uint64_t networkId,
 	const MAC &sourceMac,
 	const MAC &destMac,
-	uint16_t etherType,
-	uint16_t frameLength,
+	const uint16_t etherType,
+	const uint16_t frameLength,
 	const uint8_t *frameData,
-	ZT_TraceFrameDropReason reason)
+	const ZT_TraceFrameDropReason reason)
 {
 	ZT_TraceEvent_VL2_OUTGOING_FRAME_DROPPED ev;
-	ev.evSize = CONST_TO_BE_UINT16(sizeof(ev));
-	ev.evType = CONST_TO_BE_UINT16(ZT_TRACE_VL2_OUTGOING_FRAME_DROPPED);
+	ev.evSize = ZT_CONST_TO_BE_UINT16(sizeof(ev));
+	ev.evType = ZT_CONST_TO_BE_UINT16(ZT_TRACE_VL2_OUTGOING_FRAME_DROPPED);
+	ev.codeLocation = Utils::hton(codeLocation);
 	ev.networkId = Utils::hton(networkId);
 	ev.sourceMac = Utils::hton(sourceMac.toInt());
 	ev.destMac = Utils::hton(destMac.toInt());
@@ -159,21 +188,23 @@ void Trace::_outgoingNetworkFrameDropped(
 
 void Trace::_incomingNetworkFrameDropped(
 	void *const tPtr,
-	uint64_t networkId,
+	const uint32_t codeLocation,
+	const uint64_t networkId,
 	const MAC &sourceMac,
 	const MAC &destMac,
 	const Identity &peerIdentity,
 	const InetAddress &physicalAddress,
-	uint8_t hops,
-	uint16_t frameLength,
+	const uint8_t hops,
+	const uint16_t frameLength,
 	const uint8_t *frameData,
-	uint8_t verb,
-	bool credentialRequestSent,
-	ZT_TraceFrameDropReason reason)
+	const uint8_t verb,
+	const bool credentialRequestSent,
+	const ZT_TraceFrameDropReason reason)
 {
 	ZT_TraceEvent_VL2_INCOMING_FRAME_DROPPED ev;
-	ev.evSize = CONST_TO_BE_UINT16(sizeof(ev));
-	ev.evType = CONST_TO_BE_UINT16(ZT_TRACE_VL2_INCOMING_FRAME_DROPPED);
+	ev.evSize = ZT_CONST_TO_BE_UINT16(sizeof(ev));
+	ev.evType = ZT_CONST_TO_BE_UINT16(ZT_TRACE_VL2_INCOMING_FRAME_DROPPED);
+	ev.codeLocation = Utils::hton(codeLocation);
 	ev.networkId = Utils::hton(networkId);
 	ev.sourceMac = Utils::hton(sourceMac.toInt());
 	ev.destMac = Utils::hton(destMac.toInt());
@@ -197,38 +228,41 @@ void Trace::_incomingNetworkFrameDropped(
 
 void Trace::_networkConfigRequestSent(
 	void *const tPtr,
-	uint64_t networkId)
+	const uint32_t codeLocation,
+	const uint64_t networkId)
 {
 	ZT_TraceEvent_VL2_NETWORK_CONFIG_REQUESTED ev;
-	ev.evSize = CONST_TO_BE_UINT16(sizeof(ev));
-	ev.evType = CONST_TO_BE_UINT16(ZT_TRACE_VL2_NETWORK_CONFIG_REQUESTED);
+	ev.evSize = ZT_CONST_TO_BE_UINT16(sizeof(ev));
+	ev.evType = ZT_CONST_TO_BE_UINT16(ZT_TRACE_VL2_NETWORK_CONFIG_REQUESTED);
+	ev.codeLocation = Utils::hton(codeLocation);
 	ev.networkId = Utils::hton(networkId);
-
 	RR->node->postEvent(tPtr,ZT_EVENT_TRACE,&ev);
 }
 
 void Trace::_networkFilter(
 	void *const tPtr,
-	uint64_t networkId,
+	const uint32_t codeLocation,
+	const uint64_t networkId,
 	const uint8_t primaryRuleSetLog[512],
 	const uint8_t matchingCapabilityRuleSetLog[512],
-	uint32_t matchingCapabilityId,
-	int64_t matchingCapabilityTimestamp,
+	const uint32_t matchingCapabilityId,
+	const int64_t matchingCapabilityTimestamp,
 	const Address &source,
 	const Address &dest,
 	const MAC &sourceMac,
 	const MAC &destMac,
-	uint16_t frameLength,
+	const uint16_t frameLength,
 	const uint8_t *frameData,
-	uint16_t etherType,
-	uint16_t vlanId,
-	bool noTee,
-	bool inbound,
-	int accept)
+	const uint16_t etherType,
+	const uint16_t vlanId,
+	const bool noTee,
+	const bool inbound,
+	const int accept)
 {
 	ZT_TraceEvent_VL2_NETWORK_FILTER ev;
-	ev.evSize = CONST_TO_BE_UINT16(sizeof(ev));
-	ev.evType = CONST_TO_BE_UINT16(ZT_TRACE_VL2_NETWORK_FILTER);
+	ev.evSize = ZT_CONST_TO_BE_UINT16(sizeof(ev));
+	ev.evType = ZT_CONST_TO_BE_UINT16(ZT_TRACE_VL2_NETWORK_FILTER);
+	ev.codeLocation = Utils::hton(codeLocation);
 	ev.networkId = Utils::hton(networkId);
 	memcpy(ev.primaryRuleSetLog,primaryRuleSetLog,sizeof(ev.primaryRuleSetLog));
 	if (matchingCapabilityRuleSetLog)
@@ -253,29 +287,29 @@ void Trace::_networkFilter(
 	ev.noTee = (uint8_t)noTee;
 	ev.inbound = (uint8_t)inbound;
 	ev.accept = (int8_t)accept;
-
 	RR->node->postEvent(tPtr,ZT_EVENT_TRACE,&ev);
 }
 
 void Trace::_credentialRejected(
 	void *const tPtr,
-	uint64_t networkId,
+	const uint32_t codeLocation,
+	const uint64_t networkId,
 	const Address &address,
-	uint32_t credentialId,
-	int64_t credentialTimestamp,
-	uint8_t credentialType,
-	ZT_TraceCredentialRejectionReason reason)
+	const uint32_t credentialId,
+	const int64_t credentialTimestamp,
+	const uint8_t credentialType,
+	const ZT_TraceCredentialRejectionReason reason)
 {
 	ZT_TraceEvent_VL2_CREDENTIAL_REJECTED ev;
-	ev.evSize = CONST_TO_BE_UINT16(sizeof(ev));
-	ev.evType = CONST_TO_BE_UINT16(ZT_TRACE_VL2_NETWORK_FILTER);
+	ev.evSize = ZT_CONST_TO_BE_UINT16(sizeof(ev));
+	ev.evType = ZT_CONST_TO_BE_UINT16(ZT_TRACE_VL2_NETWORK_FILTER);
+	ev.codeLocation = Utils::hton(codeLocation);
 	ev.networkId = Utils::hton(networkId);
 	ev.address = Utils::hton(address.toInt());
 	ev.credentialId = Utils::hton(credentialId);
 	ev.credentialTimestamp = Utils::hton(credentialTimestamp);
 	ev.credentialType = credentialType;
 	ev.reason = (uint8_t)reason;
-
 	RR->node->postEvent(tPtr,ZT_EVENT_TRACE,&ev);
 }
 
