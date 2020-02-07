@@ -20,11 +20,14 @@
 #include "SharedPtr.hpp"
 #include "Mutex.hpp"
 #include "TriviallyCopyable.hpp"
+#include "FCV.hpp"
 
 #include <cstdint>
 #include <cstring>
 #include <cstdlib>
 #include <stdexcept>
+#include <utility>
+#include <algorithm>
 
 #ifndef __GNUC__
 #include <atomic>
@@ -47,18 +50,13 @@ void _Buf_release(void *ptr,std::size_t sz);
 void *_Buf_get();
 
 /**
- * Free buffers in the pool
+ * Free all instances of Buf in shared pool.
  *
  * New buffers will be created and the pool repopulated if get() is called
  * and outstanding buffers will still be returned to the pool. This just
  * frees buffers currently held in reserve.
  */
 void freeBufPool();
-
-/**
- * Macro to declare and get a new buffer templated with the given type
- */
-#define ZT_GET_NEW_BUF(vvv,xxx) SharedPtr< Buf<xxx> > vvv(reinterpret_cast< Buf<xxx> * >(_Buf_get()))
 
 /**
  * Buffer and methods for branch-free bounds-checked data assembly and parsing
@@ -100,10 +98,9 @@ void freeBufPool();
  *
  * @tparam U Type to overlap with data bytes in data union (can't be larger than ZT_BUF_MEM_SIZE)
  */
-template<typename U = int>
 class Buf
 {
-	friend class SharedPtr< Buf<U> >;
+	friend class SharedPtr< Buf >;
 	friend void _Buf_release(void *,std::size_t);
 	friend void *_Buf_get();
 	friend void freeBufPool();
@@ -139,17 +136,65 @@ public:
 		unsigned int e;
 	};
 
-	ZT_ALWAYS_INLINE Buf() {}
+	/**
+	 * Assemble all slices in a vector into a single slice starting at position 0
+	 *
+	 * The returned slice will start at 0 and contain the entire vector unless the
+	 * vector is too large to fit in a single buffer. If that or any other error
+	 * occurs the returned slice will be empty and contain a NULL Buf.
+	 *
+	 * The vector may be modified by this function and should be considered
+	 * undefined after it is called.
+	 *
+	 * @tparam FCVC Capacity of FCV (generally inferred automatically)
+	 * @param fcv FCV containing one or more slices
+	 * @return Single slice containing fully assembled buffer (empty on error)
+	 */
+	template<unsigned int FCVC>
+	static ZT_ALWAYS_INLINE Buf::Slice assembleSliceVector(FCV<Buf::Slice,FCVC> &fcv)
+	{
+		Buf::Slice r;
 
-	template<typename X>
-	ZT_ALWAYS_INLINE Buf(const Buf<X> &b) { memcpy(data.bytes,b.data.bytes,ZT_BUF_MEM_SIZE); }
+		typename FCV<Buf::Slice,FCVC>::const_iterator s(fcv.begin());
+		unsigned int l = s->e - s->s;
+		if (l <= ZT_BUF_MEM_SIZE) {
+			r.b.move(s->b);
+			if (s->s > 0)
+				memmove(r.b->b,r.b->b + s->s,l);
+			r.e = l;
+
+			while (++s != fcv.end()) {
+				l = s->e - s->s;
+				if (l > (ZT_BUF_MEM_SIZE - r.e)) {
+					r.b.zero();
+					r.e = 0;
+					break;
+				}
+				memcpy(r.b->b + r.e,s->b->b + s->s,l);
+				s->b.zero(); // let go of buffer in vector as soon as possible
+				r.e += l;
+			}
+		}
+
+		return r;
+	}
+
+	ZT_ALWAYS_INLINE Buf() {}
+	ZT_ALWAYS_INLINE Buf(const Buf &b2) { memcpy(b,b2.b,ZT_BUF_MEM_SIZE); }
+
+	ZT_ALWAYS_INLINE Buf &operator=(const Buf &b2)
+	{
+		if (this != &b2)
+			memcpy(b,b2.b,ZT_BUF_MEM_SIZE);
+		return *this;
+	}
 
 	/**
 	 * Get obtains a buffer from the pool or allocates a new buffer if the pool is empty
 	 *
 	 * @return Buffer instance
 	 */
-	static ZT_ALWAYS_INLINE SharedPtr< Buf<U> > get() { return SharedPtr<Buf>((Buf *)_Buf_get()); }
+	static ZT_ALWAYS_INLINE SharedPtr< Buf > get() { return SharedPtr<Buf>((Buf *)_Buf_get()); }
 
 	/**
 	 * Check for overflow beyond the size of the buffer
@@ -175,29 +220,14 @@ public:
 	static ZT_ALWAYS_INLINE bool readOverflow(const int &ii,const unsigned int size) { return ((ii - (int)size) > 0); }
 
 	/**
-	 * Shortcut to cast between buffers whose data can be viewed through a different struct type
-	 *
-	 * @tparam X A packed struct or other primitive type that should be placed in the data union
-	 * @return Reference to this Buf templated with the supplied parameter
+	 * Set all memory to zero
 	 */
-	template<typename X>
-	ZT_ALWAYS_INLINE Buf<X> &view() { return *reinterpret_cast< Buf<X> * >(this); }
+	ZT_ALWAYS_INLINE void clear() { memset(b,0,ZT_BUF_MEM_SIZE); }
 
 	/**
-	 * Shortcut to cast between buffers whose data can be viewed through a different struct type
-	 *
-	 * @tparam X A packed struct or other primitive type that should be placed in the data union
-	 * @return Reference to this Buf templated with the supplied parameter
+	 * Zero security critical data using Utils::burn() to ensure it's never optimized out.
 	 */
-	template<typename X>
-	ZT_ALWAYS_INLINE const Buf<X> &view() const { return *reinterpret_cast< Buf<X> * >(this); }
-
-	/**
-	 * Zero memory
-	 *
-	 * For performance reasons Buf does not do this on every get().
-	 */
-	ZT_ALWAYS_INLINE void clear() { memset(data.bytes,0,ZT_BUF_MEM_SIZE); }
+	ZT_ALWAYS_INLINE void burn() { Utils::burn(b,ZT_BUF_MEM_SIZE); }
 
 	/**
 	 * Read a byte
@@ -208,7 +238,7 @@ public:
 	ZT_ALWAYS_INLINE uint8_t rI8(int &ii) const
 	{
 		const int s = ii++;
-		return data.bytes[(unsigned int)s & ZT_BUF_MEM_MASK];
+		return b[(unsigned int)s & ZT_BUF_MEM_MASK];
 	}
 
 	/**
@@ -226,7 +256,7 @@ public:
 			((uint16_t)data.bytes[s] << 8U) |
 			(uint16_t)data.bytes[s + 1]);
 #else
-		return Utils::ntoh(*reinterpret_cast<const uint16_t *>(data.bytes + s));
+		return Utils::ntoh(*reinterpret_cast<const uint16_t *>(b + s));
 #endif
 	}
 
@@ -247,7 +277,7 @@ public:
 			((uint32_t)data.bytes[s + 2] << 8U) |
 			(uint32_t)data.bytes[s + 3]);
 #else
-		return Utils::ntoh(*reinterpret_cast<const uint32_t *>(data.bytes + s));
+		return Utils::ntoh(*reinterpret_cast<const uint32_t *>(b + s));
 #endif
 	}
 
@@ -272,7 +302,7 @@ public:
 			((uint64_t)data.bytes[s + 6] << 8U) |
 			(uint64_t)data.bytes[s + 7]);
 #else
-		return Utils::ntoh(*reinterpret_cast<const uint64_t *>(data.bytes + s));
+		return Utils::ntoh(*reinterpret_cast<const uint64_t *>(b + s));
 #endif
 	}
 
@@ -295,7 +325,7 @@ public:
 	ZT_ALWAYS_INLINE int rO(int &ii,T &obj) const
 	{
 		if (ii < ZT_BUF_MEM_SIZE) {
-			int ms = obj.unmarshal(data.bytes + ii,ZT_BUF_MEM_SIZE - ii);
+			int ms = obj.unmarshal(b + ii,ZT_BUF_MEM_SIZE - ii);
 			if (ms > 0)
 				ii += ms;
 			return ms;
@@ -316,10 +346,10 @@ public:
 	 */
 	ZT_ALWAYS_INLINE char *rS(int &ii,char *const buf,const unsigned int bufSize) const
 	{
-		const char *const s = (const char *)(data.bytes + ii);
+		const char *const s = (const char *)(b + ii);
 		const int sii = ii;
 		while (ii < ZT_BUF_MEM_SIZE) {
-			if (data.bytes[ii++] == 0) {
+			if (b[ii++] == 0) {
 				memcpy(buf,s,ii - sii);
 				return buf;
 			}
@@ -342,9 +372,9 @@ public:
 	 */
 	ZT_ALWAYS_INLINE const char *rSnc(int &ii) const
 	{
-		const char *const s = (const char *)(data.bytes + ii);
+		const char *const s = (const char *)(b + ii);
 		while (ii < ZT_BUF_MEM_SIZE) {
-			if (data.bytes[ii++] == 0)
+			if (b[ii++] == 0)
 				return s;
 		}
 		return nullptr;
@@ -364,7 +394,7 @@ public:
 	ZT_ALWAYS_INLINE uint8_t *rB(int &ii,void *bytes,unsigned int len) const
 	{
 		if ((ii += (int)len) <= ZT_BUF_MEM_SIZE) {
-			memcpy(bytes,data.bytes + ii,len);
+			memcpy(bytes,b + ii,len);
 			return reinterpret_cast<uint8_t *>(bytes);
 		}
 		return nullptr;
@@ -385,7 +415,7 @@ public:
 	 */
 	ZT_ALWAYS_INLINE const uint8_t *rBnc(int &ii,unsigned int len) const
 	{
-		const uint8_t *const b = data.bytes + ii;
+		const uint8_t *const b = b + ii;
 		return ((ii += (int)len) <= ZT_BUF_MEM_SIZE) ? b : nullptr;
 	}
 
@@ -398,7 +428,7 @@ public:
 	ZT_ALWAYS_INLINE void wI(int &ii,uint8_t n)
 	{
 		const int s = ii++;
-		data[(unsigned int)s & ZT_BUF_MEM_MASK] = n;
+		b[(unsigned int)s & ZT_BUF_MEM_MASK] = n;
 	}
 
 	/**
@@ -412,10 +442,10 @@ public:
 		const unsigned int s = ((unsigned int)ii) & ZT_BUF_MEM_MASK;
 		ii += 2;
 #ifdef ZT_NO_UNALIGNED_ACCESS
-		data[s] = (uint8_t)(n >> 8U);
-		data[s + 1] = (uint8_t)n;
+		b[s] = (uint8_t)(n >> 8U);
+		b[s + 1] = (uint8_t)n;
 #else
-		*reinterpret_cast<uint16_t *>(data.bytes + s) = Utils::hton(n);
+		*reinterpret_cast<uint16_t *>(b + s) = Utils::hton(n);
 #endif
 	}
 
@@ -430,12 +460,12 @@ public:
 		const unsigned int s = ((unsigned int)ii) & ZT_BUF_MEM_MASK;
 		ii += 4;
 #ifdef ZT_NO_UNALIGNED_ACCESS
-		data[s] = (uint8_t)(n >> 24U);
-		data[s + 1] = (uint8_t)(n >> 16U);
-		data[s + 2] = (uint8_t)(n >> 8U);
-		data[s + 3] = (uint8_t)n;
+		b[s] = (uint8_t)(n >> 24U);
+		b[s + 1] = (uint8_t)(n >> 16U);
+		b[s + 2] = (uint8_t)(n >> 8U);
+		b[s + 3] = (uint8_t)n;
 #else
-		*reinterpret_cast<uint32_t *>(data.bytes + s) = Utils::hton(n);
+		*reinterpret_cast<uint32_t *>(b + s) = Utils::hton(n);
 #endif
 	}
 
@@ -450,16 +480,16 @@ public:
 		const unsigned int s = ((unsigned int)ii) & ZT_BUF_MEM_MASK;
 		ii += 8;
 #ifdef ZT_NO_UNALIGNED_ACCESS
-		data[s] = (uint8_t)(n >> 56U);
-		data[s + 1] = (uint8_t)(n >> 48U);
-		data[s + 2] = (uint8_t)(n >> 40U);
-		data[s + 3] = (uint8_t)(n >> 32U);
-		data[s + 4] = (uint8_t)(n >> 24U);
-		data[s + 5] = (uint8_t)(n >> 16U);
-		data[s + 6] = (uint8_t)(n >> 8U);
-		data[s + 7] = (uint8_t)n;
+		b[s] = (uint8_t)(n >> 56U);
+		b[s + 1] = (uint8_t)(n >> 48U);
+		b[s + 2] = (uint8_t)(n >> 40U);
+		b[s + 3] = (uint8_t)(n >> 32U);
+		b[s + 4] = (uint8_t)(n >> 24U);
+		b[s + 5] = (uint8_t)(n >> 16U);
+		b[s + 6] = (uint8_t)(n >> 8U);
+		b[s + 7] = (uint8_t)n;
 #else
-		*reinterpret_cast<uint64_t *>(data.bytes + s) = Utils::hton(n);
+		*reinterpret_cast<uint64_t *>(b + s) = Utils::hton(n);
 #endif
 	}
 
@@ -475,7 +505,7 @@ public:
 	{
 		const int s = ii;
 		if ((s + T::marshalSizeMax()) <= ZT_BUF_MEM_SIZE) {
-			int ms = t.marshal(data.bytes + s);
+			int ms = t.marshal(b + s);
 			if (ms > 0)
 				ii += ms;
 		} else {
@@ -513,42 +543,63 @@ public:
 	{
 		const int s = ii;
 		if ((ii += (int)len) <= ZT_BUF_MEM_SIZE)
-			memcpy(data.bytes + s,bytes,len);
+			memcpy(b + s,bytes,len);
 	}
-
-	template<typename X>
-	ZT_ALWAYS_INLINE Buf &operator=(const Buf<X> &b) const
-	{
-		memcpy(data.bytes,b.data.bytes,ZT_BUF_MEM_SIZE);
-		return *this;
-	}
-
-	template<typename X>
-	ZT_ALWAYS_INLINE bool operator==(const Buf<X> &b) const { return (memcmp(data.bytes,b.data.bytes,ZT_BUF_MEM_SIZE) == 0); }
-	template<typename X>
-	ZT_ALWAYS_INLINE bool operator!=(const Buf<X> &b) const { return (memcmp(data.bytes,b.data.bytes,ZT_BUF_MEM_SIZE) != 0); }
-	template<typename X>
-	ZT_ALWAYS_INLINE bool operator<(const Buf<X> &b) const { return (memcmp(data.bytes,b.data.bytes,ZT_BUF_MEM_SIZE) < 0); }
-	template<typename X>
-	ZT_ALWAYS_INLINE bool operator<=(const Buf<X> &b) const { return (memcmp(data.bytes,b.data.bytes,ZT_BUF_MEM_SIZE) <= 0); }
-	template<typename X>
-	ZT_ALWAYS_INLINE bool operator>(const Buf<X> &b) const { return (memcmp(data.bytes,b.data.bytes,ZT_BUF_MEM_SIZE) > 0); }
-	template<typename X>
-	ZT_ALWAYS_INLINE bool operator>=(const Buf<X> &b) const { return (memcmp(data.bytes,b.data.bytes,ZT_BUF_MEM_SIZE) >= 0); }
 
 	/**
-	 * Raw data and fields (if U template parameter is set)
-	 *
-	 * The extra eight bytes permit silent overflow of integer types without reading or writing
-	 * beyond Buf's memory and without branching or extra masks. They can be ignored otherwise.
+	 * @return Capacity of this buffer (usable size of data.bytes)
 	 */
-	ZT_PACKED_STRUCT(union {
-		uint8_t bytes[ZT_BUF_MEM_SIZE + 8];
-		U fields;
-	}) data;
+	static constexpr unsigned int capacity() { return ZT_BUF_MEM_SIZE; }
+
+	/**
+	 * Cast data in 'b' to a (usually packed) structure type
+	 *
+	 * Warning: this does no bounds checking. It should only be used with packed
+	 * struct types designed for use in packet decoding such as those in
+	 * Protocol.hpp, and if 'i' is non-zero the caller must check bounds.
+	 *
+	 * @tparam T Structure type to cast 'b' to
+	 * @param i Index of start of structure (default: 0)
+	 * @return Reference to 'b' cast to type T
+	 */
+	template<typename T>
+	ZT_ALWAYS_INLINE T &as(const unsigned int i = 0) { return *reinterpret_cast<T *>(b + i); }
+
+	/**
+	 * Cast data in 'b' to a (usually packed) structure type (const)
+	 *
+	 * Warning: this does no bounds checking. It should only be used with packed
+	 * struct types designed for use in packet decoding such as those in
+	 * Protocol.hpp, and if 'i' is non-zero the caller must check bounds.
+	 *
+	 * @tparam T Structure type to cast 'b' to
+	 * @param i Index of start of structure (default: 0)
+	 * @return Reference to 'b' cast to type T
+	 */
+	template<typename T>
+	ZT_ALWAYS_INLINE const T &as(const unsigned int i = 0) const { return *reinterpret_cast<const T *>(b + i); }
+
+	ZT_ALWAYS_INLINE bool operator==(const Buf &b2) const { return (memcmp(b,b2.b,ZT_BUF_MEM_SIZE) == 0); }
+	ZT_ALWAYS_INLINE bool operator!=(const Buf &b2) const { return (memcmp(b,b2.b,ZT_BUF_MEM_SIZE) != 0); }
+	ZT_ALWAYS_INLINE bool operator<(const Buf &b2) const { return (memcmp(b,b2.b,ZT_BUF_MEM_SIZE) < 0); }
+	ZT_ALWAYS_INLINE bool operator<=(const Buf &b2) const { return (memcmp(b,b2.b,ZT_BUF_MEM_SIZE) <= 0); }
+	ZT_ALWAYS_INLINE bool operator>(const Buf &b2) const { return (memcmp(b,b2.b,ZT_BUF_MEM_SIZE) > 0); }
+	ZT_ALWAYS_INLINE bool operator>=(const Buf &b2) const { return (memcmp(b,b2.b,ZT_BUF_MEM_SIZE) >= 0); }
+
+	/**
+	 * Raw data held in buffer
+	 *
+	 * The additional eight bytes should not be used and should be considered undefined.
+	 * They exist to allow reads and writes of integer types to silently overflow if a
+	 * read or write is performed at the end of the buffer.
+	 */
+	uint8_t b[ZT_BUF_MEM_SIZE + 8];
 
 private:
-	volatile uintptr_t __nextInPool; // next item in free pool if this Buf is in Buf_pool
+	// Next item in free buffer pool linked list if Buf is placed in pool, undefined and unused otherwise
+	volatile uintptr_t __nextInPool;
+
+	// Reference counter for SharedPtr<>
 	AtomicCounter<int> __refCount;
 };
 

@@ -36,7 +36,7 @@ void _Buf_release(void *ptr,std::size_t sz)
 				break;
 		}
 
-		((Buf<> *)ptr)->__nextInPool = bb;
+		((Buf *)ptr)->__nextInPool = bb;
 #ifdef __GNUC__
 		__sync_fetch_and_and(&_Buf_pool,(uintptr_t)ptr);
 #else
@@ -59,18 +59,18 @@ void *_Buf_get()
 			break;
 	}
 
-	Buf<> *b;
+	Buf *b;
 	if (bb == 0) {
 #ifdef __GNUC__
 		__sync_fetch_and_and(&_Buf_pool,bb);
 #else
 		s_pool.store(bb);
 #endif
-		b = (Buf<> *)malloc(sizeof(Buf<>));
+		b = (Buf *)malloc(sizeof(Buf<>));
 		if (!b)
 			throw std::bad_alloc();
 	} else {
-		b = (Buf<> *)bb;
+		b = (Buf *)bb;
 #ifdef __GNUC__
 		__sync_fetch_and_and(&_Buf_pool,b->__nextInPool);
 #else
@@ -103,7 +103,7 @@ void freeBufPool()
 #endif
 
 	while (bb != 0) {
-		uintptr_t next = ((Buf<> *)bb)->__nextInPool;
+		uintptr_t next = ((Buf *)bb)->__nextInPool;
 		free((void *)bb);
 		bb = next;
 	}

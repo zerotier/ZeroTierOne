@@ -144,6 +144,7 @@
 #endif
 #ifndef __CPP11__
 #define nullptr (0)
+#define constexpr ZT_ALWAYS_INLINE
 #endif
 
 #ifdef SOCKET

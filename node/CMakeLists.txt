@@ -15,6 +15,7 @@ set(core_headers
 	Defragmenter.hpp
 	Dictionary.hpp
 	ECC384.hpp
+	FCV.hpp
 	Hashtable.hpp
 	Identity.hpp
 	InetAddress.hpp
@@ -45,6 +46,8 @@ set(core_headers
 	Trace.hpp
 	TriviallyCopyable.hpp
 	Utils.hpp
+	VL1.hpp
+	VL2.hpp
 )
 
 set(core_src
@@ -59,7 +62,6 @@ set(core_src
 	ECC384.cpp
 	Endpoint.cpp
 	Identity.cpp
-	IncomingPacket.cpp
 	InetAddress.cpp
 	Locator.cpp
 	LZ4.cpp
@@ -80,6 +82,7 @@ set(core_src
 	Topology.cpp
 	Trace.cpp
 	Utils.cpp
+	VL1.cpp
 )
 
 add_library(${PROJECT_NAME} STATIC ${core_src} ${core_headers})

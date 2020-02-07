@@ -32,7 +32,7 @@ namespace ZeroTier {
 
 class RuntimeEnvironment;
 
-template<unsigned int MF>
+template<unsigned int MF,unsigned int GCT,unsigned int GCS>
 class Defragmenter;
 
 /**
@@ -43,7 +43,7 @@ class Path
 	friend class SharedPtr<Path>;
 
 	// Allow defragmenter to access fragment in flight info stored in Path for performance reasons.
-	template<unsigned int MF>
+	template<unsigned int MF,unsigned int GCT,unsigned int GCS>
 	friend class Defragmenter;
 
 public:

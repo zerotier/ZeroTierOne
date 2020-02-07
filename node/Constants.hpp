@@ -57,6 +57,11 @@
 #define ZT_MAX_PACKET_FRAGMENTS 11
 
 /**
+ * Anti-DOS limit on the maximum incoming fragments per path
+ */
+#define ZT_MAX_INCOMING_FRAGMENTS_PER_PATH 32
+
+/**
  * Sanity limit on the maximum size of a network config object
  */
 #define ZT_MAX_NETWORK_CONFIG_BYTES 131072

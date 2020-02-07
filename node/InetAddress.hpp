@@ -106,7 +106,6 @@ public:
 		memoryCopyUnsafe(this,&ss);
 		return *this;
 	}
-
 	ZT_ALWAYS_INLINE InetAddress &operator=(const struct sockaddr_storage *ss)
 	{
 		if (ss)
@@ -114,13 +113,11 @@ public:
 		else memoryZero(this);
 		return *this;
 	}
-
 	ZT_ALWAYS_INLINE InetAddress &operator=(const struct sockaddr_in &sa)
 	{
 		copySockaddrToThis(&sa);
 		return *this;
 	}
-
 	ZT_ALWAYS_INLINE InetAddress &operator=(const struct sockaddr_in *sa)
 	{
 		if (sa)
@@ -128,13 +125,11 @@ public:
 		else memset(reinterpret_cast<void *>(this),0,sizeof(InetAddress));
 		return *this;
 	}
-
 	ZT_ALWAYS_INLINE InetAddress &operator=(const struct sockaddr_in6 &sa)
 	{
 		copySockaddrToThis(&sa);
 		return *this;
 	}
-
 	ZT_ALWAYS_INLINE InetAddress &operator=(const struct sockaddr_in6 *sa)
 	{
 		if (sa)
@@ -142,7 +137,6 @@ public:
 		else memset(reinterpret_cast<void *>(this),0,sizeof(InetAddress));
 		return *this;
 	}
-
 	ZT_ALWAYS_INLINE InetAddress &operator=(const struct sockaddr &sa)
 	{
 		if (sa.sa_family == AF_INET)
@@ -152,7 +146,6 @@ public:
 		else memset(reinterpret_cast<void *>(this),0,sizeof(InetAddress));
 		return *this;
 	}
-
 	ZT_ALWAYS_INLINE InetAddress &operator=(const struct sockaddr *sa)
 	{
 		if (sa) {
@@ -239,9 +232,9 @@ public:
 	ZT_ALWAYS_INLINE unsigned int port() const
 	{
 		switch(ss_family) {
-			case AF_INET: return Utils::ntoh((uint16_t)(reinterpret_cast<const struct sockaddr_in *>(this)->sin_port));
+			case AF_INET:  return Utils::ntoh((uint16_t)(reinterpret_cast<const struct sockaddr_in *>(this)->sin_port));
 			case AF_INET6: return Utils::ntoh((uint16_t)(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_port));
-			default: return 0;
+			default:       return 0;
 		}
 	}
 

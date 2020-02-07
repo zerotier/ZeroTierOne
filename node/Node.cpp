@@ -111,11 +111,16 @@ Node::~Node()
 		for(std::vector< SharedPtr<Network> >::iterator i(_networks.begin());i!=_networks.end();++i)
 			i->zero();
 	}
+
 	if (RR->sa) RR->sa->~SelfAwareness();
 	if (RR->topology) RR->topology->~Topology();
 	if (RR->sw) RR->sw->~Switch();
 	if (RR->t) RR->t->~Trace();
 	free(RR->rtmem);
+
+	// Let go of cached Buf objects. This does no harm if other nodes are running
+	// but usually that won't be the case.
+	freeBufPool();
 }
 
 void Node::shutdown(void *tPtr)

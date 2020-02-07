@@ -119,7 +119,12 @@
 /**
  * Magic number indicating a fragment
  */
-#define ZT_PACKET_FRAGMENT_INDICATOR 0xff
+#define ZT_PROTO_PACKET_FRAGMENT_INDICATOR 0xff
+
+/**
+ * Index at which fragment indicator is found in fragments
+ */
+#define ZT_PROTO_PACKET_FRAGMENT_INDICATOR_INDEX 13
 
 /**
  * Minimum viable length for a fragment
@@ -129,17 +134,17 @@
 /**
  * Index at which packet fragment payload starts
  */
-#define ZT_PROTO_PACKET_FRAGMENT_PAYLOAD_START_AT 16
+#define ZT_PROTO_PACKET_FRAGMENT_PAYLOAD_START_AT ZT_PROTO_MIN_FRAGMENT_LENGTH
 
 /**
  * Header flag indicating that a packet is fragmented and more fragments should be expected
  */
-#define ZT_PROTO_FLAG_FRAGMENTED 0x40
+#define ZT_PROTO_FLAG_FRAGMENTED 0x40U
 
 /**
  * Verb flag indicating payload is compressed with LZ4
  */
-#define ZT_PROTO_VERB_FLAG_COMPRESSED 0x80
+#define ZT_PROTO_VERB_FLAG_COMPRESSED 0x80U
 
 /**
  * HELLO exchange meta-data: signed locator for this node
@@ -202,10 +207,6 @@
  *
  * For unencrypted packets, MAC is computed on plaintext. Only HELLO is ever
  * sent in the clear, as it's the "here is my public key" message.
- *
- * Fragments are sent if a packet is larger than UDP MTU. The first fragment
- * is sent with its normal header with the fragmented flag set. Remaining
- * fragments are sent this way.
  *
  * The fragmented bit indicates that there is at least one fragment. Fragments
  * themselves contain the total, so the receiver must "learn" this from the
@@ -755,7 +756,6 @@ ZT_PACKED_STRUCT(struct FragmentHeader
 	uint8_t fragmentIndicator; // always 0xff for fragments
 	uint8_t counts; // total: most significant four bits, number: least significant four bits
 	uint8_t hops; // top 5 bits unused and must be zero
-	uint8_t p[];
 });
 
 ZT_PACKED_STRUCT(struct HELLO
@@ -766,7 +766,6 @@ ZT_PACKED_STRUCT(struct HELLO
 	uint8_t versionMinor;
 	uint16_t versionRev;
 	uint64_t timestamp;
-	uint8_t p[];
 });
 
 ZT_PACKED_STRUCT(struct RENDEZVOUS
@@ -776,7 +775,6 @@ ZT_PACKED_STRUCT(struct RENDEZVOUS
 	uint8_t peerAddress[5];
 	uint16_t port;
 	uint8_t addressLength;
-	uint8_t address[];
 });
 
 ZT_PACKED_STRUCT(struct FRAME
@@ -784,7 +782,6 @@ ZT_PACKED_STRUCT(struct FRAME
 	Header h;
 	uint64_t networkId;
 	uint16_t etherType;
-	uint8_t data[];
 });
 
 ZT_PACKED_STRUCT(struct EXT_FRAME
@@ -792,7 +789,6 @@ ZT_PACKED_STRUCT(struct EXT_FRAME
 	Header h;
 	uint64_t networkId;
 	uint8_t flags;
-	uint8_t p[];
 });
 
 ZT_PACKED_STRUCT(struct MULTICAST_LIKE
@@ -805,7 +801,6 @@ ZT_PACKED_STRUCT(struct MULTICAST_LIKE
 	});
 
 	Header h;
-	Entry groups[];
 });
 
 namespace OK {
@@ -922,59 +917,48 @@ ZT_ALWAYS_INLINE uint8_t packetHops(const Header &h) { return (h.flags & 0x07U);
  */
 ZT_ALWAYS_INLINE uint8_t packetCipher(const Header &h) { return ((h.flags >> 3U) & 0x07U); }
 
-void _armor(Buf< Header > &packet,unsigned int packetSize,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH],uint8_t cipherSuite);
-int _dearmor(Buf< Header > &packet,unsigned int packetSize,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH]);
-unsigned int _compress(Buf< Header > &packet,unsigned int packetSize);
-int _uncompress(Buf< Header > &packet,unsigned int packetSize);
-
 /**
- * Armor a packet for transport
+ * Deterministically mangle a 256-bit crypto key based on packet characteristics
  *
- * @param packet Packet to armor
- * @param packetSize Size of data in packet (must be at least the minimum packet size)
- * @param key 256-bit symmetric key
- * @param cipherSuite Cipher suite to apply
+ * This uses extra data from the packet to mangle the secret, yielding when
+ * combined with Salsa20's conventional 64-bit nonce an effective nonce that's
+ * more like 68 bits.
+ *
+ * @param in Input key (32 bytes)
+ * @param out Output buffer (32 bytes)
  */
-template<typename X>
-static ZT_ALWAYS_INLINE void armor(Buf< X > &packet,unsigned int packetSize,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH],uint8_t cipherSuite)
-{ _armor(reinterpret_cast< Buf< Header > & >(packet),packetSize,key,cipherSuite); }
+ZT_ALWAYS_INLINE void salsa2012DeriveKey(const uint8_t *const in,uint8_t *const out,const Buf &packet,const unsigned int packetSize)
+{
+	// IV and source/destination addresses. Using the addresses divides the
+	// key space into two halves-- A->B and B->A (since order will change).
+#ifdef ZT_NO_UNALIGNED_ACCESS
+	for(int i=0;i<18;++i)
+		out[i] = in[i] ^ packet.b[i];
+#else
+	*reinterpret_cast<uint64_t *>(out) = *reinterpret_cast<const uint64_t *>(in) ^ *reinterpret_cast<const uint64_t *>(packet.b);
+	*reinterpret_cast<uint64_t *>(out + 8) = *reinterpret_cast<const uint64_t *>(in + 8) ^ *reinterpret_cast<const uint64_t *>(packet.b + 8);
+	*reinterpret_cast<uint16_t *>(out + 16) = *reinterpret_cast<const uint16_t *>(in + 16) ^ *reinterpret_cast<const uint16_t *>(packet.b + 16);
+#endif
 
-/**
- * Dearmor a packet and check message authentication code
- *
- * If the packet is valid and MAC (if indicated) passes, the cipher suite
- * is returned. Otherwise -1 is returned to indicate a MAC failure.
- *
- * @param packet Packet to dearmor
- * @param packetSize Size of data in packet (must be at least the minimum packet size)
- * @param key 256-bit symmetric key
- * @return Cipher suite or -1 if MAC validation failed
- */
-template<typename X>
-static ZT_ALWAYS_INLINE int dearmor(Buf< X > &packet,unsigned int packetSize,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH])
-{ return _dearmor(reinterpret_cast< Buf < Header > & >(packet),packetSize,key); }
+	// Flags, but with hop count masked off. Hop count is altered by forwarding
+	// nodes and is the only field that is mutable by unauthenticated third parties.
+	out[18] = in[18] ^ (packet.b[18] & 0xf8U);
 
-/**
- * Compress packet payload
- *
- * @param packet Packet to compress
- * @param packetSize Original packet size
- * @return New packet size (returns original size of compression didn't help, in which case packet is unmodified)
- */
-template<typename X>
-static ZT_ALWAYS_INLINE unsigned int compress(Buf< X > &packet,unsigned int packetSize)
-{ return _compress(reinterpret_cast< Buf< Header > & >(packet),packetSize); }
+	// Raw packet size in bytes -- thus each packet size defines a new key space.
+	out[19] = in[19] ^ (uint8_t)packetSize;
+	out[20] = in[20] ^ (uint8_t)(packetSize >> 8U); // little endian
 
-/**
- * Uncompress packet payload (if compressed)
- *
- * @param packet Packet to uncompress
- * @param packetSize Original packet size
- * @return New packet size or -1 on decompression error (returns original packet size if packet wasn't compressed)
- */
-template<typename X>
-static ZT_ALWAYS_INLINE int uncompress(Buf< X > &packet,unsigned int packetSize)
-{ return _uncompress(reinterpret_cast< Buf< Header > & >(packet),packetSize); }
+	// Rest of raw key is used unchanged
+#ifdef ZT_NO_UNALIGNED_ACCESS
+	for(int i=21;i<32;++i)
+		out[i] = in[i];
+#else
+	out[21] = in[21];
+	out[22] = in[22];
+	out[23] = in[23];
+	*reinterpret_cast<uint64_t *>(out + 24) = *reinterpret_cast<const uint64_t *>(in + 24);
+#endif
+}
 
 /**
  * Get a sequential non-repeating packet ID for the next packet (thread-safe)
@@ -982,6 +966,12 @@ static ZT_ALWAYS_INLINE int uncompress(Buf< X > &packet,unsigned int packetSize)
  * @return Next packet ID / cryptographic nonce
  */
 uint64_t getPacketId();
+
+void armor(Buf &packet,unsigned int packetSize,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH],uint8_t cipherSuite);
+
+unsigned int compress(Buf &packet,unsigned int packetSize);
+
+int uncompress(Buf &packet,unsigned int packetSize);
 
 } // namespace Protocol
 } // namespace ZeroTier
