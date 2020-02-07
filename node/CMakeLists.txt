@@ -40,7 +40,6 @@ set(core_headers
 	SelfAwareness.hpp
 	SHA512.hpp
 	SharedPtr.hpp
-	Switch.hpp
 	Tag.hpp
 	Topology.hpp
 	Trace.hpp
@@ -77,7 +76,6 @@ set(core_src
 	Salsa20.cpp
 	SelfAwareness.cpp
 	SHA512.cpp
-	Switch.cpp
 	Tag.cpp
 	Topology.cpp
 	Trace.cpp
