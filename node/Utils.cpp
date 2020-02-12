@@ -60,7 +60,7 @@ CPUIDRegisters CPUID;
 const uint64_t ZERO256[4] = { 0,0,0,0 };
 const char HEXCHARS[16] = { '0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f' };
 
-bool secureEq(const void *a,const void *b,unsigned int len)
+bool secureEq(const void *a,const void *b,unsigned int len) noexcept
 {
 	uint8_t diff = 0;
 	for(unsigned int i=0;i<len;++i)
@@ -87,7 +87,7 @@ static unsigned long _Utils_itoa(unsigned long n,char *s)
 	s[pos] = (char)('0' + (n % 10));
 	return pos + 1;
 }
-char *decimal(unsigned long n,char s[24])
+char *decimal(unsigned long n,char s[24]) noexcept
 {
 	if (n == 0) {
 		s[0] = '0';
@@ -98,7 +98,7 @@ char *decimal(unsigned long n,char s[24])
 	return s;
 }
 
-char *hex(uint8_t i,char s[3])
+char *hex(uint8_t i,char s[3]) noexcept
 {
 	s[0] = HEXCHARS[(i >> 4U) & 0xfU];
 	s[1] = HEXCHARS[i & 0xfU];
@@ -106,7 +106,7 @@ char *hex(uint8_t i,char s[3])
 	return s;
 }
 
-char *hex(uint16_t i,char s[5])
+char *hex(uint16_t i,char s[5]) noexcept
 {
 	s[0] = HEXCHARS[(i >> 12U) & 0xfU];
 	s[1] = HEXCHARS[(i >> 8U) & 0xfU];
@@ -116,7 +116,7 @@ char *hex(uint16_t i,char s[5])
 	return s;
 }
 
-char *hex(uint32_t i,char s[9])
+char *hex(uint32_t i,char s[9]) noexcept
 {
 	s[0] = HEXCHARS[(i >> 28U) & 0xfU];
 	s[1] = HEXCHARS[(i >> 24U) & 0xfU];
@@ -130,7 +130,7 @@ char *hex(uint32_t i,char s[9])
 	return s;
 }
 
-char *hex(uint64_t i,char s[17])
+char *hex(uint64_t i,char s[17]) noexcept
 {
 	s[0] = HEXCHARS[(i >> 60U) & 0xfU];
 	s[1] = HEXCHARS[(i >> 56U) & 0xfU];
@@ -152,7 +152,7 @@ char *hex(uint64_t i,char s[17])
 	return s;
 }
 
-uint64_t unhex(const char *s)
+uint64_t unhex(const char *s) noexcept
 {
 	uint64_t n = 0;
 	if (s) {
@@ -177,7 +177,7 @@ uint64_t unhex(const char *s)
 	return n;
 }
 
-char *hex10(uint64_t i,char s[11])
+char *hex10(uint64_t i,char s[11]) noexcept
 {
 	s[0] = HEXCHARS[(i >> 36U) & 0xfU];
 	s[1] = HEXCHARS[(i >> 32U) & 0xfU];
@@ -193,7 +193,7 @@ char *hex10(uint64_t i,char s[11])
 	return s;
 }
 
-char *hex(const void *d,unsigned int l,char *s)
+char *hex(const void *d,unsigned int l,char *s) noexcept
 {
 	char *const save = s;
 	for(unsigned int i=0;i<l;++i) {
@@ -205,7 +205,7 @@ char *hex(const void *d,unsigned int l,char *s)
 	return save;
 }
 
-unsigned int unhex(const char *h,unsigned int hlen,void *buf,unsigned int buflen)
+unsigned int unhex(const char *h,unsigned int hlen,void *buf,unsigned int buflen) noexcept
 {
 	unsigned int l = 0;
 	const char *hend = h + hlen;
@@ -239,7 +239,7 @@ unsigned int unhex(const char *h,unsigned int hlen,void *buf,unsigned int buflen
 	return l;
 }
 
-void getSecureRandom(void *buf,unsigned int bytes)
+void getSecureRandom(void *buf,unsigned int bytes) noexcept
 {
 	static Mutex globalLock;
 	static bool initialized = false;
@@ -322,14 +322,14 @@ void getSecureRandom(void *buf,unsigned int bytes)
 	}
 }
 
-uint64_t getSecureRandomU64()
+uint64_t getSecureRandomU64() noexcept
 {
 	uint64_t tmp = 0;
 	getSecureRandom(&tmp,sizeof(tmp));
 	return tmp;
 }
 
-int b32e(const uint8_t *data,int length,char *result,int bufSize)
+int b32e(const uint8_t *data,int length,char *result,int bufSize) noexcept
 {
   if (length < 0 || length > (1 << 28)) {
 		result[0] = (char)0;
@@ -365,7 +365,7 @@ int b32e(const uint8_t *data,int length,char *result,int bufSize)
 	return -1;
 }
 
-int b32d(const char *encoded,uint8_t *result,int bufSize)
+int b32d(const char *encoded,uint8_t *result,int bufSize) noexcept
 {
   int buffer = 0;
   int bitsLeft = 0;
@@ -406,7 +406,7 @@ int b32d(const char *encoded,uint8_t *result,int bufSize)
 }
 
 #define ROL64(x,k) (((x) << (k)) | ((x) >> (64 - (k))))
-uint64_t random()
+uint64_t random() noexcept
 {
 	// https://en.wikipedia.org/wiki/Xorshift#xoshiro256**
 	static volatile uint64_t s_s0 = getSecureRandomU64();
@@ -434,7 +434,7 @@ uint64_t random()
 	return result;
 }
 
-bool scopy(char *dest,unsigned int len,const char *src)
+bool scopy(char *dest,unsigned int len,const char *src) noexcept
 {
 	if (!len)
 		return false; // sanity check

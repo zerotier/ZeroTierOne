@@ -379,7 +379,7 @@ bool Identity::fromString(const char *str)
 	return true;
 }
 
-int Identity::marshal(uint8_t data[ZT_IDENTITY_MARSHAL_SIZE_MAX],const bool includePrivate) const
+int Identity::marshal(uint8_t data[ZT_IDENTITY_MARSHAL_SIZE_MAX],const bool includePrivate) const noexcept
 {
 	_address.copyTo(data);
 	switch(_type) {
@@ -412,7 +412,7 @@ int Identity::marshal(uint8_t data[ZT_IDENTITY_MARSHAL_SIZE_MAX],const bool incl
 	return -1;
 }
 
-int Identity::unmarshal(const uint8_t *data,const int len)
+int Identity::unmarshal(const uint8_t *data,const int len) noexcept
 {
 	if (len < (ZT_ADDRESS_LENGTH + 1))
 		return -1;

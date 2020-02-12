@@ -4,7 +4,6 @@ project(zt_core)
 set(core_headers
 	../include/ZeroTierCore.h
 	Address.hpp
-	AtomicCounter.hpp
 	Buf.hpp
 	C25519.hpp
 	Capability.hpp

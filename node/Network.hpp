@@ -26,7 +26,6 @@
 #include "Address.hpp"
 #include "Mutex.hpp"
 #include "SharedPtr.hpp"
-#include "AtomicCounter.hpp"
 #include "MulticastGroup.hpp"
 #include "MAC.hpp"
 #include "Buf.hpp"
@@ -58,7 +57,7 @@ public:
 	/**
 	 * Compute primary controller device ID from network ID
 	 */
-	static ZT_ALWAYS_INLINE Address controllerFor(uint64_t nwid) { return Address(nwid >> 24U); }
+	static ZT_ALWAYS_INLINE Address controllerFor(uint64_t nwid) noexcept { return Address(nwid >> 24U); }
 
 	/**
 	 * Construct a new network
@@ -76,14 +75,14 @@ public:
 
 	~Network();
 
-	ZT_ALWAYS_INLINE uint64_t id() const { return _id; }
-	ZT_ALWAYS_INLINE Address controller() const { return Address(_id >> 24U); }
-	ZT_ALWAYS_INLINE bool multicastEnabled() const { return (_config.multicastLimit > 0); }
-	ZT_ALWAYS_INLINE bool hasConfig() const { return (_config); }
-	ZT_ALWAYS_INLINE uint64_t lastConfigUpdate() const { return _lastConfigUpdate; }
-	ZT_ALWAYS_INLINE ZT_VirtualNetworkStatus status() const { return _status(); }
-	ZT_ALWAYS_INLINE const NetworkConfig &config() const { return _config; }
-	ZT_ALWAYS_INLINE const MAC &mac() const { return _mac; }
+	ZT_ALWAYS_INLINE uint64_t id() const noexcept { return _id; }
+	ZT_ALWAYS_INLINE Address controller() const noexcept { return Address(_id >> 24U); }
+	ZT_ALWAYS_INLINE bool multicastEnabled() const noexcept { return (_config.multicastLimit > 0); }
+	ZT_ALWAYS_INLINE bool hasConfig() const noexcept { return (_config); }
+	ZT_ALWAYS_INLINE uint64_t lastConfigUpdate() const noexcept { return _lastConfigUpdate; }
+	ZT_ALWAYS_INLINE ZT_VirtualNetworkStatus status() const noexcept { return _status(); }
+	ZT_ALWAYS_INLINE const NetworkConfig &config() const noexcept { return _config; }
+	ZT_ALWAYS_INLINE const MAC &mac() const noexcept { return _mac; }
 
 	/**
 	 * Apply filters to an outgoing packet
@@ -215,12 +214,12 @@ public:
 	/**
 	 * Set netconf failure to 'access denied' -- called in IncomingPacket when controller reports this
 	 */
-	ZT_ALWAYS_INLINE void setAccessDenied() { _netconfFailure = NETCONF_FAILURE_ACCESS_DENIED; }
+	ZT_ALWAYS_INLINE void setAccessDenied() noexcept { _netconfFailure = NETCONF_FAILURE_ACCESS_DENIED; }
 
 	/**
 	 * Set netconf failure to 'not found' -- called by IncomingPacket when controller reports this
 	 */
-	ZT_ALWAYS_INLINE void setNotFound() { _netconfFailure = NETCONF_FAILURE_NOT_FOUND; }
+	ZT_ALWAYS_INLINE void setNotFound() noexcept { _netconfFailure = NETCONF_FAILURE_NOT_FOUND; }
 
 	/**
 	 * Determine whether this peer is permitted to communicate on this network
@@ -355,7 +354,7 @@ public:
 	/**
 	 * @return Externally usable pointer-to-pointer exported via the core API
 	 */
-	ZT_ALWAYS_INLINE void **userPtr() { return &_uPtr; }
+	ZT_ALWAYS_INLINE void **userPtr() noexcept { return &_uPtr; }
 
 private:
 	void _requestConfiguration(void *tPtr);
@@ -403,7 +402,7 @@ private:
 	Mutex _config_l;
 	Mutex _memberships_l;
 
-	AtomicCounter<int> __refCount;
+	std::atomic<int> __refCount;
 };
 
 } // namespace ZeroTier

@@ -36,14 +36,14 @@ namespace ZeroTier {
 class AES
 {
 public:
-	ZT_ALWAYS_INLINE AES() {}
-	explicit ZT_ALWAYS_INLINE AES(const uint8_t key[32]) { this->init(key); }
+	ZT_ALWAYS_INLINE AES() noexcept {}
+	explicit ZT_ALWAYS_INLINE AES(const uint8_t key[32]) noexcept { this->init(key); }
 	ZT_ALWAYS_INLINE ~AES() { Utils::burn(&_k,sizeof(_k)); }
 
 	/**
 	 * Set (or re-set) this AES256 cipher's key
 	 */
-	ZT_ALWAYS_INLINE void init(const uint8_t key[32])
+	ZT_ALWAYS_INLINE void init(const uint8_t key[32]) noexcept
 	{
 #ifdef ZT_AES_AESNI
 		if (likely(Utils::CPUID.aes)) {
@@ -60,7 +60,7 @@ public:
 	 * @param in Input block
 	 * @param out Output block (can be same as input)
 	 */
-	ZT_ALWAYS_INLINE void encrypt(const uint8_t in[16],uint8_t out[16]) const
+	ZT_ALWAYS_INLINE void encrypt(const uint8_t in[16],uint8_t out[16]) const noexcept
 	{
 #ifdef ZT_AES_AESNI
 		if (likely(Utils::CPUID.aes)) {
@@ -71,11 +71,6 @@ public:
 		_encryptSW(in,out);
 	}
 
-	ZT_ALWAYS_INLINE void gcm(const uint8_t iv[12],const void *in,const unsigned int len,uint8_t out[16],uint8_t tag[16]) const
-	{
-		// TODO
-	}
-
 private:
 	static const uint32_t Te0[256];
 	static const uint32_t Te1[256];
@@ -83,11 +78,10 @@ private:
 	static const uint32_t Te3[256];
 	static const uint32_t rcon[10];
 
-	void _initSW(const uint8_t key[32]);
-	void _encryptSW(const uint8_t in[16],uint8_t out[16]) const;
-	void _gmacSW(const uint8_t iv[12],const uint8_t *in,unsigned int len,uint8_t out[16]) const;
+	void _initSW(const uint8_t key[32]) noexcept;
+	void _encryptSW(const uint8_t in[16],uint8_t out[16]) const noexcept;
+	void _gmacSW(const uint8_t iv[12],const uint8_t *in,unsigned int len,uint8_t out[16]) const noexcept;
 
-	/**************************************************************************/
 	union {
 #ifdef ZT_AES_ARMNEON
 		// ARM NEON key and GMAC parameters
@@ -110,10 +104,9 @@ private:
 			uint32_t ek[60];
 		} sw;
 	} _k;
-	/**************************************************************************/
 
-#ifdef ZT_AES_ARMNEON /******************************************************/
-	static inline void _aes_256_expAssist_armneon(uint32x4_t prev1,uint32x4_t prev2,uint32_t rcon,uint32x4_t *e1,uint32x4_t *e2)
+#ifdef ZT_AES_ARMNEON
+	static inline void _aes_256_expAssist_armneon(uint32x4_t prev1,uint32x4_t prev2,uint32_t rcon,uint32x4_t *e1,uint32x4_t *e2) noexcept
 	{
 		uint32_t round1[4], round2[4], prv1[4], prv2[4];
 		vst1q_u32(prv1, prev1);
@@ -131,7 +124,8 @@ private:
 		//uint32x4_t expansion[2] = {vld1q_u3(round1), vld1q_u3(round2)};
 		//return expansion;
 	}
-	inline void _init_armneon(uint8x16_t encKey)
+
+	inline void _init_armneon(uint8x16_t encKey) noexcept
 	{
 		uint32x4_t *schedule = _k.neon.k;
 		uint32x4_t e1,e2;
@@ -175,7 +169,7 @@ private:
 		*/
 	}
 
-	inline void _encrypt_armneon(uint8x16_t *data) const
+	inline void _encrypt_armneon(uint8x16_t *data) const noexcept
 	{
 		*data = veorq_u8(*data, _k.neon.k[0]);
 		*data = vaesmcq_u8(vaeseq_u8(*data, (uint8x16_t)_k.neon.k[1]));
@@ -193,12 +187,12 @@ private:
 		*data = vaesmcq_u8(vaeseq_u8(*data, (uint8x16_t)_k.neon.k[13]));
 		*data = vaeseq_u8(*data, _k.neon.k[14]);
 	}
-#endif /*********************************************************************/
+#endif
 
-#ifdef ZT_AES_AESNI /********************************************************/
-	void _init_aesni(const uint8_t key[32]);
+#ifdef ZT_AES_AESNI
+	void _init_aesni(const uint8_t key[32]) noexcept;
 
-	ZT_ALWAYS_INLINE void _encrypt_aesni(const void *const in,void *const out) const
+	ZT_ALWAYS_INLINE void _encrypt_aesni(const void *const in,void *const out) const noexcept
 	{
 		__m128i tmp;
 		tmp = _mm_loadu_si128((const __m128i *)in);
@@ -219,8 +213,8 @@ private:
 		_mm_storeu_si128((__m128i *)out,_mm_aesenclast_si128(tmp,_k.ni.k[14]));
 	}
 
-	void _gmac_aesni(const uint8_t iv[12],const uint8_t *in,unsigned int len,uint8_t out[16]) const;
-#endif /* ZT_AES_AESNI ******************************************************/
+	void _gmac_aesni(const uint8_t iv[12],const uint8_t *in,unsigned int len,uint8_t out[16]) const noexcept;
+#endif
 };
 
 } // namespace ZeroTier

@@ -32,6 +32,7 @@ bool NetworkConfig::toDictionary(Dictionary &d,bool includeLegacy) const
 		d.add(ZT_NETWORKCONFIG_DICT_KEY_CREDENTIAL_TIME_MAX_DELTA,this->credentialTimeMaxDelta);
 		d.add(ZT_NETWORKCONFIG_DICT_KEY_REVISION,this->revision);
 		d.add(ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO,this->issuedTo.toString((char *)tmp));
+		d.add(ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO_IDENTITY_HASH,this->issuedToIdentityHash,ZT_IDENTITY_HASH_SIZE);
 		d.add(ZT_NETWORKCONFIG_DICT_KEY_FLAGS,this->flags);
 		d.add(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT,(uint64_t)this->multicastLimit);
 		d.add(ZT_NETWORKCONFIG_DICT_KEY_TYPE,(uint16_t)this->type);
@@ -119,6 +120,12 @@ bool NetworkConfig::fromDictionary(const Dictionary &d)
 		this->credentialTimeMaxDelta = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_CREDENTIAL_TIME_MAX_DELTA,0);
 		this->revision = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_REVISION,0);
 		this->issuedTo = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO,0);
+		const std::vector<uint8_t> *blob = &(d[ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO_IDENTITY_HASH]);
+		if (blob->size() == ZT_IDENTITY_HASH_SIZE) {
+			memcpy(this->issuedToIdentityHash,blob->data(),ZT_IDENTITY_HASH_SIZE);
+		} else {
+			memset(this->issuedToIdentityHash,0,ZT_IDENTITY_HASH_SIZE);
+		}
 		if (!this->issuedTo)
 			return false;
 		this->multicastLimit = (unsigned int)d.getUI(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT,0);
@@ -135,7 +142,7 @@ bool NetworkConfig::fromDictionary(const Dictionary &d)
 			this->flags = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_FLAGS,0);
 			this->type = (ZT_VirtualNetworkType)d.getUI(ZT_NETWORKCONFIG_DICT_KEY_TYPE,(uint64_t)ZT_NETWORK_TYPE_PRIVATE);
 
-			const std::vector<uint8_t> *blob = &(d[ZT_NETWORKCONFIG_DICT_KEY_COM]);
+			blob = &(d[ZT_NETWORKCONFIG_DICT_KEY_COM]);
 			if (!blob->empty()) {
 				if (this->com.unmarshal(blob->data(),(int)(blob->size()) < 0))
 					return false;
@@ -248,7 +255,7 @@ bool NetworkConfig::fromDictionary(const Dictionary &d)
 	return false;
 }
 
-bool NetworkConfig::addSpecialist(const Address &a,const uint64_t f)
+bool NetworkConfig::addSpecialist(const Address &a,const uint64_t f) noexcept
 {
 	const uint64_t aint = a.toInt();
 	for(unsigned int i=0;i<specialistCount;++i) {

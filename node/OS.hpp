@@ -138,13 +138,16 @@
 #endif
 
 #if __cplusplus > 199711L
+#include <atomic>
 #ifndef __CPP11__
 #define __CPP11__
 #endif
 #endif
 #ifndef __CPP11__
+/* TODO: will need some kind of very basic atomic<> implemenation if we want to compile on pre-c++11 compilers */
 #define nullptr (0)
 #define constexpr ZT_ALWAYS_INLINE
+#define noexcept throw()
 #endif
 
 #ifdef SOCKET

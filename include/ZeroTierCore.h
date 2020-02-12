@@ -1352,7 +1352,7 @@ typedef struct
 	const ZT_Identity *identity;
 
 	/**
-	 * Hash of identity public key(s)
+	 * SHA384 hash of identity public key(s)
 	 */
 	uint8_t identityHash[48];
 
@@ -1391,14 +1391,24 @@ typedef struct
 	struct sockaddr_storage bootstrap;
 
 	/**
+	 * Number of networks in which this peer is authenticated
+	 */
+	unsigned int networkCount;
+
+	/**
+	 * Network IDs for networks (array size: networkCount)
+	 */
+	uint64_t *networks;
+
+	/**
 	 * Number of paths (size of paths[])
 	 */
 	unsigned int pathCount;
 
 	/**
-	 * Known network paths to peer
+	 * Known network paths to peer (array size: pathCount)
 	 */
-	ZT_PeerPhysicalPath paths[ZT_MAX_PEER_NETWORK_PATHS];
+	ZT_PeerPhysicalPath *paths;
 } ZT_Peer;
 
 /**

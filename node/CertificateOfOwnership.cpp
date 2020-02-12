@@ -48,7 +48,7 @@ bool CertificateOfOwnership::sign(const Identity &signer)
 	return false;
 }
 
-int CertificateOfOwnership::marshal(uint8_t data[ZT_CERTIFICATEOFOWNERSHIP_MARSHAL_SIZE_MAX],bool forSign) const
+int CertificateOfOwnership::marshal(uint8_t data[ZT_CERTIFICATEOFOWNERSHIP_MARSHAL_SIZE_MAX],bool forSign) const noexcept
 {
 	int p = 0;
 	if (forSign) {
@@ -82,7 +82,7 @@ int CertificateOfOwnership::marshal(uint8_t data[ZT_CERTIFICATEOFOWNERSHIP_MARSH
 	return p;
 }
 
-int CertificateOfOwnership::unmarshal(const uint8_t *data,int len)
+int CertificateOfOwnership::unmarshal(const uint8_t *data,int len) noexcept
 {
 	if (len < 30)
 		return -1;

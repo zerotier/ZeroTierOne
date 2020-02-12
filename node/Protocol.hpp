@@ -20,6 +20,8 @@
 #include "Poly1305.hpp"
 #include "LZ4.hpp"
 #include "Buf.hpp"
+#include "Address.hpp"
+#include "Identity.hpp"
 
 /**
  * Protocol version -- incremented only for major changes
@@ -55,6 +57,7 @@
  *    + AES encryption support
  *    + NIST P-384 (type 1) identities
  *    + Ephemeral keys
+ *    + Short probe packets to reduce probe bandwidth
  */
 #define ZT_PROTO_VERSION 11
 
@@ -128,9 +131,19 @@
 #define ZT_PROTO_PACKET_FRAGMENT_INDICATOR_INDEX 13
 
 /**
+ * Index of flags field in regular packet headers
+ */
+#define ZT_PROTO_PACKET_FLAGS_INDEX 18
+
+/**
  * Minimum viable length for a fragment
  */
 #define ZT_PROTO_MIN_FRAGMENT_LENGTH 16
+
+/**
+ * Length of a probe
+ */
+#define ZT_PROTO_PROBE_LENGTH 8
 
 /**
  * Index at which packet fragment payload starts
@@ -809,6 +822,12 @@ ZT_PACKED_STRUCT(struct EXT_FRAME
 	uint8_t flags;
 });
 
+ZT_PACKED_STRUCT(struct PUSH_DIRECT_PATHS
+{
+	Header h;
+	uint16_t numPaths;
+});
+
 ZT_PACKED_STRUCT(struct MULTICAST_LIKE
 {
 	ZT_PACKED_STRUCT(struct Entry
@@ -908,14 +927,37 @@ ZT_PACKED_STRUCT(struct UNSUPPORTED_OPERATION__NETWORK_CONFIG_REQUEST
 /****************************************************************************/
 
 /**
+ * Convenience function to pull packet ID from a raw buffer
+ *
+ * @param pkt Packet to read first 8 bytes from
+ * @param packetSize Packet's actual size in bytes
+ * @return Packet ID or 0 if packet size is less than 8
+ */
+ZT_ALWAYS_INLINE uint64_t packetId(const Buf &pkt,const unsigned int packetSize) noexcept { return (packetSize >= 8) ? Utils::loadBigEndian<uint64_t>(pkt.b) : 0ULL; }
+
+/**
+ * @param Packet to extract hops from
+ * @param packetSize Packet's actual size in bytes
  * @return 3-bit hops field embedded in packet flags field
  */
-ZT_ALWAYS_INLINE uint8_t packetHops(const Header &h) { return (h.flags & 0x07U); }
+ZT_ALWAYS_INLINE uint8_t packetHops(const Buf &pkt,const unsigned int packetSize) noexcept { return (packetSize >= ZT_PROTO_PACKET_FLAGS_INDEX) ? (pkt.b[ZT_PROTO_PACKET_FLAGS_INDEX] & 0x07U) : 0; }
+
+/**
+ * @param Packet to extract cipher ID from
+ * @param packetSize Packet's actual size in bytes
+ * @return 3-bit cipher field embedded in packet flags field
+ */
+ZT_ALWAYS_INLINE uint8_t packetCipher(const Buf &pkt,const unsigned int packetSize) noexcept { return (packetSize >= ZT_PROTO_PACKET_FLAGS_INDEX) ? ((pkt.b[ZT_PROTO_PACKET_FLAGS_INDEX] >> 3U) & 0x07U) : 0; }
+
+/**
+ * @return 3-bit hops field embedded in packet flags field
+ */
+ZT_ALWAYS_INLINE uint8_t packetHops(const Header &ph) noexcept { return (ph.flags & 0x07U); }
 
 /**
  * @return 3-bit cipher field embedded in packet flags field
  */
-ZT_ALWAYS_INLINE uint8_t packetCipher(const Header &h) { return ((h.flags >> 3U) & 0x07U); }
+ZT_ALWAYS_INLINE uint8_t packetCipher(const Header &ph) noexcept { return ((ph.flags >> 3U) & 0x07U); }
 
 /**
  * Deterministically mangle a 256-bit crypto key based on packet characteristics
@@ -927,7 +969,7 @@ ZT_ALWAYS_INLINE uint8_t packetCipher(const Header &h) { return ((h.flags >> 3U)
  * @param in Input key (32 bytes)
  * @param out Output buffer (32 bytes)
  */
-ZT_ALWAYS_INLINE void salsa2012DeriveKey(const uint8_t *const in,uint8_t *const out,const Buf &packet,const unsigned int packetSize)
+ZT_ALWAYS_INLINE void salsa2012DeriveKey(const uint8_t *const in,uint8_t *const out,const Buf &packet,const unsigned int packetSize) noexcept
 {
 	// IV and source/destination addresses. Using the addresses divides the
 	// key space into two halves-- A->B and B->A (since order will change).
@@ -961,11 +1003,21 @@ ZT_ALWAYS_INLINE void salsa2012DeriveKey(const uint8_t *const in,uint8_t *const 
 }
 
 /**
+ * Create a short probe packet for probing a recipient for e.g. NAT traversal and path setup
+ *
+ * @param sender Sender identity
+ * @param recipient Recipient identity
+ * @param key Long-term shared secret key resulting from sender and recipient agreement
+ * @return Probe packed into 64-bit integer (in big-endian byte order)
+ */
+uint64_t createProbe(const Identity &sender,const Identity &recipient,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH]) noexcept;
+
+/**
  * Get a sequential non-repeating packet ID for the next packet (thread-safe)
  *
  * @return Next packet ID / cryptographic nonce
  */
-uint64_t getPacketId();
+uint64_t getPacketId() noexcept;
 
 /**
  * Encrypt and compute packet MAC
@@ -975,7 +1027,7 @@ uint64_t getPacketId();
  * @param key Key to use for encryption (not per-packet key)
  * @param cipherSuite Cipher suite to use for AEAD encryption or just MAC
  */
-void armor(Buf &pkt,unsigned int packetSize,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH],uint8_t cipherSuite);
+void armor(Buf &pkt,unsigned int packetSize,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH],uint8_t cipherSuite) noexcept;
 
 /**
  * Attempt to compress packet payload
@@ -989,7 +1041,7 @@ void armor(Buf &pkt,unsigned int packetSize,const uint8_t key[ZT_PEER_SECRET_KEY
  * @param packetSize Total size of packet in bytes (including headers)
  * @return New size of packet after compression or original size of compression wasn't helpful
  */
-unsigned int compress(SharedPtr<Buf> &pkt,unsigned int packetSize);
+unsigned int compress(SharedPtr<Buf> &pkt,unsigned int packetSize) noexcept;
 
 } // namespace Protocol
 } // namespace ZeroTier

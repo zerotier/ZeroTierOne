@@ -138,12 +138,12 @@ public:
 	/**
 	 * @return Number of entries
 	 */
-	ZT_ALWAYS_INLINE unsigned int size() const { return _t.size(); }
+	ZT_ALWAYS_INLINE unsigned int size() const noexcept { return _t.size(); }
 
 	/**
 	 * @return True if dictionary is not empty
 	 */
-	ZT_ALWAYS_INLINE bool empty() const { return _t.empty(); }
+	ZT_ALWAYS_INLINE bool empty() const noexcept { return _t.empty(); }
 
 	/**
 	 * Encode to a string in the supplied vector

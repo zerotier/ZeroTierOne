@@ -39,7 +39,7 @@ public:
 	 * @param obj Any TriviallyCopyable object
 	 */
 	template<typename T>
-	static ZT_ALWAYS_INLINE void memoryBurn(T *obj)
+	static ZT_ALWAYS_INLINE void memoryBurn(T *obj) noexcept
 	{
 		TriviallyCopyable *const tmp = obj;
 		Utils::burn(tmp,sizeof(T));
@@ -52,7 +52,7 @@ public:
 	 * @param obj Any TriviallyCopyable object
 	 */
 	template<typename T>
-	static ZT_ALWAYS_INLINE void memoryBurn(T &obj)
+	static ZT_ALWAYS_INLINE void memoryBurn(T &obj) noexcept
 	{
 		TriviallyCopyable *const tmp = &obj;
 		Utils::burn(tmp,sizeof(T));
@@ -65,7 +65,7 @@ public:
 	 * @param obj Any TriviallyCopyable object
 	 */
 	template<typename T>
-	static ZT_ALWAYS_INLINE void memoryZero(T *obj)
+	static ZT_ALWAYS_INLINE void memoryZero(T *obj) noexcept
 	{
 		TriviallyCopyable *const tmp = obj;
 		memset(tmp,0,sizeof(T));
@@ -78,7 +78,7 @@ public:
 	 * @param obj Any TriviallyCopyable object
 	 */
 	template<typename T>
-	static ZT_ALWAYS_INLINE void memoryZero(T &obj)
+	static ZT_ALWAYS_INLINE void memoryZero(T &obj) noexcept
 	{
 		TriviallyCopyable *const tmp = &obj;
 		memset(tmp,0,sizeof(T));
@@ -92,7 +92,7 @@ public:
 	 * @param src Source memory of same size or less than sizeof(dest)
 	 */
 	template<typename T>
-	static ZT_ALWAYS_INLINE void memoryCopyUnsafe(T *dest,const void *src)
+	static ZT_ALWAYS_INLINE void memoryCopyUnsafe(T *dest,const void *src) noexcept
 	{
 		TriviallyCopyable *const tmp = dest;
 		memcpy(tmp,src,sizeof(T));
@@ -106,7 +106,7 @@ public:
 	 * @param src Source memory of same size or less than sizeof(dest)
 	 */
 	template<typename T>
-	static ZT_ALWAYS_INLINE void memoryCopyUnsafe(T &dest,const void *src)
+	static ZT_ALWAYS_INLINE void memoryCopyUnsafe(T &dest,const void *src) noexcept
 	{
 		TriviallyCopyable *const tmp = &dest;
 		memcpy(tmp,src,sizeof(T));
@@ -120,7 +120,7 @@ public:
 	 * @param src Source TriviallyCopyable object
 	 */
 	template<typename T>
-	static ZT_ALWAYS_INLINE void memoryCopy(T *dest,const T *src)
+	static ZT_ALWAYS_INLINE void memoryCopy(T *dest,const T *src) noexcept
 	{
 		TriviallyCopyable *const tmp = dest;
 		memcpy(tmp,src,sizeof(T));
@@ -134,7 +134,7 @@ public:
 	 * @param src Source TriviallyCopyable object
 	 */
 	template<typename T>
-	static ZT_ALWAYS_INLINE void memoryCopy(T *dest,const T &src)
+	static ZT_ALWAYS_INLINE void memoryCopy(T *dest,const T &src) noexcept
 	{
 		TriviallyCopyable *const tmp = dest;
 		memcpy(tmp,&src,sizeof(T));
@@ -148,7 +148,7 @@ public:
 	 * @param src Source TriviallyCopyable object
 	 */
 	template<typename T>
-	static ZT_ALWAYS_INLINE void memoryCopy(T &dest,const T *src)
+	static ZT_ALWAYS_INLINE void memoryCopy(T &dest,const T *src) noexcept
 	{
 		TriviallyCopyable *const tmp = &dest;
 		memcpy(tmp,src,sizeof(T));
@@ -162,7 +162,7 @@ public:
 	 * @param src Source TriviallyCopyable object
 	 */
 	template<typename T>
-	static ZT_ALWAYS_INLINE void memoryCopy(T &dest,const T &src)
+	static ZT_ALWAYS_INLINE void memoryCopy(T &dest,const T &src) noexcept
 	{
 		TriviallyCopyable *const tmp = &dest;
 		memcpy(tmp,&src,sizeof(T));

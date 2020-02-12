@@ -14,19 +14,11 @@
 #ifndef ZT_ADDRESS_HPP
 #define ZT_ADDRESS_HPP
 
-#include <cstdio>
-#include <cstdlib>
-#include <cstdint>
-#include <cstring>
-#include <cmath>
-
-#include <string>
-#include <vector>
-#include <algorithm>
-
 #include "Constants.hpp"
 #include "Utils.hpp"
 #include "TriviallyCopyable.hpp"
+
+#define ZT_ADDRESS_STRING_SIZE_MAX 11
 
 namespace ZeroTier {
 
@@ -36,17 +28,17 @@ namespace ZeroTier {
 class Address : public TriviallyCopyable
 {
 public:
-	ZT_ALWAYS_INLINE Address() : _a(0) {}
-	explicit ZT_ALWAYS_INLINE Address(const uint8_t b[5]) : _a(((uint64_t)b[0] << 32U) | ((uint64_t)b[1] << 24U) | ((uint64_t)b[2] << 16U) | ((uint64_t)b[3] << 8U) | (uint64_t)b[4]) {}
-	explicit ZT_ALWAYS_INLINE Address(const uint64_t a) : _a(a & 0xffffffffffULL) {}
+	ZT_ALWAYS_INLINE Address() noexcept : _a(0) {}
+	explicit ZT_ALWAYS_INLINE Address(const uint8_t b[5]) noexcept : _a(((uint64_t)b[0] << 32U) | ((uint64_t)b[1] << 24U) | ((uint64_t)b[2] << 16U) | ((uint64_t)b[3] << 8U) | (uint64_t)b[4]) {}
+	explicit ZT_ALWAYS_INLINE Address(const uint64_t a) noexcept : _a(a & 0xffffffffffULL) {}
 
-	ZT_ALWAYS_INLINE Address &operator=(const uint64_t a) { _a = (a & 0xffffffffffULL); return *this; }
+	ZT_ALWAYS_INLINE Address &operator=(const uint64_t a) noexcept { _a = (a & 0xffffffffffULL); return *this; }
 
 	/**
 	 * @param bits Raw address -- 5 bytes, big-endian byte order
 	 * @param len Length of array
 	 */
-	ZT_ALWAYS_INLINE void setTo(const uint8_t b[5])
+	ZT_ALWAYS_INLINE void setTo(const uint8_t b[5]) noexcept
 	{
 		_a = ((uint64_t)b[0] << 32U) | ((uint64_t)b[1] << 24U) | ((uint64_t)b[2] << 16U) | ((uint64_t)b[3] << 8U) | (uint64_t)b[4];
 	}
@@ -55,7 +47,7 @@ public:
 	 * @param bits Buffer to hold 5-byte address in big-endian byte order
 	 * @param len Length of array
 	 */
-	ZT_ALWAYS_INLINE void copyTo(uint8_t b[5]) const
+	ZT_ALWAYS_INLINE void copyTo(uint8_t b[5]) const noexcept
 	{
 		b[0] = (uint8_t)(_a >> 32U);
 		b[1] = (uint8_t)(_a >> 24U);
@@ -67,17 +59,22 @@ public:
 	/**
 	 * @return Integer containing address (0 to 2^40)
 	 */
-	ZT_ALWAYS_INLINE uint64_t toInt() const { return _a; }
+	ZT_ALWAYS_INLINE uint64_t toInt() const noexcept { return _a; }
+
+	/**
+	 * Set address to zero/NIL
+	 */
+	ZT_ALWAYS_INLINE void zero() noexcept { _a = 0; }
 
 	/**
 	 * @return Hash code for use with Hashtable
 	 */
-	ZT_ALWAYS_INLINE unsigned long hashCode() const { return (unsigned long)_a; }
+	ZT_ALWAYS_INLINE unsigned long hashCode() const noexcept { return (unsigned long)_a; }
 
 	/**
 	 * @return Hexadecimal string
 	 */
-	ZT_ALWAYS_INLINE char *toString(char buf[11]) const { return Utils::hex10(_a,buf); }
+	ZT_ALWAYS_INLINE char *toString(char buf[ZT_ADDRESS_STRING_SIZE_MAX]) const noexcept { return Utils::hex10(_a,buf); }
 
 	/**
 	 * Check if this address is reserved
@@ -88,31 +85,29 @@ public:
 	 *
 	 * @return True if address is reserved and may not be used
 	 */
-	ZT_ALWAYS_INLINE bool isReserved() const { return ((!_a)||((_a >> 32U) == ZT_ADDRESS_RESERVED_PREFIX)); }
+	ZT_ALWAYS_INLINE bool isReserved() const noexcept { return ((!_a)||((_a >> 32U) == ZT_ADDRESS_RESERVED_PREFIX)); }
 
 	/**
 	 * @param i Value from 0 to 4 (inclusive)
 	 * @return Byte at said position (address interpreted in big-endian order)
 	 */
-	ZT_ALWAYS_INLINE uint8_t operator[](unsigned int i) const { return (uint8_t)(_a >> (32 - (i * 8))); }
+	ZT_ALWAYS_INLINE uint8_t operator[](unsigned int i) const noexcept { return (uint8_t)(_a >> (32 - (i * 8))); }
 
-	ZT_ALWAYS_INLINE operator bool() const { return (_a != 0); }
+	ZT_ALWAYS_INLINE operator bool() const noexcept { return (_a != 0); }
 
-	ZT_ALWAYS_INLINE void zero() { _a = 0; }
+	ZT_ALWAYS_INLINE bool operator==(const uint64_t &a) const noexcept { return (_a == (a & 0xffffffffffULL)); }
+	ZT_ALWAYS_INLINE bool operator!=(const uint64_t &a) const noexcept { return (_a != (a & 0xffffffffffULL)); }
+	ZT_ALWAYS_INLINE bool operator>(const uint64_t &a) const noexcept { return (_a > (a & 0xffffffffffULL)); }
+	ZT_ALWAYS_INLINE bool operator<(const uint64_t &a) const noexcept { return (_a < (a & 0xffffffffffULL)); }
+	ZT_ALWAYS_INLINE bool operator>=(const uint64_t &a) const noexcept { return (_a >= (a & 0xffffffffffULL)); }
+	ZT_ALWAYS_INLINE bool operator<=(const uint64_t &a) const noexcept { return (_a <= (a & 0xffffffffffULL)); }
 
-	ZT_ALWAYS_INLINE bool operator==(const uint64_t &a) const { return (_a == (a & 0xffffffffffULL)); }
-	ZT_ALWAYS_INLINE bool operator!=(const uint64_t &a) const { return (_a != (a & 0xffffffffffULL)); }
-	ZT_ALWAYS_INLINE bool operator>(const uint64_t &a) const { return (_a > (a & 0xffffffffffULL)); }
-	ZT_ALWAYS_INLINE bool operator<(const uint64_t &a) const { return (_a < (a & 0xffffffffffULL)); }
-	ZT_ALWAYS_INLINE bool operator>=(const uint64_t &a) const { return (_a >= (a & 0xffffffffffULL)); }
-	ZT_ALWAYS_INLINE bool operator<=(const uint64_t &a) const { return (_a <= (a & 0xffffffffffULL)); }
-
-	ZT_ALWAYS_INLINE bool operator==(const Address &a) const { return (_a == a._a); }
-	ZT_ALWAYS_INLINE bool operator!=(const Address &a) const { return (_a != a._a); }
-	ZT_ALWAYS_INLINE bool operator>(const Address &a) const { return (_a > a._a); }
-	ZT_ALWAYS_INLINE bool operator<(const Address &a) const { return (_a < a._a); }
-	ZT_ALWAYS_INLINE bool operator>=(const Address &a) const { return (_a >= a._a); }
-	ZT_ALWAYS_INLINE bool operator<=(const Address &a) const { return (_a <= a._a); }
+	ZT_ALWAYS_INLINE bool operator==(const Address &a) const noexcept { return (_a == a._a); }
+	ZT_ALWAYS_INLINE bool operator!=(const Address &a) const noexcept { return (_a != a._a); }
+	ZT_ALWAYS_INLINE bool operator>(const Address &a) const noexcept { return (_a > a._a); }
+	ZT_ALWAYS_INLINE bool operator<(const Address &a) const noexcept { return (_a < a._a); }
+	ZT_ALWAYS_INLINE bool operator>=(const Address &a) const noexcept { return (_a >= a._a); }
+	ZT_ALWAYS_INLINE bool operator<=(const Address &a) const noexcept { return (_a <= a._a); }
 
 #if 0
 	/**

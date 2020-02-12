@@ -62,7 +62,17 @@ uintptr_t _checkSizes()
 // Make compiler compile and "run" _checkSizes()
 volatile uintptr_t _checkSizesIMeanIt = _checkSizes();
 
-uint64_t getPacketId()
+uint64_t createProbe(const Identity &sender,const Identity &recipient,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH]) noexcept
+{
+	uint8_t tmp[ZT_IDENTITY_HASH_SIZE + ZT_IDENTITY_HASH_SIZE];
+	memcpy(tmp,sender.hash(),ZT_IDENTITY_HASH_SIZE);
+	memcpy(tmp + ZT_IDENTITY_HASH_SIZE,recipient.hash(),ZT_IDENTITY_HASH_SIZE);
+	uint64_t hash[6];
+	SHA384(hash,tmp,sizeof(tmp),key,ZT_PEER_SECRET_KEY_LENGTH);
+	return hash[0];
+}
+
+uint64_t getPacketId() noexcept
 {
 #ifdef ZT_PACKET_USE_ATOMIC_INTRINSICS
 	return __sync_add_and_fetch(&_packetIdCtr,1ULL);
@@ -71,7 +81,7 @@ uint64_t getPacketId()
 #endif
 }
 
-void armor(Buf &pkt,unsigned int packetSize,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH],uint8_t cipherSuite)
+void armor(Buf &pkt,unsigned int packetSize,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH],uint8_t cipherSuite) noexcept
 {
 	Protocol::Header &ph = pkt.as<Protocol::Header>();
 	ph.flags = (ph.flags & 0xc7U) | ((cipherSuite << 3U) & 0x38U); // flags: FFCCCHHH where CCC is cipher
@@ -113,7 +123,7 @@ void armor(Buf &pkt,unsigned int packetSize,const uint8_t key[ZT_PEER_SECRET_KEY
 	}
 }
 
-unsigned int compress(SharedPtr<Buf> &pkt,unsigned int packetSize)
+unsigned int compress(SharedPtr<Buf> &pkt,unsigned int packetSize) noexcept
 {
 	if (packetSize <= 128)
 		return packetSize;

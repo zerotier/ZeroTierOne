@@ -82,14 +82,14 @@
 #define ZT_PEER_SECRET_KEY_LENGTH 32
 
 /**
- * Minimum delay between timer task checks to prevent thrashing
+ * Maximum delay between timer task checks
  */
-#define ZT_MIN_TIMER_TASK_INTERVAL 500
+#define ZT_MAX_TIMER_TASK_INTERVAL 1000
 
 /**
- * Maximum delay between timer task checks (should be a fraction of smallest housekeeping interval)
+ * Interval between steps or stages in NAT-t attempts
  */
-#define ZT_MAX_TIMER_TASK_INTERVAL 5000
+#define ZT_NAT_TRAVERSAL_INTERVAL 200
 
 /**
  * How often most internal cleanup and housekeeping tasks are performed

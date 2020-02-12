@@ -64,7 +64,7 @@ extern const char HEXCHARS[16];
  * @param len Length of strings
  * @return True if strings are equal
  */
-bool secureEq(const void *a,const void *b,unsigned int len);
+bool secureEq(const void *a,const void *b,unsigned int len) noexcept;
 
 /**
  * Be absolutely sure to zero memory
@@ -81,7 +81,7 @@ void burn(void *ptr,unsigned int len);
  * @param s Buffer, at least 24 bytes in size
  * @return String containing 'n' in base 10 form
  */
-char *decimal(unsigned long n,char s[24]);
+char *decimal(unsigned long n,char s[24]) noexcept;
 
 /**
  * Convert an unsigned integer into hex
@@ -90,10 +90,10 @@ char *decimal(unsigned long n,char s[24]);
  * @param s Buffer to receive hex, must be at least (2*sizeof(i))+1 in size or overflow will occur.
  * @return Pointer to s containing hex string with trailing zero byte
  */
-char *hex(uint8_t i,char s[3]);
-char *hex(uint16_t i,char s[5]);
-char *hex(uint32_t i,char s[9]);
-char *hex(uint64_t i,char s[17]);
+char *hex(uint8_t i,char s[3]) noexcept;
+char *hex(uint16_t i,char s[5]) noexcept;
+char *hex(uint32_t i,char s[9]) noexcept;
+char *hex(uint64_t i,char s[17]) noexcept;
 
 /**
  * Decode an unsigned integer in hex format
@@ -101,7 +101,7 @@ char *hex(uint64_t i,char s[17]);
  * @param s String to decode, non-hex chars are ignored
  * @return Unsigned integer
  */
-uint64_t unhex(const char *s);
+uint64_t unhex(const char *s) noexcept;
 
 /**
  * Convert the least significant 40 bits of a uint64_t to hex
@@ -110,7 +110,7 @@ uint64_t unhex(const char *s);
  * @param s Buffer of size [11] to receive 10 hex characters
  * @return Pointer to buffer
  */
-char *hex10(uint64_t i,char s[11]);
+char *hex10(uint64_t i,char s[11]) noexcept;
 
 /**
  * Convert a byte array into hex
@@ -120,7 +120,7 @@ char *hex10(uint64_t i,char s[11]);
  * @param s String buffer, must be at least (l*2)+1 in size or overflow will occur
  * @return Pointer to filled string buffer
  */
-char *hex(const void *d,unsigned int l,char *s);
+char *hex(const void *d,unsigned int l,char *s) noexcept;
 
 /**
  * Decode a hex string
@@ -131,7 +131,7 @@ char *hex(const void *d,unsigned int l,char *s);
  * @param buflen Length of output buffer
  * @return Number of written bytes
  */
-unsigned int unhex(const char *h,unsigned int hlen,void *buf,unsigned int buflen);
+unsigned int unhex(const char *h,unsigned int hlen,void *buf,unsigned int buflen) noexcept;
 
 /**
  * Generate secure random bytes
@@ -142,12 +142,12 @@ unsigned int unhex(const char *h,unsigned int hlen,void *buf,unsigned int buflen
  * @param buf Buffer to fill
  * @param bytes Number of random bytes to generate
  */
-void getSecureRandom(void *buf,unsigned int bytes);
+void getSecureRandom(void *buf,unsigned int bytes) noexcept;
 
 /**
  * @return Secure random 64-bit integer
  */
-uint64_t getSecureRandomU64();
+uint64_t getSecureRandomU64() noexcept;
 
 /**
  * Encode string to base32
@@ -158,7 +158,7 @@ uint64_t getSecureRandomU64();
  * @param bufSize Size of result buffer
  * @return Number of bytes written
  */
-int b32e(const uint8_t *data,int length,char *result,int bufSize);
+int b32e(const uint8_t *data,int length,char *result,int bufSize) noexcept;
 
 /**
  * Decode base32 string
@@ -168,12 +168,12 @@ int b32e(const uint8_t *data,int length,char *result,int bufSize);
  * @param bufSize Size of result buffer
  * @return Number of bytes written or -1 on error
  */
-int b32d(const char *encoded, uint8_t *result, int bufSize);
+int b32d(const char *encoded, uint8_t *result, int bufSize) noexcept;
 
 /**
  * Get a non-cryptographic random integer
  */
-uint64_t random();
+uint64_t random() noexcept;
 
 /**
  * Perform a safe C string copy, ALWAYS null-terminating the result
@@ -186,7 +186,7 @@ uint64_t random();
  * @param src Source string (if NULL, dest will receive a zero-length string and true is returned)
  * @return True on success, false on overflow (buffer will still be 0-terminated)
  */
-bool scopy(char *dest,unsigned int len,const char *src);
+bool scopy(char *dest,unsigned int len,const char *src) noexcept;
 
 /**
  * Mix bits in a 64-bit integer
@@ -196,7 +196,7 @@ bool scopy(char *dest,unsigned int len,const char *src);
  * @param x Integer to mix
  * @return Hashed value
  */
-static ZT_ALWAYS_INLINE uint64_t hash64(uint64_t x)
+static ZT_ALWAYS_INLINE uint64_t hash64(uint64_t x) noexcept
 {
 	x ^= x >> 30U;
 	x *= 0xbf58476d1ce4e5b9ULL;
@@ -211,7 +211,7 @@ static ZT_ALWAYS_INLINE uint64_t hash64(uint64_t x)
  * @param l Length of buffer
  * @return True if buffer is all zero
  */
-static ZT_ALWAYS_INLINE bool allZero(const void *const b,const unsigned int l)
+static ZT_ALWAYS_INLINE bool allZero(const void *const b,const unsigned int l) noexcept
 {
 	const uint8_t *x = reinterpret_cast<const uint8_t *>(b);
 	const uint8_t *const y = x + l;
@@ -231,7 +231,7 @@ static ZT_ALWAYS_INLINE bool allZero(const void *const b,const unsigned int l)
  * @param saveptr Pointer to pointer where function can save state
  * @return Next token or NULL if none
  */
-static ZT_ALWAYS_INLINE char *stok(char *str,const char *delim,char **saveptr)
+static ZT_ALWAYS_INLINE char *stok(char *str,const char *delim,char **saveptr) noexcept
 {
 #ifdef __WINDOWS__
 	return strtok_s(str,delim,saveptr);
@@ -240,9 +240,9 @@ static ZT_ALWAYS_INLINE char *stok(char *str,const char *delim,char **saveptr)
 #endif
 }
 
-static ZT_ALWAYS_INLINE unsigned int strToUInt(const char *s) { return (unsigned int)strtoul(s,nullptr,10); }
+static ZT_ALWAYS_INLINE unsigned int strToUInt(const char *s) noexcept { return (unsigned int)strtoul(s,nullptr,10); }
 
-static ZT_ALWAYS_INLINE unsigned long long strToU64(const char *s)
+static ZT_ALWAYS_INLINE unsigned long long strToU64(const char *s) noexcept
 {
 #ifdef __WINDOWS__
 	return (unsigned long long)_strtoui64(s,(char **)0,10);
@@ -251,7 +251,7 @@ static ZT_ALWAYS_INLINE unsigned long long strToU64(const char *s)
 #endif
 }
 
-static ZT_ALWAYS_INLINE unsigned long long hexStrToU64(const char *s)
+static ZT_ALWAYS_INLINE unsigned long long hexStrToU64(const char *s) noexcept
 {
 #ifdef __WINDOWS__
 	return (unsigned long long)_strtoui64(s,nullptr,16);
@@ -267,7 +267,7 @@ static ZT_ALWAYS_INLINE unsigned long long hexStrToU64(const char *s)
  * @param len Length in bytes
  * @return Non-cryptographic hash suitable for use in a hash table
  */
-static ZT_ALWAYS_INLINE unsigned long hashString(const void *restrict key,const unsigned int len)
+static ZT_ALWAYS_INLINE unsigned long hashString(const void *restrict key,const unsigned int len) noexcept
 {
 	const uint8_t *p = reinterpret_cast<const uint8_t *>(key);
 	unsigned long h = 0;
@@ -283,13 +283,13 @@ static ZT_ALWAYS_INLINE unsigned long hashString(const void *restrict key,const 
 }
 
 #ifdef __GNUC__
-static ZT_ALWAYS_INLINE unsigned int countBits(const uint8_t v) { return (unsigned int)__builtin_popcount((unsigned int)v); }
-static ZT_ALWAYS_INLINE unsigned int countBits(const uint16_t v) { return (unsigned int)__builtin_popcount((unsigned int)v); }
-static ZT_ALWAYS_INLINE unsigned int countBits(const uint32_t v) { return (unsigned int)__builtin_popcountl((unsigned long)v); }
-static ZT_ALWAYS_INLINE unsigned int countBits(const uint64_t v) { return (unsigned int)__builtin_popcountll((unsigned long long)v); }
+static ZT_ALWAYS_INLINE unsigned int countBits(const uint8_t v) noexcept { return (unsigned int)__builtin_popcount((unsigned int)v); }
+static ZT_ALWAYS_INLINE unsigned int countBits(const uint16_t v) noexcept { return (unsigned int)__builtin_popcount((unsigned int)v); }
+static ZT_ALWAYS_INLINE unsigned int countBits(const uint32_t v) noexcept { return (unsigned int)__builtin_popcountl((unsigned long)v); }
+static ZT_ALWAYS_INLINE unsigned int countBits(const uint64_t v)  noexcept{ return (unsigned int)__builtin_popcountll((unsigned long long)v); }
 #else
 template<typename T>
-static ZT_ALWAYS_INLINE unsigned int countBits(T v)
+static ZT_ALWAYS_INLINE unsigned int countBits(T v) noexcept
 {
 	v = v - ((v >> 1) & (T)~(T)0/3);
 	v = (v & (T)~(T)0/15*3) + ((v >> 2) & (T)~(T)0/15*3);
@@ -299,9 +299,9 @@ static ZT_ALWAYS_INLINE unsigned int countBits(T v)
 #endif
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-static ZT_ALWAYS_INLINE uint8_t hton(uint8_t n) { return n; }
-static ZT_ALWAYS_INLINE int8_t hton(int8_t n) { return n; }
-static ZT_ALWAYS_INLINE uint16_t hton(uint16_t n)
+static ZT_ALWAYS_INLINE uint8_t hton(uint8_t n) noexcept { return n; }
+static ZT_ALWAYS_INLINE int8_t hton(int8_t n) noexcept { return n; }
+static ZT_ALWAYS_INLINE uint16_t hton(uint16_t n) noexcept
 {
 #if defined(__GNUC__)
 #if defined(__FreeBSD__)
@@ -313,8 +313,8 @@ static ZT_ALWAYS_INLINE uint16_t hton(uint16_t n)
 	return htons(n);
 #endif
 }
-static ZT_ALWAYS_INLINE int16_t hton(int16_t n) { return (int16_t)Utils::hton((uint16_t)n); }
-static ZT_ALWAYS_INLINE uint32_t hton(uint32_t n)
+static ZT_ALWAYS_INLINE int16_t hton(int16_t n) noexcept { return (int16_t)Utils::hton((uint16_t)n); }
+static ZT_ALWAYS_INLINE uint32_t hton(uint32_t n) noexcept
 {
 #if defined(__GNUC__)
 #if defined(__FreeBSD__)
@@ -326,8 +326,8 @@ static ZT_ALWAYS_INLINE uint32_t hton(uint32_t n)
 	return htonl(n);
 #endif
 }
-static ZT_ALWAYS_INLINE int32_t hton(int32_t n) { return (int32_t)Utils::hton((uint32_t)n); }
-static ZT_ALWAYS_INLINE uint64_t hton(uint64_t n)
+static ZT_ALWAYS_INLINE int32_t hton(int32_t n) noexcept { return (int32_t)Utils::hton((uint32_t)n); }
+static ZT_ALWAYS_INLINE uint64_t hton(uint64_t n) noexcept
 {
 #if defined(__GNUC__)
 #if defined(__FreeBSD__)
@@ -348,16 +348,16 @@ static ZT_ALWAYS_INLINE uint64_t hton(uint64_t n)
 	);
 #endif
 }
-static ZT_ALWAYS_INLINE int64_t hton(int64_t n) { return (int64_t)hton((uint64_t)n); }
+static ZT_ALWAYS_INLINE int64_t hton(int64_t n) noexcept { return (int64_t)hton((uint64_t)n); }
 #else
 template<typename T>
-static ZT_ALWAYS_INLINE T hton(T n) { return n; }
+static ZT_ALWAYS_INLINE T hton(T n) noexcept { return n; }
 #endif
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-static ZT_ALWAYS_INLINE uint8_t ntoh(uint8_t n) { return n; }
-static ZT_ALWAYS_INLINE int8_t ntoh(int8_t n) { return n; }
-static ZT_ALWAYS_INLINE uint16_t ntoh(uint16_t n)
+static ZT_ALWAYS_INLINE uint8_t ntoh(uint8_t n) noexcept { return n; }
+static ZT_ALWAYS_INLINE int8_t ntoh(int8_t n) noexcept { return n; }
+static ZT_ALWAYS_INLINE uint16_t ntoh(uint16_t n) noexcept
 {
 #if defined(__GNUC__)
 #if defined(__FreeBSD__)
@@ -369,8 +369,8 @@ static ZT_ALWAYS_INLINE uint16_t ntoh(uint16_t n)
 	return htons(n);
 #endif
 }
-static ZT_ALWAYS_INLINE int16_t ntoh(int16_t n) { return (int16_t)Utils::ntoh((uint16_t)n); }
-static ZT_ALWAYS_INLINE uint32_t ntoh(uint32_t n)
+static ZT_ALWAYS_INLINE int16_t ntoh(int16_t n) noexcept { return (int16_t)Utils::ntoh((uint16_t)n); }
+static ZT_ALWAYS_INLINE uint32_t ntoh(uint32_t n) noexcept
 {
 #if defined(__GNUC__)
 #if defined(__FreeBSD__)
@@ -382,8 +382,8 @@ static ZT_ALWAYS_INLINE uint32_t ntoh(uint32_t n)
 	return ntohl(n);
 #endif
 }
-static ZT_ALWAYS_INLINE int32_t ntoh(int32_t n) { return (int32_t)Utils::ntoh((uint32_t)n); }
-static ZT_ALWAYS_INLINE uint64_t ntoh(uint64_t n)
+static ZT_ALWAYS_INLINE int32_t ntoh(int32_t n) noexcept { return (int32_t)Utils::ntoh((uint32_t)n); }
+static ZT_ALWAYS_INLINE uint64_t ntoh(uint64_t n) noexcept
 {
 #if defined(__GNUC__)
 #if defined(__FreeBSD__)
@@ -404,14 +404,14 @@ static ZT_ALWAYS_INLINE uint64_t ntoh(uint64_t n)
 	);
 #endif
 }
-static ZT_ALWAYS_INLINE int64_t ntoh(int64_t n) { return (int64_t)ntoh((uint64_t)n); }
+static ZT_ALWAYS_INLINE int64_t ntoh(int64_t n) noexcept { return (int64_t)ntoh((uint64_t)n); }
 #else
 template<typename T>
-static ZT_ALWAYS_INLINE T ntoh(T n) { return n; }
+static ZT_ALWAYS_INLINE T ntoh(T n) noexcept { return n; }
 #endif
 
 template<typename I>
-static ZT_ALWAYS_INLINE I loadBigEndian(const void *const p)
+static ZT_ALWAYS_INLINE I loadBigEndian(const void *const p) noexcept
 {
 #ifdef ZT_NO_UNALIGNED_ACCESS
 	I x = (I)0;
@@ -429,7 +429,20 @@ static ZT_ALWAYS_INLINE I loadBigEndian(const void *const p)
 }
 
 template<typename I>
-static ZT_ALWAYS_INLINE void storeBigEndian(void *const p,const I i)
+static ZT_ALWAYS_INLINE I loadAsIsEndian(const void *const p) noexcept
+{
+#ifdef ZT_NO_UNALIGNED_ACCESS
+	I x = (I)0;
+	for(unsigned int k=0;k<sizeof(I);++k)
+		reinterpret_cast<uint8_t *>(&x)[k] = reinterpret_cast<const uint8_t *>(p)[k];
+	return x;
+#else
+	return *reinterpret_cast<const I *>(p);
+#endif
+}
+
+template<typename I>
+static ZT_ALWAYS_INLINE void storeBigEndian(void *const p,const I i) noexcept
 {
 #ifdef ZT_NO_UNALIGNED_ACCESS
 	for(unsigned int k=0;k<sizeof(I);++k) {

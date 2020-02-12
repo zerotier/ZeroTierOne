@@ -60,9 +60,10 @@ public:
 	 *
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param zta ZeroTier address of peer
+	 * @param loadFromCached If false do not load from cache if not in memory (default: true)
 	 * @return Peer or NULL if not found
 	 */
-	ZT_ALWAYS_INLINE SharedPtr<Peer> get(void *tPtr,const Address &zta)
+	ZT_ALWAYS_INLINE SharedPtr<Peer> peer(void *tPtr,const Address &zta,const bool loadFromCached = true)
 	{
 		{
 			RWMutex::RLock _l(_peers_l);
@@ -72,15 +73,32 @@ public:
 		}
 
 		SharedPtr<Peer> p;
-		_loadCached(tPtr,zta,p);
-		if (p) {
-			RWMutex::Lock _l(_peers_l);
-			SharedPtr<Peer> &hp = _peers[zta];
-			if (!hp)
-				hp = p;
+		if (loadFromCached) {
+			_loadCached(tPtr,zta,p);
+			if (p) {
+				RWMutex::Lock _l(_peers_l);
+				SharedPtr<Peer> &hp = _peers[zta];
+				if (!hp)
+					hp = p;
+			}
 		}
 
 		return p;
+	}
+
+	/**
+	 * Get a peer by its incoming short probe packet payload
+	 *
+	 * @param probe Short probe payload (in big-endian byte order)
+	 * @return Peer or NULL if no peer is currently in memory matching this probe (cache is not checked in this case)
+	 */
+	ZT_ALWAYS_INLINE SharedPtr<Peer> peerByProbe(const uint64_t probe)
+	{
+		RWMutex::RLock _l(_peers_l);
+		const SharedPtr<Peer> *const ap = _peersByIncomingProbe.get(probe);
+		if (ap)
+			return *ap;
+		return SharedPtr<Peer>();
 	}
 
 	/**
@@ -90,7 +108,7 @@ public:
 	 * @param r Remote address
 	 * @return Pointer to canonicalized Path object or NULL on error
 	 */
-	ZT_ALWAYS_INLINE SharedPtr<Path> getPath(const int64_t l,const InetAddress &r)
+	ZT_ALWAYS_INLINE SharedPtr<Path> path(const int64_t l,const InetAddress &r)
 	{
 		const uint64_t k = _pathHash(l,r);
 
@@ -174,25 +192,20 @@ public:
 	{
 		RWMutex::RLock l(_peers_l);
 
-		const unsigned long rootPeerCnt = _rootPeers.size();
-		uintptr_t *const rootPeerPtrs = (uintptr_t *)malloc(sizeof(uintptr_t) * rootPeerCnt);
-		if (!rootPeerPtrs)
-			throw std::bad_alloc();
-		for(unsigned long i=0;i<rootPeerCnt;++i)
-			rootPeerPtrs[i] = (uintptr_t)_rootPeers[i].ptr();
-		std::sort(rootPeerPtrs,rootPeerPtrs + rootPeerCnt);
-		uintptr_t *const rootPeerPtrsEnd = rootPeerPtrs + rootPeerCnt;
+		std::vector<uintptr_t> rootPeerPtrs;
+		rootPeerPtrs.reserve(_rootPeers.size());
+		for(std::vector< SharedPtr<Peer> >::const_iterator rp(_rootPeers.begin());rp!=_rootPeers.end();++rp)
+			rootPeerPtrs.push_back((uintptr_t)rp->ptr());
+		std::sort(rootPeerPtrs.begin(),rootPeerPtrs.end());
 
 		try {
 			Hashtable< Address,SharedPtr<Peer> >::Iterator i(const_cast<Topology *>(this)->_peers);
 			Address *a = nullptr;
 			SharedPtr<Peer> *p = nullptr;
 			while (i.next(a,p)) {
-				f(*((const SharedPtr<Peer> *)p),std::binary_search(rootPeerPtrs,rootPeerPtrsEnd,(uintptr_t)p->ptr()));
+				f(*((const SharedPtr<Peer> *)p),std::binary_search(rootPeerPtrs.begin(),rootPeerPtrs.end(),(uintptr_t)p->ptr()));
 			}
 		} catch ( ... ) {} // should not throw
-
-		free((void *)rootPeerPtrs);
 	}
 
 	/**
@@ -345,6 +358,7 @@ private:
 	unsigned int _numConfiguredPhysicalPaths;
 
 	Hashtable< Address,SharedPtr<Peer> > _peers;
+	Hashtable< uint64_t,SharedPtr<Peer> > _peersByIncomingProbe;
 	Hashtable< uint64_t,SharedPtr<Path> > _paths;
 	std::set< Identity > _roots; // locked by _peers_l
 	std::vector< SharedPtr<Peer> > _rootPeers; // locked by _peers_l

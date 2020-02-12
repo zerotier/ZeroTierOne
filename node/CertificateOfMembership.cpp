@@ -49,6 +49,42 @@ void CertificateOfMembership::setQualifier(uint64_t id,uint64_t value,uint64_t m
 	}
 }
 
+bool CertificateOfMembership::agreesWith(const CertificateOfMembership &other) const
+{
+	unsigned int myidx = 0;
+	unsigned int otheridx = 0;
+
+	if ((_qualifierCount == 0)||(other._qualifierCount == 0))
+		return false;
+
+	while (myidx < _qualifierCount) {
+		// Fail if we're at the end of other, since this means the field is
+		// missing.
+		if (otheridx >= other._qualifierCount)
+			return false;
+
+		// Seek to corresponding tuple in other, ignoring tuples that
+		// we may not have. If we run off the end of other, the tuple is
+		// missing. This works because tuples are sorted by ID.
+		while (other._qualifiers[otheridx].id != _qualifiers[myidx].id) {
+			++otheridx;
+			if (otheridx >= other._qualifierCount)
+				return false;
+		}
+
+		// Compare to determine if the absolute value of the difference
+		// between these two parameters is within our maxDelta.
+		const uint64_t a = _qualifiers[myidx].value;
+		const uint64_t b = other._qualifiers[myidx].value;
+		if (((a >= b) ? (a - b) : (b - a)) > _qualifiers[myidx].maxDelta)
+			return false;
+
+		++myidx;
+	}
+
+	return true;
+}
+
 bool CertificateOfMembership::sign(const Identity &with)
 {
 	uint64_t buf[ZT_NETWORK_COM_MAX_QUALIFIERS * 3];
@@ -69,7 +105,7 @@ bool CertificateOfMembership::sign(const Identity &with)
 	}
 }
 
-int CertificateOfMembership::marshal(uint8_t data[ZT_CERTIFICATEOFMEMBERSHIP_MARSHAL_SIZE_MAX]) const
+int CertificateOfMembership::marshal(uint8_t data[ZT_CERTIFICATEOFMEMBERSHIP_MARSHAL_SIZE_MAX]) const noexcept
 {
 	data[0] = 1;
 	Utils::storeBigEndian<uint16_t>(data + 1,(uint16_t)_qualifierCount);
@@ -90,7 +126,7 @@ int CertificateOfMembership::marshal(uint8_t data[ZT_CERTIFICATEOFMEMBERSHIP_MAR
 	return p;
 }
 
-int CertificateOfMembership::unmarshal(const uint8_t *data,int len)
+int CertificateOfMembership::unmarshal(const uint8_t *data,int len) noexcept
 {
 	if ((len < 3)||(data[0] != 1))
 		return -1;

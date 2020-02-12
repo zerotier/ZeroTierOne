@@ -467,7 +467,8 @@ poly1305_finish(poly1305_context *ctx, unsigned char mac[16]) {
 
 #endif // MSC/GCC or not
 
-static inline void poly1305_update(poly1305_context *ctx, const unsigned char *m, size_t bytes) {
+static ZT_ALWAYS_INLINE void poly1305_update(poly1305_context *ctx, const unsigned char *m, size_t bytes) noexcept
+{
   poly1305_state_internal_t *st = (poly1305_state_internal_t *)ctx;
   size_t i;
 
@@ -505,7 +506,7 @@ static inline void poly1305_update(poly1305_context *ctx, const unsigned char *m
 
 } // anonymous namespace
 
-void poly1305(void *auth,const void *data,unsigned int len,const void *key)
+void poly1305(void *auth,const void *data,unsigned int len,const void *key) noexcept
 {
   poly1305_context ctx;
   poly1305_init(&ctx,reinterpret_cast<const unsigned char *>(key));

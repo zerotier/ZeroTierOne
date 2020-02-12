@@ -52,7 +52,7 @@ static ZT_ALWAYS_INLINE Credential::VerifyResult _credVerify(const RuntimeEnviro
 	if ((!signedBy)||(signedBy != Network::controllerFor(networkId)))
 		return Credential::VERIFY_BAD_SIGNATURE;
 
-	const SharedPtr<Peer> peer(RR->topology->get(tPtr,signedBy));
+	const SharedPtr<Peer> peer(RR->topology->peer(tPtr,signedBy));
 	if (!peer) {
 		RR->sw->requestWhois(tPtr,RR->node->now(),signedBy);
 		return Credential::VERIFY_NEED_IDENTITY;
@@ -77,7 +77,7 @@ Credential::VerifyResult Credential::_verify(const RuntimeEnvironment *const RR,
 	if ((!credential._signedBy)||(credential._signedBy != Network::controllerFor(credential.networkId()))||(credential._qualifierCount > ZT_NETWORK_COM_MAX_QUALIFIERS))
 		return Credential::VERIFY_BAD_SIGNATURE;
 
-	const SharedPtr<Peer> peer(RR->topology->get(tPtr,credential._signedBy));
+	const SharedPtr<Peer> peer(RR->topology->peer(tPtr,credential._signedBy));
 	if (!peer) {
 		RR->sw->requestWhois(tPtr,RR->node->now(),credential._signedBy);
 		return Credential::VERIFY_NEED_IDENTITY;
@@ -118,7 +118,7 @@ Credential::VerifyResult Credential::_verify(const RuntimeEnvironment *RR,void *
 					return Credential::VERIFY_BAD_SIGNATURE; // otherwise if we have another entry it must be from the previous holder in the chain
 			}
 
-			const SharedPtr<Peer> peer(RR->topology->get(tPtr,credential._custody[c].from));
+			const SharedPtr<Peer> peer(RR->topology->peer(tPtr,credential._custody[c].from));
 			if (peer) {
 				if (!peer->identity().verify(tmp,(unsigned int)l,credential._custody[c].signature,credential._custody[c].signatureLength))
 					return Credential::VERIFY_BAD_SIGNATURE;

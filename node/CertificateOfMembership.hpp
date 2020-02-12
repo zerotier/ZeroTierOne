@@ -70,7 +70,7 @@ class CertificateOfMembership : public Credential
 	friend class Credential;
 
 public:
-	static ZT_ALWAYS_INLINE ZT_CredentialType credentialType() { return ZT_CREDENTIAL_TYPE_COM; }
+	static constexpr ZT_CredentialType credentialType() noexcept { return ZT_CREDENTIAL_TYPE_COM; }
 
 	/**
 	 * Reserved qualifier IDs
@@ -102,7 +102,7 @@ public:
 	/**
 	 * Create an empty certificate of membership
 	 */
-	ZT_ALWAYS_INLINE CertificateOfMembership() { memoryZero(this); }
+	ZT_ALWAYS_INLINE CertificateOfMembership() noexcept { memoryZero(this); }
 
 	/**
 	 * Create from required fields common to all networks
@@ -117,17 +117,17 @@ public:
 	/**
 	 * @return True if there's something here
 	 */
-	ZT_ALWAYS_INLINE operator bool() const { return (_qualifierCount != 0); }
+	ZT_ALWAYS_INLINE operator bool() const noexcept { return (_qualifierCount != 0); }
 
 	/**
 	 * @return Credential ID, always 0 for COMs
 	 */
-	ZT_ALWAYS_INLINE uint32_t id() const { return 0; }
+	ZT_ALWAYS_INLINE uint32_t id() const noexcept { return 0; }
 
 	/**
 	 * @return Timestamp for this cert and maximum delta for timestamp
 	 */
-	ZT_ALWAYS_INLINE int64_t timestamp() const
+	ZT_ALWAYS_INLINE int64_t timestamp() const noexcept
 	{
 		for(unsigned int i=0;i<_qualifierCount;++i) {
 			if (_qualifiers[i].id == COM_RESERVED_ID_TIMESTAMP)
@@ -139,7 +139,7 @@ public:
 	/**
 	 * @return Address to which this cert was issued
 	 */
-	ZT_ALWAYS_INLINE Address issuedTo() const
+	ZT_ALWAYS_INLINE Address issuedTo() const noexcept
 	{
 		for(unsigned int i=0;i<_qualifierCount;++i) {
 			if (_qualifiers[i].id == COM_RESERVED_ID_ISSUED_TO)
@@ -151,7 +151,7 @@ public:
 	/**
 	 * @return Network ID for which this cert was issued
 	 */
-	ZT_ALWAYS_INLINE uint64_t networkId() const
+	ZT_ALWAYS_INLINE uint64_t networkId() const noexcept
 	{
 		for(unsigned int i=0;i<_qualifierCount;++i) {
 			if (_qualifiers[i].id == COM_RESERVED_ID_NETWORK_ID)
@@ -186,41 +186,7 @@ public:
 	 * @param other Cert to compare with
 	 * @return True if certs agree and 'other' may be communicated with
 	 */
-	ZT_ALWAYS_INLINE bool agreesWith(const CertificateOfMembership &other) const
-	{
-		unsigned int myidx = 0;
-		unsigned int otheridx = 0;
-
-		if ((_qualifierCount == 0)||(other._qualifierCount == 0))
-			return false;
-
-		while (myidx < _qualifierCount) {
-			// Fail if we're at the end of other, since this means the field is
-			// missing.
-			if (otheridx >= other._qualifierCount)
-				return false;
-
-			// Seek to corresponding tuple in other, ignoring tuples that
-			// we may not have. If we run off the end of other, the tuple is
-			// missing. This works because tuples are sorted by ID.
-			while (other._qualifiers[otheridx].id != _qualifiers[myidx].id) {
-				++otheridx;
-				if (otheridx >= other._qualifierCount)
-					return false;
-			}
-
-			// Compare to determine if the absolute value of the difference
-			// between these two parameters is within our maxDelta.
-			const uint64_t a = _qualifiers[myidx].value;
-			const uint64_t b = other._qualifiers[myidx].value;
-			if (((a >= b) ? (a - b) : (b - a)) > _qualifiers[myidx].maxDelta)
-				return false;
-
-			++myidx;
-		}
-
-		return true;
-	}
+	bool agreesWith(const CertificateOfMembership &other) const;
 
 	/**
 	 * Sign this certificate
@@ -241,11 +207,11 @@ public:
 	/**
 	 * @return Address that signed this certificate or null address if none
 	 */
-	ZT_ALWAYS_INLINE const Address &signedBy() const { return _signedBy; }
+	ZT_ALWAYS_INLINE const Address &signedBy() const noexcept { return _signedBy; }
 
-	static ZT_ALWAYS_INLINE int marshalSizeMax() { return ZT_CERTIFICATEOFMEMBERSHIP_MARSHAL_SIZE_MAX; }
-	int marshal(uint8_t data[ZT_CERTIFICATEOFMEMBERSHIP_MARSHAL_SIZE_MAX]) const;
-	int unmarshal(const uint8_t *data,int len);
+	static constexpr int marshalSizeMax() noexcept { return ZT_CERTIFICATEOFMEMBERSHIP_MARSHAL_SIZE_MAX; }
+	int marshal(uint8_t data[ZT_CERTIFICATEOFMEMBERSHIP_MARSHAL_SIZE_MAX]) const noexcept;
+	int unmarshal(const uint8_t *data,int len) noexcept;
 
 	bool operator==(const CertificateOfMembership &c) const;
 	ZT_ALWAYS_INLINE bool operator!=(const CertificateOfMembership &c) const { return (!(*this == c)); }
@@ -253,11 +219,11 @@ public:
 private:
 	struct _Qualifier
 	{
-		ZT_ALWAYS_INLINE _Qualifier() : id(0),value(0),maxDelta(0) {}
+		ZT_ALWAYS_INLINE _Qualifier() noexcept : id(0),value(0),maxDelta(0) {}
 		uint64_t id;
 		uint64_t value;
 		uint64_t maxDelta;
-		ZT_ALWAYS_INLINE bool operator<(const _Qualifier &q) const { return (id < q.id); } // sort order
+		ZT_ALWAYS_INLINE bool operator<(const _Qualifier &q) const noexcept { return (id < q.id); } // sort order
 	};
 
 	Address _signedBy;

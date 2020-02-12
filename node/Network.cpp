@@ -34,7 +34,7 @@ namespace ZeroTier {
 namespace {
 
 // Returns true if packet appears valid; pos and proto will be set
-bool _ipv6GetPayload(const uint8_t *frameData,unsigned int frameLen,unsigned int &pos,unsigned int &proto)
+bool _ipv6GetPayload(const uint8_t *frameData,unsigned int frameLen,unsigned int &pos,unsigned int &proto) noexcept
 {
 	if (frameLen < 40)
 		return false;
@@ -75,10 +75,10 @@ _doZtFilterResult _doZtFilter(
 	const RuntimeEnvironment *RR,
 	Trace::RuleResultLog &rrl,
 	const NetworkConfig &nconf,
-	const Membership *membership, // can be NULL
+	const Membership *membership,       // can be NULL
 	const bool inbound,
 	const Address &ztSource,
-	Address &ztDest, // MUTABLE -- is changed on REDIRECT actions
+	Address &ztDest,                    // MUTABLE -- is changed on REDIRECT actions
 	const MAC &macSource,
 	const MAC &macDest,
 	const uint8_t *const frameData,
@@ -87,10 +87,10 @@ _doZtFilterResult _doZtFilter(
 	const unsigned int vlanId,
 	const ZT_VirtualNetworkRule *rules, // cannot be NULL
 	const unsigned int ruleCount,
-	Address &cc, // MUTABLE -- set to TEE destination if TEE action is taken or left alone otherwise
-	unsigned int &ccLength, // MUTABLE -- set to length of packet payload to TEE
-	bool &ccWatch, // MUTABLE -- set to true for WATCH target as opposed to normal TEE
-	uint8_t &qosBucket) // MUTABLE -- set to the value of the argument provided to PRIORITY
+	Address &cc,                        // MUTABLE -- set to TEE destination if TEE action is taken or left alone otherwise
+	unsigned int &ccLength,             // MUTABLE -- set to length of packet payload to TEE
+	bool &ccWatch,                      // MUTABLE -- set to true for WATCH target as opposed to normal TEE
+	uint8_t &qosBucket) noexcept        // MUTABLE -- set to the value of the argument provided to PRIORITY
 {
 	// Set to true if we are a TEE/REDIRECT/WATCH target
 	bool superAccept = false;

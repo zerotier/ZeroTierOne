@@ -51,7 +51,7 @@ public:
 		UNRECOGNIZED = 255  // Unrecognized endpoint type encountered in stream
 	};
 
-	ZT_ALWAYS_INLINE Endpoint() { memoryZero(this); }
+	ZT_ALWAYS_INLINE Endpoint() noexcept { memoryZero(this); }
 
 	explicit ZT_ALWAYS_INLINE Endpoint(const InetAddress &sa) { *this = sa; }
 
@@ -93,44 +93,44 @@ public:
 	/**
 	 * @return InetAddress or NIL if not of this type
 	 */
-	ZT_ALWAYS_INLINE const InetAddress &inetAddr() const { return ((_t == INETADDR_V4)||(_t == INETADDR_V6)) ? *reinterpret_cast<const InetAddress *>(&_v.sa) : InetAddress::NIL; }
+	ZT_ALWAYS_INLINE const InetAddress &inetAddr() const noexcept { return ((_t == INETADDR_V4)||(_t == INETADDR_V6)) ? *reinterpret_cast<const InetAddress *>(&_v.sa) : InetAddress::NIL; }
 
 	/**
 	 * @return DNS name or empty string if not of this type
 	 */
-	ZT_ALWAYS_INLINE const char *dnsName() const { return (_t == DNSNAME) ? _v.dns.name : ""; }
+	ZT_ALWAYS_INLINE const char *dnsName() const noexcept { return (_t == DNSNAME) ? _v.dns.name : ""; }
 
 	/**
 	 * @return Port associated with DNS name or -1 if not of this type
 	 */
-	ZT_ALWAYS_INLINE int dnsPort() const { return (_t == DNSNAME) ? _v.dns.port : -1; }
+	ZT_ALWAYS_INLINE int dnsPort() const noexcept { return (_t == DNSNAME) ? _v.dns.port : -1; }
 
 	/**
 	 * @return ZeroTier address or NIL if not of this type
 	 */
-	ZT_ALWAYS_INLINE Address ztAddress() const { return Address((_t == ZEROTIER) ? _v.zt.a : (uint64_t)0); }
+	ZT_ALWAYS_INLINE Address ztAddress() const noexcept { return Address((_t == ZEROTIER) ? _v.zt.a : (uint64_t)0); }
 
 	/**
 	 * @return 384-bit hash of identity keys or NULL if not of this type
 	 */
-	ZT_ALWAYS_INLINE const uint8_t *ztIdentityHash() const { return (_t == ZEROTIER) ? _v.zt.idh : nullptr; }
+	ZT_ALWAYS_INLINE const uint8_t *ztIdentityHash() const noexcept { return (_t == ZEROTIER) ? _v.zt.idh : nullptr; }
 
 	/**
 	 * @return URL or empty string if not of this type
 	 */
-	ZT_ALWAYS_INLINE const char *url() const { return (_t == URL) ? _v.url : ""; }
+	ZT_ALWAYS_INLINE const char *url() const noexcept { return (_t == URL) ? _v.url : ""; }
 
 	/**
 	 * @return Ethernet address or NIL if not of this type
 	 */
-	ZT_ALWAYS_INLINE MAC ethernet() const { return (_t == ETHERNET) ? MAC(_v.eth) : MAC(); }
+	ZT_ALWAYS_INLINE MAC ethernet() const noexcept { return (_t == ETHERNET) ? MAC(_v.eth) : MAC(); }
 
 	/**
 	 * @return Endpoint type or NIL if unset/empty
 	 */
-	ZT_ALWAYS_INLINE Type type() const { return _t; }
+	ZT_ALWAYS_INLINE Type type() const noexcept { return _t; }
 
-	explicit ZT_ALWAYS_INLINE operator bool() const { return _t != NIL; }
+	explicit ZT_ALWAYS_INLINE operator bool() const noexcept { return _t != NIL; }
 
 	bool operator==(const Endpoint &ep) const;
 	ZT_ALWAYS_INLINE bool operator!=(const Endpoint &ep) const { return (!(*this == ep)); }
@@ -139,9 +139,9 @@ public:
 	ZT_ALWAYS_INLINE bool operator<=(const Endpoint &ep) const { return !(ep < *this); }
 	ZT_ALWAYS_INLINE bool operator>=(const Endpoint &ep) const { return !(*this < ep); }
 
-	static ZT_ALWAYS_INLINE int marshalSizeMax() { return ZT_ENDPOINT_MARSHAL_SIZE_MAX; }
-	int marshal(uint8_t data[ZT_ENDPOINT_MARSHAL_SIZE_MAX]) const;
-	int unmarshal(const uint8_t *restrict data,int len);
+	static constexpr int marshalSizeMax() noexcept { return ZT_ENDPOINT_MARSHAL_SIZE_MAX; }
+	int marshal(uint8_t data[ZT_ENDPOINT_MARSHAL_SIZE_MAX]) const noexcept;
+	int unmarshal(const uint8_t *restrict data,int len) noexcept;
 
 private:
 	Type _t;

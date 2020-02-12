@@ -45,9 +45,9 @@ class Revocation : public Credential
 	friend class Credential;
 
 public:
-	static ZT_ALWAYS_INLINE ZT_CredentialType credentialType() { return ZT_CREDENTIAL_TYPE_REVOCATION; }
+	static constexpr ZT_CredentialType credentialType() noexcept { return ZT_CREDENTIAL_TYPE_REVOCATION; }
 
-	ZT_ALWAYS_INLINE Revocation() { memoryZero(this); }
+	ZT_ALWAYS_INLINE Revocation() noexcept { memoryZero(this); }
 
 	/**
 	 * @param i ID (arbitrary for revocations, currently random)
@@ -58,7 +58,7 @@ public:
 	 * @param tgt Target node whose credential(s) are being revoked
 	 * @param ct Credential type being revoked
 	 */
-	ZT_ALWAYS_INLINE Revocation(const uint32_t i,const uint64_t nwid,const uint32_t cid,const uint64_t thr,const uint64_t fl,const Address &tgt,const ZT_CredentialType ct) :
+	ZT_ALWAYS_INLINE Revocation(const uint32_t i,const uint64_t nwid,const uint32_t cid,const uint64_t thr,const uint64_t fl,const Address &tgt,const ZT_CredentialType ct) noexcept :
 		_id(i),
 		_credentialId(cid),
 		_networkId(nwid),
@@ -71,22 +71,22 @@ public:
 	{
 	}
 
-	ZT_ALWAYS_INLINE uint32_t id() const { return _id; }
-	ZT_ALWAYS_INLINE uint32_t credentialId() const { return _credentialId; }
-	ZT_ALWAYS_INLINE uint64_t networkId() const { return _networkId; }
-	ZT_ALWAYS_INLINE int64_t threshold() const { return _threshold; }
-	ZT_ALWAYS_INLINE const Address &target() const { return _target; }
-	ZT_ALWAYS_INLINE const Address &signer() const { return _signedBy; }
-	ZT_ALWAYS_INLINE ZT_CredentialType typeBeingRevoked() const { return _type; }
-	ZT_ALWAYS_INLINE const uint8_t *signature() const { return _signature; }
-	ZT_ALWAYS_INLINE unsigned int signatureLength() const { return _signatureLength; }
-	ZT_ALWAYS_INLINE bool fastPropagate() const { return ((_flags & ZT_REVOCATION_FLAG_FAST_PROPAGATE) != 0); }
+	ZT_ALWAYS_INLINE uint32_t id() const noexcept { return _id; }
+	ZT_ALWAYS_INLINE uint32_t credentialId() const noexcept { return _credentialId; }
+	ZT_ALWAYS_INLINE uint64_t networkId() const noexcept { return _networkId; }
+	ZT_ALWAYS_INLINE int64_t threshold() const noexcept { return _threshold; }
+	ZT_ALWAYS_INLINE const Address &target() const noexcept { return _target; }
+	ZT_ALWAYS_INLINE const Address &signer() const noexcept { return _signedBy; }
+	ZT_ALWAYS_INLINE ZT_CredentialType typeBeingRevoked() const noexcept { return _type; }
+	ZT_ALWAYS_INLINE const uint8_t *signature() const noexcept { return _signature; }
+	ZT_ALWAYS_INLINE unsigned int signatureLength() const noexcept { return _signatureLength; }
+	ZT_ALWAYS_INLINE bool fastPropagate() const noexcept { return ((_flags & ZT_REVOCATION_FLAG_FAST_PROPAGATE) != 0); }
 
 	/**
 	 * @param signer Signing identity, must have private key
 	 * @return True if signature was successful
 	 */
-	bool sign(const Identity &signer);
+	bool sign(const Identity &signer) noexcept;
 
 	/**
 	 * Verify this revocation's signature
@@ -94,11 +94,11 @@ public:
 	 * @param RR Runtime environment to provide for peer lookup, etc.
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 */
-	ZT_ALWAYS_INLINE Credential::VerifyResult verify(const RuntimeEnvironment *RR,void *tPtr) const { return _verify(RR,tPtr,*this); }
+	ZT_ALWAYS_INLINE Credential::VerifyResult verify(const RuntimeEnvironment *RR,void *tPtr) const noexcept { return _verify(RR,tPtr,*this); }
 
-	static ZT_ALWAYS_INLINE int marshalSizeMax() { return ZT_REVOCATION_MARSHAL_SIZE_MAX; }
-	int marshal(uint8_t data[ZT_REVOCATION_MARSHAL_SIZE_MAX],bool forSign = false) const;
-	int unmarshal(const uint8_t *restrict data,int len);
+	static constexpr int marshalSizeMax() noexcept { return ZT_REVOCATION_MARSHAL_SIZE_MAX; }
+	int marshal(uint8_t data[ZT_REVOCATION_MARSHAL_SIZE_MAX],bool forSign = false) const noexcept;
+	int unmarshal(const uint8_t *restrict data,int len) noexcept;
 
 private:
 	uint32_t _id;

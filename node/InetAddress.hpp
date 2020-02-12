@@ -26,6 +26,7 @@
 namespace ZeroTier {
 
 #define ZT_INETADDRESS_MARSHAL_SIZE_MAX 19
+#define ZT_INETADDRESS_STRING_SIZE_MAX 64
 
 /**
  * Extends sockaddr_storage with friendly C++ methods
@@ -213,12 +214,12 @@ public:
 	/**
 	 * @return ASCII IP/port format representation
 	 */
-	char *toString(char buf[64]) const;
+	char *toString(char buf[ZT_INETADDRESS_STRING_SIZE_MAX]) const;
 
 	/**
 	 * @return IP portion only, in ASCII string format
 	 */
-	char *toIpString(char buf[64]) const;
+	char *toIpString(char buf[ZT_INETADDRESS_STRING_SIZE_MAX]) const;
 
 	/**
 	 * @param ipSlashPort IP/port (port is optional, will be 0 if not included)

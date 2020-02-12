@@ -14,8 +14,6 @@
 #ifndef ZT_RUNTIMEENVIRONMENT_HPP
 #define ZT_RUNTIMEENVIRONMENT_HPP
 
-#include <string.h>
-
 #include "Constants.hpp"
 #include "Utils.hpp"
 #include "Identity.hpp"

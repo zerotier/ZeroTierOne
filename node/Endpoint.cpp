@@ -53,7 +53,7 @@ bool Endpoint::operator<(const Endpoint &ep) const
 	return false;
 }
 
-int Endpoint::marshal(uint8_t data[ZT_ENDPOINT_MARSHAL_SIZE_MAX]) const
+int Endpoint::marshal(uint8_t data[ZT_ENDPOINT_MARSHAL_SIZE_MAX]) const noexcept
 {
 	int p;
 	data[0] = (uint8_t)_t;
@@ -108,7 +108,7 @@ int Endpoint::marshal(uint8_t data[ZT_ENDPOINT_MARSHAL_SIZE_MAX]) const
 	}
 }
 
-int Endpoint::unmarshal(const uint8_t *restrict data,const int len)
+int Endpoint::unmarshal(const uint8_t *restrict data,const int len) noexcept
 {
 	if (len < 7)
 		return -1;

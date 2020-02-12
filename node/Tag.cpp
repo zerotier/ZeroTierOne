@@ -15,7 +15,7 @@
 
 namespace ZeroTier {
 
-bool Tag::sign(const Identity &signer)
+bool Tag::sign(const Identity &signer) noexcept
 {
 	uint8_t buf[ZT_TAG_MARSHAL_SIZE_MAX];
 	if (signer.hasPrivate()) {
@@ -26,7 +26,7 @@ bool Tag::sign(const Identity &signer)
 	return false;
 }
 
-int Tag::marshal(uint8_t data[ZT_TAG_MARSHAL_SIZE_MAX],bool forSign) const
+int Tag::marshal(uint8_t data[ZT_TAG_MARSHAL_SIZE_MAX],bool forSign) const noexcept
 {
 	int p = 0;
 	if (forSign) {
@@ -54,7 +54,7 @@ int Tag::marshal(uint8_t data[ZT_TAG_MARSHAL_SIZE_MAX],bool forSign) const
 	return p;
 }
 
-int Tag::unmarshal(const uint8_t *data,int len)
+int Tag::unmarshal(const uint8_t *data,int len) noexcept
 {
 	if (len < 37)
 		return -1;

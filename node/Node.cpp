@@ -19,7 +19,6 @@
 #include "SharedPtr.hpp"
 #include "Node.hpp"
 #include "NetworkController.hpp"
-#include "Switch.hpp"
 #include "Topology.hpp"
 #include "Address.hpp"
 #include "Identity.hpp"
@@ -44,6 +43,7 @@ Node::Node(void *uPtr,void *tPtr,const struct ZT_Node_Callbacks *callbacks,int64
 	_lastHousekeepingRun(0),
 	_lastNetworkHousekeepingRun(0),
 	_lastPathKeepaliveCheck(0),
+	_natMustDie(true),
 	_online(false)
 {
 	_networks.resize(64); // _networksMask + 1, must be power of two
@@ -78,6 +78,7 @@ Node::Node(void *uPtr,void *tPtr,const struct ZT_Node_Callbacks *callbacks,int64
 			stateObjectPut(tPtr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,idtmp,RR->publicIdentityStr,(unsigned int)strlen(RR->publicIdentityStr));
 	}
 
+#if 0
 	char *m = nullptr;
 	try {
 		m = reinterpret_cast<char *>(malloc(16 + sizeof(Trace) + sizeof(Switch) + sizeof(Topology) + sizeof(SelfAwareness)));
@@ -100,27 +101,34 @@ Node::Node(void *uPtr,void *tPtr,const struct ZT_Node_Callbacks *callbacks,int64
 		if (m) ::free(m);
 		throw;
 	}
+#endif
 
 	postEvent(tPtr, ZT_EVENT_UP);
 }
 
 Node::~Node()
 {
+	// Let go of all networks to leave them. Do it this way in case Network wants to
+	// do anything in its destructor that locks the _networks lock to avoid a deadlock.
+	std::vector< SharedPtr<Network> > networks;
 	{
 		RWMutex::Lock _l(_networks_m);
-		for(std::vector< SharedPtr<Network> >::iterator i(_networks.begin());i!=_networks.end();++i)
-			i->zero();
+		networks.swap(_networks);
 	}
+	networks.clear();
+	_networks_m.lock();
+	_networks_m.unlock();
 
 	if (RR->sa) RR->sa->~SelfAwareness();
 	if (RR->topology) RR->topology->~Topology();
-	if (RR->sw) RR->sw->~Switch();
 	if (RR->t) RR->t->~Trace();
 	free(RR->rtmem);
 
-	// Let go of cached Buf objects. This does no harm if other nodes are running
-	// but usually that won't be the case.
-	freeBufPool();
+	// Let go of cached Buf objects. If other nodes happen to be running in this
+	// same process space new Bufs will be allocated as needed, but this is almost
+	// never the case. Calling this here saves RAM if we are running inside something
+	// that wants to keep running after tearing down its ZeroTier core instance.
+	Buf::freePool();
 }
 
 void Node::shutdown(void *tPtr)
@@ -138,7 +146,7 @@ ZT_ResultCode Node::processWirePacket(
 	volatile int64_t *nextBackgroundTaskDeadline)
 {
 	_now = now;
-	RR->sw->onRemotePacket(tptr,localSocket,*(reinterpret_cast<const InetAddress *>(remoteAddress)),packetData,packetLength);
+	//RR->sw->onRemotePacket(tptr,localSocket,*(reinterpret_cast<const InetAddress *>(remoteAddress)),packetData,packetLength);
 	return ZT_RESULT_OK;
 }
 
@@ -157,7 +165,7 @@ ZT_ResultCode Node::processVirtualNetworkFrame(
 	_now = now;
 	SharedPtr<Network> nw(this->network(nwid));
 	if (nw) {
-		RR->sw->onLocalEthernet(tptr,nw,MAC(sourceMac),MAC(destMac),etherType,vlanId,frameData,frameLength);
+		//RR->sw->onLocalEthernet(tptr,nw,MAC(sourceMac),MAC(destMac),etherType,vlanId,frameData,frameLength);
 		return ZT_RESULT_OK;
 	} else {
 		return ZT_RESULT_ERROR_NETWORK_NOT_FOUND;
@@ -184,7 +192,7 @@ struct _processBackgroundTasks_ping_eachPeer
 	}
 };
 
-static uint8_t junk = 0; // junk payload for keepalive packets
+static uint8_t keepAlivePayload = 0; // junk payload for keepalive packets
 struct _processBackgroundTasks_path_keepalive
 {
 	int64_t now;
@@ -193,9 +201,8 @@ struct _processBackgroundTasks_path_keepalive
 	ZT_ALWAYS_INLINE void operator()(const SharedPtr<Path> &path)
 	{
 		if ((now - path->lastOut()) >= ZT_PATH_KEEPALIVE_PERIOD) {
-			++junk;
-			path->send(RR,tPtr,&junk,sizeof(junk),now);
-			path->sent(now);
+			++keepAlivePayload;
+			path->send(RR,tPtr,&keepAlivePayload,1,now);
 		}
 	}
 };
@@ -227,8 +234,9 @@ ZT_ResultCode Node::processBackgroundTasks(void *tPtr, int64_t now, volatile int
 				// This will give us updated locators for these roots which may contain new
 				// IP addresses. It will also auto-discover IPs for roots that were not added
 				// with an initial bootstrap address.
-				for (std::vector<Address>::const_iterator r(pf.rootsNotOnline.begin()); r != pf.rootsNotOnline.end(); ++r)
-					RR->sw->requestWhois(tPtr,now,*r);
+				// TODO
+				//for (std::vector<Address>::const_iterator r(pf.rootsNotOnline.begin()); r != pf.rootsNotOnline.end(); ++r)
+				//	RR->sw->requestWhois(tPtr,now,*r);
 			}
 		} catch ( ... ) {
 			return ZT_RESULT_FATAL_ERROR_INTERNAL;
@@ -281,8 +289,30 @@ ZT_ResultCode Node::processBackgroundTasks(void *tPtr, int64_t now, volatile int
 		RR->topology->eachPath<_processBackgroundTasks_path_keepalive &>(pf);
 	}
 
+	int64_t earliestAlarmAt = 0x7fffffffffffffffLL;
+	std::vector<Address> bzzt;
+	{
+		RWMutex::RMaybeWLock l(_peerAlarms_l);
+		for(std::map<Address,int64_t>::iterator a(_peerAlarms.begin());a!=_peerAlarms.end();) {
+			if (now >= a->second) {
+				bzzt.push_back(a->first);
+				l.write(); // acquire write lock if not already in write mode
+				_peerAlarms.erase(a++);
+			} else {
+				if (a->second < earliestAlarmAt)
+					earliestAlarmAt = a->second;
+				++a;
+			}
+		}
+	}
+	for(std::vector<Address>::iterator a(bzzt.begin());a!=bzzt.end();++a) {
+		const SharedPtr<Peer> p(RR->topology->peer(tPtr,*a,false));
+		if (p)
+			p->alarm(tPtr,now);
+	}
+
 	try {
-		*nextBackgroundTaskDeadline = now + (int64_t)std::max(std::min((unsigned long)ZT_MAX_TIMER_TASK_INTERVAL,RR->sw->doTimerTasks(tPtr, now)), (unsigned long)ZT_MIN_TIMER_TASK_INTERVAL);
+		*nextBackgroundTaskDeadline = std::min(earliestAlarmAt,now + ZT_MAX_TIMER_TASK_INTERVAL);
 	} catch ( ... ) {
 		return ZT_RESULT_FATAL_ERROR_INTERNAL;
 	}

@@ -16,7 +16,6 @@
 
 #include "Constants.hpp"
 #include "Mutex.hpp"
-#include "AtomicCounter.hpp"
 
 #define ZT_METER_HISTORY_LENGTH 4
 #define ZT_METER_HISTORY_TICK_DURATION 1000
@@ -29,7 +28,7 @@ namespace ZeroTier {
 class Meter
 {
 public:
-	ZT_ALWAYS_INLINE Meter()
+	ZT_ALWAYS_INLINE Meter() noexcept
 	{
 		for(int i=0;i<ZT_METER_HISTORY_LENGTH;++i)
 			_history[i] = 0.0;
@@ -38,7 +37,7 @@ public:
 	}
 
 	template<typename I>
-	ZT_ALWAYS_INLINE void log(const int64_t now,I count)
+	ZT_ALWAYS_INLINE void log(const int64_t now,I count) noexcept
 	{
 		const int64_t since = now - _ts;
 		if (since >= ZT_METER_HISTORY_TICK_DURATION) {
@@ -50,7 +49,7 @@ public:
 		}
 	}
 
-	ZT_ALWAYS_INLINE double perSecond(const int64_t now) const
+	ZT_ALWAYS_INLINE double perSecond(const int64_t now) const noexcept
 	{
 		double r = 0.0,n = 0.0;
 		const int64_t since = (now - _ts);
@@ -69,7 +68,7 @@ private:
 	volatile double _history[ZT_METER_HISTORY_LENGTH];
 	volatile int64_t _ts;
 	volatile uint64_t _count;
-	AtomicCounter<unsigned int> _hptr;
+	std::atomic<unsigned int> _hptr;
 };
 
 } // namespace ZeroTier

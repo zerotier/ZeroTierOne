@@ -16,7 +16,6 @@
 
 #include "Constants.hpp"
 #include "Buf.hpp"
-#include "AtomicCounter.hpp"
 #include "SharedPtr.hpp"
 #include "Hashtable.hpp"
 #include "Mutex.hpp"
@@ -38,7 +37,7 @@ namespace ZeroTier {
  * hairiness makes it very desirable to be able to test and fuzz this code
  * independently.
  *
- * Here be dragons!
+ * This class is thread-safe and handles locking internally.
  *
  * @tparam MF Maximum number of fragments that each message can possess
  * @tparam GCS Garbage collection target size for the incoming message queue
@@ -148,10 +147,10 @@ public:
 		if ((fragmentNo >= totalFragmentsExpected)||(totalFragmentsExpected > MF)||(totalFragmentsExpected == 0))
 			return ERR_INVALID_FRAGMENT;
 
-		// Lock messages for read and look up current entry. Also check the
-		// GC trigger and if we've exceeded that threshold then older message
-		// entries are garbage collected.
-		_messages_l.rlock();
+		// We hold the read lock on _messages unless we need to add a new entry or do GC.
+		RWMutex::RMaybeWLock ml(_messages_l);
+
+		// Check message hash table size and perform GC if necessary.
 		if (_messages.size() >= GCT) {
 			try {
 				// Scan messages with read lock still locked first and make a sorted list of
@@ -160,7 +159,7 @@ public:
 				// under the target size. This tries to minimize the amount of time the write
 				// lock is held since many threads can hold the read lock but all threads must
 				// wait if someone holds the write lock.
-				std::vector< std::pair<int64_t,uint64_t> > messagesByLastUsedTime;
+				std::vector<std::pair<int64_t,uint64_t> > messagesByLastUsedTime;
 				messagesByLastUsedTime.reserve(_messages.size());
 
 				typename Hashtable<uint64_t,_E>::Iterator i(_messages);
@@ -171,47 +170,37 @@ public:
 
 				std::sort(messagesByLastUsedTime.begin(),messagesByLastUsedTime.end());
 
-				_messages_l.runlock(); _messages_l.lock();
+				ml.writing(); // acquire write lock on _messages
 				for (unsigned long x = 0,y = (messagesByLastUsedTime.size() - GCS); x <= y; ++x)
 					_messages.erase(messagesByLastUsedTime[x].second);
-				_messages_l.unlock(); _messages_l.rlock();
 			} catch (...) {
-				// The only way something in that code can throw is if a bad_alloc occurs when
-				// reserve() is called in the vector. In this case we flush the entire queue
-				// and error out. This is very rare and on some platforms impossible.
-				_messages_l.runlock();
-				_messages_l.lock();
-				_messages.clear();
-				_messages_l.unlock();
 				return ERR_OUT_OF_MEMORY;
 			}
 		}
-		_E *e = _messages.get(messageId);
-		_messages_l.runlock();
 
-		// If no entry exists we must briefly lock messages for write and create a new one.
+		// Get or create message fragment.
+		_E *e = _messages.get(messageId);
 		if (!e) {
+			ml.writing(); // acquire write lock on _messages if not already
 			try {
-				RWMutex::Lock ml(_messages_l);
 				e = &(_messages[messageId]);
-			} catch ( ... ) {
+			} catch (...) {
 				return ERR_OUT_OF_MEMORY;
 			}
 			e->id = messageId;
 		}
 
-		// Now handle this fragment within this individual message entry.
-		Mutex::Lock el(e->lock);
+		// Switch back to holding only the read lock on _messages if we have locked for write
+		ml.reading();
 
-		// Note: it's important that _messages_l is not locked while the entry
-		// is locked or a deadlock could occur due to GC or clear() being called
-		// in another thread.
+		// Acquire lock on entry itself
+		Mutex::Lock el(e->lock);
 
 		// This magic value means this message has already been assembled and is done.
 		if (e->lastUsed < 0)
 			return ERR_DUPLICATE_FRAGMENT;
 
-		// Update last-activity timestamp for this entry.
+		// Update last-activity timestamp for this entry, delaying GC.
 		e->lastUsed = now;
 
 		// Learn total fragments expected if a value is given. Otherwise the cached
@@ -294,14 +283,9 @@ private:
 		ZT_ALWAYS_INLINE _E() : id(0),lastUsed(0),totalFragmentsExpected(0),via(),message(),lock() {}
 		ZT_ALWAYS_INLINE ~_E()
 		{
-			// Ensure that this entry is not in use while it is being deleted!
-			lock.lock();
-			if (via) {
-				via->_inboundFragmentedMessages_l.lock();
-				via->_inboundFragmentedMessages.erase(id);
-				via->_inboundFragmentedMessages_l.unlock();
-			}
-			lock.unlock();
+			via->_inboundFragmentedMessages_l.lock();
+			via->_inboundFragmentedMessages.erase(id);
+			via->_inboundFragmentedMessages_l.unlock();
 		}
 		uint64_t id;
 		volatile int64_t lastUsed;

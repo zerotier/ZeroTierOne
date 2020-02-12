@@ -27,7 +27,7 @@ namespace ZeroTier {
  * @param len Length of data to authenticate in bytes
  * @param key 32-byte one-time use key to authenticate data (must not be reused)
  */
-void poly1305(void *auth,const void *data,unsigned int len,const void *key);
+void poly1305(void *auth,const void *data,unsigned int len,const void *key) noexcept;
 
 } // namespace ZeroTier
 

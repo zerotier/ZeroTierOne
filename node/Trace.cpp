@@ -15,6 +15,8 @@
 #include "RuntimeEnvironment.hpp"
 #include "Node.hpp"
 #include "Peer.hpp"
+#include "Path.hpp"
+#include "InetAddress.hpp"
 
 #include <cstdio>
 #include <cstdlib>
@@ -31,6 +33,34 @@ Trace::Trace(const RuntimeEnvironment *renv) :
 	_vl2Filter(false),
 	_vl2Multicast(false)
 {
+}
+
+Trace::Str<ZT_INETADDRESS_STRING_SIZE_MAX> Trace::str(const InetAddress &a,const bool ipOnly)
+{
+	Str<ZT_INETADDRESS_STRING_SIZE_MAX> s;
+	if (ipOnly)
+		a.toIpString(s.s);
+	else a.toString(s.s);
+	return s;
+}
+
+Trace::Str<ZT_ADDRESS_STRING_SIZE_MAX> Trace::str(const Address &a)
+{
+	Str<ZT_ADDRESS_STRING_SIZE_MAX> s;
+	a.toString(s.s);
+	return s;
+}
+
+Trace::Str<ZT_ADDRESS_STRING_SIZE_MAX + ZT_INETADDRESS_STRING_SIZE_MAX + 4> Trace::str(const Address &peerAddress,const SharedPtr<Path> &path)
+{
+	Str<ZT_ADDRESS_STRING_SIZE_MAX + ZT_INETADDRESS_STRING_SIZE_MAX + 4> s;
+	peerAddress.toString(s.s);
+	s.s[11] = '(';
+	path->address().toString(s.s + 12);
+	int x = strlen(s.s);
+	s.s[x] = ')';
+	s.s[x+1] = 0;
+	return s;
 }
 
 void Trace::unexpectedError(

@@ -15,7 +15,7 @@
 
 namespace ZeroTier {
 
-bool Revocation::sign(const Identity &signer)
+bool Revocation::sign(const Identity &signer) noexcept
 {
 	uint8_t buf[ZT_REVOCATION_MARSHAL_SIZE_MAX+32];
 	if (signer.hasPrivate()) {
@@ -26,7 +26,7 @@ bool Revocation::sign(const Identity &signer)
 	return false;
 }
 
-int Revocation::marshal(uint8_t data[ZT_REVOCATION_MARSHAL_SIZE_MAX],bool forSign) const
+int Revocation::marshal(uint8_t data[ZT_REVOCATION_MARSHAL_SIZE_MAX],bool forSign) const noexcept
 {
 	int p = 0;
 	if (forSign) {
@@ -58,7 +58,7 @@ int Revocation::marshal(uint8_t data[ZT_REVOCATION_MARSHAL_SIZE_MAX],bool forSig
 	return p;
 }
 
-int Revocation::unmarshal(const uint8_t *restrict data,const int len)
+int Revocation::unmarshal(const uint8_t *restrict data,const int len) noexcept
 {
 	if (len < 54)
 		return -1;

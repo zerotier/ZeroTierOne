@@ -110,7 +110,7 @@ void InetAddress::set(const void *ipBytes,unsigned int ipLen,unsigned int port)
 	}
 }
 
-char *InetAddress::toString(char buf[64]) const
+char *InetAddress::toString(char buf[ZT_INETADDRESS_STRING_SIZE_MAX]) const
 {
 	char *p = toIpString(buf);
 	if (*p) {
@@ -121,7 +121,7 @@ char *InetAddress::toString(char buf[64]) const
 	return buf;
 }
 
-char *InetAddress::toIpString(char buf[64]) const
+char *InetAddress::toIpString(char buf[ZT_INETADDRESS_STRING_SIZE_MAX]) const
 {
 	buf[0] = (char)0;
 	switch(ss_family) {

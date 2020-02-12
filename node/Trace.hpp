@@ -14,17 +14,17 @@
 #ifndef ZT_TRACE_HPP
 #define ZT_TRACE_HPP
 
-#include <cstdint>
-#include <cstring>
-#include <cstdlib>
-#include <vector>
-
 #include "Constants.hpp"
 #include "SharedPtr.hpp"
 #include "Mutex.hpp"
 #include "InetAddress.hpp"
 #include "Address.hpp"
 #include "MAC.hpp"
+
+#include <cstdint>
+#include <cstring>
+#include <cstdlib>
+#include <vector>
 
 namespace ZeroTier {
 
@@ -42,6 +42,16 @@ struct NetworkConfig;
 
 /**
  * Remote tracing and trace logging handler
+ *
+ * These methods are called when things happen that may be of interested to
+ * someone debugging ZeroTier or its virtual networks. The codeLocation parameter
+ * is an arbitrary pseudo-random identifier of the form 0xNNNNNNNN that could be
+ * easily found by searching the code base. This makes it easy to locate the
+ * specific line where a trace originated without relying on brittle non-portable
+ * things like source file and line number. The same identifier should be used
+ * for the same 'place' in the code across versions. These could eventually be
+ * turned into constants that are semi-official and stored in a database to
+ * provide extra debug context.
  */
 class Trace
 {
@@ -64,7 +74,24 @@ public:
 		}
 	};
 
+	/**
+	 * Simple container for a C string
+	 *
+	 * @tparam C Capacity of string
+	 */
+	template<unsigned int C>
+	struct Str
+	{
+		ZT_ALWAYS_INLINE Str() { memset(s,0,sizeof(s)); }
+		constexpr static unsigned int capacity() { return C; }
+		char s[C];
+	};
+
 	explicit Trace(const RuntimeEnvironment *renv);
+
+	static Str<ZT_INETADDRESS_STRING_SIZE_MAX> str(const InetAddress &a,bool ipOnly = false);
+	static Str<ZT_ADDRESS_STRING_SIZE_MAX> str(const Address &a);
+	static Str<ZT_ADDRESS_STRING_SIZE_MAX + ZT_INETADDRESS_STRING_SIZE_MAX + 4> str(const Address &peerAddress,const SharedPtr<Path> &path);
 
 	void unexpectedError(
 		void *tPtr,

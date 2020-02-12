@@ -40,9 +40,11 @@ Peer::Peer(const RuntimeEnvironment *renv) :
 	_lastWhoisRequestReceived(0),
 	_lastEchoRequestReceived(0),
 	_lastPushDirectPathsReceived(0),
+	_lastProbeReceived(0),
 	_lastAttemptedP2PInit(0),
 	_lastTriedStaticPath(0),
 	_lastPrioritizedPaths(0),
+	_lastAttemptedAggressiveNATTraversal(0),
 	_latency(0xffff),
 	_alivePathCount(0),
 	_vProto(0),
@@ -52,12 +54,16 @@ Peer::Peer(const RuntimeEnvironment *renv) :
 {
 }
 
-bool Peer::init(const Identity &myIdentity,const Identity &peerIdentity)
+bool Peer::init(const Identity &peerIdentity)
 {
+	RWMutex::Lock l(_lock);
 	if (_id == peerIdentity)
 		return true;
 	_id = peerIdentity;
-	return myIdentity.agree(peerIdentity,_key);
+	if (!RR->identity.agree(peerIdentity,_key))
+		return false;
+	_incomingProbe = Protocol::createProbe(_id,RR->identity,_key);
+	return true;
 }
 
 void Peer::received(
@@ -66,10 +72,7 @@ void Peer::received(
 	const unsigned int hops,
 	const uint64_t packetId,
 	const unsigned int payloadLength,
-	const Protocol::Verb verb,
-	const uint64_t inRePacketId,
-	const Protocol::Verb inReVerb,
-	const uint64_t networkId)
+	const Protocol::Verb verb)
 {
 	const int64_t now = RR->node->now();
 	_lastReceive = now;
@@ -204,25 +207,6 @@ path_check_done:
 	}
 }
 
-bool Peer::shouldTryPath(void *tPtr,int64_t now,const SharedPtr<Peer> &suggestedBy,const InetAddress &addr) const
-{
-	int maxHaveScope = -1;
-	{
-		RWMutex::RLock l(_lock);
-		for (unsigned int i = 0; i < _alivePathCount; ++i) {
-			if (_paths[i]) {
-				if (_paths[i]->address().ipsEqual2(addr))
-					return false;
-
-				int s = (int)_paths[i]->address().ipScope();
-				if (s > maxHaveScope)
-					maxHaveScope = s;
-			}
-		}
-	}
-	return ( ((int)addr.ipScope() > maxHaveScope) && RR->node->shouldUsePathForZeroTierTraffic(tPtr,_id,-1,addr) );
-}
-
 void Peer::sendHELLO(void *tPtr,const int64_t localSocket,const InetAddress &atAddress,int64_t now)
 {
 #if 0
@@ -245,6 +229,19 @@ void Peer::sendHELLO(void *tPtr,const int64_t localSocket,const InetAddress &atA
 		RR->sw->send(tPtr,outp,false); // false == don't encrypt full payload, but add MAC
 	}
 #endif
+}
+
+void Peer::sendNOP(void *tPtr,const int64_t localSocket,const InetAddress &atAddress,int64_t now)
+{
+	Buf outp;
+	Protocol::Header &ph = outp.as<Protocol::Header>();
+	ph.packetId = Protocol::getPacketId();
+	_id.address().copyTo(ph.destination);
+	RR->identity.address().copyTo(ph.source);
+	ph.flags = 0;
+	ph.verb = Protocol::VERB_NOP;
+	Protocol::armor(outp,sizeof(Protocol::Header),_key,ZT_PROTO_CIPHER_SUITE__POLY1305_SALSA2012);
+	RR->node->putPacket(tPtr,localSocket,atAddress,outp.b,sizeof(Protocol::Header));
 }
 
 void Peer::ping(void *tPtr,int64_t now,const bool pingAllAddressTypes)
@@ -289,7 +286,7 @@ void Peer::resetWithinScope(void *tPtr,InetAddress::IpScope scope,int inetAddres
 	}
 }
 
-void Peer::updateLatency(const unsigned int l)
+void Peer::updateLatency(const unsigned int l) noexcept
 {
 	if ((l > 0)&&(l < 0xffff)) {
 		unsigned int lat = _latency;
@@ -298,31 +295,6 @@ void Peer::updateLatency(const unsigned int l)
 		} else {
 			_latency = l;
 		}
-	}
-}
-
-bool Peer::sendDirect(void *tPtr,const void *data,const unsigned int len,const int64_t now)
-{
-	if ((now - _lastPrioritizedPaths) > ZT_PEER_PRIORITIZE_PATHS_INTERVAL) {
-		_lastPrioritizedPaths = now;
-		_lock.lock();
-		_prioritizePaths(now);
-		if (_alivePathCount == 0) {
-			_lock.unlock();
-			return false;
-		}
-		const bool r = _paths[0]->send(RR,tPtr,data,len,now);
-		_lock.unlock();
-		return r;
-	} else {
-		_lock.rlock();
-		if (_alivePathCount == 0) {
-			_lock.runlock();
-			return false;
-		}
-		const bool r = _paths[0]->send(RR,tPtr,data,len,now);
-		_lock.runlock();
-		return r;
 	}
 }
 
@@ -340,6 +312,19 @@ SharedPtr<Path> Peer::path(const int64_t now)
 		if (_alivePathCount == 0)
 			return SharedPtr<Path>();
 		return _paths[0];
+	}
+}
+
+bool Peer::direct(const int64_t now)
+{
+	if ((now - _lastPrioritizedPaths) > ZT_PEER_PRIORITIZE_PATHS_INTERVAL) {
+		_lastPrioritizedPaths = now;
+		RWMutex::Lock l(_lock);
+		_prioritizePaths(now);
+		return (_alivePathCount > 0);
+	} else {
+		RWMutex::RLock l(_lock);
+		return (_alivePathCount > 0);
 	}
 }
 
@@ -369,7 +354,136 @@ void Peer::save(void *tPtr) const
 	free(buf);
 }
 
-int Peer::marshal(uint8_t data[ZT_PEER_MARSHAL_SIZE_MAX]) const
+void Peer::contact(void *tPtr,const Endpoint &ep,const int64_t now,bool behindSymmetric,bool bfg1024)
+{
+	static uint8_t junk = 0;
+
+	InetAddress phyAddr(ep.inetAddr());
+	if (phyAddr) { // only this endpoint type is currently implemented
+		if (!RR->node->shouldUsePathForZeroTierTraffic(tPtr,_id,-1,phyAddr))
+			return;
+
+		// Sending a packet with a low TTL before the real message assists traversal with some
+		// stateful firewalls and is harmless otherwise AFAIK.
+		++junk;
+		RR->node->putPacket(tPtr,-1,phyAddr,&junk,1,2);
+
+		// In a few hundred milliseconds we'll send the real packet.
+		{
+			RWMutex::Lock l(_lock);
+			_contactQueue.push_back(_ContactQueueItem(phyAddr,ZT_MAX_PEER_NETWORK_PATHS));
+		}
+
+		// If the peer indicates that they may be behind a symmetric NAT and there are no
+		// living direct paths, try a few more aggressive things.
+		if ((behindSymmetric) && (phyAddr.ss_family == AF_INET) && (!direct(now))) {
+			unsigned int port = phyAddr.port();
+			if ((bfg1024)&&(port < 1024)&&(RR->node->natMustDie())) {
+				// If the other side is using a low-numbered port and has elected to
+				// have this done, we can try scanning every port below 1024. The search
+				// space here is small enough that we have a very good chance of punching.
+
+				// Generate a random order list of all <1024 ports except 0 and the original sending port.
+				uint16_t ports[1022];
+				uint16_t ctr = 1;
+				for (int i=0;i<1022;++i) {
+					if (ctr == port) ++ctr;
+					ports[i] = ctr++;
+				}
+				for (int i=0;i<512;++i) {
+					uint64_t rn = Utils::random();
+					unsigned int a = ((unsigned int)rn) % 1022;
+					unsigned int b = ((unsigned int)(rn >> 24U)) % 1022;
+					if (a != b) {
+						uint16_t tmp = ports[a];
+						ports[a] = ports[b];
+						ports[b] = tmp;
+					}
+				}
+
+				// Chunk ports into chunks of 128 to try in few hundred millisecond intervals,
+				// abandoning attempts once there is at least one direct path.
+				{
+					RWMutex::Lock l(_lock);
+					for (int i=0;i<896;i+=128)
+						_contactQueue.push_back(_ContactQueueItem(phyAddr,ports + i,ports + i + 128,1));
+					_contactQueue.push_back(_ContactQueueItem(phyAddr,ports + 896,ports + 1022,1));
+				}
+			} else {
+				// Otherwise use the simpler sequential port attempt method in intervals.
+				RWMutex::Lock l(_lock);
+				for (int k=0;k<3;++k) {
+					if (++port > 65535) break;
+					InetAddress tryNext(phyAddr);
+					tryNext.setPort(port);
+					_contactQueue.push_back(_ContactQueueItem(tryNext,1));
+				}
+			}
+		}
+
+		// Start alarms going off to actually send these...
+		RR->node->setPeerAlarm(_id.address(),now + ZT_NAT_TRAVERSAL_INTERVAL);
+	}
+}
+
+void Peer::alarm(void *tPtr,const int64_t now)
+{
+	// Pop one contact queue item and also clean the queue of any that are no
+	// longer applicable because the alive path count has exceeded their threshold.
+	bool stillHaveContactQueueItems;
+	_ContactQueueItem qi;
+	{
+		RWMutex::Lock l(_lock);
+
+		if (_contactQueue.empty())
+			return;
+		while (_alivePathCount >= _contactQueue.front().alivePathThreshold) {
+			_contactQueue.pop_front();
+			if (_contactQueue.empty())
+				return;
+		}
+
+		_ContactQueueItem &qi2 = _contactQueue.front();
+		qi.address = qi2.address;
+		qi.ports.swap(qi2.ports);
+		qi.alivePathThreshold = qi2.alivePathThreshold;
+		_contactQueue.pop_front();
+
+		for(std::list<_ContactQueueItem>::iterator q(_contactQueue.begin());q!=_contactQueue.end();) {
+			if (_alivePathCount >= q->alivePathThreshold)
+				_contactQueue.erase(q++);
+			else ++q;
+		}
+
+		stillHaveContactQueueItems = !_contactQueue.empty();
+	}
+
+	if (_vProto >= 11) {
+		uint64_t outgoingProbe = Protocol::createProbe(RR->identity,_id,_key);
+		if (qi.ports.empty()) {
+			RR->node->putPacket(tPtr,-1,qi.address,&outgoingProbe,ZT_PROTO_PROBE_LENGTH);
+		} else {
+			for (std::vector<uint16_t>::iterator p(qi.ports.begin()); p != qi.ports.end(); ++p) {
+				qi.address.setPort(*p);
+				RR->node->putPacket(tPtr,-1,qi.address,&outgoingProbe,ZT_PROTO_PROBE_LENGTH);
+			}
+		}
+	} else {
+		if (qi.ports.empty()) {
+			this->sendNOP(tPtr,-1,qi.address,now);
+		} else {
+			for (std::vector<uint16_t>::iterator p(qi.ports.begin()); p != qi.ports.end(); ++p) {
+				qi.address.setPort(*p);
+				this->sendNOP(tPtr,-1,qi.address,now);
+			}
+		}
+	}
+
+	if (stillHaveContactQueueItems)
+		RR->node->setPeerAlarm(_id.address(),now + ZT_NAT_TRAVERSAL_INTERVAL);
+}
+
+int Peer::marshal(uint8_t data[ZT_PEER_MARSHAL_SIZE_MAX]) const noexcept
 {
 	RWMutex::RLock l(_lock);
 
@@ -403,39 +517,47 @@ int Peer::marshal(uint8_t data[ZT_PEER_MARSHAL_SIZE_MAX]) const
 	return p;
 }
 
-int Peer::unmarshal(const uint8_t *restrict data,const int len)
+int Peer::unmarshal(const uint8_t *restrict data,const int len) noexcept
 {
-	RWMutex::Lock l(_lock);
+	int p;
 
-	if ((len <= 1)||(data[0] != 0))
-		return -1;
+	{
+		RWMutex::Lock l(_lock);
 
-	int s = _id.unmarshal(data + 1,len - 1);
-	if (s <= 0)
-		return s;
-	int p = 1 + s;
-	s = _locator.unmarshal(data + p,len - p);
-	if (s <= 0)
-		return s;
-	p += s;
-	s = _bootstrap.unmarshal(data + p,len - p);
-	if (s <= 0)
-		return s;
-	p += s;
+		if ((len <= 1) || (data[0] != 0))
+			return -1;
 
-	if ((p + 10) > len)
+		int s = _id.unmarshal(data + 1,len - 1);
+		if (s <= 0)
+			return s;
+		p = 1 + s;
+		s = _locator.unmarshal(data + p,len - p);
+		if (s <= 0)
+			return s;
+		p += s;
+		s = _bootstrap.unmarshal(data + p,len - p);
+		if (s <= 0)
+			return s;
+		p += s;
+
+		if ((p + 10) > len)
+			return -1;
+		_vProto = Utils::loadBigEndian<uint16_t>(data + p);
+		p += 2;
+		_vMajor = Utils::loadBigEndian<uint16_t>(data + p);
+		p += 2;
+		_vMinor = Utils::loadBigEndian<uint16_t>(data + p);
+		p += 2;
+		_vRevision = Utils::loadBigEndian<uint16_t>(data + p);
+		p += 2;
+		p += 2 + (int)Utils::loadBigEndian<uint16_t>(data + p);
+		if (p > len)
+			return -1;
+	}
+
+	if (!RR->identity.agree(_id,_key))
 		return -1;
-	_vProto = Utils::loadBigEndian<uint16_t>(data + p);
-	p += 2;
-	_vMajor = Utils::loadBigEndian<uint16_t>(data + p);
-	p += 2;
-	_vMinor = Utils::loadBigEndian<uint16_t>(data + p);
-	p += 2;
-	_vRevision = Utils::loadBigEndian<uint16_t>(data + p);
-	p += 2;
-	p += 2 + (int)Utils::loadBigEndian<uint16_t>(data + p);
-	if (p > len)
-		return -1;
+	_incomingProbe = Protocol::createProbe(_id,RR->identity,_key);
 
 	return p;
 }

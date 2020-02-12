@@ -15,92 +15,56 @@
 
 namespace ZeroTier {
 
-#ifdef __GNUC__
-uintptr_t _Buf_pool = 0;
-#else
-std::atomic<uintptr_t> _Buf_pool(0);
-#endif
+static std::atomic<uintptr_t> s_pool(0);
 
-void _Buf_release(void *ptr,std::size_t sz)
-{
-	if (ptr) {
-		uintptr_t bb;
-		const uintptr_t locked = ~((uintptr_t)0);
-		for (;;) {
-#ifdef __GNUC__
-			bb = __sync_fetch_and_or(&_Buf_pool,locked); // get value of s_pool and "lock" by filling with all 1's
-#else
-			bb = s_pool.fetch_or(locked);
-#endif
-			if (bb != locked)
-				break;
-		}
-
-		((Buf *)ptr)->__nextInPool = bb;
-#ifdef __GNUC__
-		__sync_fetch_and_and(&_Buf_pool,(uintptr_t)ptr);
-#else
-		s_pool.store((uintptr_t)ptr);
-#endif
-	}
-}
-
-void *_Buf_get()
+void *Buf::operator new(std::size_t sz) noexcept
 {
 	uintptr_t bb;
-	const uintptr_t locked = ~((uintptr_t)0);
 	for (;;) {
-#ifdef __GNUC__
-		bb = __sync_fetch_and_or(&_Buf_pool,locked); // get value of s_pool and "lock" by filling with all 1's
-#else
-		bb = s_pool.fetch_or(locked);
-#endif
-		if (bb != locked)
+		bb = s_pool.exchange(~((uintptr_t)0));
+		if (bb != ~((uintptr_t)0))
 			break;
 	}
 
 	Buf *b;
-	if (bb == 0) {
-#ifdef __GNUC__
-		__sync_fetch_and_and(&_Buf_pool,bb);
-#else
-		s_pool.store(bb);
-#endif
-		b = (Buf *)malloc(sizeof(Buf));
-		if (!b)
-			throw std::bad_alloc();
-	} else {
+	if (bb) {
 		b = (Buf *)bb;
-#ifdef __GNUC__
-		__sync_fetch_and_and(&_Buf_pool,b->__nextInPool);
-#else
 		s_pool.store(b->__nextInPool);
-#endif
+	} else {
+		s_pool.store(0);
+		b = (Buf *)malloc(sz);
+		if (!b)
+			return nullptr;
 	}
 
-	b->__refCount.zero();
+	b->__refCount.store(0);
 	return (void *)b;
 }
 
-void freeBufPool()
+void Buf::operator delete(void *ptr) noexcept
+{
+	if (ptr) {
+		uintptr_t bb;
+		for (;;) {
+			bb = s_pool.exchange(~((uintptr_t)0));
+			if (bb != ~((uintptr_t)0))
+				break;
+		}
+
+		((Buf *)ptr)->__nextInPool = bb;
+		s_pool.store((uintptr_t)ptr);
+	}
+}
+
+void Buf::freePool() noexcept
 {
 	uintptr_t bb;
-	const uintptr_t locked = ~((uintptr_t)0);
 	for (;;) {
-#ifdef __GNUC__
-		bb = __sync_fetch_and_or(&_Buf_pool,locked); // get value of s_pool and "lock" by filling with all 1's
-#else
-		bb = s_pool.fetch_or(locked);
-#endif
-		if (bb != locked)
+		bb = s_pool.exchange(~((uintptr_t)0));
+		if (bb != ~((uintptr_t)0))
 			break;
 	}
-
-#ifdef __GNUC__
-	__sync_fetch_and_and(&_Buf_pool,(uintptr_t)0);
-#else
 	s_pool.store((uintptr_t)0);
-#endif
 
 	while (bb != 0) {
 		uintptr_t next = ((Buf *)bb)->__nextInPool;

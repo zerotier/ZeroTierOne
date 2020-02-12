@@ -57,7 +57,7 @@ public:
 		/**
 		 * @param ht Hash table to iterate over
 		 */
-		explicit ZT_ALWAYS_INLINE Iterator(Hashtable &ht) :
+		explicit ZT_ALWAYS_INLINE Iterator(Hashtable &ht) noexcept :
 			_idx(0),
 			_ht(&ht),
 			_b(ht._t[0])
@@ -344,26 +344,26 @@ public:
 	/**
 	 * @return Number of entries
 	 */
-	ZT_ALWAYS_INLINE unsigned long size() const { return _s; }
+	ZT_ALWAYS_INLINE unsigned long size() const noexcept { return _s; }
 
 	/**
 	 * @return True if table is empty
 	 */
-	ZT_ALWAYS_INLINE bool empty() const { return (_s == 0); }
+	ZT_ALWAYS_INLINE bool empty() const noexcept { return (_s == 0); }
 
 private:
 	template<typename O>
 	static ZT_ALWAYS_INLINE unsigned long _hc(const O &obj) { return (unsigned long)obj.hashCode(); }
-	static ZT_ALWAYS_INLINE unsigned long _hc(const uint64_t i) { return (unsigned long)(i ^ (i >> 32U)); }
-	static ZT_ALWAYS_INLINE unsigned long _hc(const uint32_t i) { return ((unsigned long)i * (unsigned long)0x9e3779b1); }
-	static ZT_ALWAYS_INLINE unsigned long _hc(const uint16_t i) { return ((unsigned long)i * (unsigned long)0x9e3779b1); }
-	static ZT_ALWAYS_INLINE unsigned long _hc(const uint8_t i) { return ((unsigned long)i * (unsigned long)0x9e3779b1); }
-	static ZT_ALWAYS_INLINE unsigned long _hc(const int64_t i) { return (unsigned long)((unsigned long long)i ^ ((unsigned long long)i >> 32U)); }
-	static ZT_ALWAYS_INLINE unsigned long _hc(const int32_t i) { return ((unsigned long)i * (unsigned long)0x9e3779b1); }
-	static ZT_ALWAYS_INLINE unsigned long _hc(const int16_t i) { return ((unsigned long)i * (unsigned long)0x9e3779b1); }
-	static ZT_ALWAYS_INLINE unsigned long _hc(const int8_t i) { return ((unsigned long)i * (unsigned long)0x9e3779b1); }
-	static ZT_ALWAYS_INLINE unsigned long _hc(void *p) { return ((unsigned long)((uintptr_t)p) * (unsigned long)0x9e3779b1); }
-	static ZT_ALWAYS_INLINE unsigned long _hc(const void *p) { return ((unsigned long)((uintptr_t)p) * (unsigned long)0x9e3779b1); }
+	static ZT_ALWAYS_INLINE unsigned long _hc(const uint64_t i) noexcept { return (unsigned long)(i ^ (i >> 32U)); }
+	static ZT_ALWAYS_INLINE unsigned long _hc(const uint32_t i) noexcept { return ((unsigned long)i * (unsigned long)0x9e3779b1); }
+	static ZT_ALWAYS_INLINE unsigned long _hc(const uint16_t i) noexcept { return ((unsigned long)i * (unsigned long)0x9e3779b1); }
+	static ZT_ALWAYS_INLINE unsigned long _hc(const uint8_t i) noexcept { return ((unsigned long)i * (unsigned long)0x9e3779b1); }
+	static ZT_ALWAYS_INLINE unsigned long _hc(const int64_t i) noexcept { return (unsigned long)((unsigned long long)i ^ ((unsigned long long)i >> 32U)); }
+	static ZT_ALWAYS_INLINE unsigned long _hc(const int32_t i) noexcept { return ((unsigned long)i * (unsigned long)0x9e3779b1); }
+	static ZT_ALWAYS_INLINE unsigned long _hc(const int16_t i) noexcept { return ((unsigned long)i * (unsigned long)0x9e3779b1); }
+	static ZT_ALWAYS_INLINE unsigned long _hc(const int8_t i) noexcept { return ((unsigned long)i * (unsigned long)0x9e3779b1); }
+	static ZT_ALWAYS_INLINE unsigned long _hc(void *p) noexcept { return ((unsigned long)((uintptr_t)p) * (unsigned long)0x9e3779b1); }
+	static ZT_ALWAYS_INLINE unsigned long _hc(const void *p) noexcept { return ((unsigned long)((uintptr_t)p) * (unsigned long)0x9e3779b1); }
 
 	ZT_ALWAYS_INLINE void _grow()
 	{

@@ -53,9 +53,9 @@ class Tag : public Credential
 	friend class Credential;
 
 public:
-	static ZT_ALWAYS_INLINE ZT_CredentialType credentialType() { return ZT_CREDENTIAL_TYPE_TAG; }
+	static constexpr ZT_CredentialType credentialType() noexcept { return ZT_CREDENTIAL_TYPE_TAG; }
 
-	ZT_ALWAYS_INLINE Tag() { memoryZero(this); }
+	ZT_ALWAYS_INLINE Tag() noexcept { memoryZero(this); }
 
 	/**
 	 * @param nwid Network ID
@@ -64,7 +64,7 @@ public:
 	 * @param id Tag ID
 	 * @param value Tag value
 	 */
-	ZT_ALWAYS_INLINE Tag(const uint64_t nwid,const int64_t ts,const Address &issuedTo,const uint32_t id,const uint32_t value) :
+	ZT_ALWAYS_INLINE Tag(const uint64_t nwid,const int64_t ts,const Address &issuedTo,const uint32_t id,const uint32_t value) noexcept :
 		_id(id),
 		_value(value),
 		_networkId(nwid),
@@ -75,14 +75,14 @@ public:
 	{
 	}
 
-	ZT_ALWAYS_INLINE uint32_t id() const { return _id; }
-	ZT_ALWAYS_INLINE const uint32_t &value() const { return _value; }
-	ZT_ALWAYS_INLINE uint64_t networkId() const { return _networkId; }
-	ZT_ALWAYS_INLINE int64_t timestamp() const { return _ts; }
-	ZT_ALWAYS_INLINE const Address &issuedTo() const { return _issuedTo; }
-	ZT_ALWAYS_INLINE const Address &signer() const { return _signedBy; }
-	ZT_ALWAYS_INLINE const uint8_t *signature() const { return _signature; }
-	ZT_ALWAYS_INLINE unsigned int signatureLength() const { return _signatureLength; }
+	ZT_ALWAYS_INLINE uint32_t id() const noexcept { return _id; }
+	ZT_ALWAYS_INLINE const uint32_t &value() const noexcept { return _value; }
+	ZT_ALWAYS_INLINE uint64_t networkId() const noexcept { return _networkId; }
+	ZT_ALWAYS_INLINE int64_t timestamp() const noexcept { return _ts; }
+	ZT_ALWAYS_INLINE const Address &issuedTo() const noexcept { return _issuedTo; }
+	ZT_ALWAYS_INLINE const Address &signer() const noexcept { return _signedBy; }
+	ZT_ALWAYS_INLINE const uint8_t *signature() const noexcept { return _signature; }
+	ZT_ALWAYS_INLINE unsigned int signatureLength() const noexcept { return _signatureLength; }
 
 	/**
 	 * Sign this tag
@@ -90,7 +90,7 @@ public:
 	 * @param signer Signing identity, must have private key
 	 * @return True if signature was successful
 	 */
-	bool sign(const Identity &signer);
+	bool sign(const Identity &signer) noexcept;
 
 	/**
 	 * Check this tag's signature
@@ -98,30 +98,30 @@ public:
 	 * @param RR Runtime environment to allow identity lookup for signedBy
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 */
-	ZT_ALWAYS_INLINE Credential::VerifyResult verify(const RuntimeEnvironment *RR,void *tPtr) const { return _verify(RR,tPtr,*this); }
+	ZT_ALWAYS_INLINE Credential::VerifyResult verify(const RuntimeEnvironment *RR,void *tPtr) const noexcept { return _verify(RR,tPtr,*this); }
 
-	static ZT_ALWAYS_INLINE int marshalSizeMax() { return ZT_TAG_MARSHAL_SIZE_MAX; }
-	int marshal(uint8_t data[ZT_TAG_MARSHAL_SIZE_MAX],bool forSign = false) const;
-	int unmarshal(const uint8_t *data,int len);
+	static constexpr int marshalSizeMax() noexcept { return ZT_TAG_MARSHAL_SIZE_MAX; }
+	int marshal(uint8_t data[ZT_TAG_MARSHAL_SIZE_MAX],bool forSign = false) const noexcept;
+	int unmarshal(const uint8_t *data,int len) noexcept;
 
 	// Provides natural sort order by ID
-	ZT_ALWAYS_INLINE bool operator<(const Tag &t) const { return (_id < t._id); }
+	ZT_ALWAYS_INLINE bool operator<(const Tag &t) const noexcept { return (_id < t._id); }
 
-	ZT_ALWAYS_INLINE bool operator==(const Tag &t) const { return (memcmp(this,&t,sizeof(Tag)) == 0); }
-	ZT_ALWAYS_INLINE bool operator!=(const Tag &t) const { return (memcmp(this,&t,sizeof(Tag)) != 0); }
+	ZT_ALWAYS_INLINE bool operator==(const Tag &t) const noexcept { return (memcmp(this,&t,sizeof(Tag)) == 0); }
+	ZT_ALWAYS_INLINE bool operator!=(const Tag &t) const noexcept { return (memcmp(this,&t,sizeof(Tag)) != 0); }
 
 	// For searching sorted arrays or lists of Tags by ID
 	struct IdComparePredicate
 	{
-		ZT_ALWAYS_INLINE bool operator()(const Tag &a,const Tag &b) const { return (a.id() < b.id()); }
-		ZT_ALWAYS_INLINE bool operator()(const uint32_t a,const Tag &b) const { return (a < b.id()); }
-		ZT_ALWAYS_INLINE bool operator()(const Tag &a,const uint32_t b) const { return (a.id() < b); }
-		ZT_ALWAYS_INLINE bool operator()(const Tag *a,const Tag *b) const { return (a->id() < b->id()); }
-		ZT_ALWAYS_INLINE bool operator()(const Tag *a,const Tag &b) const { return (a->id() < b.id()); }
-		ZT_ALWAYS_INLINE bool operator()(const Tag &a,const Tag *b) const { return (a.id() < b->id()); }
-		ZT_ALWAYS_INLINE bool operator()(const uint32_t a,const Tag *b) const { return (a < b->id()); }
-		ZT_ALWAYS_INLINE bool operator()(const Tag *a,const uint32_t b) const { return (a->id() < b); }
-		ZT_ALWAYS_INLINE bool operator()(const uint32_t a,const uint32_t b) const { return (a < b); }
+		ZT_ALWAYS_INLINE bool operator()(const Tag &a,const Tag &b) const noexcept { return (a.id() < b.id()); }
+		ZT_ALWAYS_INLINE bool operator()(const uint32_t a,const Tag &b) const noexcept { return (a < b.id()); }
+		ZT_ALWAYS_INLINE bool operator()(const Tag &a,const uint32_t b) const noexcept { return (a.id() < b); }
+		ZT_ALWAYS_INLINE bool operator()(const Tag *a,const Tag *b) const noexcept { return (a->id() < b->id()); }
+		ZT_ALWAYS_INLINE bool operator()(const Tag *a,const Tag &b) const noexcept { return (a->id() < b.id()); }
+		ZT_ALWAYS_INLINE bool operator()(const Tag &a,const Tag *b) const noexcept { return (a.id() < b->id()); }
+		ZT_ALWAYS_INLINE bool operator()(const uint32_t a,const Tag *b) const noexcept { return (a < b->id()); }
+		ZT_ALWAYS_INLINE bool operator()(const Tag *a,const uint32_t b) const noexcept { return (a->id() < b); }
+		ZT_ALWAYS_INLINE bool operator()(const uint32_t a,const uint32_t b) const noexcept { return (a < b); }
 	};
 
 private:

@@ -15,7 +15,6 @@
 #define ZT_BUF_HPP
 
 #include "Constants.hpp"
-#include "AtomicCounter.hpp"
 #include "Utils.hpp"
 #include "SharedPtr.hpp"
 #include "Mutex.hpp"
@@ -28,10 +27,7 @@
 #include <stdexcept>
 #include <utility>
 #include <algorithm>
-
-#ifndef __GNUC__
-#include <atomic>
-#endif
+#include <new>
 
 // Buffers are 16384 bytes in size because this is the smallest size that can hold any packet
 // and is a power of two. It needs to be a power of two because masking is significantly faster
@@ -40,23 +36,6 @@
 #define ZT_BUF_MEM_MASK 0x00003fffU
 
 namespace ZeroTier {
-
-#ifdef __GNUC__
-extern uintptr_t _Buf_pool;
-#else
-extern std::atomic<uintptr_t> _Buf_pool;
-#endif
-void _Buf_release(void *ptr,std::size_t sz);
-void *_Buf_get();
-
-/**
- * Free all instances of Buf in shared pool.
- *
- * New buffers will be created and the pool repopulated if get() is called
- * and outstanding buffers will still be returned to the pool. This just
- * frees buffers currently held in reserve.
- */
-void freeBufPool();
 
 /**
  * Buffer and methods for branch-free bounds-checked data assembly and parsing
@@ -101,24 +80,32 @@ void freeBufPool();
 class Buf
 {
 	friend class SharedPtr< Buf >;
-	friend void _Buf_release(void *,std::size_t);
-	friend void *_Buf_get();
-	friend void freeBufPool();
 
 public:
-	static void operator delete(void *ptr,std::size_t sz) { _Buf_release(ptr,sz); }
+	// New and delete operators that allocate Buf instances from a shared lock-free memory pool.
+	static void *operator new(std::size_t sz) noexcept;
+	static void operator delete(void *ptr) noexcept;
+
+	/**
+	 * Free all instances of Buf in shared pool.
+	 *
+	 * New buffers will be created and the pool repopulated if get() is called
+	 * and outstanding buffers will still be returned to the pool. This just
+	 * frees buffers currently held in reserve.
+	 */
+	static void freePool() noexcept;
 
 	/**
 	 * Slice is almost exactly like the built-in slice data structure in Go
 	 */
 	struct Slice : TriviallyCopyable
 	{
-		ZT_ALWAYS_INLINE Slice(const SharedPtr<Buf> &b_,const unsigned int s_,const unsigned int e_) : b(b_),s(s_),e(e_) {}
-		ZT_ALWAYS_INLINE Slice() : b(),s(0),e(0) {}
+		ZT_ALWAYS_INLINE Slice(const SharedPtr<Buf> &b_,const unsigned int s_,const unsigned int e_) noexcept : b(b_),s(s_),e(e_) {}
+		ZT_ALWAYS_INLINE Slice() noexcept : b(),s(0),e(0) {}
 
-		ZT_ALWAYS_INLINE operator bool() const { return (b); }
-		ZT_ALWAYS_INLINE unsigned int size() const { return (e - s); }
-		ZT_ALWAYS_INLINE void zero() { b.zero(); s = 0; e = 0; }
+		ZT_ALWAYS_INLINE operator bool() const noexcept { return (b); }
+		ZT_ALWAYS_INLINE unsigned int size() const noexcept { return (e - s); }
+		ZT_ALWAYS_INLINE void zero() noexcept { b.zero(); s = 0; e = 0; }
 
 		/**
 		 * Buffer holding slice data
@@ -151,7 +138,7 @@ public:
 	 * @return Single slice containing fully assembled buffer (empty on error)
 	 */
 	template<unsigned int FCVC>
-	static ZT_ALWAYS_INLINE Buf::Slice assembleSliceVector(FCV<Buf::Slice,FCVC> &fcv)
+	static ZT_ALWAYS_INLINE Buf::Slice assembleSliceVector(FCV<Buf::Slice,FCVC> &fcv) noexcept
 	{
 		Buf::Slice r;
 
@@ -179,22 +166,19 @@ public:
 		return r;
 	}
 
-	ZT_ALWAYS_INLINE Buf() {}
-	ZT_ALWAYS_INLINE Buf(const Buf &b2) { memcpy(b,b2.b,ZT_BUF_MEM_SIZE); }
+	/**
+	 * Create a new uninitialized buffer with undefined contents (use clear() to zero if needed)
+	 */
+	ZT_ALWAYS_INLINE Buf() noexcept {}
 
-	ZT_ALWAYS_INLINE Buf &operator=(const Buf &b2)
+	ZT_ALWAYS_INLINE Buf(const Buf &b2) noexcept { memcpy(b,b2.b,ZT_BUF_MEM_SIZE); }
+
+	ZT_ALWAYS_INLINE Buf &operator=(const Buf &b2) noexcept
 	{
 		if (this != &b2)
 			memcpy(b,b2.b,ZT_BUF_MEM_SIZE);
 		return *this;
 	}
-
-	/**
-	 * Get obtains a buffer from the pool or allocates a new buffer if the pool is empty
-	 *
-	 * @return Buffer instance
-	 */
-	static ZT_ALWAYS_INLINE SharedPtr< Buf > get() { return SharedPtr<Buf>((Buf *)_Buf_get()); }
 
 	/**
 	 * Check for overflow beyond the size of the buffer
@@ -205,7 +189,7 @@ public:
 	 * @param ii Iterator to check
 	 * @return True if iterator has read past the size of the buffer
 	 */
-	static ZT_ALWAYS_INLINE bool writeOverflow(const int &ii) { return ((ii - ZT_BUF_MEM_SIZE) > 0); }
+	static ZT_ALWAYS_INLINE bool writeOverflow(const int &ii) noexcept { return ((ii - ZT_BUF_MEM_SIZE) > 0); }
 
 	/**
 	 * Check for overflow beyond the size of the data that should be in the buffer
@@ -217,17 +201,17 @@ public:
 	 * @param size Size of data that should be in buffer
 	 * @return True if iterator has read past the size of the data
 	 */
-	static ZT_ALWAYS_INLINE bool readOverflow(const int &ii,const unsigned int size) { return ((ii - (int)size) > 0); }
+	static ZT_ALWAYS_INLINE bool readOverflow(const int &ii,const unsigned int size) noexcept { return ((ii - (int)size) > 0); }
 
 	/**
 	 * Set all memory to zero
 	 */
-	ZT_ALWAYS_INLINE void clear() { memset(b,0,ZT_BUF_MEM_SIZE); }
+	ZT_ALWAYS_INLINE void clear() noexcept { memset(b,0,ZT_BUF_MEM_SIZE); }
 
 	/**
 	 * Zero security critical data using Utils::burn() to ensure it's never optimized out.
 	 */
-	ZT_ALWAYS_INLINE void burn() { Utils::burn(b,ZT_BUF_MEM_SIZE); }
+	ZT_ALWAYS_INLINE void burn() noexcept { Utils::burn(b,ZT_BUF_MEM_SIZE); }
 
 	/**
 	 * Read a byte
@@ -235,7 +219,7 @@ public:
 	 * @param ii Iterator
 	 * @return Byte (undefined on overflow)
 	 */
-	ZT_ALWAYS_INLINE uint8_t rI8(int &ii) const
+	ZT_ALWAYS_INLINE uint8_t rI8(int &ii) const noexcept
 	{
 		const int s = ii++;
 		return b[(unsigned int)s & ZT_BUF_MEM_MASK];
@@ -247,7 +231,7 @@ public:
 	 * @param ii Integer
 	 * @return Integer (undefined on overflow)
 	 */
-	ZT_ALWAYS_INLINE uint16_t rI16(int &ii) const
+	ZT_ALWAYS_INLINE uint16_t rI16(int &ii) const noexcept
 	{
 		const unsigned int s = (unsigned int)ii & ZT_BUF_MEM_MASK;
 		ii += 2;
@@ -266,7 +250,7 @@ public:
 	 * @param ii Integer
 	 * @return Integer (undefined on overflow)
 	 */
-	ZT_ALWAYS_INLINE uint32_t rI32(int &ii) const
+	ZT_ALWAYS_INLINE uint32_t rI32(int &ii) const noexcept
 	{
 		const unsigned int s = (unsigned int)ii & ZT_BUF_MEM_MASK;
 		ii += 4;
@@ -287,7 +271,7 @@ public:
 	 * @param ii Integer
 	 * @return Integer (undefined on overflow)
 	 */
-	ZT_ALWAYS_INLINE uint64_t rI64(int &ii) const
+	ZT_ALWAYS_INLINE uint64_t rI64(int &ii) const noexcept
 	{
 		const unsigned int s = (unsigned int)ii & ZT_BUF_MEM_MASK;
 		ii += 8;
@@ -322,7 +306,7 @@ public:
 	 * @return Bytes read or a negative value on unmarshal error (passed from object) or overflow
 	 */
 	template<typename T>
-	ZT_ALWAYS_INLINE int rO(int &ii,T &obj) const
+	ZT_ALWAYS_INLINE int rO(int &ii,T &obj) const noexcept
 	{
 		if (ii < ZT_BUF_MEM_SIZE) {
 			int ms = obj.unmarshal(b + ii,ZT_BUF_MEM_SIZE - ii);
@@ -344,7 +328,7 @@ public:
 	 * @param bufSize Capacity of buffer in bytes
 	 * @return Pointer to buf or NULL on overflow or error
 	 */
-	ZT_ALWAYS_INLINE char *rS(int &ii,char *const buf,const unsigned int bufSize) const
+	ZT_ALWAYS_INLINE char *rS(int &ii,char *const buf,const unsigned int bufSize) const noexcept
 	{
 		const char *const s = (const char *)(b + ii);
 		const int sii = ii;
@@ -370,7 +354,7 @@ public:
 	 * @param ii Iterator
 	 * @return Pointer to null-terminated C-style string or NULL on overflow or error
 	 */
-	ZT_ALWAYS_INLINE const char *rSnc(int &ii) const
+	ZT_ALWAYS_INLINE const char *rSnc(int &ii) const noexcept
 	{
 		const char *const s = (const char *)(b + ii);
 		while (ii < ZT_BUF_MEM_SIZE) {
@@ -391,7 +375,7 @@ public:
 	 * @param len Length of buffer
 	 * @return Pointer to data or NULL on overflow or error
 	 */
-	ZT_ALWAYS_INLINE uint8_t *rB(int &ii,void *bytes,unsigned int len) const
+	ZT_ALWAYS_INLINE uint8_t *rB(int &ii,void *bytes,unsigned int len) const noexcept
 	{
 		if ((ii += (int)len) <= ZT_BUF_MEM_SIZE) {
 			memcpy(bytes,b + ii,len);
@@ -413,7 +397,7 @@ public:
 	 * @param len Length of data field to obtain a pointer to
 	 * @return Pointer to field or NULL on overflow
 	 */
-	ZT_ALWAYS_INLINE const uint8_t *rBnc(int &ii,unsigned int len) const
+	ZT_ALWAYS_INLINE const uint8_t *rBnc(int &ii,unsigned int len) const noexcept
 	{
 		const uint8_t *const b = b + ii;
 		return ((ii += (int)len) <= ZT_BUF_MEM_SIZE) ? b : nullptr;
@@ -425,7 +409,7 @@ public:
 	 * @param ii Iterator
 	 * @param n Byte
 	 */
-	ZT_ALWAYS_INLINE void wI(int &ii,uint8_t n)
+	ZT_ALWAYS_INLINE void wI(int &ii,uint8_t n) noexcept
 	{
 		const int s = ii++;
 		b[(unsigned int)s & ZT_BUF_MEM_MASK] = n;
@@ -437,7 +421,7 @@ public:
 	 * @param ii Iterator
 	 * @param n Integer
 	 */
-	ZT_ALWAYS_INLINE void wI(int &ii,uint16_t n)
+	ZT_ALWAYS_INLINE void wI(int &ii,uint16_t n) noexcept
 	{
 		const unsigned int s = ((unsigned int)ii) & ZT_BUF_MEM_MASK;
 		ii += 2;
@@ -455,7 +439,7 @@ public:
 	 * @param ii Iterator
 	 * @param n Integer
 	 */
-	ZT_ALWAYS_INLINE void wI(int &ii,uint32_t n)
+	ZT_ALWAYS_INLINE void wI(int &ii,uint32_t n) noexcept
 	{
 		const unsigned int s = ((unsigned int)ii) & ZT_BUF_MEM_MASK;
 		ii += 4;
@@ -475,7 +459,7 @@ public:
 	 * @param ii Iterator
 	 * @param n Integer
 	 */
-	ZT_ALWAYS_INLINE void wI(int &ii,uint64_t n)
+	ZT_ALWAYS_INLINE void wI(int &ii,uint64_t n) noexcept
 	{
 		const unsigned int s = ((unsigned int)ii) & ZT_BUF_MEM_MASK;
 		ii += 8;
@@ -501,7 +485,7 @@ public:
 	 * @param t Object to write
 	 */
 	template<typename T>
-	ZT_ALWAYS_INLINE void wO(int &ii,T &t)
+	ZT_ALWAYS_INLINE void wO(int &ii,T &t) noexcept
 	{
 		const int s = ii;
 		if ((s + T::marshalSizeMax()) <= ZT_BUF_MEM_SIZE) {
@@ -519,7 +503,7 @@ public:
 	 * @param ii Iterator
 	 * @param s String to write (writes an empty string if this is NULL)
 	 */
-	ZT_ALWAYS_INLINE void wS(int &ii,const char *s)
+	ZT_ALWAYS_INLINE void wS(int &ii,const char *s) noexcept
 	{
 		if (s) {
 			char c;
@@ -539,7 +523,7 @@ public:
 	 * @param bytes Bytes to write
 	 * @param len Size of data in bytes
 	 */
-	ZT_ALWAYS_INLINE void wB(int &ii,const void *const bytes,const unsigned int len)
+	ZT_ALWAYS_INLINE void wB(int &ii,const void *const bytes,const unsigned int len) noexcept
 	{
 		const int s = ii;
 		if ((ii += (int)len) <= ZT_BUF_MEM_SIZE)
@@ -549,7 +533,7 @@ public:
 	/**
 	 * @return Capacity of this buffer (usable size of data.bytes)
 	 */
-	static constexpr unsigned int capacity() { return ZT_BUF_MEM_SIZE; }
+	static constexpr unsigned int capacity() noexcept { return ZT_BUF_MEM_SIZE; }
 
 	/**
 	 * Cast data in 'b' to a (usually packed) structure type
@@ -563,7 +547,7 @@ public:
 	 * @return Reference to 'b' cast to type T
 	 */
 	template<typename T>
-	ZT_ALWAYS_INLINE T &as(const unsigned int i = 0) { return *reinterpret_cast<T *>(b + i); }
+	ZT_ALWAYS_INLINE T &as(const unsigned int i = 0) noexcept { return *reinterpret_cast<T *>(b + i); }
 
 	/**
 	 * Cast data in 'b' to a (usually packed) structure type (const)
@@ -577,14 +561,14 @@ public:
 	 * @return Reference to 'b' cast to type T
 	 */
 	template<typename T>
-	ZT_ALWAYS_INLINE const T &as(const unsigned int i = 0) const { return *reinterpret_cast<const T *>(b + i); }
+	ZT_ALWAYS_INLINE const T &as(const unsigned int i = 0) const noexcept { return *reinterpret_cast<const T *>(b + i); }
 
-	ZT_ALWAYS_INLINE bool operator==(const Buf &b2) const { return (memcmp(b,b2.b,ZT_BUF_MEM_SIZE) == 0); }
-	ZT_ALWAYS_INLINE bool operator!=(const Buf &b2) const { return (memcmp(b,b2.b,ZT_BUF_MEM_SIZE) != 0); }
-	ZT_ALWAYS_INLINE bool operator<(const Buf &b2) const { return (memcmp(b,b2.b,ZT_BUF_MEM_SIZE) < 0); }
-	ZT_ALWAYS_INLINE bool operator<=(const Buf &b2) const { return (memcmp(b,b2.b,ZT_BUF_MEM_SIZE) <= 0); }
-	ZT_ALWAYS_INLINE bool operator>(const Buf &b2) const { return (memcmp(b,b2.b,ZT_BUF_MEM_SIZE) > 0); }
-	ZT_ALWAYS_INLINE bool operator>=(const Buf &b2) const { return (memcmp(b,b2.b,ZT_BUF_MEM_SIZE) >= 0); }
+	ZT_ALWAYS_INLINE bool operator==(const Buf &b2) const noexcept { return (memcmp(b,b2.b,ZT_BUF_MEM_SIZE) == 0); }
+	ZT_ALWAYS_INLINE bool operator!=(const Buf &b2) const noexcept { return (memcmp(b,b2.b,ZT_BUF_MEM_SIZE) != 0); }
+	ZT_ALWAYS_INLINE bool operator<(const Buf &b2) const noexcept { return (memcmp(b,b2.b,ZT_BUF_MEM_SIZE) < 0); }
+	ZT_ALWAYS_INLINE bool operator<=(const Buf &b2) const noexcept { return (memcmp(b,b2.b,ZT_BUF_MEM_SIZE) <= 0); }
+	ZT_ALWAYS_INLINE bool operator>(const Buf &b2) const noexcept { return (memcmp(b,b2.b,ZT_BUF_MEM_SIZE) > 0); }
+	ZT_ALWAYS_INLINE bool operator>=(const Buf &b2) const noexcept { return (memcmp(b,b2.b,ZT_BUF_MEM_SIZE) >= 0); }
 
 	/**
 	 * Raw data held in buffer
@@ -597,10 +581,10 @@ public:
 
 private:
 	// Next item in free buffer pool linked list if Buf is placed in pool, undefined and unused otherwise
-	volatile uintptr_t __nextInPool;
+	std::atomic<uintptr_t> __nextInPool;
 
 	// Reference counter for SharedPtr<>
-	AtomicCounter<int> __refCount;
+	std::atomic<int> __refCount;
 };
 
 } // namespace ZeroTier

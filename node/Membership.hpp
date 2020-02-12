@@ -126,7 +126,7 @@ public:
 	/**
 	 * Generates a key for internal use in indexing credentials by type and credential ID
 	 */
-	static ZT_ALWAYS_INLINE uint64_t credentialKey(const ZT_CredentialType &t,const uint32_t i) { return (((uint64_t)t << 32U) | (uint64_t)i); }
+	static ZT_ALWAYS_INLINE uint64_t credentialKey(const ZT_CredentialType &t,const uint32_t i) noexcept { return (((uint64_t)t << 32U) | (uint64_t)i); }
 
 	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const Identity &sourcePeerIdentity,const NetworkConfig &nconf,const CertificateOfMembership &com);
 	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const Identity &sourcePeerIdentity,const NetworkConfig &nconf,const Tag &tag);

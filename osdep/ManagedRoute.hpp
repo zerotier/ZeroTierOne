@@ -17,7 +17,7 @@
 #include "../node/InetAddress.hpp"
 #include "../node/Utils.hpp"
 #include "../node/SharedPtr.hpp"
-#include "../node/AtomicCounter.hpp"
+#include "../node/Atomic.hpp"
 
 #include <stdexcept>
 #include <vector>
@@ -83,7 +83,7 @@ private:
 	char _device[128];
 	char _systemDevice[128]; // for route overrides
 
-	AtomicCounter<int> __refCount;
+	Atomic<int> __refCount;
 };
 
 } // namespace ZeroTier

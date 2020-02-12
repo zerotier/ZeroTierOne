@@ -17,7 +17,7 @@
 
 namespace ZeroTier {
 
-bool Path::send(const RuntimeEnvironment *RR,void *tPtr,const void *data,unsigned int len,int64_t now)
+bool Path::send(const RuntimeEnvironment *RR,void *tPtr,const void *data,unsigned int len,int64_t now) noexcept
 {
 	if (RR->node->putPacket(tPtr,_localSocket,_addr,data,len)) {
 		_lastOut = now;
@@ -26,7 +26,7 @@ bool Path::send(const RuntimeEnvironment *RR,void *tPtr,const void *data,unsigne
 	return false;
 }
 
-bool Path::isAddressValidForPath(const InetAddress &a)
+bool Path::isAddressValidForPath(const InetAddress &a) noexcept
 {
 	if ((a.ss_family == AF_INET)||(a.ss_family == AF_INET6)) {
 		switch(a.ipScope()) {

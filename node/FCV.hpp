@@ -43,7 +43,7 @@ public:
 	typedef T * iterator;
 	typedef const T * const_iterator;
 
-	ZT_ALWAYS_INLINE FCV() : _s(0) {}
+	ZT_ALWAYS_INLINE FCV() noexcept : _s(0) {}
 
 	template<unsigned int C2>
 	ZT_ALWAYS_INLINE FCV(const FCV<T,C2> &v) : _s(0) { *this = v; }
@@ -77,7 +77,7 @@ public:
 	/**
 	 * Clear without calling destructors (same as unsafeResize(0))
 	 */
-	ZT_ALWAYS_INLINE void unsafeClear() { _s = 0; }
+	ZT_ALWAYS_INLINE void unsafeClear() noexcept { _s = 0; }
 
 	/**
 	 * This does a straight copy of one vector's data to another
@@ -91,7 +91,7 @@ public:
 	 * @param v Other vector to copy to this one
 	 */
 	template<unsigned int C2>
-	ZT_ALWAYS_INLINE void unsafeAssign(const FCV<T,C2> &v)
+	ZT_ALWAYS_INLINE void unsafeAssign(const FCV<T,C2> &v) noexcept
 	{
 		_s = ((C2 > C)&&(v._s > C)) ? C : v._s;
 		memcpy(_m,v._m,_s * sizeof(T));
@@ -105,23 +105,23 @@ public:
 	 *
 	 * @param v Target vector
 	 */
-	ZT_ALWAYS_INLINE void unsafeMoveTo(FCV &v)
+	ZT_ALWAYS_INLINE void unsafeMoveTo(FCV &v) noexcept
 	{
 		memcpy(v._m,_m,(v._s = _s) * sizeof(T));
 		_s = 0;
 	}
 
-	ZT_ALWAYS_INLINE iterator begin() { return reinterpret_cast<T *>(_m); }
-	ZT_ALWAYS_INLINE const_iterator begin() const { return reinterpret_cast<const T *>(_m); }
-	ZT_ALWAYS_INLINE iterator end() { return reinterpret_cast<T *>(_m) + _s; }
-	ZT_ALWAYS_INLINE const_iterator end() const { return reinterpret_cast<const T *>(_m) + _s; }
+	ZT_ALWAYS_INLINE iterator begin() noexcept { return reinterpret_cast<T *>(_m); }
+	ZT_ALWAYS_INLINE const_iterator begin() const noexcept { return reinterpret_cast<const T *>(_m); }
+	ZT_ALWAYS_INLINE iterator end() noexcept { return reinterpret_cast<T *>(_m) + _s; }
+	ZT_ALWAYS_INLINE const_iterator end() const noexcept { return reinterpret_cast<const T *>(_m) + _s; }
 
-	ZT_ALWAYS_INLINE T &operator[](const unsigned int i) { return reinterpret_cast<T *>(_m)[i]; }
-	ZT_ALWAYS_INLINE const T &operator[](const unsigned int i) const { return reinterpret_cast<T *>(_m)[i]; }
+	ZT_ALWAYS_INLINE T &operator[](const unsigned int i) noexcept { return reinterpret_cast<T *>(_m)[i]; }
+	ZT_ALWAYS_INLINE const T &operator[](const unsigned int i) const noexcept { return reinterpret_cast<T *>(_m)[i]; }
 
-	ZT_ALWAYS_INLINE unsigned int size() const { return _s; }
-	ZT_ALWAYS_INLINE bool empty() const { return (_s == 0); }
-	static constexpr unsigned int capacity() { return C; }
+	ZT_ALWAYS_INLINE unsigned int size() const noexcept { return _s; }
+	ZT_ALWAYS_INLINE bool empty() const noexcept { return (_s == 0); }
+	static constexpr unsigned int capacity() noexcept { return C; }
 
 	/**
 	 * Push a value onto the back of this vector
@@ -200,7 +200,7 @@ public:
 	 *
 	 * @param ns New size (clipped to C if larger than capacity)
 	 */
-	ZT_ALWAYS_INLINE void unsafeResize(const unsigned int ns) { _s = (ns > C) ? C : ns; }
+	ZT_ALWAYS_INLINE void unsafeResize(const unsigned int ns) noexcept { _s = (ns > C) ? C : ns; }
 
 	/**
 	 * This is a bounds checked auto-resizing variant of the [] operator

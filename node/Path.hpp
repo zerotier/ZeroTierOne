@@ -24,7 +24,6 @@
 #include "Constants.hpp"
 #include "InetAddress.hpp"
 #include "SharedPtr.hpp"
-#include "AtomicCounter.hpp"
 #include "Utils.hpp"
 #include "Mutex.hpp"
 
@@ -47,7 +46,7 @@ class Path
 	friend class Defragmenter;
 
 public:
-	ZT_ALWAYS_INLINE Path(const int64_t l,const InetAddress &r) :
+	ZT_ALWAYS_INLINE Path(const int64_t l,const InetAddress &r) noexcept :
 		_localSocket(l),
 		_lastIn(0),
 		_lastOut(0),
@@ -65,55 +64,55 @@ public:
 	 * @param now Current time
 	 * @return True if transport reported success
 	 */
-	bool send(const RuntimeEnvironment *RR,void *tPtr,const void *data,unsigned int len,int64_t now);
+	bool send(const RuntimeEnvironment *RR,void *tPtr,const void *data,unsigned int len,int64_t now) noexcept;
 
 	/**
 	 * Explicitly update last sent time
 	 *
 	 * @param t Time of send
 	 */
-	ZT_ALWAYS_INLINE void sent(const int64_t t) { _lastOut = t; }
+	ZT_ALWAYS_INLINE void sent(const int64_t t) noexcept { _lastOut = t; }
 
 	/**
 	 * Called when a packet is received from this remote path, regardless of content
 	 *
 	 * @param t Time of receive
 	 */
-	ZT_ALWAYS_INLINE void received(const int64_t t) { _lastIn = t; }
+	ZT_ALWAYS_INLINE void received(const int64_t t) noexcept { _lastIn = t; }
 
 	/**
 	 * Check path aliveness
 	 *
 	 * @param now Current time
 	 */
-	ZT_ALWAYS_INLINE bool alive(const int64_t now) const { return ((now - _lastIn) < ZT_PATH_ALIVE_TIMEOUT); }
+	ZT_ALWAYS_INLINE bool alive(const int64_t now) const noexcept { return ((now - _lastIn) < ZT_PATH_ALIVE_TIMEOUT); }
 
 	/**
 	 * Check if path is considered active
 	 *
 	 * @param now Current time
 	 */
-	ZT_ALWAYS_INLINE bool active(const int64_t now) const { return ((now - _lastIn) < ZT_PATH_ACTIVITY_TIMEOUT); }
+	ZT_ALWAYS_INLINE bool active(const int64_t now) const noexcept { return ((now - _lastIn) < ZT_PATH_ACTIVITY_TIMEOUT); }
 
 	/**
 	 * @return Physical address
 	 */
-	ZT_ALWAYS_INLINE const InetAddress &address() const { return _addr; }
+	ZT_ALWAYS_INLINE const InetAddress &address() const noexcept { return _addr; }
 
 	/**
 	 * @return Local socket as specified by external code
 	 */
-	ZT_ALWAYS_INLINE int64_t localSocket() const { return _localSocket; }
+	ZT_ALWAYS_INLINE int64_t localSocket() const noexcept { return _localSocket; }
 
 	/**
 	 * @return Last time we received anything
 	 */
-	ZT_ALWAYS_INLINE int64_t lastIn() const { return _lastIn; }
+	ZT_ALWAYS_INLINE int64_t lastIn() const noexcept { return _lastIn; }
 
 	/**
 	 * @return Last time we sent something
 	 */
-	ZT_ALWAYS_INLINE int64_t lastOut() const { return _lastOut; }
+	ZT_ALWAYS_INLINE int64_t lastOut() const noexcept { return _lastOut; }
 
 	/**
 	 * Check whether this address is valid for a ZeroTier path
@@ -124,7 +123,7 @@ public:
 	 * @param a Address to check
 	 * @return True if address is good for ZeroTier path use
 	 */
-	static bool isAddressValidForPath(const InetAddress &a);
+	static bool isAddressValidForPath(const InetAddress &a) noexcept;
 
 private:
 	int64_t _localSocket;
@@ -138,7 +137,7 @@ private:
 	std::set<uint64_t> _inboundFragmentedMessages;
 	Mutex _inboundFragmentedMessages_l;
 
-	AtomicCounter<int> __refCount;
+	std::atomic<int> __refCount;
 };
 
 } // namespace ZeroTier

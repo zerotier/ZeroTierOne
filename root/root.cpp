@@ -122,7 +122,7 @@ using json = nlohmann::json;
  * RootPeer is a normal peer known to this root
  *
  * This struct must remain memcpy-able. Identity, InetAddress, and
- * AtomicCounter all satisfy this. Take care when adding fields that
+ * Atomic all satisfy this. Take care when adding fields that
  * this remains true.
  */
 struct RootPeer
@@ -140,7 +140,7 @@ struct RootPeer
 	int vProto;             // Protocol version or -1 if unknown
 	int vMajor,vMinor,vRev; // Peer version or -1,-1,-1 if unknown
 
-	AtomicCounter __refCount;
+	Atomic __refCount;
 };
 
 // Hashers for std::unordered_map

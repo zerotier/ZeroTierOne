@@ -14,10 +14,6 @@
 #include "Constants.hpp"
 #include "AES.hpp"
 
-#ifdef __WINDOWS__
-#include <intrin.h>
-#endif
-
 namespace ZeroTier {
 
 #ifdef ZT_NO_UNALIGNED_ACCESS
@@ -50,7 +46,7 @@ const uint32_t AES::Te2[256] = { 0x63a5c663,0x7c84f87c,0x7799ee77,0x7b8df67b,0xf
 const uint32_t AES::Te3[256] = { 0x6363a5c6,0x7c7c84f8,0x777799ee,0x7b7b8df6,0xf2f20dff,0x6b6bbdd6,0x6f6fb1de,0xc5c55491,0x30305060,0x01010302,0x6767a9ce,0x2b2b7d56,0xfefe19e7,0xd7d762b5,0xababe64d,0x76769aec,0xcaca458f,0x82829d1f,0xc9c94089,0x7d7d87fa,0xfafa15ef,0x5959ebb2,0x4747c98e,0xf0f00bfb,0xadadec41,0xd4d467b3,0xa2a2fd5f,0xafafea45,0x9c9cbf23,0xa4a4f753,0x727296e4,0xc0c05b9b,0xb7b7c275,0xfdfd1ce1,0x9393ae3d,0x26266a4c,0x36365a6c,0x3f3f417e,0xf7f702f5,0xcccc4f83,0x34345c68,0xa5a5f451,0xe5e534d1,0xf1f108f9,0x717193e2,0xd8d873ab,0x31315362,0x15153f2a,0x04040c08,0xc7c75295,0x23236546,0xc3c35e9d,0x18182830,0x9696a137,0x05050f0a,0x9a9ab52f,0x0707090e,0x12123624,0x80809b1b,0xe2e23ddf,0xebeb26cd,0x2727694e,0xb2b2cd7f,0x75759fea,0x09091b12,0x83839e1d,0x2c2c7458,0x1a1a2e34,0x1b1b2d36,0x6e6eb2dc,0x5a5aeeb4,0xa0a0fb5b,0x5252f6a4,0x3b3b4d76,0xd6d661b7,0xb3b3ce7d,0x29297b52,0xe3e33edd,0x2f2f715e,0x84849713,0x5353f5a6,0xd1d168b9,0x00000000,0xeded2cc1,0x20206040,0xfcfc1fe3,0xb1b1c879,0x5b5bedb6,0x6a6abed4,0xcbcb468d,0xbebed967,0x39394b72,0x4a4ade94,0x4c4cd498,0x5858e8b0,0xcfcf4a85,0xd0d06bbb,0xefef2ac5,0xaaaae54f,0xfbfb16ed,0x4343c586,0x4d4dd79a,0x33335566,0x85859411,0x4545cf8a,0xf9f910e9,0x02020604,0x7f7f81fe,0x5050f0a0,0x3c3c4478,0x9f9fba25,0xa8a8e34b,0x5151f3a2,0xa3a3fe5d,0x4040c080,0x8f8f8a05,0x9292ad3f,0x9d9dbc21,0x38384870,0xf5f504f1,0xbcbcdf63,0xb6b6c177,0xdada75af,0x21216342,0x10103020,0xffff1ae5,0xf3f30efd,0xd2d26dbf,0xcdcd4c81,0x0c0c1418,0x13133526,0xecec2fc3,0x5f5fe1be,0x9797a235,0x4444cc88,0x1717392e,0xc4c45793,0xa7a7f255,0x7e7e82fc,0x3d3d477a,0x6464acc8,0x5d5de7ba,0x19192b32,0x737395e6,0x6060a0c0,0x81819819,0x4f4fd19e,0xdcdc7fa3,0x22226644,0x2a2a7e54,0x9090ab3b,0x8888830b,0x4646ca8c,0xeeee29c7,0xb8b8d36b,0x14143c28,0xdede79a7,0x5e5ee2bc,0x0b0b1d16,0xdbdb76ad,0xe0e03bdb,0x32325664,0x3a3a4e74,0x0a0a1e14,0x4949db92,0x06060a0c,0x24246c48,0x5c5ce4b8,0xc2c25d9f,0xd3d36ebd,0xacacef43,0x6262a6c4,0x9191a839,0x9595a431,0xe4e437d3,0x79798bf2,0xe7e732d5,0xc8c8438b,0x3737596e,0x6d6db7da,0x8d8d8c01,0xd5d564b1,0x4e4ed29c,0xa9a9e049,0x6c6cb4d8,0x5656faac,0xf4f407f3,0xeaea25cf,0x6565afca,0x7a7a8ef4,0xaeaee947,0x08081810,0xbabad56f,0x787888f0,0x25256f4a,0x2e2e725c,0x1c1c2438,0xa6a6f157,0xb4b4c773,0xc6c65197,0xe8e823cb,0xdddd7ca1,0x74749ce8,0x1f1f213e,0x4b4bdd96,0xbdbddc61,0x8b8b860d,0x8a8a850f,0x707090e0,0x3e3e427c,0xb5b5c471,0x6666aacc,0x4848d890,0x03030506,0xf6f601f7,0x0e0e121c,0x6161a3c2,0x35355f6a,0x5757f9ae,0xb9b9d069,0x86869117,0xc1c15899,0x1d1d273a,0x9e9eb927,0xe1e138d9,0xf8f813eb,0x9898b32b,0x11113322,0x6969bbd2,0xd9d970a9,0x8e8e8907,0x9494a733,0x9b9bb62d,0x1e1e223c,0x87879215,0xe9e920c9,0xcece4987,0x5555ffaa,0x28287850,0xdfdf7aa5,0x8c8c8f03,0xa1a1f859,0x89898009,0x0d0d171a,0xbfbfda65,0xe6e631d7,0x4242c684,0x6868b8d0,0x4141c382,0x9999b029,0x2d2d775a,0x0f0f111e,0xb0b0cb7b,0x5454fca8,0xbbbbd66d,0x16163a2c };
 const uint32_t AES::rcon[10] = { 0x01000000,0x02000000,0x04000000,0x08000000,0x10000000,0x20000000,0x40000000,0x80000000,0x1B000000,0x36000000 };
 
-void AES::_initSW(const uint8_t key[32])
+void AES::_initSW(const uint8_t key[32]) noexcept
 {
 	uint32_t *rk = _k.sw.ek;
 
@@ -84,7 +80,7 @@ void AES::_initSW(const uint8_t key[32])
 	_k.sw.h[1] = Utils::ntoh(_k.sw.h[1]);
 }
 
-void AES::_encryptSW(const uint8_t in[16],uint8_t out[16]) const
+void AES::_encryptSW(const uint8_t in[16],uint8_t out[16]) const noexcept
 {
 	const uint32_t *const rk = _k.sw.ek;
 	uint32_t s0 = readuint32_t(in) ^ rk[0];
@@ -157,7 +153,7 @@ typedef unsigned __int128 uint128_t;
 typedef unsigned uint128_t __attribute__((mode(TI)));
 #endif
 
-static inline void s_bmul64(const uint64_t x,const uint64_t y,uint64_t &r_high,uint64_t &r_low)
+static ZT_ALWAYS_INLINE void s_bmul64(const uint64_t x,const uint64_t y,uint64_t &r_high,uint64_t &r_low) noexcept
 {
 	static uint128_t m1 = (uint128_t)0x2108421084210842ULL << 64U | 0x1084210842108421ULL;
 	static uint128_t m2 = (uint128_t)0x4210842108421084ULL << 64U | 0x2108421084210842ULL;
@@ -188,7 +184,7 @@ static inline void s_bmul64(const uint64_t x,const uint64_t y,uint64_t &r_high,u
 	r_low = (uint64_t)r;
 }
 
-static inline void s_gfmul(const uint64_t h_high,const uint64_t h_low,uint64_t &y0, uint64_t &y1)
+static ZT_ALWAYS_INLINE void s_gfmul(const uint64_t h_high,const uint64_t h_low,uint64_t &y0, uint64_t &y1) noexcept
 {
 	uint64_t z2_low,z2_high,z0_low,z0_high,z1a_low,z1a_high;
 	uint64_t y_high = Utils::ntoh(y0);
@@ -210,7 +206,7 @@ static inline void s_gfmul(const uint64_t h_high,const uint64_t h_low,uint64_t &
 
 #else
 
-static inline void s_bmul32(uint32_t x,uint32_t y,uint32_t &r_high,uint32_t &r_low)
+static ZT_ALWAYS_INLINE void s_bmul32(uint32_t x,uint32_t y,uint32_t &r_high,uint32_t &r_low) noexcept
 {
 	const uint32_t m1 = (uint32_t)0x11111111;
 	const uint32_t m2 = (uint32_t)0x22222222;
@@ -237,7 +233,7 @@ static inline void s_bmul32(uint32_t x,uint32_t y,uint32_t &r_high,uint32_t &r_l
 	r_low = (uint32_t)z;
 }
 
-static inline void s_gfmul(const uint64_t h_high,const uint64_t h_low,uint64_t &y0,uint64_t &y1)
+static ZT_ALWAYS_INLINE void s_gfmul(const uint64_t h_high,const uint64_t h_low,uint64_t &y0,uint64_t &y1) noexcept
 {
 	uint32_t h_high_h = (uint32_t)(h_high >> 32);
 	uint32_t h_high_l = (uint32_t)h_high;
@@ -298,7 +294,7 @@ static inline void s_gfmul(const uint64_t h_high,const uint64_t h_low,uint64_t &
 
 #endif
 
-void AES::_gmacSW(const uint8_t iv[12],const uint8_t *in,unsigned int len,uint8_t out[16]) const
+void AES::_gmacSW(const uint8_t iv[12],const uint8_t *in,unsigned int len,uint8_t out[16]) const noexcept
 {
 	const uint64_t h0 = _k.sw.h[0];
 	const uint64_t h1 = _k.sw.h[1];
@@ -347,7 +343,7 @@ void AES::_gmacSW(const uint8_t iv[12],const uint8_t *in,unsigned int len,uint8_
 
 #ifdef ZT_AES_AESNI
 
-static ZT_ALWAYS_INLINE __m128i _mult_block_aesni(__m128i shuf,__m128i h,__m128i y)
+static ZT_ALWAYS_INLINE __m128i _mult_block_aesni(__m128i shuf,__m128i h,__m128i y) noexcept
 {
 	y = _mm_shuffle_epi8(y,shuf);
 	__m128i t1 = _mm_clmulepi64_si128(h,y,0x00);
@@ -387,12 +383,13 @@ static ZT_ALWAYS_INLINE __m128i _mult_block_aesni(__m128i shuf,__m128i h,__m128i
 	t4 = _mm_xor_si128(t4,t5);
 	return _mm_shuffle_epi8(t4,shuf);
 }
-static ZT_ALWAYS_INLINE __m128i _ghash_aesni(__m128i shuf,__m128i h,__m128i y,__m128i x)
+
+static ZT_ALWAYS_INLINE __m128i _ghash_aesni(__m128i shuf,__m128i h,__m128i y,__m128i x) noexcept
 {
 	return _mult_block_aesni(shuf,h,_mm_xor_si128(y,x));
 }
 
-static ZT_ALWAYS_INLINE __m128i _init256_1_aesni(__m128i a,__m128i b)
+static ZT_ALWAYS_INLINE __m128i _init256_1_aesni(__m128i a,__m128i b) noexcept
 {
 	__m128i x,y;
 	b = _mm_shuffle_epi32(b,0xff);
@@ -405,7 +402,8 @@ static ZT_ALWAYS_INLINE __m128i _init256_1_aesni(__m128i a,__m128i b)
 	x = _mm_xor_si128(x,b);
 	return x;
 }
-static ZT_ALWAYS_INLINE __m128i _init256_2_aesni(__m128i a,__m128i b)
+
+static ZT_ALWAYS_INLINE __m128i _init256_2_aesni(__m128i a,__m128i b) noexcept
 {
 	__m128i x,y,z;
 	y = _mm_aeskeygenassist_si128(a,0x00);
@@ -420,9 +418,11 @@ static ZT_ALWAYS_INLINE __m128i _init256_2_aesni(__m128i a,__m128i b)
 	return x;
 }
 
-void AES::_init_aesni(const uint8_t key[32])
+void AES::_init_aesni(const uint8_t key[32]) noexcept
 {
 	__m128i t1,t2;
+
+	// AES-256 encryption key expansion
 	_k.ni.k[0] = t1 = _mm_loadu_si128((const __m128i *)key);
 	_k.ni.k[1] = t2 = _mm_loadu_si128((const __m128i *)(key+16));
 	_k.ni.k[2] = t1 = _init256_1_aesni(t1,_mm_aeskeygenassist_si128(t2,0x01));
@@ -439,6 +439,7 @@ void AES::_init_aesni(const uint8_t key[32])
 	_k.ni.k[13] = t2 = _init256_2_aesni(t1,t2);
 	_k.ni.k[14] = _init256_1_aesni(t1,_mm_aeskeygenassist_si128(t2,0x40));
 
+	// Initialize GMAC/GHASH constants
 	__m128i h = _mm_xor_si128(_mm_setzero_si128(),_k.ni.k[0]);
 	h = _mm_aesenc_si128(h,_k.ni.k[1]);
 	h = _mm_aesenc_si128(h,_k.ni.k[2]);
@@ -454,7 +455,6 @@ void AES::_init_aesni(const uint8_t key[32])
 	h = _mm_aesenc_si128(h,_k.ni.k[12]);
 	h = _mm_aesenc_si128(h,_k.ni.k[13]);
 	h = _mm_aesenclast_si128(h,_k.ni.k[14]);
-
 	const __m128i shuf = _mm_set_epi8(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15);
 	__m128i hswap = _mm_shuffle_epi8(h,shuf);
 	__m128i hh = _mult_block_aesni(shuf,hswap,h);
@@ -466,9 +466,9 @@ void AES::_init_aesni(const uint8_t key[32])
 	_k.ni.hhhh = _mm_shuffle_epi8(hhhh,shuf);
 }
 
-void AES::_gmac_aesni(const uint8_t iv[12],const uint8_t *in,const unsigned int len,uint8_t out[16]) const
+void AES::_gmac_aesni(const uint8_t iv[12],const uint8_t *in,const unsigned int len,uint8_t out[16]) const noexcept
 {
-	const __m128i *const ab = (const __m128i *)in;
+	const __m128i *const ab = reinterpret_cast<const __m128i *>(in);
 	const unsigned int blocks = len / 16;
 	const unsigned int pblocks = blocks - (blocks % 4);
 	const unsigned int rem = len % 16;
@@ -477,11 +477,10 @@ void AES::_gmac_aesni(const uint8_t iv[12],const uint8_t *in,const unsigned int 
 	__m128i y = _mm_setzero_si128();
 	unsigned int i = 0;
 	for (;i<pblocks;i+=4) {
-		__m128i d1 = _mm_shuffle_epi8(_mm_xor_si128(y,_mm_loadu_si128(ab + i + 0)),shuf);
+		__m128i d1 = _mm_shuffle_epi8(_mm_xor_si128(y,_mm_loadu_si128(ab + i)),shuf);
 		__m128i d2 = _mm_shuffle_epi8(_mm_loadu_si128(ab + i + 1),shuf);
 		__m128i d3 = _mm_shuffle_epi8(_mm_loadu_si128(ab + i + 2),shuf);
 		__m128i d4 = _mm_shuffle_epi8(_mm_loadu_si128(ab + i + 3),shuf);
-		_mm_prefetch(ab + i + 4,_MM_HINT_T0);
 		__m128i t0 = _mm_clmulepi64_si128(_k.ni.hhhh,d1,0x00);
 		__m128i t1 = _mm_clmulepi64_si128(_k.ni.hhh,d2,0x00);
 		__m128i t2 = _mm_clmulepi64_si128(_k.ni.hh,d3,0x00);

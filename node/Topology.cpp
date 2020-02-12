@@ -75,13 +75,20 @@ Topology::~Topology()
 SharedPtr<Peer> Topology::add(void *tPtr,const SharedPtr<Peer> &peer)
 {
 	RWMutex::Lock _l(_peers_l);
+
 	SharedPtr<Peer> &hp = _peers[peer->address()];
 	if (hp)
 		return hp;
+
 	_loadCached(tPtr,peer->address(),hp);
-	if (hp)
+	if (hp) {
+		_peersByIncomingProbe[peer->incomingProbe()] = hp;
 		return hp;
+	}
+
 	hp = peer;
+	_peersByIncomingProbe[peer->incomingProbe()] = peer;
+
 	return peer;
 }
 
@@ -196,6 +203,7 @@ void Topology::doPeriodicTasks(void *tPtr,const int64_t now)
 		while (i.next(a,p)) {
 			if ( (!(*p)->alive(now)) && (_roots.count((*p)->identity()) == 0) ) {
 				(*p)->save(tPtr);
+				_peersByIncomingProbe.erase((*p)->incomingProbe());
 				_peers.erase(*a);
 			}
 		}
@@ -227,24 +235,28 @@ void Topology::saveAll(void *tPtr)
 
 void Topology::_loadCached(void *tPtr,const Address &zta,SharedPtr<Peer> &peer)
 {
-	uint64_t id[2];
-	id[0] = zta.toInt();
-	id[1] = 0;
-	std::vector<uint8_t> data(RR->node->stateObjectGet(tPtr,ZT_STATE_OBJECT_PEER,id));
-	if (!data.empty()) {
-		const uint8_t *d = data.data();
-		int dl = (int)data.size();
-		for(;;) {
-			Peer *const p = new Peer(RR);
-			int n = p->unmarshal(d,dl);
-			if (n > 0) {
-				// TODO: will eventually handle multiple peers
-				peer.set(p);
-				return;
-			} else {
-				delete p;
+	try {
+		uint64_t id[2];
+		id[0] = zta.toInt();
+		id[1] = 0;
+		std::vector<uint8_t> data(RR->node->stateObjectGet(tPtr,ZT_STATE_OBJECT_PEER,id));
+		if (!data.empty()) {
+			const uint8_t *d = data.data();
+			int dl = (int)data.size();
+			for (;;) {
+				Peer *const p = new Peer(RR);
+				int n = p->unmarshal(d,dl);
+				if (n > 0) {
+					// TODO: will eventually handle multiple peers
+					peer.set(p);
+					return;
+				} else {
+					delete p;
+				}
 			}
 		}
+	} catch ( ... ) {
+		peer.zero();
 	}
 }
 

@@ -61,7 +61,7 @@ public:
 	 */
 	static const Identity NIL;
 
-	ZT_ALWAYS_INLINE Identity() { memoryZero(this); }
+	ZT_ALWAYS_INLINE Identity() noexcept { memoryZero(this); }
 	ZT_ALWAYS_INLINE ~Identity() { Utils::burn(reinterpret_cast<void *>(&this->_priv),sizeof(this->_priv)); }
 
 	/**
@@ -77,12 +77,12 @@ public:
 	/**
 	 * Set identity to NIL value (all zero)
 	 */
-	ZT_ALWAYS_INLINE void zero() { memoryZero(this); }
+	ZT_ALWAYS_INLINE void zero() noexcept { memoryZero(this); }
 
 	/**
 	 * @return Identity type (undefined if identity is null or invalid)
 	 */
-	ZT_ALWAYS_INLINE Type type() const { return _type; }
+	ZT_ALWAYS_INLINE Type type() const noexcept { return _type; }
 
 	/**
 	 * Generate a new identity (address, key pair)
@@ -103,7 +103,7 @@ public:
 	/**
 	 * @return True if this identity contains a private key
 	 */
-	ZT_ALWAYS_INLINE bool hasPrivate() const { return _hasPrivate; }
+	ZT_ALWAYS_INLINE bool hasPrivate() const noexcept { return _hasPrivate; }
 
 	/**
 	 * @return 384-bit/48-byte hash of this identity's public key(s)
@@ -161,7 +161,7 @@ public:
 	/**
 	 * @return This identity's address
 	 */
-	ZT_ALWAYS_INLINE const Address &address() const { return _address; }
+	ZT_ALWAYS_INLINE const Address &address() const noexcept { return _address; }
 
 	/**
 	 * Serialize to a more human-friendly string
@@ -186,9 +186,9 @@ public:
 	/**
 	 * @return True if this identity contains something
 	 */
-	explicit ZT_ALWAYS_INLINE operator bool() const { return (_address); }
+	explicit ZT_ALWAYS_INLINE operator bool() const noexcept { return (_address); }
 
-	ZT_ALWAYS_INLINE bool operator==(const Identity &id) const
+	ZT_ALWAYS_INLINE bool operator==(const Identity &id) const noexcept
 	{
 		if ((_address == id._address)&&(_type == id._type)) {
 			switch(_type) {
@@ -199,7 +199,7 @@ public:
 		}
 		return false;
 	}
-	ZT_ALWAYS_INLINE bool operator<(const Identity &id) const
+	ZT_ALWAYS_INLINE bool operator<(const Identity &id) const noexcept
 	{
 		if (_address < id._address)
 			return true;
@@ -216,16 +216,16 @@ public:
 		}
 		return false;
 	}
-	ZT_ALWAYS_INLINE bool operator!=(const Identity &id) const { return !(*this == id); }
-	ZT_ALWAYS_INLINE bool operator>(const Identity &id) const { return (id < *this); }
-	ZT_ALWAYS_INLINE bool operator<=(const Identity &id) const { return !(id < *this); }
-	ZT_ALWAYS_INLINE bool operator>=(const Identity &id) const { return !(*this < id); }
+	ZT_ALWAYS_INLINE bool operator!=(const Identity &id) const noexcept { return !(*this == id); }
+	ZT_ALWAYS_INLINE bool operator>(const Identity &id) const noexcept { return (id < *this); }
+	ZT_ALWAYS_INLINE bool operator<=(const Identity &id) const noexcept { return !(id < *this); }
+	ZT_ALWAYS_INLINE bool operator>=(const Identity &id) const noexcept { return !(*this < id); }
 
-	ZT_ALWAYS_INLINE unsigned long hashCode() const { return ((unsigned long)_address.toInt() + (unsigned long)_pub.c25519[0] + (unsigned long)_pub.c25519[1] + (unsigned long)_pub.c25519[2]); }
+	ZT_ALWAYS_INLINE unsigned long hashCode() const noexcept { return ((unsigned long)_address.toInt() + (unsigned long)_pub.c25519[0] + (unsigned long)_pub.c25519[1] + (unsigned long)_pub.c25519[2]); }
 
-	static ZT_ALWAYS_INLINE int marshalSizeMax() { return ZT_IDENTITY_MARSHAL_SIZE_MAX; }
-	int marshal(uint8_t data[ZT_IDENTITY_MARSHAL_SIZE_MAX],bool includePrivate = false) const;
-	int unmarshal(const uint8_t *data,int len);
+	static constexpr int marshalSizeMax() noexcept { return ZT_IDENTITY_MARSHAL_SIZE_MAX; }
+	int marshal(uint8_t data[ZT_IDENTITY_MARSHAL_SIZE_MAX],bool includePrivate = false) const noexcept;
+	int unmarshal(const uint8_t *data,int len) noexcept;
 
 private:
 	void _computeHash(); // recompute _hash

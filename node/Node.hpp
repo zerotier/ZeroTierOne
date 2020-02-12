@@ -14,12 +14,6 @@
 #ifndef ZT_NODE_HPP
 #define ZT_NODE_HPP
 
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-
-#include <vector>
-
 #include "Constants.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "InetAddress.hpp"
@@ -30,6 +24,12 @@
 #include "Salsa20.hpp"
 #include "NetworkController.hpp"
 #include "Hashtable.hpp"
+
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <vector>
+#include <map>
 
 // Bit mask for "expecting reply" hash
 #define ZT_EXPECTING_REPLIES_BUCKET_MASK1 255
@@ -328,6 +328,11 @@ public:
 	}
 
 	/**
+	 * @return True if aggressive NAT-traversal mechanisms like scanning of <1024 ports are enabled
+	 */
+	ZT_ALWAYS_INLINE bool natMustDie() const { return _natMustDie; }
+
+	/**
 	 * Check whether we should do potentially expensive identity verification (rate limit)
 	 *
 	 * @param now Current time
@@ -342,6 +347,20 @@ public:
 			return true;
 		}
 		return false;
+	}
+
+	/**
+	 * Wake any peers with the given address by calling their alarm() methods at or after the specified time
+	 *
+	 * @param peerAddress Peer address
+	 * @param triggerTime Time alarm should go off
+	 */
+	ZT_ALWAYS_INLINE void setPeerAlarm(const Address &peerAddress,const int64_t triggerTime)
+	{
+		RWMutex::Lock l(_peerAlarms_l);
+		int64_t &t = _peerAlarms[peerAddress];
+		if ((t <= 0)||(t > triggerTime))
+			t = triggerTime;
 	}
 
 	/**
@@ -370,18 +389,27 @@ private:
 	ZT_Node_Callbacks _cb;
 	void *_uPtr; // _uptr (lower case) is reserved in Visual Studio :P
 
-	// For tracking packet IDs to filter out OK/ERROR replies to packets we did not send
+	// For tracking packet IDs to filter out OK/ERROR replies to packets we did not send.
 	volatile uint8_t _expectingRepliesToBucketPtr[ZT_EXPECTING_REPLIES_BUCKET_MASK1 + 1];
 	volatile uint32_t _expectingRepliesTo[ZT_EXPECTING_REPLIES_BUCKET_MASK1 + 1][ZT_EXPECTING_REPLIES_BUCKET_MASK2 + 1];
 
 	// Time of last identity verification indexed by InetAddress.rateGateHash() -- used in IncomingPacket::_doHELLO() via rateGateIdentityVerification()
 	volatile int64_t _lastIdentityVerification[16384];
 
-	/* Map that remembers if we have recently sent a network config to someone
-	 * querying us as a controller. This is an optimization to allow network
-	 * controllers to know whether to treat things like multicast queries the
-	 * way authorized members would be treated without requiring an extra cert
-	 * validation. */
+	// Addresses of peers that want to have their alarm() function called at some point in the future.
+	// These behave like weak references in that the node looks them up in Topology and calls alarm()
+	// in each peer if that peer object is still held in memory. Calling alarm() unnecessarily on a peer
+	// is harmless. This just exists as an optimization to prevent having to iterate through all peers
+	// on every processBackgroundTasks call. A simple map<> is used here because there are usually only
+	// a few of these, if any, and it's slightly faster and lower memory in that case than a Hashtable.
+	std::map<Address,int64_t> _peerAlarms;
+	RWMutex _peerAlarms_l;
+
+	// Map that remembers if we have recently sent a network config to someone
+	// querying us as a controller. This is an optimization to allow network
+	// controllers to know whether to treat things like multicast queries the
+	// way authorized members would be treated without requiring an extra cert
+	// validation.
 	struct _LocalControllerAuth
 	{
 		uint64_t nwid,address;
@@ -391,17 +419,20 @@ private:
 		ZT_ALWAYS_INLINE bool operator!=(const _LocalControllerAuth &a) const { return ((a.nwid != nwid)||(a.address != address)); }
 	};
 	Hashtable< _LocalControllerAuth,int64_t > _localControllerAuthorizations;
+	Mutex _localControllerAuthorizations_m;
 
 	// Networks are stored in a flat hash table that is resized on any network ID collision. This makes
 	// network lookup by network ID a few bitwise ops and an array index.
 	std::vector< SharedPtr<Network> > _networks;
 	uint64_t _networksMask;
-
-	std::vector< ZT_InterfaceAddress > _localInterfaceAddresses;
-
-	Mutex _localControllerAuthorizations_m;
 	RWMutex _networks_m;
+
+	// These are local interface addresses that have been configured via the API
+	// and can be pushed to other nodes.
+	std::vector< ZT_InterfaceAddress > _localInterfaceAddresses;
 	Mutex _localInterfaceAddresses_m;
+
+	// This is locked while running processBackgroundTasks to ensure that calls to it are not concurrent.
 	Mutex _backgroundTasksLock;
 
 	volatile int64_t _now;
@@ -409,6 +440,7 @@ private:
 	volatile int64_t _lastHousekeepingRun;
 	volatile int64_t _lastNetworkHousekeepingRun;
 	volatile int64_t _lastPathKeepaliveCheck;
+	volatile bool _natMustDie;
 	volatile bool _online;
 };
 
