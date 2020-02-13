@@ -37,14 +37,14 @@ namespace ZeroTier {
 class Salsa20 : public TriviallyCopyable
 {
 public:
-	ZT_ALWAYS_INLINE Salsa20() {}
+	ZT_ALWAYS_INLINE Salsa20() noexcept {}
 	ZT_ALWAYS_INLINE ~Salsa20() { Utils::burn(&_state,sizeof(_state)); }
 
 	/**
 	 * @param key 256-bit (32 byte) key
 	 * @param iv 64-bit initialization vector
 	 */
-	ZT_ALWAYS_INLINE Salsa20(const void *key,const void *iv) { init(key,iv); }
+	ZT_ALWAYS_INLINE Salsa20(const void *key,const void *iv) noexcept { init(key,iv); }
 
 	/**
 	 * Initialize cipher
@@ -52,7 +52,7 @@ public:
 	 * @param key Key bits
 	 * @param iv 64-bit initialization vector
 	 */
-	void init(const void *key,const void *iv);
+	void init(const void *key,const void *iv) noexcept;
 
 	/**
 	 * Encrypt/decrypt data using Salsa20/12
@@ -61,7 +61,7 @@ public:
 	 * @param out Output buffer
 	 * @param bytes Length of data
 	 */
-	void crypt12(const void *in,void *out,unsigned int bytes);
+	void crypt12(const void *in,void *out,unsigned int bytes) noexcept;
 
 	/**
 	 * Encrypt/decrypt data using Salsa20/20
@@ -70,7 +70,7 @@ public:
 	 * @param out Output buffer
 	 * @param bytes Length of data
 	 */
-	void crypt20(const void *in,void *out,unsigned int bytes);
+	void crypt20(const void *in,void *out,unsigned int bytes) noexcept;
 
 private:
 	union {

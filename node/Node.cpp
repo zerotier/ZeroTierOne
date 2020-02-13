@@ -296,7 +296,7 @@ ZT_ResultCode Node::processBackgroundTasks(void *tPtr, int64_t now, volatile int
 		for(std::map<Address,int64_t>::iterator a(_peerAlarms.begin());a!=_peerAlarms.end();) {
 			if (now >= a->second) {
 				bzzt.push_back(a->first);
-				l.write(); // acquire write lock if not already in write mode
+				l.writing();
 				_peerAlarms.erase(a++);
 			} else {
 				if (a->second < earliestAlarmAt)
@@ -556,17 +556,15 @@ void Node::setInterfaceAddresses(const ZT_InterfaceAddress *addrs,unsigned int a
 	Mutex::Lock _l(_localInterfaceAddresses_m);
 	_localInterfaceAddresses.clear();
 	for(unsigned int i=0;i<addrCount;++i) {
-		if (Path::isAddressValidForPath(*(reinterpret_cast<const InetAddress *>(&addrs[i].address)))) {
-			bool dupe = false;
-			for(unsigned int j=0;j<i;++j) {
-				if (*(reinterpret_cast<const InetAddress *>(&addrs[j].address)) == *(reinterpret_cast<const InetAddress *>(&addrs[i].address))) {
-					dupe = true;
-					break;
-				}
+		bool dupe = false;
+		for(unsigned int j=0;j<i;++j) {
+			if (*(reinterpret_cast<const InetAddress *>(&addrs[j].address)) == *(reinterpret_cast<const InetAddress *>(&addrs[i].address))) {
+				dupe = true;
+				break;
 			}
-			if (!dupe)
-				_localInterfaceAddresses.push_back(addrs[i]);
 		}
+		if (!dupe)
+			_localInterfaceAddresses.push_back(addrs[i]);
 	}
 }
 
@@ -620,19 +618,18 @@ std::vector<uint8_t> Node::stateObjectGet(void *const tPtr,ZT_StateObjectType ty
 
 bool Node::shouldUsePathForZeroTierTraffic(void *tPtr,const Identity &id,const int64_t localSocket,const InetAddress &remoteAddress)
 {
-	if (Path::isAddressValidForPath(remoteAddress)) {
+	{
 		RWMutex::RLock l(_networks_m);
-		for(std::vector< SharedPtr<Network> >::iterator i(_networks.begin());i!=_networks.end();++i) {
+		for (std::vector<SharedPtr<Network> >::iterator i(_networks.begin()); i != _networks.end(); ++i) {
 			if ((*i)) {
-				for(unsigned int k=0,j=(*i)->config().staticIpCount;k<j;++k) {
+				for (unsigned int k = 0,j = (*i)->config().staticIpCount; k < j; ++k) {
 					if ((*i)->config().staticIps[k].containsAddress(remoteAddress))
 						return false;
 				}
 			}
 		}
-	} else {
-		return false;
 	}
+
 	if (_cb.pathCheckFunction) {
 		return (_cb.pathCheckFunction(
 			reinterpret_cast<ZT_Node *>(this),
@@ -643,6 +640,7 @@ bool Node::shouldUsePathForZeroTierTraffic(void *tPtr,const Identity &id,const i
 			localSocket,
 			reinterpret_cast<const struct sockaddr_storage *>(&remoteAddress)) != 0);
 	}
+
 	return true;
 }
 

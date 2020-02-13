@@ -47,7 +47,7 @@ extern CPUIDRegisters CPUID;
 #endif
 
 /**
- * 256 zero bits
+ * 256 zero bits / 32 zero bytes
  */
 extern const uint64_t ZERO256[4];
 
@@ -410,6 +410,13 @@ template<typename T>
 static ZT_ALWAYS_INLINE T ntoh(T n) noexcept { return n; }
 #endif
 
+/**
+ * Decode a big-endian value from a byte stream
+ *
+ * @tparam I Type to decode (should be unsigned e.g. uint32_t or uint64_t)
+ * @param p Byte stream, must be at least sizeof(I) in size
+ * @return Decoded integer
+ */
 template<typename I>
 static ZT_ALWAYS_INLINE I loadBigEndian(const void *const p) noexcept
 {
@@ -428,6 +435,13 @@ static ZT_ALWAYS_INLINE I loadBigEndian(const void *const p) noexcept
 #endif
 }
 
+/**
+ * Copy bits from memory into an integer type without modifying their order
+ *
+ * @tparam I Type to load
+ * @param p Byte stream, must be at least sizeof(I) in size
+ * @return Loaded raw integer
+ */
 template<typename I>
 static ZT_ALWAYS_INLINE I loadAsIsEndian(const void *const p) noexcept
 {
@@ -441,6 +455,13 @@ static ZT_ALWAYS_INLINE I loadAsIsEndian(const void *const p) noexcept
 #endif
 }
 
+/**
+ * Save an integer in big-endian format
+ *
+ * @tparam I Integer type to store (usually inferred)
+ * @param p Byte stream to write (must be at least sizeof(I))
+ * #param i Integer to write
+ */
 template<typename I>
 static ZT_ALWAYS_INLINE void storeBigEndian(void *const p,const I i) noexcept
 {

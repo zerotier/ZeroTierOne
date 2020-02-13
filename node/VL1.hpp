@@ -32,7 +32,9 @@ class Peer;
 class VL2;
 
 /**
- * VL1 (virtual layer 1) packet I/O and messaging
+ * VL1 (virtual layer 1) packet I/O and messaging.
+ *
+ * This class is thread safe.
  */
 class VL1
 {
@@ -43,6 +45,12 @@ public:
 	/**
 	 * Called when a packet is received from the real network
 	 *
+	 * The packet data supplied to this method may be modified. Internal
+	 * packet handler code may also take possession of it via atomic swap
+	 * and leave the 'data' pointer NULL. The 'data' pointer and its
+	 * contents should not be used after this call. Make a copy if the
+	 * data might still be needed.
+	 *
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param localSocket Local I/O socket as supplied by external code
 	 * @param fromAddr Internet IP address of origin
@@ -52,10 +60,15 @@ public:
 	void onRemotePacket(void *tPtr,int64_t localSocket,const InetAddress &fromAddr,SharedPtr<Buf> &data,unsigned int len);
 
 private:
+	const RuntimeEnvironment *RR;
+
+	// Code to handle relaying of packets to other nodes.
 	void _relay(void *tPtr,const SharedPtr<Path> &path,const Address &destination,SharedPtr<Buf> &data,unsigned int len);
+
+	// Send any pending WHOIS requests.
 	void _sendPendingWhois(void *tPtr,int64_t now);
 
-	// Handlers for VL1 verbs
+	// Handlers for VL1 verbs -- for clarity's sake VL2 verbs are in the VL2 class.
 	bool _HELLO(void *tPtr,const SharedPtr<Path> &path,SharedPtr<Peer> &peer,Buf &pkt,int packetSize,bool authenticated);
 	bool _ERROR(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &peer,Buf &pkt,int packetSize);
 	bool _OK(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &peer,Buf &pkt,int packetSize);
@@ -65,8 +78,6 @@ private:
 	bool _PUSH_DIRECT_PATHS(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &peer,Buf &pkt,int packetSize);
 	bool _USER_MESSAGE(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &peer,Buf &pkt,int packetSize);
 	bool _ENCAP(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &peer,Buf &pkt,int packetSize);
-
-	const RuntimeEnvironment *RR;
 
 	struct _WhoisQueueItem
 	{

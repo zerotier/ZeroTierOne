@@ -75,33 +75,39 @@ void VL1::onRemotePacket(void *const tPtr,const int64_t localSocket,const InetAd
 			return;
 		}
 
-		// Discard any other runt packets that aren't probes. These are likely to be keepalives or corrupt junk.
+		// Discard any other runt packets that aren't probes. These are likely to be keepalives.
+		// No reason to bother even logging them. Note that the last receive time for the path
+		// was still updated, so tiny keepalives do keep the path alive.
 		if (len < ZT_PROTO_MIN_FRAGMENT_LENGTH)
 			return;
 
+		// A vector of slices of buffers that aspires to eventually hold an assembled packet.
+		// These are reassembled into a single contiguous buffer at the same time as decryption
+		// and authentication.
 		FCV<Buf::Slice,ZT_MAX_PACKET_FRAGMENTS> pktv;
+
+		// Destination address of packet (filled below)
 		Address destination;
 
 		if (data->b[ZT_PROTO_PACKET_FRAGMENT_INDICATOR_INDEX] == ZT_PROTO_PACKET_FRAGMENT_INDICATOR) {
 			// Fragment -----------------------------------------------------------------------------------------------------
 
-			const Protocol::FragmentHeader &fh = data->as<Protocol::FragmentHeader>();
-			destination.setTo(fh.destination);
+			const Protocol::FragmentHeader &fragmentHeader = data->as<Protocol::FragmentHeader>();
+			destination.setTo(fragmentHeader.destination);
 
 			if (destination != RR->identity.address()) {
-				// Fragment is not address to this node -----------------------------------------------------------------------
 				_relay(tPtr,path,destination,data,len);
 				return;
 			}
 
 			switch (_inputPacketAssembler.assemble(
-				fh.packetId,
+				fragmentHeader.packetId,
 				pktv,
 				data,
 				ZT_PROTO_PACKET_FRAGMENT_PAYLOAD_START_AT,
 				(unsigned int)(len - ZT_PROTO_PACKET_FRAGMENT_PAYLOAD_START_AT),
-				fh.counts & 0xfU, // fragment number
-				fh.counts >> 4U,  // total number of fragments in message is specified in each fragment
+				fragmentHeader.counts & 0xfU, // fragment number
+				fragmentHeader.counts >> 4U,  // total number of fragments in message is specified in each fragment
 				now,
 				path,
 				ZT_MAX_INCOMING_FRAGMENTS_PER_PATH)) {
@@ -120,19 +126,17 @@ void VL1::onRemotePacket(void *const tPtr,const int64_t localSocket,const InetAd
 
 			if (len < ZT_PROTO_MIN_PACKET_LENGTH)
 				return;
-			const Protocol::Header &ph = data->as<Protocol::Header>();
-			destination.setTo(ph.destination);
+			const Protocol::Header &packetHeader = data->as<Protocol::Header>();
+			destination.setTo(packetHeader.destination);
 
 			if (destination != RR->identity.address()) {
-				// Packet or packet head is not addressed to this node --------------------------------------------------------
 				_relay(tPtr,path,destination,data,len);
 				return;
 			}
 
-			if ((ph.flags & ZT_PROTO_FLAG_FRAGMENTED) != 0) {
-				// Head of fragmented packet ----------------------------------------------------------------------------------
+			if ((packetHeader.flags & ZT_PROTO_FLAG_FRAGMENTED) != 0) {
 				switch (_inputPacketAssembler.assemble(
-					ph.packetId,
+					packetHeader.packetId,
 					pktv,
 					data,
 					0,
@@ -152,10 +156,9 @@ void VL1::onRemotePacket(void *const tPtr,const int64_t localSocket,const InetAd
 						//case Defragmenter<ZT_MAX_PACKET_FRAGMENTS>::ERR_OUT_OF_MEMORY:
 						return;
 				}
-			} else {
-				// Unfragmented packet, skip defrag engine and just handle it -------------------------------------------------
+			} else { // packet isn't fragmented, so skip the Defragmenter logic completely.
 				Buf::Slice &s = pktv.push();
-				s.b = data;
+				s.b.swap(data);
 				s.s = 0;
 				s.e = len;
 			}

@@ -109,7 +109,7 @@ public:
 	/**
 	 * @return Most recent time value supplied to core via API
 	 */
-	ZT_ALWAYS_INLINE int64_t now() const { return _now; }
+	ZT_ALWAYS_INLINE int64_t now() const noexcept { return _now; }
 
 	/**
 	 * Send packet to to the physical wire via callback
@@ -122,7 +122,7 @@ public:
 	 * @param ttl TTL or 0 for default/max
 	 * @return True if send appears successful
 	 */
-	ZT_ALWAYS_INLINE bool putPacket(void *tPtr,const int64_t localSocket,const InetAddress &addr,const void *data,unsigned int len,unsigned int ttl = 0)
+	ZT_ALWAYS_INLINE bool putPacket(void *tPtr,const int64_t localSocket,const InetAddress &addr,const void *data,unsigned int len,unsigned int ttl = 0) noexcept
 	{
 		return (_cb.wirePacketSendFunction(
 			reinterpret_cast<ZT_Node *>(this),
@@ -148,7 +148,7 @@ public:
 	 * @param data Ethernet frame data
 	 * @param len Ethernet frame length in bytes
 	 */
-	ZT_ALWAYS_INLINE void putFrame(void *tPtr,uint64_t nwid,void **nuptr,const MAC &source,const MAC &dest,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
+	ZT_ALWAYS_INLINE void putFrame(void *tPtr,uint64_t nwid,void **nuptr,const MAC &source,const MAC &dest,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len) noexcept
 	{
 		_cb.virtualNetworkFrameFunction(
 			reinterpret_cast<ZT_Node *>(this),
@@ -168,7 +168,7 @@ public:
 	 * @param nwid Network ID
 	 * @return Network associated with ID
 	 */
-	ZT_ALWAYS_INLINE SharedPtr<Network> network(uint64_t nwid) const
+	ZT_ALWAYS_INLINE SharedPtr<Network> network(uint64_t nwid) const noexcept
 	{
 		RWMutex::RLock l(_networks_m);
 		return _networks[(unsigned long)((nwid + (nwid >> 32U)) & _networksMask)];
@@ -190,7 +190,7 @@ public:
 	 * @param ev Event object
 	 * @param md Event data or NULL if none
 	 */
-	ZT_ALWAYS_INLINE void postEvent(void *tPtr,ZT_Event ev,const void *md = (const void *)0)
+	ZT_ALWAYS_INLINE void postEvent(void *tPtr,ZT_Event ev,const void *md = nullptr) noexcept
 	{
 		_cb.eventCallback(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,ev,md);
 	}
@@ -204,7 +204,7 @@ public:
 	 * @param op Config operation or event type
 	 * @param nc Network config info
 	 */
-	ZT_ALWAYS_INLINE void configureVirtualNetworkPort(void *tPtr,uint64_t nwid,void **nuptr,ZT_VirtualNetworkConfigOperation op,const ZT_VirtualNetworkConfig *nc)
+	ZT_ALWAYS_INLINE void configureVirtualNetworkPort(void *tPtr,uint64_t nwid,void **nuptr,ZT_VirtualNetworkConfigOperation op,const ZT_VirtualNetworkConfig *nc) noexcept
 	{
 		_cb.virtualNetworkConfigFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,nwid,nuptr,op,nc);
 	}
@@ -212,7 +212,7 @@ public:
 	/**
 	 * @return True if node appears online
 	 */
-	ZT_ALWAYS_INLINE bool online() const { return _online; }
+	ZT_ALWAYS_INLINE bool online() const noexcept { return _online; }
 
 	/**
 	 * Get a state object
@@ -233,7 +233,7 @@ public:
 	 * @param data Data to store
 	 * @param len Length of data
 	 */
-	ZT_ALWAYS_INLINE void stateObjectPut(void *const tPtr,ZT_StateObjectType type,const uint64_t id[2],const void *const data,const unsigned int len)
+	ZT_ALWAYS_INLINE void stateObjectPut(void *const tPtr,ZT_StateObjectType type,const uint64_t id[2],const void *const data,const unsigned int len) noexcept
 	{
 		if (_cb.statePutFunction)
 			_cb.statePutFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,type,id,data,(int)len);
@@ -246,7 +246,7 @@ public:
 	 * @param type Object type to delete
 	 * @param id Object ID
 	 */
-	ZT_ALWAYS_INLINE void stateObjectDelete(void *const tPtr,ZT_StateObjectType type,const uint64_t id[2])
+	ZT_ALWAYS_INLINE void stateObjectDelete(void *const tPtr,ZT_StateObjectType type,const uint64_t id[2]) noexcept
 	{
 		if (_cb.statePutFunction)
 			_cb.statePutFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,type,id,(const void *)0,-1);
@@ -288,7 +288,7 @@ public:
 	/**
 	 * @return This node's identity
 	 */
-	ZT_ALWAYS_INLINE const Identity &identity() const { return _RR.identity; }
+	ZT_ALWAYS_INLINE const Identity &identity() const noexcept { return _RR.identity; }
 
 	/**
 	 * Register that we are expecting a reply to a packet ID
@@ -299,7 +299,7 @@ public:
 	 *
 	 * @param packetId Packet ID to expect reply to
 	 */
-	ZT_ALWAYS_INLINE void expectReplyTo(const uint64_t packetId)
+	ZT_ALWAYS_INLINE void expectReplyTo(const uint64_t packetId) noexcept
 	{
 		const unsigned long pid2 = (unsigned long)(packetId >> 32U);
 		const unsigned long bucket = (unsigned long)(pid2 & ZT_EXPECTING_REPLIES_BUCKET_MASK1);
@@ -316,7 +316,7 @@ public:
 	 * @param packetId Packet ID to check
 	 * @return True if we're expecting a reply
 	 */
-	ZT_ALWAYS_INLINE bool expectingReplyTo(const uint64_t packetId) const
+	ZT_ALWAYS_INLINE bool expectingReplyTo(const uint64_t packetId) const noexcept
 	{
 		const uint32_t pid2 = (uint32_t)(packetId >> 32);
 		const unsigned long bucket = (unsigned long)(pid2 & ZT_EXPECTING_REPLIES_BUCKET_MASK1);
@@ -330,7 +330,7 @@ public:
 	/**
 	 * @return True if aggressive NAT-traversal mechanisms like scanning of <1024 ports are enabled
 	 */
-	ZT_ALWAYS_INLINE bool natMustDie() const { return _natMustDie; }
+	ZT_ALWAYS_INLINE bool natMustDie() const noexcept { return _natMustDie; }
 
 	/**
 	 * Check whether we should do potentially expensive identity verification (rate limit)
@@ -339,7 +339,7 @@ public:
 	 * @param from Source address of packet
 	 * @return True if within rate limits
 	 */
-	ZT_ALWAYS_INLINE bool rateGateIdentityVerification(const int64_t now,const InetAddress &from)
+	ZT_ALWAYS_INLINE bool rateGateIdentityVerification(const int64_t now,const InetAddress &from) noexcept
 	{
 		unsigned long iph = from.rateGateHash();
 		if ((now - _lastIdentityVerification[iph]) >= ZT_IDENTITY_VALIDATION_SOURCE_RATE_LIMIT) {
@@ -413,10 +413,10 @@ private:
 	struct _LocalControllerAuth
 	{
 		uint64_t nwid,address;
-		ZT_ALWAYS_INLINE _LocalControllerAuth(const uint64_t nwid_,const Address &address_) : nwid(nwid_),address(address_.toInt()) {}
-		ZT_ALWAYS_INLINE unsigned long hashCode() const { return (unsigned long)(nwid ^ address); }
-		ZT_ALWAYS_INLINE bool operator==(const _LocalControllerAuth &a) const { return ((a.nwid == nwid)&&(a.address == address)); }
-		ZT_ALWAYS_INLINE bool operator!=(const _LocalControllerAuth &a) const { return ((a.nwid != nwid)||(a.address != address)); }
+		ZT_ALWAYS_INLINE _LocalControllerAuth(const uint64_t nwid_,const Address &address_)  noexcept: nwid(nwid_),address(address_.toInt()) {}
+		ZT_ALWAYS_INLINE unsigned long hashCode() const noexcept { return (unsigned long)(nwid ^ address); }
+		ZT_ALWAYS_INLINE bool operator==(const _LocalControllerAuth &a) const noexcept { return ((a.nwid == nwid)&&(a.address == address)); }
+		ZT_ALWAYS_INLINE bool operator!=(const _LocalControllerAuth &a) const noexcept { return ((a.nwid != nwid)||(a.address != address)); }
 	};
 	Hashtable< _LocalControllerAuth,int64_t > _localControllerAuthorizations;
 	Mutex _localControllerAuthorizations_m;

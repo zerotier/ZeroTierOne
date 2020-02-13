@@ -114,17 +114,6 @@ public:
 	 */
 	ZT_ALWAYS_INLINE int64_t lastOut() const noexcept { return _lastOut; }
 
-	/**
-	 * Check whether this address is valid for a ZeroTier path
-	 *
-	 * This checks the address type and scope against address types and scopes
-	 * that we currently support for ZeroTier communication.
-	 *
-	 * @param a Address to check
-	 * @return True if address is good for ZeroTier path use
-	 */
-	static bool isAddressValidForPath(const InetAddress &a) noexcept;
-
 private:
 	int64_t _localSocket;
 	int64_t _lastIn;

@@ -66,7 +66,7 @@ static const _s20sseconsts _S20SSECONSTANTS;
 
 namespace ZeroTier {
 
-void Salsa20::init(const void *key,const void *iv)
+void Salsa20::init(const void *key,const void *iv) noexcept
 {
 #ifdef ZT_SALSA20_SSE
 	const uint32_t *const k = (const uint32_t *)key;
@@ -108,7 +108,7 @@ void Salsa20::init(const void *key,const void *iv)
 #endif
 }
 
-void Salsa20::crypt12(const void *in,void *out,unsigned int bytes)
+void Salsa20::crypt12(const void *in,void *out,unsigned int bytes) noexcept
 {
 	uint8_t tmp[64];
 	const uint8_t *m = (const uint8_t *)in;
@@ -607,7 +607,7 @@ void Salsa20::crypt12(const void *in,void *out,unsigned int bytes)
 	}
 }
 
-void Salsa20::crypt20(const void *in,void *out,unsigned int bytes)
+void Salsa20::crypt20(const void *in,void *out,unsigned int bytes) noexcept
 {
 	uint8_t tmp[64];
 	const uint8_t *m = (const uint8_t *)in;
