@@ -21,12 +21,14 @@
 #include <cstdint>
 #include <cstring>
 
+#ifndef ZT_AES_NO_ACCEL
 #if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
 #include <wmmintrin.h>
 #include <emmintrin.h>
 #include <smmintrin.h>
 #include <immintrin.h>
 #define ZT_AES_AESNI 1
+#endif
 #endif
 
 namespace ZeroTier {
@@ -197,7 +199,8 @@ public:
 		 */
 		ZT_ALWAYS_INLINE void init(const uint8_t iv[16],void *const output) noexcept
 		{
-			memcpy(_ctr,iv,16);
+			_ctr[0] = Utils::loadAsIsEndian<uint64_t>(iv);
+			_ctr[1] = Utils::loadAsIsEndian<uint64_t>(iv + 8);
 			_out = reinterpret_cast<uint8_t *>(output);
 			_len = 0;
 		}

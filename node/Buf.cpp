@@ -17,7 +17,7 @@ namespace ZeroTier {
 
 static std::atomic<uintptr_t> s_pool(0);
 
-void *Buf::operator new(std::size_t sz) noexcept
+void *Buf::operator new(std::size_t sz)
 {
 	uintptr_t bb;
 	for (;;) {
@@ -34,14 +34,14 @@ void *Buf::operator new(std::size_t sz) noexcept
 		s_pool.store(0);
 		b = (Buf *)malloc(sz);
 		if (!b)
-			return nullptr;
+			throw std::bad_alloc();
 	}
 
 	b->__refCount.store(0);
 	return (void *)b;
 }
 
-void Buf::operator delete(void *ptr) noexcept
+void Buf::operator delete(void *ptr)
 {
 	if (ptr) {
 		uintptr_t bb;

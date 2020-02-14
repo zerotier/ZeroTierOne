@@ -447,10 +447,6 @@ void AES::CTR::crypt(const void *const input,unsigned int len) noexcept
 
 #ifdef ZT_AES_AESNI
 	if (likely(Utils::CPUID.aes)) {
-		_mm_prefetch(in,_MM_HINT_T0);
-		_mm_prefetch(in + 64,_MM_HINT_T0);
-		_mm_prefetch(in + 128,_MM_HINT_T0);
-
 		uint64_t c0 = _ctr[0];
 		uint64_t c1 = Utils::ntoh(_ctr[1]);
 
@@ -496,10 +492,6 @@ void AES::CTR::crypt(const void *const input,unsigned int len) noexcept
 		// This is the largest chunk size that will fit in SSE registers with four
 		// registers left over for round key data and temporaries.
 		while (len >= 192) {
-			_mm_prefetch(in + 192,_MM_HINT_T0);
-			_mm_prefetch(in + 256,_MM_HINT_T0);
-			_mm_prefetch(in + 320,_MM_HINT_T0);
-
 			__m128i d0,d1,d2,d3,d4,d5,d6,d7,d8,d9,d10,d11;
 			if (likely(c1 < 0xfffffffffffffff4ULL)) {
 				d0 = _mm_set_epi64x((long long)Utils::hton(c1),(long long)c0);

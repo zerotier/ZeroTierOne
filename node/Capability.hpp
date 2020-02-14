@@ -62,9 +62,9 @@ class Capability : public Credential
 	friend class Credential;
 
 public:
-	static ZT_ALWAYS_INLINE ZT_CredentialType credentialType() { return ZT_CREDENTIAL_TYPE_CAPABILITY; }
+	static constexpr ZT_CredentialType credentialType() noexcept { return ZT_CREDENTIAL_TYPE_CAPABILITY; }
 
-	ZT_ALWAYS_INLINE Capability() { memoryZero(this); }
+	ZT_ALWAYS_INLINE Capability() noexcept { memoryZero(this); }
 
 	/**
 	 * @param id Capability ID
@@ -74,7 +74,7 @@ public:
 	 * @param rules Network flow rules for this capability
 	 * @param ruleCount Number of flow rules
 	 */
-	ZT_ALWAYS_INLINE Capability(const uint32_t id,const uint64_t nwid,const int64_t ts,const unsigned int mccl,const ZT_VirtualNetworkRule *const rules,const unsigned int ruleCount) :
+	ZT_ALWAYS_INLINE Capability(const uint32_t id,const uint64_t nwid,const int64_t ts,const unsigned int mccl,const ZT_VirtualNetworkRule *const rules,const unsigned int ruleCount) noexcept :
 		_nwid(nwid),
 		_ts(ts),
 		_id(id),
@@ -88,32 +88,32 @@ public:
 	/**
 	 * @return Rules -- see ruleCount() for size of array
 	 */
-	ZT_ALWAYS_INLINE const ZT_VirtualNetworkRule *rules() const { return _rules; }
+	ZT_ALWAYS_INLINE const ZT_VirtualNetworkRule *rules() const noexcept { return _rules; }
 
 	/**
 	 * @return Number of rules in rules()
 	 */
-	ZT_ALWAYS_INLINE unsigned int ruleCount() const { return _ruleCount; }
+	ZT_ALWAYS_INLINE unsigned int ruleCount() const noexcept { return _ruleCount; }
 
 	/**
 	 * @return ID and evaluation order of this capability in network
 	 */
-	ZT_ALWAYS_INLINE uint32_t id() const { return _id; }
+	ZT_ALWAYS_INLINE uint32_t id() const noexcept { return _id; }
 
 	/**
 	 * @return Network ID for which this capability was issued
 	 */
-	ZT_ALWAYS_INLINE uint64_t networkId() const { return _nwid; }
+	ZT_ALWAYS_INLINE uint64_t networkId() const noexcept { return _nwid; }
 
 	/**
 	 * @return Timestamp
 	 */
-	ZT_ALWAYS_INLINE int64_t timestamp() const { return _ts; }
+	ZT_ALWAYS_INLINE int64_t timestamp() const noexcept { return _ts; }
 
 	/**
 	 * @return Last 'to' address in chain of custody
 	 */
-	ZT_ALWAYS_INLINE Address issuedTo() const
+	ZT_ALWAYS_INLINE Address issuedTo() const noexcept
 	{
 		Address i2;
 		for(int i=0;i<ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH;++i) {
@@ -137,27 +137,46 @@ public:
 	 * @param to Recipient of this signature
 	 * @return True if signature successful and chain of custody appended
 	 */
-	bool sign(const Identity &from,const Address &to);
+	bool sign(const Identity &from,const Address &to) noexcept;
 
 	/**
 	 * Verify this capability's chain of custody and signatures
 	 *
 	 * @param RR Runtime environment to provide for peer lookup, etc.
 	 */
-	ZT_ALWAYS_INLINE Credential::VerifyResult verify(const RuntimeEnvironment *RR,void *tPtr) const { return _verify(RR,tPtr,*this); }
+	ZT_ALWAYS_INLINE Credential::VerifyResult verify(const RuntimeEnvironment *RR,void *tPtr) const noexcept { return _verify(RR,tPtr,*this); }
 
-	static ZT_ALWAYS_INLINE int marshalSizeMax() { return ZT_CAPABILITY_MARSHAL_SIZE_MAX; }
-	int marshal(uint8_t data[ZT_CAPABILITY_MARSHAL_SIZE_MAX],bool forSign = false) const;
-	int unmarshal(const uint8_t *data,int len);
+	static constexpr int marshalSizeMax() noexcept { return ZT_CAPABILITY_MARSHAL_SIZE_MAX; }
+	int marshal(uint8_t data[ZT_CAPABILITY_MARSHAL_SIZE_MAX],bool forSign = false) const noexcept;
+	int unmarshal(const uint8_t *data,int len) noexcept;
 
-	static int marshalVirtualNetworkRules(uint8_t *data,const ZT_VirtualNetworkRule *rules,unsigned int ruleCount);
-	static int unmarshalVirtualNetworkRules(const uint8_t *data,int len,ZT_VirtualNetworkRule *rules,unsigned int &ruleCount,unsigned int maxRuleCount);
+	/**
+	 * Marshal a set of virtual network rules
+	 *
+	 * @param data Buffer to store rules (must be at least ruleCount * ZT_VIRTUALNETWORKRULE_MARSHAL_SIZE_MAX)
+	 * @param rules Network rules
+	 * @param ruleCount Number of rules
+	 * @return Number of bytes written or -1 on error
+	 */
+	static int marshalVirtualNetworkRules(uint8_t *data,const ZT_VirtualNetworkRule *rules,unsigned int ruleCount) noexcept;
+
+	/**
+	 * Unmarshal a set of virtual network rules
+	 *
+	 * @param data Rule set to unmarshal
+	 * @param len Length of data
+	 * @param rules Buffer to store rules
+	 * @param ruleCount Result parameter to set to the number of rules decoded
+	 * @param maxRuleCount Capacity of rules buffer
+	 * @return Number of bytes unmarshaled or -1 on error
+	 */
+	static int unmarshalVirtualNetworkRules(const uint8_t *data,int len,ZT_VirtualNetworkRule *rules,unsigned int &ruleCount,unsigned int maxRuleCount) noexcept;
 
 	// Provides natural sort order by ID
-	ZT_ALWAYS_INLINE bool operator<(const Capability &c) const { return (_id < c._id); }
+	ZT_ALWAYS_INLINE bool operator<(const Capability &c) const noexcept { return (_id < c._id); }
 
-	ZT_ALWAYS_INLINE bool operator==(const Capability &c) const { return (memcmp(this,&c,sizeof(Capability)) == 0); }
-	ZT_ALWAYS_INLINE bool operator!=(const Capability &c) const { return (memcmp(this,&c,sizeof(Capability)) != 0); }
+	ZT_ALWAYS_INLINE bool operator==(const Capability &c) const noexcept { return (memcmp(this,&c,sizeof(Capability)) == 0); }
+	ZT_ALWAYS_INLINE bool operator!=(const Capability &c) const noexcept { return (memcmp(this,&c,sizeof(Capability)) != 0); }
 
 private:
 	uint64_t _nwid;

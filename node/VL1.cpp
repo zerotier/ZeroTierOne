@@ -254,11 +254,7 @@ void VL1::onRemotePacket(void *const tPtr,const int64_t localSocket,const InetAd
 					s20.crypt12(Utils::ZERO256,macKey,ZT_POLY1305_KEY_LEN);
 
 					// Get a buffer to store the decrypted and fully contiguous packet.
-					pkt.b = Buf::get();
-					if (!pkt.b) {
-						RR->t->unexpectedError(tPtr,0x1de16991,"Buf::get() failed (out of memory?)");
-						return;
-					}
+					pkt.b.set(new Buf());
 
 					// Salsa20 is a stream cipher but it's only seekable to multiples of 64 bytes.
 					// This moves data in slices around so that all slices have sizes that are
@@ -351,12 +347,7 @@ void VL1::onRemotePacket(void *const tPtr,const int64_t localSocket,const InetAd
 				return;
 			}
 
-			SharedPtr<Buf> nb(Buf::get());
-			if (!nb) {
-				RR->t->unexpectedError(tPtr,0xffe169fa,"Buf::get() failed (out of memory?)");
-				return;
-			}
-
+			SharedPtr<Buf> nb(new Buf());
 			const int uncompressedLen = LZ4_decompress_safe(
 				reinterpret_cast<const char *>(pkt.b->b + ZT_PROTO_PACKET_PAYLOAD_START),
 				reinterpret_cast<char *>(nb->b),

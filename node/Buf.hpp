@@ -83,8 +83,8 @@ class Buf
 
 public:
 	// New and delete operators that allocate Buf instances from a shared lock-free memory pool.
-	static void *operator new(std::size_t sz) noexcept;
-	static void operator delete(void *ptr) noexcept;
+	static void *operator new(std::size_t sz);
+	static void operator delete(void *ptr);
 
 	/**
 	 * Free all instances of Buf in shared pool.

@@ -18,7 +18,7 @@
 
 namespace ZeroTier {
 
-bool Capability::sign(const Identity &from,const Address &to)
+bool Capability::sign(const Identity &from,const Address &to) noexcept
 {
 	uint8_t buf[ZT_CAPABILITY_MARSHAL_SIZE_MAX + 16];
 	try {
@@ -34,7 +34,7 @@ bool Capability::sign(const Identity &from,const Address &to)
 	return false;
 }
 
-int Capability::marshal(uint8_t data[ZT_CAPABILITY_MARSHAL_SIZE_MAX],const bool forSign) const
+int Capability::marshal(uint8_t data[ZT_CAPABILITY_MARSHAL_SIZE_MAX],const bool forSign) const noexcept
 {
 	int p = 0;
 	if (forSign) {
@@ -72,7 +72,7 @@ int Capability::marshal(uint8_t data[ZT_CAPABILITY_MARSHAL_SIZE_MAX],const bool 
 	return p;
 }
 
-int Capability::unmarshal(const uint8_t *data,int len)
+int Capability::unmarshal(const uint8_t *data,int len) noexcept
 {
 	if (len < 22)
 		return -1;
@@ -122,7 +122,7 @@ int Capability::unmarshal(const uint8_t *data,int len)
 	return p;
 }
 
-int Capability::marshalVirtualNetworkRules(uint8_t *data,const ZT_VirtualNetworkRule *const rules,const unsigned int ruleCount)
+int Capability::marshalVirtualNetworkRules(uint8_t *data,const ZT_VirtualNetworkRule *const rules,const unsigned int ruleCount) noexcept
 {
 	int p = 0;
 	for(unsigned int i=0;i<ruleCount;++i) {
@@ -239,7 +239,7 @@ int Capability::marshalVirtualNetworkRules(uint8_t *data,const ZT_VirtualNetwork
 	return p;
 }
 
-int Capability::unmarshalVirtualNetworkRules(const uint8_t *const data,const int len,ZT_VirtualNetworkRule *const rules,unsigned int &ruleCount,const unsigned int maxRuleCount)
+int Capability::unmarshalVirtualNetworkRules(const uint8_t *const data,const int len,ZT_VirtualNetworkRule *const rules,unsigned int &ruleCount,const unsigned int maxRuleCount) noexcept
 {
 	int p = 0;
 	unsigned int rc = 0;

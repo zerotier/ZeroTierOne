@@ -51,7 +51,7 @@ public:
 	 * @param data Ethernet payload
 	 * @param len Frame length
 	 */
-	void onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const MAC &from,const MAC &to,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len);
+	void onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const MAC &from,const MAC &to,unsigned int etherType,unsigned int vlanId,SharedPtr<Buf> &data,unsigned int len);
 
 protected:
 	bool _FRAME(void *tPtr,const SharedPtr<Path> &path,SharedPtr<Peer> &peer,Buf &pkt,int packetSize);
