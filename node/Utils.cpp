@@ -54,7 +54,7 @@ CPUIDRegisters::CPUIDRegisters()
 	rdrand = ((ecx & (1U << 30U)) != 0);
 	aes = ( ((ecx & (1U << 25U)) != 0) && ((ecx & (1U << 19U)) != 0) && ((ecx & (1U << 1U)) != 0) ); // AES, PCLMUL, SSE4.1
 }
-CPUIDRegisters CPUID;
+const CPUIDRegisters CPUID;
 #endif
 
 const uint64_t ZERO256[4] = { 0,0,0,0 };
@@ -71,8 +71,24 @@ bool secureEq(const void *a,const void *b,unsigned int len) noexcept
 // Crazy hack to force memory to be securely zeroed in spite of the best efforts of optimizing compilers.
 static void _Utils_doBurn(volatile uint8_t *ptr,unsigned int len)
 {
-	volatile uint8_t *const end = ptr + len;
-	while (ptr != end) *(ptr++) = (uint8_t)0;
+#ifndef ZT_NO_UNALIGNED_ACCESS
+	const uint64_t z = 0;
+	while (len >= 32) {
+		*reinterpret_cast<volatile uint64_t *>(ptr) = z;
+		*reinterpret_cast<volatile uint64_t *>(ptr + 8) = z;
+		*reinterpret_cast<volatile uint64_t *>(ptr + 16) = z;
+		*reinterpret_cast<volatile uint64_t *>(ptr + 24) = z;
+		ptr += 32;
+		len -= 32;
+	}
+	while (len >= 8) {
+		*reinterpret_cast<volatile uint64_t *>(ptr) = z;
+		ptr += 8;
+		len -= 8;
+	}
+#endif
+	for(unsigned int i=0;i<len;++i)
+		ptr[i] = 0;
 }
 static void (*volatile _Utils_doBurn_ptr)(volatile uint8_t *,unsigned int) = _Utils_doBurn;
 void burn(void *ptr,unsigned int len) { (_Utils_doBurn_ptr)((volatile uint8_t *)ptr,len); }

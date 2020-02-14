@@ -22,10 +22,10 @@
 #include <cstring>
 
 #if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
-#include <xmmintrin.h>
 #include <wmmintrin.h>
 #include <emmintrin.h>
 #include <smmintrin.h>
+#include <immintrin.h>
 #define ZT_AES_AESNI 1
 #endif
 
@@ -33,12 +33,37 @@ namespace ZeroTier {
 
 /**
  * AES-256 and pals including GMAC, CTR, etc.
+ *
+ * This includes hardware acceleration for certain processors. The software
+ * mode is fallback and is significantly slower.
  */
 class AES
 {
 public:
+	/**
+	 * @return True if this system has hardware AES acceleration
+	 */
+	static ZT_ALWAYS_INLINE bool accelerated()
+	{
+#ifdef ZT_AES_AESNI
+		return Utils::CPUID.aes;
+#else
+		return false;
+#endif
+	}
+
+	/**
+	 * Create an un-initialized AES instance (must call init() before use)
+	 */
 	ZT_ALWAYS_INLINE AES() noexcept {}
+
+	/**
+	 * Create an AES instance with the given key
+	 *
+	 * @param key 256-bit key
+	 */
 	explicit ZT_ALWAYS_INLINE AES(const uint8_t key[32]) noexcept { this->init(key); }
+
 	ZT_ALWAYS_INLINE ~AES() { Utils::burn(&_k,sizeof(_k)); }
 
 	/**
@@ -102,14 +127,22 @@ public:
 		 */
 		ZT_ALWAYS_INLINE GMAC(const AES &aes) : _aes(aes) {}
 
+		/**
+		 * Reset and initialize for a new GMAC calculation
+		 *
+		 * @param iv 96-bit initialization vector (pad with zeroes if actual IV is shorter)
+		 */
 		ZT_ALWAYS_INLINE void init(const uint8_t iv[12]) noexcept
 		{
 			_rp = 0;
 			_len = 0;
+			// We fill the least significant 32 bits in the _iv field with 1 since in GCM mode
+			// this would hold the counter, but we're not doing GCM. The counter is therefore
+			// always 1.
 #ifdef ZT_AES_AESNI // also implies an x64 processor
 			*reinterpret_cast<uint64_t *>(_iv) = *reinterpret_cast<const uint64_t *>(iv);
 			*reinterpret_cast<uint32_t *>(_iv + 8) = *reinterpret_cast<const uint64_t *>(iv + 8);
-			*reinterpret_cast<uint32_t *>(_iv + 12) = 0x01000000; // 00000001 in big-endian byte order
+			*reinterpret_cast<uint32_t *>(_iv + 12) = 0x01000000; // 0x00000001 in big-endian byte order
 #else
 			for(int i=0;i<12;++i)
 				_iv[i] = iv[i];
@@ -122,8 +155,21 @@ public:
 			_y[1] = 0;
 		}
 
+		/**
+		 * Process data through GMAC
+		 *
+		 * @param data Bytes to process
+		 * @param len Length of input
+		 */
 		void update(const void *data,unsigned int len) noexcept;
 
+		/**
+		 * Process any remaining cached bytes and generate tag
+		 *
+		 * Don't call finish() more than once or you'll get an invalid result.
+		 *
+		 * @param tag 128-bit GMAC tag (can be truncated)
+		 */
 		void finish(uint8_t tag[16]) noexcept;
 
 	private:
@@ -149,16 +195,9 @@ public:
 		 * @param iv Unique initialization vector
 		 * @param output Buffer to which to store output (MUST be large enough for total bytes processed!)
 		 */
-		ZT_ALWAYS_INLINE void init(const uint8_t iv[16],void *output) noexcept
+		ZT_ALWAYS_INLINE void init(const uint8_t iv[16],void *const output) noexcept
 		{
-#ifdef ZT_AES_AESNI // also implies an x64 processor
-			_ctr[0] = Utils::ntoh(*reinterpret_cast<const uint64_t *>(iv));
-			_ctr[1] = Utils::ntoh(*reinterpret_cast<const uint64_t *>(iv + 8));
-#else
 			memcpy(_ctr,iv,16);
-			_ctr[0] = Utils::ntoh(_ctr[0]);
-			_ctr[1] = Utils::ntoh(_ctr[1]);
-#endif
 			_out = reinterpret_cast<uint8_t *>(output);
 			_len = 0;
 		}
@@ -173,6 +212,8 @@ public:
 
 		/**
 		 * Finish any remaining bytes if total bytes processed wasn't a multiple of 16
+		 *
+		 * Don't call more than once for a given stream or data may be corrupted.
 		 */
 		void finish() noexcept;
 
@@ -199,7 +240,6 @@ private:
 	void _initSW(const uint8_t key[32]) noexcept;
 	void _encryptSW(const uint8_t in[16],uint8_t out[16]) const noexcept;
 	void _decryptSW(const uint8_t in[16],uint8_t out[16]) const noexcept;
-	void _gmacSW(const uint8_t iv[12],const uint8_t *in,unsigned int len,uint8_t out[16]) const noexcept;
 
 	union {
 #ifdef ZT_AES_AESNI
@@ -215,7 +255,6 @@ private:
 			uint32_t dk[60];
 		} sw;
 	} _k;
-
 
 #ifdef ZT_AES_AESNI
 	static const __m128i s_shuf;

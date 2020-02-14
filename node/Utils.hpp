@@ -43,7 +43,7 @@ struct CPUIDRegisters
 	bool aes;
 	CPUIDRegisters();
 };
-extern CPUIDRegisters CPUID;
+extern const CPUIDRegisters CPUID;
 #endif
 
 /**
@@ -436,6 +436,29 @@ static ZT_ALWAYS_INLINE I loadBigEndian(const void *const p) noexcept
 }
 
 /**
+ * Save an integer in big-endian format
+ *
+ * @tparam I Integer type to store (usually inferred)
+ * @param p Byte stream to write (must be at least sizeof(I))
+ * #param i Integer to write
+ */
+template<typename I>
+static ZT_ALWAYS_INLINE void storeBigEndian(void *const p,const I i) noexcept
+{
+#ifdef ZT_NO_UNALIGNED_ACCESS
+	for(unsigned int k=0;k<sizeof(I);++k) {
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+		reinterpret_cast<uint8_t *>(p)[k] = reinterpret_cast<const uint8_t *>(&i)[(sizeof(I)-1)-k];
+#else
+		reinterpret_cast<uint8_t *>(p)[k] = reinterpret_cast<const uint8_t *>(&i)[k];
+#endif
+	}
+#else
+	*reinterpret_cast<I *>(p) = hton(i);
+#endif
+}
+
+/**
  * Copy bits from memory into an integer type without modifying their order
  *
  * @tparam I Type to load
@@ -456,25 +479,20 @@ static ZT_ALWAYS_INLINE I loadAsIsEndian(const void *const p) noexcept
 }
 
 /**
- * Save an integer in big-endian format
+ * Copy bits from memory into an integer type without modifying their order
  *
- * @tparam I Integer type to store (usually inferred)
- * @param p Byte stream to write (must be at least sizeof(I))
- * #param i Integer to write
+ * @tparam I Type to store
+ * @param p Byte array (must be at least sizeof(I))
+ * @param i Integer to store
  */
 template<typename I>
-static ZT_ALWAYS_INLINE void storeBigEndian(void *const p,const I i) noexcept
+static ZT_ALWAYS_INLINE void storeAsIsEndian(void *const p,const I i) noexcept
 {
 #ifdef ZT_NO_UNALIGNED_ACCESS
-	for(unsigned int k=0;k<sizeof(I);++k) {
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-		reinterpret_cast<uint8_t *>(p)[k] = reinterpret_cast<const uint8_t *>(&i)[(sizeof(I)-1)-k];
-#else
+	for(unsigned int k=0;k<sizeof(I);++k)
 		reinterpret_cast<uint8_t *>(p)[k] = reinterpret_cast<const uint8_t *>(&i)[k];
-#endif
-	}
 #else
-	*reinterpret_cast<I *>(p) = hton(i);
+	*reinterpret_cast<I *>(p) = i;
 #endif
 }
 
