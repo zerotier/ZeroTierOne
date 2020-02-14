@@ -374,27 +374,6 @@ bool InetAddress::isNetwork() const noexcept
 	return false;
 }
 
-unsigned long InetAddress::rateGateHash() const noexcept
-{
-	unsigned long h = 0;
-	switch(ss_family) {
-		case AF_INET:
-			h = (Utils::ntoh((uint32_t)reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr) & 0xffffff00U) >> 8U;
-			h ^= (h >> 14U);
-			break;
-		case AF_INET6: {
-			const uint8_t *ip = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr);
-			h = ((unsigned long)ip[0]); h <<= 1U;
-			h += ((unsigned long)ip[1]); h <<= 1U;
-			h += ((unsigned long)ip[2]); h <<= 1U;
-			h += ((unsigned long)ip[3]); h <<= 1U;
-			h += ((unsigned long)ip[4]); h <<= 1U;
-			h += ((unsigned long)ip[5]);
-		}	break;
-	}
-	return (h & 0x3fffU);
-}
-
 int InetAddress::marshal(uint8_t data[ZT_INETADDRESS_MARSHAL_SIZE_MAX]) const noexcept
 {
 	unsigned int port;

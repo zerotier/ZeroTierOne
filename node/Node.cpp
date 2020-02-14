@@ -48,10 +48,6 @@ Node::Node(void *uPtr,void *tPtr,const struct ZT_Node_Callbacks *callbacks,int64
 {
 	_networks.resize(64); // _networksMask + 1, must be power of two
 
-	memset((void *)_expectingRepliesToBucketPtr,0,sizeof(_expectingRepliesToBucketPtr));
-	memset((void *)_expectingRepliesTo,0,sizeof(_expectingRepliesTo));
-	memset((void *)_lastIdentityVerification,0,sizeof(_lastIdentityVerification));
-
 	uint64_t idtmp[2]; idtmp[0] = 0; idtmp[1] = 0;
 	std::vector<uint8_t> data(stateObjectGet(tPtr,ZT_STATE_OBJECT_IDENTITY_SECRET,idtmp));
 	bool haveIdentity = false;

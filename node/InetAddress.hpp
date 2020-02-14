@@ -398,11 +398,6 @@ public:
 	bool isNetwork() const noexcept;
 
 	/**
-	 * @return 14-bit (0-16383) hash of this IP's first 24 or 48 bits (for V4 or V6) for rate limiting code, or 0 if non-IP
-	 */
-	unsigned long rateGateHash() const noexcept;
-
-	/**
 	 * @return True if address family is non-zero
 	 */
 	explicit ZT_ALWAYS_INLINE operator bool() const noexcept { return (ss_family != 0); }

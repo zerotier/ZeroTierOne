@@ -291,63 +291,9 @@ public:
 	ZT_ALWAYS_INLINE const Identity &identity() const noexcept { return _RR.identity; }
 
 	/**
-	 * Register that we are expecting a reply to a packet ID
-	 *
-	 * This only uses the most significant bits of the packet ID, both to save space
-	 * and to avoid using the higher bits that can be modified during armor() to
-	 * mask against the packet send counter used for QoS detection.
-	 *
-	 * @param packetId Packet ID to expect reply to
-	 */
-	ZT_ALWAYS_INLINE void expectReplyTo(const uint64_t packetId) noexcept
-	{
-		const unsigned long pid2 = (unsigned long)(packetId >> 32U);
-		const unsigned long bucket = (unsigned long)(pid2 & ZT_EXPECTING_REPLIES_BUCKET_MASK1);
-		_expectingRepliesTo[bucket][_expectingRepliesToBucketPtr[bucket]++ & ZT_EXPECTING_REPLIES_BUCKET_MASK2] = (uint32_t)pid2;
-	}
-
-	/**
-	 * Check whether a given packet ID is something we are expecting a reply to
-	 *
-	 * This only uses the most significant bits of the packet ID, both to save space
-	 * and to avoid using the higher bits that can be modified during armor() to
-	 * mask against the packet send counter used for QoS detection.
-	 *
-	 * @param packetId Packet ID to check
-	 * @return True if we're expecting a reply
-	 */
-	ZT_ALWAYS_INLINE bool expectingReplyTo(const uint64_t packetId) const noexcept
-	{
-		const uint32_t pid2 = (uint32_t)(packetId >> 32);
-		const unsigned long bucket = (unsigned long)(pid2 & ZT_EXPECTING_REPLIES_BUCKET_MASK1);
-		for(unsigned long i=0;i<=ZT_EXPECTING_REPLIES_BUCKET_MASK2;++i) {
-			if (_expectingRepliesTo[bucket][i] == pid2)
-				return true;
-		}
-		return false;
-	}
-
-	/**
 	 * @return True if aggressive NAT-traversal mechanisms like scanning of <1024 ports are enabled
 	 */
 	ZT_ALWAYS_INLINE bool natMustDie() const noexcept { return _natMustDie; }
-
-	/**
-	 * Check whether we should do potentially expensive identity verification (rate limit)
-	 *
-	 * @param now Current time
-	 * @param from Source address of packet
-	 * @return True if within rate limits
-	 */
-	ZT_ALWAYS_INLINE bool rateGateIdentityVerification(const int64_t now,const InetAddress &from) noexcept
-	{
-		unsigned long iph = from.rateGateHash();
-		if ((now - _lastIdentityVerification[iph]) >= ZT_IDENTITY_VALIDATION_SOURCE_RATE_LIMIT) {
-			_lastIdentityVerification[iph] = now;
-			return true;
-		}
-		return false;
-	}
 
 	/**
 	 * Wake any peers with the given address by calling their alarm() methods at or after the specified time
@@ -388,13 +334,6 @@ private:
 	RuntimeEnvironment *RR;
 	ZT_Node_Callbacks _cb;
 	void *_uPtr; // _uptr (lower case) is reserved in Visual Studio :P
-
-	// For tracking packet IDs to filter out OK/ERROR replies to packets we did not send.
-	volatile uint8_t _expectingRepliesToBucketPtr[ZT_EXPECTING_REPLIES_BUCKET_MASK1 + 1];
-	volatile uint32_t _expectingRepliesTo[ZT_EXPECTING_REPLIES_BUCKET_MASK1 + 1][ZT_EXPECTING_REPLIES_BUCKET_MASK2 + 1];
-
-	// Time of last identity verification indexed by InetAddress.rateGateHash() -- used in IncomingPacket::_doHELLO() via rateGateIdentityVerification()
-	volatile int64_t _lastIdentityVerification[16384];
 
 	// Addresses of peers that want to have their alarm() function called at some point in the future.
 	// These behave like weak references in that the node looks them up in Topology and calls alarm()

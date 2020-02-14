@@ -54,8 +54,7 @@ public:
 		// the log size and then if it's a new bucket setting it or otherwise adding
 		// to it.
 		const unsigned long bucket = ((unsigned int)((uint64_t)(now / TUNIT))) % LSIZE;
-		const unsigned long prevBucket = _bucket.exchange(bucket);
-		if (prevBucket != bucket)
+		if (_bucket.exchange(bucket) != bucket)
 			_counts[bucket].store((uint64_t)count);
 		else _counts[bucket].fetch_add((uint64_t)count);
 	}

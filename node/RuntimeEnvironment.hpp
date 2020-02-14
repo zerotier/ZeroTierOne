@@ -27,6 +27,7 @@ class Node;
 class NetworkController;
 class SelfAwareness;
 class Trace;
+class Expect;
 
 /**
  * Holds global state for an instance of ZeroTier::Node
@@ -39,6 +40,7 @@ public:
 		localNetworkController(nullptr),
 		rtmem(nullptr),
 		t(nullptr),
+		expect(nullptr),
 		vl2(nullptr),
 		vl1(nullptr),
 		topology(nullptr),
@@ -69,6 +71,7 @@ public:
 	 * These are constant and never null after startup unless indicated. */
 
 	Trace *t;
+	Expect *expect;
 	VL2 *vl2;
 	VL1 *vl1;
 	Topology *topology;

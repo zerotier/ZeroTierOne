@@ -598,10 +598,6 @@ bool VL1::_HELLO(void *tPtr,const SharedPtr<Path> &path,SharedPtr<Peer> &peer,Bu
 	const int64_t now = RR->node->now();
 
 	if (!peer) {
-		if (!RR->node->rateGateIdentityVerification(now,path->address())) {
-			RR->t->incomingPacketDropped(tPtr,0xaffa9ff7,p.h.packetId,0,id,path->address(),hops,Protocol::VERB_HELLO,ZT_TRACE_PACKET_DROP_REASON_RATE_LIMIT_EXCEEDED);
-			return false;
-		}
 		if (!id.locallyValidate()) {
 			RR->t->incomingPacketDropped(tPtr,0x2ff7a909,p.h.packetId,0,id,path->address(),hops,Protocol::VERB_HELLO,ZT_TRACE_PACKET_DROP_REASON_INVALID_OBJECT);
 			return false;

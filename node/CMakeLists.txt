@@ -14,6 +14,7 @@ set(core_headers
 	Defragmenter.hpp
 	Dictionary.hpp
 	ECC384.hpp
+	Expect.hpp
 	FCV.hpp
 	Hashtable.hpp
 	Identity.hpp
