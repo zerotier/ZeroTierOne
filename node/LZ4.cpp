@@ -750,7 +750,7 @@ FORCE_INLINE int LZ4_decompress_generic(
 
 } // anonymous namespace
 
-int LZ4_compress_fast(const char* source, char* dest, int inputSize, int maxOutputSize, int acceleration)
+int LZ4_compress_fast(const char* source, char* dest, int inputSize, int maxOutputSize, int acceleration) noexcept
 {
 #if (HEAPMODE)
 	void* ctxPtr = ALLOCATOR(1, sizeof(LZ4_stream_t));   /* malloc-calloc always properly aligned */
@@ -767,7 +767,7 @@ int LZ4_compress_fast(const char* source, char* dest, int inputSize, int maxOutp
 	return result;
 }
 
-int LZ4_decompress_safe(const char* source, char* dest, int compressedSize, int maxDecompressedSize)
+int LZ4_decompress_safe(const char* source, char* dest, int compressedSize, int maxDecompressedSize) noexcept
 {
 	return LZ4_decompress_generic(source, dest, compressedSize, maxDecompressedSize, endOnInputSize, full, 0, noDict, (BYTE*)dest, NULL, 0);
 }

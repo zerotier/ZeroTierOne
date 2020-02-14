@@ -17,7 +17,6 @@
 #include "RuntimeEnvironment.hpp"
 #include "Peer.hpp"
 #include "Topology.hpp"
-#include "Switch.hpp"
 #include "Node.hpp"
 
 namespace ZeroTier {
@@ -30,6 +29,10 @@ Membership::Membership() :
 	_remoteTags(4),
 	_remoteCaps(4),
 	_remoteCoos(4)
+{
+}
+
+Membership::~Membership()
 {
 }
 
@@ -218,7 +221,7 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 	}
 }
 
-bool Membership::_isUnspoofableAddress(const NetworkConfig &nconf,const InetAddress &ip) const
+bool Membership::_isUnspoofableAddress(const NetworkConfig &nconf,const InetAddress &ip) const noexcept
 {
 	if ((ip.isV6())&&(nconf.ndpEmulation())) {
 		const InetAddress sixpl(InetAddress::makeIpv66plane(nconf.networkId,nconf.issuedTo.toInt()));

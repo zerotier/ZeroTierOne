@@ -17,58 +17,79 @@
 #include "Constants.hpp"
 #include "Mutex.hpp"
 
-#define ZT_METER_HISTORY_LENGTH 4
-#define ZT_METER_HISTORY_TICK_DURATION 1000
+#include <algorithm>
 
 namespace ZeroTier {
 
 /**
- * Transfer rate meter (thread-safe)
+ * Transfer rate and total transferred amount meter
+ *
+ * @tparam TUNIT Unit of time in milliseconds (default: 1000 for one second)
+ * @tparam LSIZE Log size in units of time (default: 60 for one minute worth of data)
  */
+template<int64_t TUNIT = 1000,unsigned long LSIZE = 60>
 class Meter
 {
 public:
-	ZT_ALWAYS_INLINE Meter() noexcept
-	{
-		for(int i=0;i<ZT_METER_HISTORY_LENGTH;++i)
-			_history[i] = 0.0;
-		_ts = 0;
-		_count = 0;
-	}
+	/**
+	 * Create and initialize a new meter
+	 *
+	 * @param now Start time
+	 */
+	ZT_ALWAYS_INLINE Meter(const int64_t now) noexcept : startTime(now) {}
 
+	/**
+	 * Add a measurement
+	 *
+	 * @tparam I Type of 'count' (usually inferred)
+	 * @param now Current time
+	 * @param count Count of items (usually bytes)
+	 */
 	template<typename I>
 	ZT_ALWAYS_INLINE void log(const int64_t now,I count) noexcept
 	{
-		const int64_t since = now - _ts;
-		if (since >= ZT_METER_HISTORY_TICK_DURATION) {
-			_ts = now;
-			_history[++_hptr % ZT_METER_HISTORY_LENGTH] = (double)_count / ((double)since / 1000.0);
-			_count = (uint64_t)count;
-		} else {
-			_count += (uint64_t)count;
-		}
+		_total += (uint64_t)count;
+
+		// We log by choosing a log bucket based on the current time in units modulo
+		// the log size and then if it's a new bucket setting it or otherwise adding
+		// to it.
+		const unsigned long bucket = ((unsigned int)((uint64_t)(now / TUNIT))) % LSIZE;
+		const unsigned long prevBucket = _bucket.exchange(bucket);
+		if (prevBucket != bucket)
+			_counts[bucket].store((uint64_t)count);
+		else _counts[bucket].fetch_add((uint64_t)count);
 	}
 
-	ZT_ALWAYS_INLINE double perSecond(const int64_t now) const noexcept
+	/**
+	 * Get rate per TUNIT time
+	 *
+	 * @param now Current time
+	 * @return Count per TUNIT time (rate)
+	 */
+	ZT_ALWAYS_INLINE double rate(const int64_t now) const noexcept
 	{
-		double r = 0.0,n = 0.0;
-		const int64_t since = (now - _ts);
-		if (since >= ZT_METER_HISTORY_TICK_DURATION) {
-			r += (double)_count / ((double)since / 1000.0);
-			n += 1.0;
-		}
-		for(int i=0;i<ZT_METER_HISTORY_LENGTH;++i) {
-			r += _history[i];
-			n += 1.0;
-		}
-		return r / n;
+		// Rate is computed by looking back at N buckets where N is the smaller of
+		// the size of the log or the number of units since the start time.
+		const unsigned long lookback = std::min((unsigned long)((now - startTime) / TUNIT),LSIZE);
+		if (lookback == 0)
+			return 0.0;
+		unsigned long bi = ((unsigned int)((uint64_t)(now / TUNIT)));
+		double sum = 0.0;
+		for(unsigned long l=0;l<lookback;++l)
+			sum += (double)_counts[bi-- % LSIZE].load();
+		return sum / (double)lookback;
 	}
+
+	/**
+	 * @return Total count since meter was created
+	 */
+	ZT_ALWAYS_INLINE uint64_t total() const noexcept { return _total.load(); }
 
 private:
-	volatile double _history[ZT_METER_HISTORY_LENGTH];
-	volatile int64_t _ts;
-	volatile uint64_t _count;
-	std::atomic<unsigned int> _hptr;
+	const int64_t startTime;
+	std::atomic<uint64_t> _total;
+	std::atomic<uint64_t> _counts[LSIZE];
+	std::atomic<unsigned long> _bucket;
 };
 
 } // namespace ZeroTier

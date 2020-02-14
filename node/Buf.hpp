@@ -79,7 +79,7 @@ namespace ZeroTier {
  */
 class Buf
 {
-	friend class SharedPtr< Buf >;
+	friend class SharedPtr<Buf>;
 
 public:
 	// New and delete operators that allocate Buf instances from a shared lock-free memory pool.

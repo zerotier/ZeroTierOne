@@ -49,6 +49,7 @@ public:
 	};
 
 	Membership();
+	~Membership();
 
 	/**
 	 * Send COM and other credentials to this peer
@@ -64,7 +65,7 @@ public:
 	/**
 	 * @return Time we last pushed credentials to this member
 	 */
-	ZT_ALWAYS_INLINE int64_t lastPushedCredentials() const { return _lastPushedCredentials; }
+	ZT_ALWAYS_INLINE int64_t lastPushedCredentials() const noexcept { return _lastPushedCredentials; }
 
 	/**
 	 * Check whether the peer represented by this Membership should be allowed on this network at all
@@ -72,7 +73,7 @@ public:
 	 * @param nconf Our network config
 	 * @return True if this peer is allowed on this network at all
 	 */
-	ZT_ALWAYS_INLINE bool isAllowedOnNetwork(const NetworkConfig &nconf) const
+	ZT_ALWAYS_INLINE bool isAllowedOnNetwork(const NetworkConfig &nconf) const noexcept
 	{
 		if (nconf.isPublic()) return true; // public network
 		if (_com.timestamp() <= _comRevocationThreshold) return false; // COM has been revoked
@@ -88,7 +89,7 @@ public:
 	 * @return True if this peer has a certificate of ownership for the given resource
 	 */
 	template<typename T>
-	ZT_ALWAYS_INLINE bool peerOwnsAddress(const NetworkConfig &nconf,const T &r) const
+	ZT_ALWAYS_INLINE bool peerOwnsAddress(const NetworkConfig &nconf,const T &r) const noexcept
 	{
 		if (_isUnspoofableAddress(nconf,r))
 			return true;
@@ -109,7 +110,7 @@ public:
 	 * @param id Tag ID
 	 * @return Pointer to tag or NULL if not found
 	 */
-	ZT_ALWAYS_INLINE const Tag *getTag(const NetworkConfig &nconf,const uint32_t id) const
+	ZT_ALWAYS_INLINE const Tag *getTag(const NetworkConfig &nconf,const uint32_t id) const noexcept
 	{
 		const Tag *const t = _remoteTags.get(id);
 		return (((t)&&(_isCredentialTimestampValid(nconf,*t))) ? t : (Tag *)0);
@@ -138,13 +139,13 @@ private:
 	// This returns true if a resource is an IPv6 NDP-emulated address. These embed the ZT
 	// address of the peer and therefore cannot be spoofed, causing peerOwnsAddress() to
 	// always return true for them. A certificate is not required for these.
-	ZT_ALWAYS_INLINE bool _isUnspoofableAddress(const NetworkConfig &nconf,const MAC &m) const { return false; }
-	bool _isUnspoofableAddress(const NetworkConfig &nconf,const InetAddress &ip) const;
+	ZT_ALWAYS_INLINE bool _isUnspoofableAddress(const NetworkConfig &nconf,const MAC &m) const noexcept { return false; }
+	bool _isUnspoofableAddress(const NetworkConfig &nconf,const InetAddress &ip) const noexcept;
 
 	// This compares the remote credential's timestamp to the timestamp in our network config
 	// plus or minus the permitted maximum timestamp delta.
 	template<typename C>
-	ZT_ALWAYS_INLINE bool _isCredentialTimestampValid(const NetworkConfig &nconf,const C &remoteCredential) const
+	ZT_ALWAYS_INLINE bool _isCredentialTimestampValid(const NetworkConfig &nconf,const C &remoteCredential) const noexcept
 	{
 		const int64_t ts = remoteCredential.timestamp();
 		if (((ts >= nconf.timestamp) ? (ts - nconf.timestamp) : (nconf.timestamp - ts)) <= nconf.credentialTimeMaxDelta) {
@@ -190,7 +191,7 @@ public:
 	class CapabilityIterator
 	{
 	public:
-		ZT_ALWAYS_INLINE CapabilityIterator(Membership &m,const NetworkConfig &nconf) :
+		ZT_ALWAYS_INLINE CapabilityIterator(Membership &m,const NetworkConfig &nconf) noexcept :
 			_hti(m._remoteCaps),
 			_k(nullptr),
 			_c(nullptr),
@@ -199,7 +200,7 @@ public:
 		{
 		}
 
-		ZT_ALWAYS_INLINE Capability *next()
+		ZT_ALWAYS_INLINE Capability *next() noexcept
 		{
 			while (_hti.next(_k,_c)) {
 				if (_m._isCredentialTimestampValid(_nconf,*_c))

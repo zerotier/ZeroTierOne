@@ -353,53 +353,72 @@ void AES::GMAC::finish(uint8_t tag[16]) noexcept
 		const __m128i h = _aes._k.ni.h;
 		y = _mm_xor_si128(y,_mm_set_epi64x(0LL,(long long)Utils::hton((uint64_t)_len << 3U)));
 		y = _mm_shuffle_epi8(y,s_shuf);
+
 		__m128i encIV = _mm_xor_si128(_mm_loadu_si128(reinterpret_cast<const __m128i *>(_iv)),k[0]);
+
 		__m128i t1 = _mm_clmulepi64_si128(h,y,0x00);
 		__m128i t2 = _mm_clmulepi64_si128(h,y,0x01);
 		__m128i t3 = _mm_clmulepi64_si128(h,y,0x10);
 		__m128i t4 = _mm_clmulepi64_si128(h,y,0x11);
+
 		encIV = _mm_aesenc_si128(encIV,k[1]);
+		encIV = _mm_aesenc_si128(encIV,k[2]);
+
 		t2 = _mm_xor_si128(t2,t3);
 		t3 = _mm_slli_si128(t2,8);
-		encIV = _mm_aesenc_si128(encIV,k[2]);
 		t2 = _mm_srli_si128(t2,8);
 		t1 = _mm_xor_si128(t1,t3);
+
 		encIV = _mm_aesenc_si128(encIV,k[3]);
+
 		t4 = _mm_xor_si128(t4,t2);
 		__m128i t5 = _mm_srli_epi32(t1,31);
-		encIV = _mm_aesenc_si128(encIV,k[4]);
 		t1 = _mm_slli_epi32(t1,1);
 		__m128i t6 = _mm_srli_epi32(t4,31);
-		encIV = _mm_aesenc_si128(encIV,k[5]);
+
+		encIV = _mm_aesenc_si128(encIV,k[4]);
+
 		t4 = _mm_slli_epi32(t4,1);
 		t3 = _mm_srli_si128(t5,12);
-		encIV = _mm_aesenc_si128(encIV,k[6]);
 		t6 = _mm_slli_si128(t6,4);
 		t5 = _mm_slli_si128(t5,4);
-		encIV = _mm_aesenc_si128(encIV,k[7]);
+
+		encIV = _mm_aesenc_si128(encIV,k[5]);
+
 		t1 = _mm_or_si128(t1,t5);
 		t4 = _mm_or_si128(t4,t6);
-		encIV = _mm_aesenc_si128(encIV,k[8]);
+
+		encIV = _mm_aesenc_si128(encIV,k[6]);
+		encIV = _mm_aesenc_si128(encIV,k[7]);
+
 		t4 = _mm_or_si128(t4,t3);
 		t5 = _mm_slli_epi32(t1,31);
-		encIV = _mm_aesenc_si128(encIV,k[9]);
 		t6 = _mm_slli_epi32(t1,30);
 		t3 = _mm_slli_epi32(t1,25);
-		encIV = _mm_aesenc_si128(encIV,k[10]);
+
+		encIV = _mm_aesenc_si128(encIV,k[8]);
+		encIV = _mm_aesenc_si128(encIV,k[9]);
+
 		t5 = _mm_xor_si128(t5,t6);
 		t5 = _mm_xor_si128(t5,t3);
+
+		encIV = _mm_aesenc_si128(encIV,k[10]);
 		encIV = _mm_aesenc_si128(encIV,k[11]);
+
 		t6 = _mm_srli_si128(t5,4);
 		t4 = _mm_xor_si128(t4,t6);
-		encIV = _mm_aesenc_si128(encIV,k[12]);
 		t5 = _mm_slli_si128(t5,12);
 		t1 = _mm_xor_si128(t1,t5);
-		encIV = _mm_aesenc_si128(encIV,k[13]);
+
 		t4 = _mm_xor_si128(t4,t1);
 		t5 = _mm_srli_epi32(t1,1);
 		t2 = _mm_srli_epi32(t1,2);
 		t3 = _mm_srli_epi32(t1,7);
+
+		encIV = _mm_aesenc_si128(encIV,k[12]);
+		encIV = _mm_aesenc_si128(encIV,k[13]);
 		encIV = _mm_aesenclast_si128(encIV,k[14]);
+
 		t4 = _mm_xor_si128(t4,t2);
 		t4 = _mm_xor_si128(t4,t3);
 		t4 = _mm_xor_si128(t4,t5);

@@ -37,42 +37,42 @@ namespace ZeroTier {
 class Locator : public TriviallyCopyable
 {
 public:
-	ZT_ALWAYS_INLINE Locator() { this->clear(); }
+	ZT_ALWAYS_INLINE Locator() noexcept { memoryZero(this); }
 
 	/**
 	 * Zero the Locator data structure
 	 */
-	ZT_ALWAYS_INLINE void clear() { memset(reinterpret_cast<void *>(this),0,sizeof(Locator)); }
+	ZT_ALWAYS_INLINE void clear() noexcept { memoryZero(this); }
 
 	/**
 	 * @return Timestamp (a.k.a. revision number) set by Location signer
 	 */
-	ZT_ALWAYS_INLINE int64_t timestamp() const { return _ts; }
+	ZT_ALWAYS_INLINE int64_t timestamp() const noexcept { return _ts; }
 
 	/**
 	 * @return True if locator is signed
 	 */
-	ZT_ALWAYS_INLINE bool isSigned() const { return (_signatureLength > 0); }
+	ZT_ALWAYS_INLINE bool isSigned() const noexcept { return (_signatureLength > 0); }
 
 	/**
 	 * @return Length of signature in bytes or 0 if none
 	 */
-	ZT_ALWAYS_INLINE unsigned int signatureLength() const { return _signatureLength; }
+	ZT_ALWAYS_INLINE unsigned int signatureLength() const noexcept { return _signatureLength; }
 
 	/**
 	 * @return Pointer to signature bytes
 	 */
-	ZT_ALWAYS_INLINE const uint8_t *signature() const { return _signature; }
+	ZT_ALWAYS_INLINE const uint8_t *signature() const noexcept { return _signature; }
 
 	/**
 	 * @return Number of endpoints in this locator
 	 */
-	ZT_ALWAYS_INLINE unsigned int endpointCount() const { return _endpointCount; }
+	ZT_ALWAYS_INLINE unsigned int endpointCount() const noexcept { return _endpointCount; }
 
 	/**
 	 * @return Pointer to array of endpoints
 	 */
-	ZT_ALWAYS_INLINE const Endpoint *endpoints() const { return _at; }
+	ZT_ALWAYS_INLINE const Endpoint *endpoints() const noexcept { return _at; }
 
 	/**
 	 * Add an endpoint to this locator
@@ -83,7 +83,7 @@ public:
 	 * @param ep Endpoint to add
 	 * @return True if endpoint was added (or already present), false if locator is full
 	 */
-	ZT_ALWAYS_INLINE bool add(const Endpoint &ep)
+	ZT_ALWAYS_INLINE bool add(const Endpoint &ep) noexcept
 	{
 		if (_endpointCount >= ZT_LOCATOR_MAX_ENDPOINTS)
 			return false;
@@ -100,7 +100,7 @@ public:
 	 * @param id Identity that includes private key
 	 * @return True if signature successful
 	 */
-	bool sign(int64_t ts,const Identity &id);
+	bool sign(int64_t ts,const Identity &id) noexcept;
 
 	/**
 	 * Verify this Locator's validity and signature
@@ -108,13 +108,13 @@ public:
 	 * @param id Identity corresponding to hash
 	 * @return True if valid and signature checks out
 	 */
-	bool verify(const Identity &id) const;
+	bool verify(const Identity &id) const noexcept;
 
-	explicit ZT_ALWAYS_INLINE operator bool() const { return (_ts != 0); }
+	explicit ZT_ALWAYS_INLINE operator bool() const noexcept { return (_ts != 0); }
 
-	static ZT_ALWAYS_INLINE int marshalSizeMax() { return ZT_LOCATOR_MARSHAL_SIZE_MAX; }
-	int marshal(uint8_t data[ZT_LOCATOR_MARSHAL_SIZE_MAX],bool excludeSignature = false) const;
-	int unmarshal(const uint8_t *restrict data,int len);
+	static constexpr int marshalSizeMax() noexcept { return ZT_LOCATOR_MARSHAL_SIZE_MAX; }
+	int marshal(uint8_t data[ZT_LOCATOR_MARSHAL_SIZE_MAX],bool excludeSignature = false) const noexcept;
+	int unmarshal(const uint8_t *restrict data,int len) noexcept;
 
 private:
 	int64_t _ts;

@@ -18,8 +18,8 @@
 
 namespace ZeroTier {
 
-int LZ4_compress_fast(const char *source,char *dest,int inputSize,int maxOutputSize,int acceleration = 1);
-int LZ4_decompress_safe(const char *source,char *dest,int compressedSize,int maxDecompressedSize);
+int LZ4_compress_fast(const char *source,char *dest,int inputSize,int maxOutputSize,int acceleration = 1) noexcept;
+int LZ4_decompress_safe(const char *source,char *dest,int compressedSize,int maxDecompressedSize) noexcept;
 
 } // namespace ZeroTier
 

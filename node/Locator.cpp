@@ -15,7 +15,7 @@
 
 namespace ZeroTier {
 
-bool Locator::sign(const int64_t ts,const Identity &id)
+bool Locator::sign(const int64_t ts,const Identity &id) noexcept
 {
 	uint8_t signData[ZT_LOCATOR_MARSHAL_SIZE_MAX];
 	if (!id.hasPrivate())
@@ -28,7 +28,7 @@ bool Locator::sign(const int64_t ts,const Identity &id)
 	return (_signatureLength > 0);
 }
 
-bool Locator::verify(const Identity &id) const
+bool Locator::verify(const Identity &id) const noexcept
 {
 	if ((_ts == 0)||(_endpointCount > ZT_LOCATOR_MAX_ENDPOINTS)||(_signatureLength > ZT_SIGNATURE_BUFFER_SIZE))
 		return false;
@@ -37,7 +37,7 @@ bool Locator::verify(const Identity &id) const
 	return id.verify(signData,signLen,_signature,_signatureLength);
 }
 
-int Locator::marshal(uint8_t data[ZT_LOCATOR_MARSHAL_SIZE_MAX],const bool excludeSignature) const
+int Locator::marshal(uint8_t data[ZT_LOCATOR_MARSHAL_SIZE_MAX],const bool excludeSignature) const noexcept
 {
 	if ((_endpointCount > ZT_LOCATOR_MAX_ENDPOINTS)||(_signatureLength > ZT_SIGNATURE_BUFFER_SIZE))
 		return -1;
@@ -69,7 +69,7 @@ int Locator::marshal(uint8_t data[ZT_LOCATOR_MARSHAL_SIZE_MAX],const bool exclud
 	return p;
 }
 
-int Locator::unmarshal(const uint8_t *restrict data,const int len)
+int Locator::unmarshal(const uint8_t *restrict data,const int len) noexcept
 {
 	if (len <= (8 + 2 + 48))
 		return -1;

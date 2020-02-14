@@ -263,6 +263,13 @@ namespace Protocol {
  */
 enum Verb
 {
+	/**
+	 * No operation
+	 *
+	 * This packet does nothing, but it is sometimes sent as a probe to
+	 * trigger a HELLO exchange as the code will attempt HELLO when it
+	 * receives a packet from an unidentified source.
+	 */
 	VERB_NOP = 0x00,
 
 	/**
@@ -280,8 +287,8 @@ enum Verb
 	 *   <[2] 16-bit length of meta-data dictionary>
 	 *   <[...] meta-data dictionary>
 	 *   <[2] 16-bit length of any additional fields>
-	 *   <[48] HMAC-SHA384 of full plaintext payload>
 	 *   [... end encrypted region ...]
+	 *   <[48] HMAC-SHA384 of full plaintext payload>
 	 *
 	 * HELLO is sent with authentication but without the usual encryption so
 	 * that peers can exchange identities.
