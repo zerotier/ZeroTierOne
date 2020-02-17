@@ -24,6 +24,7 @@
 #include "SHA512.hpp"
 #include "Peer.hpp"
 #include "Path.hpp"
+#include "Expect.hpp"
 
 namespace ZeroTier {
 
@@ -469,6 +470,7 @@ void VL1::_sendPendingWhois(void *const tPtr,const int64_t now)
 
 		if (outl > sizeof(Protocol::Header)) {
 			Protocol::armor(outp,outl,root->key(),ZT_PROTO_CIPHER_SUITE__POLY1305_SALSA2012);
+			RR->expect->sending(ph.packetId,now);
 			rootPath->send(RR,tPtr,outp.b,outl,now);
 		}
 	}
@@ -711,6 +713,13 @@ bool VL1::_OK(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &peer
 		return false;
 	}
 	Protocol::OK::Header &oh = pkt.as<Protocol::OK::Header>();
+
+	const int64_t now = RR->node->now();
+	if (!RR->expect->expecting(oh.inRePacketId,now)) {
+		RR->t->incomingPacketDropped(tPtr,0x4c1f1ff7,0,0,identityFromPeerPtr(peer),path->address(),0,Protocol::VERB_OK,ZT_TRACE_PACKET_DROP_REASON_REPLY_NOT_EXPECTED);
+		return false;
+	}
+
 	switch(oh.inReVerb) {
 
 		case Protocol::VERB_HELLO:

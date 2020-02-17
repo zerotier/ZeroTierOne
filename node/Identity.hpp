@@ -26,10 +26,8 @@
 #include "TriviallyCopyable.hpp"
 
 #define ZT_IDENTITY_STRING_BUFFER_LENGTH 1024
-
-#define ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE (ZT_C25519_PUBLIC_KEY_LEN + ZT_ECC384_PUBLIC_KEY_SIZE + ZT_C25519_SIGNATURE_LEN + ZT_ECC384_SIGNATURE_SIZE)
+#define ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE (ZT_C25519_PUBLIC_KEY_LEN + ZT_ECC384_PUBLIC_KEY_SIZE)
 #define ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE (ZT_C25519_PRIVATE_KEY_LEN + ZT_ECC384_PRIVATE_KEY_SIZE)
-
 #define ZT_IDENTITY_MARSHAL_SIZE_MAX (ZT_ADDRESS_LENGTH + 4 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE)
 
 namespace ZeroTier {
@@ -37,12 +35,20 @@ namespace ZeroTier {
 /**
  * A ZeroTier identity
  *
- * An identity consists of a public key, a 40-bit ZeroTier address computed
- * from that key in a collision-resistant fashion, and a self-signature.
+ * Identities currently come in two types: type 0 identities based on just Curve25519
+ * and Ed25519 and type 1 identities that include both a 25519 key pair and a NIST P-384
+ * key pair. Type 1 identities use P-384 for signatures but use both key pairs at once
+ * (hashing their results) for key agreement with other type 1 identities, and can agree
+ * with type 0 identities using only their Curve25519 keys. The ability of type 0 and 1
+ * identities to agree will allow type 0 identities to keep being used even after type
+ * 1 becomes the default.
  *
- * The address derivation algorithm makes it computationally very expensive to
- * search for a different public key that duplicates an existing address. (See
- * code for deriveAddress() for this algorithm.)
+ * Type 1 identities also use a simpler mechanism to rate limit identity generation (as
+ * a defense in depth against intentional collision) that makes local identity validation
+ * faster, allowing full identity validation on all unmarshal() operations.
+ *
+ * The default is still type 0, but this may change in future versions once 1.x is no
+ * longer common in the wild.
  */
 class Identity : public TriviallyCopyable
 {
@@ -90,8 +96,9 @@ public:
 	 * This is a time consuming operation taking up to 5-10 seconds on some slower systems.
 	 *
 	 * @param t Type of identity to generate
+	 * @return False if there was an error such as type being an invalid value
 	 */
-	void generate(Type t);
+	bool generate(Type t);
 
 	/**
 	 * Check the validity of this identity's pairing of key to address
@@ -106,14 +113,18 @@ public:
 	ZT_ALWAYS_INLINE bool hasPrivate() const noexcept { return _hasPrivate; }
 
 	/**
-	 * @return 384-bit/48-byte hash of this identity's public key(s)
+	 * This gets (computing if needed) a hash of this identity's public key(s).
+	 *
+	 * The hash returned by this function differs by identity type. For C25519 (type 0)
+	 * identities this returns a simple SHA384 of the public key, which is NOT the same
+	 * as the hash used to generate the address. For type 1 C25519+P384 identities this
+	 * returns the same compoound SHA384 hash that is used for purposes of hashcash
+	 * and address computation. This difference is because the v0 hash is expensive while
+	 * the v1 hash is fast.
+	 *
+	 * @return 384-bit/48-byte hash (pointer remains valid as long as Identity object exists)
 	 */
-	ZT_ALWAYS_INLINE const uint8_t *hash() const
-	{
-		if (_hash[0] == 0)
-			const_cast<Identity *>(this)->_computeHash();
-		return reinterpret_cast<const uint8_t *>(_hash);
-	}
+	const uint8_t *hash() const;
 
 	/**
 	 * Compute a hash of this identity's public and private keys
@@ -228,8 +239,6 @@ public:
 	int unmarshal(const uint8_t *data,int len) noexcept;
 
 private:
-	void _computeHash(); // recompute _hash
-
 	Address _address;
 	uint64_t _hash[6]; // hash of public key memo-ized for performance, recalculated when _hash[0] == 0
 	Type _type; // _type determines which fields in _priv and _pub are used
@@ -241,8 +250,6 @@ private:
 	ZT_PACKED_STRUCT(struct { // don't re-order these
 		uint8_t c25519[ZT_C25519_PUBLIC_KEY_LEN]; // Curve25519 and Ed25519 public keys
 		uint8_t p384[ZT_ECC384_PUBLIC_KEY_SIZE];  // NIST P-384 public key
-		uint8_t c25519s[ZT_C25519_SIGNATURE_LEN]; // signature of both keys with ed25519
-		uint8_t p384s[ZT_ECC384_SIGNATURE_SIZE];  // signature of both keys with p384
 	}) _pub;
 };
 
