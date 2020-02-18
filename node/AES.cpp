@@ -59,7 +59,7 @@ ZT_ALWAYS_INLINE void s_bmul64(const uint64_t x,const uint64_t y,uint64_t &r_hig
 	r_low = (uint64_t)r;
 }
 
-ZT_ALWAYS_INLINE void s_gfmul(const uint64_t h_high,const uint64_t h_low,uint64_t &y0, uint64_t &y1) noexcept
+void s_gfmul(const uint64_t h_high,const uint64_t h_low,uint64_t &y0, uint64_t &y1) noexcept
 {
 	uint64_t z2_low,z2_high,z0_low,z0_high,z1a_low,z1a_high;
 	uint64_t y_high = Utils::ntoh(y0);
@@ -108,7 +108,7 @@ ZT_ALWAYS_INLINE void s_bmul32(uint32_t x,uint32_t y,uint32_t &r_high,uint32_t &
 	r_low = (uint32_t)z;
 }
 
-ZT_ALWAYS_INLINE void s_gfmul(const uint64_t h_high,const uint64_t h_low,uint64_t &y0,uint64_t &y1) noexcept
+void s_gfmul(const uint64_t h_high,const uint64_t h_low,uint64_t &y0,uint64_t &y1) noexcept
 {
 	uint32_t h_high_h = (uint32_t)(h_high >> 32);
 	uint32_t h_high_l = (uint32_t)h_high;

@@ -272,6 +272,11 @@
  */
 #define ZT_PROTO_HELLO_NODE_META_LOCATION_Z "gZ"
 
+/**
+ * HELLO exchange meta-data: preferred cipher suite (may be ignored)
+ */
+#define ZT_PROTO_HELLO_NODE_META_PREFERRED_CIPHER_SUITE "c"
+
 namespace ZeroTier {
 namespace Protocol {
 
