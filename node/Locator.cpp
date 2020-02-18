@@ -42,8 +42,9 @@ int Locator::marshal(uint8_t data[ZT_LOCATOR_MARSHAL_SIZE_MAX],const bool exclud
 	if ((_endpointCount > ZT_LOCATOR_MAX_ENDPOINTS)||(_signatureLength > ZT_SIGNATURE_BUFFER_SIZE))
 		return -1;
 
-	Utils::storeBigEndian<int64_t>(data,_ts);
-	int p = 8;
+	data[0] = 0xff; // version byte, currently 0xff to never be the same as byte 0 of an identity for legacy compatibility reasons
+	Utils::storeBigEndian<int64_t>(data + 1,_ts);
+	int p = 9;
 
 	if (_ts > 0) {
 		Utils::storeBigEndian(data + p,(uint16_t)_endpointCount);
@@ -71,11 +72,13 @@ int Locator::marshal(uint8_t data[ZT_LOCATOR_MARSHAL_SIZE_MAX],const bool exclud
 
 int Locator::unmarshal(const uint8_t *restrict data,const int len) noexcept
 {
-	if (len <= (8 + 2 + 48))
+	if (len <= (1 + 8 + 2 + 48))
 		return -1;
 
-	_ts = Utils::loadBigEndian<int64_t>(data);
-	int p = 8;
+	if (data[0] != 0xff)
+		return -1;
+	_ts = Utils::loadBigEndian<int64_t>(data + 1);
+	int p = 9;
 
 	if (_ts > 0) {
 		const unsigned int ec = Utils::loadBigEndian<uint16_t>(data + p);

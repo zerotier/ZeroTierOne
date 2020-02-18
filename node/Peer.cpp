@@ -72,7 +72,8 @@ void Peer::received(
 	const unsigned int hops,
 	const uint64_t packetId,
 	const unsigned int payloadLength,
-	const Protocol::Verb verb)
+	const Protocol::Verb verb,
+	const Protocol::Verb inReVerb)
 {
 	const int64_t now = RR->node->now();
 	_lastReceive = now;
@@ -240,7 +241,7 @@ void Peer::sendNOP(void *tPtr,const int64_t localSocket,const InetAddress &atAdd
 	RR->identity.address().copyTo(ph.source);
 	ph.flags = 0;
 	ph.verb = Protocol::VERB_NOP;
-	Protocol::armor(outp,sizeof(Protocol::Header),_key,ZT_PROTO_CIPHER_SUITE__POLY1305_SALSA2012);
+	Protocol::armor(outp,sizeof(Protocol::Header),_key,this->cipher());
 	RR->node->putPacket(tPtr,localSocket,atAddress,outp.b,sizeof(Protocol::Header));
 }
 
@@ -354,7 +355,7 @@ void Peer::save(void *tPtr) const
 	free(buf);
 }
 
-void Peer::contact(void *tPtr,const Endpoint &ep,const int64_t now,bool behindSymmetric,bool bfg1024)
+void Peer::contact(void *tPtr,const Endpoint &ep,const int64_t now,const bool behindSymmetric,const bool bfg1024)
 {
 	static uint8_t junk = 0;
 

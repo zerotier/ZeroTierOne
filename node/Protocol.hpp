@@ -305,43 +305,42 @@ enum Verb
 	 *   <[...] meta-data dictionary>
 	 *   <[2] 16-bit length of any additional fields>
 	 *   [... end encrypted region ...]
-	 *   <[48] HMAC-SHA384 of full plaintext payload>
+	 *   <[48] HMAC-SHA384 of packet (with hops field masked to 0)>
 	 *
-	 * HELLO is sent with authentication but without the usual encryption so
-	 * that peers can exchange identities.
+	 * HELLO is sent using the POLY1305_NONE cipher setting (MAC but
+	 * no encryption) and as of protocol version 11 contains an extra
+	 * HMAC-SHA384 MAC for additional authentication hardening.
 	 *
-	 * Destination address is the actual wire address to which the packet
-	 * was sent. See InetAddress::serialize() for format.
+	 * The physical desgination address is the raw InetAddress to which the
+	 * packet was sent, regardless of any relaying used.
 	 *
-	 * Starting at "begin encrypted section" the reset of the packet is
-	 * encrypted with Salsa20/12. This is not the normal packet encryption
-	 * and is technically not necessary as nothing in HELLO is secret. It
-	 * exists merely to shield meta-data info from passive listeners to
-	 * slightly improve privacy, and for backward compatibility with older
-	 * nodes that required it.
+	 * HELLO packets have an encrypted section that is encrypted with
+	 * Salsa20/12 using the two peers' long-term negotiated keys and with
+	 * the packet ID (with least significant 3 bits masked to 0 for legacy
+	 * reasons) as the Salsa20/12 IV. This encryption is technically not
+	 * necessary but serves to protect the privacy of locators and other
+	 * fields for a little added defense in depth. Note to auditors: for FIPS
+	 * or other auditing purposes this crypto can be ignored as its
+	 * compromise poses no risk to peer or network authentication or transport
+	 * data privacy. HMAC is computed after this encryption is performed and
+	 * is verified before decryption is performed.
 	 *
-	 * HELLO (and its OK response) ends with a large 384-bit HMAC to allow
-	 * identity exchanges to be authenticated with additional strength beyond
-	 * ordinary packet authentication.
+	 * A valid and successfully authenticated HELLO will generate the following
+	 * OK response which contains much of the same information about the
+	 * responding peer.
 	 *
 	 * OK payload:
-	 *   [... HMAC-384 starts here ...]
-	 *   <[8] HELLO timestamp field echo>
+	 *   <[8] timestamp echoed from original HELLO packet>
 	 *   <[1] protocol version>
 	 *   <[1] software major version>
 	 *   <[1] software minor version>
 	 *   <[2] software revision>
 	 *   <[...] physical destination address of packet>
-	 *   <[2] 16-bit reserved (legacy) field, always 0>
+	 *   <[2] 16-bit reserved (legacy) field, currently must be 0>
 	 *   <[2] 16-bit length of meta-data dictionary>
 	 *   <[...] meta-data dictionary>
 	 *   <[2] 16-bit length of any additional fields>
-	 *   <[48] HMAC-SHA384 of all fields to this point (as plaintext)>
-	 *
-	 * With the exception of the timestamp, the other fields pertain to the
-	 * respondent who is sending OK and are not echoes.
-	 *
-	 * ERROR has no payload.
+	 *   <[48] HMAC-SHA384 of plaintext packet (with hops masked to 0)>
 	 */
 	VERB_HELLO = 0x01,
 
@@ -350,10 +349,10 @@ enum Verb
 	 *   <[1] in-re verb>
 	 *   <[8] in-re packet ID>
 	 *   <[1] error code>
-	 *   <[...] error-dependent payload>
+	 *   <[...] error-dependent payload, may be empty>
 	 *
-	 * If this is not in response to a single packet then verb can be
-	 * NOP and packet ID can be zero.
+	 * An ERROR that does not pertain to a specific packet will have its verb
+	 * set to VERB_NOP and its packet ID set to zero.
 	 */
 	VERB_ERROR = 0x02,
 
@@ -380,8 +379,7 @@ enum Verb
 	 * be performed.
 	 *
 	 * It is possible for an identity but a null/empty locator to be returned
-	 * if no locator is known for a node. Older versions will also send no
-	 * locator field at all.
+	 * if no locator is known for a node. Older versions may omit the locator.
 	 */
 	VERB_WHOIS = 0x04,
 
@@ -390,13 +388,19 @@ enum Verb
 	 *   <[1] flags (unused, currently 0)>
 	 *   <[5] ZeroTier address of peer that might be found at this address>
 	 *   <[2] 16-bit protocol address port>
-	 *   <[1] protocol address length (4 for IPv4, 16 for IPv6)>
+	 *   <[1] protocol address length / type>
 	 *   <[...] protocol address (network byte order)>
 	 *
-	 * An upstream node can send this to inform both sides of a relay of
-	 * information they might use to establish a direct connection.
+	 * This is sent by a third party node to inform a node of where another
+	 * may be located. These are currently only allowed from roots.
 	 *
-	 * Upon receipt a peer sends HELLO to establish a direct link.
+	 * The protocol address format differs from the standard InetAddress
+	 * encoding for legacy reasons, but it's not hard to decode. The following
+	 * values are valid for the protocol address length (type) field:
+	 *
+	 *   4 - IPv4 IP address
+	 *   16 - IPv6 IP address
+	 *   255 - Endpoint object, unmarshaled in place (port ignored)
 	 *
 	 * No OK or ERROR is generated.
 	 */

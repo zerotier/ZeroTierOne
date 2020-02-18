@@ -101,6 +101,7 @@ public:
 	 * @param hops ZeroTier (not IP) hops
 	 * @param packetId Packet ID
 	 * @param verb Packet verb
+	 * @param inReVerb In-reply verb for OK or ERROR verbs
 	 */
 	void received(
 		void *tPtr,
@@ -108,7 +109,8 @@ public:
 		unsigned int hops,
 		uint64_t packetId,
 		unsigned int payloadLength,
-		Protocol::Verb verb);
+		Protocol::Verb verb,
+		Protocol::Verb inReVerb);
 
 	/**
 	 * Send a HELLO to this peer at a specified physical address
@@ -206,6 +208,14 @@ public:
 	 * @return 256-bit secret symmetric encryption key
 	 */
 	ZT_ALWAYS_INLINE const unsigned char *key() const noexcept { return _key; }
+
+	/**
+	 * @return Preferred cipher suite for normal encrypted P2P communication
+	 */
+	ZT_ALWAYS_INLINE uint8_t cipher() const noexcept
+	{
+		return ZT_PROTO_CIPHER_SUITE__POLY1305_SALSA2012;
+	}
 
 	/**
 	 * @return Incoming probe packet (in big-endian byte order)
