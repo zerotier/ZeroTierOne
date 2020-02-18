@@ -23,6 +23,64 @@
 #include "Address.hpp"
 #include "Identity.hpp"
 
+/*
+ * Core ZeroTier protocol packet formats ------------------------------------------------------------------------------
+ *
+ * Packet format:
+ *   <[8] 64-bit packet ID / crypto IV>
+ *   <[5] destination ZT address>
+ *   <[5] source ZT address>
+ *   <[1] outer visible flags, cipher, and hop count (bits: FFCCHHH)>
+ *   <[8] 64-bit MAC (or trusted path ID in trusted path mode)>
+ *   [... -- begin encryption envelope -- ...]
+ *   <[1] inner envelope flags (MS 3 bits) and verb (LS 5 bits)>
+ *   [... verb-specific payload ...]
+ *
+ * Packets smaller than 28 bytes are invalid and silently discarded.
+ *
+ * The hop count field is masked during message authentication computation
+ * and is thus the only field that is mutable in transit. It's incremented
+ * when roots or other nodes forward packets and exists to prevent infinite
+ * forwarding loops and to detect direct paths.
+ *
+ * HELLO is normally sent in the clear with the POLY1305_NONE cipher suite
+ * and with Poly1305 computed on plain text (Salsa20/12 is still used to
+ * generate a one time use Poly1305 key). As of protocol version 11 HELLO
+ * also includes a terminating HMAC (last 48 bytes) that significantly
+ * hardens HELLO authentication beyond what a 64-bit MAC can guarantee.
+ *
+ * Fragmented packets begin with a packet header whose fragment bit (bit
+ * 0x40 in the flags field) is set. This constitutes fragment zero. The
+ * total number of expected fragments is contained in each subsequent
+ * fragment packet. Unfragmented packets must not have the fragment bit
+ * set or the receiver will expect at least one additional fragment.
+ *
+ * --
+ *
+ * Packet fragment format (fragments beyond 0):
+ *   <[8] packet ID of packet to which this fragment belongs>
+ *   <[5] destination ZT address>
+ *   <[1] 0xff here signals that this is a fragment>
+ *   <[1] total fragments (most significant 4 bits), fragment no (LS 4 bits)>
+ *   <[1] ZT hop count (least significant 3 bits; others are reserved)>
+ *   <[...] fragment data>
+ *
+ * The protocol supports a maximum of 16 fragments including fragment 0
+ * which contains the full packet header (with fragment bit set). Fragments
+ * thus always carry fragment numbers between 1 and 15. All fragments
+ * belonging to the same packet must carry the same total fragment count in
+ * the most significant 4 bits of the fragment numbering field.
+ *
+ * All fragments have the same packet ID and destination. The packet ID
+ * doubles as the grouping identifier for fragment reassembly.
+ *
+ * Fragments do not carry their own packet MAC. The entire packet is
+ * authenticated once it is assembled by the receiver. Incomplete packets
+ * are discarded after a receiver configured period of time.
+ *
+ * --------------------------------------------------------------------------------------------------------------------
+ */
+
 /**
  * Protocol version -- incremented only for major changes
  *
@@ -50,24 +108,25 @@
  *    + inline push of CertificateOfMembership deprecated
  * 9  - 1.2.0 ... 1.2.14
  * 10 - 1.4.0 ... 1.4.6
+ *    + Contained early pre-alpha versions of multipath, which are deprecated
  * 11 - 2.0.0 ... CURRENT
- *    + Peer-to-peer multicast replication
- *    + HELLO and OK(HELLO) include an extra HMAC to further harden auth
- *    + Old planet/moon stuff is DEAD!
- *    + AES encryption support
- *    + NIST P-384 (type 1) identities
- *    + Ephemeral keys
+ *    + New more WAN-efficient P2P-assisted multicast algorithm
+ *    + HELLO and OK(HELLO) include an extra HMAC to harden authentication
+ *    + HELLO and OK(HELLO) can carry structured meta-data
+ *    + Ephemeral keys for forward secrecy and limited key lifetime
+ *    + Old planet/moon stuff is DEAD! Independent roots are easier.
+ *    + AES encryption is now the default
+ *    + New combined Curve25519/NIST P-384 identity type (type 1)
  *    + Short probe packets to reduce probe bandwidth
+ *    + Aggressive NAT traversal techniques for IPv4 symmetric NATs
+ *    + Remote diagnostics including rewrite of remote tracing
  */
 #define ZT_PROTO_VERSION 11
 
 /**
  * Minimum supported protocol version
- *
- * As of v2 we don't "officially" support anything older than 1.2.14, but this
- * is the hard cutoff before which peers will be flat out rejected.
  */
-#define ZT_PROTO_VERSION_MIN 6
+#define ZT_PROTO_VERSION_MIN 8
 
 /**
  * Packet buffer size (can be changed)
@@ -93,8 +152,8 @@
  * Maximum hop count allowed by packet structure (3 bits, 0-7)
  *
  * This is a protocol constant. It's the maximum allowed by the length
- * of the hop counter -- three bits. See node/Constants.hpp for the
- * pragmatic forwarding limit, which is typically lower.
+ * of the hop counter -- three bits. A lower limit is specified as
+ * the actual maximum hop count.
  */
 #define ZT_PROTO_MAX_HOPS 7
 
@@ -121,7 +180,12 @@
 #define ZT_PROTO_CIPHER_SUITE__AES_GCM_NRH 3
 
 /**
- * Magic number indicating a fragment
+ * Minimum viable length for a fragment
+ */
+#define ZT_PROTO_MIN_FRAGMENT_LENGTH 16
+
+/**
+ * Magic number indicating a fragment if present at index 13
  */
 #define ZT_PROTO_PACKET_FRAGMENT_INDICATOR 0xff
 
@@ -136,12 +200,7 @@
 #define ZT_PROTO_PACKET_FLAGS_INDEX 18
 
 /**
- * Minimum viable length for a fragment
- */
-#define ZT_PROTO_MIN_FRAGMENT_LENGTH 16
-
-/**
- * Length of a probe
+ * Length of a probe packet
  */
 #define ZT_PROTO_PROBE_LENGTH 8
 
@@ -154,6 +213,11 @@
  * Header flag indicating that a packet is fragmented and more fragments should be expected
  */
 #define ZT_PROTO_FLAG_FRAGMENTED 0x40U
+
+/**
+ * Mask for obtaining hops from the combined flags, cipher, and hops field
+ */
+#define ZT_PROTO_FLAG_FIELD_HOPS_MASK 0x07U
 
 /**
  * Verb flag indicating payload is compressed with LZ4
@@ -207,53 +271,6 @@
  * HELLO exchange meta-data: Z coordinate of your node (sent in OK(HELLO))
  */
 #define ZT_PROTO_HELLO_NODE_META_LOCATION_Z "gZ"
-
-/****************************************************************************/
-
-/*
- * Packet format:
- *   <[8] 64-bit packet ID / crypto IV>
- *   <[5] destination ZT address>
- *   <[5] source ZT address>
- *   <[1] flags/cipher/hops>
- *   <[8] 64-bit MAC (or trusted path ID in trusted path mode)>
- *   [... -- begin encryption envelope -- ...]
- *   <[1] encrypted flags (MS 3 bits) and verb (LS 5 bits)>
- *   [... verb-specific payload ...]
- *
- * Packets smaller than 28 bytes are invalid and silently discarded.
- *
- * The flags/cipher/hops bit field is: FFCCCHHH where C is a 3-bit cipher
- * selection allowing up to 7 cipher suites, F is outside-envelope flags,
- * and H is hop count.
- *
- * The three-bit hop count is the only part of a packet that is mutable in
- * transit without invalidating the MAC. All other bits in the packet are
- * immutable. This is because intermediate nodes can increment the hop
- * count up to 7 (protocol max).
- *
- * For unencrypted packets, MAC is computed on plaintext. Only HELLO is ever
- * sent in the clear, as it's the "here is my public key" message.
- *
- * The fragmented bit indicates that there is at least one fragment. Fragments
- * themselves contain the total, so the receiver must "learn" this from the
- * first fragment it receives.
- *
- * Fragments are sent with the following format:
- *   <[8] packet ID of packet to which this fragment belongs>
- *   <[5] destination ZT address>
- *   <[1] 0xff here signals that this is a fragment>
- *   <[1] total fragments (most significant 4 bits), fragment no (LS 4 bits)>
- *   <[1] ZT hop count (least significant 3 bits; others are reserved)>
- *   <[...] fragment data>
- *
- * The protocol supports a maximum of 16 fragments. If a fragment is received
- * before its main packet header, it should be cached for a brief period of
- * time to see if its parent arrives. Loss of any fragment constitutes packet
- * loss; there is no retransmission mechanism. The receiver must wait for full
- * receipt to authenticate and decrypt; there is no per-fragment MAC. (But if
- * fragments are corrupt, the MAC will fail for the whole assembled packet.)
- */
 
 namespace ZeroTier {
 namespace Protocol {
@@ -947,7 +964,7 @@ ZT_ALWAYS_INLINE uint64_t packetId(const Buf &pkt,const unsigned int packetSize)
  * @param packetSize Packet's actual size in bytes
  * @return 3-bit hops field embedded in packet flags field
  */
-ZT_ALWAYS_INLINE uint8_t packetHops(const Buf &pkt,const unsigned int packetSize) noexcept { return (packetSize >= ZT_PROTO_PACKET_FLAGS_INDEX) ? (pkt.b[ZT_PROTO_PACKET_FLAGS_INDEX] & 0x07U) : 0; }
+ZT_ALWAYS_INLINE uint8_t packetHops(const Buf &pkt,const unsigned int packetSize) noexcept { return (packetSize >= ZT_PROTO_PACKET_FLAGS_INDEX) ? (pkt.b[ZT_PROTO_PACKET_FLAGS_INDEX] & ZT_PROTO_FLAG_FIELD_HOPS_MASK) : 0; }
 
 /**
  * @param Packet to extract cipher ID from

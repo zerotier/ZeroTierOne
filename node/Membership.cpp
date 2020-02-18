@@ -38,6 +38,8 @@ Membership::~Membership()
 
 void Membership::pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const int64_t now,const Address &peerAddress,const NetworkConfig &nconf)
 {
+	Buf outp;
+#if 0
 	const Capability *sendCaps[ZT_MAX_NETWORK_CAPABILITIES];
 	unsigned int sendCapCount = 0;
 	for(unsigned int c=0;c<nconf.capabilityCount;++c)
@@ -99,6 +101,7 @@ void Membership::pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const i
 		outp.compress();
 		RR->sw->send(tPtr,outp,true);
 	}
+#endif
 
 	_lastPushedCredentials = now;
 }

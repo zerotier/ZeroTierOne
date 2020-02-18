@@ -484,6 +484,7 @@ bool VL1::_HELLO(void *tPtr,const SharedPtr<Path> &path,SharedPtr<Peer> &peer,Bu
 	}
 	Protocol::HELLO &p = pkt.as<Protocol::HELLO>();
 	const uint8_t hops = Protocol::packetHops(p.h);
+	p.h.flags &= (uint8_t)~ZT_PROTO_FLAG_FIELD_HOPS_MASK; // mask off hops for MAC calculation
 	int ptr = sizeof(Protocol::HELLO);
 
 	if (p.versionProtocol < ZT_PROTO_VERSION_MIN) {
@@ -529,12 +530,26 @@ bool VL1::_HELLO(void *tPtr,const SharedPtr<Path> &path,SharedPtr<Peer> &peer,Bu
 		}
 	}
 
-	// Packet has passed Poly1305 verification --------------------------------------------------------------------------
+	// Packet has passed Poly1305 MAC authentication --------------------------------------------------------------------
+
+	uint8_t hmacKey[ZT_PEER_SECRET_KEY_LENGTH],hmac[ZT_HMACSHA384_LEN];
+	if (peer->remoteVersionProtocol() >= 11) {
+		if (packetSize <= ZT_HMACSHA384_LEN) { // sanity check, should be impossible
+			RR->t->incomingPacketDropped(tPtr,0x1000662a,p.h.packetId,0,id,path->address(),hops,Protocol::VERB_NOP,ZT_TRACE_PACKET_DROP_REASON_MAC_FAILED);
+			return false;
+		}
+		KBKDFHMACSHA384(key,ZT_PROTO_KDF_KEY_LABEL_HELLO_HMAC,0,0,hmacKey); // iter == 0 for HELLO, 1 for OK(HELLO)
+		HMACSHA384(hmacKey,pkt.b,packetSize - ZT_HMACSHA384_LEN,hmac);
+		if (!Utils::secureEq(pkt.b + (packetSize - ZT_HMACSHA384_LEN),hmac,ZT_HMACSHA384_LEN)) {
+			RR->t->incomingPacketDropped(tPtr,0x1000662a,p.h.packetId,0,id,path->address(),hops,Protocol::VERB_NOP,ZT_TRACE_PACKET_DROP_REASON_MAC_FAILED);
+			return false;
+		}
+	}
+
+	// Packet has passed HMAC-SHA384 (if present and/or forced) ---------------------------------------------------------
 
 	InetAddress externalSurfaceAddress;
 	Dictionary nodeMetaData;
-	uint8_t hmacKey[ZT_PEER_SECRET_KEY_LENGTH],hmac[ZT_HMACSHA384_LEN];
-	bool hmacAuthenticated = false;
 
 	// Get external surface address if present.
 	if (ptr < packetSize) {
@@ -544,7 +559,7 @@ bool VL1::_HELLO(void *tPtr,const SharedPtr<Path> &path,SharedPtr<Peer> &peer,Bu
 		}
 	}
 
-	if (ptr < packetSize) {
+	if (((ptr + ZT_HMACSHA384_LEN) < packetSize)&&(peer->remoteVersionProtocol() >= 11)) {
 		// Everything after this point is encrypted with Salsa20/12. This is only a privacy measure
 		// since there's nothing truly secret in a HELLO packet. It also means that an observer
 		// can't even get ephemeral public keys without first knowing the long term secret key,
@@ -553,9 +568,9 @@ bool VL1::_HELLO(void *tPtr,const SharedPtr<Path> &path,SharedPtr<Peer> &peer,Bu
 		for (int i = 0; i < 8; ++i) iv[i] = pkt.b[i];
 		iv[7] &= 0xf8U;
 		Salsa20 s20(key,iv);
-		s20.crypt12(pkt.b + ptr,pkt.b + ptr,packetSize - ptr);
+		s20.crypt12(pkt.b + ptr,pkt.b + ptr,(packetSize - ZT_HMACSHA384_LEN) - ptr);
 
-		ptr += pkt.rI16(ptr); // this field is zero in v2.0+ but can indicate data between this point and dictionary
+		ptr += pkt.rI16(ptr); // skip length field which currently is always zero in v2.0+
 		if (ptr < packetSize) {
 			const unsigned int dictionarySize = pkt.rI16(ptr);
 			const void *const dictionaryBytes = pkt.b + ptr;
@@ -570,16 +585,6 @@ bool VL1::_HELLO(void *tPtr,const SharedPtr<Path> &path,SharedPtr<Peer> &peer,Bu
 				return false;
 			}
 
-			if ((ptr + ZT_SHA384_DIGEST_LEN) <= packetSize) {
-				KBKDFHMACSHA384(key,ZT_PROTO_KDF_KEY_LABEL_HELLO_HMAC,0,0,hmacKey); // iter == 0 for HELLO
-				HMACSHA384(hmacKey,pkt.b + ZT_PROTO_PACKET_ENCRYPTED_SECTION_START,packetSize - ZT_PROTO_PACKET_ENCRYPTED_SECTION_START,hmac);
-				if (!Utils::secureEq(pkt.b + ptr,hmac,ZT_HMACSHA384_LEN)) {
-					RR->t->incomingPacketDropped(tPtr,0x1000662a,p.h.packetId,0,id,path->address(),hops,Protocol::VERB_NOP,ZT_TRACE_PACKET_DROP_REASON_MAC_FAILED);
-					return false;
-				}
-				hmacAuthenticated = true;
-			}
-
 			if (dictionarySize) {
 				if (!nodeMetaData.decode(dictionaryBytes,dictionarySize)) {
 					RR->t->incomingPacketDropped(tPtr,0x67192344,p.h.packetId,0,id,path->address(),hops,Protocol::VERB_HELLO,ZT_TRACE_PACKET_DROP_REASON_INVALID_OBJECT);
@@ -589,9 +594,8 @@ bool VL1::_HELLO(void *tPtr,const SharedPtr<Path> &path,SharedPtr<Peer> &peer,Bu
 		}
 	}
 
-	// v2.x+ peers must include HMAC, older peers don't (we'll drop support for them when 1.x is dead)
-	if ((!hmacAuthenticated) && (p.versionProtocol >= 11)) {
-		RR->t->incomingPacketDropped(tPtr,0x571feeea,p.h.packetId,0,id,path->address(),hops,Protocol::VERB_NOP,ZT_TRACE_PACKET_DROP_REASON_MAC_FAILED);
+	if (Buf::readOverflow(ptr,packetSize)) { // sanity check, should be impossible
+		RR->t->incomingPacketDropped(tPtr,0x457f2347,0,p.h.packetId,id,path->address(),0,Protocol::VERB_HELLO,ZT_TRACE_PACKET_DROP_REASON_MALFORMED_PACKET);
 		return false;
 	}
 

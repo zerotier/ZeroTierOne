@@ -38,10 +38,8 @@ namespace ZeroTier {
  * Identities currently come in two types: type 0 identities based on just Curve25519
  * and Ed25519 and type 1 identities that include both a 25519 key pair and a NIST P-384
  * key pair. Type 1 identities use P-384 for signatures but use both key pairs at once
- * (hashing their results) for key agreement with other type 1 identities, and can agree
- * with type 0 identities using only their Curve25519 keys. The ability of type 0 and 1
- * identities to agree will allow type 0 identities to keep being used even after type
- * 1 becomes the default.
+ * (hashing both keys together) for key agreement with other type 1 identities, and can
+ * agree with type 0 identities by only using the Curve25519 component.
  *
  * Type 1 identities also use a simpler mechanism to rate limit identity generation (as
  * a defense in depth against intentional collision) that makes local identity validation
