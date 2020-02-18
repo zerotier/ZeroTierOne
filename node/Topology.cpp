@@ -62,7 +62,7 @@ Topology::Topology(const RuntimeEnvironment *renv,const Identity &myId,void *tPt
 		_loadCached(tPtr,r->address(),p);
 		if ((!p)||(p->identity() != *r)) {
 			p.set(new Peer(RR));
-			p->init(myId,*r);
+			p->init(*r);
 		}
 		_rootPeers.push_back(p);
 	}
@@ -147,7 +147,7 @@ void Topology::addRoot(void *tPtr,const Identity &id,const InetAddress &bootstra
 		SharedPtr<Peer> &p = _peers[id.address()];
 		if (!p) {
 			p.set(new Peer(RR));
-			p->init(_myIdentity,id);
+			p->init(id);
 			if (bootstrap)
 				p->setBootstrap(Endpoint(bootstrap));
 		}

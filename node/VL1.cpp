@@ -676,6 +676,13 @@ bool VL1::_ERROR(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &p
 		return false;
 	}
 	Protocol::ERROR::Header &eh = pkt.as<Protocol::ERROR::Header>();
+
+	const int64_t now = RR->node->now();
+	if (!RR->expect->expecting(eh.inRePacketId,now)) {
+		RR->t->incomingPacketDropped(tPtr,0x4c1f1ff7,0,0,identityFromPeerPtr(peer),path->address(),0,Protocol::VERB_OK,ZT_TRACE_PACKET_DROP_REASON_REPLY_NOT_EXPECTED);
+		return false;
+	}
+
 	switch(eh.error) {
 
 		//case Protocol::ERROR_INVALID_REQUEST:
@@ -881,7 +888,7 @@ bool VL1::_PUSH_DIRECT_PATHS(void *tPtr,const SharedPtr<Path> &path,const Shared
 	InetAddress a;
 	Endpoint ep;
 	for(unsigned int pi=0;pi<numPaths;++pi) {
-		/*const uint8_t flags = pkt.rI8(ptr);*/ ++ptr;
+		/*const uint8_t flags = pkt.rI8(ptr);*/ ++ptr; // flags are not presently used
 		ptr += pkt.rI16(ptr); // extended attributes size, currently always 0
 		const unsigned int addrType = pkt.rI8(ptr);
 		const unsigned int addrRecordLen = pkt.rI8(ptr);
@@ -908,6 +915,7 @@ bool VL1::_PUSH_DIRECT_PATHS(void *tPtr,const SharedPtr<Path> &path,const Shared
 				addrLen = 16;
 				addrPort = pkt.rI16(ptr);
 				break;
+			default: break;
 		}
 
 		if (Buf::readOverflow(ptr,packetSize)) {
@@ -919,11 +927,18 @@ bool VL1::_PUSH_DIRECT_PATHS(void *tPtr,const SharedPtr<Path> &path,const Shared
 			a.set(addrBytes,addrLen,addrPort);
 		} else if (addrLen) {
 			if (ep.unmarshal(reinterpret_cast<const uint8_t *>(addrBytes),(int)addrLen) <= 0) {
-				RR->t->incomingPacketDropped(tPtr,0xbad0f00d,pdp.h.packetId,0,peer->identity(),path->address(),Protocol::packetHops(pdp.h),Protocol::VERB_PUSH_DIRECT_PATHS,ZT_TRACE_PACKET_DROP_REASON_MALFORMED_PACKET);
+				RR->t->incomingPacketDropped(tPtr,0x00e0f00d,pdp.h.packetId,0,peer->identity(),path->address(),Protocol::packetHops(pdp.h),Protocol::VERB_PUSH_DIRECT_PATHS,ZT_TRACE_PACKET_DROP_REASON_MALFORMED_PACKET);
 				return false;
 			}
-			if ((ep.type() == Endpoint::INETADDR_V4)||(ep.type() == Endpoint::INETADDR_V6))
-				a = ep.inetAddr();
+
+			switch(ep.type()) {
+				case Endpoint::INETADDR_V4:
+				case Endpoint::INETADDR_V6:
+					a = ep.inetAddr();
+					break;
+				default: // other types are not supported yet
+					break;
+			}
 		}
 
 		if (a) {
@@ -937,6 +952,7 @@ bool VL1::_PUSH_DIRECT_PATHS(void *tPtr,const SharedPtr<Path> &path,const Shared
 
 bool VL1::_USER_MESSAGE(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &peer,Buf &pkt,int packetSize)
 {
+	// TODO
 }
 
 bool VL1::_ENCAP(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &peer,Buf &pkt,int packetSize)

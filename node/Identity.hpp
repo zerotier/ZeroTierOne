@@ -46,9 +46,6 @@ namespace ZeroTier {
  * Type 1 identities also use a simpler mechanism to rate limit identity generation (as
  * a defense in depth against intentional collision) that makes local identity validation
  * faster, allowing full identity validation on all unmarshal() operations.
- *
- * The default is still type 0, but this may change in future versions once 1.x is no
- * longer common in the wild.
  */
 class Identity : public TriviallyCopyable
 {

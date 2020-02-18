@@ -26,6 +26,7 @@ bool Endpoint::operator==(const Endpoint &ep) const
 			case ZEROTIER:    return ((_v.zt.a == ep._v.zt.a)&&(memcmp(_v.zt.idh,ep._v.zt.idh,sizeof(_v.zt.idh)) == 0));
 			case URL:         return (strcmp(_v.url,ep._v.url) == 0);
 			case ETHERNET:    return (_v.eth == ep._v.eth);
+			case WEBRTC:      return ((_v.webrtc.offerLen == ep._v.webrtc.offerLen)&&(memcmp(_v.webrtc.offer,ep._v.webrtc.offer,_v.webrtc.offerLen) == 0));
 		}
 	}
 	return false;
@@ -47,6 +48,11 @@ bool Endpoint::operator<(const Endpoint &ep) const
 			case ZEROTIER: return (_v.zt.a < ep._v.zt.a) ? true : ((_v.zt.a == ep._v.zt.a)&&(memcmp(_v.zt.idh,ep._v.zt.idh,sizeof(_v.zt.idh)) < 0));
 			case URL:      return (strcmp(_v.url,ep._v.url) < 0);
 			case ETHERNET: return (_v.eth < ep._v.eth);
+			case WEBRTC:
+				if (_v.webrtc.offerLen < ep._v.webrtc.offerLen)
+					return true;
+				else if (_v.webrtc.offerLen == ep._v.webrtc.offerLen)
+					return memcmp(_v.webrtc.offer,ep._v.webrtc.offer,_v.webrtc.offerLen) < 0;
 			default:       return false;
 		}
 	}
@@ -102,6 +108,10 @@ int Endpoint::marshal(uint8_t data[ZT_ENDPOINT_MARSHAL_SIZE_MAX]) const noexcept
 			data[11] = (uint8_t)(_v.eth >> 8U);
 			data[12] = (uint8_t)_v.eth;
 			return 13;
+		case WEBRTC:
+			Utils::storeBigEndian(data + 7,(uint16_t)_v.webrtc.offerLen);
+			memcpy(data + 9,_v.webrtc.offer,_v.webrtc.offerLen);
+			return 9 + _v.webrtc.offerLen;
 		default:
 			data[0] = (uint8_t)NIL;
 			return 7;
@@ -173,6 +183,14 @@ int Endpoint::unmarshal(const uint8_t *restrict data,const int len) noexcept
 			_v.eth |= ((uint64_t)data[11]) << 8U;
 			_v.eth |= (uint64_t)data[12];
 			return 13;
+  	case WEBRTC:
+  		if (len < 9)
+  			return -1;
+  		_v.webrtc.offerLen = Utils::loadBigEndian<uint16_t>(data + 7);
+  		if ((len < (9 + _v.webrtc.offerLen))||(_v.webrtc.offerLen > ZT_ENDPOINT_MAX_NAME_SIZE))
+  			return -1;
+  		memcpy(_v.webrtc.offer,data + 9,_v.webrtc.offerLen);
+  		return 9 + _v.webrtc.offerLen;
 		default:
 			// Unrecognized endpoint types not yet specified must start with a byte
 			// length size so that older versions of ZeroTier can skip them.

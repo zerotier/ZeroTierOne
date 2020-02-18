@@ -3,8 +3,6 @@
 #include "SHA512.hpp"
 #include "Utils.hpp"
 
-#include <utility>
-#include <algorithm>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
@@ -68,7 +66,7 @@ static const uint64_t K[80] = {
 #define Gamma0(x)       (S(x, 1) ^ S(x, 8) ^ R(x, 7))
 #define Gamma1(x)       (S(x, 19) ^ S(x, 61) ^ R(x, 6))
 
-static inline void sha512_compress(sha512_state *const md,uint8_t *const buf)
+static void sha512_compress(sha512_state *const md,uint8_t *const buf)
 {
 	uint64_t S[8], W[80], t0, t1;
 	int i;
@@ -101,7 +99,7 @@ static inline void sha512_compress(sha512_state *const md,uint8_t *const buf)
 		md->state[i] = md->state[i] + S[i];
 }
 
-static inline void sha384_init(sha512_state *const md)
+static ZT_ALWAYS_INLINE void sha384_init(sha512_state *const md)
 {
 	md->curlen = 0;
 	md->length = 0;
@@ -115,7 +113,7 @@ static inline void sha384_init(sha512_state *const md)
 	md->state[7] = 0x47b5481dbefa4fa4ULL;
 }
 
-static inline void sha512_init(sha512_state *const md)
+static ZT_ALWAYS_INLINE void sha512_init(sha512_state *const md)
 {
 	md->curlen = 0;
 	md->length = 0;
@@ -129,7 +127,7 @@ static inline void sha512_init(sha512_state *const md)
 	md->state[7] = 0x5be0cd19137e2179ULL;
 }
 
-static inline void sha512_process(sha512_state *const md,const uint8_t *in,unsigned long inlen)
+static ZT_ALWAYS_INLINE void sha512_process(sha512_state *const md,const uint8_t *in,unsigned long inlen)
 {
 	while (inlen > 0) {
 		if (md->curlen == 0 && inlen >= 128) {
@@ -152,7 +150,7 @@ static inline void sha512_process(sha512_state *const md,const uint8_t *in,unsig
 	}
 }
 
-static inline void sha512_done(sha512_state *const md,uint8_t *out)
+static ZT_ALWAYS_INLINE void sha512_done(sha512_state *const md,uint8_t *out)
 {
 	int i;
 
@@ -217,31 +215,49 @@ void HMACSHA384(const uint8_t key[32],const void *msg,const unsigned int msglen,
 	uint64_t kInPadded[16]; // input padded key
 	uint64_t outer[22]; // output padded key | H(input padded key | msg)
 
-#ifdef ZT_NO_UNALIGNED_ACCESS
-	for(int i=0;i<32;++i) ((uint8_t *)kInPadded)[i] = key[i] ^ 0x36;
-	for(int i=4;i<16;++i) kInPadded[i] = 0x3636363636363636ULL;
-	for(int i=0;i<32;++i) ((uint8_t *)outer)[i] = key[i] ^ 0x5c;
-	for(int i=4;i<16;++i) outer[i] = 0x5c5c5c5c5c5c5c5cULL;
-#else
-	{
-		const uint64_t k0 = ((const uint64_t *)key)[0];
-		const uint64_t k1 = ((const uint64_t *)key)[1];
-		const uint64_t k2 = ((const uint64_t *)key)[2];
-		const uint64_t k3 = ((const uint64_t *)key)[3];
-		kInPadded[0] = k0 ^ 0x3636363636363636ULL;
-		kInPadded[1] = k1 ^ 0x3636363636363636ULL;
-		kInPadded[2] = k2 ^ 0x3636363636363636ULL;
-		kInPadded[3] = k3 ^ 0x3636363636363636ULL;
-		for(int i=4;i<16;++i) kInPadded[i] = 0x3636363636363636ULL;
-		outer[0] = k0 ^ 0x5c5c5c5c5c5c5c5cULL;
-		outer[1] = k1 ^ 0x5c5c5c5c5c5c5c5cULL;
-		outer[2] = k2 ^ 0x5c5c5c5c5c5c5c5cULL;
-		outer[3] = k3 ^ 0x5c5c5c5c5c5c5c5cULL;
-		for(int i=4;i<16;++i) outer[i] = 0x5c5c5c5c5c5c5c5cULL;
-	}
-#endif
+	const uint64_t k0 = Utils::loadAsIsEndian<uint64_t>(key);
+	const uint64_t k1 = Utils::loadAsIsEndian<uint64_t>(key + 8);
+	const uint64_t k2 = Utils::loadAsIsEndian<uint64_t>(key + 16);
+	const uint64_t k3 = Utils::loadAsIsEndian<uint64_t>(key + 24);
 
-	SHA384(((uint8_t *)outer) + 128,kInPadded,128,msg,msglen); // H(input padded key | msg)
+	const uint64_t ipad = 0x3636363636363636ULL;
+	kInPadded[0] = k0 ^ ipad;
+	kInPadded[1] = k1 ^ ipad;
+	kInPadded[2] = k2 ^ ipad;
+	kInPadded[3] = k3 ^ ipad;
+	kInPadded[4] = ipad;
+	kInPadded[5] = ipad;
+	kInPadded[6] = ipad;
+	kInPadded[7] = ipad;
+	kInPadded[8] = ipad;
+	kInPadded[9] = ipad;
+	kInPadded[10] = ipad;
+	kInPadded[11] = ipad;
+	kInPadded[12] = ipad;
+	kInPadded[13] = ipad;
+	kInPadded[14] = ipad;
+	kInPadded[15] = ipad;
+
+	const uint64_t opad = 0x5c5c5c5c5c5c5c5cULL;
+	outer[0] = k0 ^ opad;
+	outer[1] = k1 ^ opad;
+	outer[2] = k2 ^ opad;
+	outer[3] = k3 ^ opad;
+	outer[4] = opad;
+	outer[5] = opad;
+	outer[6] = opad;
+	outer[7] = opad;
+	outer[8] = opad;
+	outer[9] = opad;
+	outer[10] = opad;
+	outer[11] = opad;
+	outer[12] = opad;
+	outer[13] = opad;
+	outer[14] = opad;
+	outer[15] = opad;
+
+	SHA384(reinterpret_cast<uint8_t *>(outer) + 128,kInPadded,128,msg,msglen); // H(input padded key | msg)
+
 	SHA384(mac,outer,176); // H(output padded key | H(input padded key | msg))
 }
 
@@ -249,10 +265,7 @@ void KBKDFHMACSHA384(const uint8_t key[32],const char label,const char context,c
 {
 	uint8_t kbkdfMsg[13];
 	uint8_t kbuf[48];
-	kbkdfMsg[0] = (uint8_t)(iter >> 24U);
-	kbkdfMsg[1] = (uint8_t)(iter >> 16U);
-	kbkdfMsg[2] = (uint8_t)(iter >> 8U);
-	kbkdfMsg[3] = (uint8_t)iter;
+	Utils::storeBigEndian<uint32_t>(kbkdfMsg,(uint32_t)iter);
 	kbkdfMsg[4] = (uint8_t)'Z';
 	kbkdfMsg[5] = (uint8_t)'T'; // preface our labels with something ZT-specific
 	kbkdfMsg[6] = (uint8_t)label;

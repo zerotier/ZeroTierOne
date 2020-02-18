@@ -48,6 +48,7 @@ public:
 		ZEROTIER =     4,   // ZeroTier Address (for relaying and meshy behavior)
 		URL =          5,   // URL for http/https/ws/etc. (not implemented yet)
 		ETHERNET =     6,   // 48-bit LAN-local Ethernet address
+		WEBRTC =       7,   // WebRTC data channels
 		UNRECOGNIZED = 255  // Unrecognized endpoint type encountered in stream
 	};
 
@@ -152,6 +153,10 @@ private:
 			uint16_t port;
 			char name[ZT_ENDPOINT_MAX_NAME_SIZE];
 		} dns;
+		struct {
+			uint16_t offerLen;
+			uint8_t offer[ZT_ENDPOINT_MAX_NAME_SIZE];
+		} webrtc;
 		struct {
 			uint64_t a;
 			uint8_t idh[ZT_IDENTITY_HASH_SIZE];
