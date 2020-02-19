@@ -12,12 +12,22 @@
 /****/
 
 /*
- * This defines the external C API for ZeroTier's core network virtualization
- * engine.
+ * This defines the external C API for the ZeroTier network hypervisor.
  */
 
 #ifndef ZT_ZEROTIER_API_H
 #define ZT_ZEROTIER_API_H
+
+#if defined(_WIN32) || defined(_WIN64)
+#include <WinSock2.h>
+#include <WS2tcpip.h>
+#include <Windows.h>
+#else
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#endif
 
 /* ZT_PACKED_STRUCT encloses structs whose contents should be bit-packed.
  * Nearly all compilers support this. These macros detect the compiler and
@@ -45,45 +55,36 @@ extern "C" {
 #include <stdint.h>
 #endif
 
-#if defined(_WIN32) || defined(_WIN64)
-#include <WinSock2.h>
-#include <WS2tcpip.h>
-#include <Windows.h>
-#else
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#endif
-
+/* This symbol may be defined to anything we need to put in front of API function prototypes. */
 #ifndef ZT_SDK_API
 #define ZT_SDK_API
 #endif
 
-/****************************************************************************/
+/* ----------------------------------------------------------------------------------------------------------------- */
 
 /**
  * Default UDP port for devices running a ZeroTier endpoint
  *
  * NOTE: as of V2 this has changed to 893 since many NATs (even symmetric)
- * treat privileged ports in a special way. The old default was 9993.
+ * treat privileged ports in a special way. The old default was 9993 and
+ * this is likely to be seen in the wild quite a bit.
  */
 #define ZT_DEFAULT_PORT 893
 
 /**
- * Minimum MTU, which is the minimum allowed by IPv6 and several specs
+ * Minimum MTU allowed on virtual networks
  */
 #define ZT_MIN_MTU 1280
 
 /**
- * Maximum MTU for ZeroTier virtual networks
+ * Maximum MTU allowed on virtual networks
  */
 #define ZT_MAX_MTU 10000
 
 /**
- * Minimum UDP payload size allowed
+ * Minimum allowed physical UDP MTU (smaller values are clipped to this)
  */
-#define ZT_MIN_PHYSMTU 1400
+#define ZT_MIN_UDP_MTU 1400
 
 /**
  * Default UDP payload size (physical path MTU) not including UDP and IP overhead
@@ -92,22 +93,22 @@ extern "C" {
  * A 2800 byte payload still fits into two packets, so this should not impact
  * real world throughput at all vs the previous default of 1444.
  */
-#define ZT_DEFAULT_PHYSMTU 1432
+#define ZT_DEFAULT_UDP_MTU 1432
 
 /**
  * Maximum physical UDP payload
  */
-#define ZT_MAX_PHYSPAYLOAD 10100
+#define ZT_MAX_UDP_PHYSPAYLOAD 10100
 
 /**
  * Headroom for max physical MTU
  */
-#define ZT_MAX_HEADROOM 224
+#define ZT_MAX_UDP_HEADROOM 224
 
 /**
  * Maximum payload MTU for UDP packets
  */
-#define ZT_MAX_PHYSMTU (ZT_MAX_PHYSPAYLOAD + ZT_MAX_HEADROOM)
+#define ZT_MAX_UDP_MTU (ZT_MAX_UDP_PHYSPAYLOAD + ZT_MAX_UDP_HEADROOM)
 
 /**
  * Maximum length of network short name
@@ -188,7 +189,7 @@ extern "C" {
  */
 #define ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH 7
 
-/* Rule specification contants **********************************************/
+/* ----------------------------------------------------------------------------------------------------------------- */
 
 /**
  * Packet characteristics flag: packet direction, 1 if inbound 0 if outbound
@@ -275,13 +276,10 @@ extern "C" {
  */
 #define ZT_RULE_PACKET_CHARACTERISTICS_TCP_FIN 0x0000000000000001ULL
 
-/****************************************************************************/
+/* ----------------------------------------------------------------------------------------------------------------- */
 
 /**
  * Credential type IDs
- *
- * These are mostly used internally but are declared here so they can be used
- * in trace messages.
  */
 enum ZT_CredentialType
 {
@@ -295,11 +293,9 @@ enum ZT_CredentialType
 
 /* Trace events are sent and received as packed structures of a fixed size.
  * Normally we don't use this form of brittle encoding but in this case the
- * performance benefit is non-trivial as events are generated in critical
- * areas of the code.
+ * performance benefit is non-trivial.
  *
- * NOTE: all integer fields larger than one byte are stored in big-endian
- * "network" byte order in these structures. */
+ * All integer fields larger than one byte are stored in big-endian order. */
 
 /**
  * Flag indicating that VL1 tracing should be generated
@@ -386,12 +382,12 @@ enum ZT_TraceFrameDropReason
 enum ZT_TraceEventPathAddressType
 {
 	ZT_TRACE_EVENT_PATH_TYPE_NIL =          0, /* none/empty */
-	ZT_TRACE_EVENT_PATH_TYPE_INETADDR_V4 =  1, /* 4-byte IPv4 */
-	ZT_TRACE_EVENT_PATH_TYPE_INETADDR_V6 =  2, /* 16-byte IPv6 */
-	ZT_TRACE_EVENT_PATH_TYPE_DNSNAME =      3, /* C string */
-	ZT_TRACE_EVENT_PATH_TYPE_ZEROTIER =     4, /* 5-byte ZeroTier + 48-byte identity hash */
-	ZT_TRACE_EVENT_PATH_TYPE_URL =          5, /* C string */
-	ZT_TRACE_EVENT_PATH_TYPE_ETHERNET =     6  /* 6-byte Ethernet */
+	ZT_TRACE_EVENT_PATH_TYPE_ZEROTIER =     1, /* 5-byte ZeroTier + 48-byte identity hash */
+	ZT_TRACE_EVENT_PATH_TYPE_DNSNAME =      2, /* C string */
+	ZT_TRACE_EVENT_PATH_TYPE_URL =          3, /* C string */
+	ZT_TRACE_EVENT_PATH_TYPE_INETADDR_V4 =  4, /* 4-byte IPv4 */
+	ZT_TRACE_EVENT_PATH_TYPE_ETHERNET =     5, /* 6-byte Ethernet */
+	ZT_TRACE_EVENT_PATH_TYPE_INETADDR_V6 =  6  /* 16-byte IPv6 */
 };
 
 /**
@@ -613,12 +609,7 @@ enum ZT_ResultCode
 	 */
 	ZT_RESULT_OK = 0,
 
-	/**
-	 * Call produced no error but no action was taken
-	 */
-	ZT_RESULT_OK_IGNORED = 1,
-
-	// Fatal errors (>100, <1000)
+	/* Fatal errors (>100, <1000) */
 
 	/**
 	 * Ran out of memory
@@ -635,7 +626,7 @@ enum ZT_ResultCode
 	 */
 	ZT_RESULT_FATAL_ERROR_INTERNAL = 102,
 
-	// Non-fatal errors (>1000)
+	/* Non-fatal errors (>1000) */
 
 	/**
 	 * Network ID not valid

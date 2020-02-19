@@ -971,6 +971,7 @@ bool VL1::_PUSH_DIRECT_PATHS(void *tPtr,const SharedPtr<Path> &path,const Shared
 		}
 
 		if (a) {
+			RR->t->tryingNewPath(tPtr,0xa5ab1a43,peer->identity(),a,path->address(),Protocol::packetId(pkt,packetSize),Protocol::VERB_RENDEZVOUS,peer->address(),peer->identity().hash().data(),ZT_TRACE_TRYING_NEW_PATH_REASON_RECEIVED_PUSH_DIRECT_PATHS);
 		}
 
 		ptr += (int)addrRecordLen;

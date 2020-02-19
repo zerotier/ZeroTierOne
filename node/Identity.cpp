@@ -544,7 +544,7 @@ ZT_Identity *ZT_Identity_new(enum ZT_Identity_Type type)
 	if ((type != ZT_IDENTITY_TYPE_C25519)&&(type != ZT_IDENTITY_TYPE_P384))
 		return nullptr;
 	try {
-		ZeroTier::Identity *id = new ZeroTier::Identity();
+		ZeroTier::Identity *const id = new ZeroTier::Identity();
 		id->generate((ZeroTier::Identity::Type)type);
 		return reinterpret_cast<ZT_Identity *>(id);
 	} catch ( ... ) {
@@ -557,7 +557,7 @@ ZT_Identity *ZT_Identity_fromString(const char *idStr)
 	if (!idStr)
 		return nullptr;
 	try {
-		ZeroTier::Identity *id = new ZeroTier::Identity();
+		ZeroTier::Identity *const id = new ZeroTier::Identity();
 		if (!id->fromString(idStr)) {
 			delete id;
 			return nullptr;
@@ -624,7 +624,7 @@ void ZT_Identity_hash(const ZT_Identity *id,uint8_t h[48],int includePrivate)
 {
 	if (includePrivate)
 		reinterpret_cast<const ZeroTier::Identity *>(id)->hashWithPrivate(h);
-	else memcpy(h,reinterpret_cast<const ZeroTier::Identity *>(id)->hash(),48);
+	else memcpy(h,reinterpret_cast<const ZeroTier::Identity *>(id)->hash().data(),ZT_IDENTITY_HASH_SIZE);
 }
 
 ZT_SDK_API void ZT_Identity_delete(ZT_Identity *id)

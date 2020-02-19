@@ -124,11 +124,11 @@ void Topology::setPhysicalPathConfiguration(const struct sockaddr_storage *pathN
 			ZT_PhysicalPathConfiguration pc(*pathConfig);
 
 			if (pc.mtu <= 0)
-				pc.mtu = ZT_DEFAULT_PHYSMTU;
-			else if (pc.mtu < ZT_MIN_PHYSMTU)
-				pc.mtu = ZT_MIN_PHYSMTU;
-			else if (pc.mtu > ZT_MAX_PHYSMTU)
-				pc.mtu = ZT_MAX_PHYSMTU;
+				pc.mtu = ZT_DEFAULT_UDP_MTU;
+			else if (pc.mtu < ZT_MIN_UDP_MTU)
+				pc.mtu = ZT_MIN_UDP_MTU;
+			else if (pc.mtu > ZT_MAX_UDP_MTU)
+				pc.mtu = ZT_MAX_UDP_MTU;
 
 			cpaths[*(reinterpret_cast<const InetAddress *>(pathNetwork))] = pc;
 		} else {

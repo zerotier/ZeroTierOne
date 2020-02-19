@@ -41,16 +41,18 @@ class Endpoint : public TriviallyCopyable
 public:
 	/**
 	 * Endpoint type
+	 *
+	 * These are set to be the same as the IDs used for trace events in ZeroTierCore.h.
 	 */
 	enum Type
 	{
-		TYPE_NIL =          0,          // NIL value
-		TYPE_ZEROTIER =     1,          // ZeroTier Address (for relaying and meshy behavior)
-		TYPE_DNSNAME =      2,          // DNS name and port that resolves to InetAddress
-		TYPE_URL =          3,          // URL for HTTP or Web Sockets transport
-		TYPE_INETADDR_V4 =  4,          // IPv4
-		TYPE_ETHERNET =     5,          // 48-bit LAN-local Ethernet address
-		TYPE_INETADDR_V6 =  6           // IPv6
+		TYPE_NIL =          ZT_TRACE_EVENT_PATH_TYPE_NIL,
+		TYPE_ZEROTIER =     ZT_TRACE_EVENT_PATH_TYPE_ZEROTIER,
+		TYPE_DNSNAME =      ZT_TRACE_EVENT_PATH_TYPE_DNSNAME,
+		TYPE_URL =          ZT_TRACE_EVENT_PATH_TYPE_URL,
+		TYPE_INETADDR_V4 =  ZT_TRACE_EVENT_PATH_TYPE_INETADDR_V4,
+		TYPE_ETHERNET =     ZT_TRACE_EVENT_PATH_TYPE_ETHERNET,
+		TYPE_INETADDR_V6 =  ZT_TRACE_EVENT_PATH_TYPE_INETADDR_V6
 	};
 
 	ZT_ALWAYS_INLINE Endpoint() noexcept { memoryZero(this); }

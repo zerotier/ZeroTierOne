@@ -129,9 +129,9 @@
 #define ZT_PROTO_VERSION_MIN 8
 
 /**
- * Packet buffer size (can be changed)
+ * Maximum allowed packet size (can technically be increased up to 16384)
  */
-#define ZT_PROTO_MAX_PACKET_LENGTH (ZT_MAX_PACKET_FRAGMENTS * ZT_DEFAULT_PHYSMTU)
+#define ZT_PROTO_MAX_PACKET_LENGTH (ZT_MAX_PACKET_FRAGMENTS * ZT_MIN_UDP_MTU)
 
 /**
  * Minimum viable packet length (outer header + verb)
