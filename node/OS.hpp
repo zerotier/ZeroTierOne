@@ -129,7 +129,6 @@
 #define restrict
 #endif
 #ifndef likely
-#define inline inline
 #define likely(x) (x)
 #endif
 #ifndef unlikely
