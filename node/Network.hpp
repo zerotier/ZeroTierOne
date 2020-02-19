@@ -374,7 +374,7 @@ private:
 	Hashtable< MAC,Address > _remoteBridgeRoutes; // remote addresses where given MACs are reachable (for tracking devices behind remote bridges)
 
 	NetworkConfig _config;
-	volatile int64_t _lastConfigUpdate;
+	std::atomic<int64_t> _lastConfigUpdate;
 
 	struct _IncomingConfigChunk
 	{

@@ -20,7 +20,6 @@
 #include "MAC.hpp"
 #include "Address.hpp"
 #include "InetAddress.hpp"
-#include "Switch.hpp"
 #include "NetworkController.hpp"
 #include "Peer.hpp"
 #include "Trace.hpp"
@@ -646,6 +645,8 @@ bool Network::filterOutgoingPacket(
 						accept = 1;
 
 						if ((!noTee)&&(cc2)) {
+							// TODO
+							/*
 							Packet outp(cc2,RR->identity.address(),Packet::VERB_EXT_FRAME);
 							outp.append(_id);
 							outp.append((uint8_t)(ccWatch2 ? 0x16 : 0x02));
@@ -655,6 +656,7 @@ bool Network::filterOutgoingPacket(
 							outp.append(frameData,ccLength2);
 							outp.compress();
 							RR->sw->send(tPtr,outp,true);
+							*/
 						}
 
 						break;
@@ -665,7 +667,7 @@ bool Network::filterOutgoingPacket(
 		}	break;
 
 		case DOZTFILTER_DROP:
-			RR->t->networkFilter(tPtr,_id,rrl.l,nullptr,0,0,ztSource,ztDest,macSource,macDest,(uint16_t)frameLen,frameData,(uint16_t)etherType,(uint16_t)vlanId,noTee,false,0);
+			RR->t->networkFilter(tPtr,0xadea5a2a,_id,rrl.l,nullptr,0,0,ztSource,ztDest,macSource,macDest,(uint16_t)frameLen,frameData,(uint16_t)etherType,(uint16_t)vlanId,noTee,false,0);
 			return false;
 
 		case DOZTFILTER_REDIRECT: // interpreted as ACCEPT but ztFinalDest will have been changed in _doZtFilter()
@@ -680,6 +682,8 @@ bool Network::filterOutgoingPacket(
 
 	if (accept != 0) {
 		if ((!noTee)&&(cc)) {
+			// TODO
+			/*
 			Packet outp(cc,RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(_id);
 			outp.append((uint8_t)(ccWatch ? 0x16 : 0x02));
@@ -689,9 +693,12 @@ bool Network::filterOutgoingPacket(
 			outp.append(frameData,ccLength);
 			outp.compress();
 			RR->sw->send(tPtr,outp,true);
+			*/
 		}
 
 		if ((ztDest != ztFinalDest)&&(ztFinalDest)) {
+			// TODO
+			/*
 			Packet outp(ztFinalDest,RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(_id);
 			outp.append((uint8_t)0x04);
@@ -701,6 +708,7 @@ bool Network::filterOutgoingPacket(
 			outp.append(frameData,frameLen);
 			outp.compress();
 			RR->sw->send(tPtr,outp,true);
+			*/
 
 			// DROP locally since we redirected
 			accept = 0;
@@ -709,9 +717,9 @@ bool Network::filterOutgoingPacket(
 
 	if (localCapabilityIndex >= 0) {
 		const Capability &cap = _config.capabilities[localCapabilityIndex];
-		RR->t->networkFilter(tPtr,_id,rrl.l,crrl.l,cap.id(),cap.timestamp(),ztSource,ztDest,macSource,macDest,(uint16_t)frameLen,frameData,(uint16_t)etherType,(uint16_t)vlanId,noTee,false,accept);
+		RR->t->networkFilter(tPtr,0x56ff1a93,_id,rrl.l,crrl.l,cap.id(),cap.timestamp(),ztSource,ztDest,macSource,macDest,(uint16_t)frameLen,frameData,(uint16_t)etherType,(uint16_t)vlanId,noTee,false,accept);
 	} else {
-		RR->t->networkFilter(tPtr,_id,rrl.l,nullptr,0,0,ztSource,ztDest,macSource,macDest,(uint16_t)frameLen,frameData,(uint16_t)etherType,(uint16_t)vlanId,noTee,false,accept);
+		RR->t->networkFilter(tPtr,0x112fbbab,_id,rrl.l,nullptr,0,0,ztSource,ztDest,macSource,macDest,(uint16_t)frameLen,frameData,(uint16_t)etherType,(uint16_t)vlanId,noTee,false,accept);
 	}
 
 	return (accept != 0);
@@ -767,6 +775,8 @@ int Network::filterIncomingPacket(
 
 				if (accept) {
 					if (cc2) {
+						// TODO
+						/*
 						Packet outp(cc2,RR->identity.address(),Packet::VERB_EXT_FRAME);
 						outp.append(_id);
 						outp.append((uint8_t)(ccWatch2 ? 0x1c : 0x08));
@@ -776,6 +786,7 @@ int Network::filterIncomingPacket(
 						outp.append(frameData,ccLength2);
 						outp.compress();
 						RR->sw->send(tPtr,outp,true);
+						*/
 					}
 					break;
 				}
@@ -798,6 +809,8 @@ int Network::filterIncomingPacket(
 
 	if (accept) {
 		if (cc) {
+			// TODO
+			/*
 			Packet outp(cc,RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(_id);
 			outp.append((uint8_t)(ccWatch ? 0x1c : 0x08));
@@ -807,9 +820,12 @@ int Network::filterIncomingPacket(
 			outp.append(frameData,ccLength);
 			outp.compress();
 			RR->sw->send(tPtr,outp,true);
+			*/
 		}
 
 		if ((ztDest != ztFinalDest)&&(ztFinalDest)) {
+			// TODO
+			/*
 			Packet outp(ztFinalDest,RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(_id);
 			outp.append((uint8_t)0x0a);
@@ -819,6 +835,7 @@ int Network::filterIncomingPacket(
 			outp.append(frameData,frameLen);
 			outp.compress();
 			RR->sw->send(tPtr,outp,true);
+			*/
 
 			//if (_config.remoteTraceTarget)
 			//	RR->t->networkFilter(tPtr,*this,rrl,(c) ? &crrl : (Trace::RuleResultLog *)0,c,sourcePeer->address(),ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,false,true,0);
@@ -849,8 +866,10 @@ void Network::multicastUnsubscribe(const MulticastGroup &mg)
 		_myMulticastGroups.erase(i);
 }
 
-uint64_t Network::handleConfigChunk(void *tPtr,uint64_t packetId,const SharedPtr<Peer> &source,const Buf<> &chunk,int ptr,int size)
+uint64_t Network::handleConfigChunk(void *tPtr,uint64_t packetId,const SharedPtr<Peer> &source,const Buf &chunk,int ptr,int size)
 {
+	return 0;
+#if 0
 	if (_destroyed)
 		return 0;
 
@@ -979,6 +998,7 @@ uint64_t Network::handleConfigChunk(void *tPtr,uint64_t packetId,const SharedPtr
 	} catch (...) {}
 
 	return 0;
+#endif
 }
 
 int Network::setConfiguration(void *tPtr,const NetworkConfig &nconf,bool saveToDisk)
@@ -990,7 +1010,7 @@ int Network::setConfiguration(void *tPtr,const NetworkConfig &nconf,bool saveToD
 	try {
 		if ((nconf.issuedTo != RR->identity.address())||(nconf.networkId != _id))
 			return 0; // invalid config that is not for us or not for this network
-		if ((!Utils::allZero(nconf.issuedToIdentityHash,ZT_IDENTITY_HASH_SIZE))&&(memcmp(nconf.issuedToIdentityHash,RR->identity.hash(),ZT_IDENTITY_HASH_SIZE) != 0))
+		if ((!Utils::allZero(nconf.issuedToIdentityHash,ZT_IDENTITY_HASH_SIZE))&&(memcmp(nconf.issuedToIdentityHash,RR->identity.hash().data(),ZT_IDENTITY_HASH_SIZE) != 0))
 			return 0; // full identity hash is present and does not match
 
 		if (_config == nconf)
@@ -1162,6 +1182,8 @@ Membership::AddCredentialResult Network::addCredential(void *tPtr,const Identity
 		Hashtable<Address,Membership>::Iterator i(_memberships);
 		while (i.next(a,m)) {
 			if ((*a != sourcePeerIdentity.address())&&(*a != rev.signer())) {
+				// TODO
+				/*
 				Packet outp(*a,RR->identity.address(),Packet::VERB_NETWORK_CREDENTIALS);
 				outp.append((uint8_t)0x00); // no COM
 				outp.append((uint16_t)0); // no capabilities
@@ -1170,6 +1192,7 @@ Membership::AddCredentialResult Network::addCredential(void *tPtr,const Identity
 				rev.serialize(outp);
 				outp.append((uint16_t)0); // no certificates of ownership
 				RR->sw->send(tPtr,outp,true);
+				*/
 			}
 		}
 	}
@@ -1355,7 +1378,7 @@ void Network::_requestConfiguration(void *tPtr)
 	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_FLAGS,(uint64_t)0);
 	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_RULES_ENGINE_REV,(uint64_t)ZT_RULES_ENGINE_REVISION);
 
-	RR->t->networkConfigRequestSent(tPtr,_id);
+	RR->t->networkConfigRequestSent(tPtr,0x335bb1a2,_id);
 
 	if (ctrl == RR->identity.address()) {
 		if (RR->localNetworkController) {
@@ -1366,6 +1389,8 @@ void Network::_requestConfiguration(void *tPtr)
 		return;
 	}
 
+	// TODO
+	/*
 	Packet outp(ctrl,RR->identity.address(),Packet::VERB_NETWORK_CONFIG_REQUEST);
 	outp.append((uint64_t)_id);
 	const unsigned int rmdSize = rmd->sizeBytes();
@@ -1380,6 +1405,7 @@ void Network::_requestConfiguration(void *tPtr)
 	outp.compress();
 	RR->node->expectReplyTo(outp.packetId());
 	RR->sw->send(tPtr,outp,true);
+	*/
 }
 
 ZT_VirtualNetworkStatus Network::_status() const
@@ -1461,6 +1487,7 @@ void Network::_announceMulticastGroups(void *tPtr,bool force)
 
 void Network::_announceMulticastGroupsTo(void *tPtr,const Address &peer,const std::vector<MulticastGroup> &allMulticastGroups)
 {
+#if 0
 	// Assumes _myMulticastGroups_l and _memberships_l are locked
 	ScopedPtr<Packet> outp(new Packet(peer,RR->identity.address(),Packet::VERB_MULTICAST_LIKE));
 
@@ -1481,6 +1508,7 @@ void Network::_announceMulticastGroupsTo(void *tPtr,const Address &peer,const st
 		outp->compress();
 		RR->sw->send(tPtr,*outp,true);
 	}
+#endif
 }
 
 std::vector<MulticastGroup> Network::_allMulticastGroups() const
