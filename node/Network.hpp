@@ -14,13 +14,6 @@
 #ifndef ZT_NETWORK_HPP
 #define ZT_NETWORK_HPP
 
-#include <cstdint>
-#include <string>
-#include <map>
-#include <vector>
-#include <algorithm>
-#include <stdexcept>
-
 #include "Constants.hpp"
 #include "Hashtable.hpp"
 #include "Address.hpp"
@@ -33,6 +26,12 @@
 #include "Membership.hpp"
 #include "NetworkConfig.hpp"
 #include "CertificateOfMembership.hpp"
+
+#include <cstdint>
+#include <string>
+#include <map>
+#include <vector>
+#include <algorithm>
 
 #define ZT_NETWORK_MAX_INCOMING_UPDATES 3
 

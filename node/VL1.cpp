@@ -68,7 +68,7 @@ void VL1::onRemotePacket(void *const tPtr,const int64_t localSocket,const InetAd
 		// but we might as well avoid it. When the peer receives NOP on a path that hasn't been handshaked yet
 		// it will send its own HELLO to which we will respond with a fully encrypted OK(HELLO).
 		if (len == ZT_PROTO_PROBE_LENGTH) {
-			const SharedPtr<Peer> peer(RR->topology->peerByProbe(Utils::loadAsIsEndian<uint64_t>(data->b)));
+			const SharedPtr<Peer> peer(RR->topology->peerByProbe(data->lI64(0)));
 			if ((peer)&&(peer->rateGateInboundProbe(now))) {
 				peer->sendNOP(tPtr,path->localSocket(),path->address(),now);
 				path->sent(now);
@@ -90,7 +90,7 @@ void VL1::onRemotePacket(void *const tPtr,const int64_t localSocket,const InetAd
 		// Destination address of packet (filled below)
 		Address destination;
 
-		if (data->b[ZT_PROTO_PACKET_FRAGMENT_INDICATOR_INDEX] == ZT_PROTO_PACKET_FRAGMENT_INDICATOR) {
+		if (data->lI8(ZT_PROTO_PACKET_FRAGMENT_INDICATOR_INDEX) == ZT_PROTO_PACKET_FRAGMENT_INDICATOR) {
 			// Fragment -----------------------------------------------------------------------------------------------------
 
 			const Protocol::FragmentHeader &fragmentHeader = data->as<Protocol::FragmentHeader>();
@@ -234,7 +234,7 @@ void VL1::onRemotePacket(void *const tPtr,const int64_t localSocket,const InetAd
 
 					// Verify packet MAC.
 					uint64_t mac[2];
-					poly1305(mac,pkt.b->b + ZT_PROTO_PACKET_ENCRYPTED_SECTION_START,packetSize - ZT_PROTO_PACKET_ENCRYPTED_SECTION_START,macKey);
+					poly1305(mac,pkt.b->unsafeData + ZT_PROTO_PACKET_ENCRYPTED_SECTION_START,packetSize - ZT_PROTO_PACKET_ENCRYPTED_SECTION_START,macKey);
 					if (ph->mac != mac[0]) {
 						RR->t->incomingPacketDropped(tPtr,0xcc89c812,ph->packetId,0,peer->identity(),path->address(),hops,Protocol::VERB_NOP,ZT_TRACE_PACKET_DROP_REASON_MAC_FAILED);
 						return;
@@ -268,7 +268,7 @@ void VL1::onRemotePacket(void *const tPtr,const int64_t localSocket,const InetAd
 							for(i=0;i<prevOverflow;++i) {
 								if (s->s >= s->e)
 									goto next_slice;
-								ps->b->b[ps->e++] = s->b->b[s->s++]; // move from head of current to end of previous
+								ps->b->unsafeData[ps->e++] = s->b->unsafeData[s->s++]; // move from head of current to end of previous
 							}
 							next_slice: ps = s++;
 						}
@@ -277,18 +277,18 @@ void VL1::onRemotePacket(void *const tPtr,const int64_t localSocket,const InetAd
 					// Simultaneously decrypt and assemble packet into a contiguous buffer.
 					// Since we moved data around above all slices will have sizes that are
 					// multiples of 64.
-					memcpy(pkt.b->b,ph,sizeof(Protocol::Header));
+					memcpy(pkt.b->unsafeData,ph,sizeof(Protocol::Header));
 					pkt.e = sizeof(Protocol::Header);
 					for(FCV<Buf::Slice,ZT_MAX_PACKET_FRAGMENTS>::iterator s(pktv.begin());s!=pktv.end();++s) {
 						const unsigned int sliceSize = s->e - s->s;
-						s20.crypt12(s->b->b + s->s,pkt.b->b + pkt.e,sliceSize);
+						s20.crypt12(s->b->unsafeData + s->s,pkt.b->unsafeData + pkt.e,sliceSize);
 						pkt.e += sliceSize;
 					}
 					ph = &(pkt.b->as<Protocol::Header>());
 
 					// Verify packet MAC.
 					uint64_t mac[2];
-					poly1305(mac,pkt.b->b + ZT_PROTO_PACKET_ENCRYPTED_SECTION_START,packetSize - ZT_PROTO_PACKET_ENCRYPTED_SECTION_START,macKey);
+					poly1305(mac,pkt.b->unsafeData + ZT_PROTO_PACKET_ENCRYPTED_SECTION_START,packetSize - ZT_PROTO_PACKET_ENCRYPTED_SECTION_START,macKey);
 					if (ph->mac != mac[0]) {
 						RR->t->incomingPacketDropped(tPtr,0xbc881231,ph->packetId,0,peer->identity(),path->address(),hops,Protocol::VERB_NOP,ZT_TRACE_PACKET_DROP_REASON_MAC_FAILED);
 						return;
@@ -353,8 +353,8 @@ void VL1::onRemotePacket(void *const tPtr,const int64_t localSocket,const InetAd
 
 			SharedPtr<Buf> nb(new Buf());
 			const int uncompressedLen = LZ4_decompress_safe(
-				reinterpret_cast<const char *>(pkt.b->b + ZT_PROTO_PACKET_PAYLOAD_START),
-				reinterpret_cast<char *>(nb->b),
+				reinterpret_cast<const char *>(pkt.b->unsafeData + ZT_PROTO_PACKET_PAYLOAD_START),
+				reinterpret_cast<char *>(nb->unsafeData),
 				(int)(packetSize - ZT_PROTO_PACKET_PAYLOAD_START),
 				ZT_BUF_MEM_SIZE - ZT_PROTO_PACKET_PAYLOAD_START);
 
@@ -402,7 +402,7 @@ void VL1::onRemotePacket(void *const tPtr,const int64_t localSocket,const InetAd
 			case Protocol::VERB_MULTICAST:                  ok = RR->vl2->_MULTICAST(tPtr,path,peer,*pkt.b,(int)packetSize); break;
 			case Protocol::VERB_ENCAP:                      ok = _ENCAP(tPtr,path,peer,*pkt.b,(int)packetSize); break;
 			default:
-				RR->t->incomingPacketDropped(tPtr,0xdeadeff0,ph->packetId,0,identityFromPeerPtr(peer),path->address(),hops,verb,ZT_TRACE_PACKET_DROP_REASON_UNRECOGNIZED_VERB);
+				RR->t->incomingPacketDropped(tPtr,0xeeeeeff0,ph->packetId,0,identityFromPeerPtr(peer),path->address(),hops,verb,ZT_TRACE_PACKET_DROP_REASON_UNRECOGNIZED_VERB);
 				break;
 		}
 		if (ok)
@@ -414,10 +414,10 @@ void VL1::onRemotePacket(void *const tPtr,const int64_t localSocket,const InetAd
 
 void VL1::_relay(void *tPtr,const SharedPtr<Path> &path,const Address &destination,SharedPtr<Buf> &data,unsigned int len)
 {
-	const uint8_t newHopCount = (data->b[ZT_PROTO_PACKET_FLAGS_INDEX] & 7U) + 1;
+	const uint8_t newHopCount = (data->lI8(ZT_PROTO_PACKET_FLAGS_INDEX) & 7U) + 1;
 	if (newHopCount >= ZT_RELAY_MAX_HOPS)
 		return;
-	data->b[ZT_PROTO_PACKET_FLAGS_INDEX] = (data->b[ZT_PROTO_PACKET_FLAGS_INDEX] & 0xf8U) | newHopCount;
+	data->sI8(ZT_PROTO_PACKET_FLAGS_INDEX,(data->lI8(ZT_PROTO_PACKET_FLAGS_INDEX) & 0xf8U) | newHopCount);
 
 	const SharedPtr<Peer> toPeer(RR->topology->peer(tPtr,destination,false));
 	if (!toPeer)
@@ -427,7 +427,7 @@ void VL1::_relay(void *tPtr,const SharedPtr<Path> &path,const Address &destinati
 	if (!toPath)
 		return;
 
-	toPath->send(RR,tPtr,data->b,len,now);
+	toPath->send(RR,tPtr,data->unsafeData,len,now);
 }
 
 void VL1::_sendPendingWhois(void *const tPtr,const int64_t now)
@@ -467,15 +467,15 @@ void VL1::_sendPendingWhois(void *const tPtr,const int64_t now)
 
 		int outl = sizeof(Protocol::Header);
 		while ((a != toSend.end())&&(outl < ZT_PROTO_MAX_PACKET_LENGTH)) {
-			a->copyTo(outp.b + outl);
+			a->copyTo(outp.unsafeData + outl);
 			++a;
 			outl += ZT_ADDRESS_LENGTH;
 		}
 
 		if (outl > sizeof(Protocol::Header)) {
-			Protocol::armor(outp,outl,root->key(),peer->cipher());
+			Protocol::armor(outp,outl,root->key(),root->cipher());
 			RR->expect->sending(ph.packetId,now);
-			rootPath->send(RR,tPtr,outp.b,outl,now);
+			rootPath->send(RR,tPtr,outp.unsafeData,outl,now);
 		}
 	}
 }
@@ -525,7 +525,7 @@ bool VL1::_HELLO(void *tPtr,const SharedPtr<Path> &path,SharedPtr<Peer> &peer,Bu
 		Protocol::salsa2012DeriveKey(peer->key(),perPacketKey,pkt,packetSize);
 		Salsa20(perPacketKey,&p.h.packetId).crypt12(Utils::ZERO256,macKey,ZT_POLY1305_KEY_LEN);
 		uint64_t mac[2];
-		poly1305(mac,pkt.b + ZT_PROTO_PACKET_ENCRYPTED_SECTION_START,packetSize - ZT_PROTO_PACKET_ENCRYPTED_SECTION_START,macKey);
+		poly1305(mac,pkt.unsafeData + ZT_PROTO_PACKET_ENCRYPTED_SECTION_START,packetSize - ZT_PROTO_PACKET_ENCRYPTED_SECTION_START,macKey);
 		if (p.h.mac != mac[0]) {
 			RR->t->incomingPacketDropped(tPtr,0x11bfff81,p.h.packetId,0,id,path->address(),hops,Protocol::VERB_NOP,ZT_TRACE_PACKET_DROP_REASON_MAC_FAILED);
 			return false;
@@ -542,8 +542,8 @@ bool VL1::_HELLO(void *tPtr,const SharedPtr<Path> &path,SharedPtr<Peer> &peer,Bu
 		}
 		packetSize -= ZT_HMACSHA384_LEN;
 		KBKDFHMACSHA384(key,ZT_PROTO_KDF_KEY_LABEL_HELLO_HMAC,0,0,hmacKey); // iter == 0 for HELLO, 1 for OK(HELLO)
-		HMACSHA384(hmacKey,pkt.b,packetSize,hmac);
-		if (!Utils::secureEq(pkt.b + packetSize,hmac,ZT_HMACSHA384_LEN)) {
+		HMACSHA384(hmacKey,pkt.unsafeData,packetSize,hmac);
+		if (!Utils::secureEq(pkt.unsafeData + packetSize,hmac,ZT_HMACSHA384_LEN)) {
 			RR->t->incomingPacketDropped(tPtr,0x1000662a,p.h.packetId,0,id,path->address(),hops,Protocol::VERB_NOP,ZT_TRACE_PACKET_DROP_REASON_MAC_FAILED);
 			return false;
 		}
@@ -568,10 +568,10 @@ bool VL1::_HELLO(void *tPtr,const SharedPtr<Path> &path,SharedPtr<Peer> &peer,Bu
 		// can't even get ephemeral public keys without first knowing the long term secret key,
 		// adding a little defense in depth.
 		uint8_t iv[8];
-		for (int i = 0; i < 8; ++i) iv[i] = pkt.b[i];
+		for (int i = 0; i < 8; ++i) iv[i] = pkt.unsafeData[i];
 		iv[7] &= 0xf8U; // this exists for pure legacy reasons, meh...
 		Salsa20 s20(key,iv);
-		s20.crypt12(pkt.b + ptr,pkt.b + ptr,packetSize - ptr);
+		s20.crypt12(pkt.unsafeData + ptr,pkt.unsafeData + ptr,packetSize - ptr);
 
 		ptr += pkt.rI16(ptr); // skip length field which currently is always zero in v2.0+
 
@@ -654,23 +654,23 @@ bool VL1::_HELLO(void *tPtr,const SharedPtr<Path> &path,SharedPtr<Peer> &peer,Bu
 	int outl = sizeof(Protocol::OK::HELLO);
 	outp.wO(outl,path->address());
 
-	outp.wI(outl,(uint16_t)0); // legacy field, always 0
+	outp.wI16(outl,0); // legacy field, always 0
 
 	if (p.versionProtocol >= 11) {
-		outp.wI(outl,(uint16_t)myNodeMetaDataBin.size());
+		outp.wI16(outl,(uint16_t)myNodeMetaDataBin.size());
 		outp.wB(outl,myNodeMetaDataBin.data(),(unsigned int)myNodeMetaDataBin.size());
-		outp.wI(outl,(uint16_t)0); // length of additional fields, currently 0
+		outp.wI16(outl,0); // length of additional fields, currently 0
 
 		if ((outl + ZT_HMACSHA384_LEN) > ZT_PROTO_MAX_PACKET_LENGTH) // sanity check, shouldn't be possible
 			return false;
 
 		KBKDFHMACSHA384(key,ZT_PROTO_KDF_KEY_LABEL_HELLO_HMAC,0,1,hmacKey); // iter == 1 for OK
-		HMACSHA384(hmacKey,outp.b + sizeof(ok.h),outl - sizeof(ok.h),outp.b + outl);
+		HMACSHA384(hmacKey,outp.unsafeData + sizeof(ok.h),outl - sizeof(ok.h),outp.unsafeData + outl);
 		outl += ZT_HMACSHA384_LEN;
 	}
 
 	Protocol::armor(outp,outl,peer->key(),peer->cipher());
-	path->send(RR,tPtr,outp.b,outl,now);
+	path->send(RR,tPtr,outp.unsafeData,outl,now);
 
 	return true;
 }
@@ -781,7 +781,7 @@ bool VL1::_WHOIS(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &p
 
 		int outl = sizeof(Protocol::OK::WHOIS);
 		while ( ((ptr + ZT_ADDRESS_LENGTH) <= packetSize) && ((outl + ZT_IDENTITY_MARSHAL_SIZE_MAX + ZT_LOCATOR_MARSHAL_SIZE_MAX) < ZT_PROTO_MAX_PACKET_LENGTH) ) {
-			const SharedPtr<Peer> &wp(RR->topology->peer(tPtr,Address(pkt.b + ptr)));
+			const SharedPtr<Peer> &wp(RR->topology->peer(tPtr,Address(pkt.unsafeData + ptr)));
 			if (wp) {
 				outp.wO(outl,wp->identity());
 				if (peer->remoteVersionProtocol() >= 11) { // older versions don't know what a locator is
@@ -798,7 +798,7 @@ bool VL1::_WHOIS(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &p
 
 		if (outl > sizeof(Protocol::OK::WHOIS)) {
 			Protocol::armor(outp,outl,peer->key(),peer->cipher());
-			path->send(RR,tPtr,outp.b,outl,RR->node->now());
+			path->send(RR,tPtr,outp.unsafeData,outl,RR->node->now());
 		}
 	}
 
@@ -823,28 +823,27 @@ bool VL1::_RENDEZVOUS(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Pee
 					case 4:
 					case 16:
 						if ((sizeof(Protocol::RENDEZVOUS) + rdv.addressLength) <= packetSize) {
-							const InetAddress atAddr(pkt.b + sizeof(Protocol::RENDEZVOUS),rdv.addressLength,port);
-							peer->contact(tPtr,Endpoint(atAddr),now,false,false);
-							RR->t->tryingNewPath(tPtr,0x55a19aaa,with->identity(),atAddr,path->address(),Protocol::packetId(pkt,packetSize),Protocol::VERB_RENDEZVOUS,peer->address(),peer->identity().hash(),ZT_TRACE_TRYING_NEW_PATH_REASON_RENDEZVOUS);
+							const InetAddress atAddr(pkt.unsafeData + sizeof(Protocol::RENDEZVOUS),rdv.addressLength,port);
+							peer->contact(tPtr,Endpoint(atAddr),now,false);
+							RR->t->tryingNewPath(tPtr,0x55a19aaa,with->identity(),atAddr,path->address(),Protocol::packetId(pkt,packetSize),Protocol::VERB_RENDEZVOUS,peer->address(),peer->identity().hash().data(),ZT_TRACE_TRYING_NEW_PATH_REASON_RENDEZVOUS);
 						}
 						break;
-					case 255:
-						if ((sizeof(Protocol::RENDEZVOUS) + 1) <= packetSize) {
-							Endpoint ep;
-							int epl = ep.unmarshal(pkt.b + sizeof(Protocol::RENDEZVOUS),packetSize - (int)sizeof(Protocol::RENDEZVOUS));
-							if ((epl > 0) && (ep)) {
-								switch (ep.type()) {
-									case Endpoint::INETADDR_V4:
-									case Endpoint::INETADDR_V6:
-										peer->contact(tPtr,ep,now,false,false);
-										RR->t->tryingNewPath(tPtr,0x55a19aab,with->identity(),ep.inetAddr(),path->address(),Protocol::packetId(pkt,packetSize),Protocol::VERB_RENDEZVOUS,peer->address(),peer->identity().hash(),ZT_TRACE_TRYING_NEW_PATH_REASON_RENDEZVOUS);
-										break;
-									default:
-										break;
-								}
+					case 255: {
+						Endpoint ep;
+						int p = sizeof(Protocol::RENDEZVOUS);
+						int epl = pkt.rO(p,ep);
+						if ((epl > 0) && (ep) && (!Buf::readOverflow(p,packetSize))) {
+							switch (ep.type()) {
+								case Endpoint::TYPE_INETADDR_V4:
+								case Endpoint::TYPE_INETADDR_V6:
+									peer->contact(tPtr,ep,now,false);
+									RR->t->tryingNewPath(tPtr,0x55a19aab,with->identity(),ep.inetAddr(),path->address(),Protocol::packetId(pkt,packetSize),Protocol::VERB_RENDEZVOUS,peer->address(),peer->identity().hash().data(),ZT_TRACE_TRYING_NEW_PATH_REASON_RENDEZVOUS);
+									break;
+								default:
+									break;
 							}
 						}
-						break;
+					} break;
 				}
 			}
 		}
@@ -872,7 +871,7 @@ bool VL1::_ECHO(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &pe
 		outh.h.inReVerb = Protocol::VERB_ECHO;
 		outh.h.inRePacketId = packetId;
 		int outl = sizeof(Protocol::OK::ECHO);
-		outp.wB(outl,pkt.b + sizeof(Protocol::Header),packetSize - sizeof(Protocol::Header));
+		outp.wB(outl,pkt.unsafeData + sizeof(Protocol::Header),packetSize - sizeof(Protocol::Header));
 
 		if (Buf::writeOverflow(outl)) {
 			RR->t->incomingPacketDropped(tPtr,0x14d70bb0,packetId,0,peer->identity(),path->address(),Protocol::packetHops(pkt,packetSize),Protocol::VERB_ECHO,ZT_TRACE_PACKET_DROP_REASON_MALFORMED_PACKET);
@@ -880,7 +879,7 @@ bool VL1::_ECHO(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &pe
 		}
 
 		Protocol::armor(outp,outl,peer->key(),peer->cipher());
-		path->send(RR,tPtr,outp.b,outl,now);
+		path->send(RR,tPtr,outp.unsafeData,outl,now);
 	} else {
 		RR->t->incomingPacketDropped(tPtr,0x27878bc1,packetId,0,peer->identity(),path->address(),Protocol::packetHops(pkt,packetSize),Protocol::VERB_ECHO,ZT_TRACE_PACKET_DROP_REASON_RATE_LIMIT_EXCEEDED);
 	}
@@ -908,11 +907,19 @@ bool VL1::_PUSH_DIRECT_PATHS(void *tPtr,const SharedPtr<Path> &path,const Shared
 	Endpoint ep;
 	for(unsigned int pi=0;pi<numPaths;++pi) {
 		/*const uint8_t flags = pkt.rI8(ptr);*/ ++ptr; // flags are not presently used
-		ptr += pkt.rI16(ptr); // extended attributes size, currently always 0
+
+		const int xas = (int)pkt.rI16(ptr);
+		//const uint8_t *const extendedAttrs = pkt.rBnc(ptr,xas);
+		ptr += xas;
+
 		const unsigned int addrType = pkt.rI8(ptr);
 		const unsigned int addrRecordLen = pkt.rI8(ptr);
 		if (addrRecordLen == 0) {
 			RR->t->incomingPacketDropped(tPtr,0xaed00118,pdp.h.packetId,0,peer->identity(),path->address(),Protocol::packetHops(pdp.h),Protocol::VERB_PUSH_DIRECT_PATHS,ZT_TRACE_PACKET_DROP_REASON_MALFORMED_PACKET);
+			return false;
+		}
+		if (Buf::readOverflow(ptr,packetSize)) {
+			RR->t->incomingPacketDropped(tPtr,0xb450e10f,pdp.h.packetId,0,peer->identity(),path->address(),Protocol::packetHops(pdp.h),Protocol::VERB_PUSH_DIRECT_PATHS,ZT_TRACE_PACKET_DROP_REASON_MALFORMED_PACKET);
 			return false;
 		}
 
@@ -934,11 +941,14 @@ bool VL1::_PUSH_DIRECT_PATHS(void *tPtr,const SharedPtr<Path> &path,const Shared
 				addrLen = 16;
 				addrPort = pkt.rI16(ptr);
 				break;
+			//case 200:
+				// TODO: this would be a WebRTC SDP offer contained in the extended attrs field
+				//break;
 			default: break;
 		}
 
 		if (Buf::readOverflow(ptr,packetSize)) {
-			RR->t->incomingPacketDropped(tPtr,0xbad0f10f,pdp.h.packetId,0,peer->identity(),path->address(),Protocol::packetHops(pdp.h),Protocol::VERB_PUSH_DIRECT_PATHS,ZT_TRACE_PACKET_DROP_REASON_MALFORMED_PACKET);
+			RR->t->incomingPacketDropped(tPtr,0xb4d0f10f,pdp.h.packetId,0,peer->identity(),path->address(),Protocol::packetHops(pdp.h),Protocol::VERB_PUSH_DIRECT_PATHS,ZT_TRACE_PACKET_DROP_REASON_MALFORMED_PACKET);
 			return false;
 		}
 
@@ -951,8 +961,8 @@ bool VL1::_PUSH_DIRECT_PATHS(void *tPtr,const SharedPtr<Path> &path,const Shared
 			}
 
 			switch(ep.type()) {
-				case Endpoint::INETADDR_V4:
-				case Endpoint::INETADDR_V6:
+				case Endpoint::TYPE_INETADDR_V4:
+				case Endpoint::TYPE_INETADDR_V6:
 					a = ep.inetAddr();
 					break;
 				default: // other types are not supported yet

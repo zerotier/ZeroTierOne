@@ -170,7 +170,11 @@ public:
 	/**
 	 * @return Bootstrap address or NULL if none
 	 */
-	ZT_ALWAYS_INLINE const Endpoint &bootstrap() const noexcept { return _bootstrap; }
+	ZT_ALWAYS_INLINE const Endpoint &bootstrap() const noexcept
+	{
+		RWMutex::RLock l(_lock);
+		return _bootstrap;
+	}
 
 	/**
 	 * Set bootstrap endpoint
@@ -179,9 +183,8 @@ public:
 	 */
 	ZT_ALWAYS_INLINE void setBootstrap(const Endpoint &ep) noexcept
 	{
-		_lock.lock();
+		RWMutex::Lock l(_lock);
 		_bootstrap = ep;
-		_lock.unlock();
 	}
 
 	/**
@@ -315,17 +318,14 @@ public:
 	void save(void *tPtr) const;
 
 	/**
-	 * Attempt to contact this peer at a physical address
-	 *
-	 * This checks rate limits, path usability, sometimes deploys advanced NAT-t techniques, etc.
+	 * Attempt to contact this peer at a physical address, subject to internal checks
 	 *
 	 * @param tPtr External user pointer we pass around
 	 * @param ep Endpoint to attempt to contact
 	 * @param now Current time
-	 * @param behindSymmetric This peer may be behind a symmetric NAT (only meaningful for IPv4)
 	 * @param bfg1024 Use BFG1024 brute force symmetric NAT busting algorithm if applicable
 	 */
-	void contact(void *tPtr,const Endpoint &ep,int64_t now,bool behindSymmetric,bool bfg1024);
+	void contact(void *tPtr,const Endpoint &ep,int64_t now,bool bfg1024);
 
 	/**
 	 * Called by Node when an alarm set by this peer goes off
@@ -348,20 +348,24 @@ private:
 
 	const RuntimeEnvironment *RR;
 
-	volatile int64_t _lastReceive;
-	volatile int64_t _lastWhoisRequestReceived;
-	volatile int64_t _lastEchoRequestReceived;
-	volatile int64_t _lastPushDirectPathsReceived;
-	volatile int64_t _lastProbeReceived;
-	volatile int64_t _lastAttemptedP2PInit;
-	volatile int64_t _lastTriedStaticPath;
-	volatile int64_t _lastPrioritizedPaths;
-	volatile int64_t _lastAttemptedAggressiveNATTraversal;
-	volatile unsigned int _latency;
+	// The last time various things happened, for rate limiting and periodic events.
+	std::atomic<int64_t> _lastReceive;
+	std::atomic<int64_t> _lastWhoisRequestReceived;
+	std::atomic<int64_t> _lastEchoRequestReceived;
+	std::atomic<int64_t> _lastPushDirectPathsReceived;
+	std::atomic<int64_t> _lastProbeReceived;
+	std::atomic<int64_t> _lastAttemptedP2PInit;
+	std::atomic<int64_t> _lastTriedStaticPath;
+	std::atomic<int64_t> _lastPrioritizedPaths;
+	std::atomic<int64_t> _lastAttemptedAggressiveNATTraversal;
 
+	// Latency in milliseconds
+	std::atomic<unsigned int> _latency;
+
+	// For SharedPtr<>
 	std::atomic<int> __refCount;
 
-	// Lock for non-volatile read/write fields
+	// Read/write mutex for non-atomic non-const fields.
 	RWMutex _lock;
 
 	// Number of paths current alive as of last _prioritizePaths

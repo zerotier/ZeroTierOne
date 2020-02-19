@@ -38,8 +38,10 @@ Topology::Topology(const RuntimeEnvironment *renv,const Identity &myId,void *tPt
 	RR(renv),
 	_myIdentity(myId),
 	_numConfiguredPhysicalPaths(0),
-	_peers(128),
-	_paths(256)
+	_peers(256),
+	_peersByIncomingProbe(256),
+	_peersByIdentityHash(256),
+	_paths(1024)
 {
 	uint64_t idtmp[2]; idtmp[0] = 0; idtmp[1] = 0;
 	std::vector<uint8_t> data(RR->node->stateObjectGet(tPtr,ZT_STATE_OBJECT_ROOTS,idtmp));
@@ -65,6 +67,9 @@ Topology::Topology(const RuntimeEnvironment *renv,const Identity &myId,void *tPt
 			p->init(*r);
 		}
 		_rootPeers.push_back(p);
+		_peers[p->address()] = p;
+		_peersByIncomingProbe[p->incomingProbe()] = p;
+		_peersByIdentityHash[p->identity().hash()] = p;
 	}
 }
 
@@ -83,11 +88,13 @@ SharedPtr<Peer> Topology::add(void *tPtr,const SharedPtr<Peer> &peer)
 	_loadCached(tPtr,peer->address(),hp);
 	if (hp) {
 		_peersByIncomingProbe[peer->incomingProbe()] = hp;
+		_peersByIdentityHash[peer->identity().hash()] = hp;
 		return hp;
 	}
 
 	hp = peer;
 	_peersByIncomingProbe[peer->incomingProbe()] = peer;
+	_peersByIdentityHash[peer->identity().hash()] = peer;
 
 	return peer;
 }
@@ -150,6 +157,8 @@ void Topology::addRoot(void *tPtr,const Identity &id,const InetAddress &bootstra
 			p->init(id);
 			if (bootstrap)
 				p->setBootstrap(Endpoint(bootstrap));
+			_peersByIncomingProbe[p->incomingProbe()] = p;
+			_peersByIdentityHash[p->identity().hash()] = p;
 		}
 		_rootPeers.push_back(p);
 
@@ -204,6 +213,7 @@ void Topology::doPeriodicTasks(void *tPtr,const int64_t now)
 			if ( (!(*p)->alive(now)) && (_roots.count((*p)->identity()) == 0) ) {
 				(*p)->save(tPtr);
 				_peersByIncomingProbe.erase((*p)->incomingProbe());
+				_peersByIdentityHash.erase((*p)->identity().hash());
 				_peers.erase(*a);
 			}
 		}
@@ -226,11 +236,8 @@ void Topology::saveAll(void *tPtr)
 	Hashtable< Address,SharedPtr<Peer> >::Iterator i(_peers);
 	Address *a = nullptr;
 	SharedPtr<Peer> *p = nullptr;
-	while (i.next(a,p)) {
-		if ( (!(*p)->alive(RR->node->now())) && (_roots.count((*p)->identity()) == 0) ) {
-			(*p)->save((void *)0);
-		}
-	}
+	while (i.next(a,p))
+		(*p)->save(tPtr);
 }
 
 void Topology::_loadCached(void *tPtr,const Address &zta,SharedPtr<Peer> &peer)
@@ -240,19 +247,21 @@ void Topology::_loadCached(void *tPtr,const Address &zta,SharedPtr<Peer> &peer)
 		id[0] = zta.toInt();
 		id[1] = 0;
 		std::vector<uint8_t> data(RR->node->stateObjectGet(tPtr,ZT_STATE_OBJECT_PEER,id));
-		if (!data.empty()) {
+		if (data.size() > 8) {
 			const uint8_t *d = data.data();
 			int dl = (int)data.size();
-			for (;;) {
-				Peer *const p = new Peer(RR);
-				int n = p->unmarshal(d,dl);
-				if (n > 0) {
-					// TODO: will eventually handle multiple peers
-					peer.set(p);
-					return;
-				} else {
-					delete p;
-				}
+
+			const int64_t ts = (int64_t)Utils::loadBigEndian<uint64_t>(d);
+			Peer *const p = new Peer(RR);
+			int n = p->unmarshal(d + 8,dl - 8);
+			if (n < 0) {
+				delete p;
+				return;
+			}
+			if ((RR->node->now() - ts) < ZT_PEER_GLOBAL_TIMEOUT) {
+				// TODO: handle many peers, same address (?)
+				peer.set(p);
+				return;
 			}
 		}
 	} catch ( ... ) {

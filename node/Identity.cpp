@@ -93,7 +93,6 @@ bool Identity::generate(const Type t)
 
 	_type = t;
 	_hasPrivate = true;
-	_hash[0] = 0; // force hash recompute
 
 	switch(t) {
 		case C25519: {
@@ -103,32 +102,28 @@ bool Identity::generate(const Type t)
 				_address.setTo(digest + 59); // last 5 bytes are address
 			} while (_address.isReserved());
 			delete[] genmem;
+			_computeHash();
 		} break;
 
 		case P384: {
+			AES c;
 			do {
 				C25519::generate(_pub.c25519,_priv.c25519);
 				ECC384GenerateKey(_pub.p384,_priv.p384);
 
-				// This is just an intentionally complex hash function for use with a simple hashcash
-				// design to slow down identity generation as a defense in depth against brute force
-				// collision searches. V0 used a somewhat more overkill memory intensive design that's
-				// not really necessary and makes verifications too slow, so V1 uses this instead.
-
 				SHA384(digest,&_pub,sizeof(_pub));
-				AES c(digest);
-				SHA384(digest,digest,48);
-				std::sort(digest,digest + 48);
+				c.init(digest);
 				c.encrypt(digest,digest);
 				c.encrypt(digest + 16,digest + 16);
 				c.encrypt(digest + 32,digest + 32);
-				SHA384(digest,digest,48);
 
 				if (digest[47] != 0)
 					continue;
 
 				_address.setTo(digest);
 			} while (_address.isReserved());
+
+			_hash.set(digest); // P384 uses the same hash for hash() and address generation
 		} break;
 
 		default:
@@ -143,6 +138,7 @@ bool Identity::locallyValidate() const
 	if ((_address.isReserved())||(!_address))
 		return false;
 	switch (_type) {
+
 		case C25519:
 			try {
 				uint8_t digest[64];
@@ -153,51 +149,30 @@ bool Identity::locallyValidate() const
 			} catch ( ... ) {}
 			return false;
 
-		case P384: {
-			const uint8_t *hash = this->hash();
-			return ((hash[47] == 0)&&(Address(hash) == _address));
-		}
-
-		default:
-			return false;
-	}
-}
-
-const uint8_t *Identity::hash() const
-{
-	uint8_t *const hash = const_cast<uint8_t *>(reinterpret_cast<const uint8_t *>(_hash));
-	switch(_type) {
-		default:
-			memset(hash,0,48);
-			break;
-
-		case C25519:
-			if (_hash[0] == 0)
-				SHA384(hash,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
-			break;
-
 		case P384:
-			if (_hash[0] == 0) {
-				SHA384(hash,&_pub,sizeof(_pub));
-				AES c(hash);
-				std::sort(hash,hash + 48);
-				c.encrypt(hash,hash);
-				c.encrypt(hash + 16,hash + 16);
-				c.encrypt(hash + 32,hash + 32);
-				SHA384(hash,hash,48);
-			}
-			break;
+			return ((_hash[47] == 0)&&(Address(_hash.data()) == _address));
+
 	}
-	return hash;
+	return false;
 }
 
 void Identity::hashWithPrivate(uint8_t h[48]) const
 {
-	switch(_type) {
-		case C25519: SHA384(h,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN,_priv.c25519,ZT_C25519_PRIVATE_KEY_LEN); break;
-		case P384: SHA384(h,&_pub,sizeof(_pub),&_priv,sizeof(_priv)); break;
-		default: memset(h,0,48);
+	if (_hasPrivate) {
+		switch (_type) {
+
+			case C25519:
+				SHA384(h,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN,_priv.c25519,ZT_C25519_PRIVATE_KEY_LEN);
+				break;
+
+			case P384:
+				SHA384(h,&_pub,sizeof(_pub),&_priv,sizeof(_priv));
+				break;
+
+		}
+		return;
 	}
+	memset(h,0,48);
 }
 
 unsigned int Identity::sign(const void *data,unsigned int len,void *sig,unsigned int siglen) const
@@ -213,9 +188,11 @@ unsigned int Identity::sign(const void *data,unsigned int len,void *sig,unsigned
 
 			case P384:
 				if (siglen >= ZT_ECC384_SIGNATURE_SIZE) {
-					// When signing with P-384 we also include the C25519 public key in the hash.
+					// For P384 we sign SHA384(data | public keys) for added defense against any attack
+					// that attempted to decouple the two keys in some way. Otherwise this has no impact
+					// on the security of the signature (unless SHA384 had some serious flaw).
 					uint8_t h[48];
-					SHA384(h,data,len,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
+					SHA384(h,data,len,&_pub,ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE);
 					ECC384ECDSASign(_priv.p384,h,(uint8_t *)sig);
 					return ZT_ECC384_SIGNATURE_SIZE;
 				}
@@ -235,7 +212,7 @@ bool Identity::verify(const void *data,unsigned int len,const void *sig,unsigned
 		case P384:
 			if (siglen == ZT_ECC384_SIGNATURE_SIZE) {
 				uint8_t h[48];
-				SHA384(h,data,len,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
+				SHA384(h,data,len,&_pub,ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE);
 				return ECC384ECDSAVerify(_pub.p384,h,(const uint8_t *)sig);
 			}
 			break;
@@ -263,6 +240,11 @@ bool Identity::agree(const Identity &id,uint8_t key[ZT_PEER_SECRET_KEY_LENGTH]) 
 		} else if (_type == P384) {
 
 			if (id._type == P384) {
+				// For another P384 identity we execute DH agreement with BOTH keys and then
+				// hash the results together. For those (cough FIPS cough) who only consider
+				// P384 to be kosher, the C25519 secret can be considered a "salt"
+				// or something. For those who don't trust P384 this means the privacy of
+				// your traffic is also protected by C25519.
 				C25519::agree(_priv.c25519,id._pub.c25519,rawkey);
 				ECC384ECDH(id._pub.p384,_priv.p384,rawkey + ZT_C25519_SHARED_KEY_LEN);
 				SHA384(h,rawkey,ZT_C25519_SHARED_KEY_LEN + ZT_ECC384_SHARED_SECRET_SIZE);
@@ -283,13 +265,14 @@ bool Identity::agree(const Identity &id,uint8_t key[ZT_PEER_SECRET_KEY_LENGTH]) 
 
 char *Identity::toString(bool includePrivate,char buf[ZT_IDENTITY_STRING_BUFFER_LENGTH]) const
 {
+	char *p = buf;
+	_address.toString(p);
+	p += 10;
+	*(p++) = ':';
+
 	switch(_type) {
 
 		case C25519: {
-			char *p = buf;
-			Utils::hex10(_address.toInt(),p);
-			p += 10;
-			*(p++) = ':';
 			*(p++) = '0';
 			*(p++) = ':';
 			Utils::hex(_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN,p);
@@ -304,10 +287,6 @@ char *Identity::toString(bool includePrivate,char buf[ZT_IDENTITY_STRING_BUFFER_
 		}
 
 		case P384: {
-			char *p = buf;
-			Utils::hex10(_address.toInt(),p);
-			p += 10;
-			*(p++) = ':';
 			*(p++) = '1';
 			*(p++) = ':';
 			int el = Utils::b32e((const uint8_t *)(&_pub),sizeof(_pub),p,(int)(ZT_IDENTITY_STRING_BUFFER_LENGTH - (uintptr_t)(p - buf)));
@@ -324,13 +303,14 @@ char *Identity::toString(bool includePrivate,char buf[ZT_IDENTITY_STRING_BUFFER_
 		}
 
 	}
+
 	return nullptr;
 }
 
 bool Identity::fromString(const char *str)
 {
+	_hash.zero();
 	_hasPrivate = false;
-	_hash[0] = 0; // force hash recompute
 
 	if (!str) {
 		_address.zero();
@@ -421,6 +401,8 @@ bool Identity::fromString(const char *str)
 		return false;
 	}
 
+	_computeHash();
+
 	return true;
 }
 
@@ -430,50 +412,67 @@ int Identity::marshal(uint8_t data[ZT_IDENTITY_MARSHAL_SIZE_MAX],const bool incl
 	switch(_type) {
 		case C25519:
 			data[ZT_ADDRESS_LENGTH] = (uint8_t)C25519;
+
 			memcpy(data + ZT_ADDRESS_LENGTH + 1,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
+
 			if ((includePrivate)&&(_hasPrivate)) {
 				data[ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN] = ZT_C25519_PRIVATE_KEY_LEN;
 				memcpy(data + ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1,_priv.c25519,ZT_C25519_PRIVATE_KEY_LEN);
-				return (ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1 + ZT_C25519_PRIVATE_KEY_LEN);
+				return ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1 + ZT_C25519_PRIVATE_KEY_LEN;
+			} else {
+				data[ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN] = 0;
+				return ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1;
 			}
-			data[ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN] = 0;
-			return ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1;
 
 		case P384:
 			data[ZT_ADDRESS_LENGTH] = (uint8_t)P384;
-			memcpy(data + 1 + ZT_ADDRESS_LENGTH,&_pub,ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE);
+
+			memcpy(data + ZT_ADDRESS_LENGTH + 1,&_pub,ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE);
+
 			if ((includePrivate)&&(_hasPrivate)) {
 				data[ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE] = ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE;
 				memcpy(data + ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1,&_priv,ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE);
 				return ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1 + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE;
+			} else {
+				data[ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE] = 0;
+				return ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1;
 			}
-			data[ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE] = 0;
-			return ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1;
+
 	}
 	return -1;
 }
 
 int Identity::unmarshal(const uint8_t *data,const int len) noexcept
 {
+	_hash.zero();
+	_hasPrivate = false;
+
 	if (len < (ZT_ADDRESS_LENGTH + 1))
 		return -1;
-	_hash[0] = 0; // force hash recompute
+
 	unsigned int privlen;
 	switch((_type = (Type)data[ZT_ADDRESS_LENGTH])) {
 
 		case C25519:
 			if (len < (ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1))
 				return -1;
+
 			memcpy(_pub.c25519,data + ZT_ADDRESS_LENGTH + 1,ZT_C25519_PUBLIC_KEY_LEN);
+
 			privlen = data[ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN];
 			if (privlen == ZT_C25519_PRIVATE_KEY_LEN) {
 				if (len < (ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1 + ZT_C25519_PRIVATE_KEY_LEN))
 					return -1;
+
 				_hasPrivate = true;
 				memcpy(_priv.c25519,data + ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1,ZT_C25519_PRIVATE_KEY_LEN);
+
+				_computeHash();
 				return ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1 + ZT_C25519_PRIVATE_KEY_LEN;
 			} else if (privlen == 0) {
 				_hasPrivate = false;
+
+				_computeHash();
 				return ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1;
 			}
 			break;
@@ -481,24 +480,59 @@ int Identity::unmarshal(const uint8_t *data,const int len) noexcept
 		case P384:
 			if (len < (ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1))
 				return -1;
+
 			memcpy(&_pub,data + ZT_ADDRESS_LENGTH + 1,ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE);
+
 			privlen = data[ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE];
 			if (privlen == ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE) {
 				if (len < (ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1 + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE))
 					return -1;
+
 				_hasPrivate = true;
 				memcpy(&_priv,data + ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1,ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE);
+				_computeHash();
 				if (!this->locallyValidate()) // for P384 we do this always
 					return -1;
+
 				return ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1 + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE;
 			} else if (privlen == 0) {
 				_hasPrivate = false;
+
+				_computeHash();
+				if (!this->locallyValidate()) // for P384 we do this always
+					return -1;
+
 				return ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1;
 			}
 			break;
 
 	}
+
 	return -1;
+}
+
+void Identity::_computeHash()
+{
+	switch(_type) {
+		default:
+			_hash.zero();
+			break;
+
+		case C25519:
+			SHA384(_hash.data(),_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
+			break;
+
+		case P384:
+			if (!_hash) {
+				uint8_t *const h = _hash.data();
+				SHA384(h,&_pub,sizeof(_pub));
+				AES c(h);
+				c.encrypt(h,h);
+				c.encrypt(h + 16,h + 16);
+				c.encrypt(h + 32,h + 32);
+			}
+			break;
+	}
 }
 
 } // namespace ZeroTier

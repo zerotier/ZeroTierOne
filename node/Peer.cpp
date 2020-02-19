@@ -122,7 +122,7 @@ void Peer::received(
 			RR->t->learnedNewPath(tPtr,0x582fabdd,packetId,_id,path->address(),old);
 		} else {
 			if (RR->node->shouldUsePathForZeroTierTraffic(tPtr,_id,path->localSocket(),path->address())) {
-				RR->t->tryingNewPath(tPtr,0xb7747ddd,_id,path->address(),path->address(),packetId,(uint8_t)verb,_id.address(),_id.hash(),ZT_TRACE_TRYING_NEW_PATH_REASON_PACKET_RECEIVED_FROM_UNKNOWN_PATH);
+				RR->t->tryingNewPath(tPtr,0xb7747ddd,_id,path->address(),path->address(),packetId,(uint8_t)verb,_id.address(),_id.hash().data(),ZT_TRACE_TRYING_NEW_PATH_REASON_PACKET_RECEIVED_FROM_UNKNOWN_PATH);
 				sendHELLO(tPtr,path->localSocket(),path->address(),now);
 				path->sent(now);
 			}
@@ -241,7 +241,7 @@ void Peer::sendNOP(void *tPtr,const int64_t localSocket,const InetAddress &atAdd
 	ph.flags = 0;
 	ph.verb = Protocol::VERB_NOP;
 	Protocol::armor(outp,sizeof(Protocol::Header),_key,this->cipher());
-	RR->node->putPacket(tPtr,localSocket,atAddress,outp.b,sizeof(Protocol::Header));
+	RR->node->putPacket(tPtr,localSocket,atAddress,outp.unsafeData,sizeof(Protocol::Header));
 }
 
 void Peer::ping(void *tPtr,int64_t now,const bool pingAllAddressTypes)
@@ -337,24 +337,26 @@ void Peer::getAllPaths(std::vector< SharedPtr<Path> > &paths)
 
 void Peer::save(void *tPtr) const
 {
-	uint8_t *const buf = (uint8_t *)malloc(ZT_PEER_MARSHAL_SIZE_MAX);
+	uint8_t *const buf = (uint8_t *)malloc(8 + ZT_PEER_MARSHAL_SIZE_MAX);
 	if (!buf) return;
 
+	Utils::storeBigEndian<uint64_t>(buf,(uint64_t)RR->node->now());
+
 	_lock.rlock();
-	const int len = marshal(buf);
+	const int len = marshal(buf + 8);
 	_lock.runlock();
 
 	if (len > 0) {
 		uint64_t id[2];
 		id[0] = _id.address().toInt();
 		id[1] = 0;
-		RR->node->stateObjectPut(tPtr,ZT_STATE_OBJECT_PEER,id,buf,(unsigned int)len);
+		RR->node->stateObjectPut(tPtr,ZT_STATE_OBJECT_PEER,id,buf,(unsigned int)len + 8);
 	}
 
 	free(buf);
 }
 
-void Peer::contact(void *tPtr,const Endpoint &ep,const int64_t now,const bool behindSymmetric,const bool bfg1024)
+void Peer::contact(void *tPtr,const Endpoint &ep,const int64_t now,const bool bfg1024)
 {
 	static uint8_t junk = 0;
 
@@ -376,7 +378,7 @@ void Peer::contact(void *tPtr,const Endpoint &ep,const int64_t now,const bool be
 
 		// If the peer indicates that they may be behind a symmetric NAT and there are no
 		// living direct paths, try a few more aggressive things.
-		if ((behindSymmetric) && (phyAddr.ss_family == AF_INET) && (!direct(now))) {
+		if ((phyAddr.ss_family == AF_INET) && (!direct(now))) {
 			unsigned int port = phyAddr.port();
 			if ((bfg1024)&&(port < 1024)&&(RR->node->natMustDie())) {
 				// If the other side is using a low-numbered port and has elected to

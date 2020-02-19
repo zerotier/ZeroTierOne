@@ -147,7 +147,7 @@ public:
 		if (l <= ZT_BUF_MEM_SIZE) {
 			r.b.move(s->b);
 			if (s->s > 0)
-				memmove(r.b->b,r.b->b + s->s,l);
+				memmove(r.b->unsafeData,r.b->unsafeData + s->s,l);
 			r.e = l;
 
 			while (++s != fcv.end()) {
@@ -157,7 +157,7 @@ public:
 					r.e = 0;
 					break;
 				}
-				memcpy(r.b->b + r.e,s->b->b + s->s,l);
+				memcpy(r.b->unsafeData + r.e,s->b->unsafeData + s->s,l);
 				s->b.zero(); // let go of buffer in vector as soon as possible
 				r.e += l;
 			}
@@ -171,12 +171,12 @@ public:
 	 */
 	ZT_ALWAYS_INLINE Buf() noexcept {}
 
-	ZT_ALWAYS_INLINE Buf(const Buf &b2) noexcept { memcpy(b,b2.b,ZT_BUF_MEM_SIZE); }
+	ZT_ALWAYS_INLINE Buf(const Buf &b2) noexcept { memcpy(unsafeData,b2.unsafeData,ZT_BUF_MEM_SIZE); }
 
 	ZT_ALWAYS_INLINE Buf &operator=(const Buf &b2) noexcept
 	{
 		if (this != &b2)
-			memcpy(b,b2.b,ZT_BUF_MEM_SIZE);
+			memcpy(unsafeData,b2.unsafeData,ZT_BUF_MEM_SIZE);
 		return *this;
 	}
 
@@ -206,29 +206,29 @@ public:
 	/**
 	 * Set all memory to zero
 	 */
-	ZT_ALWAYS_INLINE void clear() noexcept { memset(b,0,ZT_BUF_MEM_SIZE); }
+	ZT_ALWAYS_INLINE void clear() noexcept { memset(unsafeData,0,ZT_BUF_MEM_SIZE); }
 
 	/**
 	 * Zero security critical data using Utils::burn() to ensure it's never optimized out.
 	 */
-	ZT_ALWAYS_INLINE void burn() noexcept { Utils::burn(b,ZT_BUF_MEM_SIZE); }
+	ZT_ALWAYS_INLINE void burn() noexcept { Utils::burn(unsafeData,ZT_BUF_MEM_SIZE); }
 
 	/**
 	 * Read a byte
 	 *
-	 * @param ii Iterator
+	 * @param ii Index value-result parameter (incremented by 1)
 	 * @return Byte (undefined on overflow)
 	 */
 	ZT_ALWAYS_INLINE uint8_t rI8(int &ii) const noexcept
 	{
 		const int s = ii++;
-		return b[(unsigned int)s & ZT_BUF_MEM_MASK];
+		return unsafeData[(unsigned int)s & ZT_BUF_MEM_MASK];
 	}
 
 	/**
 	 * Read a 16-bit integer
 	 *
-	 * @param ii Integer
+	 * @param ii Index value-result parameter (incremented by 2)
 	 * @return Integer (undefined on overflow)
 	 */
 	ZT_ALWAYS_INLINE uint16_t rI16(int &ii) const noexcept
@@ -240,14 +240,14 @@ public:
 			((uint16_t)data.bytes[s] << 8U) |
 			(uint16_t)data.bytes[s + 1]);
 #else
-		return Utils::ntoh(*reinterpret_cast<const uint16_t *>(b + s));
+		return Utils::ntoh(*reinterpret_cast<const uint16_t *>(unsafeData + s));
 #endif
 	}
 
 	/**
 	 * Read a 32-bit integer
 	 *
-	 * @param ii Integer
+	 * @param ii Index value-result parameter (incremented by 4)
 	 * @return Integer (undefined on overflow)
 	 */
 	ZT_ALWAYS_INLINE uint32_t rI32(int &ii) const noexcept
@@ -261,14 +261,14 @@ public:
 			((uint32_t)data.bytes[s + 2] << 8U) |
 			(uint32_t)data.bytes[s + 3]);
 #else
-		return Utils::ntoh(*reinterpret_cast<const uint32_t *>(b + s));
+		return Utils::ntoh(*reinterpret_cast<const uint32_t *>(unsafeData + s));
 #endif
 	}
 
 	/**
 	 * Read a 64-bit integer
 	 *
-	 * @param ii Integer
+	 * @param ii Index value-result parameter (incremented by 8)
 	 * @return Integer (undefined on overflow)
 	 */
 	ZT_ALWAYS_INLINE uint64_t rI64(int &ii) const noexcept
@@ -286,7 +286,7 @@ public:
 			((uint64_t)data.bytes[s + 6] << 8U) |
 			(uint64_t)data.bytes[s + 7]);
 #else
-		return Utils::ntoh(*reinterpret_cast<const uint64_t *>(b + s));
+		return Utils::ntoh(*reinterpret_cast<const uint64_t *>(unsafeData + s));
 #endif
 	}
 
@@ -301,7 +301,7 @@ public:
 	 * indicates.
 	 *
 	 * @tparam T Object type
-	 * @param ii Iterator
+	 * @param ii Index value-result parameter (incremented by object's size in bytes)
 	 * @param obj Object to read
 	 * @return Bytes read or a negative value on unmarshal error (passed from object) or overflow
 	 */
@@ -309,7 +309,7 @@ public:
 	ZT_ALWAYS_INLINE int rO(int &ii,T &obj) const noexcept
 	{
 		if (ii < ZT_BUF_MEM_SIZE) {
-			int ms = obj.unmarshal(b + ii,ZT_BUF_MEM_SIZE - ii);
+			int ms = obj.unmarshal(unsafeData + ii,ZT_BUF_MEM_SIZE - ii);
 			if (ms > 0)
 				ii += ms;
 			return ms;
@@ -323,17 +323,17 @@ public:
 	 * Use this if the buffer's memory may get changed between reading and processing
 	 * what is read.
 	 *
-	 * @param ii Iterator
+	 * @param ii Index value-result parameter (incremented by length of string)
 	 * @param buf Buffer to receive string
 	 * @param bufSize Capacity of buffer in bytes
 	 * @return Pointer to buf or NULL on overflow or error
 	 */
 	ZT_ALWAYS_INLINE char *rS(int &ii,char *const buf,const unsigned int bufSize) const noexcept
 	{
-		const char *const s = (const char *)(b + ii);
+		const char *const s = (const char *)(unsafeData + ii);
 		const int sii = ii;
 		while (ii < ZT_BUF_MEM_SIZE) {
-			if (b[ii++] == 0) {
+			if (unsafeData[ii++] == 0) {
 				memcpy(buf,s,ii - sii);
 				return buf;
 			}
@@ -351,14 +351,14 @@ public:
 	 * This version avoids a copy and so is faster if the buffer won't be modified between
 	 * reading and processing.
 	 *
-	 * @param ii Iterator
+	 * @param ii Index value-result parameter (incremented by length of string)
 	 * @return Pointer to null-terminated C-style string or NULL on overflow or error
 	 */
 	ZT_ALWAYS_INLINE const char *rSnc(int &ii) const noexcept
 	{
-		const char *const s = (const char *)(b + ii);
+		const char *const s = (const char *)(unsafeData + ii);
 		while (ii < ZT_BUF_MEM_SIZE) {
-			if (b[ii++] == 0)
+			if (unsafeData[ii++] == 0)
 				return s;
 		}
 		return nullptr;
@@ -370,15 +370,15 @@ public:
 	 * Use this if the buffer's memory may get changed between reading and processing
 	 * what is read.
 	 *
-	 * @param ii Iterator
+	 * @param ii Index value-result parameter (incremented by len)
 	 * @param bytes Buffer to contain data to read
 	 * @param len Length of buffer
 	 * @return Pointer to data or NULL on overflow or error
 	 */
-	ZT_ALWAYS_INLINE uint8_t *rB(int &ii,void *bytes,unsigned int len) const noexcept
+	ZT_ALWAYS_INLINE uint8_t *rB(int &ii,void *const bytes,const unsigned int len) const noexcept
 	{
 		if ((ii += (int)len) <= ZT_BUF_MEM_SIZE) {
-			memcpy(bytes,b + ii,len);
+			memcpy(bytes,unsafeData + ii,len);
 			return reinterpret_cast<uint8_t *>(bytes);
 		}
 		return nullptr;
@@ -393,7 +393,7 @@ public:
 	 * This version avoids a copy and so is faster if the buffer won't be modified between
 	 * reading and processing.
 	 *
-	 * @param ii Iterator
+	 * @param ii Index value-result parameter (incremented by len)
 	 * @param len Length of data field to obtain a pointer to
 	 * @return Pointer to field or NULL on overflow
 	 */
@@ -404,24 +404,101 @@ public:
 	}
 
 	/**
+	 * Load a value at an index without advancing the index
+	 *
+	 * Note that unlike the rI??() methods this does not increment ii and therefore
+	 * will not necessarily result in a 'true' return from readOverflow(). It does
+	 * however subject 'ii' to soft bounds masking like the gI??() methods.
+	 */
+	ZT_ALWAYS_INLINE uint8_t lI8(const int ii) const noexcept
+	{
+		return unsafeData[(unsigned int)ii & ZT_BUF_MEM_MASK];
+	}
+
+	/**
+	 * Load a value at an index without advancing the index
+	 *
+	 * Note that unlike the rI??() methods this does not increment ii and therefore
+	 * will not necessarily result in a 'true' return from readOverflow(). It does
+	 * however subject 'ii' to soft bounds masking like the gI??() methods.
+	 */
+	ZT_ALWAYS_INLINE uint16_t lI16(const int ii) const noexcept
+	{
+		const unsigned int s = (unsigned int)ii & ZT_BUF_MEM_MASK;
+#ifdef ZT_NO_UNALIGNED_ACCESS
+		return (
+			((uint16_t)data.bytes[s] << 8U) |
+			(uint16_t)data.bytes[s + 1]);
+#else
+		return Utils::ntoh(*reinterpret_cast<const uint16_t *>(unsafeData + s));
+#endif
+	}
+
+	/**
+	 * Load a value at an index without advancing the index
+	 *
+	 * Note that unlike the rI??() methods this does not increment ii and therefore
+	 * will not necessarily result in a 'true' return from readOverflow(). It does
+	 * however subject 'ii' to soft bounds masking like the gI??() methods.
+	 */
+	ZT_ALWAYS_INLINE uint32_t lI32(const int ii) const noexcept
+	{
+		const unsigned int s = (unsigned int)ii & ZT_BUF_MEM_MASK;
+#ifdef ZT_NO_UNALIGNED_ACCESS
+		return (
+			((uint32_t)data.bytes[s] << 24U) |
+			((uint32_t)data.bytes[s + 1] << 16U) |
+			((uint32_t)data.bytes[s + 2] << 8U) |
+			(uint32_t)data.bytes[s + 3]);
+#else
+		return Utils::ntoh(*reinterpret_cast<const uint32_t *>(unsafeData + s));
+#endif
+	}
+
+	/**
+	 * Load a value at an index without advancing the index
+	 *
+	 * Note that unlike the rI??() methods this does not increment ii and therefore
+	 * will not necessarily result in a 'true' return from readOverflow(). It does
+	 * however subject 'ii' to soft bounds masking like the gI??() methods.
+	 */
+	ZT_ALWAYS_INLINE uint8_t lI64(const int ii) const noexcept
+	{
+		const unsigned int s = (unsigned int)ii & ZT_BUF_MEM_MASK;
+#ifdef ZT_NO_UNALIGNED_ACCESS
+		return (
+			((uint64_t)data.bytes[s] << 56U) |
+			((uint64_t)data.bytes[s + 1] << 48U) |
+			((uint64_t)data.bytes[s + 2] << 40U) |
+			((uint64_t)data.bytes[s + 3] << 32U) |
+			((uint64_t)data.bytes[s + 4] << 24U) |
+			((uint64_t)data.bytes[s + 5] << 16U) |
+			((uint64_t)data.bytes[s + 6] << 8U) |
+			(uint64_t)data.bytes[s + 7]);
+#else
+		return Utils::ntoh(*reinterpret_cast<const uint64_t *>(unsafeData + s));
+#endif
+	}
+
+	/**
 	 * Write a byte
 	 *
-	 * @param ii Iterator
+	 * @param ii Index value-result parameter (incremented by 1)
 	 * @param n Byte
 	 */
-	ZT_ALWAYS_INLINE void wI(int &ii,uint8_t n) noexcept
+	ZT_ALWAYS_INLINE void wI8(int &ii,const uint8_t n) noexcept
 	{
 		const int s = ii++;
-		b[(unsigned int)s & ZT_BUF_MEM_MASK] = n;
+		unsafeData[(unsigned int)s & ZT_BUF_MEM_MASK] = n;
 	}
 
 	/**
 	 * Write a 16-bit integer in big-endian byte order
 	 *
-	 * @param ii Iterator
+	 * @param ii Index value-result parameter (incremented by 2)
 	 * @param n Integer
 	 */
-	ZT_ALWAYS_INLINE void wI(int &ii,uint16_t n) noexcept
+	ZT_ALWAYS_INLINE void wI16(int &ii,const uint16_t n) noexcept
 	{
 		const unsigned int s = ((unsigned int)ii) & ZT_BUF_MEM_MASK;
 		ii += 2;
@@ -429,17 +506,17 @@ public:
 		b[s] = (uint8_t)(n >> 8U);
 		b[s + 1] = (uint8_t)n;
 #else
-		*reinterpret_cast<uint16_t *>(b + s) = Utils::hton(n);
+		*reinterpret_cast<uint16_t *>(unsafeData + s) = Utils::hton(n);
 #endif
 	}
 
 	/**
 	 * Write a 32-bit integer in big-endian byte order
 	 *
-	 * @param ii Iterator
+	 * @param ii Index value-result parameter (incremented by 4)
 	 * @param n Integer
 	 */
-	ZT_ALWAYS_INLINE void wI(int &ii,uint32_t n) noexcept
+	ZT_ALWAYS_INLINE void wI32(int &ii,const uint32_t n) noexcept
 	{
 		const unsigned int s = ((unsigned int)ii) & ZT_BUF_MEM_MASK;
 		ii += 4;
@@ -449,17 +526,17 @@ public:
 		b[s + 2] = (uint8_t)(n >> 8U);
 		b[s + 3] = (uint8_t)n;
 #else
-		*reinterpret_cast<uint32_t *>(b + s) = Utils::hton(n);
+		*reinterpret_cast<uint32_t *>(unsafeData + s) = Utils::hton(n);
 #endif
 	}
 
 	/**
 	 * Write a 64-bit integer in big-endian byte order
 	 *
-	 * @param ii Iterator
+	 * @param ii Index value-result parameter (incremented by 8)
 	 * @param n Integer
 	 */
-	ZT_ALWAYS_INLINE void wI(int &ii,uint64_t n) noexcept
+	ZT_ALWAYS_INLINE void wI64(int &ii,const uint64_t n) noexcept
 	{
 		const unsigned int s = ((unsigned int)ii) & ZT_BUF_MEM_MASK;
 		ii += 8;
@@ -473,7 +550,7 @@ public:
 		b[s + 6] = (uint8_t)(n >> 8U);
 		b[s + 7] = (uint8_t)n;
 #else
-		*reinterpret_cast<uint64_t *>(b + s) = Utils::hton(n);
+		*reinterpret_cast<uint64_t *>(unsafeData + s) = Utils::hton(n);
 #endif
 	}
 
@@ -481,7 +558,7 @@ public:
 	 * Write an object implementing the marshal interface
 	 *
 	 * @tparam T Object type
-	 * @param ii Iterator
+	 * @param ii Index value-result parameter (incremented by size of object)
 	 * @param t Object to write
 	 */
 	template<typename T>
@@ -489,7 +566,7 @@ public:
 	{
 		const int s = ii;
 		if ((s + T::marshalSizeMax()) <= ZT_BUF_MEM_SIZE) {
-			int ms = t.marshal(b + s);
+			int ms = t.marshal(unsafeData + s);
 			if (ms > 0)
 				ii += ms;
 		} else {
@@ -500,7 +577,7 @@ public:
 	/**
 	 * Write a C-style null-terminated string (including the trailing zero)
 	 *
-	 * @param ii Iterator
+	 * @param ii Index value-result parameter (incremented by length of string)
 	 * @param s String to write (writes an empty string if this is NULL)
 	 */
 	ZT_ALWAYS_INLINE void wS(int &ii,const char *s) noexcept
@@ -509,17 +586,17 @@ public:
 			char c;
 			do {
 				c = *(s++);
-				wI(ii,(uint8_t)c);
+				wI8(ii,(uint8_t)c);
 			} while (c);
 		} else {
-			wI(ii,(uint8_t)0);
+			wI8(ii,0);
 		}
 	}
 
 	/**
 	 * Write a byte array
 	 *
-	 * @param ii Iterator
+	 * @param ii Index value-result parameter (incremented by len)
 	 * @param bytes Bytes to write
 	 * @param len Size of data in bytes
 	 */
@@ -527,7 +604,65 @@ public:
 	{
 		const int s = ii;
 		if ((ii += (int)len) <= ZT_BUF_MEM_SIZE)
-			memcpy(b + s,bytes,len);
+			memcpy(unsafeData + s,bytes,len);
+	}
+
+	/**
+	 * Store a byte without advancing the index
+	 */
+	ZT_ALWAYS_INLINE void sI8(const int ii,const uint8_t n) noexcept
+	{
+		unsafeData[(unsigned int)ii & ZT_BUF_MEM_MASK] = n;
+	}
+
+	/**
+	 * Store an integer without advancing the index
+	 */
+	ZT_ALWAYS_INLINE void sI16(const int ii,const uint16_t n) noexcept
+	{
+		const unsigned int s = ((unsigned int)ii) & ZT_BUF_MEM_MASK;
+#ifdef ZT_NO_UNALIGNED_ACCESS
+		b[s] = (uint8_t)(n >> 8U);
+		b[s + 1] = (uint8_t)n;
+#else
+		*reinterpret_cast<uint16_t *>(unsafeData + s) = Utils::hton(n);
+#endif
+	}
+
+	/**
+	 * Store an integer without advancing the index
+	 */
+	ZT_ALWAYS_INLINE void sI32(const int ii,const uint32_t n) noexcept
+	{
+		const unsigned int s = ((unsigned int)ii) & ZT_BUF_MEM_MASK;
+#ifdef ZT_NO_UNALIGNED_ACCESS
+		b[s] = (uint8_t)(n >> 24U);
+		b[s + 1] = (uint8_t)(n >> 16U);
+		b[s + 2] = (uint8_t)(n >> 8U);
+		b[s + 3] = (uint8_t)n;
+#else
+		*reinterpret_cast<uint32_t *>(unsafeData + s) = Utils::hton(n);
+#endif
+	}
+
+	/**
+	 * Store an integer without advancing the index
+	 */
+	ZT_ALWAYS_INLINE void sI64(const int ii,const uint64_t n) noexcept
+	{
+		const unsigned int s = ((unsigned int)ii) & ZT_BUF_MEM_MASK;
+#ifdef ZT_NO_UNALIGNED_ACCESS
+		b[s] = (uint8_t)(n >> 56U);
+		b[s + 1] = (uint8_t)(n >> 48U);
+		b[s + 2] = (uint8_t)(n >> 40U);
+		b[s + 3] = (uint8_t)(n >> 32U);
+		b[s + 4] = (uint8_t)(n >> 24U);
+		b[s + 5] = (uint8_t)(n >> 16U);
+		b[s + 6] = (uint8_t)(n >> 8U);
+		b[s + 7] = (uint8_t)n;
+#else
+		*reinterpret_cast<uint64_t *>(unsafeData + s) = Utils::hton(n);
+#endif
 	}
 
 	/**
@@ -547,7 +682,7 @@ public:
 	 * @return Reference to 'b' cast to type T
 	 */
 	template<typename T>
-	ZT_ALWAYS_INLINE T &as(const unsigned int i = 0) noexcept { return *reinterpret_cast<T *>(b + i); }
+	ZT_ALWAYS_INLINE T &as(const unsigned int i = 0) noexcept { return *reinterpret_cast<T *>(unsafeData + i); }
 
 	/**
 	 * Cast data in 'b' to a (usually packed) structure type (const)
@@ -561,14 +696,14 @@ public:
 	 * @return Reference to 'b' cast to type T
 	 */
 	template<typename T>
-	ZT_ALWAYS_INLINE const T &as(const unsigned int i = 0) const noexcept { return *reinterpret_cast<const T *>(b + i); }
+	ZT_ALWAYS_INLINE const T &as(const unsigned int i = 0) const noexcept { return *reinterpret_cast<const T *>(unsafeData + i); }
 
-	ZT_ALWAYS_INLINE bool operator==(const Buf &b2) const noexcept { return (memcmp(b,b2.b,ZT_BUF_MEM_SIZE) == 0); }
-	ZT_ALWAYS_INLINE bool operator!=(const Buf &b2) const noexcept { return (memcmp(b,b2.b,ZT_BUF_MEM_SIZE) != 0); }
-	ZT_ALWAYS_INLINE bool operator<(const Buf &b2) const noexcept { return (memcmp(b,b2.b,ZT_BUF_MEM_SIZE) < 0); }
-	ZT_ALWAYS_INLINE bool operator<=(const Buf &b2) const noexcept { return (memcmp(b,b2.b,ZT_BUF_MEM_SIZE) <= 0); }
-	ZT_ALWAYS_INLINE bool operator>(const Buf &b2) const noexcept { return (memcmp(b,b2.b,ZT_BUF_MEM_SIZE) > 0); }
-	ZT_ALWAYS_INLINE bool operator>=(const Buf &b2) const noexcept { return (memcmp(b,b2.b,ZT_BUF_MEM_SIZE) >= 0); }
+	ZT_ALWAYS_INLINE bool operator==(const Buf &b2) const noexcept { return (memcmp(unsafeData,b2.unsafeData,ZT_BUF_MEM_SIZE) == 0); }
+	ZT_ALWAYS_INLINE bool operator!=(const Buf &b2) const noexcept { return (memcmp(unsafeData,b2.unsafeData,ZT_BUF_MEM_SIZE) != 0); }
+	ZT_ALWAYS_INLINE bool operator<(const Buf &b2) const noexcept { return (memcmp(unsafeData,b2.unsafeData,ZT_BUF_MEM_SIZE) < 0); }
+	ZT_ALWAYS_INLINE bool operator<=(const Buf &b2) const noexcept { return (memcmp(unsafeData,b2.unsafeData,ZT_BUF_MEM_SIZE) <= 0); }
+	ZT_ALWAYS_INLINE bool operator>(const Buf &b2) const noexcept { return (memcmp(unsafeData,b2.unsafeData,ZT_BUF_MEM_SIZE) > 0); }
+	ZT_ALWAYS_INLINE bool operator>=(const Buf &b2) const noexcept { return (memcmp(unsafeData,b2.unsafeData,ZT_BUF_MEM_SIZE) >= 0); }
 
 	/**
 	 * Raw data held in buffer
@@ -577,7 +712,7 @@ public:
 	 * They exist to allow reads and writes of integer types to silently overflow if a
 	 * read or write is performed at the end of the buffer.
 	 */
-	uint8_t b[ZT_BUF_MEM_SIZE + 8];
+	uint8_t unsafeData[ZT_BUF_MEM_SIZE + 8];
 
 private:
 	// Next item in free buffer pool linked list if Buf is placed in pool, undefined and unused otherwise

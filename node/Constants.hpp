@@ -67,16 +67,6 @@
 #define ZT_MAX_NETWORK_CONFIG_BYTES 131072
 
 /**
- * Size of RX queue in packets
- */
-#define ZT_RX_QUEUE_SIZE 32
-
-/**
- * Size of TX queue in packets
- */
-#define ZT_TX_QUEUE_SIZE 32
-
-/**
  * Length of peer shared secrets (256-bit, do not change)
  */
 #define ZT_PEER_SECRET_KEY_LENGTH 32
@@ -108,16 +98,6 @@
  * Delay between WHOIS retries in ms
  */
 #define ZT_WHOIS_RETRY_DELAY 500
-
-/**
- * Transmit queue entry timeout
- */
-#define ZT_TRANSMIT_QUEUE_TIMEOUT 5000
-
-/**
- * Receive queue entry timeout
- */
-#define ZT_RECEIVE_QUEUE_TIMEOUT 5000
 
 /**
  * Maximum number of ZT hops allowed (this is not IP hops/TTL)
@@ -155,6 +135,15 @@
  * Timeout for peer active-ness (measured from last receive)
  */
 #define ZT_PEER_ACTIVITY_TIMEOUT (ZT_PEER_PING_PERIOD + 5000)
+
+/**
+ * Global timeout for peers in milliseconds
+ *
+ * This is global as in "entire world," and this value is 30 days. In this
+ * code the global timeout is used to determine when to ignore cached
+ * peers and their identity<>address mappings.
+ */
+#define ZT_PEER_GLOBAL_TIMEOUT 2592000000LL
 
 /**
  * Maximum interval between sort/prioritize of paths for a peer

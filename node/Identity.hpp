@@ -24,6 +24,7 @@
 #include "SHA512.hpp"
 #include "ECC384.hpp"
 #include "TriviallyCopyable.hpp"
+#include "H.hpp"
 
 #define ZT_IDENTITY_STRING_BUFFER_LENGTH 1024
 #define ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE (ZT_C25519_PUBLIC_KEY_LEN + ZT_ECC384_PUBLIC_KEY_SIZE)
@@ -96,7 +97,11 @@ public:
 	bool generate(Type t);
 
 	/**
-	 * Check the validity of this identity's pairing of key to address
+	 * Check the validity of this identity's address
+	 *
+	 * For type 0 identities this is slightly time consuming. For type 1 identities it's
+	 * instantaneous. It should be done when a new identity is accepted for the very first
+	 * time.
 	 *
 	 * @return True if validation check passes
 	 */
@@ -108,7 +113,7 @@ public:
 	ZT_ALWAYS_INLINE bool hasPrivate() const noexcept { return _hasPrivate; }
 
 	/**
-	 * This gets (computing if needed) a hash of this identity's public key(s).
+	 * Get hash of this identity's public key(s)
 	 *
 	 * The hash returned by this function differs by identity type. For C25519 (type 0)
 	 * identities this returns a simple SHA384 of the public key, which is NOT the same
@@ -117,12 +122,18 @@ public:
 	 * and address computation. This difference is because the v0 hash is expensive while
 	 * the v1 hash is fast.
 	 *
-	 * @return 384-bit/48-byte hash (pointer remains valid as long as Identity object exists)
+	 * While addresses can technically collide (though this is rare and hard to create),
+	 * the full hash of an identity's keys is unique to within cryptographic strength
+	 * bounds of the keys themselves.
+	 *
+	 * @return 384-bit/48-byte hash
 	 */
-	const uint8_t *hash() const;
+	ZT_ALWAYS_INLINE const H<384> &hash() const noexcept { return _hash; }
 
 	/**
-	 * Compute a hash of this identity's public and private keys
+	 * Compute a hash of this identity's public and private keys.
+	 *
+	 * If there is no private key or the identity is NIL the buffer is filled with zero.
 	 *
 	 * @param h Buffer to store SHA384 hash
 	 */
@@ -234,10 +245,10 @@ public:
 	int unmarshal(const uint8_t *data,int len) noexcept;
 
 private:
+	void _computeHash();
+
 	Address _address;
-	uint64_t _hash[6]; // hash of public key memo-ized for performance, recalculated when _hash[0] == 0
-	Type _type; // _type determines which fields in _priv and _pub are used
-	bool _hasPrivate;
+	H<384> _hash;
 	ZT_PACKED_STRUCT(struct { // don't re-order these
 		uint8_t c25519[ZT_C25519_PRIVATE_KEY_LEN];
 		uint8_t p384[ZT_ECC384_PRIVATE_KEY_SIZE];
@@ -246,6 +257,8 @@ private:
 		uint8_t c25519[ZT_C25519_PUBLIC_KEY_LEN]; // Curve25519 and Ed25519 public keys
 		uint8_t p384[ZT_ECC384_PUBLIC_KEY_SIZE];  // NIST P-384 public key
 	}) _pub;
+	Type _type; // _type determines which fields in _priv and _pub are used
+	bool _hasPrivate;
 };
 
 } // namespace ZeroTier

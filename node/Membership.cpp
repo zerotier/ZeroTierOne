@@ -60,10 +60,10 @@ void Membership::pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const i
 			sendCom = false;
 			outp->wO(outl,nconf.com);
 		}
-		outp->wI(outl,(uint8_t)0);
+		outp->wI8(outl,0);
 
 		if ((outl + ZT_CAPABILITY_MARSHAL_SIZE_MAX + 2) < ZT_PROTO_MAX_PACKET_LENGTH) {
-			void *const capCountAt = outp->b + outl;
+			void *const capCountAt = outp->unsafeData + outl;
 			outl += 2;
 			unsigned int capCount = 0;
 			while (capPtr < nconf.capabilityCount) {
@@ -75,7 +75,7 @@ void Membership::pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const i
 			Utils::storeBigEndian(capCountAt,(uint16_t)capCount);
 
 			if ((outl + ZT_TAG_MARSHAL_SIZE_MAX + 4) < ZT_PROTO_MAX_PACKET_LENGTH) {
-				void *const tagCountAt = outp->b + outl;
+				void *const tagCountAt = outp->unsafeData + outl;
 				outl += 2;
 				unsigned int tagCount = 0;
 				while (tagPtr < nconf.tagCount) {
@@ -86,10 +86,10 @@ void Membership::pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const i
 				}
 				Utils::storeBigEndian(tagCountAt,(uint16_t)tagCount);
 
-				outp->wI(outl,(uint16_t)0); // no revocations sent here as these propagate differently
+				outp->wI16(outl,0); // no revocations sent here as these propagate differently
 
 				if ((outl + ZT_CERTIFICATEOFOWNERSHIP_MARSHAL_SIZE_MAX + 2) < ZT_PROTO_MAX_PACKET_LENGTH) {
-					void *const cooCountAt = outp->b + outl;
+					void *const cooCountAt = outp->unsafeData + outl;
 					outl += 2;
 					unsigned int cooCount = 0;
 					while (cooPtr < nconf.certificateOfOwnershipCount) {
@@ -102,15 +102,14 @@ void Membership::pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const i
 
 					complete = true;
 				} else {
-					outp->wI(outl,(uint16_t)0);
+					outp->wI16(outl,0);
 				}
 			} else {
-				outp->wI(outl,(uint16_t)0);
-				outp->wI(outl,(uint16_t)0);
-				outp->wI(outl,(uint16_t)0);
+				outp->wI32(outl,0);
+				outp->wI16(outl,0); // three zero 16-bit integers
 			}
 		} else {
-			outp->wI(outl,(uint64_t)0); // four zero 16-bit integers
+			outp->wI64(outl,0); // four zero 16-bit integers
 		}
 
 		if (outl > sizeof(Protocol::Header)) {

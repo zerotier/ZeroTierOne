@@ -30,6 +30,7 @@
 #include "Hashtable.hpp"
 #include "SharedPtr.hpp"
 #include "ScopedPtr.hpp"
+#include "H.hpp"
 
 namespace ZeroTier {
 
@@ -66,24 +67,40 @@ public:
 	ZT_ALWAYS_INLINE SharedPtr<Peer> peer(void *tPtr,const Address &zta,const bool loadFromCached = true)
 	{
 		{
-			RWMutex::RLock _l(_peers_l);
+			RWMutex::RLock l(_peers_l);
 			const SharedPtr<Peer> *const ap = _peers.get(zta);
 			if (ap)
 				return *ap;
 		}
-
-		SharedPtr<Peer> p;
-		if (loadFromCached) {
-			_loadCached(tPtr,zta,p);
-			if (p) {
-				RWMutex::Lock _l(_peers_l);
-				SharedPtr<Peer> &hp = _peers[zta];
-				if (!hp)
+		{
+			SharedPtr<Peer> p;
+			if (loadFromCached) {
+				_loadCached(tPtr,zta,p);
+				if (p) {
+					RWMutex::Lock l(_peers_l);
+					SharedPtr<Peer> &hp = _peers[zta];
+					if (hp)
+						return hp;
 					hp = p;
+				}
 			}
+			return p;
 		}
+	}
 
-		return p;
+	/**
+	 * Get a peer by its 384-bit identity public key hash
+	 *
+	 * @param hash Identity hash
+	 * @return Peer or NULL if no peer is currently in memory for this hash (cache is not checked in this case)
+	 */
+	ZT_ALWAYS_INLINE SharedPtr<Peer> peerByHash(const H<384> &hash)
+	{
+		RWMutex::RLock _l(_peers_l);
+		const SharedPtr<Peer> *const ap = _peersByIdentityHash.get(hash);
+		if (ap)
+			return *ap;
+		return SharedPtr<Peer>();
 	}
 
 	/**
@@ -111,29 +128,21 @@ public:
 	ZT_ALWAYS_INLINE SharedPtr<Path> path(const int64_t l,const InetAddress &r)
 	{
 		const uint64_t k = _pathHash(l,r);
-
-		_paths_l.rlock();
-		SharedPtr<Path> p(_paths[k]);
-		_paths_l.runlock();
-		if (p)
-			return p;
-
-		_paths_l.lock();
-		SharedPtr<Path> &p2 = _paths[k];
-		if (p2) {
-			p = p2;
-		} else {
-			try {
-				p.set(new Path(l,r));
-			} catch ( ... ) {
-				_paths_l.unlock();
-				return SharedPtr<Path>();
-			}
-			p2 = p;
+		{
+			RWMutex::RLock lck(_paths_l);
+			SharedPtr<Path> *const p = _paths.get(k);
+			if (p)
+				return *p;
 		}
-		_paths_l.unlock();
-
-		return p;
+		{
+			SharedPtr<Path> p(new Path(l,r));
+			RWMutex::Lock lck(_paths_l);
+			SharedPtr<Path> &p2 = _paths[k];
+			if (p2)
+				return p2;
+			p2 = p;
+			return p;
+		}
 	}
 
 	/**
@@ -173,9 +182,8 @@ public:
 		Hashtable< Address,SharedPtr<Peer> >::Iterator i(const_cast<Topology *>(this)->_peers);
 		Address *a = nullptr;
 		SharedPtr<Peer> *p = nullptr;
-		while (i.next(a,p)) {
+		while (i.next(a,p))
 			f(*((const SharedPtr<Peer> *)p));
-		}
 	}
 
 	/**
@@ -202,9 +210,8 @@ public:
 			Hashtable< Address,SharedPtr<Peer> >::Iterator i(const_cast<Topology *>(this)->_peers);
 			Address *a = nullptr;
 			SharedPtr<Peer> *p = nullptr;
-			while (i.next(a,p)) {
+			while (i.next(a,p))
 				f(*((const SharedPtr<Peer> *)p),std::binary_search(rootPeerPtrs.begin(),rootPeerPtrs.end(),(uintptr_t)p->ptr()));
-			}
 		} catch ( ... ) {} // should not throw
 	}
 
@@ -221,9 +228,8 @@ public:
 		Hashtable< uint64_t,SharedPtr<Path> >::Iterator i(const_cast<Topology *>(this)->_paths);
 		uint64_t *k = nullptr;
 		SharedPtr<Path> *p = nullptr;
-		while (i.next(k,p)) {
+		while (i.next(k,p))
 			f(*((const SharedPtr<Path> *)p));
-		}
 	}
 
 	/**
@@ -359,6 +365,7 @@ private:
 
 	Hashtable< Address,SharedPtr<Peer> > _peers;
 	Hashtable< uint64_t,SharedPtr<Peer> > _peersByIncomingProbe;
+	Hashtable< H<384>,SharedPtr<Peer> > _peersByIdentityHash;
 	Hashtable< uint64_t,SharedPtr<Path> > _paths;
 	std::set< Identity > _roots; // locked by _peers_l
 	std::vector< SharedPtr<Peer> > _rootPeers; // locked by _peers_l

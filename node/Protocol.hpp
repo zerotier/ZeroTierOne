@@ -640,12 +640,16 @@ enum Verb
 	 *   <[...] paths>
 	 *
 	 * Path record format:
-	 *   <[1] 8-bit path flags (always 0, currently unused)>
+	 *   <[1] 8-bit path flags>
 	 *   <[2] length of extended path characteristics or 0 for none>
 	 *   <[...] extended path characteristics>
 	 *   <[1] address type>
-	 *   <[1] address length in bytes>
+	 *   <[1] address record length in bytes>
 	 *   <[...] address>
+	 *
+	 * Path flags:
+	 *   0x01 - Sender is likely behind a symmetric NAT
+	 *   0x02 - Use BFG1024 algorithm for symmetric NAT-t if conditions met
 	 *
 	 * The receiver may, upon receiving a push, attempt to establish a
 	 * direct link to one or more of the indicated addresses. It is the
@@ -965,21 +969,21 @@ ZT_PACKED_STRUCT(struct UNSUPPORTED_OPERATION__NETWORK_CONFIG_REQUEST
  * @param packetSize Packet's actual size in bytes
  * @return Packet ID or 0 if packet size is less than 8
  */
-ZT_ALWAYS_INLINE uint64_t packetId(const Buf &pkt,const unsigned int packetSize) noexcept { return (packetSize >= 8) ? Utils::loadBigEndian<uint64_t>(pkt.b) : 0ULL; }
+ZT_ALWAYS_INLINE uint64_t packetId(const Buf &pkt,const unsigned int packetSize) noexcept { return (packetSize >= 8) ? Utils::loadBigEndian<uint64_t>(pkt.unsafeData) : 0ULL; }
 
 /**
  * @param Packet to extract hops from
  * @param packetSize Packet's actual size in bytes
  * @return 3-bit hops field embedded in packet flags field
  */
-ZT_ALWAYS_INLINE uint8_t packetHops(const Buf &pkt,const unsigned int packetSize) noexcept { return (packetSize >= ZT_PROTO_PACKET_FLAGS_INDEX) ? (pkt.b[ZT_PROTO_PACKET_FLAGS_INDEX] & ZT_PROTO_FLAG_FIELD_HOPS_MASK) : 0; }
+ZT_ALWAYS_INLINE uint8_t packetHops(const Buf &pkt,const unsigned int packetSize) noexcept { return (packetSize >= ZT_PROTO_PACKET_FLAGS_INDEX) ? (pkt.unsafeData[ZT_PROTO_PACKET_FLAGS_INDEX] & ZT_PROTO_FLAG_FIELD_HOPS_MASK) : 0; }
 
 /**
  * @param Packet to extract cipher ID from
  * @param packetSize Packet's actual size in bytes
  * @return 3-bit cipher field embedded in packet flags field
  */
-ZT_ALWAYS_INLINE uint8_t packetCipher(const Buf &pkt,const unsigned int packetSize) noexcept { return (packetSize >= ZT_PROTO_PACKET_FLAGS_INDEX) ? ((pkt.b[ZT_PROTO_PACKET_FLAGS_INDEX] >> 3U) & 0x07U) : 0; }
+ZT_ALWAYS_INLINE uint8_t packetCipher(const Buf &pkt,const unsigned int packetSize) noexcept { return (packetSize >= ZT_PROTO_PACKET_FLAGS_INDEX) ? ((pkt.unsafeData[ZT_PROTO_PACKET_FLAGS_INDEX] >> 3U) & 0x07U) : 0; }
 
 /**
  * @return 3-bit hops field embedded in packet flags field
@@ -1009,14 +1013,14 @@ ZT_ALWAYS_INLINE void salsa2012DeriveKey(const uint8_t *const in,uint8_t *const 
 	for(int i=0;i<18;++i)
 		out[i] = in[i] ^ packet.b[i];
 #else
-	*reinterpret_cast<uint64_t *>(out) = *reinterpret_cast<const uint64_t *>(in) ^ *reinterpret_cast<const uint64_t *>(packet.b);
-	*reinterpret_cast<uint64_t *>(out + 8) = *reinterpret_cast<const uint64_t *>(in + 8) ^ *reinterpret_cast<const uint64_t *>(packet.b + 8);
-	*reinterpret_cast<uint16_t *>(out + 16) = *reinterpret_cast<const uint16_t *>(in + 16) ^ *reinterpret_cast<const uint16_t *>(packet.b + 16);
+	*reinterpret_cast<uint64_t *>(out) = *reinterpret_cast<const uint64_t *>(in) ^ *reinterpret_cast<const uint64_t *>(packet.unsafeData);
+	*reinterpret_cast<uint64_t *>(out + 8) = *reinterpret_cast<const uint64_t *>(in + 8) ^ *reinterpret_cast<const uint64_t *>(packet.unsafeData + 8);
+	*reinterpret_cast<uint16_t *>(out + 16) = *reinterpret_cast<const uint16_t *>(in + 16) ^ *reinterpret_cast<const uint16_t *>(packet.unsafeData + 16);
 #endif
 
 	// Flags, but with hop count masked off. Hop count is altered by forwarding
 	// nodes and is the only field that is mutable by unauthenticated third parties.
-	out[18] = in[18] ^ (packet.b[18] & 0xf8U);
+	out[18] = in[18] ^ (packet.unsafeData[18] & 0xf8U);
 
 	// Raw packet size in bytes -- thus each packet size defines a new key space.
 	out[19] = in[19] ^ (uint8_t)packetSize;

@@ -16,6 +16,7 @@ set(core_headers
 	ECC384.hpp
 	Expect.hpp
 	FCV.hpp
+	H.hpp
 	Hashtable.hpp
 	Identity.hpp
 	InetAddress.hpp
