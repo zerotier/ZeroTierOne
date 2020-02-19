@@ -57,7 +57,7 @@ public:
 
 	ZT_ALWAYS_INLINE Endpoint() noexcept { memoryZero(this); }
 
-	ZT_ALWAYS_INLINE Endpoint(const InetAddress &sa)
+	explicit ZT_ALWAYS_INLINE Endpoint(const InetAddress &sa)
 	{
 		switch (sa.ss_family) {
 			case AF_INET:
@@ -88,7 +88,9 @@ public:
 
 	explicit ZT_ALWAYS_INLINE Endpoint(const char *url) :
 		_t(TYPE_URL)
-	{ Utils::scopy(_v.url,sizeof(_v.url),url); }
+	{
+		Utils::scopy(_v.url,sizeof(_v.url),url);
+	}
 
 	/**
 	 * @return InetAddress or NIL if not of this type

@@ -192,9 +192,9 @@ bool InetAddress::fromString(const char *ipSlashPort) noexcept
 		in->sin_family = AF_INET;
 		in->sin_port = Utils::hton((uint16_t)port);
 		return true;
-	} else {
-		return false;
 	}
+
+	return false;
 }
 
 InetAddress InetAddress::netmask() const noexcept
