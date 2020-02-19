@@ -81,8 +81,8 @@
  * --------------------------------------------------------------------------------------------------------------------
  */
 
-/**
- * Protocol version -- incremented only for major changes
+/*
+ * Protocol versions
  *
  * 1  - 0.2.0 ... 0.2.5
  * 2  - 0.3.0 ... 0.4.5
@@ -296,7 +296,6 @@ enum Verb
 
 	/**
 	 * Announcement of a node's existence and vitals:
-	 *   [... HMAC-384 starts here ...]
 	 *   <[1] protocol version>
 	 *   <[1] software major version>
 	 *   <[1] software minor version>
@@ -1060,7 +1059,7 @@ uint64_t getPacketId() noexcept;
  * @param key Key to use for encryption (not per-packet key)
  * @param cipherSuite Cipher suite to use for AEAD encryption or just MAC
  */
-void armor(Buf &pkt,unsigned int packetSize,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH],uint8_t cipherSuite) noexcept;
+void armor(Buf &pkt,int packetSize,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH],uint8_t cipherSuite) noexcept;
 
 /**
  * Attempt to compress packet payload
@@ -1074,7 +1073,7 @@ void armor(Buf &pkt,unsigned int packetSize,const uint8_t key[ZT_PEER_SECRET_KEY
  * @param packetSize Total size of packet in bytes (including headers)
  * @return New size of packet after compression or original size of compression wasn't helpful
  */
-unsigned int compress(SharedPtr<Buf> &pkt,unsigned int packetSize) noexcept;
+int compress(SharedPtr<Buf> &pkt,int packetSize) noexcept;
 
 } // namespace Protocol
 } // namespace ZeroTier

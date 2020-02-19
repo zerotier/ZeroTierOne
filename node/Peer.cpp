@@ -17,7 +17,6 @@
 #include "Peer.hpp"
 #include "Topology.hpp"
 #include "Node.hpp"
-#include "Network.hpp"
 #include "SelfAwareness.hpp"
 #include "InetAddress.hpp"
 #include "Protocol.hpp"

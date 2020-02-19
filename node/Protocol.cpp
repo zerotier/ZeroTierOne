@@ -81,7 +81,7 @@ uint64_t getPacketId() noexcept
 #endif
 }
 
-void armor(Buf &pkt,unsigned int packetSize,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH],uint8_t cipherSuite) noexcept
+void armor(Buf &pkt,int packetSize,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH],uint8_t cipherSuite) noexcept
 {
 	Protocol::Header &ph = pkt.as<Protocol::Header>();
 	ph.flags = (ph.flags & 0xc7U) | ((cipherSuite << 3U) & 0x38U); // flags: FFCCCHHH where CCC is cipher
@@ -123,25 +123,21 @@ void armor(Buf &pkt,unsigned int packetSize,const uint8_t key[ZT_PEER_SECRET_KEY
 	}
 }
 
-unsigned int compress(SharedPtr<Buf> &pkt,unsigned int packetSize) noexcept
+int compress(SharedPtr<Buf> &pkt,int packetSize) noexcept
 {
 	if (packetSize <= 128)
 		return packetSize;
 
-	SharedPtr<Buf> pkt2(Buf::get());
+	SharedPtr<Buf> pkt2(new Buf());
 	if (!pkt2) return packetSize;
 
-	const unsigned int uncompressedLen = packetSize - ZT_PROTO_PACKET_PAYLOAD_START;
-	const int compressedLen = LZ4_compress_fast(
-		reinterpret_cast<const char *>(pkt->b + ZT_PROTO_PACKET_PAYLOAD_START),
-		reinterpret_cast<char *>(pkt2->b + ZT_PROTO_PACKET_PAYLOAD_START),
-		(int)uncompressedLen,
-		ZT_BUF_MEM_SIZE - ZT_PROTO_PACKET_PAYLOAD_START);
-	if ((compressedLen > 0)&&(compressedLen < (int)uncompressedLen)) {
+	const int uncompressedLen = packetSize - ZT_PROTO_PACKET_PAYLOAD_START;
+	const int compressedLen = LZ4_compress_fast(reinterpret_cast<const char *>(pkt->b + ZT_PROTO_PACKET_PAYLOAD_START),reinterpret_cast<char *>(pkt2->b + ZT_PROTO_PACKET_PAYLOAD_START),uncompressedLen,ZT_BUF_MEM_SIZE - ZT_PROTO_PACKET_PAYLOAD_START);
+	if ((compressedLen > 0)&&(compressedLen < uncompressedLen)) {
 		memcpy(pkt2->b,pkt->b,ZT_PROTO_PACKET_PAYLOAD_START);
 		pkt.swap(pkt2);
 		pkt->as<Protocol::Header>().verb |= ZT_PROTO_VERB_FLAG_COMPRESSED;
-		return (unsigned int)compressedLen + ZT_PROTO_PACKET_PAYLOAD_START;
+		return compressedLen + ZT_PROTO_PACKET_PAYLOAD_START;
 	}
 
 	return packetSize;

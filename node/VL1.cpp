@@ -342,7 +342,9 @@ void VL1::onRemotePacket(void *const tPtr,const int64_t localSocket,const InetAd
 			return;
 		}
 
-		// Decompress packet payload if compressed.
+		// Decompress packet payload if compressed. For additional safety decompression is
+		// only performed on packets whose MACs have already been validated. (Only HELLO is
+		// sent without this, and HELLO doesn't benefit from compression.)
 		if ((ph->verb & ZT_PROTO_VERB_FLAG_COMPRESSED) != 0) {
 			if (!authenticated) {
 				RR->t->incomingPacketDropped(tPtr,0x390bcd0a,ph->packetId,0,identityFromPeerPtr(peer),path->address(),hops,verb,ZT_TRACE_PACKET_DROP_REASON_MALFORMED_PACKET);

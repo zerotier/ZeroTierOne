@@ -11,17 +11,16 @@
  */
 /****/
 
-#include <cstdlib>
-#include <cstring>
-
-#include <set>
-
 #include "Constants.hpp"
 #include "SelfAwareness.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "Topology.hpp"
 #include "Peer.hpp"
 #include "Trace.hpp"
+
+#include <cstdlib>
+#include <cstring>
+#include <set>
 
 // Entry timeout -- make it fairly long since this is just to prevent stale buildup
 #define ZT_SELFAWARENESS_ENTRY_TIMEOUT 300000
