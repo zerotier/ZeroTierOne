@@ -156,7 +156,7 @@ bool Identity::locallyValidate() const
 	return false;
 }
 
-void Identity::hashWithPrivate(uint8_t h[48]) const
+void Identity::hashWithPrivate(uint8_t h[ZT_IDENTITY_HASH_SIZE]) const
 {
 	if (_hasPrivate) {
 		switch (_type) {

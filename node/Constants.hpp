@@ -117,11 +117,6 @@
 #define ZT_PATH_ALIVE_TIMEOUT ((ZT_PATH_KEEPALIVE_PERIOD * 2) + 5000)
 
 /**
- * Timeout for path active-ness (measured from last receive)
- */
-#define ZT_PATH_ACTIVITY_TIMEOUT (ZT_PATH_KEEPALIVE_PERIOD + 5000)
-
-/**
  * Delay between full HELLO messages between peers
  */
 #define ZT_PEER_PING_PERIOD 60000

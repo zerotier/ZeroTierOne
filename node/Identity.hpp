@@ -137,7 +137,7 @@ public:
 	 *
 	 * @param h Buffer to store SHA384 hash
 	 */
-	void hashWithPrivate(uint8_t h[48]) const;
+	void hashWithPrivate(uint8_t h[ZT_IDENTITY_HASH_SIZE]) const;
 
 	/**
 	 * Sign a message with this identity (private key required)

@@ -224,7 +224,7 @@ void Topology::doPeriodicTasks(void *tPtr,const int64_t now)
 		uint64_t *k = nullptr;
 		SharedPtr<Path> *p = nullptr;
 		while (i.next(k,p)) {
-			if (p->references() <= 1)
+			if ((p->references() <= 1)&&(!(*p)->alive(now)))
 				_paths.erase(*k);
 		}
 	}

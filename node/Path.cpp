@@ -21,6 +21,7 @@ bool Path::send(const RuntimeEnvironment *RR,void *tPtr,const void *data,unsigne
 {
 	if (RR->node->putPacket(tPtr,_localSocket,_addr,data,len)) {
 		_lastOut = now;
+		_outMeter.log(now,len);
 		return true;
 	}
 	return false;

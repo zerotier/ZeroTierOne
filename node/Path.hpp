@@ -14,18 +14,19 @@
 #ifndef ZT_PATH_HPP
 #define ZT_PATH_HPP
 
+#include "Constants.hpp"
+#include "InetAddress.hpp"
+#include "SharedPtr.hpp"
+#include "Utils.hpp"
+#include "Mutex.hpp"
+#include "Meter.hpp"
+
 #include <cstdint>
 #include <cstring>
 #include <cstdlib>
 #include <stdexcept>
 #include <algorithm>
 #include <set>
-
-#include "Constants.hpp"
-#include "InetAddress.hpp"
-#include "SharedPtr.hpp"
-#include "Utils.hpp"
-#include "Mutex.hpp"
 
 namespace ZeroTier {
 
@@ -69,30 +70,33 @@ public:
 	/**
 	 * Explicitly update last sent time
 	 *
-	 * @param t Time of send
+	 * @param now Time of send
+	 * @param bytes Bytes sent
 	 */
-	ZT_ALWAYS_INLINE void sent(const int64_t t) noexcept { _lastOut = t; }
+	ZT_ALWAYS_INLINE void sent(const int64_t now,const unsigned int bytes) noexcept
+	{
+		_lastOut.store(now);
+		_outMeter.log(now,bytes);
+	}
 
 	/**
 	 * Called when a packet is received from this remote path, regardless of content
 	 *
-	 * @param t Time of receive
+	 * @param now Time of receive
+	 * @param bytes Bytes received
 	 */
-	ZT_ALWAYS_INLINE void received(const int64_t t) noexcept { _lastIn = t; }
+	ZT_ALWAYS_INLINE void received(const int64_t now,const unsigned int bytes) noexcept
+	{
+		_lastIn.store(now);
+		_inMeter.log(now,bytes);
+	}
 
 	/**
 	 * Check path aliveness
 	 *
 	 * @param now Current time
 	 */
-	ZT_ALWAYS_INLINE bool alive(const int64_t now) const noexcept { return ((now - _lastIn) < ZT_PATH_ALIVE_TIMEOUT); }
-
-	/**
-	 * Check if path is considered active
-	 *
-	 * @param now Current time
-	 */
-	ZT_ALWAYS_INLINE bool active(const int64_t now) const noexcept { return ((now - _lastIn) < ZT_PATH_ACTIVITY_TIMEOUT); }
+	ZT_ALWAYS_INLINE bool alive(const int64_t now) const noexcept { return ((now - _lastIn.load()) < ZT_PATH_ALIVE_TIMEOUT); }
 
 	/**
 	 * @return Physical address
@@ -107,18 +111,20 @@ public:
 	/**
 	 * @return Last time we received anything
 	 */
-	ZT_ALWAYS_INLINE int64_t lastIn() const noexcept { return _lastIn; }
+	ZT_ALWAYS_INLINE int64_t lastIn() const noexcept { return _lastIn.load(); }
 
 	/**
 	 * @return Last time we sent something
 	 */
-	ZT_ALWAYS_INLINE int64_t lastOut() const noexcept { return _lastOut; }
+	ZT_ALWAYS_INLINE int64_t lastOut() const noexcept { return _lastOut.load(); }
 
 private:
 	int64_t _localSocket;
-	int64_t _lastIn;
-	int64_t _lastOut;
+	std::atomic<int64_t> _lastIn;
+	std::atomic<int64_t> _lastOut;
 	InetAddress _addr;
+	Meter<> _inMeter;
+	Meter<> _outMeter;
 
 	// These fields belong to Defragmenter but are kept in Path for performance
 	// as it's much faster this way than having Defragmenter maintain another
