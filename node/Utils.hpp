@@ -25,7 +25,7 @@
 
 #include "Constants.hpp"
 
-#if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
+#ifdef ZT_ARCH_X64
 #include <emmintrin.h>
 #include <xmmintrin.h>
 #include <immintrin.h>
@@ -35,7 +35,7 @@ namespace ZeroTier {
 
 namespace Utils {
 
-#if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
+#ifdef ZT_ARCH_X64
 struct CPUIDRegisters
 {
 	uint32_t eax,ebx,ecx,edx;

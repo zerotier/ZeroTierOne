@@ -13,17 +13,24 @@
 
 #include "Buf.hpp"
 
+#ifdef __WINDOWS__
+#define sched_yield() Sleep(0)
+#endif
+
 namespace ZeroTier {
 
 static std::atomic<uintptr_t> s_pool(0);
+
+#define ZT_ATOMIC_PTR_LOCKED (~((uintptr_t)0))
 
 void *Buf::operator new(std::size_t sz)
 {
 	uintptr_t bb;
 	for (;;) {
-		bb = s_pool.exchange(~((uintptr_t)0));
-		if (bb != ~((uintptr_t)0))
+		bb = s_pool.exchange(ZT_ATOMIC_PTR_LOCKED);
+		if (bb != ZT_ATOMIC_PTR_LOCKED)
 			break;
+		sched_yield();
 	}
 
 	Buf *b;
@@ -46,9 +53,10 @@ void Buf::operator delete(void *ptr)
 	if (ptr) {
 		uintptr_t bb;
 		for (;;) {
-			bb = s_pool.exchange(~((uintptr_t)0));
-			if (bb != ~((uintptr_t)0))
+			bb = s_pool.exchange(ZT_ATOMIC_PTR_LOCKED);
+			if (bb != ZT_ATOMIC_PTR_LOCKED)
 				break;
+			sched_yield();
 		}
 
 		((Buf *)ptr)->__nextInPool = bb;
@@ -60,11 +68,12 @@ void Buf::freePool() noexcept
 {
 	uintptr_t bb;
 	for (;;) {
-		bb = s_pool.exchange(~((uintptr_t)0));
-		if (bb != ~((uintptr_t)0))
+		bb = s_pool.exchange(ZT_ATOMIC_PTR_LOCKED);
+		if (bb != ZT_ATOMIC_PTR_LOCKED)
 			break;
+		sched_yield();
 	}
-	s_pool.store((uintptr_t)0);
+	s_pool.store(0);
 
 	while (bb != 0) {
 		uintptr_t next = ((Buf *)bb)->__nextInPool;

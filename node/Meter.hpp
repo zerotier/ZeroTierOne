@@ -24,6 +24,13 @@ namespace ZeroTier {
 /**
  * Transfer rate and total transferred amount meter
  *
+ * This class is lock-free and thread-safe.
+ *
+ * This maintains a set of buckets numbered according to the current time
+ * modulo TUNIT. Each bucket is incremented within that time window. When
+ * the time moves on to a new bucket, its old contents are added to a
+ * total accumulator and a new counter for that bucket starts.
+ *
  * @tparam TUNIT Unit of time in milliseconds (default: 1000 for one second)
  * @tparam LSIZE Log size in units of time (default: 10 for 10s worth of data)
  */

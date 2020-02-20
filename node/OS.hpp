@@ -33,13 +33,12 @@
 #endif
 #endif
 
+#if defined(_WIN32) || defined(_WIN64)
 #ifdef _MSC_VER
 #pragma warning(disable : 4290)
 #pragma warning(disable : 4996)
 #pragma warning(disable : 4101)
 #endif
-
-#if defined(_WIN32) || defined(_WIN64)
 #ifndef __WINDOWS__
 #define __WINDOWS__
 #endif
@@ -81,20 +80,27 @@
 #define __BSD__
 #endif
 #include <sys/endian.h>
-#ifndef __BYTE_ORDER
+#if (!defined(__BYTE_ORDER)) && (defined(_BYTE_ORDER))
 #define __BYTE_ORDER _BYTE_ORDER
 #define __LITTLE_ENDIAN _LITTLE_ENDIAN
 #define __BIG_ENDIAN _BIG_ENDIAN
 #endif
 #endif
+
 #ifdef __NetBSD__
 #ifndef RTF_MULTICAST
 #define RTF_MULTICAST 0x20000000
 #endif
 #endif
 
-// Avoid unaligned type casts on all but x86/x64 architecture.
-#if (!(defined(__amd64__) || defined(__amd64) || defined(__x86_64__) || defined(__x86_64) || defined(_M_AMD64) || defined(_M_X64) || defined(i386) || defined(__i386) || defined(__i386__) || defined(__i486__) || defined(__i586__) || defined(__i686__) || defined(_M_IX86) || defined(__X86__) || defined(_X86_) || defined(__I86__) || defined(__INTEL__) || defined(__386)))
+#if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
+#define ZT_ARCH_X64
+#endif
+
+// As far as we know it's only generally safe to do unaligned type casts in all
+// cases on x86 and x64 architectures. Others such as ARM and MIPS will generate
+// a fault or exhibit undefined behavior that varies by vendor.
+#if (!(defined(ZT_ARCH_X64) || defined(i386) || defined(__i386) || defined(__i386__) || defined(__i486__) || defined(__i586__) || defined(__i686__) || defined(_M_IX86) || defined(__X86__) || defined(_X86_) || defined(__I86__) || defined(__INTEL__) || defined(__386)))
 #ifndef ZT_NO_UNALIGNED_ACCESS
 #define ZT_NO_UNALIGNED_ACCESS
 #endif
@@ -109,6 +115,10 @@
 #define __LITTLE_ENDIAN 1234
 #define __BYTE_ORDER 1234
 #endif
+
+// It would probably be safe to assume LE everywhere except on very specific architectures as there
+// are few BE chips remaining in the wild that are powerful enough to run this, but for now we'll
+// try to include endian.h and error out if it doesn't exist.
 #ifndef __BYTE_ORDER
 #include <endian.h>
 #endif
@@ -143,7 +153,10 @@
 #endif
 #endif
 #ifndef __CPP11__
-/* TODO: will need some kind of very basic atomic<> implemenation if we want to compile on pre-c++11 compilers */
+// TODO: we'll need to "polyfill" a subset of std::atomic for integers if we want to build on pre-C++11 compilers.
+// Beyond that defining nullptr, constexpr, and noexcept should allow us to still build on these. So far we've
+// avoided deeper C++11 features like lambdas in the core until we're 100% sure all the ancient targets are gone.
+#error need pre-c++11 std::atomic implementation
 #define nullptr (0)
 #define constexpr ZT_ALWAYS_INLINE
 #define noexcept throw()

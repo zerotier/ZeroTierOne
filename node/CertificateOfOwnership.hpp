@@ -40,7 +40,10 @@ namespace ZeroTier {
 class RuntimeEnvironment;
 
 /**
- * Certificate indicating ownership of a network identifier
+ * Certificate indicating ownership of a "thing" such as an IP address
+ *
+ * These are used in conjunction with the rules engine to make IP addresses and
+ * other identifiers un-spoofable.
  */
 class CertificateOfOwnership : public Credential
 {
@@ -96,15 +99,39 @@ public:
 		return this->_owns(THING_MAC_ADDRESS,tmp,6);
 	}
 
+	/**
+	 * Add an IP address to this certificate
+	 *
+	 * @param ip IPv4 or IPv6 address
+	 */
 	void addThing(const InetAddress &ip);
+
+	/**
+	 * Add an Ethernet MAC address
+	 *
+	 * ZeroTier MAC addresses are always un-spoofable. This could in theory be
+	 * used to make bridged MAC addresses un-spoofable as well, but it's not
+	 * currently implemented.
+	 *
+	 * @param mac 48-bit MAC address
+	 */
 	void addThing(const MAC &mac);
 
 	/**
+	 * Sign this certificate
+	 *
 	 * @param signer Signing identity, must have private key
 	 * @return True if signature was successful
 	 */
 	bool sign(const Identity &signer);
 
+	/**
+	 * Verify certificate signature
+	 *
+	 * @param RR Runtime environment
+	 * @param tPtr That pointer we pass around
+	 * @return Credential verification result: OK, bad signature, or identity needed
+	 */
 	ZT_ALWAYS_INLINE Credential::VerifyResult verify(const RuntimeEnvironment *RR,void *tPtr) const { return _verify(RR,tPtr,*this); }
 
 	static constexpr int marshalSizeMax() noexcept { return ZT_CERTIFICATEOFOWNERSHIP_MARSHAL_SIZE_MAX; }

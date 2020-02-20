@@ -63,7 +63,7 @@ public:
 		COMPLETE,
 
 		/**
-		 * This fragment duplicates another with the same fragment number for this message
+		 * We already have this fragment number or the message is complete
 		 */
 		ERR_DUPLICATE_FRAGMENT,
 

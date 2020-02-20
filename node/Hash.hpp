@@ -11,8 +11,8 @@
  */
 /****/
 
-#ifndef ZT_H_HPP
-#define ZT_H_HPP
+#ifndef ZT_HASH_HPP
+#define ZT_HASH_HPP
 
 #include "Constants.hpp"
 #include "TriviallyCopyable.hpp"
@@ -30,15 +30,15 @@ namespace ZeroTier {
  * @tparam BITS Bits in hash, must be a multiple of 64
  */
 template<unsigned int BITS>
-class H : public TriviallyCopyable
+class Hash : public TriviallyCopyable
 {
 public:
-	ZT_ALWAYS_INLINE H() noexcept {}
+	ZT_ALWAYS_INLINE Hash() noexcept {}
 
 	/**
 	 * @param h Hash value of size BITS / 8
 	 */
-	explicit ZT_ALWAYS_INLINE H(const void *h) noexcept { memcpy(_h,h,BITS / 8); }
+	explicit ZT_ALWAYS_INLINE Hash(const void *h) noexcept { memcpy(_h,h,BITS / 8); }
 
 	/**
 	 * @param h Hash value of size BITS / 8
@@ -70,12 +70,12 @@ public:
 		return false;
 	}
 
-	ZT_ALWAYS_INLINE bool operator==(const H &h) const noexcept { return memcmp(_h,h._h,BITS / 8) == 0; }
-	ZT_ALWAYS_INLINE bool operator!=(const H &h) const noexcept { return memcmp(_h,h._h,BITS / 8) != 0; }
-	ZT_ALWAYS_INLINE bool operator<(const H &h) const noexcept { return memcmp(_h,h._h,BITS / 8) < 0; }
-	ZT_ALWAYS_INLINE bool operator>(const H &h) const noexcept { return memcmp(_h,h._h,BITS / 8) > 0; }
-	ZT_ALWAYS_INLINE bool operator<=(const H &h) const noexcept { return memcmp(_h,h._h,BITS / 8) <= 0; }
-	ZT_ALWAYS_INLINE bool operator>=(const H &h) const noexcept { return memcmp(_h,h._h,BITS / 8) >= 0; }
+	ZT_ALWAYS_INLINE bool operator==(const Hash &h) const noexcept { return memcmp(_h,h._h,BITS / 8) == 0; }
+	ZT_ALWAYS_INLINE bool operator!=(const Hash &h) const noexcept { return memcmp(_h,h._h,BITS / 8) != 0; }
+	ZT_ALWAYS_INLINE bool operator<(const Hash &h) const noexcept { return memcmp(_h,h._h,BITS / 8) < 0; }
+	ZT_ALWAYS_INLINE bool operator>(const Hash &h) const noexcept { return memcmp(_h,h._h,BITS / 8) > 0; }
+	ZT_ALWAYS_INLINE bool operator<=(const Hash &h) const noexcept { return memcmp(_h,h._h,BITS / 8) <= 0; }
+	ZT_ALWAYS_INLINE bool operator>=(const Hash &h) const noexcept { return memcmp(_h,h._h,BITS / 8) >= 0; }
 
 private:
 	unsigned long _h[BITS / sizeof(unsigned long)];

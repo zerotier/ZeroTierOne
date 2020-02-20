@@ -24,7 +24,7 @@
 #include "SHA512.hpp"
 #include "ECC384.hpp"
 #include "TriviallyCopyable.hpp"
-#include "H.hpp"
+#include "Hash.hpp"
 
 #define ZT_IDENTITY_STRING_BUFFER_LENGTH 1024
 #define ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE (ZT_C25519_PUBLIC_KEY_LEN + ZT_ECC384_PUBLIC_KEY_SIZE)
@@ -128,7 +128,7 @@ public:
 	 *
 	 * @return 384-bit/48-byte hash
 	 */
-	ZT_ALWAYS_INLINE const H<384> &hash() const noexcept { return _hash; }
+	ZT_ALWAYS_INLINE const Hash<384> &hash() const noexcept { return _hash; }
 
 	/**
 	 * Compute a hash of this identity's public and private keys.
@@ -248,7 +248,7 @@ private:
 	void _computeHash();
 
 	Address _address;
-	H<384> _hash;
+	Hash<384> _hash;
 	ZT_PACKED_STRUCT(struct { // don't re-order these
 		uint8_t c25519[ZT_C25519_PRIVATE_KEY_LEN];
 		uint8_t p384[ZT_ECC384_PRIVATE_KEY_SIZE];

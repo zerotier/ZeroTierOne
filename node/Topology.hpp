@@ -30,7 +30,7 @@
 #include "Hashtable.hpp"
 #include "SharedPtr.hpp"
 #include "ScopedPtr.hpp"
-#include "H.hpp"
+#include "Hash.hpp"
 
 namespace ZeroTier {
 
@@ -94,7 +94,7 @@ public:
 	 * @param hash Identity hash
 	 * @return Peer or NULL if no peer is currently in memory for this hash (cache is not checked in this case)
 	 */
-	ZT_ALWAYS_INLINE SharedPtr<Peer> peerByHash(const H<384> &hash)
+	ZT_ALWAYS_INLINE SharedPtr<Peer> peerByHash(const Hash<384> &hash)
 	{
 		RWMutex::RLock _l(_peers_l);
 		const SharedPtr<Peer> *const ap = _peersByIdentityHash.get(hash);
@@ -365,7 +365,7 @@ private:
 
 	Hashtable< Address,SharedPtr<Peer> > _peers;
 	Hashtable< uint64_t,SharedPtr<Peer> > _peersByIncomingProbe;
-	Hashtable< H<384>,SharedPtr<Peer> > _peersByIdentityHash;
+	Hashtable< Hash<384>,SharedPtr<Peer> > _peersByIdentityHash;
 	Hashtable< uint64_t,SharedPtr<Path> > _paths;
 	std::set< Identity > _roots; // locked by _peers_l
 	std::vector< SharedPtr<Peer> > _rootPeers; // locked by _peers_l
