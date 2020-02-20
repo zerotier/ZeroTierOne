@@ -20,6 +20,7 @@
 #include "SelfAwareness.hpp"
 #include "InetAddress.hpp"
 #include "Protocol.hpp"
+#include "Endpoint.hpp"
 
 #include <set>
 
@@ -93,7 +94,7 @@ void Peer::received(
 			int64_t lastReceiveTimeMax = 0;
 			int lastReceiveTimeMaxAt = 0;
 			for(int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-				if ((_paths[i]->address().ss_family == path->address().ss_family) &&
+				if ((_paths[i]->address().family() == path->address().family()) &&
 				    (_paths[i]->localSocket() == path->localSocket()) && // TODO: should be localInterface when multipath is integrated
 				    (_paths[i]->address().ipsEqual2(path->address()))) {
 					// Replace older path if everything is the same except the port number.
@@ -117,14 +118,13 @@ void Peer::received(
 			if (_paths[lastReceiveTimeMaxAt])
 				old = _paths[lastReceiveTimeMaxAt]->address();
 			_paths[lastReceiveTimeMaxAt] = path;
-			_bootstrap = path->address();
+			_bootstrap = Endpoint(path->address());
 			_prioritizePaths(now);
 			RR->t->learnedNewPath(tPtr,0x582fabdd,packetId,_id,path->address(),old);
 		} else {
 			if (RR->node->shouldUsePathForZeroTierTraffic(tPtr,_id,path->localSocket(),path->address())) {
 				RR->t->tryingNewPath(tPtr,0xb7747ddd,_id,path->address(),path->address(),packetId,(uint8_t)verb,_id.address(),_id.hash().data(),ZT_TRACE_TRYING_NEW_PATH_REASON_PACKET_RECEIVED_FROM_UNKNOWN_PATH);
-				sendHELLO(tPtr,path->localSocket(),path->address(),now);
-				path->sent(now);
+				path->sent(now,sendHELLO(tPtr,path->localSocket(),path->address(),now));
 			}
 		}
 	}
@@ -134,7 +134,7 @@ path_check_done:
 		_lastAttemptedP2PInit = now;
 
 		InetAddress addr;
-		if ((_bootstrap.type() == Endpoint::INETADDR_V4)||(_bootstrap.type() == Endpoint::INETADDR_V6)) {
+		if ((_bootstrap.type() == Endpoint::TYPE_INETADDR_V4)||(_bootstrap.type() == Endpoint::TYPE_INETADDR_V6)) {
 			RR->t->tryingNewPath(tPtr,0x0a009444,_id,_bootstrap.inetAddr(),InetAddress::NIL,0,0,0,nullptr,ZT_TRACE_TRYING_NEW_PATH_REASON_BOOTSTRAP_ADDRESS);
 			sendHELLO(tPtr,-1,_bootstrap.inetAddr(),now);
 		} if (RR->node->externalPathLookup(tPtr,_id,-1,addr)) {
@@ -207,7 +207,7 @@ path_check_done:
 	}
 }
 
-void Peer::sendHELLO(void *tPtr,const int64_t localSocket,const InetAddress &atAddress,int64_t now)
+unsigned int Peer::sendHELLO(void *tPtr,const int64_t localSocket,const InetAddress &atAddress,int64_t now)
 {
 #if 0
 	Packet outp(_id.address(),RR->identity.address(),Packet::VERB_HELLO);
@@ -253,23 +253,21 @@ void Peer::ping(void *tPtr,int64_t now,const bool pingAllAddressTypes)
 
 	if (_alivePathCount > 0) {
 		for (unsigned int i = 0; i < _alivePathCount; ++i) {
-			sendHELLO(tPtr,_paths[i]->localSocket(),_paths[i]->address(),now);
-			_paths[i]->sent(now);
+			_paths[i]->sent(now,sendHELLO(tPtr,_paths[i]->localSocket(),_paths[i]->address(),now));
 			if (!pingAllAddressTypes)
 				return;
 		}
 		return;
 	}
 
-	if ((_bootstrap.type() == Endpoint::INETADDR_V4)||(_bootstrap.type() == Endpoint::INETADDR_V6))
+	if ((_bootstrap.type() == Endpoint::TYPE_INETADDR_V4)||(_bootstrap.type() == Endpoint::TYPE_INETADDR_V6))
 		sendHELLO(tPtr,-1,_bootstrap.inetAddr(),now);
 
 	SharedPtr<Peer> r(RR->topology->root());
 	if ((r)&&(r.ptr() != this)) {
 		SharedPtr<Path> rp(r->path(now));
 		if (rp) {
-			sendHELLO(tPtr,rp->localSocket(),rp->address(),now);
-			rp->sent(now);
+			rp->sent(now,sendHELLO(tPtr,rp->localSocket(),rp->address(),now));
 			return;
 		}
 	}
@@ -279,9 +277,8 @@ void Peer::resetWithinScope(void *tPtr,InetAddress::IpScope scope,int inetAddres
 {
 	RWMutex::RLock l(_lock);
 	for(unsigned int i=0; i < _alivePathCount; ++i) {
-		if ((_paths[i])&&((_paths[i]->address().ss_family == inetAddressFamily)&&(_paths[i]->address().ipScope() == scope))) {
-			sendHELLO(tPtr,_paths[i]->localSocket(),_paths[i]->address(),now);
-			_paths[i]->sent(now);
+		if ((_paths[i])&&((_paths[i]->address().family() == inetAddressFamily)&&(_paths[i]->address().ipScope() == scope))) {
+			_paths[i]->sent(now,sendHELLO(tPtr,_paths[i]->localSocket(),_paths[i]->address(),now));
 		}
 	}
 }

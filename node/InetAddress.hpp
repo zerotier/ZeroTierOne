@@ -29,14 +29,14 @@ namespace ZeroTier {
 #define ZT_INETADDRESS_STRING_SIZE_MAX 64
 
 /**
- * Extends sockaddr_storage with friendly C++ methods
+ * C++ class that overlaps in size with sockaddr_storage and adds convenience methods
  *
  * This is basically a "mixin" for sockaddr_storage. It adds methods and
  * operators, but does not modify the structure. This can be cast to/from
  * sockaddr_storage and used interchangeably. DO NOT change this by e.g.
  * adding non-static fields, since much code depends on this identity.
  */
-struct InetAddress : public sockaddr_storage,public TriviallyCopyable
+struct InetAddress : public TriviallyCopyable
 {
 private:
 	// Internal function to copy any sockaddr_X structure to this one even if it's smaller and unpadded.
@@ -162,6 +162,11 @@ public:
 	}
 
 	/**
+	 * @return Address family (ss_family in sockaddr_storage)
+	 */
+	ZT_ALWAYS_INLINE uint8_t family() const noexcept { return _data.ss_family; }
+
+	/**
 	 * @return IP scope classification (e.g. loopback, link-local, private, global)
 	 */
 	IpScope ipScope() const noexcept;
@@ -182,7 +187,7 @@ public:
 	 */
 	ZT_ALWAYS_INLINE void setPort(unsigned int port) noexcept
 	{
-		switch(ss_family) {
+		switch(_data.ss_family) {
 			case AF_INET:
 				reinterpret_cast<struct sockaddr_in *>(this)->sin_port = Utils::hton((uint16_t)port);
 				break;
@@ -218,7 +223,7 @@ public:
 	 */
 	ZT_ALWAYS_INLINE unsigned int port() const noexcept
 	{
-		switch(ss_family) {
+		switch(_data.ss_family) {
 			case AF_INET:  return Utils::ntoh((uint16_t)(reinterpret_cast<const struct sockaddr_in *>(this)->sin_port));
 			case AF_INET6: return Utils::ntoh((uint16_t)(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_port));
 			default:       return 0;
@@ -242,7 +247,7 @@ public:
 	ZT_ALWAYS_INLINE bool netmaskBitsValid() const noexcept
 	{
 		const unsigned int n = port();
-		switch(ss_family) {
+		switch(_data.ss_family) {
 			case AF_INET: return (n <= 32);
 			case AF_INET6: return (n <= 128);
 		}
@@ -302,19 +307,19 @@ public:
 	/**
 	 * @return True if this is an IPv4 address
 	 */
-	ZT_ALWAYS_INLINE bool isV4() const noexcept { return (ss_family == AF_INET); }
+	ZT_ALWAYS_INLINE bool isV4() const noexcept { return (family() == AF_INET); }
 
 	/**
 	 * @return True if this is an IPv6 address
 	 */
-	ZT_ALWAYS_INLINE bool isV6() const noexcept { return (ss_family == AF_INET6); }
+	ZT_ALWAYS_INLINE bool isV6() const noexcept { return (family() == AF_INET6); }
 
 	/**
 	 * @return pointer to raw address bytes or NULL if not available
 	 */
 	ZT_ALWAYS_INLINE const void *rawIpData() const noexcept
 	{
-		switch(ss_family) {
+		switch(_data.ss_family) {
 			case AF_INET: return (const void *)&(reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr);
 			case AF_INET6: return (const void *)(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr);
 			default: return nullptr;
@@ -327,13 +332,13 @@ public:
 	ZT_ALWAYS_INLINE InetAddress ipOnly() const noexcept
 	{
 		InetAddress r;
-		switch(ss_family) {
+		switch(_data.ss_family) {
 			case AF_INET:
-				r.ss_family = AF_INET;
+				reinterpret_cast<struct sockaddr_in *>(&r)->sin_family = AF_INET;
 				reinterpret_cast<struct sockaddr_in *>(&r)->sin_addr.s_addr = reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr;
 				break;
 			case AF_INET6:
-				r.ss_family = AF_INET6;
+				reinterpret_cast<struct sockaddr_in6 *>(&r)->sin6_family = AF_INET;
 				memcpy(reinterpret_cast<struct sockaddr_in6 *>(&r)->sin6_addr.s6_addr,reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr,16);
 				break;
 		}
@@ -348,10 +353,11 @@ public:
 	 */
 	ZT_ALWAYS_INLINE bool ipsEqual(const InetAddress &a) const noexcept
 	{
-		if (ss_family == a.ss_family) {
-			if (ss_family == AF_INET)
+		const uint8_t f = _data.ss_family;
+		if (f == a._data.ss_family) {
+			if (f == AF_INET)
 				return (reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr == reinterpret_cast<const struct sockaddr_in *>(&a)->sin_addr.s_addr);
-			if (ss_family == AF_INET6)
+			if (f == AF_INET6)
 				return (memcmp(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr,reinterpret_cast<const struct sockaddr_in6 *>(&a)->sin6_addr.s6_addr,16) == 0);
 			return (memcmp(this,&a,sizeof(InetAddress)) == 0);
 		}
@@ -368,10 +374,11 @@ public:
 	 */
 	ZT_ALWAYS_INLINE bool ipsEqual2(const InetAddress &a) const noexcept
 	{
-		if (ss_family == a.ss_family) {
-			if (ss_family == AF_INET)
+		const uint8_t f = _data.ss_family;
+		if (f == a._data.ss_family) {
+			if (f == AF_INET)
 				return (reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr == reinterpret_cast<const struct sockaddr_in *>(&a)->sin_addr.s_addr);
-			if (ss_family == AF_INET6)
+			if (f == AF_INET6)
 				return (memcmp(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr,reinterpret_cast<const struct sockaddr_in6 *>(&a)->sin6_addr.s6_addr,8) == 0);
 			return (memcmp(this,&a,sizeof(InetAddress)) == 0);
 		}
@@ -400,7 +407,7 @@ public:
 	/**
 	 * @return True if address family is non-zero
 	 */
-	explicit ZT_ALWAYS_INLINE operator bool() const noexcept { return (ss_family != 0); }
+	explicit ZT_ALWAYS_INLINE operator bool() const noexcept { return (family() != 0); }
 
 	static constexpr int marshalSizeMax() noexcept { return ZT_INETADDRESS_MARSHAL_SIZE_MAX; }
 	int marshal(uint8_t data[ZT_INETADDRESS_MARSHAL_SIZE_MAX]) const noexcept;
@@ -468,6 +475,9 @@ public:
 	 * Compute a private IPv6 "6plane" unicast address from network ID and ZeroTier address
 	 */
 	static InetAddress makeIpv66plane(uint64_t nwid,uint64_t zeroTierAddress) noexcept;
+
+private:
+	sockaddr_storage _data;
 };
 
 static ZT_ALWAYS_INLINE InetAddress *asInetAddress(sockaddr_in *p) noexcept { return reinterpret_cast<InetAddress *>(p); }

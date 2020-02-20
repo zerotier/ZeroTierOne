@@ -27,9 +27,8 @@ namespace ZeroTier {
  *
  * It also includes some static methods to do this conveniently.
  */
-class TriviallyCopyable
+ZT_PACKED_STRUCT(struct TriviallyCopyable
 {
-public:
 	/**
 	 * Be absolutely sure a TriviallyCopyable object is zeroed using Utils::burn()
 	 *
@@ -165,7 +164,7 @@ public:
 		TriviallyCopyable *const tmp = &dest;
 		memcpy(tmp,&src,sizeof(T));
 	}
-};
+});
 
 } // namespace ZeroTier
 

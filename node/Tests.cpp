@@ -205,6 +205,7 @@ extern "C" const char *ZTT_general()
 			ZT_T_ASSERT(ZT_PROTO_PACKET_ENCRYPTED_SECTION_START < ZT_PROTO_MIN_PACKET_LENGTH);
 			ZT_T_ASSERT(sizeof(Protocol::Header) == ZT_PROTO_MIN_PACKET_LENGTH);
 			ZT_T_ASSERT(sizeof(Protocol::FragmentHeader) == ZT_PROTO_MIN_FRAGMENT_LENGTH);
+			ZT_T_ASSERT(sizeof(sockaddr_storage) == sizeof(InetAddress));
 			ZT_T_PRINTF("OK" ZT_EOL_S);
 		}
 

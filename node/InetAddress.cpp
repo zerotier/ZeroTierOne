@@ -26,7 +26,7 @@ const InetAddress InetAddress::NIL;
 
 InetAddress::IpScope InetAddress::ipScope() const noexcept
 {
-	switch(ss_family) {
+	switch(_data.ss_family) {
 
 		case AF_INET: {
 			const uint32_t ip = Utils::ntoh((uint32_t)reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr);
@@ -100,11 +100,11 @@ void InetAddress::set(const void *ipBytes,unsigned int ipLen,unsigned int port) 
 	if (ipLen == 4) {
 		uint32_t ipb[1];
 		memcpy(ipb,ipBytes,4);
-		ss_family = AF_INET;
+		_data.ss_family = AF_INET;
 		reinterpret_cast<struct sockaddr_in *>(this)->sin_addr.s_addr = ipb[0];
 		reinterpret_cast<struct sockaddr_in *>(this)->sin_port = Utils::hton((uint16_t)port);
 	} else if (ipLen == 16) {
-		ss_family = AF_INET6;
+		_data.ss_family = AF_INET6;
 		memcpy(reinterpret_cast<struct sockaddr_in6 *>(this)->sin6_addr.s6_addr,ipBytes,16);
 		reinterpret_cast<struct sockaddr_in6 *>(this)->sin6_port = Utils::hton((uint16_t)port);
 	}
@@ -112,7 +112,7 @@ void InetAddress::set(const void *ipBytes,unsigned int ipLen,unsigned int port) 
 
 bool InetAddress::isDefaultRoute() const noexcept
 {
-	switch(ss_family) {
+	switch(_data.ss_family) {
 		case AF_INET:
 			return ( (reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr == 0) && (reinterpret_cast<const struct sockaddr_in *>(this)->sin_port == 0) );
 		case AF_INET6:
@@ -140,7 +140,7 @@ char *InetAddress::toString(char buf[ZT_INETADDRESS_STRING_SIZE_MAX]) const noex
 char *InetAddress::toIpString(char buf[ZT_INETADDRESS_STRING_SIZE_MAX]) const noexcept
 {
 	buf[0] = (char)0;
-	switch(ss_family) {
+	switch(_data.ss_family) {
 		case AF_INET: {
 #ifdef _WIN32
 			inet_ntop(AF_INET, (void*)&reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr, buf, INET_ADDRSTRLEN);
@@ -200,7 +200,7 @@ bool InetAddress::fromString(const char *ipSlashPort) noexcept
 InetAddress InetAddress::netmask() const noexcept
 {
 	InetAddress r(*this);
-	switch(r.ss_family) {
+	switch(r._data.ss_family) {
 		case AF_INET:
 			reinterpret_cast<struct sockaddr_in *>(&r)->sin_addr.s_addr = Utils::hton((uint32_t)(0xffffffffU << (32 - netmaskBits())));
 			break;
@@ -222,7 +222,7 @@ InetAddress InetAddress::netmask() const noexcept
 
 InetAddress InetAddress::broadcast() const noexcept
 {
-	if (ss_family == AF_INET) {
+	if (_data.ss_family == AF_INET) {
 		InetAddress r(*this);
 		reinterpret_cast<struct sockaddr_in *>(&r)->sin_addr.s_addr |= Utils::hton((uint32_t)(0xffffffffU >> netmaskBits()));
 		return r;
@@ -233,7 +233,7 @@ InetAddress InetAddress::broadcast() const noexcept
 InetAddress InetAddress::network() const noexcept
 {
 	InetAddress r(*this);
-	switch(r.ss_family) {
+	switch(r._data.ss_family) {
 		case AF_INET:
 			reinterpret_cast<struct sockaddr_in *>(&r)->sin_addr.s_addr &= Utils::hton((uint32_t)(0xffffffffU << (32 - netmaskBits())));
 			break;
@@ -251,8 +251,8 @@ InetAddress InetAddress::network() const noexcept
 
 bool InetAddress::isEqualPrefix(const InetAddress &addr) const noexcept
 {
-	if (addr.ss_family == ss_family) {
-		switch(ss_family) {
+	if (addr._data.ss_family == _data.ss_family) {
+		switch(_data.ss_family) {
 			case AF_INET6: {
 				const InetAddress mask(netmask());
 				InetAddress addr_mask(addr.netmask());
@@ -273,8 +273,8 @@ bool InetAddress::isEqualPrefix(const InetAddress &addr) const noexcept
 
 bool InetAddress::containsAddress(const InetAddress &addr) const noexcept
 {
-	if (addr.ss_family == ss_family) {
-		switch(ss_family) {
+	if (addr._data.ss_family == _data.ss_family) {
+		switch(_data.ss_family) {
 			case AF_INET: {
 				const unsigned int bits = netmaskBits();
 				if (bits == 0)
@@ -299,9 +299,9 @@ bool InetAddress::containsAddress(const InetAddress &addr) const noexcept
 
 unsigned long InetAddress::hashCode() const noexcept
 {
-	if (ss_family == AF_INET) {
+	if (_data.ss_family == AF_INET) {
 		return ((unsigned long)reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr + (unsigned long)reinterpret_cast<const struct sockaddr_in *>(this)->sin_port);
-	} else if (ss_family == AF_INET6) {
+	} else if (_data.ss_family == AF_INET6) {
 		unsigned long tmp = reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_port;
 		const uint8_t *a = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr);
 		for(long i=0;i<16;++i)
@@ -319,7 +319,7 @@ unsigned long InetAddress::hashCode() const noexcept
 void InetAddress::forTrace(ZT_TraceEventPathAddress &ta) const noexcept
 {
 	uint32_t tmp;
-	switch(ss_family) {
+	switch(_data.ss_family) {
 		default:
 			memset(&ta,0,sizeof(ZT_TraceEventPathAddress));
 			break;
@@ -344,7 +344,7 @@ void InetAddress::forTrace(ZT_TraceEventPathAddress &ta) const noexcept
 
 bool InetAddress::isNetwork() const noexcept
 {
-	switch(ss_family) {
+	switch(_data.ss_family) {
 		case AF_INET: {
 			unsigned int bits = netmaskBits();
 			if (bits <= 0)
@@ -377,7 +377,7 @@ bool InetAddress::isNetwork() const noexcept
 int InetAddress::marshal(uint8_t data[ZT_INETADDRESS_MARSHAL_SIZE_MAX]) const noexcept
 {
 	unsigned int port;
-	switch(ss_family) {
+	switch(_data.ss_family) {
 		case AF_INET:
 			port = Utils::ntoh((uint16_t)reinterpret_cast<const sockaddr_in *>(this)->sin_port);
 			data[0] = 4;
@@ -438,8 +438,8 @@ int InetAddress::unmarshal(const uint8_t *restrict data,const int len) noexcept
 
 bool InetAddress::operator==(const InetAddress &a) const noexcept
 {
-	if (ss_family == a.ss_family) {
-		switch(ss_family) {
+	if (_data.ss_family == a._data.ss_family) {
+		switch(_data.ss_family) {
 			case AF_INET:
 				return (
 					(reinterpret_cast<const struct sockaddr_in *>(this)->sin_port == reinterpret_cast<const struct sockaddr_in *>(&a)->sin_port)&&
@@ -461,10 +461,10 @@ bool InetAddress::operator==(const InetAddress &a) const noexcept
 
 bool InetAddress::operator<(const InetAddress &a) const noexcept
 {
-	if (ss_family < a.ss_family)
+	if (_data.ss_family < a._data.ss_family)
 		return true;
-	else if (ss_family == a.ss_family) {
-		switch(ss_family) {
+	else if (_data.ss_family == a._data.ss_family) {
+		switch(_data.ss_family) {
 			case AF_INET:
 				if (reinterpret_cast<const struct sockaddr_in *>(this)->sin_port < reinterpret_cast<const struct sockaddr_in *>(&a)->sin_port)
 					return true;

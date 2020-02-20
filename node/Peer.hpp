@@ -121,8 +121,9 @@ public:
 	 * @param localSocket Local source socket
 	 * @param atAddress Destination address
 	 * @param now Current time
+	 * @return Number of bytes sent
 	 */
-	void sendHELLO(void *tPtr,int64_t localSocket,const InetAddress &atAddress,int64_t now);
+	unsigned int sendHELLO(void *tPtr,int64_t localSocket,const InetAddress &atAddress,int64_t now);
 
 	/**
 	 * Send a NOP message to e.g. probe a new link
