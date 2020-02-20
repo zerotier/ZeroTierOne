@@ -23,11 +23,9 @@
 namespace ZeroTier {
 
 /**
- * This is a class that others can inherit from to tag themselves as safe to abuse in C-like ways with memcpy, etc.
+ * Classes inheriting from this base class are safe to abuse in C-like ways: memcpy, memset, etc.
  *
- * Later versions of C++ have a built-in auto-detected notion like this, but
- * this is more explicit and its use will make audits for memory safety
- * a lot easier.
+ * It also includes some static methods to do this conveniently.
  */
 class TriviallyCopyable
 {

@@ -17,10 +17,15 @@
 #define sched_yield() Sleep(0)
 #endif
 
+// Sanity limit on maximum buffer pool size
+#define ZT_BUF_MAX_POOL_SIZE 1024
+
 namespace ZeroTier {
 
 static std::atomic<uintptr_t> s_pool(0);
+static std::atomic<long> s_allocated(0);
 
+// uintptr_max can never be a valid pointer, so use it to indicate that s_pool is locked (very short duration spinlock)
 #define ZT_ATOMIC_PTR_LOCKED (~((uintptr_t)0))
 
 void *Buf::operator new(std::size_t sz)
@@ -35,13 +40,14 @@ void *Buf::operator new(std::size_t sz)
 
 	Buf *b;
 	if (bb) {
+		s_pool.store(((Buf *)bb)->__nextInPool);
 		b = (Buf *)bb;
-		s_pool.store(b->__nextInPool);
 	} else {
 		s_pool.store(0);
 		b = (Buf *)malloc(sz);
 		if (!b)
 			throw std::bad_alloc();
+		++s_allocated;
 	}
 
 	b->__refCount.store(0);
@@ -51,16 +57,21 @@ void *Buf::operator new(std::size_t sz)
 void Buf::operator delete(void *ptr)
 {
 	if (ptr) {
-		uintptr_t bb;
-		for (;;) {
-			bb = s_pool.exchange(ZT_ATOMIC_PTR_LOCKED);
-			if (bb != ZT_ATOMIC_PTR_LOCKED)
-				break;
-			sched_yield();
-		}
+		if (s_allocated.load() > ZT_BUF_MAX_POOL_SIZE) {
+			--s_allocated;
+			free(ptr);
+		} else {
+			uintptr_t bb;
+			for (;;) {
+				bb = s_pool.exchange(ZT_ATOMIC_PTR_LOCKED);
+				if (bb != ZT_ATOMIC_PTR_LOCKED)
+					break;
+				sched_yield();
+			}
 
-		((Buf *)ptr)->__nextInPool = bb;
-		s_pool.store((uintptr_t)ptr);
+			((Buf *)ptr)->__nextInPool.store(bb);
+			s_pool.store((uintptr_t)ptr);
+		}
 	}
 }
 
@@ -73,13 +84,19 @@ void Buf::freePool() noexcept
 			break;
 		sched_yield();
 	}
+	s_allocated.store(0);
 	s_pool.store(0);
 
 	while (bb != 0) {
-		uintptr_t next = ((Buf *)bb)->__nextInPool;
+		const uintptr_t next = ((Buf *)bb)->__nextInPool;
 		free((void *)bb);
 		bb = next;
 	}
+}
+
+long Buf::poolAllocated() noexcept
+{
+	return s_allocated.load();
 }
 
 } // namespace ZeroTier

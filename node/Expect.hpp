@@ -37,7 +37,7 @@
  * Making this a power of two improves efficiency a little by allowing bit
  * shift division.
  */
-#define ZT_EXPECT_TTL 4096
+#define ZT_EXPECT_TTL 4096LL
 
 namespace ZeroTier {
 
@@ -57,7 +57,7 @@ public:
 	 */
 	ZT_ALWAYS_INLINE void sending(const uint64_t packetId,const int64_t now) noexcept
 	{
-		_packetIdSent[Utils::hash64(packetId ^ _salt) % ZT_EXPECT_BUCKETS] = (int32_t)(now / ZT_EXPECT_TTL);
+		_packetIdSent[Utils::hash64(packetId ^ _salt) % ZT_EXPECT_BUCKETS].store((int32_t)(now / ZT_EXPECT_TTL));
 	}
 
 	/**
@@ -69,12 +69,14 @@ public:
 	 */
 	ZT_ALWAYS_INLINE bool expecting(const uint64_t inRePacketId,const int64_t now) const noexcept
 	{
-		return ((((int32_t)(now / ZT_EXPECT_TTL)) - _packetIdSent[Utils::hash64(inRePacketId ^ _salt) % ZT_EXPECT_BUCKETS]) <= 1);
+		return (((now / ZT_EXPECT_TTL) - (int64_t)_packetIdSent[Utils::hash64(inRePacketId ^ _salt) % ZT_EXPECT_BUCKETS].load()) <= 1);
 	}
 
 private:
-	// This is a static per-object salt that's XORed and mixed with the packet ID
+	// This is a static per-runtime salt that's XORed and mixed with the packet ID
 	// to make it difficult for a third party to predict expected-reply buckets.
+	// Such prediction would not be catastrophic but it's easy and good to harden
+	// against it.
 	const uint64_t _salt;
 
 	// Each bucket contains a timestamp in units of the expect duration.

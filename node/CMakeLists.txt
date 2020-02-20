@@ -41,6 +41,7 @@ set(core_headers
 	SHA512.hpp
 	SharedPtr.hpp
 	Tag.hpp
+	Tests.h
 	Topology.hpp
 	Trace.hpp
 	TriviallyCopyable.hpp
@@ -77,6 +78,7 @@ set(core_src
 	SelfAwareness.cpp
 	SHA512.cpp
 	Tag.cpp
+	Tests.cpp
 	Topology.cpp
 	Trace.cpp
 	Utils.cpp

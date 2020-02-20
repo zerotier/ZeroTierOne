@@ -205,6 +205,8 @@ public:
 	 */
 	explicit ZT_ALWAYS_INLINE operator bool() const noexcept { return (_address); }
 
+	ZT_ALWAYS_INLINE unsigned long hashCode() const noexcept { return _hash.hashCode(); }
+
 	ZT_ALWAYS_INLINE bool operator==(const Identity &id) const noexcept
 	{
 		if ((_address == id._address)&&(_type == id._type)) {
@@ -237,8 +239,6 @@ public:
 	ZT_ALWAYS_INLINE bool operator>(const Identity &id) const noexcept { return (id < *this); }
 	ZT_ALWAYS_INLINE bool operator<=(const Identity &id) const noexcept { return !(id < *this); }
 	ZT_ALWAYS_INLINE bool operator>=(const Identity &id) const noexcept { return !(*this < id); }
-
-	ZT_ALWAYS_INLINE unsigned long hashCode() const noexcept { return ((unsigned long)_address.toInt() + (unsigned long)_pub.c25519[0] + (unsigned long)_pub.c25519[1] + (unsigned long)_pub.c25519[2]); }
 
 	static constexpr int marshalSizeMax() noexcept { return ZT_IDENTITY_MARSHAL_SIZE_MAX; }
 	int marshal(uint8_t data[ZT_IDENTITY_MARSHAL_SIZE_MAX],bool includePrivate = false) const noexcept;

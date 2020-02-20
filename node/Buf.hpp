@@ -96,6 +96,11 @@ public:
 	static void freePool() noexcept;
 
 	/**
+	 * @return Number of Buf objects currently allocated via pool mechanism
+	 */
+	static long poolAllocated() noexcept;
+
+	/**
 	 * Slice is almost exactly like the built-in slice data structure in Go
 	 */
 	struct Slice : TriviallyCopyable

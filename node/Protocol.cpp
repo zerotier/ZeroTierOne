@@ -16,51 +16,9 @@
 #include "Utils.hpp"
 
 #include <cstdlib>
-#include <stdexcept>
-
-#if defined(__GCC__) && (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
-#define ZT_PACKET_USE_ATOMIC_INTRINSICS
-#endif
-#ifndef ZT_PACKET_USE_ATOMIC_INTRINSICS
-#include <atomic>
-#endif
 
 namespace ZeroTier {
 namespace Protocol {
-
-namespace {
-
-unsigned long long _initPacketID()
-{
-	unsigned long long tmp = 0;
-	Utils::getSecureRandom(&tmp,sizeof(tmp));
-	tmp >>= 31U;
-	tmp |= (((uint64_t)time(nullptr)) & 0xffffffffULL) << 33U;
-	return tmp;
-}
-#ifdef ZT_PACKET_USE_ATOMIC_INTRINSICS
-unsigned long long _packetIdCtr = _initPacketID();
-#else
-static std::atomic<unsigned long long> _packetIdCtr(_initPacketID());
-#endif
-
-uintptr_t _checkSizes()
-{
-	// These are compiled time checked assertions that make sure our platform/compiler is sane
-	// and that packed structures are working properly.
-	if (ZT_PROTO_MAX_PACKET_LENGTH > ZT_BUF_MEM_SIZE)
-		throw std::runtime_error("ZT_PROTO_MAX_PACKET_LENGTH > ZT_BUF_MEM_SIZE");
-	if (sizeof(Header) != ZT_PROTO_MIN_PACKET_LENGTH)
-		throw std::runtime_error("sizeof(Header) != ZT_PROTO_MIN_PACKET_LENGTH");
-	if (sizeof(FragmentHeader) != ZT_PROTO_MIN_FRAGMENT_LENGTH)
-		throw std::runtime_error("sizeof(FragmentHeader) != ZT_PROTO_MIN_FRAGMENT_LENGTH");
-	return (uintptr_t)Utils::getSecureRandomU64(); // also prevents compiler from optimizing out
-}
-
-} // anonymous namespace
-
-// Make compiler compile and "run" _checkSizes()
-volatile uintptr_t _checkSizesIMeanIt = _checkSizes();
 
 uint64_t createProbe(const Identity &sender,const Identity &recipient,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH]) noexcept
 {
@@ -74,11 +32,8 @@ uint64_t createProbe(const Identity &sender,const Identity &recipient,const uint
 
 uint64_t getPacketId() noexcept
 {
-#ifdef ZT_PACKET_USE_ATOMIC_INTRINSICS
-	return __sync_add_and_fetch(&_packetIdCtr,1ULL);
-#else
-	return ++_packetIdCtr;
-#endif
+	static std::atomic<uint64_t> s_packetIdCtr(Utils::getSecureRandomU64());
+	return ++s_packetIdCtr;
 }
 
 void armor(Buf &pkt,int packetSize,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH],uint8_t cipherSuite) noexcept
