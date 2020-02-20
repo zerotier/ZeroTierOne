@@ -14,22 +14,10 @@
 #ifndef ZT_UTILS_HPP
 #define ZT_UTILS_HPP
 
-#include <cstdio>
-#include <cstdlib>
-#include <cstdint>
-#include <cstring>
-#include <ctime>
-#include <stdexcept>
-#include <vector>
-#include <map>
-
 #include "Constants.hpp"
 
-#ifdef ZT_ARCH_X64
-#include <emmintrin.h>
-#include <xmmintrin.h>
-#include <immintrin.h>
-#endif
+#include <cstdlib>
+#include <cstring>
 
 namespace ZeroTier {
 
