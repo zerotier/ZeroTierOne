@@ -36,13 +36,26 @@
 #define __GNUC__
 #endif
 
-#if (defined(__GCC__) || defined(__GNUC__) || defined(__clang)) && (defined(__SIZEOF_INT128__) || defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64) || defined(__aarch64__))
+#if defined(__SIZEOF_INT128__) || ((defined(__GCC__) || defined(__GNUC__) || defined(__clang)) && (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64) || defined(__aarch64__)))
 #if defined(__SIZEOF_INT128__)
-#define ZT_HAVE_UINT128
+#define ZT_HAVE_UINT128 1
 typedef unsigned __int128 uint128_t;
 #else
-#define ZT_HAVE_UINT128
+#define ZT_HAVE_UINT128 1
 typedef unsigned uint128_t __attribute__((mode(TI)));
+#endif
+#endif
+
+#if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
+#define ZT_ARCH_X64 1
+#endif
+
+// As far as we know it's only generally safe to do unaligned type casts in all
+// cases on x86 and x64 architectures. Others such as ARM and MIPS will generate
+// a fault or exhibit undefined behavior that varies by vendor.
+#if (!(defined(ZT_ARCH_X64) || defined(i386) || defined(__i386) || defined(__i386__) || defined(__i486__) || defined(__i586__) || defined(__i686__) || defined(_M_IX86) || defined(__X86__) || defined(_X86_) || defined(__I86__) || defined(__INTEL__) || defined(__386)))
+#ifndef ZT_NO_UNALIGNED_ACCESS
+#define ZT_NO_UNALIGNED_ACCESS 1
 #endif
 #endif
 
@@ -53,7 +66,7 @@ typedef unsigned uint128_t __attribute__((mode(TI)));
 #pragma warning(disable : 4101)
 #endif
 #ifndef __WINDOWS__
-#define __WINDOWS__
+#define __WINDOWS__ 1
 #endif
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -66,10 +79,10 @@ typedef unsigned uint128_t __attribute__((mode(TI)));
 
 #if defined(__linux__) || defined(linux) || defined(__LINUX__) || defined(__linux)
 #ifndef __LINUX__
-#define __LINUX__
+#define __LINUX__ 1
 #endif
 #ifndef __UNIX_LIKE__
-#define __UNIX_LIKE__
+#define __UNIX_LIKE__ 1
 #endif
 #include <endian.h>
 #endif
@@ -77,63 +90,43 @@ typedef unsigned uint128_t __attribute__((mode(TI)));
 #ifdef __APPLE__
 #include <TargetConditionals.h>
 #ifndef __UNIX_LIKE__
-#define __UNIX_LIKE__
+#define __UNIX_LIKE__ 1
 #endif
 #ifndef __BSD__
-#define __BSD__
+#define __BSD__ 1
 #endif
 #include <machine/endian.h>
+#ifndef __BYTE_ORDER
+#define __BYTE_ORDER __DARWIN_BYTE_ORDER
+#define __BIG_ENDIAN __DARWIN_BIG_ENDIAN
+#define __LITTLE_ENDIAN __DARWIN_LITTLE_ENDIAN
+#endif
 #endif
 
 #if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
 #ifndef __UNIX_LIKE__
-#define __UNIX_LIKE__
+#define __UNIX_LIKE__ 1
 #endif
 #ifndef __BSD__
-#define __BSD__
+#define __BSD__ 1
 #endif
 #include <sys/endian.h>
-#if (!defined(__BYTE_ORDER)) && (defined(_BYTE_ORDER))
-#define __BYTE_ORDER _BYTE_ORDER
-#define __LITTLE_ENDIAN _LITTLE_ENDIAN
-#define __BIG_ENDIAN _BIG_ENDIAN
-#endif
-#endif
-
-#ifdef __NetBSD__
 #ifndef RTF_MULTICAST
 #define RTF_MULTICAST 0x20000000
 #endif
-#endif
-
-#if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
-#define ZT_ARCH_X64
-#endif
-
-// As far as we know it's only generally safe to do unaligned type casts in all
-// cases on x86 and x64 architectures. Others such as ARM and MIPS will generate
-// a fault or exhibit undefined behavior that varies by vendor.
-#if (!(defined(ZT_ARCH_X64) || defined(i386) || defined(__i386) || defined(__i386__) || defined(__i486__) || defined(__i586__) || defined(__i686__) || defined(_M_IX86) || defined(__X86__) || defined(_X86_) || defined(__I86__) || defined(__INTEL__) || defined(__386)))
-#ifndef ZT_NO_UNALIGNED_ACCESS
-#define ZT_NO_UNALIGNED_ACCESS
-#endif
-#endif
-
-// Assume little endian if not defined on Mac and Windows as these don't run on any BE architectures.
-#if (defined(__APPLE__) || defined(__WINDOWS__)) && (!defined(__BYTE_ORDER))
-#undef __BYTE_ORDER
-#undef __LITTLE_ENDIAN
-#undef __BIG_ENDIAN
-#define __BIG_ENDIAN 4321
-#define __LITTLE_ENDIAN 1234
-#define __BYTE_ORDER 1234
 #endif
 
 // It would probably be safe to assume LE everywhere except on very specific architectures as there
 // are few BE chips remaining in the wild that are powerful enough to run this, but for now we'll
 // try to include endian.h and error out if it doesn't exist.
 #ifndef __BYTE_ORDER
+#ifdef _BYTE_ORDER
+#define __BYTE_ORDER _BYTE_ORDER
+#define __LITTLE_ENDIAN _LITTLE_ENDIAN
+#define __BIG_ENDIAN _BIG_ENDIAN
+#else
 #include <endian.h>
+#endif
 #endif
 
 #if (defined(__GNUC__) && (__GNUC__ >= 3)) || (defined(__INTEL_COMPILER) && (__INTEL_COMPILER >= 800)) || defined(__clang__)
