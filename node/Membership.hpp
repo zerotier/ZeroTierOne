@@ -167,9 +167,6 @@ private:
 		}
 	}
 
-	// Last time we pushed MULTICAST_LIKE(s)
-	int64_t _lastUpdatedMulticast;
-
 	// Revocation threshold for COM or 0 if none
 	int64_t _comRevocationThreshold;
 

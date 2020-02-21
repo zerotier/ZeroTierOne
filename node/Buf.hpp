@@ -404,7 +404,7 @@ public:
 	 */
 	ZT_ALWAYS_INLINE const uint8_t *rBnc(int &ii,unsigned int len) const noexcept
 	{
-		const uint8_t *const b = b + ii;
+		const uint8_t *const b = unsafeData + ii;
 		return ((ii += (int)len) <= ZT_BUF_MEM_SIZE) ? b : nullptr;
 	}
 

@@ -7,13 +7,16 @@ else()
 	cmake_policy(VERSION 3.15)
 endif()
 
+set(CMAKE_CXX_STANDARD 11)
+set(default_build_type "Release")
+
 if(WIN32)
 	set(CMAKE_SYSTEM_VERSION "7" CACHE STRING INTERNAL FORCE)
 endif(WIN32)
 set(CMAKE_OSX_DEPLOYMENT_TARGET "10.9" CACHE STRING "Minimum OS X Deployment Version")
 
-set(ZEROTIER_ONE_VERSION_MAJOR 2 CACHE INTERNAL "")
-set(ZEROTIER_ONE_VERSION_MINOR 0 CACHE INTERNAL "")
+set(ZEROTIER_ONE_VERSION_MAJOR 1 CACHE INTERNAL "")
+set(ZEROTIER_ONE_VERSION_MINOR 9 CACHE INTERNAL "")
 set(ZEROTIER_ONE_VERSION_REVISION 0 CACHE INTERNAL "")
 set(ZEROTIER_ONE_VERSION_BUILD 0 CACHE INTERNAL "")
 
@@ -21,11 +24,6 @@ configure_file(
 	${CMAKE_SOURCE_DIR}/version.h.in
 	${CMAKE_BINARY_DIR}/version.h
 )
-
-set(default_build_type "Release")
-#if(EXISTS "${CMAKE_SOURCE_DIR}/.git")
-#	set(default_build_type "Debug")
-#endif()
 
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 	message(STATUS "Setting build type to '${default_build_type}' as none was specified.")
@@ -54,7 +52,6 @@ if(WIN32)
 	add_definitions(-DNOMINMAX)
 else(WIN32)
 	if(APPLE)
-
 		message("++ Setting MacOS Compiler Flags ${CMAKE_BUILD_TYPE}")
 		add_compile_options(
 			-Wall
@@ -74,9 +71,7 @@ else(WIN32)
 			-mmacosx-version-min=10.9
 			$<$<CONFIG:RELEASE>:-flto>
 		)
-
 	else(APPLE)
-
 		message("++ Setting Linux/BSD/Posix Compiler Flags (${CMAKE_BUILD_TYPE})")
 		add_compile_options(
 			-Wall
@@ -90,7 +85,6 @@ else(WIN32)
 			$<$<CONFIG:RELWITHDEBINFO>:-fPIE>
 			$<$<CONFIG:RELWITHDEBINFO>:-g>
 		)
-
 	endif(APPLE)
 endif(WIN32)
 
@@ -103,19 +97,7 @@ if (
 	CMAKE_SYSTEM_PROCESSOR MATCHES "i686"
 )
 	message("++ Adding SSE and AES-NI flags for processor ${CMAKE_SYSTEM_PROCESSOR}")
-	add_compile_options(
-		-maes
-		-mrdrnd
-		-mpclmul
-		-msse
-		-msse2
-		-msse3
-		-msse4.1
-	)
-endif()
-
-if(ZT_TRACE)
-	add_definitions(-DZT_TRACE)
+	add_compile_options(-maes -mrdrnd -mpclmul -msse -msse2)
 endif()
 
 add_subdirectory(node)

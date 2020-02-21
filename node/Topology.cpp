@@ -34,9 +34,8 @@ struct _RootSortComparisonOperator
 	const int64_t _now;
 };
 
-Topology::Topology(const RuntimeEnvironment *renv,const Identity &myId,void *tPtr) :
+Topology::Topology(const RuntimeEnvironment *renv,void *tPtr) :
 	RR(renv),
-	_myIdentity(myId),
 	_numConfiguredPhysicalPaths(0),
 	_peers(256),
 	_peersByIncomingProbe(256),
@@ -147,7 +146,7 @@ void Topology::setPhysicalPathConfiguration(const struct sockaddr_storage *pathN
 
 void Topology::addRoot(void *tPtr,const Identity &id,const InetAddress &bootstrap)
 {
-	if (id == _myIdentity) return; // sanity check
+	if (id == RR->identity) return; // sanity check
 	RWMutex::Lock l1(_peers_l);
 	std::pair< std::set<Identity>::iterator,bool > ir(_roots.insert(id));
 	if (ir.second) {

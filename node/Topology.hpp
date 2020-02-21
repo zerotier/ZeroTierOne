@@ -42,7 +42,7 @@ class RuntimeEnvironment;
 class Topology
 {
 public:
-	Topology(const RuntimeEnvironment *renv,const Identity &myId,void *tPtr);
+	Topology(const RuntimeEnvironment *renv,void *tPtr);
 	~Topology();
 
 	/**
@@ -355,7 +355,6 @@ private:
 	}
 
 	const RuntimeEnvironment *const RR;
-	const Identity _myIdentity;
 
 	RWMutex _peers_l;
 	RWMutex _paths_l;

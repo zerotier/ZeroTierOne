@@ -41,7 +41,6 @@ set(core_headers
 	SHA512.hpp
 	SharedPtr.hpp
 	Tag.hpp
-	Tests.h
 	Topology.hpp
 	Trace.hpp
 	TriviallyCopyable.hpp
@@ -78,7 +77,6 @@ set(core_src
 	SelfAwareness.cpp
 	SHA512.cpp
 	Tag.cpp
-	Tests.cpp
 	Topology.cpp
 	Trace.cpp
 	Utils.cpp
@@ -89,3 +87,7 @@ set(core_src
 add_library(${PROJECT_NAME} STATIC ${core_src} ${core_headers})
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_11)
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_BINARY_DIR})
+
+add_executable(zt_core_tests Tests.h Tests.cpp)
+target_compile_definitions(zt_core_tests PRIVATE ZT_ENABLE_TESTS=1 ZT_STANDALONE_TESTS=1)
+target_link_libraries(zt_core_tests zt_core)

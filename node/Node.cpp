@@ -28,16 +28,54 @@
 #include "ScopedPtr.hpp"
 #include "Locator.hpp"
 #include "Protocol.hpp"
+#include "Expect.hpp"
+#include "VL1.hpp"
+#include "VL2.hpp"
 
 namespace ZeroTier {
 
+namespace {
+
+struct _NodeObjects
+{
+	ZT_ALWAYS_INLINE _NodeObjects(RuntimeEnvironment *const RR,void *const tPtr) :
+		t(RR),
+		expect(),
+		vl2(RR),
+		vl1(RR),
+		sa(RR),
+		topology(RR,tPtr)
+	{
+		RR->t = &t;
+		RR->expect = &expect;
+		RR->vl2 = &vl2;
+		RR->vl1 = &vl1;
+		RR->sa = &sa;
+		RR->topology = &topology;
+	}
+	Trace t;
+	Expect expect;
+	VL2 vl2;
+	VL1 vl1;
+	SelfAwareness sa;
+	Topology topology;
+};
+
+struct _sortPeerPtrsByAddress
+{
+	ZT_ALWAYS_INLINE bool operator()(const SharedPtr<Peer> &a,const SharedPtr<Peer> &b) const { return (a->address() < b->address()); }
+};
+
+} // anonymous namespace
+
 Node::Node(void *uPtr,void *tPtr,const struct ZT_Node_Callbacks *callbacks,int64_t now) :
 	_RR(this),
+	_objects(nullptr),
 	RR(&_RR),
 	_cb(*callbacks),
 	_uPtr(uPtr),
 	_networks(),
-	_networksMask(63),
+	_networksMask(15),
 	_now(now),
 	_lastPing(0),
 	_lastHousekeepingRun(0),
@@ -46,7 +84,7 @@ Node::Node(void *uPtr,void *tPtr,const struct ZT_Node_Callbacks *callbacks,int64
 	_natMustDie(true),
 	_online(false)
 {
-	_networks.resize(64); // _networksMask + 1, must be power of two
+	_networks.resize(16); // _networksMask + 1, must be power of two
 
 	uint64_t idtmp[2]; idtmp[0] = 0; idtmp[1] = 0;
 	std::vector<uint8_t> data(stateObjectGet(tPtr,ZT_STATE_OBJECT_IDENTITY_SECRET,idtmp));
@@ -74,30 +112,9 @@ Node::Node(void *uPtr,void *tPtr,const struct ZT_Node_Callbacks *callbacks,int64
 			stateObjectPut(tPtr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,idtmp,RR->publicIdentityStr,(unsigned int)strlen(RR->publicIdentityStr));
 	}
 
-#if 0
-	char *m = nullptr;
-	try {
-		m = reinterpret_cast<char *>(malloc(16 + sizeof(Trace) + sizeof(Switch) + sizeof(Topology) + sizeof(SelfAwareness)));
-		if (!m)
-			throw std::bad_alloc();
-		RR->rtmem = m;
-		while (((uintptr_t)m & 0xfU) != 0) ++m;
-		RR->t = new (m) Trace(RR);
-		m += sizeof(Trace);
-		RR->sw = new (m) Switch(RR);
-		m += sizeof(Switch);
-		RR->topology = new (m) Topology(RR,RR->identity,tPtr);
-		m += sizeof(Topology);
-		RR->sa = new (m) SelfAwareness(RR);
-	} catch ( ... ) {
-		if (RR->sa) RR->sa->~SelfAwareness();
-		if (RR->topology) RR->topology->~Topology();
-		if (RR->sw) RR->sw->~Switch();
-		if (RR->t) RR->t->~Trace();
-		if (m) ::free(m);
-		throw;
-	}
-#endif
+	// This constructs all the components of the ZeroTier core within a single contiguous memory container,
+	// which reduces memory fragmentation and may improve cache locality.
+	_objects = new _NodeObjects(RR,tPtr);
 
 	postEvent(tPtr, ZT_EVENT_UP);
 }
@@ -112,13 +129,12 @@ Node::~Node()
 		networks.swap(_networks);
 	}
 	networks.clear();
+
 	_networks_m.lock();
 	_networks_m.unlock();
 
-	if (RR->sa) RR->sa->~SelfAwareness();
-	if (RR->topology) RR->topology->~Topology();
-	if (RR->t) RR->t->~Trace();
-	free(RR->rtmem);
+	if (_objects)
+		delete (_NodeObjects *)_objects;
 
 	// Let go of cached Buf objects. If other nodes happen to be running in this
 	// same process space new Bufs will be allocated as needed, but this is almost
@@ -129,11 +145,12 @@ Node::~Node()
 
 void Node::shutdown(void *tPtr)
 {
-	RR->topology->saveAll(tPtr);
+	if (RR->topology)
+		RR->topology->saveAll(tPtr);
 }
 
 ZT_ResultCode Node::processWirePacket(
-	void *tptr,
+	void *tPtr,
 	int64_t now,
 	int64_t localSocket,
 	const struct sockaddr_storage *remoteAddress,
@@ -142,12 +159,16 @@ ZT_ResultCode Node::processWirePacket(
 	volatile int64_t *nextBackgroundTaskDeadline)
 {
 	_now = now;
-	//RR->sw->onRemotePacket(tptr,localSocket,*(reinterpret_cast<const InetAddress *>(remoteAddress)),packetData,packetLength);
+	// TODO: add buffer life cycle methods
+	SharedPtr<Buf> tmp(new Buf());
+	packetLength &= ZT_BUF_MEM_MASK;
+	memcpy(tmp->unsafeData,packetData,packetLength);
+	RR->vl1->onRemotePacket(tPtr,localSocket,(remoteAddress) ? InetAddress::NIL : *asInetAddress(remoteAddress),tmp,packetLength);
 	return ZT_RESULT_OK;
 }
 
 ZT_ResultCode Node::processVirtualNetworkFrame(
-	void *tptr,
+	void *tPtr,
 	int64_t now,
 	uint64_t nwid,
 	uint64_t sourceMac,
@@ -389,11 +410,11 @@ ZT_ResultCode Node::leave(uint64_t nwid,void **uptr,void *tptr)
 	return ZT_RESULT_OK;
 }
 
-ZT_ResultCode Node::multicastSubscribe(void *tptr,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi)
+ZT_ResultCode Node::multicastSubscribe(void *tPtr,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi)
 {
 	SharedPtr<Network> nw(this->network(nwid));
 	if (nw) {
-		nw->multicastSubscribe(tptr,MulticastGroup(MAC(multicastGroup),(uint32_t)(multicastAdi & 0xffffffff)));
+		nw->multicastSubscribe(tPtr,MulticastGroup(MAC(multicastGroup),(uint32_t)(multicastAdi & 0xffffffff)));
 		return ZT_RESULT_OK;
 	} else return ZT_RESULT_ERROR_NETWORK_NOT_FOUND;
 }
@@ -407,18 +428,18 @@ ZT_ResultCode Node::multicastUnsubscribe(uint64_t nwid,uint64_t multicastGroup,u
 	} else return ZT_RESULT_ERROR_NETWORK_NOT_FOUND;
 }
 
-ZT_ResultCode Node::addRoot(void *tptr,const ZT_Identity *identity,const sockaddr_storage *bootstrap)
+ZT_ResultCode Node::addRoot(void *tPtr,const ZT_Identity *identity,const sockaddr_storage *bootstrap)
 {
 	if (!identity)
 		return ZT_RESULT_ERROR_BAD_PARAMETER;
 	InetAddress a;
 	if (bootstrap)
 		a = bootstrap;
-	RR->topology->addRoot(tptr,*reinterpret_cast<const Identity *>(identity),a);
+	RR->topology->addRoot(tPtr,*reinterpret_cast<const Identity *>(identity),a);
 	return ZT_RESULT_OK;
 }
 
-ZT_ResultCode Node::removeRoot(void *tptr,const ZT_Identity *identity)
+ZT_ResultCode Node::removeRoot(void *tPtr,const ZT_Identity *identity)
 {
 	if (!identity)
 		return ZT_RESULT_ERROR_BAD_PARAMETER;
@@ -439,8 +460,6 @@ void Node::status(ZT_NodeStatus *status) const
 	status->secretIdentity = RR->secretIdentityStr;
 	status->online = _online ? 1 : 0;
 }
-
-struct _sortPeerPtrsByAddress { inline bool operator()(const SharedPtr<Peer> &a,const SharedPtr<Peer> &b) const { return (a->address() < b->address()); } };
 
 ZT_PeerList *Node::peers() const
 {
@@ -463,7 +482,7 @@ ZT_PeerList *Node::peers() const
 		p->address = (*pi)->address().toInt();
 		identities[pl->peerCount] = (*pi)->identity(); // need to make a copy in case peer gets deleted
 		p->identity = &identities[pl->peerCount];
-		memcpy(p->identityHash,(*pi)->identity().hash(),sizeof(p->identityHash));
+		memcpy(p->identityHash,(*pi)->identity().hash().data(),ZT_IDENTITY_HASH_SIZE);
 		if ((*pi)->remoteVersionKnown()) {
 			p->versionMajor = (int)(*pi)->remoteVersionMajor();
 			p->versionMinor = (int)(*pi)->remoteVersionMinor();
@@ -568,11 +587,14 @@ int Node::sendUserMessage(void *tptr,uint64_t dest,uint64_t typeId,const void *d
 {
 	try {
 		if (RR->identity.address().toInt() != dest) {
+			// TODO
+			/*
 			Packet outp(Address(dest),RR->identity.address(),Packet::VERB_USER_MESSAGE);
 			outp.append(typeId);
 			outp.append(data,len);
 			outp.compress();
 			RR->sw->send(tptr,outp,true);
+			*/
 			return 1;
 		}
 	} catch ( ... ) {}
@@ -586,9 +608,7 @@ void Node::setController(void *networkControllerInstance)
 		RR->localNetworkController->init(RR->identity,this);
 }
 
-/****************************************************************************/
-/* Node methods used only within node/                                      */
-/****************************************************************************/
+// Methods used only within the core ----------------------------------------------------------------------------------
 
 std::vector<uint8_t> Node::stateObjectGet(void *const tPtr,ZT_StateObjectType type,const uint64_t id[2])
 {
@@ -671,6 +691,8 @@ bool Node::localControllerHasAuthorized(const int64_t now,const uint64_t nwid,co
 	return false;
 }
 
+// Implementation of NetworkController::Sender ------------------------------------------------------------------------
+
 void Node::ncSendConfig(uint64_t nwid,uint64_t requestPacketId,const Address &destination,const NetworkConfig &nc,bool sendLegacyFormatConfig)
 {
 	_localControllerAuthorizations_m.lock();
@@ -682,12 +704,15 @@ void Node::ncSendConfig(uint64_t nwid,uint64_t requestPacketId,const Address &de
 		if (!n) return;
 		n->setConfiguration((void *)0,nc,true);
 	} else {
-		ScopedPtr< Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> > dconf(new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>());
-		if (nc.toDictionary(*dconf,sendLegacyFormatConfig)) {
+		Dictionary dconf;
+		if (nc.toDictionary(dconf,sendLegacyFormatConfig)) {
 			uint64_t configUpdateId = Utils::random();
 			if (!configUpdateId) ++configUpdateId;
 
-			const unsigned int totalSize = dconf->sizeBytes();
+			std::vector<uint8_t> ddata;
+			dconf.encode(ddata);
+			// TODO
+			/*
 			unsigned int chunkIndex = 0;
 			while (chunkIndex < totalSize) {
 				const unsigned int chunkLen = std::min(totalSize - chunkIndex,(unsigned int)(ZT_PROTO_MAX_PACKET_LENGTH - (ZT_PACKET_IDX_PAYLOAD + 256)));
@@ -717,6 +742,7 @@ void Node::ncSendConfig(uint64_t nwid,uint64_t requestPacketId,const Address &de
 				RR->sw->send((void *)0,outp,true);
 				chunkIndex += chunkLen;
 			}
+			*/
 		}
 	}
 }
@@ -728,6 +754,8 @@ void Node::ncSendRevocation(const Address &destination,const Revocation &rev)
 		if (!n) return;
 		n->addCredential((void *)0,RR->identity,rev);
 	} else {
+		// TODO
+		/*
 		Packet outp(destination,RR->identity.address(),Packet::VERB_NETWORK_CREDENTIALS);
 		outp.append((uint8_t)0x00);
 		outp.append((uint16_t)0);
@@ -736,6 +764,7 @@ void Node::ncSendRevocation(const Address &destination,const Revocation &rev)
 		rev.serialize(outp);
 		outp.append((uint16_t)0);
 		RR->sw->send((void *)0,outp,true);
+		*/
 	}
 }
 
@@ -756,6 +785,8 @@ void Node::ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &des
 			default: break;
 		}
 	} else if (requestPacketId) {
+		// TODO
+		/*
 		Packet outp(destination,RR->identity.address(),Packet::VERB_ERROR);
 		outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
 		outp.append(requestPacketId);
@@ -771,14 +802,13 @@ void Node::ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &des
 		}
 		outp.append(nwid);
 		RR->sw->send((void *)0,outp,true);
+		*/
 	} // else we can't send an ERROR() in response to nothing, so discard
 }
 
 } // namespace ZeroTier
 
-/****************************************************************************/
-/* CAPI bindings                                                            */
-/****************************************************************************/
+// C API exports
 
 extern "C" {
 
@@ -1015,9 +1045,12 @@ enum ZT_ResultCode ZT_Node_setPhysicalPathConfiguration(ZT_Node *node,const stru
 
 void ZT_version(int *major,int *minor,int *revision)
 {
-	if (major) *major = ZEROTIER_ONE_VERSION_MAJOR;
-	if (minor) *minor = ZEROTIER_ONE_VERSION_MINOR;
-	if (revision) *revision = ZEROTIER_ONE_VERSION_REVISION;
+	if (major)
+		*major = ZEROTIER_ONE_VERSION_MAJOR;
+	if (minor)
+		*minor = ZEROTIER_ONE_VERSION_MINOR;
+	if (revision)
+		*revision = ZEROTIER_ONE_VERSION_REVISION;
 }
 
 } // extern "C"

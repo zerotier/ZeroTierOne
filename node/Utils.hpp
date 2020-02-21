@@ -288,92 +288,6 @@ static ZT_ALWAYS_INLINE unsigned long hashString(const void *restrict key,const 
 	return h;
 }
 
-/**
- * Decode a big-endian value from a byte stream
- *
- * @tparam I Type to decode (should be unsigned e.g. uint32_t or uint64_t)
- * @param p Byte stream, must be at least sizeof(I) in size
- * @return Decoded integer
- */
-template<typename I>
-static ZT_ALWAYS_INLINE I loadBigEndian(const void *const p) noexcept
-{
-#ifdef ZT_NO_UNALIGNED_ACCESS
-	I x = (I)0;
-	for(unsigned int k=0;k<sizeof(I);++k) {
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-		reinterpret_cast<uint8_t *>(&x)[k] = reinterpret_cast<const uint8_t *>(p)[(sizeof(I)-1)-k];
-#else
-		reinterpret_cast<uint8_t *>(&x)[k] = reinterpret_cast<const uint8_t *>(p)[k];
-#endif
-	}
-	return x;
-#else
-	return ntoh(*reinterpret_cast<const I *>(p));
-#endif
-}
-
-/**
- * Save an integer in big-endian format
- *
- * @tparam I Integer type to store (usually inferred)
- * @param p Byte stream to write (must be at least sizeof(I))
- * #param i Integer to write
- */
-template<typename I>
-static ZT_ALWAYS_INLINE void storeBigEndian(void *const p,const I i) noexcept
-{
-#ifdef ZT_NO_UNALIGNED_ACCESS
-	for(unsigned int k=0;k<sizeof(I);++k) {
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-		reinterpret_cast<uint8_t *>(p)[k] = reinterpret_cast<const uint8_t *>(&i)[(sizeof(I)-1)-k];
-#else
-		reinterpret_cast<uint8_t *>(p)[k] = reinterpret_cast<const uint8_t *>(&i)[k];
-#endif
-	}
-#else
-	*reinterpret_cast<I *>(p) = hton(i);
-#endif
-}
-
-/**
- * Copy bits from memory into an integer type without modifying their order
- *
- * @tparam I Type to load
- * @param p Byte stream, must be at least sizeof(I) in size
- * @return Loaded raw integer
- */
-template<typename I>
-static ZT_ALWAYS_INLINE I loadAsIsEndian(const void *const p) noexcept
-{
-#ifdef ZT_NO_UNALIGNED_ACCESS
-	I x = (I)0;
-	for(unsigned int k=0;k<sizeof(I);++k)
-		reinterpret_cast<uint8_t *>(&x)[k] = reinterpret_cast<const uint8_t *>(p)[k];
-	return x;
-#else
-	return *reinterpret_cast<const I *>(p);
-#endif
-}
-
-/**
- * Copy bits from memory into an integer type without modifying their order
- *
- * @tparam I Type to store
- * @param p Byte array (must be at least sizeof(I))
- * @param i Integer to store
- */
-template<typename I>
-static ZT_ALWAYS_INLINE void storeAsIsEndian(void *const p,const I i) noexcept
-{
-#ifdef ZT_NO_UNALIGNED_ACCESS
-	for(unsigned int k=0;k<sizeof(I);++k)
-		reinterpret_cast<uint8_t *>(p)[k] = reinterpret_cast<const uint8_t *>(&i)[k];
-#else
-	*reinterpret_cast<I *>(p) = i;
-#endif
-}
-
 #ifdef __GNUC__
 static ZT_ALWAYS_INLINE unsigned int countBits(const uint8_t v) noexcept { return (unsigned int)__builtin_popcount((unsigned int)v); }
 static ZT_ALWAYS_INLINE unsigned int countBits(const uint16_t v) noexcept { return (unsigned int)__builtin_popcount((unsigned int)v); }
@@ -501,6 +415,92 @@ static ZT_ALWAYS_INLINE int64_t ntoh(int64_t n) noexcept { return (int64_t)ntoh(
 template<typename T>
 static ZT_ALWAYS_INLINE T ntoh(T n) noexcept { return n; }
 #endif
+
+/**
+ * Decode a big-endian value from a byte stream
+ *
+ * @tparam I Type to decode (should be unsigned e.g. uint32_t or uint64_t)
+ * @param p Byte stream, must be at least sizeof(I) in size
+ * @return Decoded integer
+ */
+template<typename I>
+static ZT_ALWAYS_INLINE I loadBigEndian(const void *const p) noexcept
+{
+#ifdef ZT_NO_UNALIGNED_ACCESS
+	I x = (I)0;
+	for(unsigned int k=0;k<sizeof(I);++k) {
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+		reinterpret_cast<uint8_t *>(&x)[k] = reinterpret_cast<const uint8_t *>(p)[(sizeof(I)-1)-k];
+#else
+		reinterpret_cast<uint8_t *>(&x)[k] = reinterpret_cast<const uint8_t *>(p)[k];
+#endif
+	}
+	return x;
+#else
+	return ntoh(*reinterpret_cast<const I *>(p));
+#endif
+}
+
+/**
+ * Save an integer in big-endian format
+ *
+ * @tparam I Integer type to store (usually inferred)
+ * @param p Byte stream to write (must be at least sizeof(I))
+ * #param i Integer to write
+ */
+template<typename I>
+static ZT_ALWAYS_INLINE void storeBigEndian(void *const p,const I i) noexcept
+{
+#ifdef ZT_NO_UNALIGNED_ACCESS
+	for(unsigned int k=0;k<sizeof(I);++k) {
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+		reinterpret_cast<uint8_t *>(p)[k] = reinterpret_cast<const uint8_t *>(&i)[(sizeof(I)-1)-k];
+#else
+		reinterpret_cast<uint8_t *>(p)[k] = reinterpret_cast<const uint8_t *>(&i)[k];
+#endif
+	}
+#else
+	*reinterpret_cast<I *>(p) = hton(i);
+#endif
+}
+
+/**
+ * Copy bits from memory into an integer type without modifying their order
+ *
+ * @tparam I Type to load
+ * @param p Byte stream, must be at least sizeof(I) in size
+ * @return Loaded raw integer
+ */
+template<typename I>
+static ZT_ALWAYS_INLINE I loadAsIsEndian(const void *const p) noexcept
+{
+#ifdef ZT_NO_UNALIGNED_ACCESS
+	I x = (I)0;
+	for(unsigned int k=0;k<sizeof(I);++k)
+		reinterpret_cast<uint8_t *>(&x)[k] = reinterpret_cast<const uint8_t *>(p)[k];
+	return x;
+#else
+	return *reinterpret_cast<const I *>(p);
+#endif
+}
+
+/**
+ * Copy bits from memory into an integer type without modifying their order
+ *
+ * @tparam I Type to store
+ * @param p Byte array (must be at least sizeof(I))
+ * @param i Integer to store
+ */
+template<typename I>
+static ZT_ALWAYS_INLINE void storeAsIsEndian(void *const p,const I i) noexcept
+{
+#ifdef ZT_NO_UNALIGNED_ACCESS
+	for(unsigned int k=0;k<sizeof(I);++k)
+		reinterpret_cast<uint8_t *>(p)[k] = reinterpret_cast<const uint8_t *>(&i)[k];
+#else
+	*reinterpret_cast<I *>(p) = i;
+#endif
+}
 
 } // namespace Utils
 

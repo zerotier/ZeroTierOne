@@ -1054,7 +1054,7 @@ ZT_ALWAYS_INLINE crypto_uint32 lt(crypto_uint32 a,crypto_uint32 b) /* 16-bit inp
 	return x;
 }
 
-oid reduce_add_sub(sc25519 *r)
+void reduce_add_sub(sc25519 *r)
 {
 	crypto_uint32 pb = 0;
 	crypto_uint32 b;

@@ -594,4 +594,15 @@ extern "C" const char *ZTT_benchmarkCrypto()
 	return nullptr;
 }
 
+#ifdef ZT_STANDALONE_TESTS
+int main(int argc,char **argv)
+{
+	bool ok = true;
+	ok &= ZTT_general() == nullptr;
+	ZT_T_PRINTF(ZT_EOL_S);
+	ok &= ZTT_crypto() == nullptr;
+	return ok ? 0 : 1;
+}
+#endif
+
 #endif // ZT_ENABLE_TESTS

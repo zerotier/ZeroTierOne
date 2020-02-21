@@ -68,7 +68,7 @@ public:
 	// Public API Functions ---------------------------------------------------------------------------------------------
 
 	ZT_ResultCode processWirePacket(
-		void *tptr,
+		void *tPtr,
 		int64_t now,
 		int64_t localSocket,
 		const struct sockaddr_storage *remoteAddress,
@@ -76,7 +76,7 @@ public:
 		unsigned int packetLength,
 		volatile int64_t *nextBackgroundTaskDeadline);
 	ZT_ResultCode processVirtualNetworkFrame(
-		void *tptr,
+		void *tPtr,
 		int64_t now,
 		uint64_t nwid,
 		uint64_t sourceMac,
@@ -89,10 +89,10 @@ public:
 	ZT_ResultCode processBackgroundTasks(void *tPtr, int64_t now, volatile int64_t *nextBackgroundTaskDeadline);
 	ZT_ResultCode join(uint64_t nwid,void *uptr,void *tptr);
 	ZT_ResultCode leave(uint64_t nwid,void **uptr,void *tptr);
-	ZT_ResultCode multicastSubscribe(void *tptr,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
+	ZT_ResultCode multicastSubscribe(void *tPtr,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
 	ZT_ResultCode multicastUnsubscribe(uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
-	ZT_ResultCode addRoot(void *tptr,const ZT_Identity *identity,const sockaddr_storage *bootstrap);
-	ZT_ResultCode removeRoot(void *tptr,const ZT_Identity *identity);
+	ZT_ResultCode addRoot(void *tPtr,const ZT_Identity *identity,const sockaddr_storage *bootstrap);
+	ZT_ResultCode removeRoot(void *tPtr,const ZT_Identity *identity);
 	uint64_t address() const;
 	void status(ZT_NodeStatus *status) const;
 	ZT_PeerList *peers() const;
@@ -331,6 +331,7 @@ public:
 
 private:
 	RuntimeEnvironment _RR;
+	void *_objects;
 	RuntimeEnvironment *RR;
 	ZT_Node_Callbacks _cb;
 	void *_uPtr; // _uptr (lower case) is reserved in Visual Studio :P

@@ -37,8 +37,6 @@
 #ifndef ZT_TESTS_HPP
 #define ZT_TESTS_HPP
 
-#define ZT_ENABLE_TESTS
-
 #ifdef ZT_ENABLE_TESTS
 
 #ifdef __cplusplus

@@ -22,7 +22,6 @@
 namespace ZeroTier {
 
 Membership::Membership() :
-	_lastUpdatedMulticast(0),
 	_comRevocationThreshold(0),
 	_lastPushedCredentials(0),
 	_revocations(4),

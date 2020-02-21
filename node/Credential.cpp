@@ -53,10 +53,8 @@ static ZT_ALWAYS_INLINE Credential::VerifyResult _credVerify(const RuntimeEnviro
 		return Credential::VERIFY_BAD_SIGNATURE;
 
 	const SharedPtr<Peer> peer(RR->topology->peer(tPtr,signedBy));
-	if (!peer) {
-		RR->sw->requestWhois(tPtr,RR->node->now(),signedBy);
+	if (!peer)
 		return Credential::VERIFY_NEED_IDENTITY;
-	}
 
 	try {
 		int l = credential.marshal(tmp,true);
@@ -78,10 +76,8 @@ Credential::VerifyResult Credential::_verify(const RuntimeEnvironment *const RR,
 		return Credential::VERIFY_BAD_SIGNATURE;
 
 	const SharedPtr<Peer> peer(RR->topology->peer(tPtr,credential._signedBy));
-	if (!peer) {
-		RR->sw->requestWhois(tPtr,RR->node->now(),credential._signedBy);
+	if (!peer)
 		return Credential::VERIFY_NEED_IDENTITY;
-	}
 
 	uint64_t buf[ZT_NETWORK_COM_MAX_QUALIFIERS * 3];
 	unsigned int ptr = 0;
@@ -123,7 +119,6 @@ Credential::VerifyResult Credential::_verify(const RuntimeEnvironment *RR,void *
 				if (!peer->identity().verify(tmp,(unsigned int)l,credential._custody[c].signature,credential._custody[c].signatureLength))
 					return Credential::VERIFY_BAD_SIGNATURE;
 			} else {
-				RR->sw->requestWhois(tPtr,RR->node->now(),credential._custody[c].from);
 				return Credential::VERIFY_NEED_IDENTITY;
 			}
 		}
