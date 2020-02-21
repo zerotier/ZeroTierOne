@@ -89,7 +89,7 @@ const Identity Identity::NIL;
 
 bool Identity::generate(const Type t)
 {
-	uint8_t digest[64];
+	uint8_t digest[128];
 
 	_type = t;
 	_hasPrivate = true;
@@ -113,9 +113,10 @@ bool Identity::generate(const Type t)
 
 				SHA384(digest,&_pub,sizeof(_pub));
 				c.init(digest);
-				c.encrypt(digest,digest);
-				c.encrypt(digest + 16,digest + 16);
-				c.encrypt(digest + 32,digest + 32);
+				c.encrypt(digest,digest + 48);
+				c.encrypt(digest + 16,digest + 64);
+				c.encrypt(digest + 32,digest + 80);
+				SHA384(digest,digest,96);
 
 				if (digest[47] != 0)
 					continue;
@@ -524,12 +525,13 @@ void Identity::_computeHash()
 
 		case P384:
 			if (!_hash) {
-				uint8_t *const h = _hash.data();
-				SHA384(h,&_pub,sizeof(_pub));
-				AES c(h);
-				c.encrypt(h,h);
-				c.encrypt(h + 16,h + 16);
-				c.encrypt(h + 32,h + 32);
+				uint8_t *const digest = _hash.data();
+				SHA384(digest,&_pub,sizeof(_pub));
+				AES c(digest);
+				c.encrypt(digest,digest + 48);
+				c.encrypt(digest + 16,digest + 64);
+				c.encrypt(digest + 32,digest + 80);
+				SHA384(digest,digest,96);
 			}
 			break;
 	}
