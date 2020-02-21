@@ -37,9 +37,9 @@
 #include "LZ4.hpp"
 #include "Hashtable.hpp"
 #include "FCV.hpp"
+#include "SHA512.hpp"
 
 #include <cstdint>
-#include <cstdlib>
 #include <cstring>
 #include <cstdio>
 #include <set>
@@ -98,7 +98,7 @@ struct C25519TestVector
 	uint8_t priv1[64];
 	uint8_t pub2[64];
 	uint8_t priv2[64];
-	uint8_t agreement[64];
+	uint8_t agreementSha512[64];
 	uint8_t agreementSignedBy1[96];
 	uint8_t agreementSignedBy2[96];
 };
@@ -144,6 +144,13 @@ static const C25519TestVector C25519_TEST_VECTORS[ZT_NUM_C25519_TEST_VECTORS] = 
 
 // --------------------------------------------------------------------------------------------------------------------
 
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+#define ZT_ENDIAN_S "little"
+#else
+#define ZT_ENDIAN_S "big"
+#endif
+
+// This is basically a unit test for compiler packed structure behavior.
 ZT_PACKED_STRUCT(struct StructPackingTestSample {
 	uint8_t foo;
 	uint16_t bar;
@@ -155,13 +162,41 @@ ZT_PACKED_STRUCT(struct StructPackingTestSample {
 	uint8_t lol;
 });
 
-#define ZT_T_ASSERT(e) if (!(e)) { ZT_T_PRINTF("FAILED (simple assert: " #e ")" ZT_EOL_S); return "simple assert: " #e; }
+// Increments and decrements a counter based on object create/destroy
+class LifeCycleTracker
+{
+public:
+	ZT_ALWAYS_INLINE LifeCycleTracker() :
+		cnt(nullptr)
+	{
+	}
+	ZT_ALWAYS_INLINE LifeCycleTracker(const LifeCycleTracker &ltc) :
+		cnt(ltc.cnt)
+	{
+		if (*cnt) ++*cnt;
+	}
+	explicit ZT_ALWAYS_INLINE LifeCycleTracker(long &c) :
+		cnt(&c)
+	{
+		++c;
+	}
+	ZT_ALWAYS_INLINE ~LifeCycleTracker()
+	{
+		if (cnt) --*cnt;
+	}
+	ZT_ALWAYS_INLINE LifeCycleTracker &operator=(const LifeCycleTracker &ltc)
+	{
+		if (&ltc != this) {
+			if (*cnt) --*cnt;
+			cnt = ltc.cnt;
+			if (*cnt) ++*cnt;
+		}
+		return *this;
+	}
+	long *cnt;
+};
 
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-#define ZT_ENDIAN_S "little"
-#else
-#define ZT_ENDIAN_S "big"
-#endif
+#define ZT_T_ASSERT(e) if (!(e)) { ZT_T_PRINTF("FAILED (simple assert: " #e ")" ZT_EOL_S); return "simple assert: " #e; }
 
 extern "C" const char *ZTT_general()
 {
@@ -206,6 +241,9 @@ extern "C" const char *ZTT_general()
 			ZT_T_ASSERT(sizeof(Protocol::Header) == ZT_PROTO_MIN_PACKET_LENGTH);
 			ZT_T_ASSERT(sizeof(Protocol::FragmentHeader) == ZT_PROTO_MIN_FRAGMENT_LENGTH);
 			ZT_T_ASSERT(sizeof(sockaddr_storage) == sizeof(InetAddress));
+			ZT_T_ASSERT(sizeof(sockaddr_in) <= sizeof(InetAddress));
+			ZT_T_ASSERT(sizeof(sockaddr_in6) <= sizeof(InetAddress));
+			ZT_T_ASSERT(sizeof(sockaddr) <= sizeof(InetAddress));
 			ZT_T_PRINTF("OK" ZT_EOL_S);
 		}
 
@@ -270,6 +308,92 @@ extern "C" const char *ZTT_general()
 			}
 			ZT_T_PRINTF("OK" ZT_EOL_S);
 		}
+
+		{
+			ZT_T_PRINTF("[general] Testing FCV (fixed capacity vector)... ");
+			long cnt = 0;
+			FCV<LifeCycleTracker,1024> test,test2;
+			for(unsigned int i=0;i<512;++i)
+				test.push_back(LifeCycleTracker(cnt));
+			if (cnt != 512) {
+				ZT_T_PRINTF("FAILED (expected 512 objects, got %lu (1))" ZT_EOL_S,cnt);
+				return "FCV object life cycle test failed (1)";
+			}
+			test2 = test;
+			if (cnt != 1024) {
+				ZT_T_PRINTF("FAILED (expected 1024 objects, got %lu (2))" ZT_EOL_S,cnt);
+				return "FCV object life cycle test failed (2)";
+			}
+			test.clear();
+			if (cnt != 512) {
+				ZT_T_PRINTF("FAILED (expected 512 objects, got %lu (3))" ZT_EOL_S,cnt);
+				return "FCV object life cycle test failed (3)";
+			}
+			for(unsigned int i=0;i<512;++i)
+				test.push_back(LifeCycleTracker(cnt));
+			if (cnt != 1024) {
+				ZT_T_PRINTF("FAILED (expected 1024 objects, got %lu (4))" ZT_EOL_S,cnt);
+				return "FCV object life cycle test failed (4)";
+			}
+			test.clear();
+			test2.clear();
+			if (cnt != 0) {
+				ZT_T_PRINTF("FAILED (expected 0 objects, got %lu (5))" ZT_EOL_S,cnt);
+				return "FCV object life cycle test failed (5)";
+			}
+			ZT_T_PRINTF("OK" ZT_EOL_S);
+		}
+
+		{
+			ZT_T_PRINTF("[general] Testing Hashtable... ");
+
+			long cnt = 0;
+			Hashtable< unsigned int,LifeCycleTracker > test,test2;
+			for(unsigned int i=0;i<512;++i)
+				test[i] = LifeCycleTracker(cnt);
+			if (cnt != 512) {
+				ZT_T_PRINTF("FAILED (expected 512 objects, got %lu (1))" ZT_EOL_S,cnt);
+				return "Hashtable test failed (1)";
+			}
+			test2 = test;
+			if (cnt != 1024) {
+				ZT_T_PRINTF("FAILED (expected 1024 objects, got %lu (2))" ZT_EOL_S,cnt);
+				return "Hashtable test failed (2)";
+			}
+			test.clear();
+			if (cnt != 512) {
+				ZT_T_PRINTF("FAILED (expected 512 objects, got %lu (3))" ZT_EOL_S,cnt);
+				return "Hashtable test failed (3)";
+			}
+			for(unsigned int i=0;i<512;++i)
+				test[i] = LifeCycleTracker(cnt);
+			if (cnt != 1024) {
+				ZT_T_PRINTF("FAILED (expected 1024 objects, got %lu (4))" ZT_EOL_S,cnt);
+				return "Hashtable test failed (4)";
+			}
+			test.clear();
+			test2.clear();
+			if (cnt != 0) {
+				ZT_T_PRINTF("FAILED (expected 0 objects, got %lu (5))" ZT_EOL_S,cnt);
+				return "Hashtable test failed (5)";
+			}
+
+			Hashtable< unsigned int,unsigned int > test3;
+			for(unsigned int i=0;i<1111;++i)
+				test3[i] = i;
+			if (test3.size() != 1111) {
+				ZT_T_PRINTF("FAILED (size() incorrect)" ZT_EOL_S);
+				return "Hashtable test failed (size() incorrect)";
+			}
+			for(unsigned int i=0;i<1111;++i) {
+				if (test3[i] != i) {
+					ZT_T_PRINTF("FAILED (lookup test)" ZT_EOL_S);
+					return "Hashtable test failed (lookup)";
+				}
+			}
+
+			ZT_T_PRINTF("OK" ZT_EOL_S);
+		}
 	} catch (std::exception &e) {
 		ZT_T_PRINTF(ZT_EOL_S "[general] Unexpected exception: %s" ZT_EOL_S,e.what());
 		return e.what();
@@ -277,12 +401,129 @@ extern "C" const char *ZTT_general()
 		ZT_T_PRINTF(ZT_EOL_S "[general] Unexpected exception: unknown exception" ZT_EOL_S);
 		return "an unknown exception occurred";
 	}
-
 	return nullptr;
 }
 
 extern "C" const char *ZTT_crypto()
 {
+	try {
+		{
+			ZT_T_PRINTF("[crypto] Testing SHA384 and SHA512... ");
+			uint8_t h[64];
+			SHA512(h,SHA512_TV0_INPUT,strlen(SHA512_TV0_INPUT));
+			if (memcmp(h,SHA512_TV0_DIGEST,64) != 0) {
+				ZT_T_PRINTF("FAILED (SHA512)" ZT_EOL_S);
+				return "SHA512 test vector failed";
+			}
+			ZT_T_PRINTF("OK" ZT_EOL_S);
+			SHA384(h,SHA512_TV0_INPUT,strlen(SHA512_TV0_INPUT));
+			if (memcmp(h,SHA512_TV0_SHA384_DIGEST,48) != 0) {
+				ZT_T_PRINTF("FAILED (SHA384)" ZT_EOL_S);
+				return "SHA384 test vector failed";
+			}
+			ZT_T_PRINTF("OK" ZT_EOL_S);
+		}
+
+		{
+			uint8_t agree0[32],agree1[32],kh[64],sig[96];
+			ZT_T_PRINTF("[crypto] Testing C25519/Ed25519... ");
+			for(int t=0;t<ZT_NUM_C25519_TEST_VECTORS;++t) {
+				C25519::agree(C25519_TEST_VECTORS[t].priv1,C25519_TEST_VECTORS[t].pub2,agree0);
+				C25519::agree(C25519_TEST_VECTORS[t].priv2,C25519_TEST_VECTORS[t].pub1,agree1);
+				if (memcmp(agree0,agree1,32) != 0) {
+					ZT_T_PRINTF("FAILED (keys do not agree, vector %d)" ZT_EOL_S,t);
+					return "Curve25519 key agreement test failed (a/b does not agree with b/a)";
+				}
+				SHA512(kh,agree0,32);
+				if (memcmp(kh,C25519_TEST_VECTORS[t].agreementSha512,64) != 0) {
+					ZT_T_PRINTF("FAILED (hash of agreement does not match test vector %d)" ZT_EOL_S,t);
+					return "Curve25519 key agreement test failed (does not match expected value)";
+				}
+				C25519::sign(C25519_TEST_VECTORS[t].priv1,C25519_TEST_VECTORS[t].pub1,kh,64,sig);
+				if (memcmp(sig,C25519_TEST_VECTORS[t].agreementSignedBy1,96) != 0) {
+					ZT_T_PRINTF("FAILED (signature of agreement by key 1 does not match test vector %d)" ZT_EOL_S,t);
+					return "Curve25519 signature test failed (signature by key 1 does not match expected value)";
+				}
+				C25519::sign(C25519_TEST_VECTORS[t].priv2,C25519_TEST_VECTORS[t].pub2,kh,64,sig);
+				if (memcmp(sig,C25519_TEST_VECTORS[t].agreementSignedBy1,96) != 0) {
+					ZT_T_PRINTF("FAILED (signature of agreement by key 2 does not match test vector %d)" ZT_EOL_S,t);
+					return "Curve25519 signature test failed (signature by key 2 does not match expected value)";
+				}
+			}
+			ZT_T_PRINTF("OK" ZT_EOL_S);
+		}
+
+		{
+			uint8_t key[48];
+			ZT_T_PRINTF("[crypto] Testing ECC384 (NIST P-384)... ");
+			ECC384ECDH(ECC384_TV0_PUBLIC,ECC384_TV0_PRIVATE,key);
+			if (memcmp(key,ECC384_TV0_DH_SELF_AGREE,48) != 0) {
+				ZT_T_PRINTF("FAILED (test vector 0, self-agree)" ZT_EOL_S);
+				return "ECC384 test vector 0 self-agree failed";
+			}
+			if (!ECC384ECDSAVerify(ECC384_TV0_PUBLIC,ECC384_TV0_PUBLIC,ECC384_TV0_SIG)) {
+				ZT_T_PRINTF("FAILED (test vector 0, signature check)" ZT_EOL_S);
+				return "ECC384 test vector 0 signature check failed";
+			}
+			ZT_T_PRINTF("OK" ZT_EOL_S);
+		}
+
+		{
+			uint8_t ks[64];
+			ZT_T_PRINTF("[crypto] Testing Salsa20... ");
+			Salsa20 s20;
+			s20.init(SALSA20_TV0_KEY,SALSA20_TV0_IV);
+			memset(ks,0,sizeof(ks));
+			s20.crypt20(ks,ks,sizeof(ks));
+			if (memcmp(ks,SALSA20_TV0_KS,64) != 0) {
+				ZT_T_PRINTF("FAILED (Salsa20 test vector)" ZT_EOL_S);
+				return "Salsa20 test vector failed";
+			}
+			s20.init(SALSA12_TV0_KEY,SALSA12_TV0_IV);
+			memset(ks,0,sizeof(ks));
+			s20.crypt12(ks,ks,sizeof(ks));
+			if (memcmp(ks,SALSA12_TV0_KS,64) != 0) {
+				ZT_T_PRINTF("FAILED (Salsa12 test vector)" ZT_EOL_S);
+				return "Salsa12 test vector failed";
+			}
+			ZT_T_PRINTF("OK" ZT_EOL_S);
+		}
+
+		{
+			uint8_t tag[16];
+			ZT_T_PRINTF("[crypto] Testing Poly1305... ");
+			poly1305(tag,POLY1305_TV0_INPUT,sizeof(POLY1305_TV0_INPUT),POLY1305_TV0_KEY);
+			if (memcmp(tag,POLY1305_TV0_TAG,16) != 0) {
+				ZT_T_PRINTF("FAILED (test vector 0)");
+				return "poly1305 test vector 0 failed";
+			}
+			poly1305(tag,POLY1305_TV1_INPUT,sizeof(POLY1305_TV1_INPUT),POLY1305_TV1_KEY);
+			if (memcmp(tag,POLY1305_TV1_TAG,16) != 0) {
+				ZT_T_PRINTF("FAILED (test vector 1)");
+				return "poly1305 test vector 1 failed";
+			}
+			ZT_T_PRINTF("OK" ZT_EOL_S);
+		}
+
+		{
+			uint8_t out[16];
+			ZT_T_PRINTF("[crypto] Testing AES (hardware acceleration: %s)... ",AES::accelerated() ? "enabled" : "disabled");
+			AES aes(AES_TEST_VECTOR_0_KEY);
+			aes.encrypt(AES_TEST_VECTOR_0_IN,out);
+			if (memcmp(AES_TEST_VECTOR_0_OUT,out,16) != 0) {
+			}
+			aes.decrypt(out,out);
+			if (memcmp(AES_TEST_VECTOR_0_IN,out,16) != 0) {
+			}
+			ZT_T_PRINTF("OK" ZT_EOL_S);
+		}
+	} catch (std::exception &e) {
+		ZT_T_PRINTF(ZT_EOL_S "[crypto] Unexpected exception: %s" ZT_EOL_S,e.what());
+		return e.what();
+	} catch ( ... ) {
+		ZT_T_PRINTF(ZT_EOL_S "[crypto] Unexpected exception: unknown exception" ZT_EOL_S);
+		return "an unknown exception occurred";
+	}
 	return nullptr;
 }
 

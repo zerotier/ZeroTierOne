@@ -64,22 +64,24 @@ public:
 	 *
 	 * @param key 256-bit key
 	 */
-	explicit ZT_ALWAYS_INLINE AES(const uint8_t key[32]) noexcept { this->init(key); }
+	explicit ZT_ALWAYS_INLINE AES(const void *const key) noexcept { this->init(key); }
 
 	ZT_ALWAYS_INLINE ~AES() { Utils::burn(&_k,sizeof(_k)); }
 
 	/**
 	 * Set (or re-set) this AES256 cipher's key
+	 *
+	 * @param key 256-bit / 32-byte key
 	 */
-	ZT_ALWAYS_INLINE void init(const uint8_t key[32]) noexcept
+	ZT_ALWAYS_INLINE void init(const void *key) noexcept
 	{
 #ifdef ZT_AES_AESNI
 		if (likely(Utils::CPUID.aes)) {
-			_init_aesni(key);
+			_init_aesni(reinterpret_cast<const uint8_t *>(key));
 			return;
 		}
 #endif
-		_initSW(key);
+		_initSW(reinterpret_cast<const uint8_t *>(key));
 	}
 
 	/**
@@ -88,7 +90,7 @@ public:
 	 * @param in Input block
 	 * @param out Output block (can be same as input)
 	 */
-	ZT_ALWAYS_INLINE void encrypt(const uint8_t in[16],uint8_t out[16]) const noexcept
+	ZT_ALWAYS_INLINE void encrypt(const void *const in,void *const out) const noexcept
 	{
 #ifdef ZT_AES_AESNI
 		if (likely(Utils::CPUID.aes)) {
@@ -96,7 +98,7 @@ public:
 			return;
 		}
 #endif
-		_encryptSW(in,out);
+		_encryptSW(reinterpret_cast<const uint8_t *>(in),reinterpret_cast<uint8_t *>(out));
 	}
 
 	/**
@@ -105,7 +107,7 @@ public:
 	 * @param in Input block
 	 * @param out Output block (can be same as input)
 	 */
-	ZT_ALWAYS_INLINE void decrypt(const uint8_t in[16],uint8_t out[16]) const noexcept
+	ZT_ALWAYS_INLINE void decrypt(const void *const in,void *const out) const noexcept
 	{
 #ifdef ZT_AES_AESNI
 		if (likely(Utils::CPUID.aes)) {
@@ -113,7 +115,7 @@ public:
 			return;
 		}
 #endif
-		_decryptSW(in,out);
+		_decryptSW(reinterpret_cast<const uint8_t *>(in),reinterpret_cast<uint8_t *>(out));
 	}
 
 	/**
