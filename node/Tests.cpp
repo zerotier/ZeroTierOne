@@ -513,9 +513,64 @@ extern "C" const char *ZTT_crypto()
 			AES aes(AES_TEST_VECTOR_0_KEY);
 			aes.encrypt(AES_TEST_VECTOR_0_IN,out);
 			if (memcmp(AES_TEST_VECTOR_0_OUT,out,16) != 0) {
+				ZT_T_PRINTF("FAILED (test vector 0)");
+				return "AES test vector 0 failed";
 			}
 			aes.decrypt(out,out);
 			if (memcmp(AES_TEST_VECTOR_0_IN,out,16) != 0) {
+				ZT_T_PRINTF("FAILED (test vector 0 decrypt)");
+				return "AES test vector 0 decrypt failed";
+			}
+			ZT_T_PRINTF("OK" ZT_EOL_S);
+		}
+
+		{
+			uint8_t tag[16];
+			ZT_T_PRINTF("[crypto] Testing AES-GMAC (hardware acceleration: %s)... ",AES::accelerated() ? "enabled" : "disabled");
+			{
+				AES aes(AES_GMAC_VECTOR_0_KEY);
+				AES::GMAC gmac(aes);
+				gmac.init(AES_GMAC_VECTOR_0_IV);
+				gmac.update(AES_GMAC_VECTOR_0_IN,sizeof(AES_GMAC_VECTOR_0_IN));
+				gmac.finish(tag);
+				if (memcmp(tag,AES_GMAC_VECTOR_0_OUT,16) != 0) {
+					ZT_T_PRINTF("FAILED (test vector 0)");
+					return "AES-GMAC test vector 0 failed";
+				}
+			}
+			{
+				AES aes(AES_GMAC_VECTOR_1_KEY);
+				AES::GMAC gmac(aes);
+				gmac.init(AES_GMAC_VECTOR_1_IV);
+				gmac.update(AES_GMAC_VECTOR_1_IN,sizeof(AES_GMAC_VECTOR_1_IN));
+				gmac.finish(tag);
+				if (memcmp(tag,AES_GMAC_VECTOR_1_OUT,16) != 0) {
+					ZT_T_PRINTF("FAILED (test vector 1)");
+					return "AES-GMAC test vector 1 failed";
+				}
+			}
+			{
+				AES aes(AES_GMAC_VECTOR_2_KEY);
+				AES::GMAC gmac(aes);
+				gmac.init(AES_GMAC_VECTOR_2_IV);
+				gmac.update(AES_GMAC_VECTOR_2_IN,sizeof(AES_GMAC_VECTOR_2_IN));
+				gmac.finish(tag);
+				if (memcmp(tag,AES_GMAC_VECTOR_2_OUT,16) != 0) {
+					ZT_T_PRINTF("FAILED (test vector 2)");
+					return "AES-GMAC test vector 2 failed";
+				}
+			}
+			{
+				AES aes(AES_GMAC_VECTOR_2_KEY);
+				AES::GMAC gmac(aes);
+				gmac.init(AES_GMAC_VECTOR_2_IV);
+				gmac.update(AES_GMAC_VECTOR_2_IN,sizeof(AES_GMAC_VECTOR_2_IN) - 117);
+				gmac.update(AES_GMAC_VECTOR_2_IN + (sizeof(AES_GMAC_VECTOR_2_IN) - 117),117);
+				gmac.finish(tag);
+				if (memcmp(tag,AES_GMAC_VECTOR_2_OUT,16) != 0) {
+					ZT_T_PRINTF("FAILED (test vector 2, two fragments)");
+					return "AES-GMAC test vector (in two fragments) 2 failed";
+				}
 			}
 			ZT_T_PRINTF("OK" ZT_EOL_S);
 		}
