@@ -20,13 +20,7 @@ namespace ZeroTier {
 
 namespace {
 
-#if (defined(__GNUC__) || defined(__clang)) && (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64) || defined(__aarch64__))
-
-#if defined(__SIZEOF_INT128__)
-typedef unsigned __int128 uint128_t;
-#else
-typedef unsigned uint128_t __attribute__((mode(TI)));
-#endif
+#ifdef ZT_HAVE_UINT128
 
 ZT_ALWAYS_INLINE void s_bmul64(const uint64_t x,const uint64_t y,uint64_t &r_high,uint64_t &r_low) noexcept
 {

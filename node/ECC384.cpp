@@ -20,15 +20,10 @@ namespace {
 #define NUM_ECC_DIGITS (ECC_BYTES/8)
 #define MAX_TRIES 1024
 
-#if defined(__SIZEOF_INT128__) || ((__clang_major__ * 100 + __clang_minor__) >= 302)
+#ifdef ZT_HAVE_UINT128
 #define SUPPORTS_INT128 1
 #else
 #define SUPPORTS_INT128 0
-#endif
-
-#if SUPPORTS_INT128
-typedef unsigned __int128 uint128_t;
-#else
 typedef struct
 {
 	uint64_t m_low;
@@ -215,7 +210,7 @@ ZT_ALWAYS_INLINE uint64_t vli_sub(uint64_t *p_result, const uint64_t *p_left, co
 	return l_borrow;
 }
 
-#if SUPPORTS_INT128
+#if SUPPORTS_INT128 == 1
 
 /* Computes p_result = p_left * p_right. */
 void vli_mult(uint64_t *p_result, const uint64_t *p_left, const uint64_t *p_right)
@@ -309,7 +304,7 @@ ZT_ALWAYS_INLINE uint128_t add_128_128(uint128_t a, uint128_t b)
 	return l_result;
 }
 
-void vli_mult(uint64_t *p_result, uint64_t *p_left, uint64_t *p_right)
+void vli_mult(uint64_t *p_result, uint64_t *p_left, const uint64_t *p_right)
 {
 	uint128_t r01 = {0, 0};
 	uint64_t r2 = 0;
@@ -1087,10 +1082,6 @@ ZT_ALWAYS_INLINE int ecdsa_verify(const uint8_t p_publicKey[ECC_BYTES+1], const 
 	return (vli_cmp(rx, l_r) == 0);
 }
 
-//////////////////////////////////////////////////////////////////////////////
-
-//////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
 } // anonymous namespace
 
 void ECC384GenerateKey(uint8_t pub[ZT_ECC384_PUBLIC_KEY_SIZE],uint8_t priv[ZT_ECC384_PRIVATE_KEY_SIZE])

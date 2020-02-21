@@ -32,6 +32,19 @@
 #define __GCC__
 #endif
 #endif
+#if defined(__GCC__) && !defined(__GNUC__)
+#define __GNUC__
+#endif
+
+#if (defined(__GCC__) || defined(__GNUC__) || defined(__clang)) && (defined(__SIZEOF_INT128__) || defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64) || defined(__aarch64__))
+#if defined(__SIZEOF_INT128__)
+#define ZT_HAVE_UINT128
+typedef unsigned __int128 uint128_t;
+#else
+#define ZT_HAVE_UINT128
+typedef unsigned uint128_t __attribute__((mode(TI)));
+#endif
+#endif
 
 #if defined(_WIN32) || defined(_WIN64)
 #ifdef _MSC_VER
