@@ -81,7 +81,7 @@ void SelfAwareness::iam(void *tPtr,const Identity &reporter,const int64_t receiv
 		}
 
 		// Reset all paths within this scope and address family
-		_ResetWithinScope rset(tPtr,now,myPhysicalAddress.ss_family,(InetAddress::IpScope)scope);
+		_ResetWithinScope rset(tPtr,now,myPhysicalAddress.family(),(InetAddress::IpScope)scope);
 		RR->topology->eachPeer<_ResetWithinScope &>(rset);
 
 		RR->t->resettingPathsInScope(tPtr,0x9afff100,reporter,reporterPhysicalAddress,entry.mySurface,myPhysicalAddress,scope);

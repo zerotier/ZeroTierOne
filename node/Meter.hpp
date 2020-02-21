@@ -43,7 +43,7 @@ public:
 	 *
 	 * @param now Start time
 	 */
-	ZT_ALWAYS_INLINE Meter(const int64_t now) noexcept {}
+	ZT_ALWAYS_INLINE Meter() noexcept {}
 
 	/**
 	 * Add a measurement

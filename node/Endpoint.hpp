@@ -59,7 +59,7 @@ public:
 
 	explicit ZT_ALWAYS_INLINE Endpoint(const InetAddress &sa)
 	{
-		switch (sa.ss_family) {
+		switch (sa.family()) {
 			case AF_INET:
 				_t = TYPE_INETADDR_V4;
 				break;

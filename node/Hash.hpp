@@ -47,7 +47,7 @@ public:
 
 	ZT_ALWAYS_INLINE void zero() noexcept
 	{
-		for(int i=0;i<(BITS / sizeof(unsigned long));++i)
+		for(int i=0;i<(BITS / (sizeof(unsigned long) * 8));++i)
 			_h[i] = 0;
 	}
 
@@ -63,7 +63,7 @@ public:
 
 	ZT_ALWAYS_INLINE operator bool() const noexcept
 	{
-		for(int i=0;i<(BITS / sizeof(unsigned long));++i) {
+		for(int i=0;i<(BITS / (sizeof(unsigned long) * 8));++i) {
 			if (_h[i] != 0)
 				return true;
 		}
@@ -78,7 +78,7 @@ public:
 	ZT_ALWAYS_INLINE bool operator>=(const Hash &h) const noexcept { return memcmp(_h,h._h,BITS / 8) >= 0; }
 
 private:
-	unsigned long _h[BITS / sizeof(unsigned long)];
+	unsigned long _h[BITS / (sizeof(unsigned long) * 8)];
 };
 
 } // namespace ZeroTier

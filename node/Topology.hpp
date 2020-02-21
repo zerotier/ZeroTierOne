@@ -335,9 +335,9 @@ private:
 	// Get a hash key for looking up paths by their local port and destination address
 	ZT_ALWAYS_INLINE uint64_t _pathHash(int64_t l,const InetAddress &r) const
 	{
-		if (r.ss_family == AF_INET) {
+		if (r.family() == AF_INET) {
 			return Utils::hash64(s_pathHashSalt ^ (uint64_t)(reinterpret_cast<const struct sockaddr_in *>(&r)->sin_addr.s_addr)) + (uint64_t)Utils::ntoh(reinterpret_cast<const struct sockaddr_in *>(&r)->sin_port) + (uint64_t)l;
-		} else if (r.ss_family == AF_INET6) {
+		} else if (r.family() == AF_INET6) {
 #ifdef ZT_NO_UNALIGNED_ACCESS
 			uint64_t h = s_pathHashSalt;
 			for(int i=0;i<16;++i) {

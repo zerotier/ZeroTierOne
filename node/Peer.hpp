@@ -132,8 +132,9 @@ public:
 	 * @param localSocket Local source socket
 	 * @param atAddress Destination address
 	 * @param now Current time
+	 * @return Number of bytes sent
 	 */
-	void sendNOP(void *tPtr,int64_t localSocket,const InetAddress &atAddress,int64_t now);
+	unsigned int sendNOP(void *tPtr,int64_t localSocket,const InetAddress &atAddress,int64_t now);
 
 	/**
 	 * Send ping to this peer

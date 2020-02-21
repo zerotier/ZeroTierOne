@@ -231,7 +231,7 @@ unsigned int Peer::sendHELLO(void *tPtr,const int64_t localSocket,const InetAddr
 #endif
 }
 
-void Peer::sendNOP(void *tPtr,const int64_t localSocket,const InetAddress &atAddress,int64_t now)
+unsigned int Peer::sendNOP(void *tPtr,const int64_t localSocket,const InetAddress &atAddress,int64_t now)
 {
 	Buf outp;
 	Protocol::Header &ph = outp.as<Protocol::Header>();
@@ -242,6 +242,7 @@ void Peer::sendNOP(void *tPtr,const int64_t localSocket,const InetAddress &atAdd
 	ph.verb = Protocol::VERB_NOP;
 	Protocol::armor(outp,sizeof(Protocol::Header),_key,this->cipher());
 	RR->node->putPacket(tPtr,localSocket,atAddress,outp.unsafeData,sizeof(Protocol::Header));
+	return sizeof(Protocol::Header);
 }
 
 void Peer::ping(void *tPtr,int64_t now,const bool pingAllAddressTypes)
@@ -375,7 +376,7 @@ void Peer::contact(void *tPtr,const Endpoint &ep,const int64_t now,const bool bf
 
 		// If the peer indicates that they may be behind a symmetric NAT and there are no
 		// living direct paths, try a few more aggressive things.
-		if ((phyAddr.ss_family == AF_INET) && (!direct(now))) {
+		if ((phyAddr.family() == AF_INET) && (!direct(now))) {
 			unsigned int port = phyAddr.port();
 			if ((bfg1024)&&(port < 1024)&&(RR->node->natMustDie())) {
 				// If the other side is using a low-numbered port and has elected to

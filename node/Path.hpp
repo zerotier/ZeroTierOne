@@ -119,10 +119,10 @@ public:
 	ZT_ALWAYS_INLINE int64_t lastOut() const noexcept { return _lastOut.load(); }
 
 private:
-	int64_t _localSocket;
+	const int64_t _localSocket;
 	std::atomic<int64_t> _lastIn;
 	std::atomic<int64_t> _lastOut;
-	InetAddress _addr;
+	const InetAddress _addr;
 	Meter<> _inMeter;
 	Meter<> _outMeter;
 

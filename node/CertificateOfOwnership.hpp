@@ -85,9 +85,9 @@ public:
 
 	ZT_ALWAYS_INLINE bool owns(const InetAddress &ip) const noexcept
 	{
-		if (ip.ss_family == AF_INET)
+		if (ip.family() == AF_INET)
 			return this->_owns(THING_IPV4_ADDRESS,&(reinterpret_cast<const struct sockaddr_in *>(&ip)->sin_addr.s_addr),4);
-		if (ip.ss_family == AF_INET6)
+		if (ip.family() == AF_INET6)
 			return this->_owns(THING_IPV6_ADDRESS,reinterpret_cast<const struct sockaddr_in6 *>(&ip)->sin6_addr.s6_addr,16);
 		return false;
 	}

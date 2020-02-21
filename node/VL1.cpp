@@ -56,7 +56,7 @@ void VL1::onRemotePacket(void *const tPtr,const int64_t localSocket,const InetAd
 	const int64_t now = RR->node->now();
 
 	// Update path's last receive time (this is updated when anything is received at all, even if invalid or a keepalive)
-	path->received(now);
+	path->received(now,len);
 
 	try {
 		// Handle 8-byte short probes, which are used as a low-bandwidth way to initiate a real handshake.
@@ -69,10 +69,8 @@ void VL1::onRemotePacket(void *const tPtr,const int64_t localSocket,const InetAd
 		// it will send its own HELLO to which we will respond with a fully encrypted OK(HELLO).
 		if (len == ZT_PROTO_PROBE_LENGTH) {
 			const SharedPtr<Peer> peer(RR->topology->peerByProbe(data->lI64(0)));
-			if ((peer)&&(peer->rateGateInboundProbe(now))) {
-				peer->sendNOP(tPtr,path->localSocket(),path->address(),now);
-				path->sent(now);
-			}
+			if ((peer)&&(peer->rateGateInboundProbe(now)))
+				path->sent(now,peer->sendNOP(tPtr,path->localSocket(),path->address(),now));
 			return;
 		}
 

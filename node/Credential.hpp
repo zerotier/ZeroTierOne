@@ -14,17 +14,16 @@
 #ifndef ZT_CREDENTIAL_HPP
 #define ZT_CREDENTIAL_HPP
 
+#include "Constants.hpp"
+#include "TriviallyCopyable.hpp"
+
 #include <string>
 #include <memory>
 #include <stdexcept>
-
 #include <cstdio>
 #include <cstdlib>
 #include <cstdint>
 #include <cstring>
-
-#include "Constants.hpp"
-#include "TriviallyCopyable.hpp"
 
 namespace ZeroTier {
 
