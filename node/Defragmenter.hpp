@@ -260,7 +260,7 @@ public:
 			// Slices are TriviallyCopyable and so may be memcpy'd from e->message to
 			// the result parameter. This is fast.
 			e->message.unsafeMoveTo(message);
-			e->message.lastUsed = -1; // mark as "done" and force GC to collect
+			e->lastUsed = -1; // mark as "done" and force GC to collect
 
 			return COMPLETE;
 		}

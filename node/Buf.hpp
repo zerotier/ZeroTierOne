@@ -147,7 +147,7 @@ public:
 	{
 		Buf::Slice r;
 
-		typename FCV<Buf::Slice,FCVC>::const_iterator s(fcv.begin());
+		typename FCV<Buf::Slice,FCVC>::iterator s(fcv.begin());
 		unsigned int l = s->e - s->s;
 		if (l <= ZT_BUF_MEM_SIZE) {
 			r.b.move(s->b);
