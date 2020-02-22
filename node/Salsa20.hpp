@@ -37,6 +37,12 @@ namespace ZeroTier {
 class Salsa20 : public TriviallyCopyable
 {
 public:
+#ifdef ZT_SALSA20_SSE
+	static constexpr bool accelerated() noexcept { return true; }
+#else
+	static constexpr bool accelerated() noexcept { return false; }
+#endif
+
 	ZT_ALWAYS_INLINE Salsa20() noexcept {}
 	ZT_ALWAYS_INLINE ~Salsa20() { Utils::burn(&_state,sizeof(_state)); }
 
