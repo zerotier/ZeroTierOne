@@ -130,7 +130,11 @@ typedef unsigned uint128_t __attribute__((mode(TI)));
 #endif
 
 #if (defined(__GNUC__) && (__GNUC__ >= 3)) || (defined(__INTEL_COMPILER) && (__INTEL_COMPILER >= 800)) || defined(__clang__)
+#ifdef ZT_DEBUG
+#define ZT_ALWAYS_INLINE
+#else
 #define ZT_ALWAYS_INLINE __attribute__((always_inline)) inline
+#endif
 #ifndef restrict
 #define restrict __restrict__
 #endif
@@ -190,7 +194,11 @@ typedef unsigned uint128_t __attribute__((mode(TI)));
 #endif
 
 #ifndef ZT_ALWAYS_INLINE
+#ifdef ZT_DEBUG
+#define ZT_ALWAYS_INLINE
+#else
 #define ZT_ALWAYS_INLINE inline
+#endif
 #endif
 
 // Macro to avoid calling hton() on values known at compile time.

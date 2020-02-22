@@ -465,6 +465,68 @@ static ZT_ALWAYS_INLINE void storeBigEndian(void *const p,const I i) noexcept
 }
 
 /**
+ * Decode a little-endian value from a byte stream
+ *
+ * @tparam I Type to decode (should be unsigned e.g. uint32_t or uint64_t)
+ * @param p Byte stream, must be at least sizeof(I) in size
+ * @return Decoded integer
+ */
+template<typename I>
+static ZT_ALWAYS_INLINE I loadLittleEndian(const void *const p) noexcept
+{
+#ifdef ZT_NO_UNALIGNED_ACCESS
+	I x = (I)0;
+	for(unsigned int k=0;k<sizeof(I);++k) {
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+		reinterpret_cast<uint8_t *>(&x)[k] = reinterpret_cast<const uint8_t *>(p)[k];
+#else
+		reinterpret_cast<uint8_t *>(&x)[k] = reinterpret_cast<const uint8_t *>(p)[(sizeof(I)-1)-k];
+#endif
+	}
+	return x;
+#else
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+	return *reinterpret_cast<const I *>(p);
+#else
+	I x = (I)0;
+	for(unsigned int k=0;k<sizeof(I);++k) {
+		reinterpret_cast<uint8_t *>(&x)[k] = reinterpret_cast<const uint8_t *>(p)[(sizeof(I)-1)-k];
+	}
+	return x;
+#endif
+#endif
+}
+
+/**
+ * Save an integer in little-endian format
+ *
+ * @tparam I Integer type to store (usually inferred)
+ * @param p Byte stream to write (must be at least sizeof(I))
+ * #param i Integer to write
+ */
+template<typename I>
+static ZT_ALWAYS_INLINE void storeLittleEndian(void *const p,const I i) noexcept
+{
+#ifdef ZT_NO_UNALIGNED_ACCESS
+	for(unsigned int k=0;k<sizeof(I);++k) {
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+		reinterpret_cast<uint8_t *>(p)[k] = reinterpret_cast<const uint8_t *>(&i)[k];
+#else
+		reinterpret_cast<uint8_t *>(p)[k] = reinterpret_cast<const uint8_t *>(&i)[(sizeof(I)-1)-k];
+#endif
+	}
+#else
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+	*reinterpret_cast<I *>(p) = i;
+#else
+	for(unsigned int k=0;k<sizeof(I);++k) {
+		reinterpret_cast<uint8_t *>(p)[k] = reinterpret_cast<const uint8_t *>(&i)[(sizeof(I)-1)-k];
+	}
+#endif
+#endif
+}
+
+/**
  * Copy bits from memory into an integer type without modifying their order
  *
  * @tparam I Type to load

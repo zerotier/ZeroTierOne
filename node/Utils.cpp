@@ -325,9 +325,9 @@ void getSecureRandom(void *buf,unsigned int bytes) noexcept
 #if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
 				if (CPUID.rdrand) {
 					uint64_t tmp = 0;
-					for(int i=0;i<16;++i) {
+					for(int k=0;k<16;++k) {
 						_rdrand64_step((unsigned long long *)&tmp);
-						randomState[i] ^= tmp;
+						randomState[k] ^= tmp;
 					}
 				}
 #endif
@@ -342,16 +342,16 @@ void getSecureRandom(void *buf,unsigned int bytes) noexcept
 
 			++randomState[15];
 			SHA384(randomState,randomState,sizeof(randomState));
+
 			AES aes(randomState);
 			uint64_t ctr[2],tmp[2];
 			ctr[0] = randomState[4];
 			ctr[1] = randomState[5]; // AES key + CTR/nonce = part replaced each time by SHA384
-			for(int k=0;k<8192;) {
+			for(int k=0;k<8192;k+=2) {
 				++ctr[0];
 				aes.encrypt(ctr,tmp);
 				randomBuf[k] ^= tmp[0];
 				randomBuf[k+1] ^= tmp[1];
-				k += 2;
 			}
 		}
 

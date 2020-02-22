@@ -44,20 +44,17 @@ public:
 	typedef const T * const_iterator;
 
 	ZT_ALWAYS_INLINE FCV() noexcept : _s(0) {}
-
-	template<unsigned int C2>
-	ZT_ALWAYS_INLINE FCV(const FCV<T,C2> &v) : _s(0) { *this = v; }
+	ZT_ALWAYS_INLINE FCV(const FCV &v) : _s(0) { *this = v; }
 
 	ZT_ALWAYS_INLINE ~FCV() { this->clear(); }
 
-	template<unsigned int C2>
-	ZT_ALWAYS_INLINE FCV &operator=(const FCV<T,C2> &v)
+	ZT_ALWAYS_INLINE FCV &operator=(const FCV &v)
 	{
-		if ((C != C2)||(&v != this)) {
+		if (&v != this) {
 			this->clear();
-			const unsigned int vs = ((C2 > C) && (v._s > C)) ? C : v._s;
-			_s = vs;
-			for (unsigned int i = 0; i < vs; ++i)
+			const unsigned int s = v._s;
+			_s = s;
+			for (unsigned int i=0;i<s;++i)
 				new(reinterpret_cast<T *>(_m) + i) T(*(reinterpret_cast<const T *>(v._m) + i));
 		}
 		return *this;
@@ -245,8 +242,7 @@ public:
 		}
 	}
 
-	template<unsigned int C2>
-	ZT_ALWAYS_INLINE bool operator==(const FCV<T,C2> &v) const
+	ZT_ALWAYS_INLINE bool operator==(const FCV &v) const
 	{
 		if (_s == v._s) {
 			for(unsigned int i=0;i<_s;++i) {
@@ -257,16 +253,11 @@ public:
 		}
 		return false;
 	}
-	template<unsigned int C2>
-	ZT_ALWAYS_INLINE bool operator!=(const FCV<T,C2> &v) const { return (!(*this == v)); }
-	template<unsigned int C2>
-	ZT_ALWAYS_INLINE bool operator<(const FCV<T,C2> &v) const { return std::lexicographical_compare(begin(),end(),v.begin(),v.end()); }
-	template<unsigned int C2>
-	ZT_ALWAYS_INLINE bool operator>(const FCV<T,C2> &v) const { return (v < *this); }
-	template<unsigned int C2>
-	ZT_ALWAYS_INLINE bool operator<=(const FCV<T,C2> &v) const { return !(v < *this); }
-	template<unsigned int C2>
-	ZT_ALWAYS_INLINE bool operator>=(const FCV<T,C2> &v) const { return !(*this < v); }
+	ZT_ALWAYS_INLINE bool operator!=(const FCV &v) const { return (!(*this == v)); }
+	ZT_ALWAYS_INLINE bool operator<(const FCV &v) const { return std::lexicographical_compare(begin(),end(),v.begin(),v.end()); }
+	ZT_ALWAYS_INLINE bool operator>(const FCV &v) const { return (v < *this); }
+	ZT_ALWAYS_INLINE bool operator<=(const FCV &v) const { return !(v < *this); }
+	ZT_ALWAYS_INLINE bool operator>=(const FCV &v) const { return !(*this < v); }
 
 private:
 	unsigned int _s;

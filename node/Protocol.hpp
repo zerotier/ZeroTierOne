@@ -969,31 +969,31 @@ ZT_PACKED_STRUCT(struct UNSUPPORTED_OPERATION__NETWORK_CONFIG_REQUEST
  * @param packetSize Packet's actual size in bytes
  * @return Packet ID or 0 if packet size is less than 8
  */
-ZT_ALWAYS_INLINE uint64_t packetId(const Buf &pkt,const unsigned int packetSize) noexcept { return (packetSize >= 8) ? Utils::loadBigEndian<uint64_t>(pkt.unsafeData) : 0ULL; }
+static ZT_ALWAYS_INLINE uint64_t packetId(const Buf &pkt,const unsigned int packetSize) noexcept { return (packetSize >= 8) ? Utils::loadBigEndian<uint64_t>(pkt.unsafeData) : 0ULL; }
 
 /**
  * @param Packet to extract hops from
  * @param packetSize Packet's actual size in bytes
  * @return 3-bit hops field embedded in packet flags field
  */
-ZT_ALWAYS_INLINE uint8_t packetHops(const Buf &pkt,const unsigned int packetSize) noexcept { return (packetSize >= ZT_PROTO_PACKET_FLAGS_INDEX) ? (pkt.unsafeData[ZT_PROTO_PACKET_FLAGS_INDEX] & ZT_PROTO_FLAG_FIELD_HOPS_MASK) : 0; }
+static ZT_ALWAYS_INLINE uint8_t packetHops(const Buf &pkt,const unsigned int packetSize) noexcept { return (packetSize >= ZT_PROTO_PACKET_FLAGS_INDEX) ? (pkt.unsafeData[ZT_PROTO_PACKET_FLAGS_INDEX] & ZT_PROTO_FLAG_FIELD_HOPS_MASK) : 0; }
 
 /**
  * @param Packet to extract cipher ID from
  * @param packetSize Packet's actual size in bytes
  * @return 3-bit cipher field embedded in packet flags field
  */
-ZT_ALWAYS_INLINE uint8_t packetCipher(const Buf &pkt,const unsigned int packetSize) noexcept { return (packetSize >= ZT_PROTO_PACKET_FLAGS_INDEX) ? ((pkt.unsafeData[ZT_PROTO_PACKET_FLAGS_INDEX] >> 3U) & 0x07U) : 0; }
+static ZT_ALWAYS_INLINE uint8_t packetCipher(const Buf &pkt,const unsigned int packetSize) noexcept { return (packetSize >= ZT_PROTO_PACKET_FLAGS_INDEX) ? ((pkt.unsafeData[ZT_PROTO_PACKET_FLAGS_INDEX] >> 3U) & 0x07U) : 0; }
 
 /**
  * @return 3-bit hops field embedded in packet flags field
  */
-ZT_ALWAYS_INLINE uint8_t packetHops(const Header &ph) noexcept { return (ph.flags & 0x07U); }
+static ZT_ALWAYS_INLINE uint8_t packetHops(const Header &ph) noexcept { return (ph.flags & 0x07U); }
 
 /**
  * @return 3-bit cipher field embedded in packet flags field
  */
-ZT_ALWAYS_INLINE uint8_t packetCipher(const Header &ph) noexcept { return ((ph.flags >> 3U) & 0x07U); }
+static ZT_ALWAYS_INLINE uint8_t packetCipher(const Header &ph) noexcept { return ((ph.flags >> 3U) & 0x07U); }
 
 /**
  * Deterministically mangle a 256-bit crypto key based on packet characteristics
@@ -1005,7 +1005,7 @@ ZT_ALWAYS_INLINE uint8_t packetCipher(const Header &ph) noexcept { return ((ph.f
  * @param in Input key (32 bytes)
  * @param out Output buffer (32 bytes)
  */
-ZT_ALWAYS_INLINE void salsa2012DeriveKey(const uint8_t *const in,uint8_t *const out,const Buf &packet,const unsigned int packetSize) noexcept
+static ZT_ALWAYS_INLINE void salsa2012DeriveKey(const uint8_t *const in,uint8_t *const out,const Buf &packet,const unsigned int packetSize) noexcept
 {
 	// IV and source/destination addresses. Using the addresses divides the
 	// key space into two halves-- A->B and B->A (since order will change).

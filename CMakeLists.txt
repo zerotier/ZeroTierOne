@@ -44,7 +44,7 @@ if (BUILD_CENTRAL_CONTROLLER)
 endif(BUILD_CENTRAL_CONTROLLER)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-	add_definitions(-DZT_TRACE)
+	add_definitions(-DZT_DEBUG)
 endif(CMAKE_BUILD_TYPE STREQUAL "Debug")
 
 if(WIN32)

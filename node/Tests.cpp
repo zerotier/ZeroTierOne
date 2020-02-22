@@ -50,7 +50,7 @@ using namespace ZeroTier;
 
 static const uint8_t ECC384_TV0_PUBLIC[49] = { 0x02,0xed,0xbc,0xbb,0x1f,0x23,0x9b,0xbd,0x9d,0x3d,0x7c,0xef,0x6b,0x37,0xa3,0x26,0x69,0xe9,0x4d,0xf4,0x26,0x64,0xfb,0xac,0x76,0x40,0xc2,0x22,0x21,0xa6,0xa3,0xdf,0x8c,0x96,0x81,0x76,0x0f,0x0e,0x67,0xab,0xd4,0x51,0x58,0xb3,0x15,0x63,0xfb,0x49,0x71 };
 static const uint8_t ECC384_TV0_PRIVATE[48]  = { 0x62,0x93,0x9b,0x4a,0x29,0x3c,0xc6,0x86,0x98,0xc3,0xd0,0x7f,0xb7,0xff,0x97,0xa2,0xfb,0xc9,0x36,0x8a,0x1d,0xa5,0x40,0x8e,0x49,0x13,0xd4,0x15,0x46,0xcb,0xb4,0x08,0xfa,0x8c,0xb2,0x7f,0xcc,0x3f,0x72,0xf8,0x0d,0x16,0x7b,0xf0,0xa4,0xc3,0x29,0xd3 };
-static const uint8_t ECC384_TV0_DH_SELF_AGREE[48] = { 0xf6,0x96,0xbd,0x1b,0xda,0x5e,0x52,0x8c,0x1d,0x56,0xa3,0x6e,0xd9,0xba,0xd7,0x84,0xdd,0x20,0x1b,0x50,0xc9,0xd8,0x68,0xb9,0x52,0x93,0x27,0xab,0x17,0xed,0xc6,0xae,0x89,0x5e,0x7f,0xd9,0x46,0x15,0x87,0xf4,0xc8,0x47,0x2e,0xf7,0x86,0xf5,0x87 };
+static const uint8_t ECC384_TV0_DH_SELF_AGREE[48] = { 0xf6,0x96,0xbd,0x1b,0xda,0x5e,0x52,0x8c,0x1d,0x56,0xa3,0x6e,0xd9,0xba,0xd7,0x84,0xdd,0x20,0x1b,0x50,0xc9,0xd8,0x68,0xb9,0x52,0x93,0x27,0xab,0x17,0xed,0xc6,0xae,0x89,0x5e,0x7f,0xd9,0x46,0x15,0x87,0xf4,0xc8,0x47,0x2e,0xf7,0x86,0xf5,0x87,0x0b };
 static const uint8_t ECC384_TV0_SIG[96] = { 0x98,0x93,0x5f,0x0a,0x05,0x2c,0xba,0x3a,0xd7,0xd2,0x08,0xde,0x64,0xe7,0x77,0x2c,0xbd,0xe6,0xd9,0x16,0x11,0xd2,0xef,0x03,0xba,0x12,0x9f,0x14,0x98,0x49,0x8c,0x2d,0x36,0x50,0xd9,0xcf,0xbb,0x2b,0xea,0xcb,0x28,0xe7,0x0b,0x90,0x43,0x9e,0x01,0x8b,0x52,0xdb,0x46,0xec,0xc7,0xf6,0xa9,0x56,0x88,0x00,0x3c,0xdb,0x4f,0xfe,0x04,0xa1,0xc7,0x4c,0x3f,0xfc,0xb8,0xc8,0x70,0x42,0x12,0xf4,0x37,0xfa,0xcd,0xb9,0x17,0x2f,0x60,0x8c,0xb6,0x05,0xc6,0xce,0x37,0xd6,0xc9,0xf0,0x0b,0x23,0x39,0x10,0x29,0x0d };
 
 static const uint8_t SALSA20_TV0_KEY[32] = { 0x0f,0x62,0xb5,0x08,0x5b,0xae,0x01,0x54,0xa7,0xfa,0x4d,0xa0,0xf3,0x46,0x99,0xec,0x3f,0x92,0xe5,0x38,0x8b,0xde,0x31,0x84,0xd7,0x2a,0x7d,0xd0,0x23,0x76,0xc9,0x1c };
@@ -173,7 +173,7 @@ public:
 	ZT_ALWAYS_INLINE LifeCycleTracker(const LifeCycleTracker &ltc) :
 		cnt(ltc.cnt)
 	{
-		if (*cnt) ++*cnt;
+		if (cnt) ++*cnt;
 	}
 	explicit ZT_ALWAYS_INLINE LifeCycleTracker(long &c) :
 		cnt(&c)
@@ -187,9 +187,9 @@ public:
 	ZT_ALWAYS_INLINE LifeCycleTracker &operator=(const LifeCycleTracker &ltc)
 	{
 		if (&ltc != this) {
-			if (*cnt) --*cnt;
+			if (cnt) --*cnt;
 			cnt = ltc.cnt;
-			if (*cnt) ++*cnt;
+			if (cnt) ++*cnt;
 		}
 		return *this;
 	}
@@ -202,14 +202,14 @@ extern "C" const char *ZTT_general()
 {
 	try {
 		volatile uint64_t endian = 0;
-		reinterpret_cast<volatile uint8_t *>(endian)[0] = 1;
-		reinterpret_cast<volatile uint8_t *>(endian)[1] = 2;
-		reinterpret_cast<volatile uint8_t *>(endian)[2] = 3;
-		reinterpret_cast<volatile uint8_t *>(endian)[3] = 4;
-		reinterpret_cast<volatile uint8_t *>(endian)[4] = 5;
-		reinterpret_cast<volatile uint8_t *>(endian)[5] = 6;
-		reinterpret_cast<volatile uint8_t *>(endian)[6] = 7;
-		reinterpret_cast<volatile uint8_t *>(endian)[7] = 8;
+		reinterpret_cast<volatile uint8_t *>(&endian)[0] = 1;
+		reinterpret_cast<volatile uint8_t *>(&endian)[1] = 2;
+		reinterpret_cast<volatile uint8_t *>(&endian)[2] = 3;
+		reinterpret_cast<volatile uint8_t *>(&endian)[3] = 4;
+		reinterpret_cast<volatile uint8_t *>(&endian)[4] = 5;
+		reinterpret_cast<volatile uint8_t *>(&endian)[5] = 6;
+		reinterpret_cast<volatile uint8_t *>(&endian)[6] = 7;
+		reinterpret_cast<volatile uint8_t *>(&endian)[7] = 8;
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 		if (*(&endian) != 0x0807060504030201ULL) {
 			ZT_T_PRINTF("[general] Error: __BYTE_ORDER == __LITTLE_ENDIAN but byte order is actually %.16llx" ZT_EOL_S,endian);
@@ -293,7 +293,9 @@ extern "C" const char *ZTT_general()
 			ZT_T_PRINTF("OK" ZT_EOL_S);
 
 			ZT_T_PRINTF("[general] Utils::random() samples: %.16llx %.16llx" ZT_EOL_S,c,d);
+
 			uint8_t secrand[64];
+			Utils::getSecureRandom(secrand,sizeof(secrand));
 			char secrands[256];
 			Utils::hex(secrand,sizeof(secrand),secrands);
 			ZT_T_PRINTF("[general] Utils::getSecureRandom() sample: %s" ZT_EOL_S,secrands);
@@ -417,7 +419,6 @@ extern "C" const char *ZTT_crypto()
 				ZT_T_PRINTF("FAILED (SHA512)" ZT_EOL_S);
 				return "SHA512 test vector failed";
 			}
-			ZT_T_PRINTF("OK" ZT_EOL_S);
 			SHA384(h,SHA512_TV0_INPUT,strlen(SHA512_TV0_INPUT));
 			if (memcmp(h,SHA512_TV0_SHA384_DIGEST,48) != 0) {
 				ZT_T_PRINTF("FAILED (SHA384)" ZT_EOL_S);
@@ -442,12 +443,12 @@ extern "C" const char *ZTT_crypto()
 					return "Curve25519 key agreement test failed (does not match expected value)";
 				}
 				C25519::sign(C25519_TEST_VECTORS[t].priv1,C25519_TEST_VECTORS[t].pub1,kh,64,sig);
-				if (memcmp(sig,C25519_TEST_VECTORS[t].agreementSignedBy1,96) != 0) {
+				if (memcmp(sig,C25519_TEST_VECTORS[t].agreementSignedBy1,ZT_C25519_SIGNATURE_LEN) != 0) {
 					ZT_T_PRINTF("FAILED (signature of agreement by key 1 does not match test vector %d)" ZT_EOL_S,t);
 					return "Curve25519 signature test failed (signature by key 1 does not match expected value)";
 				}
 				C25519::sign(C25519_TEST_VECTORS[t].priv2,C25519_TEST_VECTORS[t].pub2,kh,64,sig);
-				if (memcmp(sig,C25519_TEST_VECTORS[t].agreementSignedBy1,96) != 0) {
+				if (memcmp(sig,C25519_TEST_VECTORS[t].agreementSignedBy2,ZT_C25519_SIGNATURE_LEN) != 0) {
 					ZT_T_PRINTF("FAILED (signature of agreement by key 2 does not match test vector %d)" ZT_EOL_S,t);
 					return "Curve25519 signature test failed (signature by key 2 does not match expected value)";
 				}
@@ -456,10 +457,10 @@ extern "C" const char *ZTT_crypto()
 		}
 
 		{
-			uint8_t key[48];
+			uint8_t key[ZT_ECC384_SHARED_SECRET_SIZE];
 			ZT_T_PRINTF("[crypto] Testing ECC384 (NIST P-384)... ");
 			ECC384ECDH(ECC384_TV0_PUBLIC,ECC384_TV0_PRIVATE,key);
-			if (memcmp(key,ECC384_TV0_DH_SELF_AGREE,48) != 0) {
+			if (memcmp(key,ECC384_TV0_DH_SELF_AGREE,ZT_ECC384_SHARED_SECRET_SIZE) != 0) {
 				ZT_T_PRINTF("FAILED (test vector 0, self-agree)" ZT_EOL_S);
 				return "ECC384 test vector 0 self-agree failed";
 			}
@@ -496,12 +497,12 @@ extern "C" const char *ZTT_crypto()
 			ZT_T_PRINTF("[crypto] Testing Poly1305... ");
 			poly1305(tag,POLY1305_TV0_INPUT,sizeof(POLY1305_TV0_INPUT),POLY1305_TV0_KEY);
 			if (memcmp(tag,POLY1305_TV0_TAG,16) != 0) {
-				ZT_T_PRINTF("FAILED (test vector 0)");
+				ZT_T_PRINTF("FAILED (test vector 0)" ZT_EOL_S);
 				return "poly1305 test vector 0 failed";
 			}
 			poly1305(tag,POLY1305_TV1_INPUT,sizeof(POLY1305_TV1_INPUT),POLY1305_TV1_KEY);
 			if (memcmp(tag,POLY1305_TV1_TAG,16) != 0) {
-				ZT_T_PRINTF("FAILED (test vector 1)");
+				ZT_T_PRINTF("FAILED (test vector 1)" ZT_EOL_S);
 				return "poly1305 test vector 1 failed";
 			}
 			ZT_T_PRINTF("OK" ZT_EOL_S);
@@ -513,12 +514,12 @@ extern "C" const char *ZTT_crypto()
 			AES aes(AES_TEST_VECTOR_0_KEY);
 			aes.encrypt(AES_TEST_VECTOR_0_IN,out);
 			if (memcmp(AES_TEST_VECTOR_0_OUT,out,16) != 0) {
-				ZT_T_PRINTF("FAILED (test vector 0)");
+				ZT_T_PRINTF("FAILED (test vector 0) ZT_EOL_S");
 				return "AES test vector 0 failed";
 			}
 			aes.decrypt(out,out);
 			if (memcmp(AES_TEST_VECTOR_0_IN,out,16) != 0) {
-				ZT_T_PRINTF("FAILED (test vector 0 decrypt)");
+				ZT_T_PRINTF("FAILED (test vector 0 decrypt) ZT_EOL_S");
 				return "AES test vector 0 decrypt failed";
 			}
 			ZT_T_PRINTF("OK" ZT_EOL_S);
@@ -534,7 +535,7 @@ extern "C" const char *ZTT_crypto()
 				gmac.update(AES_GMAC_VECTOR_0_IN,sizeof(AES_GMAC_VECTOR_0_IN));
 				gmac.finish(tag);
 				if (memcmp(tag,AES_GMAC_VECTOR_0_OUT,16) != 0) {
-					ZT_T_PRINTF("FAILED (test vector 0)");
+					ZT_T_PRINTF("FAILED (test vector 0)" ZT_EOL_S);
 					return "AES-GMAC test vector 0 failed";
 				}
 			}
@@ -545,7 +546,7 @@ extern "C" const char *ZTT_crypto()
 				gmac.update(AES_GMAC_VECTOR_1_IN,sizeof(AES_GMAC_VECTOR_1_IN));
 				gmac.finish(tag);
 				if (memcmp(tag,AES_GMAC_VECTOR_1_OUT,16) != 0) {
-					ZT_T_PRINTF("FAILED (test vector 1)");
+					ZT_T_PRINTF("FAILED (test vector 1)" ZT_EOL_S);
 					return "AES-GMAC test vector 1 failed";
 				}
 			}
@@ -556,7 +557,7 @@ extern "C" const char *ZTT_crypto()
 				gmac.update(AES_GMAC_VECTOR_2_IN,sizeof(AES_GMAC_VECTOR_2_IN));
 				gmac.finish(tag);
 				if (memcmp(tag,AES_GMAC_VECTOR_2_OUT,16) != 0) {
-					ZT_T_PRINTF("FAILED (test vector 2)");
+					ZT_T_PRINTF("FAILED (test vector 2)" ZT_EOL_S);
 					return "AES-GMAC test vector 2 failed";
 				}
 			}
@@ -568,7 +569,7 @@ extern "C" const char *ZTT_crypto()
 				gmac.update(AES_GMAC_VECTOR_2_IN + (sizeof(AES_GMAC_VECTOR_2_IN) - 117),117);
 				gmac.finish(tag);
 				if (memcmp(tag,AES_GMAC_VECTOR_2_OUT,16) != 0) {
-					ZT_T_PRINTF("FAILED (test vector 2, two fragments)");
+					ZT_T_PRINTF("FAILED (test vector 2, two fragments)" ZT_EOL_S);
 					return "AES-GMAC test vector (in two fragments) 2 failed";
 				}
 			}

@@ -16,10 +16,10 @@ Public domain.
 #pragma warning(disable: 4146)
 #endif
 
-#define U8TO64(p) Utils::loadBigEndian<uint64_t>(p)
-#define U64TO8(p,v) Utils::storeBigEndian<uint64_t>(p,v)
-#define U8TO32(p) Utils::loadBigEndian<uint32_t>(p)
-#define U32TO8(p,v) Utils::storeBigEndian<uint32_t>(p,v)
+#define U8TO64(p) Utils::loadLittleEndian<uint64_t>(p)
+#define U64TO8(p,v) Utils::storeLittleEndian<uint64_t>(p,v)
+#define U8TO32(p) Utils::loadLittleEndian<uint32_t>(p)
+#define U32TO8(p,v) Utils::storeLittleEndian<uint32_t>(p,v)
 
 namespace ZeroTier {
 
