@@ -514,6 +514,7 @@ void AES::CTR::crypt(const void *const input,unsigned int len) noexcept
 		out += totalLen;
 		_len = (totalLen + len);
 
+#if 0
 		// This is the largest chunk size that will fit in SSE registers with four
 		// registers left over for round key data and temporaries.
 		while (len >= 192) {
@@ -672,8 +673,9 @@ void AES::CTR::crypt(const void *const input,unsigned int len) noexcept
 			len -= 192;
 			out += 192;
 		}
+#endif
 
-		while (_len >= 64) {
+		while (len >= 64) {
 			__m128i d0,d1,d2,d3;
 			if (likely(c1 < 0xfffffffffffffffcULL)) {
 				d0 = _mm_set_epi64x((long long)Utils::hton(c1),(long long)c0);
@@ -699,10 +701,10 @@ void AES::CTR::crypt(const void *const input,unsigned int len) noexcept
 				d1 = _mm_xor_si128(d1,k0);
 				d2 = _mm_xor_si128(d2,k0);
 				d3 = _mm_xor_si128(d3,k0);
-				d0 = _mm_xor_si128(d0,k1);
-				d1 = _mm_xor_si128(d1,k1);
-				d2 = _mm_xor_si128(d2,k1);
-				d3 = _mm_xor_si128(d3,k1);
+				d0 = _mm_aesenc_si128(d0,k1);
+				d1 = _mm_aesenc_si128(d1,k1);
+				d2 = _mm_aesenc_si128(d2,k1);
+				d3 = _mm_aesenc_si128(d3,k1);
 				for (int r=2;r<14;r+=2) {
 					k0 = _aes._k.ni.k[r];
 					k1 = _aes._k.ni.k[r+1];
