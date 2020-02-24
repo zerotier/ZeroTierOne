@@ -687,47 +687,122 @@ extern "C" const char *ZTT_benchmarkCrypto()
 			AES aes(AES_CTR_TEST_VECTOR_0_KEY);
 			AES::CTR ctr(aes);
 			int64_t start = now();
-			for(long i=0;i<500000;++i) {
+			for(long i=0;i<350000;++i) {
 				ctr.init(AES_CTR_TEST_VECTOR_0_IV,tmp);
 				ctr.crypt(tmp,sizeof(tmp));
 				ctr.finish();
 			}
 			int64_t end = now();
 			foo = tmp[0]; // prevent optimization
-			ZT_T_PRINTF("%.8f MiB/sec" ZT_EOL_S,((16384.0 * 500000.0) / 1048576.0) / ((double)(end - start) / 1000.0));
+			ZT_T_PRINTF("%.4f MiB/sec" ZT_EOL_S,((16384.0 * 350000.0) / 1048576.0) / ((double)(end - start) / 1000.0));
 
 			ZT_T_PRINTF("[crypto] Benchmarking AES-GMAC... ");
 			AES::GMAC gmac(aes);
 			start = now();
-			for(long i=0;i<500000;++i) {
+			for(long i=0;i<350000;++i) {
 				gmac.init(tag);
 				gmac.update(tmp,sizeof(tmp));
 				gmac.finish(tag);
 			}
 			end = now();
 			foo = tag[0]; // prevent optimization
-			ZT_T_PRINTF("%.8f MiB/sec" ZT_EOL_S,((16384.0 * 500000.0) / 1048576.0) / ((double)(end - start) / 1000.0));
+			ZT_T_PRINTF("%.4f MiB/sec" ZT_EOL_S,((16384.0 * 350000.0) / 1048576.0) / ((double)(end - start) / 1000.0));
 		}
 
 		{
 			ZT_T_PRINTF("[crypto] Benchmarking Poly1305... ");
 			int64_t start = now();
-			for(long i=0;i<500000;++i)
+			for(long i=0;i<150000;++i)
 				poly1305(tag,tmp,sizeof(tmp),tag);
 			int64_t end = now();
 			foo = tag[0]; // prevent optimization
-			ZT_T_PRINTF("%.8f MiB/sec" ZT_EOL_S,((16384.0 * 500000.0) / 1048576.0) / ((double)(end - start) / 1000.0));
+			ZT_T_PRINTF("%.4f MiB/sec" ZT_EOL_S,((16384.0 * 150000.0) / 1048576.0) / ((double)(end - start) / 1000.0));
 		}
 
 		{
 			ZT_T_PRINTF("[crypto] Benchmarking Salsa20/12 (using vector acceleration: %s)... ",Salsa20::accelerated() ? "yes" : "no");
 			Salsa20 s20(tmp,tag);
 			int64_t start = now();
-			for(long i=0;i<250000;++i)
+			for(long i=0;i<150000;++i)
 				s20.crypt12(tmp,tmp,sizeof(tmp));
 			int64_t end = now();
 			foo = tmp[0]; // prevent optimization
-			ZT_T_PRINTF("%.8f MiB/sec" ZT_EOL_S,((16384.0 * 250000.0) / 1048576.0) / ((double)(end - start) / 1000.0));
+			ZT_T_PRINTF("%.4f MiB/sec" ZT_EOL_S,((16384.0 * 150000.0) / 1048576.0) / ((double)(end - start) / 1000.0));
+		}
+
+		{
+			uint8_t key[ZT_C25519_SHARED_KEY_LEN];
+			ZT_T_PRINTF("[crypto] Benchmarking Curve25519 ECDH... ");
+			int64_t start = now();
+			for(int i=0;i<150;++i) {
+				for (int t=0;t<ZT_NUM_C25519_TEST_VECTORS;++t) {
+					C25519::agree(C25519_TEST_VECTORS[t].priv1,C25519_TEST_VECTORS[t].pub2,key);
+					foo = key[0]; // prevent optimization
+				}
+			}
+			int64_t end = now();
+			ZT_T_PRINTF("%.4f μs/agreement" ZT_EOL_S,((double)(end - start) * 1000.0) / (double)(150 * ZT_NUM_C25519_TEST_VECTORS));
+		}
+
+		{
+			uint8_t sig[ZT_C25519_SIGNATURE_LEN];
+			memset(sig,0,sizeof(sig));
+			ZT_T_PRINTF("[crypto] Benchmarking Ed25519 signature... ");
+			int64_t start = now();
+			for(int i=0;i<150;++i) {
+				for (int t=0;t<ZT_NUM_C25519_TEST_VECTORS;++t) {
+					C25519::sign(C25519_TEST_VECTORS[t].priv1,C25519_TEST_VECTORS[t].pub1,sig,sizeof(sig),sig);
+					foo = sig[0];
+				}
+			}
+			int64_t end = now();
+			ZT_T_PRINTF("%.4f μs/signature" ZT_EOL_S,((double)(end - start) * 1000.0) / (double)(150 * ZT_NUM_C25519_TEST_VECTORS));
+		}
+
+		{
+			ZT_T_PRINTF("[crypto] Benchmarking Ed25519 signature verification... ");
+			int64_t start = now();
+			for(int i=0;i<15;++i) {
+				for (int t=0;t<ZT_NUM_C25519_TEST_VECTORS;++t) {
+					if (C25519::verify(C25519_TEST_VECTORS[t].pub1,C25519_TEST_VECTORS[t].agreementSha512,64,C25519_TEST_VECTORS[t].agreementSignedBy1,96))
+						++foo;
+				}
+			}
+			int64_t end = now();
+			ZT_T_PRINTF("%.4f μs/verify" ZT_EOL_S,((double)(end - start) * 1000.0) / (double)(15 * ZT_NUM_C25519_TEST_VECTORS));
+		}
+
+		{
+			uint8_t key[48];
+			ZT_T_PRINTF("[crypto] Benchmarking ECC384 ECDH... ");
+			volatile uint8_t *volatile pub = (volatile uint8_t *)ECC384_TV0_PUBLIC;
+			int64_t start = now();
+			for(int i=0;i<500;++i) {
+				ECC384ECDH((const uint8_t *)pub,ECC384_TV0_PRIVATE,key);
+				foo = key[0];
+			}
+			int64_t end = now();
+			ZT_T_PRINTF("%.4f μs/agreement" ZT_EOL_S,((double)(end - start) * 1000.0) / (double)(500 * ZT_NUM_C25519_TEST_VECTORS));
+		}
+
+		{
+			uint8_t sig[96];
+			ZT_T_PRINTF("[crypto] Benchmarking ECC384 signature... ");
+			int64_t start = now();
+			for(int i=0;i<500;++i) {
+				ECC384ECDSASign(ECC384_TV0_PRIVATE,sig,sig);
+				foo = sig[0];
+			}
+			int64_t end = now();
+			ZT_T_PRINTF("%.4f μs/signature" ZT_EOL_S,((double)(end - start) * 1000.0) / (double)(500 * ZT_NUM_C25519_TEST_VECTORS));
+			ZT_T_PRINTF("[crypto] Benchmarking ECC384 signature verification... ");
+			start = now();
+			for(int i=0;i<500;++i) {
+				if (!ECC384ECDSAVerify(ECC384_TV0_PUBLIC,sig,sig))
+					++foo;
+			}
+			end = now();
+			ZT_T_PRINTF("%.4f μs/verify" ZT_EOL_S,((double)(end - start) * 1000.0) / (double)(500 * ZT_NUM_C25519_TEST_VECTORS));
 		}
 	} catch (std::exception &e) {
 		ZT_T_PRINTF(ZT_EOL_S "[crypto] Unexpected exception: %s" ZT_EOL_S,e.what());

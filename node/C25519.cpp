@@ -53,7 +53,7 @@ ZT_ALWAYS_INLINE void fscalar_product(limb *output, const limb *in, const limb s
   }
 }
 
-void fproduct(limb *output, const limb *in2, const limb *in) {
+ZT_ALWAYS_INLINE void fproduct(limb *output, const limb *in2, const limb *in) {
   output[0] =       ((limb) ((s32) in2[0])) * ((s32) in[0]);
   output[1] =       ((limb) ((s32) in2[0])) * ((s32) in[1]) +
                     ((limb) ((s32) in2[1])) * ((s32) in[0]);
@@ -267,7 +267,7 @@ ZT_ALWAYS_INLINE void fmul(limb *output, const limb *in, const limb *in2) {
   memcpy(output, t, sizeof(limb) * 10);
 }
 
-ZT_ALWAYS_INLINE void fsquare_inner(limb *output, const limb *in) {
+void fsquare_inner(limb *output, const limb *in) {
   output[0] =       ((limb) ((s32) in[0])) * ((s32) in[0]);
   output[1] =  2 *  ((limb) ((s32) in[0])) * ((s32) in[1]);
   output[2] =  2 * (((limb) ((s32) in[1])) * ((s32) in[1]) +
@@ -325,7 +325,7 @@ ZT_ALWAYS_INLINE void fsquare_inner(limb *output, const limb *in) {
   output[18] = 2 *  ((limb) ((s32) in[9])) * ((s32) in[9]);
 }
 
-void fsquare(limb *output, const limb *in) {
+ZT_ALWAYS_INLINE void fsquare(limb *output, const limb *in) {
   limb t[19];
   fsquare_inner(t, in);
   /* |t[i]| < 14*2^54 because the largest product of two limbs will be <
