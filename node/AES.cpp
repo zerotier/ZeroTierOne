@@ -478,7 +478,8 @@ void AES::CTR::crypt(const void *const input,unsigned int len) noexcept
 		uint64_t c1 = Utils::ntoh(_ctr[1]);
 
 		// There are 16 XMM registers. We can reserve six of them for the
-		// first six parts of the expanded AES key.
+		// first six parts of the expanded AES key. The rest are used for
+		// other key material, counter, or data depending on the chunk size.
 		const __m128i k0 = _aes._k.ni.k[0];
 		const __m128i k1 = _aes._k.ni.k[1];
 		const __m128i k2 = _aes._k.ni.k[2];
@@ -642,41 +643,43 @@ void AES::CTR::crypt(const void *const input,unsigned int len) noexcept
 			out += 64;
 		}
 
-		while (len >= 16) {
-			__m128i d0 = _mm_set_epi64x((long long)Utils::hton(c1),(long long)c0);
-			d0 = _mm_xor_si128(d0,k0);
-			d0 = _mm_aesenc_si128(d0,k1);
+		{
 			__m128i ka = _aes._k.ni.k[6];
-			d0 = _mm_aesenc_si128(d0,k2);
 			__m128i kb = _aes._k.ni.k[7];
-			d0 = _mm_aesenc_si128(d0,k3);
-			__m128i kc = _aes._k.ni.k[8];
-			d0 = _mm_aesenc_si128(d0,k4);
-			__m128i kd = _aes._k.ni.k[9];
-			d0 = _mm_aesenc_si128(d0,k5);
-			__m128i ke = _aes._k.ni.k[10];
-			d0 = _mm_aesenc_si128(d0,ka);
-			__m128i kf = _aes._k.ni.k[11];
-			d0 = _mm_aesenc_si128(d0,kb);
-			__m128i kg = _aes._k.ni.k[12];
-			d0 = _mm_aesenc_si128(d0,kc);
-			__m128i p0 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(in));
-			d0 = _mm_aesenc_si128(d0,kd);
-			__m128i kh = _aes._k.ni.k[13];
-			d0 = _mm_aesenc_si128(d0,ke);
-			ka = _aes._k.ni.k[14];
-			d0 = _mm_aesenc_si128(d0,kf);
-			d0 = _mm_aesenc_si128(d0,kg);
-			d0 = _mm_aesenc_si128(d0,kh);
-			d0 = _mm_aesenclast_si128(d0,ka);
-			p0 = _mm_xor_si128(d0,p0);
-			_mm_storeu_si128(reinterpret_cast<__m128i *>(out),p0);
+			const __m128i kc = _aes._k.ni.k[8];
+			const __m128i kd = _aes._k.ni.k[9];
+			const __m128i ke = _aes._k.ni.k[10];
+			const __m128i kf = _aes._k.ni.k[11];
+			const __m128i kg = _aes._k.ni.k[12];
+			const __m128i kh = _aes._k.ni.k[13];
+			while (len >= 16) {
+				__m128i d0 = _mm_set_epi64x((long long)Utils::hton(c1),(long long)c0);
+				d0 = _mm_xor_si128(d0,k0);
+				d0 = _mm_aesenc_si128(d0,k1);
+				d0 = _mm_aesenc_si128(d0,k2);
+				d0 = _mm_aesenc_si128(d0,k3);
+				d0 = _mm_aesenc_si128(d0,k4);
+				d0 = _mm_aesenc_si128(d0,k5);
+				d0 = _mm_aesenc_si128(d0,ka);
+				d0 = _mm_aesenc_si128(d0,kb);
+				d0 = _mm_aesenc_si128(d0,kc);
+				d0 = _mm_aesenc_si128(d0,kd);
+				ka = _aes._k.ni.k[14];
+				d0 = _mm_aesenc_si128(d0,ke);
+				d0 = _mm_aesenc_si128(d0,kf);
+				d0 = _mm_aesenc_si128(d0,kg);
+				d0 = _mm_aesenc_si128(d0,kh);
+				kb = _mm_loadu_si128(reinterpret_cast<const __m128i *>(in));
+				d0 = _mm_aesenclast_si128(d0,ka);
+				kb = _mm_xor_si128(d0,kb);
+				_mm_storeu_si128(reinterpret_cast<__m128i *>(out),kb);
 
-			in += 16;
-			len -= 16;
-			out += 16;
+				in += 16;
+				len -= 16;
+				out += 16;
 
-			if (unlikely(++c1 == 0ULL)) c0 = Utils::hton(Utils::ntoh(c0) + 1ULL);
+				if (unlikely(++c1 == 0ULL)) c0 = Utils::hton(Utils::ntoh(c0) + 1ULL);
+			}
 		}
 
 		// Any remaining input is placed in _out. This will be picked up and crypted
