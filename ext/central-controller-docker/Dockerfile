@@ -16,6 +16,8 @@ RUN ldconfig
 RUN cd ZeroTierOne && make central-controller
 
 FROM centos:7
+RUN yum install -y https://download.postgresql.org/pub/repos/yum/10/redhat/rhel-7-x86_64/pgdg-centos10-10-2.noarch.rpm && yum -y install epel-release && yum -y update && yum clean all
+RUN yum install -y jemalloc jemalloc-devel postgresql10
 
 COPY --from=builder /ZeroTierOne/zerotier-one /usr/local/bin/zerotier-one
 RUN chmod a+x /usr/local/bin/zerotier-one

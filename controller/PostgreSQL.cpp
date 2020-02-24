@@ -1017,10 +1017,6 @@ void PostgreSQL::commitThread()
 
 						get(nwidInt, nwOrig, memberidInt, memOrig);
 
-						if(memOrig["authorized"] && ! (*config)["authorized"]) {
-							fprintf(stderr, "Member %s deauthed\n", (*config)["id"].get<std::string>().c_str());
-						}
-
 						_memberChanged(memOrig, memNew, qitem.second);
 					} else {
 						fprintf(stderr, "Can't notify of change.  Error parsing nwid or memberid: %llu-%llu\n", (unsigned long long)nwidInt, (unsigned long long)memberidInt);
