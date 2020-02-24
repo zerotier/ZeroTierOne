@@ -335,7 +335,7 @@ central-controller:	FORCE
 	make -j4 LDLIBS="-L/usr/pgsql-10/lib/ -lpq -Lext/librabbitmq/centos_x64/lib/ -lrabbitmq" CXXFLAGS="-I/usr/pgsql-10/include -I./ext/librabbitmq/centos_x64/include -fPIC" DEFS="-DZT_CONTROLLER_USE_LIBPQ -DZT_CONTROLLER" ZT_OFFICIAL=1 ZT_USE_X64_ASM_ED25519=1 one
 
 central-controller-docker: FORCE
-	docker build -t docker.zerotier.com/zerotier-central/ztcentral-controller:${TIMESTAMP} -f ext/central-controller-docker/Dockerfile --build-arg git_branch=`git name-rev --name-only HEAD` .
+	docker build --no-cache -t docker.zerotier.com/zerotier-central/ztcentral-controller:${TIMESTAMP} -f ext/central-controller-docker/Dockerfile --build-arg git_branch=`git name-rev --name-only HEAD` .
 
 debug:	FORCE
 	make ZT_DEBUG=1 one
