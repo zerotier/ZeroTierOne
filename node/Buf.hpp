@@ -35,6 +35,9 @@
 #define ZT_BUF_MEM_SIZE 0x00004000
 #define ZT_BUF_MEM_MASK 0x00003fffU
 
+// Sanity limit on maximum buffer pool size
+#define ZT_BUF_MAX_POOL_SIZE 1024
+
 namespace ZeroTier {
 
 /**

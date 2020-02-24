@@ -38,6 +38,7 @@
 #include "Hashtable.hpp"
 #include "FCV.hpp"
 #include "SHA512.hpp"
+#include "Defragmenter.hpp"
 
 #include <cstdint>
 #include <cstring>
@@ -433,6 +434,37 @@ extern "C" const char *ZTT_general()
 
 			ZT_T_PRINTF("OK" ZT_EOL_S);
 		}
+
+		{
+			ZT_T_PRINTF("[general] Testing Buf memory pool (basic sanity check)... ");
+			try {
+				std::vector< SharedPtr<Buf> > bufs;
+				Buf::freePool();
+				long cnt = Buf::poolAllocated();
+				for(int i=0;i<(ZT_BUF_MAX_POOL_SIZE + 100);++i)
+					bufs.push_back(SharedPtr<Buf>(new Buf()));
+				cnt += ZT_BUF_MAX_POOL_SIZE + 100;
+				if (Buf::poolAllocated() != cnt) {
+					ZT_T_PRINTF("FAILED" ZT_EOL_S);
+					return "Buf memory pool test failed";
+				}
+				bufs.clear();
+				if (Buf::poolAllocated() != ZT_BUF_MAX_POOL_SIZE) {
+					ZT_T_PRINTF("FAILED" ZT_EOL_S);
+					return "Buf memory pool test failed";
+				}
+				Buf::freePool();
+				cnt -= ZT_BUF_MAX_POOL_SIZE + 100;
+				if (Buf::poolAllocated() != cnt) {
+					ZT_T_PRINTF("FAILED" ZT_EOL_S);
+					return "Buf memory pool test failed";
+				}
+			} catch ( ... ) {
+				ZT_T_PRINTF("FAILED (out of memory)" ZT_EOL_S);
+				return "Buf memory pool test failed: out of memory";
+			}
+			ZT_T_PRINTF("OK" ZT_EOL_S);
+		}
 	} catch (std::exception &e) {
 		ZT_T_PRINTF(ZT_EOL_S "[general] Unexpected exception: %s" ZT_EOL_S,e.what());
 		return e.what();
@@ -672,6 +704,30 @@ extern "C" const char *ZTT_crypto()
 
 extern "C" const char *ZTT_defragmenter()
 {
+#if 0
+	Defragmenter<11> defrag;
+
+/*
+	ZT_ALWAYS_INLINE ResultCode assemble(
+		const uint64_t messageId,
+		FCV< Buf::Slice,MF > &message,
+		SharedPtr<Buf> &fragment,
+		const unsigned int fragmentDataIndex,
+		const unsigned int fragmentDataSize,
+		const unsigned int fragmentNo,
+		const unsigned int totalFragmentsExpected,
+		const int64_t now,
+		const SharedPtr< Path > &via,
+		const unsigned int maxIncomingFragmentsPerPath)
+	{
+*/
+
+	uint64_t messageId = 1;
+	FCV< Buf::Slice,11 > message;
+	for(int kk=0;kk<16;++kk) {
+	}
+
+#endif
 	return nullptr;
 }
 

@@ -17,9 +17,6 @@
 #define sched_yield() Sleep(0)
 #endif
 
-// Sanity limit on maximum buffer pool size
-#define ZT_BUF_MAX_POOL_SIZE 1024
-
 namespace ZeroTier {
 
 static std::atomic<uintptr_t> s_pool(0);
@@ -84,11 +81,11 @@ void Buf::freePool() noexcept
 			break;
 		sched_yield();
 	}
-	s_allocated.store(0);
 	s_pool.store(0);
 
 	while (bb != 0) {
 		const uintptr_t next = ((Buf *)bb)->__nextInPool;
+		--s_allocated;
 		free((void *)bb);
 		bb = next;
 	}
