@@ -89,6 +89,11 @@ public:
 		ERR_OUT_OF_MEMORY
 	};
 
+	ZT_ALWAYS_INLINE Defragmenter() :
+		_messages(GCT * 2)
+	{
+	}
+
 	/**
 	 * Process a fragment of a multi-part message
 	 *
@@ -246,9 +251,10 @@ public:
 		s.b.move(fragment);
 		s.s = fragmentDataIndex;
 		s.e = fragmentDataIndex + fragmentDataSize;
+		++e->fragmentsReceived;
 
 		// If we now have all fragments then assemble them.
-		if ((++e->fragmentsReceived >= e->totalFragmentsExpected)&&(e->totalFragmentsExpected > 0)) {
+		if ((e->fragmentsReceived >= e->totalFragmentsExpected)&&(e->totalFragmentsExpected > 0)) {
 			// This message is done so de-register it with its path if one is associated.
 			if (e->via) {
 				e->via->_inboundFragmentedMessages_l.lock();
@@ -289,7 +295,7 @@ public:
 private:
 	struct _E
 	{
-		ZT_ALWAYS_INLINE _E() : id(0),lastUsed(0),totalFragmentsExpected(0),fragmentsReceived(0),via(),message(),lock() {}
+		ZT_ALWAYS_INLINE _E() noexcept : id(0),lastUsed(0),totalFragmentsExpected(0),fragmentsReceived(0),via(),message(),lock() {}
 		ZT_ALWAYS_INLINE ~_E()
 		{
 			if (via) {
