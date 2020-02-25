@@ -43,7 +43,7 @@ namespace ZeroTier {
  * @tparam GCS Garbage collection target size for the incoming message queue
  * @tparam GCT Garbage collection trigger threshold, usually 2X GCS
  */
-template<unsigned int MF,unsigned int GCS = 32,unsigned int GCT = 64>
+template<unsigned int MF = 16,unsigned int GCS = 32,unsigned int GCT = 64>
 class Defragmenter
 {
 public:
@@ -248,7 +248,7 @@ public:
 		s.e = fragmentDataIndex + fragmentDataSize;
 
 		// If we now have all fragments then assemble them.
-		if ((e->message.size() >= e->totalFragmentsExpected)&&(e->totalFragmentsExpected > 0)) {
+		if ((++e->fragmentsReceived >= e->totalFragmentsExpected)&&(e->totalFragmentsExpected > 0)) {
 			// This message is done so de-register it with its path if one is associated.
 			if (e->via) {
 				e->via->_inboundFragmentedMessages_l.lock();
@@ -277,19 +277,31 @@ public:
 		_messages.clear();
 	}
 
+	/**
+	 * @return Number of entries currently in message defragmentation cache
+	 */
+	ZT_ALWAYS_INLINE unsigned int cacheSize() noexcept
+	{
+		RWMutex::RLock ml(_messages_l);
+		return _messages.size();
+	}
+
 private:
 	struct _E
 	{
-		ZT_ALWAYS_INLINE _E() : id(0),lastUsed(0),totalFragmentsExpected(0),via(),message(),lock() {}
+		ZT_ALWAYS_INLINE _E() : id(0),lastUsed(0),totalFragmentsExpected(0),fragmentsReceived(0),via(),message(),lock() {}
 		ZT_ALWAYS_INLINE ~_E()
 		{
-			via->_inboundFragmentedMessages_l.lock();
-			via->_inboundFragmentedMessages.erase(id);
-			via->_inboundFragmentedMessages_l.unlock();
+			if (via) {
+				via->_inboundFragmentedMessages_l.lock();
+				via->_inboundFragmentedMessages.erase(id);
+				via->_inboundFragmentedMessages_l.unlock();
+			}
 		}
 		uint64_t id;
 		volatile int64_t lastUsed;
 		unsigned int totalFragmentsExpected;
+		unsigned int fragmentsReceived;
 		SharedPtr<Path> via;
 		FCV< Buf::Slice,MF > message;
 		Mutex lock;

@@ -465,6 +465,96 @@ extern "C" const char *ZTT_general()
 			}
 			ZT_T_PRINTF("OK" ZT_EOL_S);
 		}
+
+		{
+			// This doesn't check behavior when fragments are invalid or input is totally insane.
+			// That's done during fuzzing.
+			ZT_T_PRINTF("[general] Testing Defragmenter... ");
+			Defragmenter<> defrag;
+
+			const SharedPtr<Path> nullvia;
+			uint64_t messageId = 0;
+			int64_t ts = now();
+			for(int k=0;k<50000;++k) {
+				++messageId;
+				FCV<Buf::Slice,16> message;
+				FCV<Buf::Slice,16> ref;
+
+				int frags = 1 + (int)(Utils::random() % 16);
+				int skip = ((k & 3) == 1) ? -1 : (int)(Utils::random() % frags);
+				bool complete = false;
+				message.resize(frags);
+				ref.resize(frags);
+
+				for (int f=0;f<frags;++f) {
+					if (f != skip) {
+						ref[f].b.set(new Buf());
+						ref[f].s = (unsigned int)(Utils::random() % 24);
+						ref[f].e = ref[f].s + (unsigned int)(Utils::random() % 1000);
+						for (unsigned int i=ref[f].s;i<ref[f].e;++i)
+							ref[f].b->unsafeData[i] = (uint8_t)f;
+					}
+				}
+
+				for (int f=0;f<frags;++f) {
+					if (f != skip) {
+						if (complete) {
+							ZT_T_PRINTF("FAILED (message prematurely complete)" ZT_EOL_S);
+							return "Defragmenter test failed: message prematurely complete";
+						}
+						switch (defrag.assemble(messageId,message,ref[f].b,ref[f].s,ref[f].e - ref[f].s,f,frags,ts++,nullvia,0)) {
+							case Defragmenter<>::OK:
+								break;
+							case Defragmenter<>::COMPLETE:
+								complete = true;
+								break;
+							case Defragmenter<>::ERR_DUPLICATE_FRAGMENT:
+								break;
+							case Defragmenter<>::ERR_INVALID_FRAGMENT:
+								ZT_T_PRINTF("FAILED (invalid fragment)" ZT_EOL_S);
+								return "Defragmenter test failed: invalid fragment";
+							case Defragmenter<>::ERR_TOO_MANY_FRAGMENTS_FOR_PATH:
+								break;
+							case Defragmenter<>::ERR_OUT_OF_MEMORY:
+								ZT_T_PRINTF("FAILED (out of memory)" ZT_EOL_S);
+								return "Defragmenter test failed: out of memory";
+						}
+					}
+				}
+
+				if (skip == -1) {
+					if (complete) {
+						for(int f=0;f<frags;++f) {
+							if (!message[f].b) {
+								ZT_T_PRINTF("FAILED (fragment %d has null buffer)" ZT_EOL_S,f);
+								return "Defragmenter test failed: fragment has null buffer";
+							}
+							if ((message[f].s != ref[f].s)||(message[f].e != ref[f].e)) {
+								ZT_T_PRINTF("FAILED (fragment %d size and bounds incorrect (%u:%u, expected %u:%u))" ZT_EOL_S,f,message[f].s,message[f].e,ref[f].s,ref[f].e);
+								return "Defragmenter test failed: fragment size and bounds incorrect";
+							}
+							for(unsigned int i=message[f].s;i!=message[f].e;++i) {
+								if (message[f].b->unsafeData[i] != (uint8_t)f) {
+									ZT_T_PRINTF("FAILED (fragment %d data invalid (raw index %u: %d != %d))" ZT_EOL_S,f,i,(int)message[f].b->unsafeData[i],f);
+									return "Defragmenter test failed: fragment data invalid";
+								}
+							}
+						}
+					} else {
+						ZT_T_PRINTF("FAILED (message incomplete after all fragments)" ZT_EOL_S);
+						return "Defragmenter test failed: message incomplete after all fragments";
+					}
+				} else {
+					if (complete) {
+						ZT_T_PRINTF("FAILED (message completed without all fragments)" ZT_EOL_S);
+						return "Defragmenter test failed: message completed without all fragments";
+					}
+				}
+			}
+
+			Buf::freePool();
+			ZT_T_PRINTF("OK (cache remaining: %u)" ZT_EOL_S,defrag.cacheSize());
+		}
 	} catch (std::exception &e) {
 		ZT_T_PRINTF(ZT_EOL_S "[general] Unexpected exception: %s" ZT_EOL_S,e.what());
 		return e.what();
@@ -699,35 +789,6 @@ extern "C" const char *ZTT_crypto()
 		ZT_T_PRINTF(ZT_EOL_S "[crypto] Unexpected exception: unknown exception" ZT_EOL_S);
 		return "an unknown exception occurred";
 	}
-	return nullptr;
-}
-
-extern "C" const char *ZTT_defragmenter()
-{
-#if 0
-	Defragmenter<11> defrag;
-
-/*
-	ZT_ALWAYS_INLINE ResultCode assemble(
-		const uint64_t messageId,
-		FCV< Buf::Slice,MF > &message,
-		SharedPtr<Buf> &fragment,
-		const unsigned int fragmentDataIndex,
-		const unsigned int fragmentDataSize,
-		const unsigned int fragmentNo,
-		const unsigned int totalFragmentsExpected,
-		const int64_t now,
-		const SharedPtr< Path > &via,
-		const unsigned int maxIncomingFragmentsPerPath)
-	{
-*/
-
-	uint64_t messageId = 1;
-	FCV< Buf::Slice,11 > message;
-	for(int kk=0;kk<16;++kk) {
-	}
-
-#endif
 	return nullptr;
 }
 

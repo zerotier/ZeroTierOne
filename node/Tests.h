@@ -56,7 +56,6 @@ extern "C" {
 
 const char *ZTT_general();
 const char *ZTT_crypto();
-const char *ZTT_defragmenter();
 
 // Benchmarks ---------------------------------------------------------------------------------------------------------
 

@@ -1048,12 +1048,15 @@ static ZT_ALWAYS_INLINE void salsa2012DeriveKey(const uint8_t *const in,uint8_t 
  */
 uint64_t createProbe(const Identity &sender,const Identity &recipient,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH]) noexcept;
 
+// Do not use directly
+extern std::atomic<uint64_t> _s_packetIdCtr;
+
 /**
- * Get a sequential non-repeating packet ID for the next packet (thread-safe)
+ * Get a packet ID (and nonce) for a new packet
  *
- * @return Next packet ID / cryptographic nonce
+ * @return Next packet ID
  */
-uint64_t getPacketId() noexcept;
+static ZT_ALWAYS_INLINE uint64_t getPacketId() noexcept { return ++_s_packetIdCtr; }
 
 /**
  * Encrypt and compute packet MAC

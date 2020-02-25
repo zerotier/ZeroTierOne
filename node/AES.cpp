@@ -535,7 +535,7 @@ void AES::CTR::crypt(const void *const input,unsigned int len) noexcept
 		out += totalLen;
 		_len = (totalLen + len);
 
-		if (likely((c1 + len) > c1)) { // it's incredibly likely that we can ignore carry in counter increment
+		if (likely((c1 + len) > c1)) { // if this is true we can just increment c1 and ignore c0
 			while (len >= 64) {
 				__m128i d0 = _mm_set_epi64x((long long)Utils::hton(c1),(long long)c0);
 				__m128i d1 = _mm_set_epi64x((long long)Utils::hton(c1 + 1ULL),(long long)c0);
@@ -663,7 +663,7 @@ void AES::CTR::crypt(const void *const input,unsigned int len) noexcept
 					out += 16;
 				} while (len >= 16);
 			}
-		} else {
+		} else { // in the unlikely case c1 is near uint64_max, we must add with carry
 			while (len >= 64) {
 				__m128i d0 = _mm_set_epi64x((long long)Utils::hton(c1++),(long long)c0);
 				if (unlikely(c1 == 0ULL)) c0 = Utils::hton(Utils::ntoh(c0) + 1ULL);

@@ -16,6 +16,13 @@
 #include "Utils.hpp"
 
 #include <cstdlib>
+#include <ctime>
+
+#ifdef __WINDOWS__
+#include <process.h>
+#else
+#include <unistd.h>
+#endif
 
 namespace ZeroTier {
 namespace Protocol {
@@ -30,11 +37,7 @@ uint64_t createProbe(const Identity &sender,const Identity &recipient,const uint
 	return hash[0];
 }
 
-uint64_t getPacketId() noexcept
-{
-	static std::atomic<uint64_t> s_packetIdCtr(Utils::getSecureRandomU64());
-	return ++s_packetIdCtr;
-}
+std::atomic<uint64_t> _s_packetIdCtr((uint64_t)time(nullptr) << 32U);
 
 void armor(Buf &pkt,int packetSize,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH],uint8_t cipherSuite) noexcept
 {
