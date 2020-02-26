@@ -105,7 +105,7 @@ bool Identity::generate(const Type t)
 				ECC384GenerateKey(_pub.p384,_priv.p384);
 				Utils::storeBigEndian(_pub.t1mimc52,mimc52Delay(&_pub,sizeof(_pub) - sizeof(_pub.t1mimc52),ZT_V1_IDENTITY_MIMC52_VDF_ROUNDS_BASE));
 				_computeHash();
-				_address.setTo(_hash.data());
+				_address.setTo(_fp.data());
 				if (!_address.isReserved())
 					break;
 			}
@@ -130,12 +130,12 @@ bool Identity::locallyValidate() const
 				char *genmem = new char[ZT_V0_IDENTITY_GEN_MEMORY];
 				_computeMemoryHardHash(_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN,digest,genmem);
 				delete [] genmem;
-				return ((_address == Address(digest + 59))&&(!_address.isReserved())&&(digest[0] < 17));
+				return ((_address == Address(digest + 59))&&(digest[0] < 17));
 			} catch ( ... ) {}
 			break;
 
 		case P384:
-			if ((_address == Address(_hash.data()))&&(!_address.isReserved())) {
+			if (_address == Address(_fp.data())) {
 				// The most significant 8 bits of the MIMC proof included with v1 identities can be used to store a multiplier
 				// that can indicate that more work than the required minimum has been performed. Right now this is never done
 				// but it could have some use in the future. There is no harm in doing it, and we'll accept any round count
@@ -303,7 +303,7 @@ char *Identity::toString(bool includePrivate,char buf[ZT_IDENTITY_STRING_BUFFER_
 
 bool Identity::fromString(const char *str)
 {
-	_hash.zero();
+	_fp.zero();
 	_hasPrivate = false;
 
 	if (!str) {
@@ -438,7 +438,7 @@ int Identity::marshal(uint8_t data[ZT_IDENTITY_MARSHAL_SIZE_MAX],const bool incl
 
 int Identity::unmarshal(const uint8_t *data,const int len) noexcept
 {
-	_hash.zero();
+	_fp.zero();
 	_hasPrivate = false;
 
 	if (len < (ZT_ADDRESS_LENGTH + 1))
@@ -504,15 +504,15 @@ void Identity::_computeHash()
 {
 	switch(_type) {
 		default:
-			_hash.zero();
+			_fp.zero();
 			break;
 
 		case C25519:
-			SHA384(_hash.data(),_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
+			SHA384(_fp.data(),_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
 			break;
 
 		case P384:
-			SHA384(_hash.data(),&_pub,sizeof(_pub));
+			SHA384(_fp.data(),&_pub,sizeof(_pub));
 			break;
 	}
 }

@@ -1024,6 +1024,12 @@ extern "C" const char *ZTT_benchmarkCrypto()
 			}
 			int64_t end = now();
 			ZT_T_PRINTF("%.4f ms/generation (average, can vary quite a bit)" ZT_EOL_S,(double)(end - start) / 5.0);
+			ZT_T_PRINTF("[crypto] Benchmarking V0 Identity full validation... ");
+			start = now();
+			for(long i=0;i<10;++i)
+				foo = (uint8_t)id.locallyValidate();
+			end = now();
+			ZT_T_PRINTF("%.4f μs/validation" ZT_EOL_S,((double)(end - start) * 1000.0) / 10.0);
 			ZT_T_PRINTF("[crypto] Benchmarking V1 Identity generation... ");
 			start = now();
 			for(long i=0;i<5;++i) {
@@ -1032,6 +1038,12 @@ extern "C" const char *ZTT_benchmarkCrypto()
 			}
 			end = now();
 			ZT_T_PRINTF("%.4f ms/generation (relatively constant time)" ZT_EOL_S,(double)(end - start) / 5.0);
+			ZT_T_PRINTF("[crypto] Benchmarking V1 Identity full validation... ");
+			start = now();
+			for(long i=0;i<100;++i)
+				foo = (uint8_t)id.locallyValidate();
+			end = now();
+			ZT_T_PRINTF("%.4f μs/validation" ZT_EOL_S,((double)(end - start) * 1000.0) / 100.0);
 		}
 	} catch (std::exception &e) {
 		ZT_T_PRINTF(ZT_EOL_S "[crypto] Unexpected exception: %s" ZT_EOL_S,e.what());

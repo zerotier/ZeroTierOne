@@ -42,8 +42,7 @@ ZT_ALWAYS_INLINE uint64_t mulmod52(uint64_t a,uint64_t b,const uint64_t m) noexc
 	// It seems to be the fastest method on systems with a good double precision FPU.
 	return ((a * b) - (((uint64_t)(((double)a * (double)b) / (double)m) - 1ULL) * m)) % m;
 #else
-	// This is significantly slower on systems with a good FPU but will work any others. It supports 63 bits
-	// of precision even though we use only 52.
+	// This can be used as a fallback for any systems without FPU or with FPU precision issues.
 	int64_t res = 0;
 	for(;;) {
 		if (a & 1ULL)

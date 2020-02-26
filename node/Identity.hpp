@@ -41,7 +41,10 @@ namespace ZeroTier {
  * and Ed25519 and type 1 identities that include both a 25519 key pair and a NIST P-384
  * key pair. Type 1 identities use P-384 for signatures but use both key pairs at once
  * (hashing both keys together) for key agreement with other type 1 identities, and can
- * agree with type 0 identities by only using the Curve25519 component.
+ * agree with type 0 identities using only Curve25519.
+ *
+ * Type 1 identities are better in many ways but type 0 will remain the default until
+ * 1.x nodes are pretty much dead in the wild.
  */
 class Identity : public TriviallyCopyable
 {
@@ -121,7 +124,7 @@ public:
 	 *
 	 * @return Hash of public key(s)
 	 */
-	ZT_ALWAYS_INLINE const Fingerprint &fingerprint() const noexcept { return _hash; }
+	ZT_ALWAYS_INLINE const Fingerprint &fingerprint() const noexcept { return _fp; }
 
 	/**
 	 * Compute a hash of this identity's public and private keys.
@@ -198,11 +201,11 @@ public:
 	 */
 	explicit ZT_ALWAYS_INLINE operator bool() const noexcept { return (_address); }
 
-	ZT_ALWAYS_INLINE unsigned long hashCode() const noexcept { return _hash.hashCode(); }
+	ZT_ALWAYS_INLINE unsigned long hashCode() const noexcept { return _fp.hashCode(); }
 
 	ZT_ALWAYS_INLINE bool operator==(const Identity &id) const noexcept
 	{
-		return ((_address == id._address)&&(_type == id._type)&&(memcmp(_hash.data(),id._hash.data(),ZT_SHA384_DIGEST_LEN) == 0));
+		return ((_address == id._address)&&(_type == id._type)&&(memcmp(_fp.data(),id._fp.data(),ZT_SHA384_DIGEST_LEN) == 0));
 	}
 	ZT_ALWAYS_INLINE bool operator!=(const Identity &id) const noexcept { return !(*this == id); }
 	ZT_ALWAYS_INLINE bool operator<(const Identity &id) const noexcept
@@ -213,7 +216,7 @@ public:
 			if ((int)_type < (int)id._type)
 				return true;
 			if (_type == id._type)
-				return memcmp(_hash.data(),id._hash.data(),ZT_SHA384_DIGEST_LEN) < 0;
+				return memcmp(_fp.data(),id._fp.data(),ZT_SHA384_DIGEST_LEN) < 0;
 		}
 		return false;
 	}
@@ -229,7 +232,7 @@ private:
 	void _computeHash();
 
 	Address _address;
-	Fingerprint _hash;
+	Fingerprint _fp;
 	ZT_PACKED_STRUCT(struct { // do not re-order these fields
 		uint8_t c25519[ZT_C25519_PRIVATE_KEY_LEN];
 		uint8_t p384[ZT_ECC384_PRIVATE_KEY_SIZE];
