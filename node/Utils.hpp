@@ -116,15 +116,6 @@ char *hex(uint64_t i,char s[17]) noexcept;
 uint64_t unhex(const char *s) noexcept;
 
 /**
- * Convert the least significant 40 bits of a uint64_t to hex
- *
- * @param i Unsigned 64-bit int
- * @param s Buffer of size [11] to receive 10 hex characters
- * @return Pointer to buffer
- */
-char *hex10(uint64_t i,char s[11]) noexcept;
-
-/**
  * Convert a byte array into hex
  *
  * @param d Bytes

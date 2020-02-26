@@ -26,13 +26,8 @@ namespace ZeroTier {
 
 namespace {
 
-// --------------------------------------------------------------------------------------------------------------------
-
-// This is the memory-intensive hash function used to compute v0 identities
-// from v0 public keys.
-
+// This is the memory-intensive hash function used to compute v0 identities from v0 public keys.
 #define ZT_V0_IDENTITY_GEN_MEMORY 2097152
-
 static void _computeMemoryHardHash(const void *const publicKey,unsigned int publicKeyBytes,void *const digest,void *const genmem) noexcept
 {
 	// Digest publicKey[] to obtain initial digest
@@ -67,7 +62,6 @@ static void _computeMemoryHardHash(const void *const publicKey,unsigned int publ
 		s20.crypt20(digest,digest,64);
 	}
 }
-
 struct _v0_identity_generate_cond
 {
 	ZT_ALWAYS_INLINE _v0_identity_generate_cond() noexcept {}
@@ -81,7 +75,17 @@ struct _v0_identity_generate_cond
 	char *genmem;
 };
 
-// --------------------------------------------------------------------------------------------------------------------
+ZT_ALWAYS_INLINE void _v1_hash(uint8_t *const digest,const void *const in,const unsigned int len) noexcept
+{
+	SHA384(digest,in,len);
+	Utils::storeBigEndian(digest,Utils::loadBigEndian<uint64_t>(digest)           % 18446744073709549811ULL); // these are primes close to uint64_max
+	Utils::storeBigEndian(digest + 8,Utils::loadBigEndian<uint64_t>(digest + 8)   % 18446744073709549757ULL);
+	Utils::storeBigEndian(digest + 16,Utils::loadBigEndian<uint64_t>(digest + 16) % 18446744073709549733ULL);
+	Utils::storeBigEndian(digest + 24,Utils::loadBigEndian<uint64_t>(digest + 24) % 18446744073709549667ULL);
+	Utils::storeBigEndian(digest + 32,Utils::loadBigEndian<uint64_t>(digest + 32) % 18446744073709549613ULL);
+	Utils::storeBigEndian(digest + 40,Utils::loadBigEndian<uint64_t>(digest + 40) % 18446744073709549583ULL);
+	SHA384(digest,in,len,digest,48);
+}
 
 } // anonymous namespace
 
@@ -89,7 +93,7 @@ const Identity Identity::NIL;
 
 bool Identity::generate(const Type t)
 {
-	uint8_t digest[128];
+	uint8_t digest[64];
 
 	_type = t;
 	_hasPrivate = true;
@@ -107,23 +111,16 @@ bool Identity::generate(const Type t)
 
 		case P384: {
 			AES c;
-			do {
+			for(;;) {
 				C25519::generate(_pub.c25519,_priv.c25519);
 				ECC384GenerateKey(_pub.p384,_priv.p384);
-
-				SHA384(digest,&_pub,sizeof(_pub));
-				c.init(digest);
-				c.encrypt(digest,digest + 48);
-				c.encrypt(digest + 16,digest + 64);
-				c.encrypt(digest + 32,digest + 80);
-				SHA384(digest,digest,96);
-
-				if (digest[47] != 0)
-					continue;
-
-				_address.setTo(digest);
-			} while (_address.isReserved());
-
+				_v1_hash(digest,&_pub,sizeof(_pub));
+				if (((digest[46] & 1U)|digest[47]) == 0) { // right-most 9 bits must be zero
+					_address.setTo(digest);
+					if (!_address.isReserved())
+						break;
+				}
+			}
 			_hash.set(digest); // P384 uses the same hash for hash() and address generation
 		} break;
 
@@ -151,7 +148,7 @@ bool Identity::locallyValidate() const
 			return false;
 
 		case P384:
-			return ((_hash[47] == 0)&&(Address(_hash.data()) == _address));
+			return ( (Address(_hash.data()) == _address) && (((_hash[46] & 1U)|_hash[47]) == 0) );
 
 	}
 	return false;
@@ -524,15 +521,7 @@ void Identity::_computeHash()
 			break;
 
 		case P384:
-			if (!_hash) {
-				uint8_t *const digest = _hash.data();
-				SHA384(digest,&_pub,sizeof(_pub));
-				AES c(digest);
-				c.encrypt(digest,digest + 48);
-				c.encrypt(digest + 16,digest + 64);
-				c.encrypt(digest + 32,digest + 80);
-				SHA384(digest,digest,96);
-			}
+			_v1_hash(_hash.data(),&_pub,sizeof(_pub));
 			break;
 	}
 }

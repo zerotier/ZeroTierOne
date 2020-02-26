@@ -73,7 +73,7 @@ public:
 	 * @param their Their public key
 	 * @param rawkey Buffer to receive raw (not hashed) agreed upon key
 	 */
-	static void agree(const uint8_t mine[ZT_C25519_PRIVATE_KEY_LEN],const uint8_t their[ZT_C25519_PUBLIC_KEY_LEN],uint8_t rawkey[32]);
+	static void agree(const uint8_t mine[ZT_C25519_PRIVATE_KEY_LEN],const uint8_t their[ZT_C25519_PUBLIC_KEY_LEN],uint8_t rawkey[ZT_C25519_SHARED_KEY_LEN]);
 
 	/**
 	 * Sign a message with a sender's key pair

@@ -193,22 +193,6 @@ uint64_t unhex(const char *s) noexcept
 	return n;
 }
 
-char *hex10(uint64_t i,char s[11]) noexcept
-{
-	s[0] = HEXCHARS[(i >> 36U) & 0xfU];
-	s[1] = HEXCHARS[(i >> 32U) & 0xfU];
-	s[2] = HEXCHARS[(i >> 28U) & 0xfU];
-	s[3] = HEXCHARS[(i >> 24U) & 0xfU];
-	s[4] = HEXCHARS[(i >> 20U) & 0xfU];
-	s[5] = HEXCHARS[(i >> 16U) & 0xfU];
-	s[6] = HEXCHARS[(i >> 12U) & 0xfU];
-	s[7] = HEXCHARS[(i >> 8U) & 0xfU];
-	s[8] = HEXCHARS[(i >> 4U) & 0xfU];
-	s[9] = HEXCHARS[i & 0xfU];
-	s[10] = (char)0;
-	return s;
-}
-
 char *hex(const void *d,unsigned int l,char *s) noexcept
 {
 	char *const save = s;

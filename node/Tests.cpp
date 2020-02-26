@@ -178,6 +178,9 @@ static const C25519TestVector C25519_TEST_VECTORS[ZT_NUM_C25519_TEST_VECTORS] = 
 #define IDENTITY_V0_KNOWN_GOOD_0 "8e4df28b72:0:ac3d46abe0c21f3cfe7a6c8d6a85cfcffcb82fbd55af6a4d6350657c68200843fa2e16f9418bbd9702cae365f2af5fb4c420908b803a681d4daef6114d78a2d7:bd8dd6e4ce7022d2f812797a80c6ee8ad180dc4ebf301dec8b06d1be08832bddd63a2f1cfa7b2c504474c75bdc8898ba476ef92e8e2d0509f8441985171ff16e"
 #define IDENTITY_V0_KNOWN_BAD_0 "9e4df28b72:0:ac3d46abe0c21f3cfe7a6c8d6a85cfcffcb82fbd55af6a4d6350657c68200843fa2e16f9418bbd9702cae365f2af5fb4c420908b803a681d4daef6114d78a2d7:bd8dd6e4ce7022d2f812797a80c6ee8ad180dc4ebf301dec8b06d1be08832bddd63a2f1cfa7b2c504474c75bdc8898ba476ef92e8e2d0509f8441985171ff16e"
 
+#define IDENTITY_V1_KNOWN_GOOD_0 "bc72fb58e4:1:fya26hekqeromqdtpzq3mzj26zecwf7pkjahictpreapv4sw5vjcdkf6tbwaajzw6cq2ro6usrtzerccr37n52hiydogi2boaxk4tjidnhctgsbk4i4g34madrxihraurflyoe3xgeqkbpj2zrlsivscvbygzd3zfqs3qihoi6e24xy2jridq:tqaxnh3pucstd2xuwylgjfapyug7zdxorfwv37ted66qic6fu5g3pveodg7so4vt7cil7ptoht6msn6m2tsrfyd52a5f3b3g5wbd5ljjds2sftrjjw3qcb645eg4iizbqv5mlphgpa2uznonoo77qblbx6fdjh2nbt3ksooebj377rgu6qmq"
+#define IDENTITY_V1_KNOWN_BAD_0 "bc82fb58e4:1:fya26hekqeromqdtpzq3mzj26zecwf7pkjahictpreapv4sw5vjcdkf6tbwaajzw6cq2ro6usrtzerccr37n52hiydogi2boaxk4tjidnhctgsbk4i4g34madrxihraurflyoe3xgeqkbpj2zrlsivscvbygzd3zfqs3qihoi6e24xy2jridq:tqaxnh3pucstd2xuwylgjfapyug7zdxorfwv37ted66qic6fu5g3pveodg7so4vt7cil7ptoht6msn6m2tsrfyd52a5f3b3g5wbd5ljjds2sftrjjw3qcb645eg4iizbqv5mlphgpa2uznonoo77qblbx6fdjh2nbt3ksooebj377rgu6qmq"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN
@@ -481,7 +484,7 @@ extern "C" const char *ZTT_general()
 				FCV<Buf::Slice,16> ref;
 
 				int frags = 1 + (int)(Utils::random() % 16);
-				int skip = ((k & 3) == 1) ? -1 : (int)(Utils::random() % frags);
+				int skip = ((k & 3U) == 1) ? -1 : (int)(Utils::random() % frags);
 				bool complete = false;
 				message.resize(frags);
 				ref.resize(frags);
@@ -554,6 +557,54 @@ extern "C" const char *ZTT_general()
 
 			Buf::freePool();
 			ZT_T_PRINTF("OK (cache remaining: %u)" ZT_EOL_S,defrag.cacheSize());
+		}
+
+		{
+			ZT_T_PRINTF("[general] Testing Identity type 0 (C25519)... ");
+			Identity id;
+
+			if (!id.fromString(IDENTITY_V0_KNOWN_GOOD_0)) {
+				ZT_T_PRINTF("FAILED (error parsing test identity #1)" ZT_EOL_S);
+				return "Identity test failed: parse error";
+			}
+			if (!id.locallyValidate()) {
+				ZT_T_PRINTF("FAILED (validation of known-good identity failed)" ZT_EOL_S);
+				return "Identity test failed: validation of known-good identity";
+			}
+			if (!id.fromString(IDENTITY_V0_KNOWN_BAD_0)) {
+				ZT_T_PRINTF("FAILED (error parsing test identity #2)" ZT_EOL_S);
+				return "Identity test failed: parse error";
+			}
+			if (id.locallyValidate()) {
+				ZT_T_PRINTF("FAILED (validation of known-bad identity returned ok)" ZT_EOL_S);
+				return "Identity test failed: validation of known-bad identity";
+			}
+
+			ZT_T_PRINTF("OK" ZT_EOL_S "[general] Testing Identity type 1 (P384)... ");
+
+			//id.generate(Identity::P384);
+			//char tmp[1024];
+			//id.toString(true,tmp);
+			//ZT_T_PRINTF("\n%s\n",tmp);
+
+			if (!id.fromString(IDENTITY_V1_KNOWN_GOOD_0)) {
+				ZT_T_PRINTF("FAILED (error parsing test identity #1)" ZT_EOL_S);
+				return "Identity test failed: parse error";
+			}
+			if (!id.locallyValidate()) {
+				ZT_T_PRINTF("FAILED (validation of known-good identity failed)" ZT_EOL_S);
+				return "Identity test failed: validation of known-good identity";
+			}
+			if (!id.fromString(IDENTITY_V1_KNOWN_BAD_0)) {
+				ZT_T_PRINTF("FAILED (error parsing test identity #2)" ZT_EOL_S);
+				return "Identity test failed: parse error";
+			}
+			if (id.locallyValidate()) {
+				ZT_T_PRINTF("FAILED (validation of known-bad identity returned ok)" ZT_EOL_S);
+				return "Identity test failed: validation of known-bad identity";
+			}
+
+			ZT_T_PRINTF("OK" ZT_EOL_S);
 		}
 	} catch (std::exception &e) {
 		ZT_T_PRINTF(ZT_EOL_S "[general] Unexpected exception: %s" ZT_EOL_S,e.what());
@@ -920,6 +971,26 @@ extern "C" const char *ZTT_benchmarkCrypto()
 			}
 			end = now();
 			ZT_T_PRINTF("%.4f μs/verify" ZT_EOL_S,((double)(end - start) * 1000.0) / (double)(500 * ZT_NUM_C25519_TEST_VECTORS));
+		}
+
+		{
+			ZT_T_PRINTF("[crypto] Benchmarking V0 Identity generation... ");
+			Identity id;
+			int64_t start = now();
+			for(long i=0;i<5;++i) {
+				id.generate(Identity::C25519);
+				foo = (uint8_t)id.address().toInt();
+			}
+			int64_t end = now();
+			ZT_T_PRINTF("%.4f ms/generation" ZT_EOL_S,(double)(end - start) / 5.0);
+			ZT_T_PRINTF("[crypto] Benchmarking V1 Identity generation... ");
+			start = now();
+			for(long i=0;i<5;++i) {
+				id.generate(Identity::P384);
+				foo = (uint8_t)id.address().toInt();
+			}
+			end = now();
+			ZT_T_PRINTF("%.4f ms/generation" ZT_EOL_S,(double)(end - start) / 5.0);
 		}
 	} catch (std::exception &e) {
 		ZT_T_PRINTF(ZT_EOL_S "[crypto] Unexpected exception: %s" ZT_EOL_S,e.what());

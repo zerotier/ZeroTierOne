@@ -56,9 +56,9 @@ int Endpoint::marshal(uint8_t data[ZT_ENDPOINT_MARSHAL_SIZE_MAX]) const noexcept
 {
 	int p;
 	data[0] = (uint8_t)_t;
-	Utils::storeBigEndian(data + 1,(int16_t)_l[0]);
-	Utils::storeBigEndian(data + 3,(int16_t)_l[1]);
-	Utils::storeBigEndian(data + 5,(int16_t)_l[2]);
+	Utils::storeBigEndian(data + 1,(uint16_t)_l[0]);
+	Utils::storeBigEndian(data + 3,(uint16_t)_l[1]);
+	Utils::storeBigEndian(data + 5,(uint16_t)_l[2]);
 	switch(_t) {
 		case TYPE_ZEROTIER:
 			data[7] = (uint8_t)(_v.zt.a >> 32U);
@@ -116,9 +116,9 @@ int Endpoint::unmarshal(const uint8_t *restrict data,const int len) noexcept
 		return -1;
 	int p;
 	_t = (Type)data[0];
-	_l[0] = Utils::loadBigEndian<int16_t>(data + 1);
-	_l[1] = Utils::loadBigEndian<int16_t>(data + 3);
-	_l[2] = Utils::loadBigEndian<int16_t>(data + 5);
+	_l[0] = (int)Utils::loadBigEndian<uint16_t>(data + 1);
+	_l[1] = (int)Utils::loadBigEndian<uint16_t>(data + 3);
+	_l[2] = (int)Utils::loadBigEndian<uint16_t>(data + 5);
   switch(_t) {
 		case TYPE_NIL:
 			return 7;
