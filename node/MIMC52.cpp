@@ -27,7 +27,7 @@ ZT_ALWAYS_INLINE uint64_t mulmod52(uint64_t a,uint64_t b,const uint64_t m) noexc
 {
 #if 0 // #ifdef ZT_ARCH_X64
 	// This works on X64 but is very slightly slower than the FPU trick on all tested cores. That's probably
-	// because FPU division is more heavily optimized in silicon than integer division.
+	// because FPU division is more heavily optimized in silicon than integer division on these chips.
 	uint64_t r;
 	__asm__ (
 		"mulq %2\n\t"
