@@ -21,7 +21,7 @@
 #include "SHA512.hpp"
 #include "ECC384.hpp"
 #include "TriviallyCopyable.hpp"
-#include "Hash.hpp"
+#include "Fingerprint.hpp"
 
 #include <cstdio>
 #include <cstdlib>
@@ -54,11 +54,6 @@ public:
 		C25519 = ZT_CRYPTO_ALG_C25519, // Type 0 -- Curve25519 and Ed25519 (1.x and 2.x, default)
 		P384 = ZT_CRYPTO_ALG_P384      // Type 1 -- NIST P-384 with linked Curve25519/Ed25519 secondaries (2.x+)
 	};
-
-	/**
-	 * 384-bit full hash of identity's public key(s)
-	 */
-	typedef Hash<384> Fingerprint;
 
 	/**
 	 * A nil/empty identity instance

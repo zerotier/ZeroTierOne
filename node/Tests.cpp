@@ -40,6 +40,7 @@
 #include "SHA512.hpp"
 #include "Defragmenter.hpp"
 #include "MIMC52.hpp"
+#include "Fingerprint.hpp"
 
 #include <cstdint>
 #include <cstring>
@@ -284,8 +285,7 @@ extern "C" const char *ZTT_general()
 			ZT_T_ASSERT(sizeof(sockaddr_in) <= sizeof(InetAddress));
 			ZT_T_ASSERT(sizeof(sockaddr_in6) <= sizeof(InetAddress));
 			ZT_T_ASSERT(sizeof(sockaddr) <= sizeof(InetAddress));
-			ZT_T_ASSERT(sizeof(Hash<384>) == 48);
-			ZT_T_ASSERT(sizeof(Hash<512>) == 64);
+			ZT_T_ASSERT(sizeof(Fingerprint) == 48);
 			ZT_T_PRINTF("OK" ZT_EOL_S);
 		}
 
