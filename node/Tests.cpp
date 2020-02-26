@@ -179,8 +179,8 @@ static const C25519TestVector C25519_TEST_VECTORS[ZT_NUM_C25519_TEST_VECTORS] = 
 #define IDENTITY_V0_KNOWN_GOOD_0 "8e4df28b72:0:ac3d46abe0c21f3cfe7a6c8d6a85cfcffcb82fbd55af6a4d6350657c68200843fa2e16f9418bbd9702cae365f2af5fb4c420908b803a681d4daef6114d78a2d7:bd8dd6e4ce7022d2f812797a80c6ee8ad180dc4ebf301dec8b06d1be08832bddd63a2f1cfa7b2c504474c75bdc8898ba476ef92e8e2d0509f8441985171ff16e"
 #define IDENTITY_V0_KNOWN_BAD_0 "9e4df28b72:0:ac3d46abe0c21f3cfe7a6c8d6a85cfcffcb82fbd55af6a4d6350657c68200843fa2e16f9418bbd9702cae365f2af5fb4c420908b803a681d4daef6114d78a2d7:bd8dd6e4ce7022d2f812797a80c6ee8ad180dc4ebf301dec8b06d1be08832bddd63a2f1cfa7b2c504474c75bdc8898ba476ef92e8e2d0509f8441985171ff16e"
 
-#define IDENTITY_V1_KNOWN_GOOD_0 "bc72fb58e4:1:fya26hekqeromqdtpzq3mzj26zecwf7pkjahictpreapv4sw5vjcdkf6tbwaajzw6cq2ro6usrtzerccr37n52hiydogi2boaxk4tjidnhctgsbk4i4g34madrxihraurflyoe3xgeqkbpj2zrlsivscvbygzd3zfqs3qihoi6e24xy2jridq:tqaxnh3pucstd2xuwylgjfapyug7zdxorfwv37ted66qic6fu5g3pveodg7so4vt7cil7ptoht6msn6m2tsrfyd52a5f3b3g5wbd5ljjds2sftrjjw3qcb645eg4iizbqv5mlphgpa2uznonoo77qblbx6fdjh2nbt3ksooebj377rgu6qmq"
-#define IDENTITY_V1_KNOWN_BAD_0 "bc82fb58e4:1:fya26hekqeromqdtpzq3mzj26zecwf7pkjahictpreapv4sw5vjcdkf6tbwaajzw6cq2ro6usrtzerccr37n52hiydogi2boaxk4tjidnhctgsbk4i4g34madrxihraurflyoe3xgeqkbpj2zrlsivscvbygzd3zfqs3qihoi6e24xy2jridq:tqaxnh3pucstd2xuwylgjfapyug7zdxorfwv37ted66qic6fu5g3pveodg7so4vt7cil7ptoht6msn6m2tsrfyd52a5f3b3g5wbd5ljjds2sftrjjw3qcb645eg4iizbqv5mlphgpa2uznonoo77qblbx6fdjh2nbt3ksooebj377rgu6qmq"
+#define IDENTITY_V1_KNOWN_GOOD_0 "237ce8d8e2:1:5w3rj6am3sa7f5vtwm535iswob6ngmkpdidijz5ormqrfwkj55lhwyyszruu4rkbjycmlxzzoiuwtyw5s2mybknqx5j2cwxnaflqbwycoio2hqzcro5afrpcncnxlemzs6bt5linlib5flsej3f3r3bbzclxk733ei7tdrtm5uruiwpmyi4vgaafze42sx6hpe:mwjavgvhxz75ow2fhgq3zu4qfou5kce4wzegpjjd6545fpjnhjxb26e5unuutv7k3c6sm6umpyvatgpufwehi4wqmyudvq724h2klbiem6txs2h5iit5crgg3e6se5xeomuqhircv7zhkylrtnlgh57il742pwkrdgt4lz5fstetmiw7y3rq"
+#define IDENTITY_V1_KNOWN_BAD_0 "238ce8d8e2:1:5w3rj6am3sa7f5vtwm535iswob6ngmkpdidijz5ormqrfwkj55lhwyyszruu4rkbjycmlxzzoiuwtyw5s2mybknqx5j2cwxnaflqbwycoio2hqzcro5afrpcncnxlemzs6bt5linlib5flsej3f3r3bbzclxk733ei7tdrtm5uruiwpmyi4vgaafze42sx6hpe:mwjavgvhxz75ow2fhgq3zu4qfou5kce4wzegpjjd6545fpjnhjxb26e5unuutv7k3c6sm6umpyvatgpufwehi4wqmyudvq724h2klbiem6txs2h5iit5crgg3e6se5xeomuqhircv7zhkylrtnlgh57il742pwkrdgt4lz5fstetmiw7y3rq"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -351,16 +351,6 @@ extern "C" const char *ZTT_general()
 				return "getPacketId() produced collisions";
 			}
 			ZT_T_PRINTF("OK" ZT_EOL_S);
-		}
-
-		{
-			ZT_T_PRINTF("[general] Testing MIMC52... ");
-			const uint64_t proof = mimc52Delay("testing",7,1000);
-			if ((!mimc52Verify("testing",7,1000,proof))||(proof != 0x0007a1a0a1b0fe32)) {
-				ZT_T_PRINTF("FAILED (%.16llx)" ZT_EOL_S,proof);
-				return "MIMC52 failed simple delay/verify test";
-			}
-			ZT_T_PRINTF("OK (%.16llx)" ZT_EOL_S,proof);
 		}
 
 		{
@@ -647,6 +637,16 @@ extern "C" const char *ZTT_crypto()
 		}
 
 		{
+			ZT_T_PRINTF("[crypto] Testing MIMC52 VDF... ");
+			const uint64_t proof = mimc52Delay("testing",7,1000);
+			if ((!mimc52Verify("testing",7,1000,proof))||(proof != 0x0007a1a0a1b0fe32)) {
+				ZT_T_PRINTF("FAILED (%.16llx)" ZT_EOL_S,proof);
+				return "MIMC52 failed simple delay/verify test";
+			}
+			ZT_T_PRINTF("OK (%.16llx)" ZT_EOL_S,proof);
+		}
+
+		{
 			uint8_t agree0[32],agree1[32],kh[64],sig[96];
 			ZT_T_PRINTF("[crypto] Testing C25519/Ed25519... ");
 			for(int t=0;t<ZT_NUM_C25519_TEST_VECTORS;++t) {
@@ -862,18 +862,18 @@ extern "C" const char *ZTT_benchmarkCrypto()
 		memset(tag,0,sizeof(tag));
 
 		{
-			ZT_T_PRINTF("[crypto] Benchmarking MIMC52 delay... ");
+			ZT_T_PRINTF("[crypto] Benchmarking SHA384... ");
 			int64_t start = now();
-			const uint64_t proof = mimc52Delay("testing",7,250000);
+			for(int i=0;i<10000;++i)
+				SHA384(tmp,tmp,sizeof(tmp));
 			int64_t end = now();
-			int64_t dtime = end - start;
-			ZT_T_PRINTF("%.4f μs/round" ZT_EOL_S,((double)dtime * 1000.0) / 250000.0);
-			ZT_T_PRINTF("[crypto] Benchmarking MIMC52 verify... ");
+			ZT_T_PRINTF("%.4f MiB/sec" ZT_EOL_S,((16384.0 * 10000.0) / 1048576.0) / ((double)(end - start) / 1000.0));
+			ZT_T_PRINTF("[crypto] Benchmarking SHA512... ");
 			start = now();
-			foo = (uint8_t)mimc52Verify("testing",7,1000000,proof); // doesn't matter if return is true or false here
+			for(int i=0;i<10000;++i)
+				SHA512(tmp,tmp,sizeof(tmp));
 			end = now();
-			int64_t vtime = end - start;
-			ZT_T_PRINTF("%.8f μs/round, %.4fX faster than delay" ZT_EOL_S,((double)vtime * 1000.0) / 1000000.0,(double)(dtime / 250000.0) / (double)(vtime / 1000000.0));
+			ZT_T_PRINTF("%.4f MiB/sec" ZT_EOL_S,((16384.0 * 10000.0) / 1048576.0) / ((double)(end - start) / 1000.0));
 		}
 
 		{
@@ -1000,6 +1000,21 @@ extern "C" const char *ZTT_benchmarkCrypto()
 		}
 
 		{
+			ZT_T_PRINTF("[crypto] Benchmarking MIMC52 VDF delay... ");
+			int64_t start = now();
+			const uint64_t proof = mimc52Delay("testing",7,250000);
+			int64_t end = now();
+			int64_t dtime = end - start;
+			ZT_T_PRINTF("%.4f μs/round" ZT_EOL_S,((double)dtime * 1000.0) / 250000.0);
+			ZT_T_PRINTF("[crypto] Benchmarking MIMC52 VDF verify... ");
+			start = now();
+			foo = (uint8_t)mimc52Verify("testing",7,1000000,proof); // doesn't matter if return is true or false here
+			end = now();
+			int64_t vtime = end - start;
+			ZT_T_PRINTF("%.8f μs/round, %.4fX faster than delay" ZT_EOL_S,((double)vtime * 1000.0) / 1000000.0,(double)(dtime / 250000.0) / (double)(vtime / 1000000.0));
+		}
+
+		{
 			ZT_T_PRINTF("[crypto] Benchmarking V0 Identity generation... ");
 			Identity id;
 			int64_t start = now();
@@ -1008,7 +1023,7 @@ extern "C" const char *ZTT_benchmarkCrypto()
 				foo = (uint8_t)id.address().toInt();
 			}
 			int64_t end = now();
-			ZT_T_PRINTF("%.4f ms/generation" ZT_EOL_S,(double)(end - start) / 5.0);
+			ZT_T_PRINTF("%.4f ms/generation (average, can vary quite a bit)" ZT_EOL_S,(double)(end - start) / 5.0);
 			ZT_T_PRINTF("[crypto] Benchmarking V1 Identity generation... ");
 			start = now();
 			for(long i=0;i<5;++i) {
@@ -1016,7 +1031,7 @@ extern "C" const char *ZTT_benchmarkCrypto()
 				foo = (uint8_t)id.address().toInt();
 			}
 			end = now();
-			ZT_T_PRINTF("%.4f ms/generation" ZT_EOL_S,(double)(end - start) / 5.0);
+			ZT_T_PRINTF("%.4f ms/generation (relatively constant time)" ZT_EOL_S,(double)(end - start) / 5.0);
 		}
 	} catch (std::exception &e) {
 		ZT_T_PRINTF(ZT_EOL_S "[crypto] Unexpected exception: %s" ZT_EOL_S,e.what());

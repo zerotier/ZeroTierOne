@@ -17,10 +17,13 @@
 #include "Salsa20.hpp"
 #include "AES.hpp"
 #include "Utils.hpp"
+#include "MIMC52.hpp"
 
 #include <cstring>
 #include <cstdint>
 #include <algorithm>
+
+#define ZT_V1_IDENTITY_MIMC52_VDF_ROUNDS_BASE 250000
 
 namespace ZeroTier {
 
@@ -75,31 +78,18 @@ struct _v0_identity_generate_cond
 	char *genmem;
 };
 
-ZT_ALWAYS_INLINE void _v1_hash(uint8_t *const digest,const void *const in,const unsigned int len) noexcept
-{
-	SHA384(digest,in,len);
-	Utils::storeBigEndian(digest,Utils::loadBigEndian<uint64_t>(digest)           % 18446744073709549811ULL);
-	Utils::storeBigEndian(digest + 8,Utils::loadBigEndian<uint64_t>(digest + 8)   % 18446744073709549757ULL);
-	Utils::storeBigEndian(digest + 16,Utils::loadBigEndian<uint64_t>(digest + 16) % 18446744073709549733ULL);
-	Utils::storeBigEndian(digest + 24,Utils::loadBigEndian<uint64_t>(digest + 24) % 18446744073709549667ULL);
-	Utils::storeBigEndian(digest + 32,Utils::loadBigEndian<uint64_t>(digest + 32) % 18446744073709549613ULL);
-	Utils::storeBigEndian(digest + 40,Utils::loadBigEndian<uint64_t>(digest + 40) % 18446744073709549583ULL);
-	SHA384(digest,in,len,digest,48);
-}
-
 } // anonymous namespace
 
 const Identity Identity::NIL;
 
 bool Identity::generate(const Type t)
 {
-	uint8_t digest[64];
-
 	_type = t;
 	_hasPrivate = true;
 
 	switch(t) {
 		case C25519: {
+			uint8_t digest[64];
 			char *const genmem = new char[ZT_V0_IDENTITY_GEN_MEMORY];
 			do {
 				C25519::generateSatisfying(_v0_identity_generate_cond(digest,genmem),_pub.c25519,_priv.c25519);
@@ -110,18 +100,15 @@ bool Identity::generate(const Type t)
 		} break;
 
 		case P384: {
-			AES c;
 			for(;;) {
 				C25519::generate(_pub.c25519,_priv.c25519);
 				ECC384GenerateKey(_pub.p384,_priv.p384);
-				_v1_hash(digest,&_pub,sizeof(_pub));
-				if (((digest[46] & 1U)|digest[47]) == 0) { // right-most 9 bits must be zero
-					_address.setTo(digest);
-					if (!_address.isReserved())
-						break;
-				}
+				Utils::storeBigEndian(_pub.t1mimc52,mimc52Delay(&_pub,sizeof(_pub) - sizeof(_pub.t1mimc52),ZT_V1_IDENTITY_MIMC52_VDF_ROUNDS_BASE));
+				_computeHash();
+				_address.setTo(_hash.data());
+				if (!_address.isReserved())
+					break;
 			}
-			_hash.set(digest); // P384 uses the same hash for hash() and address generation
 		} break;
 
 		default:
@@ -145,10 +132,19 @@ bool Identity::locallyValidate() const
 				delete [] genmem;
 				return ((_address == Address(digest + 59))&&(!_address.isReserved())&&(digest[0] < 17));
 			} catch ( ... ) {}
-			return false;
+			break;
 
 		case P384:
-			return ( (Address(_hash.data()) == _address) && (((_hash[46] & 1U)|_hash[47]) == 0) );
+			if ((_address == Address(_hash.data()))&&(!_address.isReserved())) {
+				// The most significant 8 bits of the MIMC proof included with v1 identities can be used to store a multiplier
+				// that can indicate that more work than the required minimum has been performed. Right now this is never done
+				// but it could have some use in the future. There is no harm in doing it, and we'll accept any round count
+				// that is at least ZT_V1_IDENTITY_MIMC52_VDF_ROUNDS_BASE.
+				const unsigned long rounds = ZT_V1_IDENTITY_MIMC52_VDF_ROUNDS_BASE * ((unsigned long)_pub.t1mimc52[0] + 1U);
+				if (mimc52Verify(&_pub,sizeof(_pub) - sizeof(_pub.t1mimc52),rounds,Utils::loadBigEndian<uint64_t>(_pub.t1mimc52)))
+					return true;
+			}
+			break;
 
 	}
 	return false;
@@ -488,18 +484,13 @@ int Identity::unmarshal(const uint8_t *data,const int len) noexcept
 
 				_hasPrivate = true;
 				memcpy(&_priv,data + ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1,ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE);
-				_computeHash();
-				if (!this->locallyValidate()) // for P384 we do this always
-					return -1;
 
+				_computeHash();
 				return ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1 + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE;
 			} else if (privlen == 0) {
 				_hasPrivate = false;
 
 				_computeHash();
-				if (!this->locallyValidate()) // for P384 we do this always
-					return -1;
-
 				return ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1;
 			}
 			break;
@@ -521,7 +512,7 @@ void Identity::_computeHash()
 			break;
 
 		case P384:
-			_v1_hash(_hash.data(),&_pub,sizeof(_pub));
+			SHA384(_hash.data(),&_pub,sizeof(_pub));
 			break;
 	}
 }

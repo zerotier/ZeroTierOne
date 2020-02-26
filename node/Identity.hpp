@@ -14,9 +14,6 @@
 #ifndef ZT_IDENTITY_HPP
 #define ZT_IDENTITY_HPP
 
-#include <cstdio>
-#include <cstdlib>
-
 #include "Constants.hpp"
 #include "Utils.hpp"
 #include "Address.hpp"
@@ -26,8 +23,12 @@
 #include "TriviallyCopyable.hpp"
 #include "Hash.hpp"
 
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+
 #define ZT_IDENTITY_STRING_BUFFER_LENGTH 1024
-#define ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE (ZT_C25519_PUBLIC_KEY_LEN + ZT_ECC384_PUBLIC_KEY_SIZE)
+#define ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE (ZT_C25519_PUBLIC_KEY_LEN + ZT_ECC384_PUBLIC_KEY_SIZE + 8)
 #define ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE (ZT_C25519_PRIVATE_KEY_LEN + ZT_ECC384_PRIVATE_KEY_SIZE)
 #define ZT_IDENTITY_MARSHAL_SIZE_MAX (ZT_ADDRESS_LENGTH + 4 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE)
 
@@ -41,10 +42,6 @@ namespace ZeroTier {
  * key pair. Type 1 identities use P-384 for signatures but use both key pairs at once
  * (hashing both keys together) for key agreement with other type 1 identities, and can
  * agree with type 0 identities by only using the Curve25519 component.
- *
- * Type 1 identities also use a simpler mechanism to rate limit identity generation (as
- * a defense in depth against intentional collision) that makes local identity validation
- * faster, allowing full identity validation on all unmarshal() operations.
  */
 class Identity : public TriviallyCopyable
 {
@@ -210,14 +207,7 @@ public:
 
 	ZT_ALWAYS_INLINE bool operator==(const Identity &id) const noexcept
 	{
-		if ((_address == id._address)&&(_type == id._type)) {
-			switch(_type) {
-				case C25519: return (memcmp(_pub.c25519,id._pub.c25519,ZT_C25519_PUBLIC_KEY_LEN) == 0);
-				// case P384:
-				default: return (memcmp(&_pub,&id._pub,sizeof(_pub)) == 0);
-			}
-		}
-		return false;
+		return ((_address == id._address)&&(_type == id._type)&&(memcmp(_hash.data(),id._hash.data(),ZT_SHA384_DIGEST_LEN) == 0));
 	}
 	ZT_ALWAYS_INLINE bool operator!=(const Identity &id) const noexcept { return !(*this == id); }
 	ZT_ALWAYS_INLINE bool operator<(const Identity &id) const noexcept
@@ -227,13 +217,8 @@ public:
 		if (_address == id._address) {
 			if ((int)_type < (int)id._type)
 				return true;
-			if (_type == id._type) {
-				switch(_type) {
-					case C25519: return (memcmp(_pub.c25519,id._pub.c25519,ZT_C25519_PUBLIC_KEY_LEN) < 0);
-					// case P384:
-					default: return (memcmp(&_pub,&id._pub,sizeof(_pub)) < 0);
-				}
-			}
+			if (_type == id._type)
+				return memcmp(_hash.data(),id._hash.data(),ZT_SHA384_DIGEST_LEN) < 0;
 		}
 		return false;
 	}
@@ -249,14 +234,15 @@ private:
 	void _computeHash();
 
 	Address _address;
-	Hash<384> _hash;
-	ZT_PACKED_STRUCT(struct { // don't re-order these
+	Fingerprint _hash;
+	ZT_PACKED_STRUCT(struct { // do not re-order these fields
 		uint8_t c25519[ZT_C25519_PRIVATE_KEY_LEN];
 		uint8_t p384[ZT_ECC384_PRIVATE_KEY_SIZE];
 	}) _priv;
-	ZT_PACKED_STRUCT(struct { // don't re-order these
+	ZT_PACKED_STRUCT(struct { // do not re-order these fields
 		uint8_t c25519[ZT_C25519_PUBLIC_KEY_LEN]; // Curve25519 and Ed25519 public keys
 		uint8_t p384[ZT_ECC384_PUBLIC_KEY_SIZE];  // NIST P-384 public key
+		uint8_t t1mimc52[8];                      // Type 1 MIMC52 proof and work amount in big-endian byte order
 	}) _pub;
 	Type _type; // _type determines which fields in _priv and _pub are used
 	bool _hasPrivate;
