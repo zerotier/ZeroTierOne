@@ -877,6 +877,21 @@ extern "C" const char *ZTT_benchmarkCrypto()
 		}
 
 		{
+			ZT_T_PRINTF("[crypto] Benchmarking MIMC52 VDF delay... ");
+			int64_t start = now();
+			const uint64_t proof = mimc52Delay("testing",7,250000);
+			int64_t end = now();
+			int64_t dtime = end - start;
+			ZT_T_PRINTF("%.4f μs/round" ZT_EOL_S,((double)dtime * 1000.0) / 250000.0);
+			ZT_T_PRINTF("[crypto] Benchmarking MIMC52 VDF verify... ");
+			start = now();
+			foo = (uint8_t)mimc52Verify("testing",7,1000000,proof); // doesn't matter if return is true or false here
+			end = now();
+			int64_t vtime = end - start;
+			ZT_T_PRINTF("%.8f μs/round, %.4fX faster than delay" ZT_EOL_S,((double)vtime * 1000.0) / 1000000.0,(double)(dtime / 250000.0) / (double)(vtime / 1000000.0));
+		}
+
+		{
 			ZT_T_PRINTF("[crypto] Benchmarking AES-CTR... ");
 			AES aes(AES_CTR_TEST_VECTOR_0_KEY);
 			AES::CTR ctr(aes);
@@ -997,21 +1012,6 @@ extern "C" const char *ZTT_benchmarkCrypto()
 			}
 			end = now();
 			ZT_T_PRINTF("%.4f μs/verify" ZT_EOL_S,((double)(end - start) * 1000.0) / (double)(500 * ZT_NUM_C25519_TEST_VECTORS));
-		}
-
-		{
-			ZT_T_PRINTF("[crypto] Benchmarking MIMC52 VDF delay... ");
-			int64_t start = now();
-			const uint64_t proof = mimc52Delay("testing",7,250000);
-			int64_t end = now();
-			int64_t dtime = end - start;
-			ZT_T_PRINTF("%.4f μs/round" ZT_EOL_S,((double)dtime * 1000.0) / 250000.0);
-			ZT_T_PRINTF("[crypto] Benchmarking MIMC52 VDF verify... ");
-			start = now();
-			foo = (uint8_t)mimc52Verify("testing",7,1000000,proof); // doesn't matter if return is true or false here
-			end = now();
-			int64_t vtime = end - start;
-			ZT_T_PRINTF("%.8f μs/round, %.4fX faster than delay" ZT_EOL_S,((double)vtime * 1000.0) / 1000000.0,(double)(dtime / 250000.0) / (double)(vtime / 1000000.0));
 		}
 
 		{
