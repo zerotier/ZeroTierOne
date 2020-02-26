@@ -59,6 +59,11 @@ public:
 	};
 
 	/**
+	 * 384-bit full hash of identity's public key(s)
+	 */
+	typedef Hash<384> Fingerprint;
+
+	/**
 	 * A nil/empty identity instance
 	 */
 	static const Identity NIL;
@@ -113,7 +118,7 @@ public:
 	ZT_ALWAYS_INLINE bool hasPrivate() const noexcept { return _hasPrivate; }
 
 	/**
-	 * Get hash of this identity's public key(s)
+	 * Get a 384-bit hash of this identity's public key(s)
 	 *
 	 * The hash returned by this function differs by identity type. For C25519 (type 0)
 	 * identities this returns a simple SHA384 of the public key, which is NOT the same
@@ -122,13 +127,9 @@ public:
 	 * and address computation. This difference is because the v0 hash is expensive while
 	 * the v1 hash is fast.
 	 *
-	 * While addresses can technically collide (though this is rare and hard to create),
-	 * the full hash of an identity's keys is unique to within cryptographic strength
-	 * bounds of the keys themselves.
-	 *
-	 * @return 384-bit/48-byte hash
+	 * @return Hash of public key(s)
 	 */
-	ZT_ALWAYS_INLINE const Hash<384> &fingerprint() const noexcept { return _hash; }
+	ZT_ALWAYS_INLINE const Fingerprint &fingerprint() const noexcept { return _hash; }
 
 	/**
 	 * Compute a hash of this identity's public and private keys.
@@ -218,6 +219,7 @@ public:
 		}
 		return false;
 	}
+	ZT_ALWAYS_INLINE bool operator!=(const Identity &id) const noexcept { return !(*this == id); }
 	ZT_ALWAYS_INLINE bool operator<(const Identity &id) const noexcept
 	{
 		if (_address < id._address)
@@ -235,7 +237,6 @@ public:
 		}
 		return false;
 	}
-	ZT_ALWAYS_INLINE bool operator!=(const Identity &id) const noexcept { return !(*this == id); }
 	ZT_ALWAYS_INLINE bool operator>(const Identity &id) const noexcept { return (id < *this); }
 	ZT_ALWAYS_INLINE bool operator<=(const Identity &id) const noexcept { return !(id < *this); }
 	ZT_ALWAYS_INLINE bool operator>=(const Identity &id) const noexcept { return !(*this < id); }

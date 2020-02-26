@@ -33,7 +33,7 @@ class MAC : public TriviallyCopyable
 public:
 	ZT_ALWAYS_INLINE MAC() noexcept : _m(0ULL) {}
 	ZT_ALWAYS_INLINE MAC(const uint8_t a,const uint8_t b,const uint8_t c,const uint8_t d,const uint8_t e,const uint8_t f) noexcept : _m( (((uint64_t)a) << 40U) | (((uint64_t)b) << 32U) | (((uint64_t)c) << 24U) | (((uint64_t)d) << 16U) | (((uint64_t)e) << 8U) | ((uint64_t)f) ) {}
-	explicit ZT_ALWAYS_INLINE MAC(const uint64_t m) noexcept : _m(m & 0xffffffffffffULL) {}
+	explicit ZT_ALWAYS_INLINE MAC(const uint64_t m) noexcept : _m(m) {}
 	explicit ZT_ALWAYS_INLINE MAC(const uint8_t b[6]) noexcept { setTo(b); }
 	ZT_ALWAYS_INLINE MAC(const Address &ztaddr,uint64_t nwid) noexcept { fromAddress(ztaddr,nwid); }
 
@@ -78,7 +78,7 @@ public:
 	/**
 	 * @return True if this is broadcast (all 0xff)
 	 */
-	ZT_ALWAYS_INLINE bool isBroadcast() const noexcept { return (_m == 0xffffffffffffULL); }
+	ZT_ALWAYS_INLINE bool isBroadcast() const noexcept { return _m; }
 
 	/**
 	 * @return True if this is a multicast MAC
@@ -167,11 +167,7 @@ public:
 		return buf;
 	}
 
-	ZT_ALWAYS_INLINE MAC &operator=(const uint64_t m) noexcept
-	{
-		_m = m & 0xffffffffffffULL;
-		return *this;
-	}
+	ZT_ALWAYS_INLINE MAC &operator=(const uint64_t m) noexcept { _m = m; return *this; }
 
 	ZT_ALWAYS_INLINE bool operator==(const MAC &m) const noexcept { return (_m == m._m); }
 	ZT_ALWAYS_INLINE bool operator!=(const MAC &m) const noexcept { return (_m != m._m); }
