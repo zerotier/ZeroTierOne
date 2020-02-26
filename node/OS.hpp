@@ -14,6 +14,8 @@
 #ifndef ZT_OS_HPP
 #define ZT_OS_HPP
 
+#include <cstdint>
+
 //
 // This include file also auto-detects and canonicalizes some environment
 // information defines:

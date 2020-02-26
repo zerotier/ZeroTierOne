@@ -39,6 +39,7 @@
 #include "FCV.hpp"
 #include "SHA512.hpp"
 #include "Defragmenter.hpp"
+#include "MIMC52.hpp"
 
 #include <cstdint>
 #include <cstring>
@@ -350,6 +351,16 @@ extern "C" const char *ZTT_general()
 				return "getPacketId() produced collisions";
 			}
 			ZT_T_PRINTF("OK" ZT_EOL_S);
+		}
+
+		{
+			ZT_T_PRINTF("[general] Testing MIMC52... ");
+			const uint64_t proof = mimc52Delay("testing",7,1000);
+			if ((!mimc52Verify("testing",7,1000,proof))||(proof != 0x0007a1a0a1b0fe32)) {
+				ZT_T_PRINTF("FAILED (%.16llx)" ZT_EOL_S,proof);
+				return "MIMC52 failed simple delay/verify test";
+			}
+			ZT_T_PRINTF("OK (%.16llx)" ZT_EOL_S,proof);
 		}
 
 		{
@@ -849,6 +860,21 @@ extern "C" const char *ZTT_benchmarkCrypto()
 		uint8_t tmp[16384],tag[16];
 		memset(tmp,0,sizeof(tmp));
 		memset(tag,0,sizeof(tag));
+
+		{
+			ZT_T_PRINTF("[crypto] Benchmarking MIMC52 delay... ");
+			int64_t start = now();
+			const uint64_t proof = mimc52Delay("testing",7,250000);
+			int64_t end = now();
+			int64_t dtime = end - start;
+			ZT_T_PRINTF("%.4f μs/round" ZT_EOL_S,((double)dtime * 1000.0) / 250000.0);
+			ZT_T_PRINTF("[crypto] Benchmarking MIMC52 verify... ");
+			start = now();
+			foo = (uint8_t)mimc52Verify("testing",7,1000000,proof); // doesn't matter if return is true or false here
+			end = now();
+			int64_t vtime = end - start;
+			ZT_T_PRINTF("%.8f μs/round, %.4fX faster than delay" ZT_EOL_S,((double)vtime * 1000.0) / 1000000.0,(double)(dtime / 250000.0) / (double)(vtime / 1000000.0));
+		}
 
 		{
 			ZT_T_PRINTF("[crypto] Benchmarking AES-CTR... ");

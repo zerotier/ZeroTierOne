@@ -408,6 +408,34 @@ static ZT_ALWAYS_INLINE T ntoh(T n) noexcept { return n; }
 #endif
 
 /**
+ * Unconditionally swap bytes regardless of host byte order
+ *
+ * @param n Integer to swap
+ * @return Integer with bytes reversed
+ */
+static ZT_ALWAYS_INLINE uint64_t swapBytes(uint64_t n) noexcept
+{
+#if defined(__GNUC__)
+#if defined(__FreeBSD__)
+	return bswap64(n);
+#elif (!defined(__OpenBSD__))
+	return __builtin_bswap64(n);
+#endif
+#else
+	return (
+		((n & 0x00000000000000FFULL) << 56) |
+		((n & 0x000000000000FF00ULL) << 40) |
+		((n & 0x0000000000FF0000ULL) << 24) |
+		((n & 0x00000000FF000000ULL) <<  8) |
+		((n & 0x000000FF00000000ULL) >>  8) |
+		((n & 0x0000FF0000000000ULL) >> 24) |
+		((n & 0x00FF000000000000ULL) >> 40) |
+		((n & 0xFF00000000000000ULL) >> 56)
+	);
+#endif
+}
+
+/**
  * Decode a big-endian value from a byte stream
  *
  * @tparam I Type to decode (should be unsigned e.g. uint32_t or uint64_t)

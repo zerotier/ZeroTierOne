@@ -37,6 +37,11 @@
 #define ZT_ADDRESS_RESERVED_PREFIX 0xff
 
 /**
+ * Bit mask for addresses against a uint64_t
+ */
+#define ZT_ADDRESS_MASK 0xffffffffffULL
+
+/**
  * Maximum DNS or URL name size for an Endpoint (set so that max marshaled endpoint size is 64 bytes)
  */
 #define ZT_ENDPOINT_MAX_NAME_SIZE 61

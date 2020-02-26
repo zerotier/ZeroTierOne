@@ -24,6 +24,7 @@ set(core_headers
 	LZ4.hpp
 	MAC.hpp
 	Membership.hpp
+	MIMC52.hpp
 	MulticastGroup.hpp
 	Mutex.hpp
 	Network.hpp
@@ -65,6 +66,7 @@ set(core_src
 	Locator.cpp
 	LZ4.cpp
 	Membership.cpp
+	MIMC52.cpp
 	Network.cpp
 	NetworkConfig.cpp
 	Node.cpp

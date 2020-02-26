@@ -78,7 +78,7 @@ struct _v0_identity_generate_cond
 ZT_ALWAYS_INLINE void _v1_hash(uint8_t *const digest,const void *const in,const unsigned int len) noexcept
 {
 	SHA384(digest,in,len);
-	Utils::storeBigEndian(digest,Utils::loadBigEndian<uint64_t>(digest)           % 18446744073709549811ULL); // these are primes close to uint64_max
+	Utils::storeBigEndian(digest,Utils::loadBigEndian<uint64_t>(digest)           % 18446744073709549811ULL);
 	Utils::storeBigEndian(digest + 8,Utils::loadBigEndian<uint64_t>(digest + 8)   % 18446744073709549757ULL);
 	Utils::storeBigEndian(digest + 16,Utils::loadBigEndian<uint64_t>(digest + 16) % 18446744073709549733ULL);
 	Utils::storeBigEndian(digest + 24,Utils::loadBigEndian<uint64_t>(digest + 24) % 18446744073709549667ULL);
