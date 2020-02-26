@@ -128,7 +128,7 @@ public:
 	 *
 	 * @return 384-bit/48-byte hash
 	 */
-	ZT_ALWAYS_INLINE const Hash<384> &hash() const noexcept { return _hash; }
+	ZT_ALWAYS_INLINE const Hash<384> &fingerprint() const noexcept { return _hash; }
 
 	/**
 	 * Compute a hash of this identity's public and private keys.

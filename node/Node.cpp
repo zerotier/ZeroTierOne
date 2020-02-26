@@ -482,7 +482,7 @@ ZT_PeerList *Node::peers() const
 		p->address = (*pi)->address().toInt();
 		identities[pl->peerCount] = (*pi)->identity(); // need to make a copy in case peer gets deleted
 		p->identity = &identities[pl->peerCount];
-		memcpy(p->identityHash,(*pi)->identity().hash().data(),ZT_IDENTITY_HASH_SIZE);
+		memcpy(p->identityHash,(*pi)->identity().fingerprint().data(),ZT_IDENTITY_HASH_SIZE);
 		if ((*pi)->remoteVersionKnown()) {
 			p->versionMajor = (int)(*pi)->remoteVersionMajor();
 			p->versionMinor = (int)(*pi)->remoteVersionMinor();

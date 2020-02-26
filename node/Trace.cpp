@@ -118,7 +118,7 @@ void Trace::_tryingNewPath(
 	ev.evType = ZT_CONST_TO_BE_UINT16(ZT_TRACE_VL1_TRYING_NEW_PATH);
 	ev.codeLocation = Utils::hton(codeLocation);
 	ev.address = Utils::hton(trying.address().toInt());
-	memcpy(ev.identityHash,trying.hash().data(),48);
+	memcpy(ev.identityHash,trying.fingerprint().data(),48);
 	physicalAddress.forTrace(ev.physicalAddress);
 	triggerAddress.forTrace(ev.triggerAddress);
 	ev.triggeringPacketId = triggeringPacketId;
@@ -145,7 +145,7 @@ void Trace::_learnedNewPath(
 	ev.codeLocation = Utils::hton(codeLocation);
 	ev.packetId = packetId; // packet IDs are kept in big-endian
 	ev.address = Utils::hton(peerIdentity.address().toInt());
-	memcpy(ev.identityHash,peerIdentity.hash().data(),ZT_IDENTITY_HASH_SIZE);
+	memcpy(ev.identityHash,peerIdentity.fingerprint().data(),ZT_IDENTITY_HASH_SIZE);
 	physicalAddress.forTrace(ev.physicalAddress);
 	replaced.forTrace(ev.replaced);
 
@@ -171,7 +171,7 @@ void Trace::_incomingPacketDropped(
 	ev.networkId = Utils::hton(networkId);
 	if (peerIdentity) {
 		ev.address = Utils::hton(peerIdentity.address().toInt());
-		memcpy(ev.identityHash,peerIdentity.hash().data(),ZT_IDENTITY_HASH_SIZE);
+		memcpy(ev.identityHash,peerIdentity.fingerprint().data(),ZT_IDENTITY_HASH_SIZE);
 	} else {
 		ev.address = 0;
 		memset(ev.identityHash,0,ZT_IDENTITY_HASH_SIZE);

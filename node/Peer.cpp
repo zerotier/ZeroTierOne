@@ -123,7 +123,7 @@ void Peer::received(
 			RR->t->learnedNewPath(tPtr,0x582fabdd,packetId,_id,path->address(),old);
 		} else {
 			if (RR->node->shouldUsePathForZeroTierTraffic(tPtr,_id,path->localSocket(),path->address())) {
-				RR->t->tryingNewPath(tPtr,0xb7747ddd,_id,path->address(),path->address(),packetId,(uint8_t)verb,_id.address(),_id.hash().data(),ZT_TRACE_TRYING_NEW_PATH_REASON_PACKET_RECEIVED_FROM_UNKNOWN_PATH);
+				RR->t->tryingNewPath(tPtr,0xb7747ddd,_id,path->address(),path->address(),packetId,(uint8_t)verb,_id.address(),_id.fingerprint().data(),ZT_TRACE_TRYING_NEW_PATH_REASON_PACKET_RECEIVED_FROM_UNKNOWN_PATH);
 				path->sent(now,sendHELLO(tPtr,path->localSocket(),path->address(),now));
 			}
 		}

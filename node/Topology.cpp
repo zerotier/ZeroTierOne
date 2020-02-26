@@ -68,7 +68,7 @@ Topology::Topology(const RuntimeEnvironment *renv,void *tPtr) :
 		_rootPeers.push_back(p);
 		_peers[p->address()] = p;
 		_peersByIncomingProbe[p->incomingProbe()] = p;
-		_peersByIdentityHash[p->identity().hash()] = p;
+		_peersByIdentityHash[p->identity().fingerprint()] = p;
 	}
 }
 
@@ -87,13 +87,13 @@ SharedPtr<Peer> Topology::add(void *tPtr,const SharedPtr<Peer> &peer)
 	_loadCached(tPtr,peer->address(),hp);
 	if (hp) {
 		_peersByIncomingProbe[peer->incomingProbe()] = hp;
-		_peersByIdentityHash[peer->identity().hash()] = hp;
+		_peersByIdentityHash[peer->identity().fingerprint()] = hp;
 		return hp;
 	}
 
 	hp = peer;
 	_peersByIncomingProbe[peer->incomingProbe()] = peer;
-	_peersByIdentityHash[peer->identity().hash()] = peer;
+	_peersByIdentityHash[peer->identity().fingerprint()] = peer;
 
 	return peer;
 }
@@ -157,7 +157,7 @@ void Topology::addRoot(void *tPtr,const Identity &id,const InetAddress &bootstra
 			if (bootstrap)
 				p->setBootstrap(Endpoint(bootstrap));
 			_peersByIncomingProbe[p->incomingProbe()] = p;
-			_peersByIdentityHash[p->identity().hash()] = p;
+			_peersByIdentityHash[p->identity().fingerprint()] = p;
 		}
 		_rootPeers.push_back(p);
 
@@ -212,7 +212,7 @@ void Topology::doPeriodicTasks(void *tPtr,const int64_t now)
 			if ( (!(*p)->alive(now)) && (_roots.count((*p)->identity()) == 0) ) {
 				(*p)->save(tPtr);
 				_peersByIncomingProbe.erase((*p)->incomingProbe());
-				_peersByIdentityHash.erase((*p)->identity().hash());
+				_peersByIdentityHash.erase((*p)->identity().fingerprint());
 				_peers.erase(*a);
 			}
 		}

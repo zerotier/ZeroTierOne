@@ -1295,7 +1295,7 @@ void EmbeddedNetworkController::_request(
 	nc->credentialTimeMaxDelta = credentialtmd;
 	nc->revision = OSUtils::jsonInt(network["revision"],0ULL);
 	nc->issuedTo = identity.address();
-	memcpy(nc->issuedToIdentityHash,identity.hash(),sizeof(nc->issuedToIdentityHash));
+	memcpy(nc->issuedToIdentityHash,identity.fingerprint(),sizeof(nc->issuedToIdentityHash));
 	if (OSUtils::jsonBool(network["enableBroadcast"],true)) nc->flags |= ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST;
 	Utils::scopy(nc->name,sizeof(nc->name),OSUtils::jsonString(network["name"],"").c_str());
 	nc->mtu = std::max(std::min((unsigned int)OSUtils::jsonInt(network["mtu"],ZT_DEFAULT_MTU),(unsigned int)ZT_MAX_MTU),(unsigned int)ZT_MIN_MTU);
