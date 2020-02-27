@@ -115,11 +115,11 @@ set(
 	zt_go_native
 )
 
-#if(WIN32)
-#	set(libs ${libs} wsock32 ws2_32 rpcrt4 iphlpapi)
-#else(WIN32)
-#	set(libs ${libs} pthread)
-#endif(WIN32)
+if(WIN32)
+	set(libs ${libs} wsock32 ws2_32 rpcrt4 iphlpapi)
+else(WIN32)
+	set(libs ${libs} pthread)
+endif(WIN32)
 
 #if(BUILD_CENTRAL_CONTROLLER)
 #	set(libs ${libs} rabbitmq-static ${PostgreSQL_LIBRARIES})
