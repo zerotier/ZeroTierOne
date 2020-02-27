@@ -4,7 +4,6 @@
 #include "Utils.hpp"
 
 #include <cstdint>
-#include <cstdlib>
 #include <cstring>
 #include <algorithm>
 
@@ -43,21 +42,10 @@ static const uint64_t K[80] = {
 	0x4cc5d4becb3e42b6ULL,0x597f299cfc657e2aULL,0x5fcb6fab3ad6faecULL,0x6c44198c4a475817ULL
 };
 
-#define STORE64H(x, y)                                                               \
- { (y)[0] = (unsigned char)(((x)>>56)&255); (y)[1] = (unsigned char)(((x)>>48)&255); \
-   (y)[2] = (unsigned char)(((x)>>40)&255); (y)[3] = (unsigned char)(((x)>>32)&255); \
-   (y)[4] = (unsigned char)(((x)>>24)&255); (y)[5] = (unsigned char)(((x)>>16)&255); \
-   (y)[6] = (unsigned char)(((x)>>8)&255); (y)[7] = (unsigned char)((x)&255); }
-
-#define LOAD64H(x, y)                                                      \
- { x = (((uint64_t)((y)[0] & 255))<<56)|(((uint64_t)((y)[1] & 255))<<48) | \
-       (((uint64_t)((y)[2] & 255))<<40)|(((uint64_t)((y)[3] & 255))<<32) | \
-       (((uint64_t)((y)[4] & 255))<<24)|(((uint64_t)((y)[5] & 255))<<16) | \
-       (((uint64_t)((y)[6] & 255))<<8)|(((uint64_t)((y)[7] & 255))); }
-
+#define STORE64H(x, y) Utils::storeBigEndian<uint64_t>(y,x)
+#define LOAD64H(x, y) x = Utils::loadBigEndian<uint64_t>(y)
 #define ROL64c(x,y) (((x)<<(y)) | ((x)>>(64-(y))))
 #define ROR64c(x,y) (((x)>>(y)) | ((x)<<(64-(y))))
-
 #define Ch(x,y,z)       (z ^ (x & (y ^ z)))
 #define Maj(x,y,z)      (((x | y) & z) | (x & y))
 #define S(x, n)         ROR64c(x, n)
@@ -67,7 +55,7 @@ static const uint64_t K[80] = {
 #define Gamma0(x)       (S(x, 1) ^ S(x, 8) ^ R(x, 7))
 #define Gamma1(x)       (S(x, 19) ^ S(x, 61) ^ R(x, 6))
 
-static void sha512_compress(sha512_state *const md,uint8_t *const buf)
+static ZT_ALWAYS_INLINE void sha512_compress(sha512_state *const md,uint8_t *const buf)
 {
 	uint64_t S[8], W[80], t0, t1;
 	int i;
@@ -128,7 +116,7 @@ static ZT_ALWAYS_INLINE void sha512_init(sha512_state *const md)
 	md->state[7] = 0x5be0cd19137e2179ULL;
 }
 
-static ZT_ALWAYS_INLINE void sha512_process(sha512_state *const md,const uint8_t *in,unsigned long inlen)
+static void sha512_process(sha512_state *const md,const uint8_t *in,unsigned long inlen)
 {
 	while (inlen > 0) {
 		if (md->curlen == 0 && inlen >= 128) {
