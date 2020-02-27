@@ -89,11 +89,13 @@ bool Identity::generate(const Type t)
 
 	switch(t) {
 		case C25519: {
+			// Generate C25519/Ed25519 key pair whose hash satisfies a "hashcash" criterion and generate the
+			// address from the last 40 bits of this hash. This is different from the fingerprint hash for V0.
 			uint8_t digest[64];
 			char *const genmem = new char[ZT_V0_IDENTITY_GEN_MEMORY];
 			do {
 				C25519::generateSatisfying(_v0_identity_generate_cond(digest,genmem),_pub.c25519,_priv.c25519);
-				_address.setTo(digest + 59); // last 5 bytes are address
+				_address.setTo(digest + 59);
 			} while (_address.isReserved());
 			delete[] genmem;
 			_computeHash();
@@ -101,9 +103,15 @@ bool Identity::generate(const Type t)
 
 		case P384: {
 			for(;;) {
+				// Generate C25519, Ed25519, and NIST P-384 key pairs.
 				C25519::generate(_pub.c25519,_priv.c25519);
 				ECC384GenerateKey(_pub.p384,_priv.p384);
+
+				// Execute the MIMC52 verifiable delay function, resulting a near constant time delay relative
+				// to the speed of the current CPU. This result is incorporated into the final hash.
 				Utils::storeBigEndian(_pub.t1mimc52,mimc52Delay(&_pub,sizeof(_pub) - sizeof(_pub.t1mimc52),ZT_V1_IDENTITY_MIMC52_VDF_ROUNDS_BASE));
+
+				// Compute SHA384 fingerprint hash of keys and MIMC output and generate address directly from it.
 				_computeHash();
 				_address.setTo(_fp.data());
 				if (!_address.isReserved())
@@ -118,35 +126,36 @@ bool Identity::generate(const Type t)
 	return true;
 }
 
-bool Identity::locallyValidate() const
+bool Identity::locallyValidate() const noexcept
 {
-	if ((_address.isReserved())||(!_address))
-		return false;
-	switch (_type) {
+	try {
+		if ((!_address.isReserved()) && (_address)) {
+			switch (_type) {
 
-		case C25519:
-			try {
-				uint8_t digest[64];
-				char *genmem = new char[ZT_V0_IDENTITY_GEN_MEMORY];
-				_computeMemoryHardHash(_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN,digest,genmem);
-				delete [] genmem;
-				return ((_address == Address(digest + 59))&&(digest[0] < 17));
-			} catch ( ... ) {}
-			break;
+				case C25519: {
+					uint8_t digest[64];
+					char *genmem = new char[ZT_V0_IDENTITY_GEN_MEMORY];
+					_computeMemoryHardHash(_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN,digest,genmem);
+					delete[] genmem;
+					return ((_address == Address(digest + 59)) && (digest[0] < 17));
+				}
 
-		case P384:
-			if (_address == Address(_fp.data())) {
-				// The most significant 8 bits of the MIMC proof included with v1 identities can be used to store a multiplier
-				// that can indicate that more work than the required minimum has been performed. Right now this is never done
-				// but it could have some use in the future. There is no harm in doing it, and we'll accept any round count
-				// that is at least ZT_V1_IDENTITY_MIMC52_VDF_ROUNDS_BASE.
-				const unsigned long rounds = ZT_V1_IDENTITY_MIMC52_VDF_ROUNDS_BASE * ((unsigned long)_pub.t1mimc52[0] + 1U);
-				if (mimc52Verify(&_pub,sizeof(_pub) - sizeof(_pub.t1mimc52),rounds,Utils::loadBigEndian<uint64_t>(_pub.t1mimc52)))
-					return true;
+				case P384:
+					if (_address == Address(_fp.data())) {
+						// The most significant 8 bits of the MIMC proof included with v1 identities can be used to store a multiplier
+						// that can indicate that more work than the required minimum has been performed. Right now this is never done
+						// but it could have some use in the future. There is no harm in doing it, and we'll accept any round count
+						// that is at least ZT_V1_IDENTITY_MIMC52_VDF_ROUNDS_BASE.
+						unsigned long rounds = (((unsigned long)_pub.t1mimc52[0] & 15U) + 1U); // max: 16 * ZT_V1_IDENTITY_MIMC52_VDF_ROUNDS_BASE
+						rounds *= ZT_V1_IDENTITY_MIMC52_VDF_ROUNDS_BASE;
+						return mimc52Verify(&_pub,sizeof(_pub) - sizeof(_pub.t1mimc52),rounds,Utils::loadBigEndian<uint64_t>(_pub.t1mimc52));
+					} else {
+						return false;
+					}
+
 			}
-			break;
-
-	}
+		}
+	} catch ( ... ) {}
 	return false;
 }
 

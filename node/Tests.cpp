@@ -180,8 +180,8 @@ static const C25519TestVector C25519_TEST_VECTORS[ZT_NUM_C25519_TEST_VECTORS] = 
 #define IDENTITY_V0_KNOWN_GOOD_0 "8e4df28b72:0:ac3d46abe0c21f3cfe7a6c8d6a85cfcffcb82fbd55af6a4d6350657c68200843fa2e16f9418bbd9702cae365f2af5fb4c420908b803a681d4daef6114d78a2d7:bd8dd6e4ce7022d2f812797a80c6ee8ad180dc4ebf301dec8b06d1be08832bddd63a2f1cfa7b2c504474c75bdc8898ba476ef92e8e2d0509f8441985171ff16e"
 #define IDENTITY_V0_KNOWN_BAD_0 "9e4df28b72:0:ac3d46abe0c21f3cfe7a6c8d6a85cfcffcb82fbd55af6a4d6350657c68200843fa2e16f9418bbd9702cae365f2af5fb4c420908b803a681d4daef6114d78a2d7:bd8dd6e4ce7022d2f812797a80c6ee8ad180dc4ebf301dec8b06d1be08832bddd63a2f1cfa7b2c504474c75bdc8898ba476ef92e8e2d0509f8441985171ff16e"
 
-#define IDENTITY_V1_KNOWN_GOOD_0 "237ce8d8e2:1:5w3rj6am3sa7f5vtwm535iswob6ngmkpdidijz5ormqrfwkj55lhwyyszruu4rkbjycmlxzzoiuwtyw5s2mybknqx5j2cwxnaflqbwycoio2hqzcro5afrpcncnxlemzs6bt5linlib5flsej3f3r3bbzclxk733ei7tdrtm5uruiwpmyi4vgaafze42sx6hpe:mwjavgvhxz75ow2fhgq3zu4qfou5kce4wzegpjjd6545fpjnhjxb26e5unuutv7k3c6sm6umpyvatgpufwehi4wqmyudvq724h2klbiem6txs2h5iit5crgg3e6se5xeomuqhircv7zhkylrtnlgh57il742pwkrdgt4lz5fstetmiw7y3rq"
-#define IDENTITY_V1_KNOWN_BAD_0 "238ce8d8e2:1:5w3rj6am3sa7f5vtwm535iswob6ngmkpdidijz5ormqrfwkj55lhwyyszruu4rkbjycmlxzzoiuwtyw5s2mybknqx5j2cwxnaflqbwycoio2hqzcro5afrpcncnxlemzs6bt5linlib5flsej3f3r3bbzclxk733ei7tdrtm5uruiwpmyi4vgaafze42sx6hpe:mwjavgvhxz75ow2fhgq3zu4qfou5kce4wzegpjjd6545fpjnhjxb26e5unuutv7k3c6sm6umpyvatgpufwehi4wqmyudvq724h2klbiem6txs2h5iit5crgg3e6se5xeomuqhircv7zhkylrtnlgh57il742pwkrdgt4lz5fstetmiw7y3rq"
+#define IDENTITY_V1_KNOWN_GOOD_0 "12a4e65422:1:norcnqlkhl2ly6aljrguqntd7bfwdpfpgse32gy2nonhrninfyfxbz4qyj4i7jm2jn6c5hnr6fe3j7a556w5irhtmz77ajdkw6ge2nadlwczld5yak4mhdj46bcwvgzpu3evsfbx44psgughwwgp7rl5ju2gcw4mil5csvd3dp6itwqksyzf6aake3fpn5seo4:ds3mdnqdnbveqlyqq446if3tdilsva4fpsaqahqysavvbv23j655yfahihupezaic56uqrk2dbaamdj2fzmyzulhraux2daj3p6hnxyrhbwugu2ukuqi4eucdck4eczjqcgmv33w65nyxkm3gvhahmoc3zwt2nqmexcdsxlqccexfcpvinuq"
+#define IDENTITY_V1_KNOWN_BAD_0 "22a4e65422:1:norcnqlkhl2ly6aljrguqntd7bfwdpfpgse32gy2nonhrninfyfxbz4qyj4i7jm2jn6c5hnr6fe3j7a556w5irhtmz77ajdkw6ge2nadlwczld5yak4mhdj46bcwvgzpu3evsfbx44psgughwwgp7rl5ju2gcw4mil5csvd3dp6itwqksyzf6aake3fpn5seo4:ds3mdnqdnbveqlyqq446if3tdilsva4fpsaqahqysavvbv23j655yfahihupezaic56uqrk2dbaamdj2fzmyzulhraux2daj3p6hnxyrhbwugu2ukuqi4eucdck4eczjqcgmv33w65nyxkm3gvhahmoc3zwt2nqmexcdsxlqccexfcpvinuq"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -639,7 +639,7 @@ extern "C" const char *ZTT_crypto()
 		{
 			ZT_T_PRINTF("[crypto] Testing MIMC52 VDF... ");
 			const uint64_t proof = mimc52Delay("testing",7,1000);
-			if ((!mimc52Verify("testing",7,1000,proof))||(proof != 0x0007a1a0a1b0fe32)) {
+			if ((!mimc52Verify("testing",7,1000,proof))||(proof != 0x000b501115c73369)) {
 				ZT_T_PRINTF("FAILED (%.16llx)" ZT_EOL_S,proof);
 				return "MIMC52 failed simple delay/verify test";
 			}

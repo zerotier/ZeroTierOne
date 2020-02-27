@@ -338,8 +338,11 @@ void DB::_networkChanged(nlohmann::json &old,nlohmann::json &networkConfig,bool 
 
 void DB::_fillSummaryInfo(const std::shared_ptr<_Network> &nw,NetworkSummaryInfo &info)
 {
-	for(auto ab=nw->activeBridgeMembers.begin();ab!=nw->activeBridgeMembers.end();++ab)
-		info.activeBridges.push_back(Address(*ab));
+	for(auto ab=nw->activeBridgeMembers.begin();ab!=nw->activeBridgeMembers.end();++ab) {
+		const Address aba(*ab);
+		if (nw->authorizedMembers.count(aba) != 0)
+			info.activeBridges.push_back(aba);
+	}
 	std::sort(info.activeBridges.begin(),info.activeBridges.end());
 	for(auto ip=nw->allocatedIps.begin();ip!=nw->allocatedIps.end();++ip)
 		info.allocatedIps.push_back(*ip);

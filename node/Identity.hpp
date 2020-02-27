@@ -105,7 +105,7 @@ public:
 	 *
 	 * @return True if validation check passes
 	 */
-	bool locallyValidate() const;
+	bool locallyValidate() const noexcept;
 
 	/**
 	 * @return True if this identity contains a private key

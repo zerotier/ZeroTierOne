@@ -423,14 +423,14 @@ static ZT_ALWAYS_INLINE uint64_t swapBytes(uint64_t n) noexcept
 #endif
 #else
 	return (
-		((n & 0x00000000000000FFULL) << 56) |
-		((n & 0x000000000000FF00ULL) << 40) |
-		((n & 0x0000000000FF0000ULL) << 24) |
-		((n & 0x00000000FF000000ULL) <<  8) |
-		((n & 0x000000FF00000000ULL) >>  8) |
-		((n & 0x0000FF0000000000ULL) >> 24) |
-		((n & 0x00FF000000000000ULL) >> 40) |
-		((n & 0xFF00000000000000ULL) >> 56)
+		((n & 0x00000000000000ffULL) << 56) |
+		((n & 0x000000000000ff00ULL) << 40) |
+		((n & 0x0000000000ff0000ULL) << 24) |
+		((n & 0x00000000ff000000ULL) <<  8) |
+		((n & 0x000000ff00000000ULL) >>  8) |
+		((n & 0x0000ff0000000000ULL) >> 24) |
+		((n & 0x00ff000000000000ULL) >> 40) |
+		((n & 0xff00000000000000ULL) >> 56)
 	);
 #endif
 }
@@ -446,15 +446,32 @@ template<typename I>
 static ZT_ALWAYS_INLINE I loadBigEndian(const void *const p) noexcept
 {
 #ifdef ZT_NO_UNALIGNED_ACCESS
-	I x = (I)0;
-	for(unsigned int k=0;k<sizeof(I);++k) {
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-		reinterpret_cast<uint8_t *>(&x)[k] = reinterpret_cast<const uint8_t *>(p)[(sizeof(I)-1)-k];
-#else
-		reinterpret_cast<uint8_t *>(&x)[k] = reinterpret_cast<const uint8_t *>(p)[k];
-#endif
+	if (sizeof(I) == 8) {
+		return (I)(
+			((uint64_t)reinterpret_cast<const uint8_t *>(p)[0] << 56U) |
+			((uint64_t)reinterpret_cast<const uint8_t *>(p)[1] << 48U) |
+			((uint64_t)reinterpret_cast<const uint8_t *>(p)[2] << 40U) |
+			((uint64_t)reinterpret_cast<const uint8_t *>(p)[3] << 32U) |
+			((uint64_t)reinterpret_cast<const uint8_t *>(p)[4] << 24U) |
+			((uint64_t)reinterpret_cast<const uint8_t *>(p)[5] << 16U) |
+			((uint64_t)reinterpret_cast<const uint8_t *>(p)[6] << 8U) |
+			(uint64_t)reinterpret_cast<const uint8_t *>(p)[7]
+		);
+	} else if (sizeof(I) == 4) {
+		return (I)(
+			((uint32_t)reinterpret_cast<const uint8_t *>(p)[0] << 24U) |
+			((uint32_t)reinterpret_cast<const uint8_t *>(p)[1] << 16U) |
+			((uint32_t)reinterpret_cast<const uint8_t *>(p)[2] << 8U) |
+			(uint32_t)reinterpret_cast<const uint8_t *>(p)[3]
+		);
+	} else if (sizeof(I) == 2) {
+		return (I)(
+			((unsigned int)reinterpret_cast<const uint8_t *>(p)[0] << 8U) |
+			(unsigned int)reinterpret_cast<const uint8_t *>(p)[1]
+		);
+	} else {
+		return (I)reinterpret_cast<const uint8_t *>(p)[0];
 	}
-	return x;
 #else
 	return ntoh(*reinterpret_cast<const I *>(p));
 #endif
@@ -468,15 +485,28 @@ static ZT_ALWAYS_INLINE I loadBigEndian(const void *const p) noexcept
  * #param i Integer to write
  */
 template<typename I>
-static ZT_ALWAYS_INLINE void storeBigEndian(void *const p,const I i) noexcept
+static ZT_ALWAYS_INLINE void storeBigEndian(void *const p,I i) noexcept
 {
 #ifdef ZT_NO_UNALIGNED_ACCESS
-	for(unsigned int k=0;k<sizeof(I);++k) {
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-		reinterpret_cast<uint8_t *>(p)[k] = reinterpret_cast<const uint8_t *>(&i)[(sizeof(I)-1)-k];
-#else
-		reinterpret_cast<uint8_t *>(p)[k] = reinterpret_cast<const uint8_t *>(&i)[k];
-#endif
+	if (sizeof(I) == 8) {
+		reinterpret_cast<uint8_t *>(p)[0] = (uint8_t)(reinterpret_cast<uint64_t>(i) >> 56U);
+		reinterpret_cast<uint8_t *>(p)[1] = (uint8_t)(reinterpret_cast<uint64_t>(i) >> 48U);
+		reinterpret_cast<uint8_t *>(p)[2] = (uint8_t)(reinterpret_cast<uint64_t>(i) >> 40U);
+		reinterpret_cast<uint8_t *>(p)[3] = (uint8_t)(reinterpret_cast<uint64_t>(i) >> 32U);
+		reinterpret_cast<uint8_t *>(p)[4] = (uint8_t)(reinterpret_cast<uint64_t>(i) >> 24U);
+		reinterpret_cast<uint8_t *>(p)[5] = (uint8_t)(reinterpret_cast<uint64_t>(i) >> 16U);
+		reinterpret_cast<uint8_t *>(p)[6] = (uint8_t)(reinterpret_cast<uint64_t>(i) >> 8U);
+		reinterpret_cast<uint8_t *>(p)[7] = (uint8_t)reinterpret_cast<uint64_t>(i);
+	} else if (sizeof(I) == 4) {
+		reinterpret_cast<uint8_t *>(p)[0] = (uint8_t)(reinterpret_cast<uint32_t>(i) >> 24U);
+		reinterpret_cast<uint8_t *>(p)[1] = (uint8_t)(reinterpret_cast<uint32_t>(i) >> 16U);
+		reinterpret_cast<uint8_t *>(p)[2] = (uint8_t)(reinterpret_cast<uint32_t>(i) >> 8U);
+		reinterpret_cast<uint8_t *>(p)[3] = (uint8_t)reinterpret_cast<uint32_t>(i);
+	} else if (sizeof(I) == 2) {
+		reinterpret_cast<uint8_t *>(p)[0] = (uint8_t)(reinterpret_cast<uint16_t>(i) >> 8U);
+		reinterpret_cast<uint8_t *>(p)[1] = (uint8_t)reinterpret_cast<uint16_t>(i);
+	} else {
+		reinterpret_cast<uint8_t *>(p)[0] = (uint8_t)i;
 	}
 #else
 	*reinterpret_cast<I *>(p) = hton(i);
@@ -486,33 +516,42 @@ static ZT_ALWAYS_INLINE void storeBigEndian(void *const p,const I i) noexcept
 /**
  * Decode a little-endian value from a byte stream
  *
- * @tparam I Type to decode (should be unsigned e.g. uint32_t or uint64_t)
+ * @tparam I Type to decode
  * @param p Byte stream, must be at least sizeof(I) in size
  * @return Decoded integer
  */
 template<typename I>
 static ZT_ALWAYS_INLINE I loadLittleEndian(const void *const p) noexcept
 {
-#ifdef ZT_NO_UNALIGNED_ACCESS
-	I x = (I)0;
-	for(unsigned int k=0;k<sizeof(I);++k) {
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-		reinterpret_cast<uint8_t *>(&x)[k] = reinterpret_cast<const uint8_t *>(p)[k];
-#else
-		reinterpret_cast<uint8_t *>(&x)[k] = reinterpret_cast<const uint8_t *>(p)[(sizeof(I)-1)-k];
-#endif
+#if __BYTE_ORDER == __BIG_ENDIAN || defined(ZT_NO_UNALIGNED_ACCESS)
+	if (sizeof(I) == 8) {
+		return (I)(
+			(uint64_t)reinterpret_cast<const uint8_t *>(p)[0] |
+			((uint64_t)reinterpret_cast<const uint8_t *>(p)[1] << 8U) |
+			((uint64_t)reinterpret_cast<const uint8_t *>(p)[2] << 16U) |
+			((uint64_t)reinterpret_cast<const uint8_t *>(p)[3] << 24U) |
+			((uint64_t)reinterpret_cast<const uint8_t *>(p)[4] << 32U) |
+			((uint64_t)reinterpret_cast<const uint8_t *>(p)[5] << 40U) |
+			((uint64_t)reinterpret_cast<const uint8_t *>(p)[6] << 48U) |
+			((uint64_t)reinterpret_cast<const uint8_t *>(p)[7] << 56U)
+		);
+	} else if (sizeof(I) == 4) {
+		return (I)(
+			(uint32_t)reinterpret_cast<const uint8_t *>(p)[0] |
+			((uint32_t)reinterpret_cast<const uint8_t *>(p)[1] << 8U) |
+			((uint32_t)reinterpret_cast<const uint8_t *>(p)[2] << 16U) |
+			((uint32_t)reinterpret_cast<const uint8_t *>(p)[3] << 24U)
+		);
+	} else if (sizeof(I) == 2) {
+		return (I)(
+			(unsigned int)reinterpret_cast<const uint8_t *>(p)[0] |
+			((unsigned int)reinterpret_cast<const uint8_t *>(p)[1] << 8U)
+		);
+	} else {
+		return (I)reinterpret_cast<const uint8_t *>(p)[0];
 	}
-	return x;
 #else
-#if __BYTE_ORDER == __LITTLE_ENDIAN
 	return *reinterpret_cast<const I *>(p);
-#else
-	I x = (I)0;
-	for(unsigned int k=0;k<sizeof(I);++k) {
-		reinterpret_cast<uint8_t *>(&x)[k] = reinterpret_cast<const uint8_t *>(p)[(sizeof(I)-1)-k];
-	}
-	return x;
-#endif
 #endif
 }
 
@@ -526,22 +565,29 @@ static ZT_ALWAYS_INLINE I loadLittleEndian(const void *const p) noexcept
 template<typename I>
 static ZT_ALWAYS_INLINE void storeLittleEndian(void *const p,const I i) noexcept
 {
-#ifdef ZT_NO_UNALIGNED_ACCESS
-	for(unsigned int k=0;k<sizeof(I);++k) {
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-		reinterpret_cast<uint8_t *>(p)[k] = reinterpret_cast<const uint8_t *>(&i)[k];
-#else
-		reinterpret_cast<uint8_t *>(p)[k] = reinterpret_cast<const uint8_t *>(&i)[(sizeof(I)-1)-k];
-#endif
+#if __BYTE_ORDER == __BIG_ENDIAN || defined(ZT_NO_UNALIGNED_ACCESS)
+	if (sizeof(I) == 8) {
+		reinterpret_cast<uint8_t *>(p)[0] = (uint8_t)reinterpret_cast<uint64_t>(i);
+		reinterpret_cast<uint8_t *>(p)[1] = (uint8_t)(reinterpret_cast<uint64_t>(i) >> 8U);
+		reinterpret_cast<uint8_t *>(p)[2] = (uint8_t)(reinterpret_cast<uint64_t>(i) >> 16U);
+		reinterpret_cast<uint8_t *>(p)[3] = (uint8_t)(reinterpret_cast<uint64_t>(i) >> 24U);
+		reinterpret_cast<uint8_t *>(p)[4] = (uint8_t)(reinterpret_cast<uint64_t>(i) >> 32U);
+		reinterpret_cast<uint8_t *>(p)[5] = (uint8_t)(reinterpret_cast<uint64_t>(i) >> 40U);
+		reinterpret_cast<uint8_t *>(p)[6] = (uint8_t)(reinterpret_cast<uint64_t>(i) >> 48U);
+		reinterpret_cast<uint8_t *>(p)[7] = (uint8_t)(reinterpret_cast<uint64_t>(i) >> 56U);
+	} else if (sizeof(I) == 4) {
+		reinterpret_cast<uint8_t *>(p)[0] = (uint8_t)reinterpret_cast<uint32_t>(i);
+		reinterpret_cast<uint8_t *>(p)[1] = (uint8_t)(reinterpret_cast<uint32_t>(i) >> 8U);
+		reinterpret_cast<uint8_t *>(p)[2] = (uint8_t)(reinterpret_cast<uint32_t>(i) >> 16U);
+		reinterpret_cast<uint8_t *>(p)[3] = (uint8_t)(reinterpret_cast<uint32_t>(i) >> 24U);
+	} else if (sizeof(I) == 2) {
+		reinterpret_cast<uint8_t *>(p)[0] = (uint8_t)reinterpret_cast<uint16_t>(i);
+		reinterpret_cast<uint8_t *>(p)[1] = (uint8_t)(reinterpret_cast<uint16_t>(i) >> 8U);
+	} else {
+		reinterpret_cast<uint8_t *>(p)[0] = (uint8_t)i;
 	}
 #else
-#if __BYTE_ORDER == __LITTLE_ENDIAN
 	*reinterpret_cast<I *>(p) = i;
-#else
-	for(unsigned int k=0;k<sizeof(I);++k) {
-		reinterpret_cast<uint8_t *>(p)[k] = reinterpret_cast<const uint8_t *>(&i)[(sizeof(I)-1)-k];
-	}
-#endif
 #endif
 }
 
