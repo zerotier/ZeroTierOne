@@ -590,6 +590,24 @@ extern "C" const char *ZTT_general()
 				ZT_T_PRINTF("FAILED (validation of known-good identity failed)" ZT_EOL_S);
 				return "Identity test failed: validation of known-good identity";
 			}
+
+			uint8_t idm[ZT_IDENTITY_MARSHAL_SIZE_MAX];
+			int ms = id.marshal(idm,true);
+			if (ms <= 0) {
+				ZT_T_PRINTF("FAILED (v0 marshal)" ZT_EOL_S);
+				return "Identity test failed: v0 marshal";
+			}
+			ZT_T_PRINTF("(marshal: %d bytes) ",ms);
+			Identity id2;
+			if (id2.unmarshal(idm,ms) <= 0) {
+				ZT_T_PRINTF("FAILED (v0 unmarshal)" ZT_EOL_S);
+				return "Identity test failed: v0 unmarshal";
+			}
+			if (id != id2) {
+				ZT_T_PRINTF("FAILED (v0 unmarshal !=)" ZT_EOL_S);
+				return "Identity test failed: v0 unmarshal !=";
+			}
+
 			if (!id.fromString(IDENTITY_V0_KNOWN_BAD_0)) {
 				ZT_T_PRINTF("FAILED (error parsing test identity #2)" ZT_EOL_S);
 				return "Identity test failed: parse error";
@@ -614,6 +632,22 @@ extern "C" const char *ZTT_general()
 				ZT_T_PRINTF("FAILED (validation of known-good identity failed)" ZT_EOL_S);
 				return "Identity test failed: validation of known-good identity";
 			}
+
+			ms = id.marshal(idm,true);
+			if (ms <= 0) {
+				ZT_T_PRINTF("FAILED (v1 marshal)" ZT_EOL_S);
+				return "Identity test failed: v1 marshal";
+			}
+			ZT_T_PRINTF("(marshal: %d bytes) ",ms);
+			if (id2.unmarshal(idm,ms) <= 0) {
+				ZT_T_PRINTF("FAILED (v1 unmarshal)" ZT_EOL_S);
+				return "Identity test failed: v1 unmarshal";
+			}
+			if (id != id2) {
+				ZT_T_PRINTF("FAILED (v1 unmarshal !=)" ZT_EOL_S);
+				return "Identity test failed: v1 unmarshal !=";
+			}
+
 			if (!id.fromString(IDENTITY_V1_KNOWN_BAD_0)) {
 				ZT_T_PRINTF("FAILED (error parsing test identity #2)" ZT_EOL_S);
 				return "Identity test failed: parse error";

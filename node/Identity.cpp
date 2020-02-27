@@ -414,9 +414,7 @@ int Identity::marshal(uint8_t data[ZT_IDENTITY_MARSHAL_SIZE_MAX],const bool incl
 	switch(_type) {
 		case C25519:
 			data[ZT_ADDRESS_LENGTH] = (uint8_t)C25519;
-
 			memcpy(data + ZT_ADDRESS_LENGTH + 1,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
-
 			if ((includePrivate)&&(_hasPrivate)) {
 				data[ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN] = ZT_C25519_PRIVATE_KEY_LEN;
 				memcpy(data + ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1,_priv.c25519,ZT_C25519_PRIVATE_KEY_LEN);
@@ -428,9 +426,7 @@ int Identity::marshal(uint8_t data[ZT_IDENTITY_MARSHAL_SIZE_MAX],const bool incl
 
 		case P384:
 			data[ZT_ADDRESS_LENGTH] = (uint8_t)P384;
-
 			memcpy(data + ZT_ADDRESS_LENGTH + 1,&_pub,ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE);
-
 			if ((includePrivate)&&(_hasPrivate)) {
 				data[ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE] = ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE;
 				memcpy(data + ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1,&_priv,ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE);
@@ -451,6 +447,7 @@ int Identity::unmarshal(const uint8_t *data,const int len) noexcept
 
 	if (len < (ZT_ADDRESS_LENGTH + 1))
 		return -1;
+	_address.setTo(data);
 
 	unsigned int privlen;
 	switch((_type = (Type)data[ZT_ADDRESS_LENGTH])) {
@@ -460,21 +457,17 @@ int Identity::unmarshal(const uint8_t *data,const int len) noexcept
 				return -1;
 
 			memcpy(_pub.c25519,data + ZT_ADDRESS_LENGTH + 1,ZT_C25519_PUBLIC_KEY_LEN);
+			_computeHash();
 
 			privlen = data[ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN];
 			if (privlen == ZT_C25519_PRIVATE_KEY_LEN) {
 				if (len < (ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1 + ZT_C25519_PRIVATE_KEY_LEN))
 					return -1;
-
 				_hasPrivate = true;
 				memcpy(_priv.c25519,data + ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1,ZT_C25519_PRIVATE_KEY_LEN);
-
-				_computeHash();
 				return ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1 + ZT_C25519_PRIVATE_KEY_LEN;
 			} else if (privlen == 0) {
 				_hasPrivate = false;
-
-				_computeHash();
 				return ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1;
 			}
 			break;
@@ -484,21 +477,19 @@ int Identity::unmarshal(const uint8_t *data,const int len) noexcept
 				return -1;
 
 			memcpy(&_pub,data + ZT_ADDRESS_LENGTH + 1,ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE);
+			_computeHash();
+			if (_address != Address(_fp.data())) // for v1 we can sanity check this here, but this isn't a full validate
+				return -1;
 
 			privlen = data[ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE];
 			if (privlen == ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE) {
 				if (len < (ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1 + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE))
 					return -1;
-
 				_hasPrivate = true;
 				memcpy(&_priv,data + ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1,ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE);
-
-				_computeHash();
 				return ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1 + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE;
 			} else if (privlen == 0) {
 				_hasPrivate = false;
-
-				_computeHash();
 				return ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1;
 			}
 			break;

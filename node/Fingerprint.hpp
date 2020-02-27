@@ -17,6 +17,8 @@
 #include "Constants.hpp"
 #include "TriviallyCopyable.hpp"
 
+#include <algorithm>
+
 namespace ZeroTier {
 
 /**
@@ -62,12 +64,12 @@ public:
 		return false;
 	}
 
-	ZT_ALWAYS_INLINE bool operator==(const Fingerprint &h) const noexcept { return memcmp(_h,h._h,48) == 0; }
-	ZT_ALWAYS_INLINE bool operator!=(const Fingerprint &h) const noexcept { return memcmp(_h,h._h,48) != 0; }
-	ZT_ALWAYS_INLINE bool operator<(const Fingerprint &h) const noexcept { return memcmp(_h,h._h,48) < 0; }
-	ZT_ALWAYS_INLINE bool operator>(const Fingerprint &h) const noexcept { return memcmp(_h,h._h,48) > 0; }
-	ZT_ALWAYS_INLINE bool operator<=(const Fingerprint &h) const noexcept { return memcmp(_h,h._h,48) <= 0; }
-	ZT_ALWAYS_INLINE bool operator>=(const Fingerprint &h) const noexcept { return memcmp(_h,h._h,48) >= 0; }
+	ZT_ALWAYS_INLINE bool operator==(const Fingerprint &h) const noexcept { return std::equal(_h,_h + (384 / (sizeof(unsigned long) * 8)),h._h); }
+	ZT_ALWAYS_INLINE bool operator!=(const Fingerprint &h) const noexcept { return !(*this == h); }
+	ZT_ALWAYS_INLINE bool operator<(const Fingerprint &h) const noexcept { return std::lexicographical_compare(_h,_h + (384 / (sizeof(unsigned long) * 8)),h._h,h._h + (384 / (sizeof(unsigned long) * 8))); }
+	ZT_ALWAYS_INLINE bool operator>(const Fingerprint &h) const noexcept { return (h < *this); }
+	ZT_ALWAYS_INLINE bool operator<=(const Fingerprint &h) const noexcept { return !(h < *this); }
+	ZT_ALWAYS_INLINE bool operator>=(const Fingerprint &h) const noexcept { return !(*this < h); }
 
 private:
 	unsigned long _h[384 / (sizeof(unsigned long) * 8)];

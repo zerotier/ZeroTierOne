@@ -203,10 +203,7 @@ public:
 
 	ZT_ALWAYS_INLINE unsigned long hashCode() const noexcept { return _fp.hashCode(); }
 
-	ZT_ALWAYS_INLINE bool operator==(const Identity &id) const noexcept
-	{
-		return ((_address == id._address)&&(_type == id._type)&&(memcmp(_fp.data(),id._fp.data(),ZT_SHA384_DIGEST_LEN) == 0));
-	}
+	ZT_ALWAYS_INLINE bool operator==(const Identity &id) const noexcept { return ((_address == id._address)&&(_fp == id._fp)); }
 	ZT_ALWAYS_INLINE bool operator!=(const Identity &id) const noexcept { return !(*this == id); }
 	ZT_ALWAYS_INLINE bool operator<(const Identity &id) const noexcept
 	{
@@ -216,7 +213,7 @@ public:
 			if ((int)_type < (int)id._type)
 				return true;
 			if (_type == id._type)
-				return memcmp(_fp.data(),id._fp.data(),ZT_SHA384_DIGEST_LEN) < 0;
+				return _fp < id._fp;
 		}
 		return false;
 	}
