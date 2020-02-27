@@ -111,7 +111,7 @@ void Membership::pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const i
 			outp->wI64(outl,0); // four zero 16-bit integers
 		}
 
-		if (outl > sizeof(Protocol::Header)) {
+		if (outl > (int)sizeof(Protocol::Header)) {
 			outl = Protocol::compress(outp,outl);
 		}
 	}
