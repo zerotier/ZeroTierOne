@@ -15,7 +15,6 @@
 #include "Identity.hpp"
 #include "SHA512.hpp"
 #include "Salsa20.hpp"
-#include "AES.hpp"
 #include "Utils.hpp"
 #include "MIMC52.hpp"
 
@@ -23,7 +22,7 @@
 #include <cstdint>
 #include <algorithm>
 
-#define ZT_V1_IDENTITY_MIMC52_VDF_ROUNDS_BASE 250000
+#define ZT_V1_IDENTITY_MIMC52_VDF_ROUNDS_BASE 400000
 
 namespace ZeroTier {
 
