@@ -99,7 +99,7 @@ if (
 	CMAKE_SYSTEM_PROCESSOR MATCHES "i686"
 )
 	message("++ Adding SSE and AES-NI flags for processor ${CMAKE_SYSTEM_PROCESSOR}")
-	add_compile_options(-maes -mrdrnd -mpclmul -msse -msse2)
+	add_compile_options(-maes -mrdrnd -mpclmul -msse -msse2 -mssse3)
 endif()
 
 add_subdirectory(node)
