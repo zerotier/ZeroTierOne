@@ -22,7 +22,7 @@
 #include <cstring>
 
 #ifndef ZT_AES_NO_ACCEL
-#if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
+#ifdef ZT_ARCH_X64
 #include <wmmintrin.h>
 #include <emmintrin.h>
 #include <smmintrin.h>

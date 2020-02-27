@@ -61,6 +61,7 @@ else(WIN32)
 			$<$<CONFIG:Debug>:-g>
 			$<$<CONFIG:DEBUG>:-O0>
 			$<$<CONFIG:RELEASE>:-Ofast>
+			$<$<CONFIG:RELEASE>:-ffast-math>
 			$<$<CONFIG:RELEASE>:-fPIE>
 			$<$<CONFIG:RELEASE>:-flto>
 			$<$<CONFIG:RELWITHDEBINFO>:-Ofast>
@@ -80,6 +81,7 @@ else(WIN32)
 			$<$<CONFIG:Debug>:-g>
 			$<$<CONFIG:DEBUG>:-O0>
 			$<$<CONFIG:RELEASE>:-O3>
+			$<$<CONFIG:RELEASE>:-ffast-math>
 			$<$<CONFIG:RELEASE>:-fPIE>
 			$<$<CONFIG:RELWITHDEBINFO>:-O3>
 			$<$<CONFIG:RELWITHDEBINFO>:-fPIE>
