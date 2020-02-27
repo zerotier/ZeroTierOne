@@ -312,6 +312,24 @@ extern "C" const char *ZTT_general()
 			ZT_T_PRINTF("OK" ZT_EOL_S);
 		}
 
+		{
+			ZT_T_PRINTF("[general] Testing hton/ntoh byte order converters... ");
+			uint64_t a = Utils::hton((uint64_t)1);
+			uint32_t b = Utils::hton((uint32_t)1);
+			uint16_t c = Utils::hton((uint16_t)1);
+			if (
+				(reinterpret_cast<uint8_t *>(&a)[7] != 1)||
+				(reinterpret_cast<uint8_t *>(&b)[3] != 1)||
+				(reinterpret_cast<uint8_t *>(&c)[1] != 1)||
+				(Utils::ntoh(a) != 1)||
+				(Utils::ntoh(b) != 1)||
+				(Utils::ntoh(c) != 1)
+			) {
+				ZT_T_PRINTF("FAILED" ZT_EOL_S);
+				return "Utils::hton/ntoh not working properly";
+			}
+			ZT_T_PRINTF("OK" ZT_EOL_S);
+		}
 		ZT_T_PRINTF("[general] Utils::hash64() samples for 1, 2, int64_max, uint64_max: %.16llx %.16llx %.16llx %.16llx" ZT_EOL_S,Utils::hash64(1),Utils::hash64(2),Utils::hash64(0xffffffffffffffffULL),Utils::hash64(0x7fffffffffffffffULL));
 
 		{

@@ -295,132 +295,19 @@ static ZT_ALWAYS_INLINE unsigned int countBits(T v) noexcept
 }
 #endif
 
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-static ZT_ALWAYS_INLINE uint8_t hton(uint8_t n) noexcept { return n; }
-static ZT_ALWAYS_INLINE int8_t hton(int8_t n) noexcept { return n; }
-static ZT_ALWAYS_INLINE uint16_t hton(uint16_t n) noexcept
-{
-#if defined(__GNUC__)
-#if defined(__FreeBSD__)
-	return htons(n);
-#elif (!defined(__OpenBSD__))
-	return __builtin_bswap16(n);
-#endif
-#else
-	return htons(n);
-#endif
-}
-static ZT_ALWAYS_INLINE int16_t hton(int16_t n) noexcept { return (int16_t)Utils::hton((uint16_t)n); }
-static ZT_ALWAYS_INLINE uint32_t hton(uint32_t n) noexcept
-{
-#if defined(__GNUC__)
-#if defined(__FreeBSD__)
-	return htonl(n);
-#elif (!defined(__OpenBSD__))
-	return __builtin_bswap32(n);
-#endif
-#else
-	return htonl(n);
-#endif
-}
-static ZT_ALWAYS_INLINE int32_t hton(int32_t n) noexcept { return (int32_t)Utils::hton((uint32_t)n); }
-static ZT_ALWAYS_INLINE uint64_t hton(uint64_t n) noexcept
-{
-#if defined(__GNUC__)
-#if defined(__FreeBSD__)
-	return bswap64(n);
-#elif (!defined(__OpenBSD__))
-	return __builtin_bswap64(n);
-#endif
-#else
-	return (
-		((n & 0x00000000000000FFULL) << 56) |
-		((n & 0x000000000000FF00ULL) << 40) |
-		((n & 0x0000000000FF0000ULL) << 24) |
-		((n & 0x00000000FF000000ULL) <<  8) |
-		((n & 0x000000FF00000000ULL) >>  8) |
-		((n & 0x0000FF0000000000ULL) >> 24) |
-		((n & 0x00FF000000000000ULL) >> 40) |
-		((n & 0xFF00000000000000ULL) >> 56)
-	);
-#endif
-}
-static ZT_ALWAYS_INLINE int64_t hton(int64_t n) noexcept { return (int64_t)hton((uint64_t)n); }
-#else
-template<typename T>
-static ZT_ALWAYS_INLINE T hton(T n) noexcept { return n; }
-#endif
-
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-static ZT_ALWAYS_INLINE uint8_t ntoh(uint8_t n) noexcept { return n; }
-static ZT_ALWAYS_INLINE int8_t ntoh(int8_t n) noexcept { return n; }
-static ZT_ALWAYS_INLINE uint16_t ntoh(uint16_t n) noexcept
-{
-#if defined(__GNUC__)
-#if defined(__FreeBSD__)
-	return htons(n);
-#elif (!defined(__OpenBSD__))
-	return __builtin_bswap16(n);
-#endif
-#else
-	return htons(n);
-#endif
-}
-static ZT_ALWAYS_INLINE int16_t ntoh(int16_t n) noexcept { return (int16_t)Utils::ntoh((uint16_t)n); }
-static ZT_ALWAYS_INLINE uint32_t ntoh(uint32_t n) noexcept
-{
-#if defined(__GNUC__)
-#if defined(__FreeBSD__)
-	return ntohl(n);
-#elif (!defined(__OpenBSD__))
-	return __builtin_bswap32(n);
-#endif
-#else
-	return ntohl(n);
-#endif
-}
-static ZT_ALWAYS_INLINE int32_t ntoh(int32_t n) noexcept { return (int32_t)Utils::ntoh((uint32_t)n); }
-static ZT_ALWAYS_INLINE uint64_t ntoh(uint64_t n) noexcept
-{
-#if defined(__GNUC__)
-#if defined(__FreeBSD__)
-	return bswap64(n);
-#elif (!defined(__OpenBSD__))
-	return __builtin_bswap64(n);
-#endif
-#else
-	return (
-		((n & 0x00000000000000FFULL) << 56) |
-		((n & 0x000000000000FF00ULL) << 40) |
-		((n & 0x0000000000FF0000ULL) << 24) |
-		((n & 0x00000000FF000000ULL) <<  8) |
-		((n & 0x000000FF00000000ULL) >>  8) |
-		((n & 0x0000FF0000000000ULL) >> 24) |
-		((n & 0x00FF000000000000ULL) >> 40) |
-		((n & 0xFF00000000000000ULL) >> 56)
-	);
-#endif
-}
-static ZT_ALWAYS_INLINE int64_t ntoh(int64_t n) noexcept { return (int64_t)ntoh((uint64_t)n); }
-#else
-template<typename T>
-static ZT_ALWAYS_INLINE T ntoh(T n) noexcept { return n; }
-#endif
-
 /**
  * Unconditionally swap bytes regardless of host byte order
  *
  * @param n Integer to swap
  * @return Integer with bytes reversed
  */
-static ZT_ALWAYS_INLINE uint64_t swapBytes(uint64_t n) noexcept
+static ZT_ALWAYS_INLINE uint64_t swapBytes(const uint64_t n) noexcept
 {
-#if defined(__GNUC__)
-#if defined(__FreeBSD__)
-	return bswap64(n);
-#elif (!defined(__OpenBSD__))
+#ifdef __GNUC__
 	return __builtin_bswap64(n);
-#endif
+#else
+#ifdef _MSC_VER
+	return (uint64_t)_byteswap_uint64((unsigned __int64)n);
 #else
 	return (
 		((n & 0x00000000000000ffULL) << 56) |
@@ -432,6 +319,91 @@ static ZT_ALWAYS_INLINE uint64_t swapBytes(uint64_t n) noexcept
 		((n & 0x00ff000000000000ULL) >> 40) |
 		((n & 0xff00000000000000ULL) >> 56)
 	);
+#endif
+#endif
+}
+
+/**
+ * Unconditionally swap bytes regardless of host byte order
+ *
+ * @param n Integer to swap
+ * @return Integer with bytes reversed
+ */
+static ZT_ALWAYS_INLINE uint32_t swapBytes(const uint32_t n) noexcept
+{
+#if defined(__GCC__)
+	return __builtin_bswap32(n);
+#else
+#ifdef _MSC_VER
+	return (uint32_t)_byteswap_ulong((unsigned long)n);
+#else
+	return htonl(n);
+#endif
+#endif
+}
+
+/**
+ * Unconditionally swap bytes regardless of host byte order
+ *
+ * @param n Integer to swap
+ * @return Integer with bytes reversed
+ */
+static ZT_ALWAYS_INLINE uint16_t swapBytes(const uint16_t n) noexcept
+{
+#if defined(__GCC__)
+	return __builtin_bswap16(n);
+#else
+#ifdef _MSC_VER
+	return (uint16_t)_byteswap_ushort((unsigned short)n);
+#else
+	return htons(n);
+#endif
+#endif
+}
+
+// ZZvvvzvzvvzzz... moooooo... http://www.catb.org/~esr/jargon/html/Y/yak-shaving.html
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+template<typename I,unsigned int S>
+class _hton_impl { public: static ZT_ALWAYS_INLINE I hton(const I n) { return n; } };
+template<typename I>
+class _hton_impl<I,2> { public: static ZT_ALWAYS_INLINE I hton(const I n) { return (I)swapBytes((uint16_t)n); } };
+template<typename I>
+class _hton_impl<I,4> { public: static ZT_ALWAYS_INLINE I hton(const I n) { return (I)swapBytes((uint32_t)n); } };
+template<typename I>
+class _hton_impl<I,8> { public: static ZT_ALWAYS_INLINE I hton(const I n) { return (I)swapBytes((uint64_t)n); } };
+#endif
+
+/**
+ * Convert any signed or unsigned integer type to big-endian ("network") byte order
+ *
+ * @tparam I Integer type (usually inferred)
+ * @param n Value to convert
+ * @return Value in big-endian order
+ */
+template<typename I>
+static ZT_ALWAYS_INLINE I hton(const I n) noexcept
+{
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+	return _hton_impl<I,sizeof(I)>::hton(n);
+#else
+	return n;
+#endif
+}
+
+/**
+ * Convert any signed or unsigned integer type to host byte order from big-endian ("network") byte order
+ *
+ * @tparam I Integer type (usually inferred)
+ * @param n Value to convert
+ * @return Value in host byte order
+ */
+template<typename I>
+static ZT_ALWAYS_INLINE I ntoh(const I n) noexcept
+{
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+	return _hton_impl<I,sizeof(I)>::hton(n);
+#else
+	return n;
 #endif
 }
 
