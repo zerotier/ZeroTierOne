@@ -25,7 +25,7 @@ bool Endpoint::operator==(const Endpoint &ep) const
 			case TYPE_URL:         return (strcmp(_v.url,ep._v.url) == 0);
 			case TYPE_ETHERNET:    return (_v.eth == ep._v.eth);
 			case TYPE_INETADDR_V4:
-			case TYPE_INETADDR_V6: return (inetAddr() == ep.inetAddr());
+			case TYPE_INETADDR_V6: return ((asInetAddress(_v.in.sa) == asInetAddress(ep._v.in.sa))&&(_v.in.proto == ep._v.in.proto));
 		}
 	}
 	return false;
@@ -45,7 +45,7 @@ bool Endpoint::operator<(const Endpoint &ep) const
 			case TYPE_URL:         return (strcmp(_v.url,ep._v.url) < 0);
 			case TYPE_ETHERNET:    return (_v.eth < ep._v.eth);
 			case TYPE_INETADDR_V4:
-			case TYPE_INETADDR_V6: return (inetAddr() < ep.inetAddr());
+			case TYPE_INETADDR_V6: return ((_v.in.proto < ep._v.in.proto)||((_v.in.proto == ep._v.in.proto)&&(asInetAddress(_v.in.sa) < asInetAddress(ep._v.in.sa))));
 			default:               return false;
 		}
 	}
@@ -100,10 +100,11 @@ int Endpoint::marshal(uint8_t data[ZT_ENDPOINT_MARSHAL_SIZE_MAX]) const noexcept
 			return 13;
 		case TYPE_INETADDR_V4:
 		case TYPE_INETADDR_V6:
-			p = asInetAddress(_v.sa).marshal(data + 7);
-			if (p < 0)
-				return p;
-			return 7 + p;
+			p = 7 + asInetAddress(_v.in.sa).marshal(data + 7);
+			if (p <= 7)
+				return -1;
+			data[p++] = _v.in.proto;
+			return p;
 		default:
 			data[0] = (uint8_t)TYPE_NIL;
 			return 7;
@@ -174,10 +175,11 @@ int Endpoint::unmarshal(const uint8_t *restrict data,const int len) noexcept
 		  return 13;
 		case TYPE_INETADDR_V4:
 		case TYPE_INETADDR_V6:
-			p = asInetAddress(_v.sa).unmarshal(data + 7,len - 7);
-			if (p <= 0)
+			p = 7 + asInetAddress(_v.in.sa).unmarshal(data + 7,len - 7);
+			if ((p <= 7)||(p >= len))
 				return -1;
-			return 7 + p;
+			_v.in.proto = data[p++];
+			return p;
 		default:
 			// Unrecognized endpoint types not yet specified must start with a 16-bit
 			// length so that older versions of ZeroTier can skip them.

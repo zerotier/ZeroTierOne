@@ -55,9 +55,21 @@ public:
 		TYPE_INETADDR_V6 =  ZT_TRACE_EVENT_PATH_TYPE_INETADDR_V6
 	};
 
+	/**
+	 * Protocol identifiers for INETADDR endpoint types
+	 *
+	 * Most of these are reserved for future use.
+	 */
+	enum Protocol
+	{
+		PROTO_UDP_ZT =      0,
+		PROTO_TCP_ZT =      1,
+		PROTO_IP_ZT =       2
+	};
+
 	ZT_ALWAYS_INLINE Endpoint() noexcept { memoryZero(this); }
 
-	explicit ZT_ALWAYS_INLINE Endpoint(const InetAddress &sa)
+	explicit ZT_ALWAYS_INLINE Endpoint(const InetAddress &sa,const Protocol proto = PROTO_UDP_ZT)
 	{
 		switch (sa.family()) {
 			case AF_INET:
@@ -69,7 +81,8 @@ public:
 				_t = TYPE_NIL;
 				return;
 		}
-		asInetAddress(_v.sa) = sa;
+		asInetAddress(_v.in.sa) = sa;
+		_v.in.proto = (uint8_t)proto;
 	}
 
 	ZT_ALWAYS_INLINE Endpoint(const Address &zt,const uint8_t identityHash[ZT_IDENTITY_HASH_SIZE]) :
@@ -95,7 +108,12 @@ public:
 	/**
 	 * @return InetAddress or NIL if not of this type
 	 */
-	ZT_ALWAYS_INLINE const InetAddress &inetAddr() const noexcept { return ((_t == TYPE_INETADDR_V4)||(_t == TYPE_INETADDR_V6)) ? asInetAddress(_v.sa) : InetAddress::NIL; }
+	ZT_ALWAYS_INLINE const InetAddress &inetAddr() const noexcept { return ((_t == TYPE_INETADDR_V4)||(_t == TYPE_INETADDR_V6)) ? asInetAddress(_v.in.sa) : InetAddress::NIL; }
+
+	/**
+	 * @return Protocol for INETADDR types, undefined for other endpoint types
+	 */
+	ZT_ALWAYS_INLINE Protocol inetAddrProto() const noexcept { return (Protocol)_v.in.proto; }
 
 	/**
 	 * @return DNS name or empty string if not of this type
@@ -149,7 +167,10 @@ private:
 	Type _t;
 	int _l[3]; // X,Y,Z location in kilometers from the nearest gravitational center of mass
 	union {
-		struct sockaddr_storage sa;
+		struct {
+			sockaddr_storage sa;
+			uint8_t proto;
+		} in;
 		struct {
 			uint16_t port;
 			char name[ZT_ENDPOINT_MAX_NAME_SIZE];
