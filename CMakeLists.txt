@@ -108,22 +108,16 @@ add_subdirectory(osdep)
 add_subdirectory(root)
 add_subdirectory(go/native)
 
-set(
-	zt_osdep
-	zt_core
-	zt_controller
-	zt_go_native
-)
-
-if(WIN32)
-	set(libs ${libs} wsock32 ws2_32 rpcrt4 iphlpapi)
-else(WIN32)
-	set(libs ${libs} pthread)
-endif(WIN32)
-
 #if(BUILD_CENTRAL_CONTROLLER)
 #	set(libs ${libs} rabbitmq-static ${PostgreSQL_LIBRARIES})
 #endif(BUILD_CENTRAL_CONTROLLER)
+
+set(
+		zt_osdep
+		zt_core
+		zt_controller
+		zt_go_native
+)
 
 add_custom_target(zerotier ALL
 	WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/go

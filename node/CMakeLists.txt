@@ -90,6 +90,12 @@ add_library(${PROJECT_NAME} STATIC ${core_src} ${core_headers})
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_11)
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_BINARY_DIR})
 
+if(WIN32)
+	set(libs ${libs} wsock32 ws2_32 rpcrt4 iphlpapi)
+else(WIN32)
+	set(libs ${libs} pthread)
+endif(WIN32)
+
 add_executable(zt_core_tests Tests.h Tests.cpp)
 target_compile_definitions(zt_core_tests PRIVATE ZT_ENABLE_TESTS=1 ZT_STANDALONE_TESTS=1)
 target_link_libraries(zt_core_tests zt_core ${libs})
