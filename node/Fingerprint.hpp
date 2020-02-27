@@ -35,15 +35,8 @@ class Fingerprint : public TriviallyCopyable
 {
 public:
 	ZT_ALWAYS_INLINE Fingerprint() noexcept {}
-	explicit ZT_ALWAYS_INLINE Fingerprint(const void *h384) noexcept { memcpy(_h,h384,48); }
 
-	ZT_ALWAYS_INLINE void set(const void *h384) noexcept { memcpy(_h,h384,48); }
-
-	ZT_ALWAYS_INLINE void zero() noexcept
-	{
-		for(unsigned int i=0;i<(384 / (sizeof(unsigned long) * 8));++i)
-			_h[i] = 0;
-	}
+	ZT_ALWAYS_INLINE void zero() noexcept { memoryZero(this); }
 
 	ZT_ALWAYS_INLINE uint8_t *data() noexcept { return reinterpret_cast<uint8_t *>(_h); }
 	ZT_ALWAYS_INLINE const uint8_t *data() const noexcept { return reinterpret_cast<const uint8_t *>(_h); }

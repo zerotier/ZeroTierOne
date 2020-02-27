@@ -706,13 +706,6 @@ public:
 	template<typename T>
 	ZT_ALWAYS_INLINE const T &as(const unsigned int i = 0) const noexcept { return *reinterpret_cast<const T *>(unsafeData + i); }
 
-	ZT_ALWAYS_INLINE bool operator==(const Buf &b2) const noexcept { return (memcmp(unsafeData,b2.unsafeData,ZT_BUF_MEM_SIZE) == 0); }
-	ZT_ALWAYS_INLINE bool operator!=(const Buf &b2) const noexcept { return (memcmp(unsafeData,b2.unsafeData,ZT_BUF_MEM_SIZE) != 0); }
-	ZT_ALWAYS_INLINE bool operator<(const Buf &b2) const noexcept { return (memcmp(unsafeData,b2.unsafeData,ZT_BUF_MEM_SIZE) < 0); }
-	ZT_ALWAYS_INLINE bool operator<=(const Buf &b2) const noexcept { return (memcmp(unsafeData,b2.unsafeData,ZT_BUF_MEM_SIZE) <= 0); }
-	ZT_ALWAYS_INLINE bool operator>(const Buf &b2) const noexcept { return (memcmp(unsafeData,b2.unsafeData,ZT_BUF_MEM_SIZE) > 0); }
-	ZT_ALWAYS_INLINE bool operator>=(const Buf &b2) const noexcept { return (memcmp(unsafeData,b2.unsafeData,ZT_BUF_MEM_SIZE) >= 0); }
-
 	/**
 	 * Raw data held in buffer
 	 *
