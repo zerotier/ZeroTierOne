@@ -39,7 +39,7 @@ public:
 
 	ZT_ALWAYS_INLINE void zero() noexcept
 	{
-		for(int i=0;i<(384 / (sizeof(unsigned long) * 8));++i)
+		for(unsigned int i=0;i<(384 / (sizeof(unsigned long) * 8));++i)
 			_h[i] = 0;
 	}
 
@@ -55,7 +55,7 @@ public:
 
 	ZT_ALWAYS_INLINE operator bool() const noexcept
 	{
-		for(int i=0;i<(384 / (sizeof(unsigned long) * 8));++i) {
+		for(unsigned int i=0;i<(384 / (sizeof(unsigned long) * 8));++i) {
 			if (_h[i] != 0)
 				return true;
 		}
