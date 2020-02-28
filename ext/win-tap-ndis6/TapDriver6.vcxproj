@@ -33,6 +33,10 @@
       <Configuration>Win8 Release</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="Win10 Release|arm64">
+      <Configuration>Win10 Release</Configuration>
+      <Platform>arm64</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="Win7 Debug|x64">
       <Configuration>Win7 Debug</Configuration>
       <Platform>x64</Platform>
@@ -109,6 +113,11 @@
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>WindowsKernelModeDriver10.0</PlatformToolset>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win10 Release|arm64'" Label="Configuration">
+    <TargetVersion>Windows10</TargetVersion>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>WindowsKernelModeDriver10.0</PlatformToolset>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|x64'" Label="Configuration">
     <TargetVersion>Windows7</TargetVersion>
     <UseDebugLibraries>true</UseDebugLibraries>
@@ -177,6 +186,9 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Release|x64'">
     <TargetName>zttap300</TargetName>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win10 Release|arm64'">
+    <TargetName>zttap300</TargetName>
+  </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
       <WppEnabled>false</WppEnabled>
@@ -194,6 +206,7 @@
       <WppMinimalRebuildFromTracking Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|x64'">false</WppMinimalRebuildFromTracking>
       <WppMinimalRebuildFromTracking Condition="'$(Configuration)|$(Platform)'=='Win7 Release|x64'">false</WppMinimalRebuildFromTracking>
       <WppMinimalRebuildFromTracking Condition="'$(Configuration)|$(Platform)'=='Win8 Release|x64'">false</WppMinimalRebuildFromTracking>
+      <WppMinimalRebuildFromTracking Condition="'$(Configuration)|$(Platform)'=='Win10 Release|arm64'">false</WppMinimalRebuildFromTracking>
       <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Vista Debug|Win32'">Level1</WarningLevel>
       <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Win8 Debug|Win32'">Level1</WarningLevel>
       <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Vista Release|Win32'">Level1</WarningLevel>
@@ -206,6 +219,7 @@
       <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|x64'">Level1</WarningLevel>
       <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Win7 Release|x64'">Level1</WarningLevel>
       <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Win8 Release|x64'">Level1</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Win10 Release|arm64'">Level1</WarningLevel>
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Vista Debug|Win32'">Default</CompileAs>
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Win8 Debug|Win32'">Default</CompileAs>
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Vista Release|Win32'">Default</CompileAs>
@@ -218,6 +232,8 @@
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|x64'">Default</CompileAs>
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Win7 Release|x64'">Default</CompileAs>
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Win8 Release|x64'">Default</CompileAs>
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Win10 Release|arm64'">Default</CompileAs>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);NDIS670=1</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Vista Debug|x64'">C:\WinDDK\7600.16385.1\lib\win7\amd64\ndis.lib;C:\WinDDK\7600.16385.1\lib\win7\amd64\ntstrsafe.lib;C:\WinDDK\7600.16385.1\lib\win7\amd64\wdmsec.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -236,6 +252,9 @@
     </Link>
     <Link>
       <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Win8 Release|x64'">C:\WinDDK\7600.16385.1\lib\win7\amd64\ndis.lib;C:\WinDDK\7600.16385.1\lib\win7\amd64\ntstrsafe.lib;C:\WinDDK\7600.16385.1\lib\win7\amd64\wdmsec.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <Link>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Win10 Release|arm64'">"C:\Program Files (x86)\Windows Kits\10\Lib\10.0.16299.0\km\arm64\ndis.lib";"C:\Program Files (x86)\Windows Kits\10\Lib\10.0.16299.0\km\arm64\ntstrsafe.lib";"C:\Program Files (x86)\Windows Kits\10\Lib\10.0.16299.0\km\arm64\wdmsec.lib";%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Link>
       <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Vista Debug|Win32'">C:\WinDDK\7600.16385.1\lib\win7\i386\ndis.lib;C:\WinDDK\7600.16385.1\lib\win7\i386\ntstrsafe.lib;C:\WinDDK\7600.16385.1\lib\win7\i386\wdmsec.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -325,6 +344,11 @@
       <SpecifyDriverVerDirectiveVersion Condition="'$(Configuration)|$(Platform)'=='Win8 Release|x64'">false</SpecifyDriverVerDirectiveVersion>
       <SpecifyDriverVerDirectiveDate Condition="'$(Configuration)|$(Platform)'=='Win8 Release|x64'">false</SpecifyDriverVerDirectiveDate>
     </Inf>
+    <Inf>
+      <TimeStamp Condition="'$(Configuration)|$(Platform)'=='Win10 Release|arm64'">3.00.00.0</TimeStamp>
+      <SpecifyDriverVerDirectiveVersion Condition="'$(Configuration)|$(Platform)'=='Win10 Release|arm64'">false</SpecifyDriverVerDirectiveVersion>
+      <SpecifyDriverVerDirectiveDate Condition="'$(Configuration)|$(Platform)'=='Win10 Release|arm64'">false</SpecifyDriverVerDirectiveDate>
+    </Inf>
   </ItemDefinitionGroup>
   <ItemGroup>
     <FilesToPackage Include="$(TargetPath)" />
@@ -388,6 +412,8 @@
       <SpecifyDriverVerDirectiveVersion Condition="'$(Configuration)|$(Platform)'=='Win7 Release|x64'">false</SpecifyDriverVerDirectiveVersion>
       <SpecifyDriverVerDirectiveVersion Condition="'$(Configuration)|$(Platform)'=='Win8 Release|x64'">false</SpecifyDriverVerDirectiveVersion>
       <TimeStamp Condition="'$(Configuration)|$(Platform)'=='Win8 Release|x64'">3.00.00.0</TimeStamp>
+      <SpecifyDriverVerDirectiveVersion Condition="'$(Configuration)|$(Platform)'=='Win10 Release|arm64'">false</SpecifyDriverVerDirectiveVersion>
+      <TimeStamp Condition="'$(Configuration)|$(Platform)'=='Win10 Release|arm64'">3.00.00.0</TimeStamp>
     </Inf>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
