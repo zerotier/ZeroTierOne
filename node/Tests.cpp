@@ -313,21 +313,85 @@ extern "C" const char *ZTT_general()
 		}
 
 		{
-			ZT_T_PRINTF("[general] Testing hton/ntoh byte order converters... ");
-			uint64_t a = Utils::hton((uint64_t)1);
-			uint32_t b = Utils::hton((uint32_t)1);
-			uint16_t c = Utils::hton((uint16_t)1);
+			ZT_T_PRINTF("[general] Testing byte order loading, storing, and conversion... ");
+			uint64_t a = Utils::hton((uint64_t)0x0807060504030201ULL);
+			uint32_t b = Utils::hton((uint32_t)0x04030201);
+			uint16_t c = Utils::hton((uint16_t)0x0201);
+			uint8_t t[8];
 			if (
 				(reinterpret_cast<uint8_t *>(&a)[7] != 1)||
 				(reinterpret_cast<uint8_t *>(&b)[3] != 1)||
 				(reinterpret_cast<uint8_t *>(&c)[1] != 1)||
-				(Utils::ntoh(a) != 1)||
-				(Utils::ntoh(b) != 1)||
-				(Utils::ntoh(c) != 1)
+				(Utils::ntoh(a) != 0x0807060504030201ULL)||
+				(Utils::ntoh(b) != 0x04030201)||
+				(Utils::ntoh(c) != 0x0201)
 			) {
-				ZT_T_PRINTF("FAILED" ZT_EOL_S);
-				return "Utils::hton/ntoh not working properly";
+				ZT_T_PRINTF("FAILED (hton/ntoh)" ZT_EOL_S);
+				return "Utils::hton() or ntoh() broken";
 			}
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+			if (Utils::loadAsIsEndian<uint64_t>(&a) != 0x0102030405060708ULL) {
+				ZT_T_PRINTF("FAILED (loadAsIsEndian)" ZT_EOL_S);
+				return "Utils::loadAsIsEndian() broken";
+			}
+			if (Utils::loadAsIsEndian<uint32_t>(&b) != 0x01020304) {
+				ZT_T_PRINTF("FAILED (loadAsIsEndian)" ZT_EOL_S);
+				return "Utils::loadAsIsEndian() broken";
+			}
+			if (Utils::loadAsIsEndian<uint16_t>(&c) != 0x0102) {
+				ZT_T_PRINTF("FAILED (loadAsIsEndian)" ZT_EOL_S);
+				return "Utils::loadAsIsEndian() broken";
+			}
+			memset(t,0,sizeof(t));
+			Utils::storeAsIsEndian<uint64_t>(t,0x0807060504030201ULL);
+			if (t[0] != 1) {
+				ZT_T_PRINTF("FAILED (storeAsIsEndian)" ZT_EOL_S);
+				return "Utils::storeAsIsEndian() broken";
+			}
+			memset(t,0,sizeof(t));
+			Utils::storeAsIsEndian<uint32_t>(t,0x04030201);
+			if (t[0] != 1) {
+				ZT_T_PRINTF("FAILED (storeAsIsEndian)" ZT_EOL_S);
+				return "Utils::storeAsIsEndian() broken";
+			}
+			memset(t,0,sizeof(t));
+			Utils::storeAsIsEndian<uint16_t>(t,0x0201);
+			if (t[0] != 1) {
+				ZT_T_PRINTF("FAILED (storeAsIsEndian)" ZT_EOL_S);
+				return "Utils::storeAsIsEndian() broken";
+			}
+#else
+			if (Utils::loadAsIsEndian<uint64_t>(&a) != 0x0807060504030201ULL) {
+				ZT_T_PRINTF("FAILED (loadAsIsEndian)" ZT_EOL_S);
+				return "Utils::loadAsIsEndian() broken";
+			}
+			if (Utils::loadAsIsEndian<uint32_t>(&b) != 0x04030201) {
+				ZT_T_PRINTF("FAILED (loadAsIsEndian)" ZT_EOL_S);
+				return "Utils::loadAsIsEndian() broken";
+			}
+			if (Utils::loadAsIsEndian<uint16_t>(&c) != 0x0201) {
+				ZT_T_PRINTF("FAILED (loadAsIsEndian)" ZT_EOL_S);
+				return "Utils::loadAsIsEndian() broken";
+			}
+			memset(t,0,sizeof(t));
+			Utils::storeAsIsEndian<uint64_t>(t,0x0807060504030201ULL);
+			if (t[0] != 8) {
+				ZT_T_PRINTF("FAILED (storeAsIsEndian)" ZT_EOL_S);
+				return "Utils::storeAsIsEndian() broken";
+			}
+			memset(t,0,sizeof(t));
+			Utils::storeAsIsEndian<uint32_t>(t,0x04030201);
+			if (t[0] != 4) {
+				ZT_T_PRINTF("FAILED (storeAsIsEndian)" ZT_EOL_S);
+				return "Utils::storeAsIsEndian() broken";
+			}
+			memset(t,0,sizeof(t));
+			Utils::storeAsIsEndian<uint16_t>(t,0x0201);
+			if (t[0] != 2) {
+				ZT_T_PRINTF("FAILED (storeAsIsEndian)" ZT_EOL_S);
+				return "Utils::storeAsIsEndian() broken";
+			}
+#endif
 			ZT_T_PRINTF("OK" ZT_EOL_S);
 		}
 		ZT_T_PRINTF("[general] Utils::hash64() samples for 1, 2, int64_max, uint64_max: %.16llx %.16llx %.16llx %.16llx" ZT_EOL_S,Utils::hash64(1),Utils::hash64(2),Utils::hash64(0xffffffffffffffffULL),Utils::hash64(0x7fffffffffffffffULL));
@@ -597,7 +661,6 @@ extern "C" const char *ZTT_general()
 				ZT_T_PRINTF("FAILED (v0 marshal)" ZT_EOL_S);
 				return "Identity test failed: v0 marshal";
 			}
-			ZT_T_PRINTF("(marshal: %d bytes) ",ms);
 			Identity id2;
 			if (id2.unmarshal(idm,ms) <= 0) {
 				ZT_T_PRINTF("FAILED (v0 unmarshal)" ZT_EOL_S);
@@ -607,6 +670,16 @@ extern "C" const char *ZTT_general()
 				ZT_T_PRINTF("FAILED (v0 unmarshal !=)" ZT_EOL_S);
 				return "Identity test failed: v0 unmarshal !=";
 			}
+			ms = id.marshal(idm,false);
+			if (ms <= 0) {
+				ZT_T_PRINTF("FAILED (v0 marshal)" ZT_EOL_S);
+				return "Identity test failed: v0 marshal";
+			}
+			if (id2.unmarshal(idm,ms) <= 0) {
+				ZT_T_PRINTF("FAILED (v0 unmarshal)" ZT_EOL_S);
+				return "Identity test failed: v0 unmarshal";
+			}
+			ZT_T_PRINTF("(marshalled size: %d bytes) ",ms);
 
 			if (!id.fromString(IDENTITY_V0_KNOWN_BAD_0)) {
 				ZT_T_PRINTF("FAILED (error parsing test identity #2)" ZT_EOL_S);
@@ -638,7 +711,6 @@ extern "C" const char *ZTT_general()
 				ZT_T_PRINTF("FAILED (v1 marshal)" ZT_EOL_S);
 				return "Identity test failed: v1 marshal";
 			}
-			ZT_T_PRINTF("(marshal: %d bytes) ",ms);
 			if (id2.unmarshal(idm,ms) <= 0) {
 				ZT_T_PRINTF("FAILED (v1 unmarshal)" ZT_EOL_S);
 				return "Identity test failed: v1 unmarshal";
@@ -647,6 +719,16 @@ extern "C" const char *ZTT_general()
 				ZT_T_PRINTF("FAILED (v1 unmarshal !=)" ZT_EOL_S);
 				return "Identity test failed: v1 unmarshal !=";
 			}
+			ms = id.marshal(idm,false);
+			if (ms <= 0) {
+				ZT_T_PRINTF("FAILED (v1 marshal)" ZT_EOL_S);
+				return "Identity test failed: v1 marshal";
+			}
+			if (id2.unmarshal(idm,ms) <= 0) {
+				ZT_T_PRINTF("FAILED (v1 unmarshal)" ZT_EOL_S);
+				return "Identity test failed: v1 unmarshal";
+			}
+			ZT_T_PRINTF("(marshalled size: %d bytes) ",ms);
 
 			if (!id.fromString(IDENTITY_V1_KNOWN_BAD_0)) {
 				ZT_T_PRINTF("FAILED (error parsing test identity #2)" ZT_EOL_S);
