@@ -351,7 +351,7 @@ private:
 #endif
 			return h + (uint64_t)Utils::ntoh(reinterpret_cast<const struct sockaddr_in6 *>(&r)->sin6_port) + (uint64_t)l;
 		} else {
-			return Utils::hashString(reinterpret_cast<const void *>(&r),sizeof(InetAddress)) + (uint64_t)l;
+			return Utils::fnv1a32(reinterpret_cast<const void *>(&r),sizeof(InetAddress)) + (uint64_t)l;
 		}
 	}
 

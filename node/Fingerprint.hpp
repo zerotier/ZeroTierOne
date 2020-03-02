@@ -16,10 +16,13 @@
 
 #include "Constants.hpp"
 #include "TriviallyCopyable.hpp"
+#include "Address.hpp"
 
 #include <algorithm>
 
 namespace ZeroTier {
+
+class Identity;
 
 /**
  * Container for 384-bit identity hashes
@@ -33,39 +36,32 @@ namespace ZeroTier {
  */
 class Fingerprint : public TriviallyCopyable
 {
+	friend class Identity;
+
 public:
-	ZT_ALWAYS_INLINE Fingerprint() noexcept {}
+	/**
+	 * Create an empty/nil fingerprint
+	 */
+	ZT_ALWAYS_INLINE Fingerprint() noexcept { memoryZero(this); }
+
+	ZT_ALWAYS_INLINE Address address() const noexcept { return Address(_fp.address); }
+	ZT_ALWAYS_INLINE const uint8_t *hash() const noexcept { return _fp.hash; }
+	ZT_ALWAYS_INLINE void setZTFingerprint(ZT_Fingerprint *fp) const noexcept { memcpy(fp,&_fp,sizeof(ZT_Fingerprint)); }
 
 	ZT_ALWAYS_INLINE void zero() noexcept { memoryZero(this); }
+	ZT_ALWAYS_INLINE unsigned long hashCode() const noexcept { return _fp.address; }
 
-	ZT_ALWAYS_INLINE uint8_t *data() noexcept { return reinterpret_cast<uint8_t *>(_h); }
-	ZT_ALWAYS_INLINE const uint8_t *data() const noexcept { return reinterpret_cast<const uint8_t *>(_h); }
+	ZT_ALWAYS_INLINE operator bool() const noexcept { return (_fp.address != 0); }
 
-	ZT_ALWAYS_INLINE uint8_t operator[](const unsigned int i) const noexcept { return reinterpret_cast<const uint8_t *>(_h)[i]; }
-	ZT_ALWAYS_INLINE uint8_t &operator[](const unsigned int i) noexcept { return reinterpret_cast<uint8_t *>(_h)[i]; }
-
-	static constexpr unsigned int size() noexcept { return 48; }
-
-	ZT_ALWAYS_INLINE unsigned long hashCode() const noexcept { return _h[0]; }
-
-	ZT_ALWAYS_INLINE operator bool() const noexcept
-	{
-		for(unsigned int i=0;i<(384 / (sizeof(unsigned long) * 8));++i) {
-			if (_h[i] != 0)
-				return true;
-		}
-		return false;
-	}
-
-	ZT_ALWAYS_INLINE bool operator==(const Fingerprint &h) const noexcept { return std::equal(_h,_h + (384 / (sizeof(unsigned long) * 8)),h._h); }
+	ZT_ALWAYS_INLINE bool operator==(const Fingerprint &h) const noexcept { return ((_fp.address == h._fp.address)&&(memcmp(_fp.hash,h._fp.hash,ZT_IDENTITY_HASH_SIZE) == 0)); }
 	ZT_ALWAYS_INLINE bool operator!=(const Fingerprint &h) const noexcept { return !(*this == h); }
-	ZT_ALWAYS_INLINE bool operator<(const Fingerprint &h) const noexcept { return std::lexicographical_compare(_h,_h + (384 / (sizeof(unsigned long) * 8)),h._h,h._h + (384 / (sizeof(unsigned long) * 8))); }
+	ZT_ALWAYS_INLINE bool operator<(const Fingerprint &h) const noexcept { return ((_fp.address < h._fp.address) || ((_fp.address == h._fp.address)&&(memcmp(_fp.hash,h._fp.hash,ZT_IDENTITY_HASH_SIZE) < 0))); }
 	ZT_ALWAYS_INLINE bool operator>(const Fingerprint &h) const noexcept { return (h < *this); }
 	ZT_ALWAYS_INLINE bool operator<=(const Fingerprint &h) const noexcept { return !(h < *this); }
 	ZT_ALWAYS_INLINE bool operator>=(const Fingerprint &h) const noexcept { return !(*this < h); }
 
 private:
-	unsigned long _h[384 / (sizeof(unsigned long) * 8)];
+	ZT_Fingerprint _fp;
 };
 
 } // namespace ZeroTier

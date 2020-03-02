@@ -33,7 +33,7 @@
 #include <list>
 
 // version, identity, locator, bootstrap, version info, length of any additional fields
-#define ZT_PEER_MARSHAL_SIZE_MAX (1 + ZT_IDENTITY_MARSHAL_SIZE_MAX + ZT_LOCATOR_MARSHAL_SIZE_MAX + ZT_INETADDRESS_MARSHAL_SIZE_MAX + (2*4) + 2)
+#define ZT_PEER_MARSHAL_SIZE_MAX (1 + ZT_ADDRESS_LENGTH + ZT_PEER_SECRET_KEY_LENGTH + ZT_IDENTITY_MARSHAL_SIZE_MAX + ZT_LOCATOR_MARSHAL_SIZE_MAX + ZT_INETADDRESS_MARSHAL_SIZE_MAX + (2*4) + 2)
 
 namespace ZeroTier {
 

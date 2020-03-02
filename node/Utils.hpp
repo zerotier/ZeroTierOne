@@ -258,24 +258,20 @@ static ZT_ALWAYS_INLINE unsigned long long hexStrToU64(const char *s) noexcept
 }
 
 /**
- * Calculate a non-cryptographic hash of a byte string
+ * Compute 32-bit FNV-1a checksum
  *
- * @param key Key to hash
- * @param len Length in bytes
- * @return Non-cryptographic hash suitable for use in a hash table
+ * See: http://www.isthe.com/chongo/tech/comp/fnv/
+ *
+ * @param data Data to checksum
+ * @param len Length of data
+ * @return FNV1a checksum
  */
-static ZT_ALWAYS_INLINE unsigned long hashString(const void *restrict key,const unsigned int len) noexcept
+static ZT_ALWAYS_INLINE uint32_t fnv1a32(const void *const data,const unsigned int len) noexcept
 {
-	const uint8_t *p = reinterpret_cast<const uint8_t *>(key);
-	unsigned long h = 0;
-	for (unsigned int i=0;i<len;++i) {
-		h += p[i];
-		h += (h << 10U);
-		h ^= (h >> 6U);
-	}
-	h += (h << 3U);
-	h ^= (h >> 11U);
-	h += (h << 15U);
+	uint32_t h = 0x811c9dc5;
+	const uint32_t p = 0x01000193;
+	for(unsigned int i=0;i<len;++i)
+		h = (h ^ (uint32_t)reinterpret_cast<const uint8_t *>(data)[i]) * p;
 	return h;
 }
 

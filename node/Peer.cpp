@@ -123,7 +123,7 @@ void Peer::received(
 			RR->t->learnedNewPath(tPtr,0x582fabdd,packetId,_id,path->address(),old);
 		} else {
 			if (RR->node->shouldUsePathForZeroTierTraffic(tPtr,_id,path->localSocket(),path->address())) {
-				RR->t->tryingNewPath(tPtr,0xb7747ddd,_id,path->address(),path->address(),packetId,(uint8_t)verb,_id.address(),_id.fingerprint().data(),ZT_TRACE_TRYING_NEW_PATH_REASON_PACKET_RECEIVED_FROM_UNKNOWN_PATH);
+				RR->t->tryingNewPath(tPtr,0xb7747ddd,_id,path->address(),path->address(),packetId,(uint8_t)verb,_id,ZT_TRACE_TRYING_NEW_PATH_REASON_PACKET_RECEIVED_FROM_UNKNOWN_PATH);
 				path->sent(now,sendHELLO(tPtr,path->localSocket(),path->address(),now));
 			}
 		}
@@ -135,11 +135,11 @@ path_check_done:
 
 		InetAddress addr;
 		if ((_bootstrap.type() == Endpoint::TYPE_INETADDR_V4)||(_bootstrap.type() == Endpoint::TYPE_INETADDR_V6)) {
-			RR->t->tryingNewPath(tPtr,0x0a009444,_id,_bootstrap.inetAddr(),InetAddress::NIL,0,0,0,nullptr,ZT_TRACE_TRYING_NEW_PATH_REASON_BOOTSTRAP_ADDRESS);
+			RR->t->tryingNewPath(tPtr,0x0a009444,_id,_bootstrap.inetAddr(),InetAddress::NIL,0,0,Identity::NIL,ZT_TRACE_TRYING_NEW_PATH_REASON_BOOTSTRAP_ADDRESS);
 			sendHELLO(tPtr,-1,_bootstrap.inetAddr(),now);
 		} if (RR->node->externalPathLookup(tPtr,_id,-1,addr)) {
 			if (RR->node->shouldUsePathForZeroTierTraffic(tPtr,_id,-1,addr)) {
-				RR->t->tryingNewPath(tPtr,0x84a10000,_id,_bootstrap.inetAddr(),InetAddress::NIL,0,0,0,nullptr,ZT_TRACE_TRYING_NEW_PATH_REASON_EXPLICITLY_SUGGESTED_ADDRESS);
+				RR->t->tryingNewPath(tPtr,0x84a10000,_id,_bootstrap.inetAddr(),InetAddress::NIL,0,0,Identity::NIL,ZT_TRACE_TRYING_NEW_PATH_REASON_EXPLICITLY_SUGGESTED_ADDRESS);
 				sendHELLO(tPtr,-1,addr,now);
 			}
 		}
@@ -485,14 +485,23 @@ void Peer::alarm(void *tPtr,const int64_t now)
 
 int Peer::marshal(uint8_t data[ZT_PEER_MARSHAL_SIZE_MAX]) const noexcept
 {
-	RWMutex::RLock l(_lock);
-
 	data[0] = 0; // serialized peer version
 
-	int s = _id.marshal(data + 1,false);
+	// For faster unmarshaling on large nodes the long-term secret key is cached. It's
+	// encrypted with a symmetric key derived from a hash of the local node's identity
+	// secrets, so the local node's address is also included. That way the unmarshal
+	// code can check this address and not use this cached key if the local identity has
+	// changed. In that case agreement must be executed again.
+	RR->identity.address().copyTo(data + 1);
+	RR->localCacheSymmetric.encrypt(_key,data + 6);
+	RR->localCacheSymmetric.encrypt(_key + 16,data + 22);
+
+	RWMutex::RLock l(_lock);
+
+	int s = _id.marshal(data + 38,false);
 	if (s <= 0)
 		return s;
-	int p = 1 + s;
+	int p = s + 38;
 	s = _locator.marshal(data + p);
 	if (s <= 0)
 		return s;
@@ -520,17 +529,26 @@ int Peer::marshal(uint8_t data[ZT_PEER_MARSHAL_SIZE_MAX]) const noexcept
 int Peer::unmarshal(const uint8_t *restrict data,const int len) noexcept
 {
 	int p;
+	bool mustRecomputeSecret;
 
 	{
 		RWMutex::Lock l(_lock);
 
-		if ((len <= 1) || (data[0] != 0))
+		if ((len <= 38) || (data[0] != 0))
 			return -1;
 
-		int s = _id.unmarshal(data + 1,len - 1);
+		if (Address(data + 1) == RR->identity.address()) {
+			RR->localCacheSymmetric.decrypt(data + 6,_key);
+			RR->localCacheSymmetric.decrypt(data + 22,_key + 16);
+			mustRecomputeSecret = false;
+		} else {
+			mustRecomputeSecret = true; // can't use cached key if local identity has changed
+		}
+
+		int s = _id.unmarshal(data + 38,len - 38);
 		if (s <= 0)
 			return s;
-		p = 1 + s;
+		p = s + 38;
 		s = _locator.unmarshal(data + p,len - p);
 		if (s <= 0)
 			return s;
@@ -542,6 +560,7 @@ int Peer::unmarshal(const uint8_t *restrict data,const int len) noexcept
 
 		if ((p + 10) > len)
 			return -1;
+
 		_vProto = Utils::loadBigEndian<uint16_t>(data + p);
 		p += 2;
 		_vMajor = Utils::loadBigEndian<uint16_t>(data + p);
@@ -551,12 +570,16 @@ int Peer::unmarshal(const uint8_t *restrict data,const int len) noexcept
 		_vRevision = Utils::loadBigEndian<uint16_t>(data + p);
 		p += 2;
 		p += 2 + (int)Utils::loadBigEndian<uint16_t>(data + p);
+
 		if (p > len)
 			return -1;
 	}
 
-	if (!RR->identity.agree(_id,_key))
-		return -1;
+	if (mustRecomputeSecret) {
+		if (!RR->identity.agree(_id,_key))
+			return -1;
+	}
+
 	_incomingProbe = Protocol::createProbe(_id,RR->identity,_key);
 
 	return p;

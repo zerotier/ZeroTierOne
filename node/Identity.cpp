@@ -111,8 +111,7 @@ bool Identity::generate(const Type t)
 				Utils::storeBigEndian(_pub.t1mimc52,mimc52Delay(&_pub,sizeof(_pub) - sizeof(_pub.t1mimc52),ZT_V1_IDENTITY_MIMC52_VDF_ROUNDS_BASE));
 
 				// Compute SHA384 fingerprint hash of keys and MIMC output and generate address directly from it.
-				_computeHash();
-				_address.setTo(_fp.data());
+				_computeHash(); // this sets the address for P384
 				if (!_address.isReserved())
 					break;
 			}
@@ -140,7 +139,7 @@ bool Identity::locallyValidate() const noexcept
 				}
 
 				case P384:
-					if (_address == Address(_fp.data())) {
+					if (_address == Address(_fp.hash())) {
 						// The most significant 8 bits of the MIMC proof included with v1 identities can be used to store a multiplier
 						// that can indicate that more work than the required minimum has been performed. Right now this is never done
 						// but it could have some use in the future. There is no harm in doing it, and we'll accept any round count
@@ -445,10 +444,8 @@ int Identity::unmarshal(const uint8_t *data,const int len) noexcept
 	_fp.zero();
 	_hasPrivate = false;
 
-	if (len < (ZT_ADDRESS_LENGTH + 1))
+	if (len < (1 + ZT_ADDRESS_LENGTH))
 		return -1;
-	_address.setTo(data);
-
 	unsigned int privlen;
 	switch((_type = (Type)data[ZT_ADDRESS_LENGTH])) {
 
@@ -457,6 +454,7 @@ int Identity::unmarshal(const uint8_t *data,const int len) noexcept
 				return -1;
 
 			memcpy(_pub.c25519,data + ZT_ADDRESS_LENGTH + 1,ZT_C25519_PUBLIC_KEY_LEN);
+			_address.setTo(data);
 			_computeHash();
 
 			privlen = data[ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN];
@@ -477,8 +475,8 @@ int Identity::unmarshal(const uint8_t *data,const int len) noexcept
 				return -1;
 
 			memcpy(&_pub,data + ZT_ADDRESS_LENGTH + 1,ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE);
-			_computeHash();
-			if (_address != Address(_fp.data())) // for v1 we can sanity check this here, but this isn't a full validate
+			_computeHash(); // this sets the address for P384
+			if (_address != Address(data)) // sanity check address in data stream
 				return -1;
 
 			privlen = data[ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE];
@@ -507,11 +505,14 @@ void Identity::_computeHash()
 			break;
 
 		case C25519:
-			SHA384(_fp.data(),_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
+			_fp._fp.address = _address.toInt();
+			SHA384(_fp._fp.hash,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
 			break;
 
 		case P384:
-			SHA384(_fp.data(),&_pub,sizeof(_pub));
+			SHA384(_fp._fp.hash,&_pub,sizeof(_pub));
+			_address.setTo(reinterpret_cast<const uint8_t *>(_fp._fp.hash));
+			_fp._fp.address = _address.toInt();
 			break;
 	}
 }
@@ -599,13 +600,6 @@ uint64_t ZT_Identity_address(const ZT_Identity *id)
 	if (!id)
 		return 0;
 	return reinterpret_cast<const ZeroTier::Identity *>(id)->address().toInt();
-}
-
-void ZT_Identity_hash(const ZT_Identity *id,uint8_t h[48],int includePrivate)
-{
-	if (includePrivate)
-		reinterpret_cast<const ZeroTier::Identity *>(id)->hashWithPrivate(h);
-	else memcpy(h,reinterpret_cast<const ZeroTier::Identity *>(id)->fingerprint().data(),ZT_IDENTITY_HASH_SIZE);
 }
 
 ZT_SDK_API void ZT_Identity_delete(ZT_Identity *id)

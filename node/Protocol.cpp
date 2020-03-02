@@ -33,8 +33,8 @@ std::atomic<uint64_t> _s_packetIdCtr((uint64_t)time(nullptr) << 32U);
 uint64_t createProbe(const Identity &sender,const Identity &recipient,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH]) noexcept
 {
 	uint8_t tmp[ZT_IDENTITY_HASH_SIZE + ZT_IDENTITY_HASH_SIZE];
-	memcpy(tmp,sender.fingerprint().data(),ZT_IDENTITY_HASH_SIZE);
-	memcpy(tmp + ZT_IDENTITY_HASH_SIZE,recipient.fingerprint().data(),ZT_IDENTITY_HASH_SIZE);
+	memcpy(tmp,sender.fingerprint().hash(),ZT_IDENTITY_HASH_SIZE);
+	memcpy(tmp + ZT_IDENTITY_HASH_SIZE,recipient.fingerprint().hash(),ZT_IDENTITY_HASH_SIZE);
 	uint64_t hash[6];
 	SHA384(hash,tmp,sizeof(tmp),key,ZT_PEER_SECRET_KEY_LENGTH);
 	return hash[0];

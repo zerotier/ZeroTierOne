@@ -278,6 +278,32 @@ extern "C" {
 
 /* ----------------------------------------------------------------------------------------------------------------- */
 
+
+/**
+ * Identity type codes
+ */
+enum ZT_Identity_Type
+{
+	/* These values must be the same as in Identity.hpp in the core. */
+	ZT_IDENTITY_TYPE_C25519 = 0,
+	ZT_IDENTITY_TYPE_P384 = 1
+};
+
+/**
+ * A ZeroTier identity (opaque)
+ */
+typedef void ZT_Identity;
+
+/**
+ * Full identity fingerprint with address and 384-bit hash of public key(s)
+ */
+ZT_PACKED_STRUCT(struct _ZT_Fingerprint
+{
+	uint64_t address;
+	uint8_t hash[48];
+});
+typedef struct _ZT_Fingerprint ZT_Fingerprint;
+
 /**
  * Credential type IDs
  */
@@ -460,8 +486,7 @@ _ZT_TRACE_EVENT_STRUCT_END()
  * move around on the network.
  */
 _ZT_TRACE_EVENT_STRUCT_START(VL1_RESETTING_PATHS_IN_SCOPE)
-	uint64_t reporter;                               /* ZeroTier address that triggered the reset */
-	uint8_t reporterIdentityHash[48];                /* full identity hash of triggering node's identity */
+	ZT_Fingerprint reporter;                         /* node that triggered the reset */
 	struct ZT_TraceEventPathAddress from;            /* physical origin of triggering packet */
 	struct ZT_TraceEventPathAddress oldExternal;     /* previous detected external address */
 	struct ZT_TraceEventPathAddress newExternal;     /* new detected external address */
@@ -475,14 +500,12 @@ _ZT_TRACE_EVENT_STRUCT_END()
  * we might hear of them. A node tries a path by sending a trial message to it.
  */
 _ZT_TRACE_EVENT_STRUCT_START(VL1_TRYING_NEW_PATH)
-	uint64_t address;                                /* short address of node we're trying to reach */
-	uint8_t identityHash[48];                        /* identity hash of node we're trying to reach */
+	ZT_Fingerprint peer;                             /* node we're trying to reach */
 	struct ZT_TraceEventPathAddress physicalAddress; /* physical address being tried */
 	struct ZT_TraceEventPathAddress triggerAddress;  /* physical origin of triggering packet */
 	uint64_t triggeringPacketId;                     /* packet ID of triggering packet */
 	uint8_t triggeringPacketVerb;                    /* packet verb of triggering packet */
-	uint64_t triggeredByAddress;                     /* short address of node triggering attempt */
-	uint8_t triggeredByIdentityHash[48];             /* full identity hash of node triggering attempt */
+	ZT_Fingerprint triggeringPeer;                   /* peer that triggered attempt */
 	uint8_t reason;                                  /* ZT_TraceTryingNewPathReason */
 _ZT_TRACE_EVENT_STRUCT_END()
 
@@ -491,8 +514,7 @@ _ZT_TRACE_EVENT_STRUCT_END()
  */
 _ZT_TRACE_EVENT_STRUCT_START(VL1_LEARNED_NEW_PATH)
 	uint64_t packetId;                               /* packet ID of confirming packet */
-	uint64_t address;                                /* short address of learned peer */
-	uint8_t identityHash[48];                        /* full identity hash of learned peer */
+	ZT_Fingerprint peer;                             /* peer on other side of new path */
 	struct ZT_TraceEventPathAddress physicalAddress; /* physical address learned */
 	struct ZT_TraceEventPathAddress replaced;        /* if non-empty, an older address that was replaced */
 _ZT_TRACE_EVENT_STRUCT_END()
@@ -506,8 +528,7 @@ _ZT_TRACE_EVENT_STRUCT_END()
 _ZT_TRACE_EVENT_STRUCT_START(VL1_INCOMING_PACKET_DROPPED)
 	uint64_t packetId;                               /* packet ID of failed packet */
 	uint64_t networkId;                              /* VL2 network ID or 0 if unrelated to a network or unknown */
-	uint64_t address;                                /* short address that sent packet */
-	uint8_t identityHash[48];                        /* full identity hash of sending node */
+	ZT_Fingerprint peer;                             /* peer that sent packet */
 	struct ZT_TraceEventPathAddress physicalAddress; /* physical origin address of packet */
 	uint8_t hops;                                    /* hop count of packet */
 	uint8_t verb;                                    /* packet verb */
@@ -535,7 +556,7 @@ _ZT_TRACE_EVENT_STRUCT_START(VL2_INCOMING_FRAME_DROPPED)
 	uint64_t networkId;                              /* VL2 network ID */
 	uint64_t sourceMac;                              /* 48-bit source MAC */
 	uint64_t destMac;                                /* 48-bit destination MAC */
-	uint64_t address;                                /* short address of sending peer */
+	ZT_Fingerprint sender;                           /* sending peer */
 	struct ZT_TraceEventPathAddress physicalAddress; /* physical source address of packet */
 	uint8_t hops;                                    /* hop count of packet */
 	uint16_t frameLength;                            /* length of frame in bytes */
@@ -582,7 +603,7 @@ _ZT_TRACE_EVENT_STRUCT_END()
  */
 _ZT_TRACE_EVENT_STRUCT_START(VL2_CREDENTIAL_REJECTED)
 	uint64_t networkId;                              /* VL2 network ID */
-	uint64_t address;                                /* short address of sender */
+	ZT_Fingerprint peer;                             /* sending peer */
 	uint32_t credentialId;                           /* credential ID */
 	int64_t credentialTimestamp;                     /* credential timestamp */
 	uint8_t credentialType;                          /* credential type */
@@ -727,21 +748,6 @@ enum ZT_Event
 	 */
 	ZT_EVENT_USER_MESSAGE = 6
 };
-
-/**
- * Identity type codes
- */
-enum ZT_Identity_Type
-{
-	/* These values must be the same as in Identity.hpp in the core. */
-	ZT_IDENTITY_TYPE_C25519 = 0,
-	ZT_IDENTITY_TYPE_P384 = 1
-};
-
-/**
- * A ZeroTier identity (opaque)
- */
-typedef void ZT_Identity;
 
 /**
  * User message used with ZT_EVENT_USER_MESSAGE
@@ -1342,11 +1348,6 @@ typedef struct
 	 * Peer identity
 	 */
 	const ZT_Identity *identity;
-
-	/**
-	 * SHA384 hash of identity public key(s)
-	 */
-	uint8_t identityHash[48];
 
 	/**
 	 * Remote major version or -1 if not known
@@ -2140,15 +2141,6 @@ ZT_SDK_API int ZT_Identity_hasPrivate(const ZT_Identity *id);
  * @return ZeroTier address (only least significant 40 bits are meaningful, rest will be 0)
  */
 ZT_SDK_API uint64_t ZT_Identity_address(const ZT_Identity *id);
-
-/**
- * Compute a hash of this identity's public keys (or both public and private if includePrivate is true)
- *
- * @param id Identity to query
- * @param h Buffer for 384-bit hash
- * @param includePrivate If true include private keys if any
- */
-ZT_SDK_API void ZT_Identity_hash(const ZT_Identity *id,uint8_t h[48],int includePrivate);
 
 /**
  * Delete an identity and free associated memory

@@ -823,7 +823,7 @@ bool VL1::_RENDEZVOUS(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Pee
 						if ((sizeof(Protocol::RENDEZVOUS) + rdv.addressLength) <= packetSize) {
 							const InetAddress atAddr(pkt.unsafeData + sizeof(Protocol::RENDEZVOUS),rdv.addressLength,port);
 							peer->contact(tPtr,Endpoint(atAddr),now,false);
-							RR->t->tryingNewPath(tPtr,0x55a19aaa,with->identity(),atAddr,path->address(),Protocol::packetId(pkt,packetSize),Protocol::VERB_RENDEZVOUS,peer->address(),peer->identity().fingerprint().data(),ZT_TRACE_TRYING_NEW_PATH_REASON_RENDEZVOUS);
+							RR->t->tryingNewPath(tPtr,0x55a19aaa,with->identity(),atAddr,path->address(),Protocol::packetId(pkt,packetSize),Protocol::VERB_RENDEZVOUS,peer->identity(),ZT_TRACE_TRYING_NEW_PATH_REASON_RENDEZVOUS);
 						}
 						break;
 					case 255: {
@@ -835,7 +835,7 @@ bool VL1::_RENDEZVOUS(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Pee
 								case Endpoint::TYPE_INETADDR_V4:
 								case Endpoint::TYPE_INETADDR_V6:
 									peer->contact(tPtr,ep,now,false);
-									RR->t->tryingNewPath(tPtr,0x55a19aab,with->identity(),ep.inetAddr(),path->address(),Protocol::packetId(pkt,packetSize),Protocol::VERB_RENDEZVOUS,peer->address(),peer->identity().fingerprint().data(),ZT_TRACE_TRYING_NEW_PATH_REASON_RENDEZVOUS);
+									RR->t->tryingNewPath(tPtr,0x55a19aab,with->identity(),ep.inetAddr(),path->address(),Protocol::packetId(pkt,packetSize),Protocol::VERB_RENDEZVOUS,peer->identity(),ZT_TRACE_TRYING_NEW_PATH_REASON_RENDEZVOUS);
 									break;
 								default:
 									break;
@@ -969,7 +969,7 @@ bool VL1::_PUSH_DIRECT_PATHS(void *tPtr,const SharedPtr<Path> &path,const Shared
 		}
 
 		if (a) {
-			RR->t->tryingNewPath(tPtr,0xa5ab1a43,peer->identity(),a,path->address(),Protocol::packetId(pkt,packetSize),Protocol::VERB_RENDEZVOUS,peer->address(),peer->identity().fingerprint().data(),ZT_TRACE_TRYING_NEW_PATH_REASON_RECEIVED_PUSH_DIRECT_PATHS);
+			RR->t->tryingNewPath(tPtr,0xa5ab1a43,peer->identity(),a,path->address(),Protocol::packetId(pkt,packetSize),Protocol::VERB_RENDEZVOUS,peer->identity(),ZT_TRACE_TRYING_NEW_PATH_REASON_RECEIVED_PUSH_DIRECT_PATHS);
 		}
 
 		ptr += (int)addrRecordLen;

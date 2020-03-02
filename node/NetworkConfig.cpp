@@ -32,7 +32,7 @@ bool NetworkConfig::toDictionary(Dictionary &d,bool includeLegacy) const
 		d.add(ZT_NETWORKCONFIG_DICT_KEY_CREDENTIAL_TIME_MAX_DELTA,this->credentialTimeMaxDelta);
 		d.add(ZT_NETWORKCONFIG_DICT_KEY_REVISION,this->revision);
 		d.add(ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO,this->issuedTo.toString((char *)tmp));
-		d.add(ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO_IDENTITY_HASH,this->issuedToIdentityHash,ZT_IDENTITY_HASH_SIZE);
+		d.add(ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO_IDENTITY_HASH,this->issuedToFingerprintHash,ZT_IDENTITY_HASH_SIZE);
 		d.add(ZT_NETWORKCONFIG_DICT_KEY_FLAGS,this->flags);
 		d.add(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT,(uint64_t)this->multicastLimit);
 		d.add(ZT_NETWORKCONFIG_DICT_KEY_TYPE,(uint16_t)this->type);
@@ -122,9 +122,9 @@ bool NetworkConfig::fromDictionary(const Dictionary &d)
 		this->issuedTo = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO,0);
 		const std::vector<uint8_t> *blob = &(d[ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO_IDENTITY_HASH]);
 		if (blob->size() == ZT_IDENTITY_HASH_SIZE) {
-			memcpy(this->issuedToIdentityHash,blob->data(),ZT_IDENTITY_HASH_SIZE);
+			memcpy(this->issuedToFingerprintHash,blob->data(),ZT_IDENTITY_HASH_SIZE);
 		} else {
-			memset(this->issuedToIdentityHash,0,ZT_IDENTITY_HASH_SIZE);
+			memset(this->issuedToFingerprintHash,0,ZT_IDENTITY_HASH_SIZE);
 		}
 		if (!this->issuedTo)
 			return false;

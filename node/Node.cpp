@@ -111,7 +111,10 @@ Node::Node(void *uPtr,void *tPtr,const struct ZT_Node_Callbacks *callbacks,int64
 			stateObjectPut(tPtr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,idtmp,RR->publicIdentityStr,(unsigned int)strlen(RR->publicIdentityStr));
 	}
 
-	RR->identity.hashWithPrivate(RR->localCacheSymmetricKey);
+	uint8_t tmph[ZT_IDENTITY_HASH_SIZE];
+	RR->identity.hashWithPrivate(tmph);
+	RR->localCacheSymmetric.init(tmph);
+	Utils::burn(tmph,sizeof(tmph));
 
 	// This constructs all the components of the ZeroTier core within a single contiguous memory container,
 	// which reduces memory fragmentation and may improve cache locality.
@@ -483,7 +486,6 @@ ZT_PeerList *Node::peers() const
 		p->address = (*pi)->address().toInt();
 		identities[pl->peerCount] = (*pi)->identity(); // need to make a copy in case peer gets deleted
 		p->identity = &identities[pl->peerCount];
-		memcpy(p->identityHash,(*pi)->identity().fingerprint().data(),ZT_IDENTITY_HASH_SIZE);
 		if ((*pi)->remoteVersionKnown()) {
 			p->versionMajor = (int)(*pi)->remoteVersionMajor();
 			p->versionMinor = (int)(*pi)->remoteVersionMinor();

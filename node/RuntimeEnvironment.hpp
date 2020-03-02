@@ -17,6 +17,7 @@
 #include "Constants.hpp"
 #include "Utils.hpp"
 #include "Identity.hpp"
+#include "AES.hpp"
 
 namespace ZeroTier {
 
@@ -57,7 +58,6 @@ public:
 	ZT_ALWAYS_INLINE ~RuntimeEnvironment()
 	{
 		Utils::burn(secretIdentityStr,sizeof(secretIdentityStr));
-		Utils::burn(localCacheSymmetricKey,sizeof(localCacheSymmetricKey));
 	}
 
 	// Node instance that owns this RuntimeEnvironment
@@ -81,9 +81,8 @@ public:
 	char publicIdentityStr[ZT_IDENTITY_STRING_BUFFER_LENGTH];
 	char secretIdentityStr[ZT_IDENTITY_STRING_BUFFER_LENGTH];
 
-	// A hash of this node identity's public and private keys that is used as
-	// a secret key to encrypt locally cached sensitive information.
-	uint8_t localCacheSymmetricKey[ZT_IDENTITY_HASH_SIZE];
+	// AES keyed with a hash of this node's identity secret keys for local cache encryption at rest (where needed).
+	AES localCacheSymmetric;
 };
 
 } // namespace ZeroTier

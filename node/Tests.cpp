@@ -285,7 +285,7 @@ extern "C" const char *ZTT_general()
 			ZT_T_ASSERT(sizeof(sockaddr_in) <= sizeof(InetAddress));
 			ZT_T_ASSERT(sizeof(sockaddr_in6) <= sizeof(InetAddress));
 			ZT_T_ASSERT(sizeof(sockaddr) <= sizeof(InetAddress));
-			ZT_T_ASSERT(sizeof(Fingerprint) == 48);
+			ZT_T_ASSERT(sizeof(Fingerprint) == sizeof(ZT_Fingerprint));
 			ZT_T_PRINTF("OK" ZT_EOL_S);
 		}
 

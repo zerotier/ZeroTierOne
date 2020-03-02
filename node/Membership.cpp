@@ -130,13 +130,13 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 {
 	const int64_t newts = com.timestamp();
 	if (newts <= _comRevocationThreshold) {
-		RR->t->credentialRejected(tPtr,0xd9992121,com.networkId(),sourcePeerIdentity.address(),com.id(),com.timestamp(),ZT_CREDENTIAL_TYPE_COM,ZT_TRACE_CREDENTIAL_REJECTION_REASON_REVOKED);
+		RR->t->credentialRejected(tPtr,0xd9992121,com.networkId(),sourcePeerIdentity.address(),sourcePeerIdentity,com.id(),com.timestamp(),ZT_CREDENTIAL_TYPE_COM,ZT_TRACE_CREDENTIAL_REJECTION_REASON_REVOKED);
 		return ADD_REJECTED;
 	}
 
 	const int64_t oldts = _com.timestamp();
 	if (newts < oldts) {
-		RR->t->credentialRejected(tPtr,0xd9928192,com.networkId(),sourcePeerIdentity.address(),com.id(),com.timestamp(),ZT_CREDENTIAL_TYPE_COM,ZT_TRACE_CREDENTIAL_REJECTION_REASON_OLDER_THAN_LATEST);
+		RR->t->credentialRejected(tPtr,0xd9928192,com.networkId(),sourcePeerIdentity.address(),sourcePeerIdentity,com.id(),com.timestamp(),ZT_CREDENTIAL_TYPE_COM,ZT_TRACE_CREDENTIAL_REJECTION_REASON_OLDER_THAN_LATEST);
 		return ADD_REJECTED;
 	}
 	if ((newts == oldts)&&(_com == com))
@@ -144,13 +144,13 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 
 	switch(com.verify(RR,tPtr)) {
 		default:
-			RR->t->credentialRejected(tPtr,0x0f198241,com.networkId(),sourcePeerIdentity.address(),com.id(),com.timestamp(),ZT_CREDENTIAL_TYPE_COM,ZT_TRACE_CREDENTIAL_REJECTION_REASON_INVALID);
+			RR->t->credentialRejected(tPtr,0x0f198241,com.networkId(),sourcePeerIdentity.address(),sourcePeerIdentity,com.id(),com.timestamp(),ZT_CREDENTIAL_TYPE_COM,ZT_TRACE_CREDENTIAL_REJECTION_REASON_INVALID);
 			return Membership::ADD_REJECTED;
 		case Credential::VERIFY_OK:
 			_com = com;
 			return ADD_ACCEPTED_NEW;
 		case Credential::VERIFY_BAD_SIGNATURE:
-			RR->t->credentialRejected(tPtr,0xbaf0aaaa,com.networkId(),sourcePeerIdentity.address(),com.id(),com.timestamp(),ZT_CREDENTIAL_TYPE_COM,ZT_TRACE_CREDENTIAL_REJECTION_REASON_SIGNATURE_VERIFICATION_FAILED);
+			RR->t->credentialRejected(tPtr,0xbaf0aaaa,com.networkId(),sourcePeerIdentity.address(),sourcePeerIdentity,com.id(),com.timestamp(),ZT_CREDENTIAL_TYPE_COM,ZT_TRACE_CREDENTIAL_REJECTION_REASON_SIGNATURE_VERIFICATION_FAILED);
 			return ADD_REJECTED;
 		case Credential::VERIFY_NEED_IDENTITY:
 			return ADD_DEFERRED_FOR_WHOIS;
@@ -171,7 +171,7 @@ static ZT_ALWAYS_INLINE Membership::AddCredentialResult _addCredImpl(
 	C *rc = remoteCreds.get(cred.id());
 	if (rc) {
 		if (rc->timestamp() > cred.timestamp()) {
-			RR->t->credentialRejected(tPtr,0x40000001,nconf.networkId,sourcePeerIdentity.address(),cred.id(),cred.timestamp(),C::credentialType(),ZT_TRACE_CREDENTIAL_REJECTION_REASON_OLDER_THAN_LATEST);
+			RR->t->credentialRejected(tPtr,0x40000001,nconf.networkId,sourcePeerIdentity.address(),sourcePeerIdentity,cred.id(),cred.timestamp(),C::credentialType(),ZT_TRACE_CREDENTIAL_REJECTION_REASON_OLDER_THAN_LATEST);
 			return Membership::ADD_REJECTED;
 		}
 		if (*rc == cred)
@@ -180,13 +180,13 @@ static ZT_ALWAYS_INLINE Membership::AddCredentialResult _addCredImpl(
 
 	const int64_t *const rt = revocations.get(Membership::credentialKey(C::credentialType(),cred.id()));
 	if ((rt)&&(*rt >= cred.timestamp())) {
-		RR->t->credentialRejected(tPtr,0x24248124,nconf.networkId,sourcePeerIdentity.address(),cred.id(),cred.timestamp(),C::credentialType(),ZT_TRACE_CREDENTIAL_REJECTION_REASON_REVOKED);
+		RR->t->credentialRejected(tPtr,0x24248124,nconf.networkId,sourcePeerIdentity.address(),sourcePeerIdentity,cred.id(),cred.timestamp(),C::credentialType(),ZT_TRACE_CREDENTIAL_REJECTION_REASON_REVOKED);
 		return Membership::ADD_REJECTED;
 	}
 
 	switch(cred.verify(RR,tPtr)) {
 		default:
-			RR->t->credentialRejected(tPtr,0x01feba012,nconf.networkId,sourcePeerIdentity.address(),cred.id(),cred.timestamp(),C::credentialType(),ZT_TRACE_CREDENTIAL_REJECTION_REASON_INVALID);
+			RR->t->credentialRejected(tPtr,0x01feba012,nconf.networkId,sourcePeerIdentity.address(),sourcePeerIdentity,cred.id(),cred.timestamp(),C::credentialType(),ZT_TRACE_CREDENTIAL_REJECTION_REASON_INVALID);
 			return Membership::ADD_REJECTED;
 		case 0:
 			if (!rc)
@@ -206,7 +206,7 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 	int64_t *rt;
 	switch(rev.verify(RR,tPtr)) {
 		default:
-			RR->t->credentialRejected(tPtr,0x938fffff,nconf.networkId,sourcePeerIdentity.address(),rev.id(),0,ZT_CREDENTIAL_TYPE_REVOCATION,ZT_TRACE_CREDENTIAL_REJECTION_REASON_INVALID);
+			RR->t->credentialRejected(tPtr,0x938fffff,nconf.networkId,sourcePeerIdentity.address(),sourcePeerIdentity,rev.id(),0,ZT_CREDENTIAL_TYPE_REVOCATION,ZT_TRACE_CREDENTIAL_REJECTION_REASON_INVALID);
 			return ADD_REJECTED;
 		case 0: {
 			const ZT_CredentialType ct = rev.typeBeingRevoked();
@@ -228,7 +228,7 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 					}
 					return ADD_ACCEPTED_REDUNDANT;
 				default:
-					RR->t->credentialRejected(tPtr,0x0bbbb1a4,nconf.networkId,sourcePeerIdentity.address(),rev.id(),0,ZT_CREDENTIAL_TYPE_REVOCATION,ZT_TRACE_CREDENTIAL_REJECTION_REASON_INVALID);
+					RR->t->credentialRejected(tPtr,0x0bbbb1a4,nconf.networkId,sourcePeerIdentity.address(),sourcePeerIdentity,rev.id(),0,ZT_CREDENTIAL_TYPE_REVOCATION,ZT_TRACE_CREDENTIAL_REJECTION_REASON_INVALID);
 					return ADD_REJECTED;
 			}
 		}
