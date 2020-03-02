@@ -599,6 +599,13 @@ uint64_t ZT_Identity_address(const ZT_Identity *id)
 	return reinterpret_cast<const ZeroTier::Identity *>(id)->address().toInt();
 }
 
+const ZT_Fingerprint *ZT_Identity_fingerprint(const ZT_Identity *id)
+{
+	if (!id)
+		return nullptr;
+	return reinterpret_cast<const ZeroTier::Identity *>(id)->fingerprint().apiFingerprint();
+}
+
 ZT_SDK_API void ZT_Identity_delete(ZT_Identity *id)
 {
 	if (id)

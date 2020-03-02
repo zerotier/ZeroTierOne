@@ -299,7 +299,14 @@ typedef void ZT_Identity;
  */
 ZT_PACKED_STRUCT(struct _ZT_Fingerprint
 {
+	/**
+	 * Short address (only least significant 40 bits are used)
+	 */
 	uint64_t address;
+
+	/**
+	 * 384-bit hash of identity public key(s)
+	 */
 	uint8_t hash[48];
 });
 typedef struct _ZT_Fingerprint ZT_Fingerprint;
@@ -2141,6 +2148,14 @@ ZT_SDK_API int ZT_Identity_hasPrivate(const ZT_Identity *id);
  * @return ZeroTier address (only least significant 40 bits are meaningful, rest will be 0)
  */
 ZT_SDK_API uint64_t ZT_Identity_address(const ZT_Identity *id);
+
+/**
+ * Get this identity's full fingerprint
+ *
+ * @param id Identity to query
+ * @return Pointer to fingerprint (remains valid as long as identity itself is valid)
+ */
+ZT_SDK_API const ZT_Fingerprint *ZT_Identity_fingerprint(const ZT_Identity *id);
 
 /**
  * Delete an identity and free associated memory
