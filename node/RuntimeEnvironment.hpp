@@ -30,12 +30,16 @@ class Trace;
 class Expect;
 
 /**
- * Holds global state for an instance of ZeroTier::Node
+ * ZeroTier::Node execution context
+ *
+ * This just holds pointers and various other information used by all the
+ * various moving parts of a node. It's stored or passed as 'RR' to give it
+ * a common name througout the code.
  */
 class RuntimeEnvironment
 {
 public:
-	ZT_ALWAYS_INLINE RuntimeEnvironment(Node *n) :
+	ZT_ALWAYS_INLINE RuntimeEnvironment(Node *n) noexcept :
 		node(n),
 		localNetworkController(nullptr),
 		rtmem(nullptr),
@@ -53,6 +57,7 @@ public:
 	ZT_ALWAYS_INLINE ~RuntimeEnvironment()
 	{
 		Utils::burn(secretIdentityStr,sizeof(secretIdentityStr));
+		Utils::burn(localCacheSymmetricKey,sizeof(localCacheSymmetricKey));
 	}
 
 	// Node instance that owns this RuntimeEnvironment
@@ -63,12 +68,6 @@ public:
 
 	// Memory actually occupied by Trace, Switch, etc.
 	void *rtmem;
-
-	/* Order matters a bit here. These are constructed in this order
-	 * and then deleted in the opposite order on Node exit. The order ensures
-	 * that things that are needed are there before they're needed.
-	 *
-	 * These are constant and never null after startup unless indicated. */
 
 	Trace *t;
 	Expect *expect;
@@ -81,6 +80,10 @@ public:
 	Identity identity;
 	char publicIdentityStr[ZT_IDENTITY_STRING_BUFFER_LENGTH];
 	char secretIdentityStr[ZT_IDENTITY_STRING_BUFFER_LENGTH];
+
+	// A hash of this node identity's public and private keys that is used as
+	// a secret key to encrypt locally cached sensitive information.
+	uint8_t localCacheSymmetricKey[ZT_IDENTITY_HASH_SIZE];
 };
 
 } // namespace ZeroTier

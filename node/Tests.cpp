@@ -1198,7 +1198,7 @@ int main(int argc,char **argv)
 	ok &= ZTT_crypto() == nullptr;
 	ok &= ZTT_benchmarkCrypto() == nullptr;
 	if (!ok) {
-		ZT_T_PRINTF(ZT_EOL_S "At least one error occurred!" ZT_EOL_S);
+		ZT_T_PRINTF(ZT_EOL_S "*** AT LEAST ONE TEST FAILED! ***" ZT_EOL_S);
 		return 1;
 	}
 	return 0;

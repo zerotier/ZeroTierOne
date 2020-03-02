@@ -129,6 +129,8 @@ public:
 	 */
 	ZT_ALWAYS_INLINE int64_t timestamp() const noexcept
 	{
+		if (_qualifiers[COM_RESERVED_ID_TIMESTAMP].id == COM_RESERVED_ID_TIMESTAMP)
+			return (int64_t)_qualifiers[0].value;
 		for(unsigned int i=0;i<_qualifierCount;++i) {
 			if (_qualifiers[i].id == COM_RESERVED_ID_TIMESTAMP)
 				return (int64_t)_qualifiers[i].value;
@@ -141,6 +143,8 @@ public:
 	 */
 	ZT_ALWAYS_INLINE Address issuedTo() const noexcept
 	{
+		if (_qualifiers[COM_RESERVED_ID_ISSUED_TO].id == COM_RESERVED_ID_ISSUED_TO)
+			return Address(_qualifiers[2].value);
 		for(unsigned int i=0;i<_qualifierCount;++i) {
 			if (_qualifiers[i].id == COM_RESERVED_ID_ISSUED_TO)
 				return Address(_qualifiers[i].value);
@@ -153,6 +157,8 @@ public:
 	 */
 	ZT_ALWAYS_INLINE uint64_t networkId() const noexcept
 	{
+		if (_qualifiers[COM_RESERVED_ID_NETWORK_ID].id == COM_RESERVED_ID_NETWORK_ID)
+			return _qualifiers[COM_RESERVED_ID_NETWORK_ID].value;
 		for(unsigned int i=0;i<_qualifierCount;++i) {
 			if (_qualifiers[i].id == COM_RESERVED_ID_NETWORK_ID)
 				return _qualifiers[i].value;

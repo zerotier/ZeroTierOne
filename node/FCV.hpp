@@ -242,7 +242,7 @@ public:
 		}
 	}
 
-	ZT_ALWAYS_INLINE bool operator==(const FCV &v) const
+	ZT_ALWAYS_INLINE bool operator==(const FCV &v) const noexcept
 	{
 		if (_s == v._s) {
 			for(unsigned int i=0;i<_s;++i) {
@@ -253,11 +253,11 @@ public:
 		}
 		return false;
 	}
-	ZT_ALWAYS_INLINE bool operator!=(const FCV &v) const { return (!(*this == v)); }
-	ZT_ALWAYS_INLINE bool operator<(const FCV &v) const { return std::lexicographical_compare(begin(),end(),v.begin(),v.end()); }
-	ZT_ALWAYS_INLINE bool operator>(const FCV &v) const { return (v < *this); }
-	ZT_ALWAYS_INLINE bool operator<=(const FCV &v) const { return !(v < *this); }
-	ZT_ALWAYS_INLINE bool operator>=(const FCV &v) const { return !(*this < v); }
+	ZT_ALWAYS_INLINE bool operator!=(const FCV &v) const noexcept { return (!(*this == v)); }
+	ZT_ALWAYS_INLINE bool operator<(const FCV &v) const noexcept { return std::lexicographical_compare(begin(),end(),v.begin(),v.end()); }
+	ZT_ALWAYS_INLINE bool operator>(const FCV &v) const noexcept { return (v < *this); }
+	ZT_ALWAYS_INLINE bool operator<=(const FCV &v) const noexcept { return !(v < *this); }
+	ZT_ALWAYS_INLINE bool operator>=(const FCV &v) const noexcept { return !(*this < v); }
 
 private:
 	unsigned int _s;

@@ -25,7 +25,6 @@
 #include "SelfAwareness.hpp"
 #include "Network.hpp"
 #include "Trace.hpp"
-#include "ScopedPtr.hpp"
 #include "Locator.hpp"
 #include "Protocol.hpp"
 #include "Expect.hpp"
@@ -111,6 +110,8 @@ Node::Node(void *uPtr,void *tPtr,const struct ZT_Node_Callbacks *callbacks,int64
 		if ((data.empty())||(memcmp(data.data(),RR->publicIdentityStr,strlen(RR->publicIdentityStr)) != 0))
 			stateObjectPut(tPtr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,idtmp,RR->publicIdentityStr,(unsigned int)strlen(RR->publicIdentityStr));
 	}
+
+	RR->identity.hashWithPrivate(RR->localCacheSymmetricKey);
 
 	// This constructs all the components of the ZeroTier core within a single contiguous memory container,
 	// which reduces memory fragmentation and may improve cache locality.

@@ -327,6 +327,7 @@ public:
 	void saveAll(void *tPtr);
 
 private:
+	// Load cached peer and set 'peer' to it, if one is found.
 	void _loadCached(void *tPtr,const Address &zta,SharedPtr<Peer> &peer);
 
 	// This is a secure random integer created at startup to salt the calculation of path hash map keys

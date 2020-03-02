@@ -27,6 +27,9 @@
 namespace ZeroTier {
 namespace Protocol {
 
+// The counter used to assign packet IDs / cryptographic nonces.
+std::atomic<uint64_t> _s_packetIdCtr((uint64_t)time(nullptr) << 32U);
+
 uint64_t createProbe(const Identity &sender,const Identity &recipient,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH]) noexcept
 {
 	uint8_t tmp[ZT_IDENTITY_HASH_SIZE + ZT_IDENTITY_HASH_SIZE];
@@ -36,8 +39,6 @@ uint64_t createProbe(const Identity &sender,const Identity &recipient,const uint
 	SHA384(hash,tmp,sizeof(tmp),key,ZT_PEER_SECRET_KEY_LENGTH);
 	return hash[0];
 }
-
-std::atomic<uint64_t> _s_packetIdCtr((uint64_t)time(nullptr) << 32U);
 
 void armor(Buf &pkt,int packetSize,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH],uint8_t cipherSuite) noexcept
 {

@@ -18,20 +18,24 @@
  * To build these ensure that ZT_ENABLE_TESTS is defined during build time.
  * Otherwise they are omitted.
  *
+ * The macro ZT_STANDALONE_TESTS will also build a main() function for these
+ * tests for creating a stand-alone test executable. It will return zero if
+ * all tests pass and non-zero if at least one test fails.
+ *
  * These symbols are defined extern "C" so tests can be called from regular
  * C code, which is important for use via CGo or in plain C projects.
  *
  * The ZT_T_PRINTF macro defaults to printf() but if it's defined at compile
- * time (also must be set while building Tests.cpp) it can specify another
+ * time (it must be set while building Tests.cpp) it can specify another
  * function to use for output. Defining it to a no-op can be used to disable
  * output.
  *
  * Each test function returns NULL if the tests succeeds or an error message
  * on test failure.
  *
- * Only the fuzzing test functions are thread-safe. Other test functions
- * should not be called concurrently. It's okay to call different tests from
- * different threads, but not the same test.
+ * Be aware that fuzzing tests can and will crash the program if a serious
+ * error is discovered. This is the point. It's also beneficial to run these
+ * in "valgrind" or a similar tool to detect marginal bad behvaior.
  */
 
 #ifndef ZT_TESTS_HPP
@@ -52,19 +56,23 @@ extern "C" {
 #define ZT_T_PRINTF(fmt,...) printf((fmt),##__VA_ARGS__),fflush(stdout)
 #endif
 
-// Basic self-tests ---------------------------------------------------------------------------------------------------
-
+/**
+ * Test platform, compiler behavior, utility functions, and core classes
+ */
 const char *ZTT_general();
+
+/**
+ * Test crypto using test vectors and simple scenarios
+ *
+ * This is not an absolutely exhaustive test, just a sanity check to make sure
+ * crypto routines are basically working.
+ */
 const char *ZTT_crypto();
 
-// Benchmarks ---------------------------------------------------------------------------------------------------------
-
+/**
+ * Run benchmarks of cryptographic routines and common constructions
+ */
 const char *ZTT_benchmarkCrypto();
-
-// Fuzzing ------------------------------------------------------------------------------------------------------------
-
-
-// --------------------------------------------------------------------------------------------------------------------
 
 #ifdef __cplusplus
 }

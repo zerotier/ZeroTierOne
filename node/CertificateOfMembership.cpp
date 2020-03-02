@@ -17,15 +17,15 @@ namespace ZeroTier {
 
 CertificateOfMembership::CertificateOfMembership(uint64_t timestamp,uint64_t timestampMaxDelta,uint64_t nwid,const Address &issuedTo)
 {
-	_qualifiers[0].id = COM_RESERVED_ID_TIMESTAMP;
-	_qualifiers[0].value = timestamp;
-	_qualifiers[0].maxDelta = timestampMaxDelta;
-	_qualifiers[1].id = COM_RESERVED_ID_NETWORK_ID;
-	_qualifiers[1].value = nwid;
-	_qualifiers[1].maxDelta = 0;
-	_qualifiers[2].id = COM_RESERVED_ID_ISSUED_TO;
-	_qualifiers[2].value = issuedTo.toInt();
-	_qualifiers[2].maxDelta = 0xffffffffffffffffULL;
+	_qualifiers[COM_RESERVED_ID_TIMESTAMP].id = COM_RESERVED_ID_TIMESTAMP;
+	_qualifiers[COM_RESERVED_ID_TIMESTAMP].value = timestamp;
+	_qualifiers[COM_RESERVED_ID_TIMESTAMP].maxDelta = timestampMaxDelta;
+	_qualifiers[COM_RESERVED_ID_NETWORK_ID].id = COM_RESERVED_ID_NETWORK_ID;
+	_qualifiers[COM_RESERVED_ID_NETWORK_ID].value = nwid;
+	_qualifiers[COM_RESERVED_ID_NETWORK_ID].maxDelta = 0;
+	_qualifiers[COM_RESERVED_ID_ISSUED_TO].id = COM_RESERVED_ID_ISSUED_TO;
+	_qualifiers[COM_RESERVED_ID_ISSUED_TO].value = issuedTo.toInt();
+	_qualifiers[COM_RESERVED_ID_ISSUED_TO].maxDelta = 0xffffffffffffffffULL;
 	_qualifierCount = 3;
 	_signatureLength = 0;
 }
@@ -107,7 +107,7 @@ bool CertificateOfMembership::sign(const Identity &with)
 
 int CertificateOfMembership::marshal(uint8_t data[ZT_CERTIFICATEOFMEMBERSHIP_MARSHAL_SIZE_MAX]) const noexcept
 {
-	data[0] = 1;
+	data[0] = 1; // 96-byte signature length; a v2 is supported in unmarshal code where signature is length prefixed
 	Utils::storeBigEndian<uint16_t>(data + 1,(uint16_t)_qualifierCount);
 	int p = 3;
 	for(unsigned int i=0;i<_qualifierCount;++i) {
@@ -117,10 +117,6 @@ int CertificateOfMembership::marshal(uint8_t data[ZT_CERTIFICATEOFMEMBERSHIP_MAR
 	}
 	_signedBy.copyTo(data + p); p += ZT_ADDRESS_LENGTH;
 	if ((_signedBy)&&(_signatureLength == 96)) {
-		// UGLY: Ed25519 signatures in ZT are 96 bytes (64 + 32 bytes of hash).
-		// P-384 signatures are also 96 bytes, praise the horned one. That means
-		// we don't need to include a length. If we ever do we will need a new
-		// serialized object version, but only for those with length != 96.
 		memcpy(data + p,_signature,96); p += 96;
 	}
 	return p;
@@ -128,7 +124,7 @@ int CertificateOfMembership::marshal(uint8_t data[ZT_CERTIFICATEOFMEMBERSHIP_MAR
 
 int CertificateOfMembership::unmarshal(const uint8_t *data,int len) noexcept
 {
-	if ((len < 3)||(data[0] != 1))
+	if ((len < 3)||(data[0] == 0))
 		return -1;
 	unsigned int numq = Utils::loadBigEndian<uint16_t>(data + 1);
 	if (numq > ZT_NETWORK_COM_MAX_QUALIFIERS)
@@ -146,9 +142,19 @@ int CertificateOfMembership::unmarshal(const uint8_t *data,int len) noexcept
 		return -1;
 	_signedBy.setTo(data + p); p += ZT_ADDRESS_LENGTH;
 	if (_signedBy) {
-		if ((p + 96) > len)
-			return -1;
 		_signatureLength = 96;
+		if (data[0] > 1) {
+			// If the version byte is >1, signatures come prefixed by a length. This is the
+			// way it should have been in the first place. Version byte 1 indicates 96 byte
+			// signatures and is backward compatible with <2.x nodes.
+			if ((p + 2) >= len)
+				return -1;
+			_signatureLength = Utils::loadBigEndian<uint16_t>(data + p); p += 2;
+			if (_signatureLength == 0)
+				return -1;
+		}
+		if ((p + _signatureLength) > len)
+			return -1;
 		memcpy(_signature,data + p,96);
 		p += 96;
 	}
