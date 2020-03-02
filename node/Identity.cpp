@@ -189,11 +189,8 @@ unsigned int Identity::sign(const void *data,unsigned int len,void *sig,unsigned
 
 			case P384:
 				if (siglen >= ZT_ECC384_SIGNATURE_SIZE) {
-					// For P384 we sign SHA384(data | public keys) for added defense against any attack
-					// that attempted to decouple the two keys in some way. Otherwise this has no impact
-					// on the security of the signature (unless SHA384 had some serious flaw).
 					uint8_t h[48];
-					SHA384(h,data,len,&_pub,ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE);
+					SHA384(h,data,len,&_pub,ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE); // include C25519 public key in hash
 					ECC384ECDSASign(_priv.p384,h,(uint8_t *)sig);
 					return ZT_ECC384_SIGNATURE_SIZE;
 				}

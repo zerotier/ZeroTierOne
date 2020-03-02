@@ -78,15 +78,10 @@ public:
 	/**
 	 * Sign a message with a sender's key pair
 	 *
-	 * This takes the SHA-521 of msg[] and then signs the first 32 bytes of this
-	 * digest, returning it and the 64-byte ed25519 signature in signature[].
-	 * This results in a signature that verifies both the signer's authenticity
-	 * and the integrity of the message.
-	 *
-	 * This is based on the original ed25519 code from NaCl and the SUPERCOP
-	 * cipher benchmark suite, but with the modification that it always
-	 * produces a signature of fixed 96-byte length based on the hash of an
-	 * arbitrary-length message.
+	 * For legacy reasons ZeroTier ed25519 signatures end with an additional 32 bytes
+	 * that are the first 32 bytes of SHA512(msg). The verify() function considers these
+	 * bytes optional and will accept signatures of 64 or 96 bytes in length, checking
+	 * the hash bytes if they are present.
 	 *
 	 * @param myPrivate My private key
 	 * @param myPublic My public key
