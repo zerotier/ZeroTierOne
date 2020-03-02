@@ -46,7 +46,13 @@ public:
 
 	ZT_ALWAYS_INLINE Address address() const noexcept { return Address(_fp.address); }
 	ZT_ALWAYS_INLINE const uint8_t *hash() const noexcept { return _fp.hash; }
-	ZT_ALWAYS_INLINE void setZTFingerprint(ZT_Fingerprint *fp) const noexcept { memcpy(fp,&_fp,sizeof(ZT_Fingerprint)); }
+
+	/**
+	 * Copy into ZT_Fingerprint struct as used in API and trace messages
+	 *
+	 * @param fp ZT_Fingerprint
+	 */
+	ZT_ALWAYS_INLINE void getAPIFingerprint(ZT_Fingerprint *fp) const noexcept { memcpy(fp,&_fp,sizeof(ZT_Fingerprint)); }
 
 	ZT_ALWAYS_INLINE void zero() noexcept { memoryZero(this); }
 	ZT_ALWAYS_INLINE unsigned long hashCode() const noexcept { return _fp.address; }

@@ -116,12 +116,12 @@ void Trace::_tryingNewPath(
 	ev.evSize = ZT_CONST_TO_BE_UINT16(sizeof(ev));
 	ev.evType = ZT_CONST_TO_BE_UINT16(ZT_TRACE_VL1_TRYING_NEW_PATH);
 	ev.codeLocation = Utils::hton(codeLocation);
-	trying.fingerprint().setZTFingerprint(&ev.peer);
+	trying.fingerprint().getAPIFingerprint(&ev.peer);
 	physicalAddress.forTrace(ev.physicalAddress);
 	triggerAddress.forTrace(ev.triggerAddress);
 	ev.triggeringPacketId = triggeringPacketId;
 	ev.triggeringPacketVerb = triggeringPacketVerb;
-	triggeringPeer.fingerprint().setZTFingerprint(&ev.triggeringPeer);
+	triggeringPeer.fingerprint().getAPIFingerprint(&ev.triggeringPeer);
 	ev.reason = (uint8_t)reason;
 	RR->node->postEvent(tPtr,ZT_EVENT_TRACE,&ev);
 }
@@ -139,7 +139,7 @@ void Trace::_learnedNewPath(
 	ev.evType = ZT_CONST_TO_BE_UINT16(ZT_TRACE_VL1_LEARNED_NEW_PATH);
 	ev.codeLocation = Utils::hton(codeLocation);
 	ev.packetId = packetId; // packet IDs are kept in big-endian
-	peerIdentity.fingerprint().setZTFingerprint(&ev.peer);
+	peerIdentity.fingerprint().getAPIFingerprint(&ev.peer);
 	physicalAddress.forTrace(ev.physicalAddress);
 	replaced.forTrace(ev.replaced);
 
@@ -163,7 +163,7 @@ void Trace::_incomingPacketDropped(
 	ev.codeLocation = Utils::hton(codeLocation);
 	ev.packetId = packetId; // packet IDs are kept in big-endian
 	ev.networkId = Utils::hton(networkId);
-	peerIdentity.fingerprint().setZTFingerprint(&ev.peer);
+	peerIdentity.fingerprint().getAPIFingerprint(&ev.peer);
 	physicalAddress.forTrace(ev.physicalAddress);
 	ev.hops = hops;
 	ev.verb = verb;
@@ -226,7 +226,7 @@ void Trace::_incomingNetworkFrameDropped(
 	ev.networkId = Utils::hton(networkId);
 	ev.sourceMac = Utils::hton(sourceMac.toInt());
 	ev.destMac = Utils::hton(destMac.toInt());
-	peerIdentity.fingerprint().setZTFingerprint(&ev.sender);
+	peerIdentity.fingerprint().getAPIFingerprint(&ev.sender);
 	physicalAddress.forTrace(ev.physicalAddress);
 	ev.hops = hops;
 	ev.frameLength = Utils::hton(frameLength);
@@ -325,7 +325,7 @@ void Trace::_credentialRejected(
 	ev.codeLocation = Utils::hton(codeLocation);
 	ev.networkId = Utils::hton(networkId);
 	if (identity) {
-		identity.fingerprint().setZTFingerprint(&ev.peer);
+		identity.fingerprint().getAPIFingerprint(&ev.peer);
 	} else {
 		ev.peer.address = address.toInt();
 		memset(ev.peer.hash,0,sizeof(ev.peer.hash));
