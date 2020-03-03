@@ -998,6 +998,7 @@ void PostgreSQL::commitThread()
 							PQclear(PQexec(conn, "ROLLBACK"));
 							break;;
 						}
+						assignments.push_back(addr);
 					}
 
 					res = PQexec(conn, "COMMIT");
