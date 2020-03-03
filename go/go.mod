@@ -5,5 +5,5 @@ go 1.13
 require (
 	github.com/Microsoft/go-winio v0.4.14
 	github.com/hectane/go-acl v0.0.0-20190604041725-da78bae5fc95
-	golang.org/x/sys v0.0.0-20200120151820-655fe14d7479 // indirect
+	golang.org/x/sys v0.0.0-20200302150141-5c8b2ff67527 // indirect
 )
