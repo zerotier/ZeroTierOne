@@ -98,7 +98,7 @@ func (lc *LocalConfig) Read(p string, saveDefaultsIfNotExist bool, isTotallyNewN
 		lc.Network = make(map[NetworkID]NetworkLocalSettings)
 
 		if isTotallyNewNode {
-			lc.Settings.PrimaryPort = 893
+			lc.Settings.PrimaryPort = 793
 		} else {
 			lc.Settings.PrimaryPort = 9993
 		}

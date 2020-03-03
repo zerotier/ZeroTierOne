@@ -69,7 +69,12 @@ extern "C" {
  * treat privileged ports in a special way. The old default was 9993 and
  * this is likely to be seen in the wild quite a bit.
  */
-#define ZT_DEFAULT_PORT 893
+#define ZT_DEFAULT_PORT 793
+
+/**
+ * Size of a standard I/O buffer as returned by getBuffer().
+ */
+#define ZT_BUF_SIZE 16384
 
 /**
  * Minimum MTU allowed on virtual networks
@@ -1729,6 +1734,25 @@ struct ZT_Node_Callbacks
 };
 
 /**
+ * Get a buffer for reading data to be passed back into the core via one of the processX() functions
+ *
+ * The size of the returned buffer is 16384 bytes (ZT_BUF_SIZE).
+ *
+ * Buffers retrieved with this method MUST be returned to the core via either one of the processX()
+ * functions (with isZtBuffer set to true) or freeBuffer(). Buffers should not be freed directly using free().
+ *
+ * @return Pointer to I/O buffer
+ */
+ZT_SDK_API void *ZT_getBuffer();
+
+/**
+ * Free an unused buffer obtained via getBuffer
+ *
+ * @param b Buffer to free
+ */
+ZT_SDK_API void ZT_freeBuffer(void *b);
+
+/**
  * Create a new ZeroTier node
  *
  * This will attempt to load its identity via the state get function in the
@@ -1766,6 +1790,7 @@ ZT_SDK_API void ZT_Node_delete(ZT_Node *node,void *tptr);
  * @param remoteAddress Origin of packet
  * @param packetData Packet data
  * @param packetLength Packet length
+ * @param isZtBuffer If non-zero then packetData is a buffer obtained with ZT_getBuffer()
  * @param nextBackgroundTaskDeadline Value/result: set to deadline for next call to processBackgroundTasks()
  * @return OK (0) or error code if a fatal error condition has occurred
  */
@@ -1777,6 +1802,7 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_processWirePacket(
 	const struct sockaddr_storage *remoteAddress,
 	const void *packetData,
 	unsigned int packetLength,
+	int isZtBuffer,
 	volatile int64_t *nextBackgroundTaskDeadline);
 
 /**
@@ -1792,6 +1818,7 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_processWirePacket(
  * @param vlanId 10-bit VLAN ID or 0 if none
  * @param frameData Frame payload data
  * @param frameLength Frame payload length
+ * @param isZtBuffer If non-zero then packetData is a buffer obtained with ZT_getBuffer()
  * @param nextBackgroundTaskDeadline Value/result: set to deadline for next call to processBackgroundTasks()
  * @return OK (0) or error code if a fatal error condition has occurred
  */
@@ -1806,6 +1833,7 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_processVirtualNetworkFrame(
 	unsigned int vlanId,
 	const void *frameData,
 	unsigned int frameLength,
+	int isZtBuffer,
 	volatile int64_t *nextBackgroundTaskDeadline);
 
 /**

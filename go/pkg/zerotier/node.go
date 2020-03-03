@@ -635,7 +635,7 @@ func (n *Node) Peers() []*Peer {
 	return peers
 }
 
-//////////////////////////////////////////////////////////////////////////////
+// --------------------------------------------------------------------------------------------------------------------
 
 func (n *Node) multicastSubscribe(nwid uint64, mg *MulticastGroup) {
 	C.ZT_Node_multicastSubscribe(unsafe.Pointer(n.zn), nil, C.uint64_t(nwid), C.uint64_t(mg.MAC), C.ulong(mg.ADI))

@@ -96,7 +96,7 @@ struct ZT_GoNode_Impl
 static const std::string defaultHomePath(OSUtils::platformDefaultHomePath());
 const char *ZT_PLATFORM_DEFAULT_HOMEPATH = defaultHomePath.c_str();
 
-/****************************************************************************/
+// --------------------------------------------------------------------------------------------------------------------
 
 /* These functions are implemented in Go in pkg/zerotier/node.go */
 extern "C" int goPathCheckFunc(void *,const ZT_Identity *,int,const void *,int);
@@ -300,7 +300,7 @@ static int ZT_GoNode_PathLookupFunction(
 	return 0;
 }
 
-/****************************************************************************/
+// --------------------------------------------------------------------------------------------------------------------
 
 extern "C" ZT_GoNode *ZT_GoNode_new(const char *workingPath,uintptr_t userPtr)
 {

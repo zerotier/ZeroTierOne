@@ -177,9 +177,9 @@ public:
 	/**
 	 * Create a new uninitialized buffer with undefined contents (use clear() to zero if needed)
 	 */
-	ZT_ALWAYS_INLINE Buf() noexcept {}
+	ZT_ALWAYS_INLINE Buf() noexcept : __nextInPool(0),__refCount(0) {}
 
-	ZT_ALWAYS_INLINE Buf(const Buf &b2) noexcept { memcpy(unsafeData,b2.unsafeData,ZT_BUF_MEM_SIZE); }
+	ZT_ALWAYS_INLINE Buf(const Buf &b2) noexcept : __nextInPool(0),__refCount(0) { memcpy(unsafeData,b2.unsafeData,ZT_BUF_MEM_SIZE); }
 
 	ZT_ALWAYS_INLINE Buf &operator=(const Buf &b2) noexcept
 	{

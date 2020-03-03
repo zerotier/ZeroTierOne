@@ -30,6 +30,8 @@
 #include "Expect.hpp"
 #include "VL1.hpp"
 #include "VL2.hpp"
+#include "Buf.hpp"
+
 
 namespace ZeroTier {
 
@@ -158,16 +160,12 @@ ZT_ResultCode Node::processWirePacket(
 	int64_t now,
 	int64_t localSocket,
 	const struct sockaddr_storage *remoteAddress,
-	const void *packetData,
+	SharedPtr<Buf> &packetData,
 	unsigned int packetLength,
 	volatile int64_t *nextBackgroundTaskDeadline)
 {
 	_now = now;
-	// TODO: add buffer life cycle methods
-	SharedPtr<Buf> tmp(new Buf());
-	packetLength &= ZT_BUF_MEM_MASK;
-	memcpy(tmp->unsafeData,packetData,packetLength);
-	RR->vl1->onRemotePacket(tPtr,localSocket,(remoteAddress) ? InetAddress::NIL : *asInetAddress(remoteAddress),tmp,packetLength);
+	RR->vl1->onRemotePacket(tPtr,localSocket,(remoteAddress) ? InetAddress::NIL : *asInetAddress(remoteAddress),packetData,packetLength);
 	return ZT_RESULT_OK;
 }
 
@@ -179,14 +177,14 @@ ZT_ResultCode Node::processVirtualNetworkFrame(
 	uint64_t destMac,
 	unsigned int etherType,
 	unsigned int vlanId,
-	const void *frameData,
+	SharedPtr<Buf> &frameData,
 	unsigned int frameLength,
 	volatile int64_t *nextBackgroundTaskDeadline)
 {
 	_now = now;
 	SharedPtr<Network> nw(this->network(nwid));
 	if (nw) {
-		//RR->sw->onLocalEthernet(tptr,nw,MAC(sourceMac),MAC(destMac),etherType,vlanId,frameData,frameLength);
+		RR->vl2->onLocalEthernet(tPtr,nw,MAC(sourceMac),MAC(destMac),etherType,vlanId,frameData,frameLength);
 		return ZT_RESULT_OK;
 	} else {
 		return ZT_RESULT_ERROR_NETWORK_NOT_FOUND;
@@ -815,6 +813,21 @@ void Node::ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &des
 
 extern "C" {
 
+void *ZT_getBuffer()
+{
+	try {
+		return (void *)(new ZeroTier::Buf()); // __refCount is left at zero
+	} catch ( ... ) {
+		return nullptr; // can only happen on out of memory condition
+	}
+}
+
+ZT_SDK_API void ZT_freeBuffer(void *b)
+{
+	if (b)
+		delete ((ZeroTier::Buf *)b);
+}
+
 enum ZT_ResultCode ZT_Node_new(ZT_Node **node,void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,int64_t now)
 {
 	*node = (ZT_Node *)0;
@@ -846,10 +859,18 @@ enum ZT_ResultCode ZT_Node_processWirePacket(
 	const struct sockaddr_storage *remoteAddress,
 	const void *packetData,
 	unsigned int packetLength,
+	int isZtBuffer,
 	volatile int64_t *nextBackgroundTaskDeadline)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->processWirePacket(tptr,now,localSocket,remoteAddress,packetData,packetLength,nextBackgroundTaskDeadline);
+		ZeroTier::SharedPtr<ZeroTier::Buf> buf;
+		if (isZtBuffer) {
+			buf.set((ZeroTier::Buf *)packetData);
+		} else {
+			buf.set(new ZeroTier::Buf());
+			memcpy(buf->unsafeData,packetData,std::min((unsigned int)ZT_BUF_MEM_SIZE,packetLength));
+		}
+		return reinterpret_cast<ZeroTier::Node *>(node)->processWirePacket(tptr,now,localSocket,remoteAddress,buf,packetLength,nextBackgroundTaskDeadline);
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch ( ... ) {
@@ -868,10 +889,18 @@ enum ZT_ResultCode ZT_Node_processVirtualNetworkFrame(
 	unsigned int vlanId,
 	const void *frameData,
 	unsigned int frameLength,
+	int isZtBuffer,
 	volatile int64_t *nextBackgroundTaskDeadline)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->processVirtualNetworkFrame(tptr,now,nwid,sourceMac,destMac,etherType,vlanId,frameData,frameLength,nextBackgroundTaskDeadline);
+		ZeroTier::SharedPtr<ZeroTier::Buf> buf;
+		if (isZtBuffer) {
+			buf.set((ZeroTier::Buf *)frameData);
+		} else {
+			buf.set(new ZeroTier::Buf());
+			memcpy(buf->unsafeData,frameData,std::min((unsigned int)ZT_BUF_MEM_SIZE,frameLength));
+		}
+		return reinterpret_cast<ZeroTier::Node *>(node)->processVirtualNetworkFrame(tptr,now,nwid,sourceMac,destMac,etherType,vlanId,buf,frameLength,nextBackgroundTaskDeadline);
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch ( ... ) {

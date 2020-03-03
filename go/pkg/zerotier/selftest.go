@@ -16,24 +16,8 @@ package zerotier
 //#include "../../native/GoGlue.h"
 import "C"
 
-import "fmt"
-
 // SelfTest runs a series of tests on the ZeroTier core and the Go service code, returning true on success.
 // Results are sent to stdout.
 func SelfTest() bool {
-	fmt.Print("Running ZeroTier core tests...\n\n")
-
-	if C.ZT_TestOther() != 0 {
-		return false
-	}
-	fmt.Println()
-	if C.ZT_TestCrypto() != 0 {
-		return false
-	}
-	fmt.Println()
-	if C.ZT_TestIdentity() != 0 {
-		return false
-	}
-
 	return true
 }

@@ -24,6 +24,7 @@
 #include "Salsa20.hpp"
 #include "NetworkController.hpp"
 #include "Hashtable.hpp"
+#include "Buf.hpp"
 
 #include <cstdio>
 #include <cstdlib>
@@ -72,7 +73,7 @@ public:
 		int64_t now,
 		int64_t localSocket,
 		const struct sockaddr_storage *remoteAddress,
-		const void *packetData,
+		SharedPtr<Buf> &packetData,
 		unsigned int packetLength,
 		volatile int64_t *nextBackgroundTaskDeadline);
 	ZT_ResultCode processVirtualNetworkFrame(
@@ -83,7 +84,7 @@ public:
 		uint64_t destMac,
 		unsigned int etherType,
 		unsigned int vlanId,
-		const void *frameData,
+		SharedPtr<Buf> &frameData,
 		unsigned int frameLength,
 		volatile int64_t *nextBackgroundTaskDeadline);
 	ZT_ResultCode processBackgroundTasks(void *tPtr, int64_t now, volatile int64_t *nextBackgroundTaskDeadline);

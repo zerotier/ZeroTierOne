@@ -30,7 +30,7 @@ const LogoChar = "⏁"
 var Base32StdLowerCase = base32.NewEncoding("abcdefghijklmnopqrstuvwxyz234567").WithPadding(base32.NoPadding)
 
 // unassignedPrivilegedPorts are ports below 1024 that do not appear to be assigned by IANA.
-// The new 2.0+ ZeroTier default is 893, which we will eventually seek to have assigned. These
+// The new 2.0+ ZeroTier default is 793, which we will eventually seek to have assigned. These
 // are searched as backups if this port is already in use on a system.
 var unassignedPrivilegedPorts = []int{
 	4,
