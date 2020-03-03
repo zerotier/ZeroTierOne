@@ -179,6 +179,11 @@ public:
 	 */
 	ZT_ALWAYS_INLINE Buf() noexcept : __nextInPool(0),__refCount(0) {}
 
+	/**
+	 * Create a new buffer and copy data into it
+	 */
+	ZT_ALWAYS_INLINE Buf(const void *const data,const unsigned int len) noexcept : __nextInPool(0),__refCount(0) { memcpy(unsafeData,data,len); }
+
 	ZT_ALWAYS_INLINE Buf(const Buf &b2) noexcept : __nextInPool(0),__refCount(0) { memcpy(unsafeData,b2.unsafeData,ZT_BUF_MEM_SIZE); }
 
 	ZT_ALWAYS_INLINE Buf &operator=(const Buf &b2) noexcept

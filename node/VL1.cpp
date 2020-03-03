@@ -645,9 +645,9 @@ bool VL1::_HELLO(void *tPtr,const SharedPtr<Path> &path,SharedPtr<Peer> &peer,Bu
 
 	ok.timestampEcho = p.timestamp;
 	ok.versionProtocol = ZT_PROTO_VERSION;
-	ok.versionMajor = ZEROTIER_ONE_VERSION_MAJOR;
-	ok.versionMinor = ZEROTIER_ONE_VERSION_MINOR;
-	ok.versionRev = ZT_CONST_TO_BE_UINT16(ZEROTIER_ONE_VERSION_REVISION);
+	ok.versionMajor = ZEROTIER_VERSION_MAJOR;
+	ok.versionMinor = ZEROTIER_VERSION_MINOR;
+	ok.versionRev = ZT_CONST_TO_BE_UINT16(ZEROTIER_VERSION_REVISION);
 
 	int outl = sizeof(Protocol::OK::HELLO);
 	outp.wO(outl,path->address());

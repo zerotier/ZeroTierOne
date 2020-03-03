@@ -707,7 +707,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 								for(unsigned long i=0;i<ipa.size();++i) {
 									std::string ips = ipa[i];
 									InetAddress ip(ips.c_str());
-									if ((ip.ss_family == AF_INET)||(ip.ss_family == AF_INET6)) {
+									if ((ip.family() == AF_INET)||(ip.family() == AF_INET6)) {
 										char tmpip[64];
 										mipa.push_back(ip.toIpString(tmpip));
 										if (mipa.size() >= ZT_CONTROLLER_MAX_ARRAY_SIZE)
@@ -870,11 +870,11 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 										InetAddress t(target.get<std::string>().c_str());
 										InetAddress v;
 										if (via.is_string()) v.fromString(via.get<std::string>().c_str());
-										if ( ((t.ss_family == AF_INET)||(t.ss_family == AF_INET6)) && (t.netmaskBitsValid()) ) {
+										if ( ((t.family() == AF_INET)||(t.family() == AF_INET6)) && (t.netmaskBitsValid()) ) {
 											json tmp;
 											char tmp2[64];
 											tmp["target"] = t.toString(tmp2);
-											if (v.ss_family == t.ss_family)
+											if (v.family() == t.family())
 												tmp["via"] = v.toIpString(tmp2);
 											else tmp["via"] = json();
 											nrts.push_back(tmp);
@@ -897,7 +897,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 								if ((ip.is_object())&&(ip.count("ipRangeStart"))&&(ip.count("ipRangeEnd"))) {
 									InetAddress f(OSUtils::jsonString(ip["ipRangeStart"],"").c_str());
 									InetAddress t(OSUtils::jsonString(ip["ipRangeEnd"],"").c_str());
-									if ( ((f.ss_family == AF_INET)||(f.ss_family == AF_INET6)) && (f.ss_family == t.ss_family) ) {
+									if ( ((f.family() == AF_INET)||(f.family() == AF_INET6)) && (f.family() == t.family()) ) {
 										json tmp = json::object();
 										char tmp2[64];
 										tmp["ipRangeStart"] = f.toIpString(tmp2);
@@ -1295,7 +1295,7 @@ void EmbeddedNetworkController::_request(
 	nc->credentialTimeMaxDelta = credentialtmd;
 	nc->revision = OSUtils::jsonInt(network["revision"],0ULL);
 	nc->issuedTo = identity.address();
-	memcpy(nc->issuedToIdentityHash,identity.fingerprint(),sizeof(nc->issuedToIdentityHash));
+	memcpy(nc->issuedToFingerprintHash,identity.fingerprint().hash(),sizeof(nc->issuedToFingerprintHash));
 	if (OSUtils::jsonBool(network["enableBroadcast"],true)) nc->flags |= ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST;
 	Utils::scopy(nc->name,sizeof(nc->name),OSUtils::jsonString(network["name"],"").c_str());
 	nc->mtu = std::max(std::min((unsigned int)OSUtils::jsonInt(network["mtu"],ZT_DEFAULT_MTU),(unsigned int)ZT_MAX_MTU),(unsigned int)ZT_MIN_MTU);
@@ -1423,10 +1423,10 @@ void EmbeddedNetworkController::_request(
 				const InetAddress t(target.get<std::string>().c_str());
 				InetAddress v;
 				if (via.is_string()) v.fromString(via.get<std::string>().c_str());
-				if ((t.ss_family == AF_INET)||(t.ss_family == AF_INET6)) {
+				if ((t.family() == AF_INET)||(t.family() == AF_INET6)) {
 					ZT_VirtualNetworkRoute *r = &(nc->routes[nc->routeCount]);
 					*(reinterpret_cast<InetAddress *>(&(r->target))) = t;
-					if (v.ss_family == t.ss_family)
+					if (v.family() == t.family())
 						*(reinterpret_cast<InetAddress *>(&(r->via))) = v;
 					++nc->routeCount;
 				}
@@ -1471,9 +1471,9 @@ void EmbeddedNetworkController::_request(
 						ip.setPort(routedNetmaskBits);
 						nc->staticIps[nc->staticIpCount++] = ip;
 					}
-					if (ip.ss_family == AF_INET)
+					if (ip.family() == AF_INET)
 						haveManagedIpv4AutoAssignment = true;
-					else if (ip.ss_family == AF_INET6)
+					else if (ip.family() == AF_INET6)
 						haveManagedIpv6AutoAssignment = true;
 				}
 			}
@@ -1488,7 +1488,7 @@ void EmbeddedNetworkController::_request(
 			if (pool.is_object()) {
 				InetAddress ipRangeStart(OSUtils::jsonString(pool["ipRangeStart"],"").c_str());
 				InetAddress ipRangeEnd(OSUtils::jsonString(pool["ipRangeEnd"],"").c_str());
-				if ( (ipRangeStart.ss_family == AF_INET6) && (ipRangeEnd.ss_family == AF_INET6) ) {
+				if ( (ipRangeStart.family() == AF_INET6) && (ipRangeEnd.family() == AF_INET6) ) {
 					uint64_t s[2],e[2],x[2],xx[2];
 					memcpy(s,ipRangeStart.rawIpData(),16);
 					memcpy(e,ipRangeEnd.rawIpData(),16);
@@ -1552,7 +1552,7 @@ void EmbeddedNetworkController::_request(
 			if (pool.is_object()) {
 				InetAddress ipRangeStartIA(OSUtils::jsonString(pool["ipRangeStart"],"").c_str());
 				InetAddress ipRangeEndIA(OSUtils::jsonString(pool["ipRangeEnd"],"").c_str());
-				if ( (ipRangeStartIA.ss_family == AF_INET) && (ipRangeEndIA.ss_family == AF_INET) ) {
+				if ( (ipRangeStartIA.family() == AF_INET) && (ipRangeEndIA.family() == AF_INET) ) {
 					uint32_t ipRangeStart = Utils::ntoh((uint32_t)(reinterpret_cast<struct sockaddr_in *>(&ipRangeStartIA)->sin_addr.s_addr));
 					uint32_t ipRangeEnd = Utils::ntoh((uint32_t)(reinterpret_cast<struct sockaddr_in *>(&ipRangeEndIA)->sin_addr.s_addr));
 

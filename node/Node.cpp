@@ -32,7 +32,6 @@
 #include "VL2.hpp"
 #include "Buf.hpp"
 
-
 namespace ZeroTier {
 
 namespace {
@@ -809,14 +808,25 @@ void Node::ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &des
 
 } // namespace ZeroTier
 
-// C API exports
+// C API --------------------------------------------------------------------------------------------------------------
 
 extern "C" {
 
+// These macros make the idiom of passing buffers to outside code via the API work properly even
+// if the first address of Buf does not overlap with its data field, since the C++ standard does
+// not absolutely guarantee this.
+#define _ZT_PTRTOBUF(p) ((ZeroTier::Buf *)( ((uintptr_t)(p)) - ((uintptr_t)&(((ZeroTier::Buf *)0)->unsafeData[0])) ))
+#define _ZT_BUFTOPTR(b) ((void *)(&((b)->unsafeData[0])))
+
 void *ZT_getBuffer()
 {
+	// When external code requests a Buf, grab one from the pool (or freshly allocated)
+	// and return it with its reference count left at zero. It's the responsibility of
+	// external code to bring it back via freeBuffer() or one of the processX() calls.
+	// When this occurs it's either sent back to the pool with Buf's delete operator or
+	// wrapped in a SharedPtr<> to be passed into the core.
 	try {
-		return (void *)(new ZeroTier::Buf()); // __refCount is left at zero
+		return _ZT_BUFTOPTR(new ZeroTier::Buf());
 	} catch ( ... ) {
 		return nullptr; // can only happen on out of memory condition
 	}
@@ -825,7 +835,7 @@ void *ZT_getBuffer()
 ZT_SDK_API void ZT_freeBuffer(void *b)
 {
 	if (b)
-		delete ((ZeroTier::Buf *)b);
+		delete _ZT_PTRTOBUF(b);
 }
 
 enum ZT_ResultCode ZT_Node_new(ZT_Node **node,void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,int64_t now)
@@ -863,13 +873,7 @@ enum ZT_ResultCode ZT_Node_processWirePacket(
 	volatile int64_t *nextBackgroundTaskDeadline)
 {
 	try {
-		ZeroTier::SharedPtr<ZeroTier::Buf> buf;
-		if (isZtBuffer) {
-			buf.set((ZeroTier::Buf *)packetData);
-		} else {
-			buf.set(new ZeroTier::Buf());
-			memcpy(buf->unsafeData,packetData,std::min((unsigned int)ZT_BUF_MEM_SIZE,packetLength));
-		}
+		ZeroTier::SharedPtr<ZeroTier::Buf> buf((isZtBuffer) ? _ZT_PTRTOBUF(packetData) : new ZeroTier::Buf(packetData,packetLength & ZT_BUF_MEM_MASK));
 		return reinterpret_cast<ZeroTier::Node *>(node)->processWirePacket(tptr,now,localSocket,remoteAddress,buf,packetLength,nextBackgroundTaskDeadline);
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
@@ -893,13 +897,7 @@ enum ZT_ResultCode ZT_Node_processVirtualNetworkFrame(
 	volatile int64_t *nextBackgroundTaskDeadline)
 {
 	try {
-		ZeroTier::SharedPtr<ZeroTier::Buf> buf;
-		if (isZtBuffer) {
-			buf.set((ZeroTier::Buf *)frameData);
-		} else {
-			buf.set(new ZeroTier::Buf());
-			memcpy(buf->unsafeData,frameData,std::min((unsigned int)ZT_BUF_MEM_SIZE,frameLength));
-		}
+		ZeroTier::SharedPtr<ZeroTier::Buf> buf((isZtBuffer) ? _ZT_PTRTOBUF(frameData) : new ZeroTier::Buf(frameData,frameLength & ZT_BUF_MEM_MASK));
 		return reinterpret_cast<ZeroTier::Node *>(node)->processVirtualNetworkFrame(tptr,now,nwid,sourceMac,destMac,etherType,vlanId,buf,frameLength,nextBackgroundTaskDeadline);
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
@@ -1078,11 +1076,11 @@ enum ZT_ResultCode ZT_Node_setPhysicalPathConfiguration(ZT_Node *node,const stru
 void ZT_version(int *major,int *minor,int *revision)
 {
 	if (major)
-		*major = ZEROTIER_ONE_VERSION_MAJOR;
+		*major = ZEROTIER_VERSION_MAJOR;
 	if (minor)
-		*minor = ZEROTIER_ONE_VERSION_MINOR;
+		*minor = ZEROTIER_VERSION_MINOR;
 	if (revision)
-		*revision = ZEROTIER_ONE_VERSION_REVISION;
+		*revision = ZEROTIER_VERSION_REVISION;
 }
 
 } // extern "C"

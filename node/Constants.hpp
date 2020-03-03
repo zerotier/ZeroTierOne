@@ -20,10 +20,10 @@
 #if __has_include("version.h")
 #include "version.h"
 #else /* dummy values for use inside IDEs, etc. */
-#define ZEROTIER_ONE_VERSION_MAJOR 255
-#define ZEROTIER_ONE_VERSION_MINOR 255
-#define ZEROTIER_ONE_VERSION_REVISION 255
-#define ZEROTIER_ONE_VERSION_BUILD 255
+#define ZEROTIER_VERSION_MAJOR 255
+#define ZEROTIER_VERSION_MINOR 255
+#define ZEROTIER_VERSION_REVISION 255
+#define ZEROTIER_VERSION_BUILD 255
 #endif
 
 /**

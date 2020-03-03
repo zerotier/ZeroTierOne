@@ -213,9 +213,9 @@ unsigned int Peer::sendHELLO(void *tPtr,const int64_t localSocket,const InetAddr
 	Packet outp(_id.address(),RR->identity.address(),Packet::VERB_HELLO);
 
 	outp.append((unsigned char)ZT_PROTO_VERSION);
-	outp.append((unsigned char)ZEROTIER_ONE_VERSION_MAJOR);
-	outp.append((unsigned char)ZEROTIER_ONE_VERSION_MINOR);
-	outp.append((uint16_t)ZEROTIER_ONE_VERSION_REVISION);
+	outp.append((unsigned char)ZEROTIER_VERSION_MAJOR);
+	outp.append((unsigned char)ZEROTIER_VERSION_MINOR);
+	outp.append((uint16_t)ZEROTIER_VERSION_REVISION);
 	outp.append(now);
 	RR->identity.serialize(outp,false);
 	atAddress.serialize(outp);
