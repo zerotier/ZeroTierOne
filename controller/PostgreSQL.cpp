@@ -989,7 +989,7 @@ void PostgreSQL::commitThread()
 						};
 
 						res = PQexecParams(conn,
-							"INSERT INTO ztc_member_ip_assignment (member_id, network_id, address) VALUES ($1, $2, $3)",
+							"INSERT INTO ztc_member_ip_assignment (member_id, network_id, address) VALUES ($1, $2, $3) ON CONFLICT (network_id, member_id, address) DO NOTHING",
 							3,
 							NULL,
 							v3,
