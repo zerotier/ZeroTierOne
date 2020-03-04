@@ -530,7 +530,12 @@ void PostgreSQL::initializeMembers(PGconn *conn)
 
 			int n = PQntuples(r2);
 			for (int j = 0; j < n; ++j) {
-				config["ipAssignments"].push_back(PQgetvalue(r2, j, 0));
+				std::string ipaddr = PQgetvalue(r2, j, 0);
+				std::size_t pos = ipaddr.find('/');
+				if (pos != std::string::npos) {
+					ipaddr = ipaddr.substr(0, pos);
+				}
+				config["ipAssignments"].push_back(ipaddr);
 			}
 
 			_memberChanged(empty, config, false);

@@ -10,10 +10,10 @@ RUN yum -y install epel-release && yum -y update && yum clean all
 RUN yum groupinstall -y "Development Tools"
 RUN yum install -y bash postgresql10 postgresql10-devel libpqxx-devel glibc-static libstdc++-static clang jemalloc jemalloc-devel
 
-RUN git clone http://git.int.zerotier.com/zerotier/ZeroTierOne.git
-RUN if [ "$git_branch" != "master" ]; then cd ZeroTierOne && git checkout -b $git_branch origin/$git_branch; fi
-RUN ldconfig
-RUN cd ZeroTierOne && make central-controller
+# RUN git clone http://git.int.zerotier.com/zerotier/ZeroTierOne.git
+# RUN if [ "$git_branch" != "master" ]; then cd ZeroTierOne && git checkout -b $git_branch origin/$git_branch; fi
+ADD . /ZeroTierOne
+RUN cd ZeroTierOne && make clean && make central-controller
 
 FROM centos:7
 RUN yum install -y https://download.postgresql.org/pub/repos/yum/10/redhat/rhel-7-x86_64/pgdg-centos10-10-2.noarch.rpm && yum -y install epel-release && yum -y update && yum clean all
