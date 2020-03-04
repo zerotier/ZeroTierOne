@@ -66,9 +66,9 @@ static void _computeMemoryHardHash(const void *const publicKey,unsigned int publ
 }
 struct _v0_identity_generate_cond
 {
-	ZT_ALWAYS_INLINE _v0_identity_generate_cond() noexcept {}
-	ZT_ALWAYS_INLINE _v0_identity_generate_cond(unsigned char *sb,char *gm) noexcept : digest(sb),genmem(gm) {}
-	ZT_ALWAYS_INLINE bool operator()(const uint8_t pub[ZT_C25519_PUBLIC_KEY_LEN]) const noexcept
+	ZT_INLINE _v0_identity_generate_cond() noexcept {}
+	ZT_INLINE _v0_identity_generate_cond(unsigned char *sb,char *gm) noexcept : digest(sb),genmem(gm) {}
+	ZT_INLINE bool operator()(const uint8_t pub[ZT_C25519_PUBLIC_KEY_LEN]) const noexcept
 	{
 		_computeMemoryHardHash(pub,ZT_C25519_PUBLIC_KEY_LEN,digest,genmem);
 		return (digest[0] < 17);

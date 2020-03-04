@@ -60,9 +60,9 @@ public:
 		THING_IPV6_ADDRESS = 3
 	};
 
-	ZT_ALWAYS_INLINE CertificateOfOwnership() noexcept { memoryZero(this); }
+	ZT_INLINE CertificateOfOwnership() noexcept { memoryZero(this); }
 
-	ZT_ALWAYS_INLINE CertificateOfOwnership(const uint64_t nwid,const int64_t ts,const Address &issuedTo,const uint32_t id) noexcept
+	ZT_INLINE CertificateOfOwnership(const uint64_t nwid,const int64_t ts,const Address &issuedTo,const uint32_t id) noexcept
 	{
 		memset(reinterpret_cast<void *>(this),0,sizeof(CertificateOfOwnership));
 		_networkId = nwid;
@@ -71,19 +71,19 @@ public:
 		_issuedTo = issuedTo;
 	}
 
-	ZT_ALWAYS_INLINE uint64_t networkId() const noexcept { return _networkId; }
-	ZT_ALWAYS_INLINE int64_t timestamp() const noexcept { return _ts; }
-	ZT_ALWAYS_INLINE uint32_t id() const noexcept { return _id; }
-	ZT_ALWAYS_INLINE const Address &issuedTo() const noexcept { return _issuedTo; }
-	ZT_ALWAYS_INLINE const Address &signer() const noexcept { return _signedBy; }
-	ZT_ALWAYS_INLINE const uint8_t *signature() const noexcept { return _signature; }
-	ZT_ALWAYS_INLINE unsigned int signatureLength() const noexcept { return _signatureLength; }
+	ZT_INLINE uint64_t networkId() const noexcept { return _networkId; }
+	ZT_INLINE int64_t timestamp() const noexcept { return _ts; }
+	ZT_INLINE uint32_t id() const noexcept { return _id; }
+	ZT_INLINE const Address &issuedTo() const noexcept { return _issuedTo; }
+	ZT_INLINE const Address &signer() const noexcept { return _signedBy; }
+	ZT_INLINE const uint8_t *signature() const noexcept { return _signature; }
+	ZT_INLINE unsigned int signatureLength() const noexcept { return _signatureLength; }
 
-	ZT_ALWAYS_INLINE unsigned int thingCount() const noexcept { return (unsigned int)_thingCount; }
-	ZT_ALWAYS_INLINE Thing thingType(const unsigned int i) const noexcept { return (Thing)_thingTypes[i]; }
-	ZT_ALWAYS_INLINE const uint8_t *thingValue(const unsigned int i) const noexcept { return _thingValues[i]; }
+	ZT_INLINE unsigned int thingCount() const noexcept { return (unsigned int)_thingCount; }
+	ZT_INLINE Thing thingType(const unsigned int i) const noexcept { return (Thing)_thingTypes[i]; }
+	ZT_INLINE const uint8_t *thingValue(const unsigned int i) const noexcept { return _thingValues[i]; }
 
-	ZT_ALWAYS_INLINE bool owns(const InetAddress &ip) const noexcept
+	ZT_INLINE bool owns(const InetAddress &ip) const noexcept
 	{
 		if (ip.family() == AF_INET)
 			return this->_owns(THING_IPV4_ADDRESS,&(reinterpret_cast<const struct sockaddr_in *>(&ip)->sin_addr.s_addr),4);
@@ -92,7 +92,7 @@ public:
 		return false;
 	}
 
-	ZT_ALWAYS_INLINE bool owns(const MAC &mac) const noexcept
+	ZT_INLINE bool owns(const MAC &mac) const noexcept
 	{
 		uint8_t tmp[6];
 		mac.copyTo(tmp);
@@ -132,20 +132,20 @@ public:
 	 * @param tPtr That pointer we pass around
 	 * @return Credential verification result: OK, bad signature, or identity needed
 	 */
-	ZT_ALWAYS_INLINE Credential::VerifyResult verify(const RuntimeEnvironment *RR,void *tPtr) const { return _verify(RR,tPtr,*this); }
+	ZT_INLINE Credential::VerifyResult verify(const RuntimeEnvironment *RR,void *tPtr) const { return _verify(RR,tPtr,*this); }
 
 	static constexpr int marshalSizeMax() noexcept { return ZT_CERTIFICATEOFOWNERSHIP_MARSHAL_SIZE_MAX; }
 	int marshal(uint8_t data[ZT_CERTIFICATEOFOWNERSHIP_MARSHAL_SIZE_MAX],bool forSign = false) const noexcept;
 	int unmarshal(const uint8_t *data,int len) noexcept;
 
 	// Provides natural sort order by ID
-	ZT_ALWAYS_INLINE bool operator<(const CertificateOfOwnership &coo) const noexcept { return (_id < coo._id); }
+	ZT_INLINE bool operator<(const CertificateOfOwnership &coo) const noexcept { return (_id < coo._id); }
 
-	ZT_ALWAYS_INLINE bool operator==(const CertificateOfOwnership &coo) const noexcept { return (memcmp(this,&coo,sizeof(CertificateOfOwnership)) == 0); }
-	ZT_ALWAYS_INLINE bool operator!=(const CertificateOfOwnership &coo) const noexcept { return (memcmp(this,&coo,sizeof(CertificateOfOwnership)) != 0); }
+	ZT_INLINE bool operator==(const CertificateOfOwnership &coo) const noexcept { return (memcmp(this,&coo,sizeof(CertificateOfOwnership)) == 0); }
+	ZT_INLINE bool operator!=(const CertificateOfOwnership &coo) const noexcept { return (memcmp(this,&coo,sizeof(CertificateOfOwnership)) != 0); }
 
 private:
-	ZT_ALWAYS_INLINE bool _owns(const Thing &t,const void *v,unsigned int l) const noexcept
+	ZT_INLINE bool _owns(const Thing &t,const void *v,unsigned int l) const noexcept
 	{
 		for(unsigned int i=0,j=_thingCount;i<j;++i) {
 			if (_thingTypes[i] == (uint8_t)t) {

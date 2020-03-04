@@ -102,7 +102,7 @@ public:
 	/**
 	 * Create an empty certificate of membership
 	 */
-	ZT_ALWAYS_INLINE CertificateOfMembership() noexcept { memoryZero(this); }
+	ZT_INLINE CertificateOfMembership() noexcept { memoryZero(this); }
 
 	/**
 	 * Create from required fields common to all networks
@@ -117,17 +117,17 @@ public:
 	/**
 	 * @return True if there's something here
 	 */
-	ZT_ALWAYS_INLINE operator bool() const noexcept { return (_qualifierCount != 0); }
+	ZT_INLINE operator bool() const noexcept { return (_qualifierCount != 0); }
 
 	/**
 	 * @return Credential ID, always 0 for COMs
 	 */
-	ZT_ALWAYS_INLINE uint32_t id() const noexcept { return 0; }
+	ZT_INLINE uint32_t id() const noexcept { return 0; }
 
 	/**
 	 * @return Timestamp for this cert and maximum delta for timestamp
 	 */
-	ZT_ALWAYS_INLINE int64_t timestamp() const noexcept
+	ZT_INLINE int64_t timestamp() const noexcept
 	{
 		if (_qualifiers[COM_RESERVED_ID_TIMESTAMP].id == COM_RESERVED_ID_TIMESTAMP)
 			return (int64_t)_qualifiers[0].value;
@@ -141,7 +141,7 @@ public:
 	/**
 	 * @return Address to which this cert was issued
 	 */
-	ZT_ALWAYS_INLINE Address issuedTo() const noexcept
+	ZT_INLINE Address issuedTo() const noexcept
 	{
 		if (_qualifiers[COM_RESERVED_ID_ISSUED_TO].id == COM_RESERVED_ID_ISSUED_TO)
 			return Address(_qualifiers[2].value);
@@ -155,7 +155,7 @@ public:
 	/**
 	 * @return Network ID for which this cert was issued
 	 */
-	ZT_ALWAYS_INLINE uint64_t networkId() const noexcept
+	ZT_INLINE uint64_t networkId() const noexcept
 	{
 		if (_qualifiers[COM_RESERVED_ID_NETWORK_ID].id == COM_RESERVED_ID_NETWORK_ID)
 			return _qualifiers[COM_RESERVED_ID_NETWORK_ID].value;
@@ -177,7 +177,7 @@ public:
 	 */
 	void setQualifier(uint64_t id,uint64_t value,uint64_t maxDelta);
 
-	ZT_ALWAYS_INLINE void setQualifier(ReservedId id,uint64_t value,uint64_t maxDelta) { setQualifier((uint64_t)id,value,maxDelta); }
+	ZT_INLINE void setQualifier(ReservedId id,uint64_t value,uint64_t maxDelta) { setQualifier((uint64_t)id,value,maxDelta); }
 
 	/**
 	 * Compare two certificates for parameter agreement
@@ -208,28 +208,28 @@ public:
 	 * @param RR Runtime environment for looking up peers
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 */
-	ZT_ALWAYS_INLINE Credential::VerifyResult verify(const RuntimeEnvironment *RR,void *tPtr) const { return _verify(RR,tPtr,*this); }
+	ZT_INLINE Credential::VerifyResult verify(const RuntimeEnvironment *RR,void *tPtr) const { return _verify(RR,tPtr,*this); }
 
 	/**
 	 * @return Address that signed this certificate or null address if none
 	 */
-	ZT_ALWAYS_INLINE const Address &signedBy() const noexcept { return _signedBy; }
+	ZT_INLINE const Address &signedBy() const noexcept { return _signedBy; }
 
 	static constexpr int marshalSizeMax() noexcept { return ZT_CERTIFICATEOFMEMBERSHIP_MARSHAL_SIZE_MAX; }
 	int marshal(uint8_t data[ZT_CERTIFICATEOFMEMBERSHIP_MARSHAL_SIZE_MAX]) const noexcept;
 	int unmarshal(const uint8_t *data,int len) noexcept;
 
 	bool operator==(const CertificateOfMembership &c) const;
-	ZT_ALWAYS_INLINE bool operator!=(const CertificateOfMembership &c) const { return (!(*this == c)); }
+	ZT_INLINE bool operator!=(const CertificateOfMembership &c) const { return (!(*this == c)); }
 
 private:
 	struct _Qualifier
 	{
-		ZT_ALWAYS_INLINE _Qualifier() noexcept : id(0),value(0),maxDelta(0) {}
+		ZT_INLINE _Qualifier() noexcept : id(0),value(0),maxDelta(0) {}
 		uint64_t id;
 		uint64_t value;
 		uint64_t maxDelta;
-		ZT_ALWAYS_INLINE bool operator<(const _Qualifier &q) const noexcept { return (id < q.id); } // sort order
+		ZT_INLINE bool operator<(const _Qualifier &q) const noexcept { return (id < q.id); } // sort order
 	};
 
 	Address _signedBy;

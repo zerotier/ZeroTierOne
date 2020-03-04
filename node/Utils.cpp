@@ -34,7 +34,7 @@ namespace ZeroTier {
 
 namespace Utils {
 
-#if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
+#ifdef ZT_ARCH_X64
 CPUIDRegisters::CPUIDRegisters()
 {
 #ifdef __WINDOWS__
@@ -71,22 +71,6 @@ bool secureEq(const void *a,const void *b,unsigned int len) noexcept
 // Crazy hack to force memory to be securely zeroed in spite of the best efforts of optimizing compilers.
 static void _Utils_doBurn(volatile uint8_t *ptr,unsigned int len)
 {
-#ifndef ZT_NO_UNALIGNED_ACCESS
-	const uint64_t z = 0;
-	while (len >= 32) {
-		*reinterpret_cast<volatile uint64_t *>(ptr) = z;
-		*reinterpret_cast<volatile uint64_t *>(ptr + 8) = z;
-		*reinterpret_cast<volatile uint64_t *>(ptr + 16) = z;
-		*reinterpret_cast<volatile uint64_t *>(ptr + 24) = z;
-		ptr += 32;
-		len -= 32;
-	}
-	while (len >= 8) {
-		*reinterpret_cast<volatile uint64_t *>(ptr) = z;
-		ptr += 8;
-		len -= 8;
-	}
-#endif
 	for(unsigned int i=0;i<len;++i)
 		ptr[i] = 0;
 }
@@ -306,7 +290,7 @@ void getSecureRandom(void *buf,unsigned int bytes) noexcept
 				randomState[2] ^= (uint64_t)getpid();
 				randomState[3] ^= (uint64_t)getppid();
 #endif
-#if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
+#ifdef ZT_ARCH_X64
 				if (CPUID.rdrand) {
 					uint64_t tmp = 0;
 					for(int k=0;k<16;++k) {

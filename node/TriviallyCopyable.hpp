@@ -36,7 +36,7 @@ ZT_PACKED_STRUCT(struct TriviallyCopyable
 	 * @param obj Any TriviallyCopyable object
 	 */
 	template<typename T>
-	static ZT_ALWAYS_INLINE void memoryBurn(T *obj) noexcept
+	static ZT_INLINE void memoryBurn(T *obj) noexcept
 	{
 		TriviallyCopyable *const tmp = obj;
 		Utils::burn(tmp,sizeof(T));
@@ -49,7 +49,7 @@ ZT_PACKED_STRUCT(struct TriviallyCopyable
 	 * @param obj Any TriviallyCopyable object
 	 */
 	template<typename T>
-	static ZT_ALWAYS_INLINE void memoryBurn(T &obj) noexcept
+	static ZT_INLINE void memoryBurn(T &obj) noexcept
 	{
 		TriviallyCopyable *const tmp = &obj;
 		Utils::burn(tmp,sizeof(T));
@@ -62,7 +62,7 @@ ZT_PACKED_STRUCT(struct TriviallyCopyable
 	 * @param obj Any TriviallyCopyable object
 	 */
 	template<typename T>
-	static ZT_ALWAYS_INLINE void memoryZero(T *obj) noexcept
+	static ZT_INLINE void memoryZero(T *obj) noexcept
 	{
 		TriviallyCopyable *const tmp = obj;
 		memset(tmp,0,sizeof(T));
@@ -75,7 +75,7 @@ ZT_PACKED_STRUCT(struct TriviallyCopyable
 	 * @param obj Any TriviallyCopyable object
 	 */
 	template<typename T>
-	static ZT_ALWAYS_INLINE void memoryZero(T &obj) noexcept
+	static ZT_INLINE void memoryZero(T &obj) noexcept
 	{
 		TriviallyCopyable *const tmp = &obj;
 		memset(tmp,0,sizeof(T));
@@ -89,7 +89,7 @@ ZT_PACKED_STRUCT(struct TriviallyCopyable
 	 * @param src Source memory of same size or less than sizeof(dest)
 	 */
 	template<typename T>
-	static ZT_ALWAYS_INLINE void memoryCopyUnsafe(T *dest,const void *src) noexcept
+	static ZT_INLINE void memoryCopyUnsafe(T *dest,const void *src) noexcept
 	{
 		TriviallyCopyable *const tmp = dest;
 		memcpy(tmp,src,sizeof(T));
@@ -103,7 +103,7 @@ ZT_PACKED_STRUCT(struct TriviallyCopyable
 	 * @param src Source memory of same size or less than sizeof(dest)
 	 */
 	template<typename T>
-	static ZT_ALWAYS_INLINE void memoryCopyUnsafe(T &dest,const void *src) noexcept
+	static ZT_INLINE void memoryCopyUnsafe(T &dest,const void *src) noexcept
 	{
 		TriviallyCopyable *const tmp = &dest;
 		memcpy(tmp,src,sizeof(T));
@@ -117,7 +117,7 @@ ZT_PACKED_STRUCT(struct TriviallyCopyable
 	 * @param src Source TriviallyCopyable object
 	 */
 	template<typename T>
-	static ZT_ALWAYS_INLINE void memoryCopy(T *dest,const T *src) noexcept
+	static ZT_INLINE void memoryCopy(T *dest,const T *src) noexcept
 	{
 		TriviallyCopyable *const tmp = dest;
 		memcpy(tmp,src,sizeof(T));
@@ -131,7 +131,7 @@ ZT_PACKED_STRUCT(struct TriviallyCopyable
 	 * @param src Source TriviallyCopyable object
 	 */
 	template<typename T>
-	static ZT_ALWAYS_INLINE void memoryCopy(T *dest,const T &src) noexcept
+	static ZT_INLINE void memoryCopy(T *dest,const T &src) noexcept
 	{
 		TriviallyCopyable *const tmp = dest;
 		memcpy(tmp,&src,sizeof(T));
@@ -145,7 +145,7 @@ ZT_PACKED_STRUCT(struct TriviallyCopyable
 	 * @param src Source TriviallyCopyable object
 	 */
 	template<typename T>
-	static ZT_ALWAYS_INLINE void memoryCopy(T &dest,const T *src) noexcept
+	static ZT_INLINE void memoryCopy(T &dest,const T *src) noexcept
 	{
 		TriviallyCopyable *const tmp = &dest;
 		memcpy(tmp,src,sizeof(T));
@@ -159,7 +159,7 @@ ZT_PACKED_STRUCT(struct TriviallyCopyable
 	 * @param src Source TriviallyCopyable object
 	 */
 	template<typename T>
-	static ZT_ALWAYS_INLINE void memoryCopy(T &dest,const T &src) noexcept
+	static ZT_INLINE void memoryCopy(T &dest,const T &src) noexcept
 	{
 		TriviallyCopyable *const tmp = &dest;
 		memcpy(tmp,&src,sizeof(T));

@@ -52,7 +52,7 @@ public:
 	 * @tparam F Type of 'cond'
 	 */
 	template<typename F>
-	static ZT_ALWAYS_INLINE void generateSatisfying(F cond,uint8_t pub[ZT_C25519_PUBLIC_KEY_LEN],uint8_t priv[ZT_C25519_PRIVATE_KEY_LEN])
+	static ZT_INLINE void generateSatisfying(F cond,uint8_t pub[ZT_C25519_PUBLIC_KEY_LEN],uint8_t priv[ZT_C25519_PRIVATE_KEY_LEN])
 	{
 		Utils::getSecureRandom(priv,ZT_C25519_PRIVATE_KEY_LEN);
 		_calcPubED(pub,priv); // do Ed25519 key -- bytes 32-63 of pub and priv

@@ -48,7 +48,7 @@ class Peer
 	friend class Topology;
 
 private:
-	ZT_ALWAYS_INLINE Peer() {}
+	ZT_INLINE Peer() {}
 
 public:
 	/**
@@ -61,7 +61,7 @@ public:
 	 */
 	explicit Peer(const RuntimeEnvironment *renv);
 
-	ZT_ALWAYS_INLINE ~Peer() { Utils::burn(_key,sizeof(_key)); }
+	ZT_INLINE ~Peer() { Utils::burn(_key,sizeof(_key)); }
 
 	/**
 	 * Initialize peer with an identity
@@ -74,17 +74,17 @@ public:
 	/**
 	 * @return This peer's ZT address (short for identity().address())
 	 */
-	ZT_ALWAYS_INLINE const Address &address() const noexcept { return _id.address(); }
+	ZT_INLINE const Address &address() const noexcept { return _id.address(); }
 
 	/**
 	 * @return This peer's identity
 	 */
-	ZT_ALWAYS_INLINE const Identity &identity() const noexcept { return _id; }
+	ZT_INLINE const Identity &identity() const noexcept { return _id; }
 
 	/**
 	 * @return Copy of current locator
 	 */
-	ZT_ALWAYS_INLINE Locator locator() const noexcept
+	ZT_INLINE Locator locator() const noexcept
 	{
 		RWMutex::RLock l(_lock);
 		return _locator;
@@ -172,7 +172,7 @@ public:
 	/**
 	 * @return Bootstrap address or NULL if none
 	 */
-	ZT_ALWAYS_INLINE const Endpoint &bootstrap() const noexcept
+	ZT_INLINE const Endpoint &bootstrap() const noexcept
 	{
 		RWMutex::RLock l(_lock);
 		return _bootstrap;
@@ -183,7 +183,7 @@ public:
 	 *
 	 * @param ep Bootstrap endpoint
 	 */
-	ZT_ALWAYS_INLINE void setBootstrap(const Endpoint &ep) noexcept
+	ZT_INLINE void setBootstrap(const Endpoint &ep) noexcept
 	{
 		RWMutex::Lock l(_lock);
 		_bootstrap = ep;
@@ -192,32 +192,32 @@ public:
 	/**
 	 * @return Time of last receive of anything, whether direct or relayed
 	 */
-	ZT_ALWAYS_INLINE int64_t lastReceive() const noexcept { return _lastReceive; }
+	ZT_INLINE int64_t lastReceive() const noexcept { return _lastReceive; }
 
 	/**
 	 * @return True if we've heard from this peer in less than ZT_PEER_ALIVE_TIMEOUT
 	 */
-	ZT_ALWAYS_INLINE bool alive(const int64_t now) const noexcept { return ((now - _lastReceive) < ZT_PEER_ALIVE_TIMEOUT); }
+	ZT_INLINE bool alive(const int64_t now) const noexcept { return ((now - _lastReceive) < ZT_PEER_ALIVE_TIMEOUT); }
 
 	/**
 	 * @return True if we've heard from this peer in less than ZT_PEER_ACTIVITY_TIMEOUT
 	 */
-	ZT_ALWAYS_INLINE bool active(const int64_t now) const noexcept { return ((now - _lastReceive) < ZT_PEER_ACTIVITY_TIMEOUT); }
+	ZT_INLINE bool active(const int64_t now) const noexcept { return ((now - _lastReceive) < ZT_PEER_ACTIVITY_TIMEOUT); }
 
 	/**
 	 * @return Latency in milliseconds of best/aggregate path or 0xffff if unknown
 	 */
-	ZT_ALWAYS_INLINE unsigned int latency() const noexcept { return _latency; }
+	ZT_INLINE unsigned int latency() const noexcept { return _latency; }
 
 	/**
 	 * @return 256-bit secret symmetric encryption key
 	 */
-	ZT_ALWAYS_INLINE const unsigned char *key() const noexcept { return _key; }
+	ZT_INLINE const unsigned char *key() const noexcept { return _key; }
 
 	/**
 	 * @return Preferred cipher suite for normal encrypted P2P communication
 	 */
-	ZT_ALWAYS_INLINE uint8_t cipher() const noexcept
+	ZT_INLINE uint8_t cipher() const noexcept
 	{
 		return ZT_PROTO_CIPHER_SUITE__POLY1305_SALSA2012;
 	}
@@ -225,7 +225,7 @@ public:
 	/**
 	 * @return Incoming probe packet (in big-endian byte order)
 0	 */
-	ZT_ALWAYS_INLINE uint64_t incomingProbe() const noexcept { return _incomingProbe; }
+	ZT_INLINE uint64_t incomingProbe() const noexcept { return _incomingProbe; }
 
 	/**
 	 * Set the currently known remote version of this peer's client
@@ -235,7 +235,7 @@ public:
 	 * @param vmin Minor version
 	 * @param vrev Revision
 	 */
-	ZT_ALWAYS_INLINE void setRemoteVersion(unsigned int vproto,unsigned int vmaj,unsigned int vmin,unsigned int vrev) noexcept
+	ZT_INLINE void setRemoteVersion(unsigned int vproto,unsigned int vmaj,unsigned int vmin,unsigned int vrev) noexcept
 	{
 		_vProto = (uint16_t)vproto;
 		_vMajor = (uint16_t)vmaj;
@@ -243,16 +243,16 @@ public:
 		_vRevision = (uint16_t)vrev;
 	}
 
-	ZT_ALWAYS_INLINE unsigned int remoteVersionProtocol() const noexcept { return _vProto; }
-	ZT_ALWAYS_INLINE unsigned int remoteVersionMajor() const noexcept { return _vMajor; }
-	ZT_ALWAYS_INLINE unsigned int remoteVersionMinor() const noexcept { return _vMinor; }
-	ZT_ALWAYS_INLINE unsigned int remoteVersionRevision() const noexcept { return _vRevision; }
-	ZT_ALWAYS_INLINE bool remoteVersionKnown() const noexcept { return ((_vMajor > 0)||(_vMinor > 0)||(_vRevision > 0)); }
+	ZT_INLINE unsigned int remoteVersionProtocol() const noexcept { return _vProto; }
+	ZT_INLINE unsigned int remoteVersionMajor() const noexcept { return _vMajor; }
+	ZT_INLINE unsigned int remoteVersionMinor() const noexcept { return _vMinor; }
+	ZT_INLINE unsigned int remoteVersionRevision() const noexcept { return _vRevision; }
+	ZT_INLINE bool remoteVersionKnown() const noexcept { return ((_vMajor > 0) || (_vMinor > 0) || (_vRevision > 0)); }
 
 	/**
 	 * Rate limit gate for inbound WHOIS requests
 	 */
-	ZT_ALWAYS_INLINE bool rateGateInboundWhoisRequest(const int64_t now) noexcept
+	ZT_INLINE bool rateGateInboundWhoisRequest(const int64_t now) noexcept
 	{
 		if ((now - _lastWhoisRequestReceived) >= ZT_PEER_WHOIS_RATE_LIMIT) {
 			_lastWhoisRequestReceived = now;
@@ -264,7 +264,7 @@ public:
 	/**
 	 * Rate limit gate for inbound PUSH_DIRECT_PATHS requests
 	 */
-	ZT_ALWAYS_INLINE bool rateGateInboundPushDirectPaths(const int64_t now) noexcept
+	ZT_INLINE bool rateGateInboundPushDirectPaths(const int64_t now) noexcept
 	{
 		if ((now - _lastPushDirectPathsReceived) >= ZT_DIRECT_PATH_PUSH_INTERVAL) {
 			_lastPushDirectPathsReceived = now;
@@ -276,7 +276,7 @@ public:
 	/**
 	 * Rate limit attempts in response to incoming short probe packets
 	 */
-	ZT_ALWAYS_INLINE bool rateGateInboundProbe(const int64_t now) noexcept
+	ZT_INLINE bool rateGateInboundProbe(const int64_t now) noexcept
 	{
 		if ((now - _lastProbeReceived) >= ZT_DIRECT_PATH_PUSH_INTERVAL) {
 			_lastProbeReceived = now;
@@ -288,7 +288,7 @@ public:
 	/**
 	 * Rate limit gate for inbound ECHO requests
 	 */
-	ZT_ALWAYS_INLINE bool rateGateEchoRequest(const int64_t now) noexcept
+	ZT_INLINE bool rateGateEchoRequest(const int64_t now) noexcept
 	{
 		if ((now - _lastEchoRequestReceived) >= ZT_PEER_GENERAL_RATE_LIMIT) {
 			_lastEchoRequestReceived = now;
@@ -379,12 +379,12 @@ private:
 	// Queue of batches of one or more physical addresses to try at some point in the future (for NAT traversal logic)
 	struct _ContactQueueItem
 	{
-		ZT_ALWAYS_INLINE _ContactQueueItem() {}
-		ZT_ALWAYS_INLINE _ContactQueueItem(const InetAddress &a,const uint16_t *pstart,const uint16_t *pend,const unsigned int apt) :
+		ZT_INLINE _ContactQueueItem() {}
+		ZT_INLINE _ContactQueueItem(const InetAddress &a,const uint16_t *pstart,const uint16_t *pend,const unsigned int apt) :
 			address(a),
 			ports(pstart,pend),
 			alivePathThreshold(apt) {}
-		ZT_ALWAYS_INLINE _ContactQueueItem(const InetAddress &a,const unsigned int apt) :
+		ZT_INLINE _ContactQueueItem(const InetAddress &a,const unsigned int apt) :
 			address(a),
 			ports(),
 			alivePathThreshold(apt) {}

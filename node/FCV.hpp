@@ -43,12 +43,12 @@ public:
 	typedef T * iterator;
 	typedef const T * const_iterator;
 
-	ZT_ALWAYS_INLINE FCV() noexcept : _s(0) {}
-	ZT_ALWAYS_INLINE FCV(const FCV &v) : _s(0) { *this = v; }
+	ZT_INLINE FCV() noexcept : _s(0) {}
+	ZT_INLINE FCV(const FCV &v) : _s(0) { *this = v; }
 
-	ZT_ALWAYS_INLINE ~FCV() { this->clear(); }
+	ZT_INLINE ~FCV() { this->clear(); }
 
-	ZT_ALWAYS_INLINE FCV &operator=(const FCV &v)
+	ZT_INLINE FCV &operator=(const FCV &v)
 	{
 		if (&v != this) {
 			this->clear();
@@ -63,7 +63,7 @@ public:
 	/**
 	 * Clear this vector, destroying all content objects
 	 */
-	ZT_ALWAYS_INLINE void clear()
+	ZT_INLINE void clear()
 	{
 		const unsigned int s = _s;
 		_s = 0;
@@ -74,7 +74,7 @@ public:
 	/**
 	 * Clear without calling destructors (same as unsafeResize(0))
 	 */
-	ZT_ALWAYS_INLINE void unsafeClear() noexcept { _s = 0; }
+	ZT_INLINE void unsafeClear() noexcept { _s = 0; }
 
 	/**
 	 * This does a straight copy of one vector's data to another
@@ -88,7 +88,7 @@ public:
 	 * @param v Other vector to copy to this one
 	 */
 	template<unsigned int C2>
-	ZT_ALWAYS_INLINE void unsafeAssign(const FCV<T,C2> &v) noexcept
+	ZT_INLINE void unsafeAssign(const FCV<T,C2> &v) noexcept
 	{
 		_s = ((C2 > C)&&(v._s > C)) ? C : v._s;
 		memcpy(_m,v._m,_s * sizeof(T));
@@ -102,22 +102,22 @@ public:
 	 *
 	 * @param v Target vector
 	 */
-	ZT_ALWAYS_INLINE void unsafeMoveTo(FCV &v) noexcept
+	ZT_INLINE void unsafeMoveTo(FCV &v) noexcept
 	{
 		memcpy(v._m,_m,(v._s = _s) * sizeof(T));
 		_s = 0;
 	}
 
-	ZT_ALWAYS_INLINE iterator begin() noexcept { return reinterpret_cast<T *>(_m); }
-	ZT_ALWAYS_INLINE const_iterator begin() const noexcept { return reinterpret_cast<const T *>(_m); }
-	ZT_ALWAYS_INLINE iterator end() noexcept { return reinterpret_cast<T *>(_m) + _s; }
-	ZT_ALWAYS_INLINE const_iterator end() const noexcept { return reinterpret_cast<const T *>(_m) + _s; }
+	ZT_INLINE iterator begin() noexcept { return reinterpret_cast<T *>(_m); }
+	ZT_INLINE const_iterator begin() const noexcept { return reinterpret_cast<const T *>(_m); }
+	ZT_INLINE iterator end() noexcept { return reinterpret_cast<T *>(_m) + _s; }
+	ZT_INLINE const_iterator end() const noexcept { return reinterpret_cast<const T *>(_m) + _s; }
 
-	ZT_ALWAYS_INLINE T &operator[](const unsigned int i) noexcept { return reinterpret_cast<T *>(_m)[i]; }
-	ZT_ALWAYS_INLINE const T &operator[](const unsigned int i) const noexcept { return reinterpret_cast<T *>(_m)[i]; }
+	ZT_INLINE T &operator[](const unsigned int i) noexcept { return reinterpret_cast<T *>(_m)[i]; }
+	ZT_INLINE const T &operator[](const unsigned int i) const noexcept { return reinterpret_cast<T *>(_m)[i]; }
 
-	ZT_ALWAYS_INLINE unsigned int size() const noexcept { return _s; }
-	ZT_ALWAYS_INLINE bool empty() const noexcept { return (_s == 0); }
+	ZT_INLINE unsigned int size() const noexcept { return _s; }
+	ZT_INLINE bool empty() const noexcept { return (_s == 0); }
 	static constexpr unsigned int capacity() noexcept { return C; }
 
 	/**
@@ -127,7 +127,7 @@ public:
 	 *
 	 * @param v Value to push
 	 */
-	ZT_ALWAYS_INLINE void push_back(const T &v)
+	ZT_INLINE void push_back(const T &v)
 	{
 		if (_s < C)
 			new (reinterpret_cast<T *>(_m) + _s++) T(v);
@@ -138,7 +138,7 @@ public:
 	 *
 	 * @return Reference to new item
 	 */
-	ZT_ALWAYS_INLINE T &push()
+	ZT_INLINE T &push()
 	{
 		if (_s < C) {
 			return *(new(reinterpret_cast<T *>(_m) + _s++) T());
@@ -152,7 +152,7 @@ public:
 	 *
 	 * @return Reference to new item
 	 */
-	ZT_ALWAYS_INLINE T &push(const T &v)
+	ZT_INLINE T &push(const T &v)
 	{
 		if (_s < C) {
 			return *(new(reinterpret_cast<T *>(_m) + _s++) T(v));
@@ -166,7 +166,7 @@ public:
 	/**
 	 * Remove the last element if this vector is not empty
 	 */
-	ZT_ALWAYS_INLINE void pop_back()
+	ZT_INLINE void pop_back()
 	{
 		if (_s != 0)
 			(reinterpret_cast<T *>(_m) + --_s)->~T();
@@ -177,7 +177,7 @@ public:
 	 *
 	 * @param ns New size (clipped to C if larger than capacity)
 	 */
-	ZT_ALWAYS_INLINE void resize(unsigned int ns)
+	ZT_INLINE void resize(unsigned int ns)
 	{
 		if (ns > C)
 			ns = C;
@@ -197,7 +197,7 @@ public:
 	 *
 	 * @param ns New size (clipped to C if larger than capacity)
 	 */
-	ZT_ALWAYS_INLINE void unsafeResize(const unsigned int ns) noexcept { _s = (ns > C) ? C : ns; }
+	ZT_INLINE void unsafeResize(const unsigned int ns) noexcept { _s = (ns > C) ? C : ns; }
 
 	/**
 	 * This is a bounds checked auto-resizing variant of the [] operator
@@ -208,7 +208,7 @@ public:
 	 * @param i Index to obtain as a reference, resizing if needed
 	 * @return Reference to value at this index
 	 */
-	ZT_ALWAYS_INLINE T &at(unsigned int i)
+	ZT_INLINE T &at(unsigned int i)
 	{
 		if (i >= _s) {
 			if (unlikely(i >= C))
@@ -230,7 +230,7 @@ public:
 	 * @param end Ending iterator (must be greater than start)
 	 */
 	template<typename X>
-	ZT_ALWAYS_INLINE void assign(X start,const X &end)
+	ZT_INLINE void assign(X start,const X &end)
 	{
 		const int l = std::min((int)std::distance(start,end),(int)C);
 		if (l > 0) {
@@ -242,7 +242,7 @@ public:
 		}
 	}
 
-	ZT_ALWAYS_INLINE bool operator==(const FCV &v) const noexcept
+	ZT_INLINE bool operator==(const FCV &v) const noexcept
 	{
 		if (_s == v._s) {
 			for(unsigned int i=0;i<_s;++i) {
@@ -253,11 +253,11 @@ public:
 		}
 		return false;
 	}
-	ZT_ALWAYS_INLINE bool operator!=(const FCV &v) const noexcept { return (!(*this == v)); }
-	ZT_ALWAYS_INLINE bool operator<(const FCV &v) const noexcept { return std::lexicographical_compare(begin(),end(),v.begin(),v.end()); }
-	ZT_ALWAYS_INLINE bool operator>(const FCV &v) const noexcept { return (v < *this); }
-	ZT_ALWAYS_INLINE bool operator<=(const FCV &v) const noexcept { return !(v < *this); }
-	ZT_ALWAYS_INLINE bool operator>=(const FCV &v) const noexcept { return !(*this < v); }
+	ZT_INLINE bool operator!=(const FCV &v) const noexcept { return (!(*this == v)); }
+	ZT_INLINE bool operator<(const FCV &v) const noexcept { return std::lexicographical_compare(begin(),end(),v.begin(),v.end()); }
+	ZT_INLINE bool operator>(const FCV &v) const noexcept { return (v < *this); }
+	ZT_INLINE bool operator<=(const FCV &v) const noexcept { return !(v < *this); }
+	ZT_INLINE bool operator>=(const FCV &v) const noexcept { return !(*this < v); }
 
 private:
 	unsigned int _s;

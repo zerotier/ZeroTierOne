@@ -81,9 +81,9 @@ public:
 	 */
 	void add(const char *k,uint64_t v);
 
-	ZT_ALWAYS_INLINE void add(const char *k,int16_t v) { add(k,(uint16_t)v); }
-	ZT_ALWAYS_INLINE void add(const char *k,int32_t v) { add(k,(uint32_t)v); }
-	ZT_ALWAYS_INLINE void add(const char *k,int64_t v) { add(k,(uint64_t)v); }
+	ZT_INLINE void add(const char *k,int16_t v) { add(k,(uint16_t)v); }
+	ZT_INLINE void add(const char *k,int32_t v) { add(k,(uint32_t)v); }
+	ZT_INLINE void add(const char *k,int64_t v) { add(k,(uint64_t)v); }
 
 	/**
 	 * Add an address in 10-digit hex string format
@@ -138,12 +138,12 @@ public:
 	/**
 	 * @return Number of entries
 	 */
-	ZT_ALWAYS_INLINE unsigned int size() const noexcept { return _t.size(); }
+	ZT_INLINE unsigned int size() const noexcept { return _t.size(); }
 
 	/**
 	 * @return True if dictionary is not empty
 	 */
-	ZT_ALWAYS_INLINE bool empty() const noexcept { return _t.empty(); }
+	ZT_INLINE bool empty() const noexcept { return _t.empty(); }
 
 	/**
 	 * Encode to a string in the supplied vector

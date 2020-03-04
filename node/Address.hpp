@@ -28,17 +28,17 @@ namespace ZeroTier {
 class Address : public TriviallyCopyable
 {
 public:
-	ZT_ALWAYS_INLINE Address() noexcept : _a(0) {}
-	explicit ZT_ALWAYS_INLINE Address(const uint64_t a) noexcept : _a(a) {}
-	explicit ZT_ALWAYS_INLINE Address(const uint8_t b[5]) noexcept : _a(((uint64_t)b[0] << 32U) | ((uint64_t)b[1] << 24U) | ((uint64_t)b[2] << 16U) | ((uint64_t)b[3] << 8U) | (uint64_t)b[4]) {}
+	ZT_INLINE Address() noexcept : _a(0) {}
+	explicit ZT_INLINE Address(const uint64_t a) noexcept : _a(a) {}
+	explicit ZT_INLINE Address(const uint8_t b[5]) noexcept : _a(((uint64_t)b[0] << 32U) | ((uint64_t)b[1] << 24U) | ((uint64_t)b[2] << 16U) | ((uint64_t)b[3] << 8U) | (uint64_t)b[4]) {}
 
-	ZT_ALWAYS_INLINE Address &operator=(const uint64_t a) noexcept { _a = a; return *this; }
+	ZT_INLINE Address &operator=(const uint64_t a) noexcept { _a = a; return *this; }
 
 	/**
 	 * @param bits Raw address -- 5 bytes, big-endian byte order
 	 * @param len Length of array
 	 */
-	ZT_ALWAYS_INLINE void setTo(const uint8_t b[5]) noexcept
+	ZT_INLINE void setTo(const uint8_t b[5]) noexcept
 	{
 		_a = ((uint64_t)b[0] << 32U) | ((uint64_t)b[1] << 24U) | ((uint64_t)b[2] << 16U) | ((uint64_t)b[3] << 8U) | (uint64_t)b[4];
 	}
@@ -47,7 +47,7 @@ public:
 	 * @param bits Buffer to hold 5-byte address in big-endian byte order
 	 * @param len Length of array
 	 */
-	ZT_ALWAYS_INLINE void copyTo(uint8_t b[5]) const noexcept
+	ZT_INLINE void copyTo(uint8_t b[5]) const noexcept
 	{
 		const uint64_t a = _a;
 		b[0] = (uint8_t)(a >> 32U);
@@ -60,23 +60,23 @@ public:
 	/**
 	 * @return Integer containing address (0 to 2^40)
 	 */
-	ZT_ALWAYS_INLINE uint64_t toInt() const noexcept { return _a; }
+	ZT_INLINE uint64_t toInt() const noexcept { return _a; }
 
 	/**
 	 * Set address to zero/NIL
 	 */
-	ZT_ALWAYS_INLINE void zero() noexcept { _a = 0; }
+	ZT_INLINE void zero() noexcept { _a = 0; }
 
 	/**
 	 * @return Hash code for use with Hashtable
 	 */
-	ZT_ALWAYS_INLINE unsigned long hashCode() const noexcept { return (unsigned long)_a; }
+	ZT_INLINE unsigned long hashCode() const noexcept { return (unsigned long)_a; }
 
 	/**
 	 * @param s String with at least 11 characters of space available (10 + terminating NULL)
 	 * @return Hexadecimal string
 	 */
-	ZT_ALWAYS_INLINE char *toString(char s[ZT_ADDRESS_STRING_SIZE_MAX]) const noexcept
+	ZT_INLINE char *toString(char s[ZT_ADDRESS_STRING_SIZE_MAX]) const noexcept
 	{
 		const uint64_t a = _a;
 		const unsigned int m = 0xf;
@@ -103,16 +103,16 @@ public:
 	 *
 	 * @return True if address is reserved and may not be used
 	 */
-	ZT_ALWAYS_INLINE bool isReserved() const noexcept { return ((!_a)||((_a >> 32U) == ZT_ADDRESS_RESERVED_PREFIX)); }
+	ZT_INLINE bool isReserved() const noexcept { return ((!_a) || ((_a >> 32U) == ZT_ADDRESS_RESERVED_PREFIX)); }
 
-	ZT_ALWAYS_INLINE operator bool() const noexcept { return (_a != 0); }
+	ZT_INLINE operator bool() const noexcept { return (_a != 0); }
 
-	ZT_ALWAYS_INLINE bool operator==(const Address &a) const noexcept { return _a == a._a; }
-	ZT_ALWAYS_INLINE bool operator!=(const Address &a) const noexcept { return _a != a._a; }
-	ZT_ALWAYS_INLINE bool operator>(const Address &a) const noexcept { return _a > a._a; }
-	ZT_ALWAYS_INLINE bool operator<(const Address &a) const noexcept { return _a < a._a; }
-	ZT_ALWAYS_INLINE bool operator>=(const Address &a) const noexcept { return _a >= a._a; }
-	ZT_ALWAYS_INLINE bool operator<=(const Address &a) const noexcept { return _a <= a._a; }
+	ZT_INLINE bool operator==(const Address &a) const noexcept { return _a == a._a; }
+	ZT_INLINE bool operator!=(const Address &a) const noexcept { return _a != a._a; }
+	ZT_INLINE bool operator>(const Address &a) const noexcept { return _a > a._a; }
+	ZT_INLINE bool operator<(const Address &a) const noexcept { return _a < a._a; }
+	ZT_INLINE bool operator>=(const Address &a) const noexcept { return _a >= a._a; }
+	ZT_INLINE bool operator<=(const Address &a) const noexcept { return _a <= a._a; }
 
 #if 0
 	/**

@@ -56,7 +56,7 @@ public:
 	/**
 	 * Compute primary controller device ID from network ID
 	 */
-	static ZT_ALWAYS_INLINE Address controllerFor(uint64_t nwid) noexcept { return Address(nwid >> 24U); }
+	static ZT_INLINE Address controllerFor(uint64_t nwid) noexcept { return Address(nwid >> 24U); }
 
 	/**
 	 * Construct a new network
@@ -74,14 +74,14 @@ public:
 
 	~Network();
 
-	ZT_ALWAYS_INLINE uint64_t id() const noexcept { return _id; }
-	ZT_ALWAYS_INLINE Address controller() const noexcept { return Address(_id >> 24U); }
-	ZT_ALWAYS_INLINE bool multicastEnabled() const noexcept { return (_config.multicastLimit > 0); }
-	ZT_ALWAYS_INLINE bool hasConfig() const noexcept { return (_config); }
-	ZT_ALWAYS_INLINE uint64_t lastConfigUpdate() const noexcept { return _lastConfigUpdate; }
-	ZT_ALWAYS_INLINE ZT_VirtualNetworkStatus status() const noexcept { return _status(); }
-	ZT_ALWAYS_INLINE const NetworkConfig &config() const noexcept { return _config; }
-	ZT_ALWAYS_INLINE const MAC &mac() const noexcept { return _mac; }
+	ZT_INLINE uint64_t id() const noexcept { return _id; }
+	ZT_INLINE Address controller() const noexcept { return Address(_id >> 24U); }
+	ZT_INLINE bool multicastEnabled() const noexcept { return (_config.multicastLimit > 0); }
+	ZT_INLINE bool hasConfig() const noexcept { return (_config); }
+	ZT_INLINE uint64_t lastConfigUpdate() const noexcept { return _lastConfigUpdate; }
+	ZT_INLINE ZT_VirtualNetworkStatus status() const noexcept { return _status(); }
+	ZT_INLINE const NetworkConfig &config() const noexcept { return _config; }
+	ZT_INLINE const MAC &mac() const noexcept { return _mac; }
 
 	/**
 	 * Apply filters to an outgoing packet
@@ -153,7 +153,7 @@ public:
 	 * @param includeBridgedGroups If true, also check groups we've learned via bridging
 	 * @return True if this network endpoint / peer is a member
 	 */
-	ZT_ALWAYS_INLINE bool subscribedToMulticastGroup(const MulticastGroup &mg,const bool includeBridgedGroups) const
+	ZT_INLINE bool subscribedToMulticastGroup(const MulticastGroup &mg,const bool includeBridgedGroups) const
 	{
 		Mutex::Lock l(_myMulticastGroups_l);
 		if (std::binary_search(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg))
@@ -213,12 +213,12 @@ public:
 	/**
 	 * Set netconf failure to 'access denied' -- called in IncomingPacket when controller reports this
 	 */
-	ZT_ALWAYS_INLINE void setAccessDenied() noexcept { _netconfFailure = NETCONF_FAILURE_ACCESS_DENIED; }
+	ZT_INLINE void setAccessDenied() noexcept { _netconfFailure = NETCONF_FAILURE_ACCESS_DENIED; }
 
 	/**
 	 * Set netconf failure to 'not found' -- called by IncomingPacket when controller reports this
 	 */
-	ZT_ALWAYS_INLINE void setNotFound() noexcept { _netconfFailure = NETCONF_FAILURE_NOT_FOUND; }
+	ZT_INLINE void setNotFound() noexcept { _netconfFailure = NETCONF_FAILURE_NOT_FOUND; }
 
 	/**
 	 * Determine whether this peer is permitted to communicate on this network
@@ -239,7 +239,7 @@ public:
 	 * @param mac MAC address
 	 * @return ZeroTier address of bridge to this MAC
 	 */
-	ZT_ALWAYS_INLINE Address findBridgeTo(const MAC &mac) const
+	ZT_INLINE Address findBridgeTo(const MAC &mac) const
 	{
 		Mutex::Lock _l(_remoteBridgeRoutes_l);
 		const Address *const br = _remoteBridgeRoutes.get(mac);
@@ -261,7 +261,7 @@ public:
 	 * @param mg Multicast group
 	 * @param now Current time
 	 */
-	ZT_ALWAYS_INLINE void learnBridgedMulticastGroup(void *tPtr,const MulticastGroup &mg,int64_t now)
+	ZT_INLINE void learnBridgedMulticastGroup(void *tPtr,const MulticastGroup &mg,int64_t now)
 	{
 		Mutex::Lock l(_myMulticastGroups_l);
 		_multicastGroupsBehindMe.set(mg,now);
@@ -308,7 +308,7 @@ public:
 	 * @param to Destination peer address
 	 * @param now Current time
 	 */
-	ZT_ALWAYS_INLINE void pushCredentialsIfNeeded(void *tPtr,const Address &to,const int64_t now)
+	ZT_INLINE void pushCredentialsIfNeeded(void *tPtr,const Address &to,const int64_t now)
 	{
 		const int64_t tout = std::min(_config.credentialTimeMaxDelta,(int64_t)ZT_PEER_ACTIVITY_TIMEOUT);
 		Mutex::Lock _l(_memberships_l);
@@ -338,7 +338,7 @@ public:
 	 * @param f Function of (const Address,const Membership)
 	 */
 	template<typename F>
-	ZT_ALWAYS_INLINE void eachMember(F f)
+	ZT_INLINE void eachMember(F f)
 	{
 		Mutex::Lock ml(_memberships_l);
 		Hashtable<Address,Membership>::Iterator i(_memberships);
@@ -353,7 +353,7 @@ public:
 	/**
 	 * @return Externally usable pointer-to-pointer exported via the core API
 	 */
-	ZT_ALWAYS_INLINE void **userPtr() noexcept { return &_uPtr; }
+	ZT_INLINE void **userPtr() noexcept { return &_uPtr; }
 
 private:
 	void _requestConfiguration(void *tPtr);
@@ -378,7 +378,7 @@ private:
 
 	struct _IncomingConfigChunk
 	{
-		ZT_ALWAYS_INLINE _IncomingConfigChunk() : touchCtr(0),updateId(0) {}
+		ZT_INLINE _IncomingConfigChunk() : touchCtr(0),updateId(0) {}
 		uint64_t touchCtr;
 		uint64_t updateId;
 		std::map< int,std::vector<uint8_t> > chunks;

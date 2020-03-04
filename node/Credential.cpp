@@ -43,7 +43,7 @@
 namespace ZeroTier {
 
 template<typename CRED>
-static ZT_ALWAYS_INLINE Credential::VerifyResult _credVerify(const RuntimeEnvironment *RR,void *tPtr,CRED credential)
+static ZT_INLINE Credential::VerifyResult _credVerify(const RuntimeEnvironment *RR,void *tPtr,CRED credential)
 {
 	uint8_t tmp[ZT_BUF_MEM_SIZE + 16];
 

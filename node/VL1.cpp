@@ -30,7 +30,7 @@ namespace ZeroTier {
 
 namespace {
 
-ZT_ALWAYS_INLINE const Identity &identityFromPeerPtr(const SharedPtr<Peer> &p)
+ZT_INLINE const Identity &identityFromPeerPtr(const SharedPtr<Peer> &p)
 {
 	if (p)
 		return p->identity();

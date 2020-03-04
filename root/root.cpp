@@ -127,8 +127,8 @@ using json = nlohmann::json;
  */
 struct RootPeer
 {
-	ZT_ALWAYS_INLINE RootPeer() : lastSend(0),lastReceive(0),lastEcho(0),lastHello(0),vProto(-1),vMajor(-1),vMinor(-1),vRev(-1) {}
-	ZT_ALWAYS_INLINE ~RootPeer() { Utils::burn(key,sizeof(key)); }
+	ZT_INLINE RootPeer() : lastSend(0),lastReceive(0),lastEcho(0),lastHello(0),vProto(-1),vMajor(-1),vMinor(-1),vRev(-1) {}
+	ZT_INLINE ~RootPeer() { Utils::burn(key,sizeof(key)); }
 
 	Identity id;            // Identity
 	uint8_t key[32];        // Shared secret key
@@ -144,10 +144,10 @@ struct RootPeer
 };
 
 // Hashers for std::unordered_map
-struct IdentityHasher { ZT_ALWAYS_INLINE std::size_t operator()(const Identity &id) const { return (std::size_t)id.hashCode(); } };
-struct AddressHasher { ZT_ALWAYS_INLINE std::size_t operator()(const Address &a) const { return (std::size_t)a.toInt(); } };
-struct InetAddressHasher { ZT_ALWAYS_INLINE std::size_t operator()(const InetAddress &ip) const { return (std::size_t)ip.hashCode(); } };
-struct MulticastGroupHasher { ZT_ALWAYS_INLINE std::size_t operator()(const MulticastGroup &mg) const { return (std::size_t)mg.hashCode(); } };
+struct IdentityHasher { ZT_INLINE std::size_t operator()(const Identity &id) const { return (std::size_t)id.hashCode(); } };
+struct AddressHasher { ZT_INLINE std::size_t operator()(const Address &a) const { return (std::size_t)a.toInt(); } };
+struct InetAddressHasher { ZT_INLINE std::size_t operator()(const InetAddress &ip) const { return (std::size_t)ip.hashCode(); } };
+struct MulticastGroupHasher { ZT_INLINE std::size_t operator()(const MulticastGroup &mg) const { return (std::size_t)mg.hashCode(); } };
 
 // An ordered tuple key representing an introduction of one peer to another
 struct RendezvousKey
@@ -163,9 +163,9 @@ struct RendezvousKey
 		}
 	}
 	Address a,b;
-	ZT_ALWAYS_INLINE bool operator==(const RendezvousKey &k) const { return ((a == k.a)&&(b == k.b)); }
-	ZT_ALWAYS_INLINE bool operator!=(const RendezvousKey &k) const { return ((a != k.a)||(b != k.b)); }
-	struct Hasher { ZT_ALWAYS_INLINE std::size_t operator()(const RendezvousKey &k) const { return (std::size_t)(k.a.toInt() ^ k.b.toInt()); } };
+	ZT_INLINE bool operator==(const RendezvousKey &k) const { return ((a == k.a) && (b == k.b)); }
+	ZT_INLINE bool operator!=(const RendezvousKey &k) const { return ((a != k.a) || (b != k.b)); }
+	struct Hasher { ZT_INLINE std::size_t operator()(const RendezvousKey &k) const { return (std::size_t)(k.a.toInt() ^ k.b.toInt()); } };
 };
 
 struct RendezvousStats
@@ -215,13 +215,13 @@ static std::mutex s_rendezvousTracking_l;
 //////////////////////////////////////////////////////////////////////////////
 
 // Construct GeoIP key for IPv4 IPs
-static ZT_ALWAYS_INLINE uint32_t ip4ToH32(const InetAddress &ip)
+static ZT_INLINE uint32_t ip4ToH32(const InetAddress &ip)
 {
 	return Utils::ntoh((uint32_t)(((const struct sockaddr_in *)&ip)->sin_addr.s_addr));
 }
 
 // Construct GeoIP key for IPv6 IPs
-static ZT_ALWAYS_INLINE std::array< uint64_t,2 > ip6ToH128(const InetAddress &ip)
+static ZT_INLINE std::array< uint64_t,2 > ip6ToH128(const InetAddress &ip)
 {
 	std::array<uint64_t,2> i128;
 	memcpy(i128.data(),ip.rawIpData(),16);

@@ -30,13 +30,13 @@ namespace ZeroTier {
 class _ResetWithinScope
 {
 public:
-	ZT_ALWAYS_INLINE _ResetWithinScope(void *tPtr,int64_t now,int inetAddressFamily,InetAddress::IpScope scope) :
+	ZT_INLINE _ResetWithinScope(void *tPtr,int64_t now,int inetAddressFamily,InetAddress::IpScope scope) :
 		_now(now),
 		_tPtr(tPtr),
 		_family(inetAddressFamily),
 		_scope(scope) {}
 
-	ZT_ALWAYS_INLINE void operator()(const SharedPtr<Peer> &p) { p->resetWithinScope(_tPtr,_scope,_family,_now); }
+	ZT_INLINE void operator()(const SharedPtr<Peer> &p) { p->resetWithinScope(_tPtr,_scope,_family,_now); }
 
 private:
 	int64_t _now;

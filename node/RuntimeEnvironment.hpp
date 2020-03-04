@@ -40,7 +40,7 @@ class Expect;
 class RuntimeEnvironment
 {
 public:
-	ZT_ALWAYS_INLINE RuntimeEnvironment(Node *n) noexcept :
+	ZT_INLINE RuntimeEnvironment(Node *n) noexcept :
 		node(n),
 		localNetworkController(nullptr),
 		rtmem(nullptr),
@@ -55,7 +55,7 @@ public:
 		secretIdentityStr[0] = (char)0;
 	}
 
-	ZT_ALWAYS_INLINE ~RuntimeEnvironment()
+	ZT_INLINE ~RuntimeEnvironment()
 	{
 		Utils::burn(secretIdentityStr,sizeof(secretIdentityStr));
 	}

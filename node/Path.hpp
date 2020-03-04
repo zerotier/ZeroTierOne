@@ -47,7 +47,7 @@ class Path
 	friend class Defragmenter;
 
 public:
-	ZT_ALWAYS_INLINE Path(const int64_t l,const InetAddress &r) noexcept :
+	ZT_INLINE Path(const int64_t l,const InetAddress &r) noexcept :
 		_localSocket(l),
 		_lastIn(0),
 		_lastOut(0),
@@ -73,7 +73,7 @@ public:
 	 * @param now Time of send
 	 * @param bytes Bytes sent
 	 */
-	ZT_ALWAYS_INLINE void sent(const int64_t now,const unsigned int bytes) noexcept
+	ZT_INLINE void sent(const int64_t now,const unsigned int bytes) noexcept
 	{
 		_lastOut.store(now);
 		_outMeter.log(now,bytes);
@@ -85,7 +85,7 @@ public:
 	 * @param now Time of receive
 	 * @param bytes Bytes received
 	 */
-	ZT_ALWAYS_INLINE void received(const int64_t now,const unsigned int bytes) noexcept
+	ZT_INLINE void received(const int64_t now,const unsigned int bytes) noexcept
 	{
 		_lastIn.store(now);
 		_inMeter.log(now,bytes);
@@ -96,27 +96,27 @@ public:
 	 *
 	 * @param now Current time
 	 */
-	ZT_ALWAYS_INLINE bool alive(const int64_t now) const noexcept { return ((now - _lastIn.load()) < ZT_PATH_ALIVE_TIMEOUT); }
+	ZT_INLINE bool alive(const int64_t now) const noexcept { return ((now - _lastIn.load()) < ZT_PATH_ALIVE_TIMEOUT); }
 
 	/**
 	 * @return Physical address
 	 */
-	ZT_ALWAYS_INLINE const InetAddress &address() const noexcept { return _addr; }
+	ZT_INLINE const InetAddress &address() const noexcept { return _addr; }
 
 	/**
 	 * @return Local socket as specified by external code
 	 */
-	ZT_ALWAYS_INLINE int64_t localSocket() const noexcept { return _localSocket; }
+	ZT_INLINE int64_t localSocket() const noexcept { return _localSocket; }
 
 	/**
 	 * @return Last time we received anything
 	 */
-	ZT_ALWAYS_INLINE int64_t lastIn() const noexcept { return _lastIn.load(); }
+	ZT_INLINE int64_t lastIn() const noexcept { return _lastIn.load(); }
 
 	/**
 	 * @return Last time we sent something
 	 */
-	ZT_ALWAYS_INLINE int64_t lastOut() const noexcept { return _lastOut.load(); }
+	ZT_INLINE int64_t lastOut() const noexcept { return _lastOut.load(); }
 
 private:
 	const int64_t _localSocket;

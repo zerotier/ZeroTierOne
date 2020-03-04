@@ -104,8 +104,8 @@ private:
 
 	struct _MemberStatusKey
 	{
-		ZT_ALWAYS_INLINE _MemberStatusKey() : networkId(0),nodeId(0) {}
-		ZT_ALWAYS_INLINE _MemberStatusKey(const uint64_t nwid,const uint64_t nid) : networkId(nwid),nodeId(nid) {}
+		ZT_INLINE _MemberStatusKey() : networkId(0),nodeId(0) {}
+		ZT_INLINE _MemberStatusKey(const uint64_t nwid,const uint64_t nid) : networkId(nwid),nodeId(nid) {}
 		uint64_t networkId;
 		uint64_t nodeId;
 		inline bool operator==(const _MemberStatusKey &k) const { return ((k.networkId == networkId)&&(k.nodeId == nodeId)); }
@@ -113,7 +113,7 @@ private:
 
 	struct _MemberStatus
 	{
-		ZT_ALWAYS_INLINE _MemberStatus() : lastRequestTime(0),vMajor(-1),vMinor(-1),vRev(-1),vProto(-1) {}
+		ZT_INLINE _MemberStatus() : lastRequestTime(0),vMajor(-1),vMinor(-1),vRev(-1),vProto(-1) {}
 		uint64_t lastRequestTime;
 		int vMajor,vMinor,vRev,vProto;
 		Dictionary lastRequestMetaData;
@@ -123,7 +123,7 @@ private:
 
 	struct _MemberStatusHash
 	{
-		ZT_ALWAYS_INLINE std::size_t operator()(const _MemberStatusKey &networkIdNodeId) const
+		ZT_INLINE std::size_t operator()(const _MemberStatusKey &networkIdNodeId) const
 		{
 			return (std::size_t)(networkIdNodeId.networkId + networkIdNodeId.nodeId);
 		}

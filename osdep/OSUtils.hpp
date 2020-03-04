@@ -78,7 +78,7 @@ public:
 	 * @param path Path to delete
 	 * @return True if delete was successful
 	 */
-	static ZT_ALWAYS_INLINE bool rm(const char *path)
+	static ZT_INLINE bool rm(const char *path)
 	{
 #ifdef __WINDOWS__
 		return (DeleteFileA(path) != FALSE);
@@ -86,9 +86,9 @@ public:
 		return (unlink(path) == 0);
 #endif
 	}
-	static ZT_ALWAYS_INLINE bool rm(const std::string &path) { return rm(path.c_str()); }
+	static ZT_INLINE bool rm(const std::string &path) { return rm(path.c_str()); }
 
-	static ZT_ALWAYS_INLINE bool mkdir(const char *path)
+	static ZT_INLINE bool mkdir(const char *path)
 	{
 #ifdef __WINDOWS__
 		if (::PathIsDirectoryA(path))
@@ -100,9 +100,9 @@ public:
 		return true;
 #endif
 	}
-	static ZT_ALWAYS_INLINE bool mkdir(const std::string &path) { return OSUtils::mkdir(path.c_str()); }
+	static ZT_INLINE bool mkdir(const std::string &path) { return OSUtils::mkdir(path.c_str()); }
 
-	static ZT_ALWAYS_INLINE bool rename(const char *o,const char *n)
+	static ZT_INLINE bool rename(const char *o,const char *n)
 	{
 #ifdef __WINDOWS__
 		DeleteFileA(n);
@@ -150,7 +150,7 @@ public:
 	/**
 	 * @return Current time in milliseconds since epoch
 	 */
-	static ZT_ALWAYS_INLINE int64_t now()
+	static ZT_INLINE int64_t now()
 	{
 #ifdef __WINDOWS__
 		FILETIME ft;
@@ -212,7 +212,7 @@ public:
 	 * @param s Data to write
 	 * @return True if entire file was successfully written
 	 */
-	static ZT_ALWAYS_INLINE bool writeFile(const char *path,const std::string &s) { return writeFile(path,s.data(),(unsigned int)s.length()); }
+	static ZT_INLINE bool writeFile(const char *path,const std::string &s) { return writeFile(path,s.data(),(unsigned int)s.length()); }
 
 	/**
 	 * @return Platform default ZeroTier One home path

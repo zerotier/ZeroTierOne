@@ -38,7 +38,7 @@ namespace {
 
 struct _NodeObjects
 {
-	ZT_ALWAYS_INLINE _NodeObjects(RuntimeEnvironment *const RR,void *const tPtr) :
+	ZT_INLINE _NodeObjects(RuntimeEnvironment *const RR,void *const tPtr) :
 		t(RR),
 		expect(),
 		vl2(RR),
@@ -63,7 +63,7 @@ struct _NodeObjects
 
 struct _sortPeerPtrsByAddress
 {
-	ZT_ALWAYS_INLINE bool operator()(const SharedPtr<Peer> &a,const SharedPtr<Peer> &b) const { return (a->address() < b->address()); }
+	ZT_INLINE bool operator()(const SharedPtr<Peer> &a,const SharedPtr<Peer> &b) const { return (a->address() < b->address()); }
 };
 
 } // anonymous namespace
@@ -197,7 +197,7 @@ struct _processBackgroundTasks_ping_eachPeer
 	void *tPtr;
 	bool online;
 	std::vector<Address> rootsNotOnline;
-	ZT_ALWAYS_INLINE void operator()(const SharedPtr<Peer> &peer,const bool isRoot)
+	ZT_INLINE void operator()(const SharedPtr<Peer> &peer,const bool isRoot)
 	{
 		peer->ping(tPtr,now,isRoot);
 		if (isRoot) {
@@ -216,7 +216,7 @@ struct _processBackgroundTasks_path_keepalive
 	int64_t now;
 	RuntimeEnvironment *RR;
 	void *tPtr;
-	ZT_ALWAYS_INLINE void operator()(const SharedPtr<Path> &path)
+	ZT_INLINE void operator()(const SharedPtr<Path> &path)
 	{
 		if ((now - path->lastOut()) >= ZT_PATH_KEEPALIVE_PERIOD) {
 			++keepAlivePayload;

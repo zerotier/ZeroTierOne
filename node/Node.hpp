@@ -110,7 +110,7 @@ public:
 	/**
 	 * @return Most recent time value supplied to core via API
 	 */
-	ZT_ALWAYS_INLINE int64_t now() const noexcept { return _now; }
+	ZT_INLINE int64_t now() const noexcept { return _now; }
 
 	/**
 	 * Send packet to to the physical wire via callback
@@ -123,7 +123,7 @@ public:
 	 * @param ttl TTL or 0 for default/max
 	 * @return True if send appears successful
 	 */
-	ZT_ALWAYS_INLINE bool putPacket(void *tPtr,const int64_t localSocket,const InetAddress &addr,const void *data,unsigned int len,unsigned int ttl = 0) noexcept
+	ZT_INLINE bool putPacket(void *tPtr,const int64_t localSocket,const InetAddress &addr,const void *data,unsigned int len,unsigned int ttl = 0) noexcept
 	{
 		return (_cb.wirePacketSendFunction(
 			reinterpret_cast<ZT_Node *>(this),
@@ -149,7 +149,7 @@ public:
 	 * @param data Ethernet frame data
 	 * @param len Ethernet frame length in bytes
 	 */
-	ZT_ALWAYS_INLINE void putFrame(void *tPtr,uint64_t nwid,void **nuptr,const MAC &source,const MAC &dest,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len) noexcept
+	ZT_INLINE void putFrame(void *tPtr,uint64_t nwid,void **nuptr,const MAC &source,const MAC &dest,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len) noexcept
 	{
 		_cb.virtualNetworkFrameFunction(
 			reinterpret_cast<ZT_Node *>(this),
@@ -169,7 +169,7 @@ public:
 	 * @param nwid Network ID
 	 * @return Network associated with ID
 	 */
-	ZT_ALWAYS_INLINE SharedPtr<Network> network(uint64_t nwid) const noexcept
+	ZT_INLINE SharedPtr<Network> network(uint64_t nwid) const noexcept
 	{
 		RWMutex::RLock l(_networks_m);
 		return _networks[(unsigned long)((nwid + (nwid >> 32U)) & _networksMask)];
@@ -178,7 +178,7 @@ public:
 	/**
 	 * @return Known local interface addresses for this node
 	 */
-	ZT_ALWAYS_INLINE std::vector<ZT_InterfaceAddress> localInterfaceAddresses() const
+	ZT_INLINE std::vector<ZT_InterfaceAddress> localInterfaceAddresses() const
 	{
 		Mutex::Lock _l(_localInterfaceAddresses_m);
 		return _localInterfaceAddresses;
@@ -191,7 +191,7 @@ public:
 	 * @param ev Event object
 	 * @param md Event data or NULL if none
 	 */
-	ZT_ALWAYS_INLINE void postEvent(void *tPtr,ZT_Event ev,const void *md = nullptr) noexcept
+	ZT_INLINE void postEvent(void *tPtr,ZT_Event ev,const void *md = nullptr) noexcept
 	{
 		_cb.eventCallback(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,ev,md);
 	}
@@ -205,7 +205,7 @@ public:
 	 * @param op Config operation or event type
 	 * @param nc Network config info
 	 */
-	ZT_ALWAYS_INLINE void configureVirtualNetworkPort(void *tPtr,uint64_t nwid,void **nuptr,ZT_VirtualNetworkConfigOperation op,const ZT_VirtualNetworkConfig *nc) noexcept
+	ZT_INLINE void configureVirtualNetworkPort(void *tPtr,uint64_t nwid,void **nuptr,ZT_VirtualNetworkConfigOperation op,const ZT_VirtualNetworkConfig *nc) noexcept
 	{
 		_cb.virtualNetworkConfigFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,nwid,nuptr,op,nc);
 	}
@@ -213,7 +213,7 @@ public:
 	/**
 	 * @return True if node appears online
 	 */
-	ZT_ALWAYS_INLINE bool online() const noexcept { return _online; }
+	ZT_INLINE bool online() const noexcept { return _online; }
 
 	/**
 	 * Get a state object
@@ -234,7 +234,7 @@ public:
 	 * @param data Data to store
 	 * @param len Length of data
 	 */
-	ZT_ALWAYS_INLINE void stateObjectPut(void *const tPtr,ZT_StateObjectType type,const uint64_t id[2],const void *const data,const unsigned int len) noexcept
+	ZT_INLINE void stateObjectPut(void *const tPtr,ZT_StateObjectType type,const uint64_t id[2],const void *const data,const unsigned int len) noexcept
 	{
 		if (_cb.statePutFunction)
 			_cb.statePutFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,type,id,data,(int)len);
@@ -247,7 +247,7 @@ public:
 	 * @param type Object type to delete
 	 * @param id Object ID
 	 */
-	ZT_ALWAYS_INLINE void stateObjectDelete(void *const tPtr,ZT_StateObjectType type,const uint64_t id[2]) noexcept
+	ZT_INLINE void stateObjectDelete(void *const tPtr,ZT_StateObjectType type,const uint64_t id[2]) noexcept
 	{
 		if (_cb.statePutFunction)
 			_cb.statePutFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,type,id,(const void *)0,-1);
@@ -289,12 +289,12 @@ public:
 	/**
 	 * @return This node's identity
 	 */
-	ZT_ALWAYS_INLINE const Identity &identity() const noexcept { return _RR.identity; }
+	ZT_INLINE const Identity &identity() const noexcept { return _RR.identity; }
 
 	/**
 	 * @return True if aggressive NAT-traversal mechanisms like scanning of <1024 ports are enabled
 	 */
-	ZT_ALWAYS_INLINE bool natMustDie() const noexcept { return _natMustDie; }
+	ZT_INLINE bool natMustDie() const noexcept { return _natMustDie; }
 
 	/**
 	 * Wake any peers with the given address by calling their alarm() methods at or after the specified time
@@ -302,7 +302,7 @@ public:
 	 * @param peerAddress Peer address
 	 * @param triggerTime Time alarm should go off
 	 */
-	ZT_ALWAYS_INLINE void setPeerAlarm(const Address &peerAddress,const int64_t triggerTime)
+	ZT_INLINE void setPeerAlarm(const Address &peerAddress,const int64_t triggerTime)
 	{
 		RWMutex::Lock l(_peerAlarms_l);
 		int64_t &t = _peerAlarms[peerAddress];
@@ -354,10 +354,10 @@ private:
 	struct _LocalControllerAuth
 	{
 		uint64_t nwid,address;
-		ZT_ALWAYS_INLINE _LocalControllerAuth(const uint64_t nwid_,const Address &address_)  noexcept: nwid(nwid_),address(address_.toInt()) {}
-		ZT_ALWAYS_INLINE unsigned long hashCode() const noexcept { return (unsigned long)(nwid ^ address); }
-		ZT_ALWAYS_INLINE bool operator==(const _LocalControllerAuth &a) const noexcept { return ((a.nwid == nwid)&&(a.address == address)); }
-		ZT_ALWAYS_INLINE bool operator!=(const _LocalControllerAuth &a) const noexcept { return ((a.nwid != nwid)||(a.address != address)); }
+		ZT_INLINE _LocalControllerAuth(const uint64_t nwid_,const Address &address_)  noexcept: nwid(nwid_),address(address_.toInt()) {}
+		ZT_INLINE unsigned long hashCode() const noexcept { return (unsigned long)(nwid ^ address); }
+		ZT_INLINE bool operator==(const _LocalControllerAuth &a) const noexcept { return ((a.nwid == nwid) && (a.address == address)); }
+		ZT_INLINE bool operator!=(const _LocalControllerAuth &a) const noexcept { return ((a.nwid != nwid) || (a.address != address)); }
 	};
 	Hashtable< _LocalControllerAuth,int64_t > _localControllerAuthorizations;
 	Mutex _localControllerAuthorizations_m;

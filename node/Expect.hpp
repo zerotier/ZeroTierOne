@@ -47,7 +47,7 @@ namespace ZeroTier {
 class Expect
 {
 public:
-	ZT_ALWAYS_INLINE Expect() : _salt(Utils::getSecureRandomU64()) {}
+	ZT_INLINE Expect() : _salt(Utils::getSecureRandomU64()) {}
 
 	/**
 	 * Called by other code when something is sending a packet that may receive an OK response
@@ -55,7 +55,7 @@ public:
 	 * @param packetId Packet ID of packet being sent (be sure it's post-armor())
 	 * @param now Current time
 	 */
-	ZT_ALWAYS_INLINE void sending(const uint64_t packetId,const int64_t now) noexcept
+	ZT_INLINE void sending(const uint64_t packetId,const int64_t now) noexcept
 	{
 		_packetIdSent[Utils::hash64(packetId ^ _salt) % ZT_EXPECT_BUCKETS].store((int32_t)(now / ZT_EXPECT_TTL));
 	}
@@ -67,7 +67,7 @@ public:
 	 * @param now
 	 * @return
 	 */
-	ZT_ALWAYS_INLINE bool expecting(const uint64_t inRePacketId,const int64_t now) const noexcept
+	ZT_INLINE bool expecting(const uint64_t inRePacketId,const int64_t now) const noexcept
 	{
 		return (((now / ZT_EXPECT_TTL) - (int64_t)_packetIdSent[Utils::hash64(inRePacketId ^ _salt) % ZT_EXPECT_BUCKETS].load()) <= 1);
 	}

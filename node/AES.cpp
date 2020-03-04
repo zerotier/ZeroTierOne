@@ -24,7 +24,7 @@ namespace {
 
 #ifdef ZT_HAVE_UINT128
 
-ZT_ALWAYS_INLINE void s_bmul64(const uint64_t x,const uint64_t y,uint64_t &r_high,uint64_t &r_low) noexcept
+ZT_INLINE void s_bmul64(const uint64_t x,const uint64_t y,uint64_t &r_high,uint64_t &r_low) noexcept
 {
 	static uint128_t m1 = (uint128_t)0x2108421084210842ULL << 64U | 0x1084210842108421ULL;
 	static uint128_t m2 = (uint128_t)0x4210842108421084ULL << 64U | 0x2108421084210842ULL;
@@ -77,7 +77,7 @@ void s_gfmul(const uint64_t h_high,const uint64_t h_low,uint64_t &y0, uint64_t &
 
 #else
 
-ZT_ALWAYS_INLINE void s_bmul32(uint32_t x,uint32_t y,uint32_t &r_high,uint32_t &r_low) noexcept
+ZT_INLINE void s_bmul32(uint32_t x,uint32_t y,uint32_t &r_high,uint32_t &r_low) noexcept
 {
 	const uint32_t m1 = (uint32_t)0x11111111;
 	const uint32_t m2 = (uint32_t)0x22222222;
@@ -1128,7 +1128,7 @@ void AES::_decryptSW(const uint8_t in[16],uint8_t out[16]) const noexcept
 // SSE shuffle parameter to reverse bytes in a 128-bit vector.
 const __m128i AES::s_shuf = _mm_set_epi8(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15);
 
-static ZT_ALWAYS_INLINE __m128i _init256_1_aesni(__m128i a,__m128i b) noexcept
+static ZT_INLINE __m128i _init256_1_aesni(__m128i a,__m128i b) noexcept
 {
 	__m128i x,y;
 	b = _mm_shuffle_epi32(b,0xff);
@@ -1142,7 +1142,7 @@ static ZT_ALWAYS_INLINE __m128i _init256_1_aesni(__m128i a,__m128i b) noexcept
 	return x;
 }
 
-static ZT_ALWAYS_INLINE __m128i _init256_2_aesni(__m128i a,__m128i b) noexcept
+static ZT_INLINE __m128i _init256_2_aesni(__m128i a,__m128i b) noexcept
 {
 	__m128i x,y,z;
 	y = _mm_aeskeygenassist_si128(a,0x00);

@@ -64,7 +64,7 @@ public:
 	 * @param loadFromCached If false do not load from cache if not in memory (default: true)
 	 * @return Peer or NULL if not found
 	 */
-	ZT_ALWAYS_INLINE SharedPtr<Peer> peer(void *tPtr,const Address &zta,const bool loadFromCached = true)
+	ZT_INLINE SharedPtr<Peer> peer(void *tPtr,const Address &zta,const bool loadFromCached = true)
 	{
 		{
 			RWMutex::RLock l(_peers_l);
@@ -94,7 +94,7 @@ public:
 	 * @param hash Identity hash
 	 * @return Peer or NULL if no peer is currently in memory for this hash (cache is not checked in this case)
 	 */
-	ZT_ALWAYS_INLINE SharedPtr<Peer> peerByHash(const Fingerprint &hash)
+	ZT_INLINE SharedPtr<Peer> peerByHash(const Fingerprint &hash)
 	{
 		RWMutex::RLock _l(_peers_l);
 		const SharedPtr<Peer> *const ap = _peersByIdentityHash.get(hash);
@@ -109,7 +109,7 @@ public:
 	 * @param probe Short probe payload (in big-endian byte order)
 	 * @return Peer or NULL if no peer is currently in memory matching this probe (cache is not checked in this case)
 	 */
-	ZT_ALWAYS_INLINE SharedPtr<Peer> peerByProbe(const uint64_t probe)
+	ZT_INLINE SharedPtr<Peer> peerByProbe(const uint64_t probe)
 	{
 		RWMutex::RLock _l(_peers_l);
 		const SharedPtr<Peer> *const ap = _peersByIncomingProbe.get(probe);
@@ -125,7 +125,7 @@ public:
 	 * @param r Remote address
 	 * @return Pointer to canonicalized Path object or NULL on error
 	 */
-	ZT_ALWAYS_INLINE SharedPtr<Path> path(const int64_t l,const InetAddress &r)
+	ZT_INLINE SharedPtr<Path> path(const int64_t l,const InetAddress &r)
 	{
 		const uint64_t k = _pathHash(l,r);
 		{
@@ -148,7 +148,7 @@ public:
 	/**
 	 * @return Current best root server
 	 */
-	ZT_ALWAYS_INLINE SharedPtr<Peer> root() const
+	ZT_INLINE SharedPtr<Peer> root() const
 	{
 		RWMutex::RLock l(_peers_l);
 		if (_rootPeers.empty())
@@ -160,7 +160,7 @@ public:
 	 * @param id Identity to check
 	 * @return True if this identity corresponds to a root
 	 */
-	ZT_ALWAYS_INLINE bool isRoot(const Identity &id) const
+	ZT_INLINE bool isRoot(const Identity &id) const
 	{
 		RWMutex::RLock l(_peers_l);
 		return (_roots.count(id) > 0);
@@ -176,7 +176,7 @@ public:
 	 * @tparam F Function or function object type
 	 */
 	template<typename F>
-	ZT_ALWAYS_INLINE void eachPeer(F f) const
+	ZT_INLINE void eachPeer(F f) const
 	{
 		RWMutex::RLock l(_peers_l);
 		Hashtable< Address,SharedPtr<Peer> >::Iterator i(const_cast<Topology *>(this)->_peers);
@@ -196,7 +196,7 @@ public:
 	 * @tparam F Function or function object type
 	 */
 	template<typename F>
-	ZT_ALWAYS_INLINE void eachPeerWithRoot(F f) const
+	ZT_INLINE void eachPeerWithRoot(F f) const
 	{
 		RWMutex::RLock l(_peers_l);
 
@@ -222,7 +222,7 @@ public:
 	 * @param f
 	 */
 	template<typename F>
-	ZT_ALWAYS_INLINE void eachPath(F f) const
+	ZT_INLINE void eachPath(F f) const
 	{
 		RWMutex::RLock l(_paths_l);
 		Hashtable< uint64_t,SharedPtr<Path> >::Iterator i(const_cast<Topology *>(this)->_paths);
@@ -246,7 +246,7 @@ public:
 	 * @param mtu Variable set to MTU
 	 * @param trustedPathId Variable set to trusted path ID
 	 */
-	ZT_ALWAYS_INLINE void getOutboundPathInfo(const InetAddress &physicalAddress,unsigned int &mtu,uint64_t &trustedPathId)
+	ZT_INLINE void getOutboundPathInfo(const InetAddress &physicalAddress,unsigned int &mtu,uint64_t &trustedPathId)
 	{
 		for(unsigned int i=0,j=_numConfiguredPhysicalPaths;i<j;++i) {
 			if (_physicalPathConfig[i].first.containsAddress(physicalAddress)) {
@@ -263,7 +263,7 @@ public:
 	 * @param physicalAddress Physical address to which we are sending the packet
 	 * @return Trusted path ID or 0 if none (0 is not a valid trusted path ID)
 	 */
-	ZT_ALWAYS_INLINE uint64_t getOutboundPathTrust(const InetAddress &physicalAddress)
+	ZT_INLINE uint64_t getOutboundPathTrust(const InetAddress &physicalAddress)
 	{
 		for(unsigned int i=0,j=_numConfiguredPhysicalPaths;i<j;++i) {
 			if (_physicalPathConfig[i].first.containsAddress(physicalAddress))
@@ -278,7 +278,7 @@ public:
 	 * @param physicalAddress Originating physical address
 	 * @param trustedPathId Trusted path ID from packet (from MAC field)
 	 */
-	ZT_ALWAYS_INLINE bool shouldInboundPathBeTrusted(const InetAddress &physicalAddress,const uint64_t trustedPathId)
+	ZT_INLINE bool shouldInboundPathBeTrusted(const InetAddress &physicalAddress,const uint64_t trustedPathId)
 	{
 		for(unsigned int i=0,j=_numConfiguredPhysicalPaths;i<j;++i) {
 			if ((_physicalPathConfig[i].second.trustedPathId == trustedPathId)&&(_physicalPathConfig[i].first.containsAddress(physicalAddress)))
@@ -334,7 +334,7 @@ private:
 	static const uint64_t s_pathHashSalt;
 
 	// Get a hash key for looking up paths by their local port and destination address
-	ZT_ALWAYS_INLINE uint64_t _pathHash(int64_t l,const InetAddress &r) const
+	ZT_INLINE uint64_t _pathHash(int64_t l,const InetAddress &r) const
 	{
 		if (r.family() == AF_INET) {
 			return Utils::hash64(s_pathHashSalt ^ (uint64_t)(reinterpret_cast<const struct sockaddr_in *>(&r)->sin_addr.s_addr)) + (uint64_t)Utils::ntoh(reinterpret_cast<const struct sockaddr_in *>(&r)->sin_port) + (uint64_t)l;

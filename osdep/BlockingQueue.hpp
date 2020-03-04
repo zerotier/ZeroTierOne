@@ -40,16 +40,16 @@ public:
 		STOP
 	};
 
-	ZT_ALWAYS_INLINE BlockingQueue(void) : r(true) {}
+	ZT_INLINE BlockingQueue(void) : r(true) {}
 
-	ZT_ALWAYS_INLINE void post(T t)
+	ZT_INLINE void post(T t)
 	{
 		std::lock_guard<std::mutex> lock(m);
 		q.push(t);
 		c.notify_one();
 	}
 
-	ZT_ALWAYS_INLINE void postLimit(T t,const unsigned long limit)
+	ZT_INLINE void postLimit(T t,const unsigned long limit)
 	{
 		std::unique_lock<std::mutex> lock(m);
 		for(;;) {
@@ -64,7 +64,7 @@ public:
 		}
 	}
 
-	ZT_ALWAYS_INLINE void stop(void)
+	ZT_INLINE void stop(void)
 	{
 		std::lock_guard<std::mutex> lock(m);
 		r = false;
@@ -72,7 +72,7 @@ public:
 		gc.notify_all();
 	}
 
-	ZT_ALWAYS_INLINE bool get(T &value)
+	ZT_INLINE bool get(T &value)
 	{
 		std::unique_lock<std::mutex> lock(m);
 		if (!r) return false;
@@ -89,7 +89,7 @@ public:
 		return true;
 	}
 
-	ZT_ALWAYS_INLINE TimedWaitResult get(T &value,const unsigned long ms)
+	ZT_INLINE TimedWaitResult get(T &value,const unsigned long ms)
 	{
 		const std::chrono::milliseconds ms2{ms};
 		std::unique_lock<std::mutex> lock(m);

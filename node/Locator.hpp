@@ -37,42 +37,42 @@ namespace ZeroTier {
 class Locator : public TriviallyCopyable
 {
 public:
-	ZT_ALWAYS_INLINE Locator() noexcept { memoryZero(this); }
+	ZT_INLINE Locator() noexcept { memoryZero(this); }
 
 	/**
 	 * Zero the Locator data structure
 	 */
-	ZT_ALWAYS_INLINE void clear() noexcept { memoryZero(this); }
+	ZT_INLINE void clear() noexcept { memoryZero(this); }
 
 	/**
 	 * @return Timestamp (a.k.a. revision number) set by Location signer
 	 */
-	ZT_ALWAYS_INLINE int64_t timestamp() const noexcept { return _ts; }
+	ZT_INLINE int64_t timestamp() const noexcept { return _ts; }
 
 	/**
 	 * @return True if locator is signed
 	 */
-	ZT_ALWAYS_INLINE bool isSigned() const noexcept { return (_signatureLength > 0); }
+	ZT_INLINE bool isSigned() const noexcept { return (_signatureLength > 0); }
 
 	/**
 	 * @return Length of signature in bytes or 0 if none
 	 */
-	ZT_ALWAYS_INLINE unsigned int signatureLength() const noexcept { return _signatureLength; }
+	ZT_INLINE unsigned int signatureLength() const noexcept { return _signatureLength; }
 
 	/**
 	 * @return Pointer to signature bytes
 	 */
-	ZT_ALWAYS_INLINE const uint8_t *signature() const noexcept { return _signature; }
+	ZT_INLINE const uint8_t *signature() const noexcept { return _signature; }
 
 	/**
 	 * @return Number of endpoints in this locator
 	 */
-	ZT_ALWAYS_INLINE unsigned int endpointCount() const noexcept { return _endpointCount; }
+	ZT_INLINE unsigned int endpointCount() const noexcept { return _endpointCount; }
 
 	/**
 	 * @return Pointer to array of endpoints
 	 */
-	ZT_ALWAYS_INLINE const Endpoint *endpoints() const noexcept { return _at; }
+	ZT_INLINE const Endpoint *endpoints() const noexcept { return _at; }
 
 	/**
 	 * Add an endpoint to this locator
@@ -83,7 +83,7 @@ public:
 	 * @param ep Endpoint to add
 	 * @return True if endpoint was added (or already present), false if locator is full
 	 */
-	ZT_ALWAYS_INLINE bool add(const Endpoint &ep) noexcept
+	ZT_INLINE bool add(const Endpoint &ep) noexcept
 	{
 		if (_endpointCount >= ZT_LOCATOR_MAX_ENDPOINTS)
 			return false;
@@ -110,7 +110,7 @@ public:
 	 */
 	bool verify(const Identity &id) const noexcept;
 
-	explicit ZT_ALWAYS_INLINE operator bool() const noexcept { return (_ts != 0); }
+	explicit ZT_INLINE operator bool() const noexcept { return (_ts != 0); }
 
 	static constexpr int marshalSizeMax() noexcept { return ZT_LOCATOR_MARSHAL_SIZE_MAX; }
 	int marshal(uint8_t data[ZT_LOCATOR_MARSHAL_SIZE_MAX],bool excludeSignature = false) const noexcept;

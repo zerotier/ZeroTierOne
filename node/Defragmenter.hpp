@@ -89,7 +89,7 @@ public:
 		ERR_OUT_OF_MEMORY
 	};
 
-	ZT_ALWAYS_INLINE Defragmenter() :
+	ZT_INLINE Defragmenter() :
 		_messages(GCT * 2)
 	{
 	}
@@ -136,7 +136,7 @@ public:
 	 * @param maxIncomingFragmentsPerPath If via is non-NULL this is a cutoff for maximum fragments in flight via this path
 	 * @return Result code
 	 */
-	ZT_ALWAYS_INLINE ResultCode assemble(
+	ZT_INLINE ResultCode assemble(
 		const uint64_t messageId,
 		FCV< Buf::Slice,MF > &message,
 		SharedPtr<Buf> &fragment,
@@ -277,7 +277,7 @@ public:
 	/**
 	 * Erase all message entries in the internal queue
 	 */
-	ZT_ALWAYS_INLINE void clear()
+	ZT_INLINE void clear()
 	{
 		RWMutex::Lock ml(_messages_l);
 		_messages.clear();
@@ -286,7 +286,7 @@ public:
 	/**
 	 * @return Number of entries currently in message defragmentation cache
 	 */
-	ZT_ALWAYS_INLINE unsigned int cacheSize() noexcept
+	ZT_INLINE unsigned int cacheSize() noexcept
 	{
 		RWMutex::RLock ml(_messages_l);
 		return _messages.size();
@@ -295,8 +295,8 @@ public:
 private:
 	struct _E
 	{
-		ZT_ALWAYS_INLINE _E() noexcept : id(0),lastUsed(0),totalFragmentsExpected(0),fragmentsReceived(0),via(),message(),lock() {}
-		ZT_ALWAYS_INLINE ~_E()
+		ZT_INLINE _E() noexcept : id(0),lastUsed(0),totalFragmentsExpected(0),fragmentsReceived(0),via(),message(),lock() {}
+		ZT_INLINE ~_E()
 		{
 			if (via) {
 				via->_inboundFragmentedMessages_l.lock();

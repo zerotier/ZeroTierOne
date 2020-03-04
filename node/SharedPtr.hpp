@@ -34,11 +34,11 @@ template<typename T>
 class SharedPtr : public TriviallyCopyable
 {
 public:
-	ZT_ALWAYS_INLINE SharedPtr() noexcept : _ptr((T *)0) {}
-	explicit ZT_ALWAYS_INLINE SharedPtr(T *obj) noexcept : _ptr(obj) { ++obj->__refCount; }
-	ZT_ALWAYS_INLINE SharedPtr(const SharedPtr &sp) noexcept : _ptr(sp._getAndInc()) {}
+	ZT_INLINE SharedPtr() noexcept : _ptr((T *)0) {}
+	explicit ZT_INLINE SharedPtr(T *obj) noexcept : _ptr(obj) { ++obj->__refCount; }
+	ZT_INLINE SharedPtr(const SharedPtr &sp) noexcept : _ptr(sp._getAndInc()) {}
 
-	ZT_ALWAYS_INLINE ~SharedPtr()
+	ZT_INLINE ~SharedPtr()
 	{
 		if (_ptr) {
 			if (--_ptr->__refCount <= 0)
@@ -46,7 +46,7 @@ public:
 		}
 	}
 
-	ZT_ALWAYS_INLINE SharedPtr &operator=(const SharedPtr &sp)
+	ZT_INLINE SharedPtr &operator=(const SharedPtr &sp)
 	{
 		if (_ptr != sp._ptr) {
 			T *p = sp._getAndInc();
@@ -67,7 +67,7 @@ public:
 	 *
 	 * @param ptr Naked pointer to assign
 	 */
-	ZT_ALWAYS_INLINE void set(T *ptr) noexcept
+	ZT_INLINE void set(T *ptr) noexcept
 	{
 		zero();
 		++ptr->__refCount;
@@ -81,14 +81,14 @@ public:
 	 *
 	 * @param ptr Pointer to set
 	 */
-	ZT_ALWAYS_INLINE void unsafeSet(T *ptr) noexcept { _ptr = ptr; }
+	ZT_INLINE void unsafeSet(T *ptr) noexcept { _ptr = ptr; }
 
 	/**
 	 * Swap with another pointer 'for free' without ref count overhead
 	 *
 	 * @param with Pointer to swap with
 	 */
-	ZT_ALWAYS_INLINE void swap(SharedPtr &with) noexcept
+	ZT_INLINE void swap(SharedPtr &with) noexcept
 	{
 		T *tmp = _ptr;
 		_ptr = with._ptr;
@@ -103,7 +103,7 @@ public:
 	 *
 	 * @param from Origin pointer; will be zeroed
 	 */
-	ZT_ALWAYS_INLINE void move(SharedPtr &from)
+	ZT_INLINE void move(SharedPtr &from)
 	{
 		if (_ptr) {
 			if (--_ptr->__refCount <= 0)
@@ -113,20 +113,20 @@ public:
 		from._ptr = nullptr;
 	}
 
-	ZT_ALWAYS_INLINE operator bool() const noexcept { return (_ptr != nullptr); }
+	ZT_INLINE operator bool() const noexcept { return (_ptr != nullptr); }
 
-	ZT_ALWAYS_INLINE T &operator*() const noexcept { return *_ptr; }
-	ZT_ALWAYS_INLINE T *operator->() const noexcept { return _ptr; }
+	ZT_INLINE T &operator*() const noexcept { return *_ptr; }
+	ZT_INLINE T *operator->() const noexcept { return _ptr; }
 
 	/**
 	 * @return Raw pointer to held object
 	 */
-	ZT_ALWAYS_INLINE T *ptr() const noexcept { return _ptr; }
+	ZT_INLINE T *ptr() const noexcept { return _ptr; }
 
 	/**
 	 * Set this pointer to NULL
 	 */
-	ZT_ALWAYS_INLINE void zero()
+	ZT_INLINE void zero()
 	{
 		if (_ptr) {
 			if (--_ptr->__refCount <= 0)
@@ -138,22 +138,22 @@ public:
 	/**
 	 * @return Number of references according to this object's ref count or 0 if NULL
 	 */
-	ZT_ALWAYS_INLINE int references() noexcept
+	ZT_INLINE int references() noexcept
 	{
 		if (_ptr)
 			return _ptr->__refCount;
 		return 0;
 	}
 
-	ZT_ALWAYS_INLINE bool operator==(const SharedPtr &sp) const noexcept { return (_ptr == sp._ptr); }
-	ZT_ALWAYS_INLINE bool operator!=(const SharedPtr &sp) const noexcept { return (_ptr != sp._ptr); }
-	ZT_ALWAYS_INLINE bool operator>(const SharedPtr &sp) const noexcept { return (_ptr > sp._ptr); }
-	ZT_ALWAYS_INLINE bool operator<(const SharedPtr &sp) const noexcept { return (_ptr < sp._ptr); }
-	ZT_ALWAYS_INLINE bool operator>=(const SharedPtr &sp) const noexcept { return (_ptr >= sp._ptr); }
-	ZT_ALWAYS_INLINE bool operator<=(const SharedPtr &sp) const noexcept { return (_ptr <= sp._ptr); }
+	ZT_INLINE bool operator==(const SharedPtr &sp) const noexcept { return (_ptr == sp._ptr); }
+	ZT_INLINE bool operator!=(const SharedPtr &sp) const noexcept { return (_ptr != sp._ptr); }
+	ZT_INLINE bool operator>(const SharedPtr &sp) const noexcept { return (_ptr > sp._ptr); }
+	ZT_INLINE bool operator<(const SharedPtr &sp) const noexcept { return (_ptr < sp._ptr); }
+	ZT_INLINE bool operator>=(const SharedPtr &sp) const noexcept { return (_ptr >= sp._ptr); }
+	ZT_INLINE bool operator<=(const SharedPtr &sp) const noexcept { return (_ptr <= sp._ptr); }
 
 private:
-	ZT_ALWAYS_INLINE T *_getAndInc() const noexcept
+	ZT_INLINE T *_getAndInc() const noexcept
 	{
 		if (_ptr)
 			++_ptr->__refCount;
@@ -166,7 +166,7 @@ private:
 
 namespace std {
 template<typename T>
-ZT_ALWAYS_INLINE void swap(ZeroTier::SharedPtr<T> &a,ZeroTier::SharedPtr<T> &b) noexcept { a.swap(b); }
+ZT_INLINE void swap(ZeroTier::SharedPtr<T> &a,ZeroTier::SharedPtr<T> &b) noexcept { a.swap(b); }
 }
 
 #endif

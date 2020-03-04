@@ -16,8 +16,11 @@
 
 #include "Constants.hpp"
 
-#include <cstdlib>
-#include <cstring>
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+#define ZT_CONST_TO_BE_UINT16(x) ((uint16_t)((uint16_t)((uint16_t)(x) << 8U) | (uint16_t)((uint16_t)(x) >> 8U)))
+#else
+#define ZT_CONST_TO_BE_UINT16(x) ((uint16_t)(x))
+#endif
 
 namespace ZeroTier {
 
@@ -192,14 +195,14 @@ uint64_t random() noexcept;
 bool scopy(char *dest,unsigned int len,const char *src) noexcept;
 
 /**
- * Mix bits in a 64-bit integer
+ * Mix bits in a 64-bit integer (non-cryptographic)
  *
  * https://nullprogram.com/blog/2018/07/31/
  *
  * @param x Integer to mix
  * @return Hashed value
  */
-static ZT_ALWAYS_INLINE uint64_t hash64(uint64_t x) noexcept
+static ZT_INLINE uint64_t hash64(uint64_t x) noexcept
 {
 	x ^= x >> 30U;
 	x *= 0xbf58476d1ce4e5b9ULL;
@@ -210,18 +213,13 @@ static ZT_ALWAYS_INLINE uint64_t hash64(uint64_t x) noexcept
 }
 
 /**
- * @param b Buffer to check
- * @param l Length of buffer
- * @return True if buffer is all zero
+ * Check if a buffer's contents are all zero
  */
-static ZT_ALWAYS_INLINE bool allZero(const void *const b,const unsigned int l) noexcept
+static ZT_INLINE bool allZero(const void *const b,unsigned int l) noexcept
 {
-	const uint8_t *x = reinterpret_cast<const uint8_t *>(b);
-	const uint8_t *const y = x + l;
-	while (x != y) {
-		if (*x != 0)
+	for(unsigned int i=0;i<l;++i) {
+		if (reinterpret_cast<const uint8_t *>(b)[i] != 0)
 			return false;
-		++x;
 	}
 	return true;
 }
@@ -234,7 +232,7 @@ static ZT_ALWAYS_INLINE bool allZero(const void *const b,const unsigned int l) n
  * @param saveptr Pointer to pointer where function can save state
  * @return Next token or NULL if none
  */
-static ZT_ALWAYS_INLINE char *stok(char *str,const char *delim,char **saveptr) noexcept
+static ZT_INLINE char *stok(char *str,const char *delim,char **saveptr) noexcept
 {
 #ifdef __WINDOWS__
 	return strtok_s(str,delim,saveptr);
@@ -243,12 +241,12 @@ static ZT_ALWAYS_INLINE char *stok(char *str,const char *delim,char **saveptr) n
 #endif
 }
 
-static ZT_ALWAYS_INLINE unsigned int strToUInt(const char *s) noexcept
+static ZT_INLINE unsigned int strToUInt(const char *s) noexcept
 {
 	return (unsigned int)strtoul(s,nullptr,10);
 }
 
-static ZT_ALWAYS_INLINE unsigned long long hexStrToU64(const char *s) noexcept
+static ZT_INLINE unsigned long long hexStrToU64(const char *s) noexcept
 {
 #ifdef __WINDOWS__
 	return (unsigned long long)_strtoui64(s,nullptr,16);
@@ -266,7 +264,7 @@ static ZT_ALWAYS_INLINE unsigned long long hexStrToU64(const char *s) noexcept
  * @param len Length of data
  * @return FNV1a checksum
  */
-static ZT_ALWAYS_INLINE uint32_t fnv1a32(const void *const data,const unsigned int len) noexcept
+static ZT_INLINE uint32_t fnv1a32(const void *const data,const unsigned int len) noexcept
 {
 	uint32_t h = 0x811c9dc5;
 	const uint32_t p = 0x01000193;
@@ -276,13 +274,13 @@ static ZT_ALWAYS_INLINE uint32_t fnv1a32(const void *const data,const unsigned i
 }
 
 #ifdef __GNUC__
-static ZT_ALWAYS_INLINE unsigned int countBits(const uint8_t v) noexcept { return (unsigned int)__builtin_popcount((unsigned int)v); }
-static ZT_ALWAYS_INLINE unsigned int countBits(const uint16_t v) noexcept { return (unsigned int)__builtin_popcount((unsigned int)v); }
-static ZT_ALWAYS_INLINE unsigned int countBits(const uint32_t v) noexcept { return (unsigned int)__builtin_popcountl((unsigned long)v); }
-static ZT_ALWAYS_INLINE unsigned int countBits(const uint64_t v)  noexcept{ return (unsigned int)__builtin_popcountll((unsigned long long)v); }
+static ZT_INLINE unsigned int countBits(const uint8_t v) noexcept { return (unsigned int)__builtin_popcount((unsigned int)v); }
+static ZT_INLINE unsigned int countBits(const uint16_t v) noexcept { return (unsigned int)__builtin_popcount((unsigned int)v); }
+static ZT_INLINE unsigned int countBits(const uint32_t v) noexcept { return (unsigned int)__builtin_popcountl((unsigned long)v); }
+static ZT_INLINE unsigned int countBits(const uint64_t v)  noexcept{ return (unsigned int)__builtin_popcountll((unsigned long long)v); }
 #else
 template<typename T>
-static ZT_ALWAYS_INLINE unsigned int countBits(T v) noexcept
+static ZT_INLINE unsigned int countBits(T v) noexcept
 {
 	v = v - ((v >> 1) & (T)~(T)0/3);
 	v = (v & (T)~(T)0/15*3) + ((v >> 2) & (T)~(T)0/15*3);
@@ -297,7 +295,7 @@ static ZT_ALWAYS_INLINE unsigned int countBits(T v) noexcept
  * @param n Integer to swap
  * @return Integer with bytes reversed
  */
-static ZT_ALWAYS_INLINE uint64_t swapBytes(const uint64_t n) noexcept
+static ZT_INLINE uint64_t swapBytes(const uint64_t n) noexcept
 {
 #ifdef __GNUC__
 	return __builtin_bswap64(n);
@@ -325,9 +323,9 @@ static ZT_ALWAYS_INLINE uint64_t swapBytes(const uint64_t n) noexcept
  * @param n Integer to swap
  * @return Integer with bytes reversed
  */
-static ZT_ALWAYS_INLINE uint32_t swapBytes(const uint32_t n) noexcept
+static ZT_INLINE uint32_t swapBytes(const uint32_t n) noexcept
 {
-#if defined(__GCC__)
+#if defined(__GNUC__)
 	return __builtin_bswap32(n);
 #else
 #ifdef _MSC_VER
@@ -344,9 +342,9 @@ static ZT_ALWAYS_INLINE uint32_t swapBytes(const uint32_t n) noexcept
  * @param n Integer to swap
  * @return Integer with bytes reversed
  */
-static ZT_ALWAYS_INLINE uint16_t swapBytes(const uint16_t n) noexcept
+static ZT_INLINE uint16_t swapBytes(const uint16_t n) noexcept
 {
-#if defined(__GCC__)
+#if defined(__GNUC__)
 	return __builtin_bswap16(n);
 #else
 #ifdef _MSC_VER
@@ -362,33 +360,33 @@ static ZT_ALWAYS_INLINE uint16_t swapBytes(const uint16_t n) noexcept
 template<typename I,unsigned int S>
 class _swap_bytes_bysize;
 template<typename I>
-class _swap_bytes_bysize<I,1> { public: static ZT_ALWAYS_INLINE I s(const I n) noexcept { return n; } };
+class _swap_bytes_bysize<I,1> { public: static ZT_INLINE I s(const I n) noexcept { return n; } };
 template<typename I>
-class _swap_bytes_bysize<I,2> { public: static ZT_ALWAYS_INLINE I s(const I n) noexcept { return (I)swapBytes((uint16_t)n); } };
+class _swap_bytes_bysize<I,2> { public: static ZT_INLINE I s(const I n) noexcept { return (I)swapBytes((uint16_t)n); } };
 template<typename I>
-class _swap_bytes_bysize<I,4> { public: static ZT_ALWAYS_INLINE I s(const I n) noexcept { return (I)swapBytes((uint32_t)n); } };
+class _swap_bytes_bysize<I,4> { public: static ZT_INLINE I s(const I n) noexcept { return (I)swapBytes((uint32_t)n); } };
 template<typename I>
-class _swap_bytes_bysize<I,8> { public: static ZT_ALWAYS_INLINE I s(const I n) noexcept { return (I)swapBytes((uint64_t)n); } };
+class _swap_bytes_bysize<I,8> { public: static ZT_INLINE I s(const I n) noexcept { return (I)swapBytes((uint64_t)n); } };
 template<typename I,unsigned int S>
 class _load_be_bysize;
 template<typename I>
-class _load_be_bysize<I,1> { public: static ZT_ALWAYS_INLINE I l(const uint8_t *const p) noexcept { return p[0]; }};
+class _load_be_bysize<I,1> { public: static ZT_INLINE I l(const uint8_t *const p) noexcept { return p[0]; }};
 template<typename I>
-class _load_be_bysize<I,2> { public: static ZT_ALWAYS_INLINE I l(const uint8_t *const p) noexcept { return (I)(((unsigned int)p[0] << 8U) | (unsigned int)p[1]); }};
+class _load_be_bysize<I,2> { public: static ZT_INLINE I l(const uint8_t *const p) noexcept { return (I)(((unsigned int)p[0] << 8U) | (unsigned int)p[1]); }};
 template<typename I>
-class _load_be_bysize<I,4> { public: static ZT_ALWAYS_INLINE I l(const uint8_t *const p) noexcept { return (I)(((uint32_t)p[0] << 24U) | ((uint32_t)p[1] << 16U) | ((uint32_t)p[2] << 8U) | (uint32_t)p[3]); }};
+class _load_be_bysize<I,4> { public: static ZT_INLINE I l(const uint8_t *const p) noexcept { return (I)(((uint32_t)p[0] << 24U) | ((uint32_t)p[1] << 16U) | ((uint32_t)p[2] << 8U) | (uint32_t)p[3]); }};
 template<typename I>
-class _load_be_bysize<I,8> { public: static ZT_ALWAYS_INLINE I l(const uint8_t *const p) noexcept { return (I)(((uint64_t)p[0] << 56U) | ((uint64_t)p[1] << 48U) | ((uint64_t)p[2] << 40U) | ((uint64_t)p[3] << 32U) | ((uint64_t)p[4] << 24U) | ((uint64_t)p[5] << 16U) | ((uint64_t)p[6] << 8U) | (uint64_t)p[7]); }};
+class _load_be_bysize<I,8> { public: static ZT_INLINE I l(const uint8_t *const p) noexcept { return (I)(((uint64_t)p[0] << 56U) | ((uint64_t)p[1] << 48U) | ((uint64_t)p[2] << 40U) | ((uint64_t)p[3] << 32U) | ((uint64_t)p[4] << 24U) | ((uint64_t)p[5] << 16U) | ((uint64_t)p[6] << 8U) | (uint64_t)p[7]); }};
 template<typename I,unsigned int S>
 class _load_le_bysize;
 template<typename I>
-class _load_le_bysize<I,1> { public: static ZT_ALWAYS_INLINE I l(const uint8_t *const p) noexcept { return p[0]; }};
+class _load_le_bysize<I,1> { public: static ZT_INLINE I l(const uint8_t *const p) noexcept { return p[0]; }};
 template<typename I>
-class _load_le_bysize<I,2> { public: static ZT_ALWAYS_INLINE I l(const uint8_t *const p) noexcept { return (I)((unsigned int)p[0] | ((unsigned int)p[1] << 8U)); }};
+class _load_le_bysize<I,2> { public: static ZT_INLINE I l(const uint8_t *const p) noexcept { return (I)((unsigned int)p[0] | ((unsigned int)p[1] << 8U)); }};
 template<typename I>
-class _load_le_bysize<I,4> { public: static ZT_ALWAYS_INLINE I l(const uint8_t *const p) noexcept { return (I)((uint32_t)p[0] | ((uint32_t)p[1] << 8U) | ((uint32_t)p[2] << 16U) | ((uint32_t)p[3] << 24U)); }};
+class _load_le_bysize<I,4> { public: static ZT_INLINE I l(const uint8_t *const p) noexcept { return (I)((uint32_t)p[0] | ((uint32_t)p[1] << 8U) | ((uint32_t)p[2] << 16U) | ((uint32_t)p[3] << 24U)); }};
 template<typename I>
-class _load_le_bysize<I,8> { public: static ZT_ALWAYS_INLINE I l(const uint8_t *const p) noexcept { return (I)((uint64_t)p[0] | ((uint64_t)p[1] << 8U) | ((uint64_t)p[2] << 16U) | ((uint64_t)p[3] << 24U) | ((uint64_t)p[4] << 32U) | ((uint64_t)p[5] << 40U) | ((uint64_t)p[6] << 48U) | ((uint64_t)p[7]) << 56U); }};
+class _load_le_bysize<I,8> { public: static ZT_INLINE I l(const uint8_t *const p) noexcept { return (I)((uint64_t)p[0] | ((uint64_t)p[1] << 8U) | ((uint64_t)p[2] << 16U) | ((uint64_t)p[3] << 24U) | ((uint64_t)p[4] << 32U) | ((uint64_t)p[5] << 40U) | ((uint64_t)p[6] << 48U) | ((uint64_t)p[7]) << 56U); }};
 
 /**
  * Convert any signed or unsigned integer type to big-endian ("network") byte order
@@ -398,7 +396,7 @@ class _load_le_bysize<I,8> { public: static ZT_ALWAYS_INLINE I l(const uint8_t *
  * @return Value in big-endian order
  */
 template<typename I>
-static ZT_ALWAYS_INLINE I hton(const I n) noexcept
+static ZT_INLINE I hton(const I n) noexcept
 {
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 	return _swap_bytes_bysize<I,sizeof(I)>::s(n);
@@ -415,7 +413,7 @@ static ZT_ALWAYS_INLINE I hton(const I n) noexcept
  * @return Value in host byte order
  */
 template<typename I>
-static ZT_ALWAYS_INLINE I ntoh(const I n) noexcept
+static ZT_INLINE I ntoh(const I n) noexcept
 {
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 	return _swap_bytes_bysize<I,sizeof(I)>::s(n);
@@ -432,7 +430,7 @@ static ZT_ALWAYS_INLINE I ntoh(const I n) noexcept
  * @return Loaded raw integer
  */
 template<typename I>
-static ZT_ALWAYS_INLINE I loadAsIsEndian(const void *const p) noexcept
+static ZT_INLINE I loadAsIsEndian(const void *const p) noexcept
 {
 #ifdef ZT_NO_UNALIGNED_ACCESS
 #if __BYTE_ORDER == __LITTLE_ENDIAN
@@ -453,7 +451,7 @@ static ZT_ALWAYS_INLINE I loadAsIsEndian(const void *const p) noexcept
  * @param i Integer to store
  */
 template<typename I>
-static ZT_ALWAYS_INLINE void storeAsIsEndian(void *const p,const I i) noexcept
+static ZT_INLINE void storeAsIsEndian(void *const p,const I i) noexcept
 {
 #ifdef ZT_NO_UNALIGNED_ACCESS
 	for(unsigned int k=0;k<sizeof(I);++k)
@@ -471,7 +469,7 @@ static ZT_ALWAYS_INLINE void storeAsIsEndian(void *const p,const I i) noexcept
  * @return Decoded integer
  */
 template<typename I>
-static ZT_ALWAYS_INLINE I loadBigEndian(const void *const p) noexcept
+static ZT_INLINE I loadBigEndian(const void *const p) noexcept
 {
 #ifdef ZT_NO_UNALIGNED_ACCESS
 	return _load_be_bysize<I,sizeof(I)>::l(reinterpret_cast<const uint8_t *>(p));
@@ -488,7 +486,7 @@ static ZT_ALWAYS_INLINE I loadBigEndian(const void *const p) noexcept
  * #param i Integer to write
  */
 template<typename I>
-static ZT_ALWAYS_INLINE void storeBigEndian(void *const p,I i) noexcept
+static ZT_INLINE void storeBigEndian(void *const p,I i) noexcept
 {
 #ifdef ZT_NO_UNALIGNED_ACCESS
 	storeAsIsEndian(p,hton(i));
@@ -505,7 +503,7 @@ static ZT_ALWAYS_INLINE void storeBigEndian(void *const p,I i) noexcept
  * @return Decoded integer
  */
 template<typename I>
-static ZT_ALWAYS_INLINE I loadLittleEndian(const void *const p) noexcept
+static ZT_INLINE I loadLittleEndian(const void *const p) noexcept
 {
 #if __BYTE_ORDER == __BIG_ENDIAN || defined(ZT_NO_UNALIGNED_ACCESS)
 	return _load_le_bysize<I,sizeof(I)>::l(reinterpret_cast<const uint8_t *>(p));
@@ -522,7 +520,7 @@ static ZT_ALWAYS_INLINE I loadLittleEndian(const void *const p) noexcept
  * #param i Integer to write
  */
 template<typename I>
-static ZT_ALWAYS_INLINE void storeLittleEndian(void *const p,const I i) noexcept
+static ZT_INLINE void storeLittleEndian(void *const p,const I i) noexcept
 {
 #if __BYTE_ORDER == __BIG_ENDIAN || defined(ZT_NO_UNALIGNED_ACCESS)
 	storeAsIsEndian(p,_swap_bytes_bysize<I,sizeof(I)>::s(i));

@@ -81,7 +81,7 @@ private:
 
 	struct _WhoisQueueItem
 	{
-		ZT_ALWAYS_INLINE _WhoisQueueItem() : lastRetry(0),inboundPackets(),retries(0) {}
+		ZT_INLINE _WhoisQueueItem() : lastRetry(0),inboundPackets(),retries(0) {}
 		int64_t lastRetry;
 		FCV<Buf::Slice,32> inboundPackets; // capacity can be changed but this should be plenty
 		unsigned int retries;

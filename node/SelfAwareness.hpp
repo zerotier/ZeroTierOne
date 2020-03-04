@@ -72,13 +72,13 @@ private:
 		InetAddress reporterPhysicalAddress;
 		InetAddress::IpScope scope;
 
-		ZT_ALWAYS_INLINE PhySurfaceKey() {}
-		ZT_ALWAYS_INLINE PhySurfaceKey(const Address &r,const int64_t rol,const InetAddress &ra,InetAddress::IpScope s) : reporter(r),receivedOnLocalSocket(rol),reporterPhysicalAddress(ra),scope(s) {}
+		ZT_INLINE PhySurfaceKey() {}
+		ZT_INLINE PhySurfaceKey(const Address &r,const int64_t rol,const InetAddress &ra,InetAddress::IpScope s) : reporter(r),receivedOnLocalSocket(rol),reporterPhysicalAddress(ra),scope(s) {}
 
-		ZT_ALWAYS_INLINE unsigned long hashCode() const { return ((unsigned long)reporter.toInt() + (unsigned long)receivedOnLocalSocket + (unsigned long)scope); }
+		ZT_INLINE unsigned long hashCode() const { return ((unsigned long)reporter.toInt() + (unsigned long)receivedOnLocalSocket + (unsigned long)scope); }
 
-		ZT_ALWAYS_INLINE bool operator==(const PhySurfaceKey &k) const { return ((reporter == k.reporter)&&(receivedOnLocalSocket == k.receivedOnLocalSocket)&&(reporterPhysicalAddress == k.reporterPhysicalAddress)&&(scope == k.scope)); }
-		ZT_ALWAYS_INLINE bool operator!=(const PhySurfaceKey &k) const { return (!(*this == k)); }
+		ZT_INLINE bool operator==(const PhySurfaceKey &k) const { return ((reporter == k.reporter) && (receivedOnLocalSocket == k.receivedOnLocalSocket) && (reporterPhysicalAddress == k.reporterPhysicalAddress) && (scope == k.scope)); }
+		ZT_INLINE bool operator!=(const PhySurfaceKey &k) const { return (!(*this == k)); }
 	};
 
 	struct PhySurfaceEntry
@@ -87,8 +87,8 @@ private:
 		uint64_t ts;
 		bool trusted;
 
-		ZT_ALWAYS_INLINE PhySurfaceEntry() : mySurface(),ts(0),trusted(false) {}
-		ZT_ALWAYS_INLINE PhySurfaceEntry(const InetAddress &a,const uint64_t t) : mySurface(a),ts(t),trusted(false) {}
+		ZT_INLINE PhySurfaceEntry() : mySurface(),ts(0),trusted(false) {}
+		ZT_INLINE PhySurfaceEntry(const InetAddress &a,const uint64_t t) : mySurface(a),ts(t),trusted(false) {}
 	};
 
 	const RuntimeEnvironment *RR;

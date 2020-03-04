@@ -58,7 +58,7 @@ public:
 	virtual void scanMulticastGroups(std::vector<MulticastGroup> &added,std::vector<MulticastGroup> &removed) = 0;
 	virtual void setMtu(unsigned int mtu) = 0;
 
-	ZT_ALWAYS_INLINE int addRoute(const InetAddress &target,const InetAddress &via,const unsigned int metric)
+	ZT_INLINE int addRoute(const InetAddress &target,const InetAddress &via,const unsigned int metric)
 	{
 		const std::string dn(this->routingDeviceName());
 		const char *const dnp = (dn.length() > 0) ? dn.c_str() : (const char *)0;
@@ -67,14 +67,14 @@ public:
 		return 0;
 	}
 
-	ZT_ALWAYS_INLINE int removeRoute(const InetAddress &target,const InetAddress &via,const unsigned int metric)
+	ZT_INLINE int removeRoute(const InetAddress &target,const InetAddress &via,const unsigned int metric)
 	{
 		std::lock_guard<std::mutex> l(_managedRoutes_l);
 		_managedRoutes.erase(std::pair<InetAddress,unsigned int>(target,metric));
 		return 0;
 	}
 
-	ZT_ALWAYS_INLINE int syncRoutes()
+	ZT_INLINE int syncRoutes()
 	{
 		std::lock_guard<std::mutex> l(_managedRoutes_l);
 		for(auto r=_managedRoutes.begin();r!=_managedRoutes.end();++r) {

@@ -28,25 +28,25 @@ namespace ZeroTier {
 class Mutex
 {
 public:
-	ZT_ALWAYS_INLINE Mutex() noexcept { pthread_mutex_init(&_mh,0); }
-	ZT_ALWAYS_INLINE ~Mutex() noexcept { pthread_mutex_destroy(&_mh); }
+	ZT_INLINE Mutex() noexcept { pthread_mutex_init(&_mh,0); }
+	ZT_INLINE ~Mutex() noexcept { pthread_mutex_destroy(&_mh); }
 
-	ZT_ALWAYS_INLINE void lock() const noexcept { pthread_mutex_lock(&((const_cast <Mutex *> (this))->_mh)); }
-	ZT_ALWAYS_INLINE void unlock() const noexcept { pthread_mutex_unlock(&((const_cast <Mutex *> (this))->_mh)); }
+	ZT_INLINE void lock() const noexcept { pthread_mutex_lock(&((const_cast <Mutex *> (this))->_mh)); }
+	ZT_INLINE void unlock() const noexcept { pthread_mutex_unlock(&((const_cast <Mutex *> (this))->_mh)); }
 
 	class Lock
 	{
 	public:
-		ZT_ALWAYS_INLINE Lock(Mutex &m) noexcept : _m(&m) { m.lock(); }
-		ZT_ALWAYS_INLINE Lock(const Mutex &m) noexcept : _m(const_cast<Mutex *>(&m)) { _m->lock(); }
-		ZT_ALWAYS_INLINE ~Lock() { _m->unlock(); }
+		ZT_INLINE Lock(Mutex &m) noexcept : _m(&m) { m.lock(); }
+		ZT_INLINE Lock(const Mutex &m) noexcept : _m(const_cast<Mutex *>(&m)) { _m->lock(); }
+		ZT_INLINE ~Lock() { _m->unlock(); }
 	private:
 		Mutex *const _m;
 	};
 
 private:
-	ZT_ALWAYS_INLINE Mutex(const Mutex &) noexcept {}
-	ZT_ALWAYS_INLINE const Mutex &operator=(const Mutex &) noexcept { return *this; }
+	ZT_INLINE Mutex(const Mutex &) noexcept {}
+	ZT_INLINE const Mutex &operator=(const Mutex &) noexcept { return *this; }
 
 	pthread_mutex_t _mh;
 };
@@ -54,13 +54,13 @@ private:
 class RWMutex
 {
 public:
-	ZT_ALWAYS_INLINE RWMutex() noexcept { pthread_rwlock_init(&_mh,0); }
-	ZT_ALWAYS_INLINE ~RWMutex() noexcept { pthread_rwlock_destroy(&_mh); }
+	ZT_INLINE RWMutex() noexcept { pthread_rwlock_init(&_mh,0); }
+	ZT_INLINE ~RWMutex() noexcept { pthread_rwlock_destroy(&_mh); }
 
-	ZT_ALWAYS_INLINE void lock() const noexcept { pthread_rwlock_wrlock(&((const_cast <RWMutex *> (this))->_mh)); }
-	ZT_ALWAYS_INLINE void rlock() const noexcept { pthread_rwlock_rdlock(&((const_cast <RWMutex *> (this))->_mh)); }
-	ZT_ALWAYS_INLINE void unlock() const noexcept { pthread_rwlock_unlock(&((const_cast <RWMutex *> (this))->_mh)); }
-	ZT_ALWAYS_INLINE void runlock() const noexcept { pthread_rwlock_unlock(&((const_cast <RWMutex *> (this))->_mh)); }
+	ZT_INLINE void lock() const noexcept { pthread_rwlock_wrlock(&((const_cast <RWMutex *> (this))->_mh)); }
+	ZT_INLINE void rlock() const noexcept { pthread_rwlock_rdlock(&((const_cast <RWMutex *> (this))->_mh)); }
+	ZT_INLINE void unlock() const noexcept { pthread_rwlock_unlock(&((const_cast <RWMutex *> (this))->_mh)); }
+	ZT_INLINE void runlock() const noexcept { pthread_rwlock_unlock(&((const_cast <RWMutex *> (this))->_mh)); }
 
 	/**
 	 * RAAI locker that acquires only the read lock (shared read)
@@ -68,9 +68,9 @@ public:
 	class RLock
 	{
 	public:
-		ZT_ALWAYS_INLINE RLock(RWMutex &m) noexcept : _m(&m) { m.rlock(); }
-		ZT_ALWAYS_INLINE RLock(const RWMutex &m) noexcept : _m(const_cast<RWMutex *>(&m)) { _m->rlock(); }
-		ZT_ALWAYS_INLINE ~RLock() { _m->runlock(); }
+		ZT_INLINE RLock(RWMutex &m) noexcept : _m(&m) { m.rlock(); }
+		ZT_INLINE RLock(const RWMutex &m) noexcept : _m(const_cast<RWMutex *>(&m)) { _m->rlock(); }
+		ZT_INLINE ~RLock() { _m->runlock(); }
 	private:
 		RWMutex *const _m;
 	};
@@ -81,9 +81,9 @@ public:
 	class Lock
 	{
 	public:
-		ZT_ALWAYS_INLINE Lock(RWMutex &m) noexcept : _m(&m) { m.lock(); }
-		ZT_ALWAYS_INLINE Lock(const RWMutex &m) noexcept : _m(const_cast<RWMutex *>(&m)) { _m->lock(); }
-		ZT_ALWAYS_INLINE ~Lock() { _m->unlock(); }
+		ZT_INLINE Lock(RWMutex &m) noexcept : _m(&m) { m.lock(); }
+		ZT_INLINE Lock(const RWMutex &m) noexcept : _m(const_cast<RWMutex *>(&m)) { _m->lock(); }
+		ZT_INLINE ~Lock() { _m->unlock(); }
 	private:
 		RWMutex *const _m;
 	};
@@ -97,19 +97,19 @@ public:
 	class RMaybeWLock
 	{
 	public:
-		ZT_ALWAYS_INLINE RMaybeWLock(RWMutex &m) noexcept : _m(&m),_w(false) { m.rlock(); }
-		ZT_ALWAYS_INLINE RMaybeWLock(const RWMutex &m) noexcept : _m(const_cast<RWMutex *>(&m)),_w(false) { _m->rlock(); }
-		ZT_ALWAYS_INLINE void writing() noexcept { if (!_w) { _w = true; _m->runlock(); _m->lock(); } }
-		ZT_ALWAYS_INLINE void reading() noexcept { if (_w) { _w = false; _m->unlock(); _m->rlock(); } }
-		ZT_ALWAYS_INLINE ~RMaybeWLock() { if (_w) _m->unlock(); else _m->runlock(); }
+		ZT_INLINE RMaybeWLock(RWMutex &m) noexcept : _m(&m),_w(false) { m.rlock(); }
+		ZT_INLINE RMaybeWLock(const RWMutex &m) noexcept : _m(const_cast<RWMutex *>(&m)),_w(false) { _m->rlock(); }
+		ZT_INLINE void writing() noexcept { if (!_w) { _w = true; _m->runlock(); _m->lock(); } }
+		ZT_INLINE void reading() noexcept { if (_w) { _w = false; _m->unlock(); _m->rlock(); } }
+		ZT_INLINE ~RMaybeWLock() { if (_w) _m->unlock(); else _m->runlock(); }
 	private:
 		RWMutex *const _m;
 		bool _w;
 	};
 
 private:
-	ZT_ALWAYS_INLINE RWMutex(const RWMutex &) noexcept {}
-	ZT_ALWAYS_INLINE const RWMutex &operator=(const RWMutex &) noexcept { return *this; }
+	ZT_INLINE RWMutex(const RWMutex &) noexcept {}
+	ZT_INLINE const RWMutex &operator=(const RWMutex &) noexcept { return *this; }
 
 	pthread_rwlock_t _mh;
 };
@@ -124,26 +124,26 @@ namespace ZeroTier {
 class Mutex
 {
 public:
-	ZT_ALWAYS_INLINE Mutex() { InitializeCriticalSection(&_cs); }
-	ZT_ALWAYS_INLINE ~Mutex() { DeleteCriticalSection(&_cs); }
-	ZT_ALWAYS_INLINE void lock() { EnterCriticalSection(&_cs); }
-	ZT_ALWAYS_INLINE void unlock() { LeaveCriticalSection(&_cs); }
-	ZT_ALWAYS_INLINE void lock() const { (const_cast <Mutex *> (this))->lock(); }
-	ZT_ALWAYS_INLINE void unlock() const { (const_cast <Mutex *> (this))->unlock(); }
+	ZT_INLINE Mutex() { InitializeCriticalSection(&_cs); }
+	ZT_INLINE ~Mutex() { DeleteCriticalSection(&_cs); }
+	ZT_INLINE void lock() { EnterCriticalSection(&_cs); }
+	ZT_INLINE void unlock() { LeaveCriticalSection(&_cs); }
+	ZT_INLINE void lock() const { (const_cast <Mutex *> (this))->lock(); }
+	ZT_INLINE void unlock() const { (const_cast <Mutex *> (this))->unlock(); }
 
 	class Lock
 	{
 	public:
-		ZT_ALWAYS_INLINE Lock(Mutex &m) : _m(&m) { m.lock(); }
-		ZT_ALWAYS_INLINE Lock(const Mutex &m) : _m(const_cast<Mutex *>(&m)) { _m->lock(); }
-		ZT_ALWAYS_INLINE ~Lock() { _m->unlock(); }
+		ZT_INLINE Lock(Mutex &m) : _m(&m) { m.lock(); }
+		ZT_INLINE Lock(const Mutex &m) : _m(const_cast<Mutex *>(&m)) { _m->lock(); }
+		ZT_INLINE ~Lock() { _m->unlock(); }
 	private:
 		Mutex *const _m;
 	};
 
 private:
-	ZT_ALWAYS_INLINE Mutex(const Mutex &) {}
-	ZT_ALWAYS_INLINE const Mutex &operator=(const Mutex &) { return *this; }
+	ZT_INLINE Mutex(const Mutex &) {}
+	ZT_INLINE const Mutex &operator=(const Mutex &) { return *this; }
 
 	CRITICAL_SECTION _cs;
 };

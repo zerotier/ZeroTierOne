@@ -19,6 +19,7 @@
 #include "Address.hpp"
 #include "Utils.hpp"
 #include "TriviallyCopyable.hpp"
+#include "Fingerprint.hpp"
 
 #include <cstdio>
 #include <cstdlib>
@@ -67,9 +68,9 @@ public:
 		PROTO_IP_ZT =       2
 	};
 
-	ZT_ALWAYS_INLINE Endpoint() noexcept { memoryZero(this); }
+	ZT_INLINE Endpoint() noexcept { memoryZero(this); }
 
-	explicit ZT_ALWAYS_INLINE Endpoint(const InetAddress &sa,const Protocol proto = PROTO_UDP_ZT)
+	ZT_INLINE Endpoint(const InetAddress &sa,const Protocol proto = PROTO_UDP_ZT)
 	{
 		switch (sa.family()) {
 			case AF_INET:
@@ -85,21 +86,21 @@ public:
 		_v.in.proto = (uint8_t)proto;
 	}
 
-	ZT_ALWAYS_INLINE Endpoint(const Address &zt,const uint8_t identityHash[ZT_IDENTITY_HASH_SIZE]) :
+	ZT_INLINE Endpoint(const Address &zt,const uint8_t identityHash[ZT_IDENTITY_HASH_SIZE]) :
 		_t(TYPE_ZEROTIER)
 	{
-		_v.zt.a = zt.toInt();
-		memcpy(_v.zt.idh,identityHash,ZT_IDENTITY_HASH_SIZE);
+		_v.zt.address = zt.toInt();
+		memcpy(_v.zt.hash,identityHash,ZT_IDENTITY_HASH_SIZE);
 	}
 
-	ZT_ALWAYS_INLINE Endpoint(const char *name,const int port) :
+	ZT_INLINE Endpoint(const char *name,const int port) :
 		_t(TYPE_DNSNAME)
 	{
 		_v.dns.port = port;
 		Utils::scopy(_v.dns.name,sizeof(_v.dns.name),name);
 	}
 
-	explicit ZT_ALWAYS_INLINE Endpoint(const char *url) :
+	explicit ZT_INLINE Endpoint(const char *url) :
 		_t(TYPE_URL)
 	{
 		Utils::scopy(_v.url,sizeof(_v.url),url);
@@ -108,56 +109,56 @@ public:
 	/**
 	 * @return InetAddress or NIL if not of this type
 	 */
-	ZT_ALWAYS_INLINE const InetAddress &inetAddr() const noexcept { return ((_t == TYPE_INETADDR_V4)||(_t == TYPE_INETADDR_V6)) ? asInetAddress(_v.in.sa) : InetAddress::NIL; }
+	ZT_INLINE const InetAddress &inetAddr() const noexcept { return ((_t == TYPE_INETADDR_V4) || (_t == TYPE_INETADDR_V6)) ? asInetAddress(_v.in.sa) : InetAddress::NIL; }
 
 	/**
 	 * @return Protocol for INETADDR types, undefined for other endpoint types
 	 */
-	ZT_ALWAYS_INLINE Protocol inetAddrProto() const noexcept { return (Protocol)_v.in.proto; }
+	ZT_INLINE Protocol inetAddrProto() const noexcept { return (Protocol)_v.in.proto; }
 
 	/**
 	 * @return DNS name or empty string if not of this type
 	 */
-	ZT_ALWAYS_INLINE const char *dnsName() const noexcept { return (_t == TYPE_DNSNAME) ? _v.dns.name : ""; }
+	ZT_INLINE const char *dnsName() const noexcept { return (_t == TYPE_DNSNAME) ? _v.dns.name : ""; }
 
 	/**
 	 * @return Port associated with DNS name or -1 if not of this type
 	 */
-	ZT_ALWAYS_INLINE int dnsPort() const noexcept { return (_t == TYPE_DNSNAME) ? _v.dns.port : -1; }
+	ZT_INLINE int dnsPort() const noexcept { return (_t == TYPE_DNSNAME) ? _v.dns.port : -1; }
 
 	/**
 	 * @return ZeroTier address or NIL if not of this type
 	 */
-	ZT_ALWAYS_INLINE Address ztAddress() const noexcept { return Address((_t == TYPE_ZEROTIER) ? _v.zt.a : (uint64_t)0); }
+	ZT_INLINE Address ztAddress() const noexcept { return Address((_t == TYPE_ZEROTIER) ? _v.zt.address : (uint64_t)0); }
 
 	/**
 	 * @return 384-bit hash of identity keys or NULL if not of this type
 	 */
-	ZT_ALWAYS_INLINE const uint8_t *ztIdentityHash() const noexcept { return (_t == TYPE_ZEROTIER) ? _v.zt.idh : nullptr; }
+	ZT_INLINE const Fingerprint &ztFingerprint() const noexcept { return *reinterpret_cast<const Fingerprint *>(&_v.zt); }
 
 	/**
 	 * @return URL or empty string if not of this type
 	 */
-	ZT_ALWAYS_INLINE const char *url() const noexcept { return (_t == TYPE_URL) ? _v.url : ""; }
+	ZT_INLINE const char *url() const noexcept { return (_t == TYPE_URL) ? _v.url : ""; }
 
 	/**
 	 * @return Ethernet address or NIL if not of this type
 	 */
-	ZT_ALWAYS_INLINE MAC ethernet() const noexcept { return (_t == TYPE_ETHERNET) ? MAC(_v.eth) : MAC(); }
+	ZT_INLINE MAC ethernet() const noexcept { return (_t == TYPE_ETHERNET) ? MAC(_v.eth) : MAC(); }
 
 	/**
 	 * @return Endpoint type or NIL if unset/empty
 	 */
-	ZT_ALWAYS_INLINE Type type() const noexcept { return _t; }
+	ZT_INLINE Type type() const noexcept { return _t; }
 
-	explicit ZT_ALWAYS_INLINE operator bool() const noexcept { return _t != TYPE_NIL; }
+	ZT_INLINE operator bool() const noexcept { return _t != TYPE_NIL; }
 
 	bool operator==(const Endpoint &ep) const;
-	ZT_ALWAYS_INLINE bool operator!=(const Endpoint &ep) const { return (!(*this == ep)); }
+	ZT_INLINE bool operator!=(const Endpoint &ep) const { return (!(*this == ep)); }
 	bool operator<(const Endpoint &ep) const;
-	ZT_ALWAYS_INLINE bool operator>(const Endpoint &ep) const { return (ep < *this); }
-	ZT_ALWAYS_INLINE bool operator<=(const Endpoint &ep) const { return !(ep < *this); }
-	ZT_ALWAYS_INLINE bool operator>=(const Endpoint &ep) const { return !(*this < ep); }
+	ZT_INLINE bool operator>(const Endpoint &ep) const { return (ep < *this); }
+	ZT_INLINE bool operator<=(const Endpoint &ep) const { return !(ep < *this); }
+	ZT_INLINE bool operator>=(const Endpoint &ep) const { return !(*this < ep); }
 
 	static constexpr int marshalSizeMax() noexcept { return ZT_ENDPOINT_MARSHAL_SIZE_MAX; }
 	int marshal(uint8_t data[ZT_ENDPOINT_MARSHAL_SIZE_MAX]) const noexcept;
@@ -175,10 +176,7 @@ private:
 			uint16_t port;
 			char name[ZT_ENDPOINT_MAX_NAME_SIZE];
 		} dns;
-		struct {
-			uint64_t a;
-			uint8_t idh[ZT_IDENTITY_HASH_SIZE];
-		} zt;
+		ZT_Fingerprint zt;
 		char url[ZT_ENDPOINT_MAX_NAME_SIZE];
 		uint64_t eth;
 	} _v;

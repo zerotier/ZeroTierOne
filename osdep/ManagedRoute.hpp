@@ -35,7 +35,7 @@ class ManagedRoute
 	friend class SharedPtr<ManagedRoute>;
 
 public:
-	ZT_ALWAYS_INLINE ManagedRoute(const InetAddress &target,const InetAddress &via,const char *device)
+	ZT_INLINE ManagedRoute(const InetAddress &target,const InetAddress &via,const char *device)
 	{
 		_target = target;
 		_via = via;
@@ -47,7 +47,7 @@ public:
 		_systemDevice[0] = (char)0;
 	}
 
-	ZT_ALWAYS_INLINE ~ManagedRoute() { this->remove(); }
+	ZT_INLINE ~ManagedRoute() { this->remove(); }
 
 	/**
 	 * Set or update currently set route
@@ -68,13 +68,13 @@ public:
 	 */
 	void remove();
 
-	ZT_ALWAYS_INLINE const InetAddress &target() const { return _target; }
-	ZT_ALWAYS_INLINE const InetAddress &via() const { return _via; }
-	ZT_ALWAYS_INLINE const char *device() const { return _device; }
+	ZT_INLINE const InetAddress &target() const { return _target; }
+	ZT_INLINE const InetAddress &via() const { return _via; }
+	ZT_INLINE const char *device() const { return _device; }
 
 private:
-	ZT_ALWAYS_INLINE ManagedRoute(const ManagedRoute &) {}
-	ZT_ALWAYS_INLINE ManagedRoute &operator=(const ManagedRoute &) { return *this; }
+	ZT_INLINE ManagedRoute(const ManagedRoute &) {}
+	ZT_INLINE ManagedRoute &operator=(const ManagedRoute &) { return *this; }
 
 	InetAddress _target;
 	InetAddress _via;

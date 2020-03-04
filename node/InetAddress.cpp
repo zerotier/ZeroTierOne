@@ -279,7 +279,10 @@ bool InetAddress::containsAddress(const InetAddress &addr) const noexcept
 				const unsigned int bits = netmaskBits();
 				if (bits == 0)
 					return true;
-				return ( (Utils::ntoh((uint32_t)reinterpret_cast<const struct sockaddr_in *>(&addr)->sin_addr.s_addr) >> (32 - bits)) == (Utils::ntoh((uint32_t)reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr) >> (32 - bits)) );
+				return (
+					(Utils::ntoh((uint32_t)reinterpret_cast<const struct sockaddr_in *>(&addr)->sin_addr.s_addr) >> (32 - bits)) ==
+					(Utils::ntoh((uint32_t)reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr) >> (32 - bits))
+				);
 			}
 			case AF_INET6: {
 				const InetAddress mask(netmask());

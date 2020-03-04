@@ -48,7 +48,7 @@
 #pragma warning(disable : 4127)		/* disable: C4127: conditional expression is constant */
 #pragma warning(disable : 4293)		/* disable: C4293: too large shift (32-bits) */
 #else
-#define FORCE_INLINE ZT_ALWAYS_INLINE
+#define FORCE_INLINE ZT_INLINE
 #endif
 
 namespace ZeroTier {
@@ -563,7 +563,7 @@ FORCE_INLINE int LZ4_compress_generic(
 	return (int) (((char*)op)-dest);
 }
 
-ZT_ALWAYS_INLINE int LZ4_compress_fast_extState(void* state, const char* source, char* dest, int inputSize, int maxOutputSize, int acceleration)
+ZT_INLINE int LZ4_compress_fast_extState(void* state,const char* source,char* dest,int inputSize,int maxOutputSize,int acceleration)
 {
 	LZ4_stream_t_internal* ctx = &((LZ4_stream_t*)state)->internal_donotuse;
 	LZ4_resetStream((LZ4_stream_t*)state);

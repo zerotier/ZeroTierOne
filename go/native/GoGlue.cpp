@@ -182,7 +182,7 @@ static int ZT_GoNode_StateGetFunction(
 		data);
 }
 
-static ZT_ALWAYS_INLINE void doUdpSend(ZT_SOCKET sock,const struct sockaddr_storage *addr,const void *data,const unsigned int len,const unsigned int ipTTL)
+static ZT_INLINE void doUdpSend(ZT_SOCKET sock,const struct sockaddr_storage *addr,const void *data,const unsigned int len,const unsigned int ipTTL)
 {
 	switch(addr->ss_family) {
 		case AF_INET:

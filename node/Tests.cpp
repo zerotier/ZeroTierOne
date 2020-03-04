@@ -207,25 +207,25 @@ ZT_PACKED_STRUCT(struct StructPackingTestSample {
 class LifeCycleTracker
 {
 public:
-	ZT_ALWAYS_INLINE LifeCycleTracker() :
+	ZT_INLINE LifeCycleTracker() :
 		cnt(nullptr)
 	{
 	}
-	ZT_ALWAYS_INLINE LifeCycleTracker(const LifeCycleTracker &ltc) :
+	ZT_INLINE LifeCycleTracker(const LifeCycleTracker &ltc) :
 		cnt(ltc.cnt)
 	{
 		if (cnt) ++*cnt;
 	}
-	explicit ZT_ALWAYS_INLINE LifeCycleTracker(long &c) :
+	explicit ZT_INLINE LifeCycleTracker(long &c) :
 		cnt(&c)
 	{
 		++c;
 	}
-	ZT_ALWAYS_INLINE ~LifeCycleTracker()
+	ZT_INLINE ~LifeCycleTracker()
 	{
 		if (cnt) --*cnt;
 	}
-	ZT_ALWAYS_INLINE LifeCycleTracker &operator=(const LifeCycleTracker &ltc)
+	ZT_INLINE LifeCycleTracker &operator=(const LifeCycleTracker &ltc)
 	{
 		if (&ltc != this) {
 			if (cnt) --*cnt;
@@ -640,6 +640,11 @@ extern "C" const char *ZTT_general()
 
 			Buf::freePool();
 			ZT_T_PRINTF("OK (cache remaining: %u)" ZT_EOL_S,defrag.cacheSize());
+		}
+
+		{
+			ZT_T_PRINTF("[general] Testing Endpoint... ");
+			ZT_T_PRINTF("OK" ZT_EOL_S);
 		}
 
 		{

@@ -163,7 +163,7 @@ namespace ZeroTier {
  */
 struct NetworkConfig : TriviallyCopyable
 {
-	ZT_ALWAYS_INLINE NetworkConfig() noexcept { memoryZero(this); }
+	ZT_INLINE NetworkConfig() noexcept { memoryZero(this); }
 
 	/**
 	 * Write this network config to a dictionary for transport
@@ -185,28 +185,28 @@ struct NetworkConfig : TriviallyCopyable
 	/**
 	 * @return True if broadcast (ff:ff:ff:ff:ff:ff) address should work on this network
 	 */
-	ZT_ALWAYS_INLINE bool enableBroadcast() const noexcept { return ((this->flags & ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST) != 0); }
+	ZT_INLINE bool enableBroadcast() const noexcept { return ((this->flags & ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST) != 0); }
 
 	/**
 	 * @return True if IPv6 NDP emulation should be allowed for certain "magic" IPv6 address patterns
 	 */
-	ZT_ALWAYS_INLINE bool ndpEmulation() const noexcept { return ((this->flags & ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION) != 0); }
+	ZT_INLINE bool ndpEmulation() const noexcept { return ((this->flags & ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION) != 0); }
 
 	/**
 	 * @return Network type is public (no access control)
 	 */
-	ZT_ALWAYS_INLINE bool isPublic() const noexcept { return (this->type == ZT_NETWORK_TYPE_PUBLIC); }
+	ZT_INLINE bool isPublic() const noexcept { return (this->type == ZT_NETWORK_TYPE_PUBLIC); }
 
 	/**
 	 * @return Network type is private (certificate access control)
 	 */
-	ZT_ALWAYS_INLINE bool isPrivate() const noexcept { return (this->type == ZT_NETWORK_TYPE_PRIVATE); }
+	ZT_INLINE bool isPrivate() const noexcept { return (this->type == ZT_NETWORK_TYPE_PRIVATE); }
 
 	/**
 	 * @param fromPeer Peer attempting to bridge other Ethernet peers onto network
 	 * @return True if this network allows bridging
 	 */
-	ZT_ALWAYS_INLINE bool permitsBridging(const Address &fromPeer) const noexcept
+	ZT_INLINE bool permitsBridging(const Address &fromPeer) const noexcept
 	{
 		for(unsigned int i=0;i<specialistCount;++i) {
 			if ((fromPeer == specialists[i])&&((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE) != 0))
@@ -215,9 +215,9 @@ struct NetworkConfig : TriviallyCopyable
 		return false;
 	}
 
-	ZT_ALWAYS_INLINE operator bool() const noexcept { return (networkId != 0); }
-	ZT_ALWAYS_INLINE bool operator==(const NetworkConfig &nc) const noexcept { return (memcmp(this,&nc,sizeof(NetworkConfig)) == 0); }
-	ZT_ALWAYS_INLINE bool operator!=(const NetworkConfig &nc) const noexcept { return (!(*this == nc)); }
+	ZT_INLINE operator bool() const noexcept { return (networkId != 0); }
+	ZT_INLINE bool operator==(const NetworkConfig &nc) const noexcept { return (memcmp(this,&nc,sizeof(NetworkConfig)) == 0); }
+	ZT_INLINE bool operator!=(const NetworkConfig &nc) const noexcept { return (!(*this == nc)); }
 
 	/**
 	 * Add a specialist or mask flags if already present
@@ -231,7 +231,7 @@ struct NetworkConfig : TriviallyCopyable
 	 */
 	bool addSpecialist(const Address &a,uint64_t f) noexcept;
 
-	ZT_ALWAYS_INLINE const Capability *capability(const uint32_t id) const
+	ZT_INLINE const Capability *capability(const uint32_t id) const
 	{
 		for(unsigned int i=0;i<capabilityCount;++i) {
 			if (capabilities[i].id() == id)
@@ -240,7 +240,7 @@ struct NetworkConfig : TriviallyCopyable
 		return (Capability *)0;
 	}
 
-	ZT_ALWAYS_INLINE const Tag *tag(const uint32_t id) const
+	ZT_INLINE const Tag *tag(const uint32_t id) const
 	{
 		for(unsigned int i=0;i<tagCount;++i) {
 			if (tags[i].id() == id)

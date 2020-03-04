@@ -28,7 +28,7 @@ namespace ZeroTier {
 
 struct _PathPriorityComparisonOperator
 {
-	ZT_ALWAYS_INLINE bool operator()(const SharedPtr<Path> &a,const SharedPtr<Path> &b) const
+	ZT_INLINE bool operator()(const SharedPtr<Path> &a,const SharedPtr<Path> &b) const
 	{
 		return ( ((a)&&(a->lastIn() > 0)) && ((!b)||(b->lastIn() <= 0)||(a->lastIn() < b->lastIn())) );
 	}

@@ -28,30 +28,30 @@ template<typename T>
 class ScopedPtr : public TriviallyCopyable
 {
 public:
-	explicit ZT_ALWAYS_INLINE ScopedPtr(T *const p) noexcept : _p(p) {}
-	ZT_ALWAYS_INLINE ~ScopedPtr() { delete _p; }
+	explicit ZT_INLINE ScopedPtr(T *const p) noexcept : _p(p) {}
+	ZT_INLINE ~ScopedPtr() { delete _p; }
 
-	ZT_ALWAYS_INLINE T *operator->() const noexcept { return _p; }
-	ZT_ALWAYS_INLINE T &operator*() const noexcept { return *_p; }
-	explicit ZT_ALWAYS_INLINE operator bool() const noexcept { return (_p != (T *)0); }
-	ZT_ALWAYS_INLINE T *ptr() const noexcept { return _p; }
+	ZT_INLINE T *operator->() const noexcept { return _p; }
+	ZT_INLINE T &operator*() const noexcept { return *_p; }
+	explicit ZT_INLINE operator bool() const noexcept { return (_p != (T *)0); }
+	ZT_INLINE T *ptr() const noexcept { return _p; }
 
-	ZT_ALWAYS_INLINE void swap(const ScopedPtr &p) noexcept
+	ZT_INLINE void swap(const ScopedPtr &p) noexcept
 	{
 		T *const tmp = _p;
 		_p = p._p;
 		p._p = tmp;
 	}
 
-	ZT_ALWAYS_INLINE bool operator==(const ScopedPtr &p) const noexcept { return (_p == p._p); }
-	ZT_ALWAYS_INLINE bool operator!=(const ScopedPtr &p) const noexcept { return (_p != p._p); }
-	ZT_ALWAYS_INLINE bool operator==(T *const p) const noexcept { return (_p == p); }
-	ZT_ALWAYS_INLINE bool operator!=(T *const p) const noexcept { return (_p != p); }
+	ZT_INLINE bool operator==(const ScopedPtr &p) const noexcept { return (_p == p._p); }
+	ZT_INLINE bool operator!=(const ScopedPtr &p) const noexcept { return (_p != p._p); }
+	ZT_INLINE bool operator==(T *const p) const noexcept { return (_p == p); }
+	ZT_INLINE bool operator!=(T *const p) const noexcept { return (_p != p); }
 
 private:
-	ZT_ALWAYS_INLINE ScopedPtr() noexcept {}
-	ZT_ALWAYS_INLINE ScopedPtr(const ScopedPtr &p) noexcept : _p(nullptr) {}
-	ZT_ALWAYS_INLINE ScopedPtr &operator=(const ScopedPtr &p) noexcept { return *this; }
+	ZT_INLINE ScopedPtr() noexcept {}
+	ZT_INLINE ScopedPtr(const ScopedPtr &p) noexcept : _p(nullptr) {}
+	ZT_INLINE ScopedPtr &operator=(const ScopedPtr &p) noexcept { return *this; }
 
 	T *const _p;
 };
@@ -60,7 +60,7 @@ private:
 
 namespace std {
 template<typename T>
-ZT_ALWAYS_INLINE void swap(ZeroTier::ScopedPtr<T> &a,ZeroTier::ScopedPtr<T> &b) noexcept { a.swap(b); }
+ZT_INLINE void swap(ZeroTier::ScopedPtr<T> &a,ZeroTier::ScopedPtr<T> &b) noexcept { a.swap(b); }
 }
 
 #endif

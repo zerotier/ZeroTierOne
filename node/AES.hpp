@@ -45,7 +45,7 @@ public:
 	/**
 	 * @return True if this system has hardware AES acceleration
 	 */
-	static ZT_ALWAYS_INLINE bool accelerated()
+	static ZT_INLINE bool accelerated()
 	{
 #ifdef ZT_AES_AESNI
 		return Utils::CPUID.aes;
@@ -57,23 +57,23 @@ public:
 	/**
 	 * Create an un-initialized AES instance (must call init() before use)
 	 */
-	ZT_ALWAYS_INLINE AES() noexcept {}
+	ZT_INLINE AES() noexcept {}
 
 	/**
 	 * Create an AES instance with the given key
 	 *
 	 * @param key 256-bit key
 	 */
-	explicit ZT_ALWAYS_INLINE AES(const void *const key) noexcept { this->init(key); }
+	explicit ZT_INLINE AES(const void *const key) noexcept { this->init(key); }
 
-	ZT_ALWAYS_INLINE ~AES() { Utils::burn(&_k,sizeof(_k)); }
+	ZT_INLINE ~AES() { Utils::burn(&_k,sizeof(_k)); }
 
 	/**
 	 * Set (or re-set) this AES256 cipher's key
 	 *
 	 * @param key 256-bit / 32-byte key
 	 */
-	ZT_ALWAYS_INLINE void init(const void *key) noexcept
+	ZT_INLINE void init(const void *key) noexcept
 	{
 #ifdef ZT_AES_AESNI
 		if (likely(Utils::CPUID.aes)) {
@@ -90,7 +90,7 @@ public:
 	 * @param in Input block
 	 * @param out Output block (can be same as input)
 	 */
-	ZT_ALWAYS_INLINE void encrypt(const void *const in,void *const out) const noexcept
+	ZT_INLINE void encrypt(const void *const in,void *const out) const noexcept
 	{
 #ifdef ZT_AES_AESNI
 		if (likely(Utils::CPUID.aes)) {
@@ -107,7 +107,7 @@ public:
 	 * @param in Input block
 	 * @param out Output block (can be same as input)
 	 */
-	ZT_ALWAYS_INLINE void decrypt(const void *const in,void *const out) const noexcept
+	ZT_INLINE void decrypt(const void *const in,void *const out) const noexcept
 	{
 #ifdef ZT_AES_AESNI
 		if (likely(Utils::CPUID.aes)) {
@@ -129,14 +129,14 @@ public:
 		 *
 		 * @param aes Keyed AES instance to use
 		 */
-		ZT_ALWAYS_INLINE GMAC(const AES &aes) : _aes(aes) {}
+		ZT_INLINE GMAC(const AES &aes) : _aes(aes) {}
 
 		/**
 		 * Reset and initialize for a new GMAC calculation
 		 *
 		 * @param iv 96-bit initialization vector (pad with zeroes if actual IV is shorter)
 		 */
-		ZT_ALWAYS_INLINE void init(const uint8_t iv[12]) noexcept
+		ZT_INLINE void init(const uint8_t iv[12]) noexcept
 		{
 			_rp = 0;
 			_len = 0;
@@ -191,7 +191,7 @@ public:
 	class CTR
 	{
 	public:
-		ZT_ALWAYS_INLINE CTR(const AES &aes) noexcept : _aes(aes) {}
+		ZT_INLINE CTR(const AES &aes) noexcept : _aes(aes) {}
 
 		/**
 		 * Initialize this CTR instance to encrypt a new stream
@@ -199,7 +199,7 @@ public:
 		 * @param iv Unique initialization vector
 		 * @param output Buffer to which to store output (MUST be large enough for total bytes processed!)
 		 */
-		ZT_ALWAYS_INLINE void init(const uint8_t iv[16],void *const output) noexcept
+		ZT_INLINE void init(const uint8_t iv[16],void *const output) noexcept
 		{
 			_ctr[0] = Utils::loadAsIsEndian<uint64_t>(iv);
 			_ctr[1] = Utils::loadAsIsEndian<uint64_t>(iv + 8);
@@ -266,7 +266,7 @@ private:
 
 	void _init_aesni(const uint8_t key[32]) noexcept;
 
-	ZT_ALWAYS_INLINE void _encrypt_aesni(const void *const in,void *const out) const noexcept
+	ZT_INLINE void _encrypt_aesni(const void *const in,void *const out) const noexcept
 	{
 		__m128i tmp = _mm_loadu_si128((const __m128i *)in);
 		tmp = _mm_xor_si128(tmp,_k.ni.k[0]);
@@ -286,7 +286,7 @@ private:
 		_mm_storeu_si128((__m128i *)out,_mm_aesenclast_si128(tmp,_k.ni.k[14]));
 	}
 
-	ZT_ALWAYS_INLINE void _decrypt_aesni(const void *in,void *out) const noexcept
+	ZT_INLINE void _decrypt_aesni(const void *in,void *out) const noexcept
 	{
 		__m128i tmp = _mm_loadu_si128((const __m128i *)in);
 		tmp = _mm_xor_si128(tmp,_k.ni.k[14]);
@@ -306,7 +306,7 @@ private:
 		_mm_storeu_si128((__m128i *)out,_mm_aesdeclast_si128(tmp,_k.ni.k[0]));
 	}
 
-	static ZT_ALWAYS_INLINE __m128i _mult_block_aesni(const __m128i shuf,const __m128i h,__m128i y) noexcept
+	static ZT_INLINE __m128i _mult_block_aesni(const __m128i shuf,const __m128i h,__m128i y) noexcept
 	{
 		y = _mm_shuffle_epi8(y,shuf);
 		__m128i t1 = _mm_clmulepi64_si128(h,y,0x00);

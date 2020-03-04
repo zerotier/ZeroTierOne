@@ -60,15 +60,15 @@ public:
 	{
 		uint8_t l[ZT_MAX_NETWORK_RULES / 2]; // ZT_MAX_NETWORK_RULES 4-bit fields
 
-		ZT_ALWAYS_INLINE void log(const unsigned int rn,const uint8_t thisRuleMatches,const uint8_t thisSetMatches)
+		ZT_INLINE void log(const unsigned int rn,const uint8_t thisRuleMatches,const uint8_t thisSetMatches)
 		{
 			l[rn >> 1U] |= ( ((thisRuleMatches + 1U) << 2U) | (thisSetMatches + 1U) ) << ((rn & 1U) << 2U);
 		}
-		ZT_ALWAYS_INLINE void logSkipped(const unsigned int rn,const uint8_t thisSetMatches)
+		ZT_INLINE void logSkipped(const unsigned int rn,const uint8_t thisSetMatches)
 		{
 			l[rn >> 1U] |= (thisSetMatches + 1U) << ((rn & 1U) << 2U);
 		}
-		ZT_ALWAYS_INLINE void clear()
+		ZT_INLINE void clear()
 		{
 			memset(l,0,sizeof(l));
 		}
@@ -82,7 +82,7 @@ public:
 	template<unsigned int C>
 	struct Str
 	{
-		ZT_ALWAYS_INLINE Str() { memset(s,0,sizeof(s)); }
+		ZT_INLINE Str() { memset(s,0,sizeof(s)); }
 		constexpr static unsigned int capacity() { return C; }
 		char s[C];
 	};
@@ -99,7 +99,7 @@ public:
 		const char *message,
 		...);
 
-	ZT_ALWAYS_INLINE void resettingPathsInScope(
+	ZT_INLINE void resettingPathsInScope(
 		void *const tPtr,
 		const uint32_t codeLocation,
 		const Identity &reporter,
@@ -111,7 +111,7 @@ public:
 		if (_vl1) _resettingPathsInScope(tPtr,codeLocation,reporter,from,oldExternal,newExternal,scope);
 	}
 
-	ZT_ALWAYS_INLINE void tryingNewPath(
+	ZT_INLINE void tryingNewPath(
 		void *const tPtr,
 		const uint32_t codeLocation,
 		const Identity &trying,
@@ -125,7 +125,7 @@ public:
 		if (_vl1) _tryingNewPath(tPtr,codeLocation,trying,physicalAddress,triggerAddress,triggeringPacketId,triggeringPacketVerb,triggeringPeer,reason);
 	}
 
-	ZT_ALWAYS_INLINE void learnedNewPath(
+	ZT_INLINE void learnedNewPath(
 		void *const tPtr,
 		const uint32_t codeLocation,
 		uint64_t packetId,
@@ -136,7 +136,7 @@ public:
 		if (_vl1) _learnedNewPath(tPtr,codeLocation,packetId,peerIdentity,physicalAddress,replaced);
 	}
 
-	ZT_ALWAYS_INLINE void incomingPacketDropped(
+	ZT_INLINE void incomingPacketDropped(
 		void *const tPtr,
 		const uint32_t codeLocation,
 		uint64_t packetId,
@@ -150,7 +150,7 @@ public:
 		if (_vl1) _incomingPacketDropped(tPtr,codeLocation,packetId,networkId,peerIdentity,physicalAddress,hops,verb,reason);
 	}
 
-	ZT_ALWAYS_INLINE void outgoingNetworkFrameDropped(
+	ZT_INLINE void outgoingNetworkFrameDropped(
 		void *const tPtr,
 		const uint32_t codeLocation,
 		uint64_t networkId,
@@ -164,7 +164,7 @@ public:
 		if (_vl2) _outgoingNetworkFrameDropped(tPtr,codeLocation,networkId,sourceMac,destMac,etherType,frameLength,frameData,reason);
 	}
 
-	ZT_ALWAYS_INLINE void incomingNetworkFrameDropped(
+	ZT_INLINE void incomingNetworkFrameDropped(
 		void *const tPtr,
 		const uint32_t codeLocation,
 		uint64_t networkId,
@@ -182,7 +182,7 @@ public:
 		if (_vl2) _incomingNetworkFrameDropped(tPtr,codeLocation,networkId,sourceMac,destMac,peerIdentity,physicalAddress,hops,frameLength,frameData,verb,credentialRequestSent,reason);
 	}
 
-	ZT_ALWAYS_INLINE void networkConfigRequestSent(
+	ZT_INLINE void networkConfigRequestSent(
 		void *const tPtr,
 		const uint32_t codeLocation,
 		uint64_t networkId)
@@ -190,7 +190,7 @@ public:
 		if (_vl2) _networkConfigRequestSent(tPtr,codeLocation,networkId);
 	}
 
-	ZT_ALWAYS_INLINE void networkFilter(
+	ZT_INLINE void networkFilter(
 		void *const tPtr,
 		const uint32_t codeLocation,
 		uint64_t networkId,
@@ -233,7 +233,7 @@ public:
 		}
 	}
 
-	ZT_ALWAYS_INLINE void credentialRejected(
+	ZT_INLINE void credentialRejected(
 		void *const tPtr,
 		const uint32_t codeLocation,
 		uint64_t networkId,

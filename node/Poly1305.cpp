@@ -49,7 +49,7 @@ typedef struct poly1305_state_internal_t {
   unsigned char final;
 } poly1305_state_internal_t;
 
-ZT_ALWAYS_INLINE void poly1305_init(poly1305_context *ctx, const unsigned char key[32])
+ZT_INLINE void poly1305_init(poly1305_context *ctx,const unsigned char key[32])
 {
   poly1305_state_internal_t *st = (poly1305_state_internal_t *)ctx;
   unsigned long long t0,t1;
@@ -126,7 +126,7 @@ void poly1305_blocks(poly1305_state_internal_t *st, const unsigned char *m, size
   st->h[2] = h2;
 }
 
-ZT_ALWAYS_INLINE void poly1305_finish(poly1305_context *ctx, unsigned char mac[16])
+ZT_INLINE void poly1305_finish(poly1305_context *ctx,unsigned char mac[16])
 {
   poly1305_state_internal_t *st = (poly1305_state_internal_t *)ctx;
   unsigned long long h0,h1,h2,c;
@@ -210,7 +210,7 @@ typedef struct poly1305_state_internal_t {
   unsigned char final;
 } poly1305_state_internal_t;
 
-ZT_ALWAYS_INLINE void poly1305_init(poly1305_context *ctx, const unsigned char key[32])
+ZT_INLINE void poly1305_init(poly1305_context *ctx, const unsigned char key[32])
 {
   poly1305_state_internal_t *st = (poly1305_state_internal_t *)ctx;
 
@@ -297,7 +297,7 @@ void poly1305_blocks(poly1305_state_internal_t *st, const unsigned char *m, size
   st->h[4] = h4;
 }
 
-ZT_ALWAYS_INLINE void poly1305_finish(poly1305_context *ctx, unsigned char mac[16])
+ZT_INLINE void poly1305_finish(poly1305_context *ctx, unsigned char mac[16])
 {
   poly1305_state_internal_t *st = (poly1305_state_internal_t *)ctx;
   unsigned long h0,h1,h2,h3,h4,c;
@@ -386,7 +386,7 @@ ZT_ALWAYS_INLINE void poly1305_finish(poly1305_context *ctx, unsigned char mac[1
 
 #endif // uint128_t or portable version?
 
-ZT_ALWAYS_INLINE void poly1305_update(poly1305_context *ctx, const unsigned char *m, size_t bytes) noexcept
+ZT_INLINE void poly1305_update(poly1305_context *ctx,const unsigned char *m,size_t bytes) noexcept
 {
   poly1305_state_internal_t *st = (poly1305_state_internal_t *)ctx;
   size_t i;

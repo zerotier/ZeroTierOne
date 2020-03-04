@@ -28,14 +28,10 @@ namespace ZeroTier {
 class Identity;
 
 /**
- * Container for 384-bit identity hashes
+ * Address and full hash of an identity's public keys.
  *
- * The size of the hash used with this container must be a multiple of 64 bits.
- * Currently it's used as H<384> and H<512>.
- *
- * Warning: the [] operator is not bounds checked.
- *
- * @tparam BITS Bits in hash, must be a multiple of 64
+ * This is the same size as ZT_Fingerprint and should be cast-able back and forth.
+ * This is checked in Tests.cpp.
  */
 class Fingerprint : public TriviallyCopyable
 {
@@ -45,29 +41,29 @@ public:
 	/**
 	 * Create an empty/nil fingerprint
 	 */
-	ZT_ALWAYS_INLINE Fingerprint() noexcept { memoryZero(this); }
+	ZT_INLINE Fingerprint() noexcept { memoryZero(this); }
 
-	ZT_ALWAYS_INLINE Address address() const noexcept { return Address(_fp.address); }
-	ZT_ALWAYS_INLINE const uint8_t *hash() const noexcept { return _fp.hash; }
+	ZT_INLINE Address address() const noexcept { return Address(_fp.address); }
+	ZT_INLINE const uint8_t *hash() const noexcept { return _fp.hash; }
 
 	/**
 	 * Copy into ZT_Fingerprint struct as used in API and trace messages
 	 *
 	 * @param fp ZT_Fingerprint
 	 */
-	ZT_ALWAYS_INLINE void getAPIFingerprint(ZT_Fingerprint *fp) const noexcept { memcpy(fp,&_fp,sizeof(ZT_Fingerprint)); }
+	ZT_INLINE void getAPIFingerprint(ZT_Fingerprint *fp) const noexcept { memcpy(fp,&_fp,sizeof(ZT_Fingerprint)); }
 
 	/**
 	 * @return Pointer to ZT_Fingerprint for API use
 	 */
-	ZT_ALWAYS_INLINE const ZT_Fingerprint *apiFingerprint() const noexcept { return &_fp; }
+	ZT_INLINE const ZT_Fingerprint *apiFingerprint() const noexcept { return &_fp; }
 
 	/**
 	 * Get a base32-encoded representation of this fingerprint
 	 *
 	 * @param s Base32 string
 	 */
-	ZT_ALWAYS_INLINE void toString(char s[ZT_FINGERPRINT_STRING_BUFFER_LENGTH])
+	ZT_INLINE void toString(char s[ZT_FINGERPRINT_STRING_BUFFER_LENGTH])
 	{
 		uint8_t tmp[48 + 5];
 		address().copyTo(tmp);
@@ -82,7 +78,7 @@ public:
 	 * @param s String to decode
 	 * @return True if string appears to be valid and of the proper length (no other checking is done)
 	 */
-	ZT_ALWAYS_INLINE bool fromString(const char *s)
+	ZT_INLINE bool fromString(const char *s)
 	{
 		uint8_t tmp[48 + 5];
 		if (Utils::b32d(s,tmp,sizeof(tmp)) != sizeof(tmp))
@@ -92,17 +88,17 @@ public:
 		return true;
 	}
 
-	ZT_ALWAYS_INLINE void zero() noexcept { memoryZero(this); }
-	ZT_ALWAYS_INLINE unsigned long hashCode() const noexcept { return _fp.address; }
+	ZT_INLINE void zero() noexcept { memoryZero(this); }
+	ZT_INLINE unsigned long hashCode() const noexcept { return _fp.address; }
 
-	ZT_ALWAYS_INLINE operator bool() const noexcept { return (_fp.address != 0); }
+	ZT_INLINE operator bool() const noexcept { return (_fp.address != 0); }
 
-	ZT_ALWAYS_INLINE bool operator==(const Fingerprint &h) const noexcept { return ((_fp.address == h._fp.address)&&(memcmp(_fp.hash,h._fp.hash,ZT_IDENTITY_HASH_SIZE) == 0)); }
-	ZT_ALWAYS_INLINE bool operator!=(const Fingerprint &h) const noexcept { return !(*this == h); }
-	ZT_ALWAYS_INLINE bool operator<(const Fingerprint &h) const noexcept { return ((_fp.address < h._fp.address) || ((_fp.address == h._fp.address)&&(memcmp(_fp.hash,h._fp.hash,ZT_IDENTITY_HASH_SIZE) < 0))); }
-	ZT_ALWAYS_INLINE bool operator>(const Fingerprint &h) const noexcept { return (h < *this); }
-	ZT_ALWAYS_INLINE bool operator<=(const Fingerprint &h) const noexcept { return !(h < *this); }
-	ZT_ALWAYS_INLINE bool operator>=(const Fingerprint &h) const noexcept { return !(*this < h); }
+	ZT_INLINE bool operator==(const Fingerprint &h) const noexcept { return ((_fp.address == h._fp.address) && (memcmp(_fp.hash,h._fp.hash,ZT_IDENTITY_HASH_SIZE) == 0)); }
+	ZT_INLINE bool operator!=(const Fingerprint &h) const noexcept { return !(*this == h); }
+	ZT_INLINE bool operator<(const Fingerprint &h) const noexcept { return ((_fp.address < h._fp.address) || ((_fp.address == h._fp.address) && (memcmp(_fp.hash,h._fp.hash,ZT_IDENTITY_HASH_SIZE) < 0))); }
+	ZT_INLINE bool operator>(const Fingerprint &h) const noexcept { return (h < *this); }
+	ZT_INLINE bool operator<=(const Fingerprint &h) const noexcept { return !(h < *this); }
+	ZT_INLINE bool operator>=(const Fingerprint &h) const noexcept { return !(*this < h); }
 
 private:
 	ZT_Fingerprint _fp;

@@ -20,8 +20,8 @@ const uint64_t Topology::s_pathHashSalt = Utils::getSecureRandomU64();
 // Sorts roots so as to put the lowest latency alive root first.
 struct _RootSortComparisonOperator
 {
-	ZT_ALWAYS_INLINE _RootSortComparisonOperator(const int64_t now) : _now(now) {}
-	ZT_ALWAYS_INLINE bool operator()(const SharedPtr<Peer> &a,const SharedPtr<Peer> &b)
+	ZT_INLINE _RootSortComparisonOperator(const int64_t now) : _now(now) {}
+	ZT_INLINE bool operator()(const SharedPtr<Peer> &a,const SharedPtr<Peer> &b)
 	{
 		const int64_t now = _now;
 		if (a->active(now)) {

@@ -43,7 +43,7 @@ public:
 	 *
 	 * @param now Start time
 	 */
-	ZT_ALWAYS_INLINE Meter() noexcept {}
+	ZT_INLINE Meter() noexcept {}
 
 	/**
 	 * Add a measurement
@@ -51,7 +51,7 @@ public:
 	 * @param now Current time
 	 * @param count Count of items (usually bytes)
 	 */
-	ZT_ALWAYS_INLINE void log(const int64_t now,uint64_t count) noexcept
+	ZT_INLINE void log(const int64_t now,uint64_t count) noexcept
 	{
 		// We log by choosing a log bucket based on the current time in units modulo
 		// the log size and then if it's a new bucket setting it or otherwise adding
@@ -71,7 +71,7 @@ public:
 	 * @param rate Result parameter: rate in count/TUNIT
 	 * @param total Total count for life of object
 	 */
-	ZT_ALWAYS_INLINE void rate(double &rate,uint64_t &total) const noexcept
+	ZT_INLINE void rate(double &rate,uint64_t &total) const noexcept
 	{
 		total = 0;
 		for(unsigned long i=0;i<LSIZE;++i)
