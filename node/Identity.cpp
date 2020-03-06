@@ -22,7 +22,8 @@
 #include <cstdint>
 #include <algorithm>
 
-#define ZT_V1_IDENTITY_MIMC52_VDF_ROUNDS_BASE 400000
+// This takes around one second on a typical ~2.4ghz x64 machine.
+#define ZT_V1_IDENTITY_MIMC52_VDF_ROUNDS_BASE 1000000
 
 namespace ZeroTier {
 

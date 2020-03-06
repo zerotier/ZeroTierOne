@@ -238,6 +238,11 @@
 #define ZT_PROTO_KDF_KEY_LABEL_HELLO_HMAC 'H'
 
 /**
+ * HELLO exchange meta-data: random 128-bit identifier for each running instance
+ */
+#define ZT_PROTO_HELLO_NODE_META_INSTANCE_ID "i"
+
+/**
  * HELLO exchange meta-data: signed locator for this node
  */
 #define ZT_PROTO_HELLO_NODE_META_LOCATOR "l"
