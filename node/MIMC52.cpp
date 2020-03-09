@@ -14,6 +14,9 @@
 #include "MIMC52.hpp"
 #include "SHA512.hpp"
 #include "Utils.hpp"
+#include "Speck128.hpp"
+
+#include <cstdio>
 
 // This gets defined on any architecture whose FPU is not capable of doing the mulmod52() FPU trick.
 //#define ZT_MIMC52_NO_FPU
@@ -96,67 +99,31 @@ ZT_INLINE uint64_t modpow52(uint64_t a,uint64_t e,const uint64_t p) noexcept
 	}
 }
 
-// See: https://en.wikipedia.org/wiki/Speck_(cipher)
-#define SPECK_ROR(x,r) ((x >> r) | (x << (64U - r)))
-#define SPECK_ROL(x,r) ((x << r) | (x >> (64U - r)))
-#define SPECK_R(x,y,k) (x = SPECK_ROR(x,8U), x += y, x ^= k, y = SPECK_ROL(y,3U), y ^= x)
-
-ZT_INLINE void mimc52Init(uint64_t k[128],const void *const salt,const unsigned int saltSize,uint64_t &p,uint64_t &x) noexcept
-{
-	uint64_t hash[6];
-	SHA384(hash,salt,saltSize);
-
-	// Choose a prime and a delay starting point / verification end point.
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-	p = s_mimc52Primes[hash[0] & 511U];
-	x = hash[1] % p;
-#else
-	p = s_mimc52Primes[Utils::swapBytes(hash[0]) & 511U];
-	x = Utils::swapBytes(hash[1]) % p;
-#endif
-
-	// Use the Speck128 round function as a fast PRNG to generate MIMC round constants. Speck128 initial inputs are
-	// from the last 256 bits of the salt hash. MIMC round constants could be static, but generating them from the
-	// salt may improve the overall randomness and non-reversibility of the delay function.
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-	uint64_t ka = hash[2],kb = hash[3];
-#else
-	uint64_t ka = Utils::swapBytes(hash[2]),kb = Utils::swapBytes(hash[3]);
-#endif
-	uint64_t sy = hash[4],sx = hash[5];
-	for(unsigned long i=0;i<128;i+=2) {
-		ka += i;
-		kb += i;
-		SPECK_R(sx,sy,kb);
-		SPECK_R(ka,kb,0U);
-		SPECK_R(sx,sy,kb);
-		SPECK_R(ka,kb,1U);
-		SPECK_R(sx,sy,kb);
-		SPECK_R(ka,kb,2U);
-		SPECK_R(sx,sy,kb);
-		SPECK_R(ka,kb,3U);
-		SPECK_R(sx,sy,kb);
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-		k[i] = sy;
-		k[i+1] = sx;
-#else
-		k[i] = Utils::swapBytes(sy);
-		k[i+1] = Utils::swapBytes(sx);
-#endif
-	}
-}
-
 } // anonymous namespace
 
 uint64_t mimc52Delay(const void *const salt,const unsigned int saltSize,const unsigned long rounds)
 {
-	uint64_t k[128],x,p;
-	mimc52Init(k,salt,saltSize,p,x);
+	uint64_t hash[6];
+	SHA384(hash,salt,saltSize);
 
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+	uint64_t p = s_mimc52Primes[hash[0] & 511U];
+	uint64_t x = hash[1] % p;
+#else
+	uint64_t p = s_mimc52Primes[Utils::swapBytes(hash[0]) & 511U];
+	uint64_t x = Utils::swapBytes(hash[1]) % p;
+#endif
+
+	Speck128<8> roundConstantGenerator(hash + 2);
 	const uint64_t e = ((p * 2) - 1) / 3;
 	const uint64_t m52 = 0xfffffffffffffULL;
-	for(unsigned long r=0,kn=rounds;r<rounds;++r) {
-		x = (x - k[--kn & 127U]) & m52;
+	const uint64_t rmin1 = rounds - 1;
+	const uint64_t sxx = hash[4];
+#pragma unroll 16
+	for(unsigned long r=0;r<rounds;++r) {
+		uint64_t sx = sxx,sy = rmin1 - r;
+		roundConstantGenerator.encryptXY(sx,sy);
+		x = (x - sy) & m52;
 		x = modpow52(x,e,p);
 	}
 
@@ -165,18 +132,29 @@ uint64_t mimc52Delay(const void *const salt,const unsigned int saltSize,const un
 
 bool mimc52Verify(const void *const salt,const unsigned int saltSize,unsigned long rounds,const uint64_t proof)
 {
-	uint64_t k[128],x,p;
-	mimc52Init(k,salt,saltSize,p,x);
+	uint64_t hash[6];
+	SHA384(hash,salt,saltSize);
 
-	// Note: x64_cubemod() seems slower even here on all tested cores.
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+	uint64_t p = s_mimc52Primes[hash[0] & 511U];
+	uint64_t x = hash[1] % p;
+#else
+	uint64_t p = s_mimc52Primes[Utils::swapBytes(hash[0]) & 511U];
+	uint64_t x = Utils::swapBytes(hash[1]) % p;
+#endif
 
+	Speck128<8> roundConstantGenerator(hash + 2);
 	const uint64_t m52 = 0xfffffffffffffULL;
 	uint64_t y = proof & m52;
+	const uint64_t sxx = hash[4];
 #if !defined(ZT_MIMC52_NO_FPU)
 	double ii,of,pp = (double)p;
 	uint64_t oi,one = 1;
 #endif
+#pragma unroll 16
 	for(unsigned long r=0;r<rounds;++r) {
+		uint64_t sx = sxx,sy = r;
+		roundConstantGenerator.encryptXY(sx,sy);
 #ifdef ZT_MIMC52_NO_FPU
 #ifdef x64_cubemod
 		x64_cubemod(y,p);
@@ -196,7 +174,7 @@ bool mimc52Verify(const void *const salt,const unsigned int saltSize,unsigned lo
 		y -= ((uint64_t)ii - one) * p;
 		y %= p;
 #endif
-		y = (y + k[r & 127U]) & m52;
+		y = (y + sy) & m52;
 	}
 
 	return (y % p) == x;

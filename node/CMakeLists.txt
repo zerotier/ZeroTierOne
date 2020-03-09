@@ -41,6 +41,7 @@ set(core_headers
 	SelfAwareness.hpp
 	SHA512.hpp
 	SharedPtr.hpp
+	Speck128.hpp
 	Tag.hpp
 	Topology.hpp
 	Trace.hpp

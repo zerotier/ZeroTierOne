@@ -777,8 +777,8 @@ extern "C" const char *ZTT_crypto()
 
 		{
 			ZT_T_PRINTF("[crypto] Testing MIMC52 VDF... ");
-			const uint64_t proof = mimc52Delay("testing",7,1000);
-			if ((!mimc52Verify("testing",7,1000,proof))||(proof != 0x000b501115c73369)) {
+			const uint64_t proof = mimc52Delay("",1,1000);
+			if ((!mimc52Verify("",1,1000,proof))||(proof != 0x00036030471c2aec)) {
 				ZT_T_PRINTF("FAILED (%.16llx)" ZT_EOL_S,proof);
 				return "MIMC52 failed simple delay/verify test";
 			}
