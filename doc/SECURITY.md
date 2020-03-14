@@ -6,38 +6,51 @@ Author(s): Adam Ierymenko <adam@zerotier.com>
 
 # Introduction
 
-This document briefly describes the core components of ZeroTier's cryptographic and security architecture. It focuses primarily on version 2.0, ignoring deprecated v1.x constructions that are in the process of being phased out.
+This document describes the core components of ZeroTier's cryptographic and security architecture. It focuses primarily on version 2.0 and only briefly touches on v1.x constructions that are being phased out.
 
 The intended audience for this document is developers, auditors, and security professionals wishing to understand ZeroTier's design from a security posture point of view. It's also written to serve as the basis for professional security audits of the ZeroTier protocol and code base.
 
 ## High-Level Protocol Design
 
-ZeroTier's protocol is split into two conceptual layers that we term **VL1** and **VL2**. VL1 stands for *virtual layer 1* and is a cryptographically addressed secure global peer-to-peer network responsible for moving packets between ZeroTier nodes. VL2 stands for *virtual layer 2* and is a full Ethernet emulation layer incorporating cryptographic certificate and token based access control. It's conceptually separate from VL1 but for the sake of simplicity and user experience leverages VL1's cryptographic keys and identifiers to implement this access control scheme.
+ZeroTier's protocol is split into two conceptual layers that we term **VL1** and **VL2**.
 
-## Asymmetric Cryptography, Identities, and Addressing
+VL1 stands for *virtual layer 1* and is a cryptographically addressed secure global peer-to-peer network responsible for moving packets between ZeroTier nodes. It's a virtual analogue of the physical wire or radio transciever in an Ethernet or WiFi network respectively. Think of it as a gigantic wire closet for planet Earth.
 
-VL1 peers are cryptographically addressed. This means that their public keys constitute their addresses. Cryptographic addressing is extremely convenient in peer-to-peer networks as it makes the authentication of addresses implicit via authenticated encryption and/or cryptographic signatures.
+VL2 stands for *virtual layer 2* and is a full Ethernet emulation layer incorporating cryptographic certificate and token based access control. It is similar (but not identical) to other Ethernet virtualization protocols like VXLAN. VL2 is conceptually separate from VL1 but for the sake of simplicity and ease of use leverages VL1's cryptographic infrastructure for its own authentication needs.
 
-A ZeroTier identity consists of one or more cryptographic public keys and a short address derived from a hash of those keys. A fingerprint is simply the SHA-384 hash of these keys and is longer than an address but also shorter than the keys themselves and size-invariant across different identity types.
+## VL1 Asymmetric Cryptography: Identities, and Addressing
+
+VL1 peers are cryptographically addressed, meaning addresses are strongly bound to public keys. Cryptographic addressing is extremely convenient in peer-to-peer networks as it leverages authenticated (AEAD) encryption to implicity authenticate endpoint addresses.
+
+A ZeroTier identity is comprised of one or more cryptographic public keys and a short **ZeroTier address** derived from a hash of those keys. In addition to this short address there also exists a longer fingerprint in the form of a SHA-384 hash of identity public key(s).
 
 #### Identity Types and Corresponding Algorithms
 
-* Type 0: one Curve25519 key for elliptic curve Diffie-Hellman and one Ed25519 key for Ed25519 signatures, with the address computed from a hash of both.
-* Type 1: Curve25519, Ed25519, and NIST P-384 public keys, with the latter being used for signatures (the Ed25519 key is still there but is presently unused) and with *both* keys being used for elliptic curve Diffie-Hellman key agreement. In key agreement the resulting raw secret keys are hashed together using SHA-384 to combine them and yield a single session key.
+* **Type 0** (v1.x and v2.x): one Curve25519 key for elliptic curve Diffie-Hellman and one Ed25519 key for Ed25519 signatures, with the address and fingerprint computed from a hash of both.
+* **Type 1** (v2.x only): Curve25519, Ed25519, and NIST P-384 public keys, with the latter being used for signatures (the Ed25519 key is still there but is presently unused) and with *both* keys being used for elliptic curve Diffie-Hellman key agreement. In key agreement the resulting raw secret keys are hashed together using SHA-384 to combine them and yield a single session key.
 
-(Session keys resulting from identity key exchange and agreement are long-lived session keys. A different mechanism is used for ephemeral key negotiation.)
+Session keys resulting from identity key exchange and agreement are *long-lived keys* that remain static for the lifetime of a particular pair of identities. A different mechanism is used for ephemeral key negotiation.
 
-#### Short Addresses
+#### ZeroTier Addresses
 
-In simple cryptographic addressing, keys are used directly as addresses throughout the system. Unfortunately even public key cryptosystems with short keys like Curve25519 still result in string representations that are prohibitively long for human beings to type. ZeroTier mitigates this usability problem by using a short hash of the public key termed a **ZeroTier address** to refer to a peer's full identity. This short address is also used at the wire level to reduce the size of the packet header. Peers may request full identities based on addresses from one another or (more often) from root servers.
+In the simplest form of cryptographic addressing, keys are used directly as addresses throughout the system. Unfortunately even public key cryptosystems with short keys like Curve25519 still result in string representations that are prohibitively long for human beings to type. ZeroTier mitigates this usability problem by using a short hash of the public key termed a **ZeroTier address** to refer to a peer's full identity. This short address is also used at the wire level to reduce the size of the packet header. Peers may request full identities based on addresses from from root servers.
 
-ZeroTier addresses are very short: only 40 bits or 10 hexadecimal digits, e.g. `89e92ceee5.` This makes them convenient to type but would in a naive implementation introduce a significant risk that an attacker could create a duplicate identity with a different key pair but the same address. With 40 bits an intentional collision would require only an average of about 549,755,813,888 attempts (for a 50% chance of colliding). If an attempt requires 0.5ms of CPU time on a typical contemporary desktop or server CPU, this would require about 3,000 CPU-days. Since this type of search is easy to parallelize, it would take only a few days for someone with access to a few thousand CPU cores.
+ZeroTier addresses are very short: only 40 bits or 10 hexadecimal digits, e.g. `89e92ceee5.` This makes them convenient to type, but such a short hash would in a naive implementation introduce a significant risk that an attacker could create a duplicate identity with a different key pair but the same address. With 40 bits an intentional collision would require only an average of about 549,755,813,888 attempts for a 50% chance of colliding. If an attempt requires 0.5ms of CPU time on a typical contemporary desktop or server CPU, this would require about 3,000 CPU-days. Since this type of search is easy to parallelize, it would take only a few days for someone with access to a few thousand CPU cores.
 
-To increase the security margin of this construction an intentionally slow one-way "hashcash" or "proof of work" function is required during identity generation. This work function is slow to compute but fast to verify. In our system the cost of identity generation is increased to approximately one second per identity key pair per CPU core for a typical desktop or server CPU (e.g. an Intel Core i7 or AMD Ryzen at 2.4ghz). At this rate a search would require about 6.3 million CPU-days for a 50% probability of collision.
+To provide this short hash with a larger security margin, an intentionally slow one-way "hashcash" or "proof of work" function is required during identity generation. This work function is slow to compute but fast to verify, and an address is not valid unless its work checks out. This gives identity address derivation the following costs:
+
+* Type 1 identities: an average of about 500ms per key pair per typical 2.4ghz CPU core, requiring around 3 million CPU-days to reach a 50% collision probability.
+* Type 2 identities: an average of about one second per key pair per typical 2.4ghz CPU core, requiring around 6.3 million CPU-days to reach a 50% collision probability.
 
 While too costly for the vast majority of attackers, this cost may not be prohibitive to a nation-state level attacker or to a criminal with significant funds and/or access to a very large "botnet." It's also possible that FPGA, GPU, or ASIC acceleration could be leveraged to decrease this time in a manner similar to what's been accomplished in the area of cryptocurrency mining.
 
+Fingerprints are full SHA-384 hashes of identity public keys. In base32-encoding they look like this:
 
+```
+bzg7fc3sn46fzyxcxw2ev4c4m2u5fyisb3o4wz5hfmvexbzwk6et3fsglkdcn6nnjobxi3bq7hgxqox3n4u4k
+```
+
+These are too large to type but not to copy/paste, store in databases, or use in scripts and APIs.
 
 ## VL1 Wire Protocol
 

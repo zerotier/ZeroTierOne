@@ -112,7 +112,8 @@ bool Identity::generate(const Type t)
 				Utils::storeBigEndian(_pub.t1mimc52,mimc52Delay(&_pub,sizeof(_pub) - sizeof(_pub.t1mimc52),ZT_V1_IDENTITY_MIMC52_VDF_ROUNDS_BASE));
 
 				// Compute SHA384 fingerprint hash of keys and MIMC output and generate address directly from it.
-				_computeHash(); // this sets the address for P384
+				_computeHash();
+				_address.setTo(_fp.hash());
 				if (!_address.isReserved())
 					break;
 			}
@@ -401,6 +402,10 @@ bool Identity::fromString(const char *str)
 	}
 
 	_computeHash();
+	if ((_type == P384)&&(_address != Address(_fp.hash()))) {
+		_address.zero();
+		return false;
+	}
 
 	return true;
 }
@@ -444,6 +449,8 @@ int Identity::unmarshal(const uint8_t *data,const int len) noexcept
 
 	if (len < (1 + ZT_ADDRESS_LENGTH))
 		return -1;
+	_address.setTo(data);
+
 	unsigned int privlen;
 	switch((_type = (Type)data[ZT_ADDRESS_LENGTH])) {
 
@@ -452,7 +459,6 @@ int Identity::unmarshal(const uint8_t *data,const int len) noexcept
 				return -1;
 
 			memcpy(_pub.c25519,data + ZT_ADDRESS_LENGTH + 1,ZT_C25519_PUBLIC_KEY_LEN);
-			_address.setTo(data);
 			_computeHash();
 
 			privlen = data[ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN];
@@ -474,7 +480,7 @@ int Identity::unmarshal(const uint8_t *data,const int len) noexcept
 
 			memcpy(&_pub,data + ZT_ADDRESS_LENGTH + 1,ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE);
 			_computeHash(); // this sets the address for P384
-			if (_address != Address(data)) // sanity check address in data stream
+			if (_address != Address(_fp.hash())) // this sanity check is possible with V1 identities
 				return -1;
 
 			privlen = data[ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE];
@@ -509,7 +515,6 @@ void Identity::_computeHash()
 
 		case P384:
 			SHA384(_fp._fp.hash,&_pub,sizeof(_pub));
-			_address.setTo(reinterpret_cast<const uint8_t *>(_fp._fp.hash));
 			_fp._fp.address = _address.toInt();
 			break;
 	}

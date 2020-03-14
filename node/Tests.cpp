@@ -178,10 +178,7 @@ static const C25519TestVector C25519_TEST_VECTORS[ZT_NUM_C25519_TEST_VECTORS] = 
 };
 
 #define IDENTITY_V0_KNOWN_GOOD_0 "8e4df28b72:0:ac3d46abe0c21f3cfe7a6c8d6a85cfcffcb82fbd55af6a4d6350657c68200843fa2e16f9418bbd9702cae365f2af5fb4c420908b803a681d4daef6114d78a2d7:bd8dd6e4ce7022d2f812797a80c6ee8ad180dc4ebf301dec8b06d1be08832bddd63a2f1cfa7b2c504474c75bdc8898ba476ef92e8e2d0509f8441985171ff16e"
-#define IDENTITY_V0_KNOWN_BAD_0 "9e4df28b72:0:ac3d46abe0c21f3cfe7a6c8d6a85cfcffcb82fbd55af6a4d6350657c68200843fa2e16f9418bbd9702cae365f2af5fb4c420908b803a681d4daef6114d78a2d7:bd8dd6e4ce7022d2f812797a80c6ee8ad180dc4ebf301dec8b06d1be08832bddd63a2f1cfa7b2c504474c75bdc8898ba476ef92e8e2d0509f8441985171ff16e"
-
-#define IDENTITY_V1_KNOWN_GOOD_0 "e050dcf19f:1:rmtdbcnpdjhnm6pufarv6yzwexbsbjtuehb4ywr43kwgmon4o4p3gahhd3oyydem2acv2smmnnxropmp5y2rk3op3ss5mmetfdvprhad7ryqonta6wb2jlknflbvjbkpusxtcijmg6tyio4bhbp5dpwirf24rhr4vn4iiue2dtdb5v7iq2i5uaaexjctdvm2pa:wfsu4saaikz3cs23uxixizme45nxyzgtbkht5dxyt7bxffraswf7dszrepg56ois36me3a34t4vzbv4zqpybwumvk2lwfrylk62qcmngowwyxa3e7mlxav7ubgjluxhjokgnnonv5cscjtybh2pk7uromfddsbw6vtwrzsd6yvf5fgsiargq"
-#define IDENTITY_V1_KNOWN_BAD_0 "f050dcf19f:1:rmtdbcnpdjhnm6pufarv6yzwexbsbjtuehb4ywr43kwgmon4o4p3gahhd3oyydem2acv2smmnnxropmp5y2rk3op3ss5mmetfdvprhad7ryqonta6wb2jlknflbvjbkpusxtcijmg6tyio4bhbp5dpwirf24rhr4vn4iiue2dtdb5v7iq2i5uaaexjctdvm2pa:wfsu4saaikz3cs23uxixizme45nxyzgtbkht5dxyt7bxffraswf7dszrepg56ois36me3a34t4vzbv4zqpybwumvk2lwfrylk62qcmngowwyxa3e7mlxav7ubgjluxhjokgnnonv5cscjtybh2pk7uromfddsbw6vtwrzsd6yvf5fgsiargq"
+#define IDENTITY_V1_KNOWN_GOOD_0 "cc6e483c2a:1:uojaacswtakzkpe234q67ti3hunqo5et75qwpej5gnhyofpjduncjogbrof2g72e7rhtp7xdypy2t43ojb2ewva33npnoazum3ifyladgllmc6xe2iwk7mljihrbycoitip647z4vx22vn2v2yimrgudolx4tbu3ip4f6gwt4rvjszupxk35gaalwjfvr3v5gy:apt2gnwj456cu4t5enchipsnx6nj22u6vxizzsu3azahlhqxfqymvatqvtjwtta2v32tbigt6pk7m3ndw766ynsn4hhmxnvkibhajqx5f3ugpiu5yx4xwcz6mbw2vrevxsyh3t346z37elpmgp3xdg4wyqwkyssczqdhfm3w4daq4rt75rvq"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -648,6 +645,8 @@ extern "C" const char *ZTT_general()
 		}
 
 		{
+			char tmp[2048];
+
 			ZT_T_PRINTF("[general] Testing Identity type 0 (C25519)... ");
 			Identity id;
 
@@ -686,7 +685,9 @@ extern "C" const char *ZTT_general()
 			}
 			ZT_T_PRINTF("(marshalled size: %d bytes) ",ms);
 
-			if (!id.fromString(IDENTITY_V0_KNOWN_BAD_0)) {
+			Utils::scopy(tmp,sizeof(tmp),IDENTITY_V0_KNOWN_GOOD_0);
+			tmp[0] = '0';
+			if (!id.fromString(tmp)) {
 				ZT_T_PRINTF("FAILED (error parsing test identity #2)" ZT_EOL_S);
 				return "Identity test failed: parse error";
 			}
@@ -694,13 +695,17 @@ extern "C" const char *ZTT_general()
 				ZT_T_PRINTF("FAILED (validation of known-bad identity returned ok)" ZT_EOL_S);
 				return "Identity test failed: validation of known-bad identity";
 			}
+			ZT_T_PRINTF("OK" ZT_EOL_S);
 
-			ZT_T_PRINTF("OK" ZT_EOL_S "[general] Testing Identity type 1 (P384)... ");
+			{
+				id.generate(Identity::P384);
+				id.toString(true,tmp);
+				ZT_T_PRINTF("[general] Example V1 identity: %s\n",tmp);
+				id.fingerprint().toString(tmp);
+				ZT_T_PRINTF("[general]   Fingerprint: %s" ZT_EOL_S,tmp);
+			}
 
-			//id.generate(Identity::P384);
-			//char tmp[1024];
-			//id.toString(true,tmp);
-			//ZT_T_PRINTF("\n%s\n",tmp);
+			ZT_T_PRINTF("[general] Testing Identity type 1 (P384)... ");
 
 			if (!id.fromString(IDENTITY_V1_KNOWN_GOOD_0)) {
 				ZT_T_PRINTF("FAILED (error parsing test identity #1)" ZT_EOL_S);
@@ -735,9 +740,11 @@ extern "C" const char *ZTT_general()
 			}
 			ZT_T_PRINTF("(marshalled size: %d bytes) ",ms);
 
-			if (!id.fromString(IDENTITY_V1_KNOWN_BAD_0)) {
-				ZT_T_PRINTF("FAILED (error parsing test identity #2)" ZT_EOL_S);
-				return "Identity test failed: parse error";
+			Utils::scopy(tmp,sizeof(tmp),IDENTITY_V1_KNOWN_GOOD_0);
+			tmp[0] = '0';
+			if (id.fromString(tmp)) {
+				ZT_T_PRINTF("FAILED (parse of known-bad identity returned ok)" ZT_EOL_S);
+				return "Identity test failed: parse of known-bad identity";
 			}
 			if (id.locallyValidate()) {
 				ZT_T_PRINTF("FAILED (validation of known-bad identity returned ok)" ZT_EOL_S);
@@ -778,7 +785,7 @@ extern "C" const char *ZTT_crypto()
 		{
 			ZT_T_PRINTF("[crypto] Testing MIMC52 VDF... ");
 			const uint64_t proof = mimc52Delay("",1,1000);
-			if ((!mimc52Verify("",1,1000,proof))||(proof != 0x00036030471c2aec)) {
+			if ((!mimc52Verify("",1,1000,proof))||(proof != 0x000cc1abe2dde7a3)) {
 				ZT_T_PRINTF("FAILED (%.16llx)" ZT_EOL_S,proof);
 				return "MIMC52 failed simple delay/verify test";
 			}

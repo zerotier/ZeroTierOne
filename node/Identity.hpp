@@ -174,7 +174,7 @@ public:
 	/**
 	 * @return This identity's address
 	 */
-	ZT_INLINE const Address &address() const noexcept { return _address; }
+	ZT_INLINE Address address() const noexcept { return _address; }
 
 	/**
 	 * Serialize to a more human-friendly string

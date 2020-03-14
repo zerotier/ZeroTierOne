@@ -63,7 +63,7 @@ public:
 	 *
 	 * @param s Base32 string
 	 */
-	ZT_INLINE void toString(char s[ZT_FINGERPRINT_STRING_BUFFER_LENGTH])
+	ZT_INLINE void toString(char s[ZT_FINGERPRINT_STRING_BUFFER_LENGTH]) const noexcept
 	{
 		uint8_t tmp[48 + 5];
 		address().copyTo(tmp);
@@ -78,7 +78,7 @@ public:
 	 * @param s String to decode
 	 * @return True if string appears to be valid and of the proper length (no other checking is done)
 	 */
-	ZT_INLINE bool fromString(const char *s)
+	ZT_INLINE bool fromString(const char *s) noexcept
 	{
 		uint8_t tmp[48 + 5];
 		if (Utils::b32d(s,tmp,sizeof(tmp)) != sizeof(tmp))

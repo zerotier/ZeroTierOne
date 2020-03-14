@@ -74,7 +74,7 @@ public:
 	/**
 	 * @return This peer's ZT address (short for identity().address())
 	 */
-	ZT_INLINE const Address &address() const noexcept { return _id.address(); }
+	ZT_INLINE Address address() const noexcept { return _id.address(); }
 
 	/**
 	 * @return This peer's identity
