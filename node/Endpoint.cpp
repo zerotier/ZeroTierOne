@@ -15,7 +15,23 @@
 
 namespace ZeroTier {
 
-bool Endpoint::operator==(const Endpoint &ep) const
+Endpoint::Endpoint(const InetAddress &sa,const Protocol proto) noexcept
+{
+	switch (sa.family()) {
+		case AF_INET:
+			_t = TYPE_INETADDR_V4;
+			break;
+		case AF_INET6:
+			_t = TYPE_INETADDR_V6;
+		default:
+			_t = TYPE_NIL;
+			return;
+	}
+	asInetAddress(_v.in.sa) = sa;
+	_v.in.proto = (uint8_t)proto;
+}
+
+bool Endpoint::operator==(const Endpoint &ep) const noexcept
 {
 	if (_t == ep._t) {
 		switch(_t) {
@@ -31,7 +47,7 @@ bool Endpoint::operator==(const Endpoint &ep) const
 	return false;
 }
 
-bool Endpoint::operator<(const Endpoint &ep) const
+bool Endpoint::operator<(const Endpoint &ep) const noexcept
 {
 	if ((int)_t < (int)ep._t) {
 		return true;

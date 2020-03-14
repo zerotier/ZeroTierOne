@@ -70,37 +70,23 @@ public:
 
 	ZT_INLINE Endpoint() noexcept { memoryZero(this); }
 
-	ZT_INLINE Endpoint(const InetAddress &sa,const Protocol proto = PROTO_UDP_ZT)
-	{
-		switch (sa.family()) {
-			case AF_INET:
-				_t = TYPE_INETADDR_V4;
-				break;
-			case AF_INET6:
-				_t = TYPE_INETADDR_V6;
-			default:
-				_t = TYPE_NIL;
-				return;
-		}
-		asInetAddress(_v.in.sa) = sa;
-		_v.in.proto = (uint8_t)proto;
-	}
+	explicit Endpoint(const InetAddress &sa,const Protocol proto = PROTO_UDP_ZT) noexcept;
 
-	ZT_INLINE Endpoint(const Address &zt,const uint8_t identityHash[ZT_IDENTITY_HASH_SIZE]) :
+	explicit ZT_INLINE Endpoint(const Address &zt,const uint8_t identityHash[ZT_IDENTITY_HASH_SIZE]) noexcept :
 		_t(TYPE_ZEROTIER)
 	{
 		_v.zt.address = zt.toInt();
 		memcpy(_v.zt.hash,identityHash,ZT_IDENTITY_HASH_SIZE);
 	}
 
-	ZT_INLINE Endpoint(const char *name,const int port) :
+	explicit ZT_INLINE Endpoint(const char *name,const int port) noexcept :
 		_t(TYPE_DNSNAME)
 	{
 		_v.dns.port = port;
 		Utils::scopy(_v.dns.name,sizeof(_v.dns.name),name);
 	}
 
-	explicit ZT_INLINE Endpoint(const char *url) :
+	explicit ZT_INLINE Endpoint(const char *url) noexcept :
 		_t(TYPE_URL)
 	{
 		Utils::scopy(_v.url,sizeof(_v.url),url);
@@ -153,12 +139,12 @@ public:
 
 	ZT_INLINE operator bool() const noexcept { return _t != TYPE_NIL; }
 
-	bool operator==(const Endpoint &ep) const;
-	ZT_INLINE bool operator!=(const Endpoint &ep) const { return (!(*this == ep)); }
-	bool operator<(const Endpoint &ep) const;
-	ZT_INLINE bool operator>(const Endpoint &ep) const { return (ep < *this); }
-	ZT_INLINE bool operator<=(const Endpoint &ep) const { return !(ep < *this); }
-	ZT_INLINE bool operator>=(const Endpoint &ep) const { return !(*this < ep); }
+	bool operator==(const Endpoint &ep) const noexcept;
+	ZT_INLINE bool operator!=(const Endpoint &ep) const noexcept { return (!(*this == ep)); }
+	bool operator<(const Endpoint &ep) const noexcept;
+	ZT_INLINE bool operator>(const Endpoint &ep) const noexcept { return (ep < *this); }
+	ZT_INLINE bool operator<=(const Endpoint &ep) const noexcept { return !(ep < *this); }
+	ZT_INLINE bool operator>=(const Endpoint &ep) const noexcept { return !(*this < ep); }
 
 	static constexpr int marshalSizeMax() noexcept { return ZT_ENDPOINT_MARSHAL_SIZE_MAX; }
 	int marshal(uint8_t data[ZT_ENDPOINT_MARSHAL_SIZE_MAX]) const noexcept;

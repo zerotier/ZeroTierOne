@@ -789,6 +789,14 @@ extern "C" const char *ZTT_crypto()
 				ZT_T_PRINTF("FAILED (%.16llx)" ZT_EOL_S,proof);
 				return "MIMC52 failed simple delay/verify test";
 			}
+			for(int i=0;i<1024;++i) {
+				uint64_t in = Utils::random();
+				unsigned long r = 1 + (unsigned long)(Utils::random() % 1024);
+				if (!mimc52Verify(&in,sizeof(in),r,mimc52Delay(&in,sizeof(in),r))) {
+					ZT_T_PRINTF("FAILED (random input test)");
+					return "MIMC52 failed random input test";
+				}
+			}
 			ZT_T_PRINTF("OK (%.16llx)" ZT_EOL_S,proof);
 		}
 

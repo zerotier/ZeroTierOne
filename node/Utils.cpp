@@ -439,7 +439,7 @@ uint64_t random() noexcept
 	return result;
 }
 
-bool scopy(char *dest,unsigned int len,const char *src) noexcept
+bool scopy(char *const dest,const unsigned int len,const char *const src) noexcept
 {
 	if (!len)
 		return false; // sanity check
@@ -447,14 +447,17 @@ bool scopy(char *dest,unsigned int len,const char *src) noexcept
 		*dest = (char)0;
 		return true;
 	}
-	char *const end = dest + len;
-	while ((*dest++ = *src++)) {
-		if (dest == end) {
-			*(--dest) = (char)0;
+	unsigned int i = 0;
+	for(;;) {
+		if (i >= len) {
+			dest[len - 1] = 0;
 			return false;
 		}
+		const char c = src[i];
+		dest[i] = c;
+		if (c == 0)
+			return true;
 	}
-	return true;
 }
 
 } // namespace Utils
