@@ -81,7 +81,7 @@ BSDEthernetTap::BSDEthernetTap(
 
 	Mutex::Lock _gl(globalTapCreateLock);
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	/* FreeBSD allows long interface names and interface renaming */
 
 	_dev = "zt";

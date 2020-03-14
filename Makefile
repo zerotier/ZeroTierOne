@@ -26,3 +26,10 @@ endif
 ifeq ($(OSTYPE),NetBSD)
 	include make-netbsd.mk
 endif
+
+ifeq ($(OSTYPE),MidnightBSD)
+	CC=clang60
+	CXX=clang++60
+	ZT_BUILD_PLATFORM=7
+	include make-bsd.mk
+endif

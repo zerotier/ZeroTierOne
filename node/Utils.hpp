@@ -25,7 +25,7 @@
 #include <vector>
 #include <map>
 
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 #include <sys/endian.h>
 #endif
 
@@ -373,7 +373,7 @@ public:
 	{
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 #if defined(__GNUC__)
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 		return bswap64(n);
 #elif (!defined(__OpenBSD__))
 		return __builtin_bswap64(n);
@@ -406,7 +406,7 @@ public:
 	{
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 #if defined(__GNUC__)
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 		return bswap64(n);
 #elif (!defined(__OpenBSD__))
 		return __builtin_bswap64(n);
