@@ -31,7 +31,7 @@ A ZeroTier identity is comprised of one or more cryptographic public keys and a 
 
 Session keys resulting from identity key exchange and agreement are *long-lived keys* that remain static for the lifetime of a particular pair of identities. A different mechanism is used for ephemeral key negotiation.
 
-#### ZeroTier Addresses
+#### ZeroTier Addresses and Identity Fingerprints
 
 In the simplest form of cryptographic addressing, keys are used directly as addresses throughout the system. Unfortunately even public key cryptosystems with short keys like Curve25519 still result in string representations that are prohibitively long for human beings to type. ZeroTier mitigates this usability problem by using a short hash of the public key termed a **ZeroTier address** to refer to a peer's full identity. This short address is also used at the wire level to reduce the size of the packet header. Peers may request full identities based on addresses from from root servers.
 
@@ -54,7 +54,7 @@ These are too large to type but not to copy/paste, store in databases, or use in
 
 ## VL1 Wire Protocol
 
-ZeroTier's wire protocol is packet based with packets having the following basic format:
+ZeroTier's wire protocol is packet based with packets having the following format:
 
 ```
 [0:8]    64-bit packet ID and cryptographic nonce
@@ -86,7 +86,7 @@ Fragmentation can be effectively ignored from a security point of view (with the
 
 *Legacy: In v1.x the packet ID and nonce field was assigned from a counter maintained to avoid duplicate nonce assignment and the MAC field was the first 64 bits of a Poly1305 MAC of the packet. The overall construction was identical in form to the NaCl Salsa20/Poly1305 "secret box" construction in which the first 32 bytes of Salsa20 output are used as a one-time Poly1305 key for each packet.*
 
-In v2.x the packet ID and MAC field are in reality a single split 128-bit encrypted nonce and MAC field. See AES-GMAC-SIV below for this construction.
+In v2.x the packet ID and MAC field are in reality a single split 128-bit encrypted nonce and MAC field. See AES-GMAC-SIV below.
 
 ## Symmetric Encryption: AES-GMAC-SIV
 
