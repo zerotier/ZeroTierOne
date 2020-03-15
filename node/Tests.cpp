@@ -177,7 +177,7 @@ static const C25519TestVector C25519_TEST_VECTORS[ZT_NUM_C25519_TEST_VECTORS] = 
 };
 
 #define IDENTITY_V0_KNOWN_GOOD_0 "8e4df28b72:0:ac3d46abe0c21f3cfe7a6c8d6a85cfcffcb82fbd55af6a4d6350657c68200843fa2e16f9418bbd9702cae365f2af5fb4c420908b803a681d4daef6114d78a2d7:bd8dd6e4ce7022d2f812797a80c6ee8ad180dc4ebf301dec8b06d1be08832bddd63a2f1cfa7b2c504474c75bdc8898ba476ef92e8e2d0509f8441985171ff16e"
-#define IDENTITY_V1_KNOWN_GOOD_0 "cc6e483c2a:1:uojaacswtakzkpe234q67ti3hunqo5et75qwpej5gnhyofpjduncjogbrof2g72e7rhtp7xdypy2t43ojb2ewva33npnoazum3ifyladgllmc6xe2iwk7mljihrbycoitip647z4vx22vn2v2yimrgudolx4tbu3ip4f6gwt4rvjszupxk35gaalwjfvr3v5gy:apt2gnwj456cu4t5enchipsnx6nj22u6vxizzsu3azahlhqxfqymvatqvtjwtta2v32tbigt6pk7m3ndw766ynsn4hhmxnvkibhajqx5f3ugpiu5yx4xwcz6mbw2vrevxsyh3t346z37elpmgp3xdg4wyqwkyssczqdhfm3w4daq4rt75rvq"
+#define IDENTITY_V1_KNOWN_GOOD_0 "fd6dae8353:1:l2m2xjob7vhygj3tnon6iiscevsbb6rqkj45enqrbguoumoravrq3agh42njh3vnhsqm6ymzfdduydufuvqwx4wggxowqcuxbt7laoyvansknsgs6fzkzjb5wyzm4lvreoddeeykyq5vtlvb37xlocmreebj2j7lwni5b6wlpdzemehd7u3bjsa:nzdfhoj2xfhmc2xkzrqhqv4h6u3clx3oubugahmrpyaxg5prhuwswio3nnvtlm7qtoxjqwkzqm5prdwf5vcnqoldwv7eoc76uy6hsv5ya7frns4meofmvgegs2uf5jzg5ajofxgjibjhgw67c5uzuqots5jcqa5z5arzjf7jdadg6pzbgnzq"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -697,12 +697,12 @@ extern "C" const char *ZTT_general()
 			ZT_T_PRINTF("OK" ZT_EOL_S);
 
 			{
-				ZT_T_PRINTF("[general] Example V1 identity: ");
+				ZT_T_PRINTF("[general] Generated V1 identity: ");
 				id.generate(Identity::P384);
 				id.toString(true,tmp);
 				ZT_T_PRINTF("%s" ZT_EOL_S,tmp);
 				id.fingerprint().toString(tmp);
-				ZT_T_PRINTF("[general]   Fingerprint: %s" ZT_EOL_S,tmp);
+				ZT_T_PRINTF("[general] Identity fingerprint: %s" ZT_EOL_S,tmp);
 			}
 
 			ZT_T_PRINTF("[general] Testing Identity type 1 (P384)... ");

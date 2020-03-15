@@ -52,8 +52,17 @@ public:
 	 */
 	ZT_INLINE void init(const void *k) noexcept
 	{
-		uint64_t x = Utils::loadLittleEndian<uint64_t>(k);
-		uint64_t y = Utils::loadLittleEndian<uint64_t>(reinterpret_cast<const uint8_t *>(k) + 8);
+		initXY(Utils::loadLittleEndian<uint64_t>(k),Utils::loadLittleEndian<uint64_t>(reinterpret_cast<const uint8_t *>(k) + 8));
+	}
+
+	/**
+	 * Initialize Speck from a 128-bit key in two 64-bit words
+	 *
+	 * @param x Least significant 64 bits
+	 * @param y Most significant 64 bits
+	 */
+	ZT_INLINE void initXY(uint64_t x,uint64_t y) noexcept
+	{
 		_k[0] = x;
 		for(uint64_t i=0;i<(R-1);++i) {
 			x = x >> 8U | x << 56U;
@@ -76,7 +85,6 @@ public:
 	 */
 	ZT_INLINE void encryptXY(uint64_t &x,uint64_t &y) const noexcept
 	{
-#pragma unroll
 		for (int i=0;i<R;++i) {
 			const uint64_t kk = _k[i];
 			x = x >> 8U | x << 56U;
@@ -84,6 +92,36 @@ public:
 			x ^= kk;
 			y = y << 3U | y >> 61U;
 			y ^= x;
+		}
+	}
+
+	/**
+	 * Encrypt 512 bits in parallel with the same key
+	 */
+	ZT_INLINE void encrypt512(uint64_t &x0,uint64_t &y0,uint64_t &x1,uint64_t &y1,uint64_t &x2,uint64_t &y2,uint64_t &x3,uint64_t &y3) const noexcept
+	{
+		for (int i=0;i<R;++i) {
+			const uint64_t kk = _k[i];
+			x0 = x0 >> 8U | x0 << 56U;
+			x1 = x1 >> 8U | x1 << 56U;
+			x2 = x2 >> 8U | x2 << 56U;
+			x3 = x3 >> 8U | x3 << 56U;
+			x0 += y0;
+			x1 += y1;
+			x2 += y2;
+			x3 += y3;
+			x0 ^= kk;
+			x1 ^= kk;
+			x2 ^= kk;
+			x3 ^= kk;
+			y0 = y0 << 3U | y0 >> 61U;
+			y1 = y1 << 3U | y1 >> 61U;
+			y2 = y2 << 3U | y2 >> 61U;
+			y3 = y3 << 3U | y3 >> 61U;
+			y0 ^= x0;
+			y1 ^= x1;
+			y2 ^= x2;
+			y3 ^= x3;
 		}
 	}
 
@@ -98,7 +136,6 @@ public:
 	 */
 	ZT_INLINE void decryptXY(uint64_t &x,uint64_t &y) const noexcept
 	{
-#pragma unroll
 		for (int i=(R-1);i>=0;--i) {
 			const uint64_t kk = _k[i];
 			y ^= x;

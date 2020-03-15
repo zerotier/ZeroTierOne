@@ -16,6 +16,8 @@
 #include "SHA512.hpp"
 #include "Salsa20.hpp"
 #include "Utils.hpp"
+#include "Speck128.hpp"
+#include "Poly1305.hpp"
 
 #include <cstring>
 #include <cstdint>
@@ -80,25 +82,56 @@ struct _v0_identity_generate_cond
 bool _v1_identity_generate_cond(const void *in,const unsigned int len)
 {
 	uint64_t b[98304]; // 768 KiB
+	uint64_t polykey[4];
 
 	SHA512(b,in,len);
-	for(unsigned long i=8;i<98304;i+=8)
-		SHA512(b + i,b + (i - 8),64);
+
+	polykey[0] = b[2];
+	polykey[1] = b[3];
+	polykey[2] = b[4];
+	polykey[3] = b[5];
+
 #if __BYTE_ORDER == __BIG_ENDIAN
-	for(unsigned int i=0;i<131072;i+=8) {
-		b[i] = Utils::swapBytes(b[i]);
-		b[i + 1] = Utils::swapBytes(b[i + 1]);
-		b[i + 2] = Utils::swapBytes(b[i + 2]);
-		b[i + 3] = Utils::swapBytes(b[i + 3]);
-		b[i + 4] = Utils::swapBytes(b[i + 4]);
-		b[i + 5] = Utils::swapBytes(b[i + 5]);
-		b[i + 6] = Utils::swapBytes(b[i + 6]);
-		b[i + 7] = Utils::swapBytes(b[i + 7]);
-	}
+	b[0] = Utils::swapBytes(b[0]);
+	b[1] = Utils::swapBytes(b[0]);
+	b[2] = Utils::swapBytes(b[0]);
+	b[3] = Utils::swapBytes(b[0]);
+	b[4] = Utils::swapBytes(b[0]);
+	b[5] = Utils::swapBytes(b[0]);
+	b[6] = Utils::swapBytes(b[0]);
+	b[7] = Utils::swapBytes(b[0]);
 #endif
+
+	Speck128<24> s16;
+	s16.initXY(b[0],b[1]);
+	for(unsigned long i=0;i<(98304-8);) {
+		uint64_t x0 = b[i];
+		uint64_t y0 = b[i + 1];
+		uint64_t x1 = b[i + 2];
+		uint64_t y1 = b[i + 3];
+		uint64_t x2 = b[i + 4];
+		uint64_t y2 = b[i + 5];
+		uint64_t x3 = b[i + 6];
+		uint64_t y3 = b[i + 7];
+		x0 += x1;
+		x1 += x2;
+		i += 8;
+		x2 += x3;
+		x3 += y0;
+		s16.encrypt512(x0,y0,x1,y1,x2,y2,x3,y3);
+		b[i] = x0;
+		b[i + 1] = y0;
+		b[i + 2] = x1;
+		b[i + 3] = y1;
+		b[i + 4] = x2;
+		b[i + 5] = y2;
+		b[i + 6] = x3;
+		b[i + 7] = y3;
+	}
 	std::sort(b,b + 98304);
+
 #if __BYTE_ORDER == __BIG_ENDIAN
-	for(unsigned int i=0;i<131072;i+=8) {
+	for(unsigned int i=0;i<98304;i+=8) {
 		b[i] = Utils::swapBytes(b[i]);
 		b[i + 1] = Utils::swapBytes(b[i + 1]);
 		b[i + 2] = Utils::swapBytes(b[i + 2]);
@@ -110,8 +143,12 @@ bool _v1_identity_generate_cond(const void *in,const unsigned int len)
 	}
 #endif
 
-	SHA384(b,b,sizeof(b));
-	return reinterpret_cast<uint8_t *>(b)[0] == 0;
+	poly1305(b,b,sizeof(b),polykey);
+#if __BYTE_ORDER == __BIG_ENDIAN
+	return ((Utils::swapBytes(b[0]) + Utils::swapBytes(b[1])) >> 56U) == 0;
+#else
+	return ((b[0] + b[1]) >> 56U) == 0;
+#endif
 }
 
 } // anonymous namespace
