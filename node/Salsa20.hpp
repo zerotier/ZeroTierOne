@@ -22,7 +22,7 @@
 #include "Utils.hpp"
 #include "TriviallyCopyable.hpp"
 
-#if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
+#ifdef ZT_ARCH_X64
 #include <xmmintrin.h>
 #include <emmintrin.h>
 #include <immintrin.h>

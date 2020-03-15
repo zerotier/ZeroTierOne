@@ -28,7 +28,7 @@
 #include <cstring>
 
 #define ZT_IDENTITY_STRING_BUFFER_LENGTH 1024
-#define ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE (ZT_C25519_PUBLIC_KEY_LEN + ZT_ECC384_PUBLIC_KEY_SIZE + 8)
+#define ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE (1 + ZT_C25519_PUBLIC_KEY_LEN + ZT_ECC384_PUBLIC_KEY_SIZE)
 #define ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE (ZT_C25519_PRIVATE_KEY_LEN + ZT_ECC384_PRIVATE_KEY_SIZE)
 #define ZT_IDENTITY_MARSHAL_SIZE_MAX (ZT_ADDRESS_LENGTH + 4 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE)
 
@@ -224,9 +224,9 @@ private:
 		uint8_t p384[ZT_ECC384_PRIVATE_KEY_SIZE];
 	}) _priv;
 	ZT_PACKED_STRUCT(struct { // do not re-order these fields
+		uint8_t nonce;                            // nonce for PoW generate/verify
 		uint8_t c25519[ZT_C25519_PUBLIC_KEY_LEN]; // Curve25519 and Ed25519 public keys
 		uint8_t p384[ZT_ECC384_PUBLIC_KEY_SIZE];  // NIST P-384 public key
-		uint8_t t1mimc52[8];                      // Type 1 MIMC52 proof and work amount in big-endian byte order
 	}) _pub;
 	Type _type; // _type determines which fields in _priv and _pub are used
 	bool _hasPrivate;

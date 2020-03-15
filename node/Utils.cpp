@@ -453,10 +453,9 @@ bool scopy(char *const dest,const unsigned int len,const char *const src) noexce
 			dest[len - 1] = 0;
 			return false;
 		}
-		const char c = src[i];
-		dest[i] = c;
-		if (c == 0)
+		if ((dest[i] = src[i]) == 0)
 			return true;
+		++i;
 	}
 }
 

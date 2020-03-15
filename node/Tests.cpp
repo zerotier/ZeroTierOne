@@ -39,7 +39,6 @@
 #include "FCV.hpp"
 #include "SHA512.hpp"
 #include "Defragmenter.hpp"
-#include "MIMC52.hpp"
 #include "Fingerprint.hpp"
 
 #include <cstdint>
@@ -698,9 +697,10 @@ extern "C" const char *ZTT_general()
 			ZT_T_PRINTF("OK" ZT_EOL_S);
 
 			{
+				ZT_T_PRINTF("[general] Example V1 identity: ");
 				id.generate(Identity::P384);
 				id.toString(true,tmp);
-				ZT_T_PRINTF("[general] Example V1 identity: %s\n",tmp);
+				ZT_T_PRINTF("%s" ZT_EOL_S,tmp);
 				id.fingerprint().toString(tmp);
 				ZT_T_PRINTF("[general]   Fingerprint: %s" ZT_EOL_S,tmp);
 			}
@@ -780,24 +780,6 @@ extern "C" const char *ZTT_crypto()
 				return "SHA384 test vector failed";
 			}
 			ZT_T_PRINTF("OK" ZT_EOL_S);
-		}
-
-		{
-			ZT_T_PRINTF("[crypto] Testing MIMC52 VDF... ");
-			const uint64_t proof = mimc52Delay("",1,1000);
-			if ((!mimc52Verify("",1,1000,proof))||(proof != 0x000cc1abe2dde7a3)) {
-				ZT_T_PRINTF("FAILED (%.16llx)" ZT_EOL_S,proof);
-				return "MIMC52 failed simple delay/verify test";
-			}
-			for(int i=0;i<1024;++i) {
-				uint64_t in = Utils::random();
-				unsigned long r = 1 + (unsigned long)(Utils::random() % 1024);
-				if (!mimc52Verify(&in,sizeof(in),r,mimc52Delay(&in,sizeof(in),r))) {
-					ZT_T_PRINTF("FAILED (random input test)");
-					return "MIMC52 failed random input test";
-				}
-			}
-			ZT_T_PRINTF("OK (%.16llx)" ZT_EOL_S,proof);
 		}
 
 		{
@@ -1031,21 +1013,6 @@ extern "C" const char *ZTT_benchmarkCrypto()
 		}
 
 		{
-			ZT_T_PRINTF("[crypto] Benchmarking MIMC52 VDF delay... ");
-			int64_t start = now();
-			const uint64_t proof = mimc52Delay("testing",7,250000);
-			int64_t end = now();
-			int64_t dtime = end - start;
-			ZT_T_PRINTF("%.4f μs/round" ZT_EOL_S,((double)dtime * 1000.0) / 250000.0);
-			ZT_T_PRINTF("[crypto] Benchmarking MIMC52 VDF verify... ");
-			start = now();
-			foo = (uint8_t)mimc52Verify("testing",7,1000000,proof); // doesn't matter if return is true or false here
-			end = now();
-			int64_t vtime = end - start;
-			ZT_T_PRINTF("%.8f μs/round, %.4fX faster than delay" ZT_EOL_S,((double)vtime * 1000.0) / 1000000.0,(double)(dtime / 250000.0) / (double)(vtime / 1000000.0));
-		}
-
-		{
 			ZT_T_PRINTF("[crypto] Benchmarking AES-CTR... ");
 			AES aes(AES_CTR_TEST_VECTOR_0_KEY);
 			AES::CTR ctr(aes);
@@ -1169,29 +1136,31 @@ extern "C" const char *ZTT_benchmarkCrypto()
 		}
 
 		{
-			ZT_T_PRINTF("[crypto] Benchmarking V0 Identity generation... ");
+			ZT_T_PRINTF("[crypto] Benchmarking V0 Identity generation...");
 			Identity id;
 			int64_t start = now();
-			for(long i=0;i<5;++i) {
+			for(long i=0;i<10;++i) {
 				id.generate(Identity::C25519);
 				foo = (uint8_t)id.address().toInt();
+				ZT_T_PRINTF(".");
 			}
 			int64_t end = now();
-			ZT_T_PRINTF("%.4f ms/generation (average, can vary quite a bit)" ZT_EOL_S,(double)(end - start) / 5.0);
-			ZT_T_PRINTF("[crypto] Benchmarking V0 Identity full validation... ");
+			ZT_T_PRINTF(" %.4f ms/generation (average)" ZT_EOL_S,(double)(end - start) / 10.0);
+			ZT_T_PRINTF("[crypto] Benchmarking V0 Identity full validation...");
 			start = now();
 			for(long i=0;i<10;++i)
 				foo = (uint8_t)id.locallyValidate();
 			end = now();
 			ZT_T_PRINTF("%.4f ms/validation" ZT_EOL_S,(double)(end - start) / 10.0);
-			ZT_T_PRINTF("[crypto] Benchmarking V1 Identity generation... ");
+			ZT_T_PRINTF("[crypto] Benchmarking V1 Identity generation...");
 			start = now();
-			for(long i=0;i<5;++i) {
+			for(long i=0;i<10;++i) {
 				id.generate(Identity::P384);
 				foo = (uint8_t)id.address().toInt();
+				ZT_T_PRINTF(".");
 			}
 			end = now();
-			ZT_T_PRINTF("%.4f ms/generation (relatively constant time)" ZT_EOL_S,(double)(end - start) / 5.0);
+			ZT_T_PRINTF(" %.4f ms/generation (average)" ZT_EOL_S,(double)(end - start) / 10.0);
 			ZT_T_PRINTF("[crypto] Benchmarking V1 Identity full validation... ");
 			start = now();
 			for(long i=0;i<100;++i)

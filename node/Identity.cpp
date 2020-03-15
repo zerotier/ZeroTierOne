@@ -16,7 +16,6 @@
 #include "SHA512.hpp"
 #include "Salsa20.hpp"
 #include "Utils.hpp"
-#include "MIMC52.hpp"
 
 #include <cstring>
 #include <cstdint>
@@ -31,7 +30,7 @@ namespace {
 
 // This is the memory-intensive hash function used to compute v0 identities from v0 public keys.
 #define ZT_V0_IDENTITY_GEN_MEMORY 2097152
-static void _computeMemoryHardHash(const void *const publicKey,unsigned int publicKeyBytes,void *const digest,void *const genmem) noexcept
+void _computeMemoryHardHash(const void *const publicKey,unsigned int publicKeyBytes,void *const digest,void *const genmem) noexcept
 {
 	// Digest publicKey[] to obtain initial digest
 	SHA512(digest,publicKey,publicKeyBytes);
@@ -67,7 +66,6 @@ static void _computeMemoryHardHash(const void *const publicKey,unsigned int publ
 }
 struct _v0_identity_generate_cond
 {
-	ZT_INLINE _v0_identity_generate_cond() noexcept {}
 	ZT_INLINE _v0_identity_generate_cond(unsigned char *sb,char *gm) noexcept : digest(sb),genmem(gm) {}
 	ZT_INLINE bool operator()(const uint8_t pub[ZT_C25519_PUBLIC_KEY_LEN]) const noexcept
 	{
@@ -77,6 +75,44 @@ struct _v0_identity_generate_cond
 	unsigned char *digest;
 	char *genmem;
 };
+
+// This is a simpler memory-intensive hash function for V1 identity generation.
+bool _v1_identity_generate_cond(const void *in,const unsigned int len)
+{
+	uint64_t b[98304]; // 768 KiB
+
+	SHA512(b,in,len);
+	for(unsigned long i=8;i<98304;i+=8)
+		SHA512(b + i,b + (i - 8),64);
+#if __BYTE_ORDER == __BIG_ENDIAN
+	for(unsigned int i=0;i<131072;i+=8) {
+		b[i] = Utils::swapBytes(b[i]);
+		b[i + 1] = Utils::swapBytes(b[i + 1]);
+		b[i + 2] = Utils::swapBytes(b[i + 2]);
+		b[i + 3] = Utils::swapBytes(b[i + 3]);
+		b[i + 4] = Utils::swapBytes(b[i + 4]);
+		b[i + 5] = Utils::swapBytes(b[i + 5]);
+		b[i + 6] = Utils::swapBytes(b[i + 6]);
+		b[i + 7] = Utils::swapBytes(b[i + 7]);
+	}
+#endif
+	std::sort(b,b + 98304);
+#if __BYTE_ORDER == __BIG_ENDIAN
+	for(unsigned int i=0;i<131072;i+=8) {
+		b[i] = Utils::swapBytes(b[i]);
+		b[i + 1] = Utils::swapBytes(b[i + 1]);
+		b[i + 2] = Utils::swapBytes(b[i + 2]);
+		b[i + 3] = Utils::swapBytes(b[i + 3]);
+		b[i + 4] = Utils::swapBytes(b[i + 4]);
+		b[i + 5] = Utils::swapBytes(b[i + 5]);
+		b[i + 6] = Utils::swapBytes(b[i + 6]);
+		b[i + 7] = Utils::swapBytes(b[i + 7]);
+	}
+#endif
+
+	SHA384(b,b,sizeof(b));
+	return reinterpret_cast<uint8_t *>(b)[0] == 0;
+}
 
 } // anonymous namespace
 
@@ -103,15 +139,17 @@ bool Identity::generate(const Type t)
 
 		case P384: {
 			for(;;) {
-				// Generate C25519, Ed25519, and NIST P-384 key pairs.
+				_pub.nonce = 0;
+v1_pow_new_keys:
 				C25519::generate(_pub.c25519,_priv.c25519);
 				ECC384GenerateKey(_pub.p384,_priv.p384);
+				for (;;) {
+					if (_v1_identity_generate_cond(&_pub,sizeof(_pub)))
+						break;
+					if (++_pub.nonce == 0) // endian-ness doesn't matter, just change the nonce each time
+						goto v1_pow_new_keys;
+				}
 
-				// Execute the MIMC52 verifiable delay function, resulting a near constant time delay relative
-				// to the speed of the current CPU. This result is incorporated into the final hash.
-				Utils::storeBigEndian(_pub.t1mimc52,mimc52Delay(&_pub,sizeof(_pub) - sizeof(_pub.t1mimc52),ZT_V1_IDENTITY_MIMC52_VDF_ROUNDS_BASE));
-
-				// Compute SHA384 fingerprint hash of keys and MIMC output and generate address directly from it.
 				_computeHash();
 				_address.setTo(_fp.hash());
 				if (!_address.isReserved())
@@ -141,17 +179,7 @@ bool Identity::locallyValidate() const noexcept
 				}
 
 				case P384:
-					if (_address == Address(_fp.hash())) {
-						// The most significant 8 bits of the MIMC proof included with v1 identities can be used to store a multiplier
-						// that can indicate that more work than the required minimum has been performed. Right now this is never done
-						// but it could have some use in the future. There is no harm in doing it, and we'll accept any round count
-						// that is at least ZT_V1_IDENTITY_MIMC52_VDF_ROUNDS_BASE.
-						unsigned long rounds = (((unsigned long)_pub.t1mimc52[0] & 15U) + 1U); // max: 16 * ZT_V1_IDENTITY_MIMC52_VDF_ROUNDS_BASE
-						rounds *= ZT_V1_IDENTITY_MIMC52_VDF_ROUNDS_BASE;
-						return mimc52Verify(&_pub,sizeof(_pub) - sizeof(_pub.t1mimc52),rounds,Utils::loadBigEndian<uint64_t>(_pub.t1mimc52));
-					} else {
-						return false;
-					}
+					return ( (_address == Address(_fp.hash())) && _v1_identity_generate_cond(&_pub,sizeof(_pub)) );
 
 			}
 		}
