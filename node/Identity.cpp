@@ -86,10 +86,10 @@ bool _v1_identity_generate_cond(const void *in,const unsigned int len)
 
 	SHA512(b,in,len);
 
-	polykey[0] = b[2];
-	polykey[1] = b[3];
-	polykey[2] = b[4];
-	polykey[3] = b[5];
+	polykey[0] = b[0];
+	polykey[1] = b[1];
+	polykey[2] = b[2];
+	polykey[3] = b[3];
 
 #if __BYTE_ORDER == __BIG_ENDIAN
 	b[0] = Utils::swapBytes(b[0]);
@@ -103,7 +103,7 @@ bool _v1_identity_generate_cond(const void *in,const unsigned int len)
 #endif
 
 	Speck128<24> s16;
-	s16.initXY(b[0],b[1]);
+	s16.initXY(b[4],b[5]);
 	for(unsigned long i=0;i<(98304-8);) {
 		uint64_t x0 = b[i];
 		uint64_t y0 = b[i + 1];

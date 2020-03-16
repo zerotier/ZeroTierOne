@@ -177,7 +177,7 @@ static const C25519TestVector C25519_TEST_VECTORS[ZT_NUM_C25519_TEST_VECTORS] = 
 };
 
 #define IDENTITY_V0_KNOWN_GOOD_0 "8e4df28b72:0:ac3d46abe0c21f3cfe7a6c8d6a85cfcffcb82fbd55af6a4d6350657c68200843fa2e16f9418bbd9702cae365f2af5fb4c420908b803a681d4daef6114d78a2d7:bd8dd6e4ce7022d2f812797a80c6ee8ad180dc4ebf301dec8b06d1be08832bddd63a2f1cfa7b2c504474c75bdc8898ba476ef92e8e2d0509f8441985171ff16e"
-#define IDENTITY_V1_KNOWN_GOOD_0 "fd6dae8353:1:l2m2xjob7vhygj3tnon6iiscevsbb6rqkj45enqrbguoumoravrq3agh42njh3vnhsqm6ymzfdduydufuvqwx4wggxowqcuxbt7laoyvansknsgs6fzkzjb5wyzm4lvreoddeeykyq5vtlvb37xlocmreebj2j7lwni5b6wlpdzemehd7u3bjsa:nzdfhoj2xfhmc2xkzrqhqv4h6u3clx3oubugahmrpyaxg5prhuwswio3nnvtlm7qtoxjqwkzqm5prdwf5vcnqoldwv7eoc76uy6hsv5ya7frns4meofmvgegs2uf5jzg5ajofxgjibjhgw67c5uzuqots5jcqa5z5arzjf7jdadg6pzbgnzq"
+#define IDENTITY_V1_KNOWN_GOOD_0 "967a154b9a:1:54jko57fyyh4o3ujrecicqkuz4j2nyglojufv4slofa2ul2eyyoq3q4c2hwkeyw3dvgwrpulucfg7dl26bbqmt3y42s4dq3rmu2xqjerakhvajh4it3uaipa4fzqxdclhjz7ua3w2k42xksjwvbmqnyiwndlif3tyzmf3sd6e7kkmabiw4jxatq:zmvxitqjjyxb3bb3vqmr5aihapgtqyuwkra6kinajnmrg3nkhwkqousebnv64xa4zlqe24lokcaazj3bhes4eco6e7ifcdq2grk3yqrojcff5rxylh3cg7hsbtqrhvf7ukyzqzdxunnorqjeiyjicvbba2ljrozx7ekjceru4m34ukg2fhba"
 
 // --------------------------------------------------------------------------------------------------------------------
 
