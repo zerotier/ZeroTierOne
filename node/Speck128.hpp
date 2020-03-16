@@ -98,7 +98,7 @@ public:
 	/**
 	 * Encrypt 512 bits in parallel with the same key
 	 */
-	ZT_INLINE void encrypt512(uint64_t &x0,uint64_t &y0,uint64_t &x1,uint64_t &y1,uint64_t &x2,uint64_t &y2,uint64_t &x3,uint64_t &y3) const noexcept
+	ZT_INLINE void encryptXYXYXYXY(uint64_t &x0,uint64_t &y0,uint64_t &x1,uint64_t &y1,uint64_t &x2,uint64_t &y2,uint64_t &x3,uint64_t &y3) const noexcept
 	{
 		for (int i=0;i<R;++i) {
 			const uint64_t kk = _k[i];

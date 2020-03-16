@@ -93,13 +93,13 @@ bool _v1_identity_generate_cond(const void *in,const unsigned int len)
 
 #if __BYTE_ORDER == __BIG_ENDIAN
 	b[0] = Utils::swapBytes(b[0]);
-	b[1] = Utils::swapBytes(b[0]);
-	b[2] = Utils::swapBytes(b[0]);
-	b[3] = Utils::swapBytes(b[0]);
-	b[4] = Utils::swapBytes(b[0]);
-	b[5] = Utils::swapBytes(b[0]);
-	b[6] = Utils::swapBytes(b[0]);
-	b[7] = Utils::swapBytes(b[0]);
+	b[1] = Utils::swapBytes(b[1]);
+	b[2] = Utils::swapBytes(b[2]);
+	b[3] = Utils::swapBytes(b[3]);
+	b[4] = Utils::swapBytes(b[4]);
+	b[5] = Utils::swapBytes(b[5]);
+	b[6] = Utils::swapBytes(b[6]);
+	b[7] = Utils::swapBytes(b[7]);
 #endif
 
 	Speck128<24> s16;
@@ -113,12 +113,12 @@ bool _v1_identity_generate_cond(const void *in,const unsigned int len)
 		uint64_t y2 = b[i + 5];
 		uint64_t x3 = b[i + 6];
 		uint64_t y3 = b[i + 7];
-		x0 += x1;
-		x1 += x2;
 		i += 8;
+		x0 += x1; // mix parallel 128-bit blocks
+		x1 += x2;
 		x2 += x3;
 		x3 += y0;
-		s16.encrypt512(x0,y0,x1,y1,x2,y2,x3,y3);
+		s16.encryptXYXYXYXY(x0,y0,x1,y1,x2,y2,x3,y3);
 		b[i] = x0;
 		b[i + 1] = y0;
 		b[i + 2] = x1;
@@ -147,7 +147,7 @@ bool _v1_identity_generate_cond(const void *in,const unsigned int len)
 #if __BYTE_ORDER == __BIG_ENDIAN
 	return ((Utils::swapBytes(b[0]) + Utils::swapBytes(b[1])) >> 56U) == 0;
 #else
-	return ((b[0] + b[1]) >> 56U) == 0;
+	return ((b[0] + b[1]) & 0xffU) == 0;
 #endif
 }
 
