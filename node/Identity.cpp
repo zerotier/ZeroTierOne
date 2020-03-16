@@ -95,7 +95,6 @@ bool identityV1ProofOfWorkCriteria(const void *in,const unsigned int len)
 	polykey[2] = b[2];
 	polykey[3] = b[3];
 
-	// Put bits in hash in LE byte order on BE machines.
 #if __BYTE_ORDER == __BIG_ENDIAN
 	b[0] = Utils::swapBytes(b[0]);
 	b[1] = Utils::swapBytes(b[1]);
@@ -140,7 +139,6 @@ bool identityV1ProofOfWorkCriteria(const void *in,const unsigned int len)
 	}
 	std::sort(b,b + 98304);
 
-	// Put bits in little-endian byte order if this is a BE machine.
 #if __BYTE_ORDER == __BIG_ENDIAN
 	for(unsigned int i=0;i<98304;i+=8) {
 		b[i] = Utils::swapBytes(b[i]);
@@ -195,17 +193,21 @@ bool Identity::generate(const Type t)
 
 		case P384: {
 			for(;;) {
+				// Loop until we pass the PoW criteria. The nonce is only 8 bits, so generate
+				// some new key material every time it wraps. The ECC384 generator is slightly
+				// faster so use that one.
 				_pub.nonce = 0;
-v1_pow_new_keys:
 				C25519::generate(_pub.c25519,_priv.c25519);
 				ECC384GenerateKey(_pub.p384,_priv.p384);
-				for (;;) {
+				for(;;) {
 					if (identityV1ProofOfWorkCriteria(&_pub,sizeof(_pub)))
 						break;
-					if (++_pub.nonce == 0) // endian-ness doesn't matter, just change the nonce each time
-						goto v1_pow_new_keys;
+					if (++_pub.nonce == 0)
+						ECC384GenerateKey(_pub.p384,_priv.p384);
 				}
 
+				// If we passed PoW then check that the address is valid, otherwise loop
+				// back around and run the whole process again.
 				_computeHash();
 				_address.setTo(_fp.hash());
 				if (!_address.isReserved())

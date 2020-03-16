@@ -250,8 +250,8 @@ public:
 		ii += 2;
 #ifdef ZT_NO_UNALIGNED_ACCESS
 		return (
-			((uint16_t)data.bytes[s] << 8U) |
-			(uint16_t)data.bytes[s + 1]);
+			((uint16_t)unsafeData[s] << 8U) |
+			(uint16_t)unsafeData[s + 1]);
 #else
 		return Utils::ntoh(*reinterpret_cast<const uint16_t *>(unsafeData + s));
 #endif
@@ -269,10 +269,10 @@ public:
 		ii += 4;
 #ifdef ZT_NO_UNALIGNED_ACCESS
 		return (
-			((uint32_t)data.bytes[s] << 24U) |
-			((uint32_t)data.bytes[s + 1] << 16U) |
-			((uint32_t)data.bytes[s + 2] << 8U) |
-			(uint32_t)data.bytes[s + 3]);
+			((uint32_t)unsafeData[s] << 24U) |
+			((uint32_t)unsafeData[s + 1] << 16U) |
+			((uint32_t)unsafeData[s + 2] << 8U) |
+			(uint32_t)unsafeData[s + 3]);
 #else
 		return Utils::ntoh(*reinterpret_cast<const uint32_t *>(unsafeData + s));
 #endif
@@ -290,14 +290,14 @@ public:
 		ii += 8;
 #ifdef ZT_NO_UNALIGNED_ACCESS
 		return (
-			((uint64_t)data.bytes[s] << 56U) |
-			((uint64_t)data.bytes[s + 1] << 48U) |
-			((uint64_t)data.bytes[s + 2] << 40U) |
-			((uint64_t)data.bytes[s + 3] << 32U) |
-			((uint64_t)data.bytes[s + 4] << 24U) |
-			((uint64_t)data.bytes[s + 5] << 16U) |
-			((uint64_t)data.bytes[s + 6] << 8U) |
-			(uint64_t)data.bytes[s + 7]);
+			((uint64_t)unsafeData[s] << 56U) |
+			((uint64_t)unsafeData[s + 1] << 48U) |
+			((uint64_t)unsafeData[s + 2] << 40U) |
+			((uint64_t)unsafeData[s + 3] << 32U) |
+			((uint64_t)unsafeData[s + 4] << 24U) |
+			((uint64_t)unsafeData[s + 5] << 16U) |
+			((uint64_t)unsafeData[s + 6] << 8U) |
+			(uint64_t)unsafeData[s + 7]);
 #else
 		return Utils::ntoh(*reinterpret_cast<const uint64_t *>(unsafeData + s));
 #endif
@@ -440,8 +440,8 @@ public:
 		const unsigned int s = (unsigned int)ii & ZT_BUF_MEM_MASK;
 #ifdef ZT_NO_UNALIGNED_ACCESS
 		return (
-			((uint16_t)data.bytes[s] << 8U) |
-			(uint16_t)data.bytes[s + 1]);
+			((uint16_t)unsafeData[s] << 8U) |
+			(uint16_t)unsafeData[s + 1]);
 #else
 		return Utils::ntoh(*reinterpret_cast<const uint16_t *>(unsafeData + s));
 #endif
@@ -459,10 +459,10 @@ public:
 		const unsigned int s = (unsigned int)ii & ZT_BUF_MEM_MASK;
 #ifdef ZT_NO_UNALIGNED_ACCESS
 		return (
-			((uint32_t)data.bytes[s] << 24U) |
-			((uint32_t)data.bytes[s + 1] << 16U) |
-			((uint32_t)data.bytes[s + 2] << 8U) |
-			(uint32_t)data.bytes[s + 3]);
+			((uint32_t)unsafeData[s] << 24U) |
+			((uint32_t)unsafeData[s + 1] << 16U) |
+			((uint32_t)unsafeData[s + 2] << 8U) |
+			(uint32_t)unsafeData[s + 3]);
 #else
 		return Utils::ntoh(*reinterpret_cast<const uint32_t *>(unsafeData + s));
 #endif
@@ -480,14 +480,14 @@ public:
 		const unsigned int s = (unsigned int)ii & ZT_BUF_MEM_MASK;
 #ifdef ZT_NO_UNALIGNED_ACCESS
 		return (
-			((uint64_t)data.bytes[s] << 56U) |
-			((uint64_t)data.bytes[s + 1] << 48U) |
-			((uint64_t)data.bytes[s + 2] << 40U) |
-			((uint64_t)data.bytes[s + 3] << 32U) |
-			((uint64_t)data.bytes[s + 4] << 24U) |
-			((uint64_t)data.bytes[s + 5] << 16U) |
-			((uint64_t)data.bytes[s + 6] << 8U) |
-			(uint64_t)data.bytes[s + 7]);
+			((uint64_t)unsafeData[s] << 56U) |
+			((uint64_t)unsafeData[s + 1] << 48U) |
+			((uint64_t)unsafeData[s + 2] << 40U) |
+			((uint64_t)unsafeData[s + 3] << 32U) |
+			((uint64_t)unsafeData[s + 4] << 24U) |
+			((uint64_t)unsafeData[s + 5] << 16U) |
+			((uint64_t)unsafeData[s + 6] << 8U) |
+			(uint64_t)unsafeData[s + 7]);
 #else
 		return Utils::ntoh(*reinterpret_cast<const uint64_t *>(unsafeData + s));
 #endif
@@ -516,8 +516,8 @@ public:
 		const unsigned int s = ((unsigned int)ii) & ZT_BUF_MEM_MASK;
 		ii += 2;
 #ifdef ZT_NO_UNALIGNED_ACCESS
-		b[s] = (uint8_t)(n >> 8U);
-		b[s + 1] = (uint8_t)n;
+		unsafeData[s] = (uint8_t)(n >> 8U);
+		unsafeData[s + 1] = (uint8_t)n;
 #else
 		*reinterpret_cast<uint16_t *>(unsafeData + s) = Utils::hton(n);
 #endif
@@ -534,10 +534,10 @@ public:
 		const unsigned int s = ((unsigned int)ii) & ZT_BUF_MEM_MASK;
 		ii += 4;
 #ifdef ZT_NO_UNALIGNED_ACCESS
-		b[s] = (uint8_t)(n >> 24U);
-		b[s + 1] = (uint8_t)(n >> 16U);
-		b[s + 2] = (uint8_t)(n >> 8U);
-		b[s + 3] = (uint8_t)n;
+		unsafeData[s] = (uint8_t)(n >> 24U);
+		unsafeData[s + 1] = (uint8_t)(n >> 16U);
+		unsafeData[s + 2] = (uint8_t)(n >> 8U);
+		unsafeData[s + 3] = (uint8_t)n;
 #else
 		*reinterpret_cast<uint32_t *>(unsafeData + s) = Utils::hton(n);
 #endif
@@ -554,14 +554,14 @@ public:
 		const unsigned int s = ((unsigned int)ii) & ZT_BUF_MEM_MASK;
 		ii += 8;
 #ifdef ZT_NO_UNALIGNED_ACCESS
-		b[s] = (uint8_t)(n >> 56U);
-		b[s + 1] = (uint8_t)(n >> 48U);
-		b[s + 2] = (uint8_t)(n >> 40U);
-		b[s + 3] = (uint8_t)(n >> 32U);
-		b[s + 4] = (uint8_t)(n >> 24U);
-		b[s + 5] = (uint8_t)(n >> 16U);
-		b[s + 6] = (uint8_t)(n >> 8U);
-		b[s + 7] = (uint8_t)n;
+		unsafeData[s] = (uint8_t)(n >> 56U);
+		unsafeData[s + 1] = (uint8_t)(n >> 48U);
+		unsafeData[s + 2] = (uint8_t)(n >> 40U);
+		unsafeData[s + 3] = (uint8_t)(n >> 32U);
+		unsafeData[s + 4] = (uint8_t)(n >> 24U);
+		unsafeData[s + 5] = (uint8_t)(n >> 16U);
+		unsafeData[s + 6] = (uint8_t)(n >> 8U);
+		unsafeData[s + 7] = (uint8_t)n;
 #else
 		*reinterpret_cast<uint64_t *>(unsafeData + s) = Utils::hton(n);
 #endif
@@ -635,8 +635,8 @@ public:
 	{
 		const unsigned int s = ((unsigned int)ii) & ZT_BUF_MEM_MASK;
 #ifdef ZT_NO_UNALIGNED_ACCESS
-		b[s] = (uint8_t)(n >> 8U);
-		b[s + 1] = (uint8_t)n;
+		unsafeData[s] = (uint8_t)(n >> 8U);
+		unsafeData[s + 1] = (uint8_t)n;
 #else
 		*reinterpret_cast<uint16_t *>(unsafeData + s) = Utils::hton(n);
 #endif
@@ -649,10 +649,10 @@ public:
 	{
 		const unsigned int s = ((unsigned int)ii) & ZT_BUF_MEM_MASK;
 #ifdef ZT_NO_UNALIGNED_ACCESS
-		b[s] = (uint8_t)(n >> 24U);
-		b[s + 1] = (uint8_t)(n >> 16U);
-		b[s + 2] = (uint8_t)(n >> 8U);
-		b[s + 3] = (uint8_t)n;
+		unsafeData[s] = (uint8_t)(n >> 24U);
+		unsafeData[s + 1] = (uint8_t)(n >> 16U);
+		unsafeData[s + 2] = (uint8_t)(n >> 8U);
+		unsafeData[s + 3] = (uint8_t)n;
 #else
 		*reinterpret_cast<uint32_t *>(unsafeData + s) = Utils::hton(n);
 #endif
@@ -665,14 +665,14 @@ public:
 	{
 		const unsigned int s = ((unsigned int)ii) & ZT_BUF_MEM_MASK;
 #ifdef ZT_NO_UNALIGNED_ACCESS
-		b[s] = (uint8_t)(n >> 56U);
-		b[s + 1] = (uint8_t)(n >> 48U);
-		b[s + 2] = (uint8_t)(n >> 40U);
-		b[s + 3] = (uint8_t)(n >> 32U);
-		b[s + 4] = (uint8_t)(n >> 24U);
-		b[s + 5] = (uint8_t)(n >> 16U);
-		b[s + 6] = (uint8_t)(n >> 8U);
-		b[s + 7] = (uint8_t)n;
+		unsafeData[s] = (uint8_t)(n >> 56U);
+		unsafeData[s + 1] = (uint8_t)(n >> 48U);
+		unsafeData[s + 2] = (uint8_t)(n >> 40U);
+		unsafeData[s + 3] = (uint8_t)(n >> 32U);
+		unsafeData[s + 4] = (uint8_t)(n >> 24U);
+		unsafeData[s + 5] = (uint8_t)(n >> 16U);
+		unsafeData[s + 6] = (uint8_t)(n >> 8U);
+		unsafeData[s + 7] = (uint8_t)n;
 #else
 		*reinterpret_cast<uint64_t *>(unsafeData + s) = Utils::hton(n);
 #endif
