@@ -434,7 +434,6 @@ static ZT_INLINE I loadAsIsEndian(const void *const p) noexcept
 {
 #ifdef ZT_NO_UNALIGNED_ACCESS
 	I tmp;
-#pragma unroll
 	for(int i=0;i<(int)sizeof(I);++i)
 		reinterpret_cast<uint8_t *>(&tmp)[i] = reinterpret_cast<const uint8_t *>(p)[i];
 	return tmp;
@@ -454,7 +453,6 @@ template<typename I>
 static ZT_INLINE void storeAsIsEndian(void *const p,const I i) noexcept
 {
 #ifdef ZT_NO_UNALIGNED_ACCESS
-#pragma unroll
 	for(unsigned int k=0;k<sizeof(I);++k)
 		reinterpret_cast<uint8_t *>(p)[k] = reinterpret_cast<const uint8_t *>(&i)[k];
 #else
@@ -523,10 +521,14 @@ static ZT_INLINE I loadLittleEndian(const void *const p) noexcept
 template<typename I>
 static ZT_INLINE void storeLittleEndian(void *const p,const I i) noexcept
 {
-#if __BYTE_ORDER == __BIG_ENDIAN || defined(ZT_NO_UNALIGNED_ACCESS)
+#if __BYTE_ORDER == __BIG_ENDIAN
 	storeAsIsEndian(p,_swap_bytes_bysize<I,sizeof(I)>::s(i));
 #else
+#ifdef ZT_NO_UNALIGNED_ACCESS
+	storeAsIsEndian(p,i);
+#else
 	*reinterpret_cast<I *>(p) = i;
+#endif
 #endif
 }
 
