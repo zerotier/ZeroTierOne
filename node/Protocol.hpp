@@ -1016,7 +1016,7 @@ static ZT_INLINE void salsa2012DeriveKey(const uint8_t *const in,uint8_t *const 
 	// key space into two halves-- A->B and B->A (since order will change).
 #ifdef ZT_NO_UNALIGNED_ACCESS
 	for(int i=0;i<18;++i)
-		out[i] = in[i] ^ packet.b[i];
+		out[i] = in[i] ^ packet.unsafeData[i];
 #else
 	*reinterpret_cast<uint64_t *>(out) = *reinterpret_cast<const uint64_t *>(in) ^ *reinterpret_cast<const uint64_t *>(packet.unsafeData);
 	*reinterpret_cast<uint64_t *>(out + 8) = *reinterpret_cast<const uint64_t *>(in + 8) ^ *reinterpret_cast<const uint64_t *>(packet.unsafeData + 8);

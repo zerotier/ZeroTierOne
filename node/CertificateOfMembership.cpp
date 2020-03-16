@@ -153,7 +153,7 @@ int CertificateOfMembership::unmarshal(const uint8_t *data,int len) noexcept
 			if (_signatureLength == 0)
 				return -1;
 		}
-		if ((p + _signatureLength) > len)
+		if ((int)(p + _signatureLength) > len)
 			return -1;
 		memcpy(_signature,data + p,96);
 		p += 96;
