@@ -32,7 +32,7 @@ namespace {
 
 // This is the memory-intensive hash function used to compute v0 identities from v0 public keys.
 #define ZT_V0_IDENTITY_GEN_MEMORY 2097152
-void _computeMemoryHardHash(const void *const publicKey,unsigned int publicKeyBytes,void *const digest,void *const genmem) noexcept
+void identityV0ProofOfWorkFrankenhash(const void *const publicKey,unsigned int publicKeyBytes,void *const digest,void *const genmem) noexcept
 {
 	// Digest publicKey[] to obtain initial digest
 	SHA512(digest,publicKey,publicKeyBytes);
@@ -66,12 +66,12 @@ void _computeMemoryHardHash(const void *const publicKey,unsigned int publicKeyBy
 		s20.crypt20(digest,digest,64);
 	}
 }
-struct _v0_identity_generate_cond
+struct identityV0ProofOfWorkCriteria
 {
-	ZT_INLINE _v0_identity_generate_cond(unsigned char *sb,char *gm) noexcept : digest(sb),genmem(gm) {}
+	ZT_INLINE identityV0ProofOfWorkCriteria(unsigned char *sb,char *gm) noexcept : digest(sb),genmem(gm) {}
 	ZT_INLINE bool operator()(const uint8_t pub[ZT_C25519_PUBLIC_KEY_LEN]) const noexcept
 	{
-		_computeMemoryHardHash(pub,ZT_C25519_PUBLIC_KEY_LEN,digest,genmem);
+		identityV0ProofOfWorkFrankenhash(pub,ZT_C25519_PUBLIC_KEY_LEN,digest,genmem);
 		return (digest[0] < 17);
 	}
 	unsigned char *digest;
@@ -79,18 +79,23 @@ struct _v0_identity_generate_cond
 };
 
 // This is a simpler memory-intensive hash function for V1 identity generation.
-bool _v1_identity_generate_cond(const void *in,const unsigned int len)
+// It's not quite as intensive as the V0 frankenhash, is a little more orderly in
+// its design, but remains relatively resistant to GPU acceleration due to memory
+// requirements for efficient computation.
+bool identityV1ProofOfWorkCriteria(const void *in,const unsigned int len)
 {
-	uint64_t b[98304]; // 768 KiB
+	uint64_t b[98304]; // 768 KiB of working memory
 	uint64_t polykey[4];
 
 	SHA512(b,in,len);
 
+	// Poly1305 key, used in final hash at the end.
 	polykey[0] = b[0];
 	polykey[1] = b[1];
 	polykey[2] = b[2];
 	polykey[3] = b[3];
 
+	// Put bits in hash in LE byte order on BE machines.
 #if __BYTE_ORDER == __BIG_ENDIAN
 	b[0] = Utils::swapBytes(b[0]);
 	b[1] = Utils::swapBytes(b[1]);
@@ -102,6 +107,11 @@ bool _v1_identity_generate_cond(const void *in,const unsigned int len)
 	b[7] = Utils::swapBytes(b[7]);
 #endif
 
+	// Memory-intensive work: fill 'b' with pseudo-random bits generated from
+	// a reduced-round instance of Speck128 using a CBC-like construction.
+	// Then sort the resulting integer array in ascending numerical order.
+	// The sort requires that we compute and cache the whole data set, or at
+	// least that this is the most efficient implementation.
 	Speck128<24> s16;
 	s16.initXY(b[4],b[5]);
 	for(unsigned long i=0;i<(98304-8);) {
@@ -130,6 +140,7 @@ bool _v1_identity_generate_cond(const void *in,const unsigned int len)
 	}
 	std::sort(b,b + 98304);
 
+	// Put bits in little-endian byte order if this is a BE machine.
 #if __BYTE_ORDER == __BIG_ENDIAN
 	for(unsigned int i=0;i<98304;i+=8) {
 		b[i] = Utils::swapBytes(b[i]);
@@ -143,7 +154,14 @@ bool _v1_identity_generate_cond(const void *in,const unsigned int len)
 	}
 #endif
 
+	// Use poly1305 to compute a very fast digest of 'b'. This doesn't have to be
+	// cryptographic per se, just have good hashing properties.
 	poly1305(b,b,sizeof(b),polykey);
+
+	// Criterion: add two 64-bit components of poly1305 hash, must be zero mod 180.
+	// As with the rest of this bits are used in little-endian byte order. The value
+	// of 180 was set empirically to result in about one second per new identity on
+	// one CPU core of a typical desktop or server in 2020.
 #if __BYTE_ORDER == __BIG_ENDIAN
 	const uint64_t finalHash = Utils::swapBytes(b[0]) + Utils::swapBytes(b[1]);
 #else
@@ -168,7 +186,7 @@ bool Identity::generate(const Type t)
 			uint8_t digest[64];
 			char *const genmem = new char[ZT_V0_IDENTITY_GEN_MEMORY];
 			do {
-				C25519::generateSatisfying(_v0_identity_generate_cond(digest,genmem),_pub.c25519,_priv.c25519);
+				C25519::generateSatisfying(identityV0ProofOfWorkCriteria(digest,genmem),_pub.c25519,_priv.c25519);
 				_address.setTo(digest + 59);
 			} while (_address.isReserved());
 			delete[] genmem;
@@ -182,7 +200,7 @@ v1_pow_new_keys:
 				C25519::generate(_pub.c25519,_priv.c25519);
 				ECC384GenerateKey(_pub.p384,_priv.p384);
 				for (;;) {
-					if (_v1_identity_generate_cond(&_pub,sizeof(_pub)))
+					if (identityV1ProofOfWorkCriteria(&_pub,sizeof(_pub)))
 						break;
 					if (++_pub.nonce == 0) // endian-ness doesn't matter, just change the nonce each time
 						goto v1_pow_new_keys;
@@ -211,13 +229,13 @@ bool Identity::locallyValidate() const noexcept
 				case C25519: {
 					uint8_t digest[64];
 					char *genmem = new char[ZT_V0_IDENTITY_GEN_MEMORY];
-					_computeMemoryHardHash(_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN,digest,genmem);
+					identityV0ProofOfWorkFrankenhash(_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN,digest,genmem);
 					delete[] genmem;
 					return ((_address == Address(digest + 59)) && (digest[0] < 17));
 				}
 
 				case P384:
-					return ( (_address == Address(_fp.hash())) && _v1_identity_generate_cond(&_pub,sizeof(_pub)) );
+					return ((_address == Address(_fp.hash())) && identityV1ProofOfWorkCriteria(&_pub,sizeof(_pub)) );
 
 			}
 		}
