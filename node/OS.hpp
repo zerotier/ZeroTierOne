@@ -53,7 +53,7 @@
 #ifndef __CPP11__
 // Beyond that defining nullptr, constexpr, and noexcept should allow us to still build on these. So far we've
 // avoided deeper C++11 features like lambdas in the core until we're 100% sure all the ancient targets are gone.
-#error TODO: to build on pre-c++11 compilers we'll need to make a subset "polyfill" of std::atomic for integers
+#error TODO: to build on pre-c++11 compilers we will need to make a subset of std::atomic for integers
 #define nullptr (0)
 #define constexpr ZT_INLINE
 #define noexcept throw()

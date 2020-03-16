@@ -145,10 +145,11 @@ bool _v1_identity_generate_cond(const void *in,const unsigned int len)
 
 	poly1305(b,b,sizeof(b),polykey);
 #if __BYTE_ORDER == __BIG_ENDIAN
-	return ((Utils::swapBytes(b[0]) + Utils::swapBytes(b[1])) >> 56U) == 0;
+	const uint64_t finalHash = Utils::swapBytes(b[0]) + Utils::swapBytes(b[1]);
 #else
-	return ((b[0] + b[1]) & 0xffU) == 0;
+	const uint64_t finalHash = b[0] + b[1];
 #endif
+	return (finalHash % 180U) == 0;
 }
 
 } // anonymous namespace
