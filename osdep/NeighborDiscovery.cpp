@@ -124,7 +124,7 @@ struct _neighbor_advertisement {
         memset(target, 0, sizeof(target));
     }
 
-    void calculateChecksum(const sockaddr_storage &sourceIp, const sockaddr_storage &destIp) {
+    void calculateChecksum(const sockaddr_storage &sourceIp, const InetAddress &destIp) {
         _pseudo_header ph;
         memset(&ph, 0, sizeof(_pseudo_header));
         const sockaddr_in6 *src = (const sockaddr_in6*)&sourceIp;
@@ -180,7 +180,7 @@ sockaddr_storage NeighborDiscovery::processIncomingND(const uint8_t *nd, unsigne
     // assert(sizeof(_neighbor_advertisement) == 32);
 
     const uint64_t now = OSUtils::now();
-    sockaddr_storage ip = {0};
+    InetAddress ip;
 
     if (len >= sizeof(_neighbor_solicitation) && nd[0] == 0x87) {
         // respond to Neighbor Solicitation request for local address
@@ -190,12 +190,12 @@ sockaddr_storage NeighborDiscovery::processIncomingND(const uint8_t *nd, unsigne
         _NDEntry *targetEntry = _cache.get(targetAddress);
         if (targetEntry && targetEntry->local) {
             _neighbor_advertisement adv;
-            targetEntry->mac.copyTo(adv.option.mac, 6);
+            targetEntry->mac.copyTo(adv.option.mac);
             memcpy(adv.target, solicitation.target, 16);
             adv.calculateChecksum(localIp, targetAddress);
             memcpy(response, &adv, sizeof(_neighbor_advertisement));
             responseLen = sizeof(_neighbor_advertisement);
-            responseDest.setTo(solicitation.option.mac, 6);
+            responseDest.setTo(solicitation.option.mac);
         }
     } else if (len >= sizeof(_neighbor_advertisement) && nd[0] == 0x88) {
         _neighbor_advertisement adv;
@@ -204,7 +204,7 @@ sockaddr_storage NeighborDiscovery::processIncomingND(const uint8_t *nd, unsigne
         _NDEntry *queryEntry = _cache.get(responseAddress);
         if(queryEntry && !queryEntry->local && (now - queryEntry->lastQuerySent <= ZT_ND_QUERY_MAX_TTL)) {
             queryEntry->lastResponseReceived = now;
-            queryEntry->mac.setTo(adv.option.mac, 6);
+            queryEntry->mac.setTo(adv.option.mac);
             ip = responseAddress;
         }
     }
@@ -212,8 +212,8 @@ sockaddr_storage NeighborDiscovery::processIncomingND(const uint8_t *nd, unsigne
     if ((now - _lastCleaned) >= ZT_ND_EXPIRE) {
         _lastCleaned = now;
         Hashtable<InetAddress, _NDEntry>::Iterator i(_cache);
-        InetAddress *k = NULL;
-        _NDEntry *v = NULL;
+        InetAddress *k = nullptr;
+        _NDEntry *v = nullptr;
         while (i.next(k, v)) {
             if(!v->local && (now - v->lastResponseReceived) >= ZT_ND_EXPIRE) {
                 _cache.erase(*k);
@@ -221,7 +221,7 @@ sockaddr_storage NeighborDiscovery::processIncomingND(const uint8_t *nd, unsigne
         }
     }
 
-    return ip;
+    return *reinterpret_cast<sockaddr_storage *>(&ip);
 }
 
 MAC NeighborDiscovery::query(const MAC &localMac, const sockaddr_storage &localIp, const sockaddr_storage &targetIp, uint8_t *query, unsigned int &queryLen, MAC &queryDest)
@@ -241,7 +241,7 @@ MAC NeighborDiscovery::query(const MAC &localMac, const sockaddr_storage &localI
 
         _neighbor_solicitation ns;
         memcpy(ns.target, targetAddress.rawIpData(), 16);
-        localMac.copyTo(ns.option.mac, 6);
+        localMac.copyTo(ns.option.mac);
         ns.calculateChecksum(localIp, targetIp);
         if (e.mac) {
             queryDest = e.mac;

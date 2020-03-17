@@ -344,8 +344,6 @@ extern "C" ZT_GoNode *ZT_GoNode_new(const char *workingPath,uintptr_t userPtr)
 							goHandleTapAddedMulticastGroup(gn,(ZT_GoTap *)t->second.get(),t->first,g->mac().toInt(),g->adi());
 						for(auto g=removed.begin();g!=removed.end();++g)
 							goHandleTapRemovedMulticastGroup(gn,(ZT_GoTap *)t->second.get(),t->first,g->mac().toInt(),g->adi());
-
-						t->second->syncRoutes();
 					}
 				}
 			}
@@ -477,17 +475,26 @@ extern "C" int ZT_GoNode_phyStartListen(ZT_GoNode *gn,const char *dev,const char
 			gnt.thr = std::thread([udpSock,gn,&gnt] {
 				struct sockaddr_in6 in6;
 				socklen_t salen;
-				char buf[16384];
 				while (gnt.run) {
 					salen = sizeof(in6);
-					int s = (int)recvfrom(udpSock,buf,sizeof(buf),0,reinterpret_cast<struct sockaddr *>(&in6),&salen);
-					if (s > 0) {
-						gn->node->processWirePacket(&gnt,OSUtils::now(),(int64_t)udpSock,reinterpret_cast<const struct sockaddr_storage *>(&in6),buf,(unsigned int)s,&(gn->nextBackgroundTaskDeadline));
-					} else {
-						// If something goes bad with this socket such as its interface vanishing, it
-						// will eventually be closed by higher level (Go) code. Until then prevent the
-						// system from consuming too much CPU.
-						std::this_thread::sleep_for(std::chrono::milliseconds(10));
+					void *buf = ZT_getBuffer();
+					if (buf) {
+						int s = (int)recvfrom(udpSock,buf,16384,0,reinterpret_cast<struct sockaddr *>(&in6),&salen);
+						if (s > 0) {
+							ZT_Node_processWirePacket(
+								reinterpret_cast<ZT_Node *>(gn->node),
+								nullptr,
+								OSUtils::now(),
+								(int64_t)udpSock,
+								reinterpret_cast<const struct sockaddr_storage *>(&in6),
+								buf,
+								(unsigned int)s,
+								1,
+								&(gn->nextBackgroundTaskDeadline));
+						} else {
+							ZT_freeBuffer(buf);
+							std::this_thread::sleep_for(std::chrono::milliseconds(10));
+						}
 					}
 				}
 			});
@@ -523,12 +530,26 @@ extern "C" int ZT_GoNode_phyStartListen(ZT_GoNode *gn,const char *dev,const char
 			gnt.thr = std::thread([udpSock,gn,&gnt] {
 				struct sockaddr_in in4;
 				socklen_t salen;
-				char buf[16384];
 				while (gnt.run) {
 					salen = sizeof(in4);
-					int s = (int)recvfrom(udpSock,buf,sizeof(buf),0,reinterpret_cast<struct sockaddr *>(&in4),&salen);
-					if (s > 0) {
-						gn->node->processWirePacket(&gnt,OSUtils::now(),(int64_t)udpSock,reinterpret_cast<const struct sockaddr_storage *>(&in4),buf,(unsigned int)s,&(gn->nextBackgroundTaskDeadline));
+					void *buf = ZT_getBuffer();
+					if (buf) {
+						int s = (int)recvfrom(udpSock,buf,sizeof(buf),0,reinterpret_cast<struct sockaddr *>(&in4),&salen);
+						if (s > 0) {
+							ZT_Node_processWirePacket(
+								reinterpret_cast<ZT_Node *>(gn->node),
+								nullptr,
+								OSUtils::now(),
+								(int64_t)udpSock,
+								reinterpret_cast<const struct sockaddr_storage *>(&in4),
+								buf,
+								(unsigned int)s,
+								1,
+								&(gn->nextBackgroundTaskDeadline));
+						} else {
+							ZT_freeBuffer(buf);
+							std::this_thread::sleep_for(std::chrono::milliseconds(10));
+						}
 					}
 				}
 			});
@@ -557,8 +578,19 @@ extern "C" int ZT_GoNode_phyStopListen(ZT_GoNode *gn,const char *dev,const char 
 
 static void tapFrameHandler(void *uptr,void *tptr,uint64_t nwid,const MAC &from,const MAC &to,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
 {
-	ZT_GoNode *const gn = reinterpret_cast<ZT_GoNode *>(uptr);
-	gn->node->processVirtualNetworkFrame(tptr,OSUtils::now(),nwid,from.toInt(),to.toInt(),etherType,vlanId,data,len,&(gn->nextBackgroundTaskDeadline));
+	ZT_Node_processVirtualNetworkFrame(
+		reinterpret_cast<ZT_Node *>(reinterpret_cast<ZT_GoNode *>(uptr)->node),
+		tptr,
+		OSUtils::now(),
+		nwid,
+		from.toInt(),
+		to.toInt(),
+		etherType,
+		vlanId,
+		data,
+		len,
+		0,
+		&(reinterpret_cast<ZT_GoNode *>(uptr)->nextBackgroundTaskDeadline));
 }
 
 extern "C" ZT_GoTap *ZT_GoNode_join(ZT_GoNode *gn,uint64_t nwid)
@@ -661,48 +693,4 @@ extern "C" void ZT_GoTap_setFriendlyName(ZT_GoTap *tap,const char *friendlyName)
 extern "C" void ZT_GoTap_setMtu(ZT_GoTap *tap,unsigned int mtu)
 {
 	reinterpret_cast<EthernetTap *>(tap)->setMtu(mtu);
-}
-
-extern "C" int ZT_GoTap_addRoute(ZT_GoTap *tap,int targetAf,const void *targetIp,int targetNetmaskBits,int viaAf,const void *viaIp,unsigned int metric)
-{
-	InetAddress target,via;
-	switch(targetAf) {
-		case AF_INET:
-			target.set(targetIp,4,(unsigned int)targetNetmaskBits);
-			break;
-		case AF_INET6:
-			target.set(targetIp,16,(unsigned int)targetNetmaskBits);
-			break;
-	}
-	switch(viaAf) {
-		case AF_INET:
-			via.set(viaIp,4,0);
-			break;
-		case AF_INET6:
-			via.set(viaIp,16,0);
-			break;
-	}
-	return reinterpret_cast<EthernetTap *>(tap)->addRoute(target,via,metric);
-}
-
-extern "C" int ZT_GoTap_removeRoute(ZT_GoTap *tap,int targetAf,const void *targetIp,int targetNetmaskBits,int viaAf,const void *viaIp,unsigned int metric)
-{
-	InetAddress target,via;
-	switch(targetAf) {
-		case AF_INET:
-			target.set(targetIp,4,(unsigned int)targetNetmaskBits);
-			break;
-		case AF_INET6:
-			target.set(targetIp,16,(unsigned int)targetNetmaskBits);
-			break;
-	}
-	switch(viaAf) {
-		case AF_INET:
-			via.set(viaIp,4,0);
-			break;
-		case AF_INET6:
-			via.set(viaIp,16,0);
-			break;
-	}
-	return reinterpret_cast<EthernetTap *>(tap)->removeRoute(target,via,metric);
 }

@@ -2203,8 +2203,9 @@ ZT_SDK_API void ZT_Identity_delete(ZT_Identity *id);
  * @param major Result: major version
  * @param minor Result: minor version
  * @param revision Result: revision
+ * @param build Result: build number
  */
-ZT_SDK_API void ZT_version(int *major,int *minor,int *revision);
+ZT_SDK_API void ZT_version(int *major,int *minor,int *revision,int *build);
 
 #ifdef __cplusplus
 }

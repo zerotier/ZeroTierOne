@@ -227,7 +227,7 @@ bool MacEthernetTap::addIp(const InetAddress &ip)
 
 	std::string cmd;
 	cmd.push_back((char)ZT_MACETHERNETTAPAGENT_STDIN_CMD_IFCONFIG);
-	cmd.append((ip.ss_family == AF_INET6) ? "inet6" : "inet");
+	cmd.append((ip.family() == AF_INET6) ? "inet6" : "inet");
 	cmd.push_back(0);
 	cmd.append(ip.toString(tmp));
 	cmd.push_back(0);
@@ -252,7 +252,7 @@ bool MacEthernetTap::removeIp(const InetAddress &ip)
 
 	std::string cmd;
 	cmd.push_back((char)ZT_MACETHERNETTAPAGENT_STDIN_CMD_IFCONFIG);
-	cmd.append((ip.ss_family == AF_INET6) ? "inet6" : "inet");
+	cmd.append((ip.family() == AF_INET6) ? "inet6" : "inet");
 	cmd.push_back(0);
 	cmd.append(ip.toString(tmp));
 	cmd.push_back(0);
@@ -307,8 +307,8 @@ void MacEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType,co
 	uint16_t l;
 	if ((_agentStdin > 0)&&(len <= _mtu)&&(_enabled)) {
 		hdr[0] = ZT_MACETHERNETTAPAGENT_STDIN_CMD_PACKET;
-		to.copyTo(hdr + 1,6);
-		from.copyTo(hdr + 7,6);
+		to.copyTo(hdr + 1);
+		from.copyTo(hdr + 7);
 		hdr[13] = (unsigned char)((etherType >> 8) & 0xff);
 		hdr[14] = (unsigned char)(etherType & 0xff);
 		l = (uint16_t)(len + 15);
@@ -339,7 +339,7 @@ void MacEthernetTap::scanMulticastGroups(std::vector<MulticastGroup> &added,std:
 				struct sockaddr_dl *in = (struct sockaddr_dl *)p->ifma_name;
 				struct sockaddr_dl *la = (struct sockaddr_dl *)p->ifma_addr;
 				if ((la->sdl_alen == 6)&&(in->sdl_nlen <= _dev.length())&&(!memcmp(_dev.data(),in->sdl_data,in->sdl_nlen)))
-					newGroups.push_back(MulticastGroup(MAC(la->sdl_data + la->sdl_nlen,6),0));
+					newGroups.push_back(MulticastGroup(MAC((uint8_t *)(la->sdl_data + la->sdl_nlen)),0));
 			}
 			p = p->ifma_next;
 		}
@@ -423,8 +423,8 @@ void MacEthernetTap::threadMain()
 						char *msg = agentReadBuf + 2;
 
 						if ((len > 14)&&(_enabled)) {
-							to.setTo(msg,6);
-							from.setTo(msg + 6,6);
+							to.setTo((uint8_t *)msg);
+							from.setTo((uint8_t *)(msg + 6));
 							_handler(_arg,(void *)0,_nwid,from,to,ntohs(((const uint16_t *)msg)[6]),0,(const void *)(msg + 14),(unsigned int)len - 14);
 						}
 

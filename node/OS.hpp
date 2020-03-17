@@ -17,9 +17,9 @@
 #ifndef ZT_OS_HPP
 #define ZT_OS_HPP
 
-#include <cstdint>
-#include <cstdlib>
-#include <cstring>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
 #if defined(_WIN32) || defined(_WIN64)
 #ifdef _MSC_VER
@@ -40,10 +40,22 @@
 #include <sys/param.h>
 #endif
 
+#ifdef SOCKET
+#define ZT_SOCKET SOCKET
+#else
+#define ZT_SOCKET int
+#endif
+#ifdef INVALID_SOCKET
+#define ZT_INVALID_SOCKET INVALID_SOCKET
+#else
+#define ZT_INVALID_SOCKET (-1)
+#endif
+
 #if !defined(__GNUC__) && (defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1) || defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2) || defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4) || defined(__INTEL_COMPILER) || defined(__clang__))
 #define __GNUC__ 3
 #endif
 
+#ifdef __cplusplus
 #if __cplusplus > 199711L
 #include <atomic>
 #ifndef __CPP11__
@@ -57,6 +69,7 @@
 #define nullptr (0)
 #define constexpr ZT_INLINE
 #define noexcept throw()
+#endif
 #endif
 
 #ifdef __GNUC__

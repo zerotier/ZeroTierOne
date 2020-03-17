@@ -1073,7 +1073,7 @@ enum ZT_ResultCode ZT_Node_setPhysicalPathConfiguration(ZT_Node *node,const stru
 	}
 }
 
-void ZT_version(int *major,int *minor,int *revision)
+void ZT_version(int *major,int *minor,int *revision,int *build)
 {
 	if (major)
 		*major = ZEROTIER_VERSION_MAJOR;
@@ -1081,6 +1081,8 @@ void ZT_version(int *major,int *minor,int *revision)
 		*minor = ZEROTIER_VERSION_MINOR;
 	if (revision)
 		*revision = ZEROTIER_VERSION_REVISION;
+	if (build)
+		*build = ZEROTIER_VERSION_BUILD;
 }
 
 } // extern "C"

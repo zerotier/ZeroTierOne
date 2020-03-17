@@ -56,18 +56,6 @@ const (
 	NetworkTypePrivate int = C.ZT_NETWORK_TYPE_PRIVATE
 	NetworkTypePublic  int = C.ZT_NETWORK_TYPE_PUBLIC
 
-	// CoreVersionMajor is the major version of the ZeroTier core
-	CoreVersionMajor int = C.ZEROTIER_ONE_VERSION_MAJOR
-
-	// CoreVersionMinor is the minor version of the ZeroTier core
-	CoreVersionMinor int = C.ZEROTIER_ONE_VERSION_MINOR
-
-	// CoreVersionRevision is the revision of the ZeroTier core
-	CoreVersionRevision int = C.ZEROTIER_ONE_VERSION_REVISION
-
-	// CoreVersionBuild is the build version of the ZeroTier core
-	CoreVersionBuild int = C.ZEROTIER_ONE_VERSION_BUILD
-
 	networkConfigOpUp     int = C.ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP
 	networkConfigOpUpdate int = C.ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE
 
@@ -82,7 +70,21 @@ var (
 	nodesByUserPtr     = make(map[uintptr]*Node)
 	nodesByUserPtrCtr  = uintptr(0)
 	nodesByUserPtrLock sync.RWMutex
+
+	CoreVersionMajor int
+	CoreVersionMinor int
+	CoreVersionRevision int
+	CoreVersionBuild int
 )
+
+func init() {
+	var vMaj,vMin,vRev,vBuild C.int
+	C.ZT_version(&vMaj,&vMin,&vRev,&vBuild)
+	CoreVersionMajor = int(vMaj)
+	CoreVersionMinor = int(vMin)
+	CoreVersionRevision = int(vRev)
+	CoreVersionBuild = int(vBuild)
+}
 
 // Node is an instance of a virtual port on the global switch.
 type Node struct {

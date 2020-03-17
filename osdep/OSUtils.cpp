@@ -352,7 +352,7 @@ uint64_t OSUtils::jsonInt(const nlohmann::json &jv,const uint64_t dfl)
 			return (uint64_t)jv;
 		} else if (jv.is_string()) {
 			std::string s = jv;
-			return Utils::strToU64(s.c_str());
+			return (uint64_t)strtoull(s.c_str(),nullptr,10);
 		} else if (jv.is_boolean()) {
 			return ((bool)jv ? 1ULL : 0ULL);
 		}

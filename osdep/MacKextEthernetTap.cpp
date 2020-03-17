@@ -487,7 +487,7 @@ bool MacKextEthernetTap::addIp(const InetAddress &ip)
 	long cpid = (long)vfork();
 	if (cpid == 0) {
 		char tmp[128];
-		::execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),(ip.ss_family == AF_INET6) ? "inet6" : "inet",ip.toString(tmp),"alias",(const char *)0);
+		::execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),(ip.family() == AF_INET6) ? "inet6" : "inet",ip.toString(tmp),"alias",(const char *)0);
 		::_exit(-1);
 	} else if (cpid > 0) {
 		int exitcode = -1;
@@ -508,7 +508,7 @@ bool MacKextEthernetTap::removeIp(const InetAddress &ip)
 			long cpid = (long)vfork();
 			if (cpid == 0) {
 				char tmp[128];
-				execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),(ip.ss_family == AF_INET6) ? "inet6" : "inet",ip.toIpString(tmp),"-alias",(const char *)0);
+				execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),(ip.family() == AF_INET6) ? "inet6" : "inet",ip.toIpString(tmp),"-alias",(const char *)0);
 				_exit(-1);
 			} else if (cpid > 0) {
 				int exitcode = -1;
@@ -562,8 +562,8 @@ void MacKextEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherTyp
 {
 	char putBuf[ZT_MAX_MTU + 64];
 	if ((_fd > 0)&&(len <= _mtu)&&(_enabled)) {
-		to.copyTo(putBuf,6);
-		from.copyTo(putBuf + 6,6);
+		to.copyTo((uint8_t *)putBuf);
+		from.copyTo((uint8_t *)(putBuf + 6));
 		*((uint16_t *)(putBuf + 12)) = htons((uint16_t)etherType);
 		memcpy(putBuf + 14,data,len);
 		len += 14;
@@ -592,7 +592,7 @@ void MacKextEthernetTap::scanMulticastGroups(std::vector<MulticastGroup> &added,
 				struct sockaddr_dl *in = (struct sockaddr_dl *)p->ifma_name;
 				struct sockaddr_dl *la = (struct sockaddr_dl *)p->ifma_addr;
 				if ((la->sdl_alen == 6)&&(in->sdl_nlen <= _dev.length())&&(!memcmp(_dev.data(),in->sdl_data,in->sdl_nlen)))
-					newGroups.push_back(MulticastGroup(MAC(la->sdl_data + la->sdl_nlen,6),0));
+					newGroups.push_back(MulticastGroup(MAC((uint8_t *)(la->sdl_data + la->sdl_nlen)),0));
 			}
 			p = p->ifma_next;
 		}
@@ -673,8 +673,8 @@ void MacKextEthernetTap::threadMain()
 						r = _mtu + 14;
 
 					if (_enabled) {
-						to.setTo(getBuf,6);
-						from.setTo(getBuf + 6,6);
+						to.setTo((uint8_t *)getBuf);
+						from.setTo((uint8_t *)(getBuf + 6));
 						unsigned int etherType = ntohs(((const uint16_t *)getBuf)[6]);
 						// TODO: VLAN support
 						_handler(_arg,(void *)0,_nwid,from,to,etherType,0,(const void *)(getBuf + 14),r - 14);

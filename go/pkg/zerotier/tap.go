@@ -46,10 +46,4 @@ type Tap interface {
 
 	// AddMulticastGroupChangeHandler registers a function to be called on multicast group subscribe or unsubscribe (first argument)
 	AddMulticastGroupChangeHandler(func(bool, *MulticastGroup))
-
-	// AddRoute adds a route to this tap device via the system or other routing table
-	AddRoute(r *Route) error
-
-	// RemoveRoute removes a route from this tap device
-	RemoveRoute(r *Route) error
 }
