@@ -1362,6 +1362,11 @@ typedef struct
 	const ZT_Identity *identity;
 
 	/**
+	 * SHA-384 of identity public key(s)
+	 */
+	ZT_Fingerprint fingerprint;
+
+	/**
 	 * Remote major version or -1 if not known
 	 */
 	int versionMajor;

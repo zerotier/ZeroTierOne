@@ -17,7 +17,7 @@ package zerotier
 type Peer struct {
 	Address      Address      `json:"address"`
 	Identity     *Identity    `json:"identity"`
-	IdentityHash string       `json:"identityHash"`
+	Fingerprint  []byte       `json:"fingerprint"`
 	Version      [3]int       `json:"version"`
 	Latency      int          `json:"latency"`
 	Root         bool         `json:"root"`

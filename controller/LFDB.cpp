@@ -99,7 +99,7 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 							selectors.push_back(selector1);
 							newrec["Selectors"] = selectors;
 							const uint8_t *const rawip = (const uint8_t *)ms->second.lastOnlineAddress.rawIpData();
-							switch(ms->second.lastOnlineAddress.ss_family) {
+							switch(ms->second.lastOnlineAddress.family()) {
 								case AF_INET:
 									for(int j=0;j<4;++j)
 										ip.push_back((unsigned int)rawip[j]);

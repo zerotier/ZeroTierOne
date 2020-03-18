@@ -105,7 +105,7 @@ endif()
 add_subdirectory(node)
 add_subdirectory(controller)
 add_subdirectory(osdep)
-add_subdirectory(root)
+#add_subdirectory(root)
 add_subdirectory(go/native)
 
 #if(BUILD_CENTRAL_CONTROLLER)

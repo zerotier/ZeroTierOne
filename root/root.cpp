@@ -74,7 +74,7 @@
 #include <json.hpp>
 #include <httplib.h>
 
-#include <Packet.hpp>
+#include <Protocol.hpp>
 #include <Utils.hpp>
 #include <Address.hpp>
 #include <Identity.hpp>
@@ -140,7 +140,7 @@ struct RootPeer
 	int vProto;             // Protocol version or -1 if unknown
 	int vMajor,vMinor,vRev; // Peer version or -1,-1,-1 if unknown
 
-	Atomic __refCount;
+	std::atomic<int> __refCount;
 };
 
 // Hashers for std::unordered_map
@@ -191,10 +191,10 @@ static std::map< std::pair< uint32_t,uint32_t >,std::pair< float,float > > s_geo
 static std::map< std::pair< std::array< uint64_t,2 >,std::array< uint64_t,2 > >,std::pair< float,float > > s_geoIp6;
 
 // Rate meters for statistical purposes (locks are internal to Meter)
-static Meter s_inputRate;
-static Meter s_outputRate;
-static Meter s_forwardRate;
-static Meter s_discardedForwardRate;
+static Meter<> s_inputRate;
+static Meter<> s_outputRate;
+static Meter<> s_forwardRate;
+static Meter<> s_discardedForwardRate;
 
 // These fields are locked using mutexes below as they're modified during runtime
 static std::string s_planet;

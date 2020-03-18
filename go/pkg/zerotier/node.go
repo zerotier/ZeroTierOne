@@ -21,7 +21,6 @@ import "C"
 
 import (
 	"bytes"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -71,15 +70,15 @@ var (
 	nodesByUserPtrCtr  = uintptr(0)
 	nodesByUserPtrLock sync.RWMutex
 
-	CoreVersionMajor int
-	CoreVersionMinor int
+	CoreVersionMajor    int
+	CoreVersionMinor    int
 	CoreVersionRevision int
-	CoreVersionBuild int
+	CoreVersionBuild    int
 )
 
 func init() {
-	var vMaj,vMin,vRev,vBuild C.int
-	C.ZT_version(&vMaj,&vMin,&vRev,&vBuild)
+	var vMaj, vMin, vRev, vBuild C.int
+	C.ZT_version(&vMaj, &vMin, &vRev, &vBuild)
 	CoreVersionMajor = int(vMaj)
 	CoreVersionMinor = int(vMin)
 	CoreVersionRevision = int(vRev)
@@ -122,7 +121,7 @@ type Node struct {
 	gn *C.ZT_GoNode
 
 	// zn is the underlying instance of the ZeroTier core
-	zn *C.ZT_Node
+	zn unsafe.Pointer
 
 	// id is the identity of this node
 	id *Identity
@@ -263,8 +262,8 @@ func NewNode(basePath string) (n *Node, err error) {
 		nodesByUserPtrLock.Unlock()
 		return nil, ErrNodeInitFailed
 	}
-	n.zn = (*C.ZT_Node)(C.ZT_GoNode_getNode(n.gn))
-	n.id, err = newIdentityFromCIdentity(C.ZT_Node_identity(unsafe.Pointer(n.zn)))
+	n.zn = unsafe.Pointer(C.ZT_GoNode_getNode(n.gn))
+	n.id, err = newIdentityFromCIdentity(C.ZT_Node_identity(n.zn))
 	if err != nil {
 		n.infoLog.Printf("FATAL: error obtaining node's identity")
 		nodesByUserPtrLock.Lock()
@@ -393,9 +392,9 @@ func NewNode(basePath string) (n *Node, err error) {
 							}
 							cAddrCount++
 						}
-						C.ZT_Node_setInterfaceAddresses(unsafe.Pointer(n.zn), &cAddrs[0], C.uint(cAddrCount))
+						C.ZT_Node_setInterfaceAddresses(n.zn, &cAddrs[0], C.uint(cAddrCount))
 					} else {
-						C.ZT_Node_setInterfaceAddresses(unsafe.Pointer(n.zn), nil, 0)
+						C.ZT_Node_setInterfaceAddresses(n.zn, nil, 0)
 					}
 				}
 
@@ -597,14 +596,14 @@ func (n *Node) Networks() []*Network {
 // Peers retrieves a list of current peers
 func (n *Node) Peers() []*Peer {
 	var peers []*Peer
-	pl := C.ZT_Node_peers(unsafe.Pointer(n.zn))
+	pl := C.ZT_Node_peers(n.zn)
 	if pl != nil {
 		for i := uintptr(0); i < uintptr(pl.peerCount); i++ {
 			p := (*C.ZT_Peer)(unsafe.Pointer(uintptr(unsafe.Pointer(pl.peers)) + (i * C.sizeof_ZT_Peer)))
 			p2 := new(Peer)
 			p2.Address = Address(p.address)
 			p2.Identity, _ = newIdentityFromCIdentity(unsafe.Pointer(p.identity))
-			p2.IdentityHash = hex.EncodeToString((*[48]byte)(unsafe.Pointer(&p.identityHash[0]))[:])
+			p2.Fingerprint = C.GoBytes(unsafe.Pointer(&p.fingerprint.hash[0]), 48)
 			p2.Version = [3]int{int(p.versionMajor), int(p.versionMinor), int(p.versionRev)}
 			p2.Latency = int(p.latency)
 			p2.Root = p.root != 0
@@ -612,7 +611,7 @@ func (n *Node) Peers() []*Peer {
 
 			p2.Paths = make([]Path, 0, int(p.pathCount))
 			for j := 0; j < len(p2.Paths); j++ {
-				pt := &p.paths[j]
+				pt := (*C.ZT_PeerPhysicalPath)(unsafe.Pointer(uintptr(unsafe.Pointer(p.paths)) + uintptr(j * C.sizeof_ZT_PeerPhysicalPath)))
 				if pt.alive != 0 {
 					a := sockaddrStorageToUDPAddr(&pt.address)
 					if a != nil {
@@ -629,7 +628,7 @@ func (n *Node) Peers() []*Peer {
 
 			peers = append(peers, p2)
 		}
-		C.ZT_Node_freeQueryResult(unsafe.Pointer(n.zn), unsafe.Pointer(pl))
+		C.ZT_Node_freeQueryResult(n.zn, unsafe.Pointer(pl))
 	}
 	sort.Slice(peers, func(a, b int) bool {
 		return peers[a].Address < peers[b].Address
@@ -640,11 +639,11 @@ func (n *Node) Peers() []*Peer {
 // --------------------------------------------------------------------------------------------------------------------
 
 func (n *Node) multicastSubscribe(nwid uint64, mg *MulticastGroup) {
-	C.ZT_Node_multicastSubscribe(unsafe.Pointer(n.zn), nil, C.uint64_t(nwid), C.uint64_t(mg.MAC), C.ulong(mg.ADI))
+	C.ZT_Node_multicastSubscribe(n.zn, nil, C.uint64_t(nwid), C.uint64_t(mg.MAC), C.ulong(mg.ADI))
 }
 
 func (n *Node) multicastUnsubscribe(nwid uint64, mg *MulticastGroup) {
-	C.ZT_Node_multicastUnsubscribe(unsafe.Pointer(n.zn), C.uint64_t(nwid), C.uint64_t(mg.MAC), C.ulong(mg.ADI))
+	C.ZT_Node_multicastUnsubscribe(n.zn, C.uint64_t(nwid), C.uint64_t(mg.MAC), C.ulong(mg.ADI))
 }
 
 func (n *Node) pathCheck(ip net.IP) bool {

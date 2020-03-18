@@ -308,7 +308,7 @@ int main(int argc,char **argv)
 		return ZT_MACETHERNETTAPAGENT_EXIT_CODE_UNABLE_TO_CREATE;
 	}
 
-	fprintf(stderr,"I %s %s %d.%d.%d.%d\n",s_deviceName,s_peerDeviceName,ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION,ZEROTIER_ONE_VERSION_BUILD);
+	fprintf(stderr,"I %s %s %d.%d.%d.%d\n",s_deviceName,s_peerDeviceName,ZEROTIER_VERSION_MAJOR,ZEROTIER_VERSION_MINOR,ZEROTIER_VERSION_REVISION,ZEROTIER_VERSION_BUILD);
 
 	FD_ZERO(&rfds);
 	FD_ZERO(&wfds);
