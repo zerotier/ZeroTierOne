@@ -37,7 +37,6 @@ Global Options:
 Commands:
   help                                 Show this help
   version                              Print version
-  selftest                             Run internal tests
   service                              Start as service
   status                               Show ZeroTier status and config
   peers                                Show VL1 peers and link information

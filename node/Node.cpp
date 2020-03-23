@@ -36,6 +36,13 @@ namespace ZeroTier {
 
 namespace {
 
+/**
+ * All core objects of a ZeroTier node.
+ *
+ * This is just a box that allows us to allocate all core objects
+ * and data structures at once for a bit of memory saves and improved
+ * cache adjacency.
+ */
 struct _NodeObjects
 {
 	ZT_INLINE _NodeObjects(RuntimeEnvironment *const RR,void *const tPtr) :
@@ -190,11 +197,17 @@ ZT_ResultCode Node::processVirtualNetworkFrame(
 	}
 }
 
-struct _processBackgroundTasks_ping_eachPeer
+struct _processBackgroundTasks_eachPeer
 {
-	int64_t now;
-	Node *parent;
-	void *tPtr;
+	ZT_INLINE _processBackgroundTasks_eachPeer(const int64_t now_,Node *const parent_,void *const tPtr_) :
+		now(now_),
+		parent(parent_),
+		tPtr(tPtr_),
+		online(false),
+		rootsNotOnline() {}
+	const int64_t now;
+	Node *const parent;
+	void *const tPtr;
 	bool online;
 	std::vector<Address> rootsNotOnline;
 	ZT_INLINE void operator()(const SharedPtr<Peer> &peer,const bool isRoot)
@@ -209,22 +222,25 @@ struct _processBackgroundTasks_ping_eachPeer
 		}
 	}
 };
-
-static uint8_t keepAlivePayload = 0; // junk payload for keepalive packets
-struct _processBackgroundTasks_path_keepalive
+struct _processBackgroundTasks_eachPath
 {
-	int64_t now;
-	RuntimeEnvironment *RR;
-	void *tPtr;
+	ZT_INLINE _processBackgroundTasks_eachPath(const int64_t now_,const RuntimeEnvironment *const RR_,void *const tPtr_) :
+		now(now_),
+		RR(RR_),
+		tPtr(tPtr_),
+		keepAlivePayload((uint8_t)now_) {}
+	const int64_t now;
+	const RuntimeEnvironment *const RR;
+	void *const tPtr;
+	uint8_t keepAlivePayload;
 	ZT_INLINE void operator()(const SharedPtr<Path> &path)
 	{
 		if ((now - path->lastOut()) >= ZT_PATH_KEEPALIVE_PERIOD) {
 			++keepAlivePayload;
-			path->send(RR,tPtr,&keepAlivePayload,1,now);
+			path->send(RR,tPtr,&keepAlivePayload,sizeof(keepAlivePayload),now);
 		}
 	}
 };
-
 ZT_ResultCode Node::processBackgroundTasks(void *tPtr, int64_t now, volatile int64_t *nextBackgroundTaskDeadline)
 {
 	_now = now;
@@ -233,12 +249,8 @@ ZT_ResultCode Node::processBackgroundTasks(void *tPtr, int64_t now, volatile int
 	if ((now - _lastPing) >= ZT_PEER_PING_PERIOD) {
 		_lastPing = now;
 		try {
-			_processBackgroundTasks_ping_eachPeer pf;
-			pf.now = now;
-			pf.parent = this;
-			pf.tPtr = tPtr;
-			pf.online = false;
-			RR->topology->eachPeerWithRoot<_processBackgroundTasks_ping_eachPeer &>(pf);
+			_processBackgroundTasks_eachPeer pf(now,this,tPtr);
+			RR->topology->eachPeerWithRoot<_processBackgroundTasks_eachPeer &>(pf);
 
 			if (pf.online != _online) {
 				_online = pf.online;
@@ -300,11 +312,8 @@ ZT_ResultCode Node::processBackgroundTasks(void *tPtr, int64_t now, volatile int
 
 	if ((now - _lastPathKeepaliveCheck) >= ZT_PATH_KEEPALIVE_PERIOD) {
 		_lastPathKeepaliveCheck = now;
-		_processBackgroundTasks_path_keepalive pf;
-		pf.now = now;
-		pf.RR = RR;
-		pf.tPtr = tPtr;
-		RR->topology->eachPath<_processBackgroundTasks_path_keepalive &>(pf);
+		_processBackgroundTasks_eachPath pf(now,RR,tPtr);
+		RR->topology->eachPath<_processBackgroundTasks_eachPath &>(pf);
 	}
 
 	int64_t earliestAlarmAt = 0x7fffffffffffffffLL;

@@ -123,9 +123,6 @@ func main() {
 	case "version":
 		fmt.Printf("%d.%d.%d\n", zerotier.CoreVersionMajor, zerotier.CoreVersionMinor, zerotier.CoreVersionRevision)
 		os.Exit(0)
-	case "selftest":
-		cli.SelfTest()
-		os.Exit(0)
 	case "service":
 		cli.Service(basePath, authToken, cmdArgs)
 	case "status":

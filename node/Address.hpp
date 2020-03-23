@@ -24,6 +24,8 @@ namespace ZeroTier {
 
 /**
  * A ZeroTier address
+ *
+ * This is merely a 40-bit short address packed into a uint64_t and wrapped with methods.
  */
 class Address : public TriviallyCopyable
 {

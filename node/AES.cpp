@@ -899,7 +899,7 @@ void AES::CTR::finish() noexcept
 // Software AES and AES key expansion ---------------------------------------------------------------------------------
 
 #ifdef ZT_NO_UNALIGNED_ACCESS
-static inline uint32_t readuint32_t(const void *in)
+static ZT_INLINE uint32_t readuint32_t(const void *in)
 {
 	uint32_t v = ((const uint8_t *)in)[0];
 	v <<= 8;
@@ -910,7 +910,7 @@ static inline uint32_t readuint32_t(const void *in)
 	v |= ((const uint8_t *)in)[3];
 	return v;
 }
-static inline void writeuint32_t(void *out,const uint32_t v)
+static ZT_INLINE void writeuint32_t(void *out,const uint32_t v)
 {
 	((uint8_t *)out)[0] = (uint8_t)(v >> 24);
 	((uint8_t *)out)[1] = (uint8_t)(v >> 16);

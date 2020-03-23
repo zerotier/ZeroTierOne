@@ -32,6 +32,12 @@
 #include <unistd.h>
 #endif
 
+#ifdef __APPLE__
+#include <mach/mach.h>
+#include <mach/clock.h>
+#include <mach/mach_time.h>
+#endif
+
 #ifndef OMIT_JSON_SUPPORT
 #include "../ext/json/json.hpp"
 #endif
@@ -43,6 +49,11 @@ namespace ZeroTier {
  */
 class OSUtils
 {
+private:
+#ifdef __APPLE__
+	static clock_serv_t s_machRealtimeClock;
+#endif
+
 public:
 	/**
 	 * Variant of snprintf that is portable and throws an exception
@@ -162,13 +173,25 @@ public:
 		tmp.HighPart = ft.dwHighDateTime;
 		return (int64_t)( ((tmp.QuadPart - 116444736000000000LL) / 10000L) + st.wMilliseconds );
 #else
+#ifdef __LINUX__
+		timespec ts;
+#ifdef CLOCK_REALTIME_COARSE
+		clock_gettime(CLOCK_REALTIME_COARSE,&ts);
+#else
+		clock_gettime(CLOCK_REALTIME,&ts);
+#endif
+		return ( (1000LL * (int64_t)ts.tv_sec) + ((int64_t)(ts.tv_nsec / 1000000)) );
+#else
+#ifdef __APPLE__
+		mach_timespec_t mts;
+		clock_get_time(s_machRealtimeClock,&mts);
+		return ( (1000LL * (int64_t)mts.tv_sec) + ((int64_t)(mts.tv_nsec / 1000000)) );
+#else
 		timeval tv;
-// #ifdef __LINUX__
-// 		syscall(SYS_gettimeofday,&tv,0); /* fix for musl libc broken gettimeofday bug */
-// #else
 		gettimeofday(&tv,(struct timezone *)0);
-// #endif
 		return ( (1000LL * (int64_t)tv.tv_sec) + (int64_t)(tv.tv_usec / 1000) );
+#endif
+#endif
 #endif
 	};
 

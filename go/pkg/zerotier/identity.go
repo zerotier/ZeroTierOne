@@ -46,7 +46,7 @@ type Identity struct {
 	idtype     int
 	publicKey  []byte
 	privateKey []byte
-	cid        unsafe.Pointer
+	cid        unsafe.Pointer // ZT_Identity
 }
 
 func identityFinalizer(obj interface{}) {

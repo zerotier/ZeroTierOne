@@ -45,10 +45,10 @@ type ExternalAddress struct {
 
 // LocalConfigSettings contains node settings
 type LocalConfigSettings struct {
-	// PrimaryPort is the main UDP port and must be set (defaults to 9993)
+	// PrimaryPort is the main UDP port and must be set.
 	PrimaryPort int `json:"primaryPort"`
 
-	// SecondaryPort is the secondary UDP port, set to 0 to disbale (picked at random by default)
+	// SecondaryPort is the secondary UDP port, set to 0 to disable (picked at random by default)
 	SecondaryPort int `json:"secondaryPort"`
 
 	// PortSearch causes ZeroTier to try other ports automatically if it can't bind to configured ports
@@ -100,6 +100,10 @@ func (lc *LocalConfig) Read(p string, saveDefaultsIfNotExist bool, isTotallyNewN
 		if isTotallyNewNode {
 			lc.Settings.PrimaryPort = 793
 		} else {
+			// For legacy reasons we keep nodes that already existed prior to 2.0 (upgraded nodes)
+			// at 9993 by default if there is no existing primary port configured. This is for
+			// principle of least surprise since some admins may have special firewall rules for
+			// this port.
 			lc.Settings.PrimaryPort = 9993
 		}
 		lc.Settings.SecondaryPort = unassignedPrivilegedPorts[randomUInt()%uint(len(unassignedPrivilegedPorts))]

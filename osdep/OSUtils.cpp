@@ -30,6 +30,16 @@
 
 namespace ZeroTier {
 
+#ifdef __APPLE__
+static clock_serv_t _machGetRealtimeClock() noexcept
+{
+	clock_serv_t c;
+	host_get_clock_service(mach_host_self(),CALENDAR_CLOCK,&c);
+	return c;
+}
+static clock_serv_t s_machRealtimeClock = _machGetRealtimeClock();
+#endif
+
 unsigned int OSUtils::ztsnprintf(char *buf,unsigned int len,const char *fmt,...)
 {
 	va_list ap;

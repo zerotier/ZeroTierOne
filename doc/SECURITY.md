@@ -27,7 +27,7 @@ A ZeroTier identity is comprised of one or more cryptographic public keys and a 
 #### Identity Types and Corresponding Algorithms
 
 * **Type 0** (v1.x and v2.x): one Curve25519 key for elliptic curve Diffie-Hellman and one Ed25519 key for Ed25519 signatures, with the address and fingerprint computed from a hash of both.
-* **Type 1** (v2.x only): Curve25519, Ed25519, and NIST P-384 public keys, with the latter being used for signatures (the Ed25519 key is still there but is presently unused) and with *both* keys being used for elliptic curve Diffie-Hellman key agreement. In key agreement the resulting raw secret keys are hashed together using SHA-384 to combine them and yield a single session key.
+* **Type 1** (v2.x only): Curve25519, Ed25519, and NIST P-384 public keys, with the latter being used for signatures (the Ed25519 key is still there but is presently unused) and with *both* Curve25519 and NIST P-384 being used for elliptic curve Diffie-Hellman key agreement. In key agreement the resulting raw secret keys are hashed together using SHA-384 to combine them and yield a single session key.
 
 Session keys resulting from identity key exchange and agreement are *long-lived keys* that remain static for the lifetime of a particular pair of identities. A different mechanism is used for ephemeral key negotiation.
 
@@ -51,6 +51,8 @@ bzg7fc3sn46fzyxcxw2ev4c4m2u5fyisb3o4wz5hfmvexbzwk6et3fsglkdcn6nnjobxi3bq7hgxqox3
 ```
 
 These are too large to type but not to copy/paste, store in databases, or use in scripts and APIs.
+
+Once a device has joined a network, network controllers will remember and check its full identity or identity fingerprint (depending on implementation) rather than just the device's ZeroTier address.
 
 ## VL1 Wire Protocol
 
