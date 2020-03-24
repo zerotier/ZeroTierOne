@@ -668,7 +668,7 @@ void LinuxNetLink::addRoute(const InetAddress &target, const InetAddress &via, c
 	req.nl.nlmsg_type = RTM_NEWROUTE;
 	req.nl.nlmsg_pid = 0;
 	req.nl.nlmsg_seq = ++_seq;
-	req.rt.rtm_family = target.ss_family;
+	req.rt.rtm_family = target.family();
 	req.rt.rtm_table = RT_TABLE_MAIN;
 	req.rt.rtm_protocol = RTPROT_STATIC;
 	req.rt.rtm_scope = RT_SCOPE_UNIVERSE;
@@ -783,7 +783,7 @@ void LinuxNetLink::delRoute(const InetAddress &target, const InetAddress &via, c
 	req.nl.nlmsg_type = RTM_DELROUTE;
 	req.nl.nlmsg_pid = 0;
 	req.nl.nlmsg_seq = ++_seq;
-	req.rt.rtm_family = target.ss_family;
+	req.rt.rtm_family = target.family();
 	req.rt.rtm_table = RT_TABLE_MAIN;
 	req.rt.rtm_protocol = RTPROT_STATIC;
 	req.rt.rtm_scope = RT_SCOPE_UNIVERSE;
@@ -904,7 +904,7 @@ void LinuxNetLink::addAddress(const InetAddress &addr, const char *iface)
 	req.nl.nlmsg_type = RTM_NEWADDR;
 	req.nl.nlmsg_pid = 0;
 	req.nl.nlmsg_seq = ++_seq;
-	req.ifa.ifa_family = addr.ss_family;
+	req.ifa.ifa_family = addr.family();
 	req.ifa.ifa_prefixlen = addr.port();
 	req.ifa.ifa_flags = IFA_F_PERMANENT;
 	req.ifa.ifa_scope = 0;
@@ -1016,7 +1016,7 @@ void LinuxNetLink::removeAddress(const InetAddress &addr, const char *iface)
 	req.nl.nlmsg_type = RTM_DELADDR;
 	req.nl.nlmsg_pid = 0;
 	req.nl.nlmsg_seq = ++_seq;
-	req.ifa.ifa_family = addr.ss_family;
+	req.ifa.ifa_family = addr.family();
 	req.ifa.ifa_prefixlen = addr.port();
 	req.ifa.ifa_flags = IFA_F_PERMANENT;
 	req.ifa.ifa_scope = 0;

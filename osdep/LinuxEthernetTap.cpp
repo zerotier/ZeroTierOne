@@ -183,7 +183,7 @@ LinuxEthernetTap::LinuxEthernetTap(
 
 	// Set MAC address
 	ifr.ifr_ifru.ifru_hwaddr.sa_family = ARPHRD_ETHER;
-	mac.copyTo(ifr.ifr_ifru.ifru_hwaddr.sa_data,6);
+	mac.copyTo((uint8_t *)ifr.ifr_ifru.ifru_hwaddr.sa_data);
 	if (ioctl(sock,SIOCSIFHWADDR,(void *)&ifr) < 0) {
 		::close(_fd);
 		::close(sock);
@@ -378,8 +378,8 @@ void LinuxEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType,
 {
 	char putBuf[ZT_MAX_MTU + 64];
 	if ((_fd > 0)&&(len <= _mtu)&&(_enabled)) {
-		to.copyTo(putBuf,6);
-		from.copyTo(putBuf + 6,6);
+		to.copyTo((uint8_t *)putBuf);
+		from.copyTo((uint8_t *)(putBuf + 6));
 		*((uint16_t *)(putBuf + 12)) = htons((uint16_t)etherType);
 		memcpy(putBuf + 14,data,len);
 		len += 14;
@@ -420,7 +420,7 @@ void LinuxEthernetTap::scanMulticastGroups(std::vector<MulticastGroup> &added,st
 					++fno;
 				}
 				if ((devname)&&(!strcmp(devname,_dev.c_str()))&&(mcastmac)&&(Utils::unhex(mcastmac,strlen(mcastmac),mac,6) == 6))
-					newGroups.push_back(MulticastGroup(MAC(mac,6),0));
+					newGroups.push_back(MulticastGroup(MAC(mac),0));
 			}
 		}
 		::close(fd);
@@ -498,8 +498,8 @@ void LinuxEthernetTap::threadMain()
 						r = _mtu + 14;
 
 					if (_enabled) {
-						to.setTo(getBuf,6);
-						from.setTo(getBuf + 6,6);
+						to.setTo((uint8_t *)getBuf);
+						from.setTo((uint8_t *)(getBuf + 6));
 						unsigned int etherType = ntohs(((const uint16_t *)getBuf)[6]);
 						// TODO: VLAN support
 						_handler(_arg,(void *)0,_nwid,from,to,etherType,0,(const void *)(getBuf + 14),r - 14);

@@ -168,7 +168,7 @@ void VL1::onRemotePacket(void *const tPtr,const int64_t localSocket,const InetAd
 		// Subject pktv to a few sanity checks just to make sure Defragmenter worked correctly and
 		// there is enough room in each slice to shift their contents to sizes that are multiples
 		// of 64 if needed for crypto.
-		if ((pktv.empty()) || (((int)pktv[0].e - (int)pktv[0].s) < sizeof(Protocol::Header))) {
+		if ((pktv.empty()) || (((int)pktv[0].e - (int)pktv[0].s) < (int)sizeof(Protocol::Header))) {
 			RR->t->unexpectedError(tPtr,0x3df19990,"empty or undersized packet vector after parsing packet from %s of length %d",Trace::str(path->address()).s,(int)len);
 			return;
 		}
@@ -470,7 +470,7 @@ void VL1::_sendPendingWhois(void *const tPtr,const int64_t now)
 			outl += ZT_ADDRESS_LENGTH;
 		}
 
-		if (outl > sizeof(Protocol::Header)) {
+		if (outl > (int)sizeof(Protocol::Header)) {
 			Protocol::armor(outp,outl,root->key(),root->cipher());
 			RR->expect->sending(ph.packetId,now);
 			rootPath->send(RR,tPtr,outp.unsafeData,outl,now);
@@ -480,7 +480,7 @@ void VL1::_sendPendingWhois(void *const tPtr,const int64_t now)
 
 bool VL1::_HELLO(void *tPtr,const SharedPtr<Path> &path,SharedPtr<Peer> &peer,Buf &pkt,int packetSize,const bool authenticated)
 {
-	if (packetSize < sizeof(Protocol::HELLO)) {
+	if (packetSize < (int)sizeof(Protocol::HELLO)) {
 		RR->t->incomingPacketDropped(tPtr,0x2bdb0001,0,0,identityFromPeerPtr(peer),path->address(),0,Protocol::VERB_HELLO,ZT_TRACE_PACKET_DROP_REASON_MALFORMED_PACKET);
 		return false;
 	}
@@ -675,7 +675,7 @@ bool VL1::_HELLO(void *tPtr,const SharedPtr<Path> &path,SharedPtr<Peer> &peer,Bu
 
 bool VL1::_ERROR(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &peer,Buf &pkt,int packetSize,Protocol::Verb &inReVerb)
 {
-	if (packetSize < sizeof(Protocol::ERROR::Header)) {
+	if (packetSize < (int)sizeof(Protocol::ERROR::Header)) {
 		RR->t->incomingPacketDropped(tPtr,0x3beb1947,0,0,identityFromPeerPtr(peer),path->address(),0,Protocol::VERB_ERROR,ZT_TRACE_PACKET_DROP_REASON_MALFORMED_PACKET);
 		return false;
 	}
@@ -720,7 +720,7 @@ bool VL1::_ERROR(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &p
 
 bool VL1::_OK(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &peer,Buf &pkt,int packetSize,Protocol::Verb &inReVerb)
 {
-	if (packetSize < sizeof(Protocol::OK::Header)) {
+	if (packetSize < (int)sizeof(Protocol::OK::Header)) {
 		RR->t->incomingPacketDropped(tPtr,0x4c1f1ff7,0,0,identityFromPeerPtr(peer),path->address(),0,Protocol::VERB_OK,ZT_TRACE_PACKET_DROP_REASON_MALFORMED_PACKET);
 		return false;
 	}
@@ -753,7 +753,7 @@ bool VL1::_OK(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &peer
 
 bool VL1::_WHOIS(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &peer,Buf &pkt,int packetSize)
 {
-	if (packetSize < sizeof(Protocol::OK::Header)) {
+	if (packetSize < (int)sizeof(Protocol::OK::Header)) {
 		RR->t->incomingPacketDropped(tPtr,0x4c1f1ff7,0,0,identityFromPeerPtr(peer),path->address(),0,Protocol::VERB_OK,ZT_TRACE_PACKET_DROP_REASON_MALFORMED_PACKET);
 		return false;
 	}
@@ -794,7 +794,7 @@ bool VL1::_WHOIS(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &p
 			ptr += ZT_ADDRESS_LENGTH;
 		}
 
-		if (outl > sizeof(Protocol::OK::WHOIS)) {
+		if (outl > (int)sizeof(Protocol::OK::WHOIS)) {
 			Protocol::armor(outp,outl,peer->key(),peer->cipher());
 			path->send(RR,tPtr,outp.unsafeData,outl,RR->node->now());
 		}
@@ -806,7 +806,7 @@ bool VL1::_WHOIS(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &p
 bool VL1::_RENDEZVOUS(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &peer,Buf &pkt,int packetSize)
 {
 	if (RR->topology->isRoot(peer->identity())) {
-		if (packetSize < sizeof(Protocol::RENDEZVOUS)) {
+		if (packetSize < (int)sizeof(Protocol::RENDEZVOUS)) {
 			RR->t->incomingPacketDropped(tPtr,0x43e90ab3,Protocol::packetId(pkt,packetSize),0,peer->identity(),path->address(),Protocol::packetHops(pkt,packetSize),Protocol::VERB_RENDEZVOUS,ZT_TRACE_PACKET_DROP_REASON_MALFORMED_PACKET);
 			return false;
 		}
@@ -820,7 +820,7 @@ bool VL1::_RENDEZVOUS(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Pee
 				switch(rdv.addressLength) {
 					case 4:
 					case 16:
-						if ((sizeof(Protocol::RENDEZVOUS) + rdv.addressLength) <= packetSize) {
+						if ((int)(sizeof(Protocol::RENDEZVOUS) + rdv.addressLength) <= packetSize) {
 							const InetAddress atAddr(pkt.unsafeData + sizeof(Protocol::RENDEZVOUS),rdv.addressLength,port);
 							peer->contact(tPtr,Endpoint(atAddr),now,false);
 							RR->t->tryingNewPath(tPtr,0x55a19aaa,with->identity(),atAddr,path->address(),Protocol::packetId(pkt,packetSize),Protocol::VERB_RENDEZVOUS,peer->identity(),ZT_TRACE_TRYING_NEW_PATH_REASON_RENDEZVOUS);
@@ -853,7 +853,7 @@ bool VL1::_ECHO(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &pe
 {
 	const uint64_t packetId = Protocol::packetId(pkt,packetSize);
 	const uint64_t now = RR->node->now();
-	if (packetSize < sizeof(Protocol::Header)) {
+	if (packetSize < (int)sizeof(Protocol::Header)) {
 		RR->t->incomingPacketDropped(tPtr,0x14d70bb0,packetId,0,peer->identity(),path->address(),Protocol::packetHops(pkt,packetSize),Protocol::VERB_ECHO,ZT_TRACE_PACKET_DROP_REASON_MALFORMED_PACKET);
 		return false;
 	}
@@ -887,7 +887,7 @@ bool VL1::_ECHO(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &pe
 
 bool VL1::_PUSH_DIRECT_PATHS(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &peer,Buf &pkt,int packetSize)
 {
-	if (packetSize < sizeof(Protocol::PUSH_DIRECT_PATHS)) {
+	if (packetSize < (int)sizeof(Protocol::PUSH_DIRECT_PATHS)) {
 		RR->t->incomingPacketDropped(tPtr,0x1bb1bbb1,Protocol::packetId(pkt,packetSize),0,peer->identity(),path->address(),Protocol::packetHops(pkt,packetSize),Protocol::VERB_PUSH_DIRECT_PATHS,ZT_TRACE_PACKET_DROP_REASON_MALFORMED_PACKET);
 		return false;
 	}
@@ -981,6 +981,7 @@ bool VL1::_PUSH_DIRECT_PATHS(void *tPtr,const SharedPtr<Path> &path,const Shared
 bool VL1::_USER_MESSAGE(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &peer,Buf &pkt,int packetSize)
 {
 	// TODO
+	return true;
 }
 
 bool VL1::_ENCAP(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &peer,Buf &pkt,int packetSize)
