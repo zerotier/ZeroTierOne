@@ -28,10 +28,10 @@ bool CertificateOfMembership::agreesWith(const CertificateOfMembership &other) c
 	// conditions that could introduce a vulnerability.
 
 	if (other._timestamp > _timestamp) {
-		if ((other._timestamp - _timestamp) > _timestampMaxDelta)
+		if ((other._timestamp - _timestamp) > std::min(_timestampMaxDelta,other._timestampMaxDelta))
 			return false;
 	} else {
-		if ((_timestamp - other._timestamp) > _timestampMaxDelta)
+		if ((_timestamp - other._timestamp) > std::min(_timestampMaxDelta,other._timestampMaxDelta))
 			return false;
 	}
 
@@ -81,7 +81,7 @@ bool CertificateOfMembership::agreesWith(const CertificateOfMembership &other) c
 
 	// SECURITY: check for issued-to inequality is a sanity check. This should be impossible since elsewhere
 	// in the code COMs are checked to ensure that they do in fact belong to their issued-to identities.
-	return (other._networkId != _networkId) && (other._issuedTo.address() != _issuedTo.address());
+	return (other._networkId == _networkId) && (_networkId != 0) && (other._issuedTo.address() != _issuedTo.address());
 }
 
 bool CertificateOfMembership::sign(const Identity &with) noexcept
@@ -214,7 +214,7 @@ int CertificateOfMembership::unmarshal(const uint8_t *data,int len) noexcept
 		if ((p + 2) > len)
 			return -1;
 		_signatureLength = Utils::loadBigEndian<uint16_t>(data + p);
-		if ((_signatureLength > sizeof(_signature))||((p + _signatureLength) > len))
+		if ((_signatureLength > (unsigned int)sizeof(_signature))||((p + (int)_signatureLength) > len))
 			return -1;
 		memcpy(_signature,data + p,_signatureLength);
 		return p + (int)_signatureLength;

@@ -179,8 +179,10 @@ public:
 	 */
 	ZT_INLINE Credential::VerifyResult verify(const RuntimeEnvironment *RR,void *tPtr) const { return _verify(RR,tPtr,*this); }
 
+	// NOTE: right now we use v1 serialization format which works with both ZeroTier 1.x and 2.x. V2 format
+	// will be switched on once 1.x is pretty much dead and out of support.
 	static constexpr int marshalSizeMax() noexcept { return ZT_CERTIFICATEOFMEMBERSHIP_MARSHAL_SIZE_MAX; }
-	int marshal(uint8_t data[ZT_CERTIFICATEOFMEMBERSHIP_MARSHAL_SIZE_MAX],bool v2) const noexcept;
+	int marshal(uint8_t data[ZT_CERTIFICATEOFMEMBERSHIP_MARSHAL_SIZE_MAX],bool v2 = false) const noexcept;
 	int unmarshal(const uint8_t *data,int len) noexcept;
 
 private:

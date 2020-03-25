@@ -39,8 +39,9 @@ bool NetworkConfig::toDictionary(Dictionary &d,bool includeLegacy) const
 		d.add(ZT_NETWORKCONFIG_DICT_KEY_NAME,this->name);
 		d.add(ZT_NETWORKCONFIG_DICT_KEY_MTU,this->mtu);
 
-		if (this->com)
+		if (this->com) {
 			d.add(ZT_NETWORKCONFIG_DICT_KEY_COM,tmp,this->com.marshal(tmp));
+		}
 
 		std::vector<uint8_t> *blob = &(d[ZT_NETWORKCONFIG_DICT_KEY_CAPABILITIES]);
 		for (unsigned int i = 0; i < this->capabilityCount; ++i) {

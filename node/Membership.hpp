@@ -57,28 +57,15 @@ public:
 	 * @param RR Runtime environment
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param now Current time
-	 * @param peerAddress Address of member peer (the one that this Membership describes)
+	 * @param to Peer identity
 	 * @param nconf My network config
 	 */
-	void pushCredentials(const RuntimeEnvironment *RR,void *tPtr,int64_t now,const Address &peerAddress,const NetworkConfig &nconf);
+	void pushCredentials(const RuntimeEnvironment *RR,void *tPtr,int64_t now,const Identity &to,const NetworkConfig &nconf);
 
 	/**
 	 * @return Time we last pushed credentials to this member
 	 */
 	ZT_INLINE int64_t lastPushedCredentials() const noexcept { return _lastPushedCredentials; }
-
-	/**
-	 * Check whether the peer represented by this Membership should be allowed on this network at all
-	 *
-	 * @param nconf Our network config
-	 * @return True if this peer is allowed on this network at all
-	 */
-	ZT_INLINE bool isAllowedOnNetwork(const NetworkConfig &nconf) const noexcept
-	{
-		if (nconf.isPublic()) return true; // public network
-		if (_com.timestamp() <= _comRevocationThreshold) return false; // COM has been revoked
-		return nconf.com.agreesWith(_com); // check timestamp agreement window
-	}
 
 	/**
 	 * Check whether the peer represented by this Membership owns a given address
@@ -129,6 +116,42 @@ public:
 	 */
 	static ZT_INLINE uint64_t credentialKey(const ZT_CredentialType &t,const uint32_t i) noexcept { return (((uint64_t)t << 32U) | (uint64_t)i); }
 
+	/**
+	 * Check if our local COM agrees with theirs, with possible memo-ization.
+	 *
+	 * @param localCom
+	 */
+	ZT_INLINE bool certificateOfMembershipAgress(const CertificateOfMembership &localCom,const Identity &remoteIdentity)
+	{
+		if ((_comAgreementLocalTimestamp == localCom.timestamp())&&(_comAgreementRemoteTimestamp == _com.timestamp()))
+			return true;
+		if (_com.agreesWith(localCom)) {
+			// SECURITY: newer network controllers embed the full fingerprint into the COM. If we are
+			// joined to a network managed by one of these, our COM will contain one. If it's present
+			// we compare vs the other and require them to match. If our COM does not contain a full
+			// identity fingerprint we compare by address only, which is a legacy mode supported for
+			// old network controllers. Note that this is safe because the controller issues us our COM
+			// and in so doing indicates if it's new or old. However this will go away after a while
+			// once we can be pretty sure there are no ancient controllers around.
+			if (localCom.issuedTo().haveHash()) {
+				if (localCom.issuedTo() != _com.issuedTo())
+					return false;
+			} else {
+				// LEGACY: support networks run by old controllers.
+				if (localCom.issuedTo().address() != _com.issuedTo().address())
+					return false;
+			}
+
+			// Remember that these two COMs agreed. If any are updated this is invalidated and a full
+			// agreement check will be done again.
+			_comAgreementLocalTimestamp = localCom.timestamp();
+			_comAgreementRemoteTimestamp = _com.timestamp();
+
+			return true;
+		}
+		return false;
+	}
+
 	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const Identity &sourcePeerIdentity,const NetworkConfig &nconf,const CertificateOfMembership &com);
 	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const Identity &sourcePeerIdentity,const NetworkConfig &nconf,const Tag &tag);
 	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const Identity &sourcePeerIdentity,const NetworkConfig &nconf,const Capability &cap);
@@ -172,6 +195,9 @@ private:
 
 	// Time we last pushed credentials
 	int64_t _lastPushedCredentials;
+
+	// COM timestamps at which we last agreed-- used to memo-ize agreement and avoid having to recompute constantly.
+	int64_t _comAgreementLocalTimestamp,_comAgreementRemoteTimestamp;
 
 	// Remote member's latest network COM
 	CertificateOfMembership _com;

@@ -24,6 +24,8 @@ namespace ZeroTier {
 Membership::Membership() :
 	_comRevocationThreshold(0),
 	_lastPushedCredentials(0),
+	_comAgreementLocalTimestamp(0),
+	_comAgreementRemoteTimestamp(0),
 	_revocations(4),
 	_remoteTags(4),
 	_remoteCaps(4),
@@ -35,7 +37,7 @@ Membership::~Membership()
 {
 }
 
-void Membership::pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const int64_t now,const Address &peerAddress,const NetworkConfig &nconf)
+void Membership::pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const int64_t now,const Identity &to,const NetworkConfig &nconf)
 {
 	if (!nconf.com) // sanity check
 		return;
@@ -48,7 +50,7 @@ void Membership::pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const i
 	bool complete = false;
 	while (!complete) {
 		ph.packetId = Protocol::getPacketId();
-		peerAddress.copyTo(ph.destination);
+		to.address().copyTo(ph.destination);
 		RR->identity.address().copyTo(ph.source);
 		ph.flags = 0;
 		ph.verb = Protocol::VERB_NETWORK_CREDENTIALS;

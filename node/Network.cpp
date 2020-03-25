@@ -1051,19 +1051,28 @@ int Network::setConfiguration(void *tPtr,const NetworkConfig &nconf,bool saveToD
 	return 0;
 }
 
-bool Network::gate(void *tPtr,const SharedPtr<Peer> &peer)
+bool Network::gate(void *tPtr,const SharedPtr<Peer> &peer) noexcept
 {
-	Mutex::Lock l(_memberships_l);
+	Mutex::Lock lc(_config_l);
+
+	if (!_config)
+		return false;
+	if (_config.isPublic())
+		return true;
+
 	try {
-		if (_config) {
-			Membership *m = _memberships.get(peer->address());
-			if ( (_config.isPublic()) || ((m)&&(m->isAllowedOnNetwork(_config))) ) {
-				if (!m)
-					m = &(_memberships[peer->address()]);
-				return true;
-			}
+		Mutex::Lock l(_memberships_l);
+		Membership *m = _memberships.get(peer->address());
+		if (m) {
+			// SECURITY: this method in CertificateOfMembership does a full fingerprint check as well as
+			// checking certificate agreement. See Membership.hpp.
+			return m->certificateOfMembershipAgress(_config.com,peer->identity());
+		} else {
+			m = &(_memberships[peer->address()]);
+			return false;
 		}
 	} catch ( ... ) {}
+
 	return false;
 }
 
@@ -1147,7 +1156,7 @@ Membership::AddCredentialResult Network::addCredential(void *tPtr,const Identity
 	if (com.networkId() != _id)
 		return Membership::ADD_REJECTED;
 	Mutex::Lock _l(_memberships_l);
-	return _memberships[com.issuedTo()].addCredential(RR,tPtr,sourcePeerIdentity,_config,com);
+	return _memberships[com.issuedTo().address()].addCredential(RR,tPtr,sourcePeerIdentity,_config,com);
 }
 
 Membership::AddCredentialResult Network::addCredential(void *tPtr,const Identity &sourcePeerIdentity,const Capability &cap)
@@ -1206,12 +1215,6 @@ Membership::AddCredentialResult Network::addCredential(void *tPtr,const Identity
 		return Membership::ADD_REJECTED;
 	Mutex::Lock _l(_memberships_l);
 	return _memberships[coo.issuedTo()].addCredential(RR,tPtr,sourcePeerIdentity,_config,coo);
-}
-
-void Network::pushCredentialsNow(void *tPtr,const Address &to,const int64_t now)
-{
-	Mutex::Lock _l(_memberships_l);
-	_memberships[to].pushCredentials(RR,tPtr,now,to,_config);
 }
 
 void Network::destroy()

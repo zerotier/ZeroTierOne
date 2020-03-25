@@ -226,7 +226,7 @@ public:
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param peer Peer to check
 	 */
-	bool gate(void *tPtr,const SharedPtr<Peer> &peer);
+	bool gate(void *tPtr,const SharedPtr<Peer> &peer) noexcept;
 
 	/**
 	 * Do periodic cleanup and housekeeping tasks
@@ -293,26 +293,17 @@ public:
 	Membership::AddCredentialResult addCredential(void *tPtr,const Identity &sourcePeerIdentity,const CertificateOfOwnership &coo);
 
 	/**
-	 * Force push credentials (COM, etc.) to a peer now
-	 *
-	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
-	 * @param to Destination peer address
-	 * @param now Current time
-	 */
-	void pushCredentialsNow(void *tPtr,const Address &to,int64_t now);
-
-	/**
 	 * Push credentials if we haven't done so in a long time
 	 *
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
-	 * @param to Destination peer address
+	 * @param to Destination peer
 	 * @param now Current time
 	 */
-	ZT_INLINE void pushCredentialsIfNeeded(void *tPtr,const Address &to,const int64_t now)
+	ZT_INLINE void pushCredentialsIfNeeded(void *tPtr,const Identity &to,const int64_t now)
 	{
 		const int64_t tout = std::min(_config.credentialTimeMaxDelta,(int64_t)ZT_PEER_ACTIVITY_TIMEOUT);
 		Mutex::Lock _l(_memberships_l);
-		Membership &m = _memberships[to];
+		Membership &m = _memberships[to.address()];
 		if (((now - m.lastPushedCredentials()) + 5000) >= tout)
 			m.pushCredentials(RR,tPtr,now,to,_config);
 	}
