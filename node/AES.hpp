@@ -251,7 +251,7 @@ public:
 			_gmac(k0),
 			_ctr(k1) {}
 
-		/*
+		/**
 		 * Initialize AES-GMAC-SIV
 		 *
 		 * @param iv IV in network byte order (byte order in which it will appear on the wire)
@@ -265,6 +265,29 @@ public:
 			_gmac.init(reinterpret_cast<const uint8_t *>(_iv));
 		}
 
+		/**
+		 * Process AAD (additional authenticated data) that is not being encrypted
+		 *
+		 * This must be called prior to update1, finish1, etc. if there is AAD to include
+		 * in the MAC that is not included in the plaintext.
+		 *
+		 * @param aad Additional authenticated data
+		 * @param len Length of AAD in bytes
+		 */
+		ZT_INLINE void aad(const void *const aad,unsigned int len) noexcept
+		{
+			_gmac.update(aad,len);
+			len &= 0xfU;
+			if (len != 0)
+				_gmac.update(Utils::ZERO256,16 - len);
+		}
+
+		/**
+		 * First pass plaintext input function
+		 *
+		 * @param input Plaintext chunk
+		 * @param len Length of plaintext chunk
+		 */
 		ZT_INLINE void update1(const void *const input,const unsigned int len) noexcept
 		{
 			_gmac.update(input,len);
@@ -282,6 +305,15 @@ public:
 			_ctr.init(reinterpret_cast<const uint8_t *>(_iv),_output);
 		}
 
+		/**
+		 * Second pass plaintext input function
+		 *
+		 * The same plaintext must be fed in the second time in the same order,
+		 * though chunk boundaries do not have to be the same.
+		 *
+		 * @param input Plaintext chunk
+		 * @param len Length of plaintext chunk
+		 */
 		ZT_INLINE void update2(const void *const input,const unsigned int len) noexcept
 		{
 			_ctr.crypt(input,len);
