@@ -37,7 +37,7 @@ Membership::~Membership()
 {
 }
 
-void Membership::pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const int64_t now,const Identity &to,const NetworkConfig &nconf)
+void Membership::pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const int64_t now,const SharedPtr<Peer> &to,const NetworkConfig &nconf)
 {
 	if (!nconf.com) // sanity check
 		return;
@@ -50,7 +50,7 @@ void Membership::pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const i
 	bool complete = false;
 	while (!complete) {
 		ph.packetId = Protocol::getPacketId();
-		to.address().copyTo(ph.destination);
+		to->address().copyTo(ph.destination);
 		RR->identity.address().copyTo(ph.source);
 		ph.flags = 0;
 		ph.verb = Protocol::VERB_NETWORK_CREDENTIALS;

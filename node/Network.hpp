@@ -293,20 +293,13 @@ public:
 	Membership::AddCredentialResult addCredential(void *tPtr,const Identity &sourcePeerIdentity,const CertificateOfOwnership &coo);
 
 	/**
-	 * Push credentials if we haven't done so in a long time
+	 * Push credentials to a peer if timeouts indicate that we should do so
 	 *
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param to Destination peer
 	 * @param now Current time
 	 */
-	ZT_INLINE void pushCredentialsIfNeeded(void *tPtr,const Identity &to,const int64_t now)
-	{
-		const int64_t tout = std::min(_config.credentialTimeMaxDelta,(int64_t)ZT_PEER_ACTIVITY_TIMEOUT);
-		Mutex::Lock _l(_memberships_l);
-		Membership &m = _memberships[to.address()];
-		if (((now - m.lastPushedCredentials()) + 5000) >= tout)
-			m.pushCredentials(RR,tPtr,now,to,_config);
-	}
+	void pushCredentials(void *tPtr,const SharedPtr<Peer> &to,const int64_t now);
 
 	/**
 	 * Destroy this network

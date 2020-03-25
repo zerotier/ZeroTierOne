@@ -60,35 +60,12 @@ public:
 	 * @param to Peer identity
 	 * @param nconf My network config
 	 */
-	void pushCredentials(const RuntimeEnvironment *RR,void *tPtr,int64_t now,const Identity &to,const NetworkConfig &nconf);
+	void pushCredentials(const RuntimeEnvironment *RR,void *tPtr,int64_t now,const SharedPtr<Peer> &to,const NetworkConfig &nconf);
 
 	/**
 	 * @return Time we last pushed credentials to this member
 	 */
 	ZT_INLINE int64_t lastPushedCredentials() const noexcept { return _lastPushedCredentials; }
-
-	/**
-	 * Check whether the peer represented by this Membership owns a given address
-	 *
-	 * @tparam Type of resource: InetAddress or MAC
-	 * @param nconf Our network config
-	 * @param r Resource to check
-	 * @return True if this peer has a certificate of ownership for the given resource
-	 */
-	template<typename T>
-	ZT_INLINE bool peerOwnsAddress(const NetworkConfig &nconf,const T &r) const noexcept
-	{
-		if (_isUnspoofableAddress(nconf,r))
-			return true;
-		uint32_t *k = nullptr;
-		CertificateOfOwnership *v = nullptr;
-		Hashtable< uint32_t,CertificateOfOwnership >::Iterator i(*(const_cast< Hashtable< uint32_t,CertificateOfOwnership> *>(&_remoteCoos)));
-		while (i.next(k,v)) {
-			if (_isCredentialTimestampValid(nconf,*v)&&(v->owns(r)))
-				return true;
-		}
-		return false;
-	}
 
 	/**
 	 * Get a remote member's tag (if we have it)
@@ -115,6 +92,29 @@ public:
 	 * Generates a key for internal use in indexing credentials by type and credential ID
 	 */
 	static ZT_INLINE uint64_t credentialKey(const ZT_CredentialType &t,const uint32_t i) noexcept { return (((uint64_t)t << 32U) | (uint64_t)i); }
+
+	/**
+	 * Check whether the peer represented by this Membership owns a given address
+	 *
+	 * @tparam Type of resource: InetAddress or MAC
+	 * @param nconf Our network config
+	 * @param r Resource to check
+	 * @return True if this peer has a certificate of ownership for the given resource
+	 */
+	template<typename T>
+	ZT_INLINE bool peerOwnsAddress(const NetworkConfig &nconf,const T &r) const noexcept
+	{
+		if (_isUnspoofableAddress(nconf,r))
+			return true;
+		uint32_t *k = nullptr;
+		CertificateOfOwnership *v = nullptr;
+		Hashtable< uint32_t,CertificateOfOwnership >::Iterator i(*(const_cast< Hashtable< uint32_t,CertificateOfOwnership> *>(&_remoteCoos)));
+		while (i.next(k,v)) {
+			if (_isCredentialTimestampValid(nconf,*v)&&(v->owns(r)))
+				return true;
+		}
+		return false;
+	}
 
 	/**
 	 * Check if our local COM agrees with theirs, with possible memo-ization.

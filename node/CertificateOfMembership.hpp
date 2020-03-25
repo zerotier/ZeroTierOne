@@ -139,6 +139,11 @@ public:
 	ZT_INLINE int64_t timestamp() const noexcept { return _timestamp; }
 
 	/**
+	 * @return Maximum allowed difference between timestamps
+	 */
+	ZT_INLINE int64_t timestampMaxDelta() const noexcept { return _timestampMaxDelta; }
+
+	/**
 	 * @return Fingerprint of identity to which this cert was issued
 	 */
 	ZT_INLINE const Fingerprint &issuedTo() const noexcept { return _issuedTo; }
