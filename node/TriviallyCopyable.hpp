@@ -166,6 +166,12 @@ ZT_PACKED_STRUCT(struct TriviallyCopyable
 	}
 });
 
+static constexpr bool isTriviallyCopyable(const TriviallyCopyable *const anything) noexcept { return true; }
+static constexpr bool isTriviallyCopyable(const void *const anything) noexcept { return false; }
+
+template<typename T>
+static constexpr bool isTriviallyCopyable(const T &anything) noexcept { return isTriviallyCopyable(&anything); }
+
 } // namespace ZeroTier
 
 #endif

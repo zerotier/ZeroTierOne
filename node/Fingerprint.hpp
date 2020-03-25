@@ -45,18 +45,13 @@ public:
 
 	ZT_INLINE Address address() const noexcept { return Address(_fp.address); }
 	ZT_INLINE const uint8_t *hash() const noexcept { return _fp.hash; }
-
-	/**
-	 * Copy into ZT_Fingerprint struct as used in API and trace messages
-	 *
-	 * @param fp ZT_Fingerprint
-	 */
-	ZT_INLINE void getAPIFingerprint(ZT_Fingerprint *fp) const noexcept { memcpy(fp,&_fp,sizeof(ZT_Fingerprint)); }
-
-	/**
-	 * @return Pointer to ZT_Fingerprint for API use
-	 */
+	ZT_INLINE ZT_Fingerprint *apiFingerprint() noexcept { return &_fp; }
 	ZT_INLINE const ZT_Fingerprint *apiFingerprint() const noexcept { return &_fp; }
+
+	/**
+	 * @return True if hash is not all zero (missing/unspecified)
+	 */
+	ZT_INLINE bool haveHash() const noexcept { return (!Utils::allZero(_fp.hash,sizeof(_fp.hash))); }
 
 	/**
 	 * Get a base32-encoded representation of this fingerprint

@@ -118,11 +118,15 @@ public:
 		_decryptSW(reinterpret_cast<const uint8_t *>(in),reinterpret_cast<uint8_t *>(out));
 	}
 
+	class GMACSIVEncryptor;
+
 	/**
 	 * Streaming GMAC calculator
 	 */
 	class GMAC
 	{
+		friend class GMACSIVEncryptor;
+
 	public:
 		/**
 		 * Create a new instance of GMAC (must be initialized with init() before use)
@@ -190,6 +194,8 @@ public:
 	 */
 	class CTR
 	{
+		friend class GMACSIVEncryptor;
+
 	public:
 		ZT_INLINE CTR(const AES &aes) noexcept : _aes(aes) {}
 
@@ -227,6 +233,76 @@ public:
 		uint64_t _ctr[2];
 		uint8_t *_out;
 		unsigned int _len;
+	};
+
+	/**
+	 * Encrypt with AES-GMAC-SIV
+	 */
+	class GMACSIVEncryptor
+	{
+	public:
+		/**
+		 * Create a new AES-GMAC-SIV encryptor keyed with the provided AES instances
+		 *
+		 * @param k0 First of two AES instances keyed with K0
+		 * @param k1 Second of two AES instances keyed with K1
+		 */
+		ZT_INLINE GMACSIVEncryptor(const AES &k0,const AES &k1) noexcept :
+			_gmac(k0),
+			_ctr(k1) {}
+
+		/*
+		 * Initialize AES-GMAC-SIV
+		 *
+		 * @param iv IV in network byte order (byte order in which it will appear on the wire)
+		 * @param output Pointer to buffer to receive ciphertext, must be large enough for all to-be-processed data!
+		 */
+		ZT_INLINE void init(const uint64_t iv,void *const output) noexcept
+		{
+			_output = output;
+			_iv[0] = iv;
+			_iv[1] = 0;
+			_gmac.init(reinterpret_cast<const uint8_t *>(_iv));
+		}
+
+		ZT_INLINE void update1(const void *const input,const unsigned int len) noexcept
+		{
+			_gmac.update(input,len);
+		}
+
+		/**
+		 * Finish first pass, compute CTR IV, initialize second pass.
+		 */
+		ZT_INLINE void finish1() noexcept
+		{
+			uint64_t gmacTag[2];
+			_gmac.finish(reinterpret_cast<uint8_t *>(gmacTag));
+			_iv[1] = gmacTag[0];
+			_ctr._aes.encrypt(_iv,_iv);
+			_ctr.init(reinterpret_cast<const uint8_t *>(_iv),_output);
+		}
+
+		ZT_INLINE void update2(const void *const input,const unsigned int len) noexcept
+		{
+			_ctr.crypt(input,len);
+		}
+
+		/**
+		 * Finish second pass and return a pointer to the opaque 128-bit IV+MAC block
+		 *
+		 * @return Pointer to 128-bit opaque IV+MAC
+		 */
+		ZT_INLINE const uint8_t *finish2()
+		{
+			_ctr.finish();
+			return reinterpret_cast<const uint8_t *>(_iv);
+		}
+
+	private:
+		void *_output;
+		uint64_t _iv[2];
+		AES::GMAC _gmac;
+		AES::CTR _ctr;
 	};
 
 private:

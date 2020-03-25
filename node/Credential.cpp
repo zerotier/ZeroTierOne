@@ -72,22 +72,19 @@ Credential::VerifyResult Credential::_verify(const RuntimeEnvironment *const RR,
 
 Credential::VerifyResult Credential::_verify(const RuntimeEnvironment *const RR,void *tPtr,const CertificateOfMembership &credential) const
 {
-	if ((!credential._signedBy)||(credential._signedBy != Network::controllerFor(credential.networkId()))||(credential._qualifierCount > ZT_NETWORK_COM_MAX_QUALIFIERS))
+	// Sanity check network ID.
+	if ((!credential._signedBy)||(credential._signedBy != Network::controllerFor(credential._networkId)))
 		return Credential::VERIFY_BAD_SIGNATURE;
 
+	// If we don't know the peer, get its identity. This shouldn't happen here but should be handled.
 	const SharedPtr<Peer> peer(RR->topology->peer(tPtr,credential._signedBy));
 	if (!peer)
 		return Credential::VERIFY_NEED_IDENTITY;
 
-	uint64_t buf[ZT_NETWORK_COM_MAX_QUALIFIERS * 3];
-	unsigned int ptr = 0;
-	for(unsigned int i=0;i<credential._qualifierCount;++i) {
-		buf[ptr++] = Utils::hton(credential._qualifiers[i].id);
-		buf[ptr++] = Utils::hton(credential._qualifiers[i].value);
-		buf[ptr++] = Utils::hton(credential._qualifiers[i].maxDelta);
-	}
-
-	return (peer->identity().verify(buf,ptr * sizeof(uint64_t),credential._signature,credential._signatureLength) ? Credential::VERIFY_OK : Credential::VERIFY_BAD_SIGNATURE);
+	// Now verify the controller's signature.
+	uint64_t buf[ZT_CERTIFICATEOFMEMBERSHIP_MARSHAL_SIZE_MAX / 8];
+	const unsigned int bufSize = credential._fillSigningBuf(buf);
+	return peer->identity().verify(buf,bufSize,credential._signature,credential._signatureLength) ? Credential::VERIFY_OK : Credential::VERIFY_BAD_SIGNATURE;
 }
 
 Credential::VerifyResult Credential::_verify(const RuntimeEnvironment *RR,void *tPtr,const Capability &credential) const

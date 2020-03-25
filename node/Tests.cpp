@@ -1040,6 +1040,24 @@ extern "C" const char *ZTT_benchmarkCrypto()
 		}
 
 		{
+			ZT_T_PRINTF("[crypto] Benchmarking AES-GMAC-SIV... ");
+			AES k0(AES_CTR_TEST_VECTOR_0_KEY);
+			AES k1(AES_GMAC_VECTOR_0_KEY);
+			AES::GMACSIVEncryptor enc(k0,k1);
+			int64_t start = now();
+			for(long i=0;i<350000;++i) {
+				enc.init((uint64_t)i,tmp);
+				enc.update1(tmp,sizeof(tmp));
+				enc.finish1();
+				enc.update2(tmp,sizeof(tmp));
+				enc.finish2();
+			}
+			int64_t end = now();
+			foo = tmp[0]; // prevent optimization
+			ZT_T_PRINTF("%.4f MiB/sec" ZT_EOL_S,((16384.0 * 350000.0) / 1048576.0) / ((double)(end - start) / 1000.0));
+		}
+
+		{
 			ZT_T_PRINTF("[crypto] Benchmarking Poly1305... ");
 			int64_t start = now();
 			for(long i=0;i<150000;++i)

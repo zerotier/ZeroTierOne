@@ -33,6 +33,9 @@ namespace ZeroTier {
  * This doesn't implement everything in std::vector, just what we need. It
  * also adds a few special things for use in ZT core code.
  *
+ * Note that an FCV will be TriviallyCopyable IF and only if its contained
+ * type is TriviallyCopyable. There's a const static checker for this.
+ *
  * @tparam T Type to contain
  * @tparam C Maximum capacity of vector
  */
@@ -42,6 +45,11 @@ class FCV
 public:
 	typedef T * iterator;
 	typedef const T * const_iterator;
+
+	/**
+	 * @return True if this FCV is trivially copyable, which means its type is also.
+	 */
+	static constexpr bool isTriviallyCopyable() noexcept { return isTriviallyCopyable(reinterpret_cast<const T *>(0)); }
 
 	ZT_INLINE FCV() noexcept : _s(0) {}
 	ZT_INLINE FCV(const FCV &v) : _s(0) { *this = v; }

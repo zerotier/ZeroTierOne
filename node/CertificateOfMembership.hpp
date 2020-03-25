@@ -14,6 +14,8 @@
 #ifndef ZT_CERTIFICATEOFMEMBERSHIP_HPP
 #define ZT_CERTIFICATEOFMEMBERSHIP_HPP
 
+// TODO: redo
+
 #include <cstdint>
 #include <cstring>
 
@@ -27,13 +29,13 @@
 #include "C25519.hpp"
 #include "Identity.hpp"
 #include "Utils.hpp"
+#include "FCV.hpp"
 
-/**
- * Maximum number of qualifiers allowed in a COM (absolute max: 65535)
- */
-#define ZT_NETWORK_COM_MAX_QUALIFIERS 8
+// Maximum number of additional tuples beyond the standard always-present three.
+#define ZT_CERTIFICATEOFMEMBERSHIP_MAX_ADDITIONAL_QUALIFIERS 8
 
-#define ZT_CERTIFICATEOFMEMBERSHIP_MARSHAL_SIZE_MAX (1 + 2 + (24 * ZT_NETWORK_COM_MAX_QUALIFIERS) + 5 + ZT_SIGNATURE_BUFFER_SIZE)
+// version + qualifier count + three required qualifiers + additional qualifiers +
+#define ZT_CERTIFICATEOFMEMBERSHIP_MARSHAL_SIZE_MAX (1 + 2 + (3 * 3 * 8) + (ZT_CERTIFICATEOFMEMBERSHIP_MAX_ADDITIONAL_QUALIFIERS * 3 * 8) + 144 + 5 + 2 + 96)
 
 namespace ZeroTier {
 
@@ -42,28 +44,62 @@ class RuntimeEnvironment;
 /**
  * Certificate of network membership
  *
- * The COM contains a sorted set of three-element tuples called qualifiers.
- * These contain an id, a value, and a maximum delta.
+ * This is the fundamental permission object issued by network controllers to members of networks
+ * to admit them into networks.
  *
- * The ID is arbitrary and should be assigned using a scheme that makes
- * every ID globally unique. IDs beneath 65536 are reserved for global
- * assignment by ZeroTier Networks.
+ * A certificate of membership (COM) consists of a series of tuples called qualifiers as well
+ * as the full identity fingerprint of the node being admitted, the address of the controller
+ * (for sanity checking), and a signature.
  *
- * The value's meaning is ID-specific and isn't important here. What's
- * important is the value and the third member of the tuple: the maximum
- * delta. The maximum delta is the maximum difference permitted between
- * values for a given ID between certificates for the two certificates to
- * themselves agree.
+ * A qualifier is a tuple of three 64-bit unsigned integers: an id, a value, and a delta.
  *
- * Network membership is checked by checking whether a peer's certificate
- * agrees with your own. The timestamp provides the fundamental criterion--
- * each member of a private network must constantly obtain new certificates
- * often enough to stay within the max delta for this qualifier. But other
- * criteria could be added in the future for very special behaviors, things
- * like latitude and longitude for instance.
+ * Certiciates are checked between peers by determining if they agree. If the absolute value
+ * of the difference between any two qualifier values exceeds its delta, the certificates do
+ * not agree. A delta if 1 for example means that the values of two peers may differ by no more
+ * than one. A delta of 0 indicates values that must be the same. A delta of uint64_max is for
+ * informational tuples that are not included in certificate checking, as this means they may
+ * differ by any amount.
  *
- * This is a memcpy()'able structure and is safe (in a crash sense) to modify
- * without locks.
+ * All COMs contain three initial tuples: timestamp, network ID, and the address of the
+ * issued-to node. The latter is informational. The network ID must equal exactly, though in
+ * theory a controller could allow a delta there to e.g. allow cross-communication between all
+ * of its networks. (This has never been done in practice.) The most important field is the
+ * timestamp, whose delta defines a moving window within which certificates must be timestamped
+ * by the network controller to agree. A certificate that is too old will fall out of this
+ * window vs its peers and will no longer be considered valid.
+ *
+ * (Revocations are a method to rapidly revoke access that works alongside this slower but
+ * more definitive method.)
+ *
+ * Certificate of membership wire format:
+ *
+ * This wire format comes in two versions: version 1 for ZeroTier 1.x, which will
+ * eventually go away once 1.x is out of support, and version 2 for ZeroTier 2.x and later.
+ *
+ * Version 2:
+ *
+ * <[1] wire format type byte: 1 or 2>
+ * <[2] 16-bit number of qualifier tuples>
+ * <[...] qualifier tuples>
+ * <[48] fingerprint hash of identity of peer to whom COM was issued>
+ * <[5] address of network controller>
+ * <[2] 16-bit size of signature>
+ * <[...] signature>
+ *
+ * Version 1 is identical except the fingerprint hash is omitted and is instead loaded
+ * into a series of six informational tuples. The signature size is also omitted and a
+ * 96-byte signature field is assumed.
+ *
+ * Qualifier tuples must appear in numeric order of ID, and the first three tuples
+ * must have IDs 0, 1, and 2 being the timestamp, network ID, and issued-to address
+ * respectively. In version 1 COMs the IDs 3-8 are used to pack in the full identity
+ * fingerprint, so these are reserved as well. Optional additional tuples (not currently
+ * used) must use ID 65536 or higher.
+ *
+ * Signatures are computed over tuples only for backward compatibility with v1, and we
+ * don't plan to change this. Tuples are emitted into a buffer in ascending numeric
+ * order with the fingerprint hash being packed into tuple IDs 3-8 and this buffer is
+ * then signed.
  */
 class CertificateOfMembership : public Credential
 {
@@ -71,33 +107,6 @@ class CertificateOfMembership : public Credential
 
 public:
 	static constexpr ZT_CredentialType credentialType() noexcept { return ZT_CREDENTIAL_TYPE_COM; }
-
-	/**
-	 * Reserved qualifier IDs
-	 *
-	 * IDs below 1024 are reserved for use as standard IDs. Others are available
-	 * for user-defined use.
-	 *
-	 * Addition of new required fields requires that code in hasRequiredFields
-	 * be updated as well.
-	 */
-	enum ReservedId
-	{
-		/**
-		 * Timestamp of certificate
-		 */
-		COM_RESERVED_ID_TIMESTAMP = 0,
-
-		/**
-		 * Network ID for which certificate was issued
-		 */
-		COM_RESERVED_ID_NETWORK_ID = 1,
-
-		/**
-		 * ZeroTier address to whom certificate was issued
-		 */
-		COM_RESERVED_ID_ISSUED_TO = 2
-	};
 
 	/**
 	 * Create an empty certificate of membership
@@ -112,12 +121,12 @@ public:
 	 * @param nwid Network ID
 	 * @param issuedTo Certificate recipient
 	 */
-	CertificateOfMembership(uint64_t timestamp,uint64_t timestampMaxDelta,uint64_t nwid,const Address &issuedTo);
+	CertificateOfMembership(int64_t timestamp,int64_t timestampMaxDelta,uint64_t nwid,const Identity &issuedTo) noexcept;
 
 	/**
 	 * @return True if there's something here
 	 */
-	ZT_INLINE operator bool() const noexcept { return (_qualifierCount != 0); }
+	ZT_INLINE operator bool() const noexcept { return (_networkId != 0); }
 
 	/**
 	 * @return Credential ID, always 0 for COMs
@@ -127,57 +136,17 @@ public:
 	/**
 	 * @return Timestamp for this cert and maximum delta for timestamp
 	 */
-	ZT_INLINE int64_t timestamp() const noexcept
-	{
-		if (_qualifiers[COM_RESERVED_ID_TIMESTAMP].id == COM_RESERVED_ID_TIMESTAMP)
-			return (int64_t)_qualifiers[0].value;
-		for(unsigned int i=0;i<_qualifierCount;++i) {
-			if (_qualifiers[i].id == COM_RESERVED_ID_TIMESTAMP)
-				return (int64_t)_qualifiers[i].value;
-		}
-		return 0;
-	}
+	ZT_INLINE int64_t timestamp() const noexcept { return _timestamp; }
 
 	/**
-	 * @return Address to which this cert was issued
+	 * @return Fingerprint of identity to which this cert was issued
 	 */
-	ZT_INLINE Address issuedTo() const noexcept
-	{
-		if (_qualifiers[COM_RESERVED_ID_ISSUED_TO].id == COM_RESERVED_ID_ISSUED_TO)
-			return Address(_qualifiers[2].value);
-		for(unsigned int i=0;i<_qualifierCount;++i) {
-			if (_qualifiers[i].id == COM_RESERVED_ID_ISSUED_TO)
-				return Address(_qualifiers[i].value);
-		}
-		return Address();
-	}
+	ZT_INLINE const Fingerprint &issuedTo() const noexcept { return _issuedTo; }
 
 	/**
 	 * @return Network ID for which this cert was issued
 	 */
-	ZT_INLINE uint64_t networkId() const noexcept
-	{
-		if (_qualifiers[COM_RESERVED_ID_NETWORK_ID].id == COM_RESERVED_ID_NETWORK_ID)
-			return _qualifiers[COM_RESERVED_ID_NETWORK_ID].value;
-		for(unsigned int i=0;i<_qualifierCount;++i) {
-			if (_qualifiers[i].id == COM_RESERVED_ID_NETWORK_ID)
-				return _qualifiers[i].value;
-		}
-		return 0ULL;
-	}
-
-	/**
-	 * Add or update a qualifier in this certificate
-	 *
-	 * Any signature is invalidated and signedBy is set to null.
-	 *
-	 * @param id Qualifier ID
-	 * @param value Qualifier value
-	 * @param maxDelta Qualifier maximum allowed difference (absolute value of difference)
-	 */
-	void setQualifier(uint64_t id,uint64_t value,uint64_t maxDelta);
-
-	ZT_INLINE void setQualifier(ReservedId id,uint64_t value,uint64_t maxDelta) { setQualifier((uint64_t)id,value,maxDelta); }
+	ZT_INLINE uint64_t networkId() const noexcept { return _networkId; }
 
 	/**
 	 * Compare two certificates for parameter agreement
@@ -192,7 +161,7 @@ public:
 	 * @param other Cert to compare with
 	 * @return True if certs agree and 'other' may be communicated with
 	 */
-	bool agreesWith(const CertificateOfMembership &other) const;
+	bool agreesWith(const CertificateOfMembership &other) const noexcept;
 
 	/**
 	 * Sign this certificate
@@ -200,7 +169,7 @@ public:
 	 * @param with Identity to sign with, must include private key
 	 * @return True if signature was successful
 	 */
-	bool sign(const Identity &with);
+	bool sign(const Identity &with) noexcept;
 
 	/**
 	 * Verify this COM and its signature
@@ -210,31 +179,29 @@ public:
 	 */
 	ZT_INLINE Credential::VerifyResult verify(const RuntimeEnvironment *RR,void *tPtr) const { return _verify(RR,tPtr,*this); }
 
-	/**
-	 * @return Address that signed this certificate or null address if none
-	 */
-	ZT_INLINE const Address &signedBy() const noexcept { return _signedBy; }
-
 	static constexpr int marshalSizeMax() noexcept { return ZT_CERTIFICATEOFMEMBERSHIP_MARSHAL_SIZE_MAX; }
-	int marshal(uint8_t data[ZT_CERTIFICATEOFMEMBERSHIP_MARSHAL_SIZE_MAX]) const noexcept;
+	int marshal(uint8_t data[ZT_CERTIFICATEOFMEMBERSHIP_MARSHAL_SIZE_MAX],bool v2) const noexcept;
 	int unmarshal(const uint8_t *data,int len) noexcept;
 
-	bool operator==(const CertificateOfMembership &c) const;
-	ZT_INLINE bool operator!=(const CertificateOfMembership &c) const { return (!(*this == c)); }
-
 private:
+	unsigned int _fillSigningBuf(uint64_t buf[ZT_CERTIFICATEOFMEMBERSHIP_MARSHAL_SIZE_MAX / 8]) const noexcept;
+
 	struct _Qualifier
 	{
-		ZT_INLINE _Qualifier() noexcept : id(0),value(0),maxDelta(0) {}
+		ZT_INLINE _Qualifier() noexcept : id(0),value(0),delta(0) {}
+		ZT_INLINE _Qualifier(const uint64_t id_,const uint64_t value_,const uint64_t delta_) noexcept : id(id_),value(value_),delta(delta_) {}
 		uint64_t id;
 		uint64_t value;
-		uint64_t maxDelta;
+		uint64_t delta;
 		ZT_INLINE bool operator<(const _Qualifier &q) const noexcept { return (id < q.id); } // sort order
 	};
 
+	FCV<_Qualifier,ZT_CERTIFICATEOFMEMBERSHIP_MAX_ADDITIONAL_QUALIFIERS> _additionalQualifiers;
+	int64_t _timestamp;
+	int64_t _timestampMaxDelta;
+	uint64_t _networkId;
+	Fingerprint _issuedTo;
 	Address _signedBy;
-	_Qualifier _qualifiers[ZT_NETWORK_COM_MAX_QUALIFIERS];
-	unsigned int _qualifierCount;
 	unsigned int _signatureLength;
 	uint8_t _signature[ZT_SIGNATURE_BUFFER_SIZE];
 };

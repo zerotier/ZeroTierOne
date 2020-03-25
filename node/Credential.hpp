@@ -36,6 +36,11 @@ class RuntimeEnvironment;
 
 /**
  * Base class for credentials
+ *
+ * Note that all credentials are and must be trivially copyable.
+ *
+ * All credential verification methods are implemented in Credential.cpp as they share a lot
+ * of common code and logic and grouping them makes auditing easier.
  */
 class Credential : public TriviallyCopyable
 {

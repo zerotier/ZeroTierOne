@@ -16,15 +16,26 @@
 
 #include "Constants.hpp"
 
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-#define ZT_CONST_TO_BE_UINT16(x) ((uint16_t)((uint16_t)((uint16_t)(x) << 8U) | (uint16_t)((uint16_t)(x) >> 8U)))
-#else
-#define ZT_CONST_TO_BE_UINT16(x) ((uint16_t)(x))
-#endif
-
 namespace ZeroTier {
 
 namespace Utils {
+
+// Macros to convert endian-ness at compile time for constants.
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+#define ZT_CONST_TO_BE_UINT16(x) ((uint16_t)((uint16_t)((uint16_t)(x) << 8U) | (uint16_t)((uint16_t)(x) >> 8U)))
+#define ZT_CONST_TO_BE_UINT64(x) ( \
+	(((uint64_t)(x) & 0x00000000000000ffULL) << 56U) | \
+	(((uint64_t)(x) & 0x000000000000ff00ULL) << 40U) | \
+	(((uint64_t)(x) & 0x0000000000ff0000ULL) << 24U) | \
+	(((uint64_t)(x) & 0x00000000ff000000ULL) <<  8U) | \
+	(((uint64_t)(x) & 0x000000ff00000000ULL) >>  8U) | \
+	(((uint64_t)(x) & 0x0000ff0000000000ULL) >> 24U) | \
+	(((uint64_t)(x) & 0x00ff000000000000ULL) >> 40U) | \
+	(((uint64_t)(x) & 0xff00000000000000ULL) >> 56U))
+#else
+#define ZT_CONST_TO_BE_UINT16(x) ((uint16_t)(x))
+#define ZT_CONST_TO_BE_UINT64(x) ((uint64_t)(x))
+#endif
 
 #ifdef ZT_ARCH_X64
 struct CPUIDRegisters

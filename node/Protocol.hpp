@@ -23,6 +23,8 @@
 #include "Address.hpp"
 #include "Identity.hpp"
 
+// TODO: mlock
+
 /*
  * Core ZeroTier protocol packet formats ------------------------------------------------------------------------------
  *

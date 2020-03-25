@@ -145,7 +145,7 @@ public:
 		const unsigned int fragmentNo,
 		const unsigned int totalFragmentsExpected,
 		const int64_t now,
-		const SharedPtr< Path > &via,
+		const SharedPtr<Path> &via,
 		const unsigned int maxIncomingFragmentsPerPath)
 	{
 		// Sanity checks for malformed fragments or invalid input parameters.
