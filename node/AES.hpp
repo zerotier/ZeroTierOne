@@ -67,9 +67,9 @@ public:
 	 *
 	 * @param key 256-bit key
 	 */
-	explicit ZT_INLINE AES(const void *const key) noexcept :
-		AES()
+	explicit ZT_INLINE AES(const void *const key) noexcept
 	{
+		Utils::memoryLock(this,sizeof(AES));
 		this->init(key);
 	}
 
@@ -277,9 +277,9 @@ public:
 			_output = output;
 
 			// Initialize GMAC with 64-bit IV (and remaining 32 bits padded to zero).
-			_iv[0] = iv;
-			_iv[1] = 0;
-			_gmac.init(reinterpret_cast<const uint8_t *>(_iv));
+			_tag[0] = iv;
+			_tag[1] = 0;
+			_gmac.init(reinterpret_cast<const uint8_t *>(_tag));
 		}
 
 		/**
@@ -287,6 +287,8 @@ public:
 		 *
 		 * This must be called prior to update1, finish1, etc. if there is AAD to include
 		 * in the MAC that is not included in the plaintext.
+		 *
+		 * This currently only supports one chunk of AAD. Don't call multiple times per message.
 		 *
 		 * @param aad Additional authenticated data
 		 * @param len Length of AAD in bytes
@@ -296,8 +298,7 @@ public:
 			// Feed ADD into GMAC first
 			_gmac.update(aad,len);
 
-			// End of AAD is padded to a multiple of 16 bytes to ensure unique encoding vs. plaintext.
-			// AES-GCM-SIV does this as well for the same reason.
+			// End of AAD is padded to a multiple of 16 bytes to ensure unique encoding.
 			len &= 0xfU;
 			if (len != 0)
 				_gmac.update(Utils::ZERO256,16 - len);
@@ -319,24 +320,23 @@ public:
 		 */
 		ZT_INLINE void finish1() noexcept
 		{
-			// Compute GMAC tag, then encrypt the original 64-bit IV and the first 64 bits
-			// of the GMAC tag with AES (single block) and use this to initialize AES-CTR.
-			uint64_t gmacTag[2];
-			_gmac.finish(reinterpret_cast<uint8_t *>(gmacTag));
-			_iv[1] = gmacTag[0];
-			_ctr._aes.encrypt(_iv,_iv);
+			uint64_t tmp[2];
 
-			// For CTR we need to mask the least significant 32 bits to zero for a typical
-			// 96-bit nonce, since this guarantees compatiblity with the most CTR implementations
-			// and avoids having to do add with carry.
-			uint64_t ctrIv[2];
-			ctrIv[0] = _iv[0];
+			// Compute 128-bit GMAC tag.
+			_gmac.finish(reinterpret_cast<uint8_t *>(tmp));
+
+			// Truncate to 64 bits, concatenate after 64-bit message IV, and encrypt with AES.
+			_tag[1] = tmp[0];
+			_ctr._aes.encrypt(_tag,_tag);
+
+			// Mask least significant 32 bits to get CTR IV and initialize CTR.
+			tmp[0] = _tag[0];
 #if __BYTE_ORDER == __BIG_ENDIAN
 			ctrIv[1] = _iv[1] & 0xffffffff00000000ULL;
 #else
-			ctrIv[1] = _iv[1] & 0x00000000ffffffffULL;
+			tmp[1] = _tag[1] & 0x00000000ffffffffULL;
 #endif
-			_ctr.init(reinterpret_cast<const uint8_t *>(ctrIv),_output);
+			_ctr.init(reinterpret_cast<const uint8_t *>(tmp),_output);
 		}
 
 		/**
@@ -356,17 +356,20 @@ public:
 		/**
 		 * Finish second pass and return a pointer to the opaque 128-bit IV+MAC block
 		 *
-		 * @return Pointer to 128-bit opaque IV+MAC
+		 * The returned pointer remains valid as long as this object exists and init()
+		 * is not called again.
+		 *
+		 * @return Pointer to 128-bit opaque IV+MAC (packed into two 64-bit integers)
 		 */
-		ZT_INLINE const uint8_t *finish2()
+		ZT_INLINE const uint64_t *finish2()
 		{
 			_ctr.finish();
-			return reinterpret_cast<const uint8_t *>(_iv);
+			return _tag;
 		}
 
 	private:
 		void *_output;
-		uint64_t _iv[2];
+		uint64_t _tag[2];
 		AES::GMAC _gmac;
 		AES::CTR _ctr;
 	};
