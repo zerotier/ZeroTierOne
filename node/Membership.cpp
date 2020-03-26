@@ -115,6 +115,7 @@ void Membership::pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const i
 
 		if (outl > (int)sizeof(Protocol::Header)) {
 			outl = Protocol::compress(outp,outl);
+			// TODO
 		}
 	}
 

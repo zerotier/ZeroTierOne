@@ -43,7 +43,7 @@ Commands:
   roots                                Show only root peers
   addroot <identity> [IP/port]         Add root with optional bootstrap IP
   removeroot <address|identity>        Remove root
-  join <network ID>                    Join a virtual network
+  join <network ID> [fingerprint]      Join a virtual network
   leave <network ID>                   Leave a virtual network
   networks                             List joined VL2 virtual networks
   network <network ID>                 Show verbose network info

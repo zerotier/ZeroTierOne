@@ -1,5 +1,3 @@
-# Common makefile -- loads make rules for each platform
-
 BUILDDIR := build
 
 .PHONY: all
@@ -20,4 +18,4 @@ clean:
 	rm -rf ${BUILDDIR}
 
 distclean:
-	rm -rf ${BUILDDIR}
+	rm -rf ${BUILDDIR} cmake-build-*
