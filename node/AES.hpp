@@ -259,7 +259,10 @@ public:
 		 */
 		ZT_INLINE void init(const uint64_t iv,void *const output) noexcept
 		{
+			// Output buffer to receive the result of AES-CTR encryption.
 			_output = output;
+
+			// Initialize GMAC with 64-bit IV (and remaining 32 bits padded to zero).
 			_iv[0] = iv;
 			_iv[1] = 0;
 			_gmac.init(reinterpret_cast<const uint8_t *>(_iv));
@@ -276,7 +279,11 @@ public:
 		 */
 		ZT_INLINE void aad(const void *const aad,unsigned int len) noexcept
 		{
+			// Feed ADD into GMAC first
 			_gmac.update(aad,len);
+
+			// End of AAD is padded to a multiple of 16 bytes to ensure unique encoding vs. plaintext.
+			// AES-GCM-SIV does this as well for the same reason.
 			len &= 0xfU;
 			if (len != 0)
 				_gmac.update(Utils::ZERO256,16 - len);
@@ -298,11 +305,23 @@ public:
 		 */
 		ZT_INLINE void finish1() noexcept
 		{
+			// Compute GMAC tag, then encrypt the original 64-bit IV and the first 64 bits
+			// of the GMAC tag with AES (single block) and use this to initialize AES-CTR.
 			uint64_t gmacTag[2];
 			_gmac.finish(reinterpret_cast<uint8_t *>(gmacTag));
 			_iv[1] = gmacTag[0];
 			_ctr._aes.encrypt(_iv,_iv);
-			_ctr.init(reinterpret_cast<const uint8_t *>(_iv),_output);
+
+			// Bit 31 of the CTR IV is masked to (1) allow us to optimize by forgetting
+			// about integer overflow for less than 2^31 bytes (which is far less than
+			// this system's max message size), and (2) ensure interoperability with any
+			// future FIPS-compliant or other cryptographic libraries that may or may not
+			// handle 32-bit integer overflow of the least significant 32 bits in the
+			// counter in the expected way.
+			uint64_t ctrIv[2];
+			ctrIv[0] = _iv[0];
+			ctrIv[1] = _iv[1] & ZT_CONST_TO_BE_UINT64(0xffffffff7fffffffULL);
+			_ctr.init(reinterpret_cast<const uint8_t *>(ctrIv),_output);
 		}
 
 		/**
