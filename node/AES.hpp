@@ -57,16 +57,27 @@ public:
 	/**
 	 * Create an un-initialized AES instance (must call init() before use)
 	 */
-	ZT_INLINE AES() noexcept {}
+	ZT_INLINE AES() noexcept
+	{
+		Utils::memoryLock(this,sizeof(AES));
+	}
 
 	/**
 	 * Create an AES instance with the given key
 	 *
 	 * @param key 256-bit key
 	 */
-	explicit ZT_INLINE AES(const void *const key) noexcept { this->init(key); }
+	explicit ZT_INLINE AES(const void *const key) noexcept :
+		AES()
+	{
+		this->init(key);
+	}
 
-	ZT_INLINE ~AES() { Utils::burn(&_k,sizeof(_k)); }
+	ZT_INLINE ~AES()
+	{
+		Utils::burn(&_k,sizeof(_k));
+		Utils::memoryUnlock(this,sizeof(AES));
+	}
 
 	/**
 	 * Set (or re-set) this AES256 cipher's key
@@ -191,6 +202,9 @@ public:
 
 	/**
 	 * Streaming AES-CTR encrypt/decrypt
+	 *
+	 * NOTE: this doesn't support overflow of the counter in the least significant 32 bits.
+	 * AES-GMAC-CTR doesn't need this, so we don't support it as an optimization.
 	 */
 	class CTR
 	{
@@ -202,7 +216,7 @@ public:
 		/**
 		 * Initialize this CTR instance to encrypt a new stream
 		 *
-		 * @param iv Unique initialization vector
+		 * @param iv Unique initialization vector and initial 32-bit counter (least significant 32 bits, big-endian)
 		 * @param output Buffer to which to store output (MUST be large enough for total bytes processed!)
 		 */
 		ZT_INLINE void init(const uint8_t iv[16],void *const output) noexcept
@@ -312,15 +326,16 @@ public:
 			_iv[1] = gmacTag[0];
 			_ctr._aes.encrypt(_iv,_iv);
 
-			// Bit 31 of the CTR IV is masked to (1) allow us to optimize by forgetting
-			// about integer overflow for less than 2^31 bytes (which is far less than
-			// this system's max message size), and (2) ensure interoperability with any
-			// future FIPS-compliant or other cryptographic libraries that may or may not
-			// handle 32-bit integer overflow of the least significant 32 bits in the
-			// counter in the expected way.
+			// For CTR we need to mask the least significant 32 bits to zero for a typical
+			// 96-bit nonce, since this guarantees compatiblity with the most CTR implementations
+			// and avoids having to do add with carry.
 			uint64_t ctrIv[2];
 			ctrIv[0] = _iv[0];
-			ctrIv[1] = _iv[1] & ZT_CONST_TO_BE_UINT64(0xffffffff7fffffffULL);
+#if __BYTE_ORDER == __BIG_ENDIAN
+			ctrIv[1] = _iv[1] & 0xffffffff00000000ULL;
+#else
+			ctrIv[1] = _iv[1] & 0x00000000ffffffffULL;
+#endif
 			_ctr.init(reinterpret_cast<const uint8_t *>(ctrIv),_output);
 		}
 

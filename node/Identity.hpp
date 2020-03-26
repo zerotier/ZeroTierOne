@@ -63,8 +63,11 @@ public:
 	 */
 	static const Identity NIL;
 
-	ZT_INLINE Identity() noexcept { memoryZero(this); }
-	ZT_INLINE ~Identity() { Utils::burn(reinterpret_cast<void *>(&this->_priv),sizeof(this->_priv)); }
+	ZT_INLINE Identity() noexcept
+	{
+		Utils::memoryLock(this,sizeof(Identity));
+		memoryZero(this);
+	}
 
 	/**
 	 * Construct identity from string
@@ -74,7 +77,17 @@ public:
 	 *
 	 * @param str Identity in canonical string format
 	 */
-	explicit ZT_INLINE Identity(const char *str) { fromString(str); }
+	explicit ZT_INLINE Identity(const char *str)
+	{
+		Utils::memoryLock(this,sizeof(Identity));
+		fromString(str);
+	}
+
+	ZT_INLINE ~Identity()
+	{
+		Utils::memoryUnlock(this,sizeof(Identity));
+		Utils::burn(reinterpret_cast<void *>(&this->_priv),sizeof(this->_priv));
+	}
 
 	/**
 	 * Set identity to NIL value (all zero)

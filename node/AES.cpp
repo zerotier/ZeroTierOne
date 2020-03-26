@@ -507,8 +507,7 @@ void AES::CTR::crypt(const void *const input,unsigned int len) noexcept
 				--len;
 				out[totalLen++] = *(in++);
 				if (!(totalLen & 15U)) {
-					__m128i d0 = _mm_set_epi64x((long long)Utils::hton(c1),(long long)c0);
-					if (unlikely(++c1 == 0ULL)) c0 = Utils::hton(Utils::ntoh(c0) + 1ULL);
+					__m128i d0 = _mm_set_epi64x((long long)Utils::hton(c1++),(long long)c0);
 					d0 = _mm_xor_si128(d0,k0);
 					d0 = _mm_aesenc_si128(d0,k1);
 					d0 = _mm_aesenc_si128(d0,k2);
@@ -656,7 +655,6 @@ void AES::CTR::crypt(const void *const input,unsigned int len) noexcept
 				d0 = _mm_aesenc_si128(d0,k13);
 				d0 = _mm_aesenclast_si128(d0,k14);
 				_mm_storeu_si128(reinterpret_cast<__m128i *>(out),_mm_xor_si128(d0,_mm_loadu_si128(reinterpret_cast<const __m128i *>(in))));
-
 				in += 16;
 				len -= 16;
 				out += 16;
@@ -678,6 +676,7 @@ void AES::CTR::crypt(const void *const input,unsigned int len) noexcept
 #endif
 
 	uint64_t keyStream[2];
+	uint32_t ctr = Utils::ntoh(reinterpret_cast<uint32_t *>(_ctr)[3]);
 
 	unsigned int totalLen = _len;
 	if ((totalLen & 15U)) {
@@ -690,10 +689,10 @@ void AES::CTR::crypt(const void *const input,unsigned int len) noexcept
 			out[totalLen++] = *(in++);
 			if (!(totalLen & 15U)) {
 				_aes._encryptSW(reinterpret_cast<const uint8_t *>(_ctr),reinterpret_cast<uint8_t *>(keyStream));
+				reinterpret_cast<uint32_t *>(_ctr)[3] = Utils::hton(++ctr);
 				uint8_t *outblk = out + (totalLen - 16);
 				for(int i=0;i<16;++i)
 					outblk[i] ^= reinterpret_cast<uint8_t *>(keyStream)[i];
-				_ctr[1] = Utils::hton(Utils::ntoh(_ctr[1]) + 1ULL);
 				break;
 			}
 		}
@@ -707,23 +706,23 @@ void AES::CTR::crypt(const void *const input,unsigned int len) noexcept
 #endif
 		while (len >= 16) {
 			_aes._encryptSW(reinterpret_cast<const uint8_t *>(_ctr),reinterpret_cast<uint8_t *>(keyStream));
+			reinterpret_cast<uint32_t *>(_ctr)[3] = Utils::hton(++ctr);
 			reinterpret_cast<uint64_t *>(out)[0] = reinterpret_cast<const uint64_t *>(in)[0] ^ keyStream[0];
 			reinterpret_cast<uint64_t *>(out)[1] = reinterpret_cast<const uint64_t *>(in)[1] ^ keyStream[1];
 			out += 16;
 			len -= 16;
 			in += 16;
-			_ctr[1] = Utils::hton(Utils::ntoh(_ctr[1]) + 1ULL);
 		}
 #ifdef ZT_NO_UNALIGNED_ACCESS
 	} else {
 		while (len >= 16) {
 			_aes._encryptSW(reinterpret_cast<const uint8_t *>(_ctr),reinterpret_cast<uint8_t *>(keyStream));
+			reinterpret_cast<uint32_t *>(_ctr)[3] = Utils::hton(++ctr);
 			for (int i = 0;i < 16;++i)
 				out[i] = in[i] ^ reinterpret_cast<uint8_t *>(keyStream)[i];
 			out += 16;
 			len -= 16;
 			in += 16;
-			_ctr[1] = Utils::hton(Utils::ntoh(_ctr[1]) + 1ULL);
 		}
 	}
 #endif

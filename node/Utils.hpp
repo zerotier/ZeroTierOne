@@ -20,6 +20,10 @@ namespace ZeroTier {
 
 namespace Utils {
 
+#ifndef __WINDOWS__
+#include <sys/mman.h>
+#endif
+
 // Macros to convert endian-ness at compile time for constants.
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 #define ZT_CONST_TO_BE_UINT16(x) ((uint16_t)((uint16_t)((uint16_t)(x) << 8U) | (uint16_t)((uint16_t)(x) >> 8U)))
@@ -57,6 +61,36 @@ extern const uint64_t ZERO256[4];
  * Hexadecimal characters 0-f
  */
 extern const char HEXCHARS[16];
+
+/**
+ * Lock memory to prevent swapping out to secondary storage (if possible)
+ *
+ * This is used to attempt to prevent the swapping out of long-term stored secure
+ * credentials like secret keys. It isn't supported on all platforms and may not
+ * be absolutely guaranteed to work, but it's a countermeasure.
+ *
+ * @param p Memory to lock
+ * @param l Size of memory
+ */
+static ZT_INLINE void memoryLock(const void *const p,const unsigned int l) noexcept
+{
+#ifndef __WINDOWS__
+	mlock(p,l);
+#endif
+}
+
+/**
+ * Unlock memory locked with memoryLock()
+ *
+ * @param p Memory to unlock
+ * @param l Size of memory
+ */
+static ZT_INLINE void memoryUnlock(const void *const p,const unsigned int l) noexcept
+{
+#ifndef __WINDOWS__
+	munlock(p,l);
+#endif
+}
 
 /**
  * Perform a time-invariant binary comparison

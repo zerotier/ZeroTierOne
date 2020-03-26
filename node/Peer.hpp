@@ -47,9 +47,6 @@ class Peer
 	friend class SharedPtr<Peer>;
 	friend class Topology;
 
-private:
-	ZT_INLINE Peer() {}
-
 public:
 	/**
 	 * Create an uninitialized peer
@@ -61,7 +58,11 @@ public:
 	 */
 	explicit Peer(const RuntimeEnvironment *renv);
 
-	ZT_INLINE ~Peer() { Utils::burn(_key,sizeof(_key)); }
+	ZT_INLINE ~Peer()
+	{
+		Utils::memoryUnlock(_key,sizeof(_key));
+		Utils::burn(_key,sizeof(_key));
+	}
 
 	/**
 	 * Initialize peer with an identity

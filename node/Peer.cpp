@@ -52,6 +52,7 @@ Peer::Peer(const RuntimeEnvironment *renv) :
 	_vMinor(0),
 	_vRevision(0)
 {
+	Utils::memoryLock(_key,sizeof(_key));
 }
 
 bool Peer::init(const Identity &peerIdentity)
