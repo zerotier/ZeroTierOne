@@ -365,7 +365,7 @@ enum Verb
 	 *
 	 * The following optional fields may also be present:
 	 *
-	 *   NAME - abitrary short user-defined name for this node
+	 *   NAME - arbitrary short user-defined name for this node
 	 *   CONTACT - arbitrary short contact information string for this node
 	 *   NEIGHBORS - addresses of node(s) to whom we'll relay (mesh-like routing)
 	 *   LOC_X, LOC_Y, LOC_Z - location relative to the nearest large center of mass
@@ -381,6 +381,10 @@ enum Verb
 	 * initiating peer, the protocol version, and a dictionary containing
 	 * the same information about the responding peer as the originating peer
 	 * sent.
+	 *
+	 * Note that OK(HELLO) as well as HELLO itself is always sent using the long
+	 * lived identity key, not ephemeral keys. This allows ephemeral re-keying to
+	 * always succeed if one side's ephemeral keys are out of date.
 	 *
 	 * OK payload:
 	 *   <[8] timestamp echoed from original HELLO>
