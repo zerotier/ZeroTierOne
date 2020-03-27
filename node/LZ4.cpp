@@ -37,6 +37,7 @@
 // original LZ4 license.
 
 #include "LZ4.hpp"
+#include "Utils.hpp"
 
 #include <cstring>
 #include <cstdlib>
@@ -113,7 +114,6 @@ union LZ4_streamDecode_u {
 
 #define ALLOCATOR(n,s) calloc(n,s)
 #define FREEMEM		free
-#define MEM_INIT	   memset
 
 typedef  uint8_t BYTE;
 typedef uint16_t U16;
@@ -142,26 +142,26 @@ FORCE_INLINE U32 LZ4_read32(const void* ptr) { return ((const unalign*)ptr)->u32
 FORCE_INLINE reg_t LZ4_read_ARCH(const void* ptr) { return ((const unalign*)ptr)->uArch; }
 FORCE_INLINE void LZ4_write16(void* memPtr, U16 value) { ((unalign*)memPtr)->u16 = value; }
 FORCE_INLINE void LZ4_write32(void* memPtr, U32 value) { ((unalign*)memPtr)->u32 = value; }
-#else  /* safe and portable access through memcpy() */
+#else  /* safe and portable */
 FORCE_INLINE U16 LZ4_read16(const void* memPtr)
 {
-	U16 val; memcpy(&val, memPtr, sizeof(val)); return val;
+	U16 val; Utils::copy(&val, memPtr, sizeof(val)); return val;
 }
 FORCE_INLINE U32 LZ4_read32(const void* memPtr)
 {
-	U32 val; memcpy(&val, memPtr, sizeof(val)); return val;
+	U32 val; Utils::copy(&val, memPtr, sizeof(val)); return val;
 }
 FORCE_INLINE reg_t LZ4_read_ARCH(const void* memPtr)
 {
-	reg_t val; memcpy(&val, memPtr, sizeof(val)); return val;
+	reg_t val; Utils::copy(&val, memPtr, sizeof(val)); return val;
 }
 FORCE_INLINE void LZ4_write16(void* memPtr, U16 value)
 {
-	memcpy(memPtr, &value, sizeof(value));
+	Utils::copy(memPtr, &value, sizeof(value));
 }
 FORCE_INLINE void LZ4_write32(void* memPtr, U32 value)
 {
-	memcpy(memPtr, &value, sizeof(value));
+	Utils::copy(memPtr, &value, sizeof(value));
 }
 #endif /* LZ4_FORCE_MEMORY_ACCESS */
 
@@ -188,7 +188,7 @@ FORCE_INLINE void LZ4_writeLE16(void* memPtr, U16 value)
 
 FORCE_INLINE void LZ4_copy8(void* dst, const void* src)
 {
-	memcpy(dst,src,8);
+	Utils::copy<8>(dst,src);
 }
 
 FORCE_INLINE void LZ4_wildCopy(void* dstPtr, const void* srcPtr, void* dstEnd)
@@ -555,7 +555,7 @@ FORCE_INLINE int LZ4_compress_generic(
 		} else {
 			*op++ = (BYTE)(lastRun<<ML_BITS);
 		}
-		memcpy(op, anchor, lastRun);
+		Utils::copy(op, anchor, lastRun);
 		op += lastRun;
 	}
 
@@ -584,7 +584,7 @@ ZT_INLINE int LZ4_compress_fast_extState(void* state,const char* source,char* de
 
 FORCE_INLINE void LZ4_resetStream (LZ4_stream_t* LZ4_stream)
 {
-	MEM_INIT(LZ4_stream, 0, sizeof(LZ4_stream_t));
+	Utils::zero<sizeof(LZ4_stream_t)>(LZ4_stream);
 }
 
 FORCE_INLINE int LZ4_decompress_generic(
@@ -655,7 +655,7 @@ FORCE_INLINE int LZ4_decompress_generic(
 				if ((!endOnInput) && (cpy != oend)) goto _output_error;	   /* Error : block decoding must stop exactly there */
 				if ((endOnInput) && ((ip+length != iend) || (cpy > oend))) goto _output_error;   /* Error : input must be consumed */
 			}
-			memcpy(op, ip, length);
+			Utils::copy(op, ip, length);
 			ip += length;
 			op += length;
 			break;	 /* Necessarily EOF, due to parsing restrictions */
@@ -694,14 +694,14 @@ FORCE_INLINE int LZ4_decompress_generic(
 				/* match encompass external dictionary and current block */
 				size_t const copySize = (size_t)(lowPrefix-match);
 				size_t const restSize = length - copySize;
-				memcpy(op, dictEnd - copySize, copySize);
+				Utils::copy(op, dictEnd - copySize, copySize);
 				op += copySize;
 				if (restSize > (size_t)(op-lowPrefix)) {  /* overlap copy */
 					BYTE* const endOfMatch = op + restSize;
 					const BYTE* copyFrom = lowPrefix;
 					while (op < endOfMatch) *op++ = *copyFrom++;
 				} else {
-					memcpy(op, lowPrefix, restSize);
+					Utils::copy(op, lowPrefix, restSize);
 					op += restSize;
 				}   }
 			continue;
@@ -716,7 +716,7 @@ FORCE_INLINE int LZ4_decompress_generic(
 			op[2] = match[2];
 			op[3] = match[3];
 			match += dec32table[offset];
-			memcpy(op+4, match, 4);
+			Utils::copy<4>(op+4, match);
 			match -= dec64;
 		} else { LZ4_copy8(op, match); match+=8; }
 		op += 8;

@@ -15,6 +15,7 @@
 #define ZT_HASHTABLE_HPP
 
 #include "Constants.hpp"
+#include "Utils.hpp"
 
 #include <cstdlib>
 #include <cstring>
@@ -95,14 +96,14 @@ public:
 	/**
 	 * @param bc Initial capacity in buckets (default: 32, must be nonzero)
 	 */
-	explicit ZT_INLINE Hashtable(unsigned long bc = 32) :
+	explicit ZT_INLINE Hashtable(unsigned int bc = 32) :
 		_t(reinterpret_cast<_Bucket **>(::malloc(sizeof(_Bucket *) * bc))),
 		_bc(bc),
 		_s(0)
 	{
 		if (!_t)
 			throw std::bad_alloc();
-		memset(_t,0,sizeof(_Bucket *) * bc);
+		Utils::zero(_t,sizeof(uintptr_t) * bc);
 	}
 
 	ZT_INLINE Hashtable(const Hashtable<K,V> &ht) :

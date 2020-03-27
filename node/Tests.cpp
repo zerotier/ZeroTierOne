@@ -338,19 +338,19 @@ extern "C" const char *ZTT_general()
 				ZT_T_PRINTF("FAILED (loadAsIsEndian)" ZT_EOL_S);
 				return "Utils::loadAsIsEndian() broken";
 			}
-			memset(t,0,sizeof(t));
+			Utils::zero<sizeof(t)>(t);
 			Utils::storeAsIsEndian<uint64_t>(t,0x0807060504030201ULL);
 			if (t[0] != 1) {
 				ZT_T_PRINTF("FAILED (storeAsIsEndian)" ZT_EOL_S);
 				return "Utils::storeAsIsEndian() broken";
 			}
-			memset(t,0,sizeof(t));
+			Utils::zero<sizeof(t)>(t);
 			Utils::storeAsIsEndian<uint32_t>(t,0x04030201);
 			if (t[0] != 1) {
 				ZT_T_PRINTF("FAILED (storeAsIsEndian)" ZT_EOL_S);
 				return "Utils::storeAsIsEndian() broken";
 			}
-			memset(t,0,sizeof(t));
+			Utils::zero<sizeof(t)>(t);
 			Utils::storeAsIsEndian<uint16_t>(t,0x0201);
 			if (t[0] != 1) {
 				ZT_T_PRINTF("FAILED (storeAsIsEndian)" ZT_EOL_S);
@@ -369,19 +369,19 @@ extern "C" const char *ZTT_general()
 				ZT_T_PRINTF("FAILED (loadAsIsEndian)" ZT_EOL_S);
 				return "Utils::loadAsIsEndian() broken";
 			}
-			memset(t,0,sizeof(t));
+			Utils::zero<sizeof(t)>(t);
 			Utils::storeAsIsEndian<uint64_t>(t,0x0807060504030201ULL);
 			if (t[0] != 8) {
 				ZT_T_PRINTF("FAILED (storeAsIsEndian)" ZT_EOL_S);
 				return "Utils::storeAsIsEndian() broken";
 			}
-			memset(t,0,sizeof(t));
+			Utils::zero<sizeof(t)>(t);
 			Utils::storeAsIsEndian<uint32_t>(t,0x04030201);
 			if (t[0] != 4) {
 				ZT_T_PRINTF("FAILED (storeAsIsEndian)" ZT_EOL_S);
 				return "Utils::storeAsIsEndian() broken";
 			}
-			memset(t,0,sizeof(t));
+			Utils::zero<sizeof(t)>(t);
 			Utils::storeAsIsEndian<uint16_t>(t,0x0201);
 			if (t[0] != 2) {
 				ZT_T_PRINTF("FAILED (storeAsIsEndian)" ZT_EOL_S);
@@ -831,14 +831,14 @@ extern "C" const char *ZTT_crypto()
 			ZT_T_PRINTF("[crypto] Testing Salsa20... ");
 			Salsa20 s20;
 			s20.init(SALSA20_TV0_KEY,SALSA20_TV0_IV);
-			memset(ks,0,sizeof(ks));
+			Utils::zero<sizeof(ks)>(ks);
 			s20.crypt20(ks,ks,sizeof(ks));
 			if (memcmp(ks,SALSA20_TV0_KS,64) != 0) {
 				ZT_T_PRINTF("FAILED (Salsa20 test vector)" ZT_EOL_S);
 				return "Salsa20 test vector failed";
 			}
 			s20.init(SALSA12_TV0_KEY,SALSA12_TV0_IV);
-			memset(ks,0,sizeof(ks));
+			Utils::zero<sizeof(ks)>(ks);
 			s20.crypt12(ks,ks,sizeof(ks));
 			if (memcmp(ks,SALSA12_TV0_KS,64) != 0) {
 				ZT_T_PRINTF("FAILED (Salsa12 test vector)" ZT_EOL_S);
@@ -994,8 +994,8 @@ extern "C" const char *ZTT_benchmarkCrypto()
 {
 	try {
 		uint8_t tmp[16384],tag[16];
-		memset(tmp,0,sizeof(tmp));
-		memset(tag,0,sizeof(tag));
+		Utils::zero<sizeof(tmp)>(tmp);
+		Utils::zero<sizeof(tag)>(tag);
 
 		{
 			ZT_T_PRINTF("[crypto] Benchmarking SHA384... ");
@@ -1094,7 +1094,7 @@ extern "C" const char *ZTT_benchmarkCrypto()
 
 		{
 			uint8_t sig[ZT_C25519_SIGNATURE_LEN];
-			memset(sig,0,sizeof(sig));
+			Utils::zero<sizeof(sig)>(sig);
 			ZT_T_PRINTF("[crypto] Benchmarking Ed25519 signature... ");
 			int64_t start = now();
 			for(int i=0;i<150;++i) {
@@ -1169,7 +1169,7 @@ extern "C" const char *ZTT_benchmarkCrypto()
 			for(long i=0;i<10;++i)
 				foo = (uint8_t)id.locallyValidate();
 			end = now();
-			ZT_T_PRINTF("%.4f ms/validation" ZT_EOL_S,(double)(end - start) / 10.0);
+			ZT_T_PRINTF(" %.4f ms/validation" ZT_EOL_S,(double)(end - start) / 10.0);
 			ZT_T_PRINTF("[crypto] Benchmarking V1 Identity generation...");
 			start = now();
 			for(long i=0;i<10;++i) {

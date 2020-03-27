@@ -87,11 +87,6 @@ public:
 	/**
 	 * This does a straight copy of one vector's data to another
 	 *
-	 * If the other vector is larger than this one's capacity the data is
-	 * silently truncated. This is unsafe in that it does not call any
-	 * constructors or destructors and copies data with memcpy, so it can
-	 * only be used with primitive types or TriviallyCopyable objects.
-	 *
 	 * @tparam C2 Inferred capacity of other vector
 	 * @param v Other vector to copy to this one
 	 */
@@ -99,20 +94,17 @@ public:
 	ZT_INLINE void unsafeAssign(const FCV<T,C2> &v) noexcept
 	{
 		_s = ((C2 > C)&&(v._s > C)) ? C : v._s;
-		memcpy(_m,v._m,_s * sizeof(T));
+		Utils::copy(_m,v._m,_s * sizeof(T));
 	}
 
 	/**
 	 * Move contents from this vector to another and clear this vector
 	 *
-	 * This uses a straight memcpy and so is only safe for primitive types or
-	 * types that are TriviallyCopyable.
-	 *
 	 * @param v Target vector
 	 */
 	ZT_INLINE void unsafeMoveTo(FCV &v) noexcept
 	{
-		memcpy(v._m,_m,(v._s = _s) * sizeof(T));
+		Utils::copy(v._m,_m,(v._s = _s) * sizeof(T));
 		_s = 0;
 	}
 

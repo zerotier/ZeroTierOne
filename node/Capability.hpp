@@ -82,7 +82,7 @@ public:
 		_ruleCount((ruleCount < ZT_MAX_CAPABILITY_RULES) ? ruleCount : ZT_MAX_CAPABILITY_RULES)
 	{
 		if (_ruleCount > 0)
-			memcpy(_rules,rules,sizeof(ZT_VirtualNetworkRule) * _ruleCount);
+			Utils::copy(_rules,rules,sizeof(ZT_VirtualNetworkRule) * _ruleCount);
 	}
 
 	/**

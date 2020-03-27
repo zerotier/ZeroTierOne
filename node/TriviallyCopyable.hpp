@@ -23,7 +23,7 @@
 namespace ZeroTier {
 
 /**
- * Classes inheriting from this base class are safe to abuse in C-like ways: memcpy, memset, etc.
+ * Classes inheriting from this base class are safe to abuse in C-like ways.
  *
  * It also includes some static methods to do this conveniently.
  */
@@ -65,7 +65,7 @@ ZT_PACKED_STRUCT(struct TriviallyCopyable
 	static ZT_INLINE void memoryZero(T *obj) noexcept
 	{
 		TriviallyCopyable *const tmp = obj;
-		memset(tmp,0,sizeof(T));
+		Utils::zero<sizeof(T)>(tmp);
 	}
 
 	/**
@@ -78,7 +78,7 @@ ZT_PACKED_STRUCT(struct TriviallyCopyable
 	static ZT_INLINE void memoryZero(T &obj) noexcept
 	{
 		TriviallyCopyable *const tmp = &obj;
-		memset(tmp,0,sizeof(T));
+		Utils::zero<sizeof(T)>(tmp);
 	}
 
 	/**
@@ -92,7 +92,7 @@ ZT_PACKED_STRUCT(struct TriviallyCopyable
 	static ZT_INLINE void memoryCopyUnsafe(T *dest,const void *src) noexcept
 	{
 		TriviallyCopyable *const tmp = dest;
-		memcpy(tmp,src,sizeof(T));
+		Utils::copy<sizeof(T)>(tmp,src);
 	}
 
 	/**
@@ -106,7 +106,7 @@ ZT_PACKED_STRUCT(struct TriviallyCopyable
 	static ZT_INLINE void memoryCopyUnsafe(T &dest,const void *src) noexcept
 	{
 		TriviallyCopyable *const tmp = &dest;
-		memcpy(tmp,src,sizeof(T));
+		Utils::copy<sizeof(T)>(tmp,src);
 	}
 
 	/**
@@ -120,7 +120,7 @@ ZT_PACKED_STRUCT(struct TriviallyCopyable
 	static ZT_INLINE void memoryCopy(T *dest,const T *src) noexcept
 	{
 		TriviallyCopyable *const tmp = dest;
-		memcpy(tmp,src,sizeof(T));
+		Utils::copy<sizeof(T)>(tmp,src);
 	}
 
 	/**
@@ -134,7 +134,7 @@ ZT_PACKED_STRUCT(struct TriviallyCopyable
 	static ZT_INLINE void memoryCopy(T *dest,const T &src) noexcept
 	{
 		TriviallyCopyable *const tmp = dest;
-		memcpy(tmp,&src,sizeof(T));
+		Utils::copy<sizeof(T)>(tmp,&src);
 	}
 
 	/**
@@ -148,7 +148,7 @@ ZT_PACKED_STRUCT(struct TriviallyCopyable
 	static ZT_INLINE void memoryCopy(T &dest,const T *src) noexcept
 	{
 		TriviallyCopyable *const tmp = &dest;
-		memcpy(tmp,src,sizeof(T));
+		Utils::copy<sizeof(T)>(tmp,src);
 	}
 
 	/**
@@ -162,7 +162,7 @@ ZT_PACKED_STRUCT(struct TriviallyCopyable
 	static ZT_INLINE void memoryCopy(T &dest,const T &src) noexcept
 	{
 		TriviallyCopyable *const tmp = &dest;
-		memcpy(tmp,&src,sizeof(T));
+		Utils::copy<sizeof(T)>(tmp,&src);
 	}
 });
 

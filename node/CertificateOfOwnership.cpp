@@ -17,21 +17,23 @@ namespace ZeroTier {
 
 void CertificateOfOwnership::addThing(const InetAddress &ip)
 {
-	if (_thingCount >= ZT_CERTIFICATEOFOWNERSHIP_MAX_THINGS) return;
+	if (_thingCount >= ZT_CERTIFICATEOFOWNERSHIP_MAX_THINGS)
+		return;
 	if (ip.family() == AF_INET) {
 		_thingTypes[_thingCount] = THING_IPV4_ADDRESS;
-		memcpy(_thingValues[_thingCount],&(reinterpret_cast<const struct sockaddr_in *>(&ip)->sin_addr.s_addr),4);
+		Utils::copy<4>(_thingValues[_thingCount],&(reinterpret_cast<const struct sockaddr_in *>(&ip)->sin_addr.s_addr));
 		++_thingCount;
 	} else if (ip.family() == AF_INET6) {
 		_thingTypes[_thingCount] = THING_IPV6_ADDRESS;
-		memcpy(_thingValues[_thingCount],reinterpret_cast<const struct sockaddr_in6 *>(&ip)->sin6_addr.s6_addr,16);
+		Utils::copy<16>(_thingValues[_thingCount],reinterpret_cast<const struct sockaddr_in6 *>(&ip)->sin6_addr.s6_addr);
 		++_thingCount;
 	}
 }
 
 void CertificateOfOwnership::addThing(const MAC &mac)
 {
-	if (_thingCount >= ZT_CERTIFICATEOFOWNERSHIP_MAX_THINGS) return;
+	if (_thingCount >= ZT_CERTIFICATEOFOWNERSHIP_MAX_THINGS)
+		return;
 	_thingTypes[_thingCount] = THING_MAC_ADDRESS;
 	mac.copyTo(_thingValues[_thingCount]);
 	++_thingCount;
@@ -63,7 +65,7 @@ int CertificateOfOwnership::marshal(uint8_t data[ZT_CERTIFICATEOFOWNERSHIP_MARSH
 	p += 30;
 	for(unsigned int i=0,j=_thingCount;i<j;++i) {
 		data[p++] = _thingTypes[i];
-		memcpy(data + p,_thingValues[i],ZT_CERTIFICATEOFOWNERSHIP_MAX_THING_VALUE_SIZE);
+		Utils::copy<ZT_CERTIFICATEOFOWNERSHIP_MAX_THING_VALUE_SIZE>(data + p,_thingValues[i]);
 		p += ZT_CERTIFICATEOFOWNERSHIP_MAX_THING_VALUE_SIZE;
 	}
 	_issuedTo.copyTo(data + p); p += ZT_ADDRESS_LENGTH;
@@ -71,7 +73,7 @@ int CertificateOfOwnership::marshal(uint8_t data[ZT_CERTIFICATEOFOWNERSHIP_MARSH
 	if (!forSign) {
 		data[p++] = 1;
 		Utils::storeBigEndian<uint16_t>(data + p,(uint16_t)_signatureLength); p += 2;
-		memcpy(data + p,_signature,_signatureLength); p += (int)_signatureLength;
+		Utils::copy(data + p,_signature,_signatureLength); p += (int)_signatureLength;
 	}
 	data[p++] = 0;
 	data[p++] = 0;
@@ -100,7 +102,7 @@ int CertificateOfOwnership::unmarshal(const uint8_t *data,int len) noexcept
 		if ((p + 1 + ZT_CERTIFICATEOFOWNERSHIP_MAX_THING_VALUE_SIZE) > len)
 			return -1;
 		_thingTypes[i] = data[p++];
-		memcpy(_thingValues[i],data + p,ZT_CERTIFICATEOFOWNERSHIP_MAX_THING_VALUE_SIZE);
+		Utils::copy<ZT_CERTIFICATEOFOWNERSHIP_MAX_THING_VALUE_SIZE>(_thingValues[i],data + p);
 		p += ZT_CERTIFICATEOFOWNERSHIP_MAX_THING_VALUE_SIZE;
 	}
 

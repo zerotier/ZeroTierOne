@@ -265,7 +265,7 @@ void KBKDFHMACSHA384(const uint8_t key[32],const char label,const char context,c
 	kbkdfMsg[11] = 1;
 	kbkdfMsg[12] = 0; // key length: 256 bits as big-endian 32-bit value
 	HMACSHA384(key,&kbkdfMsg,sizeof(kbkdfMsg),kbuf);
-	memcpy(out,kbuf,32);
+	Utils::copy<32>(out,kbuf);
 }
 
 } // namespace ZeroTier

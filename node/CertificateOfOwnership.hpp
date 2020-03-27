@@ -64,7 +64,7 @@ public:
 
 	ZT_INLINE CertificateOfOwnership(const uint64_t nwid,const int64_t ts,const Address &issuedTo,const uint32_t id) noexcept
 	{
-		memset(reinterpret_cast<void *>(this),0,sizeof(CertificateOfOwnership));
+		memoryZero(this);
 		_networkId = nwid;
 		_ts = ts;
 		_id = id;

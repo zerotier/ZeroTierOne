@@ -110,7 +110,7 @@ int Capability::unmarshal(const uint8_t *data,int len) noexcept
 		_custody[i].signatureLength = sl;
 		if ((sl > sizeof(_custody[i].signature))||((p + (int)sl) > len))
 			return -1;
-		memcpy(_custody[i].signature,data + p,sl); p += (int)sl;
+		Utils::copy(_custody[i].signature,data + p,sl); p += (int)sl;
 	}
 
 	if ((p + 2) > len)
@@ -281,18 +281,18 @@ int Capability::unmarshalVirtualNetworkRules(const uint8_t *const data,const int
 			case ZT_NETWORK_RULE_MATCH_MAC_SOURCE:
 			case ZT_NETWORK_RULE_MATCH_MAC_DEST:
 				if ((p + 6) > len) return -1;
-				memcpy(rules[ruleCount].v.mac,data + p,6); p += 6;
+				Utils::copy<6>(rules[ruleCount].v.mac,data + p); p += 6;
 				break;
 			case ZT_NETWORK_RULE_MATCH_IPV4_SOURCE:
 			case ZT_NETWORK_RULE_MATCH_IPV4_DEST:
 				if ((p + 5) > len) return -1;
-				memcpy(&(rules[ruleCount].v.ipv4.ip),data + p,4); p += 4;
+				Utils::copy<4>(&(rules[ruleCount].v.ipv4.ip),data + p); p += 4;
 				rules[ruleCount].v.ipv4.mask = data[p++];
 				break;
 			case ZT_NETWORK_RULE_MATCH_IPV6_SOURCE:
 			case ZT_NETWORK_RULE_MATCH_IPV6_DEST:
 				if ((p + 17) > len) return -1;
-				memcpy(rules[ruleCount].v.ipv6.ip,data + p,16); p += 16;
+				Utils::copy<16>(rules[ruleCount].v.ipv6.ip,data + p); p += 16;
 				rules[ruleCount].v.ipv6.mask = data[p++];
 				break;
 			case ZT_NETWORK_RULE_MATCH_IP_TOS:

@@ -96,16 +96,16 @@ InetAddress::IpScope InetAddress::ipScope() const noexcept
 
 void InetAddress::set(const void *ipBytes,unsigned int ipLen,unsigned int port) noexcept
 {
-	memset(this,0,sizeof(InetAddress));
+	memoryZero(this);
 	if (ipLen == 4) {
 		uint32_t ipb[1];
-		memcpy(ipb,ipBytes,4);
+		Utils::copy<4>(ipb,ipBytes);
 		_data.ss_family = AF_INET;
 		reinterpret_cast<struct sockaddr_in *>(this)->sin_addr.s_addr = ipb[0];
 		reinterpret_cast<struct sockaddr_in *>(this)->sin_port = Utils::hton((uint16_t)port);
 	} else if (ipLen == 16) {
 		_data.ss_family = AF_INET6;
-		memcpy(reinterpret_cast<struct sockaddr_in6 *>(this)->sin6_addr.s6_addr,ipBytes,16);
+		Utils::copy<16>(reinterpret_cast<struct sockaddr_in6 *>(this)->sin6_addr.s6_addr,ipBytes);
 		reinterpret_cast<struct sockaddr_in6 *>(this)->sin6_port = Utils::hton((uint16_t)port);
 	}
 }
@@ -164,7 +164,7 @@ bool InetAddress::fromString(const char *ipSlashPort) noexcept
 {
 	char buf[64];
 
-	memset(this,0,sizeof(InetAddress));
+	memoryZero(this);
 
 	if (!*ipSlashPort)
 		return true;
@@ -214,7 +214,7 @@ InetAddress InetAddress::netmask() const noexcept
 				nm[0] = 0;
 				nm[1] = 0;
 			}
-			memcpy(reinterpret_cast<struct sockaddr_in6 *>(&r)->sin6_addr.s6_addr,nm,16);
+			Utils::copy<16>(reinterpret_cast<struct sockaddr_in6 *>(&r)->sin6_addr.s6_addr,nm);
 		}	break;
 	}
 	return r;
@@ -240,10 +240,10 @@ InetAddress InetAddress::network() const noexcept
 		case AF_INET6: {
 			uint64_t nm[2];
 			const unsigned int bits = netmaskBits();
-			memcpy(nm,reinterpret_cast<struct sockaddr_in6 *>(&r)->sin6_addr.s6_addr,16);
+			Utils::copy<16>(nm,reinterpret_cast<struct sockaddr_in6 *>(&r)->sin6_addr.s6_addr);
 			nm[0] &= Utils::hton((uint64_t)((bits >= 64) ? 0xffffffffffffffffULL : (0xffffffffffffffffULL << (64 - bits))));
 			nm[1] &= Utils::hton((uint64_t)((bits <= 64) ? 0ULL : (0xffffffffffffffffULL << (128 - bits))));
-			memcpy(reinterpret_cast<struct sockaddr_in6 *>(&r)->sin6_addr.s6_addr,nm,16);
+			Utils::copy<16>(reinterpret_cast<struct sockaddr_in6 *>(&r)->sin6_addr.s6_addr,nm);
 		}	break;
 	}
 	return r;
@@ -324,7 +324,7 @@ void InetAddress::forTrace(ZT_TraceEventPathAddress &ta) const noexcept
 	uint32_t tmp;
 	switch(_data.ss_family) {
 		default:
-			memset(&ta,0,sizeof(ZT_TraceEventPathAddress));
+			Utils::zero<sizeof(ZT_TraceEventPathAddress)>(&ta);
 			break;
 		case AF_INET:
 			ta.type = ZT_TRACE_EVENT_PATH_TYPE_INETADDR_V4;
@@ -333,13 +333,13 @@ void InetAddress::forTrace(ZT_TraceEventPathAddress &ta) const noexcept
 			ta.address[1] = reinterpret_cast<const uint8_t *>(&tmp)[1];
 			ta.address[2] = reinterpret_cast<const uint8_t *>(&tmp)[2];
 			ta.address[3] = reinterpret_cast<const uint8_t *>(&tmp)[3];
-			memset(ta.address + 4,0,sizeof(ta.address) - 4);
+			Utils::zero<sizeof(ta.address) - 4>(ta.address + 4);
 			ta.port = reinterpret_cast<const struct sockaddr_in *>(this)->sin_port;
 			break;
 		case AF_INET6:
 			ta.type = ZT_TRACE_EVENT_PATH_TYPE_INETADDR_V6;
-			memcpy(ta.address,reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr,16);
-			memset(ta.address + 16,0,sizeof(ta.address) - 16);
+			Utils::copy<16>(ta.address,reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr);
+			Utils::zero<sizeof(ta.address) - 16>(ta.address + 16);
 			ta.port = reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_port;
 			break;
 	}
@@ -415,7 +415,7 @@ int InetAddress::unmarshal(const uint8_t *restrict data,const int len) noexcept
 		case 4:
 			if (len < 7)
 				return -1;
-			memset(reinterpret_cast<void *>(this),0,sizeof(InetAddress));
+			memoryZero(this);
 			reinterpret_cast<sockaddr_in *>(this)->sin_family = AF_INET;
 			reinterpret_cast<uint8_t *>(&(reinterpret_cast<sockaddr_in *>(this)->sin_addr.s_addr))[0] = data[1];
 			reinterpret_cast<uint8_t *>(&(reinterpret_cast<sockaddr_in *>(this)->sin_addr.s_addr))[1] = data[2];
@@ -427,7 +427,7 @@ int InetAddress::unmarshal(const uint8_t *restrict data,const int len) noexcept
 		case 6:
 			if (len < 19)
 				return -1;
-			memset(reinterpret_cast<void *>(this),0,sizeof(InetAddress));
+			memoryZero(this);
 			reinterpret_cast<sockaddr_in6 *>(this)->sin6_family = AF_INET6;
 			for(int i=0;i<16;i++)
 				(reinterpret_cast<sockaddr_in6 *>(this)->sin6_addr.s6_addr)[i] = data[i+1];

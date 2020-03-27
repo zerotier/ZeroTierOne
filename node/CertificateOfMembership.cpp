@@ -57,7 +57,7 @@ bool CertificateOfMembership::agreesWith(const CertificateOfMembership &other) c
 		}
 	}
 
-	// them <> us
+	// them <> us (we need a second pass in case they have qualifiers we don't or vice versa)
 	for(FCV<_Qualifier,ZT_CERTIFICATEOFMEMBERSHIP_MAX_ADDITIONAL_QUALIFIERS>::const_iterator i(other._additionalQualifiers.begin());i != other._additionalQualifiers.end();++i) {
 		if (i->delta != 0xffffffffffffffffULL) {
 			const uint64_t *v2 = nullptr;
@@ -113,7 +113,7 @@ int CertificateOfMembership::marshal(uint8_t data[ZT_CERTIFICATEOFMEMBERSHIP_MAR
 	if (v2) {
 		// V2 marshal format will have three tuples followed by the fingerprint hash.
 		Utils::storeBigEndian<uint16_t>(data + 1,3);
-		memcpy(data + p,_issuedTo.hash(),48);
+		Utils::copy<48>(data + p,_issuedTo.hash());
 		p += 48;
 	} else {
 		// V1 marshal format must shove everything into tuples, resulting in nine.
@@ -130,11 +130,11 @@ int CertificateOfMembership::marshal(uint8_t data[ZT_CERTIFICATEOFMEMBERSHIP_MAR
 	if (v2) {
 		// V2 marshal format prefixes signatures with a 16-bit length to support future signature types.
 		Utils::storeBigEndian<uint16_t>(data + p,(uint16_t)_signatureLength); p += 2;
-		memcpy(data + p,_signature,_signatureLength);
+		Utils::copy(data + p,_signature,_signatureLength);
 		p += (int)_signatureLength;
 	} else {
 		// V1 only supports 96-byte signature fields.
-		memcpy(data + p,_signature,96);
+		Utils::copy<96>(data + p,_signature);
 		p += 96;
 	}
 
@@ -204,19 +204,19 @@ int CertificateOfMembership::unmarshal(const uint8_t *data,int len) noexcept
 		if ((p + 96) > len)
 			return -1;
 		_signatureLength = 96;
-		memcpy(_signature,data + p,96);
+		Utils::copy<96>(_signature,data + p);
 		return p + 96;
 	} else if (data[0] == 2) {
 		if ((p + 48) > len)
 			return -1;
-		memcpy(_issuedTo.apiFingerprint()->hash,data + p,48);
+		Utils::copy<48>(_issuedTo.apiFingerprint()->hash,data + p);
 		p += 48;
 		if ((p + 2) > len)
 			return -1;
 		_signatureLength = Utils::loadBigEndian<uint16_t>(data + p);
 		if ((_signatureLength > (unsigned int)sizeof(_signature))||((p + (int)_signatureLength) > len))
 			return -1;
-		memcpy(_signature,data + p,_signatureLength);
+		Utils::copy(_signature,data + p,_signatureLength);
 		return p + (int)_signatureLength;
 	}
 

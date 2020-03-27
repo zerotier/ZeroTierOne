@@ -42,7 +42,7 @@ int Tag::marshal(uint8_t data[ZT_TAG_MARSHAL_SIZE_MAX],bool forSign) const noexc
 	if (!forSign) {
 		data[p++] = 1;
 		Utils::storeBigEndian<uint16_t>(data + p,(uint16_t)_signatureLength); p += 2;
-		memcpy(data + p,_signature,_signatureLength);
+		Utils::copy(data + p,_signature,_signatureLength);
 		p += (int)_signatureLength;
 	}
 	data[p++] = 0;
@@ -69,7 +69,7 @@ int Tag::unmarshal(const uint8_t *data,int len) noexcept
 	int p = 37 + (int)_signatureLength;
 	if ((_signatureLength > ZT_SIGNATURE_BUFFER_SIZE)||(p > len))
 		return -1;
-	memcpy(_signature,data + p,_signatureLength);
+	Utils::copy(_signature,data + p,_signatureLength);
 	if ((p + 2) > len)
 		return -1;
 	p += 2 + Utils::loadBigEndian<uint16_t>(data + p);

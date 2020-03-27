@@ -25,10 +25,6 @@ namespace ZeroTier {
  * This is an introspective shared pointer. Classes that need to be reference
  * counted must list this as a 'friend' and must have a private instance of
  * atomic<int> called __refCount.
- *
- * This is technically TriviallyCopyable but extreme care must be taken if
- * one wishes to handle it in this manner. A memcpy must be followed by a
- * memset of the source to 0 so as to achieve 'move' semantics.
  */
 template<typename T>
 class SharedPtr : public TriviallyCopyable

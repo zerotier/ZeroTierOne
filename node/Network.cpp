@@ -1458,20 +1458,20 @@ void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const
 	ec->assignedAddressCount = 0;
 	for(unsigned int i=0;i<ZT_MAX_ZT_ASSIGNED_ADDRESSES;++i) {
 		if (i < _config.staticIpCount) {
-			memcpy(&(ec->assignedAddresses[i]),&(_config.staticIps[i]),sizeof(struct sockaddr_storage));
+			Utils::copy<sizeof(struct sockaddr_storage)>(&(ec->assignedAddresses[i]),&(_config.staticIps[i]));
 			++ec->assignedAddressCount;
 		} else {
-			memset(&(ec->assignedAddresses[i]),0,sizeof(struct sockaddr_storage));
+			Utils::zero<sizeof(struct sockaddr_storage)>(&(ec->assignedAddresses[i]));
 		}
 	}
 
 	ec->routeCount = 0;
 	for(unsigned int i=0;i<ZT_MAX_NETWORK_ROUTES;++i) {
 		if (i < _config.routeCount) {
-			memcpy(&(ec->routes[i]),&(_config.routes[i]),sizeof(ZT_VirtualNetworkRoute));
+			Utils::copy<sizeof(ZT_VirtualNetworkRoute)>(&(ec->routes[i]),&(_config.routes[i]));
 			++ec->routeCount;
 		} else {
-			memset(&(ec->routes[i]),0,sizeof(ZT_VirtualNetworkRoute));
+			Utils::zero<sizeof(ZT_VirtualNetworkRoute)>(&(ec->routes[i]));
 		}
 	}
 }

@@ -275,7 +275,7 @@ void VL1::onRemotePacket(void *const tPtr,const int64_t localSocket,const InetAd
 					// Simultaneously decrypt and assemble packet into a contiguous buffer.
 					// Since we moved data around above all slices will have sizes that are
 					// multiples of 64.
-					memcpy(pkt.b->unsafeData,ph,sizeof(Protocol::Header));
+					Utils::copy<sizeof(Protocol::Header)>(pkt.b->unsafeData,ph);
 					pkt.e = sizeof(Protocol::Header);
 					for(FCV<Buf::Slice,ZT_MAX_PACKET_FRAGMENTS>::iterator s(pktv.begin());s!=pktv.end();++s) {
 						const unsigned int sliceSize = s->e - s->s;
@@ -508,7 +508,7 @@ bool VL1::_HELLO(void *tPtr,const SharedPtr<Path> &path,SharedPtr<Peer> &peer,Bu
 
 	uint8_t key[ZT_PEER_SECRET_KEY_LENGTH];
 	if ((peer) && (id == peer->identity())) {
-		memcpy(key,peer->key(),ZT_PEER_SECRET_KEY_LENGTH);
+		Utils::copy<ZT_PEER_SECRET_KEY_LENGTH>(key,peer->key());
 	} else {
 		peer.zero();
 		if (!RR->identity.agree(id,key)) {

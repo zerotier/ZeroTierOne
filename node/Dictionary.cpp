@@ -134,7 +134,7 @@ uint64_t Dictionary::getUI(const char *k,uint64_t dfl) const
 	if (!e.empty()) {
 		if (e.back() != 0) {
 			const unsigned long sl = e.size();
-			memcpy(tmp,e.data(),(sl > 17) ? 17 : sl);
+			Utils::copy(tmp,e.data(),(sl > 17) ? 17 : sl);
 			tmp[17] = 0;
 			return Utils::unhex((const char *)tmp);
 		}

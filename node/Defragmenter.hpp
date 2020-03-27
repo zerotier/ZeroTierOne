@@ -263,7 +263,7 @@ public:
 				e->via.zero();
 			}
 
-			// Slices are TriviallyCopyable and so may be memcpy'd from e->message to
+			// Slices are TriviallyCopyable and so may be raw copied from e->message to
 			// the result parameter. This is fast.
 			e->message.unsafeMoveTo(message);
 			e->lastUsed = -1; // mark as "done" and force GC to collect

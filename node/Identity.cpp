@@ -40,7 +40,7 @@ void identityV0ProofOfWorkFrankenhash(const void *const publicKey,unsigned int p
 	// Initialize genmem[] using Salsa20 in a CBC-like configuration since
 	// ordinary Salsa20 is randomly seek-able. This is good for a cipher
 	// but is not what we want for sequential memory-hardness.
-	memset(genmem,0,ZT_V0_IDENTITY_GEN_MEMORY);
+	Utils::zero<ZT_V0_IDENTITY_GEN_MEMORY>(genmem);
 	Salsa20 s20(digest,(char *)digest + 32);
 	s20.crypt20((char *)genmem,(char *)genmem,64);
 	for(unsigned long i=64;i<ZT_V0_IDENTITY_GEN_MEMORY;i+=64) {
@@ -261,7 +261,7 @@ void Identity::hashWithPrivate(uint8_t h[ZT_IDENTITY_HASH_SIZE]) const
 		}
 		return;
 	}
-	memset(h,0,48);
+	Utils::zero<48>(h);
 }
 
 unsigned int Identity::sign(const void *data,unsigned int len,void *sig,unsigned int siglen) const
@@ -319,7 +319,7 @@ bool Identity::agree(const Identity &id,uint8_t key[ZT_PEER_SECRET_KEY_LENGTH]) 
 				// C25519 portion of a type 1 P-384 key.
 				C25519::agree(_priv.c25519,id._pub.c25519,rawkey);
 				SHA512(h,rawkey,ZT_C25519_SHARED_KEY_LEN);
-				memcpy(key,h,ZT_PEER_SECRET_KEY_LENGTH);
+				Utils::copy<ZT_PEER_SECRET_KEY_LENGTH>(key,h);
 				return true;
 			}
 
@@ -334,13 +334,13 @@ bool Identity::agree(const Identity &id,uint8_t key[ZT_PEER_SECRET_KEY_LENGTH]) 
 				C25519::agree(_priv.c25519,id._pub.c25519,rawkey);
 				ECC384ECDH(id._pub.p384,_priv.p384,rawkey + ZT_C25519_SHARED_KEY_LEN);
 				SHA384(h,rawkey,ZT_C25519_SHARED_KEY_LEN + ZT_ECC384_SHARED_SECRET_SIZE);
-				memcpy(key,h,ZT_PEER_SECRET_KEY_LENGTH);
+				Utils::copy<ZT_PEER_SECRET_KEY_LENGTH>(key,h);
 				return true;
 			} else if (id._type == C25519) {
 				// If the other identity is a C25519 identity we can agree using only that type.
 				C25519::agree(_priv.c25519,id._pub.c25519,rawkey);
 				SHA512(h,rawkey,ZT_C25519_SHARED_KEY_LEN);
-				memcpy(key,h,ZT_PEER_SECRET_KEY_LENGTH);
+				Utils::copy<ZT_PEER_SECRET_KEY_LENGTH>(key,h);
 				return true;
 			}
 
@@ -502,10 +502,10 @@ int Identity::marshal(uint8_t data[ZT_IDENTITY_MARSHAL_SIZE_MAX],const bool incl
 	switch(_type) {
 		case C25519:
 			data[ZT_ADDRESS_LENGTH] = (uint8_t)C25519;
-			memcpy(data + ZT_ADDRESS_LENGTH + 1,_pub.c25519,ZT_C25519_PUBLIC_KEY_LEN);
+			Utils::copy<ZT_C25519_PUBLIC_KEY_LEN>(data + ZT_ADDRESS_LENGTH + 1,_pub.c25519);
 			if ((includePrivate)&&(_hasPrivate)) {
 				data[ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN] = ZT_C25519_PRIVATE_KEY_LEN;
-				memcpy(data + ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1,_priv.c25519,ZT_C25519_PRIVATE_KEY_LEN);
+				Utils::copy<ZT_C25519_PRIVATE_KEY_LEN>(data + ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1,_priv.c25519);
 				return ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1 + ZT_C25519_PRIVATE_KEY_LEN;
 			} else {
 				data[ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN] = 0;
@@ -514,10 +514,10 @@ int Identity::marshal(uint8_t data[ZT_IDENTITY_MARSHAL_SIZE_MAX],const bool incl
 
 		case P384:
 			data[ZT_ADDRESS_LENGTH] = (uint8_t)P384;
-			memcpy(data + ZT_ADDRESS_LENGTH + 1,&_pub,ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE);
+			Utils::copy<ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE>(data + ZT_ADDRESS_LENGTH + 1,&_pub);
 			if ((includePrivate)&&(_hasPrivate)) {
 				data[ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE] = ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE;
-				memcpy(data + ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1,&_priv,ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE);
+				Utils::copy<ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE>(data + ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1,&_priv);
 				return ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1 + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE;
 			} else {
 				data[ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE] = 0;
@@ -544,7 +544,7 @@ int Identity::unmarshal(const uint8_t *data,const int len) noexcept
 			if (len < (ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1))
 				return -1;
 
-			memcpy(_pub.c25519,data + ZT_ADDRESS_LENGTH + 1,ZT_C25519_PUBLIC_KEY_LEN);
+			Utils::copy<ZT_C25519_PUBLIC_KEY_LEN>(_pub.c25519,data + ZT_ADDRESS_LENGTH + 1);
 			_computeHash();
 
 			privlen = data[ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN];
@@ -552,7 +552,7 @@ int Identity::unmarshal(const uint8_t *data,const int len) noexcept
 				if (len < (ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1 + ZT_C25519_PRIVATE_KEY_LEN))
 					return -1;
 				_hasPrivate = true;
-				memcpy(_priv.c25519,data + ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1,ZT_C25519_PRIVATE_KEY_LEN);
+				Utils::copy<ZT_C25519_PRIVATE_KEY_LEN>(_priv.c25519,data + ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1);
 				return ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1 + ZT_C25519_PRIVATE_KEY_LEN;
 			} else if (privlen == 0) {
 				_hasPrivate = false;
@@ -564,7 +564,7 @@ int Identity::unmarshal(const uint8_t *data,const int len) noexcept
 			if (len < (ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1))
 				return -1;
 
-			memcpy(&_pub,data + ZT_ADDRESS_LENGTH + 1,ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE);
+			Utils::copy<ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE>(&_pub,data + ZT_ADDRESS_LENGTH + 1);
 			_computeHash(); // this sets the address for P384
 			if (_address != Address(_fp.hash())) // this sanity check is possible with V1 identities
 				return -1;
@@ -574,7 +574,7 @@ int Identity::unmarshal(const uint8_t *data,const int len) noexcept
 				if (len < (ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1 + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE))
 					return -1;
 				_hasPrivate = true;
-				memcpy(&_priv,data + ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1,ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE);
+				Utils::copy<ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE>(&_priv,data + ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1);
 				return ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1 + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE;
 			} else if (privlen == 0) {
 				_hasPrivate = false;

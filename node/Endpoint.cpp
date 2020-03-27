@@ -82,7 +82,7 @@ int Endpoint::marshal(uint8_t data[ZT_ENDPOINT_MARSHAL_SIZE_MAX]) const noexcept
 			data[9] = (uint8_t)(_v.zt.address >> 16U);
 			data[10] = (uint8_t)(_v.zt.address >> 8U);
 			data[11] = (uint8_t)_v.zt.address;
-			memcpy(data + 12,_v.zt.hash,ZT_IDENTITY_HASH_SIZE);
+			Utils::copy<ZT_IDENTITY_HASH_SIZE>(data + 12,_v.zt.hash);
 			return ZT_IDENTITY_HASH_SIZE + 12;
 		case TYPE_DNSNAME:
 			p = 7;
@@ -147,7 +147,7 @@ int Endpoint::unmarshal(const uint8_t *restrict data,const int len) noexcept
 		  _v.zt.address |= ((uint64_t)data[9]) << 16U;
 		  _v.zt.address |= ((uint64_t)data[10]) << 8U;
 		  _v.zt.address |= (uint64_t)data[11];
-		  memcpy(_v.zt.hash,data + 12,ZT_IDENTITY_HASH_SIZE);
+		  Utils::copy<ZT_IDENTITY_HASH_SIZE>(_v.zt.hash,data + 12);
 		  return 60;
 	  case TYPE_DNSNAME:
 		  if (len < 10)

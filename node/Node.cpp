@@ -493,7 +493,7 @@ ZT_PeerList *Node::peers() const
 		identities[pl->peerCount] = (*pi)->identity(); // need to make a copy in case peer gets deleted
 		p->identity = &identities[pl->peerCount];
 		p->fingerprint.address = p->address;
-		memcpy(p->fingerprint.hash,(*pi)->identity().fingerprint().hash(),ZT_IDENTITY_HASH_SIZE);
+		Utils::copy<ZT_IDENTITY_HASH_SIZE>(p->fingerprint.hash,(*pi)->identity().fingerprint().hash());
 		if ((*pi)->remoteVersionKnown()) {
 			p->versionMajor = (int)(*pi)->remoteVersionMajor();
 			p->versionMinor = (int)(*pi)->remoteVersionMinor();
@@ -507,13 +507,13 @@ ZT_PeerList *Node::peers() const
 		if (p->latency >= 0xffff)
 			p->latency = -1;
 		p->root = RR->topology->isRoot((*pi)->identity()) ? 1 : 0;
-		memcpy(&p->bootstrap,&((*pi)->bootstrap()),sizeof(sockaddr_storage));
+		Utils::copy<sizeof(sockaddr_storage)>(&p->bootstrap,&((*pi)->bootstrap()));
 
 		std::vector< SharedPtr<Path> > paths;
 		(*pi)->getAllPaths(paths);
 		p->pathCount = 0;
 		for(std::vector< SharedPtr<Path> >::iterator path(paths.begin());path!=paths.end();++path) {
-			memcpy(&(p->paths[p->pathCount].address),&((*path)->address()),sizeof(struct sockaddr_storage));
+			Utils::copy<sizeof(sockaddr_storage)>(&(p->paths[p->pathCount].address),&((*path)->address()));
 			p->paths[p->pathCount].lastSend = (*path)->lastOut();
 			p->paths[p->pathCount].lastReceive = (*path)->lastIn();
 			p->paths[p->pathCount].trustedPathId = RR->topology->getOutboundPathTrust((*path)->address());

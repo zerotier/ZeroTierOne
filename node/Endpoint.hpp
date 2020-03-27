@@ -76,7 +76,7 @@ public:
 		_t(TYPE_ZEROTIER)
 	{
 		_v.zt.address = zt.toInt();
-		memcpy(_v.zt.hash,identityHash,ZT_IDENTITY_HASH_SIZE);
+		Utils::copy<ZT_IDENTITY_HASH_SIZE>(_v.zt.hash,identityHash);
 	}
 
 	explicit ZT_INLINE Endpoint(const char *name,const int port) noexcept :

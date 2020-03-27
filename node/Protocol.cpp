@@ -33,8 +33,8 @@ std::atomic<uint64_t> _s_packetIdCtr((uint64_t)time(nullptr) << 32U);
 uint64_t createProbe(const Identity &sender,const Identity &recipient,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH]) noexcept
 {
 	uint8_t tmp[ZT_IDENTITY_HASH_SIZE + ZT_IDENTITY_HASH_SIZE];
-	memcpy(tmp,sender.fingerprint().hash(),ZT_IDENTITY_HASH_SIZE);
-	memcpy(tmp + ZT_IDENTITY_HASH_SIZE,recipient.fingerprint().hash(),ZT_IDENTITY_HASH_SIZE);
+	Utils::copy<ZT_IDENTITY_HASH_SIZE>(tmp,sender.fingerprint().hash());
+	Utils::copy<ZT_IDENTITY_HASH_SIZE>(tmp + ZT_IDENTITY_HASH_SIZE,recipient.fingerprint().hash());
 	uint64_t hash[6];
 	SHA384(hash,tmp,sizeof(tmp),key,ZT_PEER_SECRET_KEY_LENGTH);
 	return hash[0];
@@ -93,7 +93,7 @@ int compress(SharedPtr<Buf> &pkt,int packetSize) noexcept
 	const int uncompressedLen = packetSize - ZT_PROTO_PACKET_PAYLOAD_START;
 	const int compressedLen = LZ4_compress_fast(reinterpret_cast<const char *>(pkt->unsafeData + ZT_PROTO_PACKET_PAYLOAD_START),reinterpret_cast<char *>(pkt2->unsafeData + ZT_PROTO_PACKET_PAYLOAD_START),uncompressedLen,ZT_BUF_MEM_SIZE - ZT_PROTO_PACKET_PAYLOAD_START);
 	if ((compressedLen > 0)&&(compressedLen < uncompressedLen)) {
-		memcpy(pkt2->unsafeData,pkt->unsafeData,ZT_PROTO_PACKET_PAYLOAD_START);
+		Utils::copy<ZT_PROTO_PACKET_PAYLOAD_START>(pkt2->unsafeData,pkt->unsafeData);
 		pkt.swap(pkt2);
 		pkt->as<Protocol::Header>().verb |= ZT_PROTO_VERB_FLAG_COMPRESSED;
 		return compressedLen + ZT_PROTO_PACKET_PAYLOAD_START;

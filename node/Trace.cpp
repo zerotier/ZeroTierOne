@@ -74,7 +74,7 @@ void Trace::unexpectedError(
 	ev.evSize = ZT_CONST_TO_BE_UINT16(sizeof(ev));
 	ev.evType = ZT_CONST_TO_BE_UINT16(ZT_TRACE_UNEXPECTED_ERROR);
 	ev.codeLocation = codeLocation;
-	memset(ev.message,0,sizeof(ev.message));
+	Utils::zero<sizeof(ev.message)>(ev.message);
 	va_start(ap,message);
 	vsnprintf(ev.message,sizeof(ev.message),message,ap);
 	va_end(ap);
@@ -116,12 +116,12 @@ void Trace::_tryingNewPath(
 	ev.evSize = ZT_CONST_TO_BE_UINT16(sizeof(ev));
 	ev.evType = ZT_CONST_TO_BE_UINT16(ZT_TRACE_VL1_TRYING_NEW_PATH);
 	ev.codeLocation = Utils::hton(codeLocation);
-	memcpy(&ev.peer,trying.fingerprint().apiFingerprint(),sizeof(ev.peer));
+	Utils::copy<sizeof(ev.peer)>(&ev.peer,trying.fingerprint().apiFingerprint());
 	physicalAddress.forTrace(ev.physicalAddress);
 	triggerAddress.forTrace(ev.triggerAddress);
 	ev.triggeringPacketId = triggeringPacketId;
 	ev.triggeringPacketVerb = triggeringPacketVerb;
-	memcpy(&ev.triggeringPeer,triggeringPeer.fingerprint().apiFingerprint(),sizeof(ev.triggeringPeer));
+	Utils::copy<sizeof(ev.triggeringPeer)>(&ev.triggeringPeer,triggeringPeer.fingerprint().apiFingerprint());
 	ev.reason = (uint8_t)reason;
 	RR->node->postEvent(tPtr,ZT_EVENT_TRACE,&ev);
 }
@@ -139,7 +139,7 @@ void Trace::_learnedNewPath(
 	ev.evType = ZT_CONST_TO_BE_UINT16(ZT_TRACE_VL1_LEARNED_NEW_PATH);
 	ev.codeLocation = Utils::hton(codeLocation);
 	ev.packetId = packetId; // packet IDs are kept in big-endian
-	memcpy(&ev.peer,peerIdentity.fingerprint().apiFingerprint(),sizeof(ev.peer));
+	Utils::copy<sizeof(ev.peer)>(&ev.peer,peerIdentity.fingerprint().apiFingerprint());
 	physicalAddress.forTrace(ev.physicalAddress);
 	replaced.forTrace(ev.replaced);
 
@@ -163,7 +163,7 @@ void Trace::_incomingPacketDropped(
 	ev.codeLocation = Utils::hton(codeLocation);
 	ev.packetId = packetId; // packet IDs are kept in big-endian
 	ev.networkId = Utils::hton(networkId);
-	memcpy(&ev.peer,peerIdentity.fingerprint().apiFingerprint(),sizeof(ev.peer));
+	Utils::copy<sizeof(ev.peer)>(&ev.peer,peerIdentity.fingerprint().apiFingerprint());
 	physicalAddress.forTrace(ev.physicalAddress);
 	ev.hops = hops;
 	ev.verb = verb;
@@ -196,8 +196,8 @@ void Trace::_outgoingNetworkFrameDropped(
 		unsigned int l = frameLength;
 		if (l > sizeof(ev.frameHead))
 			l = sizeof(ev.frameHead);
-		memcpy(ev.frameHead,frameData,l);
-		memset(ev.frameHead + l,0,sizeof(ev.frameHead) - l);
+		Utils::copy(ev.frameHead,frameData,l);
+		Utils::copy(ev.frameHead + l,0,sizeof(ev.frameHead) - l);
 	}
 	ev.reason = (uint8_t)reason;
 
@@ -226,7 +226,7 @@ void Trace::_incomingNetworkFrameDropped(
 	ev.networkId = Utils::hton(networkId);
 	ev.sourceMac = Utils::hton(sourceMac.toInt());
 	ev.destMac = Utils::hton(destMac.toInt());
-	memcpy(&ev.sender,peerIdentity.fingerprint().apiFingerprint(),sizeof(ev.sender));
+	Utils::copy<sizeof(ev.sender)>(&ev.sender,peerIdentity.fingerprint().apiFingerprint());
 	physicalAddress.forTrace(ev.physicalAddress);
 	ev.hops = hops;
 	ev.frameLength = Utils::hton(frameLength);
@@ -234,8 +234,8 @@ void Trace::_incomingNetworkFrameDropped(
 		unsigned int l = frameLength;
 		if (l > sizeof(ev.frameHead))
 			l = sizeof(ev.frameHead);
-		memcpy(ev.frameHead,frameData,l);
-		memset(ev.frameHead + l,0,sizeof(ev.frameHead) - l);
+		Utils::copy(ev.frameHead,frameData,l);
+		Utils::copy(ev.frameHead + l,0,sizeof(ev.frameHead) - l);
 	}
 	ev.verb = verb;
 	ev.credentialRequestSent = (uint8_t)credentialRequestSent;
@@ -282,10 +282,10 @@ void Trace::_networkFilter(
 	ev.evType = ZT_CONST_TO_BE_UINT16(ZT_TRACE_VL2_NETWORK_FILTER);
 	ev.codeLocation = Utils::hton(codeLocation);
 	ev.networkId = Utils::hton(networkId);
-	memcpy(ev.primaryRuleSetLog,primaryRuleSetLog,sizeof(ev.primaryRuleSetLog));
+	Utils::copy<sizeof(ev.primaryRuleSetLog)>(ev.primaryRuleSetLog,primaryRuleSetLog);
 	if (matchingCapabilityRuleSetLog)
-		memcpy(ev.matchingCapabilityRuleSetLog,matchingCapabilityRuleSetLog,sizeof(ev.matchingCapabilityRuleSetLog));
-	else memset(ev.matchingCapabilityRuleSetLog,0,sizeof(ev.matchingCapabilityRuleSetLog));
+		Utils::copy<sizeof(ev.matchingCapabilityRuleSetLog)>(ev.matchingCapabilityRuleSetLog,matchingCapabilityRuleSetLog);
+	else Utils::zero<sizeof(ev.matchingCapabilityRuleSetLog)>(ev.matchingCapabilityRuleSetLog);
 	ev.matchingCapabilityId = Utils::hton(matchingCapabilityId);
 	ev.matchingCapabilityTimestamp = Utils::hton(matchingCapabilityTimestamp);
 	ev.source = Utils::hton(source.toInt());
@@ -297,8 +297,8 @@ void Trace::_networkFilter(
 		unsigned int l = frameLength;
 		if (l > sizeof(ev.frameHead))
 			l = sizeof(ev.frameHead);
-		memcpy(ev.frameHead,frameData,l);
-		memset(ev.frameHead + l,0,sizeof(ev.frameHead) - l);
+		Utils::copy(ev.frameHead,frameData,l);
+		Utils::copy(ev.frameHead + l,0,sizeof(ev.frameHead) - l);
 	}
 	ev.etherType = Utils::hton(etherType);
 	ev.vlanId = Utils::hton(vlanId);
@@ -325,10 +325,10 @@ void Trace::_credentialRejected(
 	ev.codeLocation = Utils::hton(codeLocation);
 	ev.networkId = Utils::hton(networkId);
 	if (identity) {
-		memcpy(&ev.peer,identity.fingerprint().apiFingerprint(),sizeof(ev.peer));
+		Utils::copy<sizeof(ev.peer)>(&ev.peer,identity.fingerprint().apiFingerprint());
 	} else {
 		ev.peer.address = address.toInt();
-		memset(ev.peer.hash,0,sizeof(ev.peer.hash));
+		Utils::zero<sizeof(ev.peer.hash)>(ev.peer.hash);
 	}
 	ev.credentialId = Utils::hton(credentialId);
 	ev.credentialTimestamp = Utils::hton(credentialTimestamp);

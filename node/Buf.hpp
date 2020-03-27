@@ -165,7 +165,7 @@ public:
 					r.e = 0;
 					break;
 				}
-				memcpy(r.b->unsafeData + r.e,s->b->unsafeData + s->s,l);
+				Utils::copy(r.b->unsafeData + r.e,s->b->unsafeData + s->s,l);
 				s->b.zero(); // let go of buffer in vector as soon as possible
 				r.e += l;
 			}
@@ -182,14 +182,24 @@ public:
 	/**
 	 * Create a new buffer and copy data into it
 	 */
-	ZT_INLINE Buf(const void *const data,const unsigned int len) noexcept : __nextInPool(0),__refCount(0) { memcpy(unsafeData,data,len); }
+	ZT_INLINE Buf(const void *const data,const unsigned int len) noexcept :
+		__nextInPool(0),
+		__refCount(0)
+	{
+		Utils::copy(unsafeData,data,len);
+	}
 
-	ZT_INLINE Buf(const Buf &b2) noexcept : __nextInPool(0),__refCount(0) { memcpy(unsafeData,b2.unsafeData,ZT_BUF_MEM_SIZE); }
+	ZT_INLINE Buf(const Buf &b2) noexcept :
+		__nextInPool(0),
+		__refCount(0)
+	{
+		Utils::copy<ZT_BUF_MEM_SIZE>(unsafeData,b2.unsafeData);
+	}
 
 	ZT_INLINE Buf &operator=(const Buf &b2) noexcept
 	{
 		if (this != &b2)
-			memcpy(unsafeData,b2.unsafeData,ZT_BUF_MEM_SIZE);
+			Utils::copy<ZT_BUF_MEM_SIZE>(unsafeData,b2.unsafeData);
 		return *this;
 	}
 
@@ -219,12 +229,18 @@ public:
 	/**
 	 * Set all memory to zero
 	 */
-	ZT_INLINE void clear() noexcept { memset(unsafeData,0,ZT_BUF_MEM_SIZE); }
+	ZT_INLINE void clear() noexcept
+	{
+		Utils::zero<ZT_BUF_MEM_SIZE>(unsafeData);
+	}
 
 	/**
 	 * Zero security critical data using Utils::burn() to ensure it's never optimized out.
 	 */
-	ZT_INLINE void burn() noexcept { Utils::burn(unsafeData,ZT_BUF_MEM_SIZE); }
+	ZT_INLINE void burn() noexcept
+	{
+		Utils::burn(unsafeData,ZT_BUF_MEM_SIZE);
+	}
 
 	/**
 	 * Read a byte
@@ -347,7 +363,7 @@ public:
 		const int sii = ii;
 		while (ii < ZT_BUF_MEM_SIZE) {
 			if (unsafeData[ii++] == 0) {
-				memcpy(buf,s,ii - sii);
+				Utils::copy(buf,s,ii - sii);
 				return buf;
 			}
 		}
@@ -391,7 +407,7 @@ public:
 	ZT_INLINE uint8_t *rB(int &ii,void *const bytes,const unsigned int len) const noexcept
 	{
 		if ((ii += (int)len) <= ZT_BUF_MEM_SIZE) {
-			memcpy(bytes,unsafeData + ii,len);
+			Utils::copy(bytes,unsafeData + ii,len);
 			return reinterpret_cast<uint8_t *>(bytes);
 		}
 		return nullptr;
@@ -617,7 +633,7 @@ public:
 	{
 		const int s = ii;
 		if ((ii += (int)len) <= ZT_BUF_MEM_SIZE)
-			memcpy(unsafeData + s,bytes,len);
+			Utils::copy(unsafeData + s,bytes,len);
 	}
 
 	/**

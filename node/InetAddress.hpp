@@ -43,9 +43,9 @@ private:
 	template<typename SA>
 	ZT_INLINE void copySockaddrToThis(const SA *sa) noexcept
 	{
-		memcpy(reinterpret_cast<void *>(this),sa,sizeof(SA));
+		Utils::copy<sizeof(SA)>(reinterpret_cast<void *>(this),sa);
 		if (sizeof(SA) < sizeof(InetAddress))
-			memset(reinterpret_cast<uint8_t *>(this) + sizeof(SA),0,sizeof(InetAddress) - sizeof(SA));
+			Utils::zero<sizeof(InetAddress) - sizeof(SA)>(reinterpret_cast<uint8_t *>(this) + sizeof(SA));
 	}
 
 public:
@@ -100,8 +100,11 @@ public:
 	ZT_INLINE InetAddress(const uint32_t ipv4,unsigned int port) noexcept { this->set(&ipv4,4,port); }
 	explicit ZT_INLINE InetAddress(const char *ipSlashPort) noexcept { this->fromString(ipSlashPort); }
 
-	ZT_INLINE void clear() noexcept { memoryZero(this); }
-
+	ZT_INLINE InetAddress &operator=(const InetAddress &a) noexcept
+	{
+		memoryCopy(this,a);
+		return *this;
+	}
 	ZT_INLINE InetAddress &operator=(const sockaddr_storage &ss) noexcept
 	{
 		memoryCopyUnsafe(this,&ss);
@@ -123,7 +126,7 @@ public:
 	{
 		if (sa)
 			copySockaddrToThis(sa);
-		else memset(reinterpret_cast<void *>(this),0,sizeof(InetAddress));
+		else memoryZero(this);
 		return *this;
 	}
 	ZT_INLINE InetAddress &operator=(const sockaddr_in6 &sa) noexcept
@@ -135,7 +138,7 @@ public:
 	{
 		if (sa)
 			copySockaddrToThis(sa);
-		else memset(reinterpret_cast<void *>(this),0,sizeof(InetAddress));
+		else memoryZero(this);
 		return *this;
 	}
 	ZT_INLINE InetAddress &operator=(const sockaddr &sa) noexcept
@@ -144,7 +147,7 @@ public:
 			copySockaddrToThis(reinterpret_cast<const sockaddr_in *>(&sa));
 		else if (sa.sa_family == AF_INET6)
 			copySockaddrToThis(reinterpret_cast<const sockaddr_in6 *>(&sa));
-		else memset(reinterpret_cast<void *>(this),0,sizeof(InetAddress));
+		else memoryZero(this);
 		return *this;
 	}
 	ZT_INLINE InetAddress &operator=(const sockaddr *sa) noexcept
@@ -160,6 +163,8 @@ public:
 		}
 		return *this;
 	}
+
+	ZT_INLINE void clear() noexcept { memoryZero(this); }
 
 	/**
 	 * @return Address family (ss_family in sockaddr_storage)
@@ -339,7 +344,7 @@ public:
 				break;
 			case AF_INET6:
 				reinterpret_cast<struct sockaddr_in6 *>(&r)->sin6_family = AF_INET;
-				memcpy(reinterpret_cast<struct sockaddr_in6 *>(&r)->sin6_addr.s6_addr,reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr,16);
+				Utils::copy<16>(reinterpret_cast<struct sockaddr_in6 *>(&r)->sin6_addr.s6_addr,reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr);
 				break;
 		}
 		return r;

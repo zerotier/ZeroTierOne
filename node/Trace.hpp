@@ -70,7 +70,7 @@ public:
 		}
 		ZT_INLINE void clear()
 		{
-			memset(l,0,sizeof(l));
+			Utils::zero<sizeof(l)>(l);
 		}
 	};
 
@@ -82,7 +82,7 @@ public:
 	template<unsigned int C>
 	struct Str
 	{
-		ZT_INLINE Str() { memset(s,0,sizeof(s)); }
+		ZT_INLINE Str() { Utils::zero<sizeof(s)>(s); }
 		constexpr static unsigned int capacity() { return C; }
 		char s[C];
 	};

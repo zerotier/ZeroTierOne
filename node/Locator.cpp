@@ -59,7 +59,7 @@ int Locator::marshal(uint8_t data[ZT_LOCATOR_MARSHAL_SIZE_MAX],const bool exclud
 		if (!excludeSignature) {
 			Utils::storeBigEndian(data + p,(uint16_t)_signatureLength);
 			p += 2;
-			memcpy(data + p,_signature,_signatureLength);
+			Utils::copy(data + p,_signature,_signatureLength);
 			p += (int)_signatureLength;
 		}
 
@@ -102,7 +102,7 @@ int Locator::unmarshal(const uint8_t *restrict data,const int len) noexcept
 		_signatureLength = sl;
 		if ((p + (int)sl) > len)
 			return -1;
-		memcpy(_signature,data + p,sl);
+		Utils::copy(_signature,data + p,sl);
 		p += (int)sl;
 
 		if ((p + 2) > len)

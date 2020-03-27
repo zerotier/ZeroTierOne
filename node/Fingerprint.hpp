@@ -62,7 +62,7 @@ public:
 	{
 		uint8_t tmp[48 + 5];
 		address().copyTo(tmp);
-		memcpy(tmp + 5,_fp.hash,48);
+		Utils::copy<48>(tmp + 5,_fp.hash);
 		Utils::b32e(tmp,sizeof(tmp),s,ZT_FINGERPRINT_STRING_BUFFER_LENGTH);
 		s[ZT_FINGERPRINT_STRING_BUFFER_LENGTH-1] = 0; // sanity check, ensure always zero terminated
 	}
@@ -79,7 +79,7 @@ public:
 		if (Utils::b32d(s,tmp,sizeof(tmp)) != sizeof(tmp))
 			return false;
 		_fp.address = Address(tmp).toInt();
-		memcpy(_fp.hash,tmp + 5,48);
+		Utils::copy<48>(_fp.hash,tmp + 5);
 		return true;
 	}
 

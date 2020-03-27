@@ -123,9 +123,9 @@ bool NetworkConfig::fromDictionary(const Dictionary &d)
 		this->issuedTo = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO,0);
 		const std::vector<uint8_t> *blob = &(d[ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO_IDENTITY_HASH]);
 		if (blob->size() == ZT_IDENTITY_HASH_SIZE) {
-			memcpy(this->issuedToFingerprintHash,blob->data(),ZT_IDENTITY_HASH_SIZE);
+			Utils::copy<ZT_IDENTITY_HASH_SIZE>(this->issuedToFingerprintHash,blob->data());
 		} else {
-			memset(this->issuedToFingerprintHash,0,ZT_IDENTITY_HASH_SIZE);
+			Utils::zero<ZT_IDENTITY_HASH_SIZE>(this->issuedToFingerprintHash);
 		}
 		if (!this->issuedTo)
 			return false;

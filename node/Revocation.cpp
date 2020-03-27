@@ -46,7 +46,7 @@ int Revocation::marshal(uint8_t data[ZT_REVOCATION_MARSHAL_SIZE_MAX],bool forSig
 	if (!forSign) {
 		data[p++] = 1;
 		Utils::storeBigEndian<uint16_t>(data + p,(uint16_t)_signatureLength);
-		memcpy(data + p,_signature,_signatureLength);
+		Utils::copy(data + p,_signature,_signatureLength);
 		p += (int)_signatureLength;
 	}
 	data[p++] = 0;
@@ -77,7 +77,7 @@ int Revocation::unmarshal(const uint8_t *restrict data,const int len) noexcept
 	int p = 54 + (int)_signatureLength;
 	if ((_signatureLength > ZT_SIGNATURE_BUFFER_SIZE)||(p > len))
 		return -1;
-	memcpy(_signature,data + 54,_signatureLength);
+	Utils::copy(_signature,data + 54,_signatureLength);
 	if ((p + 2) > len)
 		return -1;
 	p += 2 + Utils::loadBigEndian<uint16_t>(data + p);

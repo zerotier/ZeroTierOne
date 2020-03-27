@@ -157,9 +157,6 @@ namespace ZeroTier {
 
 /**
  * Network configuration received from network controller nodes
- *
- * This is a memcpy()'able structure and is safe (in a crash sense) to modify
- * without locks.
  */
 struct NetworkConfig : TriviallyCopyable
 {
