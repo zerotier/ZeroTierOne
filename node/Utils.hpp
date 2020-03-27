@@ -583,99 +583,18 @@ static ZT_INLINE void storeLittleEndian(void *const p,const I i) noexcept
 #endif
 }
 
-template<unsigned int L>
-static ZT_INLINE void copy(void *dest,const void *src) noexcept;
-template<>
-ZT_INLINE void copy<64>(void *const dest,const void *const src) noexcept
-{
-#ifdef ZT_ARCH_X64
-	__m128i a = _mm_loadu_si128(reinterpret_cast<const __m128i *>(src));
-	__m128i b = _mm_loadu_si128(reinterpret_cast<const __m128i *>(src) + 1);
-	__m128i c = _mm_loadu_si128(reinterpret_cast<const __m128i *>(src) + 2);
-	__m128i d = _mm_loadu_si128(reinterpret_cast<const __m128i *>(src) + 3);
-	_mm_storeu_si128(reinterpret_cast<__m128i *>(dest),a);
-	_mm_storeu_si128(reinterpret_cast<__m128i *>(dest) + 1,b);
-	_mm_storeu_si128(reinterpret_cast<__m128i *>(dest) + 2,c);
-	_mm_storeu_si128(reinterpret_cast<__m128i *>(dest) + 3,d);
-#else
-	uint64_t a = reinterpret_cast<const uint64_t *>(src)[0];
-	uint64_t b = reinterpret_cast<const uint64_t *>(src)[1];
-	uint64_t c = reinterpret_cast<const uint64_t *>(src)[2];
-	uint64_t d = reinterpret_cast<const uint64_t *>(src)[3];
-	uint64_t e = reinterpret_cast<const uint64_t *>(src)[4];
-	uint64_t f = reinterpret_cast<const uint64_t *>(src)[5];
-	uint64_t g = reinterpret_cast<const uint64_t *>(src)[6];
-	uint64_t h = reinterpret_cast<const uint64_t *>(src)[7];
-	reinterpret_cast<uint64_t *>(dest)[0] = a;
-	reinterpret_cast<uint64_t *>(dest)[1] = b;
-	reinterpret_cast<uint64_t *>(dest)[2] = c;
-	reinterpret_cast<uint64_t *>(dest)[3] = d;
-	reinterpret_cast<uint64_t *>(dest)[4] = e;
-	reinterpret_cast<uint64_t *>(dest)[5] = f;
-	reinterpret_cast<uint64_t *>(dest)[6] = g;
-	reinterpret_cast<uint64_t *>(dest)[7] = h;
-#endif
-}
-template<>
-ZT_INLINE void copy<32>(void *const dest,const void *const src) noexcept
-{
-#ifdef ZT_ARCH_X64
-	__m128i a = _mm_loadu_si128(reinterpret_cast<const __m128i *>(src));
-	__m128i b = _mm_loadu_si128(reinterpret_cast<const __m128i *>(src) + 1);
-	_mm_storeu_si128(reinterpret_cast<__m128i *>(dest),a);
-	_mm_storeu_si128(reinterpret_cast<__m128i *>(dest) + 1,b);
-#else
-	uint64_t a = reinterpret_cast<const uint64_t *>(src)[0];
-	uint64_t b = reinterpret_cast<const uint64_t *>(src)[1];
-	uint64_t c = reinterpret_cast<const uint64_t *>(src)[2];
-	uint64_t d = reinterpret_cast<const uint64_t *>(src)[3];
-	reinterpret_cast<uint64_t *>(dest)[0] = a;
-	reinterpret_cast<uint64_t *>(dest)[1] = b;
-	reinterpret_cast<uint64_t *>(dest)[2] = c;
-	reinterpret_cast<uint64_t *>(dest)[3] = d;
-#endif
-}
-template<>
-ZT_INLINE void copy<16>(void *const dest,const void *const src) noexcept
-{
-#ifdef ZT_ARCH_X64
-	_mm_storeu_si128(reinterpret_cast<__m128i *>(dest),_mm_loadu_si128(reinterpret_cast<const __m128i *>(src)));
-#else
-	uint64_t a = reinterpret_cast<const uint64_t *>(src)[0];
-	uint64_t b = reinterpret_cast<const uint64_t *>(src)[1];
-	reinterpret_cast<uint64_t *>(dest)[0] = a;
-	reinterpret_cast<uint64_t *>(dest)[1] = b;
-#endif
-}
-template<>
-ZT_INLINE void copy<8>(void *const dest,const void *const src) noexcept
-{
-	*reinterpret_cast<uint64_t *>(dest) = *reinterpret_cast<const uint64_t *>(src);
-}
-template<>
-ZT_INLINE void copy<4>(void *const dest,const void *const src) noexcept
-{
-	*reinterpret_cast<uint32_t *>(dest) = *reinterpret_cast<const uint32_t *>(src);
-}
-template<>
-ZT_INLINE void copy<2>(void *const dest,const void *const src) noexcept
-{
-	*reinterpret_cast<uint16_t *>(dest) = *reinterpret_cast<const uint16_t *>(src);
-}
-template<>
-ZT_INLINE void copy<1>(void *const dest,const void *const src) noexcept
-{
-	*reinterpret_cast<uint8_t *>(dest) = *reinterpret_cast<const uint8_t *>(src);
-}
-template<>
-ZT_INLINE void copy<0>(void *const dest,const void *const src) noexcept
-{
-}
+/**
+ * Copy memory block whose size is known at compile time
+ *
+ * @tparam L Size of memory
+ * @param dest Destination memory
+ * @param src Source memory
+ */
 template<unsigned int L>
 static ZT_INLINE void copy(void *const dest,const void *const src) noexcept
 {
 #ifdef ZT_NO_UNALIGNED_ACCESS
-	if ((((uintptr_t)dest | (uintptr_t)src) & 7U) != 0) {
+	if ((((uintptr_t)dest | (uintptr_t)src) & (sizeof(uintptr_t) - 1)) != 0) {
 		memcpy(dest,src,L);
 		return;
 	}
@@ -684,154 +603,99 @@ static ZT_INLINE void copy(void *const dest,const void *const src) noexcept
 	uint8_t *d = reinterpret_cast<uint8_t *>(dest);
 	const uint8_t *s = reinterpret_cast<const uint8_t *>(src);
 
+#ifdef ZT_ARCH_X64
 	for(unsigned int i=0;i<(L / 64U);++i) {
-		copy<64>(d,s);
+		__m128i x0 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(s));
+		__m128i x1 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(s) + 1);
+		__m128i x2 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(s) + 2);
+		__m128i x3 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(s) + 3);
+		_mm_storeu_si128(reinterpret_cast<__m128i *>(d),x0);
+		_mm_storeu_si128(reinterpret_cast<__m128i *>(d) + 1,x1);
+		_mm_storeu_si128(reinterpret_cast<__m128i *>(d) + 2,x2);
+		_mm_storeu_si128(reinterpret_cast<__m128i *>(d) + 3,x3);
 		d += 64;
 		s += 64;
 	}
 	if ((L & 63U) >= 32U) {
-		copy<32>(d,s);
+		__m128i x0 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(s));
+		__m128i x1 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(s) + 1);
+		_mm_storeu_si128(reinterpret_cast<__m128i *>(d),x0);
+		_mm_storeu_si128(reinterpret_cast<__m128i *>(d) + 1,x1);
 		d += 32;
 		s += 32;
 	}
 	if ((L & 31U) >= 16U) {
-		copy<16>(d,s);
+		__m128i x0 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(s));
+		_mm_storeu_si128(reinterpret_cast<__m128i *>(d),x0);
 		d += 16;
 		s += 16;
 	}
 	if ((L & 15U) >= 8U) {
-		copy<8>(d,s);
+		*reinterpret_cast<uint64_t *>(d) = *reinterpret_cast<const uint64_t *>(s);
 		d += 8;
 		s += 8;
 	}
 	if ((L & 7U) >= 4U) {
-		copy<4>(d,s);
+		*reinterpret_cast<uint32_t *>(d) = *reinterpret_cast<const uint32_t *>(s);
 		d += 4;
 		s += 4;
 	}
 	if ((L & 3U) >= 2U) {
-		copy<2>(d,s);
+		*reinterpret_cast<uint16_t *>(d) = *reinterpret_cast<const uint16_t *>(s);
 		d += 2;
 		s += 2;
 	}
 	if ((L & 1U) != 0U) {
-		copy<1>(d,s);
+		*d = *s;
 	}
+#else
+	for(unsigned int i=0;i<(L / (sizeof(uintptr_t) * 4));++i) {
+		uintptr_t x0 = reinterpret_cast<const uintptr_t *>(s)[0];
+		uintptr_t x1 = reinterpret_cast<const uintptr_t *>(s)[1];
+		uintptr_t x2 = reinterpret_cast<const uintptr_t *>(s)[2];
+		uintptr_t x3 = reinterpret_cast<const uintptr_t *>(s)[3];
+		reinterpret_cast<uintptr_t *>(d)[0] = x0;
+		reinterpret_cast<uintptr_t *>(d)[1] = x1;
+		reinterpret_cast<uintptr_t *>(d)[2] = x2;
+		reinterpret_cast<uintptr_t *>(d)[3] = x3;
+		s += (sizeof(uintptr_t) * 4);
+		d += (sizeof(uintptr_t) * 4);
+	}
+	for(unsigned int i=0;i<(L & ((sizeof(uintptr_t) * 4) - 1));++i)
+		d[i] = s[i];
+#endif
 }
-static ZT_INLINE void copy(void *const dest,const void *const src,const unsigned int len) noexcept
+
+/**
+ * Copy memory block whose size is known at run time
+ *
+ * @param dest Destination memory
+ * @param src Source memory
+ * @param len Bytes to copy
+ */
+static ZT_INLINE void copy(void *const dest,const void *const src,unsigned int len) noexcept
 {
 	memcpy(dest,src,len);
 }
 
-template<unsigned int L>
-static ZT_INLINE void zero(void *dest) noexcept;
-template<>
-ZT_INLINE void zero<64>(void *const dest) noexcept
-{
-#ifdef ZT_ARCH_X64
-	const __m128i z = _mm_setzero_si128();
-	_mm_storeu_si128(reinterpret_cast<__m128i *>(dest),z);
-	_mm_storeu_si128(reinterpret_cast<__m128i *>(dest) + 1,z);
-	_mm_storeu_si128(reinterpret_cast<__m128i *>(dest) + 2,z);
-	_mm_storeu_si128(reinterpret_cast<__m128i *>(dest) + 3,z);
-#else
-	const uint64_t z = 0;
-	reinterpret_cast<uint64_t *>(dest)[0] = z;
-	reinterpret_cast<uint64_t *>(dest)[1] = z;
-	reinterpret_cast<uint64_t *>(dest)[2] = z;
-	reinterpret_cast<uint64_t *>(dest)[3] = z;
-	reinterpret_cast<uint64_t *>(dest)[4] = z;
-	reinterpret_cast<uint64_t *>(dest)[5] = z;
-	reinterpret_cast<uint64_t *>(dest)[6] = z;
-	reinterpret_cast<uint64_t *>(dest)[7] = z;
-#endif
-}
-template<>
-ZT_INLINE void zero<32>(void *const dest) noexcept
-{
-#ifdef ZT_ARCH_X64
-	const __m128i z = _mm_setzero_si128();
-	_mm_storeu_si128(reinterpret_cast<__m128i *>(dest),z);
-	_mm_storeu_si128(reinterpret_cast<__m128i *>(dest) + 1,z);
-#else
-	const uint64_t z = 0;
-	reinterpret_cast<uint64_t *>(dest)[0] = z;
-	reinterpret_cast<uint64_t *>(dest)[1] = z;
-	reinterpret_cast<uint64_t *>(dest)[2] = z;
-	reinterpret_cast<uint64_t *>(dest)[3] = z;
-#endif
-}
-template<>
-ZT_INLINE void zero<16>(void *const dest) noexcept
-{
-	const uint64_t z = 0;
-	reinterpret_cast<uint64_t *>(dest)[0] = z;
-	reinterpret_cast<uint64_t *>(dest)[1] = z;
-}
-template<>
-ZT_INLINE void zero<8>(void *const dest) noexcept
-{
-	*reinterpret_cast<uint64_t *>(dest) = 0;
-}
-template<>
-ZT_INLINE void zero<4>(void *const dest) noexcept
-{
-	*reinterpret_cast<uint32_t *>(dest) = 0;
-}
-template<>
-ZT_INLINE void zero<2>(void *const dest) noexcept
-{
-	*reinterpret_cast<uint16_t *>(dest) = 0;
-}
-template<>
-ZT_INLINE void zero<1>(void *const dest) noexcept
-{
-	*reinterpret_cast<uint8_t *>(dest) = 0;
-}
-template<>
-ZT_INLINE void zero<0>(void *const dest) noexcept
-{
-}
+/**
+ * Zero memory block whose size is known at compile time
+ *
+ * @tparam L Size in bytes
+ * @param dest Memory to zero
+ */
 template<unsigned int L>
 static ZT_INLINE void zero(void *const dest) noexcept
 {
-#ifdef ZT_NO_UNALIGNED_ACCESS
-	if ((((uintptr_t)dest | (uintptr_t)src) & 7U) != 0) {
-		memset(dest,0,L);
-		return;
-	}
-#endif
-
-	uint8_t *d = reinterpret_cast<uint8_t *>(dest);
-
-	for(unsigned int i=0;i<(L / 64U);++i) {
-		zero<64>(d);
-		d += 64;
-	}
-	if ((L & 63U) >= 32U) {
-		zero<32>(d);
-		d += 32;
-	}
-	if ((L & 31U) >= 16U) {
-		zero<16>(d);
-		d += 16;
-	}
-	if ((L & 15U) >= 8U) {
-		zero<8>(d);
-		d += 8;
-	}
-	if ((L & 7U) >= 4U) {
-		zero<4>(d);
-		d += 4;
-	}
-	if ((L & 3U) >= 2U) {
-		zero<2>(d);
-		d += 2;
-	}
-	if ((L & 1U) != 0U) {
-		zero<1>(d);
-	}
+	memset(dest,0,L);
 }
+
+/**
+ * Zero memory block whose size is known at run time
+ *
+ * @param dest Memory to zero
+ * @param len Size in bytes
+ */
 static ZT_INLINE void zero(void *const dest,const unsigned int len) noexcept
 {
 	memset(dest,0,len);

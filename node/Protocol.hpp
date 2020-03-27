@@ -252,17 +252,17 @@
 /**
  * HELLO exchange meta-data: ephemeral C25519 public key
  */
-#define ZT_PROTO_HELLO_NODE_META_EPHEMERAL_KEY_C25519 "e0"
+#define ZT_PROTO_HELLO_NODE_META_EPHEMERAL_C25519 "e0"
 
 /**
  * HELLO exchange meta-data: ephemeral NIST P-384 public key
  */
-#define ZT_PROTO_HELLO_NODE_META_EPHEMERAL_KEY_P384 "e1"
+#define ZT_PROTO_HELLO_NODE_META_EPHEMERAL_P384 "e1"
 
 /**
  * HELLO exchange meta-data: address(es) of nodes to whom this node will relay
  */
-#define ZT_PROTO_HELLO_NODE_META_WILL_RELAY_TO "wr"
+#define ZT_PROTO_HELLO_NODE_META_NEIGHBORS "wr"
 
 /**
  * HELLO exchange meta-data: X coordinate of your node (sent in OK(HELLO))
@@ -304,53 +304,93 @@ enum Verb
 	/**
 	 * Announcement of a node's existence and vitals:
 	 *   <[1] protocol version>
-	 *   <[1] software major version>
-	 *   <[1] software minor version>
-	 *   <[2] software revision>
-	 *   <[8] timestamp for determining latency>
+	 *   <[1] software major version (LEGACY)>
+	 *   <[1] software minor version (LEGACY)>
+	 *   <[2] software revision (LEGACY)>
+	 *   <[8] timestamp for determining latency (LEGACY)>
 	 *   <[...] binary serialized identity>
-	 *   <[...] physical destination address of packet>
-	 *   [... begin encrypted region ...]
-	 *   <[2] 16-bit reserved (legacy) field, always 0>
-	 *   <[2] 16-bit length of meta-data dictionary>
-	 *   <[...] meta-data dictionary>
-	 *   <[2] 16-bit length of any additional fields>
-	 *   [... end encrypted region ...]
-	 *   <[48] HMAC-SHA384 of packet (with hops field masked to 0)>
+	 *   <[...] physical destination address of packet (LEGACY)>
+	 *   <[2] 16-bit reserved "encrypted zero" field (LEGACY)>
+	 *   <[...] encrypted dictionary>
+	 *   <[2] 16-bit length of preceding encrypted dictionary>
+	 *   <[48] HMAC-SHA384 of plaintext packet (with hops masked to 0)>
 	 *
-	 * HELLO is sent using the POLY1305_NONE cipher setting (MAC but
-	 * no encryption) and as of protocol version 11 contains an extra
-	 * HMAC-SHA384 MAC for additional authentication hardening.
+	 * HELLO is sent to initiate a new pairing between two nodes.
 	 *
-	 * The physical desgination address is the raw InetAddress to which the
-	 * packet was sent, regardless of any relaying used.
+	 * HELLO is the only packet ever sent without normal payload encryption,
+	 * though an inner encrypted envelope exists to obscure all fields that
+	 * do not need to be sent in the clear. HELLO's MAC field contains a
+	 * Poly1305 MAC for backward compatibility, and v2.x adds an additional
+	 * HMAC-SHA384 at the end for stronger authentication of sessions. HELLO
+	 * authentication is performed using the long-lived identity key only,
+	 * and the encryption of the inner dictionary field is done using a key
+	 * derived from this identity key explicitly for this purpose.
 	 *
-	 * HELLO packets have an encrypted section that is encrypted with
-	 * Salsa20/12 using the two peers' long-term negotiated keys and with
-	 * the packet ID (with least significant 3 bits masked to 0 for legacy
-	 * reasons) as the Salsa20/12 IV. This encryption is technically not
-	 * necessary but serves to protect the privacy of locators and other
-	 * fields for a little added defense in depth. Note to auditors: for FIPS
-	 * or other auditing purposes this crypto can be ignored as its
-	 * compromise poses no risk to peer or network authentication or transport
-	 * data privacy. HMAC is computed after this encryption is performed and
-	 * is verified before decryption is performed.
+	 * The main payload of HELLO is the protocol version and the full identity
+	 * of the sender, which includes the sender's public key(s). An encrypted
+	 * dictionary (key/value store) is also included for additional information.
+	 * This is encrypted using AES-CTR with a derived key and using the final
+	 * 96 bits of the packet's HMAC-SHA384 as the CTR IV. (The HMAC authenticates
+	 * the packet prior to this field being encrypted, making this a SIV
+	 * construction much like AES-GMAC-SIV.)
+	 *
+	 * The length of the dictionary field is included immediately after it so
+	 * that it can be decrypted and the HMAC validated without performing any
+	 * parsing of anything else, since it's a good idea to authenticate any
+	 * message as early as possible in any secure protocol.
+	 *
+	 * V1.x will ignore the HMAC and dictionary fields as it doesn't understand
+	 * them, but the packet is constructed so that 1.x nodes will parse what
+	 * they need to communicate with 2.x nodes (without forward secrecy) as long
+	 * as we wish to support this.
+	 *
+	 * Several legacy fields are present as well for the benefit of 1.x nodes.
+	 * These will go away and become simple reserved space once 1.x is no longer
+	 * supported. Some are self-explanatory. The "encrypted zero" is rather
+	 * strange. It's a 16-bit zero value encrypted using Salsa20/12 and the
+	 * long-lived identity key shared by the two peers. It tells 1.x that an
+	 * old encrypted field is no longer there and that it should stop parsing
+	 * the packet at that point.
+	 *
+	 * The following fields are nearly always present and must exist to support
+	 * forward secrecy (in the case of the instance ID, keys, and key revision)
+	 * or federated root membership (in the case of the locator).
+	 *
+	 *   TIMESTAMP - node's timestamp in milliseconds (supersedes legacy field)
+	 *   INSTANCE_ID - a 64-bit unique value generated on each node start
+	 *   EPHEMERAL_C25519 - an ephemeral Curve25519 public key
+	 *   EPHEMERAL_P384 - an ephemeral NIST P-384 public key
+	 *   EPHEMERAL_REVISION - 64-bit monotonically increasing per-instance counter
+	 *   LOCATOR - signed record enumerating this node's trusted contact points
+	 *
+	 * The following optional fields may also be present:
+	 *
+	 *   NAME - abitrary short user-defined name for this node
+	 *   CONTACT - arbitrary short contact information string for this node
+	 *   NEIGHBORS - addresses of node(s) to whom we'll relay (mesh-like routing)
+	 *   LOC_X, LOC_Y, LOC_Z - location relative to the nearest large center of mass
+	 *   PEER_LOC_X, PEER_LOC_Y, PEER_LOC_Z - where sender thinks peer is located
+	 *   SOFTWARE_VENDOR - short name or description of vendor, such as a URL
+	 *   SOFTWARE_VERSION - major, minor, revision, and build, and 16-bit integers
+	 *   PHYSICAL_DEST - serialized Endpoint to which this message was sent
+	 *   VIRTUAL_DEST - ZeroTier address of first hop (if first hop wasn't destination)
+	 *   COMPLIANCE - bit mask containing bits for e.g. a FIPS-compliant node
 	 *
 	 * A valid and successfully authenticated HELLO will generate the following
-	 * OK response which contains much of the same information about the
-	 * responding peer.
+	 * OK response. It contains an echo of the timestamp supplied by the
+	 * initiating peer, the protocol version, and a dictionary containing
+	 * the same information about the responding peer as the originating peer
+	 * sent.
 	 *
 	 * OK payload:
-	 *   <[8] timestamp echoed from original HELLO packet>
+	 *   <[8] timestamp echoed from original HELLO>
 	 *   <[1] protocol version>
-	 *   <[1] software major version>
-	 *   <[1] software minor version>
-	 *   <[2] software revision>
-	 *   <[...] physical destination address of packet>
-	 *   <[2] 16-bit reserved (legacy) field, currently must be 0>
-	 *   <[2] 16-bit length of meta-data dictionary>
-	 *   <[...] meta-data dictionary>
-	 *   <[2] 16-bit length of any additional fields>
+	 *   <[1] software major version (LEGACY)>
+	 *   <[1] software minor version (LEGACY)>
+	 *   <[2] software revision (LEGACY)>
+	 *   <[...] physical destination address of packet (LEGACY)>
+	 *   <[2] 16-bit reserved zero field (LEGACY)>
+	 *   <[...] dictionary>
 	 *   <[48] HMAC-SHA384 of plaintext packet (with hops masked to 0)>
 	 */
 	VERB_HELLO = 0x01,
