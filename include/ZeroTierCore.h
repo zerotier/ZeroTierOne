@@ -1867,11 +1867,12 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_processBackgroundTasks(
  *
  * @param node Node instance
  * @param nwid 64-bit ZeroTier network ID
+ * @param fingerprintHash If non-NULL this is the full fingerprint of the controller
  * @param uptr An arbitrary pointer to associate with this network (default: NULL)
  * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-ZT_SDK_API enum ZT_ResultCode ZT_Node_join(ZT_Node *node,uint64_t nwid,void *uptr,void *tptr);
+ZT_SDK_API enum ZT_ResultCode ZT_Node_join(ZT_Node *node,uint64_t nwid,const ZT_Fingerprint *controllerFingerprint,void *uptr,void *tptr);
 
 /**
  * Leave a network

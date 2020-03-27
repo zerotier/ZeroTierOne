@@ -347,7 +347,7 @@ ZT_ResultCode Node::processBackgroundTasks(void *tPtr, int64_t now, volatile int
 	return ZT_RESULT_OK;
 }
 
-ZT_ResultCode Node::join(uint64_t nwid,void *uptr,void *tptr)
+ZT_ResultCode Node::join(uint64_t nwid,const ZT_Fingerprint *controllerFingerprint,void *uptr,void *tptr)
 {
 	RWMutex::Lock l(_networks_m);
 
@@ -382,7 +382,10 @@ try_larger_network_hashtable:
 		nw = &(_networks[(unsigned long)(nwidHashed & newNetworksMask)]);
 	}
 
-	nw->set(new Network(RR,tptr,nwid,uptr,(const NetworkConfig *)0));
+	Fingerprint fp;
+	if (controllerFingerprint)
+		Utils::copy<sizeof(ZT_Fingerprint)>(fp.apiFingerprint(),controllerFingerprint);
+	nw->set(new Network(RR,tptr,nwid,fp,uptr,(const NetworkConfig *)0));
 
 	return ZT_RESULT_OK;
 }
@@ -928,10 +931,10 @@ enum ZT_ResultCode ZT_Node_processBackgroundTasks(ZT_Node *node,void *tptr,int64
 	}
 }
 
-enum ZT_ResultCode ZT_Node_join(ZT_Node *node,uint64_t nwid,void *uptr,void *tptr)
+enum ZT_ResultCode ZT_Node_join(ZT_Node *node,uint64_t nwid,const ZT_Fingerprint *controllerFingerprint,void *uptr,void *tptr)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->join(nwid,uptr,tptr);
+		return reinterpret_cast<ZeroTier::Node *>(node)->join(nwid,controllerFingerprint,uptr,tptr);
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch ( ... ) {

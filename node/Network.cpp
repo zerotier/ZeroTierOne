@@ -158,7 +158,7 @@ _doZtFilterResult _doZtFilter(
 						case ZT_NETWORK_RULE_ACTION_TEE:
 						case ZT_NETWORK_RULE_ACTION_WATCH:
 						case ZT_NETWORK_RULE_ACTION_REDIRECT:
-							if (RR->identity.address() == rules[rn].v.fwd.address)
+							if (RR->identity.address().toInt() == rules[rn].v.fwd.address)
 								superAccept = true;
 							break;
 						default:
@@ -533,7 +533,7 @@ _doZtFilterResult _doZtFilter(
 
 const ZeroTier::MulticastGroup Network::BROADCAST(ZeroTier::MAC(0xffffffffffffULL),0);
 
-Network::Network(const RuntimeEnvironment *renv,void *tPtr,uint64_t nwid,void *uptr,const NetworkConfig *nconf) :
+Network::Network(const RuntimeEnvironment *renv,void *tPtr,uint64_t nwid,const Fingerprint &controllerFingerprint,void *uptr,const NetworkConfig *nconf) :
 	RR(renv),
 	_uPtr(uptr),
 	_id(nwid),
@@ -543,6 +543,9 @@ Network::Network(const RuntimeEnvironment *renv,void *tPtr,uint64_t nwid,void *u
 	_destroyed(false),
 	_netconfFailure(NETCONF_FAILURE_NONE)
 {
+	if (controllerFingerprint)
+		_controllerFingerprint = controllerFingerprint;
+
 	if (nconf) {
 		this->setConfiguration(tPtr,*nconf,false);
 		_lastConfigUpdate = 0; // still want to re-request since it's likely outdated
@@ -868,6 +871,15 @@ void Network::multicastUnsubscribe(const MulticastGroup &mg)
 
 uint64_t Network::handleConfigChunk(void *tPtr,uint64_t packetId,const SharedPtr<Peer> &source,const Buf &chunk,int ptr,int size)
 {
+	// If the controller's full fingerprint is known or was explicitly specified on join(),
+	// require that the controller's identity match. Otherwise learn it.
+	if (_controllerFingerprint) {
+		if (source->identity().fingerprint() != _controllerFingerprint)
+			return 0;
+	} else {
+		_controllerFingerprint = source->identity().fingerprint();
+	}
+
 	return 0;
 #if 0
 	if (_destroyed)

@@ -88,7 +88,7 @@ public:
 		unsigned int frameLength,
 		volatile int64_t *nextBackgroundTaskDeadline);
 	ZT_ResultCode processBackgroundTasks(void *tPtr, int64_t now, volatile int64_t *nextBackgroundTaskDeadline);
-	ZT_ResultCode join(uint64_t nwid,void *uptr,void *tptr);
+	ZT_ResultCode join(uint64_t nwid,const ZT_Fingerprint *controllerFingerprint,void *uptr,void *tptr);
 	ZT_ResultCode leave(uint64_t nwid,void **uptr,void *tptr);
 	ZT_ResultCode multicastSubscribe(void *tPtr,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
 	ZT_ResultCode multicastUnsubscribe(uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);

@@ -67,10 +67,11 @@ public:
 	 * @param renv Runtime environment
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param nwid Network ID
+	 * @param controllerFingerprint Initial controller fingerprint if non-NULL
 	 * @param uptr Arbitrary pointer used by externally-facing API (for user use)
 	 * @param nconf Network config, if known
 	 */
-	Network(const RuntimeEnvironment *renv,void *tPtr,uint64_t nwid,void *uptr,const NetworkConfig *nconf);
+	Network(const RuntimeEnvironment *renv,void *tPtr,uint64_t nwid,const Fingerprint &controllerFingerprint,void *uptr,const NetworkConfig *nconf);
 
 	~Network();
 
@@ -350,6 +351,7 @@ private:
 	const RuntimeEnvironment *const RR;
 	void *_uPtr;
 	const uint64_t _id;
+	Fingerprint _controllerFingerprint;
 	MAC _mac; // local MAC address
 	bool _portInitialized;
 
