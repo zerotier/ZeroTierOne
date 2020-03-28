@@ -170,16 +170,20 @@
 #define ZT_PROTO_CIPHER_SUITE__POLY1305_SALSA2012 1
 
 /**
- * No encryption or authentication at all
+ * No encryption or authentication at all!
  *
- * For trusted paths the MAC field is the trusted path ID.
+ * This is used for trusted paths. The MAC field will contain the
+ * 64-bit trusted path ID. Both sides of a link must be configured
+ * to trust a given network with the same trusted path ID for this
+ * to be used. It's a high performance mode designed for use on
+ * secure LANs.
  */
 #define ZT_PROTO_CIPHER_SUITE__NONE 2
 
 /**
- * AES-GCM-NRH (AES-GCM with nonce reuse hardening) w/AES-256
+ * AES-GMAC-SIV (AES-256)
  */
-#define ZT_PROTO_CIPHER_SUITE__AES_GCM_NRH 3
+#define ZT_PROTO_CIPHER_SUITE__AES_GMAC_SIV 3
 
 /**
  * Minimum viable length for a fragment
