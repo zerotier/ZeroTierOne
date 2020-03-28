@@ -355,11 +355,11 @@ public:
 private:
 	template<typename O>
 	static ZT_INLINE unsigned long _hc(const O &obj) { return (unsigned long)obj.hashCode(); }
-	static ZT_INLINE unsigned long _hc(const uint64_t i) noexcept { return (unsigned long)(i ^ (i >> 32U)); }
+	static ZT_INLINE unsigned long _hc(const uint64_t i) noexcept { return (unsigned long)(i + (i >> 32U)); }
 	static ZT_INLINE unsigned long _hc(const uint32_t i) noexcept { return ((unsigned long)i * (unsigned long)0x9e3779b1); }
 	static ZT_INLINE unsigned long _hc(const uint16_t i) noexcept { return ((unsigned long)i * (unsigned long)0x9e3779b1); }
 	static ZT_INLINE unsigned long _hc(const uint8_t i) noexcept { return ((unsigned long)i * (unsigned long)0x9e3779b1); }
-	static ZT_INLINE unsigned long _hc(const int64_t i) noexcept { return (unsigned long)((unsigned long long)i ^ ((unsigned long long)i >> 32U)); }
+	static ZT_INLINE unsigned long _hc(const int64_t i) noexcept { return (unsigned long)((unsigned long long)i + ((unsigned long long)i >> 32U)); }
 	static ZT_INLINE unsigned long _hc(const int32_t i) noexcept { return ((unsigned long)i * (unsigned long)0x9e3779b1); }
 	static ZT_INLINE unsigned long _hc(const int16_t i) noexcept { return ((unsigned long)i * (unsigned long)0x9e3779b1); }
 	static ZT_INLINE unsigned long _hc(const int8_t i) noexcept { return ((unsigned long)i * (unsigned long)0x9e3779b1); }

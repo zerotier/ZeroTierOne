@@ -17,10 +17,10 @@
 #include "Constants.hpp"
 #include "Buf.hpp"
 #include "SharedPtr.hpp"
-#include "Hashtable.hpp"
 #include "Mutex.hpp"
 #include "Path.hpp"
 #include "FCV.hpp"
+#include "FlatMap.hpp"
 
 #include <cstring>
 #include <cstdlib>
@@ -89,10 +89,7 @@ public:
 		ERR_OUT_OF_MEMORY
 	};
 
-	ZT_INLINE Defragmenter() :
-		_messages(GCT * 2)
-	{
-	}
+	ZT_INLINE Defragmenter() {}
 
 	/**
 	 * Process a fragment of a multi-part message
@@ -167,12 +164,8 @@ public:
 				std::vector<std::pair<int64_t,uint64_t> > messagesByLastUsedTime;
 				messagesByLastUsedTime.reserve(_messages.size());
 
-				typename Hashtable<uint64_t,_E>::Iterator i(_messages);
-				uint64_t *mk = nullptr;
-				_E *mv = nullptr;
-				while (i.next(mk,mv))
-					messagesByLastUsedTime.push_back(std::pair<int64_t,uint64_t>(mv->lastUsed,*mk));
-
+				for(typename FlatMap< uint64_t,_E >::const_iterator i(_messages.begin());i!=_messages.end();++i)
+					messagesByLastUsedTime.push_back(std::pair<int64_t,uint64_t>(i->second.lastUsed,i->first));
 				std::sort(messagesByLastUsedTime.begin(),messagesByLastUsedTime.end());
 
 				ml.writing(); // acquire write lock on _messages
@@ -295,7 +288,21 @@ public:
 private:
 	struct _E
 	{
-		ZT_INLINE _E() noexcept : id(0),lastUsed(0),totalFragmentsExpected(0),fragmentsReceived(0),via(),message(),lock() {}
+		ZT_INLINE _E() noexcept :
+			id(0),
+			lastUsed(0),
+			totalFragmentsExpected(0),
+			fragmentsReceived(0) {}
+
+		ZT_INLINE _E(const _E &e) noexcept :
+			id(e.id),
+			lastUsed(e.lastUsed),
+			totalFragmentsExpected(e.totalFragmentsExpected),
+			fragmentsReceived(e.fragmentsReceived),
+			via(e.via),
+			message(e.message),
+			lock() {}
+
 		ZT_INLINE ~_E()
 		{
 			if (via) {
@@ -304,6 +311,7 @@ private:
 				via->_inboundFragmentedMessages_l.unlock();
 			}
 		}
+
 		uint64_t id;
 		volatile int64_t lastUsed;
 		unsigned int totalFragmentsExpected;
@@ -313,7 +321,7 @@ private:
 		Mutex lock;
 	};
 
-	Hashtable< uint64_t,_E > _messages;
+	FlatMap< uint64_t,_E > _messages;
 	RWMutex _messages_l;
 };
 

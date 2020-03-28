@@ -264,6 +264,20 @@ static ZT_INLINE uint64_t hash64(uint64_t x) noexcept
 }
 
 /**
+ * Mix bits in a 32-bit integer
+ *
+ * @param x Integer to mix
+ * @return Hashed value
+ */
+static ZT_INLINE uint32_t hash32(uint32_t x) noexcept
+{
+	x = ((x >> 16U) ^ x) * 0x45d9f3b;
+	x = ((x >> 16U) ^ x) * 0x45d9f3b;
+	x = (x >> 16U) ^ x;
+	return x;
+}
+
+/**
  * Check if a buffer's contents are all zero
  */
 static ZT_INLINE bool allZero(const void *const b,unsigned int l) noexcept

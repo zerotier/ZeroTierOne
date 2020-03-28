@@ -18,10 +18,10 @@
 #include "Utils.hpp"
 #include "Address.hpp"
 #include "Buf.hpp"
-#include "Hashtable.hpp"
 
 #include <cstdint>
 #include <vector>
+#include <map>
 
 namespace ZeroTier {
 
@@ -168,7 +168,7 @@ public:
 	bool decode(const void *data,unsigned int len);
 
 private:
-	Hashtable< uint64_t,std::vector<uint8_t> > _t;
+	std::map< uint64_t,std::vector<uint8_t> > _t;
 };
 
 } // namespace ZeroTier

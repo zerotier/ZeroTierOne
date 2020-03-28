@@ -16,7 +16,7 @@
 
 #include "Constants.hpp"
 #include "InetAddress.hpp"
-#include "Hashtable.hpp"
+#include "FlatMap.hpp"
 #include "Address.hpp"
 #include "Mutex.hpp"
 
@@ -92,7 +92,7 @@ private:
 	};
 
 	const RuntimeEnvironment *RR;
-	Hashtable< PhySurfaceKey,PhySurfaceEntry > _phy;
+	FlatMap< PhySurfaceKey,PhySurfaceEntry > _phy;
 	Mutex _phy_l;
 };
 

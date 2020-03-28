@@ -27,10 +27,10 @@
 #include "Path.hpp"
 #include "Mutex.hpp"
 #include "InetAddress.hpp"
-#include "Hashtable.hpp"
 #include "SharedPtr.hpp"
 #include "ScopedPtr.hpp"
 #include "Fingerprint.hpp"
+#include "FlatMap.hpp"
 
 namespace ZeroTier {
 
@@ -179,11 +179,8 @@ public:
 	ZT_INLINE void eachPeer(F f) const
 	{
 		RWMutex::RLock l(_peers_l);
-		Hashtable< Address,SharedPtr<Peer> >::Iterator i(const_cast<Topology *>(this)->_peers);
-		Address *a = nullptr;
-		SharedPtr<Peer> *p = nullptr;
-		while (i.next(a,p))
-			f(*((const SharedPtr<Peer> *)p));
+		for(FlatMap< Address,SharedPtr<Peer> >::const_iterator i(_peers.begin());i!=_peers.end();++i)
+			f(i->second);
 	}
 
 	/**
@@ -207,11 +204,8 @@ public:
 		std::sort(rootPeerPtrs.begin(),rootPeerPtrs.end());
 
 		try {
-			Hashtable< Address,SharedPtr<Peer> >::Iterator i(const_cast<Topology *>(this)->_peers);
-			Address *a = nullptr;
-			SharedPtr<Peer> *p = nullptr;
-			while (i.next(a,p))
-				f(*((const SharedPtr<Peer> *)p),std::binary_search(rootPeerPtrs.begin(),rootPeerPtrs.end(),(uintptr_t)p->ptr()));
+			for(FlatMap< Address,SharedPtr<Peer> >::const_iterator i(_peers.begin());i!=_peers.end();++i)
+				f(i->second,std::binary_search(rootPeerPtrs.begin(),rootPeerPtrs.end(),(uintptr_t)i->second.ptr()));
 		} catch ( ... ) {} // should not throw
 	}
 
@@ -225,11 +219,8 @@ public:
 	ZT_INLINE void eachPath(F f) const
 	{
 		RWMutex::RLock l(_paths_l);
-		Hashtable< uint64_t,SharedPtr<Path> >::Iterator i(const_cast<Topology *>(this)->_paths);
-		uint64_t *k = nullptr;
-		SharedPtr<Path> *p = nullptr;
-		while (i.next(k,p))
-			f(*((const SharedPtr<Path> *)p));
+		for(FlatMap< uint64_t,SharedPtr<Path> >::const_iterator i(_paths.begin());i!=_paths.end();++i)
+			f(i->second);
 	}
 
 	/**
@@ -363,10 +354,10 @@ private:
 	std::pair< InetAddress,ZT_PhysicalPathConfiguration > _physicalPathConfig[ZT_MAX_CONFIGURABLE_PATHS];
 	unsigned int _numConfiguredPhysicalPaths;
 
-	Hashtable< Address,SharedPtr<Peer> > _peers;
-	Hashtable< uint64_t,SharedPtr<Peer> > _peersByIncomingProbe;
-	Hashtable< Fingerprint,SharedPtr<Peer> > _peersByIdentityHash;
-	Hashtable< uint64_t,SharedPtr<Path> > _paths;
+	FlatMap< Address,SharedPtr<Peer> > _peers;
+	FlatMap< uint64_t,SharedPtr<Peer> > _peersByIncomingProbe;
+	FlatMap< Fingerprint,SharedPtr<Peer> > _peersByIdentityHash;
+	FlatMap< uint64_t,SharedPtr<Path> > _paths;
 	std::set< Identity > _roots; // locked by _peers_l
 	std::vector< SharedPtr<Peer> > _rootPeers; // locked by _peers_l
 };

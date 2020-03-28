@@ -34,12 +34,11 @@
 #include "Tag.hpp"
 #include "Capability.hpp"
 #include "NetworkConfig.hpp"
-#include "LZ4.hpp"
-#include "Hashtable.hpp"
 #include "FCV.hpp"
 #include "SHA512.hpp"
 #include "Defragmenter.hpp"
 #include "Fingerprint.hpp"
+#include "FlatMap.hpp"
 
 #include <cstdint>
 #include <cstring>
@@ -467,54 +466,34 @@ extern "C" const char *ZTT_general()
 		}
 
 		{
-			ZT_T_PRINTF("[general] Testing Hashtable... ");
-
-			long cnt = 0;
-			Hashtable< unsigned int,LifeCycleTracker > test,test2;
-			for(unsigned int i=0;i<512;++i)
-				test[i] = LifeCycleTracker(cnt);
-			if (cnt != 512) {
-				ZT_T_PRINTF("FAILED (expected 512 objects, got %lu (1))" ZT_EOL_S,cnt);
-				return "Hashtable test failed (1)";
-			}
-			test2 = test;
-			if (cnt != 1024) {
-				ZT_T_PRINTF("FAILED (expected 1024 objects, got %lu (2))" ZT_EOL_S,cnt);
-				return "Hashtable test failed (2)";
-			}
-			test.clear();
-			if (cnt != 512) {
-				ZT_T_PRINTF("FAILED (expected 512 objects, got %lu (3))" ZT_EOL_S,cnt);
-				return "Hashtable test failed (3)";
-			}
-			for(unsigned int i=0;i<512;++i)
-				test[i] = LifeCycleTracker(cnt);
-			if (cnt != 1024) {
-				ZT_T_PRINTF("FAILED (expected 1024 objects, got %lu (4))" ZT_EOL_S,cnt);
-				return "Hashtable test failed (4)";
-			}
-			test.clear();
-			test2.clear();
-			if (cnt != 0) {
-				ZT_T_PRINTF("FAILED (expected 0 objects, got %lu (5))" ZT_EOL_S,cnt);
-				return "Hashtable test failed (5)";
-			}
-
-			Hashtable< unsigned int,unsigned int > test3;
-			for(unsigned int i=0;i<1111;++i)
-				test3[i] = i;
-			if (test3.size() != 1111) {
-				ZT_T_PRINTF("FAILED (size() incorrect)" ZT_EOL_S);
-				return "Hashtable test failed (size() incorrect)";
-			}
-			for(unsigned int i=0;i<1111;++i) {
-				if (test3[i] != i) {
-					ZT_T_PRINTF("FAILED (lookup test)" ZT_EOL_S);
-					return "Hashtable test failed (lookup)";
+			ZT_T_PRINTF("[general] Testing FlatMap... ");
+			FlatMap<uint64_t,uint64_t> tm;
+			for(uint64_t i=0;i<10000;++i)
+				tm.set(i,i);
+			for(uint64_t i=0;i<10000;++i) {
+				uint64_t *v = tm.get(i);
+				if ((!v)||(*v != i)) {
+					ZT_T_PRINTF("FAILED (get() failed)" ZT_EOL_S);
+					return "FlatMap::get() failed";
 				}
 			}
-
-			ZT_T_PRINTF("OK" ZT_EOL_S);
+			for(FlatMap<uint64_t,uint64_t>::iterator i(tm.begin());i!=tm.end();) {
+				if ((i->first & 1U) == 0)
+					tm.erase(i++);
+				else ++i;
+			}
+			if (tm.size() != 5000) {
+				ZT_T_PRINTF("FAILED (erase() failed (1))" ZT_EOL_S);
+				return "FlatMap::erase() failed (1)";
+			}
+			for(uint64_t i=0;i<10000;++i) {
+				uint64_t *v = tm.get(i);
+				if (((i & 1U) == 0)&&(v)) {
+					ZT_T_PRINTF("FAILED (erase() failed (2))" ZT_EOL_S);
+					return "FlatMap::erase() failed (2)";
+				}
+			}
+			ZT_T_PRINTF("OK (hash size: %lu)" ZT_EOL_S,tm.hashSize());
 		}
 
 		{

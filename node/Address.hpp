@@ -71,11 +71,6 @@ public:
 	ZT_INLINE void zero() noexcept { _a = 0; }
 
 	/**
-	 * @return Hash code for use with Hashtable
-	 */
-	ZT_INLINE unsigned long hashCode() const noexcept { return (unsigned long)_a; }
-
-	/**
 	 * @param s String with at least 11 characters of space available (10 + terminating NULL)
 	 * @return Hexadecimal string
 	 */
@@ -108,6 +103,7 @@ public:
 	 */
 	ZT_INLINE bool isReserved() const noexcept { return ((!_a) || ((_a >> 32U) == ZT_ADDRESS_RESERVED_PREFIX)); }
 
+	ZT_INLINE unsigned long hashCode() const noexcept { return (unsigned long)_a; }
 	ZT_INLINE operator bool() const noexcept { return (_a != 0); }
 
 	ZT_INLINE bool operator==(const Address &a) const noexcept { return _a == a._a; }

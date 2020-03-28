@@ -15,7 +15,6 @@
 #define ZT_NETWORK_HPP
 
 #include "Constants.hpp"
-#include "Hashtable.hpp"
 #include "Address.hpp"
 #include "Mutex.hpp"
 #include "SharedPtr.hpp"
@@ -26,6 +25,7 @@
 #include "Membership.hpp"
 #include "NetworkConfig.hpp"
 #include "CertificateOfMembership.hpp"
+#include "FlatMap.hpp"
 
 #include <cstdint>
 #include <string>
@@ -160,7 +160,7 @@ public:
 		if (std::binary_search(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg))
 			return true;
 		else if (includeBridgedGroups)
-			return _multicastGroupsBehindMe.contains(mg);
+			return (_multicastGroupsBehindMe.find(mg) != _multicastGroupsBehindMe.end());
 		return false;
 	}
 
@@ -326,11 +326,8 @@ public:
 	ZT_INLINE void eachMember(F f)
 	{
 		Mutex::Lock ml(_memberships_l);
-		Hashtable<Address,Membership>::Iterator i(_memberships);
-		Address *a = nullptr;
-		Membership *m = nullptr;
-		while (i.next(a,m)) {
-			if (!f(*a,*m))
+		for(FlatMap<Address,Membership>::iterator i(_memberships.begin());i!=_memberships.end();++i) {
+			if (!f(i->first,i->second))
 				break;
 		}
 	}
@@ -356,8 +353,8 @@ private:
 	bool _portInitialized;
 
 	std::vector< MulticastGroup > _myMulticastGroups; // multicast groups that we belong to (according to tap)
-	Hashtable< MulticastGroup,uint64_t > _multicastGroupsBehindMe; // multicast groups that seem to be behind us and when we last saw them (if we are a bridge)
-	Hashtable< MAC,Address > _remoteBridgeRoutes; // remote addresses where given MACs are reachable (for tracking devices behind remote bridges)
+	FlatMap< MulticastGroup,uint64_t > _multicastGroupsBehindMe; // multicast groups that seem to be behind us and when we last saw them (if we are a bridge)
+	FlatMap< MAC,Address > _remoteBridgeRoutes; // remote addresses where given MACs are reachable (for tracking devices behind remote bridges)
 
 	NetworkConfig _config;
 	std::atomic<int64_t> _lastConfigUpdate;
@@ -380,7 +377,7 @@ private:
 		NETCONF_FAILURE_INIT_FAILED
 	} _netconfFailure;
 
-	Hashtable<Address,Membership> _memberships;
+	FlatMap<Address,Membership> _memberships;
 
 	Mutex _myMulticastGroups_l;
 	Mutex _remoteBridgeRoutes_l;

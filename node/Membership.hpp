@@ -18,7 +18,7 @@
 
 #include "Constants.hpp"
 #include "Credential.hpp"
-#include "Hashtable.hpp"
+#include "FlatMap.hpp"
 #include "CertificateOfMembership.hpp"
 #include "Capability.hpp"
 #include "Tag.hpp"
@@ -106,11 +106,8 @@ public:
 	{
 		if (_isUnspoofableAddress(nconf,r))
 			return true;
-		uint32_t *k = nullptr;
-		CertificateOfOwnership *v = nullptr;
-		Hashtable< uint32_t,CertificateOfOwnership >::Iterator i(*(const_cast< Hashtable< uint32_t,CertificateOfOwnership> *>(&_remoteCoos)));
-		while (i.next(k,v)) {
-			if (_isCredentialTimestampValid(nconf,*v)&&(v->owns(r)))
+		for(FlatMap< uint32_t,CertificateOfOwnership >::const_iterator i(_remoteCoos.begin());i!=_remoteCoos.end();++i) {
+			if (_isCredentialTimestampValid(nconf,i->second)&&(i->second.owns(r)))
 				return true;
 		}
 		return false;
@@ -179,14 +176,12 @@ private:
 	}
 
 	template<typename C>
-	ZT_INLINE void _cleanCredImpl(const NetworkConfig &nconf,Hashtable<uint32_t,C> &remoteCreds)
+	ZT_INLINE void _cleanCredImpl(const NetworkConfig &nconf,FlatMap<uint32_t,C> &remoteCreds)
 	{
-		uint32_t *k = nullptr;
-		C *v = nullptr;
-		typename Hashtable<uint32_t,C>::Iterator i(remoteCreds);
-		while (i.next(k,v)) {
-			if (!_isCredentialTimestampValid(nconf,*v))
-				remoteCreds.erase(*k);
+		for(typename FlatMap<uint32_t,C>::iterator i(remoteCreds.begin());i!=remoteCreds.end();) {
+			if (!_isCredentialTimestampValid(nconf,i->second))
+				remoteCreds.erase(i++);
+			else ++i;
 		}
 	}
 
@@ -203,21 +198,19 @@ private:
 	CertificateOfMembership _com;
 
 	// Revocations by credentialKey()
-	Hashtable< uint64_t,int64_t > _revocations;
+	FlatMap< uint64_t,int64_t > _revocations;
 
 	// Remote credentials that we have received from this member (and that are valid)
-	Hashtable< uint32_t,Tag > _remoteTags;
-	Hashtable< uint32_t,Capability > _remoteCaps;
-	Hashtable< uint32_t,CertificateOfOwnership > _remoteCoos;
+	FlatMap< uint32_t,Tag > _remoteTags;
+	FlatMap< uint32_t,Capability > _remoteCaps;
+	FlatMap< uint32_t,CertificateOfOwnership > _remoteCoos;
 
 public:
 	class CapabilityIterator
 	{
 	public:
 		ZT_INLINE CapabilityIterator(Membership &m,const NetworkConfig &nconf) noexcept :
-			_hti(m._remoteCaps),
-			_k(nullptr),
-			_c(nullptr),
+			_hti(m._remoteCaps.begin()),
 			_m(m),
 			_nconf(nconf)
 		{
@@ -225,17 +218,16 @@ public:
 
 		ZT_INLINE Capability *next() noexcept
 		{
-			while (_hti.next(_k,_c)) {
-				if (_m._isCredentialTimestampValid(_nconf,*_c))
-					return _c;
+			while (_hti != _m._remoteCaps.end()) {
+				FlatMap< uint32_t,Capability >::iterator i(_hti++);
+				if (_m._isCredentialTimestampValid(_nconf,i->second))
+					return &(i->second);
 			}
 			return nullptr;
 		}
 
 	private:
-		Hashtable< uint32_t,Capability >::Iterator _hti;
-		uint32_t *_k;
-		Capability *_c;
+		FlatMap< uint32_t,Capability >::iterator _hti;
 		Membership &_m;
 		const NetworkConfig &_nconf;
 	};

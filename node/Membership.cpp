@@ -25,11 +25,7 @@ Membership::Membership() :
 	_comRevocationThreshold(0),
 	_lastPushedCredentials(0),
 	_comAgreementLocalTimestamp(0),
-	_comAgreementRemoteTimestamp(0),
-	_revocations(4),
-	_remoteTags(4),
-	_remoteCaps(4),
-	_remoteCoos(4)
+	_comAgreementRemoteTimestamp(0)
 {
 }
 
@@ -163,8 +159,8 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 // 3/5 of the credential types have identical addCredential() code
 template<typename C>
 static ZT_INLINE Membership::AddCredentialResult _addCredImpl(
-	Hashtable<uint32_t,C> &remoteCreds,
-	const Hashtable<uint64_t,int64_t> &revocations,
+	FlatMap<uint32_t,C> &remoteCreds,
+	const FlatMap<uint64_t,int64_t> &revocations,
 	const RuntimeEnvironment *const RR,
 	void *const tPtr,
 	const Identity &sourcePeerIdentity,

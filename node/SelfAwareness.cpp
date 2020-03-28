@@ -46,8 +46,7 @@ private:
 };
 
 SelfAwareness::SelfAwareness(const RuntimeEnvironment *renv) :
-	RR(renv),
-	_phy(256)
+	RR(renv)
 {
 }
 
@@ -70,14 +69,10 @@ void SelfAwareness::iam(void *tPtr,const Identity &reporter,const int64_t receiv
 		// Erase all entries in this scope that were not reported from this remote address to prevent 'thrashing'
 		// due to multiple reports of endpoint change.
 		// Don't use 'entry' after this since hash table gets modified.
-		{
-			Hashtable< PhySurfaceKey,PhySurfaceEntry >::Iterator i(_phy);
-			PhySurfaceKey *k = nullptr;
-			PhySurfaceEntry *e = nullptr;
-			while (i.next(k,e)) {
-				if ((k->scope == scope)&&(k->reporterPhysicalAddress != reporterPhysicalAddress))
-					_phy.erase(*k);
-			}
+		for(FlatMap<PhySurfaceKey,PhySurfaceEntry>::iterator i(_phy.begin());i!=_phy.end();) {
+			if ((i->first.scope == scope)&&(i->first.reporterPhysicalAddress != reporterPhysicalAddress))
+				_phy.erase(i++);
+			else ++i;
 		}
 
 		// Reset all paths within this scope and address family
@@ -96,36 +91,28 @@ void SelfAwareness::iam(void *tPtr,const Identity &reporter,const int64_t receiv
 void SelfAwareness::clean(int64_t now)
 {
 	Mutex::Lock l(_phy_l);
-	Hashtable< PhySurfaceKey,PhySurfaceEntry >::Iterator i(_phy);
-	PhySurfaceKey *k = nullptr;
-	PhySurfaceEntry *e = nullptr;
-	while (i.next(k,e)) {
-		if ((now - e->ts) >= ZT_SELFAWARENESS_ENTRY_TIMEOUT)
-			_phy.erase(*k);
+	for(FlatMap<PhySurfaceKey,PhySurfaceEntry>::iterator i(_phy.begin());i!=_phy.end();) {
+		if ((now - i->second.ts) >= ZT_SELFAWARENESS_ENTRY_TIMEOUT)
+			_phy.erase(i++);
+		else ++i;
 	}
 }
 
 std::multimap<unsigned long,InetAddress> SelfAwareness::externalAddresses(const int64_t now) const
 {
 	std::multimap<unsigned long,InetAddress> r;
-	Hashtable<InetAddress,unsigned long> counts(16);
+	FlatMap<InetAddress,unsigned long,256> counts;
 
 	{
 		Mutex::Lock l(_phy_l);
-		Hashtable<PhySurfaceKey,PhySurfaceEntry>::Iterator i(const_cast<SelfAwareness *>(this)->_phy);
-		PhySurfaceKey *k = nullptr;
-		PhySurfaceEntry *e = nullptr;
-		while (i.next(k,e)) {
-			if ((now - e->ts) < ZT_SELFAWARENESS_ENTRY_TIMEOUT)
-				++counts[e->mySurface];
+		for(FlatMap<PhySurfaceKey,PhySurfaceEntry>::const_iterator i(_phy.begin());i!=_phy.end();++i) {
+			if ((now - i->second.ts) < ZT_SELFAWARENESS_ENTRY_TIMEOUT)
+				++counts[i->second.mySurface];
 		}
 	}
 
-	Hashtable<InetAddress,unsigned long>::Iterator i(counts);
-	InetAddress *k = nullptr;
-	unsigned long *c = nullptr;
-	while (i.next(k,c))
-		r.insert(std::pair<unsigned long,InetAddress>(*c,*k));
+	for(FlatMap<InetAddress,unsigned long,256>::iterator i(counts.begin());i!=counts.end();++i)
+		r.insert(std::pair<unsigned long,InetAddress>(i->second,i->first));
 
 	return r;
 }

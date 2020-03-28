@@ -598,7 +598,7 @@ Network::~Network()
 		// This is done in Node::leave() so we can pass tPtr properly
 		//RR->node->configureVirtualNetworkPort((void *)0,_id,&_uPtr,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY,&ctmp);
 	} else {
-		RR->node->configureVirtualNetworkPort((void *)0,_id,&_uPtr,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN,&ctmp);
+		RR->node->configureVirtualNetworkPort(nullptr,_id,&_uPtr,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN,&ctmp);
 	}
 }
 
@@ -626,7 +626,7 @@ bool Network::filterOutgoingPacket(
 	Mutex::Lock l1(_memberships_l);
 	Mutex::Lock l2(_config_l);
 
-	Membership *const membership = (ztDest) ? _memberships.get(ztDest) : (Membership *)0;
+	Membership *const membership = (ztDest) ? _memberships.get(ztDest) : nullptr;
 
 	switch(_doZtFilter(RR,rrl,_config,membership,false,ztSource,ztFinalDest,macSource,macDest,frameData,frameLen,etherType,vlanId,_config.rules,_config.ruleCount,cc,ccLength,ccWatch,qosBucket)) {
 
@@ -745,7 +745,7 @@ int Network::filterIncomingPacket(
 	Address cc;
 	unsigned int ccLength = 0;
 	bool ccWatch = false;
-	const Capability *c = (Capability *)0;
+	const Capability *c = nullptr;
 
 	uint8_t qosBucket = 255; // For incoming packets this is a dummy value
 
@@ -1099,13 +1099,8 @@ void Network::doPeriodicTasks(void *tPtr,const int64_t now)
 	{
 		Mutex::Lock l1(_memberships_l);
 
-		{
-			Address *a = nullptr;
-			Membership *m = nullptr;
-			Hashtable<Address,Membership>::Iterator i(_memberships);
-			while (i.next(a,m))
-				m->clean(now,_config);
-		}
+		for(FlatMap<Address,Membership>::iterator i(_memberships.begin());i!=_memberships.end();++i)
+			i->second.clean(now,_config);
 
 		{
 			Mutex::Lock l2(_myMulticastGroups_l);
@@ -1133,32 +1128,24 @@ void Network::learnBridgeRoute(const MAC &mac,const Address &addr)
 
 	// Anti-DOS circuit breaker to prevent nodes from spamming us with absurd numbers of bridge routes
 	while (_remoteBridgeRoutes.size() > ZT_MAX_BRIDGE_ROUTES) {
-		Hashtable< Address,unsigned long > counts;
+		FlatMap< Address,unsigned long > counts;
 		Address maxAddr;
 		unsigned long maxCount = 0;
 
-		MAC *m = nullptr;
-		Address *a = nullptr;
-
 		// Find the address responsible for the most entries
-		{
-			Hashtable<MAC,Address>::Iterator i(_remoteBridgeRoutes);
-			while (i.next(m,a)) {
-				const unsigned long c = ++counts[*a];
-				if (c > maxCount) {
-					maxCount = c;
-					maxAddr = *a;
-				}
+		for(FlatMap<MAC,Address>::iterator i(_remoteBridgeRoutes.begin());i!=_remoteBridgeRoutes.end();++i) {
+			const unsigned long c = ++counts[i->second];
+			if (c > maxCount) {
+				maxCount = c;
+				maxAddr = i->second;
 			}
 		}
 
 		// Kill this address from our table, since it's most likely spamming us
-		{
-			Hashtable<MAC,Address>::Iterator i(_remoteBridgeRoutes);
-			while (i.next(m,a)) {
-				if (*a == maxAddr)
-					_remoteBridgeRoutes.erase(*m);
-			}
+		for(FlatMap<MAC,Address>::iterator i(_remoteBridgeRoutes.begin());i!=_remoteBridgeRoutes.end();) {
+			if (i->second == maxAddr)
+				_remoteBridgeRoutes.erase(i++);
+			else ++i;
 		}
 	}
 }
@@ -1198,24 +1185,24 @@ Membership::AddCredentialResult Network::addCredential(void *tPtr,const Identity
 	const Membership::AddCredentialResult result = m.addCredential(RR,tPtr,sourcePeerIdentity,_config,rev);
 
 	if ((result == Membership::ADD_ACCEPTED_NEW)&&(rev.fastPropagate())) {
-		Address *a = nullptr;
-		Membership *m = nullptr;
-		Hashtable<Address,Membership>::Iterator i(_memberships);
-		while (i.next(a,m)) {
-			if ((*a != sourcePeerIdentity.address())&&(*a != rev.signer())) {
-				// TODO
-				/*
-				Packet outp(*a,RR->identity.address(),Packet::VERB_NETWORK_CREDENTIALS);
-				outp.append((uint8_t)0x00); // no COM
-				outp.append((uint16_t)0); // no capabilities
-				outp.append((uint16_t)0); // no tags
-				outp.append((uint16_t)1); // one revocation!
-				rev.serialize(outp);
-				outp.append((uint16_t)0); // no certificates of ownership
-				RR->sw->send(tPtr,outp,true);
-				*/
-			}
-		}
+		// TODO
+		/*
+			Address *a = nullptr;
+			Membership *m = nullptr;
+			Hashtable<Address,Membership>::Iterator i(_memberships);
+			while (i.next(a,m)) {
+				if ((*a != sourcePeerIdentity.address())&&(*a != rev.signer())) {
+					Packet outp(*a,RR->identity.address(),Packet::VERB_NETWORK_CREDENTIALS);
+					outp.append((uint8_t)0x00); // no COM
+					outp.append((uint16_t)0); // no capabilities
+					outp.append((uint16_t)0); // no tags
+					outp.append((uint16_t)1); // one revocation!
+					rev.serialize(outp);
+					outp.append((uint16_t)0); // no certificates of ownership
+					RR->sw->send(tPtr,outp,true);
+						}
+					}
+		*/
 	}
 
 	return result;
@@ -1493,21 +1480,21 @@ void Network::_announceMulticastGroups(void *tPtr,bool force)
 	// Assumes _myMulticastGroups_l and _memberships_l are locked
 	const std::vector<MulticastGroup> groups(_allMulticastGroups());
 	_announceMulticastGroupsTo(tPtr,controller(),groups);
-	{
-		Address *a = nullptr;
-		Membership *m = nullptr;
-		Hashtable<Address,Membership>::Iterator i(_memberships);
-		while (i.next(a,m)) {
-			// TODO
-			/*
-			bool announce = m->multicastLikeGate(now); // force this to be called even if 'force' is true since it updates last push time
-			if ((!announce)&&(force))
-				announce = true;
-			if ((announce)&&(m->isAllowedOnNetwork(_config)))
-				_announceMulticastGroupsTo(tPtr,*a,groups);
-			*/
+
+		// TODO
+		/*
+	Address *a = nullptr;
+	Membership *m = nullptr;
+	Hashtable<Address,Membership>::Iterator i(_memberships);
+	while (i.next(a,m)) {
+		bool announce = m->multicastLikeGate(now); // force this to be called even if 'force' is true since it updates last push time
+		if ((!announce)&&(force))
+			announce = true;
+		if ((announce)&&(m->isAllowedOnNetwork(_config)))
+			_announceMulticastGroupsTo(tPtr,*a,groups);
 		}
-	}
+		*/
+
 }
 
 void Network::_announceMulticastGroupsTo(void *tPtr,const Address &peer,const std::vector<MulticastGroup> &allMulticastGroups)
@@ -1542,7 +1529,8 @@ std::vector<MulticastGroup> Network::_allMulticastGroups() const
 	std::vector<MulticastGroup> mgs;
 	mgs.reserve(_myMulticastGroups.size() + _multicastGroupsBehindMe.size() + 1);
 	mgs.insert(mgs.end(),_myMulticastGroups.begin(),_myMulticastGroups.end());
-	_multicastGroupsBehindMe.appendKeys(mgs);
+	for(FlatMap< MulticastGroup,uint64_t >::const_iterator i(_multicastGroupsBehindMe.begin());i!=_multicastGroupsBehindMe.end();++i)
+		mgs.push_back(i->first);
 	if ((_config)&&(_config.enableBroadcast()))
 		mgs.push_back(Network::BROADCAST);
 	std::sort(mgs.begin(),mgs.end());

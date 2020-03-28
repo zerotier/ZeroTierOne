@@ -77,7 +77,7 @@ void armor(Buf &pkt,int packetSize,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH],
 			ph.mac = mac[0];
 		} break;
 
-		case ZT_PROTO_CIPHER_SUITE__AES_GCM_NRH: {
+		case ZT_PROTO_CIPHER_SUITE__AES_GMAC_SIV: {
 		} break;
 	}
 }

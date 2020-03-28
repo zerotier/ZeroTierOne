@@ -440,14 +440,11 @@ void VL1::_sendPendingWhois(void *const tPtr,const int64_t now)
 	std::vector<Address> toSend;
 	{
 		Mutex::Lock wl(_whoisQueue_l);
-		Hashtable<Address,_WhoisQueueItem>::Iterator wi(_whoisQueue);
-		Address *a = nullptr;
-		_WhoisQueueItem *wq = nullptr;
-		while (wi.next(a,wq)) {
-			if ((now - wq->lastRetry) >= ZT_WHOIS_RETRY_DELAY) {
-				wq->lastRetry = now;
-				++wq->retries;
-				toSend.push_back(*a);
+		for(std::map<Address,_WhoisQueueItem>::iterator wi(_whoisQueue.begin());wi!=_whoisQueue.end();++wi) {
+			if ((now - wi->second.lastRetry) >= ZT_WHOIS_RETRY_DELAY) {
+				wi->second.lastRetry = now;
+				++wi->second.retries;
+				toSend.push_back(wi->first);
 			}
 		}
 	}

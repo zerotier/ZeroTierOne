@@ -18,7 +18,6 @@
 #include "Buf.hpp"
 #include "Address.hpp"
 #include "Protocol.hpp"
-#include "Hashtable.hpp"
 #include "Mutex.hpp"
 #include "FCV.hpp"
 

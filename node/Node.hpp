@@ -23,8 +23,8 @@
 #include "Path.hpp"
 #include "Salsa20.hpp"
 #include "NetworkController.hpp"
-#include "Hashtable.hpp"
 #include "Buf.hpp"
+#include "FlatMap.hpp"
 
 #include <cstdio>
 #include <cstdlib>
@@ -172,7 +172,10 @@ public:
 	ZT_INLINE SharedPtr<Network> network(uint64_t nwid) const noexcept
 	{
 		RWMutex::RLock l(_networks_m);
-		return _networks[(unsigned long)((nwid + (nwid >> 32U)) & _networksMask)];
+		const SharedPtr<Network> *const n = _networks.get(nwid);
+		if (n)
+			return *n;
+		return SharedPtr<Network>();
 	}
 
 	/**
@@ -342,7 +345,7 @@ private:
 	// in each peer if that peer object is still held in memory. Calling alarm() unnecessarily on a peer
 	// is harmless. This just exists as an optimization to prevent having to iterate through all peers
 	// on every processBackgroundTasks call. A simple map<> is used here because there are usually only
-	// a few of these, if any, and it's slightly faster and lower memory in that case than a Hashtable.
+	// a few of these, if any.
 	std::map<Address,int64_t> _peerAlarms;
 	RWMutex _peerAlarms_l;
 
@@ -355,17 +358,16 @@ private:
 	{
 		uint64_t nwid,address;
 		ZT_INLINE _LocalControllerAuth(const uint64_t nwid_,const Address &address_)  noexcept: nwid(nwid_),address(address_.toInt()) {}
-		ZT_INLINE unsigned long hashCode() const noexcept { return (unsigned long)(nwid ^ address); }
+		ZT_INLINE unsigned long hashCode() const noexcept { return (unsigned long)(nwid + address); }
 		ZT_INLINE bool operator==(const _LocalControllerAuth &a) const noexcept { return ((a.nwid == nwid) && (a.address == address)); }
 		ZT_INLINE bool operator!=(const _LocalControllerAuth &a) const noexcept { return ((a.nwid != nwid) || (a.address != address)); }
 	};
-	Hashtable< _LocalControllerAuth,int64_t > _localControllerAuthorizations;
+	FlatMap<_LocalControllerAuth,int64_t> _localControllerAuthorizations;
 	Mutex _localControllerAuthorizations_m;
 
 	// Networks are stored in a flat hash table that is resized on any network ID collision. This makes
 	// network lookup by network ID a few bitwise ops and an array index.
-	std::vector< SharedPtr<Network> > _networks;
-	uint64_t _networksMask;
+	FlatMap< uint64_t,SharedPtr<Network> > _networks;
 	RWMutex _networks_m;
 
 	// These are local interface addresses that have been configured via the API

@@ -82,7 +82,6 @@ Node::Node(void *uPtr,void *tPtr,const struct ZT_Node_Callbacks *callbacks,int64
 	_cb(*callbacks),
 	_uPtr(uPtr),
 	_networks(),
-	_networksMask(15),
 	_now(now),
 	_lastPing(0),
 	_lastHousekeepingRun(0),
@@ -91,8 +90,6 @@ Node::Node(void *uPtr,void *tPtr,const struct ZT_Node_Callbacks *callbacks,int64
 	_natMustDie(true),
 	_online(false)
 {
-	_networks.resize(16); // _networksMask + 1, must be power of two
-
 	uint64_t idtmp[2]; idtmp[0] = 0; idtmp[1] = 0;
 	std::vector<uint8_t> data(stateObjectGet(tPtr,ZT_STATE_OBJECT_IDENTITY_SECRET,idtmp));
 	bool haveIdentity = false;
@@ -133,15 +130,9 @@ Node::Node(void *uPtr,void *tPtr,const struct ZT_Node_Callbacks *callbacks,int64
 
 Node::~Node()
 {
-	// Let go of all networks to leave them. Do it this way in case Network wants to
-	// do anything in its destructor that locks the _networks lock to avoid a deadlock.
-	std::vector< SharedPtr<Network> > networks;
-	{
-		RWMutex::Lock _l(_networks_m);
-		networks.swap(_networks);
-	}
-	networks.clear();
-
+	_networks_m.lock();
+	_networks_m.unlock();
+	_networks.clear();
 	_networks_m.lock();
 	_networks_m.unlock();
 
@@ -277,10 +268,8 @@ ZT_ResultCode Node::processBackgroundTasks(void *tPtr, int64_t now, volatile int
 		_lastHousekeepingRun = now;
 		{
 			RWMutex::RLock l(_networks_m);
-			for(std::vector< SharedPtr<Network> >::const_iterator i(_networks.begin());i!=_networks.end();++i) {
-				if ((*i))
-					(*i)->doPeriodicTasks(tPtr,now);
-			}
+			for(FlatMap< uint64_t,SharedPtr<Network> >::const_iterator i(_networks.begin());i!=_networks.end();++i)
+				i->second->doPeriodicTasks(tPtr,now);
 		}
 	}
 
@@ -292,13 +281,10 @@ ZT_ResultCode Node::processBackgroundTasks(void *tPtr, int64_t now, volatile int
 			// or trust nodes without doing an extra cert check.
 			{
 				_localControllerAuthorizations_m.lock();
-				Hashtable< _LocalControllerAuth,int64_t >::Iterator i(_localControllerAuthorizations);
-				_LocalControllerAuth *k = (_LocalControllerAuth *)0;
-				int64_t *v = (int64_t *)0;
-				while (i.next(k,v)) {
-					if ((*v - now) > (ZT_NETWORK_AUTOCONF_DELAY * 3)) {
-						_localControllerAuthorizations.erase(*k);
-					}
+				for(FlatMap<_LocalControllerAuth,int64_t>::iterator i(_localControllerAuthorizations.begin());i!=_localControllerAuthorizations.end();) {
+					if ((i->second - now) > (ZT_NETWORK_AUTOCONF_DELAY * 3))
+						_localControllerAuthorizations.erase(i++);
+					else ++i;
 				}
 				_localControllerAuthorizations_m.unlock();
 			}
@@ -349,72 +335,40 @@ ZT_ResultCode Node::processBackgroundTasks(void *tPtr, int64_t now, volatile int
 
 ZT_ResultCode Node::join(uint64_t nwid,const ZT_Fingerprint *controllerFingerprint,void *uptr,void *tptr)
 {
-	RWMutex::Lock l(_networks_m);
-
-	const uint64_t nwidHashed = nwid + (nwid >> 32U);
-	SharedPtr<Network> *nw = &(_networks[(unsigned long)(nwidHashed & _networksMask)]);
-
-	// Enlarge flat hash table of networks until all networks fit without collisions.
-	if (*nw) {
-		unsigned long newNetworksSize = (unsigned long)_networks.size();
-		std::vector< SharedPtr<Network> > newNetworks;
-		uint64_t newNetworksMask,id;
-		std::vector< SharedPtr<Network> >::const_iterator i;
-
-try_larger_network_hashtable:
-		newNetworksSize <<= 1U; // must remain a power of two
-		newNetworks.clear();
-		newNetworks.resize(newNetworksSize);
-		newNetworksMask = (uint64_t)(newNetworksSize - 1);
-
-		for(i=_networks.begin();i!=_networks.end();++i) {
-			id = (*i)->id();
-			nw = &(newNetworks[(unsigned long)((id + (id >> 32U)) & newNetworksMask)]);
-			if (*nw)
-				goto try_larger_network_hashtable;
-			*nw = *i;
-		}
-		if (newNetworks[(unsigned long)(nwidHashed & newNetworksMask)])
-			goto try_larger_network_hashtable;
-
-		_networks.swap(newNetworks);
-		_networksMask = newNetworksMask;
-		nw = &(_networks[(unsigned long)(nwidHashed & newNetworksMask)]);
-	}
-
 	Fingerprint fp;
 	if (controllerFingerprint)
 		Utils::copy<sizeof(ZT_Fingerprint)>(fp.apiFingerprint(),controllerFingerprint);
-	nw->set(new Network(RR,tptr,nwid,fp,uptr,(const NetworkConfig *)0));
+
+	RWMutex::Lock l(_networks_m);
+	SharedPtr<Network> &nw = _networks[nwid];
+	if (nw)
+		return ZT_RESULT_OK;
+	nw.set(new Network(RR,tptr,nwid,fp,uptr,nullptr));
 
 	return ZT_RESULT_OK;
 }
 
 ZT_ResultCode Node::leave(uint64_t nwid,void **uptr,void *tptr)
 {
-	const uint64_t nwidHashed = nwid + (nwid >> 32U);
-
 	ZT_VirtualNetworkConfig ctmp;
-	void **nUserPtr = (void **)0;
-	{
-		RWMutex::RLock l(_networks_m);
-		SharedPtr<Network> &nw = _networks[(unsigned long)(nwidHashed & _networksMask)];
-		if (!nw)
-			return ZT_RESULT_OK;
-		if (uptr)
-			*uptr = nw->userPtr();
-		nw->externalConfig(&ctmp);
-		nw->destroy();
-		nUserPtr = nw->userPtr();
-	}
 
-	if (nUserPtr)
-		RR->node->configureVirtualNetworkPort(tptr,nwid,nUserPtr,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY,&ctmp);
-
-	{
-		RWMutex::Lock _l(_networks_m);
-		_networks[(unsigned long)(nwidHashed & _networksMask)].zero();
+	_networks_m.lock();
+	FlatMap< uint64_t,SharedPtr<Network> >::iterator nwi(_networks.find(nwid));
+	if (nwi == _networks.end()) {
+		_networks_m.unlock();
+		return ZT_RESULT_OK;
 	}
+	SharedPtr<Network> nw(nwi->second);
+	_networks.erase(nwi);
+	_networks_m.unlock();
+
+	if (uptr)
+		*uptr = *nw->userPtr();
+	nw->externalConfig(&ctmp);
+	nw->destroy();
+	nw.zero();
+
+	RR->node->configureVirtualNetworkPort(tptr,nwid,uptr,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY,&ctmp);
 
 	uint64_t tmp[2];
 	tmp[0] = nwid; tmp[1] = 0;
@@ -539,30 +493,22 @@ ZT_VirtualNetworkConfig *Node::networkConfig(uint64_t nwid) const
 		nw->externalConfig(nc);
 		return nc;
 	}
-	return (ZT_VirtualNetworkConfig *)0;
+	return nullptr;
 }
 
 ZT_VirtualNetworkList *Node::networks() const
 {
 	RWMutex::RLock l(_networks_m);
 
-	unsigned long networkCount = 0;
-	for(std::vector< SharedPtr<Network> >::const_iterator i(_networks.begin());i!=_networks.end();++i) {
-		if ((*i))
-			++networkCount;
-	}
-
-	char *const buf = (char *)::malloc(sizeof(ZT_VirtualNetworkList) + (sizeof(ZT_VirtualNetworkConfig) * networkCount));
+	char *const buf = (char *)::malloc(sizeof(ZT_VirtualNetworkList) + (sizeof(ZT_VirtualNetworkConfig) * _networks.size()));
 	if (!buf)
 		return (ZT_VirtualNetworkList *)0;
 	ZT_VirtualNetworkList *nl = (ZT_VirtualNetworkList *)buf;
 	nl->networks = (ZT_VirtualNetworkConfig *)(buf + sizeof(ZT_VirtualNetworkList));
 
 	nl->networkCount = 0;
-	for(std::vector< SharedPtr<Network> >::const_iterator i(_networks.begin());i!=_networks.end();++i) {
-		if ((*i))
-			(*i)->externalConfig(&(nl->networks[nl->networkCount++]));
-	}
+	for(FlatMap< uint64_t,SharedPtr<Network> >::const_iterator i(_networks.begin());i!=_networks.end();++i)
+		i->second->externalConfig(&(nl->networks[nl->networkCount++]));
 
 	return nl;
 }
@@ -650,12 +596,10 @@ bool Node::shouldUsePathForZeroTierTraffic(void *tPtr,const Identity &id,const i
 {
 	{
 		RWMutex::RLock l(_networks_m);
-		for (std::vector<SharedPtr<Network> >::iterator i(_networks.begin()); i != _networks.end(); ++i) {
-			if ((*i)) {
-				for (unsigned int k = 0,j = (*i)->config().staticIpCount; k < j; ++k) {
-					if ((*i)->config().staticIps[k].containsAddress(remoteAddress))
-						return false;
-				}
+		for (FlatMap< uint64_t,SharedPtr<Network> >::iterator i(_networks.begin()); i != _networks.end(); ++i) {
+			for (unsigned int k = 0,j = i->second->config().staticIpCount; k < j; ++k) {
+				if (i->second->config().staticIps[k].containsAddress(remoteAddress))
+					return false;
 			}
 		}
 	}

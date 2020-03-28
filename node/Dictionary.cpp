@@ -44,8 +44,8 @@ std::vector<uint8_t> &Dictionary::operator[](const char *k)
 const std::vector<uint8_t> &Dictionary::operator[](const char *k) const
 {
 	static const std::vector<uint8_t> emptyEntry;
-	const std::vector<uint8_t> *const e = _t.get(_toKey(k));
-	return (e) ? *e : emptyEntry;
+	std::map< uint64_t,std::vector<uint8_t> >::const_iterator e(_t.find(_toKey(k)));
+	return (e == _t.end()) ? emptyEntry : e->second;
 }
 
 void Dictionary::add(const char *k,bool v)
@@ -170,11 +170,8 @@ void Dictionary::encode(std::vector<uint8_t> &out) const
 
 	out.clear();
 
-	Hashtable< uint64_t,std::vector<uint8_t> >::Iterator ti(const_cast<Dictionary *>(this)->_t);
-	uint64_t *kk = nullptr;
-	std::vector<uint8_t> *vv = nullptr;
-	while (ti.next(kk,vv)) {
-		str[0] = *kk;
+	for(std::map< uint64_t,std::vector<uint8_t> >::const_iterator ti(_t.begin());ti!=_t.end();++ti) {
+		str[0] = ti->first;
 		const char *k = (const char *)str;
 
 		for(;;) {
@@ -186,7 +183,7 @@ void Dictionary::encode(std::vector<uint8_t> &out) const
 
 		out.push_back(61); // =
 
-		for(std::vector<uint8_t>::const_iterator i(vv->begin());i!=vv->end();++i) {
+		for(std::vector<uint8_t>::const_iterator i(ti->second.begin());i!=ti->second.end();++i) {
 			uint8_t c = *i;
 			switch(c) {
 				case 0:

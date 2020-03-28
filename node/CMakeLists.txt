@@ -17,7 +17,7 @@ set(core_headers
 	Expect.hpp
 	FCV.hpp
 	Fingerprint.hpp
-	Hashtable.hpp
+	FlatMap.hpp
 	Identity.hpp
 	InetAddress.hpp
 	Locator.hpp

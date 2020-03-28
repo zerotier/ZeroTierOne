@@ -30,7 +30,6 @@
 #include "Capability.hpp"
 #include "Tag.hpp"
 #include "Dictionary.hpp"
-#include "Hashtable.hpp"
 #include "Identity.hpp"
 #include "Utils.hpp"
 #include "Trace.hpp"

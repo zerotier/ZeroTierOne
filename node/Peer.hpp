@@ -23,7 +23,6 @@
 #include "Identity.hpp"
 #include "InetAddress.hpp"
 #include "SharedPtr.hpp"
-#include "Hashtable.hpp"
 #include "Mutex.hpp"
 #include "Endpoint.hpp"
 #include "Locator.hpp"

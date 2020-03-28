@@ -36,11 +36,7 @@ struct _RootSortComparisonOperator
 
 Topology::Topology(const RuntimeEnvironment *renv,void *tPtr) :
 	RR(renv),
-	_numConfiguredPhysicalPaths(0),
-	_peers(256),
-	_peersByIncomingProbe(256),
-	_peersByIdentityHash(256),
-	_paths(1024)
+	_numConfiguredPhysicalPaths(0)
 {
 	uint64_t idtmp[2]; idtmp[0] = 0; idtmp[1] = 0;
 	std::vector<uint8_t> data(RR->node->stateObjectGet(tPtr,ZT_STATE_OBJECT_ROOTS,idtmp));
@@ -103,11 +99,8 @@ void Topology::getAllPeers(std::vector< SharedPtr<Peer> > &allPeers) const
 	RWMutex::RLock l(_peers_l);
 	allPeers.clear();
 	allPeers.reserve(_peers.size());
-	Hashtable< Address,SharedPtr<Peer> >::Iterator i(*(const_cast<Hashtable< Address,SharedPtr<Peer> > *>(&_peers)));
-	Address *a = nullptr;
-	SharedPtr<Peer> *p = nullptr;
-	while (i.next(a,p))
-		allPeers.push_back(*p);
+	for(FlatMap< Address,SharedPtr<Peer> >::const_iterator i(_peers.begin());i!=_peers.end();++i)
+		allPeers.push_back(i->second);
 }
 
 void Topology::setPhysicalPathConfiguration(const struct sockaddr_storage *pathNetwork,const ZT_PhysicalPathConfiguration *pathConfig)
@@ -205,26 +198,21 @@ void Topology::doPeriodicTasks(void *tPtr,const int64_t now)
 {
 	{
 		RWMutex::Lock l1(_peers_l);
-		Hashtable< Address,SharedPtr<Peer> >::Iterator i(_peers);
-		Address *a = nullptr;
-		SharedPtr<Peer> *p = nullptr;
-		while (i.next(a,p)) {
-			if ( (!(*p)->alive(now)) && (_roots.count((*p)->identity()) == 0) ) {
-				(*p)->save(tPtr);
-				_peersByIncomingProbe.erase((*p)->incomingProbe());
-				_peersByIdentityHash.erase((*p)->identity().fingerprint());
-				_peers.erase(*a);
-			}
+		for(FlatMap< Address,SharedPtr<Peer> >::iterator i(_peers.begin());i!=_peers.end();) {
+			if ( (!i->second->alive(now)) && (_roots.count(i->second->identity()) == 0) ) {
+				i->second->save(tPtr);
+				_peersByIncomingProbe.erase(i->second->incomingProbe());
+				_peersByIdentityHash.erase(i->second->identity().fingerprint());
+				_peers.erase(i++);
+			} else ++i;
 		}
 	}
 	{
 		RWMutex::Lock l1(_paths_l);
-		Hashtable< uint64_t,SharedPtr<Path> >::Iterator i(_paths);
-		uint64_t *k = nullptr;
-		SharedPtr<Path> *p = nullptr;
-		while (i.next(k,p)) {
-			if ((p->references() <= 1)&&(!(*p)->alive(now)))
-				_paths.erase(*k);
+		for(FlatMap< uint64_t,SharedPtr<Path> >::iterator i(_paths.begin());i!=_paths.end();) {
+			if ((i->second.references() <= 1)&&(!i->second->alive(now)))
+				_paths.erase(i++);
+			else ++i;
 		}
 	}
 }
@@ -232,11 +220,8 @@ void Topology::doPeriodicTasks(void *tPtr,const int64_t now)
 void Topology::saveAll(void *tPtr)
 {
 	RWMutex::RLock l(_peers_l);
-	Hashtable< Address,SharedPtr<Peer> >::Iterator i(_peers);
-	Address *a = nullptr;
-	SharedPtr<Peer> *p = nullptr;
-	while (i.next(a,p))
-		(*p)->save(tPtr);
+	for(FlatMap< Address,SharedPtr<Peer> >::iterator i(_peers.begin());i!=_peers.end();++i)
+		i->second->save(tPtr);
 }
 
 void Topology::_loadCached(void *tPtr,const Address &zta,SharedPtr<Peer> &peer)

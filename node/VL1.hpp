@@ -19,10 +19,10 @@
 #include "Buf.hpp"
 #include "Address.hpp"
 #include "Protocol.hpp"
-#include "Hashtable.hpp"
 #include "Mutex.hpp"
 #include "FCV.hpp"
 
+#include <map>
 #include <vector>
 
 namespace ZeroTier {
@@ -89,7 +89,7 @@ private:
 
 	Defragmenter<ZT_MAX_PACKET_FRAGMENTS> _inputPacketAssembler;
 
-	Hashtable<Address,_WhoisQueueItem> _whoisQueue;
+	std::map<Address,_WhoisQueueItem> _whoisQueue;
 	Mutex _whoisQueue_l;
 };
 
