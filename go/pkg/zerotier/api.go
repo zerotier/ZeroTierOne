@@ -456,11 +456,15 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 			if apiReadObj(out, req, &nw) == nil {
 				n := node.GetNetwork(nw.ID)
 				if n == nil {
-					n, err := node.Join(nw.ID, nw.Settings, nil)
-					if err != nil {
-						_ = apiSendObj(out, req, http.StatusBadRequest, &APIErr{"only individual networks can be added or modified with POST/PUT"})
+					if nw.ControllerFingerprint != nil && nw.ControllerFingerprint.Address != nw.ID.Controller() {
+						_ = apiSendObj(out, req, http.StatusBadRequest, &APIErr{"fingerprint's address does not match what should be the controller's address"})
 					} else {
-						_ = apiSendObj(out, req, http.StatusOK, apiNetworkFromNetwork(n))
+						n, err := node.Join(nw.ID, nw.ControllerFingerprint, nw.Settings, nil)
+						if err != nil {
+							_ = apiSendObj(out, req, http.StatusBadRequest, &APIErr{"only individual networks can be added or modified with POST/PUT"})
+						} else {
+							_ = apiSendObj(out, req, http.StatusOK, apiNetworkFromNetwork(n))
+						}
 					}
 				} else {
 					if nw.Settings != nil {

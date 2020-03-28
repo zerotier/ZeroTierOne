@@ -43,6 +43,11 @@ func NewNetworkIDFromBytes(b []byte) (NetworkID, error) {
 	return NetworkID(binary.BigEndian.Uint64(b)), nil
 }
 
+// Controller gets the Address of this network's controller.
+func (n NetworkID) Controller() Address {
+	return Address(uint64(n) >> 24)
+}
+
 // String returns this network ID's 16-digit hex identifier
 func (n NetworkID) String() string {
 	return fmt.Sprintf("%.16x", uint64(n))
