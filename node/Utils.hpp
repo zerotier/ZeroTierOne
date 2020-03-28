@@ -593,76 +593,55 @@ static ZT_INLINE void storeLittleEndian(void *const p,const I i) noexcept
 template<unsigned int L>
 static ZT_INLINE void copy(void *const dest,const void *const src) noexcept
 {
-#ifdef ZT_NO_UNALIGNED_ACCESS
-	if ((((uintptr_t)dest | (uintptr_t)src) & (sizeof(uintptr_t) - 1)) != 0) {
-		memcpy(dest,src,L);
-		return;
-	}
-#endif
-
-	uint8_t *d = reinterpret_cast<uint8_t *>(dest);
-	const uint8_t *s = reinterpret_cast<const uint8_t *>(src);
-
 #ifdef ZT_ARCH_X64
-	for(unsigned int i=0;i<(L / 64U);++i) {
+	uint8_t *volatile d = reinterpret_cast<uint8_t *>(dest);
+	const uint8_t *s = reinterpret_cast<const uint8_t *>(src);
+	for(unsigned int i=0;i<(L >> 6U);++i) {
 		__m128i x0 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(s));
-		__m128i x1 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(s) + 1);
-		__m128i x2 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(s) + 2);
-		__m128i x3 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(s) + 3);
-		_mm_storeu_si128(reinterpret_cast<__m128i *>(d),x0);
-		_mm_storeu_si128(reinterpret_cast<__m128i *>(d) + 1,x1);
-		_mm_storeu_si128(reinterpret_cast<__m128i *>(d) + 2,x2);
-		_mm_storeu_si128(reinterpret_cast<__m128i *>(d) + 3,x3);
-		d += 64;
+		__m128i x1 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(s + 16));
+		__m128i x2 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(s + 32));
+		__m128i x3 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(s + 48));
 		s += 64;
-	}
-	if ((L & 63U) >= 32U) {
-		__m128i x0 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(s));
-		__m128i x1 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(s) + 1);
 		_mm_storeu_si128(reinterpret_cast<__m128i *>(d),x0);
-		_mm_storeu_si128(reinterpret_cast<__m128i *>(d) + 1,x1);
-		d += 32;
-		s += 32;
+		_mm_storeu_si128(reinterpret_cast<__m128i *>(d + 16),x1);
+		_mm_storeu_si128(reinterpret_cast<__m128i *>(d + 32),x2);
+		_mm_storeu_si128(reinterpret_cast<__m128i *>(d + 48),x3);
+		d += 64;
 	}
-	if ((L & 31U) >= 16U) {
+	if ((L & 32U) != 0) {
 		__m128i x0 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(s));
+		__m128i x1 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(s + 16));
+		s += 32;
+		_mm_storeu_si128(reinterpret_cast<__m128i *>(d),x0);
+		_mm_storeu_si128(reinterpret_cast<__m128i *>(d + 16),x1);
+		d += 32;
+	}
+	if ((L & 16U) != 0) {
+		__m128i x0 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(s));
+		s += 16;
 		_mm_storeu_si128(reinterpret_cast<__m128i *>(d),x0);
 		d += 16;
-		s += 16;
 	}
-	if ((L & 15U) >= 8U) {
-		*reinterpret_cast<uint64_t *>(d) = *reinterpret_cast<const uint64_t *>(s);
-		d += 8;
+	if ((L & 8U) != 0) {
+		*reinterpret_cast<volatile uint64_t *>(d) = *reinterpret_cast<const uint64_t *>(s);
 		s += 8;
+		d += 8;
 	}
-	if ((L & 7U) >= 4U) {
-		*reinterpret_cast<uint32_t *>(d) = *reinterpret_cast<const uint32_t *>(s);
-		d += 4;
+	if ((L & 4U) != 0) {
+		*reinterpret_cast<volatile uint32_t *>(d) = *reinterpret_cast<const uint32_t *>(s);
 		s += 4;
+		d += 4;
 	}
-	if ((L & 3U) >= 2U) {
-		*reinterpret_cast<uint16_t *>(d) = *reinterpret_cast<const uint16_t *>(s);
-		d += 2;
+	if ((L & 2U) != 0) {
+		*reinterpret_cast<volatile uint16_t *>(d) = *reinterpret_cast<const uint16_t *>(s);
 		s += 2;
+		d += 2;
 	}
-	if ((L & 1U) != 0U) {
+	if ((L & 1U) != 0) {
 		*d = *s;
 	}
 #else
-	for(unsigned int i=0;i<(L / (sizeof(uintptr_t) * 4));++i) {
-		uintptr_t x0 = reinterpret_cast<const uintptr_t *>(s)[0];
-		uintptr_t x1 = reinterpret_cast<const uintptr_t *>(s)[1];
-		uintptr_t x2 = reinterpret_cast<const uintptr_t *>(s)[2];
-		uintptr_t x3 = reinterpret_cast<const uintptr_t *>(s)[3];
-		reinterpret_cast<uintptr_t *>(d)[0] = x0;
-		reinterpret_cast<uintptr_t *>(d)[1] = x1;
-		reinterpret_cast<uintptr_t *>(d)[2] = x2;
-		reinterpret_cast<uintptr_t *>(d)[3] = x3;
-		s += (sizeof(uintptr_t) * 4);
-		d += (sizeof(uintptr_t) * 4);
-	}
-	for(unsigned int i=0;i<(L & ((sizeof(uintptr_t) * 4) - 1));++i)
-		d[i] = s[i];
+	memcpy(dest,src,L);
 #endif
 }
 
@@ -687,7 +666,43 @@ static ZT_INLINE void copy(void *const dest,const void *const src,unsigned int l
 template<unsigned int L>
 static ZT_INLINE void zero(void *const dest) noexcept
 {
+#ifdef ZT_ARCH_X64
+	uint8_t *volatile d = reinterpret_cast<uint8_t *>(dest);
+	__m128i z = _mm_setzero_si128();
+	for(unsigned int i=0;i<(L >> 6U);++i) {
+		_mm_storeu_si128(reinterpret_cast<__m128i *>(d),z);
+		_mm_storeu_si128(reinterpret_cast<__m128i *>(d + 16),z);
+		_mm_storeu_si128(reinterpret_cast<__m128i *>(d + 32),z);
+		_mm_storeu_si128(reinterpret_cast<__m128i *>(d + 48),z);
+		d += 64;
+	}
+	if ((L & 32U) != 0) {
+		_mm_storeu_si128(reinterpret_cast<__m128i *>(d),z);
+		_mm_storeu_si128(reinterpret_cast<__m128i *>(d + 16),z);
+		d += 32;
+	}
+	if ((L & 16U) != 0) {
+		_mm_storeu_si128(reinterpret_cast<__m128i *>(d),z);
+		d += 16;
+	}
+	if ((L & 8U) != 0) {
+		*reinterpret_cast<volatile uint64_t *>(d) = 0;
+		d += 8;
+	}
+	if ((L & 4U) != 0) {
+		*reinterpret_cast<volatile uint32_t *>(d) = 0;
+		d += 4;
+	}
+	if ((L & 2U) != 0) {
+		*reinterpret_cast<volatile uint16_t *>(d) = 0;
+		d += 2;
+	}
+	if ((L & 1U) != 0) {
+		*d = 0;
+	}
+#else
 	memset(dest,0,L);
+#endif
 }
 
 /**

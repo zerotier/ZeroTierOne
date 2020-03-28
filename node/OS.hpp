@@ -20,6 +20,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #if defined(_WIN32) || defined(_WIN64)
 #ifdef _MSC_VER

@@ -78,6 +78,7 @@ else(WIN32)
 			-Wall
 			-Wno-deprecated
 			-Wno-unused-function
+			-Wno-format
 			$<$<CONFIG:Debug>:-g>
 			$<$<CONFIG:DEBUG>:-O0>
 			$<$<CONFIG:RELEASE>:-O3>
