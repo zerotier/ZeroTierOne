@@ -21,54 +21,52 @@ namespace ZeroTier {
 bool Capability::sign(const Identity &from,const Address &to) noexcept
 {
 	uint8_t buf[ZT_CAPABILITY_MARSHAL_SIZE_MAX + 16];
-	try {
-		for(unsigned int i=0;((i<_maxCustodyChainLength)&&(i<ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH));++i) {
-			if (!(_custody[i].to)) {
-				_custody[i].to = to;
-				_custody[i].from = from.address();
-				_custody[i].signatureLength = from.sign(buf,(unsigned int)marshal(buf,true),_custody[i].signature,sizeof(_custody[i].signature));
-				return true;
-			}
-		}
-	} catch ( ... ) {}
-	return false;
+	_issuedTo = to;
+	_signedBy = from.address();
+	_signatureLength = from.sign(buf,(unsigned int)marshal(buf,true),_signature,sizeof(_signature));
+	return _signatureLength > 0;
 }
 
 int Capability::marshal(uint8_t data[ZT_CAPABILITY_MARSHAL_SIZE_MAX],const bool forSign) const noexcept
 {
 	int p = 0;
+
 	if (forSign) {
 		for(int k=0;k<8;++k)
 			data[p++] = 0x7f;
 	}
+
 	Utils::storeBigEndian<uint64_t>(data + p,_nwid); p += 8;
 	Utils::storeBigEndian<uint64_t>(data + p,(uint64_t)_ts); p += 8;
 	Utils::storeBigEndian<uint32_t>(data + p,_id); p += 4;
+
 	Utils::storeBigEndian<uint16_t>(data + p,(uint16_t)_ruleCount); p += 2;
-	p += Capability::marshalVirtualNetworkRules(data + 22,_rules,_ruleCount);
-	data[p++] = (uint8_t)_maxCustodyChainLength;
+	p += Capability::marshalVirtualNetworkRules(data + p,_rules,_ruleCount);
+
+	// LEGACY: older versions supported multiple records with this being a maximum custody
+	// chain length. This is deprecated so set the max chain length to one.
+	data[p++] = (uint8_t)1;
+
 	if (!forSign) {
-		for(unsigned int i=0;;++i) {
-			if ((i < _maxCustodyChainLength)&&(i < ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH)&&(_custody[i].to)) {
-				_custody[i].to.copyTo(data + p); p += ZT_ADDRESS_LENGTH;
-				_custody[i].from.copyTo(data + p); p += ZT_ADDRESS_LENGTH;
-				data[p++] = 1;
-				Utils::storeBigEndian<uint16_t>(data + p,(uint16_t)_custody[i].signatureLength); p += 2;
-				for(unsigned int k=0;k<_custody[i].signatureLength;++k)
-					data[p++] = _custody[i].signature[k];
-			} else {
-				for(int k=0;k<ZT_ADDRESS_LENGTH;++k)
-					data[p++] = 0;
-				break;
-			}
-		}
+		_issuedTo.copyTo(data + p); p += ZT_ADDRESS_LENGTH;
+		_signedBy.copyTo(data + 0); p += ZT_ADDRESS_LENGTH;
+		data[p++] = 1; // LEGACY: old versions require a reserved byte here
+		Utils::storeBigEndian<uint16_t>(data + p,(uint16_t)_signatureLength); p += 2;
+		Utils::copy(data + p,_signature,_signatureLength); p += (int)_signatureLength;
+
+		// LEGACY: older versions supported more than one record terminated by a zero address.
+		for(int k=0;k<ZT_ADDRESS_LENGTH;++k)
+			data[p++] = 0;
 	}
+
 	data[p++] = 0;
 	data[p++] = 0; // uint16_t size of additional fields, currently 0
+
 	if (forSign) {
 		for(int k=0;k<8;++k)
 			data[p++] = 0x7f;
 	}
+
 	return p;
 }
 
@@ -81,7 +79,7 @@ int Capability::unmarshal(const uint8_t *data,int len) noexcept
 	_ts = (int64_t)Utils::loadBigEndian<uint64_t>(data + 8);
 	_id = Utils::loadBigEndian<uint32_t>(data + 16);
 
-	const unsigned int rc = Utils::loadBigEndian<uint16_t>(data + 20);;
+	const unsigned int rc = Utils::loadBigEndian<uint16_t>(data + 20);
 	if (rc > ZT_MAX_CAPABILITY_RULES)
 		return -1;
 	const int rulesLen = unmarshalVirtualNetworkRules(data + 22,len - 22,_rules,_ruleCount,rc);
@@ -91,31 +89,37 @@ int Capability::unmarshal(const uint8_t *data,int len) noexcept
 
 	if (p >= len)
 		return -1;
-	_maxCustodyChainLength = data[p++];
+	++p; // LEGACY: skip old max record count
 
+	// LEGACY: since it was once supported to have multiple records, scan them all. Since
+	// this feature was never used, just set the signature and issued to and other related
+	// fields each time and we should only ever see one. If there's more than one and the
+	// last is not the controller, this credential will just fail validity check.
 	for(unsigned int i=0;;++i) {
 		if ((p + ZT_ADDRESS_LENGTH) > len)
 			return -1;
 		const Address to(data + p); p += ZT_ADDRESS_LENGTH;
-		if (!to) break;
-		if ((i >= _maxCustodyChainLength)||(i >= ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH))
-			return -1;
-		_custody[i].to = to;
+
+		if (!to)
+			break;
+
+		_issuedTo = to;
 		if ((p + ZT_ADDRESS_LENGTH) > len)
 			return -1;
-		_custody[i].from.setTo(data + p); p += ZT_ADDRESS_LENGTH + 1;
+		_signedBy.setTo(data + p); p += ZT_ADDRESS_LENGTH + 1; // LEGACY: +1 to skip reserved field
+
 		if ((p + 2) > len)
 			return -1;
-		const unsigned int sl = Utils::loadBigEndian<uint16_t>(data + p); p += 2;
-		_custody[i].signatureLength = sl;
-		if ((sl > sizeof(_custody[i].signature))||((p + (int)sl) > len))
+		_signatureLength = Utils::loadBigEndian<uint16_t>(data + p); p += 2;
+		if ((_signatureLength > sizeof(_signature))||((p + (int)_signatureLength) > len))
 			return -1;
-		Utils::copy(_custody[i].signature,data + p,sl); p += (int)sl;
+		Utils::copy(_signature,data + p,_signatureLength); p += (int)_signatureLength;
 	}
 
 	if ((p + 2) > len)
 		return -1;
 	p += 2 + Utils::loadBigEndian<uint16_t>(data + p);
+
 	if (p > len)
 		return -1;
 
@@ -173,8 +177,7 @@ int Capability::marshalVirtualNetworkRules(uint8_t *data,const ZT_VirtualNetwork
 			case ZT_NETWORK_RULE_MATCH_IPV6_SOURCE:
 			case ZT_NETWORK_RULE_MATCH_IPV6_DEST:
 				data[p++] = 17;
-				for(int k=0;k<16;++k)
-					data[p++] = rules[i].v.ipv6.ip[k];
+				Utils::copy<16>(data + p,rules[i].v.ipv6.ip); p += 16;
 				data[p++] = rules[i].v.ipv6.mask;
 				break;
 			case ZT_NETWORK_RULE_MATCH_IP_TOS:
@@ -250,7 +253,7 @@ int Capability::unmarshalVirtualNetworkRules(const uint8_t *const data,const int
 		const int fieldLen = (int)data[p++];
 		if ((p + fieldLen) > len)
 			return -1;
-		switch((ZT_VirtualNetworkRuleType)(rules[ruleCount].t & 0x3f)) {
+		switch((ZT_VirtualNetworkRuleType)(rules[ruleCount].t & 0x3fU)) {
 			default:
 				break;
 			case ZT_NETWORK_RULE_ACTION_TEE:

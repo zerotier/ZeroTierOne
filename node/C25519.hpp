@@ -101,7 +101,7 @@ public:
 	 * @param siglen Length of signature in bytes
 	 * @return True if signature is valid and the message is authentic and unmodified
 	 */
-	static bool verify(const uint8_t their[ZT_C25519_PUBLIC_KEY_LEN],const void *msg,unsigned int len,const void *signature,const unsigned int siglen);
+	static bool verify(const uint8_t their[ZT_C25519_PUBLIC_KEY_LEN],const void *msg,unsigned int len,const void *signature,unsigned int siglen);
 
 private:
 	// derive first 32 bytes of kp.pub from first 32 bytes of kp.priv

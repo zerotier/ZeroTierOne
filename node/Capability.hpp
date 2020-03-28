@@ -26,16 +26,14 @@
 #include "Identity.hpp"
 
 #define ZT_VIRTUALNETWORKRULE_MARSHAL_SIZE_MAX 21
-
-#define ZT_CAPABILITY__CUSTODY_CHAIN_ITEM_MARSHAL_SIZE_MAX (5 + 5 + 2 + ZT_SIGNATURE_BUFFER_SIZE)
-#define ZT_CAPABILITY_MARSHAL_SIZE_MAX (8 + 8 + 4 + 1 + 2 + (ZT_VIRTUALNETWORKRULE_MARSHAL_SIZE_MAX * ZT_MAX_CAPABILITY_RULES) + 2 + (ZT_CAPABILITY__CUSTODY_CHAIN_ITEM_MARSHAL_SIZE_MAX * ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH))
+#define ZT_CAPABILITY_MARSHAL_SIZE_MAX (8 + 8 + 4 + 1 + 2 + (ZT_VIRTUALNETWORKRULE_MARSHAL_SIZE_MAX * ZT_MAX_CAPABILITY_RULES) + 2 + (5 + 5 + 1 + 2 + ZT_SIGNATURE_BUFFER_SIZE))
 
 namespace ZeroTier {
 
 class RuntimeEnvironment;
 
 /**
- * A set of grouped and signed network flow rules
+ * A set of grouped and signed network flow rules for a specific member.
  *
  * On the sending side the sender does the following for each packet:
  *
@@ -51,11 +49,6 @@ class RuntimeEnvironment;
  *
  * Note that this is after evaluation of network scope rules and only if
  * network scope rules do not deliver an explicit match.
- *
- * Capabilities support a chain of custody. This is currently unused but
- * in the future would allow the publication of capabilities that can be
- * handed off between nodes. Limited transferability of capabilities is
- * a feature of true capability based security.
  */
 class Capability : public Credential
 {
@@ -74,12 +67,12 @@ public:
 	 * @param rules Network flow rules for this capability
 	 * @param ruleCount Number of flow rules
 	 */
-	ZT_INLINE Capability(const uint32_t id,const uint64_t nwid,const int64_t ts,const unsigned int mccl,const ZT_VirtualNetworkRule *const rules,const unsigned int ruleCount) noexcept :
+	ZT_INLINE Capability(const uint32_t id,const uint64_t nwid,const int64_t ts,const ZT_VirtualNetworkRule *const rules,const unsigned int ruleCount) noexcept :
 		_nwid(nwid),
 		_ts(ts),
 		_id(id),
-		_maxCustodyChainLength((mccl > 0) ? ((mccl < ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH) ? mccl : (unsigned int)ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH) : 1),
-		_ruleCount((ruleCount < ZT_MAX_CAPABILITY_RULES) ? ruleCount : ZT_MAX_CAPABILITY_RULES)
+		_ruleCount((ruleCount < ZT_MAX_CAPABILITY_RULES) ? ruleCount : ZT_MAX_CAPABILITY_RULES),
+		_signatureLength(0)
 	{
 		if (_ruleCount > 0)
 			Utils::copy(_rules,rules,sizeof(ZT_VirtualNetworkRule) * _ruleCount);
@@ -95,34 +88,13 @@ public:
 	 */
 	ZT_INLINE unsigned int ruleCount() const noexcept { return _ruleCount; }
 
-	/**
-	 * @return ID and evaluation order of this capability in network
-	 */
 	ZT_INLINE uint32_t id() const noexcept { return _id; }
-
-	/**
-	 * @return Network ID for which this capability was issued
-	 */
 	ZT_INLINE uint64_t networkId() const noexcept { return _nwid; }
-
-	/**
-	 * @return Timestamp
-	 */
 	ZT_INLINE int64_t timestamp() const noexcept { return _ts; }
-
-	/**
-	 * @return Last 'to' address in chain of custody
-	 */
-	ZT_INLINE Address issuedTo() const noexcept
-	{
-		Address i2;
-		for(int i=0;i<ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH;++i) {
-			if (!_custody[i].to)
-				return i2;
-			else i2 = _custody[i].to;
-		}
-		return i2;
-	}
+	ZT_INLINE const Address &issuedTo() const noexcept { return _issuedTo; }
+	ZT_INLINE const Address &signer() const noexcept { return _signedBy; }
+	ZT_INLINE const uint8_t *signature() const noexcept { return _signature; }
+	ZT_INLINE unsigned int signatureLength() const noexcept { return _signatureLength; }
 
 	/**
 	 * Sign this capability and add signature to its chain of custody
@@ -182,18 +154,12 @@ private:
 	uint64_t _nwid;
 	int64_t _ts;
 	uint32_t _id;
-
-	unsigned int _maxCustodyChainLength;
-
 	unsigned int _ruleCount;
 	ZT_VirtualNetworkRule _rules[ZT_MAX_CAPABILITY_RULES];
-
-	struct {
-		Address to;
-		Address from;
-		unsigned int signatureLength;
-		uint8_t signature[ZT_SIGNATURE_BUFFER_SIZE];
-	} _custody[ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH];
+	Address _issuedTo;
+	Address _signedBy;
+	unsigned int _signatureLength;
+	uint8_t _signature[ZT_SIGNATURE_BUFFER_SIZE];
 };
 
 } // namespace ZeroTier

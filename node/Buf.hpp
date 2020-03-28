@@ -235,14 +235,6 @@ public:
 	}
 
 	/**
-	 * Zero security critical data using Utils::burn() to ensure it's never optimized out.
-	 */
-	ZT_INLINE void burn() noexcept
-	{
-		Utils::burn(unsafeData,ZT_BUF_MEM_SIZE);
-	}
-
-	/**
 	 * Read a byte
 	 *
 	 * @param ii Index value-result parameter (incremented by 1)

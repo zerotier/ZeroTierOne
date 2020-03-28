@@ -68,6 +68,7 @@ static ZT_INLINE Credential::VerifyResult _credVerify(const RuntimeEnvironment *
 
 Credential::VerifyResult Credential::_verify(const RuntimeEnvironment *const RR,void *tPtr,const Revocation &credential) const { return _credVerify(RR,tPtr,credential); }
 Credential::VerifyResult Credential::_verify(const RuntimeEnvironment *const RR,void *tPtr,const Tag &credential) const { return _credVerify(RR,tPtr,credential); }
+Credential::VerifyResult Credential::_verify(const RuntimeEnvironment *const RR,void *tPtr,const Capability &credential) const { return _credVerify(RR,tPtr,credential); }
 Credential::VerifyResult Credential::_verify(const RuntimeEnvironment *const RR,void *tPtr,const CertificateOfOwnership &credential) const { return _credVerify(RR,tPtr,credential); }
 
 Credential::VerifyResult Credential::_verify(const RuntimeEnvironment *const RR,void *tPtr,const CertificateOfMembership &credential) const
@@ -85,45 +86,6 @@ Credential::VerifyResult Credential::_verify(const RuntimeEnvironment *const RR,
 	uint64_t buf[ZT_CERTIFICATEOFMEMBERSHIP_MARSHAL_SIZE_MAX / 8];
 	const unsigned int bufSize = credential._fillSigningBuf(buf);
 	return peer->identity().verify(buf,bufSize,credential._signature,credential._signatureLength) ? Credential::VERIFY_OK : Credential::VERIFY_BAD_SIGNATURE;
-}
-
-Credential::VerifyResult Credential::_verify(const RuntimeEnvironment *RR,void *tPtr,const Capability &credential) const
-{
-	uint8_t tmp[ZT_CAPABILITY_MARSHAL_SIZE_MAX + 16];
-	try {
-		// There must be at least one entry, and sanity check for bad chain max length
-		if ((credential._maxCustodyChainLength < 1)||(credential._maxCustodyChainLength > ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH))
-			return Credential::VERIFY_BAD_SIGNATURE;
-
-		int l = credential.marshal(tmp,true);
-		if (l <= 0)
-			return Credential::VERIFY_BAD_SIGNATURE;
-
-		// Validate all entries in chain of custody
-		for(unsigned int c=0;c<credential._maxCustodyChainLength;++c) {
-			if (c == 0) {
-				if ((!credential._custody[c].to)||(!credential._custody[c].from)||(credential._custody[c].from != Network::controllerFor(credential._nwid)))
-					return Credential::VERIFY_BAD_SIGNATURE; // the first entry must be present and from the network's controller
-			} else {
-				if (!credential._custody[c].to)
-					return Credential::VERIFY_OK; // all previous entries were valid, so we are valid
-				else if ((!credential._custody[c].from)||(credential._custody[c].from != credential._custody[c-1].to))
-					return Credential::VERIFY_BAD_SIGNATURE; // otherwise if we have another entry it must be from the previous holder in the chain
-			}
-
-			const SharedPtr<Peer> peer(RR->topology->peer(tPtr,credential._custody[c].from));
-			if (peer) {
-				if (!peer->identity().verify(tmp,(unsigned int)l,credential._custody[c].signature,credential._custody[c].signatureLength))
-					return Credential::VERIFY_BAD_SIGNATURE;
-			} else {
-				return Credential::VERIFY_NEED_IDENTITY;
-			}
-		}
-
-		// We reached max custody chain length and everything was valid
-		return Credential::VERIFY_OK;
-	} catch ( ... ) {}
-	return Credential::VERIFY_BAD_SIGNATURE;
 }
 
 } // namespace ZeroTier
