@@ -151,6 +151,7 @@ type APINetwork struct {
 	ID                     NetworkID             `json:"id"`
 	Config                 NetworkConfig         `json:"config"`
 	Settings               *NetworkLocalSettings `json:"settings,omitempty"`
+	ControllerFingerprint  *Fingerprint          `json:"controllerFingerprint,omitempty"`
 	MulticastSubscriptions []*MulticastGroup     `json:"multicastSubscriptions,omitempty"`
 	PortType               string                `json:"portType"`
 	PortName               string                `json:"portName"`

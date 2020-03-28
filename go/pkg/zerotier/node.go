@@ -498,7 +498,7 @@ func (n *Node) SetLocalConfig(lc *LocalConfig) (restartRequired bool, err error)
 
 // Join a network.
 // If tap is nil, the default system tap for this OS/platform is used (if available).
-func (n *Node) Join(nwid NetworkID, settings *NetworkLocalSettings, tap Tap) (*Network, error) {
+func (n *Node) Join(nwid NetworkID, controllerFingerprint *Fingerprint, settings *NetworkLocalSettings, tap Tap) (*Network, error) {
 	n.networksLock.RLock()
 	if nw, have := n.networks[nwid]; have {
 		n.infoLog.Printf("join network %.16x ignored: already a member", nwid)
@@ -512,7 +512,11 @@ func (n *Node) Join(nwid NetworkID, settings *NetworkLocalSettings, tap Tap) (*N
 	if tap != nil {
 		panic("non-native taps not yet implemented")
 	}
-	ntap := C.ZT_GoNode_join(n.gn, C.uint64_t(nwid))
+	var fp *C.ZT_Fingerprint
+	if controllerFingerprint != nil {
+		fp = controllerFingerprint.apiFingerprint()
+	}
+	ntap := C.ZT_GoNode_join(n.gn, C.uint64_t(nwid), fp)
 	if ntap == nil {
 		n.infoLog.Printf("join network %.16x failed: tap device failed to initialize (check drivers / kernel modules)", uint64(nwid))
 		return nil, ErrTapInitFailed

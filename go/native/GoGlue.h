@@ -54,7 +54,7 @@ int ZT_GoNode_phyStartListen(ZT_GoNode *gn,const char *dev,const char *ip,int po
 /* Close all listener threads for a given local IP and port */
 int ZT_GoNode_phyStopListen(ZT_GoNode *gn,const char *dev,const char *ip,int port);
 
-ZT_GoTap *ZT_GoNode_join(ZT_GoNode *gn,uint64_t nwid);
+ZT_GoTap *ZT_GoNode_join(ZT_GoNode *gn,uint64_t nwid,const ZT_Fingerprint *controllerFingerprint);
 
 void ZT_GoNode_leave(ZT_GoNode *gn,uint64_t nwid);
 

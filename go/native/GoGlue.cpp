@@ -593,7 +593,7 @@ static void tapFrameHandler(void *uptr,void *tptr,uint64_t nwid,const MAC &from,
 		&(reinterpret_cast<ZT_GoNode *>(uptr)->nextBackgroundTaskDeadline));
 }
 
-extern "C" ZT_GoTap *ZT_GoNode_join(ZT_GoNode *gn,uint64_t nwid)
+extern "C" ZT_GoTap *ZT_GoNode_join(ZT_GoNode *gn,uint64_t nwid,const ZT_Fingerprint *const controllerFingerprint)
 {
 	try {
 		std::lock_guard<std::mutex> l(gn->taps_l);
@@ -606,7 +606,7 @@ extern "C" ZT_GoTap *ZT_GoNode_join(ZT_GoNode *gn,uint64_t nwid)
 		if (!tap)
 			return nullptr;
 		gn->taps[nwid] = tap;
-		gn->node->join(nwid,tap.get(),nullptr);
+		gn->node->join(nwid,controllerFingerprint,tap.get(),nullptr);
 		return (ZT_GoTap *)tap.get();
 	} catch ( ... ) {
 		return nullptr;

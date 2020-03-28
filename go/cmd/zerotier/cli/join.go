@@ -23,7 +23,7 @@ import (
 
 // Join CLI command
 func Join(basePath, authToken string, args []string) {
-	if len(args) != 1 {
+	if len(args) < 1 || len(args) > 2 {
 		Help()
 		os.Exit(1)
 	}
@@ -39,9 +39,28 @@ func Join(basePath, authToken string, args []string) {
 	}
 	nwids := fmt.Sprintf("%.16x", nwid)
 
+	var fp *zerotier.Fingerprint
+	if len(args) == 2 {
+		fp, err = zerotier.NewFingerprintFromString(args[1])
+		if err != nil {
+			fmt.Printf("ERROR: invalid network controller fingerprint: %s\n", args[1])
+			os.Exit(1)
+		}
+	}
+
 	var network zerotier.APINetwork
 	network.ID = zerotier.NetworkID(nwid)
-	apiPost(basePath, authToken, "/network/"+nwids, &network, nil)
-	fmt.Printf("OK %s", nwids)
+	network.ControllerFingerprint = fp
+
+	if apiPost(basePath, authToken, "/network/"+nwids, &network, nil) <= 0 {
+		fmt.Printf("FAILED\n")
+	} else {
+		if fp == nil {
+			fmt.Printf("OK %s\n", nwids)
+		} else {
+			fmt.Printf("OK %s %s\n", nwids, fp.String())
+		}
+	}
+
 	os.Exit(0)
 }

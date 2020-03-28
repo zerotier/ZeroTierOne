@@ -39,6 +39,15 @@ func NewAddressFromBytes(b []byte) (Address, error) {
 	return Address((uint64(b[0]) << 32) | (uint64(b[1]) << 24) | (uint64(b[2]) << 16) | (uint64(b[3]) << 8) | uint64(b[4])), nil
 }
 
+// Copy this address to a byte array, which must be 5 bytes in length or this will panic.
+func (a Address) CopyTo(b []byte) {
+	b[0] = byte(a >> 32)
+	b[1] = byte(a >> 24)
+	b[2] = byte(a >> 16)
+	b[3] = byte(a >> 8)
+	b[4] = byte(a)
+}
+
 // IsReserved returns true if this address is reserved and therefore is not valid for a real node.
 func (a Address) IsReserved() bool { return a == 0 || (a>>32) == 0xff }
 
