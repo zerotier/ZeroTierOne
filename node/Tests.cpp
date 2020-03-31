@@ -1065,7 +1065,7 @@ extern "C" const char *ZTT_benchmarkCrypto()
 		}
 
 		{
-			uint8_t key[ZT_C25519_SHARED_KEY_LEN];
+			uint8_t key[ZT_C25519_ECDH_SHARED_SECRET_SIZE];
 			ZT_T_PRINTF("[crypto] Benchmarking Curve25519 ECDH... ");
 			int64_t start = now();
 			for(int i=0;i<150;++i) {

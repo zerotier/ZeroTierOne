@@ -28,8 +28,8 @@
 #include <cstring>
 
 #define ZT_IDENTITY_STRING_BUFFER_LENGTH 1024
-#define ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE (1 + ZT_C25519_PUBLIC_KEY_LEN + ZT_ECC384_PUBLIC_KEY_SIZE)
-#define ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE (ZT_C25519_PRIVATE_KEY_LEN + ZT_ECC384_PRIVATE_KEY_SIZE)
+#define ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE (1 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE + ZT_ECC384_PUBLIC_KEY_SIZE)
+#define ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE (ZT_C25519_COMBINED_PRIVATE_KEY_SIZE + ZT_ECC384_PRIVATE_KEY_SIZE)
 #define ZT_IDENTITY_MARSHAL_SIZE_MAX (ZT_ADDRESS_LENGTH + 4 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE)
 
 namespace ZeroTier {
@@ -233,12 +233,12 @@ private:
 	Address _address;
 	Fingerprint _fp;
 	ZT_PACKED_STRUCT(struct { // do not re-order these fields
-		uint8_t c25519[ZT_C25519_PRIVATE_KEY_LEN];
+		uint8_t c25519[ZT_C25519_COMBINED_PRIVATE_KEY_SIZE];
 		uint8_t p384[ZT_ECC384_PRIVATE_KEY_SIZE];
 	}) _priv;
 	ZT_PACKED_STRUCT(struct { // do not re-order these fields
 		uint8_t nonce;                            // nonce for PoW generate/verify
-		uint8_t c25519[ZT_C25519_PUBLIC_KEY_LEN]; // Curve25519 and Ed25519 public keys
+		uint8_t c25519[ZT_C25519_COMBINED_PUBLIC_KEY_SIZE]; // Curve25519 and Ed25519 public keys
 		uint8_t p384[ZT_ECC384_PUBLIC_KEY_SIZE];  // NIST P-384 public key
 	}) _pub;
 	Type _type; // _type determines which fields in _priv and _pub are used

@@ -2367,19 +2367,19 @@ ZT_INLINE void get_hram(unsigned char *hram,const unsigned char *sm,const unsign
 
 namespace ZeroTier {
 
-void C25519::generate(uint8_t pub[ZT_C25519_PUBLIC_KEY_LEN],uint8_t priv[ZT_C25519_PRIVATE_KEY_LEN])
+void C25519::generate(uint8_t pub[ZT_C25519_COMBINED_PUBLIC_KEY_SIZE],uint8_t priv[ZT_C25519_COMBINED_PRIVATE_KEY_SIZE])
 {
-	Utils::getSecureRandom(priv,ZT_C25519_PRIVATE_KEY_LEN);
+	Utils::getSecureRandom(priv,ZT_C25519_COMBINED_PRIVATE_KEY_SIZE);
 	_calcPubDH(pub,priv);
 	_calcPubED(pub,priv);
 }
 
-void C25519::agree(const uint8_t mine[ZT_C25519_PRIVATE_KEY_LEN],const uint8_t their[ZT_C25519_PUBLIC_KEY_LEN],uint8_t rawkey[32])
+void C25519::agree(const uint8_t mine[ZT_C25519_COMBINED_PRIVATE_KEY_SIZE],const uint8_t their[ZT_C25519_COMBINED_PUBLIC_KEY_SIZE],uint8_t rawkey[ZT_C25519_ECDH_SHARED_SECRET_SIZE])
 {
 	crypto_scalarmult(rawkey,mine,their);
 }
 
-void C25519::sign(const uint8_t myPrivate[ZT_C25519_PRIVATE_KEY_LEN],const uint8_t myPublic[ZT_C25519_PUBLIC_KEY_LEN],const void *msg,unsigned int len,void *signature)
+void C25519::sign(const uint8_t myPrivate[ZT_C25519_COMBINED_PRIVATE_KEY_SIZE],const uint8_t myPublic[ZT_C25519_COMBINED_PUBLIC_KEY_SIZE],const void *msg,unsigned int len,void *signature)
 {
 	unsigned char digest[64]; // we sign the first 32 bytes of SHA-512(msg)
 	SHA512(digest,msg,len);
@@ -2427,7 +2427,7 @@ void C25519::sign(const uint8_t myPrivate[ZT_C25519_PRIVATE_KEY_LEN],const uint8
 		sig[32 + i] = s[i];
 }
 
-bool C25519::verify(const uint8_t their[ZT_C25519_PUBLIC_KEY_LEN],const void *msg,unsigned int len,const void *signature,const unsigned int siglen)
+bool C25519::verify(const uint8_t their[ZT_C25519_COMBINED_PUBLIC_KEY_SIZE],const void *msg,unsigned int len,const void *signature,const unsigned int siglen)
 {
 	if (siglen < 64) return false;
 
@@ -2465,14 +2465,14 @@ bool C25519::verify(const uint8_t their[ZT_C25519_PUBLIC_KEY_LEN],const void *ms
 	return Utils::secureEq(sig,t2,32);
 }
 
-void C25519::_calcPubDH(uint8_t pub[ZT_C25519_PUBLIC_KEY_LEN],const uint8_t priv[ZT_C25519_PRIVATE_KEY_LEN])
+void C25519::_calcPubDH(uint8_t pub[ZT_C25519_COMBINED_PUBLIC_KEY_SIZE],const uint8_t priv[ZT_C25519_COMBINED_PRIVATE_KEY_SIZE])
 {
 	// First 32 bytes of pub and priv are the keys for ECDH key
 	// agreement. This generates the public portion from the private.
 	crypto_scalarmult_base(pub,priv);
 }
 
-void C25519::_calcPubED(uint8_t pub[ZT_C25519_PUBLIC_KEY_LEN],const uint8_t priv[ZT_C25519_PRIVATE_KEY_LEN])
+void C25519::_calcPubED(uint8_t pub[ZT_C25519_COMBINED_PUBLIC_KEY_SIZE],const uint8_t priv[ZT_C25519_COMBINED_PRIVATE_KEY_SIZE])
 {
 	struct {
 		uint8_t extsk[64];

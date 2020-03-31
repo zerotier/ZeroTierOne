@@ -22,10 +22,10 @@
 
 namespace ZeroTier {
 
-#define ZT_C25519_PUBLIC_KEY_LEN 64
-#define ZT_C25519_PRIVATE_KEY_LEN 64
+#define ZT_C25519_COMBINED_PUBLIC_KEY_SIZE 64
+#define ZT_C25519_COMBINED_PRIVATE_KEY_SIZE 64
 #define ZT_C25519_SIGNATURE_LEN 96
-#define ZT_C25519_SHARED_KEY_LEN 32
+#define ZT_C25519_ECDH_SHARED_SECRET_SIZE 32
 
 /**
  * A combined Curve25519 ECDH and Ed25519 signature engine
@@ -36,7 +36,7 @@ public:
 	/**
 	 * Generate a C25519 elliptic curve key pair
 	 */
-	static void generate(uint8_t pub[ZT_C25519_PUBLIC_KEY_LEN],uint8_t priv[ZT_C25519_PRIVATE_KEY_LEN]);
+	static void generate(uint8_t pub[ZT_C25519_COMBINED_PUBLIC_KEY_SIZE],uint8_t priv[ZT_C25519_COMBINED_PRIVATE_KEY_SIZE]);
 
 	/**
 	 * Generate a key pair satisfying a condition
@@ -52,9 +52,9 @@ public:
 	 * @tparam F Type of 'cond'
 	 */
 	template<typename F>
-	static ZT_INLINE void generateSatisfying(F cond,uint8_t pub[ZT_C25519_PUBLIC_KEY_LEN],uint8_t priv[ZT_C25519_PRIVATE_KEY_LEN])
+	static ZT_INLINE void generateSatisfying(F cond,uint8_t pub[ZT_C25519_COMBINED_PUBLIC_KEY_SIZE],uint8_t priv[ZT_C25519_COMBINED_PRIVATE_KEY_SIZE])
 	{
-		Utils::getSecureRandom(priv,ZT_C25519_PRIVATE_KEY_LEN);
+		Utils::getSecureRandom(priv,ZT_C25519_COMBINED_PRIVATE_KEY_SIZE);
 		_calcPubED(pub,priv); // do Ed25519 key -- bytes 32-63 of pub and priv
 		do {
 			++(((uint64_t *)priv)[1]);
@@ -73,15 +73,18 @@ public:
 	 * @param their Their public key
 	 * @param rawkey Buffer to receive raw (not hashed) agreed upon key
 	 */
-	static void agree(const uint8_t mine[ZT_C25519_PRIVATE_KEY_LEN],const uint8_t their[ZT_C25519_PUBLIC_KEY_LEN],uint8_t rawkey[ZT_C25519_SHARED_KEY_LEN]);
+	static void agree(const uint8_t mine[ZT_C25519_COMBINED_PRIVATE_KEY_SIZE],const uint8_t their[ZT_C25519_COMBINED_PUBLIC_KEY_SIZE],uint8_t rawkey[ZT_C25519_ECDH_SHARED_SECRET_SIZE]);
 
 	/**
 	 * Sign a message with a sender's key pair
 	 *
-	 * For legacy reasons ZeroTier ed25519 signatures end with an additional 32 bytes
-	 * that are the first 32 bytes of SHA512(msg). The verify() function considers these
-	 * bytes optional and will accept signatures of 64 or 96 bytes in length, checking
-	 * the hash bytes if they are present.
+	 * LEGACY: ZeroTier's ed25519 signatures contain an extra 32 bytes which are the first
+	 * 32 bytes of SHA512(msg). These exist because an early version of the ZeroTier multicast
+	 * algorithm did a lot of signature verification and we wanted a way to skip the more
+	 * expensive ed25519 verification if the signature was obviously wrong.
+	 *
+	 * This verify() function will accept a 64 or 96 bit signature, checking the last 32
+	 * bytes only if present.
 	 *
 	 * @param myPrivate My private key
 	 * @param myPublic My public key
@@ -89,7 +92,7 @@ public:
 	 * @param len Length of message in bytes
 	 * @param signature Buffer to fill with signature -- MUST be 96 bytes in length
 	 */
-	static void sign(const uint8_t myPrivate[ZT_C25519_PRIVATE_KEY_LEN],const uint8_t myPublic[ZT_C25519_PUBLIC_KEY_LEN],const void *msg,unsigned int len,void *signature);
+	static void sign(const uint8_t myPrivate[ZT_C25519_COMBINED_PRIVATE_KEY_SIZE],const uint8_t myPublic[ZT_C25519_COMBINED_PUBLIC_KEY_SIZE],const void *msg,unsigned int len,void *signature);
 
 	/**
 	 * Verify a message's signature
@@ -101,16 +104,16 @@ public:
 	 * @param siglen Length of signature in bytes
 	 * @return True if signature is valid and the message is authentic and unmodified
 	 */
-	static bool verify(const uint8_t their[ZT_C25519_PUBLIC_KEY_LEN],const void *msg,unsigned int len,const void *signature,unsigned int siglen);
+	static bool verify(const uint8_t their[ZT_C25519_COMBINED_PUBLIC_KEY_SIZE],const void *msg,unsigned int len,const void *signature,unsigned int siglen);
 
 private:
 	// derive first 32 bytes of kp.pub from first 32 bytes of kp.priv
 	// this is the ECDH key
-	static void _calcPubDH(uint8_t pub[ZT_C25519_PUBLIC_KEY_LEN],const uint8_t priv[ZT_C25519_PRIVATE_KEY_LEN]);
+	static void _calcPubDH(uint8_t pub[ZT_C25519_COMBINED_PUBLIC_KEY_SIZE],const uint8_t priv[ZT_C25519_COMBINED_PRIVATE_KEY_SIZE]);
 
 	// derive 2nd 32 bytes of kp.pub from 2nd 32 bytes of kp.priv
 	// this is the Ed25519 sign/verify key
-	static void _calcPubED(uint8_t pub[ZT_C25519_PUBLIC_KEY_LEN],const uint8_t priv[ZT_C25519_PRIVATE_KEY_LEN]);
+	static void _calcPubED(uint8_t pub[ZT_C25519_COMBINED_PUBLIC_KEY_SIZE],const uint8_t priv[ZT_C25519_COMBINED_PRIVATE_KEY_SIZE]);
 };
 
 } // namespace ZeroTier

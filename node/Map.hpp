@@ -14,6 +14,12 @@
 #ifndef ZT_MAP_HPP
 #define ZT_MAP_HPP
 
+/*
+ * This wraps std::unordered_map (or std::map if that is not available) and gives
+ * it a few extra methods. It also uses the built-in hashCode methods in key objects
+ * in ZeroTier instead of requiring hashers all over the place.
+ */
+
 #include "Constants.hpp"
 #include "Utils.hpp"
 
@@ -26,6 +32,7 @@
 namespace ZeroTier {
 
 #ifdef __CPP11__
+
 struct _MapHasher
 {
 	template<typename O>
@@ -36,6 +43,7 @@ struct _MapHasher
 	std::size_t operator()(const uint32_t i) const noexcept { return (std::size_t)Utils::hash32(i ^ (uint32_t)Utils::s_mapNonce); }
 	std::size_t operator()(const int32_t i) const noexcept { return (std::size_t)Utils::hash32((uint32_t)i ^ (uint32_t)Utils::s_mapNonce); }
 };
+
 template<typename K,typename V>
 class Map : public std::unordered_map<K,V,_MapHasher>
 {
@@ -61,7 +69,9 @@ public:
 		this->emplace(key,value);
 	}
 };
+
 #else
+
 template<typename K,typename V>
 class Map : public std::map<K,V>
 {
@@ -87,6 +97,7 @@ public:
 		(*this)[key] = value;
 	}
 };
+
 #endif
 
 } // ZeroTier
