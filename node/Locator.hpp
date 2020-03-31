@@ -37,7 +37,7 @@ namespace ZeroTier {
 class Locator : public TriviallyCopyable
 {
 public:
-	ZT_INLINE Locator() noexcept { memoryZero(this); }
+	ZT_INLINE Locator() noexcept { memoryZero(this); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 
 	/**
 	 * Zero the Locator data structure

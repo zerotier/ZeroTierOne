@@ -40,7 +40,7 @@ class Expect;
 class RuntimeEnvironment
 {
 public:
-	ZT_INLINE RuntimeEnvironment(Node *n) noexcept :
+	ZT_INLINE RuntimeEnvironment(Node *n) noexcept : // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init,google-explicit-constructor,hicpp-explicit-conversions)
 		node(n),
 		localNetworkController(nullptr),
 		rtmem(nullptr),

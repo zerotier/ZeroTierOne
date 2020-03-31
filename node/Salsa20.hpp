@@ -43,14 +43,14 @@ public:
 	static constexpr bool accelerated() noexcept { return false; }
 #endif
 
-	ZT_INLINE Salsa20() noexcept {}
+	ZT_INLINE Salsa20() noexcept {} // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init,hicpp-use-equals-default,modernize-use-equals-default)
 	ZT_INLINE ~Salsa20() { Utils::burn(&_state,sizeof(_state)); }
 
 	/**
 	 * @param key 256-bit (32 byte) key
 	 * @param iv 64-bit initialization vector
 	 */
-	ZT_INLINE Salsa20(const void *key,const void *iv) noexcept { init(key,iv); }
+	ZT_INLINE Salsa20(const void *key,const void *iv) noexcept { init(key,iv); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 
 	/**
 	 * Initialize cipher

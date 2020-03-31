@@ -281,7 +281,7 @@ ZT_ResultCode Node::processBackgroundTasks(void *tPtr, int64_t now, volatile int
 			// or trust nodes without doing an extra cert check.
 			{
 				_localControllerAuthorizations_m.lock();
-				for(Map<_LocalControllerAuth,int64_t>::iterator i(_localControllerAuthorizations.begin());i!=_localControllerAuthorizations.end();) {
+				for(Map<_LocalControllerAuth,int64_t>::iterator i(_localControllerAuthorizations.begin());i!=_localControllerAuthorizations.end();) { // NOLINT(hicpp-use-auto,modernize-use-auto)
 					if ((i->second - now) > (ZT_NETWORK_AUTOCONF_DELAY * 3))
 						_localControllerAuthorizations.erase(i++);
 					else ++i;
@@ -306,7 +306,7 @@ ZT_ResultCode Node::processBackgroundTasks(void *tPtr, int64_t now, volatile int
 	std::vector<Address> bzzt;
 	{
 		RWMutex::RMaybeWLock l(_peerAlarms_l);
-		for(std::map<Address,int64_t>::iterator a(_peerAlarms.begin());a!=_peerAlarms.end();) {
+		for(std::map<Address,int64_t>::iterator a(_peerAlarms.begin());a!=_peerAlarms.end();) { // NOLINT(hicpp-use-auto,modernize-use-auto)
 			if (now >= a->second) {
 				bzzt.push_back(a->first);
 				l.writing();
@@ -318,7 +318,7 @@ ZT_ResultCode Node::processBackgroundTasks(void *tPtr, int64_t now, volatile int
 			}
 		}
 	}
-	for(std::vector<Address>::iterator a(bzzt.begin());a!=bzzt.end();++a) {
+	for(std::vector<Address>::iterator a(bzzt.begin());a!=bzzt.end();++a) { // NOLINT(hicpp-use-auto,modernize-use-auto,modernize-loop-convert)
 		const SharedPtr<Peer> p(RR->topology->peer(tPtr,*a,false));
 		if (p)
 			p->alarm(tPtr,now);
@@ -353,7 +353,7 @@ ZT_ResultCode Node::leave(uint64_t nwid,void **uptr,void *tptr)
 	ZT_VirtualNetworkConfig ctmp;
 
 	_networks_m.lock();
-	Map< uint64_t,SharedPtr<Network> >::iterator nwi(_networks.find(nwid));
+	Map< uint64_t,SharedPtr<Network> >::iterator nwi(_networks.find(nwid)); // NOLINT(hicpp-use-auto,modernize-use-auto)
 	if (nwi == _networks.end()) {
 		_networks_m.unlock();
 		return ZT_RESULT_OK;
@@ -436,14 +436,14 @@ ZT_PeerList *Node::peers() const
 
 	char *buf = (char *)::malloc(sizeof(ZT_PeerList) + (sizeof(ZT_Peer) * peers.size()) + (sizeof(Identity) * peers.size()));
 	if (!buf)
-		return (ZT_PeerList *)0;
-	ZT_PeerList *pl = (ZT_PeerList *)buf;
+		return nullptr;
+	ZT_PeerList *pl = (ZT_PeerList *)buf; // NOLINT(modernize-use-auto,hicpp-use-auto)
 	pl->peers = (ZT_Peer *)(buf + sizeof(ZT_PeerList));
-	Identity *identities = (Identity *)(buf + sizeof(ZT_PeerList) + (sizeof(ZT_Peer) * peers.size()));
+	Identity *identities = (Identity *)(buf + sizeof(ZT_PeerList) + (sizeof(ZT_Peer) * peers.size())); // NOLINT(modernize-use-auto,hicpp-use-auto)
 
 	const int64_t now = _now;
 	pl->peerCount = 0;
-	for(std::vector< SharedPtr<Peer> >::iterator pi(peers.begin());pi!=peers.end();++pi) {
+	for(std::vector< SharedPtr<Peer> >::iterator pi(peers.begin());pi!=peers.end();++pi) { // NOLINT(modernize-use-auto,modernize-loop-convert,hicpp-use-auto)
 		ZT_Peer *p = &(pl->peers[pl->peerCount]);
 
 		p->address = (*pi)->address().toInt();
@@ -469,7 +469,7 @@ ZT_PeerList *Node::peers() const
 		std::vector< SharedPtr<Path> > paths;
 		(*pi)->getAllPaths(paths);
 		p->pathCount = 0;
-		for(std::vector< SharedPtr<Path> >::iterator path(paths.begin());path!=paths.end();++path) {
+		for(std::vector< SharedPtr<Path> >::iterator path(paths.begin());path!=paths.end();++path) { // NOLINT(modernize-use-auto,modernize-loop-convert,hicpp-use-auto)
 			Utils::copy<sizeof(sockaddr_storage)>(&(p->paths[p->pathCount].address),&((*path)->address()));
 			p->paths[p->pathCount].lastSend = (*path)->lastOut();
 			p->paths[p->pathCount].lastReceive = (*path)->lastIn();
@@ -489,7 +489,7 @@ ZT_VirtualNetworkConfig *Node::networkConfig(uint64_t nwid) const
 {
 	SharedPtr<Network> nw(network(nwid));
 	if (nw) {
-		ZT_VirtualNetworkConfig *const nc = (ZT_VirtualNetworkConfig *)::malloc(sizeof(ZT_VirtualNetworkConfig));
+		ZT_VirtualNetworkConfig *const nc = (ZT_VirtualNetworkConfig *)::malloc(sizeof(ZT_VirtualNetworkConfig)); // NOLINT(modernize-use-auto,hicpp-use-auto)
 		nw->externalConfig(nc);
 		return nc;
 	}
@@ -502,12 +502,12 @@ ZT_VirtualNetworkList *Node::networks() const
 
 	char *const buf = (char *)::malloc(sizeof(ZT_VirtualNetworkList) + (sizeof(ZT_VirtualNetworkConfig) * _networks.size()));
 	if (!buf)
-		return (ZT_VirtualNetworkList *)0;
-	ZT_VirtualNetworkList *nl = (ZT_VirtualNetworkList *)buf;
+		return nullptr;
+	ZT_VirtualNetworkList *nl = (ZT_VirtualNetworkList *)buf; // NOLINT(modernize-use-auto,hicpp-use-auto)
 	nl->networks = (ZT_VirtualNetworkConfig *)(buf + sizeof(ZT_VirtualNetworkList));
 
 	nl->networkCount = 0;
-	for(Map< uint64_t,SharedPtr<Network> >::const_iterator i(_networks.begin());i!=_networks.end();++i)
+	for(Map< uint64_t,SharedPtr<Network> >::const_iterator i(_networks.begin());i!=_networks.end();++i) // NOLINT(modernize-use-auto,modernize-loop-convert,hicpp-use-auto)
 		i->second->externalConfig(&(nl->networks[nl->networkCount++]));
 
 	return nl;
@@ -596,7 +596,7 @@ bool Node::shouldUsePathForZeroTierTraffic(void *tPtr,const Identity &id,const i
 {
 	{
 		RWMutex::RLock l(_networks_m);
-		for (Map< uint64_t,SharedPtr<Network> >::iterator i(_networks.begin()); i != _networks.end(); ++i) {
+		for(Map< uint64_t,SharedPtr<Network> >::iterator i(_networks.begin());i!=_networks.end();++i) { // NOLINT(hicpp-use-auto,modernize-use-auto,modernize-loop-convert)
 			for (unsigned int k = 0,j = i->second->config().staticIpCount; k < j; ++k) {
 				if (i->second->config().staticIps[k].containsAddress(remoteAddress))
 					return false;
@@ -710,7 +710,7 @@ void Node::ncSendRevocation(const Address &destination,const Revocation &rev)
 	if (destination == RR->identity.address()) {
 		SharedPtr<Network> n(network(rev.networkId()));
 		if (!n) return;
-		n->addCredential((void *)0,RR->identity,rev);
+		n->addCredential(nullptr,RR->identity,rev);
 	} else {
 		// TODO
 		/*

@@ -111,7 +111,7 @@ public:
 		ZT_INLINE Slice(const SharedPtr<Buf> &b_,const unsigned int s_,const unsigned int e_) noexcept : b(b_),s(s_),e(e_) {}
 		ZT_INLINE Slice() noexcept : b(),s(0),e(0) {}
 
-		ZT_INLINE operator bool() const noexcept { return (b); }
+		ZT_INLINE operator bool() const noexcept { return (b); } // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
 		ZT_INLINE unsigned int size() const noexcept { return (e - s); }
 		ZT_INLINE void zero() noexcept { b.zero(); s = 0; e = 0; }
 
@@ -177,19 +177,19 @@ public:
 	/**
 	 * Create a new uninitialized buffer with undefined contents (use clear() to zero if needed)
 	 */
-	ZT_INLINE Buf() noexcept : __nextInPool(0),__refCount(0) {}
+	ZT_INLINE Buf() noexcept : __nextInPool(0),__refCount(0) {} // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 
 	/**
 	 * Create a new buffer and copy data into it
 	 */
-	ZT_INLINE Buf(const void *const data,const unsigned int len) noexcept :
+	ZT_INLINE Buf(const void *const data,const unsigned int len) noexcept : // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 		__nextInPool(0),
 		__refCount(0)
 	{
 		Utils::copy(unsafeData,data,len);
 	}
 
-	ZT_INLINE Buf(const Buf &b2) noexcept :
+	ZT_INLINE Buf(const Buf &b2) noexcept : // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 		__nextInPool(0),
 		__refCount(0)
 	{

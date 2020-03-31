@@ -35,7 +35,7 @@ class VL2
 	friend class VL1;
 
 public:
-	VL2(const RuntimeEnvironment *renv);
+	explicit VL2(const RuntimeEnvironment *renv);
 	~VL2();
 
 	/**

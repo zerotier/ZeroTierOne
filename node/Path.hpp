@@ -47,7 +47,7 @@ class Path
 	friend class Defragmenter;
 
 public:
-	ZT_INLINE Path(const int64_t l,const InetAddress &r) noexcept :
+	ZT_INLINE Path(const int64_t l,const InetAddress &r) noexcept : // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 		_localSocket(l),
 		_lastIn(0),
 		_lastOut(0),

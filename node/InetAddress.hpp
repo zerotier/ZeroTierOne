@@ -86,19 +86,19 @@ public:
 	// Hasher for unordered sets and maps in C++11
 	struct Hasher { ZT_INLINE std::size_t operator()(const InetAddress &a) const noexcept { return (std::size_t)a.hashCode(); } };
 
-	ZT_INLINE InetAddress() noexcept { memoryZero(this); }
-	ZT_INLINE InetAddress(const InetAddress &a) noexcept { memoryCopy(this,&a); }
-	explicit ZT_INLINE InetAddress(const sockaddr_storage &ss) noexcept { *this = ss; }
-	explicit ZT_INLINE InetAddress(const sockaddr_storage *ss) noexcept { *this = ss; }
-	explicit ZT_INLINE InetAddress(const sockaddr &sa) noexcept { *this = sa; }
-	explicit ZT_INLINE InetAddress(const sockaddr *sa) noexcept { *this = sa; }
-	explicit ZT_INLINE InetAddress(const sockaddr_in &sa) noexcept { *this = sa; }
-	explicit ZT_INLINE InetAddress(const sockaddr_in *sa) noexcept { *this = sa; }
-	explicit ZT_INLINE InetAddress(const sockaddr_in6 &sa) noexcept { *this = sa; }
-	explicit ZT_INLINE InetAddress(const sockaddr_in6 *sa) noexcept { *this = sa; }
-	ZT_INLINE InetAddress(const void *ipBytes,unsigned int ipLen,unsigned int port) noexcept { this->set(ipBytes,ipLen,port); }
-	ZT_INLINE InetAddress(const uint32_t ipv4,unsigned int port) noexcept { this->set(&ipv4,4,port); }
-	explicit ZT_INLINE InetAddress(const char *ipSlashPort) noexcept { this->fromString(ipSlashPort); }
+	ZT_INLINE InetAddress() noexcept { memoryZero(this); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+	ZT_INLINE InetAddress(const InetAddress &a) noexcept { memoryCopy(this,&a); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+	explicit ZT_INLINE InetAddress(const sockaddr_storage &ss) noexcept { *this = ss; } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+	explicit ZT_INLINE InetAddress(const sockaddr_storage *ss) noexcept { *this = ss; } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+	explicit ZT_INLINE InetAddress(const sockaddr &sa) noexcept { *this = sa; } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+	explicit ZT_INLINE InetAddress(const sockaddr *sa) noexcept { *this = sa; } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+	explicit ZT_INLINE InetAddress(const sockaddr_in &sa) noexcept { *this = sa; } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+	explicit ZT_INLINE InetAddress(const sockaddr_in *sa) noexcept { *this = sa; } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+	explicit ZT_INLINE InetAddress(const sockaddr_in6 &sa) noexcept { *this = sa; } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+	explicit ZT_INLINE InetAddress(const sockaddr_in6 *sa) noexcept { *this = sa; } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+	ZT_INLINE InetAddress(const void *ipBytes,unsigned int ipLen,unsigned int port) noexcept { this->set(ipBytes,ipLen,port); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+	ZT_INLINE InetAddress(const uint32_t ipv4,unsigned int port) noexcept { this->set(&ipv4,4,port); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+	explicit ZT_INLINE InetAddress(const char *ipSlashPort) noexcept { this->fromString(ipSlashPort); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 
 	ZT_INLINE InetAddress &operator=(const InetAddress &a) noexcept
 	{

@@ -17,7 +17,6 @@
 #include "RuntimeEnvironment.hpp"
 #include "Peer.hpp"
 #include "Topology.hpp"
-#include "Node.hpp"
 
 namespace ZeroTier {
 
@@ -29,17 +28,13 @@ Membership::Membership() :
 {
 }
 
-Membership::~Membership()
-{
-}
-
 void Membership::pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const int64_t now,const SharedPtr<Peer> &to,const NetworkConfig &nconf)
 {
 	if (!nconf.com) // sanity check
 		return;
 
 	SharedPtr<Buf> outp(new Buf());
-	Protocol::Header &ph = outp->as<Protocol::Header>();
+	Protocol::Header &ph = outp->as<Protocol::Header>(); // NOLINT(hicpp-use-auto,modernize-use-auto)
 
 	unsigned int capPtr = 0,tagPtr = 0,cooPtr = 0;
 	bool sendCom = true;

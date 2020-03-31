@@ -60,9 +60,9 @@ public:
 		THING_IPV6_ADDRESS = 3
 	};
 
-	ZT_INLINE CertificateOfOwnership() noexcept { memoryZero(this); }
+	ZT_INLINE CertificateOfOwnership() noexcept { memoryZero(this); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 
-	ZT_INLINE CertificateOfOwnership(const uint64_t nwid,const int64_t ts,const Address &issuedTo,const uint32_t id) noexcept
+	ZT_INLINE CertificateOfOwnership(const uint64_t nwid,const int64_t ts,const Address &issuedTo,const uint32_t id) noexcept // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 	{
 		memoryZero(this);
 		_networkId = nwid;

@@ -30,32 +30,6 @@ namespace ZeroTier {
 ZT_PACKED_STRUCT(struct TriviallyCopyable
 {
 	/**
-	 * Be absolutely sure a TriviallyCopyable object is zeroed using Utils::burn()
-	 *
-	 * @tparam T Automatically inferred type of object
-	 * @param obj Any TriviallyCopyable object
-	 */
-	template<typename T>
-	static ZT_INLINE void memoryBurn(T *obj) noexcept
-	{
-		TriviallyCopyable *const tmp = obj;
-		Utils::burn(tmp,sizeof(T));
-	}
-
-	/**
-	 * Be absolutely sure a TriviallyCopyable object is zeroed using Utils::burn()
-	 *
-	 * @tparam T Automatically inferred type of object
-	 * @param obj Any TriviallyCopyable object
-	 */
-	template<typename T>
-	static ZT_INLINE void memoryBurn(T &obj) noexcept
-	{
-		TriviallyCopyable *const tmp = &obj;
-		Utils::burn(tmp,sizeof(T));
-	}
-
-	/**
 	 * Zero a TriviallyCopyable object
 	 *
 	 * @tparam T Automatically inferred type of object

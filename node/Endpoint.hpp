@@ -68,25 +68,25 @@ public:
 		PROTO_IP_ZT =       2
 	};
 
-	ZT_INLINE Endpoint() noexcept { memoryZero(this); }
+	ZT_INLINE Endpoint() noexcept { memoryZero(this); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 
-	explicit Endpoint(const InetAddress &sa,const Protocol proto = PROTO_UDP_ZT) noexcept;
+	explicit Endpoint(const InetAddress &sa,Protocol proto = PROTO_UDP_ZT) noexcept;
 
-	explicit ZT_INLINE Endpoint(const Address &zt,const uint8_t identityHash[ZT_IDENTITY_HASH_SIZE]) noexcept :
+	explicit ZT_INLINE Endpoint(const Address &zt,const uint8_t identityHash[ZT_IDENTITY_HASH_SIZE]) noexcept : // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 		_t(TYPE_ZEROTIER)
 	{
 		_v.zt.address = zt.toInt();
 		Utils::copy<ZT_IDENTITY_HASH_SIZE>(_v.zt.hash,identityHash);
 	}
 
-	explicit ZT_INLINE Endpoint(const char *name,const int port) noexcept :
+	explicit ZT_INLINE Endpoint(const char *name,const int port) noexcept : // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 		_t(TYPE_DNSNAME)
 	{
 		_v.dns.port = port;
 		Utils::scopy(_v.dns.name,sizeof(_v.dns.name),name);
 	}
 
-	explicit ZT_INLINE Endpoint(const char *url) noexcept :
+	explicit ZT_INLINE Endpoint(const char *url) noexcept : // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 		_t(TYPE_URL)
 	{
 		Utils::scopy(_v.url,sizeof(_v.url),url);
@@ -137,7 +137,7 @@ public:
 	 */
 	ZT_INLINE Type type() const noexcept { return _t; }
 
-	ZT_INLINE operator bool() const noexcept { return _t != TYPE_NIL; }
+	ZT_INLINE operator bool() const noexcept { return _t != TYPE_NIL; } // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
 
 	bool operator==(const Endpoint &ep) const noexcept;
 	ZT_INLINE bool operator!=(const Endpoint &ep) const noexcept { return (!(*this == ep)); }

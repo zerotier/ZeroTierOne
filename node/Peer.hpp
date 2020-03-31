@@ -379,7 +379,7 @@ private:
 	// Queue of batches of one or more physical addresses to try at some point in the future (for NAT traversal logic)
 	struct _ContactQueueItem
 	{
-		ZT_INLINE _ContactQueueItem() {}
+		ZT_INLINE _ContactQueueItem() {} // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init,hicpp-use-equals-default,modernize-use-equals-default)
 		ZT_INLINE _ContactQueueItem(const InetAddress &a,const uint16_t *pstart,const uint16_t *pend,const unsigned int apt) :
 			address(a),
 			ports(pstart,pend),

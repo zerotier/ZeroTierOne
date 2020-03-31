@@ -63,7 +63,7 @@ public:
 	 */
 	static const Identity NIL;
 
-	ZT_INLINE Identity() noexcept
+	ZT_INLINE Identity() noexcept // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 	{
 		Utils::memoryLock(this,sizeof(Identity));
 		memoryZero(this);
@@ -77,7 +77,7 @@ public:
 	 *
 	 * @param str Identity in canonical string format
 	 */
-	explicit ZT_INLINE Identity(const char *str)
+	explicit ZT_INLINE Identity(const char *str) // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 	{
 		Utils::memoryLock(this,sizeof(Identity));
 		fromString(str);

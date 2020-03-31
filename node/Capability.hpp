@@ -57,7 +57,7 @@ class Capability : public Credential
 public:
 	static constexpr ZT_CredentialType credentialType() noexcept { return ZT_CREDENTIAL_TYPE_CAPABILITY; }
 
-	ZT_INLINE Capability() noexcept { memoryZero(this); }
+	ZT_INLINE Capability() noexcept { memoryZero(this); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 
 	/**
 	 * @param id Capability ID
@@ -67,7 +67,7 @@ public:
 	 * @param rules Network flow rules for this capability
 	 * @param ruleCount Number of flow rules
 	 */
-	ZT_INLINE Capability(const uint32_t id,const uint64_t nwid,const int64_t ts,const ZT_VirtualNetworkRule *const rules,const unsigned int ruleCount) noexcept :
+	ZT_INLINE Capability(const uint32_t id,const uint64_t nwid,const int64_t ts,const ZT_VirtualNetworkRule *const rules,const unsigned int ruleCount) noexcept : // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 		_nwid(nwid),
 		_ts(ts),
 		_id(id),

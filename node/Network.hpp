@@ -300,7 +300,7 @@ public:
 	 * @param to Destination peer
 	 * @param now Current time
 	 */
-	void pushCredentials(void *tPtr,const SharedPtr<Peer> &to,const int64_t now);
+	void pushCredentials(void *tPtr,const SharedPtr<Peer> &to,int64_t now);
 
 	/**
 	 * Destroy this network
@@ -326,7 +326,7 @@ public:
 	ZT_INLINE void eachMember(F f)
 	{
 		Mutex::Lock ml(_memberships_l);
-		for(Map<Address,Membership>::iterator i(_memberships.begin());i!=_memberships.end();++i) {
+		for(Map<Address,Membership>::iterator i(_memberships.begin());i!=_memberships.end();++i) { // NOLINT(modernize-loop-convert,hicpp-use-auto,modernize-use-auto)
 			if (!f(i->first,i->second))
 				break;
 		}

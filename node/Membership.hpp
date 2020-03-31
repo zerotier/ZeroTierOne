@@ -49,7 +49,6 @@ public:
 	};
 
 	Membership();
-	~Membership();
 
 	/**
 	 * Send COM and other credentials to this peer

@@ -15,7 +15,7 @@
 
 namespace ZeroTier {
 
-CertificateOfMembership::CertificateOfMembership(const int64_t timestamp,const int64_t timestampMaxDelta,const uint64_t nwid,const Identity &issuedTo) noexcept :
+CertificateOfMembership::CertificateOfMembership(const int64_t timestamp,const int64_t timestampMaxDelta,const uint64_t nwid,const Identity &issuedTo) noexcept : // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 	_timestamp(timestamp),
 	_timestampMaxDelta(timestampMaxDelta),
 	_networkId(nwid),
@@ -155,9 +155,9 @@ int CertificateOfMembership::unmarshal(const uint8_t *data,int len) noexcept
 	for(unsigned int q=0;q<numq;++q) {
 		if ((p + 24) > len)
 			return -1;
-		const uint64_t id = Utils::loadBigEndian<uint64_t>(data + p); p += 8;
-		const uint64_t value = Utils::loadBigEndian<uint64_t>(data + p); p += 8;
-		const uint64_t delta = Utils::loadBigEndian<uint64_t>(data + p); p += 8;
+		const uint64_t id = Utils::loadBigEndian<uint64_t>(data + p); p += 8; // NOLINT(hicpp-use-auto,modernize-use-auto)
+		const uint64_t value = Utils::loadBigEndian<uint64_t>(data + p); p += 8; // NOLINT(hicpp-use-auto,modernize-use-auto)
+		const uint64_t delta = Utils::loadBigEndian<uint64_t>(data + p); p += 8; // NOLINT(hicpp-use-auto,modernize-use-auto)
 		switch(id) {
 			case 0:
 				_timestamp = (int64_t)value;
@@ -191,7 +191,7 @@ int CertificateOfMembership::unmarshal(const uint8_t *data,int len) noexcept
 				break;
 
 			default:
-				if (_additionalQualifiers.size() == _additionalQualifiers.capacity())
+				if (_additionalQualifiers.size() >= ZT_CERTIFICATEOFMEMBERSHIP_MAX_ADDITIONAL_QUALIFIERS)
 					return -1;
 				_additionalQualifiers.push_back(_Qualifier(id,value,delta));
 				break;
@@ -269,7 +269,7 @@ unsigned int CertificateOfMembership::_fillSigningBuf(uint64_t buf[ZT_CERTIFICAT
 		buf[p++] = informational;
 	}
 
-	for(FCV<_Qualifier,ZT_CERTIFICATEOFMEMBERSHIP_MAX_ADDITIONAL_QUALIFIERS>::const_iterator i(_additionalQualifiers.begin());i != _additionalQualifiers.end();++i) {
+	for(FCV<_Qualifier,ZT_CERTIFICATEOFMEMBERSHIP_MAX_ADDITIONAL_QUALIFIERS>::const_iterator i(_additionalQualifiers.begin());i != _additionalQualifiers.end();++i) { // NOLINT(modernize-loop-convert)
 		buf[p++] = Utils::hton(i->id);
 		buf[p++] = Utils::hton(i->value);
 		buf[p++] = Utils::hton(i->delta);

@@ -159,7 +159,7 @@ namespace ZeroTier {
  */
 struct NetworkConfig : TriviallyCopyable
 {
-	ZT_INLINE NetworkConfig() noexcept { memoryZero(this); }
+	ZT_INLINE NetworkConfig() noexcept { memoryZero(this); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 
 	/**
 	 * Write this network config to a dictionary for transport
@@ -211,7 +211,7 @@ struct NetworkConfig : TriviallyCopyable
 		return false;
 	}
 
-	ZT_INLINE operator bool() const noexcept { return (networkId != 0); }
+	ZT_INLINE operator bool() const noexcept { return (networkId != 0); } // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
 	ZT_INLINE bool operator==(const NetworkConfig &nc) const noexcept { return (memcmp(this,&nc,sizeof(NetworkConfig)) == 0); }
 	ZT_INLINE bool operator!=(const NetworkConfig &nc) const noexcept { return (!(*this == nc)); }
 
@@ -233,7 +233,7 @@ struct NetworkConfig : TriviallyCopyable
 			if (capabilities[i].id() == id)
 				return &(capabilities[i]);
 		}
-		return (Capability *)0;
+		return nullptr;
 	}
 
 	ZT_INLINE const Tag *tag(const uint32_t id) const
@@ -242,7 +242,7 @@ struct NetworkConfig : TriviallyCopyable
 			if (tags[i].id() == id)
 				return &(tags[i]);
 		}
-		return (Tag *)0;
+		return nullptr;
 	}
 
 	/**

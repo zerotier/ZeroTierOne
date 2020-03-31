@@ -17,14 +17,10 @@
 #include "Salsa20.hpp"
 #include "Utils.hpp"
 #include "Speck128.hpp"
-#include "Poly1305.hpp"
 
 #include <cstring>
 #include <cstdint>
 #include <algorithm>
-
-// This takes around one second on a typical ~2.4ghz x64 machine.
-#define ZT_V1_IDENTITY_MIMC52_VDF_ROUNDS_BASE 1000000
 
 namespace ZeroTier {
 
@@ -401,8 +397,8 @@ bool Identity::fromString(const char *str)
 	}
 
 	int fno = 0;
-	char *saveptr = (char *)0;
-	for(char *f=Utils::stok(tmp,":",&saveptr);((f)&&(fno < 4));f=Utils::stok((char *)0,":",&saveptr)) {
+	char *saveptr = nullptr;
+	for(char *f=Utils::stok(tmp,":",&saveptr);((f)&&(fno < 4));f=Utils::stok(nullptr,":",&saveptr)) {
 		switch(fno++) {
 
 			case 0:
@@ -606,7 +602,7 @@ ZT_Identity *ZT_Identity_new(enum ZT_Identity_Type type)
 	if ((type != ZT_IDENTITY_TYPE_C25519)&&(type != ZT_IDENTITY_TYPE_P384))
 		return nullptr;
 	try {
-		ZeroTier::Identity *const id = new ZeroTier::Identity();
+		ZeroTier::Identity *const id = new ZeroTier::Identity(); // NOLINT(hicpp-use-auto,modernize-use-auto)
 		id->generate((ZeroTier::Identity::Type)type);
 		return reinterpret_cast<ZT_Identity *>(id);
 	} catch ( ... ) {
@@ -619,7 +615,7 @@ ZT_Identity *ZT_Identity_fromString(const char *idStr)
 	if (!idStr)
 		return nullptr;
 	try {
-		ZeroTier::Identity *const id = new ZeroTier::Identity();
+		ZeroTier::Identity *const id = new ZeroTier::Identity(); // NOLINT(hicpp-use-auto,modernize-use-auto)
 		if (!id->fromString(idStr)) {
 			delete id;
 			return nullptr;

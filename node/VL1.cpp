@@ -226,9 +226,9 @@ void VL1::onRemotePacket(void *const tPtr,const int64_t localSocket,const InetAd
 
 					// Generate one-time-use MAC key using Salsa20.
 					uint8_t perPacketKey[ZT_PEER_SECRET_KEY_LENGTH];
-					uint8_t macKey[ZT_POLY1305_KEY_LEN];
+					uint8_t macKey[ZT_POLY1305_KEY_SIZE];
 					Protocol::salsa2012DeriveKey(peer->key(),perPacketKey,*pktv[0].b,packetSize);
-					Salsa20(perPacketKey,&ph->packetId).crypt12(Utils::ZERO256,macKey,ZT_POLY1305_KEY_LEN);
+					Salsa20(perPacketKey,&ph->packetId).crypt12(Utils::ZERO256,macKey,ZT_POLY1305_KEY_SIZE);
 
 					// Verify packet MAC.
 					uint64_t mac[2];
@@ -249,8 +249,8 @@ void VL1::onRemotePacket(void *const tPtr,const int64_t localSocket,const InetAd
 					Salsa20 s20(perPacketKey,&ph->packetId);
 
 					// Do one Salsa20 block to generate the one-time-use Poly1305 key.
-					uint8_t macKey[ZT_POLY1305_KEY_LEN];
-					s20.crypt12(Utils::ZERO256,macKey,ZT_POLY1305_KEY_LEN);
+					uint8_t macKey[ZT_POLY1305_KEY_SIZE];
+					s20.crypt12(Utils::ZERO256,macKey,ZT_POLY1305_KEY_SIZE);
 
 					// Get a buffer to store the decrypted and fully contiguous packet.
 					pkt.b.set(new Buf());
@@ -516,9 +516,9 @@ bool VL1::_HELLO(void *tPtr,const SharedPtr<Path> &path,SharedPtr<Peer> &peer,Bu
 
 	if ((!peer)||(!authenticated)) {
 		uint8_t perPacketKey[ZT_PEER_SECRET_KEY_LENGTH];
-		uint8_t macKey[ZT_POLY1305_KEY_LEN];
+		uint8_t macKey[ZT_POLY1305_KEY_SIZE];
 		Protocol::salsa2012DeriveKey(peer->key(),perPacketKey,pkt,packetSize);
-		Salsa20(perPacketKey,&p.h.packetId).crypt12(Utils::ZERO256,macKey,ZT_POLY1305_KEY_LEN);
+		Salsa20(perPacketKey,&p.h.packetId).crypt12(Utils::ZERO256,macKey,ZT_POLY1305_KEY_SIZE);
 		uint64_t mac[2];
 		poly1305(mac,pkt.unsafeData + ZT_PROTO_PACKET_ENCRYPTED_SECTION_START,packetSize - ZT_PROTO_PACKET_ENCRYPTED_SECTION_START,macKey);
 		if (p.h.mac != mac[0]) {

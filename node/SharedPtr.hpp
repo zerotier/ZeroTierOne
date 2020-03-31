@@ -109,7 +109,7 @@ public:
 		from._ptr = nullptr;
 	}
 
-	ZT_INLINE operator bool() const noexcept { return (_ptr != nullptr); }
+	ZT_INLINE operator bool() const noexcept { return (_ptr != nullptr); } // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
 
 	ZT_INLINE T &operator*() const noexcept { return *_ptr; }
 	ZT_INLINE T *operator->() const noexcept { return _ptr; }

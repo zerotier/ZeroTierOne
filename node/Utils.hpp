@@ -50,10 +50,10 @@ namespace Utils {
 #ifdef ZT_ARCH_X64
 struct CPUIDRegisters
 {
+	CPUIDRegisters() noexcept;
 	uint32_t eax,ebx,ecx,edx;
 	bool rdrand;
 	bool aes;
-	CPUIDRegisters();
 };
 extern const CPUIDRegisters CPUID;
 #endif

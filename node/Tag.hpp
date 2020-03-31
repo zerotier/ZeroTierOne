@@ -55,7 +55,7 @@ class Tag : public Credential
 public:
 	static constexpr ZT_CredentialType credentialType() noexcept { return ZT_CREDENTIAL_TYPE_TAG; }
 
-	ZT_INLINE Tag() noexcept { memoryZero(this); }
+	ZT_INLINE Tag() noexcept { memoryZero(this); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 
 	/**
 	 * @param nwid Network ID
@@ -64,7 +64,7 @@ public:
 	 * @param id Tag ID
 	 * @param value Tag value
 	 */
-	ZT_INLINE Tag(const uint64_t nwid,const int64_t ts,const Address &issuedTo,const uint32_t id,const uint32_t value) noexcept :
+	ZT_INLINE Tag(const uint64_t nwid,const int64_t ts,const Address &issuedTo,const uint32_t id,const uint32_t value) noexcept : // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 		_id(id),
 		_value(value),
 		_networkId(nwid),

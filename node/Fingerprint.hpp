@@ -86,7 +86,7 @@ public:
 	ZT_INLINE void zero() noexcept { memoryZero(this); }
 	ZT_INLINE unsigned long hashCode() const noexcept { return _fp.address; }
 
-	ZT_INLINE operator bool() const noexcept { return (_fp.address != 0); }
+	ZT_INLINE operator bool() const noexcept { return (_fp.address != 0); } // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
 
 	ZT_INLINE bool operator==(const Fingerprint &h) const noexcept { return ((_fp.address == h._fp.address) && (memcmp(_fp.hash,h._fp.hash,ZT_IDENTITY_HASH_SIZE) == 0)); }
 	ZT_INLINE bool operator!=(const Fingerprint &h) const noexcept { return !(*this == h); }

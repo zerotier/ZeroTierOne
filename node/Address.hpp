@@ -104,7 +104,7 @@ public:
 	ZT_INLINE bool isReserved() const noexcept { return ((!_a) || ((_a >> 32U) == ZT_ADDRESS_RESERVED_PREFIX)); }
 
 	ZT_INLINE unsigned long hashCode() const noexcept { return (unsigned long)_a; }
-	ZT_INLINE operator bool() const noexcept { return (_a != 0); }
+	ZT_INLINE operator bool() const noexcept { return (_a != 0); } // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
 
 	ZT_INLINE bool operator==(const Address &a) const noexcept { return _a == a._a; }
 	ZT_INLINE bool operator!=(const Address &a) const noexcept { return _a != a._a; }

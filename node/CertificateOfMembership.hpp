@@ -111,7 +111,7 @@ public:
 	/**
 	 * Create an empty certificate of membership
 	 */
-	ZT_INLINE CertificateOfMembership() noexcept { memoryZero(this); }
+	ZT_INLINE CertificateOfMembership() noexcept { memoryZero(this); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 
 	/**
 	 * Create from required fields common to all networks
@@ -126,7 +126,7 @@ public:
 	/**
 	 * @return True if there's something here
 	 */
-	ZT_INLINE operator bool() const noexcept { return (_networkId != 0); }
+	ZT_INLINE operator bool() const noexcept { return (_networkId != 0); } // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
 
 	/**
 	 * @return Credential ID, always 0 for COMs

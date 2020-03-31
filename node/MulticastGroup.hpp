@@ -64,10 +64,10 @@ public:
 			// multicast address directly from the IP address, and it gives us
 			// 24 bits of uniqueness. Collisions aren't likely to be common enough
 			// to care about.
-			const uint8_t *const a = reinterpret_cast<const uint8_t *>(ip.rawIpData());
+			const uint8_t *const a = reinterpret_cast<const uint8_t *>(ip.rawIpData()); // NOLINT(hicpp-use-auto,modernize-use-auto)
 			return MulticastGroup(MAC(0x33,0x33,0xff,a[13],a[14],a[15]),0);
 		}
-		return MulticastGroup();
+		return MulticastGroup(); // NOLINT(modernize-return-braced-init-list)
 	}
 
 	/**

@@ -20,9 +20,8 @@
 #include <CommonCrypto/CommonDigest.h>
 #endif
 
-#define ZT_SHA512_DIGEST_LEN 64
-#define ZT_SHA384_DIGEST_LEN 48
-
+#define ZT_SHA512_DIGEST_SIZE 64
+#define ZT_SHA384_DIGEST_SIZE 48
 #define ZT_SHA512_BLOCK_SIZE 128
 #define ZT_SHA384_BLOCK_SIZE 128
 

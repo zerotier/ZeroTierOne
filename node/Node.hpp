@@ -226,7 +226,7 @@ public:
 	 * @param id Object ID
 	 * @return Vector containing data or empty vector if not found or empty
 	 */
-	std::vector<uint8_t> stateObjectGet(void *const tPtr,ZT_StateObjectType type,const uint64_t id[2]);
+	std::vector<uint8_t> stateObjectGet(void *tPtr,ZT_StateObjectType type,const uint64_t id[2]);
 
 	/**
 	 * Store a state object
@@ -253,7 +253,7 @@ public:
 	ZT_INLINE void stateObjectDelete(void *const tPtr,ZT_StateObjectType type,const uint64_t id[2]) noexcept
 	{
 		if (_cb.statePutFunction)
-			_cb.statePutFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,type,id,(const void *)0,-1);
+			_cb.statePutFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,type,id,nullptr,-1);
 	}
 
 	/**
@@ -329,9 +329,9 @@ public:
 	bool localControllerHasAuthorized(int64_t now,uint64_t nwid,const Address &addr) const;
 
 	// Implementation of NetworkController::Sender interface
-	virtual void ncSendConfig(uint64_t nwid,uint64_t requestPacketId,const Address &destination,const NetworkConfig &nc,bool sendLegacyFormatConfig);
-	virtual void ncSendRevocation(const Address &destination,const Revocation &rev);
-	virtual void ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &destination,NetworkController::ErrorCode errorCode);
+	virtual void ncSendConfig(uint64_t nwid,uint64_t requestPacketId,const Address &destination,const NetworkConfig &nc,bool sendLegacyFormatConfig); // NOLINT(cppcoreguidelines-explicit-virtual-functions,hicpp-use-override,modernize-use-override)
+	virtual void ncSendRevocation(const Address &destination,const Revocation &rev); // NOLINT(cppcoreguidelines-explicit-virtual-functions,hicpp-use-override,modernize-use-override)
+	virtual void ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &destination,NetworkController::ErrorCode errorCode); // NOLINT(cppcoreguidelines-explicit-virtual-functions,hicpp-use-override,modernize-use-override)
 
 private:
 	RuntimeEnvironment _RR;

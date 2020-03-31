@@ -68,17 +68,17 @@ InetAddress::IpScope InetAddress::ipScope() const noexcept
 		}	break;
 
 		case AF_INET6: {
-			const unsigned char *ip = reinterpret_cast<const unsigned char *>(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr);
-			if ((ip[0] & 0xf0) == 0xf0) {
+			const unsigned char *ip = reinterpret_cast<const unsigned char *>(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr); // NOLINT(hicpp-use-auto,modernize-use-auto)
+			if ((ip[0] & 0xf0U) == 0xf0) {
 				if (ip[0] == 0xff) return IP_SCOPE_MULTICAST;                      // ff00::/8
-				if ((ip[0] == 0xfe)&&((ip[1] & 0xc0) == 0x80)) {
+				if ((ip[0] == 0xfe)&&((ip[1] & 0xc0U) == 0x80)) {
 					unsigned int k = 2;
 					while ((!ip[k])&&(k < 15)) ++k;
 					if ((k == 15)&&(ip[15] == 0x01))
 						return IP_SCOPE_LOOPBACK;                                      // fe80::1/128
 					else return IP_SCOPE_LINK_LOCAL;                                 // fe80::/10
 				}
-				if ((ip[0] & 0xfe) == 0xfc) return IP_SCOPE_PRIVATE;               // fc00::/7
+				if ((ip[0] & 0xfeU) == 0xfc) return IP_SCOPE_PRIVATE;              // fc00::/7
 			}
 			unsigned int k = 0;
 			while ((!ip[k])&&(k < 15)) ++k;
@@ -116,7 +116,7 @@ bool InetAddress::isDefaultRoute() const noexcept
 		case AF_INET:
 			return ( (reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr == 0) && (reinterpret_cast<const struct sockaddr_in *>(this)->sin_port == 0) );
 		case AF_INET6:
-			const uint8_t *ipb = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr);
+			const uint8_t *ipb = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr); // NOLINT(hicpp-use-auto,modernize-use-auto)
 			for(int i=0;i<16;++i) {
 				if (ipb[i])
 					return false;
@@ -181,13 +181,13 @@ bool InetAddress::fromString(const char *ipSlashPort) noexcept
 	}
 
 	if (strchr(buf,':')) {
-		struct sockaddr_in6 *const in6 = reinterpret_cast<struct sockaddr_in6 *>(this);
+		struct sockaddr_in6 *const in6 = reinterpret_cast<struct sockaddr_in6 *>(this); // NOLINT(hicpp-use-auto,modernize-use-auto)
 		inet_pton(AF_INET6, buf, &in6->sin6_addr.s6_addr);
 		in6->sin6_family = AF_INET6;
 		in6->sin6_port = Utils::hton((uint16_t)port);
 		return true;
 	} else if (strchr(buf,'.')) {
-		struct sockaddr_in *const in = reinterpret_cast<struct sockaddr_in *>(this);
+		struct sockaddr_in *const in = reinterpret_cast<struct sockaddr_in *>(this); // NOLINT(hicpp-use-auto,modernize-use-auto)
 		inet_pton(AF_INET, buf, &in->sin_addr.s_addr);
 		in->sin_family = AF_INET;
 		in->sin_port = Utils::hton((uint16_t)port);
@@ -256,10 +256,10 @@ bool InetAddress::isEqualPrefix(const InetAddress &addr) const noexcept
 			case AF_INET6: {
 				const InetAddress mask(netmask());
 				InetAddress addr_mask(addr.netmask());
-				const uint8_t *n = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&addr_mask)->sin6_addr.s6_addr);
-				const uint8_t *m = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&mask)->sin6_addr.s6_addr);
-				const uint8_t *a = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&addr)->sin6_addr.s6_addr);
-				const uint8_t *b = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr);
+				const uint8_t *n = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&addr_mask)->sin6_addr.s6_addr); // NOLINT(hicpp-use-auto,modernize-use-auto)
+				const uint8_t *m = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&mask)->sin6_addr.s6_addr); // NOLINT(hicpp-use-auto,modernize-use-auto)
+				const uint8_t *a = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&addr)->sin6_addr.s6_addr); // NOLINT(hicpp-use-auto,modernize-use-auto)
+				const uint8_t *b = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr); // NOLINT(hicpp-use-auto,modernize-use-auto)
 				for(unsigned int i=0;i<16;++i) {
 					if ((a[i] & m[i]) != (b[i] & n[i]))
 						return false;
@@ -286,9 +286,9 @@ bool InetAddress::containsAddress(const InetAddress &addr) const noexcept
 			}
 			case AF_INET6: {
 				const InetAddress mask(netmask());
-				const uint8_t *m = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&mask)->sin6_addr.s6_addr);
-				const uint8_t *a = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&addr)->sin6_addr.s6_addr);
-				const uint8_t *b = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr);
+				const uint8_t *m = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&mask)->sin6_addr.s6_addr); // NOLINT(hicpp-use-auto,modernize-use-auto)
+				const uint8_t *a = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&addr)->sin6_addr.s6_addr); // NOLINT(hicpp-use-auto,modernize-use-auto)
+				const uint8_t *b = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr); // NOLINT(hicpp-use-auto,modernize-use-auto)
 				for(unsigned int i=0;i<16;++i) {
 					if ((a[i] & m[i]) != b[i])
 						return false;
@@ -306,13 +306,13 @@ unsigned long InetAddress::hashCode() const noexcept
 		return ((unsigned long)reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr + (unsigned long)reinterpret_cast<const struct sockaddr_in *>(this)->sin_port);
 	} else if (_data.ss_family == AF_INET6) {
 		unsigned long tmp = reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_port;
-		const uint8_t *a = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr);
+		const uint8_t *a = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr); // NOLINT(hicpp-use-auto,modernize-use-auto)
 		for(long i=0;i<16;++i)
 			reinterpret_cast<uint8_t *>(&tmp)[i % sizeof(tmp)] ^= a[i];
 		return tmp;
 	} else {
 		unsigned long tmp = reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_port;
-		const uint8_t *a = reinterpret_cast<const uint8_t *>(this);
+		const uint8_t *a = reinterpret_cast<const uint8_t *>(this); // NOLINT(hicpp-use-auto,modernize-use-auto)
 		for(long i=0;i<(long)sizeof(InetAddress);++i)
 			reinterpret_cast<uint8_t *>(&tmp)[i % sizeof(tmp)] ^= a[i];
 		return tmp;
@@ -363,7 +363,7 @@ bool InetAddress::isNetwork() const noexcept
 				return false;
 			if (bits >= 128)
 				return false;
-			const unsigned char *ip = reinterpret_cast<const unsigned char *>(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr);
+			const unsigned char *ip = reinterpret_cast<const unsigned char *>(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr); // NOLINT(hicpp-use-auto,modernize-use-auto)
 			unsigned int p = bits / 8;
 			if ((ip[p++] & (0xffU >> (bits % 8))) != 0)
 				return false;
@@ -447,14 +447,12 @@ bool InetAddress::operator==(const InetAddress &a) const noexcept
 				return (
 					(reinterpret_cast<const struct sockaddr_in *>(this)->sin_port == reinterpret_cast<const struct sockaddr_in *>(&a)->sin_port)&&
 					(reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr == reinterpret_cast<const struct sockaddr_in *>(&a)->sin_addr.s_addr));
-				break;
 			case AF_INET6:
 				return (
 					(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_port == reinterpret_cast<const struct sockaddr_in6 *>(&a)->sin6_port)&&
 					(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_flowinfo == reinterpret_cast<const struct sockaddr_in6 *>(&a)->sin6_flowinfo)&&
 					(memcmp(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr,reinterpret_cast<const struct sockaddr_in6 *>(&a)->sin6_addr.s6_addr,16) == 0)&&
 					(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_scope_id == reinterpret_cast<const struct sockaddr_in6 *>(&a)->sin6_scope_id));
-				break;
 			default:
 				return (memcmp(this,&a,sizeof(InetAddress)) == 0);
 		}
@@ -502,7 +500,7 @@ bool InetAddress::operator<(const InetAddress &a) const noexcept
 InetAddress InetAddress::makeIpv6LinkLocal(const MAC &mac) noexcept
 {
 	InetAddress r;
-	sockaddr_in6 *const sin6 = reinterpret_cast<sockaddr_in6 *>(&r);
+	sockaddr_in6 *const sin6 = reinterpret_cast<sockaddr_in6 *>(&r); // NOLINT(hicpp-use-auto,modernize-use-auto)
 	sin6->sin6_family = AF_INET6;
 	sin6->sin6_addr.s6_addr[0] = 0xfe;
 	sin6->sin6_addr.s6_addr[1] = 0x80;
@@ -527,7 +525,7 @@ InetAddress InetAddress::makeIpv6LinkLocal(const MAC &mac) noexcept
 InetAddress InetAddress::makeIpv6rfc4193(uint64_t nwid,uint64_t zeroTierAddress) noexcept
 {
 	InetAddress r;
-	sockaddr_in6 *const sin6 = reinterpret_cast<sockaddr_in6 *>(&r);
+	sockaddr_in6 *const sin6 = reinterpret_cast<sockaddr_in6 *>(&r); // NOLINT(hicpp-use-auto,modernize-use-auto)
 	sin6->sin6_family = AF_INET6;
 	sin6->sin6_addr.s6_addr[0] = 0xfd;
 	sin6->sin6_addr.s6_addr[1] = (uint8_t)(nwid >> 56U);
@@ -553,7 +551,7 @@ InetAddress InetAddress::makeIpv66plane(uint64_t nwid,uint64_t zeroTierAddress) 
 {
 	nwid ^= (nwid >> 32U);
 	InetAddress r;
-	sockaddr_in6 *const sin6 = reinterpret_cast<sockaddr_in6 *>(&r);
+	sockaddr_in6 *const sin6 = reinterpret_cast<sockaddr_in6 *>(&r); // NOLINT(hicpp-use-auto,modernize-use-auto)
 	sin6->sin6_family = AF_INET6;
 	sin6->sin6_addr.s6_addr[0] = 0xfc;
 	sin6->sin6_addr.s6_addr[1] = (uint8_t)(nwid >> 24U);

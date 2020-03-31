@@ -70,7 +70,7 @@ void Trace::unexpectedError(
 	...)
 {
 	va_list ap;
-	ZT_TraceEvent_UNEXPECTED_ERROR ev;
+	ZT_TraceEvent_UNEXPECTED_ERROR ev; // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 	ev.evSize = ZT_CONST_TO_BE_UINT16(sizeof(ev));
 	ev.evType = ZT_CONST_TO_BE_UINT16(ZT_TRACE_UNEXPECTED_ERROR);
 	ev.codeLocation = codeLocation;
@@ -90,7 +90,7 @@ void Trace::_resettingPathsInScope(
 	const InetAddress &newExternal,
 	const InetAddress::IpScope scope)
 {
-	ZT_TraceEvent_VL1_RESETTING_PATHS_IN_SCOPE ev;
+	ZT_TraceEvent_VL1_RESETTING_PATHS_IN_SCOPE ev; // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 	ev.evSize = ZT_CONST_TO_BE_UINT16(sizeof(ev));
 	ev.evType = ZT_CONST_TO_BE_UINT16(ZT_TRACE_VL1_RESETTING_PATHS_IN_SCOPE);
 	ev.codeLocation = Utils::hton(codeLocation);
@@ -112,7 +112,7 @@ void Trace::_tryingNewPath(
 	const Identity &triggeringPeer,
 	const ZT_TraceTryingNewPathReason reason)
 {
-	ZT_TraceEvent_VL1_TRYING_NEW_PATH ev;
+	ZT_TraceEvent_VL1_TRYING_NEW_PATH ev; // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 	ev.evSize = ZT_CONST_TO_BE_UINT16(sizeof(ev));
 	ev.evType = ZT_CONST_TO_BE_UINT16(ZT_TRACE_VL1_TRYING_NEW_PATH);
 	ev.codeLocation = Utils::hton(codeLocation);
@@ -134,7 +134,7 @@ void Trace::_learnedNewPath(
 	const InetAddress &physicalAddress,
 	const InetAddress &replaced)
 {
-	ZT_TraceEvent_VL1_LEARNED_NEW_PATH ev;
+	ZT_TraceEvent_VL1_LEARNED_NEW_PATH ev; // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 	ev.evSize = ZT_CONST_TO_BE_UINT16(sizeof(ev));
 	ev.evType = ZT_CONST_TO_BE_UINT16(ZT_TRACE_VL1_LEARNED_NEW_PATH);
 	ev.codeLocation = Utils::hton(codeLocation);
@@ -157,7 +157,7 @@ void Trace::_incomingPacketDropped(
 	const uint8_t verb,
 	const ZT_TracePacketDropReason reason)
 {
-	ZT_TraceEvent_VL1_INCOMING_PACKET_DROPPED ev;
+	ZT_TraceEvent_VL1_INCOMING_PACKET_DROPPED ev; // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 	ev.evSize = ZT_CONST_TO_BE_UINT16(sizeof(ev));
 	ev.evType = ZT_CONST_TO_BE_UINT16(ZT_TRACE_VL1_INCOMING_PACKET_DROPPED);
 	ev.codeLocation = Utils::hton(codeLocation);
@@ -183,7 +183,7 @@ void Trace::_outgoingNetworkFrameDropped(
 	const uint8_t *frameData,
 	const ZT_TraceFrameDropReason reason)
 {
-	ZT_TraceEvent_VL2_OUTGOING_FRAME_DROPPED ev;
+	ZT_TraceEvent_VL2_OUTGOING_FRAME_DROPPED ev; // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 	ev.evSize = ZT_CONST_TO_BE_UINT16(sizeof(ev));
 	ev.evType = ZT_CONST_TO_BE_UINT16(ZT_TRACE_VL2_OUTGOING_FRAME_DROPPED);
 	ev.codeLocation = Utils::hton(codeLocation);
@@ -197,7 +197,7 @@ void Trace::_outgoingNetworkFrameDropped(
 		if (l > sizeof(ev.frameHead))
 			l = sizeof(ev.frameHead);
 		Utils::copy(ev.frameHead,frameData,l);
-		Utils::copy(ev.frameHead + l,0,sizeof(ev.frameHead) - l);
+		Utils::zero(ev.frameHead + l,sizeof(ev.frameHead) - l);
 	}
 	ev.reason = (uint8_t)reason;
 
@@ -219,7 +219,7 @@ void Trace::_incomingNetworkFrameDropped(
 	const bool credentialRequestSent,
 	const ZT_TraceFrameDropReason reason)
 {
-	ZT_TraceEvent_VL2_INCOMING_FRAME_DROPPED ev;
+	ZT_TraceEvent_VL2_INCOMING_FRAME_DROPPED ev; // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 	ev.evSize = ZT_CONST_TO_BE_UINT16(sizeof(ev));
 	ev.evType = ZT_CONST_TO_BE_UINT16(ZT_TRACE_VL2_INCOMING_FRAME_DROPPED);
 	ev.codeLocation = Utils::hton(codeLocation);
@@ -235,7 +235,7 @@ void Trace::_incomingNetworkFrameDropped(
 		if (l > sizeof(ev.frameHead))
 			l = sizeof(ev.frameHead);
 		Utils::copy(ev.frameHead,frameData,l);
-		Utils::copy(ev.frameHead + l,0,sizeof(ev.frameHead) - l);
+		Utils::zero(ev.frameHead + l,sizeof(ev.frameHead) - l);
 	}
 	ev.verb = verb;
 	ev.credentialRequestSent = (uint8_t)credentialRequestSent;
@@ -249,7 +249,7 @@ void Trace::_networkConfigRequestSent(
 	const uint32_t codeLocation,
 	const uint64_t networkId)
 {
-	ZT_TraceEvent_VL2_NETWORK_CONFIG_REQUESTED ev;
+	ZT_TraceEvent_VL2_NETWORK_CONFIG_REQUESTED ev; // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 	ev.evSize = ZT_CONST_TO_BE_UINT16(sizeof(ev));
 	ev.evType = ZT_CONST_TO_BE_UINT16(ZT_TRACE_VL2_NETWORK_CONFIG_REQUESTED);
 	ev.codeLocation = Utils::hton(codeLocation);
@@ -277,7 +277,7 @@ void Trace::_networkFilter(
 	const bool inbound,
 	const int accept)
 {
-	ZT_TraceEvent_VL2_NETWORK_FILTER ev;
+	ZT_TraceEvent_VL2_NETWORK_FILTER ev; // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 	ev.evSize = ZT_CONST_TO_BE_UINT16(sizeof(ev));
 	ev.evType = ZT_CONST_TO_BE_UINT16(ZT_TRACE_VL2_NETWORK_FILTER);
 	ev.codeLocation = Utils::hton(codeLocation);
@@ -298,7 +298,7 @@ void Trace::_networkFilter(
 		if (l > sizeof(ev.frameHead))
 			l = sizeof(ev.frameHead);
 		Utils::copy(ev.frameHead,frameData,l);
-		Utils::copy(ev.frameHead + l,0,sizeof(ev.frameHead) - l);
+		Utils::zero(ev.frameHead + l,sizeof(ev.frameHead) - l);
 	}
 	ev.etherType = Utils::hton(etherType);
 	ev.vlanId = Utils::hton(vlanId);
@@ -319,7 +319,7 @@ void Trace::_credentialRejected(
 	const uint8_t credentialType,
 	const ZT_TraceCredentialRejectionReason reason)
 {
-	ZT_TraceEvent_VL2_CREDENTIAL_REJECTED ev;
+	ZT_TraceEvent_VL2_CREDENTIAL_REJECTED ev; // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 	ev.evSize = ZT_CONST_TO_BE_UINT16(sizeof(ev));
 	ev.evType = ZT_CONST_TO_BE_UINT16(ZT_TRACE_VL2_NETWORK_FILTER);
 	ev.codeLocation = Utils::hton(codeLocation);

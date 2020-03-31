@@ -16,8 +16,8 @@
 
 namespace ZeroTier {
 
-#define ZT_POLY1305_KEY_LEN 32
-#define ZT_POLY1305_MAC_LEN 16
+#define ZT_POLY1305_KEY_SIZE 32
+#define ZT_POLY1305_MAC_SIZE 16
 
 /**
  * Compute a one-time authentication code

@@ -82,7 +82,7 @@ public:
 	template<unsigned int C>
 	struct Str
 	{
-		ZT_INLINE Str() { Utils::zero<sizeof(s)>(s); }
+		ZT_INLINE Str() { Utils::zero<sizeof(s)>(s); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 		constexpr static unsigned int capacity() { return C; }
 		char s[C];
 	};

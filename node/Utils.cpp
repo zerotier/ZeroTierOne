@@ -36,7 +36,7 @@ namespace ZeroTier {
 namespace Utils {
 
 #ifdef ZT_ARCH_X64
-CPUIDRegisters::CPUIDRegisters()
+CPUIDRegisters::CPUIDRegisters() noexcept // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 {
 #ifdef __WINDOWS__
 	int regs[4];
@@ -212,7 +212,7 @@ unsigned int unhex(const char *h,unsigned int hlen,void *buf,unsigned int buflen
 		hc = *(reinterpret_cast<const uint8_t *>(h++));
 		if (!hc) break;
 
-		c <<= 4;
+		c <<= 4U;
 		if ((hc >= 48)&&(hc <= 57))
 			c |= hc - 48;
 		else if ((hc >= 97)&&(hc <= 102))
@@ -294,7 +294,7 @@ void getSecureRandom(void *const buf,const unsigned int bytes) noexcept
 #ifdef ZT_ARCH_X64
 				if (CPUID.rdrand) {
 					uint64_t tmp = 0;
-					for(int k=0;k<ZT_GETSECURERANDOM_STATE_SIZE;++k) {
+					for(int k=0;k<ZT_GETSECURERANDOM_STATE_SIZE;++k) { // NOLINT(modernize-loop-convert)
 						_rdrand64_step((unsigned long long *)&tmp);
 						randomState[k] ^= tmp;
 					}

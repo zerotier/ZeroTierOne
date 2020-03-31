@@ -38,14 +38,14 @@ public:
 	/**
 	 * Create an uninitialized instance, init() must be called to set up.
 	 */
-	ZT_INLINE Speck128() noexcept {}
+	ZT_INLINE Speck128() noexcept {} // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init,hicpp-use-equals-default,modernize-use-equals-default)
 
 	/**
 	 * Initialize Speck from a 128-bit key
 	 *
 	 * @param k 128-bit / 16 byte key
 	 */
-	ZT_INLINE Speck128(const void *k) noexcept { this->init(k); }
+	ZT_INLINE Speck128(const void *k) noexcept { this->init(k); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init,google-explicit-constructor,hicpp-explicit-conversions)
 
 	ZT_INLINE ~Speck128() { Utils::burn(_k,sizeof(_k)); }
 
@@ -161,8 +161,8 @@ public:
 	 */
 	ZT_INLINE void encrypt(const void *const in,void *const out) const noexcept
 	{
-		uint64_t x = Utils::loadLittleEndian<uint64_t>(in);
-		uint64_t y = Utils::loadLittleEndian<uint64_t>(reinterpret_cast<const uint8_t *>(in) + 8);
+		uint64_t x = Utils::loadLittleEndian<uint64_t>(in); // NOLINT(hicpp-use-auto,modernize-use-auto)
+		uint64_t y = Utils::loadLittleEndian<uint64_t>(reinterpret_cast<const uint8_t *>(in) + 8); // NOLINT(hicpp-use-auto,modernize-use-auto)
 		encryptXY(x,y);
 		Utils::storeLittleEndian<uint64_t>(out,x);
 		Utils::storeLittleEndian<uint64_t>(reinterpret_cast<uint8_t *>(out) + 8,y);
@@ -176,8 +176,8 @@ public:
 	 */
 	ZT_INLINE void decrypt(const void *const in,void *const out) const noexcept
 	{
-		uint64_t x = Utils::loadLittleEndian<uint64_t>(in);
-		uint64_t y = Utils::loadLittleEndian<uint64_t>(reinterpret_cast<const uint8_t *>(in) + 8);
+		uint64_t x = Utils::loadLittleEndian<uint64_t>(in); // NOLINT(hicpp-use-auto,modernize-use-auto)
+		uint64_t y = Utils::loadLittleEndian<uint64_t>(reinterpret_cast<const uint8_t *>(in) + 8); // NOLINT(hicpp-use-auto,modernize-use-auto)
 		decryptXY(x,y);
 		Utils::storeLittleEndian<uint64_t>(out,x);
 		Utils::storeLittleEndian<uint64_t>(reinterpret_cast<uint8_t *>(out) + 8,y);

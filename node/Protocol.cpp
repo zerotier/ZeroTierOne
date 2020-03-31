@@ -51,8 +51,8 @@ void armor(Buf &pkt,int packetSize,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH],
 			salsa2012DeriveKey(key,perPacketKey,pkt,packetSize);
 			Salsa20 s20(perPacketKey,&ph.packetId);
 
-			uint8_t macKey[ZT_POLY1305_KEY_LEN];
-			s20.crypt12(Utils::ZERO256,macKey,ZT_POLY1305_KEY_LEN);
+			uint8_t macKey[ZT_POLY1305_KEY_SIZE];
+			s20.crypt12(Utils::ZERO256,macKey,ZT_POLY1305_KEY_SIZE);
 
 			// only difference here is that we don't encrypt the payload
 
@@ -66,8 +66,8 @@ void armor(Buf &pkt,int packetSize,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH],
 			salsa2012DeriveKey(key,perPacketKey,pkt,packetSize);
 			Salsa20 s20(perPacketKey,&ph.packetId);
 
-			uint8_t macKey[ZT_POLY1305_KEY_LEN];
-			s20.crypt12(Utils::ZERO256,macKey,ZT_POLY1305_KEY_LEN);
+			uint8_t macKey[ZT_POLY1305_KEY_SIZE];
+			s20.crypt12(Utils::ZERO256,macKey,ZT_POLY1305_KEY_SIZE);
 
 			const unsigned int encLen = packetSize - ZT_PROTO_PACKET_ENCRYPTED_SECTION_START;
 			s20.crypt12(pkt.unsafeData + ZT_PROTO_PACKET_ENCRYPTED_SECTION_START,pkt.unsafeData + ZT_PROTO_PACKET_ENCRYPTED_SECTION_START,encLen);

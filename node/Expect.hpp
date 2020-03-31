@@ -47,7 +47,7 @@ namespace ZeroTier {
 class Expect
 {
 public:
-	ZT_INLINE Expect() : _salt(Utils::getSecureRandomU64()) {}
+	ZT_INLINE Expect() : _salt(Utils::getSecureRandomU64()) {} // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 
 	/**
 	 * Called by other code when something is sending a packet that may receive an OK response

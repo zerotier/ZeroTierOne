@@ -47,7 +47,7 @@ class Revocation : public Credential
 public:
 	static constexpr ZT_CredentialType credentialType() noexcept { return ZT_CREDENTIAL_TYPE_REVOCATION; }
 
-	ZT_INLINE Revocation() noexcept { memoryZero(this); }
+	ZT_INLINE Revocation() noexcept { memoryZero(this); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 
 	/**
 	 * @param i ID (arbitrary for revocations, currently random)
@@ -58,7 +58,7 @@ public:
 	 * @param tgt Target node whose credential(s) are being revoked
 	 * @param ct Credential type being revoked
 	 */
-	ZT_INLINE Revocation(const uint32_t i,const uint64_t nwid,const uint32_t cid,const uint64_t thr,const uint64_t fl,const Address &tgt,const ZT_CredentialType ct) noexcept :
+	ZT_INLINE Revocation(const uint32_t i,const uint64_t nwid,const uint32_t cid,const uint64_t thr,const uint64_t fl,const Address &tgt,const ZT_CredentialType ct) noexcept : // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 		_id(i),
 		_credentialId(cid),
 		_networkId(nwid),
