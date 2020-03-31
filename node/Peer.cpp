@@ -235,7 +235,7 @@ unsigned int Peer::sendHELLO(void *tPtr,const int64_t localSocket,const InetAddr
 unsigned int Peer::sendNOP(void *tPtr,const int64_t localSocket,const InetAddress &atAddress,int64_t now)
 {
 	Buf outp;
-	Protocol::Header &ph = outp.as<Protocol::Header>();
+	Protocol::Header &ph = outp.as<Protocol::Header>(); // NOLINT(hicpp-use-auto,modernize-use-auto)
 	ph.packetId = Protocol::getPacketId();
 	_id.address().copyTo(ph.destination);
 	RR->identity.address().copyTo(ph.source);
@@ -336,7 +336,7 @@ void Peer::getAllPaths(std::vector< SharedPtr<Path> > &paths)
 
 void Peer::save(void *tPtr) const
 {
-	uint8_t *const buf = (uint8_t *)malloc(8 + ZT_PEER_MARSHAL_SIZE_MAX);
+	uint8_t *const buf = (uint8_t *)malloc(8 + ZT_PEER_MARSHAL_SIZE_MAX); // NOLINT(hicpp-use-auto,modernize-use-auto)
 	if (!buf) return;
 
 	Utils::storeBigEndian<uint64_t>(buf,(uint64_t)RR->node->now());
@@ -359,26 +359,25 @@ void Peer::contact(void *tPtr,const Endpoint &ep,const int64_t now,const bool bf
 {
 	static uint8_t junk = 0;
 
-	InetAddress phyAddr(ep.inetAddr());
-	if (phyAddr) { // only this endpoint type is currently implemented
-		if (!RR->node->shouldUsePathForZeroTierTraffic(tPtr,_id,-1,phyAddr))
+	if (ep.inetAddr()) { // only this endpoint type is currently implemented
+		if (!RR->node->shouldUsePathForZeroTierTraffic(tPtr,_id,-1,ep.inetAddr()))
 			return;
 
 		// Sending a packet with a low TTL before the real message assists traversal with some
 		// stateful firewalls and is harmless otherwise AFAIK.
 		++junk;
-		RR->node->putPacket(tPtr,-1,phyAddr,&junk,1,2);
+		RR->node->putPacket(tPtr,-1,ep.inetAddr(),&junk,1,2);
 
 		// In a few hundred milliseconds we'll send the real packet.
 		{
 			RWMutex::Lock l(_lock);
-			_contactQueue.push_back(_ContactQueueItem(phyAddr,ZT_MAX_PEER_NETWORK_PATHS));
+			_contactQueue.push_back(_ContactQueueItem(ep.inetAddr(),ZT_MAX_PEER_NETWORK_PATHS)); // NOLINT(hicpp-use-emplace,modernize-use-emplace)
 		}
 
 		// If the peer indicates that they may be behind a symmetric NAT and there are no
 		// living direct paths, try a few more aggressive things.
-		if ((phyAddr.family() == AF_INET) && (!direct(now))) {
-			unsigned int port = phyAddr.port();
+		if ((ep.inetAddr().family() == AF_INET) && (!direct(now))) {
+			unsigned int port = ep.inetAddr().port();
 			if ((bfg1024)&&(port < 1024)&&(RR->node->natMustDie())) {
 				// If the other side is using a low-numbered port and has elected to
 				// have this done, we can try scanning every port below 1024. The search
@@ -387,7 +386,7 @@ void Peer::contact(void *tPtr,const Endpoint &ep,const int64_t now,const bool bf
 				// Generate a random order list of all <1024 ports except 0 and the original sending port.
 				uint16_t ports[1022];
 				uint16_t ctr = 1;
-				for (int i=0;i<1022;++i) {
+				for (int i=0;i<1022;++i) { // NOLINT(modernize-loop-convert)
 					if (ctr == port) ++ctr;
 					ports[i] = ctr++;
 				}
@@ -407,17 +406,17 @@ void Peer::contact(void *tPtr,const Endpoint &ep,const int64_t now,const bool bf
 				{
 					RWMutex::Lock l(_lock);
 					for (int i=0;i<896;i+=128)
-						_contactQueue.push_back(_ContactQueueItem(phyAddr,ports + i,ports + i + 128,1));
-					_contactQueue.push_back(_ContactQueueItem(phyAddr,ports + 896,ports + 1022,1));
+						_contactQueue.push_back(_ContactQueueItem(ep.inetAddr(),ports + i,ports + i + 128,1)); // NOLINT(hicpp-use-emplace,modernize-use-emplace)
+					_contactQueue.push_back(_ContactQueueItem(ep.inetAddr(),ports + 896,ports + 1022,1)); // NOLINT(hicpp-use-emplace,modernize-use-emplace)
 				}
 			} else {
 				// Otherwise use the simpler sequential port attempt method in intervals.
 				RWMutex::Lock l(_lock);
 				for (int k=0;k<3;++k) {
 					if (++port > 65535) break;
-					InetAddress tryNext(phyAddr);
+					InetAddress tryNext(ep.inetAddr());
 					tryNext.setPort(port);
-					_contactQueue.push_back(_ContactQueueItem(tryNext,1));
+					_contactQueue.push_back(_ContactQueueItem(tryNext,1)); // NOLINT(hicpp-use-emplace,modernize-use-emplace)
 				}
 			}
 		}
@@ -450,7 +449,7 @@ void Peer::alarm(void *tPtr,const int64_t now)
 		qi.alivePathThreshold = qi2.alivePathThreshold;
 		_contactQueue.pop_front();
 
-		for(std::list<_ContactQueueItem>::iterator q(_contactQueue.begin());q!=_contactQueue.end();) {
+		for(std::list<_ContactQueueItem>::iterator q(_contactQueue.begin());q!=_contactQueue.end();) { // NOLINT(hicpp-use-auto,modernize-use-auto)
 			if (_alivePathCount >= q->alivePathThreshold)
 				_contactQueue.erase(q++);
 			else ++q;
@@ -464,7 +463,7 @@ void Peer::alarm(void *tPtr,const int64_t now)
 		if (qi.ports.empty()) {
 			RR->node->putPacket(tPtr,-1,qi.address,&outgoingProbe,ZT_PROTO_PROBE_LENGTH);
 		} else {
-			for (std::vector<uint16_t>::iterator p(qi.ports.begin()); p != qi.ports.end(); ++p) {
+			for (std::vector<uint16_t>::iterator p(qi.ports.begin()); p != qi.ports.end(); ++p) { // NOLINT(hicpp-use-auto,modernize-use-auto)
 				qi.address.setPort(*p);
 				RR->node->putPacket(tPtr,-1,qi.address,&outgoingProbe,ZT_PROTO_PROBE_LENGTH);
 			}
@@ -473,7 +472,7 @@ void Peer::alarm(void *tPtr,const int64_t now)
 		if (qi.ports.empty()) {
 			this->sendNOP(tPtr,-1,qi.address,now);
 		} else {
-			for (std::vector<uint16_t>::iterator p(qi.ports.begin()); p != qi.ports.end(); ++p) {
+			for (std::vector<uint16_t>::iterator p(qi.ports.begin()); p != qi.ports.end(); ++p) { // NOLINT(hicpp-use-auto,modernize-use-auto)
 				qi.address.setPort(*p);
 				this->sendNOP(tPtr,-1,qi.address,now);
 			}

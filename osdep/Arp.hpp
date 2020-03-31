@@ -14,14 +14,12 @@
 #ifndef ZT_ARP_HPP
 #define ZT_ARP_HPP
 
-#include <stdint.h>
-
-#include <utility>
-#include <vector>
-
 #include "../node/Constants.hpp"
 #include "../node/Map.hpp"
 #include "../node/MAC.hpp"
+
+#include <utility>
+#include <vector>
 
 /**
  * Maximum possible ARP length

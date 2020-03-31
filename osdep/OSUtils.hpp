@@ -27,7 +27,7 @@
 #include <map>
 
 #ifndef __WINDOWS__
-#include <sys/time.h>
+#include <sys/time.h> // NOLINT(modernize-deprecated-headers)
 #include <sys/stat.h>
 #include <unistd.h>
 #endif
