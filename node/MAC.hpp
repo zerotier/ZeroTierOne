@@ -34,8 +34,8 @@ public:
 	ZT_INLINE MAC() noexcept : _m(0ULL) {}
 	ZT_INLINE MAC(const uint8_t a,const uint8_t b,const uint8_t c,const uint8_t d,const uint8_t e,const uint8_t f) noexcept : _m((((uint64_t)a) << 40U) | (((uint64_t)b) << 32U) | (((uint64_t)c) << 24U) | (((uint64_t)d) << 16U) | (((uint64_t)e) << 8U) | ((uint64_t)f) ) {}
 	explicit ZT_INLINE MAC(const uint64_t m) noexcept : _m(m) {}
-	explicit ZT_INLINE MAC(const uint8_t b[6]) noexcept { setTo(b); }
-	ZT_INLINE MAC(const Address &ztaddr,uint64_t nwid) noexcept { fromAddress(ztaddr,nwid); }
+	explicit ZT_INLINE MAC(const uint8_t b[6]) noexcept { setTo(b); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+	ZT_INLINE MAC(const Address &ztaddr,const uint64_t nwid) noexcept { fromAddress(ztaddr,nwid); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 
 	/**
 	 * @return MAC in 64-bit integer
@@ -50,7 +50,7 @@ public:
 	/**
 	 * @return True if MAC is non-zero
 	 */
-	ZT_INLINE operator bool() const noexcept { return (_m != 0ULL); }
+	ZT_INLINE operator bool() const noexcept { return (_m != 0ULL); } // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
 
 	/**
 	 * @param bits Raw MAC in big-endian byte order
