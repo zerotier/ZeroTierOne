@@ -84,7 +84,7 @@ public:
 
 	ZT_INLINE void set(const K &key,const V &value)
 	{
-		this->emplace(key,value);
+		(*this)[key] = value;
 	}
 };
 #endif

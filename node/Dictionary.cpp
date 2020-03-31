@@ -31,7 +31,7 @@ std::vector<uint8_t> &Dictionary::operator[](const char *k)
 const std::vector<uint8_t> &Dictionary::operator[](const char *k) const
 {
 	static const std::vector<uint8_t> emptyEntry;
-	std::map< uint64_t,std::vector<uint8_t> >::const_iterator e(_t.find(_toKey(k)));
+	Map< uint64_t,std::vector<uint8_t> >::const_iterator e(_t.find(_toKey(k)));
 	return (e == _t.end()) ? emptyEntry : e->second;
 }
 
@@ -156,7 +156,7 @@ void Dictionary::encode(std::vector<uint8_t> &out) const
 
 	out.clear();
 
-	for(std::map< uint64_t,std::vector<uint8_t> >::const_iterator ti(_t.begin());ti!=_t.end();++ti) {
+	for(Map< uint64_t,std::vector<uint8_t> >::const_iterator ti(_t.begin());ti!=_t.end();++ti) {
 		str[0] = ti->first;
 		const char *k = (const char *)str;
 		for(;;) {

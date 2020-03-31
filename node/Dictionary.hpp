@@ -18,10 +18,10 @@
 #include "Utils.hpp"
 #include "Address.hpp"
 #include "Buf.hpp"
+#include "Map.hpp"
 
 #include <cstdint>
 #include <vector>
-#include <map>
 
 namespace ZeroTier {
 
@@ -180,7 +180,7 @@ private:
 		return key;
 	}
 
-	std::map< uint64_t,std::vector<uint8_t> > _t;
+	Map< uint64_t,std::vector<uint8_t> > _t;
 };
 
 } // namespace ZeroTier
