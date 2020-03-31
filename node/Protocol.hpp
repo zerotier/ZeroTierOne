@@ -1017,6 +1017,11 @@ ZT_PACKED_STRUCT(struct UNSUPPORTED_OPERATION__NETWORK_CONFIG_REQUEST
 
 /****************************************************************************/
 
+static_assert(sizeof(Protocol::Header) == ZT_PROTO_MIN_PACKET_LENGTH,"Protocol::Header struct packing error");
+static_assert(sizeof(Protocol::FragmentHeader) == ZT_PROTO_MIN_FRAGMENT_LENGTH,"Protocol::FragmentHeader struct packing error");
+static_assert(ZT_PROTO_MAX_PACKET_LENGTH < ZT_BUF_MEM_SIZE,"maximum packet length won't fit in Buf");
+static_assert(ZT_PROTO_PACKET_ENCRYPTED_SECTION_START == (ZT_PROTO_MIN_PACKET_LENGTH-1),"encrypted packet section must start right before protocol verb at one less than minimum packet size");
+
 /**
  * Convenience function to pull packet ID from a raw buffer
  *

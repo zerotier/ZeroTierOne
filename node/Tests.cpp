@@ -48,7 +48,7 @@
 
 #ifdef __UNIX_LIKE__
 #include <unistd.h>
-#include <sys/time.h>
+#include <sys/time.h> // NOLINT(modernize-deprecated-headers,hicpp-deprecated-headers)
 #include <sys/types.h>
 #endif
 
@@ -68,7 +68,7 @@ static int64_t now()
 	tmp.HighPart = ft.dwHighDateTime;
 	return (int64_t)( ((tmp.QuadPart - 116444736000000000LL) / 10000L) + st.wMilliseconds );
 #else
-	timeval tv;
+	timeval tv; // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 	gettimeofday(&tv,nullptr);
 	return ( (1000LL * (int64_t)tv.tv_sec) + (int64_t)(tv.tv_usec / 1000) );
 #endif
@@ -232,8 +232,6 @@ public:
 	long *cnt;
 };
 
-#define ZT_T_ASSERT(e) if (!(e)) { ZT_T_PRINTF("FAILED (simple assert: " #e ")" ZT_EOL_S); return "simple assert: " #e; }
-
 extern "C" const char *ZTT_general()
 {
 	try {
@@ -266,21 +264,12 @@ extern "C" const char *ZTT_general()
 
 		{
 			ZT_T_PRINTF("[general] Checking structure sizes, alignment, and packing... ");
-			ZT_T_ASSERT(sizeof(StructPackingTestSample) == 146);
-			StructPackingTestSample packtest;
+			static_assert(sizeof(StructPackingTestSample) == 146,"StructPackingTestSample packed incorrectly");
+			StructPackingTestSample packtest; // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 			if (((uintptr_t)&(packtest.woop) - (uintptr_t)&packtest) != 8)
 				return "structure packing check failed: incorrect index of test field in example packed struct (compiler or environment problem)";
 			if (((uintptr_t)&(packtest.hoho[5]) - (uintptr_t)&packtest) != 57)
 				return "structure packing check failed: incorrect index of test array indexed field in example packed struct (compiler or environment problem)";
-			ZT_T_ASSERT(ZT_PROTO_MAX_PACKET_LENGTH < ZT_BUF_MEM_SIZE);
-			ZT_T_ASSERT(ZT_PROTO_PACKET_ENCRYPTED_SECTION_START < ZT_PROTO_MIN_PACKET_LENGTH);
-			ZT_T_ASSERT(sizeof(Protocol::Header) == ZT_PROTO_MIN_PACKET_LENGTH);
-			ZT_T_ASSERT(sizeof(Protocol::FragmentHeader) == ZT_PROTO_MIN_FRAGMENT_LENGTH);
-			ZT_T_ASSERT(sizeof(sockaddr_storage) == sizeof(InetAddress));
-			ZT_T_ASSERT(sizeof(sockaddr_in) <= sizeof(InetAddress));
-			ZT_T_ASSERT(sizeof(sockaddr_in6) <= sizeof(InetAddress));
-			ZT_T_ASSERT(sizeof(sockaddr) <= sizeof(InetAddress));
-			ZT_T_ASSERT(sizeof(Fingerprint) == sizeof(ZT_Fingerprint));
 			ZT_T_PRINTF("OK" ZT_EOL_S);
 		}
 
@@ -477,7 +466,7 @@ extern "C" const char *ZTT_general()
 					return "Map::get() failed";
 				}
 			}
-			for(Map<uint64_t,uint64_t>::iterator i(tm.begin());i!=tm.end();) {
+			for(Map<uint64_t,uint64_t>::iterator i(tm.begin());i!=tm.end();) { // NOLINT(hicpp-use-auto,modernize-use-auto)
 				if ((i->first & 1U) == 0)
 					tm.erase(i++);
 				else ++i;
@@ -549,7 +538,7 @@ extern "C" const char *ZTT_general()
 				FCV<Buf::Slice,16> ref;
 
 				int frags = 1 + (int)(Utils::random() % 16);
-				int skip = ((k & 3U) == 1) ? -1 : (int)(Utils::random() % frags);
+				int skip = ((k & 3) == 1) ? -1 : (int)(Utils::random() % frags);
 				bool complete = false;
 				message.resize(frags);
 				ref.resize(frags);
@@ -1069,7 +1058,7 @@ extern "C" const char *ZTT_benchmarkCrypto()
 			ZT_T_PRINTF("[crypto] Benchmarking Curve25519 ECDH... ");
 			int64_t start = now();
 			for(int i=0;i<150;++i) {
-				for (int t=0;t<ZT_NUM_C25519_TEST_VECTORS;++t) {
+				for (int t=0;t<ZT_NUM_C25519_TEST_VECTORS;++t) { // NOLINT(modernize-loop-convert)
 					C25519::agree(C25519_TEST_VECTORS[t].priv1,C25519_TEST_VECTORS[t].pub2,key);
 					foo = key[0]; // prevent optimization
 				}
@@ -1084,7 +1073,7 @@ extern "C" const char *ZTT_benchmarkCrypto()
 			ZT_T_PRINTF("[crypto] Benchmarking Ed25519 signature... ");
 			int64_t start = now();
 			for(int i=0;i<150;++i) {
-				for (int t=0;t<ZT_NUM_C25519_TEST_VECTORS;++t) {
+				for (int t=0;t<ZT_NUM_C25519_TEST_VECTORS;++t) { // NOLINT(modernize-loop-convert)
 					C25519::sign(C25519_TEST_VECTORS[t].priv1,C25519_TEST_VECTORS[t].pub1,sig,sizeof(sig),sig);
 					foo = sig[0];
 				}
@@ -1097,7 +1086,7 @@ extern "C" const char *ZTT_benchmarkCrypto()
 			ZT_T_PRINTF("[crypto] Benchmarking Ed25519 signature verification... ");
 			int64_t start = now();
 			for(int i=0;i<15;++i) {
-				for (int t=0;t<ZT_NUM_C25519_TEST_VECTORS;++t) {
+				for (int t=0;t<ZT_NUM_C25519_TEST_VECTORS;++t) { // NOLINT(modernize-loop-convert)
 					if (C25519::verify(C25519_TEST_VECTORS[t].pub1,C25519_TEST_VECTORS[t].agreementSha512,64,C25519_TEST_VECTORS[t].agreementSignedBy1,96))
 						++foo;
 				}
@@ -1109,7 +1098,7 @@ extern "C" const char *ZTT_benchmarkCrypto()
 		{
 			uint8_t key[48];
 			ZT_T_PRINTF("[crypto] Benchmarking ECC384 ECDH... ");
-			volatile uint8_t *volatile pub = (volatile uint8_t *)ECC384_TV0_PUBLIC;
+			volatile uint8_t *volatile pub = (volatile uint8_t *)ECC384_TV0_PUBLIC; // NOLINT(hicpp-use-auto,modernize-use-auto)
 			int64_t start = now();
 			for(int i=0;i<500;++i) {
 				ECC384ECDH((const uint8_t *)pub,ECC384_TV0_PRIVATE,key);

@@ -485,6 +485,11 @@ private:
 	sockaddr_storage _data;
 };
 
+static_assert(sizeof(sockaddr_storage) == sizeof(InetAddress),"InetAddress sizing incorrect");
+static_assert(sizeof(sockaddr_in) <= sizeof(InetAddress),"InetAddress sizing incorrect");
+static_assert(sizeof(sockaddr_in6) <= sizeof(InetAddress),"InetAddress sizing incorrect");
+static_assert(sizeof(sockaddr) <= sizeof(InetAddress),"InetAddress sizing incorrect");
+
 static ZT_INLINE InetAddress *asInetAddress(sockaddr_in *p) noexcept { return reinterpret_cast<InetAddress *>(p); }
 static ZT_INLINE InetAddress *asInetAddress(sockaddr_in6 *p) noexcept { return reinterpret_cast<InetAddress *>(p); }
 static ZT_INLINE InetAddress *asInetAddress(sockaddr *p) noexcept { return reinterpret_cast<InetAddress *>(p); }
