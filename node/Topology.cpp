@@ -99,7 +99,7 @@ void Topology::getAllPeers(std::vector< SharedPtr<Peer> > &allPeers) const
 	RWMutex::RLock l(_peers_l);
 	allPeers.clear();
 	allPeers.reserve(_peers.size());
-	for(FlatMap< Address,SharedPtr<Peer> >::const_iterator i(_peers.begin());i!=_peers.end();++i)
+	for(Map< Address,SharedPtr<Peer> >::const_iterator i(_peers.begin());i!=_peers.end();++i)
 		allPeers.push_back(i->second);
 }
 
@@ -198,7 +198,7 @@ void Topology::doPeriodicTasks(void *tPtr,const int64_t now)
 {
 	{
 		RWMutex::Lock l1(_peers_l);
-		for(FlatMap< Address,SharedPtr<Peer> >::iterator i(_peers.begin());i!=_peers.end();) {
+		for(Map< Address,SharedPtr<Peer> >::iterator i(_peers.begin());i!=_peers.end();) {
 			if ( (!i->second->alive(now)) && (_roots.count(i->second->identity()) == 0) ) {
 				i->second->save(tPtr);
 				_peersByIncomingProbe.erase(i->second->incomingProbe());
@@ -209,7 +209,7 @@ void Topology::doPeriodicTasks(void *tPtr,const int64_t now)
 	}
 	{
 		RWMutex::Lock l1(_paths_l);
-		for(FlatMap< uint64_t,SharedPtr<Path> >::iterator i(_paths.begin());i!=_paths.end();) {
+		for(Map< uint64_t,SharedPtr<Path> >::iterator i(_paths.begin());i!=_paths.end();) {
 			if ((i->second.references() <= 1)&&(!i->second->alive(now)))
 				_paths.erase(i++);
 			else ++i;
@@ -220,7 +220,7 @@ void Topology::doPeriodicTasks(void *tPtr,const int64_t now)
 void Topology::saveAll(void *tPtr)
 {
 	RWMutex::RLock l(_peers_l);
-	for(FlatMap< Address,SharedPtr<Peer> >::iterator i(_peers.begin());i!=_peers.end();++i)
+	for(Map< Address,SharedPtr<Peer> >::iterator i(_peers.begin());i!=_peers.end();++i)
 		i->second->save(tPtr);
 }
 

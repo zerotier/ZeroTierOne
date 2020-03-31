@@ -159,8 +159,8 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 // 3/5 of the credential types have identical addCredential() code
 template<typename C>
 static ZT_INLINE Membership::AddCredentialResult _addCredImpl(
-	FlatMap<uint32_t,C> &remoteCreds,
-	const FlatMap<uint64_t,int64_t> &revocations,
+	Map<uint32_t,C> &remoteCreds,
+	const Map<uint64_t,int64_t> &revocations,
 	const RuntimeEnvironment *const RR,
 	void *const tPtr,
 	const Identity &sourcePeerIdentity,

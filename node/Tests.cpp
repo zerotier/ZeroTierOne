@@ -38,7 +38,7 @@
 #include "SHA512.hpp"
 #include "Defragmenter.hpp"
 #include "Fingerprint.hpp"
-#include "FlatMap.hpp"
+#include "Map.hpp"
 
 #include <cstdint>
 #include <cstring>
@@ -176,7 +176,7 @@ static const C25519TestVector C25519_TEST_VECTORS[ZT_NUM_C25519_TEST_VECTORS] = 
 };
 
 #define IDENTITY_V0_KNOWN_GOOD_0 "8e4df28b72:0:ac3d46abe0c21f3cfe7a6c8d6a85cfcffcb82fbd55af6a4d6350657c68200843fa2e16f9418bbd9702cae365f2af5fb4c420908b803a681d4daef6114d78a2d7:bd8dd6e4ce7022d2f812797a80c6ee8ad180dc4ebf301dec8b06d1be08832bddd63a2f1cfa7b2c504474c75bdc8898ba476ef92e8e2d0509f8441985171ff16e"
-#define IDENTITY_V1_KNOWN_GOOD_0 "8013cb9738:1:avsyitc474r2ylspwjkjvlermiiouaxy3bzzlqtcvafo2gv3abpeyov2zjfyx4vbkxghcoidpjidszt2ibsn4nmmvtpj42clzsxkyt5dajljk2i3x56picaeapayrv5xvd6x6ucgzvei7773xnoj6tyxwcjvqwbhz3joxeb74kdrfq2247hm7ly:54cckqx5fmd54zkmxt6lz2bxn2elws2ju2kv44cqpy7b22n5dlz256iz7j44jc4wyqj4mppyhknbayf2iulu7g4mysgeee5zrtp4zfwqtjnqkn2xpemap5cfm33kldc5kpukg33nqaizcgvekobj6omt3uwro5xboopvgiwdejwmgmpfevja"
+#define IDENTITY_V1_KNOWN_GOOD_0 "2d48f7a238:1:gltupn4yrt226o3vebl7m7m5hpndhvfz66nzx6gwgtgbsgs5xr7dpz5aiv636zijrxayuu2ydpff4zgho7o6gpvx62njwkavqordxcceajs2fif4y2ytofpyr25mmxmanbf4fmdiitiq2b53nmx4ckjcmtyqrkqye2jkdainmkqbtil3dhyuiwa:xg73bkrxptymo7kyyd6efu2o7ziemyu3lpgtip53ejsqukt6l2gebq5uofzt6cd2455st5iwrdgc2ft3twkdzrkunu6x5imdz6jt27qopsvqpdijx5cqgukpjxrtyx73j42socym5pi5hy2ir5yma7by4gmtjgvvu3sxbb3qv2yuicykyz2q"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -466,34 +466,41 @@ extern "C" const char *ZTT_general()
 		}
 
 		{
-			ZT_T_PRINTF("[general] Testing FlatMap... ");
-			FlatMap<uint64_t,uint64_t> tm;
-			for(uint64_t i=0;i<10000;++i)
+			ZT_T_PRINTF("[general] Testing Map... ");
+			Map<uint64_t,uint64_t> tm;
+			for(uint64_t i=0;i<100000;++i)
 				tm.set(i,i);
-			for(uint64_t i=0;i<10000;++i) {
+			for(uint64_t i=0;i<100000;++i) {
 				uint64_t *v = tm.get(i);
 				if ((!v)||(*v != i)) {
 					ZT_T_PRINTF("FAILED (get() failed)" ZT_EOL_S);
-					return "FlatMap::get() failed";
+					return "Map::get() failed";
 				}
 			}
-			for(FlatMap<uint64_t,uint64_t>::iterator i(tm.begin());i!=tm.end();) {
+			for(Map<uint64_t,uint64_t>::iterator i(tm.begin());i!=tm.end();) {
 				if ((i->first & 1U) == 0)
 					tm.erase(i++);
 				else ++i;
 			}
-			if (tm.size() != 5000) {
+			if (tm.size() != 50000) {
 				ZT_T_PRINTF("FAILED (erase() failed (1))" ZT_EOL_S);
-				return "FlatMap::erase() failed (1)";
+				return "Map::erase() failed (1)";
 			}
-			for(uint64_t i=0;i<10000;++i) {
+			for(uint64_t i=0;i<100000;++i) {
 				uint64_t *v = tm.get(i);
-				if (((i & 1U) == 0)&&(v)) {
-					ZT_T_PRINTF("FAILED (erase() failed (2))" ZT_EOL_S);
-					return "FlatMap::erase() failed (2)";
+				if ((i & 1U) == 0) {
+					if (v) {
+						ZT_T_PRINTF("FAILED (erase() failed (2))" ZT_EOL_S);
+						return "Map::erase() failed (2)";
+					}
+				} else {
+					if (!v) {
+						ZT_T_PRINTF("FAILED (erase() failed (3))" ZT_EOL_S);
+						return "Map::erase() failed (3)";
+					}
 				}
 			}
-			ZT_T_PRINTF("OK (hash size: %lu)" ZT_EOL_S,tm.hashSize());
+			ZT_T_PRINTF("OK" ZT_EOL_S);
 		}
 
 		{

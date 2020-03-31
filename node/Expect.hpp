@@ -80,7 +80,7 @@ private:
 	const uint64_t _salt;
 
 	// Each bucket contains a timestamp in units of the expect duration.
-	std::atomic<int32_t> _packetIdSent[ZT_EXPECT_TTL];
+	std::atomic<int32_t> _packetIdSent[ZT_EXPECT_BUCKETS];
 };
 
 } // namespace ZeroTier

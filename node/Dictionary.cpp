@@ -15,19 +15,6 @@
 
 namespace ZeroTier {
 
-static uint64_t _toKey(const char *k)
-{
-	uint64_t n = 0;
-	unsigned int i = 0;
-	for(;;) {
-		char c = k[i];
-		if (!c) break;
-		reinterpret_cast<uint8_t *>(&n)[i & 7U] ^= (uint8_t)c;
-		++i;
-	}
-	return n;
-}
-
 Dictionary::Dictionary()
 {
 }
@@ -80,7 +67,7 @@ void Dictionary::add(const char *k,uint64_t v)
 void Dictionary::add(const char *k,const Address &v)
 {
 	std::vector<uint8_t> &e = (*this)[k];
-	e.resize(11);
+	e.resize(ZT_ADDRESS_STRING_SIZE_MAX);
 	v.toString((char *)e.data());
 }
 
@@ -109,7 +96,6 @@ void Dictionary::add(const char *k,const void *data,unsigned int len)
 
 bool Dictionary::getB(const char *k,bool dfl) const
 {
-	bool v = dfl;
 	const std::vector<uint8_t> &e = (*this)[k];
 	if (!e.empty()) {
 		switch ((char)e[0]) {
@@ -123,7 +109,7 @@ bool Dictionary::getB(const char *k,bool dfl) const
 				return false;
 		}
 	}
-	return v;
+	return dfl;
 }
 
 uint64_t Dictionary::getUI(const char *k,uint64_t dfl) const
@@ -173,7 +159,6 @@ void Dictionary::encode(std::vector<uint8_t> &out) const
 	for(std::map< uint64_t,std::vector<uint8_t> >::const_iterator ti(_t.begin());ti!=_t.end();++ti) {
 		str[0] = ti->first;
 		const char *k = (const char *)str;
-
 		for(;;) {
 			char kc = *(k++);
 			if (!kc) break;

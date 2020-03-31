@@ -18,7 +18,7 @@
 
 #include "Constants.hpp"
 #include "Credential.hpp"
-#include "FlatMap.hpp"
+#include "Map.hpp"
 #include "CertificateOfMembership.hpp"
 #include "Capability.hpp"
 #include "Tag.hpp"
@@ -106,7 +106,7 @@ public:
 	{
 		if (_isUnspoofableAddress(nconf,r))
 			return true;
-		for(FlatMap< uint32_t,CertificateOfOwnership >::const_iterator i(_remoteCoos.begin());i!=_remoteCoos.end();++i) {
+		for(Map< uint32_t,CertificateOfOwnership >::const_iterator i(_remoteCoos.begin());i!=_remoteCoos.end();++i) {
 			if (_isCredentialTimestampValid(nconf,i->second)&&(i->second.owns(r)))
 				return true;
 		}
@@ -176,9 +176,9 @@ private:
 	}
 
 	template<typename C>
-	ZT_INLINE void _cleanCredImpl(const NetworkConfig &nconf,FlatMap<uint32_t,C> &remoteCreds)
+	ZT_INLINE void _cleanCredImpl(const NetworkConfig &nconf,Map<uint32_t,C> &remoteCreds)
 	{
-		for(typename FlatMap<uint32_t,C>::iterator i(remoteCreds.begin());i!=remoteCreds.end();) {
+		for(typename Map<uint32_t,C>::iterator i(remoteCreds.begin());i!=remoteCreds.end();) {
 			if (!_isCredentialTimestampValid(nconf,i->second))
 				remoteCreds.erase(i++);
 			else ++i;
@@ -198,12 +198,12 @@ private:
 	CertificateOfMembership _com;
 
 	// Revocations by credentialKey()
-	FlatMap< uint64_t,int64_t > _revocations;
+	Map< uint64_t,int64_t > _revocations;
 
 	// Remote credentials that we have received from this member (and that are valid)
-	FlatMap< uint32_t,Tag > _remoteTags;
-	FlatMap< uint32_t,Capability > _remoteCaps;
-	FlatMap< uint32_t,CertificateOfOwnership > _remoteCoos;
+	Map< uint32_t,Tag > _remoteTags;
+	Map< uint32_t,Capability > _remoteCaps;
+	Map< uint32_t,CertificateOfOwnership > _remoteCoos;
 
 public:
 	class CapabilityIterator
@@ -219,7 +219,7 @@ public:
 		ZT_INLINE Capability *next() noexcept
 		{
 			while (_hti != _m._remoteCaps.end()) {
-				FlatMap< uint32_t,Capability >::iterator i(_hti++);
+				Map< uint32_t,Capability >::iterator i(_hti++);
 				if (_m._isCredentialTimestampValid(_nconf,i->second))
 					return &(i->second);
 			}
@@ -227,7 +227,7 @@ public:
 		}
 
 	private:
-		FlatMap< uint32_t,Capability >::iterator _hti;
+		Map< uint32_t,Capability >::iterator _hti;
 		Membership &_m;
 		const NetworkConfig &_nconf;
 	};

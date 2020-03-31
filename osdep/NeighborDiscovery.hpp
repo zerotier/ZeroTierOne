@@ -14,7 +14,7 @@
 #ifndef ZT_NEIGHBORDISCOVERY_HPP
 #define ZT_NEIGHBORDISCOVERY_HPP
 
-#include "../node/Hashtable.hpp"
+#include "../node/Map.hpp"
 #include "../node/MAC.hpp"
 #include "../node/InetAddress.hpp"
 
@@ -58,7 +58,7 @@ private:
         bool local;
     };
 
-    Hashtable<InetAddress, _NDEntry> _cache;
+    Map< InetAddress,_NDEntry > _cache;
     uint64_t _lastCleaned;
 };
 

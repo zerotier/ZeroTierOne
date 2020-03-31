@@ -25,7 +25,7 @@
 #include "Membership.hpp"
 #include "NetworkConfig.hpp"
 #include "CertificateOfMembership.hpp"
-#include "FlatMap.hpp"
+#include "Map.hpp"
 
 #include <cstdint>
 #include <string>
@@ -326,7 +326,7 @@ public:
 	ZT_INLINE void eachMember(F f)
 	{
 		Mutex::Lock ml(_memberships_l);
-		for(FlatMap<Address,Membership>::iterator i(_memberships.begin());i!=_memberships.end();++i) {
+		for(Map<Address,Membership>::iterator i(_memberships.begin());i!=_memberships.end();++i) {
 			if (!f(i->first,i->second))
 				break;
 		}
@@ -353,8 +353,8 @@ private:
 	bool _portInitialized;
 
 	std::vector< MulticastGroup > _myMulticastGroups; // multicast groups that we belong to (according to tap)
-	FlatMap< MulticastGroup,uint64_t > _multicastGroupsBehindMe; // multicast groups that seem to be behind us and when we last saw them (if we are a bridge)
-	FlatMap< MAC,Address > _remoteBridgeRoutes; // remote addresses where given MACs are reachable (for tracking devices behind remote bridges)
+	Map< MulticastGroup,uint64_t > _multicastGroupsBehindMe; // multicast groups that seem to be behind us and when we last saw them (if we are a bridge)
+	Map< MAC,Address > _remoteBridgeRoutes; // remote addresses where given MACs are reachable (for tracking devices behind remote bridges)
 
 	NetworkConfig _config;
 	std::atomic<int64_t> _lastConfigUpdate;
@@ -377,7 +377,7 @@ private:
 		NETCONF_FAILURE_INIT_FAILED
 	} _netconfFailure;
 
-	FlatMap<Address,Membership> _memberships;
+	Map<Address,Membership> _memberships;
 
 	Mutex _myMulticastGroups_l;
 	Mutex _remoteBridgeRoutes_l;

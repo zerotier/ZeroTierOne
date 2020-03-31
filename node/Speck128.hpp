@@ -25,6 +25,10 @@ namespace ZeroTier {
  * Speck does not specify a mandatory endian-ness. This implementation is
  * little-endian for higher performance on the majority of platforms.
  *
+ * This is only used as part of the work function for V1 identity generation
+ * and for the built-in secure random source on systems that lack AES
+ * hardware acceleration.
+ *
  * @tparam R Number of rounds (default: 32)
  */
 template<int R = 32>
@@ -96,7 +100,10 @@ public:
 	}
 
 	/**
-	 * Encrypt 512 bits in parallel with the same key
+	 * Encrypt 512 bits in parallel with the same key.
+	 *
+	 * Parallel in this case assumes instruction level parallelism, but even without that
+	 * it may be faster due to cache/memory effects.
 	 */
 	ZT_INLINE void encryptXYXYXYXY(uint64_t &x0,uint64_t &y0,uint64_t &x1,uint64_t &y1,uint64_t &x2,uint64_t &y2,uint64_t &x3,uint64_t &y3) const noexcept
 	{

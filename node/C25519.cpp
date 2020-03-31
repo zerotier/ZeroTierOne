@@ -2474,24 +2474,28 @@ void C25519::_calcPubDH(uint8_t pub[ZT_C25519_PUBLIC_KEY_LEN],const uint8_t priv
 
 void C25519::_calcPubED(uint8_t pub[ZT_C25519_PUBLIC_KEY_LEN],const uint8_t priv[ZT_C25519_PRIVATE_KEY_LEN])
 {
-	unsigned char extsk[64];
-	sc25519 scsk;
-	ge25519 gepk;
+	struct {
+		uint8_t extsk[64];
+		sc25519 scsk;
+		ge25519 gepk;
+	} s;
 
 	// Second 32 bytes of pub and priv are the keys for ed25519
 	// signing and verification.
-	SHA512(extsk,priv + 32,32);
-	extsk[0] &= 248;
-	extsk[31] &= 127;
-	extsk[31] |= 64;
-	sc25519_from32bytes(&scsk,extsk);
-	ge25519_scalarmult_base(&gepk,&scsk);
-	ge25519_pack(pub + 32,&gepk);
+	SHA512(s.extsk,priv + 32,32);
+	s.extsk[0] &= 248U;
+	s.extsk[31] &= 127U;
+	s.extsk[31] |= 64U;
+	sc25519_from32bytes(&s.scsk,s.extsk);
+	ge25519_scalarmult_base(&s.gepk,&s.scsk);
+	ge25519_pack(pub + 32,&s.gepk);
 
 	// In NaCl, the public key is crammed into the next 32 bytes
 	// of the private key for signing since both keys are required
 	// to sign. In this version we just get it from kp.pub, so we
 	// leave that out of private.
+
+	Utils::burn(&s,sizeof(s));
 }
 
 } // namespace ZeroTier

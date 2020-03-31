@@ -11,7 +11,6 @@
  */
 /****/
 
-#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
@@ -24,7 +23,7 @@ static const uint8_t ARP_REQUEST_HEADER[8] = { 0x00,0x01,0x08,0x00,0x06,0x04,0x0
 static const uint8_t ARP_RESPONSE_HEADER[8] = { 0x00,0x01,0x08,0x00,0x06,0x04,0x00,0x02 };
 
 Arp::Arp() :
-	_cache(256),
+	_cache(),
 	_lastCleaned(OSUtils::now())
 {
 }
@@ -78,12 +77,10 @@ uint32_t Arp::processIncomingArp(const void *arp,unsigned int len,void *response
 
 	if ((now - _lastCleaned) >= ZT_ARP_EXPIRE) {
 		_lastCleaned = now;
-		Hashtable< uint32_t,_ArpEntry >::Iterator i(_cache);
-		uint32_t *k = (uint32_t *)0;
-		_ArpEntry *v = (_ArpEntry *)0;
-		while (i.next(k,v)) {
-			if ((!v->local)&&((now - v->lastResponseReceived) >= ZT_ARP_EXPIRE))
-				_cache.erase(*k);
+		for(Map< uint32_t,_ArpEntry >::iterator i(_cache.begin());i!=_cache.end();) {
+			if ((!i->second.local)&&((now - i->second.lastResponseReceived) >= ZT_ARP_EXPIRE))
+				_cache.erase(i++);
+			else ++i;
 		}
 	}
 

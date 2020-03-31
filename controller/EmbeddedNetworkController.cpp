@@ -1370,7 +1370,7 @@ void EmbeddedNetworkController::_request(
 								++caprc;
 						}
 					}
-					nc->capabilities[nc->capabilityCount] = Capability((uint32_t)capId,nwid,now,1,capr,caprc);
+					nc->capabilities[nc->capabilityCount] = Capability((uint32_t)capId,nwid,now,capr,caprc);
 					if (nc->capabilities[nc->capabilityCount].sign(_signingId,identity.address()))
 						++nc->capabilityCount;
 					if (nc->capabilityCount >= ZT_MAX_NETWORK_CAPABILITIES)

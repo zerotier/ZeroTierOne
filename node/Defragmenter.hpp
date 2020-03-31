@@ -20,7 +20,7 @@
 #include "Mutex.hpp"
 #include "Path.hpp"
 #include "FCV.hpp"
-#include "FlatMap.hpp"
+#include "Map.hpp"
 
 #include <cstring>
 #include <cstdlib>
@@ -164,7 +164,7 @@ public:
 				std::vector<std::pair<int64_t,uint64_t> > messagesByLastUsedTime;
 				messagesByLastUsedTime.reserve(_messages.size());
 
-				for(typename FlatMap< uint64_t,_E >::const_iterator i(_messages.begin());i!=_messages.end();++i)
+				for(typename Map< uint64_t,_E >::const_iterator i(_messages.begin());i!=_messages.end();++i)
 					messagesByLastUsedTime.push_back(std::pair<int64_t,uint64_t>(i->second.lastUsed,i->first));
 				std::sort(messagesByLastUsedTime.begin(),messagesByLastUsedTime.end());
 
@@ -286,6 +286,7 @@ public:
 	}
 
 private:
+	// _E is an entry in the message queue.
 	struct _E
 	{
 		ZT_INLINE _E() noexcept :
@@ -312,6 +313,19 @@ private:
 			}
 		}
 
+		ZT_INLINE _E &operator=(const _E &e)
+		{
+			if (this != &e) {
+				id = e.id;
+				lastUsed = e.lastUsed;
+				totalFragmentsExpected = e.totalFragmentsExpected;
+				fragmentsReceived = e.fragmentsReceived;
+				via = e.via;
+				message = e.message;
+			}
+			return *this;
+		}
+
 		uint64_t id;
 		volatile int64_t lastUsed;
 		unsigned int totalFragmentsExpected;
@@ -321,7 +335,7 @@ private:
 		Mutex lock;
 	};
 
-	FlatMap< uint64_t,_E > _messages;
+	Map< uint64_t,_E > _messages;
 	RWMutex _messages_l;
 };
 

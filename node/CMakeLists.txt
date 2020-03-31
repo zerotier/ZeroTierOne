@@ -17,12 +17,12 @@ set(core_headers
 	Expect.hpp
 	FCV.hpp
 	Fingerprint.hpp
-	FlatMap.hpp
 	Identity.hpp
 	InetAddress.hpp
 	Locator.hpp
 	LZ4.hpp
 	MAC.hpp
+	Map.hpp
 	Membership.hpp
 	MulticastGroup.hpp
 	Mutex.hpp

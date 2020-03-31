@@ -20,7 +20,7 @@
 #include <vector>
 
 #include "../node/Constants.hpp"
-#include "../node/Hashtable.hpp"
+#include "../node/Map.hpp"
 #include "../node/MAC.hpp"
 
 /**
@@ -135,7 +135,7 @@ private:
 		bool local; // True if this is a local ARP entry
 	};
 
-	Hashtable< uint32_t,_ArpEntry > _cache;
+	Map< uint32_t,_ArpEntry > _cache;
 	uint64_t _lastCleaned;
 };
 

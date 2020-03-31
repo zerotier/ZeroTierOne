@@ -268,7 +268,7 @@ ZT_ResultCode Node::processBackgroundTasks(void *tPtr, int64_t now, volatile int
 		_lastHousekeepingRun = now;
 		{
 			RWMutex::RLock l(_networks_m);
-			for(FlatMap< uint64_t,SharedPtr<Network> >::const_iterator i(_networks.begin());i!=_networks.end();++i)
+			for(Map< uint64_t,SharedPtr<Network> >::const_iterator i(_networks.begin());i!=_networks.end();++i)
 				i->second->doPeriodicTasks(tPtr,now);
 		}
 	}
@@ -281,7 +281,7 @@ ZT_ResultCode Node::processBackgroundTasks(void *tPtr, int64_t now, volatile int
 			// or trust nodes without doing an extra cert check.
 			{
 				_localControllerAuthorizations_m.lock();
-				for(FlatMap<_LocalControllerAuth,int64_t>::iterator i(_localControllerAuthorizations.begin());i!=_localControllerAuthorizations.end();) {
+				for(Map<_LocalControllerAuth,int64_t>::iterator i(_localControllerAuthorizations.begin());i!=_localControllerAuthorizations.end();) {
 					if ((i->second - now) > (ZT_NETWORK_AUTOCONF_DELAY * 3))
 						_localControllerAuthorizations.erase(i++);
 					else ++i;
@@ -353,7 +353,7 @@ ZT_ResultCode Node::leave(uint64_t nwid,void **uptr,void *tptr)
 	ZT_VirtualNetworkConfig ctmp;
 
 	_networks_m.lock();
-	FlatMap< uint64_t,SharedPtr<Network> >::iterator nwi(_networks.find(nwid));
+	Map< uint64_t,SharedPtr<Network> >::iterator nwi(_networks.find(nwid));
 	if (nwi == _networks.end()) {
 		_networks_m.unlock();
 		return ZT_RESULT_OK;
@@ -507,7 +507,7 @@ ZT_VirtualNetworkList *Node::networks() const
 	nl->networks = (ZT_VirtualNetworkConfig *)(buf + sizeof(ZT_VirtualNetworkList));
 
 	nl->networkCount = 0;
-	for(FlatMap< uint64_t,SharedPtr<Network> >::const_iterator i(_networks.begin());i!=_networks.end();++i)
+	for(Map< uint64_t,SharedPtr<Network> >::const_iterator i(_networks.begin());i!=_networks.end();++i)
 		i->second->externalConfig(&(nl->networks[nl->networkCount++]));
 
 	return nl;
@@ -596,7 +596,7 @@ bool Node::shouldUsePathForZeroTierTraffic(void *tPtr,const Identity &id,const i
 {
 	{
 		RWMutex::RLock l(_networks_m);
-		for (FlatMap< uint64_t,SharedPtr<Network> >::iterator i(_networks.begin()); i != _networks.end(); ++i) {
+		for (Map< uint64_t,SharedPtr<Network> >::iterator i(_networks.begin()); i != _networks.end(); ++i) {
 			for (unsigned int k = 0,j = i->second->config().staticIpCount; k < j; ++k) {
 				if (i->second->config().staticIps[k].containsAddress(remoteAddress))
 					return false;

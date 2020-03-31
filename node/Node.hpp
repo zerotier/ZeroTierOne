@@ -24,7 +24,7 @@
 #include "Salsa20.hpp"
 #include "NetworkController.hpp"
 #include "Buf.hpp"
-#include "FlatMap.hpp"
+#include "Map.hpp"
 
 #include <cstdio>
 #include <cstdlib>
@@ -361,13 +361,14 @@ private:
 		ZT_INLINE unsigned long hashCode() const noexcept { return (unsigned long)(nwid + address); }
 		ZT_INLINE bool operator==(const _LocalControllerAuth &a) const noexcept { return ((a.nwid == nwid) && (a.address == address)); }
 		ZT_INLINE bool operator!=(const _LocalControllerAuth &a) const noexcept { return ((a.nwid != nwid) || (a.address != address)); }
+		ZT_INLINE bool operator<(const _LocalControllerAuth &a) const noexcept { return ((a.nwid < nwid) || ((a.nwid == nwid)&&(a.address < address))); }
 	};
-	FlatMap<_LocalControllerAuth,int64_t> _localControllerAuthorizations;
+	Map<_LocalControllerAuth,int64_t> _localControllerAuthorizations;
 	Mutex _localControllerAuthorizations_m;
 
 	// Networks are stored in a flat hash table that is resized on any network ID collision. This makes
 	// network lookup by network ID a few bitwise ops and an array index.
-	FlatMap< uint64_t,SharedPtr<Network> > _networks;
+	Map< uint64_t,SharedPtr<Network> > _networks;
 	RWMutex _networks_m;
 
 	// These are local interface addresses that have been configured via the API

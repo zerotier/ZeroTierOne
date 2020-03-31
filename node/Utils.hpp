@@ -69,6 +69,11 @@ extern const uint64_t ZERO256[4];
 extern const char HEXCHARS[16];
 
 /**
+ * A random integer generated at startup for Map's hash bucket calculation.
+ */
+extern const uint64_t s_mapNonce;
+
+/**
  * Lock memory to prevent swapping out to secondary storage (if possible)
  *
  * This is used to attempt to prevent the swapping out of long-term stored secure
@@ -228,7 +233,11 @@ int b32e(const uint8_t *data,int length,char *result,int bufSize) noexcept;
 int b32d(const char *encoded, uint8_t *result, int bufSize) noexcept;
 
 /**
- * Get a non-cryptographic random integer
+ * Get a non-cryptographic random integer.
+ *
+ * This should never be used for cryptographic use cases, not even for choosing
+ * message nonce/IV values if they should not repeat. It should only be used when
+ * a fast and potentially "dirty" random source is needed.
  */
 uint64_t random() noexcept;
 
@@ -246,7 +255,7 @@ uint64_t random() noexcept;
 bool scopy(char *dest,unsigned int len,const char *src) noexcept;
 
 /**
- * Mix bits in a 64-bit integer (non-cryptographic)
+ * Mix bits in a 64-bit integer (non-cryptographic, for hash tables)
  *
  * https://nullprogram.com/blog/2018/07/31/
  *
@@ -264,16 +273,20 @@ static ZT_INLINE uint64_t hash64(uint64_t x) noexcept
 }
 
 /**
- * Mix bits in a 32-bit integer
+ * Mix bits in a 32-bit integer (non-cryptographic, for hash tables)
+ *
+ * https://nullprogram.com/blog/2018/07/31/
  *
  * @param x Integer to mix
  * @return Hashed value
  */
 static ZT_INLINE uint32_t hash32(uint32_t x) noexcept
 {
-	x = ((x >> 16U) ^ x) * 0x45d9f3b;
-	x = ((x >> 16U) ^ x) * 0x45d9f3b;
-	x = (x >> 16U) ^ x;
+	x ^= x >> 16U;
+	x *= 0x7feb352dU;
+	x ^= x >> 15U;
+	x *= 0x846ca68bU;
+	x ^= x >> 16U;
 	return x;
 }
 
@@ -598,7 +611,7 @@ static ZT_INLINE void storeLittleEndian(void *const p,const I i) noexcept
 }
 
 /**
- * Copy memory block whose size is known at compile time
+ * Copy memory block whose size is known at compile time.
  *
  * @tparam L Size of memory
  * @param dest Destination memory

@@ -1099,7 +1099,7 @@ void Network::doPeriodicTasks(void *tPtr,const int64_t now)
 	{
 		Mutex::Lock l1(_memberships_l);
 
-		for(FlatMap<Address,Membership>::iterator i(_memberships.begin());i!=_memberships.end();++i)
+		for(Map<Address,Membership>::iterator i(_memberships.begin());i!=_memberships.end();++i)
 			i->second.clean(now,_config);
 
 		{
@@ -1128,12 +1128,12 @@ void Network::learnBridgeRoute(const MAC &mac,const Address &addr)
 
 	// Anti-DOS circuit breaker to prevent nodes from spamming us with absurd numbers of bridge routes
 	while (_remoteBridgeRoutes.size() > ZT_MAX_BRIDGE_ROUTES) {
-		FlatMap< Address,unsigned long > counts;
+		Map< Address,unsigned long > counts;
 		Address maxAddr;
 		unsigned long maxCount = 0;
 
 		// Find the address responsible for the most entries
-		for(FlatMap<MAC,Address>::iterator i(_remoteBridgeRoutes.begin());i!=_remoteBridgeRoutes.end();++i) {
+		for(Map<MAC,Address>::iterator i(_remoteBridgeRoutes.begin());i!=_remoteBridgeRoutes.end();++i) {
 			const unsigned long c = ++counts[i->second];
 			if (c > maxCount) {
 				maxCount = c;
@@ -1142,7 +1142,7 @@ void Network::learnBridgeRoute(const MAC &mac,const Address &addr)
 		}
 
 		// Kill this address from our table, since it's most likely spamming us
-		for(FlatMap<MAC,Address>::iterator i(_remoteBridgeRoutes.begin());i!=_remoteBridgeRoutes.end();) {
+		for(Map<MAC,Address>::iterator i(_remoteBridgeRoutes.begin());i!=_remoteBridgeRoutes.end();) {
 			if (i->second == maxAddr)
 				_remoteBridgeRoutes.erase(i++);
 			else ++i;
@@ -1529,7 +1529,7 @@ std::vector<MulticastGroup> Network::_allMulticastGroups() const
 	std::vector<MulticastGroup> mgs;
 	mgs.reserve(_myMulticastGroups.size() + _multicastGroupsBehindMe.size() + 1);
 	mgs.insert(mgs.end(),_myMulticastGroups.begin(),_myMulticastGroups.end());
-	for(FlatMap< MulticastGroup,uint64_t >::const_iterator i(_multicastGroupsBehindMe.begin());i!=_multicastGroupsBehindMe.end();++i)
+	for(Map< MulticastGroup,uint64_t >::const_iterator i(_multicastGroupsBehindMe.begin());i!=_multicastGroupsBehindMe.end();++i)
 		mgs.push_back(i->first);
 	if ((_config)&&(_config.enableBroadcast()))
 		mgs.push_back(Network::BROADCAST);

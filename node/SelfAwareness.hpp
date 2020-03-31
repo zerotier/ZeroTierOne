@@ -16,7 +16,7 @@
 
 #include "Constants.hpp"
 #include "InetAddress.hpp"
-#include "FlatMap.hpp"
+#include "Map.hpp"
 #include "Address.hpp"
 #include "Mutex.hpp"
 
@@ -72,13 +72,30 @@ private:
 		InetAddress reporterPhysicalAddress;
 		InetAddress::IpScope scope;
 
-		ZT_INLINE PhySurfaceKey() {}
-		ZT_INLINE PhySurfaceKey(const Address &r,const int64_t rol,const InetAddress &ra,InetAddress::IpScope s) : reporter(r),receivedOnLocalSocket(rol),reporterPhysicalAddress(ra),scope(s) {}
+		ZT_INLINE PhySurfaceKey() noexcept {}
+		ZT_INLINE PhySurfaceKey(const Address &r,const int64_t rol,const InetAddress &ra,InetAddress::IpScope s) noexcept : reporter(r),receivedOnLocalSocket(rol),reporterPhysicalAddress(ra),scope(s) {}
 
-		ZT_INLINE unsigned long hashCode() const { return ((unsigned long)reporter.toInt() + (unsigned long)receivedOnLocalSocket + (unsigned long)scope); }
+		ZT_INLINE unsigned long hashCode() const noexcept { return ((unsigned long)reporter.toInt() + (unsigned long)receivedOnLocalSocket + (unsigned long)scope); }
 
-		ZT_INLINE bool operator==(const PhySurfaceKey &k) const { return ((reporter == k.reporter) && (receivedOnLocalSocket == k.receivedOnLocalSocket) && (reporterPhysicalAddress == k.reporterPhysicalAddress) && (scope == k.scope)); }
-		ZT_INLINE bool operator!=(const PhySurfaceKey &k) const { return (!(*this == k)); }
+		ZT_INLINE bool operator==(const PhySurfaceKey &k) const noexcept { return ((reporter == k.reporter) && (receivedOnLocalSocket == k.receivedOnLocalSocket) && (reporterPhysicalAddress == k.reporterPhysicalAddress) && (scope == k.scope)); }
+		ZT_INLINE bool operator!=(const PhySurfaceKey &k) const noexcept { return (!(*this == k)); }
+		ZT_INLINE bool operator<(const PhySurfaceKey &k) const noexcept
+		{
+			if (reporter < k.reporter) {
+				return true;
+			} else if (reporter == k.reporter) {
+				if (receivedOnLocalSocket < k.receivedOnLocalSocket) {
+					return true;
+				} else if (receivedOnLocalSocket == k.receivedOnLocalSocket) {
+					if (reporterPhysicalAddress < k.reporterPhysicalAddress) {
+						return true;
+					} else if (reporterPhysicalAddress == k.reporterPhysicalAddress) {
+						return scope < k.scope;
+					}
+				}
+			}
+			return false;
+		}
 	};
 
 	struct PhySurfaceEntry
@@ -87,12 +104,12 @@ private:
 		uint64_t ts;
 		bool trusted;
 
-		ZT_INLINE PhySurfaceEntry() : mySurface(),ts(0),trusted(false) {}
-		ZT_INLINE PhySurfaceEntry(const InetAddress &a,const uint64_t t) : mySurface(a),ts(t),trusted(false) {}
+		ZT_INLINE PhySurfaceEntry() noexcept : mySurface(),ts(0),trusted(false) {}
+		ZT_INLINE PhySurfaceEntry(const InetAddress &a,const uint64_t t) noexcept : mySurface(a),ts(t),trusted(false) {}
 	};
 
 	const RuntimeEnvironment *RR;
-	FlatMap< PhySurfaceKey,PhySurfaceEntry > _phy;
+	Map< PhySurfaceKey,PhySurfaceEntry > _phy;
 	Mutex _phy_l;
 };
 

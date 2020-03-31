@@ -156,7 +156,7 @@ struct _neighbor_advertisement {
 };
 
 NeighborDiscovery::NeighborDiscovery()
-    : _cache(256)
+    : _cache()
     , _lastCleaned(OSUtils::now())
 {}
 
@@ -211,13 +211,12 @@ sockaddr_storage NeighborDiscovery::processIncomingND(const uint8_t *nd, unsigne
 
     if ((now - _lastCleaned) >= ZT_ND_EXPIRE) {
         _lastCleaned = now;
-        Hashtable<InetAddress, _NDEntry>::Iterator i(_cache);
-        InetAddress *k = nullptr;
-        _NDEntry *v = nullptr;
-        while (i.next(k, v)) {
-            if(!v->local && (now - v->lastResponseReceived) >= ZT_ND_EXPIRE) {
-                _cache.erase(*k);
-            }
+        for(Map<InetAddress,_NDEntry>::iterator i(_cache.begin());i!=_cache.end();) {
+	        if(!i->second.local && (now - i->second.lastResponseReceived) >= ZT_ND_EXPIRE) {
+	          _cache.erase(i++);
+	        } else {
+	          ++i;
+	        }
         }
     }
 

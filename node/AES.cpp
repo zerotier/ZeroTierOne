@@ -51,7 +51,7 @@ ZT_INLINE void s_bmul64(const uint64_t x,const uint64_t y,uint64_t &r_high,uint6
 	r |= z & m4;
 	z = (x1 * y5) ^ (x2 * y4) ^ (x3 * y3) ^ (x4 * y2) ^ (x5 * y1);
 	r |= z & m5;
-	r_high = (uint64_t)(r >> 64);
+	r_high = (uint64_t)(r >> 64U);
 	r_low = (uint64_t)r;
 }
 

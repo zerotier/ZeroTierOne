@@ -85,15 +85,8 @@ struct identityV0ProofOfWorkCriteria
 bool identityV1ProofOfWorkCriteria(const void *in,const unsigned int len)
 {
 	uint64_t b[98304]; // 768 KiB of working memory
-	uint64_t polykey[4];
 
 	SHA512(b,in,len);
-
-	// Poly1305 key, used in final hash at the end.
-	polykey[0] = b[0];
-	polykey[1] = b[1];
-	polykey[2] = b[2];
-	polykey[3] = b[3];
 
 #if __BYTE_ORDER == __BIG_ENDIAN
 	b[0] = Utils::swapBytes(b[0]);
@@ -152,9 +145,7 @@ bool identityV1ProofOfWorkCriteria(const void *in,const unsigned int len)
 	}
 #endif
 
-	// Use poly1305 to compute a very fast digest of 'b'. This doesn't have to be
-	// cryptographic per se, just have good hashing properties.
-	poly1305(b,b,sizeof(b),polykey);
+	SHA384(b,b,sizeof(b),in,len);
 
 	// Criterion: add two 64-bit components of poly1305 hash, must be zero mod 180.
 	// As with the rest of this bits are used in little-endian byte order. The value

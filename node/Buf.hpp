@@ -329,7 +329,7 @@ public:
 	template<typename T>
 	ZT_INLINE int rO(int &ii,T &obj) const noexcept
 	{
-		if (ii < ZT_BUF_MEM_SIZE) {
+		if (likely(ii < ZT_BUF_MEM_SIZE)) {
 			int ms = obj.unmarshal(unsafeData + ii,ZT_BUF_MEM_SIZE - ii);
 			if (ms > 0)
 				ii += ms;
@@ -353,7 +353,7 @@ public:
 	{
 		const char *const s = (const char *)(unsafeData + ii);
 		const int sii = ii;
-		while (ii < ZT_BUF_MEM_SIZE) {
+		while (likely(ii < ZT_BUF_MEM_SIZE)) {
 			if (unsafeData[ii++] == 0) {
 				Utils::copy(buf,s,ii - sii);
 				return buf;
@@ -398,7 +398,7 @@ public:
 	 */
 	ZT_INLINE uint8_t *rB(int &ii,void *const bytes,const unsigned int len) const noexcept
 	{
-		if ((ii += (int)len) <= ZT_BUF_MEM_SIZE) {
+		if (likely(((ii += (int)len) <= ZT_BUF_MEM_SIZE))) {
 			Utils::copy(bytes,unsafeData + ii,len);
 			return reinterpret_cast<uint8_t *>(bytes);
 		}
@@ -586,7 +586,7 @@ public:
 	ZT_INLINE void wO(int &ii,T &t) noexcept
 	{
 		const int s = ii;
-		if ((s + T::marshalSizeMax()) <= ZT_BUF_MEM_SIZE) {
+		if (likely((s + T::marshalSizeMax()) <= ZT_BUF_MEM_SIZE)) {
 			int ms = t.marshal(unsafeData + s);
 			if (ms > 0)
 				ii += ms;
@@ -624,7 +624,7 @@ public:
 	ZT_INLINE void wB(int &ii,const void *const bytes,const unsigned int len) noexcept
 	{
 		const int s = ii;
-		if ((ii += (int)len) <= ZT_BUF_MEM_SIZE)
+		if (likely((ii += (int)len) <= ZT_BUF_MEM_SIZE))
 			Utils::copy(unsafeData + s,bytes,len);
 	}
 

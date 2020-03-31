@@ -19,6 +19,7 @@
 #include "Mutex.hpp"
 #include "AES.hpp"
 #include "SHA512.hpp"
+#include "Speck128.hpp"
 
 #ifdef __UNIX_LIKE__
 #include <unistd.h>
@@ -59,6 +60,7 @@ const CPUIDRegisters CPUID;
 
 const uint64_t ZERO256[4] = { 0,0,0,0 };
 const char HEXCHARS[16] = { '0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f' };
+const uint64_t s_mapNonce = getSecureRandomU64();
 
 bool secureEq(const void *a,const void *b,unsigned int len) noexcept
 {
@@ -223,32 +225,40 @@ unsigned int unhex(const char *h,unsigned int hlen,void *buf,unsigned int buflen
 	return l;
 }
 
-void getSecureRandom(void *buf,unsigned int bytes) noexcept
+#define ZT_GETSECURERANDOM_STATE_SIZE 64
+#define ZT_GETSECURERANDOM_BUF_SIZE 4096
+
+void getSecureRandom(void *const buf,const unsigned int bytes) noexcept
 {
 	static Mutex globalLock;
 	static bool initialized = false;
-	static uint64_t randomState[16]; // secret state
-	static uint64_t randomBuf[8192]; // next batch of random bytes
+	static uint64_t randomState[ZT_GETSECURERANDOM_STATE_SIZE]; // secret state
+	static uint64_t randomBuf[ZT_GETSECURERANDOM_BUF_SIZE]; // next batch of random bytes
 	static unsigned long randomPtr = sizeof(randomBuf); // refresh on first iteration
-
-	// This secure random function gets entropy from the system random source (e.g. /dev/urandom),
-	// CPU random instructions if present, and other sources and uses them to initialize a SHA/AES
-	// based CSPRNG with a large state. System random sources are not used directly to mitigate
-	// against cases where the system random source is broken in some way, which does happen from
-	// time to time.
 
 	Mutex::Lock gl(globalLock);
 
+	// This could be a lot faster if we're not going to need a new block.
+	if ((randomPtr + (unsigned long)bytes) <= sizeof(randomBuf)) {
+		Utils::copy(buf,reinterpret_cast<uint8_t *>(randomBuf) + randomPtr,bytes);
+		randomPtr += bytes;
+		return;
+	}
+
 	for(unsigned int i=0;i<bytes;++i) {
-		if (randomPtr >= sizeof(randomBuf)) {
+		// Generate a new block of random data if we're at the end of the current block.
+		// Note that randomPtr is a byte pointer not a word pointer so we compare with sizeof.
+		if (randomPtr >= (unsigned long)sizeof(randomBuf)) {
 			randomPtr = 0;
 
 			if (!initialized) {
 				initialized = true;
 
-				// Fill both randomState and randomBuf from system random source. Failure here
-				// is fatal to the running application and indicates a serious system problem.
-				// This is some of the only OS-specific code in the core.
+				Utils::memoryLock(randomState,sizeof(randomState));
+				Utils::memoryLock(randomBuf,sizeof(randomBuf));
+
+				// Fill randomState with entropy from the system. If this doesn't work this is a hard fail.
+				Utils::zero<sizeof(randomState)>(randomState);
 #ifdef __WINDOWS__
 				HCRYPTPROV cryptProvider = NULL;
 				if (!CryptAcquireContextA(&cryptProvider,NULL,NULL,PROV_RSA_FULL,CRYPT_VERIFYCONTEXT|CRYPT_SILENT)) {
@@ -256,10 +266,6 @@ void getSecureRandom(void *buf,unsigned int bytes) noexcept
 					exit(1);
 				}
 				if (!CryptGenRandom(cryptProvider,(DWORD)sizeof(randomState),(BYTE *)randomState)) {
-					fprintf(stderr,"FATAL: Utils::getSecureRandom() CryptGenRandom failed!\r\n");
-					exit(1);
-				}
-				if (!CryptGenRandom(cryptProvider,(DWORD)sizeof(randomBuf),(BYTE *)randomBuf)) {
 					fprintf(stderr,"FATAL: Utils::getSecureRandom() CryptGenRandom failed!\r\n");
 					exit(1);
 				}
@@ -275,25 +281,20 @@ void getSecureRandom(void *buf,unsigned int bytes) noexcept
 					fprintf(stderr,"FATAL: Utils::getSecureRandom() unable to read from /dev/urandom\n");
 					exit(1);
 				}
-				if ((long)::read(devURandomFd,randomBuf,sizeof(randomBuf)) != (long)sizeof(randomBuf)) {
-					::close(devURandomFd);
-					fprintf(stderr,"FATAL: Utils::getSecureRandom() unable to read from /dev/urandom\n");
-					exit(1);
-				}
 				close(devURandomFd);
 #endif
 
-				// Mix in additional entropy from time, the address of 'buf', rdrand if present, etc.
-				randomState[0] ^= (uint64_t)time(nullptr);
-				randomState[1] ^= (uint64_t)((uintptr_t)buf);
+				// Mix in additional entropy from time, the address of 'buf', CPU RDRAND if present, etc.
+				randomState[0] += (uint64_t)time(nullptr);
+				randomState[1] += (uint64_t)((uintptr_t)buf);
 #ifdef __UNIX_LIKE__
-				randomState[2] ^= (uint64_t)getpid();
-				randomState[3] ^= (uint64_t)getppid();
+				randomState[2] += (uint64_t)getpid();
+				randomState[3] += (uint64_t)getppid();
 #endif
 #ifdef ZT_ARCH_X64
 				if (CPUID.rdrand) {
 					uint64_t tmp = 0;
-					for(int k=0;k<16;++k) {
+					for(int k=0;k<ZT_GETSECURERANDOM_STATE_SIZE;++k) {
 						_rdrand64_step((unsigned long long *)&tmp);
 						randomState[k] ^= tmp;
 					}
@@ -301,25 +302,31 @@ void getSecureRandom(void *buf,unsigned int bytes) noexcept
 #endif
 			}
 
-			// Generate a new randomBuf:
-			//
-			// (1) Generate next randomState by perturbing, hashing, and replacing the first 384 bits with the hash.
-			// (2) Initialize AES using the first 256 bits of the new randomState as its key.
-			// (3) Initialize a 128-bit counter field using the following 128 bits of randomState.
-			// (4) Encrypt randomBuf with AES-CTR (machine-endian counter since spec conformance doesn't matter).
+			// Perturb state, hash, and overwrite the first 64 bytes with this hash.
+			++randomState[ZT_GETSECURERANDOM_STATE_SIZE-1];
+			SHA512(randomState,randomState,sizeof(randomState));
 
-			++randomState[15];
-			SHA384(randomState,randomState,sizeof(randomState));
-
-			AES aes(randomState);
-			uint64_t ctr[2],tmp[2];
-			ctr[0] = randomState[4];
-			ctr[1] = randomState[5]; // AES key + CTR/nonce = part replaced each time by SHA384
-			for(int k=0;k<8192;k+=2) {
-				++ctr[0];
-				aes.encrypt(ctr,tmp);
-				randomBuf[k] ^= tmp[0];
-				randomBuf[k+1] ^= tmp[1];
+			// Use the part of the state that was overwritten with new state to key a
+			// stream cipher and re-fill the buffer. Use AES if we're HW accel or use
+			// Speck if not since it's way faster on tiny chips without AES units.
+			if (AES::accelerated()) {
+				AES aes(randomState);
+				uint64_t ctr[2];
+				ctr[0] = randomState[4];
+				ctr[1] = randomState[5];
+				for (int k = 0;k < ZT_GETSECURERANDOM_BUF_SIZE;k += 2) {
+					++ctr[0];
+					aes.encrypt(ctr,randomBuf + k);
+				}
+			} else {
+				Speck128<> speck(randomState);
+				uint64_t ctr[2];
+				ctr[0] = randomState[4];
+				ctr[1] = randomState[5];
+				for (int k = 0;k < ZT_GETSECURERANDOM_BUF_SIZE;k += 2) {
+					++ctr[0];
+					speck.encrypt(ctr,randomBuf + k);
+				}
 			}
 		}
 
@@ -336,7 +343,7 @@ uint64_t getSecureRandomU64() noexcept
 
 int b32e(const uint8_t *data,int length,char *result,int bufSize) noexcept
 {
-  if (length < 0 || length > (1 << 28)) {
+  if (length < 0 || length > (1 << 28U)) {
 		result[0] = (char)0;
     return -1;
 	}
@@ -413,6 +420,7 @@ int b32d(const char *encoded,uint8_t *result,int bufSize) noexcept
 uint64_t random() noexcept
 {
 	// https://en.wikipedia.org/wiki/Xorshift#xoshiro256**
+
 	static volatile uint64_t s_s0 = getSecureRandomU64();
 	static volatile uint64_t s_s1 = getSecureRandomU64();
 	static volatile uint64_t s_s2 = getSecureRandomU64();

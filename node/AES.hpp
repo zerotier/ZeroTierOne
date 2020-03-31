@@ -130,6 +130,7 @@ public:
 	}
 
 	class GMACSIVEncryptor;
+	class GMACSIVDecryptor;
 
 	/**
 	 * Streaming GMAC calculator
@@ -137,6 +138,7 @@ public:
 	class GMAC
 	{
 		friend class GMACSIVEncryptor;
+		friend class GMACSIVDecryptor;
 
 	public:
 		/**
@@ -209,6 +211,7 @@ public:
 	class CTR
 	{
 		friend class GMACSIVEncryptor;
+		friend class GMACSIVDecryptor;
 
 	public:
 		ZT_INLINE CTR(const AES &aes) noexcept : _aes(aes) {}
@@ -250,7 +253,7 @@ public:
 	};
 
 	/**
-	 * Encrypt with AES-GMAC-SIV
+	 * Encryptor for GMAC-SIV
 	 */
 	class GMACSIVEncryptor
 	{
@@ -372,6 +375,101 @@ public:
 		uint64_t _tag[2];
 		AES::GMAC _gmac;
 		AES::CTR _ctr;
+	};
+
+	/**
+	 * Decryptor for GMAC-SIV
+	 */
+	class GMACSIVDecryptor
+	{
+	public:
+		ZT_INLINE GMACSIVDecryptor(const AES &k0,const AES &k1) noexcept :
+			_ctr(k1),
+			_gmac(k0) {}
+
+		/**
+		 * Initialize decryptor for a new message
+		 *
+		 * @param tag 128-bit combined IV/MAC originally created by GMAC-SIV encryption
+		 * @param output Buffer in which to write output plaintext (must be large enough!)
+		 */
+		ZT_INLINE void init(const uint64_t tag[2],void *const output) noexcept
+		{
+			// Init CTR with the most significant 96 bits of the tag (as in encryption).
+			uint64_t tmp[2];
+			tmp[0] = tag[0];
+#if __BYTE_ORDER == __BIG_ENDIAN
+			tmp[1] = tag[1] & 0xffffffff00000000ULL;
+#else
+			tmp[1] = tag[1] & 0x00000000ffffffffULL;
+#endif
+			_ctr.init(reinterpret_cast<const uint8_t *>(tmp),output);
+
+			// Decrypt the opaque tag to yield the original IV and 64-bit truncated MAC.
+			_ctr._aes.decrypt(tag,_ivMac);
+
+			// Initialize GMAC with the original IV.
+			tmp[0] = _ivMac[0];
+			tmp[1] = 0;
+			_gmac.init(reinterpret_cast<const uint8_t *>(tmp));
+
+			_output = output;
+			_decryptedLen = 0;
+		}
+
+		/**
+		 * Process AAD (additional authenticated data) that wasn't encrypted
+		 *
+		 * @param aad Additional authenticated data
+		 * @param len Length of AAD in bytes
+		 */
+		ZT_INLINE void aad(const void *const aad,unsigned int len) noexcept
+		{
+			_gmac.update(aad,len);
+			len &= 0xfU;
+			if (len != 0)
+				_gmac.update(Utils::ZERO256,16 - len);
+		}
+
+		/**
+		 * Feed ciphertext into the decryptor
+		 *
+		 * Unlike encryption, GMAC-SIV decryption requires only one pass.
+		 *
+		 * @param input Input ciphertext
+		 * @param len Length of ciphertext
+		 */
+		ZT_INLINE void update(const void *const input,const unsigned int len) noexcept
+		{
+			_ctr.crypt(input,len);
+			_decryptedLen += len;
+		}
+
+		/**
+		 * Flush decryption, compute MAC, and verify
+		 *
+		 * @return True if resulting plaintext (and AAD) pass message authentication check
+		 */
+		ZT_INLINE bool finish() noexcept
+		{
+			// Flush any remaining bytes from CTR.
+			_ctr.finish();
+
+			// Feed plaintext through GMAC.
+			_gmac.update(_output,_decryptedLen);
+			uint64_t gmacTag[2];
+			_gmac.finish(reinterpret_cast<uint8_t *>(gmacTag));
+
+			// MAC passes if its first 64 bits equals the MAC we got by decrypting the tag.
+			return gmacTag[0] == _ivMac[1];
+		}
+
+	private:
+		uint64_t _ivMac[2];
+		AES::CTR _ctr;
+		AES::GMAC _gmac;
+		void *_output;
+		unsigned int _decryptedLen;
 	};
 
 private:

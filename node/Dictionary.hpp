@@ -30,7 +30,7 @@ namespace ZeroTier {
  *
  * This data structure is used for network configurations, node meta-data,
  * and other open-definition protocol objects. It consists of a key-value
- * store with short (under 8 characters) keys that map to strings, blobs,
+ * store with short (max: 8 characters) keys that map to strings, blobs,
  * or integers with the latter being by convention in hex format.
  *
  * If this seems a little odd, it is. It dates back to the very first alpha
@@ -168,6 +168,18 @@ public:
 	bool decode(const void *data,unsigned int len);
 
 private:
+	// This just packs up to 8 character bytes into a 64-bit word. There is no need
+	// for this to be portable in terms of endian-ness. It's just for fast key lookup.
+	static ZT_INLINE uint64_t _toKey(const char *k)
+	{
+		uint64_t key = 0;
+		for(int i=0;i<8;++i) {
+			if ((reinterpret_cast<uint8_t *>(&key)[i] = *(k++)) == 0)
+				break;
+		}
+		return key;
+	}
+
 	std::map< uint64_t,std::vector<uint8_t> > _t;
 };
 

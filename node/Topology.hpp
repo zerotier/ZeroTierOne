@@ -30,7 +30,7 @@
 #include "SharedPtr.hpp"
 #include "ScopedPtr.hpp"
 #include "Fingerprint.hpp"
-#include "FlatMap.hpp"
+#include "Map.hpp"
 
 namespace ZeroTier {
 
@@ -127,7 +127,7 @@ public:
 	 */
 	ZT_INLINE SharedPtr<Path> path(const int64_t l,const InetAddress &r)
 	{
-		const uint64_t k = _pathHash(l,r);
+		const uint64_t k = _getPathKey(l,r);
 		{
 			RWMutex::RLock lck(_paths_l);
 			SharedPtr<Path> *const p = _paths.get(k);
@@ -179,7 +179,7 @@ public:
 	ZT_INLINE void eachPeer(F f) const
 	{
 		RWMutex::RLock l(_peers_l);
-		for(FlatMap< Address,SharedPtr<Peer> >::const_iterator i(_peers.begin());i!=_peers.end();++i)
+		for(Map< Address,SharedPtr<Peer> >::const_iterator i(_peers.begin());i!=_peers.end();++i)
 			f(i->second);
 	}
 
@@ -204,7 +204,7 @@ public:
 		std::sort(rootPeerPtrs.begin(),rootPeerPtrs.end());
 
 		try {
-			for(FlatMap< Address,SharedPtr<Peer> >::const_iterator i(_peers.begin());i!=_peers.end();++i)
+			for(Map< Address,SharedPtr<Peer> >::const_iterator i(_peers.begin());i!=_peers.end();++i)
 				f(i->second,std::binary_search(rootPeerPtrs.begin(),rootPeerPtrs.end(),(uintptr_t)i->second.ptr()));
 		} catch ( ... ) {} // should not throw
 	}
@@ -219,7 +219,7 @@ public:
 	ZT_INLINE void eachPath(F f) const
 	{
 		RWMutex::RLock l(_paths_l);
-		for(FlatMap< uint64_t,SharedPtr<Path> >::const_iterator i(_paths.begin());i!=_paths.end();++i)
+		for(Map< uint64_t,SharedPtr<Path> >::const_iterator i(_paths.begin());i!=_paths.end();++i)
 			f(i->second);
 	}
 
@@ -324,11 +324,11 @@ private:
 	// This is a secure random integer created at startup to salt the calculation of path hash map keys
 	static const uint64_t s_pathHashSalt;
 
-	// Get a hash key for looking up paths by their local port and destination address
-	ZT_INLINE uint64_t _pathHash(int64_t l,const InetAddress &r) const
+	// This gets an integer key from an InetAddress for looking up paths.
+	ZT_INLINE uint64_t _getPathKey(int64_t l,const InetAddress &r) const
 	{
 		if (r.family() == AF_INET) {
-			return Utils::hash64(s_pathHashSalt ^ (uint64_t)(reinterpret_cast<const struct sockaddr_in *>(&r)->sin_addr.s_addr)) + (uint64_t)Utils::ntoh(reinterpret_cast<const struct sockaddr_in *>(&r)->sin_port) + (uint64_t)l;
+			return s_pathHashSalt + (uint64_t)(reinterpret_cast<const struct sockaddr_in *>(&r)->sin_addr.s_addr) + (uint64_t)Utils::ntoh(reinterpret_cast<const struct sockaddr_in *>(&r)->sin_port) + (uint64_t)l;
 		} else if (r.family() == AF_INET6) {
 #ifdef ZT_NO_UNALIGNED_ACCESS
 			uint64_t h = s_pathHashSalt;
@@ -338,7 +338,7 @@ private:
 				h ^= (h >> 6U);
 			}
 #else
-			uint64_t h = Utils::hash64(s_pathHashSalt ^ (reinterpret_cast<const uint64_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&r)->sin6_addr.s6_addr)[0] + reinterpret_cast<const uint64_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&r)->sin6_addr.s6_addr)[1]));
+			uint64_t h = s_pathHashSalt + (reinterpret_cast<const uint64_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&r)->sin6_addr.s6_addr)[0] + reinterpret_cast<const uint64_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&r)->sin6_addr.s6_addr)[1]);
 #endif
 			return h + (uint64_t)Utils::ntoh(reinterpret_cast<const struct sockaddr_in6 *>(&r)->sin6_port) + (uint64_t)l;
 		} else {
@@ -354,10 +354,10 @@ private:
 	std::pair< InetAddress,ZT_PhysicalPathConfiguration > _physicalPathConfig[ZT_MAX_CONFIGURABLE_PATHS];
 	unsigned int _numConfiguredPhysicalPaths;
 
-	FlatMap< Address,SharedPtr<Peer> > _peers;
-	FlatMap< uint64_t,SharedPtr<Peer> > _peersByIncomingProbe;
-	FlatMap< Fingerprint,SharedPtr<Peer> > _peersByIdentityHash;
-	FlatMap< uint64_t,SharedPtr<Path> > _paths;
+	Map< Address,SharedPtr<Peer> > _peers;
+	Map< uint64_t,SharedPtr<Peer> > _peersByIncomingProbe;
+	Map< Fingerprint,SharedPtr<Peer> > _peersByIdentityHash;
+	Map< uint64_t,SharedPtr<Path> > _paths;
 	std::set< Identity > _roots; // locked by _peers_l
 	std::vector< SharedPtr<Peer> > _rootPeers; // locked by _peers_l
 };
