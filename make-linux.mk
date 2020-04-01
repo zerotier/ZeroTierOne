@@ -85,6 +85,9 @@ endif
 ifeq ($(ZT_QNAP), 1)
         override DEFS+=-D__QNAP__
 endif
+ifeq ($(ZT_UBIQUITI), 1)
+        override DEFS+=-D__UBIQUITI__
+endif
 
 ifeq ($(ZT_SYNOLOGY), 1)
 	override CFLAGS+=-fPIC

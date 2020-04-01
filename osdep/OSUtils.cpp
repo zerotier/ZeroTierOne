@@ -385,6 +385,10 @@ std::string OSUtils::platformDefaultHomePath()
     homeDir.erase(std::remove(homeDir.begin(), homeDir.end(), '\n'), homeDir.end());
     return homeDir;
 #endif
+#ifdef __UBIQUITI__
+	// Only persistent location after firmware upgrades
+	return std::string("/config/zerotier-one");
+#else
 
     // Check for user-defined environment variable before using defaults
 #ifdef __WINDOWS__
