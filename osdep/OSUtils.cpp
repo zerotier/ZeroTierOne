@@ -388,7 +388,7 @@ std::string OSUtils::platformDefaultHomePath()
 #ifdef __UBIQUITI__
 	// Only persistent location after firmware upgrades
 	return std::string("/config/zerotier-one");
-#else
+#endif
 
     // Check for user-defined environment variable before using defaults
 #ifdef __WINDOWS__
