@@ -60,13 +60,6 @@ void VL1::onRemotePacket(void *const tPtr,const int64_t localSocket,const InetAd
 
 	try {
 		// Handle 8-byte short probes, which are used as a low-bandwidth way to initiate a real handshake.
-		// These are only minimally "secure" in the sense that they are unique per graph edge (sender->recipient)
-		// to within 1/2^64 but can easily be replayed. We rate limit this to prevent ZeroTier being used as
-		// a vector in DDOS amplification attacks, then send a larger fully authenticated message to initiate
-		// a handshake. We do not send HELLO since we don't want this to be a vector for third parties to
-		// mass-probe for ZeroTier nodes and obtain all of the information in a HELLO. This isn't a huge risk
-		// but we might as well avoid it. When the peer receives NOP on a path that hasn't been handshaked yet
-		// it will send its own HELLO to which we will respond with a fully encrypted OK(HELLO).
 		if (len == ZT_PROTO_PROBE_LENGTH) {
 			const SharedPtr<Peer> peer(RR->topology->peerByProbe(data->lI64(0)));
 			if ((peer)&&(peer->rateGateInboundProbe(now)))
@@ -819,7 +812,7 @@ bool VL1::_RENDEZVOUS(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Pee
 					case 16:
 						if ((int)(sizeof(Protocol::RENDEZVOUS) + rdv.addressLength) <= packetSize) {
 							const InetAddress atAddr(pkt.unsafeData + sizeof(Protocol::RENDEZVOUS),rdv.addressLength,port);
-							peer->contact(tPtr,Endpoint(atAddr),now,false);
+							peer->tryToContactAt(tPtr,Endpoint(atAddr),now,false);
 							RR->t->tryingNewPath(tPtr,0x55a19aaa,with->identity(),atAddr,path->address(),Protocol::packetId(pkt,packetSize),Protocol::VERB_RENDEZVOUS,peer->identity(),ZT_TRACE_TRYING_NEW_PATH_REASON_RENDEZVOUS);
 						}
 						break;
@@ -831,7 +824,7 @@ bool VL1::_RENDEZVOUS(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Pee
 							switch (ep.type()) {
 								case Endpoint::TYPE_INETADDR_V4:
 								case Endpoint::TYPE_INETADDR_V6:
-									peer->contact(tPtr,ep,now,false);
+									peer->tryToContactAt(tPtr,ep,now,false);
 									RR->t->tryingNewPath(tPtr,0x55a19aab,with->identity(),ep.inetAddr(),path->address(),Protocol::packetId(pkt,packetSize),Protocol::VERB_RENDEZVOUS,peer->identity(),ZT_TRACE_TRYING_NEW_PATH_REASON_RENDEZVOUS);
 									break;
 								default:

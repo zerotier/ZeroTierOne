@@ -424,6 +424,11 @@ enum ZT_TraceEventPathAddressType
 };
 
 /**
+ * Maximum integer value of enum ZT_TraceEventPathAddressType
+ */
+#define ZT_TRACE_EVENT_PATH_TYPE__MAX 6
+
+/**
  * Reasons for trying new paths
  */
 enum ZT_TraceTryingNewPathReason

@@ -54,8 +54,8 @@ void identityV0ProofOfWorkFrankenhash(const void *const publicKey,unsigned int p
 
 	// Render final digest using genmem as a lookup table
 	for(unsigned long i=0;i<(ZT_V0_IDENTITY_GEN_MEMORY / sizeof(uint64_t));) {
-		unsigned long idx1 = (unsigned long)(Utils::ntoh(((uint64_t *)genmem)[i++]) % (64 / sizeof(uint64_t)));
-		unsigned long idx2 = (unsigned long)(Utils::ntoh(((uint64_t *)genmem)[i++]) % (ZT_V0_IDENTITY_GEN_MEMORY / sizeof(uint64_t)));
+		unsigned long idx1 = (unsigned long)(Utils::ntoh(((uint64_t *)genmem)[i++]) % (64 / sizeof(uint64_t))); // NOLINT(hicpp-use-auto,modernize-use-auto)
+		unsigned long idx2 = (unsigned long)(Utils::ntoh(((uint64_t *)genmem)[i++]) % (ZT_V0_IDENTITY_GEN_MEMORY / sizeof(uint64_t))); // NOLINT(hicpp-use-auto,modernize-use-auto)
 		uint64_t tmp = ((uint64_t *)genmem)[idx2];
 		((uint64_t *)genmem)[idx2] = ((uint64_t *)digest)[idx1];
 		((uint64_t *)digest)[idx1] = tmp;
@@ -78,12 +78,12 @@ struct identityV0ProofOfWorkCriteria
 // It's not quite as intensive as the V0 frankenhash, is a little more orderly in
 // its design, but remains relatively resistant to GPU acceleration due to memory
 // requirements for efficient computation.
-bool identityV1ProofOfWorkCriteria(const void *in,const unsigned int len)
+#define ZT_IDENTITY_V1_POW_MEMORY_SIZE 98304
+bool identityV1ProofOfWorkCriteria(const void *in,const unsigned int len,uint64_t *const b)
 {
-	uint64_t b[98304]; // 768 KiB of working memory
-
 	SHA512(b,in,len);
 
+	// This treats hash output as little-endian, so swap on BE machines.
 #if __BYTE_ORDER == __BIG_ENDIAN
 	b[0] = Utils::swapBytes(b[0]);
 	b[1] = Utils::swapBytes(b[1]);
@@ -102,7 +102,8 @@ bool identityV1ProofOfWorkCriteria(const void *in,const unsigned int len)
 	// least that this is the most efficient implementation.
 	Speck128<24> s16;
 	s16.initXY(b[4],b[5]);
-	for(unsigned long i=0;i<(98304-8);) {
+	for(unsigned long i=0;i<(ZT_IDENTITY_V1_POW_MEMORY_SIZE-8);) {
+		// Load four 128-bit blocks.
 		uint64_t x0 = b[i];
 		uint64_t y0 = b[i + 1];
 		uint64_t x1 = b[i + 2];
@@ -111,12 +112,22 @@ bool identityV1ProofOfWorkCriteria(const void *in,const unsigned int len)
 		uint64_t y2 = b[i + 5];
 		uint64_t x3 = b[i + 6];
 		uint64_t y3 = b[i + 7];
+
+		// Advance by 512 bits / 64 bytes (its a uint64_t array).
 		i += 8;
-		x0 += x1; // mix parallel 128-bit blocks
+
+		// Ensure that mixing happens across blocks.
+		x0 += x1;
 		x1 += x2;
 		x2 += x3;
 		x3 += y0;
+
+		// Encrypt 4X blocks. Speck is used for this PoW function because
+		// its performance is similar on all architectures while AES is much
+		// faster on some than others.
 		s16.encryptXYXYXYXY(x0,y0,x1,y1,x2,y2,x3,y3);
+
+		// Store four 128-bit blocks at new position.
 		b[i] = x0;
 		b[i + 1] = y0;
 		b[i + 2] = x1;
@@ -126,8 +137,13 @@ bool identityV1ProofOfWorkCriteria(const void *in,const unsigned int len)
 		b[i + 6] = x3;
 		b[i + 7] = y3;
 	}
-	std::sort(b,b + 98304);
 
+	// Sort array, something that can't efficiently be done unless we have
+	// computed the whole array and have it in memory. This also involves
+	// branching which is less efficient on GPUs.
+	std::sort(b,b + ZT_IDENTITY_V1_POW_MEMORY_SIZE);
+
+	// Swap byte order back on BE machines.
 #if __BYTE_ORDER == __BIG_ENDIAN
 	for(unsigned int i=0;i<98304;i+=8) {
 		b[i] = Utils::swapBytes(b[i]);
@@ -141,12 +157,11 @@ bool identityV1ProofOfWorkCriteria(const void *in,const unsigned int len)
 	}
 #endif
 
+	// Hash resulting sorted array to get final result for PoW criteria test.
 	SHA384(b,b,sizeof(b),in,len);
 
-	// Criterion: add two 64-bit components of poly1305 hash, must be zero mod 180.
-	// As with the rest of this bits are used in little-endian byte order. The value
-	// of 180 was set empirically to result in about one second per new identity on
-	// one CPU core of a typical desktop or server in 2020.
+	// PoW passes if sum of first two 64-bit integers (treated as little-endian) mod 180 is 0.
+	// This value was picked to yield about 1-2s total on typical desktop and server cores in 2020.
 #if __BYTE_ORDER == __BIG_ENDIAN
 	const uint64_t finalHash = Utils::swapBytes(b[0]) + Utils::swapBytes(b[1]);
 #else
@@ -179,6 +194,9 @@ bool Identity::generate(const Type t)
 		} break;
 
 		case P384: {
+			uint64_t *const b = (uint64_t *)malloc(ZT_IDENTITY_V1_POW_MEMORY_SIZE * 8); // NOLINT(hicpp-use-auto,modernize-use-auto)
+			if (!b)
+				return false;
 			for(;;) {
 				// Loop until we pass the PoW criteria. The nonce is only 8 bits, so generate
 				// some new key material every time it wraps. The ECC384 generator is slightly
@@ -187,7 +205,7 @@ bool Identity::generate(const Type t)
 				C25519::generate(_pub.c25519,_priv.c25519);
 				ECC384GenerateKey(_pub.p384,_priv.p384);
 				for(;;) {
-					if (identityV1ProofOfWorkCriteria(&_pub,sizeof(_pub)))
+					if (identityV1ProofOfWorkCriteria(&_pub,sizeof(_pub),b))
 						break;
 					if (++_pub.nonce == 0)
 						ECC384GenerateKey(_pub.p384,_priv.p384);
@@ -200,6 +218,7 @@ bool Identity::generate(const Type t)
 				if (!_address.isReserved())
 					break;
 			}
+			free(b);
 		} break;
 
 		default:
@@ -223,8 +242,16 @@ bool Identity::locallyValidate() const noexcept
 					return ((_address == Address(digest + 59)) && (digest[0] < 17));
 				}
 
-				case P384:
-					return ((_address == Address(_fp.hash())) && identityV1ProofOfWorkCriteria(&_pub,sizeof(_pub)) );
+				case P384: {
+					if (_address != Address(_fp.hash()))
+						return false;
+					uint64_t *const b = (uint64_t *)malloc(ZT_IDENTITY_V1_POW_MEMORY_SIZE * 8); // NOLINT(hicpp-use-auto,modernize-use-auto)
+					if (!b)
+						return false;
+					const bool ok = identityV1ProofOfWorkCriteria(&_pub,sizeof(_pub),b);
+					free(b);
+					return ok;
+				}
 
 			}
 		}

@@ -25,9 +25,8 @@ namespace ZeroTier {
  * Speck does not specify a mandatory endian-ness. This implementation is
  * little-endian for higher performance on the majority of platforms.
  *
- * This is only used as part of the work function for V1 identity generation
- * and for the built-in secure random source on systems that lack AES
- * hardware acceleration.
+ * Right now this is only used as part of the PoW function for V1 identity
+ * generation.
  *
  * @tparam R Number of rounds (default: 32)
  */

@@ -11,6 +11,8 @@
  */
 /****/
 
+// TODO: roots will need to PUSH_DIRECT_PATHS to make sure peers know both their IPv4 and IPv6 addresses.
+
 /*
  * This is a high-throughput minimal root server. It implements only
  * those functions of a ZT node that a root must perform and does so

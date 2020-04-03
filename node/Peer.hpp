@@ -30,9 +30,11 @@
 
 #include <vector>
 #include <list>
+#include <set>
+#include <map>
 
 // version, identity, locator, bootstrap, version info, length of any additional fields
-#define ZT_PEER_MARSHAL_SIZE_MAX (1 + ZT_ADDRESS_LENGTH + ZT_PEER_SECRET_KEY_LENGTH + ZT_IDENTITY_MARSHAL_SIZE_MAX + ZT_LOCATOR_MARSHAL_SIZE_MAX + ZT_INETADDRESS_MARSHAL_SIZE_MAX + (2*4) + 2)
+#define ZT_PEER_MARSHAL_SIZE_MAX (1 + ZT_ADDRESS_LENGTH + ZT_PEER_SECRET_KEY_LENGTH + ZT_IDENTITY_MARSHAL_SIZE_MAX + ZT_LOCATOR_MARSHAL_SIZE_MAX + 1 + (ZT_MAX_PEER_NETWORK_PATHS * ZT_ENDPOINT_MARSHAL_SIZE_MAX) + (2*4) + 2)
 
 namespace ZeroTier {
 
@@ -57,11 +59,7 @@ public:
 	 */
 	explicit Peer(const RuntimeEnvironment *renv);
 
-	ZT_INLINE ~Peer()
-	{
-		Utils::memoryUnlock(_key,sizeof(_key));
-		Utils::burn(_key,sizeof(_key));
-	}
+	~Peer();
 
 	/**
 	 * Initialize peer with an identity
@@ -113,9 +111,74 @@ public:
 		Protocol::Verb inReVerb);
 
 	/**
-	 * Send a HELLO to this peer at a specified physical address
+	 * Log sent data
 	 *
-	 * No statistics or sent times are updated here.
+	 * @param now Current time
+	 * @param bytes Number of bytes written
+	 */
+	ZT_INLINE void sent(const int64_t now,const unsigned int bytes) noexcept
+	{
+		_lastSend = now;
+		_outMeter.log(now,bytes);
+	}
+
+	/**
+	 * Called when traffic destined for a different peer is sent to this one
+	 *
+	 * @param now Current time
+	 * @param bytes Number of bytes relayed
+	 */
+	ZT_INLINE void relayed(const int64_t now,const unsigned int bytes) noexcept
+	{
+		_relayedMeter.log(now,bytes);
+	}
+
+	/**
+	 * Get the current best direct path or NULL if none
+	 *
+	 * @return Current best path or NULL if there is no direct path
+	 */
+	ZT_INLINE SharedPtr<Path> path(const int64_t now) noexcept
+	{
+		if ((now - _lastPrioritizedPaths) > ZT_PEER_PRIORITIZE_PATHS_INTERVAL) {
+			RWMutex::Lock l(_lock);
+			_prioritizePaths(now);
+			if (_alivePathCount > 0)
+				return _paths[0];
+		} else {
+			RWMutex::RLock l(_lock);
+			if (_alivePathCount > 0)
+				return _paths[0];
+		}
+		return SharedPtr<Path>();
+	}
+
+	/**
+	 * Send data to this peer over a specific path only
+	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
+	 * @param now Current time
+	 * @param data Data to send
+	 * @param len Length in bytes
+	 * @param via Path over which to send data (may or may not be an already-learned path for this peer)
+	 */
+	void send(void *tPtr,int64_t now,const void *data,unsigned int len,const SharedPtr<Path> &via) noexcept;
+
+	/**
+	 * Send data to this peer over the best available path
+	 *
+	 * If there is a working direct path it will be used. Otherwise the data will be
+	 * sent via a root server.
+	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
+	 * @param now Current time
+	 * @param data Data to send
+	 * @param len Length in bytes
+	 */
+	void send(void *tPtr,int64_t now,const void *data,unsigned int len) noexcept;
+
+	/**
+	 * Send a HELLO to this peer at a specified physical address.
 	 *
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param localSocket Local source socket
@@ -123,7 +186,7 @@ public:
 	 * @param now Current time
 	 * @return Number of bytes sent
 	 */
-	unsigned int sendHELLO(void *tPtr,int64_t localSocket,const InetAddress &atAddress,int64_t now);
+	unsigned int hello(void *tPtr,int64_t localSocket,const InetAddress &atAddress,int64_t now);
 
 	/**
 	 * Send a NOP message to e.g. probe a new link
@@ -137,13 +200,13 @@ public:
 	unsigned int sendNOP(void *tPtr,int64_t localSocket,const InetAddress &atAddress,int64_t now);
 
 	/**
-	 * Send ping to this peer
+	 * Ping this peer if needed and/or perform other periodic tasks.
 	 *
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param now Current time
-	 * @param pingAllAddressTypes If true, try to keep a link up for each address type/family
+	 * @param isRoot True if this peer is a root
 	 */
-	void ping(void *tPtr,int64_t now,bool pingAllAddressTypes);
+	void pulse(void *tPtr,int64_t now,bool isRoot);
 
 	/**
 	 * Reset paths within a given IP scope and address family
@@ -161,21 +224,18 @@ public:
 	void resetWithinScope(void *tPtr,InetAddress::IpScope scope,int inetAddressFamily,int64_t now);
 
 	/**
-	 * Update peer latency information
-	 *
-	 * This is called from packet parsing code.
+	 * Method called to update peer latency with a new measurement.
 	 *
 	 * @param l New latency measurment (in milliseconds)
 	 */
-	void updateLatency(unsigned int l) noexcept;
-
-	/**
-	 * @return Bootstrap address or NULL if none
-	 */
-	ZT_INLINE const Endpoint &bootstrap() const noexcept
+	ZT_INLINE void updateLatency(const unsigned int measurement) noexcept
 	{
-		RWMutex::RLock l(_lock);
-		return _bootstrap;
+		int l = _latency;
+		if (l > 0) {
+			_latency = (l + (int)measurement) / 2;
+		} else {
+			_latency = (int)measurement;
+		}
 	}
 
 	/**
@@ -186,23 +246,13 @@ public:
 	ZT_INLINE void setBootstrap(const Endpoint &ep) noexcept
 	{
 		RWMutex::Lock l(_lock);
-		_bootstrap = ep;
+		_bootstrap[ep.type()] = ep;
 	}
 
 	/**
 	 * @return Time of last receive of anything, whether direct or relayed
 	 */
 	ZT_INLINE int64_t lastReceive() const noexcept { return _lastReceive; }
-
-	/**
-	 * @return True if we've heard from this peer in less than ZT_PEER_ALIVE_TIMEOUT
-	 */
-	ZT_INLINE bool alive(const int64_t now) const noexcept { return ((now - _lastReceive) < ZT_PEER_ALIVE_TIMEOUT); }
-
-	/**
-	 * @return True if we've heard from this peer in less than ZT_PEER_ACTIVITY_TIMEOUT
-	 */
-	ZT_INLINE bool active(const int64_t now) const noexcept { return ((now - _lastReceive) < ZT_PEER_ACTIVITY_TIMEOUT); }
 
 	/**
 	 * @return Latency in milliseconds of best/aggregate path or 0xffff if unknown
@@ -212,7 +262,7 @@ public:
 	/**
 	 * @return 256-bit secret symmetric encryption key
 	 */
-	ZT_INLINE const unsigned char *key() const noexcept { return _key; }
+	ZT_INLINE const unsigned char *key() const noexcept { return _identityKey; }
 
 	/**
 	 * @return Preferred cipher suite for normal encrypted P2P communication
@@ -224,7 +274,7 @@ public:
 
 	/**
 	 * @return Incoming probe packet (in big-endian byte order)
-0	 */
+	 */
 	ZT_INLINE uint64_t incomingProbe() const noexcept { return _incomingProbe; }
 
 	/**
@@ -250,62 +300,9 @@ public:
 	ZT_INLINE bool remoteVersionKnown() const noexcept { return ((_vMajor > 0) || (_vMinor > 0) || (_vRevision > 0)); }
 
 	/**
-	 * Rate limit gate for inbound WHOIS requests
-	 */
-	ZT_INLINE bool rateGateInboundWhoisRequest(const int64_t now) noexcept
-	{
-		if ((now - _lastWhoisRequestReceived) >= ZT_PEER_WHOIS_RATE_LIMIT) {
-			_lastWhoisRequestReceived = now;
-			return true;
-		}
-		return false;
-	}
-
-	/**
-	 * Rate limit gate for inbound PUSH_DIRECT_PATHS requests
-	 */
-	ZT_INLINE bool rateGateInboundPushDirectPaths(const int64_t now) noexcept
-	{
-		if ((now - _lastPushDirectPathsReceived) >= ZT_DIRECT_PATH_PUSH_INTERVAL) {
-			_lastPushDirectPathsReceived = now;
-			return true;
-		}
-		return false;
-	}
-
-	/**
-	 * Rate limit attempts in response to incoming short probe packets
-	 */
-	ZT_INLINE bool rateGateInboundProbe(const int64_t now) noexcept
-	{
-		if ((now - _lastProbeReceived) >= ZT_DIRECT_PATH_PUSH_INTERVAL) {
-			_lastProbeReceived = now;
-			return true;
-		}
-		return false;
-	}
-
-	/**
-	 * Rate limit gate for inbound ECHO requests
-	 */
-	ZT_INLINE bool rateGateEchoRequest(const int64_t now) noexcept
-	{
-		if ((now - _lastEchoRequestReceived) >= ZT_PEER_GENERAL_RATE_LIMIT) {
-			_lastEchoRequestReceived = now;
-			return true;
-		}
-		return false;
-	}
-
-	/**
-	 * @return Current best path
-	 */
-	SharedPtr<Path> path(int64_t now);
-
-	/**
 	 * @return True if there is at least one alive direct path
 	 */
-	bool direct(int64_t now);
+	bool directlyConnected(int64_t now);
 
 	/**
 	 * Get all paths
@@ -327,7 +324,7 @@ public:
 	 * @param now Current time
 	 * @param bfg1024 Use BFG1024 brute force symmetric NAT busting algorithm if applicable
 	 */
-	void contact(void *tPtr,const Endpoint &ep,int64_t now,bool bfg1024);
+	void tryToContactAt(void *tPtr,const Endpoint &ep,int64_t now,bool bfg1024);
 
 	/**
 	 * Called by Node when an alarm set by this peer goes off
@@ -343,40 +340,95 @@ public:
 	int marshal(uint8_t data[ZT_PEER_MARSHAL_SIZE_MAX]) const noexcept;
 	int unmarshal(const uint8_t *restrict data,int len) noexcept;
 
+	/**
+	 * Rate limit gate for inbound WHOIS requests
+	 */
+	ZT_INLINE bool rateGateInboundWhoisRequest(const int64_t now) noexcept
+	{
+		if ((now - _lastWhoisRequestReceived) >= ZT_PEER_WHOIS_RATE_LIMIT) {
+			_lastWhoisRequestReceived = now;
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Rate limit gate for inbound PUSH_DIRECT_PATHS requests
+	 */
+	ZT_INLINE bool rateGateInboundPushDirectPaths(const int64_t now) noexcept
+	{
+		if ((now - _lastPushDirectPathsReceived) >= ZT_DIRECT_CONNECT_ATTEMPT_INTERVAL) {
+			_lastPushDirectPathsReceived = now;
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Rate limit attempts in response to incoming short probe packets
+	 */
+	ZT_INLINE bool rateGateInboundProbe(const int64_t now) noexcept
+	{
+		if ((now - _lastProbeReceived) >= ZT_DIRECT_CONNECT_ATTEMPT_INTERVAL) {
+			_lastProbeReceived = now;
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Rate limit gate for inbound ECHO requests
+	 */
+	ZT_INLINE bool rateGateEchoRequest(const int64_t now) noexcept
+	{
+		if ((now - _lastEchoRequestReceived) >= ZT_PEER_GENERAL_RATE_LIMIT) {
+			_lastEchoRequestReceived = now;
+			return true;
+		}
+		return false;
+	}
+
 private:
 	void _prioritizePaths(int64_t now);
 
-	uint8_t _key[ZT_PEER_SECRET_KEY_LENGTH];
+	// The long-lived identity key resulting from agreement between our identity and this peer's identity.
+	uint8_t _identityKey[ZT_PEER_SECRET_KEY_LENGTH];
+
+	// Read/write mutex for non-atomic non-const fields.
+	RWMutex _lock;
 
 	const RuntimeEnvironment *RR;
 
 	// The last time various things happened, for rate limiting and periodic events.
 	std::atomic<int64_t> _lastReceive;
+	std::atomic<int64_t> _lastSend;
+	int64_t _lastSentHello; // only checked while locked
 	std::atomic<int64_t> _lastWhoisRequestReceived;
 	std::atomic<int64_t> _lastEchoRequestReceived;
 	std::atomic<int64_t> _lastPushDirectPathsReceived;
 	std::atomic<int64_t> _lastProbeReceived;
 	std::atomic<int64_t> _lastAttemptedP2PInit;
-	std::atomic<int64_t> _lastTriedStaticPath;
 	std::atomic<int64_t> _lastPrioritizedPaths;
 	std::atomic<int64_t> _lastAttemptedAggressiveNATTraversal;
 
-	// Latency in milliseconds
-	std::atomic<unsigned int> _latency;
+	// Meters measuring actual bandwidth in, out, and relayed via this peer (mostly if this is a root).
+	Meter<> _inMeter;
+	Meter<> _outMeter;
+	Meter<> _relayedMeter;
 
 	// For SharedPtr<>
 	std::atomic<int> __refCount;
 
-	// Read/write mutex for non-atomic non-const fields.
-	RWMutex _lock;
+	// Milliseconds of latency over best path or -1 if unknown.
+	std::atomic<int> _latency;
 
-	// Number of paths current alive as of last _prioritizePaths
-	unsigned int _alivePathCount;
-
-	// Direct paths sorted in descending order of preference (can be NULL, if first is NULL there's no direct path)
+	// Direct paths sorted in descending order of preference.
 	SharedPtr<Path> _paths[ZT_MAX_PEER_NETWORK_PATHS];
 
-	// Queue of batches of one or more physical addresses to try at some point in the future (for NAT traversal logic)
+	// Number of paths current alive (number of non-NULL entries in _paths).
+	unsigned int _alivePathCount;
+
+	// Queue of batches of one or more physical addresses to try at some point in the future (for NAT traversal logic).
 	struct _ContactQueueItem
 	{
 		ZT_INLINE _ContactQueueItem() {} // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init,hicpp-use-equals-default,modernize-use-equals-default)
@@ -394,10 +446,12 @@ private:
 	};
 	std::list<_ContactQueueItem> _contactQueue;
 
+	// Remembered addresses by endpoint type (std::map is smaller for only a few keys).
+	std::map< Endpoint::Type,Endpoint > _bootstrap;
+
 	Identity _id;
 	uint64_t _incomingProbe;
 	Locator _locator;
-	Endpoint _bootstrap; // right now only InetAddress endpoints are supported for bootstrap
 
 	uint16_t _vProto;
 	uint16_t _vMajor;

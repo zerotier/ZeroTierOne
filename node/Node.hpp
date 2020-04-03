@@ -60,7 +60,7 @@ public:
 	 */
 	void shutdown(void *tPtr);
 
-	// Get rid of alignment warnings on 32-bit Windows and possibly improve performance
+	// Get rid of alignment warnings on 32-bit Windows
 #ifdef __WINDOWS__
 	void * operator new(size_t i) { return _mm_malloc(i,16); }
 	void operator delete(void* p) { _mm_free(p); }
@@ -300,17 +300,15 @@ public:
 	ZT_INLINE bool natMustDie() const noexcept { return _natMustDie; }
 
 	/**
-	 * Wake any peers with the given address by calling their alarm() methods at or after the specified time
+	 * Wake peer by calling its alarm() method at or after a given time.
 	 *
-	 * @param peerAddress Peer address
+	 * @param peer Identity fingerprint of peer to wake
 	 * @param triggerTime Time alarm should go off
 	 */
-	ZT_INLINE void setPeerAlarm(const Address &peerAddress,const int64_t triggerTime)
+	ZT_INLINE void setPeerAlarm(const Fingerprint &peer,const int64_t triggerTime)
 	{
-		RWMutex::Lock l(_peerAlarms_l);
-		int64_t &t = _peerAlarms[peerAddress];
-		if ((t <= 0)||(t > triggerTime))
-			t = triggerTime;
+		Mutex::Lock l(_peerAlarms_l);
+		_peerAlarms[peer] = triggerTime;
 	}
 
 	/**
@@ -335,25 +333,30 @@ public:
 
 private:
 	RuntimeEnvironment _RR;
-	void *_objects;
-	RuntimeEnvironment *RR;
-	ZT_Node_Callbacks _cb;
-	void *_uPtr; // _uptr (lower case) is reserved in Visual Studio :P
+	RuntimeEnvironment *const RR;
 
-	// Addresses of peers that want to have their alarm() function called at some point in the future.
+	// Pointer to a struct defined in Node that holds instances of core objects.
+	void *_objects;
+
+	// Function pointers to C callbacks supplied via the API.
+	ZT_Node_Callbacks _cb;
+
+	// A user-specified opaque pointer passed back via API callbacks.
+	void *_uPtr;
+
+	// Fingerprints of peers that want to have their alarm() function called at some point in the future.
 	// These behave like weak references in that the node looks them up in Topology and calls alarm()
 	// in each peer if that peer object is still held in memory. Calling alarm() unnecessarily on a peer
 	// is harmless. This just exists as an optimization to prevent having to iterate through all peers
 	// on every processBackgroundTasks call. A simple map<> is used here because there are usually only
 	// a few of these, if any.
-	std::map<Address,int64_t> _peerAlarms;
-	RWMutex _peerAlarms_l;
+	std::map<Fingerprint,int64_t> _peerAlarms;
+	Mutex _peerAlarms_l;
 
-	// Map that remembers if we have recently sent a network config to someone
-	// querying us as a controller. This is an optimization to allow network
-	// controllers to know whether to treat things like multicast queries the
-	// way authorized members would be treated without requiring an extra cert
-	// validation.
+	// Cache that remembers whether or not the locally running network controller (if any) has authorized
+	// someone on their most recent query. This is used by the network controller as a memoization optimization
+	// to elide unnecessary signature verifications. It might get moved in the future since this is sort of a
+	// weird place to put it.
 	struct _LocalControllerAuth
 	{
 		uint64_t nwid,address;
@@ -366,8 +369,7 @@ private:
 	Map<_LocalControllerAuth,int64_t> _localControllerAuthorizations;
 	Mutex _localControllerAuthorizations_m;
 
-	// Networks are stored in a flat hash table that is resized on any network ID collision. This makes
-	// network lookup by network ID a few bitwise ops and an array index.
+	// Locally joined networks by network ID.
 	Map< uint64_t,SharedPtr<Network> > _networks;
 	RWMutex _networks_m;
 
@@ -376,16 +378,22 @@ private:
 	std::vector< ZT_InterfaceAddress > _localInterfaceAddresses;
 	Mutex _localInterfaceAddresses_m;
 
-	// This is locked while running processBackgroundTasks to ensure that calls to it are not concurrent.
+	// This is locked while running processBackgroundTasks().
 	Mutex _backgroundTasksLock;
 
-	volatile int64_t _now;
-	volatile int64_t _lastPing;
-	volatile int64_t _lastHousekeepingRun;
-	volatile int64_t _lastNetworkHousekeepingRun;
-	volatile int64_t _lastPathKeepaliveCheck;
-	volatile bool _natMustDie;
-	volatile bool _online;
+	// These are locked via _backgroundTasksLock as they're only checked and modified in processBackgroundTasks().
+	int64_t _lastPeerPulse;
+	int64_t _lastHousekeepingRun;
+	int64_t _lastNetworkHousekeepingRun;
+
+	// This is the most recent value for time passed in via any of the core API methods.
+	std::atomic<int64_t> _now;
+
+	// True if we are to use really intensive NAT-busting measures.
+	std::atomic<bool> _natMustDie;
+
+	// True if at least one root appears reachable.
+	std::atomic<bool> _online;
 };
 
 } // namespace ZeroTier

@@ -50,8 +50,6 @@ class CertificateOfOwnership : public Credential
 	friend class Credential;
 
 public:
-	static constexpr ZT_CredentialType credentialType() noexcept { return ZT_CREDENTIAL_TYPE_COO; }
-
 	enum Thing
 	{
 		THING_NULL = 0,

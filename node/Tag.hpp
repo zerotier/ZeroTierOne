@@ -53,8 +53,6 @@ class Tag : public Credential
 	friend class Credential;
 
 public:
-	static constexpr ZT_CredentialType credentialType() noexcept { return ZT_CREDENTIAL_TYPE_TAG; }
-
 	ZT_INLINE Tag() noexcept { memoryZero(this); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 
 	/**

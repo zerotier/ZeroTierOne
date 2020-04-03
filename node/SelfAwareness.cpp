@@ -18,8 +18,6 @@
 #include "Peer.hpp"
 #include "Trace.hpp"
 
-#include <cstdlib>
-#include <cstring>
 #include <set>
 
 // Entry timeout -- make it fairly long since this is just to prevent stale buildup
@@ -69,7 +67,7 @@ void SelfAwareness::iam(void *tPtr,const Identity &reporter,const int64_t receiv
 		// Erase all entries in this scope that were not reported from this remote address to prevent 'thrashing'
 		// due to multiple reports of endpoint change.
 		// Don't use 'entry' after this since hash table gets modified.
-		for(Map<PhySurfaceKey,PhySurfaceEntry>::iterator i(_phy.begin());i!=_phy.end();) {
+		for(Map<PhySurfaceKey,PhySurfaceEntry>::iterator i(_phy.begin());i!=_phy.end();) { // NOLINT(modernize-loop-convert,modernize-use-auto,hicpp-use-auto)
 			if ((i->first.scope == scope)&&(i->first.reporterPhysicalAddress != reporterPhysicalAddress))
 				_phy.erase(i++);
 			else ++i;
@@ -91,7 +89,7 @@ void SelfAwareness::iam(void *tPtr,const Identity &reporter,const int64_t receiv
 void SelfAwareness::clean(int64_t now)
 {
 	Mutex::Lock l(_phy_l);
-	for(Map<PhySurfaceKey,PhySurfaceEntry>::iterator i(_phy.begin());i!=_phy.end();) {
+	for(Map<PhySurfaceKey,PhySurfaceEntry>::iterator i(_phy.begin());i!=_phy.end();) { // NOLINT(modernize-loop-convert,modernize-use-auto,hicpp-use-auto)
 		if ((now - i->second.ts) >= ZT_SELFAWARENESS_ENTRY_TIMEOUT)
 			_phy.erase(i++);
 		else ++i;
@@ -105,13 +103,13 @@ std::multimap<unsigned long,InetAddress> SelfAwareness::externalAddresses(const 
 
 	{
 		Mutex::Lock l(_phy_l);
-		for(Map<PhySurfaceKey,PhySurfaceEntry>::const_iterator i(_phy.begin());i!=_phy.end();++i) {
+		for(Map<PhySurfaceKey,PhySurfaceEntry>::const_iterator i(_phy.begin());i!=_phy.end();++i) { // NOLINT(modernize-loop-convert,modernize-use-auto,hicpp-use-auto)
 			if ((now - i->second.ts) < ZT_SELFAWARENESS_ENTRY_TIMEOUT)
 				++counts[i->second.mySurface];
 		}
 	}
 
-	for(Map<InetAddress,unsigned long>::iterator i(counts.begin());i!=counts.end();++i)
+	for(Map<InetAddress,unsigned long>::iterator i(counts.begin());i!=counts.end();++i) // NOLINT(modernize-loop-convert,modernize-use-auto,hicpp-use-auto)
 		r.insert(std::pair<unsigned long,InetAddress>(i->second,i->first));
 
 	return r;

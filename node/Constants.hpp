@@ -47,7 +47,7 @@
 #define ZT_ENDPOINT_MAX_NAME_SIZE 61
 
 /**
- * Size of an identity hash (SHA384)
+ * Size of an identity hash (SHA384) in bytes
  */
 #define ZT_IDENTITY_HASH_SIZE 48
 
@@ -82,7 +82,10 @@
 #define ZT_MAX_TIMER_TASK_INTERVAL 1000
 
 /**
- * Interval between steps or stages in NAT-t attempts
+ * Interval between steps or stages in multi-stage NAT traversal operations.
+ *
+ * This is for example the interval between initial firewall openers and real packets
+ * for two-phase IPv4 hole punch.
  */
 #define ZT_NAT_TRAVERSAL_INTERVAL 200
 
@@ -97,7 +100,7 @@
  * Note that this affects how frequently we re-request network configurations
  * from network controllers if we haven't received one yet.
  */
-#define ZT_NETWORK_HOUSEKEEPING_PERIOD 15000
+#define ZT_NETWORK_HOUSEKEEPING_PERIOD 30000
 
 /**
  * Delay between WHOIS retries in ms
@@ -122,19 +125,14 @@
 #define ZT_PATH_ALIVE_TIMEOUT ((ZT_PATH_KEEPALIVE_PERIOD * 2) + 5000)
 
 /**
- * Delay between full HELLO messages between peers
+ * Delay between calls to the pulse() method in Peer for each peer
  */
-#define ZT_PEER_PING_PERIOD 60000
+#define ZT_PEER_PULSE_INTERVAL ZT_PATH_KEEPALIVE_PERIOD
 
 /**
- * Timeout for peer alive-ness (measured from last receive)
+ * Minimum interval between HELLOs to peers.
  */
-#define ZT_PEER_ALIVE_TIMEOUT ((ZT_PEER_PING_PERIOD * 2) + 5000)
-
-/**
- * Timeout for peer active-ness (measured from last receive)
- */
-#define ZT_PEER_ACTIVITY_TIMEOUT (ZT_PEER_PING_PERIOD + 5000)
+#define ZT_PEER_HELLO_INTERVAL 120000LL
 
 /**
  * Global timeout for peers in milliseconds
@@ -175,14 +173,9 @@
 #define ZT_MAX_BRIDGE_SPAM 32
 
 /**
- * Interval between direct path pushes in milliseconds if we don't have a path
+ * Interval between attempts to make a direct connection if one does not exist
  */
-#define ZT_DIRECT_PATH_PUSH_INTERVAL 30000
-
-/**
- * Interval between direct path pushes in milliseconds if we already have a path
- */
-#define ZT_DIRECT_PATH_PUSH_INTERVAL_HAVEPATH 120000
+#define ZT_DIRECT_CONNECT_ATTEMPT_INTERVAL 30000
 
 /**
  * Maximum number of paths per IP scope (e.g. global, link-local) and family (e.g. v4/v6)

@@ -77,19 +77,19 @@ struct _sortPeerPtrsByAddress
 
 Node::Node(void *uPtr,void *tPtr,const struct ZT_Node_Callbacks *callbacks,int64_t now) :
 	_RR(this),
-	_objects(nullptr),
 	RR(&_RR),
+	_objects(nullptr),
 	_cb(*callbacks),
 	_uPtr(uPtr),
 	_networks(),
-	_now(now),
-	_lastPing(0),
+	_lastPeerPulse(0),
 	_lastHousekeepingRun(0),
 	_lastNetworkHousekeepingRun(0),
-	_lastPathKeepaliveCheck(0),
+	_now(now),
 	_natMustDie(true),
 	_online(false)
 {
+	// Load this node's identity.
 	uint64_t idtmp[2]; idtmp[0] = 0; idtmp[1] = 0;
 	std::vector<uint8_t> data(stateObjectGet(tPtr,ZT_STATE_OBJECT_IDENTITY_SECRET,idtmp));
 	bool haveIdentity = false;
@@ -102,6 +102,7 @@ Node::Node(void *uPtr,void *tPtr,const struct ZT_Node_Callbacks *callbacks,int64
 		}
 	}
 
+	// Generate a new identity if we don't have one.
 	if (!haveIdentity) {
 		RR->identity.generate(Identity::C25519);
 		RR->identity.toString(false,RR->publicIdentityStr);
@@ -190,7 +191,7 @@ ZT_ResultCode Node::processVirtualNetworkFrame(
 
 struct _processBackgroundTasks_eachPeer
 {
-	ZT_INLINE _processBackgroundTasks_eachPeer(const int64_t now_,Node *const parent_,void *const tPtr_) :
+	ZT_INLINE _processBackgroundTasks_eachPeer(const int64_t now_,Node *const parent_,void *const tPtr_) noexcept :
 		now(now_),
 		parent(parent_),
 		tPtr(tPtr_),
@@ -200,86 +201,70 @@ struct _processBackgroundTasks_eachPeer
 	Node *const parent;
 	void *const tPtr;
 	bool online;
-	std::vector<Address> rootsNotOnline;
-	ZT_INLINE void operator()(const SharedPtr<Peer> &peer,const bool isRoot)
+	std::vector< SharedPtr<Peer> > rootsNotOnline;
+	ZT_INLINE void operator()(const SharedPtr<Peer> &peer,const bool isRoot) noexcept
 	{
-		peer->ping(tPtr,now,isRoot);
+		peer->pulse(tPtr,now,isRoot);
 		if (isRoot) {
-			if (peer->active(now)) {
+			if (peer->directlyConnected(now)) {
 				online = true;
 			} else {
-				rootsNotOnline.push_back(peer->address());
+				rootsNotOnline.push_back(peer);
 			}
 		}
 	}
 };
-struct _processBackgroundTasks_eachPath
-{
-	ZT_INLINE _processBackgroundTasks_eachPath(const int64_t now_,const RuntimeEnvironment *const RR_,void *const tPtr_) :
-		now(now_),
-		RR(RR_),
-		tPtr(tPtr_),
-		keepAlivePayload((uint8_t)now_) {}
-	const int64_t now;
-	const RuntimeEnvironment *const RR;
-	void *const tPtr;
-	uint8_t keepAlivePayload;
-	ZT_INLINE void operator()(const SharedPtr<Path> &path)
-	{
-		if ((now - path->lastOut()) >= ZT_PATH_KEEPALIVE_PERIOD) {
-			++keepAlivePayload;
-			path->send(RR,tPtr,&keepAlivePayload,sizeof(keepAlivePayload),now);
-		}
-	}
-};
-ZT_ResultCode Node::processBackgroundTasks(void *tPtr, int64_t now, volatile int64_t *nextBackgroundTaskDeadline)
+ZT_ResultCode Node::processBackgroundTasks(void *tPtr,int64_t now,volatile int64_t *nextBackgroundTaskDeadline)
 {
 	_now = now;
 	Mutex::Lock bl(_backgroundTasksLock);
 
-	if ((now - _lastPing) >= ZT_PEER_PING_PERIOD) {
-		_lastPing = now;
-		try {
-			_processBackgroundTasks_eachPeer pf(now,this,tPtr);
-			RR->topology->eachPeerWithRoot<_processBackgroundTasks_eachPeer &>(pf);
+	try {
+		// Call peer pulse() method of all peers every ZT_PEER_PULSE_INTERVAL.
+		if ((now - _lastPeerPulse) >= ZT_PEER_PULSE_INTERVAL) {
+			_lastPeerPulse = now;
+			try {
+				_processBackgroundTasks_eachPeer pf(now,this,tPtr);
+				RR->topology->eachPeerWithRoot<_processBackgroundTasks_eachPeer &>(pf);
 
-			if (pf.online != _online) {
-				_online = pf.online;
-				postEvent(tPtr, _online ? ZT_EVENT_ONLINE : ZT_EVENT_OFFLINE);
+				if (pf.online != _online) {
+					_online = pf.online;
+					postEvent(tPtr, _online ? ZT_EVENT_ONLINE : ZT_EVENT_OFFLINE);
+				}
+
+				RR->topology->rankRoots(now);
+
+				if (pf.online) {
+					// If we have at least one online root, request whois for roots not online.
+					// This will give us updated locators for these roots which may contain new
+					// IP addresses. It will also auto-discover IPs for roots that were not added
+					// with an initial bootstrap address.
+					// TODO
+					//for (std::vector<Address>::const_iterator r(pf.rootsNotOnline.begin()); r != pf.rootsNotOnline.end(); ++r)
+					//	RR->sw->requestWhois(tPtr,now,*r);
+				}
+			} catch ( ... ) {
+				return ZT_RESULT_FATAL_ERROR_INTERNAL;
 			}
-
-			RR->topology->rankRoots(now);
-
-			if (pf.online) {
-				// If we have at least one online root, request whois for roots not online.
-				// This will give us updated locators for these roots which may contain new
-				// IP addresses. It will also auto-discover IPs for roots that were not added
-				// with an initial bootstrap address.
-				// TODO
-				//for (std::vector<Address>::const_iterator r(pf.rootsNotOnline.begin()); r != pf.rootsNotOnline.end(); ++r)
-				//	RR->sw->requestWhois(tPtr,now,*r);
-			}
-		} catch ( ... ) {
-			return ZT_RESULT_FATAL_ERROR_INTERNAL;
 		}
-	}
 
-	if ((now - _lastNetworkHousekeepingRun) >= ZT_NETWORK_HOUSEKEEPING_PERIOD) {
-		_lastHousekeepingRun = now;
-		{
-			RWMutex::RLock l(_networks_m);
-			for(Map< uint64_t,SharedPtr<Network> >::const_iterator i(_networks.begin());i!=_networks.end();++i)
-				i->second->doPeriodicTasks(tPtr,now);
-		}
-	}
-
-	if ((now - _lastHousekeepingRun) >= ZT_HOUSEKEEPING_PERIOD) {
-		_lastHousekeepingRun = now;
-		try {
-			// Clean up any old local controller auth memoizations. This is an
-			// optimization for network controllers to know whether to accept
-			// or trust nodes without doing an extra cert check.
+		// Perform network housekeeping and possibly request new certs and configs every ZT_NETWORK_HOUSEKEEPING_PERIOD.
+		if ((now - _lastNetworkHousekeepingRun) >= ZT_NETWORK_HOUSEKEEPING_PERIOD) {
+			_lastHousekeepingRun = now;
 			{
+				RWMutex::RLock l(_networks_m);
+				for(Map< uint64_t,SharedPtr<Network> >::const_iterator i(_networks.begin());i!=_networks.end();++i)
+					i->second->doPeriodicTasks(tPtr,now);
+			}
+		}
+
+		// Clean up other stuff every ZT_HOUSEKEEPING_PERIOD.
+		if ((now - _lastHousekeepingRun) >= ZT_HOUSEKEEPING_PERIOD) {
+			_lastHousekeepingRun = now;
+			try {
+				// Clean up any old local controller auth memoizations. This is an
+				// optimization for network controllers to know whether to accept
+				// or trust nodes without doing an extra cert check.
 				_localControllerAuthorizations_m.lock();
 				for(Map<_LocalControllerAuth,int64_t>::iterator i(_localControllerAuthorizations.begin());i!=_localControllerAuthorizations.end();) { // NOLINT(hicpp-use-auto,modernize-use-auto)
 					if ((i->second - now) > (ZT_NETWORK_AUTOCONF_DELAY * 3))
@@ -287,45 +272,38 @@ ZT_ResultCode Node::processBackgroundTasks(void *tPtr, int64_t now, volatile int
 					else ++i;
 				}
 				_localControllerAuthorizations_m.unlock();
-			}
 
-			RR->topology->doPeriodicTasks(tPtr, now);
-			RR->sa->clean(now);
-		} catch ( ... ) {
-			return ZT_RESULT_FATAL_ERROR_INTERNAL;
-		}
-	}
-
-	if ((now - _lastPathKeepaliveCheck) >= ZT_PATH_KEEPALIVE_PERIOD) {
-		_lastPathKeepaliveCheck = now;
-		_processBackgroundTasks_eachPath pf(now,RR,tPtr);
-		RR->topology->eachPath<_processBackgroundTasks_eachPath &>(pf);
-	}
-
-	int64_t earliestAlarmAt = 0x7fffffffffffffffLL;
-	std::vector<Address> bzzt;
-	{
-		RWMutex::RMaybeWLock l(_peerAlarms_l);
-		for(std::map<Address,int64_t>::iterator a(_peerAlarms.begin());a!=_peerAlarms.end();) { // NOLINT(hicpp-use-auto,modernize-use-auto)
-			if (now >= a->second) {
-				bzzt.push_back(a->first);
-				l.writing();
-				_peerAlarms.erase(a++);
-			} else {
-				if (a->second < earliestAlarmAt)
-					earliestAlarmAt = a->second;
-				++a;
+				RR->topology->doPeriodicTasks(tPtr, now);
+				RR->sa->clean(now);
+			} catch ( ... ) {
+				return ZT_RESULT_FATAL_ERROR_INTERNAL;
 			}
 		}
-	}
-	for(std::vector<Address>::iterator a(bzzt.begin());a!=bzzt.end();++a) { // NOLINT(hicpp-use-auto,modernize-use-auto,modernize-loop-convert)
-		const SharedPtr<Peer> p(RR->topology->peer(tPtr,*a,false));
-		if (p)
-			p->alarm(tPtr,now);
-	}
 
-	try {
-		*nextBackgroundTaskDeadline = std::min(earliestAlarmAt,now + ZT_MAX_TIMER_TASK_INTERVAL);
+		// Set off any due or overdue peer alarms.
+		int64_t earliestAlarmAt = now + ZT_MAX_TIMER_TASK_INTERVAL;
+		std::vector<Fingerprint> bzzt;
+		{
+			Mutex::Lock l(_peerAlarms_l);
+			for(std::map<Fingerprint,int64_t>::iterator a(_peerAlarms.begin());a!=_peerAlarms.end();) { // NOLINT(hicpp-use-auto,modernize-use-auto)
+				if (now >= a->second) {
+					bzzt.push_back(a->first);
+					_peerAlarms.erase(a++);
+				} else {
+					if (a->second < earliestAlarmAt)
+						earliestAlarmAt = a->second;
+					++a;
+				}
+			}
+		}
+		for(std::vector<Fingerprint>::iterator a(bzzt.begin());a!=bzzt.end();++a) { // NOLINT(hicpp-use-auto,modernize-use-auto,modernize-loop-convert)
+			const SharedPtr<Peer> p(RR->topology->peer(tPtr,a->address(),false));
+			if ((p)&&(p->identity().fingerprint() == *a))
+				p->alarm(tPtr,now);
+		}
+
+		// Tell caller when to call this method next.
+		*nextBackgroundTaskDeadline = earliestAlarmAt;
 	} catch ( ... ) {
 		return ZT_RESULT_FATAL_ERROR_INTERNAL;
 	}
@@ -365,10 +343,11 @@ ZT_ResultCode Node::leave(uint64_t nwid,void **uptr,void *tptr)
 	if (uptr)
 		*uptr = *nw->userPtr();
 	nw->externalConfig(&ctmp);
-	nw->destroy();
-	nw.zero();
 
 	RR->node->configureVirtualNetworkPort(tptr,nwid,uptr,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY,&ctmp);
+
+	nw->destroy();
+	nw.zero();
 
 	uint64_t tmp[2];
 	tmp[0] = nwid; tmp[1] = 0;
@@ -379,7 +358,7 @@ ZT_ResultCode Node::leave(uint64_t nwid,void **uptr,void *tptr)
 
 ZT_ResultCode Node::multicastSubscribe(void *tPtr,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi)
 {
-	SharedPtr<Network> nw(this->network(nwid));
+	const SharedPtr<Network> nw(this->network(nwid));
 	if (nw) {
 		nw->multicastSubscribe(tPtr,MulticastGroup(MAC(multicastGroup),(uint32_t)(multicastAdi & 0xffffffff)));
 		return ZT_RESULT_OK;
@@ -388,7 +367,7 @@ ZT_ResultCode Node::multicastSubscribe(void *tPtr,uint64_t nwid,uint64_t multica
 
 ZT_ResultCode Node::multicastUnsubscribe(uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi)
 {
-	SharedPtr<Network> nw(this->network(nwid));
+	const SharedPtr<Network> nw(this->network(nwid));
 	if (nw) {
 		nw->multicastUnsubscribe(MulticastGroup(MAC(multicastGroup),(uint32_t)(multicastAdi & 0xffffffff)));
 		return ZT_RESULT_OK;
