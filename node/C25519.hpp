@@ -22,6 +22,8 @@
 
 namespace ZeroTier {
 
+#define ZT_C25519_ECDH_PUBLIC_KEY_SIZE 32
+#define ZT_C25519_ECDH_PRIVATE_KEY_SIZE 32
 #define ZT_C25519_COMBINED_PUBLIC_KEY_SIZE 64
 #define ZT_C25519_COMBINED_PRIVATE_KEY_SIZE 64
 #define ZT_C25519_SIGNATURE_LEN 96
@@ -34,9 +36,14 @@ class C25519
 {
 public:
 	/**
-	 * Generate a C25519 elliptic curve key pair
+	 * Generate a set of two 25519 keys: a C25519 ECDH key pair and an Ed25519 EDDSA key pair.
 	 */
-	static void generate(uint8_t pub[ZT_C25519_COMBINED_PUBLIC_KEY_SIZE],uint8_t priv[ZT_C25519_COMBINED_PRIVATE_KEY_SIZE]);
+	static void generateCombined(uint8_t pub[ZT_C25519_COMBINED_PUBLIC_KEY_SIZE],uint8_t priv[ZT_C25519_COMBINED_PRIVATE_KEY_SIZE]);
+
+	/**
+	 * Generate a C25519 ECDH key pair only.
+	 */
+	static void generateC25519(uint8_t pub[ZT_C25519_ECDH_PUBLIC_KEY_SIZE],uint8_t priv[ZT_C25519_ECDH_PRIVATE_KEY_SIZE]);
 
 	/**
 	 * Generate a key pair satisfying a condition
@@ -109,7 +116,7 @@ public:
 private:
 	// derive first 32 bytes of kp.pub from first 32 bytes of kp.priv
 	// this is the ECDH key
-	static void _calcPubDH(uint8_t pub[ZT_C25519_COMBINED_PUBLIC_KEY_SIZE],const uint8_t priv[ZT_C25519_COMBINED_PRIVATE_KEY_SIZE]);
+	static void _calcPubDH(uint8_t *pub,const uint8_t *priv);
 
 	// derive 2nd 32 bytes of kp.pub from 2nd 32 bytes of kp.priv
 	// this is the Ed25519 sign/verify key

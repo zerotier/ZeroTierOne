@@ -38,8 +38,8 @@ ZT_PACKED_STRUCT(struct TriviallyCopyable
 	template<typename T>
 	static ZT_INLINE void memoryZero(T *obj) noexcept
 	{
-		TriviallyCopyable *const tmp = obj;
-		Utils::zero<sizeof(T)>(tmp);
+		static_assert(isTriviallyCopyable(obj),"parameter is not TriviallyCopyable");
+		Utils::zero<sizeof(T)>(obj);
 	}
 
 	/**
@@ -51,8 +51,8 @@ ZT_PACKED_STRUCT(struct TriviallyCopyable
 	template<typename T>
 	static ZT_INLINE void memoryZero(T &obj) noexcept
 	{
-		TriviallyCopyable *const tmp = &obj;
-		Utils::zero<sizeof(T)>(tmp);
+		static_assert(isTriviallyCopyable(obj),"parameter is not TriviallyCopyable");
+		Utils::zero<sizeof(T)>(&obj);
 	}
 
 	/**
@@ -65,8 +65,8 @@ ZT_PACKED_STRUCT(struct TriviallyCopyable
 	template<typename T>
 	static ZT_INLINE void memoryCopyUnsafe(T *dest,const void *src) noexcept
 	{
-		TriviallyCopyable *const tmp = dest;
-		Utils::copy<sizeof(T)>(tmp,src);
+		static_assert(isTriviallyCopyable(dest),"parameter is not TriviallyCopyable");
+		Utils::copy<sizeof(T)>(dest,src);
 	}
 
 	/**
@@ -79,8 +79,8 @@ ZT_PACKED_STRUCT(struct TriviallyCopyable
 	template<typename T>
 	static ZT_INLINE void memoryCopyUnsafe(T &dest,const void *src) noexcept
 	{
-		TriviallyCopyable *const tmp = &dest;
-		Utils::copy<sizeof(T)>(tmp,src);
+		static_assert(isTriviallyCopyable(dest),"parameter is not TriviallyCopyable");
+		Utils::copy<sizeof(T)>(&dest,src);
 	}
 
 	/**
@@ -93,8 +93,8 @@ ZT_PACKED_STRUCT(struct TriviallyCopyable
 	template<typename T>
 	static ZT_INLINE void memoryCopy(T *dest,const T *src) noexcept
 	{
-		TriviallyCopyable *const tmp = dest;
-		Utils::copy<sizeof(T)>(tmp,src);
+		static_assert(isTriviallyCopyable(dest),"parameter is not TriviallyCopyable");
+		Utils::copy<sizeof(T)>(dest,src);
 	}
 
 	/**
@@ -107,8 +107,8 @@ ZT_PACKED_STRUCT(struct TriviallyCopyable
 	template<typename T>
 	static ZT_INLINE void memoryCopy(T *dest,const T &src) noexcept
 	{
-		TriviallyCopyable *const tmp = dest;
-		Utils::copy<sizeof(T)>(tmp,&src);
+		static_assert(isTriviallyCopyable(src),"parameter is not TriviallyCopyable");
+		Utils::copy<sizeof(T)>(dest,&src);
 	}
 
 	/**
@@ -121,8 +121,8 @@ ZT_PACKED_STRUCT(struct TriviallyCopyable
 	template<typename T>
 	static ZT_INLINE void memoryCopy(T &dest,const T *src) noexcept
 	{
-		TriviallyCopyable *const tmp = &dest;
-		Utils::copy<sizeof(T)>(tmp,src);
+		static_assert(isTriviallyCopyable(dest),"parameter is not TriviallyCopyable");
+		Utils::copy<sizeof(T)>(&dest,src);
 	}
 
 	/**
@@ -135,13 +135,13 @@ ZT_PACKED_STRUCT(struct TriviallyCopyable
 	template<typename T>
 	static ZT_INLINE void memoryCopy(T &dest,const T &src) noexcept
 	{
-		TriviallyCopyable *const tmp = &dest;
-		Utils::copy<sizeof(T)>(tmp,&src);
+		static_assert(isTriviallyCopyable(dest),"parameter is not TriviallyCopyable");
+		Utils::copy<sizeof(T)>(&dest,&src);
 	}
 });
 
-static constexpr bool isTriviallyCopyable(const TriviallyCopyable *const anything) noexcept { return true; }
-static constexpr bool isTriviallyCopyable(const void *const anything) noexcept { return false; }
+static constexpr bool isTriviallyCopyable(const TriviallyCopyable *) noexcept { return true; }
+static constexpr bool isTriviallyCopyable(const void *) noexcept { return false; }
 
 template<typename T>
 static constexpr bool isTriviallyCopyable(const T &anything) noexcept { return isTriviallyCopyable(&anything); }

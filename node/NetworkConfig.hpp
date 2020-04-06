@@ -276,7 +276,7 @@ struct NetworkConfig : TriviallyCopyable
 	 * If this field is all zero it is treated as undefined since old controllers
 	 * do not set it.
 	 */
-	uint8_t issuedToFingerprintHash[ZT_IDENTITY_HASH_SIZE];
+	uint8_t issuedToFingerprintHash[ZT_FINGERPRINT_HASH_SIZE];
 
 	/**
 	 * Flags (64-bit)

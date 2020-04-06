@@ -38,7 +38,7 @@
 #include "SHA512.hpp"
 #include "Defragmenter.hpp"
 #include "Fingerprint.hpp"
-#include "Map.hpp"
+#include "Containers.hpp"
 
 #include <cstdint>
 #include <cstring>
@@ -534,8 +534,8 @@ extern "C" const char *ZTT_general()
 			int64_t ts = now();
 			for(int k=0;k<50000;++k) {
 				++messageId;
-				FCV<Buf::Slice,16> message;
-				FCV<Buf::Slice,16> ref;
+				FCV<Buf::Slice,ZT_MAX_PACKET_FRAGMENTS> message;
+				FCV<Buf::Slice,ZT_MAX_PACKET_FRAGMENTS> ref;
 
 				int frags = 1 + (int)(Utils::random() % 16);
 				int skip = ((k & 3) == 1) ? -1 : (int)(Utils::random() % frags);
@@ -559,7 +559,7 @@ extern "C" const char *ZTT_general()
 							ZT_T_PRINTF("FAILED (message prematurely complete)" ZT_EOL_S);
 							return "Defragmenter test failed: message prematurely complete";
 						}
-						switch (defrag.assemble(messageId,message,ref[f].b,ref[f].s,ref[f].e - ref[f].s,f,frags,ts++,nullvia,0)) {
+						switch (defrag.assemble(messageId,message,ref[f].b,ref[f].s,ref[f].e - ref[f].s,f,frags,ts++,nullvia)) {
 							case Defragmenter<>::OK:
 								break;
 							case Defragmenter<>::COMPLETE:

@@ -56,21 +56,21 @@ struct NetworkConfig;
 class Trace
 {
 public:
-	struct RuleResultLog
+	struct RuleResultLog : public TriviallyCopyable
 	{
 		uint8_t l[ZT_MAX_NETWORK_RULES / 2]; // ZT_MAX_NETWORK_RULES 4-bit fields
 
-		ZT_INLINE void log(const unsigned int rn,const uint8_t thisRuleMatches,const uint8_t thisSetMatches)
+		ZT_INLINE void log(const unsigned int rn,const uint8_t thisRuleMatches,const uint8_t thisSetMatches) noexcept
 		{
 			l[rn >> 1U] |= ( ((thisRuleMatches + 1U) << 2U) | (thisSetMatches + 1U) ) << ((rn & 1U) << 2U);
 		}
-		ZT_INLINE void logSkipped(const unsigned int rn,const uint8_t thisSetMatches)
+		ZT_INLINE void logSkipped(const unsigned int rn,const uint8_t thisSetMatches) noexcept
 		{
 			l[rn >> 1U] |= (thisSetMatches + 1U) << ((rn & 1U) << 2U);
 		}
-		ZT_INLINE void clear()
+		ZT_INLINE void clear() noexcept
 		{
-			Utils::zero<sizeof(l)>(l);
+			memoryZero(this);
 		}
 	};
 

@@ -218,7 +218,7 @@ void VL1::onRemotePacket(void *const tPtr,const int64_t localSocket,const InetAd
 					ph = &(pkt.b->as<Protocol::Header>());
 
 					// Generate one-time-use MAC key using Salsa20.
-					uint8_t perPacketKey[ZT_PEER_SECRET_KEY_LENGTH];
+					uint8_t perPacketKey[ZT_SYMMETRIC_KEY_SIZE];
 					uint8_t macKey[ZT_POLY1305_KEY_SIZE];
 					Protocol::salsa2012DeriveKey(peer->key(),perPacketKey,*pktv[0].b,packetSize);
 					Salsa20(perPacketKey,&ph->packetId).crypt12(Utils::ZERO256,macKey,ZT_POLY1305_KEY_SIZE);
@@ -237,7 +237,7 @@ void VL1::onRemotePacket(void *const tPtr,const int64_t localSocket,const InetAd
 			case ZT_PROTO_CIPHER_SUITE__POLY1305_SALSA2012:
 				if (peer) {
 					// Derive per-packet key using symmetric key plus some data from the packet header.
-					uint8_t perPacketKey[ZT_PEER_SECRET_KEY_LENGTH];
+					uint8_t perPacketKey[ZT_SYMMETRIC_KEY_SIZE];
 					Protocol::salsa2012DeriveKey(peer->key(),perPacketKey,*pktv[0].b,packetSize);
 					Salsa20 s20(perPacketKey,&ph->packetId);
 
@@ -433,7 +433,7 @@ void VL1::_sendPendingWhois(void *const tPtr,const int64_t now)
 	std::vector<Address> toSend;
 	{
 		Mutex::Lock wl(_whoisQueue_l);
-		for(std::map<Address,_WhoisQueueItem>::iterator wi(_whoisQueue.begin());wi!=_whoisQueue.end();++wi) {
+		for(Map<Address,_WhoisQueueItem>::iterator wi(_whoisQueue.begin());wi!=_whoisQueue.end();++wi) {
 			if ((now - wi->second.lastRetry) >= ZT_WHOIS_RETRY_DELAY) {
 				wi->second.lastRetry = now;
 				++wi->second.retries;
@@ -496,9 +496,9 @@ bool VL1::_HELLO(void *tPtr,const SharedPtr<Path> &path,SharedPtr<Peer> &peer,Bu
 
 	// Packet is basically valid and identity unmarshaled successfully --------------------------------------------------
 
-	uint8_t key[ZT_PEER_SECRET_KEY_LENGTH];
+	uint8_t key[ZT_SYMMETRIC_KEY_SIZE];
 	if ((peer) && (id == peer->identity())) {
-		Utils::copy<ZT_PEER_SECRET_KEY_LENGTH>(key,peer->key());
+		Utils::copy<ZT_SYMMETRIC_KEY_SIZE>(key,peer->key());
 	} else {
 		peer.zero();
 		if (!RR->identity.agree(id,key)) {
@@ -508,7 +508,7 @@ bool VL1::_HELLO(void *tPtr,const SharedPtr<Path> &path,SharedPtr<Peer> &peer,Bu
 	}
 
 	if ((!peer)||(!authenticated)) {
-		uint8_t perPacketKey[ZT_PEER_SECRET_KEY_LENGTH];
+		uint8_t perPacketKey[ZT_SYMMETRIC_KEY_SIZE];
 		uint8_t macKey[ZT_POLY1305_KEY_SIZE];
 		Protocol::salsa2012DeriveKey(peer->key(),perPacketKey,pkt,packetSize);
 		Salsa20(perPacketKey,&p.h.packetId).crypt12(Utils::ZERO256,macKey,ZT_POLY1305_KEY_SIZE);
@@ -522,7 +522,7 @@ bool VL1::_HELLO(void *tPtr,const SharedPtr<Path> &path,SharedPtr<Peer> &peer,Bu
 
 	// Packet has passed Poly1305 MAC authentication --------------------------------------------------------------------
 
-	uint8_t hmacKey[ZT_PEER_SECRET_KEY_LENGTH],hmac[ZT_HMACSHA384_LEN];
+	uint8_t hmacKey[ZT_SYMMETRIC_KEY_SIZE],hmac[ZT_HMACSHA384_LEN];
 	if (peer->remoteVersionProtocol() >= 11) {
 		if (packetSize <= ZT_HMACSHA384_LEN) { // sanity check, should be impossible
 			RR->t->incomingPacketDropped(tPtr,0x1000662a,p.h.packetId,0,id,path->address(),hops,Protocol::VERB_NOP,ZT_TRACE_PACKET_DROP_REASON_MAC_FAILED);
@@ -883,12 +883,6 @@ bool VL1::_PUSH_DIRECT_PATHS(void *tPtr,const SharedPtr<Path> &path,const Shared
 	}
 	Protocol::PUSH_DIRECT_PATHS &pdp = pkt.as<Protocol::PUSH_DIRECT_PATHS>();
 
-	const uint64_t now = RR->node->now();
-	if (!peer->rateGateInboundPushDirectPaths(now)) {
-		RR->t->incomingPacketDropped(tPtr,0x35b1aaaa,pdp.h.packetId,0,peer->identity(),path->address(),Protocol::packetHops(pdp.h),Protocol::VERB_PUSH_DIRECT_PATHS,ZT_TRACE_PACKET_DROP_REASON_RATE_LIMIT_EXCEEDED);
-		return true;
-	}
-
 	int ptr = sizeof(Protocol::PUSH_DIRECT_PATHS);
 	const unsigned int numPaths = Utils::ntoh(pdp.numPaths);
 	InetAddress a;
@@ -964,6 +958,8 @@ bool VL1::_PUSH_DIRECT_PATHS(void *tPtr,const SharedPtr<Path> &path,const Shared
 
 		ptr += (int)addrRecordLen;
 	}
+
+	// TODO: add to a peer try-queue
 
 	return true;
 }

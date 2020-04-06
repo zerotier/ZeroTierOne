@@ -27,6 +27,11 @@
 #endif
 
 /**
+ * Version bit packed into four 16-bit fields in a 64-bit unsigned integer.
+ */
+#define ZT_VERSION_PACKED ( ((uint64_t)ZEROTIER_VERSION_MAJOR << 48U) | ((uint64_t)ZEROTIER_VERSION_MINOR << 32U) | ((uint64_t)ZEROTIER_VERSION_REVISION << 16U) | (uint64_t)ZEROTIER_VERSION_BUILD )
+
+/**
  * Length of a ZeroTier address in bytes
  */
 #define ZT_ADDRESS_LENGTH 5
@@ -42,14 +47,9 @@
 #define ZT_ADDRESS_MASK 0xffffffffffULL
 
 /**
- * Maximum DNS or URL name size for an Endpoint (set so that max marshaled endpoint size is 64 bytes)
+ * Size of an identity fingerprint hash (SHA384) in bytes
  */
-#define ZT_ENDPOINT_MAX_NAME_SIZE 61
-
-/**
- * Size of an identity hash (SHA384) in bytes
- */
-#define ZT_IDENTITY_HASH_SIZE 48
+#define ZT_FINGERPRINT_HASH_SIZE 48
 
 /**
  * Default virtual network MTU (not physical)
@@ -64,7 +64,7 @@
 /**
  * Anti-DOS limit on the maximum incoming fragments per path
  */
-#define ZT_MAX_INCOMING_FRAGMENTS_PER_PATH 32
+#define ZT_MAX_INCOMING_FRAGMENTS_PER_PATH 16
 
 /**
  * Sanity limit on the maximum size of a network config object
@@ -72,9 +72,19 @@
 #define ZT_MAX_NETWORK_CONFIG_BYTES 131072
 
 /**
- * Length of peer shared secrets (256-bit, do not change)
+ * Length of symmetric keys (currently all symmetric crypto is 256 bit).
  */
-#define ZT_PEER_SECRET_KEY_LENGTH 32
+#define ZT_SYMMETRIC_KEY_SIZE 32
+
+/**
+ * Time limit for ephemeral keys: 30 minutes.
+ */
+#define ZT_SYMMETRIC_KEY_TTL 1800000
+
+/**
+ * Maximum number of messages over which a key should be considered usable.
+ */
+#define ZT_SYMMETRIC_KEY_TTL_MESSAGES 2147483648
 
 /**
  * Maximum delay between timer task checks

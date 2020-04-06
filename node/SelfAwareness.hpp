@@ -16,7 +16,7 @@
 
 #include "Constants.hpp"
 #include "InetAddress.hpp"
-#include "Map.hpp"
+#include "Containers.hpp"
 #include "Address.hpp"
 #include "Mutex.hpp"
 
@@ -35,6 +35,8 @@ class RuntimeEnvironment;
 class SelfAwareness
 {
 public:
+	typedef std::multimap< unsigned long,InetAddress,std::less<unsigned long>,Utils::Mallocator< std::pair<const unsigned long,InetAddress> > > ExternalAddressList;
+
 	explicit SelfAwareness(const RuntimeEnvironment *renv);
 
 	/**
@@ -62,7 +64,7 @@ public:
 	 * @param now Current time
 	 * @return Map of count to IP/port representing how many endpoints reported each address
 	 */
-	std::multimap<unsigned long,InetAddress> externalAddresses(int64_t now) const;
+	ExternalAddressList externalAddresses(int64_t now) const;
 
 private:
 	struct PhySurfaceKey

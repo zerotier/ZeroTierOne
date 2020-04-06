@@ -32,7 +32,7 @@ namespace ZeroTier {
 
 class RuntimeEnvironment;
 
-template<unsigned int MF,unsigned int GCT,unsigned int GCS>
+template<unsigned int MF,unsigned int MFP,unsigned int GCT,unsigned int GCS>
 class Defragmenter;
 
 /**
@@ -42,8 +42,8 @@ class Path
 {
 	friend class SharedPtr<Path>;
 
-	// Allow defragmenter to access fragment in flight info stored in Path for performance reasons.
-	template<unsigned int MF,unsigned int GCT,unsigned int GCS>
+	// Allow defragmenter to access fragment-in-flight info stored in Path for performance reasons.
+	template<unsigned int MF,unsigned int MFP,unsigned int GCT,unsigned int GCS>
 	friend class Defragmenter;
 
 public:
@@ -51,6 +51,7 @@ public:
 		_localSocket(l),
 		_lastIn(0),
 		_lastOut(0),
+		_latency(-1),
 		_addr(r)
 	{
 	}
@@ -92,6 +93,26 @@ public:
 	}
 
 	/**
+	 * Update latency with a new measurement
+	 *
+	 * @param newMeasurement New latency measurement in milliseconds
+	 */
+	ZT_INLINE void updateLatency(const unsigned int newMeasurement) noexcept
+	{
+		int lat = _latency;
+		if (lat > 0) {
+			_latency = (lat + newMeasurement) / 2;
+		} else {
+			_latency = newMeasurement;
+		}
+	}
+
+	/**
+	 * @return Latency in milliseconds or -1 if unknown
+	 */
+	ZT_INLINE int latency() const noexcept { return _latency; }
+
+	/**
 	 * Check path aliveness
 	 *
 	 * @param now Current time
@@ -122,6 +143,7 @@ private:
 	const int64_t _localSocket;
 	std::atomic<int64_t> _lastIn;
 	std::atomic<int64_t> _lastOut;
+	std::atomic<int> _latency;
 	const InetAddress _addr;
 	Meter<> _inMeter;
 	Meter<> _outMeter;

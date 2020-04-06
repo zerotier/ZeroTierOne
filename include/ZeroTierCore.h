@@ -416,10 +416,8 @@ enum ZT_TraceEventPathAddressType
 {
 	ZT_TRACE_EVENT_PATH_TYPE_NIL =          0, /* none/empty */
 	ZT_TRACE_EVENT_PATH_TYPE_ZEROTIER =     1, /* 5-byte ZeroTier + 48-byte identity hash */
-	ZT_TRACE_EVENT_PATH_TYPE_DNSNAME =      2, /* C string */
-	ZT_TRACE_EVENT_PATH_TYPE_URL =          3, /* C string */
+	ZT_TRACE_EVENT_PATH_TYPE_ETHERNET =     2, /* 6-byte Ethernet */
 	ZT_TRACE_EVENT_PATH_TYPE_INETADDR_V4 =  4, /* 4-byte IPv4 */
-	ZT_TRACE_EVENT_PATH_TYPE_ETHERNET =     5, /* 6-byte Ethernet */
 	ZT_TRACE_EVENT_PATH_TYPE_INETADDR_V6 =  6  /* 16-byte IPv6 */
 };
 
@@ -1392,13 +1390,18 @@ typedef struct
 	int root;
 
 	/**
-	 * Bootstrap address
+	 * Number of bootstrap addresses
+	 */
+	unsigned int bootstrapAddressCount;
+
+	/**
+	 * Bootstrap addresses
 	 *
 	 * This is a memo-ized recently valid address that can be saved and used
 	 * to attempt rapid reconnection with this peer. If the ss_family field
 	 * is 0 this field is considered null/empty.
 	 */
-	struct sockaddr_storage bootstrap;
+	struct sockaddr_storage bootstrap[ZT_MAX_PEER_NETWORK_PATHS];
 
 	/**
 	 * Number of networks in which this peer is authenticated

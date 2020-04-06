@@ -24,7 +24,7 @@
 #include "Salsa20.hpp"
 #include "NetworkController.hpp"
 #include "Buf.hpp"
-#include "Map.hpp"
+#include "Containers.hpp"
 
 #include <cstdio>
 #include <cstdlib>
@@ -181,7 +181,7 @@ public:
 	/**
 	 * @return Known local interface addresses for this node
 	 */
-	ZT_INLINE std::vector<ZT_InterfaceAddress> localInterfaceAddresses() const
+	ZT_INLINE Vector<ZT_InterfaceAddress> localInterfaceAddresses() const
 	{
 		Mutex::Lock _l(_localInterfaceAddresses_m);
 		return _localInterfaceAddresses;
@@ -350,7 +350,7 @@ private:
 	// is harmless. This just exists as an optimization to prevent having to iterate through all peers
 	// on every processBackgroundTasks call. A simple map<> is used here because there are usually only
 	// a few of these, if any.
-	std::map<Fingerprint,int64_t> _peerAlarms;
+	std::map< Fingerprint,int64_t,std::less<Fingerprint>,Utils::Mallocator< std::pair<const Fingerprint,int64_t> > > _peerAlarms;
 	Mutex _peerAlarms_l;
 
 	// Cache that remembers whether or not the locally running network controller (if any) has authorized
@@ -375,7 +375,7 @@ private:
 
 	// These are local interface addresses that have been configured via the API
 	// and can be pushed to other nodes.
-	std::vector< ZT_InterfaceAddress > _localInterfaceAddresses;
+	Vector< ZT_InterfaceAddress > _localInterfaceAddresses;
 	Mutex _localInterfaceAddresses_m;
 
 	// This is locked while running processBackgroundTasks().

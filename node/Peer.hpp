@@ -27,14 +27,14 @@
 #include "Endpoint.hpp"
 #include "Locator.hpp"
 #include "Protocol.hpp"
-
-#include <vector>
-#include <list>
-#include <set>
-#include <map>
+#include "AES.hpp"
+#include "SymmetricKey.hpp"
+#include "Containers.hpp"
 
 // version, identity, locator, bootstrap, version info, length of any additional fields
-#define ZT_PEER_MARSHAL_SIZE_MAX (1 + ZT_ADDRESS_LENGTH + ZT_PEER_SECRET_KEY_LENGTH + ZT_IDENTITY_MARSHAL_SIZE_MAX + ZT_LOCATOR_MARSHAL_SIZE_MAX + 1 + (ZT_MAX_PEER_NETWORK_PATHS * ZT_ENDPOINT_MARSHAL_SIZE_MAX) + (2*4) + 2)
+#define ZT_PEER_MARSHAL_SIZE_MAX (1 + ZT_SYMMETRICKEY_MARSHAL_SIZE_MAX + ZT_IDENTITY_MARSHAL_SIZE_MAX + ZT_LOCATOR_MARSHAL_SIZE_MAX + 1 + (ZT_MAX_PEER_NETWORK_PATHS * ZT_ENDPOINT_MARSHAL_SIZE_MAX) + (2*4) + 2)
+
+#define ZT_PEER_BFG1024_PORT_SCAN_CHUNK_SIZE 128
 
 namespace ZeroTier {
 
@@ -224,18 +224,14 @@ public:
 	void resetWithinScope(void *tPtr,InetAddress::IpScope scope,int inetAddressFamily,int64_t now);
 
 	/**
-	 * Method called to update peer latency with a new measurement.
-	 *
-	 * @param l New latency measurment (in milliseconds)
+	 * @return All currently memorized bootstrap endpoints
 	 */
-	ZT_INLINE void updateLatency(const unsigned int measurement) noexcept
+	ZT_INLINE FCV<Endpoint,ZT_MAX_PEER_NETWORK_PATHS> bootstrap() const noexcept
 	{
-		int l = _latency;
-		if (l > 0) {
-			_latency = (l + (int)measurement) / 2;
-		} else {
-			_latency = (int)measurement;
-		}
+		FCV<Endpoint,ZT_MAX_PEER_NETWORK_PATHS> r;
+		for(std::map< Endpoint::Type,Endpoint,std::less<Endpoint::Type>,Utils::Mallocator< std::pair<const Endpoint::Type,Endpoint> > >::const_iterator i(_bootstrap.begin());i!=_bootstrap.end();++i) // NOLINT(hicpp-use-auto,modernize-use-auto,modernize-loop-convert)
+			r.push_back(i->second);
+		return r;
 	}
 
 	/**
@@ -255,14 +251,22 @@ public:
 	ZT_INLINE int64_t lastReceive() const noexcept { return _lastReceive; }
 
 	/**
-	 * @return Latency in milliseconds of best/aggregate path or 0xffff if unknown
+	 * @return Average latency of all direct paths or -1 if no direct paths or unknown
 	 */
-	ZT_INLINE unsigned int latency() const noexcept { return _latency; }
-
-	/**
-	 * @return 256-bit secret symmetric encryption key
-	 */
-	ZT_INLINE const unsigned char *key() const noexcept { return _identityKey; }
+	ZT_INLINE int latency() const noexcept
+	{
+		int ltot = 0;
+		int lcnt = 0;
+		RWMutex::RLock l(_lock);
+		for(unsigned int i=0;i<_alivePathCount;++i) {
+			int lat = _paths[i]->latency();
+			if (lat > 0) {
+				ltot += lat;
+				++lcnt;
+			}
+		}
+		return (ltot > 0) ? (lcnt / ltot) : -1;
+	}
 
 	/**
 	 * @return Preferred cipher suite for normal encrypted P2P communication
@@ -271,11 +275,6 @@ public:
 	{
 		return ZT_PROTO_CIPHER_SUITE__POLY1305_SALSA2012;
 	}
-
-	/**
-	 * @return Incoming probe packet (in big-endian byte order)
-	 */
-	ZT_INLINE uint64_t incomingProbe() const noexcept { return _incomingProbe; }
 
 	/**
 	 * Set the currently known remote version of this peer's client
@@ -353,18 +352,6 @@ public:
 	}
 
 	/**
-	 * Rate limit gate for inbound PUSH_DIRECT_PATHS requests
-	 */
-	ZT_INLINE bool rateGateInboundPushDirectPaths(const int64_t now) noexcept
-	{
-		if ((now - _lastPushDirectPathsReceived) >= ZT_DIRECT_CONNECT_ATTEMPT_INTERVAL) {
-			_lastPushDirectPathsReceived = now;
-			return true;
-		}
-		return false;
-	}
-
-	/**
 	 * Rate limit attempts in response to incoming short probe packets
 	 */
 	ZT_INLINE bool rateGateInboundProbe(const int64_t now) noexcept
@@ -391,24 +378,43 @@ public:
 private:
 	void _prioritizePaths(int64_t now);
 
-	// The long-lived identity key resulting from agreement between our identity and this peer's identity.
-	uint8_t _identityKey[ZT_PEER_SECRET_KEY_LENGTH];
+	const RuntimeEnvironment *RR;
 
 	// Read/write mutex for non-atomic non-const fields.
 	RWMutex _lock;
 
-	const RuntimeEnvironment *RR;
+	// The permanent identity key resulting from agreement between our identity and this peer's identity.
+	SymmetricKey< AES,0,0 > _identityKey;
 
-	// The last time various things happened, for rate limiting and periodic events.
+	// Most recently successful (for decrypt) ephemeral key and one previous key.
+	SymmetricKey< AES,ZT_SYMMETRIC_KEY_TTL,ZT_SYMMETRIC_KEY_TTL_MESSAGES > _ephemeralKeys[2];
+
+	Identity _id;
+	Locator _locator;
+
+	// the last time something was sent or received from this peer (direct or indirect).
 	std::atomic<int64_t> _lastReceive;
 	std::atomic<int64_t> _lastSend;
+
+	// The last time we sent a full HELLO to this peer.
 	int64_t _lastSentHello; // only checked while locked
+
+	// The last time a WHOIS request was received from this peer (anti-DOS / anti-flood).
 	std::atomic<int64_t> _lastWhoisRequestReceived;
+
+	// The last time an ECHO request was received from this peer (anti-DOS / anti-flood).
 	std::atomic<int64_t> _lastEchoRequestReceived;
-	std::atomic<int64_t> _lastPushDirectPathsReceived;
+
+	// The last time a probe was received from this peer (for anti-DOS / anti-flood use).
 	std::atomic<int64_t> _lastProbeReceived;
+
+	// The last time we tried to init P2P connectivity with this peer.
 	std::atomic<int64_t> _lastAttemptedP2PInit;
+
+	// The last time we sorted paths in order of preference. (This happens pretty often.)
 	std::atomic<int64_t> _lastPrioritizedPaths;
+
+	// The last time we opened a can of whupass against this peer's NAT (if enabled).
 	std::atomic<int64_t> _lastAttemptedAggressiveNATTraversal;
 
 	// Meters measuring actual bandwidth in, out, and relayed via this peer (mostly if this is a root).
@@ -418,9 +424,6 @@ private:
 
 	// For SharedPtr<>
 	std::atomic<int> __refCount;
-
-	// Milliseconds of latency over best path or -1 if unknown.
-	std::atomic<int> _latency;
 
 	// Direct paths sorted in descending order of preference.
 	SharedPtr<Path> _paths[ZT_MAX_PEER_NETWORK_PATHS];
@@ -441,17 +444,16 @@ private:
 			ports(),
 			alivePathThreshold(apt) {}
 		InetAddress address;
-		std::vector<uint16_t> ports; // if non-empty try these ports, otherwise use the one in address
+		FCV<uint16_t,ZT_PEER_BFG1024_PORT_SCAN_CHUNK_SIZE> ports; // if non-empty try these ports, otherwise use the one in address
 		unsigned int alivePathThreshold; // skip and forget if alive path count is >= this
 	};
-	std::list<_ContactQueueItem> _contactQueue;
+	List<_ContactQueueItem> _contactQueue;
 
 	// Remembered addresses by endpoint type (std::map is smaller for only a few keys).
-	std::map< Endpoint::Type,Endpoint > _bootstrap;
+	std::map< Endpoint::Type,Endpoint,std::less<Endpoint::Type>,Utils::Mallocator< std::pair<const Endpoint::Type,Endpoint> > > _bootstrap;
 
-	Identity _id;
-	uint64_t _incomingProbe;
-	Locator _locator;
+	// 32-bit probe or 0 if unknown.
+	uint32_t _probe;
 
 	uint16_t _vProto;
 	uint16_t _vMajor;

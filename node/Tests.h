@@ -43,14 +43,8 @@
 
 #ifdef ZT_ENABLE_TESTS
 
-#ifdef __cplusplus
-#include <cstdint>
-#include <cstdio>
-extern "C" {
-#else
-#include <stdint.h>
-#include <stdio.h>
-#endif
+#include <stdint.h> // NOLINT(modernize-deprecated-headers,hicpp-deprecated-headers)
+#include <stdio.h> // NOLINT(modernize-deprecated-headers,hicpp-deprecated-headers)
 
 #ifndef ZT_T_PRINTF
 #define ZT_T_PRINTF(fmt,...) printf((fmt),##__VA_ARGS__),fflush(stdout)

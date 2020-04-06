@@ -26,8 +26,7 @@
 #include <cstdint>
 #include <cstring>
 
-// max name size + type byte + port (for DNS name/port) + 3x 16-bit coordinate for location
-#define ZT_ENDPOINT_MARSHAL_SIZE_MAX (ZT_ENDPOINT_MAX_NAME_SIZE+1+2+2+2+2)
+#define ZT_ENDPOINT_MARSHAL_SIZE_MAX 64
 
 namespace ZeroTier {
 
@@ -49,83 +48,44 @@ public:
 	{
 		TYPE_NIL =          ZT_TRACE_EVENT_PATH_TYPE_NIL,
 		TYPE_ZEROTIER =     ZT_TRACE_EVENT_PATH_TYPE_ZEROTIER,
-		TYPE_DNSNAME =      ZT_TRACE_EVENT_PATH_TYPE_DNSNAME,
-		TYPE_URL =          ZT_TRACE_EVENT_PATH_TYPE_URL,
-		TYPE_INETADDR_V4 =  ZT_TRACE_EVENT_PATH_TYPE_INETADDR_V4,
 		TYPE_ETHERNET =     ZT_TRACE_EVENT_PATH_TYPE_ETHERNET,
+		TYPE_INETADDR_V4 =  ZT_TRACE_EVENT_PATH_TYPE_INETADDR_V4,
 		TYPE_INETADDR_V6 =  ZT_TRACE_EVENT_PATH_TYPE_INETADDR_V6
 	};
 
 	/**
-	 * Protocol identifiers for INETADDR endpoint types
+	 * Protocol identifier bits.
 	 *
-	 * Most of these are reserved for future use.
+	 * Endpoint types can support more than one of these, though it depends on the type.
 	 */
 	enum Protocol
 	{
-		PROTO_UDP_ZT =      0,
-		PROTO_TCP_ZT =      1,
-		PROTO_IP_ZT =       2
+		PROTO_DGRAM =       0x0001,
+		PROTO_TCP  =        0x0002,
+		PROTO_HTTP =        0x0004,
+		PROTO_HTTPS =       0x0008,
+		PROTO_WS =          0x0010,
+		PROTO_WEBRTC =      0x0020
 	};
 
 	ZT_INLINE Endpoint() noexcept { memoryZero(this); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 
-	explicit Endpoint(const InetAddress &sa,Protocol proto = PROTO_UDP_ZT) noexcept;
-
-	explicit ZT_INLINE Endpoint(const Address &zt,const uint8_t identityHash[ZT_IDENTITY_HASH_SIZE]) noexcept : // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
-		_t(TYPE_ZEROTIER)
-	{
-		_v.zt.address = zt.toInt();
-		Utils::copy<ZT_IDENTITY_HASH_SIZE>(_v.zt.hash,identityHash);
-	}
-
-	explicit ZT_INLINE Endpoint(const char *name,const int port) noexcept : // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
-		_t(TYPE_DNSNAME)
-	{
-		_v.dns.port = port;
-		Utils::scopy(_v.dns.name,sizeof(_v.dns.name),name);
-	}
-
-	explicit ZT_INLINE Endpoint(const char *url) noexcept : // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
-		_t(TYPE_URL)
-	{
-		Utils::scopy(_v.url,sizeof(_v.url),url);
-	}
+	explicit Endpoint(const InetAddress &sa,Protocol proto = PROTO_DGRAM) noexcept;
 
 	/**
 	 * @return InetAddress or NIL if not of this type
 	 */
-	ZT_INLINE const InetAddress &inetAddr() const noexcept { return ((_t == TYPE_INETADDR_V4) || (_t == TYPE_INETADDR_V6)) ? asInetAddress(_v.in.sa) : InetAddress::NIL; }
+	ZT_INLINE const InetAddress &inetAddr() const noexcept { return ((_t == TYPE_INETADDR_V4) || (_t == TYPE_INETADDR_V6)) ? asInetAddress(_v.sa) : InetAddress::NIL; }
 
 	/**
-	 * @return Protocol for INETADDR types, undefined for other endpoint types
+	 * @return Protocol bit mask
 	 */
-	ZT_INLINE Protocol inetAddrProto() const noexcept { return (Protocol)_v.in.proto; }
-
-	/**
-	 * @return DNS name or empty string if not of this type
-	 */
-	ZT_INLINE const char *dnsName() const noexcept { return (_t == TYPE_DNSNAME) ? _v.dns.name : ""; }
-
-	/**
-	 * @return Port associated with DNS name or -1 if not of this type
-	 */
-	ZT_INLINE int dnsPort() const noexcept { return (_t == TYPE_DNSNAME) ? _v.dns.port : -1; }
-
-	/**
-	 * @return ZeroTier address or NIL if not of this type
-	 */
-	ZT_INLINE Address ztAddress() const noexcept { return Address((_t == TYPE_ZEROTIER) ? _v.zt.address : (uint64_t)0); }
+	ZT_INLINE Protocol protocol() const noexcept { return _proto; }
 
 	/**
 	 * @return 384-bit hash of identity keys or NULL if not of this type
 	 */
-	ZT_INLINE const Fingerprint &ztFingerprint() const noexcept { return *reinterpret_cast<const Fingerprint *>(&_v.zt); }
-
-	/**
-	 * @return URL or empty string if not of this type
-	 */
-	ZT_INLINE const char *url() const noexcept { return (_t == TYPE_URL) ? _v.url : ""; }
+	ZT_INLINE const Fingerprint &fingerprint() const noexcept { return *reinterpret_cast<const Fingerprint *>(&_v.zt); }
 
 	/**
 	 * @return Ethernet address or NIL if not of this type
@@ -152,19 +112,12 @@ public:
 
 private:
 	Type _t;
+	Protocol _proto;
 	int _l[3]; // X,Y,Z location in kilometers from the nearest gravitational center of mass
 	union {
-		struct {
-			sockaddr_storage sa;
-			uint8_t proto;
-		} in;
-		struct {
-			uint16_t port;
-			char name[ZT_ENDPOINT_MAX_NAME_SIZE];
-		} dns;
+		sockaddr_storage sa;
 		ZT_Fingerprint zt;
-		char url[ZT_ENDPOINT_MAX_NAME_SIZE];
-		uint64_t eth;
+		uint8_t eth[6];
 	} _v;
 };
 

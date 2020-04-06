@@ -23,8 +23,6 @@
 #include "Address.hpp"
 #include "Identity.hpp"
 
-// TODO: mlock
-
 /*
  * Core ZeroTier protocol packet formats ------------------------------------------------------------------------------
  *
@@ -208,7 +206,7 @@
 /**
  * Length of a probe packet
  */
-#define ZT_PROTO_PROBE_LENGTH 8
+#define ZT_PROTO_PROBE_LENGTH 4
 
 /**
  * Index at which packet fragment payload starts
@@ -364,8 +362,8 @@ enum Verb
 	 *   INSTANCE_ID - a 64-bit unique value generated on each node start
 	 *   EPHEMERAL_C25519 - an ephemeral Curve25519 public key
 	 *   EPHEMERAL_P384 - an ephemeral NIST P-384 public key
-	 *   EPHEMERAL_REVISION - 64-bit monotonically increasing per-instance counter
 	 *   LOCATOR - signed record enumerating this node's trusted contact points
+	 *   PROBE_TOKEN - 32-bit token that can be used to try to contact this peer
 	 *
 	 * The following optional fields may also be present:
 	 *
@@ -375,9 +373,8 @@ enum Verb
 	 *   LOC_X, LOC_Y, LOC_Z - location relative to the nearest large center of mass
 	 *   PEER_LOC_X, PEER_LOC_Y, PEER_LOC_Z - where sender thinks peer is located
 	 *   SOFTWARE_VENDOR - short name or description of vendor, such as a URL
-	 *   SOFTWARE_VERSION - major, minor, revision, and build, and 16-bit integers
+	 *   SOFTWARE_VERSION - major, minor, revision, and build (packed 64-bit int)
 	 *   PHYSICAL_DEST - serialized Endpoint to which this message was sent
-	 *   VIRTUAL_DEST - ZeroTier address of first hop (if first hop wasn't destination)
 	 *   COMPLIANCE - bit mask containing bits for e.g. a FIPS-compliant node
 	 *
 	 * A valid and successfully authenticated HELLO will generate the following
@@ -1099,26 +1096,6 @@ static ZT_INLINE void salsa2012DeriveKey(const uint8_t *const in,uint8_t *const 
 }
 
 /**
- * Create a short probe packet for probing a recipient for e.g. NAT traversal and path setup
- *
- * @param sender Sender identity
- * @param recipient Recipient identity
- * @param key Long-term shared secret key resulting from sender and recipient agreement
- * @return Probe packed into 64-bit integer (in big-endian byte order)
- */
-uint64_t createProbe(const Identity &sender,const Identity &recipient,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH]) noexcept;
-
-// Do not use directly
-extern std::atomic<uint64_t> _s_packetIdCtr;
-
-/**
- * Get a packet ID (and nonce) for a new packet
- *
- * @return Next packet ID
- */
-static ZT_INLINE uint64_t getPacketId() noexcept { return ++_s_packetIdCtr; }
-
-/**
  * Encrypt and compute packet MAC
  *
  * @param pkt Packet data to encrypt (in place)
@@ -1126,7 +1103,7 @@ static ZT_INLINE uint64_t getPacketId() noexcept { return ++_s_packetIdCtr; }
  * @param key Key to use for encryption (not per-packet key)
  * @param cipherSuite Cipher suite to use for AEAD encryption or just MAC
  */
-void armor(Buf &pkt,int packetSize,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH],uint8_t cipherSuite) noexcept;
+void armor(Buf &pkt,int packetSize,const uint8_t key[ZT_SYMMETRIC_KEY_SIZE],uint8_t cipherSuite) noexcept;
 
 /**
  * Attempt to compress packet payload

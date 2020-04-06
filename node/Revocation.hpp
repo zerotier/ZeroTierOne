@@ -45,6 +45,8 @@ class Revocation : public Credential
 	friend class Credential;
 
 public:
+	static constexpr ZT_CredentialType credentialType() noexcept { return ZT_CREDENTIAL_TYPE_REVOCATION; }
+
 	ZT_INLINE Revocation() noexcept { memoryZero(this); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 
 	/**

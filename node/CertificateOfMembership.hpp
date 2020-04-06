@@ -106,6 +106,8 @@ class CertificateOfMembership : public Credential
 	friend class Credential;
 
 public:
+	static constexpr ZT_CredentialType credentialType() noexcept { return ZT_CREDENTIAL_TYPE_COM; }
+
 	/**
 	 * Create an empty certificate of membership
 	 */

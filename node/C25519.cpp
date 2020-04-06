@@ -676,7 +676,8 @@ ZT_INLINE void crecip(limb *out,const limb *z) {
 	/* 2^255 - 21 */ fmul(out,t1,z11);
 }
 
-void crypto_scalarmult(u8 *mypublic, const u8 *secret, const u8 *basepoint) {
+void crypto_scalarmult(u8 *mypublic, const u8 *secret, const u8 *basepoint)
+{
 	limb bp[10], x[10], z[11], zmone[10];
 	uint8_t e[32];
 	int i;
@@ -2367,11 +2368,17 @@ ZT_INLINE void get_hram(unsigned char *hram,const unsigned char *sm,const unsign
 
 namespace ZeroTier {
 
-void C25519::generate(uint8_t pub[ZT_C25519_COMBINED_PUBLIC_KEY_SIZE],uint8_t priv[ZT_C25519_COMBINED_PRIVATE_KEY_SIZE])
+void C25519::generateCombined(uint8_t *pub,uint8_t *priv)
 {
 	Utils::getSecureRandom(priv,ZT_C25519_COMBINED_PRIVATE_KEY_SIZE);
 	_calcPubDH(pub,priv);
 	_calcPubED(pub,priv);
+}
+
+void C25519::generateC25519(uint8_t pub[ZT_C25519_ECDH_PUBLIC_KEY_SIZE],uint8_t priv[ZT_C25519_ECDH_PRIVATE_KEY_SIZE])
+{
+	Utils::getSecureRandom(priv,ZT_C25519_ECDH_PRIVATE_KEY_SIZE);
+	_calcPubDH(pub,priv);
 }
 
 void C25519::agree(const uint8_t mine[ZT_C25519_COMBINED_PRIVATE_KEY_SIZE],const uint8_t their[ZT_C25519_COMBINED_PUBLIC_KEY_SIZE],uint8_t rawkey[ZT_C25519_ECDH_SHARED_SECRET_SIZE])
@@ -2465,7 +2472,7 @@ bool C25519::verify(const uint8_t their[ZT_C25519_COMBINED_PUBLIC_KEY_SIZE],cons
 	return Utils::secureEq(sig,t2,32);
 }
 
-void C25519::_calcPubDH(uint8_t pub[ZT_C25519_COMBINED_PUBLIC_KEY_SIZE],const uint8_t priv[ZT_C25519_COMBINED_PRIVATE_KEY_SIZE])
+void C25519::_calcPubDH(uint8_t *const pub,const uint8_t *const priv)
 {
 	// First 32 bytes of pub and priv are the keys for ECDH key
 	// agreement. This generates the public portion from the private.

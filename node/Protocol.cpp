@@ -27,27 +27,14 @@
 namespace ZeroTier {
 namespace Protocol {
 
-// The counter used to assign packet IDs / cryptographic nonces.
-std::atomic<uint64_t> _s_packetIdCtr((uint64_t)time(nullptr) << 32U);
-
-uint64_t createProbe(const Identity &sender,const Identity &recipient,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH]) noexcept
+void armor(Buf &pkt,int packetSize,const uint8_t key[ZT_SYMMETRIC_KEY_SIZE],uint8_t cipherSuite) noexcept
 {
-	uint8_t tmp[ZT_IDENTITY_HASH_SIZE + ZT_IDENTITY_HASH_SIZE];
-	Utils::copy<ZT_IDENTITY_HASH_SIZE>(tmp,sender.fingerprint().hash());
-	Utils::copy<ZT_IDENTITY_HASH_SIZE>(tmp + ZT_IDENTITY_HASH_SIZE,recipient.fingerprint().hash());
-	uint64_t hash[6];
-	SHA384(hash,tmp,sizeof(tmp),key,ZT_PEER_SECRET_KEY_LENGTH);
-	return hash[0];
-}
-
-void armor(Buf &pkt,int packetSize,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH],uint8_t cipherSuite) noexcept
-{
-	Protocol::Header &ph = pkt.as<Protocol::Header>();
+	Protocol::Header &ph = pkt.as<Protocol::Header>(); // NOLINT(hicpp-use-auto,modernize-use-auto)
 	ph.flags = (ph.flags & 0xc7U) | ((cipherSuite << 3U) & 0x38U); // flags: FFCCCHHH where CCC is cipher
 
 	switch(cipherSuite) {
 		case ZT_PROTO_CIPHER_SUITE__POLY1305_NONE: {
-			uint8_t perPacketKey[ZT_PEER_SECRET_KEY_LENGTH];
+			uint8_t perPacketKey[ZT_SYMMETRIC_KEY_SIZE];
 			salsa2012DeriveKey(key,perPacketKey,pkt,packetSize);
 			Salsa20 s20(perPacketKey,&ph.packetId);
 
@@ -62,7 +49,7 @@ void armor(Buf &pkt,int packetSize,const uint8_t key[ZT_PEER_SECRET_KEY_LENGTH],
 		} break;
 
 		case ZT_PROTO_CIPHER_SUITE__POLY1305_SALSA2012: {
-			uint8_t perPacketKey[ZT_PEER_SECRET_KEY_LENGTH];
+			uint8_t perPacketKey[ZT_SYMMETRIC_KEY_SIZE];
 			salsa2012DeriveKey(key,perPacketKey,pkt,packetSize);
 			Salsa20 s20(perPacketKey,&ph.packetId);
 

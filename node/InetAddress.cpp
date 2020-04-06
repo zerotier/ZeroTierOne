@@ -60,12 +60,12 @@ InetAddress::IpScope InetAddress::ipScope() const noexcept
 					break;
 				case 0xff: return IP_SCOPE_NONE;                                   // 255.0.0.0/8 (broadcast, or unused/unusable)
 			}
-			switch(ip >> 28) {
+			switch(ip >> 28U) {
 				case 0xe: return IP_SCOPE_MULTICAST;                               // 224.0.0.0/4
 				case 0xf: return IP_SCOPE_PSEUDOPRIVATE;                           // 240.0.0.0/4 ("reserved," usually unusable)
 			}
 			return IP_SCOPE_GLOBAL;
-		}	break;
+		}
 
 		case AF_INET6: {
 			const unsigned char *ip = reinterpret_cast<const unsigned char *>(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr); // NOLINT(hicpp-use-auto,modernize-use-auto)
@@ -87,10 +87,9 @@ InetAddress::IpScope InetAddress::ipScope() const noexcept
 				if (ip[15] == 0x00) return IP_SCOPE_NONE;                          // ::/128
 			}
 			return IP_SCOPE_GLOBAL;
-		}	break;
+		}
 
 	}
-
 	return IP_SCOPE_NONE;
 }
 
@@ -298,25 +297,6 @@ bool InetAddress::containsAddress(const InetAddress &addr) const noexcept
 		}
 	}
 	return false;
-}
-
-unsigned long InetAddress::hashCode() const noexcept
-{
-	if (_data.ss_family == AF_INET) {
-		return ((unsigned long)reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr + (unsigned long)reinterpret_cast<const struct sockaddr_in *>(this)->sin_port);
-	} else if (_data.ss_family == AF_INET6) {
-		unsigned long tmp = reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_port;
-		const uint8_t *a = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr); // NOLINT(hicpp-use-auto,modernize-use-auto)
-		for(long i=0;i<16;++i)
-			reinterpret_cast<uint8_t *>(&tmp)[i % sizeof(tmp)] ^= a[i];
-		return tmp;
-	} else {
-		unsigned long tmp = reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_port;
-		const uint8_t *a = reinterpret_cast<const uint8_t *>(this); // NOLINT(hicpp-use-auto,modernize-use-auto)
-		for(long i=0;i<(long)sizeof(InetAddress);++i)
-			reinterpret_cast<uint8_t *>(&tmp)[i % sizeof(tmp)] ^= a[i];
-		return tmp;
-	}
 }
 
 void InetAddress::forTrace(ZT_TraceEventPathAddress &ta) const noexcept

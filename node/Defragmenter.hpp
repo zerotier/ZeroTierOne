@@ -20,7 +20,7 @@
 #include "Mutex.hpp"
 #include "Path.hpp"
 #include "FCV.hpp"
-#include "Map.hpp"
+#include "Containers.hpp"
 
 #include <cstring>
 #include <cstdlib>
@@ -39,11 +39,16 @@ namespace ZeroTier {
  *
  * This class is thread-safe and handles locking internally.
  *
- * @tparam MF Maximum number of fragments that each message can possess
- * @tparam GCS Garbage collection target size for the incoming message queue
- * @tparam GCT Garbage collection trigger threshold, usually 2X GCS
+ * @tparam MF Maximum number of fragments that each message can possess (default: ZT_MAX_PACKET_FRAGMENTS)
+ * @tparam MFP Maximum number of incoming fragments per path (if paths are specified) (default: ZT_MAX_INCOMING_FRAGMENTS_PER_PATH)
+ * @tparam GCS Garbage collection target size for the incoming message queue (default: ZT_MAX_PACKET_FRAGMENTS * 2)
+ * @tparam GCT Garbage collection trigger threshold, usually 2X GCS (default: ZT_MAX_PACKET_FRAGMENTS * 4)
  */
-template<unsigned int MF = 16,unsigned int GCS = 32,unsigned int GCT = 64>
+template<
+  unsigned int MF = ZT_MAX_PACKET_FRAGMENTS,
+  unsigned int MFP = ZT_MAX_INCOMING_FRAGMENTS_PER_PATH,
+  unsigned int GCS = (ZT_MAX_PACKET_FRAGMENTS * 2),
+  unsigned int GCT = (ZT_MAX_PACKET_FRAGMENTS * 4)>
 class Defragmenter
 {
 public:
@@ -89,14 +94,14 @@ public:
 		ERR_OUT_OF_MEMORY
 	};
 
-	ZT_INLINE Defragmenter() {}
+	ZT_INLINE Defragmenter() {} // NOLINT(hicpp-use-equals-default,modernize-use-equals-default)
 
 	/**
 	 * Process a fragment of a multi-part message
 	 *
 	 * The message ID is arbitrary but must be something that can uniquely
-	 * group fragments for a given final message. The total fragments expected
-	 * value is expectded to be the same for all fragments in a message. Results
+	 * group fragments for a given final message. The total fragments
+	 * value is expected to be the same for all fragments in a message. Results
 	 * are undefined and probably wrong if this value changes across a message.
 	 * Fragment numbers must be sequential starting with 0 and going up to
 	 * one minus total fragments expected (non-inclusive range).
@@ -130,7 +135,6 @@ public:
 	 * @param totalFragmentsExpected Total number of expected fragments in this message or 0 to use cached value
 	 * @param now Current time
 	 * @param via If non-NULL this is the path on which this message fragment was received
-	 * @param maxIncomingFragmentsPerPath If via is non-NULL this is a cutoff for maximum fragments in flight via this path
 	 * @return Result code
 	 */
 	ZT_INLINE ResultCode assemble(
@@ -142,8 +146,7 @@ public:
 		const unsigned int fragmentNo,
 		const unsigned int totalFragmentsExpected,
 		const int64_t now,
-		const SharedPtr<Path> &via,
-		const unsigned int maxIncomingFragmentsPerPath)
+		const SharedPtr<Path> &via)
 	{
 		// Sanity checks for malformed fragments or invalid input parameters.
 		if ((fragmentNo >= totalFragmentsExpected)||(totalFragmentsExpected > MF)||(totalFragmentsExpected == 0))
@@ -214,7 +217,7 @@ public:
 			bool tooManyPerPath = false;
 			via->_inboundFragmentedMessages_l.lock();
 			try {
-				if (via->_inboundFragmentedMessages.size() < maxIncomingFragmentsPerPath) {
+				if (via->_inboundFragmentedMessages.size() < MFP) {
 					via->_inboundFragmentedMessages.insert(messageId);
 				} else {
 					tooManyPerPath = true;
@@ -327,7 +330,7 @@ private:
 		}
 
 		uint64_t id;
-		volatile int64_t lastUsed;
+		int64_t lastUsed;
 		unsigned int totalFragmentsExpected;
 		unsigned int fragmentsReceived;
 		SharedPtr<Path> via;
@@ -335,7 +338,7 @@ private:
 		Mutex lock;
 	};
 
-	Map< uint64_t,_E > _messages;
+	Map< uint64_t,Defragmenter<MF,MFP,GCS,GCT>::_E > _messages;
 	RWMutex _messages_l;
 };
 

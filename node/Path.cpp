@@ -17,7 +17,7 @@
 
 namespace ZeroTier {
 
-bool Path::send(const RuntimeEnvironment *RR,void *tPtr,const void *data,unsigned int len,int64_t now) noexcept
+bool Path::send(const RuntimeEnvironment *const RR,void *const tPtr,const void *const data,const unsigned int len,const int64_t now) noexcept
 {
 	if (RR->node->putPacket(tPtr,_localSocket,_addr,data,len)) {
 		_lastOut = now;

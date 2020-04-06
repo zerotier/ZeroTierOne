@@ -96,9 +96,9 @@ void SelfAwareness::clean(int64_t now)
 	}
 }
 
-std::multimap<unsigned long,InetAddress> SelfAwareness::externalAddresses(const int64_t now) const
+SelfAwareness::ExternalAddressList SelfAwareness::externalAddresses(const int64_t now) const
 {
-	std::multimap<unsigned long,InetAddress> r;
+	SelfAwareness::ExternalAddressList r;
 	Map<InetAddress,unsigned long> counts;
 
 	{

@@ -41,7 +41,7 @@ public:
 	/**
 	 * Create an empty/nil fingerprint
 	 */
-	ZT_INLINE Fingerprint() noexcept { memoryZero(this); }
+	ZT_INLINE Fingerprint() noexcept { memoryZero(this); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 
 	ZT_INLINE Address address() const noexcept { return Address(_fp.address); }
 	ZT_INLINE const uint8_t *hash() const noexcept { return _fp.hash; }
@@ -88,9 +88,9 @@ public:
 
 	ZT_INLINE operator bool() const noexcept { return (_fp.address != 0); } // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
 
-	ZT_INLINE bool operator==(const Fingerprint &h) const noexcept { return ((_fp.address == h._fp.address) && (memcmp(_fp.hash,h._fp.hash,ZT_IDENTITY_HASH_SIZE) == 0)); }
+	ZT_INLINE bool operator==(const Fingerprint &h) const noexcept { return ((_fp.address == h._fp.address) && (memcmp(_fp.hash,h._fp.hash,ZT_FINGERPRINT_HASH_SIZE) == 0)); }
 	ZT_INLINE bool operator!=(const Fingerprint &h) const noexcept { return !(*this == h); }
-	ZT_INLINE bool operator<(const Fingerprint &h) const noexcept { return ((_fp.address < h._fp.address) || ((_fp.address == h._fp.address) && (memcmp(_fp.hash,h._fp.hash,ZT_IDENTITY_HASH_SIZE) < 0))); }
+	ZT_INLINE bool operator<(const Fingerprint &h) const noexcept { return ((_fp.address < h._fp.address) || ((_fp.address == h._fp.address) && (memcmp(_fp.hash,h._fp.hash,ZT_FINGERPRINT_HASH_SIZE) < 0))); }
 	ZT_INLINE bool operator>(const Fingerprint &h) const noexcept { return (h < *this); }
 	ZT_INLINE bool operator<=(const Fingerprint &h) const noexcept { return !(h < *this); }
 	ZT_INLINE bool operator>=(const Fingerprint &h) const noexcept { return !(*this < h); }

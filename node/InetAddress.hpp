@@ -390,7 +390,19 @@ public:
 		return false;
 	}
 
-	unsigned long hashCode() const noexcept;
+	ZT_INLINE unsigned long hashCode() const noexcept
+	{
+		if (_data.ss_family == AF_INET) {
+			return (unsigned long)Utils::hash32(((uint32_t)reinterpret_cast<const struct sockaddr_in *>(&_data)->sin_addr.s_addr + (uint32_t)reinterpret_cast<const struct sockaddr_in *>(&_data)->sin_port) ^ (uint32_t)Utils::s_mapNonce);
+		} else if (_data.ss_family == AF_INET6) {
+			return (unsigned long)Utils::hash64(
+				(Utils::loadAsIsEndian<uint64_t>(reinterpret_cast<const struct sockaddr_in6 *>(&_data)->sin6_addr.s6_addr) +
+				Utils::loadAsIsEndian<uint64_t>(reinterpret_cast<const struct sockaddr_in6 *>(&_data)->sin6_addr.s6_addr + 8) +
+				(uint64_t)reinterpret_cast<const struct sockaddr_in6 *>(&_data)->sin6_port) ^ Utils::s_mapNonce
+			);
+		}
+		return Utils::fnv1a32(&_data,sizeof(_data));
+	}
 
 	/**
 	 * Fill out a ZT_TraceEventPathAddress from this InetAddress

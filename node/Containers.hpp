@@ -14,38 +14,33 @@
 #ifndef ZT_MAP_HPP
 #define ZT_MAP_HPP
 
-/*
- * This wraps std::unordered_map (or std::map if that is not available) and gives
- * it a few extra methods. It also uses the built-in hashCode methods in key objects
- * in ZeroTier instead of requiring hashers all over the place.
- */
+/* This defines a Map, SortedMap, Vector, etc. based on STL templates. */
 
 #include "Constants.hpp"
 #include "Utils.hpp"
 
 #ifdef __CPP11__
 #include <unordered_map>
-#else
-#include <map>
 #endif
+#include <map>
+#include <vector>
+#include <list>
+#include <set>
 
 namespace ZeroTier {
 
 #ifdef __CPP11__
-
 struct _MapHasher
 {
 	template<typename O>
-	std::size_t operator()(const O &obj) const noexcept { return (std::size_t)obj.hashCode() ^ (std::size_t)Utils::s_mapNonce; }
-
+	std::size_t operator()(const O &obj) const noexcept { return (std::size_t)obj.hashCode(); }
 	std::size_t operator()(const uint64_t i) const noexcept { return (std::size_t)Utils::hash64(i ^ Utils::s_mapNonce); }
 	std::size_t operator()(const int64_t i) const noexcept { return (std::size_t)Utils::hash64((uint64_t)i ^ Utils::s_mapNonce); }
 	std::size_t operator()(const uint32_t i) const noexcept { return (std::size_t)Utils::hash32(i ^ (uint32_t)Utils::s_mapNonce); }
 	std::size_t operator()(const int32_t i) const noexcept { return (std::size_t)Utils::hash32((uint32_t)i ^ (uint32_t)Utils::s_mapNonce); }
 };
-
 template<typename K,typename V>
-class Map : public std::unordered_map<K,V,_MapHasher>
+class Map : public std::unordered_map< K,V,_MapHasher,std::equal_to<K>,Utils::Mallocator< std::pair<const K,V> > >
 {
 public:
 	ZT_INLINE V *get(const K &key) noexcept
@@ -69,11 +64,9 @@ public:
 		this->emplace(key,value);
 	}
 };
-
 #else
-
 template<typename K,typename V>
-class Map : public std::map<K,V>
+class Map : public std::map< K,V,std::less<K>,Utils::Mallocator< std::pair<const K,V> > >
 {
 public:
 	ZT_INLINE V *get(const K &key) noexcept
@@ -97,8 +90,48 @@ public:
 		(*this)[key] = value;
 	}
 };
-
 #endif
+
+template<typename K,typename V>
+class SortedMap : public std::map< K,V,std::less<K>,Utils::Mallocator< std::pair<const K,V> > >
+{
+public:
+	ZT_INLINE V *get(const K &key) noexcept
+	{
+		typename SortedMap::iterator i(this->find(key));
+		if (i == this->end())
+			return nullptr;
+		return &(i->second);
+	}
+
+	ZT_INLINE const V *get(const K &key) const noexcept
+	{
+		typename SortedMap::const_iterator i(this->find(key));
+		if (i == this->end())
+			return nullptr;
+		return &(i->second);
+	}
+
+	ZT_INLINE void set(const K &key,const V &value)
+	{
+		(*this)[key] = value;
+	}
+};
+
+template<typename V>
+class Vector : public std::vector< V,Utils::Mallocator<V> >
+{
+};
+
+template<typename V>
+class List : public std::list< V,Utils::Mallocator<V> >
+{
+};
+
+template<typename V>
+class Set : public std::set< V,std::less<V>,Utils::Mallocator<V> >
+{
+};
 
 } // ZeroTier
 

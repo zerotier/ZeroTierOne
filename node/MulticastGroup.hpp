@@ -94,7 +94,7 @@ public:
 	ZT_INLINE bool operator<=(const MulticastGroup &g) const noexcept { return !(g < *this); }
 	ZT_INLINE bool operator>=(const MulticastGroup &g) const noexcept { return !(*this < g); }
 
-	ZT_INLINE unsigned long hashCode() const noexcept { return (_mac.hashCode() ^ (unsigned long)_adi); }
+	ZT_INLINE unsigned long hashCode() const noexcept { return (_mac.hashCode() + (unsigned long)_adi); }
 
 private:
 	MAC _mac;

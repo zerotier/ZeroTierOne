@@ -26,7 +26,6 @@
 #include "Network.hpp"
 #include "Trace.hpp"
 #include "Locator.hpp"
-#include "Protocol.hpp"
 #include "Expect.hpp"
 #include "VL1.hpp"
 #include "VL2.hpp"
@@ -117,7 +116,7 @@ Node::Node(void *uPtr,void *tPtr,const struct ZT_Node_Callbacks *callbacks,int64
 			stateObjectPut(tPtr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,idtmp,RR->publicIdentityStr,(unsigned int)strlen(RR->publicIdentityStr));
 	}
 
-	uint8_t tmph[ZT_IDENTITY_HASH_SIZE];
+	uint8_t tmph[ZT_FINGERPRINT_HASH_SIZE];
 	RR->identity.hashWithPrivate(tmph);
 	RR->localCacheSymmetric.init(tmph);
 	Utils::burn(tmph,sizeof(tmph));
@@ -285,7 +284,7 @@ ZT_ResultCode Node::processBackgroundTasks(void *tPtr,int64_t now,volatile int64
 		std::vector<Fingerprint> bzzt;
 		{
 			Mutex::Lock l(_peerAlarms_l);
-			for(std::map<Fingerprint,int64_t>::iterator a(_peerAlarms.begin());a!=_peerAlarms.end();) { // NOLINT(hicpp-use-auto,modernize-use-auto)
+			for(std::map< Fingerprint,int64_t,std::less<Fingerprint>,Utils::Mallocator< std::pair<const Fingerprint,int64_t> > >::iterator a(_peerAlarms.begin());a!=_peerAlarms.end();) { // NOLINT(hicpp-use-auto,modernize-use-auto)
 				if (now >= a->second) {
 					bzzt.push_back(a->first);
 					_peerAlarms.erase(a++);
@@ -423,13 +422,13 @@ ZT_PeerList *Node::peers() const
 	const int64_t now = _now;
 	pl->peerCount = 0;
 	for(std::vector< SharedPtr<Peer> >::iterator pi(peers.begin());pi!=peers.end();++pi) { // NOLINT(modernize-use-auto,modernize-loop-convert,hicpp-use-auto)
-		ZT_Peer *p = &(pl->peers[pl->peerCount]);
+		ZT_Peer *const p = &(pl->peers[pl->peerCount]);
 
 		p->address = (*pi)->address().toInt();
 		identities[pl->peerCount] = (*pi)->identity(); // need to make a copy in case peer gets deleted
 		p->identity = &identities[pl->peerCount];
 		p->fingerprint.address = p->address;
-		Utils::copy<ZT_IDENTITY_HASH_SIZE>(p->fingerprint.hash,(*pi)->identity().fingerprint().hash());
+		Utils::copy<ZT_FINGERPRINT_HASH_SIZE>(p->fingerprint.hash,(*pi)->identity().fingerprint().hash());
 		if ((*pi)->remoteVersionKnown()) {
 			p->versionMajor = (int)(*pi)->remoteVersionMajor();
 			p->versionMinor = (int)(*pi)->remoteVersionMinor();
@@ -439,11 +438,15 @@ ZT_PeerList *Node::peers() const
 			p->versionMinor = -1;
 			p->versionRev = -1;
 		}
-		p->latency = (int)(*pi)->latency();
-		if (p->latency >= 0xffff)
-			p->latency = -1;
+		p->latency = (*pi)->latency();
 		p->root = RR->topology->isRoot((*pi)->identity()) ? 1 : 0;
-		Utils::copy<sizeof(sockaddr_storage)>(&p->bootstrap,&((*pi)->bootstrap()));
+
+		{
+			FCV<Endpoint,ZT_MAX_PEER_NETWORK_PATHS> bs((*pi)->bootstrap());
+			p->bootstrapAddressCount = 0;
+			for (FCV<Endpoint,ZT_MAX_PEER_NETWORK_PATHS>::const_iterator i(bs.begin());i!=bs.end();++i) // NOLINT(modernize-loop-convert)
+				Utils::copy<sizeof(sockaddr_storage)>(&(p->bootstrap[p->bootstrapAddressCount++]),&(*i));
+		}
 
 		std::vector< SharedPtr<Path> > paths;
 		(*pi)->getAllPaths(paths);

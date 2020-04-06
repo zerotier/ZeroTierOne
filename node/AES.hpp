@@ -57,7 +57,7 @@ public:
 	/**
 	 * Create an un-initialized AES instance (must call init() before use)
 	 */
-	ZT_INLINE AES() noexcept
+	ZT_INLINE AES() noexcept // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 	{
 		Utils::memoryLock(this,sizeof(AES));
 	}
@@ -67,7 +67,7 @@ public:
 	 *
 	 * @param key 256-bit key
 	 */
-	explicit ZT_INLINE AES(const void *const key) noexcept
+	explicit ZT_INLINE AES(const void *const key) noexcept // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 	{
 		Utils::memoryLock(this,sizeof(AES));
 		this->init(key);
@@ -84,7 +84,7 @@ public:
 	 *
 	 * @param key 256-bit / 32-byte key
 	 */
-	ZT_INLINE void init(const void *key) noexcept
+	ZT_INLINE void init(const void *const key) noexcept
 	{
 #ifdef ZT_AES_AESNI
 		if (likely(Utils::CPUID.aes)) {
@@ -264,7 +264,7 @@ public:
 		 * @param k0 First of two AES instances keyed with K0
 		 * @param k1 Second of two AES instances keyed with K1
 		 */
-		ZT_INLINE GMACSIVEncryptor(const AES &k0,const AES &k1) noexcept :
+		ZT_INLINE GMACSIVEncryptor(const AES &k0,const AES &k1) noexcept : // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 			_gmac(k0),
 			_ctr(k1) {}
 
@@ -383,7 +383,7 @@ public:
 	class GMACSIVDecryptor
 	{
 	public:
-		ZT_INLINE GMACSIVDecryptor(const AES &k0,const AES &k1) noexcept :
+		ZT_INLINE GMACSIVDecryptor(const AES &k0,const AES &k1) noexcept : // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 			_ctr(k1),
 			_gmac(k0) {}
 

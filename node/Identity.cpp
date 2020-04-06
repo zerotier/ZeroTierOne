@@ -202,7 +202,7 @@ bool Identity::generate(const Type t)
 				// some new key material every time it wraps. The ECC384 generator is slightly
 				// faster so use that one.
 				_pub.nonce = 0;
-				C25519::generate(_pub.c25519,_priv.c25519);
+				C25519::generateCombined(_pub.c25519,_priv.c25519);
 				ECC384GenerateKey(_pub.p384,_priv.p384);
 				for(;;) {
 					if (identityV1ProofOfWorkCriteria(&_pub,sizeof(_pub),b))
@@ -259,7 +259,7 @@ bool Identity::locallyValidate() const noexcept
 	return false;
 }
 
-void Identity::hashWithPrivate(uint8_t h[ZT_IDENTITY_HASH_SIZE]) const
+void Identity::hashWithPrivate(uint8_t h[ZT_FINGERPRINT_HASH_SIZE]) const
 {
 	if (_hasPrivate) {
 		switch (_type) {
@@ -321,7 +321,7 @@ bool Identity::verify(const void *data,unsigned int len,const void *sig,unsigned
 	return false;
 }
 
-bool Identity::agree(const Identity &id,uint8_t key[ZT_PEER_SECRET_KEY_LENGTH]) const
+bool Identity::agree(const Identity &id,uint8_t key[ZT_SYMMETRIC_KEY_SIZE]) const
 {
 	uint8_t rawkey[128];
 	uint8_t h[64];
@@ -333,7 +333,7 @@ bool Identity::agree(const Identity &id,uint8_t key[ZT_PEER_SECRET_KEY_LENGTH]) 
 				// C25519 portion of a type 1 P-384 key.
 				C25519::agree(_priv.c25519,id._pub.c25519,rawkey);
 				SHA512(h,rawkey,ZT_C25519_ECDH_SHARED_SECRET_SIZE);
-				Utils::copy<ZT_PEER_SECRET_KEY_LENGTH>(key,h);
+				Utils::copy<ZT_SYMMETRIC_KEY_SIZE>(key,h);
 				return true;
 			}
 
@@ -348,13 +348,13 @@ bool Identity::agree(const Identity &id,uint8_t key[ZT_PEER_SECRET_KEY_LENGTH]) 
 				C25519::agree(_priv.c25519,id._pub.c25519,rawkey);
 				ECC384ECDH(id._pub.p384,_priv.p384,rawkey + ZT_C25519_ECDH_SHARED_SECRET_SIZE);
 				SHA384(h,rawkey,ZT_C25519_ECDH_SHARED_SECRET_SIZE + ZT_ECC384_SHARED_SECRET_SIZE);
-				Utils::copy<ZT_PEER_SECRET_KEY_LENGTH>(key,h);
+				Utils::copy<ZT_SYMMETRIC_KEY_SIZE>(key,h);
 				return true;
 			} else if (id._type == C25519) {
 				// If the other identity is a C25519 identity we can agree using only that type.
 				C25519::agree(_priv.c25519,id._pub.c25519,rawkey);
 				SHA512(h,rawkey,ZT_C25519_ECDH_SHARED_SECRET_SIZE);
-				Utils::copy<ZT_PEER_SECRET_KEY_LENGTH>(key,h);
+				Utils::copy<ZT_SYMMETRIC_KEY_SIZE>(key,h);
 				return true;
 			}
 

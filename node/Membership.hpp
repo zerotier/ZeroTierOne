@@ -18,7 +18,7 @@
 
 #include "Constants.hpp"
 #include "Credential.hpp"
-#include "Map.hpp"
+#include "Containers.hpp"
 #include "CertificateOfMembership.hpp"
 #include "Capability.hpp"
 #include "Tag.hpp"
@@ -218,7 +218,7 @@ public:
 		ZT_INLINE Capability *next() noexcept
 		{
 			while (_hti != _m._remoteCaps.end()) {
-				Map< uint32_t,Capability >::iterator i(_hti++);
+				Map< uint32_t,Capability >::iterator i(_hti++); // NOLINT(hicpp-use-auto,modernize-use-auto)
 				if (_m._isCredentialTimestampValid(_nconf,i->second))
 					return &(i->second);
 			}

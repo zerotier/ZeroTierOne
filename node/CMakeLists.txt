@@ -10,6 +10,7 @@ set(core_headers
 	CertificateOfMembership.hpp
 	CertificateOfOwnership.hpp
 	Constants.hpp
+	Containers.hpp
 	Credential.hpp
 	Defragmenter.hpp
 	Dictionary.hpp
@@ -22,7 +23,6 @@ set(core_headers
 	Locator.hpp
 	LZ4.hpp
 	MAC.hpp
-	Map.hpp
 	Membership.hpp
 	MulticastGroup.hpp
 	Mutex.hpp
@@ -41,6 +41,7 @@ set(core_headers
 	SHA512.hpp
 	SharedPtr.hpp
 	Speck128.hpp
+	SymmetricKey.hpp
 	Tag.hpp
 	Topology.hpp
 	Trace.hpp

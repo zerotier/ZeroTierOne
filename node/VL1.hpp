@@ -21,8 +21,8 @@
 #include "Protocol.hpp"
 #include "Mutex.hpp"
 #include "FCV.hpp"
+#include "Containers.hpp"
 
-#include <map>
 #include <vector>
 
 namespace ZeroTier {
@@ -89,7 +89,7 @@ private:
 
 	Defragmenter<ZT_MAX_PACKET_FRAGMENTS> _inputPacketAssembler;
 
-	std::map<Address,_WhoisQueueItem> _whoisQueue;
+	Map<Address,_WhoisQueueItem> _whoisQueue;
 	Mutex _whoisQueue_l;
 };
 

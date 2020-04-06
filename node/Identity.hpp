@@ -146,7 +146,7 @@ public:
 	 *
 	 * @param h Buffer to store SHA384 hash
 	 */
-	void hashWithPrivate(uint8_t h[ZT_IDENTITY_HASH_SIZE]) const;
+	void hashWithPrivate(uint8_t h[ZT_FINGERPRINT_HASH_SIZE]) const;
 
 	/**
 	 * Sign a message with this identity (private key required)
@@ -182,7 +182,7 @@ public:
 	 * @param key Result parameter to fill with key bytes
 	 * @return Was agreement successful?
 	 */
-	bool agree(const Identity &id,uint8_t key[ZT_PEER_SECRET_KEY_LENGTH]) const;
+	bool agree(const Identity &id,uint8_t key[ZT_SYMMETRIC_KEY_SIZE]) const;
 
 	/**
 	 * @return This identity's address

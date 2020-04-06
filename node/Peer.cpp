@@ -31,36 +31,37 @@ Peer::Peer(const RuntimeEnvironment *renv) : // NOLINT(cppcoreguidelines-pro-typ
 	_lastSentHello(),
 	_lastWhoisRequestReceived(0),
 	_lastEchoRequestReceived(0),
-	_lastPushDirectPathsReceived(0),
 	_lastProbeReceived(0),
 	_lastAttemptedP2PInit(0),
 	_lastPrioritizedPaths(0),
 	_lastAttemptedAggressiveNATTraversal(0),
-	_latency(-1),
 	_alivePathCount(0),
+	_probe(0),
 	_vProto(0),
 	_vMajor(0),
 	_vMinor(0),
 	_vRevision(0)
 {
-	Utils::memoryLock(_identityKey,sizeof(_identityKey));
 }
 
-Peer::~Peer()
+Peer::~Peer() // NOLINT(hicpp-use-equals-default,modernize-use-equals-default)
 {
-	Utils::memoryUnlock(_identityKey,sizeof(_identityKey));
-	Utils::burn(_identityKey,sizeof(_identityKey));
 }
 
 bool Peer::init(const Identity &peerIdentity)
 {
 	RWMutex::Lock l(_lock);
+
 	if (_id == peerIdentity)
 		return true;
 	_id = peerIdentity;
-	if (!RR->identity.agree(peerIdentity,_identityKey))
+
+	uint8_t ktmp[ZT_SYMMETRIC_KEY_SIZE];
+	if (!RR->identity.agree(peerIdentity,ktmp))
 		return false;
-	_incomingProbe = Protocol::createProbe(_id,RR->identity,_identityKey);
+	_identityKey.init(RR->node->now(),ktmp);
+	Utils::burn(ktmp,sizeof(ktmp));
+
 	return true;
 }
 
@@ -94,7 +95,12 @@ void Peer::received(
 			if (verb == Protocol::VERB_OK) {
 				l.writing();
 
-				// If the path list is full, replace the least recently active path.
+				// SECURITY: in the future we may not accept anything but OK(HELLO) to learn paths,
+				// but right now we accept any OK for backward compatibility. Note that OK will
+				// have been checked against expected packet IDs (see Expect.hpp) before we get here,
+				// and this guards against replay attacks.
+
+				// If the path list is full, replace the least recently active path. Otherwise append new path.
 				unsigned int newPathIdx = 0;
 				if (_alivePathCount >= ZT_MAX_PEER_NETWORK_PATHS) {
 					int64_t lastReceiveTimeMax = 0;
@@ -119,8 +125,11 @@ void Peer::received(
 				if (_paths[newPathIdx])
 					old = _paths[newPathIdx]->address();
 				_paths[newPathIdx] = path;
+
+				// Re-prioritize paths to include the new one.
 				_prioritizePaths(now);
 
+				// Remember most recently learned paths for future bootstrap attempts on restart.
 				Endpoint pathEndpoint(path->address());
 				_bootstrap[pathEndpoint.type()] = pathEndpoint;
 
@@ -129,29 +138,6 @@ void Peer::received(
 				path->sent(now,hello(tPtr,path->localSocket(),path->address(),now));
 				RR->t->tryingNewPath(tPtr,0xb7747ddd,_id,path->address(),path->address(),packetId,(uint8_t)verb,_id,ZT_TRACE_TRYING_NEW_PATH_REASON_PACKET_RECEIVED_FROM_UNKNOWN_PATH);
 			}
-		}
-	} else if ((now - _lastAttemptedP2PInit) >= ZT_DIRECT_CONNECT_ATTEMPT_INTERVAL) {
-		_lastAttemptedP2PInit = now;
-		std::set<InetAddress> addrs;
-
-		// Addresses assigned to local system interfaces (as configured via the API).
-		std::vector<ZT_InterfaceAddress> localInterfaceAddresses(RR->node->localInterfaceAddresses());
-		for(std::vector<ZT_InterfaceAddress>::const_iterator i(localInterfaceAddresses.begin());i!=localInterfaceAddresses.end();++i)
-			addrs.insert(asInetAddress(i->address));
-
-		// We also advertise IPs reported to us by our peers in OK(HELLO) replies.
-		std::multimap<unsigned long,InetAddress> detectedAddresses(RR->sa->externalAddresses(now));
-		for(std::multimap<unsigned long,InetAddress>::const_reverse_iterator i(detectedAddresses.rbegin());i!=detectedAddresses.rend();++i) {
-			if (addrs.count(i->second) == 0) {
-				addrs.insert(i->second);
-				break;
-			}
-			if (i->first <= 1)
-				break;
-		}
-
-		if (!addrs.empty()) {
-			// TODO
 		}
 	}
 }
@@ -217,7 +203,7 @@ unsigned int Peer::sendNOP(void *const tPtr,const int64_t localSocket,const Inet
 	RR->identity.address().copyTo(ph.source);
 	ph.flags = 0;
 	ph.verb = Protocol::VERB_NOP;
-	Protocol::armor(outp,sizeof(Protocol::Header),_identityKey,this->cipher());
+	Protocol::armor(outp,sizeof(Protocol::Header),_identityKey.key(),this->cipher());
 	RR->node->putPacket(tPtr,localSocket,atAddress,outp.unsafeData,sizeof(Protocol::Header));
 	return sizeof(Protocol::Header);
 }
@@ -381,9 +367,11 @@ void Peer::tryToContactAt(void *const tPtr,const Endpoint &ep,const int64_t now,
 				// Chunk ports into chunks of 128 to try in few hundred millisecond intervals,
 				// abandoning attempts once there is at least one direct path.
 				{
+					static_assert((896 % ZT_PEER_BFG1024_PORT_SCAN_CHUNK_SIZE) == 0,"port scan chunk size doesn't evenly divide port list");
+					static_assert((1022 - 896) <= ZT_PEER_BFG1024_PORT_SCAN_CHUNK_SIZE,"port scan chunk size needs to be adjusted");
 					RWMutex::Lock l(_lock);
-					for (int i=0;i<896;i+=128)
-						_contactQueue.push_back(_ContactQueueItem(ep.inetAddr(),ports + i,ports + i + 128,1)); // NOLINT(hicpp-use-emplace,modernize-use-emplace)
+					for (int i=0;i<896;i+=ZT_PEER_BFG1024_PORT_SCAN_CHUNK_SIZE)
+						_contactQueue.push_back(_ContactQueueItem(ep.inetAddr(),ports + i,ports + i + ZT_PEER_BFG1024_PORT_SCAN_CHUNK_SIZE,1)); // NOLINT(hicpp-use-emplace,modernize-use-emplace)
 					_contactQueue.push_back(_ContactQueueItem(ep.inetAddr(),ports + 896,ports + 1022,1)); // NOLINT(hicpp-use-emplace,modernize-use-emplace)
 				}
 			} else {
@@ -424,11 +412,11 @@ void Peer::alarm(void *tPtr,const int64_t now)
 
 		_ContactQueueItem &qi2 = _contactQueue.front();
 		qi.address = qi2.address;
-		qi.ports.swap(qi2.ports);
+		qi.ports = qi2.ports;
 		qi.alivePathThreshold = qi2.alivePathThreshold;
 		_contactQueue.pop_front();
 
-		for(std::list<_ContactQueueItem>::iterator q(_contactQueue.begin());q!=_contactQueue.end();) { // NOLINT(hicpp-use-auto,modernize-use-auto)
+		for(std::list< _ContactQueueItem,Utils::Mallocator<_ContactQueueItem> >::iterator q(_contactQueue.begin());q!=_contactQueue.end();) { // NOLINT(hicpp-use-auto,modernize-use-auto)
 			if (_alivePathCount >= q->alivePathThreshold)
 				_contactQueue.erase(q++);
 			else ++q;
@@ -437,21 +425,20 @@ void Peer::alarm(void *tPtr,const int64_t now)
 		stillHaveContactQueueItems = !_contactQueue.empty();
 	}
 
-	if (_vProto >= 11) {
-		uint64_t outgoingProbe = Protocol::createProbe(RR->identity,_id,_identityKey);
+	if ((_vProto >= 11) && (_probe != 0)) {
 		if (qi.ports.empty()) {
-			RR->node->putPacket(tPtr,-1,qi.address,&outgoingProbe,ZT_PROTO_PROBE_LENGTH);
+			RR->node->putPacket(tPtr,-1,qi.address,&_probe,ZT_PROTO_PROBE_LENGTH);
 		} else {
-			for (std::vector<uint16_t>::iterator p(qi.ports.begin()); p != qi.ports.end(); ++p) { // NOLINT(hicpp-use-auto,modernize-use-auto)
+			for (FCV<uint16_t,ZT_PEER_BFG1024_PORT_SCAN_CHUNK_SIZE>::iterator p(qi.ports.begin()); p != qi.ports.end(); ++p) { // NOLINT(hicpp-use-auto,modernize-use-auto)
 				qi.address.setPort(*p);
-				RR->node->putPacket(tPtr,-1,qi.address,&outgoingProbe,ZT_PROTO_PROBE_LENGTH);
+				RR->node->putPacket(tPtr,-1,qi.address,&_probe,ZT_PROTO_PROBE_LENGTH);
 			}
 		}
 	} else {
 		if (qi.ports.empty()) {
 			this->sendNOP(tPtr,-1,qi.address,now);
 		} else {
-			for (std::vector<uint16_t>::iterator p(qi.ports.begin()); p != qi.ports.end(); ++p) { // NOLINT(hicpp-use-auto,modernize-use-auto)
+			for (FCV<uint16_t,ZT_PEER_BFG1024_PORT_SCAN_CHUNK_SIZE>::iterator p(qi.ports.begin()); p != qi.ports.end(); ++p) { // NOLINT(hicpp-use-auto,modernize-use-auto)
 				qi.address.setPort(*p);
 				this->sendNOP(tPtr,-1,qi.address,now);
 			}
@@ -466,21 +453,17 @@ int Peer::marshal(uint8_t data[ZT_PEER_MARSHAL_SIZE_MAX]) const noexcept
 {
 	data[0] = 0; // serialized peer version
 
-	// For faster unmarshaling on large nodes the long-term secret key is cached. It's
-	// encrypted with a symmetric key derived from a hash of the local node's identity
-	// secrets, so the local node's address is also included. That way the unmarshal
-	// code can check this address and not use this cached key if the local identity has
-	// changed. In that case agreement must be executed again.
-	RR->identity.address().copyTo(data + 1);
-	RR->localCacheSymmetric.encrypt(_identityKey,data + 6);
-	RR->localCacheSymmetric.encrypt(_identityKey + 16,data + 22);
-
 	RWMutex::RLock l(_lock);
 
-	int s = _id.marshal(data + 38,false);
-	if (s <= 0)
-		return s;
-	int p = s + 38;
+	int s = _identityKey.marshal(RR->localCacheSymmetric,data + 1);
+	if (s < 0)
+		return -1;
+	int p = 1 + s;
+
+	s = _id.marshal(data + p,false);
+	if (s < 0)
+		return -1;
+	p += s;
 
 	s = _locator.marshal(data + p);
 	if (s <= 0)
@@ -491,7 +474,7 @@ int Peer::marshal(uint8_t data[ZT_PEER_MARSHAL_SIZE_MAX]) const noexcept
 	for(std::map< Endpoint::Type,Endpoint >::const_iterator i(_bootstrap.begin());i!=_bootstrap.end();++i) { // NOLINT(modernize-loop-convert,hicpp-use-auto,modernize-use-auto)
 		s = i->second.marshal(data + p);
 		if (s <= 0)
-			return s;
+			return -1;
 		p += s;
 	}
 
@@ -512,68 +495,68 @@ int Peer::marshal(uint8_t data[ZT_PEER_MARSHAL_SIZE_MAX]) const noexcept
 
 int Peer::unmarshal(const uint8_t *restrict data,const int len) noexcept
 {
-	int p;
-	bool mustRecomputeSecret;
+	RWMutex::Lock l(_lock);
 
-	{
-		RWMutex::Lock l(_lock);
+	if ((len <= 1) || (data[0] != 0))
+		return -1;
 
-		if ((len <= 38) || (data[0] != 0))
+	int s = _identityKey.unmarshal(RR->localCacheSymmetric,data + 1,len);
+	if (s < 0)
+		return -1;
+	int p = 1 + s;
+
+	// If the identity key did not pass verification, it may mean that our local
+	// identity has changed. In this case we do not have to forget everything about
+	// the peer but we must generate a new identity key by key agreement with our
+	// new identity.
+	if (!_identityKey) {
+		uint8_t tmp[ZT_SYMMETRIC_KEY_SIZE];
+		if (!RR->identity.agree(_id,tmp))
 			return -1;
+		_identityKey.init(RR->node->now(),tmp);
+		Utils::burn(tmp,sizeof(tmp));
+	}
 
-		if (Address(data + 1) == RR->identity.address()) {
-			RR->localCacheSymmetric.decrypt(data + 6,_identityKey);
-			RR->localCacheSymmetric.decrypt(data + 22,_identityKey + 16);
-			mustRecomputeSecret = false;
-		} else {
-			mustRecomputeSecret = true; // can't use cached key if local identity has changed
-		}
+	// These are ephemeral and start out as NIL after unmarshal.
+	_ephemeralKeys[0].clear();
+	_ephemeralKeys[1].clear();
 
-		int s = _id.unmarshal(data + 38,len - 38);
-		if (s <= 0)
-			return s;
-		p = s + 38;
-		s = _locator.unmarshal(data + p,len - p);
-		if (s <= 0)
+	s = _id.unmarshal(data + 38,len - 38);
+	if (s < 0)
+		return s;
+	p += s;
+
+	s = _locator.unmarshal(data + p,len - p);
+	if (s < 0)
+		return s;
+	p += s;
+
+	if (p >= len)
+		return -1;
+	const unsigned int bootstrapCount = data[p++];
+	if (bootstrapCount > ZT_MAX_PEER_NETWORK_PATHS)
+		return -1;
+	_bootstrap.clear();
+	for(unsigned int i=0;i<bootstrapCount;++i) {
+		Endpoint tmp;
+		s = tmp.unmarshal(data + p,len - p);
+		if (s < 0)
 			return s;
 		p += s;
-
-		if (p >= len)
-			return -1;
-		const unsigned int bootstrapCount = data[p++];
-		if (bootstrapCount > ZT_MAX_PEER_NETWORK_PATHS)
-			return -1;
-		_bootstrap.clear();
-		for(unsigned int i=0;i<bootstrapCount;++i) {
-			Endpoint tmp;
-			s = tmp.unmarshal(data + p,len - p);
-			if (s <= 0)
-				return s;
-			p += s;
-			_bootstrap[tmp.type()] = tmp;
-		}
-
-		if ((p + 10) > len)
-			return -1;
-
-		_vProto = Utils::loadBigEndian<uint16_t>(data + p); p += 2;
-		_vMajor = Utils::loadBigEndian<uint16_t>(data + p); p += 2;
-		_vMinor = Utils::loadBigEndian<uint16_t>(data + p); p += 2;
-		_vRevision = Utils::loadBigEndian<uint16_t>(data + p); p += 2;
-		p += 2 + (int)Utils::loadBigEndian<uint16_t>(data + p);
-
-		if (p > len)
-			return -1;
+		_bootstrap[tmp.type()] = tmp;
 	}
 
-	if (mustRecomputeSecret) {
-		if (!RR->identity.agree(_id,_identityKey))
-			return -1;
-	}
+	_probe = 0; // ephemeral token, reset on unmarshal
 
-	_incomingProbe = Protocol::createProbe(_id,RR->identity,_identityKey);
+	if ((p + 10) > len)
+		return -1;
+	_vProto = Utils::loadBigEndian<uint16_t>(data + p); p += 2;
+	_vMajor = Utils::loadBigEndian<uint16_t>(data + p); p += 2;
+	_vMinor = Utils::loadBigEndian<uint16_t>(data + p); p += 2;
+	_vRevision = Utils::loadBigEndian<uint16_t>(data + p); p += 2;
+	p += 2 + (int)Utils::loadBigEndian<uint16_t>(data + p);
 
-	return p;
+	return (p > len) ? -1 : p;
 }
 
 struct _PathPriorityComparisonOperator

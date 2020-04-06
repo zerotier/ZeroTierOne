@@ -77,8 +77,8 @@ public:
 		virtual void ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &destination,NetworkController::ErrorCode errorCode) = 0;
 	};
 
-	NetworkController() {}
-	virtual ~NetworkController() {}
+	NetworkController() {} // NOLINT(hicpp-use-equals-default,modernize-use-equals-default)
+	virtual ~NetworkController() {} // NOLINT(hicpp-use-equals-default,modernize-use-equals-default)
 
 	/**
 	 * Called when this is added to a Node to initialize and supply info

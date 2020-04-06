@@ -54,6 +54,16 @@ public:
 	ZT_INLINE FCV() noexcept : _s(0) {} // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 	ZT_INLINE FCV(const FCV &v) : _s(0) { *this = v; } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 
+	template<typename I>
+	ZT_INLINE FCV(I i,I end) : // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+		_s(0)
+	{
+		while (i != end) {
+			push_back(*i);
+			++i;
+		}
+	}
+
 	ZT_INLINE ~FCV() { this->clear(); }
 
 	ZT_INLINE FCV &operator=(const FCV &v)

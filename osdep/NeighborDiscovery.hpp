@@ -14,7 +14,7 @@
 #ifndef ZT_NEIGHBORDISCOVERY_HPP
 #define ZT_NEIGHBORDISCOVERY_HPP
 
-#include "../node/Map.hpp"
+#include "../node/Containers.hpp"
 #include "../node/MAC.hpp"
 #include "../node/InetAddress.hpp"
 
