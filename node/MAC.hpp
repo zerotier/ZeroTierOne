@@ -142,7 +142,7 @@ public:
 	 */
 	ZT_INLINE unsigned int size() const noexcept { return 6; }
 
-	ZT_INLINE unsigned long hashCode() const noexcept { return (unsigned long)_m; }
+	ZT_INLINE unsigned long hashCode() const noexcept { return (unsigned long)Utils::hash64(_m); }
 
 	ZT_INLINE char *toString(char buf[18]) const noexcept
 	{

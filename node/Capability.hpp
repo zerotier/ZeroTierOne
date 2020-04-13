@@ -68,33 +68,33 @@ public:
 	 * @param ruleCount Number of flow rules
 	 */
 	ZT_INLINE Capability(const uint32_t id,const uint64_t nwid,const int64_t ts,const ZT_VirtualNetworkRule *const rules,const unsigned int ruleCount) noexcept : // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
-		_nwid(nwid),
-		_ts(ts),
-		_id(id),
-		_ruleCount((ruleCount < ZT_MAX_CAPABILITY_RULES) ? ruleCount : ZT_MAX_CAPABILITY_RULES),
-		_signatureLength(0)
+		m_nwid(nwid),
+		m_ts(ts),
+		m_id(id),
+		m_ruleCount((ruleCount < ZT_MAX_CAPABILITY_RULES) ? ruleCount : ZT_MAX_CAPABILITY_RULES),
+		m_signatureLength(0)
 	{
-		if (_ruleCount > 0)
-			Utils::copy(_rules,rules,sizeof(ZT_VirtualNetworkRule) * _ruleCount);
+		if (m_ruleCount > 0)
+			Utils::copy(m_rules, rules, sizeof(ZT_VirtualNetworkRule) * m_ruleCount);
 	}
 
 	/**
 	 * @return Rules -- see ruleCount() for size of array
 	 */
-	ZT_INLINE const ZT_VirtualNetworkRule *rules() const noexcept { return _rules; }
+	ZT_INLINE const ZT_VirtualNetworkRule *rules() const noexcept { return m_rules; }
 
 	/**
 	 * @return Number of rules in rules()
 	 */
-	ZT_INLINE unsigned int ruleCount() const noexcept { return _ruleCount; }
+	ZT_INLINE unsigned int ruleCount() const noexcept { return m_ruleCount; }
 
-	ZT_INLINE uint32_t id() const noexcept { return _id; }
-	ZT_INLINE uint64_t networkId() const noexcept { return _nwid; }
-	ZT_INLINE int64_t timestamp() const noexcept { return _ts; }
-	ZT_INLINE const Address &issuedTo() const noexcept { return _issuedTo; }
-	ZT_INLINE const Address &signer() const noexcept { return _signedBy; }
-	ZT_INLINE const uint8_t *signature() const noexcept { return _signature; }
-	ZT_INLINE unsigned int signatureLength() const noexcept { return _signatureLength; }
+	ZT_INLINE uint32_t id() const noexcept { return m_id; }
+	ZT_INLINE uint64_t networkId() const noexcept { return m_nwid; }
+	ZT_INLINE int64_t timestamp() const noexcept { return m_ts; }
+	ZT_INLINE const Address &issuedTo() const noexcept { return m_issuedTo; }
+	ZT_INLINE const Address &signer() const noexcept { return m_signedBy; }
+	ZT_INLINE const uint8_t *signature() const noexcept { return m_signature; }
+	ZT_INLINE unsigned int signatureLength() const noexcept { return m_signatureLength; }
 
 	/**
 	 * Sign this capability and add signature to its chain of custody
@@ -145,21 +145,21 @@ public:
 	static int unmarshalVirtualNetworkRules(const uint8_t *data,int len,ZT_VirtualNetworkRule *rules,unsigned int &ruleCount,unsigned int maxRuleCount) noexcept;
 
 	// Provides natural sort order by ID
-	ZT_INLINE bool operator<(const Capability &c) const noexcept { return (_id < c._id); }
+	ZT_INLINE bool operator<(const Capability &c) const noexcept { return (m_id < c.m_id); }
 
 	ZT_INLINE bool operator==(const Capability &c) const noexcept { return (memcmp(this,&c,sizeof(Capability)) == 0); }
 	ZT_INLINE bool operator!=(const Capability &c) const noexcept { return (memcmp(this,&c,sizeof(Capability)) != 0); }
 
 private:
-	uint64_t _nwid;
-	int64_t _ts;
-	uint32_t _id;
-	unsigned int _ruleCount;
-	ZT_VirtualNetworkRule _rules[ZT_MAX_CAPABILITY_RULES];
-	Address _issuedTo;
-	Address _signedBy;
-	unsigned int _signatureLength;
-	uint8_t _signature[ZT_SIGNATURE_BUFFER_SIZE];
+	uint64_t m_nwid;
+	int64_t m_ts;
+	uint32_t m_id;
+	unsigned int m_ruleCount;
+	ZT_VirtualNetworkRule m_rules[ZT_MAX_CAPABILITY_RULES];
+	Address m_issuedTo;
+	Address m_signedBy;
+	unsigned int m_signatureLength;
+	uint8_t m_signature[ZT_SIGNATURE_BUFFER_SIZE];
 };
 
 } // namespace ZeroTier

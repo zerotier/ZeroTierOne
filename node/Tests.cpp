@@ -408,18 +408,6 @@ extern "C" const char *ZTT_general()
 		}
 
 		{
-			ZT_T_PRINTF("[general] Sanity checking Protocol::getPacketId()... ");
-			std::set<uint64_t> pids;
-			for(unsigned long i=0;i<1048576;++i)
-				pids.insert(Protocol::getPacketId());
-			if (pids.size() != 1048576) {
-				ZT_T_PRINTF("FAILED (collision after only 1048576 generations!)");
-				return "getPacketId() produced collisions";
-			}
-			ZT_T_PRINTF("OK" ZT_EOL_S);
-		}
-
-		{
 			ZT_T_PRINTF("[general] Testing FCV (fixed capacity vector)... ");
 			long cnt = 0;
 			FCV<LifeCycleTracker,1024> test,test2;

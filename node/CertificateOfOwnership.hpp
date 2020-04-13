@@ -65,23 +65,23 @@ public:
 	ZT_INLINE CertificateOfOwnership(const uint64_t nwid,const int64_t ts,const Address &issuedTo,const uint32_t id) noexcept // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 	{
 		memoryZero(this);
-		_networkId = nwid;
-		_ts = ts;
-		_id = id;
-		_issuedTo = issuedTo;
+		m_networkId = nwid;
+		m_ts = ts;
+		m_id = id;
+		m_issuedTo = issuedTo;
 	}
 
-	ZT_INLINE uint64_t networkId() const noexcept { return _networkId; }
-	ZT_INLINE int64_t timestamp() const noexcept { return _ts; }
-	ZT_INLINE uint32_t id() const noexcept { return _id; }
-	ZT_INLINE const Address &issuedTo() const noexcept { return _issuedTo; }
-	ZT_INLINE const Address &signer() const noexcept { return _signedBy; }
-	ZT_INLINE const uint8_t *signature() const noexcept { return _signature; }
-	ZT_INLINE unsigned int signatureLength() const noexcept { return _signatureLength; }
+	ZT_INLINE uint64_t networkId() const noexcept { return m_networkId; }
+	ZT_INLINE int64_t timestamp() const noexcept { return m_ts; }
+	ZT_INLINE uint32_t id() const noexcept { return m_id; }
+	ZT_INLINE const Address &issuedTo() const noexcept { return m_issuedTo; }
+	ZT_INLINE const Address &signer() const noexcept { return m_signedBy; }
+	ZT_INLINE const uint8_t *signature() const noexcept { return m_signature; }
+	ZT_INLINE unsigned int signatureLength() const noexcept { return m_signatureLength; }
 
-	ZT_INLINE unsigned int thingCount() const noexcept { return (unsigned int)_thingCount; }
-	ZT_INLINE Thing thingType(const unsigned int i) const noexcept { return (Thing)_thingTypes[i]; }
-	ZT_INLINE const uint8_t *thingValue(const unsigned int i) const noexcept { return _thingValues[i]; }
+	ZT_INLINE unsigned int thingCount() const noexcept { return (unsigned int)m_thingCount; }
+	ZT_INLINE Thing thingType(const unsigned int i) const noexcept { return (Thing)m_thingTypes[i]; }
+	ZT_INLINE const uint8_t *thingValue(const unsigned int i) const noexcept { return m_thingValues[i]; }
 
 	ZT_INLINE bool owns(const InetAddress &ip) const noexcept
 	{
@@ -139,7 +139,7 @@ public:
 	int unmarshal(const uint8_t *data,int len) noexcept;
 
 	// Provides natural sort order by ID
-	ZT_INLINE bool operator<(const CertificateOfOwnership &coo) const noexcept { return (_id < coo._id); }
+	ZT_INLINE bool operator<(const CertificateOfOwnership &coo) const noexcept { return (m_id < coo.m_id); }
 
 	ZT_INLINE bool operator==(const CertificateOfOwnership &coo) const noexcept { return (memcmp(this,&coo,sizeof(CertificateOfOwnership)) == 0); }
 	ZT_INLINE bool operator!=(const CertificateOfOwnership &coo) const noexcept { return (memcmp(this,&coo,sizeof(CertificateOfOwnership)) != 0); }
@@ -147,11 +147,11 @@ public:
 private:
 	ZT_INLINE bool _owns(const Thing &t,const void *v,unsigned int l) const noexcept
 	{
-		for(unsigned int i=0,j=_thingCount;i<j;++i) {
-			if (_thingTypes[i] == (uint8_t)t) {
+		for(unsigned int i=0,j=m_thingCount;i < j;++i) {
+			if (m_thingTypes[i] == (uint8_t)t) {
 				unsigned int k = 0;
 				while (k < l) {
-					if (reinterpret_cast<const uint8_t *>(v)[k] != _thingValues[i][k])
+					if (reinterpret_cast<const uint8_t *>(v)[k] != m_thingValues[i][k])
 						break;
 					++k;
 				}
@@ -162,17 +162,17 @@ private:
 		return false;
 	}
 
-	uint64_t _networkId;
-	int64_t _ts;
-	uint64_t _flags;
-	uint32_t _id;
-	uint16_t _thingCount;
-	uint8_t _thingTypes[ZT_CERTIFICATEOFOWNERSHIP_MAX_THINGS];
-	uint8_t _thingValues[ZT_CERTIFICATEOFOWNERSHIP_MAX_THINGS][ZT_CERTIFICATEOFOWNERSHIP_MAX_THING_VALUE_SIZE];
-	Address _issuedTo;
-	Address _signedBy;
-	unsigned int _signatureLength;
-	uint8_t _signature[ZT_SIGNATURE_BUFFER_SIZE];
+	uint64_t m_networkId;
+	int64_t m_ts;
+	uint64_t m_flags;
+	uint32_t m_id;
+	uint16_t m_thingCount;
+	uint8_t m_thingTypes[ZT_CERTIFICATEOFOWNERSHIP_MAX_THINGS];
+	uint8_t m_thingValues[ZT_CERTIFICATEOFOWNERSHIP_MAX_THINGS][ZT_CERTIFICATEOFOWNERSHIP_MAX_THING_VALUE_SIZE];
+	Address m_issuedTo;
+	Address m_signedBy;
+	unsigned int m_signatureLength;
+	uint8_t m_signature[ZT_SIGNATURE_BUFFER_SIZE];
 };
 
 } // namespace ZeroTier

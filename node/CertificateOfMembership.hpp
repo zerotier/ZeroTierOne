@@ -126,7 +126,7 @@ public:
 	/**
 	 * @return True if there's something here
 	 */
-	ZT_INLINE operator bool() const noexcept { return (_networkId != 0); } // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
+	ZT_INLINE operator bool() const noexcept { return (m_networkId != 0); } // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
 
 	/**
 	 * @return Credential ID, always 0 for COMs
@@ -136,22 +136,22 @@ public:
 	/**
 	 * @return Timestamp for this cert and maximum delta for timestamp
 	 */
-	ZT_INLINE int64_t timestamp() const noexcept { return _timestamp; }
+	ZT_INLINE int64_t timestamp() const noexcept { return m_timestamp; }
 
 	/**
 	 * @return Maximum allowed difference between timestamps
 	 */
-	ZT_INLINE int64_t timestampMaxDelta() const noexcept { return _timestampMaxDelta; }
+	ZT_INLINE int64_t timestampMaxDelta() const noexcept { return m_timestampMaxDelta; }
 
 	/**
 	 * @return Fingerprint of identity to which this cert was issued
 	 */
-	ZT_INLINE const Fingerprint &issuedTo() const noexcept { return _issuedTo; }
+	ZT_INLINE const Fingerprint &issuedTo() const noexcept { return m_issuedTo; }
 
 	/**
 	 * @return Network ID for which this cert was issued
 	 */
-	ZT_INLINE uint64_t networkId() const noexcept { return _networkId; }
+	ZT_INLINE uint64_t networkId() const noexcept { return m_networkId; }
 
 	/**
 	 * Compare two certificates for parameter agreement
@@ -191,26 +191,26 @@ public:
 	int unmarshal(const uint8_t *data,int len) noexcept;
 
 private:
-	unsigned int _fillSigningBuf(uint64_t buf[ZT_CERTIFICATEOFMEMBERSHIP_MARSHAL_SIZE_MAX / 8]) const noexcept;
+	unsigned int m_fillSigningBuf(uint64_t *buf) const noexcept;
 
-	struct _Qualifier
+	struct p_Qualifier
 	{
-		ZT_INLINE _Qualifier() noexcept : id(0),value(0),delta(0) {}
-		ZT_INLINE _Qualifier(const uint64_t id_,const uint64_t value_,const uint64_t delta_) noexcept : id(id_),value(value_),delta(delta_) {}
+		ZT_INLINE p_Qualifier() noexcept : id(0), value(0), delta(0) {}
+		ZT_INLINE p_Qualifier(const uint64_t id_, const uint64_t value_, const uint64_t delta_) noexcept : id(id_), value(value_), delta(delta_) {}
 		uint64_t id;
 		uint64_t value;
 		uint64_t delta;
-		ZT_INLINE bool operator<(const _Qualifier &q) const noexcept { return (id < q.id); } // sort order
+		ZT_INLINE bool operator<(const p_Qualifier &q) const noexcept { return (id < q.id); } // sort order
 	};
 
-	FCV<_Qualifier,ZT_CERTIFICATEOFMEMBERSHIP_MAX_ADDITIONAL_QUALIFIERS> _additionalQualifiers;
-	int64_t _timestamp;
-	int64_t _timestampMaxDelta;
-	uint64_t _networkId;
-	Fingerprint _issuedTo;
-	Address _signedBy;
-	unsigned int _signatureLength;
-	uint8_t _signature[ZT_SIGNATURE_BUFFER_SIZE];
+	FCV<p_Qualifier,ZT_CERTIFICATEOFMEMBERSHIP_MAX_ADDITIONAL_QUALIFIERS> m_additionalQualifiers;
+	int64_t m_timestamp;
+	int64_t m_timestampMaxDelta;
+	uint64_t m_networkId;
+	Fingerprint m_issuedTo;
+	Address m_signedBy;
+	unsigned int m_signatureLength;
+	uint8_t m_signature[ZT_SIGNATURE_BUFFER_SIZE];
 };
 
 } // namespace ZeroTier

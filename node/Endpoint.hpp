@@ -57,20 +57,28 @@ public:
 	 * Protocol identifier bits.
 	 *
 	 * Endpoint types can support more than one of these, though it depends on the type.
+	 *
+	 * Most of these are reserved for possible future use.
 	 */
 	enum Protocol
 	{
-		PROTO_DGRAM =       0x0001,
-		PROTO_TCP  =        0x0002,
-		PROTO_HTTP =        0x0004,
-		PROTO_HTTPS =       0x0008,
-		PROTO_WS =          0x0010,
-		PROTO_WEBRTC =      0x0020
+		PROTO_DGRAM =       0x0001, // UDP for IP or naked Ethernet frames
+		PROTO_STREAM  =     0x0002, // TCP
+		PROTO_HTTP2 =       0x0004, // HTTP2 bidirectional protocol
+		PROTO_HTTPS2 =      0x0008, // HTTP2 over SSL/TLS
+		PROTO_WS =          0x0010, // Web sockets
+		PROTO_WEBRTC =      0x0020, // WebRTC data channels
+		PROTO_WIREGUARD =   0x0040  // Wireguard as low-level transport
 	};
 
 	ZT_INLINE Endpoint() noexcept { memoryZero(this); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 
 	explicit Endpoint(const InetAddress &sa,Protocol proto = PROTO_DGRAM) noexcept;
+
+	/**
+	 * @return True if this is an IPv4 or IPv6 IP address
+	 */
+	ZT_INLINE bool isInetAddr() const noexcept { return ((_t == TYPE_INETADDR_V4)||(_t == TYPE_INETADDR_V6)); }
 
 	/**
 	 * @return InetAddress or NIL if not of this type
@@ -113,7 +121,7 @@ public:
 private:
 	Type _t;
 	Protocol _proto;
-	int _l[3]; // X,Y,Z location in kilometers from the nearest gravitational center of mass
+	int _l[3]; // X,Y,Z location in kilometers from the nearest gravitational center of mass (e.g. Earth)
 	union {
 		sockaddr_storage sa;
 		ZT_Fingerprint zt;

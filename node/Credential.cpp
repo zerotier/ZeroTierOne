@@ -74,18 +74,18 @@ Credential::VerifyResult Credential::_verify(const RuntimeEnvironment *const RR,
 Credential::VerifyResult Credential::_verify(const RuntimeEnvironment *const RR,void *tPtr,const CertificateOfMembership &credential) const
 {
 	// Sanity check network ID.
-	if ((!credential._signedBy)||(credential._signedBy != Network::controllerFor(credential._networkId)))
+	if ((!credential.m_signedBy) || (credential.m_signedBy != Network::controllerFor(credential.m_networkId)))
 		return Credential::VERIFY_BAD_SIGNATURE;
 
 	// If we don't know the peer, get its identity. This shouldn't happen here but should be handled.
-	const SharedPtr<Peer> peer(RR->topology->peer(tPtr,credential._signedBy));
+	const SharedPtr<Peer> peer(RR->topology->peer(tPtr,credential.m_signedBy));
 	if (!peer)
 		return Credential::VERIFY_NEED_IDENTITY;
 
 	// Now verify the controller's signature.
 	uint64_t buf[ZT_CERTIFICATEOFMEMBERSHIP_MARSHAL_SIZE_MAX / 8];
-	const unsigned int bufSize = credential._fillSigningBuf(buf);
-	return peer->identity().verify(buf,bufSize,credential._signature,credential._signatureLength) ? Credential::VERIFY_OK : Credential::VERIFY_BAD_SIGNATURE;
+	const unsigned int bufSize = credential.m_fillSigningBuf(buf);
+	return peer->identity().verify(buf, bufSize, credential.m_signature, credential.m_signatureLength) ? Credential::VERIFY_OK : Credential::VERIFY_BAD_SIGNATURE;
 }
 
 } // namespace ZeroTier

@@ -40,7 +40,6 @@ class VL1
 {
 public:
 	explicit VL1(const RuntimeEnvironment *renv);
-	~VL1();
 
 	/**
 	 * Called when a packet is received from the real network
@@ -63,34 +62,34 @@ private:
 	const RuntimeEnvironment *RR;
 
 	// Code to handle relaying of packets to other nodes.
-	void _relay(void *tPtr,const SharedPtr<Path> &path,const Address &destination,SharedPtr<Buf> &data,unsigned int len);
+	void m_relay(void *tPtr, const SharedPtr<Path> &path, const Address &destination, SharedPtr<Buf> &data, unsigned int len);
 
 	// Send any pending WHOIS requests.
-	void _sendPendingWhois(void *tPtr,int64_t now);
+	void m_sendPendingWhois(void *tPtr, int64_t now);
 
 	// Handlers for VL1 verbs -- for clarity's sake VL2 verbs are in the VL2 class.
-	bool _HELLO(void *tPtr,const SharedPtr<Path> &path,SharedPtr<Peer> &peer,Buf &pkt,int packetSize,bool authenticated);
-	bool _ERROR(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &peer,Buf &pkt,int packetSize,Protocol::Verb &inReVerb);
-	bool _OK(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &peer,Buf &pkt,int packetSize,Protocol::Verb &inReVerb);
-	bool _WHOIS(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &peer,Buf &pkt,int packetSize);
-	bool _RENDEZVOUS(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &peer,Buf &pkt,int packetSize);
-	bool _ECHO(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &peer,Buf &pkt,int packetSize);
-	bool _PUSH_DIRECT_PATHS(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &peer,Buf &pkt,int packetSize);
-	bool _USER_MESSAGE(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &peer,Buf &pkt,int packetSize);
-	bool _ENCAP(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &peer,Buf &pkt,int packetSize);
+	bool m_HELLO(void *tPtr, const SharedPtr<Path> &path, SharedPtr<Peer> &peer, Buf &pkt, int packetSize, bool authenticated);
+	bool m_ERROR(void *tPtr, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize, Protocol::Verb &inReVerb);
+	bool m_OK(void *tPtr, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize, Protocol::Verb &inReVerb);
+	bool m_WHOIS(void *tPtr, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
+	bool m_RENDEZVOUS(void *tPtr, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
+	bool m_ECHO(void *tPtr, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
+	bool m_PUSH_DIRECT_PATHS(void *tPtr, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
+	bool m_USER_MESSAGE(void *tPtr, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
+	bool m_ENCAP(void *tPtr, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
 
-	struct _WhoisQueueItem
+	struct p_WhoisQueueItem
 	{
-		ZT_INLINE _WhoisQueueItem() : lastRetry(0),inboundPackets(),retries(0) {}
+		ZT_INLINE p_WhoisQueueItem() : lastRetry(0), inboundPackets(), retries(0) {}
 		int64_t lastRetry;
 		FCV<Buf::Slice,32> inboundPackets; // capacity can be changed but this should be plenty
 		unsigned int retries;
 	};
 
-	Defragmenter<ZT_MAX_PACKET_FRAGMENTS> _inputPacketAssembler;
+	Defragmenter<ZT_MAX_PACKET_FRAGMENTS> m_inputPacketAssembler;
 
-	Map<Address,_WhoisQueueItem> _whoisQueue;
-	Mutex _whoisQueue_l;
+	Map<Address,p_WhoisQueueItem> m_whoisQueue;
+	Mutex m_whoisQueue_l;
 };
 
 } // namespace ZeroTier

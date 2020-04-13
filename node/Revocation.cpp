@@ -19,8 +19,8 @@ bool Revocation::sign(const Identity &signer) noexcept
 {
 	uint8_t buf[ZT_REVOCATION_MARSHAL_SIZE_MAX+32];
 	if (signer.hasPrivate()) {
-		_signedBy = signer.address();
-		_signatureLength = signer.sign(buf,(unsigned int)marshal(buf,true),_signature,sizeof(_signature));
+		m_signedBy = signer.address();
+		m_signatureLength = signer.sign(buf, (unsigned int)marshal(buf, true), m_signature, sizeof(m_signature));
 		return true;
 	}
 	return false;
@@ -34,20 +34,20 @@ int Revocation::marshal(uint8_t data[ZT_REVOCATION_MARSHAL_SIZE_MAX],bool forSig
 			data[p++] = 0x7f;
 	}
 	Utils::storeBigEndian<uint32_t>(data + p,0); p += 4;
-	Utils::storeBigEndian<uint32_t>(data + p,_id); p += 4;
-	Utils::storeBigEndian<uint64_t>(data + p,_networkId); p += 8;
+	Utils::storeBigEndian<uint32_t>(data + p, m_id); p += 4;
+	Utils::storeBigEndian<uint64_t>(data + p, m_networkId); p += 8;
 	Utils::storeBigEndian<uint32_t>(data + p,0); p += 4;
-	Utils::storeBigEndian<uint32_t>(data + p,_credentialId); p += 4;
-	Utils::storeBigEndian<uint64_t>(data + p,(uint64_t)_threshold); p += 8;
-	Utils::storeBigEndian<uint64_t>(data + p,_flags); p += 8;
-	_target.copyTo(data + p); p += ZT_ADDRESS_LENGTH;
-	_signedBy.copyTo(data + p); p += ZT_ADDRESS_LENGTH;
-	data[p++] = (uint8_t)_type;
+	Utils::storeBigEndian<uint32_t>(data + p, m_credentialId); p += 4;
+	Utils::storeBigEndian<uint64_t>(data + p,(uint64_t)m_threshold); p += 8;
+	Utils::storeBigEndian<uint64_t>(data + p, m_flags); p += 8;
+	m_target.copyTo(data + p); p += ZT_ADDRESS_LENGTH;
+	m_signedBy.copyTo(data + p); p += ZT_ADDRESS_LENGTH;
+	data[p++] = (uint8_t)m_type;
 	if (!forSign) {
 		data[p++] = 1;
-		Utils::storeBigEndian<uint16_t>(data + p,(uint16_t)_signatureLength);
-		Utils::copy(data + p,_signature,_signatureLength);
-		p += (int)_signatureLength;
+		Utils::storeBigEndian<uint16_t>(data + p,(uint16_t)m_signatureLength);
+		Utils::copy(data + p, m_signature, m_signatureLength);
+		p += (int)m_signatureLength;
 	}
 	data[p++] = 0;
 	data[p++] = 0;
@@ -63,21 +63,21 @@ int Revocation::unmarshal(const uint8_t *restrict data,const int len) noexcept
 	if (len < 54)
 		return -1;
 	// 4 bytes reserved
-	_id = Utils::loadBigEndian<uint32_t>(data + 4);
-	_networkId = Utils::loadBigEndian<uint64_t>(data + 8);
+	m_id = Utils::loadBigEndian<uint32_t>(data + 4);
+	m_networkId = Utils::loadBigEndian<uint64_t>(data + 8);
 	// 4 bytes reserved
-	_credentialId = Utils::loadBigEndian<uint32_t>(data + 20);
-	_threshold = (int64_t)Utils::loadBigEndian<uint64_t>(data + 24);
-	_flags = Utils::loadBigEndian<uint64_t>(data + 32);
-	_target.setTo(data + 40);
-	_signedBy.setTo(data + 45);
-	_type = (ZT_CredentialType)data[50];
+	m_credentialId = Utils::loadBigEndian<uint32_t>(data + 20);
+	m_threshold = (int64_t)Utils::loadBigEndian<uint64_t>(data + 24);
+	m_flags = Utils::loadBigEndian<uint64_t>(data + 32);
+	m_target.setTo(data + 40);
+	m_signedBy.setTo(data + 45);
+	m_type = (ZT_CredentialType)data[50];
 	// 1 byte reserved
-	_signatureLength = Utils::loadBigEndian<uint16_t>(data + 52);
-	int p = 54 + (int)_signatureLength;
-	if ((_signatureLength > ZT_SIGNATURE_BUFFER_SIZE)||(p > len))
+	m_signatureLength = Utils::loadBigEndian<uint16_t>(data + 52);
+	int p = 54 + (int)m_signatureLength;
+	if ((m_signatureLength > ZT_SIGNATURE_BUFFER_SIZE) || (p > len))
 		return -1;
-	Utils::copy(_signature,data + 54,_signatureLength);
+	Utils::copy(m_signature, data + 54, m_signatureLength);
 	if ((p + 2) > len)
 		return -1;
 	p += 2 + Utils::loadBigEndian<uint16_t>(data + p);

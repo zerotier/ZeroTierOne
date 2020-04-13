@@ -24,8 +24,6 @@
 #include "Identity.hpp"
 
 /*
- * Core ZeroTier protocol packet formats ------------------------------------------------------------------------------
- *
  * Packet format:
  *   <[8] 64-bit packet ID / crypto IV>
  *   <[5] destination ZT address>
@@ -77,8 +75,6 @@
  * Fragments do not carry their own packet MAC. The entire packet is
  * authenticated once it is assembled by the receiver. Incomplete packets
  * are discarded after a receiver configured period of time.
- *
- * --------------------------------------------------------------------------------------------------------------------
  */
 
 /*
@@ -112,14 +108,13 @@
  * 11 - 2.0.0 ... CURRENT
  *    + New more WAN-efficient P2P-assisted multicast algorithm
  *    + HELLO and OK(HELLO) include an extra HMAC to harden authentication
- *    + HELLO and OK(HELLO) can carry structured meta-data
- *    + Ephemeral keys for forward secrecy and limited key lifetime
+ *    + HELLO and OK(HELLO) carry meta-data in a dictionary that's encrypted
+ *    + Forward secrecy, key lifetime management
  *    + Old planet/moon stuff is DEAD! Independent roots are easier.
- *    + AES encryption is now the default
+ *    + AES encryption with the SIV construction AES-GMAC-SIV
  *    + New combined Curve25519/NIST P-384 identity type (type 1)
  *    + Short probe packets to reduce probe bandwidth
- *    + Aggressive NAT traversal techniques for IPv4 symmetric NATs
- *    + Remote diagnostics including rewrite of remote tracing
+ *    + More aggressive NAT traversal techniques for IPv4 symmetric NATs
  */
 #define ZT_PROTO_VERSION 11
 
@@ -158,12 +153,12 @@
 #define ZT_PROTO_MAX_HOPS 7
 
 /**
- * NONE/Poly1305 (using Salsa20/12 to generate poly1305 key)
+ * NONE/Poly1305 (legacy)
  */
 #define ZT_PROTO_CIPHER_SUITE__POLY1305_NONE 0
 
 /**
- * Salsa2012/Poly1305
+ * Salsa2012/Poly1305 (legacy)
  */
 #define ZT_PROTO_CIPHER_SUITE__POLY1305_SALSA2012 1
 
@@ -179,7 +174,7 @@
 #define ZT_PROTO_CIPHER_SUITE__NONE 2
 
 /**
- * AES-GMAC-SIV (AES-256)
+ * AES-GMAC-SIV
  */
 #define ZT_PROTO_CIPHER_SUITE__AES_GMAC_SIV 3
 
@@ -229,62 +224,41 @@
 #define ZT_PROTO_VERB_FLAG_COMPRESSED 0x80U
 
 /**
- * Mask to extract just the verb from the verb field, which also includes flags
+ * Mask to extract just the verb from the verb / verb flags field
  */
 #define ZT_PROTO_VERB_MASK 0x1fU
 
 /**
- * Key derivation function label for the keys used with HMAC-384 in HELLO
- *
- * With the KDF the 'iter' parameter is 0 for the key used for
- * HMAC in HELLO and 1 for the one used in OK(HELLO).
+ * AES-GMAC-SIV first of two keys
  */
-#define ZT_PROTO_KDF_KEY_LABEL_HELLO_HMAC 'H'
+#define ZT_KBKDF_LABEL_AES_GMAC_SIV_K0 '0'
 
 /**
- * HELLO exchange meta-data: random 128-bit identifier for each running instance
+ * AES-GMAC-SIV second of two keys
  */
-#define ZT_PROTO_HELLO_NODE_META_INSTANCE_ID "i"
+#define ZT_KBKDF_LABEL_AES_GMAC_SIV_K1 '1'
 
 /**
- * HELLO exchange meta-data: signed locator for this node
+ * Key used to encrypt dictionary in HELLO with AES-CTR.
  */
-#define ZT_PROTO_HELLO_NODE_META_LOCATOR "l"
+#define ZT_KBKDF_LABEL_HELLO_DICTIONARY_ENCRYPT 'H'
 
 /**
- * HELLO exchange meta-data: ephemeral C25519 public key
+ * Key used for extra HMAC-SHA384 authentication on some packets.
  */
-#define ZT_PROTO_HELLO_NODE_META_EPHEMERAL_C25519 "e0"
+#define ZT_KBKDF_LABEL_PACKET_HMAC 'M'
 
-/**
- * HELLO exchange meta-data: ephemeral NIST P-384 public key
- */
-#define ZT_PROTO_HELLO_NODE_META_EPHEMERAL_P384 "e1"
-
-/**
- * HELLO exchange meta-data: address(es) of nodes to whom this node will relay
- */
-#define ZT_PROTO_HELLO_NODE_META_NEIGHBORS "wr"
-
-/**
- * HELLO exchange meta-data: X coordinate of your node (sent in OK(HELLO))
- */
-#define ZT_PROTO_HELLO_NODE_META_LOCATION_X "gX"
-
-/**
- * HELLO exchange meta-data: Y coordinate of your node (sent in OK(HELLO))
- */
-#define ZT_PROTO_HELLO_NODE_META_LOCATION_Y "gY"
-
-/**
- * HELLO exchange meta-data: Z coordinate of your node (sent in OK(HELLO))
- */
-#define ZT_PROTO_HELLO_NODE_META_LOCATION_Z "gZ"
-
-/**
- * HELLO exchange meta-data: preferred cipher suite (may be ignored)
- */
-#define ZT_PROTO_HELLO_NODE_META_PREFERRED_CIPHER_SUITE "c"
+#define ZT_PROTO_HELLO_NODE_META_INSTANCE_ID      "i"
+#define ZT_PROTO_HELLO_NODE_META_LOCATOR          "l"
+#define ZT_PROTO_HELLO_NODE_META_PROBE_TOKEN      "p"
+#define ZT_PROTO_HELLO_NODE_META_NEIGHBORS        "n"
+#define ZT_PROTO_HELLO_NODE_META_SOFTWARE_VENDOR  "s"
+#define ZT_PROTO_HELLO_NODE_META_SOFTWARE_VERSION "v"
+#define ZT_PROTO_HELLO_NODE_META_PHYSICAL_DEST    "d"
+#define ZT_PROTO_HELLO_NODE_META_COMPLIANCE       "c"
+#define ZT_PROTO_HELOO_NODE_META_EPHEMERAL_C25519 "0"
+#define ZT_PROTO_HELOO_NODE_META_EPHEMERAL_P384   "1"
+#define ZT_PROTO_HELOO_NODE_META_EPHEMERAL_REMOTE "R"
 
 namespace ZeroTier {
 namespace Protocol {
@@ -309,42 +283,48 @@ enum Verb
 	 *   <[1] software major version (LEGACY)>
 	 *   <[1] software minor version (LEGACY)>
 	 *   <[2] software revision (LEGACY)>
-	 *   <[8] timestamp for determining latency (LEGACY)>
-	 *   <[...] binary serialized identity>
+	 *   <[8] timestamp>
+	 *   <[...] binary serialized full sender identity>
 	 *   <[...] physical destination address of packet (LEGACY)>
 	 *   <[2] 16-bit reserved "encrypted zero" field (LEGACY)>
+	 *   <[4] 32 additional random nonce bits>
+	 *   [... start of encrypted section ...]
+	 *   <[2] 16-bit length of encrypted dictionary>
 	 *   <[...] encrypted dictionary>
-	 *   <[2] 16-bit length of preceding encrypted dictionary>
-	 *   <[48] HMAC-SHA384 of plaintext packet (with hops masked to 0)>
+	 *   [... end of encrypted section ...]
+	 *   <[48] HMAC-SHA384 of plaintext packet>
 	 *
-	 * HELLO is sent to initiate a new pairing between two nodes.
+	 * HELLO is sent to initiate a new pairing between two nodes and
+	 * periodically to refresh information.
 	 *
-	 * HELLO is the only packet ever sent without normal payload encryption,
+	 * HELLO is the only packet ever sent without whole payload encryption,
 	 * though an inner encrypted envelope exists to obscure all fields that
-	 * do not need to be sent in the clear. HELLO's MAC field contains a
-	 * Poly1305 MAC for backward compatibility, and v2.x adds an additional
-	 * HMAC-SHA384 at the end for stronger authentication of sessions. HELLO
-	 * authentication is performed using the long-lived identity key only,
-	 * and the encryption of the inner dictionary field is done using a key
-	 * derived from this identity key explicitly for this purpose.
+	 * do not need to be sent in the clear. There is nothing in this
+	 * encrypted section that would be catastrophic if it leaked, but it's
+	 * good to proactively limit exposed information.
 	 *
-	 * The main payload of HELLO is the protocol version and the full identity
-	 * of the sender, which includes the sender's public key(s). An encrypted
-	 * dictionary (key/value store) is also included for additional information.
-	 * This is encrypted using AES-CTR with a derived key and using the final
-	 * 96 bits of the packet's HMAC-SHA384 as the CTR IV. (The HMAC authenticates
-	 * the packet prior to this field being encrypted, making this a SIV
-	 * construction much like AES-GMAC-SIV.)
+	 * Inner encryption is AES-CTR with a key derived using KBKDF and a
+	 * label indicating this specific usage. The 96-bit CTR nonce is the
+	 * packet ID followed by the additional 32 random bits provided before
+	 * the encrypted section.
 	 *
-	 * The length of the dictionary field is included immediately after it so
-	 * that it can be decrypted and the HMAC validated without performing any
-	 * parsing of anything else, since it's a good idea to authenticate any
-	 * message as early as possible in any secure protocol.
+	 * Authentication and encryption in HELLO and OK(HELLO) are always done
+	 * with the long-lived identity key, not ephemeral shared keys. This
+	 * is so ephemeral key negotiation can always occur on the first try
+	 * even if things get out of sync e.g. by one side restarting. Nothing
+	 * in HELLO is likely to be dangerous if decrypted later.
 	 *
-	 * V1.x will ignore the HMAC and dictionary fields as it doesn't understand
-	 * them, but the packet is constructed so that 1.x nodes will parse what
-	 * they need to communicate with 2.x nodes (without forward secrecy) as long
-	 * as we wish to support this.
+	 * HELLO and OK(HELLO) include an extra HMAC at the end of the packet.
+	 * This authenticates them to a level of certainty beyond that afforded
+	 * by regular AEAD. HMAC is computed over the whole packet prior to
+	 * encryption/MAC and with the 3-bit hop count field masked as it is
+	 * with regular packet AEAD, and it is then included in the regular
+	 * packet MAC.
+	 *
+	 * LEGACY: for legacy reasons the MAC field of HELLO is a poly1305
+	 * MAC initialized in the same manner as 1.x. Since HMAC provides
+	 * additional full 256-bit strength authentication this should not be
+	 * a problem for FIPS.
 	 *
 	 * Several legacy fields are present as well for the benefit of 1.x nodes.
 	 * These will go away and become simple reserved space once 1.x is no longer
@@ -354,49 +334,52 @@ enum Verb
 	 * old encrypted field is no longer there and that it should stop parsing
 	 * the packet at that point.
 	 *
-	 * The following fields are nearly always present and must exist to support
-	 * forward secrecy (in the case of the instance ID, keys, and key revision)
-	 * or federated root membership (in the case of the locator).
+	 * 1.x does not understand the dictionary and HMAC fields, but it will
+	 * ignore them due to the "encrypted zero" field indicating that the
+	 * packet contains no more information.
 	 *
-	 *   TIMESTAMP - node's timestamp in milliseconds (supersedes legacy field)
+	 * Dictionary fields:
+	 *
+	 * The following fields are always present in HELLO:
+	 *
 	 *   INSTANCE_ID - a 64-bit unique value generated on each node start
-	 *   EPHEMERAL_C25519 - an ephemeral Curve25519 public key
-	 *   EPHEMERAL_P384 - an ephemeral NIST P-384 public key
 	 *   LOCATOR - signed record enumerating this node's trusted contact points
-	 *   PROBE_TOKEN - 32-bit token that can be used to try to contact this peer
+	 *   PROBE_TOKEN - 32-bit probe token
+	 *
+	 * The following fields are used to establish forward secrecy:
+	 *
+	 *   EPHEMERAL_C25519 - C25519 ephemeral public key (32 bytes)
+	 *   EPHEMERAL_P384 - NIST P-384 ephemneral public key (49 bytes)
+	 *   EPHEMERAL_REMOTE - SHA-384 of keys we have for peer (absent if none)
 	 *
 	 * The following optional fields may also be present:
 	 *
 	 *   NAME - arbitrary short user-defined name for this node
 	 *   CONTACT - arbitrary short contact information string for this node
 	 *   NEIGHBORS - addresses of node(s) to whom we'll relay (mesh-like routing)
-	 *   LOC_X, LOC_Y, LOC_Z - location relative to the nearest large center of mass
-	 *   PEER_LOC_X, PEER_LOC_Y, PEER_LOC_Z - where sender thinks peer is located
 	 *   SOFTWARE_VENDOR - short name or description of vendor, such as a URL
 	 *   SOFTWARE_VERSION - major, minor, revision, and build (packed 64-bit int)
 	 *   PHYSICAL_DEST - serialized Endpoint to which this message was sent
 	 *   COMPLIANCE - bit mask containing bits for e.g. a FIPS-compliant node
 	 *
-	 * A valid and successfully authenticated HELLO will generate the following
-	 * OK response. It contains an echo of the timestamp supplied by the
-	 * initiating peer, the protocol version, and a dictionary containing
-	 * the same information about the responding peer as the originating peer
-	 * sent.
+	 * The actual keys for these fields are in corresponding #defines by these
+	 * names.
 	 *
-	 * Note that OK(HELLO) as well as HELLO itself is always sent using the long
-	 * lived identity key, not ephemeral keys. This allows ephemeral re-keying to
-	 * always succeed if one side's ephemeral keys are out of date.
+	 * The timestamp field in OK is echoed but the others represent the sender
+	 * of the OK and are not echoes from HELLO. The dictionary in OK typically
+	 * only contains the EPHEMERAL fields, allowing the receiver of the OK to
+	 * confirm that both sides know the correct keys and thus begin using the
+	 * ephemeral shared secret to send packets.
 	 *
 	 * OK payload:
 	 *   <[8] timestamp echoed from original HELLO>
-	 *   <[1] protocol version>
-	 *   <[1] software major version (LEGACY)>
-	 *   <[1] software minor version (LEGACY)>
-	 *   <[2] software revision (LEGACY)>
-	 *   <[...] physical destination address of packet (LEGACY)>
-	 *   <[2] 16-bit reserved zero field (LEGACY)>
+	 *   <[1] protocol version of responding node>
+	 *   <[2] 16-bit length of dictionary>
 	 *   <[...] dictionary>
-	 *   <[48] HMAC-SHA384 of plaintext packet (with hops masked to 0)>
+	 *   <[48] HMAC-SHA384 of plaintext packet>
+	 *
+	 * LEGACY: a legacy format OK will be sent to nodes with older protocol
+	 * versions.
 	 */
 	VERB_HELLO = 0x01,
 
@@ -416,7 +399,7 @@ enum Verb
 	 * Success response:
 	 *   <[1] in-re verb>
 	 *   <[8] in-re packet ID>
-	 *   <[...] request-specific payload>
+	 *   <[...] response-specific payload>
 	 */
 	VERB_OK = 0x03,
 
@@ -693,26 +676,14 @@ enum Verb
 	 *
 	 * Path record format:
 	 *   <[1] 8-bit path flags>
-	 *   <[2] length of extended path characteristics or 0 for none>
-	 *   <[...] extended path characteristics>
+	 *   <[2] length of extended path data or 0 for none>
+	 *   <[...] extended path data>
 	 *   <[1] address type>
 	 *   <[1] address record length in bytes>
 	 *   <[...] address>
 	 *
 	 * Path flags:
-	 *   0x01 - Sender is likely behind a symmetric NAT
-	 *   0x02 - Use BFG1024 algorithm for symmetric NAT-t if conditions met
-	 *
-	 * The receiver may, upon receiving a push, attempt to establish a
-	 * direct link to one or more of the indicated addresses. It is the
-	 * responsibility of the sender to limit which peers it pushes direct
-	 * paths to to those with whom it has a trust relationship. The receiver
-	 * must obey any restrictions provided such as exclusivity or blacklists.
-	 * OK responses to this message are optional.
-	 *
-	 * Note that a direct path push does not imply that learned paths can't
-	 * be used unless they are blacklisted explicitly or unless flag 0x01
-	 * is set.
+	 *   0x01 - BFG1024 symmetric NAT-t requested
 	 *
 	 * OK and ERROR are not generated.
 	 */
@@ -754,11 +725,9 @@ enum Verb
 	 *
 	 * Encapsulation exists to enable secure relaying as opposed to the usual
 	 * "dumb" relaying. The latter is faster but secure relaying has roles
-	 * where endpoint privacy is desired. Multiply nested ENCAP packets
-	 * could allow ZeroTier to act as an onion router.
+	 * where endpoint privacy is desired.
 	 *
-	 * When encapsulated packets are forwarded they do have their hop count
-	 * field incremented.
+	 * Packet hop count is incremented as normal.
 	 */
 	VERB_ENCAP = 0x17
 

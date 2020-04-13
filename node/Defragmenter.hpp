@@ -39,16 +39,22 @@ namespace ZeroTier {
  *
  * This class is thread-safe and handles locking internally.
  *
+ * Templating is so that this class can be placed in a test harness and tested
+ * without dependencies on external code. The default template parameters are
+ * the ones used throughout the ZeroTier core.
+ *
  * @tparam MF Maximum number of fragments that each message can possess (default: ZT_MAX_PACKET_FRAGMENTS)
  * @tparam MFP Maximum number of incoming fragments per path (if paths are specified) (default: ZT_MAX_INCOMING_FRAGMENTS_PER_PATH)
  * @tparam GCS Garbage collection target size for the incoming message queue (default: ZT_MAX_PACKET_FRAGMENTS * 2)
  * @tparam GCT Garbage collection trigger threshold, usually 2X GCS (default: ZT_MAX_PACKET_FRAGMENTS * 4)
+ * @tparam P Type for pointer to a path object (default: SharedPtr<Path>)
  */
 template<
   unsigned int MF = ZT_MAX_PACKET_FRAGMENTS,
   unsigned int MFP = ZT_MAX_INCOMING_FRAGMENTS_PER_PATH,
   unsigned int GCS = (ZT_MAX_PACKET_FRAGMENTS * 2),
-  unsigned int GCT = (ZT_MAX_PACKET_FRAGMENTS * 4)>
+  unsigned int GCT = (ZT_MAX_PACKET_FRAGMENTS * 4),
+  typename P = SharedPtr<Path> >
 class Defragmenter
 {
 public:
@@ -146,17 +152,17 @@ public:
 		const unsigned int fragmentNo,
 		const unsigned int totalFragmentsExpected,
 		const int64_t now,
-		const SharedPtr<Path> &via)
+		const P &via)
 	{
 		// Sanity checks for malformed fragments or invalid input parameters.
 		if ((fragmentNo >= totalFragmentsExpected)||(totalFragmentsExpected > MF)||(totalFragmentsExpected == 0))
 			return ERR_INVALID_FRAGMENT;
 
 		// We hold the read lock on _messages unless we need to add a new entry or do GC.
-		RWMutex::RMaybeWLock ml(_messages_l);
+		RWMutex::RMaybeWLock ml(m_messages_l);
 
 		// Check message hash table size and perform GC if necessary.
-		if (_messages.size() >= GCT) {
+		if (m_messages.size() >= GCT) {
 			try {
 				// Scan messages with read lock still locked first and make a sorted list of
 				// message entries by last modified time. Then lock for writing and delete
@@ -165,27 +171,27 @@ public:
 				// lock is held since many threads can hold the read lock but all threads must
 				// wait if someone holds the write lock.
 				std::vector<std::pair<int64_t,uint64_t> > messagesByLastUsedTime;
-				messagesByLastUsedTime.reserve(_messages.size());
+				messagesByLastUsedTime.reserve(m_messages.size());
 
-				for(typename Map< uint64_t,_E >::const_iterator i(_messages.begin());i!=_messages.end();++i)
+				for(typename Map< uint64_t,p_E >::const_iterator i(m_messages.begin());i != m_messages.end();++i)
 					messagesByLastUsedTime.push_back(std::pair<int64_t,uint64_t>(i->second.lastUsed,i->first));
 				std::sort(messagesByLastUsedTime.begin(),messagesByLastUsedTime.end());
 
 				ml.writing(); // acquire write lock on _messages
 				for (unsigned long x = 0,y = (messagesByLastUsedTime.size() - GCS); x <= y; ++x)
-					_messages.erase(messagesByLastUsedTime[x].second);
+					m_messages.erase(messagesByLastUsedTime[x].second);
 			} catch (...) {
 				return ERR_OUT_OF_MEMORY;
 			}
 		}
 
 		// Get or create message fragment.
-		_E *e = _messages.get(messageId);
+		p_E *e = m_messages.get(messageId);
 		if (!e) {
 			ml.writing(); // acquire write lock on _messages if not already
 			try {
-				e = &(_messages[messageId]);
-			} catch (...) {
+				e = &(m_messages[messageId]);
+			} catch ( ... ) {
 				return ERR_OUT_OF_MEMORY;
 			}
 			e->id = messageId;
@@ -275,8 +281,8 @@ public:
 	 */
 	ZT_INLINE void clear()
 	{
-		RWMutex::Lock ml(_messages_l);
-		_messages.clear();
+		RWMutex::Lock ml(m_messages_l);
+		m_messages.clear();
 	}
 
 	/**
@@ -284,21 +290,21 @@ public:
 	 */
 	ZT_INLINE unsigned int cacheSize() noexcept
 	{
-		RWMutex::RLock ml(_messages_l);
-		return _messages.size();
+		RWMutex::RLock ml(m_messages_l);
+		return m_messages.size();
 	}
 
 private:
-	// _E is an entry in the message queue.
-	struct _E
+	// p_E is an entry in the message queue.
+	struct p_E
 	{
-		ZT_INLINE _E() noexcept :
+		ZT_INLINE p_E() noexcept :
 			id(0),
 			lastUsed(0),
 			totalFragmentsExpected(0),
 			fragmentsReceived(0) {}
 
-		ZT_INLINE _E(const _E &e) noexcept :
+		ZT_INLINE p_E(const p_E &e) noexcept :
 			id(e.id),
 			lastUsed(e.lastUsed),
 			totalFragmentsExpected(e.totalFragmentsExpected),
@@ -307,7 +313,7 @@ private:
 			message(e.message),
 			lock() {}
 
-		ZT_INLINE ~_E()
+		ZT_INLINE ~p_E()
 		{
 			if (via) {
 				via->_inboundFragmentedMessages_l.lock();
@@ -316,7 +322,7 @@ private:
 			}
 		}
 
-		ZT_INLINE _E &operator=(const _E &e)
+		ZT_INLINE p_E &operator=(const p_E &e)
 		{
 			if (this != &e) {
 				id = e.id;
@@ -333,13 +339,13 @@ private:
 		int64_t lastUsed;
 		unsigned int totalFragmentsExpected;
 		unsigned int fragmentsReceived;
-		SharedPtr<Path> via;
+		P via;
 		FCV< Buf::Slice,MF > message;
 		Mutex lock;
 	};
 
-	Map< uint64_t,Defragmenter<MF,MFP,GCS,GCT>::_E > _messages;
-	RWMutex _messages_l;
+	Map< uint64_t,Defragmenter<MF,MFP,GCS,GCT,P>::p_E > m_messages;
+	RWMutex m_messages_l;
 };
 
 } // namespace ZeroTier

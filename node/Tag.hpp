@@ -65,24 +65,24 @@ public:
 	 * @param value Tag value
 	 */
 	ZT_INLINE Tag(const uint64_t nwid,const int64_t ts,const Address &issuedTo,const uint32_t id,const uint32_t value) noexcept : // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
-		_id(id),
-		_value(value),
-		_networkId(nwid),
-		_ts(ts),
-		_issuedTo(issuedTo),
-		_signedBy(),
-		_signatureLength(0)
+		m_id(id),
+		m_value(value),
+		m_networkId(nwid),
+		m_ts(ts),
+		m_issuedTo(issuedTo),
+		m_signedBy(),
+		m_signatureLength(0)
 	{
 	}
 
-	ZT_INLINE uint32_t id() const noexcept { return _id; }
-	ZT_INLINE const uint32_t &value() const noexcept { return _value; }
-	ZT_INLINE uint64_t networkId() const noexcept { return _networkId; }
-	ZT_INLINE int64_t timestamp() const noexcept { return _ts; }
-	ZT_INLINE const Address &issuedTo() const noexcept { return _issuedTo; }
-	ZT_INLINE const Address &signer() const noexcept { return _signedBy; }
-	ZT_INLINE const uint8_t *signature() const noexcept { return _signature; }
-	ZT_INLINE unsigned int signatureLength() const noexcept { return _signatureLength; }
+	ZT_INLINE uint32_t id() const noexcept { return m_id; }
+	ZT_INLINE const uint32_t &value() const noexcept { return m_value; }
+	ZT_INLINE uint64_t networkId() const noexcept { return m_networkId; }
+	ZT_INLINE int64_t timestamp() const noexcept { return m_ts; }
+	ZT_INLINE const Address &issuedTo() const noexcept { return m_issuedTo; }
+	ZT_INLINE const Address &signer() const noexcept { return m_signedBy; }
+	ZT_INLINE const uint8_t *signature() const noexcept { return m_signature; }
+	ZT_INLINE unsigned int signatureLength() const noexcept { return m_signatureLength; }
 
 	/**
 	 * Sign this tag
@@ -105,7 +105,7 @@ public:
 	int unmarshal(const uint8_t *data,int len) noexcept;
 
 	// Provides natural sort order by ID
-	ZT_INLINE bool operator<(const Tag &t) const noexcept { return (_id < t._id); }
+	ZT_INLINE bool operator<(const Tag &t) const noexcept { return (m_id < t.m_id); }
 
 	ZT_INLINE bool operator==(const Tag &t) const noexcept { return (memcmp(this,&t,sizeof(Tag)) == 0); }
 	ZT_INLINE bool operator!=(const Tag &t) const noexcept { return (memcmp(this,&t,sizeof(Tag)) != 0); }
@@ -125,14 +125,14 @@ public:
 	};
 
 private:
-	uint32_t _id;
-	uint32_t _value;
-	uint64_t _networkId;
-	int64_t _ts;
-	Address _issuedTo;
-	Address _signedBy;
-	unsigned int _signatureLength;
-	uint8_t _signature[ZT_SIGNATURE_BUFFER_SIZE];
+	uint32_t m_id;
+	uint32_t m_value;
+	uint64_t m_networkId;
+	int64_t m_ts;
+	Address m_issuedTo;
+	Address m_signedBy;
+	unsigned int m_signatureLength;
+	uint8_t m_signature[ZT_SIGNATURE_BUFFER_SIZE];
 };
 
 } // namespace ZeroTier

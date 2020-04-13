@@ -23,10 +23,10 @@
 
 #ifndef ZT_AES_NO_ACCEL
 #ifdef ZT_ARCH_X64
-#include <wmmintrin.h>
 #include <emmintrin.h>
 #include <smmintrin.h>
 #include <immintrin.h>
+#include <wmmintrin.h>
 #define ZT_AES_AESNI 1
 #endif
 #endif

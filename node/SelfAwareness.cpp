@@ -55,8 +55,8 @@ void SelfAwareness::iam(void *tPtr,const Identity &reporter,const int64_t receiv
 	if ((scope != reporterPhysicalAddress.ipScope())||(scope == InetAddress::IP_SCOPE_NONE)||(scope == InetAddress::IP_SCOPE_LOOPBACK)||(scope == InetAddress::IP_SCOPE_MULTICAST))
 		return;
 
-	Mutex::Lock l(_phy_l);
-	PhySurfaceEntry &entry = _phy[PhySurfaceKey(reporter.address(),receivedOnLocalSocket,reporterPhysicalAddress,scope)];
+	Mutex::Lock l(m_phy_l);
+	p_PhySurfaceEntry &entry = m_phy[p_PhySurfaceKey(reporter.address(), receivedOnLocalSocket, reporterPhysicalAddress, scope)];
 
 	if ( (trusted) && ((now - entry.ts) < ZT_SELFAWARENESS_ENTRY_TIMEOUT) && (!entry.mySurface.ipsEqual(myPhysicalAddress)) ) {
 		// Changes to external surface reported by trusted peers causes path reset in this scope
@@ -67,9 +67,9 @@ void SelfAwareness::iam(void *tPtr,const Identity &reporter,const int64_t receiv
 		// Erase all entries in this scope that were not reported from this remote address to prevent 'thrashing'
 		// due to multiple reports of endpoint change.
 		// Don't use 'entry' after this since hash table gets modified.
-		for(Map<PhySurfaceKey,PhySurfaceEntry>::iterator i(_phy.begin());i!=_phy.end();) { // NOLINT(modernize-loop-convert,modernize-use-auto,hicpp-use-auto)
+		for(Map<p_PhySurfaceKey,p_PhySurfaceEntry>::iterator i(m_phy.begin());i != m_phy.end();) { // NOLINT(modernize-loop-convert,modernize-use-auto,hicpp-use-auto)
 			if ((i->first.scope == scope)&&(i->first.reporterPhysicalAddress != reporterPhysicalAddress))
-				_phy.erase(i++);
+				m_phy.erase(i++);
 			else ++i;
 		}
 
@@ -88,10 +88,10 @@ void SelfAwareness::iam(void *tPtr,const Identity &reporter,const int64_t receiv
 
 void SelfAwareness::clean(int64_t now)
 {
-	Mutex::Lock l(_phy_l);
-	for(Map<PhySurfaceKey,PhySurfaceEntry>::iterator i(_phy.begin());i!=_phy.end();) { // NOLINT(modernize-loop-convert,modernize-use-auto,hicpp-use-auto)
+	Mutex::Lock l(m_phy_l);
+	for(Map<p_PhySurfaceKey,p_PhySurfaceEntry>::iterator i(m_phy.begin());i != m_phy.end();) { // NOLINT(modernize-loop-convert,modernize-use-auto,hicpp-use-auto)
 		if ((now - i->second.ts) >= ZT_SELFAWARENESS_ENTRY_TIMEOUT)
-			_phy.erase(i++);
+			m_phy.erase(i++);
 		else ++i;
 	}
 }
@@ -102,8 +102,8 @@ SelfAwareness::ExternalAddressList SelfAwareness::externalAddresses(const int64_
 	Map<InetAddress,unsigned long> counts;
 
 	{
-		Mutex::Lock l(_phy_l);
-		for(Map<PhySurfaceKey,PhySurfaceEntry>::const_iterator i(_phy.begin());i!=_phy.end();++i) { // NOLINT(modernize-loop-convert,modernize-use-auto,hicpp-use-auto)
+		Mutex::Lock l(m_phy_l);
+		for(Map<p_PhySurfaceKey,p_PhySurfaceEntry>::const_iterator i(m_phy.begin());i != m_phy.end();++i) { // NOLINT(modernize-loop-convert,modernize-use-auto,hicpp-use-auto)
 			if ((now - i->second.ts) < ZT_SELFAWARENESS_ENTRY_TIMEOUT)
 				++counts[i->second.mySurface];
 		}

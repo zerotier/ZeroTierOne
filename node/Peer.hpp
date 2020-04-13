@@ -34,8 +34,6 @@
 // version, identity, locator, bootstrap, version info, length of any additional fields
 #define ZT_PEER_MARSHAL_SIZE_MAX (1 + ZT_SYMMETRICKEY_MARSHAL_SIZE_MAX + ZT_IDENTITY_MARSHAL_SIZE_MAX + ZT_LOCATOR_MARSHAL_SIZE_MAX + 1 + (ZT_MAX_PEER_NETWORK_PATHS * ZT_ENDPOINT_MARSHAL_SIZE_MAX) + (2*4) + 2)
 
-#define ZT_PEER_BFG1024_PORT_SCAN_CHUNK_SIZE 128
-
 namespace ZeroTier {
 
 class Topology;
@@ -72,20 +70,20 @@ public:
 	/**
 	 * @return This peer's ZT address (short for identity().address())
 	 */
-	ZT_INLINE Address address() const noexcept { return _id.address(); }
+	ZT_INLINE Address address() const noexcept { return m_id.address(); }
 
 	/**
 	 * @return This peer's identity
 	 */
-	ZT_INLINE const Identity &identity() const noexcept { return _id; }
+	ZT_INLINE const Identity &identity() const noexcept { return m_id; }
 
 	/**
 	 * @return Copy of current locator
 	 */
 	ZT_INLINE Locator locator() const noexcept
 	{
-		RWMutex::RLock l(_lock);
-		return _locator;
+		RWMutex::RLock l(m_lock);
+		return m_locator;
 	}
 
 	/**
@@ -118,8 +116,8 @@ public:
 	 */
 	ZT_INLINE void sent(const int64_t now,const unsigned int bytes) noexcept
 	{
-		_lastSend = now;
-		_outMeter.log(now,bytes);
+		m_lastSend = now;
+		m_outMeter.log(now, bytes);
 	}
 
 	/**
@@ -130,7 +128,7 @@ public:
 	 */
 	ZT_INLINE void relayed(const int64_t now,const unsigned int bytes) noexcept
 	{
-		_relayedMeter.log(now,bytes);
+		m_relayedMeter.log(now, bytes);
 	}
 
 	/**
@@ -140,15 +138,15 @@ public:
 	 */
 	ZT_INLINE SharedPtr<Path> path(const int64_t now) noexcept
 	{
-		if ((now - _lastPrioritizedPaths) > ZT_PEER_PRIORITIZE_PATHS_INTERVAL) {
-			RWMutex::Lock l(_lock);
-			_prioritizePaths(now);
-			if (_alivePathCount > 0)
-				return _paths[0];
+		if ((now - m_lastPrioritizedPaths) > ZT_PEER_PRIORITIZE_PATHS_INTERVAL) {
+			RWMutex::Lock l(m_lock);
+			m_prioritizePaths(now);
+			if (m_alivePathCount > 0)
+				return m_paths[0];
 		} else {
-			RWMutex::RLock l(_lock);
-			if (_alivePathCount > 0)
-				return _paths[0];
+			RWMutex::RLock l(m_lock);
+			if (m_alivePathCount > 0)
+				return m_paths[0];
 		}
 		return SharedPtr<Path>();
 	}
@@ -197,7 +195,7 @@ public:
 	 * @param now Current time
 	 * @return Number of bytes sent
 	 */
-	unsigned int sendNOP(void *tPtr,int64_t localSocket,const InetAddress &atAddress,int64_t now);
+	unsigned int probe(void *tPtr,int64_t localSocket,const InetAddress &atAddress,int64_t now);
 
 	/**
 	 * Ping this peer if needed and/or perform other periodic tasks.
@@ -207,6 +205,15 @@ public:
 	 * @param isRoot True if this peer is a root
 	 */
 	void pulse(void *tPtr,int64_t now,bool isRoot);
+
+	/**
+	 * Add a potential candidate direct path to the P2P "try" queue.
+	 *
+	 * @param now Current time
+	 * @param ep Endpoint to attempt to contact
+	 * @param bfg1024 Use BFG1024 brute force symmetric NAT busting algorithm if applicable
+	 */
+	void tryDirectPath(int64_t now,const Endpoint &ep,bool breakSymmetricBFG1024);
 
 	/**
 	 * Reset paths within a given IP scope and address family
@@ -228,8 +235,9 @@ public:
 	 */
 	ZT_INLINE FCV<Endpoint,ZT_MAX_PEER_NETWORK_PATHS> bootstrap() const noexcept
 	{
+		RWMutex::RLock l(m_lock);
 		FCV<Endpoint,ZT_MAX_PEER_NETWORK_PATHS> r;
-		for(std::map< Endpoint::Type,Endpoint,std::less<Endpoint::Type>,Utils::Mallocator< std::pair<const Endpoint::Type,Endpoint> > >::const_iterator i(_bootstrap.begin());i!=_bootstrap.end();++i) // NOLINT(hicpp-use-auto,modernize-use-auto,modernize-loop-convert)
+		for(SortedMap<Endpoint::Type,Endpoint>::const_iterator i(m_bootstrap.begin());i != m_bootstrap.end();++i) // NOLINT(hicpp-use-auto,modernize-use-auto,modernize-loop-convert)
 			r.push_back(i->second);
 		return r;
 	}
@@ -241,14 +249,14 @@ public:
 	 */
 	ZT_INLINE void setBootstrap(const Endpoint &ep) noexcept
 	{
-		RWMutex::Lock l(_lock);
-		_bootstrap[ep.type()] = ep;
+		RWMutex::Lock l(m_lock);
+		m_bootstrap[ep.type()] = ep;
 	}
 
 	/**
 	 * @return Time of last receive of anything, whether direct or relayed
 	 */
-	ZT_INLINE int64_t lastReceive() const noexcept { return _lastReceive; }
+	ZT_INLINE int64_t lastReceive() const noexcept { return m_lastReceive; }
 
 	/**
 	 * @return Average latency of all direct paths or -1 if no direct paths or unknown
@@ -257,9 +265,9 @@ public:
 	{
 		int ltot = 0;
 		int lcnt = 0;
-		RWMutex::RLock l(_lock);
-		for(unsigned int i=0;i<_alivePathCount;++i) {
-			int lat = _paths[i]->latency();
+		RWMutex::RLock l(m_lock);
+		for(unsigned int i=0;i < m_alivePathCount;++i) {
+			int lat = m_paths[i]->latency();
 			if (lat > 0) {
 				ltot += lat;
 				++lcnt;
@@ -286,17 +294,17 @@ public:
 	 */
 	ZT_INLINE void setRemoteVersion(unsigned int vproto,unsigned int vmaj,unsigned int vmin,unsigned int vrev) noexcept
 	{
-		_vProto = (uint16_t)vproto;
-		_vMajor = (uint16_t)vmaj;
-		_vMinor = (uint16_t)vmin;
-		_vRevision = (uint16_t)vrev;
+		m_vProto = (uint16_t)vproto;
+		m_vMajor = (uint16_t)vmaj;
+		m_vMinor = (uint16_t)vmin;
+		m_vRevision = (uint16_t)vrev;
 	}
 
-	ZT_INLINE unsigned int remoteVersionProtocol() const noexcept { return _vProto; }
-	ZT_INLINE unsigned int remoteVersionMajor() const noexcept { return _vMajor; }
-	ZT_INLINE unsigned int remoteVersionMinor() const noexcept { return _vMinor; }
-	ZT_INLINE unsigned int remoteVersionRevision() const noexcept { return _vRevision; }
-	ZT_INLINE bool remoteVersionKnown() const noexcept { return ((_vMajor > 0) || (_vMinor > 0) || (_vRevision > 0)); }
+	ZT_INLINE unsigned int remoteVersionProtocol() const noexcept { return m_vProto; }
+	ZT_INLINE unsigned int remoteVersionMajor() const noexcept { return m_vMajor; }
+	ZT_INLINE unsigned int remoteVersionMinor() const noexcept { return m_vMinor; }
+	ZT_INLINE unsigned int remoteVersionRevision() const noexcept { return m_vRevision; }
+	ZT_INLINE bool remoteVersionKnown() const noexcept { return ((m_vMajor > 0) || (m_vMinor > 0) || (m_vRevision > 0)); }
 
 	/**
 	 * @return True if there is at least one alive direct path
@@ -315,24 +323,6 @@ public:
 	 */
 	void save(void *tPtr) const;
 
-	/**
-	 * Attempt to contact this peer at a physical address, subject to internal checks
-	 *
-	 * @param tPtr External user pointer we pass around
-	 * @param ep Endpoint to attempt to contact
-	 * @param now Current time
-	 * @param bfg1024 Use BFG1024 brute force symmetric NAT busting algorithm if applicable
-	 */
-	void tryToContactAt(void *tPtr,const Endpoint &ep,int64_t now,bool bfg1024);
-
-	/**
-	 * Called by Node when an alarm set by this peer goes off
-	 *
-	 * @param tPtr External user pointer we pass around
-	 * @param now Current time
-	 */
-	void alarm(void *tPtr,int64_t now);
-
 	// NOTE: peer marshal/unmarshal only saves/restores the identity, locator, most
 	// recent bootstrap address, and version information.
 	static constexpr int marshalSizeMax() noexcept { return ZT_PEER_MARSHAL_SIZE_MAX; }
@@ -344,20 +334,8 @@ public:
 	 */
 	ZT_INLINE bool rateGateInboundWhoisRequest(const int64_t now) noexcept
 	{
-		if ((now - _lastWhoisRequestReceived) >= ZT_PEER_WHOIS_RATE_LIMIT) {
-			_lastWhoisRequestReceived = now;
-			return true;
-		}
-		return false;
-	}
-
-	/**
-	 * Rate limit attempts in response to incoming short probe packets
-	 */
-	ZT_INLINE bool rateGateInboundProbe(const int64_t now) noexcept
-	{
-		if ((now - _lastProbeReceived) >= ZT_DIRECT_CONNECT_ATTEMPT_INTERVAL) {
-			_lastProbeReceived = now;
+		if ((now - m_lastWhoisRequestReceived) >= ZT_PEER_WHOIS_RATE_LIMIT) {
+			m_lastWhoisRequestReceived = now;
 			return true;
 		}
 		return false;
@@ -368,97 +346,82 @@ public:
 	 */
 	ZT_INLINE bool rateGateEchoRequest(const int64_t now) noexcept
 	{
-		if ((now - _lastEchoRequestReceived) >= ZT_PEER_GENERAL_RATE_LIMIT) {
-			_lastEchoRequestReceived = now;
+		if ((now - m_lastEchoRequestReceived) >= ZT_PEER_GENERAL_RATE_LIMIT) {
+			m_lastEchoRequestReceived = now;
 			return true;
 		}
 		return false;
 	}
 
 private:
-	void _prioritizePaths(int64_t now);
+	void m_prioritizePaths(int64_t now);
 
 	const RuntimeEnvironment *RR;
 
 	// Read/write mutex for non-atomic non-const fields.
-	RWMutex _lock;
+	RWMutex m_lock;
 
 	// The permanent identity key resulting from agreement between our identity and this peer's identity.
-	SymmetricKey< AES,0,0 > _identityKey;
+	SymmetricKey< AES,0,0 > m_identityKey;
 
 	// Most recently successful (for decrypt) ephemeral key and one previous key.
-	SymmetricKey< AES,ZT_SYMMETRIC_KEY_TTL,ZT_SYMMETRIC_KEY_TTL_MESSAGES > _ephemeralKeys[2];
+	SymmetricKey< AES,ZT_SYMMETRIC_KEY_TTL,ZT_SYMMETRIC_KEY_TTL_MESSAGES > m_ephemeralKeys[2];
 
-	Identity _id;
-	Locator _locator;
+	Identity m_id;
+	Locator m_locator;
 
 	// the last time something was sent or received from this peer (direct or indirect).
-	std::atomic<int64_t> _lastReceive;
-	std::atomic<int64_t> _lastSend;
+	std::atomic<int64_t> m_lastReceive;
+	std::atomic<int64_t> m_lastSend;
 
 	// The last time we sent a full HELLO to this peer.
-	int64_t _lastSentHello; // only checked while locked
+	int64_t m_lastSentHello; // only checked while locked
 
 	// The last time a WHOIS request was received from this peer (anti-DOS / anti-flood).
-	std::atomic<int64_t> _lastWhoisRequestReceived;
+	std::atomic<int64_t> m_lastWhoisRequestReceived;
 
 	// The last time an ECHO request was received from this peer (anti-DOS / anti-flood).
-	std::atomic<int64_t> _lastEchoRequestReceived;
-
-	// The last time a probe was received from this peer (for anti-DOS / anti-flood use).
-	std::atomic<int64_t> _lastProbeReceived;
-
-	// The last time we tried to init P2P connectivity with this peer.
-	std::atomic<int64_t> _lastAttemptedP2PInit;
+	std::atomic<int64_t> m_lastEchoRequestReceived;
 
 	// The last time we sorted paths in order of preference. (This happens pretty often.)
-	std::atomic<int64_t> _lastPrioritizedPaths;
-
-	// The last time we opened a can of whupass against this peer's NAT (if enabled).
-	std::atomic<int64_t> _lastAttemptedAggressiveNATTraversal;
+	std::atomic<int64_t> m_lastPrioritizedPaths;
 
 	// Meters measuring actual bandwidth in, out, and relayed via this peer (mostly if this is a root).
-	Meter<> _inMeter;
-	Meter<> _outMeter;
-	Meter<> _relayedMeter;
+	Meter<> m_inMeter;
+	Meter<> m_outMeter;
+	Meter<> m_relayedMeter;
+
+	// Direct paths sorted in descending order of preference.
+	SharedPtr<Path> m_paths[ZT_MAX_PEER_NETWORK_PATHS];
 
 	// For SharedPtr<>
 	std::atomic<int> __refCount;
 
-	// Direct paths sorted in descending order of preference.
-	SharedPtr<Path> _paths[ZT_MAX_PEER_NETWORK_PATHS];
-
 	// Number of paths current alive (number of non-NULL entries in _paths).
-	unsigned int _alivePathCount;
-
-	// Queue of batches of one or more physical addresses to try at some point in the future (for NAT traversal logic).
-	struct _ContactQueueItem
-	{
-		ZT_INLINE _ContactQueueItem() {} // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init,hicpp-use-equals-default,modernize-use-equals-default)
-		ZT_INLINE _ContactQueueItem(const InetAddress &a,const uint16_t *pstart,const uint16_t *pend,const unsigned int apt) :
-			address(a),
-			ports(pstart,pend),
-			alivePathThreshold(apt) {}
-		ZT_INLINE _ContactQueueItem(const InetAddress &a,const unsigned int apt) :
-			address(a),
-			ports(),
-			alivePathThreshold(apt) {}
-		InetAddress address;
-		FCV<uint16_t,ZT_PEER_BFG1024_PORT_SCAN_CHUNK_SIZE> ports; // if non-empty try these ports, otherwise use the one in address
-		unsigned int alivePathThreshold; // skip and forget if alive path count is >= this
-	};
-	List<_ContactQueueItem> _contactQueue;
+	unsigned int m_alivePathCount;
 
 	// Remembered addresses by endpoint type (std::map is smaller for only a few keys).
-	std::map< Endpoint::Type,Endpoint,std::less<Endpoint::Type>,Utils::Mallocator< std::pair<const Endpoint::Type,Endpoint> > > _bootstrap;
+	SortedMap<Endpoint::Type,Endpoint> m_bootstrap;
+
+	// Addresses recieved via PUSH_DIRECT_PATHS etc. that we are scheduled to try.
+	struct p_TryQueueItem
+	{
+		ZT_INLINE p_TryQueueItem() : target(), ts(0), breakSymmetricBFG1024(false) {}
+		ZT_INLINE p_TryQueueItem(const int64_t now, const Endpoint &t, const bool bfg) : target(t), ts(now), breakSymmetricBFG1024(bfg) {}
+		Endpoint target;
+		int64_t ts;
+		bool breakSymmetricBFG1024;
+	};
+	List<p_TryQueueItem> m_tryQueue;
+	List<p_TryQueueItem>::iterator m_tryQueuePtr; // loops over _tryQueue like a circular buffer
 
 	// 32-bit probe or 0 if unknown.
-	uint32_t _probe;
+	uint32_t m_probe;
 
-	uint16_t _vProto;
-	uint16_t _vMajor;
-	uint16_t _vMinor;
-	uint16_t _vRevision;
+	uint16_t m_vProto;
+	uint16_t m_vMajor;
+	uint16_t m_vMinor;
+	uint16_t m_vRevision;
 };
 
 } // namespace ZeroTier

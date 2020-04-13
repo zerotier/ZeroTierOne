@@ -38,8 +38,8 @@
  * in "valgrind" or a similar tool to detect marginal bad behvaior.
  */
 
-#ifndef ZT_TESTS_HPP
-#define ZT_TESTS_HPP
+#ifndef ZT_TESTS_H
+#define ZT_TESTS_H
 
 #ifdef ZT_ENABLE_TESTS
 
@@ -48,6 +48,10 @@
 
 #ifndef ZT_T_PRINTF
 #define ZT_T_PRINTF(fmt,...) printf((fmt),##__VA_ARGS__),fflush(stdout)
+#endif
+
+#ifdef __cplusplus
+extern "C" {
 #endif
 
 /**

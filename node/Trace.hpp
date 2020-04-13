@@ -26,6 +26,11 @@
 #include <cstdlib>
 #include <vector>
 
+#define ZT_TRACE_F_VL1           0x01U
+#define ZT_TRACE_F_VL2           0x02U
+#define ZT_TRACE_F_VL2_FILTER    0x04U
+#define ZT_TRACE_F_VL2_MULTICAST 0x08U
+
 namespace ZeroTier {
 
 class RuntimeEnvironment;
@@ -74,24 +79,7 @@ public:
 		}
 	};
 
-	/**
-	 * Simple container for a C string
-	 *
-	 * @tparam C Capacity of string
-	 */
-	template<unsigned int C>
-	struct Str
-	{
-		ZT_INLINE Str() { Utils::zero<sizeof(s)>(s); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
-		constexpr static unsigned int capacity() { return C; }
-		char s[C];
-	};
-
 	explicit Trace(const RuntimeEnvironment *renv);
-
-	static Str<ZT_INETADDRESS_STRING_SIZE_MAX> str(const InetAddress &a,bool ipOnly = false);
-	static Str<ZT_ADDRESS_STRING_SIZE_MAX> str(const Address &a);
-	static Str<ZT_ADDRESS_STRING_SIZE_MAX + ZT_INETADDRESS_STRING_SIZE_MAX + 4> str(const Address &peerAddress,const SharedPtr<Path> &path);
 
 	void unexpectedError(
 		void *tPtr,
@@ -108,7 +96,8 @@ public:
 		const InetAddress &newExternal,
 		const InetAddress::IpScope scope)
 	{
-		if (_vl1) _resettingPathsInScope(tPtr,codeLocation,reporter,from,oldExternal,newExternal,scope);
+		if ((_f & ZT_TRACE_F_VL1) != 0)
+			_resettingPathsInScope(tPtr,codeLocation,reporter,from,oldExternal,newExternal,scope);
 	}
 
 	ZT_INLINE void tryingNewPath(
@@ -122,7 +111,8 @@ public:
 		const Identity &triggeringPeer,
 		ZT_TraceTryingNewPathReason reason)
 	{
-		if (_vl1) _tryingNewPath(tPtr,codeLocation,trying,physicalAddress,triggerAddress,triggeringPacketId,triggeringPacketVerb,triggeringPeer,reason);
+		if ((_f & ZT_TRACE_F_VL1) != 0)
+			_tryingNewPath(tPtr,codeLocation,trying,physicalAddress,triggerAddress,triggeringPacketId,triggeringPacketVerb,triggeringPeer,reason);
 	}
 
 	ZT_INLINE void learnedNewPath(
@@ -133,7 +123,8 @@ public:
 		const InetAddress &physicalAddress,
 		const InetAddress &replaced)
 	{
-		if (_vl1) _learnedNewPath(tPtr,codeLocation,packetId,peerIdentity,physicalAddress,replaced);
+		if ((_f & ZT_TRACE_F_VL1) != 0)
+			_learnedNewPath(tPtr,codeLocation,packetId,peerIdentity,physicalAddress,replaced);
 	}
 
 	ZT_INLINE void incomingPacketDropped(
@@ -147,7 +138,8 @@ public:
 		uint8_t verb,
 		const ZT_TracePacketDropReason reason)
 	{
-		if (_vl1) _incomingPacketDropped(tPtr,codeLocation,packetId,networkId,peerIdentity,physicalAddress,hops,verb,reason);
+		if ((_f & ZT_TRACE_F_VL1) != 0)
+			_incomingPacketDropped(tPtr,codeLocation,packetId,networkId,peerIdentity,physicalAddress,hops,verb,reason);
 	}
 
 	ZT_INLINE void outgoingNetworkFrameDropped(
@@ -161,7 +153,8 @@ public:
 		const uint8_t *frameData,
 		ZT_TraceFrameDropReason reason)
 	{
-		if (_vl2) _outgoingNetworkFrameDropped(tPtr,codeLocation,networkId,sourceMac,destMac,etherType,frameLength,frameData,reason);
+		if ((_f & ZT_TRACE_F_VL2) != 0)
+			_outgoingNetworkFrameDropped(tPtr,codeLocation,networkId,sourceMac,destMac,etherType,frameLength,frameData,reason);
 	}
 
 	ZT_INLINE void incomingNetworkFrameDropped(
@@ -179,7 +172,8 @@ public:
 		bool credentialRequestSent,
 		ZT_TraceFrameDropReason reason)
 	{
-		if (_vl2) _incomingNetworkFrameDropped(tPtr,codeLocation,networkId,sourceMac,destMac,peerIdentity,physicalAddress,hops,frameLength,frameData,verb,credentialRequestSent,reason);
+		if ((_f & ZT_TRACE_F_VL2) != 0)
+			_incomingNetworkFrameDropped(tPtr,codeLocation,networkId,sourceMac,destMac,peerIdentity,physicalAddress,hops,frameLength,frameData,verb,credentialRequestSent,reason);
 	}
 
 	ZT_INLINE void networkConfigRequestSent(
@@ -187,7 +181,8 @@ public:
 		const uint32_t codeLocation,
 		uint64_t networkId)
 	{
-		if (_vl2) _networkConfigRequestSent(tPtr,codeLocation,networkId);
+		if ((_f & ZT_TRACE_F_VL2) != 0)
+			_networkConfigRequestSent(tPtr,codeLocation,networkId);
 	}
 
 	ZT_INLINE void networkFilter(
@@ -210,7 +205,7 @@ public:
 		bool inbound,
 		int accept)
 	{
-		if (_vl2Filter) {
+		if ((_f & ZT_TRACE_F_VL2_FILTER) != 0) {
 			_networkFilter(
 				tPtr,
 				codeLocation,
@@ -244,7 +239,8 @@ public:
 		uint8_t credentialType,
 		ZT_TraceCredentialRejectionReason reason)
 	{
-		if (_vl2) _credentialRejected(tPtr,codeLocation,networkId,address,identity,credentialId,credentialTimestamp,credentialType,reason);
+		if ((_f & ZT_TRACE_F_VL2) != 0)
+			_credentialRejected(tPtr,codeLocation,networkId,address,identity,credentialId,credentialTimestamp,credentialType,reason);
 	}
 
 private:
@@ -342,18 +338,7 @@ private:
 		ZT_TraceCredentialRejectionReason reason);
 
 	const RuntimeEnvironment *const RR;
-	volatile bool _vl1,_vl2,_vl2Filter,_vl2Multicast;
-
-	struct _MonitoringPeer
-	{
-		int64_t _timeSet;
-		unsigned int _traceTypes;
-		SharedPtr<Peer> peer;
-		Mutex lock;
-	};
-
-	std::vector<_MonitoringPeer> _monitoringPeers;
-	RWMutex _monitoringPeers_l;
+	volatile unsigned int _f; // faster than atomic, but may not "instantly" change... will after next memory fence
 };
 
 } // namespace ZeroTier

@@ -20,22 +20,14 @@
 /**
  * Number of buckets to use to maintain a list of expected replies.
  *
- * More buckets means less chance of two packets tagging the same
- * bucket. This doesn't actually hurt anything since this class
- * behaves like a bloom filter: you can have false positives but
- * not false negatives.
- *
- * OKs are also cryptographically authenticated, so this is not a
- * huge problem, but this helps harden the system against replay
- * attacks for e.g. denial of service.
+ * Making this a power of two improves efficiency a little by allowing bit shift division.
  */
-#define ZT_EXPECT_BUCKETS 131072
+#define ZT_EXPECT_BUCKETS 32768
 
 /**
  * 1/2 the TTL for expected replies in milliseconds
  *
- * Making this a power of two improves efficiency a little by allowing bit
- * shift division.
+ * Making this a power of two improves efficiency a little by allowing bit shift division.
  */
 #define ZT_EXPECT_TTL 4096LL
 
@@ -47,40 +39,37 @@ namespace ZeroTier {
 class Expect
 {
 public:
-	ZT_INLINE Expect() : _salt(Utils::getSecureRandomU64()) {} // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+	ZT_INLINE Expect() {} // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init,hicpp-use-equals-default,modernize-use-equals-default)
 
 	/**
-	 * Called by other code when something is sending a packet that may receive an OK response
+	 * Called by other code when something is sending a packet that could potentially receive an OK response
 	 *
 	 * @param packetId Packet ID of packet being sent (be sure it's post-armor())
 	 * @param now Current time
 	 */
 	ZT_INLINE void sending(const uint64_t packetId,const int64_t now) noexcept
 	{
-		_packetIdSent[Utils::hash64(packetId ^ _salt) % ZT_EXPECT_BUCKETS].store((int32_t)(now / ZT_EXPECT_TTL));
+		_packetIdSent[Utils::hash64(packetId ^ Utils::s_mapNonce) % ZT_EXPECT_BUCKETS].store((uint32_t)(now / ZT_EXPECT_TTL));
 	}
 
 	/**
-	 * Check whether an OK is expected for this packet
+	 * Check if an OK is expected and if so reset the corresponding bucket.
 	 *
-	 * @param inRePacketId
-	 * @param now
-	 * @return
+	 * This means this call mutates the state. If it returns true, it will
+	 * subsequently return false. This is for replay protection for OKs.
+	 *
+	 * @param inRePacketId In-re packet ID we're expecting
+	 * @param now Current time
+	 * @return True if we're expecting a reply (and a reset occurred)
 	 */
-	ZT_INLINE bool expecting(const uint64_t inRePacketId,const int64_t now) const noexcept
+	ZT_INLINE bool expecting(const uint64_t inRePacketId,const int64_t now) noexcept
 	{
-		return (((now / ZT_EXPECT_TTL) - (int64_t)_packetIdSent[Utils::hash64(inRePacketId ^ _salt) % ZT_EXPECT_BUCKETS].load()) <= 1);
+		return (((now / ZT_EXPECT_TTL) - (int64_t)_packetIdSent[(unsigned long)Utils::hash64(inRePacketId ^ Utils::s_mapNonce) % ZT_EXPECT_BUCKETS].exchange(0)) <= 1);
 	}
 
 private:
-	// This is a static per-runtime salt that's XORed and mixed with the packet ID
-	// to make it difficult for a third party to predict expected-reply buckets.
-	// Such prediction would not be catastrophic but it's easy and good to harden
-	// against it.
-	const uint64_t _salt;
-
-	// Each bucket contains a timestamp in units of the expect duration.
-	std::atomic<int32_t> _packetIdSent[ZT_EXPECT_BUCKETS];
+	// Each bucket contains a timestamp in units of the max expect duration.
+	std::atomic<uint32_t> _packetIdSent[ZT_EXPECT_BUCKETS];
 };
 
 } // namespace ZeroTier

@@ -75,18 +75,18 @@ struct _sortPeerPtrsByAddress
 } // anonymous namespace
 
 Node::Node(void *uPtr,void *tPtr,const struct ZT_Node_Callbacks *callbacks,int64_t now) :
-	_RR(this),
-	RR(&_RR),
-	_objects(nullptr),
-	_cb(*callbacks),
-	_uPtr(uPtr),
-	_networks(),
-	_lastPeerPulse(0),
-	_lastHousekeepingRun(0),
-	_lastNetworkHousekeepingRun(0),
-	_now(now),
-	_natMustDie(true),
-	_online(false)
+	m_RR(this),
+	RR(&m_RR),
+	m_objects(nullptr),
+	m_cb(*callbacks),
+	m_uPtr(uPtr),
+	m_networks(),
+	m_lastPeerPulse(0),
+	m_lastHousekeepingRun(0),
+	m_lastNetworkHousekeepingRun(0),
+	m_now(now),
+	m_natMustDie(true),
+	m_online(false)
 {
 	// Load this node's identity.
 	uint64_t idtmp[2]; idtmp[0] = 0; idtmp[1] = 0;
@@ -116,28 +116,27 @@ Node::Node(void *uPtr,void *tPtr,const struct ZT_Node_Callbacks *callbacks,int64
 			stateObjectPut(tPtr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,idtmp,RR->publicIdentityStr,(unsigned int)strlen(RR->publicIdentityStr));
 	}
 
-	uint8_t tmph[ZT_FINGERPRINT_HASH_SIZE];
+	uint8_t tmph[ZT_SHA384_DIGEST_SIZE];
 	RR->identity.hashWithPrivate(tmph);
 	RR->localCacheSymmetric.init(tmph);
-	Utils::burn(tmph,sizeof(tmph));
 
 	// This constructs all the components of the ZeroTier core within a single contiguous memory container,
 	// which reduces memory fragmentation and may improve cache locality.
-	_objects = new _NodeObjects(RR,tPtr);
+	m_objects = new _NodeObjects(RR, tPtr);
 
 	postEvent(tPtr, ZT_EVENT_UP);
 }
 
 Node::~Node()
 {
-	_networks_m.lock();
-	_networks_m.unlock();
-	_networks.clear();
-	_networks_m.lock();
-	_networks_m.unlock();
+	m_networks_l.lock();
+	m_networks_l.unlock();
+	m_networks.clear();
+	m_networks_l.lock();
+	m_networks_l.unlock();
 
-	if (_objects)
-		delete (_NodeObjects *)_objects;
+	if (m_objects)
+		delete (_NodeObjects *)m_objects;
 
 	// Let go of cached Buf objects. If other nodes happen to be running in this
 	// same process space new Bufs will be allocated as needed, but this is almost
@@ -161,7 +160,7 @@ ZT_ResultCode Node::processWirePacket(
 	unsigned int packetLength,
 	volatile int64_t *nextBackgroundTaskDeadline)
 {
-	_now = now;
+	m_now = now;
 	RR->vl1->onRemotePacket(tPtr,localSocket,(remoteAddress) ? InetAddress::NIL : *asInetAddress(remoteAddress),packetData,packetLength);
 	return ZT_RESULT_OK;
 }
@@ -178,7 +177,7 @@ ZT_ResultCode Node::processVirtualNetworkFrame(
 	unsigned int frameLength,
 	volatile int64_t *nextBackgroundTaskDeadline)
 {
-	_now = now;
+	m_now = now;
 	SharedPtr<Network> nw(this->network(nwid));
 	if (nw) {
 		RR->vl2->onLocalEthernet(tPtr,nw,MAC(sourceMac),MAC(destMac),etherType,vlanId,frameData,frameLength);
@@ -215,20 +214,20 @@ struct _processBackgroundTasks_eachPeer
 };
 ZT_ResultCode Node::processBackgroundTasks(void *tPtr,int64_t now,volatile int64_t *nextBackgroundTaskDeadline)
 {
-	_now = now;
-	Mutex::Lock bl(_backgroundTasksLock);
+	m_now = now;
+	Mutex::Lock bl(m_backgroundTasksLock);
 
 	try {
 		// Call peer pulse() method of all peers every ZT_PEER_PULSE_INTERVAL.
-		if ((now - _lastPeerPulse) >= ZT_PEER_PULSE_INTERVAL) {
-			_lastPeerPulse = now;
+		if ((now - m_lastPeerPulse) >= ZT_PEER_PULSE_INTERVAL) {
+			m_lastPeerPulse = now;
 			try {
 				_processBackgroundTasks_eachPeer pf(now,this,tPtr);
 				RR->topology->eachPeerWithRoot<_processBackgroundTasks_eachPeer &>(pf);
 
-				if (pf.online != _online) {
-					_online = pf.online;
-					postEvent(tPtr, _online ? ZT_EVENT_ONLINE : ZT_EVENT_OFFLINE);
+				if (pf.online != m_online) {
+					m_online = pf.online;
+					postEvent(tPtr, m_online ? ZT_EVENT_ONLINE : ZT_EVENT_OFFLINE);
 				}
 
 				RR->topology->rankRoots(now);
@@ -248,29 +247,29 @@ ZT_ResultCode Node::processBackgroundTasks(void *tPtr,int64_t now,volatile int64
 		}
 
 		// Perform network housekeeping and possibly request new certs and configs every ZT_NETWORK_HOUSEKEEPING_PERIOD.
-		if ((now - _lastNetworkHousekeepingRun) >= ZT_NETWORK_HOUSEKEEPING_PERIOD) {
-			_lastHousekeepingRun = now;
+		if ((now - m_lastNetworkHousekeepingRun) >= ZT_NETWORK_HOUSEKEEPING_PERIOD) {
+			m_lastHousekeepingRun = now;
 			{
-				RWMutex::RLock l(_networks_m);
-				for(Map< uint64_t,SharedPtr<Network> >::const_iterator i(_networks.begin());i!=_networks.end();++i)
+				RWMutex::RLock l(m_networks_l);
+				for(Map< uint64_t,SharedPtr<Network> >::const_iterator i(m_networks.begin());i != m_networks.end();++i)
 					i->second->doPeriodicTasks(tPtr,now);
 			}
 		}
 
 		// Clean up other stuff every ZT_HOUSEKEEPING_PERIOD.
-		if ((now - _lastHousekeepingRun) >= ZT_HOUSEKEEPING_PERIOD) {
-			_lastHousekeepingRun = now;
+		if ((now - m_lastHousekeepingRun) >= ZT_HOUSEKEEPING_PERIOD) {
+			m_lastHousekeepingRun = now;
 			try {
 				// Clean up any old local controller auth memoizations. This is an
 				// optimization for network controllers to know whether to accept
 				// or trust nodes without doing an extra cert check.
-				_localControllerAuthorizations_m.lock();
-				for(Map<_LocalControllerAuth,int64_t>::iterator i(_localControllerAuthorizations.begin());i!=_localControllerAuthorizations.end();) { // NOLINT(hicpp-use-auto,modernize-use-auto)
+				m_localControllerAuthorizations_l.lock();
+				for(Map<p_LocalControllerAuth,int64_t>::iterator i(m_localControllerAuthorizations.begin());i != m_localControllerAuthorizations.end();) { // NOLINT(hicpp-use-auto,modernize-use-auto)
 					if ((i->second - now) > (ZT_NETWORK_AUTOCONF_DELAY * 3))
-						_localControllerAuthorizations.erase(i++);
+						m_localControllerAuthorizations.erase(i++);
 					else ++i;
 				}
-				_localControllerAuthorizations_m.unlock();
+				m_localControllerAuthorizations_l.unlock();
 
 				RR->topology->doPeriodicTasks(tPtr, now);
 				RR->sa->clean(now);
@@ -279,30 +278,7 @@ ZT_ResultCode Node::processBackgroundTasks(void *tPtr,int64_t now,volatile int64
 			}
 		}
 
-		// Set off any due or overdue peer alarms.
-		int64_t earliestAlarmAt = now + ZT_MAX_TIMER_TASK_INTERVAL;
-		std::vector<Fingerprint> bzzt;
-		{
-			Mutex::Lock l(_peerAlarms_l);
-			for(std::map< Fingerprint,int64_t,std::less<Fingerprint>,Utils::Mallocator< std::pair<const Fingerprint,int64_t> > >::iterator a(_peerAlarms.begin());a!=_peerAlarms.end();) { // NOLINT(hicpp-use-auto,modernize-use-auto)
-				if (now >= a->second) {
-					bzzt.push_back(a->first);
-					_peerAlarms.erase(a++);
-				} else {
-					if (a->second < earliestAlarmAt)
-						earliestAlarmAt = a->second;
-					++a;
-				}
-			}
-		}
-		for(std::vector<Fingerprint>::iterator a(bzzt.begin());a!=bzzt.end();++a) { // NOLINT(hicpp-use-auto,modernize-use-auto,modernize-loop-convert)
-			const SharedPtr<Peer> p(RR->topology->peer(tPtr,a->address(),false));
-			if ((p)&&(p->identity().fingerprint() == *a))
-				p->alarm(tPtr,now);
-		}
-
-		// Tell caller when to call this method next.
-		*nextBackgroundTaskDeadline = earliestAlarmAt;
+		*nextBackgroundTaskDeadline = now + ZT_TIMER_TASK_INTERVAL;
 	} catch ( ... ) {
 		return ZT_RESULT_FATAL_ERROR_INTERNAL;
 	}
@@ -316,8 +292,8 @@ ZT_ResultCode Node::join(uint64_t nwid,const ZT_Fingerprint *controllerFingerpri
 	if (controllerFingerprint)
 		Utils::copy<sizeof(ZT_Fingerprint)>(fp.apiFingerprint(),controllerFingerprint);
 
-	RWMutex::Lock l(_networks_m);
-	SharedPtr<Network> &nw = _networks[nwid];
+	RWMutex::Lock l(m_networks_l);
+	SharedPtr<Network> &nw = m_networks[nwid];
 	if (nw)
 		return ZT_RESULT_OK;
 	nw.set(new Network(RR,tptr,nwid,fp,uptr,nullptr));
@@ -329,15 +305,15 @@ ZT_ResultCode Node::leave(uint64_t nwid,void **uptr,void *tptr)
 {
 	ZT_VirtualNetworkConfig ctmp;
 
-	_networks_m.lock();
-	Map< uint64_t,SharedPtr<Network> >::iterator nwi(_networks.find(nwid)); // NOLINT(hicpp-use-auto,modernize-use-auto)
-	if (nwi == _networks.end()) {
-		_networks_m.unlock();
+	m_networks_l.lock();
+	Map< uint64_t,SharedPtr<Network> >::iterator nwi(m_networks.find(nwid)); // NOLINT(hicpp-use-auto,modernize-use-auto)
+	if (nwi == m_networks.end()) {
+		m_networks_l.unlock();
 		return ZT_RESULT_OK;
 	}
 	SharedPtr<Network> nw(nwi->second);
-	_networks.erase(nwi);
-	_networks_m.unlock();
+	m_networks.erase(nwi);
+	m_networks_l.unlock();
 
 	if (uptr)
 		*uptr = *nw->userPtr();
@@ -403,7 +379,7 @@ void Node::status(ZT_NodeStatus *status) const
 	status->identity = reinterpret_cast<const ZT_Identity *>(&RR->identity);
 	status->publicIdentity = RR->publicIdentityStr;
 	status->secretIdentity = RR->secretIdentityStr;
-	status->online = _online ? 1 : 0;
+	status->online = m_online ? 1 : 0;
 }
 
 ZT_PeerList *Node::peers() const
@@ -419,7 +395,7 @@ ZT_PeerList *Node::peers() const
 	pl->peers = (ZT_Peer *)(buf + sizeof(ZT_PeerList));
 	Identity *identities = (Identity *)(buf + sizeof(ZT_PeerList) + (sizeof(ZT_Peer) * peers.size())); // NOLINT(modernize-use-auto,hicpp-use-auto)
 
-	const int64_t now = _now;
+	const int64_t now = m_now;
 	pl->peerCount = 0;
 	for(std::vector< SharedPtr<Peer> >::iterator pi(peers.begin());pi!=peers.end();++pi) { // NOLINT(modernize-use-auto,modernize-loop-convert,hicpp-use-auto)
 		ZT_Peer *const p = &(pl->peers[pl->peerCount]);
@@ -480,16 +456,16 @@ ZT_VirtualNetworkConfig *Node::networkConfig(uint64_t nwid) const
 
 ZT_VirtualNetworkList *Node::networks() const
 {
-	RWMutex::RLock l(_networks_m);
+	RWMutex::RLock l(m_networks_l);
 
-	char *const buf = (char *)::malloc(sizeof(ZT_VirtualNetworkList) + (sizeof(ZT_VirtualNetworkConfig) * _networks.size()));
+	char *const buf = (char *)::malloc(sizeof(ZT_VirtualNetworkList) + (sizeof(ZT_VirtualNetworkConfig) * m_networks.size()));
 	if (!buf)
 		return nullptr;
 	ZT_VirtualNetworkList *nl = (ZT_VirtualNetworkList *)buf; // NOLINT(modernize-use-auto,hicpp-use-auto)
 	nl->networks = (ZT_VirtualNetworkConfig *)(buf + sizeof(ZT_VirtualNetworkList));
 
 	nl->networkCount = 0;
-	for(Map< uint64_t,SharedPtr<Network> >::const_iterator i(_networks.begin());i!=_networks.end();++i) // NOLINT(modernize-use-auto,modernize-loop-convert,hicpp-use-auto)
+	for(Map< uint64_t,SharedPtr<Network> >::const_iterator i(m_networks.begin());i != m_networks.end();++i) // NOLINT(modernize-use-auto,modernize-loop-convert,hicpp-use-auto)
 		i->second->externalConfig(&(nl->networks[nl->networkCount++]));
 
 	return nl;
@@ -510,8 +486,8 @@ void Node::freeQueryResult(void *qr)
 
 void Node::setInterfaceAddresses(const ZT_InterfaceAddress *addrs,unsigned int addrCount)
 {
-	Mutex::Lock _l(_localInterfaceAddresses_m);
-	_localInterfaceAddresses.clear();
+	Mutex::Lock _l(m_localInterfaceAddresses_m);
+	m_localInterfaceAddresses.clear();
 	for(unsigned int i=0;i<addrCount;++i) {
 		bool dupe = false;
 		for(unsigned int j=0;j<i;++j) {
@@ -521,7 +497,7 @@ void Node::setInterfaceAddresses(const ZT_InterfaceAddress *addrs,unsigned int a
 			}
 		}
 		if (!dupe)
-			_localInterfaceAddresses.push_back(addrs[i]);
+			m_localInterfaceAddresses.push_back(addrs[i]);
 	}
 }
 
@@ -555,12 +531,12 @@ void Node::setController(void *networkControllerInstance)
 std::vector<uint8_t> Node::stateObjectGet(void *const tPtr,ZT_StateObjectType type,const uint64_t id[2])
 {
 	std::vector<uint8_t> r;
-	if (_cb.stateGetFunction) {
+	if (m_cb.stateGetFunction) {
 		void *data = 0;
 		void (*freeFunc)(void *) = 0;
-		int l = _cb.stateGetFunction(
+		int l = m_cb.stateGetFunction(
 			reinterpret_cast<ZT_Node *>(this),
-			_uPtr,
+			m_uPtr,
 			tPtr,
 			type,
 			id,
@@ -577,8 +553,8 @@ std::vector<uint8_t> Node::stateObjectGet(void *const tPtr,ZT_StateObjectType ty
 bool Node::shouldUsePathForZeroTierTraffic(void *tPtr,const Identity &id,const int64_t localSocket,const InetAddress &remoteAddress)
 {
 	{
-		RWMutex::RLock l(_networks_m);
-		for(Map< uint64_t,SharedPtr<Network> >::iterator i(_networks.begin());i!=_networks.end();++i) { // NOLINT(hicpp-use-auto,modernize-use-auto,modernize-loop-convert)
+		RWMutex::RLock l(m_networks_l);
+		for(Map< uint64_t,SharedPtr<Network> >::iterator i(m_networks.begin());i != m_networks.end();++i) { // NOLINT(hicpp-use-auto,modernize-use-auto,modernize-loop-convert)
 			for (unsigned int k = 0,j = i->second->config().staticIpCount; k < j; ++k) {
 				if (i->second->config().staticIps[k].containsAddress(remoteAddress))
 					return false;
@@ -586,10 +562,10 @@ bool Node::shouldUsePathForZeroTierTraffic(void *tPtr,const Identity &id,const i
 		}
 	}
 
-	if (_cb.pathCheckFunction) {
-		return (_cb.pathCheckFunction(
+	if (m_cb.pathCheckFunction) {
+		return (m_cb.pathCheckFunction(
 			reinterpret_cast<ZT_Node *>(this),
-			_uPtr,
+			m_uPtr,
 			tPtr,
 			id.address().toInt(),
 			(const ZT_Identity *)&id,
@@ -602,10 +578,10 @@ bool Node::shouldUsePathForZeroTierTraffic(void *tPtr,const Identity &id,const i
 
 bool Node::externalPathLookup(void *tPtr,const Identity &id,int family,InetAddress &addr)
 {
-	if (_cb.pathLookupFunction) {
-		return (_cb.pathLookupFunction(
+	if (m_cb.pathLookupFunction) {
+		return (m_cb.pathLookupFunction(
 			reinterpret_cast<ZT_Node *>(this),
-			_uPtr,
+			m_uPtr,
 			tPtr,
 			id.address().toInt(),
 			reinterpret_cast<const ZT_Identity *>(&id),
@@ -623,9 +599,9 @@ ZT_ResultCode Node::setPhysicalPathConfiguration(const struct sockaddr_storage *
 
 bool Node::localControllerHasAuthorized(const int64_t now,const uint64_t nwid,const Address &addr) const
 {
-	_localControllerAuthorizations_m.lock();
-	const int64_t *const at = _localControllerAuthorizations.get(_LocalControllerAuth(nwid,addr));
-	_localControllerAuthorizations_m.unlock();
+	m_localControllerAuthorizations_l.lock();
+	const int64_t *const at = m_localControllerAuthorizations.get(p_LocalControllerAuth(nwid, addr));
+	m_localControllerAuthorizations_l.unlock();
 	if (at)
 		return ((now - *at) < (ZT_NETWORK_AUTOCONF_DELAY * 3));
 	return false;
@@ -635,9 +611,9 @@ bool Node::localControllerHasAuthorized(const int64_t now,const uint64_t nwid,co
 
 void Node::ncSendConfig(uint64_t nwid,uint64_t requestPacketId,const Address &destination,const NetworkConfig &nc,bool sendLegacyFormatConfig)
 {
-	_localControllerAuthorizations_m.lock();
-	_localControllerAuthorizations[_LocalControllerAuth(nwid,destination)] = now();
-	_localControllerAuthorizations_m.unlock();
+	m_localControllerAuthorizations_l.lock();
+	m_localControllerAuthorizations[p_LocalControllerAuth(nwid, destination)] = now();
+	m_localControllerAuthorizations_l.unlock();
 
 	if (destination == RR->identity.address()) {
 		SharedPtr<Network> n(network(nwid));

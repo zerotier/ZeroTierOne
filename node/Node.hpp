@@ -110,7 +110,7 @@ public:
 	/**
 	 * @return Most recent time value supplied to core via API
 	 */
-	ZT_INLINE int64_t now() const noexcept { return _now; }
+	ZT_INLINE int64_t now() const noexcept { return m_now; }
 
 	/**
 	 * Send packet to to the physical wire via callback
@@ -125,9 +125,9 @@ public:
 	 */
 	ZT_INLINE bool putPacket(void *tPtr,const int64_t localSocket,const InetAddress &addr,const void *data,unsigned int len,unsigned int ttl = 0) noexcept
 	{
-		return (_cb.wirePacketSendFunction(
+		return (m_cb.wirePacketSendFunction(
 			reinterpret_cast<ZT_Node *>(this),
-			_uPtr,
+			m_uPtr,
 			tPtr,
 			localSocket,
 			reinterpret_cast<const struct sockaddr_storage *>(&addr),
@@ -151,9 +151,9 @@ public:
 	 */
 	ZT_INLINE void putFrame(void *tPtr,uint64_t nwid,void **nuptr,const MAC &source,const MAC &dest,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len) noexcept
 	{
-		_cb.virtualNetworkFrameFunction(
+		m_cb.virtualNetworkFrameFunction(
 			reinterpret_cast<ZT_Node *>(this),
-			_uPtr,
+			m_uPtr,
 			tPtr,
 			nwid,
 			nuptr,
@@ -171,8 +171,8 @@ public:
 	 */
 	ZT_INLINE SharedPtr<Network> network(uint64_t nwid) const noexcept
 	{
-		RWMutex::RLock l(_networks_m);
-		const SharedPtr<Network> *const n = _networks.get(nwid);
+		RWMutex::RLock l(m_networks_l);
+		const SharedPtr<Network> *const n = m_networks.get(nwid);
 		if (n)
 			return *n;
 		return SharedPtr<Network>();
@@ -183,8 +183,8 @@ public:
 	 */
 	ZT_INLINE Vector<ZT_InterfaceAddress> localInterfaceAddresses() const
 	{
-		Mutex::Lock _l(_localInterfaceAddresses_m);
-		return _localInterfaceAddresses;
+		Mutex::Lock _l(m_localInterfaceAddresses_m);
+		return m_localInterfaceAddresses;
 	}
 
 	/**
@@ -196,7 +196,7 @@ public:
 	 */
 	ZT_INLINE void postEvent(void *tPtr,ZT_Event ev,const void *md = nullptr) noexcept
 	{
-		_cb.eventCallback(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,ev,md);
+		m_cb.eventCallback(reinterpret_cast<ZT_Node *>(this), m_uPtr, tPtr, ev, md);
 	}
 
 	/**
@@ -210,13 +210,13 @@ public:
 	 */
 	ZT_INLINE void configureVirtualNetworkPort(void *tPtr,uint64_t nwid,void **nuptr,ZT_VirtualNetworkConfigOperation op,const ZT_VirtualNetworkConfig *nc) noexcept
 	{
-		_cb.virtualNetworkConfigFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,nwid,nuptr,op,nc);
+		m_cb.virtualNetworkConfigFunction(reinterpret_cast<ZT_Node *>(this), m_uPtr, tPtr, nwid, nuptr, op, nc);
 	}
 
 	/**
 	 * @return True if node appears online
 	 */
-	ZT_INLINE bool online() const noexcept { return _online; }
+	ZT_INLINE bool online() const noexcept { return m_online; }
 
 	/**
 	 * Get a state object
@@ -239,8 +239,8 @@ public:
 	 */
 	ZT_INLINE void stateObjectPut(void *const tPtr,ZT_StateObjectType type,const uint64_t id[2],const void *const data,const unsigned int len) noexcept
 	{
-		if (_cb.statePutFunction)
-			_cb.statePutFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,type,id,data,(int)len);
+		if (m_cb.statePutFunction)
+			m_cb.statePutFunction(reinterpret_cast<ZT_Node *>(this), m_uPtr, tPtr, type, id, data, (int)len);
 	}
 
 	/**
@@ -252,8 +252,8 @@ public:
 	 */
 	ZT_INLINE void stateObjectDelete(void *const tPtr,ZT_StateObjectType type,const uint64_t id[2]) noexcept
 	{
-		if (_cb.statePutFunction)
-			_cb.statePutFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,tPtr,type,id,nullptr,-1);
+		if (m_cb.statePutFunction)
+			m_cb.statePutFunction(reinterpret_cast<ZT_Node *>(this), m_uPtr, tPtr, type, id, nullptr, -1);
 	}
 
 	/**
@@ -292,12 +292,12 @@ public:
 	/**
 	 * @return This node's identity
 	 */
-	ZT_INLINE const Identity &identity() const noexcept { return _RR.identity; }
+	ZT_INLINE const Identity &identity() const noexcept { return m_RR.identity; }
 
 	/**
 	 * @return True if aggressive NAT-traversal mechanisms like scanning of <1024 ports are enabled
 	 */
-	ZT_INLINE bool natMustDie() const noexcept { return _natMustDie; }
+	ZT_INLINE bool natMustDie() const noexcept { return m_natMustDie; }
 
 	/**
 	 * Wake peer by calling its alarm() method at or after a given time.
@@ -332,68 +332,59 @@ public:
 	virtual void ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &destination,NetworkController::ErrorCode errorCode); // NOLINT(cppcoreguidelines-explicit-virtual-functions,hicpp-use-override,modernize-use-override)
 
 private:
-	RuntimeEnvironment _RR;
+	RuntimeEnvironment m_RR;
 	RuntimeEnvironment *const RR;
 
 	// Pointer to a struct defined in Node that holds instances of core objects.
-	void *_objects;
+	void *m_objects;
 
 	// Function pointers to C callbacks supplied via the API.
-	ZT_Node_Callbacks _cb;
+	ZT_Node_Callbacks m_cb;
 
 	// A user-specified opaque pointer passed back via API callbacks.
-	void *_uPtr;
-
-	// Fingerprints of peers that want to have their alarm() function called at some point in the future.
-	// These behave like weak references in that the node looks them up in Topology and calls alarm()
-	// in each peer if that peer object is still held in memory. Calling alarm() unnecessarily on a peer
-	// is harmless. This just exists as an optimization to prevent having to iterate through all peers
-	// on every processBackgroundTasks call. A simple map<> is used here because there are usually only
-	// a few of these, if any.
-	std::map< Fingerprint,int64_t,std::less<Fingerprint>,Utils::Mallocator< std::pair<const Fingerprint,int64_t> > > _peerAlarms;
-	Mutex _peerAlarms_l;
+	void *m_uPtr;
 
 	// Cache that remembers whether or not the locally running network controller (if any) has authorized
 	// someone on their most recent query. This is used by the network controller as a memoization optimization
 	// to elide unnecessary signature verifications. It might get moved in the future since this is sort of a
 	// weird place to put it.
-	struct _LocalControllerAuth
+	struct p_LocalControllerAuth
 	{
 		uint64_t nwid,address;
-		ZT_INLINE _LocalControllerAuth(const uint64_t nwid_,const Address &address_)  noexcept: nwid(nwid_),address(address_.toInt()) {}
+		ZT_INLINE p_LocalControllerAuth(const uint64_t nwid_, const Address &address_)  noexcept: nwid(nwid_), address(address_.toInt()) {}
 		ZT_INLINE unsigned long hashCode() const noexcept { return (unsigned long)(nwid + address); }
-		ZT_INLINE bool operator==(const _LocalControllerAuth &a) const noexcept { return ((a.nwid == nwid) && (a.address == address)); }
-		ZT_INLINE bool operator!=(const _LocalControllerAuth &a) const noexcept { return ((a.nwid != nwid) || (a.address != address)); }
-		ZT_INLINE bool operator<(const _LocalControllerAuth &a) const noexcept { return ((a.nwid < nwid) || ((a.nwid == nwid)&&(a.address < address))); }
+		ZT_INLINE bool operator==(const p_LocalControllerAuth &a) const noexcept { return ((a.nwid == nwid) && (a.address == address)); }
+		ZT_INLINE bool operator!=(const p_LocalControllerAuth &a) const noexcept { return ((a.nwid != nwid) || (a.address != address)); }
+		ZT_INLINE bool operator<(const p_LocalControllerAuth &a) const noexcept { return ((a.nwid < nwid) || ((a.nwid == nwid) && (a.address < address))); }
 	};
-	Map<_LocalControllerAuth,int64_t> _localControllerAuthorizations;
-	Mutex _localControllerAuthorizations_m;
+	Map<p_LocalControllerAuth,int64_t> m_localControllerAuthorizations;
+	Mutex m_localControllerAuthorizations_l;
 
 	// Locally joined networks by network ID.
-	Map< uint64_t,SharedPtr<Network> > _networks;
-	RWMutex _networks_m;
+	Map< uint64_t,SharedPtr<Network> > m_networks;
+	RWMutex m_networks_l;
 
 	// These are local interface addresses that have been configured via the API
 	// and can be pushed to other nodes.
-	Vector< ZT_InterfaceAddress > _localInterfaceAddresses;
-	Mutex _localInterfaceAddresses_m;
+	Vector< ZT_InterfaceAddress > m_localInterfaceAddresses;
+	Mutex m_localInterfaceAddresses_m;
 
 	// This is locked while running processBackgroundTasks().
-	Mutex _backgroundTasksLock;
+	Mutex m_backgroundTasksLock;
 
 	// These are locked via _backgroundTasksLock as they're only checked and modified in processBackgroundTasks().
-	int64_t _lastPeerPulse;
-	int64_t _lastHousekeepingRun;
-	int64_t _lastNetworkHousekeepingRun;
+	int64_t m_lastPeerPulse;
+	int64_t m_lastHousekeepingRun;
+	int64_t m_lastNetworkHousekeepingRun;
 
 	// This is the most recent value for time passed in via any of the core API methods.
-	std::atomic<int64_t> _now;
+	std::atomic<int64_t> m_now;
 
 	// True if we are to use really intensive NAT-busting measures.
-	std::atomic<bool> _natMustDie;
+	std::atomic<bool> m_natMustDie;
 
 	// True if at least one root appears reachable.
-	std::atomic<bool> _online;
+	std::atomic<bool> m_online;
 };
 
 } // namespace ZeroTier

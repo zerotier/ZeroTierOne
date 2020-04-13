@@ -62,11 +62,11 @@ public:
 	static ZT_INLINE void generateSatisfying(F cond,uint8_t pub[ZT_C25519_COMBINED_PUBLIC_KEY_SIZE],uint8_t priv[ZT_C25519_COMBINED_PRIVATE_KEY_SIZE])
 	{
 		Utils::getSecureRandom(priv,ZT_C25519_COMBINED_PRIVATE_KEY_SIZE);
-		_calcPubED(pub,priv); // do Ed25519 key -- bytes 32-63 of pub and priv
+		s_calcPubED(pub, priv); // do Ed25519 key -- bytes 32-63 of pub and priv
 		do {
 			++(((uint64_t *)priv)[1]);
 			--(((uint64_t *)priv)[2]);
-			_calcPubDH(pub,priv); // keep regenerating bytes 0-31 until satisfied
+			s_calcPubDH(pub, priv); // keep regenerating bytes 0-31 until satisfied
 		} while (!cond(pub));
 	}
 
@@ -116,11 +116,11 @@ public:
 private:
 	// derive first 32 bytes of kp.pub from first 32 bytes of kp.priv
 	// this is the ECDH key
-	static void _calcPubDH(uint8_t *pub,const uint8_t *priv);
+	static void s_calcPubDH(uint8_t *pub, const uint8_t *priv);
 
 	// derive 2nd 32 bytes of kp.pub from 2nd 32 bytes of kp.priv
 	// this is the Ed25519 sign/verify key
-	static void _calcPubED(uint8_t pub[ZT_C25519_COMBINED_PUBLIC_KEY_SIZE],const uint8_t priv[ZT_C25519_COMBINED_PRIVATE_KEY_SIZE]);
+	static void s_calcPubED(uint8_t *pub, const uint8_t *priv);
 };
 
 } // namespace ZeroTier

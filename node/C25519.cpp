@@ -2371,14 +2371,14 @@ namespace ZeroTier {
 void C25519::generateCombined(uint8_t *pub,uint8_t *priv)
 {
 	Utils::getSecureRandom(priv,ZT_C25519_COMBINED_PRIVATE_KEY_SIZE);
-	_calcPubDH(pub,priv);
-	_calcPubED(pub,priv);
+	s_calcPubDH(pub, priv);
+	s_calcPubED(pub, priv);
 }
 
 void C25519::generateC25519(uint8_t pub[ZT_C25519_ECDH_PUBLIC_KEY_SIZE],uint8_t priv[ZT_C25519_ECDH_PRIVATE_KEY_SIZE])
 {
 	Utils::getSecureRandom(priv,ZT_C25519_ECDH_PRIVATE_KEY_SIZE);
-	_calcPubDH(pub,priv);
+	s_calcPubDH(pub, priv);
 }
 
 void C25519::agree(const uint8_t mine[ZT_C25519_COMBINED_PRIVATE_KEY_SIZE],const uint8_t their[ZT_C25519_COMBINED_PUBLIC_KEY_SIZE],uint8_t rawkey[ZT_C25519_ECDH_SHARED_SECRET_SIZE])
@@ -2472,14 +2472,14 @@ bool C25519::verify(const uint8_t their[ZT_C25519_COMBINED_PUBLIC_KEY_SIZE],cons
 	return Utils::secureEq(sig,t2,32);
 }
 
-void C25519::_calcPubDH(uint8_t *const pub,const uint8_t *const priv)
+void C25519::s_calcPubDH(uint8_t *pub, const uint8_t *priv)
 {
 	// First 32 bytes of pub and priv are the keys for ECDH key
 	// agreement. This generates the public portion from the private.
 	crypto_scalarmult_base(pub,priv);
 }
 
-void C25519::_calcPubED(uint8_t pub[ZT_C25519_COMBINED_PUBLIC_KEY_SIZE],const uint8_t priv[ZT_C25519_COMBINED_PRIVATE_KEY_SIZE])
+void C25519::s_calcPubED(uint8_t *pub, const uint8_t *priv)
 {
 	struct {
 		uint8_t extsk[64];

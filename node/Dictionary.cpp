@@ -25,14 +25,14 @@ Dictionary::~Dictionary()
 
 std::vector<uint8_t> &Dictionary::operator[](const char *k)
 {
-	return _t[_toKey(k)];
+	return m_entries[s_toKey(k)];
 }
 
 const std::vector<uint8_t> &Dictionary::operator[](const char *k) const
 {
 	static const std::vector<uint8_t> emptyEntry;
-	Map< uint64_t,std::vector<uint8_t> >::const_iterator e(_t.find(_toKey(k)));
-	return (e == _t.end()) ? emptyEntry : e->second;
+	Map< uint64_t,std::vector<uint8_t> >::const_iterator e(m_entries.find(s_toKey(k)));
+	return (e == m_entries.end()) ? emptyEntry : e->second;
 }
 
 void Dictionary::add(const char *k,bool v)
@@ -147,7 +147,7 @@ void Dictionary::getS(const char *k,char *v,unsigned int cap) const
 
 void Dictionary::clear()
 {
-	_t.clear();
+	m_entries.clear();
 }
 
 void Dictionary::encode(std::vector<uint8_t> &out) const
@@ -156,7 +156,7 @@ void Dictionary::encode(std::vector<uint8_t> &out) const
 
 	out.clear();
 
-	for(Map< uint64_t,std::vector<uint8_t> >::const_iterator ti(_t.begin());ti!=_t.end();++ti) {
+	for(Map< uint64_t,std::vector<uint8_t> >::const_iterator ti(m_entries.begin());ti != m_entries.end();++ti) {
 		str[0] = ti->first;
 		const char *k = (const char *)str;
 		for(;;) {
@@ -247,7 +247,7 @@ bool Dictionary::decode(const void *data,unsigned int len)
 			if ((c < 33)||(c > 126)||(c == 92)) {
 				return false;
 			} else if (c == 61) {
-				v = &_t[k];
+				v = &m_entries[k];
 			} else {
 				reinterpret_cast<uint8_t *>(&k)[ki & 7U] ^= c;
 			}

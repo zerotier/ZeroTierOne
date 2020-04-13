@@ -29,7 +29,7 @@ InetAddress::IpScope InetAddress::ipScope() const noexcept
 	switch(_data.ss_family) {
 
 		case AF_INET: {
-			const uint32_t ip = Utils::ntoh((uint32_t)reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr);
+			const uint32_t ip = Utils::ntoh((uint32_t)reinterpret_cast<const sockaddr_in *>(this)->sin_addr.s_addr);
 			switch(ip >> 24U) {
 				case 0x00: return IP_SCOPE_NONE;                                   // 0.0.0.0/8 (reserved, never used)
 				case 0x06: return IP_SCOPE_PSEUDOPRIVATE;                          // 6.0.0.0/8 (US Army)
@@ -68,7 +68,7 @@ InetAddress::IpScope InetAddress::ipScope() const noexcept
 		}
 
 		case AF_INET6: {
-			const unsigned char *ip = reinterpret_cast<const unsigned char *>(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr); // NOLINT(hicpp-use-auto,modernize-use-auto)
+			const unsigned char *ip = reinterpret_cast<const unsigned char *>(reinterpret_cast<const sockaddr_in6 *>(this)->sin6_addr.s6_addr); // NOLINT(hicpp-use-auto,modernize-use-auto)
 			if ((ip[0] & 0xf0U) == 0xf0) {
 				if (ip[0] == 0xff) return IP_SCOPE_MULTICAST;                      // ff00::/8
 				if ((ip[0] == 0xfe)&&((ip[1] & 0xc0U) == 0x80)) {
@@ -100,12 +100,12 @@ void InetAddress::set(const void *ipBytes,unsigned int ipLen,unsigned int port) 
 		uint32_t ipb[1];
 		Utils::copy<4>(ipb,ipBytes);
 		_data.ss_family = AF_INET;
-		reinterpret_cast<struct sockaddr_in *>(this)->sin_addr.s_addr = ipb[0];
-		reinterpret_cast<struct sockaddr_in *>(this)->sin_port = Utils::hton((uint16_t)port);
+		reinterpret_cast<sockaddr_in *>(this)->sin_addr.s_addr = ipb[0];
+		reinterpret_cast<sockaddr_in *>(this)->sin_port = Utils::hton((uint16_t)port);
 	} else if (ipLen == 16) {
 		_data.ss_family = AF_INET6;
-		Utils::copy<16>(reinterpret_cast<struct sockaddr_in6 *>(this)->sin6_addr.s6_addr,ipBytes);
-		reinterpret_cast<struct sockaddr_in6 *>(this)->sin6_port = Utils::hton((uint16_t)port);
+		Utils::copy<16>(reinterpret_cast<sockaddr_in6 *>(this)->sin6_addr.s6_addr,ipBytes);
+		reinterpret_cast<sockaddr_in6 *>(this)->sin6_port = Utils::hton((uint16_t)port);
 	}
 }
 
@@ -113,14 +113,14 @@ bool InetAddress::isDefaultRoute() const noexcept
 {
 	switch(_data.ss_family) {
 		case AF_INET:
-			return ( (reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr == 0) && (reinterpret_cast<const struct sockaddr_in *>(this)->sin_port == 0) );
+			return ( (reinterpret_cast<const sockaddr_in *>(this)->sin_addr.s_addr == 0) && (reinterpret_cast<const sockaddr_in *>(this)->sin_port == 0) );
 		case AF_INET6:
-			const uint8_t *ipb = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr); // NOLINT(hicpp-use-auto,modernize-use-auto)
+			const uint8_t *ipb = reinterpret_cast<const uint8_t *>(reinterpret_cast<const sockaddr_in6 *>(this)->sin6_addr.s6_addr); // NOLINT(hicpp-use-auto,modernize-use-auto)
 			for(int i=0;i<16;++i) {
 				if (ipb[i])
 					return false;
 			}
-			return (reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_port == 0);
+			return (reinterpret_cast<const sockaddr_in6 *>(this)->sin6_port == 0);
 	}
 	return false;
 }
@@ -142,17 +142,17 @@ char *InetAddress::toIpString(char buf[ZT_INETADDRESS_STRING_SIZE_MAX]) const no
 	switch(_data.ss_family) {
 		case AF_INET: {
 #ifdef _WIN32
-			inet_ntop(AF_INET, (void*)&reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr, buf, INET_ADDRSTRLEN);
+			inet_ntop(AF_INET, (void*)&reinterpret_cast<const sockaddr_in *>(this)->sin_addr.s_addr, buf, INET_ADDRSTRLEN);
 #else
-			inet_ntop(AF_INET, &reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr, buf, INET_ADDRSTRLEN);
+			inet_ntop(AF_INET, &reinterpret_cast<const sockaddr_in *>(this)->sin_addr.s_addr, buf, INET_ADDRSTRLEN);
 #endif
  		}	break;
 
 		case AF_INET6: {
 #ifdef _WIN32
-			inet_ntop(AF_INET6, (void*)reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr, buf, INET6_ADDRSTRLEN);
+			inet_ntop(AF_INET6, (void*)reinterpret_cast<const sockaddr_in6 *>(this)->sin6_addr.s6_addr, buf, INET6_ADDRSTRLEN);
 #else
-			inet_ntop(AF_INET6, reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr, buf, INET6_ADDRSTRLEN);
+			inet_ntop(AF_INET6, reinterpret_cast<const sockaddr_in6 *>(this)->sin6_addr.s6_addr, buf, INET6_ADDRSTRLEN);
 #endif
 		}	break;
 	}
@@ -180,13 +180,13 @@ bool InetAddress::fromString(const char *ipSlashPort) noexcept
 	}
 
 	if (strchr(buf,':')) {
-		struct sockaddr_in6 *const in6 = reinterpret_cast<struct sockaddr_in6 *>(this); // NOLINT(hicpp-use-auto,modernize-use-auto)
+		sockaddr_in6 *const in6 = reinterpret_cast<sockaddr_in6 *>(this); // NOLINT(hicpp-use-auto,modernize-use-auto)
 		inet_pton(AF_INET6, buf, &in6->sin6_addr.s6_addr);
 		in6->sin6_family = AF_INET6;
 		in6->sin6_port = Utils::hton((uint16_t)port);
 		return true;
 	} else if (strchr(buf,'.')) {
-		struct sockaddr_in *const in = reinterpret_cast<struct sockaddr_in *>(this); // NOLINT(hicpp-use-auto,modernize-use-auto)
+		sockaddr_in *const in = reinterpret_cast<sockaddr_in *>(this); // NOLINT(hicpp-use-auto,modernize-use-auto)
 		inet_pton(AF_INET, buf, &in->sin_addr.s_addr);
 		in->sin_family = AF_INET;
 		in->sin_port = Utils::hton((uint16_t)port);
@@ -201,7 +201,7 @@ InetAddress InetAddress::netmask() const noexcept
 	InetAddress r(*this);
 	switch(r._data.ss_family) {
 		case AF_INET:
-			reinterpret_cast<struct sockaddr_in *>(&r)->sin_addr.s_addr = Utils::hton((uint32_t)(0xffffffffU << (32 - netmaskBits())));
+			reinterpret_cast<sockaddr_in *>(&r)->sin_addr.s_addr = Utils::hton((uint32_t)(0xffffffffU << (32 - netmaskBits())));
 			break;
 		case AF_INET6: {
 			uint64_t nm[2];
@@ -213,7 +213,7 @@ InetAddress InetAddress::netmask() const noexcept
 				nm[0] = 0;
 				nm[1] = 0;
 			}
-			Utils::copy<16>(reinterpret_cast<struct sockaddr_in6 *>(&r)->sin6_addr.s6_addr,nm);
+			Utils::copy<16>(reinterpret_cast<sockaddr_in6 *>(&r)->sin6_addr.s6_addr,nm);
 		}	break;
 	}
 	return r;
@@ -223,7 +223,7 @@ InetAddress InetAddress::broadcast() const noexcept
 {
 	if (_data.ss_family == AF_INET) {
 		InetAddress r(*this);
-		reinterpret_cast<struct sockaddr_in *>(&r)->sin_addr.s_addr |= Utils::hton((uint32_t)(0xffffffffU >> netmaskBits()));
+		reinterpret_cast<sockaddr_in *>(&r)->sin_addr.s_addr |= Utils::hton((uint32_t)(0xffffffffU >> netmaskBits()));
 		return r;
 	}
 	return InetAddress();
@@ -234,15 +234,15 @@ InetAddress InetAddress::network() const noexcept
 	InetAddress r(*this);
 	switch(r._data.ss_family) {
 		case AF_INET:
-			reinterpret_cast<struct sockaddr_in *>(&r)->sin_addr.s_addr &= Utils::hton((uint32_t)(0xffffffffU << (32 - netmaskBits())));
+			reinterpret_cast<sockaddr_in *>(&r)->sin_addr.s_addr &= Utils::hton((uint32_t)(0xffffffffU << (32 - netmaskBits())));
 			break;
 		case AF_INET6: {
 			uint64_t nm[2];
 			const unsigned int bits = netmaskBits();
-			Utils::copy<16>(nm,reinterpret_cast<struct sockaddr_in6 *>(&r)->sin6_addr.s6_addr);
+			Utils::copy<16>(nm,reinterpret_cast<sockaddr_in6 *>(&r)->sin6_addr.s6_addr);
 			nm[0] &= Utils::hton((uint64_t)((bits >= 64) ? 0xffffffffffffffffULL : (0xffffffffffffffffULL << (64 - bits))));
 			nm[1] &= Utils::hton((uint64_t)((bits <= 64) ? 0ULL : (0xffffffffffffffffULL << (128 - bits))));
-			Utils::copy<16>(reinterpret_cast<struct sockaddr_in6 *>(&r)->sin6_addr.s6_addr,nm);
+			Utils::copy<16>(reinterpret_cast<sockaddr_in6 *>(&r)->sin6_addr.s6_addr,nm);
 		}	break;
 	}
 	return r;
@@ -255,10 +255,10 @@ bool InetAddress::isEqualPrefix(const InetAddress &addr) const noexcept
 			case AF_INET6: {
 				const InetAddress mask(netmask());
 				InetAddress addr_mask(addr.netmask());
-				const uint8_t *n = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&addr_mask)->sin6_addr.s6_addr); // NOLINT(hicpp-use-auto,modernize-use-auto)
-				const uint8_t *m = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&mask)->sin6_addr.s6_addr); // NOLINT(hicpp-use-auto,modernize-use-auto)
-				const uint8_t *a = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&addr)->sin6_addr.s6_addr); // NOLINT(hicpp-use-auto,modernize-use-auto)
-				const uint8_t *b = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr); // NOLINT(hicpp-use-auto,modernize-use-auto)
+				const uint8_t *n = reinterpret_cast<const uint8_t *>(reinterpret_cast<const sockaddr_in6 *>(&addr_mask)->sin6_addr.s6_addr); // NOLINT(hicpp-use-auto,modernize-use-auto)
+				const uint8_t *m = reinterpret_cast<const uint8_t *>(reinterpret_cast<const sockaddr_in6 *>(&mask)->sin6_addr.s6_addr); // NOLINT(hicpp-use-auto,modernize-use-auto)
+				const uint8_t *a = reinterpret_cast<const uint8_t *>(reinterpret_cast<const sockaddr_in6 *>(&addr)->sin6_addr.s6_addr); // NOLINT(hicpp-use-auto,modernize-use-auto)
+				const uint8_t *b = reinterpret_cast<const uint8_t *>(reinterpret_cast<const sockaddr_in6 *>(this)->sin6_addr.s6_addr); // NOLINT(hicpp-use-auto,modernize-use-auto)
 				for(unsigned int i=0;i<16;++i) {
 					if ((a[i] & m[i]) != (b[i] & n[i]))
 						return false;
@@ -279,15 +279,15 @@ bool InetAddress::containsAddress(const InetAddress &addr) const noexcept
 				if (bits == 0)
 					return true;
 				return (
-					(Utils::ntoh((uint32_t)reinterpret_cast<const struct sockaddr_in *>(&addr)->sin_addr.s_addr) >> (32 - bits)) ==
-					(Utils::ntoh((uint32_t)reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr) >> (32 - bits))
+					(Utils::ntoh((uint32_t)reinterpret_cast<const sockaddr_in *>(&addr)->sin_addr.s_addr) >> (32 - bits)) ==
+					(Utils::ntoh((uint32_t)reinterpret_cast<const sockaddr_in *>(this)->sin_addr.s_addr) >> (32 - bits))
 				);
 			}
 			case AF_INET6: {
 				const InetAddress mask(netmask());
-				const uint8_t *m = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&mask)->sin6_addr.s6_addr); // NOLINT(hicpp-use-auto,modernize-use-auto)
-				const uint8_t *a = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&addr)->sin6_addr.s6_addr); // NOLINT(hicpp-use-auto,modernize-use-auto)
-				const uint8_t *b = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr); // NOLINT(hicpp-use-auto,modernize-use-auto)
+				const uint8_t *m = reinterpret_cast<const uint8_t *>(reinterpret_cast<const sockaddr_in6 *>(&mask)->sin6_addr.s6_addr); // NOLINT(hicpp-use-auto,modernize-use-auto)
+				const uint8_t *a = reinterpret_cast<const uint8_t *>(reinterpret_cast<const sockaddr_in6 *>(&addr)->sin6_addr.s6_addr); // NOLINT(hicpp-use-auto,modernize-use-auto)
+				const uint8_t *b = reinterpret_cast<const uint8_t *>(reinterpret_cast<const sockaddr_in6 *>(this)->sin6_addr.s6_addr); // NOLINT(hicpp-use-auto,modernize-use-auto)
 				for(unsigned int i=0;i<16;++i) {
 					if ((a[i] & m[i]) != b[i])
 						return false;
@@ -308,19 +308,19 @@ void InetAddress::forTrace(ZT_TraceEventPathAddress &ta) const noexcept
 			break;
 		case AF_INET:
 			ta.type = ZT_TRACE_EVENT_PATH_TYPE_INETADDR_V4;
-			tmp = (uint32_t)(reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr);
+			tmp = (uint32_t)(reinterpret_cast<const sockaddr_in *>(this)->sin_addr.s_addr);
 			ta.address[0] = reinterpret_cast<const uint8_t *>(&tmp)[0];
 			ta.address[1] = reinterpret_cast<const uint8_t *>(&tmp)[1];
 			ta.address[2] = reinterpret_cast<const uint8_t *>(&tmp)[2];
 			ta.address[3] = reinterpret_cast<const uint8_t *>(&tmp)[3];
 			Utils::zero<sizeof(ta.address) - 4>(ta.address + 4);
-			ta.port = reinterpret_cast<const struct sockaddr_in *>(this)->sin_port;
+			ta.port = reinterpret_cast<const sockaddr_in *>(this)->sin_port;
 			break;
 		case AF_INET6:
 			ta.type = ZT_TRACE_EVENT_PATH_TYPE_INETADDR_V6;
-			Utils::copy<16>(ta.address,reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr);
+			Utils::copy<16>(ta.address,reinterpret_cast<const sockaddr_in6 *>(this)->sin6_addr.s6_addr);
 			Utils::zero<sizeof(ta.address) - 16>(ta.address + 16);
-			ta.port = reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_port;
+			ta.port = reinterpret_cast<const sockaddr_in6 *>(this)->sin6_port;
 			break;
 	}
 }
@@ -334,7 +334,7 @@ bool InetAddress::isNetwork() const noexcept
 				return false;
 			if (bits >= 32)
 				return false;
-			uint32_t ip = Utils::ntoh((uint32_t)reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr);
+			uint32_t ip = Utils::ntoh((uint32_t)reinterpret_cast<const sockaddr_in *>(this)->sin_addr.s_addr);
 			return ((ip & (0xffffffffU >> bits)) == 0);
 		}
 		case AF_INET6: {
@@ -343,7 +343,7 @@ bool InetAddress::isNetwork() const noexcept
 				return false;
 			if (bits >= 128)
 				return false;
-			const unsigned char *ip = reinterpret_cast<const unsigned char *>(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr); // NOLINT(hicpp-use-auto,modernize-use-auto)
+			const unsigned char *ip = reinterpret_cast<const unsigned char *>(reinterpret_cast<const sockaddr_in6 *>(this)->sin6_addr.s6_addr); // NOLINT(hicpp-use-auto,modernize-use-auto)
 			unsigned int p = bits / 8;
 			if ((ip[p++] & (0xffU >> (bits % 8))) != 0)
 				return false;
@@ -425,14 +425,14 @@ bool InetAddress::operator==(const InetAddress &a) const noexcept
 		switch(_data.ss_family) {
 			case AF_INET:
 				return (
-					(reinterpret_cast<const struct sockaddr_in *>(this)->sin_port == reinterpret_cast<const struct sockaddr_in *>(&a)->sin_port)&&
-					(reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr == reinterpret_cast<const struct sockaddr_in *>(&a)->sin_addr.s_addr));
+					(reinterpret_cast<const sockaddr_in *>(this)->sin_port == reinterpret_cast<const sockaddr_in *>(&a)->sin_port)&&
+					(reinterpret_cast<const sockaddr_in *>(this)->sin_addr.s_addr == reinterpret_cast<const sockaddr_in *>(&a)->sin_addr.s_addr));
 			case AF_INET6:
 				return (
-					(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_port == reinterpret_cast<const struct sockaddr_in6 *>(&a)->sin6_port)&&
-					(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_flowinfo == reinterpret_cast<const struct sockaddr_in6 *>(&a)->sin6_flowinfo)&&
-					(memcmp(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr,reinterpret_cast<const struct sockaddr_in6 *>(&a)->sin6_addr.s6_addr,16) == 0)&&
-					(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_scope_id == reinterpret_cast<const struct sockaddr_in6 *>(&a)->sin6_scope_id));
+					(reinterpret_cast<const sockaddr_in6 *>(this)->sin6_port == reinterpret_cast<const sockaddr_in6 *>(&a)->sin6_port)&&
+					(reinterpret_cast<const sockaddr_in6 *>(this)->sin6_flowinfo == reinterpret_cast<const sockaddr_in6 *>(&a)->sin6_flowinfo)&&
+					(memcmp(reinterpret_cast<const sockaddr_in6 *>(this)->sin6_addr.s6_addr,reinterpret_cast<const sockaddr_in6 *>(&a)->sin6_addr.s6_addr,16) == 0)&&
+					(reinterpret_cast<const sockaddr_in6 *>(this)->sin6_scope_id == reinterpret_cast<const sockaddr_in6 *>(&a)->sin6_scope_id));
 			default:
 				return (memcmp(this,&a,sizeof(InetAddress)) == 0);
 		}
@@ -447,24 +447,24 @@ bool InetAddress::operator<(const InetAddress &a) const noexcept
 	else if (_data.ss_family == a._data.ss_family) {
 		switch(_data.ss_family) {
 			case AF_INET:
-				if (reinterpret_cast<const struct sockaddr_in *>(this)->sin_port < reinterpret_cast<const struct sockaddr_in *>(&a)->sin_port)
+				if (reinterpret_cast<const sockaddr_in *>(this)->sin_port < reinterpret_cast<const sockaddr_in *>(&a)->sin_port)
 					return true;
-				else if (reinterpret_cast<const struct sockaddr_in *>(this)->sin_port == reinterpret_cast<const struct sockaddr_in *>(&a)->sin_port) {
-					if (reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr < reinterpret_cast<const struct sockaddr_in *>(&a)->sin_addr.s_addr)
+				else if (reinterpret_cast<const sockaddr_in *>(this)->sin_port == reinterpret_cast<const sockaddr_in *>(&a)->sin_port) {
+					if (reinterpret_cast<const sockaddr_in *>(this)->sin_addr.s_addr < reinterpret_cast<const sockaddr_in *>(&a)->sin_addr.s_addr)
 						return true;
 				}
 				break;
 			case AF_INET6:
-				if (reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_port < reinterpret_cast<const struct sockaddr_in6 *>(&a)->sin6_port)
+				if (reinterpret_cast<const sockaddr_in6 *>(this)->sin6_port < reinterpret_cast<const sockaddr_in6 *>(&a)->sin6_port)
 					return true;
-				else if (reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_port == reinterpret_cast<const struct sockaddr_in6 *>(&a)->sin6_port) {
-					if (reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_flowinfo < reinterpret_cast<const struct sockaddr_in6 *>(&a)->sin6_flowinfo)
+				else if (reinterpret_cast<const sockaddr_in6 *>(this)->sin6_port == reinterpret_cast<const sockaddr_in6 *>(&a)->sin6_port) {
+					if (reinterpret_cast<const sockaddr_in6 *>(this)->sin6_flowinfo < reinterpret_cast<const sockaddr_in6 *>(&a)->sin6_flowinfo)
 						return true;
-					else if (reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_flowinfo == reinterpret_cast<const struct sockaddr_in6 *>(&a)->sin6_flowinfo) {
-						if (memcmp(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr,reinterpret_cast<const struct sockaddr_in6 *>(&a)->sin6_addr.s6_addr,16) < 0)
+					else if (reinterpret_cast<const sockaddr_in6 *>(this)->sin6_flowinfo == reinterpret_cast<const sockaddr_in6 *>(&a)->sin6_flowinfo) {
+						if (memcmp(reinterpret_cast<const sockaddr_in6 *>(this)->sin6_addr.s6_addr,reinterpret_cast<const sockaddr_in6 *>(&a)->sin6_addr.s6_addr,16) < 0)
 							return true;
-						else if (memcmp(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr,reinterpret_cast<const struct sockaddr_in6 *>(&a)->sin6_addr.s6_addr,16) == 0) {
-							if (reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_scope_id < reinterpret_cast<const struct sockaddr_in6 *>(&a)->sin6_scope_id)
+						else if (memcmp(reinterpret_cast<const sockaddr_in6 *>(this)->sin6_addr.s6_addr,reinterpret_cast<const sockaddr_in6 *>(&a)->sin6_addr.s6_addr,16) == 0) {
+							if (reinterpret_cast<const sockaddr_in6 *>(this)->sin6_scope_id < reinterpret_cast<const sockaddr_in6 *>(&a)->sin6_scope_id)
 								return true;
 						}
 					}

@@ -26,21 +26,20 @@ namespace ZeroTier {
 
 Peer::Peer(const RuntimeEnvironment *renv) : // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 	RR(renv),
-	_lastReceive(0),
-	_lastSend(0),
-	_lastSentHello(),
-	_lastWhoisRequestReceived(0),
-	_lastEchoRequestReceived(0),
-	_lastProbeReceived(0),
-	_lastAttemptedP2PInit(0),
-	_lastPrioritizedPaths(0),
-	_lastAttemptedAggressiveNATTraversal(0),
-	_alivePathCount(0),
-	_probe(0),
-	_vProto(0),
-	_vMajor(0),
-	_vMinor(0),
-	_vRevision(0)
+	m_lastReceive(0),
+	m_lastSend(0),
+	m_lastSentHello(),
+	m_lastWhoisRequestReceived(0),
+	m_lastEchoRequestReceived(0),
+	m_lastPrioritizedPaths(0),
+	m_alivePathCount(0),
+	m_tryQueue(),
+	m_tryQueuePtr(m_tryQueue.end()),
+	m_probe(0),
+	m_vProto(0),
+	m_vMajor(0),
+	m_vMinor(0),
+	m_vRevision(0)
 {
 }
 
@@ -50,16 +49,16 @@ Peer::~Peer() // NOLINT(hicpp-use-equals-default,modernize-use-equals-default)
 
 bool Peer::init(const Identity &peerIdentity)
 {
-	RWMutex::Lock l(_lock);
+	RWMutex::Lock l(m_lock);
 
-	if (_id == peerIdentity)
-		return true;
-	_id = peerIdentity;
+	if (m_id) // already initialized sanity check
+		return false;
+	m_id = peerIdentity;
 
 	uint8_t ktmp[ZT_SYMMETRIC_KEY_SIZE];
 	if (!RR->identity.agree(peerIdentity,ktmp))
 		return false;
-	_identityKey.init(RR->node->now(),ktmp);
+	m_identityKey.init(RR->node->now(), ktmp);
 	Utils::burn(ktmp,sizeof(ktmp));
 
 	return true;
@@ -76,67 +75,64 @@ void Peer::received(
 {
 	const int64_t now = RR->node->now();
 
-	_lastReceive = now;
-	_inMeter.log(now,payloadLength);
+	m_lastReceive = now;
+	m_inMeter.log(now, payloadLength);
 
 	if (hops == 0) {
-		RWMutex::RMaybeWLock l(_lock);
+		RWMutex::RMaybeWLock l(m_lock);
 
-		// If this matches an existing path, skip path learning stuff.
-		for (unsigned int i=0;i<_alivePathCount;++i) {
-			if (_paths[i] == path) {
-				_lock.runlock();
+		// If this matches an existing path, skip path learning stuff. For the small number
+		// of paths a peer will have linear scan is the fastest way to do lookup.
+		for (unsigned int i=0;i < m_alivePathCount;++i) {
+			if (m_paths[i] == path)
 				return;
-			}
 		}
 
 		// If we made it here, we don't already know this path.
-		if (RR->node->shouldUsePathForZeroTierTraffic(tPtr,_id,path->localSocket(),path->address())) {
+		if (RR->node->shouldUsePathForZeroTierTraffic(tPtr, m_id, path->localSocket(), path->address())) {
+			// SECURITY: note that if we've made it here we expected this OK, see Expect.hpp.
+			// There is replay protection in effect for OK responses.
 			if (verb == Protocol::VERB_OK) {
+				// If we're learning a new path convert the lock to an exclusive write lock.
 				l.writing();
-
-				// SECURITY: in the future we may not accept anything but OK(HELLO) to learn paths,
-				// but right now we accept any OK for backward compatibility. Note that OK will
-				// have been checked against expected packet IDs (see Expect.hpp) before we get here,
-				// and this guards against replay attacks.
 
 				// If the path list is full, replace the least recently active path. Otherwise append new path.
 				unsigned int newPathIdx = 0;
-				if (_alivePathCount >= ZT_MAX_PEER_NETWORK_PATHS) {
+				if (m_alivePathCount >= ZT_MAX_PEER_NETWORK_PATHS) {
 					int64_t lastReceiveTimeMax = 0;
-					for (unsigned int i=0;i<_alivePathCount;++i) {
-						if ((_paths[i]->address().family() == path->address().family()) &&
-						    (_paths[i]->localSocket() == path->localSocket()) && // TODO: should be localInterface when multipath is integrated
-						    (_paths[i]->address().ipsEqual2(path->address()))) {
+					for (unsigned int i=0;i < m_alivePathCount;++i) {
+						if ((m_paths[i]->address().family() == path->address().family()) &&
+						    (m_paths[i]->localSocket() == path->localSocket()) && // TODO: should be localInterface when multipath is integrated
+						    (m_paths[i]->address().ipsEqual2(path->address()))) {
 							// Replace older path if everything is the same except the port number, since NAT/firewall reboots
 							// and other wacky stuff can change port number assignments.
-							_paths[i] = path;
+							m_paths[i] = path;
 							return;
-						} else if (_paths[i]->lastIn() > lastReceiveTimeMax) {
-							lastReceiveTimeMax = _paths[i]->lastIn();
+						} else if (m_paths[i]->lastIn() > lastReceiveTimeMax) {
+							lastReceiveTimeMax = m_paths[i]->lastIn();
 							newPathIdx = i;
 						}
 					}
 				} else {
-					newPathIdx = _alivePathCount++;
+					newPathIdx = m_alivePathCount++;
 				}
 
 				InetAddress old;
-				if (_paths[newPathIdx])
-					old = _paths[newPathIdx]->address();
-				_paths[newPathIdx] = path;
+				if (m_paths[newPathIdx])
+					old = m_paths[newPathIdx]->address();
+				m_paths[newPathIdx] = path;
 
 				// Re-prioritize paths to include the new one.
-				_prioritizePaths(now);
+				m_prioritizePaths(now);
 
 				// Remember most recently learned paths for future bootstrap attempts on restart.
 				Endpoint pathEndpoint(path->address());
-				_bootstrap[pathEndpoint.type()] = pathEndpoint;
+				m_bootstrap[pathEndpoint.type()] = pathEndpoint;
 
-				RR->t->learnedNewPath(tPtr,0x582fabdd,packetId,_id,path->address(),old);
+				RR->t->learnedNewPath(tPtr, 0x582fabdd, packetId, m_id, path->address(), old);
 			} else {
 				path->sent(now,hello(tPtr,path->localSocket(),path->address(),now));
-				RR->t->tryingNewPath(tPtr,0xb7747ddd,_id,path->address(),path->address(),packetId,(uint8_t)verb,_id,ZT_TRACE_TRYING_NEW_PATH_REASON_PACKET_RECEIVED_FROM_UNKNOWN_PATH);
+				RR->t->tryingNewPath(tPtr, 0xb7747ddd, m_id, path->address(), path->address(), packetId, (uint8_t)verb, m_id, ZT_TRACE_TRYING_NEW_PATH_REASON_PACKET_RECEIVED_FROM_UNKNOWN_PATH);
 			}
 		}
 	}
@@ -194,112 +190,181 @@ unsigned int Peer::hello(void *tPtr,int64_t localSocket,const InetAddress &atAdd
 #endif
 }
 
-unsigned int Peer::sendNOP(void *const tPtr,const int64_t localSocket,const InetAddress &atAddress,const int64_t now)
+unsigned int Peer::probe(void *tPtr,int64_t localSocket,const InetAddress &atAddress,int64_t now)
 {
-	Buf outp;
-	Protocol::Header &ph = outp.as<Protocol::Header>(); // NOLINT(hicpp-use-auto,modernize-use-auto)
-	ph.packetId = Protocol::getPacketId();
-	_id.address().copyTo(ph.destination);
-	RR->identity.address().copyTo(ph.source);
-	ph.flags = 0;
-	ph.verb = Protocol::VERB_NOP;
-	Protocol::armor(outp,sizeof(Protocol::Header),_identityKey.key(),this->cipher());
-	RR->node->putPacket(tPtr,localSocket,atAddress,outp.unsafeData,sizeof(Protocol::Header));
-	return sizeof(Protocol::Header);
+	if (m_vProto < 11) {
+		Buf outp;
+		Protocol::Header &ph = outp.as<Protocol::Header>(); // NOLINT(hicpp-use-auto,modernize-use-auto)
+		//ph.packetId = Protocol::getPacketId();
+		m_id.address().copyTo(ph.destination);
+		RR->identity.address().copyTo(ph.source);
+		ph.flags = 0;
+		ph.verb = Protocol::VERB_NOP;
+		Protocol::armor(outp, sizeof(Protocol::Header), m_identityKey.key(), this->cipher());
+		RR->node->putPacket(tPtr,localSocket,atAddress,outp.unsafeData,sizeof(Protocol::Header));
+		return sizeof(Protocol::Header);
+	} else {
+		RR->node->putPacket(tPtr, -1, atAddress, &m_probe, 4);
+		return 4;
+	}
 }
 
 void Peer::pulse(void *const tPtr,const int64_t now,const bool isRoot)
 {
-	RWMutex::Lock l(_lock);
+	RWMutex::Lock l(m_lock);
 
 	bool needHello = false;
-	if ((now - _lastSentHello) >= ZT_PEER_HELLO_INTERVAL) {
-		_lastSentHello = now;
+	if ((now - m_lastSentHello) >= ZT_PEER_HELLO_INTERVAL) {
+		m_lastSentHello = now;
 		needHello = true;
 	}
 
-	_prioritizePaths(now);
+	m_prioritizePaths(now);
 
-	for(unsigned int i=0;i<_alivePathCount;++i) {
-		if (needHello) {
-			needHello = false;
-			const unsigned int bytes = hello(tPtr,_paths[i]->localSocket(),_paths[i]->address(),now);
-			_paths[i]->sent(now,bytes);
-			sent(now,bytes);
-		} else if ((now - _paths[i]->lastOut()) >= ZT_PATH_KEEPALIVE_PERIOD) {
-			_paths[i]->send(RR,tPtr,&now,1,now);
-			sent(now,1);
-		}
-
-		// TODO: when we merge multipath we'll keep one open per interface to non-roots.
-		// For roots we try to keep every path open.
-		if (!isRoot)
-			return;
-	}
-
-	if (needHello) {
-		// Try any statically configured addresses.
-		InetAddress addr;
-		if (RR->node->externalPathLookup(tPtr,_id,-1,addr)) {
-			if (RR->node->shouldUsePathForZeroTierTraffic(tPtr,_id,-1,addr)) {
-				RR->t->tryingNewPath(tPtr,0x84a10000,_id,addr,InetAddress::NIL,0,0,Identity::NIL,ZT_TRACE_TRYING_NEW_PATH_REASON_EXPLICITLY_SUGGESTED_ADDRESS);
-				hello(tPtr,-1,addr,now);
-			}
-		}
-
-		if (!_bootstrap.empty()) {
-			if (isRoot) {
-				// Try all bootstrap addresses if this is a root.
-				for(std::map< Endpoint::Type,Endpoint >::const_iterator i(_bootstrap.begin());i!=_bootstrap.end();++i) {
-					if ( ((i->first == Endpoint::TYPE_INETADDR_V4)||(i->first == Endpoint::TYPE_INETADDR_V6)) && (!i->second.inetAddr().ipsEqual(addr)) ) {
-						RR->t->tryingNewPath(tPtr,0x0a009444,_id,i->second.inetAddr(),InetAddress::NIL,0,0,Identity::NIL,ZT_TRACE_TRYING_NEW_PATH_REASON_BOOTSTRAP_ADDRESS);
-						hello(tPtr,-1,i->second.inetAddr(),now);
-					}
+	if (m_alivePathCount == 0) {
+		// If there are no direct paths, attempt to make one. If there are queued addresses
+		// to try, attempt one of those. Otherwise try a path we can fetch via API callbacks
+		// and/or a remembered bootstrap path.
+		if (m_tryQueue.empty()) {
+			InetAddress addr;
+			if (RR->node->externalPathLookup(tPtr, m_id, -1, addr)) {
+				if ((addr)&&(RR->node->shouldUsePathForZeroTierTraffic(tPtr, m_id, -1, addr))) {
+					RR->t->tryingNewPath(tPtr, 0x84a10000, m_id, addr, InetAddress::NIL, 0, 0, Identity::NIL, ZT_TRACE_TRYING_NEW_PATH_REASON_EXPLICITLY_SUGGESTED_ADDRESS);
+					sent(now,probe(tPtr,-1,addr,now));
 				}
-			} else {
-				// Otherwise try a random bootstrap address.
-				unsigned int tryAtIndex = (unsigned int)Utils::random() % (unsigned int)_bootstrap.size();
-				for(std::map< Endpoint::Type,Endpoint >::const_iterator i(_bootstrap.begin());i!=_bootstrap.end();++i) {
+			}
+			if (!m_bootstrap.empty()) {
+				unsigned int tryAtIndex = (unsigned int)Utils::random() % (unsigned int)m_bootstrap.size();
+				for(SortedMap< Endpoint::Type,Endpoint >::const_iterator i(m_bootstrap.begin());i != m_bootstrap.end();++i) {
 					if (tryAtIndex > 0) {
 						--tryAtIndex;
 					} else {
-						if ( ((i->first == Endpoint::TYPE_INETADDR_V4)||(i->first == Endpoint::TYPE_INETADDR_V6)) && (!i->second.inetAddr().ipsEqual(addr)) ) {
-							RR->t->tryingNewPath(tPtr,0x0a009444,_id,i->second.inetAddr(),InetAddress::NIL,0,0,Identity::NIL,ZT_TRACE_TRYING_NEW_PATH_REASON_BOOTSTRAP_ADDRESS);
-							hello(tPtr,-1,i->second.inetAddr(),now);
+						if ((i->second.isInetAddr())&&(!i->second.inetAddr().ipsEqual(addr))) {
+							RR->t->tryingNewPath(tPtr, 0x0a009444, m_id, i->second.inetAddr(), InetAddress::NIL, 0, 0, Identity::NIL, ZT_TRACE_TRYING_NEW_PATH_REASON_BOOTSTRAP_ADDRESS);
+							sent(now,probe(tPtr,-1,i->second.inetAddr(),now));
+							break;
 						}
 					}
 				}
+			}
+		} else {
+			for(int k=0;(k<ZT_NAT_T_MAX_QUEUED_ATTEMPTS_PER_PULSE)&&(!m_tryQueue.empty());++k) {
+				if (m_tryQueuePtr == m_tryQueue.end())
+					m_tryQueuePtr = m_tryQueue.begin();
+
+				if ((now - m_tryQueuePtr->ts) > ZT_PATH_ALIVE_TIMEOUT) {
+					m_tryQueue.erase(m_tryQueuePtr++);
+					continue;
+				}
+
+				if (m_tryQueuePtr->target.isInetAddr()) {
+					if ((m_tryQueuePtr->breakSymmetricBFG1024) && (RR->node->natMustDie())) {
+						// Attempt aggressive NAT traversal if both requested and enabled.
+						uint16_t ports[1023];
+						for (unsigned int i=0;i<1023;++i)
+							ports[i] = (uint64_t)(i + 1);
+						for (unsigned int i=0;i<512;++i) {
+							const uint64_t rn = Utils::random();
+							const unsigned int a = (unsigned int)rn % 1023;
+							const unsigned int b = (unsigned int)(rn >> 32U) % 1023;
+							if (a != b) {
+								uint16_t tmp = ports[a];
+								ports[a] = ports[b];
+								ports[b] = tmp;
+							}
+						}
+						InetAddress addr(m_tryQueuePtr->target.inetAddr());
+						for (unsigned int i = 0;i < ZT_NAT_T_BFG1024_PORTS_PER_ATTEMPT;++i) {
+							addr.setPort(ports[i]);
+							sent(now,probe(tPtr,-1,addr,now));
+						}
+					} else {
+						// Otherwise send a normal probe.
+						sent(now,probe(tPtr, -1, m_tryQueuePtr->target.inetAddr(), now));
+					}
+				}
+
+				++m_tryQueuePtr;
+			}
+		}
+	} else {
+		// Keep direct paths alive, sending a HELLO if we need one or else just a simple byte.
+		for(unsigned int i=0;i < m_alivePathCount;++i) {
+			if (needHello) {
+				needHello = false;
+				const unsigned int bytes = hello(tPtr, m_paths[i]->localSocket(), m_paths[i]->address(), now);
+				m_paths[i]->sent(now, bytes);
+				sent(now,bytes);
+			} else if ((now - m_paths[i]->lastOut()) >= ZT_PATH_KEEPALIVE_PERIOD) {
+				m_paths[i]->send(RR, tPtr, &now, 1, now);
+				sent(now,1);
+			}
+		}
+	}
+
+	// If we could not reliably send a HELLO via a direct path, send it by way of a root.
+	if (needHello) {
+		const SharedPtr<Peer> root(RR->topology->root());
+		if (root) {
+			const SharedPtr<Path> via(root->path(now));
+			if (via) {
+				const unsigned int bytes = hello(tPtr,via->localSocket(),via->address(),now);
+				via->sent(now,bytes);
+				root->relayed(now,bytes);
+				sent(now,bytes);
 			}
 		}
 	}
 }
 
+void Peer::tryDirectPath(const int64_t now,const Endpoint &ep,const bool breakSymmetricBFG1024)
+{
+	RWMutex::Lock l(m_lock);
+
+	for(List<p_TryQueueItem>::iterator i(m_tryQueue.begin());i != m_tryQueue.end();++i) { // NOLINT(modernize-loop-convert,hicpp-use-auto,modernize-use-auto)
+		if (i->target == ep) {
+			i->ts = now;
+			i->breakSymmetricBFG1024 = breakSymmetricBFG1024;
+			return;
+		}
+	}
+
+#ifdef __CPP11__
+	m_tryQueue.emplace_back(now, ep, breakSymmetricBFG1024);
+#else
+	_tryQueue.push_back(_TryQueueItem(now,ep,breakSymmetricBFG1024));
+#endif
+}
+
 void Peer::resetWithinScope(void *tPtr,InetAddress::IpScope scope,int inetAddressFamily,int64_t now)
 {
-	RWMutex::RLock l(_lock);
-	for(unsigned int i=0;i<_alivePathCount;++i) {
-		if ((_paths[i])&&((_paths[i]->address().family() == inetAddressFamily)&&(_paths[i]->address().ipScope() == scope)))
-			_paths[i]->sent(now,sendNOP(tPtr,_paths[i]->localSocket(),_paths[i]->address(),now));
+	RWMutex::RLock l(m_lock);
+	for(unsigned int i=0;i < m_alivePathCount;++i) {
+		if ((m_paths[i]) && ((m_paths[i]->address().family() == inetAddressFamily) && (m_paths[i]->address().ipScope() == scope))) {
+			const unsigned int bytes = probe(tPtr, m_paths[i]->localSocket(), m_paths[i]->address(), now);
+			m_paths[i]->sent(now, bytes);
+			sent(now,bytes);
+		}
 	}
 }
 
 bool Peer::directlyConnected(int64_t now)
 {
-	if ((now - _lastPrioritizedPaths) > ZT_PEER_PRIORITIZE_PATHS_INTERVAL) {
-		RWMutex::Lock l(_lock);
-		_prioritizePaths(now);
-		return _alivePathCount > 0;
+	if ((now - m_lastPrioritizedPaths) > ZT_PEER_PRIORITIZE_PATHS_INTERVAL) {
+		RWMutex::Lock l(m_lock);
+		m_prioritizePaths(now);
+		return m_alivePathCount > 0;
 	} else {
-		RWMutex::RLock l(_lock);
-		return _alivePathCount > 0;
+		RWMutex::RLock l(m_lock);
+		return m_alivePathCount > 0;
 	}
 }
 
 void Peer::getAllPaths(std::vector< SharedPtr<Path> > &paths)
 {
-	RWMutex::RLock l(_lock);
+	RWMutex::RLock l(m_lock);
 	paths.clear();
-	paths.assign(_paths,_paths + _alivePathCount);
+	paths.assign(m_paths, m_paths + m_alivePathCount);
 }
 
 void Peer::save(void *tPtr) const
@@ -312,179 +377,48 @@ void Peer::save(void *tPtr) const
 	const int len = marshal(buf + 8);
 	if (len > 0) {
 		uint64_t id[2];
-		id[0] = _id.address().toInt();
+		id[0] = m_id.address().toInt();
 		id[1] = 0;
 		RR->node->stateObjectPut(tPtr,ZT_STATE_OBJECT_PEER,id,buf,(unsigned int)len + 8);
 	}
-}
-
-void Peer::tryToContactAt(void *const tPtr,const Endpoint &ep,const int64_t now,const bool bfg1024)
-{
-	static uint8_t junk = 0;
-
-	if (ep.inetAddr()) { // only this endpoint type is currently implemented
-		if (!RR->node->shouldUsePathForZeroTierTraffic(tPtr,_id,-1,ep.inetAddr()))
-			return;
-
-		// Sending a packet with a low TTL before the real message assists traversal with some
-		// stateful firewalls and is harmless otherwise AFAIK.
-		++junk;
-		RR->node->putPacket(tPtr,-1,ep.inetAddr(),&junk,1,2);
-
-		// In a few hundred milliseconds we'll send the real packet.
-		{
-			RWMutex::Lock l(_lock);
-			_contactQueue.push_back(_ContactQueueItem(ep.inetAddr(),ZT_MAX_PEER_NETWORK_PATHS)); // NOLINT(hicpp-use-emplace,modernize-use-emplace)
-		}
-
-		// If the peer indicates that they may be behind a symmetric NAT and there are no
-		// living direct paths, try a few more aggressive things.
-		if ((ep.inetAddr().family() == AF_INET) && (!directlyConnected(now))) {
-			unsigned int port = ep.inetAddr().port();
-			if ((bfg1024)&&(port < 1024)&&(RR->node->natMustDie())) {
-				// If the other side is using a low-numbered port and has elected to
-				// have this done, we can try scanning every port below 1024. The search
-				// space here is small enough that we have a very good chance of punching.
-
-				// Generate a random order list of all <1024 ports except 0 and the original sending port.
-				uint16_t ports[1022];
-				uint16_t ctr = 1;
-				for (int i=0;i<1022;++i) { // NOLINT(modernize-loop-convert)
-					if (ctr == port) ++ctr;
-					ports[i] = ctr++;
-				}
-				for (int i=0;i<512;++i) {
-					uint64_t rn = Utils::random();
-					unsigned int a = ((unsigned int)rn) % 1022;
-					unsigned int b = ((unsigned int)(rn >> 24U)) % 1022;
-					if (a != b) {
-						uint16_t tmp = ports[a];
-						ports[a] = ports[b];
-						ports[b] = tmp;
-					}
-				}
-
-				// Chunk ports into chunks of 128 to try in few hundred millisecond intervals,
-				// abandoning attempts once there is at least one direct path.
-				{
-					static_assert((896 % ZT_PEER_BFG1024_PORT_SCAN_CHUNK_SIZE) == 0,"port scan chunk size doesn't evenly divide port list");
-					static_assert((1022 - 896) <= ZT_PEER_BFG1024_PORT_SCAN_CHUNK_SIZE,"port scan chunk size needs to be adjusted");
-					RWMutex::Lock l(_lock);
-					for (int i=0;i<896;i+=ZT_PEER_BFG1024_PORT_SCAN_CHUNK_SIZE)
-						_contactQueue.push_back(_ContactQueueItem(ep.inetAddr(),ports + i,ports + i + ZT_PEER_BFG1024_PORT_SCAN_CHUNK_SIZE,1)); // NOLINT(hicpp-use-emplace,modernize-use-emplace)
-					_contactQueue.push_back(_ContactQueueItem(ep.inetAddr(),ports + 896,ports + 1022,1)); // NOLINT(hicpp-use-emplace,modernize-use-emplace)
-				}
-			} else {
-				// Otherwise use the simpler sequential port attempt method in intervals.
-				RWMutex::Lock l(_lock);
-				for (int k=0;k<3;++k) {
-					if (++port > 65535) break;
-					InetAddress tryNext(ep.inetAddr());
-					tryNext.setPort(port);
-					_contactQueue.push_back(_ContactQueueItem(tryNext,1)); // NOLINT(hicpp-use-emplace,modernize-use-emplace)
-				}
-			}
-		}
-
-		// Start alarms going off to actually send these...
-		RR->node->setPeerAlarm(_id.fingerprint(),now + ZT_NAT_TRAVERSAL_INTERVAL);
-	}
-}
-
-void Peer::alarm(void *tPtr,const int64_t now)
-{
-	// Right now alarms are only used for multi-phase or multi-step NAT traversal operations.
-
-	// Pop one contact queue item and also clean the queue of any that are no
-	// longer applicable because the alive path count has exceeded their threshold.
-	bool stillHaveContactQueueItems;
-	_ContactQueueItem qi;
-	{
-		RWMutex::Lock l(_lock);
-
-		if (_contactQueue.empty())
-			return;
-		while (_alivePathCount >= _contactQueue.front().alivePathThreshold) {
-			_contactQueue.pop_front();
-			if (_contactQueue.empty())
-				return;
-		}
-
-		_ContactQueueItem &qi2 = _contactQueue.front();
-		qi.address = qi2.address;
-		qi.ports = qi2.ports;
-		qi.alivePathThreshold = qi2.alivePathThreshold;
-		_contactQueue.pop_front();
-
-		for(std::list< _ContactQueueItem,Utils::Mallocator<_ContactQueueItem> >::iterator q(_contactQueue.begin());q!=_contactQueue.end();) { // NOLINT(hicpp-use-auto,modernize-use-auto)
-			if (_alivePathCount >= q->alivePathThreshold)
-				_contactQueue.erase(q++);
-			else ++q;
-		}
-
-		stillHaveContactQueueItems = !_contactQueue.empty();
-	}
-
-	if ((_vProto >= 11) && (_probe != 0)) {
-		if (qi.ports.empty()) {
-			RR->node->putPacket(tPtr,-1,qi.address,&_probe,ZT_PROTO_PROBE_LENGTH);
-		} else {
-			for (FCV<uint16_t,ZT_PEER_BFG1024_PORT_SCAN_CHUNK_SIZE>::iterator p(qi.ports.begin()); p != qi.ports.end(); ++p) { // NOLINT(hicpp-use-auto,modernize-use-auto)
-				qi.address.setPort(*p);
-				RR->node->putPacket(tPtr,-1,qi.address,&_probe,ZT_PROTO_PROBE_LENGTH);
-			}
-		}
-	} else {
-		if (qi.ports.empty()) {
-			this->sendNOP(tPtr,-1,qi.address,now);
-		} else {
-			for (FCV<uint16_t,ZT_PEER_BFG1024_PORT_SCAN_CHUNK_SIZE>::iterator p(qi.ports.begin()); p != qi.ports.end(); ++p) { // NOLINT(hicpp-use-auto,modernize-use-auto)
-				qi.address.setPort(*p);
-				this->sendNOP(tPtr,-1,qi.address,now);
-			}
-		}
-	}
-
-	if (stillHaveContactQueueItems)
-		RR->node->setPeerAlarm(_id.fingerprint(),now + ZT_NAT_TRAVERSAL_INTERVAL);
 }
 
 int Peer::marshal(uint8_t data[ZT_PEER_MARSHAL_SIZE_MAX]) const noexcept
 {
 	data[0] = 0; // serialized peer version
 
-	RWMutex::RLock l(_lock);
+	RWMutex::RLock l(m_lock);
 
-	int s = _identityKey.marshal(RR->localCacheSymmetric,data + 1);
+	int s = m_identityKey.marshal(RR->localCacheSymmetric, data + 1);
 	if (s < 0)
 		return -1;
 	int p = 1 + s;
 
-	s = _id.marshal(data + p,false);
+	s = m_id.marshal(data + p, false);
 	if (s < 0)
 		return -1;
 	p += s;
 
-	s = _locator.marshal(data + p);
+	s = m_locator.marshal(data + p);
 	if (s <= 0)
 		return s;
 	p += s;
 
-	data[p++] = (uint8_t)_bootstrap.size();
-	for(std::map< Endpoint::Type,Endpoint >::const_iterator i(_bootstrap.begin());i!=_bootstrap.end();++i) { // NOLINT(modernize-loop-convert,hicpp-use-auto,modernize-use-auto)
+	data[p++] = (uint8_t)m_bootstrap.size();
+	for(std::map< Endpoint::Type,Endpoint >::const_iterator i(m_bootstrap.begin());i != m_bootstrap.end();++i) { // NOLINT(modernize-loop-convert,hicpp-use-auto,modernize-use-auto)
 		s = i->second.marshal(data + p);
 		if (s <= 0)
 			return -1;
 		p += s;
 	}
 
-	Utils::storeBigEndian(data + p,(uint16_t)_vProto);
+	Utils::storeBigEndian(data + p,(uint16_t)m_vProto);
 	p += 2;
-	Utils::storeBigEndian(data + p,(uint16_t)_vMajor);
+	Utils::storeBigEndian(data + p,(uint16_t)m_vMajor);
 	p += 2;
-	Utils::storeBigEndian(data + p,(uint16_t)_vMinor);
+	Utils::storeBigEndian(data + p,(uint16_t)m_vMinor);
 	p += 2;
-	Utils::storeBigEndian(data + p,(uint16_t)_vRevision);
+	Utils::storeBigEndian(data + p,(uint16_t)m_vRevision);
 	p += 2;
 
 	data[p++] = 0;
@@ -495,12 +429,12 @@ int Peer::marshal(uint8_t data[ZT_PEER_MARSHAL_SIZE_MAX]) const noexcept
 
 int Peer::unmarshal(const uint8_t *restrict data,const int len) noexcept
 {
-	RWMutex::Lock l(_lock);
+	RWMutex::Lock l(m_lock);
 
 	if ((len <= 1) || (data[0] != 0))
 		return -1;
 
-	int s = _identityKey.unmarshal(RR->localCacheSymmetric,data + 1,len);
+	int s = m_identityKey.unmarshal(RR->localCacheSymmetric, data + 1, len);
 	if (s < 0)
 		return -1;
 	int p = 1 + s;
@@ -509,24 +443,24 @@ int Peer::unmarshal(const uint8_t *restrict data,const int len) noexcept
 	// identity has changed. In this case we do not have to forget everything about
 	// the peer but we must generate a new identity key by key agreement with our
 	// new identity.
-	if (!_identityKey) {
+	if (!m_identityKey) {
 		uint8_t tmp[ZT_SYMMETRIC_KEY_SIZE];
-		if (!RR->identity.agree(_id,tmp))
+		if (!RR->identity.agree(m_id, tmp))
 			return -1;
-		_identityKey.init(RR->node->now(),tmp);
+		m_identityKey.init(RR->node->now(), tmp);
 		Utils::burn(tmp,sizeof(tmp));
 	}
 
 	// These are ephemeral and start out as NIL after unmarshal.
-	_ephemeralKeys[0].clear();
-	_ephemeralKeys[1].clear();
+	m_ephemeralKeys[0].clear();
+	m_ephemeralKeys[1].clear();
 
-	s = _id.unmarshal(data + 38,len - 38);
+	s = m_id.unmarshal(data + 38, len - 38);
 	if (s < 0)
 		return s;
 	p += s;
 
-	s = _locator.unmarshal(data + p,len - p);
+	s = m_locator.unmarshal(data + p, len - p);
 	if (s < 0)
 		return s;
 	p += s;
@@ -536,24 +470,24 @@ int Peer::unmarshal(const uint8_t *restrict data,const int len) noexcept
 	const unsigned int bootstrapCount = data[p++];
 	if (bootstrapCount > ZT_MAX_PEER_NETWORK_PATHS)
 		return -1;
-	_bootstrap.clear();
+	m_bootstrap.clear();
 	for(unsigned int i=0;i<bootstrapCount;++i) {
 		Endpoint tmp;
 		s = tmp.unmarshal(data + p,len - p);
 		if (s < 0)
 			return s;
 		p += s;
-		_bootstrap[tmp.type()] = tmp;
+		m_bootstrap[tmp.type()] = tmp;
 	}
 
-	_probe = 0; // ephemeral token, reset on unmarshal
+	m_probe = 0; // ephemeral token, reset on unmarshal
 
 	if ((p + 10) > len)
 		return -1;
-	_vProto = Utils::loadBigEndian<uint16_t>(data + p); p += 2;
-	_vMajor = Utils::loadBigEndian<uint16_t>(data + p); p += 2;
-	_vMinor = Utils::loadBigEndian<uint16_t>(data + p); p += 2;
-	_vRevision = Utils::loadBigEndian<uint16_t>(data + p); p += 2;
+	m_vProto = Utils::loadBigEndian<uint16_t>(data + p); p += 2;
+	m_vMajor = Utils::loadBigEndian<uint16_t>(data + p); p += 2;
+	m_vMinor = Utils::loadBigEndian<uint16_t>(data + p); p += 2;
+	m_vRevision = Utils::loadBigEndian<uint16_t>(data + p); p += 2;
 	p += 2 + (int)Utils::loadBigEndian<uint16_t>(data + p);
 
 	return (p > len) ? -1 : p;
@@ -563,28 +497,28 @@ struct _PathPriorityComparisonOperator
 {
 	ZT_INLINE bool operator()(const SharedPtr<Path> &a,const SharedPtr<Path> &b) const noexcept
 	{
-		// Sort in order of last received time for receipt of anything over path, which prioritizes
-		// paths by aliveness. This will go away when we merge in multipath in favor of something
-		// much smarter.
-		return ( ((a)&&(a->lastIn() > 0)) && ((!b)||(b->lastIn() <= 0)||(a->lastIn() < b->lastIn())) );
+		// Sort in descending order of most recent receive time.
+		return (a->lastIn() > b->lastIn());
 	}
 };
 
-void Peer::_prioritizePaths(const int64_t now)
+void Peer::m_prioritizePaths(int64_t now)
 {
 	// assumes _lock is locked for writing
-	_lastPrioritizedPaths = now;
+	m_lastPrioritizedPaths = now;
 
-	std::sort(_paths,_paths + ZT_MAX_PEER_NETWORK_PATHS,_PathPriorityComparisonOperator());
+	if (m_alivePathCount > 0) {
+		// Sort paths in descending order of priority.
+		std::sort(m_paths, m_paths + m_alivePathCount, _PathPriorityComparisonOperator());
 
-	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-		if ((!_paths[i]) || (!_paths[i]->alive(now))) {
-			_alivePathCount = i;
-
-			for(;i<ZT_MAX_PEER_NETWORK_PATHS;++i)
-				_paths[i].zero();
-
-			break;
+		// Let go of paths that have expired.
+		for (unsigned int i = 0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
+			if ((!m_paths[i]) || (!m_paths[i]->alive(now))) {
+				m_alivePathCount = i;
+				for (;i < ZT_MAX_PEER_NETWORK_PATHS;++i)
+					m_paths[i].zero();
+				break;
+			}
 		}
 	}
 }

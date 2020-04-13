@@ -21,10 +21,10 @@ namespace ZeroTier {
 bool Capability::sign(const Identity &from,const Address &to) noexcept
 {
 	uint8_t buf[ZT_CAPABILITY_MARSHAL_SIZE_MAX + 16];
-	_issuedTo = to;
-	_signedBy = from.address();
-	_signatureLength = from.sign(buf,(unsigned int)marshal(buf,true),_signature,sizeof(_signature));
-	return _signatureLength > 0;
+	m_issuedTo = to;
+	m_signedBy = from.address();
+	m_signatureLength = from.sign(buf, (unsigned int)marshal(buf, true), m_signature, sizeof(m_signature));
+	return m_signatureLength > 0;
 }
 
 int Capability::marshal(uint8_t data[ZT_CAPABILITY_MARSHAL_SIZE_MAX],const bool forSign) const noexcept
@@ -36,23 +36,23 @@ int Capability::marshal(uint8_t data[ZT_CAPABILITY_MARSHAL_SIZE_MAX],const bool 
 			data[p++] = 0x7f;
 	}
 
-	Utils::storeBigEndian<uint64_t>(data + p,_nwid); p += 8;
-	Utils::storeBigEndian<uint64_t>(data + p,(uint64_t)_ts); p += 8;
-	Utils::storeBigEndian<uint32_t>(data + p,_id); p += 4;
+	Utils::storeBigEndian<uint64_t>(data + p, m_nwid); p += 8;
+	Utils::storeBigEndian<uint64_t>(data + p,(uint64_t)m_ts); p += 8;
+	Utils::storeBigEndian<uint32_t>(data + p, m_id); p += 4;
 
-	Utils::storeBigEndian<uint16_t>(data + p,(uint16_t)_ruleCount); p += 2;
-	p += Capability::marshalVirtualNetworkRules(data + p,_rules,_ruleCount);
+	Utils::storeBigEndian<uint16_t>(data + p,(uint16_t)m_ruleCount); p += 2;
+	p += Capability::marshalVirtualNetworkRules(data + p, m_rules, m_ruleCount);
 
 	// LEGACY: older versions supported multiple records with this being a maximum custody
 	// chain length. This is deprecated so set the max chain length to one.
 	data[p++] = (uint8_t)1;
 
 	if (!forSign) {
-		_issuedTo.copyTo(data + p); p += ZT_ADDRESS_LENGTH;
-		_signedBy.copyTo(data + 0); p += ZT_ADDRESS_LENGTH;
+		m_issuedTo.copyTo(data + p); p += ZT_ADDRESS_LENGTH;
+		m_signedBy.copyTo(data + 0); p += ZT_ADDRESS_LENGTH;
 		data[p++] = 1; // LEGACY: old versions require a reserved byte here
-		Utils::storeBigEndian<uint16_t>(data + p,(uint16_t)_signatureLength); p += 2;
-		Utils::copy(data + p,_signature,_signatureLength); p += (int)_signatureLength;
+		Utils::storeBigEndian<uint16_t>(data + p,(uint16_t)m_signatureLength); p += 2;
+		Utils::copy(data + p, m_signature, m_signatureLength); p += (int)m_signatureLength;
 
 		// LEGACY: older versions supported more than one record terminated by a zero address.
 		for(int k=0;k<ZT_ADDRESS_LENGTH;++k)
@@ -75,14 +75,14 @@ int Capability::unmarshal(const uint8_t *data,int len) noexcept
 	if (len < 22)
 		return -1;
 
-	_nwid = Utils::loadBigEndian<uint64_t>(data);
-	_ts = (int64_t)Utils::loadBigEndian<uint64_t>(data + 8);
-	_id = Utils::loadBigEndian<uint32_t>(data + 16);
+	m_nwid = Utils::loadBigEndian<uint64_t>(data);
+	m_ts = (int64_t)Utils::loadBigEndian<uint64_t>(data + 8);
+	m_id = Utils::loadBigEndian<uint32_t>(data + 16);
 
 	const unsigned int rc = Utils::loadBigEndian<uint16_t>(data + 20);
 	if (rc > ZT_MAX_CAPABILITY_RULES)
 		return -1;
-	const int rulesLen = unmarshalVirtualNetworkRules(data + 22,len - 22,_rules,_ruleCount,rc);
+	const int rulesLen = unmarshalVirtualNetworkRules(data + 22,len - 22, m_rules, m_ruleCount, rc);
 	if (rulesLen < 0)
 		return rulesLen;
 	int p = 22 + rulesLen;
@@ -103,17 +103,17 @@ int Capability::unmarshal(const uint8_t *data,int len) noexcept
 		if (!to)
 			break;
 
-		_issuedTo = to;
+		m_issuedTo = to;
 		if ((p + ZT_ADDRESS_LENGTH) > len)
 			return -1;
-		_signedBy.setTo(data + p); p += ZT_ADDRESS_LENGTH + 1; // LEGACY: +1 to skip reserved field
+		m_signedBy.setTo(data + p); p += ZT_ADDRESS_LENGTH + 1; // LEGACY: +1 to skip reserved field
 
 		if ((p + 2) > len)
 			return -1;
-		_signatureLength = Utils::loadBigEndian<uint16_t>(data + p); p += 2;
-		if ((_signatureLength > sizeof(_signature))||((p + (int)_signatureLength) > len))
+		m_signatureLength = Utils::loadBigEndian<uint16_t>(data + p); p += 2;
+		if ((m_signatureLength > sizeof(m_signature)) || ((p + (int)m_signatureLength) > len))
 			return -1;
-		Utils::copy(_signature,data + p,_signatureLength); p += (int)_signatureLength;
+		Utils::copy(m_signature, data + p, m_signatureLength); p += (int)m_signatureLength;
 	}
 
 	if ((p + 2) > len)

@@ -49,11 +49,11 @@ public:
 	 */
 	ZT_INLINE SymmetricKey() noexcept : // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init,hicpp-use-equals-default,modernize-use-equals-default)
 		cipher(),
-		_ts(0),
-		_nonceBase(0),
-		_odometer(0)
+		m_ts(0),
+		m_nonceBase(0),
+		m_odometer(0)
 	{
-		Utils::memoryLock(_k,sizeof(_k));
+		Utils::memoryLock(m_secret, sizeof(m_secret));
 	}
 
 	/**
@@ -64,38 +64,38 @@ public:
 	 */
 	explicit ZT_INLINE SymmetricKey(const int64_t ts,const void *const key) noexcept : // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 		cipher(key),
-		_ts(ts),
-		_nonceBase((uint64_t)ts << 22U), // << 22 to shift approximately the seconds since epoch into the most significant 32 bits
-		_odometer(0)
+		m_ts(ts),
+		m_nonceBase((uint64_t)ts << 22U), // << 22 to shift approximately the seconds since epoch into the most significant 32 bits
+		m_odometer(0)
 	{
-		Utils::memoryLock(_k,sizeof(_k));
-		Utils::copy<ZT_SYMMETRIC_KEY_SIZE>(_k,key);
+		Utils::memoryLock(m_secret, sizeof(m_secret));
+		Utils::copy<ZT_SYMMETRIC_KEY_SIZE>(m_secret, key);
 	}
 
 	ZT_INLINE SymmetricKey(const SymmetricKey &k) noexcept : // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
-		cipher(k._k),
-		_ts(k.ts),
-		_nonceBase(k._nonceBase),
-		_odometer(k._odometer)
+		cipher(k.m_secret),
+		m_ts(k.ts),
+		m_nonceBase(k.m_nonceBase),
+		m_odometer(k.m_odometer)
 	{
-		Utils::memoryLock(_k,sizeof(_k));
-		Utils::copy<ZT_SYMMETRIC_KEY_SIZE>(_k,k._k);
+		Utils::memoryLock(m_secret, sizeof(m_secret));
+		Utils::copy<ZT_SYMMETRIC_KEY_SIZE>(m_secret, k.m_secret);
 	}
 
 	ZT_INLINE ~SymmetricKey() noexcept
 	{
-		Utils::burn(_k,sizeof(_k));
-		Utils::memoryUnlock(_k,sizeof(_k));
+		Utils::burn(m_secret, sizeof(m_secret));
+		Utils::memoryUnlock(m_secret, sizeof(m_secret));
 	}
 
 	ZT_INLINE SymmetricKey &operator=(const SymmetricKey &k) noexcept
 	{
 		if (&k != this) {
-			cipher.init(k._k);
-			_ts = k._ts;
-			_nonceBase = k._nonceBase;
-			_odometer = k._odometer;
-			Utils::copy<ZT_SYMMETRIC_KEY_SIZE>(_k,k._k);
+			cipher.init(k.m_secret);
+			m_ts = k.m_ts;
+			m_nonceBase = k.m_nonceBase;
+			m_odometer = k.m_odometer;
+			Utils::copy<ZT_SYMMETRIC_KEY_SIZE>(m_secret, k.m_secret);
 		}
 		return *this;
 	}
@@ -111,13 +111,13 @@ public:
 	 */
 	ZT_INLINE bool init(const int64_t ts,const void *const key) noexcept
 	{
-		if ((_ts > 0)&&(memcmp(_k,key,ZT_SYMMETRIC_KEY_SIZE) == 0))
+		if ((m_ts > 0) && (memcmp(m_secret, key, ZT_SYMMETRIC_KEY_SIZE) == 0))
 			return false;
 		cipher.init(key);
-		_ts = ts;
-		_nonceBase = (uint64_t)ts << 22U; // << 22 to shift approximately the seconds since epoch into the most significant 32 bits;
-		_odometer = 0;
-		Utils::copy<ZT_SYMMETRIC_KEY_SIZE>(_k,key);
+		m_ts = ts;
+		m_nonceBase = (uint64_t)ts << 22U; // << 22 to shift approximately the seconds since epoch into the most significant 32 bits;
+		m_odometer = 0;
+		Utils::copy<ZT_SYMMETRIC_KEY_SIZE>(m_secret, key);
 		return true;
 	}
 
@@ -126,10 +126,10 @@ public:
 	 */
 	ZT_INLINE void clear() noexcept
 	{
-		_ts = 0;
-		_nonceBase = 0;
-		_odometer = 0;
-		Utils::zero<ZT_SYMMETRIC_KEY_SIZE>(_k);
+		m_ts = 0;
+		m_nonceBase = 0;
+		m_odometer = 0;
+		Utils::zero<ZT_SYMMETRIC_KEY_SIZE>(m_secret);
 	}
 
 	/**
@@ -140,7 +140,7 @@ public:
 	 */
 	ZT_INLINE bool expiringSoon(const int64_t now) const noexcept
 	{
-		return (TTL > 0) && ( ((now - _ts) >= (TTL / 2)) || (_odometer >= (TTLM / 2)) );
+		return (TTL > 0) && (((now - m_ts) >= (TTL / 2)) || (m_odometer >= (TTLM / 2)) );
 	}
 
 	/**
@@ -151,7 +151,7 @@ public:
 	 */
 	ZT_INLINE bool expired(const int64_t now) const noexcept
 	{
-		return (TTL > 0) && ( ((now - _ts) >= TTL) || (_odometer >= TTLM) );
+		return (TTL > 0) && (((now - m_ts) >= TTL) || (m_odometer >= TTLM) );
 	}
 
 	/**
@@ -169,7 +169,7 @@ public:
 	 */
 	ZT_INLINE const uint8_t *key() const noexcept
 	{
-		return _k;
+		return m_secret;
 	}
 
 	/**
@@ -179,13 +179,13 @@ public:
 	 */
 	ZT_INLINE uint64_t nextMessageIv() noexcept
 	{
-		return _nonceBase + _odometer++;
+		return m_nonceBase + m_odometer++;
 	}
 
 	/**
 	 * @return True if this object is not NIL
 	 */
-	ZT_INLINE operator bool() const noexcept { return (_ts > 0); } // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
+	ZT_INLINE operator bool() const noexcept { return (m_ts > 0); } // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
 
 	static constexpr int marshalSizeMax() noexcept { return ZT_SYMMETRICKEY_MARSHAL_SIZE_MAX; }
 
@@ -200,9 +200,9 @@ public:
 	template<typename MC>
 	ZT_INLINE int marshal(const MC &keyEncCipher,uint8_t data[ZT_SYMMETRICKEY_MARSHAL_SIZE_MAX]) const noexcept
 	{
-		Utils::storeBigEndian<uint64_t>(data,(uint64_t)_ts);
-		Utils::storeBigEndian<uint64_t>(data + 8,_odometer.load());
-		Utils::storeBigEndian<uint32_t>(data + 16,Utils::fnv1a32(_k,sizeof(_k)));
+		Utils::storeBigEndian<uint64_t>(data,(uint64_t)m_ts);
+		Utils::storeBigEndian<uint64_t>(data + 8, m_odometer.load());
+		Utils::storeBigEndian<uint32_t>(data + 16,Utils::fnv1a32(m_secret, sizeof(m_secret)));
 
 		// Key encryption at rest is CBC using the last 32 bits of the timestamp, the odometer,
 		// and the FNV1a checksum as a 128-bit IV. A duplicate IV wouldn't matter much anyway since
@@ -210,10 +210,10 @@ public:
 		// looks better.
 		uint8_t tmp[16];
 		for(int i=0;i<16;++i)
-			tmp[i] = data[i + 4] ^ _k[i];
+			tmp[i] = data[i + 4] ^ m_secret[i];
 		keyEncCipher.encrypt(tmp,data + 20);
 		for(int i=0;i<16;++i)
-			tmp[i] = data[i + 20] ^ _k[i + 16];
+			tmp[i] = data[i + 20] ^ m_secret[i + 16];
 		keyEncCipher.encrypt(tmp,data + 36);
 
 		return ZT_SYMMETRICKEY_MARSHAL_SIZE_MAX;
@@ -238,29 +238,29 @@ public:
 		if (len < ZT_SYMMETRICKEY_MARSHAL_SIZE_MAX)
 			return -1;
 
-		_ts = (int64_t)Utils::loadBigEndian<uint64_t>(data);
-		_odometer = (uint64_t)Utils::loadBigEndian<uint64_t>(data + 8);
+		m_ts = (int64_t)Utils::loadBigEndian<uint64_t>(data);
+		m_odometer = (uint64_t)Utils::loadBigEndian<uint64_t>(data + 8);
 		const uint32_t fnv = Utils::loadBigEndian<uint32_t>(data + 16); // NOLINT(hicpp-use-auto,modernize-use-auto)
 
 		uint8_t tmp[16];
 		keyDecCipher.decrypt(data + 20,tmp);
 		for(int i=0;i<16;++i)
-			_k[i] = data[i + 4] ^ tmp[i];
+			m_secret[i] = data[i + 4] ^ tmp[i];
 		keyDecCipher.decrypt(data + 36,tmp);
 		for(int i=0;i<16;++i)
-			_k[i + 16] = data[i + 20] ^ tmp[i];
+			m_secret[i + 16] = data[i + 20] ^ tmp[i];
 
-		if (Utils::fnv1a32(_k,sizeof(_k)) != fnv)
+		if (Utils::fnv1a32(m_secret, sizeof(m_secret)) != fnv)
 			clear();
 
 		return ZT_SYMMETRICKEY_MARSHAL_SIZE_MAX;
 	}
 
 private:
-	int64_t _ts;
-	uint64_t _nonceBase;
-	std::atomic<uint64_t> _odometer;
-	uint8_t _k[ZT_SYMMETRIC_KEY_SIZE];
+	int64_t m_ts;
+	uint64_t m_nonceBase;
+	std::atomic<uint64_t> m_odometer;
+	uint8_t m_secret[ZT_SYMMETRIC_KEY_SIZE];
 };
 
 } // namespace ZeroTier

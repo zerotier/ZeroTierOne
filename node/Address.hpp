@@ -17,6 +17,7 @@
 #include "Constants.hpp"
 #include "Utils.hpp"
 #include "TriviallyCopyable.hpp"
+#include "Containers.hpp"
 
 #define ZT_ADDRESS_STRING_SIZE_MAX 11
 
@@ -91,6 +92,7 @@ public:
 		s[10] = 0;
 		return s;
 	}
+	ZT_INLINE String toString() const { char s[ZT_ADDRESS_STRING_SIZE_MAX]; toString(s); return String(s); }
 
 	/**
 	 * Check if this address is reserved

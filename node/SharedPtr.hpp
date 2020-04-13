@@ -30,27 +30,27 @@ template<typename T>
 class SharedPtr : public TriviallyCopyable
 {
 public:
-	ZT_INLINE SharedPtr() noexcept : _ptr((T *)0) {}
-	explicit ZT_INLINE SharedPtr(T *obj) noexcept : _ptr(obj) { ++obj->__refCount; }
-	ZT_INLINE SharedPtr(const SharedPtr &sp) noexcept : _ptr(sp._getAndInc()) {}
+	ZT_INLINE SharedPtr() noexcept : m_ptr((T *)0) {}
+	explicit ZT_INLINE SharedPtr(T *obj) noexcept : m_ptr(obj) { ++obj->__refCount; }
+	ZT_INLINE SharedPtr(const SharedPtr &sp) noexcept : m_ptr(sp._getAndInc()) {}
 
 	ZT_INLINE ~SharedPtr()
 	{
-		if (_ptr) {
-			if (--_ptr->__refCount <= 0)
-				delete _ptr;
+		if (m_ptr) {
+			if (--m_ptr->__refCount <= 0)
+				delete m_ptr;
 		}
 	}
 
 	ZT_INLINE SharedPtr &operator=(const SharedPtr &sp)
 	{
-		if (_ptr != sp._ptr) {
+		if (m_ptr != sp.m_ptr) {
 			T *p = sp._getAndInc();
-			if (_ptr) {
-				if (--_ptr->__refCount <= 0)
-					delete _ptr;
+			if (m_ptr) {
+				if (--m_ptr->__refCount <= 0)
+					delete m_ptr;
 			}
-			_ptr = p;
+			m_ptr = p;
 		}
 		return *this;
 	}
@@ -67,7 +67,7 @@ public:
 	{
 		zero();
 		++ptr->__refCount;
-		_ptr = ptr;
+		m_ptr = ptr;
 	}
 
 	/**
@@ -77,7 +77,7 @@ public:
 	 *
 	 * @param ptr Pointer to set
 	 */
-	ZT_INLINE void unsafeSet(T *ptr) noexcept { _ptr = ptr; }
+	ZT_INLINE void unsafeSet(T *ptr) noexcept { m_ptr = ptr; }
 
 	/**
 	 * Swap with another pointer 'for free' without ref count overhead
@@ -86,9 +86,9 @@ public:
 	 */
 	ZT_INLINE void swap(SharedPtr &with) noexcept
 	{
-		T *tmp = _ptr;
-		_ptr = with._ptr;
-		with._ptr = tmp;
+		T *tmp = m_ptr;
+		m_ptr = with.m_ptr;
+		with.m_ptr = tmp;
 	}
 
 	/**
@@ -101,33 +101,33 @@ public:
 	 */
 	ZT_INLINE void move(SharedPtr &from)
 	{
-		if (_ptr) {
-			if (--_ptr->__refCount <= 0)
-				delete _ptr;
+		if (m_ptr) {
+			if (--m_ptr->__refCount <= 0)
+				delete m_ptr;
 		}
-		_ptr = from._ptr;
-		from._ptr = nullptr;
+		m_ptr = from.m_ptr;
+		from.m_ptr = nullptr;
 	}
 
-	ZT_INLINE operator bool() const noexcept { return (_ptr != nullptr); } // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
+	ZT_INLINE operator bool() const noexcept { return (m_ptr != nullptr); } // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
 
-	ZT_INLINE T &operator*() const noexcept { return *_ptr; }
-	ZT_INLINE T *operator->() const noexcept { return _ptr; }
+	ZT_INLINE T &operator*() const noexcept { return *m_ptr; }
+	ZT_INLINE T *operator->() const noexcept { return m_ptr; }
 
 	/**
 	 * @return Raw pointer to held object
 	 */
-	ZT_INLINE T *ptr() const noexcept { return _ptr; }
+	ZT_INLINE T *ptr() const noexcept { return m_ptr; }
 
 	/**
 	 * Set this pointer to NULL
 	 */
 	ZT_INLINE void zero()
 	{
-		if (_ptr) {
-			if (--_ptr->__refCount <= 0)
-				delete _ptr;
-			_ptr = (T *)0;
+		if (m_ptr) {
+			if (--m_ptr->__refCount <= 0)
+				delete m_ptr;
+			m_ptr = (T *)0;
 		}
 	}
 
@@ -136,26 +136,26 @@ public:
 	 */
 	ZT_INLINE int references() noexcept
 	{
-		if (_ptr)
-			return _ptr->__refCount;
+		if (m_ptr)
+			return m_ptr->__refCount;
 		return 0;
 	}
 
-	ZT_INLINE bool operator==(const SharedPtr &sp) const noexcept { return (_ptr == sp._ptr); }
-	ZT_INLINE bool operator!=(const SharedPtr &sp) const noexcept { return (_ptr != sp._ptr); }
-	ZT_INLINE bool operator>(const SharedPtr &sp) const noexcept { return (_ptr > sp._ptr); }
-	ZT_INLINE bool operator<(const SharedPtr &sp) const noexcept { return (_ptr < sp._ptr); }
-	ZT_INLINE bool operator>=(const SharedPtr &sp) const noexcept { return (_ptr >= sp._ptr); }
-	ZT_INLINE bool operator<=(const SharedPtr &sp) const noexcept { return (_ptr <= sp._ptr); }
+	ZT_INLINE bool operator==(const SharedPtr &sp) const noexcept { return (m_ptr == sp.m_ptr); }
+	ZT_INLINE bool operator!=(const SharedPtr &sp) const noexcept { return (m_ptr != sp.m_ptr); }
+	ZT_INLINE bool operator>(const SharedPtr &sp) const noexcept { return (m_ptr > sp.m_ptr); }
+	ZT_INLINE bool operator<(const SharedPtr &sp) const noexcept { return (m_ptr < sp.m_ptr); }
+	ZT_INLINE bool operator>=(const SharedPtr &sp) const noexcept { return (m_ptr >= sp.m_ptr); }
+	ZT_INLINE bool operator<=(const SharedPtr &sp) const noexcept { return (m_ptr <= sp.m_ptr); }
 
 private:
 	ZT_INLINE T *_getAndInc() const noexcept
 	{
-		if (_ptr)
-			++_ptr->__refCount;
-		return _ptr;
+		if (m_ptr)
+			++m_ptr->__refCount;
+		return m_ptr;
 	}
-	T *_ptr;
+	T *m_ptr;
 };
 
 } // namespace ZeroTier

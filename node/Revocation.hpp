@@ -59,28 +59,28 @@ public:
 	 * @param ct Credential type being revoked
 	 */
 	ZT_INLINE Revocation(const uint32_t i,const uint64_t nwid,const uint32_t cid,const uint64_t thr,const uint64_t fl,const Address &tgt,const ZT_CredentialType ct) noexcept : // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
-		_id(i),
-		_credentialId(cid),
-		_networkId(nwid),
-		_threshold(thr),
-		_flags(fl),
-		_target(tgt),
-		_signedBy(),
-		_type(ct),
-		_signatureLength(0)
+		m_id(i),
+		m_credentialId(cid),
+		m_networkId(nwid),
+		m_threshold(thr),
+		m_flags(fl),
+		m_target(tgt),
+		m_signedBy(),
+		m_type(ct),
+		m_signatureLength(0)
 	{
 	}
 
-	ZT_INLINE uint32_t id() const noexcept { return _id; }
-	ZT_INLINE uint32_t credentialId() const noexcept { return _credentialId; }
-	ZT_INLINE uint64_t networkId() const noexcept { return _networkId; }
-	ZT_INLINE int64_t threshold() const noexcept { return _threshold; }
-	ZT_INLINE const Address &target() const noexcept { return _target; }
-	ZT_INLINE const Address &signer() const noexcept { return _signedBy; }
-	ZT_INLINE ZT_CredentialType typeBeingRevoked() const noexcept { return _type; }
-	ZT_INLINE const uint8_t *signature() const noexcept { return _signature; }
-	ZT_INLINE unsigned int signatureLength() const noexcept { return _signatureLength; }
-	ZT_INLINE bool fastPropagate() const noexcept { return ((_flags & ZT_REVOCATION_FLAG_FAST_PROPAGATE) != 0); }
+	ZT_INLINE uint32_t id() const noexcept { return m_id; }
+	ZT_INLINE uint32_t credentialId() const noexcept { return m_credentialId; }
+	ZT_INLINE uint64_t networkId() const noexcept { return m_networkId; }
+	ZT_INLINE int64_t threshold() const noexcept { return m_threshold; }
+	ZT_INLINE const Address &target() const noexcept { return m_target; }
+	ZT_INLINE const Address &signer() const noexcept { return m_signedBy; }
+	ZT_INLINE ZT_CredentialType typeBeingRevoked() const noexcept { return m_type; }
+	ZT_INLINE const uint8_t *signature() const noexcept { return m_signature; }
+	ZT_INLINE unsigned int signatureLength() const noexcept { return m_signatureLength; }
+	ZT_INLINE bool fastPropagate() const noexcept { return ((m_flags & ZT_REVOCATION_FLAG_FAST_PROPAGATE) != 0); }
 
 	/**
 	 * @param signer Signing identity, must have private key
@@ -101,16 +101,16 @@ public:
 	int unmarshal(const uint8_t *restrict data,int len) noexcept;
 
 private:
-	uint32_t _id;
-	uint32_t _credentialId;
-	uint64_t _networkId;
-	int64_t _threshold;
-	uint64_t _flags;
-	Address _target;
-	Address _signedBy;
-	ZT_CredentialType _type;
-	unsigned int _signatureLength;
-	uint8_t _signature[ZT_SIGNATURE_BUFFER_SIZE];
+	uint32_t m_id;
+	uint32_t m_credentialId;
+	uint64_t m_networkId;
+	int64_t m_threshold;
+	uint64_t m_flags;
+	Address m_target;
+	Address m_signedBy;
+	ZT_CredentialType m_type;
+	unsigned int m_signatureLength;
+	uint8_t m_signature[ZT_SIGNATURE_BUFFER_SIZE];
 };
 
 } // namespace ZeroTier

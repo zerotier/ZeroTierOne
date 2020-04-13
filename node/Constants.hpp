@@ -87,22 +87,14 @@
 #define ZT_SYMMETRIC_KEY_TTL_MESSAGES 2147483648
 
 /**
- * Maximum delay between timer task checks
+ * Normal delay between processBackgroundTasks calls.
  */
-#define ZT_MAX_TIMER_TASK_INTERVAL 1000
-
-/**
- * Interval between steps or stages in multi-stage NAT traversal operations.
- *
- * This is for example the interval between initial firewall openers and real packets
- * for two-phase IPv4 hole punch.
- */
-#define ZT_NAT_TRAVERSAL_INTERVAL 200
+#define ZT_TIMER_TASK_INTERVAL 2000
 
 /**
  * How often most internal cleanup and housekeeping tasks are performed
  */
-#define ZT_HOUSEKEEPING_PERIOD 120000
+#define ZT_HOUSEKEEPING_PERIOD 300000
 
 /**
  * How often network housekeeping is performed
@@ -125,9 +117,12 @@
 #define ZT_RELAY_MAX_HOPS 4
 
 /**
- * Period between keepalives sent to paths if no other traffic has been sent
+ * Period between keepalives sent to paths if no other traffic has been sent.
+ *
+ * The average NAT timeout is 60-120s, but there exist NATs in the wild with timeouts
+ * as short as 30s. Come in just under 30s and we should be fine.
  */
-#define ZT_PATH_KEEPALIVE_PERIOD 20000
+#define ZT_PATH_KEEPALIVE_PERIOD 28000
 
 /**
  * Timeout for path alive-ness (measured from last receive)
@@ -135,12 +130,22 @@
 #define ZT_PATH_ALIVE_TIMEOUT ((ZT_PATH_KEEPALIVE_PERIOD * 2) + 5000)
 
 /**
- * Delay between calls to the pulse() method in Peer for each peer
+ * Number of ports to try for each BFG1024 scan attempt (if enabled).
  */
-#define ZT_PEER_PULSE_INTERVAL ZT_PATH_KEEPALIVE_PERIOD
+#define ZT_NAT_T_BFG1024_PORTS_PER_ATTEMPT 256
 
 /**
- * Minimum interval between HELLOs to peers.
+ * Maximum number of queued endpoints to try per "pulse."
+ */
+#define ZT_NAT_T_MAX_QUEUED_ATTEMPTS_PER_PULSE 4
+
+/**
+ * Delay between calls to the pulse() method in Peer for each peer
+ */
+#define ZT_PEER_PULSE_INTERVAL (ZT_PATH_KEEPALIVE_PERIOD / 2)
+
+/**
+ * Interval between HELLOs to peers.
  */
 #define ZT_PEER_HELLO_INTERVAL 120000LL
 
@@ -154,7 +159,7 @@
 #define ZT_PEER_GLOBAL_TIMEOUT 2592000000LL
 
 /**
- * Maximum interval between sort/prioritize of paths for a peer
+ * Interval between sort/prioritize of paths for a peer
  */
 #define ZT_PEER_PRIORITIZE_PATHS_INTERVAL 5000
 
@@ -181,16 +186,6 @@
  * If there is no known L2 bridging route, spam to up to this many active bridges
  */
 #define ZT_MAX_BRIDGE_SPAM 32
-
-/**
- * Interval between attempts to make a direct connection if one does not exist
- */
-#define ZT_DIRECT_CONNECT_ATTEMPT_INTERVAL 30000
-
-/**
- * Maximum number of paths per IP scope (e.g. global, link-local) and family (e.g. v4/v6)
- */
-#define ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY 4
 
 /**
  * WHOIS rate limit (we allow these to be pretty fast)

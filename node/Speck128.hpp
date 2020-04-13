@@ -26,7 +26,9 @@ namespace ZeroTier {
  * little-endian for higher performance on the majority of platforms.
  *
  * Right now this is only used as part of the PoW function for V1 identity
- * generation.
+ * generation. It's used because it's faster than SHA for filling a buffer
+ * with randomness and unlike AES its relative performance advantage
+ * across CPU architectures is pretty much identical.
  *
  * @tparam R Number of rounds (default: 32)
  */
@@ -46,7 +48,7 @@ public:
 	 */
 	ZT_INLINE Speck128(const void *k) noexcept { this->init(k); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init,google-explicit-constructor,hicpp-explicit-conversions)
 
-	ZT_INLINE ~Speck128() { Utils::burn(_k,sizeof(_k)); }
+	ZT_INLINE ~Speck128() { Utils::burn(m_expandedKey, sizeof(m_expandedKey)); }
 
 	/**
 	 * Initialize Speck from a 128-bit key
@@ -66,14 +68,14 @@ public:
 	 */
 	ZT_INLINE void initXY(uint64_t x,uint64_t y) noexcept
 	{
-		_k[0] = x;
+		m_expandedKey[0] = x;
 		for(uint64_t i=0;i<(R-1);++i) {
 			x = x >> 8U | x << 56U;
 			x += y;
 			x ^= i;
 			y = y << 3U | y >> 61U;
 			y ^= x;
-			_k[i + 1] = y;
+			m_expandedKey[i + 1] = y;
 		}
 	}
 
@@ -89,7 +91,7 @@ public:
 	ZT_INLINE void encryptXY(uint64_t &x,uint64_t &y) const noexcept
 	{
 		for (int i=0;i<R;++i) {
-			const uint64_t kk = _k[i];
+			const uint64_t kk = m_expandedKey[i];
 			x = x >> 8U | x << 56U;
 			x += y;
 			x ^= kk;
@@ -107,7 +109,7 @@ public:
 	ZT_INLINE void encryptXYXYXYXY(uint64_t &x0,uint64_t &y0,uint64_t &x1,uint64_t &y1,uint64_t &x2,uint64_t &y2,uint64_t &x3,uint64_t &y3) const noexcept
 	{
 		for (int i=0;i<R;++i) {
-			const uint64_t kk = _k[i];
+			const uint64_t kk = m_expandedKey[i];
 			x0 = x0 >> 8U | x0 << 56U;
 			x1 = x1 >> 8U | x1 << 56U;
 			x2 = x2 >> 8U | x2 << 56U;
@@ -143,7 +145,7 @@ public:
 	ZT_INLINE void decryptXY(uint64_t &x,uint64_t &y) const noexcept
 	{
 		for (int i=(R-1);i>=0;--i) {
-			const uint64_t kk = _k[i];
+			const uint64_t kk = m_expandedKey[i];
 			y ^= x;
 			y = y >> 3U | y << 61U;
 			x ^= kk;
@@ -183,7 +185,7 @@ public:
 	}
 
 private:
-	uint64_t _k[R];
+	uint64_t m_expandedKey[R];
 };
 
 } // namespace ZeroTier

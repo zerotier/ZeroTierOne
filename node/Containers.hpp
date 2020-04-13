@@ -26,6 +26,7 @@
 #include <vector>
 #include <list>
 #include <set>
+#include <string>
 
 namespace ZeroTier {
 
@@ -39,6 +40,7 @@ struct _MapHasher
 	std::size_t operator()(const uint32_t i) const noexcept { return (std::size_t)Utils::hash32(i ^ (uint32_t)Utils::s_mapNonce); }
 	std::size_t operator()(const int32_t i) const noexcept { return (std::size_t)Utils::hash32((uint32_t)i ^ (uint32_t)Utils::s_mapNonce); }
 };
+
 template<typename K,typename V>
 class Map : public std::unordered_map< K,V,_MapHasher,std::equal_to<K>,Utils::Mallocator< std::pair<const K,V> > >
 {
@@ -131,6 +133,12 @@ class List : public std::list< V,Utils::Mallocator<V> >
 template<typename V>
 class Set : public std::set< V,std::less<V>,Utils::Mallocator<V> >
 {
+};
+
+class String : public std::basic_string< char,std::char_traits<char>,Utils::Mallocator<char> >
+{
+public:
+	explicit ZT_INLINE String(const char *const s) { assign(s); }
 };
 
 } // ZeroTier

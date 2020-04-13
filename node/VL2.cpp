@@ -27,47 +27,43 @@ VL2::VL2(const RuntimeEnvironment *renv)
 {
 }
 
-VL2::~VL2()
-{
-}
-
 void VL2::onLocalEthernet(void *const tPtr,const SharedPtr<Network> &network,const MAC &from,const MAC &to,const unsigned int etherType,unsigned int vlanId,SharedPtr<Buf> &data,unsigned int len)
 {
 }
 
-bool VL2::_FRAME(void *const tPtr,const SharedPtr<Path> &path,SharedPtr<Peer> &peer,Buf &pkt,int packetSize)
+bool VL2::m_FRAME(void *tPtr, const SharedPtr<Path> &path, SharedPtr<Peer> &peer, Buf &pkt, int packetSize)
 {
 }
 
-bool VL2::_EXT_FRAME(void *const tPtr,const SharedPtr<Path> &path,SharedPtr<Peer> &peer,Buf &pkt,int packetSize)
+bool VL2::m_EXT_FRAME(void *tPtr, const SharedPtr<Path> &path, SharedPtr<Peer> &peer, Buf &pkt, int packetSize)
 {
 }
 
-bool VL2::_MULTICAST_LIKE(void *const tPtr,const SharedPtr<Path> &path,SharedPtr<Peer> &peer,Buf &pkt,int packetSize)
+bool VL2::m_MULTICAST_LIKE(void *tPtr, const SharedPtr<Path> &path, SharedPtr<Peer> &peer, Buf &pkt, int packetSize)
 {
 }
 
-bool VL2::_NETWORK_CREDENTIALS(void *const tPtr,const SharedPtr<Path> &path,SharedPtr<Peer> &peer,Buf &pkt,int packetSize)
+bool VL2::m_NETWORK_CREDENTIALS(void *tPtr, const SharedPtr<Path> &path, SharedPtr<Peer> &peer, Buf &pkt, int packetSize)
 {
 }
 
-bool VL2::_NETWORK_CONFIG_REQUEST(void *const tPtr,const SharedPtr<Path> &path,SharedPtr<Peer> &peer,Buf &pkt,int packetSize)
+bool VL2::m_NETWORK_CONFIG_REQUEST(void *tPtr, const SharedPtr<Path> &path, SharedPtr<Peer> &peer, Buf &pkt, int packetSize)
 {
 }
 
-bool VL2::_NETWORK_CONFIG(void *const tPtr,const SharedPtr<Path> &path,SharedPtr<Peer> &peer,Buf &pkt,int packetSize)
+bool VL2::m_NETWORK_CONFIG(void *tPtr, const SharedPtr<Path> &path, SharedPtr<Peer> &peer, Buf &pkt, int packetSize)
 {
 }
 
-bool VL2::_MULTICAST_GATHER(void *const tPtr,const SharedPtr<Path> &path,SharedPtr<Peer> &peer,Buf &pkt,int packetSize)
+bool VL2::m_MULTICAST_GATHER(void *tPtr, const SharedPtr<Path> &path, SharedPtr<Peer> &peer, Buf &pkt, int packetSize)
 {
 }
 
-bool VL2::_MULTICAST_FRAME_deprecated(void *const tPtr,const SharedPtr<Path> &path,SharedPtr<Peer> &peer,Buf &pkt,int packetSize)
+bool VL2::m_MULTICAST_FRAME_deprecated(void *tPtr, const SharedPtr<Path> &path, SharedPtr<Peer> &peer, Buf &pkt, int packetSize)
 {
 }
 
-bool VL2::_MULTICAST(void *const tPtr,const SharedPtr<Path> &path,SharedPtr<Peer> &peer,Buf &pkt,int packetSize)
+bool VL2::m_MULTICAST(void *tPtr, const SharedPtr<Path> &path, SharedPtr<Peer> &peer, Buf &pkt, int packetSize)
 {
 }
 

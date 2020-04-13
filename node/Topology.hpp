@@ -67,18 +67,18 @@ public:
 	ZT_INLINE SharedPtr<Peer> peer(void *tPtr,const Address &zta,const bool loadFromCached = true)
 	{
 		{
-			RWMutex::RLock l(_peers_l);
-			const SharedPtr<Peer> *const ap = _peers.get(zta);
+			RWMutex::RLock l(m_peers_l);
+			const SharedPtr<Peer> *const ap = m_peers.get(zta);
 			if (ap)
 				return *ap;
 		}
 		{
 			SharedPtr<Peer> p;
 			if (loadFromCached) {
-				_loadCached(tPtr,zta,p);
+				m_loadCached(tPtr, zta, p);
 				if (p) {
-					RWMutex::Lock l(_peers_l);
-					SharedPtr<Peer> &hp = _peers[zta];
+					RWMutex::Lock l(m_peers_l);
+					SharedPtr<Peer> &hp = m_peers[zta];
 					if (hp)
 						return hp;
 					hp = p;
@@ -96,8 +96,8 @@ public:
 	 */
 	ZT_INLINE SharedPtr<Peer> peerByHash(const Fingerprint &hash)
 	{
-		RWMutex::RLock _l(_peers_l);
-		const SharedPtr<Peer> *const ap = _peersByIdentityHash.get(hash);
+		RWMutex::RLock _l(m_peers_l);
+		const SharedPtr<Peer> *const ap = m_peersByIdentityHash.get(hash);
 		if (ap)
 			return *ap;
 		return SharedPtr<Peer>();
@@ -111,8 +111,8 @@ public:
 	 */
 	ZT_INLINE SharedPtr<Peer> peerByProbe(const uint64_t probe)
 	{
-		RWMutex::RLock _l(_peers_l);
-		const SharedPtr<Peer> *const ap = _peersByIncomingProbe.get(probe);
+		RWMutex::RLock _l(m_peers_l);
+		const SharedPtr<Peer> *const ap = m_peersByIncomingProbe.get(probe);
 		if (ap)
 			return *ap;
 		return SharedPtr<Peer>();
@@ -127,17 +127,17 @@ public:
 	 */
 	ZT_INLINE SharedPtr<Path> path(const int64_t l,const InetAddress &r)
 	{
-		const uint64_t k = _getPathKey(l,r);
+		const uint64_t k = s_getPathKey(l, r);
 		{
-			RWMutex::RLock lck(_paths_l);
-			SharedPtr<Path> *const p = _paths.get(k);
+			RWMutex::RLock lck(m_paths_l);
+			SharedPtr<Path> *const p = m_paths.get(k);
 			if (p)
 				return *p;
 		}
 		{
 			SharedPtr<Path> p(new Path(l,r));
-			RWMutex::Lock lck(_paths_l);
-			SharedPtr<Path> &p2 = _paths[k];
+			RWMutex::Lock lck(m_paths_l);
+			SharedPtr<Path> &p2 = m_paths[k];
 			if (p2)
 				return p2;
 			p2 = p;
@@ -150,10 +150,10 @@ public:
 	 */
 	ZT_INLINE SharedPtr<Peer> root() const
 	{
-		RWMutex::RLock l(_peers_l);
-		if (_rootPeers.empty())
+		RWMutex::RLock l(m_peers_l);
+		if (m_rootPeers.empty())
 			return SharedPtr<Peer>();
-		return _rootPeers.front();
+		return m_rootPeers.front();
 	}
 
 	/**
@@ -162,8 +162,8 @@ public:
 	 */
 	ZT_INLINE bool isRoot(const Identity &id) const
 	{
-		RWMutex::RLock l(_peers_l);
-		return (_roots.count(id) > 0);
+		RWMutex::RLock l(m_peers_l);
+		return (m_roots.count(id) > 0);
 	}
 
 	/**
@@ -178,8 +178,8 @@ public:
 	template<typename F>
 	ZT_INLINE void eachPeer(F f) const
 	{
-		RWMutex::RLock l(_peers_l);
-		for(Map< Address,SharedPtr<Peer> >::const_iterator i(_peers.begin());i!=_peers.end();++i) // NOLINT(modernize-loop-convert,hicpp-use-auto,modernize-use-auto)
+		RWMutex::RLock l(m_peers_l);
+		for(Map< Address,SharedPtr<Peer> >::const_iterator i(m_peers.begin());i != m_peers.end();++i) // NOLINT(modernize-loop-convert,hicpp-use-auto,modernize-use-auto)
 			f(i->second);
 	}
 
@@ -195,16 +195,16 @@ public:
 	template<typename F>
 	ZT_INLINE void eachPeerWithRoot(F f) const
 	{
-		RWMutex::RLock l(_peers_l);
+		RWMutex::RLock l(m_peers_l);
 
 		std::vector<uintptr_t> rootPeerPtrs;
-		rootPeerPtrs.reserve(_rootPeers.size());
-		for(std::vector< SharedPtr<Peer> >::const_iterator rp(_rootPeers.begin());rp!=_rootPeers.end();++rp) // NOLINT(modernize-loop-convert,hicpp-use-auto,modernize-use-auto)
+		rootPeerPtrs.reserve(m_rootPeers.size());
+		for(std::vector< SharedPtr<Peer> >::const_iterator rp(m_rootPeers.begin());rp != m_rootPeers.end();++rp) // NOLINT(modernize-loop-convert,hicpp-use-auto,modernize-use-auto)
 			rootPeerPtrs.push_back((uintptr_t)rp->ptr());
 		std::sort(rootPeerPtrs.begin(),rootPeerPtrs.end());
 
 		try {
-			for(Map< Address,SharedPtr<Peer> >::const_iterator i(_peers.begin());i!=_peers.end();++i) // NOLINT(modernize-loop-convert,hicpp-use-auto,modernize-use-auto)
+			for(Map< Address,SharedPtr<Peer> >::const_iterator i(m_peers.begin());i != m_peers.end();++i) // NOLINT(modernize-loop-convert,hicpp-use-auto,modernize-use-auto)
 				f(i->second,std::binary_search(rootPeerPtrs.begin(),rootPeerPtrs.end(),(uintptr_t)i->second.ptr()));
 		} catch ( ... ) {} // should not throw
 	}
@@ -218,8 +218,8 @@ public:
 	template<typename F>
 	ZT_INLINE void eachPath(F f) const
 	{
-		RWMutex::RLock l(_paths_l);
-		for(Map< uint64_t,SharedPtr<Path> >::const_iterator i(_paths.begin());i!=_paths.end();++i) // NOLINT(modernize-loop-convert,hicpp-use-auto,modernize-use-auto)
+		RWMutex::RLock l(m_paths_l);
+		for(Map< uint64_t,SharedPtr<Path> >::const_iterator i(m_paths.begin());i != m_paths.end();++i) // NOLINT(modernize-loop-convert,hicpp-use-auto,modernize-use-auto)
 			f(i->second);
 	}
 
@@ -239,10 +239,10 @@ public:
 	 */
 	ZT_INLINE void getOutboundPathInfo(const InetAddress &physicalAddress,unsigned int &mtu,uint64_t &trustedPathId)
 	{
-		for(unsigned int i=0,j=_numConfiguredPhysicalPaths;i<j;++i) {
-			if (_physicalPathConfig[i].first.containsAddress(physicalAddress)) {
-				trustedPathId = _physicalPathConfig[i].second.trustedPathId;
-				mtu = _physicalPathConfig[i].second.mtu;
+		for(unsigned int i=0,j=m_numConfiguredPhysicalPaths;i < j;++i) {
+			if (m_physicalPathConfig[i].first.containsAddress(physicalAddress)) {
+				trustedPathId = m_physicalPathConfig[i].second.trustedPathId;
+				mtu = m_physicalPathConfig[i].second.mtu;
 				return;
 			}
 		}
@@ -256,9 +256,9 @@ public:
 	 */
 	ZT_INLINE uint64_t getOutboundPathTrust(const InetAddress &physicalAddress)
 	{
-		for(unsigned int i=0,j=_numConfiguredPhysicalPaths;i<j;++i) {
-			if (_physicalPathConfig[i].first.containsAddress(physicalAddress))
-				return _physicalPathConfig[i].second.trustedPathId;
+		for(unsigned int i=0,j=m_numConfiguredPhysicalPaths;i < j;++i) {
+			if (m_physicalPathConfig[i].first.containsAddress(physicalAddress))
+				return m_physicalPathConfig[i].second.trustedPathId;
 		}
 		return 0;
 	}
@@ -271,8 +271,8 @@ public:
 	 */
 	ZT_INLINE bool shouldInboundPathBeTrusted(const InetAddress &physicalAddress,const uint64_t trustedPathId)
 	{
-		for(unsigned int i=0,j=_numConfiguredPhysicalPaths;i<j;++i) {
-			if ((_physicalPathConfig[i].second.trustedPathId == trustedPathId)&&(_physicalPathConfig[i].first.containsAddress(physicalAddress)))
+		for(unsigned int i=0,j=m_numConfiguredPhysicalPaths;i < j;++i) {
+			if ((m_physicalPathConfig[i].second.trustedPathId == trustedPathId) && (m_physicalPathConfig[i].first.containsAddress(physicalAddress)))
 				return true;
 		}
 		return false;
@@ -319,13 +319,13 @@ public:
 
 private:
 	// Load cached peer and set 'peer' to it, if one is found.
-	void _loadCached(void *tPtr,const Address &zta,SharedPtr<Peer> &peer);
+	void m_loadCached(void *tPtr, const Address &zta, SharedPtr<Peer> &peer);
 
 	// This is a secure random integer created at startup to salt the calculation of path hash map keys
 	static const uint64_t s_pathHashSalt;
 
 	// This gets an integer key from an InetAddress for looking up paths.
-	ZT_INLINE uint64_t _getPathKey(int64_t l,const InetAddress &r) const
+	static ZT_INLINE uint64_t s_getPathKey(int64_t l, const InetAddress &r)
 	{
 		if (r.family() == AF_INET) {
 			return s_pathHashSalt + (uint64_t)(reinterpret_cast<const struct sockaddr_in *>(&r)->sin_addr.s_addr) + (uint64_t)Utils::ntoh(reinterpret_cast<const struct sockaddr_in *>(&r)->sin_port) + (uint64_t)l;
@@ -348,18 +348,19 @@ private:
 
 	const RuntimeEnvironment *const RR;
 
-	RWMutex _peers_l;
-	RWMutex _paths_l;
+	RWMutex m_peers_l;
+	RWMutex m_paths_l;
 
-	std::pair< InetAddress,ZT_PhysicalPathConfiguration > _physicalPathConfig[ZT_MAX_CONFIGURABLE_PATHS];
-	unsigned int _numConfiguredPhysicalPaths;
+	std::pair< InetAddress,ZT_PhysicalPathConfiguration > m_physicalPathConfig[ZT_MAX_CONFIGURABLE_PATHS];
+	unsigned int m_numConfiguredPhysicalPaths;
 
-	Map< Address,SharedPtr<Peer> > _peers;
-	Map< uint64_t,SharedPtr<Peer> > _peersByIncomingProbe;
-	Map< Fingerprint,SharedPtr<Peer> > _peersByIdentityHash;
-	Map< uint64_t,SharedPtr<Path> > _paths;
-	std::set< Identity > _roots; // locked by _peers_l
-	std::vector< SharedPtr<Peer> > _rootPeers; // locked by _peers_l
+	Map< uint64_t,SharedPtr<Path> > m_paths;
+
+	Map< Address,SharedPtr<Peer> > m_peers;
+	Map< uint64_t,SharedPtr<Peer> > m_peersByIncomingProbe;
+	Map< Fingerprint,SharedPtr<Peer> > m_peersByIdentityHash;
+	Set< Identity > m_roots;
+	Vector< SharedPtr<Peer> > m_rootPeers;
 };
 
 } // namespace ZeroTier

@@ -137,12 +137,12 @@ public:
 	/**
 	 * @return Number of entries
 	 */
-	ZT_INLINE unsigned int size() const noexcept { return _t.size(); }
+	ZT_INLINE unsigned int size() const noexcept { return m_entries.size(); }
 
 	/**
 	 * @return True if dictionary is not empty
 	 */
-	ZT_INLINE bool empty() const noexcept { return _t.empty(); }
+	ZT_INLINE bool empty() const noexcept { return m_entries.empty(); }
 
 	/**
 	 * Encode to a string in the supplied vector
@@ -169,7 +169,7 @@ public:
 private:
 	// This just packs up to 8 character bytes into a 64-bit word. There is no need
 	// for this to be portable in terms of endian-ness. It's just for fast key lookup.
-	static ZT_INLINE uint64_t _toKey(const char *k)
+	static ZT_INLINE uint64_t s_toKey(const char *k)
 	{
 		uint64_t key = 0;
 		for(int i=0;i<8;++i) {
@@ -179,7 +179,7 @@ private:
 		return key;
 	}
 
-	Map< uint64_t,Vector<uint8_t> > _t;
+	Map< uint64_t,Vector<uint8_t> > m_entries;
 };
 
 } // namespace ZeroTier

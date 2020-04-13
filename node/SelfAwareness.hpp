@@ -20,8 +20,6 @@
 #include "Address.hpp"
 #include "Mutex.hpp"
 
-#include <map>
-
 namespace ZeroTier {
 
 class Identity;
@@ -30,7 +28,7 @@ class RuntimeEnvironment;
 /**
  * SelfAwareness manages awareness of this peer's external address(es) and NAT situation.
  *
- * This code should not be capable of achieving sentience and triggering the Terminator wars.
+ * Name aside, it shouldn't be capable of achieving sentience.
  */
 class SelfAwareness
 {
@@ -67,21 +65,21 @@ public:
 	ExternalAddressList externalAddresses(int64_t now) const;
 
 private:
-	struct PhySurfaceKey
+	struct p_PhySurfaceKey
 	{
 		Address reporter;
 		int64_t receivedOnLocalSocket;
 		InetAddress reporterPhysicalAddress;
 		InetAddress::IpScope scope;
 
-		ZT_INLINE PhySurfaceKey() noexcept {} // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init,hicpp-use-equals-default,modernize-use-equals-default)
-		ZT_INLINE PhySurfaceKey(const Address &r,const int64_t rol,const InetAddress &ra,InetAddress::IpScope s) noexcept : reporter(r),receivedOnLocalSocket(rol),reporterPhysicalAddress(ra),scope(s) {}
+		ZT_INLINE p_PhySurfaceKey() noexcept {} // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init,hicpp-use-equals-default,modernize-use-equals-default)
+		ZT_INLINE p_PhySurfaceKey(const Address &r, const int64_t rol, const InetAddress &ra, InetAddress::IpScope s) noexcept : reporter(r), receivedOnLocalSocket(rol), reporterPhysicalAddress(ra), scope(s) {}
 
 		ZT_INLINE unsigned long hashCode() const noexcept { return ((unsigned long)reporter.toInt() + (unsigned long)receivedOnLocalSocket + (unsigned long)scope); }
 
-		ZT_INLINE bool operator==(const PhySurfaceKey &k) const noexcept { return ((reporter == k.reporter) && (receivedOnLocalSocket == k.receivedOnLocalSocket) && (reporterPhysicalAddress == k.reporterPhysicalAddress) && (scope == k.scope)); }
-		ZT_INLINE bool operator!=(const PhySurfaceKey &k) const noexcept { return (!(*this == k)); }
-		ZT_INLINE bool operator<(const PhySurfaceKey &k) const noexcept
+		ZT_INLINE bool operator==(const p_PhySurfaceKey &k) const noexcept { return ((reporter == k.reporter) && (receivedOnLocalSocket == k.receivedOnLocalSocket) && (reporterPhysicalAddress == k.reporterPhysicalAddress) && (scope == k.scope)); }
+		ZT_INLINE bool operator!=(const p_PhySurfaceKey &k) const noexcept { return (!(*this == k)); }
+		ZT_INLINE bool operator<(const p_PhySurfaceKey &k) const noexcept
 		{
 			if (reporter < k.reporter) {
 				return true;
@@ -100,19 +98,19 @@ private:
 		}
 	};
 
-	struct PhySurfaceEntry
+	struct p_PhySurfaceEntry
 	{
 		InetAddress mySurface;
 		uint64_t ts;
 		bool trusted;
 
-		ZT_INLINE PhySurfaceEntry() noexcept : mySurface(),ts(0),trusted(false) {}
-		ZT_INLINE PhySurfaceEntry(const InetAddress &a,const uint64_t t) noexcept : mySurface(a),ts(t),trusted(false) {}
+		ZT_INLINE p_PhySurfaceEntry() noexcept : mySurface(), ts(0), trusted(false) {}
+		ZT_INLINE p_PhySurfaceEntry(const InetAddress &a, const uint64_t t) noexcept : mySurface(a), ts(t), trusted(false) {}
 	};
 
 	const RuntimeEnvironment *RR;
-	Map< PhySurfaceKey,PhySurfaceEntry > _phy;
-	Mutex _phy_l;
+	Map< p_PhySurfaceKey,p_PhySurfaceEntry > m_phy;
+	Mutex m_phy_l;
 };
 
 } // namespace ZeroTier

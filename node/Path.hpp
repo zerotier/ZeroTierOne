@@ -32,7 +32,7 @@ namespace ZeroTier {
 
 class RuntimeEnvironment;
 
-template<unsigned int MF,unsigned int MFP,unsigned int GCT,unsigned int GCS>
+template<unsigned int MF,unsigned int MFP,unsigned int GCT,unsigned int GCS,typename P>
 class Defragmenter;
 
 /**
@@ -43,16 +43,16 @@ class Path
 	friend class SharedPtr<Path>;
 
 	// Allow defragmenter to access fragment-in-flight info stored in Path for performance reasons.
-	template<unsigned int MF,unsigned int MFP,unsigned int GCT,unsigned int GCS>
+	template<unsigned int MF,unsigned int MFP,unsigned int GCT,unsigned int GCS,typename P>
 	friend class Defragmenter;
 
 public:
 	ZT_INLINE Path(const int64_t l,const InetAddress &r) noexcept : // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
-		_localSocket(l),
-		_lastIn(0),
-		_lastOut(0),
-		_latency(-1),
-		_addr(r)
+		m_localSocket(l),
+		m_lastIn(0),
+		m_lastOut(0),
+		m_latency(-1),
+		m_addr(r)
 	{
 	}
 
@@ -76,8 +76,8 @@ public:
 	 */
 	ZT_INLINE void sent(const int64_t now,const unsigned int bytes) noexcept
 	{
-		_lastOut.store(now);
-		_outMeter.log(now,bytes);
+		m_lastOut.store(now);
+		m_outMeter.log(now, bytes);
 	}
 
 	/**
@@ -88,8 +88,8 @@ public:
 	 */
 	ZT_INLINE void received(const int64_t now,const unsigned int bytes) noexcept
 	{
-		_lastIn.store(now);
-		_inMeter.log(now,bytes);
+		m_lastIn.store(now);
+		m_inMeter.log(now, bytes);
 	}
 
 	/**
@@ -99,54 +99,54 @@ public:
 	 */
 	ZT_INLINE void updateLatency(const unsigned int newMeasurement) noexcept
 	{
-		int lat = _latency;
+		int lat = m_latency;
 		if (lat > 0) {
-			_latency = (lat + newMeasurement) / 2;
+			m_latency = (lat + newMeasurement) / 2;
 		} else {
-			_latency = newMeasurement;
+			m_latency = newMeasurement;
 		}
 	}
 
 	/**
 	 * @return Latency in milliseconds or -1 if unknown
 	 */
-	ZT_INLINE int latency() const noexcept { return _latency; }
+	ZT_INLINE int latency() const noexcept { return m_latency; }
 
 	/**
 	 * Check path aliveness
 	 *
 	 * @param now Current time
 	 */
-	ZT_INLINE bool alive(const int64_t now) const noexcept { return ((now - _lastIn.load()) < ZT_PATH_ALIVE_TIMEOUT); }
+	ZT_INLINE bool alive(const int64_t now) const noexcept { return ((now - m_lastIn.load()) < ZT_PATH_ALIVE_TIMEOUT); }
 
 	/**
 	 * @return Physical address
 	 */
-	ZT_INLINE const InetAddress &address() const noexcept { return _addr; }
+	ZT_INLINE const InetAddress &address() const noexcept { return m_addr; }
 
 	/**
 	 * @return Local socket as specified by external code
 	 */
-	ZT_INLINE int64_t localSocket() const noexcept { return _localSocket; }
+	ZT_INLINE int64_t localSocket() const noexcept { return m_localSocket; }
 
 	/**
 	 * @return Last time we received anything
 	 */
-	ZT_INLINE int64_t lastIn() const noexcept { return _lastIn.load(); }
+	ZT_INLINE int64_t lastIn() const noexcept { return m_lastIn.load(); }
 
 	/**
 	 * @return Last time we sent something
 	 */
-	ZT_INLINE int64_t lastOut() const noexcept { return _lastOut.load(); }
+	ZT_INLINE int64_t lastOut() const noexcept { return m_lastOut.load(); }
 
 private:
-	const int64_t _localSocket;
-	std::atomic<int64_t> _lastIn;
-	std::atomic<int64_t> _lastOut;
-	std::atomic<int> _latency;
-	const InetAddress _addr;
-	Meter<> _inMeter;
-	Meter<> _outMeter;
+	const int64_t m_localSocket;
+	std::atomic<int64_t> m_lastIn;
+	std::atomic<int64_t> m_lastOut;
+	std::atomic<int> m_latency;
+	const InetAddress m_addr;
+	Meter<> m_inMeter;
+	Meter<> m_outMeter;
 
 	// These fields belong to Defragmenter but are kept in Path for performance
 	// as it's much faster this way than having Defragmenter maintain another

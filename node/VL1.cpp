@@ -44,10 +44,6 @@ VL1::VL1(const RuntimeEnvironment *renv) :
 {
 }
 
-VL1::~VL1()
-{
-}
-
 void VL1::onRemotePacket(void *const tPtr,const int64_t localSocket,const InetAddress &fromAddr,SharedPtr<Buf> &data,const unsigned int len)
 {
 	// Get canonical Path object for this originating address and local socket pair.
@@ -63,7 +59,7 @@ void VL1::onRemotePacket(void *const tPtr,const int64_t localSocket,const InetAd
 		if (len == ZT_PROTO_PROBE_LENGTH) {
 			const SharedPtr<Peer> peer(RR->topology->peerByProbe(data->lI64(0)));
 			if ((peer)&&(peer->rateGateInboundProbe(now)))
-				path->sent(now,peer->sendNOP(tPtr,path->localSocket(),path->address(),now));
+				path->sent(now,peer->nop(tPtr,path->localSocket(),path->address(),now));
 			return;
 		}
 
@@ -88,11 +84,11 @@ void VL1::onRemotePacket(void *const tPtr,const int64_t localSocket,const InetAd
 			destination.setTo(fragmentHeader.destination);
 
 			if (destination != RR->identity.address()) {
-				_relay(tPtr,path,destination,data,len);
+				m_relay(tPtr, path, destination, data, len);
 				return;
 			}
 
-			switch (_inputPacketAssembler.assemble(
+			switch (m_inputPacketAssembler.assemble(
 				fragmentHeader.packetId,
 				pktv,
 				data,
@@ -122,12 +118,12 @@ void VL1::onRemotePacket(void *const tPtr,const int64_t localSocket,const InetAd
 			destination.setTo(packetHeader.destination);
 
 			if (destination != RR->identity.address()) {
-				_relay(tPtr,path,destination,data,len);
+				m_relay(tPtr, path, destination, data, len);
 				return;
 			}
 
 			if ((packetHeader.flags & ZT_PROTO_FLAG_FRAGMENTED) != 0) {
-				switch (_inputPacketAssembler.assemble(
+				switch (m_inputPacketAssembler.assemble(
 					packetHeader.packetId,
 					pktv,
 					data,
@@ -199,11 +195,11 @@ void VL1::onRemotePacket(void *const tPtr,const int64_t localSocket,const InetAd
 				return;
 			}
 			{
-				Mutex::Lock wl(_whoisQueue_l);
-				_WhoisQueueItem &wq = _whoisQueue[source];
+				Mutex::Lock wl(m_whoisQueue_l);
+				p_WhoisQueueItem &wq = m_whoisQueue[source];
 				wq.inboundPackets.push_back(pkt);
 			}
-			_sendPendingWhois(tPtr,now);
+			m_sendPendingWhois(tPtr, now);
 			return;
 		}
 
@@ -374,24 +370,24 @@ void VL1::onRemotePacket(void *const tPtr,const int64_t localSocket,const InetAd
 		Protocol::Verb inReVerb = Protocol::VERB_NOP; // set via result parameter to _ERROR and _OK
 		switch(verb) {
 			case Protocol::VERB_NOP:                        break;
-			case Protocol::VERB_HELLO:                      ok = _HELLO(tPtr,path,peer,*pkt.b,(int)packetSize,authenticated); break;
-			case Protocol::VERB_ERROR:                      ok = _ERROR(tPtr,path,peer,*pkt.b,(int)packetSize,inReVerb); break;
-			case Protocol::VERB_OK:                         ok = _OK(tPtr,path,peer,*pkt.b,(int)packetSize,inReVerb); break;
-			case Protocol::VERB_WHOIS:                      ok = _WHOIS(tPtr,path,peer,*pkt.b,(int)packetSize); break;
-			case Protocol::VERB_RENDEZVOUS:                 ok = _RENDEZVOUS(tPtr,path,peer,*pkt.b,(int)packetSize); break;
-			case Protocol::VERB_FRAME:                      ok = RR->vl2->_FRAME(tPtr,path,peer,*pkt.b,(int)packetSize); break;
-			case Protocol::VERB_EXT_FRAME:                  ok = RR->vl2->_EXT_FRAME(tPtr,path,peer,*pkt.b,(int)packetSize); break;
-			case Protocol::VERB_ECHO:                       ok = _ECHO(tPtr,path,peer,*pkt.b,(int)packetSize); break;
-			case Protocol::VERB_MULTICAST_LIKE:             ok = RR->vl2->_MULTICAST_LIKE(tPtr,path,peer,*pkt.b,(int)packetSize); break;
-			case Protocol::VERB_NETWORK_CREDENTIALS:        ok = RR->vl2->_NETWORK_CREDENTIALS(tPtr,path,peer,*pkt.b,(int)packetSize); break;
-			case Protocol::VERB_NETWORK_CONFIG_REQUEST:     ok = RR->vl2->_NETWORK_CONFIG_REQUEST(tPtr,path,peer,*pkt.b,(int)packetSize); break;
-			case Protocol::VERB_NETWORK_CONFIG:             ok = RR->vl2->_NETWORK_CONFIG(tPtr,path,peer,*pkt.b,(int)packetSize); break;
-			case Protocol::VERB_MULTICAST_GATHER:           ok = RR->vl2->_MULTICAST_GATHER(tPtr,path,peer,*pkt.b,(int)packetSize); break;
-			case Protocol::VERB_MULTICAST_FRAME_deprecated: ok = RR->vl2->_MULTICAST_FRAME_deprecated(tPtr,path,peer,*pkt.b,(int)packetSize); break;
-			case Protocol::VERB_PUSH_DIRECT_PATHS:          ok = _PUSH_DIRECT_PATHS(tPtr,path,peer,*pkt.b,(int)packetSize); break;
-			case Protocol::VERB_USER_MESSAGE:               ok = _USER_MESSAGE(tPtr,path,peer,*pkt.b,(int)packetSize); break;
-			case Protocol::VERB_MULTICAST:                  ok = RR->vl2->_MULTICAST(tPtr,path,peer,*pkt.b,(int)packetSize); break;
-			case Protocol::VERB_ENCAP:                      ok = _ENCAP(tPtr,path,peer,*pkt.b,(int)packetSize); break;
+			case Protocol::VERB_HELLO:                      ok = m_HELLO(tPtr, path, peer, *pkt.b, (int) packetSize, authenticated); break;
+			case Protocol::VERB_ERROR:                      ok = m_ERROR(tPtr, path, peer, *pkt.b, (int) packetSize, inReVerb); break;
+			case Protocol::VERB_OK:                         ok = m_OK(tPtr, path, peer, *pkt.b, (int) packetSize, inReVerb); break;
+			case Protocol::VERB_WHOIS:                      ok = m_WHOIS(tPtr, path, peer, *pkt.b, (int) packetSize); break;
+			case Protocol::VERB_RENDEZVOUS:                 ok = m_RENDEZVOUS(tPtr, path, peer, *pkt.b, (int) packetSize); break;
+			case Protocol::VERB_FRAME:                      ok = RR->vl2->m_FRAME(tPtr, path, peer, *pkt.b, (int) packetSize); break;
+			case Protocol::VERB_EXT_FRAME:                  ok = RR->vl2->m_EXT_FRAME(tPtr, path, peer, *pkt.b, (int) packetSize); break;
+			case Protocol::VERB_ECHO:                       ok = m_ECHO(tPtr, path, peer, *pkt.b, (int) packetSize); break;
+			case Protocol::VERB_MULTICAST_LIKE:             ok = RR->vl2->m_MULTICAST_LIKE(tPtr, path, peer, *pkt.b, (int) packetSize); break;
+			case Protocol::VERB_NETWORK_CREDENTIALS:        ok = RR->vl2->m_NETWORK_CREDENTIALS(tPtr, path, peer, *pkt.b, (int) packetSize); break;
+			case Protocol::VERB_NETWORK_CONFIG_REQUEST:     ok = RR->vl2->m_NETWORK_CONFIG_REQUEST(tPtr, path, peer, *pkt.b, (int) packetSize); break;
+			case Protocol::VERB_NETWORK_CONFIG:             ok = RR->vl2->m_NETWORK_CONFIG(tPtr, path, peer, *pkt.b, (int) packetSize); break;
+			case Protocol::VERB_MULTICAST_GATHER:           ok = RR->vl2->m_MULTICAST_GATHER(tPtr, path, peer, *pkt.b, (int) packetSize); break;
+			case Protocol::VERB_MULTICAST_FRAME_deprecated: ok = RR->vl2->m_MULTICAST_FRAME_deprecated(tPtr, path, peer, *pkt.b, (int) packetSize); break;
+			case Protocol::VERB_PUSH_DIRECT_PATHS:          ok = m_PUSH_DIRECT_PATHS(tPtr, path, peer, *pkt.b, (int) packetSize); break;
+			case Protocol::VERB_USER_MESSAGE:               ok = m_USER_MESSAGE(tPtr, path, peer, *pkt.b, (int) packetSize); break;
+			case Protocol::VERB_MULTICAST:                  ok = RR->vl2->m_MULTICAST(tPtr, path, peer, *pkt.b, (int) packetSize); break;
+			case Protocol::VERB_ENCAP:                      ok = m_ENCAP(tPtr, path, peer, *pkt.b, (int) packetSize); break;
 			default:
 				RR->t->incomingPacketDropped(tPtr,0xeeeeeff0,ph->packetId,0,identityFromPeerPtr(peer),path->address(),hops,verb,ZT_TRACE_PACKET_DROP_REASON_UNRECOGNIZED_VERB);
 				break;
@@ -403,7 +399,7 @@ void VL1::onRemotePacket(void *const tPtr,const int64_t localSocket,const InetAd
 	}
 }
 
-void VL1::_relay(void *tPtr,const SharedPtr<Path> &path,const Address &destination,SharedPtr<Buf> &data,unsigned int len)
+void VL1::m_relay(void *tPtr, const SharedPtr<Path> &path, const Address &destination, SharedPtr<Buf> &data, unsigned int len)
 {
 	const uint8_t newHopCount = (data->lI8(ZT_PROTO_PACKET_FLAGS_INDEX) & 7U) + 1;
 	if (newHopCount >= ZT_RELAY_MAX_HOPS)
@@ -421,7 +417,7 @@ void VL1::_relay(void *tPtr,const SharedPtr<Path> &path,const Address &destinati
 	toPath->send(RR,tPtr,data->unsafeData,len,now);
 }
 
-void VL1::_sendPendingWhois(void *const tPtr,const int64_t now)
+void VL1::m_sendPendingWhois(void *tPtr, int64_t now)
 {
 	SharedPtr<Peer> root(RR->topology->root());
 	if (!root)
@@ -432,8 +428,8 @@ void VL1::_sendPendingWhois(void *const tPtr,const int64_t now)
 
 	std::vector<Address> toSend;
 	{
-		Mutex::Lock wl(_whoisQueue_l);
-		for(Map<Address,_WhoisQueueItem>::iterator wi(_whoisQueue.begin());wi!=_whoisQueue.end();++wi) {
+		Mutex::Lock wl(m_whoisQueue_l);
+		for(Map<Address,p_WhoisQueueItem>::iterator wi(m_whoisQueue.begin());wi != m_whoisQueue.end();++wi) {
 			if ((now - wi->second.lastRetry) >= ZT_WHOIS_RETRY_DELAY) {
 				wi->second.lastRetry = now;
 				++wi->second.retries;
@@ -468,7 +464,7 @@ void VL1::_sendPendingWhois(void *const tPtr,const int64_t now)
 	}
 }
 
-bool VL1::_HELLO(void *tPtr,const SharedPtr<Path> &path,SharedPtr<Peer> &peer,Buf &pkt,int packetSize,const bool authenticated)
+bool VL1::m_HELLO(void *tPtr, const SharedPtr<Path> &path, SharedPtr<Peer> &peer, Buf &pkt, int packetSize, bool authenticated)
 {
 	if (packetSize < (int)sizeof(Protocol::HELLO)) {
 		RR->t->incomingPacketDropped(tPtr,0x2bdb0001,0,0,identityFromPeerPtr(peer),path->address(),0,Protocol::VERB_HELLO,ZT_TRACE_PACKET_DROP_REASON_MALFORMED_PACKET);
@@ -663,7 +659,7 @@ bool VL1::_HELLO(void *tPtr,const SharedPtr<Path> &path,SharedPtr<Peer> &peer,Bu
 	return true;
 }
 
-bool VL1::_ERROR(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &peer,Buf &pkt,int packetSize,Protocol::Verb &inReVerb)
+bool VL1::m_ERROR(void *tPtr, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize, Protocol::Verb &inReVerb)
 {
 	if (packetSize < (int)sizeof(Protocol::ERROR::Header)) {
 		RR->t->incomingPacketDropped(tPtr,0x3beb1947,0,0,identityFromPeerPtr(peer),path->address(),0,Protocol::VERB_ERROR,ZT_TRACE_PACKET_DROP_REASON_MALFORMED_PACKET);
@@ -708,7 +704,7 @@ bool VL1::_ERROR(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &p
 	return true;
 }
 
-bool VL1::_OK(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &peer,Buf &pkt,int packetSize,Protocol::Verb &inReVerb)
+bool VL1::m_OK(void *tPtr, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize, Protocol::Verb &inReVerb)
 {
 	if (packetSize < (int)sizeof(Protocol::OK::Header)) {
 		RR->t->incomingPacketDropped(tPtr,0x4c1f1ff7,0,0,identityFromPeerPtr(peer),path->address(),0,Protocol::VERB_OK,ZT_TRACE_PACKET_DROP_REASON_MALFORMED_PACKET);
@@ -741,7 +737,7 @@ bool VL1::_OK(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &peer
 	return true;
 }
 
-bool VL1::_WHOIS(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &peer,Buf &pkt,int packetSize)
+bool VL1::m_WHOIS(void *tPtr, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize)
 {
 	if (packetSize < (int)sizeof(Protocol::OK::Header)) {
 		RR->t->incomingPacketDropped(tPtr,0x4c1f1ff7,0,0,identityFromPeerPtr(peer),path->address(),0,Protocol::VERB_OK,ZT_TRACE_PACKET_DROP_REASON_MALFORMED_PACKET);
@@ -793,7 +789,7 @@ bool VL1::_WHOIS(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &p
 	return true;
 }
 
-bool VL1::_RENDEZVOUS(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &peer,Buf &pkt,int packetSize)
+bool VL1::m_RENDEZVOUS(void *tPtr, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize)
 {
 	if (RR->topology->isRoot(peer->identity())) {
 		if (packetSize < (int)sizeof(Protocol::RENDEZVOUS)) {
@@ -839,7 +835,7 @@ bool VL1::_RENDEZVOUS(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Pee
 	return true;
 }
 
-bool VL1::_ECHO(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &peer,Buf &pkt,int packetSize)
+bool VL1::m_ECHO(void *tPtr, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize)
 {
 	const uint64_t packetId = Protocol::packetId(pkt,packetSize);
 	const uint64_t now = RR->node->now();
@@ -875,7 +871,7 @@ bool VL1::_ECHO(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &pe
 	return true;
 }
 
-bool VL1::_PUSH_DIRECT_PATHS(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &peer,Buf &pkt,int packetSize)
+bool VL1::m_PUSH_DIRECT_PATHS(void *tPtr, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize)
 {
 	if (packetSize < (int)sizeof(Protocol::PUSH_DIRECT_PATHS)) {
 		RR->t->incomingPacketDropped(tPtr,0x1bb1bbb1,Protocol::packetId(pkt,packetSize),0,peer->identity(),path->address(),Protocol::packetHops(pkt,packetSize),Protocol::VERB_PUSH_DIRECT_PATHS,ZT_TRACE_PACKET_DROP_REASON_MALFORMED_PACKET);
@@ -964,13 +960,13 @@ bool VL1::_PUSH_DIRECT_PATHS(void *tPtr,const SharedPtr<Path> &path,const Shared
 	return true;
 }
 
-bool VL1::_USER_MESSAGE(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &peer,Buf &pkt,int packetSize)
+bool VL1::m_USER_MESSAGE(void *tPtr, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize)
 {
 	// TODO
 	return true;
 }
 
-bool VL1::_ENCAP(void *tPtr,const SharedPtr<Path> &path,const SharedPtr<Peer> &peer,Buf &pkt,int packetSize)
+bool VL1::m_ENCAP(void *tPtr, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize)
 {
 	// TODO: not implemented yet
 	return true;

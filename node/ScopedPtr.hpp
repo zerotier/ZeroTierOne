@@ -28,32 +28,32 @@ template<typename T>
 class ScopedPtr : public TriviallyCopyable
 {
 public:
-	explicit ZT_INLINE ScopedPtr(T *const p) noexcept : _p(p) {}
-	ZT_INLINE ~ScopedPtr() { delete _p; }
+	explicit ZT_INLINE ScopedPtr(T *const p) noexcept : m_ptr(p) {}
+	ZT_INLINE ~ScopedPtr() { delete m_ptr; }
 
-	ZT_INLINE T *operator->() const noexcept { return _p; }
-	ZT_INLINE T &operator*() const noexcept { return *_p; }
-	explicit ZT_INLINE operator bool() const noexcept { return (_p != (T *)0); }
-	ZT_INLINE T *ptr() const noexcept { return _p; }
+	ZT_INLINE T *operator->() const noexcept { return m_ptr; }
+	ZT_INLINE T &operator*() const noexcept { return *m_ptr; }
+	explicit ZT_INLINE operator bool() const noexcept { return (m_ptr != (T *)0); }
+	ZT_INLINE T *ptr() const noexcept { return m_ptr; }
 
 	ZT_INLINE void swap(const ScopedPtr &p) noexcept
 	{
-		T *const tmp = _p;
-		_p = p._p;
-		p._p = tmp;
+		T *const tmp = m_ptr;
+		m_ptr = p.m_ptr;
+		p.m_ptr = tmp;
 	}
 
-	ZT_INLINE bool operator==(const ScopedPtr &p) const noexcept { return (_p == p._p); }
-	ZT_INLINE bool operator!=(const ScopedPtr &p) const noexcept { return (_p != p._p); }
-	ZT_INLINE bool operator==(T *const p) const noexcept { return (_p == p); }
-	ZT_INLINE bool operator!=(T *const p) const noexcept { return (_p != p); }
+	ZT_INLINE bool operator==(const ScopedPtr &p) const noexcept { return (m_ptr == p.m_ptr); }
+	ZT_INLINE bool operator!=(const ScopedPtr &p) const noexcept { return (m_ptr != p.m_ptr); }
+	ZT_INLINE bool operator==(T *const p) const noexcept { return (m_ptr == p); }
+	ZT_INLINE bool operator!=(T *const p) const noexcept { return (m_ptr != p); }
 
 private:
 	ZT_INLINE ScopedPtr() noexcept {} // NOLINT(hicpp-use-equals-default,hicpp-use-equals-delete,modernize-use-equals-default)
-	ZT_INLINE ScopedPtr(const ScopedPtr &p) noexcept : _p(nullptr) {}
+	ZT_INLINE ScopedPtr(const ScopedPtr &p) noexcept : m_ptr(nullptr) {}
 	ZT_INLINE ScopedPtr &operator=(const ScopedPtr &p) noexcept { return *this; }
 
-	T *const _p;
+	T *const m_ptr;
 };
 
 } // namespace ZeroTier
