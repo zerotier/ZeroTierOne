@@ -149,7 +149,7 @@ public:
 	 *
 	 * @param out String encoded dictionary
 	 */
-	void encode(std::vector<uint8_t> &out) const;
+	void encode(Vector<uint8_t> &out) const;
 
 	/**
 	 * Decode a string encoded dictionary

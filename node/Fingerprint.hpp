@@ -99,8 +99,6 @@ private:
 	ZT_Fingerprint m_cfp;
 };
 
-static_assert(sizeof(Fingerprint) == sizeof(ZT_Fingerprint),"Fingerprint should be the same size as the underlying C ZT_Fingerprint");
-
 } // namespace ZeroTier
 
 #endif

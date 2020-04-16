@@ -145,8 +145,8 @@ private:
 	// These fields belong to Defragmenter but are kept in Path for performance
 	// as it's much faster this way than having Defragmenter maintain another
 	// mapping from paths to inbound message IDs.
-	Set<uint64_t> _inboundFragmentedMessages;
-	Mutex _inboundFragmentedMessages_l;
+	Set<uint64_t> m_inboundFragmentedMessages;
+	Mutex m_inboundFragmentedMessages_l;
 
 	std::atomic<int> __refCount;
 };

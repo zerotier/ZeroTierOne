@@ -58,12 +58,12 @@ extern "C" {
 #define ZT_BUF_SIZE 16384
 
 /**
- * Minimum MTU allowed on virtual networks
+ * Minimum Ethernet MTU allowed on virtual (not physical) networks
  */
 #define ZT_MIN_MTU 1280
 
 /**
- * Maximum MTU allowed on virtual networks
+ * Maximum Ethernet MTU allowed on virtual (not physical) networks
  */
 #define ZT_MAX_MTU 10000
 
@@ -73,16 +73,16 @@ extern "C" {
 #define ZT_MIN_UDP_MTU 1400
 
 /**
- * Default UDP payload size (physical path MTU) not including UDP and IP overhead
+ * Default UDP payload size NOT including UDP and IP overhead
  *
  * This is small enough for PPPoE and for Google Cloud's bizarrely tiny MTUs.
- * A 2800 byte payload still fits into two packets, so this should not impact
- * real world throughput at all vs the previous default of 1444.
+ * A payload size corresponding to the default 2800 byte virtual MTU fits
+ * into two packets of less than or equal to this size.
  */
 #define ZT_DEFAULT_UDP_MTU 1432
 
 /**
- * Maximum physical UDP payload
+ * Maximum physical payload size that can ever be used
  */
 #define ZT_MAX_UDP_PHYSPAYLOAD 10100
 
@@ -265,8 +265,8 @@ extern "C" {
 enum ZT_Identity_Type
 {
 	/* These values must be the same as in Identity.hpp in the core. */
-	ZT_IDENTITY_TYPE_C25519 = 0,
-	ZT_IDENTITY_TYPE_P384 = 1
+	ZT_IDENTITY_TYPE_C25519 = 0, /* C25519/Ed25519 */
+	ZT_IDENTITY_TYPE_P384 = 1    /* Combined C25519/NIST-P-384 key */
 };
 
 /**
@@ -302,12 +302,6 @@ enum ZT_CredentialType
 	ZT_CREDENTIAL_TYPE_COO = 4,
 	ZT_CREDENTIAL_TYPE_REVOCATION = 6
 };
-
-/* Trace events are sent and received as packed structures of a fixed size.
- * Normally we don't use this form of brittle encoding but in this case the
- * performance benefit is non-trivial.
- *
- * All integer fields larger than one byte are stored in big-endian order. */
 
 /**
  * Flag indicating that VL1 tracing should be generated
@@ -391,30 +385,27 @@ enum ZT_TraceFrameDropReason
  * if possible for consistency. Not all of these are used (yet?) but they are defined
  * for possible future use and the structure is sized to support them.
  */
-enum ZT_TraceEventPathAddressType
+enum ZT_EndpointType
 {
-	ZT_TRACE_EVENT_PATH_TYPE_NIL =          0, /* none/empty */
-	ZT_TRACE_EVENT_PATH_TYPE_ZEROTIER =     1, /* 5-byte ZeroTier + 48-byte identity hash */
-	ZT_TRACE_EVENT_PATH_TYPE_ETHERNET =     2, /* 6-byte Ethernet */
-	ZT_TRACE_EVENT_PATH_TYPE_INETADDR_V4 =  4, /* 4-byte IPv4 */
-	ZT_TRACE_EVENT_PATH_TYPE_INETADDR_V6 =  6  /* 16-byte IPv6 */
+	ZT_ENDPOINT_TYPE_NIL =          0, /* none/empty */
+	ZT_ENDPOINT_TYPE_ZEROTIER =     1, /* 5-byte ZeroTier + 48-byte identity hash */
+	ZT_ENDPOINT_TYPE_ETHERNET =     2, /* 6-byte Ethernet */
+	ZT_ENDPOINT_TYPE_INETADDR_V4 =  4, /* 4-byte IPv4 */
+	ZT_ENDPOINT_TYPE_INETADDR_V6 =  6  /* 16-byte IPv6 */
 };
 
 /**
- * Maximum integer value of enum ZT_TraceEventPathAddressType
+ * Protocol bits allowed for endpoint addresses.
  */
-#define ZT_TRACE_EVENT_PATH_TYPE__MAX 6
-
-/**
- * Reasons for trying new paths
- */
-enum ZT_TraceTryingNewPathReason
+enum ZT_EndpointProtocol
 {
-	ZT_TRACE_TRYING_NEW_PATH_REASON_PACKET_RECEIVED_FROM_UNKNOWN_PATH = 1,
-	ZT_TRACE_TRYING_NEW_PATH_REASON_RECEIVED_PUSH_DIRECT_PATHS = 2,
-	ZT_TRACE_TRYING_NEW_PATH_REASON_RENDEZVOUS = 3,
-	ZT_TRACE_TRYING_NEW_PATH_REASON_BOOTSTRAP_ADDRESS = 4,
-	ZT_TRACE_TRYING_NEW_PATH_REASON_EXPLICITLY_SUGGESTED_ADDRESS = 5
+	ZT_ENDPOINT_PROTO_DGRAM =       0x0001,
+	ZT_ENDPOINT_PROTO_STREAM  =     0x0002,
+	ZT_ENDPOINT_PROTO_HTTP2 =       0x0004,
+	ZT_ENDPOINT_PROTO_HTTPS2 =      0x0008,
+	ZT_ENDPOINT_PROTO_WS =          0x0010,
+	ZT_ENDPOINT_PROTO_WEBRTC =      0x0020,
+	ZT_ENDPOINT_PROTO_WIREGUARD =   0x0040
 };
 
 /**

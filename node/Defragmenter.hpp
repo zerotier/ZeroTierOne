@@ -217,10 +217,10 @@ public:
 		if ((via)&&(!e->via)) {
 			e->via = via;
 			bool tooManyPerPath = false;
-			via->_inboundFragmentedMessages_l.lock();
+			via->m_inboundFragmentedMessages_l.lock();
 			try {
-				if (via->_inboundFragmentedMessages.size() < MFP) {
-					via->_inboundFragmentedMessages.insert(messageId);
+				if (via->m_inboundFragmentedMessages.size() < MFP) {
+					via->m_inboundFragmentedMessages.insert(messageId);
 				} else {
 					tooManyPerPath = true;
 				}
@@ -229,7 +229,7 @@ public:
 				// it as limit exceeded.
 				tooManyPerPath = true;
 			}
-			via->_inboundFragmentedMessages_l.unlock();
+			via->m_inboundFragmentedMessages_l.unlock();
 			if (tooManyPerPath)
 				return ERR_TOO_MANY_FRAGMENTS_FOR_PATH;
 		}
@@ -255,9 +255,9 @@ public:
 		if ((e->fragmentsReceived >= e->totalFragmentsExpected)&&(e->totalFragmentsExpected > 0)) {
 			// This message is done so de-register it with its path if one is associated.
 			if (e->via) {
-				e->via->_inboundFragmentedMessages_l.lock();
-				e->via->_inboundFragmentedMessages.erase(messageId);
-				e->via->_inboundFragmentedMessages_l.unlock();
+				e->via->m_inboundFragmentedMessages_l.lock();
+				e->via->m_inboundFragmentedMessages.erase(messageId);
+				e->via->m_inboundFragmentedMessages_l.unlock();
 				e->via.zero();
 			}
 
@@ -312,9 +312,9 @@ private:
 		ZT_INLINE ~p_E()
 		{
 			if (via) {
-				via->_inboundFragmentedMessages_l.lock();
-				via->_inboundFragmentedMessages.erase(id);
-				via->_inboundFragmentedMessages_l.unlock();
+				via->m_inboundFragmentedMessages_l.lock();
+				via->m_inboundFragmentedMessages.erase(id);
+				via->m_inboundFragmentedMessages_l.unlock();
 			}
 		}
 

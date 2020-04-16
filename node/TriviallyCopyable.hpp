@@ -24,8 +24,9 @@ namespace ZeroTier {
  *
  * It also includes some static methods to do this conveniently.
  */
-ZT_PACKED_STRUCT(struct TriviallyCopyable
+struct TriviallyCopyable
 {
+public:
 	/**
 	 * Zero a TriviallyCopyable object
 	 *
@@ -50,34 +51,6 @@ ZT_PACKED_STRUCT(struct TriviallyCopyable
 	{
 		static_assert(isTriviallyCopyable(obj),"parameter is not TriviallyCopyable");
 		Utils::zero<sizeof(T)>(&obj);
-	}
-
-	/**
-	 * Copy any memory over a TriviallyCopyable object
-	 *
-	 * @tparam T Automatically inferred type of destination
-	 * @param dest Any TriviallyCopyable object
-	 * @param src Source memory of same size or less than sizeof(dest)
-	 */
-	template<typename T>
-	static ZT_INLINE void memoryCopyUnsafe(T *dest,const void *src) noexcept
-	{
-		static_assert(isTriviallyCopyable(dest),"parameter is not TriviallyCopyable");
-		Utils::copy<sizeof(T)>(dest,src);
-	}
-
-	/**
-	 * Copy any memory over a TriviallyCopyable object
-	 *
-	 * @tparam T Automatically inferred type of destination
-	 * @param dest Any TriviallyCopyable object
-	 * @param src Source memory of same size or less than sizeof(dest)
-	 */
-	template<typename T>
-	static ZT_INLINE void memoryCopyUnsafe(T &dest,const void *src) noexcept
-	{
-		static_assert(isTriviallyCopyable(dest),"parameter is not TriviallyCopyable");
-		Utils::copy<sizeof(T)>(&dest,src);
 	}
 
 	/**
@@ -135,7 +108,7 @@ ZT_PACKED_STRUCT(struct TriviallyCopyable
 		static_assert(isTriviallyCopyable(dest),"parameter is not TriviallyCopyable");
 		Utils::copy<sizeof(T)>(&dest,&src);
 	}
-});
+};
 
 static constexpr bool isTriviallyCopyable(const TriviallyCopyable *) noexcept { return true; }
 static constexpr bool isTriviallyCopyable(const void *) noexcept { return false; }

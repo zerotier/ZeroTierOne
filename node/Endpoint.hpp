@@ -21,20 +21,12 @@
 #include "TriviallyCopyable.hpp"
 #include "Fingerprint.hpp"
 
-#include <cstdio>
-#include <cstdlib>
-#include <cstdint>
-#include <cstring>
-
 #define ZT_ENDPOINT_MARSHAL_SIZE_MAX 64
 
 namespace ZeroTier {
 
 /**
- * Endpoint variant specifying some form of network endpoint
- *
- * This data structure supports a number of types that are not yet actually used:
- * DNSNAME, URL, and ETHERNET. These are present to reserve them for future use.
+ * Endpoint variant specifying some form of network endpoint.
  */
 class Endpoint : public TriviallyCopyable
 {
@@ -46,29 +38,25 @@ public:
 	 */
 	enum Type
 	{
-		TYPE_NIL =          ZT_TRACE_EVENT_PATH_TYPE_NIL,
-		TYPE_ZEROTIER =     ZT_TRACE_EVENT_PATH_TYPE_ZEROTIER,
-		TYPE_ETHERNET =     ZT_TRACE_EVENT_PATH_TYPE_ETHERNET,
-		TYPE_INETADDR_V4 =  ZT_TRACE_EVENT_PATH_TYPE_INETADDR_V4,
-		TYPE_INETADDR_V6 =  ZT_TRACE_EVENT_PATH_TYPE_INETADDR_V6
+		TYPE_NIL =          ZT_ENDPOINT_TYPE_NIL,
+		TYPE_ZEROTIER =     ZT_ENDPOINT_TYPE_ZEROTIER,
+		TYPE_ETHERNET =     ZT_ENDPOINT_TYPE_ETHERNET,
+		TYPE_INETADDR_V4 =  ZT_ENDPOINT_TYPE_INETADDR_V4,
+		TYPE_INETADDR_V6 =  ZT_ENDPOINT_TYPE_INETADDR_V6
 	};
 
 	/**
 	 * Protocol identifier bits.
-	 *
-	 * Endpoint types can support more than one of these, though it depends on the type.
-	 *
-	 * Most of these are reserved for possible future use.
 	 */
 	enum Protocol
 	{
-		PROTO_DGRAM =       0x0001, // UDP for IP or naked Ethernet frames
-		PROTO_STREAM  =     0x0002, // TCP
-		PROTO_HTTP2 =       0x0004, // HTTP2 bidirectional protocol
-		PROTO_HTTPS2 =      0x0008, // HTTP2 over SSL/TLS
-		PROTO_WS =          0x0010, // Web sockets
-		PROTO_WEBRTC =      0x0020, // WebRTC data channels
-		PROTO_WIREGUARD =   0x0040  // Wireguard as low-level transport
+		PROTO_DGRAM =       ZT_ENDPOINT_PROTO_DGRAM,
+		PROTO_STREAM  =     ZT_ENDPOINT_PROTO_STREAM,
+		PROTO_HTTP2 =       ZT_ENDPOINT_PROTO_HTTP2,
+		PROTO_HTTPS2 =      ZT_ENDPOINT_PROTO_HTTPS2,
+		PROTO_WS =          ZT_ENDPOINT_PROTO_WS,
+		PROTO_WEBRTC =      ZT_ENDPOINT_PROTO_WEBRTC,
+		PROTO_WIREGUARD =   ZT_ENDPOINT_PROTO_WIREGUARD
 	};
 
 	ZT_INLINE Endpoint() noexcept { memoryZero(this); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)

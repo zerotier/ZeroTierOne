@@ -146,7 +146,7 @@ void Dictionary::clear()
 	m_entries.clear();
 }
 
-void Dictionary::encode(std::vector<uint8_t> &out) const
+void Dictionary::encode(Vector<uint8_t> &out) const
 {
 	uint64_t str[2] = { 0,0 }; // second entry causes all strings to be null-terminated even if 8 chars in length
 

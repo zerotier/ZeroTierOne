@@ -186,18 +186,6 @@ static const C25519TestVector C25519_TEST_VECTORS[ZT_NUM_C25519_TEST_VECTORS] = 
 #define ZT_ENDIAN_S "big"
 #endif
 
-// This is basically a unit test for compiler packed structure behavior.
-ZT_PACKED_STRUCT(struct StructPackingTestSample {
-	uint8_t foo;
-	uint16_t bar;
-	uint32_t baz;
-	uint8_t lala;
-	uint64_t woop;
-	uint8_t haha;
-	uint64_t hoho[16];
-	uint8_t lol;
-});
-
 // Increments and decrements a counter based on object create/destroy
 class LifeCycleTracker
 {
@@ -264,12 +252,14 @@ extern "C" const char *ZTT_general()
 
 		{
 			ZT_T_PRINTF("[general] Checking structure sizes, alignment, and packing... ");
-			static_assert(sizeof(StructPackingTestSample) == 146,"StructPackingTestSample packed incorrectly");
-			StructPackingTestSample packtest; // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
-			if (((uintptr_t)&(packtest.woop) - (uintptr_t)&packtest) != 8)
-				return "structure packing check failed: incorrect index of test field in example packed struct (compiler or environment problem)";
-			if (((uintptr_t)&(packtest.hoho[5]) - (uintptr_t)&packtest) != 57)
-				return "structure packing check failed: incorrect index of test array indexed field in example packed struct (compiler or environment problem)";
+			if ((uintptr_t)&(InetAddress::LO4.as.sa_in) != (uintptr_t)&(InetAddress::LO4.as.sa_in6)) {
+				ZT_T_PRINTF("FAILED (&sa_in != &sa_in6)" ZT_EOL_S);
+				return "&sa_in != &sa_in6";
+			}
+			if ((uintptr_t)&(InetAddress::LO4.as.sa_in6.sin6_family) != (uintptr_t)&(InetAddress::LO4.as.ss.ss_family)) {
+				ZT_T_PRINTF("FAILED (&sa_in6.sin6_family != &ss.ss_family)" ZT_EOL_S);
+				return "&sa_in6.sin6_family != &ss.ss_family";
+			}
 			ZT_T_PRINTF("OK" ZT_EOL_S);
 		}
 
