@@ -127,7 +127,31 @@ public:
 		if (m_ptr) {
 			if (--m_ptr->__refCount <= 0)
 				delete m_ptr;
-			m_ptr = (T *)0;
+			m_ptr = nullptr;
+		}
+	}
+
+	/**
+	 * Set pointer to NULL and delete object if reference count is only 1
+	 *
+	 * This can be called periodically to implement something like a weak
+	 * reference as it exists in other more managed languages like Java,
+	 * but with the caveat that it only works if there is only one remaining
+	 * SharedPtr to be treated as weak.
+	 *
+	 * @return True if object was in fact deleted or was already zero/NULL
+	 */
+	ZT_INLINE bool weakGC()
+	{
+		if (m_ptr) {
+			if (m_ptr->__refCount.compare_exchange_strong(1,0)) {
+				delete m_ptr;
+				m_ptr = nullptr;
+				return true;
+			}
+			return false;
+		} else {
+			return true;
 		}
 	}
 

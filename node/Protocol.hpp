@@ -251,14 +251,16 @@
 #define ZT_PROTO_HELLO_NODE_META_INSTANCE_ID      "i"
 #define ZT_PROTO_HELLO_NODE_META_LOCATOR          "l"
 #define ZT_PROTO_HELLO_NODE_META_PROBE_TOKEN      "p"
-#define ZT_PROTO_HELLO_NODE_META_NEIGHBORS        "n"
 #define ZT_PROTO_HELLO_NODE_META_SOFTWARE_VENDOR  "s"
 #define ZT_PROTO_HELLO_NODE_META_SOFTWARE_VERSION "v"
 #define ZT_PROTO_HELLO_NODE_META_PHYSICAL_DEST    "d"
 #define ZT_PROTO_HELLO_NODE_META_COMPLIANCE       "c"
-#define ZT_PROTO_HELOO_NODE_META_EPHEMERAL_C25519 "0"
-#define ZT_PROTO_HELOO_NODE_META_EPHEMERAL_P384   "1"
-#define ZT_PROTO_HELOO_NODE_META_EPHEMERAL_REMOTE "R"
+#define ZT_PROTO_HELLO_NODE_META_EPHEMERAL_C25519 "0"
+#define ZT_PROTO_HELLO_NODE_META_EPHEMERAL_P384   "1"
+#define ZT_PROTO_HELLO_NODE_META_EPHEMERAL_REMOTE "R"
+
+static_assert(ZT_PROTO_MAX_PACKET_LENGTH < ZT_BUF_MEM_SIZE,"maximum packet length won't fit in Buf");
+static_assert(ZT_PROTO_PACKET_ENCRYPTED_SECTION_START == (ZT_PROTO_MIN_PACKET_LENGTH-1),"encrypted packet section must start right before protocol verb at one less than minimum packet size");
 
 namespace ZeroTier {
 namespace Protocol {
@@ -356,7 +358,6 @@ enum Verb
 	 *
 	 *   NAME - arbitrary short user-defined name for this node
 	 *   CONTACT - arbitrary short contact information string for this node
-	 *   NEIGHBORS - addresses of node(s) to whom we'll relay (mesh-like routing)
 	 *   SOFTWARE_VENDOR - short name or description of vendor, such as a URL
 	 *   SOFTWARE_VERSION - major, minor, revision, and build (packed 64-bit int)
 	 *   PHYSICAL_DEST - serialized Endpoint to which this message was sent
@@ -425,21 +426,28 @@ enum Verb
 	/**
 	 * Relay-mediated NAT traversal or firewall punching initiation:
 	 *   <[1] flags (unused, currently 0)>
-	 *   <[5] ZeroTier address of peer that might be found at this address>
+	 *   <[5] ZeroTier address of other peer>
+	 *   <[2] 16-bit number of endpoints where peer might be reached>
+	 *   <[...] endpoints to attempt>
+	 *
+	 * Legacy packet format for pre-2.x peers:
+	 *   <[1] flags (unused, currently 0)>
+	 *   <[5] ZeroTier address of other peer>
 	 *   <[2] 16-bit protocol address port>
 	 *   <[1] protocol address length / type>
 	 *   <[...] protocol address (network byte order)>
 	 *
-	 * This is sent by a third party node to inform a node of where another
-	 * may be located. These are currently only allowed from roots.
+	 * When a root or other peer is relaying messages, it can periodically send
+	 * RENDEZVOUS to assist peers in establishing direct communication.
 	 *
-	 * The protocol address format differs from the standard InetAddress
-	 * encoding for legacy reasons, but it's not hard to decode. The following
-	 * values are valid for the protocol address length (type) field:
+	 * Peers also directly exchange information via HELLO, so this serves as
+	 * a second way for peers to learn about their possible locations.
 	 *
-	 *   4 - IPv4 IP address
-	 *   16 - IPv6 IP address
-	 *   255 - Endpoint object, unmarshaled in place (port ignored)
+	 * It also serves another function: temporal coordination of NAT traversal
+	 * attempts. Some NATs traverse better if both sides first send "firewall
+	 * opener" packets and then send real packets and if this exchange is
+	 * coordinated in time so that the packets effectively pass each other in
+	 * flight.
 	 *
 	 * No OK or ERROR is generated.
 	 */
@@ -627,46 +635,7 @@ enum Verb
 	 */
 	VERB_MULTICAST_GATHER = 0x0d,
 
-	/** *** DEPRECATED ***
-	 * Multicast frame:
-	 *   <[8] 64-bit network ID>
-	 *   <[1] flags>
-	 *  [<[4] 32-bit implicit gather limit>]
-	 *  [<[6] source MAC>]
-	 *   <[6] destination MAC (multicast address)>
-	 *   <[4] 32-bit multicast ADI (multicast address extension)>
-	 *   <[2] 16-bit ethertype>
-	 *   <[...] ethernet payload>
-	 *
-	 * Flags:
-	 *   0x01 - Network certificate of membership attached (DEPRECATED)
-	 *   0x02 - Implicit gather limit field is present
-	 *   0x04 - Source MAC is specified -- otherwise it's computed from sender
-	 *   0x08 - Please replicate (sent to multicast replicators)
-	 *
-	 * OK and ERROR responses are optional. OK may be generated if there are
-	 * implicit gather results or if the recipient wants to send its own
-	 * updated certificate of network membership to the sender. ERROR may be
-	 * generated if a certificate is needed or if multicasts to this group
-	 * are no longer wanted (multicast unsubscribe).
-	 *
-	 * OK response payload:
-	 *   <[8] 64-bit network ID>
-	 *   <[6] MAC address of multicast group>
-	 *   <[4] 32-bit ADI for multicast group>
-	 *   <[1] flags>
-	 *  [<[...] network certificate of membership (DEPRECATED)>]
-	 *  [<[...] implicit gather results if flag 0x01 is set>]
-	 *
-	 * OK flags (same bits as request flags):
-	 *   0x01 - OK includes certificate of network membership (DEPRECATED)
-	 *   0x02 - OK includes implicit gather results
-	 *
-	 * ERROR response payload:
-	 *   <[8] 64-bit network ID>
-	 *   <[6] multicast group MAC>
-	 *   <[4] 32-bit multicast group ADI>
-	 */
+	// Deprecated multicast frame message type.
 	VERB_MULTICAST_FRAME_deprecated = 0x0e,
 
 	/**
@@ -676,14 +645,19 @@ enum Verb
 	 *
 	 * Path record format:
 	 *   <[1] 8-bit path flags>
-	 *   <[2] length of extended path data or 0 for none>
-	 *   <[...] extended path data>
-	 *   <[1] address type>
-	 *   <[1] address record length in bytes>
-	 *   <[...] address>
+	 *   <[2] length of endpoint record>
+	 *   <[...] endpoint>
+	 * 
+	 * The following fields are also included if the node is pre-2.x:
+	 *   <[1] address type (LEGACY)>
+	 *   <[1] address length in bytes (LEGACY)>
+	 *   <[...] address (LEGACY)>
 	 *
-	 * Path flags:
-	 *   0x01 - BFG1024 symmetric NAT-t requested
+	 * Path record flags:
+	 *   0x01 - reserved (legacy)
+	 *   0x02 - reserved (legacy)
+	 *   0x04 - Symmetric NAT detected at sender side
+	 *   0x08 - Request aggressive symmetric NAT traversal
 	 *
 	 * OK and ERROR are not generated.
 	 */
@@ -704,19 +678,6 @@ enum Verb
 	 */
 	VERB_USER_MESSAGE = 0x14,
 
-	/**
-	 * Encapsulate a ZeroTier packet for multicast distribution:
-	 *   [... begin signed portion ...]
-	 *   <[1] 8-bit flags>
-	 *   <[5] 40-bit ZeroTier address of sender>
-	 *   <[2] 16-bit length of inner payload>
-	 *   <[1] inner payload verb>
-	 *   <[...] inner payload data>
-	 *   [... end signed portion ...]
-	 *   <[2] 16-bit length of signature or 0 if un-signed>
-	 *  [<[...] optional signature of multicast>]
-	 *   <[...] address (min prefix) list>
-	 */
 	VERB_MULTICAST = 0x16,
 
 	/**
@@ -806,220 +767,6 @@ enum NetworkConfigFlag
 	 */
 	NETWORK_CONFIG_FLAG_FAST_PROPAGATE = 0x01
 };
-
-/****************************************************************************/
-
-/*
- * These are bit-packed structures for rapid parsing of packets or at least
- * the fixed size headers thereof. Not all packet types have these as some
- * are full of variable length fields are are more easily parsed through
- * incremental decoding.
- *
- * All fields larger than one byte are in big-endian byte order on the wire.
- */
-
-/**
- * Normal packet header
- *
- * @tparam PT Packet payload type (default: uint8_t[])
- */
-ZT_PACKED_STRUCT(struct Header
-{
-	uint64_t packetId;
-	uint8_t destination[5];
-	uint8_t source[5];
-	uint8_t flags;
-	uint64_t mac;
-	// --- begin encrypted envelope ---
-	uint8_t verb;
-});
-
-/**
- * Packet fragment header
- */
-ZT_PACKED_STRUCT(struct FragmentHeader
-{
-	uint64_t packetId;
-	uint8_t destination[5];
-	uint8_t fragmentIndicator; // always 0xff for fragments
-	uint8_t counts; // total: most significant four bits, number: least significant four bits
-	uint8_t hops; // top 5 bits unused and must be zero
-});
-
-ZT_PACKED_STRUCT(struct HELLO
-{
-	Header h;
-	uint8_t versionProtocol;
-	uint8_t versionMajor;
-	uint8_t versionMinor;
-	uint16_t versionRev;
-	uint64_t timestamp;
-});
-
-ZT_PACKED_STRUCT(struct RENDEZVOUS
-{
-	Header h;
-	uint8_t flags;
-	uint8_t peerAddress[5];
-	uint16_t port;
-	uint8_t addressLength;
-});
-
-ZT_PACKED_STRUCT(struct FRAME
-{
-	Header h;
-	uint64_t networkId;
-	uint16_t etherType;
-});
-
-ZT_PACKED_STRUCT(struct EXT_FRAME
-{
-	Header h;
-	uint64_t networkId;
-	uint8_t flags;
-});
-
-ZT_PACKED_STRUCT(struct PUSH_DIRECT_PATHS
-{
-	Header h;
-	uint16_t numPaths;
-});
-
-ZT_PACKED_STRUCT(struct MULTICAST_LIKE
-{
-	ZT_PACKED_STRUCT(struct Entry
-	{
-		uint64_t networkId;
-		uint8_t mac[6];
-		uint32_t adi;
-	});
-
-	Header h;
-});
-
-namespace OK {
-
-/**
- * OK response header
- *
- * @tparam PT OK payload type (default: uint8_t[])
- */
-ZT_PACKED_STRUCT(struct Header
-{
-	Protocol::Header h;
-	uint8_t inReVerb;
-	uint64_t inRePacketId;
-});
-
-ZT_PACKED_STRUCT(struct WHOIS
-{
-	OK::Header h;
-});
-
-ZT_PACKED_STRUCT(struct ECHO
-{
-	OK::Header h;
-});
-
-ZT_PACKED_STRUCT(struct HELLO
-{
-	OK::Header h;
-	uint64_t timestampEcho;
-	uint8_t versionProtocol;
-	uint8_t versionMajor;
-	uint8_t versionMinor;
-	uint16_t versionRev;
-});
-
-ZT_PACKED_STRUCT(struct EXT_FRAME
-{
-	OK::Header h;
-	uint64_t networkId;
-	uint8_t flags;
-	uint8_t destMac[6];
-	uint8_t sourceMac[6];
-	uint16_t etherType;
-});
-
-ZT_PACKED_STRUCT(struct NETWORK_CONFIG
-{
-	OK::Header h;
-	uint64_t networkId;
-	uint64_t configUpdateId;
-});
-
-} // namespace OK
-
-namespace ERROR {
-
-/**
- * Error header
- *
- * The error header comes after the packet header but before type-specific payloads.
- *
- * @tparam PT Error payload type (default: uint8_t[])
- */
-ZT_PACKED_STRUCT(struct Header
-{
-	Protocol::Header h;
-	int8_t inReVerb;
-	uint64_t inRePacketId;
-	uint8_t error;
-});
-
-ZT_PACKED_STRUCT(struct NEED_MEMBERSHIP_CERTIFICATE
-{
-	ERROR::Header h;
-	uint64_t networkId;
-});
-
-ZT_PACKED_STRUCT(struct UNSUPPORTED_OPERATION__NETWORK_CONFIG_REQUEST
-{
-	ERROR::Header h;
-	uint64_t networkId;
-});
-
-} // namespace ERROR
-
-/****************************************************************************/
-
-static_assert(sizeof(Protocol::Header) == ZT_PROTO_MIN_PACKET_LENGTH,"Protocol::Header struct packing error");
-static_assert(sizeof(Protocol::FragmentHeader) == ZT_PROTO_MIN_FRAGMENT_LENGTH,"Protocol::FragmentHeader struct packing error");
-static_assert(ZT_PROTO_MAX_PACKET_LENGTH < ZT_BUF_MEM_SIZE,"maximum packet length won't fit in Buf");
-static_assert(ZT_PROTO_PACKET_ENCRYPTED_SECTION_START == (ZT_PROTO_MIN_PACKET_LENGTH-1),"encrypted packet section must start right before protocol verb at one less than minimum packet size");
-
-/**
- * Convenience function to pull packet ID from a raw buffer
- *
- * @param pkt Packet to read first 8 bytes from
- * @param packetSize Packet's actual size in bytes
- * @return Packet ID or 0 if packet size is less than 8
- */
-static ZT_INLINE uint64_t packetId(const Buf &pkt,const unsigned int packetSize) noexcept { return (packetSize >= 8) ? Utils::loadBigEndian<uint64_t>(pkt.unsafeData) : 0ULL; }
-
-/**
- * @param Packet to extract hops from
- * @param packetSize Packet's actual size in bytes
- * @return 3-bit hops field embedded in packet flags field
- */
-static ZT_INLINE uint8_t packetHops(const Buf &pkt,const unsigned int packetSize) noexcept { return (packetSize >= ZT_PROTO_PACKET_FLAGS_INDEX) ? (pkt.unsafeData[ZT_PROTO_PACKET_FLAGS_INDEX] & ZT_PROTO_FLAG_FIELD_HOPS_MASK) : 0; }
-
-/**
- * @param Packet to extract cipher ID from
- * @param packetSize Packet's actual size in bytes
- * @return 3-bit cipher field embedded in packet flags field
- */
-static ZT_INLINE uint8_t packetCipher(const Buf &pkt,const unsigned int packetSize) noexcept { return (packetSize >= ZT_PROTO_PACKET_FLAGS_INDEX) ? ((pkt.unsafeData[ZT_PROTO_PACKET_FLAGS_INDEX] >> 3U) & 0x07U) : 0; }
-
-/**
- * @return 3-bit hops field embedded in packet flags field
- */
-static ZT_INLINE uint8_t packetHops(const Header &ph) noexcept { return (ph.flags & 0x07U); }
-
-/**
- * @return 3-bit cipher field embedded in packet flags field
- */
-static ZT_INLINE uint8_t packetCipher(const Header &ph) noexcept { return ((ph.flags >> 3U) & 0x07U); }
 
 /**
  * Deterministically mangle a 256-bit crypto key based on packet characteristics

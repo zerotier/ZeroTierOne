@@ -18,10 +18,6 @@
 #include "Path.hpp"
 #include "InetAddress.hpp"
 
-#include <cstdio>
-#include <cstdlib>
-#include <cstdarg>
-
 // NOTE: packet IDs are always handled in network byte order, so no need to convert them.
 
 namespace ZeroTier {

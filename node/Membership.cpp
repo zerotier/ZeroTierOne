@@ -21,10 +21,10 @@
 namespace ZeroTier {
 
 Membership::Membership() :
-	_comRevocationThreshold(0),
-	_lastPushedCredentials(0),
-	_comAgreementLocalTimestamp(0),
-	_comAgreementRemoteTimestamp(0)
+	m_comRevocationThreshold(0),
+	m_lastPushedCredentials(0),
+	m_comAgreementLocalTimestamp(0),
+	m_comAgreementRemoteTimestamp(0)
 {
 }
 
@@ -110,30 +110,30 @@ void Membership::pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const i
 		}
 	}
 
-	_lastPushedCredentials = now;
+	m_lastPushedCredentials = now;
 }
 
 void Membership::clean(const int64_t now,const NetworkConfig &nconf)
 {
-	_cleanCredImpl<Tag>(nconf,_remoteTags);
-	_cleanCredImpl<Capability>(nconf,_remoteCaps);
-	_cleanCredImpl<CertificateOfOwnership>(nconf,_remoteCoos);
+	m_cleanCredImpl<Tag>(nconf, m_remoteTags);
+	m_cleanCredImpl<Capability>(nconf, m_remoteCaps);
+	m_cleanCredImpl<CertificateOfOwnership>(nconf, m_remoteCoos);
 }
 
 Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment *RR,void *tPtr,const Identity &sourcePeerIdentity,const NetworkConfig &nconf,const CertificateOfMembership &com)
 {
 	const int64_t newts = com.timestamp();
-	if (newts <= _comRevocationThreshold) {
+	if (newts <= m_comRevocationThreshold) {
 		RR->t->credentialRejected(tPtr,0xd9992121,com.networkId(),sourcePeerIdentity.address(),sourcePeerIdentity,com.id(),com.timestamp(),ZT_CREDENTIAL_TYPE_COM,ZT_TRACE_CREDENTIAL_REJECTION_REASON_REVOKED);
 		return ADD_REJECTED;
 	}
 
-	const int64_t oldts = _com.timestamp();
+	const int64_t oldts = m_com.timestamp();
 	if (newts < oldts) {
 		RR->t->credentialRejected(tPtr,0xd9928192,com.networkId(),sourcePeerIdentity.address(),sourcePeerIdentity,com.id(),com.timestamp(),ZT_CREDENTIAL_TYPE_COM,ZT_TRACE_CREDENTIAL_REJECTION_REASON_OLDER_THAN_LATEST);
 		return ADD_REJECTED;
 	}
-	if ((newts == oldts)&&(_com == com))
+	if ((newts == oldts)&&(m_com == com))
 		return ADD_ACCEPTED_REDUNDANT;
 
 	switch(com.verify(RR,tPtr)) {
@@ -141,7 +141,7 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 			RR->t->credentialRejected(tPtr,0x0f198241,com.networkId(),sourcePeerIdentity.address(),sourcePeerIdentity,com.id(),com.timestamp(),ZT_CREDENTIAL_TYPE_COM,ZT_TRACE_CREDENTIAL_REJECTION_REASON_INVALID);
 			return Membership::ADD_REJECTED;
 		case Credential::VERIFY_OK:
-			_com = com;
+			m_com = com;
 			return ADD_ACCEPTED_NEW;
 		case Credential::VERIFY_BAD_SIGNATURE:
 			RR->t->credentialRejected(tPtr,0xbaf0aaaa,com.networkId(),sourcePeerIdentity.address(),sourcePeerIdentity,com.id(),com.timestamp(),ZT_CREDENTIAL_TYPE_COM,ZT_TRACE_CREDENTIAL_REJECTION_REASON_SIGNATURE_VERIFICATION_FAILED);
@@ -191,9 +191,9 @@ static ZT_INLINE Membership::AddCredentialResult _addCredImpl(
 			return Membership::ADD_DEFERRED_FOR_WHOIS;
 	}
 }
-Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment *RR,void *tPtr,const Identity &sourcePeerIdentity,const NetworkConfig &nconf,const Tag &tag) { return _addCredImpl<Tag>(_remoteTags,_revocations,RR,tPtr,sourcePeerIdentity,nconf,tag); }
-Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment *RR,void *tPtr,const Identity &sourcePeerIdentity,const NetworkConfig &nconf,const Capability &cap) { return _addCredImpl<Capability>(_remoteCaps,_revocations,RR,tPtr,sourcePeerIdentity,nconf,cap); }
-Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment *RR,void *tPtr,const Identity &sourcePeerIdentity,const NetworkConfig &nconf,const CertificateOfOwnership &coo) { return _addCredImpl<CertificateOfOwnership>(_remoteCoos,_revocations,RR,tPtr,sourcePeerIdentity,nconf,coo); }
+Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment *RR,void *tPtr,const Identity &sourcePeerIdentity,const NetworkConfig &nconf,const Tag &tag) { return _addCredImpl<Tag>(m_remoteTags, m_revocations, RR, tPtr, sourcePeerIdentity, nconf, tag); }
+Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment *RR,void *tPtr,const Identity &sourcePeerIdentity,const NetworkConfig &nconf,const Capability &cap) { return _addCredImpl<Capability>(m_remoteCaps, m_revocations, RR, tPtr, sourcePeerIdentity, nconf, cap); }
+Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment *RR,void *tPtr,const Identity &sourcePeerIdentity,const NetworkConfig &nconf,const CertificateOfOwnership &coo) { return _addCredImpl<CertificateOfOwnership>(m_remoteCoos, m_revocations, RR, tPtr, sourcePeerIdentity, nconf, coo); }
 
 Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment *RR,void *tPtr,const Identity &sourcePeerIdentity,const NetworkConfig &nconf,const Revocation &rev)
 {
@@ -206,18 +206,18 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 			const ZT_CredentialType ct = rev.typeBeingRevoked();
 			switch(ct) {
 				case ZT_CREDENTIAL_TYPE_COM:
-					if (rev.threshold() > _comRevocationThreshold) {
-						_comRevocationThreshold = rev.threshold();
+					if (rev.threshold() > m_comRevocationThreshold) {
+						m_comRevocationThreshold = rev.threshold();
 						return ADD_ACCEPTED_NEW;
 					}
 					return ADD_ACCEPTED_REDUNDANT;
 				case ZT_CREDENTIAL_TYPE_CAPABILITY:
 				case ZT_CREDENTIAL_TYPE_TAG:
 				case ZT_CREDENTIAL_TYPE_COO:
-					rt = &(_revocations[credentialKey(ct,rev.credentialId())]);
+					rt = &(m_revocations[credentialKey(ct, rev.credentialId())]);
 					if (*rt < rev.threshold()) {
 						*rt = rev.threshold();
-						_comRevocationThreshold = rev.threshold();
+						m_comRevocationThreshold = rev.threshold();
 						return ADD_ACCEPTED_NEW;
 					}
 					return ADD_ACCEPTED_REDUNDANT;
@@ -231,7 +231,7 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 	}
 }
 
-bool Membership::_isUnspoofableAddress(const NetworkConfig &nconf,const InetAddress &ip) const noexcept
+bool Membership::m_isUnspoofableAddress(const NetworkConfig &nconf, const InetAddress &ip) const noexcept
 {
 	if ((ip.isV6())&&(nconf.ndpEmulation())) {
 		const InetAddress sixpl(InetAddress::makeIpv66plane(nconf.networkId,nconf.issuedTo.toInt()));

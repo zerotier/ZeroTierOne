@@ -150,6 +150,11 @@
 #define ZT_PEER_HELLO_INTERVAL 120000LL
 
 /**
+ * Timeout for peers being alive
+ */
+#define ZT_PEER_ALIVE_TIMEOUT ((ZT_PEER_HELLO_INTERVAL * 2) + 5000)
+
+/**
  * Global timeout for peers in milliseconds
  *
  * This is global as in "entire world," and this value is 30 days. In this

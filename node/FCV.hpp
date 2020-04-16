@@ -49,7 +49,7 @@ public:
 	/**
 	 * @return True if this FCV is trivially copyable, which means its type is also.
 	 */
-	static constexpr bool isTriviallyCopyable() noexcept { return isTriviallyCopyable(reinterpret_cast<const T *>(0)); }
+	static constexpr bool isTriviallyCopyable() noexcept { return ZeroTier::isTriviallyCopyable(reinterpret_cast<const T *>(nullptr)); }
 
 	ZT_INLINE FCV() noexcept : _s(0) {} // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 	ZT_INLINE FCV(const FCV &v) : _s(0) { *this = v; } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)

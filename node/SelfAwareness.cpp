@@ -17,8 +17,7 @@
 #include "Topology.hpp"
 #include "Peer.hpp"
 #include "Trace.hpp"
-
-#include <set>
+#include "Containers.hpp"
 
 // Entry timeout -- make it fairly long since this is just to prevent stale buildup
 #define ZT_SELFAWARENESS_ENTRY_TIMEOUT 300000
@@ -67,7 +66,7 @@ void SelfAwareness::iam(void *tPtr,const Identity &reporter,const int64_t receiv
 		// Erase all entries in this scope that were not reported from this remote address to prevent 'thrashing'
 		// due to multiple reports of endpoint change.
 		// Don't use 'entry' after this since hash table gets modified.
-		for(Map<p_PhySurfaceKey,p_PhySurfaceEntry>::iterator i(m_phy.begin());i != m_phy.end();) { // NOLINT(modernize-loop-convert,modernize-use-auto,hicpp-use-auto)
+		for(Map<p_PhySurfaceKey,p_PhySurfaceEntry>::iterator i(m_phy.begin());i != m_phy.end();) {
 			if ((i->first.scope == scope)&&(i->first.reporterPhysicalAddress != reporterPhysicalAddress))
 				m_phy.erase(i++);
 			else ++i;
@@ -89,27 +88,29 @@ void SelfAwareness::iam(void *tPtr,const Identity &reporter,const int64_t receiv
 void SelfAwareness::clean(int64_t now)
 {
 	Mutex::Lock l(m_phy_l);
-	for(Map<p_PhySurfaceKey,p_PhySurfaceEntry>::iterator i(m_phy.begin());i != m_phy.end();) { // NOLINT(modernize-loop-convert,modernize-use-auto,hicpp-use-auto)
+	for(Map<p_PhySurfaceKey,p_PhySurfaceEntry>::iterator i(m_phy.begin());i != m_phy.end();) {
 		if ((now - i->second.ts) >= ZT_SELFAWARENESS_ENTRY_TIMEOUT)
 			m_phy.erase(i++);
 		else ++i;
 	}
 }
 
-SelfAwareness::ExternalAddressList SelfAwareness::externalAddresses(const int64_t now) const
+MultiMap<unsigned int,InetAddress> SelfAwareness::externalAddresses(const int64_t now) const
 {
-	SelfAwareness::ExternalAddressList r;
-	Map<InetAddress,unsigned long> counts;
+	MultiMap<unsigned int,InetAddress> r;
 
+	// Count endpoints reporting each IP/port combo
+	Map<InetAddress,unsigned long> counts;
 	{
 		Mutex::Lock l(m_phy_l);
-		for(Map<p_PhySurfaceKey,p_PhySurfaceEntry>::const_iterator i(m_phy.begin());i != m_phy.end();++i) { // NOLINT(modernize-loop-convert,modernize-use-auto,hicpp-use-auto)
+		for(Map<p_PhySurfaceKey,p_PhySurfaceEntry>::const_iterator i(m_phy.begin());i != m_phy.end();++i) {
 			if ((now - i->second.ts) < ZT_SELFAWARENESS_ENTRY_TIMEOUT)
 				++counts[i->second.mySurface];
 		}
 	}
 
-	for(Map<InetAddress,unsigned long>::iterator i(counts.begin());i!=counts.end();++i) // NOLINT(modernize-loop-convert,modernize-use-auto,hicpp-use-auto)
+	// Invert to create a map from count to address
+	for(Map<InetAddress,unsigned long>::iterator i(counts.begin());i!=counts.end();++i)
 		r.insert(std::pair<unsigned long,InetAddress>(i->second,i->first));
 
 	return r;

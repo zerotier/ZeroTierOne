@@ -20,11 +20,7 @@
 #include "InetAddress.hpp"
 #include "Address.hpp"
 #include "MAC.hpp"
-
-#include <cstdint>
-#include <cstring>
-#include <cstdlib>
-#include <vector>
+#include "Containers.hpp"
 
 #define ZT_TRACE_F_VL1           0x01U
 #define ZT_TRACE_F_VL2           0x02U

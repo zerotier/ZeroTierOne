@@ -49,7 +49,7 @@ public:
 	 */
 	ZT_INLINE void sending(const uint64_t packetId,const int64_t now) noexcept
 	{
-		_packetIdSent[Utils::hash64(packetId ^ Utils::s_mapNonce) % ZT_EXPECT_BUCKETS].store((uint32_t)(now / ZT_EXPECT_TTL));
+		m_packetIdSent[Utils::hash64(packetId ^ Utils::s_mapNonce) % ZT_EXPECT_BUCKETS].store((uint32_t)(now / ZT_EXPECT_TTL));
 	}
 
 	/**
@@ -64,12 +64,12 @@ public:
 	 */
 	ZT_INLINE bool expecting(const uint64_t inRePacketId,const int64_t now) noexcept
 	{
-		return (((now / ZT_EXPECT_TTL) - (int64_t)_packetIdSent[(unsigned long)Utils::hash64(inRePacketId ^ Utils::s_mapNonce) % ZT_EXPECT_BUCKETS].exchange(0)) <= 1);
+		return (((now / ZT_EXPECT_TTL) - (int64_t)m_packetIdSent[(unsigned long)Utils::hash64(inRePacketId ^ Utils::s_mapNonce) % ZT_EXPECT_BUCKETS].exchange(0)) <= 1);
 	}
 
 private:
 	// Each bucket contains a timestamp in units of the max expect duration.
-	std::atomic<uint32_t> _packetIdSent[ZT_EXPECT_BUCKETS];
+	std::atomic<uint32_t> m_packetIdSent[ZT_EXPECT_BUCKETS];
 };
 
 } // namespace ZeroTier

@@ -11,10 +11,6 @@
  */
 /****/
 
-#include <cstdlib>
-#include <cstring>
-#include <cstdint>
-
 #include "Constants.hpp"
 #include "SharedPtr.hpp"
 #include "Node.hpp"
@@ -90,7 +86,7 @@ Node::Node(void *uPtr,void *tPtr,const struct ZT_Node_Callbacks *callbacks,int64
 {
 	// Load this node's identity.
 	uint64_t idtmp[2]; idtmp[0] = 0; idtmp[1] = 0;
-	std::vector<uint8_t> data(stateObjectGet(tPtr,ZT_STATE_OBJECT_IDENTITY_SECRET,idtmp));
+	Vector<uint8_t> data(stateObjectGet(tPtr,ZT_STATE_OBJECT_IDENTITY_SECRET,idtmp));
 	bool haveIdentity = false;
 	if (!data.empty()) {
 		data.push_back(0); // zero-terminate string
@@ -528,12 +524,12 @@ void Node::setController(void *networkControllerInstance)
 
 // Methods used only within the core ----------------------------------------------------------------------------------
 
-std::vector<uint8_t> Node::stateObjectGet(void *const tPtr,ZT_StateObjectType type,const uint64_t id[2])
+Vector<uint8_t> Node::stateObjectGet(void *const tPtr,ZT_StateObjectType type,const uint64_t id[2])
 {
-	std::vector<uint8_t> r;
+	Vector<uint8_t> r;
 	if (m_cb.stateGetFunction) {
-		void *data = 0;
-		void (*freeFunc)(void *) = 0;
+		void *data = nullptr;
+		void (*freeFunc)(void *) = nullptr;
 		int l = m_cb.stateGetFunction(
 			reinterpret_cast<ZT_Node *>(this),
 			m_uPtr,

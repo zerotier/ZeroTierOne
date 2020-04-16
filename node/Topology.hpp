@@ -14,12 +14,6 @@
 #ifndef ZT_TOPOLOGY_HPP
 #define ZT_TOPOLOGY_HPP
 
-#include <cstring>
-#include <vector>
-#include <algorithm>
-#include <utility>
-#include <set>
-
 #include "Constants.hpp"
 #include "Address.hpp"
 #include "Identity.hpp"
@@ -31,6 +25,7 @@
 #include "ScopedPtr.hpp"
 #include "Fingerprint.hpp"
 #include "Containers.hpp"
+#include "PeerList.hpp"
 
 namespace ZeroTier {
 
@@ -43,7 +38,6 @@ class Topology
 {
 public:
 	Topology(const RuntimeEnvironment *renv,void *tPtr);
-	~Topology();
 
 	/**
 	 * Add peer to database
@@ -89,34 +83,21 @@ public:
 	}
 
 	/**
-	 * Get a peer by its 384-bit identity public key hash
+	 * Get peer(s) by 32-bit probe token
 	 *
-	 * @param hash Identity hash
-	 * @return Peer or NULL if no peer is currently in memory for this hash (cache is not checked in this case)
+	 * @param probeToken Probe token
+	 * @return List of peers
 	 */
-	ZT_INLINE SharedPtr<Peer> peerByHash(const Fingerprint &hash)
-	{
-		RWMutex::RLock _l(m_peers_l);
-		const SharedPtr<Peer> *const ap = m_peersByIdentityHash.get(hash);
-		if (ap)
-			return *ap;
-		return SharedPtr<Peer>();
-	}
+	PeerList peersByProbeToken(uint32_t probeToken) const;
 
 	/**
-	 * Get a peer by its incoming short probe packet payload
+	 * Set or update the probe token associated with a peer
 	 *
-	 * @param probe Short probe payload (in big-endian byte order)
-	 * @return Peer or NULL if no peer is currently in memory matching this probe (cache is not checked in this case)
+	 * @param peer Peer to update
+	 * @param oldToken Old probe token or 0 if none
+	 * @param newToken New probe token or 0 to erase old mapping but not set a new token
 	 */
-	ZT_INLINE SharedPtr<Peer> peerByProbe(const uint64_t probe)
-	{
-		RWMutex::RLock _l(m_peers_l);
-		const SharedPtr<Peer> *const ap = m_peersByIncomingProbe.get(probe);
-		if (ap)
-			return *ap;
-		return SharedPtr<Peer>();
-	}
+	void updateProbeToken(const SharedPtr<Peer> &peer,uint32_t oldToken,uint32_t newToken);
 
 	/**
 	 * Get a Path object for a given local and remote physical address, creating if needed
@@ -163,7 +144,7 @@ public:
 	ZT_INLINE bool isRoot(const Identity &id) const
 	{
 		RWMutex::RLock l(m_peers_l);
-		return (m_roots.count(id) > 0);
+		return (m_roots.find(id) != m_roots.end());
 	}
 
 	/**
@@ -210,23 +191,16 @@ public:
 	}
 
 	/**
-	 * Iterate through all paths in the system
-	 *
-	 * @tparam F Function to call for each path
-	 * @param f
-	 */
-	template<typename F>
-	ZT_INLINE void eachPath(F f) const
-	{
-		RWMutex::RLock l(m_paths_l);
-		for(Map< uint64_t,SharedPtr<Path> >::const_iterator i(m_paths.begin());i != m_paths.end();++i) // NOLINT(modernize-loop-convert,hicpp-use-auto,modernize-use-auto)
-			f(i->second);
-	}
-
-	/**
 	 * @param allPeers vector to fill with all current peers
 	 */
-	void getAllPeers(std::vector< SharedPtr<Peer> > &allPeers) const;
+	ZT_INLINE void getAllPeers(Vector< SharedPtr<Peer> > &allPeers) const
+	{
+		RWMutex::RLock l(m_peers_l);
+		allPeers.clear();
+		allPeers.reserve(m_peers.size());
+		for(Map< Address,SharedPtr<Peer> >::const_iterator i(m_peers.begin());i != m_peers.end();++i)
+			allPeers.push_back(i->second);
+	}
 
 	/**
 	 * Get info about a path
@@ -295,17 +269,18 @@ public:
 	/**
 	 * Remove a root server's identity from the root server set
 	 *
+	 * @param tPtr Thread pointer
 	 * @param id Root server identity
 	 * @return True if root found and removed, false if not found
 	 */
-	bool removeRoot(const Identity &id);
+	bool removeRoot(void *tPtr,const Identity &id);
 
 	/**
 	 * Sort roots in asecnding order of apparent latency
 	 *
 	 * @param now Current time
 	 */
-	void rankRoots(int64_t now);
+	void rankRoots();
 
 	/**
 	 * Do periodic tasks such as database cleanup
@@ -318,47 +293,45 @@ public:
 	void saveAll(void *tPtr);
 
 private:
-	// Load cached peer and set 'peer' to it, if one is found.
 	void m_loadCached(void *tPtr, const Address &zta, SharedPtr<Peer> &peer);
-
-	// This is a secure random integer created at startup to salt the calculation of path hash map keys
-	static const uint64_t s_pathHashSalt;
+	void m_writeRootList(void *tPtr);
 
 	// This gets an integer key from an InetAddress for looking up paths.
-	static ZT_INLINE uint64_t s_getPathKey(int64_t l, const InetAddress &r)
+	static ZT_INLINE uint64_t s_getPathKey(const int64_t l,const InetAddress &r)
 	{
 		if (r.family() == AF_INET) {
-			return s_pathHashSalt + (uint64_t)(reinterpret_cast<const struct sockaddr_in *>(&r)->sin_addr.s_addr) + (uint64_t)Utils::ntoh(reinterpret_cast<const struct sockaddr_in *>(&r)->sin_port) + (uint64_t)l;
+			return ((uint64_t)(reinterpret_cast<const sockaddr_in *>(&r)->sin_addr.s_addr) << 24U) +
+			       ((uint64_t)reinterpret_cast<const sockaddr_in *>(&r)->sin_port << 8U) +
+						 (uint64_t)l;
 		} else if (r.family() == AF_INET6) {
 #ifdef ZT_NO_UNALIGNED_ACCESS
-			uint64_t h = s_pathHashSalt;
-			for(int i=0;i<16;++i) {
-				h += (uint64_t)((reinterpret_cast<const struct sockaddr_in6 *>(&r)->sin6_addr.s6_addr)[i]);
-				h += (h << 10U);
-				h ^= (h >> 6U);
-			}
+			uint64_t htmp[2];
+			Utils::copy<16>(htmp,reinterpret_cast<const sockaddr_in6 *>(&r)->sin6_addr.s6_addr);
+			const uint64_t h = htmp[0] ^ htmp[1];
 #else
-			uint64_t h = s_pathHashSalt + (reinterpret_cast<const uint64_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&r)->sin6_addr.s6_addr)[0] + reinterpret_cast<const uint64_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&r)->sin6_addr.s6_addr)[1]);
+			const uint64_t h = reinterpret_cast<const uint64_t *>(reinterpret_cast<const sockaddr_in6 *>(&r)->sin6_addr.s6_addr)[0] ^
+			                   reinterpret_cast<const uint64_t *>(reinterpret_cast<const sockaddr_in6 *>(&r)->sin6_addr.s6_addr)[1];
 #endif
-			return h + (uint64_t)Utils::ntoh(reinterpret_cast<const struct sockaddr_in6 *>(&r)->sin6_port) + (uint64_t)l;
+			return h + (uint64_t)Utils::ntoh(reinterpret_cast<const struct sockaddr_in6 *>(&r)->sin6_port) ^ (uint64_t)l;
 		} else {
-			return Utils::fnv1a32(reinterpret_cast<const void *>(&r),sizeof(InetAddress)) + (uint64_t)l;
+			return (uint64_t)Utils::fnv1a32(reinterpret_cast<const void *>(&r),sizeof(InetAddress)) + (uint64_t)l;
 		}
 	}
 
 	const RuntimeEnvironment *const RR;
 
-	RWMutex m_peers_l;
 	RWMutex m_paths_l;
+	Mutex m_peersByProbeToken_l;
+	RWMutex m_peers_l;
 
 	std::pair< InetAddress,ZT_PhysicalPathConfiguration > m_physicalPathConfig[ZT_MAX_CONFIGURABLE_PATHS];
 	unsigned int m_numConfiguredPhysicalPaths;
 
 	Map< uint64_t,SharedPtr<Path> > m_paths;
 
+	MultiMap< uint32_t,SharedPtr<Peer> > m_peersByProbeToken;
+
 	Map< Address,SharedPtr<Peer> > m_peers;
-	Map< uint64_t,SharedPtr<Peer> > m_peersByIncomingProbe;
-	Map< Fingerprint,SharedPtr<Peer> > m_peersByIdentityHash;
 	Set< Identity > m_roots;
 	Vector< SharedPtr<Peer> > m_rootPeers;
 };

@@ -57,7 +57,7 @@ class Capability : public Credential
 public:
 	static constexpr ZT_CredentialType credentialType() noexcept { return ZT_CREDENTIAL_TYPE_CAPABILITY; }
 
-	ZT_INLINE Capability() noexcept { memoryZero(this); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+	ZT_INLINE Capability() noexcept { memoryZero(this); }
 
 	/**
 	 * @param id Capability ID

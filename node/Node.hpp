@@ -226,7 +226,7 @@ public:
 	 * @param id Object ID
 	 * @return Vector containing data or empty vector if not found or empty
 	 */
-	std::vector<uint8_t> stateObjectGet(void *tPtr,ZT_StateObjectType type,const uint64_t id[2]);
+	Vector<uint8_t> stateObjectGet(void *tPtr,ZT_StateObjectType type,const uint64_t id[2]);
 
 	/**
 	 * Store a state object
@@ -298,18 +298,6 @@ public:
 	 * @return True if aggressive NAT-traversal mechanisms like scanning of <1024 ports are enabled
 	 */
 	ZT_INLINE bool natMustDie() const noexcept { return m_natMustDie; }
-
-	/**
-	 * Wake peer by calling its alarm() method at or after a given time.
-	 *
-	 * @param peer Identity fingerprint of peer to wake
-	 * @param triggerTime Time alarm should go off
-	 */
-	ZT_INLINE void setPeerAlarm(const Fingerprint &peer,const int64_t triggerTime)
-	{
-		Mutex::Lock l(_peerAlarms_l);
-		_peerAlarms[peer] = triggerTime;
-	}
 
 	/**
 	 * Check whether a local controller has authorized a member on a network

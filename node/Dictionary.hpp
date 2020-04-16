@@ -20,8 +20,6 @@
 #include "Buf.hpp"
 #include "Containers.hpp"
 
-#include <cstdint>
-
 namespace ZeroTier {
 
 /**
@@ -42,7 +40,6 @@ class Dictionary
 {
 public:
 	Dictionary();
-	~Dictionary();
 
 	/**
 	 * Get a reference to a value

@@ -31,26 +31,26 @@ namespace ZeroTier {
 class MAC : public TriviallyCopyable
 {
 public:
-	ZT_INLINE MAC() noexcept : _m(0ULL) {}
-	ZT_INLINE MAC(const uint8_t a,const uint8_t b,const uint8_t c,const uint8_t d,const uint8_t e,const uint8_t f) noexcept : _m((((uint64_t)a) << 40U) | (((uint64_t)b) << 32U) | (((uint64_t)c) << 24U) | (((uint64_t)d) << 16U) | (((uint64_t)e) << 8U) | ((uint64_t)f) ) {}
-	explicit ZT_INLINE MAC(const uint64_t m) noexcept : _m(m) {}
+	ZT_INLINE MAC() noexcept : m_mac(0ULL) {}
+	ZT_INLINE MAC(const uint8_t a,const uint8_t b,const uint8_t c,const uint8_t d,const uint8_t e,const uint8_t f) noexcept : m_mac((((uint64_t)a) << 40U) | (((uint64_t)b) << 32U) | (((uint64_t)c) << 24U) | (((uint64_t)d) << 16U) | (((uint64_t)e) << 8U) | ((uint64_t)f) ) {}
+	explicit ZT_INLINE MAC(const uint64_t m) noexcept : m_mac(m) {}
 	explicit ZT_INLINE MAC(const uint8_t b[6]) noexcept { setTo(b); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 	ZT_INLINE MAC(const Address &ztaddr,const uint64_t nwid) noexcept { fromAddress(ztaddr,nwid); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 
 	/**
 	 * @return MAC in 64-bit integer
 	 */
-	ZT_INLINE uint64_t toInt() const noexcept { return _m; }
+	ZT_INLINE uint64_t toInt() const noexcept { return m_mac; }
 
 	/**
 	 * Set MAC to zero
 	 */
-	ZT_INLINE void zero() noexcept { _m = 0ULL; }
+	ZT_INLINE void zero() noexcept { m_mac = 0ULL; }
 
 	/**
 	 * @return True if MAC is non-zero
 	 */
-	ZT_INLINE operator bool() const noexcept { return (_m != 0ULL); } // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
+	ZT_INLINE operator bool() const noexcept { return (m_mac != 0ULL); } // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
 
 	/**
 	 * @param bits Raw MAC in big-endian byte order
@@ -58,7 +58,7 @@ public:
 	 */
 	ZT_INLINE void setTo(const uint8_t b[6]) noexcept
 	{
-		_m = ((uint64_t)b[0] << 40U) | ((uint64_t)b[1] << 32U) | ((uint64_t)b[2] << 24U) | ((uint64_t)b[3] << 16U) | ((uint64_t)b[4] << 8U) | (uint64_t)b[5];
+		m_mac = ((uint64_t)b[0] << 40U) | ((uint64_t)b[1] << 32U) | ((uint64_t)b[2] << 24U) | ((uint64_t)b[3] << 16U) | ((uint64_t)b[4] << 8U) | (uint64_t)b[5];
 	}
 
 	/**
@@ -67,23 +67,23 @@ public:
 	 */
 	ZT_INLINE void copyTo(uint8_t b[6]) const noexcept
 	{
-		b[0] = (uint8_t)(_m >> 40U);
-		b[1] = (uint8_t)(_m >> 32U);
-		b[2] = (uint8_t)(_m >> 24U);
-		b[3] = (uint8_t)(_m >> 16U);
-		b[4] = (uint8_t)(_m >> 8U);
-		b[5] = (uint8_t)_m;
+		b[0] = (uint8_t)(m_mac >> 40U);
+		b[1] = (uint8_t)(m_mac >> 32U);
+		b[2] = (uint8_t)(m_mac >> 24U);
+		b[3] = (uint8_t)(m_mac >> 16U);
+		b[4] = (uint8_t)(m_mac >> 8U);
+		b[5] = (uint8_t)m_mac;
 	}
 
 	/**
 	 * @return True if this is broadcast (all 0xff)
 	 */
-	ZT_INLINE bool isBroadcast() const noexcept { return _m; }
+	ZT_INLINE bool isBroadcast() const noexcept { return m_mac; }
 
 	/**
 	 * @return True if this is a multicast MAC
 	 */
-	ZT_INLINE bool isMulticast() const noexcept { return ((_m & 0x010000000000ULL) != 0ULL); }
+	ZT_INLINE bool isMulticast() const noexcept { return ((m_mac & 0x010000000000ULL) != 0ULL); }
 
 	/**
 	 * Set this MAC to a MAC derived from an address and a network ID
@@ -100,7 +100,7 @@ public:
 		m ^= ((nwid >> 24U) & 0xffU) << 16U;
 		m ^= ((nwid >> 32U) & 0xffU) << 8U;
 		m ^= (nwid >> 40U) & 0xffU;
-		_m = m;
+		m_mac = m;
 	}
 
 	/**
@@ -112,7 +112,7 @@ public:
 	 */
 	ZT_INLINE Address toAddress(uint64_t nwid) const noexcept
 	{
-		uint64_t a = _m & 0xffffffffffULL; // least significant 40 bits of MAC are formed from address
+		uint64_t a = m_mac & 0xffffffffffULL; // least significant 40 bits of MAC are formed from address
 		a ^= ((nwid >> 8U) & 0xffU) << 32U; // ... XORed with bits 8-48 of the nwid in little-endian byte order, so unmask it
 		a ^= ((nwid >> 16U) & 0xffU) << 24U;
 		a ^= ((nwid >> 24U) & 0xffU) << 16U;
@@ -135,49 +135,49 @@ public:
 	 * @param i Value from 0 to 5 (inclusive)
 	 * @return Byte at said position (address interpreted in big-endian order)
 	 */
-	ZT_INLINE uint8_t operator[](unsigned int i) const noexcept { return (uint8_t)(_m >> (40 - (i * 8))); }
+	ZT_INLINE uint8_t operator[](unsigned int i) const noexcept { return (uint8_t)(m_mac >> (40 - (i * 8))); }
 
 	/**
 	 * @return 6, which is the number of bytes in a MAC, for container compliance
 	 */
 	ZT_INLINE unsigned int size() const noexcept { return 6; }
 
-	ZT_INLINE unsigned long hashCode() const noexcept { return (unsigned long)Utils::hash64(_m); }
+	ZT_INLINE unsigned long hashCode() const noexcept { return (unsigned long)Utils::hash64(m_mac); }
 
 	ZT_INLINE char *toString(char buf[18]) const noexcept
 	{
-		buf[0] = Utils::HEXCHARS[(_m >> 44U) & 0xfU];
-		buf[1] = Utils::HEXCHARS[(_m >> 40U) & 0xfU];
+		buf[0] = Utils::HEXCHARS[(m_mac >> 44U) & 0xfU];
+		buf[1] = Utils::HEXCHARS[(m_mac >> 40U) & 0xfU];
 		buf[2] = ':';
-		buf[3] = Utils::HEXCHARS[(_m >> 36U) & 0xfU];
-		buf[4] = Utils::HEXCHARS[(_m >> 32U) & 0xfU];
+		buf[3] = Utils::HEXCHARS[(m_mac >> 36U) & 0xfU];
+		buf[4] = Utils::HEXCHARS[(m_mac >> 32U) & 0xfU];
 		buf[5] = ':';
-		buf[6] = Utils::HEXCHARS[(_m >> 28U) & 0xfU];
-		buf[7] = Utils::HEXCHARS[(_m >> 24U) & 0xfU];
+		buf[6] = Utils::HEXCHARS[(m_mac >> 28U) & 0xfU];
+		buf[7] = Utils::HEXCHARS[(m_mac >> 24U) & 0xfU];
 		buf[8] = ':';
-		buf[9] = Utils::HEXCHARS[(_m >> 20U) & 0xfU];
-		buf[10] = Utils::HEXCHARS[(_m >> 16U) & 0xfU];
+		buf[9] = Utils::HEXCHARS[(m_mac >> 20U) & 0xfU];
+		buf[10] = Utils::HEXCHARS[(m_mac >> 16U) & 0xfU];
 		buf[11] = ':';
-		buf[12] = Utils::HEXCHARS[(_m >> 12U) & 0xfU];
-		buf[13] = Utils::HEXCHARS[(_m >> 8U) & 0xfU];
+		buf[12] = Utils::HEXCHARS[(m_mac >> 12U) & 0xfU];
+		buf[13] = Utils::HEXCHARS[(m_mac >> 8U) & 0xfU];
 		buf[14] = ':';
-		buf[15] = Utils::HEXCHARS[(_m >> 4U) & 0xfU];
-		buf[16] = Utils::HEXCHARS[_m & 0xfU];
+		buf[15] = Utils::HEXCHARS[(m_mac >> 4U) & 0xfU];
+		buf[16] = Utils::HEXCHARS[m_mac & 0xfU];
 		buf[17] = (char)0;
 		return buf;
 	}
 
-	ZT_INLINE MAC &operator=(const uint64_t m) noexcept { _m = m; return *this; }
+	ZT_INLINE MAC &operator=(const uint64_t m) noexcept { m_mac = m; return *this; }
 
-	ZT_INLINE bool operator==(const MAC &m) const noexcept { return (_m == m._m); }
-	ZT_INLINE bool operator!=(const MAC &m) const noexcept { return (_m != m._m); }
-	ZT_INLINE bool operator<(const MAC &m) const noexcept { return (_m < m._m); }
-	ZT_INLINE bool operator<=(const MAC &m) const noexcept { return (_m <= m._m); }
-	ZT_INLINE bool operator>(const MAC &m) const noexcept { return (_m > m._m); }
-	ZT_INLINE bool operator>=(const MAC &m) const noexcept { return (_m >= m._m); }
+	ZT_INLINE bool operator==(const MAC &m) const noexcept { return (m_mac == m.m_mac); }
+	ZT_INLINE bool operator!=(const MAC &m) const noexcept { return (m_mac != m.m_mac); }
+	ZT_INLINE bool operator<(const MAC &m) const noexcept { return (m_mac < m.m_mac); }
+	ZT_INLINE bool operator<=(const MAC &m) const noexcept { return (m_mac <= m.m_mac); }
+	ZT_INLINE bool operator>(const MAC &m) const noexcept { return (m_mac > m.m_mac); }
+	ZT_INLINE bool operator>=(const MAC &m) const noexcept { return (m_mac >= m.m_mac); }
 
 private:
-	uint64_t _m;
+	uint64_t m_mac;
 };
 
 } // namespace ZeroTier

@@ -19,10 +19,6 @@ Dictionary::Dictionary()
 {
 }
 
-Dictionary::~Dictionary()
-{
-}
-
 std::vector<uint8_t> &Dictionary::operator[](const char *k)
 {
 	return m_entries[s_toKey(k)];

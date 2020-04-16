@@ -22,6 +22,7 @@
 #include "ECC384.hpp"
 #include "TriviallyCopyable.hpp"
 #include "Fingerprint.hpp"
+#include "Containers.hpp"
 
 #include <cstdio>
 #include <cstdlib>
@@ -86,7 +87,7 @@ public:
 	ZT_INLINE ~Identity()
 	{
 		Utils::memoryUnlock(this,sizeof(Identity));
-		Utils::burn(reinterpret_cast<void *>(&this->_priv),sizeof(this->_priv));
+		Utils::burn(reinterpret_cast<void *>(&this->m_priv), sizeof(this->m_priv));
 	}
 
 	/**
@@ -97,7 +98,7 @@ public:
 	/**
 	 * @return Identity type (undefined if identity is null or invalid)
 	 */
-	ZT_INLINE Type type() const noexcept { return _type; }
+	ZT_INLINE Type type() const noexcept { return m_type; }
 
 	/**
 	 * Generate a new identity (address, key pair)
@@ -123,7 +124,7 @@ public:
 	/**
 	 * @return True if this identity contains a private key
 	 */
-	ZT_INLINE bool hasPrivate() const noexcept { return _hasPrivate; }
+	ZT_INLINE bool hasPrivate() const noexcept { return m_hasPrivate; }
 
 	/**
 	 * Get a 384-bit hash of this identity's public key(s)
@@ -137,7 +138,7 @@ public:
 	 *
 	 * @return Hash of public key(s)
 	 */
-	ZT_INLINE const Fingerprint &fingerprint() const noexcept { return _fp; }
+	ZT_INLINE const Fingerprint &fingerprint() const noexcept { return m_fp; }
 
 	/**
 	 * Compute a hash of this identity's public and private keys.
@@ -187,7 +188,7 @@ public:
 	/**
 	 * @return This identity's address
 	 */
-	ZT_INLINE Address address() const noexcept { return _address; }
+	ZT_INLINE Address address() const noexcept { return m_address; }
 
 	/**
 	 * Serialize to a more human-friendly string
@@ -197,6 +198,7 @@ public:
 	 * @return ASCII string representation of identity (pointer to buf)
 	 */
 	char *toString(bool includePrivate,char buf[ZT_IDENTITY_STRING_BUFFER_LENGTH]) const;
+	ZT_INLINE String toString(const bool includePrivate = false) const { char buf[ZT_IDENTITY_STRING_BUFFER_LENGTH]; toString(includePrivate); return String(buf); }
 
 	/**
 	 * Deserialize a human-friendly string
@@ -212,13 +214,13 @@ public:
 	/**
 	 * @return True if this identity contains something
 	 */
-	explicit ZT_INLINE operator bool() const noexcept { return (_address); }
+	explicit ZT_INLINE operator bool() const noexcept { return (m_address); }
 
-	ZT_INLINE unsigned long hashCode() const noexcept { return _fp.hashCode(); }
+	ZT_INLINE unsigned long hashCode() const noexcept { return m_fp.hashCode(); }
 
-	ZT_INLINE bool operator==(const Identity &id) const noexcept { return (_fp == id._fp); }
+	ZT_INLINE bool operator==(const Identity &id) const noexcept { return (m_fp == id.m_fp); }
 	ZT_INLINE bool operator!=(const Identity &id) const noexcept { return !(*this == id); }
-	ZT_INLINE bool operator<(const Identity &id) const noexcept { return (_fp < id._fp); }
+	ZT_INLINE bool operator<(const Identity &id) const noexcept { return (m_fp < id.m_fp); }
 	ZT_INLINE bool operator>(const Identity &id) const noexcept { return (id < *this); }
 	ZT_INLINE bool operator<=(const Identity &id) const noexcept { return !(id < *this); }
 	ZT_INLINE bool operator>=(const Identity &id) const noexcept { return !(*this < id); }
@@ -230,19 +232,19 @@ public:
 private:
 	void _computeHash();
 
-	Address _address;
-	Fingerprint _fp;
+	Address m_address;
+	Fingerprint m_fp;
 	ZT_PACKED_STRUCT(struct { // do not re-order these fields
 		uint8_t c25519[ZT_C25519_COMBINED_PRIVATE_KEY_SIZE];
 		uint8_t p384[ZT_ECC384_PRIVATE_KEY_SIZE];
-	}) _priv;
+	}) m_priv;
 	ZT_PACKED_STRUCT(struct { // do not re-order these fields
 		uint8_t nonce;                            // nonce for PoW generate/verify
 		uint8_t c25519[ZT_C25519_COMBINED_PUBLIC_KEY_SIZE]; // Curve25519 and Ed25519 public keys
 		uint8_t p384[ZT_ECC384_PUBLIC_KEY_SIZE];  // NIST P-384 public key
-	}) _pub;
-	Type _type; // _type determines which fields in _priv and _pub are used
-	bool _hasPrivate;
+	}) m_pub;
+	Type m_type; // _type determines which fields in _priv and _pub are used
+	bool m_hasPrivate;
 };
 
 } // namespace ZeroTier

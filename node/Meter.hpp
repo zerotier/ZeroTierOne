@@ -57,10 +57,10 @@ public:
 		// the log size and then if it's a new bucket setting it or otherwise adding
 		// to it.
 		const unsigned long bucket = ((unsigned long)(now / TUNIT)) % LSIZE;
-		if (_bucket.exchange(bucket) != bucket) {
-			_totalExclCounts.fetch_add(_counts[bucket].exchange(count));
+		if (m_bucket.exchange(bucket) != bucket) {
+			m_totalExclCounts.fetch_add(m_counts[bucket].exchange(count));
 		} else {
-			_counts[bucket].fetch_add(count);
+			m_counts[bucket].fetch_add(count);
 		}
 	}
 
@@ -75,15 +75,15 @@ public:
 	{
 		total = 0;
 		for(unsigned long i=0;i<LSIZE;++i)
-			total += _counts[i].load();
+			total += m_counts[i].load();
 		rate = (double)total / (double)LSIZE;
-		total += _totalExclCounts.load();
+		total += m_totalExclCounts.load();
 	}
 
 private:
-	std::atomic<uint64_t> _counts[LSIZE];
-	std::atomic<uint64_t> _totalExclCounts;
-	std::atomic<unsigned long> _bucket;
+	std::atomic<uint64_t> m_counts[LSIZE];
+	std::atomic<uint64_t> m_totalExclCounts;
+	std::atomic<unsigned long> m_bucket;
 };
 
 } // namespace ZeroTier

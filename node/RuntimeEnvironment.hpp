@@ -55,7 +55,7 @@ public:
 		secretIdentityStr[0] = (char)0;
 	}
 
-	ZT_INLINE ~RuntimeEnvironment()
+	ZT_INLINE ~RuntimeEnvironment() noexcept
 	{
 		Utils::burn(secretIdentityStr,sizeof(secretIdentityStr));
 	}

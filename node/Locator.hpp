@@ -47,32 +47,32 @@ public:
 	/**
 	 * @return Timestamp (a.k.a. revision number) set by Location signer
 	 */
-	ZT_INLINE int64_t timestamp() const noexcept { return _ts; }
+	ZT_INLINE int64_t timestamp() const noexcept { return m_ts; }
 
 	/**
 	 * @return True if locator is signed
 	 */
-	ZT_INLINE bool isSigned() const noexcept { return (_signatureLength > 0); }
+	ZT_INLINE bool isSigned() const noexcept { return (m_signatureLength > 0); }
 
 	/**
 	 * @return Length of signature in bytes or 0 if none
 	 */
-	ZT_INLINE unsigned int signatureLength() const noexcept { return _signatureLength; }
+	ZT_INLINE unsigned int signatureLength() const noexcept { return m_signatureLength; }
 
 	/**
 	 * @return Pointer to signature bytes
 	 */
-	ZT_INLINE const uint8_t *signature() const noexcept { return _signature; }
+	ZT_INLINE const uint8_t *signature() const noexcept { return m_signature; }
 
 	/**
 	 * @return Number of endpoints in this locator
 	 */
-	ZT_INLINE unsigned int endpointCount() const noexcept { return _endpointCount; }
+	ZT_INLINE unsigned int endpointCount() const noexcept { return m_endpointCount; }
 
 	/**
 	 * @return Pointer to array of endpoints
 	 */
-	ZT_INLINE const Endpoint *endpoints() const noexcept { return _at; }
+	ZT_INLINE const Endpoint *endpoints() const noexcept { return m_at; }
 
 	/**
 	 * Add an endpoint to this locator
@@ -85,9 +85,9 @@ public:
 	 */
 	ZT_INLINE bool add(const Endpoint &ep) noexcept
 	{
-		if (_endpointCount >= ZT_LOCATOR_MAX_ENDPOINTS)
+		if (m_endpointCount >= ZT_LOCATOR_MAX_ENDPOINTS)
 			return false;
-		_at[_endpointCount++] = ep;
+		m_at[m_endpointCount++] = ep;
 		return true;
 	}
 
@@ -110,19 +110,19 @@ public:
 	 */
 	bool verify(const Identity &id) const noexcept;
 
-	explicit ZT_INLINE operator bool() const noexcept { return (_ts != 0); }
+	explicit ZT_INLINE operator bool() const noexcept { return (m_ts != 0); }
 
 	static constexpr int marshalSizeMax() noexcept { return ZT_LOCATOR_MARSHAL_SIZE_MAX; }
 	int marshal(uint8_t data[ZT_LOCATOR_MARSHAL_SIZE_MAX],bool excludeSignature = false) const noexcept;
 	int unmarshal(const uint8_t *restrict data,int len) noexcept;
 
 private:
-	int64_t _ts;
-	unsigned int _endpointCount;
-	unsigned int _signatureLength;
-	Endpoint _at[ZT_LOCATOR_MAX_ENDPOINTS];
-	uint16_t _flags;
-	uint8_t _signature[ZT_SIGNATURE_BUFFER_SIZE];
+	int64_t m_ts;
+	unsigned int m_endpointCount;
+	unsigned int m_signatureLength;
+	Endpoint m_at[ZT_LOCATOR_MAX_ENDPOINTS];
+	uint16_t m_flags;
+	uint8_t m_signature[ZT_SIGNATURE_BUFFER_SIZE];
 };
 
 } // namespace ZeroTier

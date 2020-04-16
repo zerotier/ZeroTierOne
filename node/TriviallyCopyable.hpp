@@ -17,9 +17,6 @@
 #include "Constants.hpp"
 #include "Utils.hpp"
 
-#include <cstring>
-#include <cstdlib>
-
 namespace ZeroTier {
 
 /**

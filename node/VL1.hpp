@@ -23,8 +23,6 @@
 #include "FCV.hpp"
 #include "Containers.hpp"
 
-#include <vector>
-
 namespace ZeroTier {
 
 class RuntimeEnvironment;

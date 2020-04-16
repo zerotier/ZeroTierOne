@@ -75,14 +75,14 @@ public:
 
 	~Network();
 
-	ZT_INLINE uint64_t id() const noexcept { return _id; }
-	ZT_INLINE Address controller() const noexcept { return Address(_id >> 24U); }
-	ZT_INLINE bool multicastEnabled() const noexcept { return (_config.multicastLimit > 0); }
-	ZT_INLINE bool hasConfig() const noexcept { return (_config); }
-	ZT_INLINE uint64_t lastConfigUpdate() const noexcept { return _lastConfigUpdate; }
-	ZT_INLINE ZT_VirtualNetworkStatus status() const noexcept { return _status(); }
-	ZT_INLINE const NetworkConfig &config() const noexcept { return _config; }
-	ZT_INLINE const MAC &mac() const noexcept { return _mac; }
+	ZT_INLINE uint64_t id() const noexcept { return m_id; }
+	ZT_INLINE Address controller() const noexcept { return Address(m_id >> 24U); }
+	ZT_INLINE bool multicastEnabled() const noexcept { return (m_config.multicastLimit > 0); }
+	ZT_INLINE bool hasConfig() const noexcept { return (m_config); }
+	ZT_INLINE uint64_t lastConfigUpdate() const noexcept { return m_lastConfigUpdate; }
+	ZT_INLINE ZT_VirtualNetworkStatus status() const noexcept { return m_status(); }
+	ZT_INLINE const NetworkConfig &config() const noexcept { return m_config; }
+	ZT_INLINE const MAC &mac() const noexcept { return m_mac; }
 
 	/**
 	 * Apply filters to an outgoing packet
@@ -156,11 +156,11 @@ public:
 	 */
 	ZT_INLINE bool subscribedToMulticastGroup(const MulticastGroup &mg,const bool includeBridgedGroups) const
 	{
-		Mutex::Lock l(_myMulticastGroups_l);
-		if (std::binary_search(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg))
+		Mutex::Lock l(m_myMulticastGroups_l);
+		if (std::binary_search(m_myMulticastGroups.begin(), m_myMulticastGroups.end(), mg))
 			return true;
 		else if (includeBridgedGroups)
-			return (_multicastGroupsBehindMe.find(mg) != _multicastGroupsBehindMe.end());
+			return (m_multicastGroupsBehindMe.find(mg) != m_multicastGroupsBehindMe.end());
 		return false;
 	}
 
@@ -242,8 +242,8 @@ public:
 	 */
 	ZT_INLINE Address findBridgeTo(const MAC &mac) const
 	{
-		Mutex::Lock _l(_remoteBridgeRoutes_l);
-		const Address *const br = _remoteBridgeRoutes.get(mac);
+		Mutex::Lock _l(m_remoteBridgeRoutes_l);
+		const Address *const br = m_remoteBridgeRoutes.get(mac);
 		return ((br) ? *br : Address());
 	}
 
@@ -264,8 +264,8 @@ public:
 	 */
 	ZT_INLINE void learnBridgedMulticastGroup(void *tPtr,const MulticastGroup &mg,int64_t now)
 	{
-		Mutex::Lock l(_myMulticastGroups_l);
-		_multicastGroupsBehindMe.set(mg,now);
+		Mutex::Lock l(m_myMulticastGroups_l);
+		m_multicastGroupsBehindMe.set(mg, now);
 	}
 
 	/**
@@ -325,8 +325,8 @@ public:
 	template<typename F>
 	ZT_INLINE void eachMember(F f)
 	{
-		Mutex::Lock ml(_memberships_l);
-		for(Map<Address,Membership>::iterator i(_memberships.begin());i!=_memberships.end();++i) { // NOLINT(modernize-loop-convert,hicpp-use-auto,modernize-use-auto)
+		Mutex::Lock ml(m_memberships_l);
+		for(Map<Address,Membership>::iterator i(m_memberships.begin());i != m_memberships.end();++i) { // NOLINT(modernize-loop-convert,hicpp-use-auto,modernize-use-auto)
 			if (!f(i->first,i->second))
 				break;
 		}
@@ -335,40 +335,30 @@ public:
 	/**
 	 * @return Externally usable pointer-to-pointer exported via the core API
 	 */
-	ZT_INLINE void **userPtr() noexcept { return &_uPtr; }
+	ZT_INLINE void **userPtr() noexcept { return &m_uPtr; }
 
 private:
-	void _requestConfiguration(void *tPtr);
-	ZT_VirtualNetworkStatus _status() const;
-	void _externalConfig(ZT_VirtualNetworkConfig *ec) const; // assumes _lock is locked
-	void _announceMulticastGroups(void *tPtr,bool force);
-	void _announceMulticastGroupsTo(void *tPtr,const Address &peer,const std::vector<MulticastGroup> &allMulticastGroups);
-	std::vector<MulticastGroup> _allMulticastGroups() const;
+	void m_requestConfiguration(void *tPtr);
+	ZT_VirtualNetworkStatus m_status() const;
+	void m_externalConfig(ZT_VirtualNetworkConfig *ec) const; // assumes _lock is locked
+	void m_announceMulticastGroups(void *tPtr, bool force);
+	void m_announceMulticastGroupsTo(void *tPtr, const Address &peer, const Vector<MulticastGroup> &allMulticastGroups);
+	Vector<MulticastGroup> m_allMulticastGroups() const;
 
 	const RuntimeEnvironment *const RR;
-	void *_uPtr;
-	const uint64_t _id;
-	Fingerprint _controllerFingerprint;
-	MAC _mac; // local MAC address
-	bool _portInitialized;
+	void *m_uPtr;
+	const uint64_t m_id;
+	Fingerprint m_controllerFingerprint;
+	MAC m_mac; // local MAC address
+	bool m_portInitialized;
+	std::atomic<bool> m_destroyed;
 
-	std::vector< MulticastGroup > _myMulticastGroups; // multicast groups that we belong to (according to tap)
-	Map< MulticastGroup,uint64_t > _multicastGroupsBehindMe; // multicast groups that seem to be behind us and when we last saw them (if we are a bridge)
-	Map< MAC,Address > _remoteBridgeRoutes; // remote addresses where given MACs are reachable (for tracking devices behind remote bridges)
+	Vector<MulticastGroup> m_myMulticastGroups; // multicast groups that we belong to (according to tap)
+	Map<MulticastGroup,int64_t> m_multicastGroupsBehindMe; // multicast groups that seem to be behind us and when we last saw them (if we are a bridge)
+	Map<MAC,Address> m_remoteBridgeRoutes; // remote addresses where given MACs are reachable (for tracking devices behind remote bridges)
 
-	NetworkConfig _config;
-	std::atomic<int64_t> _lastConfigUpdate;
-
-	struct _IncomingConfigChunk
-	{
-		ZT_INLINE _IncomingConfigChunk() : touchCtr(0),updateId(0) {}
-		uint64_t touchCtr;
-		uint64_t updateId;
-		std::map< int,std::vector<uint8_t> > chunks;
-	};
-	_IncomingConfigChunk _incomingConfigChunks[ZT_NETWORK_MAX_INCOMING_UPDATES];
-
-	volatile bool _destroyed;
+	NetworkConfig m_config;
+	std::atomic<int64_t> m_lastConfigUpdate;
 
 	volatile enum {
 		NETCONF_FAILURE_NONE,
@@ -377,12 +367,12 @@ private:
 		NETCONF_FAILURE_INIT_FAILED
 	} _netconfFailure;
 
-	Map<Address,Membership> _memberships;
+	Map<Address,Membership> m_memberships;
 
-	Mutex _myMulticastGroups_l;
-	Mutex _remoteBridgeRoutes_l;
-	Mutex _config_l;
-	Mutex _memberships_l;
+	Mutex m_myMulticastGroups_l;
+	Mutex m_remoteBridgeRoutes_l;
+	Mutex m_config_l;
+	Mutex m_memberships_l;
 
 	std::atomic<int> __refCount;
 };

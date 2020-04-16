@@ -20,6 +20,7 @@
 #include "Protocol.hpp"
 #include "Mutex.hpp"
 #include "FCV.hpp"
+#include "Containers.hpp"
 
 namespace ZeroTier {
 

@@ -42,8 +42,8 @@ namespace ZeroTier {
 class MulticastGroup : public TriviallyCopyable
 {
 public:
-	ZT_INLINE MulticastGroup() noexcept : _mac(),_adi(0) {}
-	ZT_INLINE MulticastGroup(const MAC &m,uint32_t a) noexcept : _mac(m),_adi(a) {}
+	ZT_INLINE MulticastGroup() noexcept : m_mac(), m_adi(0) {}
+	ZT_INLINE MulticastGroup(const MAC &m,uint32_t a) noexcept : m_mac(m), m_adi(a) {}
 
 	/**
 	 * Derive the multicast group used for address resolution (ARP/NDP) for an IP
@@ -73,32 +73,32 @@ public:
 	/**
 	 * @return Ethernet MAC portion of multicast group
 	 */
-	ZT_INLINE const MAC &mac() const noexcept { return _mac; }
+	ZT_INLINE const MAC &mac() const noexcept { return m_mac; }
 
 	/**
 	 * @return Additional distinguishing information, which is normally zero except for IPv4 ARP where it's the IPv4 address
 	 */
-	ZT_INLINE uint32_t adi() const { return _adi; }
+	ZT_INLINE uint32_t adi() const { return m_adi; }
 
-	ZT_INLINE bool operator==(const MulticastGroup &g) const noexcept { return ((_mac == g._mac) && (_adi == g._adi)); }
-	ZT_INLINE bool operator!=(const MulticastGroup &g) const noexcept { return ((_mac != g._mac) || (_adi != g._adi)); }
+	ZT_INLINE bool operator==(const MulticastGroup &g) const noexcept { return ((m_mac == g.m_mac) && (m_adi == g.m_adi)); }
+	ZT_INLINE bool operator!=(const MulticastGroup &g) const noexcept { return ((m_mac != g.m_mac) || (m_adi != g.m_adi)); }
 	ZT_INLINE bool operator<(const MulticastGroup &g) const noexcept
 	{
-		if (_mac < g._mac)
+		if (m_mac < g.m_mac)
 			return true;
-		else if (_mac == g._mac)
-			return (_adi < g._adi);
+		else if (m_mac == g.m_mac)
+			return (m_adi < g.m_adi);
 		return false;
 	}
 	ZT_INLINE bool operator>(const MulticastGroup &g) const noexcept { return (g < *this); }
 	ZT_INLINE bool operator<=(const MulticastGroup &g) const noexcept { return !(g < *this); }
 	ZT_INLINE bool operator>=(const MulticastGroup &g) const noexcept { return !(*this < g); }
 
-	ZT_INLINE unsigned long hashCode() const noexcept { return (_mac.hashCode() + (unsigned long)_adi); }
+	ZT_INLINE unsigned long hashCode() const noexcept { return (m_mac.hashCode() + (unsigned long)m_adi); }
 
 private:
-	MAC _mac;
-	uint32_t _adi;
+	MAC m_mac;
+	uint32_t m_adi;
 };
 
 } // namespace ZeroTier

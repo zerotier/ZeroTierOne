@@ -29,25 +29,6 @@
 #include <sys/socket.h>
 #endif
 
-/* ZT_PACKED_STRUCT encloses structs whose contents should be bit-packed.
- * Nearly all compilers support this. These macros detect the compiler and
- * define it correctly for gcc/icc/clang or MSC. */
-#ifndef ZT_PACKED_STRUCT
-#if defined(__GCC__) || defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1) || defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2) || defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4) || defined(__INTEL_COMPILER) || defined(__clang__)
-#define ZT_PACKED_STRUCT(D) D __attribute__((packed))
-#define ZT_PACKED_STRUCT_START
-#define ZT_PACKED_STRUCT_END __attribute__((packed))
-#endif
-#ifdef _MSC_VER
-#define ZT_PACKED_STRUCT(D) __pragma(pack(push,1)) D __pragma(pack(pop))
-#define ZT_PACKED_STRUCT_START __pragma(pack(push,1))
-#define ZT_PACKED_STRUCT_END __pragma(pack(pop))
-#endif
-#endif
-#ifndef ZT_PACKED_STRUCT
-#error Missing a macro to define ZT_PACKED_STRUCT for your compiler.
-#endif
-
 #ifdef __cplusplus
 #include <cstdint>
 extern "C" {
@@ -278,7 +259,6 @@ extern "C" {
 
 /* ----------------------------------------------------------------------------------------------------------------- */
 
-
 /**
  * Identity type codes
  */
@@ -297,7 +277,7 @@ typedef void ZT_Identity;
 /**
  * Full identity fingerprint with address and 384-bit hash of public key(s)
  */
-ZT_PACKED_STRUCT(struct _ZT_Fingerprint
+typedef struct
 {
 	/**
 	 * Short address (only least significant 40 bits are used)
@@ -308,8 +288,7 @@ ZT_PACKED_STRUCT(struct _ZT_Fingerprint
 	 * 384-bit hash of identity public key(s)
 	 */
 	uint8_t hash[48];
-});
-typedef struct _ZT_Fingerprint ZT_Fingerprint;
+} ZT_Fingerprint;
 
 /**
  * Credential type IDs
@@ -448,6 +427,8 @@ enum ZT_TraceCredentialRejectionReason
 	ZT_TRACE_CREDENTIAL_REJECTION_REASON_OLDER_THAN_LATEST = 3,
 	ZT_TRACE_CREDENTIAL_REJECTION_REASON_INVALID = 4
 };
+
+#if 0
 
 /**
  * Physical path address from a trace event
@@ -622,6 +603,8 @@ _ZT_TRACE_EVENT_STRUCT_END()
 
 #undef _ZT_TRACE_EVENT_STRUCT_START
 #undef _ZT_TRACE_EVENT_STRUCT_END
+
+#endif
 
 /****************************************************************************/
 

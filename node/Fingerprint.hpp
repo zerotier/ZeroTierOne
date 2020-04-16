@@ -43,15 +43,15 @@ public:
 	 */
 	ZT_INLINE Fingerprint() noexcept { memoryZero(this); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 
-	ZT_INLINE Address address() const noexcept { return Address(_fp.address); }
-	ZT_INLINE const uint8_t *hash() const noexcept { return _fp.hash; }
-	ZT_INLINE ZT_Fingerprint *apiFingerprint() noexcept { return &_fp; }
-	ZT_INLINE const ZT_Fingerprint *apiFingerprint() const noexcept { return &_fp; }
+	ZT_INLINE Address address() const noexcept { return Address(m_cfp.address); }
+	ZT_INLINE const uint8_t *hash() const noexcept { return m_cfp.hash; }
+	ZT_INLINE ZT_Fingerprint *apiFingerprint() noexcept { return &m_cfp; }
+	ZT_INLINE const ZT_Fingerprint *apiFingerprint() const noexcept { return &m_cfp; }
 
 	/**
 	 * @return True if hash is not all zero (missing/unspecified)
 	 */
-	ZT_INLINE bool haveHash() const noexcept { return (!Utils::allZero(_fp.hash,sizeof(_fp.hash))); }
+	ZT_INLINE bool haveHash() const noexcept { return (!Utils::allZero(m_cfp.hash, sizeof(m_cfp.hash))); }
 
 	/**
 	 * Get a base32-encoded representation of this fingerprint
@@ -62,7 +62,7 @@ public:
 	{
 		uint8_t tmp[48 + 5];
 		address().copyTo(tmp);
-		Utils::copy<48>(tmp + 5,_fp.hash);
+		Utils::copy<48>(tmp + 5, m_cfp.hash);
 		Utils::b32e(tmp,sizeof(tmp),s,ZT_FINGERPRINT_STRING_BUFFER_LENGTH);
 		s[ZT_FINGERPRINT_STRING_BUFFER_LENGTH-1] = 0; // sanity check, ensure always zero terminated
 	}
@@ -78,25 +78,25 @@ public:
 		uint8_t tmp[48 + 5];
 		if (Utils::b32d(s,tmp,sizeof(tmp)) != sizeof(tmp))
 			return false;
-		_fp.address = Address(tmp).toInt();
-		Utils::copy<48>(_fp.hash,tmp + 5);
+		m_cfp.address = Address(tmp).toInt();
+		Utils::copy<48>(m_cfp.hash, tmp + 5);
 		return true;
 	}
 
 	ZT_INLINE void zero() noexcept { memoryZero(this); }
-	ZT_INLINE unsigned long hashCode() const noexcept { return _fp.address; }
+	ZT_INLINE unsigned long hashCode() const noexcept { return m_cfp.address; }
 
-	ZT_INLINE operator bool() const noexcept { return (_fp.address != 0); } // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
+	ZT_INLINE operator bool() const noexcept { return (m_cfp.address != 0); } // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
 
-	ZT_INLINE bool operator==(const Fingerprint &h) const noexcept { return ((_fp.address == h._fp.address) && (memcmp(_fp.hash,h._fp.hash,ZT_FINGERPRINT_HASH_SIZE) == 0)); }
+	ZT_INLINE bool operator==(const Fingerprint &h) const noexcept { return ((m_cfp.address == h.m_cfp.address) && (memcmp(m_cfp.hash, h.m_cfp.hash, ZT_FINGERPRINT_HASH_SIZE) == 0)); }
 	ZT_INLINE bool operator!=(const Fingerprint &h) const noexcept { return !(*this == h); }
-	ZT_INLINE bool operator<(const Fingerprint &h) const noexcept { return ((_fp.address < h._fp.address) || ((_fp.address == h._fp.address) && (memcmp(_fp.hash,h._fp.hash,ZT_FINGERPRINT_HASH_SIZE) < 0))); }
+	ZT_INLINE bool operator<(const Fingerprint &h) const noexcept { return ((m_cfp.address < h.m_cfp.address) || ((m_cfp.address == h.m_cfp.address) && (memcmp(m_cfp.hash, h.m_cfp.hash, ZT_FINGERPRINT_HASH_SIZE) < 0))); }
 	ZT_INLINE bool operator>(const Fingerprint &h) const noexcept { return (h < *this); }
 	ZT_INLINE bool operator<=(const Fingerprint &h) const noexcept { return !(h < *this); }
 	ZT_INLINE bool operator>=(const Fingerprint &h) const noexcept { return !(*this < h); }
 
 private:
-	ZT_Fingerprint _fp;
+	ZT_Fingerprint m_cfp;
 };
 
 static_assert(sizeof(Fingerprint) == sizeof(ZT_Fingerprint),"Fingerprint should be the same size as the underlying C ZT_Fingerprint");

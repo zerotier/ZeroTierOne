@@ -20,13 +20,7 @@
 #include "Utils.hpp"
 #include "Mutex.hpp"
 #include "Meter.hpp"
-
-#include <cstdint>
-#include <cstring>
-#include <cstdlib>
-#include <stdexcept>
-#include <algorithm>
-#include <set>
+#include "Containers.hpp"
 
 namespace ZeroTier {
 
@@ -151,7 +145,7 @@ private:
 	// These fields belong to Defragmenter but are kept in Path for performance
 	// as it's much faster this way than having Defragmenter maintain another
 	// mapping from paths to inbound message IDs.
-	std::set<uint64_t> _inboundFragmentedMessages;
+	Set<uint64_t> _inboundFragmentedMessages;
 	Mutex _inboundFragmentedMessages_l;
 
 	std::atomic<int> __refCount;

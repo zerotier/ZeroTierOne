@@ -166,7 +166,7 @@ public:
 	/**
 	 * @return Address family (ss_family in sockaddr_storage)
 	 */
-	ZT_INLINE uint8_t family() const noexcept { return _data.ss_family; }
+	ZT_INLINE uint8_t family() const noexcept { return m_sockaddr.ss_family; }
 
 	/**
 	 * @return IP scope classification (e.g. loopback, link-local, private, global)
@@ -189,7 +189,7 @@ public:
 	 */
 	ZT_INLINE void setPort(unsigned int port) noexcept
 	{
-		switch(_data.ss_family) {
+		switch(m_sockaddr.ss_family) {
 			case AF_INET:
 				reinterpret_cast<sockaddr_in *>(this)->sin_port = Utils::hton((uint16_t)port);
 				break;
@@ -227,7 +227,7 @@ public:
 	 */
 	ZT_INLINE unsigned int port() const noexcept
 	{
-		switch(_data.ss_family) {
+		switch(m_sockaddr.ss_family) {
 			case AF_INET:  return Utils::ntoh((uint16_t)(reinterpret_cast<const sockaddr_in *>(this)->sin_port));
 			case AF_INET6: return Utils::ntoh((uint16_t)(reinterpret_cast<const sockaddr_in6 *>(this)->sin6_port));
 			default:       return 0;
@@ -251,7 +251,7 @@ public:
 	ZT_INLINE bool netmaskBitsValid() const noexcept
 	{
 		const unsigned int n = port();
-		switch(_data.ss_family) {
+		switch(m_sockaddr.ss_family) {
 			case AF_INET: return (n <= 32);
 			case AF_INET6: return (n <= 128);
 		}
@@ -323,7 +323,7 @@ public:
 	 */
 	ZT_INLINE const void *rawIpData() const noexcept
 	{
-		switch(_data.ss_family) {
+		switch(m_sockaddr.ss_family) {
 			case AF_INET: return (const void *)&(reinterpret_cast<const sockaddr_in *>(this)->sin_addr.s_addr);
 			case AF_INET6: return (const void *)(reinterpret_cast<const sockaddr_in6 *>(this)->sin6_addr.s6_addr);
 			default: return nullptr;
@@ -336,7 +336,7 @@ public:
 	ZT_INLINE InetAddress ipOnly() const noexcept
 	{
 		InetAddress r;
-		switch(_data.ss_family) {
+		switch(m_sockaddr.ss_family) {
 			case AF_INET:
 				reinterpret_cast<sockaddr_in *>(&r)->sin_family = AF_INET;
 				reinterpret_cast<sockaddr_in *>(&r)->sin_addr.s_addr = reinterpret_cast<const sockaddr_in *>(this)->sin_addr.s_addr;
@@ -357,8 +357,8 @@ public:
 	 */
 	ZT_INLINE bool ipsEqual(const InetAddress &a) const noexcept
 	{
-		const uint8_t f = _data.ss_family;
-		if (f == a._data.ss_family) {
+		const uint8_t f = m_sockaddr.ss_family;
+		if (f == a.m_sockaddr.ss_family) {
 			if (f == AF_INET)
 				return (reinterpret_cast<const sockaddr_in *>(this)->sin_addr.s_addr == reinterpret_cast<const sockaddr_in *>(&a)->sin_addr.s_addr);
 			if (f == AF_INET6)
@@ -378,8 +378,8 @@ public:
 	 */
 	ZT_INLINE bool ipsEqual2(const InetAddress &a) const noexcept
 	{
-		const uint8_t f = _data.ss_family;
-		if (f == a._data.ss_family) {
+		const uint8_t f = m_sockaddr.ss_family;
+		if (f == a.m_sockaddr.ss_family) {
 			if (f == AF_INET)
 				return (reinterpret_cast<const sockaddr_in *>(this)->sin_addr.s_addr == reinterpret_cast<const sockaddr_in *>(&a)->sin_addr.s_addr);
 			if (f == AF_INET6)
@@ -391,16 +391,16 @@ public:
 
 	ZT_INLINE unsigned long hashCode() const noexcept
 	{
-		if (_data.ss_family == AF_INET) {
-			return (unsigned long)Utils::hash32(((uint32_t)reinterpret_cast<const sockaddr_in *>(&_data)->sin_addr.s_addr + (uint32_t)reinterpret_cast<const sockaddr_in *>(&_data)->sin_port) ^ (uint32_t)Utils::s_mapNonce);
-		} else if (_data.ss_family == AF_INET6) {
+		if (m_sockaddr.ss_family == AF_INET) {
+			return (unsigned long)Utils::hash32(((uint32_t)reinterpret_cast<const sockaddr_in *>(&m_sockaddr)->sin_addr.s_addr + (uint32_t)reinterpret_cast<const sockaddr_in *>(&m_sockaddr)->sin_port) ^ (uint32_t)Utils::s_mapNonce);
+		} else if (m_sockaddr.ss_family == AF_INET6) {
 			return (unsigned long)Utils::hash64(
-				(Utils::loadAsIsEndian<uint64_t>(reinterpret_cast<const sockaddr_in6 *>(&_data)->sin6_addr.s6_addr) +
-				Utils::loadAsIsEndian<uint64_t>(reinterpret_cast<const sockaddr_in6 *>(&_data)->sin6_addr.s6_addr + 8) +
-				(uint64_t)reinterpret_cast<const sockaddr_in6 *>(&_data)->sin6_port) ^ Utils::s_mapNonce
+				(Utils::loadAsIsEndian<uint64_t>(reinterpret_cast<const sockaddr_in6 *>(&m_sockaddr)->sin6_addr.s6_addr) +
+				 Utils::loadAsIsEndian<uint64_t>(reinterpret_cast<const sockaddr_in6 *>(&m_sockaddr)->sin6_addr.s6_addr + 8) +
+				 (uint64_t)reinterpret_cast<const sockaddr_in6 *>(&m_sockaddr)->sin6_port) ^ Utils::s_mapNonce
 			);
 		}
-		return Utils::fnv1a32(&_data,sizeof(_data));
+		return Utils::fnv1a32(&m_sockaddr, sizeof(m_sockaddr));
 	}
 
 	/**
@@ -493,7 +493,7 @@ public:
 	static InetAddress makeIpv66plane(uint64_t nwid,uint64_t zeroTierAddress) noexcept;
 
 private:
-	sockaddr_storage _data;
+	sockaddr_storage m_sockaddr;
 };
 
 static_assert(sizeof(sockaddr_storage) == sizeof(InetAddress),"InetAddress sizing incorrect");

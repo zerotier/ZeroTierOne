@@ -22,10 +22,6 @@
 #include "FCV.hpp"
 #include "Containers.hpp"
 
-#include <cstring>
-#include <cstdlib>
-#include <vector>
-
 namespace ZeroTier {
 
 /**

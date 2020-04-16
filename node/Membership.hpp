@@ -64,7 +64,7 @@ public:
 	/**
 	 * @return Time we last pushed credentials to this member
 	 */
-	ZT_INLINE int64_t lastPushedCredentials() const noexcept { return _lastPushedCredentials; }
+	ZT_INLINE int64_t lastPushedCredentials() const noexcept { return m_lastPushedCredentials; }
 
 	/**
 	 * Get a remote member's tag (if we have it)
@@ -75,8 +75,8 @@ public:
 	 */
 	ZT_INLINE const Tag *getTag(const NetworkConfig &nconf,const uint32_t id) const noexcept
 	{
-		const Tag *const t = _remoteTags.get(id);
-		return (((t)&&(_isCredentialTimestampValid(nconf,*t))) ? t : (Tag *)0);
+		const Tag *const t = m_remoteTags.get(id);
+		return (((t)&&(m_isCredentialTimestampValid(nconf, *t))) ? t : (Tag *)0);
 	}
 
 	/**
@@ -103,10 +103,10 @@ public:
 	template<typename T>
 	ZT_INLINE bool peerOwnsAddress(const NetworkConfig &nconf,const T &r) const noexcept
 	{
-		if (_isUnspoofableAddress(nconf,r))
+		if (s_isUnspoofableAddress(nconf, r))
 			return true;
-		for(Map< uint32_t,CertificateOfOwnership >::const_iterator i(_remoteCoos.begin());i!=_remoteCoos.end();++i) {
-			if (_isCredentialTimestampValid(nconf,i->second)&&(i->second.owns(r)))
+		for(Map< uint32_t,CertificateOfOwnership >::const_iterator i(m_remoteCoos.begin());i != m_remoteCoos.end();++i) {
+			if (m_isCredentialTimestampValid(nconf, i->second) && (i->second.owns(r)))
 				return true;
 		}
 		return false;
@@ -119,9 +119,9 @@ public:
 	 */
 	ZT_INLINE bool certificateOfMembershipAgress(const CertificateOfMembership &localCom,const Identity &remoteIdentity)
 	{
-		if ((_comAgreementLocalTimestamp == localCom.timestamp())&&(_comAgreementRemoteTimestamp == _com.timestamp()))
+		if ((m_comAgreementLocalTimestamp == localCom.timestamp()) && (m_comAgreementRemoteTimestamp == m_com.timestamp()))
 			return true;
-		if (_com.agreesWith(localCom)) {
+		if (m_com.agreesWith(localCom)) {
 			// SECURITY: newer network controllers embed the full fingerprint into the COM. If we are
 			// joined to a network managed by one of these, our COM will contain one. If it's present
 			// we compare vs the other and require them to match. If our COM does not contain a full
@@ -130,18 +130,18 @@ public:
 			// and in so doing indicates if it's new or old. However this will go away after a while
 			// once we can be pretty sure there are no ancient controllers around.
 			if (localCom.issuedTo().haveHash()) {
-				if (localCom.issuedTo() != _com.issuedTo())
+				if (localCom.issuedTo() != m_com.issuedTo())
 					return false;
 			} else {
 				// LEGACY: support networks run by old controllers.
-				if (localCom.issuedTo().address() != _com.issuedTo().address())
+				if (localCom.issuedTo().address() != m_com.issuedTo().address())
 					return false;
 			}
 
 			// Remember that these two COMs agreed. If any are updated this is invalidated and a full
 			// agreement check will be done again.
-			_comAgreementLocalTimestamp = localCom.timestamp();
-			_comAgreementRemoteTimestamp = _com.timestamp();
+			m_comAgreementLocalTimestamp = localCom.timestamp();
+			m_comAgreementRemoteTimestamp = m_com.timestamp();
 
 			return true;
 		}
@@ -158,77 +158,77 @@ private:
 	// This returns true if a resource is an IPv6 NDP-emulated address. These embed the ZT
 	// address of the peer and therefore cannot be spoofed, causing peerOwnsAddress() to
 	// always return true for them. A certificate is not required for these.
-	ZT_INLINE bool _isUnspoofableAddress(const NetworkConfig &nconf,const MAC &m) const noexcept { return false; }
-	bool _isUnspoofableAddress(const NetworkConfig &nconf,const InetAddress &ip) const noexcept;
+	ZT_INLINE static bool s_isUnspoofableAddress(const NetworkConfig &nconf, const MAC &m) noexcept { return false; }
+	bool m_isUnspoofableAddress(const NetworkConfig &nconf, const InetAddress &ip) const noexcept;
 
 	// This compares the remote credential's timestamp to the timestamp in our network config
 	// plus or minus the permitted maximum timestamp delta.
 	template<typename C>
-	ZT_INLINE bool _isCredentialTimestampValid(const NetworkConfig &nconf,const C &remoteCredential) const noexcept
+	ZT_INLINE bool m_isCredentialTimestampValid(const NetworkConfig &nconf, const C &remoteCredential) const noexcept
 	{
 		const int64_t ts = remoteCredential.timestamp();
 		if (((ts >= nconf.timestamp) ? (ts - nconf.timestamp) : (nconf.timestamp - ts)) <= nconf.credentialTimeMaxDelta) {
-			const int64_t *threshold = _revocations.get(credentialKey(C::credentialType(),remoteCredential.id()));
+			const int64_t *threshold = m_revocations.get(credentialKey(C::credentialType(), remoteCredential.id()));
 			return ((!threshold)||(ts > *threshold));
 		}
 		return false;
 	}
 
 	template<typename C>
-	ZT_INLINE void _cleanCredImpl(const NetworkConfig &nconf,Map<uint32_t,C> &remoteCreds)
+	ZT_INLINE void m_cleanCredImpl(const NetworkConfig &nconf, Map<uint32_t,C> &remoteCreds)
 	{
 		for(typename Map<uint32_t,C>::iterator i(remoteCreds.begin());i!=remoteCreds.end();) {
-			if (!_isCredentialTimestampValid(nconf,i->second))
+			if (!m_isCredentialTimestampValid(nconf, i->second))
 				remoteCreds.erase(i++);
 			else ++i;
 		}
 	}
 
 	// Revocation threshold for COM or 0 if none
-	int64_t _comRevocationThreshold;
+	int64_t m_comRevocationThreshold;
 
 	// Time we last pushed credentials
-	int64_t _lastPushedCredentials;
+	int64_t m_lastPushedCredentials;
 
 	// COM timestamps at which we last agreed-- used to memo-ize agreement and avoid having to recompute constantly.
-	int64_t _comAgreementLocalTimestamp,_comAgreementRemoteTimestamp;
+	int64_t m_comAgreementLocalTimestamp,m_comAgreementRemoteTimestamp;
 
 	// Remote member's latest network COM
-	CertificateOfMembership _com;
+	CertificateOfMembership m_com;
 
 	// Revocations by credentialKey()
-	Map< uint64_t,int64_t > _revocations;
+	Map<uint64_t,int64_t> m_revocations;
 
 	// Remote credentials that we have received from this member (and that are valid)
-	Map< uint32_t,Tag > _remoteTags;
-	Map< uint32_t,Capability > _remoteCaps;
-	Map< uint32_t,CertificateOfOwnership > _remoteCoos;
+	Map<uint32_t,Tag> m_remoteTags;
+	Map<uint32_t,Capability> m_remoteCaps;
+	Map<uint32_t,CertificateOfOwnership> m_remoteCoos;
 
 public:
 	class CapabilityIterator
 	{
 	public:
 		ZT_INLINE CapabilityIterator(Membership &m,const NetworkConfig &nconf) noexcept :
-			_hti(m._remoteCaps.begin()),
-			_m(m),
-			_nconf(nconf)
+			m_hti(m.m_remoteCaps.begin()),
+			m_parent(m),
+			m_nconf(nconf)
 		{
 		}
 
 		ZT_INLINE Capability *next() noexcept
 		{
-			while (_hti != _m._remoteCaps.end()) {
-				Map< uint32_t,Capability >::iterator i(_hti++); // NOLINT(hicpp-use-auto,modernize-use-auto)
-				if (_m._isCredentialTimestampValid(_nconf,i->second))
+			while (m_hti != m_parent.m_remoteCaps.end()) {
+				Map< uint32_t,Capability >::iterator i(m_hti++); // NOLINT(hicpp-use-auto,modernize-use-auto)
+				if (m_parent.m_isCredentialTimestampValid(m_nconf, i->second))
 					return &(i->second);
 			}
 			return nullptr;
 		}
 
 	private:
-		Map< uint32_t,Capability >::iterator _hti;
-		Membership &_m;
-		const NetworkConfig &_nconf;
+		Map< uint32_t,Capability >::iterator m_hti;
+		Membership &m_parent;
+		const NetworkConfig &m_nconf;
 	};
 };
 
