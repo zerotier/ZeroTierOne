@@ -165,10 +165,9 @@ struct NetworkConfig : TriviallyCopyable
 	 * Write this network config to a dictionary for transport
 	 *
 	 * @param d Dictionary
-	 * @param includeLegacy If true, include legacy fields for old node versions
 	 * @return True if dictionary was successfully created, false if e.g. overflow
 	 */
-	bool toDictionary(Dictionary &d,bool includeLegacy) const;
+	bool toDictionary(Dictionary &d) const;
 
 	/**
 	 * Read this network config from a dictionary

@@ -19,70 +19,46 @@ Dictionary::Dictionary()
 {
 }
 
-std::vector<uint8_t> &Dictionary::operator[](const char *k)
+Vector<uint8_t> &Dictionary::operator[](const char *k)
 {
 	return m_entries[s_toKey(k)];
 }
 
-const std::vector<uint8_t> &Dictionary::operator[](const char *k) const
+const Vector<uint8_t> &Dictionary::operator[](const char *k) const
 {
-	static const std::vector<uint8_t> emptyEntry;
-	Map< uint64_t,std::vector<uint8_t> >::const_iterator e(m_entries.find(s_toKey(k)));
-	return (e == m_entries.end()) ? emptyEntry : e->second;
+	static const Vector<uint8_t> s_emptyEntry;
+	Map< uint64_t,Vector<uint8_t> >::const_iterator e(m_entries.find(s_toKey(k)));
+	return (e == m_entries.end()) ? s_emptyEntry : e->second;
 }
 
 void Dictionary::add(const char *k,bool v)
 {
-	std::vector<uint8_t> &e = (*this)[k];
+	Vector<uint8_t> &e = (*this)[k];
 	e.resize(2);
 	e[0] = (uint8_t)(v ? '1' : '0');
 	e[1] = 0;
 }
 
-void Dictionary::add(const char *k,uint16_t v)
-{
-	std::vector<uint8_t> &e = (*this)[k];
-	e.resize(5);
-	Utils::hex(v,(char *)e.data());
-}
-
-void Dictionary::add(const char *k,uint32_t v)
-{
-	std::vector<uint8_t> &e = (*this)[k];
-	e.resize(9);
-	Utils::hex(v,(char *)e.data());
-}
-
-void Dictionary::add(const char *k,uint64_t v)
-{
-	std::vector<uint8_t> &e = (*this)[k];
-	e.resize(17);
-	Utils::hex(v,(char *)e.data());
-}
-
 void Dictionary::add(const char *k,const Address &v)
 {
-	std::vector<uint8_t> &e = (*this)[k];
+	Vector<uint8_t> &e = (*this)[k];
 	e.resize(ZT_ADDRESS_STRING_SIZE_MAX);
 	v.toString((char *)e.data());
 }
 
 void Dictionary::add(const char *k,const char *v)
 {
-	std::vector<uint8_t> &e = (*this)[k];
-	e.clear();
-	if (v) {
-		for(;;) {
-			const uint8_t c = (uint8_t)*(v++);
-			e.push_back(c);
-			if (!c) break;
-		}
+	if ((v)&&(*v)) {
+		Vector<uint8_t> &e = (*this)[k];
+		e.clear();
+		while (*v)
+			e.push_back((uint8_t)*(v++));
 	}
 }
 
 void Dictionary::add(const char *k,const void *data,unsigned int len)
 {
-	std::vector<uint8_t> &e = (*this)[k];
+	Vector<uint8_t> &e = (*this)[k];
 	if (len != 0) {
 		e.assign((const uint8_t *)data,(const uint8_t *)data + len);
 	} else {
@@ -92,7 +68,7 @@ void Dictionary::add(const char *k,const void *data,unsigned int len)
 
 bool Dictionary::getB(const char *k,bool dfl) const
 {
-	const std::vector<uint8_t> &e = (*this)[k];
+	const Vector<uint8_t> &e = (*this)[k];
 	if (!e.empty()) {
 		switch ((char)e[0]) {
 			case '1':
@@ -112,7 +88,7 @@ uint64_t Dictionary::getUI(const char *k,uint64_t dfl) const
 {
 	uint8_t tmp[18];
 	uint64_t v = dfl;
-	const std::vector<uint8_t> &e = (*this)[k];
+	const Vector<uint8_t> &e = (*this)[k];
 	if (!e.empty()) {
 		if (e.back() != 0) {
 			const unsigned long sl = e.size();
@@ -125,11 +101,11 @@ uint64_t Dictionary::getUI(const char *k,uint64_t dfl) const
 	return v;
 }
 
-void Dictionary::getS(const char *k,char *v,unsigned int cap) const
+void Dictionary::getS(const char *k,char *v,const unsigned int cap) const
 {
 	if (cap == 0) // sanity check
 		return;
-	const std::vector<uint8_t> &e = (*this)[k];
+	const Vector<uint8_t> &e = (*this)[k];
 	unsigned int i = 0;
 	const unsigned int last = cap - 1;
 	for(;;) {
@@ -148,52 +124,14 @@ void Dictionary::clear()
 
 void Dictionary::encode(Vector<uint8_t> &out) const
 {
-	uint64_t str[2] = { 0,0 }; // second entry causes all strings to be null-terminated even if 8 chars in length
-
+	uint64_t str[2] = { 0,0 }; // second uint64_t being 0 means all strings always 0-terminated
 	out.clear();
-
-	for(Map< uint64_t,std::vector<uint8_t> >::const_iterator ti(m_entries.begin());ti != m_entries.end();++ti) {
+	for(Map< uint64_t,Vector<uint8_t> >::const_iterator ti(m_entries.begin());ti != m_entries.end();++ti) {
 		str[0] = ti->first;
-		const char *k = (const char *)str;
-		for(;;) {
-			char kc = *(k++);
-			if (!kc) break;
-			if ((kc >= 33)&&(kc <= 126)&&(kc != 61)&&(kc != 92)) // printable ASCII with no spaces, equals, or backslash
-				out.push_back((uint8_t)kc);
-		}
-
-		out.push_back(61); // =
-
-		for(std::vector<uint8_t>::const_iterator i(ti->second.begin());i!=ti->second.end();++i) {
-			uint8_t c = *i;
-			switch(c) {
-				case 0:
-					out.push_back(92);
-					out.push_back(48);
-					break;
-				case 10:
-					out.push_back(92);
-					out.push_back(110);
-					break;
-				case 13:
-					out.push_back(92);
-					out.push_back(114);
-					break;
-				case 61:
-					out.push_back(92);
-					out.push_back(101);
-					break;
-				case 92:
-					out.push_back(92);
-					out.push_back(92);
-					break;
-				default:
-					out.push_back(c);
-					break;
-			}
-		}
-
-		out.push_back(10);
+		s_appendKey(out,reinterpret_cast<const char *>(str));
+		for(std::vector<uint8_t>::const_iterator i(ti->second.begin());i!=ti->second.end();++i)
+			s_appendValueByte(out,*i);
+		out.push_back((uint8_t)'\n');
 	}
 }
 
@@ -203,7 +141,7 @@ bool Dictionary::decode(const void *data,unsigned int len)
 
 	uint64_t k = 0;
 	unsigned int ki = 0;
-	std::vector<uint8_t> *v = nullptr;
+	Vector<uint8_t> *v = nullptr;
 	bool escape = false;
 	for(unsigned int di=0;di<len;++di) {
 		uint8_t c = reinterpret_cast<const uint8_t *>(data)[di];
@@ -229,11 +167,11 @@ bool Dictionary::decode(const void *data,unsigned int len)
 						break;
 				}
 			} else {
-				if (c == 10) {
+				if (c == (uint8_t)'\n') {
 					k = 0;
 					ki = 0;
 					v = nullptr;
-				} else if (c == 92) {
+				} else if (c == 92) { // backslash
 					escape = true;
 				} else {
 					v->push_back(c);
@@ -242,7 +180,7 @@ bool Dictionary::decode(const void *data,unsigned int len)
 		} else {
 			if ((c < 33)||(c > 126)||(c == 92)) {
 				return false;
-			} else if (c == 61) {
+			} else if (c == (uint8_t)'=') {
 				v = &m_entries[k];
 			} else {
 				reinterpret_cast<uint8_t *>(&k)[ki & 7U] ^= c;

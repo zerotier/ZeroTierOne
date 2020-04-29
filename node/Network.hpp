@@ -27,12 +27,6 @@
 #include "CertificateOfMembership.hpp"
 #include "Containers.hpp"
 
-#include <cstdint>
-#include <string>
-#include <map>
-#include <vector>
-#include <algorithm>
-
 #define ZT_NETWORK_MAX_INCOMING_UPDATES 3
 
 namespace ZeroTier {

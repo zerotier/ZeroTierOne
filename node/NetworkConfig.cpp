@@ -21,7 +21,7 @@
 
 namespace ZeroTier {
 
-bool NetworkConfig::toDictionary(Dictionary &d,bool includeLegacy) const
+bool NetworkConfig::toDictionary(Dictionary &d) const
 {
 	uint8_t tmp[ZT_BUF_MEM_SIZE];
 	try {

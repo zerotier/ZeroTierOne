@@ -160,7 +160,7 @@ public:
 	ZT_INLINE void eachPeer(F f) const
 	{
 		RWMutex::RLock l(m_peers_l);
-		for(Map< Address,SharedPtr<Peer> >::const_iterator i(m_peers.begin());i != m_peers.end();++i) // NOLINT(modernize-loop-convert,hicpp-use-auto,modernize-use-auto)
+		for(Map< Address,SharedPtr<Peer> >::const_iterator i(m_peers.begin());i != m_peers.end();++i)
 			f(i->second);
 	}
 
@@ -178,14 +178,14 @@ public:
 	{
 		RWMutex::RLock l(m_peers_l);
 
-		std::vector<uintptr_t> rootPeerPtrs;
+		Vector<uintptr_t> rootPeerPtrs;
 		rootPeerPtrs.reserve(m_rootPeers.size());
-		for(std::vector< SharedPtr<Peer> >::const_iterator rp(m_rootPeers.begin());rp != m_rootPeers.end();++rp) // NOLINT(modernize-loop-convert,hicpp-use-auto,modernize-use-auto)
+		for(Vector< SharedPtr<Peer> >::const_iterator rp(m_rootPeers.begin());rp != m_rootPeers.end();++rp)
 			rootPeerPtrs.push_back((uintptr_t)rp->ptr());
 		std::sort(rootPeerPtrs.begin(),rootPeerPtrs.end());
 
 		try {
-			for(Map< Address,SharedPtr<Peer> >::const_iterator i(m_peers.begin());i != m_peers.end();++i) // NOLINT(modernize-loop-convert,hicpp-use-auto,modernize-use-auto)
+			for(Map< Address,SharedPtr<Peer> >::const_iterator i(m_peers.begin());i != m_peers.end();++i)
 				f(i->second,std::binary_search(rootPeerPtrs.begin(),rootPeerPtrs.end(),(uintptr_t)i->second.ptr()));
 		} catch ( ... ) {} // should not throw
 	}

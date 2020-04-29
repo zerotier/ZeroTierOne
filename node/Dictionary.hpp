@@ -35,6 +35,9 @@ namespace ZeroTier {
  * of simple or standardized binary encoding. Nevertheless it is efficient
  * and it works so there is no need to change it and break backward
  * compatibility.
+ * 
+ * Use of the append functions is faster than building and then encoding a
+ * dictionary.
  */
 class Dictionary
 {
@@ -47,7 +50,7 @@ public:
 	 * @param k Key to look up
 	 * @return Reference to value
 	 */
-	std::vector<uint8_t> &operator[](const char *k);
+	Vector<uint8_t> &operator[](const char *k);
 
 	/**
 	 * Get a const reference to a value
@@ -55,7 +58,7 @@ public:
 	 * @param k Key to look up
 	 * @return Reference to value or to empty vector if not found
 	 */
-	const std::vector<uint8_t> &operator[](const char *k) const;
+	const Vector<uint8_t> &operator[](const char *k) const;
 
 	/**
 	 * Add a boolean as '1' or '0'
@@ -65,21 +68,12 @@ public:
 	/**
 	 * Add an integer as a hexadecimal string value
 	 */
-	void add(const char *k,uint16_t v);
-
-	/**
-	 * Add an integer as a hexadecimal string value
-	 */
-	void add(const char *k,uint32_t v);
-
-	/**
-	 * Add an integer as a hexadecimal string value
-	 */
-	void add(const char *k,uint64_t v);
-
-	ZT_INLINE void add(const char *k,int16_t v) { add(k,(uint16_t)v); }
-	ZT_INLINE void add(const char *k,int32_t v) { add(k,(uint32_t)v); }
-	ZT_INLINE void add(const char *k,int64_t v) { add(k,(uint64_t)v); }
+	ZT_INLINE void add(const char *const k,const uint64_t v) { char buf[17]; add(k,Utils::hex(v,buf)); }
+	ZT_INLINE void add(const char *const k,const int64_t v) { char buf[17]; add(k,Utils::hex((uint64_t)v,buf)); }
+	ZT_INLINE void add(const char *const k,const uint32_t v) { char buf[17]; add(k,Utils::hex((uint64_t)v,buf)); }
+	ZT_INLINE void add(const char *const k,const int32_t v) { char buf[17]; add(k,Utils::hex((uint64_t)v,buf)); }
+	ZT_INLINE void add(const char *const k,const uint16_t v) { char buf[17]; add(k,Utils::hex((uint64_t)v,buf)); }
+	ZT_INLINE void add(const char *const k,const int16_t v) { char buf[17]; add(k,Utils::hex((uint64_t)v,buf)); }
 
 	/**
 	 * Add an address in 10-digit hex string format
@@ -127,6 +121,24 @@ public:
 	void getS(const char *k,char *v,unsigned int cap) const;
 
 	/**
+	 * Get an object supporting the marshal/unmarshal interface pattern
+	 * 
+	 * @param k Key to look up
+	 * @param obj Object to unmarshal() into
+	 * @return True if unmarshal was successful
+	 */
+	template<typename T>
+	ZT_INLINE bool getO(const char *k,T &obj) const
+	{
+		const Vector<uint8_t> &d = (*this)[k];
+		if (d.empty())
+			return false;
+		if (obj.unmarshal(d.data(),(unsigned int)d.size()) <= 0)
+			return false;
+		return true;
+	}
+
+	/**
 	 * Erase all entries in dictionary
 	 */
 	void clear();
@@ -163,7 +175,190 @@ public:
 	 */
 	bool decode(const void *data,unsigned int len);
 
+	/**
+	 * Append a key=value pair to a buffer (vector or FCV)
+	 * 
+	 * @param out Buffer
+	 * @param k Key (must be <= 8 characters)
+	 * @param v Value
+	 */
+	template<typename V>
+	ZT_INLINE static void append(V &out,const char *const k,const bool v)
+	{
+		s_appendKey(out,k);
+		out.push_back((uint8_t)(v ? '1' : '0'));
+		out.push_back((uint8_t)'\n');
+	}
+
+	/**
+	 * Append a key=value pair to a buffer (vector or FCV)
+	 * 
+	 * @param out Buffer
+	 * @param k Key (must be <= 8 characters)
+	 * @param v Value
+	 */
+	template<typename V>
+	ZT_INLINE static void append(V &out,const char *const k,const Address v)
+	{
+		s_appendKey(out,k);
+		const uint64_t a = v.toInt();
+		static_assert(ZT_ADDRESS_LENGTH_HEX == 10,"this must be rewritten for any change in address length");
+		out.push_back((uint8_t)Utils::HEXCHARS[(a >> 36U) & 0xfU]);
+		out.push_back((uint8_t)Utils::HEXCHARS[(a >> 32U) & 0xfU]);
+		out.push_back((uint8_t)Utils::HEXCHARS[(a >> 28U) & 0xfU]);
+		out.push_back((uint8_t)Utils::HEXCHARS[(a >> 24U) & 0xfU]);
+		out.push_back((uint8_t)Utils::HEXCHARS[(a >> 20U) & 0xfU]);
+		out.push_back((uint8_t)Utils::HEXCHARS[(a >> 16U) & 0xfU]);
+		out.push_back((uint8_t)Utils::HEXCHARS[(a >> 12U) & 0xfU]);
+		out.push_back((uint8_t)Utils::HEXCHARS[(a >> 8U) & 0xfU]);
+		out.push_back((uint8_t)Utils::HEXCHARS[(a >> 4U) & 0xfU]);
+		out.push_back((uint8_t)Utils::HEXCHARS[a & 0xfU]);
+		out.push_back((uint8_t)'\n');
+	}
+
+	/**
+	 * Append a key=value pair to a buffer (vector or FCV)
+	 * 
+	 * @param out Buffer
+	 * @param k Key (must be <= 8 characters)
+	 * @param v Value
+	 */
+	template<typename V>
+	ZT_INLINE static void append(V &out,const char *const k,const uint64_t v)
+	{
+		char buf[17];
+		Utils::hex(v,buf);
+		unsigned int i = 0;
+		while (buf[i])
+			out.push_back((uint8_t)buf[i++]);
+		out.push_back((uint8_t)'\n');
+	}
+
+	template<typename V>
+	ZT_INLINE static void append(V &out,const char *const k,const int64_t v) { append(out,k,(uint64_t)v); }
+	template<typename V>
+	ZT_INLINE static void append(V &out,const char *const k,const uint32_t v) { append(out,k,(uint64_t)v); }
+	template<typename V>
+	ZT_INLINE static void append(V &out,const char *const k,const int32_t v) { append(out,k,(uint64_t)v); }
+	template<typename V>
+	ZT_INLINE static void append(V &out,const char *const k,const uint16_t v) { append(out,k,(uint64_t)v); }
+	template<typename V>
+	ZT_INLINE static void append(V &out,const char *const k,const int16_t v) { append(out,k,(uint64_t)v); }
+	template<typename V>
+	ZT_INLINE static void append(V &out,const char *const k,const uint8_t v) { append(out,k,(uint64_t)v); }
+	template<typename V>
+	ZT_INLINE static void append(V &out,const char *const k,const int8_t v) { append(out,k,(uint64_t)v); }
+
+	/**
+	 * Append a key=value pair to a buffer (vector or FCV)
+	 * 
+	 * @param out Buffer
+	 * @param k Key (must be <= 8 characters)
+	 * @param v Value
+	 */
+	template<typename V>
+	ZT_INLINE static void append(V &out,const char *const k,const char *v)
+	{
+		if ((v)&&(*v)) {
+			s_appendKey(out,k);
+			while (*v)
+				s_appendValueByte(out,(uint8_t)*(v++));
+			out.push_back((uint8_t)'\n');
+		}
+	}
+
+	/**
+	 * Append a key=value pair to a buffer (vector or FCV)
+	 * 
+	 * @param out Buffer
+	 * @param k Key (must be <= 8 characters)
+	 * @param v Value
+	 * @param vlen Value length in bytes
+	 */
+	template<typename V>
+	ZT_INLINE static void append(V &out,const char *const k,const void *const v,const unsigned int vlen)
+	{
+		s_appendKey(out,k);
+		for(unsigned int i=0;i<vlen;++i)
+			s_appendValueByte(out,reinterpret_cast<const uint8_t *>(v)[i]);
+		out.push_back((uint8_t)'\n');
+	}
+
+	/**
+	 * Append a packet ID as raw bytes in the provided byte order
+	 * 
+	 * @param out Buffer
+	 * @param k Key (must be <= 8 characters)
+	 * @param pid Packet ID
+	 */
+	template<typename V>
+	static ZT_INLINE void appendPacketId(V &out,const char *const k,const uint64_t pid)
+	{
+		append(out,k,&pid,8);
+	}
+
+	/**
+	 * Append key=value with any object implementing the correct marshal interface
+	 * 
+	 * @param out Buffer
+	 * @param k Key (must be <= 8 characters)
+	 * @param v Marshal-able object
+	 * @return Bytes appended or negative on error (return value of marshal())
+	 */
+	template<typename V,typename T>
+	static ZT_INLINE int appendObject(V &out,const char *const k,const T &v)
+	{
+		uint8_t tmp[4096]; // large enough for any current object
+		if (T::marshalSizeMax() > sizeof(tmp))
+			return -1;
+		const int mlen = v.marshal(tmp);
+		if (mlen > 0)
+			append(out,k,tmp,(unsigned int)mlen);
+		return mlen;
+	}
+
 private:
+	template<typename V>
+	ZT_INLINE static void s_appendValueByte(V &out,const uint8_t c)
+	{
+		switch(c) {
+			case 0:
+				out.push_back(92); // backslash
+				out.push_back(48);
+				break;
+			case 10:
+				out.push_back(92);
+				out.push_back(110);
+				break;
+			case 13:
+				out.push_back(92);
+				out.push_back(114);
+				break;
+			case 61:
+				out.push_back(92);
+				out.push_back(101);
+				break;
+			case 92:
+				out.push_back(92);
+				out.push_back(92);
+				break;
+			default:
+				out.push_back(c);
+				break;
+		}
+	}
+	template<typename V>
+	ZT_INLINE static void s_appendKey(V &out,const char *const k)
+	{
+		for(unsigned int i=0;i<8;++i) {
+			const char kc = k[i];
+			if (!kc) break;
+			if ((kc >= 33)&&(kc <= 126)&&(kc != 61)&&(kc != 92)) // printable ASCII with no spaces, equals, or backslash
+				out.push_back((uint8_t)kc);
+		}
+		out.push_back((uint8_t)'=');
+	}
+
 	// This just packs up to 8 character bytes into a 64-bit word. There is no need
 	// for this to be portable in terms of endian-ness. It's just for fast key lookup.
 	static ZT_INLINE uint64_t s_toKey(const char *k)

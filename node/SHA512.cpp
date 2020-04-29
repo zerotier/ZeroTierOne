@@ -199,7 +199,7 @@ void SHA384(void *digest,const void *data0,unsigned int len0,const void *data1,u
 
 #endif // !ZT_HAVE_NATIVE_SHA512
 
-void HMACSHA384(const uint8_t key[32],const void *msg,const unsigned int msglen,uint8_t mac[48])
+void HMACSHA384(const uint8_t key[ZT_SYMMETRIC_KEY_SIZE],const void *msg,const unsigned int msglen,uint8_t mac[48])
 {
 	uint64_t kInPadded[16]; // input padded key
 	uint64_t outer[22]; // output padded key | H(input padded key | msg)
@@ -208,14 +208,16 @@ void HMACSHA384(const uint8_t key[32],const void *msg,const unsigned int msglen,
 	const uint64_t k1 = Utils::loadAsIsEndian<uint64_t>(key + 8);
 	const uint64_t k2 = Utils::loadAsIsEndian<uint64_t>(key + 16);
 	const uint64_t k3 = Utils::loadAsIsEndian<uint64_t>(key + 24);
+	const uint64_t k4 = Utils::loadAsIsEndian<uint64_t>(key + 32);
+	const uint64_t k5 = Utils::loadAsIsEndian<uint64_t>(key + 40);
 
 	const uint64_t ipad = 0x3636363636363636ULL;
 	kInPadded[0] = k0 ^ ipad;
 	kInPadded[1] = k1 ^ ipad;
 	kInPadded[2] = k2 ^ ipad;
 	kInPadded[3] = k3 ^ ipad;
-	kInPadded[4] = ipad;
-	kInPadded[5] = ipad;
+	kInPadded[4] = k4 ^ ipad;
+	kInPadded[5] = k5 ^ ipad;
 	kInPadded[6] = ipad;
 	kInPadded[7] = ipad;
 	kInPadded[8] = ipad;
@@ -232,8 +234,8 @@ void HMACSHA384(const uint8_t key[32],const void *msg,const unsigned int msglen,
 	outer[1] = k1 ^ opad;
 	outer[2] = k2 ^ opad;
 	outer[3] = k3 ^ opad;
-	outer[4] = opad;
-	outer[5] = opad;
+	outer[4] = k4 ^ opad;
+	outer[5] = k5 ^ opad;
 	outer[6] = opad;
 	outer[7] = opad;
 	outer[8] = opad;
@@ -245,12 +247,12 @@ void HMACSHA384(const uint8_t key[32],const void *msg,const unsigned int msglen,
 	outer[14] = opad;
 	outer[15] = opad;
 
-	SHA384(reinterpret_cast<uint8_t *>(outer) + 128,kInPadded,128,msg,msglen); // H(input padded key | msg)
-
-	SHA384(mac,outer,176); // H(output padded key | H(input padded key | msg))
+	// H(output padded key | H(input padded key | msg))
+	SHA384(reinterpret_cast<uint8_t *>(outer) + 128,kInPadded,128,msg,msglen);
+	SHA384(mac,outer,176);
 }
 
-void KBKDFHMACSHA384(const uint8_t key[32],const char label,const char context,const uint32_t iter,uint8_t out[32])
+void KBKDFHMACSHA384(const uint8_t key[ZT_SYMMETRIC_KEY_SIZE],const char label,const char context,const uint32_t iter,uint8_t out[ZT_SYMMETRIC_KEY_SIZE])
 {
 	uint8_t kbkdfMsg[13];
 	uint8_t kbuf[48];
@@ -265,7 +267,7 @@ void KBKDFHMACSHA384(const uint8_t key[32],const char label,const char context,c
 	kbkdfMsg[11] = 1;
 	kbkdfMsg[12] = 0; // key length: 256 bits as big-endian 32-bit value
 	HMACSHA384(key,&kbkdfMsg,sizeof(kbkdfMsg),kbuf);
-	Utils::copy<32>(out,kbuf);
+	Utils::copy<ZT_SYMMETRIC_KEY_SIZE>(out,kbuf);
 }
 
 } // namespace ZeroTier

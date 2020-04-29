@@ -32,7 +32,7 @@
 #include "Containers.hpp"
 
 // version, identity, locator, bootstrap, version info, length of any additional fields
-#define ZT_PEER_MARSHAL_SIZE_MAX (1 + ZT_SYMMETRICKEY_MARSHAL_SIZE_MAX + ZT_IDENTITY_MARSHAL_SIZE_MAX + ZT_LOCATOR_MARSHAL_SIZE_MAX + 1 + (ZT_MAX_PEER_NETWORK_PATHS * ZT_ENDPOINT_MARSHAL_SIZE_MAX) + (2*4) + 2)
+#define ZT_PEER_MARSHAL_SIZE_MAX (1 + ZT_ADDRESS_LENGTH + ZT_SYMMETRIC_KEY_SIZE + ZT_IDENTITY_MARSHAL_SIZE_MAX + ZT_LOCATOR_MARSHAL_SIZE_MAX + 1 + (ZT_MAX_PEER_NETWORK_PATHS * ZT_ENDPOINT_MARSHAL_SIZE_MAX) + (2*4) + 2)
 
 namespace ZeroTier {
 
@@ -50,8 +50,8 @@ public:
 	/**
 	 * Create an uninitialized peer
 	 *
-	 * The peer will need to be initialized with init() or unmarshal() before
-	 * it can be used.
+	 * New peers must be initialized via either init() or unmarshal() prior to
+	 * use or null pointer dereference may occur.
 	 *
 	 * @param renv Runtime environment
 	 */
@@ -95,7 +95,7 @@ public:
 	 * @param t New probe token
 	 * @return Old probe token
 	 */
-	ZT_INLINE uint32_t setProbeToken(const uint32_t t) const noexcept
+	ZT_INLINE uint32_t setProbeToken(const uint32_t t) noexcept
 	{
 		RWMutex::Lock l(m_lock);
 		const uint32_t pt = m_probe;
@@ -186,7 +186,11 @@ public:
 	 * @param len Length in bytes
 	 * @param via Path over which to send data (may or may not be an already-learned path for this peer)
 	 */
-	void send(void *tPtr,int64_t now,const void *data,unsigned int len,const SharedPtr<Path> &via) noexcept;
+	ZT_INLINE void send(void *tPtr,int64_t now,const void *data,unsigned int len,const SharedPtr<Path> &via) noexcept
+	{
+		via->send(RR,tPtr,data,len,now);
+		sent(now,len);
+	}
 
 	/**
 	 * Send data to this peer over the best available path
@@ -211,17 +215,6 @@ public:
 	 * @return Number of bytes sent
 	 */
 	unsigned int hello(void *tPtr,int64_t localSocket,const InetAddress &atAddress,int64_t now);
-
-	/**
-	 * Send a NOP message to e.g. probe a new link
-	 *
-	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
-	 * @param localSocket Local source socket
-	 * @param atAddress Destination address
-	 * @param now Current time
-	 * @return Number of bytes sent
-	 */
-	unsigned int probe(void *tPtr,int64_t localSocket,const InetAddress &atAddress,int64_t now);
 
 	/**
 	 * Ping this peer if needed and/or perform other periodic tasks.
@@ -303,11 +296,69 @@ public:
 	}
 
 	/**
-	 * @return Preferred cipher suite for normal encrypted P2P communication
+	 * @return Cipher suite that should be used to communicate with this peer
 	 */
 	ZT_INLINE uint8_t cipher() const noexcept
 	{
+		//if (m_vProto >= 11)
+		//	return ZT_PROTO_CIPHER_SUITE__AES_GMAC_SIV;
 		return ZT_PROTO_CIPHER_SUITE__POLY1305_SALSA2012;
+	}
+
+	/**
+	 * @return The permanent shared key for this peer computed by simple identity agreement
+	 */
+	ZT_INLINE SharedPtr<SymmetricKey> identityKey() noexcept
+	{
+		return m_identityKey;
+	}
+
+	/**
+	 * @return AES instance for HELLO dictionary / encrypted section encryption/decryption
+	 */
+	ZT_INLINE const AES &identityHelloDictionaryEncryptionCipher() noexcept
+	{
+		return m_helloCipher;
+	}
+
+	/**
+	 * @return Key for HMAC on HELLOs
+	 */
+	ZT_INLINE const uint8_t *identityHelloHmacKey() noexcept
+	{
+		return m_helloMacKey;
+	}
+
+	/**
+	 * @return Raw identity key bytes
+	 */
+	ZT_INLINE const uint8_t *rawIdentityKey() noexcept
+	{
+		RWMutex::RLock l(m_lock);
+		return m_identityKey->secret;
+	}
+
+	/**
+	 * @return Current best key: either the latest ephemeral or the identity key
+	 */
+	ZT_INLINE SharedPtr<SymmetricKey> key() noexcept
+	{
+		RWMutex::RLock l(m_lock);
+		return m_key();
+	}
+
+	/**
+	 * Check whether a key is ephemeral
+	 * 
+	 * This is used to check whether a packet is received with forward secrecy enabled
+	 * or not.
+	 * 
+	 * @param k Key to check
+	 * @return True if this key is ephemeral, false if it's the long-lived identity key
+	 */
+	ZT_INLINE bool isEphemeral(const SharedPtr<SymmetricKey> &k) const noexcept
+	{
+		return (m_identityKey != k);
 	}
 
 	/**
@@ -342,7 +393,7 @@ public:
 	 *
 	 * @param paths Vector of paths with the first path being the current preferred path
 	 */
-	void getAllPaths(std::vector< SharedPtr<Path> > &paths);
+	void getAllPaths(Vector< SharedPtr<Path> > &paths);
 
 	/**
 	 * Save the latest version of this peer to the data store
@@ -379,19 +430,45 @@ public:
 		return false;
 	}
 
+	/**
+	 * Rate limit gate for inbound probes
+	 */
+	ZT_INLINE bool rateGateProbeRequest(const int64_t now) noexcept
+	{
+		if((now - m_lastProbeReceived) > ZT_PEER_PROBE_RESPONSE_RATE_LIMIT) {
+			m_lastProbeReceived = now;
+			return true;
+		}
+		return false;
+	}
+
 private:
 	void m_prioritizePaths(int64_t now);
+	unsigned int m_sendProbe(void *tPtr,int64_t localSocket,const InetAddress &atAddress,int64_t now);
+	void m_deriveSecondaryIdentityKeys() noexcept;
+
+	ZT_INLINE SharedPtr<SymmetricKey> m_key() noexcept
+	{
+		// assumes m_lock is locked (for read at least)
+		return (m_ephemeralKeys[0]) ? m_ephemeralKeys[0] : m_identityKey;
+	}
 
 	const RuntimeEnvironment *RR;
 
 	// Read/write mutex for non-atomic non-const fields.
 	RWMutex m_lock;
 
-	// The permanent identity key resulting from agreement between our identity and this peer's identity.
-	SymmetricKey< AES,0,0 > m_identityKey;
+	// Static identity key
+	SharedPtr<SymmetricKey> m_identityKey;
 
-	// Most recently successful (for decrypt) ephemeral key and one previous key.
-	SymmetricKey< AES,ZT_SYMMETRIC_KEY_TTL,ZT_SYMMETRIC_KEY_TTL_MESSAGES > m_ephemeralKeys[2];
+	// Cipher for encrypting or decrypting the encrypted section of HELLO packets.
+	AES m_helloCipher;
+
+	// Key for HELLO HMAC-SHA384
+	uint8_t m_helloMacKey[ZT_SYMMETRIC_KEY_SIZE];
+
+	// Current and previous ephemeral key
+	SharedPtr<SymmetricKey> m_ephemeralKeys[2];
 
 	Identity m_id;
 	Locator m_locator;
@@ -411,6 +488,9 @@ private:
 
 	// The last time we sorted paths in order of preference. (This happens pretty often.)
 	std::atomic<int64_t> m_lastPrioritizedPaths;
+
+	// The last time we got a probe from this peer.
+	std::atomic<int64_t> m_lastProbeReceived;
 
 	// Meters measuring actual bandwidth in, out, and relayed via this peer (mostly if this is a root).
 	Meter<> m_inMeter;

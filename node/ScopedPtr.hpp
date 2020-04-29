@@ -49,7 +49,7 @@ public:
 	ZT_INLINE bool operator!=(T *const p) const noexcept { return (m_ptr != p); }
 
 private:
-	ZT_INLINE ScopedPtr() noexcept {} // NOLINT(hicpp-use-equals-default,hicpp-use-equals-delete,modernize-use-equals-default)
+	ZT_INLINE ScopedPtr() noexcept {}
 	ZT_INLINE ScopedPtr(const ScopedPtr &p) noexcept : m_ptr(nullptr) {}
 	ZT_INLINE ScopedPtr &operator=(const ScopedPtr &p) noexcept { return *this; }
 

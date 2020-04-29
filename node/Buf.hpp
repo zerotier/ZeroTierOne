@@ -87,6 +87,15 @@ public:
 	static void operator delete(void *ptr);
 
 	/**
+	 * Raw data held in buffer
+	 *
+	 * The additional eight bytes should not be used and should be considered undefined.
+	 * They exist to allow reads and writes of integer types to silently overflow if a
+	 * read or write is performed at the end of the buffer.
+	 */
+	uint8_t unsafeData[ZT_BUF_MEM_SIZE + 8];
+
+	/**
 	 * Free all instances of Buf in shared pool.
 	 *
 	 * New buffers will be created and the pool repopulated if get() is called
@@ -129,47 +138,82 @@ public:
 	};
 
 	/**
-	 * Assemble all slices in a vector into a single slice starting at position 0
-	 *
-	 * The returned slice will start at 0 and contain the entire vector unless the
-	 * vector is too large to fit in a single buffer. If that or any other error
-	 * occurs the returned slice will be empty and contain a NULL Buf.
-	 *
-	 * The vector may be modified by this function and should be considered
-	 * undefined after it is called.
-	 *
-	 * @tparam FCVC Capacity of FCV (generally inferred automatically)
-	 * @param fcv FCV containing one or more slices
-	 * @return Single slice containing fully assembled buffer (empty on error)
+	 * A vector of slices making up a packet that might span more than one buffer.
 	 */
-	template<unsigned int FCVC>
-	static ZT_INLINE Buf::Slice assembleSliceVector(FCV<Buf::Slice,FCVC> &fcv) noexcept
+	class PacketVector : public ZeroTier::FCV<Slice,ZT_MAX_PACKET_FRAGMENTS>
 	{
-		Buf::Slice r;
+	public:
+		ZT_INLINE PacketVector() : ZeroTier::FCV<Slice,ZT_MAX_PACKET_FRAGMENTS>() {}
 
-		typename FCV<Buf::Slice,FCVC>::iterator s(fcv.begin());
-		unsigned int l = s->e - s->s;
-		if (l <= ZT_BUF_MEM_SIZE) {
-			r.b.move(s->b);
-			if (s->s > 0)
-				memmove(r.b->unsafeData,r.b->unsafeData + s->s,l);
-			r.e = l;
-
-			while (++s != fcv.end()) {
-				l = s->e - s->s;
-				if (l > (ZT_BUF_MEM_SIZE - r.e)) {
-					r.b.zero();
-					r.e = 0;
-					break;
-				}
-				Utils::copy(r.b->unsafeData + r.e,s->b->unsafeData + s->s,l);
-				s->b.zero(); // let go of buffer in vector as soon as possible
-				r.e += l;
-			}
+		ZT_INLINE unsigned int totalSize() const noexcept
+		{
+			unsigned int size = 0;
+			for(PacketVector::const_iterator s(begin());s!=end();++s)
+				size += s->e - s->s;
+			return size;
 		}
 
-		return r;
-	}
+		/**
+		 * Merge this packet vector into a single destination buffer
+		 * 
+		 * @param b Destination buffer
+		 * @return Size of data in destination or -1 on error
+		 */
+		ZT_INLINE int mergeCopy(Buf &b) const noexcept
+		{
+			unsigned int size = 0;
+			for(PacketVector::const_iterator s(begin());s!=end();++s) {
+				const unsigned int start = s->s;
+				const unsigned int rem = s->e - start;
+				if (likely((size + rem) <= ZT_BUF_MEM_SIZE)) {
+					Utils::copy(b.unsafeData + size,s->b->unsafeData + start,rem);
+					size += rem;
+				} else {
+					return -1;
+				}
+			}
+			return (int)size;
+		}
+
+		/**
+		 * Merge this packet vector into a single destination buffer with an arbitrary copy function
+		 * 
+		 * This can be used to e.g. simultaneously merge and decrypt a packet.
+		 * 
+		 * @param b Destination buffer
+		 * @param simpleCopyBefore Don't start using copyFunction until this index (0 to always use)
+		 * @param copyFunction Function to invoke with memcpy-like arguments: (dest, source, size)
+		 * @tparam F Type of copyFunction (typically inferred)
+		 * @return Size of data in destination or -1 on error
+		 */
+		template<typename F>
+		ZT_INLINE int mergeMap(Buf &b,const unsigned int simpleCopyBefore,F copyFunction) const noexcept
+		{
+			unsigned int size = 0;
+			for(PacketVector::const_iterator s(begin());s!=end();++s) {
+				unsigned int start = s->s;
+				unsigned int rem = s->e - start;
+				if (likely((size + rem) <= ZT_BUF_MEM_SIZE)) {
+					if (size < simpleCopyBefore) {
+						unsigned int sc = simpleCopyBefore - size;
+						if (unlikely(sc > rem))
+							sc = rem;
+						Utils::copy(b.unsafeData + size,s->b->unsafeData + start,sc);
+						start += sc;
+						rem -= sc;
+					}
+
+					if (likely(rem > 0)) {
+						copyFunction(b.unsafeData + size,s->b->unsafeData + start,rem);
+						size += rem;
+					}
+				} else {
+					return -1;
+				}
+			}
+			return (int)size;
+		}
+	};
 
 	/**
 	 * Create a new uninitialized buffer with undefined contents (use clear() to zero if needed)
@@ -419,6 +463,84 @@ public:
 	{
 		const uint8_t *const b = unsafeData + ii;
 		return ((ii += (int)len) <= ZT_BUF_MEM_SIZE) ? b : nullptr;
+	}
+
+	/**
+	 * Load a value at an index that is compile time checked against the maximum buffer size
+	 * 
+	 * @tparam I Static index
+	 * @return Value
+	 */
+	template<unsigned int I>
+	ZT_INLINE uint8_t lI8() const noexcept
+	{
+		static_assert(I < ZT_BUF_MEM_SIZE,"overflow");
+		return unsafeData[I];
+	}
+
+	/**
+	 * Load a value at an index that is compile time checked against the maximum buffer size
+	 * 
+	 * @tparam I Static index
+	 * @return Value
+	 */
+	template<unsigned int I>
+	ZT_INLINE uint8_t lI16() const noexcept
+	{
+		static_assert((I + 1) < ZT_BUF_MEM_SIZE,"overflow");
+#ifdef ZT_NO_UNALIGNED_ACCESS
+		return (
+			((uint16_t)unsafeData[I] << 8U) |
+			(uint16_t)unsafeData[I + 1]);
+#else
+		return Utils::ntoh(*reinterpret_cast<const uint16_t *>(unsafeData + I));
+#endif
+	}
+
+	/**
+	 * Load a value at an index that is compile time checked against the maximum buffer size
+	 * 
+	 * @tparam I Static index
+	 * @return Value
+	 */
+	template<unsigned int I>
+	ZT_INLINE uint8_t lI32() const noexcept
+	{
+		static_assert((I + 3) < ZT_BUF_MEM_SIZE,"overflow");
+#ifdef ZT_NO_UNALIGNED_ACCESS
+		return (
+			((uint32_t)unsafeData[I] << 24U) |
+			((uint32_t)unsafeData[I + 1] << 16U) |
+			((uint32_t)unsafeData[I + 2] << 8U) |
+			(uint32_t)unsafeData[I + 3]);
+#else
+		return Utils::ntoh(*reinterpret_cast<const uint32_t *>(unsafeData + I));
+#endif
+	}
+
+	/**
+	 * Load a value at an index that is compile time checked against the maximum buffer size
+	 * 
+	 * @tparam I Static index
+	 * @return Value
+	 */
+	template<unsigned int I>
+	ZT_INLINE uint8_t lI64() const noexcept
+	{
+		static_assert((I + 7) < ZT_BUF_MEM_SIZE,"overflow");
+#ifdef ZT_NO_UNALIGNED_ACCESS
+		return (
+			((uint64_t)unsafeData[I] << 56U) |
+			((uint64_t)unsafeData[I + 1] << 48U) |
+			((uint64_t)unsafeData[I + 2] << 40U) |
+			((uint64_t)unsafeData[I + 3] << 32U) |
+			((uint64_t)unsafeData[I + 4] << 24U) |
+			((uint64_t)unsafeData[I + 5] << 16U) |
+			((uint64_t)unsafeData[I + 6] << 8U) |
+			(uint64_t)unsafeData[I + 7]);
+#else
+		return Utils::ntoh(*reinterpret_cast<const uint64_t *>(unsafeData + I));
+#endif
 	}
 
 	/**
@@ -687,43 +809,6 @@ public:
 	 * @return Capacity of this buffer (usable size of data.bytes)
 	 */
 	static constexpr unsigned int capacity() noexcept { return ZT_BUF_MEM_SIZE; }
-
-	/**
-	 * Cast data in 'b' to a (usually packed) structure type
-	 *
-	 * Warning: this does no bounds checking. It should only be used with packed
-	 * struct types designed for use in packet decoding such as those in
-	 * Protocol.hpp, and if 'i' is non-zero the caller must check bounds.
-	 *
-	 * @tparam T Structure type to cast 'b' to
-	 * @param i Index of start of structure (default: 0)
-	 * @return Reference to 'b' cast to type T
-	 */
-	template<typename T>
-	ZT_INLINE T &as(const unsigned int i = 0) noexcept { return *reinterpret_cast<T *>(unsafeData + i); }
-
-	/**
-	 * Cast data in 'b' to a (usually packed) structure type (const)
-	 *
-	 * Warning: this does no bounds checking. It should only be used with packed
-	 * struct types designed for use in packet decoding such as those in
-	 * Protocol.hpp, and if 'i' is non-zero the caller must check bounds.
-	 *
-	 * @tparam T Structure type to cast 'b' to
-	 * @param i Index of start of structure (default: 0)
-	 * @return Reference to 'b' cast to type T
-	 */
-	template<typename T>
-	ZT_INLINE const T &as(const unsigned int i = 0) const noexcept { return *reinterpret_cast<const T *>(unsafeData + i); }
-
-	/**
-	 * Raw data held in buffer
-	 *
-	 * The additional eight bytes should not be used and should be considered undefined.
-	 * They exist to allow reads and writes of integer types to silently overflow if a
-	 * read or write is performed at the end of the buffer.
-	 */
-	uint8_t unsafeData[ZT_BUF_MEM_SIZE + 8];
 
 private:
 	// Next item in free buffer pool linked list if Buf is placed in pool, undefined and unused otherwise

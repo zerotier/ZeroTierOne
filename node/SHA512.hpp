@@ -70,7 +70,7 @@ void SHA384(void *digest,const void *data0,unsigned int len0,const void *data1,u
  * @param msglen Length of message
  * @param mac Buffer to fill with result
  */
-void HMACSHA384(const uint8_t key[32],const void *msg,unsigned int msglen,uint8_t mac[48]);
+void HMACSHA384(const uint8_t key[ZT_SYMMETRIC_KEY_SIZE],const void *msg,unsigned int msglen,uint8_t mac[48]);
 
 /**
  * Compute KBKDF (key-based key derivation function) using HMAC-SHA-384 as a PRF
@@ -81,7 +81,7 @@ void HMACSHA384(const uint8_t key[32],const void *msg,unsigned int msglen,uint8_
  * @param iter Key iteration for generation of multiple keys for the same label/context
  * @param out Output to receive derived key
  */
-void KBKDFHMACSHA384(const uint8_t key[32],char label,char context,uint32_t iter,uint8_t out[32]);
+void KBKDFHMACSHA384(const uint8_t key[ZT_SYMMETRIC_KEY_SIZE],char label,char context,uint32_t iter,uint8_t out[ZT_SYMMETRIC_KEY_SIZE]);
 
 } // namespace ZeroTier
 

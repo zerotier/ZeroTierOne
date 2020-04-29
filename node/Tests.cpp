@@ -48,7 +48,7 @@
 
 #ifdef __UNIX_LIKE__
 #include <unistd.h>
-#include <sys/time.h> // NOLINT(modernize-deprecated-headers,hicpp-deprecated-headers)
+#include <sys/time.h>
 #include <sys/types.h>
 #endif
 

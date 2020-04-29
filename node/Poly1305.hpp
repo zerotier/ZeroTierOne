@@ -20,14 +20,24 @@ namespace ZeroTier {
 #define ZT_POLY1305_MAC_SIZE 16
 
 /**
- * Compute a one-time authentication code
- *
- * @param auth Buffer to receive code -- MUST be 16 bytes in length
- * @param data Data to authenticate
- * @param len Length of data to authenticate in bytes
- * @param key 32-byte one-time use key to authenticate data (must not be reused)
+ * Poly1305 one-time MAC calculator
  */
-void poly1305(void *auth,const void *data,unsigned int len,const void *key) noexcept;
+class Poly1305
+{
+public:
+	ZT_INLINE Poly1305() {}
+	ZT_INLINE Poly1305(const void *key) { this->init(key); }
+
+	void init(const void *key) noexcept;
+	void update(const void *data,unsigned int len) noexcept;
+	void finish(void *auth) noexcept;
+
+private:
+	struct {
+	  size_t aligner;
+  	unsigned char opaque[136];
+	} ctx;
+};
 
 } // namespace ZeroTier
 

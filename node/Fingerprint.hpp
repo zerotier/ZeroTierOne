@@ -84,7 +84,7 @@ public:
 	}
 
 	ZT_INLINE void zero() noexcept { memoryZero(this); }
-	ZT_INLINE unsigned long hashCode() const noexcept { return m_cfp.address; }
+	ZT_INLINE unsigned long hashCode() const noexcept { return (unsigned long)m_cfp.address; }
 
 	ZT_INLINE operator bool() const noexcept { return (m_cfp.address != 0); } // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
 

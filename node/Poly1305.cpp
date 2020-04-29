@@ -425,12 +425,20 @@ ZT_INLINE void poly1305_update(poly1305_context *ctx,const unsigned char *m,size
 
 } // anonymous namespace
 
-void poly1305(void *auth,const void *data,unsigned int len,const void *key) noexcept
+void Poly1305::init(const void *key) noexcept
 {
-  poly1305_context ctx;
-  poly1305_init(&ctx,reinterpret_cast<const unsigned char *>(key));
-  poly1305_update(&ctx,reinterpret_cast<const unsigned char *>(data),(size_t)len);
-  poly1305_finish(&ctx,reinterpret_cast<unsigned char *>(auth));
+  static_assert(sizeof(ctx) >= sizeof(poly1305_context),"buffer in class smaller than required structure size");
+  poly1305_init(reinterpret_cast<poly1305_context *>(&ctx),reinterpret_cast<const unsigned char *>(key));
+}
+
+void Poly1305::update(const void *data,unsigned int len) noexcept
+{
+  poly1305_update(reinterpret_cast<poly1305_context *>(&ctx),reinterpret_cast<const unsigned char *>(data),(size_t)len);
+}
+
+void Poly1305::finish(void *auth) noexcept
+{
+  poly1305_finish(reinterpret_cast<poly1305_context *>(&ctx),reinterpret_cast<unsigned char *>(auth));
 }
 
 } // namespace ZeroTier

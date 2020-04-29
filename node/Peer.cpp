@@ -21,10 +21,11 @@
 #include "InetAddress.hpp"
 #include "Protocol.hpp"
 #include "Endpoint.hpp"
+#include "Expect.hpp"
 
 namespace ZeroTier {
 
-Peer::Peer(const RuntimeEnvironment *renv) : // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+Peer::Peer(const RuntimeEnvironment *renv) :
 	RR(renv),
 	m_lastReceive(0),
 	m_lastSend(0),
@@ -32,6 +33,7 @@ Peer::Peer(const RuntimeEnvironment *renv) : // NOLINT(cppcoreguidelines-pro-typ
 	m_lastWhoisRequestReceived(0),
 	m_lastEchoRequestReceived(0),
 	m_lastPrioritizedPaths(0),
+	m_lastProbeReceived(0),
 	m_alivePathCount(0),
 	m_tryQueue(),
 	m_tryQueuePtr(m_tryQueue.end()),
@@ -43,8 +45,9 @@ Peer::Peer(const RuntimeEnvironment *renv) : // NOLINT(cppcoreguidelines-pro-typ
 {
 }
 
-Peer::~Peer() // NOLINT(hicpp-use-equals-default,modernize-use-equals-default)
+Peer::~Peer()
 {
+	Utils::burn(m_helloMacKey,sizeof(m_helloMacKey));
 }
 
 bool Peer::init(const Identity &peerIdentity)
@@ -55,11 +58,13 @@ bool Peer::init(const Identity &peerIdentity)
 		return false;
 	m_id = peerIdentity;
 
-	uint8_t ktmp[ZT_SYMMETRIC_KEY_SIZE];
-	if (!RR->identity.agree(peerIdentity,ktmp))
+	uint8_t k[ZT_SYMMETRIC_KEY_SIZE];
+	if (!RR->identity.agree(peerIdentity,k))
 		return false;
-	m_identityKey.init(RR->node->now(), ktmp);
-	Utils::burn(ktmp,sizeof(ktmp));
+	m_identityKey.set(new SymmetricKey(RR->node->now(),k,true));
+	Utils::burn(k,sizeof(k));
+
+	m_deriveSecondaryIdentityKeys();
 
 	return true;
 }
@@ -76,7 +81,7 @@ void Peer::received(
 	const int64_t now = RR->node->now();
 
 	m_lastReceive = now;
-	m_inMeter.log(now, payloadLength);
+	m_inMeter.log(now,payloadLength);
 
 	if (hops == 0) {
 		RWMutex::RMaybeWLock l(m_lock);
@@ -98,7 +103,7 @@ void Peer::received(
 
 				// If the path list is full, replace the least recently active path. Otherwise append new path.
 				unsigned int newPathIdx = 0;
-				if (m_alivePathCount >= ZT_MAX_PEER_NETWORK_PATHS) {
+				if (m_alivePathCount == ZT_MAX_PEER_NETWORK_PATHS) {
 					int64_t lastReceiveTimeMax = 0;
 					for (unsigned int i=0;i < m_alivePathCount;++i) {
 						if ((m_paths[i]->address().family() == path->address().family()) &&
@@ -132,16 +137,10 @@ void Peer::received(
 				RR->t->learnedNewPath(tPtr, 0x582fabdd, packetId, m_id, path->address(), old);
 			} else {
 				path->sent(now,hello(tPtr,path->localSocket(),path->address(),now));
-				RR->t->tryingNewPath(tPtr, 0xb7747ddd, m_id, path->address(), path->address(), packetId, (uint8_t)verb, m_id, ZT_TRACE_TRYING_NEW_PATH_REASON_PACKET_RECEIVED_FROM_UNKNOWN_PATH);
+				RR->t->tryingNewPath(tPtr, 0xb7747ddd, m_id, path->address(), path->address(), packetId, (uint8_t)verb, m_id);
 			}
 		}
 	}
-}
-
-void Peer::send(void *const tPtr,const int64_t now,const void *const data,const unsigned int len,const SharedPtr<Path> &via) noexcept
-{
-	via->send(RR,tPtr,data,len,now);
-	sent(now,len);
 }
 
 void Peer::send(void *const tPtr,const int64_t now,const void *const data,const unsigned int len) noexcept
@@ -190,25 +189,6 @@ unsigned int Peer::hello(void *tPtr,int64_t localSocket,const InetAddress &atAdd
 #endif
 }
 
-unsigned int Peer::probe(void *tPtr,int64_t localSocket,const InetAddress &atAddress,int64_t now)
-{
-	if (m_vProto < 11) {
-		Buf outp;
-		Protocol::Header &ph = outp.as<Protocol::Header>(); // NOLINT(hicpp-use-auto,modernize-use-auto)
-		//ph.packetId = Protocol::getPacketId();
-		m_id.address().copyTo(ph.destination);
-		RR->identity.address().copyTo(ph.source);
-		ph.flags = 0;
-		ph.verb = Protocol::VERB_NOP;
-		Protocol::armor(outp, sizeof(Protocol::Header), m_identityKey.key(), this->cipher());
-		RR->node->putPacket(tPtr,localSocket,atAddress,outp.unsafeData,sizeof(Protocol::Header));
-		return sizeof(Protocol::Header);
-	} else {
-		RR->node->putPacket(tPtr, -1, atAddress, &m_probe, 4);
-		return 4;
-	}
-}
-
 void Peer::pulse(void *const tPtr,const int64_t now,const bool isRoot)
 {
 	RWMutex::Lock l(m_lock);
@@ -219,90 +199,104 @@ void Peer::pulse(void *const tPtr,const int64_t now,const bool isRoot)
 		needHello = true;
 	}
 
-	m_prioritizePaths(now);
-
-	if (m_alivePathCount == 0) {
-		// If there are no direct paths, attempt to make one. If there are queued addresses
-		// to try, attempt one of those. Otherwise try a path we can fetch via API callbacks
-		// and/or a remembered bootstrap path.
-		if (m_tryQueue.empty()) {
-			InetAddress addr;
-			if (RR->node->externalPathLookup(tPtr, m_id, -1, addr)) {
-				if ((addr)&&(RR->node->shouldUsePathForZeroTierTraffic(tPtr, m_id, -1, addr))) {
-					RR->t->tryingNewPath(tPtr, 0x84a10000, m_id, addr, InetAddress::NIL, 0, 0, Identity::NIL, ZT_TRACE_TRYING_NEW_PATH_REASON_EXPLICITLY_SUGGESTED_ADDRESS);
-					sent(now,probe(tPtr,-1,addr,now));
-				}
-			}
-			if (!m_bootstrap.empty()) {
-				unsigned int tryAtIndex = (unsigned int)Utils::random() % (unsigned int)m_bootstrap.size();
-				for(SortedMap< Endpoint::Type,Endpoint >::const_iterator i(m_bootstrap.begin());i != m_bootstrap.end();++i) {
-					if (tryAtIndex > 0) {
-						--tryAtIndex;
-					} else {
-						if ((i->second.isInetAddr())&&(!i->second.inetAddr().ipsEqual(addr))) {
-							RR->t->tryingNewPath(tPtr, 0x0a009444, m_id, i->second.inetAddr(), InetAddress::NIL, 0, 0, Identity::NIL, ZT_TRACE_TRYING_NEW_PATH_REASON_BOOTSTRAP_ADDRESS);
-							sent(now,probe(tPtr,-1,i->second.inetAddr(),now));
-							break;
-						}
-					}
-				}
-			}
-		} else {
-			for(int k=0;(k<ZT_NAT_T_MAX_QUEUED_ATTEMPTS_PER_PULSE)&&(!m_tryQueue.empty());++k) {
-				if (m_tryQueuePtr == m_tryQueue.end())
-					m_tryQueuePtr = m_tryQueue.begin();
-
-				if ((now - m_tryQueuePtr->ts) > ZT_PATH_ALIVE_TIMEOUT) {
-					m_tryQueue.erase(m_tryQueuePtr++);
-					continue;
-				}
-
-				if (m_tryQueuePtr->target.isInetAddr()) {
-					if ((m_tryQueuePtr->breakSymmetricBFG1024) && (RR->node->natMustDie())) {
-						// Attempt aggressive NAT traversal if both requested and enabled.
-						uint16_t ports[1023];
-						for (unsigned int i=0;i<1023;++i)
-							ports[i] = (uint64_t)(i + 1);
-						for (unsigned int i=0;i<512;++i) {
-							const uint64_t rn = Utils::random();
-							const unsigned int a = (unsigned int)rn % 1023;
-							const unsigned int b = (unsigned int)(rn >> 32U) % 1023;
-							if (a != b) {
-								uint16_t tmp = ports[a];
-								ports[a] = ports[b];
-								ports[b] = tmp;
-							}
-						}
-						InetAddress addr(m_tryQueuePtr->target.inetAddr());
-						for (unsigned int i = 0;i < ZT_NAT_T_BFG1024_PORTS_PER_ATTEMPT;++i) {
-							addr.setPort(ports[i]);
-							sent(now,probe(tPtr,-1,addr,now));
-						}
-					} else {
-						// Otherwise send a normal probe.
-						sent(now,probe(tPtr, -1, m_tryQueuePtr->target.inetAddr(), now));
-					}
-				}
-
-				++m_tryQueuePtr;
+	// If we have no active paths and none queued to try, attempt any
+	// old paths we have cached in m_bootstrap or that external code
+	// supplies to the core via the optional API callback.
+	if (m_tryQueue.empty()&&(m_alivePathCount == 0)) {
+		InetAddress addr;
+		if (RR->node->externalPathLookup(tPtr, m_id, -1, addr)) {
+			if ((addr)&&(RR->node->shouldUsePathForZeroTierTraffic(tPtr, m_id, -1, addr))) {
+				RR->t->tryingNewPath(tPtr, 0x84a10000, m_id, addr, InetAddress::NIL, 0, 0, Identity::NIL);
+				sent(now,m_sendProbe(tPtr,-1,addr,now));
 			}
 		}
-	} else {
-		// Keep direct paths alive, sending a HELLO if we need one or else just a simple byte.
-		for(unsigned int i=0;i < m_alivePathCount;++i) {
-			if (needHello) {
-				needHello = false;
-				const unsigned int bytes = hello(tPtr, m_paths[i]->localSocket(), m_paths[i]->address(), now);
-				m_paths[i]->sent(now, bytes);
-				sent(now,bytes);
-			} else if ((now - m_paths[i]->lastOut()) >= ZT_PATH_KEEPALIVE_PERIOD) {
-				m_paths[i]->send(RR, tPtr, &now, 1, now);
-				sent(now,1);
+
+		if (!m_bootstrap.empty()) {
+			unsigned int tryAtIndex = (unsigned int)Utils::random() % (unsigned int)m_bootstrap.size();
+			for(SortedMap< Endpoint::Type,Endpoint >::const_iterator i(m_bootstrap.begin());i != m_bootstrap.end();++i) {
+				if (tryAtIndex > 0) {
+					--tryAtIndex;
+				} else {
+					if ((i->second.isInetAddr())&&(!i->second.inetAddr().ipsEqual(addr))) {
+						RR->t->tryingNewPath(tPtr, 0x0a009444, m_id, i->second.inetAddr(), InetAddress::NIL, 0, 0, Identity::NIL);
+						sent(now,m_sendProbe(tPtr,-1,i->second.inetAddr(),now));
+						break;
+					}
+				}
 			}
 		}
 	}
 
-	// If we could not reliably send a HELLO via a direct path, send it by way of a root.
+	m_prioritizePaths(now);
+
+	// Attempt queued paths to try.
+	for(int k=0;(k<ZT_NAT_T_MAX_QUEUED_ATTEMPTS_PER_PULSE)&&(!m_tryQueue.empty());++k) {
+		if (m_tryQueuePtr == m_tryQueue.end())
+			m_tryQueuePtr = m_tryQueue.begin();
+
+		if ((now - m_tryQueuePtr->ts) > ZT_PATH_ALIVE_TIMEOUT) {
+			m_tryQueue.erase(m_tryQueuePtr++);
+			continue;
+		}
+
+		if (m_tryQueuePtr->target.isInetAddr()) {
+			// Make sure target does not overlap with any existing path.
+			bool duplicate = false;
+			for(unsigned int i=0;i<m_alivePathCount;++i) {
+				if (m_paths[i]->address() == m_tryQueuePtr->target.inetAddr()) {
+					duplicate = true;
+					break;
+				}
+			}
+			if (duplicate) {
+				m_tryQueue.erase(m_tryQueuePtr++);
+				continue;
+			}
+
+			if (m_tryQueuePtr->breakSymmetricBFG1024 && RR->node->natMustDie()) {
+				// Attempt aggressive NAT traversal if both requested and enabled.
+				uint16_t ports[1023];
+				for (unsigned int i=0;i<1023;++i)
+					ports[i] = (uint64_t)(i + 1);
+				for (unsigned int i=0;i<512;++i) {
+					const uint64_t rn = Utils::random();
+					const unsigned int a = (unsigned int)rn % 1023;
+					const unsigned int b = (unsigned int)(rn >> 32U) % 1023;
+					if (a != b) {
+						uint16_t tmp = ports[a];
+						ports[a] = ports[b];
+						ports[b] = tmp;
+					}
+				}
+				InetAddress addr(m_tryQueuePtr->target.inetAddr());
+				for (unsigned int i=0;i<ZT_NAT_T_BFG1024_PORTS_PER_ATTEMPT;++i) {
+					addr.setPort(ports[i]);
+					sent(now,m_sendProbe(tPtr,-1,addr,now));
+				}
+			} else {
+				// Otherwise send a normal probe.
+				sent(now,m_sendProbe(tPtr, -1, m_tryQueuePtr->target.inetAddr(), now));
+			}
+		}
+
+		++m_tryQueuePtr;
+	}
+
+	// Do keepalive on all currently active paths.
+	for(unsigned int i=0;i<m_alivePathCount;++i) {
+		if (needHello) {
+			needHello = false;
+			const unsigned int bytes = hello(tPtr, m_paths[i]->localSocket(), m_paths[i]->address(), now);
+			m_paths[i]->sent(now, bytes);
+			sent(now,bytes);
+		} else if ((now - m_paths[i]->lastOut()) >= ZT_PATH_KEEPALIVE_PERIOD) {
+			m_paths[i]->send(RR, tPtr, &now, 1, now);
+			sent(now,1);
+		}
+	}
+
+	// If we need a HELLO and were not able to send one via any other path,
+	// send one indirectly.
 	if (needHello) {
 		const SharedPtr<Peer> root(RR->topology->root());
 		if (root) {
@@ -321,7 +315,7 @@ void Peer::tryDirectPath(const int64_t now,const Endpoint &ep,const bool breakSy
 {
 	RWMutex::Lock l(m_lock);
 
-	for(List<p_TryQueueItem>::iterator i(m_tryQueue.begin());i != m_tryQueue.end();++i) { // NOLINT(modernize-loop-convert,hicpp-use-auto,modernize-use-auto)
+	for(List<p_TryQueueItem>::iterator i(m_tryQueue.begin());i != m_tryQueue.end();++i) {
 		if (i->target == ep) {
 			i->ts = now;
 			i->breakSymmetricBFG1024 = breakSymmetricBFG1024;
@@ -338,14 +332,20 @@ void Peer::tryDirectPath(const int64_t now,const Endpoint &ep,const bool breakSy
 
 void Peer::resetWithinScope(void *tPtr,InetAddress::IpScope scope,int inetAddressFamily,int64_t now)
 {
-	RWMutex::RLock l(m_lock);
-	for(unsigned int i=0;i < m_alivePathCount;++i) {
+	RWMutex::Lock l(m_lock);
+	unsigned int pc = 0;
+	for(unsigned int i=0;i<m_alivePathCount;++i) {
 		if ((m_paths[i]) && ((m_paths[i]->address().family() == inetAddressFamily) && (m_paths[i]->address().ipScope() == scope))) {
-			const unsigned int bytes = probe(tPtr, m_paths[i]->localSocket(), m_paths[i]->address(), now);
+			const unsigned int bytes = m_sendProbe(tPtr, m_paths[i]->localSocket(), m_paths[i]->address(), now);
 			m_paths[i]->sent(now, bytes);
 			sent(now,bytes);
+		} else if (pc != i) {
+			m_paths[pc++] = m_paths[i];
 		}
 	}
+	m_alivePathCount = pc;
+	while (pc < ZT_MAX_PEER_NETWORK_PATHS)
+		m_paths[pc].zero();
 }
 
 bool Peer::directlyConnected(int64_t now)
@@ -360,10 +360,11 @@ bool Peer::directlyConnected(int64_t now)
 	}
 }
 
-void Peer::getAllPaths(std::vector< SharedPtr<Path> > &paths)
+void Peer::getAllPaths(Vector< SharedPtr<Path> > &paths)
 {
 	RWMutex::RLock l(m_lock);
 	paths.clear();
+	paths.reserve(m_alivePathCount);
 	paths.assign(m_paths, m_paths + m_alivePathCount);
 }
 
@@ -385,16 +386,27 @@ void Peer::save(void *tPtr) const
 
 int Peer::marshal(uint8_t data[ZT_PEER_MARSHAL_SIZE_MAX]) const noexcept
 {
-	data[0] = 0; // serialized peer version
-
 	RWMutex::RLock l(m_lock);
 
-	int s = m_identityKey.marshal(RR->localCacheSymmetric, data + 1);
-	if (s < 0)
+	if (!m_identityKey)
 		return -1;
-	int p = 1 + s;
 
-	s = m_id.marshal(data + p, false);
+	data[0] = 0; // serialized peer version
+
+	// Include our identity's address to detect if this changes and require
+	// recomputation of m_identityKey.
+	RR->identity.address().copyTo(data + 1);
+
+	// SECURITY: encryption in place is only to protect secrets if they are
+	// cached to local storage. It's not used over the wire. Dumb ECB is fine
+	// because secret keys are random and have no structure to reveal.
+	RR->localCacheSymmetric.encrypt(m_identityKey->secret,data + 6);
+	RR->localCacheSymmetric.encrypt(m_identityKey->secret + 22,data + 17);
+	RR->localCacheSymmetric.encrypt(m_identityKey->secret + 38,data + 33);
+
+	int p = 54;
+
+	int s = m_id.marshal(data + p, false);
 	if (s < 0)
 		return -1;
 	p += s;
@@ -431,34 +443,37 @@ int Peer::unmarshal(const uint8_t *restrict data,const int len) noexcept
 {
 	RWMutex::Lock l(m_lock);
 
-	if ((len <= 1) || (data[0] != 0))
+	if ((len <= 54) || (data[0] != 0))
 		return -1;
 
-	int s = m_identityKey.unmarshal(RR->localCacheSymmetric, data + 1, len);
-	if (s < 0)
-		return -1;
-	int p = 1 + s;
+	m_identityKey.zero();
+	m_ephemeralKeys[0].zero();
+	m_ephemeralKeys[1].zero();
 
-	// If the identity key did not pass verification, it may mean that our local
-	// identity has changed. In this case we do not have to forget everything about
-	// the peer but we must generate a new identity key by key agreement with our
-	// new identity.
-	if (!m_identityKey) {
-		uint8_t tmp[ZT_SYMMETRIC_KEY_SIZE];
-		if (!RR->identity.agree(m_id, tmp))
-			return -1;
-		m_identityKey.init(RR->node->now(), tmp);
-		Utils::burn(tmp,sizeof(tmp));
+	if (Address(data + 1) == RR->identity.address()) {
+		uint8_t k[ZT_SYMMETRIC_KEY_SIZE];
+		static_assert(ZT_SYMMETRIC_KEY_SIZE == 48,"marshal() and unmarshal() must be revisited if ZT_SYMMETRIC_KEY_SIZE is changed");
+		RR->localCacheSymmetric.decrypt(data + 1,k);
+		RR->localCacheSymmetric.decrypt(data + 17,k + 16);
+		RR->localCacheSymmetric.decrypt(data + 33,k + 32);
+		m_identityKey.set(new SymmetricKey(RR->node->now(),k,true));
+		Utils::burn(k,sizeof(k));
 	}
 
-	// These are ephemeral and start out as NIL after unmarshal.
-	m_ephemeralKeys[0].clear();
-	m_ephemeralKeys[1].clear();
+	int p = 49;
 
-	s = m_id.unmarshal(data + 38, len - 38);
+	int s = m_id.unmarshal(data + 38, len - 38);
 	if (s < 0)
 		return s;
 	p += s;
+
+	if (!m_identityKey) {
+		uint8_t k[ZT_SYMMETRIC_KEY_SIZE];
+		if (!RR->identity.agree(m_id,k))
+			return -1;
+		m_identityKey.set(new SymmetricKey(RR->node->now(),k,true));
+		Utils::burn(k,sizeof(k));
+	}
 
 	s = m_locator.unmarshal(data + p, len - p);
 	if (s < 0)
@@ -521,6 +536,42 @@ void Peer::m_prioritizePaths(int64_t now)
 			}
 		}
 	}
+}
+
+unsigned int Peer::m_sendProbe(void *tPtr,int64_t localSocket,const InetAddress &atAddress,int64_t now)
+{
+	// Assumes m_lock is locked
+	if ((m_vProto < 11)||(m_probe == 0)) {
+		const SharedPtr<SymmetricKey> k(m_key());
+		const uint64_t packetId = k->nextMessage(RR->identity.address(),m_id.address());
+
+		uint8_t p[ZT_PROTO_MIN_PACKET_LENGTH + 1];
+		Utils::storeAsIsEndian<uint64_t>(p + ZT_PROTO_PACKET_ID_INDEX,packetId);
+		m_id.address().copyTo(p + ZT_PROTO_PACKET_DESTINATION_INDEX);
+		RR->identity.address().copyTo(p + ZT_PROTO_PACKET_SOURCE_INDEX);
+		p[ZT_PROTO_PACKET_FLAGS_INDEX] = 0;
+		p[ZT_PROTO_PACKET_VERB_INDEX] = Protocol::VERB_ECHO;
+		p[ZT_PROTO_PACKET_VERB_INDEX + 1] = (uint8_t)now; // arbitrary byte
+
+		Protocol::armor(p,ZT_PROTO_MIN_PACKET_LENGTH,k,cipher());
+
+		RR->expect->sending(packetId,now);
+		RR->node->putPacket(tPtr,-1,atAddress,p,ZT_PROTO_MIN_PACKET_LENGTH);
+
+		return ZT_PROTO_MIN_PACKET_LENGTH;
+	} else {
+		RR->node->putPacket(tPtr,-1,atAddress,&m_probe,4);
+		return 4;
+	}
+}
+
+void Peer::m_deriveSecondaryIdentityKeys() noexcept
+{
+	uint8_t hk[ZT_SYMMETRIC_KEY_SIZE];
+	KBKDFHMACSHA384(m_identityKey->secret,ZT_KBKDF_LABEL_HELLO_DICTIONARY_ENCRYPT,0,0,hk);
+	m_helloCipher.init(hk);
+	Utils::burn(hk,sizeof(hk));
+	KBKDFHMACSHA384(m_identityKey->secret,ZT_KBKDF_LABEL_PACKET_HMAC,0,0,m_helloMacKey);
 }
 
 } // namespace ZeroTier

@@ -56,10 +56,7 @@ public:
 	/**
 	 * Create an un-initialized AES instance (must call init() before use)
 	 */
-	ZT_INLINE AES() noexcept
-	{
-		Utils::memoryLock(this,sizeof(AES));
-	}
+	ZT_INLINE AES() noexcept {}
 
 	/**
 	 * Create an AES instance with the given key
@@ -68,14 +65,12 @@ public:
 	 */
 	explicit ZT_INLINE AES(const void *const key) noexcept
 	{
-		Utils::memoryLock(this,sizeof(AES));
 		this->init(key);
 	}
 
 	ZT_INLINE ~AES()
 	{
 		Utils::burn(&_k,sizeof(_k));
-		Utils::memoryUnlock(this,sizeof(AES));
 	}
 
 	/**

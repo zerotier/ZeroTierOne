@@ -37,6 +37,11 @@
 #define ZT_ADDRESS_LENGTH 5
 
 /**
+ * Length of a ZeroTier address in digits
+ */
+#define ZT_ADDRESS_LENGTH_HEX 10
+
+/**
  * Addresses beginning with this byte are reserved for the joy of in-band signaling
  */
 #define ZT_ADDRESS_RESERVED_PREFIX 0xff
@@ -72,9 +77,9 @@
 #define ZT_MAX_NETWORK_CONFIG_BYTES 131072
 
 /**
- * Length of symmetric keys (currently all symmetric crypto is 256 bit).
+ * Length of symmetric keys
  */
-#define ZT_SYMMETRIC_KEY_SIZE 32
+#define ZT_SYMMETRIC_KEY_SIZE 48
 
 /**
  * Time limit for ephemeral keys: 30 minutes.
@@ -201,6 +206,11 @@
  * General rate limit for other kinds of rate-limited packets (HELLO, credential request, etc.) both inbound and outbound
  */
 #define ZT_PEER_GENERAL_RATE_LIMIT 500
+
+/**
+ * Rate limit for responses to short probes to prevent amplification attacks
+ */
+#define ZT_PEER_PROBE_RESPONSE_RATE_LIMIT 5000
 
 /**
  * Don't do expensive identity validation more often than this

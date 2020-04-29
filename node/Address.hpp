@@ -19,7 +19,9 @@
 #include "TriviallyCopyable.hpp"
 #include "Containers.hpp"
 
-#define ZT_ADDRESS_STRING_SIZE_MAX 11
+#define ZT_ADDRESS_STRING_SIZE_MAX (ZT_ADDRESS_LENGTH_HEX + 1)
+
+static_assert(ZT_ADDRESS_LENGTH == 5,"parts of Address will need modification for any change in ZT_ADDRESS_LENGTH");
 
 namespace ZeroTier {
 

@@ -23,6 +23,8 @@
 #include "FCV.hpp"
 #include "Containers.hpp"
 
+#define ZT_VL1_MAX_WHOIS_WAITING_PACKETS 32
+
 namespace ZeroTier {
 
 class RuntimeEnvironment;
@@ -66,7 +68,7 @@ private:
 	void m_sendPendingWhois(void *tPtr, int64_t now);
 
 	// Handlers for VL1 verbs -- for clarity's sake VL2 verbs are in the VL2 class.
-	bool m_HELLO(void *tPtr, const SharedPtr<Path> &path, SharedPtr<Peer> &peer, Buf &pkt, int packetSize, bool authenticated);
+	SharedPtr<Peer> m_HELLO(void *tPtr, const SharedPtr<Path> &path, Buf &pkt, int packetSize);
 	bool m_ERROR(void *tPtr, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize, Protocol::Verb &inReVerb);
 	bool m_OK(void *tPtr, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize, Protocol::Verb &inReVerb);
 	bool m_WHOIS(void *tPtr, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
@@ -76,16 +78,17 @@ private:
 	bool m_USER_MESSAGE(void *tPtr, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
 	bool m_ENCAP(void *tPtr, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
 
-	struct p_WhoisQueueItem
-	{
-		ZT_INLINE p_WhoisQueueItem() : lastRetry(0), inboundPackets(), retries(0) {}
-		int64_t lastRetry;
-		FCV<Buf::Slice,32> inboundPackets; // capacity can be changed but this should be plenty
-		unsigned int retries;
-	};
-
 	Defragmenter<ZT_MAX_PACKET_FRAGMENTS> m_inputPacketAssembler;
 
+	struct p_WhoisQueueItem
+	{
+		ZT_INLINE p_WhoisQueueItem() : lastRetry(0),retries(0),waitingPacketCount(0) {}
+		int64_t lastRetry;
+		unsigned int retries;
+		unsigned int waitingPacketCount;
+		unsigned int waitingPacketSize[ZT_VL1_MAX_WHOIS_WAITING_PACKETS];
+		SharedPtr<Buf> waitingPacket[ZT_VL1_MAX_WHOIS_WAITING_PACKETS];
+	};
 	Map<Address,p_WhoisQueueItem> m_whoisQueue;
 	Mutex m_whoisQueue_l;
 };

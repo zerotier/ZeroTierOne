@@ -24,10 +24,6 @@
 #include "Fingerprint.hpp"
 #include "Containers.hpp"
 
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-
 #define ZT_IDENTITY_STRING_BUFFER_LENGTH 1024
 #define ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE (1 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE + ZT_ECC384_PUBLIC_KEY_SIZE)
 #define ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE (ZT_C25519_COMBINED_PRIVATE_KEY_SIZE + ZT_ECC384_PRIVATE_KEY_SIZE)
@@ -127,16 +123,12 @@ public:
 	ZT_INLINE bool hasPrivate() const noexcept { return m_hasPrivate; }
 
 	/**
-	 * Get a 384-bit hash of this identity's public key(s)
-	 *
-	 * The hash returned by this function differs by identity type. For C25519 (type 0)
-	 * identities this returns a simple SHA384 of the public key, which is NOT the same
-	 * as the hash used to generate the address. For type 1 C25519+P384 identities this
-	 * returns the same compoound SHA384 hash that is used for purposes of hashcash
-	 * and address computation. This difference is because the v0 hash is expensive while
-	 * the v1 hash is fast.
-	 *
-	 * @return Hash of public key(s)
+	 * @return This identity's address
+	 */
+	ZT_INLINE Address address() const noexcept { return Address(m_fp.m_cfp.address); }
+
+	/**
+	 * @return Full fingerprint of this identity (address plus SHA384 of keys)
 	 */
 	ZT_INLINE const Fingerprint &fingerprint() const noexcept { return m_fp; }
 
@@ -186,11 +178,6 @@ public:
 	bool agree(const Identity &id,uint8_t key[ZT_SYMMETRIC_KEY_SIZE]) const;
 
 	/**
-	 * @return This identity's address
-	 */
-	ZT_INLINE Address address() const noexcept { return m_address; }
-
-	/**
 	 * Serialize to a more human-friendly string
 	 *
 	 * @param includePrivate If true, include private key (if it exists)
@@ -214,7 +201,7 @@ public:
 	/**
 	 * @return True if this identity contains something
 	 */
-	explicit ZT_INLINE operator bool() const noexcept { return (m_address); }
+	explicit ZT_INLINE operator bool() const noexcept { return (m_fp); }
 
 	ZT_INLINE unsigned long hashCode() const noexcept { return m_fp.hashCode(); }
 
@@ -230,19 +217,11 @@ public:
 	int unmarshal(const uint8_t *data,int len) noexcept;
 
 private:
-	void _computeHash();
+	void m_computeHash();
 
-	Address m_address;
 	Fingerprint m_fp;
-	ZT_PACKED_STRUCT(struct { // do not re-order these fields
-		uint8_t c25519[ZT_C25519_COMBINED_PRIVATE_KEY_SIZE];
-		uint8_t p384[ZT_ECC384_PRIVATE_KEY_SIZE];
-	}) m_priv;
-	ZT_PACKED_STRUCT(struct { // do not re-order these fields
-		uint8_t nonce;                            // nonce for PoW generate/verify
-		uint8_t c25519[ZT_C25519_COMBINED_PUBLIC_KEY_SIZE]; // Curve25519 and Ed25519 public keys
-		uint8_t p384[ZT_ECC384_PUBLIC_KEY_SIZE];  // NIST P-384 public key
-	}) m_pub;
+	uint8_t m_priv[ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE];
+	uint8_t m_pub[ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE];
 	Type m_type; // _type determines which fields in _priv and _pub are used
 	bool m_hasPrivate;
 };

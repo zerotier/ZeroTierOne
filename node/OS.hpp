@@ -17,10 +17,10 @@
 #ifndef ZT_OS_HPP
 #define ZT_OS_HPP
 
-#include <stdint.h> // NOLINT(modernize-deprecated-headers,hicpp-deprecated-headers)
-#include <stdlib.h> // NOLINT(modernize-deprecated-headers,hicpp-deprecated-headers)
-#include <string.h> // NOLINT(modernize-deprecated-headers,hicpp-deprecated-headers)
-#include <stdio.h> // NOLINT(modernize-deprecated-headers,hicpp-deprecated-headers)
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
 
 #if defined(_WIN32) || defined(_WIN64)
 #ifdef _MSC_VER

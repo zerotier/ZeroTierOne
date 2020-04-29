@@ -137,38 +137,14 @@ char *decimal(unsigned long n,char s[24]) noexcept;
 /**
  * Convert an unsigned integer into hex
  *
+ * The returned pointer won't point to the start of 'buf', since
+ * hex writing is done in reverse order.
+ * 
  * @param i Any unsigned integer
  * @param s Buffer to receive hex, must be at least (2*sizeof(i))+1 in size or overflow will occur.
  * @return Pointer to s containing hex string with trailing zero byte
  */
-char *hex(uint8_t i,char s[3]) noexcept;
-
-/**
- * Convert an unsigned integer into hex
- *
- * @param i Any unsigned integer
- * @param s Buffer to receive hex, must be at least (2*sizeof(i))+1 in size or overflow will occur.
- * @return Pointer to s containing hex string with trailing zero byte
- */
-char *hex(uint16_t i,char s[5]) noexcept;
-
-/**
- * Convert an unsigned integer into hex
- *
- * @param i Any unsigned integer
- * @param s Buffer to receive hex, must be at least (2*sizeof(i))+1 in size or overflow will occur.
- * @return Pointer to s containing hex string with trailing zero byte
- */
-char *hex(uint32_t i,char s[9]) noexcept;
-
-/**
- * Convert an unsigned integer into hex
- *
- * @param i Any unsigned integer
- * @param s Buffer to receive hex, must be at least (2*sizeof(i))+1 in size or overflow will occur.
- * @return Pointer to s containing hex string with trailing zero byte
- */
-char *hex(uint64_t i,char s[17]) noexcept;
+char *hex(uint64_t i,char buf[17]) noexcept;
 
 /**
  * Decode an unsigned integer in hex format
@@ -625,8 +601,8 @@ template<unsigned int L>
 static ZT_INLINE void copy(void *const dest,const void *const src) noexcept
 {
 #ifdef ZT_ARCH_X64
-	uint8_t *volatile d = reinterpret_cast<uint8_t *>(dest); // NOLINT(hicpp-use-auto,modernize-use-auto)
-	const uint8_t *s = reinterpret_cast<const uint8_t *>(src); // NOLINT(hicpp-use-auto,modernize-use-auto)
+	uint8_t *volatile d = reinterpret_cast<uint8_t *>(dest);
+	const uint8_t *s = reinterpret_cast<const uint8_t *>(src);
 	for(unsigned int i=0;i<(L >> 6U);++i) {
 		__m128i x0 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(s));
 		__m128i x1 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(s + 16));
@@ -698,7 +674,7 @@ template<unsigned int L>
 static ZT_INLINE void zero(void *const dest) noexcept
 {
 #ifdef ZT_ARCH_X64
-	uint8_t *volatile d = reinterpret_cast<uint8_t *>(dest); // NOLINT(hicpp-use-auto,modernize-use-auto)
+	uint8_t *volatile d = reinterpret_cast<uint8_t *>(dest);
 	__m128i z = _mm_setzero_si128();
 	for(unsigned int i=0;i<(L >> 6U);++i) {
 		_mm_storeu_si128(reinterpret_cast<__m128i *>(d),z);
@@ -764,16 +740,16 @@ struct Mallocator
 	typedef T value_type;
 
 	template <class U> struct rebind { typedef Mallocator<U> other; };
-	ZT_INLINE Mallocator() noexcept {} // NOLINT(hicpp-use-equals-default,modernize-use-equals-default)
-	ZT_INLINE Mallocator(const Mallocator&) noexcept {} // NOLINT(hicpp-use-equals-default,modernize-use-equals-default)
-	template <class U> ZT_INLINE Mallocator(const Mallocator<U>&) noexcept {} // NOLINT(hicpp-use-equals-default,modernize-use-equals-default,google-explicit-constructor,hicpp-explicit-conversions)
-	ZT_INLINE ~Mallocator() noexcept {} // NOLINT(hicpp-use-equals-default,modernize-use-equals-default)
+	ZT_INLINE Mallocator() noexcept {}
+	ZT_INLINE Mallocator(const Mallocator&) noexcept {}
+	template <class U> ZT_INLINE Mallocator(const Mallocator<U>&) noexcept {}
+	ZT_INLINE ~Mallocator() noexcept {}
 
 	ZT_INLINE pointer allocate(size_type s,void const * = nullptr)
 	{
 		if (0 == s)
 			return nullptr;
-		pointer temp = (pointer)malloc(s * sizeof(T)); // NOLINT(hicpp-use-auto,modernize-use-auto)
+		pointer temp = (pointer)malloc(s * sizeof(T));
 		if (temp == nullptr)
 			throw std::bad_alloc();
 		return temp;

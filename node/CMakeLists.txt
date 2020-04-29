@@ -74,7 +74,6 @@ set(core_src
 	Path.cpp
 	Peer.cpp
 	Poly1305.cpp
-	Protocol.cpp
 	Revocation.cpp
 	Salsa20.cpp
 	SelfAwareness.cpp

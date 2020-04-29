@@ -22,6 +22,7 @@
 #include "Buf.hpp"
 #include "Address.hpp"
 #include "Identity.hpp"
+#include "SymmetricKey.hpp"
 
 /*
  * Packet format:
@@ -189,16 +190,6 @@
 #define ZT_PROTO_PACKET_FRAGMENT_INDICATOR 0xff
 
 /**
- * Index at which fragment indicator is found in fragments
- */
-#define ZT_PROTO_PACKET_FRAGMENT_INDICATOR_INDEX 13
-
-/**
- * Index of flags field in regular packet headers
- */
-#define ZT_PROTO_PACKET_FLAGS_INDEX 18
-
-/**
  * Length of a probe packet
  */
 #define ZT_PROTO_PROBE_LENGTH 4
@@ -248,6 +239,16 @@
  */
 #define ZT_KBKDF_LABEL_PACKET_HMAC 'M'
 
+#define ZT_PROTO_PACKET_FRAGMENT_INDICATOR_INDEX 13
+#define ZT_PROTO_PACKET_FRAGMENT_COUNTS          14
+
+#define ZT_PROTO_PACKET_ID_INDEX          0
+#define ZT_PROTO_PACKET_DESTINATION_INDEX 8
+#define ZT_PROTO_PACKET_SOURCE_INDEX      13
+#define ZT_PROTO_PACKET_FLAGS_INDEX       18
+#define ZT_PROTO_PACKET_MAC_INDEX         19
+#define ZT_PROTO_PACKET_VERB_INDEX        27
+
 #define ZT_PROTO_HELLO_NODE_META_INSTANCE_ID      "i"
 #define ZT_PROTO_HELLO_NODE_META_LOCATOR          "l"
 #define ZT_PROTO_HELLO_NODE_META_PROBE_TOKEN      "p"
@@ -288,8 +289,7 @@ enum Verb
 	 *   <[8] timestamp>
 	 *   <[...] binary serialized full sender identity>
 	 *   <[...] physical destination address of packet (LEGACY)>
-	 *   <[2] 16-bit reserved "encrypted zero" field (LEGACY)>
-	 *   <[4] 32 additional random nonce bits>
+	 *   <[12] 96-bit CTR IV>
 	 *   [... start of encrypted section ...]
 	 *   <[2] 16-bit length of encrypted dictionary>
 	 *   <[...] encrypted dictionary>
@@ -306,9 +306,8 @@ enum Verb
 	 * good to proactively limit exposed information.
 	 *
 	 * Inner encryption is AES-CTR with a key derived using KBKDF and a
-	 * label indicating this specific usage. The 96-bit CTR nonce is the
-	 * packet ID followed by the additional 32 random bits provided before
-	 * the encrypted section.
+	 * label indicating this specific usage. A 96-bit CTR IV precedes this
+	 * encrypted section.
 	 *
 	 * Authentication and encryption in HELLO and OK(HELLO) are always done
 	 * with the long-lived identity key, not ephemeral shared keys. This
@@ -319,7 +318,7 @@ enum Verb
 	 * HELLO and OK(HELLO) include an extra HMAC at the end of the packet.
 	 * This authenticates them to a level of certainty beyond that afforded
 	 * by regular AEAD. HMAC is computed over the whole packet prior to
-	 * encryption/MAC and with the 3-bit hop count field masked as it is
+	 * packet MAC and with the 3-bit hop count field masked as it is
 	 * with regular packet AEAD, and it is then included in the regular
 	 * packet MAC.
 	 *
@@ -812,14 +811,78 @@ static ZT_INLINE void salsa2012DeriveKey(const uint8_t *const in,uint8_t *const 
 }
 
 /**
+ * Fill out packet header fields (except for mac, which is filled out by armor())
+ * 
+ * @param pkt Start of packet buffer
+ * @param packetId Packet IV / cryptographic MAC
+ * @param destination Destination ZT address
+ * @param source Source (sending) ZT address
+ * @param verb Protocol verb
+ * @return Index of packet start
+ */
+static ZT_INLINE int newPacket(uint8_t pkt[28],const uint64_t packetId,const Address destination,const Address source,const Verb verb) noexcept
+{
+	Utils::storeAsIsEndian<uint64_t>(pkt + ZT_PROTO_PACKET_ID_INDEX,packetId);
+	destination.copyTo(pkt + ZT_PROTO_PACKET_DESTINATION_INDEX);
+	source.copyTo(pkt + ZT_PROTO_PACKET_SOURCE_INDEX);
+	pkt[ZT_PROTO_PACKET_FLAGS_INDEX] = 0;
+	// mac is left undefined as it's filled out by armor()
+	pkt[ZT_PROTO_PACKET_VERB_INDEX] = (uint8_t)verb;
+	return ZT_PROTO_PACKET_VERB_INDEX + 1;
+}
+static ZT_INLINE int newPacket(Buf &pkt,const uint64_t packetId,const Address destination,const Address source,const Verb verb) noexcept { return newPacket(pkt.unsafeData,packetId,destination,source,verb); }
+
+/**
  * Encrypt and compute packet MAC
  *
  * @param pkt Packet data to encrypt (in place)
  * @param packetSize Packet size, must be at least ZT_PROTO_MIN_PACKET_LENGTH or crash will occur
- * @param key Key to use for encryption (not per-packet key)
+ * @param key Key to use for encryption
  * @param cipherSuite Cipher suite to use for AEAD encryption or just MAC
  */
-void armor(Buf &pkt,int packetSize,const uint8_t key[ZT_SYMMETRIC_KEY_SIZE],uint8_t cipherSuite) noexcept;
+static ZT_INLINE void armor(uint8_t *const pkt,const int packetSize,const SharedPtr<SymmetricKey> &key,const uint8_t cipherSuite) noexcept
+{
+#if 0
+	Protocol::Header &ph = pkt.as<Protocol::Header>(); // NOLINT(hicpp-use-auto,modernize-use-auto)
+	ph.flags = (ph.flags & 0xc7U) | ((cipherSuite << 3U) & 0x38U); // flags: FFCCCHHH where CCC is cipher
+
+	switch(cipherSuite) {
+		case ZT_PROTO_CIPHER_SUITE__POLY1305_NONE: {
+			uint8_t perPacketKey[ZT_SYMMETRIC_KEY_SIZE];
+			salsa2012DeriveKey(key,perPacketKey,pkt,packetSize);
+			Salsa20 s20(perPacketKey,&ph.packetId);
+
+			uint8_t macKey[ZT_POLY1305_KEY_SIZE];
+			s20.crypt12(Utils::ZERO256,macKey,ZT_POLY1305_KEY_SIZE);
+
+			// only difference here is that we don't encrypt the payload
+
+			uint64_t mac[2];
+			poly1305(mac,pkt.unsafeData + ZT_PROTO_PACKET_ENCRYPTED_SECTION_START,packetSize - ZT_PROTO_PACKET_ENCRYPTED_SECTION_START,macKey);
+			ph.mac = mac[0];
+		} break;
+
+		case ZT_PROTO_CIPHER_SUITE__POLY1305_SALSA2012: {
+			uint8_t perPacketKey[ZT_SYMMETRIC_KEY_SIZE];
+			salsa2012DeriveKey(key,perPacketKey,pkt,packetSize);
+			Salsa20 s20(perPacketKey,&ph.packetId);
+
+			uint8_t macKey[ZT_POLY1305_KEY_SIZE];
+			s20.crypt12(Utils::ZERO256,macKey,ZT_POLY1305_KEY_SIZE);
+
+			const unsigned int encLen = packetSize - ZT_PROTO_PACKET_ENCRYPTED_SECTION_START;
+			s20.crypt12(pkt.unsafeData + ZT_PROTO_PACKET_ENCRYPTED_SECTION_START,pkt.unsafeData + ZT_PROTO_PACKET_ENCRYPTED_SECTION_START,encLen);
+
+			uint64_t mac[2];
+			poly1305(mac,pkt.unsafeData + ZT_PROTO_PACKET_ENCRYPTED_SECTION_START,encLen,macKey);
+			ph.mac = mac[0];
+		} break;
+
+		case ZT_PROTO_CIPHER_SUITE__AES_GMAC_SIV: {
+		} break;
+	}
+#endif
+}
 
 /**
  * Attempt to compress packet payload
@@ -833,7 +896,11 @@ void armor(Buf &pkt,int packetSize,const uint8_t key[ZT_SYMMETRIC_KEY_SIZE],uint
  * @param packetSize Total size of packet in bytes (including headers)
  * @return New size of packet after compression or original size of compression wasn't helpful
  */
-int compress(SharedPtr<Buf> &pkt,int packetSize) noexcept;
+static ZT_INLINE int compress(SharedPtr<Buf> &pkt,int packetSize) noexcept
+{
+	// TODO
+	return packetSize;
+}
 
 } // namespace Protocol
 } // namespace ZeroTier

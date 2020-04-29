@@ -70,7 +70,7 @@ private:
 		InetAddress reporterPhysicalAddress;
 		InetAddress::IpScope scope;
 
-		ZT_INLINE p_PhySurfaceKey() noexcept {} // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init,hicpp-use-equals-default,modernize-use-equals-default)
+		ZT_INLINE p_PhySurfaceKey() noexcept {}
 		ZT_INLINE p_PhySurfaceKey(const Address &r, const int64_t rol, const InetAddress &ra, InetAddress::IpScope s) noexcept : reporter(r), receivedOnLocalSocket(rol), reporterPhysicalAddress(ra), scope(s) {}
 
 		ZT_INLINE unsigned long hashCode() const noexcept { return ((unsigned long)reporter.toInt() + (unsigned long)receivedOnLocalSocket + (unsigned long)scope); }

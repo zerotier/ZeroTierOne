@@ -104,11 +104,10 @@ public:
 		const InetAddress &triggerAddress,
 		uint64_t triggeringPacketId,
 		uint8_t triggeringPacketVerb,
-		const Identity &triggeringPeer,
-		ZT_TraceTryingNewPathReason reason)
+		const Identity &triggeringPeer)
 	{
 		if ((_f & ZT_TRACE_F_VL1) != 0)
-			_tryingNewPath(tPtr,codeLocation,trying,physicalAddress,triggerAddress,triggeringPacketId,triggeringPacketVerb,triggeringPeer,reason);
+			_tryingNewPath(tPtr,codeLocation,trying,physicalAddress,triggerAddress,triggeringPacketId,triggeringPacketVerb,triggeringPeer);
 	}
 
 	ZT_INLINE void learnedNewPath(
@@ -228,7 +227,6 @@ public:
 		void *const tPtr,
 		const uint32_t codeLocation,
 		uint64_t networkId,
-		const Address &address,
 		const Identity &identity,
 		uint32_t credentialId,
 		int64_t credentialTimestamp,
@@ -236,7 +234,7 @@ public:
 		ZT_TraceCredentialRejectionReason reason)
 	{
 		if ((_f & ZT_TRACE_F_VL2) != 0)
-			_credentialRejected(tPtr,codeLocation,networkId,address,identity,credentialId,credentialTimestamp,credentialType,reason);
+			_credentialRejected(tPtr,codeLocation,networkId,identity,credentialId,credentialTimestamp,credentialType,reason);
 	}
 
 private:
@@ -256,8 +254,7 @@ private:
 		const InetAddress &triggerAddress,
 		uint64_t triggeringPacketId,
 		uint8_t triggeringPacketVerb,
-		const Identity &triggeringPeer,
-		ZT_TraceTryingNewPathReason reason);
+		const Identity &triggeringPeer);
 	void _learnedNewPath(
 		void *tPtr,
 		uint32_t codeLocation,
@@ -326,7 +323,6 @@ private:
 		void *tPtr,
 		uint32_t codeLocation,
 		uint64_t networkId,
-		const Address &address,
 		const Identity &identity,
 		uint32_t credentialId,
 		int64_t credentialTimestamp,

@@ -40,7 +40,7 @@ class Expect;
 class RuntimeEnvironment
 {
 public:
-	ZT_INLINE RuntimeEnvironment(Node *n) noexcept : // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init,google-explicit-constructor,hicpp-explicit-conversions)
+	ZT_INLINE RuntimeEnvironment(Node *n) noexcept :
 		node(n),
 		localNetworkController(nullptr),
 		rtmem(nullptr),
@@ -51,8 +51,8 @@ public:
 		topology(nullptr),
 		sa(nullptr)
 	{
-		publicIdentityStr[0] = (char)0;
-		secretIdentityStr[0] = (char)0;
+		publicIdentityStr[0] = nullptr;
+		secretIdentityStr[0] = nullptr;
 	}
 
 	ZT_INLINE ~RuntimeEnvironment() noexcept

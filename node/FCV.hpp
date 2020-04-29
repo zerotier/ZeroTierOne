@@ -128,6 +128,8 @@ public:
 
 	ZT_INLINE unsigned int size() const noexcept { return _s; }
 	ZT_INLINE bool empty() const noexcept { return (_s == 0); }
+	ZT_INLINE T *data() noexcept { return reinterpret_cast<T *>(_m); }
+	ZT_INLINE const T *data() const noexcept { return reinterpret_cast<const T *>(_m); }
 	static constexpr unsigned int capacity() noexcept { return C; }
 
 	/**
@@ -144,7 +146,7 @@ public:
 	}
 
 	/**
-	 * Push a new value onto the vector and return it, or return last item if capacity is reached
+	 * Push new default value or return last in vector if full.
 	 *
 	 * @return Reference to new item
 	 */
@@ -158,7 +160,7 @@ public:
 	}
 
 	/**
-	 * Push a new value onto the vector and return it, or return last item if capacity is reached
+	 * Push new default value or replace and return last in vector if full.
 	 *
 	 * @return Reference to new item
 	 */
@@ -218,7 +220,7 @@ public:
 	 * @param i Index to obtain as a reference, resizing if needed
 	 * @return Reference to value at this index
 	 */
-	ZT_INLINE T &at(unsigned int i)
+	ZT_INLINE T &at(const unsigned int i)
 	{
 		if (i >= _s) {
 			if (unlikely(i >= C))
