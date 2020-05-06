@@ -28,6 +28,7 @@
 #include "Locator.hpp"
 #include "Protocol.hpp"
 #include "AES.hpp"
+#include "EphemeralKey.hpp"
 #include "SymmetricKey.hpp"
 #include "Containers.hpp"
 
@@ -226,13 +227,14 @@ public:
 	void pulse(void *tPtr,int64_t now,bool isRoot);
 
 	/**
-	 * Add a potential candidate direct path to the P2P "try" queue.
+	 * Attempt to contact this peer at a given endpoint.
 	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param now Current time
 	 * @param ep Endpoint to attempt to contact
 	 * @param bfg1024 Use BFG1024 brute force symmetric NAT busting algorithm if applicable
 	 */
-	void tryDirectPath(int64_t now,const Endpoint &ep,bool breakSymmetricBFG1024);
+	void contact(void *tPtr,int64_t now,const Endpoint &ep,bool breakSymmetricBFG1024);
 
 	/**
 	 * Reset paths within a given IP scope and address family
@@ -466,6 +468,10 @@ private:
 
 	// Key for HELLO HMAC-SHA384
 	uint8_t m_helloMacKey[ZT_SYMMETRIC_KEY_SIZE];
+
+	// Currently active ephemeral public key pair
+	EphemeralKey m_ephemeralPair;
+	int64_t m_ephemeralPairTimestamp;
 
 	// Current and previous ephemeral key
 	SharedPtr<SymmetricKey> m_ephemeralKeys[2];

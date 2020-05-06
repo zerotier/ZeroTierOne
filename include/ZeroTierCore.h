@@ -25,15 +25,15 @@
 #else
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <net/if_dl.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <stdint.h>
+#include <stdlib.h>
 #endif
 
 #ifdef __cplusplus
-#include <cstdint>
 extern "C" {
-#else
-#include <stdint.h>
 #endif
 
 /* This symbol may be defined to anything we need to put in front of API function prototypes. */
@@ -41,16 +41,22 @@ extern "C" {
 #define ZT_SDK_API
 #endif
 
-/* ----------------------------------------------------------------------------------------------------------------- */
+/* ---------------------------------------------------------------------------------------------------------------- */
 
 /**
- * Default UDP port for devices running a ZeroTier endpoint
- *
- * NOTE: as of V2 this has changed to 893 since many NATs (even symmetric)
- * treat privileged ports in a special way. The old default was 9993 and
- * this is likely to be seen in the wild quite a bit.
+ * Default primary UDP port for devices running a ZeroTier endpoint
  */
-#define ZT_DEFAULT_PORT 793
+#define ZT_DEFAULT_PORT 9993
+
+/**
+ * IP protocol number for naked IP encapsulation (this is not currently used)
+ */
+#define ZT_DEFAULT_IP_PROTOCOL 193
+
+/**
+ * Ethernet type for naked Ethernet encapsulation (this is not currently used)
+ */
+#define ZT_DEFAULT_ETHERNET_PROTOCOL 0x9993
 
 /**
  * Size of a standard I/O buffer as returned by getBuffer().
@@ -170,8 +176,6 @@ extern "C" {
  */
 #define ZT_MAX_CERTIFICATES_OF_OWNERSHIP 4
 
-/* ----------------------------------------------------------------------------------------------------------------- */
-
 /**
  * Packet characteristics flag: packet direction, 1 if inbound 0 if outbound
  */
@@ -257,16 +261,15 @@ extern "C" {
  */
 #define ZT_RULE_PACKET_CHARACTERISTICS_TCP_FIN 0x0000000000000001ULL
 
-/* ----------------------------------------------------------------------------------------------------------------- */
+/* ---------------------------------------------------------------------------------------------------------------- */
 
 /**
- * Identity type codes
+ * Identity type codes (must be the same as Identity.hpp).
  */
 enum ZT_Identity_Type
 {
-	/* These values must be the same as in Identity.hpp in the core. */
 	ZT_IDENTITY_TYPE_C25519 = 0, /* C25519/Ed25519 */
-	ZT_IDENTITY_TYPE_P384 = 1    /* Combined C25519/NIST-P-384 key */
+	ZT_IDENTITY_TYPE_P384 =   1  /* Combined C25519/NIST-P-384 key */
 };
 
 /**
@@ -295,12 +298,31 @@ typedef struct
  */
 enum ZT_CredentialType
 {
-	ZT_CREDENTIAL_TYPE_NULL = 0,
-	ZT_CREDENTIAL_TYPE_COM = 1,
-	ZT_CREDENTIAL_TYPE_CAPABILITY = 2,
-	ZT_CREDENTIAL_TYPE_TAG = 3,
-	ZT_CREDENTIAL_TYPE_COO = 4,
-	ZT_CREDENTIAL_TYPE_REVOCATION = 6
+	ZT_CREDENTIAL_TYPE_NULL =        0,
+	ZT_CREDENTIAL_TYPE_COM =         1,
+	ZT_CREDENTIAL_TYPE_CAPABILITY =  2,
+	ZT_CREDENTIAL_TYPE_TAG =         3,
+	ZT_CREDENTIAL_TYPE_COO =         4,
+	ZT_CREDENTIAL_TYPE_REVOCATION =  6
+};
+
+/**
+ * Endpoint address and protocol types
+ *
+ * Most of these are not currently implemented and are just reserved
+ * for future use.
+ */
+enum ZT_EndpointType
+{
+	ZT_ENDPOINT_TYPE_NIL =           0,  // Nil/empty endpoint
+	ZT_ENDPOINT_TYPE_ZEROTIER =      1,  // ZeroTier relaying (address+fingerprint)
+	ZT_ENDPOINT_TYPE_ETHERNET =      2,  // Ethernet with ethertype 0x9993
+	ZT_ENDPOINT_TYPE_WIFI_DIRECT =   3,  // Ethernet using WiFi direct
+	ZT_ENDPOINT_TYPE_BLUETOOTH =     4,  // Bluetooth (same address type as Ethernet)
+	ZT_ENDPOINT_TYPE_IP =            5,  // Naked IP (protocol 193)
+	ZT_ENDPOINT_TYPE_IP_UDP =        6,  // IP/UDP
+	ZT_ENDPOINT_TYPE_IP_TCP =        7,  // IP/TCP
+	ZT_ENDPOINT_TYPE_IP_HTTP2 =      8   // IP/HTTP2 encapsulation
 };
 
 /**
@@ -330,20 +352,15 @@ enum ZT_CredentialType
  */
 enum ZT_TraceEventType
 {
-	/* An unexpected error is an internal assertion / sanity check failure, out of memory, etc. */
-	ZT_TRACE_UNEXPECTED_ERROR = 0,
-
-	/* VL1 events related to the peer-to-peer layer */
+	ZT_TRACE_UNEXPECTED_ERROR =             0,
 	ZT_TRACE_VL1_RESETTING_PATHS_IN_SCOPE = 1,
-	ZT_TRACE_VL1_TRYING_NEW_PATH = 2,
-	ZT_TRACE_VL1_LEARNED_NEW_PATH = 3,
-	ZT_TRACE_VL1_INCOMING_PACKET_DROPPED = 4,
-
-	/* VL2 events relate to virtual networks, packet filtering, and authentication */
-	ZT_TRACE_VL2_OUTGOING_FRAME_DROPPED = 100,
-	ZT_TRACE_VL2_INCOMING_FRAME_DROPPED = 101,
+	ZT_TRACE_VL1_TRYING_NEW_PATH =          2,
+	ZT_TRACE_VL1_LEARNED_NEW_PATH =         3,
+	ZT_TRACE_VL1_INCOMING_PACKET_DROPPED =  4,
+	ZT_TRACE_VL2_OUTGOING_FRAME_DROPPED =   100,
+	ZT_TRACE_VL2_INCOMING_FRAME_DROPPED =   101,
 	ZT_TRACE_VL2_NETWORK_CONFIG_REQUESTED = 102,
-	ZT_TRACE_VL2_NETWORK_FILTER = 103
+	ZT_TRACE_VL2_NETWORK_FILTER =           103
 };
 
 /**
@@ -351,16 +368,16 @@ enum ZT_TraceEventType
  */
 enum ZT_TracePacketDropReason
 {
-	ZT_TRACE_PACKET_DROP_REASON_UNSPECIFIED = 0,
-	ZT_TRACE_PACKET_DROP_REASON_PEER_TOO_OLD = 1,
-	ZT_TRACE_PACKET_DROP_REASON_MALFORMED_PACKET = 2,
-	ZT_TRACE_PACKET_DROP_REASON_MAC_FAILED = 3,
-	ZT_TRACE_PACKET_DROP_REASON_NOT_TRUSTED_PATH = 4,
-	ZT_TRACE_PACKET_DROP_REASON_RATE_LIMIT_EXCEEDED = 5,
-	ZT_TRACE_PACKET_DROP_REASON_INVALID_OBJECT = 6,
+	ZT_TRACE_PACKET_DROP_REASON_UNSPECIFIED =             0,
+	ZT_TRACE_PACKET_DROP_REASON_PEER_TOO_OLD =            1,
+	ZT_TRACE_PACKET_DROP_REASON_MALFORMED_PACKET =        2,
+	ZT_TRACE_PACKET_DROP_REASON_MAC_FAILED =              3,
+	ZT_TRACE_PACKET_DROP_REASON_NOT_TRUSTED_PATH =        4,
+	ZT_TRACE_PACKET_DROP_REASON_RATE_LIMIT_EXCEEDED =     5,
+	ZT_TRACE_PACKET_DROP_REASON_INVALID_OBJECT =          6,
 	ZT_TRACE_PACKET_DROP_REASON_INVALID_COMPRESSED_DATA = 7,
-	ZT_TRACE_PACKET_DROP_REASON_UNRECOGNIZED_VERB = 8,
-	ZT_TRACE_PACKET_DROP_REASON_REPLY_NOT_EXPECTED = 9
+	ZT_TRACE_PACKET_DROP_REASON_UNRECOGNIZED_VERB =       8,
+	ZT_TRACE_PACKET_DROP_REASON_REPLY_NOT_EXPECTED =      9
 };
 
 /**
@@ -368,44 +385,14 @@ enum ZT_TracePacketDropReason
  */
 enum ZT_TraceFrameDropReason
 {
-	ZT_TRACE_FRAME_DROP_REASON_UNSPECIFIED = 0,
-	ZT_TRACE_FRAME_DROP_REASON_BRIDGING_NOT_ALLOWED_REMOTE = 1,
-	ZT_TRACE_FRAME_DROP_REASON_BRIDGING_NOT_ALLOWED_LOCAL = 2,
-	ZT_TRACE_FRAME_DROP_REASON_MULTICAST_DISABLED = 3,
-	ZT_TRACE_FRAME_DROP_REASON_BROADCAST_DISABLED = 4,
-	ZT_TRACE_FRAME_DROP_REASON_FILTER_BLOCKED = 5,
+	ZT_TRACE_FRAME_DROP_REASON_UNSPECIFIED =                          0,
+	ZT_TRACE_FRAME_DROP_REASON_BRIDGING_NOT_ALLOWED_REMOTE =          1,
+	ZT_TRACE_FRAME_DROP_REASON_BRIDGING_NOT_ALLOWED_LOCAL =           2,
+	ZT_TRACE_FRAME_DROP_REASON_MULTICAST_DISABLED =                   3,
+	ZT_TRACE_FRAME_DROP_REASON_BROADCAST_DISABLED =                   4,
+	ZT_TRACE_FRAME_DROP_REASON_FILTER_BLOCKED =                       5,
 	ZT_TRACE_FRAME_DROP_REASON_FILTER_BLOCKED_AT_BRIDGE_REPLICATION = 6,
-	ZT_TRACE_FRAME_DROP_REASON_PERMISSION_DENIED = 7
-};
-
-/**
- * Address types for ZT_TraceEventPathAddress
- *
- * These are currently the same as the types in Endpoint.hpp and should remain so
- * if possible for consistency. Not all of these are used (yet?) but they are defined
- * for possible future use and the structure is sized to support them.
- */
-enum ZT_EndpointType
-{
-	ZT_ENDPOINT_TYPE_NIL =          0, /* none/empty */
-	ZT_ENDPOINT_TYPE_ZEROTIER =     1, /* 5-byte ZeroTier + 48-byte identity hash */
-	ZT_ENDPOINT_TYPE_ETHERNET =     2, /* 6-byte Ethernet */
-	ZT_ENDPOINT_TYPE_INETADDR_V4 =  4, /* 4-byte IPv4 */
-	ZT_ENDPOINT_TYPE_INETADDR_V6 =  6  /* 16-byte IPv6 */
-};
-
-/**
- * Protocol bits allowed for endpoint addresses.
- */
-enum ZT_EndpointProtocol
-{
-	ZT_ENDPOINT_PROTO_DGRAM =       0x0001,
-	ZT_ENDPOINT_PROTO_STREAM  =     0x0002,
-	ZT_ENDPOINT_PROTO_HTTP2 =       0x0004,
-	ZT_ENDPOINT_PROTO_HTTPS2 =      0x0008,
-	ZT_ENDPOINT_PROTO_WS =          0x0010,
-	ZT_ENDPOINT_PROTO_WEBRTC =      0x0020,
-	ZT_ENDPOINT_PROTO_WIREGUARD =   0x0040
+	ZT_TRACE_FRAME_DROP_REASON_PERMISSION_DENIED =                    7
 };
 
 /**
@@ -414,51 +401,47 @@ enum ZT_EndpointProtocol
 enum ZT_TraceCredentialRejectionReason
 {
 	ZT_TRACE_CREDENTIAL_REJECTION_REASON_SIGNATURE_VERIFICATION_FAILED = 1,
-	ZT_TRACE_CREDENTIAL_REJECTION_REASON_REVOKED = 2,
-	ZT_TRACE_CREDENTIAL_REJECTION_REASON_OLDER_THAN_LATEST = 3,
-	ZT_TRACE_CREDENTIAL_REJECTION_REASON_INVALID = 4
+	ZT_TRACE_CREDENTIAL_REJECTION_REASON_REVOKED =                       2,
+	ZT_TRACE_CREDENTIAL_REJECTION_REASON_OLDER_THAN_LATEST =             3,
+	ZT_TRACE_CREDENTIAL_REJECTION_REASON_INVALID =                       4
 };
 
-// Fields used in trace output dictionaries. Which fields are present depends on
-// the trace event type. All trace dictionaries contain TYPE and CODE_LOCATION.
-#define ZT_TRACE_FIELD_TYPE "t"
-#define ZT_TRACE_FIELD_CODE_LOCATION "@"
-#define ZT_TRACE_FIELD_ENDPOINT "e"
-#define ZT_TRACE_FIELD_OLD_ENDPOINT "oe"
-#define ZT_TRACE_FIELD_NEW_ENDPOINT "ne"
-#define ZT_TRACE_FIELD_TRIGGER_FROM_ENDPOINT "te"
-#define ZT_TRACE_FIELD_TRIGGER_FROM_PACKET_ID "ti"
-#define ZT_TRACE_FIELD_TRIGGER_FROM_PACKET_VERB "tv"
+#define ZT_TRACE_FIELD_TYPE                               "t"
+#define ZT_TRACE_FIELD_CODE_LOCATION                      "@"
+#define ZT_TRACE_FIELD_ENDPOINT                           "e"
+#define ZT_TRACE_FIELD_OLD_ENDPOINT                       "oe"
+#define ZT_TRACE_FIELD_NEW_ENDPOINT                       "ne"
+#define ZT_TRACE_FIELD_TRIGGER_FROM_ENDPOINT              "te"
+#define ZT_TRACE_FIELD_TRIGGER_FROM_PACKET_ID             "ti"
+#define ZT_TRACE_FIELD_TRIGGER_FROM_PACKET_VERB           "tv"
 #define ZT_TRACE_FIELD_TRIGGER_FROM_PEER_FINGERPRINT_HASH "tp"
-#define ZT_TRACE_FIELD_MESSAGE "m"
-#define ZT_TRACE_FIELD_RESET_ADDRESS_SCOPE "rs"
-#define ZT_TRACE_FIELD_IDENTITY_FINGERPRINT_HASH "f"
-#define ZT_TRACE_FIELD_PACKET_ID "p"
-#define ZT_TRACE_FIELD_PACKET_VERB "v"
-#define ZT_TRACE_FIELD_PACKET_HOPS "h"
-#define ZT_TRACE_FIELD_NETWORK_ID "n"
-#define ZT_TRACE_FIELD_REASON "r"
-#define ZT_TRACE_FIELD_SOURCE_MAC "sm"
-#define ZT_TRACE_FIELD_DEST_MAC "dm"
-#define ZT_TRACE_FIELD_ETHERTYPE "et"
-#define ZT_TRACE_FIELD_VLAN_ID "vlid"
-#define ZT_TRACE_FIELD_FRAME_LENGTH "fl"
-#define ZT_TRACE_FIELD_FRAME_DATA "fd"
-#define ZT_TRACE_FIELD_FLAG_CREDENTIAL_REQUEST_SENT "crs"
-#define ZT_TRACE_FIELD_PRIMARY_RULE_SET_LOG "rL"
-#define ZT_TRACE_FIELD_MATCHING_CAPABILITY_RULE_SET_LOG "caRL"
-#define ZT_TRACE_FIELD_MATCHING_CAPABILITY_ID "caID"
-#define ZT_TRACE_FIELD_MATCHING_CAPABILITY_TIMESTAMP "caTS"
-#define ZT_TRACE_FIELD_SOURCE_ZT_ADDRESS "sz"
-#define ZT_TRACE_FIELD_DEST_ZT_ADDRESS "dz"
-#define ZT_TRACE_FIELD_RULE_FLAG_NOTEE "rNT"
-#define ZT_TRACE_FIELD_RULE_FLAG_INBOUND "rIN"
-#define ZT_TRACE_FIELD_RULE_FLAG_ACCEPT "rACC"
-#define ZT_TRACE_FIELD_CREDENTIAL_ID "crID"
-#define ZT_TRACE_FIELD_CREDENTIAL_TYPE "crT"
-#define ZT_TRACE_FIELD_CREDENTIAL_TIMESTAMP "crTS"
-
-/****************************************************************************/
+#define ZT_TRACE_FIELD_MESSAGE                            "m"
+#define ZT_TRACE_FIELD_RESET_ADDRESS_SCOPE                "rs"
+#define ZT_TRACE_FIELD_IDENTITY_FINGERPRINT_HASH          "f"
+#define ZT_TRACE_FIELD_PACKET_ID                          "p"
+#define ZT_TRACE_FIELD_PACKET_VERB                        "v"
+#define ZT_TRACE_FIELD_PACKET_HOPS                        "h"
+#define ZT_TRACE_FIELD_NETWORK_ID                         "n"
+#define ZT_TRACE_FIELD_REASON                             "r"
+#define ZT_TRACE_FIELD_SOURCE_MAC                         "sm"
+#define ZT_TRACE_FIELD_DEST_MAC                           "dm"
+#define ZT_TRACE_FIELD_ETHERTYPE                          "et"
+#define ZT_TRACE_FIELD_VLAN_ID                            "vlid"
+#define ZT_TRACE_FIELD_FRAME_LENGTH                       "fl"
+#define ZT_TRACE_FIELD_FRAME_DATA                         "fd"
+#define ZT_TRACE_FIELD_FLAG_CREDENTIAL_REQUEST_SENT       "crs"
+#define ZT_TRACE_FIELD_PRIMARY_RULE_SET_LOG               "rL"
+#define ZT_TRACE_FIELD_MATCHING_CAPABILITY_RULE_SET_LOG   "caRL"
+#define ZT_TRACE_FIELD_MATCHING_CAPABILITY_ID             "caID"
+#define ZT_TRACE_FIELD_MATCHING_CAPABILITY_TIMESTAMP      "caTS"
+#define ZT_TRACE_FIELD_SOURCE_ZT_ADDRESS                  "sz"
+#define ZT_TRACE_FIELD_DEST_ZT_ADDRESS                    "dz"
+#define ZT_TRACE_FIELD_RULE_FLAG_NOTEE                    "rNT"
+#define ZT_TRACE_FIELD_RULE_FLAG_INBOUND                  "rIN"
+#define ZT_TRACE_FIELD_RULE_FLAG_ACCEPT                   "rACC"
+#define ZT_TRACE_FIELD_CREDENTIAL_ID                      "crID"
+#define ZT_TRACE_FIELD_CREDENTIAL_TYPE                    "crT"
+#define ZT_TRACE_FIELD_CREDENTIAL_TIMESTAMP               "crTS"
 
 /**
  * Function return code: OK (0) or error results
@@ -1309,7 +1292,7 @@ enum ZT_StateObjectType
 	 * Peer and related state
 	 *
 	 * Object ID: peer address
-	 * Canonical path: <HOME>/peers.d/<ID> (10-digit address
+	 * Canonical path: <HOME>/peers.d/<ID> (10-digit address)
 	 * Persistence: optional, can be cleared at any time
 	 */
 	ZT_STATE_OBJECT_PEER = 5,
@@ -1338,7 +1321,7 @@ enum ZT_StateObjectType
  */
 typedef void ZT_Node;
 
-/****************************************************************************/
+/* ---------------------------------------------------------------------------------------------------------------- */
 
 /**
  * Callback called to update virtual network port configuration
@@ -1528,7 +1511,7 @@ typedef int (*ZT_PathLookupFunction)(
 	int,                              /* Desired ss_family or -1 for any */
 	struct sockaddr_storage *);       /* Result buffer */
 
-/****************************************************************************/
+/* ---------------------------------------------------------------------------------------------------------------- */
 
 /**
  * Structure for configuring ZeroTier core callback functions
@@ -1576,6 +1559,8 @@ struct ZT_Node_Callbacks
 	ZT_PathLookupFunction pathLookupFunction;
 };
 
+/* ---------------------------------------------------------------------------------------------------------------- */
+
 /**
  * Get a buffer for reading data to be passed back into the core via one of the processX() functions
  *
@@ -1594,6 +1579,8 @@ ZT_SDK_API void *ZT_getBuffer();
  * @param b Buffer to free
  */
 ZT_SDK_API void ZT_freeBuffer(void *b);
+
+/* ---------------------------------------------------------------------------------------------------------------- */
 
 /**
  * Create a new ZeroTier node
@@ -1929,7 +1916,7 @@ ZT_SDK_API void ZT_Node_setController(ZT_Node *node,void *networkConfigMasterIns
  */
 ZT_SDK_API enum ZT_ResultCode ZT_Node_setPhysicalPathConfiguration(ZT_Node *node,const struct sockaddr_storage *pathNetwork,const ZT_PhysicalPathConfiguration *pathConfig);
 
-/****************************************************************************/
+/* ---------------------------------------------------------------------------------------------------------------- */
 
 /**
  * Generate a new identity
@@ -2039,7 +2026,7 @@ ZT_SDK_API const ZT_Fingerprint *ZT_Identity_fingerprint(const ZT_Identity *id);
  */
 ZT_SDK_API void ZT_Identity_delete(ZT_Identity *id);
 
-/****************************************************************************/
+/* ---------------------------------------------------------------------------------------------------------------- */
 
 /**
  * Get ZeroTier One version

@@ -21,6 +21,7 @@
 #include "Address.hpp"
 #include "MAC.hpp"
 #include "Containers.hpp"
+#include "Utils.hpp"
 
 #define ZT_TRACE_F_VL1           0x01U
 #define ZT_TRACE_F_VL2           0x02U

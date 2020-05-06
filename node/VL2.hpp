@@ -53,15 +53,15 @@ public:
 	void onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const MAC &from,const MAC &to,unsigned int etherType,unsigned int vlanId,SharedPtr<Buf> &data,unsigned int len);
 
 protected:
-	bool m_FRAME(void *tPtr, const SharedPtr<Path> &path, SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
-	bool m_EXT_FRAME(void *tPtr, const SharedPtr<Path> &path, SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
-	bool m_MULTICAST_LIKE(void *tPtr, const SharedPtr<Path> &path, SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
-	bool m_NETWORK_CREDENTIALS(void *tPtr, const SharedPtr<Path> &path, SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
-	bool m_NETWORK_CONFIG_REQUEST(void *tPtr, const SharedPtr<Path> &path, SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
-	bool m_NETWORK_CONFIG(void *tPtr, const SharedPtr<Path> &path, SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
-	bool m_MULTICAST_GATHER(void *tPtr, const SharedPtr<Path> &path, SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
-	bool m_MULTICAST_FRAME_deprecated(void *tPtr, const SharedPtr<Path> &path, SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
-	bool m_MULTICAST(void *tPtr, const SharedPtr<Path> &path, SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
+	bool m_FRAME(void *tPtr, unsigned int auth, const SharedPtr<Path> &path, SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
+	bool m_EXT_FRAME(void *tPtr, unsigned int auth, const SharedPtr<Path> &path, SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
+	bool m_MULTICAST_LIKE(void *tPtr, unsigned int auth, const SharedPtr<Path> &path, SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
+	bool m_NETWORK_CREDENTIALS(void *tPtr, unsigned int auth, const SharedPtr<Path> &path, SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
+	bool m_NETWORK_CONFIG_REQUEST(void *tPtr, unsigned int auth, const SharedPtr<Path> &path, SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
+	bool m_NETWORK_CONFIG(void *tPtr, unsigned int auth, const SharedPtr<Path> &path, SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
+	bool m_MULTICAST_GATHER(void *tPtr, unsigned int auth, const SharedPtr<Path> &path, SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
+	bool m_MULTICAST_FRAME_deprecated(void *tPtr, unsigned int auth, const SharedPtr<Path> &path, SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
+	bool m_MULTICAST(void *tPtr, unsigned int auth, const SharedPtr<Path> &path, SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
 
 private:
 };

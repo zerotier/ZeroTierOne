@@ -33,7 +33,6 @@ public:
 
 	ZT_INLINE T *operator->() const noexcept { return m_ptr; }
 	ZT_INLINE T &operator*() const noexcept { return *m_ptr; }
-	explicit ZT_INLINE operator bool() const noexcept { return (m_ptr != (T *)0); }
 	ZT_INLINE T *ptr() const noexcept { return m_ptr; }
 
 	ZT_INLINE void swap(const ScopedPtr &p) noexcept
@@ -42,6 +41,8 @@ public:
 		m_ptr = p.m_ptr;
 		p.m_ptr = tmp;
 	}
+
+	explicit ZT_INLINE operator bool() const noexcept { return (m_ptr != (T *)0); }
 
 	ZT_INLINE bool operator==(const ScopedPtr &p) const noexcept { return (m_ptr == p.m_ptr); }
 	ZT_INLINE bool operator!=(const ScopedPtr &p) const noexcept { return (m_ptr != p.m_ptr); }

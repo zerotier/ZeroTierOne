@@ -659,10 +659,7 @@ static ZT_INLINE void copy(void *const dest,const void *const src) noexcept
  * @param src Source memory
  * @param len Bytes to copy
  */
-static ZT_INLINE void copy(void *const dest,const void *const src,unsigned int len) noexcept
-{
-	memcpy(dest,src,len);
-}
+static ZT_INLINE void copy(void *const dest,const void *const src,unsigned int len) noexcept { memcpy(dest,src,len); }
 
 /**
  * Zero memory block whose size is known at compile time
@@ -718,13 +715,14 @@ static ZT_INLINE void zero(void *const dest) noexcept
  * @param dest Memory to zero
  * @param len Size in bytes
  */
-static ZT_INLINE void zero(void *const dest,const unsigned int len) noexcept
-{
-	memset(dest,0,len);
-}
+static ZT_INLINE void zero(void *const dest,const unsigned int len) noexcept { memset(dest,0,len); }
 
 /**
- * Simple malloc/free based C++ STL allocator
+ * Simple malloc/free based C++ STL allocator.
+ * 
+ * This is used to make sure our containers don't use weird libc++
+ * allocators but instead use whatever malloc() is, which in turn
+ * can be overridden by things like jemaclloc or tcmalloc.
  *
  * @tparam T Allocated type
  */

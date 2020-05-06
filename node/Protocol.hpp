@@ -256,9 +256,8 @@
 #define ZT_PROTO_HELLO_NODE_META_SOFTWARE_VERSION "v"
 #define ZT_PROTO_HELLO_NODE_META_PHYSICAL_DEST    "d"
 #define ZT_PROTO_HELLO_NODE_META_COMPLIANCE       "c"
-#define ZT_PROTO_HELLO_NODE_META_EPHEMERAL_C25519 "0"
-#define ZT_PROTO_HELLO_NODE_META_EPHEMERAL_P384   "1"
-#define ZT_PROTO_HELLO_NODE_META_EPHEMERAL_REMOTE "R"
+#define ZT_PROTO_HELLO_NODE_META_EPHEMERAL_PUBLIC "e"
+#define ZT_PROTO_HELLO_NODE_META_EPHEMERAL_ACK    "E"
 
 static_assert(ZT_PROTO_MAX_PACKET_LENGTH < ZT_BUF_MEM_SIZE,"maximum packet length won't fit in Buf");
 static_assert(ZT_PROTO_PACKET_ENCRYPTED_SECTION_START == (ZT_PROTO_MIN_PACKET_LENGTH-1),"encrypted packet section must start right before protocol verb at one less than minimum packet size");
@@ -324,7 +323,7 @@ enum Verb
 	 *
 	 * LEGACY: for legacy reasons the MAC field of HELLO is a poly1305
 	 * MAC initialized in the same manner as 1.x. Since HMAC provides
-	 * additional full 256-bit strength authentication this should not be
+	 * additional full 384-bit strength authentication this should not be
 	 * a problem for FIPS.
 	 *
 	 * Several legacy fields are present as well for the benefit of 1.x nodes.
@@ -339,31 +338,25 @@ enum Verb
 	 * ignore them due to the "encrypted zero" field indicating that the
 	 * packet contains no more information.
 	 *
-	 * Dictionary fields:
-	 *
-	 * The following fields are always present in HELLO:
-	 *
+	 * Dictionary fields (defines start with ZT_PROTO_HELLO_NODE_META_):
+	 * 
 	 *   INSTANCE_ID - a 64-bit unique value generated on each node start
 	 *   LOCATOR - signed record enumerating this node's trusted contact points
 	 *   PROBE_TOKEN - 32-bit probe token
-	 *
-	 * The following fields are used to establish forward secrecy:
-	 *
-	 *   EPHEMERAL_C25519 - C25519 ephemeral public key (32 bytes)
-	 *   EPHEMERAL_P384 - NIST P-384 ephemneral public key (49 bytes)
-	 *   EPHEMERAL_REMOTE - SHA-384 of keys we have for peer (absent if none)
+	 *   EPHEMERAL_PUBLIC - Ephemeral public key(s)
+	 * 
+	 * OK will contain EPHEMERAL_PUBLIC (of the sender) and:
+	 * 
+	 *   EPHEMERAL_ACK - SHA384 of EPHEMERAL_PUBLIC received
 	 *
 	 * The following optional fields may also be present:
 	 *
-	 *   NAME - arbitrary short user-defined name for this node
+	 *   HOSTNAME - arbitrary short host name for this node
 	 *   CONTACT - arbitrary short contact information string for this node
 	 *   SOFTWARE_VENDOR - short name or description of vendor, such as a URL
 	 *   SOFTWARE_VERSION - major, minor, revision, and build (packed 64-bit int)
 	 *   PHYSICAL_DEST - serialized Endpoint to which this message was sent
 	 *   COMPLIANCE - bit mask containing bits for e.g. a FIPS-compliant node
-	 *
-	 * The actual keys for these fields are in corresponding #defines by these
-	 * names.
 	 *
 	 * The timestamp field in OK is echoed but the others represent the sender
 	 * of the OK and are not echoes from HELLO. The dictionary in OK typically
@@ -378,8 +371,14 @@ enum Verb
 	 *   <[...] dictionary>
 	 *   <[48] HMAC-SHA384 of plaintext packet>
 	 *
-	 * LEGACY: a legacy format OK will be sent to nodes with older protocol
-	 * versions.
+	 * Legacy OK payload (sent to pre-2.x nodes):
+	 *   <[8] timestamp echoed from original HELLO>
+	 *   <[1] protocol version of responding node>
+	 *   <[1] software major version>
+	 *   <[1] software minor version>
+	 *   <[2] software revision>
+	 *   <[...] physical destination address of packet>
+	 *   <[2] 16-bit zero length of additional fields>
 	 */
 	VERB_HELLO = 0x01,
 

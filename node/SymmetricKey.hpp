@@ -24,10 +24,7 @@
 namespace ZeroTier {
 
 /**
- * Container for symmetric keys and ciphers initialized with them
- *
- * This container is responsible for tracking key TTL to maintain it
- * below our security bounds and tell us when it's time to re-key.
+ * Container for symmetric keys and ciphers initialized with them.
  */
 class SymmetricKey
 {
@@ -63,15 +60,13 @@ public:
 	 * 
 	 * @param ts Current time
 	 * @param key 48-bit / 384-byte key
-	 * @param perm If true this is a permanent key
 	 */
-	explicit ZT_INLINE SymmetricKey(const int64_t ts,const void *const key,const bool perm) noexcept :
+	explicit ZT_INLINE SymmetricKey(const int64_t ts,const void *const key) noexcept :
 		secret(),
-		cipher(key), // uses first 256 bits of 384-bit key
-		m_ts(ts),
-		m_nonceBase(((((uint64_t)ts / 1000ULL) << 32U) & 0x7fffffff00000000ULL) | (Utils::random() & 0x00000000ffffffffULL)),
-		m_odometer(0),
-		m_permanent(perm)
+		cipher(key), // AES-256 uses first 256 bits of 384-bit key
+		m_initialNonce(((((uint64_t)ts / 1000ULL) << 32U) & 0x7fffffff00000000ULL) | (Utils::random() & 0x00000000ffffffffULL)),
+		m_nonce(m_initialNonce),
+		__refCount(0)
 	{
 		Utils::memoryLock(this,sizeof(SymmetricKey));
 		Utils::copy<ZT_SYMMETRIC_KEY_SIZE>(const_cast<uint8_t *>(secret), key);
@@ -84,28 +79,6 @@ public:
 	}
 
 	/**
-	 * Check whether this symmetric key may be expiring soon
-	 *
-	 * @param now Current time
-	 * @return True if re-keying should happen
-	 */
-	ZT_INLINE bool expiringSoon(const int64_t now) const noexcept
-	{
-		return (!m_permanent) && (((now - m_ts) >= (ZT_SYMMETRIC_KEY_TTL / 2)) || (m_odometer >= (ZT_SYMMETRIC_KEY_TTL_MESSAGES / 2)) );
-	}
-
-	/**
-	 * Check whether this symmetric key is expired due to too much time or too many messages
-	 *
-	 * @param now Current time
-	 * @return True if this symmetric key should no longer be used
-	 */
-	ZT_INLINE bool expired(const int64_t now) const noexcept
-	{
-		return (!m_permanent) && (((now - m_ts) >= ZT_SYMMETRIC_KEY_TTL) || (m_odometer >= ZT_SYMMETRIC_KEY_TTL_MESSAGES) );
-	}
-
-	/**
 	 * Advance usage counter by one and return the next IV / packet ID.
 	 *
 	 * @param sender Sending ZeroTier address
@@ -114,15 +87,21 @@ public:
 	 */
 	ZT_INLINE uint64_t nextMessage(const Address sender,const Address receiver) noexcept
 	{
-		return (m_nonceBase + m_odometer++) ^ (((uint64_t)(sender > receiver)) << 63U);
+		return m_nonce.fetch_add(1) ^ (((uint64_t)(sender > receiver)) << 63U);
+	}
+
+	/**
+	 * @return Number of times nextMessage() has been called since object creation
+	 */
+	ZT_INLINE uint64_t odometer() const noexcept
+	{
+		return m_nonce.load() - m_initialNonce;
 	}
 
 private:
-	const int64_t m_ts;
-	const uint64_t m_nonceBase;
-	std::atomic<uint64_t> m_odometer;
+	const uint64_t m_initialNonce;
+	std::atomic<uint64_t> m_nonce;
 	std::atomic<int> __refCount;
-	const bool m_permanent;
 };
 
 } // namespace ZeroTier

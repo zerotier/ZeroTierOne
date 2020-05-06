@@ -16,145 +16,99 @@
 
 namespace ZeroTier {
 
-Endpoint::Endpoint(const InetAddress &sa,const Protocol proto) noexcept // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
-{
-	switch (sa.family()) {
-		case AF_INET:
-			_t = TYPE_INETADDR_V4;
-			break;
-		case AF_INET6:
-			_t = TYPE_INETADDR_V6;
-			break;
-		default:
-			_t = TYPE_NIL;
-			return;
-	}
-	_proto = proto;
-	asInetAddress(_v.sa) = sa;
-}
-
-bool Endpoint::operator==(const Endpoint &ep) const noexcept
-{
-	if ((_t == ep._t)&&(_proto == ep._proto)) {
-		switch(_t) {
-			default:
-				return true;
-			case TYPE_ZEROTIER:
-				return ((_v.zt.address == ep._v.zt.address) && (memcmp(_v.zt.hash,ep._v.zt.hash,sizeof(_v.zt.hash)) == 0));
-			case TYPE_ETHERNET:
-				return memcmp(_v.eth,ep._v.eth,6) == 0;
-			case TYPE_INETADDR_V4:
-			case TYPE_INETADDR_V6:
-				return asInetAddress(_v.sa) == asInetAddress(ep._v.sa);
-		}
-	}
-	return false;
-}
-
-bool Endpoint::operator<(const Endpoint &ep) const noexcept
-{
-	if ((int)_t < (int)ep._t) {
-		return true;
-	} else if (_t == ep._t) {
-		if ((int)_proto < (int)ep._proto) {
-			return true;
-		} else {
-			switch (_t) {
-				case TYPE_ZEROTIER:
-					return (_v.zt.address < ep._v.zt.address) ? true : ((_v.zt.address == ep._v.zt.address) && (memcmp(_v.zt.hash,ep._v.zt.hash,sizeof(_v.zt.hash)) < 0));
-				case TYPE_ETHERNET:
-					return memcmp(_v.eth,ep._v.eth,6) < 0;
-				case TYPE_INETADDR_V4:
-				case TYPE_INETADDR_V6:
-					return asInetAddress(_v.sa) < asInetAddress(ep._v.sa);
-				default:
-					return false;
-			}
-		}
-	}
-	return false;
-}
-
 int Endpoint::marshal(uint8_t data[ZT_ENDPOINT_MARSHAL_SIZE_MAX]) const noexcept
 {
-	data[0] = (uint8_t)_t;
-	Utils::storeBigEndian(data + 1,(uint16_t)_proto);
-	Utils::storeBigEndian(data + 3,(uint16_t)_l[0]);
-	Utils::storeBigEndian(data + 5,(uint16_t)_l[1]);
-	Utils::storeBigEndian(data + 7,(uint16_t)_l[2]);
-
-	int p;
-	switch(_t) {
-		case TYPE_ZEROTIER:
-			data[9] = (uint8_t)(_v.zt.address >> 32U);
-			data[10] = (uint8_t)(_v.zt.address >> 24U);
-			data[11] = (uint8_t)(_v.zt.address >> 16U);
-			data[12] = (uint8_t)(_v.zt.address >> 8U);
-			data[13] = (uint8_t)_v.zt.address;
-			Utils::copy<ZT_FINGERPRINT_HASH_SIZE>(data + 14,_v.zt.hash);
-			return ZT_FINGERPRINT_HASH_SIZE + 14;
-		case TYPE_ETHERNET:
-			Utils::copy<6>(data + 9,_v.eth);
-			return 15;
-		case TYPE_INETADDR_V4:
-		case TYPE_INETADDR_V6:
-			p = 9 + asInetAddress(_v.sa).marshal(data + 7);
-			if (p <= 9)
-				return -1;
-			return p;
+	switch(m_value[ZT_ENDPOINT_MARSHAL_SIZE_MAX-1]) {
 		default:
-			data[0] = (uint8_t)TYPE_NIL;
+		//case ZT_ENDPOINT_TYPE_NIL:
+			data[0] = 0;
 			return 1;
+
+		case ZT_ENDPOINT_TYPE_ZEROTIER:
+			data[0] = 16 + ZT_ENDPOINT_TYPE_ZEROTIER;
+			reinterpret_cast<const Fingerprint *>(m_value)->address().copyTo(data + 1);
+			Utils::copy<ZT_FINGERPRINT_HASH_SIZE>(data + 1 + ZT_ADDRESS_LENGTH,reinterpret_cast<const Fingerprint *>(m_value)->hash());
+			return 1 + ZT_ADDRESS_LENGTH + ZT_FINGERPRINT_HASH_SIZE;
+
+		case ZT_ENDPOINT_TYPE_ETHERNET:
+		case ZT_ENDPOINT_TYPE_WIFI_DIRECT:
+		case ZT_ENDPOINT_TYPE_BLUETOOTH:
+			data[0] = 16 + m_value[ZT_ENDPOINT_MARSHAL_SIZE_MAX-1];
+			reinterpret_cast<const MAC *>(m_value)->copyTo(data + 1);
+			return 7;
+
+		case ZT_ENDPOINT_TYPE_IP_UDP:
+			return reinterpret_cast<const InetAddress *>(m_value)->marshal(data);
+
+		case ZT_ENDPOINT_TYPE_IP:
+		case ZT_ENDPOINT_TYPE_IP_TCP:
+		case ZT_ENDPOINT_TYPE_IP_HTTP2:
+			data[0] = 16 + m_value[ZT_ENDPOINT_MARSHAL_SIZE_MAX-1];
+			return 1 + reinterpret_cast<const InetAddress *>(m_value)->marshal(data + 1);
 	}
 }
 
-int Endpoint::unmarshal(const uint8_t *restrict data,const int len) noexcept
+int Endpoint::unmarshal(const uint8_t *restrict data,int len) noexcept
 {
-	if (len < 1)
+	memoryZero(this);
+	if (unlikely(len <= 0))
 		return -1;
 
-	_t = (Type)data[0];
-	if (_t == TYPE_NIL)
-		return 1;
-
-	_proto = (Protocol)Utils::loadBigEndian<uint16_t>(data + 1);
-	_l[0] = (int)Utils::loadBigEndian<uint16_t>(data + 3);
-	_l[1] = (int)Utils::loadBigEndian<uint16_t>(data + 5);
-	_l[2] = (int)Utils::loadBigEndian<uint16_t>(data + 7);
-
-	int p;
-  switch(_t) {
-	  case TYPE_ZEROTIER:
-		  if (len < (14 + ZT_FINGERPRINT_HASH_SIZE))
-			  return -1;
-		  _v.zt.address = ((uint64_t)data[9]) << 32U;
-		  _v.zt.address |= ((uint64_t)data[10]) << 24U;
-		  _v.zt.address |= ((uint64_t)data[11]) << 16U;
-		  _v.zt.address |= ((uint64_t)data[12]) << 8U;
-		  _v.zt.address |= (uint64_t)data[13];
-		  Utils::copy<ZT_FINGERPRINT_HASH_SIZE>(_v.zt.hash,data + 14);
-		  return ZT_FINGERPRINT_HASH_SIZE + 14;
-	  case TYPE_ETHERNET:
-		  if (len < 15)
-			  return -1;
-		  Utils::copy<6>(_v.eth,data + 9);
-		  return 15;
-		case TYPE_INETADDR_V4:
-		case TYPE_INETADDR_V6:
-			if (len <= 9)
-				return -1;
-			p = 9 + asInetAddress(_v.sa).unmarshal(data + 9,len - 9);
-			if ((p <= 9)||(p >= len))
-				return -1;
-			return p;
-		default:
-			// Unrecognized endpoint types not yet specified must start with a 16-bit
-			// length so that older versions of ZeroTier can skip them.
-			if (len < 11)
-				return -1;
-			p = 11 + (int)Utils::loadBigEndian<uint16_t>(data + 9);
-			return (p > len) ? -1 : p;
+	// Serialized endpoints with type bytes less than 16 are passed through
+	// to the unmarshal method of InetAddress and considered UDP endpoints.
+	// This allows backward compatibility with old endpoint fields in the
+	// protocol that were serialized InetAddress instances.
+	if (data[0] < 16) {
+		switch(data[0]) {
+			case 0:
+				return 1;
+			case 4:
+			case 6:
+				m_value[ZT_ENDPOINT_MARSHAL_SIZE_MAX-1] = (uint8_t)ZT_ENDPOINT_TYPE_IP_UDP;
+				return reinterpret_cast<InetAddress *>(m_value)->unmarshal(data,len);
+		}
+		return -1;
 	}
+
+	switch((m_value[ZT_ENDPOINT_MARSHAL_SIZE_MAX-1] = (data[0] - 16))) {
+		case ZT_ENDPOINT_TYPE_NIL:
+			return 1;
+
+		case ZT_ENDPOINT_TYPE_ZEROTIER:
+			if (len >= (1 + ZT_ADDRESS_LENGTH + ZT_FINGERPRINT_HASH_SIZE)) {
+				reinterpret_cast<Fingerprint *>(m_value)->apiFingerprint()->address = Address(data + 1).toInt();
+				Utils::copy<ZT_FINGERPRINT_HASH_SIZE>(reinterpret_cast<Fingerprint *>(m_value)->apiFingerprint()->hash,data + 1 + ZT_ADDRESS_LENGTH);
+				return 1 + ZT_ADDRESS_LENGTH + ZT_FINGERPRINT_HASH_SIZE;
+			}
+			return -1;
+
+		case ZT_ENDPOINT_TYPE_ETHERNET:
+		case ZT_ENDPOINT_TYPE_WIFI_DIRECT:
+		case ZT_ENDPOINT_TYPE_BLUETOOTH:
+			if (len >= 7) {
+				reinterpret_cast<MAC *>(m_value)->setTo(data + 1);
+				return 7;
+			}
+			return -1;
+
+		case ZT_ENDPOINT_TYPE_IP:
+		case ZT_ENDPOINT_TYPE_IP_UDP:
+		case ZT_ENDPOINT_TYPE_IP_TCP:
+		case ZT_ENDPOINT_TYPE_IP_HTTP2:
+			return reinterpret_cast<InetAddress *>(m_value)->unmarshal(data + 1,len - 1);
+
+		default:
+			break;
+	}
+
+	// Unrecognized types can still be passed over in a valid stream if they are
+	// prefixed by a 16-bit size. This allows forward compatibility with future
+	// endpoint types.
+	m_value[ZT_ENDPOINT_MARSHAL_SIZE_MAX-1] = (uint8_t)ZT_ENDPOINT_TYPE_NIL;
+	if (len < 3)
+		return -1;
+	const int unrecLen = 1 + (int)Utils::loadBigEndian<uint16_t>(data + 1);
+	return (unrecLen > len) ? -1 : unrecLen;
 }
 
 } // namespace ZeroTier

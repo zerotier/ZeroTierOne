@@ -27,6 +27,7 @@ namespace ZeroTier {
 
 Peer::Peer(const RuntimeEnvironment *renv) :
 	RR(renv),
+	m_ephemeralPairTimestamp(0),
 	m_lastReceive(0),
 	m_lastSend(0),
 	m_lastSentHello(),
@@ -61,7 +62,7 @@ bool Peer::init(const Identity &peerIdentity)
 	uint8_t k[ZT_SYMMETRIC_KEY_SIZE];
 	if (!RR->identity.agree(peerIdentity,k))
 		return false;
-	m_identityKey.set(new SymmetricKey(RR->node->now(),k,true));
+	m_identityKey.set(new SymmetricKey(RR->node->now(),k));
 	Utils::burn(k,sizeof(k));
 
 	m_deriveSecondaryIdentityKeys();
@@ -105,7 +106,7 @@ void Peer::received(
 				unsigned int newPathIdx = 0;
 				if (m_alivePathCount == ZT_MAX_PEER_NETWORK_PATHS) {
 					int64_t lastReceiveTimeMax = 0;
-					for (unsigned int i=0;i < m_alivePathCount;++i) {
+					for (unsigned int i=0;i<m_alivePathCount;++i) {
 						if ((m_paths[i]->address().family() == path->address().family()) &&
 						    (m_paths[i]->localSocket() == path->localSocket()) && // TODO: should be localInterface when multipath is integrated
 						    (m_paths[i]->address().ipsEqual2(path->address()))) {
@@ -113,7 +114,7 @@ void Peer::received(
 							// and other wacky stuff can change port number assignments.
 							m_paths[i] = path;
 							return;
-						} else if (m_paths[i]->lastIn() > lastReceiveTimeMax) {
+						} else if (m_paths[i]->lastIn() >= lastReceiveTimeMax) {
 							lastReceiveTimeMax = m_paths[i]->lastIn();
 							newPathIdx = i;
 						}
@@ -193,9 +194,13 @@ void Peer::pulse(void *const tPtr,const int64_t now,const bool isRoot)
 {
 	RWMutex::Lock l(m_lock);
 
+	// Determine if we need to send a full HELLO because we are refreshing ephemeral
+	// keys or it's simply been too long.
 	bool needHello = false;
-	if ((now - m_lastSentHello) >= ZT_PEER_HELLO_INTERVAL) {
-		m_lastSentHello = now;
+	if ( ((now - m_ephemeralPairTimestamp) >= (ZT_SYMMETRIC_KEY_TTL / 2)) || ((m_ephemeralKeys[0])&&(m_ephemeralKeys[0]->odometer() >= (ZT_SYMMETRIC_KEY_TTL_MESSAGES / 2))) ) {
+		m_ephemeralPair.generate();
+		needHello = true;
+	} else if ((now - m_lastSentHello) >= ZT_PEER_HELLO_INTERVAL) {
 		needHello = true;
 	}
 
@@ -217,9 +222,9 @@ void Peer::pulse(void *const tPtr,const int64_t now,const bool isRoot)
 				if (tryAtIndex > 0) {
 					--tryAtIndex;
 				} else {
-					if ((i->second.isInetAddr())&&(!i->second.inetAddr().ipsEqual(addr))) {
-						RR->t->tryingNewPath(tPtr, 0x0a009444, m_id, i->second.inetAddr(), InetAddress::NIL, 0, 0, Identity::NIL);
-						sent(now,m_sendProbe(tPtr,-1,i->second.inetAddr(),now));
+					if ((i->second.isInetAddr())&&(!i->second.ip().ipsEqual(addr))) {
+						RR->t->tryingNewPath(tPtr, 0x0a009444, m_id, i->second.ip(), InetAddress::NIL, 0, 0, Identity::NIL);
+						sent(now,m_sendProbe(tPtr,-1,i->second.ip(),now));
 						break;
 					}
 				}
@@ -231,19 +236,22 @@ void Peer::pulse(void *const tPtr,const int64_t now,const bool isRoot)
 
 	// Attempt queued paths to try.
 	for(int k=0;(k<ZT_NAT_T_MAX_QUEUED_ATTEMPTS_PER_PULSE)&&(!m_tryQueue.empty());++k) {
+		// This is a global circular pointer that iterates through the list of
+		// endpoints to attempt.
 		if (m_tryQueuePtr == m_tryQueue.end())
 			m_tryQueuePtr = m_tryQueue.begin();
 
+		// Delete timed out entries.
 		if ((now - m_tryQueuePtr->ts) > ZT_PATH_ALIVE_TIMEOUT) {
 			m_tryQueue.erase(m_tryQueuePtr++);
 			continue;
 		}
 
 		if (m_tryQueuePtr->target.isInetAddr()) {
-			// Make sure target does not overlap with any existing path.
+			// Delete entries that duplicate existing alive paths.
 			bool duplicate = false;
 			for(unsigned int i=0;i<m_alivePathCount;++i) {
-				if (m_paths[i]->address() == m_tryQueuePtr->target.inetAddr()) {
+				if (m_paths[i]->address() == m_tryQueuePtr->target.ip()) {
 					duplicate = true;
 					break;
 				}
@@ -268,27 +276,29 @@ void Peer::pulse(void *const tPtr,const int64_t now,const bool isRoot)
 						ports[b] = tmp;
 					}
 				}
-				InetAddress addr(m_tryQueuePtr->target.inetAddr());
+				InetAddress addr(m_tryQueuePtr->target.ip());
 				for (unsigned int i=0;i<ZT_NAT_T_BFG1024_PORTS_PER_ATTEMPT;++i) {
 					addr.setPort(ports[i]);
 					sent(now,m_sendProbe(tPtr,-1,addr,now));
 				}
 			} else {
 				// Otherwise send a normal probe.
-				sent(now,m_sendProbe(tPtr, -1, m_tryQueuePtr->target.inetAddr(), now));
+				sent(now,m_sendProbe(tPtr, -1, m_tryQueuePtr->target.ip(), now));
 			}
 		}
 
 		++m_tryQueuePtr;
 	}
 
-	// Do keepalive on all currently active paths.
+	// Do keepalive on all currently active paths, sending HELLO to the first
+	// if needHello is true and sending small keepalives to others.
 	for(unsigned int i=0;i<m_alivePathCount;++i) {
 		if (needHello) {
 			needHello = false;
 			const unsigned int bytes = hello(tPtr, m_paths[i]->localSocket(), m_paths[i]->address(), now);
 			m_paths[i]->sent(now, bytes);
 			sent(now,bytes);
+			m_lastSentHello = now;
 		} else if ((now - m_paths[i]->lastOut()) >= ZT_PATH_KEEPALIVE_PERIOD) {
 			m_paths[i]->send(RR, tPtr, &now, 1, now);
 			sent(now,1);
@@ -306,16 +316,27 @@ void Peer::pulse(void *const tPtr,const int64_t now,const bool isRoot)
 				via->sent(now,bytes);
 				root->relayed(now,bytes);
 				sent(now,bytes);
+				m_lastSentHello = now;
 			}
 		}
 	}
 }
 
-void Peer::tryDirectPath(const int64_t now,const Endpoint &ep,const bool breakSymmetricBFG1024)
+void Peer::contact(void *tPtr,const int64_t now,const Endpoint &ep,const bool breakSymmetricBFG1024)
 {
+	static uint8_t foo = 0;
 	RWMutex::Lock l(m_lock);
 
-	for(List<p_TryQueueItem>::iterator i(m_tryQueue.begin());i != m_tryQueue.end();++i) {
+	if (ep.isInetAddr()&&ep.ip().isV4()) {
+		// For IPv4 addresses we send a tiny packet with a low TTL, which helps to
+		// traverse some NAT types. It has no effect otherwise. It's important to
+		// send this right away in case this is a coordinated attempt via RENDEZVOUS.
+		RR->node->putPacket(tPtr,-1,ep.ip(),&foo,1,2);
+		++foo;
+	}
+
+	// Check to see if this endpoint overlaps an existing queue item. If so, just update it.
+	for(List<p_TryQueueItem>::iterator i(m_tryQueue.begin());i!=m_tryQueue.end();++i) {
 		if (i->target == ep) {
 			i->ts = now;
 			i->breakSymmetricBFG1024 = breakSymmetricBFG1024;
@@ -323,6 +344,7 @@ void Peer::tryDirectPath(const int64_t now,const Endpoint &ep,const bool breakSy
 		}
 	}
 
+	// Add endpoint to endpoint attempt queue.
 #ifdef __CPP11__
 	m_tryQueue.emplace_back(now, ep, breakSymmetricBFG1024);
 #else
@@ -456,7 +478,7 @@ int Peer::unmarshal(const uint8_t *restrict data,const int len) noexcept
 		RR->localCacheSymmetric.decrypt(data + 1,k);
 		RR->localCacheSymmetric.decrypt(data + 17,k + 16);
 		RR->localCacheSymmetric.decrypt(data + 33,k + 32);
-		m_identityKey.set(new SymmetricKey(RR->node->now(),k,true));
+		m_identityKey.set(new SymmetricKey(RR->node->now(),k));
 		Utils::burn(k,sizeof(k));
 	}
 
@@ -471,7 +493,7 @@ int Peer::unmarshal(const uint8_t *restrict data,const int len) noexcept
 		uint8_t k[ZT_SYMMETRIC_KEY_SIZE];
 		if (!RR->identity.agree(m_id,k))
 			return -1;
-		m_identityKey.set(new SymmetricKey(RR->node->now(),k,true));
+		m_identityKey.set(new SymmetricKey(RR->node->now(),k));
 		Utils::burn(k,sizeof(k));
 	}
 
@@ -504,6 +526,8 @@ int Peer::unmarshal(const uint8_t *restrict data,const int len) noexcept
 	m_vMinor = Utils::loadBigEndian<uint16_t>(data + p); p += 2;
 	m_vRevision = Utils::loadBigEndian<uint16_t>(data + p); p += 2;
 	p += 2 + (int)Utils::loadBigEndian<uint16_t>(data + p);
+
+	m_deriveSecondaryIdentityKeys();
 
 	return (p > len) ? -1 : p;
 }

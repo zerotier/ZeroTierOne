@@ -2381,7 +2381,7 @@ void C25519::generateC25519(uint8_t pub[ZT_C25519_ECDH_PUBLIC_KEY_SIZE],uint8_t 
 	s_calcPubDH(pub, priv);
 }
 
-void C25519::agree(const uint8_t mine[ZT_C25519_COMBINED_PRIVATE_KEY_SIZE],const uint8_t their[ZT_C25519_COMBINED_PUBLIC_KEY_SIZE],uint8_t rawkey[ZT_C25519_ECDH_SHARED_SECRET_SIZE])
+void C25519::agree(const uint8_t mine[ZT_C25519_ECDH_PRIVATE_KEY_SIZE],const uint8_t their[ZT_C25519_ECDH_PUBLIC_KEY_SIZE],uint8_t rawkey[ZT_C25519_ECDH_SHARED_SECRET_SIZE])
 {
 	crypto_scalarmult(rawkey,mine,their);
 }

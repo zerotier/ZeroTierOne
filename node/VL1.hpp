@@ -25,6 +25,10 @@
 
 #define ZT_VL1_MAX_WHOIS_WAITING_PACKETS 32
 
+#define ZT_VL1_AUTH_RESULT_FLAG_AUTHENTICATED  0x01U
+#define ZT_VL1_AUTH_RESULT_FLAG_ENCRYPTED      0x02U
+#define ZT_VL1_AUTH_RESULT_FLAG_FORWARD_SECRET 0x04U
+
 namespace ZeroTier {
 
 class RuntimeEnvironment;
@@ -61,22 +65,19 @@ public:
 private:
 	const RuntimeEnvironment *RR;
 
-	// Code to handle relaying of packets to other nodes.
-	void m_relay(void *tPtr, const SharedPtr<Path> &path, const Address &destination, SharedPtr<Buf> &data, unsigned int len);
-
-	// Send any pending WHOIS requests.
+	void m_relay(void *tPtr, const SharedPtr<Path> &path, Address destination, SharedPtr<Buf> &pkt, int pktSize);
 	void m_sendPendingWhois(void *tPtr, int64_t now);
 
-	// Handlers for VL1 verbs -- for clarity's sake VL2 verbs are in the VL2 class.
 	SharedPtr<Peer> m_HELLO(void *tPtr, const SharedPtr<Path> &path, Buf &pkt, int packetSize);
-	bool m_ERROR(void *tPtr, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize, Protocol::Verb &inReVerb);
-	bool m_OK(void *tPtr, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize, Protocol::Verb &inReVerb);
-	bool m_WHOIS(void *tPtr, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
-	bool m_RENDEZVOUS(void *tPtr, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
-	bool m_ECHO(void *tPtr, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
-	bool m_PUSH_DIRECT_PATHS(void *tPtr, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
-	bool m_USER_MESSAGE(void *tPtr, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
-	bool m_ENCAP(void *tPtr, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
+
+	bool m_ERROR(void *tPtr, unsigned int auth, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize, Protocol::Verb &inReVerb);
+	bool m_OK(void *tPtr, unsigned int auth, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize, Protocol::Verb &inReVerb);
+	bool m_WHOIS(void *tPtr, unsigned int auth, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
+	bool m_RENDEZVOUS(void *tPtr, unsigned int auth, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
+	bool m_ECHO(void *tPtr, unsigned int auth, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
+	bool m_PUSH_DIRECT_PATHS(void *tPtr, unsigned int auth, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
+	bool m_USER_MESSAGE(void *tPtr, unsigned int auth, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
+	bool m_ENCAP(void *tPtr, unsigned int auth, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
 
 	Defragmenter<ZT_MAX_PACKET_FRAGMENTS> m_inputPacketAssembler;
 

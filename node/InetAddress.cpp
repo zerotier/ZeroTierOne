@@ -346,21 +346,21 @@ int InetAddress::marshal(uint8_t data[ZT_INETADDRESS_MARSHAL_SIZE_MAX]) const no
 
 int InetAddress::unmarshal(const uint8_t *restrict data,const int len) noexcept
 {
-	if (len <= 0)
-		return -1;
 	memoryZero(this);
+	if (unlikely(len <= 0))
+		return -1;
 	switch(data[0]) {
 		case 0:
 			return 1;
 		case 4:
-			if (len < 7)
+			if (unlikely(len < 7))
 				return -1;
 			as.sa_in.sin_family = AF_INET;
 			as.sa_in.sin_port = Utils::loadAsIsEndian<uint16_t>(data + 5);
 			as.sa_in.sin_addr.s_addr = Utils::loadAsIsEndian<uint32_t>(data + 1);
 			return 7;
 		case 6:
-			if (len < 19)
+			if (unlikely(len < 19))
 				return -1;
 			as.sa_in6.sin6_family = AF_INET6;
 			as.sa_in6.sin6_port = Utils::loadAsIsEndian<uint16_t>(data + 17);
