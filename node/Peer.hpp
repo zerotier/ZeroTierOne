@@ -32,8 +32,10 @@
 #include "SymmetricKey.hpp"
 #include "Containers.hpp"
 
-// version, identity, locator, bootstrap, version info, length of any additional fields
 #define ZT_PEER_MARSHAL_SIZE_MAX (1 + ZT_ADDRESS_LENGTH + ZT_SYMMETRIC_KEY_SIZE + ZT_IDENTITY_MARSHAL_SIZE_MAX + ZT_LOCATOR_MARSHAL_SIZE_MAX + 1 + (ZT_MAX_PEER_NETWORK_PATHS * ZT_ENDPOINT_MARSHAL_SIZE_MAX) + (2*4) + 2)
+
+#define ZT_PEER_DEDUP_BUFFER_SIZE 1024
+#define ZT_PEER_DEDUP_BUFFER_MASK 1023U
 
 namespace ZeroTier {
 
@@ -444,6 +446,21 @@ public:
 		return false;
 	}
 
+	/**
+	 * Packet deduplication filter for incoming packets
+	 * 
+	 * This flags a packet ID and returns true if the same packet ID was already
+	 * flagged. This is done in an atomic operation if supported.
+	 * 
+	 * @param packetId Packet ID to check/flag
+	 * @return True if this is a duplicate
+	 */
+	ZT_INLINE bool deduplicateIncomingPacket(const uint64_t packetId) noexcept
+	{
+		// TODO: should take instance ID into account too, but this isn't fully wired.
+		return m_dedup[Utils::hash32((uint32_t)packetId) & ZT_PEER_DEDUP_BUFFER_MASK].exchange(packetId) == packetId;
+	}
+
 private:
 	void m_prioritizePaths(int64_t now);
 	unsigned int m_sendProbe(void *tPtr,int64_t localSocket,const InetAddress &atAddress,int64_t now);
@@ -497,6 +514,9 @@ private:
 
 	// The last time we got a probe from this peer.
 	std::atomic<int64_t> m_lastProbeReceived;
+
+	// Deduplication buffer
+	std::atomic<uint64_t> m_dedup[ZT_PEER_DEDUP_BUFFER_SIZE];
 
 	// Meters measuring actual bandwidth in, out, and relayed via this peer (mostly if this is a root).
 	Meter<> m_inMeter;

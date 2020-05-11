@@ -70,17 +70,19 @@ private:
 
 	SharedPtr<Peer> m_HELLO(void *tPtr, const SharedPtr<Path> &path, Buf &pkt, int packetSize);
 
-	bool m_ERROR(void *tPtr, unsigned int auth, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize, Protocol::Verb &inReVerb);
-	bool m_OK(void *tPtr, unsigned int auth, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize, Protocol::Verb &inReVerb);
-	bool m_WHOIS(void *tPtr, unsigned int auth, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
-	bool m_RENDEZVOUS(void *tPtr, unsigned int auth, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
-	bool m_ECHO(void *tPtr, unsigned int auth, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
-	bool m_PUSH_DIRECT_PATHS(void *tPtr, unsigned int auth, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
-	bool m_USER_MESSAGE(void *tPtr, unsigned int auth, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
-	bool m_ENCAP(void *tPtr, unsigned int auth, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
+	bool m_ERROR(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize, Protocol::Verb &inReVerb);
+	bool m_OK(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize, Protocol::Verb &inReVerb);
+	bool m_WHOIS(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
+	bool m_RENDEZVOUS(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
+	bool m_ECHO(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
+	bool m_PUSH_DIRECT_PATHS(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
+	bool m_USER_MESSAGE(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
+	bool m_ENCAP(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
 
+	// Defragmentation engine for handling inbound packets with more than one fragment.
 	Defragmenter<ZT_MAX_PACKET_FRAGMENTS> m_inputPacketAssembler;
 
+	// Queue of outbound WHOIS reqeusts and packets waiting on them.
 	struct p_WhoisQueueItem
 	{
 		ZT_INLINE p_WhoisQueueItem() : lastRetry(0),retries(0),waitingPacketCount(0) {}

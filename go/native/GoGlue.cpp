@@ -13,16 +13,13 @@
 
 #include "GoGlue.h"
 
-#include <cstring>
-#include <cstdlib>
-#include <cerrno>
-
 #include "../../node/Constants.hpp"
 #include "../../node/InetAddress.hpp"
 #include "../../node/Node.hpp"
 #include "../../node/Utils.hpp"
 #include "../../node/MAC.hpp"
 #include "../../node/Address.hpp"
+#include "../../node/Containers.hpp"
 #include "../../osdep/OSUtils.hpp"
 #include "../../osdep/EthernetTap.hpp"
 
@@ -32,6 +29,7 @@
 #include <sys/un.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <errno.h>
 #ifdef __BSD__
 #include <net/if.h>
 #endif
@@ -81,13 +79,13 @@ struct ZT_GoNode_Impl
 	Node *node;
 	volatile int64_t nextBackgroundTaskDeadline;
 
-	std::string path;
+	String path;
 	std::atomic<bool> run;
 
-	std::map< ZT_SOCKET,ZT_GoNodeThread > threads;
-	std::mutex threads_l;
+	Map< ZT_SOCKET,ZT_GoNodeThread > threads;
+	Map< uint64_t,std::shared_ptr<EthernetTap> > taps;
 
-	std::map< uint64_t,std::shared_ptr<EthernetTap> > taps;
+	std::mutex threads_l;
 	std::mutex taps_l;
 
 	std::thread backgroundTaskThread;
@@ -96,9 +94,7 @@ struct ZT_GoNode_Impl
 static const std::string defaultHomePath(OSUtils::platformDefaultHomePath());
 const char *ZT_PLATFORM_DEFAULT_HOMEPATH = defaultHomePath.c_str();
 
-// --------------------------------------------------------------------------------------------------------------------
-
-/* These functions are implemented in Go in pkg/zerotier/node.go */
+// These are implemented in Go code.
 extern "C" int goPathCheckFunc(void *,const ZT_Identity *,int,const void *,int);
 extern "C" int goPathLookupFunc(void *,uint64_t,int,const ZT_Identity *,int *,uint8_t [16],int *);
 extern "C" void goStateObjectPutFunc(void *,int,const uint64_t [2],const void *,int);
@@ -300,8 +296,6 @@ static int ZT_GoNode_PathLookupFunction(
 	return 0;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-
 extern "C" ZT_GoNode *ZT_GoNode_new(const char *workingPath,uintptr_t userPtr)
 {
 	try {
@@ -388,7 +382,6 @@ extern "C" ZT_Node *ZT_GoNode_getNode(ZT_GoNode *gn)
 	return gn->node;
 }
 
-// Sets flags and socket options common to both IPv4 and IPv6 UDP sockets
 static void setCommonUdpSocketSettings(ZT_SOCKET udpSock,const char *dev)
 {
 	int bufSize = 1048576;
@@ -622,8 +615,6 @@ extern "C" void ZT_GoNode_leave(ZT_GoNode *gn,uint64_t nwid)
 		gn->taps.erase(existingTap);
 	}
 }
-
-/****************************************************************************/
 
 extern "C" void ZT_GoTap_setEnabled(ZT_GoTap *tap,int enabled)
 {

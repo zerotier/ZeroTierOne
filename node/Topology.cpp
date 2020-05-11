@@ -31,7 +31,7 @@ Topology::Topology(const RuntimeEnvironment *renv,void *tPtr) :
 				m_roots.insert(id);
 				dptr += l;
 				drem -= l;
-				ZT_SPEW("recalled root %s",id.address().toString().c_str());
+				ZT_SPEW("loaded root %s",id.address().toString().c_str());
 			}
 		}
 	}

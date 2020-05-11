@@ -297,7 +297,7 @@ private:
 	void m_writeRootList(void *tPtr);
 
 	// This gets an integer key from an InetAddress for looking up paths.
-	static ZT_INLINE uint64_t s_getPathKey(const int64_t l,const InetAddress &r)
+	static ZT_INLINE uint64_t s_getPathKey(const int64_t l,const InetAddress &r) noexcept
 	{
 		if (r.family() == AF_INET) {
 			return ((uint64_t)(reinterpret_cast<const sockaddr_in *>(&r)->sin_addr.s_addr) << 24U) +

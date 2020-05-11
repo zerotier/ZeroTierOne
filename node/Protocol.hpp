@@ -693,6 +693,34 @@ enum Verb
 	// protocol max: 0x1f
 };
 
+#ifdef ZT_DEBUG_SPEW
+static ZT_INLINE const char *verbName(const Verb v) noexcept
+{
+	switch(v) {
+		case VERB_NOP:                        return "NOP";
+		case VERB_HELLO:                      return "HELLO";
+		case VERB_ERROR:                      return "ERROR";
+		case VERB_OK:                         return "OK";
+		case VERB_WHOIS:                      return "WHOIS";
+		case VERB_RENDEZVOUS:                 return "RENDEZVOUS";
+		case VERB_FRAME:                      return "FRAME";
+		case VERB_EXT_FRAME:                  return "EXT_FRAME";
+		case VERB_ECHO:                       return "ECHO";
+		case VERB_MULTICAST_LIKE:             return "MULTICAST_LIKE";
+		case VERB_NETWORK_CREDENTIALS:        return "NETWORK_CREDENTIALS";
+		case VERB_NETWORK_CONFIG_REQUEST:     return "NETWORK_CONFIG_REQUEST";
+		case VERB_NETWORK_CONFIG:             return "NETWORK_CONFIG";
+		case VERB_MULTICAST_GATHER:           return "MULTICAST_GATHER";
+		case VERB_MULTICAST_FRAME_deprecated: return "MULTICAST_FRAME_deprecated";
+		case VERB_PUSH_DIRECT_PATHS:          return "PUSH_DIRECT_PATHS";
+		case VERB_USER_MESSAGE:               return "USER_MESSAGE";
+		case VERB_MULTICAST:                  return "MULTICAST";
+		case VERB_ENCAP:                      return "ENCAP";
+		default:                              return "(unknown)";
+	}
+}
+#endif
+
 /**
  * Error codes used in ERROR packets.
  */
@@ -825,7 +853,7 @@ static ZT_INLINE int newPacket(uint8_t pkt[28],const uint64_t packetId,const Add
 	destination.copyTo(pkt + ZT_PROTO_PACKET_DESTINATION_INDEX);
 	source.copyTo(pkt + ZT_PROTO_PACKET_SOURCE_INDEX);
 	pkt[ZT_PROTO_PACKET_FLAGS_INDEX] = 0;
-	// mac is left undefined as it's filled out by armor()
+	Utils::storeAsIsEndian<uint64_t>(pkt + ZT_PROTO_PACKET_MAC_INDEX,0);
 	pkt[ZT_PROTO_PACKET_VERB_INDEX] = (uint8_t)verb;
 	return ZT_PROTO_PACKET_VERB_INDEX + 1;
 }

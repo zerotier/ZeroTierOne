@@ -152,7 +152,9 @@ class Set : public std::set< V,std::less<V>,Utils::Mallocator<V> >
 class String : public std::basic_string< char,std::char_traits<char>,Utils::Mallocator<char> >
 {
 public:
+	ZT_INLINE String() {}
 	explicit ZT_INLINE String(const char *const s) { assign(s); }
+	ZT_INLINE &operator=(const char *const s) { assign(s); }
 };
 
 } // ZeroTier
