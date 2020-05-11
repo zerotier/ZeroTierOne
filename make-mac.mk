@@ -28,10 +28,9 @@ include objects.mk
 ONE_OBJS+=osdep/MacEthernetTap.o osdep/MacKextEthernetTap.o ext/http-parser/http_parser.o
 
 ifeq ($(ZT_CONTROLLER),1)
-	LIBS+=-L/usr/local/opt/libpq/lib -lpq
+	LIBS+=-L/usr/local/opt/libpq/lib -lpq -Lext/redis-plus-plus-1.1.1/install/macos/lib -lredis++ -Lext/hiredis-0.14.1/lib/macos -lhiredis
 	DEFS+=-DZT_CONTROLLER_USE_LIBPQ -DZT_CONTROLLER_USE_REDIS -DZT_CONTROLLER 
-	INCLUDES+=-I/usr/local/opt/libpq/include -Iext/hiredis-vip-0.3.0
-	ONE_OBJS+=ext/hiredis-vip-0.3.0/adlist.o ext/hiredis-vip-0.3.0/async.o ext/hiredis-vip-0.3.0/command.o ext/hiredis-vip-0.3.0/crc16.o ext/hiredis-vip-0.3.0/dict.o ext/hiredis-vip-0.3.0/hiarray.o ext/hiredis-vip-0.3.0/hircluster.o ext/hiredis-vip-0.3.0/hiredis.o ext/hiredis-vip-0.3.0/hiutil.o ext/hiredis-vip-0.3.0/net.o ext/hiredis-vip-0.3.0/read.o ext/hiredis-vip-0.3.0/sds.o
+	INCLUDES+=-I/usr/local/opt/libpq/include -Iext/hiredis-0.14.1/include/ -Iext/redis-plus-plus-1.1.1/install/macos/include/sw/
 endif
 
 # Official releases are signed with our Apple cert and apply software updates by default

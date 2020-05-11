@@ -20,6 +20,8 @@
 
 #define ZT_CENTRAL_CONTROLLER_COMMIT_THREADS 4
 
+#include <redis++/redis++.h>
+
 extern "C" {
 typedef struct pg_conn PGconn;
 }
@@ -98,6 +100,8 @@ private:
 	int _listenPort;
 
 	RedisConfig *_rc;
+	sw::redis::Redis *_redis;
+	sw::redis::RedisCluster *_cluster;
 };
 
 } // namespace ZeroTier

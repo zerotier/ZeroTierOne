@@ -45,6 +45,7 @@ typedef void (redisCallbackFn)(struct redisAsyncContext*, void*, void*);
 typedef struct redisCallback {
     struct redisCallback *next; /* simple singly linked list */
     redisCallbackFn *fn;
+    int pending_subs;
     void *privdata;
 } redisCallback;
 
@@ -68,7 +69,6 @@ typedef struct redisAsyncContext {
 
     /* Not used by hiredis */
     void *data;
-    void (*dataHandler)(struct redisAsyncContext* ac);
 
     /* Event library data and hooks */
     struct {

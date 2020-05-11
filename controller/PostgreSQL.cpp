@@ -78,6 +78,8 @@ PostgreSQL::PostgreSQL(const Identity &myId, const char *path, int listenPort, R
 	, _waitNoticePrinted(false)
 	, _listenPort(listenPort)
 	, _rc(rc)
+	, _redis(NULL)
+	, _cluster(NULL)
 {
 	char myAddress[64];
 	_myAddressStr = myId.address().toString(myAddress);
@@ -113,6 +115,21 @@ PostgreSQL::PostgreSQL(const Identity &myId, const char *path, int listenPort, R
 	PQfinish(conn);
 	conn = NULL;
 
+	if (_rc != NULL) {
+		sw::redis::ConnectionOptions opts;
+		sw::redis::ConnectionPoolOptions poolOpts;
+		opts.host = _rc->hostname;
+		opts.port = _rc->port;
+		opts.password = _rc->password;
+		opts.db = 0;
+		poolOpts.size = 10;
+		if (_rc->clusterMode) {
+			_cluster = new sw::redis::RedisCluster(opts, poolOpts);
+		} else {
+			_redis = new sw::redis::Redis(opts, poolOpts);
+		}
+	}
+
 	_readyLock.lock();
 	_heartbeatThread = std::thread(&PostgreSQL::heartbeat, this);
 	_membersDbWatcher = std::thread(&PostgreSQL::membersDbWatcher, this);
@@ -128,6 +145,8 @@ PostgreSQL::~PostgreSQL()
 	_run = 0;
 	std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
+	
+
 	_heartbeatThread.join();
 	_membersDbWatcher.join();
 	_networksDbWatcher.join();
@@ -135,7 +154,8 @@ PostgreSQL::~PostgreSQL()
 		_commitThread[i].join();
 	}
 	_onlineNotificationThread.join();
-
+	delete _redis;
+	delete _cluster;
 }
 
 
