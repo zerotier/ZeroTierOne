@@ -64,6 +64,9 @@ private:
 	void _networksWatcher_Postgres(PGconn *conn);
 	void _networksWatcher_RabbitMQ();
 
+	void _membersWatcher_Reids();
+	void _networksWatcher_Redis();
+
 	void commitThread();
 	void onlineNotificationThread();
 

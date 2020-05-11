@@ -740,6 +740,11 @@ void PostgreSQL::_membersWatcher_RabbitMQ() {
 	}
 }
 
+void PostgreSQL::_membersWatcher_Reids() {
+	char buff[11] = {0};
+	
+}
+
 void PostgreSQL::networksDbWatcher()
 {
 	PGconn *conn = getPgConn(NO_OVERRIDE);
@@ -842,6 +847,10 @@ void PostgreSQL::_networksWatcher_RabbitMQ() {
 			fprintf(stderr, "RABBITMQ ERROR network watcher: unknown error\n");
 		}
 	}
+}
+
+void PostgreSQL::_networksWatcher_Redis() {
+
 }
 
 void PostgreSQL::commitThread()
