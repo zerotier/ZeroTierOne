@@ -261,9 +261,9 @@ ifeq ($(ZT_OFFICIAL),1)
 endif
 
 ifeq ($(ZT_CONTROLLER),1)
-	LDLIBS+=-L/usr/pgsql-10/lib/ -lpq -Lext/librabbitmq/centos_x64/lib/ -lrabbitmq
+	LDLIBS+=-L/usr/pgsql-10/lib/ -lpq
 	DEFS+=-DZT_CONTROLLER_USE_LIBPQ
-	INCLUDES+=-Iext/librabbitmq/macos/include -I/usr/pgsql-10/include -Iext/hiredis-vip-0.3.0
+	INCLUDES+=-I/usr/pgsql-10/include -Iext/hiredis-vip-0.3.0
 	ONE_OBJS+=ext/hiredis-vip-0.3.0/adlist.o ext/hiredis-vip-0.3.0/async.o ext/hiredis-vip-0.3.0/command.o ext/hiredis-vip-0.3.0/crc16.o ext/hiredis-vip-0.3.0/dict.o ext/hiredis-vip-0.3.0/hiarray.o ext/hiredis-vip-0.3.0/hircluster.o ext/hiredis-vip-0.3.0/hiredis.o ext/hiredis-vip-0.3.0/hiutil.o ext/hiredis-vip-0.3.0/net.o ext/hiredis-vip-0.3.0/read.o ext/hiredis-vip-0.3.0/sds.o
 endif
 

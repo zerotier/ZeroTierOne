@@ -456,15 +456,14 @@ static bool _parseRule(json &r,ZT_VirtualNetworkRule &rule)
 
 } // anonymous namespace
 
-EmbeddedNetworkController::EmbeddedNetworkController(Node *node,const char *ztPath,const char *dbPath, int listenPort, MQConfig *mqc) :
+EmbeddedNetworkController::EmbeddedNetworkController(Node *node,const char *ztPath,const char *dbPath, int listenPort) :
 	_startTime(OSUtils::now()),
 	_listenPort(listenPort),
 	_node(node),
 	_ztPath(ztPath),
 	_path(dbPath),
 	_sender((NetworkController::Sender *)0),
-	_db(this),
-	_mqc(mqc)
+	_db(this)
 {
 }
 
@@ -485,7 +484,7 @@ void EmbeddedNetworkController::init(const Identity &signingId,Sender *sender)
 
 #ifdef ZT_CONTROLLER_USE_LIBPQ
 	if ((_path.length() > 9)&&(_path.substr(0,9) == "postgres:")) {
-		_db.addDB(std::shared_ptr<DB>(new PostgreSQL(_signingId,_path.substr(9).c_str(), _listenPort, _mqc)));
+		_db.addDB(std::shared_ptr<DB>(new PostgreSQL(_signingId,_path.substr(9).c_str(), _listenPort)));
 	} else {
 #endif
 		_db.addDB(std::shared_ptr<DB>(new FileDB(_path.c_str())));

@@ -17,13 +17,12 @@
 
 #include "../node/Constants.hpp"
 #include "EmbeddedNetworkController.hpp"
-#include "RabbitMQ.hpp"
 #include "../version.h"
+#include "hiredis.h"
 
 #include <libpq-fe.h>
 #include <sstream>
-#include <amqp.h>
-#include <amqp_tcp_socket.h>
+
 
 using json = nlohmann::json;
 
@@ -69,7 +68,7 @@ std::string join(const std::vector<std::string> &elements, const char * const se
 
 using namespace ZeroTier;
 
-PostgreSQL::PostgreSQL(const Identity &myId, const char *path, int listenPort, MQConfig *mqc)
+PostgreSQL::PostgreSQL(const Identity &myId, const char *path, int listenPort)
 	: DB()
 	, _myId(myId)
 	, _myAddress(myId.address())
@@ -78,7 +77,6 @@ PostgreSQL::PostgreSQL(const Identity &myId, const char *path, int listenPort, M
 	, _run(1)
 	, _waitNoticePrinted(false)
 	, _listenPort(listenPort)
-	, _mqc(mqc)
 {
 	char myAddress[64];
 	_myAddressStr = myId.address().toString(myAddress);
@@ -593,7 +591,7 @@ void PostgreSQL::heartbeat()
 			std::string build = std::to_string(ZEROTIER_ONE_VERSION_BUILD);
 			std::string now = std::to_string(OSUtils::now());
 			std::string host_port = std::to_string(_listenPort);
-			std::string use_rabbitmq = (_mqc != NULL) ? "true" : "false";
+			std::string use_rabbitmq = (false) ? "true" : "false";
 			const char *values[10] = {
 				controllerId,
 				hostname,
@@ -645,10 +643,10 @@ void PostgreSQL::membersDbWatcher()
 
 	initializeMembers(conn);
 
-	if (this->_mqc != NULL) {
-		PQfinish(conn);
-		conn = NULL;
-		_membersWatcher_RabbitMQ();
+	if (false) {
+		// PQfinish(conn);
+		// conn = NULL;
+		// _membersWatcher_RabbitMQ();
 	} else {
 		_membersWatcher_Postgres(conn);
 		PQfinish(conn);
@@ -703,43 +701,6 @@ void PostgreSQL::_membersWatcher_Postgres(PGconn *conn) {
 	}
 }
 
-void PostgreSQL::_membersWatcher_RabbitMQ() {
-	char buf[11] = {0};
-	std::string qname = "member_"+ std::string(_myAddress.toString(buf));
-	RabbitMQ rmq(_mqc, qname.c_str());
-	try {
-		rmq.init();
-	} catch (std::runtime_error &e) {
-		fprintf(stderr, "RABBITMQ ERROR: %s\n", e.what());
-		exit(11);
-	}
-	while (_run == 1) {
-		try {
-			std::string msg = rmq.consume();
-			// fprintf(stderr, "Got Member Update: %s\n", msg.c_str());
-			if (msg.empty()) {
-				continue;
-			}
-			json tmp(json::parse(msg));
-			json &ov = tmp["old_val"];
-			json &nv = tmp["new_val"];
-			json oldConfig, newConfig;
-			if (ov.is_object()) oldConfig = ov;
-			if (nv.is_object()) newConfig = nv;
-			if (oldConfig.is_object() || newConfig.is_object()) {
-				_memberChanged(oldConfig,newConfig,(this->_ready>=2));
-			}
-		} catch (std::runtime_error &e) {
-			fprintf(stderr, "RABBITMQ ERROR member change: %s\n", e.what());
-			break;
-		} catch(std::exception &e ) {
-			fprintf(stderr, "RABBITMQ ERROR member change: %s\n", e.what());
-		} catch(...) {
-			fprintf(stderr, "RABBITMQ ERROR member change: unknown error\n");
-		}
-	}
-}
-
 void PostgreSQL::_membersWatcher_Reids() {
 	char buff[11] = {0};
 	
@@ -756,10 +717,10 @@ void PostgreSQL::networksDbWatcher()
 
 	initializeNetworks(conn);
 
-	if (this->_mqc != NULL) {
-		PQfinish(conn);
-		conn = NULL;
-		_networksWatcher_RabbitMQ();
+	if (false) {
+		// PQfinish(conn);
+		// conn = NULL;
+		// _networksWatcher_RabbitMQ();
 	} else {
 		_networksWatcher_Postgres(conn);
 		PQfinish(conn);
@@ -809,43 +770,6 @@ void PostgreSQL::_networksWatcher_Postgres(PGconn *conn) {
 			free(notify);
 		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
-	}
-}
-
-void PostgreSQL::_networksWatcher_RabbitMQ() {
-	char buf[11] = {0};
-	std::string qname = "network_"+ std::string(_myAddress.toString(buf));
-	RabbitMQ rmq(_mqc, qname.c_str());
-	try {
-		rmq.init();
-	} catch (std::runtime_error &e) {
-		fprintf(stderr, "RABBITMQ ERROR: %s\n", e.what());
-		exit(11);
-	}
-	while (_run == 1) {
-		try {
-			std::string msg = rmq.consume();
-			if (msg.empty()) {
-				continue;
-			}
-			// fprintf(stderr, "Got network update: %s\n", msg.c_str());
-			json tmp(json::parse(msg));
-			json &ov = tmp["old_val"];
-			json &nv = tmp["new_val"];
-			json oldConfig, newConfig;
-			if (ov.is_object()) oldConfig = ov;
-			if (nv.is_object()) newConfig = nv;
-			if (oldConfig.is_object()||newConfig.is_object()) {
-				_networkChanged(oldConfig,newConfig,(this->_ready >= 2));
-			}
-		} catch (std::runtime_error &e) {
-			fprintf(stderr, "RABBITMQ ERROR: %s\n", e.what());
-			break;
-		} catch (std::exception &e) {
-			fprintf(stderr, "RABBITMQ ERROR network watcher: %s\n", e.what());
-		} catch(...) {
-			fprintf(stderr, "RABBITMQ ERROR network watcher: unknown error\n");
-		}
 	}
 }
 

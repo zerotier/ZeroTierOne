@@ -26,8 +26,6 @@ typedef struct pg_conn PGconn;
 
 namespace ZeroTier {
 
-struct MQConfig;
-
 /**
  * A controller database driver that talks to PostgreSQL
  *
@@ -37,7 +35,7 @@ struct MQConfig;
 class PostgreSQL : public DB
 {
 public:
-	PostgreSQL(const Identity &myId, const char *path, int listenPort, MQConfig *mqc = NULL);
+	PostgreSQL(const Identity &myId, const char *path, int listenPort);
 	virtual ~PostgreSQL();
 
 	virtual bool waitForReady();
@@ -59,10 +57,8 @@ private:
 	void heartbeat();
 	void membersDbWatcher();
 	void _membersWatcher_Postgres(PGconn *conn);
-	void _membersWatcher_RabbitMQ();
 	void networksDbWatcher();
 	void _networksWatcher_Postgres(PGconn *conn);
-	void _networksWatcher_RabbitMQ();
 
 	void _membersWatcher_Reids();
 	void _networksWatcher_Redis();
@@ -98,8 +94,6 @@ private:
 	mutable volatile bool _waitNoticePrinted;
 
 	int _listenPort;
-
-	MQConfig *_mqc;
 };
 
 } // namespace ZeroTier
