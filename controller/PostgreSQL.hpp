@@ -26,6 +26,8 @@ typedef struct pg_conn PGconn;
 
 namespace ZeroTier {
 
+struct RedisConfig;
+
 /**
  * A controller database driver that talks to PostgreSQL
  *
@@ -35,7 +37,7 @@ namespace ZeroTier {
 class PostgreSQL : public DB
 {
 public:
-	PostgreSQL(const Identity &myId, const char *path, int listenPort);
+	PostgreSQL(const Identity &myId, const char *path, int listenPort, RedisConfig *rc);
 	virtual ~PostgreSQL();
 
 	virtual bool waitForReady();
@@ -94,6 +96,8 @@ private:
 	mutable volatile bool _waitNoticePrinted;
 
 	int _listenPort;
+
+	RedisConfig *_rc;
 };
 
 } // namespace ZeroTier

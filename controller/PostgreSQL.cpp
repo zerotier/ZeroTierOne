@@ -18,7 +18,7 @@
 #include "../node/Constants.hpp"
 #include "EmbeddedNetworkController.hpp"
 #include "../version.h"
-#include "hiredis.h"
+#include "Redis.hpp"
 
 #include <libpq-fe.h>
 #include <sstream>
@@ -68,7 +68,7 @@ std::string join(const std::vector<std::string> &elements, const char * const se
 
 using namespace ZeroTier;
 
-PostgreSQL::PostgreSQL(const Identity &myId, const char *path, int listenPort)
+PostgreSQL::PostgreSQL(const Identity &myId, const char *path, int listenPort, RedisConfig *rc)
 	: DB()
 	, _myId(myId)
 	, _myAddress(myId.address())
@@ -77,6 +77,7 @@ PostgreSQL::PostgreSQL(const Identity &myId, const char *path, int listenPort)
 	, _run(1)
 	, _waitNoticePrinted(false)
 	, _listenPort(listenPort)
+	, _rc(rc)
 {
 	char myAddress[64];
 	_myAddressStr = myId.address().toString(myAddress);
@@ -717,10 +718,10 @@ void PostgreSQL::networksDbWatcher()
 
 	initializeNetworks(conn);
 
-	if (false) {
-		// PQfinish(conn);
-		// conn = NULL;
-		// _networksWatcher_RabbitMQ();
+	if (_rc) {
+		PQfinish(conn);
+		conn = NULL;
+		_networksWatcher_Redis();
 	} else {
 		_networksWatcher_Postgres(conn);
 		PQfinish(conn);
