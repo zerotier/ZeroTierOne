@@ -28,9 +28,10 @@ include objects.mk
 ONE_OBJS+=osdep/MacEthernetTap.o osdep/MacKextEthernetTap.o ext/http-parser/http_parser.o
 
 ifeq ($(ZT_CONTROLLER),1)
-	LIBS+=-L/usr/local/opt/libpq/lib -lpq -Lext/redis-plus-plus-1.1.1/install/macos/lib -lredis++ -Lext/hiredis-0.14.1/lib/macos -lhiredis
+	LIBS+=-L/usr/local/opt/libpq/lib -lpq ext/redis-plus-plus-1.1.1/install/macos/lib/libredis++.a ext/hiredis-0.14.1/lib/macos/libhiredis.a
 	DEFS+=-DZT_CONTROLLER_USE_LIBPQ -DZT_CONTROLLER_USE_REDIS -DZT_CONTROLLER 
 	INCLUDES+=-I/usr/local/opt/libpq/include -Iext/hiredis-0.14.1/include/ -Iext/redis-plus-plus-1.1.1/install/macos/include/sw/
+	
 endif
 
 # Official releases are signed with our Apple cert and apply software updates by default

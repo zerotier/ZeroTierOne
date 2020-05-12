@@ -20,6 +20,7 @@
 
 #define ZT_CENTRAL_CONTROLLER_COMMIT_THREADS 4
 
+#include <memory>
 #include <redis++/redis++.h>
 
 extern "C" {
@@ -64,7 +65,7 @@ private:
 	void networksDbWatcher();
 	void _networksWatcher_Postgres(PGconn *conn);
 
-	void _membersWatcher_Reids();
+	void _membersWatcher_Redis();
 	void _networksWatcher_Redis();
 
 	void commitThread();
@@ -100,8 +101,8 @@ private:
 	int _listenPort;
 
 	RedisConfig *_rc;
-	sw::redis::Redis *_redis;
-	sw::redis::RedisCluster *_cluster;
+	std::shared_ptr<sw::redis::Redis> _redis;
+	std::shared_ptr<sw::redis::RedisCluster> _cluster;
 };
 
 } // namespace ZeroTier
