@@ -415,55 +415,128 @@ enum ZT_ResultCode
  */
 #define ZT_ResultCode_isFatal(x) ((((int)(x)) >= 100)&&(((int)(x)) < 1000))
 
+
 /**
- * The multipath algorithm in use by this node.
+ *  Multipath bonding policy
  */
-enum ZT_MultipathMode
+enum ZT_MultipathBondingPolicy
 {
 	/**
-	 * No fault tolerance or balancing.
+	 * Normal operation. No fault tolerance, no load balancing
 	 */
-	ZT_MULTIPATH_NONE = 0,
+	ZT_BONDING_POLICY_NONE = 0,
 
 	/**
-	 * Sends traffic out on all paths.
+	 * Sends traffic out on only one path at a time. Configurable immediate
+	 * fail-over.
 	 */
-	ZT_MULTIPATH_BROADCAST = 1,
+	ZT_BONDING_POLICY_ACTIVE_BACKUP = 1,
 
 	/**
-	 * Sends traffic out on only one path at a time. Immediate fail-over.
+	 * Sends traffic out on all paths
 	 */
-	ZT_MULTIPATH_ACTIVE_BACKUP= 2,
+	ZT_BONDING_POLICY_BROADCAST = 2,
 
 	/**
-	 * Sends traffic out on all interfaces according to a uniform random distribution.
+	 * Stripes packets across all paths
 	 */
-	ZT_MULTIPATH_BALANCE_RANDOM = 3,
+	ZT_BONDING_POLICY_BALANCE_RR = 3,
 
 	/**
-	 * Stripes packets across all paths.
+	 * Packets destined for specific peers will always be sent over the same
+	 * path.
 	 */
-	ZT_MULTIPATH_BALANCE_RR_OPAQUE = 4,
+	ZT_BONDING_POLICY_BALANCE_XOR = 4,
 
 	/**
-	 * Balances flows across all paths.
+	 * Balances flows among all paths according to path performance
 	 */
-	ZT_MULTIPATH_BALANCE_RR_FLOW = 5,
+	ZT_BONDING_POLICY_BALANCE_AWARE = 5
+};
+
+/**
+ * Multipath active re-selection policy (slaveSelectMethod)
+ */
+enum ZT_MultipathSlaveSelectMethod
+{
+	/**
+	 * Primary slave regains status as active slave whenever it comes back up
+	 * (default when slaves are explicitly specified)
+	 */
+	ZT_MULTIPATH_RESELECTION_POLICY_ALWAYS = 0,
 
 	/**
-	 * Hashes flows across all paths.
+	 * Primary slave regains status as active slave when it comes back up and
+	 * (if) it is better than the currently-active slave.
 	 */
-	ZT_MULTIPATH_BALANCE_XOR_FLOW = 6,
+	ZT_MULTIPATH_RESELECTION_POLICY_BETTER = 1,
 
 	/**
-	 * Balances traffic across all paths according to observed performance.
+	 * Primary slave regains status as active slave only if the currently-active
+	 * slave fails.
 	 */
-	ZT_MULTIPATH_BALANCE_DYNAMIC_OPAQUE = 7,
+	ZT_MULTIPATH_RESELECTION_POLICY_FAILURE = 2,
 
 	/**
-	 * Balances flows across all paths.
+	 * The primary slave can change if a superior path is detected.
+	 * (default if user provides no fail-over guidance)
 	 */
-	ZT_MULTIPATH_BALANCE_DYNAMIC_FLOW = 8,
+	ZT_MULTIPATH_RESELECTION_POLICY_OPTIMIZE = 3
+};
+
+/**
+ * Mode of multipath slave interface
+ */
+enum ZT_MultipathSlaveMode
+{
+	ZT_MULTIPATH_SLAVE_MODE_PRIMARY = 0,
+	ZT_MULTIPATH_SLAVE_MODE_SPARE = 1
+};
+
+/**
+ * Strategy for path monitoring
+ */
+enum ZT_MultipathMonitorStrategy
+{
+	/**
+	 * Use bonding policy's default strategy
+	 */
+	ZT_MULTIPATH_SLAVE_MONITOR_STRATEGY_DEFAULT = 0,
+
+	/**
+	 * Does not actively send probes to judge aliveness, will rely
+	 * on conventional traffic and summary statistics.
+	 */
+	ZT_MULTIPATH_SLAVE_MONITOR_STRATEGY_PASSIVE = 1,
+
+	/**
+	 * Sends probes at a constant rate to judge aliveness.
+	 */
+	ZT_MULTIPATH_SLAVE_MONITOR_STRATEGY_ACTIVE = 2,
+
+	/**
+	 * Sends probes at varying rates which correlate to native
+	 * traffic loads to judge aliveness.
+	 */
+	ZT_MULTIPATH_SLAVE_MONITOR_STRATEGY_DYNAMIC = 3
+};
+
+/**
+ * Indices for the path quality weight vector
+ */
+enum ZT_MultipathQualityWeightIndex
+{
+	ZT_QOS_LAT_IDX,
+	ZT_QOS_LTM_IDX,
+	ZT_QOS_PDV_IDX,
+	ZT_QOS_PLR_IDX,
+	ZT_QOS_PER_IDX,
+	ZT_QOS_THR_IDX,
+	ZT_QOS_THM_IDX,
+	ZT_QOS_THV_IDX,
+	ZT_QOS_AGE_IDX,
+	ZT_QOS_SCP_IDX,
+	ZT_QOS_WEIGHT_SIZE
 };
 
 /**
@@ -1272,44 +1345,49 @@ typedef struct
 	uint64_t trustedPathId;
 
 	/**
-	 * One-way latency
+	 * Mean latency
 	 */
-	float latency;
+	float latencyMean;
 
 	/**
-	 * How much latency varies over time
+	 * Maximum observed latency
 	 */
-	float packetDelayVariance;
+	float latencyMax;
 
 	/**
-	 * How much observed throughput varies over time
+	 * Variance of latency
 	 */
-	float throughputDisturbCoeff;
+	float latencyVariance;
 
 	/**
-	 * Packet Error Ratio (PER)
-	 */
-	float packetErrorRatio;
-
-	/**
-	 * Packet Loss Ratio (PLR)
+	 * Packet loss ratio
 	 */
 	float packetLossRatio;
 
 	/**
-	 * Stability of the path
+	 * Packet error ratio
 	 */
-	float stability;
+	float packetErrorRatio;
 
 	/**
-	 * Current throughput (moving average)
+	 * Mean throughput
 	 */
-	uint64_t throughput;
+	uint64_t throughputMean;
 
 	/**
-	 * Maximum observed throughput for this path
+	 * Maximum observed throughput
 	 */
-	uint64_t maxThroughput;
+	float throughputMax;
+
+	/**
+	 * Throughput variance
+	 */
+	float throughputVariance;
+
+	/**
+	 * Address scope
+	 */
+	uint8_t scope;
 
 	/**
 	 * Percentage of traffic allocated to this path
@@ -1319,7 +1397,9 @@ typedef struct
 	/**
 	 * Name of physical interface (for monitoring)
 	 */
-	char *ifname;
+	char ifname[32];
+
+	uint64_t localSocket;
 
 	/**
 	 * Is path expired?
@@ -1373,9 +1453,11 @@ typedef struct
 	unsigned int pathCount;
 
 	/**
-	 * Whether this peer was ever reachable via an aggregate link
+	 * Whether multiple paths to this peer are bonded
 	 */
-	bool hadAggregateLink;
+	bool isBonded;
+
+	int bondingPolicy;
 
 	/**
 	 * Known network paths to peer

@@ -1,10 +1,10 @@
 /*
- * Copyright (c)2019 ZeroTier, Inc.
+ * Copyright (c)2013-2020 ZeroTier, Inc.
  *
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2023-01-01
+ * Change Date: 2024-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -347,6 +347,23 @@ public:
 			}
 		}
 
+		// Generate set of unique interface names (used for formation of logical slave set in multipath code)
+		for(std::map<InetAddress,std::string>::const_iterator ii(localIfAddrs.begin());ii!=localIfAddrs.end();++ii) {
+			slaveIfNames.insert(ii->second);
+		}
+		for (std::set<std::string>::iterator si(slaveIfNames.begin());si!=slaveIfNames.end();si++) {
+			bool bFoundMatch = false;
+			for(std::map<InetAddress,std::string>::const_iterator ii(localIfAddrs.begin());ii!=localIfAddrs.end();++ii) {
+				if (ii->second == *si) {
+					bFoundMatch = true;
+					break;
+				}
+			}
+			if (!bFoundMatch) {
+				slaveIfNames.erase(si);
+			}
+		}
+
 		// Create new bindings for those not already bound
 		for(std::map<InetAddress,std::string>::const_iterator ii(localIfAddrs.begin());ii!=localIfAddrs.end();++ii) {
 			unsigned int bi = 0;
@@ -444,7 +461,15 @@ public:
 		return false;
 	}
 
+	inline std::set<std::string> getSlaveInterfaceNames()
+	{
+		Mutex::Lock _l(_lock);
+		return slaveIfNames;
+	}
+
 private:
+
+	std::set<std::string> slaveIfNames;
 	_Binding _bindings[ZT_BINDER_MAX_BINDINGS];
 	std::atomic<unsigned int> _bindingCount;
 	Mutex _lock;

@@ -1,10 +1,10 @@
 /*
- * Copyright (c)2019 ZeroTier, Inc.
+ * Copyright (c)2013-2020 ZeroTier, Inc.
  *
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2023-01-01
+ * Change Date: 2024-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -39,6 +39,8 @@
 #include "../node/Salsa20.hpp"
 #include "../node/Poly1305.hpp"
 #include "../node/SHA512.hpp"
+#include "../node/Bond.hpp"
+#include "../node/Peer.hpp"
 
 #include "../osdep/Phy.hpp"
 #include "../osdep/Thread.hpp"
@@ -48,6 +50,7 @@
 #include "../osdep/Binder.hpp"
 #include "../osdep/ManagedRoute.hpp"
 #include "../osdep/BlockingQueue.hpp"
+#include "../osdep/Slave.hpp"
 
 #include "OneService.hpp"
 #include "SoftwareUpdater.hpp"
@@ -266,37 +269,43 @@ static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer)
 	pj["paths"] = pa;
 }
 
-static void _peerAggregateLinkToJson(nlohmann::json &pj,const ZT_Peer *peer)
+static void _peerBondToJson(nlohmann::json &pj,const ZT_Peer *peer)
 {
 	char tmp[256];
 	OSUtils::ztsnprintf(tmp,sizeof(tmp),"%.10llx",peer->address);
-	pj["aggregateLinkLatency"] = peer->latency;
+	//pj["aggregateLinkLatency"] = peer->latency;
+	std::string policyStr = BondController::getPolicyStrByCode(peer->bondingPolicy);
+	pj["policy"] = policyStr;
 
 	nlohmann::json pa = nlohmann::json::array();
 	for(unsigned int i=0;i<peer->pathCount;++i) {
 		int64_t lastSend = peer->paths[i].lastSend;
 		int64_t lastReceive = peer->paths[i].lastReceive;
 		nlohmann::json j;
-		j["address"] = reinterpret_cast<const InetAddress *>(&(peer->paths[i].address))->toString(tmp);
-		j["lastSend"] = (lastSend < 0) ? 0 : lastSend;
-		j["lastReceive"] = (lastReceive < 0) ? 0 : lastReceive;
+		j["ifname"] = std::string(peer->paths[i].ifname);
+		j["path"] = reinterpret_cast<const InetAddress *>(&(peer->paths[i].address))->toString(tmp);
+		j["lastTX"] = (lastSend < 0) ? 0 : lastSend;
+		j["lastRX"] = (lastReceive < 0) ? 0 : lastReceive;
+		j["lat"] = peer->paths[i].latencyMean;
+		j["pdv"] = peer->paths[i].latencyVariance;
+
 		//j["trustedPathId"] = peer->paths[i].trustedPathId;
 		//j["active"] = (bool)(peer->paths[i].expired == 0);
 		//j["expired"] = (bool)(peer->paths[i].expired != 0);
 		//j["preferred"] = (bool)(peer->paths[i].preferred != 0);
-		j["latency"] = peer->paths[i].latency;
-		j["pdv"] = peer->paths[i].packetDelayVariance;
-		//j["throughputDisturbCoeff"] = peer->paths[i].throughputDisturbCoeff;
-		//j["packetErrorRatio"] = peer->paths[i].packetErrorRatio;
-		//j["packetLossRatio"] = peer->paths[i].packetLossRatio;
-		j["stability"] = peer->paths[i].stability;
-		j["throughput"] = peer->paths[i].throughput;
-		//j["maxThroughput"] = peer->paths[i].maxThroughput;
-		j["allocation"] = peer->paths[i].allocation;
-		j["ifname"] = peer->paths[i].ifname;
+		//j["ltm"] = peer->paths[i].latencyMax;
+		//j["plr"] = peer->paths[i].packetLossRatio;
+		//j["per"] = peer->paths[i].packetErrorRatio;
+		//j["thr"] = peer->paths[i].throughputMean;
+		//j["thm"] = peer->paths[i].throughputMax;
+		//j["thv"] = peer->paths[i].throughputVariance;
+		//j["avl"] = peer->paths[i].availability;
+		//j["age"] = peer->paths[i].age;
+		//j["alloc"] = peer->paths[i].allocation;
+		//j["ifname"] = peer->paths[i].ifname;
 		pa.push_back(j);
 	}
-	pj["paths"] = pa;
+	pj["slaves"] = pa;
 }
 
 static void _moonToJson(nlohmann::json &mj,const World &world)
@@ -429,7 +438,7 @@ public:
 	bool _updateAutoApply;
 	bool _allowTcpFallbackRelay;
 	bool _allowSecondaryPort;
-	unsigned int _multipathMode;
+
 	unsigned int _primaryPort;
 	unsigned int _secondaryPort;
 	unsigned int _tertiaryPort;
@@ -718,6 +727,7 @@ public:
 				}
 			}
 #endif
+
 			// Delete legacy iddb.d if present (cleanup)
 			OSUtils::rmDashRf((_homePath + ZT_PATH_SEPARATOR_S "iddb.d").c_str());
 
@@ -752,7 +762,6 @@ public:
 			int64_t lastTapMulticastGroupCheck = 0;
 			int64_t lastBindRefresh = 0;
 			int64_t lastUpdateCheck = clockShouldBe;
-			int64_t lastMultipathModeUpdate = 0;
 			int64_t lastCleanedPeersDb = 0;
 			int64_t lastLocalInterfaceAddressCheck = (clockShouldBe - ZT_LOCAL_INTERFACE_CHECK_INTERVAL) + 15000; // do this in 15s to give portmapper time to configure and other things time to settle
 			int64_t lastLocalConfFileCheck = OSUtils::now();
@@ -798,7 +807,7 @@ public:
 				}
 
 				// Refresh bindings in case device's interfaces have changed, and also sync routes to update any shadow routes (e.g. shadow default)
-				if (((now - lastBindRefresh) >= (_multipathMode ? ZT_BINDER_REFRESH_PERIOD / 8 : ZT_BINDER_REFRESH_PERIOD))||(restarted)) {
+				if (((now - lastBindRefresh) >= (_node->bondController()->inUse() ? ZT_BINDER_REFRESH_PERIOD / 4 : ZT_BINDER_REFRESH_PERIOD))||(restarted)) {
 					lastBindRefresh = now;
 					unsigned int p[3];
 					unsigned int pc = 0;
@@ -814,11 +823,6 @@ public:
 								syncManagedStuff(n->second,false,true);
 						}
 					}
-				}
-				// Update multipath mode (if needed)
-				if (((now - lastMultipathModeUpdate) >= ZT_BINDER_REFRESH_PERIOD / 8)||(restarted)) {
-					lastMultipathModeUpdate = now;
-					_node->setMultipathMode(_multipathMode);
 				}
 
 				// Run background task processor in core if it's time to do so
@@ -855,7 +859,7 @@ public:
 				}
 
 				// Sync information about physical network interfaces
-				if ((now - lastLocalInterfaceAddressCheck) >= (_multipathMode ? ZT_LOCAL_INTERFACE_CHECK_INTERVAL / 8 : ZT_LOCAL_INTERFACE_CHECK_INTERVAL)) {
+				if ((now - lastLocalInterfaceAddressCheck) >= (_node->bondController()->inUse() ? ZT_LOCAL_INTERFACE_CHECK_INTERVAL / 8 : ZT_LOCAL_INTERFACE_CHECK_INTERVAL)) {
 					lastLocalInterfaceAddressCheck = now;
 
 					_node->clearLocalInterfaceAddresses();
@@ -869,8 +873,9 @@ public:
 #endif
 
 					std::vector<InetAddress> boundAddrs(_binder.allBoundLocalInterfaceAddresses());
-					for(std::vector<InetAddress>::const_iterator i(boundAddrs.begin());i!=boundAddrs.end();++i)
+					for(std::vector<InetAddress>::const_iterator i(boundAddrs.begin());i!=boundAddrs.end();++i) {
 						_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&(*i)));
+					}
 				}
 
 				// Clean peers.d periodically
@@ -1209,15 +1214,15 @@ public:
 					settings["primaryPort"] = OSUtils::jsonInt(settings["primaryPort"],(uint64_t)_primaryPort) & 0xffff;
 					settings["allowTcpFallbackRelay"] = OSUtils::jsonBool(settings["allowTcpFallbackRelay"],_allowTcpFallbackRelay);
 
-					if (_multipathMode) {
-						json &multipathConfig = res["multipath"];
+					if (_node->bondController()->inUse()) {
+						json &multipathConfig = res["bonds"];
 						ZT_PeerList *pl = _node->peers();
 						char peerAddrStr[256];
 						if (pl) {
 							for(unsigned long i=0;i<pl->peerCount;++i) {
-								if (pl->peers[i].hadAggregateLink) {
+								if (pl->peers[i].isBonded) {
 									nlohmann::json pj;
-									_peerAggregateLinkToJson(pj,&(pl->peers[i]));
+									_peerBondToJson(pj,&(pl->peers[i]));
 									OSUtils::ztsnprintf(peerAddrStr,sizeof(peerAddrStr),"%.10llx",pl->peers[i].address);
 									multipathConfig[peerAddrStr] = (pj);
 								}
@@ -1346,8 +1351,8 @@ public:
 							if (j.is_object()) {
 								seed = Utils::hexStrToU64(OSUtils::jsonString(j["seed"],"0").c_str());
 							}
-						} catch (std::exception &exc) {
 						} catch ( ... ) {
+							// discard invalid JSON
 						}
 
 						std::vector<World> moons(_node->moons());
@@ -1396,8 +1401,8 @@ public:
 											json &allowDefault = j["allowDefault"];
 											if (allowDefault.is_boolean()) localSettings.allowDefault = (bool)allowDefault;
 										}
-									} catch (std::exception &exc) {
 									} catch ( ... ) {
+										// discard invalid JSON
 									}
 
 									setNetworkSettings(nws->networks[i].nwid,localSettings);
@@ -1551,10 +1556,133 @@ public:
 
 		json &settings = lc["settings"];
 
+		if (!_node->bondController()->inUse()) {
+			// defaultBondingPolicy
+			std::string defaultBondingPolicyStr(OSUtils::jsonString(settings["defaultBondingPolicy"],""));
+			int defaultBondingPolicy = _node->bondController()->getPolicyCodeByStr(defaultBondingPolicyStr);
+			_node->bondController()->setBondingLayerDefaultPolicy(defaultBondingPolicy);
+			_node->bondController()->setBondingLayerDefaultPolicyStr(defaultBondingPolicyStr); // Used if custom policy
+			// Custom Policies
+			json &customBondingPolicies = settings["policies"];
+			for (json::iterator policyItr = customBondingPolicies.begin(); policyItr != customBondingPolicies.end();++policyItr) {
+				fprintf(stderr, "\n\n--- (%s)\n", policyItr.key().c_str());
+				// Custom Policy
+				std::string customPolicyStr(policyItr.key());
+				json &customPolicy = policyItr.value();
+				std::string basePolicyStr(OSUtils::jsonString(customPolicy["basePolicy"],""));
+				if (_node->bondController()->getPolicyCodeByStr(basePolicyStr) == ZT_BONDING_POLICY_NONE) {
+					fprintf(stderr, "error: custom policy (%s) is invalid, unknown base policy (%s).\n",
+						customPolicyStr.c_str(), basePolicyStr.c_str());
+					continue;
+				} if (_node->bondController()->getPolicyCodeByStr(customPolicyStr) != ZT_BONDING_POLICY_NONE) {
+					fprintf(stderr, "error: custom policy (%s) will be ignored, cannot use standard policy names for custom policies.\n",
+						customPolicyStr.c_str());
+					continue;
+				}
+				// New bond, used as a copy template for new instances
+				SharedPtr<Bond> newTemplateBond = new Bond(basePolicyStr, customPolicyStr, SharedPtr<Peer>());
+				// Acceptable ranges
+				newTemplateBond->setMaxAcceptableLatency(OSUtils::jsonInt(customPolicy["maxAcceptableLatency"],-1));
+				newTemplateBond->setMaxAcceptableMeanLatency(OSUtils::jsonInt(customPolicy["maxAcceptableMeanLatency"],-1));
+				newTemplateBond->setMaxAcceptablePacketDelayVariance(OSUtils::jsonInt(customPolicy["maxAcceptablePacketDelayVariance"],-1));
+				newTemplateBond->setMaxAcceptablePacketLossRatio((float)OSUtils::jsonDouble(customPolicy["maxAcceptablePacketLossRatio"],-1));
+				newTemplateBond->setMaxAcceptablePacketErrorRatio((float)OSUtils::jsonDouble(customPolicy["maxAcceptablePacketErrorRatio"],-1));
+				newTemplateBond->setMinAcceptableAllocation((float)OSUtils::jsonDouble(customPolicy["minAcceptableAllocation"],0));
+				// Quality weights
+				json &qualityWeights = customPolicy["qualityWeights"];
+				if (qualityWeights.size() == ZT_QOS_WEIGHT_SIZE) { // TODO: Generalize this
+					float weights[ZT_QOS_WEIGHT_SIZE];
+					weights[ZT_QOS_LAT_IDX] = (float)OSUtils::jsonDouble(qualityWeights["lat"],0.0);
+					weights[ZT_QOS_LTM_IDX] = (float)OSUtils::jsonDouble(qualityWeights["ltm"],0.0);
+					weights[ZT_QOS_PDV_IDX] = (float)OSUtils::jsonDouble(qualityWeights["pdv"],0.0);
+					weights[ZT_QOS_PLR_IDX] = (float)OSUtils::jsonDouble(qualityWeights["plr"],0.0);
+					weights[ZT_QOS_PER_IDX] = (float)OSUtils::jsonDouble(qualityWeights["per"],0.0);
+					weights[ZT_QOS_THR_IDX] = (float)OSUtils::jsonDouble(qualityWeights["thr"],0.0);
+					weights[ZT_QOS_THM_IDX] = (float)OSUtils::jsonDouble(qualityWeights["thm"],0.0);
+					weights[ZT_QOS_THV_IDX] = (float)OSUtils::jsonDouble(qualityWeights["thv"],0.0);
+					newTemplateBond->setUserQualityWeights(weights,ZT_QOS_WEIGHT_SIZE);
+				}
+				// Bond-specific properties
+				newTemplateBond->setUpDelay(OSUtils::jsonInt(customPolicy["upDelay"],-1));
+				newTemplateBond->setDownDelay(OSUtils::jsonInt(customPolicy["downDelay"],-1));
+				newTemplateBond->setFailoverInterval(OSUtils::jsonInt(customPolicy["failoverInterval"],(uint64_t)0));
+				newTemplateBond->setPacketsPerSlave(OSUtils::jsonInt(customPolicy["packetsPerSlave"],-1));
+				std::string slaveMonitorStrategyStr(OSUtils::jsonString(customPolicy["slaveMonitorStrategy"],""));
+				uint8_t slaveMonitorStrategy = ZT_MULTIPATH_SLAVE_MONITOR_STRATEGY_DEFAULT;
+				if (slaveMonitorStrategyStr == "passive") { newTemplateBond->setSlaveMonitorStrategy(ZT_MULTIPATH_SLAVE_MONITOR_STRATEGY_PASSIVE); }
+				if (slaveMonitorStrategyStr == "active") { newTemplateBond->setSlaveMonitorStrategy(ZT_MULTIPATH_SLAVE_MONITOR_STRATEGY_ACTIVE); }
+				if (slaveMonitorStrategyStr == "dynamic") { newTemplateBond->setSlaveMonitorStrategy(ZT_MULTIPATH_SLAVE_MONITOR_STRATEGY_DYNAMIC); }
+				// Policy-Specific slave set
+				json &slaves = customPolicy["slaves"];
+				for (json::iterator slaveItr = slaves.begin(); slaveItr != slaves.end();++slaveItr) {
+					fprintf(stderr, "\t--- slave (%s)\n", slaveItr.key().c_str());
+					std::string slaveNameStr(slaveItr.key());
+					json &slave = slaveItr.value();
+
+					bool enabled = OSUtils::jsonInt(slave["enabled"],true);
+					uint32_t speed = OSUtils::jsonInt(slave["speed"],0);
+					float alloc = (float)OSUtils::jsonDouble(slave["alloc"],0);
+
+					if (speed && alloc) {
+						fprintf(stderr, "error: cannot specify both speed (%d) and alloc (%f) for slave (%s), pick one, slave disabled.\n",
+							speed, alloc, slaveNameStr.c_str());
+						enabled = false;
+					}
+					uint32_t upDelay = OSUtils::jsonInt(slave["upDelay"],-1);
+					uint32_t downDelay = OSUtils::jsonInt(slave["downDelay"],-1);
+					uint8_t ipvPref = OSUtils::jsonInt(slave["ipvPref"],0);
+					uint32_t slaveMonitorInterval = OSUtils::jsonInt(slave["monitorInterval"],(uint64_t)0);
+					std::string failoverToStr(OSUtils::jsonString(slave["failoverTo"],""));
+					// Mode
+					std::string slaveModeStr(OSUtils::jsonString(slave["mode"],"spare"));
+					uint8_t slaveMode = ZT_MULTIPATH_SLAVE_MODE_SPARE;
+					if (slaveModeStr == "primary") { slaveMode = ZT_MULTIPATH_SLAVE_MODE_PRIMARY; }
+					if (slaveModeStr == "spare") { slaveMode = ZT_MULTIPATH_SLAVE_MODE_SPARE; }
+					// ipvPref
+					if ((ipvPref != 0) && (ipvPref != 4) && (ipvPref != 6) && (ipvPref != 46) && (ipvPref != 64)) {
+						fprintf(stderr, "error: invalid ipvPref value (%d), slave disabled.\n", ipvPref);
+						enabled = false;
+					}
+					if (slaveMode == ZT_MULTIPATH_SLAVE_MODE_SPARE && failoverToStr.length()) {
+						fprintf(stderr, "error: cannot specify failover slaves for spares, slave disabled.\n");
+						failoverToStr = "";
+						enabled = false;
+					}
+					_node->bondController()->addCustomSlave(customPolicyStr, new Slave(slaveNameStr,ipvPref,speed,slaveMonitorInterval,upDelay,downDelay,enabled,slaveMode,failoverToStr,alloc));
+				}
+				// TODO: This is dumb
+				std::string slaveSelectMethodStr(OSUtils::jsonString(customPolicy["activeReselect"],"optimize"));
+				if (slaveSelectMethodStr == "always") { newTemplateBond->setSlaveSelectMethod(ZT_MULTIPATH_RESELECTION_POLICY_ALWAYS); }
+				if (slaveSelectMethodStr == "better") { newTemplateBond->setSlaveSelectMethod(ZT_MULTIPATH_RESELECTION_POLICY_BETTER); }
+				if (slaveSelectMethodStr == "failure") { newTemplateBond->setSlaveSelectMethod(ZT_MULTIPATH_RESELECTION_POLICY_FAILURE); }
+				if (slaveSelectMethodStr == "optimize") { newTemplateBond->setSlaveSelectMethod(ZT_MULTIPATH_RESELECTION_POLICY_OPTIMIZE); }
+				if (newTemplateBond->getSlaveSelectMethod() < 0 || newTemplateBond->getSlaveSelectMethod() > 3) {
+					fprintf(stderr, "warning: invalid value (%s) for slaveSelectMethod, assuming mode: always\n", slaveSelectMethodStr.c_str());
+				}
+				/*
+				newBond->setPolicy(_node->bondController()->getPolicyCodeByStr(basePolicyStr));
+				newBond->setFlowHashing((bool)OSUtils::jsonInt(userSpecifiedBondingPolicies[i]["allowFlowHashing"],(bool)allowFlowHashing));
+				newBond->setBondMonitorInterval((unsigned int)OSUtils::jsonInt(userSpecifiedBondingPolicies[i]["monitorInterval"],(uint64_t)0));
+				newBond->setAllowPathNegotiation((bool)OSUtils::jsonInt(userSpecifiedBondingPolicies[i]["allowPathNegotiation"],(bool)false));
+				*/
+				if (!_node->bondController()->addCustomPolicy(newTemplateBond)) {
+					fprintf(stderr, "error: a custom policy of this name (%s) already exists.\n", customPolicyStr.c_str());
+				}
+			}
+			// Peer-specific bonding
+			json &peerSpecificBonds = settings["peerSpecificBonds"];
+			for (json::iterator peerItr = peerSpecificBonds.begin(); peerItr != peerSpecificBonds.end();++peerItr) {
+				_node->bondController()->assignBondingPolicyToPeer(std::stoull(peerItr.key(),0,16), peerItr.value());
+			}
+			// Check settings
+			if (defaultBondingPolicyStr.length() && !defaultBondingPolicy && !_node->bondController()->inUse()) {
+				fprintf(stderr, "error: unknown policy (%s) specified by defaultBondingPolicy, slave disabled.\n", defaultBondingPolicyStr.c_str());
+			}
+		}
+
+		// bondingPolicy cannot be used with allowTcpFallbackRelay
+		_allowTcpFallbackRelay = OSUtils::jsonBool(settings["allowTcpFallbackRelay"],true) && !(_node->bondController()->inUse());
 		_primaryPort = (unsigned int)OSUtils::jsonInt(settings["primaryPort"],(uint64_t)_primaryPort) & 0xffff;
-		_multipathMode = (unsigned int)OSUtils::jsonInt(settings["multipathMode"],0);
-		// multipathMode cannot be used with allowTcpFallbackRelay
-		_allowTcpFallbackRelay = OSUtils::jsonBool(settings["allowTcpFallbackRelay"],true) && !_multipathMode;
 		_allowSecondaryPort = OSUtils::jsonBool(settings["allowSecondaryPort"],true);
 		_secondaryPort = (unsigned int)OSUtils::jsonInt(settings["secondaryPort"],0);
 		_tertiaryPort = (unsigned int)OSUtils::jsonInt(settings["tertiaryPort"],0);
@@ -1705,9 +1833,8 @@ public:
 				}
 			}
 #ifdef __SYNOLOGY__
-			if (!n.tap->addIps(newManagedIps)) {
+			if (!n.tap->addIpSyn(newManagedIps))
 				fprintf(stderr,"ERROR: unable to add ip addresses to ifcfg" ZT_EOL_S);
-			}
 #else
 			for(std::vector<InetAddress>::iterator ip(newManagedIps.begin());ip!=newManagedIps.end();++ip) {
 				if (std::find(n.managedIps.begin(),n.managedIps.end(),*ip) == n.managedIps.end()) {
@@ -2025,8 +2152,6 @@ public:
 					return;
 
 			}
-		} catch (std::exception &exc) {
-			_phy.close(sock);
 		} catch ( ... ) {
 			_phy.close(sock);
 		}
@@ -2134,8 +2259,6 @@ public:
 						fprintf(stderr,"ERROR: unable to configure virtual network port: %s" ZT_EOL_S,exc.what());
 #endif
 						_nets.erase(nwid);
-						return -999;
-					} catch (int exc) {
 						return -999;
 					} catch ( ... ) {
 						return -999; // tap init failed
@@ -2743,6 +2866,7 @@ public:
 				if (!strncmp(p->c_str(),ifname,p->length()))
 					return false;
 			}
+			return _node->bondController()->allowedToBind(std::string(ifname));
 		}
 		{
 			// Check global blacklists

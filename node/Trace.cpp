@@ -94,29 +94,26 @@ void Trace::peerConfirmingUnknownPath(void *const tPtr,const uint64_t networkId,
 	}
 }
 
-void Trace::peerLinkNowAggregate(void *const tPtr,Peer &peer)
+void Trace::peerLinkNowRedundant(void *const tPtr,Peer &peer)
 {
-	if ((RR->node->getMultipathMode() == ZT_MULTIPATH_BALANCE_RANDOM)) {
-		ZT_LOCAL_TRACE(tPtr,RR,"link to peer %.10llx is now a randomly-distributed aggregate link",peer.address().toInt());
-	}
-	if ((RR->node->getMultipathMode() == ZT_MULTIPATH_BALANCE_DYNAMIC_OPAQUE)) {
-		ZT_LOCAL_TRACE(tPtr,RR,"link to peer %.10llx is now a proportionally-balanced aggregate link",peer.address().toInt());
-	}
+	//ZT_LOCAL_TRACE(tPtr,RR,"link to peer %.10llx is fully redundant",peer.address().toInt());
 }
 
-void Trace::peerLinkNoLongerAggregate(void *const tPtr,Peer &peer)
+void Trace::peerLinkNoLongerRedundant(void *const tPtr,Peer &peer)
 {
-	ZT_LOCAL_TRACE(tPtr,RR,"link to peer %.10llx has degraded and is no longer an aggregate link",peer.address().toInt());
+	//ZT_LOCAL_TRACE(tPtr,RR,"link to peer %.10llx is no longer redundant",peer.address().toInt());
 }
 
 void Trace::peerLinkAggregateStatistics(void *const tPtr,Peer &peer)
 {
-	ZT_LOCAL_TRACE(tPtr,RR,"link to peer %.10llx is composed of (%d) physical paths %s, has PDV (%.0f ms), mean latency (%.0f ms)",
+	/*
+	ZT_LOCAL_TRACE(tPtr,RR,"link to peer %.10llx is composed of (%d) physical paths %s, has packet delay variance (%.0f ms), mean latency (%.0f ms)",
 		peer.address().toInt(),
 		peer.aggregateLinkPhysicalPathCount(),
 		peer.interfaceListStr(),
 		peer.computeAggregateLinkPacketDelayVariance(),
 		peer.computeAggregateLinkMeanLatency());
+	*/
 }
 
 void Trace::peerLearnedNewPath(void *const tPtr,const uint64_t networkId,Peer &peer,const SharedPtr<Path> &newPath,const uint64_t packetId)

@@ -1,10 +1,10 @@
 /*
- * Copyright (c)2019 ZeroTier, Inc.
+ * Copyright (c)2013-2020 ZeroTier, Inc.
  *
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2023-01-01
+ * Change Date: 2024-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -259,46 +259,6 @@ public:
 		if (s) {
 			memcpy(&(reinterpret_cast<PhySocketImpl *>(s)->ifname), ifname, len);
 		}
-	}
-
-	/**
-	 * Whether or not the socket object is in a closed state
-	 *
-	 * @param s Socket object
-	 * @return true if socket is closed, false if otherwise
-	 */
-	inline bool isClosed(PhySocket *s)
-	{
-		PhySocketImpl *sws = (reinterpret_cast<PhySocketImpl *>(s));
-		return sws->type == ZT_PHY_SOCKET_CLOSED;
-	}
-
-	/**
-	 * Get state of socket object
-	 *
-	 * @param s Socket object
-	 * @return State of socket
-	 */
-	inline int getState(PhySocket *s)
-	{
-		PhySocketImpl *sws = (reinterpret_cast<PhySocketImpl *>(s));
-		return sws->type;
-	}
-
-	/**
-	 * In the event that this socket is erased, we need a way to convey to the multipath logic
-	 * that this path is no longer valid.
-	 *
-	 * @param s Socket object
-	 * @return Whether the state of this socket is within an acceptable range of values
-	 */
-	inline bool isValidState(PhySocket *s)
-	{
-		if (s) {
-			PhySocketImpl *sws = (reinterpret_cast<PhySocketImpl *>(s));
-			return sws->type >= ZT_PHY_SOCKET_CLOSED && sws->type <= ZT_PHY_SOCKET_UNIX_LISTEN;
-		}
-		return false;
 	}
 
 	/**

@@ -1,10 +1,10 @@
 /*
- * Copyright (c)2019 ZeroTier, Inc.
+ * Copyright (c)2013-2020 ZeroTier, Inc.
  *
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2023-01-01
+ * Change Date: 2024-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -58,6 +58,8 @@ class Switch
 {
 	struct ManagedQueue;
 	struct TXQueueEntry;
+
+	friend class SharedPtr<Peer>;
 
 	typedef struct {
 		TXQueueEntry *p;
@@ -123,7 +125,7 @@ public:
 	 * @param encrypt Encrypt packet payload? (always true except for HELLO)
 	 * @param qosBucket Which bucket the rule-system determined this packet should fall into
 	 */
-	void aqm_enqueue(void *tPtr, const SharedPtr<Network> &network, Packet &packet,bool encrypt,int qosBucket,int64_t flowId = -1);
+	void aqm_enqueue(void *tPtr, const SharedPtr<Network> &network, Packet &packet,bool encrypt,int qosBucket,int32_t flowId = ZT_QOS_NO_FLOW);
 
 	/**
 	 * Performs a single AQM cycle and dequeues and transmits all eligible packets on all networks
@@ -169,7 +171,7 @@ public:
 	 * @param packet Packet to send (buffer may be modified)
 	 * @param encrypt Encrypt packet payload? (always true except for HELLO)
 	 */
-	void send(void *tPtr,Packet &packet,bool encrypt,int64_t flowId = -1);
+	void send(void *tPtr,Packet &packet,bool encrypt,int32_t flowId = ZT_QOS_NO_FLOW);
 
 	/**
 	 * Request WHOIS on a given address
@@ -204,7 +206,8 @@ public:
 
 private:
 	bool _shouldUnite(const int64_t now,const Address &source,const Address &destination);
-	bool _trySend(void *tPtr,Packet &packet,bool encrypt,int64_t flowId = -1); // packet is modified if return is true
+	bool _trySend(void *tPtr,Packet &packet,bool encrypt,int32_t flowId = ZT_QOS_NO_FLOW); // packet is modified if return is true
+	void _sendViaSpecificPath(void *tPtr,SharedPtr<Peer> peer,SharedPtr<Path> viaPath,int64_t now,Packet &packet,bool encrypt,int32_t flowId);
 
 	const RuntimeEnvironment *const RR;
 	int64_t _lastBeaconResponse;
@@ -225,6 +228,7 @@ private:
 		unsigned int totalFragments; // 0 if only frag0 received, waiting for frags
 		uint32_t haveFragments; // bit mask, LSB to MSB
 		volatile bool complete; // if true, packet is complete
+		volatile int32_t flowId;
 		Mutex lock;
 	};
 	RXQueueEntry _rxQueue[ZT_RX_QUEUE_SIZE];
@@ -253,7 +257,7 @@ private:
 	struct TXQueueEntry
 	{
 		TXQueueEntry() {}
-		TXQueueEntry(Address d,uint64_t ct,const Packet &p,bool enc,int64_t fid) :
+		TXQueueEntry(Address d,uint64_t ct,const Packet &p,bool enc,int32_t fid) :
 			dest(d),
 			creationTime(ct),
 			packet(p),
@@ -264,7 +268,7 @@ private:
 		uint64_t creationTime;
 		Packet packet; // unencrypted/unMAC'd packet -- this is done at send time
 		bool encrypt;
-		int64_t flowId;
+		int32_t flowId;
 	};
 	std::list< TXQueueEntry > _txQueue;
 	Mutex _txQueue_m;
@@ -296,7 +300,7 @@ private:
 	{
 		ManagedQueue(int id) :
 			id(id),
-			byteCredit(ZT_QOS_QUANTUM),
+			byteCredit(ZT_AQM_QUANTUM),
 			byteLength(0),
 			dropping(false)
 		{}

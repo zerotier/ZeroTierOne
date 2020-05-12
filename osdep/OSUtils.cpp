@@ -1,10 +1,10 @@
 /*
- * Copyright (c)2019 ZeroTier, Inc.
+ * Copyright (c)2013-2020 ZeroTier, Inc.
  *
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2023-01-01
+ * Change Date: 2024-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -454,6 +454,22 @@ uint64_t OSUtils::jsonInt(const nlohmann::json &jv,const uint64_t dfl)
 			return Utils::strToU64(s.c_str());
 		} else if (jv.is_boolean()) {
 			return ((bool)jv ? 1ULL : 0ULL);
+		}
+	} catch ( ... ) {}
+	return dfl;
+}
+
+double OSUtils::jsonDouble(const nlohmann::json &jv,const double dfl)
+{
+	try {
+		if (jv.is_number()) {
+			return (double)jv;
+		}
+		else if (jv.is_string()) {
+			std::string s = jv;
+			return Utils::strToDouble(s.c_str());
+		} else if (jv.is_boolean()) {
+			return (double)jv;
 		}
 	} catch ( ... ) {}
 	return dfl;
