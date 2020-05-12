@@ -92,7 +92,6 @@ Example:
 | v6AssignMode          | object        | IPv6 management and assign options (see below)    | YES      |
 | mtu                   | integer       | Network MTU (default: 2800)                       | YES      |
 | multicastLimit        | integer       | Maximum recipients for a multicast packet         | YES      |
-| creationTime          | integer       | Time network was first created                    | no       |
 | revision              | integer       | Network config revision counter                   | no       |
 | routes                | array[object] | Managed IPv4 and IPv6 routes; see below           | YES      |
 | ipAssignmentPools     | array[object] | IP auto-assign ranges; see below                  | YES      |

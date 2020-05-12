@@ -1,9 +1,9 @@
 Name:           zerotier-one
-Version:        1.4.2
-Release:        2%{?dist}
+Version:        1.4.6
+Release:        1%{?dist}
 Summary:        ZeroTier One network virtualization service
 
-License:        GPLv3
+License:        ZeroTier BSL 1.1
 URL:            https://www.zerotier.com
 
 %if 0%{?rhel} >= 7
@@ -145,6 +145,9 @@ esac
 %endif
 
 %changelog
+* Fri Aug 23 2019 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.4.4-0.1
+- see https://github.com/zerotier/ZeroTierOne for release notes
+
 * Mon Aug 04 2019 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.4.2-0.1
 - see https://github.com/zerotier/ZeroTierOne for release notes
 

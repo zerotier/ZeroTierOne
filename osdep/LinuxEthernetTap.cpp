@@ -1,28 +1,15 @@
 /*
- * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2019  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (c)2019 ZeroTier, Inc.
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file in the project's root directory.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Change Date: 2023-01-01
  *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
- *
- * --
- *
- * You can be released from the requirements of the license by purchasing
- * a commercial license. Buying such a license is mandatory as soon as you
- * develop commercial closed-source software that incorporates or links
- * directly against ZeroTier software without disclosing the source code
- * of your own application.
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2.0 of the Apache License.
  */
+/****/
 
 #include "../node/Constants.hpp"
 
@@ -103,7 +90,7 @@ LinuxEthernetTap::LinuxEthernetTap(
 
 	// ensure netlink connection is started
 	(void)LinuxNetLink::getInstance();
-	
+
 	OSUtils::ztsnprintf(nwids,sizeof(nwids),"%.16llx",nwid);
 
 	Mutex::Lock _l(__tapCreateLock); // create only one tap at a time, globally
@@ -274,10 +261,9 @@ static bool ___removeIp(const std::string &_dev,const InetAddress &ip)
 	return true;
 }
 
-#ifdef __SYNOLOGY__
-bool LinuxEthernetTap::addIpSyn(std::vector<InetAddress> ips)
+bool LinuxEthernetTap::addIps(std::vector<InetAddress> ips)
 {
-	// Here we fill out interface config (ifcfg-dev) to prevent it from being killed
+#ifdef __SYNOLOGY__
 	std::string filepath = "/etc/sysconfig/network-scripts/ifcfg-"+_dev;
 	std::string cfg_contents = "DEVICE="+_dev+"\nBOOTPROTO=static";
 	int ip4=0,ip6=0,ip4_tot=0,ip6_tot=0;
@@ -305,13 +291,14 @@ bool LinuxEthernetTap::addIpSyn(std::vector<InetAddress> ips)
 		}
 	}
 	OSUtils::writeFile(filepath.c_str(), cfg_contents.c_str(), cfg_contents.length());
-	// Finaly, add IPs
+	// Finally, add IPs
 	for(int i=0; i<(int)ips.size(); i++){
 		LinuxNetLink::getInstance().addAddress(ips[i], _dev.c_str());
 	}
 	return true;
-}
 #endif // __SYNOLOGY__
+	return false;
+}
 
 bool LinuxEthernetTap::addIp(const InetAddress &ip)
 {

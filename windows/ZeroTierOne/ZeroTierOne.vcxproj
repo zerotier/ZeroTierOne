@@ -113,7 +113,20 @@
     <ClCompile Include="..\..\service\SoftwareUpdater.cpp" />
     <ClCompile Include="ServiceBase.cpp" />
     <ClCompile Include="ServiceInstaller.cpp" />
-    <ClCompile Include="ZeroTierOneService.cpp" />
+    <ClCompile Include="ZeroTierOneService.cpp">
+      <FunctionLevelLinking Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</FunctionLevelLinking>
+      <EnableParallelCodeGeneration Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</EnableParallelCodeGeneration>
+      <FunctionLevelLinking Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</FunctionLevelLinking>
+      <EnableParallelCodeGeneration Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</EnableParallelCodeGeneration>
+      <EnableEnhancedInstructionSet Condition="'$(Configuration)|$(Platform)'=='Release|x64'">StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+      <EnableEnhancedInstructionSet Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NoExtensions</EnableEnhancedInstructionSet>
+      <FloatingPointExceptions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</FloatingPointExceptions>
+      <CreateHotpatchableImage Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</CreateHotpatchableImage>
+      <FloatingPointExceptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</FloatingPointExceptions>
+      <CreateHotpatchableImage Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</CreateHotpatchableImage>
+      <EnableEnhancedInstructionSet Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+      <EnableEnhancedInstructionSet Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NoExtensions</EnableEnhancedInstructionSet>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\controller\DB.hpp" />
@@ -207,37 +220,37 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{B00A4957-5977-4AC1-9EF4-571DC27EADA2}</ProjectGuid>
     <RootNamespace>ZeroTierOne</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Profile|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
     <UseOfMfc>Static</UseOfMfc>
@@ -245,7 +258,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
     <UseOfMfc>Static</UseOfMfc>

@@ -1,28 +1,15 @@
 /*
- * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2019  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (c)2019 ZeroTier, Inc.
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file in the project's root directory.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Change Date: 2023-01-01
  *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
- *
- * --
- *
- * You can be released from the requirements of the license by purchasing
- * a commercial license. Buying such a license is mandatory as soon as you
- * develop commercial closed-source software that incorporates or links
- * directly against ZeroTier software without disclosing the source code
- * of your own application.
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2.0 of the Apache License.
  */
+/****/
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -96,12 +83,8 @@ using namespace ZeroTier;
 static OneService *volatile zt1Service = (OneService *)0;
 
 #define PROGRAM_NAME "ZeroTier One"
-#define COPYRIGHT_NOTICE "Copyright (c) 2011-2018 ZeroTier, Inc."
-#define LICENSE_GRANT \
-	"This is free software: you may copy, modify, and/or distribute this" ZT_EOL_S \
-	"work under the terms of the GNU General Public License, version 3 or" ZT_EOL_S \
-	"later as published by the Free Software Foundation." ZT_EOL_S \
-	"No warranty expressed or implied." ZT_EOL_S
+#define COPYRIGHT_NOTICE "Copyright (c) 2019 ZeroTier, Inc."
+#define LICENSE_GRANT "Licensed under the ZeroTier BSL 1.1 (see LICENSE.txt)"
 
 /****************************************************************************/
 /* zerotier-cli personality                                                 */
@@ -132,10 +115,10 @@ static void cliPrintHelp(const char *pn,FILE *out)
 	fprintf(out,"  listpeers               - List all peers" ZT_EOL_S);
 	fprintf(out,"  peers                   - List all peers (prettier)" ZT_EOL_S);
 	fprintf(out,"  listnetworks            - List all networks" ZT_EOL_S);
-	fprintf(out,"  join <network>          - Join a network" ZT_EOL_S);
-	fprintf(out,"  leave <network>         - Leave a network" ZT_EOL_S);
-	fprintf(out,"  set <network> <setting> - Set a network setting" ZT_EOL_S);
-	fprintf(out,"  get <network> <setting> - Get a network setting" ZT_EOL_S);
+	fprintf(out,"  join <network ID>          - Join a network" ZT_EOL_S);
+	fprintf(out,"  leave <network ID>         - Leave a network" ZT_EOL_S);
+	fprintf(out,"  set <network ID> <setting> - Set a network setting" ZT_EOL_S);
+	fprintf(out,"  get <network ID> <setting> - Get a network setting" ZT_EOL_S);
 	fprintf(out,"  listmoons               - List moons (federated root sets)" ZT_EOL_S);
 	fprintf(out,"  orbit <world ID> <seed> - Join a moon via any member root" ZT_EOL_S);
 	fprintf(out,"  deorbit <world ID>      - Leave a moon" ZT_EOL_S);
@@ -143,7 +126,7 @@ static void cliPrintHelp(const char *pn,FILE *out)
 	fprintf(out,"  Settings to use with [get/set] may include property names from " ZT_EOL_S);
 	fprintf(out,"  the JSON output of \"zerotier-cli -j listnetworks\". Additionally, " ZT_EOL_S);
 	fprintf(out,"  (ip, ip4, ip6, ip6plane, and ip6prefix can be used). For instance:" ZT_EOL_S);
-	fprintf(out,"  zerotier-cli get <nwid> ip6plane will return the 6PLANE address" ZT_EOL_S);
+	fprintf(out,"  zerotier-cli get <network ID> ip6plane will return the 6PLANE address" ZT_EOL_S);
 	fprintf(out,"  assigned to this node." ZT_EOL_S);
 }
 

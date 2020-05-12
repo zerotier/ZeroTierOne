@@ -1,28 +1,15 @@
 /*
- * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2019  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (c)2019 ZeroTier, Inc.
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file in the project's root directory.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Change Date: 2023-01-01
  *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
- *
- * --
- *
- * You can be released from the requirements of the license by purchasing
- * a commercial license. Buying such a license is mandatory as soon as you
- * develop commercial closed-source software that incorporates or links
- * directly against ZeroTier software without disclosing the source code
- * of your own application.
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2.0 of the Apache License.
  */
+/****/
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -627,8 +614,9 @@ void Switch::aqm_enqueue(void *tPtr, const SharedPtr<Network> &network, Packet &
 	}
 	// Don't apply QoS scheduling to ZT protocol traffic
 	if (packet.verb() != Packet::VERB_FRAME && packet.verb() != Packet::VERB_EXT_FRAME) {
+		// just send packet normally, no QoS for ZT protocol traffic
 		send(tPtr, packet, encrypt, flowId);
-	} 
+	}
 
 	_aqm_m.lock();
 
@@ -636,7 +624,6 @@ void Switch::aqm_enqueue(void *tPtr, const SharedPtr<Network> &network, Packet &
 
 	const Address dest(packet.destination());
 	TXQueueEntry *txEntry = new TXQueueEntry(dest,RR->node->now(),packet,encrypt,flowId);
-	
 	ManagedQueue *selectedQueue = nullptr;
 	for (size_t i=0; i<ZT_QOS_NUM_BUCKETS; i++) {
 		if (i < nqcb->oldQueues.size()) { // search old queues first (I think this is best since old would imply most recent usage of the queue)
@@ -710,7 +697,7 @@ uint64_t Switch::control_law(uint64_t t, int count)
 	return (uint64_t)(t + ZT_QOS_INTERVAL / sqrt(count));
 }
 
-Switch::dqr Switch::dodequeue(ManagedQueue *q, uint64_t now) 
+Switch::dqr Switch::dodequeue(ManagedQueue *q, uint64_t now)
 {
 	dqr r;
 	r.ok_to_drop = false;

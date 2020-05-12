@@ -1,28 +1,15 @@
 /*
- * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2019  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (c)2019 ZeroTier, Inc.
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file in the project's root directory.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Change Date: 2023-01-01
  *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
- *
- * --
- *
- * You can be released from the requirements of the license by purchasing
- * a commercial license. Buying such a license is mandatory as soon as you
- * develop commercial closed-source software that incorporates or links
- * directly against ZeroTier software without disclosing the source code
- * of your own application.
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2.0 of the Apache License.
  */
+/****/
 
 /*
  * This creates a pair of feth devices with the lower numbered device
@@ -30,10 +17,10 @@
  * used to actually read and write packets. The latter gets no IP config
  * and is only used for I/O. The behavior of feth is similar to the
  * veth pairs that exist on Linux.
- * 
+ *
  * The feth device has only existed since MacOS Sierra, but that's fairly
  * long ago in Mac terms.
- * 
+ *
  * I/O with feth must be done using two different sockets. The BPF socket
  * is used to receive packets, while an AF_NDRV (low-level network driver
  * access) socket must be used to inject. AF_NDRV can't read IP frames
@@ -41,20 +28,20 @@
  * been handled, and while BPF can inject its MTU for injected packets
  * is limited to 2048. AF_NDRV packet injection is required to inject
  * ZeroTier's large MTU frames.
- * 
+ *
  * Benchmarks show that this performs similarly to the old tap.kext driver,
  * and a kext is no longer required. Splitting it off into an agent will
  * also make it easier to have zerotier-one itself drop permissions.
- * 
+ *
  * All this stuff is basically undocumented. A lot of tracing through
  * the Darwin/XNU kernel source was required to figure out how to make
  * this actually work.
- * 
+ *
  * See also:
- * 
+ *
  * https://apple.stackexchange.com/questions/337715/fake-ethernet-interfaces-feth-if-fake-anyone-ever-seen-this
  * https://opensource.apple.com/source/xnu/xnu-4570.41.2/bsd/net/if_fake.c.auto.html
- * 
+ *
  */
 
 #include <stdio.h>

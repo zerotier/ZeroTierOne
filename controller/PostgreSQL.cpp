@@ -1,28 +1,15 @@
 /*
- * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2019  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (c)2019 ZeroTier, Inc.
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file in the project's root directory.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Change Date: 2023-01-01
  *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
- *
- * --
- *
- * You can be released from the requirements of the license by purchasing
- * a commercial license. Buying such a license is mandatory as soon as you
- * develop commercial closed-source software that incorporates or links
- * directly against ZeroTier software without disclosing the source code
- * of your own application.
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2.0 of the Apache License.
  */
+/****/
 
 #include "PostgreSQL.hpp"
 
@@ -30,13 +17,12 @@
 
 #include "../node/Constants.hpp"
 #include "EmbeddedNetworkController.hpp"
-#include "RabbitMQ.hpp"
 #include "../version.h"
+#include "hiredis.h"
 
 #include <libpq-fe.h>
 #include <sstream>
-#include <amqp.h>
-#include <amqp_tcp_socket.h>
+
 
 using json = nlohmann::json;
 
@@ -82,7 +68,7 @@ std::string join(const std::vector<std::string> &elements, const char * const se
 
 using namespace ZeroTier;
 
-PostgreSQL::PostgreSQL(const Identity &myId, const char *path, int listenPort, MQConfig *mqc)
+PostgreSQL::PostgreSQL(const Identity &myId, const char *path, int listenPort)
 	: DB()
 	, _myId(myId)
 	, _myAddress(myId.address())
@@ -91,7 +77,6 @@ PostgreSQL::PostgreSQL(const Identity &myId, const char *path, int listenPort, M
 	, _run(1)
 	, _waitNoticePrinted(false)
 	, _listenPort(listenPort)
-	, _mqc(mqc)
 {
 	char myAddress[64];
 	_myAddressStr = myId.address().toString(myAddress);
@@ -141,7 +126,7 @@ PostgreSQL::~PostgreSQL()
 {
 	_run = 0;
 	std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	
+
 	_heartbeatThread.join();
 	_membersDbWatcher.join();
 	_networksDbWatcher.join();
@@ -222,7 +207,7 @@ void PostgreSQL::eraseNetwork(const uint64_t networkId)
 	_commitQueue.post(tmp);
 }
 
-void PostgreSQL::eraseMember(const uint64_t networkId, const uint64_t memberId) 
+void PostgreSQL::eraseMember(const uint64_t networkId, const uint64_t memberId)
 {
 	char tmp2[24];
 	std::pair<nlohmann::json,bool> tmp;
@@ -267,7 +252,7 @@ void PostgreSQL::initializeNetworks(PGconn *conn)
 			NULL,
 			NULL,
 			0);
-		
+
 		if (PQresultStatus(res) != PGRES_TUPLES_OK) {
 			fprintf(stderr, "Networks Initialization Failed: %s", PQerrorMessage(conn));
 			PQclear(res);
@@ -339,7 +324,7 @@ void PostgreSQL::initializeNetworks(PGconn *conn)
 				NULL,
 				NULL,
 				0);
-			
+
 			if (PQresultStatus(r2) != PGRES_TUPLES_OK) {
 				fprintf(stderr, "ERROR: Error retreiving IP pools for network: %s\n", PQresultErrorMessage(r2));
 				PQclear(r2);
@@ -391,7 +376,7 @@ void PostgreSQL::initializeNetworks(PGconn *conn)
 			}
 
 			PQclear(r2);
-			
+
 			_networkChanged(empty, config, false);
 		}
 
@@ -543,7 +528,12 @@ void PostgreSQL::initializeMembers(PGconn *conn)
 
 			int n = PQntuples(r2);
 			for (int j = 0; j < n; ++j) {
-				config["ipAssignments"].push_back(PQgetvalue(r2, j, 0));
+				std::string ipaddr = PQgetvalue(r2, j, 0);
+				std::size_t pos = ipaddr.find('/');
+				if (pos != std::string::npos) {
+					ipaddr = ipaddr.substr(0, pos);
+				}
+				config["ipAssignments"].push_back(ipaddr);
 			}
 
 			_memberChanged(empty, config, false);
@@ -601,7 +591,7 @@ void PostgreSQL::heartbeat()
 			std::string build = std::to_string(ZEROTIER_ONE_VERSION_BUILD);
 			std::string now = std::to_string(OSUtils::now());
 			std::string host_port = std::to_string(_listenPort);
-			std::string use_rabbitmq = (_mqc != NULL) ? "true" : "false";
+			std::string use_rabbitmq = (false) ? "true" : "false";
 			const char *values[10] = {
 				controllerId,
 				hostname,
@@ -616,7 +606,7 @@ void PostgreSQL::heartbeat()
 			};
 
 			PGresult *res = PQexecParams(conn,
-				"INSERT INTO ztc_controller (id, cluster_host, last_alive, public_identity, v_major, v_minor, v_rev, v_build, host_port, use_rabbitmq) " 
+				"INSERT INTO ztc_controller (id, cluster_host, last_alive, public_identity, v_major, v_minor, v_rev, v_build, host_port, use_rabbitmq) "
 				"VALUES ($1, $2, TO_TIMESTAMP($3::double precision/1000), $4, $5, $6, $7, $8, $9, $10) "
 				"ON CONFLICT (id) DO UPDATE SET cluster_host = EXCLUDED.cluster_host, last_alive = EXCLUDED.last_alive, "
 				"public_identity = EXCLUDED.public_identity, v_major = EXCLUDED.v_major, v_minor = EXCLUDED.v_minor, "
@@ -653,10 +643,10 @@ void PostgreSQL::membersDbWatcher()
 
 	initializeMembers(conn);
 
-	if (this->_mqc != NULL) {
-		PQfinish(conn);
-		conn = NULL;
-		_membersWatcher_RabbitMQ();
+	if (false) {
+		// PQfinish(conn);
+		// conn = NULL;
+		// _membersWatcher_RabbitMQ();
 	} else {
 		_membersWatcher_Postgres(conn);
 		PQfinish(conn);
@@ -711,41 +701,9 @@ void PostgreSQL::_membersWatcher_Postgres(PGconn *conn) {
 	}
 }
 
-void PostgreSQL::_membersWatcher_RabbitMQ() {
-	char buf[11] = {0};
-	std::string qname = "member_"+ std::string(_myAddress.toString(buf));
-	RabbitMQ rmq(_mqc, qname.c_str());
-	try {
-		rmq.init();
-	} catch (std::runtime_error &e) {
-		fprintf(stderr, "RABBITMQ ERROR: %s\n", e.what());
-		exit(11);
-	}
-	while (_run == 1) {
-		try {
-			std::string msg = rmq.consume();
-			// fprintf(stderr, "Got Member Update: %s\n", msg.c_str());
-			if (msg.empty()) {
-				continue;
-			}
-			json tmp(json::parse(msg));
-			json &ov = tmp["old_val"];
-			json &nv = tmp["new_val"];
-			json oldConfig, newConfig;
-			if (ov.is_object()) oldConfig = ov;
-			if (nv.is_object()) newConfig = nv;
-			if (oldConfig.is_object() || newConfig.is_object()) {
-				_memberChanged(oldConfig,newConfig,(this->_ready>=2));
-			}
-		} catch (std::runtime_error &e) {
-			fprintf(stderr, "RABBITMQ ERROR member change: %s\n", e.what());
-			break;
-		} catch(std::exception &e ) {
-			fprintf(stderr, "RABBITMQ ERROR member change: %s\n", e.what());
-		} catch(...) {
-			fprintf(stderr, "RABBITMQ ERROR member change: unknown error\n");
-		}
-	}
+void PostgreSQL::_membersWatcher_Reids() {
+	char buff[11] = {0};
+	
 }
 
 void PostgreSQL::networksDbWatcher()
@@ -759,21 +717,21 @@ void PostgreSQL::networksDbWatcher()
 
 	initializeNetworks(conn);
 
-	if (this->_mqc != NULL) {
-		PQfinish(conn);
-		conn = NULL;
-		_networksWatcher_RabbitMQ();
+	if (false) {
+		// PQfinish(conn);
+		// conn = NULL;
+		// _networksWatcher_RabbitMQ();
 	} else {
 		_networksWatcher_Postgres(conn);
 		PQfinish(conn);
 		conn = NULL;
 	}
-	
+
 	if (_run == 1) {
 		fprintf(stderr, "ERROR: %s networksDbWatcher should still be running! Exiting Controller.\n", _myAddressStr.c_str());
 		exit(8);
 	}
-	fprintf(stderr, "Exited membersDbWatcher\n");
+	fprintf(stderr, "Exited networksDbWatcher\n");
 }
 
 void PostgreSQL::_networksWatcher_Postgres(PGconn *conn) {
@@ -815,41 +773,8 @@ void PostgreSQL::_networksWatcher_Postgres(PGconn *conn) {
 	}
 }
 
-void PostgreSQL::_networksWatcher_RabbitMQ() {
-	char buf[11] = {0};
-	std::string qname = "network_"+ std::string(_myAddress.toString(buf));
-	RabbitMQ rmq(_mqc, qname.c_str());
-	try {
-		rmq.init();
-	} catch (std::runtime_error &e) {
-		fprintf(stderr, "RABBITMQ ERROR: %s\n", e.what());
-		exit(11);
-	}
-	while (_run == 1) {
-		try {
-			std::string msg = rmq.consume();
-			if (msg.empty()) {
-				continue;
-			}
-			// fprintf(stderr, "Got network update: %s\n", msg.c_str());
-			json tmp(json::parse(msg));
-			json &ov = tmp["old_val"];
-			json &nv = tmp["new_val"];
-			json oldConfig, newConfig;
-			if (ov.is_object()) oldConfig = ov;
-			if (nv.is_object()) newConfig = nv;
-			if (oldConfig.is_object()||newConfig.is_object()) {
-				_networkChanged(oldConfig,newConfig,(this->_ready >= 2));
-			}
-		} catch (std::runtime_error &e) {
-			fprintf(stderr, "RABBITMQ ERROR: %s\n", e.what());
-			break;
-		} catch (std::exception &e) {
-			fprintf(stderr, "RABBITMQ ERROR network watcher: %s\n", e.what());
-		} catch(...) {
-			fprintf(stderr, "RABBITMQ ERROR network watcher: unknown error\n");
-		}
-	}
+void PostgreSQL::_networksWatcher_Redis() {
+
 }
 
 void PostgreSQL::commitThread()
@@ -934,7 +859,7 @@ void PostgreSQL::commitThread()
 						NULL,
 						NULL,
 						0);
-					
+
 					if (PQresultStatus(res) != PGRES_COMMAND_OK) {
 						fprintf(stderr, "ERROR: Error updating member: %s\n", PQresultErrorMessage(res));
 						fprintf(stderr, "%s", OSUtils::jsonDump(*config, 2).c_str());
@@ -997,20 +922,21 @@ void PostgreSQL::commitThread()
 						};
 
 						res = PQexecParams(conn,
-							"INSERT INTO ztc_member_ip_assignment (member_id, network_id, address) VALUES ($1, $2, $3)",
+							"INSERT INTO ztc_member_ip_assignment (member_id, network_id, address) VALUES ($1, $2, $3) ON CONFLICT (network_id, member_id, address) DO NOTHING",
 							3,
 							NULL,
 							v3,
 							NULL,
 							NULL,
 							0);
-						
+
 						if (PQresultStatus(res) != PGRES_COMMAND_OK) {
 							fprintf(stderr, "ERROR: Error setting IP addresses for member: %s\n", PQresultErrorMessage(res));
 							PQclear(res);
 							PQclear(PQexec(conn, "ROLLBACK"));
 							break;;
 						}
+						assignments.push_back(addr);
 					}
 
 					res = PQexec(conn, "COMMIT");
@@ -1029,7 +955,7 @@ void PostgreSQL::commitThread()
 						nlohmann::json memNew(*config);
 
 						get(nwidInt, nwOrig, memberidInt, memOrig);
-				
+
 						_memberChanged(memOrig, memNew, qitem.second);
 					} else {
 						fprintf(stderr, "Can't notify of change.  Error parsing nwid or memberid: %llu-%llu\n", (unsigned long long)nwidInt, (unsigned long long)memberidInt);
@@ -1111,7 +1037,7 @@ void PostgreSQL::commitThread()
 						NULL,
 						NULL,
 						0);
-					
+
 					if (PQresultStatus(res) != PGRES_COMMAND_OK) {
 						fprintf(stderr, "ERROR: Error updating network record: %s\n", PQresultErrorMessage(res));
 						PQclear(res);
@@ -1136,7 +1062,7 @@ void PostgreSQL::commitThread()
 					const char *params[1] = {
 						id.c_str()
 					};
-					res = PQexecParams(conn, 
+					res = PQexecParams(conn,
 						"DELETE FROM ztc_network_assignment_pool WHERE network_id = $1",
 						1,
 						NULL,
@@ -1190,7 +1116,7 @@ void PostgreSQL::commitThread()
 						continue;
 					}
 
-					res = PQexecParams(conn, 
+					res = PQexecParams(conn,
 						"DELETE FROM ztc_network_route WHERE network_id = $1",
 						1,
 						NULL,
@@ -1295,7 +1221,7 @@ void PostgreSQL::commitThread()
 						NULL,
 						NULL,
 						0);
-					
+
 					if (PQresultStatus(res) != PGRES_COMMAND_OK) {
 						fprintf(stderr, "ERROR: Error deleting network: %s\n", PQresultErrorMessage(res));
 					}
@@ -1395,16 +1321,16 @@ void PostgreSQL::onlineNotificationThread()
 			if (found == _networks.end()) {
 				continue; // skip members trying to join non-existant networks
 			}
-			
+
 			std::string networkId(nwidTmp);
 			std::string memberId(memTmp);
-			
+
 			std::vector<std::string> &members = updateMap[networkId];
 			members.push_back(memberId);
 
 			lastOnlineCumulative[i->first] = i->second.first;
-			
-			
+
+
 			const char *qvals[2] = {
 				networkId.c_str(),
 				memberId.c_str()
@@ -1432,7 +1358,7 @@ void PostgreSQL::onlineNotificationThread()
 				int64_t ts = i->second.first;
 				std::string ipAddr = i->second.second.toIpString(ipTmp);
 				std::string timestamp = std::to_string(ts);
-				
+
 				if (firstRun) {
 					firstRun = false;
 				} else {
@@ -1481,7 +1407,7 @@ PGconn *PostgreSQL::getPgConn(OverrideMode m)
 		if (connStr != NULL) {
 			fprintf(stderr, "PGBouncer Override\n");
 			std::string conn(connStr);
-			conn += " application_name=controller-"; 
+			conn += " application_name=controller-";
 			conn += _myAddressStr.c_str();
 			return PQconnectdb(conn.c_str());
 		}

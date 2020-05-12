@@ -1,19 +1,27 @@
 ZeroTier - Global Area Networking
 ======
 
-ZeroTier is a smart programmable Ethernet switch for planet Earth. It allows networked devices and applications to be managed as if the entire world is one data center or cloud region.
+ZeroTier is a smart programmable Ethernet switch for planet Earth. It allows all networked devices, VMs, containers, and applications to communicate as if they all reside in the same physical data center or cloud region.
 
-It replaces the physical LAN/WAN boundary with a virtual one, allowing devices of any type at any location to be managed as if they all reside in the same cloud region or data center. All traffic is encrypted end-to-end and takes the most direct path available for minimum latency and maximum performance. The goals and design of ZeroTier are inspired by among other things the original [Google BeyondCorp](https://static.googleusercontent.com/media/research.google.com/en//pubs/archive/43231.pdf) paper and the [Jericho Forum](https://en.wikipedia.org/wiki/Jericho_Forum).
+This is accomplished by combining a cryptographically addressed and secure peer to peer network (termed VL1) with an Ethernet emulation layer somewhat similar to VXLAN (termed VL2). Our VL2 Ethernet virtualization layer includes advanced enterprise SDN features like fine grained access control rules for network micro-segmentation and security monitoring.
+
+All ZeroTier traffic is encrypted end-to-end using secret keys that only you control. Most traffic flows peer to peer, though we offer free (but slow) relaying for users who cannot establish peer to peer connetions.
+
+The goals and design principles of ZeroTier are inspired by among other things the original [Google BeyondCorp](https://static.googleusercontent.com/media/research.google.com/en//pubs/archive/43231.pdf) paper and the [Jericho Forum](https://en.wikipedia.org/wiki/Jericho_Forum) with its notion of "deperimeterization."
 
 Visit [ZeroTier's site](https://www.zerotier.com/) for more information and [pre-built binary packages](https://www.zerotier.com/download/). Apps for Android and iOS are available for free in the Google Play and Apple app stores.
 
+ZeroTier is licensed under the [BSL version 1.1](https://mariadb.com/bsl11/). See [LICENSE.txt](LICENSE.txt) and the [ZeroTier pricing page](https://www.zerotier.com/pricing) for details. ZeroTier is free to use internally in businesses and academic institutions and for non-commercial purposes. Certain types of commercial use such as building closed-source apps and devices based on ZeroTier or offering ZeroTier network controllers and network management as a SaaS service require a commercial license.
+
+A small amount of third party code is also included in ZeroTier and is not subject to our BSL license. See [AUTHORS.md] for a list of third party code, where it is included, and the licenses that apply to it. All of the third party code in ZeroTier is liberally licensed (MIT, BSD, Apache, public domain, etc.).
+
 ### Getting Started
 
-Everything in the ZeroTier world is controlled by two types of identifier: 40-bit/10-digit *ZeroTier addresses* and 64-bit/16-digit *network IDs*. A ZeroTier address identifies a node or "device" (laptop, phone, server, VM, app, etc.) while a network ID identifies a virtual Ethernet network that can be joined by devices.
+Everything in the ZeroTier world is controlled by two types of identifier: 40-bit/10-digit *ZeroTier addresses* and 64-bit/16-digit *network IDs*. These identifiers are easily distinguished by their length. A ZeroTier address identifies a node or "device" (laptop, phone, server, VM, app, etc.) while a network ID identifies a virtual Ethernet network that can be joined by devices.
 
-Another way of thinking about it is that ZeroTier addresses are port numbers on a giant planetary-sized smart switch while network IDs are VLANs to which these ports can be assigned. For more details read about VL1 and VL2 in [the ZeroTier manual](https://www.zerotier.com/manual/).
+ZeroTier addresses can be thought of as port numbers on an enormous planet-wide enterprise Ethernet smart switch supporting VLANs. Network IDs are VLAN IDs to which these ports may be assigned. A single port can be assigned to more than one VLAN.
 
-*Network controllers* are ZeroTier nodes that act as access control certificate authorities and configuration managers for virtual networks. The first 40 bits (or 10 digits) of a network ID is the ZeroTier address of its controller. You can create networks with our [hosted controllers](https://my.zerotier.com/) and web UI/API or [host your own](controller/) if you don't mind posting some JSON configuration info or writing a script to do so.
+A ZeroTier address looks like `8056c2e21c` and a network ID looks like `8056c2e21c000001`. Network IDs are composed of the ZeroTier address of that network's primary controller and an arbitrary 24-bit ID that identifies the network on this controller. Network controllers are roughly analogous to SDN controllers in SDN protocols like [OpenFlow](https://en.wikipedia.org/wiki/OpenFlow), though as with the analogy between VXLAN and VL2 this should not be read to imply that the protocols or design are the same. You can use our convenient and inexpensive SaaS hosted controllers at [my.zerotier.com](https://my.zerotier.com/) or [run your own controller](controller/) if you don't mind messing around with JSON configuration files or writing scripts to do so.
 
 ### Project Layout
 
@@ -24,7 +32,6 @@ The base path contains the ZeroTier One service main entry point (`one.cpp`), se
  - `controller/`: the reference network controller implementation, which is built and included by default on desktop and server build targets.
  - `debian/`: files for building Debian packages on Linux.
  - `doc/`: manual pages and other documentation.
- - `docker/`: Dockerfile to build as a container for containerized Linux systems and Kubernetes clusters.
  - `ext/`: third party libraries, binaries that we ship for convenience on some platforms (Mac and Windows), and installation support files.
  - `include/`: include files for the ZeroTier core.
  - `java/`: a JNI wrapper used with our Android mobile app. (The whole Android app is not open source but may be made so in the future.)
@@ -33,7 +40,7 @@ The base path contains the ZeroTier One service main entry point (`one.cpp`), se
  - `osdep/`: code to support and integrate with OSes, including platform-specific stuff only built for certain targets.
  - `rule-compiler/`: JavaScript rules language compiler for defining network-level rules.
  - `service/`: the ZeroTier One service, which wraps the ZeroTier core and provides VPN-like connectivity to virtual networks for desktops, laptops, servers, VMs, and containers.
- - `windows/`: Visual Studio solution files, Windows service code for ZeroTier One, and the Windows task bar app UI.
+ - `windows/`: Visual Studio solution files, Windows service code, and the Windows task bar app UI.
 
 ### Build and Platform Notes
 
@@ -80,7 +87,7 @@ Running ZeroTier One on a Mac is the same, but OSX requires a kernel extension. 
 
 This will create the home folder for Mac, place *tap.kext* there, and set its modes correctly to enable ZeroTier One to manage it with *kextload* and *kextunload*.
 
-### Troubleshooting
+### Basic Troubleshooting
 
 For most users, it just works.
 
@@ -96,14 +103,6 @@ ZeroTier One peers will automatically locate each other and communicate directly
 
 Users behind certain types of firewalls and "symmetric" NAT devices may not able able to connect to external peers directly at all. ZeroTier has limited support for port prediction and will *attempt* to traverse symmetric NATs, but this doesn't always work. If P2P connectivity fails you'll be bouncing UDP packets off our relay servers resulting in slower performance. Some NAT router(s) have a configurable NAT mode, and setting this to "full cone" will eliminate this problem. If you do this you may also see a magical improvement for things like VoIP phones, Skype, BitTorrent, WebRTC, certain games, etc., since all of these use NAT traversal techniques similar to ours.
 
-If you're interested, there's a [technical deep dive about NAT traversal on our blog](https://www.zerotier.com/blog/?p=226?pk_campaign=github_ZeroTierOne). A troubleshooting tool to help you diagnose NAT issues is planned for the future as are uPnP/IGD/NAT-PMP and IPv6 transport.
-
 If a firewall between you and the Internet blocks ZeroTier's UDP traffic, you will fall back to last-resort TCP tunneling to rootservers over port 443 (https impersonation). This will work almost anywhere but is *very slow* compared to UDP or direct peer to peer connectivity.
 
-### Contributing
-
-Please make pull requests against the `dev` branch. The `master` branch is release, and `edge` is for unstable and work in progress changes and is not likely to work.
-
-### License
-
-The ZeroTier source code is open source and is licensed under the GNU GPL v3 (not LGPL). If you'd like to embed it in a closed-source commercial product or appliance, please e-mail [contact@zerotier.com](mailto:contact@zerotier.com) to discuss commercial licensing. Otherwise it can be used for free.
+Additional help [can be found in our knowledge base](https://zerotier.atlassian.net/wiki/spaces/SD/overview).

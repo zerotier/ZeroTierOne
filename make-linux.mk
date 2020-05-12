@@ -1,4 +1,4 @@
-# Automagically pick clang or gcc, with preference for clang
+# Automagically pick CLANG or RH/CentOS newer GCC if present
 # This is only done if we have not overridden these with an environment or CLI variable
 ifeq ($(origin CC),default)
         CC:=$(shell if [ -e /usr/bin/clang ]; then echo clang; else echo gcc; fi)
@@ -17,9 +17,6 @@ DESTDIR?=
 include objects.mk
 ONE_OBJS+=osdep/LinuxEthernetTap.o
 ONE_OBJS+=osdep/LinuxNetLink.o
-
-NLTEST_OBJS+=osdep/LinuxNetLink.o node/InetAddress.o node/Utils.o node/Salsa20.o
-NLTEST_OBJS+=nltest.o
 
 # for central controller builds
 TIMESTAMP=$(shell date +"%Y%m%d%H%M")
@@ -87,6 +84,9 @@ endif
 
 ifeq ($(ZT_QNAP), 1)
         override DEFS+=-D__QNAP__
+endif
+ifeq ($(ZT_UBIQUITI), 1)
+        override DEFS+=-D__UBIQUITI__
 endif
 
 ifeq ($(ZT_SYNOLOGY), 1)
@@ -260,15 +260,22 @@ ifeq ($(ZT_OFFICIAL),1)
 	override LDFLAGS+=-Wl,--wrap=memcpy -static-libstdc++
 endif
 
+ifeq ($(ZT_CONTROLLER),1)
+	LDLIBS+=-L/usr/pgsql-10/lib/ -lpq
+	DEFS+=-DZT_CONTROLLER_USE_LIBPQ
+	INCLUDES+=-I/usr/pgsql-10/include -Iext/hiredis-vip-0.3.0
+	ONE_OBJS+=ext/hiredis-vip-0.3.0/adlist.o ext/hiredis-vip-0.3.0/async.o ext/hiredis-vip-0.3.0/command.o ext/hiredis-vip-0.3.0/crc16.o ext/hiredis-vip-0.3.0/dict.o ext/hiredis-vip-0.3.0/hiarray.o ext/hiredis-vip-0.3.0/hircluster.o ext/hiredis-vip-0.3.0/hiredis.o ext/hiredis-vip-0.3.0/hiutil.o ext/hiredis-vip-0.3.0/net.o ext/hiredis-vip-0.3.0/read.o ext/hiredis-vip-0.3.0/sds.o
+endif
+
 # ARM32 hell -- use conservative CFLAGS
 ifeq ($(ZT_ARCHITECTURE),3)
 	ifeq ($(shell if [ -e /usr/bin/dpkg ]; then dpkg --print-architecture; fi),armel)
-		override CFLAGS+=-march=armv5 -mfloat-abi=soft -msoft-float -mno-unaligned-access -marm
-		override CXXFLAGS+=-march=armv5 -mfloat-abi=soft -msoft-float -mno-unaligned-access -marm
+		override CFLAGS+=-march=armv5t -mfloat-abi=soft -msoft-float -mno-unaligned-access -marm
+		override CXXFLAGS+=-march=armv5t -mfloat-abi=soft -msoft-float -mno-unaligned-access -marm
 		ZT_USE_ARM32_NEON_ASM_CRYPTO=0
 	else
-		override CFLAGS+=-march=armv5 -mno-unaligned-access -marm
-		override CXXFLAGS+=-march=armv5 -mno-unaligned-access -marm
+		override CFLAGS+=-march=armv5t -mno-unaligned-access -marm -fexceptions
+		override CXXFLAGS+=-march=armv5t -mno-unaligned-access -marm -fexceptions
 		ZT_USE_ARM32_NEON_ASM_CRYPTO=0
 	endif
 endif
@@ -322,7 +329,7 @@ manpages:	FORCE
 doc:	manpages
 
 clean: FORCE
-	rm -rf *.a *.so *.o node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/miniupnpc/*.o ext/libnatpmp/*.o $(CORE_OBJS) $(ONE_OBJS) zerotier-one zerotier-idtool zerotier-cli zerotier-selftest build-* ZeroTierOneInstaller-* *.deb *.rpm .depend debian/files debian/zerotier-one*.debhelper debian/zerotier-one.substvars debian/*.log debian/zerotier-one doc/node_modules ext/misc/*.o debian/.debhelper debian/debhelper-build-stamp
+	rm -rf *.a *.so *.o node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/miniupnpc/*.o ext/libnatpmp/*.o $(CORE_OBJS) $(ONE_OBJS) zerotier-one zerotier-idtool zerotier-cli zerotier-selftest build-* ZeroTierOneInstaller-* *.deb *.rpm .depend debian/files debian/zerotier-one*.debhelper debian/zerotier-one.substvars debian/*.log debian/zerotier-one doc/node_modules ext/misc/*.o debian/.debhelper debian/debhelper-build-stamp docker/zerotier-one
 
 distclean:	clean
 
@@ -331,18 +338,18 @@ realclean:	distclean
 official:	FORCE
 	make -j4 ZT_OFFICIAL=1 all
 
-central-controller:	FORCE
-	make -j4 LDLIBS="-L/usr/pgsql-10/lib/ -lpq -Lext/librabbitmq/centos_x64/lib/ -lrabbitmq" CXXFLAGS="-I/usr/pgsql-10/include -I./ext/librabbitmq/centos_x64/include -fPIC" DEFS="-DZT_CONTROLLER_USE_LIBPQ -DZT_CONTROLLER" ZT_OFFICIAL=1 ZT_USE_X64_ASM_ED25519=1 one
+docker:	FORCE
+	docker build --no-cache -f ext/installfiles/linux/zerotier-containerized/Dockerfile -t zerotier-containerized .
 
-central-controller-docker:	central-controller
-	docker build -t docker.zerotier.com/zerotier-central/ztcentral-controller:${TIMESTAMP} -f docker/Dockerfile . 
+central-controller:	FORCE
+	make -j4 ZT_CONTROLLER=1 ZT_OFFICIAL=1 ZT_USE_X64_ASM_ED25519=1 one
+
+central-controller-docker: FORCE
+	docker build --no-cache -t docker.zerotier.com/zerotier-central/ztcentral-controller:${TIMESTAMP} -f ext/central-controller-docker/Dockerfile --build-arg git_branch=`git name-rev --name-only HEAD` .
 
 debug:	FORCE
 	make ZT_DEBUG=1 one
 	make ZT_DEBUG=1 selftest
-
-nltest: $(NLTEST_OBJS)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o nltest $(NLTEST_OBJS) $(LDLIBS)
 
 # Note: keep the symlinks in /var/lib/zerotier-one to the binaries since these
 # provide backward compatibility with old releases where the binaries actually
@@ -393,13 +400,13 @@ uninstall:	FORCE
 # These are just for convenience for building Linux packages
 
 debian:	FORCE
-	debuild -I -i -us -uc -nc -b
+	debuild --no-lintian -I -i -us -uc -nc -b 
 
 debian-clean: FORCE
 	rm -rf debian/files debian/zerotier-one*.debhelper debian/zerotier-one.substvars debian/*.log debian/zerotier-one debian/.debhelper debian/debhelper-build-stamp
 
 redhat:	FORCE
-	rpmbuild -ba zerotier-one.spec
+	rpmbuild --target `rpm -q bash --qf "%{arch}"` -ba zerotier-one.spec
 
 # This installs the packages needed to build ZT locally on CentOS 7 and
 # is here largely for documentation purposes.

@@ -1,22 +1,19 @@
 /*
- * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2016  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (c)2019 ZeroTier, Inc.
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file in the project's root directory.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Change Date: 2023-01-01
  *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2.0 of the Apache License.
  */
+/****/
 
 #pragma region Includes
+
+#if defined(_WIN32) || defined(_WIN64)
 
 #include <WinSock2.h>
 #include <Windows.h>
@@ -79,9 +76,7 @@ restart_node:
 			ZeroTier::Mutex::Lock _l(_lock);
 			delete _service;
 			_service = (ZeroTier::OneService *)0; // in case newInstance() fails
-			_service = ZeroTier::OneService::newInstance(
-				ZeroTier::OneService::platformDefaultHomePath().c_str(),
-				ZT_DEFAULT_PORT);
+			_service = ZeroTier::OneService::newInstance(_path.c_str(), ZT_DEFAULT_PORT);
 		}
 		switch(_service->run()) {
 			case ZeroTier::OneService::ONE_UNRECOVERABLE_ERROR: {
@@ -123,9 +118,15 @@ restart_node:
 	}
 }
 
-void ZeroTierOneService::OnStart(DWORD dwArgc, LPSTR *lpszArgv)
+void ZeroTierOneService::OnStart(DWORD dwArgc, PSTR *lpszArgv)
 {
 	ZT_SVCDBG("ZeroTierOneService::OnStart()\r\n");
+
+	if ((dwArgc > 1)&&(lpszArgv[1])&&(strlen(lpszArgv[1]) > 0)) {
+		this->_path = lpszArgv[1];
+	} else {
+		this->_path = ZeroTier::OneService::platformDefaultHomePath();
+	}
 
 	try {
 		_thread = ZeroTier::Thread::start(this);
@@ -155,3 +156,5 @@ void ZeroTierOneService::OnShutdown()
 	// stop thread on system shutdown (if it hasn't happened already)
 	OnStop();
 }
+
+#endif

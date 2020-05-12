@@ -1,3 +1,20 @@
+zerotier-one (1.4.6) unstable; urgency=medium
+
+  * Update default root server list
+  * Fix build flags on "armhf" (32-bit ARM) platforms for better
+    compatibility with Pi Zero and other devices.
+  * Fix license text in one.cpp.
+  * Add a clarification to LICENSE.txt.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Fri, 30 Aug 2019 01:00:00 -0700
+
+zerotier-one (1.4.4) unstable; urgency=medium
+
+  * See https://github.com/zerotier/ZeroTierOne for release notes.
+  * License changed to BSL 1.1
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Fri, 23 Aug 2019 01:00:00 -0700
+
 zerotier-one (1.4.2-2) unstable; urgency=medium
 
   * See https://github.com/zerotier/ZeroTierOne for release notes.

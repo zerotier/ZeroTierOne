@@ -1,3 +1,4 @@
+
 CC=clang
 CXX=clang++
 INCLUDES=
@@ -8,6 +9,8 @@ CODESIGN=echo
 PRODUCTSIGN=echo
 CODESIGN_APP_CERT=
 CODESIGN_INSTALLER_CERT=
+NOTARIZE=echo
+NOTARIZE_USER_ID=null
 
 ZT_BUILD_PLATFORM=3
 ZT_BUILD_ARCHITECTURE=2
@@ -16,14 +19,19 @@ ZT_VERSION_MINOR=$(shell cat version.h | grep -F VERSION_MINOR | cut -d ' ' -f 3
 ZT_VERSION_REV=$(shell cat version.h | grep -F VERSION_REVISION | cut -d ' ' -f 3)
 ZT_VERSION_BUILD=$(shell cat version.h | grep -F VERSION_BUILD | cut -d ' ' -f 3)
 
+# for central controller builds
+TIMESTAMP=$(shell date +"%Y%m%d%H%M")
+
 DEFS+=-DZT_BUILD_PLATFORM=$(ZT_BUILD_PLATFORM) -DZT_BUILD_ARCHITECTURE=$(ZT_BUILD_ARCHITECTURE)
 
 include objects.mk
 ONE_OBJS+=osdep/MacEthernetTap.o osdep/MacKextEthernetTap.o ext/http-parser/http_parser.o
 
 ifeq ($(ZT_CONTROLLER),1)
-	LIBS+=-lpq -lrabbitmq
+	LIBS+=-L/usr/local/opt/libpq/lib -lpq
 	DEFS+=-DZT_CONTROLLER_USE_LIBPQ -DZT_CONTROLLER
+	INCLUDES+=-I/usr/local/opt/libpq/include -Iext/hiredis-vip-0.3.0
+	ONE_OBJS+=ext/hiredis-vip-0.3.0/adlist.o ext/hiredis-vip-0.3.0/async.o ext/hiredis-vip-0.3.0/command.o ext/hiredis-vip-0.3.0/crc16.o ext/hiredis-vip-0.3.0/dict.o ext/hiredis-vip-0.3.0/hiarray.o ext/hiredis-vip-0.3.0/hircluster.o ext/hiredis-vip-0.3.0/hiredis.o ext/hiredis-vip-0.3.0/hiutil.o ext/hiredis-vip-0.3.0/net.o ext/hiredis-vip-0.3.0/read.o ext/hiredis-vip-0.3.0/sds.o
 endif
 
 # Official releases are signed with our Apple cert and apply software updates by default
@@ -34,6 +42,8 @@ ifeq ($(ZT_OFFICIAL_RELEASE),1)
 	PRODUCTSIGN=productsign
 	CODESIGN_APP_CERT="Developer ID Application: ZeroTier, Inc (8ZD9JUCZ4V)"
 	CODESIGN_INSTALLER_CERT="Developer ID Installer: ZeroTier, Inc (8ZD9JUCZ4V)"
+	NOTARIZE=xcrun altool
+	NOTARIZE_USER_ID="adam.ierymenko@gmail.com"
 else
 	DEFS+=-DZT_SOFTWARE_UPDATE_DEFAULT="\"download\""
 endif
@@ -76,7 +86,7 @@ ifeq ($(ZT_VAULT_SUPPORT),1)
 	LIBS+=-lcurl
 endif
 
-CXXFLAGS=$(CFLAGS) -std=c++11 -stdlib=libc++ 
+CXXFLAGS=$(CFLAGS) -std=c++11 -stdlib=libc++
 
 all: one macui
 
@@ -131,6 +141,8 @@ mac-dist-pkg: FORCE
 	if [ -f "ZeroTier One Signed.pkg" ]; then mv -f "ZeroTier One Signed.pkg" "ZeroTier One.pkg"; fi
 	rm -f zt1_update_$(ZT_BUILD_PLATFORM)_$(ZT_BUILD_ARCHITECTURE)_*
 	cat ext/installfiles/mac-update/updater.tmpl.sh "ZeroTier One.pkg" >zt1_update_$(ZT_BUILD_PLATFORM)_$(ZT_BUILD_ARCHITECTURE)_$(ZT_VERSION_MAJOR).$(ZT_VERSION_MINOR).$(ZT_VERSION_REV)_$(ZT_VERSION_BUILD).exe
+	$(NOTARIZE) -t osx -f "ZeroTier One.pkg" --primary-bundle-id --output-format xml --notarize-app -u $(NOTARIZE_USER_ID)
+	echo '*** When Apple notifies that the app is notarized, run: xcrun stapler staple "ZeroTier One.pkg"'
 
 # For ZeroTier, Inc. to build official signed packages
 official: FORCE
@@ -138,6 +150,10 @@ official: FORCE
 	make ZT_OFFICIAL_RELEASE=1 -j 8 one
 	make ZT_OFFICIAL_RELEASE=1 macui
 	make ZT_OFFICIAL_RELEASE=1 mac-dist-pkg
+
+central-controller-docker: FORCE
+	#docker build --no-cache -t registry.zerotier.com/zerotier-central/ztcentral-controller:${TIMESTAMP} -f ext/central-controller-docker/Dockerfile --build-arg git_branch=$(shell git name-rev --name-only HEAD) .
+	docker build -t registry.zerotier.com/zerotier-central/ztcentral-controller:${TIMESTAMP} -f ext/central-controller-docker/Dockerfile --build-arg git_branch=$(shell git name-rev --name-only HEAD) .
 
 clean:
 	rm -rf MacEthernetTapAgent *.dSYM build-* *.a *.pkg *.dmg *.o node/*.o controller/*.o service/*.o osdep/*.o ext/http-parser/*.o $(CORE_OBJS) $(ONE_OBJS) zerotier-one zerotier-idtool zerotier-selftest zerotier-cli zerotier doc/node_modules macui/build zt1_update_$(ZT_BUILD_PLATFORM)_$(ZT_BUILD_ARCHITECTURE)_*

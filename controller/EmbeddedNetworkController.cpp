@@ -1,28 +1,15 @@
 /*
- * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2019  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (c)2019 ZeroTier, Inc.
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file in the project's root directory.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Change Date: 2023-01-01
  *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
- *
- * --
- *
- * You can be released from the requirements of the license by purchasing
- * a commercial license. Buying such a license is mandatory as soon as you
- * develop commercial closed-source software that incorporates or links
- * directly against ZeroTier software without disclosing the source code
- * of your own application.
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2.0 of the Apache License.
  */
+/****/
 
 #include <stdint.h>
 #include <stdio.h>
@@ -469,15 +456,14 @@ static bool _parseRule(json &r,ZT_VirtualNetworkRule &rule)
 
 } // anonymous namespace
 
-EmbeddedNetworkController::EmbeddedNetworkController(Node *node,const char *ztPath,const char *dbPath, int listenPort, MQConfig *mqc) :
+EmbeddedNetworkController::EmbeddedNetworkController(Node *node,const char *ztPath,const char *dbPath, int listenPort) :
 	_startTime(OSUtils::now()),
 	_listenPort(listenPort),
 	_node(node),
 	_ztPath(ztPath),
 	_path(dbPath),
 	_sender((NetworkController::Sender *)0),
-	_db(this),
-	_mqc(mqc)
+	_db(this)
 {
 }
 
@@ -498,7 +484,7 @@ void EmbeddedNetworkController::init(const Identity &signingId,Sender *sender)
 
 #ifdef ZT_CONTROLLER_USE_LIBPQ
 	if ((_path.length() > 9)&&(_path.substr(0,9) == "postgres:")) {
-		_db.addDB(std::shared_ptr<DB>(new PostgreSQL(_signingId,_path.substr(9).c_str(), _listenPort, _mqc)));
+		_db.addDB(std::shared_ptr<DB>(new PostgreSQL(_signingId,_path.substr(9).c_str(), _listenPort)));
 	} else {
 #endif
 		_db.addDB(std::shared_ptr<DB>(new FileDB(_path.c_str())));
@@ -1650,7 +1636,7 @@ void EmbeddedNetworkController::_request(
 					if ((ipRangeEnd < ipRangeStart)||(ipRangeStart == 0))
 						continue;
 					uint32_t ipRangeLen = ipRangeEnd - ipRangeStart;
-					
+
 					// Start with the LSB of the member's address
 					uint32_t ipTrialCounter = (uint32_t)(identity.address().toInt() & 0xffffffff);
 

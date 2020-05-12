@@ -1,28 +1,15 @@
 /*
- * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2019  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (c)2019 ZeroTier, Inc.
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file in the project's root directory.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Change Date: 2023-01-01
  *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
- *
- * --
- *
- * You can be released from the requirements of the license by purchasing
- * a commercial license. Buying such a license is mandatory as soon as you
- * develop commercial closed-source software that incorporates or links
- * directly against ZeroTier software without disclosing the source code
- * of your own application.
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2.0 of the Apache License.
  */
+/****/
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -99,7 +86,6 @@ extern "C" {
 using json = nlohmann::json;
 
 #include "../controller/EmbeddedNetworkController.hpp"
-#include "../controller/RabbitMQ.hpp"
 #include "../osdep/EthernetTap.hpp"
 #ifdef __WINDOWS__
 #include "../osdep/WindowsEthernetTap.hpp"
@@ -538,8 +524,6 @@ public:
 	volatile bool _run;
 	Mutex _run_m;
 
-	MQConfig *_mqc;
-
 	// end member variables ----------------------------------------------------
 
 	OneServiceImpl(const char *hp,unsigned int port) :
@@ -575,7 +559,6 @@ public:
 		,_vaultPath("cubbyhole/zerotier")
 #endif
 		,_run(true)
-		,_mqc(NULL)
 	{
 		_ports[0] = 0;
 		_ports[1] = 0;
@@ -600,7 +583,6 @@ public:
 		delete _portMapper;
 #endif
 		delete _controller;
-		delete _mqc;
 	}
 
 	virtual ReasonForTermination run()
@@ -691,50 +673,56 @@ public:
 			// than one device behind the same NAT tries to use the same internal
 			// private address port number. Buggy NATs are a running theme.
 			if (_allowSecondaryPort) {
-				_ports[1] = (_secondaryPort == 0) ? 20000 + ((unsigned int)_node->address() % 45500) : _secondaryPort;
-				for(int i=0;;++i) {
-					if (i > 1000) {
-						_ports[1] = 0;
-						break;
-					} else if (++_ports[1] >= 65536) {
-						_ports[1] = 20000;
+				if (_secondaryPort) {
+					_ports[1] = _secondaryPort;
+				} else {
+					_ports[1] = 20000 + ((unsigned int)_node->address() % 45500);
+					for(int i=0;;++i) {
+						if (i > 1000) {
+							_ports[1] = 0;
+							break;
+						} else if (++_ports[1] >= 65536) {
+							_ports[1] = 20000;
+						}
+						if (_trialBind(_ports[1]))
+							break;
 					}
-					if (_trialBind(_ports[1]))
-						break;
 				}
 			}
-
 #ifdef ZT_USE_MINIUPNPC
 			if (_portMappingEnabled) {
 				// If we're running uPnP/NAT-PMP, bind a *third* port for that. We can't
 				// use the other two ports for that because some NATs do really funky
 				// stuff with ports that are explicitly mapped that breaks things.
 				if (_ports[1]) {
-					_ports[2] = (_tertiaryPort == 0) ? _ports[1] : _tertiaryPort;
-					for(int i=0;;++i) {
-						if (i > 1000) {
-							_ports[2] = 0;
-							break;
-						} else if (++_ports[2] >= 65536) {
-							_ports[2] = 20000;
+					if (_tertiaryPort) {
+						_ports[2] = _tertiaryPort;
+					} else {
+						_ports[2] = _ports[1];
+						for(int i=0;;++i) {
+							if (i > 1000) {
+								_ports[2] = 0;
+								break;
+							} else if (++_ports[2] >= 65536) {
+								_ports[2] = 20000;
+							}
+							if (_trialBind(_ports[2]))
+								break;
 						}
-						if (_trialBind(_ports[2]))
-							break;
-					}
-					if (_ports[2]) {
-						char uniqueName[64];
-						OSUtils::ztsnprintf(uniqueName,sizeof(uniqueName),"ZeroTier/%.10llx@%u",_node->address(),_ports[2]);
-						_portMapper = new PortMapper(_ports[2],uniqueName);
+						if (_ports[2]) {
+							char uniqueName[64];
+							OSUtils::ztsnprintf(uniqueName,sizeof(uniqueName),"ZeroTier/%.10llx@%u",_node->address(),_ports[2]);
+							_portMapper = new PortMapper(_ports[2],uniqueName);
+						}
 					}
 				}
 			}
 #endif
-
 			// Delete legacy iddb.d if present (cleanup)
 			OSUtils::rmDashRf((_homePath + ZT_PATH_SEPARATOR_S "iddb.d").c_str());
 
 			// Network controller is now enabled by default for desktop and server
-			_controller = new EmbeddedNetworkController(_node,_homePath.c_str(),_controllerDbPath.c_str(),_ports[0], _mqc);
+			_controller = new EmbeddedNetworkController(_node,_homePath.c_str(),_controllerDbPath.c_str(),_ports[0]);
 			_node->setNetconfMaster((void *)_controller);
 
 			// Join existing networks in networks.d
@@ -925,7 +913,7 @@ public:
 	}
 
 	void readLocalSettings()
-	{		
+	{
 		// Read local configuration
 		std::map<InetAddress,ZT_PhysicalPathConfiguration> ppc;
 
@@ -998,15 +986,7 @@ public:
 			if (cdbp.length() > 0)
 				_controllerDbPath = cdbp;
 
-			json &rmq = settings["rabbitmq"];
-			if (rmq.is_object() && _mqc == NULL) {
-				fprintf(stderr, "Reading RabbitMQ Config\n");
-				_mqc = new MQConfig;
-				_mqc->port = rmq["port"];
-				_mqc->host = OSUtils::jsonString(rmq["host"], "").c_str();
-				_mqc->username = OSUtils::jsonString(rmq["username"], "").c_str();
-				_mqc->password = OSUtils::jsonString(rmq["password"], "").c_str();
-			}
+			// TODO:  Redis config
 
 			// Bind to wildcard instead of to specific interfaces (disables full tunnel capability)
 			json &bind = settings["bind"];
@@ -1366,8 +1346,8 @@ public:
 							if (j.is_object()) {
 								seed = Utils::hexStrToU64(OSUtils::jsonString(j["seed"],"0").c_str());
 							}
+						} catch (std::exception &exc) {
 						} catch ( ... ) {
-							// discard invalid JSON
 						}
 
 						std::vector<World> moons(_node->moons());
@@ -1416,8 +1396,8 @@ public:
 											json &allowDefault = j["allowDefault"];
 											if (allowDefault.is_boolean()) localSettings.allowDefault = (bool)allowDefault;
 										}
+									} catch (std::exception &exc) {
 									} catch ( ... ) {
-										// discard invalid JSON
 									}
 
 									setNetworkSettings(nws->networks[i].nwid,localSettings);
@@ -1725,8 +1705,9 @@ public:
 				}
 			}
 #ifdef __SYNOLOGY__
-			if (!n.tap->addIpSyn(newManagedIps))
+			if (!n.tap->addIps(newManagedIps)) {
 				fprintf(stderr,"ERROR: unable to add ip addresses to ifcfg" ZT_EOL_S);
+			}
 #else
 			for(std::vector<InetAddress>::iterator ip(newManagedIps.begin());ip!=newManagedIps.end();++ip) {
 				if (std::find(n.managedIps.begin(),n.managedIps.end(),*ip) == n.managedIps.end()) {
@@ -2044,6 +2025,8 @@ public:
 					return;
 
 			}
+		} catch (std::exception &exc) {
+			_phy.close(sock);
 		} catch ( ... ) {
 			_phy.close(sock);
 		}
@@ -2151,6 +2134,8 @@ public:
 						fprintf(stderr,"ERROR: unable to configure virtual network port: %s" ZT_EOL_S,exc.what());
 #endif
 						_nets.erase(nwid);
+						return -999;
+					} catch (int exc) {
 						return -999;
 					} catch ( ... ) {
 						return -999; // tap init failed

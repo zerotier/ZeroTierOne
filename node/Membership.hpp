@@ -1,28 +1,15 @@
 /*
- * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2019  ZeroTier, Inc.  https://www.zerotier.com/
+ * Copyright (c)2019 ZeroTier, Inc.
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file in the project's root directory.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Change Date: 2023-01-01
  *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
- *
- * --
- *
- * You can be released from the requirements of the license by purchasing
- * a commercial license. Buying such a license is mandatory as soon as you
- * develop commercial closed-source software that incorporates or links
- * directly against ZeroTier software without disclosing the source code
- * of your own application.
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2.0 of the Apache License.
  */
+/****/
 
 #ifndef ZT_MEMBERSHIP_HPP
 #define ZT_MEMBERSHIP_HPP
@@ -194,8 +181,38 @@ private:
 	inline bool _isV6NDPEmulated(const NetworkConfig &nconf,const MAC &m) const { return false; }
 	inline bool _isV6NDPEmulated(const NetworkConfig &nconf,const InetAddress &ip) const
 	{
-		if ((ip.isV6())&&(nconf.ndpEmulation())&&((InetAddress::makeIpv66plane(nconf.networkId,nconf.issuedTo.toInt()).ipsEqual(ip))||(InetAddress::makeIpv6rfc4193(nconf.networkId,nconf.issuedTo.toInt()).ipsEqual(ip)))) {
-			return true;
+		if ((ip.isV6())&&(nconf.ndpEmulation())) {
+			const InetAddress sixpl(InetAddress::makeIpv66plane(nconf.networkId,nconf.issuedTo.toInt()));
+			for(unsigned int i=0;i<nconf.staticIpCount;++i) {
+				if (nconf.staticIps[i].ipsEqual(sixpl)) {
+					bool prefixMatches = true;
+					for(unsigned int j=0;j<5;++j) { // check for match on /40
+						if ((((const struct sockaddr_in6 *)&ip)->sin6_addr.s6_addr)[j] != (((const struct sockaddr_in6 *)&sixpl)->sin6_addr.s6_addr)[j]) {
+							prefixMatches = false;
+							break;
+						}
+					}
+					if (prefixMatches)
+						return true;
+					break;
+				}
+			}
+
+			const InetAddress rfc4193(InetAddress::makeIpv6rfc4193(nconf.networkId,nconf.issuedTo.toInt()));
+			for(unsigned int i=0;i<nconf.staticIpCount;++i) {
+				if (nconf.staticIps[i].ipsEqual(rfc4193)) {
+					bool prefixMatches = true;
+					for(unsigned int j=0;j<11;++j) { // check for match on /88
+						if ((((const struct sockaddr_in6 *)&ip)->sin6_addr.s6_addr)[j] != (((const struct sockaddr_in6 *)&rfc4193)->sin6_addr.s6_addr)[j]) {
+							prefixMatches = false;
+							break;
+						}
+					}
+					if (prefixMatches)
+						return true;
+					break;
+				}
+			}
 		}
 		return false;
 	}
