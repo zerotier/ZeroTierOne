@@ -157,7 +157,6 @@ PostgreSQL::~PostgreSQL()
 		_commitThread[i].join();
 	}
 	_onlineNotificationThread.join();
-	fprintf(stderr, "~PostgreSQL() done\n");
 }
 
 
@@ -739,14 +738,20 @@ void PostgreSQL::_membersWatcher_Redis() {
 		}
 		if (!result.empty()) {
 			for (auto element : result) {
+#ifdef ZT_TRACE
 				fprintf(stdout, "Received notification from: %s\n", element.first.c_str());
+#endif
 				for (auto rec : element.second) {
 					std::string id = rec.first;
 					auto attrs = rec.second;
+#ifdef ZT_TRACE
 					fprintf(stdout, "Record ID: %s\n", id.c_str());
 					fprintf(stdout, "attrs len: %lu\n", attrs.size());
+#endif
 					for (auto a : attrs) {
+#ifdef ZT_TRACE
 						fprintf(stdout, "key: %s\nvalue: %s\n", a.first.c_str(), a.second.c_str());
+#endif
 						try {
 							tmp = json::parse(a.second);
 							json &ov = tmp["old_val"];
@@ -855,15 +860,20 @@ void PostgreSQL::_networksWatcher_Redis() {
 		
 		if (!result.empty()) {
 			for (auto element : result) {
-
+#ifdef ZT_TRACE
 				fprintf(stdout, "Received notification from: %s\n", element.first.c_str());
+#endif
 				for (auto rec : element.second) {
 					std::string id = rec.first;
 					auto attrs = rec.second;
+#ifdef ZT_TRACE
 					fprintf(stdout, "Record ID: %s\n", id.c_str());
 					fprintf(stdout, "attrs len: %lu\n", attrs.size());
+#endif
 					for (auto a : attrs) {
+#ifdef ZT_TRACE
 						fprintf(stdout, "key: %s\nvalue: %s\n", a.first.c_str(), a.second.c_str());
+#endif
 						try {
 							tmp = json::parse(a.second);
 							json &ov = tmp["old_val"];
