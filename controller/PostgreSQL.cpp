@@ -761,6 +761,11 @@ void PostgreSQL::_membersWatcher_Redis() {
 							fprintf(stderr, "json parse error in networkWatcher_Redis\n");
 						}
 					}
+					if (_rc->clusterMode) {
+						_cluster->xdel(key, id);
+					} else {
+						_redis->xdel(key, id);
+					}
 				}
 			}
 		}
@@ -872,6 +877,11 @@ void PostgreSQL::_networksWatcher_Redis() {
 						} catch (...) {
 							fprintf(stderr, "json parse error in networkWatcher_Redis\n");
 						}
+					}
+					if (_rc->clusterMode) {
+						_cluster->xdel(key, id);
+					} else {
+						_redis->xdel(key, id);
 					}
 				}
 			}
