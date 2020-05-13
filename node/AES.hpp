@@ -218,8 +218,22 @@ public:
 		 */
 		ZT_INLINE void init(const uint8_t iv[16],void *const output) noexcept
 		{
-			_ctr[0] = Utils::loadAsIsEndian<uint64_t>(iv);
-			_ctr[1] = Utils::loadAsIsEndian<uint64_t>(iv + 8);
+			Utils::copy<16>(_ctr,iv);
+			_out = reinterpret_cast<uint8_t *>(output);
+			_len = 0;
+		}
+
+		/**
+		 * Initialize this CTR instance to encrypt a new stream
+		 *
+		 * @param iv Unique initialization vector
+		 * @param ic Initial counter (must be in big-endian byte order!)
+		 * @param output Buffer to which to store output (MUST be large enough for total bytes processed!)
+		 */
+		ZT_INLINE void init(const uint8_t iv[12],const uint32_t ic,void *const output) noexcept
+		{
+			Utils::copy<12>(_ctr,iv);
+			reinterpret_cast<uint32_t *>(_ctr)[3] = ic;
 			_out = reinterpret_cast<uint8_t *>(output);
 			_len = 0;
 		}

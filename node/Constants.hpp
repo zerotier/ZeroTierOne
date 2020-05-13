@@ -135,11 +135,6 @@
 #define ZT_PATH_ALIVE_TIMEOUT ((ZT_PATH_KEEPALIVE_PERIOD * 2) + 5000)
 
 /**
- * Number of ports to try for each BFG1024 scan attempt (if enabled).
- */
-#define ZT_NAT_T_BFG1024_PORTS_PER_ATTEMPT 256
-
-/**
  * Maximum number of queued endpoints to try per "pulse."
  */
 #define ZT_NAT_T_MAX_QUEUED_ATTEMPTS_PER_PULSE 4

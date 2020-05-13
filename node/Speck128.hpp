@@ -17,6 +17,8 @@
 #include "Constants.hpp"
 #include "Utils.hpp"
 
+#define ZT_SPECK128_KEY_SIZE 16
+
 namespace ZeroTier {
 
 /**

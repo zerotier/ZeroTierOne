@@ -90,32 +90,6 @@ public:
 	}
 
 	/**
-	 * Set this peer's probe token
-	 *
-	 * This doesn't update the mapping in Topology. The caller must do
-	 * this, which is the HELLO handler in VL1.
-	 *
-	 * @param t New probe token
-	 * @return Old probe token
-	 */
-	ZT_INLINE uint32_t setProbeToken(const uint32_t t) noexcept
-	{
-		RWMutex::Lock l(m_lock);
-		const uint32_t pt = m_probe;
-		m_probe = t;
-		return pt;
-	}
-
-	/**
-	 * @return This peer's probe token or 0 if unknown
-	 */
-	ZT_INLINE uint32_t probeToken() const noexcept
-	{
-		RWMutex::RLock l(m_lock);
-		return m_probe;
-	}
-
-	/**
 	 * Log receipt of an authenticated packet
 	 *
 	 * This is called by the decode pipe when a packet is proven to be authentic
@@ -167,13 +141,13 @@ public:
 	 */
 	ZT_INLINE SharedPtr<Path> path(const int64_t now) noexcept
 	{
-		if ((now - m_lastPrioritizedPaths) > ZT_PEER_PRIORITIZE_PATHS_INTERVAL) {
-			RWMutex::Lock l(m_lock);
-			m_prioritizePaths(now);
+		if (likely((now - m_lastPrioritizedPaths) < ZT_PEER_PRIORITIZE_PATHS_INTERVAL)) {
+			RWMutex::RLock l(m_lock);
 			if (m_alivePathCount > 0)
 				return m_paths[0];
 		} else {
-			RWMutex::RLock l(m_lock);
+			RWMutex::Lock l(m_lock);
+			m_prioritizePaths(now);
 			if (m_alivePathCount > 0)
 				return m_paths[0];
 		}
@@ -206,7 +180,27 @@ public:
 	 * @param data Data to send
 	 * @param len Length in bytes
 	 */
-	void send(void *tPtr,int64_t now,const void *data,unsigned int len) noexcept;
+	ZT_INLINE void send(void *tPtr,int64_t now,const void *data,unsigned int len) noexcept
+	{
+		SharedPtr<Path> via(this->path(now));
+		if (via) {
+			via->send(RR,tPtr,data,len,now);
+		} else {
+			const SharedPtr<Peer> root(RR->topology->root());
+			if ((root)&&(root.ptr() != this)) {
+				via = root->path(now);
+				if (via) {
+					via->send(RR,tPtr,data,len,now);
+					root->relayed(now,len);
+				} else {
+					return;
+				}
+			} else {
+				return;
+			}
+		}
+		sent(now,len);
+	}
 
 	/**
 	 * Send a HELLO to this peer at a specified physical address.
@@ -463,7 +457,7 @@ public:
 
 private:
 	void m_prioritizePaths(int64_t now);
-	unsigned int m_sendProbe(void *tPtr,int64_t localSocket,const InetAddress &atAddress,int64_t now);
+	unsigned int m_sendProbe(void *tPtr,int64_t localSocket,const InetAddress &atAddress,const uint16_t *ports,unsigned int numPorts,int64_t now);
 	void m_deriveSecondaryIdentityKeys() noexcept;
 
 	ZT_INLINE SharedPtr<SymmetricKey> m_key() noexcept
@@ -546,9 +540,6 @@ private:
 	};
 	List<p_TryQueueItem> m_tryQueue;
 	List<p_TryQueueItem>::iterator m_tryQueuePtr; // loops over _tryQueue like a circular buffer
-
-	// 32-bit probe token or 0 if unknown.
-	uint32_t m_probe;
 
 	uint16_t m_vProto;
 	uint16_t m_vMajor;

@@ -40,7 +40,8 @@ class Expect;
 class RuntimeEnvironment
 {
 public:
-	ZT_INLINE RuntimeEnvironment(Node *n) noexcept :
+	ZT_INLINE RuntimeEnvironment(Node *const n) noexcept :
+		instanceId(Utils::getSecureRandomU64()),
 		node(n),
 		localNetworkController(nullptr),
 		rtmem(nullptr),
@@ -51,14 +52,17 @@ public:
 		topology(nullptr),
 		sa(nullptr)
 	{
-		publicIdentityStr[0] = nullptr;
-		secretIdentityStr[0] = nullptr;
+		publicIdentityStr[0] = 0;
+		secretIdentityStr[0] = 0;
 	}
 
 	ZT_INLINE ~RuntimeEnvironment() noexcept
 	{
 		Utils::burn(secretIdentityStr,sizeof(secretIdentityStr));
 	}
+
+	// Unique ID generated on startup
+	const uint64_t instanceId;
 
 	// Node instance that owns this RuntimeEnvironment
 	Node *const node;

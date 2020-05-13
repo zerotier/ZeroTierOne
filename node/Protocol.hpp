@@ -251,10 +251,7 @@
 
 #define ZT_PROTO_HELLO_NODE_META_INSTANCE_ID      "i"
 #define ZT_PROTO_HELLO_NODE_META_LOCATOR          "l"
-#define ZT_PROTO_HELLO_NODE_META_PROBE_TOKEN      "p"
 #define ZT_PROTO_HELLO_NODE_META_SOFTWARE_VENDOR  "s"
-#define ZT_PROTO_HELLO_NODE_META_SOFTWARE_VERSION "v"
-#define ZT_PROTO_HELLO_NODE_META_PHYSICAL_DEST    "d"
 #define ZT_PROTO_HELLO_NODE_META_COMPLIANCE       "c"
 #define ZT_PROTO_HELLO_NODE_META_EPHEMERAL_PUBLIC "e"
 #define ZT_PROTO_HELLO_NODE_META_EPHEMERAL_ACK    "E"
@@ -282,18 +279,19 @@ enum Verb
 	/**
 	 * Announcement of a node's existence and vitals:
 	 *   <[1] protocol version>
-	 *   <[1] software major version (LEGACY)>
-	 *   <[1] software minor version (LEGACY)>
-	 *   <[2] software revision (LEGACY)>
+	 *   <[1] software major version (optional, 0 if unspecified)>
+	 *   <[1] software minor version (optional, 0 if unspecified)>
+	 *   <[2] software revision (optional, 0 if unspecified)>
 	 *   <[8] timestamp>
 	 *   <[...] binary serialized full sender identity>
-	 *   <[...] physical destination address of packet (LEGACY)>
+	 *   <[...] physical destination of packet>
 	 *   <[12] 96-bit CTR IV>
+	 *   <[6] reserved bytes, currently used for legacy compatibility>
 	 *   [... start of encrypted section ...]
 	 *   <[2] 16-bit length of encrypted dictionary>
 	 *   <[...] encrypted dictionary>
 	 *   [... end of encrypted section ...]
-	 *   <[48] HMAC-SHA384 of plaintext packet>
+	 *   <[48] HMAC-SHA384 of packet>
 	 *
 	 * HELLO is sent to initiate a new pairing between two nodes and
 	 * periodically to refresh information.
@@ -342,7 +340,6 @@ enum Verb
 	 * 
 	 *   INSTANCE_ID - a 64-bit unique value generated on each node start
 	 *   LOCATOR - signed record enumerating this node's trusted contact points
-	 *   PROBE_TOKEN - 32-bit probe token
 	 *   EPHEMERAL_PUBLIC - Ephemeral public key(s)
 	 * 
 	 * OK will contain EPHEMERAL_PUBLIC (of the sender) and:
@@ -354,8 +351,6 @@ enum Verb
 	 *   HOSTNAME - arbitrary short host name for this node
 	 *   CONTACT - arbitrary short contact information string for this node
 	 *   SOFTWARE_VENDOR - short name or description of vendor, such as a URL
-	 *   SOFTWARE_VERSION - major, minor, revision, and build (packed 64-bit int)
-	 *   PHYSICAL_DEST - serialized Endpoint to which this message was sent
 	 *   COMPLIANCE - bit mask containing bits for e.g. a FIPS-compliant node
 	 *
 	 * The timestamp field in OK is echoed but the others represent the sender
@@ -363,22 +358,21 @@ enum Verb
 	 * only contains the EPHEMERAL fields, allowing the receiver of the OK to
 	 * confirm that both sides know the correct keys and thus begin using the
 	 * ephemeral shared secret to send packets.
+	 * 
+	 * OK is sent encrypted with the usual AEAD, but still includes a full HMAC
+	 * as well (inside the cryptographic envelope).
 	 *
 	 * OK payload:
 	 *   <[8] timestamp echoed from original HELLO>
 	 *   <[1] protocol version of responding node>
+	 *   <[1] software major version (optional)>
+	 *   <[1] software minor version (optional)>
+	 *   <[2] software revision (optional)>
+	 *   <[...] physical destination address of packet>
+	 *   <[2] 16-bit reserved field (zero for legacy compatibility)>
 	 *   <[2] 16-bit length of dictionary>
 	 *   <[...] dictionary>
 	 *   <[48] HMAC-SHA384 of plaintext packet>
-	 *
-	 * Legacy OK payload (sent to pre-2.x nodes):
-	 *   <[8] timestamp echoed from original HELLO>
-	 *   <[1] protocol version of responding node>
-	 *   <[1] software major version>
-	 *   <[1] software minor version>
-	 *   <[2] software revision>
-	 *   <[...] physical destination address of packet>
-	 *   <[2] 16-bit zero length of additional fields>
 	 */
 	VERB_HELLO = 0x01,
 

@@ -748,6 +748,32 @@ public:
 	}
 
 	/**
+	 * Write zeroes
+	 *
+	 * @param ii Index value-result parameter (incremented by len)
+	 * @param len Number of zero bytes to write
+	 */
+	ZT_INLINE void wZ(int &ii,const unsigned int len) noexcept
+	{
+		const int s = ii;
+		if (likely((ii += (int)len) <= ZT_BUF_MEM_SIZE))
+			Utils::zero(unsafeData + s,len);
+	}
+
+	/**
+	 * Write secure random bytes
+	 *
+	 * @param ii Index value-result parameter (incremented by len)
+	 * @param len Number of random bytes to write
+	 */
+	ZT_INLINE void wR(int &ii,const unsigned int len) noexcept
+	{
+		const int s = ii;
+		if (likely((ii += (int)len) <= ZT_BUF_MEM_SIZE))
+			Utils::getSecureRandom(unsafeData + s,len);
+	}
+
+	/**
 	 * Store a byte without advancing the index
 	 */
 	ZT_INLINE void sI8(const int ii,const uint8_t n) noexcept

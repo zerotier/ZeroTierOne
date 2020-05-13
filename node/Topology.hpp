@@ -83,23 +83,6 @@ public:
 	}
 
 	/**
-	 * Get peer(s) by 32-bit probe token
-	 *
-	 * @param probeToken Probe token
-	 * @return List of peers
-	 */
-	PeerList peersByProbeToken(uint32_t probeToken) const;
-
-	/**
-	 * Set or update the probe token associated with a peer
-	 *
-	 * @param peer Peer to update
-	 * @param oldToken Old probe token or 0 if none
-	 * @param newToken New probe token or 0 to erase old mapping but not set a new token
-	 */
-	void updateProbeToken(const SharedPtr<Peer> &peer,uint32_t oldToken,uint32_t newToken);
-
-	/**
 	 * Get a Path object for a given local and remote physical address, creating if needed
 	 *
 	 * @param l Local socket
@@ -321,15 +304,12 @@ private:
 	const RuntimeEnvironment *const RR;
 
 	RWMutex m_paths_l;
-	Mutex m_peersByProbeToken_l;
 	RWMutex m_peers_l;
 
 	std::pair< InetAddress,ZT_PhysicalPathConfiguration > m_physicalPathConfig[ZT_MAX_CONFIGURABLE_PATHS];
 	unsigned int m_numConfiguredPhysicalPaths;
 
 	Map< uint64_t,SharedPtr<Path> > m_paths;
-
-	MultiMap< uint32_t,SharedPtr<Peer> > m_peersByProbeToken;
 
 	Map< Address,SharedPtr<Peer> > m_peers;
 	Set< Identity > m_roots;

@@ -61,38 +61,6 @@ SharedPtr<Peer> Topology::add(void *tPtr,const SharedPtr<Peer> &peer)
 	return peer;
 }
 
-PeerList Topology::peersByProbeToken(const uint32_t probeToken) const
-{
-	Mutex::Lock l(m_peersByProbeToken_l);
-	std::pair< MultiMap< uint32_t,SharedPtr<Peer> >::const_iterator,MultiMap< uint32_t,SharedPtr<Peer> >::const_iterator > r(m_peersByProbeToken.equal_range(probeToken));
-	PeerList pl;
-	if (r.first == r.second)
-		return pl;
-	const unsigned int cnt = (unsigned int)std::distance(r.first,r.second);
-	pl.resize(cnt);
-	MultiMap< uint32_t,SharedPtr<Peer> >::const_iterator pi(r.first);
-	for(unsigned int i=0;i<cnt;++i) {
-		pl[i] = pi->second;
-		++pi;
-	}
-	return pl;
-}
-
-void Topology::updateProbeToken(const SharedPtr<Peer> &peer,const uint32_t oldToken,const uint32_t newToken)
-{
-	Mutex::Lock l(m_peersByProbeToken_l);
-	if (oldToken != 0) {
-		std::pair< MultiMap< uint32_t,SharedPtr<Peer> >::iterator,MultiMap< uint32_t,SharedPtr<Peer> >::iterator > r(m_peersByProbeToken.equal_range(oldToken));
-		for(MultiMap< uint32_t,SharedPtr<Peer> >::iterator i(r.first);i!=r.second;) {
-			if (i->second == peer)
-				m_peersByProbeToken.erase(i++);
-			else ++i;
-		}
-	}
-	if (newToken != 0)
-		m_peersByProbeToken.insert(std::pair< uint32_t,SharedPtr<Peer> >(newToken,peer));
-}
-
 void Topology::setPhysicalPathConfiguration(const struct sockaddr_storage *pathNetwork,const ZT_PhysicalPathConfiguration *pathConfig)
 {
 	if (!pathNetwork) {
@@ -191,7 +159,6 @@ void Topology::doPeriodicTasks(void *tPtr,const int64_t now)
 		RWMutex::Lock l1(m_peers_l);
 		for(Map< Address,SharedPtr<Peer> >::iterator i(m_peers.begin());i != m_peers.end();) {
 			if ( ((now - i->second->lastReceive()) > ZT_PEER_ALIVE_TIMEOUT) && (m_roots.count(i->second->identity()) == 0) ) {
-				updateProbeToken(i->second,i->second->probeToken(),0);
 				i->second->save(tPtr);
 				m_peers.erase(i++);
 			} else ++i;
