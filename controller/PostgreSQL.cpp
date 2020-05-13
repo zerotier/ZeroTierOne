@@ -128,8 +128,10 @@ PostgreSQL::PostgreSQL(const Identity &myId, const char *path, int listenPort, R
 		opts.db = 0;
 		poolOpts.size = 10;
 		if (_rc->clusterMode) {
+			fprintf(stderr, "Using Redis in Cluster Mode\n");
 			_cluster = std::make_shared<sw::redis::RedisCluster>(opts, poolOpts);
 		} else {
+			fprintf(stderr, "Using Redis in Standalone Mode\n");
 			_redis = std::make_shared<sw::redis::Redis>(opts, poolOpts);
 		}
 	}
@@ -613,7 +615,7 @@ void PostgreSQL::heartbeat()
 			std::string build = std::to_string(ZEROTIER_ONE_VERSION_BUILD);
 			std::string now = std::to_string(OSUtils::now());
 			std::string host_port = std::to_string(_listenPort);
-			std::string use_rabbitmq = (false) ? "true" : "false";
+			std::string use_redis = (_rc != NULL) ? "true" : "false";
 			const char *values[10] = {
 				controllerId,
 				hostname,
@@ -624,16 +626,16 @@ void PostgreSQL::heartbeat()
 				rev.c_str(),
 				build.c_str(),
 				host_port.c_str(),
-				use_rabbitmq.c_str()
+				use_redis.c_str()
 			};
 
 			PGresult *res = PQexecParams(conn,
-				"INSERT INTO ztc_controller (id, cluster_host, last_alive, public_identity, v_major, v_minor, v_rev, v_build, host_port, use_rabbitmq) "
-				"VALUES ($1, $2, TO_TIMESTAMP($3::double precision/1000), $4, $5, $6, $7, $8, $9, $10) "
+				"INSERT INTO ztc_controller (id, cluster_host, last_alive, public_identity, v_major, v_minor, v_rev, v_build, host_port, use_rabbitmq, use_redis) "
+				"VALUES ($1, $2, TO_TIMESTAMP($3::double precision/1000), $4, $5, $6, $7, $8, $9, $10, $11) "
 				"ON CONFLICT (id) DO UPDATE SET cluster_host = EXCLUDED.cluster_host, last_alive = EXCLUDED.last_alive, "
 				"public_identity = EXCLUDED.public_identity, v_major = EXCLUDED.v_major, v_minor = EXCLUDED.v_minor, "
 				"v_rev = EXCLUDED.v_rev, v_build = EXCLUDED.v_rev, host_port = EXCLUDED.host_port, "
-				"use_rabbitmq = EXCLUDED.use_rabbitmq",
+				"use_redis = EXCLUDED.use_redis",
 				10,	   // number of parameters
 				NULL,	// oid field.   ignore
 				values,  // values for substitution

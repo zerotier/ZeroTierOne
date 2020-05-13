@@ -37,7 +37,7 @@ if [ "$ZT_USE_REDIS" == "true" ]; then
         exit 1
     fi
 
-    if [ -z "$ZT_REDIS_CLUSTER_MODE" ];
+    if [ -z "$ZT_REDIS_CLUSTER_MODE" ]; then
         echo '*** FAILED: ZT_REDIS_CLUSTER_MODE environment variable not defined'
         exit 1
     fi
@@ -49,6 +49,8 @@ if [ "$ZT_USE_REDIS" == "true" ]; then
             \"password\": \"${ZT_REDIS_PASSWORD}\"
         }
     "
+else
+    REDIS="\"redis\": {}"
 fi
 
 mkdir -p /var/lib/zerotier-one
