@@ -20,11 +20,16 @@
 
 #define ZT_CENTRAL_CONTROLLER_COMMIT_THREADS 4
 
+#include <memory>
+#include <redis++/redis++.h>
+
 extern "C" {
 typedef struct pg_conn PGconn;
 }
 
 namespace ZeroTier {
+
+struct RedisConfig;
 
 /**
  * A controller database driver that talks to PostgreSQL
@@ -35,7 +40,7 @@ namespace ZeroTier {
 class PostgreSQL : public DB
 {
 public:
-	PostgreSQL(const Identity &myId, const char *path, int listenPort);
+	PostgreSQL(const Identity &myId, const char *path, int listenPort, RedisConfig *rc);
 	virtual ~PostgreSQL();
 
 	virtual bool waitForReady();
@@ -60,11 +65,15 @@ private:
 	void networksDbWatcher();
 	void _networksWatcher_Postgres(PGconn *conn);
 
-	void _membersWatcher_Reids();
+	void _membersWatcher_Redis();
 	void _networksWatcher_Redis();
 
 	void commitThread();
 	void onlineNotificationThread();
+	void onlineNotification_Postgres();
+	void onlineNotification_Redis();
+	void _doRedisUpdate(sw::redis::Transaction &tx, std::string &controllerId, 
+		std::unordered_map< std::pair<uint64_t,uint64_t>,std::pair<int64_t,InetAddress>,_PairHasher > &lastOnline);
 
 	enum OverrideMode {
 		ALLOW_PGBOUNCER_OVERRIDE = 0,
@@ -94,6 +103,10 @@ private:
 	mutable volatile bool _waitNoticePrinted;
 
 	int _listenPort;
+
+	RedisConfig *_rc;
+	std::shared_ptr<sw::redis::Redis> _redis;
+	std::shared_ptr<sw::redis::RedisCluster> _cluster;
 };
 
 } // namespace ZeroTier

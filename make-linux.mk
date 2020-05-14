@@ -261,10 +261,9 @@ ifeq ($(ZT_OFFICIAL),1)
 endif
 
 ifeq ($(ZT_CONTROLLER),1)
-	LDLIBS+=-L/usr/pgsql-10/lib/ -lpq
-	DEFS+=-DZT_CONTROLLER_USE_LIBPQ
-	INCLUDES+=-I/usr/pgsql-10/include -Iext/hiredis-vip-0.3.0
-	ONE_OBJS+=ext/hiredis-vip-0.3.0/adlist.o ext/hiredis-vip-0.3.0/async.o ext/hiredis-vip-0.3.0/command.o ext/hiredis-vip-0.3.0/crc16.o ext/hiredis-vip-0.3.0/dict.o ext/hiredis-vip-0.3.0/hiarray.o ext/hiredis-vip-0.3.0/hircluster.o ext/hiredis-vip-0.3.0/hiredis.o ext/hiredis-vip-0.3.0/hiutil.o ext/hiredis-vip-0.3.0/net.o ext/hiredis-vip-0.3.0/read.o ext/hiredis-vip-0.3.0/sds.o
+	override LDLIBS+=-L/usr/pgsql-10/lib/ -lpq ext/hiredis-0.14.1/lib/centos8/libhiredis.a ext/redis-plus-plus-1.1.1/install/centos8/lib/libredis++.a
+	override DEFS+=-DZT_CONTROLLER_USE_LIBPQ
+	override INCLUDES+=-I/usr/pgsql-10/include -Iext/hiredis-0.14.1/include/ -Iext/redis-plus-plus-1.1.1/install/centos8/include/sw/
 endif
 
 # ARM32 hell -- use conservative CFLAGS
@@ -342,7 +341,7 @@ docker:	FORCE
 	docker build --no-cache -f ext/installfiles/linux/zerotier-containerized/Dockerfile -t zerotier-containerized .
 
 central-controller:	FORCE
-	make -j4 ZT_CONTROLLER=1 ZT_OFFICIAL=1 ZT_USE_X64_ASM_ED25519=1 one
+	make -j4 ZT_CONTROLLER=1 ZT_USE_X64_ASM_ED25519=1 one
 
 central-controller-docker: FORCE
 	docker build --no-cache -t docker.zerotier.com/zerotier-central/ztcentral-controller:${TIMESTAMP} -f ext/central-controller-docker/Dockerfile --build-arg git_branch=`git name-rev --name-only HEAD` .
