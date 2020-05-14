@@ -27,7 +27,7 @@ VL2::VL2(const RuntimeEnvironment *renv)
 {
 }
 
-void VL2::onLocalEthernet(void *const tPtr,const uint64_t packetId,const unsigned int auth,const SharedPtr<Network> &network,const MAC &from,const MAC &to,const unsigned int etherType,unsigned int vlanId,SharedPtr<Buf> &data,unsigned int len)
+void VL2::onLocalEthernet(void *const tPtr,const SharedPtr<Network> &network,const MAC &from,const MAC &to,const unsigned int etherType,unsigned int vlanId,SharedPtr<Buf> &data,unsigned int len)
 {
 }
 

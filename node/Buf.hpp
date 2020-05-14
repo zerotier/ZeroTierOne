@@ -394,9 +394,12 @@ public:
 	{
 		const char *const s = (const char *)(unsafeData + ii);
 		const int sii = ii;
-		while (likely(ii < ZT_BUF_MEM_SIZE)) {
+		while (ii < ZT_BUF_MEM_SIZE) {
 			if (unsafeData[ii++] == 0) {
-				Utils::copy(buf,s,ii - sii);
+				const int l = ii - sii;
+				if (unlikely((unsigned int)l > bufSize))
+					return nullptr;
+				Utils::copy(buf,s,l);
 				return buf;
 			}
 		}

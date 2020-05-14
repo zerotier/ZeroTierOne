@@ -15,31 +15,33 @@
 
 namespace ZeroTier {
 
-Topology::Topology(const RuntimeEnvironment *renv,void *tPtr) :
+Topology::Topology(const RuntimeEnvironment *renv, void *tPtr) :
 	RR(renv),
 	m_numConfiguredPhysicalPaths(0)
 {
-	uint64_t idtmp[2]; idtmp[0] = 0; idtmp[1] = 0;
-	Vector<uint8_t> data(RR->node->stateObjectGet(tPtr,ZT_STATE_OBJECT_ROOTS,idtmp));
+	uint64_t idtmp[2];
+	idtmp[0] = 0;
+	idtmp[1] = 0;
+	Vector<uint8_t> data(RR->node->stateObjectGet(tPtr, ZT_STATE_OBJECT_ROOTS, idtmp));
 	if (!data.empty()) {
 		uint8_t *dptr = data.data();
-		int drem = (int)data.size();
+		int drem = (int) data.size();
 		while (drem > 0) {
 			Identity id;
-			int l = id.unmarshal(dptr,drem);
+			int l = id.unmarshal(dptr, drem);
 			if (l > 0) {
 				m_roots.insert(id);
 				dptr += l;
 				drem -= l;
-				ZT_SPEW("loaded root %s",id.address().toString().c_str());
+				ZT_SPEW("loaded root %s", id.address().toString().c_str());
 			}
 		}
 	}
 
-	for(Set<Identity>::const_iterator r(m_roots.begin());r != m_roots.end();++r) {
+	for (Set<Identity>::const_iterator r(m_roots.begin());r != m_roots.end();++r) {
 		SharedPtr<Peer> p;
-		m_loadCached(tPtr,r->address(),p);
-		if ((!p)||(p->identity() != *r)) {
+		m_loadCached(tPtr, r->address(), p);
+		if ((!p) || (p->identity() != *r)) {
 			p.set(new Peer(RR));
 			p->init(*r);
 		}
@@ -48,26 +50,26 @@ Topology::Topology(const RuntimeEnvironment *renv,void *tPtr) :
 	}
 }
 
-SharedPtr<Peer> Topology::add(void *tPtr,const SharedPtr<Peer> &peer)
+SharedPtr<Peer> Topology::add(void *tPtr, const SharedPtr<Peer> &peer)
 {
 	RWMutex::Lock _l(m_peers_l);
 	SharedPtr<Peer> &hp = m_peers[peer->address()];
 	if (hp)
 		return hp;
-	m_loadCached(tPtr,peer->address(),hp);
+	m_loadCached(tPtr, peer->address(), hp);
 	if (hp)
 		return hp;
 	hp = peer;
 	return peer;
 }
 
-void Topology::setPhysicalPathConfiguration(const struct sockaddr_storage *pathNetwork,const ZT_PhysicalPathConfiguration *pathConfig)
+void Topology::setPhysicalPathConfiguration(const struct sockaddr_storage *pathNetwork, const ZT_PhysicalPathConfiguration *pathConfig)
 {
 	if (!pathNetwork) {
 		m_numConfiguredPhysicalPaths = 0;
 	} else {
-		std::map<InetAddress,ZT_PhysicalPathConfiguration> cpaths;
-		for(unsigned int i=0,j=m_numConfiguredPhysicalPaths;i < j;++i)
+		std::map<InetAddress, ZT_PhysicalPathConfiguration> cpaths;
+		for (unsigned int i = 0, j = m_numConfiguredPhysicalPaths;i < j;++i)
 			cpaths[m_physicalPathConfig[i].first] = m_physicalPathConfig[i].second;
 
 		if (pathConfig) {
@@ -86,7 +88,7 @@ void Topology::setPhysicalPathConfiguration(const struct sockaddr_storage *pathN
 		}
 
 		unsigned int cnt = 0;
-		for(std::map<InetAddress,ZT_PhysicalPathConfiguration>::const_iterator i(cpaths.begin());((i!=cpaths.end())&&(cnt<ZT_MAX_CONFIGURABLE_PATHS));++i) {
+		for (std::map<InetAddress, ZT_PhysicalPathConfiguration>::const_iterator i(cpaths.begin());((i != cpaths.end()) && (cnt < ZT_MAX_CONFIGURABLE_PATHS));++i) {
 			m_physicalPathConfig[cnt].first = i->first;
 			m_physicalPathConfig[cnt].second = i->second;
 			++cnt;
@@ -97,7 +99,7 @@ void Topology::setPhysicalPathConfiguration(const struct sockaddr_storage *pathN
 
 struct p_RootSortComparisonOperator
 {
-	ZT_INLINE bool operator()(const SharedPtr<Peer> &a,const SharedPtr<Peer> &b) const noexcept
+	ZT_INLINE bool operator()(const SharedPtr<Peer> &a, const SharedPtr<Peer> &b) const noexcept
 	{
 		// Sort in inverse order of latency with lowest latency first (and -1 last).
 		const int bb = b->latency();
@@ -107,13 +109,13 @@ struct p_RootSortComparisonOperator
 	}
 };
 
-void Topology::addRoot(void *const tPtr,const Identity &id,const InetAddress &bootstrap)
+void Topology::addRoot(void *const tPtr, const Identity &id, const InetAddress &bootstrap)
 {
 	if (id == RR->identity)
 		return;
 
 	RWMutex::Lock l1(m_peers_l);
-	std::pair< Set<Identity>::iterator,bool > ir(m_roots.insert(id));
+	std::pair<Set<Identity>::iterator, bool> ir(m_roots.insert(id));
 	if (ir.second) {
 		SharedPtr<Peer> &p = m_peers[id.address()];
 		if (!p) {
@@ -123,17 +125,17 @@ void Topology::addRoot(void *const tPtr,const Identity &id,const InetAddress &bo
 				p->setBootstrap(Endpoint(bootstrap));
 		}
 		m_rootPeers.push_back(p);
-		std::sort(m_rootPeers.begin(),m_rootPeers.end(),p_RootSortComparisonOperator());
+		std::sort(m_rootPeers.begin(), m_rootPeers.end(), p_RootSortComparisonOperator());
 		m_writeRootList(tPtr);
 	}
 }
 
-bool Topology::removeRoot(void *const tPtr,const Identity &id)
+bool Topology::removeRoot(void *const tPtr, const Identity &id)
 {
 	RWMutex::Lock l1(m_peers_l);
 	Set<Identity>::iterator r(m_roots.find(id));
 	if (r != m_roots.end()) {
-		for(Vector< SharedPtr<Peer> >::iterator p(m_rootPeers.begin());p != m_rootPeers.end();++p) {
+		for (Vector<SharedPtr<Peer> >::iterator p(m_rootPeers.begin());p != m_rootPeers.end();++p) {
 			if ((*p)->identity() == id) {
 				m_rootPeers.erase(p);
 				break;
@@ -149,16 +151,16 @@ bool Topology::removeRoot(void *const tPtr,const Identity &id)
 void Topology::rankRoots()
 {
 	RWMutex::Lock l1(m_peers_l);
-	std::sort(m_rootPeers.begin(),m_rootPeers.end(),p_RootSortComparisonOperator());
+	std::sort(m_rootPeers.begin(), m_rootPeers.end(), p_RootSortComparisonOperator());
 }
 
-void Topology::doPeriodicTasks(void *tPtr,const int64_t now)
+void Topology::doPeriodicTasks(void *tPtr, const int64_t now)
 {
 	// Delete peers that haven't said anything in ZT_PEER_ALIVE_TIMEOUT.
 	{
 		RWMutex::Lock l1(m_peers_l);
-		for(Map< Address,SharedPtr<Peer> >::iterator i(m_peers.begin());i != m_peers.end();) {
-			if ( ((now - i->second->lastReceive()) > ZT_PEER_ALIVE_TIMEOUT) && (m_roots.count(i->second->identity()) == 0) ) {
+		for (Map<Address, SharedPtr<Peer> >::iterator i(m_peers.begin());i != m_peers.end();) {
+			if (((now - i->second->lastReceive()) > ZT_PEER_ALIVE_TIMEOUT) && (m_roots.count(i->second->identity()) == 0)) {
 				i->second->save(tPtr);
 				m_peers.erase(i++);
 			} else ++i;
@@ -168,7 +170,7 @@ void Topology::doPeriodicTasks(void *tPtr,const int64_t now)
 	// Delete paths that are no longer held by anyone else ("weak reference" type behavior).
 	{
 		RWMutex::Lock l1(m_paths_l);
-		for(Map< uint64_t,SharedPtr<Path> >::iterator i(m_paths.begin());i != m_paths.end();) {
+		for (Map<uint64_t, SharedPtr<Path> >::iterator i(m_paths.begin());i != m_paths.end();) {
 			if (i->second.weakGC())
 				m_paths.erase(i++);
 			else ++i;
@@ -179,7 +181,7 @@ void Topology::doPeriodicTasks(void *tPtr,const int64_t now)
 void Topology::saveAll(void *tPtr)
 {
 	RWMutex::RLock l(m_peers_l);
-	for(Map< Address,SharedPtr<Peer> >::iterator i(m_peers.begin());i!=m_peers.end();++i)
+	for (Map<Address, SharedPtr<Peer> >::iterator i(m_peers.begin());i != m_peers.end();++i)
 		i->second->save(tPtr);
 }
 
@@ -189,14 +191,14 @@ void Topology::m_loadCached(void *tPtr, const Address &zta, SharedPtr<Peer> &pee
 		uint64_t id[2];
 		id[0] = zta.toInt();
 		id[1] = 0;
-		Vector<uint8_t> data(RR->node->stateObjectGet(tPtr,ZT_STATE_OBJECT_PEER,id));
+		Vector<uint8_t> data(RR->node->stateObjectGet(tPtr, ZT_STATE_OBJECT_PEER, id));
 		if (data.size() > 8) {
 			const uint8_t *d = data.data();
-			int dl = (int)data.size();
+			int dl = (int) data.size();
 
-			const int64_t ts = (int64_t)Utils::loadBigEndian<uint64_t>(d);
+			const int64_t ts = (int64_t) Utils::loadBigEndian<uint64_t>(d);
 			Peer *const p = new Peer(RR);
-			int n = p->unmarshal(d + 8,dl - 8);
+			int n = p->unmarshal(d + 8, dl - 8);
 			if (n < 0) {
 				delete p;
 				return;
@@ -207,7 +209,7 @@ void Topology::m_loadCached(void *tPtr, const Address &zta, SharedPtr<Peer> &pee
 				return;
 			}
 		}
-	} catch ( ... ) {
+	} catch (...) {
 		peer.zero();
 	}
 }
@@ -215,18 +217,18 @@ void Topology::m_loadCached(void *tPtr, const Address &zta, SharedPtr<Peer> &pee
 void Topology::m_writeRootList(void *tPtr)
 {
 	// assumes m_peers_l is locked
-	uint8_t *const roots = (uint8_t *)malloc(ZT_IDENTITY_MARSHAL_SIZE_MAX * m_roots.size());
+	uint8_t *const roots = (uint8_t *) malloc(ZT_IDENTITY_MARSHAL_SIZE_MAX * m_roots.size());
 	if (roots) { // sanity check
 		int p = 0;
-		for(Set<Identity>::const_iterator i(m_roots.begin());i != m_roots.end();++i) {
-			const int pp = i->marshal(roots + p,false);
+		for (Set<Identity>::const_iterator i(m_roots.begin());i != m_roots.end();++i) {
+			const int pp = i->marshal(roots + p, false);
 			if (pp > 0)
 				p += pp;
 		}
 		uint64_t id[2];
 		id[0] = 0;
 		id[1] = 0;
-		RR->node->stateObjectPut(tPtr,ZT_STATE_OBJECT_ROOTS,id,roots,(unsigned int)p);
+		RR->node->stateObjectPut(tPtr, ZT_STATE_OBJECT_ROOTS, id, roots, (unsigned int) p);
 		free(roots);
 	}
 }

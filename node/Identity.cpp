@@ -16,10 +16,8 @@
 #include "SHA512.hpp"
 #include "Salsa20.hpp"
 #include "Utils.hpp"
-#include "Speck128.hpp"
+#include "AES.hpp"
 
-#include <cstring>
-#include <cstdint>
 #include <algorithm>
 
 namespace ZeroTier {
@@ -78,74 +76,34 @@ struct identityV0ProofOfWorkCriteria
 // It's not quite as heavy as the V0 frankenhash, is a little more orderly in
 // its design, but remains relatively resistant to GPU acceleration due to memory
 // requirements for efficient computation.
-#define ZT_IDENTITY_V1_POW_MEMORY_SIZE 98304
+#define ZT_IDENTITY_V1_POW_MEMORY_SIZE 1048576
+#define ZT_IDENTITY_V1_POW_MEMORY_SIZE_U64 131072
 bool identityV1ProofOfWorkCriteria(const void *in,const unsigned int len,uint64_t *const b)
 {
 	SHA512(b,in,len);
 
-	// This treats hash output as little-endian, so swap on BE machines.
-#if __BYTE_ORDER == __BIG_ENDIAN
-	b[0] = Utils::swapBytes(b[0]);
-	b[1] = Utils::swapBytes(b[1]);
-	b[2] = Utils::swapBytes(b[2]);
-	b[3] = Utils::swapBytes(b[3]);
-	b[4] = Utils::swapBytes(b[4]);
-	b[5] = Utils::swapBytes(b[5]);
-	b[6] = Utils::swapBytes(b[6]);
-	b[7] = Utils::swapBytes(b[7]);
-#endif
-
-	// Memory-intensive work: fill 'b' with pseudo-random bits generated from
-	// a reduced-round instance of Speck128 using a CBC-like construction.
-	// Then sort the resulting integer array in ascending numerical order.
-	// The sort requires that we compute and cache the whole data set, or at
-	// least that this is the most efficient implementation.
-	Speck128<24> s16;
-	s16.initXY(b[4],b[5]);
-	for(unsigned long i=0;i<(ZT_IDENTITY_V1_POW_MEMORY_SIZE-8);) {
-		// Load four 128-bit blocks.
-		uint64_t x0 = b[i];
-		uint64_t y0 = b[i + 1];
-		uint64_t x1 = b[i + 2];
-		uint64_t y1 = b[i + 3];
-		uint64_t x2 = b[i + 4];
-		uint64_t y2 = b[i + 5];
-		uint64_t x3 = b[i + 6];
-		uint64_t y3 = b[i + 7];
-
-		// Advance by 512 bits / 64 bytes (its a uint64_t array).
-		i += 8;
-
-		// Ensure that mixing happens across blocks.
-		x0 += x1;
-		x1 += x2;
-		x2 += x3;
-		x3 += y0;
-
-		// Encrypt 4X blocks. Speck is used for this PoW function because
-		// its performance is similar on all architectures while AES is much
-		// faster on some than others.
-		s16.encryptXYXYXYXY(x0,y0,x1,y1,x2,y2,x3,y3);
-
-		// Store four 128-bit blocks at new position.
-		b[i] = x0;
-		b[i + 1] = y0;
-		b[i + 2] = x1;
-		b[i + 3] = y1;
-		b[i + 4] = x2;
-		b[i + 5] = y2;
-		b[i + 6] = x3;
-		b[i + 7] = y3;
+	AES c(b);
+	for(unsigned int i=8;i<ZT_IDENTITY_V1_POW_MEMORY_SIZE_U64;i+=8) {
+		SHA512(b + i,b + (i - 8),64);
+		if (unlikely((b[i] % 31337ULL) == (b[i] >> 49U)))
+			c.encrypt(b + i,b + i);
 	}
 
-	// Sort array, something that can't efficiently be done unless we have
-	// computed the whole array and have it in memory. This also involves
-	// branching which is less efficient on GPUs.
-	std::sort(b,b + ZT_IDENTITY_V1_POW_MEMORY_SIZE);
-
-	// Swap byte order back on BE machines.
 #if __BYTE_ORDER == __BIG_ENDIAN
-	for(unsigned int i=0;i<98304;i+=8) {
+	for(unsigned int i=0;i<ZT_IDENTITY_V1_POW_MEMORY_SIZE_U64;i+=8) {
+		b[i] = Utils::swapBytes(b[i]);
+		b[i + 1] = Utils::swapBytes(b[i + 1]);
+		b[i + 2] = Utils::swapBytes(b[i + 2]);
+		b[i + 3] = Utils::swapBytes(b[i + 3]);
+		b[i + 4] = Utils::swapBytes(b[i + 4]);
+		b[i + 5] = Utils::swapBytes(b[i + 5]);
+		b[i + 6] = Utils::swapBytes(b[i + 6]);
+		b[i + 7] = Utils::swapBytes(b[i + 7]);
+	}
+#endif
+	std::sort(b,b + ZT_IDENTITY_V1_POW_MEMORY_SIZE_U64);
+#if __BYTE_ORDER == __BIG_ENDIAN
+	for(unsigned int i=0;i<ZT_IDENTITY_V1_POW_MEMORY_SIZE_U64;i+=8) {
 		b[i] = Utils::swapBytes(b[i]);
 		b[i + 1] = Utils::swapBytes(b[i + 1]);
 		b[i + 2] = Utils::swapBytes(b[i + 2]);
@@ -158,6 +116,9 @@ bool identityV1ProofOfWorkCriteria(const void *in,const unsigned int len,uint64_
 #endif
 
 	// Hash resulting sorted array to get final result for PoW criteria test.
+	// We also include the original input after so that cryptographically this
+	// is exactly like SHA384(in). This should make any FIPS types happy as
+	// this means the identity hash is SHA384 and not some weird construction.
 	SHA384(b,b,sizeof(b),in,len);
 
 	// PoW passes if sum of first two 64-bit integers (treated as little-endian) mod 180 is 0.
@@ -197,7 +158,7 @@ bool Identity::generate(const Type t)
 		} break;
 
 		case P384: {
-			uint64_t *const b = (uint64_t *)malloc(ZT_IDENTITY_V1_POW_MEMORY_SIZE * 8); // NOLINT(hicpp-use-auto,modernize-use-auto)
+			uint64_t *const b = (uint64_t *)malloc(ZT_IDENTITY_V1_POW_MEMORY_SIZE); // NOLINT(hicpp-use-auto,modernize-use-auto)
 			if (!b)
 				return false;
 			for(;;) {

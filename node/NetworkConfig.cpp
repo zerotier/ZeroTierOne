@@ -43,7 +43,7 @@ bool NetworkConfig::toDictionary(Dictionary &d) const
 			d.add(ZT_NETWORKCONFIG_DICT_KEY_COM,tmp,this->com.marshal(tmp));
 		}
 
-		std::vector<uint8_t> *blob = &(d[ZT_NETWORKCONFIG_DICT_KEY_CAPABILITIES]);
+		Vector<uint8_t> *blob = &(d[ZT_NETWORKCONFIG_DICT_KEY_CAPABILITIES]);
 		for (unsigned int i = 0; i < this->capabilityCount; ++i) {
 			int l = this->capabilities[i].marshal(tmp);
 			if (l < 0)
@@ -121,7 +121,7 @@ bool NetworkConfig::fromDictionary(const Dictionary &d)
 		this->credentialTimeMaxDelta = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_CREDENTIAL_TIME_MAX_DELTA,0);
 		this->revision = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_REVISION,0);
 		this->issuedTo = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO,0);
-		const std::vector<uint8_t> *blob = &(d[ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO_IDENTITY_HASH]);
+		const Vector<uint8_t> *blob = &(d[ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO_IDENTITY_HASH]);
 		if (blob->size() == ZT_FINGERPRINT_HASH_SIZE) {
 			Utils::copy<ZT_FINGERPRINT_HASH_SIZE>(this->issuedToFingerprintHash,blob->data());
 		} else {

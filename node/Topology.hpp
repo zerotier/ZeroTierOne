@@ -63,7 +63,7 @@ public:
 		{
 			RWMutex::RLock l(m_peers_l);
 			const SharedPtr<Peer> *const ap = m_peers.get(zta);
-			if (ap)
+			if (likely(ap != nullptr))
 				return *ap;
 		}
 		{
@@ -95,7 +95,7 @@ public:
 		{
 			RWMutex::RLock lck(m_paths_l);
 			SharedPtr<Path> *const p = m_paths.get(k);
-			if (p)
+			if (likely(p != nullptr))
 				return *p;
 		}
 		{
@@ -115,7 +115,7 @@ public:
 	ZT_INLINE SharedPtr<Peer> root() const
 	{
 		RWMutex::RLock l(m_peers_l);
-		if (m_rootPeers.empty())
+		if (unlikely(m_rootPeers.empty()))
 			return SharedPtr<Peer>();
 		return m_rootPeers.front();
 	}
@@ -167,10 +167,8 @@ public:
 			rootPeerPtrs.push_back((uintptr_t)rp->ptr());
 		std::sort(rootPeerPtrs.begin(),rootPeerPtrs.end());
 
-		try {
-			for(Map< Address,SharedPtr<Peer> >::const_iterator i(m_peers.begin());i != m_peers.end();++i)
-				f(i->second,std::binary_search(rootPeerPtrs.begin(),rootPeerPtrs.end(),(uintptr_t)i->second.ptr()));
-		} catch ( ... ) {} // should not throw
+		for(Map< Address,SharedPtr<Peer> >::const_iterator i(m_peers.begin());i != m_peers.end();++i)
+			f(i->second,std::binary_search(rootPeerPtrs.begin(),rootPeerPtrs.end(),(uintptr_t)i->second.ptr()));
 	}
 
 	/**
@@ -183,56 +181,6 @@ public:
 		allPeers.reserve(m_peers.size());
 		for(Map< Address,SharedPtr<Peer> >::const_iterator i(m_peers.begin());i != m_peers.end();++i)
 			allPeers.push_back(i->second);
-	}
-
-	/**
-	 * Get info about a path
-	 *
-	 * The supplied result variables are not modified if no special config info is found.
-	 *
-	 * @param physicalAddress Physical endpoint address
-	 * @param mtu Variable set to MTU
-	 * @param trustedPathId Variable set to trusted path ID
-	 */
-	ZT_INLINE void getOutboundPathInfo(const InetAddress &physicalAddress,unsigned int &mtu,uint64_t &trustedPathId)
-	{
-		for(unsigned int i=0,j=m_numConfiguredPhysicalPaths;i < j;++i) {
-			if (m_physicalPathConfig[i].first.containsAddress(physicalAddress)) {
-				trustedPathId = m_physicalPathConfig[i].second.trustedPathId;
-				mtu = m_physicalPathConfig[i].second.mtu;
-				return;
-			}
-		}
-	}
-
-	/**
-	 * Get the outbound trusted path ID for a physical address, or 0 if none
-	 *
-	 * @param physicalAddress Physical address to which we are sending the packet
-	 * @return Trusted path ID or 0 if none (0 is not a valid trusted path ID)
-	 */
-	ZT_INLINE uint64_t getOutboundPathTrust(const InetAddress &physicalAddress)
-	{
-		for(unsigned int i=0,j=m_numConfiguredPhysicalPaths;i < j;++i) {
-			if (m_physicalPathConfig[i].first.containsAddress(physicalAddress))
-				return m_physicalPathConfig[i].second.trustedPathId;
-		}
-		return 0;
-	}
-
-	/**
-	 * Check whether in incoming trusted path marked packet is valid
-	 *
-	 * @param physicalAddress Originating physical address
-	 * @param trustedPathId Trusted path ID from packet (from MAC field)
-	 */
-	ZT_INLINE bool shouldInboundPathBeTrusted(const InetAddress &physicalAddress,const uint64_t trustedPathId)
-	{
-		for(unsigned int i=0,j=m_numConfiguredPhysicalPaths;i < j;++i) {
-			if ((m_physicalPathConfig[i].second.trustedPathId == trustedPathId) && (m_physicalPathConfig[i].first.containsAddress(physicalAddress)))
-				return true;
-		}
-		return false;
 	}
 
 	/**
@@ -259,7 +207,7 @@ public:
 	bool removeRoot(void *tPtr,const Identity &id);
 
 	/**
-	 * Sort roots in asecnding order of apparent latency
+	 * Sort roots in ascending order of apparent latency
 	 *
 	 * @param now Current time
 	 */

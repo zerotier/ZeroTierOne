@@ -41,7 +41,6 @@ set(core_headers
 	SelfAwareness.hpp
 	SHA512.hpp
 	SharedPtr.hpp
-	Speck128.hpp
 	SymmetricKey.hpp
 	Tag.hpp
 	Topology.hpp

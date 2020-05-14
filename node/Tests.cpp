@@ -403,29 +403,29 @@ extern "C" const char *ZTT_general()
 			FCV<LifeCycleTracker,1024> test,test2;
 			for(unsigned int i=0;i<512;++i)
 				test.push_back(LifeCycleTracker(cnt));
-			if (cnt != 512) {
+			if (cnt != (long)test.size()) {
 				ZT_T_PRINTF("FAILED (expected 512 objects, got %lu (1))" ZT_EOL_S,cnt);
 				return "FCV object life cycle test failed (1)";
 			}
 			test2 = test;
-			if (cnt != 1024) {
+			if (cnt != (long)(test.size() + test2.size())) {
 				ZT_T_PRINTF("FAILED (expected 1024 objects, got %lu (2))" ZT_EOL_S,cnt);
 				return "FCV object life cycle test failed (2)";
 			}
 			test.clear();
-			if (cnt != 512) {
+			if (cnt != (long)test.size()) {
 				ZT_T_PRINTF("FAILED (expected 512 objects, got %lu (3))" ZT_EOL_S,cnt);
 				return "FCV object life cycle test failed (3)";
 			}
 			for(unsigned int i=0;i<512;++i)
 				test.push_back(LifeCycleTracker(cnt));
-			if (cnt != 1024) {
+			if (cnt != (long)(test.size() + test2.size())) {
 				ZT_T_PRINTF("FAILED (expected 1024 objects, got %lu (4))" ZT_EOL_S,cnt);
 				return "FCV object life cycle test failed (4)";
 			}
 			test.clear();
 			test2.clear();
-			if (cnt != 0) {
+			if (cnt != (long)test.size()) {
 				ZT_T_PRINTF("FAILED (expected 0 objects, got %lu (5))" ZT_EOL_S,cnt);
 				return "FCV object life cycle test failed (5)";
 			}

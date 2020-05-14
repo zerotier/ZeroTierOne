@@ -33,7 +33,7 @@ namespace ZeroTier {
 class PeerList
 {
 public:
-	ZT_INLINE PeerList() noexcept :
+	ZT_INLINE PeerList() noexcept:
 		m_onePeer(),
 		m_peers(&m_onePeer),
 		m_peerCount(0)
@@ -47,7 +47,7 @@ public:
 			m_peers = &m_onePeer;
 		} else {
 			m_peers = new SharedPtr<Peer>[pc];
-			for (unsigned int i=0;i<pc;++i)
+			for (unsigned int i = 0;i < pc;++i)
 				m_peers[i] = pl.m_peers[i];
 		}
 		m_peerCount = pc;
@@ -56,14 +56,14 @@ public:
 	ZT_INLINE ~PeerList()
 	{
 		if (unlikely(m_peers != &m_onePeer))
-			delete [] m_peers;
+			delete[] m_peers;
 	}
 
 	ZT_INLINE PeerList &operator=(const PeerList &pl)
 	{
 		if (&pl != this) {
 			if (unlikely(m_peers != &m_onePeer))
-				delete [] m_peers;
+				delete[] m_peers;
 			if (likely(pl.m_peerCount <= 1)) {
 				m_onePeer = pl.m_onePeer;
 				m_peers = &m_onePeer;
@@ -90,7 +90,7 @@ public:
 	ZT_INLINE void resize(const unsigned int s)
 	{
 		if (unlikely(m_peers != &m_onePeer))
-			delete [] m_peers;
+			delete[] m_peers;
 		m_peerCount = s;
 		if (likely(s <= 1)) {
 			m_peers = &m_onePeer;
@@ -99,13 +99,18 @@ public:
 		}
 	}
 
-	ZT_INLINE SharedPtr<Peer> &operator[](const unsigned int i) noexcept { return m_peers[i]; }
-	ZT_INLINE const SharedPtr<Peer> &operator[](const unsigned int i) const noexcept { return m_peers[i]; }
-	ZT_INLINE unsigned int size() const noexcept { return m_peerCount; }
+	ZT_INLINE SharedPtr <Peer> &operator[](const unsigned int i) noexcept
+	{ return m_peers[i]; }
+
+	ZT_INLINE const SharedPtr <Peer> &operator[](const unsigned int i) const noexcept
+	{ return m_peers[i]; }
+
+	ZT_INLINE unsigned int size() const noexcept
+	{ return m_peerCount; }
 
 private:
-	SharedPtr<Peer> m_onePeer;
-	SharedPtr<Peer> *m_peers;
+	SharedPtr <Peer> m_onePeer;
+	SharedPtr <Peer> *m_peers;
 	unsigned int m_peerCount;
 };
 

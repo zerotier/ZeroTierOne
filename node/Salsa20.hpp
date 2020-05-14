@@ -14,18 +14,11 @@
 #ifndef ZT_SALSA20_HPP
 #define ZT_SALSA20_HPP
 
-#include <cstdint>
-#include <cstdlib>
-#include <cstring>
-
 #include "Constants.hpp"
 #include "Utils.hpp"
 #include "TriviallyCopyable.hpp"
 
 #ifdef ZT_ARCH_X64
-#include <xmmintrin.h>
-#include <emmintrin.h>
-#include <immintrin.h>
 #define ZT_SALSA20_SSE 1
 #endif
 

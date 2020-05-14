@@ -15,7 +15,6 @@
 #include "RuntimeEnvironment.hpp"
 #include "Node.hpp"
 #include "Peer.hpp"
-#include "Path.hpp"
 #include "InetAddress.hpp"
 #include "FCV.hpp"
 

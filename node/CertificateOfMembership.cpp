@@ -15,12 +15,13 @@
 
 namespace ZeroTier {
 
-CertificateOfMembership::CertificateOfMembership(const int64_t timestamp,const int64_t timestampMaxDelta,const uint64_t nwid,const Identity &issuedTo) noexcept : // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+CertificateOfMembership::CertificateOfMembership(const int64_t timestamp, const int64_t timestampMaxDelta, const uint64_t nwid, const Identity &issuedTo) noexcept: // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 	m_timestamp(timestamp),
 	m_timestampMaxDelta(timestampMaxDelta),
 	m_networkId(nwid),
 	m_issuedTo(issuedTo.fingerprint()),
-	m_signatureLength(0) {}
+	m_signatureLength(0)
+{}
 
 bool CertificateOfMembership::agreesWith(const CertificateOfMembership &other) const noexcept
 {
@@ -36,10 +37,10 @@ bool CertificateOfMembership::agreesWith(const CertificateOfMembership &other) c
 	}
 
 	// us <> them
-	for(FCV<p_Qualifier,ZT_CERTIFICATEOFMEMBERSHIP_MAX_ADDITIONAL_QUALIFIERS>::const_iterator i(m_additionalQualifiers.begin());i != m_additionalQualifiers.end();++i) {
+	for (FCV<p_Qualifier, ZT_CERTIFICATEOFMEMBERSHIP_MAX_ADDITIONAL_QUALIFIERS>::const_iterator i(m_additionalQualifiers.begin());i != m_additionalQualifiers.end();++i) {
 		if (i->delta != 0xffffffffffffffffULL) {
 			const uint64_t *v2 = nullptr;
-			for(FCV<p_Qualifier,ZT_CERTIFICATEOFMEMBERSHIP_MAX_ADDITIONAL_QUALIFIERS>::const_iterator j(other.m_additionalQualifiers.begin());j != other.m_additionalQualifiers.end();++i) {
+			for (FCV<p_Qualifier, ZT_CERTIFICATEOFMEMBERSHIP_MAX_ADDITIONAL_QUALIFIERS>::const_iterator j(other.m_additionalQualifiers.begin());j != other.m_additionalQualifiers.end();++i) {
 				if (j->id == i->id) {
 					v2 = &(j->value);
 					break;
@@ -58,10 +59,10 @@ bool CertificateOfMembership::agreesWith(const CertificateOfMembership &other) c
 	}
 
 	// them <> us (we need a second pass in case they have qualifiers we don't or vice versa)
-	for(FCV<p_Qualifier,ZT_CERTIFICATEOFMEMBERSHIP_MAX_ADDITIONAL_QUALIFIERS>::const_iterator i(other.m_additionalQualifiers.begin());i != other.m_additionalQualifiers.end();++i) {
+	for (FCV<p_Qualifier, ZT_CERTIFICATEOFMEMBERSHIP_MAX_ADDITIONAL_QUALIFIERS>::const_iterator i(other.m_additionalQualifiers.begin());i != other.m_additionalQualifiers.end();++i) {
 		if (i->delta != 0xffffffffffffffffULL) {
 			const uint64_t *v2 = nullptr;
-			for(FCV<p_Qualifier,ZT_CERTIFICATEOFMEMBERSHIP_MAX_ADDITIONAL_QUALIFIERS>::const_iterator j(m_additionalQualifiers.begin());j != m_additionalQualifiers.end();++i) {
+			for (FCV<p_Qualifier, ZT_CERTIFICATEOFMEMBERSHIP_MAX_ADDITIONAL_QUALIFIERS>::const_iterator j(m_additionalQualifiers.begin());j != m_additionalQualifiers.end();++i) {
 				if (j->id == i->id) {
 					v2 = &(j->value);
 					break;
@@ -93,45 +94,59 @@ bool CertificateOfMembership::sign(const Identity &with) noexcept
 	return m_signatureLength > 0;
 }
 
-int CertificateOfMembership::marshal(uint8_t data[ZT_CERTIFICATEOFMEMBERSHIP_MARSHAL_SIZE_MAX],const bool v2) const noexcept
+int CertificateOfMembership::marshal(uint8_t data[ZT_CERTIFICATEOFMEMBERSHIP_MARSHAL_SIZE_MAX], const bool v2) const noexcept
 {
 	data[0] = v2 ? 2 : 1;
 
 	// All formats start with the standard three qualifiers: timestamp with delta, network ID as a strict
 	// equality compare, and the address of the issued-to node as an informational tuple.
 	int p = 3;
-	Utils::storeBigEndian<uint64_t>(data + p,0); p += 8;
-	Utils::storeBigEndian<uint64_t>(data + p,(uint64_t)m_timestamp); p += 8;
-	Utils::storeBigEndian<uint64_t>(data + p,(uint64_t)m_timestampMaxDelta); p += 8;
-	Utils::storeBigEndian<uint64_t>(data + p,1); p += 8;
-	Utils::storeBigEndian<uint64_t>(data + p, m_networkId); p += 8;
-	Utils::storeBigEndian<uint64_t>(data + p,0); p += 8;
-	Utils::storeBigEndian<uint64_t>(data + p,2); p += 8;
-	Utils::storeBigEndian<uint64_t>(data + p, m_issuedTo.address().toInt()); p += 8;
-	Utils::storeAsIsEndian<uint64_t>(data + p,0xffffffffffffffffULL); p += 8;
+	Utils::storeBigEndian<uint64_t>(data + p, 0);
+	p += 8;
+	Utils::storeBigEndian<uint64_t>(data + p, (uint64_t) m_timestamp);
+	p += 8;
+	Utils::storeBigEndian<uint64_t>(data + p, (uint64_t) m_timestampMaxDelta);
+	p += 8;
+	Utils::storeBigEndian<uint64_t>(data + p, 1);
+	p += 8;
+	Utils::storeBigEndian<uint64_t>(data + p, m_networkId);
+	p += 8;
+	Utils::storeBigEndian<uint64_t>(data + p, 0);
+	p += 8;
+	Utils::storeBigEndian<uint64_t>(data + p, 2);
+	p += 8;
+	Utils::storeBigEndian<uint64_t>(data + p, m_issuedTo.address().toInt());
+	p += 8;
+	Utils::storeAsIsEndian<uint64_t>(data + p, 0xffffffffffffffffULL);
+	p += 8;
 
 	if (v2) {
 		// V2 marshal format will have three tuples followed by the fingerprint hash.
-		Utils::storeBigEndian<uint16_t>(data + 1,3);
+		Utils::storeBigEndian<uint16_t>(data + 1, 3);
 		Utils::copy<48>(data + p, m_issuedTo.hash());
 		p += 48;
 	} else {
 		// V1 marshal format must shove everything into tuples, resulting in nine.
-		Utils::storeBigEndian<uint16_t>(data + 1,9);
-		for(int k=0;k<6;++k) {
-			Utils::storeBigEndian<uint64_t>(data + p,(uint64_t)k + 3); p += 8;
-			Utils::storeAsIsEndian<uint64_t>(data + p,Utils::loadAsIsEndian<uint64_t>(m_issuedTo.hash() + (k * 8))); p += 8;
-			Utils::storeAsIsEndian<uint64_t>(data + p,0xffffffffffffffffULL); p += 8;
+		Utils::storeBigEndian<uint16_t>(data + 1, 9);
+		for (int k = 0;k < 6;++k) {
+			Utils::storeBigEndian<uint64_t>(data + p, (uint64_t) k + 3);
+			p += 8;
+			Utils::storeAsIsEndian<uint64_t>(data + p, Utils::loadAsIsEndian<uint64_t>(m_issuedTo.hash() + (k * 8)));
+			p += 8;
+			Utils::storeAsIsEndian<uint64_t>(data + p, 0xffffffffffffffffULL);
+			p += 8;
 		}
 	}
 
-	m_signedBy.copyTo(data + p); p += 5;
+	m_signedBy.copyTo(data + p);
+	p += 5;
 
 	if (v2) {
 		// V2 marshal format prefixes signatures with a 16-bit length to support future signature types.
-		Utils::storeBigEndian<uint16_t>(data + p,(uint16_t)m_signatureLength); p += 2;
+		Utils::storeBigEndian<uint16_t>(data + p, (uint16_t) m_signatureLength);
+		p += 2;
 		Utils::copy(data + p, m_signature, m_signatureLength);
-		p += (int)m_signatureLength;
+		p += (int) m_signatureLength;
 	} else {
 		// V1 only supports 96-byte signature fields.
 		Utils::copy<96>(data + p, m_signature);
@@ -141,7 +156,7 @@ int CertificateOfMembership::marshal(uint8_t data[ZT_CERTIFICATEOFMEMBERSHIP_MAR
 	return p;
 }
 
-int CertificateOfMembership::unmarshal(const uint8_t *data,int len) noexcept
+int CertificateOfMembership::unmarshal(const uint8_t *data, int len) noexcept
 {
 	if (len < (1 + 2 + 72))
 		return -1;
@@ -149,19 +164,22 @@ int CertificateOfMembership::unmarshal(const uint8_t *data,int len) noexcept
 	TriviallyCopyable::memoryZero(this);
 
 	const unsigned int numq = Utils::loadBigEndian<uint16_t>(data + 1);
-	if ((numq < 3)||(numq > (ZT_CERTIFICATEOFMEMBERSHIP_MAX_ADDITIONAL_QUALIFIERS + 3)))
+	if ((numq < 3) || (numq > (ZT_CERTIFICATEOFMEMBERSHIP_MAX_ADDITIONAL_QUALIFIERS + 3)))
 		return -1;
 	int p = 3;
-	for(unsigned int q=0;q<numq;++q) {
+	for (unsigned int q = 0;q < numq;++q) {
 		if ((p + 24) > len)
 			return -1;
-		const uint64_t id = Utils::loadBigEndian<uint64_t>(data + p); p += 8; // NOLINT(hicpp-use-auto,modernize-use-auto)
-		const uint64_t value = Utils::loadBigEndian<uint64_t>(data + p); p += 8; // NOLINT(hicpp-use-auto,modernize-use-auto)
-		const uint64_t delta = Utils::loadBigEndian<uint64_t>(data + p); p += 8; // NOLINT(hicpp-use-auto,modernize-use-auto)
-		switch(id) {
+		const uint64_t id = Utils::loadBigEndian<uint64_t>(data + p);
+		p += 8; // NOLINT(hicpp-use-auto,modernize-use-auto)
+		const uint64_t value = Utils::loadBigEndian<uint64_t>(data + p);
+		p += 8; // NOLINT(hicpp-use-auto,modernize-use-auto)
+		const uint64_t delta = Utils::loadBigEndian<uint64_t>(data + p);
+		p += 8; // NOLINT(hicpp-use-auto,modernize-use-auto)
+		switch (id) {
 			case 0:
-				m_timestamp = (int64_t)value;
-				m_timestampMaxDelta = (int64_t)delta;
+				m_timestamp = (int64_t) value;
+				m_timestampMaxDelta = (int64_t) delta;
 				break;
 			case 1:
 				m_networkId = value;
@@ -214,10 +232,10 @@ int CertificateOfMembership::unmarshal(const uint8_t *data,int len) noexcept
 		if ((p + 2) > len)
 			return -1;
 		m_signatureLength = Utils::loadBigEndian<uint16_t>(data + p);
-		if ((m_signatureLength > (unsigned int)sizeof(m_signature)) || ((p + (int)m_signatureLength) > len))
+		if ((m_signatureLength > (unsigned int) sizeof(m_signature)) || ((p + (int) m_signatureLength) > len))
 			return -1;
 		Utils::copy(m_signature, data + p, m_signatureLength);
-		return p + (int)m_signatureLength;
+		return p + (int) m_signatureLength;
 	}
 
 	return -1;
@@ -235,8 +253,8 @@ unsigned int CertificateOfMembership::m_fillSigningBuf(uint64_t *buf) const noex
 
 	// The standard three tuples that must begin every COM.
 	buf[0] = 0;
-	buf[1] = Utils::hton((uint64_t)m_timestamp);
-	buf[2] = Utils::hton((uint64_t)m_timestampMaxDelta);
+	buf[1] = Utils::hton((uint64_t) m_timestamp);
+	buf[2] = Utils::hton((uint64_t) m_timestampMaxDelta);
 	buf[3] = ZT_CONST_TO_BE_UINT64(1);
 	buf[4] = Utils::hton(m_networkId);
 	buf[5] = 0;
@@ -269,7 +287,7 @@ unsigned int CertificateOfMembership::m_fillSigningBuf(uint64_t *buf) const noex
 		buf[p++] = informational;
 	}
 
-	for(FCV<p_Qualifier,ZT_CERTIFICATEOFMEMBERSHIP_MAX_ADDITIONAL_QUALIFIERS>::const_iterator i(m_additionalQualifiers.begin());i != m_additionalQualifiers.end();++i) { // NOLINT(modernize-loop-convert)
+	for (FCV<p_Qualifier, ZT_CERTIFICATEOFMEMBERSHIP_MAX_ADDITIONAL_QUALIFIERS>::const_iterator i(m_additionalQualifiers.begin());i != m_additionalQualifiers.end();++i) { // NOLINT(modernize-loop-convert)
 		buf[p++] = Utils::hton(i->id);
 		buf[p++] = Utils::hton(i->value);
 		buf[p++] = Utils::hton(i->delta);

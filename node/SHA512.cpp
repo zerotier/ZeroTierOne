@@ -3,10 +3,6 @@
 #include "SHA512.hpp"
 #include "Utils.hpp"
 
-#include <cstdint>
-#include <cstring>
-#include <algorithm>
-
 namespace ZeroTier {
 
 #ifndef ZT_HAVE_NATIVE_SHA512
