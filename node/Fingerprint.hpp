@@ -41,7 +41,7 @@ public:
 	/**
 	 * Create an empty/nil fingerprint
 	 */
-	ZT_INLINE Fingerprint() noexcept { memoryZero(this); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+	ZT_INLINE Fingerprint() noexcept { memoryZero(this); }
 
 	ZT_INLINE Address address() const noexcept { return Address(m_cfp.address); }
 	ZT_INLINE const uint8_t *hash() const noexcept { return m_cfp.hash; }
@@ -86,7 +86,7 @@ public:
 	ZT_INLINE void zero() noexcept { memoryZero(this); }
 	ZT_INLINE unsigned long hashCode() const noexcept { return (unsigned long)m_cfp.address; }
 
-	ZT_INLINE operator bool() const noexcept { return (m_cfp.address != 0); } // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
+	ZT_INLINE operator bool() const noexcept { return (m_cfp.address != 0); }
 
 	ZT_INLINE bool operator==(const Fingerprint &h) const noexcept { return ((m_cfp.address == h.m_cfp.address) && (memcmp(m_cfp.hash, h.m_cfp.hash, ZT_FINGERPRINT_HASH_SIZE) == 0)); }
 	ZT_INLINE bool operator!=(const Fingerprint &h) const noexcept { return !(*this == h); }

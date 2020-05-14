@@ -36,7 +36,7 @@ public:
 	template<typename T>
 	static ZT_INLINE void memoryZero(T *obj) noexcept
 	{
-		static_assert(isTriviallyCopyable(obj),"parameter is not TriviallyCopyable");
+		mustBeTriviallyCopyable(obj);
 		Utils::zero<sizeof(T)>(obj);
 	}
 
@@ -49,7 +49,7 @@ public:
 	template<typename T>
 	static ZT_INLINE void memoryZero(T &obj) noexcept
 	{
-		static_assert(isTriviallyCopyable(obj),"parameter is not TriviallyCopyable");
+		mustBeTriviallyCopyable(obj);
 		Utils::zero<sizeof(T)>(&obj);
 	}
 
@@ -63,7 +63,7 @@ public:
 	template<typename T>
 	static ZT_INLINE void memoryCopy(T *dest,const T *src) noexcept
 	{
-		static_assert(isTriviallyCopyable(dest),"parameter is not TriviallyCopyable");
+		mustBeTriviallyCopyable(dest);
 		Utils::copy<sizeof(T)>(dest,src);
 	}
 
@@ -77,7 +77,7 @@ public:
 	template<typename T>
 	static ZT_INLINE void memoryCopy(T *dest,const T &src) noexcept
 	{
-		static_assert(isTriviallyCopyable(src),"parameter is not TriviallyCopyable");
+		mustBeTriviallyCopyable(src);
 		Utils::copy<sizeof(T)>(dest,&src);
 	}
 
@@ -91,7 +91,7 @@ public:
 	template<typename T>
 	static ZT_INLINE void memoryCopy(T &dest,const T *src) noexcept
 	{
-		static_assert(isTriviallyCopyable(dest),"parameter is not TriviallyCopyable");
+		mustBeTriviallyCopyable(dest);
 		Utils::copy<sizeof(T)>(&dest,src);
 	}
 
@@ -105,16 +105,14 @@ public:
 	template<typename T>
 	static ZT_INLINE void memoryCopy(T &dest,const T &src) noexcept
 	{
-		static_assert(isTriviallyCopyable(dest),"parameter is not TriviallyCopyable");
+		mustBeTriviallyCopyable(dest);
 		Utils::copy<sizeof(T)>(&dest,&src);
 	}
+
+private:
+	static ZT_INLINE void mustBeTriviallyCopyable(const TriviallyCopyable &) noexcept {}
+	static ZT_INLINE void mustBeTriviallyCopyable(const TriviallyCopyable *) noexcept {}
 };
-
-static constexpr bool isTriviallyCopyable(const TriviallyCopyable *) noexcept { return true; }
-static constexpr bool isTriviallyCopyable(const void *) noexcept { return false; }
-
-template<typename T>
-static constexpr bool isTriviallyCopyable(const T &anything) noexcept { return isTriviallyCopyable(&anything); }
 
 } // namespace ZeroTier
 

@@ -46,11 +46,6 @@ public:
 	typedef T * iterator;
 	typedef const T * const_iterator;
 
-	/**
-	 * @return True if this FCV is trivially copyable, which means its type is also.
-	 */
-	static constexpr bool isTriviallyCopyable() noexcept { return ZeroTier::isTriviallyCopyable(reinterpret_cast<const T *>(nullptr)); }
-
 	ZT_INLINE FCV() noexcept : _s(0) {} // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 	ZT_INLINE FCV(const FCV &v) : _s(0) { *this = v; } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 
@@ -220,7 +215,7 @@ public:
 	 * @param i Index to obtain as a reference, resizing if needed
 	 * @return Reference to value at this index
 	 */
-	ZT_INLINE T &at(const unsigned int i)
+	ZT_INLINE T &at(unsigned int i)
 	{
 		if (i >= _s) {
 			if (unlikely(i >= C))

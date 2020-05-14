@@ -76,42 +76,35 @@ struct identityV0ProofOfWorkCriteria
 // It's not quite as heavy as the V0 frankenhash, is a little more orderly in
 // its design, but remains relatively resistant to GPU acceleration due to memory
 // requirements for efficient computation.
-#define ZT_IDENTITY_V1_POW_MEMORY_SIZE 1048576
-#define ZT_IDENTITY_V1_POW_MEMORY_SIZE_U64 131072
-bool identityV1ProofOfWorkCriteria(const void *in,const unsigned int len,uint64_t *const b)
+#define ZT_IDENTITY_V1_POW_MEMORY_SIZE 262144
+#define ZT_IDENTITY_V1_POW_MEMORY_SIZE_U64 32768
+bool identityV1ProofOfWorkCriteria(const void *in,const unsigned int len)
 {
-	SHA512(b,in,len);
+	uint64_t b[ZT_IDENTITY_V1_POW_MEMORY_SIZE_U64];
 
+	SHA512(b,in,len);
 	AES c(b);
 	for(unsigned int i=8;i<ZT_IDENTITY_V1_POW_MEMORY_SIZE_U64;i+=8) {
 		SHA512(b + i,b + (i - 8),64);
-		if (unlikely((b[i] % 31337ULL) == (b[i] >> 49U)))
+		if (unlikely((b[i] % 31ULL) == (b[i - 1] >> 59U)))
 			c.encrypt(b + i,b + i);
 	}
 
 #if __BYTE_ORDER == __BIG_ENDIAN
-	for(unsigned int i=0;i<ZT_IDENTITY_V1_POW_MEMORY_SIZE_U64;i+=8) {
+	for(unsigned int i=0;i<ZT_IDENTITY_V1_POW_MEMORY_SIZE_U64;i+=4) {
 		b[i] = Utils::swapBytes(b[i]);
 		b[i + 1] = Utils::swapBytes(b[i + 1]);
 		b[i + 2] = Utils::swapBytes(b[i + 2]);
 		b[i + 3] = Utils::swapBytes(b[i + 3]);
-		b[i + 4] = Utils::swapBytes(b[i + 4]);
-		b[i + 5] = Utils::swapBytes(b[i + 5]);
-		b[i + 6] = Utils::swapBytes(b[i + 6]);
-		b[i + 7] = Utils::swapBytes(b[i + 7]);
 	}
 #endif
 	std::sort(b,b + ZT_IDENTITY_V1_POW_MEMORY_SIZE_U64);
 #if __BYTE_ORDER == __BIG_ENDIAN
-	for(unsigned int i=0;i<ZT_IDENTITY_V1_POW_MEMORY_SIZE_U64;i+=8) {
+	for(unsigned int i=0;i<ZT_IDENTITY_V1_POW_MEMORY_SIZE_U64;i+=4) {
 		b[i] = Utils::swapBytes(b[i]);
 		b[i + 1] = Utils::swapBytes(b[i + 1]);
 		b[i + 2] = Utils::swapBytes(b[i + 2]);
 		b[i + 3] = Utils::swapBytes(b[i + 3]);
-		b[i + 4] = Utils::swapBytes(b[i + 4]);
-		b[i + 5] = Utils::swapBytes(b[i + 5]);
-		b[i + 6] = Utils::swapBytes(b[i + 6]);
-		b[i + 7] = Utils::swapBytes(b[i + 7]);
 	}
 #endif
 
@@ -119,7 +112,7 @@ bool identityV1ProofOfWorkCriteria(const void *in,const unsigned int len,uint64_
 	// We also include the original input after so that cryptographically this
 	// is exactly like SHA384(in). This should make any FIPS types happy as
 	// this means the identity hash is SHA384 and not some weird construction.
-	SHA384(b,b,sizeof(b),in,len);
+	SHA384(b,b,ZT_IDENTITY_V1_POW_MEMORY_SIZE,in,len);
 
 	// PoW passes if sum of first two 64-bit integers (treated as little-endian) mod 180 is 0.
 	// This value was picked to yield about 1-2s total on typical desktop and server cores in 2020.
@@ -158,9 +151,6 @@ bool Identity::generate(const Type t)
 		} break;
 
 		case P384: {
-			uint64_t *const b = (uint64_t *)malloc(ZT_IDENTITY_V1_POW_MEMORY_SIZE); // NOLINT(hicpp-use-auto,modernize-use-auto)
-			if (!b)
-				return false;
 			for(;;) {
 				// Loop until we pass the PoW criteria. The nonce is only 8 bits, so generate
 				// some new key material every time it wraps. The ECC384 generator is slightly
@@ -169,7 +159,7 @@ bool Identity::generate(const Type t)
 				C25519::generateCombined(m_pub + 1,m_priv + 1);
 				ECC384GenerateKey(m_pub + 1 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE,m_priv + ZT_C25519_COMBINED_PRIVATE_KEY_SIZE);
 				for(;;) {
-					if (identityV1ProofOfWorkCriteria(&m_pub,sizeof(m_pub),b))
+					if (identityV1ProofOfWorkCriteria(m_pub,sizeof(m_pub)))
 						break;
 					if (++m_pub[0] == 0)
 						ECC384GenerateKey(m_pub + 1 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE,m_priv + ZT_C25519_COMBINED_PRIVATE_KEY_SIZE);
@@ -181,7 +171,6 @@ bool Identity::generate(const Type t)
 				if (!m_fp.address().isReserved())
 					break;
 			}
-			free(b);
 		} break;
 
 		default:
@@ -208,12 +197,7 @@ bool Identity::locallyValidate() const noexcept
 				case P384: {
 					if (m_fp.address() != Address(m_fp.hash()))
 						return false;
-					uint64_t *const genmem = (uint64_t *)malloc(ZT_IDENTITY_V1_POW_MEMORY_SIZE * 8);
-					if (!genmem)
-						return false;
-					const bool ok = identityV1ProofOfWorkCriteria(m_pub,sizeof(m_pub),genmem);
-					free(genmem);
-					return ok;
+					return identityV1ProofOfWorkCriteria(m_pub,sizeof(m_pub));
 				}
 			}
 		}

@@ -142,6 +142,28 @@ void Peer::received(
 	}
 }
 
+void Peer::send(void *tPtr,int64_t now,const void *data,unsigned int len) noexcept
+{
+	SharedPtr<Path> via(this->path(now));
+	if (via) {
+		via->send(RR,tPtr,data,len,now);
+	} else {
+		const SharedPtr<Peer> root(RR->topology->root());
+		if ((root)&&(root.ptr() != this)) {
+			via = root->path(now);
+			if (via) {
+				via->send(RR,tPtr,data,len,now);
+				root->relayed(now,len);
+			} else {
+				return;
+			}
+		} else {
+			return;
+		}
+	}
+	sent(now,len);
+}
+
 unsigned int Peer::hello(void *tPtr,int64_t localSocket,const InetAddress &atAddress,int64_t now)
 {
 	Buf outp;

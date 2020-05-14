@@ -180,27 +180,7 @@ public:
 	 * @param data Data to send
 	 * @param len Length in bytes
 	 */
-	ZT_INLINE void send(void *tPtr,int64_t now,const void *data,unsigned int len) noexcept
-	{
-		SharedPtr<Path> via(this->path(now));
-		if (via) {
-			via->send(RR,tPtr,data,len,now);
-		} else {
-			const SharedPtr<Peer> root(RR->topology->root());
-			if ((root)&&(root.ptr() != this)) {
-				via = root->path(now);
-				if (via) {
-					via->send(RR,tPtr,data,len,now);
-					root->relayed(now,len);
-				} else {
-					return;
-				}
-			} else {
-				return;
-			}
-		}
-		sent(now,len);
-	}
+	void send(void *tPtr,int64_t now,const void *data,unsigned int len) noexcept;
 
 	/**
 	 * Send a HELLO to this peer at a specified physical address.

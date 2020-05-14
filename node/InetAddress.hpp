@@ -91,6 +91,7 @@ public:
 	ZT_INLINE InetAddress &operator=(const sockaddr_storage &ss) noexcept
 	{
 		as.ss = ss;
+		return *this;
 	}
 	ZT_INLINE InetAddress &operator=(const sockaddr_storage *ss) noexcept
 	{

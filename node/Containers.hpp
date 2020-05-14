@@ -154,7 +154,7 @@ class String : public std::basic_string< char,std::char_traits<char>,Utils::Mall
 public:
 	ZT_INLINE String() {}
 	explicit ZT_INLINE String(const char *const s) { assign(s); }
-	ZT_INLINE &operator=(const char *const s) { assign(s); }
+	ZT_INLINE String &operator=(const char *const s) { assign(s); return *this; }
 };
 
 } // ZeroTier

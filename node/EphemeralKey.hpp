@@ -62,8 +62,9 @@ public:
 	 * Create an uninitialized ephemeral key (must call generate())
 	 */
 	ZT_INLINE EphemeralKey() noexcept :
-		pub({0})
+		pub()
 	{
+		const_cast<uint8_t *>(pub)[0] = (uint8_t)TYPE_NIL;
 		Utils::memoryLock(this,sizeof(EphemeralKey));
 	}
 

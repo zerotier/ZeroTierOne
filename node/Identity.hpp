@@ -185,7 +185,7 @@ public:
 	 * @return ASCII string representation of identity (pointer to buf)
 	 */
 	char *toString(bool includePrivate,char buf[ZT_IDENTITY_STRING_BUFFER_LENGTH]) const;
-	ZT_INLINE String toString(const bool includePrivate = false) const { char buf[ZT_IDENTITY_STRING_BUFFER_LENGTH]; toString(includePrivate); return String(buf); }
+	ZT_INLINE String toString(const bool includePrivate = false) const { char buf[ZT_IDENTITY_STRING_BUFFER_LENGTH]; toString(includePrivate,buf); return String(buf); }
 
 	/**
 	 * Deserialize a human-friendly string

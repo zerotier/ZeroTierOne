@@ -106,7 +106,7 @@ public:
 	/**
 	 * @return True if endpoint type isn't NIL
 	 */
-	ZT_INLINE operator bool() const noexcept { return (m_value[ZT_ENDPOINT_MARSHAL_SIZE_MAX] != (uint8_t)ZT_ENDPOINT_TYPE_NIL); }
+	ZT_INLINE operator bool() const noexcept { return (m_value[ZT_ENDPOINT_MARSHAL_SIZE_MAX-1] != (uint8_t)ZT_ENDPOINT_TYPE_NIL); }
 
 	/**
 	 * @return True if this endpoint type has an InetAddress address type and thus ip() is valid
