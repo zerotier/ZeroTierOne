@@ -32,6 +32,7 @@ import java.lang.Override;
 import java.lang.String;
 import java.util.ArrayList;
 import java.net.InetSocketAddress;
+import java.util.Collections;
 
 public final class VirtualNetworkConfig implements Comparable<VirtualNetworkConfig> {
     public static final int MAX_MULTICAST_SUBSCRIPTIONS = 4096;
@@ -57,39 +58,42 @@ public final class VirtualNetworkConfig implements Comparable<VirtualNetworkConf
     }
 
     public boolean equals(VirtualNetworkConfig cfg) {
-        boolean aaEqual = true;
-        if(assignedAddresses.length == cfg.assignedAddresses.length) {
-            for(int i = 0; i < assignedAddresses.length; ++i) {
-                if(!assignedAddresses[i].equals(cfg.assignedAddresses[i])) {
-                    aaEqual = false;
-                }
-            }
-        } else {
-            aaEqual = false;
+        ArrayList<String> current = new ArrayList<>();
+        ArrayList<String> newConfig = new ArrayList<>();
+        for (InetSocketAddress s : assignedAddresses) {
+            current.add(s.toString());
         }
-
-        boolean routesEqual = true;
-        if(routes.length == cfg.routes.length) {
-            for (int i = 0; i < routes.length; ++i) {
-                if (!routes[i].equals(cfg.routes[i])) {
-                    routesEqual = false;
-                }
-            }
-        } else {
-            routesEqual = false;
+        for (InetSocketAddress s : cfg.assignedAddresses) {
+            newConfig.add(s.toString());
         }
+        Collections.sort(current);
+        Collections.sort(newConfig);
+        boolean aaEqual = current.equals(newConfig);
 
-        return nwid == cfg.nwid &&
-               mac == cfg.mac &&
-               name.equals(cfg.name) &&
-               status.equals(cfg.status) &&
-               type.equals(cfg.type) &&
-               mtu == cfg.mtu &&
-               dhcp == cfg.dhcp &&
-               bridge == cfg.bridge &&
-               broadcastEnabled == cfg.broadcastEnabled &&
-               portError == cfg.portError &&
-               enabled == cfg.enabled &&
+        current.clear();
+        newConfig.clear();
+
+        for (VirtualNetworkRoute r : routes) {
+            current.add(r.toString());
+        }
+        for (VirtualNetworkRoute r : cfg.routes) {
+            newConfig.add(r.toString());
+        }
+        Collections.sort(current);
+        Collections.sort(newConfig);
+        boolean routesEqual = current.equals(newConfig);
+
+        return this.nwid == cfg.nwid &&
+               this.mac == cfg.mac &&
+               this.name.equals(cfg.name) &&
+               this.status.equals(cfg.status) &&
+               this.type.equals(cfg.type) &&
+               this.mtu == cfg.mtu &&
+               this.dhcp == cfg.dhcp &&
+               this.bridge == cfg.bridge &&
+               this.broadcastEnabled == cfg.broadcastEnabled &&
+               this.portError == cfg.portError &&
+               this.enabled == cfg.enabled &&
                aaEqual && routesEqual;
     }
 
