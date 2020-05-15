@@ -61,7 +61,7 @@ public:
 		_userSpecifiedAlloc(userSpecifiedAlloc),
 		_isUserSpecified(false)
 	{}
-	
+
 	/**
 	 * @return The string representation of this slave's underlying interface's system name.
 	 */
@@ -163,7 +163,7 @@ private:
 	/**
 	 * What preference (if any) a user has for IP protocol version used in
 	 * path aggregations. Preference is expressed in the order of the digits:
-	 * 
+	 *
 	 *  0: no preference
 	 *  4: IPv4 only
 	 *  6: IPv6 only
@@ -212,7 +212,7 @@ private:
 	uint8_t _mode;
 
 	/**
-	 * The specific name of the interface to be used in the event that this 
+	 * The specific name of the interface to be used in the event that this
 	 * slave fails.
 	 */
 	std::string _failoverToSlaveStr;
@@ -230,7 +230,6 @@ private:
 	bool _isUserSpecified;
 
 	AtomicCounter __refCount;
-
 };
 
 } // namespace ZeroTier

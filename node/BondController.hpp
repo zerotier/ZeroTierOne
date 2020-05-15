@@ -55,10 +55,10 @@ public:
 	 */
 	bool inUse() { return !_bondPolicyTemplates.empty() || _defaultBondingPolicy; }
 
-    /**
-     * @param basePolicyName Bonding policy name (See ZeroTierOne.h)
-     * @return The bonding policy code for a given human-readable bonding policy name
-     */
+	/**
+	 * @param basePolicyName Bonding policy name (See ZeroTierOne.h)
+	 * @return The bonding policy code for a given human-readable bonding policy name
+	 */
 	static int getPolicyCodeByStr(const std::string& basePolicyName)
 	{
 		if (basePolicyName == "active-backup") { return 1; }
@@ -83,18 +83,18 @@ public:
 		return "none";
 	}
 
-    /**
-     * Sets the default bonding policy for new or undefined bonds.
+	/**
+	 * Sets the default bonding policy for new or undefined bonds.
 	 *
-     * @param bp Bonding policy
-     */
+	 * @param bp Bonding policy
+	 */
 	void setBondingLayerDefaultPolicy(uint8_t bp) { _defaultBondingPolicy = bp; }
 
-    /**
-     * Sets the default (custom) bonding policy for new or undefined bonds.
+	/**
+	 * Sets the default (custom) bonding policy for new or undefined bonds.
 	 *
-     * @param alias Human-readable string alias for bonding policy
-     */
+	 * @param alias Human-readable string alias for bonding policy
+	 */
 	void setBondingLayerDefaultPolicyStr(std::string alias) { _defaultBondingPolicyStr = alias; }
 
 	/**
@@ -119,7 +119,7 @@ public:
 	bool addCustomPolicy(const SharedPtr<Bond>& newBond);
 
 	/**
-	 * Assigns a specific bonding policy  
+	 * Assigns a specific bonding policy
 	 *
 	 * @param identity
 	 * @param policyAlias

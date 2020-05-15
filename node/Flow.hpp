@@ -24,10 +24,10 @@ namespace ZeroTier {
  */
 struct Flow
 {
-    /**
-     * @param flowId Given flow ID
-     * @param now Current time
-     */
+	/**
+	 * @param flowId Given flow ID
+	 * @param now Current time
+	 */
 	Flow(int32_t flowId, int64_t now) :
 		_flowId(flowId),
 		_bytesInPerUnitTime(0),
@@ -50,12 +50,12 @@ struct Flow
 	 * @return The Flow's ID
 	 */
 	int32_t id() { return _flowId; }
-	
+
 	/**
 	 * @return Number of incoming bytes processed on this flow per unit time
 	 */
 	int64_t bytesInPerUnitTime() { return _bytesInPerUnitTime; }
-	
+
 	/**
 	 * Record number of incoming bytes on this flow
 	 *

@@ -28,7 +28,6 @@
 #include "Utils.hpp"
 #include "Packet.hpp"
 #include "RingBuffer.hpp"
-//#include "Bond.hpp"
 
 #include "../osdep/Slave.hpp"
 
@@ -48,7 +47,6 @@ class Path
 {
 	friend class SharedPtr<Path>;
 	friend class Bond;
-	//friend class SharedPtr<Bond>;
 
 public:
 	/**
@@ -361,7 +359,7 @@ public:
 	 * @return the age of the path in terms of receiving packets
 	 */
 	inline int64_t age(int64_t now) { return (now - _lastIn); }
-		
+
 	/**
 	 * @return Time last trust-established packet was received
 	 */
@@ -634,7 +632,7 @@ private:
 	 * The variance in the estimated throughput of this path.
 	 */
 	float _throughputVariance;
-	
+
 	/**
 	 * The relative quality of this path to all others in the bond, [0-255].
 	 */

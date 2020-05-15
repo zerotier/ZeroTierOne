@@ -45,48 +45,48 @@ class Bond
 
 public:
 
-    // TODO: Remove
-    bool _header;
-    int64_t _lastLogTS;
-    int64_t _lastPrintTS;
-    void dumpInfo(const int64_t now);
-    bool relevant();
+	// TODO: Remove
+	bool _header;
+	int64_t _lastLogTS;
+	int64_t _lastPrintTS;
+	void dumpInfo(const int64_t now);
+	bool relevant();
 
-    SharedPtr<Slave> getSlave(const SharedPtr<Path>& path);
+	SharedPtr<Slave> getSlave(const SharedPtr<Path>& path);
 
-    /**
-     * Constructor. For use only in first initialization in Node
-     *
-     * @param renv Runtime environment
-     */
-    Bond(const RuntimeEnvironment *renv);
+	/**
+	 * Constructor. For use only in first initialization in Node
+	 *
+	 * @param renv Runtime environment
+	 */
+	Bond(const RuntimeEnvironment *renv);
 
-    /**
-     * Constructor. Creates a bond based off of ZT defaults
-     *
-     * @param renv Runtime environment
-     * @param policy Bonding policy
-     * @param peer
-     */
-    Bond(const RuntimeEnvironment *renv, int policy, const SharedPtr<Peer>& peer);
+	/**
+	 * Constructor. Creates a bond based off of ZT defaults
+	 *
+	 * @param renv Runtime environment
+	 * @param policy Bonding policy
+	 * @param peer
+	 */
+	Bond(const RuntimeEnvironment *renv, int policy, const SharedPtr<Peer>& peer);
 
-    /**
-     * Constructor. For use when user intends to manually specify parameters
-     *
-     * @param basePolicy
-     * @param policyAlias
-     * @param peer
-     */
-    Bond(std::string& basePolicy, std::string& policyAlias, const SharedPtr<Peer>& peer);
+	/**
+	 * Constructor. For use when user intends to manually specify parameters
+	 *
+	 * @param basePolicy
+	 * @param policyAlias
+	 * @param peer
+	 */
+	Bond(std::string& basePolicy, std::string& policyAlias, const SharedPtr<Peer>& peer);
 
-    /**
-     * Constructor. Creates a bond based off of a user-defined bond template
-     *
-     * @param renv Runtime environment
-     * @param original
-     * @param peer
-     */
-    Bond(const RuntimeEnvironment *renv, const Bond &original, const SharedPtr<Peer>& peer);
+	/**
+	 * Constructor. Creates a bond based off of a user-defined bond template
+	 *
+	 * @param renv Runtime environment
+	 * @param original
+	 * @param peer
+	 */
+	Bond(const RuntimeEnvironment *renv, const Bond &original, const SharedPtr<Peer>& peer);
 
 	/**
 	 *
@@ -101,7 +101,7 @@ public:
 	 * @param now Current time
 	 */
 	void nominatePath(const SharedPtr<Path>& path, int64_t now);
-	
+
 	/**
 	 * Propagate and memoize often-used bonding preferences for each path
 	 */
@@ -109,9 +109,9 @@ public:
 
 	/**
 	 * Check path states and perform bond rebuilds if needed.
-	 * 
+	 *
 	 * @param now Current time
-	 * @param rebuild Whether or not the bond should be reconstructed. 
+	 * @param rebuild Whether or not the bond should be reconstructed.
 	 */
 	void curateBond(const int64_t now, bool rebuild);
 
@@ -156,7 +156,7 @@ public:
 
 	/**
 	 * Process the contents of an inbound VERB_ACK to gather path quality observations.
-	 * 
+	 *
 	 * @param path Path over which packet was received
 	 * @param now Current time
 	 * @param ackedBytes Number of bytes ACKed by this VERB_ACK
@@ -174,7 +174,7 @@ public:
 
 	/**
 	 * Record statistics for an inbound packet.
-	 * 
+	 *
 	 * @param path Path over which packet was received
 	 * @param packetId Packet ID
 	 * @param payloadLength Packet data length
@@ -183,7 +183,7 @@ public:
 	 * @param now Current time
 	 */
 	void recordIncomingPacket(const SharedPtr<Path>& path, uint64_t packetId, uint16_t payloadLength,
-	        Packet::Verb verb, int32_t flowId, int64_t now);
+			Packet::Verb verb, int32_t flowId, int64_t now);
 
 	/**
 	 * Determines the most appropriate path for packet and flow egress. This decision is made by
@@ -197,7 +197,7 @@ public:
 
 	/**
 	 * Creates a new flow record
-	 * 
+	 *
 	 * @param path Path over which flow shall be handled
 	 * @param flowId Flow ID
 	 * @param entropy A byte of entropy to be used by the bonding algorithm
@@ -208,7 +208,7 @@ public:
 
 	/**
 	 * Removes flow records that are past a certain age limit.
-	 * 
+	 *
 	 * @param age Age threshold to be forgotten
 	 * @param oldest Whether only the oldest shall be forgotten
 	 * @param now Current time
@@ -217,17 +217,17 @@ public:
 
 	/**
 	 * Assigns a new flow to a bonded path
-	 * 
+	 *
 	 * @param flow Flow to be assigned
 	 * @param now Current time
 	 */
 	bool assignFlowToBondedPath(SharedPtr<Flow> &flow, int64_t now);
 
-    /**
+	/**
 	 * Determine whether a path change should occur given the remote peer's reported utility and our
 	 * local peer's known utility. This has the effect of assigning inbound and outbound traffic to
-	 * the same path.  
-	 * 
+	 * the same path.
+	 *
 	 * @param now Current time
 	 * @param path Path over which the negotiation request was received
 	 * @param remoteUtility How much utility the remote peer claims to gain by using the declared path
@@ -245,7 +245,7 @@ public:
 
 	/**
 	 * Sends a VERB_ACK to the remote peer.
-	 * 
+	 *
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param path Path over which packet should be sent
 	 * @param localSocket Local source socket
@@ -253,11 +253,11 @@ public:
 	 * @param now Current time
 	 */
 	void sendACK(void *tPtr,const SharedPtr<Path> &path,int64_t localSocket,
-	        const InetAddress &atAddress,int64_t now);
+			const InetAddress &atAddress,int64_t now);
 
 	/**
 	 * Sends a VERB_QOS_MEASUREMENT to the remote peer.
-	 * 
+	 *
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param path Path over which packet should be sent
 	 * @param localSocket Local source socket
@@ -265,11 +265,11 @@ public:
 	 * @param now Current time
 	 */
 	void sendQOS_MEASUREMENT(void *tPtr,const SharedPtr<Path> &path,int64_t localSocket,
-	        const InetAddress &atAddress,int64_t now);
+			const InetAddress &atAddress,int64_t now);
 
 	/**
 	 * Sends a VERB_PATH_NEGOTIATION_REQUEST to the remote peer.
-	 * 
+	 *
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param path Path over which packet should be sent
 	 */
@@ -280,10 +280,10 @@ public:
 	 * @param now Current time
 	 */
 	void processBalanceTasks(int64_t now);
-	
+
 	/**
 	 * Perform periodic tasks unique to active-backup
-	 * 
+	 *
 	 * @param now Current time
 	 */
 	void processActiveBackupTasks(int64_t now);
@@ -296,12 +296,12 @@ public:
 	 */
 	void dequeueNextActiveBackupPath(uint64_t now);
 
-    /**
-     * Set bond parameters to reasonable defaults, these may later be overwritten by
+	/**
+	 * Set bond parameters to reasonable defaults, these may later be overwritten by
 	 * user-specified parameters.
-     *
-     * @param policy Bonding policy
-     */
+	 *
+	 * @param policy Bonding policy
+	 */
 	void setReasonableDefaults(int policy);
 
 	/**
@@ -450,19 +450,19 @@ public:
 	 */
 	inline uint16_t getUpDelay() { return _upDelay; }
 
-    /**
-     * @param upDelay Length of time before a newly-discovered path is admitted to the bond
-     */
+	/**
+	 * @param upDelay Length of time before a newly-discovered path is admitted to the bond
+	 */
 	inline void setUpDelay(int upDelay) { if (upDelay >= 0) { _upDelay = upDelay; } }
 
-    /**
-     * @return Length of time before a newly-failed path is removed from the bond
-     */
+	/**
+	 * @return Length of time before a newly-failed path is removed from the bond
+	 */
 	inline uint16_t getDownDelay() { return _downDelay; }
 
-    /**
-     * @param downDelay Length of time before a newly-failed path is removed from the bond
-     */
+	/**
+	 * @param downDelay Length of time before a newly-failed path is removed from the bond
+	 */
 	inline void setDownDelay(int downDelay) { if (downDelay >= 0) { _downDelay = downDelay; } }
 
 	/**
@@ -470,11 +470,11 @@ public:
 	 */
 	inline uint16_t getBondMonitorInterval() { return _bondMonitorInterval; }
 
-    /**
-     * Set the current monitoring interval for the bond (can be overridden with intervals specific to certain slaves.)
-     *
-     * @param monitorInterval How often gratuitous VERB_HELLO(s) are sent to remote peer.
-     */
+	/**
+	 * Set the current monitoring interval for the bond (can be overridden with intervals specific to certain slaves.)
+	 *
+	 * @param monitorInterval How often gratuitous VERB_HELLO(s) are sent to remote peer.
+	 */
 	inline void setBondMonitorInterval(uint16_t interval) { _bondMonitorInterval = interval; }
 
 	/**
@@ -487,10 +487,10 @@ public:
 	 */
 	inline uint8_t getPolicy() { return _bondingPolicy; }
 
-    /**
-     *
-     * @param allowFlowHashing
-     */
+	/**
+	 *
+	 * @param allowFlowHashing
+	 */
 	inline void setFlowHashing(bool allowFlowHashing) { _allowFlowHashing = allowFlowHashing; }
 
 	/**
@@ -498,10 +498,10 @@ public:
 	 */
 	bool flowHashingEnabled() { return _allowFlowHashing; }
 
-    /**
-     *
-     * @param packetsPerSlave
-     */
+	/**
+	 *
+	 * @param packetsPerSlave
+	 */
 	inline void setPacketsPerSlave(int packetsPerSlave) { _packetsPerSlave = packetsPerSlave; }
 
 	/**
@@ -514,7 +514,7 @@ public:
 	 *
 	 * @return
 	 */
-    inline uint8_t getSlaveSelectMethod() { return _abSlaveSelectMethod; }
+	inline uint8_t getSlaveSelectMethod() { return _abSlaveSelectMethod; }
 
 	/**
 	 *
