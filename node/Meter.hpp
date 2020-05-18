@@ -34,7 +34,7 @@ namespace ZeroTier {
  * @tparam TUNIT Unit of time in milliseconds (default: 1000 for one second)
  * @tparam LSIZE Log size in units of time (default: 10 for 10s worth of data)
  */
-template<int64_t TUNIT = 1000,unsigned long LSIZE = 10>
+template<int64_t TUNIT = 1000, unsigned long LSIZE = 10>
 class Meter
 {
 public:
@@ -43,7 +43,8 @@ public:
 	 *
 	 * @param now Start time
 	 */
-	ZT_INLINE Meter() noexcept {} // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init,hicpp-use-equals-default,modernize-use-equals-default)
+	ZT_INLINE Meter() noexcept
+	{} // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init,hicpp-use-equals-default,modernize-use-equals-default)
 
 	/**
 	 * Add a measurement
@@ -51,7 +52,7 @@ public:
 	 * @param now Current time
 	 * @param count Count of items (usually bytes)
 	 */
-	ZT_INLINE void log(const int64_t now,uint64_t count) noexcept
+	ZT_INLINE void log(const int64_t now, uint64_t count) noexcept
 	{
 		// We log by choosing a log bucket based on the current time in units modulo
 		// the log size and then if it's a new bucket setting it or otherwise adding
@@ -71,12 +72,12 @@ public:
 	 * @param rate Result parameter: rate in count/TUNIT
 	 * @param total Total count for life of object
 	 */
-	ZT_INLINE void rate(double &rate,uint64_t &total) const noexcept
+	ZT_INLINE void rate(double &rate, uint64_t &total) const noexcept
 	{
 		total = 0;
-		for(unsigned long i=0;i<LSIZE;++i)
+		for (unsigned long i = 0;i < LSIZE;++i)
 			total += m_counts[i].load();
-		rate = (double)total / (double)LSIZE;
+		rate = (double) total / (double) LSIZE;
 		total += m_totalExclCounts.load();
 	}
 

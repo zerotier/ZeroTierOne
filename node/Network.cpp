@@ -539,8 +539,8 @@ Network::Network(const RuntimeEnvironment *renv,void *tPtr,uint64_t nwid,const F
 	m_id(nwid),
 	m_mac(renv->identity.address(), nwid),
 	m_portInitialized(false),
-	m_lastConfigUpdate(0),
 	m_destroyed(false),
+	m_lastConfigUpdate(0),
 	_netconfFailure(NETCONF_FAILURE_NONE)
 {
 	if (controllerFingerprint)
@@ -556,7 +556,7 @@ Network::Network(const RuntimeEnvironment *renv,void *tPtr,uint64_t nwid,const F
 		bool got = false;
 		try {
 			Dictionary dict;
-			std::vector<uint8_t> nconfData(RR->node->stateObjectGet(tPtr,ZT_STATE_OBJECT_NETWORK_CONFIG,tmp));
+			Vector<uint8_t> nconfData(RR->node->stateObjectGet(tPtr,ZT_STATE_OBJECT_NETWORK_CONFIG,tmp));
 			if (nconfData.size() > 2) {
 				nconfData.push_back(0);
 				if (dict.decode(nconfData.data(),(unsigned int)nconfData.size())) {
@@ -864,7 +864,7 @@ void Network::multicastSubscribe(void *tPtr,const MulticastGroup &mg)
 void Network::multicastUnsubscribe(const MulticastGroup &mg)
 {
 	Mutex::Lock l(m_myMulticastGroups_l);
-	std::vector<MulticastGroup>::iterator i(std::lower_bound(m_myMulticastGroups.begin(), m_myMulticastGroups.end(), mg));
+	Vector<MulticastGroup>::iterator i(std::lower_bound(m_myMulticastGroups.begin(), m_myMulticastGroups.end(), mg));
 	if ((i != m_myMulticastGroups.end()) && (*i == mg) )
 		m_myMulticastGroups.erase(i);
 }
@@ -984,7 +984,7 @@ uint64_t Network::handleConfigChunk(void *tPtr,uint64_t packetId,const SharedPtr
 		c->chunks[chunkIndex].assign(chunkData,chunkData + chunkLen);
 
 		int haveLength = 0;
-		for(std::map< int,std::vector<uint8_t> >::const_iterator ch(c->chunks.begin());ch!=c->chunks.end();++ch)
+		for(std::map< int,Vector<uint8_t> >::const_iterator ch(c->chunks.begin());ch!=c->chunks.end();++ch)
 			haveLength += (int)ch->second.size();
 		if (haveLength > ZT_MAX_NETWORK_CONFIG_BYTES) {
 			c->touchCtr = 0;
@@ -994,8 +994,8 @@ uint64_t Network::handleConfigChunk(void *tPtr,uint64_t packetId,const SharedPtr
 		}
 
 		if (haveLength == totalLength) {
-			std::vector<uint8_t> assembledConfig;
-			for(std::map< int,std::vector<uint8_t> >::const_iterator ch(c->chunks.begin());ch!=c->chunks.end();++ch)
+			Vector<uint8_t> assembledConfig;
+			for(std::map< int,Vector<uint8_t> >::const_iterator ch(c->chunks.begin());ch!=c->chunks.end();++ch)
 				assembledConfig.insert(assembledConfig.end(),ch->second.begin(),ch->second.end());
 
 			Dictionary dict;
@@ -1048,10 +1048,10 @@ int Network::setConfiguration(void *tPtr,const NetworkConfig &nconf,bool saveToD
 		if (saveToDisk) {
 			try {
 				Dictionary d;
-				if (nconf.toDictionary(d,false)) {
+				if (nconf.toDictionary(d)) {
 					uint64_t tmp[2];
 					tmp[0] = m_id; tmp[1] = 0;
-					std::vector<uint8_t> d2;
+					Vector<uint8_t> d2;
 					d.encode(d2);
 					RR->node->stateObjectPut(tPtr,ZT_STATE_OBJECT_NETWORK_CONFIG,tmp,d2.data(),(unsigned int)d2.size());
 				}
@@ -1445,7 +1445,7 @@ void Network::m_externalConfig(ZT_VirtualNetworkConfig *ec) const
 	ec->status = m_status();
 	ec->type = (m_config) ? (m_config.isPrivate() ? ZT_NETWORK_TYPE_PRIVATE : ZT_NETWORK_TYPE_PUBLIC) : ZT_NETWORK_TYPE_PRIVATE;
 	ec->mtu = (m_config) ? m_config.mtu : ZT_DEFAULT_MTU;
-	std::vector<Address> ab;
+	Vector<Address> ab;
 	for(unsigned int i=0;i < m_config.specialistCount;++i) {
 		if ((m_config.specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE) != 0)
 			ab.push_back(Address(m_config.specialists[i]));
@@ -1503,7 +1503,7 @@ void Network::m_announceMulticastGroupsTo(void *tPtr, const Address &peer, const
 	// Assumes _myMulticastGroups_l and _memberships_l are locked
 	ScopedPtr<Packet> outp(new Packet(peer,RR->identity.address(),Packet::VERB_MULTICAST_LIKE));
 
-	for(std::vector<MulticastGroup>::const_iterator mg(allMulticastGroups.begin());mg!=allMulticastGroups.end();++mg) {
+	for(Vector<MulticastGroup>::const_iterator mg(allMulticastGroups.begin());mg!=allMulticastGroups.end();++mg) {
 		if ((outp->size() + 24) >= ZT_PROTO_MAX_PACKET_LENGTH) {
 			outp->compress();
 			RR->sw->send(tPtr,*outp,true);
@@ -1529,7 +1529,7 @@ Vector<MulticastGroup> Network::m_allMulticastGroups() const
 	Vector<MulticastGroup> mgs;
 	mgs.reserve(m_myMulticastGroups.size() + m_multicastGroupsBehindMe.size() + 1);
 	mgs.insert(mgs.end(), m_myMulticastGroups.begin(), m_myMulticastGroups.end());
-	for(Map<MulticastGroup,uint64_t>::const_iterator i(m_multicastGroupsBehindMe.begin());i != m_multicastGroupsBehindMe.end();++i)
+	for(Map<MulticastGroup,int64_t>::const_iterator i(m_multicastGroupsBehindMe.begin());i != m_multicastGroupsBehindMe.end();++i)
 		mgs.push_back(i->first);
 	if ((m_config) && (m_config.enableBroadcast()))
 		mgs.push_back(Network::BROADCAST);

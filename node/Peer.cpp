@@ -164,11 +164,10 @@ void Peer::send(void *tPtr,int64_t now,const void *data,unsigned int len) noexce
 	sent(now,len);
 }
 
-unsigned int Peer::hello(void *tPtr,int64_t localSocket,const InetAddress &atAddress,int64_t now)
+unsigned int Peer::hello(void *tPtr,int64_t localSocket,const InetAddress &atAddress,const int64_t now)
 {
 	Buf outp;
 
-	const int64_t now = RR->node->now();
 	const uint64_t packetId = m_identityKey->nextMessage(RR->identity.address(),m_id.address());
 	int ii = Protocol::newPacket(outp,packetId,m_id.address(),RR->identity.address(),Protocol::VERB_HELLO);
 

@@ -27,13 +27,15 @@ namespace ZeroTier {
 class _ResetWithinScope
 {
 public:
-	ZT_INLINE _ResetWithinScope(void *tPtr,int64_t now,int inetAddressFamily,InetAddress::IpScope scope) :
+	ZT_INLINE _ResetWithinScope(void *tPtr, int64_t now, int inetAddressFamily, InetAddress::IpScope scope) :
 		_now(now),
 		_tPtr(tPtr),
 		_family(inetAddressFamily),
-		_scope(scope) {}
+		_scope(scope)
+	{}
 
-	ZT_INLINE void operator()(const SharedPtr<Peer> &p) { p->resetWithinScope(_tPtr,_scope,_family,_now); }
+	ZT_INLINE void operator()(const SharedPtr<Peer> &p)
+	{ p->resetWithinScope(_tPtr, _scope, _family, _now); }
 
 private:
 	int64_t _now;
@@ -47,17 +49,17 @@ SelfAwareness::SelfAwareness(const RuntimeEnvironment *renv) :
 {
 }
 
-void SelfAwareness::iam(void *tPtr,const Identity &reporter,const int64_t receivedOnLocalSocket,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,bool trusted,int64_t now)
+void SelfAwareness::iam(void *tPtr, const Identity &reporter, const int64_t receivedOnLocalSocket, const InetAddress &reporterPhysicalAddress, const InetAddress &myPhysicalAddress, bool trusted, int64_t now)
 {
 	const InetAddress::IpScope scope = myPhysicalAddress.ipScope();
 
-	if ((scope != reporterPhysicalAddress.ipScope())||(scope == InetAddress::IP_SCOPE_NONE)||(scope == InetAddress::IP_SCOPE_LOOPBACK)||(scope == InetAddress::IP_SCOPE_MULTICAST))
+	if ((scope != reporterPhysicalAddress.ipScope()) || (scope == InetAddress::IP_SCOPE_NONE) || (scope == InetAddress::IP_SCOPE_LOOPBACK) || (scope == InetAddress::IP_SCOPE_MULTICAST))
 		return;
 
 	Mutex::Lock l(m_phy_l);
 	p_PhySurfaceEntry &entry = m_phy[p_PhySurfaceKey(reporter.address(), receivedOnLocalSocket, reporterPhysicalAddress, scope)];
 
-	if ( (trusted) && ((now - entry.ts) < ZT_SELFAWARENESS_ENTRY_TIMEOUT) && (!entry.mySurface.ipsEqual(myPhysicalAddress)) ) {
+	if ((trusted) && ((now - entry.ts) < ZT_SELFAWARENESS_ENTRY_TIMEOUT) && (!entry.mySurface.ipsEqual(myPhysicalAddress))) {
 		// Changes to external surface reported by trusted peers causes path reset in this scope
 		entry.mySurface = myPhysicalAddress;
 		entry.ts = now;
@@ -66,17 +68,17 @@ void SelfAwareness::iam(void *tPtr,const Identity &reporter,const int64_t receiv
 		// Erase all entries in this scope that were not reported from this remote address to prevent 'thrashing'
 		// due to multiple reports of endpoint change.
 		// Don't use 'entry' after this since hash table gets modified.
-		for(Map<p_PhySurfaceKey,p_PhySurfaceEntry>::iterator i(m_phy.begin());i != m_phy.end();) {
-			if ((i->first.scope == scope)&&(i->first.reporterPhysicalAddress != reporterPhysicalAddress))
+		for (Map<p_PhySurfaceKey, p_PhySurfaceEntry>::iterator i(m_phy.begin());i != m_phy.end();) {
+			if ((i->first.scope == scope) && (i->first.reporterPhysicalAddress != reporterPhysicalAddress))
 				m_phy.erase(i++);
 			else ++i;
 		}
 
 		// Reset all paths within this scope and address family
-		_ResetWithinScope rset(tPtr,now,myPhysicalAddress.family(),(InetAddress::IpScope)scope);
+		_ResetWithinScope rset(tPtr, now, myPhysicalAddress.family(), (InetAddress::IpScope) scope);
 		RR->topology->eachPeer<_ResetWithinScope &>(rset);
 
-		RR->t->resettingPathsInScope(tPtr,0x9afff100,reporter,reporterPhysicalAddress,entry.mySurface,myPhysicalAddress,scope);
+		RR->t->resettingPathsInScope(tPtr, 0x9afff100, reporter, reporterPhysicalAddress, entry.mySurface, myPhysicalAddress, scope);
 	} else {
 		// Otherwise just update DB to use to determine external surface info
 		entry.mySurface = myPhysicalAddress;
@@ -88,30 +90,30 @@ void SelfAwareness::iam(void *tPtr,const Identity &reporter,const int64_t receiv
 void SelfAwareness::clean(int64_t now)
 {
 	Mutex::Lock l(m_phy_l);
-	for(Map<p_PhySurfaceKey,p_PhySurfaceEntry>::iterator i(m_phy.begin());i != m_phy.end();) {
+	for (Map<p_PhySurfaceKey, p_PhySurfaceEntry>::iterator i(m_phy.begin());i != m_phy.end();) {
 		if ((now - i->second.ts) >= ZT_SELFAWARENESS_ENTRY_TIMEOUT)
 			m_phy.erase(i++);
 		else ++i;
 	}
 }
 
-MultiMap<unsigned int,InetAddress> SelfAwareness::externalAddresses(const int64_t now) const
+MultiMap<unsigned int, InetAddress> SelfAwareness::externalAddresses(const int64_t now) const
 {
-	MultiMap<unsigned int,InetAddress> r;
+	MultiMap<unsigned int, InetAddress> r;
 
 	// Count endpoints reporting each IP/port combo
-	Map<InetAddress,unsigned long> counts;
+	Map<InetAddress, unsigned long> counts;
 	{
 		Mutex::Lock l(m_phy_l);
-		for(Map<p_PhySurfaceKey,p_PhySurfaceEntry>::const_iterator i(m_phy.begin());i != m_phy.end();++i) {
+		for (Map<p_PhySurfaceKey, p_PhySurfaceEntry>::const_iterator i(m_phy.begin());i != m_phy.end();++i) {
 			if ((now - i->second.ts) < ZT_SELFAWARENESS_ENTRY_TIMEOUT)
 				++counts[i->second.mySurface];
 		}
 	}
 
 	// Invert to create a map from count to address
-	for(Map<InetAddress,unsigned long>::iterator i(counts.begin());i!=counts.end();++i)
-		r.insert(std::pair<unsigned long,InetAddress>(i->second,i->first));
+	for (Map<InetAddress, unsigned long>::iterator i(counts.begin());i != counts.end();++i)
+		r.insert(std::pair<unsigned long, InetAddress>(i->second, i->first));
 
 	return r;
 }

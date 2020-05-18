@@ -52,7 +52,7 @@ public:
 	/**
 	 * @return True if locator is signed
 	 */
-	ZT_INLINE bool isSigned() const noexcept { return (m_signatureLength > 0); }
+	ZT_INLINE bool isSigned() const noexcept { return m_signatureLength > 0; }
 
 	/**
 	 * @return Length of signature in bytes or 0 if none
@@ -110,7 +110,7 @@ public:
 	 */
 	bool verify(const Identity &id) const noexcept;
 
-	explicit ZT_INLINE operator bool() const noexcept { return (m_ts != 0); }
+	explicit ZT_INLINE operator bool() const noexcept { return m_ts != 0; }
 
 	static constexpr int marshalSizeMax() noexcept { return ZT_LOCATOR_MARSHAL_SIZE_MAX; }
 	int marshal(uint8_t data[ZT_LOCATOR_MARSHAL_SIZE_MAX],bool excludeSignature = false) const noexcept;

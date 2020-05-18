@@ -103,7 +103,7 @@ public:
 	template<typename T>
 	ZT_INLINE bool peerOwnsAddress(const NetworkConfig &nconf,const T &r) const noexcept
 	{
-		if (s_isUnspoofableAddress(nconf, r))
+		if (m_isUnspoofableAddress(nconf, r))
 			return true;
 		for(Map< uint32_t,CertificateOfOwnership >::const_iterator i(m_remoteCoos.begin());i != m_remoteCoos.end();++i) {
 			if (m_isCredentialTimestampValid(nconf, i->second) && (i->second.owns(r)))
@@ -158,7 +158,7 @@ private:
 	// This returns true if a resource is an IPv6 NDP-emulated address. These embed the ZT
 	// address of the peer and therefore cannot be spoofed, causing peerOwnsAddress() to
 	// always return true for them. A certificate is not required for these.
-	ZT_INLINE static bool s_isUnspoofableAddress(const NetworkConfig &nconf, const MAC &m) noexcept { return false; }
+	constexpr bool m_isUnspoofableAddress(const NetworkConfig &nconf, const MAC &m) const noexcept { return false; }
 	bool m_isUnspoofableAddress(const NetworkConfig &nconf, const InetAddress &ip) const noexcept;
 
 	// This compares the remote credential's timestamp to the timestamp in our network config

@@ -144,7 +144,8 @@ public:
 	ZT_INLINE bool weakGC()
 	{
 		if (m_ptr) {
-			if (m_ptr->__refCount.compare_exchange_strong(1,0)) {
+			int one = 1;
+			if (m_ptr->__refCount.compare_exchange_strong(one,(int)0)) {
 				delete m_ptr;
 				m_ptr = nullptr;
 				return true;

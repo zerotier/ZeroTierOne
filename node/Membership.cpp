@@ -33,6 +33,7 @@ void Membership::pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const i
 	if (!nconf.com) // sanity check
 		return;
 
+#if 0
 	SharedPtr<Buf> outp(new Buf());
 	Protocol::Header &ph = outp->as<Protocol::Header>(); // NOLINT(hicpp-use-auto,modernize-use-auto)
 
@@ -109,6 +110,7 @@ void Membership::pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const i
 			// TODO
 		}
 	}
+#endif
 
 	m_lastPushedCredentials = now;
 }

@@ -14,9 +14,6 @@
 #include "MIMC52.hpp"
 #include "SHA512.hpp"
 #include "Utils.hpp"
-#include "Speck128.hpp"
-
-#include <cstdio>
 
 // This gets defined on any architecture whose FPU is not capable of doing the mulmod52() FPU trick.
 //#define ZT_MIMC52_NO_FPU
@@ -114,7 +111,7 @@ uint64_t mimc52Delay(const void *const salt,const unsigned int saltSize,const un
 	uint64_t x = Utils::swapBytes(hash[1]) % p;
 #endif
 
-	Speck128<8> roundConstantGenerator(hash + 2);
+	//Speck128<8> roundConstantGenerator(hash + 2);
 	const uint64_t e = ((p * 2) - 1) / 3;
 	const uint64_t m52 = 0xfffffffffffffULL;
 	const uint64_t rmin1 = rounds - 1;
@@ -122,7 +119,7 @@ uint64_t mimc52Delay(const void *const salt,const unsigned int saltSize,const un
 #pragma unroll 16
 	for(unsigned long r=0;r<rounds;++r) {
 		uint64_t sx = sxx,sy = rmin1 - r;
-		roundConstantGenerator.encryptXY(sx,sy);
+		//roundConstantGenerator.encryptXY(sx,sy);
 		x = (x - sy) & m52;
 		x = modpow52(x,e,p);
 	}
@@ -143,7 +140,7 @@ bool mimc52Verify(const void *const salt,const unsigned int saltSize,unsigned lo
 	uint64_t x = Utils::swapBytes(hash[1]) % p;
 #endif
 
-	Speck128<8> roundConstantGenerator(hash + 2);
+	//Speck128<8> roundConstantGenerator(hash + 2);
 	const uint64_t m52 = 0xfffffffffffffULL;
 	uint64_t y = proof & m52;
 	const uint64_t sxx = hash[4];
@@ -154,7 +151,7 @@ bool mimc52Verify(const void *const salt,const unsigned int saltSize,unsigned lo
 #pragma unroll 16
 	for(unsigned long r=0;r<rounds;++r) {
 		uint64_t sx = sxx,sy = r;
-		roundConstantGenerator.encryptXY(sx,sy);
+		//roundConstantGenerator.encryptXY(sx,sy);
 #ifdef ZT_MIMC52_NO_FPU
 #ifdef x64_cubemod
 		x64_cubemod(y,p);

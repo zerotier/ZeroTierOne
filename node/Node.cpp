@@ -31,13 +31,7 @@ namespace ZeroTier {
 
 namespace {
 
-/**
- * All core objects of a ZeroTier node.
- *
- * This is just a box that allows us to allocate all core objects
- * and data structures at once for a bit of memory saves and improved
- * cache adjacency.
- */
+// Structure containing all the core objects for a ZeroTier node to reduce memory allocations.
 struct _NodeObjects
 {
 	ZT_INLINE _NodeObjects(RuntimeEnvironment *const RR,void *const tPtr) :
@@ -195,7 +189,7 @@ struct _processBackgroundTasks_eachPeer
 	Node *const parent;
 	void *const tPtr;
 	bool online;
-	std::vector< SharedPtr<Peer> > rootsNotOnline;
+	Vector< SharedPtr<Peer> > rootsNotOnline;
 	ZT_INLINE void operator()(const SharedPtr<Peer> &peer,const bool isRoot) noexcept
 	{
 		peer->pulse(tPtr,now,isRoot);
@@ -226,7 +220,7 @@ ZT_ResultCode Node::processBackgroundTasks(void *tPtr,int64_t now,volatile int64
 					postEvent(tPtr, m_online ? ZT_EVENT_ONLINE : ZT_EVENT_OFFLINE);
 				}
 
-				RR->topology->rankRoots(now);
+				RR->topology->rankRoots();
 
 				if (pf.online) {
 					// If we have at least one online root, request whois for roots not online.
@@ -234,7 +228,7 @@ ZT_ResultCode Node::processBackgroundTasks(void *tPtr,int64_t now,volatile int64
 					// IP addresses. It will also auto-discover IPs for roots that were not added
 					// with an initial bootstrap address.
 					// TODO
-					//for (std::vector<Address>::const_iterator r(pf.rootsNotOnline.begin()); r != pf.rootsNotOnline.end(); ++r)
+					//for (Vector<Address>::const_iterator r(pf.rootsNotOnline.begin()); r != pf.rootsNotOnline.end(); ++r)
 					//	RR->sw->requestWhois(tPtr,now,*r);
 				}
 			} catch ( ... ) {
@@ -360,7 +354,7 @@ ZT_ResultCode Node::removeRoot(void *tPtr,const ZT_Identity *identity)
 {
 	if (!identity)
 		return ZT_RESULT_ERROR_BAD_PARAMETER;
-	RR->topology->removeRoot(*reinterpret_cast<const Identity *>(identity));
+	RR->topology->removeRoot(tPtr, *reinterpret_cast<const Identity *>(identity));
 	return ZT_RESULT_OK;
 }
 
@@ -380,7 +374,7 @@ void Node::status(ZT_NodeStatus *status) const
 
 ZT_PeerList *Node::peers() const
 {
-	std::vector< SharedPtr<Peer> > peers;
+	Vector< SharedPtr<Peer> > peers;
 	RR->topology->getAllPeers(peers);
 	std::sort(peers.begin(),peers.end(),_sortPeerPtrsByAddress());
 
@@ -393,7 +387,7 @@ ZT_PeerList *Node::peers() const
 
 	const int64_t now = m_now;
 	pl->peerCount = 0;
-	for(std::vector< SharedPtr<Peer> >::iterator pi(peers.begin());pi!=peers.end();++pi) { // NOLINT(modernize-use-auto,modernize-loop-convert,hicpp-use-auto)
+	for(Vector< SharedPtr<Peer> >::iterator pi(peers.begin());pi!=peers.end();++pi) { // NOLINT(modernize-use-auto,modernize-loop-convert,hicpp-use-auto)
 		ZT_Peer *const p = &(pl->peers[pl->peerCount]);
 
 		p->address = (*pi)->address().toInt();
@@ -420,14 +414,15 @@ ZT_PeerList *Node::peers() const
 				Utils::copy<sizeof(sockaddr_storage)>(&(p->bootstrap[p->bootstrapAddressCount++]),&(*i));
 		}
 
-		std::vector< SharedPtr<Path> > paths;
+		Vector< SharedPtr<Path> > paths;
 		(*pi)->getAllPaths(paths);
 		p->pathCount = 0;
-		for(std::vector< SharedPtr<Path> >::iterator path(paths.begin());path!=paths.end();++path) { // NOLINT(modernize-use-auto,modernize-loop-convert,hicpp-use-auto)
+		for(Vector< SharedPtr<Path> >::iterator path(paths.begin());path!=paths.end();++path) { // NOLINT(modernize-use-auto,modernize-loop-convert,hicpp-use-auto)
 			Utils::copy<sizeof(sockaddr_storage)>(&(p->paths[p->pathCount].address),&((*path)->address()));
 			p->paths[p->pathCount].lastSend = (*path)->lastOut();
 			p->paths[p->pathCount].lastReceive = (*path)->lastIn();
-			p->paths[p->pathCount].trustedPathId = RR->topology->getOutboundPathTrust((*path)->address());
+			// TODO
+			//p->paths[p->pathCount].trustedPathId = RR->topology->getOutboundPathTrust((*path)->address());
 			p->paths[p->pathCount].alive = (*path)->alive(now) ? 1 : 0;
 			p->paths[p->pathCount].preferred = (p->pathCount == 0) ? 1 : 0;
 			++p->pathCount;
@@ -613,15 +608,17 @@ void Node::ncSendConfig(uint64_t nwid,uint64_t requestPacketId,const Address &de
 
 	if (destination == RR->identity.address()) {
 		SharedPtr<Network> n(network(nwid));
-		if (!n) return;
+		if (!n)
+			return;
 		n->setConfiguration((void *)0,nc,true);
 	} else {
 		Dictionary dconf;
-		if (nc.toDictionary(dconf,sendLegacyFormatConfig)) {
+		if (nc.toDictionary(dconf)) {
 			uint64_t configUpdateId = Utils::random();
-			if (!configUpdateId) ++configUpdateId;
+			if (!configUpdateId)
+				++configUpdateId;
 
-			std::vector<uint8_t> ddata;
+			Vector<uint8_t> ddata;
 			dconf.encode(ddata);
 			// TODO
 			/*

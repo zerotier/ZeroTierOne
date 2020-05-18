@@ -20,20 +20,23 @@
 
 namespace ZeroTier {
 
-const InetAddress InetAddress::LO4((const void *)("\x7f\x00\x00\x01"),4,0);
-const InetAddress InetAddress::LO6((const void *)("\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"),16,0);
+const InetAddress InetAddress::LO4((const void *) ("\x7f\x00\x00\x01"), 4, 0);
+const InetAddress InetAddress::LO6((const void *) ("\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"), 16, 0);
 const InetAddress InetAddress::NIL;
 
 InetAddress::IpScope InetAddress::ipScope() const noexcept
 {
-	switch(as.ss.ss_family) {
+	switch (as.ss.ss_family) {
 
 		case AF_INET: {
 			const uint32_t ip = Utils::ntoh((uint32_t)as.sa_in.sin_addr.s_addr);
-			switch(ip >> 24U) {
-				case 0x00: return IP_SCOPE_NONE;                                   // 0.0.0.0/8 (reserved, never used)
-				case 0x06: return IP_SCOPE_PSEUDOPRIVATE;                          // 6.0.0.0/8 (US Army)
-				case 0x0a: return IP_SCOPE_PRIVATE;                                // 10.0.0.0/8
+			switch (ip >> 24U) {
+				case 0x00:
+					return IP_SCOPE_NONE;                                            // 0.0.0.0/8 (reserved, never used)
+				case 0x06:
+					return IP_SCOPE_PSEUDOPRIVATE;                                   // 6.0.0.0/8 (US Army)
+				case 0x0a:
+					return IP_SCOPE_PRIVATE;                                         // 10.0.0.0/8
 				case 0x0b: //return IP_SCOPE_PSEUDOPRIVATE;                        // 11.0.0.0/8 (US DoD)
 				case 0x15: //return IP_SCOPE_PSEUDOPRIVATE;                        // 21.0.0.0/8 (US DDN-RVN)
 				case 0x16: //return IP_SCOPE_PSEUDOPRIVATE;                        // 22.0.0.0/8 (US DISA)
@@ -44,11 +47,13 @@ InetAddress::IpScope InetAddress::ipScope() const noexcept
 				case 0x1e: //return IP_SCOPE_PSEUDOPRIVATE;                        // 30.0.0.0/8 (US DISA)
 				case 0x33: //return IP_SCOPE_PSEUDOPRIVATE;                        // 51.0.0.0/8 (UK Department of Social Security)
 				case 0x37: //return IP_SCOPE_PSEUDOPRIVATE;                        // 55.0.0.0/8 (US DoD)
-				case 0x38: return IP_SCOPE_PSEUDOPRIVATE;                          // 56.0.0.0/8 (US Postal Service)
+				case 0x38:
+					return IP_SCOPE_PSEUDOPRIVATE;                                   // 56.0.0.0/8 (US Postal Service)
 				case 0x64:
 					if ((ip & 0xffc00000) == 0x64400000) return IP_SCOPE_PRIVATE;    // 100.64.0.0/10
 					break;
-				case 0x7f: return IP_SCOPE_LOOPBACK;                               // 127.0.0.0/8
+				case 0x7f:
+					return IP_SCOPE_LOOPBACK;                                        // 127.0.0.0/8
 				case 0xa9:
 					if ((ip & 0xffff0000) == 0xa9fe0000) return IP_SCOPE_LINK_LOCAL; // 169.254.0.0/16
 					break;
@@ -58,11 +63,14 @@ InetAddress::IpScope InetAddress::ipScope() const noexcept
 				case 0xc0:
 					if ((ip & 0xffff0000) == 0xc0a80000) return IP_SCOPE_PRIVATE;    // 192.168.0.0/16
 					break;
-				case 0xff: return IP_SCOPE_NONE;                                   // 255.0.0.0/8 (broadcast, or unused/unusable)
+				case 0xff:
+					return IP_SCOPE_NONE;                                            // 255.0.0.0/8 (broadcast, or unused/unusable)
 			}
-			switch(ip >> 28U) {
-				case 0xe: return IP_SCOPE_MULTICAST;                               // 224.0.0.0/4
-				case 0xf: return IP_SCOPE_PSEUDOPRIVATE;                           // 240.0.0.0/4 ("reserved," usually unusable)
+			switch (ip >> 28U) {
+				case 0xe:
+					return IP_SCOPE_MULTICAST;                                       // 224.0.0.0/4
+				case 0xf:
+					return IP_SCOPE_PSEUDOPRIVATE;                                   // 240.0.0.0/4 ("reserved," usually unusable)
 			}
 			return IP_SCOPE_GLOBAL;
 		}
@@ -71,17 +79,17 @@ InetAddress::IpScope InetAddress::ipScope() const noexcept
 			const uint8_t *const ip = as.sa_in6.sin6_addr.s6_addr;
 			if ((ip[0] & 0xf0U) == 0xf0) {
 				if (ip[0] == 0xff) return IP_SCOPE_MULTICAST;                      // ff00::/8
-				if ((ip[0] == 0xfe)&&((ip[1] & 0xc0U) == 0x80)) {
+				if ((ip[0] == 0xfe) && ((ip[1] & 0xc0U) == 0x80)) {
 					unsigned int k = 2;
-					while ((!ip[k])&&(k < 15)) ++k;
-					if ((k == 15)&&(ip[15] == 0x01))
+					while ((!ip[k]) && (k < 15)) ++k;
+					if ((k == 15) && (ip[15] == 0x01))
 						return IP_SCOPE_LOOPBACK;                                      // fe80::1/128
 					else return IP_SCOPE_LINK_LOCAL;                                 // fe80::/10
 				}
 				if ((ip[0] & 0xfeU) == 0xfc) return IP_SCOPE_PRIVATE;              // fc00::/7
 			}
 			unsigned int k = 0;
-			while ((!ip[k])&&(k < 15)) ++k;
+			while ((!ip[k]) && (k < 15)) ++k;
 			if (k == 15) { // all 0's except last byte
 				if (ip[15] == 0x01) return IP_SCOPE_LOOPBACK;                      // ::1/128
 				if (ip[15] == 0x00) return IP_SCOPE_NONE;                          // ::/128
@@ -93,28 +101,28 @@ InetAddress::IpScope InetAddress::ipScope() const noexcept
 	return IP_SCOPE_NONE;
 }
 
-void InetAddress::set(const void *ipBytes,unsigned int ipLen,unsigned int port) noexcept
+void InetAddress::set(const void *ipBytes, unsigned int ipLen, unsigned int port) noexcept
 {
 	memoryZero(this);
 	if (ipLen == 4) {
 		as.sa_in.sin_family = AF_INET;
-		as.sa_in.sin_port = Utils::hton((uint16_t)port);
+		as.sa_in.sin_port = Utils::hton((uint16_t) port);
 		as.sa_in.sin_addr.s_addr = Utils::loadAsIsEndian<uint32_t>(ipBytes);
 	} else if (ipLen == 16) {
 		as.sa_in6.sin6_family = AF_INET6;
-		as.sa_in6.sin6_port = Utils::hton((uint16_t)port);
-		Utils::copy<16>(as.sa_in6.sin6_addr.s6_addr,ipBytes);
+		as.sa_in6.sin6_port = Utils::hton((uint16_t) port);
+		Utils::copy<16>(as.sa_in6.sin6_addr.s6_addr, ipBytes);
 	}
 }
 
 bool InetAddress::isDefaultRoute() const noexcept
 {
-	switch(as.ss.ss_family) {
+	switch (as.ss.ss_family) {
 		case AF_INET:
-			return ((as.sa_in.sin_port == 0)&&(as.sa_in.sin_addr.s_addr == 0));
+			return ((as.sa_in.sin_port == 0) && (as.sa_in.sin_addr.s_addr == 0));
 		case AF_INET6:
 			if (as.sa_in6.sin6_port == 0) {
-				for (unsigned int i=0;i<16;++i) {
+				for (unsigned int i = 0;i < 16;++i) {
 					if (as.sa_in6.sin6_addr.s6_addr[i])
 						return false;
 				}
@@ -132,17 +140,21 @@ char *InetAddress::toString(char buf[ZT_INETADDRESS_STRING_SIZE_MAX]) const noex
 	if (*p) {
 		while (*p) ++p;
 		*(p++) = '/';
-		Utils::decimal(port(),p);
+		Utils::decimal(port(), p);
 	}
 	return buf;
 }
 
 char *InetAddress::toIpString(char buf[ZT_INETADDRESS_STRING_SIZE_MAX]) const noexcept
 {
-	buf[0] = (char)0;
-	switch(as.ss.ss_family) {
-		case AF_INET:  inet_ntop(AF_INET,&as.sa_in.sin_addr.s_addr,buf,INET_ADDRSTRLEN); break;
-		case AF_INET6: inet_ntop(AF_INET6,as.sa_in6.sin6_addr.s6_addr,buf,INET6_ADDRSTRLEN); break;
+	buf[0] = (char) 0;
+	switch (as.ss.ss_family) {
+		case AF_INET:
+			inet_ntop(AF_INET, &as.sa_in.sin_addr.s_addr, buf, INET_ADDRSTRLEN);
+			break;
+		case AF_INET6:
+			inet_ntop(AF_INET6, as.sa_in6.sin6_addr.s6_addr, buf, INET6_ADDRSTRLEN);
+			break;
 	}
 	return buf;
 }
@@ -155,27 +167,27 @@ bool InetAddress::fromString(const char *ipSlashPort) noexcept
 
 	if (!*ipSlashPort)
 		return true;
-	if (!Utils::scopy(buf,sizeof(buf),ipSlashPort))
+	if (!Utils::scopy(buf, sizeof(buf), ipSlashPort))
 		return false;
 
 	char *portAt = buf;
-	while ((*portAt)&&(*portAt != '/'))
+	while ((*portAt) && (*portAt != '/'))
 		++portAt;
 	unsigned int port = 0;
 	if (*portAt) {
-		*(portAt++) = (char)0;
+		*(portAt++) = (char) 0;
 		port = Utils::strToUInt(portAt) & 0xffffU;
 	}
 
-	if (strchr(buf,':')) {
+	if (strchr(buf, ':')) {
 		as.sa_in6.sin6_family = AF_INET6;
-		as.sa_in6.sin6_port = Utils::hton((uint16_t)port);
-		inet_pton(AF_INET6,buf,as.sa_in6.sin6_addr.s6_addr);
+		as.sa_in6.sin6_port = Utils::hton((uint16_t) port);
+		inet_pton(AF_INET6, buf, as.sa_in6.sin6_addr.s6_addr);
 		return true;
-	} else if (strchr(buf,'.')) {
+	} else if (strchr(buf, '.')) {
 		as.sa_in.sin_family = AF_INET;
-		as.sa_in.sin_port = Utils::hton((uint16_t)port);
-		inet_pton(AF_INET,buf,&as.sa_in.sin_addr.s_addr);
+		as.sa_in.sin_port = Utils::hton((uint16_t) port);
+		inet_pton(AF_INET, buf, &as.sa_in.sin_addr.s_addr);
 		return true;
 	}
 
@@ -185,22 +197,23 @@ bool InetAddress::fromString(const char *ipSlashPort) noexcept
 InetAddress InetAddress::netmask() const noexcept
 {
 	InetAddress r(*this);
-	switch(r.as.ss.ss_family) {
+	switch (r.as.ss.ss_family) {
 		case AF_INET:
-			r.as.sa_in.sin_addr.s_addr = Utils::hton((uint32_t)(0xffffffffU << (32 - netmaskBits())));
+			r.as.sa_in.sin_addr.s_addr = Utils::hton((uint32_t) (0xffffffffU << (32 - netmaskBits())));
 			break;
 		case AF_INET6: {
 			uint64_t nm[2];
 			const unsigned int bits = netmaskBits();
-			if(bits) {
-				nm[0] = Utils::hton((uint64_t)((bits >= 64) ? 0xffffffffffffffffULL : (0xffffffffffffffffULL << (64 - bits))));
-				nm[1] = Utils::hton((uint64_t)((bits <= 64) ? 0ULL : (0xffffffffffffffffULL << (128 - bits))));
+			if (bits) {
+				nm[0] = Utils::hton((uint64_t) ((bits >= 64) ? 0xffffffffffffffffULL : (0xffffffffffffffffULL << (64 - bits))));
+				nm[1] = Utils::hton((uint64_t) ((bits <= 64) ? 0ULL : (0xffffffffffffffffULL << (128 - bits))));
 			} else {
 				nm[0] = 0;
 				nm[1] = 0;
 			}
-			Utils::copy<16>(r.as.sa_in6.sin6_addr.s6_addr,nm);
-		}	break;
+			Utils::copy<16>(r.as.sa_in6.sin6_addr.s6_addr, nm);
+		}
+			break;
 	}
 	return r;
 }
@@ -209,7 +222,7 @@ InetAddress InetAddress::broadcast() const noexcept
 {
 	if (as.ss.ss_family == AF_INET) {
 		InetAddress r(*this);
-		reinterpret_cast<sockaddr_in *>(&r)->sin_addr.s_addr |= Utils::hton((uint32_t)(0xffffffffU >> netmaskBits()));
+		reinterpret_cast<sockaddr_in *>(&r)->sin_addr.s_addr |= Utils::hton((uint32_t) (0xffffffffU >> netmaskBits()));
 		return r;
 	}
 	return InetAddress();
@@ -218,18 +231,19 @@ InetAddress InetAddress::broadcast() const noexcept
 InetAddress InetAddress::network() const noexcept
 {
 	InetAddress r(*this);
-	switch(r.as.ss.ss_family) {
+	switch (r.as.ss.ss_family) {
 		case AF_INET:
-			r.as.sa_in.sin_addr.s_addr &= Utils::hton((uint32_t)(0xffffffffU << (32 - netmaskBits())));
+			r.as.sa_in.sin_addr.s_addr &= Utils::hton((uint32_t) (0xffffffffU << (32 - netmaskBits())));
 			break;
 		case AF_INET6: {
 			uint64_t nm[2];
 			const unsigned int bits = netmaskBits();
-			Utils::copy<16>(nm,reinterpret_cast<sockaddr_in6 *>(&r)->sin6_addr.s6_addr);
-			nm[0] &= Utils::hton((uint64_t)((bits >= 64) ? 0xffffffffffffffffULL : (0xffffffffffffffffULL << (64 - bits))));
-			nm[1] &= Utils::hton((uint64_t)((bits <= 64) ? 0ULL : (0xffffffffffffffffULL << (128 - bits))));
-			Utils::copy<16>(r.as.sa_in6.sin6_addr.s6_addr,nm);
-		}	break;
+			Utils::copy<16>(nm, reinterpret_cast<sockaddr_in6 *>(&r)->sin6_addr.s6_addr);
+			nm[0] &= Utils::hton((uint64_t) ((bits >= 64) ? 0xffffffffffffffffULL : (0xffffffffffffffffULL << (64 - bits))));
+			nm[1] &= Utils::hton((uint64_t) ((bits <= 64) ? 0ULL : (0xffffffffffffffffULL << (128 - bits))));
+			Utils::copy<16>(r.as.sa_in6.sin6_addr.s6_addr, nm);
+		}
+			break;
 	}
 	return r;
 }
@@ -237,7 +251,7 @@ InetAddress InetAddress::network() const noexcept
 bool InetAddress::isEqualPrefix(const InetAddress &addr) const noexcept
 {
 	if (addr.as.ss.ss_family == as.ss.ss_family) {
-		switch(as.ss.ss_family) {
+		switch (as.ss.ss_family) {
 			case AF_INET6: {
 				const InetAddress mask(netmask());
 				InetAddress addr_mask(addr.netmask());
@@ -245,7 +259,7 @@ bool InetAddress::isEqualPrefix(const InetAddress &addr) const noexcept
 				const uint8_t *const m = mask.as.sa_in6.sin6_addr.s6_addr;
 				const uint8_t *const a = addr.as.sa_in6.sin6_addr.s6_addr;
 				const uint8_t *const b = as.sa_in6.sin6_addr.s6_addr;
-				for(unsigned int i=0;i<16;++i) {
+				for (unsigned int i = 0;i < 16;++i) {
 					if ((a[i] & m[i]) != (b[i] & n[i]))
 						return false;
 				}
@@ -259,14 +273,14 @@ bool InetAddress::isEqualPrefix(const InetAddress &addr) const noexcept
 bool InetAddress::containsAddress(const InetAddress &addr) const noexcept
 {
 	if (addr.as.ss.ss_family == as.ss.ss_family) {
-		switch(as.ss.ss_family) {
+		switch (as.ss.ss_family) {
 			case AF_INET: {
 				const unsigned int bits = netmaskBits();
 				if (bits == 0)
 					return true;
 				return (
-					(Utils::ntoh((uint32_t)addr.as.sa_in.sin_addr.s_addr) >> (32 - bits)) ==
-					(Utils::ntoh((uint32_t)as.sa_in.sin_addr.s_addr) >> (32 - bits))
+					(Utils::ntoh((uint32_t) addr.as.sa_in.sin_addr.s_addr) >> (32 - bits)) ==
+					(Utils::ntoh((uint32_t) as.sa_in.sin_addr.s_addr) >> (32 - bits))
 				);
 			}
 			case AF_INET6: {
@@ -274,7 +288,7 @@ bool InetAddress::containsAddress(const InetAddress &addr) const noexcept
 				const uint8_t *const m = mask.as.sa_in6.sin6_addr.s6_addr;
 				const uint8_t *const a = addr.as.sa_in6.sin6_addr.s6_addr;
 				const uint8_t *const b = as.sa_in6.sin6_addr.s6_addr;
-				for(unsigned int i=0;i<16;++i) {
+				for (unsigned int i = 0;i < 16;++i) {
 					if ((a[i] & m[i]) != b[i])
 						return false;
 				}
@@ -287,14 +301,14 @@ bool InetAddress::containsAddress(const InetAddress &addr) const noexcept
 
 bool InetAddress::isNetwork() const noexcept
 {
-	switch(as.ss.ss_family) {
+	switch (as.ss.ss_family) {
 		case AF_INET: {
 			unsigned int bits = netmaskBits();
 			if (bits <= 0)
 				return false;
 			if (bits >= 32)
 				return false;
-			const uint32_t ip = Utils::ntoh((uint32_t)as.sa_in.sin_addr.s_addr);
+			const uint32_t ip = Utils::ntoh((uint32_t) as.sa_in.sin_addr.s_addr);
 			return ((ip & (0xffffffffU >> bits)) == 0);
 		}
 		case AF_INET6: {
@@ -320,23 +334,23 @@ bool InetAddress::isNetwork() const noexcept
 int InetAddress::marshal(uint8_t data[ZT_INETADDRESS_MARSHAL_SIZE_MAX]) const noexcept
 {
 	unsigned int port;
-	switch(as.ss.ss_family) {
+	switch (as.ss.ss_family) {
 		case AF_INET:
-			port = Utils::ntoh((uint16_t)reinterpret_cast<const sockaddr_in *>(this)->sin_port);
+			port = Utils::ntoh((uint16_t) reinterpret_cast<const sockaddr_in *>(this)->sin_port);
 			data[0] = 4;
 			data[1] = reinterpret_cast<const uint8_t *>(&as.sa_in.sin_addr.s_addr)[0];
 			data[2] = reinterpret_cast<const uint8_t *>(&as.sa_in.sin_addr.s_addr)[1];
 			data[3] = reinterpret_cast<const uint8_t *>(&as.sa_in.sin_addr.s_addr)[2];
 			data[4] = reinterpret_cast<const uint8_t *>(&as.sa_in.sin_addr.s_addr)[3];
-			data[5] = (uint8_t)(port >> 8U);
-			data[6] = (uint8_t)port;
+			data[5] = (uint8_t) (port >> 8U);
+			data[6] = (uint8_t) port;
 			return 7;
 		case AF_INET6:
-			port = Utils::ntoh((uint16_t)as.sa_in6.sin6_port);
+			port = Utils::ntoh((uint16_t) as.sa_in6.sin6_port);
 			data[0] = 6;
-			Utils::copy<16>(data + 1,as.sa_in6.sin6_addr.s6_addr);
-			data[17] = (uint8_t)(port >> 8U);
-			data[18] = (uint8_t)port;
+			Utils::copy<16>(data + 1, as.sa_in6.sin6_addr.s6_addr);
+			data[17] = (uint8_t) (port >> 8U);
+			data[18] = (uint8_t) port;
 			return 19;
 		default:
 			data[0] = 0;
@@ -344,12 +358,12 @@ int InetAddress::marshal(uint8_t data[ZT_INETADDRESS_MARSHAL_SIZE_MAX]) const no
 	}
 }
 
-int InetAddress::unmarshal(const uint8_t *restrict data,const int len) noexcept
+int InetAddress::unmarshal(const uint8_t *restrict data, const int len) noexcept
 {
 	memoryZero(this);
 	if (unlikely(len <= 0))
 		return -1;
-	switch(data[0]) {
+	switch (data[0]) {
 		case 0:
 			return 1;
 		case 4:
@@ -364,7 +378,7 @@ int InetAddress::unmarshal(const uint8_t *restrict data,const int len) noexcept
 				return -1;
 			as.sa_in6.sin6_family = AF_INET6;
 			as.sa_in6.sin6_port = Utils::loadAsIsEndian<uint16_t>(data + 17);
-			Utils::copy<16>(as.sa_in6.sin6_addr.s6_addr,data + 1);
+			Utils::copy<16>(as.sa_in6.sin6_addr.s6_addr, data + 1);
 			return 19;
 		default:
 			return -1;
@@ -395,46 +409,46 @@ InetAddress InetAddress::makeIpv6LinkLocal(const MAC &mac) noexcept
 	return r;
 }
 
-InetAddress InetAddress::makeIpv6rfc4193(uint64_t nwid,uint64_t zeroTierAddress) noexcept
+InetAddress InetAddress::makeIpv6rfc4193(uint64_t nwid, uint64_t zeroTierAddress) noexcept
 {
 	InetAddress r;
 	r.as.sa_in6.sin6_family = AF_INET6;
 	r.as.sa_in6.sin6_port = ZT_CONST_TO_BE_UINT16(88); // /88 includes 0xfd + network ID, discriminating by device ID below that
 	r.as.sa_in6.sin6_addr.s6_addr[0] = 0xfd;
-	r.as.sa_in6.sin6_addr.s6_addr[1] = (uint8_t)(nwid >> 56U);
-	r.as.sa_in6.sin6_addr.s6_addr[2] = (uint8_t)(nwid >> 48U);
-	r.as.sa_in6.sin6_addr.s6_addr[3] = (uint8_t)(nwid >> 40U);
-	r.as.sa_in6.sin6_addr.s6_addr[4] = (uint8_t)(nwid >> 32U);
-	r.as.sa_in6.sin6_addr.s6_addr[5] = (uint8_t)(nwid >> 24U);
-	r.as.sa_in6.sin6_addr.s6_addr[6] = (uint8_t)(nwid >> 16U);
-	r.as.sa_in6.sin6_addr.s6_addr[7] = (uint8_t)(nwid >> 8U);
-	r.as.sa_in6.sin6_addr.s6_addr[8] = (uint8_t)nwid;
+	r.as.sa_in6.sin6_addr.s6_addr[1] = (uint8_t) (nwid >> 56U);
+	r.as.sa_in6.sin6_addr.s6_addr[2] = (uint8_t) (nwid >> 48U);
+	r.as.sa_in6.sin6_addr.s6_addr[3] = (uint8_t) (nwid >> 40U);
+	r.as.sa_in6.sin6_addr.s6_addr[4] = (uint8_t) (nwid >> 32U);
+	r.as.sa_in6.sin6_addr.s6_addr[5] = (uint8_t) (nwid >> 24U);
+	r.as.sa_in6.sin6_addr.s6_addr[6] = (uint8_t) (nwid >> 16U);
+	r.as.sa_in6.sin6_addr.s6_addr[7] = (uint8_t) (nwid >> 8U);
+	r.as.sa_in6.sin6_addr.s6_addr[8] = (uint8_t) nwid;
 	r.as.sa_in6.sin6_addr.s6_addr[9] = 0x99;
 	r.as.sa_in6.sin6_addr.s6_addr[10] = 0x93;
-	r.as.sa_in6.sin6_addr.s6_addr[11] = (uint8_t)(zeroTierAddress >> 32U);
-	r.as.sa_in6.sin6_addr.s6_addr[12] = (uint8_t)(zeroTierAddress >> 24U);
-	r.as.sa_in6.sin6_addr.s6_addr[13] = (uint8_t)(zeroTierAddress >> 16U);
-	r.as.sa_in6.sin6_addr.s6_addr[14] = (uint8_t)(zeroTierAddress >> 8U);
-	r.as.sa_in6.sin6_addr.s6_addr[15] = (uint8_t)zeroTierAddress;
+	r.as.sa_in6.sin6_addr.s6_addr[11] = (uint8_t) (zeroTierAddress >> 32U);
+	r.as.sa_in6.sin6_addr.s6_addr[12] = (uint8_t) (zeroTierAddress >> 24U);
+	r.as.sa_in6.sin6_addr.s6_addr[13] = (uint8_t) (zeroTierAddress >> 16U);
+	r.as.sa_in6.sin6_addr.s6_addr[14] = (uint8_t) (zeroTierAddress >> 8U);
+	r.as.sa_in6.sin6_addr.s6_addr[15] = (uint8_t) zeroTierAddress;
 	return r;
 }
 
-InetAddress InetAddress::makeIpv66plane(uint64_t nwid,uint64_t zeroTierAddress) noexcept
+InetAddress InetAddress::makeIpv66plane(uint64_t nwid, uint64_t zeroTierAddress) noexcept
 {
 	nwid ^= (nwid >> 32U);
 	InetAddress r;
 	r.as.sa_in6.sin6_family = AF_INET6;
 	r.as.sa_in6.sin6_port = ZT_CONST_TO_BE_UINT16(40);
 	r.as.sa_in6.sin6_addr.s6_addr[0] = 0xfc;
-	r.as.sa_in6.sin6_addr.s6_addr[1] = (uint8_t)(nwid >> 24U);
-	r.as.sa_in6.sin6_addr.s6_addr[2] = (uint8_t)(nwid >> 16U);
-	r.as.sa_in6.sin6_addr.s6_addr[3] = (uint8_t)(nwid >> 8U);
-	r.as.sa_in6.sin6_addr.s6_addr[4] = (uint8_t)nwid;
-	r.as.sa_in6.sin6_addr.s6_addr[5] = (uint8_t)(zeroTierAddress >> 32U);
-	r.as.sa_in6.sin6_addr.s6_addr[6] = (uint8_t)(zeroTierAddress >> 24U);
-	r.as.sa_in6.sin6_addr.s6_addr[7] = (uint8_t)(zeroTierAddress >> 16U);
-	r.as.sa_in6.sin6_addr.s6_addr[8] = (uint8_t)(zeroTierAddress >> 8U);
-	r.as.sa_in6.sin6_addr.s6_addr[9] = (uint8_t)zeroTierAddress;
+	r.as.sa_in6.sin6_addr.s6_addr[1] = (uint8_t) (nwid >> 24U);
+	r.as.sa_in6.sin6_addr.s6_addr[2] = (uint8_t) (nwid >> 16U);
+	r.as.sa_in6.sin6_addr.s6_addr[3] = (uint8_t) (nwid >> 8U);
+	r.as.sa_in6.sin6_addr.s6_addr[4] = (uint8_t) nwid;
+	r.as.sa_in6.sin6_addr.s6_addr[5] = (uint8_t) (zeroTierAddress >> 32U);
+	r.as.sa_in6.sin6_addr.s6_addr[6] = (uint8_t) (zeroTierAddress >> 24U);
+	r.as.sa_in6.sin6_addr.s6_addr[7] = (uint8_t) (zeroTierAddress >> 16U);
+	r.as.sa_in6.sin6_addr.s6_addr[8] = (uint8_t) (zeroTierAddress >> 8U);
+	r.as.sa_in6.sin6_addr.s6_addr[9] = (uint8_t) zeroTierAddress;
 	r.as.sa_in6.sin6_addr.s6_addr[15] = 0x01;
 	return r;
 }

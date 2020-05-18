@@ -137,6 +137,8 @@ public:
 template<typename V>
 class Vector : public std::vector< V,Utils::Mallocator<V> >
 {
+public:
+	ZT_INLINE Vector() {}
 };
 
 template<typename V>

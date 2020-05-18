@@ -51,6 +51,11 @@ namespace Utils {
 #define ZT_CONST_TO_BE_UINT64(x) ((uint64_t)(x))
 #endif
 
+#define ZT_ROR64(x, r) (((x) >> (r)) | ((x) << (64 - (r))))
+#define ZT_ROL64(x, r) (((x) << (r)) | ((x) >> (64 - (r))))
+#define ZT_ROR32(x, r) (((x) >> (r)) | ((x) << (32 - (r))))
+#define ZT_ROL32(x, r) (((x) << (r)) | ((x) >> (32 - (r))))
+
 #ifdef ZT_ARCH_X64
 struct CPUIDRegisters
 {
@@ -759,6 +764,9 @@ struct Mallocator
 	ZT_INLINE size_type max_size() const noexcept { return std::numeric_limits<size_t>::max() / sizeof(T); }
 	ZT_INLINE void construct(pointer p,const T& val) { new((void *)p) T(val); }
 	ZT_INLINE void destroy(pointer p) { p->~T(); }
+
+	constexpr bool operator==(const Mallocator &) const noexcept { return true; }
+	constexpr bool operator!=(const Mallocator &) const noexcept { return false; }
 };
 
 } // namespace Utils

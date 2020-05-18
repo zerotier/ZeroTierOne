@@ -46,11 +46,11 @@ namespace ZeroTier {
  * @tparam P Type for pointer to a path object (default: SharedPtr<Path>)
  */
 template<
-  unsigned int MF = ZT_MAX_PACKET_FRAGMENTS,
-  unsigned int MFP = ZT_MAX_INCOMING_FRAGMENTS_PER_PATH,
-  unsigned int GCS = (ZT_MAX_PACKET_FRAGMENTS * 2),
-  unsigned int GCT = (ZT_MAX_PACKET_FRAGMENTS * 4),
-  typename P = SharedPtr<Path> >
+	unsigned int MF = ZT_MAX_PACKET_FRAGMENTS,
+	unsigned int MFP = ZT_MAX_INCOMING_FRAGMENTS_PER_PATH,
+	unsigned int GCS = (ZT_MAX_PACKET_FRAGMENTS * 2),
+	unsigned int GCT = (ZT_MAX_PACKET_FRAGMENTS * 4),
+	typename P = SharedPtr <Path> >
 class Defragmenter
 {
 public:
@@ -96,7 +96,8 @@ public:
 		ERR_OUT_OF_MEMORY
 	};
 
-	ZT_INLINE Defragmenter() {} // NOLINT(hicpp-use-equals-default,modernize-use-equals-default)
+	ZT_INLINE Defragmenter()
+	{} // NOLINT(hicpp-use-equals-default,modernize-use-equals-default)
 
 	/**
 	 * Process a fragment of a multi-part message
@@ -141,8 +142,8 @@ public:
 	 */
 	ZT_INLINE ResultCode assemble(
 		const uint64_t messageId,
-		FCV< Buf::Slice,MF > &message,
-		SharedPtr<Buf> &fragment,
+		FCV <Buf::Slice, MF> &message,
+		SharedPtr <Buf> &fragment,
 		const unsigned int fragmentDataIndex,
 		const unsigned int fragmentDataSize,
 		const unsigned int fragmentNo,
@@ -151,7 +152,7 @@ public:
 		const P &via)
 	{
 		// Sanity checks for malformed fragments or invalid input parameters.
-		if ((fragmentNo >= totalFragmentsExpected)||(totalFragmentsExpected > MF)||(totalFragmentsExpected == 0))
+		if ((fragmentNo >= totalFragmentsExpected) || (totalFragmentsExpected > MF) || (totalFragmentsExpected == 0))
 			return ERR_INVALID_FRAGMENT;
 
 		// We hold the read lock on _messages unless we need to add a new entry or do GC.
@@ -166,15 +167,15 @@ public:
 				// under the target size. This tries to minimize the amount of time the write
 				// lock is held since many threads can hold the read lock but all threads must
 				// wait if someone holds the write lock.
-				std::vector<std::pair<int64_t,uint64_t> > messagesByLastUsedTime;
+				std::vector<std::pair<int64_t, uint64_t> > messagesByLastUsedTime;
 				messagesByLastUsedTime.reserve(m_messages.size());
 
-				for(typename Map< uint64_t,p_E >::const_iterator i(m_messages.begin());i != m_messages.end();++i)
-					messagesByLastUsedTime.push_back(std::pair<int64_t,uint64_t>(i->second.lastUsed,i->first));
-				std::sort(messagesByLastUsedTime.begin(),messagesByLastUsedTime.end());
+				for (typename Map<uint64_t, p_E>::const_iterator i(m_messages.begin());i != m_messages.end();++i)
+					messagesByLastUsedTime.push_back(std::pair<int64_t, uint64_t>(i->second.lastUsed, i->first));
+				std::sort(messagesByLastUsedTime.begin(), messagesByLastUsedTime.end());
 
 				ml.writing(); // acquire write lock on _messages
-				for (unsigned long x = 0,y = (messagesByLastUsedTime.size() - GCS); x <= y; ++x)
+				for (unsigned long x = 0, y = (messagesByLastUsedTime.size() - GCS);x <= y;++x)
 					m_messages.erase(messagesByLastUsedTime[x].second);
 			} catch (...) {
 				return ERR_OUT_OF_MEMORY;
@@ -187,7 +188,7 @@ public:
 			ml.writing(); // acquire write lock on _messages if not already
 			try {
 				e = &(m_messages[messageId]);
-			} catch ( ... ) {
+			} catch (...) {
 				return ERR_OUT_OF_MEMORY;
 			}
 			e->id = messageId;
@@ -214,7 +215,7 @@ public:
 
 		// If there is a path associated with this fragment make sure we've registered
 		// ourselves as in flight, check the limit, and abort if exceeded.
-		if ((via)&&(!e->via)) {
+		if ((via) && (!e->via)) {
 			e->via = via;
 			bool tooManyPerPath = false;
 			via->m_inboundFragmentedMessages_l.lock();
@@ -224,7 +225,7 @@ public:
 				} else {
 					tooManyPerPath = true;
 				}
-			} catch ( ... ) {
+			} catch (...) {
 				// This would indicate something like bad_alloc thrown by the set. Treat
 				// it as limit exceeded.
 				tooManyPerPath = true;
@@ -252,7 +253,7 @@ public:
 		++e->fragmentsReceived;
 
 		// If we now have all fragments then assemble them.
-		if ((e->fragmentsReceived >= e->totalFragmentsExpected)&&(e->totalFragmentsExpected > 0)) {
+		if ((e->fragmentsReceived >= e->totalFragmentsExpected) && (e->totalFragmentsExpected > 0)) {
 			// This message is done so de-register it with its path if one is associated.
 			if (e->via) {
 				e->via->m_inboundFragmentedMessages_l.lock();
@@ -294,20 +295,22 @@ private:
 	// p_E is an entry in the message queue.
 	struct p_E
 	{
-		ZT_INLINE p_E() noexcept :
+		ZT_INLINE p_E() noexcept:
 			id(0),
 			lastUsed(0),
 			totalFragmentsExpected(0),
-			fragmentsReceived(0) {}
+			fragmentsReceived(0)
+		{}
 
-		ZT_INLINE p_E(const p_E &e) noexcept :
+		ZT_INLINE p_E(const p_E &e) noexcept:
 			id(e.id),
 			lastUsed(e.lastUsed),
 			totalFragmentsExpected(e.totalFragmentsExpected),
 			fragmentsReceived(e.fragmentsReceived),
 			via(e.via),
 			message(e.message),
-			lock() {}
+			lock()
+		{}
 
 		ZT_INLINE ~p_E()
 		{
@@ -336,11 +339,11 @@ private:
 		unsigned int totalFragmentsExpected;
 		unsigned int fragmentsReceived;
 		P via;
-		FCV< Buf::Slice,MF > message;
+		FCV <Buf::Slice, MF> message;
 		Mutex lock;
 	};
 
-	Map< uint64_t,Defragmenter<MF,MFP,GCS,GCT,P>::p_E > m_messages;
+	Map <uint64_t, Defragmenter<MF, MFP, GCS, GCT, P>::p_E> m_messages;
 	RWMutex m_messages_l;
 };
 

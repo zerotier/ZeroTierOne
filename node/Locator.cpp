@@ -15,7 +15,7 @@
 
 namespace ZeroTier {
 
-bool Locator::sign(const int64_t ts,const Identity &id) noexcept
+bool Locator::sign(const int64_t ts, const Identity &id) noexcept
 {
 	uint8_t signData[ZT_LOCATOR_MARSHAL_SIZE_MAX];
 	if (!id.hasPrivate())
@@ -23,7 +23,7 @@ bool Locator::sign(const int64_t ts,const Identity &id) noexcept
 	m_ts = ts;
 	if (m_endpointCount > 0)
 		std::sort(m_at, m_at + m_endpointCount);
-	const unsigned int signLen = marshal(signData,true);
+	const unsigned int signLen = marshal(signData, true);
 	m_signatureLength = id.sign(signData, signLen, m_signature, sizeof(m_signature));
 	return (m_signatureLength > 0);
 }
@@ -33,11 +33,11 @@ bool Locator::verify(const Identity &id) const noexcept
 	if ((m_ts == 0) || (m_endpointCount > ZT_LOCATOR_MAX_ENDPOINTS) || (m_signatureLength > ZT_SIGNATURE_BUFFER_SIZE))
 		return false;
 	uint8_t signData[ZT_LOCATOR_MARSHAL_SIZE_MAX];
-	const unsigned int signLen = marshal(signData,true);
+	const unsigned int signLen = marshal(signData, true);
 	return id.verify(signData, signLen, m_signature, m_signatureLength);
 }
 
-int Locator::marshal(uint8_t data[ZT_LOCATOR_MARSHAL_SIZE_MAX],const bool excludeSignature) const noexcept
+int Locator::marshal(uint8_t data[ZT_LOCATOR_MARSHAL_SIZE_MAX], const bool excludeSignature) const noexcept
 {
 	if ((m_endpointCount > ZT_LOCATOR_MAX_ENDPOINTS) || (m_signatureLength > ZT_SIGNATURE_BUFFER_SIZE))
 		return -1;
@@ -47,7 +47,7 @@ int Locator::marshal(uint8_t data[ZT_LOCATOR_MARSHAL_SIZE_MAX],const bool exclud
 	int p = 9;
 
 	if (m_ts > 0) {
-		Utils::storeBigEndian(data + p,(uint16_t)m_endpointCount);
+		Utils::storeBigEndian(data + p, (uint16_t) m_endpointCount);
 		p += 2;
 		for (unsigned int i = 0;i < m_endpointCount;++i) {
 			int tmp = m_at[i].marshal(data + p);
@@ -57,10 +57,10 @@ int Locator::marshal(uint8_t data[ZT_LOCATOR_MARSHAL_SIZE_MAX],const bool exclud
 		}
 
 		if (!excludeSignature) {
-			Utils::storeBigEndian(data + p,(uint16_t)m_signatureLength);
+			Utils::storeBigEndian(data + p, (uint16_t) m_signatureLength);
 			p += 2;
 			Utils::copy(data + p, m_signature, m_signatureLength);
-			p += (int)m_signatureLength;
+			p += (int) m_signatureLength;
 		}
 
 		Utils::storeBigEndian(data + p, m_flags);
@@ -70,7 +70,7 @@ int Locator::marshal(uint8_t data[ZT_LOCATOR_MARSHAL_SIZE_MAX],const bool exclud
 	return p;
 }
 
-int Locator::unmarshal(const uint8_t *restrict data,const int len) noexcept
+int Locator::unmarshal(const uint8_t *restrict data, const int len) noexcept
 {
 	if (len <= (1 + 8 + 2 + 48))
 		return -1;
@@ -86,7 +86,7 @@ int Locator::unmarshal(const uint8_t *restrict data,const int len) noexcept
 		if (ec > ZT_LOCATOR_MAX_ENDPOINTS)
 			return -1;
 		m_endpointCount = ec;
-		for (unsigned int i = 0; i < ec; ++i) {
+		for (unsigned int i = 0;i < ec;++i) {
 			int tmp = m_at[i].unmarshal(data + p, len - p);
 			if (tmp < 0)
 				return -1;
@@ -100,10 +100,10 @@ int Locator::unmarshal(const uint8_t *restrict data,const int len) noexcept
 		if (sl > ZT_SIGNATURE_BUFFER_SIZE)
 			return -1;
 		m_signatureLength = sl;
-		if ((p + (int)sl) > len)
+		if ((p + (int) sl) > len)
 			return -1;
 		Utils::copy(m_signature, data + p, sl);
-		p += (int)sl;
+		p += (int) sl;
 
 		if ((p + 2) > len)
 			return -1;

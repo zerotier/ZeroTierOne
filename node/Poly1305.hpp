@@ -32,6 +32,13 @@ public:
 	void update(const void *data,unsigned int len) noexcept;
 	void finish(void *auth) noexcept;
 
+	static ZT_INLINE void compute(void *const auth, const void *const data, const unsigned int len, const void *const key) noexcept
+	{
+		Poly1305 p(key);
+		p.update(data,len);
+		p.finish(auth);
+	}
+
 private:
 	struct {
 	  size_t aligner;

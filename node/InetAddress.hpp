@@ -71,28 +71,54 @@ public:
 	};
 
 	// Hasher for unordered sets and maps in C++11
-	struct Hasher { ZT_INLINE std::size_t operator()(const InetAddress &a) const noexcept { return (std::size_t)a.hashCode(); } };
+	struct Hasher
+	{
+		ZT_INLINE std::size_t operator()(const InetAddress &a) const noexcept
+		{ return (std::size_t) a.hashCode(); }
+	};
 
-	ZT_INLINE InetAddress() noexcept { memoryZero(this); }
+	ZT_INLINE InetAddress() noexcept
+	{ memoryZero(this); }
 
-	explicit ZT_INLINE InetAddress(const sockaddr_storage &ss) noexcept { *this = ss; }
-	explicit ZT_INLINE InetAddress(const sockaddr_storage *const ss) noexcept { *this = ss; }
-	explicit ZT_INLINE InetAddress(const sockaddr &sa) noexcept { *this = sa; }
-	explicit ZT_INLINE InetAddress(const sockaddr *const sa) noexcept { *this = sa; }
-	explicit ZT_INLINE InetAddress(const sockaddr_in &sa) noexcept { *this = sa; }
-	explicit ZT_INLINE InetAddress(const sockaddr_in *const sa) noexcept { *this = sa; }
-	explicit ZT_INLINE InetAddress(const sockaddr_in6 &sa) noexcept { *this = sa; }
-	explicit ZT_INLINE InetAddress(const sockaddr_in6 *const sa) noexcept { *this = sa; }
+	explicit ZT_INLINE InetAddress(const sockaddr_storage &ss) noexcept
+	{ *this = ss; }
 
-	ZT_INLINE InetAddress(const void *const ipBytes,const unsigned int ipLen,const unsigned int port) noexcept { this->set(ipBytes,ipLen,port); }
-	ZT_INLINE InetAddress(const uint32_t ipv4,const unsigned int port) noexcept { this->set(&ipv4,4,port); }
-	explicit ZT_INLINE InetAddress(const char *const ipSlashPort) noexcept { this->fromString(ipSlashPort); }
+	explicit ZT_INLINE InetAddress(const sockaddr_storage *const ss) noexcept
+	{ *this = ss; }
+
+	explicit ZT_INLINE InetAddress(const sockaddr &sa) noexcept
+	{ *this = sa; }
+
+	explicit ZT_INLINE InetAddress(const sockaddr *const sa) noexcept
+	{ *this = sa; }
+
+	explicit ZT_INLINE InetAddress(const sockaddr_in &sa) noexcept
+	{ *this = sa; }
+
+	explicit ZT_INLINE InetAddress(const sockaddr_in *const sa) noexcept
+	{ *this = sa; }
+
+	explicit ZT_INLINE InetAddress(const sockaddr_in6 &sa) noexcept
+	{ *this = sa; }
+
+	explicit ZT_INLINE InetAddress(const sockaddr_in6 *const sa) noexcept
+	{ *this = sa; }
+
+	ZT_INLINE InetAddress(const void *const ipBytes, const unsigned int ipLen, const unsigned int port) noexcept
+	{ this->set(ipBytes, ipLen, port); }
+
+	ZT_INLINE InetAddress(const uint32_t ipv4, const unsigned int port) noexcept
+	{ this->set(&ipv4, 4, port); }
+
+	explicit ZT_INLINE InetAddress(const char *const ipSlashPort) noexcept
+	{ this->fromString(ipSlashPort); }
 
 	ZT_INLINE InetAddress &operator=(const sockaddr_storage &ss) noexcept
 	{
 		as.ss = ss;
 		return *this;
 	}
+
 	ZT_INLINE InetAddress &operator=(const sockaddr_storage *ss) noexcept
 	{
 		if (ss)
@@ -100,11 +126,13 @@ public:
 		else memoryZero(this);
 		return *this;
 	}
+
 	ZT_INLINE InetAddress &operator=(const sockaddr_in &sa) noexcept
 	{
 		as.sa_in = sa;
 		return *this;
 	}
+
 	ZT_INLINE InetAddress &operator=(const sockaddr_in *sa) noexcept
 	{
 		if (sa)
@@ -112,11 +140,13 @@ public:
 		else memoryZero(this);
 		return *this;
 	}
+
 	ZT_INLINE InetAddress &operator=(const sockaddr_in6 &sa) noexcept
 	{
 		as.sa_in6 = sa;
 		return *this;
 	}
+
 	ZT_INLINE InetAddress &operator=(const sockaddr_in6 *sa) noexcept
 	{
 		if (sa)
@@ -124,6 +154,7 @@ public:
 		else memoryZero(this);
 		return *this;
 	}
+
 	ZT_INLINE InetAddress &operator=(const sockaddr &sa) noexcept
 	{
 		if (sa.sa_family == AF_INET)
@@ -133,6 +164,7 @@ public:
 		else memoryZero(this);
 		return *this;
 	}
+
 	ZT_INLINE InetAddress &operator=(const sockaddr *sa) noexcept
 	{
 		if (sa) {
@@ -147,12 +179,14 @@ public:
 		return *this;
 	}
 
-	ZT_INLINE void clear() noexcept { memoryZero(this); }
+	ZT_INLINE void clear() noexcept
+	{ memoryZero(this); }
 
 	/**
 	 * @return Address family (ss_family in sockaddr_storage)
 	 */
-	ZT_INLINE uint8_t family() const noexcept { return as.ss.ss_family; }
+	ZT_INLINE uint8_t family() const noexcept
+	{ return as.ss.ss_family; }
 
 	/**
 	 * @return IP scope classification (e.g. loopback, link-local, private, global)
@@ -166,7 +200,7 @@ public:
 	 * @param ipLen Length of IP address: 4 or 16
 	 * @param port Port number or 0 for none
 	 */
-	void set(const void *ipBytes,unsigned int ipLen,unsigned int port) noexcept;
+	void set(const void *ipBytes, unsigned int ipLen, unsigned int port) noexcept;
 
 	/**
 	 * Set the port component
@@ -175,9 +209,13 @@ public:
 	 */
 	ZT_INLINE void setPort(unsigned int port) noexcept
 	{
-		switch(as.ss.ss_family) {
-			case AF_INET:  as.sa_in.sin_port = Utils::hton((uint16_t)port); break;
-			case AF_INET6: as.sa_in6.sin6_port = Utils::hton((uint16_t)port); break;
+		switch (as.ss.ss_family) {
+			case AF_INET:
+				as.sa_in.sin_port = Utils::hton((uint16_t) port);
+				break;
+			case AF_INET6:
+				as.sa_in6.sin6_port = Utils::hton((uint16_t) port);
+				break;
 		}
 	}
 
@@ -190,13 +228,25 @@ public:
 	 * @return ASCII IP/port format representation
 	 */
 	char *toString(char buf[ZT_INETADDRESS_STRING_SIZE_MAX]) const noexcept;
-	ZT_INLINE String toString() const { char buf[ZT_INETADDRESS_STRING_SIZE_MAX]; toString(buf); return String(buf); }
+
+	ZT_INLINE String toString() const
+	{
+		char buf[ZT_INETADDRESS_STRING_SIZE_MAX];
+		toString(buf);
+		return String(buf);
+	}
 
 	/**
 	 * @return IP portion only, in ASCII string format
 	 */
 	char *toIpString(char buf[ZT_INETADDRESS_STRING_SIZE_MAX]) const noexcept;
-	ZT_INLINE String toIpString() const { char buf[ZT_INETADDRESS_STRING_SIZE_MAX]; toIpString(buf); return String(buf); }
+
+	ZT_INLINE String toIpString() const
+	{
+		char buf[ZT_INETADDRESS_STRING_SIZE_MAX];
+		toIpString(buf);
+		return String(buf);
+	}
 
 	/**
 	 * @param ipSlashPort IP/port (port is optional, will be 0 if not included)
@@ -209,10 +259,13 @@ public:
 	 */
 	ZT_INLINE unsigned int port() const noexcept
 	{
-		switch(as.ss.ss_family) {
-			case AF_INET:  return Utils::ntoh((uint16_t)as.sa_in.sin_port);
-			case AF_INET6: return Utils::ntoh((uint16_t)as.sa_in6.sin6_port);
-			default:       return 0;
+		switch (as.ss.ss_family) {
+			case AF_INET:
+				return Utils::ntoh((uint16_t) as.sa_in.sin_port);
+			case AF_INET6:
+				return Utils::ntoh((uint16_t) as.sa_in6.sin6_port);
+			default:
+				return 0;
 		}
 	}
 
@@ -225,7 +278,8 @@ public:
 	 *
 	 * @return Netmask bits
 	 */
-	ZT_INLINE unsigned int netmaskBits() const noexcept { return port(); }
+	ZT_INLINE unsigned int netmaskBits() const noexcept
+	{ return port(); }
 
 	/**
 	 * @return True if netmask bits is valid for the address type
@@ -233,9 +287,11 @@ public:
 	ZT_INLINE bool netmaskBitsValid() const noexcept
 	{
 		const unsigned int n = port();
-		switch(as.ss.ss_family) {
-			case AF_INET:  return (n <= 32);
-			case AF_INET6: return (n <= 128);
+		switch (as.ss.ss_family) {
+			case AF_INET:
+				return (n <= 32);
+			case AF_INET6:
+				return (n <= 128);
 		}
 		return false;
 	}
@@ -248,7 +304,8 @@ public:
 	 *
 	 * @return Gateway metric
 	 */
-	ZT_INLINE unsigned int metric() const noexcept { return port(); }
+	ZT_INLINE unsigned int metric() const noexcept
+	{ return port(); }
 
 	/**
 	 * Construct a full netmask as an InetAddress
@@ -293,22 +350,27 @@ public:
 	/**
 	 * @return True if this is an IPv4 address
 	 */
-	ZT_INLINE bool isV4() const noexcept { return (as.ss.ss_family == AF_INET); }
+	ZT_INLINE bool isV4() const noexcept
+	{ return (as.ss.ss_family == AF_INET); }
 
 	/**
 	 * @return True if this is an IPv6 address
 	 */
-	ZT_INLINE bool isV6() const noexcept { return (as.ss.ss_family == AF_INET6); }
+	ZT_INLINE bool isV6() const noexcept
+	{ return (as.ss.ss_family == AF_INET6); }
 
 	/**
 	 * @return pointer to raw address bytes or NULL if not available
 	 */
 	ZT_INLINE const void *rawIpData() const noexcept
 	{
-		switch(as.ss.ss_family) {
-			case AF_INET: return reinterpret_cast<const void *>(&(as.sa_in.sin_addr.s_addr));
-			case AF_INET6: return reinterpret_cast<const void *>(as.sa_in6.sin6_addr.s6_addr);
-			default: return nullptr;
+		switch (as.ss.ss_family) {
+			case AF_INET:
+				return reinterpret_cast<const void *>(&(as.sa_in.sin_addr.s_addr));
+			case AF_INET6:
+				return reinterpret_cast<const void *>(as.sa_in6.sin6_addr.s6_addr);
+			default:
+				return nullptr;
 		}
 	}
 
@@ -318,14 +380,14 @@ public:
 	ZT_INLINE InetAddress ipOnly() const noexcept
 	{
 		InetAddress r;
-		switch(as.ss.ss_family) {
+		switch (as.ss.ss_family) {
 			case AF_INET:
 				r.as.sa_in.sin_family = AF_INET;
 				r.as.sa_in.sin_addr.s_addr = as.sa_in.sin_addr.s_addr;
 				break;
 			case AF_INET6:
 				r.as.sa_in6.sin6_family = AF_INET6;
-				Utils::copy<16>(r.as.sa_in6.sin6_addr.s6_addr,as.sa_in6.sin6_addr.s6_addr);
+				Utils::copy<16>(r.as.sa_in6.sin6_addr.s6_addr, as.sa_in6.sin6_addr.s6_addr);
 				break;
 		}
 		return r;
@@ -344,8 +406,8 @@ public:
 			if (f == AF_INET)
 				return as.sa_in.sin_addr.s_addr == a.as.sa_in.sin_addr.s_addr;
 			if (f == AF_INET6)
-				return memcmp(as.sa_in6.sin6_addr.s6_addr,a.as.sa_in6.sin6_addr.s6_addr,16) == 0;
-			return memcmp(this,&a,sizeof(InetAddress)) == 0;
+				return memcmp(as.sa_in6.sin6_addr.s6_addr, a.as.sa_in6.sin6_addr.s6_addr, 16) == 0;
+			return memcmp(this, &a, sizeof(InetAddress)) == 0;
 		}
 		return false;
 	}
@@ -365,8 +427,8 @@ public:
 			if (f == AF_INET)
 				return as.sa_in.sin_addr.s_addr == a.as.sa_in.sin_addr.s_addr;
 			if (f == AF_INET6)
-				return memcmp(as.sa_in6.sin6_addr.s6_addr,a.as.sa_in6.sin6_addr.s6_addr,8) == 0;
-			return (memcmp(this,&a,sizeof(InetAddress)) == 0);
+				return memcmp(as.sa_in6.sin6_addr.s6_addr, a.as.sa_in6.sin6_addr.s6_addr, 8) == 0;
+			return (memcmp(this, &a, sizeof(InetAddress)) == 0);
 		}
 		return false;
 	}
@@ -374,15 +436,15 @@ public:
 	ZT_INLINE unsigned long hashCode() const noexcept
 	{
 		if (as.ss.ss_family == AF_INET) {
-			return (unsigned long)Utils::hash32(((uint32_t)as.sa_in.sin_addr.s_addr + (uint32_t)as.sa_in.sin_port) ^ (uint32_t)Utils::s_mapNonce);
+			return (unsigned long) Utils::hash32(((uint32_t) as.sa_in.sin_addr.s_addr + (uint32_t) as.sa_in.sin_port) ^ (uint32_t) Utils::s_mapNonce);
 		} else if (as.ss.ss_family == AF_INET6) {
-			return (unsigned long)Utils::hash64(
+			return (unsigned long) Utils::hash64(
 				(Utils::loadAsIsEndian<uint64_t>(as.sa_in6.sin6_addr.s6_addr) +
 				 Utils::loadAsIsEndian<uint64_t>(as.sa_in6.sin6_addr.s6_addr + 8) +
-				 (uint64_t)as.sa_in6.sin6_port) ^
+				 (uint64_t) as.sa_in6.sin6_port) ^
 				Utils::s_mapNonce);
 		}
-		return Utils::fnv1a32(this,sizeof(InetAddress));
+		return Utils::fnv1a32(this, sizeof(InetAddress));
 	}
 
 	/**
@@ -398,48 +460,61 @@ public:
 	/**
 	 * @return True if address family is non-zero
 	 */
-	explicit ZT_INLINE operator bool() const noexcept { return (as.ss.ss_family != 0); }
+	explicit ZT_INLINE operator bool() const noexcept
+	{ return (as.ss.ss_family != 0); }
 
-	static constexpr int marshalSizeMax() noexcept { return ZT_INETADDRESS_MARSHAL_SIZE_MAX; }
+	static constexpr int marshalSizeMax() noexcept
+	{ return ZT_INETADDRESS_MARSHAL_SIZE_MAX; }
+
 	int marshal(uint8_t data[ZT_INETADDRESS_MARSHAL_SIZE_MAX]) const noexcept;
-	int unmarshal(const uint8_t *restrict data,int len) noexcept;
+
+	int unmarshal(const uint8_t *restrict data, int len) noexcept;
 
 	ZT_INLINE bool operator==(const InetAddress &a) const noexcept
 	{
 		if (as.ss.ss_family == a.as.ss.ss_family) {
 			if (as.ss.ss_family == AF_INET)
-				return ((as.sa_in.sin_port == a.as.sa_in.sin_port)&&(as.sa_in.sin_addr.s_addr == a.as.sa_in.sin_addr.s_addr));
+				return ((as.sa_in.sin_port == a.as.sa_in.sin_port) && (as.sa_in.sin_addr.s_addr == a.as.sa_in.sin_addr.s_addr));
 			if (as.ss.ss_family == AF_INET6)
-				return ((as.sa_in6.sin6_port == a.as.sa_in6.sin6_port)&&(memcmp(as.sa_in6.sin6_addr.s6_addr,a.as.sa_in6.sin6_addr.s6_addr,16) == 0));
-			return memcmp(this,&a,sizeof(InetAddress)) == 0;
+				return ((as.sa_in6.sin6_port == a.as.sa_in6.sin6_port) && (memcmp(as.sa_in6.sin6_addr.s6_addr, a.as.sa_in6.sin6_addr.s6_addr, 16) == 0));
+			return memcmp(this, &a, sizeof(InetAddress)) == 0;
 		}
 		return false;
 	}
+
 	ZT_INLINE bool operator<(const InetAddress &a) const noexcept
 	{
 		if (as.ss.ss_family == a.as.ss.ss_family) {
 			if (as.ss.ss_family == AF_INET) {
-				const uint16_t p0 = Utils::ntoh((uint16_t)as.sa_in.sin_port);
-				const uint16_t p1 = Utils::ntoh((uint16_t)a.as.sa_in.sin_port);
+				const uint16_t p0 = Utils::ntoh((uint16_t) as.sa_in.sin_port);
+				const uint16_t p1 = Utils::ntoh((uint16_t) a.as.sa_in.sin_port);
 				if (p0 == p1)
-					return Utils::ntoh((uint32_t)as.sa_in.sin_addr.s_addr) < Utils::ntoh((uint32_t)a.as.sa_in.sin_addr.s_addr);
+					return Utils::ntoh((uint32_t) as.sa_in.sin_addr.s_addr) < Utils::ntoh((uint32_t) a.as.sa_in.sin_addr.s_addr);
 				return p0 < p1;
 			}
 			if (as.ss.ss_family == AF_INET6) {
-				const uint16_t p0 = Utils::ntoh((uint16_t)as.sa_in6.sin6_port);
-				const uint16_t p1 = Utils::ntoh((uint16_t)a.as.sa_in6.sin6_port);
+				const uint16_t p0 = Utils::ntoh((uint16_t) as.sa_in6.sin6_port);
+				const uint16_t p1 = Utils::ntoh((uint16_t) a.as.sa_in6.sin6_port);
 				if (p0 == p1)
-					return memcmp(as.sa_in6.sin6_addr.s6_addr,a.as.sa_in6.sin6_addr.s6_addr,16) < 0;
+					return memcmp(as.sa_in6.sin6_addr.s6_addr, a.as.sa_in6.sin6_addr.s6_addr, 16) < 0;
 				return p0 < p1;
 			}
-			return memcmp(this,&a,sizeof(InetAddress)) < 0;
+			return memcmp(this, &a, sizeof(InetAddress)) < 0;
 		}
 		return as.ss.ss_family < a.as.ss.ss_family;
 	}
-	ZT_INLINE bool operator!=(const InetAddress &a) const noexcept { return !(*this == a); }
-	ZT_INLINE bool operator>(const InetAddress &a) const noexcept { return (a < *this); }
-	ZT_INLINE bool operator<=(const InetAddress &a) const noexcept { return !(a < *this); }
-	ZT_INLINE bool operator>=(const InetAddress &a) const noexcept { return !(*this < a); }
+
+	ZT_INLINE bool operator!=(const InetAddress &a) const noexcept
+	{ return !(*this == a); }
+
+	ZT_INLINE bool operator>(const InetAddress &a) const noexcept
+	{ return (a < *this); }
+
+	ZT_INLINE bool operator<=(const InetAddress &a) const noexcept
+	{ return !(a < *this); }
+
+	ZT_INLINE bool operator>=(const InetAddress &a) const noexcept
+	{ return !(*this < a); }
 
 	/**
 	 * Compute an IPv6 link-local address
@@ -490,17 +565,18 @@ public:
 	 * @param zeroTierAddress 40-bit device address (in least significant 40 bits, highest 24 bits ignored)
 	 * @return IPv6 private unicast address with /88 netmask
 	 */
-	static InetAddress makeIpv6rfc4193(uint64_t nwid,uint64_t zeroTierAddress) noexcept;
+	static InetAddress makeIpv6rfc4193(uint64_t nwid, uint64_t zeroTierAddress) noexcept;
 
 	/**
 	 * Compute a private IPv6 "6plane" unicast address from network ID and ZeroTier address
 	 */
-	static InetAddress makeIpv66plane(uint64_t nwid,uint64_t zeroTierAddress) noexcept;
+	static InetAddress makeIpv66plane(uint64_t nwid, uint64_t zeroTierAddress) noexcept;
 
 	/**
 	 * Union allowing this to be accessed as a sockaddr of any supported type.
 	 */
-	union {
+	union
+	{
 		sockaddr_storage ss;
 		sockaddr sa;
 		sockaddr_in sa_in;
@@ -508,22 +584,53 @@ public:
 	} as;
 };
 
-static ZT_INLINE InetAddress *asInetAddress(sockaddr_in *const p) noexcept { return reinterpret_cast<InetAddress *>(p); }
-static ZT_INLINE InetAddress *asInetAddress(sockaddr_in6 *const p) noexcept { return reinterpret_cast<InetAddress *>(p); }
-static ZT_INLINE InetAddress *asInetAddress(sockaddr *const p) noexcept { return reinterpret_cast<InetAddress *>(p); }
-static ZT_INLINE InetAddress *asInetAddress(sockaddr_storage *const p) noexcept { return reinterpret_cast<InetAddress *>(p); }
-static ZT_INLINE const InetAddress *asInetAddress(const sockaddr_in *const p) noexcept { return reinterpret_cast<const InetAddress *>(p); }
-static ZT_INLINE const InetAddress *asInetAddress(const sockaddr_in6 *const p) noexcept { return reinterpret_cast<const InetAddress *>(p); }
-static ZT_INLINE const InetAddress *asInetAddress(const sockaddr *const p) noexcept { return reinterpret_cast<const InetAddress *>(p); }
-static ZT_INLINE const InetAddress *asInetAddress(const sockaddr_storage *const p) noexcept { return reinterpret_cast<const InetAddress *>(p); }
-static ZT_INLINE InetAddress &asInetAddress(sockaddr_in &p) noexcept { return *reinterpret_cast<InetAddress *>(&p); }
-static ZT_INLINE InetAddress &asInetAddress(sockaddr_in6 &p) noexcept { return *reinterpret_cast<InetAddress *>(&p); }
-static ZT_INLINE InetAddress &asInetAddress(sockaddr &p) noexcept { return *reinterpret_cast<InetAddress *>(&p); }
-static ZT_INLINE InetAddress &asInetAddress(sockaddr_storage &p) noexcept { return *reinterpret_cast<InetAddress *>(&p); }
-static ZT_INLINE const InetAddress &asInetAddress(const sockaddr_in &p) noexcept { return *reinterpret_cast<const InetAddress *>(&p); }
-static ZT_INLINE const InetAddress &asInetAddress(const sockaddr_in6 &p) noexcept { return *reinterpret_cast<const InetAddress *>(&p); }
-static ZT_INLINE const InetAddress &asInetAddress(const sockaddr &p) noexcept { return *reinterpret_cast<const InetAddress *>(&p); }
-static ZT_INLINE const InetAddress &asInetAddress(const sockaddr_storage &p) noexcept { return *reinterpret_cast<const InetAddress *>(&p); }
+static ZT_INLINE InetAddress *asInetAddress(sockaddr_in *const p) noexcept
+{ return reinterpret_cast<InetAddress *>(p); }
+
+static ZT_INLINE InetAddress *asInetAddress(sockaddr_in6 *const p) noexcept
+{ return reinterpret_cast<InetAddress *>(p); }
+
+static ZT_INLINE InetAddress *asInetAddress(sockaddr *const p) noexcept
+{ return reinterpret_cast<InetAddress *>(p); }
+
+static ZT_INLINE InetAddress *asInetAddress(sockaddr_storage *const p) noexcept
+{ return reinterpret_cast<InetAddress *>(p); }
+
+static ZT_INLINE const InetAddress *asInetAddress(const sockaddr_in *const p) noexcept
+{ return reinterpret_cast<const InetAddress *>(p); }
+
+static ZT_INLINE const InetAddress *asInetAddress(const sockaddr_in6 *const p) noexcept
+{ return reinterpret_cast<const InetAddress *>(p); }
+
+static ZT_INLINE const InetAddress *asInetAddress(const sockaddr *const p) noexcept
+{ return reinterpret_cast<const InetAddress *>(p); }
+
+static ZT_INLINE const InetAddress *asInetAddress(const sockaddr_storage *const p) noexcept
+{ return reinterpret_cast<const InetAddress *>(p); }
+
+static ZT_INLINE InetAddress &asInetAddress(sockaddr_in &p) noexcept
+{ return *reinterpret_cast<InetAddress *>(&p); }
+
+static ZT_INLINE InetAddress &asInetAddress(sockaddr_in6 &p) noexcept
+{ return *reinterpret_cast<InetAddress *>(&p); }
+
+static ZT_INLINE InetAddress &asInetAddress(sockaddr &p) noexcept
+{ return *reinterpret_cast<InetAddress *>(&p); }
+
+static ZT_INLINE InetAddress &asInetAddress(sockaddr_storage &p) noexcept
+{ return *reinterpret_cast<InetAddress *>(&p); }
+
+static ZT_INLINE const InetAddress &asInetAddress(const sockaddr_in &p) noexcept
+{ return *reinterpret_cast<const InetAddress *>(&p); }
+
+static ZT_INLINE const InetAddress &asInetAddress(const sockaddr_in6 &p) noexcept
+{ return *reinterpret_cast<const InetAddress *>(&p); }
+
+static ZT_INLINE const InetAddress &asInetAddress(const sockaddr &p) noexcept
+{ return *reinterpret_cast<const InetAddress *>(&p); }
+
+static ZT_INLINE const InetAddress &asInetAddress(const sockaddr_storage &p) noexcept
+{ return *reinterpret_cast<const InetAddress *>(&p); }
 
 } // namespace ZeroTier
 

@@ -413,7 +413,7 @@ extern "C" const char *ZTT_general()
 				return "FCV object life cycle test failed (2)";
 			}
 			test.clear();
-			if (cnt != (long)test.size()) {
+			if (cnt != (long)test2.size()) {
 				ZT_T_PRINTF("FAILED (expected 512 objects, got %lu (3))" ZT_EOL_S,cnt);
 				return "FCV object life cycle test failed (3)";
 			}
@@ -515,7 +515,7 @@ extern "C" const char *ZTT_general()
 				FCV<Buf::Slice,ZT_MAX_PACKET_FRAGMENTS> message;
 				FCV<Buf::Slice,ZT_MAX_PACKET_FRAGMENTS> ref;
 
-				int frags = 1 + (int)(Utils::random() % 16);
+				int frags = 1 + (int)(Utils::random() % ZT_MAX_PACKET_FRAGMENTS);
 				int skip = ((k & 3) == 1) ? -1 : (int)(Utils::random() % frags);
 				bool complete = false;
 				message.resize(frags);
@@ -803,12 +803,12 @@ extern "C" const char *ZTT_crypto()
 		{
 			uint8_t tag[16];
 			ZT_T_PRINTF("[crypto] Testing Poly1305... ");
-			poly1305(tag,POLY1305_TV0_INPUT,sizeof(POLY1305_TV0_INPUT),POLY1305_TV0_KEY);
+			Poly1305::compute(tag,POLY1305_TV0_INPUT,sizeof(POLY1305_TV0_INPUT),POLY1305_TV0_KEY);
 			if (memcmp(tag,POLY1305_TV0_TAG,16) != 0) {
 				ZT_T_PRINTF("FAILED (test vector 0)" ZT_EOL_S);
 				return "poly1305 test vector 0 failed";
 			}
-			poly1305(tag,POLY1305_TV1_INPUT,sizeof(POLY1305_TV1_INPUT),POLY1305_TV1_KEY);
+			Poly1305::compute(tag,POLY1305_TV1_INPUT,sizeof(POLY1305_TV1_INPUT),POLY1305_TV1_KEY);
 			if (memcmp(tag,POLY1305_TV1_TAG,16) != 0) {
 				ZT_T_PRINTF("FAILED (test vector 1)" ZT_EOL_S);
 				return "poly1305 test vector 1 failed";
@@ -1014,7 +1014,7 @@ extern "C" const char *ZTT_benchmarkCrypto()
 			ZT_T_PRINTF("[crypto] Benchmarking Poly1305... ");
 			int64_t start = now();
 			for(long i=0;i<150000;++i)
-				poly1305(tag,tmp,sizeof(tmp),tag);
+				Poly1305::compute(tag,tmp,sizeof(tmp),tag);
 			int64_t end = now();
 			foo = tag[0]; // prevent optimization
 			ZT_T_PRINTF("%.4f MiB/sec" ZT_EOL_S,((16384.0 * 150000.0) / 1048576.0) / ((double)(end - start) / 1000.0));

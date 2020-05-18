@@ -57,8 +57,8 @@ else(WIN32)
 			-Wall
 			-Wno-deprecated
 			-Wno-unused-function
-			-mmacosx-version-min=10.9
-			$<$<CONFIG:Debug>:-g>
+			-mmacosx-version-min=10.12
+			$<$<CONFIG:DEBUG>:-g>
 			$<$<CONFIG:DEBUG>:-O0>
 			$<$<CONFIG:RELEASE>:-Ofast>
 			$<$<CONFIG:RELEASE>:-ffast-math>
@@ -79,7 +79,7 @@ else(WIN32)
 			-Wno-deprecated
 			-Wno-unused-function
 			-Wno-format
-			$<$<CONFIG:Debug>:-g>
+			$<$<CONFIG:DEBUG>:-g>
 			$<$<CONFIG:DEBUG>:-O0>
 			$<$<CONFIG:RELEASE>:-O3>
 			$<$<CONFIG:RELEASE>:-ffast-math>
