@@ -1540,15 +1540,15 @@ void PostgreSQL::onlineNotification_Redis()
 			std::lock_guard<std::mutex> l(_lastOnline_l);
 			lastOnline.swap(_lastOnline);
 		}
-
-		if (_rc->clusterMode) {
-			auto tx = _cluster->redis(controllerId).transaction(true);
-			_doRedisUpdate(tx, controllerId, lastOnline);
-		} else {
-			auto tx = _redis->transaction(true);
-			_doRedisUpdate(tx, controllerId, lastOnline);
-		}
-		
+		if (!lastOnline.empty()) {
+			if (_rc->clusterMode) {
+				auto tx = _cluster->redis(controllerId).transaction(true);
+				_doRedisUpdate(tx, controllerId, lastOnline);
+			} else {
+				auto tx = _redis->transaction(true);
+				_doRedisUpdate(tx, controllerId, lastOnline);
+			}
+		}		
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
 }
@@ -1557,6 +1557,7 @@ void PostgreSQL::_doRedisUpdate(sw::redis::Transaction &tx, std::string &control
 	std::unordered_map< std::pair<uint64_t,uint64_t>,std::pair<int64_t,InetAddress>,_PairHasher > &lastOnline) 
 
 {
+	fprintf(stderr, "Redis Update\n");
 	nlohmann::json jtmp1, jtmp2;
 	for (auto i=lastOnline.begin(); i != lastOnline.end(); ++i) {
 		uint64_t nwid_i = i->first.first;
