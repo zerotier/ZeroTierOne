@@ -468,6 +468,219 @@ void AES::GMAC::finish(uint8_t tag[16]) noexcept
 
 // AES-CTR ------------------------------------------------------------------------------------------------------------
 
+static __attribute__((__target__("sse4,avx,avx2,vaes,avx512f"))) void p_aesCtrInnerVAES512(unsigned int &len,uint64_t &c0,uint64_t &c1,const uint8_t *&in,uint8_t *&out,const __m128i *const k) noexcept
+{
+	const __m512i kk0 = _mm512_broadcast_i32x4(k[0]);
+	const __m512i kk1 = _mm512_broadcast_i32x4(k[1]);
+	const __m512i kk2 = _mm512_broadcast_i32x4(k[2]);
+	const __m512i kk3 = _mm512_broadcast_i32x4(k[3]);
+	const __m512i kk4 = _mm512_broadcast_i32x4(k[4]);
+	const __m512i kk5 = _mm512_broadcast_i32x4(k[5]);
+	const __m512i kk6 = _mm512_broadcast_i32x4(k[6]);
+	const __m512i kk7 = _mm512_broadcast_i32x4(k[7]);
+	const __m512i kk8 = _mm512_broadcast_i32x4(k[8]);
+	const __m512i kk9 = _mm512_broadcast_i32x4(k[9]);
+	const __m512i kk10 = _mm512_broadcast_i32x4(k[10]);
+	const __m512i kk11 = _mm512_broadcast_i32x4(k[11]);
+	const __m512i kk12 = _mm512_broadcast_i32x4(k[12]);
+	const __m512i kk13 = _mm512_broadcast_i32x4(k[13]);
+	const __m512i kk14 = _mm512_broadcast_i32x4(k[14]);
+	do {
+		__m512i d0 = _mm512_set_epi64(
+			(long long)Utils::hton(c1 + 3ULL),(long long)c0,
+			(long long)Utils::hton(c1 + 2ULL),(long long)c0,
+			(long long)Utils::hton(c1 + 1ULL),(long long)c0,
+			(long long)Utils::hton(c1),(long long)c0);
+		c1 += 4;
+		__m512i p0 = _mm512_loadu_si512(reinterpret_cast<const __m512i *>(in));
+		in += 64;
+		d0 = _mm512_xor_si512(d0,kk0);
+		d0 = _mm512_aesenc_epi128(d0,kk1);
+		d0 = _mm512_aesenc_epi128(d0,kk2);
+		d0 = _mm512_aesenc_epi128(d0,kk3);
+		d0 = _mm512_aesenc_epi128(d0,kk4);
+		d0 = _mm512_aesenc_epi128(d0,kk5);
+		d0 = _mm512_aesenc_epi128(d0,kk6);
+		d0 = _mm512_aesenc_epi128(d0,kk7);
+		d0 = _mm512_aesenc_epi128(d0,kk8);
+		d0 = _mm512_aesenc_epi128(d0,kk9);
+		d0 = _mm512_aesenc_epi128(d0,kk10);
+		d0 = _mm512_aesenc_epi128(d0,kk11);
+		d0 = _mm512_aesenc_epi128(d0,kk12);
+		d0 = _mm512_aesenc_epi128(d0,kk13);
+		d0 = _mm512_aesenclast_epi128(d0,kk14);
+		_mm512_storeu_si512(reinterpret_cast<__m512i *>(out),_mm512_xor_si512(p0,d0));
+		out += 64;
+		len -= 64;
+	} while (len >= 64);
+}
+
+static __attribute__((__target__("sse4,avx,avx2,vaes"))) void p_aesCtrInnerVAES256(unsigned int &len,uint64_t &c0,uint64_t &c1,const uint8_t *&in,uint8_t *&out,const __m128i *const k) noexcept
+{
+	const __m256i kk0 = _mm256_broadcastsi128_si256(k[0]);
+	const __m256i kk1 = _mm256_broadcastsi128_si256(k[1]);
+	const __m256i kk2 = _mm256_broadcastsi128_si256(k[2]);
+	const __m256i kk3 = _mm256_broadcastsi128_si256(k[3]);
+	const __m256i kk4 = _mm256_broadcastsi128_si256(k[4]);
+	const __m256i kk5 = _mm256_broadcastsi128_si256(k[5]);
+	const __m256i kk6 = _mm256_broadcastsi128_si256(k[6]);
+	const __m256i kk7 = _mm256_broadcastsi128_si256(k[7]);
+	const __m256i kk8 = _mm256_broadcastsi128_si256(k[8]);
+	const __m256i kk9 = _mm256_broadcastsi128_si256(k[9]);
+	const __m256i kk10 = _mm256_broadcastsi128_si256(k[10]);
+	const __m256i kk11 = _mm256_broadcastsi128_si256(k[11]);
+	const __m256i kk12 = _mm256_broadcastsi128_si256(k[12]);
+	const __m256i kk13 = _mm256_broadcastsi128_si256(k[13]);
+	const __m256i kk14 = _mm256_broadcastsi128_si256(k[14]);
+	do {
+		__m256i d0 = _mm256_set_epi64x(
+			(long long)Utils::hton(c1 + 1ULL),(long long)c0,
+			(long long)Utils::hton(c1),(long long)c0);
+		__m256i d1 = _mm256_set_epi64x(
+			(long long)Utils::hton(c1 + 3ULL),(long long)c0,
+			(long long)Utils::hton(c1 + 2ULL),(long long)c0);
+		c1 += 4;
+		__m256i p0 = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(in));
+		__m256i p1 = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(in + 32));
+		in += 64;
+		d0 = _mm256_xor_si256(d0,kk0);
+		d1 = _mm256_xor_si256(d1,kk0);
+		d0 = _mm256_aesenc_epi128(d0,kk1);
+		d1 = _mm256_aesenc_epi128(d1,kk1);
+		d0 = _mm256_aesenc_epi128(d0,kk2);
+		d1 = _mm256_aesenc_epi128(d1,kk2);
+		d0 = _mm256_aesenc_epi128(d0,kk3);
+		d1 = _mm256_aesenc_epi128(d1,kk3);
+		d0 = _mm256_aesenc_epi128(d0,kk4);
+		d1 = _mm256_aesenc_epi128(d1,kk4);
+		d0 = _mm256_aesenc_epi128(d0,kk5);
+		d1 = _mm256_aesenc_epi128(d1,kk5);
+		d0 = _mm256_aesenc_epi128(d0,kk6);
+		d1 = _mm256_aesenc_epi128(d1,kk6);
+		d0 = _mm256_aesenc_epi128(d0,kk7);
+		d1 = _mm256_aesenc_epi128(d1,kk7);
+		d0 = _mm256_aesenc_epi128(d0,kk8);
+		d1 = _mm256_aesenc_epi128(d1,kk8);
+		d0 = _mm256_aesenc_epi128(d0,kk9);
+		d1 = _mm256_aesenc_epi128(d1,kk9);
+		d0 = _mm256_aesenc_epi128(d0,kk10);
+		d1 = _mm256_aesenc_epi128(d1,kk10);
+		d0 = _mm256_aesenc_epi128(d0,kk11);
+		d1 = _mm256_aesenc_epi128(d1,kk11);
+		d0 = _mm256_aesenc_epi128(d0,kk12);
+		d1 = _mm256_aesenc_epi128(d1,kk12);
+		d0 = _mm256_aesenc_epi128(d0,kk13);
+		d1 = _mm256_aesenc_epi128(d1,kk13);
+		d0 = _mm256_aesenclast_epi128(d0,kk14);
+		d1 = _mm256_aesenclast_epi128(d1,kk14);
+		_mm256_storeu_si256(reinterpret_cast<__m256i *>(out),_mm256_xor_si256(d0,p0));
+		_mm256_storeu_si256(reinterpret_cast<__m256i *>(out + 32),_mm256_xor_si256(d1,p1));
+		out += 64;
+		len -= 64;
+	} while (len >= 64);
+}
+
+static void p_aesCtrInner128(unsigned int &len,uint64_t &c0,uint64_t &c1,const uint8_t *&in,uint8_t *&out,const __m128i *const k) noexcept
+{
+	const __m128i k0 = k[0];
+	const __m128i k1 = k[1];
+	const __m128i k2 = k[2];
+	const __m128i k3 = k[3];
+	const __m128i k4 = k[4];
+	const __m128i k5 = k[5];
+	const __m128i k6 = k[6];
+	const __m128i k7 = k[7];
+	const __m128i k8 = k[8];
+	const __m128i k9 = k[9];
+	const __m128i k10 = k[10];
+	const __m128i k11 = k[11];
+	const __m128i k12 = k[12];
+	const __m128i k13 = k[13];
+	const __m128i k14 = k[14];
+	do {
+		__m128i d0 = _mm_set_epi64x((long long)Utils::hton(c1),(long long)c0);
+		__m128i d1 = _mm_set_epi64x((long long)Utils::hton(c1 + 1ULL),(long long)c0);
+		__m128i d2 = _mm_set_epi64x((long long)Utils::hton(c1 + 2ULL),(long long)c0);
+		__m128i d3 = _mm_set_epi64x((long long)Utils::hton(c1 + 3ULL),(long long)c0);
+		c1 += 4;
+		d0 = _mm_xor_si128(d0,k0);
+		d1 = _mm_xor_si128(d1,k0);
+		d2 = _mm_xor_si128(d2,k0);
+		d3 = _mm_xor_si128(d3,k0);
+		d0 = _mm_aesenc_si128(d0,k1);
+		d1 = _mm_aesenc_si128(d1,k1);
+		d2 = _mm_aesenc_si128(d2,k1);
+		d3 = _mm_aesenc_si128(d3,k1);
+		d0 = _mm_aesenc_si128(d0,k2);
+		d1 = _mm_aesenc_si128(d1,k2);
+		d2 = _mm_aesenc_si128(d2,k2);
+		d3 = _mm_aesenc_si128(d3,k2);
+		d0 = _mm_aesenc_si128(d0,k3);
+		d1 = _mm_aesenc_si128(d1,k3);
+		d2 = _mm_aesenc_si128(d2,k3);
+		d3 = _mm_aesenc_si128(d3,k3);
+		d0 = _mm_aesenc_si128(d0,k4);
+		d1 = _mm_aesenc_si128(d1,k4);
+		d2 = _mm_aesenc_si128(d2,k4);
+		d3 = _mm_aesenc_si128(d3,k4);
+		d0 = _mm_aesenc_si128(d0,k5);
+		d1 = _mm_aesenc_si128(d1,k5);
+		d2 = _mm_aesenc_si128(d2,k5);
+		d3 = _mm_aesenc_si128(d3,k5);
+		d0 = _mm_aesenc_si128(d0,k6);
+		d1 = _mm_aesenc_si128(d1,k6);
+		d2 = _mm_aesenc_si128(d2,k6);
+		d3 = _mm_aesenc_si128(d3,k6);
+		d0 = _mm_aesenc_si128(d0,k7);
+		d1 = _mm_aesenc_si128(d1,k7);
+		d2 = _mm_aesenc_si128(d2,k7);
+		d3 = _mm_aesenc_si128(d3,k7);
+		d0 = _mm_aesenc_si128(d0,k8);
+		d1 = _mm_aesenc_si128(d1,k8);
+		d2 = _mm_aesenc_si128(d2,k8);
+		d3 = _mm_aesenc_si128(d3,k8);
+		d0 = _mm_aesenc_si128(d0,k9);
+		d1 = _mm_aesenc_si128(d1,k9);
+		d2 = _mm_aesenc_si128(d2,k9);
+		d3 = _mm_aesenc_si128(d3,k9);
+		d0 = _mm_aesenc_si128(d0,k10);
+		d1 = _mm_aesenc_si128(d1,k10);
+		d2 = _mm_aesenc_si128(d2,k10);
+		d3 = _mm_aesenc_si128(d3,k10);
+		__m128i p0 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(in));
+		d0 = _mm_aesenc_si128(d0,k11);
+		d1 = _mm_aesenc_si128(d1,k11);
+		d2 = _mm_aesenc_si128(d2,k11);
+		d3 = _mm_aesenc_si128(d3,k11);
+		__m128i p1 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(in + 16));
+		d0 = _mm_aesenc_si128(d0,k12);
+		d1 = _mm_aesenc_si128(d1,k12);
+		d2 = _mm_aesenc_si128(d2,k12);
+		d3 = _mm_aesenc_si128(d3,k12);
+		__m128i p2 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(in + 32));
+		d0 = _mm_aesenc_si128(d0,k13);
+		d1 = _mm_aesenc_si128(d1,k13);
+		d2 = _mm_aesenc_si128(d2,k13);
+		d3 = _mm_aesenc_si128(d3,k13);
+		__m128i p3 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(in + 48));
+		in += 64;
+		d0 = _mm_aesenclast_si128(d0,k14);
+		d1 = _mm_aesenclast_si128(d1,k14);
+		d2 = _mm_aesenclast_si128(d2,k14);
+		d3 = _mm_aesenclast_si128(d3,k14);
+		p0 = _mm_xor_si128(d0,p0);
+		p1 = _mm_xor_si128(d1,p1);
+		p2 = _mm_xor_si128(d2,p2);
+		p3 = _mm_xor_si128(d3,p3);
+		_mm_storeu_si128(reinterpret_cast<__m128i *>(out),p0);
+		_mm_storeu_si128(reinterpret_cast<__m128i *>(out + 16),p1);
+		_mm_storeu_si128(reinterpret_cast<__m128i *>(out + 32),p2);
+		_mm_storeu_si128(reinterpret_cast<__m128i *>(out + 48),p3);
+		out += 64;
+		len -= 64;
+	} while (len >= 64);
+}
+
 void AES::CTR::crypt(const void *const input,unsigned int len) noexcept
 {
 	const uint8_t *in = reinterpret_cast<const uint8_t *>(input);
@@ -522,236 +735,36 @@ void AES::CTR::crypt(const void *const input,unsigned int len) noexcept
 		if (likely(len >= 64)) {
 			if (Utils::CPUID.vaes) { // is only true if AVX is also present
 				if ((!Utils::CPUID.avx512f)||((len < 1024))) {
-					const __m256i kk0 = _mm256_broadcastsi128_si256(k[0]);
-					const __m256i kk1 = _mm256_broadcastsi128_si256(k[1]);
-					const __m256i kk2 = _mm256_broadcastsi128_si256(k[2]);
-					const __m256i kk3 = _mm256_broadcastsi128_si256(k[3]);
-					const __m256i kk4 = _mm256_broadcastsi128_si256(k[4]);
-					const __m256i kk5 = _mm256_broadcastsi128_si256(k[5]);
-					const __m256i kk6 = _mm256_broadcastsi128_si256(k[6]);
-					const __m256i kk7 = _mm256_broadcastsi128_si256(k[7]);
-					const __m256i kk8 = _mm256_broadcastsi128_si256(k[8]);
-					const __m256i kk9 = _mm256_broadcastsi128_si256(k[9]);
-					const __m256i kk10 = _mm256_broadcastsi128_si256(k[10]);
-					const __m256i kk11 = _mm256_broadcastsi128_si256(k[11]);
-					const __m256i kk12 = _mm256_broadcastsi128_si256(k[12]);
-					const __m256i kk13 = _mm256_broadcastsi128_si256(k[13]);
-					const __m256i kk14 = _mm256_broadcastsi128_si256(k[14]);
-					do {
-						__m256i d0 = _mm256_set_epi64x(
-							(long long)Utils::hton(c1 + 1ULL),(long long)c0,
-							(long long)Utils::hton(c1),(long long)c0);
-						__m256i d1 = _mm256_set_epi64x(
-							(long long)Utils::hton(c1 + 3ULL),(long long)c0,
-							(long long)Utils::hton(c1 + 2ULL),(long long)c0);
-						c1 += 4;
-						__m256i p0 = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(in));
-						__m256i p1 = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(in + 32));
-						in += 64;
-						d0 = _mm256_xor_si256(d0,kk0);
-						d1 = _mm256_xor_si256(d1,kk0);
-						d0 = _mm256_aesenc_epi128(d0,kk1);
-						d1 = _mm256_aesenc_epi128(d1,kk1);
-						d0 = _mm256_aesenc_epi128(d0,kk2);
-						d1 = _mm256_aesenc_epi128(d1,kk2);
-						d0 = _mm256_aesenc_epi128(d0,kk3);
-						d1 = _mm256_aesenc_epi128(d1,kk3);
-						d0 = _mm256_aesenc_epi128(d0,kk4);
-						d1 = _mm256_aesenc_epi128(d1,kk4);
-						d0 = _mm256_aesenc_epi128(d0,kk5);
-						d1 = _mm256_aesenc_epi128(d1,kk5);
-						d0 = _mm256_aesenc_epi128(d0,kk6);
-						d1 = _mm256_aesenc_epi128(d1,kk6);
-						d0 = _mm256_aesenc_epi128(d0,kk7);
-						d1 = _mm256_aesenc_epi128(d1,kk7);
-						d0 = _mm256_aesenc_epi128(d0,kk8);
-						d1 = _mm256_aesenc_epi128(d1,kk8);
-						d0 = _mm256_aesenc_epi128(d0,kk9);
-						d1 = _mm256_aesenc_epi128(d1,kk9);
-						d0 = _mm256_aesenc_epi128(d0,kk10);
-						d1 = _mm256_aesenc_epi128(d1,kk10);
-						d0 = _mm256_aesenc_epi128(d0,kk11);
-						d1 = _mm256_aesenc_epi128(d1,kk11);
-						d0 = _mm256_aesenc_epi128(d0,kk12);
-						d1 = _mm256_aesenc_epi128(d1,kk12);
-						d0 = _mm256_aesenc_epi128(d0,kk13);
-						d1 = _mm256_aesenc_epi128(d1,kk13);
-						d0 = _mm256_aesenclast_epi128(d0,kk14);
-						d1 = _mm256_aesenclast_epi128(d1,kk14);
-						_mm256_storeu_si256(reinterpret_cast<__m256i *>(out),_mm256_xor_si256(d0,p0));
-						_mm256_storeu_si256(reinterpret_cast<__m256i *>(out + 32),_mm256_xor_si256(d1,p1));
-						out += 64;
-						len -= 64;
-					} while (len >= 64);
+					p_aesCtrInnerVAES256(len,c0,c1,in,out,k);
 				} else {
-					const __m512i kk0 = _mm512_broadcast_i32x4(k[0]);
-					const __m512i kk1 = _mm512_broadcast_i32x4(k[1]);
-					const __m512i kk2 = _mm512_broadcast_i32x4(k[2]);
-					const __m512i kk3 = _mm512_broadcast_i32x4(k[3]);
-					const __m512i kk4 = _mm512_broadcast_i32x4(k[4]);
-					const __m512i kk5 = _mm512_broadcast_i32x4(k[5]);
-					const __m512i kk6 = _mm512_broadcast_i32x4(k[6]);
-					const __m512i kk7 = _mm512_broadcast_i32x4(k[7]);
-					const __m512i kk8 = _mm512_broadcast_i32x4(k[8]);
-					const __m512i kk9 = _mm512_broadcast_i32x4(k[9]);
-					const __m512i kk10 = _mm512_broadcast_i32x4(k[10]);
-					const __m512i kk11 = _mm512_broadcast_i32x4(k[11]);
-					const __m512i kk12 = _mm512_broadcast_i32x4(k[12]);
-					const __m512i kk13 = _mm512_broadcast_i32x4(k[13]);
-					const __m512i kk14 = _mm512_broadcast_i32x4(k[14]);
-					do {
-						__m512i d0 = _mm512_set_epi64(
-							(long long)Utils::hton(c1 + 3ULL),(long long)c0,
-							(long long)Utils::hton(c1 + 2ULL),(long long)c0,
-							(long long)Utils::hton(c1 + 1ULL),(long long)c0,
-							(long long)Utils::hton(c1),(long long)c0);
-						c1 += 4;
-						__m512i p0 = _mm512_loadu_si512(reinterpret_cast<const __m512i *>(in));
-						in += 64;
-						d0 = _mm512_xor_si512(d0,kk0);
-						d0 = _mm512_aesenc_epi128(d0,kk1);
-						d0 = _mm512_aesenc_epi128(d0,kk2);
-						d0 = _mm512_aesenc_epi128(d0,kk3);
-						d0 = _mm512_aesenc_epi128(d0,kk4);
-						d0 = _mm512_aesenc_epi128(d0,kk5);
-						d0 = _mm512_aesenc_epi128(d0,kk6);
-						d0 = _mm512_aesenc_epi128(d0,kk7);
-						d0 = _mm512_aesenc_epi128(d0,kk8);
-						d0 = _mm512_aesenc_epi128(d0,kk9);
-						d0 = _mm512_aesenc_epi128(d0,kk10);
-						d0 = _mm512_aesenc_epi128(d0,kk11);
-						d0 = _mm512_aesenc_epi128(d0,kk12);
-						d0 = _mm512_aesenc_epi128(d0,kk13);
-						d0 = _mm512_aesenclast_epi128(d0,kk14);
-						_mm512_storeu_si512(reinterpret_cast<__m512i *>(out),_mm512_xor_si512(p0,d0));
-						out += 64;
-						len -= 64;
-					} while (len >= 64);
+					p_aesCtrInnerVAES512(len,c0,c1,in,out,k);
 				}
 			} else {
-				const __m128i k0 = k[0];
-				const __m128i k1 = k[1];
-				const __m128i k2 = k[2];
-				const __m128i k3 = k[3];
-				const __m128i k4 = k[4];
-				const __m128i k5 = k[5];
-				const __m128i k6 = k[6];
-				const __m128i k7 = k[7];
-				const __m128i k8 = k[8];
-				const __m128i k9 = k[9];
-				const __m128i k10 = k[10];
-				const __m128i k11 = k[11];
-				const __m128i k12 = k[12];
-				const __m128i k13 = k[13];
-				const __m128i k14 = k[14];
-				do {
-					__m128i d0 = _mm_set_epi64x((long long)Utils::hton(c1),(long long)c0);
-					__m128i d1 = _mm_set_epi64x((long long)Utils::hton(c1 + 1ULL),(long long)c0);
-					__m128i d2 = _mm_set_epi64x((long long)Utils::hton(c1 + 2ULL),(long long)c0);
-					__m128i d3 = _mm_set_epi64x((long long)Utils::hton(c1 + 3ULL),(long long)c0);
-					c1 += 4;
-					d0 = _mm_xor_si128(d0,k0);
-					d1 = _mm_xor_si128(d1,k0);
-					d2 = _mm_xor_si128(d2,k0);
-					d3 = _mm_xor_si128(d3,k0);
-					d0 = _mm_aesenc_si128(d0,k1);
-					d1 = _mm_aesenc_si128(d1,k1);
-					d2 = _mm_aesenc_si128(d2,k1);
-					d3 = _mm_aesenc_si128(d3,k1);
-					d0 = _mm_aesenc_si128(d0,k2);
-					d1 = _mm_aesenc_si128(d1,k2);
-					d2 = _mm_aesenc_si128(d2,k2);
-					d3 = _mm_aesenc_si128(d3,k2);
-					d0 = _mm_aesenc_si128(d0,k3);
-					d1 = _mm_aesenc_si128(d1,k3);
-					d2 = _mm_aesenc_si128(d2,k3);
-					d3 = _mm_aesenc_si128(d3,k3);
-					d0 = _mm_aesenc_si128(d0,k4);
-					d1 = _mm_aesenc_si128(d1,k4);
-					d2 = _mm_aesenc_si128(d2,k4);
-					d3 = _mm_aesenc_si128(d3,k4);
-					d0 = _mm_aesenc_si128(d0,k5);
-					d1 = _mm_aesenc_si128(d1,k5);
-					d2 = _mm_aesenc_si128(d2,k5);
-					d3 = _mm_aesenc_si128(d3,k5);
-					d0 = _mm_aesenc_si128(d0,k6);
-					d1 = _mm_aesenc_si128(d1,k6);
-					d2 = _mm_aesenc_si128(d2,k6);
-					d3 = _mm_aesenc_si128(d3,k6);
-					d0 = _mm_aesenc_si128(d0,k7);
-					d1 = _mm_aesenc_si128(d1,k7);
-					d2 = _mm_aesenc_si128(d2,k7);
-					d3 = _mm_aesenc_si128(d3,k7);
-					d0 = _mm_aesenc_si128(d0,k8);
-					d1 = _mm_aesenc_si128(d1,k8);
-					d2 = _mm_aesenc_si128(d2,k8);
-					d3 = _mm_aesenc_si128(d3,k8);
-					d0 = _mm_aesenc_si128(d0,k9);
-					d1 = _mm_aesenc_si128(d1,k9);
-					d2 = _mm_aesenc_si128(d2,k9);
-					d3 = _mm_aesenc_si128(d3,k9);
-					d0 = _mm_aesenc_si128(d0,k10);
-					d1 = _mm_aesenc_si128(d1,k10);
-					d2 = _mm_aesenc_si128(d2,k10);
-					d3 = _mm_aesenc_si128(d3,k10);
-					__m128i p0 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(in));
-					d0 = _mm_aesenc_si128(d0,k11);
-					d1 = _mm_aesenc_si128(d1,k11);
-					d2 = _mm_aesenc_si128(d2,k11);
-					d3 = _mm_aesenc_si128(d3,k11);
-					__m128i p1 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(in + 16));
-					d0 = _mm_aesenc_si128(d0,k12);
-					d1 = _mm_aesenc_si128(d1,k12);
-					d2 = _mm_aesenc_si128(d2,k12);
-					d3 = _mm_aesenc_si128(d3,k12);
-					__m128i p2 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(in + 32));
-					d0 = _mm_aesenc_si128(d0,k13);
-					d1 = _mm_aesenc_si128(d1,k13);
-					d2 = _mm_aesenc_si128(d2,k13);
-					d3 = _mm_aesenc_si128(d3,k13);
-					__m128i p3 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(in + 48));
-					in += 64;
-					d0 = _mm_aesenclast_si128(d0,k14);
-					d1 = _mm_aesenclast_si128(d1,k14);
-					d2 = _mm_aesenclast_si128(d2,k14);
-					d3 = _mm_aesenclast_si128(d3,k14);
-					p0 = _mm_xor_si128(d0,p0);
-					p1 = _mm_xor_si128(d1,p1);
-					p2 = _mm_xor_si128(d2,p2);
-					p3 = _mm_xor_si128(d3,p3);
-					_mm_storeu_si128(reinterpret_cast<__m128i *>(out),p0);
-					_mm_storeu_si128(reinterpret_cast<__m128i *>(out + 16),p1);
-					_mm_storeu_si128(reinterpret_cast<__m128i *>(out + 32),p2);
-					_mm_storeu_si128(reinterpret_cast<__m128i *>(out + 48),p3);
-					out += 64;
-					len -= 64;
-				} while (len >= 64);
+				p_aesCtrInner128(len,c0,c1,in,out,k);
 			}
 		}
 
-		if (len >= 16) {
-			do {
-				__m128i d0 = _mm_set_epi64x((long long)Utils::hton(c1++),(long long)c0);
-				d0 = _mm_xor_si128(d0,k[0]);
-				d0 = _mm_aesenc_si128(d0,k[1]);
-				d0 = _mm_aesenc_si128(d0,k[2]);
-				d0 = _mm_aesenc_si128(d0,k[3]);
-				d0 = _mm_aesenc_si128(d0,k[4]);
-				d0 = _mm_aesenc_si128(d0,k[5]);
-				d0 = _mm_aesenc_si128(d0,k[6]);
-				d0 = _mm_aesenc_si128(d0,k[7]);
-				d0 = _mm_aesenc_si128(d0,k[8]);
-				d0 = _mm_aesenc_si128(d0,k[9]);
-				d0 = _mm_aesenc_si128(d0,k[10]);
-				d0 = _mm_aesenc_si128(d0,k[11]);
-				d0 = _mm_aesenc_si128(d0,k[12]);
-				d0 = _mm_aesenc_si128(d0,k[13]);
-				d0 = _mm_aesenclast_si128(d0,k[14]);
-				_mm_storeu_si128(reinterpret_cast<__m128i *>(out),_mm_xor_si128(d0,_mm_loadu_si128(reinterpret_cast<const __m128i *>(in))));
-				in += 16;
-				len -= 16;
-				out += 16;
-			} while (len >= 16);
+		while (len >= 16) {
+			__m128i d0 = _mm_set_epi64x((long long)Utils::hton(c1++),(long long)c0);
+			d0 = _mm_xor_si128(d0,k[0]);
+			d0 = _mm_aesenc_si128(d0,k[1]);
+			d0 = _mm_aesenc_si128(d0,k[2]);
+			d0 = _mm_aesenc_si128(d0,k[3]);
+			d0 = _mm_aesenc_si128(d0,k[4]);
+			d0 = _mm_aesenc_si128(d0,k[5]);
+			d0 = _mm_aesenc_si128(d0,k[6]);
+			d0 = _mm_aesenc_si128(d0,k[7]);
+			d0 = _mm_aesenc_si128(d0,k[8]);
+			d0 = _mm_aesenc_si128(d0,k[9]);
+			d0 = _mm_aesenc_si128(d0,k[10]);
+			d0 = _mm_aesenc_si128(d0,k[11]);
+			d0 = _mm_aesenc_si128(d0,k[12]);
+			d0 = _mm_aesenc_si128(d0,k[13]);
+			d0 = _mm_aesenclast_si128(d0,k[14]);
+			_mm_storeu_si128(reinterpret_cast<__m128i *>(out),_mm_xor_si128(d0,_mm_loadu_si128(reinterpret_cast<const __m128i *>(in))));
+			in += 16;
+			len -= 16;
+			out += 16;
 		}
 
 		// Any remaining input is placed in _out. This will be picked up and crypted
