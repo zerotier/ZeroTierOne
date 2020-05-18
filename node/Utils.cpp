@@ -35,6 +35,7 @@ namespace Utils {
 #ifdef ZT_ARCH_X64
 CPUIDRegisters::CPUIDRegisters() noexcept
 {
+	uint32_t eax,ebx,ecx,edx;
 #ifdef __WINDOWS__
 	int regs[4];
 	__cpuid(regs,1);
@@ -50,7 +51,23 @@ CPUIDRegisters::CPUIDRegisters() noexcept
 	);
 #endif
 	rdrand = ((ecx & (1U << 30U)) != 0);
-	aes = ( ((ecx & (1U << 25U)) != 0) && ((ecx & (1U << 19U)) != 0) && ((ecx & (1U << 1U)) != 0) ); // AES, PCLMUL, SSE4.1
+	aes = ( ((ecx & (1U << 25U)) != 0) && ((ecx & (1U << 19U)) != 0) && ((ecx & (1U << 1U)) != 0) );
+	avx = ((ecx & (1U << 25U)) != 0);
+#ifdef __WINDOWS__
+TODO
+#else
+	__asm__ __volatile__ (
+		"cpuid"
+		: "=a"(eax),"=b"(ebx),"=c"(ecx),"=d"(edx)
+		: "a"(7),"c"(0)
+	);
+#endif
+	vaes = aes && avx && ((ecx & (1U << 9U)) != 0);
+	vpclmulqdq = aes && avx && ((ecx & (1U << 10U)) != 0);
+	avx2 = avx && ((ebx & (1U << 5U)) != 0);
+	avx512f = avx && ((ebx & (1U << 16U)) != 0);
+	sha = ((ebx & (1U << 29U)) != 0);
+	fsrm = sha = ((edx & (1U << 4U)) != 0);
 }
 const CPUIDRegisters CPUID;
 #endif

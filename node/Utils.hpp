@@ -16,12 +16,6 @@
 
 #include "Constants.hpp"
 
-#ifdef ZT_ARCH_X64
-#include <xmmintrin.h>
-#include <emmintrin.h>
-#include <immintrin.h>
-#endif
-
 #include <utility>
 #include <algorithm>
 #include <memory>
@@ -60,9 +54,15 @@ namespace Utils {
 struct CPUIDRegisters
 {
 	CPUIDRegisters() noexcept;
-	uint32_t eax,ebx,ecx,edx;
 	bool rdrand;
 	bool aes;
+	bool avx;
+	bool vaes; // implies AVX
+	bool vpclmulqdq; // implies AVX
+	bool avx2;
+	bool avx512f;
+	bool sha;
+	bool fsrm;
 };
 extern const CPUIDRegisters CPUID;
 #endif

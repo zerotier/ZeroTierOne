@@ -15,6 +15,7 @@
 #include "Identity.hpp"
 #include "SHA512.hpp"
 #include "Salsa20.hpp"
+#include "Poly1305.hpp"
 #include "Utils.hpp"
 
 #include <algorithm>
@@ -39,14 +40,14 @@ void identityV0ProofOfWorkFrankenhash(const void *const publicKey, unsigned int 
 	s20.crypt20((char *) genmem, (char *) genmem, 64);
 	for (unsigned long i = 64;i < ZT_V0_IDENTITY_GEN_MEMORY;i += 64) {
 		unsigned long k = i - 64;
-		*((uint64_t *) ((char *) genmem + i)) = *((uint64_t *) ((char *) genmem + k));
-		*((uint64_t *) ((char *) genmem + i + 8)) = *((uint64_t *) ((char *) genmem + k + 8));
-		*((uint64_t *) ((char *) genmem + i + 16)) = *((uint64_t *) ((char *) genmem + k + 16));
-		*((uint64_t *) ((char *) genmem + i + 24)) = *((uint64_t *) ((char *) genmem + k + 24));
-		*((uint64_t *) ((char *) genmem + i + 32)) = *((uint64_t *) ((char *) genmem + k + 32));
-		*((uint64_t *) ((char *) genmem + i + 40)) = *((uint64_t *) ((char *) genmem + k + 40));
-		*((uint64_t *) ((char *) genmem + i + 48)) = *((uint64_t *) ((char *) genmem + k + 48));
-		*((uint64_t *) ((char *) genmem + i + 56)) = *((uint64_t *) ((char *) genmem + k + 56));
+		*((uint64_t * )((char *) genmem + i)) = *((uint64_t * )((char *) genmem + k));
+		*((uint64_t * )((char *) genmem + i + 8)) = *((uint64_t * )((char *) genmem + k + 8));
+		*((uint64_t * )((char *) genmem + i + 16)) = *((uint64_t * )((char *) genmem + k + 16));
+		*((uint64_t * )((char *) genmem + i + 24)) = *((uint64_t * )((char *) genmem + k + 24));
+		*((uint64_t * )((char *) genmem + i + 32)) = *((uint64_t * )((char *) genmem + k + 32));
+		*((uint64_t * )((char *) genmem + i + 40)) = *((uint64_t * )((char *) genmem + k + 40));
+		*((uint64_t * )((char *) genmem + i + 48)) = *((uint64_t * )((char *) genmem + k + 48));
+		*((uint64_t * )((char *) genmem + i + 56)) = *((uint64_t * )((char *) genmem + k + 56));
 		s20.crypt20((char *) genmem + i, (char *) genmem + i, 64);
 	}
 
@@ -78,49 +79,58 @@ struct identityV0ProofOfWorkCriteria
 
 #define ZT_IDENTITY_V1_POW_MEMORY_SIZE 131072
 
-// This is a simpler memory-intensive hash function for V1 identity generation.
-// It's not quite as heavy as the V0 frankenhash, is a little more orderly in
-// its design, but remains relatively resistant to GPU acceleration due to memory
-// requirements for efficient computation.
+struct p_CompareLittleEndian
+{
+#if __BYTE_ORDER == __BIG_ENDIAN
+	ZT_INLINE bool operator()(const uint64_t a,const uint64_t b) const noexcept { return Utils::swapBytes(a) < Utils::swapBytes(b); }
+#else
+	ZT_INLINE bool operator()(const uint64_t a,const uint64_t b) const noexcept { return a < b; }
+#endif
+};
+
+// This is a simpler memory-intensive frankenhash for V1 identity generation.
 bool identityV1ProofOfWorkCriteria(const void *in, const unsigned int len)
 {
-	uint64_t b[ZT_IDENTITY_V1_POW_MEMORY_SIZE / 8];
+	uint64_t w[ZT_IDENTITY_V1_POW_MEMORY_SIZE / 8];
 
-	SHA384(b, in, len);
-	Utils::zero<ZT_IDENTITY_V1_POW_MEMORY_SIZE - 48>(b + 6);
-	Salsa20(b,b + 4).crypt12(b,b,ZT_IDENTITY_V1_POW_MEMORY_SIZE);
-
-#if __BYTE_ORDER == __BIG_ENDIAN
-	for (unsigned int i=0;i<(ZT_IDENTITY_V1_POW_MEMORY_SIZE / 8);) {
-		const unsigned int i1 = i + 1;
-		const unsigned int i2 = i + 2;
-		const unsigned int i3 = i + 3;
-		b[i] = Utils::swapBytes(b[i]);
-		i += 4;
-		b[i1] = Utils::swapBytes(b[i1]);
-		b[i2] = Utils::swapBytes(b[i2]);
-		b[i3] = Utils::swapBytes(b[i3]);
+	// Fill work buffer with pseudorandom bytes using a construction that should be
+	// relatively hostile to GPU acceleration. GPUs usually implement branching by
+	// executing all branches and then selecting the answer, which means this
+	// construction should require a GPU to do ~3X the work of a CPU per iteration.
+	SHA512(w, in, len);
+	for (unsigned int i = 8, j = 0;i < (ZT_IDENTITY_V1_POW_MEMORY_SIZE / 8);) {
+		uint64_t *const ww = w + i;
+		const uint64_t *const wp = w + j;
+		i += 8;
+		j += 8;
+		if ((wp[0] & 7U) == 0) {
+			SHA512(ww, wp, 64);
+		} else if ((wp[1] & 15U) == 0) {
+			ww[0] = Utils::hton(Utils::ntoh(wp[0]) % 4503599627370101ULL);
+			ww[1] = Utils::hton(Utils::ntoh(wp[1]) % 4503599627370161ULL);
+			ww[2] = Utils::hton(Utils::ntoh(wp[2]) % 4503599627370227ULL);
+			ww[3] = Utils::hton(Utils::ntoh(wp[3]) % 4503599627370287ULL);
+			ww[4] = Utils::hton(Utils::ntoh(wp[4]) % 4503599627370299ULL);
+			ww[5] = Utils::hton(Utils::ntoh(wp[5]) % 4503599627370323ULL);
+			ww[6] = Utils::hton(Utils::ntoh(wp[6]) % 4503599627370353ULL);
+			ww[7] = Utils::hton(Utils::ntoh(wp[7]) % 4503599627370449ULL);
+			SHA384(ww, wp, 128);
+		} else {
+			Salsa20(wp, wp + 4).crypt12(wp, ww, 64);
+		}
 	}
-#endif
 
-	std::sort(b,b + (ZT_IDENTITY_V1_POW_MEMORY_SIZE / 8));
+	// Sort 64-bit integers (little-endian) into ascending order and compute a
+	// cryptographic checksum. Sorting makes the order of values dependent on all
+	// other values, making a speed competitive implementation that skips on the
+	// memory requirement extremely hard.
+	std::sort(w, w + (ZT_IDENTITY_V1_POW_MEMORY_SIZE / 8), p_CompareLittleEndian());
+	Poly1305::compute(w, w, ZT_IDENTITY_V1_POW_MEMORY_SIZE, w);
 
-#if __BYTE_ORDER == __BIG_ENDIAN
-	for (unsigned int i=0;i<(ZT_IDENTITY_V1_POW_MEMORY_SIZE / 8);) {
-		const unsigned int i1 = i + 1;
-		const unsigned int i2 = i + 2;
-		const unsigned int i3 = i + 3;
-		b[i] = Utils::swapBytes(b[i]);
-		i += 4;
-		b[i1] = Utils::swapBytes(b[i1]);
-		b[i2] = Utils::swapBytes(b[i2]);
-		b[i3] = Utils::swapBytes(b[i3]);
-	}
-#endif
-
-	SHA384(b, b, ZT_IDENTITY_V1_POW_MEMORY_SIZE, in, len);
-
-	return (b[0] % 1093U) == 0;
+	// PoW criteria passed if this is true. The value 593 was chosen experimentally
+	// to yield a good average performance balancing fast setup with intentional
+	// identity collision resistance.
+	return (Utils::ntoh(w[0]) % 593U) == 0;
 }
 
 } // anonymous namespace
@@ -145,7 +155,7 @@ bool Identity::generate(const Type t)
 				address.setTo(digest + 59);
 			} while (address.isReserved());
 			delete[] genmem;
-			m_fp.m_cfp.address = address.toInt();
+			m_fp.m_cfp.address = address.toInt(); // address comes from PoW hash for type 0 identities
 			m_computeHash();
 		} break;
 
@@ -167,6 +177,7 @@ bool Identity::generate(const Type t)
 				// If we passed PoW then check that the address is valid, otherwise loop
 				// back around and run the whole process again.
 				m_computeHash();
+				m_fp.m_cfp.address = Address(m_fp.m_cfp.hash).toInt();
 				if (!m_fp.address().isReserved())
 					break;
 			}
@@ -351,10 +362,8 @@ bool Identity::fromString(const char *str)
 
 			case 0:
 				m_fp.m_cfp.address = Utils::hexStrToU64(f) & ZT_ADDRESS_MASK;
-				if (m_fp.address().isReserved()) {
-					memoryZero(this);
+				if (m_fp.address().isReserved())
 					return false;
-				}
 				break;
 
 			case 1:
@@ -363,7 +372,6 @@ bool Identity::fromString(const char *str)
 				} else if ((f[0] == '1') && (!f[1])) {
 					m_type = P384;
 				} else {
-					memoryZero(this);
 					return false;
 				}
 				break;
@@ -372,17 +380,13 @@ bool Identity::fromString(const char *str)
 				switch (m_type) {
 
 					case C25519:
-						if (Utils::unhex(f, strlen(f), m_pub, ZT_C25519_COMBINED_PUBLIC_KEY_SIZE) != ZT_C25519_COMBINED_PUBLIC_KEY_SIZE) {
-							memoryZero(this);
+						if (Utils::unhex(f, strlen(f), m_pub, ZT_C25519_COMBINED_PUBLIC_KEY_SIZE) != ZT_C25519_COMBINED_PUBLIC_KEY_SIZE)
 							return false;
-						}
 						break;
 
 					case P384:
-						if (Utils::b32d(f, m_pub, sizeof(m_pub)) != sizeof(m_pub)) {
-							memoryZero(this);
+						if (Utils::b32d(f, m_pub, sizeof(m_pub)) != sizeof(m_pub))
 							return false;
-						}
 						break;
 
 				}
@@ -394,7 +398,6 @@ bool Identity::fromString(const char *str)
 
 						case C25519:
 							if (Utils::unhex(f, strlen(f), m_priv, ZT_C25519_COMBINED_PRIVATE_KEY_SIZE) != ZT_C25519_COMBINED_PRIVATE_KEY_SIZE) {
-								memoryZero(this);
 								return false;
 							} else {
 								m_hasPrivate = true;
@@ -403,7 +406,6 @@ bool Identity::fromString(const char *str)
 
 						case P384:
 							if (Utils::b32d(f, m_priv, sizeof(m_priv)) != sizeof(m_priv)) {
-								memoryZero(this);
 								return false;
 							} else {
 								m_hasPrivate = true;
@@ -417,16 +419,12 @@ bool Identity::fromString(const char *str)
 		}
 	}
 
-	if (fno < 3) {
-		memoryZero(this);
+	if (fno < 3)
 		return false;
-	}
 
 	m_computeHash();
-	if ((m_type == P384) && (m_fp.address() != Address(m_fp.hash()))) {
-		memoryZero(this);
+	if ((m_type == P384) && (m_fp.address() != Address(m_fp.hash())))
 		return false;
-	}
 
 	return true;
 }
@@ -533,7 +531,6 @@ void Identity::m_computeHash()
 			break;
 		case P384:
 			SHA384(m_fp.m_cfp.hash, m_pub, sizeof(m_pub));
-			m_fp.m_cfp.address = Address(m_fp.m_cfp.hash).toInt();
 			break;
 	}
 }
