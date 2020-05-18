@@ -44,6 +44,7 @@ jobject createResultObject(JNIEnv *env, ZT_ResultCode code)
     switch(code)
     {
     case ZT_RESULT_OK:
+    case ZT_RESULT_OK_IGNORED:
         LOGV("ZT_RESULT_OK");
         fieldName = "RESULT_OK";
         break;
@@ -56,12 +57,20 @@ jobject createResultObject(JNIEnv *env, ZT_ResultCode code)
         fieldName = "RESULT_FATAL_ERROR_DATA_STORE_FAILED";
         break;
     case ZT_RESULT_ERROR_NETWORK_NOT_FOUND:
-        LOGV("RESULT_FATAL_ERROR_DATA_STORE_FAILED");
+        LOGV("ZT_RESULT_ERROR_NETWORK_NOT_FOUND");
         fieldName = "RESULT_ERROR_NETWORK_NOT_FOUND";
+        break;
+    case ZT_RESULT_ERROR_UNSUPPORTED_OPERATION:
+        LOGV("ZT_RESULT_ERROR_UNSUPPORTED_OPERATION");
+        fieldName = "RESULT_ERROR_UNSUPPORTED_OPERATION";
+        break;
+    case ZT_RESULT_ERROR_BAD_PARAMETER:
+        LOGV("ZT_RESULT_ERROR_BAD_PARAMETER");
+        fieldName = "ZT_RESULT_ERROR_BAD_PARAMETER";
         break;
     case ZT_RESULT_FATAL_ERROR_INTERNAL:
     default:
-        LOGV("RESULT_FATAL_ERROR_DATA_STORE_FAILED");
+        LOGV("ZT_RESULT_FATAL_ERROR_INTERNAL");
         fieldName = "RESULT_FATAL_ERROR_INTERNAL";
         break;
     }
