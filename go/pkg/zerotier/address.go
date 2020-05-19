@@ -41,6 +41,7 @@ func NewAddressFromBytes(b []byte) (Address, error) {
 
 // Copy this address to a byte array, which must be 5 bytes in length or this will panic.
 func (a Address) CopyTo(b []byte) {
+	_ = b[4]
 	b[0] = byte(a >> 32)
 	b[1] = byte(a >> 24)
 	b[2] = byte(a >> 16)

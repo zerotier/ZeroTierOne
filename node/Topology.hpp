@@ -25,7 +25,6 @@
 #include "ScopedPtr.hpp"
 #include "Fingerprint.hpp"
 #include "Containers.hpp"
-#include "PeerList.hpp"
 
 namespace ZeroTier {
 

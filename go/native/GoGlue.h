@@ -47,10 +47,6 @@ void ZT_GoTap_deviceName(ZT_GoTap *tap,char nbuf[256]);
 void ZT_GoTap_setFriendlyName(ZT_GoTap *tap,const char *friendlyName);
 void ZT_GoTap_setMtu(ZT_GoTap *tap,unsigned int mtu);
 
-int ZT_TestCrypto();
-int ZT_TestIdentity();
-int ZT_TestOther();
-
 #ifdef __cplusplus
 }
 #endif

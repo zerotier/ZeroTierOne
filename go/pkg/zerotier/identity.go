@@ -13,7 +13,7 @@
 
 package zerotier
 
-//#include "../../native/GoGlue.h"
+// #include "../../native/GoGlue.h"
 import "C"
 
 import (

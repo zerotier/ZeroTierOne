@@ -129,7 +129,7 @@ void Dictionary::encode(Vector<uint8_t> &out) const
 	for(Map< uint64_t,Vector<uint8_t> >::const_iterator ti(m_entries.begin());ti != m_entries.end();++ti) {
 		str[0] = ti->first;
 		s_appendKey(out,reinterpret_cast<const char *>(str));
-		for(std::vector<uint8_t>::const_iterator i(ti->second.begin());i!=ti->second.end();++i)
+		for(Vector<uint8_t>::const_iterator i(ti->second.begin());i!=ti->second.end();++i)
 			s_appendValueByte(out,*i);
 		out.push_back((uint8_t)'\n');
 	}
