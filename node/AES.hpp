@@ -337,16 +337,16 @@ public:
 			_gmac.finish(reinterpret_cast<uint8_t *>(tmp));
 
 			// Truncate to 64 bits, concatenate after 64-bit message IV, and encrypt with AES.
-			_tag[1] = tmp[0];
+			_tag[1] = tmp[0] ^ tmp[1];
 			_ctr._aes.encrypt(_tag,_tag);
 
-			// Mask least significant 32 bits to get CTR IV and initialize CTR.
+			// Get CTR IV and 32-bit counter. The most significant bit of the 32-bit counter
+			// is masked to zero so the counter will never overflow, but the remaining bits
+			// are taken from the encrypted tag as they can count as additional bits of
+			// entropy for the CTR IV. We don't technically count these in figuring our
+			// worst case scenario bound, but they could be argued to add a little margin.
 			tmp[0] = _tag[0];
-#if __BYTE_ORDER == __BIG_ENDIAN
-			ctrIv[1] = _iv[1] & 0xffffffff00000000ULL;
-#else
-			tmp[1] = _tag[1] & 0x00000000ffffffffULL;
-#endif
+			tmp[1] = _tag[1] & ZT_CONST_TO_BE_UINT64(0xffffffff7fffffffULL);
 			_ctr.init(reinterpret_cast<const uint8_t *>(tmp),_output);
 		}
 
@@ -403,20 +403,13 @@ public:
 		 */
 		ZT_INLINE void init(const uint64_t tag[2],void *const output) noexcept
 		{
-			// Init CTR with the most significant 96 bits of the tag (as in encryption).
 			uint64_t tmp[2];
 			tmp[0] = tag[0];
-#if __BYTE_ORDER == __BIG_ENDIAN
-			tmp[1] = tag[1] & 0xffffffff00000000ULL;
-#else
-			tmp[1] = tag[1] & 0x00000000ffffffffULL;
-#endif
+			tmp[1] = tag[1] & ZT_CONST_TO_BE_UINT64(0xffffffff7fffffffULL);
 			_ctr.init(reinterpret_cast<const uint8_t *>(tmp),output);
 
-			// Decrypt the opaque tag to yield the original IV and 64-bit truncated MAC.
 			_ctr._aes.decrypt(tag,_ivMac);
 
-			// Initialize GMAC with the original IV.
 			tmp[0] = _ivMac[0];
 			tmp[1] = 0;
 			_gmac.init(reinterpret_cast<const uint8_t *>(tmp));
@@ -460,16 +453,12 @@ public:
 		 */
 		ZT_INLINE bool finish() noexcept
 		{
-			// Flush any remaining bytes from CTR.
 			_ctr.finish();
 
-			// Feed plaintext through GMAC.
-			_gmac.update(_output,_decryptedLen);
 			uint64_t gmacTag[2];
+			_gmac.update(_output,_decryptedLen);
 			_gmac.finish(reinterpret_cast<uint8_t *>(gmacTag));
-
-			// MAC passes if its first 64 bits equals the MAC we got by decrypting the tag.
-			return gmacTag[0] == _ivMac[1];
+			return (gmacTag[0] ^ gmacTag[1]) == _ivMac[1];
 		}
 
 	private:
