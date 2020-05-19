@@ -36,6 +36,7 @@ namespace Utils {
 CPUIDRegisters::CPUIDRegisters() noexcept
 {
 	uint32_t eax,ebx,ecx,edx;
+
 #ifdef __WINDOWS__
 	int regs[4];
 	__cpuid(regs,1);
@@ -50,11 +51,17 @@ CPUIDRegisters::CPUIDRegisters() noexcept
 		: "a"(1),"c"(0)
 	);
 #endif
+
 	rdrand = ((ecx & (1U << 30U)) != 0);
 	aes = ( ((ecx & (1U << 25U)) != 0) && ((ecx & (1U << 19U)) != 0) && ((ecx & (1U << 1U)) != 0) );
 	avx = ((ecx & (1U << 25U)) != 0);
+
 #ifdef __WINDOWS__
-TODO
+	__cpuid(regs,7);
+	eax = (uint32_t)regs[0];
+	ebx = (uint32_t)regs[1];
+	ecx = (uint32_t)regs[2];
+	edx = (uint32_t)regs[3];
 #else
 	__asm__ __volatile__ (
 		"cpuid"
@@ -62,6 +69,7 @@ TODO
 		: "a"(7),"c"(0)
 	);
 #endif
+
 	vaes = aes && avx && ((ecx & (1U << 9U)) != 0);
 	vpclmulqdq = aes && avx && ((ecx & (1U << 10U)) != 0);
 	avx2 = avx && ((ebx & (1U << 5U)) != 0);

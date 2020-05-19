@@ -16,12 +16,13 @@
 #include "Node.hpp"
 #include "Topology.hpp"
 #include "VL2.hpp"
+#include "AES.hpp"
 #include "Salsa20.hpp"
 #include "LZ4.hpp"
 #include "Poly1305.hpp"
+#include "SHA512.hpp"
 #include "Identity.hpp"
 #include "SelfAwareness.hpp"
-#include "SHA512.hpp"
 #include "Peer.hpp"
 #include "Path.hpp"
 #include "Expect.hpp"
@@ -40,6 +41,7 @@ struct p_SalsaPolyCopyFunction
 	Salsa20 s20;
 	Poly1305 poly1305;
 	unsigned int hdrRemaining;
+
 	ZT_INLINE p_SalsaPolyCopyFunction(const void *salsaKey, const void *salsaIv) :
 		s20(salsaKey, salsaIv),
 		poly1305(),
@@ -69,6 +71,7 @@ struct p_PolyCopyFunction
 {
 	Poly1305 poly1305;
 	unsigned int hdrRemaining;
+
 	ZT_INLINE p_PolyCopyFunction(const void *salsaKey, const void *salsaIv) :
 		poly1305(),
 		hdrRemaining(ZT_PROTO_PACKET_ENCRYPTED_SECTION_START)
@@ -100,7 +103,7 @@ VL1::VL1(const RuntimeEnvironment *renv) :
 {
 }
 
-void VL1::onRemotePacket(void *const tPtr, const int64_t localSocket, const InetAddress &fromAddr, SharedPtr<Buf> &data, const unsigned int len)
+void VL1::onRemotePacket(void *const tPtr, const int64_t localSocket, const InetAddress &fromAddr, SharedPtr<Buf> &data, const unsigned int len) noexcept
 {
 	const SharedPtr<Path> path(RR->topology->path(localSocket, fromAddr));
 	const int64_t now = RR->node->now();
@@ -112,18 +115,6 @@ void VL1::onRemotePacket(void *const tPtr, const int64_t localSocket, const Inet
 	// for valid data packets. This may allow the compiler to generate very slightly
 	// faster code for that path.
 
-	/*
-	 * Packet format:
-	 *   <[8] 64-bit packet ID / crypto IV>
-	 *   <[5] destination ZT address>
-	 *   <[5] source ZT address>
-	 *   <[1] outer visible flags, cipher, and hop count (bits: FFCCHHH)>
-	 *   <[8] 64-bit MAC (or trusted path ID in trusted path mode)>
-	 *   [... -- begin encryption envelope -- ...]
-	 *   <[1] inner envelope flags (MS 3 bits) and verb (LS 5 bits)>
-	 *   [... verb-specific payload ...]
-	 */
-
 	try {
 		if (unlikely(len < ZT_PROTO_MIN_FRAGMENT_LENGTH))
 			return;
@@ -132,7 +123,7 @@ void VL1::onRemotePacket(void *const tPtr, const int64_t localSocket, const Inet
 		const uint64_t packetId = Utils::loadAsIsEndian<uint64_t>(data->unsafeData + ZT_PROTO_PACKET_ID_INDEX);
 
 		static_assert((ZT_PROTO_PACKET_DESTINATION_INDEX + ZT_ADDRESS_LENGTH) < ZT_PROTO_MIN_FRAGMENT_LENGTH, "overflow");
-		Address destination(data->unsafeData + ZT_PROTO_PACKET_DESTINATION_INDEX);
+		const Address destination(data->unsafeData + ZT_PROTO_PACKET_DESTINATION_INDEX);
 		if (destination != RR->identity.address()) {
 			m_relay(tPtr, path, destination, data, len);
 			return;
@@ -419,7 +410,7 @@ void VL1::onRemotePacket(void *const tPtr, const int64_t localSocket, const Inet
 			// This is rate limited by virtue of the retry rate limit timer.
 			if (pktSize <= 0)
 				pktSize = pktv.mergeCopy(*pkt);
-			if (pktSize >= ZT_PROTO_MIN_PACKET_LENGTH) {
+			if (likely(pktSize >= ZT_PROTO_MIN_PACKET_LENGTH)) {
 				ZT_SPEW("authentication failed or no peers match, queueing WHOIS for %s", source.toString().c_str());
 				bool sendPending;
 				{
@@ -464,23 +455,22 @@ void VL1::m_sendPendingWhois(void *tPtr, int64_t now)
 		}
 	}
 
-	if (toSend.empty())
-		return;
-
-	const SharedPtr<SymmetricKey> key(root->key());
-	uint8_t outp[ZT_DEFAULT_UDP_MTU - ZT_PROTO_MIN_PACKET_LENGTH];
-	Vector<Address>::iterator a(toSend.begin());
-	while (a != toSend.end()) {
-		const uint64_t packetId = key->nextMessage(RR->identity.address(), root->address());
-		int p = Protocol::newPacket(outp, packetId, root->address(), RR->identity.address(), Protocol::VERB_WHOIS);
-		while ((a != toSend.end()) && (p < (sizeof(outp) - ZT_ADDRESS_LENGTH))) {
-			a->copyTo(outp + p);
-			++a;
-			p += ZT_ADDRESS_LENGTH;
+	if (!toSend.empty()) {
+		const SharedPtr<SymmetricKey> key(root->key());
+		uint8_t outp[ZT_DEFAULT_UDP_MTU - ZT_PROTO_MIN_PACKET_LENGTH];
+		Vector<Address>::iterator a(toSend.begin());
+		while (a != toSend.end()) {
+			const uint64_t packetId = key->nextMessage(RR->identity.address(), root->address());
+			int p = Protocol::newPacket(outp, packetId, root->address(), RR->identity.address(), Protocol::VERB_WHOIS);
+			while ((a != toSend.end()) && (p < (sizeof(outp) - ZT_ADDRESS_LENGTH))) {
+				a->copyTo(outp + p);
+				++a;
+				p += ZT_ADDRESS_LENGTH;
+			}
+			Protocol::armor(outp, p, key, root->cipher());
+			RR->expect->sending(packetId, now);
+			root->send(tPtr, now, outp, p, rootPath);
 		}
-		Protocol::armor(outp, p, key, root->cipher());
-		RR->expect->sending(packetId, now);
-		root->send(tPtr, now, outp, p, rootPath);
 	}
 }
 
@@ -708,7 +698,7 @@ bool VL1::m_OK(void *tPtr, const uint64_t packetId, const unsigned int auth, con
 	}
 
 	const int64_t now = RR->node->now();
-	if (!RR->expect->expecting(inRePacketId, now)) {
+	if (unlikely(!RR->expect->expecting(inRePacketId, now))) {
 		RR->t->incomingPacketDropped(tPtr, 0x4c1f1ff8, packetId, 0, identityFromPeerPtr(peer), path->address(), 0, Protocol::VERB_OK, ZT_TRACE_PACKET_DROP_REASON_REPLY_NOT_EXPECTED);
 		return false;
 	}

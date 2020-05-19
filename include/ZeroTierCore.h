@@ -25,7 +25,6 @@
 #else
 #include <arpa/inet.h>
 #include <netinet/in.h>
-#include <net/if_dl.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <stdint.h>

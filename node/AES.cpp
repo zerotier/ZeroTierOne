@@ -468,7 +468,11 @@ void AES::GMAC::finish(uint8_t tag[16]) noexcept
 
 // AES-CTR ------------------------------------------------------------------------------------------------------------
 
-static __attribute__((__target__("sse4,avx,avx2,vaes,avx512f"))) void p_aesCtrInnerVAES512(unsigned int &len,uint64_t &c0,uint64_t &c1,const uint8_t *&in,uint8_t *&out,const __m128i *const k) noexcept
+#ifdef ZT_AES_AESNI
+
+static
+__attribute__((__target__("sse4,avx,avx2,vaes,avx512f")))
+void p_aesCtrInnerVAES512(unsigned int &len,uint64_t &c0,uint64_t &c1,const uint8_t *&in,uint8_t *&out,const __m128i *const k) noexcept
 {
 	const __m512i kk0 = _mm512_broadcast_i32x4(k[0]);
 	const __m512i kk1 = _mm512_broadcast_i32x4(k[1]);
@@ -515,7 +519,9 @@ static __attribute__((__target__("sse4,avx,avx2,vaes,avx512f"))) void p_aesCtrIn
 	} while (len >= 64);
 }
 
-static __attribute__((__target__("sse4,avx,avx2,vaes"))) void p_aesCtrInnerVAES256(unsigned int &len,uint64_t &c0,uint64_t &c1,const uint8_t *&in,uint8_t *&out,const __m128i *const k) noexcept
+static
+__attribute__((__target__("sse4,avx,avx2,vaes")))
+void p_aesCtrInnerVAES256(unsigned int &len,uint64_t &c0,uint64_t &c1,const uint8_t *&in,uint8_t *&out,const __m128i *const k) noexcept
 {
 	const __m256i kk0 = _mm256_broadcastsi128_si256(k[0]);
 	const __m256i kk1 = _mm256_broadcastsi128_si256(k[1]);
@@ -681,6 +687,8 @@ static void p_aesCtrInner128(unsigned int &len,uint64_t &c0,uint64_t &c1,const u
 	} while (len >= 64);
 }
 
+#endif
+
 void AES::CTR::crypt(const void *const input,unsigned int len) noexcept
 {
 	const uint8_t *in = reinterpret_cast<const uint8_t *>(input);
@@ -733,7 +741,7 @@ void AES::CTR::crypt(const void *const input,unsigned int len) noexcept
 		_len = totalLen + len;
 
 		if (likely(len >= 64)) {
-			if (Utils::CPUID.vaes) { // is only true if AVX is also present
+			if (Utils::CPUID.vaes) {
 				if ((!Utils::CPUID.avx512f)||((len < 1024))) {
 					p_aesCtrInnerVAES256(len,c0,c1,in,out,k);
 				} else {

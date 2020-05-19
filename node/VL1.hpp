@@ -60,7 +60,7 @@ public:
 	 * @param data Packet data
 	 * @param len Packet length
 	 */
-	void onRemotePacket(void *tPtr,int64_t localSocket,const InetAddress &fromAddr,SharedPtr<Buf> &data,unsigned int len);
+	void onRemotePacket(void *tPtr,int64_t localSocket,const InetAddress &fromAddr,SharedPtr<Buf> &data,unsigned int len) noexcept;
 
 private:
 	const RuntimeEnvironment *RR;
