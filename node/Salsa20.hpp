@@ -28,6 +28,12 @@ namespace ZeroTier {
 
 /**
  * Salsa20 stream cipher
+ *
+ * This supports both the 12-round and 20-round variants.
+ *
+ * SECURITY: this code only support up to 2^32 bytes per key. This is
+ * a minor optimization done here because ZeroTier messages are
+ * nowhere near this large.
  */
 class Salsa20 : public TriviallyCopyable
 {
@@ -39,7 +45,7 @@ public:
 #endif
 
 	ZT_INLINE Salsa20() noexcept {}
-	ZT_INLINE ~Salsa20() { Utils::burn(&_state,sizeof(_state)); }
+	ZT_INLINE ~Salsa20() noexcept { Utils::burn(&_state,sizeof(_state)); }
 
 	/**
 	 * @param key 256-bit (32 byte) key

@@ -127,10 +127,10 @@ bool identityV1ProofOfWorkCriteria(const void *in, const unsigned int len)
 	std::sort(w, w + (ZT_IDENTITY_V1_POW_MEMORY_SIZE / 8), p_CompareLittleEndian());
 	Poly1305::compute(w, w, ZT_IDENTITY_V1_POW_MEMORY_SIZE, w);
 
-	// PoW criteria passed if this is true. The value 593 was chosen experimentally
+	// PoW criteria passed if this is true. The value 1093 was chosen experimentally
 	// to yield a good average performance balancing fast setup with intentional
 	// identity collision resistance.
-	return (Utils::ntoh(w[0]) % 593U) == 0;
+	return (Utils::ntoh(w[0]) % 1000U) == 0;
 }
 
 } // anonymous namespace
