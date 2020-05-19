@@ -242,7 +242,7 @@ private:
 			const uint64_t h = reinterpret_cast<const uint64_t *>(reinterpret_cast<const sockaddr_in6 *>(&r)->sin6_addr.s6_addr)[0] ^
 			                   reinterpret_cast<const uint64_t *>(reinterpret_cast<const sockaddr_in6 *>(&r)->sin6_addr.s6_addr)[1];
 #endif
-			return h + (uint64_t)Utils::ntoh(reinterpret_cast<const struct sockaddr_in6 *>(&r)->sin6_port) ^ (uint64_t)l;
+			return (h + (uint64_t)Utils::ntoh(reinterpret_cast<const struct sockaddr_in6 *>(&r)->sin6_port)) ^ (uint64_t)l;
 		} else {
 			return (uint64_t)Utils::fnv1a32(reinterpret_cast<const void *>(&r),sizeof(InetAddress)) + (uint64_t)l;
 		}
