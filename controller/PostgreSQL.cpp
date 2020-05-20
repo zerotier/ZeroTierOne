@@ -22,6 +22,7 @@
 
 #include <libpq-fe.h>
 #include <sstream>
+#include <climits>
 
 
 using json = nlohmann::json;
