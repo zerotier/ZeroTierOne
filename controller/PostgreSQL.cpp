@@ -1540,15 +1540,19 @@ void PostgreSQL::onlineNotification_Redis()
 			std::lock_guard<std::mutex> l(_lastOnline_l);
 			lastOnline.swap(_lastOnline);
 		}
-		if (!lastOnline.empty()) {
-			if (_rc->clusterMode) {
-				auto tx = _cluster->redis(controllerId).transaction(true);
-				_doRedisUpdate(tx, controllerId, lastOnline);
-			} else {
-				auto tx = _redis->transaction(true);
-				_doRedisUpdate(tx, controllerId, lastOnline);
+		try {
+			if (!lastOnline.empty()) {
+				if (_rc->clusterMode) {
+					auto tx = _cluster->redis(controllerId).transaction(true);
+					_doRedisUpdate(tx, controllerId, lastOnline);
+				} else {
+					auto tx = _redis->transaction(true);
+					_doRedisUpdate(tx, controllerId, lastOnline);
+				}
 			}
-		}		
+		} catch (sw::redis::Error &e) {
+			fprintf(stderr, "Error in online notification thread (redis): %s\n", e.what());
+		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
 }
