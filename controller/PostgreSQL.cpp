@@ -1674,7 +1674,9 @@ void PostgreSQL::onlineNotification_Redis()
 				}
 			}
 		} catch (sw::redis::Error &e) {
+#ifdef ZT_TRACE
 			fprintf(stderr, "Error in online notification thread (redis): %s\n", e.what());
+#endif
 		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
@@ -1695,7 +1697,6 @@ void PostgreSQL::_doRedisUpdate(sw::redis::Transaction &tx, std::string &control
 		OSUtils::ztsnprintf(memTmp,sizeof(memTmp), "%.10llx", memberid_i);
 
 		if (!get(nwid_i, jtmp1, memberid_i, jtmp2)){
-			fprintf(stderr, "network or member doesn't exist\n");
 			continue;  // skip non existent members/networks
 		}
 
