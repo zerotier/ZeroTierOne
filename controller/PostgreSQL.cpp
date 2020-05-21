@@ -1666,8 +1666,7 @@ void PostgreSQL::onlineNotification_Redis()
 		try {
 			if (!lastOnline.empty()) {
 				if (_rc->clusterMode) {
-					auto redis = _cluster->redis(controllerId);
-					auto tx = redis.transaction(true);
+					auto tx = _cluster->transaction(controllerId, true);
 					_doRedisUpdate(tx, controllerId, lastOnline);
 				} else {
 					auto tx = _redis->transaction(true);
