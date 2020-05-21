@@ -582,12 +582,6 @@ bool Node::externalPathLookup(void *tPtr,const Identity &id,int family,InetAddre
 	return false;
 }
 
-ZT_ResultCode Node::setPhysicalPathConfiguration(const struct sockaddr_storage *pathNetwork, const ZT_PhysicalPathConfiguration *pathConfig)
-{
-	RR->topology->setPhysicalPathConfiguration(pathNetwork,pathConfig);
-	return ZT_RESULT_OK;
-}
-
 bool Node::localControllerHasAuthorized(const int64_t now,const uint64_t nwid,const Address &addr) const
 {
 	m_localControllerAuthorizations_l.lock();
@@ -971,15 +965,6 @@ void ZT_Node_setController(ZT_Node *node,void *networkControllerInstance)
 	try {
 		reinterpret_cast<ZeroTier::Node *>(node)->setController(networkControllerInstance);
 	} catch ( ... ) {}
-}
-
-enum ZT_ResultCode ZT_Node_setPhysicalPathConfiguration(ZT_Node *node,const struct sockaddr_storage *pathNetwork,const ZT_PhysicalPathConfiguration *pathConfig)
-{
-	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->setPhysicalPathConfiguration(pathNetwork,pathConfig);
-	} catch ( ... ) {
-		return ZT_RESULT_FATAL_ERROR_INTERNAL;
-	}
 }
 
 void ZT_version(int *major,int *minor,int *revision,int *build)

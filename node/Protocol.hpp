@@ -249,12 +249,13 @@
 #define ZT_PROTO_PACKET_MAC_INDEX         19
 #define ZT_PROTO_PACKET_VERB_INDEX        27
 
-#define ZT_PROTO_HELLO_NODE_META_INSTANCE_ID      "i"
-#define ZT_PROTO_HELLO_NODE_META_LOCATOR          "l"
-#define ZT_PROTO_HELLO_NODE_META_SOFTWARE_VENDOR  "s"
-#define ZT_PROTO_HELLO_NODE_META_COMPLIANCE       "c"
-#define ZT_PROTO_HELLO_NODE_META_EPHEMERAL_PUBLIC "e"
-#define ZT_PROTO_HELLO_NODE_META_EPHEMERAL_ACK    "E"
+#define ZT_PROTO_HELLO_NODE_META_INSTANCE_ID                "i"
+#define ZT_PROTO_HELLO_NODE_META_PREFERRED_SYMMETRIC        "a"
+#define ZT_PROTO_HELLO_NODE_META_LOCATOR                    "l"
+#define ZT_PROTO_HELLO_NODE_META_SOFTWARE_VENDOR            "s"
+#define ZT_PROTO_HELLO_NODE_META_COMPLIANCE                 "c"
+#define ZT_PROTO_HELLO_NODE_META_EPHEMERAL_PUBLIC           "e"
+#define ZT_PROTO_HELLO_NODE_META_EPHEMERAL_ACK              "E"
 
 static_assert(ZT_PROTO_MAX_PACKET_LENGTH < ZT_BUF_MEM_SIZE,"maximum packet length won't fit in Buf");
 static_assert(ZT_PROTO_PACKET_ENCRYPTED_SECTION_START == (ZT_PROTO_MIN_PACKET_LENGTH-1),"encrypted packet section must start right before protocol verb at one less than minimum packet size");
@@ -339,6 +340,7 @@ enum Verb
 	 * Dictionary fields (defines start with ZT_PROTO_HELLO_NODE_META_):
 	 * 
 	 *   INSTANCE_ID - a 64-bit unique value generated on each node start
+	 *   PREFERRED_SYMMETRIC - preferred symmetric encryption mode
 	 *   LOCATOR - signed record enumerating this node's trusted contact points
 	 *   EPHEMERAL_PUBLIC - Ephemeral public key(s)
 	 * 

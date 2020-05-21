@@ -281,15 +281,6 @@ public:
 	bool externalPathLookup(void *tPtr,const Identity &id,int family,InetAddress &addr);
 
 	/**
-	 * Set physical path configuration
-	 *
-	 * @param pathNetwork Physical path network/netmask bits (CIDR notation)
-	 * @param pathConfig Path configuration
-	 * @return Return to pass through to external API
-	 */
-	ZT_ResultCode setPhysicalPathConfiguration(const struct sockaddr_storage *pathNetwork,const ZT_PhysicalPathConfiguration *pathConfig);
-
-	/**
 	 * @return This node's identity
 	 */
 	ZT_INLINE const Identity &identity() const noexcept { return m_RR.identity; }

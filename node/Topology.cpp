@@ -59,18 +59,6 @@ SharedPtr<Peer> Topology::add(void *tPtr, const SharedPtr<Peer> &peer)
 	return peer;
 }
 
-void Topology::setPhysicalPathConfiguration(const struct sockaddr_storage *pathNetwork, const ZT_PhysicalPathConfiguration *pathConfig)
-{
-	RWMutex::Lock l(m_paths_l);
-	if (!pathNetwork) {
-		m_physicalPathConfig.clear();
-	} else if (!pathConfig) {
-		m_physicalPathConfig.erase(asInetAddress(*pathNetwork));
-	} else {
-		m_physicalPathConfig[asInetAddress(*pathNetwork)] = *pathConfig;
-	}
-}
-
 struct p_RootSortComparisonOperator
 {
 	ZT_INLINE bool operator()(const SharedPtr<Peer> &a, const SharedPtr<Peer> &b) const noexcept

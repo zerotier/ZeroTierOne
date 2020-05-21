@@ -1,25 +1,38 @@
 ZeroTier Release Notes
 ======
 
-# Version 2.0.0
+# Version 1.9.0 (2.0 beta)
 
-### This is a major milestone release with numerous changes. It's technically backward compatibile with older nodes but we highly recommend upgrading as soon as possible. We will not force upgrade however as this is a major release and contains changes that may require updates to some configurations, such as CLI changes that may required updates to scripts.
+Version 2.0 is a very significant release with many changes. It remains backward compatibility to version 1.4.0 (and possibly earlier versions but this is not guaranteed) but makes numerous local and behavioral changes that should be reviewed before upgrading production systems.
+
+After this release we're going to be working to get to a more frequent, less extreme, more "agile" release cadence.
+
+Protocol changes:
+
+ * Trusted paths have been completely removed. The new AES mode is so fast on CPUs with AES acceleration that much of the rationale for this is gone, and this feature was never used much to begin with due to inconvenience and obvious security concerns. Environments using trusted paths will need to upgrade all nodes at once.
+ * The symmetric encryption algorithm and mode is now AES-GMAC-SIV, a variation of AES-GCM using the same primitives but offering superior security bounds and behavior under non-ideal conditions. It's also a lot faster than Salsa20/12 and Poly1305 on CPUs with AES acceleration (almost all desktops, laptops, and newer routers and phones). Salsa20/12 with Poly1305 is still supported for communication with older versions and small devices that lack AES acceleration.
+ * A new identity type (1) has been introduced that contains both Curve25519 and NIST P-384 public key types, but classic type 0 remains the default for new identities for now. ECDH key agreement between V1 identities uses both keys and hashes the resulting secrets to yield security equal to the best of the two, but V1 identities can also agree with V0 identities using only their Curve25519 component.
+ * Roots can now be joined and left like networks in a much more convenient way, and the old "moon" and "planet" terminology is deprecated.
+ * A new peer to peer multicast algorithm has been introduced that offers much better scalability and better performance, especially when the physical network itself is hub-and-spoke with many low latency peers connected by higher latency WAN links.
+ * Forward secrecy is finally supported via periodic re-keying using ephemeral asymmetric keys. Both Curve25519 and NIST P-384 keys are used with secrets being hashed to provide security equal to the stronger of the two curves.
+ * As part of forward secrecy implementation peers now always exchange HELLO messages even if they don't have a direct path.
+ * Compression is only enabled for control packets as almost all data packets are largely un-compressable.
+ * New NAT traversal tricks have been added, such as (ab)use of port 500.
+
+Code changes:
 
  * Migrated from GNU make to cmake for easier cross platform builds and simplified build files.
- * Service management code for desktop, laptop, and server ZeroTier service is now written in Go. Core and packet handling (performance critical) code remains in C++.
- * Reworked CLI for improved ease of use, more readable and detailed display output, and added new root management commands.
- * "Moon" and "planet" terminology and associated commands are now gone in favor of fully decentralized roots.
- * Service now has a fully multithreaded UDP I/O path written in C++ for superior scaling on large systems.
- * Entirely new P2P based multicast propagation algorithm for improved multi-data-center and global scale multicast propagation and improved multicast discovery. Some backward compatibility is included with pre-2.0 but upgrading of all nodes is recommended if you depend on multicast for anything but ARP, NDP, and occasional service advertisements. 
- * ZeroTier now implements ephemeral keys with continuos re-keying for forward secrecy! (FINALLY!)
- * Separated root into its own highly optimized code base.
- * Changed default primary ZeroTier port to 893 (for new nodes) to exploit friendlier NAT behavior on ports numbered under 1024. Added some more aggressive NAT-t techniques that work with this and can often traverse symmetric NATs.
- * Added stubs for future support for alternative transports including HTTP/HTTPS, WebRTC, Web Sockets, and "naked" Ethernet (on LAN).
- * Improved packet assemble/decode performance by moving to a lock-free bounds-checking scheme for buffers and a shared memory buffer pool.
- * AES encryption is now the default for communicating with 2.0+ nodes.
- * Added support for a new identity type with NIST P-384 curves for future FIPS compliance. Curve25519 is still the default.
- * Compression is now only enabled for control packets as most data these days is encrypted or already compressed. This improves performance in almost all cases.
- * Minor API changes (for those who use the core directly) to support faster buffer handling, reduced memory copying, exposure of identity functions and full node identity, and improved state object load/store semantics.
+ * The core network hypervisor has been significantly refactored, almost amounting to a partial rewrite.
+ * Critical packet handling paths have been streamlined with unnecessary memcpy() steps removed.
+ * Host service code has been completely rewritten in Go. Packet handling code remains in C++, but Go offers superior developer productivity when it comes to implementing more complex local service and local API features. Go imposes a little bit more memory overhead but not much and has been tuned to minimize memory use.
+
+User interface:
+
+ * Command line interface has been redesigned and rewritten. Old commands names are supported but their output will be different.
+
+Other things:
+
+ * The V2 design, protocol, and cryptographic primitives (AES-GMAC-SIV) have been security audited by [Trail of Bits](https://www.trailofbits.com), and the code is being audited as well prior to full 2.0 release.
 
 ---
 

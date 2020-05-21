@@ -15,18 +15,15 @@ package cli
 
 import (
 	"fmt"
-
 	"zerotier/pkg/zerotier"
 )
 
-var copyrightText = fmt.Sprintf(`ZeroTier Network Virtualization Service Version %d.%d.%d
-(c)2013-2020 ZeroTier, Inc.
-Licensed under the ZeroTier BSL (see LICENSE.txt)`, zerotier.CoreVersionMajor, zerotier.CoreVersionMinor, zerotier.CoreVersionRevision)
-
 // Help dumps help to stdout
 func Help() {
-	fmt.Println(copyrightText)
-	fmt.Println(`
+	fmt.Printf(`ZeroTier Network Hypervisor Service Version %d.%d.%d
+(c)2013-2020 ZeroTier, Inc.
+Licensed under the ZeroTier BSL (see LICENSE.txt)
+
 Usage: zerotier [-options] <command> [command args]
 
 Global Options:
@@ -38,14 +35,14 @@ Commands:
   help                                 Show this help
   version                              Print version
   service                              Start as service
-  status                               Show ZeroTier status and config
-  peers                                Show VL1 peers and link information
-  roots                                Show only root peers
-  addroot <identity> [IP/port]         Add root with optional bootstrap IP
-  removeroot <address|identity>        Remove root
+  status                               Show node status, identity, and config
+  peers                                List all VL1 peers
+  roots                                List root peers
+  addroot <path/URL to spec>           Add root
+  removeroot <address>                 Remove a peer from the root list
   join <network ID> [fingerprint]      Join a virtual network
   leave <network ID>                   Leave a virtual network
-  networks                             List joined VL2 virtual networks
+  networks                             List VL2 virtual networks
   network <network ID>                 Show verbose network info
   set <network ID> [option] [value]    Get or set a network config option
     manageips <boolean>                Is IP management allowed?
@@ -54,32 +51,29 @@ Commands:
     globalroutes <boolean>             Can global IP space routes be set?
     defaultroute <boolean>             Can default route be overridden?
   set [option] [value]                 Get or set a service config option
-    phy <IP/bits> blacklist <boolean>  Set or clear blacklist for CIDR
-    phy <IP/bits> trust <path ID/0>    Set or clear trusted path ID for CIDR
-    port <port>                        Set primary port for P2P links
-    secondaryport <port/0>             Set secondary P2P port (0 disables)
-    portsearch <boolean>               Enable/disable port search on startup
-    portmapping <boolean>              Enable/disable use of uPnP/NAT-PMP
+    port <port>                        Primary P2P port
+    secondaryport <port/0>             Secondary P2P port (0 to disable)
+    blacklist cidr <IP/bits> <boolean> Toggle physical path blacklisting
+    blacklist if <prefix> <boolean>    Toggle interface prefix blacklisting
+    portmap <boolean>                  Toggle use of uPnP or NAT-PMP
   identity <command> [args]            Identity management commands
     new [c25519|p384]                  Create identity pair (default: c25519)
     getpublic <identity>               Extract only public part of identity
     validate <identity>                Locally validate an identity
     sign <identity> <file>             Sign a file with an identity's key
     verify <identity> <file> <sig>     Verify a signature
+    makeroot <identity> <address> ...  Make a root spec (see docs)
 
 The 'service' command does not exit until the service receives a signal.
-This is typically run from launchd (Mac), systemd or init (Linux), etc.
+This is typically run from launchd (Mac), systemd or init (Linux), a Windows
+service harness (Windows), etc.
 
 If 'set' is followed by a 16-digit hex number it will get/set network config
-options. Otherwise it will get/set service options. Run with no arguments to
-see all options.
+options. Otherwise it will get/set local options that pertain to the entire
+node.
 
-An identity can be specified as a file or directly. This is auto-detected.
+Identities can be specified verbatim on the command line or as a path to
+a file. This is detected automatically.
 
-Most commands require a secret token to permit control of a running
-service. The CLI will automatically try to read this token from the
-authtoken.secret file in the service's working directory and then from a
-file called .zerotierauth in the user's home directory. The -t option can
-be used to explicitly specify a location.`)
-	fmt.Println()
+`,zerotier.CoreVersionMajor, zerotier.CoreVersionMinor, zerotier.CoreVersionRevision)
 }

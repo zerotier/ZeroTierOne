@@ -380,12 +380,12 @@ enum ZT_TracePacketDropReason
 	ZT_TRACE_PACKET_DROP_REASON_PEER_TOO_OLD =            1,
 	ZT_TRACE_PACKET_DROP_REASON_MALFORMED_PACKET =        2,
 	ZT_TRACE_PACKET_DROP_REASON_MAC_FAILED =              3,
-	ZT_TRACE_PACKET_DROP_REASON_NOT_TRUSTED_PATH =        4,
-	ZT_TRACE_PACKET_DROP_REASON_RATE_LIMIT_EXCEEDED =     5,
-	ZT_TRACE_PACKET_DROP_REASON_INVALID_OBJECT =          6,
-	ZT_TRACE_PACKET_DROP_REASON_INVALID_COMPRESSED_DATA = 7,
-	ZT_TRACE_PACKET_DROP_REASON_UNRECOGNIZED_VERB =       8,
-	ZT_TRACE_PACKET_DROP_REASON_REPLY_NOT_EXPECTED =      9
+	ZT_TRACE_PACKET_DROP_REASON_RATE_LIMIT_EXCEEDED =     4,
+	ZT_TRACE_PACKET_DROP_REASON_INVALID_OBJECT =          5,
+	ZT_TRACE_PACKET_DROP_REASON_INVALID_COMPRESSED_DATA = 6,
+	ZT_TRACE_PACKET_DROP_REASON_UNRECOGNIZED_VERB =       7,
+	ZT_TRACE_PACKET_DROP_REASON_REPLY_NOT_EXPECTED =      8
+
 };
 
 /**
@@ -1119,22 +1119,6 @@ typedef struct
 } ZT_InterfaceAddress;
 
 /**
- * Physical path configuration
- */
-typedef struct
-{
-	/**
-	 * If non-zero set this physical network path to be trusted to disable encryption and authentication
-	 */
-	uint64_t trustedPathId;
-
-	/**
-	 * Physical path MTU from ZT_MIN_PHYSMTU and ZT_MAX_PHYSMTU or <= 0 to use default
-	 */
-	int mtu;
-} ZT_PhysicalPathConfiguration;
-
-/**
  * Physical network path to a peer
  */
 typedef struct
@@ -1153,11 +1137,6 @@ typedef struct
 	 * Time of last receive in milliseconds or 0 for never
 	 */
 	int64_t lastReceive;
-
-	/**
-	 * Is this a trusted path? If so this will be its nonzero ID.
-	 */
-	uint64_t trustedPathId;
 
 	/**
 	 * Is path alive?
@@ -1914,16 +1893,6 @@ ZT_SDK_API int ZT_Node_sendUserMessage(ZT_Node *node,void *tptr,uint64_t dest,ui
  * @return OK (0) or error code if a fatal error condition has occurred
  */
 ZT_SDK_API void ZT_Node_setController(ZT_Node *node,void *networkConfigMasterInstance);
-
-/**
- * Set configuration for a given physical path
- *
- * @param node Node instance
- * @param pathNetwork Network/CIDR of path or NULL to clear the cache and reset all paths to default
- * @param pathConfig Path configuration or NULL to erase this entry and therefore reset it to NULL
- * @return OK or error code
- */
-ZT_SDK_API enum ZT_ResultCode ZT_Node_setPhysicalPathConfiguration(ZT_Node *node,const struct sockaddr_storage *pathNetwork,const ZT_PhysicalPathConfiguration *pathConfig);
 
 /* ---------------------------------------------------------------------------------------------------------------- */
 
