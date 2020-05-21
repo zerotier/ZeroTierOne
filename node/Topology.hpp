@@ -188,22 +188,22 @@ public:
 	void setPhysicalPathConfiguration(const struct sockaddr_storage *pathNetwork,const ZT_PhysicalPathConfiguration *pathConfig);
 
 	/**
-	 * Add a root server's identity to the root server set
+	 * Add or update a root server and its locator
 	 *
 	 * @param tPtr Thread pointer
-	 * @param id Root server identity
-	 * @param bootstrap If non-NULL, a bootstrap address to attempt to find this root
+	 * @param id Root identity
+	 * @param loc Root locator
 	 */
-	void addRoot(void *tPtr,const Identity &id,const InetAddress &bootstrap);
+	void addRoot(void *tPtr,const Identity &id,const Locator &loc);
 
 	/**
 	 * Remove a root server's identity from the root server set
 	 *
 	 * @param tPtr Thread pointer
-	 * @param id Root server identity
+	 * @param fp Root identity
 	 * @return True if root found and removed, false if not found
 	 */
-	bool removeRoot(void *tPtr,const Identity &id);
+	bool removeRoot(void *tPtr,const Fingerprint &fp);
 
 	/**
 	 * Sort roots in ascending order of apparent latency
@@ -225,6 +225,7 @@ public:
 private:
 	void m_loadCached(void *tPtr, const Address &zta, SharedPtr<Peer> &peer);
 	void m_writeRootList(void *tPtr);
+	void m_updateRootPeers(void *tPtr);
 
 	// This gets an integer key from an InetAddress for looking up paths.
 	static ZT_INLINE uint64_t s_getPathKey(const int64_t l,const InetAddress &r) noexcept
@@ -250,16 +251,14 @@ private:
 
 	const RuntimeEnvironment *const RR;
 
-	RWMutex m_paths_l;
-	RWMutex m_peers_l;
+	RWMutex m_paths_l; // locks m_physicalPathConfig and m_paths
+	RWMutex m_peers_l; // locks m_peers, m_roots, and m_rootPeers
 
-	std::pair< InetAddress,ZT_PhysicalPathConfiguration > m_physicalPathConfig[ZT_MAX_CONFIGURABLE_PATHS];
-	unsigned int m_numConfiguredPhysicalPaths;
-
+	Map< InetAddress,ZT_PhysicalPathConfiguration > m_physicalPathConfig;
 	Map< uint64_t,SharedPtr<Path> > m_paths;
 
 	Map< Address,SharedPtr<Peer> > m_peers;
-	Set< Identity > m_roots;
+	Map< Identity,Locator > m_roots;
 	Vector< SharedPtr<Peer> > m_rootPeers;
 };
 

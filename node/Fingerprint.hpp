@@ -43,6 +43,13 @@ public:
 	 */
 	ZT_INLINE Fingerprint() noexcept { memoryZero(this); }
 
+	/**
+	 * Create a Fingerprint that is a copy of the external API companion structure
+	 *
+	 * @param apifp API fingerprint
+	 */
+	ZT_INLINE Fingerprint(const ZT_Fingerprint &apifp) noexcept { Utils::copy<sizeof(ZT_Fingerprint)>(&m_cfp,&apifp); }
+
 	ZT_INLINE Address address() const noexcept { return Address(m_cfp.address); }
 	ZT_INLINE const uint8_t *hash() const noexcept { return m_cfp.hash; }
 	ZT_INLINE ZT_Fingerprint *apiFingerprint() noexcept { return &m_cfp; }

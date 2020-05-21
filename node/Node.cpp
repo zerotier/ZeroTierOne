@@ -339,23 +339,23 @@ ZT_ResultCode Node::multicastUnsubscribe(uint64_t nwid,uint64_t multicastGroup,u
 	} else return ZT_RESULT_ERROR_NETWORK_NOT_FOUND;
 }
 
-ZT_ResultCode Node::addRoot(void *tPtr,const ZT_Identity *identity,const sockaddr_storage *bootstrap)
+ZT_ResultCode Node::addRoot(void *tPtr,const void *rdef,unsigned int rdeflen)
 {
-	if (!identity)
-		return ZT_RESULT_ERROR_BAD_PARAMETER;
-	InetAddress a;
-	if (bootstrap)
-		a = bootstrap;
-	RR->topology->addRoot(tPtr,*reinterpret_cast<const Identity *>(identity),a);
-	return ZT_RESULT_OK;
+	std::pair<Identity,Locator> r(Locator::parseRootSpecification(rdef,rdeflen));
+	if (r.first) {
+		RR->topology->addRoot(tPtr,r.first,r.second);
+		return ZT_RESULT_OK;
+	}
+	return ZT_RESULT_ERROR_BAD_PARAMETER;
 }
 
-ZT_ResultCode Node::removeRoot(void *tPtr,const ZT_Identity *identity)
+ZT_ResultCode Node::removeRoot(void *tPtr,const ZT_Fingerprint *fp)
 {
-	if (!identity)
-		return ZT_RESULT_ERROR_BAD_PARAMETER;
-	RR->topology->removeRoot(tPtr, *reinterpret_cast<const Identity *>(identity));
-	return ZT_RESULT_OK;
+	if (fp) {
+		RR->topology->removeRoot(tPtr,Fingerprint(*fp));
+		return ZT_RESULT_OK;
+	}
+	return ZT_RESULT_ERROR_BAD_PARAMETER;
 }
 
 uint64_t Node::address() const
@@ -870,10 +870,10 @@ enum ZT_ResultCode ZT_Node_multicastUnsubscribe(ZT_Node *node,uint64_t nwid,uint
 	}
 }
 
-enum ZT_ResultCode ZT_Node_addRoot(ZT_Node *node,void *tptr,const ZT_Identity *identity,const struct sockaddr_storage *bootstrap)
+enum ZT_ResultCode ZT_Node_addRoot(ZT_Node *node,void *tptr,const void *rdef,unsigned int rdeflen)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->addRoot(tptr,identity,bootstrap);
+		return reinterpret_cast<ZeroTier::Node *>(node)->addRoot(tptr,rdef,rdeflen);
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch ( ... ) {
@@ -881,10 +881,10 @@ enum ZT_ResultCode ZT_Node_addRoot(ZT_Node *node,void *tptr,const ZT_Identity *i
 	}
 }
 
-enum ZT_ResultCode ZT_Node_removeRoot(ZT_Node *node,void *tptr,const ZT_Identity *identity)
+enum ZT_ResultCode ZT_Node_removeRoot(ZT_Node *node,void *tptr,const ZT_Fingerprint *fp)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->removeRoot(tptr,identity);
+		return reinterpret_cast<ZeroTier::Node *>(node)->removeRoot(tptr,fp);
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch ( ... ) {

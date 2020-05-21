@@ -92,8 +92,8 @@ public:
 	ZT_ResultCode leave(uint64_t nwid,void **uptr,void *tptr);
 	ZT_ResultCode multicastSubscribe(void *tPtr,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
 	ZT_ResultCode multicastUnsubscribe(uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
-	ZT_ResultCode addRoot(void *tPtr,const ZT_Identity *identity,const sockaddr_storage *bootstrap);
-	ZT_ResultCode removeRoot(void *tPtr,const ZT_Identity *identity);
+	ZT_ResultCode addRoot(void *tptr,const void *rdef,unsigned int rdeflen);
+	ZT_ResultCode removeRoot(void *tptr,const ZT_Fingerprint *fp);
 	uint64_t address() const;
 	void status(ZT_NodeStatus *status) const;
 	ZT_PeerList *peers() const;

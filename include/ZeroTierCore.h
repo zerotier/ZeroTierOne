@@ -176,6 +176,15 @@ extern "C" {
 #define ZT_MAX_CERTIFICATES_OF_OWNERSHIP 4
 
 /**
+ * Maximum size in bytes for a root specification
+ *
+ * A root specification is just a serialized identity followed by a serialized
+ * locator. This provides the maximum size of those plus a lot of extra margin
+ * for any future expansions, but could change in future versions.
+ */
+#define ZT_ROOT_SPEC_MAX_SIZE 8192
+
+/**
  * Packet characteristics flag: packet direction, 1 if inbound 0 if outbound
  */
 #define ZT_RULE_PACKET_CHARACTERISTICS_INBOUND 0x8000000000000000ULL
@@ -1761,28 +1770,29 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_multicastSubscribe(ZT_Node *node,void *tpt
 ZT_SDK_API enum ZT_ResultCode ZT_Node_multicastUnsubscribe(ZT_Node *node,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
 
 /**
- * Add a root server (has no effect if already added)
+ * Add a root node or update its locator
  *
  * @param node Node instance
  * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
- * @param identity Identity of this root server
- * @param bootstrap Optional bootstrap address for initial contact
+ * @param rdef Root definition (serialized identity and locator)
+ * @param rdeflen Length of root definition in bytes
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-ZT_SDK_API enum ZT_ResultCode ZT_Node_addRoot(ZT_Node *node,void *tptr,const ZT_Identity *identity,const struct sockaddr_storage *bootstrap);
+ZT_SDK_API enum ZT_ResultCode ZT_Node_addRoot(ZT_Node *node,void *tptr,const void *rdef,unsigned int rdeflen);
 
 /**
- * Remove a root server
+ * Remove a root
  *
- * This removes this node's root designation but does not prevent this node
- * from communicating with it or close active paths to it.
+ * This doesn't fully remove the peer from the peer list. It just removes
+ * its root trust flag. If there is no longer any need to communicate with it
+ * it may gradually time out and be removed.
  *
  * @param node Node instance
  * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
- * @param identity Identity to remove
+ * @param fp Fingerprint of root (will be looked up by address only if hash is all zeroes)
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-ZT_SDK_API enum ZT_ResultCode ZT_Node_removeRoot(ZT_Node *node,void *tptr,const ZT_Identity *identity);
+ZT_SDK_API enum ZT_ResultCode ZT_Node_removeRoot(ZT_Node *node,void *tptr,const ZT_Fingerprint *fp);
 
 /**
  * Get this node's 40-bit ZeroTier address
@@ -2014,6 +2024,19 @@ ZT_SDK_API uint64_t ZT_Identity_address(const ZT_Identity *id);
  * @return Pointer to fingerprint (remains valid as long as identity itself is valid)
  */
 ZT_SDK_API const ZT_Fingerprint *ZT_Identity_fingerprint(const ZT_Identity *id);
+
+/**
+ * Make a root specification
+ *
+ * @param id Identity to sign root with (must have private key)
+ * @param ts Timestamp for root specification in milliseconds since epoch
+ * @param addrs Physical addresses for root
+ * @param addrcnt Number of physical addresses for root
+ * @param rootSpecBuf Buffer to receive result, should be at least ZT_ROOT_SPEC_MAX_SIZE bytes
+ * @param rootSpecBufSize Size of rootSpecBuf in bytes
+ * @return Bytes written to rootSpecBuf or -1 on error
+ */
+ZT_SDK_API int ZT_Identity_makeRootSpecification(ZT_Identity *id,int64_t ts,struct sockaddr_storage *addrs,unsigned int addrcnt,void *rootSpecBuf,unsigned int rootSpecBufSize);
 
 /**
  * Delete an identity and free associated memory

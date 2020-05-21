@@ -16,8 +16,7 @@
 namespace ZeroTier {
 
 Topology::Topology(const RuntimeEnvironment *renv, void *tPtr) :
-	RR(renv),
-	m_numConfiguredPhysicalPaths(0)
+	RR(renv)
 {
 	uint64_t idtmp[2];
 	idtmp[0] = 0;
@@ -25,29 +24,26 @@ Topology::Topology(const RuntimeEnvironment *renv, void *tPtr) :
 	Vector<uint8_t> data(RR->node->stateObjectGet(tPtr, ZT_STATE_OBJECT_ROOTS, idtmp));
 	if (!data.empty()) {
 		uint8_t *dptr = data.data();
-		int drem = (int) data.size();
-		while (drem > 0) {
+		int drem = (int)data.size();
+		for (;;) {
 			Identity id;
 			int l = id.unmarshal(dptr, drem);
-			if (l > 0) {
-				m_roots.insert(id);
-				dptr += l;
-				drem -= l;
-				ZT_SPEW("loaded root %s", id.address().toString().c_str());
+			if ((l > 0)&&(id)) {
+				if ((drem -= l) <= 0)
+					break;
+				Locator loc;
+				l = loc.unmarshal(dptr, drem);
+				if ((l > 0)&&(loc)) {
+					m_roots[id] = loc;
+					dptr += l;
+					ZT_SPEW("loaded root %s", id.address().toString().c_str());
+					if ((drem -= l) <= 0)
+						break;
+				}
 			}
 		}
 	}
-
-	for (Set<Identity>::const_iterator r(m_roots.begin());r != m_roots.end();++r) {
-		SharedPtr<Peer> p;
-		m_loadCached(tPtr, r->address(), p);
-		if ((!p) || (p->identity() != *r)) {
-			p.set(new Peer(RR));
-			p->init(*r);
-		}
-		m_rootPeers.push_back(p);
-		m_peers[p->address()] = p;
-	}
+	m_updateRootPeers(tPtr);
 }
 
 SharedPtr<Peer> Topology::add(void *tPtr, const SharedPtr<Peer> &peer)
@@ -65,35 +61,13 @@ SharedPtr<Peer> Topology::add(void *tPtr, const SharedPtr<Peer> &peer)
 
 void Topology::setPhysicalPathConfiguration(const struct sockaddr_storage *pathNetwork, const ZT_PhysicalPathConfiguration *pathConfig)
 {
+	RWMutex::Lock l(m_paths_l);
 	if (!pathNetwork) {
-		m_numConfiguredPhysicalPaths = 0;
+		m_physicalPathConfig.clear();
+	} else if (!pathConfig) {
+		m_physicalPathConfig.erase(asInetAddress(*pathNetwork));
 	} else {
-		std::map<InetAddress, ZT_PhysicalPathConfiguration> cpaths;
-		for (unsigned int i = 0, j = m_numConfiguredPhysicalPaths;i < j;++i)
-			cpaths[m_physicalPathConfig[i].first] = m_physicalPathConfig[i].second;
-
-		if (pathConfig) {
-			ZT_PhysicalPathConfiguration pc(*pathConfig);
-
-			if (pc.mtu <= 0)
-				pc.mtu = ZT_DEFAULT_UDP_MTU;
-			else if (pc.mtu < ZT_MIN_UDP_MTU)
-				pc.mtu = ZT_MIN_UDP_MTU;
-			else if (pc.mtu > ZT_MAX_UDP_MTU)
-				pc.mtu = ZT_MAX_UDP_MTU;
-
-			cpaths[*(reinterpret_cast<const InetAddress *>(pathNetwork))] = pc;
-		} else {
-			cpaths.erase(*(reinterpret_cast<const InetAddress *>(pathNetwork)));
-		}
-
-		unsigned int cnt = 0;
-		for (std::map<InetAddress, ZT_PhysicalPathConfiguration>::const_iterator i(cpaths.begin());((i != cpaths.end()) && (cnt < ZT_MAX_CONFIGURABLE_PATHS));++i) {
-			m_physicalPathConfig[cnt].first = i->first;
-			m_physicalPathConfig[cnt].second = i->second;
-			++cnt;
-		}
-		m_numConfiguredPhysicalPaths = cnt;
+		m_physicalPathConfig[asInetAddress(*pathNetwork)] = *pathConfig;
 	}
 }
 
@@ -109,41 +83,32 @@ struct p_RootSortComparisonOperator
 	}
 };
 
-void Topology::addRoot(void *const tPtr, const Identity &id, const InetAddress &bootstrap)
+void Topology::addRoot(void *const tPtr, const Identity &id, const Locator &loc)
 {
 	if (id == RR->identity)
 		return;
-
 	RWMutex::Lock l1(m_peers_l);
-	std::pair<Set<Identity>::iterator, bool> ir(m_roots.insert(id));
-	if (ir.second) {
-		SharedPtr<Peer> &p = m_peers[id.address()];
-		if (!p) {
-			p.set(new Peer(RR));
-			p->init(id);
-			if (bootstrap)
-				p->setBootstrap(Endpoint(bootstrap));
-		}
-		m_rootPeers.push_back(p);
-		std::sort(m_rootPeers.begin(), m_rootPeers.end(), p_RootSortComparisonOperator());
-		m_writeRootList(tPtr);
-	}
+	m_roots[id] = loc;
+	m_updateRootPeers(tPtr);
+	m_writeRootList(tPtr);
 }
 
-bool Topology::removeRoot(void *const tPtr, const Identity &id)
+bool Topology::removeRoot(void *const tPtr, const Fingerprint &fp)
 {
+	const bool hashIsZero = !fp.haveHash();
 	RWMutex::Lock l1(m_peers_l);
-	Set<Identity>::iterator r(m_roots.find(id));
-	if (r != m_roots.end()) {
-		for (Vector<SharedPtr<Peer> >::iterator p(m_rootPeers.begin());p != m_rootPeers.end();++p) {
-			if ((*p)->identity() == id) {
-				m_rootPeers.erase(p);
-				break;
+	for(Vector< SharedPtr<Peer> >::const_iterator r(m_rootPeers.begin());r!=m_rootPeers.end();++r) {
+		if ((*r)->address() == fp.address()) {
+			if ((hashIsZero)||(fp == (*r)->identity().fingerprint())) {
+				Map<Identity,Locator>::iterator rr(m_roots.find((*r)->identity()));
+				if (rr != m_roots.end()) {
+					m_roots.erase(rr);
+					m_updateRootPeers(tPtr);
+					m_writeRootList(tPtr);
+					return true;
+				}
 			}
 		}
-		m_roots.erase(r);
-		m_writeRootList(tPtr);
-		return true;
 	}
 	return false;
 }
@@ -216,21 +181,44 @@ void Topology::m_loadCached(void *tPtr, const Address &zta, SharedPtr<Peer> &pee
 
 void Topology::m_writeRootList(void *tPtr)
 {
-	// assumes m_peers_l is locked
-	uint8_t *const roots = (uint8_t *) malloc(ZT_IDENTITY_MARSHAL_SIZE_MAX * m_roots.size());
+	// assumes m_peers_l is locked for read or write
+	uint8_t *const roots = (uint8_t *)malloc((ZT_IDENTITY_MARSHAL_SIZE_MAX + ZT_LOCATOR_MARSHAL_SIZE_MAX + 2) * m_roots.size());
 	if (roots) { // sanity check
 		int p = 0;
-		for (Set<Identity>::const_iterator i(m_roots.begin());i != m_roots.end();++i) {
-			const int pp = i->marshal(roots + p, false);
-			if (pp > 0)
+		for (Map<Identity,Locator>::const_iterator r(m_roots.begin());r!=m_roots.end();++r) {
+			int pp = r->first.marshal(roots + p, false);
+			if (pp > 0) {
 				p += pp;
+				pp = r->second.marshal(roots + p);
+				if (pp > 0)
+					p += pp;
+			}
 		}
 		uint64_t id[2];
 		id[0] = 0;
 		id[1] = 0;
-		RR->node->stateObjectPut(tPtr, ZT_STATE_OBJECT_ROOTS, id, roots, (unsigned int) p);
+		RR->node->stateObjectPut(tPtr, ZT_STATE_OBJECT_ROOTS, id, roots, (unsigned int)p);
 		free(roots);
 	}
+}
+
+void Topology::m_updateRootPeers(void *tPtr)
+{
+	// assumes m_peers_l is locked for write
+	Vector< SharedPtr<Peer> > rp;
+	for (Map<Identity,Locator>::iterator r(m_roots.begin());r!=m_roots.end();++r) {
+		Map< Address,SharedPtr<Peer> >::iterator p(m_peers.find(r->first.address()));
+		if ((p == m_peers.end())||(p->second->identity() != r->first)) {
+			SharedPtr<Peer> np(new Peer(RR));
+			np->init(r->first);
+			m_peers[r->first.address()] = np;
+			rp.push_back(np);
+		} else {
+			rp.push_back(p->second);
+		}
+	}
+	m_rootPeers.swap(rp);
+	std::sort(m_rootPeers.begin(), m_rootPeers.end(), p_RootSortComparisonOperator());
 }
 
 } // namespace ZeroTier

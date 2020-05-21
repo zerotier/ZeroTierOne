@@ -17,6 +17,8 @@
 #include "Salsa20.hpp"
 #include "Poly1305.hpp"
 #include "Utils.hpp"
+#include "Endpoint.hpp"
+#include "Locator.hpp"
 
 #include <algorithm>
 
@@ -625,6 +627,15 @@ const ZT_Fingerprint *ZT_Identity_fingerprint(const ZT_Identity *id)
 	if (!id)
 		return nullptr;
 	return reinterpret_cast<const ZeroTier::Identity *>(id)->fingerprint().apiFingerprint();
+}
+
+int ZT_Identity_makeRootSpecification(ZT_Identity *id,int64_t ts,struct sockaddr_storage *addrs,unsigned int addrcnt,void *rootSpecBuf,unsigned int rootSpecBufSize)
+{
+	ZeroTier::Vector<ZeroTier::Endpoint> endpoints;
+	endpoints.reserve(addrcnt);
+	for(unsigned int i=0;i<addrcnt;++i)
+		endpoints.push_back(ZeroTier::Endpoint(ZeroTier::asInetAddress(addrs[i]));
+	return ZeroTier::Locator::makeRootSpecification(reinterpret_cast<const ZeroTier::Identity *>(id),endpoints,rootSpecBuf,rootSpecBufSize);
 }
 
 ZT_SDK_API void ZT_Identity_delete(ZT_Identity *id)

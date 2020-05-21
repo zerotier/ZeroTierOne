@@ -37,7 +37,7 @@ namespace ZeroTier {
 class Locator : public TriviallyCopyable
 {
 public:
-	ZT_INLINE Locator() noexcept { memoryZero(this); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+	ZT_INLINE Locator() noexcept { memoryZero(this); }
 
 	/**
 	 * Zero the Locator data structure
@@ -115,6 +115,27 @@ public:
 	static constexpr int marshalSizeMax() noexcept { return ZT_LOCATOR_MARSHAL_SIZE_MAX; }
 	int marshal(uint8_t data[ZT_LOCATOR_MARSHAL_SIZE_MAX],bool excludeSignature = false) const noexcept;
 	int unmarshal(const uint8_t *restrict data,int len) noexcept;
+
+	/**
+	 * Create a signed Locator and package it with the root's identity to make a root spec
+	 *
+	 * @param id Identity (must have secret)
+	 * @param ts Timestamp
+	 * @param endpoints Endpoints
+	 * @param rootSpecBuf Buffer to store identity and locator into
+	 * @param rootSpecBufSize Size of buffer
+	 * @return Bytes written to buffer or -1 on error
+	 */
+	static int makeRootSpecification(const Identity &id,int64_t ts,const Vector<Endpoint> &endpoints,void *rootSpecBuf,unsigned int rootSpecBufSize);
+
+	/**
+	 * Parse a root specification and decode the identity and locator
+	 *
+	 * @param rootSpec Root spec bytes
+	 * @param rootSpecSize Size in bytes
+	 * @return Identity and locator, with identity NULL if an error occurs
+	 */
+	static std::pair<Identity,Locator> parseRootSpecification(const void *rootSpec,unsigned int rootSpecSize);
 
 private:
 	int64_t m_ts;

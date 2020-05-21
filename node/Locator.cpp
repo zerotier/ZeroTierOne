@@ -100,10 +100,10 @@ int Locator::unmarshal(const uint8_t *restrict data, const int len) noexcept
 		if (sl > ZT_SIGNATURE_BUFFER_SIZE)
 			return -1;
 		m_signatureLength = sl;
-		if ((p + (int) sl) > len)
+		if ((p + (int)sl) > len)
 			return -1;
 		Utils::copy(m_signature, data + p, sl);
-		p += (int) sl;
+		p += (int)sl;
 
 		if ((p + 2) > len)
 			return -1;
@@ -114,6 +114,44 @@ int Locator::unmarshal(const uint8_t *restrict data, const int len) noexcept
 	}
 
 	return p;
+}
+
+int Locator::makeRootSpecification(const Identity &id,int64_t ts,const Vector<Endpoint> &endpoints,void *rootSpecBuf,unsigned int rootSpecBufSize)
+{
+	if (endpoints.size() > ZT_LOCATOR_MAX_ENDPOINTS)
+		return -1;
+	if (rootSpecBufSize < (ZT_IDENTITY_MARSHAL_SIZE_MAX + ZT_LOCATOR_MARSHAL_SIZE_MAX + 1))
+		return -1;
+
+	Locator loc;
+	for (Vector<Endpoint>::const_iterator e(endpoints.begin());e!=endpoints.end();++e)
+		loc.add(*e);
+	if (!loc.sign(ts,id))
+		return -1;
+
+	uint8_t *buf = reinterpret_cast<uint8_t *>(rootSpecBuf);
+	int idl = id.marshal(buf,false);
+	if (idl <= 0)
+		return -1;
+	buf += idl;
+	int locl = loc.marshal(buf);
+	if (locl <= 0)
+		return -1;
+	return idl + locl;
+}
+
+std::pair<Identity,Locator> Locator::parseRootSpecification(const void *rootSpec,unsigned int rootSpecSize)
+{
+	std::pair<Identity,Locator> rs;
+	int l = rs.first.unmarshal(reinterpret_cast<const uint8_t *>(rootSpec),(int)rootSpecSize);
+	if (l <= 0) {
+		rs.first.zero();
+		return rs;
+	}
+	l = rs.second.unmarshal(reinterpret_cast<const uint8_t *>(rootSpec) + l,(int)rootSpecSize - l);
+	if (l <= 0)
+		rs.first.zero();
+	return rs;
 }
 
 } // namespace ZeroTier
