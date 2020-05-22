@@ -686,12 +686,13 @@ void PostgreSQL::heartbeat()
 			PQfinish(conn);
 			exit(6);
 		}
+		int64_t ts = OSUtils::now();
 		if (conn) {
 			std::string major = std::to_string(ZEROTIER_ONE_VERSION_MAJOR);
 			std::string minor = std::to_string(ZEROTIER_ONE_VERSION_MINOR);
 			std::string rev = std::to_string(ZEROTIER_ONE_VERSION_REVISION);
 			std::string build = std::to_string(ZEROTIER_ONE_VERSION_BUILD);
-			std::string now = std::to_string(OSUtils::now());
+			std::string now = std::to_string(ts);
 			std::string host_port = std::to_string(_listenPort);
 			std::string use_redis = (_rc != NULL) ? "true" : "false";
 			const char *values[10] = {
@@ -725,6 +726,13 @@ void PostgreSQL::heartbeat()
 				fprintf(stderr, "Heartbeat Update Failed: %s\n", PQresultErrorMessage(res));
 			}
 			PQclear(res);
+		}
+		if (_rc != NULL) {
+			if (_rc->clusterMode) {
+				_cluster->zadd("controllers", controllerId, ts);
+			} else {
+				_redis->zadd("controllers", controllerId, ts);
+			}
 		}
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
