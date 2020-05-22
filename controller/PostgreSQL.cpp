@@ -1746,7 +1746,7 @@ void PostgreSQL::_doRedisUpdate(sw::redis::Transaction &tx, std::string &control
 	}
 
 	tx.zremrangebyscore("nodes-online:{"+controllerId+"}", sw::redis::RightBoundedInterval<double>(expireOld, sw::redis::BoundType::LEFT_OPEN));
-	tx.zremrangebyscore("active-networks:{"+controllerId}"}", sw::redis::RightBoundedInterval<double>(expireOld, sw::redis::BoundType::LEFT_OPEN));
+	tx.zremrangebyscore("active-networks:{"+controllerId+"}", sw::redis::RightBoundedInterval<double>(expireOld, sw::redis::BoundType::LEFT_OPEN));
 	for(const auto &k : keys) {
 		tx.zremrangebyscore(k, sw::redis::RightBoundedInterval<double>(expireOld, sw::redis::BoundType::LEFT_OPEN));
 	}
