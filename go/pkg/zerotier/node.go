@@ -45,7 +45,6 @@ import (
 
 var nullLogger = log.New(ioutil.Discard, "", 0)
 
-// Network status states
 const (
 	NetworkIDStringLength = 16
 	AddressStringLength   = 10
@@ -62,16 +61,17 @@ const (
 	networkConfigOpUpdate int = C.ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE
 
 	defaultVirtualNetworkMTU = C.ZT_DEFAULT_MTU
+
+	// maxCNodeRefs is the maximum number of Node instances that can be created in this process (increasing is fine)
+	maxCNodeRefs = 4
 )
 
 var (
 	// PlatformDefaultHomePath is the default location of ZeroTier's working path on this system
 	PlatformDefaultHomePath string = C.GoString(C.ZT_PLATFORM_DEFAULT_HOMEPATH)
 
-	// This map is used to get the Go Node object from a pointer passed back in via C callbacks
-	nodesByUserPtr     = make(map[uintptr]*Node)
-	nodesByUserPtrCtr  = uintptr(0)
-	nodesByUserPtrLock sync.RWMutex
+	cNodeRefs    [maxCNodeRefs]*Node
+	cNodeRefUsed [maxCNodeRefs]uint32
 
 	CoreVersionMajor    int
 	CoreVersionMinor    int
@@ -90,6 +90,9 @@ func init() {
 
 // Node is an instance of a virtual port on the global switch.
 type Node struct {
+	// an arbitrary uintptr given to the core as its pointer back to Go's Node instance
+	cPtr uintptr
+
 	// networks contains networks we have joined, and networksByMAC by their local MAC address
 	networks      map[NetworkID]*Network
 	networksByMAC map[MAC]*Network // locked by networksLock
@@ -107,10 +110,13 @@ type Node struct {
 	peersPath       string
 	networksPath    string
 	localConfigPath string
+	infoLogPath     string
+	errorLogPath    string
 
 	// localConfig is the current state of local.conf
-	localConfig     LocalConfig
-	localConfigLock sync.RWMutex
+	localConfig         *LocalConfig
+	previousLocalConfig *LocalConfig
+	localConfigLock     sync.RWMutex
 
 	// logs for information, errors, and trace output
 	infoLogW  *sizeLimitWriter
@@ -120,13 +126,13 @@ type Node struct {
 	errLog    *log.Logger
 	traceLog  *log.Logger
 
-	// gn is the instance of GoNode, the Go wrapper and multithreaded I/O engine
+	// gn is the GoNode instance
 	gn *C.ZT_GoNode
 
-	// zn is the underlying instance of the ZeroTier core
+	// zn is the underlying ZT_Node (ZeroTier::Node) instance
 	zn unsafe.Pointer
 
-	// id is the identity of this node
+	// id is the identity of this node (includes private key)
 	id *Identity
 
 	// HTTP server instances: one for a named socket (Unix domain or Windows named pipe) and one on a local TCP socket
@@ -135,14 +141,34 @@ type Node struct {
 
 	// runWaitGroup is used to wait for all node goroutines on shutdown
 	runWaitGroup sync.WaitGroup
-
-	// an arbitrary uintptr given to the core as its pointer back to Go's Node instance
-	cPtr uintptr
 }
 
 // NewNode creates and initializes a new instance of the ZeroTier node service
 func NewNode(basePath string) (n *Node, err error) {
 	n = new(Node)
+
+	// Register this with the cNodeRefs lookup array and set up a deferred function
+	// to unregister this if we exit before the end of the constructor such as by
+	// returning an error.
+	cPtr := -1
+	for i:=0;i<maxCNodeRefs;i++ {
+		if atomic.CompareAndSwapUint32(&cNodeRefUsed[i],0,1) {
+			cNodeRefs[i] = n
+			cPtr = i
+			n.cPtr = uintptr(i)
+			break
+		}
+	}
+	if cPtr < 0 {
+		return nil, errors.New("too many nodes in this instance")
+	}
+	defer func() {
+		if cPtr >= 0 {
+			atomic.StoreUint32(&cNodeRefUsed[cPtr],0)
+			cNodeRefs[cPtr] = nil
+		}
+	}()
+
 	n.networks = make(map[NetworkID]*Network)
 	n.networksByMAC = make(map[MAC]*Network)
 	n.interfaceAddresses = make(map[string]net.IP)
@@ -168,17 +194,20 @@ func NewNode(basePath string) (n *Node, err error) {
 	n.localConfigPath = path.Join(basePath, "local.conf")
 
 	_, identitySecretNotFoundErr := os.Stat(path.Join(basePath, "identity.secret"))
+	n.localConfig = new(LocalConfig)
 	err = n.localConfig.Read(n.localConfigPath, true, identitySecretNotFoundErr != nil)
 	if err != nil {
 		return
 	}
 
+	n.infoLogPath = path.Join(basePath, "info.log")
+	n.errorLogPath = path.Join(basePath, "error.log")
 	if n.localConfig.Settings.LogSizeMax >= 0 {
-		n.infoLogW, err = sizeLimitWriterOpen(path.Join(basePath, "info.log"))
+		n.infoLogW, err = sizeLimitWriterOpen(n.infoLogPath)
 		if err != nil {
 			return
 		}
-		n.errLogW, err = sizeLimitWriterOpen(path.Join(basePath, "error.log"))
+		n.errLogW, err = sizeLimitWriterOpen(n.errorLogPath)
 		if err != nil {
 			return
 		}
@@ -186,6 +215,7 @@ func NewNode(basePath string) (n *Node, err error) {
 		n.errLog = log.New(n.errLogW, "", log.LstdFlags)
 	} else {
 		n.infoLog = nullLogger
+		n.errLog = nullLogger
 	}
 
 	if n.localConfig.Settings.PortSearch {
@@ -249,29 +279,17 @@ func NewNode(basePath string) (n *Node, err error) {
 		return nil, err
 	}
 
-	nodesByUserPtrLock.Lock()
-	nodesByUserPtrCtr++
-	n.cPtr = nodesByUserPtrCtr
-	nodesByUserPtr[n.cPtr] = n
-	nodesByUserPtrLock.Unlock()
-
 	cPath := C.CString(basePath)
 	n.gn = C.ZT_GoNode_new(cPath, C.uintptr_t(n.cPtr))
 	C.free(unsafe.Pointer(cPath))
 	if n.gn == nil {
 		n.infoLog.Println("FATAL: node initialization failed")
-		nodesByUserPtrLock.Lock()
-		delete(nodesByUserPtr, n.cPtr)
-		nodesByUserPtrLock.Unlock()
 		return nil, ErrNodeInitFailed
 	}
 	n.zn = unsafe.Pointer(C.ZT_GoNode_getNode(n.gn))
 	n.id, err = newIdentityFromCIdentity(C.ZT_Node_identity(n.zn))
 	if err != nil {
 		n.infoLog.Printf("FATAL: error obtaining node's identity")
-		nodesByUserPtrLock.Lock()
-		delete(nodesByUserPtr, n.cPtr)
-		nodesByUserPtrLock.Unlock()
 		C.ZT_GoNode_delete(n.gn)
 		return nil, err
 	}
@@ -281,136 +299,19 @@ func NewNode(basePath string) (n *Node, err error) {
 	n.runWaitGroup.Add(1)
 	go func() {
 		defer n.runWaitGroup.Done()
-		var previousExplicitExternalAddresses []ExternalAddress // empty at first so these will be configured
 		lastMaintenanceRun := int64(0)
-
 		for atomic.LoadUint32(&n.running) != 0 {
 			time.Sleep(500 * time.Millisecond)
-
 			nowS := time.Now().Unix()
 			if (nowS - lastMaintenanceRun) >= 30 {
 				lastMaintenanceRun = nowS
-
-				//////////////////////////////////////////////////////////////////////
-				n.localConfigLock.RLock()
-
-				// Get local physical interface addresses, excluding blacklisted and ZeroTier-created interfaces
-				interfaceAddresses := make(map[string]net.IP)
-				ifs, _ := net.Interfaces()
-				if len(ifs) > 0 {
-					n.networksLock.RLock()
-				scanInterfaces:
-					for _, i := range ifs {
-						for _, bl := range n.localConfig.Settings.InterfacePrefixBlacklist {
-							if strings.HasPrefix(strings.ToLower(i.Name), strings.ToLower(bl)) {
-								continue scanInterfaces
-							}
-						}
-						m, _ := NewMACFromBytes(i.HardwareAddr)
-						if _, isZeroTier := n.networksByMAC[m]; !isZeroTier {
-							addrs, _ := i.Addrs()
-							for _, a := range addrs {
-								ipn, _ := a.(*net.IPNet)
-								if ipn != nil && len(ipn.IP) > 0 && !ipn.IP.IsLinkLocalUnicast() && !ipn.IP.IsMulticast() {
-									interfaceAddresses[ipn.IP.String()] = ipn.IP
-								}
-							}
-						}
-					}
-					n.networksLock.RUnlock()
-				}
-
-				// Open or close locally bound UDP ports for each local interface address.
-				// This opens ports if they are not already open and then closes ports if
-				// they are open but no longer seem to exist.
-				interfaceAddressesChanged := false
-				ports := make([]int, 0, 2)
-				if n.localConfig.Settings.PrimaryPort > 0 && n.localConfig.Settings.PrimaryPort < 65536 {
-					ports = append(ports, n.localConfig.Settings.PrimaryPort)
-				}
-				if n.localConfig.Settings.SecondaryPort > 0 && n.localConfig.Settings.SecondaryPort < 65536 {
-					ports = append(ports, n.localConfig.Settings.SecondaryPort)
-				}
-				n.interfaceAddressesLock.Lock()
-				for astr, ipn := range interfaceAddresses {
-					if _, alreadyKnown := n.interfaceAddresses[astr]; !alreadyKnown {
-						interfaceAddressesChanged = true
-						ipCstr := C.CString(ipn.String())
-						for pn, p := range ports {
-							n.infoLog.Printf("UDP binding to port %d on interface %s", p, astr)
-							primary := C.int(0)
-							if pn == 0 {
-								primary = 1
-							}
-							C.ZT_GoNode_phyStartListen(n.gn, nil, ipCstr, C.int(p), primary)
-						}
-						C.free(unsafe.Pointer(ipCstr))
-					}
-				}
-				for astr, ipn := range n.interfaceAddresses {
-					if _, stillPresent := interfaceAddresses[astr]; !stillPresent {
-						interfaceAddressesChanged = true
-						ipCstr := C.CString(ipn.String())
-						for _, p := range ports {
-							n.infoLog.Printf("UDP closing socket bound to port %d on interface %s", p, astr)
-							C.ZT_GoNode_phyStopListen(n.gn, nil, ipCstr, C.int(p))
-						}
-						C.free(unsafe.Pointer(ipCstr))
-					}
-				}
-				n.interfaceAddresses = interfaceAddresses
-				n.interfaceAddressesLock.Unlock()
-
-				// Update node's understanding of our interface addresses if they've changed
-				if interfaceAddressesChanged || reflect.DeepEqual(n.localConfig.Settings.ExplicitAddresses, previousExplicitExternalAddresses) {
-					previousExplicitExternalAddresses = n.localConfig.Settings.ExplicitAddresses
-
-					// Consolidate explicit and detected interface addresses, removing duplicates.
-					externalAddresses := make(map[[3]uint64]*ExternalAddress)
-					for _, ip := range interfaceAddresses {
-						for _, p := range ports {
-							a := &ExternalAddress{
-								InetAddress: InetAddress{
-									IP:   ip,
-									Port: p,
-								},
-								Permanent: false,
-							}
-							externalAddresses[a.key()] = a
-						}
-					}
-					for _, a := range n.localConfig.Settings.ExplicitAddresses {
-						externalAddresses[a.key()] = &a
-					}
-
-					if len(externalAddresses) > 0 {
-						cAddrs := make([]C.ZT_InterfaceAddress, len(externalAddresses))
-						cAddrCount := 0
-						for _, a := range externalAddresses {
-							makeSockaddrStorage(a.IP, a.Port, &(cAddrs[cAddrCount].address))
-							if a.Permanent {
-								cAddrs[cAddrCount].permanent = 1
-							} else {
-								cAddrs[cAddrCount].permanent = 0
-							}
-							cAddrCount++
-						}
-						C.ZT_Node_setInterfaceAddresses(n.zn, &cAddrs[0], C.uint(cAddrCount))
-					} else {
-						C.ZT_Node_setInterfaceAddresses(n.zn, nil, 0)
-					}
-				}
-
-				// Trim infoLog if it's gone over its size limit
-				if n.localConfig.Settings.LogSizeMax > 0 && n.infoLogW != nil {
-					_ = n.infoLogW.trim(n.localConfig.Settings.LogSizeMax*1024, 0.5, true)
-				}
-
-				n.localConfigLock.RUnlock()
-				//////////////////////////////////////////////////////////////////////
+				n.runMaintenance()
 			}
 		}
 	}()
+
+	// Stop deferred cPtr table cleanup function from deregistering this instance
+	cPtr = -1
 
 	return n, nil
 }
@@ -429,9 +330,8 @@ func (n *Node) Close() {
 
 		n.runWaitGroup.Wait()
 
-		nodesByUserPtrLock.Lock()
-		delete(nodesByUserPtr, uintptr(unsafe.Pointer(n)))
-		nodesByUserPtrLock.Unlock()
+		cNodeRefs[n.cPtr] = nil
+		atomic.StoreUint32(&cNodeRefUsed[n.cPtr],0)
 	}
 }
 
@@ -457,7 +357,7 @@ func (n *Node) InterfaceAddresses() []net.IP {
 }
 
 // LocalConfig gets this node's local configuration
-func (n *Node) LocalConfig() LocalConfig {
+func (n *Node) LocalConfig() *LocalConfig {
 	n.localConfigLock.RLock()
 	defer n.localConfigLock.RUnlock()
 	return n.localConfig
@@ -477,24 +377,14 @@ func (n *Node) SetLocalConfig(lc *LocalConfig) (restartRequired bool, err error)
 		}
 	}
 
-	if n.localConfig.Settings.PrimaryPort != lc.Settings.PrimaryPort || n.localConfig.Settings.SecondaryPort != lc.Settings.SecondaryPort {
+	if n.localConfig.Settings.PrimaryPort != lc.Settings.PrimaryPort ||
+		n.localConfig.Settings.SecondaryPort != lc.Settings.SecondaryPort ||
+		n.localConfig.Settings.LogSizeMax != lc.Settings.LogSizeMax {
 		restartRequired = true
 	}
-	if lc.Settings.LogSizeMax < 0 {
-		n.infoLog = nullLogger
-		_ = n.infoLogW.Close()
-		n.infoLogW = nil
-	} else if n.infoLogW != nil {
-		n.infoLogW, err = sizeLimitWriterOpen(path.Join(n.basePath, "service.infoLog"))
-		if err == nil {
-			n.infoLog = log.New(n.infoLogW, "", log.LstdFlags)
-		} else {
-			n.infoLog = nullLogger
-			n.infoLogW = nil
-		}
-	}
 
-	n.localConfig = *lc
+	n.previousLocalConfig = n.localConfig
+	n.localConfig = lc
 
 	return
 }
@@ -555,30 +445,11 @@ func (n *Node) Leave(nwid NetworkID) error {
 	return nil
 }
 
-// AddRoot adds a root server with an optional bootstrap address for establishing first contact.
-// If you're already using roots backed by proper global LF data stores the bootstrap address may
-// be unnecessary as your node can probably find the new root automatically.
-func (n *Node) AddRoot(id *Identity, bootstrap *InetAddress) error {
-	if id == nil {
-		return ErrInvalidParameter
-	}
-	var cBootstrap C.struct_sockaddr_storage
-	if bootstrap != nil {
-		makeSockaddrStorage(bootstrap.IP, bootstrap.Port, &cBootstrap)
-	} else {
-		zeroSockaddrStorage(&cBootstrap)
-	}
-	C.ZT_Node_addRoot(n.zn, nil, id.cIdentity(), &cBootstrap)
+func (n *Node) AddRoot(spec []byte) error {
 	return nil
 }
 
-// RemoveRoot removes a root server for this node.
-// This doesn't instantly close paths to the given peer or forget about it. It just
-// demotes it to a normal peer.
-func (n *Node) RemoveRoot(id *Identity) {
-	if id != nil {
-		C.ZT_Node_removeRoot(n.zn, nil, id.cIdentity())
-	}
+func (n *Node) RemoveRoot(address Address) {
 }
 
 // GetNetwork looks up a network by ID or returns nil if not joined
@@ -618,7 +489,7 @@ func (n *Node) Peers() []*Peer {
 
 			p2.Paths = make([]Path, 0, int(p.pathCount))
 			for j := 0; j < len(p2.Paths); j++ {
-				pt := (*C.ZT_PeerPhysicalPath)(unsafe.Pointer(uintptr(unsafe.Pointer(p.paths)) + uintptr(j * C.sizeof_ZT_PeerPhysicalPath)))
+				pt := (*C.ZT_PeerPhysicalPath)(unsafe.Pointer(uintptr(unsafe.Pointer(p.paths)) + uintptr(j*C.sizeof_ZT_PeerPhysicalPath)))
 				if pt.alive != 0 {
 					a := sockaddrStorageToUDPAddr(&pt.address)
 					if a != nil {
@@ -644,6 +515,116 @@ func (n *Node) Peers() []*Peer {
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+func (n *Node) runMaintenance() {
+	n.localConfigLock.RLock()
+	defer n.localConfigLock.RUnlock()
+
+	// Get local physical interface addresses, excluding blacklisted and ZeroTier-created interfaces
+	interfaceAddresses := make(map[string]net.IP)
+	ifs, _ := net.Interfaces()
+	if len(ifs) > 0 {
+		n.networksLock.RLock()
+	scanInterfaces:
+		for _, i := range ifs {
+			for _, bl := range n.localConfig.Settings.InterfacePrefixBlacklist {
+				if strings.HasPrefix(strings.ToLower(i.Name), strings.ToLower(bl)) {
+					continue scanInterfaces
+				}
+			}
+			m, _ := NewMACFromBytes(i.HardwareAddr)
+			if _, isZeroTier := n.networksByMAC[m]; !isZeroTier {
+				addrs, _ := i.Addrs()
+				for _, a := range addrs {
+					ipn, _ := a.(*net.IPNet)
+					if ipn != nil && len(ipn.IP) > 0 && !ipn.IP.IsLinkLocalUnicast() && !ipn.IP.IsMulticast() {
+						interfaceAddresses[ipn.IP.String()] = ipn.IP
+					}
+				}
+			}
+		}
+		n.networksLock.RUnlock()
+	}
+
+	// Open or close locally bound UDP ports for each local interface address.
+	// This opens ports if they are not already open and then closes ports if
+	// they are open but no longer seem to exist.
+	interfaceAddressesChanged := false
+	ports := make([]int, 0, 2)
+	if n.localConfig.Settings.PrimaryPort > 0 && n.localConfig.Settings.PrimaryPort < 65536 {
+		ports = append(ports, n.localConfig.Settings.PrimaryPort)
+	}
+	if n.localConfig.Settings.SecondaryPort > 0 && n.localConfig.Settings.SecondaryPort < 65536 {
+		ports = append(ports, n.localConfig.Settings.SecondaryPort)
+	}
+	n.interfaceAddressesLock.Lock()
+	for astr, ipn := range interfaceAddresses {
+		if _, alreadyKnown := n.interfaceAddresses[astr]; !alreadyKnown {
+			interfaceAddressesChanged = true
+			ipCstr := C.CString(ipn.String())
+			for pn, p := range ports {
+				n.infoLog.Printf("UDP binding to port %d on interface %s", p, astr)
+				primary := C.int(0)
+				if pn == 0 {
+					primary = 1
+				}
+				C.ZT_GoNode_phyStartListen(n.gn, nil, ipCstr, C.int(p), primary)
+			}
+			C.free(unsafe.Pointer(ipCstr))
+		}
+	}
+	for astr, ipn := range n.interfaceAddresses {
+		if _, stillPresent := interfaceAddresses[astr]; !stillPresent {
+			interfaceAddressesChanged = true
+			ipCstr := C.CString(ipn.String())
+			for _, p := range ports {
+				n.infoLog.Printf("UDP closing socket bound to port %d on interface %s", p, astr)
+				C.ZT_GoNode_phyStopListen(n.gn, nil, ipCstr, C.int(p))
+			}
+			C.free(unsafe.Pointer(ipCstr))
+		}
+	}
+	n.interfaceAddresses = interfaceAddresses
+	n.interfaceAddressesLock.Unlock()
+
+	// Update node's interface address list if detected or configured addresses have changed.
+	if interfaceAddressesChanged || n.previousLocalConfig == nil || !reflect.DeepEqual(n.localConfig.Settings.ExplicitAddresses, n.previousLocalConfig.Settings.ExplicitAddresses) {
+		var cAddrs []C.ZT_InterfaceAddress
+		externalAddresses := make(map[[3]uint64]*InetAddress)
+		for _, a := range n.localConfig.Settings.ExplicitAddresses {
+			ak := a.key()
+			if _, have := externalAddresses[ak]; !have {
+				externalAddresses[ak] = &a
+				cAddrs = append(cAddrs, C.ZT_InterfaceAddress{})
+				makeSockaddrStorage(a.IP, a.Port, &(cAddrs[len(cAddrs)-1].address))
+				cAddrs[len(cAddrs)-1].permanent = 1 // explicit addresses are permanent, meaning they can be put in a locator
+			}
+		}
+		for _, ip := range interfaceAddresses {
+			for _, p := range ports {
+				a := InetAddress{ IP: ip, Port: p }
+				ak := a.key()
+				if _, have := externalAddresses[ak]; !have {
+					externalAddresses[ak] = &a
+					cAddrs = append(cAddrs, C.ZT_InterfaceAddress{})
+					makeSockaddrStorage(a.IP, a.Port, &(cAddrs[len(cAddrs)-1].address))
+					cAddrs[len(cAddrs)-1].permanent = 0
+				}
+			}
+		}
+
+		if len(cAddrs) > 0 {
+			C.ZT_Node_setInterfaceAddresses(n.zn, &cAddrs[0], C.uint(len(cAddrs)))
+		} else {
+			C.ZT_Node_setInterfaceAddresses(n.zn, nil, 0)
+		}
+	}
+
+	// Trim infoLog if it's gone over its size limit
+	if n.localConfig.Settings.LogSizeMax > 0 && n.infoLogW != nil {
+		_ = n.infoLogW.trim(n.localConfig.Settings.LogSizeMax*1024, 0.5, true)
+	}
+}
 
 func (n *Node) multicastSubscribe(nwid uint64, mg *MulticastGroup) {
 	C.ZT_Node_multicastSubscribe(n.zn, nil, C.uint64_t(nwid), C.uint64_t(mg.MAC), C.ulong(mg.ADI))
@@ -743,20 +724,17 @@ func (n *Node) handleTrace(traceMessage string) {
 	}
 }
 
-// func (n *Node) handleUserMessage(origin *Identity, messageTypeID uint64, data []byte) {
-// }
-
-//////////////////////////////////////////////////////////////////////////////
-
 // These are callbacks called by the core and GoGlue stuff to talk to the
 // service. These launch goroutines to do their work where possible to
 // avoid blocking anything in the core.
 
 //export goPathCheckFunc
 func goPathCheckFunc(gn, _ unsafe.Pointer, af C.int, ip unsafe.Pointer, _ C.int) C.int {
-	nodesByUserPtrLock.RLock()
-	node := nodesByUserPtr[uintptr(gn)]
-	nodesByUserPtrLock.RUnlock()
+	node := cNodeRefs[uintptr(gn)]
+	if node == nil {
+		return 0
+	}
+
 	var nip net.IP
 	if af == syscall.AF_INET {
 		nip = ((*[4]byte)(ip))[:]
@@ -765,17 +743,16 @@ func goPathCheckFunc(gn, _ unsafe.Pointer, af C.int, ip unsafe.Pointer, _ C.int)
 	} else {
 		return 0
 	}
-	if node != nil && len(nip) > 0 && node.pathCheck(nip) {
+	if len(nip) > 0 && node.pathCheck(nip) {
 		return 1
 	}
+
 	return 0
 }
 
 //export goPathLookupFunc
 func goPathLookupFunc(gn unsafe.Pointer, _ C.uint64_t, _ int, identity, familyP, ipP, portP unsafe.Pointer) C.int {
-	nodesByUserPtrLock.RLock()
-	node := nodesByUserPtr[uintptr(gn)]
-	nodesByUserPtrLock.RUnlock()
+	node := cNodeRefs[uintptr(gn)]
 	if node == nil {
 		return 0
 	}
@@ -807,17 +784,15 @@ func goPathLookupFunc(gn unsafe.Pointer, _ C.uint64_t, _ int, identity, familyP,
 
 //export goStateObjectPutFunc
 func goStateObjectPutFunc(gn unsafe.Pointer, objType C.int, id, data unsafe.Pointer, len C.int) {
+	node := cNodeRefs[uintptr(gn)]
+	if node == nil {
+		return
+	}
+
 	id2 := *((*[2]uint64)(id))
 	var data2 []byte
 	if len > 0 {
 		data2 = C.GoBytes(data, len)
-	}
-
-	nodesByUserPtrLock.RLock()
-	node := nodesByUserPtr[uintptr(gn)]
-	nodesByUserPtrLock.RUnlock()
-	if node == nil {
-		return
 	}
 
 	node.runWaitGroup.Add(1)
@@ -833,12 +808,11 @@ func goStateObjectPutFunc(gn unsafe.Pointer, objType C.int, id, data unsafe.Poin
 
 //export goStateObjectGetFunc
 func goStateObjectGetFunc(gn unsafe.Pointer, objType C.int, id, dataP unsafe.Pointer) C.int {
-	nodesByUserPtrLock.RLock()
-	node := nodesByUserPtr[uintptr(gn)]
-	nodesByUserPtrLock.RUnlock()
+	node := cNodeRefs[uintptr(gn)]
 	if node == nil {
 		return -1
 	}
+
 	*((*uintptr)(dataP)) = 0
 	tmp, found := node.stateObjectGet(int(objType), *((*[2]uint64)(id)))
 	if found && len(tmp) > 0 {
@@ -849,14 +823,13 @@ func goStateObjectGetFunc(gn unsafe.Pointer, objType C.int, id, dataP unsafe.Poi
 		*((*uintptr)(dataP)) = uintptr(cData)
 		return C.int(len(tmp))
 	}
+
 	return -1
 }
 
 //export goVirtualNetworkConfigFunc
 func goVirtualNetworkConfigFunc(gn, _ unsafe.Pointer, nwid C.uint64_t, op C.int, conf unsafe.Pointer) {
-	nodesByUserPtrLock.RLock()
-	node := nodesByUserPtr[uintptr(gn)]
-	nodesByUserPtrLock.RUnlock()
+	node := cNodeRefs[uintptr(gn)]
 	if node == nil {
 		return
 	}
@@ -916,12 +889,11 @@ func goVirtualNetworkConfigFunc(gn, _ unsafe.Pointer, nwid C.uint64_t, op C.int,
 
 //export goZtEvent
 func goZtEvent(gn unsafe.Pointer, eventType C.int, data unsafe.Pointer) {
-	nodesByUserPtrLock.RLock()
-	node := nodesByUserPtr[uintptr(gn)]
-	nodesByUserPtrLock.RUnlock()
+	node := cNodeRefs[uintptr(gn)]
 	if node == nil {
 		return
 	}
+
 	switch eventType {
 	case C.ZT_EVENT_OFFLINE:
 		atomic.StoreUint32(&node.online, 0)

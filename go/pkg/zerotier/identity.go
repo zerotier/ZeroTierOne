@@ -27,18 +27,14 @@ import (
 	"unsafe"
 )
 
-// IdentityTypeC25519 is a classic Curve25519/Ed25519 identity
-const IdentityTypeC25519 = 0
-
-// IdentityTypeP384 is an identity containing both NIST P-384 and Curve25519/Ed25519 key types and leveraging both when possible
-const IdentityTypeP384 = 1
-
-// Sizes of components of different identity types
 const (
-	IdentityTypeC25519PublicKeySize  = 64  // C25519/Ed25519 keys
-	IdentityTypeC25519PrivateKeySize = 64  // C25519/Ed25519 private keys
-	IdentityTypeP384PublicKeySize    = 209 // C25519/Ed25519, P-384 point-compressed public, P-384 self-signature
-	IdentityTypeP384PrivateKeySize   = 112 // C25519/Ed25519 and P-384 private keys
+	IdentityTypeC25519 = C.ZT_IDENTITY_TYPE_C25519
+	IdentityTypeP384   = C.ZT_IDENTITY_TYPE_P384
+
+	IdentityTypeC25519PublicKeySize  = C.ZT_IDENTITY_C25519_PUBLIC_KEY_SIZE
+	IdentityTypeC25519PrivateKeySize = C.ZT_IDENTITY_C25519_PRIVATE_KEY_SIZE
+	IdentityTypeP384PublicKeySize    = C.ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE
+	IdentityTypeP384PrivateKeySize   = C.ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE
 )
 
 // Identity is precisely what it sounds like: the address and associated keys for a ZeroTier node
@@ -79,18 +75,18 @@ func newIdentityFromCIdentity(cid unsafe.Pointer) (*Identity, error) {
 	return id, nil
 }
 
-// cIdentity returns a pointer to the core ZT_Identity instance or nil/0 on error.
-func (id *Identity) cIdentity() unsafe.Pointer {
+// initCIdentityPtr returns a pointer to the core ZT_Identity instance or nil/0 on error.
+func (id *Identity) initCIdentityPtr() bool {
 	if uintptr(id.cid) == 0 {
 		idCStr := C.CString(id.String())
 		defer C.free(unsafe.Pointer(idCStr))
 		id.cid = C.ZT_Identity_fromString(idCStr)
 		if uintptr(id.cid) == 0 {
-			return nil
+			return false
 		}
 		runtime.SetFinalizer(id, identityFinalizer)
 	}
-	return id.cid
+	return true
 }
 
 // NewIdentity generates a new identity of the selected type
@@ -197,8 +193,7 @@ func (id *Identity) String() string {
 
 // LocallyValidate performs local self-validation of this identity
 func (id *Identity) LocallyValidate() bool {
-	id.cIdentity()
-	if uintptr(id.cid) == 0 {
+	if !id.initCIdentityPtr() {
 		return false
 	}
 	return C.ZT_Identity_validate(id.cid) != 0
@@ -206,8 +201,7 @@ func (id *Identity) LocallyValidate() bool {
 
 // Sign signs a message with this identity
 func (id *Identity) Sign(msg []byte) ([]byte, error) {
-	id.cIdentity()
-	if uintptr(id.cid) == 0 {
+	if !id.initCIdentityPtr() {
 		return nil, ErrInvalidKey
 	}
 
@@ -226,15 +220,9 @@ func (id *Identity) Sign(msg []byte) ([]byte, error) {
 
 // Verify verifies a signature
 func (id *Identity) Verify(msg, sig []byte) bool {
-	if len(sig) == 0 {
+	if len(sig) == 0 || !id.initCIdentityPtr() {
 		return false
 	}
-
-	id.cIdentity()
-	if uintptr(id.cid) == 0 {
-		return false
-	}
-
 	var dataP unsafe.Pointer
 	if len(msg) > 0 {
 		dataP = unsafe.Pointer(&msg[0])
@@ -247,9 +235,7 @@ func (id *Identity) MakeRoot(addresses []InetAddress) ([]byte, error) {
 	if len(addresses) == 0 {
 		return nil, errors.New("at least one static address must be specified for a root")
 	}
-
-	id.cIdentity()
-	if uintptr(id.cid) == 0 {
+	if !id.initCIdentityPtr() {
 		return nil, errors.New("error initializing ZT_Identity")
 	}
 

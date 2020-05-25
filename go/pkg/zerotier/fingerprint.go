@@ -18,13 +18,10 @@ package zerotier
 import "C"
 
 import (
-	"encoding/base32"
 	"errors"
 	"strings"
 	"unsafe"
 )
-
-var ztBase32 = base32.NewEncoding("abcdefghijklmnopqrstuvwxyz234567").WithPadding(base32.NoPadding)
 
 type Fingerprint struct {
 	Address Address  `json:"address"`
@@ -32,7 +29,7 @@ type Fingerprint struct {
 }
 
 func NewFingerprintFromString(fps string) (*Fingerprint, error) {
-	fpb, err := ztBase32.DecodeString(strings.TrimSpace(strings.ToLower(fps)))
+	fpb, err := Base32StdLowerCase.DecodeString(strings.TrimSpace(strings.ToLower(fps)))
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +46,7 @@ func (fp *Fingerprint) String() string {
 	var tmp [53]byte
 	fp.Address.CopyTo(tmp[0:5])
 	copy(tmp[5:],fp.Hash[:])
-	return ztBase32.EncodeToString(tmp[:])
+	return Base32StdLowerCase.EncodeToString(tmp[:])
 }
 
 func (fp *Fingerprint) apiFingerprint() *C.ZT_Fingerprint {

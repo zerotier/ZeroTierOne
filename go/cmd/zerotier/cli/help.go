@@ -63,7 +63,7 @@ Commands:
     validate <identity>                 Locally validate an identity
     sign <identity> <file>              Sign a file with an identity's key
     verify <identity> <file> <sig>      Verify a signature
-    makeroot <identity> <address> [...] Make a root spec (see docs)
+    makeroot <identity> <address[,...]> Make a root spec (see docs)
 
 The 'service' command does not exit until the service receives a signal.
 This is typically run from launchd (Mac), systemd or init (Linux), a Windows

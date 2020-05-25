@@ -159,25 +159,27 @@ func (t *nativeTap) AddMulticastGroupChangeHandler(handler func(bool, *Multicast
 }
 
 func handleTapMulticastGroupChange(gn unsafe.Pointer, nwid, mac C.uint64_t, adi C.uint32_t, added bool) {
+	node := cNodeRefs[uintptr(gn)]
+	if node == nil {
+		return
+	}
+	node.networksLock.RLock()
+	network := node.networks[NetworkID(nwid)]
+	node.networksLock.RUnlock()
+	if network == nil {
+		return
+	}
+
+	node.runWaitGroup.Add(1)
 	go func() {
-		nodesByUserPtrLock.RLock()
-		node := nodesByUserPtr[uintptr(gn)]
-		nodesByUserPtrLock.RUnlock()
-		if node == nil {
-			return
-		}
-		node.networksLock.RLock()
-		network := node.networks[NetworkID(nwid)]
-		node.networksLock.RUnlock()
-		if network != nil {
-			tap, _ := network.tap.(*nativeTap)
-			if tap != nil {
-				mg := &MulticastGroup{MAC: MAC(mac), ADI: uint32(adi)}
-				tap.multicastGroupHandlersLock.Lock()
-				defer tap.multicastGroupHandlersLock.Unlock()
-				for _, h := range tap.multicastGroupHandlers {
-					h(added, mg)
-				}
+		defer node.runWaitGroup.Done()
+		tap, _ := network.tap.(*nativeTap)
+		if tap != nil {
+			mg := &MulticastGroup{MAC: MAC(mac), ADI: uint32(adi)}
+			tap.multicastGroupHandlersLock.Lock()
+			defer tap.multicastGroupHandlersLock.Unlock()
+			for _, h := range tap.multicastGroupHandlers {
+				h(added, mg)
 			}
 		}
 	}()

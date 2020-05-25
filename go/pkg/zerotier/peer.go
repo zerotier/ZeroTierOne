@@ -27,7 +27,6 @@ type Peer struct {
 
 // PeerMutableFields contains only the mutable fields of Peer as nullable pointers.
 type PeerMutableFields struct {
-	Identity  *Identity    `json:"identity"`
 	Root      *bool        `json:"root"`
-	Bootstrap *InetAddress `json:"bootstrap,omitempty"`
+	RootSpec  []byte       `json:"rootSpec"`
 }
