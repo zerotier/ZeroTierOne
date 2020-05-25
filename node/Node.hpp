@@ -130,7 +130,7 @@ public:
 			m_uPtr,
 			tPtr,
 			localSocket,
-			reinterpret_cast<const struct sockaddr_storage *>(&addr),
+			&addr.as.ss,
 			data,
 			len,
 			ttl) == 0);
@@ -306,9 +306,9 @@ public:
 	bool localControllerHasAuthorized(int64_t now,uint64_t nwid,const Address &addr) const;
 
 	// Implementation of NetworkController::Sender interface
-	virtual void ncSendConfig(uint64_t nwid,uint64_t requestPacketId,const Address &destination,const NetworkConfig &nc,bool sendLegacyFormatConfig); // NOLINT(cppcoreguidelines-explicit-virtual-functions,hicpp-use-override,modernize-use-override)
-	virtual void ncSendRevocation(const Address &destination,const Revocation &rev); // NOLINT(cppcoreguidelines-explicit-virtual-functions,hicpp-use-override,modernize-use-override)
-	virtual void ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &destination,NetworkController::ErrorCode errorCode); // NOLINT(cppcoreguidelines-explicit-virtual-functions,hicpp-use-override,modernize-use-override)
+	virtual void ncSendConfig(uint64_t nwid,uint64_t requestPacketId,const Address &destination,const NetworkConfig &nc,bool sendLegacyFormatConfig);
+	virtual void ncSendRevocation(const Address &destination,const Revocation &rev);
+	virtual void ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &destination,NetworkController::ErrorCode errorCode);
 
 private:
 	RuntimeEnvironment m_RR;

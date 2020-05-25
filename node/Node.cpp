@@ -341,12 +341,10 @@ ZT_ResultCode Node::multicastUnsubscribe(uint64_t nwid,uint64_t multicastGroup,u
 
 ZT_ResultCode Node::addRoot(void *tPtr,const void *rdef,unsigned int rdeflen)
 {
+	if ((!rdef)||(rdeflen == 0))
+		return ZT_RESULT_ERROR_BAD_PARAMETER;
 	std::pair<Identity,Locator> r(Locator::parseRootSpecification(rdef,rdeflen));
-	if (r.first) {
-		RR->topology->addRoot(tPtr,r.first,r.second);
-		return ZT_RESULT_OK;
-	}
-	return ZT_RESULT_ERROR_BAD_PARAMETER;
+	return ((r.first)&&(RR->topology->addRoot(tPtr,r.first,r.second))) ? ZT_RESULT_OK : ZT_RESULT_ERROR_BAD_PARAMETER;
 }
 
 ZT_ResultCode Node::removeRoot(void *tPtr,const ZT_Fingerprint *fp)

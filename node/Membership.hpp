@@ -14,8 +14,6 @@
 #ifndef ZT_MEMBERSHIP_HPP
 #define ZT_MEMBERSHIP_HPP
 
-#include <cstdint>
-
 #include "Constants.hpp"
 #include "Credential.hpp"
 #include "Containers.hpp"

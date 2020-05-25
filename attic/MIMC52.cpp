@@ -14,6 +14,7 @@
 #include "MIMC52.hpp"
 #include "SHA512.hpp"
 #include "Utils.hpp"
+#include "Salsa20.hpp"
 
 // This gets defined on any architecture whose FPU is not capable of doing the mulmod52() FPU trick.
 //#define ZT_MIMC52_NO_FPU
@@ -98,60 +99,52 @@ ZT_INLINE uint64_t modpow52(uint64_t a,uint64_t e,const uint64_t p) noexcept
 
 } // anonymous namespace
 
+#define ZT_MIMC52_ROUND_CONSTANT_COUNT 1048576
+
 uint64_t mimc52Delay(const void *const salt,const unsigned int saltSize,const unsigned long rounds)
 {
-	uint64_t hash[6];
-	SHA384(hash,salt,saltSize);
+	uint64_t hash[8];
+	SHA512(hash,salt,saltSize);
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-	uint64_t p = s_mimc52Primes[hash[0] & 511U];
+	const uint64_t p = s_mimc52Primes[hash[0] & 511U];
 	uint64_t x = hash[1] % p;
 #else
-	uint64_t p = s_mimc52Primes[Utils::swapBytes(hash[0]) & 511U];
+	const uint64_t p = s_mimc52Primes[Utils::swapBytes(hash[0]) & 511U];
 	uint64_t x = Utils::swapBytes(hash[1]) % p;
 #endif
 
-	//Speck128<8> roundConstantGenerator(hash + 2);
 	const uint64_t e = ((p * 2) - 1) / 3;
 	const uint64_t m52 = 0xfffffffffffffULL;
-	const uint64_t rmin1 = rounds - 1;
-	const uint64_t sxx = hash[4];
-#pragma unroll 16
-	for(unsigned long r=0;r<rounds;++r) {
-		uint64_t sx = sxx,sy = rmin1 - r;
-		//roundConstantGenerator.encryptXY(sx,sy);
-		x = (x - sy) & m52;
+	const uint32_t rminus1 = rounds - 1;
+	for(uint32_t r=0;r<rounds;++r) {
+		x = (x - (uint64_t)sy) & m52;
 		x = modpow52(x,e,p);
 	}
 
 	return x;
 }
 
-bool mimc52Verify(const void *const salt,const unsigned int saltSize,unsigned long rounds,const uint64_t proof)
+bool mimc52Verify(const void *const salt,const unsigned int saltSize,const unsigned long rounds,const uint64_t proof)
 {
 	uint64_t hash[6];
 	SHA384(hash,salt,saltSize);
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-	uint64_t p = s_mimc52Primes[hash[0] & 511U];
-	uint64_t x = hash[1] % p;
-#else
-	uint64_t p = s_mimc52Primes[Utils::swapBytes(hash[0]) & 511U];
+	const uint64_t p = s_mimc52Primes[Utils::swapBytes(hash[0]) & 511U];
 	uint64_t x = Utils::swapBytes(hash[1]) % p;
+#else
+	const uint64_t p = s_mimc52Primes[hash[0] & 511U];
+	uint64_t x = hash[1] % p;
 #endif
 
-	//Speck128<8> roundConstantGenerator(hash + 2);
 	const uint64_t m52 = 0xfffffffffffffULL;
 	uint64_t y = proof & m52;
-	const uint64_t sxx = hash[4];
-#if !defined(ZT_MIMC52_NO_FPU)
-	double ii,of,pp = (double)p;
+#ifndef ZT_MIMC52_NO_FPU
+	double dy,ii,of,pp = (double)p;
 	uint64_t oi,one = 1;
 #endif
-#pragma unroll 16
 	for(unsigned long r=0;r<rounds;++r) {
-		uint64_t sx = sxx,sy = r;
-		//roundConstantGenerator.encryptXY(sx,sy);
 #ifdef ZT_MIMC52_NO_FPU
 #ifdef x64_cubemod
 		x64_cubemod(y,p);
@@ -160,18 +153,19 @@ bool mimc52Verify(const void *const salt,const unsigned int saltSize,unsigned lo
 #endif
 #else
 		// mulmod52(mulmod52(y,y,p),y,p)
-		of = (double)y;
+		dy = (double)y;
+		of = dy;
 		oi = y;
 		ii = (of * of) / pp;
 		y *= oi;
 		y -= ((uint64_t)ii - one) * p;
-		//y %= p;
-		ii = ((double)y * of) / pp;
+		//y %= p; // does not seem to be necessary
+		ii = (dy * of) / pp;
 		y *= oi;
 		y -= ((uint64_t)ii - one) * p;
 		y %= p;
 #endif
-		y = (y + sy) & m52;
+		y = (y + (uint64_t)sy) & m52;
 	}
 
 	return (y % p) == x;

@@ -261,9 +261,9 @@ public:
 	{
 		switch (as.ss.ss_family) {
 			case AF_INET:
-				return Utils::ntoh((uint16_t) as.sa_in.sin_port);
+				return Utils::ntoh((uint16_t)as.sa_in.sin_port);
 			case AF_INET6:
-				return Utils::ntoh((uint16_t) as.sa_in6.sin6_port);
+				return Utils::ntoh((uint16_t)as.sa_in6.sin6_port);
 			default:
 				return 0;
 		}

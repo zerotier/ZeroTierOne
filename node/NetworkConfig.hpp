@@ -14,13 +14,6 @@
 #ifndef ZT_NETWORKCONFIG_HPP
 #define ZT_NETWORKCONFIG_HPP
 
-#include <cstdint>
-#include <cstring>
-#include <cstdlib>
-#include <vector>
-#include <stdexcept>
-#include <algorithm>
-
 #include "Constants.hpp"
 #include "InetAddress.hpp"
 #include "MulticastGroup.hpp"
@@ -34,6 +27,10 @@
 #include "Utils.hpp"
 #include "Trace.hpp"
 #include "TriviallyCopyable.hpp"
+#include "Containers.hpp"
+
+#include <stdexcept>
+#include <algorithm>
 
 namespace ZeroTier {
 

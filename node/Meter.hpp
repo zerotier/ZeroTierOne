@@ -44,7 +44,7 @@ public:
 	 * @param now Start time
 	 */
 	ZT_INLINE Meter() noexcept
-	{} // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init,hicpp-use-equals-default,modernize-use-equals-default)
+	{}
 
 	/**
 	 * Add a measurement

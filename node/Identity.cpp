@@ -631,11 +631,13 @@ const ZT_Fingerprint *ZT_Identity_fingerprint(const ZT_Identity *id)
 
 int ZT_Identity_makeRootSpecification(ZT_Identity *id,int64_t ts,struct sockaddr_storage *addrs,unsigned int addrcnt,void *rootSpecBuf,unsigned int rootSpecBufSize)
 {
+	if ((!id)||(!addrs)||(!addrcnt)||(!rootSpecBuf))
+		return -1;
 	ZeroTier::Vector<ZeroTier::Endpoint> endpoints;
 	endpoints.reserve(addrcnt);
 	for(unsigned int i=0;i<addrcnt;++i)
-		endpoints.push_back(ZeroTier::Endpoint(ZeroTier::asInetAddress(addrs[i]));
-	return ZeroTier::Locator::makeRootSpecification(reinterpret_cast<const ZeroTier::Identity *>(id),endpoints,rootSpecBuf,rootSpecBufSize);
+		endpoints.push_back(ZeroTier::Endpoint(ZeroTier::asInetAddress(addrs[i])));
+	return ZeroTier::Locator::makeRootSpecification(*reinterpret_cast<const ZeroTier::Identity *>(id),ts,endpoints,rootSpecBuf,rootSpecBufSize);
 }
 
 ZT_SDK_API void ZT_Identity_delete(ZT_Identity *id)

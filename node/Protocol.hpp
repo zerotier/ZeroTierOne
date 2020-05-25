@@ -250,7 +250,7 @@
 #define ZT_PROTO_PACKET_VERB_INDEX        27
 
 #define ZT_PROTO_HELLO_NODE_META_INSTANCE_ID                "i"
-#define ZT_PROTO_HELLO_NODE_META_PREFERRED_SYMMETRIC        "a"
+#define ZT_PROTO_HELLO_NODE_META_PREFERRED_CIPHER_MODE      "a"
 #define ZT_PROTO_HELLO_NODE_META_LOCATOR                    "l"
 #define ZT_PROTO_HELLO_NODE_META_SOFTWARE_VENDOR            "s"
 #define ZT_PROTO_HELLO_NODE_META_COMPLIANCE                 "c"
@@ -340,7 +340,7 @@ enum Verb
 	 * Dictionary fields (defines start with ZT_PROTO_HELLO_NODE_META_):
 	 * 
 	 *   INSTANCE_ID - a 64-bit unique value generated on each node start
-	 *   PREFERRED_SYMMETRIC - preferred symmetric encryption mode
+	 *   PREFERRED_CIPHER_MODE - preferred symmetric encryption mode
 	 *   LOCATOR - signed record enumerating this node's trusted contact points
 	 *   EPHEMERAL_PUBLIC - Ephemeral public key(s)
 	 * 
@@ -419,10 +419,10 @@ enum Verb
 
 	/**
 	 * Relay-mediated NAT traversal or firewall punching initiation:
-	 *   <[1] flags (unused, currently 0)>
+	 *   <[1] flags>
 	 *   <[5] ZeroTier address of other peer>
 	 *   <[2] 16-bit number of endpoints where peer might be reached>
-	 *   <[...] endpoints to attempt>
+	 *   [<[...] endpoints to attempt>]
 	 *
 	 * Legacy packet format for pre-2.x peers:
 	 *   <[1] flags (unused, currently 0)>

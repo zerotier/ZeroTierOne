@@ -27,42 +27,43 @@ Licensed under the ZeroTier BSL (see LICENSE.txt)
 Usage: zerotier [-options] <command> [command args]
 
 Global Options:
-  -j                                   Output raw JSON where applicable
-  -p <path>                            Use alternate base path
-  -t <path>                            Use secret auth token from this file
+  -j                                    Output raw JSON where applicable
+  -p <path>                             Use alternate base path
+  -t <path>                             Load secret auth token from a file
+  -T <token>                            Set secret auth token on command line
 
 Commands:
-  help                                 Show this help
-  version                              Print version
-  service                              Start as service
-  status                               Show node status, identity, and config
-  peers                                List all VL1 peers
-  roots                                List root peers
-  addroot <path/URL to spec>           Add root
-  removeroot <address>                 Remove a peer from the root list
-  join <network ID> [fingerprint]      Join a virtual network
-  leave <network ID>                   Leave a virtual network
-  networks                             List VL2 virtual networks
-  network <network ID>                 Show verbose network info
-  set <network ID> [option] [value]    Get or set a network config option
-    manageips <boolean>                Is IP management allowed?
-    manageroutes <boolean>             Is route management allowed?
-    globalips <boolean>                Allow assignment of global IPs?
-    globalroutes <boolean>             Can global IP space routes be set?
-    defaultroute <boolean>             Can default route be overridden?
-  set [option] [value]                 Get or set a service config option
-    port <port>                        Primary P2P port
-    secondaryport <port/0>             Secondary P2P port (0 to disable)
-    blacklist cidr <IP/bits> <boolean> Toggle physical path blacklisting
-    blacklist if <prefix> <boolean>    Toggle interface prefix blacklisting
-    portmap <boolean>                  Toggle use of uPnP or NAT-PMP
-  identity <command> [args]            Identity management commands
-    new [c25519|p384]                  Create identity pair (default: c25519)
-    getpublic <identity>               Extract only public part of identity
-    validate <identity>                Locally validate an identity
-    sign <identity> <file>             Sign a file with an identity's key
-    verify <identity> <file> <sig>     Verify a signature
-    makeroot <identity> <address> ...  Make a root spec (see docs)
+  help                                  Show this help
+  version                               Print version
+  service                               Start as service
+  status                                Show node status, identity, and config
+  peers                                 List all VL1 peers
+  roots                                 List root peers
+  addroot <path | URL>                  Add root from root spec file or URL
+  removeroot <address>                  Remove a peer from the root list
+  join <network ID> [fingerprint]       Join a virtual network
+  leave <network ID>                    Leave a virtual network
+  networks                              List VL2 virtual networks
+  network <network ID>                  Show verbose network info
+  set <network ID> [option] [value]     Get or set a network config option
+    manageips <boolean>                 Is IP management allowed?
+    manageroutes <boolean>              Is route management allowed?
+    globalips <boolean>                 Allow assignment of global IPs?
+    globalroutes <boolean>              Can global IP space routes be set?
+    defaultroute <boolean>              Can default route be overridden?
+  set [option] [value]                  Get or set a service config option
+    port <port>                         Primary P2P port
+    secondaryport <port/0>              Secondary P2P port (0 to disable)
+    blacklist cidr <IP/bits> <boolean>  Toggle physical path blacklisting
+    blacklist if <prefix> <boolean>     Toggle interface prefix blacklisting
+    portmap <boolean>                   Toggle use of uPnP or NAT-PMP
+  identity <command> [args]             Identity management commands
+    new [c25519|p384]                   Create identity pair (default: c25519)
+    getpublic <identity>                Extract only public part of identity
+    validate <identity>                 Locally validate an identity
+    sign <identity> <file>              Sign a file with an identity's key
+    verify <identity> <file> <sig>      Verify a signature
+    makeroot <identity> <address> [...] Make a root spec (see docs)
 
 The 'service' command does not exit until the service receives a signal.
 This is typically run from launchd (Mac), systemd or init (Linux), a Windows

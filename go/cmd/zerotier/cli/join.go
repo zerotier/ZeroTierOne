@@ -28,7 +28,7 @@ func Join(basePath, authToken string, args []string) {
 		os.Exit(1)
 	}
 
-	if len(args[0]) != 16 {
+	if len(args[0]) != zerotier.NetworkIDStringLength {
 		fmt.Printf("ERROR: invalid network ID: %s\n", args[0])
 		os.Exit(1)
 	}

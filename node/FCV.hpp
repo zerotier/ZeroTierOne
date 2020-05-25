@@ -19,22 +19,14 @@
 #include <iterator>
 #include <algorithm>
 #include <memory>
-#include <cstring>
-#include <cstdlib>
 
 namespace ZeroTier {
 
 /**
  * FCV is a Fixed Capacity Vector
  *
- * Attempts to resize, push, or access this vector beyond its capacity will
- * silently fail. The [] operator is NOT bounds checked!
- *
  * This doesn't implement everything in std::vector, just what we need. It
  * also adds a few special things for use in ZT core code.
- *
- * Note that an FCV will be TriviallyCopyable IF and only if its contained
- * type is TriviallyCopyable. There's a const static checker for this.
  *
  * @tparam T Type to contain
  * @tparam C Maximum capacity of vector
@@ -46,11 +38,11 @@ public:
 	typedef T * iterator;
 	typedef const T * const_iterator;
 
-	ZT_INLINE FCV() noexcept : _s(0) {} // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
-	ZT_INLINE FCV(const FCV &v) : _s(0) { *this = v; } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+	ZT_INLINE FCV() noexcept : _s(0) {}
+	ZT_INLINE FCV(const FCV &v) : _s(0) { *this = v; }
 
 	template<typename I>
-	ZT_INLINE FCV(I i,I end) : // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+	ZT_INLINE FCV(I i,I end) :
 		_s(0)
 	{
 		while (i != end) {
@@ -63,7 +55,7 @@ public:
 
 	ZT_INLINE FCV &operator=(const FCV &v)
 	{
-		if (&v != this) {
+		if (likely(&v != this)) {
 			this->clear();
 			const unsigned int s = v._s;
 			_s = s;
@@ -85,25 +77,7 @@ public:
 	}
 
 	/**
-	 * Clear without calling destructors (same as unsafeResize(0))
-	 */
-	ZT_INLINE void unsafeClear() noexcept { _s = 0; }
-
-	/**
-	 * This does a straight copy of one vector's data to another
-	 *
-	 * @tparam C2 Inferred capacity of other vector
-	 * @param v Other vector to copy to this one
-	 */
-	template<unsigned int C2>
-	ZT_INLINE void unsafeAssign(const FCV<T,C2> &v) noexcept
-	{
-		_s = ((C2 > C)&&(v._s > C)) ? C : v._s;
-		Utils::copy(_m,v._m,_s * sizeof(T));
-	}
-
-	/**
-	 * Move contents from this vector to another and clear this vector
+	 * Move contents from this vector to another and clear this vector.
 	 *
 	 * @param v Target vector
 	 */
@@ -114,18 +88,29 @@ public:
 	}
 
 	ZT_INLINE iterator begin() noexcept { return reinterpret_cast<T *>(_m); }
-	ZT_INLINE const_iterator begin() const noexcept { return reinterpret_cast<const T *>(_m); }
 	ZT_INLINE iterator end() noexcept { return reinterpret_cast<T *>(_m) + _s; }
+	ZT_INLINE const_iterator begin() const noexcept { return reinterpret_cast<const T *>(_m); }
 	ZT_INLINE const_iterator end() const noexcept { return reinterpret_cast<const T *>(_m) + _s; }
 
-	ZT_INLINE T &operator[](const unsigned int i) noexcept { return reinterpret_cast<T *>(_m)[i]; }
-	ZT_INLINE const T &operator[](const unsigned int i) const noexcept { return reinterpret_cast<T *>(_m)[i]; }
+	ZT_INLINE T &operator[](const unsigned int i)
+	{
+		if (likely(i < _s))
+			return reinterpret_cast<T *>(_m)[i];
+		throw std::out_of_range("i > capacity");
+	}
+	ZT_INLINE const T &operator[](const unsigned int i) const
+	{
+		if (likely(i < _s))
+			return reinterpret_cast<const T *>(_m)[i];
+		throw std::out_of_range("i > capacity");
+	}
 
+	static constexpr unsigned int capacity() noexcept { return C; }
 	ZT_INLINE unsigned int size() const noexcept { return _s; }
 	ZT_INLINE bool empty() const noexcept { return (_s == 0); }
+
 	ZT_INLINE T *data() noexcept { return reinterpret_cast<T *>(_m); }
 	ZT_INLINE const T *data() const noexcept { return reinterpret_cast<const T *>(_m); }
-	static constexpr unsigned int capacity() noexcept { return C; }
 
 	/**
 	 * Push a value onto the back of this vector
@@ -136,8 +121,9 @@ public:
 	 */
 	ZT_INLINE void push_back(const T &v)
 	{
-		if (_s < C)
+		if (likely(_s < C))
 			new (reinterpret_cast<T *>(_m) + _s++) T(v);
+		else throw std::out_of_range("capacity exceeded");
 	}
 
 	/**
@@ -147,7 +133,7 @@ public:
 	 */
 	ZT_INLINE T &push()
 	{
-		if (_s < C) {
+		if (likely(_s < C)) {
 			return *(new(reinterpret_cast<T *>(_m) + _s++) T());
 		} else {
 			return *(reinterpret_cast<T *>(_m) + (C - 1));
@@ -161,7 +147,7 @@ public:
 	 */
 	ZT_INLINE T &push(const T &v)
 	{
-		if (_s < C) {
+		if (likely(_s < C)) {
 			return *(new(reinterpret_cast<T *>(_m) + _s++) T(v));
 		} else {
 			T &tmp = *(reinterpret_cast<T *>(_m) + (C - 1));
@@ -175,7 +161,7 @@ public:
 	 */
 	ZT_INLINE void pop_back()
 	{
-		if (_s != 0)
+		if (likely(_s != 0))
 			(reinterpret_cast<T *>(_m) + --_s)->~T();
 	}
 
@@ -186,8 +172,8 @@ public:
 	 */
 	ZT_INLINE void resize(unsigned int ns)
 	{
-		if (ns > C)
-			ns = C;
+		if (unlikely(ns > C))
+			throw std::out_of_range("capacity exceeded");
 		unsigned int s = _s;
 		while (s < ns)
 			new(reinterpret_cast<T *>(_m) + s++) T();
@@ -195,16 +181,6 @@ public:
 			(reinterpret_cast<T *>(_m) + --s)->~T();
 		_s = s;
 	}
-
-	/**
-	 * Resize without calling any constructors or destructors on T
-	 *
-	 * This must only be called if T is a primitive type or is TriviallyCopyable and
-	 * safe to initialize from undefined contents.
-	 *
-	 * @param ns New size (clipped to C if larger than capacity)
-	 */
-	ZT_INLINE void unsafeResize(const unsigned int ns) noexcept { _s = (ns > C) ? C : ns; }
 
 	/**
 	 * This is a bounds checked auto-resizing variant of the [] operator
@@ -267,8 +243,12 @@ public:
 	ZT_INLINE bool operator>=(const FCV &v) const noexcept { return !(*this < v); }
 
 private:
-	unsigned int _s;
+#ifdef _MSC_VER
 	uint8_t _m[sizeof(T) * C];
+#else
+	__attribute__((aligned(16))) uint8_t _m[sizeof(T) * C];
+#endif
+	unsigned int _s;
 };
 
 } // namespace ZeroTier

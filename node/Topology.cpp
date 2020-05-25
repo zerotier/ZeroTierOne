@@ -71,14 +71,15 @@ struct p_RootSortComparisonOperator
 	}
 };
 
-void Topology::addRoot(void *const tPtr, const Identity &id, const Locator &loc)
+bool Topology::addRoot(void *const tPtr, const Identity &id, const Locator &loc)
 {
-	if (id == RR->identity)
-		return;
+	if ((id == RR->identity) || (!id) || (!loc) || (!loc.verify(id)) || (!id.locallyValidate()))
+		return false;
 	RWMutex::Lock l1(m_peers_l);
 	m_roots[id] = loc;
 	m_updateRootPeers(tPtr);
 	m_writeRootList(tPtr);
+	return true;
 }
 
 bool Topology::removeRoot(void *const tPtr, const Fingerprint &fp)

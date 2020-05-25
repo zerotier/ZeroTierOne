@@ -37,7 +37,7 @@ namespace ZeroTier {
  * compatibility.
  * 
  * Use of the append functions is faster than building and then encoding a
- * dictionary.
+ * dictionary for creating outbound packets.
  */
 class Dictionary
 {

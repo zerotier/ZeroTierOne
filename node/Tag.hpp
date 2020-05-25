@@ -14,11 +14,6 @@
 #ifndef ZT_TAG_HPP
 #define ZT_TAG_HPP
 
-#include <cstdint>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-
 #include "Constants.hpp"
 #include "Credential.hpp"
 #include "C25519.hpp"

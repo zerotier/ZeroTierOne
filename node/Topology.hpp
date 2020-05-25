@@ -185,11 +185,15 @@ public:
 	/**
 	 * Add or update a root server and its locator
 	 *
+	 * This also validates the identity and checks the locator signature,
+	 * returning false if either of these is not valid.
+	 *
 	 * @param tPtr Thread pointer
 	 * @param id Root identity
 	 * @param loc Root locator
+	 * @return True if identity and locator are valid and root was added / updated
 	 */
-	void addRoot(void *tPtr,const Identity &id,const Locator &loc);
+	bool addRoot(void *tPtr,const Identity &id,const Locator &loc);
 
 	/**
 	 * Remove a root server's identity from the root server set

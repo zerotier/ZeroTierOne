@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"runtime"
 	"strings"
@@ -239,6 +240,31 @@ func (id *Identity) Verify(msg, sig []byte) bool {
 		dataP = unsafe.Pointer(&msg[0])
 	}
 	return C.ZT_Identity_verify(id.cid, dataP, C.uint(len(msg)), unsafe.Pointer(&sig[0]), C.uint(len(sig))) != 0
+}
+
+// MakeRoot generates a root spec consisting of a serialized identity and a root locator.
+func (id *Identity) MakeRoot(addresses []InetAddress) ([]byte, error) {
+	if len(addresses) == 0 {
+		return nil, errors.New("at least one static address must be specified for a root")
+	}
+
+	id.cIdentity()
+	if uintptr(id.cid) == 0 {
+		return nil, errors.New("error initializing ZT_Identity")
+	}
+
+	ss := make([]C.sockaddr_storage, len(addresses))
+	for i := range addresses {
+		if !makeSockaddrStorage(addresses[i].IP, addresses[i].Port, &ss[i]) {
+			return nil, errors.New("invalid address in address list")
+		}
+	}
+	var buf [8192]byte
+	rl := C.ZT_Identity_makeRootSpecification(id.cid, C.int64_t(TimeMs()), &ss[0], C.uint(len(ss)), &buf[0], 8192)
+	if rl <= 0 {
+		return nil, errors.New("unable to make root specification (does identity contain a secret key?)")
+	}
+	return buf[0:int(rl)], nil
 }
 
 // Equals performs a deep equality test between this and another identity

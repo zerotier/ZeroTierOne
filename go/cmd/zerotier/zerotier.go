@@ -74,13 +74,14 @@ func main() {
 	} else {
 		runtime.GOMAXPROCS(1)
 	}
-	debug.SetGCPercent(25)
+	debug.SetGCPercent(20)
 
 	globalOpts := flag.NewFlagSet("global", flag.ContinueOnError)
 	hflag := globalOpts.Bool("h", false, "") // support -h to be canonical with other Unix utilities
 	jflag := globalOpts.Bool("j", false, "")
 	pflag := globalOpts.String("p", "", "")
 	tflag := globalOpts.String("t", "", "")
+	tTflag := globalOpts.String("T", "", "")
 	err := globalOpts.Parse(os.Args[1:])
 	if err != nil {
 		cli.Help()
@@ -98,11 +99,6 @@ func main() {
 		cmdArgs = args[1:]
 	}
 
-	if *hflag {
-		cli.Help()
-		os.Exit(0)
-	}
-
 	basePath := zerotier.PlatformDefaultHomePath
 	if len(*pflag) > 0 {
 		basePath = *pflag
@@ -110,7 +106,14 @@ func main() {
 
 	var authToken string
 	if len(*tflag) > 0 {
-		authToken = *tflag
+		at, err := ioutil.ReadFile(*tflag)
+		if err != nil || len(at) == 0 {
+			fmt.Println("FATAL: unable to read API authorization token from file '" + *tflag + "'")
+			os.Exit(1)
+		}
+		authToken = strings.TrimSpace(string(at))
+	} else if len(*tTflag) > 0 {
+		authToken = strings.TrimSpace(*tTflag)
 	} else {
 		authToken = readAuthToken(basePath)
 	}
@@ -125,38 +128,36 @@ func main() {
 		os.Exit(0)
 	case "service":
 		cli.Service(basePath, authToken, cmdArgs)
-	case "status":
+	case "status", "info":
 		authTokenRequired(authToken)
 		cli.Status(basePath, authToken, cmdArgs, *jflag)
-	case "peers", "listpeers":
+	case "peers", "listpeers", "lspeers":
 		authTokenRequired(authToken)
 		cli.Peers(basePath, authToken, cmdArgs, *jflag, false)
-	case "roots", "listroots":
+	case "roots", "listroots", "lsroots":
 		authTokenRequired(authToken)
 		cli.Peers(basePath, authToken, cmdArgs, *jflag, true)
 	case "addroot":
-		authTokenRequired(authToken)
-		cli.SetRoot(basePath, authToken, cmdArgs, true)
+		// TODO
 	case "removeroot":
-		authTokenRequired(authToken)
-		cli.SetRoot(basePath, authToken, cmdArgs, false)
-	case "identity":
-		cli.Identity(cmdArgs)
-	case "networks", "listnetworks":
-		authTokenRequired(authToken)
-		cli.Networks(basePath, authToken, cmdArgs, *jflag)
-	case "network":
-		authTokenRequired(authToken)
-		cli.Network(basePath, authToken, cmdArgs, *jflag)
+		// TODO
 	case "join":
 		authTokenRequired(authToken)
 		cli.Join(basePath, authToken, cmdArgs)
 	case "leave":
 		authTokenRequired(authToken)
 		cli.Leave(basePath, authToken, cmdArgs)
+	case "networks", "listnetworks":
+		authTokenRequired(authToken)
+		cli.Networks(basePath, authToken, cmdArgs, *jflag)
+	case "network":
+		authTokenRequired(authToken)
+		cli.Network(basePath, authToken, cmdArgs, *jflag)
 	case "set":
 		authTokenRequired(authToken)
 		cli.Set(basePath, authToken, cmdArgs)
+	case "identity":
+		cli.Identity(cmdArgs)
 	}
 
 	cli.Help()

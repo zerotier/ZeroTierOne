@@ -14,11 +14,6 @@
 #ifndef ZT_REVOCATION_HPP
 #define ZT_REVOCATION_HPP
 
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <cstdint>
-
 #include "Constants.hpp"
 #include "Credential.hpp"
 #include "Address.hpp"

@@ -261,7 +261,15 @@ public:
 	};
 
 	/**
-	 * Encryptor for GMAC-SIV
+	 * Encryptor for AES-GMAC-SIV.
+	 *
+	 * Encryption requires two passes. The first pass starts after init
+	 * with aad (if any) followed by update1() and finish1(). Then the
+	 * update2() and finish2() methods must be used over the same data
+	 * (but NOT AAD) again.
+	 *
+	 * This supports encryption of a maximum of 2^31 bytes of data per
+	 * call to init().
 	 */
 	class GMACSIVEncryptor
 	{
@@ -294,12 +302,12 @@ public:
 		}
 
 		/**
-		 * Process AAD (additional authenticated data) that is not being encrypted
+		 * Process AAD (additional authenticated data) that is not being encrypted.
 		 *
-		 * This must be called prior to update1, finish1, etc. if there is AAD to include
-		 * in the MAC that is not included in the plaintext.
+		 * If such data exists this must be called before update1() and finish1().
 		 *
-		 * This currently only supports one chunk of AAD. Don't call multiple times per message.
+		 * Note: current code only supports one single chunk of AAD. Don't call this
+		 * multiple times per message.
 		 *
 		 * @param aad Additional authenticated data
 		 * @param len Length of AAD in bytes
@@ -336,15 +344,22 @@ public:
 			// Compute 128-bit GMAC tag.
 			_gmac.finish(reinterpret_cast<uint8_t *>(tmp));
 
-			// Truncate to 64 bits, concatenate after 64-bit message IV, and encrypt with AES.
+			// Shorten to 64 bits, concatenate with message IV, and encrypt with AES to
+			// yield the CTR IV and opaque IV/MAC blob. In ZeroTier's use of GMAC-SIV
+			// this get split into the packet ID (64 bits) and the MAC (64 bits) in each
+			// packet and then recombined on receipt for legacy reasons (but with no
+			// cryptographic or performance impact).
 			_tag[1] = tmp[0] ^ tmp[1];
 			_ctr._aes.encrypt(_tag,_tag);
 
-			// Get CTR IV and 32-bit counter. The most significant bit of the 32-bit counter
-			// is masked to zero so the counter will never overflow, but the remaining bits
-			// are taken from the encrypted tag as they can count as additional bits of
-			// entropy for the CTR IV. We don't technically count these in figuring our
-			// worst case scenario bound, but they could be argued to add a little margin.
+			// Initialize CTR with 96-bit CTR nonce and 32-bit counter. The counter
+			// incorporates 31 more bits of entropy which should raise our security margin
+			// a bit, but this is not included in the worst case analysis of GMAC-SIV.
+			// The most significant bit of the counter is masked to zero to allow up to
+			// 2^31 bytes to be encrypted before the counter loops. Some CTR implementations
+			// increment the whole big-endian 128-bit integer in which case this could be
+			// used for more than 2^31 bytes, but ours does not for performance reasons
+			// and so 2^31 should be considered the input limit.
 			tmp[0] = _tag[0];
 			tmp[1] = _tag[1] & ZT_CONST_TO_BE_UINT64(0xffffffff7fffffffULL);
 			_ctr.init(reinterpret_cast<const uint8_t *>(tmp),_output);
@@ -386,7 +401,9 @@ public:
 	};
 
 	/**
-	 * Decryptor for GMAC-SIV
+	 * Decryptor for AES-GMAC-SIV.
+	 *
+	 * GMAC-SIV decryption is single-pass. AAD (if any) must be processed first.
 	 */
 	class GMACSIVDecryptor
 	{

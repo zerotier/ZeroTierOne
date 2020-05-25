@@ -53,62 +53,6 @@ public:
 		Utils::zero<sizeof(T)>(&obj);
 	}
 
-	/**
-	 * Copy a TriviallyCopyable object
-	 *
-	 * @tparam T Automatically inferred type of destination
-	 * @param dest Destination TriviallyCopyable object
-	 * @param src Source TriviallyCopyable object
-	 */
-	template<typename T>
-	static ZT_INLINE void memoryCopy(T *dest,const T *src) noexcept
-	{
-		mustBeTriviallyCopyable(dest);
-		Utils::copy<sizeof(T)>(dest,src);
-	}
-
-	/**
-	 * Copy a TriviallyCopyable object
-	 *
-	 * @tparam T Automatically inferred type of destination
-	 * @param dest Destination TriviallyCopyable object
-	 * @param src Source TriviallyCopyable object
-	 */
-	template<typename T>
-	static ZT_INLINE void memoryCopy(T *dest,const T &src) noexcept
-	{
-		mustBeTriviallyCopyable(src);
-		Utils::copy<sizeof(T)>(dest,&src);
-	}
-
-	/**
-	 * Copy a TriviallyCopyable object
-	 *
-	 * @tparam T Automatically inferred type of destination
-	 * @param dest Destination TriviallyCopyable object
-	 * @param src Source TriviallyCopyable object
-	 */
-	template<typename T>
-	static ZT_INLINE void memoryCopy(T &dest,const T *src) noexcept
-	{
-		mustBeTriviallyCopyable(dest);
-		Utils::copy<sizeof(T)>(&dest,src);
-	}
-
-	/**
-	 * Copy a TriviallyCopyable object
-	 *
-	 * @tparam T Automatically inferred type of destination
-	 * @param dest Destination TriviallyCopyable object
-	 * @param src Source TriviallyCopyable object
-	 */
-	template<typename T>
-	static ZT_INLINE void memoryCopy(T &dest,const T &src) noexcept
-	{
-		mustBeTriviallyCopyable(dest);
-		Utils::copy<sizeof(T)>(&dest,&src);
-	}
-
 private:
 	static ZT_INLINE void mustBeTriviallyCopyable(const TriviallyCopyable &) noexcept {}
 	static ZT_INLINE void mustBeTriviallyCopyable(const TriviallyCopyable *) noexcept {}

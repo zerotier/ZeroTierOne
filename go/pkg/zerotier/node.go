@@ -47,6 +47,9 @@ var nullLogger = log.New(ioutil.Discard, "", 0)
 
 // Network status states
 const (
+	NetworkIDStringLength = 16
+	AddressStringLength   = 10
+
 	NetworkStatusRequestConfiguration int = C.ZT_NETWORK_STATUS_REQUESTING_CONFIGURATION
 	NetworkStatusOK                   int = C.ZT_NETWORK_STATUS_OK
 	NetworkStatusAccessDenied         int = C.ZT_NETWORK_STATUS_ACCESS_DENIED

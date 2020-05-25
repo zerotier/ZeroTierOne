@@ -327,10 +327,10 @@ public:
 
 	/**
 	 * Check whether a key is ephemeral
-	 * 
+	 *
 	 * This is used to check whether a packet is received with forward secrecy enabled
 	 * or not.
-	 * 
+	 *
 	 * @param k Key to check
 	 * @return True if this key is ephemeral, false if it's the long-lived identity key
 	 */

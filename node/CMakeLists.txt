@@ -32,7 +32,6 @@ set(core_headers
 	OS.hpp
 	Path.hpp
 	Peer.hpp
-	PeerList.hpp
 	Poly1305.hpp
 	Protocol.hpp
 	RuntimeEnvironment.hpp
