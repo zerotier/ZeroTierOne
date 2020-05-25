@@ -425,10 +425,7 @@ bool Identity::fromString(const char *str)
 		return false;
 
 	m_computeHash();
-	if ((m_type == P384) && (m_fp.address() != Address(m_fp.hash())))
-		return false;
-
-	return true;
+	return !((m_type == P384) && (m_fp.address() != Address(m_fp.hash())));
 }
 
 int Identity::marshal(uint8_t data[ZT_IDENTITY_MARSHAL_SIZE_MAX], const bool includePrivate) const noexcept
