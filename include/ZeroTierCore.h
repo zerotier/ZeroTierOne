@@ -1755,9 +1755,10 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_multicastUnsubscribe(ZT_Node *node,uint64_
  * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
  * @param rdef Root definition (serialized identity and locator)
  * @param rdeflen Length of root definition in bytes
+ * @param address If non-NULL will be filled with the ZeroTier address of the root (only defined if return is OK)
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-ZT_SDK_API enum ZT_ResultCode ZT_Node_addRoot(ZT_Node *node,void *tptr,const void *rdef,unsigned int rdeflen);
+ZT_SDK_API enum ZT_ResultCode ZT_Node_addRoot(ZT_Node *node,void *tptr,const void *rdef,unsigned int rdeflen,uint64_t *address);
 
 /**
  * Remove a root

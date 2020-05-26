@@ -17,6 +17,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "../../include/ZeroTierCore.h"
 #include "../../node/Constants.hpp"
@@ -29,7 +30,7 @@ typedef void ZT_GoTap;
 struct ZT_GoNode_Impl;
 typedef struct ZT_GoNode_Impl ZT_GoNode;
 
-extern const char *ZT_PLATFORM_DEFAULT_HOMEPATH;
+extern const char *const ZT_PLATFORM_DEFAULT_HOMEPATH;
 
 ZT_GoNode *ZT_GoNode_new(const char *workingPath,uintptr_t userPtr);
 void ZT_GoNode_delete(ZT_GoNode *gn);

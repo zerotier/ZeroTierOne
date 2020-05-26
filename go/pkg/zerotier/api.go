@@ -18,6 +18,7 @@ import (
 	secrand "crypto/rand"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -32,8 +33,6 @@ import (
 
 // APISocketName is the default socket name for accessing the API
 const APISocketName = "apisocket"
-
-var startTime = TimeMs()
 
 // APIGet makes a query to the API via a Unix domain or windows pipe socket
 func APIGet(basePath, socketName, authToken, queryPath string, obj interface{}) (int, int64, error) {
@@ -128,7 +127,7 @@ type APIStatus struct {
 	Address                 Address        `json:"address"`
 	Clock                   int64          `json:"clock"`
 	StartupTime             int64          `json:"startupTime"`
-	Config                  LocalConfig    `json:"config"`
+	Config                  *LocalConfig   `json:"config"`
 	Online                  bool           `json:"online"`
 	PeerCount               int            `json:"peerCount"`
 	PathCount               int            `json:"pathCount"`
@@ -254,8 +253,6 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 
 	smux := http.NewServeMux()
 
-	////////////////////////////////////////////////////////////////////////////
-
 	smux.HandleFunc("/status", func(out http.ResponseWriter, req *http.Request) {
 		defer func() {
 			e := recover()
@@ -278,7 +275,7 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 			_ = apiSendObj(out, req, http.StatusOK, &APIStatus{
 				Address:                 node.Address(),
 				Clock:                   TimeMs(),
-				StartupTime:             startTime,
+				StartupTime:             node.startupTime,
 				Config:                  node.LocalConfig(),
 				Online:                  node.Online(),
 				PeerCount:               len(peers),
@@ -301,8 +298,6 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 			_ = apiSendObj(out, req, http.StatusMethodNotAllowed, &APIErr{"/status is read-only"})
 		}
 	})
-
-	////////////////////////////////////////////////////////////////////////////
 
 	smux.HandleFunc("/config", func(out http.ResponseWriter, req *http.Request) {
 		defer func() {
@@ -336,9 +331,9 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 		}
 	})
 
-	////////////////////////////////////////////////////////////////////////////
-
 	smux.HandleFunc("/peer/", func(out http.ResponseWriter, req *http.Request) {
+		var err error
+
 		defer func() {
 			e := recover()
 			if e != nil {
@@ -351,64 +346,91 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 		}
 		apiSetStandardHeaders(out)
 
+		if req.URL.Path == "/peer/_addroot" {
+			if req.Method == http.MethodPost || req.Method == http.MethodPut {
+				rsdata, err := ioutil.ReadAll(io.LimitReader(req.Body, 16384))
+				if err != nil || len(rsdata) == 0 {
+					_ = apiSendObj(out, req, http.StatusBadRequest, &APIErr{"read error"})
+				} else {
+					p, err := node.AddRoot(rsdata)
+					if err != nil {
+						_ = apiSendObj(out, req, http.StatusBadRequest, &APIErr{"invalid root spec"})
+					}
+					_ = apiSendObj(out, req, http.StatusOK, p)
+				}
+			} else {
+				out.Header().Set("Allow", "POST, PUT")
+				_ = apiSendObj(out, req, http.StatusMethodNotAllowed, &APIErr{"no root spec supplied"})
+			}
+			return
+		}
+
+		var queriedStr string
 		var queriedID Address
+		var queriedFP *Fingerprint
 		if len(req.URL.Path) > 6 {
-			var err error
-			queriedID, err = NewAddressFromString(req.URL.Path[6:])
-			if err != nil {
-				_ = apiSendObj(out, req, http.StatusNotFound, &APIErr{"peer not found"})
-				return
+			queriedStr = req.URL.Path[6:]
+			if len(queriedStr) == AddressStringLength {
+				queriedID, err = NewAddressFromString(queriedStr)
+				if err != nil {
+					_ = apiSendObj(out, req, http.StatusNotFound, &APIErr{"peer not found"})
+					return
+				}
+			} else {
+				queriedFP, err = NewFingerprintFromString(queriedStr)
+				if err != nil {
+					_ = apiSendObj(out, req, http.StatusNotFound, &APIErr{"peer not found"})
+					return
+				}
 			}
 		}
 
-		// Right now POST/PUT is only used with peers to add or remove root servers.
-		if req.Method == http.MethodPost || req.Method == http.MethodPut {
-			if queriedID == 0 {
-				_ = apiSendObj(out, req, http.StatusNotFound, &APIErr{"peer not found"})
-				return
+		var peer *Peer
+		peers := node.Peers()
+		if queriedFP != nil {
+			for _, p := range peers {
+				if p.Fingerprint.Equals(queriedFP) {
+					peer = p
+					break
+				}
 			}
-			var peerChanges PeerMutableFields
-			if apiReadObj(out, req, &peerChanges) == nil {
-				if peerChanges.Root != nil || peerChanges.Bootstrap != nil {
-					peers := node.Peers()
-					for _, p := range peers {
-						if p.Address == queriedID && (peerChanges.Identity == nil || peerChanges.Identity.Equals(p.Identity)) {
-							if peerChanges.Root != nil && *peerChanges.Root != p.Root {
-								if *peerChanges.Root {
-									_ = node.AddRoot(p.Identity, peerChanges.Bootstrap)
-								} else {
-									node.RemoveRoot(p.Identity)
-								}
-							}
-							break
-						}
+		} else if queriedID != 0 {
+			for _, p := range peers {
+				if p.Address == queriedID {
+					peer = p
+					break
+				}
+			}
+		}
+
+		if req.Method == http.MethodPost || req.Method == http.MethodPut {
+			if peer != nil {
+				var posted Peer
+				if apiReadObj(out, req, &posted) == nil {
+					if posted.Root && !peer.Root {
+						_ = apiSendObj(out, req, http.StatusBadRequest, &APIErr{"root spec must be submitted to /peer/_addroot, post to peers can only be used to clear the root flag"})
+					} else if !posted.Root && peer.Root {
+						peer.Root = false
+						node.RemoveRoot(peer.Address)
+						_ = apiSendObj(out, req, http.StatusOK, peer)
 					}
 				}
 			} else {
-				return
+				_ = apiSendObj(out, req, http.StatusNotFound, &APIErr{"peer not found"})
 			}
-		}
-
-		if req.Method == http.MethodGet || req.Method == http.MethodHead || req.Method == http.MethodPost || req.Method == http.MethodPut {
-			peers := node.Peers()
-			if queriedID != 0 {
-				for _, p := range peers {
-					if p.Address == queriedID {
-						_ = apiSendObj(out, req, http.StatusOK, p)
-						return
-					}
-				}
+		} else if req.Method == http.MethodGet || req.Method == http.MethodHead || req.Method == http.MethodPost || req.Method == http.MethodPut {
+			if peer != nil {
+				_ = apiSendObj(out, req, http.StatusOK, peer)
+			} else if len(queriedStr) > 0 {
 				_ = apiSendObj(out, req, http.StatusNotFound, &APIErr{"peer not found"})
 			} else {
 				_ = apiSendObj(out, req, http.StatusOK, peers)
 			}
 		} else {
-			out.Header().Set("Allow", "GET, HEAD, PUT, POST")
-			_ = apiSendObj(out, req, http.StatusMethodNotAllowed, &APIErr{"peers are read only"})
+			out.Header().Set("Allow", "GET, HEAD, POST, PUT")
+			_ = apiSendObj(out, req, http.StatusMethodNotAllowed, &APIErr{"unsupported method"})
 		}
 	})
-
-	////////////////////////////////////////////////////////////////////////////
 
 	smux.HandleFunc("/network/", func(out http.ResponseWriter, req *http.Request) {
 		defer func() {
@@ -495,8 +517,6 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 			_ = apiSendObj(out, req, http.StatusMethodNotAllowed, &APIErr{"unsupported method " + req.Method})
 		}
 	})
-
-	////////////////////////////////////////////////////////////////////////////
 
 	listener, err := createNamedSocketListener(basePath, APISocketName)
 	if err != nil {

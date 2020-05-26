@@ -27,14 +27,15 @@ import (
 	"unsafe"
 )
 
+// Constants from node/Identity.hpp (must be the same)
 const (
-	IdentityTypeC25519 = C.ZT_IDENTITY_TYPE_C25519
-	IdentityTypeP384   = C.ZT_IDENTITY_TYPE_P384
+	IdentityTypeC25519 = 0
+	IdentityTypeP384   = 1
 
-	IdentityTypeC25519PublicKeySize  = C.ZT_IDENTITY_C25519_PUBLIC_KEY_SIZE
-	IdentityTypeC25519PrivateKeySize = C.ZT_IDENTITY_C25519_PRIVATE_KEY_SIZE
-	IdentityTypeP384PublicKeySize    = C.ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE
-	IdentityTypeP384PrivateKeySize   = C.ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE
+	IdentityTypeC25519PublicKeySize  = 64
+	IdentityTypeC25519PrivateKeySize = 64
+	IdentityTypeP384PublicKeySize    = 114
+	IdentityTypeP384PrivateKeySize   = 112
 )
 
 // Identity is precisely what it sounds like: the address and associated keys for a ZeroTier node
@@ -239,14 +240,14 @@ func (id *Identity) MakeRoot(addresses []InetAddress) ([]byte, error) {
 		return nil, errors.New("error initializing ZT_Identity")
 	}
 
-	ss := make([]C.sockaddr_storage, len(addresses))
+	ss := make([]C.struct_sockaddr_storage, len(addresses))
 	for i := range addresses {
 		if !makeSockaddrStorage(addresses[i].IP, addresses[i].Port, &ss[i]) {
 			return nil, errors.New("invalid address in address list")
 		}
 	}
 	var buf [8192]byte
-	rl := C.ZT_Identity_makeRootSpecification(id.cid, C.int64_t(TimeMs()), &ss[0], C.uint(len(ss)), &buf[0], 8192)
+	rl := C.ZT_Identity_makeRootSpecification(id.cid, C.int64_t(TimeMs()), &ss[0], C.uint(len(ss)), unsafe.Pointer(&buf[0]), 8192)
 	if rl <= 0 {
 		return nil, errors.New("unable to make root specification (does identity contain a secret key?)")
 	}

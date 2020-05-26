@@ -17,16 +17,10 @@ package zerotier
 type Peer struct {
 	Address      Address      `json:"address"`
 	Identity     *Identity    `json:"identity"`
-	Fingerprint  []byte       `json:"fingerprint"`
+	Fingerprint  Fingerprint  `json:"fingerprint"`
 	Version      [3]int       `json:"version"`
 	Latency      int          `json:"latency"`
 	Root         bool         `json:"root"`
 	Bootstrap    *InetAddress `json:"bootstrap,omitempty"`
 	Paths        []Path       `json:"paths,omitempty"`
-}
-
-// PeerMutableFields contains only the mutable fields of Peer as nullable pointers.
-type PeerMutableFields struct {
-	Root      *bool        `json:"root"`
-	RootSpec  []byte       `json:"rootSpec"`
 }

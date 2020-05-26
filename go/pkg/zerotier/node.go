@@ -63,7 +63,7 @@ const (
 	defaultVirtualNetworkMTU = C.ZT_DEFAULT_MTU
 
 	// maxCNodeRefs is the maximum number of Node instances that can be created in this process (increasing is fine)
-	maxCNodeRefs = 4
+	maxCNodeRefs = 8
 )
 
 var (
@@ -90,6 +90,9 @@ func init() {
 
 // Node is an instance of a virtual port on the global switch.
 type Node struct {
+	// Time this node was created
+	startupTime int64
+
 	// an arbitrary uintptr given to the core as its pointer back to Go's Node instance
 	cPtr uintptr
 
@@ -146,13 +149,14 @@ type Node struct {
 // NewNode creates and initializes a new instance of the ZeroTier node service
 func NewNode(basePath string) (n *Node, err error) {
 	n = new(Node)
+	n.startupTime = TimeMs()
 
 	// Register this with the cNodeRefs lookup array and set up a deferred function
 	// to unregister this if we exit before the end of the constructor such as by
 	// returning an error.
 	cPtr := -1
-	for i:=0;i<maxCNodeRefs;i++ {
-		if atomic.CompareAndSwapUint32(&cNodeRefUsed[i],0,1) {
+	for i := 0; i < maxCNodeRefs; i++ {
+		if atomic.CompareAndSwapUint32(&cNodeRefUsed[i], 0, 1) {
 			cNodeRefs[i] = n
 			cPtr = i
 			n.cPtr = uintptr(i)
@@ -164,7 +168,7 @@ func NewNode(basePath string) (n *Node, err error) {
 	}
 	defer func() {
 		if cPtr >= 0 {
-			atomic.StoreUint32(&cNodeRefUsed[cPtr],0)
+			atomic.StoreUint32(&cNodeRefUsed[cPtr], 0)
 			cNodeRefs[cPtr] = nil
 		}
 	}()
@@ -331,7 +335,7 @@ func (n *Node) Close() {
 		n.runWaitGroup.Wait()
 
 		cNodeRefs[n.cPtr] = nil
-		atomic.StoreUint32(&cNodeRefUsed[n.cPtr],0)
+		atomic.StoreUint32(&cNodeRefUsed[n.cPtr], 0)
 	}
 }
 
@@ -445,11 +449,31 @@ func (n *Node) Leave(nwid NetworkID) error {
 	return nil
 }
 
-func (n *Node) AddRoot(spec []byte) error {
-	return nil
+func (n *Node) AddRoot(spec []byte) (*Peer, error) {
+	if len(spec) == 0 {
+		return nil, ErrInvalidParameter
+	}
+	var address C.uint64_t
+	res := C.ZT_Node_addRoot(n.zn, nil, unsafe.Pointer(&spec[0]), C.uint(len(spec)), &address)
+	if res != 0 {
+		return nil, ErrInvalidParameter
+	}
+	peers := n.Peers()
+	for _, p := range peers {
+		if p.Address == Address(uint64(address)) {
+			return p, nil
+		}
+	}
+	return nil, ErrInternal
 }
 
 func (n *Node) RemoveRoot(address Address) {
+	var cfp C.ZT_Fingerprint
+	cfp.address = C.uint64_t(address)
+	for i := 0; i < 48; i++ {
+		cfp.hash[i] = 0
+	}
+	C.ZT_Node_removeRoot(n.zn, nil, &cfp)
 }
 
 // GetNetwork looks up a network by ID or returns nil if not joined
@@ -481,7 +505,8 @@ func (n *Node) Peers() []*Peer {
 			p2 := new(Peer)
 			p2.Address = Address(p.address)
 			p2.Identity, _ = newIdentityFromCIdentity(unsafe.Pointer(p.identity))
-			p2.Fingerprint = C.GoBytes(unsafe.Pointer(&p.fingerprint.hash[0]), 48)
+			p2.Fingerprint.Address = p2.Address
+			copy(p2.Fingerprint.Hash[:], ((*[48]byte)(unsafe.Pointer(&p.fingerprint.hash[0])))[:])
 			p2.Version = [3]int{int(p.versionMajor), int(p.versionMinor), int(p.versionRev)}
 			p2.Latency = int(p.latency)
 			p2.Root = p.root != 0
@@ -498,7 +523,6 @@ func (n *Node) Peers() []*Peer {
 							Port:          a.Port,
 							LastSend:      int64(pt.lastSend),
 							LastReceive:   int64(pt.lastReceive),
-							TrustedPathID: uint64(pt.trustedPathId),
 						})
 					}
 				}
@@ -602,7 +626,7 @@ func (n *Node) runMaintenance() {
 		}
 		for _, ip := range interfaceAddresses {
 			for _, p := range ports {
-				a := InetAddress{ IP: ip, Port: p }
+				a := InetAddress{IP: ip, Port: p}
 				ak := a.key()
 				if _, have := externalAddresses[ak]; !have {
 					externalAddresses[ak] = &a

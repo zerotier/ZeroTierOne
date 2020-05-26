@@ -92,7 +92,7 @@ struct ZT_GoNode_Impl
 };
 
 static const std::string defaultHomePath(OSUtils::platformDefaultHomePath());
-const char *ZT_PLATFORM_DEFAULT_HOMEPATH = defaultHomePath.c_str();
+const char *const ZT_PLATFORM_DEFAULT_HOMEPATH = defaultHomePath.c_str();
 
 // These are implemented in Go code.
 extern "C" int goPathCheckFunc(void *,const ZT_Identity *,int,const void *,int);
@@ -300,6 +300,7 @@ extern "C" ZT_GoNode *ZT_GoNode_new(const char *workingPath,uintptr_t userPtr)
 {
 	try {
 		struct ZT_Node_Callbacks cb;
+
 		cb.statePutFunction = &ZT_GoNode_StatePutFunction;
 		cb.stateGetFunction = &ZT_GoNode_StateGetFunction;
 		cb.wirePacketSendFunction = &ZT_GoNode_WirePacketSendFunction;

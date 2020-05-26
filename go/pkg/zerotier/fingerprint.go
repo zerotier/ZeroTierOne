@@ -18,6 +18,7 @@ package zerotier
 import "C"
 
 import (
+	"bytes"
 	"errors"
 	"strings"
 	"unsafe"
@@ -47,6 +48,10 @@ func (fp *Fingerprint) String() string {
 	fp.Address.CopyTo(tmp[0:5])
 	copy(tmp[5:],fp.Hash[:])
 	return Base32StdLowerCase.EncodeToString(tmp[:])
+}
+
+func (fp *Fingerprint) Equals(fp2 *Fingerprint) bool {
+	return fp.Address == fp2.Address && bytes.Equal(fp.Hash[:], fp2.Hash[:])
 }
 
 func (fp *Fingerprint) apiFingerprint() *C.ZT_Fingerprint {

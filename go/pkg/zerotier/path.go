@@ -21,5 +21,4 @@ type Path struct {
 	Port          int    `json:"port"`
 	LastSend      int64  `json:"lastSend"`
 	LastReceive   int64  `json:"lastReceive"`
-	TrustedPathID uint64 `json:"trustedPathID"`
 }

@@ -224,9 +224,6 @@ ZT_ResultCode Node::processBackgroundTasks(void *tPtr,int64_t now,volatile int64
 
 				if (pf.online) {
 					// If we have at least one online root, request whois for roots not online.
-					// This will give us updated locators for these roots which may contain new
-					// IP addresses. It will also auto-discover IPs for roots that were not added
-					// with an initial bootstrap address.
 					// TODO
 					//for (Vector<Address>::const_iterator r(pf.rootsNotOnline.begin()); r != pf.rootsNotOnline.end(); ++r)
 					//	RR->sw->requestWhois(tPtr,now,*r);
@@ -339,11 +336,13 @@ ZT_ResultCode Node::multicastUnsubscribe(uint64_t nwid,uint64_t multicastGroup,u
 	} else return ZT_RESULT_ERROR_NETWORK_NOT_FOUND;
 }
 
-ZT_ResultCode Node::addRoot(void *tPtr,const void *rdef,unsigned int rdeflen)
+ZT_ResultCode Node::addRoot(void *tPtr,const void *rdef,unsigned int rdeflen,uint64_t *address)
 {
 	if ((!rdef)||(rdeflen == 0))
 		return ZT_RESULT_ERROR_BAD_PARAMETER;
 	std::pair<Identity,Locator> r(Locator::parseRootSpecification(rdef,rdeflen));
+	if (address)
+		*address = r.first.address().toInt();
 	return ((r.first)&&(RR->topology->addRoot(tPtr,r.first,r.second))) ? ZT_RESULT_OK : ZT_RESULT_ERROR_BAD_PARAMETER;
 }
 
@@ -862,10 +861,10 @@ enum ZT_ResultCode ZT_Node_multicastUnsubscribe(ZT_Node *node,uint64_t nwid,uint
 	}
 }
 
-enum ZT_ResultCode ZT_Node_addRoot(ZT_Node *node,void *tptr,const void *rdef,unsigned int rdeflen)
+enum ZT_ResultCode ZT_Node_addRoot(ZT_Node *node,void *tptr,const void *rdef,unsigned int rdeflen,uint64_t *address)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->addRoot(tptr,rdef,rdeflen);
+		return reinterpret_cast<ZeroTier::Node *>(node)->addRoot(tptr,rdef,rdeflen,address);
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch ( ... ) {
