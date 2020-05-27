@@ -1596,7 +1596,7 @@ public:
 					continue;
 				}
 				// New bond, used as a copy template for new instances
-				SharedPtr<Bond> newTemplateBond = new Bond(basePolicyStr, customPolicyStr, SharedPtr<Peer>());
+				SharedPtr<Bond> newTemplateBond = new Bond(NULL, basePolicyStr, customPolicyStr, SharedPtr<Peer>());
 				// Acceptable ranges
 				newTemplateBond->setMaxAcceptableLatency(OSUtils::jsonInt(customPolicy["maxAcceptableLatency"],-1));
 				newTemplateBond->setMaxAcceptableMeanLatency(OSUtils::jsonInt(customPolicy["maxAcceptableMeanLatency"],-1));

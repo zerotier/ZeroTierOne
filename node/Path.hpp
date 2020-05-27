@@ -127,8 +127,7 @@ public:
 		_packetsReceivedSinceLastQoS(0),
 		_bytesAckedSinceLastThroughputEstimation(0),
 		_packetsIn(0),
-		_packetsOut(0),
-		_prevEligibility(false)
+		_packetsOut(0)
 		{}
 
 	Path(const int64_t localSocket,const InetAddress &addr) :
@@ -177,8 +176,7 @@ public:
 		_packetsReceivedSinceLastQoS(0),
 		_bytesAckedSinceLastThroughputEstimation(0),
 		_packetsIn(0),
-		_packetsOut(0),
-		_prevEligibility(false)
+		_packetsOut(0)
 	{}
 
 	/**
@@ -187,10 +185,10 @@ public:
 	 * @param t Time of receive
 	 */
 	inline void received(const uint64_t t) {
-		_lastIn = t;
-		if (!_prevEligibility) {
+		if (!alive(t,_bonded)) {
 			_lastAliveToggle = _lastIn;
 		}
+		_lastIn = t;
 	}
 
 	/**
@@ -506,7 +504,7 @@ private:
 	uint64_t _lastQoSMeasurement;
 
 	/**
-	 * Last time that a the path's throughput was estimated.
+	 * Last time that the path's throughput was estimated.
 	 */
 	uint64_t _lastThroughputEstimation;
 
@@ -531,7 +529,7 @@ private:
 	uint64_t _lastTrialBegin;
 
 	/**
-	 * Amount of time that this path is prevented from becoming a member of a bond.
+	 * Amount of time that this path will be prevented from becoming a member of a bond.
 	 */
 	uint32_t _refractoryPeriod;
 
@@ -576,7 +574,7 @@ private:
 	bool _bonded;
 
 	/**
-	 * Whether this path was intentionally _negotiated by either peer.
+	 * Whether this path was intentionally negotiated by either peer.
 	 */
 	bool _negotiated;
 
@@ -684,10 +682,6 @@ private:
 	 */
 	int _packetsIn;
 	int _packetsOut;
-
-	// TODO: Remove
-
-	bool _prevEligibility;
 };
 
 } // namespace ZeroTier

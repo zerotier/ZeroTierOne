@@ -36,7 +36,7 @@ public:
 	BondController(const RuntimeEnvironment *renv);
 
 	/**
-	 * @return The minimum interval required to poll the active bonds to fulfill all active monitoring timing requirements.
+	 * @return Whether this slave is permitted to become a member of a bond.
 	 */
 	bool slaveAllowed(std::string &policyAlias, SharedPtr<Slave> slave);
 
@@ -46,7 +46,7 @@ public:
 	int minReqPathMonitorInterval() { return _minReqPathMonitorInterval; }
 
 	/**
-	 * @return The minimum interval required to poll the active bonds to fulfill all active monitoring timing requirements.
+	 * @param minReqPathMonitorInterval The minimum interval required to poll the active bonds to fulfill all active monitoring timing requirements.
 	 */
 	static void setMinReqPathMonitorInterval(int minReqPathMonitorInterval) { _minReqPathMonitorInterval = minReqPathMonitorInterval; }
 

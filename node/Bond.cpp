@@ -29,7 +29,8 @@ Bond::Bond(const RuntimeEnvironment *renv, int policy, const SharedPtr<Peer>& pe
 	_policyAlias = BondController::getPolicyStrByCode(policy);
 }
 
-Bond::Bond(std::string& basePolicy, std::string& policyAlias, const SharedPtr<Peer>& peer) :
+Bond::Bond(const RuntimeEnvironment *renv, std::string& basePolicy, std::string& policyAlias, const SharedPtr<Peer>& peer) :
+	RR(renv),
 	_policyAlias(policyAlias),
 	_peer(peer)
 {
@@ -1518,20 +1519,23 @@ void Bond::setReasonableDefaults(int policy)
 	_upDelay = 0;
 	_allowFlowHashing=false;
 	_bondMonitorInterval=0;
-	_allowPathNegotiation=false;
 	_shouldCollectPathStatistics=false;
-	_lastPathNegotiationReceived=0;
 	_lastBackgroundTaskCheck=0;
+
+	// Path negotiation
+	_allowPathNegotiation=false;
+	_lastPathNegotiationReceived=0;
 	_lastPathNegotiationCheck=0;
+	_pathNegotiationCutoffCount=0;
+	_localUtility=0;
 
 	_lastFlowStatReset=0;
 	_lastFlowExpirationCheck=0;
-	_localUtility=0;
+
 	_numBondedPaths=0;
 	_rrPacketsSentOnCurrSlave=0;
 	_rrIdx=0;
-	_lastPathNegotiationReceived=0;
-	_pathNegotiationCutoffCount=0;
+
 	_lastFlowRebalance=0;
 	_totalBondUnderload = 0;
 
@@ -1542,12 +1546,6 @@ void Bond::setReasonableDefaults(int policy)
 	_userHasSpecifiedSlaveSpeeds=0;
 
 	_lastFrame=0;
-
-	// TODO: Remove
-	_header=false;
-	_lastLogTS = 0;
-	_lastPrintTS = 0;
-
 
 
 
@@ -1582,7 +1580,7 @@ void Bond::setReasonableDefaults(int policy)
 		case ZT_BONDING_POLICY_BALANCE_RR:
 			_failoverInterval = 5000;
 			_allowFlowHashing = false;
-			_packetsPerSlave = 512;
+			_packetsPerSlave = 1024;
 			_slaveMonitorStrategy = ZT_MULTIPATH_SLAVE_MONITOR_STRATEGY_DYNAMIC;
 			_qualityWeights[ZT_QOS_LAT_IDX] = 0.4f;
 			_qualityWeights[ZT_QOS_LTM_IDX] = 0.0f;
@@ -1653,10 +1651,22 @@ void Bond::setReasonableDefaults(int policy)
 	_qosSendInterval = _bondMonitorInterval * 4;
 	_qosCutoffCount = 0;
 	_lastQoSRateCheck = 0;
+	_lastQualityEstimation=0;
 	throughputMeasurementInterval = _ackSendInterval * 2;
 	BondController::setMinReqPathMonitorInterval(_bondMonitorInterval);
 
 	_defaultPathRefractoryPeriod = 8000;
+
+
+
+
+
+	// TODO: Remove
+	_header=false;
+	_lastLogTS = 0;
+	_lastPrintTS = 0;
+
+
 
 	fprintf(stderr, "TIMERS: strat=%d, fi= %d, bmi= %d, qos= %d, ack= %d, estimateInt= %d, refractory= %d, ud= %d, dd= %d\n",
 		_slaveMonitorStrategy,
@@ -1669,7 +1679,7 @@ void Bond::setReasonableDefaults(int policy)
 		_upDelay,
 		_downDelay);
 
-	_lastQualityEstimation=0;
+
 }
 
 void Bond::setUserQualityWeights(float weights[], int len)

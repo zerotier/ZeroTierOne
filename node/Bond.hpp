@@ -55,13 +55,6 @@ public:
 	SharedPtr<Slave> getSlave(const SharedPtr<Path>& path);
 
 	/**
-	 * Constructor. For use only in first initialization in Node
-	 *
-	 * @param renv Runtime environment
-	 */
-	Bond(const RuntimeEnvironment *renv);
-
-	/**
 	 * Constructor. Creates a bond based off of ZT defaults
 	 *
 	 * @param renv Runtime environment
@@ -77,7 +70,7 @@ public:
 	 * @param policyAlias
 	 * @param peer
 	 */
-	Bond(std::string& basePolicy, std::string& policyAlias, const SharedPtr<Peer>& peer);
+	Bond(const RuntimeEnvironment *renv, std::string& basePolicy, std::string& policyAlias, const SharedPtr<Peer>& peer);
 
 	/**
 	 * Constructor. Creates a bond based off of a user-defined bond template
@@ -89,8 +82,7 @@ public:
 	Bond(const RuntimeEnvironment *renv, const Bond &original, const SharedPtr<Peer>& peer);
 
 	/**
-	 *
-	 * @return
+	 * @return The human-readable name of the bonding policy
 	 */
 	std::string policyAlias() { return _policyAlias; }
 
