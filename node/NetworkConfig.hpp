@@ -226,9 +226,16 @@ public:
 		capabilityCount(0),
 		tagCount(0),
 		certificateOfOwnershipCount(0),
+		capabilities(),
+		tags(),
+		certificatesOfOwnership(),
 		type(ZT_NETWORK_TYPE_PRIVATE)
 	{
 		name[0] = 0;
+		memset(specialists, 0, sizeof(uint64_t)*ZT_MAX_NETWORK_SPECIALISTS);
+		memset(routes, 0, sizeof(ZT_VirtualNetworkRoute)*ZT_MAX_NETWORK_ROUTES);
+		memset(staticIps, 0, sizeof(InetAddress)*ZT_MAX_ZT_ASSIGNED_ADDRESSES);
+		memset(rules, 0, sizeof(ZT_VirtualNetworkRule)*ZT_MAX_NETWORK_RULES);
 	}
 
 	/**
