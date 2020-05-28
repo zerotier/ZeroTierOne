@@ -1732,33 +1732,18 @@ void PostgreSQL::_doRedisUpdate(sw::redis::Transaction &tx, std::string &control
 	// expire records from all-nodes and network-nodes member list
 	uint64_t expireOld = OSUtils::now() - 300000;
 	
-	auto cursor = 0LL;
-	std::unordered_set<std::string> keys;
-	// can't scan for keys in a transaction, so we need to fall back to _cluster or _redis
-	// to get all network-members keys
-	if(_rc->clusterMode) {
-		auto r = _cluster->redis(controllerId);
-		while(true) {
-			cursor = r.scan(cursor, "network-nodes-online:{"+controllerId+"}:*", INT_MAX, std::inserter(keys, keys.begin()));
-			if (cursor == 0) {
-				break;
-			}
-		}
-	} else {
-		while(true) {
-			cursor = _redis->scan(cursor, "network-nodes-online:"+controllerId+":*", INT_MAX, std::inserter(keys, keys.begin()));
-			if (cursor == 0) {
-				break;
-			}
-		}
-	}
-
 	tx.zremrangebyscore("nodes-online:{"+controllerId+"}", sw::redis::RightBoundedInterval<double>(expireOld, sw::redis::BoundType::LEFT_OPEN));
 	tx.zremrangebyscore("active-networks:{"+controllerId+"}", sw::redis::RightBoundedInterval<double>(expireOld, sw::redis::BoundType::LEFT_OPEN));
-	for(const auto &k : keys) {
-		tx.zremrangebyscore(k, sw::redis::RightBoundedInterval<double>(expireOld, sw::redis::BoundType::LEFT_OPEN));
+	{
+		std::lock_guard<std::mutex> l(_networks_l);
+		for (const auto &it : _networks) {
+			uint64_t nwid_i = it.first;
+			char nwidTmp[64];
+			OSUtils::ztsnprintf(nwidTmp,sizeof(nwidTmp), "%.16llx", nwid_i);
+			tx.zremrangebyscore("network-nodes-online:{"+controllerId+"}:"+nwidTmp, 
+				 sw::redis::RightBoundedInterval<double>(expireOld, sw::redis::BoundType::LEFT_OPEN));
+		}
 	}
-
 	tx.exec();
 }
 
