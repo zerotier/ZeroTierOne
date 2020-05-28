@@ -1483,8 +1483,10 @@ void PostgreSQL::commitThread()
 						std::string key = "networks:{" + controllerId + "}";
 						if (_rc->clusterMode) {
 							_cluster->srem(key, id);
+							_cluster->del("network-nodes-online:{"+controllerId+"}:"+id);
 						} else {
 							_redis->srem(key, id);
+							_redis->del("network-nodes-online:{"+controllerId+"}:"+id);
 						}
 					} catch (sw::redis::Error &e) {
 						fprintf(stderr, "ERROR: Error adding network to Redis: %s\n", e.what());
@@ -1525,8 +1527,10 @@ void PostgreSQL::commitThread()
 						std::string key = "network-nodes-all:{" + controllerId + "}:" + networkId;
 						if (_rc->clusterMode) {
 							_cluster->srem(key, memberId);
+							_cluster->del("member:{"+controllerId+"}:"+networkId+":"+memberId);
 						} else {
 							_redis->srem(key, memberId);
+							_redis->del("member:{"+controllerId+"}:"+networkId+":"+memberId);
 						}
 					} catch (sw::redis::Error &e) {
 						fprintf(stderr, "ERROR: Error deleting member from Redis: %s\n", e.what());
