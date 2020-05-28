@@ -1774,6 +1774,7 @@ void PostgreSQL::_doRedisUpdate(sw::redis::Transaction &tx, std::string &control
 			{"last_updated", std::to_string(ts)}
 		};
 		tx.zadd("nodes-online:{"+controllerId+"}", memberId, ts)
+			.zadd("nodes-online2:{"+controllerId+"}", networkId+"-"+memberId, ts)
 			.zadd("network-nodes-online:{"+controllerId+"}:"+networkId, memberId, ts)
 			.zadd("active-networks:{"+controllerId+"}", networkId, ts)
 			.sadd("network-nodes-all:{"+controllerId+"}:"+networkId, memberId)
@@ -1786,6 +1787,7 @@ void PostgreSQL::_doRedisUpdate(sw::redis::Transaction &tx, std::string &control
 	uint64_t expireOld = OSUtils::now() - 300000;
 	
 	tx.zremrangebyscore("nodes-online:{"+controllerId+"}", sw::redis::RightBoundedInterval<double>(expireOld, sw::redis::BoundType::LEFT_OPEN));
+	tx.zremrangebyscore("nodes-online2:{"+controllerId+"}", sw::redis::RightBoundedInterval<double>(expireOld, sw::redis::BoundType::LEFT_OPEN));
 	tx.zremrangebyscore("active-networks:{"+controllerId+"}", sw::redis::RightBoundedInterval<double>(expireOld, sw::redis::BoundType::LEFT_OPEN));
 	{
 		std::lock_guard<std::mutex> l(_networks_l);
