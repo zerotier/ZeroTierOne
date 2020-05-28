@@ -1590,7 +1590,7 @@ void PostgreSQL::onlineNotificationThread()
 			fprintf(stderr, "Error in online notification thread (redis): %s\n", e.what());
 #endif
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
 
 	fprintf(stderr, "%s: Fell out of run loop in onlineNotificationThread\n", _myAddressStr.c_str());
@@ -1705,7 +1705,7 @@ void PostgreSQL::onlineNotification_Postgres(PGconn *conn, std::unordered_map< s
 			PQclear(res);
 		}
 
-	// 	std::this_thread::sleep_for(std::chrono::milliseconds(10));
+	// 	std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	// }
 	// fprintf(stderr, "%s: Fell out of run loop in onlineNotificationThread\n", _myAddressStr.c_str());
 	// PQfinish(conn);
@@ -1743,7 +1743,7 @@ void PostgreSQL::onlineNotification_Redis()
 			fprintf(stderr, "Error in online notification thread (redis): %s\n", e.what());
 #endif
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
 }
 
@@ -1784,8 +1784,6 @@ void PostgreSQL::_doRedisUpdate(sw::redis::Transaction &tx, std::string &control
 			.sadd("network-nodes-all:{"+controllerId+"}:"+networkId, memberId)
 			.hmset("member:{"+controllerId+"}:"+networkId+":"+memberId, record.begin(), record.end());
 	}
-
-	tx.exec();
 
 	// expire records from all-nodes and network-nodes member list
 	uint64_t expireOld = OSUtils::now() - 300000;
