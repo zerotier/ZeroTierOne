@@ -2132,7 +2132,11 @@ ZT_SDK_API void ZT_Identity_delete(ZT_Identity *id);
  * @param signer Identity to sign locator (must include private key)
  * @return Locator or NULL on error (too many endpoints or identity does not have private key)
  */
-ZT_SDK_API ZT_Locator *ZT_Locator_create(int64_t ts,const ZT_Endpoint *endpoints,unsigned int endpointCount,const ZT_Identity *signer);
+ZT_SDK_API ZT_Locator *ZT_Locator_create(
+	int64_t ts,
+	const ZT_Endpoint *endpoints,
+	unsigned int endpointCount,
+	const ZT_Identity *signer);
 
 /**
  * Decode a serialized locator
@@ -2141,7 +2145,29 @@ ZT_SDK_API ZT_Locator *ZT_Locator_create(int64_t ts,const ZT_Endpoint *endpoints
  * @param len Length of data
  * @return Locator or NULL if data is not valid
  */
-ZT_SDK_API ZT_Locator *ZT_Locator_unmarshal(const void *data,unsigned int len);
+ZT_SDK_API ZT_Locator *ZT_Locator_unmarshal(
+	const void *data,
+	unsigned int len);
+
+/**
+ * Serialize this locator into a buffer
+ *
+ * @param loc Locator to serialize
+ * @param buf Buffer to store bytes
+ * @param bufSize Size of buffer in bytes (needs to be at least 2048 bytes in size)
+ * @return Number of bytes stored to buf or -1 on error such as buffer too small
+ */
+ZT_SDK_API int ZT_Locator_marshal(const ZT_Locator *loc,void *buf,unsigned int bufSize);
+
+/**
+ * Get a pointer to the fingerprint of this locator's signer.
+ *
+ * The returned pointer remains valid as long as the Locator is not deleted.
+ *
+ * @param loc Locator to query
+ * @return Pointer to fingerprint of signer
+ */
+ZT_SDK_API const ZT_Fingerprint *ZT_Locator_fingerprint(const ZT_Locator *loc);
 
 /**
  * Get the number of endpoints in this locator
@@ -2159,7 +2185,15 @@ ZT_SDK_API unsigned int ZT_Locator_endpointCount(const ZT_Locator *loc);
  * @param ep Endpoint number from 0 to 1 - endpointCount()
  * @return Endpoint or NULL if out of bounds
  */
-ZT_SDK_API const ZT_Endpoint *ZT_Locator_endpoint(const unsigned int ep);
+ZT_SDK_API const ZT_Endpoint *ZT_Locator_endpoint(const ZT_Locator *loc,const unsigned int ep);
+
+/**
+ * Verify this locator's signature
+ *
+ * @param signer Signing identity
+ * @return Non-zero if locator is valid
+ */
+ZT_SDK_API int ZT_Locator_verify(const ZT_Locator *loc,const ZT_Identity *signer);
 
 /**
  * Delete a locator
@@ -2178,7 +2212,11 @@ ZT_SDK_API void ZT_Locator_delete(ZT_Locator *loc);
  * @param revision Result: revision
  * @param build Result: build number
  */
-ZT_SDK_API void ZT_version(int *major,int *minor,int *revision,int *build);
+ZT_SDK_API void ZT_version(
+	int *major,
+	int *minor,
+	int *revision,
+	int *build);
 
 #ifdef __cplusplus
 }

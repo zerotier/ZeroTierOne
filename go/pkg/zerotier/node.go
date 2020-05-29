@@ -410,7 +410,7 @@ func (n *Node) Join(nwid NetworkID, controllerFingerprint *Fingerprint, settings
 	}
 	var fp *C.ZT_Fingerprint
 	if controllerFingerprint != nil {
-		fp = controllerFingerprint.apiFingerprint()
+		fp = controllerFingerprint.cFingerprint()
 	}
 	ntap := C.ZT_GoNode_join(n.gn, C.uint64_t(nwid), fp)
 	if ntap == nil {
@@ -448,31 +448,13 @@ func (n *Node) Leave(nwid NetworkID) error {
 	return nil
 }
 
-func (n *Node) AddRoot(spec []byte) (*Peer, error) {
-	if len(spec) == 0 {
-		return nil, ErrInvalidParameter
-	}
-	var address C.uint64_t
-	res := C.ZT_Node_addRoot(n.zn, nil, unsafe.Pointer(&spec[0]), C.uint(len(spec)), &address)
-	if res != 0 {
-		return nil, ErrInvalidParameter
-	}
-	peers := n.Peers()
-	for _, p := range peers {
-		if p.Address == Address(uint64(address)) {
-			return p, nil
-		}
-	}
-	return nil, ErrInternal
+func (n *Node) AddRoot(id *Identity, loc *Locator) (*Peer, error) {
+	// TODO
+	return nil, nil
 }
 
 func (n *Node) RemoveRoot(address Address) {
-	var cfp C.ZT_Fingerprint
-	cfp.address = C.uint64_t(address)
-	for i := 0; i < 48; i++ {
-		cfp.hash[i] = 0
-	}
-	C.ZT_Node_removeRoot(n.zn, nil, &cfp)
+	C.ZT_Node_removeRoot(n.zn, nil, C.uint64_t(address))
 }
 
 // GetNetwork looks up a network by ID or returns nil if not joined
@@ -512,15 +494,16 @@ func (n *Node) Peers() []*Peer {
 
 			p2.Paths = make([]Path, 0, int(p.pathCount))
 			for j := 0; j < len(p2.Paths); j++ {
-				pt := (*C.ZT_PeerPhysicalPath)(unsafe.Pointer(uintptr(unsafe.Pointer(p.paths)) + uintptr(j*C.sizeof_ZT_PeerPhysicalPath)))
+				pt := (*C.ZT_Path)(unsafe.Pointer(uintptr(unsafe.Pointer(p.paths)) + uintptr(j*C.sizeof_ZT_Path)))
 				if pt.alive != 0 {
-					a := sockaddrStorageToUDPAddr(&pt.address)
+					ep := Endpoint{pt.endpoint}
+					a := ep.InetAddress()
 					if a != nil {
 						p2.Paths = append(p2.Paths, Path{
-							IP:            a.IP,
-							Port:          a.Port,
-							LastSend:      int64(pt.lastSend),
-							LastReceive:   int64(pt.lastReceive),
+							IP:          a.IP,
+							Port:        a.Port,
+							LastSend:    int64(pt.lastSend),
+							LastReceive: int64(pt.lastReceive),
 						})
 					}
 				}
@@ -528,7 +511,7 @@ func (n *Node) Peers() []*Peer {
 
 			peers = append(peers, p2)
 		}
-		C.ZT_Node_freeQueryResult(n.zn, unsafe.Pointer(pl))
+		C.ZT_freeQueryResult(unsafe.Pointer(pl))
 	}
 	sort.Slice(peers, func(a, b int) bool {
 		return peers[a].Address < peers[b].Address

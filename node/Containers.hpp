@@ -157,8 +157,11 @@ class String : public std::basic_string< char,std::char_traits<char>,Utils::Mall
 {
 public:
 	ZT_INLINE String() {}
-	explicit ZT_INLINE String(const char *const s) { assign(s); }
+	ZT_INLINE String(const String &s) : std::basic_string< char,std::char_traits<char>,Utils::Mallocator<char> >(s.c_str()) {}
+	ZT_INLINE String(const std::string &s) : std::basic_string< char,std::char_traits<char>,Utils::Mallocator<char> >(s.c_str()) {}
+	ZT_INLINE String(const char *const s) : std::basic_string< char,std::char_traits<char>,Utils::Mallocator<char> >(s) {}
 	ZT_INLINE String &operator=(const char *const s) { assign(s); return *this; }
+	ZT_INLINE String &operator=(const std::string &s) { assign(s.c_str()); return *this; }
 };
 
 } // ZeroTier

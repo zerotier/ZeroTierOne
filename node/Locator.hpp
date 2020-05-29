@@ -23,7 +23,7 @@
 #include "Containers.hpp"
 
 #define ZT_LOCATOR_MAX_ENDPOINTS 8
-#define ZT_LOCATOR_MARSHAL_SIZE_MAX (8 + 2 + (ZT_LOCATOR_MAX_ENDPOINTS * ZT_ENDPOINT_MARSHAL_SIZE_MAX) + 2 + 2 + ZT_SIGNATURE_BUFFER_SIZE)
+#define ZT_LOCATOR_MARSHAL_SIZE_MAX (8 + ZT_FINGERPRINT_MARSHAL_SIZE + 2 + (ZT_LOCATOR_MAX_ENDPOINTS * ZT_ENDPOINT_MARSHAL_SIZE_MAX) + 2 + 2 + ZT_SIGNATURE_BUFFER_SIZE)
 
 namespace ZeroTier {
 
@@ -45,6 +45,7 @@ public:
 
 	ZT_INLINE Locator(const Locator &loc) noexcept :
 		m_ts(loc.m_ts),
+		m_signer(loc.m_signer),
 		m_endpoints(loc.m_endpoints),
 		m_signature(loc.m_signature),
 		__refCount(0)
@@ -55,6 +56,12 @@ public:
 	 */
 	ZT_INLINE int64_t timestamp() const noexcept
 	{ return m_ts; }
+
+	/**
+	 * @return Fingerprint of identity that signed this locator
+	 */
+	ZT_INLINE const Fingerprint &signer() const noexcept
+	{ return m_signer; }
 
 	/**
 	 * @return Endpoints specified in locator
@@ -110,6 +117,7 @@ public:
 
 private:
 	int64_t m_ts;
+	Fingerprint m_signer;
 	Vector<Endpoint> m_endpoints;
 	FCV<uint8_t, ZT_SIGNATURE_BUFFER_SIZE> m_signature;
 	std::atomic<int> __refCount;

@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"runtime"
 	"strings"
@@ -92,7 +91,13 @@ func (id *Identity) initCIdentityPtr() bool {
 
 // NewIdentity generates a new identity of the selected type
 func NewIdentity(identityType int) (*Identity, error) {
-	return newIdentityFromCIdentity(C.ZT_Identity_new(C.enum_ZT_Identity_Type(identityType)))
+	switch identityType {
+	case C.ZT_IDENTITY_TYPE_C25519:
+		return newIdentityFromCIdentity(C.ZT_Identity_new(C.ZT_IDENTITY_TYPE_C25519))
+	case C.ZT_IDENTITY_TYPE_P384:
+		return newIdentityFromCIdentity(C.ZT_Identity_new(C.ZT_IDENTITY_TYPE_P384))
+	}
+	return nil, ErrInvalidParameter
 }
 
 // NewIdentityFromString generates a new identity from its string representation.
@@ -229,29 +234,6 @@ func (id *Identity) Verify(msg, sig []byte) bool {
 		dataP = unsafe.Pointer(&msg[0])
 	}
 	return C.ZT_Identity_verify(id.cid, dataP, C.uint(len(msg)), unsafe.Pointer(&sig[0]), C.uint(len(sig))) != 0
-}
-
-// MakeRoot generates a root spec consisting of a serialized identity and a root locator.
-func (id *Identity) MakeRoot(addresses []InetAddress) ([]byte, error) {
-	if len(addresses) == 0 {
-		return nil, errors.New("at least one static address must be specified for a root")
-	}
-	if !id.initCIdentityPtr() {
-		return nil, errors.New("error initializing ZT_Identity")
-	}
-
-	ss := make([]C.struct_sockaddr_storage, len(addresses))
-	for i := range addresses {
-		if !makeSockaddrStorage(addresses[i].IP, addresses[i].Port, &ss[i]) {
-			return nil, errors.New("invalid address in address list")
-		}
-	}
-	var buf [8192]byte
-	rl := C.ZT_Identity_makeRootSpecification(id.cid, C.int64_t(TimeMs()), &ss[0], C.uint(len(ss)), unsafe.Pointer(&buf[0]), 8192)
-	if rl <= 0 {
-		return nil, errors.New("unable to make root specification (does identity contain a secret key?)")
-	}
-	return buf[0:int(rl)], nil
 }
 
 // Equals performs a deep equality test between this and another identity

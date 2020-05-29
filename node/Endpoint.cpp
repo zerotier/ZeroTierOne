@@ -147,6 +147,7 @@ int Endpoint::unmarshal(const uint8_t *restrict data, int len) noexcept
 	// to the unmarshal method of InetAddress and considered UDP endpoints.
 	// This allows backward compatibility with old endpoint fields in the
 	// protocol that were serialized InetAddress instances.
+
 	if (data[0] < 16) {
 		switch (data[0]) {
 			case 0:

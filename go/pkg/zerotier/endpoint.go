@@ -1,13 +1,15 @@
 package zerotier
 
 // #include "../../native/GoGlue.h"
+// static inline const ZT_Fingerprint *_getFP(const ZT_Endpoint *ep) { return &(ep->value.fp); }
+// static inline uint64_t _getAddress(const ZT_Endpoint *ep) { return ep->value.fp.address; }
+// static inline uint64_t _getMAC(const ZT_Endpoint *ep) { return ep->value.mac; }
+// static inline const struct sockaddr_storage *_getSS(const ZT_Endpoint *ep) { return &(ep->value.ss); }
 import "C"
 
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
-	"strings"
 	"unsafe"
 )
 
@@ -29,26 +31,57 @@ type Endpoint struct {
 
 // Type returns this endpoint's type.
 func (ep *Endpoint) Type() int {
-	return ep.cep._type
+	return int(ep.cep._type)
 }
 
 // InetAddress gets this Endpoint as an InetAddress or nil if its type is not addressed by one.
 func (ep *Endpoint) InetAddress() *InetAddress {
 	switch ep.cep._type {
 	case EndpointTypeIp, EndpointTypeIpUdp, EndpointTypeIpTcp, EndpointTypeIpHttp2:
-		ua := sockaddrStorageToUDPAddr(&(ep.cep.a.ss))
+		ua := sockaddrStorageToUDPAddr(C._getSS(&ep.cep))
 		return &InetAddress{IP: ua.IP, Port: ua.Port}
 	}
 	return nil
 }
 
+// Address returns a ZeroTier address if this is a ZeroTier endpoint or a zero address otherwise.
+func (ep *Endpoint) Address() Address {
+	switch ep.cep._type {
+	case EndpointTypeZeroTier:
+		return Address(C._getAddress(&ep.cep))
+	}
+	return Address(0)
+}
+
+// Fingerprint returns a fingerprint if this is a ZeroTier endpoint or nil otherwise.
+func (ep *Endpoint) Fingerprint() *Fingerprint {
+	switch ep.cep._type {
+	case EndpointTypeZeroTier:
+		cfp := C._getFP(&ep.cep)
+		fp := Fingerprint{Address: Address(cfp.address), Hash: C.GoBytes(unsafe.Pointer(&cfp.hash[0]), 48)}
+		if allZero(fp.Hash) {
+			fp.Hash = nil
+		}
+		return &fp
+	}
+	return nil
+}
+
+// MAC returns a MAC address if this is an Ethernet type endpoint or a zero address otherwise.
+func (ep *Endpoint) MAC() MAC {
+	switch ep.cep._type {
+	case EndpointTypeEthernet, EndpointTypeWifiDirect, EndpointTypeBluetooth:
+		return MAC(C._getMAC(&ep.cep))
+	}
+	return MAC(0)
+}
+
 func (ep *Endpoint) String() string {
 	switch ep.cep._type {
 	case EndpointTypeZeroTier:
-		fp := Fingerprint{Address: Address(ep.cep.a.fp.address), Hash: *((*[48]byte)(unsafe.Pointer(&ep.cep.a.fp.hash[0])))}
-		return fmt.Sprintf("%d/%s", ep.Type(), fp.String())
+		return fmt.Sprintf("%d/%s", ep.Type(), ep.Fingerprint().String())
 	case EndpointTypeEthernet, EndpointTypeWifiDirect, EndpointTypeBluetooth:
-		return fmt.Sprintf("%d/%s", ep.Type(), MAC(ep.cep.a.mac).String())
+		return fmt.Sprintf("%d/%s", ep.Type(), ep.MAC().String())
 	case EndpointTypeIp, EndpointTypeIpUdp, EndpointTypeIpTcp, EndpointTypeIpHttp2:
 		return fmt.Sprintf("%d/%s", ep.Type(), ep.InetAddress().String())
 	}
@@ -61,33 +94,6 @@ func (ep *Endpoint) MarshalJSON() ([]byte, error) {
 }
 
 func (ep *Endpoint) UnmarshalJSON(j []byte) error {
-	var s string
-	err := json.Unmarshal(j, &s)
-	if err != nil {
-		return err
-	}
-
-	slashIdx := strings.IndexRune(s, '/')
-	if slashIdx < 0 {
-		ep.cep._type = C.uint(strconv.ParseUint(s, 10, 32))
-	} else if slashIdx == 0 || slashIdx >= (len(s)-1) {
-		return ErrInvalidParameter
-	} else {
-		ep.cep._type = C.uint(strconv.ParseUint(s[0:slashIdx], 10, 32))
-		s = s[slashIdx+1:]
-	}
-
-	switch ep.cep._type {
-	case EndpointTypeNil:
-		return nil
-	case EndpointTypeZeroTier:
-		fp, err := NewFingerprintFromString(s)
-		if err != nil {
-			return err
-		}
-		ep.cep.a.fp.address = C.uint64_t(fp.Address)
-		copy(((*[48]byte)(unsafe.Pointer(&ep.cep.a.fp.hash[0])))[:], fp.Hash[:])
-		return nil
-	}
-	return ErrInvalidParameter
+	// TODO
+	return nil
 }

@@ -33,8 +33,8 @@ public:
 	virtual void nodeIsOnline(const uint64_t networkId,const uint64_t memberId,const InetAddress &physicalAddress);
 
 protected:
-	std::string _path;
-	std::string _networksPath;
+	String _path;
+	String _networksPath;
 	std::thread _onlineUpdateThread;
 	std::map< uint64_t,std::map<uint64_t,std::map<int64_t,InetAddress> > > _online;
 	std::mutex _online_l;

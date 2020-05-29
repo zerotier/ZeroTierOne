@@ -19,31 +19,31 @@ namespace ZeroTier
 FileDB::FileDB(const char *path) :
 	DB(),
 	_path(path),
-	_networksPath(_path + ZT_PATH_SEPARATOR_S + "network"),
+	_networksPath((_path + ZT_PATH_SEPARATOR_S + "network").c_str()),
 	_running(true)
 {
 	OSUtils::mkdir(_path.c_str());
 	OSUtils::lockDownFile(_path.c_str(),true);
 	OSUtils::mkdir(_networksPath.c_str());
 
-	std::vector<std::string> networks(OSUtils::listDirectory(_networksPath.c_str(),false));
-	std::string buf;
+	Vector<String> networks(OSUtils::listDirectory(_networksPath.c_str(),false));
+	String buf;
 	for(auto n=networks.begin();n!=networks.end();++n) {
 		buf.clear();
 		if ((n->length() == 21)&&(OSUtils::readFile((_networksPath + ZT_PATH_SEPARATOR_S + *n).c_str(),buf))) {
 			try {
-				nlohmann::json network(OSUtils::jsonParse(buf));
+				nlohmann::json network(OSUtils::jsonParse(std::string(buf.c_str())));
 				const std::string nwids = network["id"];
 				if (nwids.length() == 16) {
 					nlohmann::json nullJson;
 					_networkChanged(nullJson,network,false);
-					std::string membersPath(_networksPath + ZT_PATH_SEPARATOR_S + nwids + ZT_PATH_SEPARATOR_S "member");
-					std::vector<std::string> members(OSUtils::listDirectory(membersPath.c_str(),false));
+					String membersPath((_networksPath + ZT_PATH_SEPARATOR_S + nwids.c_str() + ZT_PATH_SEPARATOR_S "member").c_str());
+					Vector<String> members(OSUtils::listDirectory(membersPath.c_str(),false));
 					for(auto m=members.begin();m!=members.end();++m) {
 						buf.clear();
 						if ((m->length() == 15)&&(OSUtils::readFile((membersPath + ZT_PATH_SEPARATOR_S + *m).c_str(),buf))) {
 							try {
-								nlohmann::json member(OSUtils::jsonParse(buf));
+								nlohmann::json member(OSUtils::jsonParse(std::string(buf.c_str())));
 								const std::string addrs = member["id"];
 								if (addrs.length() == 10) {
 									nlohmann::json nullJson2;

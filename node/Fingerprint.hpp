@@ -20,6 +20,7 @@
 #include "Utils.hpp"
 
 #define ZT_FINGERPRINT_STRING_SIZE_MAX 128
+#define ZT_FINGERPRINT_MARSHAL_SIZE 53
 
 namespace ZeroTier {
 
@@ -92,6 +93,25 @@ public:
 
 	ZT_INLINE operator bool() const noexcept
 	{ return this->address != 0; }
+
+	static constexpr int marshalSizeMax() noexcept
+	{ return ZT_FINGERPRINT_MARSHAL_SIZE; }
+
+	ZT_INLINE int marshal(uint8_t data[ZT_FINGERPRINT_MARSHAL_SIZE]) const noexcept
+	{
+		Address(this->address).copyTo(data);
+		Utils::copy<ZT_FINGERPRINT_HASH_SIZE>(data + ZT_ADDRESS_LENGTH,this->hash);
+		return ZT_FINGERPRINT_MARSHAL_SIZE;
+	}
+
+	ZT_INLINE int unmarshal(const uint8_t *const data, int len) noexcept
+	{
+		if (unlikely(len < ZT_FINGERPRINT_MARSHAL_SIZE))
+			return -1;
+		this->address = Address(data);
+		Utils::copy<ZT_FINGERPRINT_HASH_SIZE>(hash,data + ZT_ADDRESS_LENGTH);
+		return ZT_FINGERPRINT_MARSHAL_SIZE;
+	}
 
 	ZT_INLINE bool operator==(const Fingerprint &h) const noexcept
 	{ return ((this->address == h.address) && (memcmp(this->hash, h.hash, ZT_FINGERPRINT_HASH_SIZE) == 0)); }

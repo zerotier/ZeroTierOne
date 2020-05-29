@@ -102,10 +102,6 @@ func Identity(args []string) {
 				}
 			}
 
-		case "makeroot":
-			if len(args) >= 2 {
-			}
-
 		}
 	}
 	Help()

@@ -38,9 +38,6 @@ Commands:
   service                               Start as service
   status                                Show node status, identity, and config
   peers                                 List all VL1 peers
-  roots                                 List root peers
-  addroot <path | URL>                  Add root from root spec file or URL
-  removeroot <address>                  Remove a peer from the root list
   join <network ID> [fingerprint]       Join a virtual network
   leave <network ID>                    Leave a virtual network
   networks                              List VL2 virtual networks
@@ -63,7 +60,13 @@ Commands:
     validate <identity>                 Locally validate an identity
     sign <identity> <file>              Sign a file with an identity's key
     verify <identity> <file> <sig>      Verify a signature
-    makeroot <identity> <address[,...]> Make a root spec (see docs)
+  locator <command> [args]              Locator management commands
+    new <identity> <address> [...]      Create and sign a new locator
+    show <locator> [<identity>]         Show locator information
+  roots                                 List root peers
+  addroot <identity> <locator>          Add a root or update its locator
+  addroot <url>                         Add or update roots from a URL
+  removeroot <address>                  Remove a peer from the root list
 
 The 'service' command does not exit until the service receives a signal.
 This is typically run from launchd (Mac), systemd or init (Linux), a Windows

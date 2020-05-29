@@ -484,10 +484,10 @@ void EmbeddedNetworkController::init(const Identity &signingId,Sender *sender)
 	}
 #endif
 
-	std::string lfJSON;
+	String lfJSON;
 	OSUtils::readFile((_ztPath + ZT_PATH_SEPARATOR_S "local.conf").c_str(),lfJSON);
 	if (lfJSON.length() > 0) {
-		nlohmann::json lfConfig(OSUtils::jsonParse(lfJSON));
+		nlohmann::json lfConfig(OSUtils::jsonParse(std::string(lfJSON.c_str())));
 		nlohmann::json &settings = lfConfig["settings"];
 		if (settings.is_object()) {
 			nlohmann::json &controllerDb = settings["controllerDb"];
@@ -831,13 +831,13 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 						json &v6m = b["v6AssignMode"];
 						if (!nv6m.is_object()) nv6m = json::object();
 						if (v6m.is_string()) { // backward compatibility
-							std::vector<std::string> v6ms(OSUtils::split(OSUtils::jsonString(v6m,"").c_str(),",","",""));
+							Vector<String> v6ms(OSUtils::split(OSUtils::jsonString(v6m,"").c_str(),",","",""));
 							std::sort(v6ms.begin(),v6ms.end());
 							v6ms.erase(std::unique(v6ms.begin(),v6ms.end()),v6ms.end());
 							nv6m["rfc4193"] = false;
 							nv6m["zt"] = false;
 							nv6m["6plane"] = false;
-							for(std::vector<std::string>::iterator i(v6ms.begin());i!=v6ms.end();++i) {
+							for(Vector<String>::iterator i(v6ms.begin());i!=v6ms.end();++i) {
 								if (*i == "rfc4193")
 									nv6m["rfc4193"] = true;
 								else if (*i == "zt")
@@ -1295,7 +1295,7 @@ void EmbeddedNetworkController::_request(
 	nc->credentialTimeMaxDelta = credentialtmd;
 	nc->revision = OSUtils::jsonInt(network["revision"],0ULL);
 	nc->issuedTo = identity.address();
-	memcpy(nc->issuedToFingerprintHash,identity.fingerprint().hash(),sizeof(nc->issuedToFingerprintHash));
+	memcpy(nc->issuedToFingerprintHash,identity.fingerprint().hash,sizeof(nc->issuedToFingerprintHash));
 	if (OSUtils::jsonBool(network["enableBroadcast"],true)) nc->flags |= ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST;
 	Utils::scopy(nc->name,sizeof(nc->name),OSUtils::jsonString(network["name"],"").c_str());
 	nc->mtu = std::max(std::min((unsigned int)OSUtils::jsonInt(network["mtu"],ZT_DEFAULT_MTU),(unsigned int)ZT_MAX_MTU),(unsigned int)ZT_MIN_MTU);

@@ -352,11 +352,8 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 				if err != nil || len(rsdata) == 0 {
 					_ = apiSendObj(out, req, http.StatusBadRequest, &APIErr{"read error"})
 				} else {
-					p, err := node.AddRoot(rsdata)
-					if err != nil {
-						_ = apiSendObj(out, req, http.StatusBadRequest, &APIErr{"invalid root spec"})
-					}
-					_ = apiSendObj(out, req, http.StatusOK, p)
+					// TODO
+					_ = apiSendObj(out, req, http.StatusOK, nil)
 				}
 			} else {
 				out.Header().Set("Allow", "POST, PUT")
