@@ -70,7 +70,7 @@ private:
 
 	void commitThread();
 	void onlineNotificationThread();
-	void onlineNotification_Postgres(PGconn *conn, std::unordered_map< std::pair<uint64_t,uint64_t>,std::pair<int64_t,InetAddress>,_PairHasher > &lastOnline);
+	void onlineNotification_Postgres();
 	void onlineNotification_Redis();
 	void _doRedisUpdate(sw::redis::Transaction &tx, std::string &controllerId, 
 		std::unordered_map< std::pair<uint64_t,uint64_t>,std::pair<int64_t,InetAddress>,_PairHasher > &lastOnline);
