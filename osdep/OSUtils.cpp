@@ -13,6 +13,7 @@
 
 #include "../node/Constants.hpp"
 #include "../node/Utils.hpp"
+#include "../node/Containers.hpp"
 #include "OSUtils.hpp"
 
 #ifdef __WINDOWS__
@@ -23,6 +24,9 @@
 #include <dirent.h>
 #include <fcntl.h>
 #endif
+
+#include <algorithm>
+#include <utility>
 
 #ifdef __GCC__
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -80,17 +84,17 @@ bool OSUtils::redirectUnixOutputs(const char *stdoutPath,const char *stderrPath)
 }
 #endif // __UNIX_LIKE__
 
-std::vector<std::string> OSUtils::listDirectory(const char *path,bool includeDirectories)
+Vector<String> OSUtils::listDirectory(const char *path,bool includeDirectories)
 {
-	std::vector<std::string> r;
+	Vector<String> r;
 
 #ifdef __WINDOWS__
 	HANDLE hFind;
 	WIN32_FIND_DATAA ffd;
-	if ((hFind = FindFirstFileA((std::string(path) + "\\*").c_str(),&ffd)) != INVALID_HANDLE_VALUE) {
+	if ((hFind = FindFirstFileA((String(path) + "\\*").c_str(),&ffd)) != INVALID_HANDLE_VALUE) {
 		do {
 			if ( (strcmp(ffd.cFileName,".")) && (strcmp(ffd.cFileName,"..")) && (((ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0)||(((ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0)&&(includeDirectories))) )
-				r.push_back(std::string(ffd.cFileName));
+				r.push_back(String(ffd.cFileName));
 		} while (FindNextFileA(hFind,&ffd));
 		FindClose(hFind);
 	}
@@ -106,7 +110,7 @@ std::vector<std::string> OSUtils::listDirectory(const char *path,bool includeDir
 			break;
 		if (dptr) {
 			if ((strcmp(dptr->d_name,".") != 0)&&(strcmp(dptr->d_name,"..") != 0)&&((dptr->d_type != DT_DIR)||(includeDirectories)))
-				r.push_back(std::string(dptr->d_name));
+				r.push_back(String(dptr->d_name));
 		} else break;
 	}
 	closedir(d);
@@ -120,14 +124,14 @@ bool OSUtils::rmDashRf(const char *path)
 #ifdef __WINDOWS__
 	HANDLE hFind;
 	WIN32_FIND_DATAA ffd;
-	if ((hFind = FindFirstFileA((std::string(path) + "\\*").c_str(),&ffd)) != INVALID_HANDLE_VALUE) {
+	if ((hFind = FindFirstFileA((String(path) + "\\*").c_str(),&ffd)) != INVALID_HANDLE_VALUE) {
 		do {
 			if ((strcmp(ffd.cFileName,".") != 0)&&(strcmp(ffd.cFileName,"..") != 0)) {
 				if ((ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0) {
-					if (DeleteFileA((std::string(path) + ZT_PATH_SEPARATOR_S + ffd.cFileName).c_str()) == FALSE)
+					if (DeleteFileA((String(path) + ZT_PATH_SEPARATOR_S + ffd.cFileName).c_str()) == FALSE)
 						return false;
 				} else {
-					if (!rmDashRf((std::string(path) + ZT_PATH_SEPARATOR_S + ffd.cFileName).c_str()))
+					if (!rmDashRf((String(path) + ZT_PATH_SEPARATOR_S + ffd.cFileName).c_str()))
 						return false;
 				}
 			}
@@ -148,7 +152,7 @@ bool OSUtils::rmDashRf(const char *path)
 		if (!dptr)
 			break;
 		if ((strcmp(dptr->d_name,".") != 0)&&(strcmp(dptr->d_name,"..") != 0)&&(strlen(dptr->d_name) > 0)) {
-			std::string p(path);
+			String p(path);
 			p.push_back(ZT_PATH_SEPARATOR);
 			p.append(dptr->d_name);
 			if (unlink(p.c_str()) != 0) { // unlink first will remove symlinks instead of recursing them
@@ -175,7 +179,7 @@ void OSUtils::lockDownFile(const char *path,bool isDir)
 		startupInfo.cb = sizeof(startupInfo);
 		memset(&startupInfo,0,sizeof(STARTUPINFOA));
 		memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
-		if (CreateProcessA(NULL,(LPSTR)(std::string("C:\\Windows\\System32\\icacls.exe \"") + path + "\" /inheritance:d /Q").c_str(),NULL,NULL,FALSE,CREATE_NO_WINDOW,NULL,NULL,&startupInfo,&processInfo)) {
+		if (CreateProcessA(NULL,(LPSTR)(String("C:\\Windows\\System32\\icacls.exe \"") + path + "\" /inheritance:d /Q").c_str(),NULL,NULL,FALSE,CREATE_NO_WINDOW,NULL,NULL,&startupInfo,&processInfo)) {
 			WaitForSingleObject(processInfo.hProcess,INFINITE);
 			CloseHandle(processInfo.hProcess);
 			CloseHandle(processInfo.hThread);
@@ -184,7 +188,7 @@ void OSUtils::lockDownFile(const char *path,bool isDir)
 		startupInfo.cb = sizeof(startupInfo);
 		memset(&startupInfo,0,sizeof(STARTUPINFOA));
 		memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
-		if (CreateProcessA(NULL,(LPSTR)(std::string("C:\\Windows\\System32\\icacls.exe \"") + path + "\" /remove *S-1-5-32-545 /Q").c_str(),NULL,NULL,FALSE,CREATE_NO_WINDOW,NULL,NULL,&startupInfo,&processInfo)) {
+		if (CreateProcessA(NULL,(LPSTR)(String("C:\\Windows\\System32\\icacls.exe \"") + path + "\" /remove *S-1-5-32-545 /Q").c_str(),NULL,NULL,FALSE,CREATE_NO_WINDOW,NULL,NULL,&startupInfo,&processInfo)) {
 			WaitForSingleObject(processInfo.hProcess,INFINITE);
 			CloseHandle(processInfo.hProcess);
 			CloseHandle(processInfo.hThread);
@@ -204,7 +208,7 @@ bool OSUtils::fileExists(const char *path,bool followLinks)
 	return (stat(path,&s) == 0);
 }
 
-bool OSUtils::readFile(const char *path,std::string &buf)
+bool OSUtils::readFile(const char *path,String &buf)
 {
 	char tmp[16384];
 	FILE *f = fopen(path,"rb");
@@ -236,10 +240,10 @@ bool OSUtils::writeFile(const char *path,const void *buf,unsigned int len)
 	return false;
 }
 
-std::vector<std::string> OSUtils::split(const char *s,const char *const sep,const char *esc,const char *quot)
+Vector<String> OSUtils::split(const char *s,const char *const sep,const char *esc,const char *quot)
 {
-	std::vector<std::string> fields;
-	std::string buf;
+	Vector<String> fields;
+	String buf;
 
 	if (!esc)
 		esc = "";
@@ -280,7 +284,7 @@ std::vector<std::string> OSUtils::split(const char *s,const char *const sep,cons
 	return fields;
 }
 
-std::string OSUtils::platformDefaultHomePath()
+ZeroTier::String OSUtils::platformDefaultHomePath()
 {
 #ifdef __QNAP__
 	char *cmd = "/sbin/getcfg zerotier Install_Path -f /etc/config/qpkg.conf";
@@ -295,7 +299,7 @@ std::string OSUtils::platformDefaultHomePath()
         printf("Command not found or exited with error status\n");
         return NULL;
     }
-    std::string homeDir = std::string(buf);
+    String homeDir = String(buf);
     homeDir.erase(std::remove(homeDir.begin(), homeDir.end(), '\n'), homeDir.end());
     return homeDir;
 #endif
@@ -303,15 +307,13 @@ std::string OSUtils::platformDefaultHomePath()
     // Check for user-defined environment variable before using defaults
 #ifdef __WINDOWS__
 	DWORD bufferSize = 65535;
-	std::string userDefinedPath;
+	ZeroTier::String userDefinedPath;
 	bufferSize = GetEnvironmentVariable("ZEROTIER_HOME", &userDefinedPath[0], bufferSize);
-	if (bufferSize) {
+	if (bufferSize)
 		return userDefinedPath;
-	}
 #else
-	if(const char* userDefinedPath = getenv("ZEROTIER_HOME")) {
-		return std::string(userDefinedPath);
-	}
+	if(const char* userDefinedPath = getenv("ZEROTIER_HOME"))
+		return String(userDefinedPath);
 #endif
 
 	// Finally, resort to using default paths if no user-defined path was provided
@@ -319,15 +321,15 @@ std::string OSUtils::platformDefaultHomePath()
 
 #ifdef __APPLE__
 	// /Library/... on Apple
-	return std::string("/Library/Application Support/ZeroTier");
+	return ZeroTier::String("/Library/Application Support/ZeroTier");
 #else
 
 #ifdef __BSD__
 	// BSD likes /var/db instead of /var/lib
-	return std::string("/var/db/zerotier");
+	return ZeroTier::String("/var/db/zerotier");
 #else
 	// Use /var/lib for Linux and other *nix
-	return std::string("/var/lib/zerotier");
+	return ZeroTier::String("/var/lib/zerotier");
 #endif
 
 #endif
@@ -338,11 +340,11 @@ std::string OSUtils::platformDefaultHomePath()
 	// Look up app data folder on Windows, e.g. C:\ProgramData\...
 	char buf[16384];
 	if (SUCCEEDED(SHGetFolderPathA(NULL,CSIDL_COMMON_APPDATA,NULL,0,buf)))
-		return (std::string(buf) + "\\ZeroTier");
-	else return std::string("C:\\ZeroTier");
+		return (ZeroTier::String(buf) + "\\ZeroTier");
+	else return ZeroTier::String("C:\\ZeroTier");
 #else
 
-	return (std::string(ZT_PATH_SEPARATOR_S) + "ZeroTier"); // UNKNOWN PLATFORM
+	return (ZeroTier::String(ZT_PATH_SEPARATOR_S) + "ZeroTier"); // UNKNOWN PLATFORM
 
 #endif
 

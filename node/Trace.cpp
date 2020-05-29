@@ -78,13 +78,13 @@ void Trace::_tryingNewPath(
 	FCV<uint8_t,4096> buf;
 	Dictionary::append(buf,ZT_TRACE_FIELD_TYPE,ZT_TRACE_VL1_TRYING_NEW_PATH);
 	Dictionary::append(buf,ZT_TRACE_FIELD_CODE_LOCATION,codeLocation);
-	Dictionary::append(buf,ZT_TRACE_FIELD_IDENTITY_FINGERPRINT_HASH,trying.fingerprint().hash(),ZT_FINGERPRINT_HASH_SIZE);
+	Dictionary::append(buf,ZT_TRACE_FIELD_IDENTITY_FINGERPRINT_HASH,trying.fingerprint().hash,ZT_FINGERPRINT_HASH_SIZE);
 	if (triggerAddress)
 		Dictionary::appendObject(buf,ZT_TRACE_FIELD_TRIGGER_FROM_ENDPOINT,Endpoint(triggerAddress));
 	Dictionary::appendPacketId(buf,ZT_TRACE_FIELD_TRIGGER_FROM_PACKET_ID,triggeringPacketId);
 	Dictionary::append(buf,ZT_TRACE_FIELD_TRIGGER_FROM_PACKET_VERB,triggeringPacketVerb);
 	if (triggeringPeer)
-		Dictionary::append(buf,ZT_TRACE_FIELD_TRIGGER_FROM_PEER_FINGERPRINT_HASH,triggeringPeer.fingerprint().hash(),ZT_FINGERPRINT_HASH_SIZE);
+		Dictionary::append(buf,ZT_TRACE_FIELD_TRIGGER_FROM_PEER_FINGERPRINT_HASH,triggeringPeer.fingerprint().hash,ZT_FINGERPRINT_HASH_SIZE);
 	buf.push_back(0);
 	RR->node->postEvent(tPtr,ZT_EVENT_TRACE,buf.data());
 }
@@ -101,7 +101,7 @@ void Trace::_learnedNewPath(
 	Dictionary::append(buf,ZT_TRACE_FIELD_TYPE,ZT_TRACE_VL1_LEARNED_NEW_PATH);
 	Dictionary::append(buf,ZT_TRACE_FIELD_CODE_LOCATION,codeLocation);
 	Dictionary::appendPacketId(buf,ZT_TRACE_FIELD_PACKET_ID,packetId);
-	Dictionary::append(buf,ZT_TRACE_FIELD_IDENTITY_FINGERPRINT_HASH,peerIdentity.fingerprint().hash(),ZT_FINGERPRINT_HASH_SIZE);
+	Dictionary::append(buf,ZT_TRACE_FIELD_IDENTITY_FINGERPRINT_HASH,peerIdentity.fingerprint().hash,ZT_FINGERPRINT_HASH_SIZE);
 	if (physicalAddress)
 		Dictionary::appendObject(buf,ZT_TRACE_FIELD_ENDPOINT,Endpoint(physicalAddress));
 	if (replaced)
@@ -126,7 +126,7 @@ void Trace::_incomingPacketDropped(
 	Dictionary::append(buf,ZT_TRACE_FIELD_CODE_LOCATION,codeLocation);
 	Dictionary::appendPacketId(buf,ZT_TRACE_FIELD_PACKET_ID,packetId);
 	Dictionary::append(buf,ZT_TRACE_FIELD_NETWORK_ID,networkId);
-	Dictionary::append(buf,ZT_TRACE_FIELD_IDENTITY_FINGERPRINT_HASH,peerIdentity.fingerprint().hash(),ZT_FINGERPRINT_HASH_SIZE);
+	Dictionary::append(buf,ZT_TRACE_FIELD_IDENTITY_FINGERPRINT_HASH,peerIdentity.fingerprint().hash,ZT_FINGERPRINT_HASH_SIZE);
 	if (physicalAddress)
 		Dictionary::append(buf,ZT_TRACE_FIELD_ENDPOINT,Endpoint(physicalAddress));
 	Dictionary::append(buf,ZT_TRACE_FIELD_PACKET_HOPS,hops);
@@ -181,7 +181,7 @@ void Trace::_incomingNetworkFrameDropped(
 	Dictionary::append(buf,ZT_TRACE_FIELD_CODE_LOCATION,codeLocation);
 	Dictionary::append(buf,ZT_TRACE_FIELD_SOURCE_MAC,sourceMac.toInt());
 	Dictionary::append(buf,ZT_TRACE_FIELD_DEST_MAC,destMac.toInt());
-	Dictionary::append(buf,ZT_TRACE_FIELD_IDENTITY_FINGERPRINT_HASH,peerIdentity.fingerprint().hash(),ZT_FINGERPRINT_HASH_SIZE);
+	Dictionary::append(buf,ZT_TRACE_FIELD_IDENTITY_FINGERPRINT_HASH,peerIdentity.fingerprint().hash,ZT_FINGERPRINT_HASH_SIZE);
 	if (physicalAddress)
 		Dictionary::appendObject(buf,ZT_TRACE_FIELD_ENDPOINT,Endpoint(physicalAddress));
 	Dictionary::append(buf,ZT_TRACE_FIELD_PACKET_HOPS,hops);
@@ -268,7 +268,7 @@ void Trace::_credentialRejected(
 	Dictionary::append(buf,ZT_TRACE_FIELD_TYPE,ZT_TRACE_VL2_NETWORK_FILTER);
 	Dictionary::append(buf,ZT_TRACE_FIELD_CODE_LOCATION,codeLocation);
 	Dictionary::append(buf,ZT_TRACE_FIELD_NETWORK_ID,networkId);
-	Dictionary::append(buf,ZT_TRACE_FIELD_IDENTITY_FINGERPRINT_HASH,identity.fingerprint().hash(),ZT_FINGERPRINT_HASH_SIZE);
+	Dictionary::append(buf,ZT_TRACE_FIELD_IDENTITY_FINGERPRINT_HASH,identity.fingerprint().hash,ZT_FINGERPRINT_HASH_SIZE);
 	Dictionary::append(buf,ZT_TRACE_FIELD_CREDENTIAL_ID,credentialId);
 	Dictionary::append(buf,ZT_TRACE_FIELD_CREDENTIAL_TIMESTAMP,credentialTimestamp);
 	Dictionary::append(buf,ZT_TRACE_FIELD_CREDENTIAL_TYPE,credentialType);

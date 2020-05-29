@@ -67,19 +67,18 @@ const (
 )
 
 var (
-	// PlatformDefaultHomePath is the default location of ZeroTier's working path on this system
-	PlatformDefaultHomePath string = C.GoString(C.ZT_PLATFORM_DEFAULT_HOMEPATH)
-
-	cNodeRefs    [maxCNodeRefs]*Node
-	cNodeRefUsed [maxCNodeRefs]uint32
-
+	PlatformDefaultHomePath string
 	CoreVersionMajor    int
 	CoreVersionMinor    int
 	CoreVersionRevision int
 	CoreVersionBuild    int
+
+	cNodeRefs    [maxCNodeRefs]*Node
+	cNodeRefUsed [maxCNodeRefs]uint32
 )
 
 func init() {
+	PlatformDefaultHomePath = C.GoString(C.ZT_PLATFORM_DEFAULT_HOMEPATH);
 	var vMaj, vMin, vRev, vBuild C.int
 	C.ZT_version(&vMaj, &vMin, &vRev, &vBuild)
 	CoreVersionMajor = int(vMaj)

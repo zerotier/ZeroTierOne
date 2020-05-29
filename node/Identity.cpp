@@ -528,10 +528,10 @@ void Identity::m_computeHash()
 			m_fp.zero();
 			break;
 		case C25519:
-			SHA384(m_fp.m_cfp.hash, m_pub, ZT_C25519_COMBINED_PUBLIC_KEY_SIZE);
+			SHA384(m_fp.hash, m_pub, ZT_C25519_COMBINED_PUBLIC_KEY_SIZE);
 			break;
 		case P384:
-			SHA384(m_fp.m_cfp.hash, m_pub, sizeof(m_pub));
+			SHA384(m_fp.hash, m_pub, ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE);
 			break;
 	}
 }

@@ -42,8 +42,6 @@
 
 #include <thread>
 #include <mutex>
-#include <map>
-#include <vector>
 #include <memory>
 #include <atomic>
 
@@ -65,7 +63,7 @@ using namespace ZeroTier;
 
 struct ZT_GoNodeThread
 {
-	std::string ip;
+	String ip;
 	int port;
 	int af;
 	bool primary;
@@ -91,7 +89,7 @@ struct ZT_GoNode_Impl
 	std::thread backgroundTaskThread;
 };
 
-static const std::string defaultHomePath(OSUtils::platformDefaultHomePath());
+static const String defaultHomePath(OSUtils::platformDefaultHomePath());
 const char *const ZT_PLATFORM_DEFAULT_HOMEPATH = defaultHomePath.c_str();
 
 // These are implemented in Go code.
@@ -182,7 +180,7 @@ static ZT_INLINE void doUdpSend(ZT_SOCKET sock,const struct sockaddr_storage *ad
 {
 	switch(addr->ss_family) {
 		case AF_INET:
-			if ((ipTTL > 0)&&(ipTTL < 255)) {
+			if (unlikely((ipTTL > 0)&&(ipTTL < 255))) {
 #ifdef __WINDOWS__
 				DWORD tmp = (DWORD)ipTTL;
 #else
@@ -215,7 +213,7 @@ static int ZT_GoNode_WirePacketSendFunction(
 	unsigned int len,
 	unsigned int ipTTL)
 {
-	if (localSocket > 0) {
+	if (likely(localSocket > 0)) {
 		doUdpSend((ZT_SOCKET)localSocket,addr,data,len,ipTTL);
 	} else {
 		ZT_GoNode *const gn = reinterpret_cast<ZT_GoNode *>(uptr);

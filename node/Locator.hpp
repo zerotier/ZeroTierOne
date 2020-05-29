@@ -36,6 +36,7 @@ namespace ZeroTier {
 class Locator
 {
 	friend class SharedPtr<Locator>;
+	friend class SharedPtr<const Locator>;
 
 public:
 	ZT_INLINE Locator() noexcept :

@@ -127,7 +127,7 @@ public:
 	/**
 	 * @return This identity's address
 	 */
-	ZT_INLINE Address address() const noexcept { return Address(m_fp.m_cfp.address); }
+	ZT_INLINE Address address() const noexcept { return Address(m_fp.address); }
 
 	/**
 	 * @return Full fingerprint of this identity (address plus SHA384 of keys)

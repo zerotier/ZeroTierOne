@@ -110,7 +110,7 @@ uint64_t Dictionary::getUI(const char *k, uint64_t dfl) const
 char *Dictionary::getS(const char *k, char *v, const unsigned int cap) const
 {
 	if (cap == 0) // sanity check
-		return;
+		return v;
 	const Vector<uint8_t> &e = (*this)[k];
 	unsigned int i = 0;
 	const unsigned int last = cap - 1;
@@ -134,8 +134,8 @@ bool Dictionary::sign(const Identity &signer)
 		return false;
 
 	uint8_t fp[ZT_ADDRESS_LENGTH + ZT_FINGERPRINT_HASH_SIZE];
-	signer.fingerprint().address().copyTo(fp);
-	Utils::copy<ZT_FINGERPRINT_HASH_SIZE>(fp + ZT_ADDRESS_LENGTH, signer.fingerprint().hash());
+	Address(signer.fingerprint().address).copyTo(fp);
+	Utils::copy<ZT_FINGERPRINT_HASH_SIZE>(fp + ZT_ADDRESS_LENGTH, signer.fingerprint().hash);
 
 	m_entries[s_signatureFingerprint].assign(fp, fp + ZT_ADDRESS_LENGTH + ZT_FINGERPRINT_HASH_SIZE);
 	m_entries[s_signatureData].assign(sig, sig + siglen);
@@ -148,8 +148,8 @@ Fingerprint Dictionary::signer() const
 	SortedMap<FCV<char, 8>, Vector<uint8_t> >::const_iterator sigfp(m_entries.find(s_signatureFingerprint));
 	Fingerprint fp;
 	if ((sigfp != m_entries.end()) && (sigfp->second.size() == (ZT_ADDRESS_LENGTH + ZT_FINGERPRINT_HASH_SIZE))) {
-		fp.apiFingerprint()->address = Address(sigfp->second.data()).toInt();
-		Utils::copy<ZT_FINGERPRINT_HASH_SIZE>(fp.apiFingerprint()->hash, sigfp->second.data() + ZT_ADDRESS_LENGTH);
+		fp.address = Address(sigfp->second.data());
+		Utils::copy<ZT_FINGERPRINT_HASH_SIZE>(fp.hash, sigfp->second.data() + ZT_ADDRESS_LENGTH);
 	}
 	return fp;
 }
@@ -161,7 +161,7 @@ bool Dictionary::verify(const Identity &signer) const
 		(sigfp == m_entries.end()) ||
 		(sigfp->second.size() != (ZT_ADDRESS_LENGTH + ZT_FINGERPRINT_HASH_SIZE)) ||
 		(Address(sigfp->second.data()) != signer.address()) ||
-		(memcmp(sigfp->second.data() + ZT_ADDRESS_LENGTH,signer.fingerprint().hash(),ZT_FINGERPRINT_HASH_SIZE) != 0))
+		(memcmp(sigfp->second.data() + ZT_ADDRESS_LENGTH,signer.fingerprint().hash,ZT_FINGERPRINT_HASH_SIZE) != 0))
 		return false;
 
 	SortedMap< FCV<char, 8>, Vector<uint8_t> >::const_iterator sig(m_entries.find(s_signatureData));

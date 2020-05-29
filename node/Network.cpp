@@ -1155,7 +1155,7 @@ Membership::AddCredentialResult Network::addCredential(void *tPtr,const Identity
 	if (com.networkId() != m_id)
 		return Membership::ADD_REJECTED;
 	Mutex::Lock _l(m_memberships_l);
-	return m_memberships[com.issuedTo().address()].addCredential(RR, tPtr, sourcePeerIdentity, m_config, com);
+	return m_memberships[com.issuedTo().address].addCredential(RR, tPtr, sourcePeerIdentity, m_config, com);
 }
 
 Membership::AddCredentialResult Network::addCredential(void *tPtr,const Identity &sourcePeerIdentity,const Capability &cap)

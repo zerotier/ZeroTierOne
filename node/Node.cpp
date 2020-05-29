@@ -287,7 +287,7 @@ ZT_ResultCode Node::join(uint64_t nwid, const ZT_Fingerprint *controllerFingerpr
 {
 	Fingerprint fp;
 	if (controllerFingerprint)
-		Utils::copy<sizeof(ZT_Fingerprint)>(fp.apiFingerprint(), controllerFingerprint);
+		fp = *controllerFingerprint;
 
 	RWMutex::Lock l(m_networks_l);
 	SharedPtr<Network> &nw = m_networks[nwid];

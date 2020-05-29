@@ -31,23 +31,23 @@ class SharedPtr : public TriviallyCopyable
 {
 public:
 	ZT_INLINE SharedPtr() noexcept : m_ptr((T *)0) {}
-	explicit ZT_INLINE SharedPtr(T *obj) noexcept : m_ptr(obj) { ++obj->__refCount; }
+	explicit ZT_INLINE SharedPtr(T *obj) noexcept : m_ptr(obj) { if (likely(obj != nullptr)) ++*const_cast<std::atomic<int> *>(&(obj->__refCount)); }
 	ZT_INLINE SharedPtr(const SharedPtr &sp) noexcept : m_ptr(sp._getAndInc()) {}
 
 	ZT_INLINE ~SharedPtr()
 	{
-		if (m_ptr) {
-			if (--m_ptr->__refCount <= 0)
+		if (likely(m_ptr != nullptr)) {
+			if (unlikely(--*const_cast<std::atomic<int> *>(&(m_ptr->__refCount)) <= 0))
 				delete m_ptr;
 		}
 	}
 
 	ZT_INLINE SharedPtr &operator=(const SharedPtr &sp)
 	{
-		if (m_ptr != sp.m_ptr) {
+		if (likely(m_ptr != sp.m_ptr)) {
 			T *p = sp._getAndInc();
-			if (m_ptr) {
-				if (--m_ptr->__refCount <= 0)
+			if (likely(m_ptr != nullptr)) {
+				if (unlikely(--*const_cast<std::atomic<int> *>(&(m_ptr->__refCount)) <= 0))
 					delete m_ptr;
 			}
 			m_ptr = p;
@@ -66,7 +66,7 @@ public:
 	ZT_INLINE void set(T *ptr) noexcept
 	{
 		zero();
-		++ptr->__refCount;
+		++*const_cast<std::atomic<int> *>(&(ptr->__refCount));
 		m_ptr = ptr;
 	}
 
@@ -101,8 +101,8 @@ public:
 	 */
 	ZT_INLINE void move(SharedPtr &from)
 	{
-		if (m_ptr) {
-			if (--m_ptr->__refCount <= 0)
+		if (likely(m_ptr != nullptr)) {
+			if (--*const_cast<std::atomic<int> *>(&(m_ptr->__refCount)) <= 0)
 				delete m_ptr;
 		}
 		m_ptr = from.m_ptr;
@@ -124,8 +124,8 @@ public:
 	 */
 	ZT_INLINE void zero()
 	{
-		if (m_ptr) {
-			if (--m_ptr->__refCount <= 0)
+		if (likely(m_ptr != nullptr)) {
+			if (unlikely(--*const_cast<std::atomic<int> *>(&(m_ptr->__refCount)) <= 0))
 				delete m_ptr;
 			m_ptr = nullptr;
 		}
@@ -139,13 +139,13 @@ public:
 	 * but with the caveat that it only works if there is only one remaining
 	 * SharedPtr to be treated as weak.
 	 *
-	 * @return True if object was in fact deleted or was already zero/NULL
+	 * @return True if object was in fact deleted OR this pointer was already NULL
 	 */
 	ZT_INLINE bool weakGC()
 	{
-		if (m_ptr) {
+		if (likely(m_ptr != nullptr)) {
 			int one = 1;
-			if (m_ptr->__refCount.compare_exchange_strong(one,(int)0)) {
+			if (const_cast<std::atomic<int> *>(&(m_ptr->__refCount))->compare_exchange_strong(one,(int)0)) {
 				delete m_ptr;
 				m_ptr = nullptr;
 				return true;
@@ -161,7 +161,7 @@ public:
 	 */
 	ZT_INLINE int references() noexcept
 	{
-		if (m_ptr)
+		if (likely(m_ptr != nullptr))
 			return m_ptr->__refCount;
 		return 0;
 	}
@@ -177,7 +177,7 @@ private:
 	ZT_INLINE T *_getAndInc() const noexcept
 	{
 		if (m_ptr)
-			++m_ptr->__refCount;
+			++*const_cast<std::atomic<int> *>(&(m_ptr->__refCount));
 		return m_ptr;
 	}
 	T *m_ptr;

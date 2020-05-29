@@ -82,7 +82,7 @@ bool CertificateOfMembership::agreesWith(const CertificateOfMembership &other) c
 
 	// SECURITY: check for issued-to inequality is a sanity check. This should be impossible since elsewhere
 	// in the code COMs are checked to ensure that they do in fact belong to their issued-to identities.
-	return (other.m_networkId == m_networkId) && (m_networkId != 0) && (other.m_issuedTo.address() != m_issuedTo.address());
+	return (other.m_networkId == m_networkId) && (m_networkId != 0) && (other.m_issuedTo.address != m_issuedTo.address);
 }
 
 bool CertificateOfMembership::sign(const Identity &with) noexcept
@@ -115,7 +115,7 @@ int CertificateOfMembership::marshal(uint8_t data[ZT_CERTIFICATEOFMEMBERSHIP_MAR
 	p += 8;
 	Utils::storeBigEndian<uint64_t>(data + p, 2);
 	p += 8;
-	Utils::storeBigEndian<uint64_t>(data + p, m_issuedTo.address().toInt());
+	Utils::storeBigEndian<uint64_t>(data + p, m_issuedTo.address);
 	p += 8;
 	Utils::storeAsIsEndian<uint64_t>(data + p, 0xffffffffffffffffULL);
 	p += 8;
@@ -123,7 +123,7 @@ int CertificateOfMembership::marshal(uint8_t data[ZT_CERTIFICATEOFMEMBERSHIP_MAR
 	if (v2) {
 		// V2 marshal format will have three tuples followed by the fingerprint hash.
 		Utils::storeBigEndian<uint16_t>(data + 1, 3);
-		Utils::copy<48>(data + p, m_issuedTo.hash());
+		Utils::copy<ZT_FINGERPRINT_HASH_SIZE>(data + p, m_issuedTo.hash);
 		p += 48;
 	} else {
 		// V1 marshal format must shove everything into tuples, resulting in nine.
@@ -131,7 +131,7 @@ int CertificateOfMembership::marshal(uint8_t data[ZT_CERTIFICATEOFMEMBERSHIP_MAR
 		for (int k = 0;k < 6;++k) {
 			Utils::storeBigEndian<uint64_t>(data + p, (uint64_t) k + 3);
 			p += 8;
-			Utils::storeAsIsEndian<uint64_t>(data + p, Utils::loadAsIsEndian<uint64_t>(m_issuedTo.hash() + (k * 8)));
+			Utils::storeAsIsEndian<uint64_t>(data + p, Utils::loadAsIsEndian<uint64_t>(m_issuedTo.hash + (k * 8)));
 			p += 8;
 			Utils::storeAsIsEndian<uint64_t>(data + p, 0xffffffffffffffffULL);
 			p += 8;
@@ -185,27 +185,27 @@ int CertificateOfMembership::unmarshal(const uint8_t *data, int len) noexcept
 				m_networkId = value;
 				break;
 			case 2:
-				m_issuedTo.apiFingerprint()->address = value;
+				m_issuedTo.address = value;
 				break;
 
 				// V1 nodes will pack the hash into qualifier tuples.
 			case 3:
-				Utils::storeBigEndian<uint64_t>(m_issuedTo.apiFingerprint()->hash, value);
+				Utils::storeBigEndian<uint64_t>(m_issuedTo.hash, value);
 				break;
 			case 4:
-				Utils::storeBigEndian<uint64_t>(m_issuedTo.apiFingerprint()->hash + 8, value);
+				Utils::storeBigEndian<uint64_t>(m_issuedTo.hash + 8, value);
 				break;
 			case 5:
-				Utils::storeBigEndian<uint64_t>(m_issuedTo.apiFingerprint()->hash + 16, value);
+				Utils::storeBigEndian<uint64_t>(m_issuedTo.hash + 16, value);
 				break;
 			case 6:
-				Utils::storeBigEndian<uint64_t>(m_issuedTo.apiFingerprint()->hash + 24, value);
+				Utils::storeBigEndian<uint64_t>(m_issuedTo.hash + 24, value);
 				break;
 			case 7:
-				Utils::storeBigEndian<uint64_t>(m_issuedTo.apiFingerprint()->hash + 32, value);
+				Utils::storeBigEndian<uint64_t>(m_issuedTo.hash + 32, value);
 				break;
 			case 8:
-				Utils::storeBigEndian<uint64_t>(m_issuedTo.apiFingerprint()->hash + 40, value);
+				Utils::storeBigEndian<uint64_t>(m_issuedTo.hash + 40, value);
 				break;
 
 			default:
@@ -227,7 +227,7 @@ int CertificateOfMembership::unmarshal(const uint8_t *data, int len) noexcept
 	} else if (data[0] == 2) {
 		if ((p + 48) > len)
 			return -1;
-		Utils::copy<48>(m_issuedTo.apiFingerprint()->hash, data + p);
+		Utils::copy<48>(m_issuedTo.hash, data + p);
 		p += 48;
 		if ((p + 2) > len)
 			return -1;
@@ -259,7 +259,7 @@ unsigned int CertificateOfMembership::m_fillSigningBuf(uint64_t *buf) const noex
 	buf[4] = Utils::hton(m_networkId);
 	buf[5] = 0;
 	buf[6] = ZT_CONST_TO_BE_UINT64(2);
-	buf[7] = Utils::hton(m_issuedTo.address().toInt());
+	buf[7] = Utils::hton(m_issuedTo.address);
 	buf[8] = informational;
 
 	unsigned int p = 9;
@@ -268,22 +268,22 @@ unsigned int CertificateOfMembership::m_fillSigningBuf(uint64_t *buf) const noex
 	// embeded as a series of informational tuples.
 	if (m_issuedTo.haveHash()) {
 		buf[p++] = ZT_CONST_TO_BE_UINT64(3);
-		buf[p++] = Utils::loadAsIsEndian<uint64_t>(m_issuedTo.hash());
+		buf[p++] = Utils::loadAsIsEndian<uint64_t>(m_issuedTo.hash);
 		buf[p++] = informational;
 		buf[p++] = ZT_CONST_TO_BE_UINT64(4);
-		buf[p++] = Utils::loadAsIsEndian<uint64_t>(m_issuedTo.hash() + 8);
+		buf[p++] = Utils::loadAsIsEndian<uint64_t>(m_issuedTo.hash + 8);
 		buf[p++] = informational;
 		buf[p++] = ZT_CONST_TO_BE_UINT64(5);
-		buf[p++] = Utils::loadAsIsEndian<uint64_t>(m_issuedTo.hash() + 16);
+		buf[p++] = Utils::loadAsIsEndian<uint64_t>(m_issuedTo.hash + 16);
 		buf[p++] = informational;
 		buf[p++] = ZT_CONST_TO_BE_UINT64(6);
-		buf[p++] = Utils::loadAsIsEndian<uint64_t>(m_issuedTo.hash() + 24);
+		buf[p++] = Utils::loadAsIsEndian<uint64_t>(m_issuedTo.hash + 24);
 		buf[p++] = informational;
 		buf[p++] = ZT_CONST_TO_BE_UINT64(7);
-		buf[p++] = Utils::loadAsIsEndian<uint64_t>(m_issuedTo.hash() + 32);
+		buf[p++] = Utils::loadAsIsEndian<uint64_t>(m_issuedTo.hash + 32);
 		buf[p++] = informational;
 		buf[p++] = ZT_CONST_TO_BE_UINT64(8);
-		buf[p++] = Utils::loadAsIsEndian<uint64_t>(m_issuedTo.hash() + 40);
+		buf[p++] = Utils::loadAsIsEndian<uint64_t>(m_issuedTo.hash + 40);
 		buf[p++] = informational;
 	}
 

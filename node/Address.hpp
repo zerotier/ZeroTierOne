@@ -32,7 +32,7 @@ class Address : public TriviallyCopyable
 {
 public:
 	ZT_INLINE Address() noexcept : _a(0) {}
-	explicit ZT_INLINE Address(const uint64_t a) noexcept : _a(a) {}
+	ZT_INLINE Address(const uint64_t a) noexcept : _a(a) {}
 	explicit ZT_INLINE Address(const uint8_t b[5]) noexcept : _a(((uint64_t)b[0] << 32U) | ((uint64_t)b[1] << 24U) | ((uint64_t)b[2] << 16U) | ((uint64_t)b[3] << 8U) | (uint64_t)b[4]) {}
 
 	ZT_INLINE Address &operator=(const uint64_t a) noexcept { _a = a; return *this; }

@@ -15,16 +15,10 @@
 #define ZT_OSUTILS_HPP
 
 #include "../node/Constants.hpp"
+#include "../node/Containers.hpp"
 
-#include <cstdio>
-#include <cstdlib>
-#include <cstdint>
-#include <cstring>
-#include <cstdarg>
-#include <ctime>
-#include <stdexcept>
-#include <vector>
-#include <map>
+#include <stdarg.h>
+#include <time.h>
 
 #ifndef __WINDOWS__
 #include <sys/time.h> // NOLINT(modernize-deprecated-headers)
@@ -97,7 +91,6 @@ public:
 		return (unlink(path) == 0);
 #endif
 	}
-	static ZT_INLINE bool rm(const std::string &path) { return rm(path.c_str()); }
 
 	static ZT_INLINE bool mkdir(const char *path)
 	{
@@ -111,7 +104,6 @@ public:
 		return true;
 #endif
 	}
-	static ZT_INLINE bool mkdir(const std::string &path) { return OSUtils::mkdir(path.c_str()); }
 
 	static ZT_INLINE bool rename(const char *o,const char *n)
 	{
@@ -130,7 +122,7 @@ public:
 	 * @param includeDirectories If true, include directories as well as files
 	 * @return Names of files in directory (without path prepended)
 	 */
-	static std::vector<std::string> listDirectory(const char *path,bool includeDirectories = false);
+	static ZeroTier::Vector<ZeroTier::String> listDirectory(const char *path,bool includeDirectories = false);
 
 	/**
 	 * Delete a directory and all its files and subdirectories recursively
@@ -205,7 +197,7 @@ public:
 	 * @param buf Buffer to fill
 	 * @return True if open and read successful
 	 */
-	static bool readFile(const char *path,std::string &buf);
+	static bool readFile(const char *path,ZeroTier::String &buf);
 
 	/**
 	 * Write a block of data to disk, replacing any current file contents
@@ -226,7 +218,7 @@ public:
 	 * @param quot Zero or more quote characters
 	 * @return Vector of tokens
 	 */
-	static std::vector<std::string> split(const char *s,const char *sep,const char *esc,const char *quot);
+	static ZeroTier::Vector<ZeroTier::String> split(const char *s,const char *sep,const char *esc,const char *quot);
 
 	/**
 	 * Write a block of data to disk, replacing any current file contents
@@ -235,12 +227,12 @@ public:
 	 * @param s Data to write
 	 * @return True if entire file was successfully written
 	 */
-	static ZT_INLINE bool writeFile(const char *path,const std::string &s) { return writeFile(path,s.data(),(unsigned int)s.length()); }
+	static ZT_INLINE bool writeFile(const char *path,const ZeroTier::String &s) { return writeFile(path,s.data(),(unsigned int)s.length()); }
 
 	/**
 	 * @return Platform default ZeroTier One home path
 	 */
-	static std::string platformDefaultHomePath();
+	static ZeroTier::String platformDefaultHomePath();
 
 #ifndef OMIT_JSON_SUPPORT
 	static nlohmann::json jsonParse(const std::string &buf);
