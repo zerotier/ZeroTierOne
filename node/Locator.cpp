@@ -13,145 +13,99 @@
 
 #include "Locator.hpp"
 
+#include <algorithm>
+
 namespace ZeroTier {
+
+bool Locator::add(const Endpoint &ep)
+{
+	if (m_endpoints.size() < ZT_LOCATOR_MAX_ENDPOINTS) {
+		if (std::find(m_endpoints.begin(), m_endpoints.end(), ep) == m_endpoints.end())
+			m_endpoints.push_back(ep);
+		return true;
+	}
+	return false;
+}
 
 bool Locator::sign(const int64_t ts, const Identity &id) noexcept
 {
-	uint8_t signData[ZT_LOCATOR_MARSHAL_SIZE_MAX];
-	if (!id.hasPrivate())
-		return false;
 	m_ts = ts;
-	if (m_endpointCount > 0)
-		std::sort(m_at, m_at + m_endpointCount);
-	const unsigned int signLen = marshal(signData, true);
-	m_signatureLength = id.sign(signData, signLen, m_signature, sizeof(m_signature));
-	return (m_signatureLength > 0);
+	std::sort(m_endpoints.begin(), m_endpoints.end());
+
+	uint8_t signdata[ZT_LOCATOR_MARSHAL_SIZE_MAX];
+	const unsigned int signlen = marshal(signdata, true);
+
+	const unsigned int siglen = id.sign(signdata, signlen, m_signature.data(), m_signature.capacity());
+	if (siglen == 0)
+		return false;
+	m_signature.unsafeSetSize(siglen);
+
+	return true;
 }
 
 bool Locator::verify(const Identity &id) const noexcept
 {
-	if ((m_ts == 0) || (m_endpointCount > ZT_LOCATOR_MAX_ENDPOINTS) || (m_signatureLength > ZT_SIGNATURE_BUFFER_SIZE))
+	if (m_ts <= 0)
 		return false;
-	uint8_t signData[ZT_LOCATOR_MARSHAL_SIZE_MAX];
-	const unsigned int signLen = marshal(signData, true);
-	return id.verify(signData, signLen, m_signature, m_signatureLength);
+	uint8_t signdata[ZT_LOCATOR_MARSHAL_SIZE_MAX];
+	const unsigned int signlen = marshal(signdata, true);
+	return id.verify(signdata, signlen, m_signature.data(), m_signature.size());
 }
 
 int Locator::marshal(uint8_t data[ZT_LOCATOR_MARSHAL_SIZE_MAX], const bool excludeSignature) const noexcept
 {
-	if ((m_endpointCount > ZT_LOCATOR_MAX_ENDPOINTS) || (m_signatureLength > ZT_SIGNATURE_BUFFER_SIZE))
-		return -1;
-
-	data[0] = 0xff; // version byte, currently 0xff to never be the same as byte 0 of an identity for legacy compatibility reasons
-	Utils::storeBigEndian<int64_t>(data + 1, m_ts);
-	int p = 9;
-
-	if (m_ts > 0) {
-		Utils::storeBigEndian(data + p, (uint16_t) m_endpointCount);
-		p += 2;
-		for (unsigned int i = 0;i < m_endpointCount;++i) {
-			int tmp = m_at[i].marshal(data + p);
-			if (tmp < 0)
-				return -1;
-			p += tmp;
-		}
-
-		if (!excludeSignature) {
-			Utils::storeBigEndian(data + p, (uint16_t) m_signatureLength);
-			p += 2;
-			Utils::copy(data + p, m_signature, m_signatureLength);
-			p += (int) m_signatureLength;
-		}
-
-		Utils::storeBigEndian(data + p, m_flags);
-		p += 2;
+	Utils::storeBigEndian<uint64_t>(data, (uint64_t) m_ts);
+	Utils::storeBigEndian<uint16_t>(data + 8, (uint16_t) m_endpoints.size());
+	int p = 10;
+	for (Vector<Endpoint>::const_iterator e(m_endpoints.begin());e != m_endpoints.end();++e) {
+		int l = e->marshal(data + p);
+		if (l <= 0)
+			return -1;
+		p += l;
 	}
-
+	Utils::storeAsIsEndian<uint16_t>(data + p, 0); // length of meta-data, currently always 0
+	p += 2;
+	if (!excludeSignature) {
+		Utils::storeBigEndian<uint16_t>(data + p, (uint16_t) m_signature.size());
+		p += 2;
+		Utils::copy(data + p, m_signature.data(), m_signature.size());
+		p += (int) m_signature.size();
+	}
 	return p;
 }
 
-int Locator::unmarshal(const uint8_t *restrict data, const int len) noexcept
+int Locator::unmarshal(const uint8_t *data, const int len) noexcept
 {
-	if (len <= (1 + 8 + 2 + 48))
+	if (unlikely(len < 10))
 		return -1;
-
-	if (data[0] != 0xff)
+	m_ts = (int64_t) Utils::loadBigEndian<uint64_t>(data);
+	unsigned int endpointCount = Utils::loadBigEndian<uint16_t>(data + 8);
+	if (unlikely(endpointCount > ZT_LOCATOR_MAX_ENDPOINTS))
 		return -1;
-	m_ts = Utils::loadBigEndian<int64_t>(data + 1);
-	int p = 9;
-
-	if (m_ts > 0) {
-		const unsigned int ec = Utils::loadBigEndian<uint16_t>(data + p);
-		p += 2;
-		if (ec > ZT_LOCATOR_MAX_ENDPOINTS)
+	int p = 10;
+	m_endpoints.resize(endpointCount);
+	m_endpoints.shrink_to_fit();
+	for (unsigned int i = 0;i < endpointCount;++i) {
+		int l = m_endpoints[i].unmarshal(data + p, len - p);
+		if (l <= 0)
 			return -1;
-		m_endpointCount = ec;
-		for (unsigned int i = 0;i < ec;++i) {
-			int tmp = m_at[i].unmarshal(data + p, len - p);
-			if (tmp < 0)
-				return -1;
-			p += tmp;
-		}
-
-		if ((p + 2) > len)
-			return -1;
-		const unsigned int sl = Utils::loadBigEndian<uint16_t>(data + p);
-		p += 2;
-		if (sl > ZT_SIGNATURE_BUFFER_SIZE)
-			return -1;
-		m_signatureLength = sl;
-		if ((p + (int)sl) > len)
-			return -1;
-		Utils::copy(m_signature, data + p, sl);
-		p += (int)sl;
-
-		if ((p + 2) > len)
-			return -1;
-		m_flags = Utils::loadBigEndian<uint16_t>(data + p);
-		p += 2;
-	} else {
-		m_ts = 0;
+		p += l;
 	}
-
+	if (unlikely((p + 2) > len))
+		return -1;
+	p += 2 + (int) Utils::loadBigEndian<uint16_t>(data + p);
+	if (unlikely((p + 2) > len))
+		return -1;
+	unsigned int siglen = Utils::loadBigEndian<uint16_t>(data + p);
+	p += 2;
+	if (unlikely((siglen > ZT_SIGNATURE_BUFFER_SIZE) || ((p + (int) siglen) > len)))
+		return -1;
+	m_signature.unsafeSetSize(siglen);
+	Utils::copy(m_signature.data(), data + p, siglen);
+	p += siglen;
+	if (unlikely(p > len))
+		return -1;
 	return p;
-}
-
-int Locator::makeRootSpecification(const Identity &id,int64_t ts,const Vector<Endpoint> &endpoints,void *rootSpecBuf,unsigned int rootSpecBufSize)
-{
-	if (endpoints.size() > ZT_LOCATOR_MAX_ENDPOINTS)
-		return -1;
-	if (rootSpecBufSize < (ZT_IDENTITY_MARSHAL_SIZE_MAX + ZT_LOCATOR_MARSHAL_SIZE_MAX + 1))
-		return -1;
-
-	Locator loc;
-	for (Vector<Endpoint>::const_iterator e(endpoints.begin());e!=endpoints.end();++e)
-		loc.add(*e);
-	if (!loc.sign(ts,id))
-		return -1;
-
-	uint8_t *buf = reinterpret_cast<uint8_t *>(rootSpecBuf);
-	int idl = id.marshal(buf,false);
-	if (idl <= 0)
-		return -1;
-	buf += idl;
-	int locl = loc.marshal(buf);
-	if (locl <= 0)
-		return -1;
-	return idl + locl;
-}
-
-std::pair<Identity,Locator> Locator::parseRootSpecification(const void *rootSpec,unsigned int rootSpecSize)
-{
-	std::pair<Identity,Locator> rs;
-	int l = rs.first.unmarshal(reinterpret_cast<const uint8_t *>(rootSpec),(int)rootSpecSize);
-	if (l <= 0) {
-		rs.first.zero();
-		return rs;
-	}
-	l = rs.second.unmarshal(reinterpret_cast<const uint8_t *>(rootSpec) + l,(int)rootSpecSize - l);
-	if (l <= 0)
-		rs.first.zero();
-	return rs;
 }
 
 } // namespace ZeroTier

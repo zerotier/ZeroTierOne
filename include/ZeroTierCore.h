@@ -154,11 +154,6 @@ extern "C" {
 #define ZT_MAX_PEER_NETWORK_PATHS 16
 
 /**
- * Maximum number of path configurations that can be set
- */
-#define ZT_MAX_CONFIGURABLE_PATHS 32
-
-/**
  * Maximum number of rules per capability object
  *
  * Capabilities normally contain only a few rules. The rules in a capability
@@ -174,15 +169,6 @@ extern "C" {
  * more than four authenticated IPs per node you may have personal problems.
  */
 #define ZT_MAX_CERTIFICATES_OF_OWNERSHIP 4
-
-/**
- * Maximum size in bytes for a root specification
- *
- * A root specification is just a serialized identity followed by a serialized
- * locator. This provides the maximum size of those plus a lot of extra margin
- * for any future expansions, but could change in future versions.
- */
-#define ZT_ROOT_SPEC_MAX_SIZE 8192
 
 /**
  * Packet characteristics flag: packet direction, 1 if inbound 0 if outbound
@@ -274,32 +260,21 @@ extern "C" {
 /**
  * Identity type codes (must be the same as Identity.hpp).
  */
-enum ZT_Identity_Type
+enum ZT_IdentityType
 {
 	ZT_IDENTITY_TYPE_C25519 = 0, /* C25519/Ed25519 */
 	ZT_IDENTITY_TYPE_P384 =   1  /* Combined C25519/NIST-P-384 key */
 };
 
 /**
- * A ZeroTier identity (opaque)
+ * ZeroTier identity (address plus keys)
  */
 typedef void ZT_Identity;
 
 /**
- * Full identity fingerprint with address and 384-bit hash of public key(s)
+ * Locator is a signed list of endpoints
  */
-typedef struct
-{
-	/**
-	 * Short address (only least significant 40 bits are used)
-	 */
-	uint64_t address;
-
-	/**
-	 * 384-bit hash of identity public key(s)
-	 */
-	uint8_t hash[48];
-} ZT_Fingerprint;
+typedef void ZT_Locator;
 
 /**
  * Credential type IDs
@@ -332,6 +307,27 @@ enum ZT_EndpointType
 	ZT_ENDPOINT_TYPE_IP_TCP =        7,  // IP/TCP
 	ZT_ENDPOINT_TYPE_IP_HTTP2 =      8   // IP/HTTP2 encapsulation
 };
+
+/**
+ * A string that contains endpoint type IDs indexed by endpoint type (can be used as a lookup array)
+ */
+#define ZT_ENDPOINT_TYPE_CHAR_INDEX "012345678"
+
+/**
+ * Full identity fingerprint with address and 384-bit hash of public key(s)
+ */
+typedef struct
+{
+	/**
+	 * Short address (only least significant 40 bits are used)
+	 */
+	uint64_t address;
+
+	/**
+	 * 384-bit hash of identity public key(s)
+	 */
+	uint8_t hash[48];
+} ZT_Fingerprint;
 
 /**
  * Flag indicating that VL1 tracing should be generated
@@ -415,7 +411,7 @@ enum ZT_TraceCredentialRejectionReason
 };
 
 #define ZT_TRACE_FIELD_TYPE                               "t"
-#define ZT_TRACE_FIELD_CODE_LOCATION                      "@"
+#define ZT_TRACE_FIELD_CODE_LOCATION                      "c"
 #define ZT_TRACE_FIELD_ENDPOINT                           "e"
 #define ZT_TRACE_FIELD_OLD_ENDPOINT                       "oe"
 #define ZT_TRACE_FIELD_NEW_ENDPOINT                       "ne"
@@ -498,7 +494,12 @@ enum ZT_ResultCode
 	/**
 	 * The requested operation was given a bad parameter or was called in an invalid state
 	 */
-	ZT_RESULT_ERROR_BAD_PARAMETER = 1002
+	ZT_RESULT_ERROR_BAD_PARAMETER = 1002,
+
+	/**
+	 * A credential or other object was supplied that failed cryptographic signature or integrity check
+	 */
+	ZT_RESULT_ERROR_INVALID_CREDENTIAL = 1003
 };
 
 /**
@@ -1119,14 +1120,57 @@ typedef struct
 } ZT_InterfaceAddress;
 
 /**
- * Physical network path to a peer
+ * Variant type for storing possible path endpoints or peer contact points.
  */
 typedef struct
 {
 	/**
-	 * Address of endpoint
+	 * Endpoint type, which determines what field in the union 'a' applies.
 	 */
-	struct sockaddr_storage address;
+	enum ZT_EndpointType type;
+
+	union {
+		/**
+		 * Socket address generic buffer
+		 */
+		struct sockaddr_storage ss;
+
+		/**
+		 * Socket address header, for all ZT_ENDPOINT_TYPE_IP types
+		 */
+		struct sockaddr sa;
+
+		/**
+		 * IPv4 address, for all ZT_ENDPOINT_TYPE_IP types if family is AF_INET
+		 */
+		struct sockaddr_in sa_in;
+
+		/**
+		 * IPv6 address, for all ZT_ENDPOINT_TYPE_IP types if family is AF_INET6
+		 */
+		struct sockaddr_in6 sa_in6;
+
+		/**
+		 * MAC address (least significant 48 bites) for ZT_ENDPOINT_TYPE_ETHERNET and other MAC addressed types
+		 */
+		uint64_t mac;
+
+		/**
+		 * ZeroTier node address and identity fingerprint for ZT_ENDPOINT_TYPE_ZEROTIER
+		 */
+		ZT_Fingerprint fp;
+	} value;
+} ZT_Endpoint;
+
+/**
+ * Network path to a peer
+ */
+typedef struct
+{
+	/**
+	 * Path endpoint
+	 */
+	ZT_Endpoint endpoint;
 
 	/**
 	 * Time of last send in milliseconds or 0 for never
@@ -1147,10 +1191,10 @@ typedef struct
 	 * Is path preferred?
 	 */
 	int preferred;
-} ZT_PeerPhysicalPath;
+} ZT_Path;
 
 /**
- * Peer status result buffer
+ * Peer information
  */
 typedef struct
 {
@@ -1195,20 +1239,6 @@ typedef struct
 	int root;
 
 	/**
-	 * Number of bootstrap addresses
-	 */
-	unsigned int bootstrapAddressCount;
-
-	/**
-	 * Bootstrap addresses
-	 *
-	 * This is a memo-ized recently valid address that can be saved and used
-	 * to attempt rapid reconnection with this peer. If the ss_family field
-	 * is 0 this field is considered null/empty.
-	 */
-	struct sockaddr_storage bootstrap[ZT_MAX_PEER_NETWORK_PATHS];
-
-	/**
 	 * Number of networks in which this peer is authenticated
 	 */
 	unsigned int networkCount;
@@ -1224,9 +1254,28 @@ typedef struct
 	unsigned int pathCount;
 
 	/**
-	 * Known network paths to peer (array size: pathCount)
+	 * Known network paths to peer (array size: pathCount).
+	 *
+	 * These are direct paths only. Endpoints can also describe indirect paths,
+	 * but those would not appear here. Right now those can only be relaying via
+	 * a root.
 	 */
-	ZT_PeerPhysicalPath *paths;
+	ZT_Path *paths;
+
+	/**
+	 * Timestamp of peer's locator or 0 if none on file
+	 */
+	int64_t locatorTimestamp;
+
+	/**
+	 * Number of endpoints in locator
+	 */
+	unsigned int locatorEndpointCount;
+
+	/**
+	 * Endpoints in peer's locator
+	 */
+	ZT_Endpoint *locatorEndpoints;
 } ZT_Peer;
 
 /**
@@ -1567,6 +1616,16 @@ ZT_SDK_API void *ZT_getBuffer();
  */
 ZT_SDK_API void ZT_freeBuffer(void *b);
 
+/**
+ * Free a query result buffer
+ *
+ * Use this to free the return values of listNetworks(), listPeers(), and
+ * other query functions that return allocated structures or buffers.
+ *
+ * @param qr Query result buffer
+ */
+ZT_SDK_API void ZT_freeQueryResult(void *qr);
+
 /* ---------------------------------------------------------------------------------------------------------------- */
 
 /**
@@ -1584,7 +1643,12 @@ ZT_SDK_API void ZT_freeBuffer(void *b);
  * @param now Current clock in milliseconds
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-ZT_SDK_API enum ZT_ResultCode ZT_Node_new(ZT_Node **node,void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,int64_t now);
+ZT_SDK_API enum ZT_ResultCode ZT_Node_new(
+	ZT_Node **node,
+	void *uptr,
+	void *tptr,
+	const struct ZT_Node_Callbacks *callbacks,
+	int64_t now);
 
 /**
  * Delete a node and free all resources it consumes
@@ -1595,7 +1659,9 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_new(ZT_Node **node,void *uptr,void *tptr,c
  * @param node Node to delete
  * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
  */
-ZT_SDK_API void ZT_Node_delete(ZT_Node *node,void *tptr);
+ZT_SDK_API void ZT_Node_delete(
+	ZT_Node *node,
+	void *tptr);
 
 /**
  * Process a packet received from the physical wire
@@ -1684,7 +1750,12 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_processBackgroundTasks(
  * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-ZT_SDK_API enum ZT_ResultCode ZT_Node_join(ZT_Node *node,uint64_t nwid,const ZT_Fingerprint *controllerFingerprint,void *uptr,void *tptr);
+ZT_SDK_API enum ZT_ResultCode ZT_Node_join(
+	ZT_Node *node,
+	uint64_t nwid,
+	const ZT_Fingerprint *controllerFingerprint,
+	void *uptr,
+	void *tptr);
 
 /**
  * Leave a network
@@ -1702,7 +1773,11 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_join(ZT_Node *node,uint64_t nwid,const ZT_
  * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-ZT_SDK_API enum ZT_ResultCode ZT_Node_leave(ZT_Node *node,uint64_t nwid,void **uptr,void *tptr);
+ZT_SDK_API enum ZT_ResultCode ZT_Node_leave(
+	ZT_Node *node,
+	uint64_t nwid,
+	void **uptr,
+	void *tptr);
 
 /**
  * Subscribe to an Ethernet multicast group
@@ -1730,7 +1805,12 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_leave(ZT_Node *node,uint64_t nwid,void **u
  * @param multicastAdi Multicast ADI (least significant 32 bits only, use 0 if not needed)
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-ZT_SDK_API enum ZT_ResultCode ZT_Node_multicastSubscribe(ZT_Node *node,void *tptr,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
+ZT_SDK_API enum ZT_ResultCode ZT_Node_multicastSubscribe(
+	ZT_Node *node,
+	void *tptr,
+	uint64_t nwid,
+	uint64_t multicastGroup,
+	unsigned long multicastAdi);
 
 /**
  * Unsubscribe from an Ethernet multicast group (or all groups)
@@ -1746,19 +1826,30 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_multicastSubscribe(ZT_Node *node,void *tpt
  * @param multicastAdi Multicast ADI (least significant 32 bits only, use 0 if not needed)
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-ZT_SDK_API enum ZT_ResultCode ZT_Node_multicastUnsubscribe(ZT_Node *node,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
+ZT_SDK_API enum ZT_ResultCode ZT_Node_multicastUnsubscribe(
+	ZT_Node *node,
+	uint64_t nwid,
+	uint64_t multicastGroup,
+	unsigned long multicastAdi);
 
 /**
  * Add a root node or update its locator
  *
+ * ZeroTier does not take possession of the id or loc objects. The caller
+ * must still eventually delete them with ZT_Identity_delete() and
+ * ZT_Locator_delete().
+ *
  * @param node Node instance
  * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
- * @param rdef Root definition (serialized identity and locator)
- * @param rdeflen Length of root definition in bytes
- * @param address If non-NULL will be filled with the ZeroTier address of the root (only defined if return is OK)
- * @return OK (0) or error code if a fatal error condition has occurred
+ * @param id Identity of root to add
+ * @param loc Root locator
+ * @return OK (0) or error code if an error condition has occurred
  */
-ZT_SDK_API enum ZT_ResultCode ZT_Node_addRoot(ZT_Node *node,void *tptr,const void *rdef,unsigned int rdeflen,uint64_t *address);
+ZT_SDK_API enum ZT_ResultCode ZT_Node_addRoot(
+	ZT_Node *node,
+	void *tptr,
+	const ZT_Identity *id,
+	const ZT_Locator *loc);
 
 /**
  * Remove a root
@@ -1769,10 +1860,13 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_addRoot(ZT_Node *node,void *tptr,const voi
  *
  * @param node Node instance
  * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
- * @param fp Fingerprint of root (will be looked up by address only if hash is all zeroes)
- * @return OK (0) or error code if a fatal error condition has occurred
+ * @param address ZeroTier address to remove
+ * @return OK (0) or error code if an error condition has occurred
  */
-ZT_SDK_API enum ZT_ResultCode ZT_Node_removeRoot(ZT_Node *node,void *tptr,const ZT_Fingerprint *fp);
+ZT_SDK_API enum ZT_ResultCode ZT_Node_removeRoot(
+	ZT_Node *node,
+	void *tptr,
+	const uint64_t address);
 
 /**
  * Get this node's 40-bit ZeroTier address
@@ -1799,7 +1893,9 @@ ZT_SDK_API const ZT_Identity *ZT_Node_identity(ZT_Node *node);
  * @param node Node instance
  * @param status Buffer to fill with current node status
  */
-ZT_SDK_API void ZT_Node_status(ZT_Node *node,ZT_NodeStatus *status);
+ZT_SDK_API void ZT_Node_status(
+	ZT_Node *node,
+	ZT_NodeStatus *status);
 
 /**
  * Get a list of known peer nodes
@@ -1822,7 +1918,9 @@ ZT_SDK_API ZT_PeerList *ZT_Node_peers(ZT_Node *node);
  * @param nwid 64-bit network ID
  * @return Network configuration or NULL if we are not a member of this network
  */
-ZT_SDK_API ZT_VirtualNetworkConfig *ZT_Node_networkConfig(ZT_Node *node,uint64_t nwid);
+ZT_SDK_API ZT_VirtualNetworkConfig *ZT_Node_networkConfig(
+	ZT_Node *node,
+	uint64_t nwid);
 
 /**
  * Enumerate and get status of all networks
@@ -1841,17 +1939,10 @@ ZT_SDK_API ZT_VirtualNetworkList *ZT_Node_networks(ZT_Node *node);
  * @param nwid Network ID
  * @param ptr New network-associated pointer
  */
-ZT_SDK_API void ZT_Node_setNetworkUserPtr(ZT_Node *node,uint64_t nwid,void *ptr);
-
-/**
- * Free a query result buffer
- *
- * Use this to free the return values of listNetworks(), listPeers(), etc.
- *
- * @param node Node instance
- * @param qr Query result buffer
- */
-ZT_SDK_API void ZT_Node_freeQueryResult(ZT_Node *node,void *qr);
+ZT_SDK_API void ZT_Node_setNetworkUserPtr(
+	ZT_Node *node,
+	uint64_t nwid,
+	void *ptr);
 
 /**
  * Set external interface addresses where this node could be reached
@@ -1860,7 +1951,10 @@ ZT_SDK_API void ZT_Node_freeQueryResult(ZT_Node *node,void *qr);
  * @param addrs Addresses
  * @param addrCount Number of items in addrs[]
  */
-ZT_SDK_API void ZT_Node_setInterfaceAddresses(ZT_Node *node,const ZT_InterfaceAddress *addrs,unsigned int addrCount);
+ZT_SDK_API void ZT_Node_setInterfaceAddresses(
+	ZT_Node *node,
+	const ZT_InterfaceAddress *addrs,
+	unsigned int addrCount);
 
 /**
  * Send a VERB_USER_MESSAGE to another ZeroTier node
@@ -1876,7 +1970,13 @@ ZT_SDK_API void ZT_Node_setInterfaceAddresses(ZT_Node *node,const ZT_InterfaceAd
  * @param len Length of data in bytes
  * @return Boolean: non-zero on success, zero on failure
  */
-ZT_SDK_API int ZT_Node_sendUserMessage(ZT_Node *node,void *tptr,uint64_t dest,uint64_t typeId,const void *data,unsigned int len);
+ZT_SDK_API int ZT_Node_sendUserMessage(
+	ZT_Node *node,
+	void *tptr,
+	uint64_t dest,
+	uint64_t typeId,
+	const void *data,
+	unsigned int len);
 
 /**
  * Set a network controller instance for this node
@@ -1893,7 +1993,9 @@ ZT_SDK_API int ZT_Node_sendUserMessage(ZT_Node *node,void *tptr,uint64_t dest,ui
  * @param networkConfigMasterInstance Instance of NetworkConfigMaster C++ class or NULL to disable
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-ZT_SDK_API void ZT_Node_setController(ZT_Node *node,void *networkConfigMasterInstance);
+ZT_SDK_API void ZT_Node_setController(
+	ZT_Node *node,
+	void *networkConfigMasterInstance);
 
 /* ---------------------------------------------------------------------------------------------------------------- */
 
@@ -1907,7 +2009,7 @@ ZT_SDK_API void ZT_Node_setController(ZT_Node *node,void *networkConfigMasterIns
  * @param type Type of identity to generate
  * @return New identity or NULL on error
  */
-ZT_SDK_API ZT_Identity *ZT_Identity_new(enum ZT_Identity_Type type);
+ZT_SDK_API ZT_Identity *ZT_Identity_new(enum ZT_IdentityType type);
 
 /**
  * Create a new identity object from a string-serialized identity
@@ -1938,7 +2040,12 @@ ZT_SDK_API int ZT_Identity_validate(const ZT_Identity *id);
  * @param signatureBufferLength Length of buffer (must be at least 96 bytes)
  * @return Length of signature in bytes or 0 on failure.
  */
-ZT_SDK_API unsigned int ZT_Identity_sign(const ZT_Identity *id,const void *data,unsigned int len,void *signature,unsigned int signatureBufferLength);
+ZT_SDK_API unsigned int ZT_Identity_sign(
+	const ZT_Identity *id,
+	const void *data,
+	unsigned int len,
+	void *signature,
+	unsigned int signatureBufferLength);
 
 /**
  * Verify a signature
@@ -1950,7 +2057,12 @@ ZT_SDK_API unsigned int ZT_Identity_sign(const ZT_Identity *id,const void *data,
  * @param sigLen Length of signature in bytes
  * @return Non-zero if signature is valid
  */
-ZT_SDK_API int ZT_Identity_verify(const ZT_Identity *id,const void *data,unsigned int len,const void *signature,unsigned int sigLen);
+ZT_SDK_API int ZT_Identity_verify(
+	const ZT_Identity *id,
+	const void *data,
+	unsigned int len,
+	const void *signature,
+	unsigned int sigLen);
 
 /**
  * Get identity type
@@ -1958,7 +2070,7 @@ ZT_SDK_API int ZT_Identity_verify(const ZT_Identity *id,const void *data,unsigne
  * @param id Identity to query
  * @return Identity type code
  */
-ZT_SDK_API enum ZT_Identity_Type ZT_Identity_type(const ZT_Identity *id);
+ZT_SDK_API enum ZT_IdentityType ZT_Identity_type(const ZT_Identity *id);
 
 /**
  * Convert an identity to its string representation
@@ -1969,7 +2081,11 @@ ZT_SDK_API enum ZT_Identity_Type ZT_Identity_type(const ZT_Identity *id);
  * @param includePrivate If true include the private key if present
  * @return Pointer to buf or NULL on overflow or other error
  */
-ZT_SDK_API char *ZT_Identity_toString(const ZT_Identity *id,char *buf,int capacity,int includePrivate);
+ZT_SDK_API char *ZT_Identity_toString(
+	const ZT_Identity *id,
+	char *buf,
+	int capacity,
+	int includePrivate);
 
 /**
  * Check whether this identity object also holds a private key
@@ -1996,19 +2112,6 @@ ZT_SDK_API uint64_t ZT_Identity_address(const ZT_Identity *id);
 ZT_SDK_API const ZT_Fingerprint *ZT_Identity_fingerprint(const ZT_Identity *id);
 
 /**
- * Make a root specification
- *
- * @param id Identity to sign root with (must have private key)
- * @param ts Timestamp for root specification in milliseconds since epoch
- * @param addrs Physical addresses for root
- * @param addrcnt Number of physical addresses for root
- * @param rootSpecBuf Buffer to receive result, should be at least ZT_ROOT_SPEC_MAX_SIZE bytes
- * @param rootSpecBufSize Size of rootSpecBuf in bytes
- * @return Bytes written to rootSpecBuf or -1 on error
- */
-ZT_SDK_API int ZT_Identity_makeRootSpecification(ZT_Identity *id,int64_t ts,struct sockaddr_storage *addrs,unsigned int addrcnt,void *rootSpecBuf,unsigned int rootSpecBufSize);
-
-/**
  * Delete an identity and free associated memory
  *
  * This should only be used with identities created via Identity_new
@@ -2017,6 +2120,53 @@ ZT_SDK_API int ZT_Identity_makeRootSpecification(ZT_Identity *id,int64_t ts,stru
  * @param id Identity to delete
  */
 ZT_SDK_API void ZT_Identity_delete(ZT_Identity *id);
+
+/* ---------------------------------------------------------------------------------------------------------------- */
+
+/**
+ * Create and sign a new locator
+ *
+ * @param ts Locator timestamp
+ * @param endpoints List of endpoints to store in locator
+ * @param endpointCount Number of endpoints (maximum: 8)
+ * @param signer Identity to sign locator (must include private key)
+ * @return Locator or NULL on error (too many endpoints or identity does not have private key)
+ */
+ZT_SDK_API ZT_Locator *ZT_Locator_create(int64_t ts,const ZT_Endpoint *endpoints,unsigned int endpointCount,const ZT_Identity *signer);
+
+/**
+ * Decode a serialized locator
+ *
+ * @param data Data to deserialize
+ * @param len Length of data
+ * @return Locator or NULL if data is not valid
+ */
+ZT_SDK_API ZT_Locator *ZT_Locator_unmarshal(const void *data,unsigned int len);
+
+/**
+ * Get the number of endpoints in this locator
+ *
+ * @param loc Locator to query
+ * @return Number of endpoints
+ */
+ZT_SDK_API unsigned int ZT_Locator_endpointCount(const ZT_Locator *loc);
+
+/**
+ * Get a pointer to an endpoint in a locator
+ *
+ * The returned pointer remains valid as long as the Locator is not deleted.
+ *
+ * @param ep Endpoint number from 0 to 1 - endpointCount()
+ * @return Endpoint or NULL if out of bounds
+ */
+ZT_SDK_API const ZT_Endpoint *ZT_Locator_endpoint(const unsigned int ep);
+
+/**
+ * Delete a locator
+ *
+ * @param loc Locator to delete
+ */
+ZT_SDK_API void ZT_Locator_delete(ZT_Locator *loc);
 
 /* ---------------------------------------------------------------------------------------------------------------- */
 

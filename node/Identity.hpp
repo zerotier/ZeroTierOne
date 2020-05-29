@@ -53,8 +53,8 @@ public:
 	 */
 	enum Type
 	{
-		C25519 = ZT_CRYPTO_ALG_C25519, // Type 0 -- Curve25519 and Ed25519 (1.x and 2.x, default)
-		P384 = ZT_CRYPTO_ALG_P384      // Type 1 -- NIST P-384 with linked Curve25519/Ed25519 secondaries (2.x+)
+		C25519 = ZT_IDENTITY_TYPE_C25519, // Type 0 -- Curve25519 and Ed25519 (1.x and 2.x, default)
+		P384 = ZT_IDENTITY_TYPE_P384      // Type 1 -- NIST P-384 with linked Curve25519/Ed25519 secondaries (2.x+)
 	};
 
 	/**
@@ -62,7 +62,7 @@ public:
 	 */
 	static const Identity NIL;
 
-	ZT_INLINE Identity() noexcept // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+	ZT_INLINE Identity() noexcept
 	{
 		Utils::memoryLock(this,sizeof(Identity));
 		memoryZero(this);
@@ -76,7 +76,7 @@ public:
 	 *
 	 * @param str Identity in canonical string format
 	 */
-	explicit ZT_INLINE Identity(const char *str) // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+	explicit ZT_INLINE Identity(const char *str)
 	{
 		Utils::memoryLock(this,sizeof(Identity));
 		fromString(str);

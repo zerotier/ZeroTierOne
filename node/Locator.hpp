@@ -14,17 +14,16 @@
 #ifndef ZT_LOCATOR_HPP
 #define ZT_LOCATOR_HPP
 
-#include <algorithm>
-#include <vector>
-#include <cstdint>
-
 #include "Constants.hpp"
 #include "Endpoint.hpp"
 #include "Identity.hpp"
 #include "TriviallyCopyable.hpp"
+#include "SharedPtr.hpp"
+#include "FCV.hpp"
+#include "Containers.hpp"
 
 #define ZT_LOCATOR_MAX_ENDPOINTS 8
-#define ZT_LOCATOR_MARSHAL_SIZE_MAX (1 + 8 + 2 + (ZT_ENDPOINT_MARSHAL_SIZE_MAX * ZT_LOCATOR_MAX_ENDPOINTS) + 2 + 2 + ZT_SIGNATURE_BUFFER_SIZE)
+#define ZT_LOCATOR_MARSHAL_SIZE_MAX (8 + 2 + (ZT_LOCATOR_MAX_ENDPOINTS * ZT_ENDPOINT_MARSHAL_SIZE_MAX) + 2 + 2 + ZT_SIGNATURE_BUFFER_SIZE)
 
 namespace ZeroTier {
 
@@ -34,45 +33,39 @@ namespace ZeroTier {
  * A locator contains long-lived endpoints for a node such as IP/port pairs,
  * URLs, or other nodes, and is signed by the node it describes.
  */
-class Locator : public TriviallyCopyable
+class Locator
 {
-public:
-	ZT_INLINE Locator() noexcept { memoryZero(this); }
+	friend class SharedPtr<Locator>;
 
-	/**
-	 * Zero the Locator data structure
-	 */
-	ZT_INLINE void clear() noexcept { memoryZero(this); }
+public:
+	ZT_INLINE Locator() noexcept :
+		m_ts(0)
+	{}
+
+	ZT_INLINE Locator(const Locator &loc) noexcept :
+		m_ts(loc.m_ts),
+		m_endpoints(loc.m_endpoints),
+		m_signature(loc.m_signature),
+		__refCount(0)
+	{}
 
 	/**
 	 * @return Timestamp (a.k.a. revision number) set by Location signer
 	 */
-	ZT_INLINE int64_t timestamp() const noexcept { return m_ts; }
+	ZT_INLINE int64_t timestamp() const noexcept
+	{ return m_ts; }
 
 	/**
-	 * @return True if locator is signed
+	 * @return Endpoints specified in locator
 	 */
-	ZT_INLINE bool isSigned() const noexcept { return m_signatureLength > 0; }
+	ZT_INLINE const Vector<Endpoint> &endpoints() const noexcept
+	{ return m_endpoints; }
 
 	/**
-	 * @return Length of signature in bytes or 0 if none
+	 * @return Signature data
 	 */
-	ZT_INLINE unsigned int signatureLength() const noexcept { return m_signatureLength; }
-
-	/**
-	 * @return Pointer to signature bytes
-	 */
-	ZT_INLINE const uint8_t *signature() const noexcept { return m_signature; }
-
-	/**
-	 * @return Number of endpoints in this locator
-	 */
-	ZT_INLINE unsigned int endpointCount() const noexcept { return m_endpointCount; }
-
-	/**
-	 * @return Pointer to array of endpoints
-	 */
-	ZT_INLINE const Endpoint *endpoints() const noexcept { return m_at; }
+	ZT_INLINE const FCV<uint8_t, ZT_SIGNATURE_BUFFER_SIZE> &signature() const noexcept
+	{ return m_signature; }
 
 	/**
 	 * Add an endpoint to this locator
@@ -83,13 +76,7 @@ public:
 	 * @param ep Endpoint to add
 	 * @return True if endpoint was added (or already present), false if locator is full
 	 */
-	ZT_INLINE bool add(const Endpoint &ep) noexcept
-	{
-		if (m_endpointCount >= ZT_LOCATOR_MAX_ENDPOINTS)
-			return false;
-		m_at[m_endpointCount++] = ep;
-		return true;
-	}
+	bool add(const Endpoint &ep);
 
 	/**
 	 * Sign this locator
@@ -100,7 +87,7 @@ public:
 	 * @param id Identity that includes private key
 	 * @return True if signature successful
 	 */
-	bool sign(int64_t ts,const Identity &id) noexcept;
+	bool sign(int64_t ts, const Identity &id) noexcept;
 
 	/**
 	 * Verify this Locator's validity and signature
@@ -110,40 +97,21 @@ public:
 	 */
 	bool verify(const Identity &id) const noexcept;
 
-	explicit ZT_INLINE operator bool() const noexcept { return m_ts != 0; }
+	explicit ZT_INLINE operator bool() const noexcept
+	{ return m_ts > 0; }
 
-	static constexpr int marshalSizeMax() noexcept { return ZT_LOCATOR_MARSHAL_SIZE_MAX; }
-	int marshal(uint8_t data[ZT_LOCATOR_MARSHAL_SIZE_MAX],bool excludeSignature = false) const noexcept;
-	int unmarshal(const uint8_t *restrict data,int len) noexcept;
+	static constexpr int marshalSizeMax() noexcept
+	{ return ZT_LOCATOR_MARSHAL_SIZE_MAX; }
 
-	/**
-	 * Create a signed Locator and package it with the root's identity to make a root spec
-	 *
-	 * @param id Identity (must have secret)
-	 * @param ts Timestamp
-	 * @param endpoints Endpoints
-	 * @param rootSpecBuf Buffer to store identity and locator into
-	 * @param rootSpecBufSize Size of buffer
-	 * @return Bytes written to buffer or -1 on error
-	 */
-	static int makeRootSpecification(const Identity &id,int64_t ts,const Vector<Endpoint> &endpoints,void *rootSpecBuf,unsigned int rootSpecBufSize);
+	int marshal(uint8_t data[ZT_LOCATOR_MARSHAL_SIZE_MAX], bool excludeSignature = false) const noexcept;
 
-	/**
-	 * Parse a root specification and decode the identity and locator
-	 *
-	 * @param rootSpec Root spec bytes
-	 * @param rootSpecSize Size in bytes
-	 * @return Identity and locator, with identity NULL if an error occurs
-	 */
-	static std::pair<Identity,Locator> parseRootSpecification(const void *rootSpec,unsigned int rootSpecSize);
+	int unmarshal(const uint8_t *data, int len) noexcept;
 
 private:
 	int64_t m_ts;
-	unsigned int m_endpointCount;
-	unsigned int m_signatureLength;
-	Endpoint m_at[ZT_LOCATOR_MAX_ENDPOINTS];
-	uint16_t m_flags;
-	uint8_t m_signature[ZT_SIGNATURE_BUFFER_SIZE];
+	Vector<Endpoint> m_endpoints;
+	FCV<uint8_t, ZT_SIGNATURE_BUFFER_SIZE> m_signature;
+	std::atomic<int> __refCount;
 };
 
 } // namespace ZeroTier

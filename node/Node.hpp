@@ -26,19 +26,7 @@
 #include "Buf.hpp"
 #include "Containers.hpp"
 
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <vector>
-#include <map>
-
-// Bit mask for "expecting reply" hash
-#define ZT_EXPECTING_REPLIES_BUCKET_MASK1 255
-#define ZT_EXPECTING_REPLIES_BUCKET_MASK2 31
-
 namespace ZeroTier {
-
-class Locator;
 
 /**
  * Implementation of Node object as defined in CAPI
@@ -48,23 +36,17 @@ class Locator;
 class Node : public NetworkController::Sender
 {
 public:
-	Node(void *uPtr,void *tPtr,const struct ZT_Node_Callbacks *callbacks,int64_t now);
-	virtual ~Node();
-
-	/**
-	 * Perform any operations that should be done prior to deleting a Node
-	 *
-	 * This is technically optional but recommended.
-	 *
-	 * @param tPtr Thread pointer to pass through to callbacks
-	 */
-	void shutdown(void *tPtr);
-
 	// Get rid of alignment warnings on 32-bit Windows
 #ifdef __WINDOWS__
 	void * operator new(size_t i) { return _mm_malloc(i,16); }
 	void operator delete(void* p) { _mm_free(p); }
 #endif
+
+	Node(void *uPtr, void *tPtr, const struct ZT_Node_Callbacks *callbacks, int64_t now);
+
+	virtual ~Node();
+
+	void shutdown(void *tPtr);
 
 	// Public API Functions ---------------------------------------------------------------------------------------------
 
@@ -76,6 +58,7 @@ public:
 		SharedPtr<Buf> &packetData,
 		unsigned int packetLength,
 		volatile int64_t *nextBackgroundTaskDeadline);
+
 	ZT_ResultCode processVirtualNetworkFrame(
 		void *tPtr,
 		int64_t now,
@@ -87,30 +70,80 @@ public:
 		SharedPtr<Buf> &frameData,
 		unsigned int frameLength,
 		volatile int64_t *nextBackgroundTaskDeadline);
-	ZT_ResultCode processBackgroundTasks(void *tPtr, int64_t now, volatile int64_t *nextBackgroundTaskDeadline);
-	ZT_ResultCode join(uint64_t nwid,const ZT_Fingerprint *controllerFingerprint,void *uptr,void *tptr);
-	ZT_ResultCode leave(uint64_t nwid,void **uptr,void *tptr);
-	ZT_ResultCode multicastSubscribe(void *tPtr,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
-	ZT_ResultCode multicastUnsubscribe(uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
-	ZT_ResultCode addRoot(void *tptr,const void *rdef,unsigned int rdeflen,uint64_t *address);
-	ZT_ResultCode removeRoot(void *tptr,const ZT_Fingerprint *fp);
+
+	ZT_ResultCode processBackgroundTasks(
+		void *tPtr,
+		int64_t now,
+		volatile int64_t *nextBackgroundTaskDeadline);
+
+	ZT_ResultCode join(
+		uint64_t nwid,
+		const ZT_Fingerprint *controllerFingerprint,
+		void *uptr,
+		void *tptr);
+
+	ZT_ResultCode leave(
+		uint64_t nwid,
+		void **uptr,
+		void *tptr);
+
+	ZT_ResultCode multicastSubscribe(
+		void *tPtr,
+		uint64_t nwid,
+		uint64_t multicastGroup,
+		unsigned long multicastAdi);
+
+	ZT_ResultCode multicastUnsubscribe(
+		uint64_t nwid,
+		uint64_t multicastGroup,
+		unsigned long multicastAdi);
+
+	ZT_ResultCode addRoot(
+		void *tptr,
+		const ZT_Identity *id,
+		const ZT_Locator *loc);
+
+	ZT_ResultCode removeRoot(
+		void *tptr,
+		const uint64_t address);
+
 	uint64_t address() const;
-	void status(ZT_NodeStatus *status) const;
+
+	void status(
+		ZT_NodeStatus *status) const;
+
 	ZT_PeerList *peers() const;
-	ZT_VirtualNetworkConfig *networkConfig(uint64_t nwid) const;
+
+	ZT_VirtualNetworkConfig *networkConfig(
+		uint64_t nwid) const;
+
 	ZT_VirtualNetworkList *networks() const;
-	void setNetworkUserPtr(uint64_t nwid,void *ptr);
-	void freeQueryResult(void *qr);
-	void setInterfaceAddresses(const ZT_InterfaceAddress *addrs,unsigned int addrCount);
-	int sendUserMessage(void *tptr,uint64_t dest,uint64_t typeId,const void *data,unsigned int len);
-	void setController(void *networkControllerInstance);
+
+	void setNetworkUserPtr(
+		uint64_t nwid,
+		void *ptr);
+
+	void setInterfaceAddresses(
+		const ZT_InterfaceAddress *addrs,
+		unsigned int addrCount);
+
+	int sendUserMessage(
+		void *tptr,
+		uint64_t dest,
+		uint64_t typeId,
+		const void *data,
+		unsigned int len);
+
+	void setController(
+		void *networkControllerInstance);
 
 	// Internal functions -----------------------------------------------------------------------------------------------
 
 	/**
 	 * @return Most recent time value supplied to core via API
 	 */
-	ZT_INLINE int64_t now() const noexcept { return m_now; }
+	ZT_INLINE int64_t now() const noexcept
+	{ return m_now; }
 
 	/**
 	 * Send packet to to the physical wire via callback
@@ -123,7 +156,7 @@ public:
 	 * @param ttl TTL or 0 for default/max
 	 * @return True if send appears successful
 	 */
-	ZT_INLINE bool putPacket(void *tPtr,const int64_t localSocket,const InetAddress &addr,const void *data,unsigned int len,unsigned int ttl = 0) noexcept
+	ZT_INLINE bool putPacket(void *tPtr, const int64_t localSocket, const InetAddress &addr, const void *data, unsigned int len, unsigned int ttl = 0) noexcept
 	{
 		return (m_cb.wirePacketSendFunction(
 			reinterpret_cast<ZT_Node *>(this),
@@ -149,7 +182,7 @@ public:
 	 * @param data Ethernet frame data
 	 * @param len Ethernet frame length in bytes
 	 */
-	ZT_INLINE void putFrame(void *tPtr,uint64_t nwid,void **nuptr,const MAC &source,const MAC &dest,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len) noexcept
+	ZT_INLINE void putFrame(void *tPtr, uint64_t nwid, void **nuptr, const MAC &source, const MAC &dest, unsigned int etherType, unsigned int vlanId, const void *data, unsigned int len) noexcept
 	{
 		m_cb.virtualNetworkFrameFunction(
 			reinterpret_cast<ZT_Node *>(this),
@@ -194,7 +227,7 @@ public:
 	 * @param ev Event object
 	 * @param md Event data or NULL if none
 	 */
-	ZT_INLINE void postEvent(void *tPtr,ZT_Event ev,const void *md = nullptr) noexcept
+	ZT_INLINE void postEvent(void *tPtr, ZT_Event ev, const void *md = nullptr) noexcept
 	{
 		m_cb.eventCallback(reinterpret_cast<ZT_Node *>(this), m_uPtr, tPtr, ev, md);
 	}
@@ -208,7 +241,7 @@ public:
 	 * @param op Config operation or event type
 	 * @param nc Network config info
 	 */
-	ZT_INLINE void configureVirtualNetworkPort(void *tPtr,uint64_t nwid,void **nuptr,ZT_VirtualNetworkConfigOperation op,const ZT_VirtualNetworkConfig *nc) noexcept
+	ZT_INLINE void configureVirtualNetworkPort(void *tPtr, uint64_t nwid, void **nuptr, ZT_VirtualNetworkConfigOperation op, const ZT_VirtualNetworkConfig *nc) noexcept
 	{
 		m_cb.virtualNetworkConfigFunction(reinterpret_cast<ZT_Node *>(this), m_uPtr, tPtr, nwid, nuptr, op, nc);
 	}
@@ -216,7 +249,8 @@ public:
 	/**
 	 * @return True if node appears online
 	 */
-	ZT_INLINE bool online() const noexcept { return m_online; }
+	ZT_INLINE bool online() const noexcept
+	{ return m_online; }
 
 	/**
 	 * Get a state object
@@ -226,7 +260,7 @@ public:
 	 * @param id Object ID
 	 * @return Vector containing data or empty vector if not found or empty
 	 */
-	Vector<uint8_t> stateObjectGet(void *tPtr,ZT_StateObjectType type,const uint64_t id[2]);
+	Vector<uint8_t> stateObjectGet(void *tPtr, ZT_StateObjectType type, const uint64_t id[2]);
 
 	/**
 	 * Store a state object
@@ -237,10 +271,10 @@ public:
 	 * @param data Data to store
 	 * @param len Length of data
 	 */
-	ZT_INLINE void stateObjectPut(void *const tPtr,ZT_StateObjectType type,const uint64_t id[2],const void *const data,const unsigned int len) noexcept
+	ZT_INLINE void stateObjectPut(void *const tPtr, ZT_StateObjectType type, const uint64_t id[2], const void *const data, const unsigned int len) noexcept
 	{
 		if (m_cb.statePutFunction)
-			m_cb.statePutFunction(reinterpret_cast<ZT_Node *>(this), m_uPtr, tPtr, type, id, data, (int)len);
+			m_cb.statePutFunction(reinterpret_cast<ZT_Node *>(this), m_uPtr, tPtr, type, id, data, (int) len);
 	}
 
 	/**
@@ -250,7 +284,7 @@ public:
 	 * @param type Object type to delete
 	 * @param id Object ID
 	 */
-	ZT_INLINE void stateObjectDelete(void *const tPtr,ZT_StateObjectType type,const uint64_t id[2]) noexcept
+	ZT_INLINE void stateObjectDelete(void *const tPtr, ZT_StateObjectType type, const uint64_t id[2]) noexcept
 	{
 		if (m_cb.statePutFunction)
 			m_cb.statePutFunction(reinterpret_cast<ZT_Node *>(this), m_uPtr, tPtr, type, id, nullptr, -1);
@@ -267,7 +301,7 @@ public:
 	 * @param remoteAddress Remote address
 	 * @return True if path should be used
 	 */
-	bool shouldUsePathForZeroTierTraffic(void *tPtr,const Identity &id,int64_t localSocket,const InetAddress &remoteAddress);
+	bool shouldUsePathForZeroTierTraffic(void *tPtr, const Identity &id, int64_t localSocket, const InetAddress &remoteAddress);
 
 	/**
 	 * Query callback for a physical address for a peer
@@ -278,17 +312,19 @@ public:
 	 * @param addr Buffer to store address (result paramter)
 	 * @return True if addr was filled with something
 	 */
-	bool externalPathLookup(void *tPtr,const Identity &id,int family,InetAddress &addr);
+	bool externalPathLookup(void *tPtr, const Identity &id, int family, InetAddress &addr);
 
 	/**
 	 * @return This node's identity
 	 */
-	ZT_INLINE const Identity &identity() const noexcept { return m_RR.identity; }
+	ZT_INLINE const Identity &identity() const noexcept
+	{ return m_RR.identity; }
 
 	/**
 	 * @return True if aggressive NAT-traversal mechanisms like scanning of <1024 ports are enabled
 	 */
-	ZT_INLINE bool natMustDie() const noexcept { return m_natMustDie; }
+	ZT_INLINE bool natMustDie() const noexcept
+	{ return m_natMustDie; }
 
 	/**
 	 * Check whether a local controller has authorized a member on a network
@@ -303,12 +339,14 @@ public:
 	 * @param addr Member address to check
 	 * @return True if member has been authorized
 	 */
-	bool localControllerHasAuthorized(int64_t now,uint64_t nwid,const Address &addr) const;
+	bool localControllerHasAuthorized(int64_t now, uint64_t nwid, const Address &addr) const;
 
 	// Implementation of NetworkController::Sender interface
-	virtual void ncSendConfig(uint64_t nwid,uint64_t requestPacketId,const Address &destination,const NetworkConfig &nc,bool sendLegacyFormatConfig);
-	virtual void ncSendRevocation(const Address &destination,const Revocation &rev);
-	virtual void ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &destination,NetworkController::ErrorCode errorCode);
+	virtual void ncSendConfig(uint64_t nwid, uint64_t requestPacketId, const Address &destination, const NetworkConfig &nc, bool sendLegacyFormatConfig);
+
+	virtual void ncSendRevocation(const Address &destination, const Revocation &rev);
+
+	virtual void ncSendError(uint64_t nwid, uint64_t requestPacketId, const Address &destination, NetworkController::ErrorCode errorCode);
 
 private:
 	RuntimeEnvironment m_RR;
@@ -329,23 +367,33 @@ private:
 	// weird place to put it.
 	struct p_LocalControllerAuth
 	{
-		uint64_t nwid,address;
-		ZT_INLINE p_LocalControllerAuth(const uint64_t nwid_, const Address &address_)  noexcept: nwid(nwid_), address(address_.toInt()) {}
-		ZT_INLINE unsigned long hashCode() const noexcept { return (unsigned long)(nwid + address); }
-		ZT_INLINE bool operator==(const p_LocalControllerAuth &a) const noexcept { return ((a.nwid == nwid) && (a.address == address)); }
-		ZT_INLINE bool operator!=(const p_LocalControllerAuth &a) const noexcept { return ((a.nwid != nwid) || (a.address != address)); }
-		ZT_INLINE bool operator<(const p_LocalControllerAuth &a) const noexcept { return ((a.nwid < nwid) || ((a.nwid == nwid) && (a.address < address))); }
+		uint64_t nwid, address;
+		ZT_INLINE p_LocalControllerAuth(const uint64_t nwid_, const Address &address_) noexcept: nwid(nwid_), address(address_.toInt())
+		{}
+
+		ZT_INLINE unsigned long hashCode() const noexcept
+		{ return (unsigned long) (nwid + address); }
+
+		ZT_INLINE bool operator==(const p_LocalControllerAuth &a) const noexcept
+		{ return ((a.nwid == nwid) && (a.address == address)); }
+
+		ZT_INLINE bool operator!=(const p_LocalControllerAuth &a) const noexcept
+		{ return ((a.nwid != nwid) || (a.address != address)); }
+
+		ZT_INLINE bool operator<(const p_LocalControllerAuth &a) const noexcept
+		{ return ((a.nwid < nwid) || ((a.nwid == nwid) && (a.address < address))); }
 	};
-	Map<p_LocalControllerAuth,int64_t> m_localControllerAuthorizations;
+
+	Map<p_LocalControllerAuth, int64_t> m_localControllerAuthorizations;
 	Mutex m_localControllerAuthorizations_l;
 
 	// Locally joined networks by network ID.
-	Map< uint64_t,SharedPtr<Network> > m_networks;
+	Map<uint64_t, SharedPtr<Network> > m_networks;
 	RWMutex m_networks_l;
 
 	// These are local interface addresses that have been configured via the API
 	// and can be pushed to other nodes.
-	Vector< ZT_InterfaceAddress > m_localInterfaceAddresses;
+	Vector<ZT_InterfaceAddress> m_localInterfaceAddresses;
 	Mutex m_localInterfaceAddresses_m;
 
 	// This is locked while running processBackgroundTasks().

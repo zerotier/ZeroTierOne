@@ -31,14 +31,16 @@ Topology::Topology(const RuntimeEnvironment *renv, void *tPtr) :
 			if ((l > 0)&&(id)) {
 				if ((drem -= l) <= 0)
 					break;
-				Locator loc;
-				l = loc.unmarshal(dptr, drem);
-				if ((l > 0)&&(loc)) {
-					m_roots[id] = loc;
+				Locator *const loc = new Locator();
+				l = loc->unmarshal(dptr, drem);
+				if (l > 0) {
+					m_roots[id].set(loc);
 					dptr += l;
 					ZT_SPEW("loaded root %s", id.address().toString().c_str());
 					if ((drem -= l) <= 0)
 						break;
+				} else {
+					delete loc;
 				}
 			}
 		}
@@ -71,9 +73,9 @@ struct p_RootSortComparisonOperator
 	}
 };
 
-bool Topology::addRoot(void *const tPtr, const Identity &id, const Locator &loc)
+bool Topology::addRoot(void *const tPtr, const Identity &id, const SharedPtr<const Locator> &loc)
 {
-	if ((id == RR->identity) || (!id) || (!loc) || (!loc.verify(id)) || (!id.locallyValidate()))
+	if ((id == RR->identity) || (!id) || (!loc) || (!loc->verify(id)) || (!id.locallyValidate()))
 		return false;
 	RWMutex::Lock l1(m_peers_l);
 	m_roots[id] = loc;
@@ -82,20 +84,17 @@ bool Topology::addRoot(void *const tPtr, const Identity &id, const Locator &loc)
 	return true;
 }
 
-bool Topology::removeRoot(void *const tPtr, const Fingerprint &fp)
+bool Topology::removeRoot(void *const tPtr, Address address)
 {
-	const bool hashIsZero = !fp.haveHash();
 	RWMutex::Lock l1(m_peers_l);
 	for(Vector< SharedPtr<Peer> >::const_iterator r(m_rootPeers.begin());r!=m_rootPeers.end();++r) {
-		if ((*r)->address() == fp.address()) {
-			if ((hashIsZero)||(fp == (*r)->identity().fingerprint())) {
-				Map<Identity,Locator>::iterator rr(m_roots.find((*r)->identity()));
-				if (rr != m_roots.end()) {
-					m_roots.erase(rr);
-					m_updateRootPeers(tPtr);
-					m_writeRootList(tPtr);
-					return true;
-				}
+		if ((*r)->address() == address) {
+			Map< Identity,SharedPtr<const Locator> >::iterator rr(m_roots.find((*r)->identity()));
+			if (rr != m_roots.end()) {
+				m_roots.erase(rr);
+				m_updateRootPeers(tPtr);
+				m_writeRootList(tPtr);
+				return true;
 			}
 		}
 	}
@@ -174,11 +173,11 @@ void Topology::m_writeRootList(void *tPtr)
 	uint8_t *const roots = (uint8_t *)malloc((ZT_IDENTITY_MARSHAL_SIZE_MAX + ZT_LOCATOR_MARSHAL_SIZE_MAX + 2) * m_roots.size());
 	if (roots) { // sanity check
 		int p = 0;
-		for (Map<Identity,Locator>::const_iterator r(m_roots.begin());r!=m_roots.end();++r) {
+		for (Map< Identity,SharedPtr<const Locator> >::const_iterator r(m_roots.begin());r!=m_roots.end();++r) {
 			int pp = r->first.marshal(roots + p, false);
 			if (pp > 0) {
 				p += pp;
-				pp = r->second.marshal(roots + p);
+				pp = r->second->marshal(roots + p);
 				if (pp > 0)
 					p += pp;
 			}
@@ -195,16 +194,23 @@ void Topology::m_updateRootPeers(void *tPtr)
 {
 	// assumes m_peers_l is locked for write
 	Vector< SharedPtr<Peer> > rp;
-	for (Map<Identity,Locator>::iterator r(m_roots.begin());r!=m_roots.end();++r) {
-		Map< Address,SharedPtr<Peer> >::iterator p(m_peers.find(r->first.address()));
-		if ((p == m_peers.end())||(p->second->identity() != r->first)) {
-			SharedPtr<Peer> np(new Peer(RR));
-			np->init(r->first);
-			m_peers[r->first.address()] = np;
-			rp.push_back(np);
-		} else {
-			rp.push_back(p->second);
+	for (Map< Identity,SharedPtr<const Locator> >::iterator r(m_roots.begin());r!=m_roots.end();++r) {
+		Map< Address,SharedPtr<Peer> >::iterator pp(m_peers.find(r->first.address()));
+		SharedPtr<Peer> p;
+		if (pp != m_peers.end())
+			p = pp->second;
+
+		if (!p)
+			m_loadCached(tPtr, r->first.address(), p);
+
+		if ((!p) || (p->identity() != r->first)) {
+			p.set(new Peer(RR));
+			p->init(r->first);
+			m_peers[r->first.address()] = p;
 		}
+
+		p->setLocator(r->second);
+		rp.push_back(p);
 	}
 	m_rootPeers.swap(rp);
 	std::sort(m_rootPeers.begin(), m_rootPeers.end(), p_RootSortComparisonOperator());

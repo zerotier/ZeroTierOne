@@ -15,6 +15,7 @@ set(core_headers
 	Defragmenter.hpp
 	Dictionary.hpp
 	ECC384.hpp
+	EphemeralKey.hpp
 	Expect.hpp
 	FCV.hpp
 	Fingerprint.hpp

@@ -70,16 +70,6 @@ namespace ZeroTier {
  */
 #define ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE 0x0000020000000000ULL
 
-/**
- * Device that replicates multicasts
- */
-#define ZT_NETWORKCONFIG_SPECIALIST_TYPE_MULTICAST_REPLICATOR 0x0000040000000000ULL
-
-/**
- * Device that is allowed to remotely debug this network and query other peers for e.g. remote trace data
- */
-#define ZT_NETWORKCONFIG_SPECIALIST_TYPE_DIAGNOSTICIAN 0x0000080000000000ULL
-
 // Fields for meta-data sent with network config requests
 
 // Protocol version (see Packet.hpp)
@@ -156,7 +146,8 @@ namespace ZeroTier {
  */
 struct NetworkConfig : TriviallyCopyable
 {
-	ZT_INLINE NetworkConfig() noexcept { memoryZero(this); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+	ZT_INLINE NetworkConfig() noexcept
+	{ memoryZero(this); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 
 	/**
 	 * Write this network config to a dictionary for transport
@@ -177,22 +168,26 @@ struct NetworkConfig : TriviallyCopyable
 	/**
 	 * @return True if broadcast (ff:ff:ff:ff:ff:ff) address should work on this network
 	 */
-	ZT_INLINE bool enableBroadcast() const noexcept { return ((this->flags & ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST) != 0); }
+	ZT_INLINE bool enableBroadcast() const noexcept
+	{ return ((this->flags & ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST) != 0); }
 
 	/**
 	 * @return True if IPv6 NDP emulation should be allowed for certain "magic" IPv6 address patterns
 	 */
-	ZT_INLINE bool ndpEmulation() const noexcept { return ((this->flags & ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION) != 0); }
+	ZT_INLINE bool ndpEmulation() const noexcept
+	{ return ((this->flags & ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION) != 0); }
 
 	/**
 	 * @return Network type is public (no access control)
 	 */
-	ZT_INLINE bool isPublic() const noexcept { return (this->type == ZT_NETWORK_TYPE_PUBLIC); }
+	ZT_INLINE bool isPublic() const noexcept
+	{ return (this->type == ZT_NETWORK_TYPE_PUBLIC); }
 
 	/**
 	 * @return Network type is private (certificate access control)
 	 */
-	ZT_INLINE bool isPrivate() const noexcept { return (this->type == ZT_NETWORK_TYPE_PRIVATE); }
+	ZT_INLINE bool isPrivate() const noexcept
+	{ return (this->type == ZT_NETWORK_TYPE_PRIVATE); }
 
 	/**
 	 * @param fromPeer Peer attempting to bridge other Ethernet peers onto network
@@ -200,16 +195,20 @@ struct NetworkConfig : TriviallyCopyable
 	 */
 	ZT_INLINE bool permitsBridging(const Address &fromPeer) const noexcept
 	{
-		for(unsigned int i=0;i<specialistCount;++i) {
-			if ((fromPeer.toInt() == (specialists[i] & ZT_ADDRESS_MASK))&&((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE) != 0))
+		for (unsigned int i = 0;i < specialistCount;++i) {
+			if ((fromPeer.toInt() == (specialists[i] & ZT_ADDRESS_MASK)) && ((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE) != 0))
 				return true;
 		}
 		return false;
 	}
 
-	ZT_INLINE operator bool() const noexcept { return (networkId != 0); } // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
-	ZT_INLINE bool operator==(const NetworkConfig &nc) const noexcept { return (memcmp(this,&nc,sizeof(NetworkConfig)) == 0); }
-	ZT_INLINE bool operator!=(const NetworkConfig &nc) const noexcept { return (!(*this == nc)); }
+	ZT_INLINE operator bool() const noexcept
+	{ return (networkId != 0); } // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
+	ZT_INLINE bool operator==(const NetworkConfig &nc) const noexcept
+	{ return (memcmp(this, &nc, sizeof(NetworkConfig)) == 0); }
+
+	ZT_INLINE bool operator!=(const NetworkConfig &nc) const noexcept
+	{ return (!(*this == nc)); }
 
 	/**
 	 * Add a specialist or mask flags if already present
@@ -221,11 +220,11 @@ struct NetworkConfig : TriviallyCopyable
 	 * @param f Flags (OR of specialist role/type flags)
 	 * @return True if successfully masked or added
 	 */
-	bool addSpecialist(const Address &a,uint64_t f) noexcept;
+	bool addSpecialist(const Address &a, uint64_t f) noexcept;
 
 	ZT_INLINE const Capability *capability(const uint32_t id) const
 	{
-		for(unsigned int i=0;i<capabilityCount;++i) {
+		for (unsigned int i = 0;i < capabilityCount;++i) {
 			if (capabilities[i].id() == id)
 				return &(capabilities[i]);
 		}
@@ -234,7 +233,7 @@ struct NetworkConfig : TriviallyCopyable
 
 	ZT_INLINE const Tag *tag(const uint32_t id) const
 	{
-		for(unsigned int i=0;i<tagCount;++i) {
+		for (unsigned int i = 0;i < tagCount;++i) {
 			if (tags[i].id() == id)
 				return &(tags[i]);
 		}

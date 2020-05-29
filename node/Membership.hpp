@@ -132,7 +132,7 @@ public:
 					return false;
 			} else {
 				// LEGACY: support networks run by old controllers.
-				if (localCom.issuedTo().address() != m_com.issuedTo().address())
+				if (localCom.issuedTo().address != m_com.issuedTo().address)
 					return false;
 			}
 

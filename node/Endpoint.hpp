@@ -22,12 +22,16 @@
 #include "Fingerprint.hpp"
 #include "MAC.hpp"
 
-#define ZT_ENDPOINT_MARSHAL_SIZE_MAX 128
-
-static_assert(ZT_ENDPOINT_MARSHAL_SIZE_MAX > (ZT_INETADDRESS_MARSHAL_SIZE_MAX + 1),"ZT_ENDPOINT_MARSHAL_SIZE_MAX not large enough");
-static_assert(ZT_ENDPOINT_MARSHAL_SIZE_MAX > (sizeof(ZT_Fingerprint) + 1),"ZT_ENDPOINT_MARSHAL_SIZE_MAX not large enough");
+#define ZT_ENDPOINT_STRING_SIZE_MAX 256
+#define ZT_ENDPOINT_MARSHAL_SIZE_MAX 192
 
 namespace ZeroTier {
+
+static_assert((ZT_ENDPOINT_MARSHAL_SIZE_MAX - 1) > ZT_INETADDRESS_MARSHAL_SIZE_MAX, "ZT_ENDPOINT_MARSHAL_SIZE_MAX not large enough");
+static_assert((ZT_ENDPOINT_MARSHAL_SIZE_MAX - 1) > sizeof(ZT_Fingerprint), "ZT_ENDPOINT_MARSHAL_SIZE_MAX not large enough");
+static_assert((ZT_ENDPOINT_MARSHAL_SIZE_MAX - 1) > sizeof(InetAddress), "ZT_ENDPOINT_MARSHAL_SIZE_MAX not large enough");
+static_assert((ZT_ENDPOINT_MARSHAL_SIZE_MAX - 1) > sizeof(MAC), "ZT_ENDPOINT_MARSHAL_SIZE_MAX not large enough");
+static_assert((ZT_ENDPOINT_MARSHAL_SIZE_MAX - 1) > sizeof(Fingerprint), "ZT_ENDPOINT_MARSHAL_SIZE_MAX not large enough");
 
 /**
  * Endpoint variant specifying some form of network endpoint.
@@ -38,18 +42,17 @@ namespace ZeroTier {
  * where InetAddress was used as long as only the UDP type is exchanged
  * with those nodes.
  */
-class Endpoint : public TriviallyCopyable
+class Endpoint : public ZT_Endpoint, public TriviallyCopyable
 {
 public:
 	/**
-	 * Endpoint type (defined in the API)
-	 */
-	typedef ZT_EndpointType Type;
-
-	/**
 	 * Create a NIL/empty endpoint
 	 */
-	ZT_INLINE Endpoint() noexcept { memoryZero(this); }
+	ZT_INLINE Endpoint() noexcept
+	{ memoryZero(this); }
+
+	ZT_INLINE Endpoint(const ZT_Endpoint &ep) noexcept
+	{ *this = ep; }
 
 	/**
 	 * Create an endpoint for a type that uses an IP
@@ -57,11 +60,11 @@ public:
 	 * @param a IP/port
 	 * @param et Endpoint type (default: IP_UDP)
 	 */
-	ZT_INLINE Endpoint(const InetAddress &a,const Type et = ZT_ENDPOINT_TYPE_IP_UDP) noexcept
+	ZT_INLINE Endpoint(const InetAddress &inaddr, const ZT_EndpointType et = ZT_ENDPOINT_TYPE_IP_UDP) noexcept
 	{
-		if (a) {
-			Utils::copy<sizeof(InetAddress)>(m_value,&a);
-			m_value[ZT_ENDPOINT_MARSHAL_SIZE_MAX-1] = (uint8_t)et;
+		if (inaddr) {
+			this->type = et;
+			Utils::copy<sizeof(struct sockaddr_storage)>(&(this->value.ss), &(inaddr.as.ss));
 		} else {
 			memoryZero(this);
 		}
@@ -75,8 +78,8 @@ public:
 	ZT_INLINE Endpoint(const Fingerprint &zt_) noexcept
 	{
 		if (zt_) {
-			Utils::copy<sizeof(Fingerprint)>(m_value,&zt_);
-			m_value[ZT_ENDPOINT_MARSHAL_SIZE_MAX-1] = (uint8_t)ZT_ENDPOINT_TYPE_ZEROTIER;
+			this->type = ZT_ENDPOINT_TYPE_ZEROTIER;
+			this->value.fp = zt_;
 		} else {
 			memoryZero(this);
 		}
@@ -88,32 +91,28 @@ public:
 	 * @param eth_ Ethernet address
 	 * @param et Endpoint type (default: ETHERNET)
 	 */
-	ZT_INLINE Endpoint(const MAC &eth_,const Type et = ZT_ENDPOINT_TYPE_ETHERNET) noexcept
+	ZT_INLINE Endpoint(const MAC &eth_, const ZT_EndpointType et = ZT_ENDPOINT_TYPE_ETHERNET) noexcept
 	{
 		if (eth_) {
-			Utils::copy<sizeof(MAC)>(m_value,&eth_);
-			m_value[ZT_ENDPOINT_MARSHAL_SIZE_MAX-1] = (uint8_t)et;
+			this->type = et;
+			this->value.mac = eth_.toInt();
 		} else {
 			memoryZero(this);
 		}
 	}
 
 	/**
-	 * @return Endpoint type
-	 */
-	ZT_INLINE Type type() const noexcept { return (Type)m_value[ZT_ENDPOINT_MARSHAL_SIZE_MAX-1]; }
-
-	/**
 	 * @return True if endpoint type isn't NIL
 	 */
-	ZT_INLINE operator bool() const noexcept { return (m_value[ZT_ENDPOINT_MARSHAL_SIZE_MAX-1] != (uint8_t)ZT_ENDPOINT_TYPE_NIL); }
+	ZT_INLINE operator bool() const noexcept
+	{ return this->type != ZT_ENDPOINT_TYPE_NIL; }
 
 	/**
 	 * @return True if this endpoint type has an InetAddress address type and thus ip() is valid
 	 */
 	ZT_INLINE bool isInetAddr() const noexcept
 	{
-		switch(this->type()) {
+		switch (this->type) {
 			case ZT_ENDPOINT_TYPE_IP:
 			case ZT_ENDPOINT_TYPE_IP_UDP:
 			case ZT_ENDPOINT_TYPE_IP_TCP:
@@ -129,28 +128,58 @@ public:
 	 * 
 	 * @return InetAddress instance
 	 */
-	ZT_INLINE const InetAddress &ip() const noexcept { return *reinterpret_cast<const InetAddress *>(m_value); }
+	ZT_INLINE const InetAddress &ip() const noexcept
+	{ return asInetAddress(this->value.ss); }
 
 	/**
 	 * Get MAC if this is an Ethernet, WiFi direct, or Bluetooth type (undefined otherwise)
 	 *
 	 * @return Ethernet MAC
 	 */
-	ZT_INLINE const MAC &eth() const noexcept { return *reinterpret_cast<const MAC *>(m_value); }
+	ZT_INLINE MAC eth() const noexcept
+	{ return MAC(this->value.mac); }
 
 	/**
 	 * Get fingerprint if this is a ZeroTier endpoint type (undefined otherwise)
 	 * 
 	 * @return ZeroTier fingerprint
 	 */
-	ZT_INLINE const Fingerprint &zt() const noexcept { return *reinterpret_cast<const Fingerprint *>(m_value); }
+	ZT_INLINE Fingerprint zt() const noexcept
+	{ return Fingerprint(this->value.fp); }
 
-	static constexpr int marshalSizeMax() noexcept { return ZT_ENDPOINT_MARSHAL_SIZE_MAX; }
+	void toString(char s[ZT_ENDPOINT_STRING_SIZE_MAX]) const noexcept;
+
+	ZT_INLINE String toString() const
+	{
+		char tmp[ZT_ENDPOINT_STRING_SIZE_MAX];
+		toString(tmp);
+		return String(tmp);
+	}
+
+	bool fromString(const char *s) noexcept;
+
+	static constexpr int marshalSizeMax() noexcept
+	{ return ZT_ENDPOINT_MARSHAL_SIZE_MAX; }
+
 	int marshal(uint8_t data[ZT_ENDPOINT_MARSHAL_SIZE_MAX]) const noexcept;
-	int unmarshal(const uint8_t *restrict data,int len) noexcept;
 
-private:
-	uint8_t m_value[ZT_ENDPOINT_MARSHAL_SIZE_MAX]; // the last byte in this buffer is the type
+	int unmarshal(const uint8_t *restrict data, int len) noexcept;
+
+	bool operator==(const Endpoint &ep) const noexcept;
+
+	ZT_INLINE bool operator!=(const Endpoint &ep) const noexcept
+	{ return !((*this) == ep); }
+
+	bool operator<(const Endpoint &ep) const noexcept;
+
+	ZT_INLINE bool operator>(const Endpoint &ep) const noexcept
+	{ return (ep < *this); }
+
+	ZT_INLINE bool operator<=(const Endpoint &ep) const noexcept
+	{ return !(ep < *this); }
+
+	ZT_INLINE bool operator>=(const Endpoint &ep) const noexcept
+	{ return !(*this < ep); }
 };
 
 } // namespace ZeroTier

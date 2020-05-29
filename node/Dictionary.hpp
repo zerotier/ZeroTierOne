@@ -18,16 +18,21 @@
 #include "Utils.hpp"
 #include "Address.hpp"
 #include "Buf.hpp"
+#include "FCV.hpp"
+#include "SHA512.hpp"
+#include "Fingerprint.hpp"
 #include "Containers.hpp"
 
 namespace ZeroTier {
+
+class Identity;
 
 /**
  * A simple key-value store for short keys
  *
  * This data structure is used for network configurations, node meta-data,
  * and other open-definition protocol objects. It consists of a key-value
- * store with short (max: 8 characters) keys that map to strings, blobs,
+ * store with short (max: 7 characters) keys that map to strings, blobs,
  * or integers with the latter being by convention in hex format.
  *
  * If this seems a little odd, it is. It dates back to the very first alpha
@@ -118,7 +123,7 @@ public:
 	 * @param v Buffer to hold string
 	 * @param cap Maximum size of string (including terminating null)
 	 */
-	void getS(const char *k,char *v,unsigned int cap) const;
+	char *getS(const char *k,char *v,unsigned int cap) const;
 
 	/**
 	 * Get an object supporting the marshal/unmarshal interface pattern
@@ -133,10 +138,35 @@ public:
 		const Vector<uint8_t> &d = (*this)[k];
 		if (d.empty())
 			return false;
-		if (obj.unmarshal(d.data(),(unsigned int)d.size()) <= 0)
-			return false;
-		return true;
+		return (obj.unmarshal(d.data(),(unsigned int)d.size()) > 0);
 	}
+
+	/**
+	 * Sign this identity
+	 *
+	 * This adds two fields:
+	 *   "@Si" contains the fingerprint (address followed by hash) of the signer
+	 *   "@Ss" contains the signature
+	 *
+	 * @param signer Signing identity (must contain secret)
+	 * @return True if signature was successful
+	 */
+	bool sign(const Identity &signer);
+
+	/**
+	 * Get the signer's fingerprint for this dictionary or a NIL fingerprint if not signed.
+	 *
+	 * @return Signer
+	 */
+	Fingerprint signer() const;
+
+	/**
+	 * Verify this identity's signature
+	 *
+	 * @param signer
+	 * @return
+	 */
+	bool verify(const Identity &signer) const;
 
 	/**
 	 * Erase all entries in dictionary
@@ -156,12 +186,10 @@ public:
 	/**
 	 * Encode to a string in the supplied vector
 	 *
-	 * This does not add a terminating zero. This must be pushed afterwords
-	 * if the result is to be handled as a C string.
-	 *
 	 * @param out String encoded dictionary
+	 * @param omitSignatureFields If true omit the signature fields from encoding (default: false)
 	 */
-	void encode(Vector<uint8_t> &out) const;
+	void encode(Vector<uint8_t> &out,bool omitSignatureFields = false) const;
 
 	/**
 	 * Decode a string encoded dictionary
@@ -347,31 +375,35 @@ private:
 				break;
 		}
 	}
+
 	template<typename V>
 	ZT_INLINE static void s_appendKey(V &out,const char *const k)
 	{
-		for(unsigned int i=0;i<8;++i) {
+		for(unsigned int i=0;i<7;++i) {
 			const char kc = k[i];
-			if (!kc) break;
+			if (kc == 0)
+				break;
 			if ((kc >= 33)&&(kc <= 126)&&(kc != 61)&&(kc != 92)) // printable ASCII with no spaces, equals, or backslash
 				out.push_back((uint8_t)kc);
 		}
 		out.push_back((uint8_t)'=');
 	}
 
-	// This just packs up to 8 character bytes into a 64-bit word. There is no need
-	// for this to be portable in terms of endian-ness. It's just for fast key lookup.
-	static ZT_INLINE uint64_t s_toKey(const char *k)
+	ZT_INLINE static FCV<char,8> &s_key(FCV<char,8> &buf,const char *k) noexcept
 	{
-		uint64_t key = 0;
-		for(int i=0;i<8;++i) {
-			if ((reinterpret_cast<uint8_t *>(&key)[i] = *(k++)) == 0)
+		buf.clear();
+		for(unsigned int i=0;i<7;++i) {
+			const char kc = k[i];
+			if (kc == 0)
 				break;
+			if ((kc >= 33)&&(kc <= 126)&&(kc != 61)&&(kc != 92)) // printable ASCII with no spaces, equals, or backslash
+				buf.push_back(kc);
 		}
-		return key;
+		buf.push_back(0);
+		return buf;
 	}
 
-	Map< uint64_t,Vector<uint8_t> > m_entries;
+	SortedMap< FCV<char,8>,Vector<uint8_t> > m_entries;
 };
 
 } // namespace ZeroTier

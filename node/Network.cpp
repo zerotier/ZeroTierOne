@@ -1022,7 +1022,7 @@ int Network::setConfiguration(void *tPtr,const NetworkConfig &nconf,bool saveToD
 	try {
 		if ((nconf.issuedTo != RR->identity.address())||(nconf.networkId != m_id))
 			return 0; // invalid config that is not for us or not for this network
-		if ((!Utils::allZero(nconf.issuedToFingerprintHash,ZT_FINGERPRINT_HASH_SIZE)) && (memcmp(nconf.issuedToFingerprintHash,RR->identity.fingerprint().hash(),ZT_FINGERPRINT_HASH_SIZE) != 0))
+		if ((!Utils::allZero(nconf.issuedToFingerprintHash,ZT_FINGERPRINT_HASH_SIZE)) && (memcmp(nconf.issuedToFingerprintHash,RR->identity.fingerprint().hash,ZT_FINGERPRINT_HASH_SIZE) != 0))
 			return 0; // full identity hash is present and does not match
 
 		if (m_config == nconf)

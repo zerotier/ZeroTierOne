@@ -13,41 +13,51 @@
 
 package zerotier
 
-//#cgo CFLAGS: -O3
-//#include "../../native/GoGlue.h"
+// #include "../../native/GoGlue.h"
 import "C"
 
 import (
 	"bytes"
-	"errors"
+	"fmt"
 	"strings"
 	"unsafe"
 )
 
 type Fingerprint struct {
-	Address Address  `json:"address"`
-	Hash    [48]byte `json:"hash"`
+	Address Address `json:"address"`
+	Hash    []byte  `json:"hash"`
 }
 
 func NewFingerprintFromString(fps string) (*Fingerprint, error) {
-	fpb, err := Base32StdLowerCase.DecodeString(strings.TrimSpace(strings.ToLower(fps)))
+	if len(fps) < AddressStringLength {
+		return nil, ErrInvalidZeroTierAddress
+	}
+	ss := strings.Split(fps, "/")
+	if len(ss) < 1 || len(ss) > 2 {
+		return nil, ErrInvalidParameter
+	}
+	a, err := NewAddressFromString(ss[0])
 	if err != nil {
 		return nil, err
 	}
-	if len(fpb) != 53 {
-		return nil, errors.New("invalid fingerprint length")
+	if len(ss) == 2 {
+		h, err := Base32StdLowerCase.DecodeString(ss[1])
+		if err != nil {
+			return nil, err
+		}
+		if len(h) != 48 {
+			return nil, ErrInvalidParameter
+		}
+		return &Fingerprint{Address: a, Hash: h}, nil
 	}
-	var fp Fingerprint
-	fp.Address, _ = NewAddressFromBytes(fpb[0:5])
-	copy(fp.Hash[:],fpb[5:])
-	return &fp, nil
+	return &Fingerprint{Address: a, Hash: nil}, nil
 }
 
 func (fp *Fingerprint) String() string {
-	var tmp [53]byte
-	fp.Address.CopyTo(tmp[0:5])
-	copy(tmp[5:],fp.Hash[:])
-	return Base32StdLowerCase.EncodeToString(tmp[:])
+	if len(fp.Hash) == 48 {
+		return fmt.Sprintf("%.10x/%s", uint64(fp.Address), Base32StdLowerCase.EncodeToString(fp.Hash))
+	}
+	return fp.Address.String()
 }
 
 func (fp *Fingerprint) Equals(fp2 *Fingerprint) bool {

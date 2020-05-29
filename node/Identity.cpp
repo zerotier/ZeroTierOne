@@ -157,7 +157,7 @@ bool Identity::generate(const Type t)
 				address.setTo(digest + 59);
 			} while (address.isReserved());
 			delete[] genmem;
-			m_fp.m_cfp.address = address.toInt(); // address comes from PoW hash for type 0 identities
+			m_fp.address = address; // address comes from PoW hash for type 0 identities
 			m_computeHash();
 		} break;
 
@@ -179,9 +179,11 @@ bool Identity::generate(const Type t)
 				// If we passed PoW then check that the address is valid, otherwise loop
 				// back around and run the whole process again.
 				m_computeHash();
-				m_fp.m_cfp.address = Address(m_fp.m_cfp.hash).toInt();
-				if (!m_fp.address().isReserved())
+				const Address addr(m_fp.hash);
+				if (!addr.isReserved()) {
+					m_fp.address = addr;
 					break;
+				}
 			}
 		} break;
 
@@ -195,7 +197,7 @@ bool Identity::generate(const Type t)
 bool Identity::locallyValidate() const noexcept
 {
 	try {
-		if ((m_fp) && ((!m_fp.address().isReserved()))) {
+		if ((m_fp) && ((!Address(m_fp.address).isReserved()))) {
 			switch (m_type) {
 				case C25519: {
 					uint8_t digest[64];
@@ -204,10 +206,10 @@ bool Identity::locallyValidate() const noexcept
 						return false;
 					identityV0ProofOfWorkFrankenhash(m_pub, ZT_C25519_COMBINED_PUBLIC_KEY_SIZE, digest, genmem);
 					free(genmem);
-					return ((m_fp.address() == Address(digest + 59)) && (digest[0] < 17));
+					return ((Address(digest + 59) == m_fp.address) && (digest[0] < 17));
 				}
 				case P384: {
-					if (m_fp.address() != Address(m_fp.hash()))
+					if (Address(m_fp.hash) != m_fp.address)
 						return false;
 					return identityV1ProofOfWorkCriteria(m_pub, sizeof(m_pub));
 				}
@@ -312,7 +314,7 @@ bool Identity::agree(const Identity &id, uint8_t key[ZT_SYMMETRIC_KEY_SIZE]) con
 char *Identity::toString(bool includePrivate, char buf[ZT_IDENTITY_STRING_BUFFER_LENGTH]) const
 {
 	char *p = buf;
-	m_fp.address().toString(p);
+	Address(m_fp.address).toString(p);
 	p += 10;
 	*(p++) = ':';
 
@@ -363,8 +365,8 @@ bool Identity::fromString(const char *str)
 		switch (fno++) {
 
 			case 0:
-				m_fp.m_cfp.address = Utils::hexStrToU64(f) & ZT_ADDRESS_MASK;
-				if (m_fp.address().isReserved())
+				m_fp.address = Utils::hexStrToU64(f) & ZT_ADDRESS_MASK;
+				if (Address(m_fp.address).isReserved())
 					return false;
 				break;
 
@@ -425,12 +427,12 @@ bool Identity::fromString(const char *str)
 		return false;
 
 	m_computeHash();
-	return !((m_type == P384) && (m_fp.address() != Address(m_fp.hash())));
+	return !((m_type == P384) && (Address(m_fp.hash) != m_fp.address));
 }
 
 int Identity::marshal(uint8_t data[ZT_IDENTITY_MARSHAL_SIZE_MAX], const bool includePrivate) const noexcept
 {
-	m_fp.address().copyTo(data);
+	Address(m_fp.address).copyTo(data);
 	switch (m_type) {
 
 		case C25519:
@@ -467,7 +469,7 @@ int Identity::unmarshal(const uint8_t *data, const int len) noexcept
 
 	if (len < (1 + ZT_ADDRESS_LENGTH))
 		return -1;
-	m_fp.m_cfp.address = Address(data).toInt();
+	m_fp.address = Address(data);
 
 	unsigned int privlen;
 	switch ((m_type = (Type) data[ZT_ADDRESS_LENGTH])) {
@@ -498,7 +500,7 @@ int Identity::unmarshal(const uint8_t *data, const int len) noexcept
 
 			Utils::copy<ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE>(m_pub, data + ZT_ADDRESS_LENGTH + 1);
 			m_computeHash(); // this sets the address for P384
-			if (m_fp.address() != Address(m_fp.hash())) // this sanity check is possible with V1 identities
+			if (Address(m_fp.hash) != m_fp.address) // this sanity check is possible with V1 identities
 				return -1;
 
 			privlen = data[ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE];
@@ -538,12 +540,12 @@ void Identity::m_computeHash()
 
 extern "C" {
 
-ZT_Identity *ZT_Identity_new(enum ZT_Identity_Type type)
+ZT_Identity *ZT_Identity_new(enum ZT_IdentityType type)
 {
 	if ((type != ZT_IDENTITY_TYPE_C25519) && (type != ZT_IDENTITY_TYPE_P384))
 		return nullptr;
 	try {
-		ZeroTier::Identity *const id = new ZeroTier::Identity(); // NOLINT(hicpp-use-auto,modernize-use-auto)
+		ZeroTier::Identity *const id = new ZeroTier::Identity();
 		id->generate((ZeroTier::Identity::Type) type);
 		return reinterpret_cast<ZT_Identity *>(id);
 	} catch (...) {
@@ -556,7 +558,7 @@ ZT_Identity *ZT_Identity_fromString(const char *idStr)
 	if (!idStr)
 		return nullptr;
 	try {
-		ZeroTier::Identity *const id = new ZeroTier::Identity(); // NOLINT(hicpp-use-auto,modernize-use-auto)
+		ZeroTier::Identity *const id = new ZeroTier::Identity();
 		if (!id->fromString(idStr)) {
 			delete id;
 			return nullptr;
@@ -590,11 +592,11 @@ int ZT_Identity_verify(const ZT_Identity *id, const void *data, unsigned int len
 	return reinterpret_cast<const ZeroTier::Identity *>(id)->verify(data, len, signature, sigLen) ? 1 : 0;
 }
 
-enum ZT_Identity_Type ZT_Identity_type(const ZT_Identity *id)
+enum ZT_IdentityType ZT_Identity_type(const ZT_Identity *id)
 {
 	if (!id)
-		return (ZT_Identity_Type) 0;
-	return (enum ZT_Identity_Type) reinterpret_cast<const ZeroTier::Identity *>(id)->type();
+		return (ZT_IdentityType) 0;
+	return (enum ZT_IdentityType) reinterpret_cast<const ZeroTier::Identity *>(id)->type();
 }
 
 char *ZT_Identity_toString(const ZT_Identity *id, char *buf, int capacity, int includePrivate)
@@ -616,25 +618,14 @@ uint64_t ZT_Identity_address(const ZT_Identity *id)
 {
 	if (!id)
 		return 0;
-	return reinterpret_cast<const ZeroTier::Identity *>(id)->address().toInt();
+	return reinterpret_cast<const ZeroTier::Identity *>(id)->address();
 }
 
 const ZT_Fingerprint *ZT_Identity_fingerprint(const ZT_Identity *id)
 {
 	if (!id)
 		return nullptr;
-	return reinterpret_cast<const ZeroTier::Identity *>(id)->fingerprint().apiFingerprint();
-}
-
-int ZT_Identity_makeRootSpecification(ZT_Identity *id,int64_t ts,struct sockaddr_storage *addrs,unsigned int addrcnt,void *rootSpecBuf,unsigned int rootSpecBufSize)
-{
-	if ((!id)||(!addrs)||(!addrcnt)||(!rootSpecBuf))
-		return -1;
-	ZeroTier::Vector<ZeroTier::Endpoint> endpoints;
-	endpoints.reserve(addrcnt);
-	for(unsigned int i=0;i<addrcnt;++i)
-		endpoints.push_back(ZeroTier::Endpoint(ZeroTier::asInetAddress(addrs[i])));
-	return ZeroTier::Locator::makeRootSpecification(*reinterpret_cast<const ZeroTier::Identity *>(id),ts,endpoints,rootSpecBuf,rootSpecBufSize);
+	return &(reinterpret_cast<const ZeroTier::Identity *>(id)->fingerprint());
 }
 
 ZT_SDK_API void ZT_Identity_delete(ZT_Identity *id)

@@ -35,7 +35,6 @@ public:
 	explicit ZT_INLINE Address(const uint64_t a) noexcept : _a(a) {}
 	explicit ZT_INLINE Address(const uint8_t b[5]) noexcept : _a(((uint64_t)b[0] << 32U) | ((uint64_t)b[1] << 24U) | ((uint64_t)b[2] << 16U) | ((uint64_t)b[3] << 8U) | (uint64_t)b[4]) {}
 
-	ZT_INLINE Address &operator=(const Address &a) noexcept { _a = a._a; return *this; }
 	ZT_INLINE Address &operator=(const uint64_t a) noexcept { _a = a; return *this; }
 
 	/**
@@ -108,6 +107,7 @@ public:
 	ZT_INLINE unsigned long hashCode() const noexcept { return (unsigned long)_a; }
 
 	ZT_INLINE operator bool() const noexcept { return (_a != 0); }
+	ZT_INLINE operator uint64_t() const noexcept { return _a; }
 
 	ZT_INLINE bool operator==(const Address &a) const noexcept { return _a == a._a; }
 	ZT_INLINE bool operator!=(const Address &a) const noexcept { return _a != a._a; }
@@ -115,6 +115,13 @@ public:
 	ZT_INLINE bool operator<(const Address &a) const noexcept { return _a < a._a; }
 	ZT_INLINE bool operator>=(const Address &a) const noexcept { return _a >= a._a; }
 	ZT_INLINE bool operator<=(const Address &a) const noexcept { return _a <= a._a; }
+
+	ZT_INLINE bool operator==(const uint64_t a) const noexcept { return _a == a; }
+	ZT_INLINE bool operator!=(const uint64_t a) const noexcept { return _a != a; }
+	ZT_INLINE bool operator>(const uint64_t a) const noexcept { return _a > a; }
+	ZT_INLINE bool operator<(const uint64_t a) const noexcept { return _a < a; }
+	ZT_INLINE bool operator>=(const uint64_t a) const noexcept { return _a >= a; }
+	ZT_INLINE bool operator<=(const uint64_t a) const noexcept { return _a <= a; }
 
 private:
 	uint64_t _a;

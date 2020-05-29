@@ -27,53 +27,32 @@ import (
 	"zerotier/pkg/zerotier"
 )
 
-func readAuthToken(basePath string) string {
-	data, _ := ioutil.ReadFile(path.Join(basePath, "authtoken.secret"))
-	if len(data) > 0 {
-		return string(data)
-	}
+func getAuthTokenPaths(basePath string) (p []string) {
+	p = append(p,path.Join(basePath,"authtoken.secret"))
 	userHome, _ := os.UserHomeDir()
 	if len(userHome) > 0 {
 		if runtime.GOOS == "darwin" {
-			data, _ = ioutil.ReadFile(userHome + "/Library/Application Support/ZeroTier/authtoken.secret")
-			if len(data) > 0 {
-				return string(data)
-			}
-			data, _ = ioutil.ReadFile(userHome + "/Library/Application Support/ZeroTier/One/authtoken.secret")
-			if len(data) > 0 {
-				return string(data)
-			}
+			p = append(p,path.Join(userHome,"Library","Application Support","ZeroTier","authtoken.secret"))
+			p = append(p,path.Join(userHome,"Library","Application Support","ZeroTier","One","authtoken.secret"))
 		}
-		data, _ = ioutil.ReadFile(path.Join(userHome, ".zerotierauth"))
-		if len(data) > 0 {
-			return string(data)
-		}
-		data, _ = ioutil.ReadFile(path.Join(userHome, ".zeroTierOneAuthToken"))
-		if len(data) > 0 {
-			return string(data)
-		}
+		p = append(p,path.Join(userHome,".zerotierauth"))
+		p = append(p,path.Join(userHome,".zeroTierOneAuthToken"))
 	}
-	return ""
+	return p
 }
 
 func authTokenRequired(authToken string) {
 	if len(authToken) == 0 {
-		fmt.Println("FATAL: unable to read API authorization token from service path or user home ('sudo' may be needed)")
+		fmt.Println("FATAL: unable to read API authorization token from command line or any filesystem location.")
 		os.Exit(1)
 	}
 }
 
 func main() {
-	// Reduce Go's threads to 1-2 depending on whether this is single core or
-	// multi-core. Note that I/O threads are in C++ and are separate and Go
-	// code only does service control and CLI stuff, so this reduces memory
-	// use and competition with I/O but shouldn't impact throughput. We also
-	// crank up the GC to reduce memory usage a little bit.
-	if runtime.NumCPU() >= 2 {
-		runtime.GOMAXPROCS(2)
-	} else {
-		runtime.GOMAXPROCS(1)
-	}
+	// Reduce Go's thread and memory footprint. This would slow things down if the Go code
+	// were doing a lot, but it's not. It just manages the core and is not directly involved
+	// in pushing a lot of packets around. If that ever changes this should be adjusted.
+	runtime.GOMAXPROCS(1)
 	debug.SetGCPercent(20)
 
 	globalOpts := flag.NewFlagSet("global", flag.ContinueOnError)
@@ -103,19 +82,33 @@ func main() {
 	if len(*pflag) > 0 {
 		basePath = *pflag
 	}
+	authTokenPaths := getAuthTokenPaths(basePath)
 
 	var authToken string
 	if len(*tflag) > 0 {
 		at, err := ioutil.ReadFile(*tflag)
 		if err != nil || len(at) == 0 {
-			fmt.Println("FATAL: unable to read API authorization token from file '" + *tflag + "'")
+			fmt.Println("FATAL: unable to read local service API authorization token from " + *tflag)
 			os.Exit(1)
 		}
-		authToken = strings.TrimSpace(string(at))
+		authToken = string(at)
 	} else if len(*tTflag) > 0 {
-		authToken = strings.TrimSpace(*tTflag)
+		authToken = *tTflag
 	} else {
-		authToken = readAuthToken(basePath)
+		for _, p := range authTokenPaths {
+			tmp, _ := ioutil.ReadFile(p)
+			if len(tmp) > 0 {
+				authToken = string(tmp)
+				break;
+			}
+		}
+		if len(authToken) == 0 {
+			fmt.Println("FATAL: unable to read local service API authorization token from any of:")
+			for _, p := range authTokenPaths {
+				fmt.Println("  " + p)
+			}
+			os.Exit(1)
+		}
 	}
 	authToken = strings.TrimSpace(authToken)
 

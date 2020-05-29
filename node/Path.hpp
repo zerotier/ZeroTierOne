@@ -26,7 +26,7 @@ namespace ZeroTier {
 
 class RuntimeEnvironment;
 
-template<unsigned int MF,unsigned int MFP,unsigned int GCT,unsigned int GCS,typename P>
+template<unsigned int MF, unsigned int MFP, unsigned int GCT, unsigned int GCS, typename P>
 class Defragmenter;
 
 /**
@@ -37,11 +37,12 @@ class Path
 	friend class SharedPtr<Path>;
 
 	// Allow defragmenter to access fragment-in-flight info stored in Path for performance reasons.
-	template<unsigned int MF,unsigned int MFP,unsigned int GCT,unsigned int GCS,typename P>
-	friend class Defragmenter;
+	template<unsigned int MF, unsigned int MFP, unsigned int GCT, unsigned int GCS, typename P>
+	friend
+	class Defragmenter;
 
 public:
-	ZT_INLINE Path(const int64_t l,const InetAddress &r) noexcept :
+	ZT_INLINE Path(const int64_t l, const InetAddress &r) noexcept:
 		m_localSocket(l),
 		m_lastIn(0),
 		m_lastOut(0),
@@ -60,7 +61,7 @@ public:
 	 * @param now Current time
 	 * @return True if transport reported success
 	 */
-	bool send(const RuntimeEnvironment *RR,void *tPtr,const void *data,unsigned int len,int64_t now) noexcept;
+	bool send(const RuntimeEnvironment *RR, void *tPtr, const void *data, unsigned int len, int64_t now) noexcept;
 
 	/**
 	 * Explicitly update last sent time
@@ -68,7 +69,7 @@ public:
 	 * @param now Time of send
 	 * @param bytes Bytes sent
 	 */
-	ZT_INLINE void sent(const int64_t now,const unsigned int bytes) noexcept
+	ZT_INLINE void sent(const int64_t now, const unsigned int bytes) noexcept
 	{
 		m_lastOut.store(now);
 		m_outMeter.log(now, bytes);
@@ -80,7 +81,7 @@ public:
 	 * @param now Time of receive
 	 * @param bytes Bytes received
 	 */
-	ZT_INLINE void received(const int64_t now,const unsigned int bytes) noexcept
+	ZT_INLINE void received(const int64_t now, const unsigned int bytes) noexcept
 	{
 		m_lastIn.store(now);
 		m_inMeter.log(now, bytes);
@@ -104,34 +105,40 @@ public:
 	/**
 	 * @return Latency in milliseconds or -1 if unknown
 	 */
-	ZT_INLINE int latency() const noexcept { return m_latency; }
+	ZT_INLINE int latency() const noexcept
+	{ return m_latency; }
 
 	/**
 	 * Check path aliveness
 	 *
 	 * @param now Current time
 	 */
-	ZT_INLINE bool alive(const int64_t now) const noexcept { return ((now - m_lastIn.load()) < ZT_PATH_ALIVE_TIMEOUT); }
+	ZT_INLINE bool alive(const int64_t now) const noexcept
+	{ return ((now - m_lastIn.load()) < ZT_PATH_ALIVE_TIMEOUT); }
 
 	/**
 	 * @return Physical address
 	 */
-	ZT_INLINE const InetAddress &address() const noexcept { return m_addr; }
+	ZT_INLINE const InetAddress &address() const noexcept
+	{ return m_addr; }
 
 	/**
 	 * @return Local socket as specified by external code
 	 */
-	ZT_INLINE int64_t localSocket() const noexcept { return m_localSocket; }
+	ZT_INLINE int64_t localSocket() const noexcept
+	{ return m_localSocket; }
 
 	/**
 	 * @return Last time we received anything
 	 */
-	ZT_INLINE int64_t lastIn() const noexcept { return m_lastIn.load(); }
+	ZT_INLINE int64_t lastIn() const noexcept
+	{ return m_lastIn.load(); }
 
 	/**
 	 * @return Last time we sent something
 	 */
-	ZT_INLINE int64_t lastOut() const noexcept { return m_lastOut.load(); }
+	ZT_INLINE int64_t lastOut() const noexcept
+	{ return m_lastOut.load(); }
 
 private:
 	const int64_t m_localSocket;

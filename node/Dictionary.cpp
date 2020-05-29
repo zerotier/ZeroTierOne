@@ -12,8 +12,12 @@
 /****/
 
 #include "Dictionary.hpp"
+#include "Identity.hpp"
 
 namespace ZeroTier {
+
+static const FCV<char, 8> s_signatureFingerprint("@Si", 4);
+static const FCV<char, 8> s_signatureData("@Ss", 4);
 
 Dictionary::Dictionary()
 {
@@ -21,56 +25,58 @@ Dictionary::Dictionary()
 
 Vector<uint8_t> &Dictionary::operator[](const char *k)
 {
-	return m_entries[s_toKey(k)];
+	FCV<char, 8> key;
+	return m_entries[s_key(key, k)];
 }
 
 const Vector<uint8_t> &Dictionary::operator[](const char *k) const
 {
 	static const Vector<uint8_t> s_emptyEntry;
-	Map< uint64_t,Vector<uint8_t> >::const_iterator e(m_entries.find(s_toKey(k)));
+	FCV<char, 8> key;
+	SortedMap<FCV<char, 8>, Vector<uint8_t> >::const_iterator e(m_entries.find(s_key(key, k)));
 	return (e == m_entries.end()) ? s_emptyEntry : e->second;
 }
 
-void Dictionary::add(const char *k,bool v)
+void Dictionary::add(const char *k, bool v)
 {
 	Vector<uint8_t> &e = (*this)[k];
 	e.resize(2);
-	e[0] = (uint8_t)(v ? '1' : '0');
+	e[0] = (uint8_t) (v ? '1' : '0');
 	e[1] = 0;
 }
 
-void Dictionary::add(const char *k,const Address &v)
+void Dictionary::add(const char *k, const Address &v)
 {
 	Vector<uint8_t> &e = (*this)[k];
 	e.resize(ZT_ADDRESS_STRING_SIZE_MAX);
-	v.toString((char *)e.data());
+	v.toString((char *) e.data());
 }
 
-void Dictionary::add(const char *k,const char *v)
+void Dictionary::add(const char *k, const char *v)
 {
-	if ((v)&&(*v)) {
+	if ((v) && (*v)) {
 		Vector<uint8_t> &e = (*this)[k];
 		e.clear();
 		while (*v)
-			e.push_back((uint8_t)*(v++));
+			e.push_back((uint8_t) *(v++));
 	}
 }
 
-void Dictionary::add(const char *k,const void *data,unsigned int len)
+void Dictionary::add(const char *k, const void *data, unsigned int len)
 {
 	Vector<uint8_t> &e = (*this)[k];
 	if (len != 0) {
-		e.assign((const uint8_t *)data,(const uint8_t *)data + len);
+		e.assign((const uint8_t *) data, (const uint8_t *) data + len);
 	} else {
 		e.clear();
 	}
 }
 
-bool Dictionary::getB(const char *k,bool dfl) const
+bool Dictionary::getB(const char *k, bool dfl) const
 {
 	const Vector<uint8_t> &e = (*this)[k];
 	if (!e.empty()) {
-		switch ((char)e[0]) {
+		switch ((char) e[0]) {
 			case '1':
 			case 't':
 			case 'T':
@@ -84,7 +90,7 @@ bool Dictionary::getB(const char *k,bool dfl) const
 	return dfl;
 }
 
-uint64_t Dictionary::getUI(const char *k,uint64_t dfl) const
+uint64_t Dictionary::getUI(const char *k, uint64_t dfl) const
 {
 	uint8_t tmp[18];
 	uint64_t v = dfl;
@@ -92,29 +98,79 @@ uint64_t Dictionary::getUI(const char *k,uint64_t dfl) const
 	if (!e.empty()) {
 		if (e.back() != 0) {
 			const unsigned long sl = e.size();
-			Utils::copy(tmp,e.data(),(sl > 17) ? 17 : sl);
+			Utils::copy(tmp, e.data(), (sl > 17) ? 17 : sl);
 			tmp[17] = 0;
-			return Utils::unhex((const char *)tmp);
+			return Utils::unhex((const char *) tmp);
 		}
-		return Utils::unhex((const char *)e.data());
+		return Utils::unhex((const char *) e.data());
 	}
 	return v;
 }
 
-void Dictionary::getS(const char *k,char *v,const unsigned int cap) const
+char *Dictionary::getS(const char *k, char *v, const unsigned int cap) const
 {
 	if (cap == 0) // sanity check
 		return;
 	const Vector<uint8_t> &e = (*this)[k];
 	unsigned int i = 0;
 	const unsigned int last = cap - 1;
-	for(;;) {
-		if ((i == last)||(i >= (unsigned int)e.size()))
+	for (;;) {
+		if ((i == last) || (i >= (unsigned int)e.size()))
 			break;
-		v[i] = (char)e[i];
+		v[i] = (char) e[i];
 		++i;
 	}
 	v[i] = 0;
+	return v;
+}
+
+bool Dictionary::sign(const Identity &signer)
+{
+	Vector<uint8_t> data;
+	encode(data, true);
+	uint8_t sig[ZT_SIGNATURE_BUFFER_SIZE];
+	const unsigned int siglen = signer.sign(data.data(), (unsigned int) data.size(), sig, ZT_SIGNATURE_BUFFER_SIZE);
+	if (siglen == 0)
+		return false;
+
+	uint8_t fp[ZT_ADDRESS_LENGTH + ZT_FINGERPRINT_HASH_SIZE];
+	signer.fingerprint().address().copyTo(fp);
+	Utils::copy<ZT_FINGERPRINT_HASH_SIZE>(fp + ZT_ADDRESS_LENGTH, signer.fingerprint().hash());
+
+	m_entries[s_signatureFingerprint].assign(fp, fp + ZT_ADDRESS_LENGTH + ZT_FINGERPRINT_HASH_SIZE);
+	m_entries[s_signatureData].assign(sig, sig + siglen);
+
+	return true;
+}
+
+Fingerprint Dictionary::signer() const
+{
+	SortedMap<FCV<char, 8>, Vector<uint8_t> >::const_iterator sigfp(m_entries.find(s_signatureFingerprint));
+	Fingerprint fp;
+	if ((sigfp != m_entries.end()) && (sigfp->second.size() == (ZT_ADDRESS_LENGTH + ZT_FINGERPRINT_HASH_SIZE))) {
+		fp.apiFingerprint()->address = Address(sigfp->second.data()).toInt();
+		Utils::copy<ZT_FINGERPRINT_HASH_SIZE>(fp.apiFingerprint()->hash, sigfp->second.data() + ZT_ADDRESS_LENGTH);
+	}
+	return fp;
+}
+
+bool Dictionary::verify(const Identity &signer) const
+{
+	SortedMap< FCV<char, 8>, Vector<uint8_t> >::const_iterator sigfp(m_entries.find(s_signatureFingerprint));
+	if (
+		(sigfp == m_entries.end()) ||
+		(sigfp->second.size() != (ZT_ADDRESS_LENGTH + ZT_FINGERPRINT_HASH_SIZE)) ||
+		(Address(sigfp->second.data()) != signer.address()) ||
+		(memcmp(sigfp->second.data() + ZT_ADDRESS_LENGTH,signer.fingerprint().hash(),ZT_FINGERPRINT_HASH_SIZE) != 0))
+		return false;
+
+	SortedMap< FCV<char, 8>, Vector<uint8_t> >::const_iterator sig(m_entries.find(s_signatureData));
+	if ((sig == m_entries.end()) || (sig->second.empty()))
+		return false;
+
+	Vector<uint8_t> data;
+	encode(data, true);
+	return signer.verify(data.data(),(unsigned int)data.size(),sig->second.data(),(unsigned int)sig->second.size());
 }
 
 void Dictionary::clear()
@@ -122,34 +178,33 @@ void Dictionary::clear()
 	m_entries.clear();
 }
 
-void Dictionary::encode(Vector<uint8_t> &out) const
+void Dictionary::encode(Vector<uint8_t> &out, const bool omitSignatureFields) const
 {
-	uint64_t str[2] = { 0,0 }; // second uint64_t being 0 means all strings always 0-terminated
 	out.clear();
-	for(Map< uint64_t,Vector<uint8_t> >::const_iterator ti(m_entries.begin());ti != m_entries.end();++ti) {
-		str[0] = ti->first;
-		s_appendKey(out,reinterpret_cast<const char *>(str));
-		for(Vector<uint8_t>::const_iterator i(ti->second.begin());i!=ti->second.end();++i)
-			s_appendValueByte(out,*i);
-		out.push_back((uint8_t)'\n');
+	for (SortedMap<FCV<char, 8>, Vector<uint8_t> >::const_iterator ti(m_entries.begin());ti != m_entries.end();++ti) {
+		if ((!omitSignatureFields) || ((ti->first != s_signatureFingerprint) && (ti->first != s_signatureData))) {
+			s_appendKey(out, ti->first.data());
+			for (Vector<uint8_t>::const_iterator i(ti->second.begin());i != ti->second.end();++i)
+				s_appendValueByte(out, *i);
+			out.push_back((uint8_t) '\n');
+		}
 	}
+	out.push_back(0);
 }
 
-bool Dictionary::decode(const void *data,unsigned int len)
+bool Dictionary::decode(const void *data, unsigned int len)
 {
 	clear();
-
-	uint64_t k = 0;
-	unsigned int ki = 0;
+	FCV<char, 8> k;
 	Vector<uint8_t> *v = nullptr;
 	bool escape = false;
-	for(unsigned int di=0;di<len;++di) {
+	for (unsigned int di = 0;di < len;++di) {
 		uint8_t c = reinterpret_cast<const uint8_t *>(data)[di];
 		if (!c) break;
 		if (v) {
 			if (escape) {
 				escape = false;
-				switch(c) {
+				switch (c) {
 					case 48:
 						v->push_back(0);
 						break;
@@ -167,9 +222,8 @@ bool Dictionary::decode(const void *data,unsigned int len)
 						break;
 				}
 			} else {
-				if (c == (uint8_t)'\n') {
-					k = 0;
-					ki = 0;
+				if (c == (uint8_t) '\n') {
+					k.clear();
 					v = nullptr;
 				} else if (c == 92) { // backslash
 					escape = true;
@@ -178,16 +232,18 @@ bool Dictionary::decode(const void *data,unsigned int len)
 				}
 			}
 		} else {
-			if ((c < 33)||(c > 126)||(c == 92)) {
+			if ((c < 33) || (c > 126) || (c == 92)) {
 				return false;
-			} else if (c == (uint8_t)'=') {
+			} else if (c == (uint8_t) '=') {
+				k.push_back(0);
 				v = &m_entries[k];
+			} else if (k.size() < 7) {
+				k.push_back(c);
 			} else {
-				reinterpret_cast<uint8_t *>(&k)[ki & 7U] ^= c;
+				return false;
 			}
 		}
 	}
-
 	return true;
 }
 

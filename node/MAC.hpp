@@ -14,14 +14,11 @@
 #ifndef ZT_MAC_HPP
 #define ZT_MAC_HPP
 
-#include <cstdio>
-#include <cstdlib>
-#include <cstdint>
-
 #include "Constants.hpp"
 #include "Utils.hpp"
 #include "Address.hpp"
 #include "TriviallyCopyable.hpp"
+#include "Containers.hpp"
 
 namespace ZeroTier {
 
@@ -32,10 +29,20 @@ class MAC : public TriviallyCopyable
 {
 public:
 	ZT_INLINE MAC() noexcept : m_mac(0ULL) {}
-	ZT_INLINE MAC(const uint8_t a,const uint8_t b,const uint8_t c,const uint8_t d,const uint8_t e,const uint8_t f) noexcept : m_mac((((uint64_t)a) << 40U) | (((uint64_t)b) << 32U) | (((uint64_t)c) << 24U) | (((uint64_t)d) << 16U) | (((uint64_t)e) << 8U) | ((uint64_t)f) ) {}
-	explicit ZT_INLINE MAC(const uint64_t m) noexcept : m_mac(m) {}
-	explicit ZT_INLINE MAC(const uint8_t b[6]) noexcept { setTo(b); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
-	ZT_INLINE MAC(const Address &ztaddr,const uint64_t nwid) noexcept { fromAddress(ztaddr,nwid); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+
+	ZT_INLINE MAC(const uint8_t a,const uint8_t b,const uint8_t c,const uint8_t d,const uint8_t e,const uint8_t f) noexcept :
+		m_mac((((uint64_t)a) << 40U) | (((uint64_t)b) << 32U) | (((uint64_t)c) << 24U) | (((uint64_t)d) << 16U) | (((uint64_t)e) << 8U) | ((uint64_t)f) )
+	{}
+
+	explicit ZT_INLINE MAC(const uint64_t m) noexcept :
+		m_mac(m)
+	{}
+
+	explicit ZT_INLINE MAC(const uint8_t b[6]) noexcept
+	{ setTo(b); }
+
+	ZT_INLINE MAC(const Address &ztaddr,const uint64_t nwid) noexcept
+	{ fromAddress(ztaddr,nwid); }
 
 	/**
 	 * @return MAC in 64-bit integer
@@ -46,11 +53,6 @@ public:
 	 * Set MAC to zero
 	 */
 	ZT_INLINE void zero() noexcept { m_mac = 0ULL; }
-
-	/**
-	 * @return True if MAC is non-zero
-	 */
-	ZT_INLINE operator bool() const noexcept { return (m_mac != 0ULL); } // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
 
 	/**
 	 * @param bits Raw MAC in big-endian byte order
@@ -135,7 +137,7 @@ public:
 	 * @param i Value from 0 to 5 (inclusive)
 	 * @return Byte at said position (address interpreted in big-endian order)
 	 */
-	ZT_INLINE uint8_t operator[](unsigned int i) const noexcept { return (uint8_t)(m_mac >> (40 - (i * 8))); }
+	ZT_INLINE uint8_t operator[](unsigned int i) const noexcept { return (uint8_t)(m_mac >> (unsigned int)(40 - (i * 8))); }
 
 	/**
 	 * @return 6, which is the number of bytes in a MAC, for container compliance
@@ -144,6 +146,15 @@ public:
 
 	ZT_INLINE unsigned long hashCode() const noexcept { return (unsigned long)Utils::hash64(m_mac); }
 
+	ZT_INLINE operator bool() const noexcept { return (m_mac != 0ULL); }
+	ZT_INLINE operator uint64_t() const noexcept { return m_mac; }
+
+	/**
+	 * Convert this MAC to a standard format colon-separated hex string
+	 *
+	 * @param buf Buffer to store string
+	 * @return Pointer to buf
+	 */
 	ZT_INLINE char *toString(char buf[18]) const noexcept
 	{
 		buf[0] = Utils::HEXCHARS[(m_mac >> 44U) & 0xfU];
@@ -166,6 +177,32 @@ public:
 		buf[17] = (char)0;
 		return buf;
 	}
+	ZT_INLINE String toString() const { char tmp[18]; return String(toString(tmp)); }
+
+	/**
+	 * Parse a MAC address in hex format with or without : separators and ignoring non-hex characters.
+	 *
+	 * @param s String to parse
+	 */
+	ZT_INLINE void fromString(const char *s) noexcept
+	{
+		m_mac = 0;
+		if (s) {
+			while (*s) {
+				uint64_t c;
+				const char hc = *s++;
+				if ((hc >= 48)&&(hc <= 57))
+					c = (uint64_t)hc - 48;
+				else if ((hc >= 97)&&(hc <= 102))
+					c = (uint64_t)hc - 87;
+				else if ((hc >= 65)&&(hc <= 70))
+					c = (uint64_t)hc - 55;
+				else continue;
+				m_mac = (m_mac << 4U) | c;
+			}
+			m_mac &= 0xffffffffffffULL;
+		}
+	}
 
 	ZT_INLINE MAC &operator=(const uint64_t m) noexcept { m_mac = m; return *this; }
 
@@ -175,6 +212,13 @@ public:
 	ZT_INLINE bool operator<=(const MAC &m) const noexcept { return (m_mac <= m.m_mac); }
 	ZT_INLINE bool operator>(const MAC &m) const noexcept { return (m_mac > m.m_mac); }
 	ZT_INLINE bool operator>=(const MAC &m) const noexcept { return (m_mac >= m.m_mac); }
+
+	ZT_INLINE bool operator==(const uint64_t m) const noexcept { return (m_mac == m); }
+	ZT_INLINE bool operator!=(const uint64_t m) const noexcept { return (m_mac != m); }
+	ZT_INLINE bool operator<(const uint64_t m) const noexcept { return (m_mac < m); }
+	ZT_INLINE bool operator<=(const uint64_t m) const noexcept { return (m_mac <= m); }
+	ZT_INLINE bool operator>(const uint64_t m) const noexcept { return (m_mac > m); }
+	ZT_INLINE bool operator>=(const uint64_t m) const noexcept { return (m_mac >= m); }
 
 private:
 	uint64_t m_mac;

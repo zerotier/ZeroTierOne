@@ -23,6 +23,7 @@
 namespace ZeroTier {
 
 class Identity;
+
 class RuntimeEnvironment;
 
 /**
@@ -45,7 +46,7 @@ public:
 	 * @param trusted True if this peer is trusted as an authority to inform us of external address changes
 	 * @param now Current time
 	 */
-	void iam(void *tPtr,const Identity &reporter,int64_t receivedOnLocalSocket,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,bool trusted,int64_t now);
+	void iam(void *tPtr, const Identity &reporter, int64_t receivedOnLocalSocket, const InetAddress &reporterPhysicalAddress, const InetAddress &myPhysicalAddress, bool trusted, int64_t now);
 
 	/**
 	 * Clean up database periodically
@@ -60,7 +61,7 @@ public:
 	 * @param now Current time
 	 * @return Map of count to IP/port representing how many endpoints reported each address
 	 */
-	MultiMap<unsigned int,InetAddress> externalAddresses(int64_t now) const;
+	MultiMap<unsigned int, InetAddress> externalAddresses(int64_t now) const;
 
 private:
 	struct p_PhySurfaceKey
@@ -70,13 +71,21 @@ private:
 		InetAddress reporterPhysicalAddress;
 		InetAddress::IpScope scope;
 
-		ZT_INLINE p_PhySurfaceKey() noexcept {}
-		ZT_INLINE p_PhySurfaceKey(const Address &r, const int64_t rol, const InetAddress &ra, InetAddress::IpScope s) noexcept : reporter(r), receivedOnLocalSocket(rol), reporterPhysicalAddress(ra), scope(s) {}
+		ZT_INLINE p_PhySurfaceKey() noexcept
+		{}
 
-		ZT_INLINE unsigned long hashCode() const noexcept { return ((unsigned long)reporter.toInt() + (unsigned long)receivedOnLocalSocket + (unsigned long)scope); }
+		ZT_INLINE p_PhySurfaceKey(const Address &r, const int64_t rol, const InetAddress &ra, InetAddress::IpScope s) noexcept: reporter(r), receivedOnLocalSocket(rol), reporterPhysicalAddress(ra), scope(s)
+		{}
 
-		ZT_INLINE bool operator==(const p_PhySurfaceKey &k) const noexcept { return ((reporter == k.reporter) && (receivedOnLocalSocket == k.receivedOnLocalSocket) && (reporterPhysicalAddress == k.reporterPhysicalAddress) && (scope == k.scope)); }
-		ZT_INLINE bool operator!=(const p_PhySurfaceKey &k) const noexcept { return (!(*this == k)); }
+		ZT_INLINE unsigned long hashCode() const noexcept
+		{ return ((unsigned long) reporter.toInt() + (unsigned long) receivedOnLocalSocket + (unsigned long) scope); }
+
+		ZT_INLINE bool operator==(const p_PhySurfaceKey &k) const noexcept
+		{ return ((reporter == k.reporter) && (receivedOnLocalSocket == k.receivedOnLocalSocket) && (reporterPhysicalAddress == k.reporterPhysicalAddress) && (scope == k.scope)); }
+
+		ZT_INLINE bool operator!=(const p_PhySurfaceKey &k) const noexcept
+		{ return (!(*this == k)); }
+
 		ZT_INLINE bool operator<(const p_PhySurfaceKey &k) const noexcept
 		{
 			if (reporter < k.reporter) {
@@ -102,12 +111,15 @@ private:
 		uint64_t ts;
 		bool trusted;
 
-		ZT_INLINE p_PhySurfaceEntry() noexcept : mySurface(), ts(0), trusted(false) {}
-		ZT_INLINE p_PhySurfaceEntry(const InetAddress &a, const uint64_t t) noexcept : mySurface(a), ts(t), trusted(false) {}
+		ZT_INLINE p_PhySurfaceEntry() noexcept: mySurface(), ts(0), trusted(false)
+		{}
+
+		ZT_INLINE p_PhySurfaceEntry(const InetAddress &a, const uint64_t t) noexcept: mySurface(a), ts(t), trusted(false)
+		{}
 	};
 
 	const RuntimeEnvironment *RR;
-	Map< p_PhySurfaceKey,p_PhySurfaceEntry > m_phy;
+	Map<p_PhySurfaceKey, p_PhySurfaceEntry> m_phy;
 	Mutex m_phy_l;
 };
 

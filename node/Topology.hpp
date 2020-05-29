@@ -193,16 +193,16 @@ public:
 	 * @param loc Root locator
 	 * @return True if identity and locator are valid and root was added / updated
 	 */
-	bool addRoot(void *tPtr,const Identity &id,const Locator &loc);
+	bool addRoot(void *tPtr,const Identity &id,const SharedPtr<const Locator> &loc);
 
 	/**
 	 * Remove a root server's identity from the root server set
 	 *
 	 * @param tPtr Thread pointer
-	 * @param fp Root identity
+	 * @param address Root address
 	 * @return True if root found and removed, false if not found
 	 */
-	bool removeRoot(void *tPtr,const Fingerprint &fp);
+	bool removeRoot(void *tPtr, Address address);
 
 	/**
 	 * Sort roots in ascending order of apparent latency
@@ -250,7 +250,7 @@ private:
 	RWMutex m_peers_l; // locks m_peers, m_roots, and m_rootPeers
 	Map< uint64_t,SharedPtr<Path> > m_paths;
 	Map< Address,SharedPtr<Peer> > m_peers;
-	Map< Identity,Locator > m_roots;
+	Map< Identity,SharedPtr<const Locator> > m_roots;
 	Vector< SharedPtr<Peer> > m_rootPeers;
 };
 

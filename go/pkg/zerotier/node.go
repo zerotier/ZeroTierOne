@@ -510,7 +510,6 @@ func (n *Node) Peers() []*Peer {
 			p2.Version = [3]int{int(p.versionMajor), int(p.versionMinor), int(p.versionRev)}
 			p2.Latency = int(p.latency)
 			p2.Root = p.root != 0
-			p2.Bootstrap = NewInetAddressFromSockaddr(unsafe.Pointer(&p.bootstrap))
 
 			p2.Paths = make([]Path, 0, int(p.pathCount))
 			for j := 0; j < len(p2.Paths); j++ {

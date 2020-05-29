@@ -13,6 +13,7 @@
 
 #include "Tests.h"
 
+//#define ZT_ENABLE_TESTS
 #ifdef ZT_ENABLE_TESTS
 
 #include "Constants.hpp"
@@ -39,12 +40,6 @@
 #include "Defragmenter.hpp"
 #include "Fingerprint.hpp"
 #include "Containers.hpp"
-
-#include <cstdint>
-#include <cstring>
-#include <cstdio>
-#include <ctime>
-#include <set>
 
 #ifdef __UNIX_LIKE__
 #include <unistd.h>

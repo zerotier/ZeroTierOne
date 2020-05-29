@@ -15,12 +15,13 @@ package zerotier
 
 // Peer is another ZeroTier node
 type Peer struct {
-	Address      Address      `json:"address"`
-	Identity     *Identity    `json:"identity"`
-	Fingerprint  Fingerprint  `json:"fingerprint"`
-	Version      [3]int       `json:"version"`
-	Latency      int          `json:"latency"`
-	Root         bool         `json:"root"`
-	Bootstrap    *InetAddress `json:"bootstrap,omitempty"`
-	Paths        []Path       `json:"paths,omitempty"`
+	Address          Address     `json:"address"`
+	Identity         *Identity   `json:"identity"`
+	Fingerprint      Fingerprint `json:"fingerprint"`
+	Version          [3]int      `json:"version"`
+	Latency          int         `json:"latency"`
+	Root             bool        `json:"root"`
+	Paths            []Path      `json:"paths,omitempty"`
+	LocatorTimestamp int64       `json:"locatorTimestamp"`
+	LocatorEndpoints []Endpoint  `json:"locatorEndpoints,omitempty"`
 }

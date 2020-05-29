@@ -31,18 +31,28 @@ namespace ZeroTier {
  * @tparam T Type to contain
  * @tparam C Maximum capacity of vector
  */
-template<typename T,unsigned int C>
+template<typename T, unsigned int C>
 class FCV
 {
 public:
-	typedef T * iterator;
-	typedef const T * const_iterator;
+	typedef T *iterator;
+	typedef const T *const_iterator;
 
-	ZT_INLINE FCV() noexcept : _s(0) {}
-	ZT_INLINE FCV(const FCV &v) : _s(0) { *this = v; }
+	ZT_INLINE FCV() noexcept: _s(0)
+	{}
+
+	ZT_INLINE FCV(const FCV &v) : _s(0)
+	{ *this = v; }
+
+	ZT_INLINE FCV(const T *const contents, const unsigned int len) :
+		_s(0)
+	{
+		for (unsigned int i = 0;i < len;++i)
+			push_back(contents[i]);
+	}
 
 	template<typename I>
-	ZT_INLINE FCV(I i,I end) :
+	ZT_INLINE FCV(I i, I end) :
 		_s(0)
 	{
 		while (i != end) {
@@ -51,7 +61,8 @@ public:
 		}
 	}
 
-	ZT_INLINE ~FCV() { this->clear(); }
+	ZT_INLINE ~FCV()
+	{ this->clear(); }
 
 	ZT_INLINE FCV &operator=(const FCV &v)
 	{
@@ -59,7 +70,7 @@ public:
 			this->clear();
 			const unsigned int s = v._s;
 			_s = s;
-			for (unsigned int i=0;i<s;++i)
+			for (unsigned int i = 0;i < s;++i)
 				new(reinterpret_cast<T *>(_m) + i) T(*(reinterpret_cast<const T *>(v._m) + i));
 		}
 		return *this;
@@ -72,7 +83,7 @@ public:
 	{
 		const unsigned int s = _s;
 		_s = 0;
-		for(unsigned int i=0;i<s;++i)
+		for (unsigned int i = 0;i < s;++i)
 			(reinterpret_cast<T *>(_m) + i)->~T();
 	}
 
@@ -83,14 +94,21 @@ public:
 	 */
 	ZT_INLINE void unsafeMoveTo(FCV &v) noexcept
 	{
-		Utils::copy(v._m,_m,(v._s = _s) * sizeof(T));
+		Utils::copy(v._m, _m, (v._s = _s) * sizeof(T));
 		_s = 0;
 	}
 
-	ZT_INLINE iterator begin() noexcept { return reinterpret_cast<T *>(_m); }
-	ZT_INLINE iterator end() noexcept { return reinterpret_cast<T *>(_m) + _s; }
-	ZT_INLINE const_iterator begin() const noexcept { return reinterpret_cast<const T *>(_m); }
-	ZT_INLINE const_iterator end() const noexcept { return reinterpret_cast<const T *>(_m) + _s; }
+	ZT_INLINE iterator begin() noexcept
+	{ return reinterpret_cast<T *>(_m); }
+
+	ZT_INLINE iterator end() noexcept
+	{ return reinterpret_cast<T *>(_m) + _s; }
+
+	ZT_INLINE const_iterator begin() const noexcept
+	{ return reinterpret_cast<const T *>(_m); }
+
+	ZT_INLINE const_iterator end() const noexcept
+	{ return reinterpret_cast<const T *>(_m) + _s; }
 
 	ZT_INLINE T &operator[](const unsigned int i)
 	{
@@ -98,6 +116,7 @@ public:
 			return reinterpret_cast<T *>(_m)[i];
 		throw std::out_of_range("i > capacity");
 	}
+
 	ZT_INLINE const T &operator[](const unsigned int i) const
 	{
 		if (likely(i < _s))
@@ -105,12 +124,20 @@ public:
 		throw std::out_of_range("i > capacity");
 	}
 
-	static constexpr unsigned int capacity() noexcept { return C; }
-	ZT_INLINE unsigned int size() const noexcept { return _s; }
-	ZT_INLINE bool empty() const noexcept { return (_s == 0); }
+	static constexpr unsigned int capacity() noexcept
+	{ return C; }
 
-	ZT_INLINE T *data() noexcept { return reinterpret_cast<T *>(_m); }
-	ZT_INLINE const T *data() const noexcept { return reinterpret_cast<const T *>(_m); }
+	ZT_INLINE unsigned int size() const noexcept
+	{ return _s; }
+
+	ZT_INLINE bool empty() const noexcept
+	{ return (_s == 0); }
+
+	ZT_INLINE T *data() noexcept
+	{ return reinterpret_cast<T *>(_m); }
+
+	ZT_INLINE const T *data() const noexcept
+	{ return reinterpret_cast<const T *>(_m); }
 
 	/**
 	 * Push a value onto the back of this vector
@@ -122,7 +149,7 @@ public:
 	ZT_INLINE void push_back(const T &v)
 	{
 		if (likely(_s < C))
-			new (reinterpret_cast<T *>(_m) + _s++) T(v);
+			new(reinterpret_cast<T *>(_m) + _s++) T(v);
 		else throw std::out_of_range("capacity exceeded");
 	}
 
@@ -183,6 +210,14 @@ public:
 	}
 
 	/**
+	 * Set the size of this vector without otherwise changing anything
+	 *
+	 * @param ns New size
+	 */
+	ZT_INLINE void unsafeSetSize(unsigned int ns)
+	{ _s = ns; }
+
+	/**
 	 * This is a bounds checked auto-resizing variant of the [] operator
 	 *
 	 * If 'i' is out of bounds vs the current size of the vector, the vector is
@@ -213,12 +248,12 @@ public:
 	 * @param end Ending iterator (must be greater than start)
 	 */
 	template<typename X>
-	ZT_INLINE void assign(X start,const X &end)
+	ZT_INLINE void assign(X start, const X &end)
 	{
-		const int l = std::min((int)std::distance(start,end),(int)C);
+		const int l = std::min((int) std::distance(start, end), (int) C);
 		if (l > 0) {
-			this->resize((unsigned int)l);
-			for(int i=0;i<l;++i)
+			this->resize((unsigned int) l);
+			for (int i = 0;i < l;++i)
 				reinterpret_cast<T *>(_m)[i] = *(start++);
 		} else {
 			this->clear();
@@ -228,7 +263,7 @@ public:
 	ZT_INLINE bool operator==(const FCV &v) const noexcept
 	{
 		if (_s == v._s) {
-			for(unsigned int i=0;i<_s;++i) {
+			for (unsigned int i = 0;i < _s;++i) {
 				if (!(*(reinterpret_cast<const T *>(_m) + i) == *(reinterpret_cast<const T *>(v._m) + i)))
 					return false;
 			}
@@ -236,11 +271,21 @@ public:
 		}
 		return false;
 	}
-	ZT_INLINE bool operator!=(const FCV &v) const noexcept { return (!(*this == v)); }
-	ZT_INLINE bool operator<(const FCV &v) const noexcept { return std::lexicographical_compare(begin(),end(),v.begin(),v.end()); }
-	ZT_INLINE bool operator>(const FCV &v) const noexcept { return (v < *this); }
-	ZT_INLINE bool operator<=(const FCV &v) const noexcept { return !(v < *this); }
-	ZT_INLINE bool operator>=(const FCV &v) const noexcept { return !(*this < v); }
+
+	ZT_INLINE bool operator!=(const FCV &v) const noexcept
+	{ return (!(*this == v)); }
+
+	ZT_INLINE bool operator<(const FCV &v) const noexcept
+	{ return std::lexicographical_compare(begin(), end(), v.begin(), v.end()); }
+
+	ZT_INLINE bool operator>(const FCV &v) const noexcept
+	{ return (v < *this); }
+
+	ZT_INLINE bool operator<=(const FCV &v) const noexcept
+	{ return !(v < *this); }
+
+	ZT_INLINE bool operator>=(const FCV &v) const noexcept
+	{ return !(*this < v); }
 
 private:
 #ifdef _MSC_VER

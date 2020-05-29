@@ -129,10 +129,6 @@ void Peer::received(
 				// Re-prioritize paths to include the new one.
 				m_prioritizePaths(now);
 
-				// Remember most recently learned paths for future bootstrap attempts on restart.
-				Endpoint pathEndpoint(path->address());
-				m_bootstrap[pathEndpoint.type()] = pathEndpoint;
-
 				RR->t->learnedNewPath(tPtr, 0x582fabdd, packetId, m_id, path->address(), old);
 			} else {
 				path->sent(now,hello(tPtr,path->localSocket(),path->address(),now));
@@ -227,8 +223,6 @@ void Peer::pulse(void *const tPtr,const int64_t now,const bool isRoot)
 {
 	RWMutex::Lock l(m_lock);
 
-	// Determine if we need to send a full HELLO because we are refreshing ephemeral
-	// keys or it's simply been too long.
 	bool needHello = false;
 	if ( (m_vProto >= 11) && ( ((now - m_ephemeralPairTimestamp) >= (ZT_SYMMETRIC_KEY_TTL / 2)) || ((m_ephemeralKeys[0])&&(m_ephemeralKeys[0]->odometer() >= (ZT_SYMMETRIC_KEY_TTL_MESSAGES / 2))) ) ) {
 		m_ephemeralPair.generate();
@@ -237,9 +231,6 @@ void Peer::pulse(void *const tPtr,const int64_t now,const bool isRoot)
 		needHello = true;
 	}
 
-	// If we have no active paths and none queued to try, attempt any
-	// old paths we have cached in m_bootstrap or that external code
-	// supplies to the core via the optional API callback.
 	if (m_tryQueue.empty()&&(m_alivePathCount == 0)) {
 		InetAddress addr;
 		if (RR->node->externalPathLookup(tPtr, m_id, -1, addr)) {
@@ -248,27 +239,10 @@ void Peer::pulse(void *const tPtr,const int64_t now,const bool isRoot)
 				sent(now,m_sendProbe(tPtr,-1,addr,nullptr,0,now));
 			}
 		}
-
-		if (!m_bootstrap.empty()) {
-			unsigned int tryAtIndex = (unsigned int)Utils::random() % (unsigned int)m_bootstrap.size();
-			for(SortedMap< Endpoint::Type,Endpoint >::const_iterator i(m_bootstrap.begin());i != m_bootstrap.end();++i) {
-				if (tryAtIndex > 0) {
-					--tryAtIndex;
-				} else {
-					if ((i->second.isInetAddr())&&(!i->second.ip().ipsEqual(addr))) {
-						RR->t->tryingNewPath(tPtr, 0x0a009444, m_id, i->second.ip(), InetAddress::NIL, 0, 0, Identity::NIL);
-						sent(now,m_sendProbe(tPtr,-1,i->second.ip(),nullptr,0,now));
-						break;
-					}
-				}
-			}
-		}
 	}
 
-	// Sort paths and forget expired ones.
 	m_prioritizePaths(now);
 
-	// Attempt queued endpoints if they don't overlap with paths.
 	if (!m_tryQueue.empty()) {
 		for(int k=0;k<ZT_NAT_T_MAX_QUEUED_ATTEMPTS_PER_PULSE;++k) {
 			// This is a global circular pointer that iterates through the list of
@@ -398,7 +372,7 @@ void Peer::resetWithinScope(void *tPtr,InetAddress::IpScope scope,int inetAddres
 	}
 	m_alivePathCount = pc;
 	while (pc < ZT_MAX_PEER_NETWORK_PATHS)
-		m_paths[pc].zero();
+		m_paths[pc++].zero();
 }
 
 bool Peer::directlyConnected(int64_t now)
@@ -464,17 +438,14 @@ int Peer::marshal(uint8_t data[ZT_PEER_MARSHAL_SIZE_MAX]) const noexcept
 		return -1;
 	p += s;
 
-	s = m_locator.marshal(data + p);
-	if (s <= 0)
-		return s;
-	p += s;
-
-	data[p++] = (uint8_t)m_bootstrap.size();
-	for(std::map< Endpoint::Type,Endpoint >::const_iterator i(m_bootstrap.begin());i != m_bootstrap.end();++i) { // NOLINT(modernize-loop-convert,hicpp-use-auto,modernize-use-auto)
-		s = i->second.marshal(data + p);
+	if (m_locator) {
+		data[p++] = 1;
+		s = m_locator->marshal(data + p);
 		if (s <= 0)
-			return -1;
+			return s;
 		p += s;
+	} else {
+		data[p++] = 0;
 	}
 
 	Utils::storeBigEndian(data + p,(uint16_t)m_vProto);
@@ -528,24 +499,19 @@ int Peer::unmarshal(const uint8_t *restrict data,const int len) noexcept
 		Utils::burn(k,sizeof(k));
 	}
 
-	s = m_locator.unmarshal(data + p, len - p);
-	if (s < 0)
-		return s;
-	p += s;
-
-	if (p >= len)
-		return -1;
-	const unsigned int bootstrapCount = data[p++];
-	if (bootstrapCount > ZT_MAX_PEER_NETWORK_PATHS)
-		return -1;
-	m_bootstrap.clear();
-	for(unsigned int i=0;i<bootstrapCount;++i) {
-		Endpoint tmp;
-		s = tmp.unmarshal(data + p,len - p);
+	if (data[p] == 0) {
+		++p;
+		m_locator.zero();
+	} else if (data[p] == 1) {
+		++p;
+		Locator *const loc = new Locator();
+		s = loc->unmarshal(data + p, len - p);
+		m_locator.set(loc);
 		if (s < 0)
 			return s;
 		p += s;
-		m_bootstrap[tmp.type()] = tmp;
+	} else {
+		return -1;
 	}
 
 	if ((p + 10) > len)

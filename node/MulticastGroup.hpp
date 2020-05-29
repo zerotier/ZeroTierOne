@@ -20,8 +20,6 @@
 #include "Utils.hpp"
 #include "TriviallyCopyable.hpp"
 
-#include <cstdint>
-
 namespace ZeroTier {
 
 /**

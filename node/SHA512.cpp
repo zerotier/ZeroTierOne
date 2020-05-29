@@ -251,19 +251,24 @@ void HMACSHA384(const uint8_t key[ZT_SYMMETRIC_KEY_SIZE],const void *msg,const u
 void KBKDFHMACSHA384(const uint8_t key[ZT_SYMMETRIC_KEY_SIZE],const char label,const char context,const uint32_t iter,uint8_t out[ZT_SYMMETRIC_KEY_SIZE])
 {
 	uint8_t kbkdfMsg[13];
-	uint8_t kbuf[48];
+
 	Utils::storeBigEndian<uint32_t>(kbkdfMsg,(uint32_t)iter);
+
 	kbkdfMsg[4] = (uint8_t)'Z';
 	kbkdfMsg[5] = (uint8_t)'T'; // preface our labels with something ZT-specific
 	kbkdfMsg[6] = (uint8_t)label;
 	kbkdfMsg[7] = 0;
+
 	kbkdfMsg[8] = (uint8_t)context;
+
+	// Output key length: 384 bits (as 32-bit big-endian value)
 	kbkdfMsg[9] = 0;
 	kbkdfMsg[10] = 0;
-	kbkdfMsg[11] = 1;
-	kbkdfMsg[12] = 0; // key length: 256 bits as big-endian 32-bit value
-	HMACSHA384(key,&kbkdfMsg,sizeof(kbkdfMsg),kbuf);
-	Utils::copy<ZT_SYMMETRIC_KEY_SIZE>(out,kbuf);
+	kbkdfMsg[11] = 0x01;
+	kbkdfMsg[12] = 0x80;
+
+	static_assert(ZT_SYMMETRIC_KEY_SIZE == ZT_SHA384_DIGEST_SIZE,"sizeof(out) != ZT_SHA384_DIGEST_SIZE");
+	HMACSHA384(key,&kbkdfMsg,sizeof(kbkdfMsg),out);
 }
 
 } // namespace ZeroTier
