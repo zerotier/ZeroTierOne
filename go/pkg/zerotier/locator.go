@@ -69,9 +69,9 @@ func NewLocatorFromString(s string) (*Locator, error) {
 		return nil, ErrInvalidParameter
 	}
 	sb := []byte(s)
-	sb = append(sb,0)
-	loc := C.ZT_Locator_fromString(unsafe.Pointer(&sb[0]))
-	if uintptr(loc) == 0 {
+	sb = append(sb, 0)
+	loc := C.ZT_Locator_fromString((*C.char)(unsafe.Pointer(&sb[0])))
+	if loc == nil {
 		return nil, ErrInvalidParameter
 	}
 	goloc := new(Locator)
@@ -92,7 +92,7 @@ func (loc *Locator) GetInfo(id *Identity) (ts int64, fp *Fingerprint, eps []Endp
 	fp = newFingerprintFromCFingerprint(cfp)
 	epc := int(C.ZT_Locator_endpointCount(loc.cl))
 	eps = make([]Endpoint, epc)
-	for i:=0;i<epc;i++ {
+	for i := 0; i < epc; i++ {
 		eps[i].cep = *C.ZT_Locator_endpoint(loc.cl, C.uint(i))
 	}
 	if id != nil {
@@ -104,8 +104,8 @@ func (loc *Locator) GetInfo(id *Identity) (ts int64, fp *Fingerprint, eps []Endp
 
 func (loc *Locator) String() string {
 	var buf [4096]byte
-	C.ZT_Locator_toString(loc.cl,unsafe.Pointer(&buf[0]),4096)
-	for i:=range buf {
+	C.ZT_Locator_toString(loc.cl, (*C.char)(unsafe.Pointer(&buf[0])), 4096)
+	for i := range buf {
 		if buf[i] == 0 {
 			return string(buf[0:i])
 		}

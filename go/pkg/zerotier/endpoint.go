@@ -42,8 +42,8 @@ func NewEndpointFromString(s string) (*Endpoint, error) {
 	if strings.IndexRune(s, '-') > 0 || (strings.IndexRune(s, ':') < 0 && strings.IndexRune(s, '.') < 0) {
 		var ep Endpoint
 		cs := C.CString(s)
-		defer C.free(cs)
-		if C.ZT_Endpoint_fromString(cs) == nil {
+		defer C.free(unsafe.Pointer(cs))
+		if C.ZT_Endpoint_fromString(&ep.cep, cs) != 0 {
 			return nil, ErrInvalidParameter
 		}
 		return &ep, nil
@@ -115,7 +115,7 @@ func (ep *Endpoint) MAC() MAC {
 
 func (ep *Endpoint) String() string {
 	var buf [4096]byte
-	cs := C.ZT_Endpoint_toString(&ep.cep,unsafe.Pointer(&buf[0]),4096)
+	cs := C.ZT_Endpoint_toString(&ep.cep, (*C.char)(unsafe.Pointer(&buf[0])), 4096)
 	if cs == nil {
 		return "0"
 	}
