@@ -54,7 +54,7 @@ public:
 	{
 		Address(this->address).toString(s);
 		if (haveHash()) {
-			s[ZT_ADDRESS_LENGTH_HEX] = '/';
+			s[ZT_ADDRESS_LENGTH_HEX] = '-';
 			Utils::b32e(this->hash, ZT_FINGERPRINT_HASH_SIZE, s + (ZT_ADDRESS_LENGTH_HEX + 1), ZT_FINGERPRINT_STRING_SIZE_MAX - (ZT_ADDRESS_LENGTH_HEX + 1));
 		}
 	}

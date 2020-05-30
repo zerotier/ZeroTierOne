@@ -64,9 +64,26 @@ func NewLocatorFromBytes(lb []byte) (*Locator, error) {
 	return goloc, nil
 }
 
+func NewLocatorFromString(s string) (*Locator, error) {
+	if len(s) == 0 {
+		return nil, ErrInvalidParameter
+	}
+	sb := []byte(s)
+	sb = append(sb,0)
+	loc := C.ZT_Locator_fromString(unsafe.Pointer(&sb[0]))
+	if uintptr(loc) == 0 {
+		return nil, ErrInvalidParameter
+	}
+	goloc := new(Locator)
+	goloc.cl = unsafe.Pointer(loc)
+	runtime.SetFinalizer(goloc, locatorFinalizer)
+	return goloc, nil
+}
+
 // GetInfo gets information about this locator, also validating its signature if 'id' is non-nil.
 // If 'id' is nil the 'valid' return value is undefined.
-func (loc *Locator) GetInfo(id *Identity) (fp *Fingerprint, eps []Endpoint, valid bool, err error) {
+func (loc *Locator) GetInfo(id *Identity) (ts int64, fp *Fingerprint, eps []Endpoint, valid bool, err error) {
+	ts = int64(C.ZT_Locator_timestamp(loc.cl))
 	cfp := C.ZT_Locator_fingerprint(loc.cl)
 	if uintptr(unsafe.Pointer(cfp)) == 0 {
 		err = ErrInternal
@@ -83,4 +100,15 @@ func (loc *Locator) GetInfo(id *Identity) (fp *Fingerprint, eps []Endpoint, vali
 		valid = C.ZT_Locator_verify(loc.cl, id.cid) != 0
 	}
 	return
+}
+
+func (loc *Locator) String() string {
+	var buf [4096]byte
+	C.ZT_Locator_toString(loc.cl,unsafe.Pointer(&buf[0]),4096)
+	for i:=range buf {
+		if buf[i] == 0 {
+			return string(buf[0:i])
+		}
+	}
+	return ""
 }

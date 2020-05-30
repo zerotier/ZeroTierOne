@@ -16,7 +16,7 @@
 
 namespace ZeroTier {
 
-void Endpoint::toString(char s[ZT_ENDPOINT_STRING_SIZE_MAX]) const noexcept
+char *Endpoint::toString(char s[ZT_ENDPOINT_STRING_SIZE_MAX]) const noexcept
 {
 	static const char *const s_endpointTypeChars = ZT_ENDPOINT_TYPE_CHAR_INDEX;
 
@@ -30,14 +30,14 @@ void Endpoint::toString(char s[ZT_ENDPOINT_STRING_SIZE_MAX]) const noexcept
 			break;
 		case ZT_ENDPOINT_TYPE_ZEROTIER:
 			s[0] = s_endpointTypeChars[ZT_ENDPOINT_TYPE_ZEROTIER];
-			s[1] = '/';
+			s[1] = '-';
 			zt().toString(s + 2);
 			break;
 		case ZT_ENDPOINT_TYPE_ETHERNET:
 		case ZT_ENDPOINT_TYPE_WIFI_DIRECT:
 		case ZT_ENDPOINT_TYPE_BLUETOOTH:
 			s[0] = s_endpointTypeChars[this->type];
-			s[1] = '/';
+			s[1] = '-';
 			eth().toString(s + 2);
 			break;
 		case ZT_ENDPOINT_TYPE_IP:
@@ -45,10 +45,12 @@ void Endpoint::toString(char s[ZT_ENDPOINT_STRING_SIZE_MAX]) const noexcept
 		case ZT_ENDPOINT_TYPE_IP_TCP:
 		case ZT_ENDPOINT_TYPE_IP_HTTP2:
 			s[0] = s_endpointTypeChars[this->type];
-			s[1] = '/';
+			s[1] = '-';
 			ip().toString(s + 2);
 			break;
 	}
+
+	return s;
 }
 
 bool Endpoint::fromString(const char *s) noexcept
@@ -57,7 +59,7 @@ bool Endpoint::fromString(const char *s) noexcept
 	if ((!s) || (!*s))
 		return true;
 
-	const char *start = strchr(s, '/');
+	const char *start = strchr(s, '-');
 	if (start) {
 		char tmp[16];
 		for (unsigned int i = 0;i < 15;++i) {
@@ -248,3 +250,26 @@ bool Endpoint::operator<(const Endpoint &ep) const noexcept
 }
 
 } // namespace ZeroTier
+
+extern "C" {
+
+char *ZT_Endpoint_toString(
+	const ZT_Endpoint *ep,
+	char *buf,
+	int capacity)
+{
+	if ((!ep) || (!buf) || (capacity < ZT_ENDPOINT_STRING_SIZE_MAX))
+		return nullptr;
+	return reinterpret_cast<const ZeroTier::Endpoint *>(ep)->toString(buf);
+}
+
+int ZT_Endpoint_fromString(
+	ZT_Endpoint *ep,
+	const char *str)
+{
+	if ((!ep) || (!str))
+		return ZT_RESULT_ERROR_BAD_PARAMETER;
+	return reinterpret_cast<ZeroTier::Endpoint *>(ep)->fromString(str) ? ZT_RESULT_OK : ZT_RESULT_ERROR_BAD_PARAMETER;
+}
+
+} // C API

@@ -5,11 +5,12 @@ package zerotier
 // static inline uint64_t _getAddress(const ZT_Endpoint *ep) { return ep->value.fp.address; }
 // static inline uint64_t _getMAC(const ZT_Endpoint *ep) { return ep->value.mac; }
 // static inline const struct sockaddr_storage *_getSS(const ZT_Endpoint *ep) { return &(ep->value.ss); }
+// static inline void _setSS(ZT_Endpoint *ep,const void *ss) { memcpy(&(ep->value.ss),ss,sizeof(struct sockaddr_storage)); }
 import "C"
 
 import (
 	"encoding/json"
-	"fmt"
+	"strings"
 	"unsafe"
 )
 
@@ -27,6 +28,42 @@ const (
 
 type Endpoint struct {
 	cep C.ZT_Endpoint
+}
+
+// NewEndpointFromString constructs a new endpoint from an InetAddress or Endpoint string.
+// This will auto detect whether this is a plain InetAddress or an Endpoint in string
+// format. If the former it's created as a ZT_ENDPOINT_TYPE_IP_UDP endpoint.
+func NewEndpointFromString(s string) (*Endpoint, error) {
+	if len(s) == 0 {
+		var ep Endpoint
+		ep.cep._type = C.ZT_ENDPOINT_TYPE_NIL
+		return &ep, nil
+	}
+	if strings.IndexRune(s, '-') > 0 || (strings.IndexRune(s, ':') < 0 && strings.IndexRune(s, '.') < 0) {
+		var ep Endpoint
+		cs := C.CString(s)
+		defer C.free(cs)
+		if C.ZT_Endpoint_fromString(cs) == nil {
+			return nil, ErrInvalidParameter
+		}
+		return &ep, nil
+	}
+	inaddr := NewInetAddressFromString(s)
+	if inaddr == nil {
+		return nil, ErrInvalidParameter
+	}
+	return NewEndpointFromInetAddress(inaddr)
+}
+
+func NewEndpointFromInetAddress(addr *InetAddress) (*Endpoint, error) {
+	var ep Endpoint
+	var ss C.struct_sockaddr_storage
+	if !makeSockaddrStorage(addr.IP, addr.Port, &ss) {
+		return nil, ErrInvalidParameter
+	}
+	ep.cep._type = C.ZT_ENDPOINT_TYPE_IP_UDP
+	C._setSS(&ep.cep, unsafe.Pointer(&ss))
+	return &ep, nil
 }
 
 // Type returns this endpoint's type.
@@ -77,15 +114,12 @@ func (ep *Endpoint) MAC() MAC {
 }
 
 func (ep *Endpoint) String() string {
-	switch ep.cep._type {
-	case EndpointTypeZeroTier:
-		return fmt.Sprintf("%d/%s", ep.Type(), ep.Fingerprint().String())
-	case EndpointTypeEthernet, EndpointTypeWifiDirect, EndpointTypeBluetooth:
-		return fmt.Sprintf("%d/%s", ep.Type(), ep.MAC().String())
-	case EndpointTypeIp, EndpointTypeIpUdp, EndpointTypeIpTcp, EndpointTypeIpHttp2:
-		return fmt.Sprintf("%d/%s", ep.Type(), ep.InetAddress().String())
+	var buf [4096]byte
+	cs := C.ZT_Endpoint_toString(&ep.cep,unsafe.Pointer(&buf[0]),4096)
+	if cs == nil {
+		return "0"
 	}
-	return fmt.Sprintf("%d", ep.Type())
+	return C.GoString(cs)
 }
 
 func (ep *Endpoint) MarshalJSON() ([]byte, error) {
@@ -94,6 +128,15 @@ func (ep *Endpoint) MarshalJSON() ([]byte, error) {
 }
 
 func (ep *Endpoint) UnmarshalJSON(j []byte) error {
-	// TODO
+	var s string
+	err := json.Unmarshal(j, &s)
+	if err != nil {
+		return err
+	}
+	ep2, err := NewEndpointFromString(s)
+	if err != nil {
+		return err
+	}
+	*ep = *ep2
 	return nil
 }

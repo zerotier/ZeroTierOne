@@ -21,7 +21,6 @@ import (
 	"zerotier/pkg/zerotier"
 )
 
-// Network CLI command
 func Network(basePath, authToken string, args []string, jsonOutput bool) {
 	if len(args) != 1 {
 		Help()

@@ -24,6 +24,7 @@
 
 #define ZT_LOCATOR_MAX_ENDPOINTS 8
 #define ZT_LOCATOR_MARSHAL_SIZE_MAX (8 + ZT_FINGERPRINT_MARSHAL_SIZE + 2 + (ZT_LOCATOR_MAX_ENDPOINTS * ZT_ENDPOINT_MARSHAL_SIZE_MAX) + 2 + 2 + ZT_SIGNATURE_BUFFER_SIZE)
+#define ZT_LOCATOR_STRING_SIZE_MAX 4096
 
 namespace ZeroTier {
 
@@ -105,14 +106,27 @@ public:
 	 */
 	bool verify(const Identity &id) const noexcept;
 
+	/**
+	 * Convert this locator to a string
+	 *
+	 * @param s String buffer
+	 * @return Pointer to buffer
+	 */
+	char *toString(char s[ZT_LOCATOR_STRING_SIZE_MAX]) const noexcept;
+
+	/**
+	 * Decode a string format locator
+	 *
+	 * @param s Locator from toString()
+	 * @return True if format was valid
+	 */
+	bool fromString(const char *s) noexcept;
+
 	explicit ZT_INLINE operator bool() const noexcept
 	{ return m_ts > 0; }
 
-	static constexpr int marshalSizeMax() noexcept
-	{ return ZT_LOCATOR_MARSHAL_SIZE_MAX; }
-
+	static constexpr int marshalSizeMax() noexcept { return ZT_LOCATOR_MARSHAL_SIZE_MAX; }
 	int marshal(uint8_t data[ZT_LOCATOR_MARSHAL_SIZE_MAX], bool excludeSignature = false) const noexcept;
-
 	int unmarshal(const uint8_t *data, int len) noexcept;
 
 private:

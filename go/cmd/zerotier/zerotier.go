@@ -127,13 +127,6 @@ func main() {
 	case "peers", "listpeers", "lspeers":
 		authTokenRequired(authToken)
 		cli.Peers(basePath, authToken, cmdArgs, *jflag, false)
-	case "roots", "listroots", "lsroots":
-		authTokenRequired(authToken)
-		cli.Peers(basePath, authToken, cmdArgs, *jflag, true)
-	case "addroot":
-		// TODO
-	case "removeroot":
-		// TODO
 	case "join":
 		authTokenRequired(authToken)
 		cli.Join(basePath, authToken, cmdArgs)
@@ -151,7 +144,18 @@ func main() {
 		cli.Set(basePath, authToken, cmdArgs)
 	case "identity":
 		cli.Identity(cmdArgs)
+	case "locator":
+		cli.Locator(cmdArgs)
+	case "root":
+		authTokenRequired(authToken)
+		cli.Root(basePath, authToken, cmdArgs, *jflag)
+	case "controller":
+		authTokenRequired(authToken)
+		cli.Controller(basePath, authToken, cmdArgs, *jflag)
 	}
+
+	// Commands in the 'cli' sub-package do not return, so if we make
+	// it here the command was not recognized.
 
 	cli.Help()
 	os.Exit(1)

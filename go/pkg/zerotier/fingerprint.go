@@ -32,7 +32,7 @@ func NewFingerprintFromString(fps string) (*Fingerprint, error) {
 	if len(fps) < AddressStringLength {
 		return nil, ErrInvalidZeroTierAddress
 	}
-	ss := strings.Split(fps, "/")
+	ss := strings.Split(fps, "-")
 	if len(ss) < 1 || len(ss) > 2 {
 		return nil, ErrInvalidParameter
 	}
@@ -67,7 +67,7 @@ func newFingerprintFromCFingerprint(cfp *C.ZT_Fingerprint) *Fingerprint {
 
 func (fp *Fingerprint) String() string {
 	if len(fp.Hash) == 48 {
-		return fmt.Sprintf("%.10x/%s", uint64(fp.Address), Base32StdLowerCase.EncodeToString(fp.Hash))
+		return fmt.Sprintf("%.10x-%s", uint64(fp.Address), Base32StdLowerCase.EncodeToString(fp.Hash))
 	}
 	return fp.Address.String()
 }

@@ -18,7 +18,6 @@ import (
 	"zerotier/pkg/zerotier"
 )
 
-// Help dumps help to stdout
 func Help() {
 	fmt.Printf(`ZeroTier Network Hypervisor Service Version %d.%d.%d
 (c)2013-2020 ZeroTier, Inc.
@@ -38,11 +37,11 @@ Commands:
   service                               Start as service
   status                                Show node status, identity, and config
   peers                                 List all VL1 peers
-  join <network ID> [fingerprint]       Join a virtual network
-  leave <network ID>                    Leave a virtual network
+  join <network> [fingerprint]          Join a virtual network
+  leave <network>                       Leave a virtual network
   networks                              List VL2 virtual networks
-  network <network ID>                  Show verbose network info
-  set <network ID> [option] [value]     Get or set a network config option
+  network <network>                     Show verbose network info
+  set <network> [option] [value]        Get or set a network config option
     manageips <boolean>                 Is IP management allowed?
     manageroutes <boolean>              Is route management allowed?
     globalips <boolean>                 Allow assignment of global IPs?
@@ -62,11 +61,20 @@ Commands:
     verify <identity> <file> <sig>      Verify a signature
   locator <command> [args]              Locator management commands
     new <identity> <address> [...]      Create and sign a new locator
-    show <locator> [<identity>]         Show locator information
-  roots                                 List root peers
-  addroot <identity> <locator>          Add a root or update its locator
-  addroot <url>                         Add or update roots from a URL
-  removeroot <address>                  Remove a peer from the root list
+    show <locator> [identity]           Show locator information
+  root [command]                        Root management commands
+    list                                List root peers (same as no command)
+    add <identity> <locator>            Add or manually update a root
+    add <url>                           Add or update root(s) from a URL
+    remove <address>                    Un-designate a peer as a root
+  controller <command> [option]         Local controller management commands
+    networks                            List networks run by local controller
+    new                                 Create a new network
+    set <network> [setting] [value]     Show or modify network settings
+    members <network>                   List members of a network
+    member <network> [setting] [value]  Show or modify member level settings
+    auth <address|fingerprint>          Authorize a peer
+    deauth <address|fingerprint>        Deauthorize a peer
 
 The 'service' command does not exit until the service receives a signal.
 This is typically run from launchd (Mac), systemd or init (Linux), a Windows
@@ -78,6 +86,5 @@ node.
 
 Identities can be specified verbatim on the command line or as a path to
 a file. This is detected automatically.
-
 `,zerotier.CoreVersionMajor, zerotier.CoreVersionMinor, zerotier.CoreVersionRevision)
 }

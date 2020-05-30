@@ -147,14 +147,9 @@ public:
 	ZT_INLINE Fingerprint zt() const noexcept
 	{ return Fingerprint(this->value.fp); }
 
-	void toString(char s[ZT_ENDPOINT_STRING_SIZE_MAX]) const noexcept;
+	char *toString(char s[ZT_ENDPOINT_STRING_SIZE_MAX]) const noexcept;
 
-	ZT_INLINE String toString() const
-	{
-		char tmp[ZT_ENDPOINT_STRING_SIZE_MAX];
-		toString(tmp);
-		return String(tmp);
-	}
+	ZT_INLINE String toString() const { char tmp[ZT_ENDPOINT_STRING_SIZE_MAX]; return String(toString(tmp)); }
 
 	bool fromString(const char *s) noexcept;
 

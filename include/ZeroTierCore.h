@@ -2123,6 +2123,17 @@ ZT_SDK_API void ZT_Identity_delete(ZT_Identity *id);
 
 /* ---------------------------------------------------------------------------------------------------------------- */
 
+ZT_SDK_API char *ZT_Endpoint_toString(
+	const ZT_Endpoint *ep,
+	char *buf,
+	int capacity);
+
+ZT_SDK_API int ZT_Endpoint_fromString(
+	ZT_Endpoint *ep,
+	const char *str);
+
+/* ---------------------------------------------------------------------------------------------------------------- */
+
 /**
  * Create and sign a new locator
  *
@@ -2150,6 +2161,14 @@ ZT_SDK_API ZT_Locator *ZT_Locator_unmarshal(
 	unsigned int len);
 
 /**
+ * Decode a locator from string format
+ *
+ * @param str String format locator
+ * @return Locator or NULL if string is not valid
+ */
+ZT_SDK_API ZT_Locator *ZT_Locator_fromString(const char *str);
+
+/**
  * Serialize this locator into a buffer
  *
  * @param loc Locator to serialize
@@ -2160,6 +2179,19 @@ ZT_SDK_API ZT_Locator *ZT_Locator_unmarshal(
 ZT_SDK_API int ZT_Locator_marshal(const ZT_Locator *loc,void *buf,unsigned int bufSize);
 
 /**
+ * Get this locator in string format
+ *
+ * @param loc Locator
+ * @param buf Buffer to store string
+ * @param capacity Capacity of buffer in bytes (recommended size: 4096)
+ * @return Pointer to buffer or NULL if an error occurs
+ */
+ZT_SDK_API char *ZT_Locator_toString(
+	const ZT_Locator *loc,
+	char *buf,
+	int capacity);
+
+/**
  * Get a pointer to the fingerprint of this locator's signer.
  *
  * The returned pointer remains valid as long as the Locator is not deleted.
@@ -2168,6 +2200,14 @@ ZT_SDK_API int ZT_Locator_marshal(const ZT_Locator *loc,void *buf,unsigned int b
  * @return Pointer to fingerprint of signer
  */
 ZT_SDK_API const ZT_Fingerprint *ZT_Locator_fingerprint(const ZT_Locator *loc);
+
+/**
+ * Get a locator's timestamp
+ *
+ * @param loc Locator to query
+ * @return Locator timestamp in milliseconds since epoch
+ */
+ZT_SDK_API int64_t ZT_Locator_timestamp(const ZT_Locator *loc);
 
 /**
  * Get the number of endpoints in this locator

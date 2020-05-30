@@ -99,15 +99,35 @@ func readIdentity(s string) *zerotier.Identity {
 	}
 	idData, err := ioutil.ReadFile(s)
 	if err != nil {
-		fmt.Printf("FATAL: identity '%s' cannot be resolved as file or literal identity: %s", s, err.Error())
+		fmt.Printf("FATAL: identity '%s' cannot be parsed as file or literal: %s", s, err.Error())
 		os.Exit(1)
 	}
 	id, err := zerotier.NewIdentityFromString(string(idData))
 	if err != nil {
-		fmt.Printf("FATAL: identity '%s' cannot be resolved as file or literal identity: %s", s, err.Error())
+		fmt.Printf("FATAL: identity '%s' cannot be parsed as file or literal: %s", s, err.Error())
 		os.Exit(1)
 	}
 	return id
+}
+
+func readLocator(s string) *zerotier.Locator {
+	if strings.ContainsRune(s, '@') {
+		loc, _ := zerotier.NewLocatorFromString(s)
+		if loc != nil {
+			return loc
+		}
+	}
+	locData, err := ioutil.ReadFile(s)
+	if err != nil {
+		fmt.Printf("FATAL: locator '%s' cannot be parsed as file or literal: %s", s, err.Error())
+		os.Exit(1)
+	}
+	loc, err := zerotier.NewLocatorFromString(string(locData))
+	if err != nil {
+		fmt.Printf("FATAL: locator '%s' cannot be parsed as file or literal: %s", s, err.Error())
+		os.Exit(1)
+	}
+	return loc
 }
 
 func networkStatusStr(status int) string {
@@ -115,7 +135,7 @@ func networkStatusStr(status int) string {
 	case zerotier.NetworkStatusNotFound:
 		return "NOTFOUND"
 	case zerotier.NetworkStatusAccessDenied:
-		return "DENIED"
+		return "ACCESSDENIED"
 	case zerotier.NetworkStatusRequestConfiguration:
 		return "UPDATING"
 	case zerotier.NetworkStatusOK:

@@ -23,7 +23,6 @@ import (
 	"zerotier/pkg/zerotier"
 )
 
-// Identity command
 func Identity(args []string) {
 	if len(args) > 0 {
 		switch args[0] {
