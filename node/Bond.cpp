@@ -135,13 +135,14 @@ SharedPtr<Path> Bond::getAppropriatePath(int64_t now, int32_t flowId)
 				int _tempIdx = _rrIdx;
 				for (int searchCount = 0; searchCount < (_numBondedPaths-1); searchCount++) {
 					_tempIdx = (_tempIdx == (_numBondedPaths-1)) ? 0 : _tempIdx+1;
-					if (_paths[_bondedIdx[_tempIdx]] && _paths[_bondedIdx[_tempIdx]]->eligible(now,_ackSendInterval)) {
-						_rrIdx = _tempIdx;
-						break;
+					if (_bondedIdx[_tempIdx] != ZT_MAX_PEER_NETWORK_PATHS) {
+						if (_paths[_bondedIdx[_tempIdx]] && _paths[_bondedIdx[_tempIdx]]->eligible(now,_ackSendInterval)) {
+							_rrIdx = _tempIdx;
+							break;
+						}
 					}
 				}
 			}
-			fprintf(stderr, "_rrIdx=%d\n", _rrIdx);
 			if (_paths[_bondedIdx[_rrIdx]]) {
 				return _paths[_bondedIdx[_rrIdx]];
 			}
