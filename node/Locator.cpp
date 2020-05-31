@@ -18,6 +18,16 @@
 
 namespace ZeroTier {
 
+Locator::Locator(const char *const str) noexcept
+{
+	if (!fromString(str)) {
+		m_ts = 0;
+		m_signer.zero();
+		m_endpoints.clear();
+		m_signature.clear();
+	}
+}
+
 bool Locator::add(const Endpoint &ep)
 {
 	if (m_endpoints.size() < ZT_LOCATOR_MAX_ENDPOINTS) {

@@ -124,8 +124,9 @@ Node::Node(void *uPtr, void *tPtr, const struct ZT_Node_Callbacks *callbacks, in
 	for(unsigned int i=0;i<1023;++i)
 		RR->randomPrivilegedPortOrder[i] = (uint16_t)(i + 1);
 	for(unsigned int i=0;i<512;++i) {
-		const unsigned int a = (unsigned int)Utils::random() % 1023;
-		const unsigned int b = (unsigned int)Utils::random() % 1023;
+		uint64_t rn = Utils::random();
+		const unsigned int a = (unsigned int)rn % 1023;
+		const unsigned int b = (unsigned int)(rn >> 32U) % 1023;
 		if (a != b) {
 			const uint16_t tmp = RR->randomPrivilegedPortOrder[a];
 			RR->randomPrivilegedPortOrder[a] = RR->randomPrivilegedPortOrder[b];

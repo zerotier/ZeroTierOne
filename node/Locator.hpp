@@ -44,6 +44,8 @@ public:
 		m_ts(0)
 	{}
 
+	explicit Locator(const char *const str) noexcept;
+
 	ZT_INLINE Locator(const Locator &loc) noexcept :
 		m_ts(loc.m_ts),
 		m_signer(loc.m_signer),
