@@ -524,19 +524,18 @@ private:
 	// Addresses recieved via PUSH_DIRECT_PATHS etc. that we are scheduled to try.
 	struct p_TryQueueItem
 	{
-		ZT_INLINE p_TryQueueItem() : target(), ts(0), breakSymmetricBFG1024(false)
+		ZT_INLINE p_TryQueueItem() : ts(0), target(), natMustDie(false)
 		{}
 
-		ZT_INLINE p_TryQueueItem(const int64_t now, const Endpoint &t, const bool bfg) : target(t), ts(now), breakSymmetricBFG1024(bfg)
+		ZT_INLINE p_TryQueueItem(const int64_t now, const Endpoint &t, const bool nmd) : ts(now), target(t), natMustDie(nmd)
 		{}
 
-		Endpoint target;
 		int64_t ts;
-		bool breakSymmetricBFG1024;
+		Endpoint target;
+		bool natMustDie;
 	};
 
 	List<p_TryQueueItem> m_tryQueue;
-	List<p_TryQueueItem>::iterator m_tryQueuePtr; // loops over _tryQueue like a circular buffer
 
 	uint16_t m_vProto;
 	uint16_t m_vMajor;

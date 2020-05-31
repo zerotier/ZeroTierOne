@@ -940,7 +940,7 @@ void AES::CTR::finish() noexcept
 // Software AES and AES key expansion ---------------------------------------------------------------------------------
 
 #define readuint32_t(i) Utils::loadBigEndian<uint32_t>(i)
-#define writeuint32_t(o, v) Utils::storeBigEndian((o),(uint32_t)(v))
+#define writeuint32_t(o, v) Utils::storeBigEndian<uint32_t>((o),(uint32_t)(v))
 
 const uint32_t AES::Te0[256] = {0xc66363a5, 0xf87c7c84, 0xee777799, 0xf67b7b8d, 0xfff2f20d, 0xd66b6bbd, 0xde6f6fb1, 0x91c5c554, 0x60303050, 0x02010103, 0xce6767a9, 0x562b2b7d, 0xe7fefe19, 0xb5d7d762, 0x4dababe6, 0xec76769a, 0x8fcaca45, 0x1f82829d, 0x89c9c940, 0xfa7d7d87, 0xeffafa15, 0xb25959eb, 0x8e4747c9, 0xfbf0f00b, 0x41adadec, 0xb3d4d467, 0x5fa2a2fd, 0x45afafea, 0x239c9cbf, 0x53a4a4f7, 0xe4727296, 0x9bc0c05b, 0x75b7b7c2, 0xe1fdfd1c, 0x3d9393ae, 0x4c26266a, 0x6c36365a, 0x7e3f3f41, 0xf5f7f702, 0x83cccc4f, 0x6834345c, 0x51a5a5f4, 0xd1e5e534, 0xf9f1f108, 0xe2717193, 0xabd8d873, 0x62313153, 0x2a15153f, 0x0804040c, 0x95c7c752, 0x46232365, 0x9dc3c35e, 0x30181828, 0x379696a1, 0x0a05050f, 0x2f9a9ab5, 0x0e070709, 0x24121236, 0x1b80809b, 0xdfe2e23d, 0xcdebeb26, 0x4e272769, 0x7fb2b2cd, 0xea75759f,
                                 0x1209091b, 0x1d83839e, 0x582c2c74, 0x341a1a2e, 0x361b1b2d, 0xdc6e6eb2, 0xb45a5aee, 0x5ba0a0fb, 0xa45252f6, 0x763b3b4d, 0xb7d6d661, 0x7db3b3ce, 0x5229297b, 0xdde3e33e, 0x5e2f2f71, 0x13848497, 0xa65353f5, 0xb9d1d168, 0x00000000, 0xc1eded2c, 0x40202060, 0xe3fcfc1f, 0x79b1b1c8, 0xb65b5bed, 0xd46a6abe, 0x8dcbcb46, 0x67bebed9, 0x7239394b, 0x944a4ade, 0x984c4cd4, 0xb05858e8, 0x85cfcf4a, 0xbbd0d06b, 0xc5efef2a, 0x4faaaae5, 0xedfbfb16, 0x864343c5, 0x9a4d4dd7, 0x66333355, 0x11858594, 0x8a4545cf, 0xe9f9f910, 0x04020206, 0xfe7f7f81, 0xa05050f0, 0x783c3c44, 0x259f9fba, 0x4ba8a8e3, 0xa25151f3, 0x5da3a3fe, 0x804040c0, 0x058f8f8a, 0x3f9292ad, 0x219d9dbc, 0x70383848, 0xf1f5f504, 0x63bcbcdf, 0x77b6b6c1, 0xafdada75, 0x42212163, 0x20101030, 0xe5ffff1a, 0xfdf3f30e, 0xbfd2d26d,
@@ -1048,14 +1048,14 @@ void AES::_encryptSW(const uint8_t in[16], uint8_t out[16]) const noexcept
 {
 	const uint32_t *const rk = _k.sw.ek;
 	const uint32_t m8 = 0xff;
-	uint32_t s0 = readuint32_t(in) ^rk[0];
-	uint32_t s1 = readuint32_t(in + 4) ^rk[1];
-	uint32_t s2 = readuint32_t(in + 8) ^rk[2];
-	uint32_t s3 = readuint32_t(in + 12) ^rk[3];
-	uint32_t t0 = Te0[s0 >> 24U] ^Te1[(s1 >> 16U) & m8] ^Te2[(s2 >> 8U) & m8] ^Te3[s3 & m8] ^rk[4];
-	uint32_t t1 = Te0[s1 >> 24U] ^Te1[(s2 >> 16U) & m8] ^Te2[(s3 >> 8U) & m8] ^Te3[s0 & m8] ^rk[5];
-	uint32_t t2 = Te0[s2 >> 24U] ^Te1[(s3 >> 16U) & m8] ^Te2[(s0 >> 8U) & m8] ^Te3[s1 & m8] ^rk[6];
-	uint32_t t3 = Te0[s3 >> 24U] ^Te1[(s0 >> 16U) & m8] ^Te2[(s1 >> 8U) & m8] ^Te3[s2 & m8] ^rk[7];
+	uint32_t s0 = readuint32_t(in) ^ rk[0];
+	uint32_t s1 = readuint32_t(in + 4) ^ rk[1];
+	uint32_t s2 = readuint32_t(in + 8) ^ rk[2];
+	uint32_t s3 = readuint32_t(in + 12) ^ rk[3];
+	uint32_t t0 = Te0[s0 >> 24U] ^Te1[(s1 >> 16U) & m8] ^Te2[(s2 >> 8U) & m8] ^Te3[s3 & m8] ^ rk[4];
+	uint32_t t1 = Te0[s1 >> 24U] ^Te1[(s2 >> 16U) & m8] ^Te2[(s3 >> 8U) & m8] ^Te3[s0 & m8] ^ rk[5];
+	uint32_t t2 = Te0[s2 >> 24U] ^Te1[(s3 >> 16U) & m8] ^Te2[(s0 >> 8U) & m8] ^Te3[s1 & m8] ^ rk[6];
+	uint32_t t3 = Te0[s3 >> 24U] ^Te1[(s0 >> 16U) & m8] ^Te2[(s1 >> 8U) & m8] ^Te3[s2 & m8] ^ rk[7];
 	s0 = Te0[t0 >> 24U] ^ Te1[(t1 >> 16U) & m8] ^ Te2[(t2 >> 8U) & m8] ^ Te3[t3 & m8] ^ rk[8];
 	s1 = Te0[t1 >> 24U] ^ Te1[(t2 >> 16U) & m8] ^ Te2[(t3 >> 8U) & m8] ^ Te3[t0 & m8] ^ rk[9];
 	s2 = Te0[t2 >> 24U] ^ Te1[(t3 >> 16U) & m8] ^ Te2[(t0 >> 8U) & m8] ^ Te3[t1 & m8] ^ rk[10];

@@ -36,7 +36,6 @@ Peer::Peer(const RuntimeEnvironment *renv) :
 	m_lastProbeReceived(0),
 	m_alivePathCount(0),
 	m_tryQueue(),
-	m_tryQueuePtr(m_tryQueue.end()),
 	m_vProto(0),
 	m_vMajor(0),
 	m_vMinor(0),
@@ -223,6 +222,9 @@ void Peer::pulse(void *const tPtr,const int64_t now,const bool isRoot)
 {
 	RWMutex::Lock l(m_lock);
 
+	// Determine if we need a new ephemeral key pair and if a new HELLO needs
+	// to be sent. The latter happens every ZT_PEER_HELLO_INTERVAL or if a new
+	// ephemeral key pair is generated.
 	bool needHello = false;
 	if ( (m_vProto >= 11) && ( ((now - m_ephemeralPairTimestamp) >= (ZT_SYMMETRIC_KEY_TTL / 2)) || ((m_ephemeralKeys[0])&&(m_ephemeralKeys[0]->odometer() >= (ZT_SYMMETRIC_KEY_TTL_MESSAGES / 2))) ) ) {
 		m_ephemeralPair.generate();
@@ -231,36 +233,46 @@ void Peer::pulse(void *const tPtr,const int64_t now,const bool isRoot)
 		needHello = true;
 	}
 
-	if (m_tryQueue.empty()&&(m_alivePathCount == 0)) {
-		InetAddress addr;
-		if (RR->node->externalPathLookup(tPtr, m_id, -1, addr)) {
-			if ((addr)&&(RR->node->shouldUsePathForZeroTierTraffic(tPtr, m_id, -1, addr))) {
-				RR->t->tryingNewPath(tPtr, 0x84a10000, m_id, addr, InetAddress::NIL, 0, 0, Identity::NIL);
-				sent(now,m_sendProbe(tPtr,-1,addr,nullptr,0,now));
-			}
-		}
-	}
-
+	// Prioritize paths and more importantly for here forget dead ones.
 	m_prioritizePaths(now);
 
-	if (!m_tryQueue.empty()) {
-		for(int k=0;k<ZT_NAT_T_MAX_QUEUED_ATTEMPTS_PER_PULSE;++k) {
-			// This is a global circular pointer that iterates through the list of
-			// endpoints to attempt.
-			if (m_tryQueuePtr == m_tryQueue.end()) {
-				if (m_tryQueue.empty())
-					break;
-				m_tryQueuePtr = m_tryQueue.begin();
+	if (m_tryQueue.empty()) {
+		if (m_alivePathCount == 0) {
+			// If there are no living paths and nothing in the try queue, try addresses
+			// from any locator we have on file or that are fetched via the external API
+			// callback (if one was supplied).
+			if (m_locator) {
+				for(Vector<Endpoint>::const_iterator ep(m_locator->endpoints().begin());ep!=m_locator->endpoints().end();++ep) {
+					if (ep->type == ZT_ENDPOINT_TYPE_IP_UDP) {
+						RR->t->tryingNewPath(tPtr, 0x84b22322, m_id, ep->ip(), InetAddress::NIL, 0, 0, Identity::NIL);
+						sent(now,m_sendProbe(tPtr,-1,ep->ip(),nullptr,0,now));
+					}
+				}
 			}
 
-			if (likely((now - m_tryQueuePtr->ts) < ZT_PATH_ALIVE_TIMEOUT)) {
-				if (m_tryQueuePtr->target.isInetAddr()) {
+			InetAddress addr;
+			if (RR->node->externalPathLookup(tPtr, m_id, -1, addr)) {
+				if ((addr)&&(RR->node->shouldUsePathForZeroTierTraffic(tPtr, m_id, -1, addr))) {
+					RR->t->tryingNewPath(tPtr, 0x84a10000, m_id, addr, InetAddress::NIL, 0, 0, Identity::NIL);
+					sent(now,m_sendProbe(tPtr,-1,addr,nullptr,0,now));
+				}
+			}
+		}
+	} else {
+		// Attempt up to ZT_NAT_T_MAX_QUEUED_ATTEMPTS_PER_PULSE queued addresses.
+
+		for (int k=0;k<ZT_NAT_T_MAX_QUEUED_ATTEMPTS_PER_PULSE;++k) {
+			p_TryQueueItem &qi = m_tryQueue.front();
+
+			if (likely((now - qi.ts) < ZT_PATH_ALIVE_TIMEOUT)) {
+				if (qi.target.type == ZT_ENDPOINT_TYPE_IP_UDP) {
+					// Skip entry if it overlaps with any currently active IP.
 					for(unsigned int i=0;i<m_alivePathCount;++i) {
-						if (m_paths[i]->address().ipsEqual(m_tryQueuePtr->target.ip()))
+						if (m_paths[i]->address().ipsEqual(qi.target.ip()))
 							goto skip_tryQueue_item;
 					}
 
-					if ((m_alivePathCount == 0) && (m_tryQueuePtr->breakSymmetricBFG1024) && (RR->node->natMustDie())) {
+					if ((m_alivePathCount == 0) && (qi.natMustDie) && (RR->node->natMustDie())) {
 						// Attempt aggressive NAT traversal if both requested and enabled. This sends a probe
 						// to all ports under 1024, which assumes that the peer has bound to such a port and
 						// has attempted to initiate a connection through it. This can traverse a decent number
@@ -279,15 +291,17 @@ void Peer::pulse(void *const tPtr,const int64_t now,const bool isRoot)
 								ports[b] = tmp;
 							}
 						}
-						sent(now,m_sendProbe(tPtr, -1, m_tryQueuePtr->target.ip(), ports, 1023, now));
+						sent(now,m_sendProbe(tPtr, -1, qi.target.ip(), ports, 1023, now));
 					} else {
-						sent(now,m_sendProbe(tPtr, -1, m_tryQueuePtr->target.ip(), nullptr, 0, now));
+						sent(now,m_sendProbe(tPtr, -1, qi.target.ip(), nullptr, 0, now));
 					}
 				}
 			}
 
 skip_tryQueue_item:
-			m_tryQueue.erase(m_tryQueuePtr++);
+			m_tryQueue.pop_front();
+			if (m_tryQueue.empty())
+				break;
 		}
 	}
 
@@ -323,7 +337,7 @@ skip_tryQueue_item:
 	}
 }
 
-void Peer::contact(void *tPtr,const int64_t now,const Endpoint &ep,const bool breakSymmetricBFG1024)
+void Peer::contact(void *tPtr,const int64_t now,const Endpoint &ep,const bool natMustDie)
 {
 	static uint8_t foo = 0;
 	RWMutex::Lock l(m_lock);
@@ -336,25 +350,15 @@ void Peer::contact(void *tPtr,const int64_t now,const Endpoint &ep,const bool br
 		++foo;
 	}
 
-	const bool wasEmpty = m_tryQueue.empty();
-	if (!wasEmpty) {
-		for(List<p_TryQueueItem>::iterator i(m_tryQueue.begin());i!=m_tryQueue.end();++i) {
-			if (i->target == ep) {
-				i->ts = now;
-				i->breakSymmetricBFG1024 = breakSymmetricBFG1024;
-				return;
-			}
+	for(List<p_TryQueueItem>::iterator i(m_tryQueue.begin());i!=m_tryQueue.end();++i) {
+		if (i->target == ep) {
+			i->ts = now;
+			i->natMustDie = natMustDie;
+			return;
 		}
 	}
 
-#ifdef __CPP11__
-	m_tryQueue.emplace_back(now, ep, breakSymmetricBFG1024);
-#else
-	_tryQueue.push_back(_TryQueueItem(now,ep,breakSymmetricBFG1024));
-#endif
-
-	if (wasEmpty)
-		m_tryQueuePtr = m_tryQueue.begin();
+	m_tryQueue.push_back(p_TryQueueItem(now, ep, natMustDie));
 }
 
 void Peer::resetWithinScope(void *tPtr,InetAddress::IpScope scope,int inetAddressFamily,int64_t now)

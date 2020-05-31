@@ -122,7 +122,7 @@
 /**
  * Minimum supported protocol version
  */
-#define ZT_PROTO_VERSION_MIN 8
+#define ZT_PROTO_VERSION_MIN 9
 
 /**
  * Maximum allowed packet size (can technically be increased up to 16384)
@@ -154,7 +154,7 @@
 #define ZT_PROTO_MAX_HOPS 7
 
 /**
- * NONE/Poly1305 (legacy)
+ * NONE/Poly1305 (used for HELLO for backward compatibility)
  */
 #define ZT_PROTO_CIPHER_SUITE__POLY1305_NONE 0
 
@@ -164,13 +164,7 @@
 #define ZT_PROTO_CIPHER_SUITE__POLY1305_SALSA2012 1
 
 /**
- * No encryption or authentication at all!
- *
- * This is used for trusted paths. The MAC field will contain the
- * 64-bit trusted path ID. Both sides of a link must be configured
- * to trust a given network with the same trusted path ID for this
- * to be used. It's a high performance mode designed for use on
- * secure LANs.
+ * Deprecated, not currently used.
  */
 #define ZT_PROTO_CIPHER_SUITE__NONE 2
 
@@ -250,7 +244,6 @@
 #define ZT_PROTO_PACKET_VERB_INDEX        27
 
 #define ZT_PROTO_HELLO_NODE_META_INSTANCE_ID                "i"
-#define ZT_PROTO_HELLO_NODE_META_PREFERRED_CIPHER_MODE      "a"
 #define ZT_PROTO_HELLO_NODE_META_LOCATOR                    "l"
 #define ZT_PROTO_HELLO_NODE_META_SOFTWARE_VENDOR            "s"
 #define ZT_PROTO_HELLO_NODE_META_COMPLIANCE                 "c"
