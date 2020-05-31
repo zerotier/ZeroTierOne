@@ -13,7 +13,7 @@
 
 #include "Tests.h"
 
-//#define ZT_ENABLE_TESTS
+#define ZT_ENABLE_TESTS
 #ifdef ZT_ENABLE_TESTS
 
 #include "Constants.hpp"

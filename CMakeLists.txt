@@ -120,4 +120,4 @@ add_custom_target(zerotier ALL
 	WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/go
 	COMMAND rm -f ../build/zerotier && go build -trimpath -ldflags -s -o ../build/zerotier cmd/zerotier/zerotier.go
 )
-add_dependencies(zerotier zt_osdep zt_core zt_go_native)
+add_dependencies(zerotier zt_osdep zt_core zt_controller zt_go_native)

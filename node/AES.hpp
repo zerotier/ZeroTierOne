@@ -507,7 +507,7 @@ private:
 #ifdef ZT_AES_AESNI
 		struct {
 			__m128i k[28];
-			__m128i h,hh,hhh,hhhh;
+			__m128i h[4]; // h, hh, hhh, hhhh
 		} ni;
 #endif
 
@@ -519,8 +519,6 @@ private:
 	} _k;
 
 #ifdef ZT_AES_AESNI
-	static const __m128i s_shuf;
-
 	void _init_aesni(const uint8_t key[32]) noexcept;
 
 	ZT_INLINE void _encrypt_aesni(const void *const in,void *const out) const noexcept
@@ -561,47 +559,6 @@ private:
 		tmp = _mm_aesdec_si128(tmp,_k.ni.k[26]);
 		tmp = _mm_aesdec_si128(tmp,_k.ni.k[27]);
 		_mm_storeu_si128((__m128i *)out,_mm_aesdeclast_si128(tmp,_k.ni.k[0]));
-	}
-
-	static ZT_INLINE __m128i _mult_block_aesni(const __m128i shuf,const __m128i h,__m128i y) noexcept
-	{
-		y = _mm_shuffle_epi8(y,shuf);
-		__m128i t1 = _mm_clmulepi64_si128(h,y,0x00);
-		__m128i t2 = _mm_clmulepi64_si128(h,y,0x01);
-		__m128i t3 = _mm_clmulepi64_si128(h,y,0x10);
-		__m128i t4 = _mm_clmulepi64_si128(h,y,0x11);
-		t2 = _mm_xor_si128(t2,t3);
-		t3 = _mm_slli_si128(t2,8);
-		t2 = _mm_srli_si128(t2,8);
-		t1 = _mm_xor_si128(t1,t3);
-		t4 = _mm_xor_si128(t4,t2);
-		__m128i t5 = _mm_srli_epi32(t1,31);
-		t1 = _mm_slli_epi32(t1,1);
-		__m128i t6 = _mm_srli_epi32(t4,31);
-		t4 = _mm_slli_epi32(t4,1);
-		t3 = _mm_srli_si128(t5,12);
-		t6 = _mm_slli_si128(t6,4);
-		t5 = _mm_slli_si128(t5,4);
-		t1 = _mm_or_si128(t1,t5);
-		t4 = _mm_or_si128(t4,t6);
-		t4 = _mm_or_si128(t4,t3);
-		t5 = _mm_slli_epi32(t1,31);
-		t6 = _mm_slli_epi32(t1,30);
-		t3 = _mm_slli_epi32(t1,25);
-		t5 = _mm_xor_si128(t5,t6);
-		t5 = _mm_xor_si128(t5,t3);
-		t6 = _mm_srli_si128(t5,4);
-		t4 = _mm_xor_si128(t4,t6);
-		t5 = _mm_slli_si128(t5,12);
-		t1 = _mm_xor_si128(t1,t5);
-		t4 = _mm_xor_si128(t4,t1);
-		t5 = _mm_srli_epi32(t1,1);
-		t2 = _mm_srli_epi32(t1,2);
-		t3 = _mm_srli_epi32(t1,7);
-		t4 = _mm_xor_si128(t4,t2);
-		t4 = _mm_xor_si128(t4,t3);
-		t4 = _mm_xor_si128(t4,t5);
-		return _mm_shuffle_epi8(t4,shuf);
 	}
 #endif
 };
