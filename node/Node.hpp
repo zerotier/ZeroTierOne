@@ -321,12 +321,6 @@ public:
 	{ return m_RR.identity; }
 
 	/**
-	 * @return True if aggressive NAT-traversal mechanisms like scanning of <1024 ports are enabled
-	 */
-	ZT_INLINE bool natMustDie() const noexcept
-	{ return m_natMustDie; }
-
-	/**
 	 * Check whether a local controller has authorized a member on a network
 	 *
 	 * This is used by controllers to avoid needless certificate checks when we already
@@ -406,9 +400,6 @@ private:
 
 	// This is the most recent value for time passed in via any of the core API methods.
 	std::atomic<int64_t> m_now;
-
-	// True if we are to use really intensive NAT-busting measures.
-	std::atomic<bool> m_natMustDie;
 
 	// True if at least one root appears reachable.
 	std::atomic<bool> m_online;

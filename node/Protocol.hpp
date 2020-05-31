@@ -627,24 +627,20 @@ enum Verb
 
 	/**
 	 * Push of potential endpoints for direct communication:
-	 *   <[2] 16-bit number of paths>
-	 *   <[...] paths>
+	 *   <[2] 16-bit number of endpoints>
+	 *   <[...] endpoints>
 	 *
-	 * Path record format:
-	 *   <[1] 8-bit path flags>
-	 *   <[2] length of endpoint record>
-	 *   <[...] endpoint>
-	 * 
-	 * The following fields are also included if the node is pre-2.x:
-	 *   <[1] address type (LEGACY)>
-	 *   <[1] address length in bytes (LEGACY)>
-	 *   <[...] address (LEGACY)>
+	 * If the target node is pre-2.0 path records of the following format
+	 * are sent instead of post-2.x endpoints:
+	 *   <[1] 8-bit path flags (zero)>
+	 *   <[2] length of extended path characteristics (0)>
+	 *   [<[...] extended path characteristics>]
+	 *   <[1] address type>
+	 *   <[1] address length in bytes>
+	 *   <[...] address>
 	 *
-	 * Path record flags:
-	 *   0x01 - reserved (legacy)
-	 *   0x02 - reserved (legacy)
-	 *   0x04 - Symmetric NAT detected at sender side
-	 *   0x08 - Request aggressive symmetric NAT traversal
+	 * Recipients will add these endpoints to a queue of possible endpoints
+	 * to try for a given peer.
 	 *
 	 * OK and ERROR are not generated.
 	 */

@@ -87,6 +87,9 @@ public:
 
 	// AES keyed with a hash of this node's identity secret keys for local cache encryption at rest (where needed).
 	AES localCacheSymmetric;
+
+	// Privileged ports from 1 to 1023 in a random order (for IPv4 NAT traversal)
+	uint16_t randomPrivilegedPortOrder[1023];
 };
 
 } // namespace ZeroTier

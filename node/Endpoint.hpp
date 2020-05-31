@@ -124,6 +124,38 @@ public:
 	}
 
 	/**
+	 * Check whether this endpoint's address is the same as another.
+	 *
+	 * Right now this checks whether IPs are equal if both are IP based endpoints.
+	 * Otherwise it checks for simple equality.
+	 *
+	 * @param ep Endpoint to check
+	 * @return True if endpoints seem to refer to the same address/host
+	 */
+	ZT_INLINE bool isSameAddress(const Endpoint &ep) const noexcept
+	{
+		switch (this->type) {
+			case ZT_ENDPOINT_TYPE_IP:
+			case ZT_ENDPOINT_TYPE_IP_UDP:
+			case ZT_ENDPOINT_TYPE_IP_TCP:
+			case ZT_ENDPOINT_TYPE_IP_HTTP2:
+				switch(ep.type) {
+					case ZT_ENDPOINT_TYPE_IP:
+					case ZT_ENDPOINT_TYPE_IP_UDP:
+					case ZT_ENDPOINT_TYPE_IP_TCP:
+					case ZT_ENDPOINT_TYPE_IP_HTTP2:
+						return ip().ipsEqual(ep.ip());
+					default:
+						break;
+				}
+				break;
+			default:
+				break;
+		}
+		return (*this) == ep;
+	}
+
+	/**
 	 * Get InetAddress if this type uses IPv4 or IPv6 addresses (undefined otherwise)
 	 * 
 	 * @return InetAddress instance

@@ -77,7 +77,6 @@ Node::Node(void *uPtr, void *tPtr, const struct ZT_Node_Callbacks *callbacks, in
 	m_lastHousekeepingRun(0),
 	m_lastNetworkHousekeepingRun(0),
 	m_now(now),
-	m_natMustDie(true),
 	m_online(false)
 {
 	// Load this node's identity.
@@ -112,9 +111,27 @@ Node::Node(void *uPtr, void *tPtr, const struct ZT_Node_Callbacks *callbacks, in
 			stateObjectPut(tPtr, ZT_STATE_OBJECT_IDENTITY_PUBLIC, idtmp, RR->publicIdentityStr, (unsigned int) strlen(RR->publicIdentityStr));
 	}
 
+	// 2X hash our identity private key(s) to obtain a symmetric key for encrypting
+	// locally cached data at rest (as a defense in depth measure). This is not used
+	// for any network level encryption or authentication.
 	uint8_t tmph[ZT_SHA384_DIGEST_SIZE];
 	RR->identity.hashWithPrivate(tmph);
+	SHA384(tmph, tmph, ZT_SHA384_DIGEST_SIZE);
 	RR->localCacheSymmetric.init(tmph);
+	Utils::burn(tmph, ZT_SHA384_DIGEST_SIZE);
+
+	// Generate a random sort order for privileged ports for use in NAT-t algorithms.
+	for(unsigned int i=0;i<1023;++i)
+		RR->randomPrivilegedPortOrder[i] = (uint16_t)(i + 1);
+	for(unsigned int i=0;i<512;++i) {
+		const unsigned int a = (unsigned int)Utils::random() % 1023;
+		const unsigned int b = (unsigned int)Utils::random() % 1023;
+		if (a != b) {
+			const uint16_t tmp = RR->randomPrivilegedPortOrder[a];
+			RR->randomPrivilegedPortOrder[a] = RR->randomPrivilegedPortOrder[b];
+			RR->randomPrivilegedPortOrder[b] = tmp;
+		}
+	}
 
 	// This constructs all the components of the ZeroTier core within a single contiguous memory container,
 	// which reduces memory fragmentation and may improve cache locality.
@@ -186,29 +203,20 @@ ZT_ResultCode Node::processVirtualNetworkFrame(
 
 struct _processBackgroundTasks_eachPeer
 {
-	ZT_INLINE _processBackgroundTasks_eachPeer(const int64_t now_, Node *const parent_, void *const tPtr_) noexcept:
-		now(now_),
-		parent(parent_),
-		tPtr(tPtr_),
-		online(false),
-		rootsNotOnline()
-	{}
-
 	const int64_t now;
-	Node *const parent;
 	void *const tPtr;
 	bool online;
-	Vector<SharedPtr<Peer> > rootsNotOnline;
+
+	ZT_INLINE _processBackgroundTasks_eachPeer(const int64_t now_, void *const tPtr_) noexcept :
+		now(now_),
+		tPtr(tPtr_),
+		online(false)
+	{}
+
 	ZT_INLINE void operator()(const SharedPtr<Peer> &peer, const bool isRoot) noexcept
 	{
 		peer->pulse(tPtr, now, isRoot);
-		if (isRoot) {
-			if (peer->directlyConnected(now)) {
-				online = true;
-			} else {
-				rootsNotOnline.push_back(peer);
-			}
-		}
+		this->online |= (isRoot && peer->directlyConnected(now));
 	}
 };
 
@@ -222,22 +230,13 @@ ZT_ResultCode Node::processBackgroundTasks(void *tPtr, int64_t now, volatile int
 		if ((now - m_lastPeerPulse) >= ZT_PEER_PULSE_INTERVAL) {
 			m_lastPeerPulse = now;
 			try {
-				_processBackgroundTasks_eachPeer pf(now, this, tPtr);
+				_processBackgroundTasks_eachPeer pf(now, tPtr);
 				RR->topology->eachPeerWithRoot<_processBackgroundTasks_eachPeer &>(pf);
 
-				if (pf.online != m_online) {
-					m_online = pf.online;
-					postEvent(tPtr, m_online ? ZT_EVENT_ONLINE : ZT_EVENT_OFFLINE);
-				}
+				if (m_online.exchange(pf.online) != pf.online)
+					postEvent(tPtr, pf.online ? ZT_EVENT_ONLINE : ZT_EVENT_OFFLINE);
 
 				RR->topology->rankRoots();
-
-				if (pf.online) {
-					// If we have at least one online root, request whois for roots not online.
-					// TODO
-					//for (Vector<Address>::const_iterator r(pf.rootsNotOnline.begin()); r != pf.rootsNotOnline.end(); ++r)
-					//	RR->sw->requestWhois(tPtr,now,*r);
-				}
 			} catch (...) {
 				return ZT_RESULT_FATAL_ERROR_INTERNAL;
 			}
@@ -246,33 +245,29 @@ ZT_ResultCode Node::processBackgroundTasks(void *tPtr, int64_t now, volatile int
 		// Perform network housekeeping and possibly request new certs and configs every ZT_NETWORK_HOUSEKEEPING_PERIOD.
 		if ((now - m_lastNetworkHousekeepingRun) >= ZT_NETWORK_HOUSEKEEPING_PERIOD) {
 			m_lastHousekeepingRun = now;
-			{
-				RWMutex::RLock l(m_networks_l);
-				for (Map<uint64_t, SharedPtr<Network> >::const_iterator i(m_networks.begin());i != m_networks.end();++i)
-					i->second->doPeriodicTasks(tPtr, now);
+			RWMutex::RLock l(m_networks_l);
+			for (Map<uint64_t, SharedPtr<Network> >::const_iterator i(m_networks.begin());i != m_networks.end();++i) {
+				i->second->doPeriodicTasks(tPtr, now);
 			}
 		}
 
 		// Clean up other stuff every ZT_HOUSEKEEPING_PERIOD.
 		if ((now - m_lastHousekeepingRun) >= ZT_HOUSEKEEPING_PERIOD) {
 			m_lastHousekeepingRun = now;
-			try {
-				// Clean up any old local controller auth memoizations. This is an
-				// optimization for network controllers to know whether to accept
-				// or trust nodes without doing an extra cert check.
-				m_localControllerAuthorizations_l.lock();
-				for (Map<p_LocalControllerAuth, int64_t>::iterator i(m_localControllerAuthorizations.begin());i != m_localControllerAuthorizations.end();) { // NOLINT(hicpp-use-auto,modernize-use-auto)
-					if ((i->second - now) > (ZT_NETWORK_AUTOCONF_DELAY * 3))
-						m_localControllerAuthorizations.erase(i++);
-					else ++i;
-				}
-				m_localControllerAuthorizations_l.unlock();
 
-				RR->topology->doPeriodicTasks(tPtr, now);
-				RR->sa->clean(now);
-			} catch (...) {
-				return ZT_RESULT_FATAL_ERROR_INTERNAL;
+			// Clean up any old local controller auth memoizations. This is an
+			// optimization for network controllers to know whether to accept
+			// or trust nodes without doing an extra cert check.
+			m_localControllerAuthorizations_l.lock();
+			for (Map<p_LocalControllerAuth, int64_t>::iterator i(m_localControllerAuthorizations.begin());i != m_localControllerAuthorizations.end();) { // NOLINT(hicpp-use-auto,modernize-use-auto)
+				if ((i->second - now) > (ZT_NETWORK_AUTOCONF_DELAY * 3))
+					m_localControllerAuthorizations.erase(i++);
+				else ++i;
 			}
+			m_localControllerAuthorizations_l.unlock();
+
+			RR->topology->doPeriodicTasks(tPtr, now);
+			RR->sa->clean(now);
 		}
 
 		*nextBackgroundTaskDeadline = now + ZT_TIMER_TASK_INTERVAL;

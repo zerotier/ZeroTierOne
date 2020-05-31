@@ -137,17 +137,17 @@
 /**
  * Maximum number of queued endpoints to try per "pulse."
  */
-#define ZT_NAT_T_MAX_QUEUED_ATTEMPTS_PER_PULSE 4
+#define ZT_NAT_T_MAX_QUEUED_ATTEMPTS_PER_PULSE 16
 
 /**
  * Delay between calls to the pulse() method in Peer for each peer
  */
-#define ZT_PEER_PULSE_INTERVAL (ZT_PATH_KEEPALIVE_PERIOD / 2)
+#define ZT_PEER_PULSE_INTERVAL 8000
 
 /**
  * Interval between HELLOs to peers.
  */
-#define ZT_PEER_HELLO_INTERVAL 120000LL
+#define ZT_PEER_HELLO_INTERVAL 120000
 
 /**
  * Timeout for peers being alive

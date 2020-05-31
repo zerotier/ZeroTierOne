@@ -231,9 +231,8 @@ public:
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param now Current time
 	 * @param ep Endpoint to attempt to contact
-	 * @param bfg1024 Use BFG1024 brute force symmetric NAT busting algorithm if applicable
 	 */
-	void contact(void *tPtr, int64_t now, const Endpoint &ep, bool breakSymmetricBFG1024);
+	void contact(void *tPtr, int64_t now, const Endpoint &ep);
 
 	/**
 	 * Reset paths within a given IP scope and address family
@@ -524,15 +523,18 @@ private:
 	// Addresses recieved via PUSH_DIRECT_PATHS etc. that we are scheduled to try.
 	struct p_TryQueueItem
 	{
-		ZT_INLINE p_TryQueueItem() : ts(0), target(), natMustDie(false)
+		ZT_INLINE p_TryQueueItem() :
+			target(),
+			privilegedPortTrialIteration(-1)
 		{}
 
-		ZT_INLINE p_TryQueueItem(const int64_t now, const Endpoint &t, const bool nmd) : ts(now), target(t), natMustDie(nmd)
+		ZT_INLINE p_TryQueueItem(const Endpoint &t) :
+			target(t),
+			privilegedPortTrialIteration(-1)
 		{}
 
-		int64_t ts;
 		Endpoint target;
-		bool natMustDie;
+		int privilegedPortTrialIteration;
 	};
 
 	List<p_TryQueueItem> m_tryQueue;
