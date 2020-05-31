@@ -13,7 +13,7 @@
 
 #include "Tests.h"
 
-#define ZT_ENABLE_TESTS
+//#define ZT_ENABLE_TESTS
 #ifdef ZT_ENABLE_TESTS
 
 #include "Constants.hpp"
@@ -40,6 +40,8 @@
 #include "Defragmenter.hpp"
 #include "Fingerprint.hpp"
 #include "Containers.hpp"
+#include "Endpoint.hpp"
+#include "Locator.hpp"
 
 #ifdef __UNIX_LIKE__
 #include <unistd.h>
@@ -298,6 +300,14 @@ extern "C" const char *ZTT_general()
 				ZT_T_PRINTF("FAILED (hton/ntoh)" ZT_EOL_S);
 				return "Utils::hton() or ntoh() broken";
 			}
+			if (ZT_CONST_TO_BE_UINT64(0x0102030405060708ULL) != Utils::hton((uint64_t)0x0102030405060708ULL)) {
+				ZT_T_PRINTF("ZT_CONST_TO_BE_UINT64 macro is not working" ZT_EOL_S);
+				return "ZT_CONST_TO_BE_UINT64 macro is not working";
+			}
+			if (ZT_CONST_TO_BE_UINT16(0x0102) != Utils::hton((uint16_t)0x0102)) {
+				ZT_T_PRINTF("ZT_CONST_TO_BE_UINT16 macro is not working" ZT_EOL_S);
+				return "ZT_CONST_TO_BE_UINT16 macro is not working";
+			}
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 			if (Utils::loadAsIsEndian<uint64_t>(&a) != 0x0102030405060708ULL) {
 				ZT_T_PRINTF("FAILED (loadAsIsEndian)" ZT_EOL_S);
@@ -428,44 +438,6 @@ extern "C" const char *ZTT_general()
 		}
 
 		{
-			ZT_T_PRINTF("[general] Testing Map... ");
-			Map<uint64_t,uint64_t> tm;
-			for(uint64_t i=0;i<100000;++i)
-				tm.set(i,i);
-			for(uint64_t i=0;i<100000;++i) {
-				uint64_t *v = tm.get(i);
-				if ((!v)||(*v != i)) {
-					ZT_T_PRINTF("FAILED (get() failed)" ZT_EOL_S);
-					return "Map::get() failed";
-				}
-			}
-			for(Map<uint64_t,uint64_t>::iterator i(tm.begin());i!=tm.end();) { // NOLINT(hicpp-use-auto,modernize-use-auto)
-				if ((i->first & 1U) == 0)
-					tm.erase(i++);
-				else ++i;
-			}
-			if (tm.size() != 50000) {
-				ZT_T_PRINTF("FAILED (erase() failed (1))" ZT_EOL_S);
-				return "Map::erase() failed (1)";
-			}
-			for(uint64_t i=0;i<100000;++i) {
-				uint64_t *v = tm.get(i);
-				if ((i & 1U) == 0) {
-					if (v) {
-						ZT_T_PRINTF("FAILED (erase() failed (2))" ZT_EOL_S);
-						return "Map::erase() failed (2)";
-					}
-				} else {
-					if (!v) {
-						ZT_T_PRINTF("FAILED (erase() failed (3))" ZT_EOL_S);
-						return "Map::erase() failed (3)";
-					}
-				}
-			}
-			ZT_T_PRINTF("OK" ZT_EOL_S);
-		}
-
-		{
 			ZT_T_PRINTF("[general] Testing Buf memory pool (basic sanity check)... ");
 			try {
 				std::vector< SharedPtr<Buf> > bufs;
@@ -497,8 +469,6 @@ extern "C" const char *ZTT_general()
 		}
 
 		{
-			// This doesn't check behavior when fragments are invalid or input is totally insane.
-			// That's done during fuzzing.
 			ZT_T_PRINTF("[general] Testing Defragmenter... ");
 			Defragmenter<> defrag;
 
@@ -586,11 +556,7 @@ extern "C" const char *ZTT_general()
 			ZT_T_PRINTF("OK (cache remaining: %u)" ZT_EOL_S,defrag.cacheSize());
 		}
 
-		{
-			ZT_T_PRINTF("[general] Testing Endpoint... ");
-			ZT_T_PRINTF("OK" ZT_EOL_S);
-		}
-
+		Identity v0id,v1id;
 		{
 			char tmp[2048];
 
@@ -604,6 +570,23 @@ extern "C" const char *ZTT_general()
 			if (!id.locallyValidate()) {
 				ZT_T_PRINTF("FAILED (validation of known-good identity failed)" ZT_EOL_S);
 				return "Identity test failed: validation of known-good identity";
+			}
+			v0id = id;
+
+			Utils::getSecureRandom(tmp,sizeof(tmp));
+			for(int k=0;k<32;++k) {
+				uint8_t sig[ZT_SIGNATURE_BUFFER_SIZE];
+				++tmp[0];
+				unsigned int sl = id.sign(tmp,sizeof(tmp),sig,sizeof(sig));
+				if (!id.verify(tmp,sizeof(tmp),sig,sl)) {
+					ZT_T_PRINTF("FAILED (sign/verify)" ZT_EOL_S);
+					return "Identity test failed: sign/verify with type 0";
+				}
+				++tmp[1];
+				if (id.verify(tmp,sizeof(tmp),sig,sl)) {
+					ZT_T_PRINTF("FAILED (sign/verify (2))" ZT_EOL_S);
+					return "Identity test failed: sign/verify with type 0";
+				}
 			}
 
 			uint8_t idm[ZT_IDENTITY_MARSHAL_SIZE_MAX];
@@ -644,6 +627,7 @@ extern "C" const char *ZTT_general()
 			}
 			ZT_T_PRINTF("OK" ZT_EOL_S);
 
+			/*
 			{
 				ZT_T_PRINTF("[general] Generated V1 identity: ");
 				id.generate(Identity::P384);
@@ -652,6 +636,7 @@ extern "C" const char *ZTT_general()
 				id.fingerprint().toString(tmp);
 				ZT_T_PRINTF("[general] Identity fingerprint: %s" ZT_EOL_S,tmp);
 			}
+			*/
 
 			ZT_T_PRINTF("[general] Testing Identity type 1 (P384)... ");
 
@@ -662,6 +647,23 @@ extern "C" const char *ZTT_general()
 			if (!id.locallyValidate()) {
 				ZT_T_PRINTF("FAILED (validation of known-good identity failed)" ZT_EOL_S);
 				return "Identity test failed: validation of known-good identity";
+			}
+			v1id = id;
+
+			Utils::getSecureRandom(tmp,sizeof(tmp));
+			for(int k=0;k<32;++k) {
+				uint8_t sig[ZT_SIGNATURE_BUFFER_SIZE];
+				++tmp[0];
+				unsigned int sl = id.sign(tmp,sizeof(tmp),sig,sizeof(sig));
+				if (!id.verify(tmp,sizeof(tmp),sig,sl)) {
+					ZT_T_PRINTF("FAILED (sign/verify)" ZT_EOL_S);
+					return "Identity test failed: sign/verify with type 1";
+				}
+				++tmp[1];
+				if (id.verify(tmp,sizeof(tmp),sig,sl)) {
+					ZT_T_PRINTF("FAILED (sign/verify (2))" ZT_EOL_S);
+					return "Identity test failed: sign/verify with type 1";
+				}
 			}
 
 			ms = id.marshal(idm,true);
@@ -696,6 +698,28 @@ extern "C" const char *ZTT_general()
 				return "Identity test failed: validation of known-bad identity";
 			}
 
+			ZT_T_PRINTF("OK" ZT_EOL_S);
+		}
+
+		{
+			ZT_T_PRINTF("[general] Testing Endpoint and Locator... ");
+			Endpoint ep0(InetAddress::LO4);
+			Endpoint ep1(InetAddress::LO6);
+			Locator loc;
+			loc.add(ep0);
+			loc.add(ep1);
+			loc.sign(now(),v1id);
+			String locStr(loc.toString());
+			//ZT_T_PRINTF("%s %s %s ",locStr.c_str(),loc.endpoints()[0].toString().c_str(),loc.endpoints()[1].toString().c_str());
+			Locator loc2;
+			if ((!loc2.fromString(locStr.c_str())) || (loc2.toString() != locStr)) {
+				ZT_T_PRINTF("FAILED (fromString)" ZT_EOL_S);
+				return "FAILED (Locator toString/fromString)";
+			}
+			if (!loc2.verify(v1id)) {
+				ZT_T_PRINTF("FAILED (verify)" ZT_EOL_S);
+				return "FAILED (Locator verify)";
+			}
 			ZT_T_PRINTF("OK" ZT_EOL_S);
 		}
 	} catch (std::exception &e) {
@@ -758,7 +782,7 @@ extern "C" const char *ZTT_crypto()
 
 		{
 			uint8_t key[ZT_ECC384_SHARED_SECRET_SIZE];
-			ZT_T_PRINTF("[crypto] Testing ECC384 (NIST P-384)... ");
+			ZT_T_PRINTF("[crypto] Testing ECC384 (NIST P-384 ECDH/ECDSA)... ");
 			ECC384ECDH(ECC384_TV0_PUBLIC,ECC384_TV0_PRIVATE,key);
 			if (memcmp(key,ECC384_TV0_DH_SELF_AGREE,ZT_ECC384_SHARED_SECRET_SIZE) != 0) {
 				ZT_T_PRINTF("FAILED (test vector 0, self-agree)" ZT_EOL_S);
@@ -767,6 +791,19 @@ extern "C" const char *ZTT_crypto()
 			if (!ECC384ECDSAVerify(ECC384_TV0_PUBLIC,ECC384_TV0_PUBLIC,ECC384_TV0_SIG)) {
 				ZT_T_PRINTF("FAILED (test vector 0, signature check)" ZT_EOL_S);
 				return "ECC384 test vector 0 signature check failed";
+			}
+			uint8_t msg[ZT_ECC384_SIGNATURE_HASH_SIZE];
+			Utils::getSecureRandom(msg,sizeof(msg));
+			uint8_t sig[ZT_ECC384_SIGNATURE_SIZE];
+			ECC384ECDSASign(ECC384_TV0_PRIVATE, msg, sig);
+			if (!ECC384ECDSAVerify(ECC384_TV0_PUBLIC, msg, sig)) {
+				ZT_T_PRINTF("FAILED (test vector 0, sign/verify)" ZT_EOL_S);
+				return "ECC384 test vector 0 sign/verify failed";
+			}
+			++msg[0];
+			if (ECC384ECDSAVerify(ECC384_TV0_PUBLIC, msg, sig)) {
+				ZT_T_PRINTF("FAILED (test vector 0, sign/verify (2))" ZT_EOL_S);
+				return "ECC384 test vector 0 sign/verify failed (2)";
 			}
 			ZT_T_PRINTF("OK" ZT_EOL_S);
 		}

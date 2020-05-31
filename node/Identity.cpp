@@ -247,9 +247,10 @@ unsigned int Identity::sign(const void *data, unsigned int len, void *sig, unsig
 			case P384:
 				if (siglen >= ZT_ECC384_SIGNATURE_SIZE) {
 					// SECURITY: signatures also include the public keys to further enforce their coupling.
-					uint8_t h[48];
-					SHA384(h, data, len, m_pub, sizeof(m_pub));
-					ECC384ECDSASign(m_priv + 1 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE, h, (uint8_t *) sig);
+					static_assert(ZT_ECC384_SIGNATURE_HASH_SIZE == ZT_SHA384_DIGEST_SIZE, "weird!");
+					uint8_t h[ZT_ECC384_SIGNATURE_HASH_SIZE];
+					SHA384(h, data, len, m_pub, ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE);
+					ECC384ECDSASign(m_priv + ZT_C25519_COMBINED_PRIVATE_KEY_SIZE, h, (uint8_t *) sig);
 					return ZT_ECC384_SIGNATURE_SIZE;
 				}
 		}
@@ -264,8 +265,8 @@ bool Identity::verify(const void *data, unsigned int len, const void *sig, unsig
 			return C25519::verify(m_pub, data, len, sig, siglen);
 		case P384:
 			if (siglen == ZT_ECC384_SIGNATURE_SIZE) {
-				uint8_t h[48];
-				SHA384(h, data, len, m_pub, sizeof(m_pub));
+				uint8_t h[ZT_ECC384_SIGNATURE_HASH_SIZE];
+				SHA384(h, data, len, m_pub, ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE);
 				return ECC384ECDSAVerify(m_pub + 1 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE, h, (const uint8_t *) sig);
 			}
 			break;

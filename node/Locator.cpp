@@ -62,7 +62,7 @@ char *Locator::toString(char s[ZT_LOCATOR_STRING_SIZE_MAX]) const noexcept
 	static_assert(ZT_LOCATOR_STRING_SIZE_MAX > ((((ZT_LOCATOR_MARSHAL_SIZE_MAX / 5) + 1) * 8) + ZT_ADDRESS_LENGTH_HEX + 1), "overflow");
 	uint8_t bin[ZT_LOCATOR_MARSHAL_SIZE_MAX];
 	Address(m_signer.address).toString(s);
-	s[ZT_ADDRESS_LENGTH_HEX] = '@';
+	s[ZT_ADDRESS_LENGTH_HEX] = '-';
 	Utils::b32e(bin, marshal(bin, false), s + (ZT_ADDRESS_LENGTH_HEX + 1), ZT_LOCATOR_STRING_SIZE_MAX - (ZT_ADDRESS_LENGTH_HEX + 1));
 	return s;
 }
@@ -126,7 +126,8 @@ int Locator::unmarshal(const uint8_t *data, const int len) noexcept
 
 	if (unlikely(p + 2) > len)
 		return -1;
-	unsigned int endpointCount = Utils::loadBigEndian<uint16_t>(data + 8);
+	unsigned int endpointCount = Utils::loadBigEndian<uint16_t>(data + p);
+	p += 2;
 	if (unlikely(endpointCount > ZT_LOCATOR_MAX_ENDPOINTS))
 		return -1;
 	m_endpoints.resize(endpointCount);
