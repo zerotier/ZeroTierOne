@@ -107,7 +107,7 @@ SharedPtr<Bond> BondController::createTransportTriggeredBond(const RuntimeEnviro
 		}
 	}
 	else {
-		fprintf(stderr, "bond already exists for %llx, cannot re-register. exiting\n", identity); exit(0); // TODO: Remove
+		fprintf(stderr, "bond already exists for %llx.\n", identity);
 	}
 	if (bond) {
 		_bonds[identity] = bond;
