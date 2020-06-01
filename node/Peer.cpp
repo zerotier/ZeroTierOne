@@ -131,7 +131,7 @@ void Peer::received(
 				RR->t->learnedNewPath(tPtr, 0x582fabdd, packetId, m_id, path->address(), old);
 			} else {
 				path->sent(now, hello(tPtr, path->localSocket(), path->address(), now));
-				RR->t->tryingNewPath(tPtr, 0xb7747ddd, m_id, path->address(), path->address(), packetId, (uint8_t) verb, m_id);
+				RR->t->tryingNewPath(tPtr, 0xb7747ddd, m_id, path->address(), path->address(), packetId, (uint8_t)verb, m_id);
 			}
 		}
 	}
@@ -170,7 +170,7 @@ unsigned int Peer::hello(void *tPtr, int64_t localSocket, const InetAddress &atA
 	outp.wI8(ii, ZEROTIER_VERSION_MAJOR);
 	outp.wI8(ii, ZEROTIER_VERSION_MINOR);
 	outp.wI16(ii, ZEROTIER_VERSION_REVISION);
-	outp.wI64(ii, (uint64_t) now);
+	outp.wI64(ii, (uint64_t)now);
 	outp.wO(ii, RR->identity);
 	outp.wO(ii, atAddress);
 
@@ -188,8 +188,8 @@ unsigned int Peer::hello(void *tPtr, int64_t localSocket, const InetAddress &atA
 	const int cryptSectionStart = ii;
 	FCV<uint8_t, 4096> md;
 	Dictionary::append(md, ZT_PROTO_HELLO_NODE_META_INSTANCE_ID, RR->instanceId);
-	outp.wI16(ii, (uint16_t) md.size());
-	outp.wB(ii, md.data(), (unsigned int) md.size());
+	outp.wI16(ii, (uint16_t)md.size());
+	outp.wB(ii, md.data(), (unsigned int)md.size());
 
 	if (unlikely((ii + ZT_HMACSHA384_LEN) > ZT_BUF_SIZE)) // sanity check: should be impossible
 		return 0;
@@ -213,9 +213,7 @@ unsigned int Peer::hello(void *tPtr, int64_t localSocket, const InetAddress &atA
 	p1305.finish(polyMac);
 	Utils::storeAsIsEndian<uint64_t>(outp.unsafeData + ZT_PROTO_PACKET_MAC_INDEX, polyMac[0]);
 
-	if (likely(RR->node->putPacket(tPtr, localSocket, atAddress, outp.unsafeData, ii)))
-		return ii;
-	return 0;
+	return (likely(RR->node->putPacket(tPtr, localSocket, atAddress, outp.unsafeData, ii))) ? ii : 0;
 }
 
 void Peer::pulse(void *const tPtr, const int64_t now, const bool isRoot)
@@ -263,47 +261,83 @@ void Peer::pulse(void *const tPtr, const int64_t now, const bool isRoot)
 		// Attempt up to ZT_NAT_T_MAX_QUEUED_ATTEMPTS_PER_PULSE queued addresses.
 
 		unsigned int attempts = 0;
-		do {
+		for(;;) {
 			p_TryQueueItem &qi = m_tryQueue.front();
 
 			if (qi.target.isInetAddr()) {
 				// Skip entry if it overlaps with any currently active IP.
 				for (unsigned int i = 0;i < m_alivePathCount;++i) {
 					if (m_paths[i]->address().ipsEqual(qi.target.ip()))
-						goto next_tryQueue_item;
+						goto discard_queue_item;
 				}
 			}
 
 			if (qi.target.type == ZT_ENDPOINT_TYPE_IP_UDP) {
 				++attempts;
-				if (qi.privilegedPortTrialIteration < 0) {
+				if (qi.iteration < 0) {
+
+					// If iteration is less than zero, try to contact the original address.
+					// It may be set to a larger negative value to try multiple times such
+					// as e.g. -3 to try 3 times.
 					sent(now, m_sendProbe(tPtr, -1, qi.target.ip(), nullptr, 0, now));
-					if ((qi.target.ip().isV4()) && (qi.target.ip().port() < 1024)) {
-						qi.privilegedPortTrialIteration = 0;
-						if (m_tryQueue.size() > 1)
-							m_tryQueue.splice(m_tryQueue.end(),m_tryQueue,m_tryQueue.begin());
-						continue;
-					} // else goto next_tryQueue_item;
-				} else if (qi.privilegedPortTrialIteration < 1023) {
-					uint16_t ports[ZT_NAT_T_MAX_QUEUED_ATTEMPTS_PER_PULSE];
-					unsigned int pn = 0;
-					while ((pn < ZT_NAT_T_MAX_QUEUED_ATTEMPTS_PER_PULSE) && (qi.privilegedPortTrialIteration < 1023)) {
-						const uint16_t p = RR->randomPrivilegedPortOrder[qi.privilegedPortTrialIteration++];
-						if ((unsigned int)p != qi.target.ip().port())
-							ports[pn++] = p;
+					++qi.iteration;
+					goto requeue_item;
+
+				} else if (qi.target.ip().isV4() && (m_alivePathCount == 0)) {
+					// When iteration reaches zero the queue item is dropped unless it's
+					// IPv4 and we have no direct paths. In that case some heavier NAT-t
+					// strategies are attempted.
+
+					if (qi.target.ip().port() < 1024) {
+
+						// If the source port is privileged, we actually scan every possible
+						// privileged port in random order slowly over multiple iterations
+						// of pulse(). This is done in batches of ZT_NAT_T_PORT_SCAN_MAX.
+						uint16_t ports[ZT_NAT_T_PORT_SCAN_MAX];
+						unsigned int pn = 0;
+						while ((pn < ZT_NAT_T_PORT_SCAN_MAX) && (qi.iteration < 1023)) {
+							const uint16_t p = RR->randomPrivilegedPortOrder[qi.iteration++];
+							if ((unsigned int)p != qi.target.ip().port())
+								ports[pn++] = p;
+						}
+						if (pn > 0)
+							sent(now, m_sendProbe(tPtr, -1, qi.target.ip(), ports, pn, now));
+						if (qi.iteration < 1023)
+							goto requeue_item;
+
+					} else {
+
+						// For un-privileged ports we'll try ZT_NAT_T_PORT_SCAN_MAX ports
+						// beyond the one we were sent to catch some sequentially assigning
+						// symmetric NATs.
+						InetAddress tmp(qi.target.ip());
+						unsigned int p = tmp.port() + 1 + (unsigned int)qi.iteration++;
+						if (p > 65535)
+							p -= 64512; // wrap back to 1024
+						tmp.setPort(p);
+						sent(now, m_sendProbe(tPtr, -1, tmp, nullptr, 0, now));
+						if (qi.iteration < ZT_NAT_T_PORT_SCAN_MAX)
+							goto requeue_item;
+
 					}
-					sent(now, m_sendProbe(tPtr, -1, qi.target.ip(), ports, pn, now));
-					if (qi.privilegedPortTrialIteration < 1023) {
-						if (m_tryQueue.size() > 1)
-							m_tryQueue.splice(m_tryQueue.end(),m_tryQueue,m_tryQueue.begin());
-						continue;
-					} // else goto next_tryQueue_item;
 				}
 			}
 
-		next_tryQueue_item:
+			// Discard front item unless the code skips to requeue_item.
+			discard_queue_item:
 			m_tryQueue.pop_front();
-		} while ((attempts < ZT_NAT_T_MAX_QUEUED_ATTEMPTS_PER_PULSE) && (!m_tryQueue.empty()));
+			if ((m_tryQueue.empty()) || (attempts >= ZT_NAT_T_PORT_SCAN_MAX))
+				break;
+			else continue;
+
+			// If the code skips here the front item is instead moved to the back.
+			requeue_item:
+			if (m_tryQueue.size() > 1)
+				m_tryQueue.splice(m_tryQueue.end(), m_tryQueue, m_tryQueue.begin());
+			if (attempts >= ZT_NAT_T_PORT_SCAN_MAX)
+				break;
+			else continue;
+		}
 	}
 
 	// Do keepalive on all currently active paths, sending HELLO to the first
@@ -338,7 +372,7 @@ void Peer::pulse(void *const tPtr, const int64_t now, const bool isRoot)
 	}
 }
 
-void Peer::contact(void *tPtr, const int64_t now, const Endpoint &ep)
+void Peer::contact(void *tPtr, const int64_t now, const Endpoint &ep, int tries)
 {
 	static uint8_t foo = 0;
 	RWMutex::Lock l(m_lock);
@@ -364,12 +398,12 @@ void Peer::contact(void *tPtr, const int64_t now, const Endpoint &ep)
 	for (List<p_TryQueueItem>::iterator i(m_tryQueue.begin());i != m_tryQueue.end();++i) {
 		if (i->target.isSameAddress(ep)) {
 			i->target = ep;
-			i->privilegedPortTrialIteration = -1;
+			i->iteration = -tries;
 			return;
 		}
 	}
 
-	m_tryQueue.push_back(p_TryQueueItem(ep));
+	m_tryQueue.push_back(p_TryQueueItem(ep, -tries));
 }
 
 void Peer::resetWithinScope(void *tPtr, InetAddress::IpScope scope, int inetAddressFamily, int64_t now)
@@ -415,14 +449,14 @@ void Peer::save(void *tPtr) const
 	uint8_t buf[8 + ZT_PEER_MARSHAL_SIZE_MAX];
 
 	// Prefix each saved peer with the current timestamp.
-	Utils::storeBigEndian<uint64_t>(buf, (uint64_t) RR->node->now());
+	Utils::storeBigEndian<uint64_t>(buf, (uint64_t)RR->node->now());
 
 	const int len = marshal(buf + 8);
 	if (len > 0) {
 		uint64_t id[2];
 		id[0] = m_id.address().toInt();
 		id[1] = 0;
-		RR->node->stateObjectPut(tPtr, ZT_STATE_OBJECT_PEER, id, buf, (unsigned int) len + 8);
+		RR->node->stateObjectPut(tPtr, ZT_STATE_OBJECT_PEER, id, buf, (unsigned int)len + 8);
 	}
 }
 
@@ -463,13 +497,13 @@ int Peer::marshal(uint8_t data[ZT_PEER_MARSHAL_SIZE_MAX]) const noexcept
 		data[p++] = 0;
 	}
 
-	Utils::storeBigEndian(data + p, (uint16_t) m_vProto);
+	Utils::storeBigEndian(data + p, (uint16_t)m_vProto);
 	p += 2;
-	Utils::storeBigEndian(data + p, (uint16_t) m_vMajor);
+	Utils::storeBigEndian(data + p, (uint16_t)m_vMajor);
 	p += 2;
-	Utils::storeBigEndian(data + p, (uint16_t) m_vMinor);
+	Utils::storeBigEndian(data + p, (uint16_t)m_vMinor);
 	p += 2;
-	Utils::storeBigEndian(data + p, (uint16_t) m_vRevision);
+	Utils::storeBigEndian(data + p, (uint16_t)m_vRevision);
 	p += 2;
 
 	data[p++] = 0;
@@ -539,7 +573,7 @@ int Peer::unmarshal(const uint8_t *restrict data, const int len) noexcept
 	p += 2;
 	m_vRevision = Utils::loadBigEndian<uint16_t>(data + p);
 	p += 2;
-	p += 2 + (int) Utils::loadBigEndian<uint16_t>(data + p);
+	p += 2 + (int)Utils::loadBigEndian<uint16_t>(data + p);
 
 	m_deriveSecondaryIdentityKeys();
 

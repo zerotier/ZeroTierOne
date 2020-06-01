@@ -20,10 +20,6 @@
 #include <string>
 #include <memory>
 #include <stdexcept>
-#include <cstdio>
-#include <cstdlib>
-#include <cstdint>
-#include <cstring>
 
 namespace ZeroTier {
 

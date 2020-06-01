@@ -231,8 +231,9 @@ public:
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param now Current time
 	 * @param ep Endpoint to attempt to contact
+	 * @param tries Number of times to try (default: 1)
 	 */
-	void contact(void *tPtr, int64_t now, const Endpoint &ep);
+	void contact(void *tPtr, int64_t now, const Endpoint &ep, int tries = 1);
 
 	/**
 	 * Reset paths within a given IP scope and address family
@@ -525,16 +526,16 @@ private:
 	{
 		ZT_INLINE p_TryQueueItem() :
 			target(),
-			privilegedPortTrialIteration(-1)
+			iteration(0)
 		{}
 
-		ZT_INLINE p_TryQueueItem(const Endpoint &t) :
+		ZT_INLINE p_TryQueueItem(const Endpoint &t, int iter) :
 			target(t),
-			privilegedPortTrialIteration(-1)
+			iteration(iter)
 		{}
 
 		Endpoint target;
-		int privilegedPortTrialIteration;
+		int iteration;
 	};
 
 	List<p_TryQueueItem> m_tryQueue;

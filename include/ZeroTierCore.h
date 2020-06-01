@@ -2123,11 +2123,30 @@ ZT_SDK_API void ZT_Identity_delete(ZT_Identity *id);
 
 /* ---------------------------------------------------------------------------------------------------------------- */
 
+/**
+ * Convert an endpoint to a string
+ *
+ * @param ep Endpoint structure
+ * @param buf Buffer to store string (recommended size: 256)
+ * @param capacity Capacity of buffer
+ * @return String or NULL on error
+ */
 ZT_SDK_API char *ZT_Endpoint_toString(
 	const ZT_Endpoint *ep,
 	char *buf,
 	int capacity);
 
+/**
+ * Parse an endpoint as a string
+ *
+ * This will automatically detect IP addresses in IP/port format. If one
+ * of these is specified rather than a fully specified endpoint it will be
+ * parsed as an IP/UDP endpoint.
+ *
+ * @param ep Endpoint structure to populate
+ * @param str String representation of endpoint
+ * @return OK (0) or error code
+ */
 ZT_SDK_API int ZT_Endpoint_fromString(
 	ZT_Endpoint *ep,
 	const char *str);

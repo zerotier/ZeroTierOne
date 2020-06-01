@@ -137,7 +137,7 @@
 /**
  * Maximum number of queued endpoints to try per "pulse."
  */
-#define ZT_NAT_T_MAX_QUEUED_ATTEMPTS_PER_PULSE 16
+#define ZT_NAT_T_PORT_SCAN_MAX 16
 
 /**
  * Delay between calls to the pulse() method in Peer for each peer

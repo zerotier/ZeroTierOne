@@ -10,7 +10,6 @@ import "C"
 
 import (
 	"encoding/json"
-	"strings"
 	"unsafe"
 )
 
@@ -39,20 +38,13 @@ func NewEndpointFromString(s string) (*Endpoint, error) {
 		ep.cep._type = C.ZT_ENDPOINT_TYPE_NIL
 		return &ep, nil
 	}
-	if strings.IndexRune(s, '-') > 0 || (strings.IndexRune(s, ':') < 0 && strings.IndexRune(s, '.') < 0) {
-		var ep Endpoint
-		cs := C.CString(s)
-		defer C.free(unsafe.Pointer(cs))
-		if C.ZT_Endpoint_fromString(&ep.cep, cs) != 0 {
-			return nil, ErrInvalidParameter
-		}
-		return &ep, nil
-	}
-	inaddr := NewInetAddressFromString(s)
-	if inaddr == nil {
+	var ep Endpoint
+	cs := C.CString(s)
+	defer C.free(unsafe.Pointer(cs))
+	if C.ZT_Endpoint_fromString(&ep.cep, cs) != 0 {
 		return nil, ErrInvalidParameter
 	}
-	return NewEndpointFromInetAddress(inaddr)
+	return &ep, nil
 }
 
 func NewEndpointFromInetAddress(addr *InetAddress) (*Endpoint, error) {

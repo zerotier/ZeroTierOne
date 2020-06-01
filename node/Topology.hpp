@@ -147,39 +147,28 @@ public:
 	}
 
 	/**
-	 * Apply a function or function object to all peers
-	 *
-	 * This locks the peer map during execution, so calls to get() etc. during
-	 * eachPeer() will deadlock.
-	 *
-	 * @param f Function to apply
-	 * @tparam F Function or function object type
+	 * @param allPeers vector to fill with all current peers
 	 */
-	template<typename F>
-	ZT_INLINE void eachPeerWithRoot(F f) const
+	ZT_INLINE void getAllPeers(Vector< SharedPtr<Peer> > &allPeers) const
 	{
+		allPeers.clear();
 		RWMutex::RLock l(m_peers_l);
-
-		Vector<uintptr_t> rootPeerPtrs;
-		rootPeerPtrs.reserve(m_rootPeers.size());
-		for(Vector< SharedPtr<Peer> >::const_iterator rp(m_rootPeers.begin());rp != m_rootPeers.end();++rp)
-			rootPeerPtrs.push_back((uintptr_t)rp->ptr());
-		std::sort(rootPeerPtrs.begin(),rootPeerPtrs.end());
-
+		allPeers.reserve(m_peers.size());
 		for(Map< Address,SharedPtr<Peer> >::const_iterator i(m_peers.begin());i != m_peers.end();++i)
-			f(i->second,std::binary_search(rootPeerPtrs.begin(),rootPeerPtrs.end(),(uintptr_t)i->second.ptr()));
+			allPeers.push_back(i->second);
 	}
 
 	/**
 	 * @param allPeers vector to fill with all current peers
 	 */
-	ZT_INLINE void getAllPeers(Vector< SharedPtr<Peer> > &allPeers) const
+	ZT_INLINE void getAllPeers(Vector< SharedPtr<Peer> > &allPeers,Vector< SharedPtr<Peer> > &rootPeers) const
 	{
-		RWMutex::RLock l(m_peers_l);
 		allPeers.clear();
+		RWMutex::RLock l(m_peers_l);
 		allPeers.reserve(m_peers.size());
 		for(Map< Address,SharedPtr<Peer> >::const_iterator i(m_peers.begin());i != m_peers.end();++i)
 			allPeers.push_back(i->second);
+		rootPeers = m_rootPeers;
 	}
 
 	/**

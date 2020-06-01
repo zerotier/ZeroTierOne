@@ -39,7 +39,7 @@ namespace ZeroTier {
 class Expect
 {
 public:
-	ZT_INLINE Expect() {} // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init,hicpp-use-equals-default,modernize-use-equals-default)
+	ZT_INLINE Expect() {}
 
 	/**
 	 * Called by other code when something is sending a packet that could potentially receive an OK response

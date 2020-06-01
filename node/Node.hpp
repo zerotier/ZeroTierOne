@@ -202,7 +202,7 @@ public:
 	 * @param nwid Network ID
 	 * @return Network associated with ID
 	 */
-	ZT_INLINE SharedPtr<Network> network(uint64_t nwid) const noexcept
+	ZT_INLINE SharedPtr<Network> network(const uint64_t nwid) const noexcept
 	{
 		RWMutex::RLock l(m_networks_l);
 		const SharedPtr<Network> *const n = m_networks.get(nwid);
@@ -274,7 +274,7 @@ public:
 	ZT_INLINE void stateObjectPut(void *const tPtr, ZT_StateObjectType type, const uint64_t id[2], const void *const data, const unsigned int len) noexcept
 	{
 		if (m_cb.statePutFunction)
-			m_cb.statePutFunction(reinterpret_cast<ZT_Node *>(this), m_uPtr, tPtr, type, id, data, (int) len);
+			m_cb.statePutFunction(reinterpret_cast<ZT_Node *>(this), m_uPtr, tPtr, type, id, data, (int)len);
 	}
 
 	/**
@@ -366,7 +366,7 @@ private:
 		{}
 
 		ZT_INLINE unsigned long hashCode() const noexcept
-		{ return (unsigned long) (nwid + address); }
+		{ return (unsigned long)(nwid + address); }
 
 		ZT_INLINE bool operator==(const p_LocalControllerAuth &a) const noexcept
 		{ return ((a.nwid == nwid) && (a.address == address)); }

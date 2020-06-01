@@ -115,7 +115,9 @@ public:
 	 * @return Pointer to buffer
 	 */
 	char *toString(char s[ZT_LOCATOR_STRING_SIZE_MAX]) const noexcept;
-	ZT_INLINE String toString() const { char tmp[ZT_LOCATOR_STRING_SIZE_MAX]; return String(toString(tmp)); }
+
+	ZT_INLINE String toString() const
+	{ char tmp[ZT_LOCATOR_STRING_SIZE_MAX]; return String(toString(tmp)); }
 
 	/**
 	 * Decode a string format locator

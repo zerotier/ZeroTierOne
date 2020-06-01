@@ -97,7 +97,7 @@ public:
 	};
 
 	ZT_INLINE Defragmenter()
-	{} // NOLINT(hicpp-use-equals-default,modernize-use-equals-default)
+	{}
 
 	/**
 	 * Process a fragment of a multi-part message

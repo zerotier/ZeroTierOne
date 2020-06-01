@@ -84,6 +84,7 @@ class Buf
 public:
 	// New and delete operators that allocate Buf instances from a shared lock-free memory pool.
 	static void *operator new(std::size_t sz);
+
 	static void operator delete(void *ptr);
 
 	/**
@@ -114,12 +115,24 @@ public:
 	 */
 	struct Slice : TriviallyCopyable
 	{
-		ZT_INLINE Slice(const SharedPtr<Buf> &b_,const unsigned int s_,const unsigned int e_) noexcept : b(b_),s(s_),e(e_) {}
-		ZT_INLINE Slice() noexcept : b(),s(0),e(0) {}
+		ZT_INLINE Slice(const SharedPtr<Buf> &b_, const unsigned int s_, const unsigned int e_) noexcept: b(b_), s(s_), e(e_)
+		{}
 
-		ZT_INLINE operator bool() const noexcept { return (b); } // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
-		ZT_INLINE unsigned int size() const noexcept { return (e - s); }
-		ZT_INLINE void zero() noexcept { b.zero(); s = 0; e = 0; }
+		ZT_INLINE Slice() noexcept: b(), s(0), e(0)
+		{}
+
+		ZT_INLINE operator bool() const noexcept
+		{ return (b); }
+
+		ZT_INLINE unsigned int size() const noexcept
+		{ return (e - s); }
+
+		ZT_INLINE void zero() noexcept
+		{
+			b.zero();
+			s = 0;
+			e = 0;
+		}
 
 		/**
 		 * Buffer holding slice data
@@ -140,15 +153,16 @@ public:
 	/**
 	 * A vector of slices making up a packet that might span more than one buffer.
 	 */
-	class PacketVector : public ZeroTier::FCV<Slice,ZT_MAX_PACKET_FRAGMENTS>
+	class PacketVector : public ZeroTier::FCV<Slice, ZT_MAX_PACKET_FRAGMENTS>
 	{
 	public:
-		ZT_INLINE PacketVector() : ZeroTier::FCV<Slice,ZT_MAX_PACKET_FRAGMENTS>() {}
+		ZT_INLINE PacketVector() : ZeroTier::FCV<Slice, ZT_MAX_PACKET_FRAGMENTS>()
+		{}
 
 		ZT_INLINE unsigned int totalSize() const noexcept
 		{
 			unsigned int size = 0;
-			for(PacketVector::const_iterator s(begin());s!=end();++s)
+			for (PacketVector::const_iterator s(begin());s != end();++s)
 				size += s->e - s->s;
 			return size;
 		}
@@ -162,17 +176,17 @@ public:
 		ZT_INLINE int mergeCopy(Buf &b) const noexcept
 		{
 			unsigned int size = 0;
-			for(PacketVector::const_iterator s(begin());s!=end();++s) {
+			for (PacketVector::const_iterator s(begin());s != end();++s) {
 				const unsigned int start = s->s;
 				const unsigned int rem = s->e - start;
 				if (likely((size + rem) <= ZT_BUF_MEM_SIZE)) {
-					Utils::copy(b.unsafeData + size,s->b->unsafeData + start,rem);
+					Utils::copy(b.unsafeData + size, s->b->unsafeData + start, rem);
 					size += rem;
 				} else {
 					return -1;
 				}
 			}
-			return (int)size;
+			return (int) size;
 		}
 
 		/**
@@ -187,10 +201,10 @@ public:
 		 * @return Size of data in destination or -1 on error
 		 */
 		template<typename F>
-		ZT_INLINE int mergeMap(Buf &b,const unsigned int simpleCopyBefore,F copyFunction) const noexcept
+		ZT_INLINE int mergeMap(Buf &b, const unsigned int simpleCopyBefore, F copyFunction) const noexcept
 		{
 			unsigned int size = 0;
-			for(PacketVector::const_iterator s(begin());s!=end();++s) {
+			for (PacketVector::const_iterator s(begin());s != end();++s) {
 				unsigned int start = s->s;
 				unsigned int rem = s->e - start;
 				if (likely((size + rem) <= ZT_BUF_MEM_SIZE)) {
@@ -198,49 +212,49 @@ public:
 						unsigned int sc = simpleCopyBefore - size;
 						if (unlikely(sc > rem))
 							sc = rem;
-						Utils::copy(b.unsafeData + size,s->b->unsafeData + start,sc);
+						Utils::copy(b.unsafeData + size, s->b->unsafeData + start, sc);
 						start += sc;
 						rem -= sc;
 					}
 
 					if (likely(rem > 0)) {
-						copyFunction(b.unsafeData + size,s->b->unsafeData + start,rem);
+						copyFunction(b.unsafeData + size, s->b->unsafeData + start, rem);
 						size += rem;
 					}
 				} else {
 					return -1;
 				}
 			}
-			return (int)size;
+			return (int) size;
 		}
 	};
 
 	/**
 	 * Create a new uninitialized buffer with undefined contents (use clear() to zero if needed)
 	 */
-	ZT_INLINE Buf() noexcept : __nextInPool(0),__refCount(0) {} // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+	ZT_INLINE Buf() noexcept: __nextInPool(0), __refCount(0)
+	{}
 
 	/**
 	 * Create a new buffer and copy data into it
 	 */
-	ZT_INLINE Buf(const void *const data,const unsigned int len) noexcept : // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
-		__nextInPool(0),
+	ZT_INLINE Buf(const void *const data, const unsigned int len) noexcept:
 		__refCount(0)
 	{
-		Utils::copy(unsafeData,data,len);
+		Utils::copy(unsafeData, data, len);
 	}
 
-	ZT_INLINE Buf(const Buf &b2) noexcept : // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+	ZT_INLINE Buf(const Buf &b2) noexcept:
 		__nextInPool(0),
 		__refCount(0)
 	{
-		Utils::copy<ZT_BUF_MEM_SIZE>(unsafeData,b2.unsafeData);
+		Utils::copy<ZT_BUF_MEM_SIZE>(unsafeData, b2.unsafeData);
 	}
 
 	ZT_INLINE Buf &operator=(const Buf &b2) noexcept
 	{
 		if (this != &b2)
-			Utils::copy<ZT_BUF_MEM_SIZE>(unsafeData,b2.unsafeData);
+			Utils::copy<ZT_BUF_MEM_SIZE>(unsafeData, b2.unsafeData);
 		return *this;
 	}
 
@@ -253,7 +267,8 @@ public:
 	 * @param ii Iterator to check
 	 * @return True if iterator has read past the size of the buffer
 	 */
-	static ZT_INLINE bool writeOverflow(const int &ii) noexcept { return ((ii - ZT_BUF_MEM_SIZE) > 0); }
+	static ZT_INLINE bool writeOverflow(const int &ii) noexcept
+	{ return ((ii - ZT_BUF_MEM_SIZE) > 0); }
 
 	/**
 	 * Check for overflow beyond the size of the data that should be in the buffer
@@ -265,7 +280,8 @@ public:
 	 * @param size Size of data that should be in buffer
 	 * @return True if iterator has read past the size of the data
 	 */
-	static ZT_INLINE bool readOverflow(const int &ii,const unsigned int size) noexcept { return ((ii - (int)size) > 0); }
+	static ZT_INLINE bool readOverflow(const int &ii, const unsigned int size) noexcept
+	{ return ((ii - (int) size) > 0); }
 
 	/**
 	 * Set all memory to zero
@@ -284,7 +300,7 @@ public:
 	ZT_INLINE uint8_t rI8(int &ii) const noexcept
 	{
 		const int s = ii++;
-		return unsafeData[(unsigned int)s & ZT_BUF_MEM_MASK];
+		return unsafeData[(unsigned int) s & ZT_BUF_MEM_MASK];
 	}
 
 	/**
@@ -295,7 +311,7 @@ public:
 	 */
 	ZT_INLINE uint16_t rI16(int &ii) const noexcept
 	{
-		const unsigned int s = (unsigned int)ii & ZT_BUF_MEM_MASK;
+		const unsigned int s = (unsigned int) ii & ZT_BUF_MEM_MASK;
 		ii += 2;
 #ifdef ZT_NO_UNALIGNED_ACCESS
 		return (
@@ -314,7 +330,7 @@ public:
 	 */
 	ZT_INLINE uint32_t rI32(int &ii) const noexcept
 	{
-		const unsigned int s = (unsigned int)ii & ZT_BUF_MEM_MASK;
+		const unsigned int s = (unsigned int) ii & ZT_BUF_MEM_MASK;
 		ii += 4;
 #ifdef ZT_NO_UNALIGNED_ACCESS
 		return (
@@ -335,7 +351,7 @@ public:
 	 */
 	ZT_INLINE uint64_t rI64(int &ii) const noexcept
 	{
-		const unsigned int s = (unsigned int)ii & ZT_BUF_MEM_MASK;
+		const unsigned int s = (unsigned int) ii & ZT_BUF_MEM_MASK;
 		ii += 8;
 #ifdef ZT_NO_UNALIGNED_ACCESS
 		return (
@@ -368,10 +384,10 @@ public:
 	 * @return Bytes read or a negative value on unmarshal error (passed from object) or overflow
 	 */
 	template<typename T>
-	ZT_INLINE int rO(int &ii,T &obj) const noexcept
+	ZT_INLINE int rO(int &ii, T &obj) const noexcept
 	{
 		if (likely(ii < ZT_BUF_MEM_SIZE)) {
-			int ms = obj.unmarshal(unsafeData + ii,ZT_BUF_MEM_SIZE - ii);
+			int ms = obj.unmarshal(unsafeData + ii, ZT_BUF_MEM_SIZE - ii);
 			if (ms > 0)
 				ii += ms;
 			return ms;
@@ -390,16 +406,16 @@ public:
 	 * @param bufSize Capacity of buffer in bytes
 	 * @return Pointer to buf or NULL on overflow or error
 	 */
-	ZT_INLINE char *rS(int &ii,char *const buf,const unsigned int bufSize) const noexcept
+	ZT_INLINE char *rS(int &ii, char *const buf, const unsigned int bufSize) const noexcept
 	{
-		const char *const s = (const char *)(unsafeData + ii);
+		const char *const s = (const char *) (unsafeData + ii);
 		const int sii = ii;
 		while (ii < ZT_BUF_MEM_SIZE) {
 			if (unsafeData[ii++] == 0) {
 				const int l = ii - sii;
-				if (unlikely((unsigned int)l > bufSize))
+				if (unlikely((unsigned int) l > bufSize))
 					return nullptr;
-				Utils::copy(buf,s,l);
+				Utils::copy(buf, s, l);
 				return buf;
 			}
 		}
@@ -421,7 +437,7 @@ public:
 	 */
 	ZT_INLINE const char *rSnc(int &ii) const noexcept
 	{
-		const char *const s = (const char *)(unsafeData + ii);
+		const char *const s = (const char *) (unsafeData + ii);
 		while (ii < ZT_BUF_MEM_SIZE) {
 			if (unsafeData[ii++] == 0)
 				return s;
@@ -440,10 +456,10 @@ public:
 	 * @param len Length of buffer
 	 * @return Pointer to data or NULL on overflow or error
 	 */
-	ZT_INLINE uint8_t *rB(int &ii,void *const bytes,const unsigned int len) const noexcept
+	ZT_INLINE uint8_t *rB(int &ii, void *const bytes, const unsigned int len) const noexcept
 	{
-		if (likely(((ii += (int)len) <= ZT_BUF_MEM_SIZE))) {
-			Utils::copy(bytes,unsafeData + ii,len);
+		if (likely(((ii += (int) len) <= ZT_BUF_MEM_SIZE))) {
+			Utils::copy(bytes, unsafeData + ii, len);
 			return reinterpret_cast<uint8_t *>(bytes);
 		}
 		return nullptr;
@@ -462,10 +478,10 @@ public:
 	 * @param len Length of data field to obtain a pointer to
 	 * @return Pointer to field or NULL on overflow
 	 */
-	ZT_INLINE const uint8_t *rBnc(int &ii,unsigned int len) const noexcept
+	ZT_INLINE const uint8_t *rBnc(int &ii, unsigned int len) const noexcept
 	{
 		const uint8_t *const b = unsafeData + ii;
-		return ((ii += (int)len) <= ZT_BUF_MEM_SIZE) ? b : nullptr;
+		return ((ii += (int) len) <= ZT_BUF_MEM_SIZE) ? b : nullptr;
 	}
 
 	/**
@@ -477,7 +493,7 @@ public:
 	template<unsigned int I>
 	ZT_INLINE uint8_t lI8() const noexcept
 	{
-		static_assert(I < ZT_BUF_MEM_SIZE,"overflow");
+		static_assert(I < ZT_BUF_MEM_SIZE, "overflow");
 		return unsafeData[I];
 	}
 
@@ -490,7 +506,7 @@ public:
 	template<unsigned int I>
 	ZT_INLINE uint8_t lI16() const noexcept
 	{
-		static_assert((I + 1) < ZT_BUF_MEM_SIZE,"overflow");
+		static_assert((I + 1) < ZT_BUF_MEM_SIZE, "overflow");
 #ifdef ZT_NO_UNALIGNED_ACCESS
 		return (
 			((uint16_t)unsafeData[I] << 8U) |
@@ -509,7 +525,7 @@ public:
 	template<unsigned int I>
 	ZT_INLINE uint8_t lI32() const noexcept
 	{
-		static_assert((I + 3) < ZT_BUF_MEM_SIZE,"overflow");
+		static_assert((I + 3) < ZT_BUF_MEM_SIZE, "overflow");
 #ifdef ZT_NO_UNALIGNED_ACCESS
 		return (
 			((uint32_t)unsafeData[I] << 24U) |
@@ -530,7 +546,7 @@ public:
 	template<unsigned int I>
 	ZT_INLINE uint8_t lI64() const noexcept
 	{
-		static_assert((I + 7) < ZT_BUF_MEM_SIZE,"overflow");
+		static_assert((I + 7) < ZT_BUF_MEM_SIZE, "overflow");
 #ifdef ZT_NO_UNALIGNED_ACCESS
 		return (
 			((uint64_t)unsafeData[I] << 56U) |
@@ -555,7 +571,7 @@ public:
 	 */
 	ZT_INLINE uint8_t lI8(const int ii) const noexcept
 	{
-		return unsafeData[(unsigned int)ii & ZT_BUF_MEM_MASK];
+		return unsafeData[(unsigned int) ii & ZT_BUF_MEM_MASK];
 	}
 
 	/**
@@ -567,7 +583,7 @@ public:
 	 */
 	ZT_INLINE uint16_t lI16(const int ii) const noexcept
 	{
-		const unsigned int s = (unsigned int)ii & ZT_BUF_MEM_MASK;
+		const unsigned int s = (unsigned int) ii & ZT_BUF_MEM_MASK;
 #ifdef ZT_NO_UNALIGNED_ACCESS
 		return (
 			((uint16_t)unsafeData[s] << 8U) |
@@ -586,7 +602,7 @@ public:
 	 */
 	ZT_INLINE uint32_t lI32(const int ii) const noexcept
 	{
-		const unsigned int s = (unsigned int)ii & ZT_BUF_MEM_MASK;
+		const unsigned int s = (unsigned int) ii & ZT_BUF_MEM_MASK;
 #ifdef ZT_NO_UNALIGNED_ACCESS
 		return (
 			((uint32_t)unsafeData[s] << 24U) |
@@ -607,7 +623,7 @@ public:
 	 */
 	ZT_INLINE uint8_t lI64(const int ii) const noexcept
 	{
-		const unsigned int s = (unsigned int)ii & ZT_BUF_MEM_MASK;
+		const unsigned int s = (unsigned int) ii & ZT_BUF_MEM_MASK;
 #ifdef ZT_NO_UNALIGNED_ACCESS
 		return (
 			((uint64_t)unsafeData[s] << 56U) |
@@ -629,10 +645,10 @@ public:
 	 * @param ii Index value-result parameter (incremented by 1)
 	 * @param n Byte
 	 */
-	ZT_INLINE void wI8(int &ii,const uint8_t n) noexcept
+	ZT_INLINE void wI8(int &ii, const uint8_t n) noexcept
 	{
 		const int s = ii++;
-		unsafeData[(unsigned int)s & ZT_BUF_MEM_MASK] = n;
+		unsafeData[(unsigned int) s & ZT_BUF_MEM_MASK] = n;
 	}
 
 	/**
@@ -641,9 +657,9 @@ public:
 	 * @param ii Index value-result parameter (incremented by 2)
 	 * @param n Integer
 	 */
-	ZT_INLINE void wI16(int &ii,const uint16_t n) noexcept
+	ZT_INLINE void wI16(int &ii, const uint16_t n) noexcept
 	{
-		const unsigned int s = ((unsigned int)ii) & ZT_BUF_MEM_MASK;
+		const unsigned int s = ((unsigned int) ii) & ZT_BUF_MEM_MASK;
 		ii += 2;
 #ifdef ZT_NO_UNALIGNED_ACCESS
 		unsafeData[s] = (uint8_t)(n >> 8U);
@@ -659,9 +675,9 @@ public:
 	 * @param ii Index value-result parameter (incremented by 4)
 	 * @param n Integer
 	 */
-	ZT_INLINE void wI32(int &ii,const uint32_t n) noexcept
+	ZT_INLINE void wI32(int &ii, const uint32_t n) noexcept
 	{
-		const unsigned int s = ((unsigned int)ii) & ZT_BUF_MEM_MASK;
+		const unsigned int s = ((unsigned int) ii) & ZT_BUF_MEM_MASK;
 		ii += 4;
 #ifdef ZT_NO_UNALIGNED_ACCESS
 		unsafeData[s] = (uint8_t)(n >> 24U);
@@ -679,9 +695,9 @@ public:
 	 * @param ii Index value-result parameter (incremented by 8)
 	 * @param n Integer
 	 */
-	ZT_INLINE void wI64(int &ii,const uint64_t n) noexcept
+	ZT_INLINE void wI64(int &ii, const uint64_t n) noexcept
 	{
-		const unsigned int s = ((unsigned int)ii) & ZT_BUF_MEM_MASK;
+		const unsigned int s = ((unsigned int) ii) & ZT_BUF_MEM_MASK;
 		ii += 8;
 #ifdef ZT_NO_UNALIGNED_ACCESS
 		unsafeData[s] = (uint8_t)(n >> 56U);
@@ -705,7 +721,7 @@ public:
 	 * @param t Object to write
 	 */
 	template<typename T>
-	ZT_INLINE void wO(int &ii,T &t) noexcept
+	ZT_INLINE void wO(int &ii, T &t) noexcept
 	{
 		const int s = ii;
 		if (likely((s + T::marshalSizeMax()) <= ZT_BUF_MEM_SIZE)) {
@@ -723,16 +739,16 @@ public:
 	 * @param ii Index value-result parameter (incremented by length of string)
 	 * @param s String to write (writes an empty string if this is NULL)
 	 */
-	ZT_INLINE void wS(int &ii,const char *s) noexcept
+	ZT_INLINE void wS(int &ii, const char *s) noexcept
 	{
 		if (s) {
 			char c;
 			do {
 				c = *(s++);
-				wI8(ii,(uint8_t)c);
+				wI8(ii, (uint8_t) c);
 			} while (c);
 		} else {
-			wI8(ii,0);
+			wI8(ii, 0);
 		}
 	}
 
@@ -743,11 +759,11 @@ public:
 	 * @param bytes Bytes to write
 	 * @param len Size of data in bytes
 	 */
-	ZT_INLINE void wB(int &ii,const void *const bytes,const unsigned int len) noexcept
+	ZT_INLINE void wB(int &ii, const void *const bytes, const unsigned int len) noexcept
 	{
 		const int s = ii;
-		if (likely((ii += (int)len) <= ZT_BUF_MEM_SIZE))
-			Utils::copy(unsafeData + s,bytes,len);
+		if (likely((ii += (int) len) <= ZT_BUF_MEM_SIZE))
+			Utils::copy(unsafeData + s, bytes, len);
 	}
 
 	/**
@@ -756,11 +772,11 @@ public:
 	 * @param ii Index value-result parameter (incremented by len)
 	 * @param len Number of zero bytes to write
 	 */
-	ZT_INLINE void wZ(int &ii,const unsigned int len) noexcept
+	ZT_INLINE void wZ(int &ii, const unsigned int len) noexcept
 	{
 		const int s = ii;
-		if (likely((ii += (int)len) <= ZT_BUF_MEM_SIZE))
-			Utils::zero(unsafeData + s,len);
+		if (likely((ii += (int) len) <= ZT_BUF_MEM_SIZE))
+			Utils::zero(unsafeData + s, len);
 	}
 
 	/**
@@ -769,27 +785,27 @@ public:
 	 * @param ii Index value-result parameter (incremented by len)
 	 * @param len Number of random bytes to write
 	 */
-	ZT_INLINE void wR(int &ii,const unsigned int len) noexcept
+	ZT_INLINE void wR(int &ii, const unsigned int len) noexcept
 	{
 		const int s = ii;
-		if (likely((ii += (int)len) <= ZT_BUF_MEM_SIZE))
-			Utils::getSecureRandom(unsafeData + s,len);
+		if (likely((ii += (int) len) <= ZT_BUF_MEM_SIZE))
+			Utils::getSecureRandom(unsafeData + s, len);
 	}
 
 	/**
 	 * Store a byte without advancing the index
 	 */
-	ZT_INLINE void sI8(const int ii,const uint8_t n) noexcept
+	ZT_INLINE void sI8(const int ii, const uint8_t n) noexcept
 	{
-		unsafeData[(unsigned int)ii & ZT_BUF_MEM_MASK] = n;
+		unsafeData[(unsigned int) ii & ZT_BUF_MEM_MASK] = n;
 	}
 
 	/**
 	 * Store an integer without advancing the index
 	 */
-	ZT_INLINE void sI16(const int ii,const uint16_t n) noexcept
+	ZT_INLINE void sI16(const int ii, const uint16_t n) noexcept
 	{
-		const unsigned int s = ((unsigned int)ii) & ZT_BUF_MEM_MASK;
+		const unsigned int s = ((unsigned int) ii) & ZT_BUF_MEM_MASK;
 #ifdef ZT_NO_UNALIGNED_ACCESS
 		unsafeData[s] = (uint8_t)(n >> 8U);
 		unsafeData[s + 1] = (uint8_t)n;
@@ -801,9 +817,9 @@ public:
 	/**
 	 * Store an integer without advancing the index
 	 */
-	ZT_INLINE void sI32(const int ii,const uint32_t n) noexcept
+	ZT_INLINE void sI32(const int ii, const uint32_t n) noexcept
 	{
-		const unsigned int s = ((unsigned int)ii) & ZT_BUF_MEM_MASK;
+		const unsigned int s = ((unsigned int) ii) & ZT_BUF_MEM_MASK;
 #ifdef ZT_NO_UNALIGNED_ACCESS
 		unsafeData[s] = (uint8_t)(n >> 24U);
 		unsafeData[s + 1] = (uint8_t)(n >> 16U);
@@ -817,9 +833,9 @@ public:
 	/**
 	 * Store an integer without advancing the index
 	 */
-	ZT_INLINE void sI64(const int ii,const uint64_t n) noexcept
+	ZT_INLINE void sI64(const int ii, const uint64_t n) noexcept
 	{
-		const unsigned int s = ((unsigned int)ii) & ZT_BUF_MEM_MASK;
+		const unsigned int s = ((unsigned int) ii) & ZT_BUF_MEM_MASK;
 #ifdef ZT_NO_UNALIGNED_ACCESS
 		unsafeData[s] = (uint8_t)(n >> 56U);
 		unsafeData[s + 1] = (uint8_t)(n >> 48U);
@@ -837,7 +853,8 @@ public:
 	/**
 	 * @return Capacity of this buffer (usable size of data.bytes)
 	 */
-	static constexpr unsigned int capacity() noexcept { return ZT_BUF_MEM_SIZE; }
+	static constexpr unsigned int capacity() noexcept
+	{ return ZT_BUF_MEM_SIZE; }
 
 private:
 	// Next item in free buffer pool linked list if Buf is placed in pool, undefined and unused otherwise

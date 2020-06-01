@@ -199,9 +199,10 @@ typedef unsigned uint128_t __attribute__((mode(TI)));
 #endif
 
 // Macro to print very verbose tracing information to standard error.
+#define ZT_VA_ARGS(...) , ##__VA_ARGS__
 #define ZT_DEBUG_SPEW
 #ifdef ZT_DEBUG_SPEW
-#define ZT_SPEW(f,...) fprintf(stderr,"%s:%d(%s): " f ZT_EOL_S,__FILE__,__LINE__,__FUNCTION__,__VA_ARGS__)
+#define ZT_SPEW(f,...) fprintf(stderr,"%s:%d(%s): " f ZT_EOL_S,__FILE__,__LINE__,__FUNCTION__ ZT_VA_ARGS(__VA_ARGS__))
 #else
 #define ZT_SPEW(f,...)
 #endif

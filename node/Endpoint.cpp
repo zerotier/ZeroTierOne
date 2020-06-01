@@ -60,16 +60,20 @@ bool Endpoint::fromString(const char *s) noexcept
 		return true;
 
 	const char *start = strchr(s, '-');
-	if (start) {
+	if (start++ != nullptr) {
+		// Parse a fully qualified type-address format Endpoint.
 		char tmp[16];
-		for (unsigned int i = 0;i < 15;++i) {
-			if ((tmp[i] = s[i]) == 0)
+		for (unsigned int i=0;i<16;++i) {
+			char ss = s[i];
+			if (ss == '-') {
+				tmp[i] = 0;
 				break;
+			}
+			tmp[i] = ss;
 		}
 		tmp[15] = 0;
 		this->type = (ZT_EndpointType)Utils::strToUInt(tmp);
 
-		++start;
 		Fingerprint tmpfp;
 		MAC tmpmac;
 		switch (this->type) {
@@ -93,10 +97,15 @@ bool Endpoint::fromString(const char *s) noexcept
 				if (!asInetAddress(this->value.ss).fromString(start))
 					return false;
 			default:
-				this->type = ZT_ENDPOINT_TYPE_NIL;
 				return false;
 		}
+	} else if ((strchr(s, ':')) || (strchr(s, '.'))) {
+		// Parse raw IP/port strings as IP_UDP endpoints.
+		this->type = ZT_ENDPOINT_TYPE_IP_UDP;
+		if (!asInetAddress(this->value.ss).fromString(s))
+			return false;
 	} else {
+		// A naked '0' can be a NIL endpoint.
 		if (Utils::strToUInt(s) != (unsigned int)ZT_ENDPOINT_TYPE_NIL)
 			return false;
 	}

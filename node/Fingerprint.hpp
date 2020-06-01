@@ -50,14 +50,16 @@ public:
 	 *
 	 * @param s Base32 string
 	 */
-	ZT_INLINE void toString(char s[ZT_FINGERPRINT_STRING_SIZE_MAX]) const noexcept
+	ZT_INLINE char *toString(char s[ZT_FINGERPRINT_STRING_SIZE_MAX]) const noexcept
 	{
 		Address(this->address).toString(s);
 		if (haveHash()) {
 			s[ZT_ADDRESS_LENGTH_HEX] = '-';
 			Utils::b32e(this->hash, ZT_FINGERPRINT_HASH_SIZE, s + (ZT_ADDRESS_LENGTH_HEX + 1), ZT_FINGERPRINT_STRING_SIZE_MAX - (ZT_ADDRESS_LENGTH_HEX + 1));
 		}
+		return s;
 	}
+	ZT_INLINE String toString() const { char tmp[ZT_FINGERPRINT_STRING_SIZE_MAX]; return String(toString(tmp)); }
 
 	/**
 	 * Set this fingerprint to a base32-encoded string

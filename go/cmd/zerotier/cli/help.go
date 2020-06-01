@@ -53,6 +53,14 @@ Commands:
     blacklist cidr <IP/bits> <boolean>  Toggle physical path blacklisting
     blacklist if <prefix> <boolean>     Toggle interface prefix blacklisting
     portmap <boolean>                   Toggle use of uPnP or NAT-PMP
+  controller <command> [option]         Local controller management commands
+    networks                            List networks run by local controller
+    new                                 Create a new network
+    set <network> [setting] [value]     Show or modify network settings
+    members <network>                   List members of a network
+    member <network> [setting] [value]  Show or modify member level settings
+    auth <address|fingerprint>          Authorize a peer
+    deauth <address|fingerprint>        Deauthorize a peer
   identity <command> [args]             Identity management commands
     new [c25519|p384]                   Create identity pair (default: c25519)
     getpublic <identity>                Extract only public part of identity
@@ -64,17 +72,8 @@ Commands:
     show <locator> [identity]           Show locator information
   root [command]                        Root management commands
     list                                List root peers (same as no command)
-    add <identity> <locator>            Add or manually update a root
-    add <url>                           Add or update root(s) from a URL
+    add <identity> <endpoint|locator>   Designate a peer as a root
     remove <address>                    Un-designate a peer as a root
-  controller <command> [option]         Local controller management commands
-    networks                            List networks run by local controller
-    new                                 Create a new network
-    set <network> [setting] [value]     Show or modify network settings
-    members <network>                   List members of a network
-    member <network> [setting] [value]  Show or modify member level settings
-    auth <address|fingerprint>          Authorize a peer
-    deauth <address|fingerprint>        Deauthorize a peer
 
 The 'service' command does not exit until the service receives a signal.
 This is typically run from launchd (Mac), systemd or init (Linux), a Windows

@@ -37,18 +37,18 @@ void *Buf::operator new(std::size_t sz)
 
 	Buf *b;
 	if (bb) {
-		s_pool.store(((Buf *)bb)->__nextInPool);
-		b = (Buf *)bb;
+		s_pool.store(((Buf *) bb)->__nextInPool);
+		b = (Buf *) bb;
 	} else {
 		s_pool.store(0);
-		b = (Buf *)malloc(sz);
+		b = (Buf *) malloc(sz);
 		if (!b)
 			throw std::bad_alloc();
 		++s_allocated;
 	}
 
 	b->__refCount.store(0);
-	return (void *)b;
+	return (void *) b;
 }
 
 void Buf::operator delete(void *ptr)
@@ -66,8 +66,8 @@ void Buf::operator delete(void *ptr)
 				sched_yield();
 			}
 
-			((Buf *)ptr)->__nextInPool.store(bb);
-			s_pool.store((uintptr_t)ptr);
+			((Buf *) ptr)->__nextInPool.store(bb);
+			s_pool.store((uintptr_t) ptr);
 		}
 	}
 }
@@ -84,9 +84,9 @@ void Buf::freePool() noexcept
 	s_pool.store(0);
 
 	while (bb != 0) {
-		const uintptr_t next = ((Buf *)bb)->__nextInPool;
+		const uintptr_t next = ((Buf *) bb)->__nextInPool;
 		--s_allocated;
-		free((void *)bb);
+		free((void *) bb);
 		bb = next;
 	}
 }
