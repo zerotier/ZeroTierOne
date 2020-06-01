@@ -23,7 +23,10 @@ type MulticastGroup struct {
 
 // String returns MAC#ADI
 func (mg *MulticastGroup) String() string {
-	return fmt.Sprintf("%s#%.8x", mg.MAC.String(), mg.ADI)
+	if mg.ADI != 0 {
+		return fmt.Sprintf("%s#%.8x", mg.MAC.String(), mg.ADI)
+	}
+	return mg.MAC.String()
 }
 
 // Less returns true if this MulticastGroup is less than another.

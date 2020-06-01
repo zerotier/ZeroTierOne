@@ -7,7 +7,6 @@ package zerotier
 // static inline const struct sockaddr_storage *_getSS(const ZT_Endpoint *ep) { return &(ep->value.ss); }
 // static inline void _setSS(ZT_Endpoint *ep,const void *ss) { memcpy(&(ep->value.ss),ss,sizeof(struct sockaddr_storage)); }
 import "C"
-
 import (
 	"encoding/json"
 	"unsafe"

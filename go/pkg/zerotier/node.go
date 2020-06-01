@@ -18,7 +18,6 @@ package zerotier
 // #cgo linux android LDFLAGS: ${SRCDIR}/../../../build/go/native/libzt_go_native.a ${SRCDIR}/../../../build/node/libzt_core.a ${SRCDIR}/../../../build/osdep/libzt_osdep.a -lstdc++ -lpthread -lm
 // #include "../../native/GoGlue.h"
 import "C"
-
 import (
 	"bytes"
 	"errors"
@@ -68,17 +67,17 @@ const (
 
 var (
 	PlatformDefaultHomePath string
-	CoreVersionMajor    int
-	CoreVersionMinor    int
-	CoreVersionRevision int
-	CoreVersionBuild    int
+	CoreVersionMajor        int
+	CoreVersionMinor        int
+	CoreVersionRevision     int
+	CoreVersionBuild        int
 
 	cNodeRefs    [maxCNodeRefs]*Node
 	cNodeRefUsed [maxCNodeRefs]uint32
 )
 
 func init() {
-	PlatformDefaultHomePath = C.GoString(C.ZT_PLATFORM_DEFAULT_HOMEPATH);
+	PlatformDefaultHomePath = C.GoString(C.ZT_PLATFORM_DEFAULT_HOMEPATH)
 	var vMaj, vMin, vRev, vBuild C.int
 	C.ZT_version(&vMaj, &vMin, &vRev, &vBuild)
 	CoreVersionMajor = int(vMaj)
