@@ -92,7 +92,7 @@ SharedPtr<Bond> BondController::createTransportTriggeredBond(const RuntimeEnviro
 			}
 			if (!_defaultBondingPolicy && _defaultBondingPolicyStr.length()) {
 				fprintf(stderr, "  no assignment, using default custom (%s)\n", _defaultBondingPolicyStr.c_str());
-				bond = new Bond(renv, *(_bondPolicyTemplates[_defaultBondingPolicyStr].ptr()), peer);
+				bond = new Bond(renv, _bondPolicyTemplates[_defaultBondingPolicyStr].ptr(), peer);
 			}
 		}
 		else {
@@ -102,7 +102,7 @@ SharedPtr<Bond> BondController::createTransportTriggeredBond(const RuntimeEnviro
 				bond = new Bond(renv, _defaultBondingPolicy, peer);
 			}
 			else {
-				bond = new Bond(renv, *(_bondPolicyTemplates[_policyTemplateAssignments[identity]].ptr()), peer);
+				bond = new Bond(renv, _bondPolicyTemplates[_policyTemplateAssignments[identity]].ptr(), peer);
 			}
 		}
 	}

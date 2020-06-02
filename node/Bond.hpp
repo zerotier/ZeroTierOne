@@ -79,7 +79,7 @@ public:
 	 * @param original
 	 * @param peer
 	 */
-	Bond(const RuntimeEnvironment *renv, const Bond &original, const SharedPtr<Peer>& peer);
+	Bond(const RuntimeEnvironment *renv, SharedPtr<Bond> originalBond, const SharedPtr<Peer>& peer);
 
 	/**
 	 * @return The human-readable name of the bonding policy
@@ -293,8 +293,9 @@ public:
 	 * user-specified parameters.
 	 *
 	 * @param policy Bonding policy
+	 * @param templateBond
 	 */
-	void setReasonableDefaults(int policy);
+	void setReasonableDefaults(int policy, SharedPtr<Bond> templateBond, bool useTemplate);
 
 	/**
 	 * Check and assign user-specified quality weights to this bond.
