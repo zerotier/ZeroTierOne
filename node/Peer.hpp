@@ -153,9 +153,7 @@ public:
 	 * @param bytes Number of bytes relayed
 	 */
 	ZT_INLINE void relayed(const int64_t now, const unsigned int bytes) noexcept
-	{
-		m_relayedMeter.log(now, bytes);
-	}
+	{ m_relayedMeter.log(now, bytes); }
 
 	/**
 	 * Get the current best direct path or NULL if none
@@ -288,25 +286,19 @@ public:
 	 * @return The permanent shared key for this peer computed by simple identity agreement
 	 */
 	ZT_INLINE SharedPtr<SymmetricKey> identityKey() noexcept
-	{
-		return m_identityKey;
-	}
+	{ return m_identityKey; }
 
 	/**
 	 * @return AES instance for HELLO dictionary / encrypted section encryption/decryption
 	 */
 	ZT_INLINE const AES &identityHelloDictionaryEncryptionCipher() noexcept
-	{
-		return m_helloCipher;
-	}
+	{ return m_helloCipher; }
 
 	/**
 	 * @return Key for HMAC on HELLOs
 	 */
 	ZT_INLINE const uint8_t *identityHelloHmacKey() noexcept
-	{
-		return m_helloMacKey;
-	}
+	{ return m_helloMacKey; }
 
 	/**
 	 * @return Raw identity key bytes
@@ -336,9 +328,7 @@ public:
 	 * @return True if this key is ephemeral, false if it's the long-lived identity key
 	 */
 	ZT_INLINE bool isEphemeral(const SharedPtr<SymmetricKey> &k) const noexcept
-	{
-		return (m_identityKey != k);
-	}
+	{ return m_identityKey != k; }
 
 	/**
 	 * Set the currently known remote version of this peer's client
@@ -350,10 +340,10 @@ public:
 	 */
 	ZT_INLINE void setRemoteVersion(unsigned int vproto, unsigned int vmaj, unsigned int vmin, unsigned int vrev) noexcept
 	{
-		m_vProto = (uint16_t) vproto;
-		m_vMajor = (uint16_t) vmaj;
-		m_vMinor = (uint16_t) vmin;
-		m_vRevision = (uint16_t) vrev;
+		m_vProto = (uint16_t)vproto;
+		m_vMajor = (uint16_t)vmaj;
+		m_vMinor = (uint16_t)vmin;
+		m_vRevision = (uint16_t)vrev;
 	}
 
 	ZT_INLINE unsigned int remoteVersionProtocol() const noexcept
@@ -369,7 +359,7 @@ public:
 	{ return m_vRevision; }
 
 	ZT_INLINE bool remoteVersionKnown() const noexcept
-	{ return ((m_vMajor > 0) || (m_vMinor > 0) || (m_vRevision > 0)); }
+	{ return (m_vMajor > 0) || (m_vMinor > 0) || (m_vRevision > 0); }
 
 	/**
 	 * @return True if there is at least one alive direct path
@@ -445,7 +435,7 @@ public:
 	ZT_INLINE bool deduplicateIncomingPacket(const uint64_t packetId) noexcept
 	{
 		// TODO: should take instance ID into account too, but this isn't fully wired.
-		return m_dedup[Utils::hash32((uint32_t) packetId) & ZT_PEER_DEDUP_BUFFER_MASK].exchange(packetId) == packetId;
+		return m_dedup[Utils::hash32((uint32_t)packetId) & ZT_PEER_DEDUP_BUFFER_MASK].exchange(packetId) == packetId;
 	}
 
 private:
@@ -521,7 +511,22 @@ private:
 	// For SharedPtr<>
 	std::atomic<int> __refCount;
 
-	// Addresses recieved via PUSH_DIRECT_PATHS etc. that we are scheduled to try.
+	struct p_EndpointCacheItem
+	{
+		Endpoint target;
+		uint64_t timesSeen;
+		int64_t firstSeen;
+
+		ZT_INLINE bool operator<(const p_EndpointCacheItem &ci) const noexcept
+		{ return (ci.timesSeen < timesSeen) || ((ci.timesSeen == timesSeen) && (ci.firstSeen < firstSeen)); }
+
+		ZT_INLINE p_EndpointCacheItem() noexcept : target(), timesSeen(0), firstSeen(0)
+		{}
+	};
+
+	// Endpoint cache sorted in ascending order of times seen followed by first seen time.
+	p_EndpointCacheItem m_endpointCache[ZT_PEER_ENDPOINT_CACHE_SIZE];
+
 	struct p_TryQueueItem
 	{
 		ZT_INLINE p_TryQueueItem() :
@@ -539,6 +544,7 @@ private:
 	};
 
 	List<p_TryQueueItem> m_tryQueue;
+	Map<Endpoint,int64_t> m_lastTried;
 
 	uint16_t m_vProto;
 	uint16_t m_vMajor;

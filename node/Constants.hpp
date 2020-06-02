@@ -140,6 +140,11 @@
 #define ZT_NAT_T_PORT_SCAN_MAX 16
 
 /**
+ * Minimum interval between attempts to reach a given physical endpoint
+ */
+#define ZT_PATH_MIN_TRY_INTERVAL ZT_PATH_KEEPALIVE_PERIOD
+
+/**
  * Delay between calls to the pulse() method in Peer for each peer
  */
 #define ZT_PEER_PULSE_INTERVAL 8000
@@ -167,6 +172,11 @@
  * Interval between sort/prioritize of paths for a peer
  */
 #define ZT_PEER_PRIORITIZE_PATHS_INTERVAL 5000
+
+/**
+ * Number of previous endpoints to cache for root-less re-establishment
+ */
+#define ZT_PEER_ENDPOINT_CACHE_SIZE 8
 
 /**
  * Delay between requests for updated network autoconf information

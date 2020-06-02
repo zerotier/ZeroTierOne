@@ -35,8 +35,9 @@ func Identity(args []string) {
 					os.Exit(1)
 				}
 				switch args[1] {
-				case "c25519":
-				case "p384":
+				case "c25519", "C25519", "0":
+					idType = zerotier.IdentityTypeC25519
+				case "p384", "P384", "1":
 					idType = zerotier.IdentityTypeP384
 				default:
 					Help()
@@ -54,6 +55,12 @@ func Identity(args []string) {
 		case "getpublic":
 			if len(args) == 2 {
 				fmt.Println(readIdentity(args[1]).String())
+				os.Exit(0)
+			}
+
+		case "fingerprint":
+			if len(args) == 2 {
+				fmt.Println(readIdentity(args[1]).Fingerprint().String())
 				os.Exit(0)
 			}
 

@@ -144,8 +144,6 @@ func main() {
 		cli.Set(basePath, authToken, cmdArgs)
 	case "identity":
 		cli.Identity(cmdArgs)
-	case "locator":
-		cli.Locator(cmdArgs)
 	case "root":
 		authTokenRequired(authToken)
 		cli.Root(basePath, authToken, cmdArgs, *jflag)

@@ -21,7 +21,7 @@ const (
 	EndpointTypeIp         = C.ZT_ENDPOINT_TYPE_IP
 	EndpointTypeIpUdp      = C.ZT_ENDPOINT_TYPE_IP_UDP
 	EndpointTypeIpTcp      = C.ZT_ENDPOINT_TYPE_IP_TCP
-	EndpointTypeIpHttp2    = C.ZT_ENDPOINT_TYPE_IP_HTTP2
+	EndpointTypeIpHttp     = C.ZT_ENDPOINT_TYPE_IP_HTTP
 )
 
 type Endpoint struct {
@@ -65,7 +65,7 @@ func (ep *Endpoint) Type() int {
 // InetAddress gets this Endpoint as an InetAddress or nil if its type is not addressed by one.
 func (ep *Endpoint) InetAddress() *InetAddress {
 	switch ep.cep._type {
-	case EndpointTypeIp, EndpointTypeIpUdp, EndpointTypeIpTcp, EndpointTypeIpHttp2:
+	case EndpointTypeIp, EndpointTypeIpUdp, EndpointTypeIpTcp, EndpointTypeIpHttp:
 		ua := sockaddrStorageToUDPAddr(C._getSS(&ep.cep))
 		return &InetAddress{IP: ua.IP, Port: ua.Port}
 	}

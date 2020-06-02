@@ -166,6 +166,12 @@ func (id *Identity) Address() Address { return id.address }
 // HasPrivate returns true if this identity has its own private portion.
 func (id *Identity) HasPrivate() bool { return len(id.privateKey) > 0 }
 
+// Fingerprint gets this identity's address plus hash of public key(s).
+func (id *Identity) Fingerprint() *Fingerprint {
+	id.initCIdentityPtr()
+	return newFingerprintFromCFingerprint(C.ZT_Identity_fingerprint(id.cid))
+}
+
 // PrivateKeyString returns the full identity.secret if the private key is set, or an empty string if no private key is set.
 func (id *Identity) PrivateKeyString() string {
 	switch id.idtype {

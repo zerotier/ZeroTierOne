@@ -18,34 +18,34 @@ namespace ZeroTier {
 
 char *Endpoint::toString(char s[ZT_ENDPOINT_STRING_SIZE_MAX]) const noexcept
 {
-	static const char *const s_endpointTypeChars = ZT_ENDPOINT_TYPE_CHAR_INDEX;
+	static const char *const s_endpointTypeChars = "0123456789";
 
 	static_assert(ZT_ENDPOINT_STRING_SIZE_MAX > (ZT_INETADDRESS_STRING_SIZE_MAX + 4), "overflow");
 	static_assert(ZT_ENDPOINT_STRING_SIZE_MAX > (ZT_FINGERPRINT_STRING_SIZE_MAX + 4), "overflow");
 
 	switch (this->type) {
-		default:
+		default: // ZT_ENDPOINT_TYPE_NIL
 			s[0] = s_endpointTypeChars[ZT_ENDPOINT_TYPE_NIL];
 			s[1] = 0;
 			break;
 		case ZT_ENDPOINT_TYPE_ZEROTIER:
 			s[0] = s_endpointTypeChars[ZT_ENDPOINT_TYPE_ZEROTIER];
-			s[1] = '-';
+			s[1] = '=';
 			zt().toString(s + 2);
 			break;
 		case ZT_ENDPOINT_TYPE_ETHERNET:
 		case ZT_ENDPOINT_TYPE_WIFI_DIRECT:
 		case ZT_ENDPOINT_TYPE_BLUETOOTH:
 			s[0] = s_endpointTypeChars[this->type];
-			s[1] = '-';
+			s[1] = '=';
 			eth().toString(s + 2);
 			break;
 		case ZT_ENDPOINT_TYPE_IP:
 		case ZT_ENDPOINT_TYPE_IP_UDP:
 		case ZT_ENDPOINT_TYPE_IP_TCP:
-		case ZT_ENDPOINT_TYPE_IP_HTTP2:
+		case ZT_ENDPOINT_TYPE_IP_HTTP:
 			s[0] = s_endpointTypeChars[this->type];
-			s[1] = '-';
+			s[1] = '=';
 			ip().toString(s + 2);
 			break;
 	}
@@ -59,7 +59,7 @@ bool Endpoint::fromString(const char *s) noexcept
 	if ((!s) || (!*s))
 		return true;
 
-	const char *start = strchr(s, '-');
+	const char *start = strchr(s, '=');
 	if (start++ != nullptr) {
 		// Parse a fully qualified type-address format Endpoint.
 		char tmp[16];
@@ -93,7 +93,7 @@ bool Endpoint::fromString(const char *s) noexcept
 			case ZT_ENDPOINT_TYPE_IP:
 			case ZT_ENDPOINT_TYPE_IP_UDP:
 			case ZT_ENDPOINT_TYPE_IP_TCP:
-			case ZT_ENDPOINT_TYPE_IP_HTTP2:
+			case ZT_ENDPOINT_TYPE_IP_HTTP:
 				if (!asInetAddress(this->value.ss).fromString(start))
 					return false;
 			default:
@@ -116,8 +116,7 @@ bool Endpoint::fromString(const char *s) noexcept
 int Endpoint::marshal(uint8_t data[ZT_ENDPOINT_MARSHAL_SIZE_MAX]) const noexcept
 {
 	switch (this->type) {
-		//case ZT_ENDPOINT_TYPE_NIL:
-		default:
+		default: // ZT_ENDPOINT_TYPE_NIL
 			// NIL endpoints get serialized like NIL InetAddress instances.
 			data[0] = ZT_ENDPOINT_TYPE_NIL;
 			return 1;
@@ -141,7 +140,7 @@ int Endpoint::marshal(uint8_t data[ZT_ENDPOINT_MARSHAL_SIZE_MAX]) const noexcept
 
 		case ZT_ENDPOINT_TYPE_IP:
 		case ZT_ENDPOINT_TYPE_IP_TCP:
-		case ZT_ENDPOINT_TYPE_IP_HTTP2:
+		case ZT_ENDPOINT_TYPE_IP_HTTP:
 			// Other IP types get serialized as new version Endpoint instances with type.
 			data[0] = 16 + (uint8_t)this->type;
 			return 1 + asInetAddress(this->value.ss).marshal(data + 1);
@@ -197,7 +196,7 @@ int Endpoint::unmarshal(const uint8_t *restrict data, int len) noexcept
 		case ZT_ENDPOINT_TYPE_IP:
 		case ZT_ENDPOINT_TYPE_IP_UDP:
 		case ZT_ENDPOINT_TYPE_IP_TCP:
-		case ZT_ENDPOINT_TYPE_IP_HTTP2:
+		case ZT_ENDPOINT_TYPE_IP_HTTP:
 			return asInetAddress(this->value.ss).unmarshal(data + 1, len - 1);
 
 		default:
@@ -227,7 +226,7 @@ bool Endpoint::operator==(const Endpoint &ep) const noexcept
 			case ZT_ENDPOINT_TYPE_IP:
 			case ZT_ENDPOINT_TYPE_IP_UDP:
 			case ZT_ENDPOINT_TYPE_IP_TCP:
-			case ZT_ENDPOINT_TYPE_IP_HTTP2:
+			case ZT_ENDPOINT_TYPE_IP_HTTP:
 				return ip() == ep.ip();
 			default:
 				return true;
@@ -249,7 +248,7 @@ bool Endpoint::operator<(const Endpoint &ep) const noexcept
 			case ZT_ENDPOINT_TYPE_IP:
 			case ZT_ENDPOINT_TYPE_IP_UDP:
 			case ZT_ENDPOINT_TYPE_IP_TCP:
-			case ZT_ENDPOINT_TYPE_IP_HTTP2:
+			case ZT_ENDPOINT_TYPE_IP_HTTP:
 				return ip() < ep.ip();
 			default:
 				return true;

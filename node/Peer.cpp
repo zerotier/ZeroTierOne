@@ -243,25 +243,51 @@ void Peer::pulse(void *const tPtr, const int64_t now, const bool isRoot)
 			if (m_locator) {
 				for (Vector<Endpoint>::const_iterator ep(m_locator->endpoints().begin());ep != m_locator->endpoints().end();++ep) {
 					if (ep->type == ZT_ENDPOINT_TYPE_IP_UDP) {
-						RR->t->tryingNewPath(tPtr, 0x84b22322, m_id, ep->ip(), InetAddress::NIL, 0, 0, Identity::NIL);
-						sent(now, m_sendProbe(tPtr, -1, ep->ip(), nullptr, 0, now));
+						if (RR->node->shouldUsePathForZeroTierTraffic(tPtr, m_id, -1, ep->ip())) {
+							int64_t &lt = m_lastTried[*ep];
+							if ((now - lt) > ZT_PATH_MIN_TRY_INTERVAL) {
+								lt = now;
+								RR->t->tryingNewPath(tPtr, 0x84b22322, m_id, ep->ip(), InetAddress::NIL, 0, 0, Identity::NIL);
+								sent(now, m_sendProbe(tPtr, -1, ep->ip(), nullptr, 0, now));
+							}
+						}
+					}
+				}
+			}
+
+			for(unsigned int i=0;i<ZT_PEER_ENDPOINT_CACHE_SIZE;++i) {
+				if ((m_endpointCache[i].firstSeen > 0) && (m_endpointCache[i].target.type == ZT_ENDPOINT_TYPE_IP_UDP)) {
+					if (RR->node->shouldUsePathForZeroTierTraffic(tPtr, m_id, -1, m_endpointCache[i].target.ip())) {
+						int64_t &lt = m_lastTried[m_endpointCache[i].target];
+						if ((now - lt) > ZT_PATH_MIN_TRY_INTERVAL) {
+							lt = now;
+							RR->t->tryingNewPath(tPtr, 0x84b22343, m_id, m_endpointCache[i].target.ip(), InetAddress::NIL, 0, 0, Identity::NIL);
+							sent(now, m_sendProbe(tPtr, -1, m_endpointCache[i].target.ip(), nullptr, 0, now));
+						}
 					}
 				}
 			}
 
 			InetAddress addr;
 			if (RR->node->externalPathLookup(tPtr, m_id, -1, addr)) {
-				if ((addr) && (RR->node->shouldUsePathForZeroTierTraffic(tPtr, m_id, -1, addr))) {
-					RR->t->tryingNewPath(tPtr, 0x84a10000, m_id, addr, InetAddress::NIL, 0, 0, Identity::NIL);
-					sent(now, m_sendProbe(tPtr, -1, addr, nullptr, 0, now));
+				if ((addr) && RR->node->shouldUsePathForZeroTierTraffic(tPtr, m_id, -1, addr)) {
+					int64_t &lt = m_lastTried[Endpoint(addr)];
+					if ((now - lt) > ZT_PATH_MIN_TRY_INTERVAL) {
+						lt = now;
+						RR->t->tryingNewPath(tPtr, 0x84a10000, m_id, addr, InetAddress::NIL, 0, 0, Identity::NIL);
+						sent(now, m_sendProbe(tPtr, -1, addr, nullptr, 0, now));
+					}
 				}
 			}
 		}
 	} else {
 		// Attempt up to ZT_NAT_T_MAX_QUEUED_ATTEMPTS_PER_PULSE queued addresses.
 
+		// Note that m_lastTried is checked when contact() is called and something
+		// is added to the try queue, not here.
+
 		unsigned int attempts = 0;
-		for(;;) {
+		for (;;) {
 			p_TryQueueItem &qi = m_tryQueue.front();
 
 			if (qi.target.isInetAddr()) {
@@ -326,15 +352,15 @@ void Peer::pulse(void *const tPtr, const int64_t now, const bool isRoot)
 			// Discard front item unless the code skips to requeue_item.
 			discard_queue_item:
 			m_tryQueue.pop_front();
-			if ((m_tryQueue.empty()) || (attempts >= ZT_NAT_T_PORT_SCAN_MAX))
+			if (attempts >= std::min((unsigned int)m_tryQueue.size(),(unsigned int)ZT_NAT_T_PORT_SCAN_MAX))
 				break;
 			else continue;
 
 			// If the code skips here the front item is instead moved to the back.
 			requeue_item:
-			if (m_tryQueue.size() > 1)
+			if (m_tryQueue.size() > 1) // no point in doing this splice if there's only one item
 				m_tryQueue.splice(m_tryQueue.end(), m_tryQueue, m_tryQueue.begin());
-			if (attempts >= ZT_NAT_T_PORT_SCAN_MAX)
+			if (attempts >= std::min((unsigned int)m_tryQueue.size(),(unsigned int)ZT_NAT_T_PORT_SCAN_MAX))
 				break;
 			else continue;
 		}
@@ -370,6 +396,13 @@ void Peer::pulse(void *const tPtr, const int64_t now, const bool isRoot)
 			}
 		}
 	}
+
+	// Clean m_lastTried
+	for (Map<Endpoint,int64_t>::iterator i(m_lastTried.begin());i!=m_lastTried.end();) {
+		if ((now - i->second) > (ZT_PATH_MIN_TRY_INTERVAL * 4))
+			m_lastTried.erase(i++);
+		else ++i;
+	}
 }
 
 void Peer::contact(void *tPtr, const int64_t now, const Endpoint &ep, int tries)
@@ -386,6 +419,12 @@ void Peer::contact(void *tPtr, const int64_t now, const Endpoint &ep, int tries)
 				return;
 		}
 	}
+
+	// Check underlying path attempt rate limit.
+	int64_t &lt = m_lastTried[ep];
+	if ((now - lt) < ZT_PATH_MIN_TRY_INTERVAL)
+		return;
+	lt = now;
 
 	// For IPv4 addresses we send a tiny packet with a low TTL, which helps to
 	// traverse some NAT types. It has no effect otherwise.

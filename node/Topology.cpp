@@ -28,7 +28,7 @@ Topology::Topology(const RuntimeEnvironment *renv, void *tPtr) :
 		for (;;) {
 			Identity id;
 			int l = id.unmarshal(dptr, drem);
-			if ((l > 0)&&(id)) {
+			if ((l > 0) && (id)) {
 				if ((drem -= l) <= 0)
 					break;
 				Locator *const loc = new Locator();
@@ -87,9 +87,9 @@ bool Topology::addRoot(void *const tPtr, const Identity &id, const SharedPtr<con
 bool Topology::removeRoot(void *const tPtr, Address address)
 {
 	RWMutex::Lock l1(m_peers_l);
-	for(Vector< SharedPtr<Peer> >::const_iterator r(m_rootPeers.begin());r!=m_rootPeers.end();++r) {
+	for (Vector<SharedPtr<Peer> >::const_iterator r(m_rootPeers.begin());r != m_rootPeers.end();++r) {
 		if ((*r)->address() == address) {
-			Map< Identity,SharedPtr<const Locator> >::iterator rr(m_roots.find((*r)->identity()));
+			Map<Identity, SharedPtr<const Locator> >::iterator rr(m_roots.find((*r)->identity()));
 			if (rr != m_roots.end()) {
 				m_roots.erase(rr);
 				m_updateRootPeers(tPtr);
@@ -113,6 +113,8 @@ void Topology::doPeriodicTasks(void *tPtr, const int64_t now)
 	{
 		RWMutex::Lock l1(m_peers_l);
 		for (Map<Address, SharedPtr<Peer> >::iterator i(m_peers.begin());i != m_peers.end();) {
+			// TODO: also delete if the peer has not exchanged meaningful communication in a while, such as
+			// a network frame or non-trivial control packet.
 			if (((now - i->second->lastReceive()) > ZT_PEER_ALIVE_TIMEOUT) && (m_roots.count(i->second->identity()) == 0)) {
 				i->second->save(tPtr);
 				m_peers.erase(i++);
@@ -147,9 +149,9 @@ void Topology::m_loadCached(void *tPtr, const Address &zta, SharedPtr<Peer> &pee
 		Vector<uint8_t> data(RR->node->stateObjectGet(tPtr, ZT_STATE_OBJECT_PEER, id));
 		if (data.size() > 8) {
 			const uint8_t *d = data.data();
-			int dl = (int) data.size();
+			int dl = (int)data.size();
 
-			const int64_t ts = (int64_t) Utils::loadBigEndian<uint64_t>(d);
+			const int64_t ts = (int64_t)Utils::loadBigEndian<uint64_t>(d);
 			Peer *const p = new Peer(RR);
 			int n = p->unmarshal(d + 8, dl - 8);
 			if (n < 0) {
@@ -173,7 +175,7 @@ void Topology::m_writeRootList(void *tPtr)
 	uint8_t *const roots = (uint8_t *)malloc((ZT_IDENTITY_MARSHAL_SIZE_MAX + ZT_LOCATOR_MARSHAL_SIZE_MAX + 2) * m_roots.size());
 	if (roots) { // sanity check
 		int p = 0;
-		for (Map< Identity,SharedPtr<const Locator> >::const_iterator r(m_roots.begin());r!=m_roots.end();++r) {
+		for (Map<Identity, SharedPtr<const Locator> >::const_iterator r(m_roots.begin());r != m_roots.end();++r) {
 			int pp = r->first.marshal(roots + p, false);
 			if (pp > 0) {
 				p += pp;
@@ -193,9 +195,9 @@ void Topology::m_writeRootList(void *tPtr)
 void Topology::m_updateRootPeers(void *tPtr)
 {
 	// assumes m_peers_l is locked for write
-	Vector< SharedPtr<Peer> > rp;
-	for (Map< Identity,SharedPtr<const Locator> >::iterator r(m_roots.begin());r!=m_roots.end();++r) {
-		Map< Address,SharedPtr<Peer> >::iterator pp(m_peers.find(r->first.address()));
+	Vector<SharedPtr<Peer> > rp;
+	for (Map<Identity, SharedPtr<const Locator> >::iterator r(m_roots.begin());r != m_roots.end();++r) {
+		Map<Address, SharedPtr<Peer> >::iterator pp(m_peers.find(r->first.address()));
 		SharedPtr<Peer> p;
 		if (pp != m_peers.end())
 			p = pp->second;

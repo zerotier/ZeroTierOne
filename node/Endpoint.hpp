@@ -138,12 +138,12 @@ public:
 			case ZT_ENDPOINT_TYPE_IP:
 			case ZT_ENDPOINT_TYPE_IP_UDP:
 			case ZT_ENDPOINT_TYPE_IP_TCP:
-			case ZT_ENDPOINT_TYPE_IP_HTTP2:
+			case ZT_ENDPOINT_TYPE_IP_HTTP:
 				switch(ep.type) {
 					case ZT_ENDPOINT_TYPE_IP:
 					case ZT_ENDPOINT_TYPE_IP_UDP:
 					case ZT_ENDPOINT_TYPE_IP_TCP:
-					case ZT_ENDPOINT_TYPE_IP_HTTP2:
+					case ZT_ENDPOINT_TYPE_IP_HTTP:
 						return ip().ipsEqual(ep.ip());
 					default:
 						break;

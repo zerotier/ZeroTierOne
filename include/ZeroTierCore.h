@@ -305,13 +305,8 @@ enum ZT_EndpointType
 	ZT_ENDPOINT_TYPE_IP =            5,  // Naked IP (protocol 193)
 	ZT_ENDPOINT_TYPE_IP_UDP =        6,  // IP/UDP
 	ZT_ENDPOINT_TYPE_IP_TCP =        7,  // IP/TCP
-	ZT_ENDPOINT_TYPE_IP_HTTP2 =      8   // IP/HTTP2 encapsulation
+	ZT_ENDPOINT_TYPE_IP_HTTP =       8   // IP/HTTP encapsulation
 };
-
-/**
- * A string that contains endpoint type IDs indexed by endpoint type (can be used as a lookup array)
- */
-#define ZT_ENDPOINT_TYPE_CHAR_INDEX "012345678"
 
 /**
  * Full identity fingerprint with address and 384-bit hash of public key(s)
@@ -2276,6 +2271,8 @@ ZT_SDK_API void ZT_version(
 	int *minor,
 	int *revision,
 	int *build);
+
+/* ---------------------------------------------------------------------------------------------------------------- */
 
 #ifdef __cplusplus
 }

@@ -14,4 +14,13 @@
 package cli
 
 func Root(basePath, authToken string, args []string, jsonOutput bool) {
+	if len(args) > 0 {
+		switch args[0] {
+
+		case "add":
+
+		case "remove":
+
+		}
+	}
 }

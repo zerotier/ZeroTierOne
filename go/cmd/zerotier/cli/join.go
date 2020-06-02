@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"zerotier/pkg/zerotier"
 )
@@ -41,10 +42,19 @@ func Join(basePath, authToken string, args []string) {
 
 	var fp *zerotier.Fingerprint
 	if len(args) == 2 {
-		fp, err = zerotier.NewFingerprintFromString(args[1])
-		if err != nil {
-			fmt.Printf("ERROR: invalid network controller fingerprint: %s\n", args[1])
-			os.Exit(1)
+		if strings.ContainsRune(args[1], '-') {
+			fp, err = zerotier.NewFingerprintFromString(args[1])
+			if err != nil {
+				fmt.Printf("ERROR: invalid network controller fingerprint: %s\n", args[1])
+				os.Exit(1)
+			}
+		} else {
+			id, err := zerotier.NewIdentityFromString(args[1])
+			if err != nil {
+				fmt.Printf("ERROR: invalid network controller identity: %s\n", args[1])
+				os.Exit(1)
+			}
+			fp = id.Fingerprint()
 		}
 	}
 
