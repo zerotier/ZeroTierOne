@@ -17,34 +17,16 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"zerotier/pkg/zerotier"
 )
 
-func Network(basePath, authToken string, args []string, jsonOutput bool) {
-	if len(args) != 1 {
-		Help()
-		os.Exit(1)
-	}
-
-	if len(args[0]) != zerotier.NetworkIDStringLength {
-		fmt.Printf("ERROR: invalid network ID: %s\n", args[0])
-		os.Exit(1)
-	}
-	nwid, err := strconv.ParseUint(args[0], 16, 64)
-	if err != nil {
-		fmt.Printf("ERROR: invalid network ID: %s\n", args[0])
-		os.Exit(1)
-	}
-	nwids := fmt.Sprintf("%.16x", nwid)
-
-	var network zerotier.APINetwork
-	apiGet(basePath, authToken, "/network/"+nwids, &network)
-
+func showNetwork(nwids string, network *zerotier.APINetwork, jsonOutput bool) {
 	if jsonOutput {
 		fmt.Println(jsonDump(&network))
 	} else {
-		fmt.Printf("%s: %s\n", nwids, network.Config.Name)
+		fmt.Printf("%s\t%s\n", nwids, network.Config.Name)
 		fmt.Printf("\tstatus:\t%s\n", networkStatusStr(network.Config.Status))
 		enabled := "no"
 		if network.PortEnabled {
@@ -78,27 +60,93 @@ func Network(basePath, authToken string, args []string, jsonOutput bool) {
 				fmt.Printf("->%s", r.Via.String())
 			}
 		}
-		managedIPs := "disabled"
+		managedIPs := "blocked"
 		if network.Settings.AllowManagedIPs {
-			managedIPs = "enabled"
+			managedIPs = "allowed"
 		}
-		managedIPsGlobal := "disabled"
+		managedIPsGlobal := "blocked"
 		if network.Settings.AllowGlobalIPs {
-			managedIPsGlobal = "enabled"
+			managedIPsGlobal = "allowed"
 		}
 		fmt.Printf("\n\tmanaged address local permissions:\t%s global %s\n", managedIPs, managedIPsGlobal)
-		managedRoutes := "diabled"
+		managedRoutes := "blocked"
 		if network.Settings.AllowManagedRoutes {
-			managedRoutes = "enabled"
+			managedRoutes = "allowed"
 		}
-		managedGlobalRoutes := "disabled"
+		managedGlobalRoutes := "blocked"
 		if network.Settings.AllowGlobalRoutes {
-			managedGlobalRoutes = "enabled"
+			managedGlobalRoutes = "allowed"
 		}
-		managedDefaultRoute := "disabled"
+		managedDefaultRoute := "blocked"
 		if network.Settings.AllowDefaultRouteOverride {
-			managedDefaultRoute = "enabled"
+			managedDefaultRoute = "allowed"
 		}
 		fmt.Printf("\tmanaged route local permissions:\t%s global %s default %s\n", managedRoutes, managedGlobalRoutes, managedDefaultRoute)
 	}
+}
+
+func Network(basePath, authToken string, args []string, jsonOutput bool) {
+	if len(args) < 1 {
+		Help()
+		os.Exit(1)
+	}
+
+	if len(args[0]) != zerotier.NetworkIDStringLength {
+		fmt.Printf("ERROR: invalid network ID: %s\n", args[0])
+		os.Exit(1)
+	}
+	nwid, err := strconv.ParseUint(args[0], 16, 64)
+	if err != nil {
+		fmt.Printf("ERROR: invalid network ID: %s\n", args[0])
+		os.Exit(1)
+	}
+	nwids := fmt.Sprintf("%.16x", nwid)
+
+	var network zerotier.APINetwork
+	apiGet(basePath, authToken, "/network/"+nwids, &network)
+
+	if len(args) == 1 {
+		showNetwork(nwids, &network, jsonOutput)
+	} else {
+		switch args[1] {
+		case "show", "info":
+			showNetwork(nwids, &network, jsonOutput)
+		case "set":
+			if len(args) > 3 {
+				Help()
+			} else if len(args) > 2 {
+				fieldName := strings.ToLower(strings.TrimSpace(args[2]))
+				var field *bool
+				switch fieldName {
+				case "managedips":
+					field = &network.Settings.AllowManagedIPs
+				case "managedroutes":
+					field = &network.Settings.AllowGlobalRoutes
+				case "globalips":
+					field = &network.Settings.AllowGlobalIPs
+				case "globalroutes":
+					field = &network.Settings.AllowGlobalRoutes
+				case "defaultroute":
+					field = &network.Settings.AllowDefaultRouteOverride
+				default:
+					Help()
+					os.Exit(1)
+				}
+
+				if len(args) == 3 {
+					*field = isTrue(args[2])
+				}
+
+				fmt.Printf("%s\t%t\n", fieldName, allowedBlocked(*field))
+			} else {
+				fmt.Printf("manageips\t%s\n", allowedBlocked(network.Settings.AllowManagedIPs))
+				fmt.Printf("manageroutes\t%s\n", allowedBlocked(network.Settings.AllowManagedRoutes))
+				fmt.Printf("globalips\t%s\n", allowedBlocked(network.Settings.AllowGlobalIPs))
+				fmt.Printf("globalroutes\t%s\n", allowedBlocked(network.Settings.AllowGlobalRoutes))
+				fmt.Printf("defaultroute\t%s\n", allowedBlocked(network.Settings.AllowDefaultRouteOverride))
+			}
+		}
+	}
+
+	os.Exit(0)
 }

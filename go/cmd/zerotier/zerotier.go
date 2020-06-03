@@ -124,9 +124,6 @@ func main() {
 	case "status", "info":
 		authTokenRequired(authToken)
 		cli.Status(basePath, authToken, cmdArgs, *jflag)
-	case "peers", "listpeers", "lspeers":
-		authTokenRequired(authToken)
-		cli.Peers(basePath, authToken, cmdArgs, *jflag, false)
 	case "join":
 		authTokenRequired(authToken)
 		cli.Join(basePath, authToken, cmdArgs)
@@ -139,17 +136,25 @@ func main() {
 	case "network":
 		authTokenRequired(authToken)
 		cli.Network(basePath, authToken, cmdArgs, *jflag)
-	case "set":
+	case "peers", "listpeers", "lspeers":
 		authTokenRequired(authToken)
-		cli.Set(basePath, authToken, cmdArgs)
-	case "identity":
-		cli.Identity(cmdArgs)
+		cli.Peers(basePath, authToken, cmdArgs, *jflag, false)
+	case "peer":
+		authTokenRequired(authToken)
+	case "roots":
+		authTokenRequired(authToken)
+		cli.Peers(basePath, authToken, cmdArgs, *jflag, true)
 	case "root":
 		authTokenRequired(authToken)
 		cli.Root(basePath, authToken, cmdArgs, *jflag)
+	case "set":
+		authTokenRequired(authToken)
+		cli.Set(basePath, authToken, cmdArgs)
 	case "controller":
 		authTokenRequired(authToken)
 		cli.Controller(basePath, authToken, cmdArgs, *jflag)
+	case "identity":
+		cli.Identity(cmdArgs)
 	}
 
 	// Commands in the 'cli' sub-package do not return, so if we make

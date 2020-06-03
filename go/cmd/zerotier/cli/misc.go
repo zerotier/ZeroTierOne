@@ -80,14 +80,74 @@ func apiDelete(basePath, authToken, urlPath string, result interface{}) int64 {
 
 func enabledDisabled(f bool) string {
 	if f {
-		return "ENABLED"
+		return "enabled"
 	}
-	return "DISABLED"
+	return "disabled"
+}
+
+func allowedBlocked(f bool) string {
+	if f {
+		return "allowed"
+	}
+	return "blocked"
+}
+
+// isTrueStringPrefixChars matches things like [Tt]rue, [Yy]es, 1, [Ee]nabled, and [Aa]llowed
+var isTrueStringPrefixChars = [9]uint8{'t', 'T', 'y', 'Y', '1', 'e', 'E', 'a', 'A'}
+
+func isTrue(s string) bool {
+	if len(s) > 0 {
+		f := s[0]
+		for _, c := range isTrueStringPrefixChars {
+			if c == f {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func jsonDump(obj interface{}) string {
-	j, _ := json.MarshalIndent(obj, "", "  ")
+	j, _ := json.MarshalIndent(obj, "", "\t")
 	return string(j)
+}
+
+// parseAddressFingerprintOrIdentity parses an argument as an address, fingerprint, or identity.
+// If it's an address, only that return variable is filled out. Fingerprints fill out both address and
+// fingerprint. Identity fills out all three.
+func parseAddressFingerprintOrIdentity(s string) (a zerotier.Address, fp *zerotier.Fingerprint, id *zerotier.Identity) {
+	var err error
+
+	s = strings.TrimSpace(s)
+	hasColon := strings.ContainsRune(s, ':')
+	hasDash := strings.ContainsRune(s, '-')
+
+	if len(s) == zerotier.AddressStringLength && !hasColon && !hasDash {
+		a, err = zerotier.NewAddressFromString(s)
+		if err == nil {
+			return
+		}
+	}
+
+	if hasDash {
+		fp, err = zerotier.NewFingerprintFromString(s)
+		if err == nil {
+			a = fp.Address
+			return
+		}
+	}
+
+	if hasColon {
+		id, err = zerotier.NewIdentityFromString(s)
+		if err == nil {
+			a = id.Address()
+			fp = id.Fingerprint()
+			return
+		}
+	}
+
+	a = zerotier.Address(0)
+	return
 }
 
 func readIdentity(s string) *zerotier.Identity {
