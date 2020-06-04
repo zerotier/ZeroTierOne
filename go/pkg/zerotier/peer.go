@@ -45,7 +45,7 @@ func newPeerFromCPeer(cp *C.ZT_Peer) (p *Peer, err error) {
 	p.Root = cp.root != 0
 	p.Paths = make([]Path, int(cp.pathCount))
 	for i := range p.Paths {
-		p.Paths[i].setFromCPath(&(cp.paths[i]))
+		p.Paths[i].setFromCPath((*C.ZT_Path)(unsafe.Pointer(uintptr(unsafe.Pointer(cp.paths)) + (uintptr(C.sizeof_ZT_Path) * uintptr(i)))))
 	}
 	p.Locator, err = NewLocatorFromBytes(C.GoBytes(unsafe.Pointer(cp.locator), C.int(cp.locatorSize)))
 	return

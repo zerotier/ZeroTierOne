@@ -46,8 +46,7 @@ func NewLocator(ts int64, endpoints []Endpoint, signer *Identity) (*Locator, err
 
 	goloc := new(Locator)
 	goloc.cl = unsafe.Pointer(loc)
-	goloc.init()
-	return goloc, nil
+	return goloc, goloc.init()
 }
 
 func NewLocatorFromBytes(lb []byte) (*Locator, error) {
@@ -61,8 +60,7 @@ func NewLocatorFromBytes(lb []byte) (*Locator, error) {
 
 	goloc := new(Locator)
 	goloc.cl = unsafe.Pointer(loc)
-	goloc.init()
-	return goloc, nil
+	return goloc, goloc.init()
 }
 
 func NewLocatorFromString(s string) (*Locator, error) {
@@ -78,8 +76,7 @@ func NewLocatorFromString(s string) (*Locator, error) {
 
 	goloc := new(Locator)
 	goloc.cl = unsafe.Pointer(loc)
-	goloc.init()
-	return goloc, nil
+	return goloc, goloc.init()
 }
 
 func (loc *Locator) Validate(id *Identity) bool {
@@ -119,7 +116,7 @@ func (loc *Locator) UnmarshalJSON(j []byte) error {
 		return ErrInvalidParameter
 	}
 	loc.cl = cl
-	loc.init()
+	return loc.init()
 }
 
 func locatorFinalizer(obj interface{}) {

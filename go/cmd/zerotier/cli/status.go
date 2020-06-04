@@ -39,7 +39,6 @@ func Status(basePath, authToken string, args []string, jsonOutput bool) {
 		} else {
 			fmt.Printf("\tports:\t%d\n", status.Config.Settings.PrimaryPort)
 		}
-		fmt.Printf("\tport search:\t%s\n", enabledDisabled(status.Config.Settings.PortSearch))
 		fmt.Printf("\tport mapping (uPnP/NAT-PMP):\t%s\n", enabledDisabled(status.Config.Settings.PortMapping))
 		fmt.Printf("\tblacklisted interface prefixes:\t")
 		for i, bl := range status.Config.Settings.InterfacePrefixBlacklist {

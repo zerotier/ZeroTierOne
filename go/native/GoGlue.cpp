@@ -30,13 +30,11 @@
 #include <sys/types.h>
 #include <sys/ioctl.h>
 #include <ifaddrs.h>
+#include <net/if.h>
+#include <netinet/in.h>
 #include <netinet6/in6_var.h>
 #include <arpa/inet.h>
-#include <netinet/in.h>
 #include <errno.h>
-#ifdef __BSD__
-#include <net/if.h>
-#endif
 #ifdef __LINUX__
 #ifndef IPV6_DONTFRAG
 #define IPV6_DONTFRAG 62

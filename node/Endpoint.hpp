@@ -116,7 +116,7 @@ public:
 			case ZT_ENDPOINT_TYPE_IP:
 			case ZT_ENDPOINT_TYPE_IP_UDP:
 			case ZT_ENDPOINT_TYPE_IP_TCP:
-			case ZT_ENDPOINT_TYPE_IP_HTTP2:
+			case ZT_ENDPOINT_TYPE_IP_HTTP:
 				return true;
 			default:
 				return false;
@@ -178,6 +178,25 @@ public:
 	 */
 	ZT_INLINE Fingerprint zt() const noexcept
 	{ return Fingerprint(this->value.fp); }
+
+	ZT_INLINE unsigned long hashCode() const noexcept
+	{
+		switch (this->type) {
+			default:
+				return 1;
+			case ZT_ENDPOINT_TYPE_ZEROTIER:
+				return (unsigned long)this->value.fp.address;
+			case ZT_ENDPOINT_TYPE_ETHERNET:
+			case ZT_ENDPOINT_TYPE_WIFI_DIRECT:
+			case ZT_ENDPOINT_TYPE_BLUETOOTH:
+				return (unsigned long)Utils::hash64(this->value.mac);
+			case ZT_ENDPOINT_TYPE_IP:
+			case ZT_ENDPOINT_TYPE_IP_UDP:
+			case ZT_ENDPOINT_TYPE_IP_TCP:
+			case ZT_ENDPOINT_TYPE_IP_HTTP:
+				return ip().hashCode();
+		}
+	}
 
 	char *toString(char s[ZT_ENDPOINT_STRING_SIZE_MAX]) const noexcept;
 

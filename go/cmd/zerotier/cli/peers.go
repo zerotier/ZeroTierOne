@@ -51,7 +51,7 @@ func Peers(basePath, authToken string, args []string, jsonOutput bool, rootsOnly
 				if paths.Len() > 0 {
 					paths.WriteRune(' ')
 				}
-				paths.WriteString(fmt.Sprintf("%s/%d", peer.Paths[0].IP.String(), peer.Paths[0].Port))
+				paths.WriteString(peer.Paths[0].Endpoint.String())
 			} else {
 				paths.WriteString("(relayed)")
 			}
