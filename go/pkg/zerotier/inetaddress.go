@@ -197,34 +197,6 @@ func (ina *InetAddress) UnmarshalJSON(j []byte) error {
 	return nil
 }
 
-func (ina *InetAddress) unmarshalZT(b []byte) (int, error) {
-	if len(b) <= 0 {
-		return 0, ErrInvalidInetAddress
-	}
-	switch b[0] {
-	case 0:
-		ina.IP = nil
-		ina.Port = 0
-		return 1, nil
-	case 4:
-		if len(b) != 7 {
-			return 0, ErrInvalidInetAddress
-		}
-		ina.IP = []byte{b[1], b[2], b[3], b[4]}
-		ina.Port = int(binary.BigEndian.Uint16(b[5:7]))
-		return 7, nil
-	case 6:
-		if len(b) != 19 {
-			return 0, ErrInvalidInetAddress
-		}
-		ina.IP = append(make([]byte, 0, 16), b[1:17]...)
-		ina.Port = int(binary.BigEndian.Uint16(b[17:19]))
-		return 19, nil
-	default:
-		return 0, ErrInvalidInetAddress
-	}
-}
-
 // key returns a short array suitable for use as a map[] key for this IP
 func (ina *InetAddress) key() (k [3]uint64) {
 	copy(((*[16]byte)(unsafe.Pointer(&k[0])))[:], ina.IP)

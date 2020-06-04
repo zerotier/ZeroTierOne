@@ -389,7 +389,7 @@ ZT_PeerList *Node::peers() const
 		(sizeof(ZT_Peer) * peers.size()) +
 		((sizeof(ZT_Path) * ZT_MAX_PEER_NETWORK_PATHS) * peers.size()) +
 		(sizeof(Identity) * peers.size()) +
-		((sizeof(ZT_Endpoint) * ZT_LOCATOR_MAX_ENDPOINTS) * peers.size());
+		(ZT_LOCATOR_MARSHAL_SIZE_MAX * peers.size());
 	char *buf = (char *)malloc(bufSize);
 	if (!buf)
 		return nullptr;
@@ -402,7 +402,7 @@ ZT_PeerList *Node::peers() const
 	buf += (sizeof(ZT_Path) * ZT_MAX_PEER_NETWORK_PATHS) * peers.size();
 	Identity *identities = reinterpret_cast<Identity *>(buf);
 	buf += sizeof(Identity) * peers.size();
-	ZT_Endpoint *locatorEndpoint = reinterpret_cast<ZT_Endpoint *>(buf);
+	uint8_t *locatorBuf = reinterpret_cast<uint8_t *>(buf);
 
 	const int64_t now = m_now;
 
@@ -430,7 +430,7 @@ ZT_PeerList *Node::peers() const
 		p->networkCount = 0;
 		// TODO: enumerate network memberships
 
-		Vector<SharedPtr<Path> > paths;
+		Vector< SharedPtr<Path> > paths;
 		(*pi)->getAllPaths(paths);
 		p->pathCount = (unsigned int)paths.size();
 		p->paths = peerPath;
@@ -446,11 +446,12 @@ ZT_PeerList *Node::peers() const
 
 		const SharedPtr<const Locator> loc((*pi)->locator());
 		if (loc) {
-			p->locatorTimestamp = loc->timestamp();
-			p->locatorEndpointCount = (unsigned int)loc->endpoints().size();
-			p->locatorEndpoints = locatorEndpoint;
-			for (Vector<Endpoint>::const_iterator ep(loc->endpoints().begin());ep != loc->endpoints().end();++ep)
-				*(locatorEndpoint++) = *ep;
+			const int ls = loc->marshal(locatorBuf);
+			if (ls > 0) {
+				p->locatorSize = (unsigned int)ls;
+				p->locator = locatorBuf;
+				locatorBuf += ls;
+			}
 		}
 
 		++pl->peerCount;

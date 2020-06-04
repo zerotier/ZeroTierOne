@@ -27,6 +27,10 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <sys/types.h>
+#include <sys/ioctl.h>
+#include <ifaddrs.h>
+#include <netinet6/in6_var.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <errno.h>
@@ -683,4 +687,27 @@ extern "C" void ZT_GoTap_setFriendlyName(ZT_GoTap *tap,const char *friendlyName)
 extern "C" void ZT_GoTap_setMtu(ZT_GoTap *tap,unsigned int mtu)
 {
 	reinterpret_cast<EthernetTap *>(tap)->setMtu(mtu);
+}
+
+extern "C" int ZT_isTemporaryV6Address(const char *ifname,const struct sockaddr_storage *a)
+{
+#ifndef __WINDOWS__
+	static ZT_SOCKET s_tmpV6Socket = ZT_INVALID_SOCKET;
+	static std::mutex s_lock;
+	std::lock_guard<std::mutex> l(s_lock);
+	if (s_tmpV6Socket == ZT_INVALID_SOCKET) {
+		s_tmpV6Socket = socket(AF_INET6,SOCK_DGRAM,0);
+		if (s_tmpV6Socket <= 0)
+			return 0;
+	}
+	struct in6_ifreq ifr;
+	strncpy(ifr.ifr_name,ifname,sizeof(ifr.ifr_name));
+	memcpy(&(ifr.ifr_addr),a,sizeof(sockaddr_in6));
+	if (ioctl(s_tmpV6Socket,SIOCGIFAFLAG_IN6,&ifr) < 0) {
+		return 0;
+	}
+	return ((ifr.ifr_ifru.ifru_flags6 & IN6_IFF_TEMPORARY) != 0) ? 1 : 0;
+#else
+	return 0;
+#endif
 }

@@ -17,18 +17,17 @@ package zerotier
 import "C"
 
 import (
+	"encoding/json"
 	"runtime"
 	"unsafe"
 )
 
 type Locator struct {
-	cl unsafe.Pointer
-}
-
-func locatorFinalizer(obj interface{}) {
-	if obj != nil {
-		C.ZT_Locator_delete(obj.(Locator).cl)
-	}
+	Timestamp   int64        `json:"timestamp"`
+	Fingerprint *Fingerprint `json:"fingerprint"`
+	Endpoints   []Endpoint   `json:"endpoints"`
+	String      string       `json:"string"`
+	cl          unsafe.Pointer
 }
 
 func NewLocator(ts int64, endpoints []Endpoint, signer *Identity) (*Locator, error) {
@@ -44,9 +43,10 @@ func NewLocator(ts int64, endpoints []Endpoint, signer *Identity) (*Locator, err
 	if uintptr(loc) == 0 {
 		return nil, ErrInvalidParameter
 	}
+
 	goloc := new(Locator)
 	goloc.cl = unsafe.Pointer(loc)
-	runtime.SetFinalizer(goloc, locatorFinalizer)
+	goloc.init()
 	return goloc, nil
 }
 
@@ -58,9 +58,10 @@ func NewLocatorFromBytes(lb []byte) (*Locator, error) {
 	if uintptr(loc) == 0 {
 		return nil, ErrInvalidParameter
 	}
+
 	goloc := new(Locator)
 	goloc.cl = unsafe.Pointer(loc)
-	runtime.SetFinalizer(goloc, locatorFinalizer)
+	goloc.init()
 	return goloc, nil
 }
 
@@ -74,41 +75,73 @@ func NewLocatorFromString(s string) (*Locator, error) {
 	if loc == nil {
 		return nil, ErrInvalidParameter
 	}
+
 	goloc := new(Locator)
 	goloc.cl = unsafe.Pointer(loc)
-	runtime.SetFinalizer(goloc, locatorFinalizer)
+	goloc.init()
 	return goloc, nil
 }
 
-// GetInfo gets information about this locator, also validating its signature if 'id' is non-nil.
-// If 'id' is nil the 'valid' return value is undefined.
-func (loc *Locator) GetInfo(id *Identity) (ts int64, fp *Fingerprint, eps []Endpoint, valid bool, err error) {
-	ts = int64(C.ZT_Locator_timestamp(loc.cl))
-	cfp := C.ZT_Locator_fingerprint(loc.cl)
-	if uintptr(unsafe.Pointer(cfp)) == 0 {
-		err = ErrInternal
-		return
+func (loc *Locator) Validate(id *Identity) bool {
+	if id == nil {
+		return false
 	}
-	fp = newFingerprintFromCFingerprint(cfp)
-	epc := int(C.ZT_Locator_endpointCount(loc.cl))
-	eps = make([]Endpoint, epc)
-	for i := 0; i < epc; i++ {
-		eps[i].cep = *C.ZT_Locator_endpoint(loc.cl, C.uint(i))
-	}
-	if id != nil {
-		id.initCIdentityPtr()
-		valid = C.ZT_Locator_verify(loc.cl, id.cid) != 0
-	}
-	return
+	id.initCIdentityPtr()
+	return C.ZT_Locator_verify(loc.cl, id.cid) != 0
 }
 
-func (loc *Locator) String() string {
+func (loc *Locator) Bytes() []byte {
 	var buf [4096]byte
-	C.ZT_Locator_toString(loc.cl, (*C.char)(unsafe.Pointer(&buf[0])), 4096)
-	for i := range buf {
-		if buf[i] == 0 {
-			return string(buf[0:i])
-		}
+	bl := C.ZT_Locator_marshal(loc.cl, unsafe.Pointer(&buf[0]), 4096)
+	if bl <= 0 {
+		return nil
 	}
-	return ""
+	return buf[0:int(bl)]
+}
+
+func (loc *Locator) MarshalJSON() ([]byte, error) {
+	return json.Marshal(loc)
+}
+
+func (loc *Locator) UnmarshalJSON(j []byte) error {
+	C.ZT_Locator_delete(loc.cl)
+	loc.cl = unsafe.Pointer(nil)
+
+	err := json.Unmarshal(j, loc)
+	if err != nil {
+		return err
+	}
+
+	sb := []byte(loc.String)
+	sb = append(sb, 0)
+	cl := C.ZT_Locator_fromString((*C.char)(unsafe.Pointer(&sb[0])))
+	if cl == nil {
+		return ErrInvalidParameter
+	}
+	loc.cl = cl
+	loc.init()
+}
+
+func locatorFinalizer(obj interface{}) {
+	if obj != nil {
+		C.ZT_Locator_delete(obj.(Locator).cl)
+	}
+}
+
+func (loc *Locator) init() error {
+	loc.Timestamp = int64(C.ZT_Locator_timestamp(loc.cl))
+	cfp := C.ZT_Locator_fingerprint(loc.cl)
+	if uintptr(unsafe.Pointer(cfp)) == 0 {
+		return ErrInternal
+	}
+	loc.Fingerprint = newFingerprintFromCFingerprint(cfp)
+	epc := int(C.ZT_Locator_endpointCount(loc.cl))
+	loc.Endpoints = make([]Endpoint, epc)
+	for i := 0; i < epc; i++ {
+		loc.Endpoints[i].cep = *C.ZT_Locator_endpoint(loc.cl, C.uint(i))
+	}
+	var buf [4096]byte
+	loc.String = C.GoString(C.ZT_Locator_toString(loc.cl, (*C.char)(unsafe.Pointer(&buf[0])), 4096))
+	runtime.SetFinalizer(loc, locatorFinalizer)
+	return nil
 }

@@ -18,6 +18,7 @@ package zerotier
 // #cgo linux android LDFLAGS: ${SRCDIR}/../../../build/go/native/libzt_go_native.a ${SRCDIR}/../../../build/node/libzt_core.a ${SRCDIR}/../../../build/osdep/libzt_osdep.a -lstdc++ -lpthread -lm
 // #include "../../native/GoGlue.h"
 import "C"
+
 import (
 	"bytes"
 	"errors"
@@ -195,9 +196,12 @@ func NewNode(basePath string) (n *Node, err error) {
 	}
 	n.localConfigPath = path.Join(basePath, "local.conf")
 
-	_, identitySecretNotFoundErr := os.Stat(path.Join(basePath, "identity.secret"))
+	// Read local configuration, initializing with defaults if not found. We
+	// check for identity.secret's existence to determine if this is a new
+	// node or one that already existed. This influences some of the defaults.
+	_, isTotallyNewNode := os.Stat(path.Join(basePath, "identity.secret"))
 	n.localConfig = new(LocalConfig)
-	err = n.localConfig.Read(n.localConfigPath, true, identitySecretNotFoundErr != nil)
+	err = n.localConfig.Read(n.localConfigPath, true, isTotallyNewNode != nil)
 	if err != nil {
 		return
 	}
@@ -220,59 +224,45 @@ func NewNode(basePath string) (n *Node, err error) {
 		n.errLog = nullLogger
 	}
 
-	if n.localConfig.Settings.PortSearch {
-		portsChanged := false
-
-		portCheckCount := 0
-		origPort := n.localConfig.Settings.PrimaryPort
+	portsChanged := false
+	portCheckCount := 0
+	origPort := n.localConfig.Settings.PrimaryPort
+	for portCheckCount < 256 {
+		portCheckCount++
+		if checkPort(n.localConfig.Settings.PrimaryPort) {
+			if n.localConfig.Settings.PrimaryPort != origPort {
+				n.infoLog.Printf("primary port %d unavailable, found port %d and saved in local.conf", origPort, n.localConfig.Settings.PrimaryPort)
+			}
+			break
+		}
+		n.localConfig.Settings.PrimaryPort = int(4096 + (randomUInt() % 16384))
+		portsChanged = true
+	}
+	if portCheckCount == 256 {
+		return nil, errors.New("unable to bind to primary port: tried configured port and 256 other random ports")
+	}
+	if n.localConfig.Settings.SecondaryPort > 0 {
+		portCheckCount = 0
+		origPort = n.localConfig.Settings.SecondaryPort
 		for portCheckCount < 256 {
 			portCheckCount++
-			if checkPort(n.localConfig.Settings.PrimaryPort) {
-				if n.localConfig.Settings.PrimaryPort != origPort {
-					n.infoLog.Printf("primary port %d unavailable, found port %d and saved in local.conf", origPort, n.localConfig.Settings.PrimaryPort)
+			if checkPort(n.localConfig.Settings.SecondaryPort) {
+				if n.localConfig.Settings.SecondaryPort != origPort {
+					n.infoLog.Printf("secondary port %d unavailable, found port %d (port search enabled)", origPort, n.localConfig.Settings.SecondaryPort)
 				}
 				break
 			}
-			n.localConfig.Settings.PrimaryPort = int(4096 + (randomUInt() % 16384))
+			n.infoLog.Printf("secondary port %d unavailable, trying a random port (port search enabled)", n.localConfig.Settings.SecondaryPort)
+			if portCheckCount <= 64 {
+				n.localConfig.Settings.SecondaryPort = unassignedPrivilegedPorts[randomUInt()%uint(len(unassignedPrivilegedPorts))]
+			} else {
+				n.localConfig.Settings.SecondaryPort = int(16384 + (randomUInt() % 16384))
+			}
 			portsChanged = true
 		}
-		if portCheckCount == 256 {
-			return nil, errors.New("unable to bind to primary port: tried configured port and 256 other random ports")
-		}
-
-		if n.localConfig.Settings.SecondaryPort > 0 {
-			portCheckCount = 0
-			origPort = n.localConfig.Settings.SecondaryPort
-			for portCheckCount < 256 {
-				portCheckCount++
-				if checkPort(n.localConfig.Settings.SecondaryPort) {
-					if n.localConfig.Settings.SecondaryPort != origPort {
-						n.infoLog.Printf("secondary port %d unavailable, found port %d (port search enabled)", origPort, n.localConfig.Settings.SecondaryPort)
-					}
-					break
-				}
-				n.infoLog.Printf("secondary port %d unavailable, trying a random port (port search enabled)", n.localConfig.Settings.SecondaryPort)
-				if portCheckCount <= 64 {
-					n.localConfig.Settings.SecondaryPort = unassignedPrivilegedPorts[randomUInt()%uint(len(unassignedPrivilegedPorts))]
-				} else {
-					n.localConfig.Settings.SecondaryPort = int(16384 + (randomUInt() % 16384))
-				}
-				portsChanged = true
-			}
-		}
-
-		if portsChanged {
-			_ = n.localConfig.Write(n.localConfigPath)
-		}
-	} else {
-		if !checkPort(n.localConfig.Settings.PrimaryPort) {
-			return nil, errors.New("unable to bind to primary port")
-		}
-		if n.localConfig.Settings.SecondaryPort > 0 && n.localConfig.Settings.SecondaryPort < 65536 {
-			if !checkPort(n.localConfig.Settings.SecondaryPort) {
-				n.infoLog.Printf("WARNING: unable to bind secondary port %d", n.localConfig.Settings.SecondaryPort)
-			}
-		}
+	}
+	if portsChanged {
+		_ = n.localConfig.Write(n.localConfigPath)
 	}
 
 	n.namedSocketApiServer, n.tcpApiServer, err = createAPIServer(basePath, n)
@@ -481,34 +471,10 @@ func (n *Node) Peers() []*Peer {
 	pl := C.ZT_Node_peers(n.zn)
 	if pl != nil {
 		for i := uintptr(0); i < uintptr(pl.peerCount); i++ {
-			p := (*C.ZT_Peer)(unsafe.Pointer(uintptr(unsafe.Pointer(pl.peers)) + (i * C.sizeof_ZT_Peer)))
-			p2 := new(Peer)
-			p2.Address = Address(p.address)
-			p2.Identity, _ = newIdentityFromCIdentity(unsafe.Pointer(p.identity))
-			p2.Fingerprint.Address = p2.Address
-			copy(p2.Fingerprint.Hash[:], ((*[48]byte)(unsafe.Pointer(&p.fingerprint.hash[0])))[:])
-			p2.Version = [3]int{int(p.versionMajor), int(p.versionMinor), int(p.versionRev)}
-			p2.Latency = int(p.latency)
-			p2.Root = p.root != 0
-
-			p2.Paths = make([]Path, 0, int(p.pathCount))
-			for j := 0; j < len(p2.Paths); j++ {
-				pt := (*C.ZT_Path)(unsafe.Pointer(uintptr(unsafe.Pointer(p.paths)) + uintptr(j*C.sizeof_ZT_Path)))
-				if pt.alive != 0 {
-					ep := Endpoint{pt.endpoint}
-					a := ep.InetAddress()
-					if a != nil {
-						p2.Paths = append(p2.Paths, Path{
-							IP:          a.IP,
-							Port:        a.Port,
-							LastSend:    int64(pt.lastSend),
-							LastReceive: int64(pt.lastReceive),
-						})
-					}
-				}
+			p, _ := newPeerFromCPeer((*C.ZT_Peer)(unsafe.Pointer(uintptr(unsafe.Pointer(pl.peers)) + (i * C.sizeof_ZT_Peer))))
+			if p != nil {
+				peers = append(peers, p)
 			}
-
-			peers = append(peers, p2)
 		}
 		C.ZT_freeQueryResult(unsafe.Pointer(pl))
 	}
@@ -524,7 +490,8 @@ func (n *Node) runMaintenance() {
 	n.localConfigLock.RLock()
 	defer n.localConfigLock.RUnlock()
 
-	// Get local physical interface addresses, excluding blacklisted and ZeroTier-created interfaces
+	// Get local physical interface addresses, excluding blacklisted and
+	// ZeroTier-created interfaces.
 	interfaceAddresses := make(map[string]net.IP)
 	ifs, _ := net.Interfaces()
 	if len(ifs) > 0 {
@@ -541,8 +508,21 @@ func (n *Node) runMaintenance() {
 				addrs, _ := i.Addrs()
 				for _, a := range addrs {
 					ipn, _ := a.(*net.IPNet)
-					if ipn != nil && len(ipn.IP) > 0 && !ipn.IP.IsLinkLocalUnicast() && !ipn.IP.IsMulticast() {
-						interfaceAddresses[ipn.IP.String()] = ipn.IP
+					if ipn != nil && len(ipn.IP) > 0 && ipn.IP.IsGlobalUnicast() {
+						isTemporary := false
+						if len(ipn.IP) == 16 {
+							var ss C.struct_sockaddr_storage
+							if makeSockaddrStorage(ipn.IP, 0, &ss) {
+								cIfName := C.CString(i.Name)
+								if C.ZT_isTemporaryV6Address(cIfName, &ss) != 0 {
+									isTemporary = true
+								}
+								C.free(unsafe.Pointer(cIfName))
+							}
+						}
+						if !isTemporary {
+							interfaceAddresses[ipn.IP.String()] = ipn.IP
+						}
 					}
 				}
 			}

@@ -128,6 +128,22 @@ void Peer::received(
 				// Re-prioritize paths to include the new one.
 				m_prioritizePaths(now);
 
+				// Add or update entry in the endpoint cache. If this endpoint
+				// is already present, its timesSeen count is incremented. Otherwise
+				// it replaces the lowest ranked entry.
+				std::sort(m_endpointCache, m_endpointCache + ZT_PEER_ENDPOINT_CACHE_SIZE);
+				Endpoint thisEndpoint(path->address());
+				for (unsigned int i = 0;;++i) {
+					if (i == (ZT_PEER_ENDPOINT_CACHE_SIZE - 1)) {
+						m_endpointCache[i].target = thisEndpoint;
+						m_endpointCache[i].lastSeen = now;
+						break;
+					} else if (m_endpointCache[i].target == thisEndpoint) {
+						m_endpointCache[i].lastSeen = now;
+						break;
+					}
+				}
+
 				RR->t->learnedNewPath(tPtr, 0x582fabdd, packetId, m_id, path->address(), old);
 			} else {
 				path->sent(now, hello(tPtr, path->localSocket(), path->address(), now));
@@ -255,8 +271,8 @@ void Peer::pulse(void *const tPtr, const int64_t now, const bool isRoot)
 				}
 			}
 
-			for(unsigned int i=0;i<ZT_PEER_ENDPOINT_CACHE_SIZE;++i) {
-				if ((m_endpointCache[i].firstSeen > 0) && (m_endpointCache[i].target.type == ZT_ENDPOINT_TYPE_IP_UDP)) {
+			for (unsigned int i = 0;i < ZT_PEER_ENDPOINT_CACHE_SIZE;++i) {
+				if ((m_endpointCache[i].lastSeen > 0) && (m_endpointCache[i].target.type == ZT_ENDPOINT_TYPE_IP_UDP)) {
 					if (RR->node->shouldUsePathForZeroTierTraffic(tPtr, m_id, -1, m_endpointCache[i].target.ip())) {
 						int64_t &lt = m_lastTried[m_endpointCache[i].target];
 						if ((now - lt) > ZT_PATH_MIN_TRY_INTERVAL) {
@@ -352,7 +368,7 @@ void Peer::pulse(void *const tPtr, const int64_t now, const bool isRoot)
 			// Discard front item unless the code skips to requeue_item.
 			discard_queue_item:
 			m_tryQueue.pop_front();
-			if (attempts >= std::min((unsigned int)m_tryQueue.size(),(unsigned int)ZT_NAT_T_PORT_SCAN_MAX))
+			if (attempts >= std::min((unsigned int)m_tryQueue.size(), (unsigned int)ZT_NAT_T_PORT_SCAN_MAX))
 				break;
 			else continue;
 
@@ -360,7 +376,7 @@ void Peer::pulse(void *const tPtr, const int64_t now, const bool isRoot)
 			requeue_item:
 			if (m_tryQueue.size() > 1) // no point in doing this splice if there's only one item
 				m_tryQueue.splice(m_tryQueue.end(), m_tryQueue, m_tryQueue.begin());
-			if (attempts >= std::min((unsigned int)m_tryQueue.size(),(unsigned int)ZT_NAT_T_PORT_SCAN_MAX))
+			if (attempts >= std::min((unsigned int)m_tryQueue.size(), (unsigned int)ZT_NAT_T_PORT_SCAN_MAX))
 				break;
 			else continue;
 		}
@@ -398,7 +414,7 @@ void Peer::pulse(void *const tPtr, const int64_t now, const bool isRoot)
 	}
 
 	// Clean m_lastTried
-	for (Map<Endpoint,int64_t>::iterator i(m_lastTried.begin());i!=m_lastTried.end();) {
+	for (Map<Endpoint, int64_t>::iterator i(m_lastTried.begin());i != m_lastTried.end();) {
 		if ((now - i->second) > (ZT_PATH_MIN_TRY_INTERVAL * 4))
 			m_lastTried.erase(i++);
 		else ++i;
@@ -506,7 +522,7 @@ int Peer::marshal(uint8_t data[ZT_PEER_MARSHAL_SIZE_MAX]) const noexcept
 	if (!m_identityKey)
 		return -1;
 
-	data[0] = 0; // serialized peer version
+	data[0] = 16; // serialized peer version
 
 	// Include our identity's address to detect if this changes and require
 	// recomputation of m_identityKey.
@@ -515,11 +531,11 @@ int Peer::marshal(uint8_t data[ZT_PEER_MARSHAL_SIZE_MAX]) const noexcept
 	// SECURITY: encryption in place is only to protect secrets if they are
 	// cached to local storage. It's not used over the wire. Dumb ECB is fine
 	// because secret keys are random and have no structure to reveal.
-	RR->localCacheSymmetric.encrypt(m_identityKey->secret, data + 6);
-	RR->localCacheSymmetric.encrypt(m_identityKey->secret + 22, data + 17);
-	RR->localCacheSymmetric.encrypt(m_identityKey->secret + 38, data + 33);
+	RR->localCacheSymmetric.encrypt(m_identityKey->secret, data + 1 + ZT_ADDRESS_LENGTH);
+	RR->localCacheSymmetric.encrypt(m_identityKey->secret + 16, data + 1 + ZT_ADDRESS_LENGTH + 16);
+	RR->localCacheSymmetric.encrypt(m_identityKey->secret + 32, data + 1 + ZT_ADDRESS_LENGTH + 32);
 
-	int p = 54;
+	int p = 1 + ZT_ADDRESS_LENGTH + 48;
 
 	int s = m_id.marshal(data + p, false);
 	if (s < 0)
@@ -534,6 +550,21 @@ int Peer::marshal(uint8_t data[ZT_PEER_MARSHAL_SIZE_MAX]) const noexcept
 		p += s;
 	} else {
 		data[p++] = 0;
+	}
+
+	unsigned int cachedEndpointCount = 0;
+	for (unsigned int i = 0;i < ZT_PEER_ENDPOINT_CACHE_SIZE;++i) {
+		if (m_endpointCache[i].lastSeen > 0)
+			++cachedEndpointCount;
+	}
+	Utils::storeBigEndian(data + p, (uint16_t)cachedEndpointCount);
+	p += 2;
+	for (unsigned int i = 0;i < ZT_PEER_ENDPOINT_CACHE_SIZE;++i) {
+		Utils::storeBigEndian(data + p, (uint64_t)m_endpointCache[i].lastSeen);
+		s = m_endpointCache[i].target.marshal(data + p);
+		if (s <= 0)
+			return -1;
+		p += s;
 	}
 
 	Utils::storeBigEndian(data + p, (uint16_t)m_vProto);
@@ -555,7 +586,7 @@ int Peer::unmarshal(const uint8_t *restrict data, const int len) noexcept
 {
 	RWMutex::Lock l(m_lock);
 
-	if ((len <= 54) || (data[0] != 0))
+	if ((len <= (1 + ZT_ADDRESS_LENGTH + 48)) || (data[0] != 16))
 		return -1;
 
 	m_identityKey.zero();
@@ -565,16 +596,16 @@ int Peer::unmarshal(const uint8_t *restrict data, const int len) noexcept
 	if (Address(data + 1) == RR->identity.address()) {
 		uint8_t k[ZT_SYMMETRIC_KEY_SIZE];
 		static_assert(ZT_SYMMETRIC_KEY_SIZE == 48, "marshal() and unmarshal() must be revisited if ZT_SYMMETRIC_KEY_SIZE is changed");
-		RR->localCacheSymmetric.decrypt(data + 1, k);
-		RR->localCacheSymmetric.decrypt(data + 17, k + 16);
-		RR->localCacheSymmetric.decrypt(data + 33, k + 32);
+		RR->localCacheSymmetric.decrypt(data + 1 + ZT_ADDRESS_LENGTH, k);
+		RR->localCacheSymmetric.decrypt(data + 1 + ZT_ADDRESS_LENGTH + 16, k + 16);
+		RR->localCacheSymmetric.decrypt(data + 1 + ZT_ADDRESS_LENGTH + 32, k + 32);
 		m_identityKey.set(new SymmetricKey(RR->node->now(), k));
 		Utils::burn(k, sizeof(k));
 	}
 
-	int p = 49;
+	int p = 1 + ZT_ADDRESS_LENGTH + 48;
 
-	int s = m_id.unmarshal(data + 38, len - 38);
+	int s = m_id.unmarshal(data + p, len - p);
 	if (s < 0)
 		return s;
 	p += s;
@@ -587,6 +618,8 @@ int Peer::unmarshal(const uint8_t *restrict data, const int len) noexcept
 		Utils::burn(k, sizeof(k));
 	}
 
+	if (p >= len)
+		return -1;
 	if (data[p] == 0) {
 		++p;
 		m_locator.zero();
@@ -600,6 +633,21 @@ int Peer::unmarshal(const uint8_t *restrict data, const int len) noexcept
 		p += s;
 	} else {
 		return -1;
+	}
+
+	const unsigned int cachedEndpointCount = Utils::loadBigEndian<uint16_t>(data + p);
+	p += 2;
+	for (unsigned int i = 0;i < cachedEndpointCount;++i) {
+		if (i < ZT_PEER_ENDPOINT_CACHE_SIZE) {
+			if ((p + 8) >= len)
+				return -1;
+			m_endpointCache[i].lastSeen = (int64_t)Utils::loadBigEndian<uint64_t>(data + p);
+			p += 8;
+			s = m_endpointCache[i].target.unmarshal(data + p, len - p);
+			if (s <= 0)
+				return -1;
+			p += s;
+		}
 	}
 
 	if ((p + 10) > len)

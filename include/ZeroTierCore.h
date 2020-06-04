@@ -1258,19 +1258,14 @@ typedef struct
 	ZT_Path *paths;
 
 	/**
-	 * Timestamp of peer's locator or 0 if none on file
+	 * Size of locator in bytes or 0 if none
 	 */
-	int64_t locatorTimestamp;
+	unsigned int locatorSize;
 
 	/**
-	 * Number of endpoints in locator
+	 * Serialized locator or NULL if none
 	 */
-	unsigned int locatorEndpointCount;
-
-	/**
-	 * Endpoints in peer's locator
-	 */
-	ZT_Endpoint *locatorEndpoints;
+	const void *locator;
 } ZT_Peer;
 
 /**

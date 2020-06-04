@@ -32,7 +32,15 @@
 #include "SymmetricKey.hpp"
 #include "Containers.hpp"
 
-#define ZT_PEER_MARSHAL_SIZE_MAX (1 + ZT_ADDRESS_LENGTH + ZT_SYMMETRIC_KEY_SIZE + ZT_IDENTITY_MARSHAL_SIZE_MAX + 1 + ZT_LOCATOR_MARSHAL_SIZE_MAX + 1 + (ZT_MAX_PEER_NETWORK_PATHS * ZT_ENDPOINT_MARSHAL_SIZE_MAX) + (2*4) + 2)
+#define ZT_PEER_MARSHAL_SIZE_MAX ( \
+	1 + \
+	ZT_ADDRESS_LENGTH + \
+	ZT_SYMMETRIC_KEY_SIZE + \
+	ZT_IDENTITY_MARSHAL_SIZE_MAX + \
+	1 + ZT_LOCATOR_MARSHAL_SIZE_MAX + \
+	2 + ((8 + ZT_ENDPOINT_MARSHAL_SIZE_MAX) * ZT_PEER_ENDPOINT_CACHE_SIZE) + \
+	(2 * 4) + \
+	2 )
 
 #define ZT_PEER_DEDUP_BUFFER_SIZE 1024
 #define ZT_PEER_DEDUP_BUFFER_MASK 1023U
@@ -514,13 +522,12 @@ private:
 	struct p_EndpointCacheItem
 	{
 		Endpoint target;
-		uint64_t timesSeen;
-		int64_t firstSeen;
+		int64_t lastSeen;
 
 		ZT_INLINE bool operator<(const p_EndpointCacheItem &ci) const noexcept
-		{ return (ci.timesSeen < timesSeen) || ((ci.timesSeen == timesSeen) && (ci.firstSeen < firstSeen)); }
+		{ return lastSeen < ci.lastSeen; }
 
-		ZT_INLINE p_EndpointCacheItem() noexcept : target(), timesSeen(0), firstSeen(0)
+		ZT_INLINE p_EndpointCacheItem() noexcept : target(), lastSeen(0)
 		{}
 	};
 

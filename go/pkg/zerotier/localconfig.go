@@ -40,9 +40,6 @@ type LocalConfigSettings struct {
 	// SecondaryPort is the secondary UDP port, set to 0 to disable (picked at random by default)
 	SecondaryPort int `json:"secondaryPort"`
 
-	// PortSearch causes ZeroTier to try other ports automatically if it can't bind to configured ports
-	PortSearch bool `json:"portSearch"`
-
 	// PortMapping enables uPnP and NAT-PMP support
 	PortMapping bool `json:"portMapping"`
 
@@ -77,7 +74,7 @@ type LocalConfig struct {
 }
 
 // Read this local config from a file, initializing to defaults if the file does not exist.
-func (lc *LocalConfig) Read(p string, saveDefaultsIfNotExist bool, isTotallyNewNode bool) error {
+func (lc *LocalConfig) Read(p string, saveDefaultsIfNotExist, isTotallyNewNode bool) error {
 	// Initialize defaults, which may be replaced if we read a file from disk.
 	if !lc.initialized {
 		lc.initialized = true
@@ -88,7 +85,6 @@ func (lc *LocalConfig) Read(p string, saveDefaultsIfNotExist bool, isTotallyNewN
 
 		lc.Settings.PrimaryPort = 9993
 		lc.Settings.SecondaryPort = unassignedPrivilegedPorts[randomUInt()%uint(len(unassignedPrivilegedPorts))]
-		lc.Settings.PortSearch = true
 		lc.Settings.PortMapping = true
 		lc.Settings.LogSizeMax = 128
 

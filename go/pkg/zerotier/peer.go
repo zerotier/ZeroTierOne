@@ -13,15 +13,40 @@
 
 package zerotier
 
+// #include "../../native/GoGlue.h"
+import "C"
+
+import "unsafe"
+
 // Peer is another ZeroTier node
 type Peer struct {
-	Address          Address     `json:"address"`
-	Identity         *Identity   `json:"identity"`
-	Fingerprint      Fingerprint `json:"fingerprint"`
-	Version          [3]int      `json:"version"`
-	Latency          int         `json:"latency"`
-	Root             bool        `json:"root"`
-	Paths            []Path      `json:"paths,omitempty"`
-	LocatorTimestamp int64       `json:"locatorTimestamp"`
-	LocatorEndpoints []Endpoint  `json:"locatorEndpoints,omitempty"`
+	Address     Address      `json:"address"`
+	Identity    *Identity    `json:"identity"`
+	Fingerprint *Fingerprint `json:"fingerprint"`
+	Version     [3]int       `json:"version"`
+	Latency     int          `json:"latency"`
+	Root        bool         `json:"root"`
+	Paths       []Path       `json:"paths,omitempty"`
+	Locator     *Locator     `json:"locator,omitempty"`
+}
+
+func newPeerFromCPeer(cp *C.ZT_Peer) (p *Peer, err error) {
+	p = new(Peer)
+	p.Address = Address(cp.address)
+	p.Identity, err = newIdentityFromCIdentity(cp.identity)
+	if err != nil {
+		return
+	}
+	p.Fingerprint = newFingerprintFromCFingerprint(&(cp.fingerprint))
+	p.Version[0] = int(cp.versionMajor)
+	p.Version[1] = int(cp.versionMinor)
+	p.Version[2] = int(cp.versionRev)
+	p.Latency = int(cp.latency)
+	p.Root = cp.root != 0
+	p.Paths = make([]Path, int(cp.pathCount))
+	for i := range p.Paths {
+		p.Paths[i].setFromCPath(&(cp.paths[i]))
+	}
+	p.Locator, err = NewLocatorFromBytes(C.GoBytes(unsafe.Pointer(cp.locator), C.int(cp.locatorSize)))
+	return
 }

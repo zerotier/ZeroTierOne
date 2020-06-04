@@ -18,14 +18,15 @@ import "C"
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"unsafe"
 )
 
 type Fingerprint struct {
-	Address Address `json:"address"`
-	Hash    []byte  `json:"hash"`
+	Address Address
+	Hash    []byte
 }
 
 func NewFingerprintFromString(fps string) (*Fingerprint, error) {
@@ -81,4 +82,20 @@ func (fp *Fingerprint) cFingerprint() *C.ZT_Fingerprint {
 	apifp.address = C.uint64_t(fp.Address)
 	copy((*[48]byte)(unsafe.Pointer(&apifp.hash[0]))[:], fp.Hash[:])
 	return &apifp
+}
+
+func (fp *Fingerprint) MarshalJSON() ([]byte, error) {
+	return []byte("\"" + fp.String() + "\""), nil
+}
+
+func (fp *Fingerprint) UnmarshalJSON(j []byte) error {
+	var s string
+	err := json.Unmarshal(j, &s)
+	if err != nil {
+		return err
+	}
+	fp2, err := NewFingerprintFromString(s)
+	fp.Address = fp2.Address
+	fp.Hash = fp2.Hash
+	return err
 }

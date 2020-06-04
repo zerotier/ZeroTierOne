@@ -13,12 +13,18 @@
 
 package zerotier
 
-import "net"
+// #include "../../native/GoGlue.h"
+import "C"
 
 // Path is a path to another peer on the network
 type Path struct {
-	IP            net.IP `json:"ip"`
-	Port          int    `json:"port"`
-	LastSend      int64  `json:"lastSend"`
-	LastReceive   int64  `json:"lastReceive"`
+	Endpoint    Endpoint `json:"endpoint"`
+	LastSend    int64    `json:"lastSend"`
+	LastReceive int64    `json:"lastReceive"`
+}
+
+func (p *Path) setFromCPath(cp *C.ZT_Path) {
+	p.Endpoint.setFromCEndpoint(&(cp.endpoint))
+	p.LastSend = int64(cp.lastSend)
+	p.LastReceive = int64(cp.lastReceive)
 }

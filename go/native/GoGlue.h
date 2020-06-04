@@ -48,6 +48,8 @@ void ZT_GoTap_deviceName(ZT_GoTap *tap,char nbuf[256]);
 void ZT_GoTap_setFriendlyName(ZT_GoTap *tap,const char *friendlyName);
 void ZT_GoTap_setMtu(ZT_GoTap *tap,unsigned int mtu);
 
+int ZT_isTemporaryV6Address(const char *ifname,const struct sockaddr_storage *a);
+
 #ifdef __cplusplus
 }
 #endif
