@@ -155,7 +155,7 @@ func newNetwork(node *Node, id NetworkID, t Tap) (*Network, error) {
 		config: NetworkConfig{
 			ID:     id,
 			MAC:    m,
-			Status: NetworkStatusRequestConfiguration,
+			Status: NetworkStatusRequestingConfiguration,
 			Type:   NetworkTypePrivate,
 			MTU:    int(defaultVirtualNetworkMTU),
 		},

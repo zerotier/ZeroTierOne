@@ -473,7 +473,7 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 			}
 			var nw APINetwork
 			if apiReadObj(out, req, &nw) == nil {
-				n := node.GetNetwork(nw.ID)
+				n := node.Network(nw.ID)
 				if n == nil {
 					if nw.ControllerFingerprint != nil && nw.ControllerFingerprint.Address != nw.ID.Controller() {
 						_ = apiSendObj(out, req, http.StatusBadRequest, &APIErr{"fingerprint's address does not match what should be the controller's address"})

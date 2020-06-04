@@ -89,7 +89,7 @@ func (id *Identity) initCIdentityPtr() bool {
 	return true
 }
 
-// NewIdentity generates a new identity of the selected type
+// NewIdentity generates a new identity of the selected type.
 func NewIdentity(identityType int) (*Identity, error) {
 	switch identityType {
 	case C.ZT_IDENTITY_TYPE_C25519:
@@ -160,7 +160,7 @@ func NewIdentityFromString(s string) (*Identity, error) {
 	return id, nil
 }
 
-// Address returns this identity's address
+// Address returns this identity's address.
 func (id *Identity) Address() Address { return id.address }
 
 // HasPrivate returns true if this identity has its own private portion.
@@ -172,7 +172,8 @@ func (id *Identity) Fingerprint() *Fingerprint {
 	return newFingerprintFromCFingerprint(C.ZT_Identity_fingerprint(id.cid))
 }
 
-// PrivateKeyString returns the full identity.secret if the private key is set, or an empty string if no private key is set.
+// PrivateKeyString returns the full identity.secret if the private key is set,
+// or an empty string if no private key is set.
 func (id *Identity) PrivateKeyString() string {
 	switch id.idtype {
 	case IdentityTypeC25519:
@@ -253,12 +254,10 @@ func (id *Identity) Equals(id2 *Identity) bool {
 	return id.address == id2.address && id.idtype == id2.idtype && bytes.Equal(id.publicKey, id2.publicKey) && bytes.Equal(id.privateKey, id2.privateKey)
 }
 
-// MarshalJSON marshals this Identity in its string format (private key is never included)
 func (id *Identity) MarshalJSON() ([]byte, error) {
 	return []byte("\"" + id.String() + "\""), nil
 }
 
-// UnmarshalJSON unmarshals this Identity from a string
 func (id *Identity) UnmarshalJSON(j []byte) error {
 	var s string
 	err := json.Unmarshal(j, &s)

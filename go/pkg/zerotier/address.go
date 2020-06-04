@@ -39,7 +39,8 @@ func NewAddressFromBytes(b []byte) (Address, error) {
 	return Address((uint64(b[0]) << 32) | (uint64(b[1]) << 24) | (uint64(b[2]) << 16) | (uint64(b[3]) << 8) | uint64(b[4])), nil
 }
 
-// Copy this address to a byte array, which must be 5 bytes in length or this will panic.
+// CopyTo writes this address to five bytes.
+// If b cannot store five bytes this will panic.
 func (a Address) CopyTo(b []byte) {
 	_ = b[4]
 	b[0] = byte(a >> 32)
@@ -52,7 +53,7 @@ func (a Address) CopyTo(b []byte) {
 // IsReserved returns true if this address is reserved and therefore is not valid for a real node.
 func (a Address) IsReserved() bool { return a == 0 || (a>>32) == 0xff }
 
-// String returns this address's 10-digit hex identifier
+// String returns this address's 10-digit hex identifier.
 func (a Address) String() string {
 	return fmt.Sprintf("%.10x", uint64(a))
 }

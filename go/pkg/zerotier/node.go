@@ -47,12 +47,14 @@ var nullLogger = log.New(ioutil.Discard, "", 0)
 
 const (
 	NetworkIDStringLength = 16
+	NEtworkIDLength       = 8
 	AddressStringLength   = 10
+	AddressLength         = 5
 
-	NetworkStatusRequestConfiguration int = C.ZT_NETWORK_STATUS_REQUESTING_CONFIGURATION
-	NetworkStatusOK                   int = C.ZT_NETWORK_STATUS_OK
-	NetworkStatusAccessDenied         int = C.ZT_NETWORK_STATUS_ACCESS_DENIED
-	NetworkStatusNotFound             int = C.ZT_NETWORK_STATUS_NOT_FOUND
+	NetworkStatusRequestingConfiguration int = C.ZT_NETWORK_STATUS_REQUESTING_CONFIGURATION
+	NetworkStatusOK                      int = C.ZT_NETWORK_STATUS_OK
+	NetworkStatusAccessDenied            int = C.ZT_NETWORK_STATUS_ACCESS_DENIED
+	NetworkStatusNotFound                int = C.ZT_NETWORK_STATUS_NOT_FOUND
 
 	NetworkTypePrivate int = C.ZT_NETWORK_TYPE_PRIVATE
 	NetworkTypePublic  int = C.ZT_NETWORK_TYPE_PUBLIC
@@ -62,7 +64,8 @@ const (
 
 	defaultVirtualNetworkMTU = C.ZT_DEFAULT_MTU
 
-	// maxCNodeRefs is the maximum number of Node instances that can be created in this process (increasing is fine)
+	// maxCNodeRefs is the maximum number of Node instances that can be created in this process.
+	// This is perfectly fine to increase.
 	maxCNodeRefs = 8
 )
 
@@ -73,7 +76,10 @@ var (
 	CoreVersionRevision     int
 	CoreVersionBuild        int
 
-	cNodeRefs    [maxCNodeRefs]*Node
+	// cNodeRefs maps an index to a *Node
+	cNodeRefs [maxCNodeRefs]*Node
+
+	// cNodeRefsUsed maps an index to whether or not the corresponding cNodeRefs[] entry is used.
 	cNodeRefUsed [maxCNodeRefs]uint32
 )
 
@@ -92,7 +98,9 @@ type Node struct {
 	// Time this node was created
 	startupTime int64
 
-	// an arbitrary uintptr given to the core as its pointer back to Go's Node instance
+	// an arbitrary uintptr given to the core as its pointer back to Go's Node instance.
+	// This is an index in the cNodeRefs array, which is synchronized by way of a set of
+	// used/free booleans accessed atomically.
 	cPtr uintptr
 
 	// networks contains networks we have joined, and networksByMAC by their local MAC address
@@ -100,13 +108,14 @@ type Node struct {
 	networksByMAC map[MAC]*Network // locked by networksLock
 	networksLock  sync.RWMutex
 
-	// interfaceAddresses are physical IPs assigned to the local machine (detected, not configured)
+	// interfaceAddresses are physical IPs assigned to the local machine.
+	// These are the detected IPs, not those configured explicitly. They include
+	// both private and global IPs.
 	interfaceAddresses     map[string]net.IP
 	interfaceAddressesLock sync.Mutex
 
-	// online and running are atomic flags set to control and monitor background tasks
-	online  uint32
 	running uint32
+	online  uint32
 
 	basePath        string
 	peersPath       string
@@ -115,20 +124,20 @@ type Node struct {
 	infoLogPath     string
 	errorLogPath    string
 
-	// localConfig is the current state of local.conf
+	// localConfig is the current state of local.conf.
 	localConfig         *LocalConfig
 	previousLocalConfig *LocalConfig
 	localConfigLock     sync.RWMutex
 
-	// logs for information, errors, and trace output
 	infoLogW  *sizeLimitWriter
 	errLogW   *sizeLimitWriter
 	traceLogW io.Writer
-	infoLog   *log.Logger
-	errLog    *log.Logger
-	traceLog  *log.Logger
 
-	// gn is the GoNode instance
+	infoLog  *log.Logger
+	errLog   *log.Logger
+	traceLog *log.Logger
+
+	// gn is the GoNode instance, see go/native/GoNode.hpp
 	gn *C.ZT_GoNode
 
 	// zn is the underlying ZT_Node (ZeroTier::Node) instance
@@ -137,11 +146,12 @@ type Node struct {
 	// id is the identity of this node (includes private key)
 	id *Identity
 
-	// HTTP server instances: one for a named socket (Unix domain or Windows named pipe) and one on a local TCP socket
-	namedSocketApiServer *http.Server
-	tcpApiServer         *http.Server
+	namedSocketAPIServer *http.Server
+	tcpAPIServer         *http.Server
 
-	// runWaitGroup is used to wait for all node goroutines on shutdown
+	// runWaitGroup is used to wait for all node goroutines on shutdown.
+	// Any new goroutine is tracked via this wait group so node shutdown can
+	// itself wait until all goroutines have exited.
 	runWaitGroup sync.WaitGroup
 }
 
@@ -163,8 +173,11 @@ func NewNode(basePath string) (n *Node, err error) {
 		}
 	}
 	if cPtr < 0 {
-		return nil, errors.New("too many nodes in this instance")
+		return nil, ErrInternal
 	}
+
+	// Check and delete node reference pointer if it's non-negative. This helps
+	// with error handling cleanup. At the end we set cPtr to -1 to disable.
 	defer func() {
 		if cPtr >= 0 {
 			atomic.StoreUint32(&cNodeRefUsed[cPtr], 0)
@@ -175,7 +188,7 @@ func NewNode(basePath string) (n *Node, err error) {
 	n.networks = make(map[NetworkID]*Network)
 	n.networksByMAC = make(map[MAC]*Network)
 	n.interfaceAddresses = make(map[string]net.IP)
-	n.online = 0
+
 	n.running = 1
 
 	_ = os.MkdirAll(basePath, 0755)
@@ -265,7 +278,7 @@ func NewNode(basePath string) (n *Node, err error) {
 		_ = n.localConfig.Write(n.localConfigPath)
 	}
 
-	n.namedSocketApiServer, n.tcpApiServer, err = createAPIServer(basePath, n)
+	n.namedSocketAPIServer, n.tcpAPIServer, err = createAPIServer(basePath, n)
 	if err != nil {
 		n.infoLog.Printf("FATAL: unable to start API server: %s", err.Error())
 		return nil, err
@@ -293,12 +306,13 @@ func NewNode(basePath string) (n *Node, err error) {
 		defer n.runWaitGroup.Done()
 		lastMaintenanceRun := int64(0)
 		for atomic.LoadUint32(&n.running) != 0 {
-			time.Sleep(500 * time.Millisecond)
+			time.Sleep(250 * time.Millisecond)
 			nowS := time.Now().Unix()
 			if (nowS - lastMaintenanceRun) >= 30 {
 				lastMaintenanceRun = nowS
 				n.runMaintenance()
 			}
+			time.Sleep(250 * time.Millisecond)
 		}
 	}()
 
@@ -311,11 +325,11 @@ func NewNode(basePath string) (n *Node, err error) {
 // Close closes this Node and frees its underlying C++ Node structures
 func (n *Node) Close() {
 	if atomic.SwapUint32(&n.running, 0) != 0 {
-		if n.namedSocketApiServer != nil {
-			_ = n.namedSocketApiServer.Close()
+		if n.namedSocketAPIServer != nil {
+			_ = n.namedSocketAPIServer.Close()
 		}
-		if n.tcpApiServer != nil {
-			_ = n.tcpApiServer.Close()
+		if n.tcpAPIServer != nil {
+			_ = n.tcpAPIServer.Close()
 		}
 
 		C.ZT_GoNode_delete(n.gn)
@@ -369,9 +383,7 @@ func (n *Node) SetLocalConfig(lc *LocalConfig) (restartRequired bool, err error)
 		}
 	}
 
-	if n.localConfig.Settings.PrimaryPort != lc.Settings.PrimaryPort ||
-		n.localConfig.Settings.SecondaryPort != lc.Settings.SecondaryPort ||
-		n.localConfig.Settings.LogSizeMax != lc.Settings.LogSizeMax {
+	if n.localConfig.Settings.PrimaryPort != lc.Settings.PrimaryPort || n.localConfig.Settings.SecondaryPort != lc.Settings.SecondaryPort || n.localConfig.Settings.LogSizeMax != lc.Settings.LogSizeMax {
 		restartRequired = true
 	}
 
@@ -437,17 +449,29 @@ func (n *Node) Leave(nwid NetworkID) error {
 	return nil
 }
 
-func (n *Node) AddRoot(id *Identity, loc *Locator) (*Peer, error) {
-	// TODO
-	return nil, nil
+// AddRoot designates a peer as root, adding it if missing.
+func (n *Node) AddRoot(id *Identity) (*Peer, error) {
+	if !id.initCIdentityPtr() {
+		return nil, ErrInvalidKey
+	}
+	rc := C.ZT_Node_addRoot(n.zn, nil, id.cid)
+	if rc != 0 {
+		return nil, ErrInvalidParameter
+	}
+	p := n.Peer(id.Fingerprint())
+	if p == nil {
+		return nil, ErrInvalidParameter
+	}
+	return p, nil
 }
 
+// RemoveRoot un-designates a peer as root.
 func (n *Node) RemoveRoot(address Address) {
 	C.ZT_Node_removeRoot(n.zn, nil, C.uint64_t(address))
 }
 
-// GetNetwork looks up a network by ID or returns nil if not joined
-func (n *Node) GetNetwork(nwid NetworkID) *Network {
+// Network looks up a network by ID or returns nil if not joined
+func (n *Node) Network(nwid NetworkID) *Network {
 	n.networksLock.RLock()
 	nw := n.networks[nwid]
 	n.networksLock.RUnlock()
@@ -482,6 +506,32 @@ func (n *Node) Peers() []*Peer {
 		return peers[a].Address < peers[b].Address
 	})
 	return peers
+}
+
+// Peer looks up a single peer by address or full fingerprint.
+// The fpOrAddress parameter may be either. If it is neither nil is returned.
+// A nil pointer is returned if nothing is found.
+func (n *Node) Peer(fpOrAddress interface{}) *Peer {
+	fp, _ := fpOrAddress.(*Fingerprint)
+	if fp == nil {
+		a, _ := fpOrAddress.(*Address)
+		if a == nil {
+			return nil
+		}
+		fp = &Fingerprint{Address: *a}
+	}
+	pl := C.ZT_Node_peers(n.zn)
+	if pl != nil {
+		for i := uintptr(0); i < uintptr(pl.peerCount); i++ {
+			p, _ := newPeerFromCPeer((*C.ZT_Peer)(unsafe.Pointer(uintptr(unsafe.Pointer(pl.peers)) + (i * C.sizeof_ZT_Peer))))
+			if p != nil && p.Identity.Fingerprint().BestSpecificityEquals(fp) {
+				C.ZT_freeQueryResult(unsafe.Pointer(pl))
+				return p
+			}
+		}
+		C.ZT_freeQueryResult(unsafe.Pointer(pl))
+	}
+	return nil
 }
 
 // AddPeer adds a peer by explicit identity.

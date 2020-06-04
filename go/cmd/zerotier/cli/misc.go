@@ -193,13 +193,13 @@ func readLocator(s string) *zerotier.Locator {
 func networkStatusStr(status int) string {
 	switch status {
 	case zerotier.NetworkStatusNotFound:
-		return "NOTFOUND"
+		return "not-found"
 	case zerotier.NetworkStatusAccessDenied:
-		return "ACCESSDENIED"
-	case zerotier.NetworkStatusRequestConfiguration:
-		return "UPDATING"
+		return "access-denied"
+	case zerotier.NetworkStatusRequestingConfiguration:
+		return "updating"
 	case zerotier.NetworkStatusOK:
-		return "OK"
+		return "ok"
 	}
 	return "???"
 }
