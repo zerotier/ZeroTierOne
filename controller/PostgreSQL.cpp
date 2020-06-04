@@ -485,18 +485,20 @@ void PostgreSQL::initializeMembers(PGconn *conn)
 				deletes.insert(key);
 			}
 
-			if (_rc->clusterMode) {
-				auto tx = _cluster->transaction(_myAddressStr, true);
-				for (std::string k : deletes) {
-					tx.del(k);
+			if (!deletes.empty()) {
+				if (_rc->clusterMode) {
+					auto tx = _cluster->transaction(_myAddressStr, true);
+					for (std::string k : deletes) {
+						tx.del(k);
+					}
+					tx.exec();
+				} else {
+					auto tx = _redis->transaction(true);
+					for (std::string k : deletes) {
+						tx.del(k);
+					}
+					tx.exec();
 				}
-				tx.exec();
-			} else {
-				auto tx = _redis->transaction(true);
-				for (std::string k : deletes) {
-					tx.del(k);
-				}
-				tx.exec();
 			}
 		}
 		
