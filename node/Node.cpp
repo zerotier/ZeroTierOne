@@ -349,13 +349,9 @@ ZT_ResultCode Node::multicastUnsubscribe(uint64_t nwid, uint64_t multicastGroup,
 	} else return ZT_RESULT_ERROR_NETWORK_NOT_FOUND;
 }
 
-ZT_ResultCode Node::addRoot(void *tPtr, const ZT_Identity *id, const ZT_Locator *loc)
+ZT_ResultCode Node::addRoot(void *tPtr, const ZT_Identity *id)
 {
-	if ((!id) || (!loc))
-		return ZT_RESULT_ERROR_BAD_PARAMETER;
-	const SharedPtr<const Locator> locator(new Locator(*reinterpret_cast<const Locator *>(loc)));
-	// SECURITY: locator credential validation happens in Topology.cpp in addRoot().
-	return RR->topology->addRoot(tPtr, *reinterpret_cast<const Identity *>(id), locator) ? ZT_RESULT_OK : ZT_RESULT_ERROR_INVALID_CREDENTIAL;
+	return (RR->topology->addRoot(tPtr, *reinterpret_cast<const Identity *>(id))) ? ZT_RESULT_OK : ZT_RESULT_ERROR_BAD_PARAMETER;
 }
 
 ZT_ResultCode Node::removeRoot(void *tPtr, const uint64_t address)
@@ -891,10 +887,10 @@ enum ZT_ResultCode ZT_Node_multicastUnsubscribe(ZT_Node *node, uint64_t nwid, ui
 	}
 }
 
-enum ZT_ResultCode ZT_Node_addRoot(ZT_Node *node, void *tptr, const ZT_Identity *id, const ZT_Locator *loc)
+enum ZT_ResultCode ZT_Node_addRoot(ZT_Node *node, void *tptr, const ZT_Identity *id)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->addRoot(tptr, id, loc);
+		return reinterpret_cast<ZeroTier::Node *>(node)->addRoot(tptr, id);
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch (...) {

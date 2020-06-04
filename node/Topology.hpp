@@ -172,17 +172,13 @@ public:
 	}
 
 	/**
-	 * Add or update a root server and its locator
-	 *
-	 * This also validates the identity and checks the locator signature,
-	 * returning false if either of these is not valid.
+	 * Flag a peer as a root, adding the peer if it is not known
 	 *
 	 * @param tPtr Thread pointer
-	 * @param id Root identity
-	 * @param loc Root locator
-	 * @return True if identity and locator are valid and root was added / updated
+	 * @param id Root identity (will be locally validated)
+	 * @return Root peer or NULL if some problem occurred
 	 */
-	bool addRoot(void *tPtr,const Identity &id,const SharedPtr<const Locator> &loc);
+	SharedPtr<Peer> addRoot(void *tPtr, const Identity &id);
 
 	/**
 	 * Remove a root server's identity from the root server set
@@ -239,7 +235,7 @@ private:
 	RWMutex m_peers_l; // locks m_peers, m_roots, and m_rootPeers
 	Map< uint64_t,SharedPtr<Path> > m_paths;
 	Map< Address,SharedPtr<Peer> > m_peers;
-	Map< Identity,SharedPtr<const Locator> > m_roots;
+	Set< Identity > m_roots;
 	Vector< SharedPtr<Peer> > m_rootPeers;
 };
 

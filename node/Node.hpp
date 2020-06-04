@@ -100,8 +100,7 @@ public:
 
 	ZT_ResultCode addRoot(
 		void *tptr,
-		const ZT_Identity *id,
-		const ZT_Locator *loc);
+		const ZT_Identity *id);
 
 	ZT_ResultCode removeRoot(
 		void *tptr,

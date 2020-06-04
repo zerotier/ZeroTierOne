@@ -51,10 +51,12 @@ Commands:
   peer <address> [command] [option]    - Peer management commands
     show                                 Show peer details (default)
     try <endpoint> [...]                 Try peer at explicit endpoint
+    locator <locator>                    Explicitly update peer locator
   roots                                  List root peers
   root [command]                       - Root management commands
     add <identity> [endpoint]            Designate a peer as a root
     remove <address>                     Un-designate a peer as a root
+    subscribe <url>                      Subscribe to a root set
   set [option] [value]                 - Get or set a core config option
     port <port>                          Primary P2P port
     secondaryport <port/0>               Secondary P2P port (0 to disable)
