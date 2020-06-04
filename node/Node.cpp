@@ -66,7 +66,11 @@ struct _sortPeerPtrsByAddress
 
 } // anonymous namespace
 
-Node::Node(void *uPtr, void *tPtr, const struct ZT_Node_Callbacks *callbacks, int64_t now) :
+Node::Node(
+	void *uPtr,
+	void *tPtr,
+	const struct ZT_Node_Callbacks *callbacks,
+	int64_t now) :
 	m_RR(this),
 	RR(&m_RR),
 	m_objects(nullptr),
@@ -210,7 +214,10 @@ ZT_ResultCode Node::processVirtualNetworkFrame(
 	}
 }
 
-ZT_ResultCode Node::processBackgroundTasks(void *tPtr, int64_t now, volatile int64_t *nextBackgroundTaskDeadline)
+ZT_ResultCode Node::processBackgroundTasks(
+	void *tPtr,
+	int64_t now,
+	volatile int64_t *nextBackgroundTaskDeadline)
 {
 	m_now = now;
 	Mutex::Lock bl(m_backgroundTasksLock);
@@ -278,7 +285,11 @@ ZT_ResultCode Node::processBackgroundTasks(void *tPtr, int64_t now, volatile int
 	return ZT_RESULT_OK;
 }
 
-ZT_ResultCode Node::join(uint64_t nwid, const ZT_Fingerprint *controllerFingerprint, void *uptr, void *tptr)
+ZT_ResultCode Node::join(
+	uint64_t nwid,
+	const ZT_Fingerprint *controllerFingerprint,
+	void *uptr,
+	void *tptr)
 {
 	Fingerprint fp;
 	if (controllerFingerprint) {
@@ -297,7 +308,10 @@ ZT_ResultCode Node::join(uint64_t nwid, const ZT_Fingerprint *controllerFingerpr
 	return ZT_RESULT_OK;
 }
 
-ZT_ResultCode Node::leave(uint64_t nwid, void **uptr, void *tptr)
+ZT_ResultCode Node::leave(
+	uint64_t nwid,
+	void **uptr,
+	void *tptr)
 {
 	ZT_SPEW("leaving network %.16llx",nwid);
 	ZT_VirtualNetworkConfig ctmp;
@@ -329,7 +343,11 @@ ZT_ResultCode Node::leave(uint64_t nwid, void **uptr, void *tptr)
 	return ZT_RESULT_OK;
 }
 
-ZT_ResultCode Node::multicastSubscribe(void *tPtr, uint64_t nwid, uint64_t multicastGroup, unsigned long multicastAdi)
+ZT_ResultCode Node::multicastSubscribe(
+	void *tPtr,
+	uint64_t nwid,
+	uint64_t multicastGroup,
+	unsigned long multicastAdi)
 {
 	ZT_SPEW("multicast subscribe to %s:%lu",MAC(multicastGroup).toString().c_str(),multicastAdi);
 	const SharedPtr<Network> nw(this->network(nwid));
@@ -339,7 +357,10 @@ ZT_ResultCode Node::multicastSubscribe(void *tPtr, uint64_t nwid, uint64_t multi
 	} else return ZT_RESULT_ERROR_NETWORK_NOT_FOUND;
 }
 
-ZT_ResultCode Node::multicastUnsubscribe(uint64_t nwid, uint64_t multicastGroup, unsigned long multicastAdi)
+ZT_ResultCode Node::multicastUnsubscribe(
+	uint64_t nwid,
+	uint64_t multicastGroup,
+	unsigned long multicastAdi)
 {
 	ZT_SPEW("multicast unsubscribe from %s:%lu",MAC(multicastGroup).toString().c_str(),multicastAdi);
 	const SharedPtr<Network> nw(this->network(nwid));
@@ -349,12 +370,16 @@ ZT_ResultCode Node::multicastUnsubscribe(uint64_t nwid, uint64_t multicastGroup,
 	} else return ZT_RESULT_ERROR_NETWORK_NOT_FOUND;
 }
 
-ZT_ResultCode Node::addRoot(void *tPtr, const ZT_Identity *id)
+ZT_ResultCode Node::addRoot(
+	void *tPtr,
+	const ZT_Identity *id)
 {
 	return (RR->topology->addRoot(tPtr, *reinterpret_cast<const Identity *>(id))) ? ZT_RESULT_OK : ZT_RESULT_ERROR_BAD_PARAMETER;
 }
 
-ZT_ResultCode Node::removeRoot(void *tPtr, const uint64_t address)
+ZT_ResultCode Node::removeRoot(
+	void *tPtr,
+	const uint64_t address)
 {
 	RR->topology->removeRoot(tPtr, Address(address));
 	return ZT_RESULT_OK;
@@ -484,14 +509,18 @@ ZT_VirtualNetworkList *Node::networks() const
 	return nl;
 }
 
-void Node::setNetworkUserPtr(uint64_t nwid, void *ptr)
+void Node::setNetworkUserPtr(
+	uint64_t nwid,
+	void *ptr)
 {
 	SharedPtr<Network> nw(network(nwid));
 	if (nw)
 		*(nw->userPtr()) = ptr;
 }
 
-void Node::setInterfaceAddresses(const ZT_InterfaceAddress *addrs, unsigned int addrCount)
+void Node::setInterfaceAddresses(
+	const ZT_InterfaceAddress *addrs,
+	unsigned int addrCount)
 {
 	Mutex::Lock _l(m_localInterfaceAddresses_m);
 	m_localInterfaceAddresses.clear();
@@ -508,7 +537,43 @@ void Node::setInterfaceAddresses(const ZT_InterfaceAddress *addrs, unsigned int 
 	}
 }
 
-int Node::sendUserMessage(void *tptr, uint64_t dest, uint64_t typeId, const void *data, unsigned int len)
+ZT_ResultCode Node::addPeer(
+	void *tptr,
+	const ZT_Identity *identity)
+{
+	if (!identity)
+		return ZT_RESULT_ERROR_BAD_PARAMETER;
+	SharedPtr<Peer> peer(RR->topology->peer(tptr, reinterpret_cast<const Identity *>(identity)->address()));
+	if (!peer) {
+		peer.set(new Peer(RR));
+		peer->init(*reinterpret_cast<const Identity *>(identity));
+		peer = RR->topology->add(tptr, peer);
+	}
+	return (peer->identity() == *reinterpret_cast<const Identity *>(identity)) ? ZT_RESULT_OK : ZT_RESULT_ERROR_COLLIDING_OBJECT;
+}
+
+int Node::tryPeer(
+	void *tptr,
+	const ZT_Fingerprint *fp,
+	const ZT_Endpoint *endpoint,
+	int retries)
+{
+	if ((!fp) || (!endpoint))
+		return 0;
+	const SharedPtr<Peer> peer(RR->topology->peer(tptr,fp->address,true));
+	if ((peer) && (peer->identity().fingerprint().bestSpecificityEquals(*fp))) {
+		peer->contact(tptr, m_now, Endpoint(*endpoint), std::min(retries,1));
+		return 1;
+	}
+	return 0;
+}
+
+int Node::sendUserMessage(
+	void *tptr,
+	uint64_t dest,
+	uint64_t typeId,
+	const void *data,
+	unsigned int len)
 {
 	try {
 		if (RR->identity.address().toInt() != dest) {
@@ -775,7 +840,7 @@ enum ZT_ResultCode ZT_Node_new(ZT_Node **node, void *uptr, void *tptr, const str
 	} catch (std::runtime_error &exc) {
 		return ZT_RESULT_FATAL_ERROR_DATA_STORE_FAILED;
 	} catch (...) {
-		return ZT_RESULT_FATAL_ERROR_INTERNAL;
+		return ZT_RESULT_ERROR_INTERNAL;
 	}
 }
 
@@ -804,7 +869,9 @@ enum ZT_ResultCode ZT_Node_processWirePacket(
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch (...) {
-		return ZT_RESULT_OK; // "OK" since invalid packets are simply dropped, but the system is still up
+		// "OK" since invalid packets are simply dropped, but the system is still up.
+		// We should never make it here, but if we did that would be the interpretation.
+		return ZT_RESULT_OK;
 	}
 }
 
@@ -828,7 +895,7 @@ enum ZT_ResultCode ZT_Node_processVirtualNetworkFrame(
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch (...) {
-		return ZT_RESULT_FATAL_ERROR_INTERNAL;
+		return ZT_RESULT_ERROR_INTERNAL;
 	}
 }
 
@@ -839,7 +906,7 @@ enum ZT_ResultCode ZT_Node_processBackgroundTasks(ZT_Node *node, void *tptr, int
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch (...) {
-		return ZT_RESULT_FATAL_ERROR_INTERNAL;
+		return ZT_RESULT_ERROR_INTERNAL;
 	}
 }
 
@@ -850,7 +917,7 @@ enum ZT_ResultCode ZT_Node_join(ZT_Node *node, uint64_t nwid, const ZT_Fingerpri
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch (...) {
-		return ZT_RESULT_FATAL_ERROR_INTERNAL;
+		return ZT_RESULT_ERROR_INTERNAL;
 	}
 }
 
@@ -861,7 +928,7 @@ enum ZT_ResultCode ZT_Node_leave(ZT_Node *node, uint64_t nwid, void **uptr, void
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch (...) {
-		return ZT_RESULT_FATAL_ERROR_INTERNAL;
+		return ZT_RESULT_ERROR_INTERNAL;
 	}
 }
 
@@ -872,7 +939,7 @@ enum ZT_ResultCode ZT_Node_multicastSubscribe(ZT_Node *node, void *tptr, uint64_
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch (...) {
-		return ZT_RESULT_FATAL_ERROR_INTERNAL;
+		return ZT_RESULT_ERROR_INTERNAL;
 	}
 }
 
@@ -883,7 +950,7 @@ enum ZT_ResultCode ZT_Node_multicastUnsubscribe(ZT_Node *node, uint64_t nwid, ui
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch (...) {
-		return ZT_RESULT_FATAL_ERROR_INTERNAL;
+		return ZT_RESULT_ERROR_INTERNAL;
 	}
 }
 
@@ -894,7 +961,7 @@ enum ZT_ResultCode ZT_Node_addRoot(ZT_Node *node, void *tptr, const ZT_Identity 
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch (...) {
-		return ZT_RESULT_FATAL_ERROR_INTERNAL;
+		return ZT_RESULT_ERROR_INTERNAL;
 	}
 }
 
@@ -905,7 +972,7 @@ enum ZT_ResultCode ZT_Node_removeRoot(ZT_Node *node, void *tptr, const uint64_t 
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch (...) {
-		return ZT_RESULT_FATAL_ERROR_INTERNAL;
+		return ZT_RESULT_ERROR_INTERNAL;
 	}
 }
 
@@ -953,6 +1020,20 @@ ZT_VirtualNetworkList *ZT_Node_networks(ZT_Node *node)
 	}
 }
 
+int ZT_Node_tryPeer(
+	ZT_Node *node,
+	void *tptr,
+	const ZT_Fingerprint *fp,
+	const ZT_Endpoint *endpoint,
+	int retries)
+{
+	try {
+		return reinterpret_cast<ZeroTier::Node *>(node)->tryPeer(tptr,fp,endpoint,retries);
+	} catch (...) {
+		return 0;
+	}
+}
+
 void ZT_Node_setNetworkUserPtr(ZT_Node *node, uint64_t nwid, void *ptr)
 {
 	try {
@@ -965,6 +1046,18 @@ void ZT_Node_setInterfaceAddresses(ZT_Node *node, const ZT_InterfaceAddress *add
 	try {
 		reinterpret_cast<ZeroTier::Node *>(node)->setInterfaceAddresses(addrs, addrCount);
 	} catch (...) {}
+}
+
+enum ZT_ResultCode ZT_Node_addPeer(
+	ZT_Node *node,
+	void *tptr,
+	const ZT_Identity *id)
+{
+	try {
+		return reinterpret_cast<ZeroTier::Node *>(node)->addPeer(tptr, id);
+	} catch (...) {
+		return ZT_RESULT_ERROR_INTERNAL;
+	}
 }
 
 int ZT_Node_sendUserMessage(ZT_Node *node, void *tptr, uint64_t dest, uint64_t typeId, const void *data, unsigned int len)

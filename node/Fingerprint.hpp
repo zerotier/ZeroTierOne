@@ -87,6 +87,24 @@ public:
 		return true;
 	}
 
+	/**
+	 * Check for equality with best possible specificity.
+	 * 
+	 * If both fingerprints have a hash, that is compared. Otherwise just the
+	 * addresses are compared.
+	 * 
+	 * @param fp Fingerprint to test
+	 */
+	ZT_INLINE bool bestSpecificityEquals(const ZT_Fingerprint &fp) const noexcept
+	{
+		if (address == fp.address) {
+			if (Utils::allZero(fp.hash, ZT_FINGERPRINT_HASH_SIZE) || Utils::allZero(hash, ZT_FINGERPRINT_HASH_SIZE))
+				return true;
+			return (memcmp(hash, fp.hash, ZT_FINGERPRINT_HASH_SIZE) == 0);
+		}
+		return false;
+	}
+
 	ZT_INLINE void zero() noexcept
 	{ memoryZero(this); }
 
@@ -115,22 +133,22 @@ public:
 		return ZT_FINGERPRINT_MARSHAL_SIZE;
 	}
 
-	ZT_INLINE bool operator==(const Fingerprint &h) const noexcept
+	ZT_INLINE bool operator==(const ZT_Fingerprint &h) const noexcept
 	{ return ((this->address == h.address) && (memcmp(this->hash, h.hash, ZT_FINGERPRINT_HASH_SIZE) == 0)); }
 
-	ZT_INLINE bool operator!=(const Fingerprint &h) const noexcept
+	ZT_INLINE bool operator!=(const ZT_Fingerprint &h) const noexcept
 	{ return !(*this == h); }
 
-	ZT_INLINE bool operator<(const Fingerprint &h) const noexcept
+	ZT_INLINE bool operator<(const ZT_Fingerprint &h) const noexcept
 	{ return ((this->address < h.address) || ((this->address == h.address) && (memcmp(this->hash, h.hash, ZT_FINGERPRINT_HASH_SIZE) < 0))); }
 
-	ZT_INLINE bool operator>(const Fingerprint &h) const noexcept
-	{ return (h < *this); }
+	ZT_INLINE bool operator>(const ZT_Fingerprint &h) const noexcept
+	{ return (*reinterpret_cast<const Fingerprint *>(&h) < *this); }
 
-	ZT_INLINE bool operator<=(const Fingerprint &h) const noexcept
-	{ return !(h < *this); }
+	ZT_INLINE bool operator<=(const ZT_Fingerprint &h) const noexcept
+	{ return !(*reinterpret_cast<const Fingerprint *>(&h) < *this); }
 
-	ZT_INLINE bool operator>=(const Fingerprint &h) const noexcept
+	ZT_INLINE bool operator>=(const ZT_Fingerprint &h) const noexcept
 	{ return !(*this < h); }
 };
 

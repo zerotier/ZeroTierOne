@@ -484,6 +484,39 @@ func (n *Node) Peers() []*Peer {
 	return peers
 }
 
+// AddPeer adds a peer by explicit identity.
+func (n *Node) AddPeer(id *Identity) error {
+	if id == nil {
+		return ErrInvalidParameter
+	}
+	if !id.initCIdentityPtr() {
+		return ErrInvalidKey
+	}
+	rc := C.ZT_Node_addPeer(n.zn, nil, id.cid)
+	if rc != 0 {
+		return ErrInvalidParameter
+	}
+	return nil
+}
+
+// TryPeer attempts to contact a peer at a given explicit endpoint.
+// The peer may be identified by an Address or a full Fingerprint. Any other
+// type for fpOrAddress will return false.
+func (n *Node) TryPeer(fpOrAddress interface{}, ep *Endpoint, retries int) bool {
+	if ep == nil {
+		return false
+	}
+	fp, _ := fpOrAddress.(*Fingerprint)
+	if fp == nil {
+		a, _ := fpOrAddress.(*Address)
+		if a == nil {
+			return false
+		}
+		fp = &Fingerprint{Address: *a}
+	}
+	return C.ZT_Node_tryPeer(n.zn, nil, fp.cFingerprint(), &ep.cep, C.int(retries)) != 0
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 func (n *Node) runMaintenance() {

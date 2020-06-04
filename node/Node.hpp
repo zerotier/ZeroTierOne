@@ -126,6 +126,16 @@ public:
 		const ZT_InterfaceAddress *addrs,
 		unsigned int addrCount);
 
+	ZT_ResultCode addPeer(
+		void *tptr,
+		const ZT_Identity *identity);
+
+	int tryPeer(
+		void *tptr,
+		const ZT_Fingerprint *fp,
+		const ZT_Endpoint *endpoint,
+		int retries);
+
 	int sendUserMessage(
 		void *tptr,
 		uint64_t dest,

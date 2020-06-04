@@ -470,7 +470,7 @@ enum ZT_ResultCode
 	ZT_RESULT_FATAL_ERROR_DATA_STORE_FAILED = 101,
 
 	/**
-	 * Internal error (e.g. unexpected exception indicating bug or build problem)
+	 * Internal error fatal to the instance
 	 */
 	ZT_RESULT_FATAL_ERROR_INTERNAL = 102,
 
@@ -494,7 +494,17 @@ enum ZT_ResultCode
 	/**
 	 * A credential or other object was supplied that failed cryptographic signature or integrity check
 	 */
-	ZT_RESULT_ERROR_INVALID_CREDENTIAL = 1003
+	ZT_RESULT_ERROR_INVALID_CREDENTIAL = 1003,
+
+	/**
+	 * An object collides with another object in some way (meaning is object-specific)
+	 */
+	ZT_RESULT_ERROR_COLLIDING_OBJECT = 1004,
+
+	/**
+	 * An internal error occurred, but one that is not fatal to the whole instance
+	 */
+	ZT_RESULT_ERROR_INTERNAL = 1005
 };
 
 /**
@@ -1844,6 +1854,9 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_addRoot(
  * This doesn't fully remove the peer from the peer list. It just removes
  * its root trust flag. If there is no longer any need to communicate with it
  * it may gradually time out and be removed.
+ * 
+ * The removeRoot() only takes an address since the identity is by definition
+ * already known and pinned.
  *
  * @param node Node instance
  * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
@@ -1942,6 +1955,49 @@ ZT_SDK_API void ZT_Node_setInterfaceAddresses(
 	ZT_Node *node,
 	const ZT_InterfaceAddress *addrs,
 	unsigned int addrCount);
+
+/**
+ * Add a peer directly by supplying its identity
+ * 
+ * This does not authorize the peer on a network (only the network's
+ * controller can do that) or otherwise give it special privileges. It
+ * also doesn't guarantee it will be contacted. It just adds it to the
+ * internal peer data set if it is not already present.
+ * 
+ * @param node Node instance
+ * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
+ * @param id Identity of peer to add
+ * @return OK (0) or error code
+ */
+ZT_SDK_API enum ZT_ResultCode ZT_Node_addPeer(
+	ZT_Node *node,
+	void *tptr,
+	const ZT_Identity *id);
+
+/**
+ * Attempt to contact a peer at an explicit endpoint address.
+ * 
+ * If the fingerprint structure's hash is all zeroes, the peer is
+ * looked up only by address.
+ * 
+ * This can only fail if the peer was not found.
+ * 
+ * Note that this can immediately (before this returns) result in
+ * calls to the send packet functions supplied to the core.
+ * 
+ * @param node Node instance
+ * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
+ * @param fp Fingerprint (or only address)
+ * @param endpoint Endpoint
+ * @param retries If greater than zero, try this many times
+ * @return Boolean: non-zero on success, zero if peer was not found
+ */
+ZT_SDK_API int ZT_Node_tryPeer(
+	ZT_Node *node,
+	void *tptr,
+	const ZT_Fingerprint *fp,
+	const ZT_Endpoint *endpoint,
+	int retries);
 
 /**
  * Send a VERB_USER_MESSAGE to another ZeroTier node
