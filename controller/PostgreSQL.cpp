@@ -437,14 +437,16 @@ void PostgreSQL::initializeNetworks(PGconn *conn)
 
 		PQclear(res);
 
-		if (_rc && _rc->clusterMode) {
-			auto tx = _cluster->transaction(_myAddressStr, true);
-			tx.sadd(setKey, networkSet.begin(), networkSet.end());
-			tx.exec();
-		} else if (_rc && !_rc->clusterMode) {
-			auto tx = _redis->transaction(true);
-			tx.sadd(setKey, networkSet.begin(), networkSet.end());
-			tx.exec();
+		if(!networkSet.empty()) {
+			if (_rc && _rc->clusterMode) {
+				auto tx = _cluster->transaction(_myAddressStr, true);
+				tx.sadd(setKey, networkSet.begin(), networkSet.end());
+				tx.exec();
+			} else if (_rc && !_rc->clusterMode) {
+				auto tx = _redis->transaction(true);
+				tx.sadd(setKey, networkSet.begin(), networkSet.end());
+				tx.exec();
+			}
 		}
 
 		if (++this->_ready == 2) {
@@ -643,19 +645,21 @@ void PostgreSQL::initializeMembers(PGconn *conn)
 
 		PQclear(res);
 
-		if (_rc != NULL) {
-			if (_rc->clusterMode) {
-				auto tx = _cluster->transaction(_myAddressStr, true);
-				for (auto it : networkMembers) {
-					tx.sadd(it.first, it.second);
+		if (!networkMembers.empty()) {
+			if (_rc != NULL) {
+				if (_rc->clusterMode) {
+					auto tx = _cluster->transaction(_myAddressStr, true);
+					for (auto it : networkMembers) {
+						tx.sadd(it.first, it.second);
+					}
+					tx.exec();
+				} else {
+					auto tx = _redis->transaction(true);
+					for (auto it : networkMembers) {
+						tx.sadd(it.first, it.second);
+					}
+					tx.exec();
 				}
-				tx.exec();
-			} else {
-				auto tx = _redis->transaction(true);
-				for (auto it : networkMembers) {
-					tx.sadd(it.first, it.second);
-				}
-				tx.exec();
 			}
 		}
 		if (++this->_ready == 2) {
