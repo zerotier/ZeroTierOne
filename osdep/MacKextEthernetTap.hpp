@@ -21,10 +21,10 @@
 #include <string>
 #include <vector>
 
-#include "../node/Constants.hpp"
-#include "../node/MAC.hpp"
-#include "../node/InetAddress.hpp"
-#include "../node/MulticastGroup.hpp"
+#include "../core/Constants.hpp"
+#include "../core/MAC.hpp"
+#include "../core/InetAddress.hpp"
+#include "../core/MulticastGroup.hpp"
 
 #include "Thread.hpp"
 #include "EthernetTap.hpp"

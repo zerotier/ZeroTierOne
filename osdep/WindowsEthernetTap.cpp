@@ -11,7 +11,7 @@
  */
 /****/
 
-#include "../node/Constants.hpp"
+#include "../core/Constants.hpp"
 
 #ifdef __WINDOWS__
 
@@ -40,8 +40,8 @@
 #include <iostream>
 #include <set>
 
-#include "../node/Utils.hpp"
-#include "../node/Mutex.hpp"
+#include "../core/Utils.hpp"
+#include "../core/Mutex.hpp"
 
 #include "WindowsEthernetTap.hpp"
 #include "OSUtils.hpp"

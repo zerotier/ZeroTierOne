@@ -14,11 +14,11 @@
 #ifndef ZT_OSXETHERNETTAP_HPP
 #define ZT_OSXETHERNETTAP_HPP
 
-#include "../node/Constants.hpp"
-#include "../node/MAC.hpp"
-#include "../node/InetAddress.hpp"
-#include "../node/MulticastGroup.hpp"
-#include "../node/Mutex.hpp"
+#include "../core/Constants.hpp"
+#include "../core/MAC.hpp"
+#include "../core/InetAddress.hpp"
+#include "../core/MulticastGroup.hpp"
+#include "../core/Mutex.hpp"
 #include "Thread.hpp"
 #include "EthernetTap.hpp"
 

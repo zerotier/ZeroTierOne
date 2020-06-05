@@ -13,15 +13,15 @@
 
 #include "GoGlue.h"
 
-#include "../../node/Constants.hpp"
-#include "../../node/InetAddress.hpp"
-#include "../../node/Node.hpp"
-#include "../../node/Utils.hpp"
-#include "../../node/MAC.hpp"
-#include "../../node/Address.hpp"
-#include "../../node/Containers.hpp"
-#include "../../osdep/OSUtils.hpp"
-#include "../../osdep/EthernetTap.hpp"
+#include "../core/Constants.hpp"
+#include "../core/InetAddress.hpp"
+#include "../core/Node.hpp"
+#include "../core/Utils.hpp"
+#include "../core/MAC.hpp"
+#include "../core/Address.hpp"
+#include "../core/Containers.hpp"
+#include "../osdep/OSUtils.hpp"
+#include "../osdep/EthernetTap.hpp"
 
 #ifndef __WINDOWS__
 #include <unistd.h>

@@ -20,14 +20,14 @@
 #include <chrono>
 #include <atomic>
 
-#include "../node/Constants.hpp"
+#include "../core/Constants.hpp"
 
 namespace ZeroTier {
 
 /**
  * Simple C++11 thread-safe queue
  *
- * Do not use in node/ since we have not gone C++11 there yet.
+ * Do not use in core/ since we have not gone C++11 there yet.
  */
 template <class T>
 class BlockingQueue

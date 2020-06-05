@@ -21,9 +21,9 @@
 #include <vector>
 #include <stdexcept>
 
-#include "../node/Constants.hpp"
-#include "../node/MulticastGroup.hpp"
-#include "../node/MAC.hpp"
+#include "../core/Constants.hpp"
+#include "../core/MulticastGroup.hpp"
+#include "../core/MAC.hpp"
 #include "Thread.hpp"
 #include "EthernetTap.hpp"
 

@@ -14,7 +14,7 @@
 #ifndef ZT_LINUX_NETLINK_HPP
 #define ZT_LINUX_NETLINK_HPP
 
-#include "../node/Constants.hpp"
+#include "../core/Constants.hpp"
 
 #ifdef __LINUX__
 
@@ -26,11 +26,11 @@
 #include <sys/socket.h>
 #include <linux/if.h>
 
-#include "../node/InetAddress.hpp"
-#include "../node/MAC.hpp"
+#include "../core/InetAddress.hpp"
+#include "../core/MAC.hpp"
 #include "Thread.hpp"
-#include "../node/Hashtable.hpp"
-#include "../node/Mutex.hpp"
+#include "../core/Hashtable.hpp"
+#include "../core/Mutex.hpp"
 
 
 namespace ZeroTier {

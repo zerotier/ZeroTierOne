@@ -14,9 +14,9 @@
 #ifndef ZT_ARP_HPP
 #define ZT_ARP_HPP
 
-#include "../node/Constants.hpp"
-#include "../node/Containers.hpp"
-#include "../node/MAC.hpp"
+#include "../core/Constants.hpp"
+#include "../core/Containers.hpp"
+#include "../core/MAC.hpp"
 
 #include <utility>
 #include <vector>

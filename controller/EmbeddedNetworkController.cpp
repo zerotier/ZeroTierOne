@@ -21,12 +21,12 @@
 #include <thread>
 #include <memory>
 
-#include "../node/Constants.hpp"
-#include "../node/Node.hpp"
-#include "../node/CertificateOfMembership.hpp"
-#include "../node/NetworkConfig.hpp"
-#include "../node/Dictionary.hpp"
-#include "../node/MAC.hpp"
+#include "../core/Constants.hpp"
+#include "../core/Node.hpp"
+#include "../core/CertificateOfMembership.hpp"
+#include "../core/NetworkConfig.hpp"
+#include "../core/Dictionary.hpp"
+#include "../core/MAC.hpp"
 
 #include "EmbeddedNetworkController.hpp"
 #include "LFDB.hpp"

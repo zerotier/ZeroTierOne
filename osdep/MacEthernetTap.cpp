@@ -11,13 +11,13 @@
  */
 /****/
 
-#include "../node/Constants.hpp"
+#include "../core/Constants.hpp"
 
 #ifdef __APPLE__
 
-#include "../node/Utils.hpp"
-#include "../node/Mutex.hpp"
-#include "../node/Dictionary.hpp"
+#include "../core/Utils.hpp"
+#include "../core/Mutex.hpp"
+#include "../core/Dictionary.hpp"
 #include "OSUtils.hpp"
 #include "MacEthernetTap.hpp"
 #include "MacEthernetTapAgent.h"

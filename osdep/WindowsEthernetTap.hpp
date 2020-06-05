@@ -14,7 +14,7 @@
 #ifndef ZT_WINDOWSETHERNETTAP_HPP
 #define ZT_WINDOWSETHERNETTAP_HPP
 
-#include "../node/Constants.hpp"
+#include "../core/Constants.hpp"
 
 #ifdef __WINDOWS__
 
@@ -27,9 +27,9 @@
 #include <queue>
 #include <stdexcept>
 
-#include "../node/Mutex.hpp"
-#include "../node/MulticastGroup.hpp"
-#include "../node/InetAddress.hpp"
+#include "../core/Mutex.hpp"
+#include "../core/MulticastGroup.hpp"
+#include "../core/InetAddress.hpp"
 #include "../osdep/Thread.hpp"
 #include "EthernetTap.hpp"
 

@@ -11,9 +11,9 @@
  */
 /****/
 
-#include "../node/Constants.hpp"
-#include "../node/Utils.hpp"
-#include "../node/Containers.hpp"
+#include "../core/Constants.hpp"
+#include "../core/Utils.hpp"
+#include "../core/Containers.hpp"
 #include "OSUtils.hpp"
 
 #ifdef __WINDOWS__

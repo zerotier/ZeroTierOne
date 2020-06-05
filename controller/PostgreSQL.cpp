@@ -15,7 +15,7 @@
 
 #ifdef ZT_CONTROLLER_USE_LIBPQ
 
-#include "../node/Constants.hpp"
+#include "../core/Constants.hpp"
 #include "EmbeddedNetworkController.hpp"
 #include "RabbitMQ.hpp"
 #include "../version.h"

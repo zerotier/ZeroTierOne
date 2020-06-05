@@ -14,10 +14,10 @@
 #ifndef ZT_ETHERNETTAP_HPP
 #define ZT_ETHERNETTAP_HPP
 
-#include "../node/Constants.hpp"
-#include "../node/MAC.hpp"
-#include "../node/InetAddress.hpp"
-#include "../node/MulticastGroup.hpp"
+#include "../core/Constants.hpp"
+#include "../core/MAC.hpp"
+#include "../core/InetAddress.hpp"
+#include "../core/MulticastGroup.hpp"
 
 #include <string>
 #include <memory>

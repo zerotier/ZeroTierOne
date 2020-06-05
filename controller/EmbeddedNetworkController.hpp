@@ -25,11 +25,11 @@
 #include <unordered_map>
 #include <atomic>
 
-#include "../node/Constants.hpp"
-#include "../node/NetworkController.hpp"
-#include "../node/Utils.hpp"
-#include "../node/Address.hpp"
-#include "../node/InetAddress.hpp"
+#include "../core/Constants.hpp"
+#include "../core/NetworkController.hpp"
+#include "../core/Utils.hpp"
+#include "../core/Address.hpp"
+#include "../core/InetAddress.hpp"
 
 #include "../osdep/OSUtils.hpp"
 #include "../osdep/Thread.hpp"

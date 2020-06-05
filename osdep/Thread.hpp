@@ -16,7 +16,7 @@
 
 #include <stdexcept>
 
-#include "../node/Constants.hpp"
+#include "../core/Constants.hpp"
 
 #ifdef __WINDOWS__
 
@@ -24,7 +24,7 @@
 #include <Windows.h>
 #include <string.h>
 
-#include "../node/Mutex.hpp"
+#include "../core/Mutex.hpp"
 
 namespace ZeroTier {
 

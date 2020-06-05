@@ -20,7 +20,7 @@
 #ifdef ZT_SDK
 
 #include "../controller/EmbeddedNetworkController.hpp"
-#include "../node/Node.hpp"
+#include "../core/Node.hpp"
 #include "../include/VirtualTap.hpp"
 
 #else

@@ -22,7 +22,7 @@
 #include <stdexcept>
 #include <atomic>
 
-#include "../node/MulticastGroup.hpp"
+#include "../core/MulticastGroup.hpp"
 #include "Thread.hpp"
 #include "EthernetTap.hpp"
 

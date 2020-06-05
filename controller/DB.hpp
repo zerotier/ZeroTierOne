@@ -16,9 +16,9 @@
 
 //#define ZT_CONTROLLER_USE_LIBPQ
 
-#include "../node/Constants.hpp"
-#include "../node/Identity.hpp"
-#include "../node/InetAddress.hpp"
+#include "../core/Constants.hpp"
+#include "../core/Identity.hpp"
+#include "../core/InetAddress.hpp"
 #include "../osdep/OSUtils.hpp"
 #include "../osdep/BlockingQueue.hpp"
 

@@ -14,8 +14,8 @@
 #ifndef ZT_OSUTILS_HPP
 #define ZT_OSUTILS_HPP
 
-#include "../node/Constants.hpp"
-#include "../node/Containers.hpp"
+#include "../core/Constants.hpp"
+#include "../core/Containers.hpp"
 
 #include <stdarg.h>
 #include <time.h>
@@ -30,10 +30,6 @@
 #include <mach/mach.h>
 #include <mach/clock.h>
 #include <mach/mach_time.h>
-#endif
-
-#ifndef OMIT_JSON_SUPPORT
-#include "../ext/json/json.hpp"
 #endif
 
 namespace ZeroTier {

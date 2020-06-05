@@ -29,7 +29,7 @@ struct MQConfig {
 
 #ifdef ZT_CONTROLLER_USE_LIBPQ
 
-#include "../node/Mutex.hpp"
+#include "../core/Mutex.hpp"
 
 #include <amqp.h>
 #include <amqp_tcp_socket.h>

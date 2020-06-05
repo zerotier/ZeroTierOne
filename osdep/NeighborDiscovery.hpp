@@ -14,9 +14,9 @@
 #ifndef ZT_NEIGHBORDISCOVERY_HPP
 #define ZT_NEIGHBORDISCOVERY_HPP
 
-#include "../node/Containers.hpp"
-#include "../node/MAC.hpp"
-#include "../node/InetAddress.hpp"
+#include "../core/Containers.hpp"
+#include "../core/MAC.hpp"
+#include "../core/InetAddress.hpp"
 
 #define ZT_ND_QUERY_INTERVAL 2000
 #define ZT_ND_QUERY_MAX_TTL 5000

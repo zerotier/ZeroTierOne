@@ -19,8 +19,8 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "../../include/ZeroTierCore.h"
-#include "../../node/Constants.hpp"
+#include "../core/ZeroTierCore.h"
+#include "../core/Constants.hpp"
 
 #ifdef __cplusplus
 extern "C" {

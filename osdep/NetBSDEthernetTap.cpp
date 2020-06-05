@@ -50,9 +50,9 @@
 #include <algorithm>
 #include <utility>
 
-#include "../node/Constants.hpp"
-#include "../node/Utils.hpp"
-#include "../node/Mutex.hpp"
+#include "../core/Constants.hpp"
+#include "../core/Utils.hpp"
+#include "../core/Mutex.hpp"
 #include "OSUtils.hpp"
 #include "NetBSDEthernetTap.hpp"
 

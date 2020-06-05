@@ -11,7 +11,7 @@
  */
 /****/
 
-#include "../node/Constants.hpp"
+#include "../core/Constants.hpp"
 
 #ifdef __LINUX__
 
@@ -19,9 +19,9 @@
 #pragma GCC diagnostic ignored "-Wrestrict"
 #endif
 
-#include "../node/Utils.hpp"
-#include "../node/Mutex.hpp"
-#include "../node/Dictionary.hpp"
+#include "../core/Utils.hpp"
+#include "../core/Mutex.hpp"
+#include "../core/Dictionary.hpp"
 #include "OSUtils.hpp"
 #include "LinuxEthernetTap.hpp"
 #include "LinuxNetLink.hpp"
