@@ -22,7 +22,6 @@ import (
 	"zerotier/pkg/zerotier"
 )
 
-// Service is "zerotier service ..."
 func Service(basePath, authToken string, args []string) {
 	if len(args) > 0 {
 		Help()

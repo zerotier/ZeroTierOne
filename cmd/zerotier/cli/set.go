@@ -13,6 +13,5 @@
 
 package cli
 
-// Set CLI command
 func Set(basePath, authToken string, args []string) {
 }

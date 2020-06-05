@@ -14,6 +14,7 @@
 package cli
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"strconv"
@@ -22,41 +23,53 @@ import (
 	"zerotier/pkg/zerotier"
 )
 
-// Join CLI command
 func Join(basePath, authToken string, args []string) {
-	if len(args) < 1 || len(args) > 2 {
+	joinOpts := flag.NewFlagSet("join", flag.ContinueOnError)
+	controllerAuthToken := joinOpts.String("a", "", "")
+	controllerFingerprint := joinOpts.String("c", "", "")
+	err := joinOpts.Parse(os.Args[1:])
+	if err != nil {
 		Help()
 		os.Exit(1)
+		return
 	}
-
+	args = joinOpts.Args()
+	if len(args) < 1 {
+		Help()
+		os.Exit(1)
+		return
+	}
 	if len(args[0]) != zerotier.NetworkIDStringLength {
 		fmt.Printf("ERROR: invalid network ID: %s\n", args[0])
 		os.Exit(1)
 	}
+
+	_ = *controllerAuthToken // TODO: not implemented yet
+
+	var fp *zerotier.Fingerprint
+	if len(*controllerFingerprint) > 0 {
+		if strings.ContainsRune(*controllerFingerprint, '-') {
+			fp, err = zerotier.NewFingerprintFromString(*controllerFingerprint)
+			if err != nil {
+				fmt.Printf("ERROR: invalid network controller fingerprint: %s\n", *controllerFingerprint)
+				os.Exit(1)
+			}
+		} else {
+			id, err := zerotier.NewIdentityFromString(*controllerFingerprint)
+			if err != nil {
+				fmt.Printf("ERROR: invalid network controller identity: %s\n", *controllerFingerprint)
+				os.Exit(1)
+			}
+			fp = id.Fingerprint()
+		}
+	}
+
 	nwid, err := strconv.ParseUint(args[0], 16, 64)
 	if err != nil {
 		fmt.Printf("ERROR: invalid network ID: %s\n", args[0])
 		os.Exit(1)
 	}
 	nwids := fmt.Sprintf("%.16x", nwid)
-
-	var fp *zerotier.Fingerprint
-	if len(args) == 2 {
-		if strings.ContainsRune(args[1], '-') {
-			fp, err = zerotier.NewFingerprintFromString(args[1])
-			if err != nil {
-				fmt.Printf("ERROR: invalid network controller fingerprint: %s\n", args[1])
-				os.Exit(1)
-			}
-		} else {
-			id, err := zerotier.NewIdentityFromString(args[1])
-			if err != nil {
-				fmt.Printf("ERROR: invalid network controller identity: %s\n", args[1])
-				os.Exit(1)
-			}
-			fp = id.Fingerprint()
-		}
-	}
 
 	var network zerotier.APINetwork
 	network.ID = zerotier.NetworkID(nwid)

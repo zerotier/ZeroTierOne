@@ -21,7 +21,6 @@ import (
 	"zerotier/pkg/zerotier"
 )
 
-// Peers CLI command (also used for 'roots' command with rootsOnly set to true)
 func Peers(basePath, authToken string, args []string, jsonOutput bool, rootsOnly bool) {
 	var peers []zerotier.Peer
 	apiGet(basePath, authToken, "/peer", &peers)

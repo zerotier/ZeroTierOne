@@ -20,7 +20,6 @@ import (
 	"zerotier/pkg/zerotier"
 )
 
-// Leave CLI command
 func Leave(basePath, authToken string, args []string) {
 	if len(args) != 1 {
 		Help()

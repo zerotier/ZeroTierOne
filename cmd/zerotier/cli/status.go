@@ -20,7 +20,6 @@ import (
 	"zerotier/pkg/zerotier"
 )
 
-// Status shows service status info
 func Status(basePath, authToken string, args []string, jsonOutput bool) {
 	var status zerotier.APIStatus
 	apiGet(basePath, authToken, "/status", &status)

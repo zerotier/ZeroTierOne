@@ -34,11 +34,11 @@ Global Options:
 Commands:
   help                                   Show this help
   version                                Print version
-  service                                Start as service
+  service                                Start a node (see below)
   status                                 Show node status and configuration
-  join <network> [option]                Join a virtual network
-    auth <token>                         Join authorization token
-    fingerprint <fingerprint>            Full controller identity fingerprint
+  join [-options] <network>              Join a virtual network
+    -a <token>                           Join authorization token
+    -c <identity|fingerprint>            Controller identity or fingerprint
   leave <network>                        Leave a virtual network
   networks                               List VL2 virtual networks
   network <network> [command] [option] - Network management commands
@@ -82,8 +82,6 @@ Commands:
     sign <identity> <file>               Sign a file with an identity's key
     verify <identity> <file> <sig>       Verify a signature
 
-The 'service' command does not exit until the service receives a signal.
-
 An <address> may be specified as a 10-digit short ZeroTier address, a
 fingerprint containing both an address and a SHA384 hash, or an identity.
 The latter two options are equivalent in terms of specificity and may be
@@ -93,5 +91,8 @@ full identities and may be specified either verbatim or as a path to a file.
 
 An <endpoint> is a place where a peer may be reached. Currently these are
 just 'IP/port' format addresses but other types may be added in the future.
+
+The 'service' command starts a node. It will run until the node receives
+an exit signal and is normally not used directly.
 `,zerotier.CoreVersionMajor, zerotier.CoreVersionMinor, zerotier.CoreVersionRevision)
 }

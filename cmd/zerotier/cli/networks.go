@@ -20,7 +20,6 @@ import (
 	"zerotier/pkg/zerotier"
 )
 
-// Networks CLI command
 func Networks(basePath, authToken string, args []string, jsonOutput bool) {
 	var networks []zerotier.APINetwork
 	apiGet(basePath, authToken, "/network", &networks)

@@ -28,7 +28,7 @@ namespace ZeroTier {
 class Mutex
 {
 public:
-	ZT_INLINE Mutex() noexcept { pthread_mutex_init(&_mh,nullptr); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+	ZT_INLINE Mutex() noexcept { pthread_mutex_init(&_mh,nullptr); }
 	ZT_INLINE ~Mutex() noexcept { pthread_mutex_destroy(&_mh); }
 
 	ZT_INLINE void lock() const noexcept { pthread_mutex_lock(&((const_cast <Mutex *> (this))->_mh)); }
@@ -37,15 +37,15 @@ public:
 	class Lock
 	{
 	public:
-		explicit ZT_INLINE Lock(Mutex &m) noexcept : _m(&m) { m.lock(); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
-		explicit ZT_INLINE Lock(const Mutex &m) noexcept : _m(const_cast<Mutex *>(&m)) { _m->lock(); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+		explicit ZT_INLINE Lock(Mutex &m) noexcept : _m(&m) { m.lock(); }
+		explicit ZT_INLINE Lock(const Mutex &m) noexcept : _m(const_cast<Mutex *>(&m)) { _m->lock(); }
 		ZT_INLINE ~Lock() { _m->unlock(); }
 	private:
 		Mutex *const _m;
 	};
 
 private:
-	ZT_INLINE Mutex(const Mutex &) noexcept {} // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+	ZT_INLINE Mutex(const Mutex &) noexcept {}
 	ZT_INLINE const Mutex &operator=(const Mutex &) noexcept { return *this; }
 
 	pthread_mutex_t _mh;
@@ -54,7 +54,7 @@ private:
 class RWMutex
 {
 public:
-	ZT_INLINE RWMutex() noexcept { pthread_rwlock_init(&_mh,nullptr); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+	ZT_INLINE RWMutex() noexcept { pthread_rwlock_init(&_mh,nullptr); }
 	ZT_INLINE ~RWMutex() noexcept { pthread_rwlock_destroy(&_mh); }
 
 	ZT_INLINE void lock() const noexcept { pthread_rwlock_wrlock(&((const_cast <RWMutex *> (this))->_mh)); }
@@ -68,8 +68,8 @@ public:
 	class RLock
 	{
 	public:
-		explicit ZT_INLINE RLock(RWMutex &m) noexcept : _m(&m) { m.rlock(); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
-		explicit ZT_INLINE RLock(const RWMutex &m) noexcept : _m(const_cast<RWMutex *>(&m)) { _m->rlock(); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+		explicit ZT_INLINE RLock(RWMutex &m) noexcept : _m(&m) { m.rlock(); }
+		explicit ZT_INLINE RLock(const RWMutex &m) noexcept : _m(const_cast<RWMutex *>(&m)) { _m->rlock(); }
 		ZT_INLINE ~RLock() { _m->runlock(); }
 	private:
 		RWMutex *const _m;
@@ -81,8 +81,8 @@ public:
 	class Lock
 	{
 	public:
-		explicit ZT_INLINE Lock(RWMutex &m) noexcept : _m(&m) { m.lock(); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
-		explicit ZT_INLINE Lock(const RWMutex &m) noexcept : _m(const_cast<RWMutex *>(&m)) { _m->lock(); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+		explicit ZT_INLINE Lock(RWMutex &m) noexcept : _m(&m) { m.lock(); }
+		explicit ZT_INLINE Lock(const RWMutex &m) noexcept : _m(const_cast<RWMutex *>(&m)) { _m->lock(); }
 		ZT_INLINE ~Lock() { _m->unlock(); }
 	private:
 		RWMutex *const _m;
@@ -97,8 +97,8 @@ public:
 	class RMaybeWLock
 	{
 	public:
-		explicit ZT_INLINE RMaybeWLock(RWMutex &m) noexcept : _m(&m),_w(false) { m.rlock(); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
-		explicit ZT_INLINE RMaybeWLock(const RWMutex &m) noexcept : _m(const_cast<RWMutex *>(&m)),_w(false) { _m->rlock(); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+		explicit ZT_INLINE RMaybeWLock(RWMutex &m) noexcept : _m(&m),_w(false) { m.rlock(); }
+		explicit ZT_INLINE RMaybeWLock(const RWMutex &m) noexcept : _m(const_cast<RWMutex *>(&m)),_w(false) { _m->rlock(); }
 		ZT_INLINE void writing() noexcept { if (!_w) { _w = true; _m->runlock(); _m->lock(); } }
 		ZT_INLINE void reading() noexcept { if (_w) { _w = false; _m->unlock(); _m->rlock(); } }
 		ZT_INLINE ~RMaybeWLock() { if (_w) _m->unlock(); else _m->runlock(); }
@@ -108,7 +108,7 @@ public:
 	};
 
 private:
-	ZT_INLINE RWMutex(const RWMutex &) noexcept {} // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+	ZT_INLINE RWMutex(const RWMutex &) noexcept {}
 	ZT_INLINE const RWMutex &operator=(const RWMutex &) noexcept { return *this; }
 
 	pthread_rwlock_t _mh;
