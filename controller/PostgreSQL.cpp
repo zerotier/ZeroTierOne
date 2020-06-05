@@ -166,24 +166,24 @@ bool PostgreSQL::save(nlohmann::json &record,bool notifyListeners)
 			return false;
 		const std::string objtype = record["objtype"];
 		if (objtype == "network") {
-			const uint64_t nwid = OSUtils::jsonIntHex(record["id"],0ULL);
+			const uint64_t nwid = DB::jsonIntHex(record["id"],0ULL);
 			if (nwid) {
 				nlohmann::json old;
 				get(nwid,old);
 				if ((!old.is_object())||(!_compareRecords(old,record))) {
-					record["revision"] = OSUtils::jsonInt(record["revision"],0ULL) + 1ULL;
+					record["revision"] = DB::jsonInt(record["revision"],0ULL) + 1ULL;
 					_commitQueue.post(std::pair<nlohmann::json,bool>(record,notifyListeners));
 					modified = true;
 				}
 			}
 		} else if (objtype == "member") {
-			const uint64_t nwid = OSUtils::jsonIntHex(record["nwid"],0ULL);
-			const uint64_t id = OSUtils::jsonIntHex(record["id"],0ULL);
+			const uint64_t nwid = DB::jsonIntHex(record["nwid"],0ULL);
+			const uint64_t id = DB::jsonIntHex(record["id"],0ULL);
 			if ((id)&&(nwid)) {
 				nlohmann::json network,old;
 				get(nwid,network,id,old);
 				if ((!old.is_object())||(!_compareRecords(old,record))) {
-					record["revision"] = OSUtils::jsonInt(record["revision"],0ULL) + 1ULL;
+					record["revision"] = DB::jsonInt(record["revision"],0ULL) + 1ULL;
 					_commitQueue.post(std::pair<nlohmann::json,bool>(record,notifyListeners));
 					modified = true;
 				}
@@ -872,12 +872,12 @@ void PostgreSQL::commitThread()
 						target = (*config)["remoteTraceTarget"];
 					}
 
-					std::string caps = OSUtils::jsonDump((*config)["capabilities"], -1);
+					std::string caps = DB::jsonDump((*config)["capabilities"], -1);
 					std::string lastAuthTime = std::to_string((long long)(*config)["lastAuthorizedTime"]);
 					std::string lastDeauthTime = std::to_string((long long)(*config)["lastDeauthorizedTime"]);
 					std::string rtraceLevel = std::to_string((int)(*config)["remoteTraceLevel"]);
 					std::string rev = std::to_string((unsigned long long)(*config)["revision"]);
-					std::string tags = OSUtils::jsonDump((*config)["tags"], -1);
+					std::string tags = DB::jsonDump((*config)["tags"], -1);
 					std::string vmajor = std::to_string((int)(*config)["vMajor"]);
 					std::string vminor = std::to_string((int)(*config)["vMinor"]);
 					std::string vrev = std::to_string((int)(*config)["vRev"]);
@@ -924,7 +924,7 @@ void PostgreSQL::commitThread()
 
 					if (PQresultStatus(res) != PGRES_COMMAND_OK) {
 						fprintf(stderr, "ERROR: Error updating member: %s\n", PQresultErrorMessage(res));
-						fprintf(stderr, "%s", OSUtils::jsonDump(*config, 2).c_str());
+						fprintf(stderr, "%s", DB::jsonDump(*config, 2).c_str());
 						PQclear(res);
 						delete config;
 						config = nullptr;
@@ -1007,8 +1007,8 @@ void PostgreSQL::commitThread()
 
 					PQclear(res);
 
-					const uint64_t nwidInt = OSUtils::jsonIntHex((*config)["nwid"], 0ULL);
-					const uint64_t memberidInt = OSUtils::jsonIntHex((*config)["id"], 0ULL);
+					const uint64_t nwidInt = DB::jsonIntHex((*config)["nwid"], 0ULL);
+					const uint64_t memberidInt = DB::jsonIntHex((*config)["id"], 0ULL);
 					if (nwidInt && memberidInt) {
 						nlohmann::json nwOrig;
 						nlohmann::json memOrig;
@@ -1038,15 +1038,15 @@ void PostgreSQL::commitThread()
 					if ((*config)["rulesSource"].is_string()) {
 						rulesSource = (*config)["rulesSource"];
 					}
-					std::string caps = OSUtils::jsonDump((*config)["capabilitles"], -1);
+					std::string caps = DB::jsonDump((*config)["capabilitles"], -1);
 					std::string now = std::to_string(OSUtils::now());
 					std::string mtu = std::to_string((int)(*config)["mtu"]);
 					std::string mcastLimit = std::to_string((int)(*config)["multicastLimit"]);
 					std::string rtraceLevel = std::to_string((int)(*config)["remoteTraceLevel"]);
-					std::string rules = OSUtils::jsonDump((*config)["rules"], -1);
-					std::string tags = OSUtils::jsonDump((*config)["tags"], -1);
-					std::string v4mode = OSUtils::jsonDump((*config)["v4AssignMode"],-1);
-					std::string v6mode = OSUtils::jsonDump((*config)["v6AssignMode"], -1);
+					std::string rules = DB::jsonDump((*config)["rules"], -1);
+					std::string tags = DB::jsonDump((*config)["tags"], -1);
+					std::string v4mode = DB::jsonDump((*config)["v4AssignMode"],-1);
+					std::string v6mode = DB::jsonDump((*config)["v6AssignMode"], -1);
 					bool enableBroadcast = (*config)["enableBroadcast"];
 					bool isPrivate = (*config)["private"];
 
@@ -1253,7 +1253,7 @@ void PostgreSQL::commitThread()
 					}
 					PQclear(res);
 
-					const uint64_t nwidInt = OSUtils::jsonIntHex((*config)["nwid"], 0ULL);
+					const uint64_t nwidInt = DB::jsonIntHex((*config)["nwid"], 0ULL);
 					if (nwidInt) {
 						nlohmann::json nwOrig;
 						nlohmann::json nwNew(*config);

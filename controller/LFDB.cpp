@@ -19,7 +19,7 @@
 #include <sstream>
 
 #include "../osdep/OSUtils.hpp"
-#include "../ext/cpp-httplib/httplib.h"
+#include "./thirdparty/cpp-httplib/httplib.h"
 
 namespace ZeroTier
 {
@@ -189,7 +189,7 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 				auto resp = htcli.Post("/query",query.str(),"application/json");
 				if (resp) {
 					if (resp->status == 200) {
-						nlohmann::json results(OSUtils::jsonParse(resp->body));
+						nlohmann::json results(DB::jsonParse(resp->body));
 						if ((results.is_array())&&(results.size() > 0)) {
 							for(std::size_t ri=0;ri<results.size();++ri) {
 								nlohmann::json &rset = results[ri];
@@ -201,7 +201,7 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 										if (record.is_object()) {
 											const std::string recordValue = result["Value"];
 											//printf("GET network %s\n",recordValue.c_str());
-											nlohmann::json network(OSUtils::jsonParse(recordValue));
+											nlohmann::json network(DB::jsonParse(recordValue));
 											if (network.is_object()) {
 												const std::string idstr = network["id"];
 												const uint64_t id = Utils::hexStrToU64(idstr.c_str());
@@ -257,7 +257,7 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 				auto resp = htcli.Post("/query",query.str(),"application/json");
 				if (resp) {
 					if (resp->status == 200) {
-						nlohmann::json results(OSUtils::jsonParse(resp->body));
+						nlohmann::json results(DB::jsonParse(resp->body));
 						if ((results.is_array())&&(results.size() > 0)) {
 							for(std::size_t ri=0;ri<results.size();++ri) {
 								nlohmann::json &rset = results[ri];
@@ -269,7 +269,7 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 										if (record.is_object()) {
 											const std::string recordValue = result["Value"];
 											//printf("GET member %s\n",recordValue.c_str());
-											nlohmann::json member(OSUtils::jsonParse(recordValue));
+											nlohmann::json member(DB::jsonParse(recordValue));
 											if (member.is_object()) {
 												const std::string nwidstr = member["nwid"];
 												const std::string idstr = member["id"];
@@ -344,12 +344,12 @@ bool LFDB::save(nlohmann::json &record,bool notifyListeners)
 	bool modified = false;
 	const std::string objtype = record["objtype"];
 	if (objtype == "network") {
-		const uint64_t nwid = OSUtils::jsonIntHex(record["id"],0ULL);
+		const uint64_t nwid = DB::jsonIntHex(record["id"],0ULL);
 		if (nwid) {
 			nlohmann::json old;
 			get(nwid,old);
 			if ((!old.is_object())||(!_compareRecords(old,record))) {
-				record["revision"] = OSUtils::jsonInt(record["revision"],0ULL) + 1ULL;
+				record["revision"] = DB::jsonInt(record["revision"],0ULL) + 1ULL;
 				_networkChanged(old,record,notifyListeners);
 				{
 					std::lock_guard<std::mutex> l(_state_l);
@@ -359,13 +359,13 @@ bool LFDB::save(nlohmann::json &record,bool notifyListeners)
 			}
 		}
 	} else if (objtype == "member") {
-		const uint64_t nwid = OSUtils::jsonIntHex(record["nwid"],0ULL);
-		const uint64_t id = OSUtils::jsonIntHex(record["id"],0ULL);
+		const uint64_t nwid = DB::jsonIntHex(record["nwid"],0ULL);
+		const uint64_t id = DB::jsonIntHex(record["id"],0ULL);
 		if ((id)&&(nwid)) {
 			nlohmann::json network,old;
 			get(nwid,network,id,old);
 			if ((!old.is_object())||(!_compareRecords(old,record))) {
-				record["revision"] = OSUtils::jsonInt(record["revision"],0ULL) + 1ULL;
+				record["revision"] = DB::jsonInt(record["revision"],0ULL) + 1ULL;
 				_memberChanged(old,record,notifyListeners);
 				{
 					std::lock_guard<std::mutex> l(_state_l);

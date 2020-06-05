@@ -195,8 +195,8 @@ void DB::_memberChanged(nlohmann::json &old,nlohmann::json &memberConfig,bool no
 	std::shared_ptr<_Network> nw;
 
 	if (old.is_object()) {
-		memberId = OSUtils::jsonIntHex(old["id"],0ULL);
-		networkId = OSUtils::jsonIntHex(old["nwid"],0ULL);
+		memberId = DB::jsonIntHex(old["id"],0ULL);
+		networkId = DB::jsonIntHex(old["nwid"],0ULL);
 		if ((memberId)&&(networkId)) {
 			{
 				std::lock_guard<std::mutex> l(_networks_l);
@@ -206,9 +206,9 @@ void DB::_memberChanged(nlohmann::json &old,nlohmann::json &memberConfig,bool no
 			}
 			if (nw) {
 				std::lock_guard<std::mutex> l(nw->lock);
-				if (OSUtils::jsonBool(old["activeBridge"],false))
+				if (DB::jsonBool(old["activeBridge"],false))
 					nw->activeBridgeMembers.erase(memberId);
-				wasAuth = OSUtils::jsonBool(old["authorized"],false);
+				wasAuth = DB::jsonBool(old["authorized"],false);
 				if (wasAuth)
 					nw->authorizedMembers.erase(memberId);
 				json &ips = old["ipAssignments"];
@@ -229,8 +229,8 @@ void DB::_memberChanged(nlohmann::json &old,nlohmann::json &memberConfig,bool no
 
 	if (memberConfig.is_object()) {
 		if (!nw) {
-			memberId = OSUtils::jsonIntHex(memberConfig["id"],0ULL);
-			networkId = OSUtils::jsonIntHex(memberConfig["nwid"],0ULL);
+			memberId = DB::jsonIntHex(memberConfig["id"],0ULL);
+			networkId = DB::jsonIntHex(memberConfig["nwid"],0ULL);
 			if ((!memberId)||(!networkId))
 				return;
 			std::lock_guard<std::mutex> l(_networks_l);
@@ -245,9 +245,9 @@ void DB::_memberChanged(nlohmann::json &old,nlohmann::json &memberConfig,bool no
 
 			nw->members[memberId] = memberConfig;
 
-			if (OSUtils::jsonBool(memberConfig["activeBridge"],false))
+			if (DB::jsonBool(memberConfig["activeBridge"],false))
 				nw->activeBridgeMembers.insert(memberId);
-			isAuth = OSUtils::jsonBool(memberConfig["authorized"],false);
+			isAuth = DB::jsonBool(memberConfig["authorized"],false);
 			if (isAuth)
 				nw->authorizedMembers.insert(memberId);
 			json &ips = memberConfig["ipAssignments"];
@@ -264,7 +264,7 @@ void DB::_memberChanged(nlohmann::json &old,nlohmann::json &memberConfig,bool no
 			}
 
 			if (!isAuth) {
-				const int64_t ldt = (int64_t)OSUtils::jsonInt(memberConfig["lastDeauthorizedTime"],0ULL);
+				const int64_t ldt = (int64_t)DB::jsonInt(memberConfig["lastDeauthorizedTime"],0ULL);
 				if (ldt > nw->mostRecentDeauthTime)
 					nw->mostRecentDeauthTime = ldt;
 			}
@@ -350,6 +350,79 @@ void DB::_fillSummaryInfo(const std::shared_ptr<_Network> &nw,NetworkSummaryInfo
 	info.authorizedMemberCount = (unsigned long)nw->authorizedMembers.size();
 	info.totalMemberCount = (unsigned long)nw->members.size();
 	info.mostRecentDeauthTime = nw->mostRecentDeauthTime;
+}
+
+
+nlohmann::json DB::jsonParse(const std::string &buf) { return nlohmann::json::parse(buf.c_str()); }
+std::string DB::jsonDump(const nlohmann::json &j,int indentation) { return j.dump(indentation); }
+
+uint64_t DB::jsonInt(const nlohmann::json &jv,const uint64_t dfl)
+{
+	try {
+		if (jv.is_number()) {
+			return (uint64_t)jv;
+		} else if (jv.is_string()) {
+			std::string s = jv;
+			return (uint64_t)strtoull(s.c_str(),nullptr,10);
+		} else if (jv.is_boolean()) {
+			return ((bool)jv ? 1ULL : 0ULL);
+		}
+	} catch ( ... ) {}
+	return dfl;
+}
+
+uint64_t DB::jsonIntHex(const nlohmann::json &jv,const uint64_t dfl)
+{
+	try {
+		if (jv.is_number()) {
+			return (uint64_t)jv;
+		} else if (jv.is_string()) {
+			std::string s = jv;
+			return Utils::hexStrToU64(s.c_str());
+		} else if (jv.is_boolean()) {
+			return ((bool)jv ? 1ULL : 0ULL);
+		}
+	} catch ( ... ) {}
+	return dfl;
+}
+
+bool DB::jsonBool(const nlohmann::json &jv,const bool dfl)
+{
+	try {
+		if (jv.is_boolean()) {
+			return (bool)jv;
+		} else if (jv.is_number()) {
+			return ((uint64_t)jv > 0ULL);
+		} else if (jv.is_string()) {
+			std::string s = jv;
+			if (s.length() > 0) {
+				switch(s[0]) {
+					case 't':
+					case 'T':
+					case '1':
+						return true;
+				}
+			}
+			return false;
+		}
+	} catch ( ... ) {}
+	return dfl;
+}
+
+std::string DB::jsonString(const nlohmann::json &jv,const char *dfl)
+{
+	try {
+		if (jv.is_string()) {
+			return jv;
+		} else if (jv.is_number()) {
+			char tmp[64];
+			OSUtils::ztsnprintf(tmp,sizeof(tmp),"%llu",(uint64_t)jv);
+			return tmp;
+		} else if (jv.is_boolean()) {
+			return ((bool)jv ? std::string("1") : std::string("0"));
+		}
+	} catch ( ... ) {}
+	return std::string((dfl) ? dfl : "");
 }
 
 } // namespace ZeroTier

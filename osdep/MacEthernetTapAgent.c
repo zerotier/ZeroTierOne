@@ -79,7 +79,7 @@
 #include <netinet6/nd6.h>
 #include <ifaddrs.h>
 
-#include "version.h"
+#include "../core/Constants.hpp"
 #include "MacEthernetTapAgent.h"
 
 #ifndef SIOCAUTOCONF_START

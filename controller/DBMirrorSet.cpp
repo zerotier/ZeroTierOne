@@ -43,7 +43,7 @@ DBMirrorSet::DBMirrorSet(DB::ChangeListener *listener) :
 								for(auto db2=dbs.begin();db2!=dbs.end();++db2) {
 									if (db->get() != db2->get()) {
 										nlohmann::json nw2;
-										if ((!(*db2)->get(networkId,nw2))||((nw2.is_object())&&(OSUtils::jsonInt(nw2["revision"],0) < OSUtils::jsonInt(network["revision"],0)))) {
+										if ((!(*db2)->get(networkId,nw2))||((nw2.is_object())&&(DB::jsonInt(nw2["revision"],0) < DB::jsonInt(network["revision"],0)))) {
 											nw2 = network;
 											(*db2)->save(nw2,false);
 										}
@@ -53,7 +53,7 @@ DBMirrorSet::DBMirrorSet(DB::ChangeListener *listener) :
 								for(auto db2=dbs.begin();db2!=dbs.end();++db2) {
 									if (db->get() != db2->get()) {
 										nlohmann::json nw2,m2;
-										if ((!(*db2)->get(networkId,nw2,memberId,m2))||((m2.is_object())&&(OSUtils::jsonInt(m2["revision"],0) < OSUtils::jsonInt(member["revision"],0)))) {
+										if ((!(*db2)->get(networkId,nw2,memberId,m2))||((m2.is_object())&&(DB::jsonInt(m2["revision"],0) < DB::jsonInt(member["revision"],0)))) {
 											m2 = member;
 											(*db2)->save(m2,false);
 										}

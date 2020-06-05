@@ -14,8 +14,8 @@
 package zerotier
 
 // #cgo CFLAGS: -O3
-// #cgo darwin LDFLAGS: ${SRCDIR}/../../../build/go/native/libzt_go_native.a ${SRCDIR}/../../../build/node/libzt_core.a ${SRCDIR}/../../../build/osdep/libzt_osdep.a -lc++ -lpthread
-// #cgo linux android LDFLAGS: ${SRCDIR}/../../../build/go/native/libzt_go_native.a ${SRCDIR}/../../../build/node/libzt_core.a ${SRCDIR}/../../../build/osdep/libzt_osdep.a -lstdc++ -lpthread -lm
+// #cgo darwin LDFLAGS: ${SRCDIR}/../../build/serviceiocore/libzt_service_io_core.a ${SRCDIR}/../../build/core/libzt_core.a ${SRCDIR}/../../build/osdep/libzt_osdep.a -lc++ -lpthread
+// #cgo linux android LDFLAGS: ${SRCDIR}/../../build/serviceiocore/libzt_service_io_core.a ${SRCDIR}/../../build/core/libzt_core.a ${SRCDIR}/../../build/osdep/libzt_osdep.a -lstdc++ -lpthread -lm
 // #include "../../serviceiocore/GoGlue.h"
 import "C"
 

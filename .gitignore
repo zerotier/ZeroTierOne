@@ -2,8 +2,8 @@
 /cmake-build-debug
 /cmake-build-release
 /core/version.h
-
-.idea
+/.idea
+/.ide-*
 .DS_Store
 .Trashes
 *.swp

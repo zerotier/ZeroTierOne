@@ -32,7 +32,7 @@ FileDB::FileDB(const char *path) :
 		buf.clear();
 		if ((n->length() == 21)&&(OSUtils::readFile((_networksPath + ZT_PATH_SEPARATOR_S + *n).c_str(),buf))) {
 			try {
-				nlohmann::json network(OSUtils::jsonParse(std::string(buf.c_str())));
+				nlohmann::json network(DB::jsonParse(std::string(buf.c_str())));
 				const std::string nwids = network["id"];
 				if (nwids.length() == 16) {
 					nlohmann::json nullJson;
@@ -43,7 +43,7 @@ FileDB::FileDB(const char *path) :
 						buf.clear();
 						if ((m->length() == 15)&&(OSUtils::readFile((membersPath + ZT_PATH_SEPARATOR_S + *m).c_str(),buf))) {
 							try {
-								nlohmann::json member(OSUtils::jsonParse(std::string(buf.c_str())));
+								nlohmann::json member(DB::jsonParse(std::string(buf.c_str())));
 								const std::string addrs = member["id"];
 								if (addrs.length() == 10) {
 									nlohmann::json nullJson2;
@@ -79,14 +79,14 @@ bool FileDB::save(nlohmann::json &record,bool notifyListeners)
 		const std::string objtype = record["objtype"];
 		if (objtype == "network") {
 
-			const uint64_t nwid = OSUtils::jsonIntHex(record["id"],0ULL);
+			const uint64_t nwid = DB::jsonIntHex(record["id"],0ULL);
 			if (nwid) {
 				nlohmann::json old;
 				get(nwid,old);
 				if ((!old.is_object())||(!_compareRecords(old,record))) {
-					record["revision"] = OSUtils::jsonInt(record["revision"],0ULL) + 1ULL;
+					record["revision"] = DB::jsonInt(record["revision"],0ULL) + 1ULL;
 					OSUtils::ztsnprintf(p1,sizeof(p1),"%s" ZT_PATH_SEPARATOR_S "%.16llx.json",_networksPath.c_str(),nwid);
-					if (!OSUtils::writeFile(p1,OSUtils::jsonDump(record,-1)))
+					if (!OSUtils::writeFile(p1,DB::jsonDump(record,-1)))
 						fprintf(stderr,"WARNING: controller unable to write to path: %s" ZT_EOL_S,p1);
 					_networkChanged(old,record,notifyListeners);
 					modified = true;
@@ -95,20 +95,20 @@ bool FileDB::save(nlohmann::json &record,bool notifyListeners)
 
 		} else if (objtype == "member") {
 
-			const uint64_t id = OSUtils::jsonIntHex(record["id"],0ULL);
-			const uint64_t nwid = OSUtils::jsonIntHex(record["nwid"],0ULL);
+			const uint64_t id = DB::jsonIntHex(record["id"],0ULL);
+			const uint64_t nwid = DB::jsonIntHex(record["nwid"],0ULL);
 			if ((id)&&(nwid)) {
 				nlohmann::json network,old;
 				get(nwid,network,id,old);
 				if ((!old.is_object())||(!_compareRecords(old,record))) {
-					record["revision"] = OSUtils::jsonInt(record["revision"],0ULL) + 1ULL;
+					record["revision"] = DB::jsonInt(record["revision"],0ULL) + 1ULL;
 					OSUtils::ztsnprintf(pb,sizeof(pb),"%s" ZT_PATH_SEPARATOR_S "%.16llx" ZT_PATH_SEPARATOR_S "member",_networksPath.c_str(),(unsigned long long)nwid);
 					OSUtils::ztsnprintf(p1,sizeof(p1),"%s" ZT_PATH_SEPARATOR_S "%.10llx.json",pb,(unsigned long long)id);
-					if (!OSUtils::writeFile(p1,OSUtils::jsonDump(record,-1))) {
+					if (!OSUtils::writeFile(p1,DB::jsonDump(record,-1))) {
 						OSUtils::ztsnprintf(p2,sizeof(p2),"%s" ZT_PATH_SEPARATOR_S "%.16llx",_networksPath.c_str(),(unsigned long long)nwid);
 						OSUtils::mkdir(p2);
 						OSUtils::mkdir(pb);
-						if (!OSUtils::writeFile(p1,OSUtils::jsonDump(record,-1)))
+						if (!OSUtils::writeFile(p1,DB::jsonDump(record,-1)))
 							fprintf(stderr,"WARNING: controller unable to write to path: %s" ZT_EOL_S,p1);
 					}
 					_memberChanged(old,record,notifyListeners);

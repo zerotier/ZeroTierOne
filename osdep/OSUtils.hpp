@@ -24,6 +24,7 @@
 #include <sys/time.h> // NOLINT(modernize-deprecated-headers)
 #include <sys/stat.h>
 #include <unistd.h>
+#include <errno.h>
 #endif
 
 #ifdef __APPLE__
@@ -229,15 +230,6 @@ public:
 	 * @return Platform default ZeroTier One home path
 	 */
 	static ZeroTier::String platformDefaultHomePath();
-
-#ifndef OMIT_JSON_SUPPORT
-	static nlohmann::json jsonParse(const std::string &buf);
-	static std::string jsonDump(const nlohmann::json &j,int indentation = 1);
-	static uint64_t jsonInt(const nlohmann::json &jv,uint64_t dfl);
-	static uint64_t jsonIntHex(const nlohmann::json &jv,uint64_t dfl);
-	static bool jsonBool(const nlohmann::json &jv,bool dfl);
-	static std::string jsonString(const nlohmann::json &jv,const char *dfl);
-#endif // OMIT_JSON_SUPPORT
 };
 
 } // namespace ZeroTier
