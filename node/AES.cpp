@@ -24,11 +24,11 @@ namespace {
 
 ZT_INLINE void s_bmul64(const uint64_t x, const uint64_t y, uint64_t &r_high, uint64_t &r_low) noexcept
 {
-	static uint128_t m1 = (uint128_t) 0x2108421084210842ULL << 64U | 0x1084210842108421ULL;
-	static uint128_t m2 = (uint128_t) 0x4210842108421084ULL << 64U | 0x2108421084210842ULL;
-	static uint128_t m3 = (uint128_t) 0x8421084210842108ULL << 64U | 0x4210842108421084ULL;
-	static uint128_t m4 = (uint128_t) 0x0842108421084210ULL << 64U | 0x8421084210842108ULL;
-	static uint128_t m5 = (uint128_t) 0x1084210842108421ULL << 64U | 0x0842108421084210ULL;
+	static uint128_t m1 = (uint128_t)0x2108421084210842ULL << 64U | 0x1084210842108421ULL;
+	static uint128_t m2 = (uint128_t)0x4210842108421084ULL << 64U | 0x2108421084210842ULL;
+	static uint128_t m3 = (uint128_t)0x8421084210842108ULL << 64U | 0x4210842108421084ULL;
+	static uint128_t m4 = (uint128_t)0x0842108421084210ULL << 64U | 0x8421084210842108ULL;
+	static uint128_t m5 = (uint128_t)0x1084210842108421ULL << 64U | 0x0842108421084210ULL;
 	uint128_t x1 = x & m1;
 	uint128_t y1 = y & m1;
 	uint128_t x2 = x & m2;
@@ -49,8 +49,8 @@ ZT_INLINE void s_bmul64(const uint64_t x, const uint64_t y, uint64_t &r_high, ui
 	r |= z & m4;
 	z = (x1 * y5) ^ (x2 * y4) ^ (x3 * y3) ^ (x4 * y2) ^ (x5 * y1);
 	r |= z & m5;
-	r_high = (uint64_t) (r >> 64U);
-	r_low = (uint64_t) r;
+	r_high = (uint64_t)(r >> 64U);
+	r_low = (uint64_t)r;
 }
 
 void s_gfmul(const uint64_t h_high, const uint64_t h_low, uint64_t &y0, uint64_t &y1) noexcept
@@ -63,14 +63,14 @@ void s_gfmul(const uint64_t h_high, const uint64_t h_low, uint64_t &y0, uint64_t
 	s_bmul64(y_high ^ y_low, h_high ^ h_low, z1a_high, z1a_low);
 	z1a_high ^= z2_high ^ z0_high;
 	z1a_low ^= z2_low ^ z0_low;
-	uint128_t z_high = ((uint128_t) z2_high << 64U) | (z2_low ^ z1a_high);
-	uint128_t z_low = (((uint128_t) z0_high << 64U) | z0_low) ^(((uint128_t) z1a_low) << 64U);
+	uint128_t z_high = ((uint128_t)z2_high << 64U) | (z2_low ^ z1a_high);
+	uint128_t z_low = (((uint128_t)z0_high << 64U) | z0_low) ^(((uint128_t)z1a_low) << 64U);
 	z_high = (z_high << 1U) | (z_low >> 127U);
 	z_low <<= 1U;
 	z_low ^= (z_low << 127U) ^ (z_low << 126U) ^ (z_low << 121U);
 	z_high ^= z_low ^ (z_low >> 1U) ^ (z_low >> 2U) ^ (z_low >> 7U);
-	y1 = Utils::hton((uint64_t) z_high);
-	y0 = Utils::hton((uint64_t) (z_high >> 64U));
+	y1 = Utils::hton((uint64_t)z_high);
+	y0 = Utils::hton((uint64_t)(z_high >> 64U));
 }
 
 #else
@@ -329,7 +329,7 @@ void AES::GMAC::update(const void *const data, unsigned int len) noexcept
 		_mm_storeu_si128(reinterpret_cast<__m128i *>(_y), y);
 
 		// Any overflow is cached for a later run or finish().
-		for (unsigned int i = 0;i < len;++i)
+		for (unsigned int i = 0; i < len; ++i)
 			_r[i] = in[i];
 		_rp = len; // len is always less than 16 here
 
@@ -349,8 +349,8 @@ void AES::GMAC::update(const void *const data, unsigned int len) noexcept
 			--len;
 			_r[_rp++] = *(in++);
 			if (_rp == 16) {
-				y0 ^= Utils::loadAsIsEndian<uint64_t>(_r);
-				y1 ^= Utils::loadAsIsEndian<uint64_t>(_r + 8);
+				y0 ^= Utils::loadAsIsEndian< uint64_t >(_r);
+				y1 ^= Utils::loadAsIsEndian< uint64_t >(_r + 8);
 				s_gfmul(h0, h1, y0, y1);
 				break;
 			}
@@ -358,14 +358,14 @@ void AES::GMAC::update(const void *const data, unsigned int len) noexcept
 	}
 
 	while (len >= 16) {
-		y0 ^= Utils::loadAsIsEndian<uint64_t>(in);
-		y1 ^= Utils::loadAsIsEndian<uint64_t>(in + 8);
+		y0 ^= Utils::loadAsIsEndian< uint64_t >(in);
+		y1 ^= Utils::loadAsIsEndian< uint64_t >(in + 8);
 		s_gfmul(h0, h1, y0, y1);
 		in += 16;
 		len -= 16;
 	}
 
-	for (unsigned int i = 0;i < len;++i)
+	for (unsigned int i = 0; i < len; ++i)
 		_r[i] = in[i];
 	_rp = len; // len is always less than 16 here
 
@@ -390,7 +390,7 @@ void AES::GMAC::finish(uint8_t tag[16]) noexcept
 		// Then XOR these together to get the final tag.
 		const __m128i *const k = _aes._k.ni.k;
 		const __m128i h = _aes._k.ni.h[0];
-		y = _mm_xor_si128(y, _mm_set_epi64x(0LL, (long long) Utils::hton((uint64_t) _len << 3U)));
+		y = _mm_xor_si128(y, _mm_set_epi64x(0LL, (long long)Utils::hton((uint64_t)_len << 3U)));
 		y = _mm_shuffle_epi8(y, s_sseSwapBytes);
 
 		__m128i encIV = _mm_xor_si128(_mm_loadu_si128(reinterpret_cast<const __m128i *>(_iv)), k[0]);
@@ -488,24 +488,24 @@ void AES::GMAC::finish(uint8_t tag[16]) noexcept
 	if (_rp) {
 		while (_rp < 16)
 			_r[_rp++] = 0;
-		y0 ^= Utils::loadAsIsEndian<uint64_t>(_r);
-		y1 ^= Utils::loadAsIsEndian<uint64_t>(_r + 8);
+		y0 ^= Utils::loadAsIsEndian< uint64_t >(_r);
+		y1 ^= Utils::loadAsIsEndian< uint64_t >(_r + 8);
 		s_gfmul(h0, h1, y0, y1);
 	}
 
-	y0 ^= Utils::hton((uint64_t) _len << 3U);
+	y0 ^= Utils::hton((uint64_t)_len << 3U);
 	s_gfmul(h0, h1, y0, y1);
 
 	uint64_t iv2[2];
-	for (unsigned int i = 0;i < 12;++i) ((uint8_t *) iv2)[i] = _iv[i];
-	((uint8_t *) iv2)[12] = 0;
-	((uint8_t *) iv2)[13] = 0;
-	((uint8_t *) iv2)[14] = 0;
-	((uint8_t *) iv2)[15] = 1;
-	_aes._encryptSW((const uint8_t *) iv2, (uint8_t *) iv2);
+	for (unsigned int i = 0; i < 12; ++i) ((uint8_t *)iv2)[i] = _iv[i];
+	((uint8_t *)iv2)[12] = 0;
+	((uint8_t *)iv2)[13] = 0;
+	((uint8_t *)iv2)[14] = 0;
+	((uint8_t *)iv2)[15] = 1;
+	_aes._encryptSW((const uint8_t *)iv2, (uint8_t *)iv2);
 
-	Utils::storeAsIsEndian<uint64_t>(tag, iv2[0] ^ y0);
-	Utils::storeAsIsEndian<uint64_t>(tag + 8, iv2[1] ^ y1);
+	Utils::storeAsIsEndian< uint64_t >(tag, iv2[0] ^ y0);
+	Utils::storeAsIsEndian< uint64_t >(tag + 8, iv2[1] ^ y1);
 }
 
 // AES-CTR ------------------------------------------------------------------------------------------------------------
@@ -534,10 +534,10 @@ void p_aesCtrInnerVAES512(unsigned int &len, const uint64_t c0, uint64_t &c1, co
 	do {
 		__m512i p0 = _mm512_loadu_si512(reinterpret_cast<const __m512i *>(in));
 		__m512i d0 = _mm512_set_epi64(
-			(long long) Utils::hton(c1 + 3ULL), (long long) c0,
-			(long long) Utils::hton(c1 + 2ULL), (long long) c0,
-			(long long) Utils::hton(c1 + 1ULL), (long long) c0,
-			(long long) Utils::hton(c1), (long long) c0);
+			(long long)Utils::hton(c1 + 3ULL), (long long)c0,
+			(long long)Utils::hton(c1 + 2ULL), (long long)c0,
+			(long long)Utils::hton(c1 + 1ULL), (long long)c0,
+			(long long)Utils::hton(c1), (long long)c0);
 		c1 += 4;
 		in += 64;
 		len -= 64;
@@ -585,11 +585,11 @@ void p_aesCtrInnerVAES256(unsigned int &len, uint64_t &c0, uint64_t &c1, const u
 		__m256i p0 = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(in));
 		__m256i p1 = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(in + 32));
 		__m256i d0 = _mm256_set_epi64x(
-			(long long) Utils::hton(c1 + 1ULL), (long long) c0,
-			(long long) Utils::hton(c1), (long long) c0);
+			(long long)Utils::hton(c1 + 1ULL), (long long)c0,
+			(long long)Utils::hton(c1), (long long)c0);
 		__m256i d1 = _mm256_set_epi64x(
-			(long long) Utils::hton(c1 + 3ULL), (long long) c0,
-			(long long) Utils::hton(c1 + 2ULL), (long long) c0);
+			(long long)Utils::hton(c1 + 3ULL), (long long)c0,
+			(long long)Utils::hton(c1 + 2ULL), (long long)c0);
 		c1 += 4;
 		in += 64;
 		len -= 64;
@@ -649,10 +649,10 @@ static void p_aesCtrInner128(unsigned int &len, uint64_t &c0, uint64_t &c1, cons
 	const __m128i k14 = k[14];
 	_mm_prefetch(in, _MM_HINT_T0);
 	do {
-		__m128i d0 = _mm_set_epi64x((long long) Utils::hton(c1), (long long) c0);
-		__m128i d1 = _mm_set_epi64x((long long) Utils::hton(c1 + 1ULL), (long long) c0);
-		__m128i d2 = _mm_set_epi64x((long long) Utils::hton(c1 + 2ULL), (long long) c0);
-		__m128i d3 = _mm_set_epi64x((long long) Utils::hton(c1 + 3ULL), (long long) c0);
+		__m128i d0 = _mm_set_epi64x((long long)Utils::hton(c1), (long long)c0);
+		__m128i d1 = _mm_set_epi64x((long long)Utils::hton(c1 + 1ULL), (long long)c0);
+		__m128i d2 = _mm_set_epi64x((long long)Utils::hton(c1 + 2ULL), (long long)c0);
+		__m128i d3 = _mm_set_epi64x((long long)Utils::hton(c1 + 3ULL), (long long)c0);
 		c1 += 4;
 		d0 = _mm_xor_si128(d0, k0);
 		d1 = _mm_xor_si128(d1, k0);
@@ -759,7 +759,7 @@ void AES::CTR::crypt(const void *const input, unsigned int len) noexcept
 				--len;
 				out[totalLen++] = *(in++);
 				if (!(totalLen & 15U)) {
-					__m128i d0 = _mm_set_epi64x((long long) Utils::hton(c1++), (long long) c0);
+					__m128i d0 = _mm_set_epi64x((long long)Utils::hton(c1++), (long long)c0);
 					d0 = _mm_xor_si128(d0, k[0]);
 					d0 = _mm_aesenc_si128(d0, k[1]);
 					d0 = _mm_aesenc_si128(d0, k[2]);
@@ -799,7 +799,7 @@ void AES::CTR::crypt(const void *const input, unsigned int len) noexcept
 		}
 
 		while (len >= 16) {
-			__m128i d0 = _mm_set_epi64x((long long) Utils::hton(c1++), (long long) c0);
+			__m128i d0 = _mm_set_epi64x((long long)Utils::hton(c1++), (long long)c0);
 			d0 = _mm_xor_si128(d0, k[0]);
 			d0 = _mm_aesenc_si128(d0, k[1]);
 			d0 = _mm_aesenc_si128(d0, k[2]);
@@ -851,7 +851,7 @@ void AES::CTR::crypt(const void *const input, unsigned int len) noexcept
 				_aes._encryptSW(reinterpret_cast<const uint8_t *>(_ctr), reinterpret_cast<uint8_t *>(keyStream));
 				reinterpret_cast<uint32_t *>(_ctr)[3] = Utils::hton(++ctr);
 				uint8_t *outblk = out + (totalLen - 16);
-				for (int i = 0;i < 16;++i)
+				for (int i = 0; i < 16; ++i)
 					outblk[i] ^= reinterpret_cast<uint8_t *>(keyStream)[i];
 				break;
 			}
@@ -922,7 +922,7 @@ void AES::CTR::finish() noexcept
 			d0 = _mm_aesenc_si128(d0, _aes._k.ni.k[13]);
 			d0 = _mm_aesenclast_si128(d0, _aes._k.ni.k[14]);
 			_mm_storeu_si128(reinterpret_cast<__m128i *>(tmp), d0);
-			for (unsigned int i = 0, j = _len - rem;i < rem;++i)
+			for (unsigned int i = 0, j = _len - rem; i < rem; ++i)
 				_out[j + i] ^= tmp[i];
 		}
 		return;
@@ -932,7 +932,7 @@ void AES::CTR::finish() noexcept
 	if (rem) {
 		uint8_t tmp[16];
 		_aes._encryptSW(reinterpret_cast<const uint8_t *>(_ctr), tmp);
-		for (unsigned int i = 0, j = _len - rem;i < rem;++i)
+		for (unsigned int i = 0, j = _len - rem; i < rem; ++i)
 			_out[j + i] ^= tmp[i];
 	}
 }
@@ -1013,15 +1013,15 @@ void AES::_initSW(const uint8_t key[32]) noexcept
 	uint64_t zero[2];
 	zero[0] = 0;
 	zero[1] = 0;
-	_encryptSW((const uint8_t *) zero, (uint8_t *) _k.sw.h);
+	_encryptSW((const uint8_t *)zero, (uint8_t *)_k.sw.h);
 	_k.sw.h[0] = Utils::ntoh(_k.sw.h[0]);
 	_k.sw.h[1] = Utils::ntoh(_k.sw.h[1]);
 
-	for (int i = 0;i < 60;++i)
+	for (int i = 0; i < 60; ++i)
 		_k.sw.dk[i] = _k.sw.ek[i];
 	rk = _k.sw.dk;
 
-	for (int i = 0, j = 56;i < j;i += 4, j -= 4) {
+	for (int i = 0, j = 56; i < j; i += 4, j -= 4) {
 		uint32_t temp = rk[i];
 		rk[i] = rk[j];
 		rk[j] = temp;
@@ -1035,7 +1035,7 @@ void AES::_initSW(const uint8_t key[32]) noexcept
 		rk[i + 3] = rk[j + 3];
 		rk[j + 3] = temp;
 	}
-	for (int i = 1;i < 14;++i) {
+	for (int i = 1; i < 14; ++i) {
 		rk += 4;
 		rk[0] = Td0[Te4[(rk[0] >> 24U)] & 0xff] ^ Td1[Te4[(rk[0] >> 16U) & 0xffU] & 0xff] ^ Td2[Te4[(rk[0] >> 8U) & 0xffU] & 0xffU] ^ Td3[Te4[(rk[0]) & 0xffU] & 0xffU];
 		rk[1] = Td0[Te4[(rk[1] >> 24U)] & 0xff] ^ Td1[Te4[(rk[1] >> 16U) & 0xffU] & 0xff] ^ Td2[Te4[(rk[1] >> 8U) & 0xffU] & 0xffU] ^ Td3[Te4[(rk[1]) & 0xffU] & 0xffU];
@@ -1046,16 +1046,17 @@ void AES::_initSW(const uint8_t key[32]) noexcept
 
 void AES::_encryptSW(const uint8_t in[16], uint8_t out[16]) const noexcept
 {
-	const uint32_t *const rk = _k.sw.ek;
+	const uint32_t *const restrict rk = _k.sw.ek;
 	const uint32_t m8 = 0xff;
-	uint32_t s0 = readuint32_t(in) ^ rk[0];
-	uint32_t s1 = readuint32_t(in + 4) ^ rk[1];
-	uint32_t s2 = readuint32_t(in + 8) ^ rk[2];
-	uint32_t s3 = readuint32_t(in + 12) ^ rk[3];
-	uint32_t t0 = Te0[s0 >> 24U] ^Te1[(s1 >> 16U) & m8] ^Te2[(s2 >> 8U) & m8] ^Te3[s3 & m8] ^ rk[4];
-	uint32_t t1 = Te0[s1 >> 24U] ^Te1[(s2 >> 16U) & m8] ^Te2[(s3 >> 8U) & m8] ^Te3[s0 & m8] ^ rk[5];
-	uint32_t t2 = Te0[s2 >> 24U] ^Te1[(s3 >> 16U) & m8] ^Te2[(s0 >> 8U) & m8] ^Te3[s1 & m8] ^ rk[6];
-	uint32_t t3 = Te0[s3 >> 24U] ^Te1[(s0 >> 16U) & m8] ^Te2[(s1 >> 8U) & m8] ^Te3[s2 & m8] ^ rk[7];
+	uint32_t s0, s1, s2, s3, t0, t1, t2, t3;
+	s0 = readuint32_t(in) ^ rk[0];
+	s1 = readuint32_t(in + 4) ^ rk[1];
+	s2 = readuint32_t(in + 8) ^ rk[2];
+	s3 = readuint32_t(in + 12) ^ rk[3];
+	t0 = Te0[s0 >> 24U] ^ Te1[(s1 >> 16U) & m8] ^ Te2[(s2 >> 8U) & m8] ^ Te3[s3 & m8] ^ rk[4];
+	t1 = Te0[s1 >> 24U] ^ Te1[(s2 >> 16U) & m8] ^ Te2[(s3 >> 8U) & m8] ^ Te3[s0 & m8] ^ rk[5];
+	t2 = Te0[s2 >> 24U] ^ Te1[(s3 >> 16U) & m8] ^ Te2[(s0 >> 8U) & m8] ^ Te3[s1 & m8] ^ rk[6];
+	t3 = Te0[s3 >> 24U] ^ Te1[(s0 >> 16U) & m8] ^ Te2[(s1 >> 8U) & m8] ^ Te3[s2 & m8] ^ rk[7];
 	s0 = Te0[t0 >> 24U] ^ Te1[(t1 >> 16U) & m8] ^ Te2[(t2 >> 8U) & m8] ^ Te3[t3 & m8] ^ rk[8];
 	s1 = Te0[t1 >> 24U] ^ Te1[(t2 >> 16U) & m8] ^ Te2[(t3 >> 8U) & m8] ^ Te3[t0 & m8] ^ rk[9];
 	s2 = Te0[t2 >> 24U] ^ Te1[(t3 >> 16U) & m8] ^ Te2[(t0 >> 8U) & m8] ^ Te3[t1 & m8] ^ rk[10];
@@ -1115,7 +1116,7 @@ void AES::_encryptSW(const uint8_t in[16], uint8_t out[16]) const noexcept
 
 void AES::_decryptSW(const uint8_t in[16], uint8_t out[16]) const noexcept
 {
-	const uint32_t *rk = _k.sw.dk;
+	const uint32_t *const restrict rk = _k.sw.dk;
 	uint32_t s0, s1, s2, s3, t0, t1, t2, t3;
 	const uint32_t m8 = 0xff;
 	s0 = readuint32_t(in) ^ rk[0];
@@ -1215,8 +1216,8 @@ static ZT_INLINE __m128i _init256_2_aesni(__m128i a, __m128i b) noexcept
 void AES::_init_aesni(const uint8_t key[32]) noexcept
 {
 	__m128i t1, t2, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10, k11, k12, k13;
-	_k.ni.k[0] = t1 = _mm_loadu_si128((const __m128i *) key);
-	_k.ni.k[1] = k1 = t2 = _mm_loadu_si128((const __m128i *) (key + 16));
+	_k.ni.k[0] = t1 = _mm_loadu_si128((const __m128i *)key);
+	_k.ni.k[1] = k1 = t2 = _mm_loadu_si128((const __m128i *)(key + 16));
 	_k.ni.k[2] = k2 = t1 = _init256_1_aesni(t1, _mm_aeskeygenassist_si128(t2, 0x01));
 	_k.ni.k[3] = k3 = t2 = _init256_2_aesni(t1, t2);
 	_k.ni.k[4] = k4 = t1 = _init256_1_aesni(t1, _mm_aeskeygenassist_si128(t2, 0x02));
