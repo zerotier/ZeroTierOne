@@ -36,7 +36,9 @@ Commands:
   version                                Print version
   service                                Start as service
   status                                 Show node status and configuration
-  join <network> [fingerprint]           Join a virtual network
+  join <network> [option]                Join a virtual network
+    auth <token>                         Join authorization token
+    fingerprint <fingerprint>            Full controller identity fingerprint
   leave <network>                        Leave a virtual network
   networks                               List VL2 virtual networks
   network <network> [command] [option] - Network management commands
@@ -57,6 +59,7 @@ Commands:
     add <identity> [endpoint]            Designate a peer as a root
     remove <address>                     Un-designate a peer as a root
     subscribe <url>                      Subscribe to a root set
+    unsubscribe <url>                    Unsubscribe from a root set
   set [option] [value]                 - Get or set a core config option
     port <port>                          Primary P2P port
     secondaryport <port/0>               Secondary P2P port (0 to disable)

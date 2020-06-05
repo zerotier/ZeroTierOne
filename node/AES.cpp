@@ -1116,7 +1116,7 @@ void AES::_encryptSW(const uint8_t in[16], uint8_t out[16]) const noexcept
 
 void AES::_decryptSW(const uint8_t in[16], uint8_t out[16]) const noexcept
 {
-	const uint32_t *const restrict rk = _k.sw.dk;
+	const uint32_t *restrict rk = _k.sw.dk;
 	uint32_t s0, s1, s2, s3, t0, t1, t2, t3;
 	const uint32_t m8 = 0xff;
 	s0 = readuint32_t(in) ^ rk[0];

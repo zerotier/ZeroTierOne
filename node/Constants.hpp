@@ -29,7 +29,11 @@
 /**
  * Version bit packed into four 16-bit fields in a 64-bit unsigned integer.
  */
-#define ZT_VERSION_PACKED ( ((uint64_t)ZEROTIER_VERSION_MAJOR << 48U) | ((uint64_t)ZEROTIER_VERSION_MINOR << 32U) | ((uint64_t)ZEROTIER_VERSION_REVISION << 16U) | (uint64_t)ZEROTIER_VERSION_BUILD )
+#define ZT_VERSION_PACKED ( \
+	((uint64_t)ZEROTIER_VERSION_MAJOR << 48U) | \
+	((uint64_t)ZEROTIER_VERSION_MINOR << 32U) | \
+	((uint64_t)ZEROTIER_VERSION_REVISION << 16U) | \
+	(uint64_t)ZEROTIER_VERSION_BUILD )
 
 /**
  * Length of a ZeroTier address in bytes
