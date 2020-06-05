@@ -18,4 +18,4 @@ clean:
 	rm -rf ${BUILDDIR}
 
 distclean:
-	rm -rf ${BUILDDIR} cmake-build-*
+	rm -rf ${BUILDDIR}

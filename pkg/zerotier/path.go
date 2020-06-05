@@ -13,7 +13,7 @@
 
 package zerotier
 
-// #include "../../native/GoGlue.h"
+// #include "../../serviceiocore/GoGlue.h"
 import "C"
 
 // Path is a path to another peer on the network

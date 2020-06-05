@@ -1,6 +1,6 @@
 package zerotier
 
-// #include "../../native/GoGlue.h"
+// #include "../../serviceiocore/GoGlue.h"
 // static inline const ZT_Fingerprint *_getFP(const ZT_Endpoint *ep) { return &(ep->value.fp); }
 // static inline uint64_t _getAddress(const ZT_Endpoint *ep) { return ep->value.fp.address; }
 // static inline uint64_t _getMAC(const ZT_Endpoint *ep) { return ep->value.mac; }
