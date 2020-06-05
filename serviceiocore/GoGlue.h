@@ -19,7 +19,7 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "../core/ZeroTierCore.h"
+#include "../core/zerotier.h"
 #include "../core/Constants.hpp"
 
 #ifdef __cplusplus

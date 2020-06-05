@@ -1,6 +1,11 @@
 cmake_minimum_required (VERSION 3.8)
 project(zerotier DESCRIPTION "ZeroTier Network Hypervisor" LANGUAGES CXX C)
 
+set(ZEROTIER_VERSION_MAJOR 1 CACHE INTERNAL "")
+set(ZEROTIER_VERSION_MINOR 9 CACHE INTERNAL "")
+set(ZEROTIER_VERSION_REVISION 0 CACHE INTERNAL "")
+set(ZEROTIER_VERSION_BUILD 0 CACHE INTERNAL "")
+
 if(${CMAKE_VERSION} VERSION_LESS 3.15)
 	cmake_policy(VERSION ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION})
 else()
@@ -13,17 +18,8 @@ set(default_build_type "Release")
 if(WIN32)
 	set(CMAKE_SYSTEM_VERSION "7" CACHE STRING INTERNAL FORCE)
 endif(WIN32)
-set(CMAKE_OSX_DEPLOYMENT_TARGET "10.9" CACHE STRING "Minimum OS X Deployment Version")
 
-set(ZEROTIER_VERSION_MAJOR 1 CACHE INTERNAL "")
-set(ZEROTIER_VERSION_MINOR 9 CACHE INTERNAL "")
-set(ZEROTIER_VERSION_REVISION 0 CACHE INTERNAL "")
-set(ZEROTIER_VERSION_BUILD 0 CACHE INTERNAL "")
-
-configure_file(
-	${CMAKE_SOURCE_DIR}/version.h.in
-	${CMAKE_BINARY_DIR}/version.h
-)
+set(CMAKE_OSX_DEPLOYMENT_TARGET "10.12" CACHE STRING "Minimum OS X Deployment Version")
 
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 	message(STATUS "Setting build type to '${default_build_type}' as none was specified.")
@@ -31,17 +27,17 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 	set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
-option(BUILD_CENTRAL_CONTROLLER "Build ZeroTier Central Controller" OFF)
-if (BUILD_CENTRAL_CONTROLLER)
-	find_package(PostgreSQL REQUIRED)
-	set(ENABLE_SSL_SUPPORT OFF)
-	set(BUILD_SHARED_LIBS OFF)
-	set(BUILD_EXAMPLES OFF)
-	set(BUILD_TOOLS OFF)
-	set(BUILD_TESTS OFF)
-	set(BUILD_API_DOCS OFF)
-	add_subdirectory("ext/librabbitmq")
-endif(BUILD_CENTRAL_CONTROLLER)
+#option(BUILD_CENTRAL_CONTROLLER "Build ZeroTier Central Controller" OFF)
+#if (BUILD_CENTRAL_CONTROLLER)
+#	find_package(PostgreSQL REQUIRED)
+#	set(ENABLE_SSL_SUPPORT OFF)
+#	set(BUILD_SHARED_LIBS OFF)
+#	set(BUILD_EXAMPLES OFF)
+#	set(BUILD_TOOLS OFF)
+#	set(BUILD_TESTS OFF)
+#	set(BUILD_API_DOCS OFF)
+#	add_subdirectory("ext/librabbitmq")
+#endif(BUILD_CENTRAL_CONTROLLER)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 	add_definitions(-DZT_DEBUG)
@@ -69,7 +65,7 @@ else(WIN32)
 			$<$<CONFIG:RELWITHDEBINFO>:-g>
 		)
 		add_link_options(
-			-mmacosx-version-min=10.9
+			-mmacosx-version-min=10.12
 			$<$<CONFIG:RELEASE>:-flto>
 		)
 	else(APPLE)
@@ -95,28 +91,29 @@ if (
 	CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64" OR
 	CMAKE_SYSTEM_PROCESSOR MATCHES "amd64"
 )
-	message("++ Adding SSE and AES-NI flags for processor ${CMAKE_SYSTEM_PROCESSOR}")
+	message("++ Adding flags for processor ${CMAKE_SYSTEM_PROCESSOR}")
 	add_compile_options(-maes -mrdrnd -mpclmul -msse -msse2 -mssse3)
 endif()
 
-add_subdirectory(node)
+add_subdirectory(core)
 add_subdirectory(controller)
 add_subdirectory(osdep)
-add_subdirectory(go/native)
+add_subdirectory(serviceiocore)
 
 #if(BUILD_CENTRAL_CONTROLLER)
 #	set(libs ${libs} rabbitmq-static ${PostgreSQL_LIBRARIES})
 #endif(BUILD_CENTRAL_CONTROLLER)
 
 set(
-		zt_osdep
-		zt_core
-		zt_controller
-		zt_go_native
+	zt_core
+	zt_osdep
+	zt_controller
+	zt_service_io_core
 )
 
 add_custom_target(zerotier ALL
-	WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/go
-	COMMAND rm -f ../build/zerotier && go build -trimpath -ldflags -s -o ../build/zerotier cmd/zerotier/zerotier.go
+	WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+	COMMAND rm -f ./build/zerotier && go build -trimpath -ldflags -s -o ./build/zerotier cmd/zerotier/zerotier.go
 )
-add_dependencies(zerotier zt_osdep zt_core zt_controller zt_go_native)
+add_dependencies(zerotier zt_osdep zt_core zt_controller zt_service_io_core)
+ADDITIONAL_CLEAN_FILES(./build/zerotier)

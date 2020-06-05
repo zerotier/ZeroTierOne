@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-project(zt_go_native)
+project(zt_service_io_core)
 
 set(src
 	GoGlue.cpp

@@ -14,7 +14,7 @@
 #ifndef ZT_CONSTANTS_HPP
 #define ZT_CONSTANTS_HPP
 
-#include "ZeroTierCore.h"
+#include "zerotier.h"
 #include "OS.hpp"
 
 #if __has_include("version.h")

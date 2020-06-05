@@ -1,8 +1,13 @@
 cmake_minimum_required (VERSION 2.8)
 project(zt_core)
 
+configure_file(
+        version.h.in
+        version.h
+)
+
 set(core_headers
-	../include/ZeroTierCore.h
+	zerotier.h
 	Address.hpp
 	Buf.hpp
 	C25519.hpp
