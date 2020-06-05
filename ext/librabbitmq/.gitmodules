@@ -1,6 +1,0 @@
-[submodule "codegen"]
-	path = codegen
-	url = https://github.com/rabbitmq/rabbitmq-codegen.git
-[submodule "travis/run-clang-format"]
-	path = travis/run-clang-format
-	url = https://github.com/Sarcasm/run-clang-format.git

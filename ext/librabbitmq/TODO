@@ -1,9 +1,0 @@
-Deal with version-mismatch-header received from the server
-
-Cope with unknown frame types better. Currently it gets horribly
-confused about frame lengths.
-
-Make client brutal by default, killing the program on any amqp
-error. Only if the user disables this behaviour will the user get to
-deal with error conditions themselves. Make use of amqp_rpc_reply
-consistent (i.e. universal), and rename it something like amqp_errno.

@@ -32,7 +32,7 @@
 #include <mutex>
 #include <set>
 
-#include "../ext/json/json.hpp"
+#include "./thirdparty/json/json.hpp"
 
 namespace ZeroTier
 {
