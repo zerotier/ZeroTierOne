@@ -40,7 +40,7 @@ public:
 	{}
 
 	explicit ZT_INLINE Address(const uint8_t b[5]) noexcept:
-		_a(((uint64_t) b[0] << 32U) | ((uint64_t) b[1] << 24U) | ((uint64_t) b[2] << 16U) | ((uint64_t) b[3] << 8U) | (uint64_t) b[4])
+		_a(((uint64_t)b[0] << 32U) | ((uint64_t)b[1] << 24U) | ((uint64_t)b[2] << 16U) | ((uint64_t)b[3] << 8U) | (uint64_t)b[4])
 	{}
 
 	ZT_INLINE Address &operator=(const uint64_t a) noexcept
@@ -55,7 +55,7 @@ public:
 	 */
 	ZT_INLINE void setTo(const uint8_t b[5]) noexcept
 	{
-		_a = ((uint64_t) b[0] << 32U) | ((uint64_t) b[1] << 24U) | ((uint64_t) b[2] << 16U) | ((uint64_t) b[3] << 8U) | (uint64_t) b[4];
+		_a = ((uint64_t)b[0] << 32U) | ((uint64_t)b[1] << 24U) | ((uint64_t)b[2] << 16U) | ((uint64_t)b[3] << 8U) | (uint64_t)b[4];
 	}
 
 	/**
@@ -65,11 +65,11 @@ public:
 	ZT_INLINE void copyTo(uint8_t b[5]) const noexcept
 	{
 		const uint64_t a = _a;
-		b[0] = (uint8_t) (a >> 32U);
-		b[1] = (uint8_t) (a >> 24U);
-		b[2] = (uint8_t) (a >> 16U);
-		b[3] = (uint8_t) (a >> 8U);
-		b[4] = (uint8_t) a;
+		b[0] = (uint8_t)(a >> 32U);
+		b[1] = (uint8_t)(a >> 24U);
+		b[2] = (uint8_t)(a >> 16U);
+		b[3] = (uint8_t)(a >> 8U);
+		b[4] = (uint8_t)a;
 	}
 
 	/**
@@ -92,16 +92,16 @@ public:
 	{
 		const uint64_t a = _a;
 		const unsigned int m = 0xf;
-		s[0] = Utils::HEXCHARS[(unsigned int) (a >> 36U) & m];
-		s[1] = Utils::HEXCHARS[(unsigned int) (a >> 32U) & m];
-		s[2] = Utils::HEXCHARS[(unsigned int) (a >> 28U) & m];
-		s[3] = Utils::HEXCHARS[(unsigned int) (a >> 24U) & m];
-		s[4] = Utils::HEXCHARS[(unsigned int) (a >> 20U) & m];
-		s[5] = Utils::HEXCHARS[(unsigned int) (a >> 16U) & m];
-		s[6] = Utils::HEXCHARS[(unsigned int) (a >> 12U) & m];
-		s[7] = Utils::HEXCHARS[(unsigned int) (a >> 8U) & m];
-		s[8] = Utils::HEXCHARS[(unsigned int) (a >> 4U) & m];
-		s[9] = Utils::HEXCHARS[(unsigned int) a & m];
+		s[0] = Utils::HEXCHARS[(unsigned int)(a >> 36U) & m];
+		s[1] = Utils::HEXCHARS[(unsigned int)(a >> 32U) & m];
+		s[2] = Utils::HEXCHARS[(unsigned int)(a >> 28U) & m];
+		s[3] = Utils::HEXCHARS[(unsigned int)(a >> 24U) & m];
+		s[4] = Utils::HEXCHARS[(unsigned int)(a >> 20U) & m];
+		s[5] = Utils::HEXCHARS[(unsigned int)(a >> 16U) & m];
+		s[6] = Utils::HEXCHARS[(unsigned int)(a >> 12U) & m];
+		s[7] = Utils::HEXCHARS[(unsigned int)(a >> 8U) & m];
+		s[8] = Utils::HEXCHARS[(unsigned int)(a >> 4U) & m];
+		s[9] = Utils::HEXCHARS[(unsigned int)a & m];
 		s[10] = 0;
 		return s;
 	}
@@ -126,7 +126,7 @@ public:
 	{ return ((!_a) || ((_a >> 32U) == ZT_ADDRESS_RESERVED_PREFIX)); }
 
 	ZT_INLINE unsigned long hashCode() const noexcept
-	{ return (unsigned long) _a; }
+	{ return (unsigned long)_a; }
 
 	ZT_INLINE operator bool() const noexcept
 	{ return (_a != 0); }

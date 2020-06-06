@@ -29,11 +29,11 @@
 /**
  * Version bit packed into four 16-bit fields in a 64-bit unsigned integer.
  */
-#define ZT_VERSION_PACKED ( \
-	((uint64_t)ZEROTIER_VERSION_MAJOR << 48U) | \
-	((uint64_t)ZEROTIER_VERSION_MINOR << 32U) | \
+#define ZT_VERSION_PACKED (                      \
+	((uint64_t)ZEROTIER_VERSION_MAJOR    << 48U) | \
+	((uint64_t)ZEROTIER_VERSION_MINOR    << 32U) | \
 	((uint64_t)ZEROTIER_VERSION_REVISION << 16U) | \
-	(uint64_t)ZEROTIER_VERSION_BUILD )
+	((uint64_t)ZEROTIER_VERSION_BUILD)         )
 
 /**
  * Length of a ZeroTier address in bytes
@@ -91,7 +91,7 @@
 #define ZT_SYMMETRIC_KEY_TTL 1800000
 
 /**
- * Maximum number of messages over which a key should be considered usable.
+ * Maximum number of messages per symmetric key.
  */
 #define ZT_SYMMETRIC_KEY_TTL_MESSAGES 2147483648
 
@@ -178,7 +178,7 @@
 #define ZT_PEER_PRIORITIZE_PATHS_INTERVAL 5000
 
 /**
- * Number of previous endpoints to cache for root-less re-establishment
+ * Number of previous endpoints to cache in peer records.
  */
 #define ZT_PEER_ENDPOINT_CACHE_SIZE 8
 
@@ -202,11 +202,6 @@
 #define ZT_MAX_BRIDGE_ROUTES 16777216
 
 /**
- * If there is no known L2 bridging route, spam to up to this many active bridges
- */
-#define ZT_MAX_BRIDGE_SPAM 32
-
-/**
  * WHOIS rate limit (we allow these to be pretty fast)
  */
 #define ZT_PEER_WHOIS_RATE_LIMIT 100
@@ -222,29 +217,10 @@
 #define ZT_PEER_PROBE_RESPONSE_RATE_LIMIT 5000
 
 /**
- * Don't do expensive identity validation more often than this
- *
- * IPv4 and IPv6 address prefixes are hashed down to 14-bit (0-16383) integers
- * using the first 24 bits for IPv4 or the first 48 bits for IPv6. These are
- * then rate limited to one identity validation per this often milliseconds.
- */
-#if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64) || defined(_M_AMD64))
-// AMD64 machines can do anywhere from one every 50ms to one every 10ms. This provides plenty of margin.
-#define ZT_IDENTITY_VALIDATION_SOURCE_RATE_LIMIT 2000
-#else
-#if (defined(__i386__) || defined(__i486__) || defined(__i586__) || defined(__i686__) || defined(_M_IX86) || defined(_X86_) || defined(__I86__))
-// 32-bit Intel machines usually average about one every 100ms
-#define ZT_IDENTITY_VALIDATION_SOURCE_RATE_LIMIT 5000
-#else
-// This provides a safe margin for ARM, MIPS, etc. that usually average one every 250-400ms
-#define ZT_IDENTITY_VALIDATION_SOURCE_RATE_LIMIT 10000
-#endif
-#endif
-
-/**
  * Size of a buffer to store either a C25519 or an ECC P-384 signature
  *
- * This must be large enough to hold all signature types.
+ * This must be large enough to hold all signature types, which right now is
+ * Curve25519 EDDSA and NIST P-384 ECDSA.
  */
 #define ZT_SIGNATURE_BUFFER_SIZE 96
 

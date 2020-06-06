@@ -19,8 +19,6 @@
 #include "Address.hpp"
 #include "Buf.hpp"
 #include "FCV.hpp"
-#include "SHA512.hpp"
-#include "Fingerprint.hpp"
 #include "Containers.hpp"
 
 namespace ZeroTier {
@@ -140,33 +138,6 @@ public:
 			return false;
 		return (obj.unmarshal(d.data(),(unsigned int)d.size()) > 0);
 	}
-
-	/**
-	 * Sign this identity
-	 *
-	 * This adds two fields:
-	 *   "@Si" contains the fingerprint (address followed by hash) of the signer
-	 *   "@Ss" contains the signature
-	 *
-	 * @param signer Signing identity (must contain secret)
-	 * @return True if signature was successful
-	 */
-	bool sign(const Identity &signer);
-
-	/**
-	 * Get the signer's fingerprint for this dictionary or a NIL fingerprint if not signed.
-	 *
-	 * @return Signer
-	 */
-	Fingerprint signer() const;
-
-	/**
-	 * Verify this identity's signature
-	 *
-	 * @param signer
-	 * @return
-	 */
-	bool verify(const Identity &signer) const;
 
 	/**
 	 * Erase all entries in dictionary

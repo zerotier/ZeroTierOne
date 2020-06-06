@@ -419,7 +419,7 @@ void LinuxNetLink::_linkDeleted(struct nlmsghdr *nlp)
 
 	{
 		Mutex::Lock l(_if_m);
-		if(_interfaces.contains(ifip->ifi_index)) {
+		if(_interfaces.find(ifip->ifi_index) != _interfaces.end()) {
 			_interfaces.erase(ifip->ifi_index);
 		}
 	}
@@ -1057,12 +1057,9 @@ int LinuxNetLink::_indexForInterface(const char *iface)
 {
 	Mutex::Lock l(_if_m);
 	int interface_index = -1;
-	Hashtable<int, iface_entry>::Iterator iter(_interfaces);
-	int *k = NULL;
-	iface_entry *v = NULL;
-	while(iter.next(k,v)) {
-		if(strcmp(iface, v->ifacename) == 0) {
-			interface_index = v->index;
+	for(std::map<int, iface_entry>::iterator i(_interfaces.begin());i!=_interfaces.end();++i) {
+		if (strcmp(iface, i->second.ifacename) == 0) {
+			interface_index = i->second.index;
 			break;
 		}
 	}

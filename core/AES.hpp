@@ -18,16 +18,8 @@
 #include "Utils.hpp"
 #include "SHA512.hpp"
 
-#include <cstdint>
-#include <cstring>
-
-#ifndef ZT_AES_NO_ACCEL
-#ifdef ZT_ARCH_X64
-#include <xmmintrin.h>
-#include <emmintrin.h>
-#include <immintrin.h>
+#if !defined(ZT_AES_NO_ACCEL) && defined(ZT_ARCH_X64)
 #define ZT_AES_AESNI 1
-#endif
 #endif
 
 namespace ZeroTier {
@@ -56,7 +48,8 @@ public:
 	/**
 	 * Create an un-initialized AES instance (must call init() before use)
 	 */
-	ZT_INLINE AES() noexcept {}
+	ZT_INLINE AES() noexcept
+	{}
 
 	/**
 	 * Create an AES instance with the given key
@@ -70,7 +63,7 @@ public:
 
 	ZT_INLINE ~AES()
 	{
-		Utils::burn(&_k,sizeof(_k));
+		Utils::burn(&_k, sizeof(_k));
 	}
 
 	/**
@@ -95,15 +88,15 @@ public:
 	 * @param in Input block
 	 * @param out Output block (can be same as input)
 	 */
-	ZT_INLINE void encrypt(const void *const in,void *const out) const noexcept
+	ZT_INLINE void encrypt(const void *const in, void *const out) const noexcept
 	{
 #ifdef ZT_AES_AESNI
 		if (likely(Utils::CPUID.aes)) {
-			_encrypt_aesni(in,out);
+			_encrypt_aesni(in, out);
 			return;
 		}
 #endif
-		_encryptSW(reinterpret_cast<const uint8_t *>(in),reinterpret_cast<uint8_t *>(out));
+		_encryptSW(reinterpret_cast<const uint8_t *>(in), reinterpret_cast<uint8_t *>(out));
 	}
 
 	/**
@@ -112,18 +105,19 @@ public:
 	 * @param in Input block
 	 * @param out Output block (can be same as input)
 	 */
-	ZT_INLINE void decrypt(const void *const in,void *const out) const noexcept
+	ZT_INLINE void decrypt(const void *const in, void *const out) const noexcept
 	{
 #ifdef ZT_AES_AESNI
 		if (likely(Utils::CPUID.aes)) {
-			_decrypt_aesni(in,out);
+			_decrypt_aesni(in, out);
 			return;
 		}
 #endif
-		_decryptSW(reinterpret_cast<const uint8_t *>(in),reinterpret_cast<uint8_t *>(out));
+		_decryptSW(reinterpret_cast<const uint8_t *>(in), reinterpret_cast<uint8_t *>(out));
 	}
 
 	class GMACSIVEncryptor;
+
 	class GMACSIVDecryptor;
 
 	/**
@@ -132,6 +126,7 @@ public:
 	class GMAC
 	{
 		friend class GMACSIVEncryptor;
+
 		friend class GMACSIVDecryptor;
 
 	public:
@@ -140,7 +135,8 @@ public:
 		 *
 		 * @param aes Keyed AES instance to use
 		 */
-		ZT_INLINE GMAC(const AES &aes) : _aes(aes) {}
+		ZT_INLINE GMAC(const AES &aes) : _aes(aes)
+		{}
 
 		/**
 		 * Reset and initialize for a new GMAC calculation
@@ -176,7 +172,7 @@ public:
 		 * @param data Bytes to process
 		 * @param len Length of input
 		 */
-		void update(const void *data,unsigned int len) noexcept;
+		void update(const void *data, unsigned int len) noexcept;
 
 		/**
 		 * Process any remaining cached bytes and generate tag
@@ -205,10 +201,12 @@ public:
 	class CTR
 	{
 		friend class GMACSIVEncryptor;
+
 		friend class GMACSIVDecryptor;
 
 	public:
-		ZT_INLINE CTR(const AES &aes) noexcept : _aes(aes) {}
+		ZT_INLINE CTR(const AES &aes) noexcept: _aes(aes)
+		{}
 
 		/**
 		 * Initialize this CTR instance to encrypt a new stream
@@ -216,9 +214,9 @@ public:
 		 * @param iv Unique initialization vector and initial 32-bit counter (least significant 32 bits, big-endian)
 		 * @param output Buffer to which to store output (MUST be large enough for total bytes processed!)
 		 */
-		ZT_INLINE void init(const uint8_t iv[16],void *const output) noexcept
+		ZT_INLINE void init(const uint8_t iv[16], void *const output) noexcept
 		{
-			Utils::copy<16>(_ctr,iv);
+			Utils::copy< 16 >(_ctr, iv);
 			_out = reinterpret_cast<uint8_t *>(output);
 			_len = 0;
 		}
@@ -230,9 +228,9 @@ public:
 		 * @param ic Initial counter (must be in big-endian byte order!)
 		 * @param output Buffer to which to store output (MUST be large enough for total bytes processed!)
 		 */
-		ZT_INLINE void init(const uint8_t iv[12],const uint32_t ic,void *const output) noexcept
+		ZT_INLINE void init(const uint8_t iv[12], const uint32_t ic, void *const output) noexcept
 		{
-			Utils::copy<12>(_ctr,iv);
+			Utils::copy< 12 >(_ctr, iv);
 			reinterpret_cast<uint32_t *>(_ctr)[3] = ic;
 			_out = reinterpret_cast<uint8_t *>(output);
 			_len = 0;
@@ -244,7 +242,7 @@ public:
 		 * @param input Input data
 		 * @param len Length of input
 		 */
-		void crypt(const void *input,unsigned int len) noexcept;
+		void crypt(const void *input, unsigned int len) noexcept;
 
 		/**
 		 * Finish any remaining bytes if total bytes processed wasn't a multiple of 16
@@ -280,9 +278,10 @@ public:
 		 * @param k0 First of two AES instances keyed with K0
 		 * @param k1 Second of two AES instances keyed with K1
 		 */
-		ZT_INLINE GMACSIVEncryptor(const AES &k0,const AES &k1) noexcept :
+		ZT_INLINE GMACSIVEncryptor(const AES &k0, const AES &k1) noexcept:
 			_gmac(k0),
-			_ctr(k1) {}
+			_ctr(k1)
+		{}
 
 		/**
 		 * Initialize AES-GMAC-SIV
@@ -290,7 +289,7 @@ public:
 		 * @param iv IV in network byte order (byte order in which it will appear on the wire)
 		 * @param output Pointer to buffer to receive ciphertext, must be large enough for all to-be-processed data!
 		 */
-		ZT_INLINE void init(const uint64_t iv,void *const output) noexcept
+		ZT_INLINE void init(const uint64_t iv, void *const output) noexcept
 		{
 			// Output buffer to receive the result of AES-CTR encryption.
 			_output = output;
@@ -312,15 +311,15 @@ public:
 		 * @param aad Additional authenticated data
 		 * @param len Length of AAD in bytes
 		 */
-		ZT_INLINE void aad(const void *const aad,unsigned int len) noexcept
+		ZT_INLINE void aad(const void *const aad, unsigned int len) noexcept
 		{
 			// Feed ADD into GMAC first
-			_gmac.update(aad,len);
+			_gmac.update(aad, len);
 
 			// End of AAD is padded to a multiple of 16 bytes to ensure unique encoding.
 			len &= 0xfU;
 			if (len != 0)
-				_gmac.update(Utils::ZERO256,16 - len);
+				_gmac.update(Utils::ZERO256, 16 - len);
 		}
 
 		/**
@@ -329,9 +328,9 @@ public:
 		 * @param input Plaintext chunk
 		 * @param len Length of plaintext chunk
 		 */
-		ZT_INLINE void update1(const void *const input,const unsigned int len) noexcept
+		ZT_INLINE void update1(const void *const input, const unsigned int len) noexcept
 		{
-			_gmac.update(input,len);
+			_gmac.update(input, len);
 		}
 
 		/**
@@ -350,7 +349,7 @@ public:
 			// packet and then recombined on receipt for legacy reasons (but with no
 			// cryptographic or performance impact).
 			_tag[1] = tmp[0] ^ tmp[1];
-			_ctr._aes.encrypt(_tag,_tag);
+			_ctr._aes.encrypt(_tag, _tag);
 
 			// Initialize CTR with 96-bit CTR nonce and 32-bit counter. The counter
 			// incorporates 31 more bits of entropy which should raise our security margin
@@ -362,7 +361,7 @@ public:
 			// and so 2^31 should be considered the input limit.
 			tmp[0] = _tag[0];
 			tmp[1] = _tag[1] & ZT_CONST_TO_BE_UINT64(0xffffffff7fffffffULL);
-			_ctr.init(reinterpret_cast<const uint8_t *>(tmp),_output);
+			_ctr.init(reinterpret_cast<const uint8_t *>(tmp), _output);
 		}
 
 		/**
@@ -374,9 +373,9 @@ public:
 		 * @param input Plaintext chunk
 		 * @param len Length of plaintext chunk
 		 */
-		ZT_INLINE void update2(const void *const input,const unsigned int len) noexcept
+		ZT_INLINE void update2(const void *const input, const unsigned int len) noexcept
 		{
-			_ctr.crypt(input,len);
+			_ctr.crypt(input, len);
 		}
 
 		/**
@@ -408,9 +407,10 @@ public:
 	class GMACSIVDecryptor
 	{
 	public:
-		ZT_INLINE GMACSIVDecryptor(const AES &k0,const AES &k1) noexcept :
+		ZT_INLINE GMACSIVDecryptor(const AES &k0, const AES &k1) noexcept:
 			_ctr(k1),
-			_gmac(k0) {}
+			_gmac(k0)
+		{}
 
 		/**
 		 * Initialize decryptor for a new message
@@ -418,14 +418,14 @@ public:
 		 * @param tag 128-bit combined IV/MAC originally created by GMAC-SIV encryption
 		 * @param output Buffer in which to write output plaintext (must be large enough!)
 		 */
-		ZT_INLINE void init(const uint64_t tag[2],void *const output) noexcept
+		ZT_INLINE void init(const uint64_t tag[2], void *const output) noexcept
 		{
 			uint64_t tmp[2];
 			tmp[0] = tag[0];
 			tmp[1] = tag[1] & ZT_CONST_TO_BE_UINT64(0xffffffff7fffffffULL);
-			_ctr.init(reinterpret_cast<const uint8_t *>(tmp),output);
+			_ctr.init(reinterpret_cast<const uint8_t *>(tmp), output);
 
-			_ctr._aes.decrypt(tag,_ivMac);
+			_ctr._aes.decrypt(tag, _ivMac);
 
 			tmp[0] = _ivMac[0];
 			tmp[1] = 0;
@@ -441,12 +441,12 @@ public:
 		 * @param aad Additional authenticated data
 		 * @param len Length of AAD in bytes
 		 */
-		ZT_INLINE void aad(const void *const aad,unsigned int len) noexcept
+		ZT_INLINE void aad(const void *const aad, unsigned int len) noexcept
 		{
-			_gmac.update(aad,len);
+			_gmac.update(aad, len);
 			len &= 0xfU;
 			if (len != 0)
-				_gmac.update(Utils::ZERO256,16 - len);
+				_gmac.update(Utils::ZERO256, 16 - len);
 		}
 
 		/**
@@ -457,9 +457,9 @@ public:
 		 * @param input Input ciphertext
 		 * @param len Length of ciphertext
 		 */
-		ZT_INLINE void update(const void *const input,const unsigned int len) noexcept
+		ZT_INLINE void update(const void *const input, const unsigned int len) noexcept
 		{
-			_ctr.crypt(input,len);
+			_ctr.crypt(input, len);
 			_decryptedLen += len;
 		}
 
@@ -473,7 +473,7 @@ public:
 			_ctr.finish();
 
 			uint64_t gmacTag[2];
-			_gmac.update(_output,_decryptedLen);
+			_gmac.update(_output, _decryptedLen);
 			_gmac.finish(reinterpret_cast<uint8_t *>(gmacTag));
 			return (gmacTag[0] ^ gmacTag[1]) == _ivMac[1];
 		}
@@ -500,18 +500,23 @@ private:
 	static const uint32_t rcon[10];
 
 	void _initSW(const uint8_t key[32]) noexcept;
-	void _encryptSW(const uint8_t in[16],uint8_t out[16]) const noexcept;
-	void _decryptSW(const uint8_t in[16],uint8_t out[16]) const noexcept;
 
-	union {
+	void _encryptSW(const uint8_t in[16], uint8_t out[16]) const noexcept;
+
+	void _decryptSW(const uint8_t in[16], uint8_t out[16]) const noexcept;
+
+	union
+	{
 #ifdef ZT_AES_AESNI
-		struct {
+		struct
+		{
 			__m128i k[28];
 			__m128i h[4]; // h, hh, hhh, hhhh
 		} ni;
 #endif
 
-		struct {
+		struct
+		{
 			uint64_t h[2];
 			uint32_t ek[60];
 			uint32_t dk[60];
@@ -519,47 +524,49 @@ private:
 	} _k;
 
 #ifdef ZT_AES_AESNI
+
 	void _init_aesni(const uint8_t key[32]) noexcept;
 
-	ZT_INLINE void _encrypt_aesni(const void *const in,void *const out) const noexcept
+	ZT_INLINE void _encrypt_aesni(const void *const in, void *const out) const noexcept
 	{
 		__m128i tmp = _mm_loadu_si128((const __m128i *)in);
-		tmp = _mm_xor_si128(tmp,_k.ni.k[0]);
-		tmp = _mm_aesenc_si128(tmp,_k.ni.k[1]);
-		tmp = _mm_aesenc_si128(tmp,_k.ni.k[2]);
-		tmp = _mm_aesenc_si128(tmp,_k.ni.k[3]);
-		tmp = _mm_aesenc_si128(tmp,_k.ni.k[4]);
-		tmp = _mm_aesenc_si128(tmp,_k.ni.k[5]);
-		tmp = _mm_aesenc_si128(tmp,_k.ni.k[6]);
-		tmp = _mm_aesenc_si128(tmp,_k.ni.k[7]);
-		tmp = _mm_aesenc_si128(tmp,_k.ni.k[8]);
-		tmp = _mm_aesenc_si128(tmp,_k.ni.k[9]);
-		tmp = _mm_aesenc_si128(tmp,_k.ni.k[10]);
-		tmp = _mm_aesenc_si128(tmp,_k.ni.k[11]);
-		tmp = _mm_aesenc_si128(tmp,_k.ni.k[12]);
-		tmp = _mm_aesenc_si128(tmp,_k.ni.k[13]);
-		_mm_storeu_si128((__m128i *)out,_mm_aesenclast_si128(tmp,_k.ni.k[14]));
+		tmp = _mm_xor_si128(tmp, _k.ni.k[0]);
+		tmp = _mm_aesenc_si128(tmp, _k.ni.k[1]);
+		tmp = _mm_aesenc_si128(tmp, _k.ni.k[2]);
+		tmp = _mm_aesenc_si128(tmp, _k.ni.k[3]);
+		tmp = _mm_aesenc_si128(tmp, _k.ni.k[4]);
+		tmp = _mm_aesenc_si128(tmp, _k.ni.k[5]);
+		tmp = _mm_aesenc_si128(tmp, _k.ni.k[6]);
+		tmp = _mm_aesenc_si128(tmp, _k.ni.k[7]);
+		tmp = _mm_aesenc_si128(tmp, _k.ni.k[8]);
+		tmp = _mm_aesenc_si128(tmp, _k.ni.k[9]);
+		tmp = _mm_aesenc_si128(tmp, _k.ni.k[10]);
+		tmp = _mm_aesenc_si128(tmp, _k.ni.k[11]);
+		tmp = _mm_aesenc_si128(tmp, _k.ni.k[12]);
+		tmp = _mm_aesenc_si128(tmp, _k.ni.k[13]);
+		_mm_storeu_si128((__m128i *)out, _mm_aesenclast_si128(tmp, _k.ni.k[14]));
 	}
 
-	ZT_INLINE void _decrypt_aesni(const void *in,void *out) const noexcept
+	ZT_INLINE void _decrypt_aesni(const void *in, void *out) const noexcept
 	{
 		__m128i tmp = _mm_loadu_si128((const __m128i *)in);
-		tmp = _mm_xor_si128(tmp,_k.ni.k[14]);
-		tmp = _mm_aesdec_si128(tmp,_k.ni.k[15]);
-		tmp = _mm_aesdec_si128(tmp,_k.ni.k[16]);
-		tmp = _mm_aesdec_si128(tmp,_k.ni.k[17]);
-		tmp = _mm_aesdec_si128(tmp,_k.ni.k[18]);
-		tmp = _mm_aesdec_si128(tmp,_k.ni.k[19]);
-		tmp = _mm_aesdec_si128(tmp,_k.ni.k[20]);
-		tmp = _mm_aesdec_si128(tmp,_k.ni.k[21]);
-		tmp = _mm_aesdec_si128(tmp,_k.ni.k[22]);
-		tmp = _mm_aesdec_si128(tmp,_k.ni.k[23]);
-		tmp = _mm_aesdec_si128(tmp,_k.ni.k[24]);
-		tmp = _mm_aesdec_si128(tmp,_k.ni.k[25]);
-		tmp = _mm_aesdec_si128(tmp,_k.ni.k[26]);
-		tmp = _mm_aesdec_si128(tmp,_k.ni.k[27]);
-		_mm_storeu_si128((__m128i *)out,_mm_aesdeclast_si128(tmp,_k.ni.k[0]));
+		tmp = _mm_xor_si128(tmp, _k.ni.k[14]);
+		tmp = _mm_aesdec_si128(tmp, _k.ni.k[15]);
+		tmp = _mm_aesdec_si128(tmp, _k.ni.k[16]);
+		tmp = _mm_aesdec_si128(tmp, _k.ni.k[17]);
+		tmp = _mm_aesdec_si128(tmp, _k.ni.k[18]);
+		tmp = _mm_aesdec_si128(tmp, _k.ni.k[19]);
+		tmp = _mm_aesdec_si128(tmp, _k.ni.k[20]);
+		tmp = _mm_aesdec_si128(tmp, _k.ni.k[21]);
+		tmp = _mm_aesdec_si128(tmp, _k.ni.k[22]);
+		tmp = _mm_aesdec_si128(tmp, _k.ni.k[23]);
+		tmp = _mm_aesdec_si128(tmp, _k.ni.k[24]);
+		tmp = _mm_aesdec_si128(tmp, _k.ni.k[25]);
+		tmp = _mm_aesdec_si128(tmp, _k.ni.k[26]);
+		tmp = _mm_aesdec_si128(tmp, _k.ni.k[27]);
+		_mm_storeu_si128((__m128i *)out, _mm_aesdeclast_si128(tmp, _k.ni.k[0]));
 	}
+
 #endif
 };
 

@@ -29,9 +29,7 @@
 #include "../core/InetAddress.hpp"
 #include "../core/MAC.hpp"
 #include "Thread.hpp"
-#include "../core/Hashtable.hpp"
 #include "../core/Mutex.hpp"
-
 
 namespace ZeroTier {
 
@@ -107,7 +105,7 @@ private:
         char mac_bin[6];
         unsigned int mtu;
     };
-    Hashtable<int, iface_entry> _interfaces;
+    std::map<int, iface_entry> _interfaces;
     Mutex _if_m;
 
     // socket communication vars;

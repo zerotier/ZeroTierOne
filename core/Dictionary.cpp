@@ -12,7 +12,6 @@
 /****/
 
 #include "Dictionary.hpp"
-#include "Identity.hpp"
 
 namespace ZeroTier {
 
@@ -122,55 +121,6 @@ char *Dictionary::getS(const char *k, char *v, const unsigned int cap) const
 	}
 	v[i] = 0;
 	return v;
-}
-
-bool Dictionary::sign(const Identity &signer)
-{
-	Vector<uint8_t> data;
-	encode(data, true);
-	uint8_t sig[ZT_SIGNATURE_BUFFER_SIZE];
-	const unsigned int siglen = signer.sign(data.data(), (unsigned int) data.size(), sig, ZT_SIGNATURE_BUFFER_SIZE);
-	if (siglen == 0)
-		return false;
-
-	uint8_t fp[ZT_ADDRESS_LENGTH + ZT_FINGERPRINT_HASH_SIZE];
-	Address(signer.fingerprint().address).copyTo(fp);
-	Utils::copy<ZT_FINGERPRINT_HASH_SIZE>(fp + ZT_ADDRESS_LENGTH, signer.fingerprint().hash);
-
-	m_entries[s_signatureFingerprint].assign(fp, fp + ZT_ADDRESS_LENGTH + ZT_FINGERPRINT_HASH_SIZE);
-	m_entries[s_signatureData].assign(sig, sig + siglen);
-
-	return true;
-}
-
-Fingerprint Dictionary::signer() const
-{
-	SortedMap<FCV<char, 8>, Vector<uint8_t> >::const_iterator sigfp(m_entries.find(s_signatureFingerprint));
-	Fingerprint fp;
-	if ((sigfp != m_entries.end()) && (sigfp->second.size() == (ZT_ADDRESS_LENGTH + ZT_FINGERPRINT_HASH_SIZE))) {
-		fp.address = Address(sigfp->second.data());
-		Utils::copy<ZT_FINGERPRINT_HASH_SIZE>(fp.hash, sigfp->second.data() + ZT_ADDRESS_LENGTH);
-	}
-	return fp;
-}
-
-bool Dictionary::verify(const Identity &signer) const
-{
-	SortedMap< FCV<char, 8>, Vector<uint8_t> >::const_iterator sigfp(m_entries.find(s_signatureFingerprint));
-	if (
-		(sigfp == m_entries.end()) ||
-		(sigfp->second.size() != (ZT_ADDRESS_LENGTH + ZT_FINGERPRINT_HASH_SIZE)) ||
-		(Address(sigfp->second.data()) != signer.address()) ||
-		(memcmp(sigfp->second.data() + ZT_ADDRESS_LENGTH,signer.fingerprint().hash,ZT_FINGERPRINT_HASH_SIZE) != 0))
-		return false;
-
-	SortedMap< FCV<char, 8>, Vector<uint8_t> >::const_iterator sig(m_entries.find(s_signatureData));
-	if ((sig == m_entries.end()) || (sig->second.empty()))
-		return false;
-
-	Vector<uint8_t> data;
-	encode(data, true);
-	return signer.verify(data.data(),(unsigned int)data.size(),sig->second.data(),(unsigned int)sig->second.size());
 }
 
 void Dictionary::clear()

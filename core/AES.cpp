@@ -996,14 +996,14 @@ void AES::_initSW(const uint8_t key[32]) noexcept
 	rk[7] = readuint32_t(key + 28);
 	for (int i = 0;;) {
 		uint32_t temp = rk[7];
-		rk[8] = rk[0] ^ (Te2[(temp >> 16U) & 0xff] & 0xff000000) ^ (Te3[(temp >> 8U) & 0xff] & 0x00ff0000) ^ (Te0[(temp) & 0xff] & 0x0000ff00) ^ (Te1[(temp >> 24U)] & 0x000000ff) ^ rcon[i];
+		rk[8] = rk[0] ^ (Te2[(temp >> 16U) & 0xffU] & 0xff000000U) ^ (Te3[(temp >> 8U) & 0xffU] & 0x00ff0000U) ^ (Te0[(temp) & 0xffU] & 0x0000ff00U) ^ (Te1[(temp >> 24U)] & 0x000000ffU) ^ rcon[i];
 		rk[9] = rk[1] ^ rk[8];
 		rk[10] = rk[2] ^ rk[9];
 		rk[11] = rk[3] ^ rk[10];
 		if (++i == 7)
 			break;
 		temp = rk[11];
-		rk[12] = rk[4] ^ (Te2[(temp >> 24U)] & 0xff000000) ^ (Te3[(temp >> 16U) & 0xff] & 0x00ff0000) ^ (Te0[(temp >> 8U) & 0xff] & 0x0000ff00) ^ (Te1[(temp) & 0xff] & 0x000000ff);
+		rk[12] = rk[4] ^ (Te2[(temp >> 24U)] & 0xff000000U) ^ (Te3[(temp >> 16U) & 0xffU] & 0x00ff0000U) ^ (Te0[(temp >> 8U) & 0xffU] & 0x0000ff00U) ^ (Te1[(temp) & 0xffU] & 0x000000ffU);
 		rk[13] = rk[5] ^ rk[12];
 		rk[14] = rk[6] ^ rk[13];
 		rk[15] = rk[7] ^ rk[14];
@@ -1037,10 +1037,10 @@ void AES::_initSW(const uint8_t key[32]) noexcept
 	}
 	for (int i = 1; i < 14; ++i) {
 		rk += 4;
-		rk[0] = Td0[Te4[(rk[0] >> 24U)] & 0xff] ^ Td1[Te4[(rk[0] >> 16U) & 0xffU] & 0xff] ^ Td2[Te4[(rk[0] >> 8U) & 0xffU] & 0xffU] ^ Td3[Te4[(rk[0]) & 0xffU] & 0xffU];
-		rk[1] = Td0[Te4[(rk[1] >> 24U)] & 0xff] ^ Td1[Te4[(rk[1] >> 16U) & 0xffU] & 0xff] ^ Td2[Te4[(rk[1] >> 8U) & 0xffU] & 0xffU] ^ Td3[Te4[(rk[1]) & 0xffU] & 0xffU];
-		rk[2] = Td0[Te4[(rk[2] >> 24U)] & 0xff] ^ Td1[Te4[(rk[2] >> 16U) & 0xffU] & 0xff] ^ Td2[Te4[(rk[2] >> 8U) & 0xffU] & 0xffU] ^ Td3[Te4[(rk[2]) & 0xffU] & 0xffU];
-		rk[3] = Td0[Te4[(rk[3] >> 24U)] & 0xff] ^ Td1[Te4[(rk[3] >> 16U) & 0xffU] & 0xff] ^ Td2[Te4[(rk[3] >> 8U) & 0xffU] & 0xffU] ^ Td3[Te4[(rk[3]) & 0xffU] & 0xffU];
+		rk[0] = Td0[Te4[(rk[0] >> 24U)] & 0xffU] ^ Td1[Te4[(rk[0] >> 16U) & 0xffU] & 0xffU] ^ Td2[Te4[(rk[0] >> 8U) & 0xffU] & 0xffU] ^ Td3[Te4[(rk[0]) & 0xffU] & 0xffU];
+		rk[1] = Td0[Te4[(rk[1] >> 24U)] & 0xffU] ^ Td1[Te4[(rk[1] >> 16U) & 0xffU] & 0xffU] ^ Td2[Te4[(rk[1] >> 8U) & 0xffU] & 0xffU] ^ Td3[Te4[(rk[1]) & 0xffU] & 0xffU];
+		rk[2] = Td0[Te4[(rk[2] >> 24U)] & 0xffU] ^ Td1[Te4[(rk[2] >> 16U) & 0xffU] & 0xffU] ^ Td2[Te4[(rk[2] >> 8U) & 0xffU] & 0xffU] ^ Td3[Te4[(rk[2]) & 0xffU] & 0xffU];
+		rk[3] = Td0[Te4[(rk[3] >> 24U)] & 0xffU] ^ Td1[Te4[(rk[3] >> 16U) & 0xffU] & 0xffU] ^ Td2[Te4[(rk[3] >> 8U) & 0xffU] & 0xffU] ^ Td3[Te4[(rk[3]) & 0xffU] & 0xffU];
 	}
 }
 

@@ -52,7 +52,7 @@ public:
 	{ memoryZero(this); }
 
 	ZT_INLINE Endpoint(const ZT_Endpoint &ep) noexcept
-	{ *this = ep; }
+	{ Utils::copy< sizeof(ZT_Endpoint) >((ZT_Endpoint *)this, &ep); }
 
 	/**
 	 * Create an endpoint for a type that uses an IP
@@ -64,7 +64,7 @@ public:
 	{
 		if (inaddr) {
 			this->type = et;
-			Utils::copy<sizeof(struct sockaddr_storage)>(&(this->value.ss), &(inaddr.as.ss));
+			Utils::copy< sizeof(struct sockaddr_storage) >(&(this->value.ss), &(inaddr.as.ss));
 		} else {
 			memoryZero(this);
 		}
@@ -139,7 +139,7 @@ public:
 			case ZT_ENDPOINT_TYPE_IP_UDP:
 			case ZT_ENDPOINT_TYPE_IP_TCP:
 			case ZT_ENDPOINT_TYPE_IP_HTTP:
-				switch(ep.type) {
+				switch (ep.type) {
 					case ZT_ENDPOINT_TYPE_IP:
 					case ZT_ENDPOINT_TYPE_IP_UDP:
 					case ZT_ENDPOINT_TYPE_IP_TCP:
@@ -200,7 +200,11 @@ public:
 
 	char *toString(char s[ZT_ENDPOINT_STRING_SIZE_MAX]) const noexcept;
 
-	ZT_INLINE String toString() const { char tmp[ZT_ENDPOINT_STRING_SIZE_MAX]; return String(toString(tmp)); }
+	ZT_INLINE String toString() const
+	{
+		char tmp[ZT_ENDPOINT_STRING_SIZE_MAX];
+		return String(toString(tmp));
+	}
 
 	bool fromString(const char *s) noexcept;
 
@@ -227,6 +231,8 @@ public:
 	ZT_INLINE bool operator>=(const Endpoint &ep) const noexcept
 	{ return !(*this < ep); }
 };
+
+static_assert(sizeof(Endpoint) == sizeof(ZT_Endpoint), "size mismatch");
 
 } // namespace ZeroTier
 

@@ -32,7 +32,9 @@
 #include <ifaddrs.h>
 #include <net/if.h>
 #include <netinet/in.h>
+#if __has_include(<netinet/in6_var.h>)
 #include <netinet6/in6_var.h>
+#endif
 #include <arpa/inet.h>
 #include <errno.h>
 #ifdef __LINUX__
@@ -689,7 +691,7 @@ extern "C" void ZT_GoTap_setMtu(ZT_GoTap *tap,unsigned int mtu)
 
 extern "C" int ZT_isTemporaryV6Address(const char *ifname,const struct sockaddr_storage *a)
 {
-#ifndef __WINDOWS__
+#ifdef IN6_IFF_TEMPORARY
 	static ZT_SOCKET s_tmpV6Socket = ZT_INVALID_SOCKET;
 	static std::mutex s_lock;
 	std::lock_guard<std::mutex> l(s_lock);
