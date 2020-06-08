@@ -27,17 +27,22 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 	set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
-#option(BUILD_CENTRAL_CONTROLLER "Build ZeroTier Central Controller" OFF)
-#if (BUILD_CENTRAL_CONTROLLER)
-#	find_package(PostgreSQL REQUIRED)
-#	set(ENABLE_SSL_SUPPORT OFF)
-#	set(BUILD_SHARED_LIBS OFF)
-#	set(BUILD_EXAMPLES OFF)
-#	set(BUILD_TOOLS OFF)
-#	set(BUILD_TESTS OFF)
-#	set(BUILD_API_DOCS OFF)
-#	add_subdirectory("ext/librabbitmq")
-#endif(BUILD_CENTRAL_CONTROLLER)
+option(BUILD_CENTRAL_CONTROLLER "Build ZeroTier Central Controller" OFF)
+if(BUILD_CENTRAL_CONTROLLER)
+	find_package(PkgConfig REQUIRED)
+	if(APPLE)
+		set(CMAKE_PREFIX_PATH 
+			${CMAKE_PREFIX_PATH}
+			/usr/local/opt/libpq
+			/usr/local/lib
+		)
+	endif(APPLE)
+	find_package(PostgreSQL REQUIRED)
+	
+	pkg_check_modules(hiredis REQUIRED IMPORTED_TARGET hiredis)
+	
+	add_subdirectory(controller/thirdparty/redis-plus-plus-1.1.1)
+endif(BUILD_CENTRAL_CONTROLLER)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 	add_definitions(-DZT_DEBUG)
@@ -95,14 +100,14 @@ if (
 	add_compile_options(-maes -mrdrnd -mpclmul -msse -msse2 -mssse3)
 endif()
 
+if(BUILD_CENTRAL_CONTROLLER)
+	add_definitions(-DZT_CONTROLLER_USE_LIBPQ=1)
+endif(BUILD_CENTRAL_CONTROLLER)
+
 add_subdirectory(core)
 add_subdirectory(controller)
 add_subdirectory(osdep)
 add_subdirectory(serviceiocore)
-
-#if(BUILD_CENTRAL_CONTROLLER)
-#	set(libs ${libs} rabbitmq-static ${PostgreSQL_LIBRARIES})
-#endif(BUILD_CENTRAL_CONTROLLER)
 
 set(
 	zt_core
@@ -117,4 +122,5 @@ add_custom_target(zerotier ALL
 	BYPRODUCTS zerotier
 )
 add_dependencies(zerotier zt_osdep zt_core zt_controller zt_service_io_core)
+
 set(ADDITIONAL_MAKE_CLEAN_FILES zerotier)

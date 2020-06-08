@@ -44,7 +44,7 @@ namespace ZeroTier {
 
 class Node;
 
-struct MQConfig;
+struct RedisConfig;
 
 class EmbeddedNetworkController : public NetworkController,public DB::ChangeListener
 {
@@ -54,7 +54,7 @@ public:
 	 * @param ztPath ZeroTier base path
 	 * @param dbPath Database path (file path or database credentials)
 	 */
-	EmbeddedNetworkController(Node *node,const char *ztPath,const char *dbPath, int listenPort, MQConfig *mqc = NULL);
+	EmbeddedNetworkController(Node *node,const char *ztPath,const char *dbPath, int listenPort, RedisConfig *rc = NULL);
 	virtual ~EmbeddedNetworkController();
 
 	virtual void init(const Identity &signingId,Sender *sender);
@@ -147,7 +147,7 @@ private:
 	std::unordered_map< _MemberStatusKey,_MemberStatus,_MemberStatusHash > _memberStatus;
 	std::mutex _memberStatus_l;
 
-	MQConfig *_mqc;
+	RedisConfig *_rc;
 };
 
 } // namespace ZeroTier

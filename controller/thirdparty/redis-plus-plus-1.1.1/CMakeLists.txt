@@ -34,8 +34,6 @@ set_target_properties(${SHARED_LIB} PROPERTIES OUTPUT_NAME ${PROJECT_NAME})
 set_target_properties(${STATIC_LIB} PROPERTIES CLEAN_DIRECT_OUTPUT 1)
 set_target_properties(${SHARED_LIB} PROPERTIES CLEAN_DIRECT_OUTPUT 1)
 
-add_subdirectory(test)
-
 # Install static lib.
 install(TARGETS ${STATIC_LIB}
         ARCHIVE DESTINATION lib)
