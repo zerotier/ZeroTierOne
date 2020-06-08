@@ -28,9 +28,12 @@ if(BUILD_CENTRAL_CONTROLLER)
 	set(ctl_hdr ${ctl_hdr} PostgreSQL.hpp)
 endif(BUILD_CENTRAL_CONTROLLER)
 
-add_library(${PROJECT_NAME} STATIC ${ctl_src} ${ctl_hdr} ${PostgreSQL_LIBRARIES} ${STATIC_LIB} ${hiredis_libraries})
+add_library(${PROJECT_NAME} STATIC ${ctl_src} ${ctl_hdr} ${PostgreSQL_LIBRARIES} ${hiredis_libraries})
 target_include_directories(${PROJECT_NAME}
-	PUBLIC ${hiredis_INCLUDE_DIRS}/../ ${CMAKE_CURRENT_LIST_DIR}/thirdparty/redis-plus-plus-1.1.1/src/sw ${PostgreSQL_INCLUDE_DIRS}
+	PUBLIC ${hiredis_INCLUDE_DIRS}/../ ${redispp_INCLUDE_DIRS} ${PostgreSQL_INCLUDE_DIRS}
 	PRIVATE ${CMAKE_BINARY_DIR}/core)
+if(BUILD_CENTRAL_CONTROLLER)
+	add_dependencies(${PROJECT_NAME} redispp_static)
+endif(BUILD_CENTRAL_CONTROLLER)
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_11)
 

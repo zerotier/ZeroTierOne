@@ -14,33 +14,33 @@ set(PROJECT_SOURCE_DIR ${PROJECT_SOURCE_DIR}/src/sw/redis++)
 
 file(GLOB PROJECT_SOURCE_FILES "${PROJECT_SOURCE_DIR}/*.cpp")
 
-set(STATIC_LIB static)
-set(SHARED_LIB shared)
+set(STATIC_LIB redispp_static)
+# set(SHARED_LIB shared)
 
 add_library(${STATIC_LIB} STATIC ${PROJECT_SOURCE_FILES})
-add_library(${SHARED_LIB} SHARED ${PROJECT_SOURCE_FILES})
+# add_library(${SHARED_LIB} SHARED ${PROJECT_SOURCE_FILES})
 
 # hiredis dependency
 find_path(HIREDIS_HEADER hiredis)
 target_include_directories(${STATIC_LIB} PUBLIC ${HIREDIS_HEADER})
-target_include_directories(${SHARED_LIB} PUBLIC ${HIREDIS_HEADER})
+# target_include_directories(${SHARED_LIB} PUBLIC ${HIREDIS_HEADER})
 
 find_library(HIREDIS_LIB hiredis)
-target_link_libraries(${SHARED_LIB} ${HIREDIS_LIB})
+# target_link_libraries(${SHARED_LIB} ${HIREDIS_LIB})
 
 set_target_properties(${STATIC_LIB} PROPERTIES OUTPUT_NAME ${PROJECT_NAME})
-set_target_properties(${SHARED_LIB} PROPERTIES OUTPUT_NAME ${PROJECT_NAME})
+# set_target_properties(${SHARED_LIB} PROPERTIES OUTPUT_NAME ${PROJECT_NAME})
 
 set_target_properties(${STATIC_LIB} PROPERTIES CLEAN_DIRECT_OUTPUT 1)
-set_target_properties(${SHARED_LIB} PROPERTIES CLEAN_DIRECT_OUTPUT 1)
+# set_target_properties(${SHARED_LIB} PROPERTIES CLEAN_DIRECT_OUTPUT 1)
 
 # Install static lib.
 install(TARGETS ${STATIC_LIB}
         ARCHIVE DESTINATION lib)
 
 # Install shared lib.
-install(TARGETS ${SHARED_LIB}
-        LIBRARY DESTINATION lib)
+# install(TARGETS ${SHARED_LIB}
+#        LIBRARY DESTINATION lib)
 
 #Install headers.
 set(HEADER_PATH "sw/redis++")

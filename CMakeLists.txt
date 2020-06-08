@@ -42,6 +42,8 @@ if(BUILD_CENTRAL_CONTROLLER)
 	pkg_check_modules(hiredis REQUIRED IMPORTED_TARGET hiredis)
 	
 	add_subdirectory(controller/thirdparty/redis-plus-plus-1.1.1)
+	set(redispp_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/controller/thirdparty/redis-plus-plus-1.1.1/src/sw)
+	set(redispp_STATIC_LIB redispp_static)
 endif(BUILD_CENTRAL_CONTROLLER)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -100,8 +102,10 @@ if (
 	add_compile_options(-maes -mrdrnd -mpclmul -msse -msse2 -mssse3)
 endif()
 
+set(GO_BUILD_TAGS)
 if(BUILD_CENTRAL_CONTROLLER)
 	add_definitions(-DZT_CONTROLLER_USE_LIBPQ=1)
+	set(GO_BUILD_TAGS -tags central)
 endif(BUILD_CENTRAL_CONTROLLER)
 
 add_subdirectory(core)
@@ -118,7 +122,7 @@ set(
 
 add_custom_target(zerotier ALL
 	WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-	COMMAND rm -f ./build/zerotier && go build -trimpath -ldflags -s -buildmode=pie -o ./build/zerotier cmd/zerotier/zerotier.go
+	COMMAND rm -f ./build/zerotier && go build ${GO_BUILD_TAGS} -trimpath -ldflags -s -buildmode=pie -o ./build/zerotier cmd/zerotier/zerotier.go
 	BYPRODUCTS zerotier
 )
 add_dependencies(zerotier zt_osdep zt_core zt_controller zt_service_io_core)
