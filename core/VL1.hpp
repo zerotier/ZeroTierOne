@@ -32,7 +32,9 @@
 namespace ZeroTier {
 
 class RuntimeEnvironment;
+
 class Peer;
+
 class VL2;
 
 /**
@@ -60,39 +62,50 @@ public:
 	 * @param data Packet data
 	 * @param len Packet length
 	 */
-	void onRemotePacket(void *tPtr,int64_t localSocket,const InetAddress &fromAddr,SharedPtr<Buf> &data,unsigned int len) noexcept;
+	void onRemotePacket(void *tPtr, int64_t localSocket, const InetAddress &fromAddr, SharedPtr< Buf > &data, unsigned int len) noexcept;
 
 private:
 	const RuntimeEnvironment *RR;
 
-	void m_relay(void *tPtr, const SharedPtr<Path> &path, Address destination, SharedPtr<Buf> &pkt, int pktSize);
+	void m_relay(void *tPtr, const SharedPtr< Path > &path, Address destination, SharedPtr< Buf > &pkt, int pktSize);
+
 	void m_sendPendingWhois(void *tPtr, int64_t now);
 
-	SharedPtr<Peer> m_HELLO(void *tPtr, const SharedPtr<Path> &path, Buf &pkt, int packetSize);
+	SharedPtr< Peer > m_HELLO(void *tPtr, const SharedPtr< Path > &path, Buf &pkt, int packetSize);
 
-	bool m_ERROR(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize, Protocol::Verb &inReVerb);
-	bool m_OK(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize, Protocol::Verb &inReVerb);
-	bool m_WHOIS(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
-	bool m_RENDEZVOUS(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
-	bool m_ECHO(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
-	bool m_PUSH_DIRECT_PATHS(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
-	bool m_USER_MESSAGE(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
-	bool m_ENCAP(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
+	bool m_ERROR(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, const SharedPtr< Peer > &peer, Buf &pkt, int packetSize, Protocol::Verb &inReVerb);
+
+	bool m_OK(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, const SharedPtr< Peer > &peer, Buf &pkt, int packetSize, Protocol::Verb &inReVerb);
+
+	bool m_WHOIS(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, const SharedPtr< Peer > &peer, Buf &pkt, int packetSize);
+
+	bool m_RENDEZVOUS(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, const SharedPtr< Peer > &peer, Buf &pkt, int packetSize);
+
+	bool m_ECHO(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, const SharedPtr< Peer > &peer, Buf &pkt, int packetSize);
+
+	bool m_PUSH_DIRECT_PATHS(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, const SharedPtr< Peer > &peer, Buf &pkt, int packetSize);
+
+	bool m_USER_MESSAGE(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, const SharedPtr< Peer > &peer, Buf &pkt, int packetSize);
+
+	bool m_ENCAP(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, const SharedPtr< Peer > &peer, Buf &pkt, int packetSize);
 
 	// Defragmentation engine for handling inbound packets with more than one fragment.
-	Defragmenter<ZT_MAX_PACKET_FRAGMENTS> m_inputPacketAssembler;
+	Defragmenter< ZT_MAX_PACKET_FRAGMENTS > m_inputPacketAssembler;
 
 	// Queue of outbound WHOIS reqeusts and packets waiting on them.
 	struct p_WhoisQueueItem
 	{
-		ZT_INLINE p_WhoisQueueItem() : lastRetry(0),retries(0),waitingPacketCount(0) {}
+		ZT_INLINE p_WhoisQueueItem() : lastRetry(0), retries(0), waitingPacketCount(0)
+		{}
+
 		int64_t lastRetry;
 		unsigned int retries;
 		unsigned int waitingPacketCount;
 		unsigned int waitingPacketSize[ZT_VL1_MAX_WHOIS_WAITING_PACKETS];
-		SharedPtr<Buf> waitingPacket[ZT_VL1_MAX_WHOIS_WAITING_PACKETS];
+		SharedPtr< Buf > waitingPacket[ZT_VL1_MAX_WHOIS_WAITING_PACKETS];
 	};
-	Map<Address,p_WhoisQueueItem> m_whoisQueue;
+
+	Map< Address, p_WhoisQueueItem > m_whoisQueue;
 	Mutex m_whoisQueue_l;
 };
 

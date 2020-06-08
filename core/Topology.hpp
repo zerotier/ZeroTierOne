@@ -36,7 +36,7 @@ class RuntimeEnvironment;
 class Topology
 {
 public:
-	Topology(const RuntimeEnvironment *renv,void *tPtr);
+	Topology(const RuntimeEnvironment *renv, void *tPtr);
 
 	/**
 	 * Add peer to database
@@ -47,7 +47,7 @@ public:
 	 * @param peer Peer to add
 	 * @return New or existing peer (should replace 'peer')
 	 */
-	SharedPtr<Peer> add(void *tPtr,const SharedPtr<Peer> &peer);
+	SharedPtr< Peer > add(void *tPtr, const SharedPtr< Peer > &peer);
 
 	/**
 	 * Get a peer from its address
@@ -57,21 +57,21 @@ public:
 	 * @param loadFromCached If false do not load from cache if not in memory (default: true)
 	 * @return Peer or NULL if not found
 	 */
-	ZT_INLINE SharedPtr<Peer> peer(void *tPtr,const Address &zta,const bool loadFromCached = true)
+	ZT_INLINE SharedPtr< Peer > peer(void *tPtr, const Address &zta, const bool loadFromCached = true)
 	{
 		{
 			RWMutex::RLock l(m_peers_l);
-			const SharedPtr<Peer> *const ap = m_peers.get(zta);
+			const SharedPtr< Peer > *const ap = m_peers.get(zta);
 			if (likely(ap != nullptr))
 				return *ap;
 		}
 		{
-			SharedPtr<Peer> p;
+			SharedPtr< Peer > p;
 			if (loadFromCached) {
 				m_loadCached(tPtr, zta, p);
 				if (p) {
 					RWMutex::Lock l(m_peers_l);
-					SharedPtr<Peer> &hp = m_peers[zta];
+					SharedPtr< Peer > &hp = m_peers[zta];
 					if (hp)
 						return hp;
 					hp = p;
@@ -88,19 +88,19 @@ public:
 	 * @param r Remote address
 	 * @return Pointer to canonicalized Path object or NULL on error
 	 */
-	ZT_INLINE SharedPtr<Path> path(const int64_t l,const InetAddress &r)
+	ZT_INLINE SharedPtr< Path > path(const int64_t l, const InetAddress &r)
 	{
 		const uint64_t k = s_getPathKey(l, r);
 		{
 			RWMutex::RLock lck(m_paths_l);
-			SharedPtr<Path> *const p = m_paths.get(k);
+			SharedPtr< Path > *const p = m_paths.get(k);
 			if (likely(p != nullptr))
 				return *p;
 		}
 		{
-			SharedPtr<Path> p(new Path(l,r));
+			SharedPtr< Path > p(new Path(l, r));
 			RWMutex::Lock lck(m_paths_l);
-			SharedPtr<Path> &p2 = m_paths[k];
+			SharedPtr< Path > &p2 = m_paths[k];
 			if (p2)
 				return p2;
 			p2 = p;
@@ -111,11 +111,11 @@ public:
 	/**
 	 * @return Current best root server
 	 */
-	ZT_INLINE SharedPtr<Peer> root() const
+	ZT_INLINE SharedPtr< Peer > root() const
 	{
 		RWMutex::RLock l(m_peers_l);
 		if (unlikely(m_rootPeers.empty()))
-			return SharedPtr<Peer>();
+			return SharedPtr< Peer >();
 		return m_rootPeers.front();
 	}
 
@@ -138,35 +138,35 @@ public:
 	 * @param f Function to apply
 	 * @tparam F Function or function object type
 	 */
-	template<typename F>
+	template< typename F >
 	ZT_INLINE void eachPeer(F f) const
 	{
 		RWMutex::RLock l(m_peers_l);
-		for(Map< Address,SharedPtr<Peer> >::const_iterator i(m_peers.begin());i != m_peers.end();++i)
+		for (Map< Address, SharedPtr< Peer > >::const_iterator i(m_peers.begin()); i != m_peers.end(); ++i)
 			f(i->second);
 	}
 
 	/**
 	 * @param allPeers vector to fill with all current peers
 	 */
-	ZT_INLINE void getAllPeers(Vector< SharedPtr<Peer> > &allPeers) const
+	ZT_INLINE void getAllPeers(Vector< SharedPtr< Peer > > &allPeers) const
 	{
 		allPeers.clear();
 		RWMutex::RLock l(m_peers_l);
 		allPeers.reserve(m_peers.size());
-		for(Map< Address,SharedPtr<Peer> >::const_iterator i(m_peers.begin());i != m_peers.end();++i)
+		for (Map< Address, SharedPtr< Peer > >::const_iterator i(m_peers.begin()); i != m_peers.end(); ++i)
 			allPeers.push_back(i->second);
 	}
 
 	/**
 	 * @param allPeers vector to fill with all current peers
 	 */
-	ZT_INLINE void getAllPeers(Vector< SharedPtr<Peer> > &allPeers,Vector< SharedPtr<Peer> > &rootPeers) const
+	ZT_INLINE void getAllPeers(Vector< SharedPtr< Peer > > &allPeers, Vector< SharedPtr< Peer > > &rootPeers) const
 	{
 		allPeers.clear();
 		RWMutex::RLock l(m_peers_l);
 		allPeers.reserve(m_peers.size());
-		for(Map< Address,SharedPtr<Peer> >::const_iterator i(m_peers.begin());i != m_peers.end();++i)
+		for (Map< Address, SharedPtr< Peer > >::const_iterator i(m_peers.begin()); i != m_peers.end(); ++i)
 			allPeers.push_back(i->second);
 		rootPeers = m_rootPeers;
 	}
@@ -178,7 +178,7 @@ public:
 	 * @param id Root identity (will be locally validated)
 	 * @return Root peer or NULL if some problem occurred
 	 */
-	SharedPtr<Peer> addRoot(void *tPtr, const Identity &id);
+	SharedPtr< Peer > addRoot(void *tPtr, const Identity &id);
 
 	/**
 	 * Remove a root server's identity from the root server set
@@ -199,7 +199,7 @@ public:
 	/**
 	 * Do periodic tasks such as database cleanup
 	 */
-	void doPeriodicTasks(void *tPtr,int64_t now);
+	void doPeriodicTasks(void *tPtr, int64_t now);
 
 	/**
 	 * Save all currently known peers to data store
@@ -207,12 +207,14 @@ public:
 	void saveAll(void *tPtr);
 
 private:
-	void m_loadCached(void *tPtr, const Address &zta, SharedPtr<Peer> &peer);
+	void m_loadCached(void *tPtr, const Address &zta, SharedPtr< Peer > &peer);
+
 	void m_writeRootList(void *tPtr);
+
 	void m_updateRootPeers(void *tPtr);
 
 	// This gets an integer key from an InetAddress for looking up paths.
-	static ZT_INLINE uint64_t s_getPathKey(const int64_t l,const InetAddress &r) noexcept
+	static ZT_INLINE uint64_t s_getPathKey(const int64_t l, const InetAddress &r) noexcept
 	{
 		// SECURITY: these will be used as keys in a Map<> which uses its own hasher that
 		// mixes in a per-invocation secret to work against hash collision attacks. See the
@@ -223,20 +225,20 @@ private:
 		if (r.family() == AF_INET) {
 			return ((uint64_t)(r.as.sa_in.sin_addr.s_addr) << 32U) ^ ((uint64_t)r.as.sa_in.sin_port << 16U) ^ (uint64_t)l;
 		} else if (r.family() == AF_INET6) {
-			return Utils::loadAsIsEndian<uint64_t>(r.as.sa_in6.sin6_addr.s6_addr) + Utils::loadAsIsEndian<uint64_t>(r.as.sa_in6.sin6_addr.s6_addr + 8) + (uint64_t)r.as.sa_in6.sin6_port + (uint64_t)l;
+			return Utils::loadAsIsEndian< uint64_t >(r.as.sa_in6.sin6_addr.s6_addr) + Utils::loadAsIsEndian< uint64_t >(r.as.sa_in6.sin6_addr.s6_addr + 8) + (uint64_t)r.as.sa_in6.sin6_port + (uint64_t)l;
 		} else {
 			// This should never really be used but it's here just in case.
-			return (uint64_t)Utils::fnv1a32(reinterpret_cast<const void *>(&r),sizeof(InetAddress)) + (uint64_t)l;
+			return (uint64_t)Utils::fnv1a32(reinterpret_cast<const void *>(&r), sizeof(InetAddress)) + (uint64_t)l;
 		}
 	}
 
 	const RuntimeEnvironment *const RR;
 	RWMutex m_paths_l; // locks m_paths
 	RWMutex m_peers_l; // locks m_peers, m_roots, and m_rootPeers
-	Map< uint64_t,SharedPtr<Path> > m_paths;
-	Map< Address,SharedPtr<Peer> > m_peers;
+	Map< uint64_t, SharedPtr< Path > > m_paths;
+	Map< Address, SharedPtr< Peer > > m_peers;
 	Set< Identity > m_roots;
-	Vector< SharedPtr<Peer> > m_rootPeers;
+	Vector< SharedPtr< Peer > > m_rootPeers;
 };
 
 } // namespace ZeroTier

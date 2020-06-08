@@ -40,7 +40,7 @@ class Expect;
 class RuntimeEnvironment
 {
 public:
-	ZT_INLINE RuntimeEnvironment(Node *const n) noexcept :
+	ZT_INLINE RuntimeEnvironment(Node *const n) noexcept:
 		instanceId(Utils::getSecureRandomU64()),
 		node(n),
 		localNetworkController(nullptr),
@@ -58,7 +58,7 @@ public:
 
 	ZT_INLINE ~RuntimeEnvironment() noexcept
 	{
-		Utils::burn(secretIdentityStr,sizeof(secretIdentityStr));
+		Utils::burn(secretIdentityStr, sizeof(secretIdentityStr));
 	}
 
 	// Unique ID generated on startup

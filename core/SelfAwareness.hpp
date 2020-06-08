@@ -61,7 +61,7 @@ public:
 	 * @param now Current time
 	 * @return Map of count to IP/port representing how many endpoints reported each address
 	 */
-	MultiMap<unsigned int, InetAddress> externalAddresses(int64_t now) const;
+	MultiMap< unsigned int, InetAddress > externalAddresses(int64_t now) const;
 
 private:
 	struct p_PhySurfaceKey
@@ -78,7 +78,7 @@ private:
 		{}
 
 		ZT_INLINE unsigned long hashCode() const noexcept
-		{ return ((unsigned long) reporter.toInt() + (unsigned long) receivedOnLocalSocket + (unsigned long) scope); }
+		{ return ((unsigned long)reporter.toInt() + (unsigned long)receivedOnLocalSocket + (unsigned long)scope); }
 
 		ZT_INLINE bool operator==(const p_PhySurfaceKey &k) const noexcept
 		{ return ((reporter == k.reporter) && (receivedOnLocalSocket == k.receivedOnLocalSocket) && (reporterPhysicalAddress == k.reporterPhysicalAddress) && (scope == k.scope)); }
@@ -119,7 +119,7 @@ private:
 	};
 
 	const RuntimeEnvironment *RR;
-	Map<p_PhySurfaceKey, p_PhySurfaceEntry> m_phy;
+	Map< p_PhySurfaceKey, p_PhySurfaceEntry > m_phy;
 	Mutex m_phy_l;
 };
 

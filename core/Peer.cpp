@@ -69,7 +69,7 @@ bool Peer::init(const Identity &peerIdentity)
 
 void Peer::received(
 	void *tPtr,
-	const SharedPtr<Path> &path,
+	const SharedPtr< Path > &path,
 	const unsigned int hops,
 	const uint64_t packetId,
 	const unsigned int payloadLength,
@@ -86,7 +86,7 @@ void Peer::received(
 
 		// If this matches an existing path, skip path learning stuff. For the small number
 		// of paths a peer will have linear scan is the fastest way to do lookup.
-		for (unsigned int i = 0;i < m_alivePathCount;++i) {
+		for (unsigned int i = 0; i < m_alivePathCount; ++i) {
 			if (m_paths[i] == path)
 				return;
 		}
@@ -103,7 +103,7 @@ void Peer::received(
 				unsigned int newPathIdx = 0;
 				if (m_alivePathCount == ZT_MAX_PEER_NETWORK_PATHS) {
 					int64_t lastReceiveTimeMax = 0;
-					for (unsigned int i = 0;i < m_alivePathCount;++i) {
+					for (unsigned int i = 0; i < m_alivePathCount; ++i) {
 						if ((m_paths[i]->address().family() == path->address().family()) &&
 						    (m_paths[i]->localSocket() == path->localSocket()) && // TODO: should be localInterface when multipath is integrated
 						    (m_paths[i]->address().ipsEqual2(path->address()))) {
@@ -133,7 +133,7 @@ void Peer::received(
 				// it replaces the lowest ranked entry.
 				std::sort(m_endpointCache, m_endpointCache + ZT_PEER_ENDPOINT_CACHE_SIZE);
 				Endpoint thisEndpoint(path->address());
-				for (unsigned int i = 0;;++i) {
+				for (unsigned int i = 0;; ++i) {
 					if (i == (ZT_PEER_ENDPOINT_CACHE_SIZE - 1)) {
 						m_endpointCache[i].target = thisEndpoint;
 						m_endpointCache[i].lastSeen = now;
@@ -155,11 +155,11 @@ void Peer::received(
 
 void Peer::send(void *tPtr, int64_t now, const void *data, unsigned int len) noexcept
 {
-	SharedPtr<Path> via(this->path(now));
+	SharedPtr< Path > via(this->path(now));
 	if (via) {
 		via->send(RR, tPtr, data, len, now);
 	} else {
-		const SharedPtr<Peer> root(RR->topology->root());
+		const SharedPtr< Peer > root(RR->topology->root());
 		if ((root) && (root.ptr() != this)) {
 			via = root->path(now);
 			if (via) {
@@ -202,7 +202,7 @@ unsigned int Peer::hello(void *tPtr, int64_t localSocket, const InetAddress &atA
 	Salsa20(m_identityKey->secret, &legacySalsaIv).crypt12(legacyMoonCountStart, legacyMoonCountStart, 2);
 
 	const int cryptSectionStart = ii;
-	FCV<uint8_t, 4096> md;
+	FCV< uint8_t, 4096 > md;
 	Dictionary::append(md, ZT_PROTO_HELLO_NODE_META_INSTANCE_ID, RR->instanceId);
 	outp.wI16(ii, (uint16_t)md.size());
 	outp.wB(ii, md.data(), (unsigned int)md.size());
@@ -227,7 +227,7 @@ unsigned int Peer::hello(void *tPtr, int64_t localSocket, const InetAddress &atA
 	p1305.update(outp.unsafeData + ZT_PROTO_PACKET_ENCRYPTED_SECTION_START, ii - ZT_PROTO_PACKET_ENCRYPTED_SECTION_START);
 	uint64_t polyMac[2];
 	p1305.finish(polyMac);
-	Utils::storeAsIsEndian<uint64_t>(outp.unsafeData + ZT_PROTO_PACKET_MAC_INDEX, polyMac[0]);
+	Utils::storeAsIsEndian< uint64_t >(outp.unsafeData + ZT_PROTO_PACKET_MAC_INDEX, polyMac[0]);
 
 	return (likely(RR->node->putPacket(tPtr, localSocket, atAddress, outp.unsafeData, ii))) ? ii : 0;
 }
@@ -257,7 +257,7 @@ void Peer::pulse(void *const tPtr, const int64_t now, const bool isRoot)
 			// callback (if one was supplied).
 
 			if (m_locator) {
-				for (Vector<Endpoint>::const_iterator ep(m_locator->endpoints().begin());ep != m_locator->endpoints().end();++ep) {
+				for (Vector< Endpoint >::const_iterator ep(m_locator->endpoints().begin()); ep != m_locator->endpoints().end(); ++ep) {
 					if (ep->type == ZT_ENDPOINT_TYPE_IP_UDP) {
 						if (RR->node->shouldUsePathForZeroTierTraffic(tPtr, m_id, -1, ep->ip())) {
 							int64_t &lt = m_lastTried[*ep];
@@ -271,7 +271,7 @@ void Peer::pulse(void *const tPtr, const int64_t now, const bool isRoot)
 				}
 			}
 
-			for (unsigned int i = 0;i < ZT_PEER_ENDPOINT_CACHE_SIZE;++i) {
+			for (unsigned int i = 0; i < ZT_PEER_ENDPOINT_CACHE_SIZE; ++i) {
 				if ((m_endpointCache[i].lastSeen > 0) && (m_endpointCache[i].target.type == ZT_ENDPOINT_TYPE_IP_UDP)) {
 					if (RR->node->shouldUsePathForZeroTierTraffic(tPtr, m_id, -1, m_endpointCache[i].target.ip())) {
 						int64_t &lt = m_lastTried[m_endpointCache[i].target];
@@ -308,7 +308,7 @@ void Peer::pulse(void *const tPtr, const int64_t now, const bool isRoot)
 
 			if (qi.target.isInetAddr()) {
 				// Skip entry if it overlaps with any currently active IP.
-				for (unsigned int i = 0;i < m_alivePathCount;++i) {
+				for (unsigned int i = 0; i < m_alivePathCount; ++i) {
 					if (m_paths[i]->address().ipsEqual(qi.target.ip()))
 						goto discard_queue_item;
 				}
@@ -385,7 +385,7 @@ void Peer::pulse(void *const tPtr, const int64_t now, const bool isRoot)
 	// Do keepalive on all currently active paths, sending HELLO to the first
 	// if needHello is true and sending small keepalives to others.
 	uint64_t randomJunk = Utils::random();
-	for (unsigned int i = 0;i < m_alivePathCount;++i) {
+	for (unsigned int i = 0; i < m_alivePathCount; ++i) {
 		if (needHello) {
 			needHello = false;
 			const unsigned int bytes = hello(tPtr, m_paths[i]->localSocket(), m_paths[i]->address(), now);
@@ -400,9 +400,9 @@ void Peer::pulse(void *const tPtr, const int64_t now, const bool isRoot)
 
 	// Send a HELLO indirectly if we were not able to send one via any direct path.
 	if (needHello) {
-		const SharedPtr<Peer> root(RR->topology->root());
+		const SharedPtr< Peer > root(RR->topology->root());
 		if (root) {
-			const SharedPtr<Path> via(root->path(now));
+			const SharedPtr< Path > via(root->path(now));
 			if (via) {
 				const unsigned int bytes = hello(tPtr, via->localSocket(), via->address(), now);
 				via->sent(now, bytes);
@@ -414,7 +414,7 @@ void Peer::pulse(void *const tPtr, const int64_t now, const bool isRoot)
 	}
 
 	// Clean m_lastTried
-	for (Map<Endpoint, int64_t>::iterator i(m_lastTried.begin());i != m_lastTried.end();) {
+	for (Map< Endpoint, int64_t >::iterator i(m_lastTried.begin()); i != m_lastTried.end();) {
 		if ((now - i->second) > (ZT_PATH_MIN_TRY_INTERVAL * 4))
 			m_lastTried.erase(i++);
 		else ++i;
@@ -430,7 +430,7 @@ void Peer::contact(void *tPtr, const int64_t now, const Endpoint &ep, int tries)
 	if (ep.isInetAddr()) {
 		if ((now - m_lastPrioritizedPaths) > ZT_PEER_PRIORITIZE_PATHS_INTERVAL)
 			m_prioritizePaths(now);
-		for (unsigned int i = 0;i < m_alivePathCount;++i) {
+		for (unsigned int i = 0; i < m_alivePathCount; ++i) {
 			if (m_paths[i]->address().ipsEqual(ep.ip()))
 				return;
 		}
@@ -450,7 +450,7 @@ void Peer::contact(void *tPtr, const int64_t now, const Endpoint &ep, int tries)
 	}
 
 	// Make sure address is not already in the try queue. If so just update it.
-	for (List<p_TryQueueItem>::iterator i(m_tryQueue.begin());i != m_tryQueue.end();++i) {
+	for (List< p_TryQueueItem >::iterator i(m_tryQueue.begin()); i != m_tryQueue.end(); ++i) {
 		if (i->target.isSameAddress(ep)) {
 			i->target = ep;
 			i->iteration = -tries;
@@ -465,7 +465,7 @@ void Peer::resetWithinScope(void *tPtr, InetAddress::IpScope scope, int inetAddr
 {
 	RWMutex::Lock l(m_lock);
 	unsigned int pc = 0;
-	for (unsigned int i = 0;i < m_alivePathCount;++i) {
+	for (unsigned int i = 0; i < m_alivePathCount; ++i) {
 		if ((m_paths[i]) && ((m_paths[i]->address().family() == inetAddressFamily) && (m_paths[i]->address().ipScope() == scope))) {
 			const unsigned int bytes = m_sendProbe(tPtr, m_paths[i]->localSocket(), m_paths[i]->address(), nullptr, 0, now);
 			m_paths[i]->sent(now, bytes);
@@ -491,7 +491,7 @@ bool Peer::directlyConnected(int64_t now)
 	}
 }
 
-void Peer::getAllPaths(Vector<SharedPtr<Path> > &paths)
+void Peer::getAllPaths(Vector< SharedPtr< Path > > &paths)
 {
 	RWMutex::RLock l(m_lock);
 	paths.clear();
@@ -504,7 +504,7 @@ void Peer::save(void *tPtr) const
 	uint8_t buf[8 + ZT_PEER_MARSHAL_SIZE_MAX];
 
 	// Prefix each saved peer with the current timestamp.
-	Utils::storeBigEndian<uint64_t>(buf, (uint64_t)RR->node->now());
+	Utils::storeBigEndian< uint64_t >(buf, (uint64_t)RR->node->now());
 
 	const int len = marshal(buf + 8);
 	if (len > 0) {
@@ -553,13 +553,13 @@ int Peer::marshal(uint8_t data[ZT_PEER_MARSHAL_SIZE_MAX]) const noexcept
 	}
 
 	unsigned int cachedEndpointCount = 0;
-	for (unsigned int i = 0;i < ZT_PEER_ENDPOINT_CACHE_SIZE;++i) {
+	for (unsigned int i = 0; i < ZT_PEER_ENDPOINT_CACHE_SIZE; ++i) {
 		if (m_endpointCache[i].lastSeen > 0)
 			++cachedEndpointCount;
 	}
 	Utils::storeBigEndian(data + p, (uint16_t)cachedEndpointCount);
 	p += 2;
-	for (unsigned int i = 0;i < ZT_PEER_ENDPOINT_CACHE_SIZE;++i) {
+	for (unsigned int i = 0; i < ZT_PEER_ENDPOINT_CACHE_SIZE; ++i) {
 		Utils::storeBigEndian(data + p, (uint64_t)m_endpointCache[i].lastSeen);
 		s = m_endpointCache[i].target.marshal(data + p);
 		if (s <= 0)
@@ -635,13 +635,13 @@ int Peer::unmarshal(const uint8_t *restrict data, const int len) noexcept
 		return -1;
 	}
 
-	const unsigned int cachedEndpointCount = Utils::loadBigEndian<uint16_t>(data + p);
+	const unsigned int cachedEndpointCount = Utils::loadBigEndian< uint16_t >(data + p);
 	p += 2;
-	for (unsigned int i = 0;i < cachedEndpointCount;++i) {
+	for (unsigned int i = 0; i < cachedEndpointCount; ++i) {
 		if (i < ZT_PEER_ENDPOINT_CACHE_SIZE) {
 			if ((p + 8) >= len)
 				return -1;
-			m_endpointCache[i].lastSeen = (int64_t)Utils::loadBigEndian<uint64_t>(data + p);
+			m_endpointCache[i].lastSeen = (int64_t)Utils::loadBigEndian< uint64_t >(data + p);
 			p += 8;
 			s = m_endpointCache[i].target.unmarshal(data + p, len - p);
 			if (s <= 0)
@@ -652,15 +652,15 @@ int Peer::unmarshal(const uint8_t *restrict data, const int len) noexcept
 
 	if ((p + 10) > len)
 		return -1;
-	m_vProto = Utils::loadBigEndian<uint16_t>(data + p);
+	m_vProto = Utils::loadBigEndian< uint16_t >(data + p);
 	p += 2;
-	m_vMajor = Utils::loadBigEndian<uint16_t>(data + p);
+	m_vMajor = Utils::loadBigEndian< uint16_t >(data + p);
 	p += 2;
-	m_vMinor = Utils::loadBigEndian<uint16_t>(data + p);
+	m_vMinor = Utils::loadBigEndian< uint16_t >(data + p);
 	p += 2;
-	m_vRevision = Utils::loadBigEndian<uint16_t>(data + p);
+	m_vRevision = Utils::loadBigEndian< uint16_t >(data + p);
 	p += 2;
-	p += 2 + (int)Utils::loadBigEndian<uint16_t>(data + p);
+	p += 2 + (int)Utils::loadBigEndian< uint16_t >(data + p);
 
 	m_deriveSecondaryIdentityKeys();
 
@@ -669,7 +669,7 @@ int Peer::unmarshal(const uint8_t *restrict data, const int len) noexcept
 
 struct _PathPriorityComparisonOperator
 {
-	ZT_INLINE bool operator()(const SharedPtr<Path> &a, const SharedPtr<Path> &b) const noexcept
+	ZT_INLINE bool operator()(const SharedPtr< Path > &a, const SharedPtr< Path > &b) const noexcept
 	{
 		// Sort in descending order of most recent receive time.
 		return (a->lastIn() > b->lastIn());
@@ -686,10 +686,10 @@ void Peer::m_prioritizePaths(int64_t now)
 		std::sort(m_paths, m_paths + m_alivePathCount, _PathPriorityComparisonOperator());
 
 		// Let go of paths that have expired.
-		for (unsigned int i = 0;i < ZT_MAX_PEER_NETWORK_PATHS;++i) {
+		for (unsigned int i = 0; i < ZT_MAX_PEER_NETWORK_PATHS; ++i) {
 			if ((!m_paths[i]) || (!m_paths[i]->alive(now))) {
 				m_alivePathCount = i;
-				for (;i < ZT_MAX_PEER_NETWORK_PATHS;++i)
+				for (; i < ZT_MAX_PEER_NETWORK_PATHS; ++i)
 					m_paths[i].zero();
 				break;
 			}
@@ -700,11 +700,11 @@ void Peer::m_prioritizePaths(int64_t now)
 unsigned int Peer::m_sendProbe(void *tPtr, int64_t localSocket, const InetAddress &atAddress, const uint16_t *ports, const unsigned int numPorts, int64_t now)
 {
 	// Assumes m_lock is locked
-	const SharedPtr<SymmetricKey> k(m_key());
+	const SharedPtr< SymmetricKey > k(m_key());
 	const uint64_t packetId = k->nextMessage(RR->identity.address(), m_id.address());
 
 	uint8_t p[ZT_PROTO_MIN_PACKET_LENGTH];
-	Utils::storeAsIsEndian<uint64_t>(p + ZT_PROTO_PACKET_ID_INDEX, packetId);
+	Utils::storeAsIsEndian< uint64_t >(p + ZT_PROTO_PACKET_ID_INDEX, packetId);
 	m_id.address().copyTo(p + ZT_PROTO_PACKET_DESTINATION_INDEX);
 	RR->identity.address().copyTo(p + ZT_PROTO_PACKET_SOURCE_INDEX);
 	p[ZT_PROTO_PACKET_FLAGS_INDEX] = 0;
@@ -716,7 +716,7 @@ unsigned int Peer::m_sendProbe(void *tPtr, int64_t localSocket, const InetAddres
 
 	if (numPorts > 0) {
 		InetAddress tmp(atAddress);
-		for (unsigned int i = 0;i < numPorts;++i) {
+		for (unsigned int i = 0; i < numPorts; ++i) {
 			tmp.setPort(ports[i]);
 			RR->node->putPacket(tPtr, -1, tmp, p, ZT_PROTO_MIN_PACKET_LENGTH);
 		}

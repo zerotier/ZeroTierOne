@@ -34,10 +34,10 @@ Global Options:
 Commands:
   help                                   Show this help
   version                                Print version
-  service                                Start a node (see below)
+  service                                Start node (see below)
   status                                 Show node status and configuration
   join [-options] <network>              Join a virtual network
-    -a <token>                           Join authorization token
+    -a <token>                           Token to submit to controller
     -c <identity|fingerprint>            Controller identity or fingerprint
   leave <network>                        Leave a virtual network
   networks                               List VL2 virtual networks

@@ -591,7 +591,7 @@ func (n *Node) runMaintenance() {
 				addrs, _ := i.Addrs()
 				for _, a := range addrs {
 					ipn, _ := a.(*net.IPNet)
-					if ipn != nil && len(ipn.IP) > 0 && ipn.IP.IsGlobalUnicast() {
+					if ipn != nil && len(ipn.IP) > 0 && !ipn.IP.IsLoopback() && !ipn.IP.IsMulticast() && !ipn.IP.IsInterfaceLocalMulticast() && !ipn.IP.IsLinkLocalMulticast() && !ipn.IP.IsLinkLocalUnicast() {
 						isTemporary := false
 						if len(ipn.IP) == 16 {
 							var ss C.struct_sockaddr_storage

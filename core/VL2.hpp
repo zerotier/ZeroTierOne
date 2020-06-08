@@ -25,10 +25,15 @@
 namespace ZeroTier {
 
 class Path;
+
 class Peer;
+
 class RuntimeEnvironment;
+
 class VL1;
+
 class Network;
+
 class MAC;
 
 class VL2
@@ -50,18 +55,26 @@ public:
 	 * @param data Ethernet payload
 	 * @param len Frame length
 	 */
-	void onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const MAC &from,const MAC &to,unsigned int etherType,unsigned int vlanId,SharedPtr<Buf> &data,unsigned int len);
+	void onLocalEthernet(void *tPtr, const SharedPtr< Network > &network, const MAC &from, const MAC &to, unsigned int etherType, unsigned int vlanId, SharedPtr< Buf > &data, unsigned int len);
 
 protected:
-	bool m_FRAME(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr<Path> &path, SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
-	bool m_EXT_FRAME(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr<Path> &path, SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
-	bool m_MULTICAST_LIKE(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr<Path> &path, SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
-	bool m_NETWORK_CREDENTIALS(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr<Path> &path, SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
-	bool m_NETWORK_CONFIG_REQUEST(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr<Path> &path, SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
-	bool m_NETWORK_CONFIG(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr<Path> &path, SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
-	bool m_MULTICAST_GATHER(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr<Path> &path, SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
-	bool m_MULTICAST_FRAME_deprecated(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr<Path> &path, SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
-	bool m_MULTICAST(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr<Path> &path, SharedPtr<Peer> &peer, Buf &pkt, int packetSize);
+	bool m_FRAME(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize);
+
+	bool m_EXT_FRAME(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize);
+
+	bool m_MULTICAST_LIKE(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize);
+
+	bool m_NETWORK_CREDENTIALS(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize);
+
+	bool m_NETWORK_CONFIG_REQUEST(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize);
+
+	bool m_NETWORK_CONFIG(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize);
+
+	bool m_MULTICAST_GATHER(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize);
+
+	bool m_MULTICAST_FRAME_deprecated(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize);
+
+	bool m_MULTICAST(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize);
 
 private:
 };

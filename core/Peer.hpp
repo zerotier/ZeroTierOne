@@ -33,14 +33,14 @@
 #include "Containers.hpp"
 
 #define ZT_PEER_MARSHAL_SIZE_MAX ( \
-	1 + \
-	ZT_ADDRESS_LENGTH + \
-	ZT_SYMMETRIC_KEY_SIZE + \
-	ZT_IDENTITY_MARSHAL_SIZE_MAX + \
-	1 + ZT_LOCATOR_MARSHAL_SIZE_MAX + \
-	2 + ((8 + ZT_ENDPOINT_MARSHAL_SIZE_MAX) * ZT_PEER_ENDPOINT_CACHE_SIZE) + \
-	(2 * 4) + \
-	2 )
+  1 + \
+  ZT_ADDRESS_LENGTH + \
+  ZT_SYMMETRIC_KEY_SIZE + \
+  ZT_IDENTITY_MARSHAL_SIZE_MAX + \
+  1 + ZT_LOCATOR_MARSHAL_SIZE_MAX + \
+  2 + ((8 + ZT_ENDPOINT_MARSHAL_SIZE_MAX) * ZT_PEER_ENDPOINT_CACHE_SIZE) + \
+  (2 * 4) + \
+  2 )
 
 #define ZT_PEER_DEDUP_BUFFER_SIZE 1024
 #define ZT_PEER_DEDUP_BUFFER_MASK 1023U
@@ -54,7 +54,7 @@ class Topology;
  */
 class Peer
 {
-	friend class SharedPtr<Peer>;
+	friend class SharedPtr< Peer >;
 
 	friend class Topology;
 
@@ -94,7 +94,7 @@ public:
 	/**
 	 * @return Current locator or NULL if no locator is known
 	 */
-	ZT_INLINE const SharedPtr<const Locator> &locator() const noexcept
+	ZT_INLINE const SharedPtr< const Locator > &locator() const noexcept
 	{
 		RWMutex::RLock l(m_lock);
 		return m_locator;
@@ -112,7 +112,7 @@ public:
 	 * @param loc Locator update
 	 * @return New locator or previous if it was not replaced.
 	 */
-	ZT_INLINE SharedPtr<const Locator> setLocator(const SharedPtr<const Locator> &loc) noexcept
+	ZT_INLINE SharedPtr< const Locator > setLocator(const SharedPtr< const Locator > &loc) noexcept
 	{
 		RWMutex::Lock l(m_lock);
 		if ((loc) && ((!m_locator) || (m_locator->timestamp() < loc->timestamp())))
@@ -135,7 +135,7 @@ public:
 	 */
 	void received(
 		void *tPtr,
-		const SharedPtr<Path> &path,
+		const SharedPtr< Path > &path,
 		unsigned int hops,
 		uint64_t packetId,
 		unsigned int payloadLength,
@@ -168,7 +168,7 @@ public:
 	 *
 	 * @return Current best path or NULL if there is no direct path
 	 */
-	ZT_INLINE SharedPtr<Path> path(const int64_t now) noexcept
+	ZT_INLINE SharedPtr< Path > path(const int64_t now) noexcept
 	{
 		if (likely((now - m_lastPrioritizedPaths) < ZT_PEER_PRIORITIZE_PATHS_INTERVAL)) {
 			RWMutex::RLock l(m_lock);
@@ -180,7 +180,7 @@ public:
 			if (m_alivePathCount > 0)
 				return m_paths[0];
 		}
-		return SharedPtr<Path>();
+		return SharedPtr< Path >();
 	}
 
 	/**
@@ -192,7 +192,7 @@ public:
 	 * @param len Length in bytes
 	 * @param via Path over which to send data (may or may not be an already-learned path for this peer)
 	 */
-	ZT_INLINE void send(void *tPtr, int64_t now, const void *data, unsigned int len, const SharedPtr<Path> &via) noexcept
+	ZT_INLINE void send(void *tPtr, int64_t now, const void *data, unsigned int len, const SharedPtr< Path > &via) noexcept
 	{
 		via->send(RR, tPtr, data, len, now);
 		sent(now, len);
@@ -270,7 +270,7 @@ public:
 		int ltot = 0;
 		int lcnt = 0;
 		RWMutex::RLock l(m_lock);
-		for (unsigned int i = 0;i < m_alivePathCount;++i) {
+		for (unsigned int i = 0; i < m_alivePathCount; ++i) {
 			int lat = m_paths[i]->latency();
 			if (lat > 0) {
 				ltot += lat;
@@ -293,7 +293,7 @@ public:
 	/**
 	 * @return The permanent shared key for this peer computed by simple identity agreement
 	 */
-	ZT_INLINE SharedPtr<SymmetricKey> identityKey() noexcept
+	ZT_INLINE SharedPtr< SymmetricKey > identityKey() noexcept
 	{ return m_identityKey; }
 
 	/**
@@ -320,7 +320,7 @@ public:
 	/**
 	 * @return Current best key: either the latest ephemeral or the identity key
 	 */
-	ZT_INLINE SharedPtr<SymmetricKey> key() noexcept
+	ZT_INLINE SharedPtr< SymmetricKey > key() noexcept
 	{
 		RWMutex::RLock l(m_lock);
 		return m_key();
@@ -335,7 +335,7 @@ public:
 	 * @param k Key to check
 	 * @return True if this key is ephemeral, false if it's the long-lived identity key
 	 */
-	ZT_INLINE bool isEphemeral(const SharedPtr<SymmetricKey> &k) const noexcept
+	ZT_INLINE bool isEphemeral(const SharedPtr< SymmetricKey > &k) const noexcept
 	{ return m_identityKey != k; }
 
 	/**
@@ -379,7 +379,7 @@ public:
 	 *
 	 * @param paths Vector of paths with the first path being the current preferred path
 	 */
-	void getAllPaths(Vector< SharedPtr<Path> > &paths);
+	void getAllPaths(Vector< SharedPtr< Path > > &paths);
 
 	/**
 	 * Save the latest version of this peer to the data store
@@ -453,7 +453,7 @@ private:
 
 	void m_deriveSecondaryIdentityKeys() noexcept;
 
-	ZT_INLINE SharedPtr<SymmetricKey> m_key() noexcept
+	ZT_INLINE SharedPtr< SymmetricKey > m_key() noexcept
 	{
 		// assumes m_lock is locked (for read at least)
 		return (m_ephemeralKeys[0]) ? m_ephemeralKeys[0] : m_identityKey;
@@ -465,7 +465,7 @@ private:
 	RWMutex m_lock;
 
 	// Static identity key
-	SharedPtr<SymmetricKey> m_identityKey;
+	SharedPtr< SymmetricKey > m_identityKey;
 
 	// Cipher for encrypting or decrypting the encrypted section of HELLO packets.
 	AES m_helloCipher;
@@ -478,32 +478,32 @@ private:
 	int64_t m_ephemeralPairTimestamp;
 
 	// Current and previous ephemeral key
-	SharedPtr<SymmetricKey> m_ephemeralKeys[2];
+	SharedPtr< SymmetricKey > m_ephemeralKeys[2];
 
 	Identity m_id;
-	SharedPtr<const Locator> m_locator;
+	SharedPtr< const Locator > m_locator;
 
 	// the last time something was sent or received from this peer (direct or indirect).
-	std::atomic<int64_t> m_lastReceive;
-	std::atomic<int64_t> m_lastSend;
+	std::atomic< int64_t > m_lastReceive;
+	std::atomic< int64_t > m_lastSend;
 
 	// The last time we sent a full HELLO to this peer.
 	int64_t m_lastSentHello; // only checked while locked
 
 	// The last time a WHOIS request was received from this peer (anti-DOS / anti-flood).
-	std::atomic<int64_t> m_lastWhoisRequestReceived;
+	std::atomic< int64_t > m_lastWhoisRequestReceived;
 
 	// The last time an ECHO request was received from this peer (anti-DOS / anti-flood).
-	std::atomic<int64_t> m_lastEchoRequestReceived;
+	std::atomic< int64_t > m_lastEchoRequestReceived;
 
 	// The last time we sorted paths in order of preference. (This happens pretty often.)
-	std::atomic<int64_t> m_lastPrioritizedPaths;
+	std::atomic< int64_t > m_lastPrioritizedPaths;
 
 	// The last time we got a probe from this peer.
-	std::atomic<int64_t> m_lastProbeReceived;
+	std::atomic< int64_t > m_lastProbeReceived;
 
 	// Deduplication buffer
-	std::atomic<uint64_t> m_dedup[ZT_PEER_DEDUP_BUFFER_SIZE];
+	std::atomic< uint64_t > m_dedup[ZT_PEER_DEDUP_BUFFER_SIZE];
 
 	// Meters measuring actual bandwidth in, out, and relayed via this peer (mostly if this is a root).
 	Meter<> m_inMeter;
@@ -511,13 +511,13 @@ private:
 	Meter<> m_relayedMeter;
 
 	// Direct paths sorted in descending order of preference.
-	SharedPtr<Path> m_paths[ZT_MAX_PEER_NETWORK_PATHS];
+	SharedPtr< Path > m_paths[ZT_MAX_PEER_NETWORK_PATHS];
 
 	// Number of paths current alive (number of non-NULL entries in _paths).
 	unsigned int m_alivePathCount;
 
 	// For SharedPtr<>
-	std::atomic<int> __refCount;
+	std::atomic< int > __refCount;
 
 	struct p_EndpointCacheItem
 	{
@@ -527,7 +527,7 @@ private:
 		ZT_INLINE bool operator<(const p_EndpointCacheItem &ci) const noexcept
 		{ return lastSeen < ci.lastSeen; }
 
-		ZT_INLINE p_EndpointCacheItem() noexcept : target(), lastSeen(0)
+		ZT_INLINE p_EndpointCacheItem() noexcept: target(), lastSeen(0)
 		{}
 	};
 
@@ -550,8 +550,8 @@ private:
 		int iteration;
 	};
 
-	List<p_TryQueueItem> m_tryQueue;
-	Map<Endpoint,int64_t> m_lastTried;
+	List< p_TryQueueItem > m_tryQueue;
+	Map< Endpoint, int64_t > m_lastTried;
 
 	uint16_t m_vProto;
 	uint16_t m_vMajor;

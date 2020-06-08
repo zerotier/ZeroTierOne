@@ -26,7 +26,7 @@ namespace ZeroTier {
 
 class RuntimeEnvironment;
 
-template<unsigned int MF, unsigned int MFP, unsigned int GCT, unsigned int GCS, typename P>
+template< unsigned int MF, unsigned int MFP, unsigned int GCT, unsigned int GCS, typename P >
 class Defragmenter;
 
 /**
@@ -34,10 +34,10 @@ class Defragmenter;
  */
 class Path
 {
-	friend class SharedPtr<Path>;
+	friend class SharedPtr< Path >;
 
 	// Allow defragmenter to access fragment-in-flight info stored in Path for performance reasons.
-	template<unsigned int MF, unsigned int MFP, unsigned int GCT, unsigned int GCS, typename P>
+	template< unsigned int MF, unsigned int MFP, unsigned int GCT, unsigned int GCS, typename P >
 	friend
 	class Defragmenter;
 
@@ -142,9 +142,9 @@ public:
 
 private:
 	const int64_t m_localSocket;
-	std::atomic<int64_t> m_lastIn;
-	std::atomic<int64_t> m_lastOut;
-	std::atomic<int> m_latency;
+	std::atomic< int64_t > m_lastIn;
+	std::atomic< int64_t > m_lastOut;
+	std::atomic< int > m_latency;
 	const InetAddress m_addr;
 	Meter<> m_inMeter;
 	Meter<> m_outMeter;
@@ -152,10 +152,10 @@ private:
 	// These fields belong to Defragmenter but are kept in Path for performance
 	// as it's much faster this way than having Defragmenter maintain another
 	// mapping from paths to inbound message IDs.
-	Set<uint64_t> m_inboundFragmentedMessages;
+	Set< uint64_t > m_inboundFragmentedMessages;
 	Mutex m_inboundFragmentedMessages_l;
 
-	std::atomic<int> __refCount;
+	std::atomic< int > __refCount;
 };
 
 } // namespace ZeroTier

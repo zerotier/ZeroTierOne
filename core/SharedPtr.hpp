@@ -26,18 +26,23 @@ namespace ZeroTier {
  * counted must list this as a 'friend' and must have a private instance of
  * atomic<int> called __refCount.
  */
-template<typename T>
+template< typename T >
 class SharedPtr : public TriviallyCopyable
 {
 public:
-	ZT_INLINE SharedPtr() noexcept : m_ptr((T *)0) {}
-	explicit ZT_INLINE SharedPtr(T *obj) noexcept : m_ptr(obj) { if (likely(obj != nullptr)) ++*const_cast<std::atomic<int> *>(&(obj->__refCount)); }
-	ZT_INLINE SharedPtr(const SharedPtr &sp) noexcept : m_ptr(sp._getAndInc()) {}
+	ZT_INLINE SharedPtr() noexcept: m_ptr((T *)0)
+	{}
+
+	explicit ZT_INLINE SharedPtr(T *obj) noexcept: m_ptr(obj)
+	{ if (likely(obj != nullptr)) ++*const_cast<std::atomic< int > *>(&(obj->__refCount)); }
+
+	ZT_INLINE SharedPtr(const SharedPtr &sp) noexcept: m_ptr(sp._getAndInc())
+	{}
 
 	ZT_INLINE ~SharedPtr()
 	{
 		if (likely(m_ptr != nullptr)) {
-			if (unlikely(--*const_cast<std::atomic<int> *>(&(m_ptr->__refCount)) <= 0))
+			if (unlikely(--*const_cast<std::atomic< int > *>(&(m_ptr->__refCount)) <= 0))
 				delete m_ptr;
 		}
 	}
@@ -47,7 +52,7 @@ public:
 		if (likely(m_ptr != sp.m_ptr)) {
 			T *p = sp._getAndInc();
 			if (likely(m_ptr != nullptr)) {
-				if (unlikely(--*const_cast<std::atomic<int> *>(&(m_ptr->__refCount)) <= 0))
+				if (unlikely(--*const_cast<std::atomic< int > *>(&(m_ptr->__refCount)) <= 0))
 					delete m_ptr;
 			}
 			m_ptr = p;
@@ -66,7 +71,7 @@ public:
 	ZT_INLINE void set(T *ptr) noexcept
 	{
 		zero();
-		++*const_cast<std::atomic<int> *>(&(ptr->__refCount));
+		++*const_cast<std::atomic< int > *>(&(ptr->__refCount));
 		m_ptr = ptr;
 	}
 
@@ -77,7 +82,8 @@ public:
 	 *
 	 * @param ptr Pointer to set
 	 */
-	ZT_INLINE void unsafeSet(T *ptr) noexcept { m_ptr = ptr; }
+	ZT_INLINE void unsafeSet(T *ptr) noexcept
+	{ m_ptr = ptr; }
 
 	/**
 	 * Swap with another pointer 'for free' without ref count overhead
@@ -102,22 +108,27 @@ public:
 	ZT_INLINE void move(SharedPtr &from)
 	{
 		if (likely(m_ptr != nullptr)) {
-			if (--*const_cast<std::atomic<int> *>(&(m_ptr->__refCount)) <= 0)
+			if (--*const_cast<std::atomic< int > *>(&(m_ptr->__refCount)) <= 0)
 				delete m_ptr;
 		}
 		m_ptr = from.m_ptr;
 		from.m_ptr = nullptr;
 	}
 
-	ZT_INLINE operator bool() const noexcept { return (m_ptr != nullptr); }
+	ZT_INLINE operator bool() const noexcept
+	{ return (m_ptr != nullptr); }
 
-	ZT_INLINE T &operator*() const noexcept { return *m_ptr; }
-	ZT_INLINE T *operator->() const noexcept { return m_ptr; }
+	ZT_INLINE T &operator*() const noexcept
+	{ return *m_ptr; }
+
+	ZT_INLINE T *operator->() const noexcept
+	{ return m_ptr; }
 
 	/**
 	 * @return Raw pointer to held object
 	 */
-	ZT_INLINE T *ptr() const noexcept { return m_ptr; }
+	ZT_INLINE T *ptr() const noexcept
+	{ return m_ptr; }
 
 	/**
 	 * Set this pointer to NULL
@@ -125,7 +136,7 @@ public:
 	ZT_INLINE void zero()
 	{
 		if (likely(m_ptr != nullptr)) {
-			if (unlikely(--*const_cast<std::atomic<int> *>(&(m_ptr->__refCount)) <= 0))
+			if (unlikely(--*const_cast<std::atomic< int > *>(&(m_ptr->__refCount)) <= 0))
 				delete m_ptr;
 			m_ptr = nullptr;
 		}
@@ -145,7 +156,7 @@ public:
 	{
 		if (likely(m_ptr != nullptr)) {
 			int one = 1;
-			if (const_cast<std::atomic<int> *>(&(m_ptr->__refCount))->compare_exchange_strong(one,(int)0)) {
+			if (const_cast<std::atomic< int > *>(&(m_ptr->__refCount))->compare_exchange_strong(one, (int)0)) {
 				delete m_ptr;
 				m_ptr = nullptr;
 				return true;
@@ -166,28 +177,41 @@ public:
 		return 0;
 	}
 
-	ZT_INLINE bool operator==(const SharedPtr &sp) const noexcept { return (m_ptr == sp.m_ptr); }
-	ZT_INLINE bool operator!=(const SharedPtr &sp) const noexcept { return (m_ptr != sp.m_ptr); }
-	ZT_INLINE bool operator>(const SharedPtr &sp) const noexcept { return (m_ptr > sp.m_ptr); }
-	ZT_INLINE bool operator<(const SharedPtr &sp) const noexcept { return (m_ptr < sp.m_ptr); }
-	ZT_INLINE bool operator>=(const SharedPtr &sp) const noexcept { return (m_ptr >= sp.m_ptr); }
-	ZT_INLINE bool operator<=(const SharedPtr &sp) const noexcept { return (m_ptr <= sp.m_ptr); }
+	ZT_INLINE bool operator==(const SharedPtr &sp) const noexcept
+	{ return (m_ptr == sp.m_ptr); }
+
+	ZT_INLINE bool operator!=(const SharedPtr &sp) const noexcept
+	{ return (m_ptr != sp.m_ptr); }
+
+	ZT_INLINE bool operator>(const SharedPtr &sp) const noexcept
+	{ return (m_ptr > sp.m_ptr); }
+
+	ZT_INLINE bool operator<(const SharedPtr &sp) const noexcept
+	{ return (m_ptr < sp.m_ptr); }
+
+	ZT_INLINE bool operator>=(const SharedPtr &sp) const noexcept
+	{ return (m_ptr >= sp.m_ptr); }
+
+	ZT_INLINE bool operator<=(const SharedPtr &sp) const noexcept
+	{ return (m_ptr <= sp.m_ptr); }
 
 private:
 	ZT_INLINE T *_getAndInc() const noexcept
 	{
 		if (m_ptr)
-			++*const_cast<std::atomic<int> *>(&(m_ptr->__refCount));
+			++*const_cast<std::atomic< int > *>(&(m_ptr->__refCount));
 		return m_ptr;
 	}
+
 	T *m_ptr;
 };
 
 } // namespace ZeroTier
 
 namespace std {
-template<typename T>
-ZT_INLINE void swap(ZeroTier::SharedPtr<T> &a,ZeroTier::SharedPtr<T> &b) noexcept { a.swap(b); }
+template< typename T >
+ZT_INLINE void swap(ZeroTier::SharedPtr< T > &a, ZeroTier::SharedPtr< T > &b) noexcept
+{ a.swap(b); }
 }
 
 #endif

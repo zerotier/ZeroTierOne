@@ -28,7 +28,7 @@ namespace ZeroTier {
  */
 class SymmetricKey
 {
-	friend class SharedPtr<SymmetricKey>;
+	friend class SharedPtr< SymmetricKey >;
 
 public:
 	/**
@@ -61,21 +61,21 @@ public:
 	 * @param ts Current time
 	 * @param key 48-bit / 384-byte key
 	 */
-	explicit ZT_INLINE SymmetricKey(const int64_t ts,const void *const key) noexcept :
+	explicit ZT_INLINE SymmetricKey(const int64_t ts, const void *const key) noexcept:
 		secret(),
 		cipher(key), // AES-256 uses first 256 bits of 384-bit key
 		m_initialNonce(((((uint64_t)ts / 1000ULL) << 32U) & 0x7fffffff00000000ULL) | (Utils::random() & 0x00000000ffffffffULL)),
 		m_nonce(m_initialNonce),
 		__refCount(0)
 	{
-		Utils::memoryLock(this,sizeof(SymmetricKey));
-		Utils::copy<ZT_SYMMETRIC_KEY_SIZE>(const_cast<uint8_t *>(secret), key);
+		Utils::memoryLock(this, sizeof(SymmetricKey));
+		Utils::copy< ZT_SYMMETRIC_KEY_SIZE >(const_cast<uint8_t *>(secret), key);
 	}
 
 	ZT_INLINE ~SymmetricKey() noexcept
 	{
-		Utils::burn(const_cast<uint8_t *>(secret),ZT_SYMMETRIC_KEY_SIZE);
-		Utils::memoryUnlock(this,sizeof(SymmetricKey));
+		Utils::burn(const_cast<uint8_t *>(secret), ZT_SYMMETRIC_KEY_SIZE);
+		Utils::memoryUnlock(this, sizeof(SymmetricKey));
 	}
 
 	/**
@@ -85,7 +85,7 @@ public:
 	 * @param receiver Receiving ZeroTier address
 	 * @return Next unique IV for next message
 	 */
-	ZT_INLINE uint64_t nextMessage(const Address sender,const Address receiver) noexcept
+	ZT_INLINE uint64_t nextMessage(const Address sender, const Address receiver) noexcept
 	{
 		return m_nonce.fetch_add(1) ^ (((uint64_t)(sender > receiver)) << 63U);
 	}
@@ -100,8 +100,8 @@ public:
 
 private:
 	const uint64_t m_initialNonce;
-	std::atomic<uint64_t> m_nonce;
-	std::atomic<int> __refCount;
+	std::atomic< uint64_t > m_nonce;
+	std::atomic< int > __refCount;
 };
 
 } // namespace ZeroTier
