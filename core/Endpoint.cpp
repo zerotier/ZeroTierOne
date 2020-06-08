@@ -30,14 +30,14 @@ char *Endpoint::toString(char s[ZT_ENDPOINT_STRING_SIZE_MAX]) const noexcept
 			break;
 		case ZT_ENDPOINT_TYPE_ZEROTIER:
 			s[0] = s_endpointTypeChars[ZT_ENDPOINT_TYPE_ZEROTIER];
-			s[1] = '=';
+			s[1] = '/';
 			zt().toString(s + 2);
 			break;
 		case ZT_ENDPOINT_TYPE_ETHERNET:
 		case ZT_ENDPOINT_TYPE_WIFI_DIRECT:
 		case ZT_ENDPOINT_TYPE_BLUETOOTH:
 			s[0] = s_endpointTypeChars[this->type];
-			s[1] = '=';
+			s[1] = '/';
 			eth().toString(s + 2);
 			break;
 		case ZT_ENDPOINT_TYPE_IP:
@@ -45,7 +45,7 @@ char *Endpoint::toString(char s[ZT_ENDPOINT_STRING_SIZE_MAX]) const noexcept
 		case ZT_ENDPOINT_TYPE_IP_TCP:
 		case ZT_ENDPOINT_TYPE_IP_HTTP:
 			s[0] = s_endpointTypeChars[this->type];
-			s[1] = '=';
+			s[1] = '/';
 			ip().toString(s + 2);
 			break;
 	}
@@ -59,13 +59,32 @@ bool Endpoint::fromString(const char *s) noexcept
 	if ((!s) || (!*s))
 		return true;
 
-	const char *start = strchr(s, '=');
-	if (start++ != nullptr) {
-		// Parse a fully qualified type-address format Endpoint.
+	// Locate first slash, colon, and dot to help classify input.
+	const char *slash = nullptr, *colon = nullptr, *dot = nullptr;
+	for(const char *p=s;;++p) {
+		const char c = *p;
+		if (c != 0) {
+			switch (c) {
+				case '/':
+					slash = p;
+					break;
+				case ':':
+					colon = p;
+					break;
+				case '.':
+					dot = p;
+					break;
+			}
+		} else break;
+	}
+
+	if ((slash != nullptr) && (((colon == nullptr) && (dot == nullptr)) || (colon > slash) || (dot > slash))) {
+		// Detect a fully specified endpoint of the form type/ip/port or type/other,
+		// but don't detect ip/port as a fully specified endpoint.
 		char tmp[16];
 		for (unsigned int i=0;i<16;++i) {
-			char ss = s[i];
-			if (ss == '-') {
+			const char ss = s[i];
+			if (ss == '/') {
 				tmp[i] = 0;
 				break;
 			}
@@ -74,32 +93,33 @@ bool Endpoint::fromString(const char *s) noexcept
 		tmp[15] = 0;
 		this->type = (ZT_EndpointType)Utils::strToUInt(tmp);
 
-		Fingerprint tmpfp;
-		MAC tmpmac;
+		++slash;
 		switch (this->type) {
 			case ZT_ENDPOINT_TYPE_NIL:
 				break;
-			case ZT_ENDPOINT_TYPE_ZEROTIER:
-				if (!tmpfp.fromString(start))
+			case ZT_ENDPOINT_TYPE_ZEROTIER: {
+				Fingerprint tmpfp;
+				if (!tmpfp.fromString(slash))
 					return false;
 				this->value.fp = tmpfp;
-				break;
+			} break;
 			case ZT_ENDPOINT_TYPE_ETHERNET:
 			case ZT_ENDPOINT_TYPE_WIFI_DIRECT:
-			case ZT_ENDPOINT_TYPE_BLUETOOTH:
-				tmpmac.fromString(start);
+			case ZT_ENDPOINT_TYPE_BLUETOOTH: {
+				MAC tmpmac;
+				tmpmac.fromString(slash);
 				this->value.mac = tmpmac.toInt();
-				break;
+			} break;
 			case ZT_ENDPOINT_TYPE_IP:
 			case ZT_ENDPOINT_TYPE_IP_UDP:
 			case ZT_ENDPOINT_TYPE_IP_TCP:
 			case ZT_ENDPOINT_TYPE_IP_HTTP:
-				if (!asInetAddress(this->value.ss).fromString(start))
+				if (!asInetAddress(this->value.ss).fromString(slash))
 					return false;
 			default:
 				return false;
 		}
-	} else if ((strchr(s, ':')) || (strchr(s, '.'))) {
+	} else if (((colon != nullptr) || (dot != nullptr)) && (slash != nullptr)) {
 		// Parse raw IP/port strings as IP_UDP endpoints.
 		this->type = ZT_ENDPOINT_TYPE_IP_UDP;
 		if (!asInetAddress(this->value.ss).fromString(s))

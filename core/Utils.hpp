@@ -53,11 +53,9 @@ namespace Utils {
 #define ZT_ROL32(x, r) (((x) << (r)) | ((x) >> (32 - (r))))
 
 #ifdef ZT_ARCH_X64
-
 struct CPUIDRegisters
 {
 	CPUIDRegisters() noexcept;
-
 	bool rdrand;
 	bool aes;
 	bool avx;
@@ -68,7 +66,6 @@ struct CPUIDRegisters
 	bool sha;
 	bool fsrm;
 };
-
 extern const CPUIDRegisters CPUID;
 #endif
 
@@ -285,10 +282,22 @@ static ZT_INLINE uint32_t hash32(uint32_t x) noexcept
  */
 static ZT_INLINE bool allZero(const void *const b, unsigned int l) noexcept
 {
+	const uint8_t *p = reinterpret_cast<const uint8_t *>(b);
+
+#ifndef ZT_NO_UNALIGNED_ACCESS
+	while (l >= 8) {
+		if (*reinterpret_cast<const uint64_t *>(p) != 0)
+			return false;
+		p += 8;
+		l -= 8;
+	}
+#endif
+
 	for (unsigned int i = 0; i < l; ++i) {
-		if (reinterpret_cast<const uint8_t *>(b)[i] != 0)
+		if (reinterpret_cast<const uint8_t *>(p)[i] != 0)
 			return false;
 	}
+
 	return true;
 }
 
