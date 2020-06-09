@@ -75,7 +75,11 @@
 
 #ifdef __GNUC__
 #ifndef ZT_DEBUG
+#ifdef __clang__
 #define ZT_INLINE __attribute__((always_inline)) inline
+#else
+#define ZT_INLINE inline
+#endif
 #endif
 #ifndef restrict
 #define restrict __restrict__
