@@ -56,6 +56,7 @@ if(WIN32)
 else(WIN32)
 	if(APPLE)
 		message("++ Setting MacOS Compiler Flags ${CMAKE_BUILD_TYPE}")
+
 		add_compile_options(
 			-Wall
 			-Wno-deprecated
@@ -113,18 +114,35 @@ add_subdirectory(controller)
 add_subdirectory(osdep)
 add_subdirectory(serviceiocore)
 
-set(
-	zt_core
-	zt_osdep
-	zt_controller
-	zt_service_io_core
+file(GLOB go_src 
+	${CMAKE_SOURCE_DIR}/cmd/*.go
+	${CMAKE_SOURCE_DIR}/cmd/cmd/*.go
+	${CMAKE_SOURCE_DIR}/pkg/zerotier/*.go)
+
+add_custom_command(
+	OUTPUT ${CMAKE_BINARY_DIR}/zerotier_cgo.h ${CMAKE_BINARY_DIR}/zerotier_cgo.a
+	COMMAND go build -buildmode=c-archive -o ${CMAKE_BINARY_DIR}/zerotier_cgo.a ${CMAKE_SOURCE_DIR}/cmd/zerotier/zerotier.go
+	IMPLICIT_DEPENDS go ${go_src}
+	COMMENT "Compiling Go Code..."
+)
+add_custom_target(
+	zerotier_cgo_target 
+	DEPENDS ${CMAKE_BINARY_DIR}/zerotier_cgo.a
+	SOURCES ${go_src}
+)
+add_library(zerotier_cgo STATIC IMPORTED GLOBAL)
+add_dependencies(zerotier_cgo zerotier_cgo_target)
+set_target_properties(
+	zerotier_cgo
+	PROPERTIES
+	IMPORTED_LOCATION ${CMAKE_BINARY_DIR}/zerotier_cgo.a
+	INTERFACE_INCLUDE_DIRECTORIES ${CMAKE_BINARY_DIR}
 )
 
-add_custom_target(zerotier ALL
-	WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-	COMMAND rm -f ./build/zerotier && go build ${GO_BUILD_TAGS} -trimpath -ldflags -s -buildmode=pie -o ./build/zerotier cmd/zerotier/zerotier.go
-	BYPRODUCTS zerotier
-)
-add_dependencies(zerotier zt_osdep zt_core zt_controller zt_service_io_core)
-
-set(ADDITIONAL_MAKE_CLEAN_FILES zerotier)
+add_executable(zerotier main.cpp)
+target_include_directories(zerotier PUBLIC ${CMAKE_BINARY_DIR})
+add_dependencies(zerotier zerotier_cgo zt_osdep zt_core zt_controller zt_service_io_core)
+target_link_libraries(zerotier zerotier_cgo zt_osdep zt_core zt_controller zt_service_io_core)
+if (APPLE)
+	target_link_libraries(zerotier "-framework CoreFoundation" "-framework Security")
+endif (APPLE)

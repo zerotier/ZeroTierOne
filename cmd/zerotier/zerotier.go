@@ -13,6 +13,8 @@
 
 package main
 
+import "C"
+
 import (
 	"flag"
 	"fmt"
@@ -28,15 +30,15 @@ import (
 )
 
 func getAuthTokenPaths(basePath string) (p []string) {
-	p = append(p,path.Join(basePath,"authtoken.secret"))
+	p = append(p, path.Join(basePath, "authtoken.secret"))
 	userHome, _ := os.UserHomeDir()
 	if len(userHome) > 0 {
 		if runtime.GOOS == "darwin" {
-			p = append(p,path.Join(userHome,"Library","Application Support","ZeroTier","authtoken.secret"))
-			p = append(p,path.Join(userHome,"Library","Application Support","ZeroTier","One","authtoken.secret"))
+			p = append(p, path.Join(userHome, "Library", "Application Support", "ZeroTier", "authtoken.secret"))
+			p = append(p, path.Join(userHome, "Library", "Application Support", "ZeroTier", "One", "authtoken.secret"))
 		}
-		p = append(p,path.Join(userHome,".zerotierauth"))
-		p = append(p,path.Join(userHome,".zeroTierOneAuthToken"))
+		p = append(p, path.Join(userHome, ".zerotierauth"))
+		p = append(p, path.Join(userHome, ".zeroTierOneAuthToken"))
 	}
 	return p
 }
@@ -45,10 +47,15 @@ func authTokenRequired(authToken string) {
 	if len(authToken) == 0 {
 		fmt.Println("FATAL: unable to read API authorization token from command line or any filesystem location.")
 		os.Exit(1)
+
 	}
 }
 
 func main() {
+}
+
+//export ZeroTierMain
+func ZeroTierMain() {
 	// Reduce Go's thread and memory footprint. This would slow things down if the Go code
 	// were doing a lot, but it's not. It just manages the core and is not directly involved
 	// in pushing a lot of packets around. If that ever changes this should be adjusted.
@@ -99,7 +106,7 @@ func main() {
 			tmp, _ := ioutil.ReadFile(p)
 			if len(tmp) > 0 {
 				authToken = string(tmp)
-				break;
+				break
 			}
 		}
 		if len(authToken) == 0 {

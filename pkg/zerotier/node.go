@@ -14,10 +14,8 @@
 package zerotier
 
 // #cgo CFLAGS: -O3
-// #cgo darwin,!central LDFLAGS: ${SRCDIR}/../../build/serviceiocore/libzt_service_io_core.a ${SRCDIR}/../../build/core/libzt_core.a ${SRCDIR}/../../build/osdep/libzt_osdep.a ${SRCDIR}/../../build/controller/libzt_controller.a -lc++ -lpthread
-// #cgo darwin,central LDFLAGS: ${SRCDIR}/../../build/serviceiocore/libzt_service_io_core.a ${SRCDIR}/../../build/core/libzt_core.a ${SRCDIR}/../../build/osdep/libzt_osdep.a ${SRCDIR}/../../build/controller/libzt_controller.a ${SRCDIR}/../../build/lib/libredis++.a  /usr/local/lib/libhiredis.a /usr/local/opt/libpq/lib/libpq.a -lc++ -lpthread
-// #cgo linux,!central android,!central LDFLAGS: ${SRCDIR}/../../build/serviceiocore/libzt_service_io_core.a ${SRCDIR}/../../build/core/libzt_core.a ${SRCDIR}/../../build/osdep/libzt_osdep.a ${SRCDIR}/../../build/controller/libzt_controller.a -lstdc++ -lpthread -lm
-// #cgo linux,central android,central LDFLAGS: ${SRCDIR}/../../build/serviceiocore/libzt_service_io_core.a ${SRCDIR}/../../build/core/libzt_core.a ${SRCDIR}/../../build/osdep/libzt_osdep.a ${SRCDIR}/../../build/controller/libzt_controller.a ${SRCDIR}/../../build/lib/libredis++.a -lhiredis -lpq -lstdc++ -lpthread -lm
+// #cgo darwin LDFLAGS: -Wl,-undefined -Wl,dynamic_lookup
+// #cgo !darwin LDFLAGS: -Wl,-unresolved-symbols=ignore-all
 // #include "../../serviceiocore/GoGlue.h"
 import "C"
 
