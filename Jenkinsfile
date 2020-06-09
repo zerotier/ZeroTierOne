@@ -18,7 +18,7 @@ pipeline {
             steps {
                 script {
                     def tasks = [:]
-                    tasks << buildStaticBinaries()
+                    // tasks << buildStaticBinaries()
                     tasks << buildDebianNative()
                     tasks << buildCentosNative()
                     
