@@ -1,0 +1,15 @@
+FROM debian:buster-20191224
+
+ARG go_pkg_url
+
+RUN apt-get update && apt-get -y install build-essential curl ca-certificates devscripts dh-systemd
+
+RUN curl -s -k $go_pkg_url -o go.tar.gz && \
+    tar -C /usr/local -xzf go.tar.gz && \
+    rm go.tar.gz
+
+RUN groupadd -g 1000 jenkins-build && useradd -u 1000 -g 1000 jenkins-build
+RUN chmod 777 /home
+
+CMD ["/usr/bin/sshd", "-D"]
+
