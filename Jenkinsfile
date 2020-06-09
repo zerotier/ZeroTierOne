@@ -56,8 +56,8 @@ def buildStaticBinaries() {
                 runtime.inside {
                     dir("build") {
                         sh 'make -j8 ZT_STATIC=1 all'
-                        sh "mv zerotier-one zerotier-one-static-${platform}"
-                        stash includes: 'zerotier-one-static-*', name: "static-${platform}"
+                        sh "mv zerotier zerotier-static-${platform}"
+                        stash includes: 'zerotier-static-*', name: "static-${platform}"
                     }
                     cleanWs deleteDirs: true, disableDeferredWipeout: true, notFailBuild: true
                 }
@@ -96,7 +96,7 @@ def packageStatic() {
                 runtime.inside {
                     dir("build") {
                         unstash "static-${arch}"
-                        sh "mv zerotier-one-static-${arch} zerotier-one && chmod +x zerotier-one" 
+                        sh "mv zerotier-static-${arch} zerotier && chmod +x zerotier" 
                         sh "make redhat"
                         sh "mkdir -p ${distro}"
                         sh "cp -av `find ~/rpmbuild/ -type f -name \"*.rpm\"` ${distro}/"
@@ -121,7 +121,7 @@ def packageStatic() {
                 runtime.inside {
                     dir("build") {
                         unstash "static-${arch}"
-                        sh "mv zerotier-one-static-${arch} zerotier-one && chmod +x zerotier-one" 
+                        sh "mv zerotier-static-${arch} zerotier && chmod +x zerotier" 
                         sh "make redhat"
                         sh "mkdir -p ${distro}"
                         sh "cp -av `find ~/rpmbuild/ -type f -name \"*.rpm\"` ${distro}/"
@@ -147,7 +147,7 @@ def packageStatic() {
                     runtime.inside {
                         dir("build/") {
                             unstash "static-${arch}"
-                            sh "mv zerotier-one-static-${arch} zerotier-one && chmod +x zerotier-one" 
+                            sh "mv zerotier-static-${arch} zerotier && chmod +x zerotier" 
                             sh "make redhat"
                             sh "mkdir -p ${distro}"
                             sh "cp -av `find ~/rpmbuild/ -type f -name \"*.rpm\"` ${distro}/"
@@ -181,7 +181,7 @@ def packageStatic() {
                         sh "ls -la ."
                         unstash "static-${arch}"
                         sh "pwd"
-                        sh "mv zerotier-one-static-${arch} zerotier-one && chmod +x zerotier-one && file ./zerotier-one" 
+                        sh "mv zerotier-static-${arch} zerotier && chmod +x zerotier && file ./zerotier" 
                         sh "mv -f debian/rules.static debian/rules"
                         sh "make debian"
                     }
@@ -215,7 +215,7 @@ def packageStatic() {
                         sh "ls -la ."
                         unstash "static-${arch}"
                         sh "pwd"
-                        sh "mv zerotier-one-static-${arch} zerotier-one && chmod +x zerotier-one && file ./zerotier-one" 
+                        sh "mv zerotier-static-${arch} zerotier && chmod +x zerotier && file ./zerotier" 
                         sh "mv -f debian/rules.static debian/rules"
                         sh "make debian"
                     }
@@ -246,7 +246,7 @@ def packageStatic() {
                 runtime.inside {
                     dir('build/') {
                         unstash "static-${arch}"
-                        sh "mv zerotier-one-static-${arch} zerotier-one && chmod +x zerotier-one && file ./zerotier-one" 
+                        sh "mv zerotier-static-${arch} zerotier && chmod +x zerotier && file ./zerotier" 
                         sh "mv -f debian/rules.wheezy.static debian/rules"
                         sh "mv -f debian/control.wheezy debian/control"
                         sh "make debian"
