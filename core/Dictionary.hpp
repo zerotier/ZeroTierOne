@@ -18,8 +18,11 @@
 #include "Utils.hpp"
 #include "Address.hpp"
 #include "Buf.hpp"
-#include "FCV.hpp"
 #include "Containers.hpp"
+#include "C25519.hpp"
+#include "ECC384.hpp"
+
+#define ZT_DICTIONARY_SIGNATURE_KEY "@S"
 
 namespace ZeroTier {
 
@@ -29,9 +32,7 @@ class Identity;
  * A simple key-value store for short keys
  *
  * This data structure is used for network configurations, node meta-data,
- * and other open-definition protocol objects. It consists of a key-value
- * store with short (max: 7 characters) keys that map to strings, blobs,
- * or integers with the latter being by convention in hex format.
+ * and other open-definition protocol objects.
  *
  * If this seems a little odd, it is. It dates back to the very first alpha
  * versions of ZeroTier and if it were redesigned today we'd use some kind
@@ -45,6 +46,9 @@ class Identity;
 class Dictionary
 {
 public:
+	typedef SortedMap< String, Vector < uint8_t > >
+	::const_iterator const_iterator;
+
 	Dictionary();
 
 	/**
@@ -53,7 +57,7 @@ public:
 	 * @param k Key to look up
 	 * @return Reference to value
 	 */
-	Vector<uint8_t> &operator[](const char *k);
+	Vector <uint8_t> &operator[](const char *k);
 
 	/**
 	 * Get a const reference to a value
@@ -61,37 +65,52 @@ public:
 	 * @param k Key to look up
 	 * @return Reference to value or to empty vector if not found
 	 */
-	const Vector<uint8_t> &operator[](const char *k) const;
+	const Vector <uint8_t> &operator[](const char *k) const;
+
+	/**
+	 * @return Start of key->value pairs
+	 */
+	ZT_INLINE const_iterator begin() const noexcept
+	{ return m_entries.begin(); }
+
+	/**
+	 * @return End of key->value pairs
+	 */
+	ZT_INLINE const_iterator end() const noexcept
+	{ return m_entries.end(); }
 
 	/**
 	 * Add a boolean as '1' or '0'
 	 */
-	void add(const char *k,bool v);
+	void add(const char *k, bool v);
 
 	/**
 	 * Add an integer as a hexadecimal string value
+	 *
+	 * @param k Key to set
+	 * @param v Integer to set, will be cast to uint64_t and stored as hex
 	 */
-	ZT_INLINE void add(const char *const k,const uint64_t v) { char buf[17]; add(k,Utils::hex(v,buf)); }
-	ZT_INLINE void add(const char *const k,const int64_t v) { char buf[17]; add(k,Utils::hex((uint64_t)v,buf)); }
-	ZT_INLINE void add(const char *const k,const uint32_t v) { char buf[17]; add(k,Utils::hex((uint64_t)v,buf)); }
-	ZT_INLINE void add(const char *const k,const int32_t v) { char buf[17]; add(k,Utils::hex((uint64_t)v,buf)); }
-	ZT_INLINE void add(const char *const k,const uint16_t v) { char buf[17]; add(k,Utils::hex((uint64_t)v,buf)); }
-	ZT_INLINE void add(const char *const k,const int16_t v) { char buf[17]; add(k,Utils::hex((uint64_t)v,buf)); }
+	template< typename I >
+	ZT_INLINE void add(const char *const k, I v)
+	{
+		char buf[17];
+		add(k, Utils::hex((uint64_t)(v), buf));
+	}
 
 	/**
 	 * Add an address in 10-digit hex string format
 	 */
-	void add(const char *k,const Address &v);
+	void add(const char *k, const Address &v);
 
 	/**
 	 * Add a C string as a value
 	 */
-	void add(const char *k,const char *v);
+	void add(const char *k, const char *v);
 
 	/**
 	 * Add a binary blob as a value
 	 */
-	void add(const char *k,const void *data,unsigned int len);
+	void add(const char *k, const void *data, unsigned int len);
 
 	/**
 	 * Get a boolean
@@ -100,7 +119,7 @@ public:
 	 * @param dfl Default value (default: false)
 	 * @return Value of key or default if not found
 	 */
-	bool getB(const char *k,bool dfl = false) const;
+	bool getB(const char *k, bool dfl = false) const;
 
 	/**
 	 * Get an integer
@@ -109,7 +128,7 @@ public:
 	 * @param dfl Default value (default: 0)
 	 * @return Value of key or default if not found
 	 */
-	uint64_t getUI(const char *k,uint64_t dfl = 0) const;
+	uint64_t getUI(const char *k, uint64_t dfl = 0) const;
 
 	/**
 	 * Get a C string
@@ -121,7 +140,7 @@ public:
 	 * @param v Buffer to hold string
 	 * @param cap Maximum size of string (including terminating null)
 	 */
-	char *getS(const char *k,char *v,unsigned int cap) const;
+	char *getS(const char *k, char *v, unsigned int cap) const;
 
 	/**
 	 * Get an object supporting the marshal/unmarshal interface pattern
@@ -130,13 +149,13 @@ public:
 	 * @param obj Object to unmarshal() into
 	 * @return True if unmarshal was successful
 	 */
-	template<typename T>
-	ZT_INLINE bool getO(const char *k,T &obj) const
+	template< typename T >
+	ZT_INLINE bool getO(const char *k, T &obj) const
 	{
-		const Vector<uint8_t> &d = (*this)[k];
+		const Vector< uint8_t > &d = (*this)[k];
 		if (d.empty())
 			return false;
-		return (obj.unmarshal(d.data(),(unsigned int)d.size()) > 0);
+		return (obj.unmarshal(d.data(), (unsigned int)d.size()) > 0);
 	}
 
 	/**
@@ -147,12 +166,14 @@ public:
 	/**
 	 * @return Number of entries
 	 */
-	ZT_INLINE unsigned int size() const noexcept { return m_entries.size(); }
+	ZT_INLINE unsigned int size() const noexcept
+	{ return m_entries.size(); }
 
 	/**
 	 * @return True if dictionary is not empty
 	 */
-	ZT_INLINE bool empty() const noexcept { return m_entries.empty(); }
+	ZT_INLINE bool empty() const noexcept
+	{ return m_entries.empty(); }
 
 	/**
 	 * Encode to a string in the supplied vector
@@ -160,7 +181,7 @@ public:
 	 * @param out String encoded dictionary
 	 * @param omitSignatureFields If true omit the signature fields from encoding (default: false)
 	 */
-	void encode(Vector<uint8_t> &out,bool omitSignatureFields = false) const;
+	void encode(Vector <uint8_t> &out, bool omitSignatureFields = false) const;
 
 	/**
 	 * Decode a string encoded dictionary
@@ -172,7 +193,35 @@ public:
 	 * @param len Length of data
 	 * @return True if dictionary was formatted correctly and valid, false on error
 	 */
-	bool decode(const void *data,unsigned int len);
+	bool decode(const void *data, unsigned int len);
+
+	/**
+	 * Sign this dictionary with both an Ed25519 key and a NIST P-384 key.
+	 *
+	 * This is currently used just for signing root sets for the root subscribe
+	 * feature. It uses both key types for more crypto cowbell.
+	 *
+	 * @param c25519PrivateKey Curve25519 combined key (C25519 and ed25519), though only ed25519 part is used
+	 * @param c25519PublicKey Public part of Curve25519 combined key
+	 * @param p384PrivateKey NIST P-384 private key
+	 * @param p384PublicKey NIST P-384 public key
+	 */
+	void sign(
+		const uint8_t c25519PrivateKey[ZT_C25519_COMBINED_PRIVATE_KEY_SIZE],
+		const uint8_t c25519PublicKey[ZT_C25519_COMBINED_PUBLIC_KEY_SIZE],
+		const uint8_t p384PrivateKey[ZT_ECC384_PRIVATE_KEY_SIZE],
+		const uint8_t p384PublicKey[ZT_ECC384_PUBLIC_KEY_SIZE]);
+
+	/**
+	 * Verify this dictionary's signature
+	 *
+	 * @param c25519PublicKey Curve25519 public key
+	 * @param p384PublicKey P-384 public key
+	 * @return True if signatures are valid
+	 */
+	bool verify(
+		const uint8_t c25519PublicKey[ZT_C25519_COMBINED_PUBLIC_KEY_SIZE],
+		const uint8_t p384PublicKey[ZT_ECC384_PUBLIC_KEY_SIZE]) const;
 
 	/**
 	 * Append a key=value pair to a buffer (vector or FCV)
@@ -181,10 +230,10 @@ public:
 	 * @param k Key (must be <= 8 characters)
 	 * @param v Value
 	 */
-	template<typename V>
-	ZT_INLINE static void append(V &out,const char *const k,const bool v)
+	template< typename V >
+	ZT_INLINE static void append(V &out, const char *const k, const bool v)
 	{
-		s_appendKey(out,k);
+		s_appendKey(out, k);
 		out.push_back((uint8_t)(v ? '1' : '0'));
 		out.push_back((uint8_t)'\n');
 	}
@@ -196,12 +245,12 @@ public:
 	 * @param k Key (must be <= 8 characters)
 	 * @param v Value
 	 */
-	template<typename V>
-	ZT_INLINE static void append(V &out,const char *const k,const Address v)
+	template< typename V >
+	ZT_INLINE static void append(V &out, const char *const k, const Address v)
 	{
-		s_appendKey(out,k);
+		s_appendKey(out, k);
 		const uint64_t a = v.toInt();
-		static_assert(ZT_ADDRESS_LENGTH_HEX == 10,"this must be rewritten for any change in address length");
+		static_assert(ZT_ADDRESS_LENGTH_HEX == 10, "this must be rewritten for any change in address length");
 		out.push_back((uint8_t)Utils::HEXCHARS[(a >> 36U) & 0xfU]);
 		out.push_back((uint8_t)Utils::HEXCHARS[(a >> 32U) & 0xfU]);
 		out.push_back((uint8_t)Utils::HEXCHARS[(a >> 28U) & 0xfU]);
@@ -222,31 +271,44 @@ public:
 	 * @param k Key (must be <= 8 characters)
 	 * @param v Value
 	 */
-	template<typename V>
-	ZT_INLINE static void append(V &out,const char *const k,const uint64_t v)
+	template< typename V >
+	ZT_INLINE static void append(V &out, const char *const k, const uint64_t v)
 	{
 		char buf[17];
-		Utils::hex(v,buf);
+		Utils::hex(v, buf);
 		unsigned int i = 0;
 		while (buf[i])
 			out.push_back((uint8_t)buf[i++]);
 		out.push_back((uint8_t)'\n');
 	}
 
-	template<typename V>
-	ZT_INLINE static void append(V &out,const char *const k,const int64_t v) { append(out,k,(uint64_t)v); }
-	template<typename V>
-	ZT_INLINE static void append(V &out,const char *const k,const uint32_t v) { append(out,k,(uint64_t)v); }
-	template<typename V>
-	ZT_INLINE static void append(V &out,const char *const k,const int32_t v) { append(out,k,(uint64_t)v); }
-	template<typename V>
-	ZT_INLINE static void append(V &out,const char *const k,const uint16_t v) { append(out,k,(uint64_t)v); }
-	template<typename V>
-	ZT_INLINE static void append(V &out,const char *const k,const int16_t v) { append(out,k,(uint64_t)v); }
-	template<typename V>
-	ZT_INLINE static void append(V &out,const char *const k,const uint8_t v) { append(out,k,(uint64_t)v); }
-	template<typename V>
-	ZT_INLINE static void append(V &out,const char *const k,const int8_t v) { append(out,k,(uint64_t)v); }
+	template< typename V >
+	ZT_INLINE static void append(V &out, const char *const k, const int64_t v)
+	{ append(out, k, (uint64_t)v); }
+
+	template< typename V >
+	ZT_INLINE static void append(V &out, const char *const k, const uint32_t v)
+	{ append(out, k, (uint64_t)v); }
+
+	template< typename V >
+	ZT_INLINE static void append(V &out, const char *const k, const int32_t v)
+	{ append(out, k, (uint64_t)v); }
+
+	template< typename V >
+	ZT_INLINE static void append(V &out, const char *const k, const uint16_t v)
+	{ append(out, k, (uint64_t)v); }
+
+	template< typename V >
+	ZT_INLINE static void append(V &out, const char *const k, const int16_t v)
+	{ append(out, k, (uint64_t)v); }
+
+	template< typename V >
+	ZT_INLINE static void append(V &out, const char *const k, const uint8_t v)
+	{ append(out, k, (uint64_t)v); }
+
+	template< typename V >
+	ZT_INLINE static void append(V &out, const char *const k, const int8_t v)
+	{ append(out, k, (uint64_t)v); }
 
 	/**
 	 * Append a key=value pair to a buffer (vector or FCV)
@@ -255,13 +317,13 @@ public:
 	 * @param k Key (must be <= 8 characters)
 	 * @param v Value
 	 */
-	template<typename V>
-	ZT_INLINE static void append(V &out,const char *const k,const char *v)
+	template< typename V >
+	ZT_INLINE static void append(V &out, const char *const k, const char *v)
 	{
-		if ((v)&&(*v)) {
-			s_appendKey(out,k);
+		if ((v) && (*v)) {
+			s_appendKey(out, k);
 			while (*v)
-				s_appendValueByte(out,(uint8_t)*(v++));
+				s_appendValueByte(out, (uint8_t)*(v++));
 			out.push_back((uint8_t)'\n');
 		}
 	}
@@ -274,12 +336,12 @@ public:
 	 * @param v Value
 	 * @param vlen Value length in bytes
 	 */
-	template<typename V>
-	ZT_INLINE static void append(V &out,const char *const k,const void *const v,const unsigned int vlen)
+	template< typename V >
+	ZT_INLINE static void append(V &out, const char *const k, const void *const v, const unsigned int vlen)
 	{
-		s_appendKey(out,k);
-		for(unsigned int i=0;i<vlen;++i)
-			s_appendValueByte(out,reinterpret_cast<const uint8_t *>(v)[i]);
+		s_appendKey(out, k);
+		for (unsigned int i = 0; i < vlen; ++i)
+			s_appendValueByte(out, reinterpret_cast<const uint8_t *>(v)[i]);
 		out.push_back((uint8_t)'\n');
 	}
 
@@ -290,11 +352,9 @@ public:
 	 * @param k Key (must be <= 8 characters)
 	 * @param pid Packet ID
 	 */
-	template<typename V>
-	static ZT_INLINE void appendPacketId(V &out,const char *const k,const uint64_t pid)
-	{
-		append(out,k,&pid,8);
-	}
+	template< typename V >
+	static ZT_INLINE void appendPacketId(V &out, const char *const k, const uint64_t pid)
+	{ append(out, k, &pid, 8); }
 
 	/**
 	 * Append key=value with any object implementing the correct marshal interface
@@ -304,23 +364,23 @@ public:
 	 * @param v Marshal-able object
 	 * @return Bytes appended or negative on error (return value of marshal())
 	 */
-	template<typename V,typename T>
-	static ZT_INLINE int appendObject(V &out,const char *const k,const T &v)
+	template< typename V, typename T >
+	static ZT_INLINE int appendObject(V &out, const char *const k, const T &v)
 	{
 		uint8_t tmp[4096]; // large enough for any current object
 		if (T::marshalSizeMax() > sizeof(tmp))
 			return -1;
 		const int mlen = v.marshal(tmp);
 		if (mlen > 0)
-			append(out,k,tmp,(unsigned int)mlen);
+			append(out, k, tmp, (unsigned int)mlen);
 		return mlen;
 	}
 
 private:
-	template<typename V>
-	ZT_INLINE static void s_appendValueByte(V &out,const uint8_t c)
+	template< typename V >
+	ZT_INLINE static void s_appendValueByte(V &out, const uint8_t c)
 	{
-		switch(c) {
+		switch (c) {
 			case 0:
 				out.push_back(92); // backslash
 				out.push_back(48);
@@ -347,34 +407,35 @@ private:
 		}
 	}
 
-	template<typename V>
-	ZT_INLINE static void s_appendKey(V &out,const char *const k)
+	template< typename V >
+	ZT_INLINE static void s_appendKey(V &out, const char *const k)
 	{
-		for(unsigned int i=0;i<7;++i) {
+		for (unsigned int i = 0; i < 7; ++i) {
 			const char kc = k[i];
 			if (kc == 0)
 				break;
-			if ((kc >= 33)&&(kc <= 126)&&(kc != 61)&&(kc != 92)) // printable ASCII with no spaces, equals, or backslash
+			if ((kc >= 33) && (kc <= 126) && (kc != 61) && (kc != 92)) // printable ASCII with no spaces, equals, or backslash
 				out.push_back((uint8_t)kc);
 		}
 		out.push_back((uint8_t)'=');
 	}
 
-	ZT_INLINE static FCV<char,8> &s_key(FCV<char,8> &buf,const char *k) noexcept
+	ZT_INLINE static String s_key(const char *k) noexcept
 	{
+		String buf;
 		buf.clear();
-		for(unsigned int i=0;i<7;++i) {
+		for (unsigned int i = 0; i < 7; ++i) {
 			const char kc = k[i];
 			if (kc == 0)
 				break;
-			if ((kc >= 33)&&(kc <= 126)&&(kc != 61)&&(kc != 92)) // printable ASCII with no spaces, equals, or backslash
+			if ((kc >= 33) && (kc <= 126) && (kc != 61) && (kc != 92)) // printable ASCII with no spaces, equals, or backslash
 				buf.push_back(kc);
 		}
 		buf.push_back(0);
 		return buf;
 	}
 
-	SortedMap< FCV<char,8>,Vector<uint8_t> > m_entries;
+	SortedMap <String, Vector< uint8_t >> m_entries;
 };
 
 } // namespace ZeroTier

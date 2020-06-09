@@ -224,10 +224,6 @@
  */
 #define ZT_SIGNATURE_BUFFER_SIZE 96
 
-// Internal cryptographic algorithm IDs (these match relevant identity types)
-#define ZT_CRYPTO_ALG_C25519 0
-#define ZT_CRYPTO_ALG_P384 1
-
 /* Ethernet frame types that might be relevant to us */
 #define ZT_ETHERTYPE_IPV4 0x0800
 #define ZT_ETHERTYPE_ARP 0x0806

@@ -47,7 +47,7 @@ public:
 	enum Type
 	{
 		TYPE_NIL = 0,
-		TYPE_C25519_P384 = ZT_CRYPTO_ALG_P384
+		TYPE_C25519_P384 = 1
 	};
 
 	/**

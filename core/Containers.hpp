@@ -20,8 +20,11 @@
 #include "Utils.hpp"
 
 #ifdef __CPP11__
+
 #include <unordered_map>
+
 #endif
+
 #include <map>
 #include <vector>
 #include <list>
@@ -34,42 +37,52 @@ namespace ZeroTier {
 
 struct intl_MapHasher
 {
-	template<typename O>
-	std::size_t operator()(const O &obj) const noexcept { return (std::size_t)obj.hashCode(); }
-	std::size_t operator()(const uint64_t i) const noexcept { return (std::size_t)Utils::hash64(i + Utils::s_mapNonce); }
-	std::size_t operator()(const int64_t i) const noexcept { return (std::size_t)Utils::hash64((uint64_t)i + Utils::s_mapNonce); }
-	std::size_t operator()(const uint32_t i) const noexcept { return (std::size_t)Utils::hash32(i + (uint32_t)Utils::s_mapNonce); }
-	std::size_t operator()(const int32_t i) const noexcept { return (std::size_t)Utils::hash32((uint32_t)i + (uint32_t)Utils::s_mapNonce); }
+	template< typename O >
+	std::size_t operator()(const O &obj) const noexcept
+	{ return (std::size_t)obj.hashCode(); }
+
+	std::size_t operator()(const uint64_t i) const noexcept
+	{ return (std::size_t)Utils::hash64(i + Utils::s_mapNonce); }
+
+	std::size_t operator()(const int64_t i) const noexcept
+	{ return (std::size_t)Utils::hash64((uint64_t)i + Utils::s_mapNonce); }
+
+	std::size_t operator()(const uint32_t i) const noexcept
+	{ return (std::size_t)Utils::hash32(i + (uint32_t)Utils::s_mapNonce); }
+
+	std::size_t operator()(const int32_t i) const noexcept
+	{ return (std::size_t)Utils::hash32((uint32_t)i + (uint32_t)Utils::s_mapNonce); }
 };
 
-template<typename K,typename V>
-class Map : public std::unordered_map< K,V,intl_MapHasher,std::equal_to<K>,Utils::Mallocator< std::pair<const K,V> > >
-{
+template< typename K, typename V >
+class Map : public std::unordered_map< K, V, intl_MapHasher, std::equal_to< K >, Utils::Mallocator < std::pair< const K, V > >
+
+> {
 public:
-	ZT_INLINE V *get(const K &key) noexcept
-	{
-		typename Map::iterator i(this->find(key));
-		if (i == this->end())
-			return nullptr;
-		return &(i->second);
-	}
+ZT_INLINE V *get(const K &key) noexcept
+{
+	typename Map::iterator i(this->find(key));
+	if (i == this->end())
+		return nullptr;
+	return &(i->second);
+}
 
-	ZT_INLINE const V *get(const K &key) const noexcept
-	{
-		typename Map::const_iterator i(this->find(key));
-		if (i == this->end())
-			return nullptr;
-		return &(i->second);
-	}
+ZT_INLINE const V *get(const K &key) const noexcept
+{
+	typename Map::const_iterator i(this->find(key));
+	if (i == this->end())
+		return nullptr;
+	return &(i->second);
+}
 
-	ZT_INLINE void set(const K &key,const V &value)
-	{
-		this->emplace(key,value);
-	}
+ZT_INLINE void set(const K &key, const V &value)
+{ this->emplace(key, value); }
 };
 
-template<typename K,typename V>
-class MultiMap : public std::unordered_multimap< K,V,intl_MapHasher,std::equal_to<K>,Utils::Mallocator< std::pair<const K,V> > >
+template< typename K, typename V >
+class MultiMap : public std::unordered_multimap< K, V, intl_MapHasher, std::equal_to< K >, Utils::Mallocator < std::pair< const K, V > >
+
+>
 {
 };
 
@@ -96,9 +109,7 @@ public:
 	}
 
 	ZT_INLINE void set(const K &key,const V &value)
-	{
-		(*this)[key] = value;
-	}
+	{ (*this)[key] = value; }
 };
 
 template<typename K,typename V>
@@ -108,60 +119,104 @@ class MultiMap : public std::multimap< K,V,std::less<K>,Utils::Mallocator< std::
 
 #endif
 
-template<typename K,typename V>
-class SortedMap : public std::map< K,V,std::less<K>,Utils::Mallocator< std::pair<const K,V> > >
+template< typename K, typename V >
+class SortedMap : public std::map< K, V, std::less< K >, Utils::Mallocator < std::pair< const K, V > >
+
+>
 {
 public:
-	ZT_INLINE V *get(const K &key) noexcept
-	{
-		typename SortedMap::iterator i(this->find(key));
-		if (i == this->end())
-			return nullptr;
-		return &(i->second);
-	}
+ZT_INLINE V *get(const K &key) noexcept
+{
+	typename SortedMap::iterator i(this->find(key));
+	if (i == this->end())
+		return nullptr;
+	return &(i->second);
+}
 
-	ZT_INLINE const V *get(const K &key) const noexcept
-	{
-		typename SortedMap::const_iterator i(this->find(key));
-		if (i == this->end())
-			return nullptr;
-		return &(i->second);
-	}
+ZT_INLINE const V *get(const K &key) const noexcept
+{
+	typename SortedMap::const_iterator i(this->find(key));
+	if (i == this->end())
+		return nullptr;
+	return &(i->second);
+}
 
-	ZT_INLINE void set(const K &key,const V &value)
-	{
-		(*this)[key] = value;
-	}
+ZT_INLINE void set(const K &key, const V &value)
+{ (*this)[key] = value; }
+
 };
 
-template<typename V>
-class Vector : public std::vector< V,Utils::Mallocator<V> >
+template< typename V >
+class Vector : public std::vector< V, Utils::Mallocator < V >
+
+>
 {
 public:
-	ZT_INLINE Vector() {}
-	template<typename I>
-	ZT_INLINE Vector(I begin,I end) : std::vector< V,Utils::Mallocator<V> >(begin,end) {}
+ZT_INLINE Vector()
+{}
+
+template< typename I >
+ZT_INLINE Vector(I
+begin,
+I end
+) : std::vector< V, Utils::Mallocator < V > >(begin,end) {
+}
 };
 
-template<typename V>
-class List : public std::list< V,Utils::Mallocator<V> >
+template< typename V >
+class List : public std::list< V, Utils::Mallocator < V >
+
+>
 {
 };
 
-template<typename V>
-class Set : public std::set< V,std::less<V>,Utils::Mallocator<V> >
+template< typename V >
+class Set : public std::set< V, std::less< V >, Utils::Mallocator < V >
+
+>
 {
 };
 
-class String : public std::basic_string< char,std::char_traits<char>,Utils::Mallocator<char> >
+class String : public std::basic_string< char, std::char_traits< char >, Utils::Mallocator < char >
+
+>
 {
 public:
-	ZT_INLINE String() {}
-	ZT_INLINE String(const String &s) : std::basic_string< char,std::char_traits<char>,Utils::Mallocator<char> >(s.c_str()) {}
-	ZT_INLINE String(const std::string &s) : std::basic_string< char,std::char_traits<char>,Utils::Mallocator<char> >(s.c_str()) {}
-	ZT_INLINE String(const char *const s) : std::basic_string< char,std::char_traits<char>,Utils::Mallocator<char> >(s) {}
-	ZT_INLINE String &operator=(const char *const s) { assign(s); return *this; }
-	ZT_INLINE String &operator=(const std::string &s) { assign(s.c_str()); return *this; }
+ZT_INLINE String()
+{}
+
+ZT_INLINE String(const String &s) : std::basic_string< char, std::char_traits< char >, Utils::Mallocator < char >
+
+>(s.
+
+c_str()
+
+) {
+}
+ZT_INLINE String(const std::string &s) : std::basic_string< char, std::char_traits< char >, Utils::Mallocator < char >
+
+>(s.
+
+c_str()
+
+) {
+}
+ZT_INLINE String(const char *const s) : std::basic_string< char, std::char_traits< char >, Utils::Mallocator < char >
+
+>(s) {
+}
+ZT_INLINE String &operator=(const char *const s)
+{
+	assign(s);
+	return *this;
+}
+
+ZT_INLINE String &operator=(const std::string &s)
+{
+	assign(s.c_str());
+	return *this;
+}
+
 };
 
 } // ZeroTier

@@ -21,10 +21,6 @@ func Root(basePath, authToken string, args []string, jsonOutput bool) {
 
 		case "remove":
 
-		case "subscribe":
-
-		case "unsubscribe":
-
 		}
 	}
 }

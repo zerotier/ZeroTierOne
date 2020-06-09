@@ -38,7 +38,7 @@ Commands:
   status                                 Show node status and configuration
   join [-options] <network>              Join a virtual network
     -a <token>                           Token to submit to controller
-    -c <identity|fingerprint>            Controller identity or fingerprint
+    -c <identity | fingerprint>          Controller identity or fingerprint
   leave <network>                        Leave a virtual network
   networks                               List VL2 virtual networks
   network <network> [command] [option] - Network management commands
@@ -58,8 +58,8 @@ Commands:
   root [command]                       - Root management commands
     add <identity> [endpoint]            Designate a peer as a root
     remove <address>                     Un-designate a peer as a root
-    subscribe <url>                      Subscribe to a root set
-    unsubscribe <url>                    Unsubscribe from a root set
+    subscribe <url> [<key hash>]         Subscribe to a set of roots
+    unsubscribe <url | key hash>         Unsubscribe from a set of roots
   set [option] [value]                 - Get or set a core config option
     port <port>                          Primary P2P port
     secondaryport <port/0>               Secondary P2P port (0 to disable)
@@ -75,7 +75,7 @@ Commands:
     auth <address>                       Authorize a peer
     deauth <address>                     Deauthorize a peer
   identity <command> [args]            - Identity management commands
-    new [c25519|p384]                    Create identity (default: c25519)
+    new [c25519 | p384]                  Create identity (default: c25519)
     getpublic <identity>                 Extract only public part of identity
     fingerprint <identity>               Get an identity's fingerprint
     validate <identity>                  Locally validate an identity

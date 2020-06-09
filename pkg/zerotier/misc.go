@@ -13,6 +13,9 @@
 
 package zerotier
 
+// #include "../../serviceiocore/GoGlue.h"
+import "C"
+
 import (
 	"encoding/base32"
 	"encoding/binary"

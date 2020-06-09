@@ -12,11 +12,9 @@
 /****/
 
 #include "Dictionary.hpp"
+#include "SHA512.hpp"
 
 namespace ZeroTier {
-
-static const FCV<char, 8> s_signatureFingerprint("@Si", 4);
-static const FCV<char, 8> s_signatureData("@Ss", 4);
 
 Dictionary::Dictionary()
 {
@@ -24,15 +22,13 @@ Dictionary::Dictionary()
 
 Vector<uint8_t> &Dictionary::operator[](const char *k)
 {
-	FCV<char, 8> key;
-	return m_entries[s_key(key, k)];
+	return m_entries[s_key(k)];
 }
 
 const Vector<uint8_t> &Dictionary::operator[](const char *k) const
 {
 	static const Vector<uint8_t> s_emptyEntry;
-	FCV<char, 8> key;
-	SortedMap<FCV<char, 8>, Vector<uint8_t> >::const_iterator e(m_entries.find(s_key(key, k)));
+	SortedMap< String, Vector<uint8_t> >::const_iterator e(m_entries.find(s_key(k)));
 	return (e == m_entries.end()) ? s_emptyEntry : e->second;
 }
 
@@ -131,8 +127,8 @@ void Dictionary::clear()
 void Dictionary::encode(Vector<uint8_t> &out, const bool omitSignatureFields) const
 {
 	out.clear();
-	for (SortedMap<FCV<char, 8>, Vector<uint8_t> >::const_iterator ti(m_entries.begin());ti != m_entries.end();++ti) {
-		if ((!omitSignatureFields) || ((ti->first != s_signatureFingerprint) && (ti->first != s_signatureData))) {
+	for (SortedMap< String, Vector<uint8_t> >::const_iterator ti(m_entries.begin());ti != m_entries.end();++ti) {
+		if ((!omitSignatureFields) || ((ti->first != ZT_DICTIONARY_SIGNATURE_KEY))) {
 			s_appendKey(out, ti->first.data());
 			for (Vector<uint8_t>::const_iterator i(ti->second.begin());i != ti->second.end();++i)
 				s_appendValueByte(out, *i);
@@ -145,7 +141,7 @@ void Dictionary::encode(Vector<uint8_t> &out, const bool omitSignatureFields) co
 bool Dictionary::decode(const void *data, unsigned int len)
 {
 	clear();
-	FCV<char, 8> k;
+	String k;
 	Vector<uint8_t> *v = nullptr;
 	bool escape = false;
 	for (unsigned int di = 0;di < len;++di) {
@@ -195,6 +191,61 @@ bool Dictionary::decode(const void *data, unsigned int len)
 		}
 	}
 	return true;
+}
+
+void Dictionary::sign(
+	const uint8_t c25519PrivateKey[ZT_C25519_COMBINED_PRIVATE_KEY_SIZE],
+	const uint8_t c25519PublicKey[ZT_C25519_COMBINED_PUBLIC_KEY_SIZE],
+	const uint8_t p384PrivateKey[ZT_ECC384_PRIVATE_KEY_SIZE],
+	const uint8_t p384PublicKey[ZT_ECC384_PUBLIC_KEY_SIZE])
+{
+	Vector<uint8_t> buf;
+	encode(buf, true);
+
+	uint8_t c25519Signature[ZT_C25519_SIGNATURE_LEN];
+	C25519::sign(c25519PrivateKey, c25519PublicKey, buf.data(), (unsigned int)buf.size(), c25519Signature);
+
+	uint8_t hbuf[ZT_ECC384_SIGNATURE_HASH_SIZE];
+	static_assert(ZT_ECC384_SIGNATURE_HASH_SIZE == ZT_SHA384_DIGEST_SIZE,"size mismatch");
+	SHA384(hbuf, buf.data(), (unsigned int)buf.size());
+	uint8_t p384Signature[ZT_ECC384_SIGNATURE_SIZE];
+	ECC384ECDSASign(p384PrivateKey, hbuf, p384Signature);
+
+	SHA384(hbuf, c25519PublicKey, ZT_C25519_COMBINED_PUBLIC_KEY_SIZE, p384PublicKey, ZT_ECC384_PUBLIC_KEY_SIZE);
+
+	Dictionary signature;
+	signature["kh"].assign(hbuf, hbuf + ZT_SHA384_DIGEST_SIZE);
+	signature["ed25519"].assign(c25519Signature, c25519Signature + ZT_C25519_SIGNATURE_LEN);
+	signature["p384"].assign(p384Signature, p384Signature + ZT_ECC384_SIGNATURE_SIZE);
+	signature.encode((*this)[ZT_DICTIONARY_SIGNATURE_KEY], true);
+}
+
+bool Dictionary::verify(
+	const uint8_t c25519PublicKey[ZT_C25519_COMBINED_PUBLIC_KEY_SIZE],
+	const uint8_t p384PublicKey[ZT_ECC384_PUBLIC_KEY_SIZE]) const
+{
+	try {
+		const Vector< uint8_t > &data = (*this)[ZT_DICTIONARY_SIGNATURE_KEY];
+		if (data.empty())
+			return false;
+		Dictionary signature;
+		if (!signature.decode(data.data(), (unsigned int)data.size()))
+			return false;
+		const Vector< uint8_t > &p384Signature = signature["p384"];
+		const Vector< uint8_t > &c25519Signature = signature["ed25519"];
+		if ((p384Signature.size() != ZT_ECC384_SIGNATURE_SIZE) || (c25519Signature.size() != ZT_C25519_SIGNATURE_LEN))
+			return false;
+
+		Vector< uint8_t > buf;
+		encode(buf, true);
+
+		if (C25519::verify(c25519PublicKey, buf.data(), (unsigned int)buf.size(), c25519Signature.data(), (unsigned int)c25519Signature.size())) {
+			uint8_t hbuf[ZT_ECC384_SIGNATURE_HASH_SIZE];
+			SHA384(hbuf, buf.data(), (unsigned int)buf.size());
+			return ECC384ECDSAVerify(p384PublicKey, hbuf, p384Signature.data());
+		}
+	} catch ( ... ) {}
+	return false;
 }
 
 } // namespace ZeroTier
