@@ -104,6 +104,11 @@ else(WIN32)
 			$<$<CONFIG:RELWITHDEBINFO>:-fPIE>
 			$<$<CONFIG:RELWITHDEBINFO>:-g>
 		)
+		option(BUILD_32BIT "Force building as 32-bit binary")
+		if(BUILD_32BIT)
+			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32" CACHE STRING "c++ flags")
+			set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} -m32" CACHE STRING "c flags")
+		endif(BUILD_32BIT)
 	endif(APPLE)
 endif(WIN32)
 

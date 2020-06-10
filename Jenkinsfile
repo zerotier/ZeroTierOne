@@ -282,9 +282,14 @@ def buildDebianNative() {
                 }
                 def runtime = docker.image("ztbuild/${distro}-${arch}:latest")
                 runtime.inside {
+                    def cmakeFlags = ""
+                    if (arch == "i386") {
+                        cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1"'
+                    }
+                   
                     sh 'whoami'
                     dir("build") {
-                        sh 'make -j4'
+                        sh "${cmakeFlags} make -j4"
                     }
                     // sh "mkdir -p ${distro}"
                     // sh "mv *.deb ${distro}"
