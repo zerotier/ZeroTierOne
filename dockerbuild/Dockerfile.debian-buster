@@ -9,7 +9,6 @@ RUN curl -s -k $go_pkg_url -o go.tar.gz && \
     rm go.tar.gz
 
 RUN groupadd -g 1000 jenkins-build && useradd -u 1000 -g 1000 jenkins-build
-RUN chmod 777 /home && chmod 777 /home/jenkins-build
-
+RUN chmod 777 /home && mkdir -p /home/jenkins-build && chown jenkins-build:jenkins-build /home/jenkins-build && chmod 777 /home/jenkins-build
 CMD ["/usr/bin/sshd", "-D"]
 
