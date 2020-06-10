@@ -14,7 +14,7 @@ endif()
 
 find_program(
 	GO go
-	HINTS "/usr/local/go" "C:/go/bin"
+	HINTS "/usr/local/go/bin" "C:/go/bin"
 )
 
 if(NOT GO)
