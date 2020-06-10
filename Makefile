@@ -4,7 +4,7 @@ TIMESTAMP=$(shell date +"%Y%m%d%H%M")
 .PHONY: all
 
 all:	setup
-	cd ${BUILDDIR} && $(MAKE) -j$(shell getconf _NPROCESSORS_ONLN)
+	cd ${BUILDDIR} && $(MAKE) -j$(shell getconf _NPROCESSORS_ONLN) VERBOSE=1
 
 setup:
 	mkdir -p ${BUILDDIR} && cd ${BUILDDIR} && cmake .. -DCMAKE_BUILD_TYPE=Release ${CMAKE_ARGS}

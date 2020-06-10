@@ -110,6 +110,9 @@ else(WIN32)
 			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32" CACHE STRING "c++ flags")
 			set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} -m32" CACHE STRING "c flags")
 			set(GOARCH "GOARCH=386" CACHE STRING "go architecture")
+			add_compile_options(
+				-m32
+			)
 		endif(BUILD_32BIT)
 	endif(APPLE)
 endif(WIN32)
