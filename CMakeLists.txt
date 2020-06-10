@@ -12,6 +12,18 @@ else()
 	cmake_policy(VERSION 3.15)
 endif()
 
+find_program(
+	GO go
+	HINTS "/usr/local/go" "C:/go/bin"
+)
+
+if(NOT GO)
+	message(FATAL_ERROR "Golang not found")
+else(NOT GO)
+	message(STATUS "Found Golang at ${GO}")
+endif(NOT GO)
+
+
 set(CMAKE_CXX_STANDARD 11)
 set(default_build_type "Release")
 
@@ -121,8 +133,8 @@ file(GLOB go_src
 
 add_custom_command(
 	OUTPUT ${CMAKE_BINARY_DIR}/zerotier_cgo.h ${CMAKE_BINARY_DIR}/zerotier_cgo.a
-	COMMAND go build -buildmode=c-archive -o ${CMAKE_BINARY_DIR}/zerotier_cgo.a ${CMAKE_SOURCE_DIR}/cmd/zerotier/zerotier.go
-	IMPLICIT_DEPENDS go ${go_src}
+	COMMAND ${GO} build -buildmode=c-archive -o ${CMAKE_BINARY_DIR}/zerotier_cgo.a ${CMAKE_SOURCE_DIR}/cmd/zerotier/zerotier.go
+	IMPLICIT_DEPENDS ${go_src}
 	COMMENT "Compiling Go Code..."
 )
 add_custom_target(
