@@ -104,7 +104,7 @@ else(WIN32)
 			$<$<CONFIG:RELWITHDEBINFO>:-fPIE>
 			$<$<CONFIG:RELWITHDEBINFO>:-g>
 		)
-		option(BUILD_32BIT "Force building as 32-bit binary")
+		option(BUILD_32BIT "Force building as 32-bit binary" OFF)
 		if(BUILD_32BIT)
 			set(CMAKE_SYSTEM_PROCESSOR "x86" CACHE STRING "system processor")
 			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32" CACHE STRING "c++ flags")
