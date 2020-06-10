@@ -2,7 +2,7 @@ FROM debian:bullseye-20191224
 
 ARG go_pkg_url
 
-RUN apt-get update && apt-get upgrade -y && apt-get -y install build-essential curl ca-certificates devscripts dh-systemd
+RUN apt-get update && apt-get upgrade -y && apt-get -y install build-essential curl cmake ca-certificates devscripts dh-systemd
 
 RUN curl -s -k $go_pkg_url -o go.tar.gz && \
     tar -C /usr/local -xzf go.tar.gz && \
