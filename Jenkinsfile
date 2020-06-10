@@ -282,6 +282,7 @@ def buildDebianNative() {
                 }
                 def runtime = docker.image("ztbuild/${distro}-${arch}:latest")
                 runtime.inside {
+                    sh 'whoami'
                     dir("build") {
                         sh 'make -j4'
                     }
