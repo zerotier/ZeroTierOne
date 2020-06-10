@@ -109,6 +109,7 @@ else(WIN32)
 			set(CMAKE_SYSTEM_PROCESSOR "x86" CACHE STRING "system processor")
 			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32" CACHE STRING "c++ flags")
 			set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} -m32" CACHE STRING "c flags")
+			set(GOARCH "GOARCH=386" CACHE STRING "go architecture")
 		endif(BUILD_32BIT)
 	endif(APPLE)
 endif(WIN32)
@@ -139,7 +140,7 @@ file(GLOB go_src
 
 add_custom_command(
 	OUTPUT ${CMAKE_BINARY_DIR}/zerotier_cgo.h ${CMAKE_BINARY_DIR}/zerotier_cgo.a
-	COMMAND ${GO} build -buildmode=c-archive -o ${CMAKE_BINARY_DIR}/zerotier_cgo.a ${CMAKE_SOURCE_DIR}/cmd/zerotier/zerotier.go
+	COMMAND ${GOARCH} CGO_ENABLED=1 ${GO} build -buildmode=c-archive -o ${CMAKE_BINARY_DIR}/zerotier_cgo.a ${CMAKE_SOURCE_DIR}/cmd/zerotier/zerotier.go
 	IMPLICIT_DEPENDS ${go_src}
 	COMMENT "Compiling Go Code..."
 )
