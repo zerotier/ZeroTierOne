@@ -17,14 +17,7 @@
 #include "zerotier.h"
 #include "OS.hpp"
 
-#if __has_include("version.h")
 #include "version.h"
-#else /* dummy values for use inside IDEs, etc. */
-#define ZEROTIER_VERSION_MAJOR 255
-#define ZEROTIER_VERSION_MINOR 255
-#define ZEROTIER_VERSION_REVISION 255
-#define ZEROTIER_VERSION_BUILD 255
-#endif
 
 /**
  * Version bit packed into four 16-bit fields in a 64-bit unsigned integer.
