@@ -119,6 +119,8 @@ else(WIN32)
 			add_link_options(
 				-static
 			)
+			set(CMAKE_EXE_LINKER_FLAGS "-static ${CMAKE_EXE_LINKER_FLAGS}")
+			set(GOFLAGS "-a -tags netgo -ldflags '-w -extldflags \"-static\"")
 		endif(BUILD_STATIC)
 	endif(APPLE)
 endif(WIN32)
@@ -149,7 +151,7 @@ file(GLOB go_src
 
 add_custom_command(
 	OUTPUT ${CMAKE_BINARY_DIR}/zerotier_cgo.h ${CMAKE_BINARY_DIR}/zerotier_cgo.a
-	COMMAND ${GOARCH} CGO_ENABLED=1 ${GO} build -buildmode=c-archive -o ${CMAKE_BINARY_DIR}/zerotier_cgo.a ${CMAKE_SOURCE_DIR}/cmd/zerotier/zerotier.go
+	COMMAND ${GOARCH} CGO_ENABLED=1 ${GO} build -buildmode=c-archive ${GOFLAGS} -o ${CMAKE_BINARY_DIR}/zerotier_cgo.a ${CMAKE_SOURCE_DIR}/cmd/zerotier/zerotier.go
 	IMPLICIT_DEPENDS ${go_src}
 	COMMENT "Compiling Go Code..."
 )
