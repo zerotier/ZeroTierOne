@@ -60,7 +60,7 @@ def buildStaticBinaries() {
                             cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DBUILD_STATIC=1"'
                          }
                    
-                        sh "${cmakeFlags} make -j8 ZT_STATIC=1 all"
+                        sh "${cmakeFlags} make"
                         dir("build") {
                             sh "mv zerotier zerotier-static-${platform}"
                             stash includes: 'zerotier-static-*', name: "static-${platform}"
