@@ -56,7 +56,7 @@ def buildStaticBinaries() {
                 runtime.inside {
                     dir("build") {
                         def cmakeFlags = 'CMAKE_ARGS="-DBUILD_STATIC=1"'
-                        if (arch == "i386") {
+                        if (platform == "i386") {
                             cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DBUILD_STATIC=1"'
                          }
                    
