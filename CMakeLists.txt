@@ -120,7 +120,10 @@ else(WIN32)
 				-static
 			)
 			set(CMAKE_EXE_LINKER_FLAGS "-static ${CMAKE_EXE_LINKER_FLAGS}")
-			set(GOFLAGS "-a -tags netgo -ldflags '-w -extldflags \"-static\"")
+			set(GOFLAGS 
+				-a 
+				-tags netgo 
+				-ldflags '-w -extldflags \"-static\"')
 		endif(BUILD_STATIC)
 	endif(APPLE)
 endif(WIN32)
