@@ -56,8 +56,10 @@ def buildStaticBinaries() {
                 runtime.inside {
                     dir("build") {
                         sh 'make -j8 ZT_STATIC=1 all'
-                        sh "mv zerotier zerotier-static-${platform}"
-                        stash includes: 'zerotier-static-*', name: "static-${platform}"
+                        dir("build") {
+                            sh "mv build/zerotier zerotier-static-${platform}"
+                            stash includes: 'zerotier-static-*', name: "static-${platform}"
+                        }
                     }
                     cleanWs deleteDirs: true, disableDeferredWipeout: true, notFailBuild: true
                 }
