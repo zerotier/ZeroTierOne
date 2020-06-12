@@ -16,8 +16,7 @@ RUN useradd jenkins-build
 
 RUN echo $'\n\
   export PATH=$PATH:/usr/local/go/bin:$HOME/go/bin\n\
-  source scl_source enable devtoolset-8 llvm-toolset-7\n'\
-  >> ~/.bash_profile
+  ' >> /etc/profile
 
 RUN mkdir /rpmbuild && chmod 777 /rpmbuild
 
