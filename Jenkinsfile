@@ -55,7 +55,12 @@ def buildStaticBinaries() {
                 def runtime = docker.image("ztbuild/${distro}-${platform}:latest")
                 runtime.inside {
                     dir("build") {
-                        sh 'make -j8 ZT_STATIC=1 all'
+                        def cmakeFlags = 'CMAKE_ARGS="-DBUILD_STATIC=1"'
+                        if (arch == "i386") {
+                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DBUILD_STATIC=1"'
+                         }
+                   
+                        sh "${cmakeFlags} make -j8 ZT_STATIC=1 all"
                         dir("build") {
                             sh "mv zerotier zerotier-static-${platform}"
                             stash includes: 'zerotier-static-*', name: "static-${platform}"
