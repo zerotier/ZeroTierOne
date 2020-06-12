@@ -144,9 +144,13 @@ static ZT_INLINE void p_salsaCrypt(p_SalsaState *const state, const uint8_t *m, 
 #endif
 
 	for (;;) {
+#ifdef ZT_SALSA20_SSE
 		if (likely(bytes >= 64)) {
 			_mm_prefetch(m + 128, _MM_HINT_T0);
-		} else {
+	 	} else {
+#else
+		if (bytes < 64) {
+#endif
 			for (unsigned int i = 0;i < bytes;++i)
 				tmp[i] = m[i];
 			m = tmp;
