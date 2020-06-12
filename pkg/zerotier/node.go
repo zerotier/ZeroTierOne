@@ -883,7 +883,7 @@ func goStateObjectGetFunc(gn unsafe.Pointer, objType C.int, id, dataP unsafe.Poi
 	*((*uintptr)(dataP)) = 0
 	tmp, found := node.stateObjectGet(int(objType), *((*[2]uint64)(id)))
 	if found && len(tmp) > 0 {
-		cData := C.malloc(C.ulong(len(tmp))) // GoGlue sends free() to the core as the free function
+		cData := C.malloc(C.uintptr_t(len(tmp))) // GoGlue sends free() to the core as the free function
 		if uintptr(cData) == 0 {
 			return -1
 		}
