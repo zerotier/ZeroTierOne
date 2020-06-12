@@ -57,7 +57,7 @@ def buildStaticBinaries() {
                     dir("build") {
                         sh 'make -j8 ZT_STATIC=1 all'
                         dir("build") {
-                            sh "mv build/zerotier zerotier-static-${platform}"
+                            sh "mv zerotier zerotier-static-${platform}"
                             stash includes: 'zerotier-static-*', name: "static-${platform}"
                         }
                     }
