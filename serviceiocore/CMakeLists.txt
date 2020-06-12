@@ -11,3 +11,8 @@ set(headers
 
 add_library(${PROJECT_NAME} STATIC ${src} ${headers})
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_11)
+target_include_directories(
+	${PROJECT_NAME}
+	PUBLIC
+	${CMAKE_BINARY_DIR}/core
+)

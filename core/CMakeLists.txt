@@ -102,4 +102,9 @@ endif(WIN32)
 
 add_executable(zt_core_tests Tests.h Tests.cpp)
 target_compile_definitions(zt_core_tests PRIVATE ZT_ENABLE_TESTS=1 ZT_STANDALONE_TESTS=1)
+target_include_directories(
+	${PROJECT_NAME}
+	PUBLIC
+	${CMAKE_BINARY_DIR}/core
+)
 target_link_libraries(zt_core_tests zt_core ${libs})
