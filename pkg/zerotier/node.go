@@ -47,7 +47,7 @@ var nullLogger = log.New(ioutil.Discard, "", 0)
 
 const (
 	NetworkIDStringLength = 16
-	NEtworkIDLength       = 8
+	NetworkIDLength       = 8
 	AddressStringLength   = 10
 	AddressLength         = 5
 
@@ -883,7 +883,7 @@ func goStateObjectGetFunc(gn unsafe.Pointer, objType C.int, id, dataP unsafe.Poi
 	*((*uintptr)(dataP)) = 0
 	tmp, found := node.stateObjectGet(int(objType), *((*[2]uint64)(id)))
 	if found && len(tmp) > 0 {
-		cData := C.malloc(C.ulong(len(tmp))) // GoGlue sends free() to the core as the free function
+		cData := C.ZT_malloc(C.ulong(len(tmp))) // GoGlue sends free() to the core as the free function
 		if uintptr(cData) == 0 {
 			return -1
 		}

@@ -64,7 +64,7 @@ public:
 
 	ZT_INLINE Identity() noexcept
 	{
-		Utils::memoryLock(this,sizeof(Identity));
+		Utils::memoryLock(this, sizeof(Identity));
 		memoryZero(this);
 	}
 
@@ -78,25 +78,27 @@ public:
 	 */
 	explicit ZT_INLINE Identity(const char *str)
 	{
-		Utils::memoryLock(this,sizeof(Identity));
+		Utils::memoryLock(this, sizeof(Identity));
 		fromString(str);
 	}
 
 	ZT_INLINE ~Identity()
 	{
-		Utils::memoryUnlock(this,sizeof(Identity));
+		Utils::memoryUnlock(this, sizeof(Identity));
 		Utils::burn(reinterpret_cast<void *>(&this->m_priv), sizeof(this->m_priv));
 	}
 
 	/**
 	 * Set identity to NIL value (all zero)
 	 */
-	ZT_INLINE void zero() noexcept { memoryZero(this); }
+	ZT_INLINE void zero() noexcept
+	{ memoryZero(this); }
 
 	/**
 	 * @return Identity type (undefined if identity is null or invalid)
 	 */
-	ZT_INLINE Type type() const noexcept { return m_type; }
+	ZT_INLINE Type type() const noexcept
+	{ return m_type; }
 
 	/**
 	 * Generate a new identity (address, key pair)
@@ -122,17 +124,20 @@ public:
 	/**
 	 * @return True if this identity contains a private key
 	 */
-	ZT_INLINE bool hasPrivate() const noexcept { return m_hasPrivate; }
+	ZT_INLINE bool hasPrivate() const noexcept
+	{ return m_hasPrivate; }
 
 	/**
 	 * @return This identity's address
 	 */
-	ZT_INLINE Address address() const noexcept { return Address(m_fp.address); }
+	ZT_INLINE Address address() const noexcept
+	{ return Address(m_fp.address); }
 
 	/**
 	 * @return Full fingerprint of this identity (address plus SHA384 of keys)
 	 */
-	ZT_INLINE const Fingerprint &fingerprint() const noexcept { return m_fp; }
+	ZT_INLINE const Fingerprint &fingerprint() const noexcept
+	{ return m_fp; }
 
 	/**
 	 * Compute a hash of this identity's public and private keys.
@@ -155,7 +160,7 @@ public:
 	 * @param siglen Length of buffer
 	 * @return Number of bytes actually written to sig or 0 on error
 	 */
-	unsigned int sign(const void *data,unsigned int len,void *sig,unsigned int siglen) const;
+	unsigned int sign(const void *data, unsigned int len, void *sig, unsigned int siglen) const;
 
 	/**
 	 * Verify a message signature against this identity
@@ -166,7 +171,7 @@ public:
 	 * @param siglen Length of signature in bytes
 	 * @return True if signature validates and data integrity checks
 	 */
-	bool verify(const void *data,unsigned int len,const void *sig,unsigned int siglen) const;
+	bool verify(const void *data, unsigned int len, const void *sig, unsigned int siglen) const;
 
 	/**
 	 * Shortcut method to perform key agreement with another identity
@@ -177,7 +182,7 @@ public:
 	 * @param key Result parameter to fill with key bytes
 	 * @return Was agreement successful?
 	 */
-	bool agree(const Identity &id,uint8_t key[ZT_SYMMETRIC_KEY_SIZE]) const;
+	bool agree(const Identity &id, uint8_t key[ZT_SYMMETRIC_KEY_SIZE]) const;
 
 	/**
 	 * Serialize to a more human-friendly string
@@ -186,8 +191,14 @@ public:
 	 * @param buf Buffer to store string
 	 * @return ASCII string representation of identity (pointer to buf)
 	 */
-	char *toString(bool includePrivate,char buf[ZT_IDENTITY_STRING_BUFFER_LENGTH]) const;
-	ZT_INLINE String toString(const bool includePrivate = false) const { char buf[ZT_IDENTITY_STRING_BUFFER_LENGTH]; toString(includePrivate,buf); return String(buf); }
+	char *toString(bool includePrivate, char buf[ZT_IDENTITY_STRING_BUFFER_LENGTH]) const;
+
+	ZT_INLINE String toString(const bool includePrivate = false) const
+	{
+		char buf[ZT_IDENTITY_STRING_BUFFER_LENGTH];
+		toString(includePrivate, buf);
+		return String(buf);
+	}
 
 	/**
 	 * Deserialize a human-friendly string
@@ -203,20 +214,36 @@ public:
 	/**
 	 * @return True if this identity contains something
 	 */
-	explicit ZT_INLINE operator bool() const noexcept { return (m_fp); }
+	explicit ZT_INLINE operator bool() const noexcept
+	{ return (m_fp); }
 
-	ZT_INLINE unsigned long hashCode() const noexcept { return m_fp.hashCode(); }
+	ZT_INLINE unsigned long hashCode() const noexcept
+	{ return m_fp.hashCode(); }
 
-	ZT_INLINE bool operator==(const Identity &id) const noexcept { return (m_fp == id.m_fp); }
-	ZT_INLINE bool operator!=(const Identity &id) const noexcept { return !(*this == id); }
-	ZT_INLINE bool operator<(const Identity &id) const noexcept { return (m_fp < id.m_fp); }
-	ZT_INLINE bool operator>(const Identity &id) const noexcept { return (id < *this); }
-	ZT_INLINE bool operator<=(const Identity &id) const noexcept { return !(id < *this); }
-	ZT_INLINE bool operator>=(const Identity &id) const noexcept { return !(*this < id); }
+	ZT_INLINE bool operator==(const Identity &id) const noexcept
+	{ return (m_fp == id.m_fp); }
 
-	static constexpr int marshalSizeMax() noexcept { return ZT_IDENTITY_MARSHAL_SIZE_MAX; }
-	int marshal(uint8_t data[ZT_IDENTITY_MARSHAL_SIZE_MAX],bool includePrivate = false) const noexcept;
-	int unmarshal(const uint8_t *data,int len) noexcept;
+	ZT_INLINE bool operator!=(const Identity &id) const noexcept
+	{ return !(*this == id); }
+
+	ZT_INLINE bool operator<(const Identity &id) const noexcept
+	{ return (m_fp < id.m_fp); }
+
+	ZT_INLINE bool operator>(const Identity &id) const noexcept
+	{ return (id < *this); }
+
+	ZT_INLINE bool operator<=(const Identity &id) const noexcept
+	{ return !(id < *this); }
+
+	ZT_INLINE bool operator>=(const Identity &id) const noexcept
+	{ return !(*this < id); }
+
+	static constexpr int marshalSizeMax() noexcept
+	{ return ZT_IDENTITY_MARSHAL_SIZE_MAX; }
+
+	int marshal(uint8_t data[ZT_IDENTITY_MARSHAL_SIZE_MAX], bool includePrivate = false) const noexcept;
+
+	int unmarshal(const uint8_t *data, int len) noexcept;
 
 private:
 	void m_computeHash();

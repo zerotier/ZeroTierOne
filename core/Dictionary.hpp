@@ -19,10 +19,6 @@
 #include "Address.hpp"
 #include "Buf.hpp"
 #include "Containers.hpp"
-#include "C25519.hpp"
-#include "ECC384.hpp"
-
-#define ZT_DICTIONARY_SIGNATURE_KEY "@S"
 
 namespace ZeroTier {
 
@@ -46,10 +42,10 @@ class Identity;
 class Dictionary
 {
 public:
-	typedef SortedMap< String, Vector < uint8_t > >
-	::const_iterator const_iterator;
+	typedef SortedMap< String, Vector < uint8_t > >::const_iterator const_iterator;
 
 	Dictionary();
+	~Dictionary();
 
 	/**
 	 * Get a reference to a value
@@ -90,12 +86,17 @@ public:
 	 * @param k Key to set
 	 * @param v Integer to set, will be cast to uint64_t and stored as hex
 	 */
-	template< typename I >
-	ZT_INLINE void add(const char *const k, I v)
-	{
-		char buf[17];
-		add(k, Utils::hex((uint64_t)(v), buf));
-	}
+	ZT_INLINE void add(const char *const k, const uint64_t v)
+	{ char buf[17]; add(k, Utils::hex((uint64_t)(v), buf)); }
+
+	/**
+	 * Add an integer as a hexadecimal string value
+	 *
+	 * @param k Key to set
+	 * @param v Integer to set, will be cast to uint64_t and stored as hex
+	 */
+	ZT_INLINE void add(const char *const k, const int64_t v)
+	{ char buf[17]; add(k, Utils::hex((uint64_t)(v), buf)); }
 
 	/**
 	 * Add an address in 10-digit hex string format
@@ -145,6 +146,7 @@ public:
 	/**
 	 * Get an object supporting the marshal/unmarshal interface pattern
 	 * 
+	 * @tparam T Object type (inferred)
 	 * @param k Key to look up
 	 * @param obj Object to unmarshal() into
 	 * @return True if unmarshal was successful
@@ -156,6 +158,27 @@ public:
 		if (d.empty())
 			return false;
 		return (obj.unmarshal(d.data(), (unsigned int)d.size()) > 0);
+	}
+
+	/**
+	 * Add an object supporting the marshal/unmarshal interface pattern
+	 *
+	 * @tparam T Object type (inferred)
+	 * @param k Key to add
+	 * @param obj Object to marshal() into vector
+	 * @return True if successful
+	 */
+	template< typename T >
+	ZT_INLINE bool addO(const char *k, T &obj)
+	{
+		uint8_t tmp[4096];
+		static_assert(sizeof(tmp) >= T::marshalSizeMax(),"buffer too small");
+		int l = obj.marshal(tmp);
+		if (l > 0) {
+			(*this)[k].assign(tmp, tmp + l);
+			return true;
+		}
+		return false;
 	}
 
 	/**
@@ -179,9 +202,8 @@ public:
 	 * Encode to a string in the supplied vector
 	 *
 	 * @param out String encoded dictionary
-	 * @param omitSignatureFields If true omit the signature fields from encoding (default: false)
 	 */
-	void encode(Vector <uint8_t> &out, bool omitSignatureFields = false) const;
+	void encode(Vector <uint8_t> &out) const;
 
 	/**
 	 * Decode a string encoded dictionary
@@ -194,34 +216,6 @@ public:
 	 * @return True if dictionary was formatted correctly and valid, false on error
 	 */
 	bool decode(const void *data, unsigned int len);
-
-	/**
-	 * Sign this dictionary with both an Ed25519 key and a NIST P-384 key.
-	 *
-	 * This is currently used just for signing root sets for the root subscribe
-	 * feature. It uses both key types for more crypto cowbell.
-	 *
-	 * @param c25519PrivateKey Curve25519 combined key (C25519 and ed25519), though only ed25519 part is used
-	 * @param c25519PublicKey Public part of Curve25519 combined key
-	 * @param p384PrivateKey NIST P-384 private key
-	 * @param p384PublicKey NIST P-384 public key
-	 */
-	void sign(
-		const uint8_t c25519PrivateKey[ZT_C25519_COMBINED_PRIVATE_KEY_SIZE],
-		const uint8_t c25519PublicKey[ZT_C25519_COMBINED_PUBLIC_KEY_SIZE],
-		const uint8_t p384PrivateKey[ZT_ECC384_PRIVATE_KEY_SIZE],
-		const uint8_t p384PublicKey[ZT_ECC384_PUBLIC_KEY_SIZE]);
-
-	/**
-	 * Verify this dictionary's signature
-	 *
-	 * @param c25519PublicKey Curve25519 public key
-	 * @param p384PublicKey P-384 public key
-	 * @return True if signatures are valid
-	 */
-	bool verify(
-		const uint8_t c25519PublicKey[ZT_C25519_COMBINED_PUBLIC_KEY_SIZE],
-		const uint8_t p384PublicKey[ZT_ECC384_PUBLIC_KEY_SIZE]) const;
 
 	/**
 	 * Append a key=value pair to a buffer (vector or FCV)
@@ -374,6 +368,19 @@ public:
 		if (mlen > 0)
 			append(out, k, tmp, (unsigned int)mlen);
 		return mlen;
+	}
+
+	static ZT_INLINE char *arraySubscript(char buf[256],const char *name,const unsigned long sub) noexcept
+	{
+		for(unsigned int i=0;i<(256 - 17);++i) {
+			if ((buf[i] = name[i]) == 0) {
+				buf[i++] = '#';
+				Utils::hex(sub, buf + i);
+				return buf;
+			}
+		}
+		buf[0] = 0;
+		return buf;
 	}
 
 private:

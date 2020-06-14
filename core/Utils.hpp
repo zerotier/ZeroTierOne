@@ -144,9 +144,6 @@ char *decimal(unsigned long n, char s[24]) noexcept;
 /**
  * Convert an unsigned integer into hex
  *
- * The returned pointer won't point to the start of 'buf', since
- * hex writing is done in reverse order.
- * 
  * @param i Any unsigned integer
  * @param s Buffer to receive hex, must be at least (2*sizeof(i))+1 in size or overflow will occur.
  * @return Pointer to s containing hex string with trailing zero byte

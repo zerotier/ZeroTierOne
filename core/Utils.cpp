@@ -132,14 +132,19 @@ char *decimal(unsigned long n, char s[24]) noexcept
 
 char *hex(uint64_t i, char buf[17]) noexcept
 {
-	if (i) {
-		char *p = buf + 16;
-		*p = 0;
-		while (i) {
-			*(--p) = HEXCHARS[i & 0xfU];
-			i >>= 4;
+	if (i != 0) {
+		char *p = nullptr;
+		for (int b = 60; b >= 0; b -= 4) {
+			const unsigned int nyb = (unsigned int)(i >> (unsigned int)b) & 0xfU;
+			if (p) {
+				*(p++) = HEXCHARS[nyb];
+			} else if (nyb != 0) {
+				p = buf;
+				*(p++) = HEXCHARS[nyb];
+			}
 		}
-		return p;
+		*p = 0;
+		return buf;
 	} else {
 		buf[0] = '0';
 		buf[1] = 0;
@@ -267,20 +272,18 @@ void getSecureRandom(void *const buf, unsigned int bytes) noexcept
 			close(devURandomFd);
 #endif
 
-			// Mix in additional entropy from time, the address of 'buf', CPU RDRAND if present, etc.
-			randomState[0] += (uint64_t)time(nullptr);
-			randomState[1] += (uint64_t)((uintptr_t)buf);
 #ifdef __UNIX_LIKE__
-			randomState[2] += (uint64_t)getpid();
-			randomState[3] += (uint64_t)getppid();
+			randomState[0] += (uint64_t)getpid();
+			randomState[1] += (uint64_t)getppid();
 #endif
 #ifdef ZT_ARCH_X64
 			if (CPUID.rdrand) {
+				// RDRAND is very slow on some chips, so only sample it a little bit for extra entropy.
 				uint64_t tmp = 0;
-				for (int k = 0; k < ZT_GETSECURERANDOM_STATE_SIZE; ++k) {
-					_rdrand64_step((unsigned long long *)&tmp);
-					randomState[k] ^= tmp;
-				}
+				_rdrand64_step((unsigned long long *)&tmp);
+				randomState[2] ^= tmp;
+				_rdrand64_step((unsigned long long *)&tmp);
+				randomState[3] ^= tmp;
 			}
 #endif
 		}
@@ -289,6 +292,9 @@ void getSecureRandom(void *const buf, unsigned int bytes) noexcept
 		// replacing the first 64 bytes with this hash, and then re-initializing
 		// AES with the first 32 bytes.
 		randomByteCounter = 0;
+		randomState[4] += (uint64_t)((uintptr_t)buf);
+		randomState[5] += (uint64_t)bytes;
+		randomState[6] += (uint64_t)time(nullptr);
 		SHA512(randomState, randomState, sizeof(randomState));
 		randomGen.init(randomState);
 	}

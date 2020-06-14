@@ -34,7 +34,8 @@ Global Options:
 Commands:
   help                                   Show this help
   version                                Print version
-  service                                Start node (see below)
+  service [-options]                     Start node (see below)
+    -d                                   Fork into background (Unix only)
   status                                 Show node status and configuration
   join [-options] <network>              Join a virtual network
     -a <token>                           Token to submit to controller
@@ -56,10 +57,8 @@ Commands:
     locator <locator>                    Explicitly update peer locator
   roots                                  List root peers
   root [command]                       - Root management commands
-    add <identity> [endpoint]            Designate a peer as a root
-    remove <address>                     Un-designate a peer as a root
-    subscribe <url> [<key hash>]         Subscribe to a set of roots
-    unsubscribe <url | key hash>         Unsubscribe from a set of roots
+    add <identity | url> [endpoint]      Add a root or a root set
+    remove <address | url | serial>      Remove a root or root set
   set [option] [value]                 - Get or set a core config option
     port <port>                          Primary P2P port
     secondaryport <port/0>               Secondary P2P port (0 to disable)

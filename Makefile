@@ -25,7 +25,7 @@ central-controller-docker:
 	docker build -t registry.zerotier.com/zerotier-central/ztcentral-controller:${TIMESTAMP} -f controller/central-docker/Dockerfile .
 
 clean:
-	rm -rf ${BUILDDIR} cmake-build-*
+	rm -rf ${BUILDDIR}
 
 distclean:
-	rm -rf ${BUILDDIR} cmake-build-*
+	rm -rf ${BUILDDIR}

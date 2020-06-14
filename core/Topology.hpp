@@ -25,6 +25,7 @@
 #include "ScopedPtr.hpp"
 #include "Fingerprint.hpp"
 #include "Containers.hpp"
+#include "Blob.hpp"
 
 namespace ZeroTier {
 
@@ -36,6 +37,11 @@ class RuntimeEnvironment;
 class Topology
 {
 public:
+	/**
+	 * Hash of public keys for signing a root set definition
+	 */
+	typedef Blob<ZT_SHA384_DIGEST_SIZE> RootSetId;
+
 	Topology(const RuntimeEnvironment *renv, void *tPtr);
 
 	/**
@@ -237,7 +243,7 @@ private:
 	RWMutex m_peers_l; // locks m_peers, m_roots, and m_rootPeers
 	Map< uint64_t, SharedPtr< Path > > m_paths;
 	Map< Address, SharedPtr< Peer > > m_peers;
-	Set< Identity > m_roots;
+	Map< Identity, Set< SubscriptionKeyHash > > m_roots;
 	Vector< SharedPtr< Peer > > m_rootPeers;
 };
 

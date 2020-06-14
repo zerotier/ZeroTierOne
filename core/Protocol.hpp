@@ -194,7 +194,7 @@
 #define ZT_PROTO_PACKET_FRAGMENT_PAYLOAD_START_AT ZT_PROTO_MIN_FRAGMENT_LENGTH
 
 /**
- * Header flag indicating that a packet is fragmented and more fragments should be expected
+ * Outer flag indicating that a packet is fragmented and this is just the head.
  */
 #define ZT_PROTO_FLAG_FRAGMENTED 0x40U
 

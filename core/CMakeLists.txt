@@ -2,13 +2,14 @@ cmake_minimum_required (VERSION 2.8)
 project(zt_core)
 
 configure_file(
-        version.h.in
-        version.h
+	version.h.in
+	version.h
 )
 
 set(core_headers
 	zerotier.h
 	Address.hpp
+	Blob.hpp
 	Buf.hpp
 	C25519.hpp
 	Capability.hpp
@@ -24,6 +25,7 @@ set(core_headers
 	Expect.hpp
 	FCV.hpp
 	Fingerprint.hpp
+	IdentificationCertificate.hpp
 	Identity.hpp
 	InetAddress.hpp
 	Locator.hpp
@@ -67,6 +69,7 @@ set(core_src
 	Dictionary.cpp
 	ECC384.cpp
 	Endpoint.cpp
+	IdentificationCertificate.cpp
 	Identity.cpp
 	InetAddress.cpp
 	Locator.cpp

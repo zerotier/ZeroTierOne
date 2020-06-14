@@ -15,8 +15,11 @@ package cli
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/signal"
+	"path"
+	"strconv"
 	"syscall"
 
 	"zerotier/pkg/zerotier"
@@ -28,16 +31,20 @@ func Service(basePath, authToken string, args []string) {
 		os.Exit(1)
 	}
 
+	pidPath := path.Join(basePath, "zerotier.pid")
+	_ = ioutil.WriteFile(pidPath, []byte(strconv.FormatInt(int64(os.Getpid()), 10)), 0644)
+
 	node, err := zerotier.NewNode(basePath)
 	if err != nil {
 		fmt.Println("FATAL: error initializing node: " + err.Error())
-		os.Exit(1)
+	} else {
+		osSignalChannel := make(chan os.Signal, 2)
+		signal.Notify(osSignalChannel, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT, syscall.SIGSTOP)
+		signal.Ignore(syscall.SIGUSR1, syscall.SIGUSR2, syscall.SIGPIPE, syscall.SIGHUP)
+		<-osSignalChannel
+		node.Close()
 	}
 
-	osSignalChannel := make(chan os.Signal, 2)
-	signal.Notify(osSignalChannel, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT, syscall.SIGBUS)
-	signal.Ignore(syscall.SIGUSR1, syscall.SIGUSR2)
-	<-osSignalChannel
-	node.Close()
-	os.Exit(0)
+	_ = os.Remove(pidPath)
+	os.Exit(1)
 }

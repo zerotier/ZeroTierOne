@@ -119,9 +119,7 @@ Node::Node(
 			stateObjectPut(tPtr, ZT_STATE_OBJECT_IDENTITY_PUBLIC, idtmp, RR->publicIdentityStr, (unsigned int)strlen(RR->publicIdentityStr));
 	}
 
-	// 2X hash our identity private key(s) to obtain a symmetric key for encrypting
-	// locally cached data at rest (as a defense in depth measure). This is not used
-	// for any network level encryption or authentication.
+	// Create a secret key for encrypting local data at rest.
 	uint8_t tmph[ZT_SHA384_DIGEST_SIZE];
 	RR->identity.hashWithPrivate(tmph);
 	SHA384(tmph, tmph, ZT_SHA384_DIGEST_SIZE);

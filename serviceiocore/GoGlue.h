@@ -50,6 +50,8 @@ void ZT_GoTap_setMtu(ZT_GoTap *tap,unsigned int mtu);
 
 int ZT_isTemporaryV6Address(const char *ifname,const struct sockaddr_storage *a);
 
+void *ZT_malloc(unsigned long s);
+
 #ifdef __cplusplus
 }
 #endif

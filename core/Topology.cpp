@@ -29,7 +29,6 @@ Topology::Topology(const RuntimeEnvironment *renv, void *tPtr) :
 			Identity id;
 			int l = id.unmarshal(dptr, drem);
 			if ((l > 0) && (id)) {
-				m_roots.insert(id);
 				ZT_SPEW("restored root %s", id.address().toString().c_str());
 				if ((drem -= l) <= 0)
 					break;
@@ -189,25 +188,25 @@ void Topology::m_updateRootPeers(void *tPtr)
 {
 	// assumes m_peers_l is locked for write
 	Vector< SharedPtr< Peer > > rp;
-	for (Set< Identity >::iterator r(m_roots.begin()); r != m_roots.end(); ++r) {
-		Map< Address, SharedPtr< Peer > >::iterator pp(m_peers.find(r->address()));
+	for (Map< Identity, Set< SubscriptionKeyHash > >::iterator r(m_roots.begin()); r != m_roots.end(); ++r) {
+		Map< Address, SharedPtr< Peer > >::iterator pp(m_peers.find(r->first.address()));
 		SharedPtr< Peer > p;
 		if (pp != m_peers.end())
 			p = pp->second;
 
 		if (!p)
-			m_loadCached(tPtr, r->address(), p);
+			m_loadCached(tPtr, r->first.address(), p);
 
-		if ((!p) || (p->identity() != *r)) {
+		if ((!p) || (p->identity() != r->first)) {
 			p.set(new Peer(RR));
-			p->init(*r);
-			m_peers[r->address()] = p;
+			p->init(r->first);
+			m_peers[r->first.address()] = p;
 		}
 
 		rp.push_back(p);
 	}
+	std::sort(rp.begin(), rp.end(), p_RootSortComparisonOperator());
 	m_rootPeers.swap(rp);
-	std::sort(m_rootPeers.begin(), m_rootPeers.end(), p_RootSortComparisonOperator());
 }
 
 } // namespace ZeroTier

@@ -724,3 +724,6 @@ extern "C" int ZT_isTemporaryV6Address(const char *ifname, const struct sockaddr
 	return 0;
 #endif
 }
+
+extern "C" void *ZT_malloc(unsigned long s)
+{ return (void *)malloc((size_t)s); }

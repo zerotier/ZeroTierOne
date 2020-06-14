@@ -277,6 +277,181 @@ typedef void ZT_Identity;
 typedef void ZT_Locator;
 
 /**
+ * Full identity fingerprint with address and 384-bit hash of public key(s)
+ */
+typedef struct
+{
+	/**
+	 * Short address (only least significant 40 bits are used)
+	 */
+	uint64_t address;
+
+	/**
+	 * 384-bit hash of identity public key(s)
+	 */
+	uint8_t hash[48];
+} ZT_Fingerprint;
+
+/**
+ * Maximum length of string fields in identification certificates
+ */
+#define ZT_IDENTIFICATION_CERTIFICATE_MAX_STRING_LENGTH 127
+
+/**
+ * Maximum length of a signature
+ */
+#define ZT_IDENTIFICATION_CERTIFICATE_MAX_SIGNATURE_SIZE 256
+
+/**
+ * Information about a real world entity.
+ */
+typedef struct
+{
+	char country[ZT_IDENTIFICATION_CERTIFICATE_MAX_STRING_LENGTH + 1];
+	char organization[ZT_IDENTIFICATION_CERTIFICATE_MAX_STRING_LENGTH + 1];
+	char unit[ZT_IDENTIFICATION_CERTIFICATE_MAX_STRING_LENGTH + 1];
+	char locality[ZT_IDENTIFICATION_CERTIFICATE_MAX_STRING_LENGTH + 1];
+	char province[ZT_IDENTIFICATION_CERTIFICATE_MAX_STRING_LENGTH + 1];
+	char streetAddress[ZT_IDENTIFICATION_CERTIFICATE_MAX_STRING_LENGTH + 1];
+	char postalCode[ZT_IDENTIFICATION_CERTIFICATE_MAX_STRING_LENGTH + 1];
+	char commonName[ZT_IDENTIFICATION_CERTIFICATE_MAX_STRING_LENGTH + 1];
+	char serialNo[ZT_IDENTIFICATION_CERTIFICATE_MAX_STRING_LENGTH + 1];
+	char email[ZT_IDENTIFICATION_CERTIFICATE_MAX_STRING_LENGTH + 1];
+	char url[ZT_IDENTIFICATION_CERTIFICATE_MAX_STRING_LENGTH + 1];
+} ZT_IdentificationCertificate_Name;
+
+/**
+ * Identity and optional locator for a node
+ */
+typedef struct
+{
+	/**
+	 * Identity (never NULL)
+	 */
+	const ZT_Identity *identity;
+
+	/**
+	 * Locator or NULL if not specified
+	 */
+	const ZT_Locator *locator;
+} ZT_IdentificationCertificate_Node;
+
+/**
+ * ID and primary controller for a network
+ */
+typedef struct
+{
+	/**
+	 * Network ID
+	 */
+	uint64_t id;
+
+	/**
+	 * Full fingerprint of primary controller
+	 */
+	ZT_Fingerprint controller;
+} ZT_IdentificationCertificate_Network;
+
+/**
+ * Identification certificate subject
+ */
+typedef struct
+{
+	/**
+	 * Identities and optional locators of nodes
+	 */
+	ZT_IdentificationCertificate_Node *nodes;
+
+	/**
+	 * Number of nodes
+	 */
+	unsigned int nodeCount;
+
+	/**
+	 * Networks owned by this entity
+	 */
+	ZT_IdentificationCertificate_Network *networks;
+
+	/**
+	 * Number of networks
+	 */
+	unsigned int networkCount;
+
+	/**
+	 * Information about owner of items.
+	 */
+	ZT_IdentificationCertificate_Name name;
+} ZT_IdentificationCertificate_Subject;
+
+/**
+ * Identification certificate
+ *
+ * This is designed so it could be converted to/from an X509 format
+ * for interoperability with X509 systems. OCSP could be implemented
+ * too, though it would probably require the development of an OCSP
+ * proxy server that queried the issuer via the ZeroTier protocol.
+ */
+typedef struct
+{
+	/**
+	 * Serial number, a SHA384 hash of this certificate.
+	 */
+	uint8_t serialNo[48];
+
+	/**
+	 * Certificate version
+	 */
+	unsigned int version;
+
+	/**
+	 * Maximum path length from this certificate toward further certificates.
+	 *
+	 * Subjects may sign other certificates whose path lengths are less than
+	 * this value. A value of zero indicates that no identification certificates
+	 * may be signed (not a CA).
+	 */
+	unsigned int maxPathLength;
+
+	/**
+	 * Flags (for future use, currently zero).
+	 *
+	 * This could be used to implement key usage flags similar to X509 if
+	 * these are needed.
+	 */
+	uint64_t flags;
+
+	/**
+	 * Valid time range: not before, not after.
+	 */
+	int64_t validity[2];
+
+	/**
+	 * Subject of certificate
+	 */
+	ZT_IdentificationCertificate_Subject subject;
+
+	/**
+	 * Issuer node identity and public key(s).
+	 */
+	const ZT_Identity *issuer;
+
+	/**
+	 * Issuer information
+	 */
+	ZT_IdentificationCertificate_Name issuerName;
+
+	/**
+	 * Signature by issuer (algorithm determined by identity type).
+	 */
+	uint8_t signature[ZT_IDENTIFICATION_CERTIFICATE_MAX_SIGNATURE_SIZE];
+
+	/**
+	 * Size of signature in bytes.
+	 */
+	unsigned int signatureSize;
+} ZT_IdentificationCertificate;
+
+/**
  * Credential type IDs
  */
 enum ZT_CredentialType
@@ -307,22 +482,6 @@ enum ZT_EndpointType
 	ZT_ENDPOINT_TYPE_IP_TCP =        7,  // IP/TCP
 	ZT_ENDPOINT_TYPE_IP_HTTP =       8   // IP/HTTP encapsulation
 };
-
-/**
- * Full identity fingerprint with address and 384-bit hash of public key(s)
- */
-typedef struct
-{
-	/**
-	 * Short address (only least significant 40 bits are used)
-	 */
-	uint64_t address;
-
-	/**
-	 * 384-bit hash of identity public key(s)
-	 */
-	uint8_t hash[48];
-} ZT_Fingerprint;
 
 /**
  * Flag indicating that VL1 tracing should be generated
