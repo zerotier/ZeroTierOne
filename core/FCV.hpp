@@ -151,7 +151,7 @@ public:
 	{
 		if (likely(_s < C))
 			new(reinterpret_cast<T *>(_m) + _s++) T(v);
-		throw Utils::OutOfRangeException;
+		else throw Utils::OutOfRangeException;
 	}
 
 	/**

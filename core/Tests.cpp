@@ -430,7 +430,7 @@ extern "C" const char *ZTT_general()
 			}
 			test.clear();
 			test2.clear();
-			if (cnt != (long)test.size()) {
+			if ((cnt != (long)test.size()) && (cnt != 0)) {
 				ZT_T_PRINTF("FAILED (expected 0 objects, got %lu (5))" ZT_EOL_S,cnt);
 				return "FCV object life cycle test failed (5)";
 			}
