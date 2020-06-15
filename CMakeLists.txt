@@ -62,6 +62,11 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 	add_definitions(-DZT_DEBUG)
 endif(CMAKE_BUILD_TYPE STREQUAL "Debug")
 
+set(GOFLAGS
+	-trimpath 
+	-buildmode=pie 	
+)
+
 if(WIN32)
 	message("++ Setting Windows Compiler Flags ${CMAKE_BUILD_TYPE}")
 	add_definitions(-DNOMINMAX)
@@ -121,6 +126,7 @@ else(WIN32)
 			)
 			set(CMAKE_EXE_LINKER_FLAGS "-static ${CMAKE_EXE_LINKER_FLAGS}")
 			set(GOFLAGS 
+				${GOFLAGS}
 				-a 
 				-tags netgo 
 				-ldflags '-w -extldflags \"-static\"')
@@ -152,34 +158,11 @@ file(GLOB go_src
 	${CMAKE_SOURCE_DIR}/cmd/cmd/*.go
 	${CMAKE_SOURCE_DIR}/pkg/zerotier/*.go)
 
-add_custom_command(
-	OUTPUT ${CMAKE_BINARY_DIR}/zerotier_cgo.h ${CMAKE_BINARY_DIR}/zerotier_cgo.a
-	COMMAND ${GOARCH} CGO_ENABLED=1 ${GO} build -buildmode=c-archive ${GOFLAGS} -o ${CMAKE_BINARY_DIR}/zerotier_cgo.a ${CMAKE_SOURCE_DIR}/cmd/zerotier/zerotier.go
-	IMPLICIT_DEPENDS ${go_src}
+add_custom_target(
+	zerotier ALL
+	BYPRODUCTS ${CMAKE_BINARY_DIR}/zerotier
+	SOURCES ${go_src}
+	COMMAND ${GOARCH} CGO_ENABLED=1 CGO_LDFLAGS=\"$<TARGET_FILE:zt_osdep> $<TARGET_FILE:zt_core> $<TARGET_FILE:zt_controller> $<TARGET_FILE:zt_service_io_core>\" ${GO} build ${GOFLAGS} -o ${CMAKE_BINARY_DIR}/zerotier ${CMAKE_SOURCE_DIR}/cmd/zerotier/zerotier.go
 	COMMENT "Compiling Go Code..."
 )
-add_custom_target(
-	zerotier_cgo_target 
-	DEPENDS ${CMAKE_BINARY_DIR}/zerotier_cgo.a
-	SOURCES ${go_src}
-)
-add_library(zerotier_cgo STATIC IMPORTED GLOBAL)
-add_dependencies(zerotier_cgo zerotier_cgo_target)
-set_target_properties(
-	zerotier_cgo
-	PROPERTIES
-	IMPORTED_LOCATION ${CMAKE_BINARY_DIR}/zerotier_cgo.a
-	INTERFACE_INCLUDE_DIRECTORIES ${CMAKE_BINARY_DIR}
-)
-
-add_executable(zerotier main.cpp)
-target_include_directories(zerotier PUBLIC ${CMAKE_BINARY_DIR})
-add_dependencies(zerotier zerotier_cgo zt_osdep zt_core zt_controller zt_service_io_core)
-target_link_libraries(zerotier zerotier_cgo zt_service_io_core zt_core zt_osdep zt_controller )
-if (APPLE)
-	target_link_libraries(zerotier "-framework CoreFoundation" "-framework Security")
-else(APPLE)
-	if ("${CMAKE_SYSTEM}" MATCHES "Linux")
-		target_link_libraries(zerotier "-lpthread" "-lm")
-	endif ("${CMAKE_SYSTEM}" MATCHES "Linux")
-endif (APPLE)
+add_dependencies(zerotier zt_osdep zt_core zt_controller zt_service_io_core)

@@ -52,10 +52,6 @@ func authTokenRequired(authToken string) {
 }
 
 func main() {
-}
-
-//export ZeroTierMain
-func ZeroTierMain() {
 	// Reduce Go's thread and memory footprint. This would slow things down if the Go code
 	// were doing a lot, but it's not. It just manages the core and is not directly involved
 	// in pushing a lot of packets around. If that ever changes this should be adjusted.
