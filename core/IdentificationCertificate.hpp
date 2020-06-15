@@ -31,31 +31,37 @@ namespace ZeroTier {
  * Certificate identifying the real world owner of an identity or network.
  *
  * This is a wrapper around the straight C ZT_IdentificationCertificate and
- * handles allocating memory for objects and disposing of it on GC. If filling
- * out a ZT_IdentificationCertificate structure, identities and other objects
- * should be attached via the addXXX() methods rather than by directly setting
- * the pointers in the C structure.
- *
- * If identities and similar objects are NOT added via the addXXX() methods,
- * this will not take care of de-allocating them when destroyed.
+ * handles allocating memory for objects added via addXXX() and disposing of
+ * them on delete. If pointers in the underlying C struct are set manually,
+ * their memory is not freed on delete. Use the addXXX() methods to fill
+ * out this structure in C++ code.
  *
  * The serialNo field is filled in automatically by sign() and decode(), so
- * it can be left undefined when building certificates.
+ * it can be left undefined when building certificates. It contains a SHA384
+ * hash of the certificate marshalled without the signature field.
+ *
+ * The hashCode() method and comparison operators compare the serial number
+ * field, so these will not work correctly before sign() or decode() is
+ * called.
  */
 class IdentificationCertificate : public ZT_IdentificationCertificate
 {
 public:
 	ZT_INLINE IdentificationCertificate() noexcept
-	{ Utils::zero< sizeof(ZT_IdentificationCertificate) >((ZT_IdentificationCertificate *)this); }
+	{ this->clear(); }
 
 	ZT_INLINE IdentificationCertificate(const ZT_IdentificationCertificate &apiCert)
-	{ Utils::copy< sizeof(ZT_IdentificationCertificate) >((ZT_IdentificationCertificate *)this, &apiCert); }
+	{ *this = apiCert; }
 
 	ZT_INLINE IdentificationCertificate(const IdentificationCertificate &cert)
 	{ *this = cert; }
 
-	IdentificationCertificate &operator=(const ZT_IdentificationCertificate &apiCert);
+	/**
+	 * Zero all fields and release all extra memory
+	 */
+	void clear();
 
+	IdentificationCertificate &operator=(const ZT_IdentificationCertificate &apiCert);
 	IdentificationCertificate &operator=(const IdentificationCertificate &cert);
 
 	/**
@@ -117,6 +123,21 @@ public:
 	 * @return True if certificate is signed and signature is valid
 	 */
 	bool verify() const;
+
+	ZT_INLINE unsigned long hashCode() const noexcept { return (unsigned long)Utils::loadAsIsEndian<uint32_t>(this->serialNo); }
+
+	ZT_INLINE bool operator==(const ZT_IdentificationCertificate &c) const noexcept
+	{	return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) == 0; }
+	ZT_INLINE bool operator!=(const ZT_IdentificationCertificate &c) const noexcept
+	{	return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) != 0; }
+	ZT_INLINE bool operator<(const ZT_IdentificationCertificate &c) const noexcept
+	{	return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) < 0; }
+	ZT_INLINE bool operator<=(const ZT_IdentificationCertificate &c) const noexcept
+	{	return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) <= 0; }
+	ZT_INLINE bool operator>(const ZT_IdentificationCertificate &c) const noexcept
+	{	return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) > 0; }
+	ZT_INLINE bool operator>=(const ZT_IdentificationCertificate &c) const noexcept
+	{	return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) >= 0; }
 
 private:
 	// These hold any identity or locator objects that are owned by and should

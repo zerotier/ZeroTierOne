@@ -35,9 +35,9 @@ bool NetworkConfig::toDictionary(Dictionary &d) const
 		d.add(ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO_IDENTITY_HASH,this->issuedToFingerprintHash,ZT_FINGERPRINT_HASH_SIZE);
 		d.add(ZT_NETWORKCONFIG_DICT_KEY_FLAGS,this->flags);
 		d.add(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT,(uint64_t)this->multicastLimit);
-		d.add(ZT_NETWORKCONFIG_DICT_KEY_TYPE,(uint16_t)this->type);
+		d.add(ZT_NETWORKCONFIG_DICT_KEY_TYPE,(uint64_t)this->type);
 		d.add(ZT_NETWORKCONFIG_DICT_KEY_NAME,this->name);
-		d.add(ZT_NETWORKCONFIG_DICT_KEY_MTU,this->mtu);
+		d.add(ZT_NETWORKCONFIG_DICT_KEY_MTU,(uint64_t)this->mtu);
 
 		if (this->com) {
 			d.add(ZT_NETWORKCONFIG_DICT_KEY_COM,tmp,this->com.marshal(tmp));

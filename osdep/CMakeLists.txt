@@ -43,8 +43,18 @@ endif(WIN32)
 
 add_library(${PROJECT_NAME} STATIC ${src} ${headers})
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_11)
+target_include_directories(
+	${PROJECT_NAME}
+	PUBLIC
+	${CMAKE_BINARY_DIR}/core
+)
 
 if(APPLE)
 	add_executable(MacEthernetTapAgent MacEthernetTapAgent.c MacEthernetTapAgent.h)
 	target_include_directories(MacEthernetTapAgent PRIVATE ${CMAKE_BINARY_DIR})
+	target_include_directories(
+		MacEthernetTapAgent
+		PUBLIC
+		${CMAKE_BINARY_DIR}/core
+	)
 endif(APPLE)

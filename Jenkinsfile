@@ -18,7 +18,7 @@ pipeline {
             steps {
                 script {
                     def tasks = [:]
-                    // tasks << buildStaticBinaries()
+                    tasks << buildStaticBinaries()
                     tasks << buildDebianNative()
                     tasks << buildCentosNative()
                     
@@ -55,9 +55,16 @@ def buildStaticBinaries() {
                 def runtime = docker.image("ztbuild/${distro}-${platform}:latest")
                 runtime.inside {
                     dir("build") {
-                        sh 'make -j8 ZT_STATIC=1 all'
-                        sh "mv zerotier zerotier-static-${platform}"
-                        stash includes: 'zerotier-static-*', name: "static-${platform}"
+                        def cmakeFlags = 'CMAKE_ARGS="-DBUILD_STATIC=1"'
+                        if (platform == "i386") {
+                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DBUILD_STATIC=1"'
+                         }
+                   
+                        sh "${cmakeFlags} make"
+                        dir("build") {
+                            sh "mv zerotier zerotier-static-${platform}"
+                            stash includes: 'zerotier-static-*', name: "static-${platform}"
+                        }
                     }
                     cleanWs deleteDirs: true, disableDeferredWipeout: true, notFailBuild: true
                 }
@@ -282,8 +289,14 @@ def buildDebianNative() {
                 }
                 def runtime = docker.image("ztbuild/${distro}-${arch}:latest")
                 runtime.inside {
+                    def cmakeFlags = ""
+                    if (arch == "i386") {
+                        cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1"'
+                    }
+                   
+                    sh 'whoami'
                     dir("build") {
-                        sh 'make -j4'
+                        sh "${cmakeFlags} make -j4"
                     }
                     // sh "mkdir -p ${distro}"
                     // sh "mv *.deb ${distro}"

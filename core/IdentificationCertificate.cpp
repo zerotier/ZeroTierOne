@@ -16,24 +16,25 @@
 
 namespace ZeroTier {
 
-IdentificationCertificate &IdentificationCertificate::operator=(const ZT_IdentificationCertificate &apiCert)
+void IdentificationCertificate::clear()
 {
-	Utils::copy< sizeof(ZT_IdentificationCertificate) >((ZT_IdentificationCertificate *)this, &apiCert);
+	Utils::zero< sizeof(ZT_IdentificationCertificate) >((ZT_IdentificationCertificate *)this);
 	m_identities.clear();
 	m_locators.clear();
 	m_nodes.clear();
 	m_networks.clear();
+}
+
+IdentificationCertificate &IdentificationCertificate::operator=(const ZT_IdentificationCertificate &apiCert)
+{
+	clear();
+	Utils::copy< sizeof(ZT_IdentificationCertificate) >((ZT_IdentificationCertificate *)this, &apiCert);
 	return *this;
 }
 
 IdentificationCertificate &IdentificationCertificate::operator=(const IdentificationCertificate &cert)
 {
-	Utils::copy< sizeof(ZT_IdentificationCertificate) >((ZT_IdentificationCertificate *)this, (const ZT_IdentificationCertificate *)(&cert));
-
-	m_identities.clear();
-	m_locators.clear();
-	m_nodes.clear();
-	m_networks.clear();
+	*this = *((const ZT_IdentificationCertificate *)(&cert));
 
 	this->subject.nodeCount = 0;
 	this->subject.networkCount = 0;
@@ -147,11 +148,7 @@ bool IdentificationCertificate::decode(const Vector< uint8_t > &data)
 {
 	char tmp[256];
 
-	Utils::zero< sizeof(ZT_IdentificationCertificate) >((ZT_IdentificationCertificate *)this);
-	m_identities.clear();
-	m_locators.clear();
-	m_nodes.clear();
-	m_networks.clear();
+	clear();
 
 	Dictionary d;
 	if (!d.decode(data.data(), (unsigned int)data.size()))

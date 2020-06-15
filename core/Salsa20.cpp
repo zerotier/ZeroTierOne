@@ -39,6 +39,7 @@ static ZT_INLINE void U32TO8_LITTLE(uint8_t *const c,const uint32_t v) { c[0] = 
 #endif // !ZT_SALSA20_SSE
 
 #ifdef ZT_SALSA20_SSE
+
 class _s20sseconsts
 {
 public:
@@ -47,8 +48,10 @@ public:
 		maskLo32 = _mm_shuffle_epi32(_mm_cvtsi32_si128(-1), _MM_SHUFFLE(1, 0, 1, 0));
 		maskHi32 = _mm_slli_epi64(maskLo32, 32);
 	}
+
 	__m128i maskLo32, maskHi32;
 };
+
 static const _s20sseconsts s_S20SSECONSTANTS;
 #endif
 
@@ -57,7 +60,7 @@ namespace ZeroTier {
 void Salsa20::init(const void *key, const void *iv) noexcept
 {
 #ifdef ZT_SALSA20_SSE
-	const uint32_t *const k = (const uint32_t *) key;
+	const uint32_t *const k = (const uint32_t *)key;
 	_state.i[0] = 0x61707865;
 	_state.i[1] = 0x3320646e;
 	_state.i[2] = 0x79622d32;
@@ -69,10 +72,10 @@ void Salsa20::init(const void *key, const void *iv) noexcept
 	_state.i[8] = 0;
 	_state.i[9] = k[6];
 	_state.i[10] = k[1];
-	_state.i[11] = ((const uint32_t *) iv)[1];
+	_state.i[11] = ((const uint32_t *)iv)[1];
 	_state.i[12] = k[5];
 	_state.i[13] = k[0];
-	_state.i[14] = ((const uint32_t *) iv)[0];
+	_state.i[14] = ((const uint32_t *)iv)[0];
 	_state.i[15] = k[4];
 #else
 	const char *const constants = "expand 32-byte k";
@@ -96,14 +99,15 @@ void Salsa20::init(const void *key, const void *iv) noexcept
 #endif
 }
 
-union p_SalsaState {
+union p_SalsaState
+{
 #ifdef ZT_SALSA20_SSE
 	__m128i v[4];
 #endif // ZT_SALSA20_SSE
 	uint32_t i[16];
 };
 
-template<unsigned int R>
+template< unsigned int R >
 static ZT_INLINE void p_salsaCrypt(p_SalsaState *const state, const uint8_t *m, uint8_t *c, unsigned int bytes) noexcept
 {
 	if (unlikely(bytes == 0))
@@ -144,17 +148,18 @@ static ZT_INLINE void p_salsaCrypt(p_SalsaState *const state, const uint8_t *m, 
 #endif
 
 	for (;;) {
-		if (likely(bytes >= 64)) {
-#ifdef ZT_SALSA20_SSE
-			_mm_prefetch(m + 128, _MM_HINT_T0);
-#endif
-		} else {
-			for (unsigned int i = 0;i < bytes;++i)
+		if (unlikely(bytes < 64)) {
+			for (unsigned int i = 0; i < bytes; ++i)
 				tmp[i] = m[i];
 			m = tmp;
 			ctarget = c;
 			c = tmp;
 		}
+#ifdef ZT_SALSA20_SSE
+		else {
+			_mm_prefetch(m + 128, _MM_HINT_T0);
+		}
+#endif
 
 #ifdef ZT_SALSA20_SSE
 		__m128i X0s = X0;
@@ -163,7 +168,7 @@ static ZT_INLINE void p_salsaCrypt(p_SalsaState *const state, const uint8_t *m, 
 		__m128i X3s = X3;
 		__m128i T;
 
-		for(unsigned int rr=0; rr<(R/2); ++rr) {
+		for (unsigned int rr = 0; rr < (R / 2); ++rr) {
 			T = _mm_add_epi32(X0, X3);
 			X1 = _mm_xor_si128(_mm_xor_si128(X1, _mm_slli_epi32(T, 7)), _mm_srli_epi32(T, 25));
 			T = _mm_add_epi32(X1, X0);
@@ -308,7 +313,7 @@ static ZT_INLINE void p_salsaCrypt(p_SalsaState *const state, const uint8_t *m, 
 			m += 64;
 		} else {
 			if (bytes < 64) {
-				for (unsigned int i = 0;i < bytes;++i)
+				for (unsigned int i = 0; i < bytes; ++i)
 					ctarget[i] = c[i];
 			}
 #ifdef ZT_SALSA20_SSE
@@ -323,12 +328,12 @@ static ZT_INLINE void p_salsaCrypt(p_SalsaState *const state, const uint8_t *m, 
 
 void Salsa20::crypt12(const void *in, void *out, unsigned int bytes) noexcept
 {
-	p_salsaCrypt<12>(reinterpret_cast<p_SalsaState *>(&_state), reinterpret_cast<const uint8_t *>(in), reinterpret_cast<uint8_t *>(out), bytes);
+	p_salsaCrypt< 12 >(reinterpret_cast<p_SalsaState *>(&_state), reinterpret_cast<const uint8_t *>(in), reinterpret_cast<uint8_t *>(out), bytes);
 }
 
 void Salsa20::crypt20(const void *in, void *out, unsigned int bytes) noexcept
 {
-	p_salsaCrypt<20>(reinterpret_cast<p_SalsaState *>(&_state), reinterpret_cast<const uint8_t *>(in), reinterpret_cast<uint8_t *>(out), bytes);
+	p_salsaCrypt< 20 >(reinterpret_cast<p_SalsaState *>(&_state), reinterpret_cast<const uint8_t *>(in), reinterpret_cast<uint8_t *>(out), bytes);
 }
 
 } // namespace ZeroTier
