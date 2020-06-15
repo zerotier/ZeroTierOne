@@ -19,6 +19,7 @@
 #include <iterator>
 #include <algorithm>
 #include <memory>
+#include <stdexcept>
 
 namespace ZeroTier {
 
@@ -114,14 +115,14 @@ public:
 	{
 		if (likely(i < _s))
 			return reinterpret_cast<T *>(_m)[i];
-		throw std::out_of_range("i > capacity");
+		throw Utils::OutOfRangeException;
 	}
 
 	ZT_INLINE const T &operator[](const unsigned int i) const
 	{
 		if (likely(i < _s))
 			return reinterpret_cast<const T *>(_m)[i];
-		throw std::out_of_range("i > capacity");
+		throw Utils::OutOfRangeException;
 	}
 
 	static constexpr unsigned int capacity() noexcept
@@ -150,7 +151,7 @@ public:
 	{
 		if (likely(_s < C))
 			new(reinterpret_cast<T *>(_m) + _s++) T(v);
-		else throw std::out_of_range("capacity exceeded");
+		throw Utils::OutOfRangeException;
 	}
 
 	/**
@@ -200,7 +201,7 @@ public:
 	ZT_INLINE void resize(unsigned int ns)
 	{
 		if (unlikely(ns > C))
-			throw std::out_of_range("capacity exceeded");
+			throw Utils::OutOfRangeException;
 		unsigned int s = _s;
 		while (s < ns)
 			new(reinterpret_cast<T *>(_m) + s++) T();

@@ -43,7 +43,7 @@ void *Buf::operator new(std::size_t sz)
 		s_pool.store(0);
 		b = (Buf *) malloc(sz);
 		if (!b)
-			throw std::bad_alloc();
+			throw Utils::BadAllocException;
 		++s_allocated;
 	}
 

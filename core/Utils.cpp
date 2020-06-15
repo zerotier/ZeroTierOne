@@ -84,6 +84,8 @@ CPUIDRegisters::CPUIDRegisters() noexcept
 const CPUIDRegisters CPUID;
 #endif
 
+const std::bad_alloc BadAllocException;
+const std::out_of_range OutOfRangeException("access out of range");
 const uint64_t ZERO256[4] = {0, 0, 0, 0};
 const char HEXCHARS[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
 const uint64_t s_mapNonce = getSecureRandomU64();

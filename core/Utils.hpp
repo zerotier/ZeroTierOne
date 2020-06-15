@@ -69,6 +69,9 @@ struct CPUIDRegisters
 extern const CPUIDRegisters CPUID;
 #endif
 
+extern const std::bad_alloc BadAllocException;
+extern const std::out_of_range OutOfRangeException;
+
 /**
  * 256 zero bits / 32 zero bytes
  */
@@ -862,7 +865,7 @@ struct Mallocator
 			return nullptr;
 		pointer temp = (pointer)malloc(s * sizeof(T));
 		if (temp == nullptr)
-			throw std::bad_alloc();
+			throw BadAllocException;
 		return temp;
 	}
 
