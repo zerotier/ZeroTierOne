@@ -6,14 +6,11 @@
 #include "ECC384.hpp"
 #include "Utils.hpp"
 
-#include <cstdio>
-#include <cstdlib>
-#include <cstdint>
-
 namespace ZeroTier {
 
 namespace {
 
+#define uint unsigned int
 #define secp384r1 48
 #define ECC_CURVE secp384r1
 #define ECC_BYTES ECC_CURVE
