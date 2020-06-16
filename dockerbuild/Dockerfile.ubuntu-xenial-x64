@@ -7,10 +7,10 @@ RUN apt-get update && apt-get -y install build-essential curl ca-certificates de
 RUN curl -s -k $go_pkg_url -o go.tar.gz && \
     tar -C /usr/local -xzf go.tar.gz && \
     rm go.tar.gz
-RUN curl -s -k -L https://github.com/Kitware/CMake/releases/download/v3.17.3/cmake-3.17.3.tar.gz -o cmake-3.17.3.tar.gz && tar -xzf cmake-3.17.3.tar.gz
-WORKDIR /cmake-3.17.3
-RUN ./bootstrap && make -j8 && make install
-WORKDIR /
+RUN curl -s -L https://github.com/Kitware/CMake/releases/download/v3.17.3/cmake-3.17.3-Linux-x86_64.sh -o cmake.sh && \
+    chmod +x cmake.sh && \
+    ./cmake.sh --skip-license --exclude-subdir && \
+    rm cmake.sh
 
 
 RUN groupadd -g 1000 jenkins-build && useradd -u 1000 -g 1000 jenkins-build
