@@ -183,11 +183,16 @@ file(GLOB go_src
 	${CMAKE_SOURCE_DIR}/cmd/cmd/*.go
 	${CMAKE_SOURCE_DIR}/pkg/zerotier/*.go)
 
+set(CXX_CORE_LIBRARIES "-lc++")
+if(CMAKE_SYSTEM_NAME MATCHES "Linux")
+	set(CXX_CORE_LIBRARIES "-lstdc++")
+endif(CMAKE_SYSTEM_NAME MATCHES "Linux")
+
 add_custom_target(
 	zerotier ALL
 	BYPRODUCTS ${CMAKE_BINARY_DIR}/zerotier
 	SOURCES ${go_src}
-	COMMAND ${GOARCH} CGO_ENABLED=1 CGO_CFLAGS=\"${CMAKE_C_FLAGS}\" CGO_LDFLAGS=\"$<TARGET_FILE:zt_osdep> $<TARGET_FILE:zt_core> $<TARGET_FILE:zt_controller> $<TARGET_FILE:zt_service_io_core> -l${CMAKE_CXX_IMPLICIT_LINK_LIBRARIES}\" ${GO} build ${GOFLAGS} -o ${CMAKE_BINARY_DIR}/zerotier ${CMAKE_SOURCE_DIR}/cmd/zerotier/zerotier.go
+	COMMAND ${GOARCH} CGO_ENABLED=1 CGO_CFLAGS=\"-O3\" CGO_LDFLAGS=\"$<TARGET_FILE:zt_core> $<TARGET_FILE:zt_controller> $<TARGET_FILE:zt_service_io_core> $<TARGET_FILE:zt_osdep> ${CXX_CORE_LIBRARIES}\" ${GO} build ${GOFLAGS} -o ${CMAKE_BINARY_DIR}/zerotier ${CMAKE_SOURCE_DIR}/cmd/zerotier/zerotier.go
 	COMMENT "Compiling Go Code..."
 )
 add_dependencies(zerotier zt_osdep zt_core zt_controller zt_service_io_core)
