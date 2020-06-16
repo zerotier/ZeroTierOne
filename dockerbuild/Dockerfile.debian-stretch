@@ -10,6 +10,7 @@ RUN curl -s -k -L $go_pkg_url -o go.tar.gz && \
 RUN curl -s -k -L https://github.com/Kitware/CMake/releases/download/v3.17.3/cmake-3.17.3.tar.gz -o cmake-3.17.3.tar.gz && tar -xzf cmake-3.17.3.tar.gz
 WORKDIR /cmake-3.17.3
 RUN ./boostrap && make && make install
+WORKDIR /
 
 
 RUN groupadd -g 1000 jenkins-build && useradd -u 1000 -g 1000 jenkins-build
