@@ -27,9 +27,10 @@
 #include <netinet/in.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#endif
+
 #include <stdint.h>
 #include <stdlib.h>
-#endif
 
 #ifdef __cplusplus
 extern "C" {
