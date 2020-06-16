@@ -2,14 +2,14 @@ FROM debian:stretch-20191224
 
 ARG go_pkg_url
 
-RUN apt-get update && apt-get -y install build-essential curl ca-certificates devscripts dh-systemd
+RUN apt-get update && apt-get -y install build-essential curl ca-certificates devscripts dh-systemd libssl-dev
 
 RUN curl -s -k -L $go_pkg_url -o go.tar.gz && \
     tar -C /usr/local -xzf go.tar.gz && \
     rm go.tar.gz
 RUN curl -s -k -L https://github.com/Kitware/CMake/releases/download/v3.17.3/cmake-3.17.3.tar.gz -o cmake-3.17.3.tar.gz && tar -xzf cmake-3.17.3.tar.gz
 WORKDIR /cmake-3.17.3
-RUN ./bootstrap && make && make install
+RUN ./bootstrap && make -j8 && make install
 WORKDIR /
 
 
