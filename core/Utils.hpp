@@ -19,6 +19,8 @@
 #include <utility>
 #include <algorithm>
 #include <memory>
+#include <stdint.h>
+#include <stddef.h>
 
 namespace ZeroTier {
 
