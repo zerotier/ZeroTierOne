@@ -108,7 +108,6 @@ ubuntu-eoan:
 ubuntu-focal:
 	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz" --platform linux/amd64 -f Dockerfile.ubuntu-focal . -t ztbuild/ubuntu-focal-amd64 --load
 	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-arm64.tar.gz" --platform linux/arm64 -f Dockerfile.ubuntu-focal . -t ztbuild/ubuntu-focal-arm64 --load
-	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-armv6l.tar.gz" --platform linux/arm/v7 -f Dockerfile.ubuntu-focal . -t ztbuild/ubuntu-focal-armhf --load
 	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-ppc64le.tar.gz" --platform linux/ppc64le -f Dockerfile.ubuntu-focal . -t ztbuild/ubuntu-focal-ppc64le --load
 	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-s390x.tar.gz" --platform linux/s390x -f Dockerfile.ubuntu-focal . -t ztbuild/ubuntu-focal-s390x --load
 
