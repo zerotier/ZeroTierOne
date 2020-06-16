@@ -522,6 +522,33 @@ enum ZT_MultipathMonitorStrategy
 };
 
 /**
+ * Strategy for re-balancing protocol flows
+ */
+enum ZT_MultipathFlowRebalanceStrategy
+{
+	/**
+	 * Flows will only be re-balanced among slaves during
+	 * assignment or failover. This minimizes the possibility
+	 * of sequence reordering and is thus the default setting.
+	 */
+	ZT_MULTIPATH_FLOW_REBALANCE_STRATEGY_PASSIVE = 0,
+
+	/**
+	 * Flows that are active may be re-assigned to a new more
+	 * suitable slave if it can be done without disrupting the flow.
+	 * This setting can sometimes cause sequence re-ordering.
+	 */
+	ZT_MULTIPATH_FLOW_REBALANCE_STRATEGY_OPPORTUNISTIC = 0,
+
+	/**
+	 * Flows will be continuously re-assigned the most suitable slave
+	 * in order to maximize "balance". This can often cause sequence
+	 * reordering and is thus only reccomended for protocols like UDP.
+	 */
+	ZT_MULTIPATH_FLOW_REBALANCE_STRATEGY_AGGRESSIVE = 2
+};
+
+/**
  * Indices for the path quality weight vector
  */
 enum ZT_MultipathQualityWeightIndex

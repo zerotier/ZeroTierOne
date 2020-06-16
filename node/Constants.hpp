@@ -342,11 +342,6 @@
 #define ZT_QOS_SHORTTERM_SAMPLE_WIN_SIZE 32
 
 /**
- * Number of samples to consider when processing long-term trends
- */
-#define ZT_QOS_LONGTERM_SAMPLE_WIN_SIZE (ZT_QOS_SHORTTERM_SAMPLE_WIN_SIZE * 4)
-
-/**
  * Max allowable time spent in any queue (in ms)
  */
 #define ZT_AQM_TARGET 5

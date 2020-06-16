@@ -11,6 +11,7 @@
  */
 /****/
 
+#include "Constants.hpp"
 #include "BondController.hpp"
 #include "Peer.hpp"
 
@@ -23,6 +24,7 @@ BondController::BondController(const RuntimeEnvironment *renv) :
 	RR(renv)
 {
 	bondStartTime = RR->node->now();
+	_defaultBondingPolicy = ZT_BONDING_POLICY_NONE;
 }
 
 bool BondController::slaveAllowed(std::string &policyAlias, SharedPtr<Slave> slave)
@@ -83,10 +85,9 @@ SharedPtr<Bond> BondController::createTransportTriggeredBond(const RuntimeEnviro
 	Bond *bond = nullptr;
 	if (!_bonds.count(identity)) {
 		std::string policyAlias;
-		int _defaultBondingPolicy = defaultBondingPolicy();
 		fprintf(stderr, "new bond, registering for %llx\n", identity);
 		if (!_policyTemplateAssignments.count(identity)) {
-			if (defaultBondingPolicy()) {
+			if (_defaultBondingPolicy) {
 				fprintf(stderr, "  no assignment, using default (%d)\n", _defaultBondingPolicy);
 				bond = new Bond(renv, _defaultBondingPolicy, peer);
 			}

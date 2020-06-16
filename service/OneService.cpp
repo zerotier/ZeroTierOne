@@ -1621,6 +1621,7 @@ public:
 				// Bond-specific properties
 				newTemplateBond->setUpDelay(OSUtils::jsonInt(customPolicy["upDelay"],-1));
 				newTemplateBond->setDownDelay(OSUtils::jsonInt(customPolicy["downDelay"],-1));
+				newTemplateBond->setFlowRebalanceStrategy(OSUtils::jsonInt(customPolicy["flowRebalanceStrategy"],(uint64_t)0));
 				newTemplateBond->setFailoverInterval(OSUtils::jsonInt(customPolicy["failoverInterval"],(uint64_t)0));
 				newTemplateBond->setPacketsPerSlave(OSUtils::jsonInt(customPolicy["packetsPerSlave"],-1));
 				std::string slaveMonitorStrategyStr(OSUtils::jsonString(customPolicy["slaveMonitorStrategy"],""));

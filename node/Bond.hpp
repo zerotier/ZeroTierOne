@@ -87,7 +87,7 @@ public:
 	std::string policyAlias() { return _policyAlias; }
 
 	/**
-	 * Inform the bond about the path that its peer just learned about
+	 * Inform the bond about the path that its peer (owning object) just learned about
 	 *
 	 * @param path Newly-learned Path which should now be handled by the Bond
 	 * @param now Current time
@@ -434,7 +434,12 @@ public:
 	inline void setFailoverInterval(uint32_t interval) { _failoverInterval = interval; }
 
 	/**
-	 * @param strategy The strategy that the bond uses to prob for path aliveness and quality
+	 * @param strategy Strategy that the bond uses to re-assign protocol flows.
+	 */
+	inline void setFlowRebalanceStrategy(uint32_t strategy) { _flowRebalanceStrategy = strategy; }
+
+	/**
+	 * @param strategy Strategy that the bond uses to prob for path aliveness and quality
 	 */
 	inline void setSlaveMonitorStrategy(uint8_t strategy) { _slaveMonitorStrategy = strategy; }
 
@@ -578,6 +583,7 @@ private:
 
 	// balance-aware
 	uint64_t _totalBondUnderload;
+	uint8_t _flowRebalanceStrategy;
 
 	// dynamic slave monitoring
 	uint8_t _slaveMonitorStrategy;

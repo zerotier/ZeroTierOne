@@ -221,9 +221,11 @@ bool IncomingPacket::_doACK(const RuntimeEnvironment *RR,void *tPtr,const Shared
 bool IncomingPacket::_doQOS_MEASUREMENT(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
 	SharedPtr<Bond> bond = peer->bond();
+	/* TODO: Fix rate gate issue
 	if (!bond || !bond->rateGateQoS(RR->node->now())) {
 		return true;
 	}
+	*/
 	/* Dissect incoming QoS packet. From this we can compute latency values and their variance.
 	 * The latency variance is used as a measure of "jitter". */
 	if (payloadLength() > ZT_QOS_MAX_PACKET_SIZE || payloadLength() < ZT_QOS_MIN_PACKET_SIZE) {

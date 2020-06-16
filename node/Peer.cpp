@@ -55,7 +55,8 @@ Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Ident
 	_remoteMultipathSupported(false),
 	_canUseMultipath(false),
 	_shouldCollectPathStatistics(0),
-	_lastComputedAggregateMeanLatency(0)
+	_lastComputedAggregateMeanLatency(0),
+	_bondingPolicy(0)
 {
 	if (!myIdentity.agree(peerIdentity,_key,ZT_PEER_SECRET_KEY_LENGTH)) {
 		throw ZT_EXCEPTION_INVALID_ARGUMENT;

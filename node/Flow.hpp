@@ -116,6 +116,7 @@ struct Flow
 	int64_t _lastActivity;
 	int64_t _lastPathReassignment;
 	SharedPtr<Path> _assignedPath;
+	SharedPtr<Path> _previouslyAssignedPath;
 };
 
 } // namespace ZeroTier
