@@ -46,7 +46,7 @@ debian-buster:
 	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-s390x.tar.gz" --platform linux/s390x -f Dockerfile.debian-buster . -t ztbuild/debian-buster-s390x --load
 
 debian-stretch:
-	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz" --platform linux/amd64 -f Dockerfile.debian-stretch . -t ztbuild/debian-stretch-amd64 --load
+	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz" --platform linux/amd64 -f Dockerfile.debian-stretch-x64 . -t ztbuild/debian-stretch-amd64 --load
 	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-arm64.tar.gz" --platform linux/arm64 -f Dockerfile.debian-stretch . -t ztbuild/debian-stretch-arm64 --load
 	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-armv6l.tar.gz" --platform linux/arm/v6 -f Dockerfile.debian-stretch . -t ztbuild/debian-stretch-armel --load
 	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-armv6l.tar.gz" --platform linux/arm/v7 -f Dockerfile.debian-stretch . -t ztbuild/debian-stretch-armhf --load
@@ -72,7 +72,7 @@ debian-sid:
 	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-ppc64le.tar.gz" --platform linux/ppc64le -f Dockerfile.debian-sid . -t ztbuild/debian-sid-ppc64le --load
 	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-s390x.tar.gz" --platform linux/s390x -f Dockerfile.debian-sid . -t ztbuild/debian-sid-s390x --load
 
-ubuntu: ubuntu-trusty ubuntu-xenial ubuntu-bionic ubuntu-eoan
+ubuntu: ubuntu-trusty ubuntu-xenial ubuntu-bionic ubuntu-eoan ubuntu-focal
 
 ubuntu-trusty:
 	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz" --platform linux/amd64 -f Dockerfile.ubuntu-trusty . -t ztbuild/ubuntu-trusty-amd64 --load
@@ -104,6 +104,12 @@ ubuntu-eoan:
 	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-386.tar.gz" --platform linux/386 -f Dockerfile.ubuntu-eoan . -t ztbuild/ubuntu-eoan-i386 --load
 	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-ppc64le.tar.gz" --platform linux/ppc64le -f Dockerfile.ubuntu-eoan . -t ztbuild/ubuntu-eoan-ppc64le --load
 	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-s390x.tar.gz" --platform linux/s390x -f Dockerfile.ubuntu-eoan . -t ztbuild/ubuntu-eoan-s390x --load
+
+ubuntu-focal:
+	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz" --platform linux/amd64 -f Dockerfile.ubuntu-focal . -t ztbuild/ubuntu-focal-amd64 --load
+	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-arm64.tar.gz" --platform linux/arm64 -f Dockerfile.ubuntu-focal . -t ztbuild/ubuntu-focal-arm64 --load
+	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-ppc64le.tar.gz" --platform linux/ppc64le -f Dockerfile.ubuntu-focal . -t ztbuild/ubuntu-focal-ppc64le --load
+	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-s390x.tar.gz" --platform linux/s390x -f Dockerfile.ubuntu-focal . -t ztbuild/ubuntu-focal-s390x --load
 
 kali-rolling:
 	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz" --platform linux/amd64 -f Dockerfile.kali-rolling . -t ztbuild/kali-rolling-amd64 --load

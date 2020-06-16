@@ -55,6 +55,7 @@ def buildStaticBinaries() {
                 def runtime = docker.image("ztbuild/${distro}-${platform}:latest")
                 runtime.inside {
                     dir("build") {
+
                         def cmakeFlags = 'CMAKE_ARGS="-DBUILD_STATIC=1"'
                         if (platform == "i386") {
                             cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DBUILD_STATIC=1"'
@@ -329,6 +330,15 @@ def buildDebianNative() {
     }
     tasks << getTasks(ubuntu, ubuntuArchs, build)
     
+    def ubuntuFocal = ["ubuntu-focal"]
+    def ubuntuFocalArchs = []
+    if (params.BUILD_ALL == true) {
+        ubuntuFocalArchs = ["amd64", "armhf", "arm64", "ppc64le", "s390x"]
+    } else {
+        ubuntuFocalArchs = ["amd64"]
+    }
+    tasks << getTasks(ubuntuFocal, ubuntuFocalArchs, build)
+
     def kali = ["kali-rolling"]
     def kaliArchs = ["amd64"]
     tasks << getTasks(kali, kaliArchs, build)
@@ -348,7 +358,11 @@ def buildCentosNative() {
                 def runtime = docker.image("ztbuild/${distro}-${arch}:latest")
                 runtime.inside {
                     dir("build") {
-                        sh 'make -j4'
+                        if (distro == 'centos7') {
+                            sh 'source scl_source enable devtoolset-8 llvm-toolset-7 && make'
+                        } else {
+                            sh 'make'
+                        }
                         // sh 'make redhat'
                         // sh "mkdir -p ${distro}"
                         // sh "cp -av `find ~/rpmbuild/ -type f -name \"*.rpm\"` ${distro}/"

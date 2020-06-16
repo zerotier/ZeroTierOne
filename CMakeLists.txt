@@ -136,7 +136,8 @@ endif(WIN32)
 
 if (
 	CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64" OR
-	CMAKE_SYSTEM_PROCESSOR MATCHES "amd64"
+	CMAKE_SYSTEM_PROCESSOR MATCHES "amd64" OR
+	CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64"
 )
 	message("++ Adding flags for processor ${CMAKE_SYSTEM_PROCESSOR}")
 	add_compile_options(-maes -mrdrnd -mpclmul -msse -msse2 -mssse3)
