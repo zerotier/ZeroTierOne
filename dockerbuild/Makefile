@@ -82,7 +82,7 @@ ubuntu-trusty:
 	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-ppc64le.tar.gz" --platform linux/ppc64le -f Dockerfile.ubuntu-trusty . -t ztbuild/ubuntu-trusty-ppc64le --load
 
 ubuntu-xenial:
-	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz" --platform linux/amd64 -f Dockerfile.ubuntu-xenial . -t ztbuild/ubuntu-xenial-amd64 --load
+	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz" --platform linux/amd64 -f Dockerfile.ubuntu-xenial-x64 . -t ztbuild/ubuntu-xenial-amd64 --load
 	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-arm64.tar.gz" --platform linux/arm64 -f Dockerfile.ubuntu-xenial . -t ztbuild/ubuntu-xenial-arm64 --load
 	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-armv6l.tar.gz" --platform linux/arm/v7 -f Dockerfile.ubuntu-xenial . -t ztbuild/ubuntu-xenial-armhf --load
 	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-386.tar.gz" --platform linux/386 -f Dockerfile.ubuntu-xenial . -t ztbuild/ubuntu-xenial-i386 --load
