@@ -57,8 +57,8 @@ Commands:
     locator <locator>                    Explicitly update peer locator
   roots                                  List root peers
   root [command]                       - Root management commands
-    add <identity | url> [endpoint]      Add a root or a root set
-    remove <address | url | serial>      Remove a root or root set
+    add <identity | url> [endpoint]      Add a root or a set of roots
+    remove <address | url | serial>      Remove a root or set of roots
   set [option] [value]                 - Get or set a core config option
     port <port>                          Primary P2P port
     secondaryport <port/0>               Secondary P2P port (0 to disable)

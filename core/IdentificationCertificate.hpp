@@ -62,6 +62,7 @@ public:
 	void clear();
 
 	IdentificationCertificate &operator=(const ZT_IdentificationCertificate &apiCert);
+
 	IdentificationCertificate &operator=(const IdentificationCertificate &cert);
 
 	/**
@@ -89,6 +90,13 @@ public:
 	 * @return Pointer to C struct
 	 */
 	ZT_IdentificationCertificate_Network *addSubjectNetwork(const uint64_t id, const ZT_Fingerprint &controller);
+
+	/**
+	 * Add an update URL to the updateUrls list
+	 *
+	 * @param url Update URL
+	 */
+	void addUpdateUrl(const char *url);
 
 	/**
 	 * Marshal this certificate in binary form
@@ -124,20 +132,26 @@ public:
 	 */
 	bool verify() const;
 
-	ZT_INLINE unsigned long hashCode() const noexcept { return (unsigned long)Utils::loadAsIsEndian<uint32_t>(this->serialNo); }
+	ZT_INLINE unsigned long hashCode() const noexcept
+	{ return (unsigned long)Utils::loadAsIsEndian< uint32_t >(this->serialNo); }
 
 	ZT_INLINE bool operator==(const ZT_IdentificationCertificate &c) const noexcept
-	{	return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) == 0; }
+	{ return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) == 0; }
+
 	ZT_INLINE bool operator!=(const ZT_IdentificationCertificate &c) const noexcept
-	{	return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) != 0; }
+	{ return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) != 0; }
+
 	ZT_INLINE bool operator<(const ZT_IdentificationCertificate &c) const noexcept
-	{	return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) < 0; }
+	{ return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) < 0; }
+
 	ZT_INLINE bool operator<=(const ZT_IdentificationCertificate &c) const noexcept
-	{	return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) <= 0; }
+	{ return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) <= 0; }
+
 	ZT_INLINE bool operator>(const ZT_IdentificationCertificate &c) const noexcept
-	{	return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) > 0; }
+	{ return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) > 0; }
+
 	ZT_INLINE bool operator>=(const ZT_IdentificationCertificate &c) const noexcept
-	{	return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) >= 0; }
+	{ return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) >= 0; }
 
 private:
 	// These hold any identity or locator objects that are owned by and should
@@ -145,10 +159,12 @@ private:
 	// change.
 	List< Identity > m_identities;
 	List< Locator > m_locators;
+	List< String > m_strings;
 
 	// These are stored in a vector because the memory needs to be contiguous.
 	Vector< ZT_IdentificationCertificate_Node > m_nodes;
 	Vector< ZT_IdentificationCertificate_Network > m_networks;
+	Vector< const char * > m_updateUrls;
 };
 
 } // namespace ZeroTier

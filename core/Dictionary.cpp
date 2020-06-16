@@ -199,4 +199,17 @@ bool Dictionary::decode(const void *data, unsigned int len)
 	return true;
 }
 
+char *Dictionary::arraySubscript(char buf[256],const char *name,const unsigned long sub) noexcept
+{
+	for(unsigned int i=0;i<(256 - 17);++i) {
+		if ((buf[i] = name[i]) == 0) {
+			buf[i++] = '#';
+			Utils::hex(sub, buf + i);
+			return buf;
+		}
+	}
+	buf[0] = 0;
+	return buf;
+}
+
 } // namespace ZeroTier

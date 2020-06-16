@@ -21,8 +21,10 @@ void IdentificationCertificate::clear()
 	Utils::zero< sizeof(ZT_IdentificationCertificate) >((ZT_IdentificationCertificate *)this);
 	m_identities.clear();
 	m_locators.clear();
+	m_strings.clear();
 	m_nodes.clear();
 	m_networks.clear();
+	m_updateUrls.clear();
 }
 
 IdentificationCertificate &IdentificationCertificate::operator=(const ZT_IdentificationCertificate &apiCert)
@@ -54,6 +56,11 @@ IdentificationCertificate &IdentificationCertificate::operator=(const Identifica
 	for (unsigned int i = 0; i < cert.subject.networkCount; ++i)
 		addSubjectNetwork(cert.subject.networks[i].id, cert.subject.networks[i].controller);
 
+	if (cert.updateUrls) {
+		for (unsigned int i = 0; i < cert.updateUrlCount; ++i)
+			addUpdateUrl(cert.updateUrls[i]);
+	}
+
 	return *this;
 }
 
@@ -82,6 +89,14 @@ ZT_IdentificationCertificate_Network *IdentificationCertificate::addSubjectNetwo
 	m_networks.back().id = id;
 	Utils::copy< sizeof(ZT_Fingerprint) >(&(m_networks.back().controller), &controller);
 	return &(m_networks.back());
+}
+
+void IdentificationCertificate::addUpdateUrl(const char *url)
+{
+	m_strings.push_back(url);
+	m_updateUrls.push_back(m_strings.back().c_str());
+	this->updateUrls = m_updateUrls.data();
+	this->updateUrlCount = (unsigned int)m_updateUrls.size();
 }
 
 Vector< uint8_t > IdentificationCertificate::encode(const bool omitSignature) const
@@ -137,6 +152,12 @@ Vector< uint8_t > IdentificationCertificate::encode(const bool omitSignature) co
 	d.add("iN.e", this->issuerName.email);
 	d.add("iN.ur", this->issuerName.url);
 
+	d.add("uU[]", (uint64_t)this->updateUrlCount);
+	if (this->updateUrls) {
+		for (unsigned int i = 0; i < this->updateUrlCount; ++i)
+			d.add(Dictionary::arraySubscript(tmp, "uU[]", i), this->updateUrls[i]);
+	}
+
 	if ((!omitSignature) && (this->signatureSize > 0) && (this->signatureSize <= sizeof(this->signature)))
 		d["si"].assign(this->signature, this->signature + this->signatureSize);
 
@@ -146,7 +167,7 @@ Vector< uint8_t > IdentificationCertificate::encode(const bool omitSignature) co
 
 bool IdentificationCertificate::decode(const Vector< uint8_t > &data)
 {
-	char tmp[256];
+	char tmp[256], tmp2[ZT_IDENTIFICATION_CERTIFICATE_MAX_STRING_LENGTH + 1];
 
 	clear();
 
@@ -225,6 +246,14 @@ bool IdentificationCertificate::decode(const Vector< uint8_t > &data)
 	d.getS("iN.sN", this->issuerName.serialNo, sizeof(this->issuerName.serialNo));
 	d.getS("iN.e", this->issuerName.email, sizeof(this->issuerName.email));
 	d.getS("iN.ur", this->issuerName.url, sizeof(this->issuerName.url));
+
+	cnt = (unsigned int)d.getUI("uU[]");
+	for (unsigned int i = 0; i < cnt; ++i) {
+		const char *const url = d.getS(Dictionary::arraySubscript(tmp, "uU[]", i), tmp2, sizeof(tmp2));
+		if (url)
+			addUpdateUrl(tmp2);
+		else return false;
+	}
 
 	const Vector< uint8_t > &sig = d["si"];
 	if (sig.size() > sizeof(this->signature))

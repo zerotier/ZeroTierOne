@@ -303,6 +303,11 @@ typedef struct
 #define ZT_IDENTIFICATION_CERTIFICATE_MAX_SIGNATURE_SIZE 256
 
 /**
+ * Flag indicating that the nodes in the subject are a set of roots
+ */
+#define ZT_IDENTIFICATION_CERTIFICATE_FLAG_ROOT_SET 0x0000000000000001ULL
+
+/**
  * Information about a real world entity.
  */
 typedef struct
@@ -363,14 +368,14 @@ typedef struct
 	ZT_IdentificationCertificate_Node *nodes;
 
 	/**
-	 * Number of nodes
-	 */
-	unsigned int nodeCount;
-
-	/**
 	 * Networks owned by this entity
 	 */
 	ZT_IdentificationCertificate_Network *networks;
+
+	/**
+	 * Number of nodes
+	 */
+	unsigned int nodeCount;
 
 	/**
 	 * Number of networks
@@ -413,15 +418,15 @@ typedef struct
 	unsigned int maxPathLength;
 
 	/**
-	 * Flags (for future use, currently zero).
-	 *
-	 * This could be used to implement key usage flags similar to X509 if
-	 * these are needed.
+	 * Flags indicating certificate usage and any other attributes.
 	 */
 	uint64_t flags;
 
 	/**
 	 * Valid time range: not before, not after.
+	 *
+	 * In ZeroTier the not before field is also the certificate issued time
+	 * and timestamp.
 	 */
 	int64_t validity[2];
 
@@ -441,14 +446,24 @@ typedef struct
 	ZT_IdentificationCertificate_Name issuerName;
 
 	/**
-	 * Signature by issuer (algorithm determined by identity type).
+	 * URLs that can be consulted for updates to this certificate.
 	 */
-	uint8_t signature[ZT_IDENTIFICATION_CERTIFICATE_MAX_SIGNATURE_SIZE];
+	const char *const *updateUrls;
+
+	/**
+	 * Number of update URLs
+	 */
+	unsigned int updateUrlCount;
 
 	/**
 	 * Size of signature in bytes.
 	 */
 	unsigned int signatureSize;
+
+	/**
+	 * Signature by issuer (algorithm determined by identity type).
+	 */
+	uint8_t signature[ZT_IDENTIFICATION_CERTIFICATE_MAX_SIGNATURE_SIZE];
 } ZT_IdentificationCertificate;
 
 /**

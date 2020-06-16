@@ -370,18 +370,7 @@ public:
 		return mlen;
 	}
 
-	static ZT_INLINE char *arraySubscript(char buf[256],const char *name,const unsigned long sub) noexcept
-	{
-		for(unsigned int i=0;i<(256 - 17);++i) {
-			if ((buf[i] = name[i]) == 0) {
-				buf[i++] = '#';
-				Utils::hex(sub, buf + i);
-				return buf;
-			}
-		}
-		buf[0] = 0;
-		return buf;
-	}
+	static char *arraySubscript(char buf[256],const char *name,const unsigned long sub) noexcept;
 
 private:
 	template< typename V >

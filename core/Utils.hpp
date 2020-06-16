@@ -319,9 +319,7 @@ static ZT_INLINE char *stok(char *str, const char *delim, char **saveptr) noexce
 }
 
 static ZT_INLINE unsigned int strToUInt(const char *s) noexcept
-{
-	return (unsigned int)strtoul(s, nullptr, 10);
-}
+{ return (unsigned int)strtoul(s, nullptr, 10); }
 
 static ZT_INLINE unsigned long long hexStrToU64(const char *s) noexcept
 {
