@@ -21,7 +21,8 @@ pipeline {
                     tasks << buildStaticBinaries()
                     tasks << buildDebianNative()
                     tasks << buildCentosNative()
-                    
+                    tasks << buildMacOS()
+
                     parallel tasks
                 }
             }
@@ -34,6 +35,21 @@ pipeline {
         //     }
         // }
     }
+}
+
+def buildMacOS() {
+    tasks << getTasks({ ->
+        def myNode = {
+            node ('mac') {
+                dir("build") {
+                    checkout scm
+                    sh 'make'
+                    cleanWs deleteDirs: true, disableDeferredWipeout: true, notFailBuild: true
+                }
+            }
+        }
+    })
+    return tasks
 }
 
 def buildStaticBinaries() {
