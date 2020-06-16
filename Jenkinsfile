@@ -358,7 +358,7 @@ def buildCentosNative() {
                 def runtime = docker.image("ztbuild/${distro}-${arch}:latest")
                 runtime.inside {
                     dir("build") {
-                        if (distro == 'centos7') {
+                        if (distro == 'centos7' && arch == 'amd64') {
                             sh 'source scl_source enable devtoolset-8 llvm-toolset-7 && make'
                         } else {
                             sh 'make'
