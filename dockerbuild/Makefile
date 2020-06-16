@@ -46,7 +46,7 @@ debian-buster:
 	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-s390x.tar.gz" --platform linux/s390x -f Dockerfile.debian-buster . -t ztbuild/debian-buster-s390x --load
 
 debian-stretch:
-	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz" --platform linux/amd64 -f Dockerfile.debian-stretch . -t ztbuild/debian-stretch-amd64 --load
+	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz" --platform linux/amd64 -f Dockerfile.debian-stretch-x64 . -t ztbuild/debian-stretch-amd64 --load
 	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-arm64.tar.gz" --platform linux/arm64 -f Dockerfile.debian-stretch . -t ztbuild/debian-stretch-arm64 --load
 	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-armv6l.tar.gz" --platform linux/arm/v6 -f Dockerfile.debian-stretch . -t ztbuild/debian-stretch-armel --load
 	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-armv6l.tar.gz" --platform linux/arm/v7 -f Dockerfile.debian-stretch . -t ztbuild/debian-stretch-armhf --load
