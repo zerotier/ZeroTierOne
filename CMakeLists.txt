@@ -23,7 +23,6 @@ else(NOT GO)
 	message(STATUS "Found Golang at ${GO}")
 endif(NOT GO)
 
-
 set(CMAKE_CXX_STANDARD 11)
 set(default_build_type "Release")
 
@@ -68,10 +67,13 @@ set(GOFLAGS
 )
 
 if(WIN32)
+
 	message("++ Setting Windows Compiler Flags ${CMAKE_BUILD_TYPE}")
 	add_definitions(-DNOMINMAX)
+
 else(WIN32)
 	if(APPLE)
+
 		message("++ Setting MacOS Compiler Flags ${CMAKE_BUILD_TYPE}")
 
 		add_compile_options(
@@ -85,15 +87,24 @@ else(WIN32)
 			$<$<CONFIG:RELEASE>:-ffast-math>
 			$<$<CONFIG:RELEASE>:-fPIE>
 			$<$<CONFIG:RELEASE>:-flto>
-			$<$<CONFIG:RELWITHDEBINFO>:-Ofast>
+			$<$<CONFIG:RELWITHDEBINFO>:-O1>
 			$<$<CONFIG:RELWITHDEBINFO>:-fPIE>
 			$<$<CONFIG:RELWITHDEBINFO>:-g>
 		)
+
 		add_link_options(
 			-mmacosx-version-min=10.12
 			$<$<CONFIG:RELEASE>:-flto>
 		)
+
+		set(GOFLAGS
+			${GOFLAGS}
+			-a
+			-ldflags '-w -extldflags \"-Wl,-undefined -Wl,dynamic_lookup\"'
+		)
+
 	else(APPLE)
+
 		message("++ Setting Linux/BSD/Posix Compiler Flags (${CMAKE_BUILD_TYPE})")
 		add_compile_options(
 			-Wall
@@ -109,8 +120,10 @@ else(WIN32)
 			$<$<CONFIG:RELWITHDEBINFO>:-fPIE>
 			$<$<CONFIG:RELWITHDEBINFO>:-g>
 		)
+
 		option(BUILD_32BIT "Force building as 32-bit binary" OFF)
 		option(BUILD_STATIC "Build statically linked executable" OFF)
+
 		if(BUILD_32BIT)
 			set(CMAKE_SYSTEM_PROCESSOR "x86" CACHE STRING "system processor")
 			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32" CACHE STRING "c++ flags")
@@ -120,6 +133,7 @@ else(WIN32)
 				-m32
 			)
 		endif(BUILD_32BIT)
+
 		if(BUILD_STATIC)
 			add_link_options(
 				-static
@@ -128,9 +142,18 @@ else(WIN32)
 			set(GOFLAGS 
 				${GOFLAGS}
 				-a 
-				-tags netgo 
-				-ldflags '-w -extldflags \"-static\"')
+				-tags netgo
+				-ldflags '-w -extldflags \"-static -Wl,-unresolved-symbols=ignore-all\"'
+			)
+		else(BUILD_STATIC)
+			set(GOFLAGS
+				${GOFLAGS}
+				-a
+				-tags netgo
+				-ldflags '-w -extldflags \"-Wl,-unresolved-symbols=ignore-all\"'
+			)
 		endif(BUILD_STATIC)
+
 	endif(APPLE)
 endif(WIN32)
 
@@ -144,6 +167,7 @@ if (
 endif()
 
 set(GO_BUILD_TAGS)
+
 if(BUILD_CENTRAL_CONTROLLER)
 	add_definitions(-DZT_CONTROLLER_USE_LIBPQ=1)
 	set(GO_BUILD_TAGS -tags central)
@@ -163,7 +187,7 @@ add_custom_target(
 	zerotier ALL
 	BYPRODUCTS ${CMAKE_BINARY_DIR}/zerotier
 	SOURCES ${go_src}
-	COMMAND ${GOARCH} CGO_ENABLED=1 CGO_LDFLAGS=\"$<TARGET_FILE:zt_osdep> $<TARGET_FILE:zt_core> $<TARGET_FILE:zt_controller> $<TARGET_FILE:zt_service_io_core>\" ${GO} build ${GOFLAGS} -o ${CMAKE_BINARY_DIR}/zerotier ${CMAKE_SOURCE_DIR}/cmd/zerotier/zerotier.go
+	COMMAND ${GOARCH} CGO_ENABLED=1 CGO_CFLAGS=\"${CMAKE_C_FLAGS}\" CGO_LDFLAGS=\"$<TARGET_FILE:zt_osdep> $<TARGET_FILE:zt_core> $<TARGET_FILE:zt_controller> $<TARGET_FILE:zt_service_io_core> -l${CMAKE_CXX_IMPLICIT_LINK_LIBRARIES}\" ${GO} build ${GOFLAGS} -o ${CMAKE_BINARY_DIR}/zerotier ${CMAKE_SOURCE_DIR}/cmd/zerotier/zerotier.go
 	COMMENT "Compiling Go Code..."
 )
 add_dependencies(zerotier zt_osdep zt_core zt_controller zt_service_io_core)

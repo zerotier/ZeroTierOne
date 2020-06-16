@@ -13,9 +13,7 @@
 
 package zerotier
 
-// #cgo CFLAGS: -O3 -I${SRCDIR}/../../build/core
-// #cgo darwin LDFLAGS: -Wl,-undefined -Wl,dynamic_lookup -lc++
-// #cgo !darwin LDFLAGS: -Wl,-unresolved-symbols=ignore-all -lstdc++
+// #cgo CFLAGS: -I${SRCDIR}/../../build/core
 // #include "../../serviceiocore/GoGlue.h"
 import "C"
 
