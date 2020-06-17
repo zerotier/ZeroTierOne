@@ -38,7 +38,7 @@ pipeline {
 }
 
 def buildMacOS() {
-    tasks << getTasks({ ->
+    tasks << getTasks(['mac'],['amd64'], {unused1, unused2 ->
         def myNode = {
             node ('mac') {
                 dir("build") {
@@ -48,6 +48,7 @@ def buildMacOS() {
                 }
             }
         }
+        return myNode
     })
     return tasks
 }
