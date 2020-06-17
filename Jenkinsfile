@@ -64,10 +64,8 @@ def buildWindows() {
                 dir ("build") {
                     checkout scm
                     dir ("build") {
-                        bat """
-                        cmake -G"MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release ..
-                        make -j8
-                        """
+                        bat 'cmake -G"MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release ..'
+                        bat 'make'
                     }
                     cleanWs deleteDirs: true, disableDeferredWipeout: true, notFailBuild: true
                 }
