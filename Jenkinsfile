@@ -22,6 +22,7 @@ pipeline {
                     tasks << buildDebianNative()
                     tasks << buildCentosNative()
                     tasks << buildMacOS()
+                    tasks << buildWindows()
 
                     parallel tasks
                 }
@@ -51,6 +52,30 @@ def buildMacOS() {
         }
         return myNode
     })
+    return tasks
+}
+
+def buildWindows() {
+    def tasks = [:]
+    tasks << getTasks(['windows'], ['amd64'], { unused1, unused2 ->
+        def myNode = {
+            node ('windows') {
+                dir ("build") {
+                    checkout scm
+                    dir ("build") {
+                        bat """
+                        CALL C:\\MinGW\\set_distro_paths.bat
+                        cmake -G"MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release ..
+                        make -j8
+                        """
+                    }
+                    cleanWs deleteDirs: true, disableDeferredWipeout: true, notFailBuild: true
+                }
+            }
+        }
+        return myNode
+    })
+
     return tasks
 }
 
