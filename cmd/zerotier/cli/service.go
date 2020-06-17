@@ -39,8 +39,7 @@ func Service(basePath, authToken string, args []string) {
 		fmt.Println("FATAL: error initializing node: " + err.Error())
 	} else {
 		osSignalChannel := make(chan os.Signal, 2)
-		signal.Notify(osSignalChannel, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT, syscall.SIGSTOP)
-		signal.Ignore(syscall.SIGUSR1, syscall.SIGUSR2, syscall.SIGPIPE, syscall.SIGHUP)
+		signal.Notify(osSignalChannel, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT)
 		<-osSignalChannel
 		node.Close()
 	}

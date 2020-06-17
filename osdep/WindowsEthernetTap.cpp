@@ -829,7 +829,8 @@ void WindowsEthernetTap::setFriendlyName(const char *dn)
 	if (hr != S_OK) return;
 
 	INetSharingManager *nsm;
-	hr = CoCreateInstance(__uuidof(NetSharingManager), NULL, CLSCTX_ALL, __uuidof(INetSharingManager), (void**)&nsm);
+	//hr = CoCreateInstance(__uuidof(NetSharingManager), NULL, CLSCTX_ALL, __uuidof(INetSharingManager), (void**)&nsm);
+	hr = CoCreateInstance(CLSID_NetSharingManager, NULL, CLSCTX_ALL, IID_INetSharingManager, (void**)&nsm);
 	if (hr != S_OK)	return;
 
 	bool found = false;
@@ -844,7 +845,8 @@ void WindowsEthernetTap::setFriendlyName(const char *dn)
 	IUnknown *unk = nullptr;
 	hr = nsecc->get__NewEnum(&unk);
 	if (unk) {
-		hr = unk->QueryInterface(__uuidof(IEnumVARIANT), (void**)&ev);
+		//hr = unk->QueryInterface(__uuidof(IEnumVARIANT), (void**)&ev);
+		hr = unk->QueryInterface(IID_IEnumVARIANT, (void**)&ev);
 		unk->Release();
 	}
 	if (ev) {
@@ -854,7 +856,8 @@ void WindowsEthernetTap::setFriendlyName(const char *dn)
 		while ((S_OK == ev->Next(1, &v, NULL)) && found == FALSE) {
 			if (V_VT(&v) == VT_UNKNOWN) {
 				INetConnection *nc = nullptr;
-				V_UNKNOWN(&v)->QueryInterface(__uuidof(INetConnection), (void**)&nc);
+				//V_UNKNOWN(&v)->QueryInterface(__uuidof(INetConnection), (void**)&nc);
+				V_UNKNOWN(&v)->QueryInterface(IID_INetConnection, (void**)&nc);
 				if (nc) {
 					NETCON_PROPERTIES *ncp = nullptr;
 					nc->GetProperties(&ncp);

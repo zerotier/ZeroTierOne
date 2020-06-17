@@ -17,6 +17,7 @@ package zerotier
 
 import (
 	"net"
+	"net/http"
 
 	winio "github.com/Microsoft/go-winio"
 )
@@ -24,7 +25,7 @@ import (
 const windowsAPISocketPathPrefix = "\\\\.\\pipe\\zerotier_"
 
 func createNamedSocketListener(basePath, name string) (net.Listener, error) {
-	winio.ListenPipe(windowsAPISocketPathPrefix+name, nil)
+	return winio.ListenPipe(windowsAPISocketPathPrefix+name, nil)
 }
 
 func createNamedSocketHTTPClient(basePath, name string) (*http.Client, error) {

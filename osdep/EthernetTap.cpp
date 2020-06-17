@@ -14,9 +14,6 @@
 #include "EthernetTap.hpp"
 #include "OSUtils.hpp"
 
-#include <cstdlib>
-#include <cstring>
-
 #ifdef ZT_SDK
 
 #include "../controller/EmbeddedNetworkController.hpp"
