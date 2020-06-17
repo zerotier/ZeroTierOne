@@ -7,9 +7,6 @@ pipeline {
     parameters {
         booleanParam(name: "BUILD_ALL", defaultValue: false, description: "Build all supported platform/architecture combos.  Defaults to x86/x64 only")
     }
-    environment {
-        PATH = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin:/home/jenkins-build/go/bin"
-    }
     
     agent none
     
@@ -42,6 +39,7 @@ def buildMacOS() {
     def tasks = [:]
     tasks << getTasks(['mac'],['amd64'], {unused1, unused2 ->
         def myNode = {
+            env.PATH = env.PATH + ":/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin:/home/jenkins-build/go/bin"
             node ('mac') {
                 dir("build") {
                     checkout scm
@@ -92,6 +90,7 @@ def buildStaticBinaries() {
     tasks << getTasks(dist, archs, { distro, platform -> 
         def myNode = {
             node ('linux-build') {
+                env.PATH = env.PATH + ":/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin:/home/jenkins-build/go/bin"
                 dir ("build") {
                     checkout scm
                 }
@@ -140,6 +139,7 @@ def packageStatic() {
     tasks << getTasks(centos6, centos6Arch, { distro, arch -> 
         def myNode = {
             node ('linux-build') {
+                env.PATH = env.PATH + ":/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin:/home/jenkins-build/go/bin"
                 dir ("build") {
                     checkout scm
                 }
@@ -165,6 +165,7 @@ def packageStatic() {
     tasks << getTasks(centos7, centos7Arch, { distro, arch -> 
         def myNode = {
             node ('linux-build') {
+                env.PATH = env.PATH + ":/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin:/home/jenkins-build/go/bin"
                 dir ("build") {
                     checkout scm
                 }
@@ -191,6 +192,7 @@ def packageStatic() {
         tasks << getTasks(clefos7, clefos7Arch, { distro, arch -> 
             def myNode = {
                 node ('linux-build') {
+                    env.PATH = env.PATH + ":/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin:/home/jenkins-build/go/bin"
                     dir ("build") {
                         checkout scm
                     }
@@ -222,6 +224,7 @@ def packageStatic() {
     tasks << getTasks(debianJessie, debianJessieArch, { distro, arch -> 
         def myNode = {
             node ('linux-build') {
+                env.PATH = env.PATH + ":/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin:/home/jenkins-build/go/bin"
                 dir ("build") {
                     checkout scm
                 }
@@ -256,6 +259,7 @@ def packageStatic() {
     tasks << getTasks(ubuntuTrusty, ubuntuTrustyArch, { distro, arch -> 
         def myNode = {
             node ('linux-build') {
+                env.PATH = env.PATH + ":/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin:/home/jenkins-build/go/bin"
                 dir ("build") {
                     checkout scm
                 }
@@ -290,6 +294,7 @@ def packageStatic() {
     tasks << getTasks(debianJessie, debianJessieArch, { distro, arch -> 
         def myNode = {
             node ('linux-build') {
+                env.PATH = env.PATH + ":/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin:/home/jenkins-build/go/bin"
                 dir ("build") {
                     checkout scm
                 }
@@ -328,6 +333,7 @@ def buildDebianNative() {
     def build = { distro, arch -> 
         def myNode = {
             node ('linux-build') {
+                env.PATH = env.PATH + ":/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin:/home/jenkins-build/go/bin"
                 dir ("build") {
                     checkout scm
                 }
@@ -395,6 +401,7 @@ def buildCentosNative() {
     def build = { distro, arch -> 
         def myNode = {
             node ('linux-build') {
+                env.PATH = env.PATH + ":/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin:/home/jenkins-build/go/bin"
                 dir ("build") {
                     checkout scm
                 }
