@@ -38,6 +38,7 @@ pipeline {
 }
 
 def buildMacOS() {
+    def tasks = [:]
     tasks << getTasks(['mac'],['amd64'], {unused1, unused2 ->
         def myNode = {
             node ('mac') {
