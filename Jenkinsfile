@@ -58,6 +58,7 @@ def buildWindows() {
     tasks << getTasks(['windows'], ['amd64'], { unused1, unused2 ->
         def myNode = {
             node ('windows') {
+                env.PATH = env.PATH + ";C:\\Windows\\system32"
                 dir ("build") {
                     checkout scm
                     dir ("build") {
