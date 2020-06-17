@@ -58,12 +58,13 @@ def buildWindows() {
     tasks << getTasks(['windows'], ['amd64'], { unused1, unused2 ->
         def myNode = {
             node ('windows') {
-                env.PATH = env.PATH + ';C:\\Windows\\system32;C:\\Program Files\\CMake\\bin;C:\\Go\\bin'
+                env.PATH = env.PATH + ';C:\\MinGW\\bin;C:\\WINDOWS;C:\\Windows\\system32;C:\\Program Files\\CMake\\bin;C:\\Go\\bin'
+                env.C_PLUS_PLUS_INCLUDE_PATH = 'C:\\MinGW\\include;C:\\MinGW\\include\freetype2'
+                env.C_INCLUDE_PATH = 'C:\\MinGW\\include;C:\\MinGW\\include\freetype2'
                 dir ("build") {
                     checkout scm
                     dir ("build") {
                         bat """
-                        CALL C:\\MinGW\\set_distro_paths.bat
                         cmake -G"MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release ..
                         make -j8
                         """
