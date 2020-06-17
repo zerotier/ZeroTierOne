@@ -37,7 +37,10 @@
 #undef __UNIX_LIKE__
 #undef __BSD__
 #include <WinSock2.h>
+#include <ws2tcpip.h>
 #include <Windows.h>
+#include <shlwapi.h>
+#include <Shlobj.h>
 #include <sys/param.h>
 #endif
 

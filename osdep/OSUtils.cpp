@@ -16,11 +16,9 @@
 #include "../core/Containers.hpp"
 #include "OSUtils.hpp"
 
-#ifdef __WINDOWS__
-#include <WinSock2.h>
-#include <Windows.h>
-#include <Shlwapi.h>
-#else
+#include <sys/stat.h>
+
+#ifndef __WINDOWS__
 #include <dirent.h>
 #include <fcntl.h>
 #endif
@@ -339,13 +337,15 @@ ZeroTier::String OSUtils::platformDefaultHomePath()
 #ifdef __WINDOWS__
 	// Look up app data folder on Windows, e.g. C:\ProgramData\...
 	char buf[16384];
-	if (SUCCEEDED(SHGetFolderPathA(NULL,CSIDL_COMMON_APPDATA,NULL,0,buf)))
-		return (ZeroTier::String(buf) + "\\ZeroTier");
-	else return ZeroTier::String("C:\\ZeroTier");
+	if (SUCCEEDED(SHGetFolderPathA(NULL,CSIDL_COMMON_APPDATA,NULL,0,buf))) {
+		ZeroTier::String tmp(buf);
+		tmp.append("\\ZeroTier");
+		return tmp;
+	} else {
+		return ZeroTier::String("C:\\ZeroTier");
+	}
 #else
-
 	return (ZeroTier::String(ZT_PATH_SEPARATOR_S) + "ZeroTier"); // UNKNOWN PLATFORM
-
 #endif
 
 #endif // __UNIX_LIKE__ or not...

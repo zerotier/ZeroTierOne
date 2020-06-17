@@ -11,6 +11,8 @@
  */
 /****/
 
+#define _WIN32_WINNT 0x06010000
+
 #include "GoGlue.h"
 
 #include "../core/Constants.hpp"
@@ -198,19 +200,19 @@ static ZT_INLINE void doUdpSend(ZT_SOCKET sock, const struct sockaddr_storage *a
 #else
 				int tmp = (int)ipTTL;
 #endif
-				setsockopt(sock, IPPROTO_IP, IP_TTL, &tmp, sizeof(tmp));
-				sendto(sock, data, len, MSG_DONTWAIT, (const sockaddr *)addr, sizeof(struct sockaddr_in));
+				setsockopt(sock, IPPROTO_IP, IP_TTL, reinterpret_cast<const char *>(&tmp), sizeof(tmp));
+				sendto(sock, reinterpret_cast<const char *>(data), len, MSG_DONTWAIT, (const sockaddr *)addr, sizeof(struct sockaddr_in));
 				tmp = 255;
-				setsockopt(sock, IPPROTO_IP, IP_TTL, &tmp, sizeof(tmp));
+				setsockopt(sock, IPPROTO_IP, IP_TTL, reinterpret_cast<const char *>(&tmp), sizeof(tmp));
 			} else {
-				sendto(sock, data, len, MSG_DONTWAIT, (const sockaddr *)addr, sizeof(struct sockaddr_in));
+				sendto(sock, reinterpret_cast<const char *>(data), len, MSG_DONTWAIT, (const sockaddr *)addr, sizeof(struct sockaddr_in));
 			}
 			break;
 		case AF_INET6:
 			// The ipTTL option isn't currently used with IPv6. It's only used
 			// with IPv4 "firewall opener" / "NAT buster" preamble packets as part
 			// of IPv4 NAT traversal.
-			sendto(sock, data, len, MSG_DONTWAIT, (const sockaddr *)addr, sizeof(struct sockaddr_in6));
+			sendto(sock, reinterpret_cast<const char *>(data), len, MSG_DONTWAIT, (const sockaddr *)addr, sizeof(struct sockaddr_in6));
 			break;
 	}
 }
@@ -368,8 +370,13 @@ extern "C" void ZT_GoNode_delete(ZT_GoNode *gn)
 	gn->threads_l.lock();
 	for (auto t = gn->threads.begin(); t != gn->threads.end(); ++t) {
 		t->second.run = false;
+#ifdef __WINDOWS__
+		shutdown(t->first, SD_BOTH);
+		closesocket(t->first);
+#else
 		shutdown(t->first, SHUT_RDWR);
 		close(t->first);
+#endif
 		t->second.thr.join();
 	}
 	gn->threads_l.unlock();
@@ -412,23 +419,23 @@ static void setCommonUdpSocketSettings(ZT_SOCKET udpSock, const char *dev)
 
 #ifdef SO_REUSEPORT
 	fl = SETSOCKOPT_FLAG_TRUE;
-	setsockopt(udpSock, SOL_SOCKET, SO_REUSEPORT, (void *)&fl, sizeof(fl));
+	setsockopt(udpSock, SOL_SOCKET, SO_REUSEPORT, &fl, sizeof(fl));
 #endif
 #ifndef __LINUX__ // linux wants just SO_REUSEPORT
 	fl = SETSOCKOPT_FLAG_TRUE;
-	setsockopt(udpSock, SOL_SOCKET, SO_REUSEADDR, (void *)&fl, sizeof(fl));
+	setsockopt(udpSock, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<const char *>(&fl), sizeof(fl));
 #endif
 
 	fl = SETSOCKOPT_FLAG_TRUE;
-	setsockopt(udpSock, SOL_SOCKET, SO_BROADCAST, (void *)&fl, sizeof(fl));
+	setsockopt(udpSock, SOL_SOCKET, SO_BROADCAST, reinterpret_cast<const char *>(&fl), sizeof(fl));
 
 #ifdef IP_DONTFRAG
 	fl = SETSOCKOPT_FLAG_FALSE;
-	setsockopt(udpSock,IPPROTO_IP,IP_DONTFRAG,(void *)&fl,sizeof(fl));
+	setsockopt(udpSock,IPPROTO_IP,IP_DONTFRAG,&fl,sizeof(fl));
 #endif
 #ifdef IP_MTU_DISCOVER
 	fl = SETSOCKOPT_FLAG_FALSE;
-	setsockopt(udpSock,IPPROTO_IP,IP_MTU_DISCOVER,(void *)&fl,sizeof(fl));
+	setsockopt(udpSock,IPPROTO_IP,IP_MTU_DISCOVER,&fl,sizeof(fl));
 #endif
 
 #ifdef SO_BINDTODEVICE
@@ -462,7 +469,7 @@ extern "C" int ZT_GoNode_phyStartListen(ZT_GoNode *gn, const char *dev, const ch
 		setsockopt(udpSock, IPPROTO_IPV6, IPV6_V6ONLY, (const char *)&fl, sizeof(fl));
 #ifdef IPV6_DONTFRAG
 		fl = SETSOCKOPT_FLAG_FALSE;
-		setsockopt(udpSock,IPPROTO_IPV6,IPV6_DONTFRAG,&fl,sizeof(fl));
+		setsockopt(udpSock, IPPROTO_IPV6, IPV6_DONTFRAG, reinterpret_cast<const char *>(&fl), sizeof(fl));
 #endif
 
 		if (bind(udpSock, reinterpret_cast<const struct sockaddr *>(&in6), sizeof(in6)) != 0)
@@ -483,7 +490,7 @@ extern "C" int ZT_GoNode_phyStartListen(ZT_GoNode *gn, const char *dev, const ch
 					salen = sizeof(in6);
 					void *buf = ZT_getBuffer();
 					if (buf) {
-						int s = (int)recvfrom(udpSock, buf, 16384, 0, reinterpret_cast<struct sockaddr *>(&in6), &salen);
+						int s = (int)recvfrom(udpSock, reinterpret_cast<char *>(buf), 16384, 0, reinterpret_cast<struct sockaddr *>(&in6), &salen);
 						if (s > 0) {
 							ZT_Node_processWirePacket(
 								reinterpret_cast<ZT_Node *>(gn->node),
@@ -538,7 +545,7 @@ extern "C" int ZT_GoNode_phyStartListen(ZT_GoNode *gn, const char *dev, const ch
 					salen = sizeof(in4);
 					void *buf = ZT_getBuffer();
 					if (buf) {
-						int s = (int)recvfrom(udpSock, buf, sizeof(buf), 0, reinterpret_cast<struct sockaddr *>(&in4), &salen);
+						int s = (int)recvfrom(udpSock, reinterpret_cast<char *>(buf), sizeof(buf), 0, reinterpret_cast<struct sockaddr *>(&in4), &salen);
 						if (s > 0) {
 							ZT_Node_processWirePacket(
 								reinterpret_cast<ZT_Node *>(gn->node),
@@ -570,8 +577,13 @@ extern "C" int ZT_GoNode_phyStopListen(ZT_GoNode *gn, const char *dev, const cha
 		for (auto t = gn->threads.begin(); t != gn->threads.end();) {
 			if ((t->second.ip == ip) && (t->second.port == port)) {
 				t->second.run = false;
+#ifdef __WINDOWS__
+				shutdown(t->first, SD_BOTH);
+				closesocket(t->first);
+#else
 				shutdown(t->first, SHUT_RDWR);
 				close(t->first);
+#endif
 				t->second.thr.join();
 				gn->threads.erase(t++);
 			} else ++t;

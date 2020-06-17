@@ -27,6 +27,7 @@
 #include <time.h>
 
 #ifdef __WINDOWS__
+#include <intrin.h>
 #include <wincrypt.h>
 #endif
 

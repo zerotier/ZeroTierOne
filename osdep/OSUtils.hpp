@@ -21,7 +21,7 @@
 #include <time.h>
 
 #ifndef __WINDOWS__
-#include <sys/time.h> // NOLINT(modernize-deprecated-headers)
+#include <sys/time.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <errno.h>
@@ -154,13 +154,8 @@ public:
 	{
 #ifdef __WINDOWS__
 		FILETIME ft;
-		SYSTEMTIME st;
-		ULARGE_INTEGER tmp;
-		GetSystemTime(&st);
-		SystemTimeToFileTime(&st,&ft);
-		tmp.LowPart = ft.dwLowDateTime;
-		tmp.HighPart = ft.dwHighDateTime;
-		return (int64_t)( ((tmp.QuadPart - 116444736000000000LL) / 10000L) + st.wMilliseconds );
+		GetSystemTimeAsFileTime(&ft);
+		return (((LONGLONG)ft.dwLowDateTime + ((LONGLONG)(ft.dwHighDateTime) << 32)) / 10000LL) - 116444736000000000LL;
 #else
 #ifdef __LINUX__
 		timespec ts;

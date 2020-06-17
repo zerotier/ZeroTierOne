@@ -512,6 +512,9 @@ void AES::GMAC::finish(uint8_t tag[16]) noexcept
 
 #ifdef ZT_AES_AESNI
 
+#if !defined(__WINDOWS__)
+
+#define ZT_AES_VAES512
 static
 __attribute__((__target__("sse4,avx,avx2,vaes,avx512f,avx512bw")))
 void p_aesCtrInnerVAES512(unsigned int &len, const uint64_t c0, uint64_t &c1, const uint8_t *&in, uint8_t *&out, const __m128i *const k) noexcept
@@ -562,6 +565,7 @@ void p_aesCtrInnerVAES512(unsigned int &len, const uint64_t c0, uint64_t &c1, co
 	} while (len >= 64);
 }
 
+#define ZT_AES_VAES256
 static
 __attribute__((__target__("sse4,avx,avx2,vaes")))
 void p_aesCtrInnerVAES256(unsigned int &len, uint64_t &c0, uint64_t &c1, const uint8_t *&in, uint8_t *&out, const __m128i *const k) noexcept
@@ -629,6 +633,8 @@ void p_aesCtrInnerVAES256(unsigned int &len, uint64_t &c0, uint64_t &c1, const u
 		out += 64;
 	} while (len >= 64);
 }
+
+#endif
 
 static void p_aesCtrInner128(unsigned int &len, uint64_t &c0, uint64_t &c1, const uint8_t *&in, uint8_t *&out, const __m128i *const k) noexcept
 {
@@ -787,6 +793,7 @@ void AES::CTR::crypt(const void *const input, unsigned int len) noexcept
 		_len = totalLen + len;
 
 		if (likely(len >= 64)) {
+#if defined(ZT_AES_VAES512) && defined(ZT_AES_VAES256)
 			if (Utils::CPUID.vaes) {
 				if ((!Utils::CPUID.avx512f) || ((len < 1024))) {
 					p_aesCtrInnerVAES256(len, c0, c1, in, out, k);
@@ -794,8 +801,11 @@ void AES::CTR::crypt(const void *const input, unsigned int len) noexcept
 					p_aesCtrInnerVAES512(len, c0, c1, in, out, k);
 				}
 			} else {
+#endif
 				p_aesCtrInner128(len, c0, c1, in, out, k);
+#if defined(ZT_AES_VAES512) && defined(ZT_AES_VAES256)
 			}
+#endif
 		}
 
 		while (len >= 16) {

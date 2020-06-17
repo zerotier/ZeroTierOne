@@ -11,6 +11,8 @@
  */
 /****/
 
+#define _WIN32_WINNT 0x06010000
+
 #include "../core/Constants.hpp"
 
 #ifdef __WINDOWS__
@@ -30,7 +32,8 @@
 #include <IPHlpApi.h>
 #include <nldef.h>
 #include <netioapi.h>
-#include <atlbase.h>
+#include <ipmib.h>
+//#include <atlbase.h>
 #include <netlistmgr.h>
 #include <nldef.h>
 #include <SetupAPI.h>
@@ -46,7 +49,7 @@
 #include "WindowsEthernetTap.hpp"
 #include "OSUtils.hpp"
 
-#include "..\windows\TapDriver6\tap-windows.h"
+#include "../installsupport/windows/tap-windows-ndis6/src/tap-windows-ndis6/tap-windows.h"
 
 #include <netcon.h>
 
@@ -790,10 +793,10 @@ void WindowsEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherTyp
 	_injectPending.emplace();
 	_injectPending.back().len = len + 14;
 	char *const d = _injectPending.back().data;
-	to.copyTo(d,6);
-	from.copyTo(d + 6,6);
-	d[12] = (char)((etherType >> 8) & 0xff);
-	d[13] = (char)(etherType & 0xff);
+	to.copyTo((uint8_t *)d);
+	from.copyTo((uint8_t *)(d + 6));
+	d[12] = (char)((etherType >> 8U) & 0xffU);
+	d[13] = (char)(etherType & 0xffU);
 	memcpy(d + 14,data,len);
 
 	ReleaseSemaphore(_injectSemaphore,1,NULL);
@@ -893,7 +896,7 @@ void WindowsEthernetTap::scanMulticastGroups(std::vector<MulticastGroup> &added,
 			MAC mac;
 			DWORD i = 0;
 			while ((i + 6) <= bytesReturned) {
-				mac.setTo(mcastbuf + i,6);
+				mac.setTo((uint8_t *)(mcastbuf + i));
 				i += 6;
 				if ((mac.isMulticast())&&(!mac.isBroadcast())) {
 					// exclude the nulls that may be returned or any other junk Windows puts in there
@@ -1049,7 +1052,7 @@ void WindowsEthernetTap::threadMain()
 					nr.NextHop.si_family = AF_INET;
 					nr.NextHop.Ipv4.sin_addr.s_addr = fakeIp;
 					nr.Metric = 9999; // do not use as real default route
-					nr.Protocol = MIB_IPPROTO_NETMGMT;
+					nr.Protocol = (NL_ROUTE_PROTOCOL)MIB_IPPROTO_NETMGMT;
 					DWORD result = CreateIpForwardEntry2(&nr);
 					if (result != NO_ERROR)
 						Sleep(250);
@@ -1128,11 +1131,11 @@ void WindowsEthernetTap::threadMain()
 					DWORD bytesRead = 0;
 					if (GetOverlappedResult(_tap,&tapOvlRead,&bytesRead,FALSE)) {
 						if ((bytesRead > 14)&&(_enabled)) {
-							MAC to(tapReadBuf,6);
-							MAC from(tapReadBuf + 6,6);
-							unsigned int etherType = ((((unsigned int)tapReadBuf[12]) & 0xff) << 8) | (((unsigned int)tapReadBuf[13]) & 0xff);
+							MAC to((uint8_t *)tapReadBuf);
+							MAC from((uint8_t *)(tapReadBuf + 6));
+							unsigned int etherType = ((((unsigned int)tapReadBuf[12]) & 0xffU) << 8U) | (((unsigned int)tapReadBuf[13]) & 0xffU);
 							try {
-								_handler(_arg,(void *)0,_nwid,from,to,etherType,0,tapReadBuf + 14,bytesRead - 14);
+								_handler(_arg,nullptr,_nwid,from,to,etherType,0,tapReadBuf + 14,bytesRead - 14);
 							} catch ( ... ) {} // handlers should not throw
 						}
 					}
