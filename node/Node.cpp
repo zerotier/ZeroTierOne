@@ -501,14 +501,12 @@ ZT_PeerList *Node::peers() const
 		p->pathCount = 0;
 		for(std::vector< SharedPtr<Path> >::iterator path(paths.begin());path!=paths.end();++path) {
 			memcpy(&(p->paths[p->pathCount].address),&((*path)->address()),sizeof(struct sockaddr_storage));
-			//memcpy(&(p->paths[p->pathCount].ifname,&((*path)->slave()),32);)
 			p->paths[p->pathCount].localSocket = (*path)->localSocket();
 			p->paths[p->pathCount].lastSend = (*path)->lastOut();
 			p->paths[p->pathCount].lastReceive = (*path)->lastIn();
 			p->paths[p->pathCount].trustedPathId = RR->topology->getOutboundPathTrust((*path)->address());
 			p->paths[p->pathCount].expired = 0;
 			p->paths[p->pathCount].preferred = ((*path) == bestp) ? 1 : 0;
-			//p->paths[p->pathCount].age = (*path)->age(_now);
 			p->paths[p->pathCount].scope = (*path)->ipScope();
 			++p->pathCount;
 		}

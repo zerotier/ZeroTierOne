@@ -347,11 +347,11 @@ public:
 			}
 		}
 
-		// Generate set of unique interface names (used for formation of logical slave set in multipath code)
+		// Generate set of unique interface names (used for formation of logical link set in multipath code)
 		for(std::map<InetAddress,std::string>::const_iterator ii(localIfAddrs.begin());ii!=localIfAddrs.end();++ii) {
-			slaveIfNames.insert(ii->second);
+			linkIfNames.insert(ii->second);
 		}
-		for (std::set<std::string>::iterator si(slaveIfNames.begin());si!=slaveIfNames.end();si++) {
+		for (std::set<std::string>::iterator si(linkIfNames.begin());si!=linkIfNames.end();si++) {
 			bool bFoundMatch = false;
 			for(std::map<InetAddress,std::string>::const_iterator ii(localIfAddrs.begin());ii!=localIfAddrs.end();++ii) {
 				if (ii->second == *si) {
@@ -360,7 +360,7 @@ public:
 				}
 			}
 			if (!bFoundMatch) {
-				slaveIfNames.erase(si);
+				linkIfNames.erase(si);
 			}
 		}
 
@@ -461,15 +461,15 @@ public:
 		return false;
 	}
 
-	inline std::set<std::string> getSlaveInterfaceNames()
+	inline std::set<std::string> getLinkInterfaceNames()
 	{
 		Mutex::Lock _l(_lock);
-		return slaveIfNames;
+		return linkIfNames;
 	}
 
 private:
 
-	std::set<std::string> slaveIfNames;
+	std::set<std::string> linkIfNames;
 	_Binding _bindings[ZT_BINDER_MAX_BINDINGS];
 	std::atomic<unsigned int> _bindingCount;
 	Mutex _lock;

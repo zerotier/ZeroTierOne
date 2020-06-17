@@ -19,7 +19,7 @@
 
 #include "SharedPtr.hpp"
 #include "../osdep/Phy.hpp"
-#include "../osdep/Slave.hpp"
+#include "../osdep/Link.hpp"
 
 namespace ZeroTier {
 
@@ -36,9 +36,9 @@ public:
 	BondController(const RuntimeEnvironment *renv);
 
 	/**
-	 * @return Whether this slave is permitted to become a member of a bond.
+	 * @return Whether this link is permitted to become a member of a bond.
 	 */
-	bool slaveAllowed(std::string &policyAlias, SharedPtr<Slave> slave);
+	bool linkAllowed(std::string &policyAlias, SharedPtr<Link> link);
 
 	/**
 	 * @return The minimum interval required to poll the active bonds to fulfill all active monitoring timing requirements.
@@ -103,12 +103,12 @@ public:
 	static int defaultBondingPolicy() { return _defaultBondingPolicy; }
 
 	/**
-	 * Add a user-defined slave to a given bonding policy.
+	 * Add a user-defined link to a given bonding policy.
 	 *
 	 * @param policyAlias User-defined custom name for variant of bonding policy
-	 * @param slave Pointer to new slave definition
+	 * @param link Pointer to new link definition
 	 */
-	void addCustomSlave(std::string& policyAlias, SharedPtr<Slave> slave);
+	void addCustomLink(std::string& policyAlias, SharedPtr<Link> link);
 
 	/**
 	 * Add a user-defined bonding policy that is based on one of the standard types.
@@ -145,22 +145,22 @@ public:
 	void processBackgroundTasks(void *tPtr, int64_t now);
 
 	/**
-	 * Gets a reference to a physical slave definition given a policy alias and a local socket.
+	 * Gets a reference to a physical link definition given a policy alias and a local socket.
 	 *
 	 * @param policyAlias Policy in use
 	 * @param localSocket Local source socket
-	 * @return Physical slave definition
+	 * @return Physical link definition
 	 */
-	SharedPtr<Slave> getSlaveBySocket(const std::string& policyAlias, uint64_t localSocket);
+	SharedPtr<Link> getLinkBySocket(const std::string& policyAlias, uint64_t localSocket);
 
 	/**
-	 * Gets a reference to a physical slave definition given its human-readable system name.
+	 * Gets a reference to a physical link definition given its human-readable system name.
 	 *
 	 * @param policyAlias Policy in use
 	 * @param ifname Alphanumeric human-readable name
-	 * @return Physical slave definition
+	 * @return Physical link definition
 	 */
-	SharedPtr<Slave> getSlaveByName(const std::string& policyAlias, const std::string& ifname);
+	SharedPtr<Link> getLinkByName(const std::string& policyAlias, const std::string& ifname);
 
 	/**
 	 * @param ifname Name of interface that we want to know if we can bind to
@@ -175,7 +175,7 @@ private:
 	const RuntimeEnvironment *RR;
 
 	Mutex _bonds_m;
-	Mutex _slaves_m;
+	Mutex _links_m;
 
 	/**
 	 * The last time that the bond controller updated the set of bonds.
@@ -213,14 +213,14 @@ private:
 	std::map<std::string,SharedPtr<Bond> > _bondPolicyTemplates;
 
 	/**
-	 * Set of slaves defined for a given bonding policy
+	 * Set of links defined for a given bonding policy
 	 */
-	std::map<std::string,std::vector<SharedPtr<Slave> > > _slaveDefinitions;
+	std::map<std::string,std::vector<SharedPtr<Link> > > _linkDefinitions;
 
 	/**
-	 * Set of slave objects mapped to their physical interfaces
+	 * Set of link objects mapped to their physical interfaces
 	 */
-	std::map<std::string, std::map<std::string, SharedPtr<Slave> > > _interfaceToSlaveMap;
+	std::map<std::string, std::map<std::string, SharedPtr<Link> > > _interfaceToLinkMap;
 
 	// TODO: Remove
 	uint64_t bondStartTime;

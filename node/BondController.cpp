@@ -27,33 +27,33 @@ BondController::BondController(const RuntimeEnvironment *renv) :
 	_defaultBondingPolicy = ZT_BONDING_POLICY_NONE;
 }
 
-bool BondController::slaveAllowed(std::string &policyAlias, SharedPtr<Slave> slave)
+bool BondController::linkAllowed(std::string &policyAlias, SharedPtr<Link> link)
 {
 	bool foundInDefinitions = false;
-	if (_slaveDefinitions.count(policyAlias)) {
-		auto it = _slaveDefinitions[policyAlias].begin();
-		while (it != _slaveDefinitions[policyAlias].end()) {
-			if (slave->ifname() == (*it)->ifname()) {
+	if (_linkDefinitions.count(policyAlias)) {
+		auto it = _linkDefinitions[policyAlias].begin();
+		while (it != _linkDefinitions[policyAlias].end()) {
+			if (link->ifname() == (*it)->ifname()) {
 				foundInDefinitions = true;
 				break;
 			}
 			++it;
 		}
 	}
-	return _slaveDefinitions[policyAlias].empty() || foundInDefinitions;
+	return _linkDefinitions[policyAlias].empty() || foundInDefinitions;
 }
 
-void BondController::addCustomSlave(std::string& policyAlias, SharedPtr<Slave> slave)
+void BondController::addCustomLink(std::string& policyAlias, SharedPtr<Link> link)
 {
-	Mutex::Lock _l(_slaves_m);
-	_slaveDefinitions[policyAlias].push_back(slave);
-	auto search = _interfaceToSlaveMap[policyAlias].find(slave->ifname());
-	if (search == _interfaceToSlaveMap[policyAlias].end()) {
-		slave->setAsUserSpecified(true);
-		_interfaceToSlaveMap[policyAlias].insert(std::pair<std::string, SharedPtr<Slave>>(slave->ifname(), slave));
+	Mutex::Lock _l(_links_m);
+	_linkDefinitions[policyAlias].push_back(link);
+	auto search = _interfaceToLinkMap[policyAlias].find(link->ifname());
+	if (search == _interfaceToLinkMap[policyAlias].end()) {
+		link->setAsUserSpecified(true);
+		_interfaceToLinkMap[policyAlias].insert(std::pair<std::string, SharedPtr<Link>>(link->ifname(), link));
 	} else {
-		fprintf(stderr, "slave already exists=%s\n", slave->ifname().c_str());
-		// Slave is already defined, overlay user settings
+		fprintf(stderr, "link already exists=%s\n", link->ifname().c_str());
+		// Link is already defined, overlay user settings
 	}
 }
 
@@ -115,20 +115,20 @@ SharedPtr<Bond> BondController::createTransportTriggeredBond(const RuntimeEnviro
 		/**
 		 * Determine if user has specified anything that could affect the bonding policy's decisions
 		 */
-		if (_interfaceToSlaveMap.count(bond->policyAlias())) {
-			std::map<std::string, SharedPtr<Slave> >::iterator it = _interfaceToSlaveMap[bond->policyAlias()].begin();
-			while (it != _interfaceToSlaveMap[bond->policyAlias()].end()) {
+		if (_interfaceToLinkMap.count(bond->policyAlias())) {
+			std::map<std::string, SharedPtr<Link> >::iterator it = _interfaceToLinkMap[bond->policyAlias()].begin();
+			while (it != _interfaceToLinkMap[bond->policyAlias()].end()) {
 				if (it->second->isUserSpecified()) {
-					bond->_userHasSpecifiedSlaves = true;
+					bond->_userHasSpecifiedLinks = true;
 				}
 				if (it->second->isUserSpecified() && it->second->primary()) {
-					bond->_userHasSpecifiedPrimarySlave = true;
+					bond->_userHasSpecifiedPrimaryLink = true;
 				}
 				if (it->second->isUserSpecified() && it->second->userHasSpecifiedFailoverInstructions()) {
 					bond->_userHasSpecifiedFailoverInstructions = true;
 				}
 				if (it->second->isUserSpecified() && (it->second->speed() > 0)) {
-					bond->_userHasSpecifiedSlaveSpeeds = true;
+					bond->_userHasSpecifiedLinkSpeeds = true;
 				}
 				++it;
 			}
@@ -138,16 +138,16 @@ SharedPtr<Bond> BondController::createTransportTriggeredBond(const RuntimeEnviro
 	return SharedPtr<Bond>();
 }
 
-SharedPtr<Slave> BondController::getSlaveBySocket(const std::string& policyAlias, uint64_t localSocket)
+SharedPtr<Link> BondController::getLinkBySocket(const std::string& policyAlias, uint64_t localSocket)
 {
-	Mutex::Lock _l(_slaves_m);
+	Mutex::Lock _l(_links_m);
 	char ifname[16];
 	_phy->getIfName((PhySocket *) ((uintptr_t)localSocket), ifname, 16);
 	std::string ifnameStr(ifname);
-	auto search = _interfaceToSlaveMap[policyAlias].find(ifnameStr);
-	if (search == _interfaceToSlaveMap[policyAlias].end()) {
-		SharedPtr<Slave> s = new Slave(ifnameStr, 0, 0, 0, 0, 0, true, ZT_MULTIPATH_SLAVE_MODE_SPARE, "", 0.0);
-		_interfaceToSlaveMap[policyAlias].insert(std::pair<std::string,SharedPtr<Slave> >(ifnameStr, s));
+	auto search = _interfaceToLinkMap[policyAlias].find(ifnameStr);
+	if (search == _interfaceToLinkMap[policyAlias].end()) {
+		SharedPtr<Link> s = new Link(ifnameStr, 0, 0, 0, 0, 0, true, ZT_MULTIPATH_SLAVE_MODE_SPARE, "", 0.0);
+		_interfaceToLinkMap[policyAlias].insert(std::pair<std::string,SharedPtr<Link> >(ifnameStr, s));
 		return s;
 	}
 	else {
@@ -155,14 +155,14 @@ SharedPtr<Slave> BondController::getSlaveBySocket(const std::string& policyAlias
 	}
 }
 
-SharedPtr<Slave> BondController::getSlaveByName(const std::string& policyAlias, const std::string& ifname)
+SharedPtr<Link> BondController::getLinkByName(const std::string& policyAlias, const std::string& ifname)
 {
-	Mutex::Lock _l(_slaves_m);
-	auto search = _interfaceToSlaveMap[policyAlias].find(ifname);
-	if (search != _interfaceToSlaveMap[policyAlias].end()) {
+	Mutex::Lock _l(_links_m);
+	auto search = _interfaceToLinkMap[policyAlias].find(ifname);
+	if (search != _interfaceToLinkMap[policyAlias].end()) {
 		return search->second;
 	}
-	return SharedPtr<Slave>();
+	return SharedPtr<Link>();
 }
 
 bool BondController::allowedToBind(const std::string& ifname)
@@ -172,18 +172,18 @@ bool BondController::allowedToBind(const std::string& ifname)
 	if (!_defaultBondingPolicy) {
 		return true; // no restrictions
 	}
-	Mutex::Lock _l(_slaves_m);
-	if (_interfaceToSlaveMap.empty()) {
+	Mutex::Lock _l(_links_m);
+	if (_interfaceToLinkMap.empty()) {
 		return true; // no restrictions
 	}
-	std::map<std::string, std::map<std::string, SharedPtr<Slave> > >::iterator policyItr = _interfaceToSlaveMap.begin();
-	while (policyItr != _interfaceToSlaveMap.end()) {
-		std::map<std::string, SharedPtr<Slave> >::iterator slaveItr = policyItr->second.begin();
-		while (slaveItr != policyItr->second.end()) {
-			if (slaveItr->first == ifname) {
+	std::map<std::string, std::map<std::string, SharedPtr<Link> > >::iterator policyItr = _interfaceToLinkMap.begin();
+	while (policyItr != _interfaceToLinkMap.end()) {
+		std::map<std::string, SharedPtr<Link> >::iterator linkItr = policyItr->second.begin();
+		while (linkItr != policyItr->second.end()) {
+			if (linkItr->first == ifname) {
 				return true;
 			}
-			++slaveItr;
+			++linkItr;
 		}
 		++policyItr;
 	}

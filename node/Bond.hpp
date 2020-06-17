@@ -18,13 +18,13 @@
 
 #include "Path.hpp"
 #include "Peer.hpp"
-#include "../osdep/Slave.hpp"
+#include "../osdep/Link.hpp"
 #include "Flow.hpp"
 
 namespace ZeroTier {
 
 class RuntimeEnvironment;
-class Slave;
+class Link;
 
 class Bond
 {
@@ -52,7 +52,7 @@ public:
 	void dumpInfo(const int64_t now);
 	bool relevant();
 
-	SharedPtr<Slave> getSlave(const SharedPtr<Path>& path);
+	SharedPtr<Link> getLink(const SharedPtr<Path>& path);
 
 	/**
 	 * Constructor. Creates a bond based off of ZT defaults
@@ -281,7 +281,7 @@ public:
 	void processActiveBackupTasks(int64_t now);
 
 	/**
-	 * Switches the active slave in an active-backup scenario to the next best during
+	 * Switches the active link in an active-backup scenario to the next best during
 	 * a failover event.
 	 *
 	 * @param now Current time
@@ -348,24 +348,24 @@ public:
 	}
 
 	/**
-	 * @return Whether the user has defined slaves for use on this bond
+	 * @return Whether the user has defined links for use on this bond
 	 */
-	inline bool userHasSpecifiedSlaves() { return _userHasSpecifiedSlaves; }
+	inline bool userHasSpecifiedLinks() { return _userHasSpecifiedLinks; }
 
 	/**
-	 * @return Whether the user has defined a set of failover slave(s) for this bond
+	 * @return Whether the user has defined a set of failover link(s) for this bond
 	 */
 	inline bool userHasSpecifiedFailoverInstructions() { return _userHasSpecifiedFailoverInstructions; };
 
 	/**
-	 * @return Whether the user has specified a primary slave
+	 * @return Whether the user has specified a primary link
 	 */
-	inline bool userHasSpecifiedPrimarySlave() { return _userHasSpecifiedPrimarySlave; }
+	inline bool userHasSpecifiedPrimaryLink() { return _userHasSpecifiedPrimaryLink; }
 
 	/**
-	 * @return Whether the user has specified slave speeds
+	 * @return Whether the user has specified link speeds
 	 */
-	inline bool userHasSpecifiedSlaveSpeeds() { return _userHasSpecifiedSlaveSpeeds; }
+	inline bool userHasSpecifiedLinkSpeeds() { return _userHasSpecifiedLinkSpeeds; }
 
 	/**
 	 * Periodically perform maintenance tasks for each active bond.
@@ -441,7 +441,7 @@ public:
 	/**
 	 * @param strategy Strategy that the bond uses to prob for path aliveness and quality
 	 */
-	inline void setSlaveMonitorStrategy(uint8_t strategy) { _slaveMonitorStrategy = strategy; }
+	inline void setLinkMonitorStrategy(uint8_t strategy) { _linkMonitorStrategy = strategy; }
 
 	/**
 	 * @return the current up delay parameter
@@ -464,12 +464,12 @@ public:
 	inline void setDownDelay(int downDelay) { if (downDelay >= 0) { _downDelay = downDelay; } }
 
 	/**
-	 * @return the current monitoring interval for the bond (can be overridden with intervals specific to certain slaves.)
+	 * @return the current monitoring interval for the bond (can be overridden with intervals specific to certain links.)
 	 */
 	inline uint16_t getBondMonitorInterval() { return _bondMonitorInterval; }
 
 	/**
-	 * Set the current monitoring interval for the bond (can be overridden with intervals specific to certain slaves.)
+	 * Set the current monitoring interval for the bond (can be overridden with intervals specific to certain links.)
 	 *
 	 * @param monitorInterval How often gratuitous VERB_HELLO(s) are sent to remote peer.
 	 */
@@ -498,21 +498,21 @@ public:
 
 	/**
 	 *
-	 * @param packetsPerSlave
+	 * @param packetsPerLink
 	 */
-	inline void setPacketsPerSlave(int packetsPerSlave) { _packetsPerSlave = packetsPerSlave; }
+	inline void setPacketsPerLink(int packetsPerLink) { _packetsPerLink = packetsPerLink; }
 
 	/**
 	 *
-	 * @param slaveSelectMethod
+	 * @param linkSelectMethod
 	 */
-	inline void setSlaveSelectMethod(uint8_t method) { _abSlaveSelectMethod = method; }
+	inline void setLinkSelectMethod(uint8_t method) { _abLinkSelectMethod = method; }
 
 	/**
 	 *
 	 * @return
 	 */
-	inline uint8_t getSlaveSelectMethod() { return _abSlaveSelectMethod; }
+	inline uint8_t getLinkSelectMethod() { return _abLinkSelectMethod; }
 
 	/**
 	 *
@@ -568,25 +568,25 @@ private:
 	// active-backup
 	SharedPtr<Path> _abPath; // current active path
 	std::list<SharedPtr<Path> > _abFailoverQueue;
-	uint8_t _abSlaveSelectMethod; // slave re-selection policy for the primary slave in active-backup
+	uint8_t _abLinkSelectMethod; // link re-selection policy for the primary link in active-backup
 	uint64_t _lastActiveBackupPathChange;
 
 	// balance-rr
 	uint8_t _rrIdx; // index to path currently in use during Round Robin operation
-	uint16_t _rrPacketsSentOnCurrSlave; // number of packets sent on this slave since the most recent path switch.
+	uint16_t _rrPacketsSentOnCurrLink; // number of packets sent on this link since the most recent path switch.
 	/**
 	 * How many packets will be sent on a path before moving to the next path
 	 * in the round-robin sequence. A value of zero will cause a random path
 	 * selection for each outgoing packet.
 	 */
-	int _packetsPerSlave;
+	int _packetsPerLink;
 
 	// balance-aware
 	uint64_t _totalBondUnderload;
 	uint8_t _flowRebalanceStrategy;
 
-	// dynamic slave monitoring
-	uint8_t _slaveMonitorStrategy;
+	// dynamic link monitoring
+	uint8_t _linkMonitorStrategy;
 	uint64_t _lastFrame;
 	uint32_t _dynamicPathMonitorInterval;
 
@@ -651,14 +651,14 @@ private:
 	Mutex _flows_m;
 
 	/**
-	 * Whether the user has specified slaves for this bond.
+	 * Whether the user has specified links for this bond.
 	 */
-	bool _userHasSpecifiedSlaves;
+	bool _userHasSpecifiedLinks;
 
 	/**
-	 * Whether the user has specified a primary slave for this bond.
+	 * Whether the user has specified a primary link for this bond.
 	 */
-	bool _userHasSpecifiedPrimarySlave;
+	bool _userHasSpecifiedPrimaryLink;
 
 	/**
 	 * Whether the user has specified failover instructions for this bond.
@@ -666,9 +666,9 @@ private:
 	bool _userHasSpecifiedFailoverInstructions;
 
 	/**
-	 * Whether the user has specified slaves speeds for this bond.
+	 * Whether the user has specified links speeds for this bond.
 	 */
-	bool _userHasSpecifiedSlaveSpeeds;
+	bool _userHasSpecifiedLinkSpeeds;
 
 	/**
 	 * How frequently (in ms) a VERB_ECHO is sent to a peer to verify that a

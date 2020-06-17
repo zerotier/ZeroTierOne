@@ -455,39 +455,39 @@ enum ZT_MultipathBondingPolicy
 };
 
 /**
- * Multipath active re-selection policy (slaveSelectMethod)
+ * Multipath active re-selection policy (linkSelectMethod)
  */
-enum ZT_MultipathSlaveSelectMethod
+enum ZT_MultipathLinkSelectMethod
 {
 	/**
-	 * Primary slave regains status as active slave whenever it comes back up
-	 * (default when slaves are explicitly specified)
+	 * Primary link regains status as active link whenever it comes back up
+	 * (default when links are explicitly specified)
 	 */
 	ZT_MULTIPATH_RESELECTION_POLICY_ALWAYS = 0,
 
 	/**
-	 * Primary slave regains status as active slave when it comes back up and
-	 * (if) it is better than the currently-active slave.
+	 * Primary link regains status as active link when it comes back up and
+	 * (if) it is better than the currently-active link.
 	 */
 	ZT_MULTIPATH_RESELECTION_POLICY_BETTER = 1,
 
 	/**
-	 * Primary slave regains status as active slave only if the currently-active
-	 * slave fails.
+	 * Primary link regains status as active link only if the currently-active
+	 * link fails.
 	 */
 	ZT_MULTIPATH_RESELECTION_POLICY_FAILURE = 2,
 
 	/**
-	 * The primary slave can change if a superior path is detected.
+	 * The primary link can change if a superior path is detected.
 	 * (default if user provides no fail-over guidance)
 	 */
 	ZT_MULTIPATH_RESELECTION_POLICY_OPTIMIZE = 3
 };
 
 /**
- * Mode of multipath slave interface
+ * Mode of multipath link interface
  */
-enum ZT_MultipathSlaveMode
+enum ZT_MultipathLinkMode
 {
 	ZT_MULTIPATH_SLAVE_MODE_PRIMARY = 0,
 	ZT_MULTIPATH_SLAVE_MODE_SPARE = 1
@@ -527,7 +527,7 @@ enum ZT_MultipathMonitorStrategy
 enum ZT_MultipathFlowRebalanceStrategy
 {
 	/**
-	 * Flows will only be re-balanced among slaves during
+	 * Flows will only be re-balanced among links during
 	 * assignment or failover. This minimizes the possibility
 	 * of sequence reordering and is thus the default setting.
 	 */
@@ -535,13 +535,13 @@ enum ZT_MultipathFlowRebalanceStrategy
 
 	/**
 	 * Flows that are active may be re-assigned to a new more
-	 * suitable slave if it can be done without disrupting the flow.
+	 * suitable link if it can be done without disrupting the flow.
 	 * This setting can sometimes cause sequence re-ordering.
 	 */
 	ZT_MULTIPATH_FLOW_REBALANCE_STRATEGY_OPPORTUNISTIC = 0,
 
 	/**
-	 * Flows will be continuously re-assigned the most suitable slave
+	 * Flows will be continuously re-assigned the most suitable link
 	 * in order to maximize "balance". This can often cause sequence
 	 * reordering and is thus only reccomended for protocols like UDP.
 	 */

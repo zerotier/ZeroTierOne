@@ -29,7 +29,7 @@
 #include "Packet.hpp"
 #include "RingBuffer.hpp"
 
-#include "../osdep/Slave.hpp"
+#include "../osdep/Link.hpp"
 
 /**
  * Maximum return value of preferenceRank()
@@ -103,7 +103,7 @@ public:
 		_downDelay(0),
 		_ipvPref(0),
 		_mode(0),
-		_onlyPathOnSlave(false),
+		_onlyPathOnLink(false),
 		_enabled(false),
 		_bonded(false),
 		_negotiated(false),
@@ -152,7 +152,7 @@ public:
 		_downDelay(0),
 		_ipvPref(0),
 		_mode(0),
-		_onlyPathOnSlave(false),
+		_onlyPathOnLink(false),
 		_enabled(false),
 		_bonded(false),
 		_negotiated(false),
@@ -431,10 +431,10 @@ public:
 	}
 
 	/**
-	 * @return True if a path is preferred over another on the same physical slave (according to user pref.)
+	 * @return True if a path is preferred over another on the same physical link (according to user pref.)
 	 */
 	inline bool preferred() {
-		return _onlyPathOnSlave
+		return _onlyPathOnLink
 			|| (_addr.isV4() && (_ipvPref == 4 || _ipvPref == 46))
 			|| (_addr.isV6() && (_ipvPref == 6 || _ipvPref == 64));
 	}
@@ -549,22 +549,22 @@ private:
 	uint32_t _downDelay;
 
 	/**
-	 * IP version preference inherited from the physical slave.
+	 * IP version preference inherited from the physical link.
 	 */
 	uint8_t _ipvPref;
 
 	/**
-	 * Mode inherited from the physical slave.
+	 * Mode inherited from the physical link.
 	 */
 	uint8_t _mode;
 
 	/**
-	 * IP version preference inherited from the physical slave.
+	 * IP version preference inherited from the physical link.
 	 */
-	bool _onlyPathOnSlave;
+	bool _onlyPathOnLink;
 
 	/**
-	 * Enabled state inherited from the physical slave.
+	 * Enabled state inherited from the physical link.
 	 */
 	bool _enabled;
 

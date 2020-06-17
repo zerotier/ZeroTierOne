@@ -50,7 +50,7 @@
 #include "../osdep/Binder.hpp"
 #include "../osdep/ManagedRoute.hpp"
 #include "../osdep/BlockingQueue.hpp"
-#include "../osdep/Slave.hpp"
+#include "../osdep/Link.hpp"
 
 #include "OneService.hpp"
 #include "SoftwareUpdater.hpp"
@@ -307,7 +307,7 @@ static void _peerBondToJson(nlohmann::json &pj,const ZT_Peer *peer)
 		//j["ifname"] = peer->paths[i].ifname;
 		pa.push_back(j);
 	}
-	pj["slaves"] = pa;
+	pj["links"] = pa;
 }
 
 static void _moonToJson(nlohmann::json &mj,const World &world)
@@ -1623,58 +1623,61 @@ public:
 				newTemplateBond->setDownDelay(OSUtils::jsonInt(customPolicy["downDelay"],-1));
 				newTemplateBond->setFlowRebalanceStrategy(OSUtils::jsonInt(customPolicy["flowRebalanceStrategy"],(uint64_t)0));
 				newTemplateBond->setFailoverInterval(OSUtils::jsonInt(customPolicy["failoverInterval"],(uint64_t)0));
-				newTemplateBond->setPacketsPerSlave(OSUtils::jsonInt(customPolicy["packetsPerSlave"],-1));
-				std::string slaveMonitorStrategyStr(OSUtils::jsonString(customPolicy["slaveMonitorStrategy"],""));
-				uint8_t slaveMonitorStrategy = ZT_MULTIPATH_SLAVE_MONITOR_STRATEGY_DEFAULT;
-				if (slaveMonitorStrategyStr == "passive") { newTemplateBond->setSlaveMonitorStrategy(ZT_MULTIPATH_SLAVE_MONITOR_STRATEGY_PASSIVE); }
-				if (slaveMonitorStrategyStr == "active") { newTemplateBond->setSlaveMonitorStrategy(ZT_MULTIPATH_SLAVE_MONITOR_STRATEGY_ACTIVE); }
-				if (slaveMonitorStrategyStr == "dynamic") { newTemplateBond->setSlaveMonitorStrategy(ZT_MULTIPATH_SLAVE_MONITOR_STRATEGY_DYNAMIC); }
-				// Policy-Specific slave set
-				json &slaves = customPolicy["slaves"];
-				for (json::iterator slaveItr = slaves.begin(); slaveItr != slaves.end();++slaveItr) {
-					fprintf(stderr, "\t--- slave (%s)\n", slaveItr.key().c_str());
-					std::string slaveNameStr(slaveItr.key());
-					json &slave = slaveItr.value();
+				newTemplateBond->setPacketsPerLink(OSUtils::jsonInt(customPolicy["packetsPerLink"],-1));
 
-					bool enabled = OSUtils::jsonInt(slave["enabled"],true);
-					uint32_t speed = OSUtils::jsonInt(slave["speed"],0);
-					float alloc = (float)OSUtils::jsonDouble(slave["alloc"],0);
+				std::string linkMonitorStrategyStr(OSUtils::jsonString(customPolicy["linkMonitorStrategy"],""));
+				uint8_t linkMonitorStrategy = ZT_MULTIPATH_SLAVE_MONITOR_STRATEGY_DEFAULT;
+				if (linkMonitorStrategyStr == "passive") { linkMonitorStrategy = ZT_MULTIPATH_SLAVE_MONITOR_STRATEGY_PASSIVE; }
+				if (linkMonitorStrategyStr == "active") { linkMonitorStrategy = ZT_MULTIPATH_SLAVE_MONITOR_STRATEGY_ACTIVE; }
+				if (linkMonitorStrategyStr == "dynamic") { linkMonitorStrategy = ZT_MULTIPATH_SLAVE_MONITOR_STRATEGY_DYNAMIC; }
+				newTemplateBond->setLinkMonitorStrategy(linkMonitorStrategy);
+
+				// Policy-Specific link set
+				json &links = customPolicy["links"];
+				for (json::iterator linkItr = links.begin(); linkItr != links.end();++linkItr) {
+					fprintf(stderr, "\t--- link (%s)\n", linkItr.key().c_str());
+					std::string linkNameStr(linkItr.key());
+					json &link = linkItr.value();
+
+					bool enabled = OSUtils::jsonInt(link["enabled"],true);
+					uint32_t speed = OSUtils::jsonInt(link["speed"],0);
+					float alloc = (float)OSUtils::jsonDouble(link["alloc"],0);
 
 					if (speed && alloc) {
-						fprintf(stderr, "error: cannot specify both speed (%d) and alloc (%f) for slave (%s), pick one, slave disabled.\n",
-							speed, alloc, slaveNameStr.c_str());
+						fprintf(stderr, "error: cannot specify both speed (%d) and alloc (%f) for link (%s), pick one, link disabled.\n",
+							speed, alloc, linkNameStr.c_str());
 						enabled = false;
 					}
-					uint32_t upDelay = OSUtils::jsonInt(slave["upDelay"],-1);
-					uint32_t downDelay = OSUtils::jsonInt(slave["downDelay"],-1);
-					uint8_t ipvPref = OSUtils::jsonInt(slave["ipvPref"],0);
-					uint32_t slaveMonitorInterval = OSUtils::jsonInt(slave["monitorInterval"],(uint64_t)0);
-					std::string failoverToStr(OSUtils::jsonString(slave["failoverTo"],""));
+					uint32_t upDelay = OSUtils::jsonInt(link["upDelay"],-1);
+					uint32_t downDelay = OSUtils::jsonInt(link["downDelay"],-1);
+					uint8_t ipvPref = OSUtils::jsonInt(link["ipvPref"],0);
+					uint32_t linkMonitorInterval = OSUtils::jsonInt(link["monitorInterval"],(uint64_t)0);
+					std::string failoverToStr(OSUtils::jsonString(link["failoverTo"],""));
 					// Mode
-					std::string slaveModeStr(OSUtils::jsonString(slave["mode"],"spare"));
-					uint8_t slaveMode = ZT_MULTIPATH_SLAVE_MODE_SPARE;
-					if (slaveModeStr == "primary") { slaveMode = ZT_MULTIPATH_SLAVE_MODE_PRIMARY; }
-					if (slaveModeStr == "spare") { slaveMode = ZT_MULTIPATH_SLAVE_MODE_SPARE; }
+					std::string linkModeStr(OSUtils::jsonString(link["mode"],"spare"));
+					uint8_t linkMode = ZT_MULTIPATH_SLAVE_MODE_SPARE;
+					if (linkModeStr == "primary") { linkMode = ZT_MULTIPATH_SLAVE_MODE_PRIMARY; }
+					if (linkModeStr == "spare") { linkMode = ZT_MULTIPATH_SLAVE_MODE_SPARE; }
 					// ipvPref
 					if ((ipvPref != 0) && (ipvPref != 4) && (ipvPref != 6) && (ipvPref != 46) && (ipvPref != 64)) {
-						fprintf(stderr, "error: invalid ipvPref value (%d), slave disabled.\n", ipvPref);
+						fprintf(stderr, "error: invalid ipvPref value (%d), link disabled.\n", ipvPref);
 						enabled = false;
 					}
-					if (slaveMode == ZT_MULTIPATH_SLAVE_MODE_SPARE && failoverToStr.length()) {
-						fprintf(stderr, "error: cannot specify failover slaves for spares, slave disabled.\n");
+					if (linkMode == ZT_MULTIPATH_SLAVE_MODE_SPARE && failoverToStr.length()) {
+						fprintf(stderr, "error: cannot specify failover links for spares, link disabled.\n");
 						failoverToStr = "";
 						enabled = false;
 					}
-					_node->bondController()->addCustomSlave(customPolicyStr, new Slave(slaveNameStr,ipvPref,speed,slaveMonitorInterval,upDelay,downDelay,enabled,slaveMode,failoverToStr,alloc));
+					_node->bondController()->addCustomLink(customPolicyStr, new Link(linkNameStr,ipvPref,speed,linkMonitorInterval,upDelay,downDelay,enabled,linkMode,failoverToStr,alloc));
 				}
 				// TODO: This is dumb
-				std::string slaveSelectMethodStr(OSUtils::jsonString(customPolicy["activeReselect"],"optimize"));
-				if (slaveSelectMethodStr == "always") { newTemplateBond->setSlaveSelectMethod(ZT_MULTIPATH_RESELECTION_POLICY_ALWAYS); }
-				if (slaveSelectMethodStr == "better") { newTemplateBond->setSlaveSelectMethod(ZT_MULTIPATH_RESELECTION_POLICY_BETTER); }
-				if (slaveSelectMethodStr == "failure") { newTemplateBond->setSlaveSelectMethod(ZT_MULTIPATH_RESELECTION_POLICY_FAILURE); }
-				if (slaveSelectMethodStr == "optimize") { newTemplateBond->setSlaveSelectMethod(ZT_MULTIPATH_RESELECTION_POLICY_OPTIMIZE); }
-				if (newTemplateBond->getSlaveSelectMethod() < 0 || newTemplateBond->getSlaveSelectMethod() > 3) {
-					fprintf(stderr, "warning: invalid value (%s) for slaveSelectMethod, assuming mode: always\n", slaveSelectMethodStr.c_str());
+				std::string linkSelectMethodStr(OSUtils::jsonString(customPolicy["activeReselect"],"optimize"));
+				if (linkSelectMethodStr == "always") { newTemplateBond->setLinkSelectMethod(ZT_MULTIPATH_RESELECTION_POLICY_ALWAYS); }
+				if (linkSelectMethodStr == "better") { newTemplateBond->setLinkSelectMethod(ZT_MULTIPATH_RESELECTION_POLICY_BETTER); }
+				if (linkSelectMethodStr == "failure") { newTemplateBond->setLinkSelectMethod(ZT_MULTIPATH_RESELECTION_POLICY_FAILURE); }
+				if (linkSelectMethodStr == "optimize") { newTemplateBond->setLinkSelectMethod(ZT_MULTIPATH_RESELECTION_POLICY_OPTIMIZE); }
+				if (newTemplateBond->getLinkSelectMethod() < 0 || newTemplateBond->getLinkSelectMethod() > 3) {
+					fprintf(stderr, "warning: invalid value (%s) for linkSelectMethod, assuming mode: always\n", linkSelectMethodStr.c_str());
 				}
 				/*
 				newBond->setPolicy(_node->bondController()->getPolicyCodeByStr(basePolicyStr));
@@ -1693,7 +1696,7 @@ public:
 			}
 			// Check settings
 			if (defaultBondingPolicyStr.length() && !defaultBondingPolicy && !_node->bondController()->inUse()) {
-				fprintf(stderr, "error: unknown policy (%s) specified by defaultBondingPolicy, slave disabled.\n", defaultBondingPolicyStr.c_str());
+				fprintf(stderr, "error: unknown policy (%s) specified by defaultBondingPolicy, link disabled.\n", defaultBondingPolicyStr.c_str());
 			}
 		}
 

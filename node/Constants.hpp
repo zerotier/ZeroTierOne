@@ -405,12 +405,12 @@
 #define ZT_FLOW_MAX_COUNT (1024*64)
 
 /**
- * How often flows are rebalanced across slave interfaces (if at all)
+ * How often flows are rebalanced across link (if at all)
  */
 #define ZT_FLOW_MIN_REBALANCE_INTERVAL 5000
 
 /**
- * How often flows are rebalanced across slave interfaces (if at all)
+ * How often flows are rebalanced across link (if at all)
  */
 #define ZT_FLOW_REBALANCE_INTERVAL 5000
 
@@ -428,7 +428,7 @@
 
 /**
  * Minimum amount of time (since a previous transition) before the active-backup bonding
- * policy is allowed to transition to a different slave. Only valid for active-backup.
+ * policy is allowed to transition to a different link. Only valid for active-backup.
  */
 #define ZT_MULTIPATH_MIN_ACTIVE_BACKUP_AUTOFLOP_INTERVAL 10000
 
