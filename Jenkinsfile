@@ -95,7 +95,10 @@ def buildFreeBSD() {
             node ('freebsd12') {
                 dir('build') {
                     checkout scm
-                    sh 'make'
+                    sh 'make setup'
+                    dir('build') {
+                        sh 'make -j4'
+                    }
                 }
                 cleanWs deleteDirs: true, disableDeferredWipeout: true, notFailBuild: true
             }
