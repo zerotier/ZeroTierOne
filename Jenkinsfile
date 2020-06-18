@@ -58,14 +58,14 @@ def buildWindows() {
     tasks << getTasks(['windows'], ['amd64'], { unused1, unused2 ->
         def myNode = {
             node ('windows') {
-                env.PATH = env.PATH + ';C:\\MinGW\\bin;C:\\WINDOWS;C:\\Windows\\system32;C:\\Program Files\\CMake\\bin;C:\\Go\\bin'
-                env.C_PLUS_PLUS_INCLUDE_PATH = 'C:\\MinGW\\include;C:\\MinGW\\include\freetype2'
-                env.C_INCLUDE_PATH = 'C:\\MinGW\\include;C:\\MinGW\\include\freetype2'
+                env.PATH = env.PATH + ';C:\\TDM-GCC-64\\bin;C:\\WINDOWS;C:\\Windows\\system32;C:\\Program Files\\CMake\\bin;C:\\Go\\bin'
                 dir ("build") {
                     checkout scm
                     dir ("build") {
-                        bat 'cmake -G"MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release ..'
-                        bat 'make'
+                        bat """
+                        cmake -G"MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release ..
+                        mingw32-make
+                        """
                     }
                     cleanWs deleteDirs: true, disableDeferredWipeout: true, notFailBuild: true
                 }
