@@ -23,6 +23,7 @@ pipeline {
                     tasks << buildCentosNative()
                     tasks << buildMacOS()
                     tasks << buildWindows()
+                    tasks << buildFreeBSD()
 
                     parallel tasks
                 }
@@ -47,8 +48,8 @@ def buildMacOS() {
                 dir("build") {
                     checkout scm
                     sh 'make'
-                    cleanWs deleteDirs: true, disableDeferredWipeout: true, notFailBuild: true
                 }
+                cleanWs deleteDirs: true, disableDeferredWipeout: true, notFailBuild: true
             }
         }
         return myNode
@@ -84,6 +85,23 @@ def buildWindows() {
         return myNode
     })
 
+    return tasks
+}
+
+def buildFreeBSD() {
+    def tasks = [:]
+    tasks << getTasks(['freebsd12'], ['amd64'], { unused, unused ->
+        def myNode = {
+            node ('freebsd12') {
+                dir('build') {
+                    checkout scm
+                    sh 'make'
+                }
+                cleanWs deleteDirs: true, disableDeferredWipeout: true, notFailBuild: true
+            }
+        }
+        return myNode
+    })
     return tasks
 }
 
