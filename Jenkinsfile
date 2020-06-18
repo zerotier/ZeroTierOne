@@ -59,7 +59,7 @@ def buildWindows() {
         def myNode = {
             node ('windows') {
                 env.SHELL = 'C:/Windows/System32/cmd.exe'
-                env.PATH = env.PATH + ';C:\\TDM-GCC-64\\bin;C:\\WINDOWS;C:\\Windows\\system32;C:\\Program Files\\CMake\\bin;C:\\Go\\bin'
+                env.PATH = 'C:\\TDM-GCC-64\\bin;C:\\WINDOWS;C:\\Windows\\system32;C:\\CMake\\bin;C:\\Go\\bin'
                 dir ("build") {
                     checkout scm
                     dir ("build") {
