@@ -73,7 +73,7 @@ def buildWindows() {
                             }
                             bat """
                             cmake -G"MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release ${cmakeFlags} ..
-                            mingw32-make
+                            mingw32-make -j8
                             """
                         }
                     }
