@@ -27,6 +27,8 @@
 
 package com.zerotier.sdk;
 
+import android.util.Log;
+
 import java.lang.Comparable;
 import java.lang.Override;
 import java.lang.String;
@@ -35,6 +37,8 @@ import java.net.InetSocketAddress;
 import java.util.Collections;
 
 public final class VirtualNetworkConfig implements Comparable<VirtualNetworkConfig> {
+    private final static String TAG = "VirtualNetworkConfig";
+
     public static final int MAX_MULTICAST_SUBSCRIPTIONS = 4096;
     public static final int ZT_MAX_ZT_ASSIGNED_ADDRESSES = 16;
 
@@ -58,30 +62,93 @@ public final class VirtualNetworkConfig implements Comparable<VirtualNetworkConf
     }
 
     public boolean equals(VirtualNetworkConfig cfg) {
-        ArrayList<String> current = new ArrayList<>();
-        ArrayList<String> newConfig = new ArrayList<>();
+        ArrayList<String> aaCurrent = new ArrayList<>();
+        ArrayList<String> aaNew = new ArrayList<>();
         for (InetSocketAddress s : assignedAddresses) {
-            current.add(s.toString());
+            aaCurrent.add(s.toString());
         }
         for (InetSocketAddress s : cfg.assignedAddresses) {
-            newConfig.add(s.toString());
+            aaNew.add(s.toString());
         }
-        Collections.sort(current);
-        Collections.sort(newConfig);
-        boolean aaEqual = current.equals(newConfig);
+        Collections.sort(aaCurrent);
+        Collections.sort(aaNew);
+        boolean aaEqual = aaCurrent.equals(aaNew);
 
-        current.clear();
-        newConfig.clear();
-
+        ArrayList<String> rCurrent = new ArrayList<>();
+        ArrayList<String> rNew = new ArrayList<>();
         for (VirtualNetworkRoute r : routes) {
-            current.add(r.toString());
+            rCurrent.add(r.toString());
         }
         for (VirtualNetworkRoute r : cfg.routes) {
-            newConfig.add(r.toString());
+            rNew.add(r.toString());
         }
-        Collections.sort(current);
-        Collections.sort(newConfig);
-        boolean routesEqual = current.equals(newConfig);
+        Collections.sort(rCurrent);
+        Collections.sort(rNew);
+        boolean routesEqual = rCurrent.equals(rNew);
+
+        if (this.nwid != cfg.nwid) {
+            Log.i(TAG, "nwid Changed. Old: " + Long.toHexString(this.nwid) + " (" + Long.toString(this.nwid) + "), " +
+                    "New: " + Long.toHexString(cfg.nwid) + " (" + Long.toString(cfg.nwid) + ")");
+        }
+        if (this.mac != cfg.mac) {
+            Log.i(TAG, "MAC Changed. Old: " + Long.toHexString(this.mac) + ", New: " + Long.toHexString(cfg.mac));
+        }
+
+        if (!this.name.equals(cfg.name)) {
+            Log.i(TAG, "Name Changed.  Old: " + this.name + " New: "+ cfg.name);
+        }
+
+        if (!this.type.equals(cfg.type)) {
+            Log.i(TAG, "TYPE changed.  Old " + this.type + ", New: " + cfg.type);
+        }
+
+        if (this.mtu != cfg.mtu) {
+            Log.i(TAG, "MTU Changed.  Old: " + this.mtu + ", New: " + cfg.mtu);
+        }
+
+        if (this.dhcp != cfg.dhcp) {
+            Log.i(TAG, "DHCP Flag Changed. Old: " + this.dhcp + ", New: " + cfg.dhcp);
+        }
+
+        if (this.bridge != cfg.bridge) {
+            Log.i(TAG, "Bridge Flag Changed. Old: " + this.bridge + ", New: " + cfg.bridge);
+        }
+
+        if (this.broadcastEnabled != cfg.broadcastEnabled) {
+            Log.i(TAG, "Broadcast Flag Changed. Old: "+ this.broadcastEnabled +", New: " + this.broadcastEnabled);
+        }
+
+        if (this.portError != cfg.portError) {
+            Log.i(TAG, "Port Error Changed. Old: " + this.portError + ", New: " + this.portError);
+        }
+
+        if (this.enabled != cfg.enabled) {
+            Log.i(TAG, "Enabled Changed. Old: " + this.enabled + ", New: " + this.enabled);
+        }
+
+        if (!aaEqual) {
+            Log.i(TAG, "Assigned Addresses Changed");
+            Log.i(TAG, "Old:");
+            for (String s : aaCurrent) {
+                Log.i(TAG, "    " + s);
+            }
+            Log.i(TAG, "New:");
+            for (String s : aaNew) {
+                Log.i(TAG, "    " +s);
+            }
+        }
+
+        if (!routesEqual) {
+            Log.i(TAG, "Managed Routes Changed");
+            Log.i(TAG, "Old:");
+            for (String s : rCurrent) {
+                Log.i(TAG, "    " + s);
+            }
+            Log.i(TAG, "New:");
+            for (String s : rNew) {
+                Log.i(TAG, "    " + s);
+            }
+        }
 
         return this.nwid == cfg.nwid &&
                this.mac == cfg.mac &&
