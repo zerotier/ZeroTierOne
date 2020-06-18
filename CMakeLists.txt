@@ -80,6 +80,9 @@ if(WIN32)
 		add_compile_options(
 			-m32
 		)
+		add_link_options(
+			-m32
+		)
 	endif(BUILD_32BIT)
 else(WIN32)
 
