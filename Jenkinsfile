@@ -97,7 +97,7 @@ def buildStaticBinaries() {
     tasks << getTasks(dist, archs, { distro, platform -> 
         def myNode = {
             node ('linux-build') {
-                env.PATH = env.PATH + ":/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin:/home/jenkins-build/go/bin"
+                env.PATH = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin:/home/jenkins-build/go/bin"
                 dir ("build") {
                     checkout scm
                 }
@@ -340,7 +340,7 @@ def buildDebianNative() {
     def build = { distro, arch -> 
         def myNode = {
             node ('linux-build') {
-                env.PATH = env.PATH + ":/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin:/home/jenkins-build/go/bin"
+                env.PATH = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin:/home/jenkins-build/go/bin"
                 dir ("build") {
                     checkout scm
                 }
