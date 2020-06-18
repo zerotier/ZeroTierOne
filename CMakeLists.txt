@@ -70,6 +70,17 @@ if(WIN32)
 		-trimpath
 	)
 
+	option(BUILD_32BIT "Force building as 32-bit binary" OFF)
+
+	if(BUILD_32BIT)
+		set(CMAKE_SYSTEM_PROCESSOR "x86" CACHE STRING "system processor")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32" CACHE STRING "c++ flags")
+		set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} -m32" CACHE STRING "c flags")
+		set(GOARCH "GOARCH=386" CACHE STRING "go architecture")
+		add_compile_options(
+			-m32
+		)
+	endif(BUILD_32BIT)
 else(WIN32)
 
 	set(GOFLAGS
