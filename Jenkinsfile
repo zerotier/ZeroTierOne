@@ -62,20 +62,20 @@ def buildWindows() {
         def myNode = {
             node ('windows') {
                 env.SHELL = 'C:/Windows/System32/cmd.exe'
-                env.PATH = 'C:\\TDM-GCC-64\\bin;C:\\WINDOWS;C:\\Windows\\system32;C:\\CMake\\bin;C:\\Go\\bin'
                 dir ("build") {
                     checkout scm
-
                     
                     dir ("build") {
-                        def cmakeFlags = ""
-                        if (platform == "i386") {
-                            cmakeFlags = '-DBUILD_32BIT=1'
+                        withEnv(["PATH=C:\\TDM-GCC-64\\bin;C:\\WINDOWS;C:\\Windows\\system32;C:\\CMake\\bin;C:\\Go\\bin"]) {
+                            def cmakeFlags = ""
+                            if (platform == "i386") {
+                                cmakeFlags = '-DBUILD_32BIT=1'
+                            }
+                            bat """
+                            cmake -G"MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release ${cmakeFlags} ..
+                            mingw32-make
+                            """
                         }
-                        bat """
-                        cmake -G"MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release ${cmakeFlags} ..
-                        mingw32-make
-                        """
                     }
                     cleanWs deleteDirs: true, disableDeferredWipeout: true, notFailBuild: true
                 }
