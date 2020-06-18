@@ -90,7 +90,7 @@ def buildWindows() {
 
 def buildFreeBSD() {
     def tasks = [:]
-    tasks << getTasks(['freebsd12'], ['amd64'], { unused, unused ->
+    tasks << getTasks(['freebsd12'], ['amd64'], { unused1, unused2 ->
         def myNode = {
             node ('freebsd12') {
                 dir('build') {
