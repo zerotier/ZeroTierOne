@@ -58,6 +58,7 @@ def buildWindows() {
     tasks << getTasks(['windows'], ['amd64'], { unused1, unused2 ->
         def myNode = {
             node ('windows') {
+                env.SHELL = 'C:/Windows/System32/cmd.exe'
                 env.PATH = env.PATH + ';C:\\TDM-GCC-64\\bin;C:\\WINDOWS;C:\\Windows\\system32;C:\\Program Files\\CMake\\bin;C:\\Go\\bin'
                 dir ("build") {
                     checkout scm
