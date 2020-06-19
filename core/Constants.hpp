@@ -17,9 +17,7 @@
 #include "zerotier.h"
 #include "OS.hpp"
 
-#if __has_include("version.h")
 #include "version.h"
-#endif
 
 /**
  * Version bit packed into four 16-bit fields in a 64-bit unsigned integer.
