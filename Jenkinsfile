@@ -443,15 +443,17 @@ def buildCentosNative() {
                 runtime.inside {
                     dir("build") {
                         if (distro == 'centos7' && arch == 'amd64') {
-                            sh 'source scl_source enable devtoolset-8 llvm-toolset-7 && make'
+                            sh 'source scl_source enable devtoolset-8 llvm-toolset-7 && CMAKE_ARGS="-DZT_PACKAGE_FORMAT=RPM" make setup'
                         } else {
-                            sh 'make'
+                            sh 'CMAKE_ARGS="-DZT_PACKAGE_FORMAT=RPM" make setup'
                         }
-                        // sh 'make redhat'
-                        // sh "mkdir -p ${distro}"
-                        // sh "cp -av `find ~/rpmbuild/ -type f -name \"*.rpm\"` ${distro}/"
-                        // archiveArtifacts artifacts: "${distro}/*.rpm", onlyIfSuccessful: true
+                        dir ("build") {
+                            sh 'make package -j4'
+                        }
                     }
+                    sh "mkdir -p ${distro}"
+                    sh "cp -av build/build/*.rpm` ${distro}/"
+                    archiveArtifacts artifacts: "${distro}/*.rpm", onlyIfSuccessful: true
                     
                     cleanWs deleteDirs: true, disableDeferredWipeout: true, notFailBuild: true
                 }
