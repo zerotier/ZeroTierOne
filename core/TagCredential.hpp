@@ -43,7 +43,7 @@ class RuntimeEnvironment;
  * Unlike capabilities tags are signed only by the issuer and are never
  * transferable.
  */
-class Tag : public Credential
+class TagCredential : public Credential
 {
 	friend class Credential;
 
@@ -51,7 +51,7 @@ public:
 	static constexpr ZT_CredentialType credentialType() noexcept
 	{ return ZT_CREDENTIAL_TYPE_TAG; }
 
-	ZT_INLINE Tag() noexcept
+	ZT_INLINE TagCredential() noexcept
 	{ memoryZero(this); }
 
 	/**
@@ -61,7 +61,7 @@ public:
 	 * @param id Tag ID
 	 * @param value Tag value
 	 */
-	ZT_INLINE Tag(const uint64_t nwid, const int64_t ts, const Address &issuedTo, const uint32_t id, const uint32_t value) noexcept:
+	ZT_INLINE TagCredential(const uint64_t nwid, const int64_t ts, const Address &issuedTo, const uint32_t id, const uint32_t value) noexcept:
 		m_id(id),
 		m_value(value),
 		m_networkId(nwid),
@@ -121,40 +121,40 @@ public:
 	int unmarshal(const uint8_t *data, int len) noexcept;
 
 	// Provides natural sort order by ID
-	ZT_INLINE bool operator<(const Tag &t) const noexcept
+	ZT_INLINE bool operator<(const TagCredential &t) const noexcept
 	{ return (m_id < t.m_id); }
 
-	ZT_INLINE bool operator==(const Tag &t) const noexcept
-	{ return (memcmp(this, &t, sizeof(Tag)) == 0); }
+	ZT_INLINE bool operator==(const TagCredential &t) const noexcept
+	{ return (memcmp(this, &t, sizeof(TagCredential)) == 0); }
 
-	ZT_INLINE bool operator!=(const Tag &t) const noexcept
-	{ return (memcmp(this, &t, sizeof(Tag)) != 0); }
+	ZT_INLINE bool operator!=(const TagCredential &t) const noexcept
+	{ return (memcmp(this, &t, sizeof(TagCredential)) != 0); }
 
 	// For searching sorted arrays or lists of Tags by ID
 	struct IdComparePredicate
 	{
-		ZT_INLINE bool operator()(const Tag &a, const Tag &b) const noexcept
+		ZT_INLINE bool operator()(const TagCredential &a, const TagCredential &b) const noexcept
 		{ return (a.id() < b.id()); }
 
-		ZT_INLINE bool operator()(const uint32_t a, const Tag &b) const noexcept
+		ZT_INLINE bool operator()(const uint32_t a, const TagCredential &b) const noexcept
 		{ return (a < b.id()); }
 
-		ZT_INLINE bool operator()(const Tag &a, const uint32_t b) const noexcept
+		ZT_INLINE bool operator()(const TagCredential &a, const uint32_t b) const noexcept
 		{ return (a.id() < b); }
 
-		ZT_INLINE bool operator()(const Tag *a, const Tag *b) const noexcept
+		ZT_INLINE bool operator()(const TagCredential *a, const TagCredential *b) const noexcept
 		{ return (a->id() < b->id()); }
 
-		ZT_INLINE bool operator()(const Tag *a, const Tag &b) const noexcept
+		ZT_INLINE bool operator()(const TagCredential *a, const TagCredential &b) const noexcept
 		{ return (a->id() < b.id()); }
 
-		ZT_INLINE bool operator()(const Tag &a, const Tag *b) const noexcept
+		ZT_INLINE bool operator()(const TagCredential &a, const TagCredential *b) const noexcept
 		{ return (a.id() < b->id()); }
 
-		ZT_INLINE bool operator()(const uint32_t a, const Tag *b) const noexcept
+		ZT_INLINE bool operator()(const uint32_t a, const TagCredential *b) const noexcept
 		{ return (a < b->id()); }
 
-		ZT_INLINE bool operator()(const Tag *a, const uint32_t b) const noexcept
+		ZT_INLINE bool operator()(const TagCredential *a, const uint32_t b) const noexcept
 		{ return (a->id() < b); }
 
 		ZT_INLINE bool operator()(const uint32_t a, const uint32_t b) const noexcept

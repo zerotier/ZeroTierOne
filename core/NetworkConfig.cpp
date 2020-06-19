@@ -96,7 +96,7 @@ bool NetworkConfig::toDictionary(Dictionary &d) const
 		blob = &(d[ZT_NETWORKCONFIG_DICT_KEY_RULES]);
 		if (this->ruleCount) {
 			blob->resize(ruleCount * ZT_VIRTUALNETWORKRULE_MARSHAL_SIZE_MAX);
-			int l = Capability::marshalVirtualNetworkRules(blob->data(),rules,ruleCount);
+			int l = CapabilityCredential::marshalVirtualNetworkRules(blob->data(), rules, ruleCount);
 			if (l > 0)
 				blob->resize(l);
 		}
@@ -154,7 +154,7 @@ bool NetworkConfig::fromDictionary(const Dictionary &d)
 				try {
 					unsigned int p = 0;
 					while (p < blob->size()) {
-						Capability cap;
+						CapabilityCredential cap;
 						int l = cap.unmarshal(blob->data() + p,(int)(blob->size() - p));
 						if (l < 0)
 							return false;
@@ -171,7 +171,7 @@ bool NetworkConfig::fromDictionary(const Dictionary &d)
 				try {
 					unsigned int p = 0;
 					while (p < blob->size()) {
-						Tag tag;
+						TagCredential tag;
 						int l = tag.unmarshal(blob->data() + p,(int)(blob->size() - p));
 						if (l < 0)
 							return false;
@@ -188,7 +188,7 @@ bool NetworkConfig::fromDictionary(const Dictionary &d)
 				try {
 					unsigned int p = 0;
 					while (p < blob->size()) {
-						CertificateOfOwnership coo;
+						OwnershipCredential coo;
 						int l = coo.unmarshal(blob->data() + p,(int)(blob->size() - p));
 						if (l < 0)
 							return false;
@@ -246,7 +246,7 @@ bool NetworkConfig::fromDictionary(const Dictionary &d)
 			blob = &(d[ZT_NETWORKCONFIG_DICT_KEY_RULES]);
 			if (!blob->empty()) {
 				this->ruleCount = 0;
-				if (Capability::unmarshalVirtualNetworkRules(blob->data(),(int)blob->size(),this->rules,this->ruleCount,ZT_MAX_NETWORK_RULES) < 0)
+				if (CapabilityCredential::unmarshalVirtualNetworkRules(blob->data(), (int)blob->size(), this->rules, this->ruleCount, ZT_MAX_NETWORK_RULES) < 0)
 					return false;
 			}
 		}

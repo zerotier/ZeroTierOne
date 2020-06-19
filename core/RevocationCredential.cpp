@@ -11,11 +11,11 @@
  */
 /****/
 
-#include "Revocation.hpp"
+#include "RevocationCredential.hpp"
 
 namespace ZeroTier {
 
-bool Revocation::sign(const Identity &signer) noexcept
+bool RevocationCredential::sign(const Identity &signer) noexcept
 {
 	uint8_t buf[ZT_REVOCATION_MARSHAL_SIZE_MAX + 32];
 	if (signer.hasPrivate()) {
@@ -26,7 +26,7 @@ bool Revocation::sign(const Identity &signer) noexcept
 	return false;
 }
 
-int Revocation::marshal(uint8_t data[ZT_REVOCATION_MARSHAL_SIZE_MAX], bool forSign) const noexcept
+int RevocationCredential::marshal(uint8_t data[ZT_REVOCATION_MARSHAL_SIZE_MAX], bool forSign) const noexcept
 {
 	int p = 0;
 	if (forSign) {
@@ -67,7 +67,7 @@ int Revocation::marshal(uint8_t data[ZT_REVOCATION_MARSHAL_SIZE_MAX], bool forSi
 	return p;
 }
 
-int Revocation::unmarshal(const uint8_t *restrict data, const int len) noexcept
+int RevocationCredential::unmarshal(const uint8_t *restrict data, const int len) noexcept
 {
 	if (len < 54)
 		return -1;

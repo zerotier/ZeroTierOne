@@ -11,14 +11,14 @@
  */
 /****/
 
-#include "Capability.hpp"
+#include "CapabilityCredential.hpp"
 #include "Utils.hpp"
 #include "Constants.hpp"
 #include "MAC.hpp"
 
 namespace ZeroTier {
 
-bool Capability::sign(const Identity &from, const Address &to) noexcept
+bool CapabilityCredential::sign(const Identity &from, const Address &to) noexcept
 {
 	uint8_t buf[ZT_CAPABILITY_MARSHAL_SIZE_MAX + 16];
 	m_issuedTo = to;
@@ -27,7 +27,7 @@ bool Capability::sign(const Identity &from, const Address &to) noexcept
 	return m_signatureLength > 0;
 }
 
-int Capability::marshal(uint8_t data[ZT_CAPABILITY_MARSHAL_SIZE_MAX], const bool forSign) const noexcept
+int CapabilityCredential::marshal(uint8_t data[ZT_CAPABILITY_MARSHAL_SIZE_MAX], const bool forSign) const noexcept
 {
 	int p = 0;
 
@@ -45,7 +45,7 @@ int Capability::marshal(uint8_t data[ZT_CAPABILITY_MARSHAL_SIZE_MAX], const bool
 
 	Utils::storeBigEndian<uint16_t>(data + p, (uint16_t) m_ruleCount);
 	p += 2;
-	p += Capability::marshalVirtualNetworkRules(data + p, m_rules, m_ruleCount);
+	p += CapabilityCredential::marshalVirtualNetworkRules(data + p, m_rules, m_ruleCount);
 
 	// LEGACY: older versions supported multiple records with this being a maximum custody
 	// chain length. This is deprecated so set the max chain length to one.
@@ -78,7 +78,7 @@ int Capability::marshal(uint8_t data[ZT_CAPABILITY_MARSHAL_SIZE_MAX], const bool
 	return p;
 }
 
-int Capability::unmarshal(const uint8_t *data, int len) noexcept
+int CapabilityCredential::unmarshal(const uint8_t *data, int len) noexcept
 {
 	if (len < 22)
 		return -1;
@@ -138,7 +138,7 @@ int Capability::unmarshal(const uint8_t *data, int len) noexcept
 	return p;
 }
 
-int Capability::marshalVirtualNetworkRules(uint8_t *data, const ZT_VirtualNetworkRule *const rules, const unsigned int ruleCount) noexcept
+int CapabilityCredential::marshalVirtualNetworkRules(uint8_t *data, const ZT_VirtualNetworkRule *const rules, const unsigned int ruleCount) noexcept
 {
 	int p = 0;
 	for (unsigned int i = 0;i < ruleCount;++i) {
@@ -273,7 +273,7 @@ int Capability::marshalVirtualNetworkRules(uint8_t *data, const ZT_VirtualNetwor
 	return p;
 }
 
-int Capability::unmarshalVirtualNetworkRules(const uint8_t *const data, const int len, ZT_VirtualNetworkRule *const rules, unsigned int &ruleCount, const unsigned int maxRuleCount) noexcept
+int CapabilityCredential::unmarshalVirtualNetworkRules(const uint8_t *const data, const int len, ZT_VirtualNetworkRule *const rules, unsigned int &ruleCount, const unsigned int maxRuleCount) noexcept
 {
 	int p = 0;
 	unsigned int rc = 0;

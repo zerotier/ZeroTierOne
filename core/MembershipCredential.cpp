@@ -11,11 +11,11 @@
  */
 /****/
 
-#include "CertificateOfMembership.hpp"
+#include "MembershipCredential.hpp"
 
 namespace ZeroTier {
 
-CertificateOfMembership::CertificateOfMembership(const int64_t timestamp, const int64_t timestampMaxDelta, const uint64_t nwid, const Identity &issuedTo) noexcept: // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+MembershipCredential::MembershipCredential(const int64_t timestamp, const int64_t timestampMaxDelta, const uint64_t nwid, const Identity &issuedTo) noexcept: // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 	m_timestamp(timestamp),
 	m_timestampMaxDelta(timestampMaxDelta),
 	m_networkId(nwid),
@@ -23,7 +23,7 @@ CertificateOfMembership::CertificateOfMembership(const int64_t timestamp, const 
 	m_signatureLength(0)
 {}
 
-bool CertificateOfMembership::agreesWith(const CertificateOfMembership &other) const noexcept
+bool MembershipCredential::agreesWith(const MembershipCredential &other) const noexcept
 {
 	// NOTE: we always do explicit absolute value with an if() since llabs() can have overflow
 	// conditions that could introduce a vulnerability.
@@ -85,7 +85,7 @@ bool CertificateOfMembership::agreesWith(const CertificateOfMembership &other) c
 	return (other.m_networkId == m_networkId) && (m_networkId != 0) && (other.m_issuedTo.address != m_issuedTo.address);
 }
 
-bool CertificateOfMembership::sign(const Identity &with) noexcept
+bool MembershipCredential::sign(const Identity &with) noexcept
 {
 	m_signedBy = with.address();
 	uint64_t buf[ZT_CERTIFICATEOFMEMBERSHIP_MARSHAL_SIZE_MAX / 8];
@@ -94,7 +94,7 @@ bool CertificateOfMembership::sign(const Identity &with) noexcept
 	return m_signatureLength > 0;
 }
 
-int CertificateOfMembership::marshal(uint8_t data[ZT_CERTIFICATEOFMEMBERSHIP_MARSHAL_SIZE_MAX], const bool v2) const noexcept
+int MembershipCredential::marshal(uint8_t data[ZT_CERTIFICATEOFMEMBERSHIP_MARSHAL_SIZE_MAX], const bool v2) const noexcept
 {
 	data[0] = v2 ? 2 : 1;
 
@@ -156,7 +156,7 @@ int CertificateOfMembership::marshal(uint8_t data[ZT_CERTIFICATEOFMEMBERSHIP_MAR
 	return p;
 }
 
-int CertificateOfMembership::unmarshal(const uint8_t *data, int len) noexcept
+int MembershipCredential::unmarshal(const uint8_t *data, int len) noexcept
 {
 	if (len < (1 + 2 + 72))
 		return -1;
@@ -241,7 +241,7 @@ int CertificateOfMembership::unmarshal(const uint8_t *data, int len) noexcept
 	return -1;
 }
 
-unsigned int CertificateOfMembership::m_fillSigningBuf(uint64_t *buf) const noexcept
+unsigned int MembershipCredential::m_fillSigningBuf(uint64_t *buf) const noexcept
 {
 	const uint64_t informational = 0xffffffffffffffffULL;
 

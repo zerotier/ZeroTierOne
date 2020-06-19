@@ -50,14 +50,14 @@ class RuntimeEnvironment;
  * Note that this is after evaluation of network scope rules and only if
  * network scope rules do not deliver an explicit match.
  */
-class Capability : public Credential
+class CapabilityCredential : public Credential
 {
 	friend class Credential;
 
 public:
 	static constexpr ZT_CredentialType credentialType() noexcept { return ZT_CREDENTIAL_TYPE_CAPABILITY; }
 
-	ZT_INLINE Capability() noexcept { memoryZero(this); }
+	ZT_INLINE CapabilityCredential() noexcept { memoryZero(this); }
 
 	/**
 	 * @param id Capability ID
@@ -67,7 +67,7 @@ public:
 	 * @param rules Network flow rules for this capability
 	 * @param ruleCount Number of flow rules
 	 */
-	ZT_INLINE Capability(const uint32_t id,const uint64_t nwid,const int64_t ts,const ZT_VirtualNetworkRule *const rules,const unsigned int ruleCount) noexcept : // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+	ZT_INLINE CapabilityCredential(const uint32_t id, const uint64_t nwid, const int64_t ts, const ZT_VirtualNetworkRule *const rules, const unsigned int ruleCount) noexcept : // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 		m_nwid(nwid),
 		m_ts(ts),
 		m_id(id),
@@ -145,10 +145,10 @@ public:
 	static int unmarshalVirtualNetworkRules(const uint8_t *data,int len,ZT_VirtualNetworkRule *rules,unsigned int &ruleCount,unsigned int maxRuleCount) noexcept;
 
 	// Provides natural sort order by ID
-	ZT_INLINE bool operator<(const Capability &c) const noexcept { return (m_id < c.m_id); }
+	ZT_INLINE bool operator<(const CapabilityCredential &c) const noexcept { return (m_id < c.m_id); }
 
-	ZT_INLINE bool operator==(const Capability &c) const noexcept { return (memcmp(this,&c,sizeof(Capability)) == 0); }
-	ZT_INLINE bool operator!=(const Capability &c) const noexcept { return (memcmp(this,&c,sizeof(Capability)) != 0); }
+	ZT_INLINE bool operator==(const CapabilityCredential &c) const noexcept { return (memcmp(this, &c, sizeof(CapabilityCredential)) == 0); }
+	ZT_INLINE bool operator!=(const CapabilityCredential &c) const noexcept { return (memcmp(this, &c, sizeof(CapabilityCredential)) != 0); }
 
 private:
 	uint64_t m_nwid;

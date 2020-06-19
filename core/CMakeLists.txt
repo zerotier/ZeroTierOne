@@ -12,9 +12,10 @@ set(core_headers
 	Blob.hpp
 	Buf.hpp
 	C25519.hpp
-	Capability.hpp
-	CertificateOfMembership.hpp
-	CertificateOfOwnership.hpp
+	CapabilityCredential.hpp
+	Certificate.hpp
+	MembershipCredential.hpp
+	OwnershipCredential.hpp
 	Constants.hpp
 	Containers.hpp
 	Credential.hpp
@@ -25,13 +26,12 @@ set(core_headers
 	Expect.hpp
 	FCV.hpp
 	Fingerprint.hpp
-	IdentificationCertificate.hpp
 	Identity.hpp
 	InetAddress.hpp
 	Locator.hpp
 	LZ4.hpp
 	MAC.hpp
-	Membership.hpp
+	Member.hpp
 	MulticastGroup.hpp
 	Mutex.hpp
 	Network.hpp
@@ -49,7 +49,7 @@ set(core_headers
 	SHA512.hpp
 	SharedPtr.hpp
 	SymmetricKey.hpp
-	Tag.hpp
+	TagCredential.hpp
 	Topology.hpp
 	Trace.hpp
 	TriviallyCopyable.hpp
@@ -62,30 +62,30 @@ set(core_src
 	AES.cpp
 	Buf.cpp
 	C25519.cpp
-	Capability.cpp
-	CertificateOfMembership.cpp
-	CertificateOfOwnership.cpp
+	CapabilityCredential.cpp
+	Certificate.cpp
+	MembershipCredential.cpp
+	OwnershipCredential.cpp
 	Credential.cpp
 	Dictionary.cpp
 	ECC384.cpp
 	Endpoint.cpp
-	IdentificationCertificate.cpp
 	Identity.cpp
 	InetAddress.cpp
 	Locator.cpp
 	LZ4.cpp
-	Membership.cpp
+	Member.cpp
 	Network.cpp
 	NetworkConfig.cpp
 	Node.cpp
 	Path.cpp
 	Peer.cpp
 	Poly1305.cpp
-	Revocation.cpp
+	RevocationCredential.cpp
 	Salsa20.cpp
 	SelfAwareness.cpp
 	SHA512.cpp
-	Tag.cpp
+	TagCredential.cpp
 	Topology.cpp
 	Trace.cpp
 	Utils.cpp

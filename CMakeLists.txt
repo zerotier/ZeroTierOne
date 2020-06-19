@@ -30,8 +30,6 @@ if(WIN32)
 	set(CMAKE_SYSTEM_VERSION "7" CACHE STRING INTERNAL FORCE)
 endif(WIN32)
 
-set(CMAKE_OSX_DEPLOYMENT_TARGET "10.12" CACHE STRING "Minimum OS X Deployment Version")
-
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 	message(STATUS "Setting build type to '${default_build_type}' as none was specified.")
 	set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE STRING "Choose the type of build." FORCE)
@@ -64,10 +62,25 @@ endif(CMAKE_BUILD_TYPE STREQUAL "Debug")
 if(WIN32)
 
 	message("++ Setting Windows Compiler Flags ${CMAKE_BUILD_TYPE}")
+
 	add_definitions(-DNOMINMAX)
+	add_compile_options(
+		-Wall
+		-Wno-deprecated
+		-Wno-unused-function
+		-Wno-format
+		$<$<CONFIG:DEBUG>:-g>
+		$<$<CONFIG:DEBUG>:-O0>
+		$<$<CONFIG:RELEASE>:-O3>
+		$<$<CONFIG:RELEASE>:-ffast-math>
+		$<$<CONFIG:RELWITHDEBINFO>:-O3>
+		$<$<CONFIG:RELWITHDEBINFO>:-g>
+	)
 
 	set(GOFLAGS
+		-a
 		-trimpath
+		-ldflags '-w'
 	)
 
 else(WIN32)
@@ -77,6 +90,8 @@ else(WIN32)
 		-buildmode=pie
 	)
 
+	set(MACOS_VERSION_MIN "10.12")
+
 	if(APPLE)
 
 		message("++ Setting MacOS Compiler Flags ${CMAKE_BUILD_TYPE}")
@@ -85,7 +100,7 @@ else(WIN32)
 			-Wall
 			-Wno-deprecated
 			-Wno-unused-function
-			-mmacosx-version-min=10.12
+			-mmacosx-version-min=${MACOS_VERSION_MIN}
 			$<$<CONFIG:DEBUG>:-g>
 			$<$<CONFIG:DEBUG>:-O0>
 			$<$<CONFIG:RELEASE>:-Ofast>
@@ -98,7 +113,7 @@ else(WIN32)
 		)
 
 		add_link_options(
-			-mmacosx-version-min=10.12
+			-mmacosx-version-min=${MACOS_VERSION_MIN}
 			$<$<CONFIG:RELEASE>:-flto>
 		)
 
@@ -111,6 +126,7 @@ else(WIN32)
 	else(APPLE)
 
 		message("++ Setting Linux/BSD/Posix Compiler Flags (${CMAKE_BUILD_TYPE})")
+
 		add_compile_options(
 			-Wall
 			-Wno-deprecated
@@ -186,7 +202,8 @@ add_subdirectory(serviceiocore)
 file(GLOB go_src 
 	${CMAKE_SOURCE_DIR}/cmd/*.go
 	${CMAKE_SOURCE_DIR}/cmd/cmd/*.go
-	${CMAKE_SOURCE_DIR}/pkg/zerotier/*.go)
+	${CMAKE_SOURCE_DIR}/pkg/zerotier/*.go
+)
 
 if(WIN32)
 	set(GO_EXE_NAME "zerotier.exe")

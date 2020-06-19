@@ -431,7 +431,10 @@ private:
 		return buf;
 	}
 
-	SortedMap <String, Vector< uint8_t >> m_entries;
+	// Dictionary maps need to be sorted so that they always encode in the same order
+	// to yield blobs that can be hashed and signed reproducibly. Other than for areas
+	// where dictionaries are signed and verified the order doesn't matter.
+	SortedMap < String, Vector< uint8_t > > m_entries;
 };
 
 } // namespace ZeroTier

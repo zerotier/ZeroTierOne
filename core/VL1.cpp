@@ -32,9 +32,7 @@ namespace ZeroTier {
 namespace {
 
 ZT_INLINE const Identity &identityFromPeerPtr(const SharedPtr< Peer > &p)
-{
-	return (p) ? p->identity() : Identity::NIL;
-}
+{ return (p) ? p->identity() : Identity::NIL; }
 
 struct p_SalsaPolyCopyFunction
 {
@@ -100,8 +98,7 @@ struct p_PolyCopyFunction
 
 VL1::VL1(const RuntimeEnvironment *renv) :
 	RR(renv)
-{
-}
+{}
 
 void VL1::onRemotePacket(void *const tPtr, const int64_t localSocket, const InetAddress &fromAddr, SharedPtr< Buf > &data, const unsigned int len) noexcept
 {

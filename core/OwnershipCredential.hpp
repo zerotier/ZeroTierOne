@@ -45,7 +45,7 @@ class RuntimeEnvironment;
  * These are used in conjunction with the rules engine to make IP addresses and
  * other identifiers un-spoofable.
  */
-class CertificateOfOwnership : public Credential
+class OwnershipCredential : public Credential
 {
 	friend class Credential;
 
@@ -60,9 +60,9 @@ public:
 		THING_IPV6_ADDRESS = 3
 	};
 
-	ZT_INLINE CertificateOfOwnership() noexcept { memoryZero(this); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+	ZT_INLINE OwnershipCredential() noexcept { memoryZero(this); }
 
-	ZT_INLINE CertificateOfOwnership(const uint64_t nwid,const int64_t ts,const Address &issuedTo,const uint32_t id) noexcept // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+	ZT_INLINE OwnershipCredential(const uint64_t nwid, const int64_t ts, const Address &issuedTo, const uint32_t id) noexcept
 	{
 		memoryZero(this);
 		m_networkId = nwid;
@@ -139,10 +139,10 @@ public:
 	int unmarshal(const uint8_t *data,int len) noexcept;
 
 	// Provides natural sort order by ID
-	ZT_INLINE bool operator<(const CertificateOfOwnership &coo) const noexcept { return (m_id < coo.m_id); }
+	ZT_INLINE bool operator<(const OwnershipCredential &coo) const noexcept { return (m_id < coo.m_id); }
 
-	ZT_INLINE bool operator==(const CertificateOfOwnership &coo) const noexcept { return (memcmp(this,&coo,sizeof(CertificateOfOwnership)) == 0); }
-	ZT_INLINE bool operator!=(const CertificateOfOwnership &coo) const noexcept { return (memcmp(this,&coo,sizeof(CertificateOfOwnership)) != 0); }
+	ZT_INLINE bool operator==(const OwnershipCredential &coo) const noexcept { return (memcmp(this, &coo, sizeof(OwnershipCredential)) == 0); }
+	ZT_INLINE bool operator!=(const OwnershipCredential &coo) const noexcept { return (memcmp(this, &coo, sizeof(OwnershipCredential)) != 0); }
 
 private:
 	ZT_INLINE bool _owns(const Thing &t,const void *v,unsigned int l) const noexcept

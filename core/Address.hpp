@@ -136,37 +136,26 @@ public:
 
 	ZT_INLINE bool operator==(const Address &a) const noexcept
 	{ return _a == a._a; }
-
 	ZT_INLINE bool operator!=(const Address &a) const noexcept
 	{ return _a != a._a; }
-
 	ZT_INLINE bool operator>(const Address &a) const noexcept
 	{ return _a > a._a; }
-
 	ZT_INLINE bool operator<(const Address &a) const noexcept
 	{ return _a < a._a; }
-
 	ZT_INLINE bool operator>=(const Address &a) const noexcept
 	{ return _a >= a._a; }
-
 	ZT_INLINE bool operator<=(const Address &a) const noexcept
 	{ return _a <= a._a; }
-
 	ZT_INLINE bool operator==(const uint64_t a) const noexcept
 	{ return _a == a; }
-
 	ZT_INLINE bool operator!=(const uint64_t a) const noexcept
 	{ return _a != a; }
-
 	ZT_INLINE bool operator>(const uint64_t a) const noexcept
 	{ return _a > a; }
-
 	ZT_INLINE bool operator<(const uint64_t a) const noexcept
 	{ return _a < a; }
-
 	ZT_INLINE bool operator>=(const uint64_t a) const noexcept
 	{ return _a >= a; }
-
 	ZT_INLINE bool operator<=(const uint64_t a) const noexcept
 	{ return _a <= a; }
 

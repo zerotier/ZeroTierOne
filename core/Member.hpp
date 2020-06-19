@@ -17,10 +17,10 @@
 #include "Constants.hpp"
 #include "Credential.hpp"
 #include "Containers.hpp"
-#include "CertificateOfMembership.hpp"
-#include "Capability.hpp"
-#include "Tag.hpp"
-#include "Revocation.hpp"
+#include "MembershipCredential.hpp"
+#include "CapabilityCredential.hpp"
+#include "TagCredential.hpp"
+#include "RevocationCredential.hpp"
 #include "NetworkConfig.hpp"
 
 namespace ZeroTier {
@@ -35,7 +35,7 @@ class Network;
  *
  * This class is not thread safe. It must be locked externally.
  */
-class Membership
+class Member
 {
 public:
 	enum AddCredentialResult
@@ -46,7 +46,7 @@ public:
 		ADD_DEFERRED_FOR_WHOIS
 	};
 
-	Membership();
+	Member();
 
 	/**
 	 * Send COM and other credentials to this peer
@@ -71,10 +71,10 @@ public:
 	 * @param id Tag ID
 	 * @return Pointer to tag or NULL if not found
 	 */
-	ZT_INLINE const Tag *getTag(const NetworkConfig &nconf,const uint32_t id) const noexcept
+	ZT_INLINE const TagCredential *getTag(const NetworkConfig &nconf, const uint32_t id) const noexcept
 	{
-		const Tag *const t = m_remoteTags.get(id);
-		return (((t)&&(m_isCredentialTimestampValid(nconf, *t))) ? t : (Tag *)0);
+		const TagCredential *const t = m_remoteTags.get(id);
+		return (((t)&&(m_isCredentialTimestampValid(nconf, *t))) ? t : (TagCredential *)0);
 	}
 
 	/**
@@ -103,7 +103,7 @@ public:
 	{
 		if (m_isUnspoofableAddress(nconf, r))
 			return true;
-		for(Map< uint32_t,CertificateOfOwnership >::const_iterator i(m_remoteCoos.begin());i != m_remoteCoos.end();++i) {
+		for(Map< uint32_t,OwnershipCredential >::const_iterator i(m_remoteCoos.begin()); i != m_remoteCoos.end(); ++i) {
 			if (m_isCredentialTimestampValid(nconf, i->second) && (i->second.owns(r)))
 				return true;
 		}
@@ -115,7 +115,7 @@ public:
 	 *
 	 * @param localCom
 	 */
-	ZT_INLINE bool certificateOfMembershipAgress(const CertificateOfMembership &localCom,const Identity &remoteIdentity)
+	ZT_INLINE bool certificateOfMembershipAgress(const MembershipCredential &localCom, const Identity &remoteIdentity)
 	{
 		if ((m_comAgreementLocalTimestamp == localCom.timestamp()) && (m_comAgreementRemoteTimestamp == m_com.timestamp()))
 			return true;
@@ -146,11 +146,11 @@ public:
 		return false;
 	}
 
-	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const Identity &sourcePeerIdentity,const NetworkConfig &nconf,const CertificateOfMembership &com);
-	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const Identity &sourcePeerIdentity,const NetworkConfig &nconf,const Tag &tag);
-	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const Identity &sourcePeerIdentity,const NetworkConfig &nconf,const Capability &cap);
-	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const Identity &sourcePeerIdentity,const NetworkConfig &nconf,const CertificateOfOwnership &coo);
-	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const Identity &sourcePeerIdentity,const NetworkConfig &nconf,const Revocation &rev);
+	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const Identity &sourcePeerIdentity,const NetworkConfig &nconf,const MembershipCredential &com);
+	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const Identity &sourcePeerIdentity,const NetworkConfig &nconf,const TagCredential &tag);
+	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const Identity &sourcePeerIdentity,const NetworkConfig &nconf,const CapabilityCredential &cap);
+	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const Identity &sourcePeerIdentity,const NetworkConfig &nconf,const OwnershipCredential &coo);
+	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const Identity &sourcePeerIdentity,const NetworkConfig &nconf,const RevocationCredential &rev);
 
 private:
 	// This returns true if a resource is an IPv6 NDP-emulated address. These embed the ZT
@@ -192,31 +192,31 @@ private:
 	int64_t m_comAgreementLocalTimestamp,m_comAgreementRemoteTimestamp;
 
 	// Remote member's latest network COM
-	CertificateOfMembership m_com;
+	MembershipCredential m_com;
 
 	// Revocations by credentialKey()
 	Map<uint64_t,int64_t> m_revocations;
 
 	// Remote credentials that we have received from this member (and that are valid)
-	Map<uint32_t,Tag> m_remoteTags;
-	Map<uint32_t,Capability> m_remoteCaps;
-	Map<uint32_t,CertificateOfOwnership> m_remoteCoos;
+	Map<uint32_t,TagCredential> m_remoteTags;
+	Map<uint32_t,CapabilityCredential> m_remoteCaps;
+	Map<uint32_t,OwnershipCredential> m_remoteCoos;
 
 public:
 	class CapabilityIterator
 	{
 	public:
-		ZT_INLINE CapabilityIterator(Membership &m,const NetworkConfig &nconf) noexcept :
+		ZT_INLINE CapabilityIterator(Member &m, const NetworkConfig &nconf) noexcept :
 			m_hti(m.m_remoteCaps.begin()),
 			m_parent(m),
 			m_nconf(nconf)
 		{
 		}
 
-		ZT_INLINE Capability *next() noexcept
+		ZT_INLINE CapabilityCredential *next() noexcept
 		{
 			while (m_hti != m_parent.m_remoteCaps.end()) {
-				Map< uint32_t,Capability >::iterator i(m_hti++); // NOLINT(hicpp-use-auto,modernize-use-auto)
+				Map< uint32_t,CapabilityCredential >::iterator i(m_hti++);
 				if (m_parent.m_isCredentialTimestampValid(m_nconf, i->second))
 					return &(i->second);
 			}
@@ -224,8 +224,8 @@ public:
 		}
 
 	private:
-		Map< uint32_t,Capability >::iterator m_hti;
-		Membership &m_parent;
+		Map< uint32_t,CapabilityCredential >::iterator m_hti;
+		Member &m_parent;
 		const NetworkConfig &m_nconf;
 	};
 };

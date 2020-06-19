@@ -743,7 +743,7 @@ void Node::ncSendConfig(uint64_t nwid, uint64_t requestPacketId, const Address &
 	}
 }
 
-void Node::ncSendRevocation(const Address &destination, const Revocation &rev)
+void Node::ncSendRevocation(const Address &destination, const RevocationCredential &rev)
 {
 	if (destination == RR->identity.address()) {
 		SharedPtr< Network > n(network(rev.networkId()));

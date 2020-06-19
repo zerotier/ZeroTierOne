@@ -101,7 +101,7 @@ class RuntimeEnvironment;
  * order with the fingerprint hash being packed into tuple IDs 3-8 and this buffer is
  * then signed.
  */
-class CertificateOfMembership : public Credential
+class MembershipCredential : public Credential
 {
 	friend class Credential;
 
@@ -111,7 +111,7 @@ public:
 	/**
 	 * Create an empty certificate of membership
 	 */
-	ZT_INLINE CertificateOfMembership() noexcept { memoryZero(this); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+	ZT_INLINE MembershipCredential() noexcept { memoryZero(this); }
 
 	/**
 	 * Create from required fields common to all networks
@@ -121,12 +121,12 @@ public:
 	 * @param nwid Network ID
 	 * @param issuedTo Certificate recipient
 	 */
-	CertificateOfMembership(int64_t timestamp,int64_t timestampMaxDelta,uint64_t nwid,const Identity &issuedTo) noexcept;
+	MembershipCredential(int64_t timestamp, int64_t timestampMaxDelta, uint64_t nwid, const Identity &issuedTo) noexcept;
 
 	/**
 	 * @return True if there's something here
 	 */
-	ZT_INLINE operator bool() const noexcept { return (m_networkId != 0); } // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
+	ZT_INLINE operator bool() const noexcept { return (m_networkId != 0); }
 
 	/**
 	 * @return Credential ID, always 0 for COMs
@@ -166,7 +166,7 @@ public:
 	 * @param other Cert to compare with
 	 * @return True if certs agree and 'other' may be communicated with
 	 */
-	bool agreesWith(const CertificateOfMembership &other) const noexcept;
+	bool agreesWith(const MembershipCredential &other) const noexcept;
 
 	/**
 	 * Sign this certificate

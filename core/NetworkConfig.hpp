@@ -18,10 +18,10 @@
 #include "InetAddress.hpp"
 #include "MulticastGroup.hpp"
 #include "Address.hpp"
-#include "CertificateOfMembership.hpp"
-#include "CertificateOfOwnership.hpp"
-#include "Capability.hpp"
-#include "Tag.hpp"
+#include "MembershipCredential.hpp"
+#include "OwnershipCredential.hpp"
+#include "CapabilityCredential.hpp"
+#include "TagCredential.hpp"
 #include "Dictionary.hpp"
 #include "Identity.hpp"
 #include "Utils.hpp"
@@ -222,7 +222,7 @@ struct NetworkConfig : TriviallyCopyable
 	 */
 	bool addSpecialist(const Address &a, uint64_t f) noexcept;
 
-	ZT_INLINE const Capability *capability(const uint32_t id) const
+	ZT_INLINE const CapabilityCredential *capability(const uint32_t id) const
 	{
 		for (unsigned int i = 0;i < capabilityCount;++i) {
 			if (capabilities[i].id() == id)
@@ -231,7 +231,7 @@ struct NetworkConfig : TriviallyCopyable
 		return nullptr;
 	}
 
-	ZT_INLINE const Tag *tag(const uint32_t id) const
+	ZT_INLINE const TagCredential *tag(const uint32_t id) const
 	{
 		for (unsigned int i = 0;i < tagCount;++i) {
 			if (tags[i].id() == id)
@@ -349,17 +349,17 @@ struct NetworkConfig : TriviallyCopyable
 	/**
 	 * Capabilities for this node on this network, in ascending order of capability ID
 	 */
-	Capability capabilities[ZT_MAX_NETWORK_CAPABILITIES];
+	CapabilityCredential capabilities[ZT_MAX_NETWORK_CAPABILITIES];
 
 	/**
 	 * Tags for this node on this network, in ascending order of tag ID
 	 */
-	Tag tags[ZT_MAX_NETWORK_TAGS];
+	TagCredential tags[ZT_MAX_NETWORK_TAGS];
 
 	/**
 	 * Certificates of ownership for this network member
 	 */
-	CertificateOfOwnership certificatesOfOwnership[ZT_MAX_CERTIFICATES_OF_OWNERSHIP];
+	OwnershipCredential certificatesOfOwnership[ZT_MAX_CERTIFICATES_OF_OWNERSHIP];
 
 	/**
 	 * Network type (currently just public or private)
@@ -374,7 +374,7 @@ struct NetworkConfig : TriviallyCopyable
 	/**
 	 * Certificate of membership (for private networks)
 	 */
-	CertificateOfMembership com;
+	MembershipCredential com;
 };
 
 } // namespace ZeroTier

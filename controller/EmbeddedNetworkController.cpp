@@ -23,7 +23,7 @@
 
 #include "../core/Constants.hpp"
 #include "../core/Node.hpp"
-#include "../core/CertificateOfMembership.hpp"
+#include "../core/MembershipCredential.hpp"
 #include "../core/NetworkConfig.hpp"
 #include "../core/Dictionary.hpp"
 #include "../core/MAC.hpp"
@@ -1123,7 +1123,7 @@ void EmbeddedNetworkController::onNetworkMemberUpdate(const void *db,uint64_t ne
 void EmbeddedNetworkController::onNetworkMemberDeauthorize(const void *db,uint64_t networkId,uint64_t memberId)
 {
 	const int64_t now = OSUtils::now();
-	Revocation rev((uint32_t)Utils::random(),networkId,0,now,ZT_REVOCATION_FLAG_FAST_PROPAGATE,Address(memberId),ZT_CREDENTIAL_TYPE_COM);
+	RevocationCredential rev((uint32_t)Utils::random(), networkId, 0, now, ZT_REVOCATION_FLAG_FAST_PROPAGATE, Address(memberId), ZT_CREDENTIAL_TYPE_COM);
 	rev.sign(_signingId);
 	{
 		std::lock_guard<std::mutex> l(_memberStatus_l);
@@ -1370,7 +1370,7 @@ void EmbeddedNetworkController::_request(
 								++caprc;
 						}
 					}
-					nc->capabilities[nc->capabilityCount] = Capability((uint32_t)capId,nwid,now,capr,caprc);
+					nc->capabilities[nc->capabilityCount] = CapabilityCredential((uint32_t)capId, nwid, now, capr, caprc);
 					if (nc->capabilities[nc->capabilityCount].sign(_signingId,identity.address()))
 						++nc->capabilityCount;
 					if (nc->capabilityCount >= ZT_MAX_NETWORK_CAPABILITIES)
@@ -1406,7 +1406,7 @@ void EmbeddedNetworkController::_request(
 		for(std::map< uint32_t,uint32_t >::const_iterator t(memberTagsById.begin());t!=memberTagsById.end();++t) {
 			if (nc->tagCount >= ZT_MAX_NETWORK_TAGS)
 				break;
-			nc->tags[nc->tagCount] = Tag(nwid,now,identity.address(),t->first,t->second);
+			nc->tags[nc->tagCount] = TagCredential(nwid, now, identity.address(), t->first, t->second);
 			if (nc->tags[nc->tagCount].sign(_signingId))
 				++nc->tagCount;
 		}
@@ -1609,14 +1609,14 @@ void EmbeddedNetworkController::_request(
 
 	// Issue a certificate of ownership for all static IPs
 	if (nc->staticIpCount) {
-		nc->certificatesOfOwnership[0] = CertificateOfOwnership(nwid,now,identity.address(),1);
+		nc->certificatesOfOwnership[0] = OwnershipCredential(nwid, now, identity.address(), 1);
 		for(unsigned int i=0;i<nc->staticIpCount;++i)
 			nc->certificatesOfOwnership[0].addThing(nc->staticIps[i]);
 		nc->certificatesOfOwnership[0].sign(_signingId);
 		nc->certificateOfOwnershipCount = 1;
 	}
 
-	CertificateOfMembership com(now,credentialtmd,nwid,identity);
+	MembershipCredential com(now, credentialtmd, nwid, identity);
 	if (com.sign(_signingId)) {
 		nc->com = com;
 	} else {

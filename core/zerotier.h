@@ -294,40 +294,81 @@ typedef struct
 } ZT_Fingerprint;
 
 /**
- * Maximum length of string fields in identification certificates
+ * Maximum length of string fields in certificates
  */
-#define ZT_IDENTIFICATION_CERTIFICATE_MAX_STRING_LENGTH 127
+#define ZT_CERTIFICATE_MAX_STRING_LENGTH 63
 
 /**
  * Maximum length of a signature
  */
-#define ZT_IDENTIFICATION_CERTIFICATE_MAX_SIGNATURE_SIZE 256
+#define ZT_CERTIFICATE_MAX_SIGNATURE_SIZE 96
 
 /**
  * Flag indicating that the nodes in the subject are a set of roots
  */
-#define ZT_IDENTIFICATION_CERTIFICATE_FLAG_ROOT_SET 0x0000000000000001ULL
+#define ZT_CERTIFICATE_FLAG_CERTIFICATE_USE_ROOT_SET 0x0000000000000001ULL
+
+/**
+ * Errors returned by functions that verify or handle certificates.
+ */
+enum ZT_CertificateError
+{
+	/**
+	 * No error (certificate is valid or operation was successful)
+	 */
+	ZT_CERTIFICATE_ERROR_NONE = 0,
+
+	/**
+	 * Certificate format is invalid or required fields are missing
+	 */
+	ZT_CERTIFICATE_ERROR_INVALID_FORMAT = 1,
+
+	/**
+	 * One or more identities in the certificate are invalid or fail consistency check
+	 */
+	ZT_CERTIFICATE_ERROR_INVALID_IDENTITY = 2,
+
+	/**
+	 * Certificate primary signature is invalid
+	 */
+	ZT_CERTIFICATE_ERROR_INVALID_PRIMARY_SIGNATURE = 3,
+
+	/**
+	 * Full chain validation of certificate failed
+	 */
+	ZT_CERTIFICATE_ERROR_INVALID_CHAIN = 4,
+
+	/**
+	 * One or more signed components (e.g. a Locator) has an invalid signature.
+	 */
+	ZT_CERTIFICATE_ERROR_INVALID_COMPONENT_SIGNATURE = 5,
+
+	/**
+	 * Certificate is not appropriate for this use
+	 */
+	ZT_CERTIFICATE_ERROR_INAPPROPRIATE_FOR_USE = 6
+};
 
 /**
  * Information about a real world entity.
  */
 typedef struct
 {
-	char country[ZT_IDENTIFICATION_CERTIFICATE_MAX_STRING_LENGTH + 1];
-	char organization[ZT_IDENTIFICATION_CERTIFICATE_MAX_STRING_LENGTH + 1];
-	char unit[ZT_IDENTIFICATION_CERTIFICATE_MAX_STRING_LENGTH + 1];
-	char locality[ZT_IDENTIFICATION_CERTIFICATE_MAX_STRING_LENGTH + 1];
-	char province[ZT_IDENTIFICATION_CERTIFICATE_MAX_STRING_LENGTH + 1];
-	char streetAddress[ZT_IDENTIFICATION_CERTIFICATE_MAX_STRING_LENGTH + 1];
-	char postalCode[ZT_IDENTIFICATION_CERTIFICATE_MAX_STRING_LENGTH + 1];
-	char commonName[ZT_IDENTIFICATION_CERTIFICATE_MAX_STRING_LENGTH + 1];
-	char serialNo[ZT_IDENTIFICATION_CERTIFICATE_MAX_STRING_LENGTH + 1];
-	char email[ZT_IDENTIFICATION_CERTIFICATE_MAX_STRING_LENGTH + 1];
-	char url[ZT_IDENTIFICATION_CERTIFICATE_MAX_STRING_LENGTH + 1];
-} ZT_IdentificationCertificate_Name;
+	char country[ZT_CERTIFICATE_MAX_STRING_LENGTH + 1];
+	char organization[ZT_CERTIFICATE_MAX_STRING_LENGTH + 1];
+	char unit[ZT_CERTIFICATE_MAX_STRING_LENGTH + 1];
+	char locality[ZT_CERTIFICATE_MAX_STRING_LENGTH + 1];
+	char province[ZT_CERTIFICATE_MAX_STRING_LENGTH + 1];
+	char streetAddress[ZT_CERTIFICATE_MAX_STRING_LENGTH + 1];
+	char postalCode[ZT_CERTIFICATE_MAX_STRING_LENGTH + 1];
+	char commonName[ZT_CERTIFICATE_MAX_STRING_LENGTH + 1];
+	char serialNo[ZT_CERTIFICATE_MAX_STRING_LENGTH + 1];
+	char email[ZT_CERTIFICATE_MAX_STRING_LENGTH + 1];
+	char url[ZT_CERTIFICATE_MAX_STRING_LENGTH + 1];
+} ZT_Certificate_Name;
 
 /**
- * Identity and optional locator for a node
+ * Identity and optional locator to help find a node on physical networks.
  */
 typedef struct
 {
@@ -337,10 +378,10 @@ typedef struct
 	const ZT_Identity *identity;
 
 	/**
-	 * Locator or NULL if not specified
+	 * Locator, or NULL if none
 	 */
 	const ZT_Locator *locator;
-} ZT_IdentificationCertificate_Node;
+} ZT_Certificate_Identity;
 
 /**
  * ID and primary controller for a network
@@ -356,7 +397,7 @@ typedef struct
 	 * Full fingerprint of primary controller
 	 */
 	ZT_Fingerprint controller;
-} ZT_IdentificationCertificate_Network;
+} ZT_Certificate_Network;
 
 /**
  * Identification certificate subject
@@ -366,17 +407,22 @@ typedef struct
 	/**
 	 * Identities and optional locators of nodes
 	 */
-	ZT_IdentificationCertificate_Node *nodes;
+	ZT_Certificate_Identity *identities;
 
 	/**
 	 * Networks owned by this entity
 	 */
-	ZT_IdentificationCertificate_Network *networks;
+	ZT_Certificate_Network *networks;
 
 	/**
-	 * Number of nodes
+	 * Serial numbers of other certificates being signed (each is 48 bytes / 384 bits)
 	 */
-	unsigned int nodeCount;
+	const uint8_t *const *certificates;
+
+	/**
+	 * Number of identities
+	 */
+	unsigned int identityCount;
 
 	/**
 	 * Number of networks
@@ -384,18 +430,25 @@ typedef struct
 	unsigned int networkCount;
 
 	/**
+	 * Number of certificates
+	 */
+	unsigned int certificateCount;
+
+	/**
 	 * Information about owner of items.
 	 */
-	ZT_IdentificationCertificate_Name name;
-} ZT_IdentificationCertificate_Subject;
+	ZT_Certificate_Name name;
+} ZT_Certificate_Subject;
 
 /**
- * Identification certificate
+ * Certificate
  *
- * This is designed so it could be converted to/from an X509 format
- * for interoperability with X509 systems. OCSP could be implemented
- * too, though it would probably require the development of an OCSP
- * proxy server that queried the issuer via the ZeroTier protocol.
+ * This is designed to be compatible with x509 certificate interfaces,
+ * presenting similar concepts and fields.
+ *
+ * It's not X509 because we want to keep ZeroTier clean, as simple as
+ * possible, small, and secure. X509 is both bloated and a security
+ * disaster as it's very hard to implement correctly.
  */
 typedef struct
 {
@@ -403,20 +456,6 @@ typedef struct
 	 * Serial number, a SHA384 hash of this certificate.
 	 */
 	uint8_t serialNo[48];
-
-	/**
-	 * Certificate version
-	 */
-	unsigned int version;
-
-	/**
-	 * Maximum path length from this certificate toward further certificates.
-	 *
-	 * Subjects may sign other certificates whose path lengths are less than
-	 * this value. A value of zero indicates that no identification certificates
-	 * may be signed (not a CA).
-	 */
-	unsigned int maxPathLength;
 
 	/**
 	 * Flags indicating certificate usage and any other attributes.
@@ -434,7 +473,7 @@ typedef struct
 	/**
 	 * Subject of certificate
 	 */
-	ZT_IdentificationCertificate_Subject subject;
+	ZT_Certificate_Subject subject;
 
 	/**
 	 * Issuer node identity and public key(s).
@@ -444,7 +483,7 @@ typedef struct
 	/**
 	 * Issuer information
 	 */
-	ZT_IdentificationCertificate_Name issuerName;
+	ZT_Certificate_Name issuerName;
 
 	/**
 	 * URLs that can be consulted for updates to this certificate.
@@ -457,6 +496,15 @@ typedef struct
 	unsigned int updateUrlCount;
 
 	/**
+	 * Maximum path length from this certificate toward further certificates.
+	 *
+	 * Subjects may sign other certificates whose path lengths are less than
+	 * this value. A value of zero indicates that no identification certificates
+	 * may be signed (not a CA).
+	 */
+	unsigned int maxPathLength;
+
+	/**
 	 * Size of signature in bytes.
 	 */
 	unsigned int signatureSize;
@@ -464,8 +512,8 @@ typedef struct
 	/**
 	 * Signature by issuer (algorithm determined by identity type).
 	 */
-	uint8_t signature[ZT_IDENTIFICATION_CERTIFICATE_MAX_SIGNATURE_SIZE];
-} ZT_IdentificationCertificate;
+	uint8_t signature[ZT_CERTIFICATE_MAX_SIGNATURE_SIZE];
+} ZT_Certificate;
 
 /**
  * Credential type IDs

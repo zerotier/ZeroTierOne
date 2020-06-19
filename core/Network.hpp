@@ -22,9 +22,9 @@
 #include "MAC.hpp"
 #include "Buf.hpp"
 #include "Dictionary.hpp"
-#include "Membership.hpp"
+#include "Member.hpp"
 #include "NetworkConfig.hpp"
-#include "CertificateOfMembership.hpp"
+#include "MembershipCredential.hpp"
 #include "Containers.hpp"
 
 #define ZT_NETWORK_MAX_INCOMING_UPDATES 3
@@ -265,27 +265,27 @@ public:
 	/**
 	 * Validate a credential and learn it if it passes certificate and other checks
 	 */
-	Membership::AddCredentialResult addCredential(void *tPtr,const Identity &sourcePeerIdentity,const CertificateOfMembership &com);
+	Member::AddCredentialResult addCredential(void *tPtr, const Identity &sourcePeerIdentity, const MembershipCredential &com);
 
 	/**
 	 * Validate a credential and learn it if it passes certificate and other checks
 	 */
-	Membership::AddCredentialResult addCredential(void *tPtr,const Identity &sourcePeerIdentity,const Capability &cap);
+	Member::AddCredentialResult addCredential(void *tPtr, const Identity &sourcePeerIdentity, const CapabilityCredential &cap);
 
 	/**
 	 * Validate a credential and learn it if it passes certificate and other checks
 	 */
-	Membership::AddCredentialResult addCredential(void *tPtr,const Identity &sourcePeerIdentity,const Tag &tag);
+	Member::AddCredentialResult addCredential(void *tPtr, const Identity &sourcePeerIdentity, const TagCredential &tag);
 
 	/**
 	 * Validate a credential and learn it if it passes certificate and other checks
 	 */
-	Membership::AddCredentialResult addCredential(void *tPtr,const Identity &sourcePeerIdentity,const Revocation &rev);
+	Member::AddCredentialResult addCredential(void *tPtr, const Identity &sourcePeerIdentity, const RevocationCredential &rev);
 
 	/**
 	 * Validate a credential and learn it if it passes certificate and other checks
 	 */
-	Membership::AddCredentialResult addCredential(void *tPtr,const Identity &sourcePeerIdentity,const CertificateOfOwnership &coo);
+	Member::AddCredentialResult addCredential(void *tPtr, const Identity &sourcePeerIdentity, const OwnershipCredential &coo);
 
 	/**
 	 * Push credentials to a peer if timeouts indicate that we should do so
@@ -320,7 +320,7 @@ public:
 	ZT_INLINE void eachMember(F f)
 	{
 		Mutex::Lock ml(m_memberships_l);
-		for(Map<Address,Membership>::iterator i(m_memberships.begin());i != m_memberships.end();++i) { // NOLINT(modernize-loop-convert,hicpp-use-auto,modernize-use-auto)
+		for(Map<Address,Member>::iterator i(m_memberships.begin()); i != m_memberships.end(); ++i) { // NOLINT(modernize-loop-convert,hicpp-use-auto,modernize-use-auto)
 			if (!f(i->first,i->second))
 				break;
 		}
@@ -361,7 +361,7 @@ private:
 		NETCONF_FAILURE_INIT_FAILED
 	} _netconfFailure;
 
-	Map<Address,Membership> m_memberships;
+	Map<Address,Member> m_memberships;
 
 	Mutex m_myMulticastGroups_l;
 	Mutex m_remoteBridgeRoutes_l;

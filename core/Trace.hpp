@@ -35,11 +35,11 @@ class Identity;
 class Peer;
 class Path;
 class Network;
-class CertificateOfMembership;
-class CertificateOfOwnership;
-class Revocation;
-class Tag;
-class Capability;
+class MembershipCredential;
+class OwnershipCredential;
+class RevocationCredential;
+class TagCredential;
+class CapabilityCredential;
 struct NetworkConfig;
 
 /**

@@ -39,18 +39,6 @@ SharedPtr< Peer > Topology::add(void *tPtr, const SharedPtr< Peer > &peer)
 	return peer;
 }
 
-struct p_RootSortComparisonOperator
-{
-	ZT_INLINE bool operator()(const SharedPtr< Peer > &a, const SharedPtr< Peer > &b) const noexcept
-	{
-		// Sort in inverse order of latency with lowest latency first (and -1 last).
-		const int bb = b->latency();
-		if (bb < 0)
-			return true;
-		return bb < a->latency();
-	}
-};
-
 SharedPtr< Peer > Topology::addRoot(void *const tPtr, const Identity &id)
 {
 	if ((id != RR->identity) && id.locallyValidate()) {
@@ -69,6 +57,10 @@ SharedPtr< Peer > Topology::addRoot(void *const tPtr, const Identity &id)
 	return SharedPtr< Peer >();
 }
 
+ZT_CertificateError addRootSet(void *tPtr, const Certificate &cert)
+{
+}
+
 bool Topology::removeRoot(void *const tPtr, Address address)
 {
 	RWMutex::Lock l1(m_peers_l);
@@ -76,10 +68,22 @@ bool Topology::removeRoot(void *const tPtr, Address address)
 	return true;
 }
 
+struct p_RootRankingComparisonOperator
+{
+	ZT_INLINE bool operator()(const SharedPtr< Peer > &a, const SharedPtr< Peer > &b) const noexcept
+	{
+		// Sort in inverse order of latency with lowest latency first (and -1 last).
+		const int bb = b->latency();
+		if (bb < 0)
+			return true;
+		return bb < a->latency();
+	}
+};
+
 void Topology::rankRoots()
 {
 	RWMutex::Lock l1(m_peers_l);
-	std::sort(m_rootPeers.begin(), m_rootPeers.end(), p_RootSortComparisonOperator());
+	std::sort(m_rootPeers.begin(), m_rootPeers.end(), p_RootRankingComparisonOperator());
 }
 
 void Topology::doPeriodicTasks(void *tPtr, const int64_t now)

@@ -25,7 +25,7 @@
 #include "ScopedPtr.hpp"
 #include "Fingerprint.hpp"
 #include "Blob.hpp"
-#include "IdentificationCertificate.hpp"
+#include "Certificate.hpp"
 #include "Containers.hpp"
 
 namespace ZeroTier {
@@ -183,6 +183,20 @@ public:
 	SharedPtr< Peer > addRoot(void *tPtr, const Identity &id);
 
 	/**
+	 * Add or update a root set
+	 *
+	 * This does not check the certificate's validity. That must be done
+	 * first. It may however return a certificate error if something is
+	 * missing or wrong that prevents the certificate from being used
+	 * as a root set.
+	 *
+	 * @param tPtr Thread pointer
+	 * @param cert Certificate whose subject enumerates root identities
+	 * @return Zero on success or an error code
+	 */
+	ZT_CertificateError addRootSet(void *tPtr, const Certificate &cert);
+
+	/**
 	 * Remove a root server's identity from the root server set
 	 *
 	 * @param tPtr Thread pointer
@@ -239,7 +253,8 @@ private:
 	RWMutex m_peers_l; // locks m_peers, m_roots, and m_rootPeers
 	Map< uint64_t, SharedPtr< Path > > m_paths;
 	Map< Address, SharedPtr< Peer > > m_peers;
-	Map< Identity, Set< IdentificationCertificate > > m_roots;
+	Map< Identity, Set< Blob<ZT_SHA384_DIGEST_SIZE> > > m_roots;
+	Map< String, Certificate > m_rootSets;
 	Vector< SharedPtr< Peer > > m_rootPeers;
 };
 

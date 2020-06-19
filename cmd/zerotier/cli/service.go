@@ -25,7 +25,7 @@ import (
 	"zerotier/pkg/zerotier"
 )
 
-func Service(basePath, authToken string, args []string) {
+func Service(basePath string, args []string) {
 	if len(args) > 0 {
 		Help()
 		os.Exit(1)

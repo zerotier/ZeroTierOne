@@ -14,11 +14,11 @@
 #include "Constants.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "Credential.hpp"
-#include "Capability.hpp"
-#include "Tag.hpp"
-#include "CertificateOfMembership.hpp"
-#include "CertificateOfOwnership.hpp"
-#include "Revocation.hpp"
+#include "CapabilityCredential.hpp"
+#include "TagCredential.hpp"
+#include "MembershipCredential.hpp"
+#include "OwnershipCredential.hpp"
+#include "RevocationCredential.hpp"
 #include "Network.hpp"
 #include "Topology.hpp"
 
@@ -66,12 +66,12 @@ static ZT_INLINE Credential::VerifyResult _credVerify(const RuntimeEnvironment *
 	return Credential::VERIFY_BAD_SIGNATURE;
 }
 
-Credential::VerifyResult Credential::_verify(const RuntimeEnvironment *const RR,void *tPtr,const Revocation &credential) const { return _credVerify(RR,tPtr,credential); }
-Credential::VerifyResult Credential::_verify(const RuntimeEnvironment *const RR,void *tPtr,const Tag &credential) const { return _credVerify(RR,tPtr,credential); }
-Credential::VerifyResult Credential::_verify(const RuntimeEnvironment *const RR,void *tPtr,const Capability &credential) const { return _credVerify(RR,tPtr,credential); }
-Credential::VerifyResult Credential::_verify(const RuntimeEnvironment *const RR,void *tPtr,const CertificateOfOwnership &credential) const { return _credVerify(RR,tPtr,credential); }
+Credential::VerifyResult Credential::_verify(const RuntimeEnvironment *const RR,void *tPtr,const RevocationCredential &credential) const { return _credVerify(RR, tPtr, credential); }
+Credential::VerifyResult Credential::_verify(const RuntimeEnvironment *const RR,void *tPtr,const TagCredential &credential) const { return _credVerify(RR, tPtr, credential); }
+Credential::VerifyResult Credential::_verify(const RuntimeEnvironment *const RR,void *tPtr,const CapabilityCredential &credential) const { return _credVerify(RR, tPtr, credential); }
+Credential::VerifyResult Credential::_verify(const RuntimeEnvironment *const RR,void *tPtr,const OwnershipCredential &credential) const { return _credVerify(RR, tPtr, credential); }
 
-Credential::VerifyResult Credential::_verify(const RuntimeEnvironment *const RR,void *tPtr,const CertificateOfMembership &credential) const
+Credential::VerifyResult Credential::_verify(const RuntimeEnvironment *const RR,void *tPtr,const MembershipCredential &credential) const
 {
 	// Sanity check network ID.
 	if ((!credential.m_signedBy) || (credential.m_signedBy != Network::controllerFor(credential.m_networkId)))

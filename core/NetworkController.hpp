@@ -17,7 +17,7 @@
 #include "Constants.hpp"
 #include "Dictionary.hpp"
 #include "NetworkConfig.hpp"
-#include "Revocation.hpp"
+#include "RevocationCredential.hpp"
 #include "Address.hpp"
 
 namespace ZeroTier {
@@ -62,7 +62,7 @@ public:
 		 * @param destination Destination node address
 		 * @param rev Revocation to send
 		 */
-		virtual void ncSendRevocation(const Address &destination,const Revocation &rev) = 0;
+		virtual void ncSendRevocation(const Address &destination,const RevocationCredential &rev) = 0;
 
 		/**
 		 * Send a network configuration request error

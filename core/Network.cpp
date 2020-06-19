@@ -74,7 +74,7 @@ _doZtFilterResult _doZtFilter(
 	const RuntimeEnvironment *RR,
 	Trace::RuleResultLog &rrl,
 	const NetworkConfig &nconf,
-	const Membership *membership,       // can be NULL
+	const Member *membership,       // can be NULL
 	const bool inbound,
 	const Address &ztSource,
 	Address &ztDest,                    // MUTABLE -- is changed on REDIRECT actions
@@ -420,9 +420,9 @@ _doZtFilterResult _doZtFilter(
 			case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_OR:
 			case ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_XOR:
 			case ZT_NETWORK_RULE_MATCH_TAGS_EQUAL: {
-				const Tag *const localTag = std::lower_bound(&(nconf.tags[0]),&(nconf.tags[nconf.tagCount]),rules[rn].v.tag.id,Tag::IdComparePredicate());
+				const TagCredential *const localTag = std::lower_bound(&(nconf.tags[0]), &(nconf.tags[nconf.tagCount]), rules[rn].v.tag.id, TagCredential::IdComparePredicate());
 				if ((localTag != &(nconf.tags[nconf.tagCount]))&&(localTag->id() == rules[rn].v.tag.id)) {
-					const Tag *const remoteTag = ((membership) ? membership->getTag(nconf,rules[rn].v.tag.id) : (const Tag *)0);
+					const TagCredential *const remoteTag = ((membership) ? membership->getTag(nconf, rules[rn].v.tag.id) : (const TagCredential *)0);
 					if (remoteTag) {
 						const uint32_t ltv = localTag->value();
 						const uint32_t rtv = remoteTag->value();
@@ -461,7 +461,7 @@ _doZtFilterResult _doZtFilter(
 				if (superAccept) {
 					thisRuleMatches = 1;
 				} else if ( ((rt == ZT_NETWORK_RULE_MATCH_TAG_SENDER)&&(inbound)) || ((rt == ZT_NETWORK_RULE_MATCH_TAG_RECEIVER)&&(!inbound)) ) {
-					const Tag *const remoteTag = ((membership) ? membership->getTag(nconf,rules[rn].v.tag.id) : (const Tag *)0);
+					const TagCredential *const remoteTag = ((membership) ? membership->getTag(nconf, rules[rn].v.tag.id) : (const TagCredential *)0);
 					if (remoteTag) {
 						thisRuleMatches = (uint8_t)(remoteTag->value() == rules[rn].v.tag.value);
 					} else {
@@ -474,7 +474,7 @@ _doZtFilterResult _doZtFilter(
 						}
 					}
 				} else { // sender and outbound or receiver and inbound
-					const Tag *const localTag = std::lower_bound(&(nconf.tags[0]),&(nconf.tags[nconf.tagCount]),rules[rn].v.tag.id,Tag::IdComparePredicate());
+					const TagCredential *const localTag = std::lower_bound(&(nconf.tags[0]), &(nconf.tags[nconf.tagCount]), rules[rn].v.tag.id, TagCredential::IdComparePredicate());
 					if ((localTag != &(nconf.tags[nconf.tagCount]))&&(localTag->id() == rules[rn].v.tag.id)) {
 						thisRuleMatches = (uint8_t)(localTag->value() == rules[rn].v.tag.value);
 					} else {
@@ -626,7 +626,7 @@ bool Network::filterOutgoingPacket(
 	Mutex::Lock l1(m_memberships_l);
 	Mutex::Lock l2(m_config_l);
 
-	Membership *const membership = (ztDest) ? m_memberships.get(ztDest) : nullptr;
+	Member *const membership = (ztDest) ? m_memberships.get(ztDest) : nullptr;
 
 	switch(_doZtFilter(RR, rrl, m_config, membership, false, ztSource, ztFinalDest, macSource, macDest, frameData, frameLen, etherType, vlanId, m_config.rules, m_config.ruleCount, cc, ccLength, ccWatch, qosBucket)) {
 
@@ -719,7 +719,7 @@ bool Network::filterOutgoingPacket(
 	}
 
 	if (localCapabilityIndex >= 0) {
-		const Capability &cap = m_config.capabilities[localCapabilityIndex];
+		const CapabilityCredential &cap = m_config.capabilities[localCapabilityIndex];
 		RR->t->networkFilter(tPtr, 0x56ff1a93, m_id, rrl.l, crrl.l, cap.id(), cap.timestamp(), ztSource, ztDest, macSource, macDest, (uint16_t)frameLen, frameData, (uint16_t)etherType, (uint16_t)vlanId, noTee, false, accept);
 	} else {
 		RR->t->networkFilter(tPtr, 0x112fbbab, m_id, rrl.l, nullptr, 0, 0, ztSource, ztDest, macSource, macDest, (uint16_t)frameLen, frameData, (uint16_t)etherType, (uint16_t)vlanId, noTee, false, accept);
@@ -745,19 +745,19 @@ int Network::filterIncomingPacket(
 	Address cc;
 	unsigned int ccLength = 0;
 	bool ccWatch = false;
-	const Capability *c = nullptr;
+	const CapabilityCredential *c = nullptr;
 
 	uint8_t qosBucket = 255; // For incoming packets this is a dummy value
 
 	Mutex::Lock l1(m_memberships_l);
 	Mutex::Lock l2(m_config_l);
 
-	Membership &membership = m_memberships[sourcePeer->address()];
+	Member &membership = m_memberships[sourcePeer->address()];
 
 	switch (_doZtFilter(RR, rrl, m_config, &membership, true, sourcePeer->address(), ztFinalDest, macSource, macDest, frameData, frameLen, etherType, vlanId, m_config.rules, m_config.ruleCount, cc, ccLength, ccWatch, qosBucket)) {
 
 		case DOZTFILTER_NO_MATCH: {
-			Membership::CapabilityIterator mci(membership, m_config);
+			Member::CapabilityIterator mci(membership, m_config);
 			while ((c = mci.next())) {
 				ztFinalDest = ztDest; // sanity check, should be unmodified if there was no match
 				Address cc2;
@@ -1074,7 +1074,7 @@ bool Network::gate(void *tPtr,const SharedPtr<Peer> &peer) noexcept
 
 	try {
 		Mutex::Lock l(m_memberships_l);
-		Membership *m = m_memberships.get(peer->address());
+		Member *m = m_memberships.get(peer->address());
 		if (m) {
 			// SECURITY: this method in CertificateOfMembership does a full fingerprint check as well as
 			// checking certificate agreement. See Membership.hpp.
@@ -1099,7 +1099,7 @@ void Network::doPeriodicTasks(void *tPtr,const int64_t now)
 	{
 		Mutex::Lock l1(m_memberships_l);
 
-		for(Map<Address,Membership>::iterator i(m_memberships.begin());i != m_memberships.end();++i)
+		for(Map<Address,Member>::iterator i(m_memberships.begin()); i != m_memberships.end(); ++i)
 			i->second.clean(now, m_config);
 
 		{
@@ -1150,41 +1150,41 @@ void Network::learnBridgeRoute(const MAC &mac,const Address &addr)
 	}
 }
 
-Membership::AddCredentialResult Network::addCredential(void *tPtr,const Identity &sourcePeerIdentity,const CertificateOfMembership &com)
+Member::AddCredentialResult Network::addCredential(void *tPtr, const Identity &sourcePeerIdentity, const MembershipCredential &com)
 {
 	if (com.networkId() != m_id)
-		return Membership::ADD_REJECTED;
+		return Member::ADD_REJECTED;
 	Mutex::Lock _l(m_memberships_l);
 	return m_memberships[com.issuedTo().address].addCredential(RR, tPtr, sourcePeerIdentity, m_config, com);
 }
 
-Membership::AddCredentialResult Network::addCredential(void *tPtr,const Identity &sourcePeerIdentity,const Capability &cap)
+Member::AddCredentialResult Network::addCredential(void *tPtr, const Identity &sourcePeerIdentity, const CapabilityCredential &cap)
 {
 	if (cap.networkId() != m_id)
-		return Membership::ADD_REJECTED;
+		return Member::ADD_REJECTED;
 	Mutex::Lock _l(m_memberships_l);
 	return m_memberships[cap.issuedTo()].addCredential(RR, tPtr, sourcePeerIdentity, m_config, cap);
 }
 
-Membership::AddCredentialResult Network::addCredential(void *tPtr,const Identity &sourcePeerIdentity,const Tag &tag)
+Member::AddCredentialResult Network::addCredential(void *tPtr, const Identity &sourcePeerIdentity, const TagCredential &tag)
 {
 	if (tag.networkId() != m_id)
-		return Membership::ADD_REJECTED;
+		return Member::ADD_REJECTED;
 	Mutex::Lock _l(m_memberships_l);
 	return m_memberships[tag.issuedTo()].addCredential(RR, tPtr, sourcePeerIdentity, m_config, tag);
 }
 
-Membership::AddCredentialResult Network::addCredential(void *tPtr,const Identity &sourcePeerIdentity,const Revocation &rev)
+Member::AddCredentialResult Network::addCredential(void *tPtr, const Identity &sourcePeerIdentity, const RevocationCredential &rev)
 {
 	if (rev.networkId() != m_id)
-		return Membership::ADD_REJECTED;
+		return Member::ADD_REJECTED;
 
 	Mutex::Lock l1(m_memberships_l);
-	Membership &m = m_memberships[rev.target()];
+	Member &m = m_memberships[rev.target()];
 
-	const Membership::AddCredentialResult result = m.addCredential(RR, tPtr, sourcePeerIdentity, m_config, rev);
+	const Member::AddCredentialResult result = m.addCredential(RR, tPtr, sourcePeerIdentity, m_config, rev);
 
-	if ((result == Membership::ADD_ACCEPTED_NEW)&&(rev.fastPropagate())) {
+	if ((result == Member::ADD_ACCEPTED_NEW) && (rev.fastPropagate())) {
 		// TODO
 		/*
 			Address *a = nullptr;
@@ -1208,10 +1208,10 @@ Membership::AddCredentialResult Network::addCredential(void *tPtr,const Identity
 	return result;
 }
 
-Membership::AddCredentialResult Network::addCredential(void *tPtr,const Identity &sourcePeerIdentity,const CertificateOfOwnership &coo)
+Member::AddCredentialResult Network::addCredential(void *tPtr, const Identity &sourcePeerIdentity, const OwnershipCredential &coo)
 {
 	if (coo.networkId() != m_id)
-		return Membership::ADD_REJECTED;
+		return Member::ADD_REJECTED;
 	Mutex::Lock _l(m_memberships_l);
 	return m_memberships[coo.issuedTo()].addCredential(RR, tPtr, sourcePeerIdentity, m_config, coo);
 }
@@ -1220,7 +1220,7 @@ void Network::pushCredentials(void *tPtr,const SharedPtr<Peer> &to,const int64_t
 {
 	const int64_t tout = std::min(m_config.credentialTimeMaxDelta, m_config.com.timestampMaxDelta());
 	Mutex::Lock _l(m_memberships_l);
-	Membership &m = m_memberships[to->address()];
+	Member &m = m_memberships[to->address()];
 	if (((now - m.lastPushedCredentials()) + 5000) >= tout) {
 		m.pushCredentials(RR, tPtr, now, to, m_config);
 	}

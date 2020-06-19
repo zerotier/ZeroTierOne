@@ -35,7 +35,7 @@ class RuntimeEnvironment;
 /**
  * Revocation certificate to instantaneously revoke a COM, capability, or tag
  */
-class Revocation : public Credential
+class RevocationCredential : public Credential
 {
 	friend class Credential;
 
@@ -43,7 +43,7 @@ public:
 	static constexpr ZT_CredentialType credentialType() noexcept
 	{ return ZT_CREDENTIAL_TYPE_REVOCATION; }
 
-	ZT_INLINE Revocation() noexcept
+	ZT_INLINE RevocationCredential() noexcept
 	{ memoryZero(this); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 
 	/**
@@ -55,7 +55,7 @@ public:
 	 * @param tgt Target node whose credential(s) are being revoked
 	 * @param ct Credential type being revoked
 	 */
-	ZT_INLINE Revocation(const uint32_t i, const uint64_t nwid, const uint32_t cid, const uint64_t thr, const uint64_t fl, const Address &tgt, const ZT_CredentialType ct) noexcept: // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+	ZT_INLINE RevocationCredential(const uint32_t i, const uint64_t nwid, const uint32_t cid, const uint64_t thr, const uint64_t fl, const Address &tgt, const ZT_CredentialType ct) noexcept: // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 		m_id(i),
 		m_credentialId(cid),
 		m_networkId(nwid),

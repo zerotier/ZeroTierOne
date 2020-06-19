@@ -11,11 +11,11 @@
  */
 /****/
 
-#include "CertificateOfOwnership.hpp"
+#include "OwnershipCredential.hpp"
 
 namespace ZeroTier {
 
-void CertificateOfOwnership::addThing(const InetAddress &ip)
+void OwnershipCredential::addThing(const InetAddress &ip)
 {
 	if (m_thingCount >= ZT_CERTIFICATEOFOWNERSHIP_MAX_THINGS)
 		return;
@@ -30,7 +30,7 @@ void CertificateOfOwnership::addThing(const InetAddress &ip)
 	}
 }
 
-void CertificateOfOwnership::addThing(const MAC &mac)
+void OwnershipCredential::addThing(const MAC &mac)
 {
 	if (m_thingCount >= ZT_CERTIFICATEOFOWNERSHIP_MAX_THINGS)
 		return;
@@ -39,7 +39,7 @@ void CertificateOfOwnership::addThing(const MAC &mac)
 	++m_thingCount;
 }
 
-bool CertificateOfOwnership::sign(const Identity &signer)
+bool OwnershipCredential::sign(const Identity &signer)
 {
 	uint8_t buf[ZT_CERTIFICATEOFOWNERSHIP_MARSHAL_SIZE_MAX + 16];
 	if (signer.hasPrivate()) {
@@ -50,7 +50,7 @@ bool CertificateOfOwnership::sign(const Identity &signer)
 	return false;
 }
 
-int CertificateOfOwnership::marshal(uint8_t data[ZT_CERTIFICATEOFOWNERSHIP_MARSHAL_SIZE_MAX], bool forSign) const noexcept
+int OwnershipCredential::marshal(uint8_t data[ZT_CERTIFICATEOFOWNERSHIP_MARSHAL_SIZE_MAX], bool forSign) const noexcept
 {
 	int p = 0;
 	if (forSign) {
@@ -88,7 +88,7 @@ int CertificateOfOwnership::marshal(uint8_t data[ZT_CERTIFICATEOFOWNERSHIP_MARSH
 	return p;
 }
 
-int CertificateOfOwnership::unmarshal(const uint8_t *data, int len) noexcept
+int OwnershipCredential::unmarshal(const uint8_t *data, int len) noexcept
 {
 	if (len < 30)
 		return -1;

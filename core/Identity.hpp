@@ -222,27 +222,20 @@ public:
 
 	ZT_INLINE bool operator==(const Identity &id) const noexcept
 	{ return (m_fp == id.m_fp); }
-
 	ZT_INLINE bool operator!=(const Identity &id) const noexcept
 	{ return !(*this == id); }
-
 	ZT_INLINE bool operator<(const Identity &id) const noexcept
 	{ return (m_fp < id.m_fp); }
-
 	ZT_INLINE bool operator>(const Identity &id) const noexcept
 	{ return (id < *this); }
-
 	ZT_INLINE bool operator<=(const Identity &id) const noexcept
 	{ return !(id < *this); }
-
 	ZT_INLINE bool operator>=(const Identity &id) const noexcept
 	{ return !(*this < id); }
 
 	static constexpr int marshalSizeMax() noexcept
 	{ return ZT_IDENTITY_MARSHAL_SIZE_MAX; }
-
 	int marshal(uint8_t data[ZT_IDENTITY_MARSHAL_SIZE_MAX], bool includePrivate = false) const noexcept;
-
 	int unmarshal(const uint8_t *data, int len) noexcept;
 
 private:

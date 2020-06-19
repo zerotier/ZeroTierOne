@@ -54,17 +54,16 @@ Commands:
   peer <address> [command] [option]    - Peer management commands
     show                                 Show peer details (default)
     try <endpoint> [...]                 Try peer at explicit endpoint
-    locator <locator>                    Explicitly update peer locator
-  roots                                  List root peers
-  root [command]                       - Root management commands
-    add <identity | url> [endpoint]      Add a root or a set of roots
-    remove <address | url | serial>      Remove a root or set of roots
   set [option] [value]                 - Get or set a core config option
     port <port>                          Primary P2P port
     secondaryport <port/0>               Secondary P2P port (0 to disable)
     blacklist cidr <IP/bits> <boolean>   Toggle physical path blacklisting
     blacklist if <prefix> <boolean>      Toggle interface prefix blacklisting
     portmap <boolean>                    Toggle use of uPnP or NAT-PMP
+  roots                                  List root peers
+  root [command]                       - Root management commands
+    trust <identity | url> [endpoint]    Add a root or a set of roots
+    remove <address | url | serial>      Remove a root or set of roots
   controller <command> [option]        - Local controller management commands
     networks                             List networks run by local controller
     new                                  Create a new network
@@ -80,6 +79,7 @@ Commands:
     validate <identity>                  Locally validate an identity
     sign <identity> <file>               Sign a file with an identity's key
     verify <identity> <file> <sig>       Verify a signature
+  certificate <command> [args]         - Certificate commands
 
 An <address> may be specified as a 10-digit short ZeroTier address, a
 fingerprint containing both an address and a SHA384 hash, or an identity.

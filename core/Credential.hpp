@@ -23,11 +23,11 @@
 
 namespace ZeroTier {
 
-class Capability;
-class Revocation;
-class Tag;
-class CertificateOfMembership;
-class CertificateOfOwnership;
+class CapabilityCredential;
+class RevocationCredential;
+class TagCredential;
+class MembershipCredential;
+class OwnershipCredential;
 class RuntimeEnvironment;
 
 /**
@@ -52,11 +52,11 @@ public:
 	};
 
 protected:
-	VerifyResult _verify(const RuntimeEnvironment *RR,void *tPtr,const CertificateOfMembership &credential) const;
-	VerifyResult _verify(const RuntimeEnvironment *RR,void *tPtr,const Revocation &credential) const;
-	VerifyResult _verify(const RuntimeEnvironment *RR,void *tPtr,const Tag &credential) const;
-	VerifyResult _verify(const RuntimeEnvironment *RR,void *tPtr,const CertificateOfOwnership &credential) const;
-	VerifyResult _verify(const RuntimeEnvironment *RR,void *tPtr,const Capability &credential) const;
+	VerifyResult _verify(const RuntimeEnvironment *RR,void *tPtr,const MembershipCredential &credential) const;
+	VerifyResult _verify(const RuntimeEnvironment *RR,void *tPtr,const RevocationCredential &credential) const;
+	VerifyResult _verify(const RuntimeEnvironment *RR,void *tPtr,const TagCredential &credential) const;
+	VerifyResult _verify(const RuntimeEnvironment *RR,void *tPtr,const OwnershipCredential &credential) const;
+	VerifyResult _verify(const RuntimeEnvironment *RR,void *tPtr,const CapabilityCredential &credential) const;
 };
 
 } // namespace ZeroTier

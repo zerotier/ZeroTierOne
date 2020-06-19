@@ -11,8 +11,8 @@
  */
 /****/
 
-#ifndef ZT_IDENTIFICATIONCERTIFICATE_HPP
-#define ZT_IDENTIFICATIONCERTIFICATE_HPP
+#ifndef ZT_CERTIFICATE_HPP
+#define ZT_CERTIFICATE_HPP
 
 #include "Constants.hpp"
 #include "SHA512.hpp"
@@ -23,12 +23,13 @@
 #include "Locator.hpp"
 #include "Dictionary.hpp"
 #include "Utils.hpp"
+#include "Blob.hpp"
 #include "Containers.hpp"
 
 namespace ZeroTier {
 
 /**
- * Certificate identifying the real world owner of an identity or network.
+ * Certificate describing and grouping a set of objects.
  *
  * This is a wrapper around the straight C ZT_IdentificationCertificate and
  * handles allocating memory for objects added via addXXX() and disposing of
@@ -44,16 +45,16 @@ namespace ZeroTier {
  * field, so these will not work correctly before sign() or decode() is
  * called.
  */
-class IdentificationCertificate : public ZT_IdentificationCertificate
+class Certificate : public ZT_Certificate
 {
 public:
-	ZT_INLINE IdentificationCertificate() noexcept
+	ZT_INLINE Certificate() noexcept
 	{ this->clear(); }
 
-	ZT_INLINE IdentificationCertificate(const ZT_IdentificationCertificate &apiCert)
+	ZT_INLINE Certificate(const ZT_Certificate &apiCert)
 	{ *this = apiCert; }
 
-	ZT_INLINE IdentificationCertificate(const IdentificationCertificate &cert)
+	ZT_INLINE Certificate(const Certificate &cert)
 	{ *this = cert; }
 
 	/**
@@ -61,9 +62,9 @@ public:
 	 */
 	void clear();
 
-	IdentificationCertificate &operator=(const ZT_IdentificationCertificate &apiCert);
+	Certificate &operator=(const ZT_Certificate &apiCert);
 
-	IdentificationCertificate &operator=(const IdentificationCertificate &cert);
+	Certificate &operator=(const Certificate &cert);
 
 	/**
 	 * Add a subject node/identity without a locator
@@ -71,7 +72,7 @@ public:
 	 * @param id Identity
 	 * @return Pointer to C struct
 	 */
-	ZT_IdentificationCertificate_Node *addSubjectNode(const Identity &id);
+	ZT_Certificate_Identity *addSubjectNode(const Identity &id);
 
 	/**
 	 * Add a subject node/identity with a locator
@@ -80,7 +81,7 @@ public:
 	 * @param loc Locator signed by identity (signature is NOT checked here)
 	 * @return Pointer to C struct
 	 */
-	ZT_IdentificationCertificate_Node *addSubjectNode(const Identity &id, const Locator &loc);
+	ZT_Certificate_Identity *addSubjectNode(const Identity &id, const Locator &loc);
 
 	/**
 	 * Add a subject network
@@ -89,7 +90,14 @@ public:
 	 * @param controller Network controller's full fingerprint
 	 * @return Pointer to C struct
 	 */
-	ZT_IdentificationCertificate_Network *addSubjectNetwork(const uint64_t id, const ZT_Fingerprint &controller);
+	ZT_Certificate_Network *addSubjectNetwork(const uint64_t id, const ZT_Fingerprint &controller);
+
+	/**
+	 * Add a subject certificate (by its serial number)
+	 *
+	 * @param serialNo 384-bit serial number
+	 */
+	void addSubjectCertificate(const uint8_t serialNo[ZT_SHA384_DIGEST_SIZE]);
 
 	/**
 	 * Add an update URL to the updateUrls list
@@ -135,22 +143,22 @@ public:
 	ZT_INLINE unsigned long hashCode() const noexcept
 	{ return (unsigned long)Utils::loadAsIsEndian< uint32_t >(this->serialNo); }
 
-	ZT_INLINE bool operator==(const ZT_IdentificationCertificate &c) const noexcept
+	ZT_INLINE bool operator==(const ZT_Certificate &c) const noexcept
 	{ return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) == 0; }
 
-	ZT_INLINE bool operator!=(const ZT_IdentificationCertificate &c) const noexcept
+	ZT_INLINE bool operator!=(const ZT_Certificate &c) const noexcept
 	{ return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) != 0; }
 
-	ZT_INLINE bool operator<(const ZT_IdentificationCertificate &c) const noexcept
+	ZT_INLINE bool operator<(const ZT_Certificate &c) const noexcept
 	{ return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) < 0; }
 
-	ZT_INLINE bool operator<=(const ZT_IdentificationCertificate &c) const noexcept
+	ZT_INLINE bool operator<=(const ZT_Certificate &c) const noexcept
 	{ return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) <= 0; }
 
-	ZT_INLINE bool operator>(const ZT_IdentificationCertificate &c) const noexcept
+	ZT_INLINE bool operator>(const ZT_Certificate &c) const noexcept
 	{ return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) > 0; }
 
-	ZT_INLINE bool operator>=(const ZT_IdentificationCertificate &c) const noexcept
+	ZT_INLINE bool operator>=(const ZT_Certificate &c) const noexcept
 	{ return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) >= 0; }
 
 private:
@@ -160,10 +168,12 @@ private:
 	List< Identity > m_identities;
 	List< Locator > m_locators;
 	List< String > m_strings;
+	List< Blob< ZT_SHA384_DIGEST_SIZE > > m_serials;
 
 	// These are stored in a vector because the memory needs to be contiguous.
-	Vector< ZT_IdentificationCertificate_Node > m_nodes;
-	Vector< ZT_IdentificationCertificate_Network > m_networks;
+	Vector< ZT_Certificate_Identity > m_subjectIdentities;
+	Vector< ZT_Certificate_Network > m_subjectNetworks;
+	Vector< const uint8_t * > m_subjectCertificates;
 	Vector< const char * > m_updateUrls;
 };
 

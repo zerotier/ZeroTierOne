@@ -29,7 +29,10 @@ struct Blob
 {
 	uint8_t data[S];
 
-	ZT_INLINE Blob() { Utils::zero<S>(data); }
+	ZT_INLINE Blob() noexcept { Utils::zero<S>(data); }
+	explicit ZT_INLINE Blob(const void *const d) noexcept { Utils::copy<S>(data,d); }
+
+	ZT_INLINE operator bool() const noexcept { return !Utils::allZero(data); }
 
 	ZT_INLINE bool operator==(const Blob &b) const noexcept { return (memcmp(data,b.data,S) == 0); }
 	ZT_INLINE bool operator!=(const Blob &b) const noexcept { return (memcmp(data,b.data,S) != 0); }

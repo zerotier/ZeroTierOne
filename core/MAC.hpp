@@ -62,9 +62,7 @@ public:
 	 * @param len Length, must be >= 6 or result is zero
 	 */
 	ZT_INLINE void setTo(const uint8_t b[6]) noexcept
-	{
-		m_mac = ((uint64_t)b[0] << 40U) | ((uint64_t)b[1] << 32U) | ((uint64_t)b[2] << 24U) | ((uint64_t)b[3] << 16U) | ((uint64_t)b[4] << 8U) | (uint64_t)b[5];
-	}
+	{ m_mac = ((uint64_t)b[0] << 40U) | ((uint64_t)b[1] << 32U) | ((uint64_t)b[2] << 24U) | ((uint64_t)b[3] << 16U) | ((uint64_t)b[4] << 8U) | (uint64_t)b[5]; }
 
 	/**
 	 * @param buf Destination buffer for MAC in big-endian byte order
@@ -221,44 +219,30 @@ public:
 	}
 
 	ZT_INLINE MAC &operator=(const uint64_t m) noexcept
-	{
-		m_mac = m;
-		return *this;
-	}
+	{ m_mac = m; return *this; }
 
 	ZT_INLINE bool operator==(const MAC &m) const noexcept
 	{ return (m_mac == m.m_mac); }
-
 	ZT_INLINE bool operator!=(const MAC &m) const noexcept
 	{ return (m_mac != m.m_mac); }
-
 	ZT_INLINE bool operator<(const MAC &m) const noexcept
 	{ return (m_mac < m.m_mac); }
-
 	ZT_INLINE bool operator<=(const MAC &m) const noexcept
 	{ return (m_mac <= m.m_mac); }
-
 	ZT_INLINE bool operator>(const MAC &m) const noexcept
 	{ return (m_mac > m.m_mac); }
-
 	ZT_INLINE bool operator>=(const MAC &m) const noexcept
 	{ return (m_mac >= m.m_mac); }
-
 	ZT_INLINE bool operator==(const uint64_t m) const noexcept
 	{ return (m_mac == m); }
-
 	ZT_INLINE bool operator!=(const uint64_t m) const noexcept
 	{ return (m_mac != m); }
-
 	ZT_INLINE bool operator<(const uint64_t m) const noexcept
 	{ return (m_mac < m); }
-
 	ZT_INLINE bool operator<=(const uint64_t m) const noexcept
 	{ return (m_mac <= m); }
-
 	ZT_INLINE bool operator>(const uint64_t m) const noexcept
 	{ return (m_mac > m); }
-
 	ZT_INLINE bool operator>=(const uint64_t m) const noexcept
 	{ return (m_mac >= m); }
 
