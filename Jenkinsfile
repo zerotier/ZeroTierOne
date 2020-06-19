@@ -370,9 +370,9 @@ def buildDebianNative() {
                 }
                 def runtime = docker.image("ztbuild/${distro}-${arch}:latest")
                 runtime.inside {
-                    def cmakeFlags = ""
+                    def cmakeFlags = 'CMAKE_ARGS="-DZT_PACKAGE_FORMAT=DEB"'
                     if (arch == "i386") {
-                        cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1"'
+                        cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DZT_PACKAGE_FORMAT=DEB"'
                     }
                    
                     sh 'whoami'
