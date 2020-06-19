@@ -379,7 +379,7 @@ def buildDebianNative() {
                     dir("build") {
                         sh "${cmakeFlags} make setup"
                         dir("build") {
-                            sh "make package"
+                            sh "make package -j4"
                         }
                     }
                     sh "mkdir -p ${distro}"
