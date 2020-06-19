@@ -239,7 +239,7 @@ add_dependencies(zerotier zt_osdep zt_core zt_controller zt_service_io_core)
 if("${ZT_PACKAGE_FORMAT}" MATCHES "DEB")
 	include(packaging/debian.cmake)
 elseif("${ZT_PACKAGE_FORMAT}" MATCHES "RPM")
-
+	include(packaging/rpm.cmake)
 else()
 
 endif()
