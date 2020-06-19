@@ -377,11 +377,14 @@ def buildDebianNative() {
                    
                     sh 'whoami'
                     dir("build") {
-                        sh "${cmakeFlags} make -j4"
+                        sh "${cmakeFlags} make setup"
+                        dir("build") {
+                            sh "make package"
+                        }
                     }
-                    // sh "mkdir -p ${distro}"
-                    // sh "mv *.deb ${distro}"
-                    // archiveArtifacts artifacts: "${distro}/*.deb", onlyIfSuccessful: true
+                    sh "mkdir -p ${distro}"
+                    sh "mv build/build/*.deb ${distro}"
+                    archiveArtifacts artifacts: "${distro}/*.deb", onlyIfSuccessful: true
                     cleanWs deleteDirs: true, disableDeferredWipeout: true, notFailBuild: true
                 }
             }

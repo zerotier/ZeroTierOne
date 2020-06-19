@@ -1,10 +1,22 @@
 cmake_minimum_required (VERSION 3.8)
-project(zerotier DESCRIPTION "ZeroTier Network Hypervisor" LANGUAGES CXX C)
+
+cmake_policy(SET CMP0048 NEW)
+if(${CMAKE_VERSION} VERSION_LESS 3.15)
+	cmake_policy(VERSION ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION})
+else()
+	cmake_policy(VERSION 3.15)
+endif()
 
 set(ZEROTIER_VERSION_MAJOR 1 CACHE INTERNAL "")
 set(ZEROTIER_VERSION_MINOR 9 CACHE INTERNAL "")
 set(ZEROTIER_VERSION_REVISION 0 CACHE INTERNAL "")
 set(ZEROTIER_VERSION_BUILD 0 CACHE INTERNAL "")
+
+project(zerotier
+	VERSION ${ZEROTIER_VERSION_MAJOR}.${ZEROTIER_VERSION_MINOR}.${ZEROTIER_VERSION_REVISION}.${ZEROTIER_VERSION_BUILD}
+	DESCRIPTION "ZeroTier Network Hypervisor" 
+	LANGUAGES CXX C)
+
 
 if(${CMAKE_VERSION} VERSION_LESS 3.15)
 	cmake_policy(VERSION ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION})
@@ -222,3 +234,12 @@ add_custom_target(
 	COMMENT "Compiling Go Code..."
 )
 add_dependencies(zerotier zt_osdep zt_core zt_controller zt_service_io_core)
+
+
+if("${ZT_PACKAGE_FORMAT}" MATCHES "DEB")
+	include(packaging/debian.cmake)
+elseif("${ZT_PACKAGE_FORMAT}" MATCHES "RPM")
+
+else()
+
+endif()

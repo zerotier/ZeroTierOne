@@ -1,0 +1,11 @@
+#!/bin/sh -e
+
+case "$1" in
+  configure)
+      if ! id zerotier >>/dev/null 2>&1; then
+        useradd --system --user-group --home-dir /var/lib/zerotier --no-create-home zerotier
+      fi
+      ;;
+esac
+
+#DEBHELPER#
