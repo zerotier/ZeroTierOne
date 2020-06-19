@@ -448,7 +448,11 @@ def buildCentosNative() {
                             sh 'CMAKE_ARGS="-DZT_PACKAGE_FORMAT=RPM" make setup'
                         }
                         dir ("build") {
-                            sh 'make package -j4'
+                            if (distro == 'centos7' && arch == 'amd64') {
+                                sh 'source scl_source enable devtoolset-8 llvm-toolset-7 && make package -j4'
+                            } else {
+                                sh 'make package -j4'
+                            }
                         }
                     }
                     sh "mkdir -p ${distro}"
