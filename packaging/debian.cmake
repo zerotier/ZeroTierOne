@@ -1,9 +1,5 @@
 set(CPACK_PACKAGE_VENDOR "ZeroTier, Inc.")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "ZeroTier network virtualization service
-ZeroTier One lets you join ZeroTier virtual networks and
-have them appear as tun/tap ports on your system. See
-https://www.zerotier.com/ for instructions and
-documentation.")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "ZeroTier network virtualization service ZeroTier One lets you join ZeroTier virtual networks and have them appear as tun/tap ports on your system. See https://www.zerotier.com/ for instructions and documentation.")
 set(CPACK_PACKAGE_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
 set(CPACK_PACKAGE_VERSION_MINOR ${PROJECT_VERSION_MINOR})
 set(CPACK_PACKAGE_VERSION_PATCH ${PROJECT_VERSION_PATCH})
