@@ -452,7 +452,7 @@ def buildCentosNative() {
                         }
                     }
                     sh "mkdir -p ${distro}"
-                    sh "cp -av build/build/*.rpm` ${distro}/"
+                    sh "cp -av build/build/*.rpm ${distro}/"
                     archiveArtifacts artifacts: "${distro}/*.rpm", onlyIfSuccessful: true
                     
                     cleanWs deleteDirs: true, disableDeferredWipeout: true, notFailBuild: true
