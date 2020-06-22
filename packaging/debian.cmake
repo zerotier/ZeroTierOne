@@ -19,23 +19,4 @@ set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA "${CMAKE_CURRENT_SOURCE_DIR}/packaging/de
 
 set(CPACK_DEBIAN_FILE_NAME "DEB-DEFAULT")
 
-install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/zerotier DESTINATION bin)
-
-if(IS_DIRECTORY /lib/systemd/system)
-    install(
-        FILES ${CMAKE_CURRENT_SOURCE_DIR}/packaging/debian/zerotier.service 
-        DESTINATION /lib/systemd/system
-    )
-elseif(IS_DIRECTORY /usr/lib/systemd/system)
-    install(
-        FILES ${CMAKE_CURRENT_SOURCE_DIR}/packaging/debian/zerotier.service 
-        DESTINATION /usr/lib/systemd/system
-    )
-else()
-    install(
-        FILES ${CMAKE_CURRENT_SOURCE_DIR}/packaging/debian/zerotier.init
-        DESTINATION /etc/init.d
-    )
-endif()
-
 include(CPack)

@@ -235,6 +235,25 @@ add_custom_target(
 )
 add_dependencies(zerotier zt_osdep zt_core zt_controller zt_service_io_core)
 
+install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/zerotier DESTINATION bin)
+if("${CMAKE_SYSTEM_NAME}" EQUAL "Linux")
+	if(IS_DIRECTORY /lib/systemd/system)
+		install(
+			FILES ${CMAKE_CURRENT_SOURCE_DIR}/packaging/debian/zerotier.service 
+			DESTINATION /lib/systemd/system
+		)
+	elseif(IS_DIRECTORY /usr/lib/systemd/system)
+		install(
+			FILES ${CMAKE_CURRENT_SOURCE_DIR}/packaging/debian/zerotier.service 
+			DESTINATION /usr/lib/systemd/system
+		)
+	else()
+		install(
+			FILES ${CMAKE_CURRENT_SOURCE_DIR}/packaging/debian/zerotier.init
+			DESTINATION /etc/init.d
+		)
+	endif()
+endif()
 
 if("${ZT_PACKAGE_FORMAT}" MATCHES "DEB")
 	include(packaging/debian.cmake)
