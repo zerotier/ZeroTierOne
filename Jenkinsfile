@@ -29,13 +29,13 @@ pipeline {
                 }
             }
         }
-        // stage ("Package Static") {
-        //     steps {
-        //         script {
-        //             parallel packageStatic()
-        //         }
-        //     }
-        // }
+        stage ("Package Static") {
+            steps {
+                script {
+                    parallel packageStatic()
+                }
+            }
+        }
     }
 }
 
@@ -178,10 +178,14 @@ def packageStatic() {
                 runtime.inside {
                     dir("build") {
                         unstash "static-${arch}"
-                        sh "mv zerotier-static-${arch} zerotier && chmod +x zerotier" 
-                        sh "make redhat"
+                        sh "mkdir -p build"
+                        sh "mv zerotier-static-${arch} build/zerotier && chmod +x build/zerotier" 
+                        sh 'CMAKE_ARGS="-DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=RPM" make setup'
+                        dir("build") {
+                            sh 'make package'
+                        }
                         sh "mkdir -p ${distro}"
-                        sh "cp -av `find ~/rpmbuild/ -type f -name \"*.rpm\"` ${distro}/"
+                        sh "cp -av build/*.rpm ${distro}/"
                         archiveArtifacts artifacts: "${distro}/*.rpm", onlyIfSuccessful: true
                     }
                 }
@@ -204,10 +208,14 @@ def packageStatic() {
                 runtime.inside {
                     dir("build") {
                         unstash "static-${arch}"
-                        sh "mv zerotier-static-${arch} zerotier && chmod +x zerotier" 
-                        sh "make redhat"
+                        sh "mkdir -p build"
+                        sh "mv zerotier-static-${arch} build/zerotier && chmod +x build/zerotier" 
+                        sh 'CMAKE_ARGS="-DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=RPM" make setup'
+                        dir("build") {
+                            sh 'make package'
+                        }
                         sh "mkdir -p ${distro}"
-                        sh "cp -av `find ~/rpmbuild/ -type f -name \"*.rpm\"` ${distro}/"
+                        sh "cp -av build/*.rpm ${distro}/"
                         archiveArtifacts artifacts: "${distro}/*.rpm", onlyIfSuccessful: true
                     }
                 }
@@ -231,10 +239,14 @@ def packageStatic() {
                     runtime.inside {
                         dir("build/") {
                             unstash "static-${arch}"
-                            sh "mv zerotier-static-${arch} zerotier && chmod +x zerotier" 
-                            sh "make redhat"
+                            sh "mkdir -p build"
+                            sh "mv zerotier-static-${arch} build/zerotier && chmod +x build/zerotier" 
+                            sh 'CMAKE_ARGS="-DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=RPM" make setup'
+                            dir("build") {
+                                sh 'make package'
+                            }
                             sh "mkdir -p ${distro}"
-                            sh "cp -av `find ~/rpmbuild/ -type f -name \"*.rpm\"` ${distro}/"
+                            sh "cp -av build/*.rpm ${distro}/"
                             archiveArtifacts artifacts: "${distro}/*.rpm", onlyIfSuccessful: true
                         }
                     }
@@ -261,18 +273,18 @@ def packageStatic() {
                 }
                 def runtime = docker.image("ztbuild/${distro}-${arch}:latest")
                 runtime.inside {
-                    sh "ls -la ."
                     dir('build/') {
-                        sh "ls -la ."
                         unstash "static-${arch}"
-                        sh "pwd"
-                        sh "mv zerotier-static-${arch} zerotier && chmod +x zerotier && file ./zerotier" 
-                        sh "mv -f debian/rules.static debian/rules"
-                        sh "make debian"
+                        sh "mkdir -p build"
+                        sh "mv zerotier-static-${arch} build/zerotier && chmod +x build/zerotier" 
+                        sh 'CMAKE_ARGS="-DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB" make setup'
+                        dir("build") {
+                            sh 'make package'
+                        }
+                        sh "mkdir -p ${distro}"
+                        sh "cp -av build/*.deb ${distro}/"
+                        archiveArtifacts artifacts: "${distro}/*.deb", onlyIfSuccessful: true
                     }
-                    sh "mkdir -p ${distro}"
-                    sh "mv *.deb ${distro}"
-                    archiveArtifacts artifacts: "${distro}/*.deb", onlyIfSuccessful: true
                 }
                 cleanWs deleteDirs: true, disableDeferredWipeout: true, notFailBuild: true
             }
@@ -296,18 +308,18 @@ def packageStatic() {
                 }
                 def runtime = docker.image("ztbuild/${distro}-${arch}:latest")
                 runtime.inside {
-                    sh "ls -la ."
                     dir('build/') {
-                        sh "ls -la ."
                         unstash "static-${arch}"
-                        sh "pwd"
-                        sh "mv zerotier-static-${arch} zerotier && chmod +x zerotier && file ./zerotier" 
-                        sh "mv -f debian/rules.static debian/rules"
-                        sh "make debian"
+                        sh "mkdir -p build"
+                        sh "mv zerotier-static-${arch} build/zerotier && chmod +x build/zerotier" 
+                        sh 'CMAKE_ARGS="-DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB" make setup'
+                        dir("build") {
+                            sh 'make package'
+                        }
+                        sh "mkdir -p ${distro}"
+                        sh "cp -av build/*.deb ${distro}/"
+                        archiveArtifacts artifacts: "${distro}/*.deb", onlyIfSuccessful: true
                     }
-                    sh "mkdir -p ${distro}"
-                    sh "mv *.deb ${distro}"
-                    archiveArtifacts artifacts: "${distro}/*.deb", onlyIfSuccessful: true
                 }
                 cleanWs deleteDirs: true, disableDeferredWipeout: true, notFailBuild: true
             }
@@ -333,14 +345,16 @@ def packageStatic() {
                 runtime.inside {
                     dir('build/') {
                         unstash "static-${arch}"
-                        sh "mv zerotier-static-${arch} zerotier && chmod +x zerotier && file ./zerotier" 
-                        sh "mv -f debian/rules.wheezy.static debian/rules"
-                        sh "mv -f debian/control.wheezy debian/control"
-                        sh "make debian"
+                        sh "mkdir -p build"
+                        sh "mv zerotier-static-${arch} build/zerotier && chmod +x build/zerotier" 
+                        sh 'CMAKE_ARGS="-DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB" make setup'
+                        dir("build") {
+                            sh 'make package'
+                        }
+                        sh "mkdir -p ${distro}"
+                        sh "cp -av build/*.deb ${distro}/"
+                        archiveArtifacts artifacts: "${distro}/*.deb", onlyIfSuccessful: true
                     }
-                    sh "mkdir -p ${distro}"
-                    sh "mv *.deb ${distro}"
-                    archiveArtifacts artifacts: "${distro}/*.deb", onlyIfSuccessful: true
                 }
                 cleanWs deleteDirs: true, disableDeferredWipeout: true, notFailBuild: true
             }
