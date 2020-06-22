@@ -23,7 +23,7 @@ pipeline {
                     tasks << buildCentosNative()
                     tasks << buildMacOS()
                     tasks << buildWindows()
-                    tasks << buildFreeBSD()
+                    // tasks << buildFreeBSD()
 
                     parallel tasks
                 }
@@ -367,7 +367,7 @@ def packageStatic() {
 
 def buildDebianNative() {
     def tasks = [:]
-    def buster = ["debian-buster", "debian-stretch", "debian-bullseye", "debian-sid"]
+    def buster = ["debian-buster", /*"debian-stretch",*/ "debian-bullseye", "debian-sid"]
     def busterArchs = []
     if (params.BUILD_ALL) {
         busterArchs = ["s390x", "ppc64le", "i386", "armhf", "armel", "arm64", "amd64"]
@@ -416,14 +416,14 @@ def buildDebianNative() {
     } else {
         xenialArchs = ["i386", "amd64"]
     }
-    tasks << getTasks(xenial, xenialArchs, build)
+    //tasks << getTasks(xenial, xenialArchs, build)
     
     def ubuntu = ["ubuntu-bionic", "ubuntu-eoan"]
     def ubuntuArchs = []
     if (params.BUILD_ALL == true) {
         ubuntuArchs = ["i386", "amd64", "armhf", "arm64", "ppc64le", "s390x"]
     } else {
-        ubuntuArchs = ["i386", "amd64"]
+        ubuntuArchs = ["i386" /*, "amd64"*/]
     }
     tasks << getTasks(ubuntu, ubuntuArchs, build)
     
