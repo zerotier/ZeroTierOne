@@ -2,7 +2,7 @@ FROM centos:7
 
 ARG go_pkg_url
 
-RUN yum install -y curl git wget openssh-server sudo make development-tools rpmdevtools clang gcc-c++ ruby ruby-devel ssl-devel && yum clean all
+RUN yum install -y curl git wget openssh-server sudo make development-tools rpmdevtools clang gcc-c++ ruby ruby-devel openssl openssl-devel && yum clean all
 RUN curl -s -k -L https://github.com/Kitware/CMake/releases/download/v3.17.3/cmake-3.17.3.tar.gz -o cmake-3.17.3.tar.gz && tar -xzf cmake-3.17.3.tar.gz
 WORKDIR /cmake-3.17.3
 RUN ./bootstrap && make -j8 && make install
