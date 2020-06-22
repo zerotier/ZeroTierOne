@@ -16,8 +16,6 @@ alpine:
 centos:
 	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz" --platform linux/amd64 -f Dockerfile.centos7 . -t ztbuild/centos7-amd64 --load
 	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-386.tar.gz" --platform linux/386 -f Dockerfile.centos7-i386 . -t ztbuild/centos7-i386 --load
-	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz" --platform linux/amd64 -f Dockerfile.centos6 . -t ztbuild/centos6-amd64 --load
-	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-386.tar.gz" --platform linux/386 -f Dockerfile.centos6-i386 . -t ztbuild/centos6-i386 --load
 	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz" --platform linux/amd64 -f Dockerfile.centos8 . -t ztbuild/centos8-amd64 --load
 	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-arm64.tar.gz" --platform linux/arm64 -f Dockerfile.centos8 . -t ztbuild/centos8-arm64 --load
 	@docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-ppc64le.tar.gz" --platform linux/ppc64le -f Dockerfile.centos8 . -t ztbuild/centos8-ppc64le --load
