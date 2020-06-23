@@ -249,11 +249,11 @@ def packageStatic() {
                 runtime.inside {
                     dir('build/') {
                         def cmakeFlags = 'CMAKE_ARGS="-DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB"'
-                        if (platform == "i386") {
+                        if (arch == "i386") {
                             cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DBUILD_STATIC=1 -DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB"'
-                        } else if (platform == "armel") {
+                        } else if (arch == "armel") {
                             cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DBUILD_STATIC=1 -DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB -DBUILD_ARM_V5=1"'
-                        } else if (platform == "armhf") {
+                        } else if (arch == "armhf") {
                             cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DBUILD_STATIC=1 -DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB -DBUILD_ARM_V6=1"'
                         }
                    
@@ -293,11 +293,11 @@ def packageStatic() {
                 runtime.inside {
                     dir('build/') {
                         def cmakeFlags = 'CMAKE_ARGS="-DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB"'
-                        if (platform == "i386") {
+                        if (arch == "i386") {
                             cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DBUILD_STATIC=1 -DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB"'
-                        } else if (platform == "armel") {
+                        } else if (arch == "armel") {
                             cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DBUILD_STATIC=1 -DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB -DBUILD_ARM_V5=1"'
-                        } else if (platform == "armhf") {
+                        } else if (arch == "armhf") {
                             cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DBUILD_STATIC=1 -DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB -DBUILD_ARM_V6=1"'
                         }
 
@@ -337,11 +337,11 @@ def packageStatic() {
                 runtime.inside {
                     dir('build/') {
                         def cmakeFlags = 'CMAKE_ARGS="-DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB"'
-                        if (platform == "i386") {
+                        if (arch == "i386") {
                             cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DBUILD_STATIC=1 -DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB"'
-                        } else if (platform == "armel") {
+                        } else if (arch == "armel") {
                             cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DBUILD_STATIC=1 -DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB -DBUILD_ARM_V5=1"'
-                        } else if (platform == "armhf") {
+                        } else if (arch == "armhf") {
                             cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DBUILD_STATIC=1 -DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB -DBUILD_ARM_V6=1"'
                         }
                         unstash "static-${arch}"
