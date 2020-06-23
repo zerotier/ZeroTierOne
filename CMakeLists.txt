@@ -154,6 +154,12 @@ if(NOT PACKAGE_STATIC)
 
 			option(BUILD_32BIT "Force building as 32-bit binary" OFF)
 			option(BUILD_STATIC "Build statically linked executable" OFF)
+			option(BUILD_ARM_V5 "Build ARMv5" OFF)
+			option(BUILD_ARM_v6 "Build ARMv6" OFF)
+			
+			if (BUILD_ARM_V5 AND BUILD_ARM_V6) 
+				message(FATAL_ERROR "BUILD_ARM_V5 and BUILD_ARM_V6 are mutually exclusive!")
+			endif()
 
 			if(BUILD_32BIT)
 				set(CMAKE_SYSTEM_PROCESSOR "x86" CACHE STRING "system processor")
@@ -185,6 +191,13 @@ if(NOT PACKAGE_STATIC)
 				)
 			endif(BUILD_STATIC)
 
+			if (BUILD_ARM_V5)
+				set(GOARM "GOARM=5")
+			endif (BUILD_ARM_V5)
+
+			if (BUILD_ARM_v6)
+				set(GOARM "GOARM=6")
+			endif (BUILD_ARM_V6)
 		endif(APPLE)
 	endif(WIN32)
 
@@ -230,7 +243,7 @@ if(NOT PACKAGE_STATIC)
 		zerotier ALL
 		BYPRODUCTS ${CMAKE_BINARY_DIR}/zerotier
 		SOURCES ${go_src}
-		COMMAND ${CMAKE_COMMAND} -E env ${GOARCH} CGO_ENABLED=1 CGO_CFLAGS=\"-O3\" CGO_LDFLAGS=\"$<TARGET_FILE:zt_core> $<TARGET_FILE:zt_controller> $<TARGET_FILE:zt_service_io_core> $<TARGET_FILE:zt_osdep> ${GO_EXTRA_LIBRARIES}\" ${GO} build ${GOFLAGS} -o ${CMAKE_BINARY_DIR}/${GO_EXE_NAME} ${CMAKE_SOURCE_DIR}/cmd/zerotier/zerotier.go
+		COMMAND ${CMAKE_COMMAND} -E env ${GOARCH} ${GOARM} CGO_ENABLED=1 CGO_CFLAGS=\"-O3\" CGO_LDFLAGS=\"$<TARGET_FILE:zt_core> $<TARGET_FILE:zt_controller> $<TARGET_FILE:zt_service_io_core> $<TARGET_FILE:zt_osdep> ${GO_EXTRA_LIBRARIES}\" ${GO} build ${GOFLAGS} -o ${CMAKE_BINARY_DIR}/${GO_EXE_NAME} ${CMAKE_SOURCE_DIR}/cmd/zerotier/zerotier.go
 		COMMENT "Compiling Go Code..."
 	)
 	add_dependencies(zerotier zt_osdep zt_core zt_controller zt_service_io_core)
