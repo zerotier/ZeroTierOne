@@ -347,7 +347,7 @@ def packageStatic() {
                         unstash "static-${arch}"
                         sh "mkdir -p build"
                         sh "mv zerotier-static-${arch} build/zerotier && chmod +x build/zerotier" 
-                        sh "${cmakeArgs} make setup"
+                        sh "${cmakeFlags} make setup"
                         dir("build") {
                             sh 'make package'
                         }
