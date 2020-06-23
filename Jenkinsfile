@@ -180,7 +180,7 @@ def packageStatic() {
                         unstash "static-${arch}"
                         sh "mkdir -p build"
                         sh "mv zerotier-static-${arch} build/zerotier && chmod +x build/zerotier" 
-                        sh 'CMAKE_ARGS="-DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=RPM" make setup'
+                        sh 'CMAKE_ARGS="-DBUILD_32BIT=1 -DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=RPM" make setup'
                         dir("build") {
                             sh 'make package'
                         }
