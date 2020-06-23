@@ -164,37 +164,7 @@ def getTasks(axisDistro, axisPlatform, task) {
 
 def packageStatic() {
     def tasks = [:]
-    
-    def centos6 = ["centos6"]
-    def centos6Arch = ["i386", "amd64"]
-    tasks << getTasks(centos6, centos6Arch, { distro, arch -> 
-        def myNode = {
-            node ('linux-build') {
-                env.PATH = env.PATH + ":/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin:/home/jenkins-build/go/bin"
-                dir ("build") {
-                    checkout scm
-                }
-                def runtime = docker.image("ztbuild/${distro}-${arch}:latest")
-                runtime.inside {
-                    dir("build") {
-                        unstash "static-${arch}"
-                        sh "mkdir -p build"
-                        sh "mv zerotier-static-${arch} build/zerotier && chmod +x build/zerotier" 
-                        sh 'CMAKE_ARGS="-DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=RPM" make setup'
-                        dir("build") {
-                            sh 'make package'
-                        }
-                        sh "mkdir -p ${distro}"
-                        sh "cp -av build/*.rpm ${distro}/"
-                        archiveArtifacts artifacts: "${distro}/*.rpm", onlyIfSuccessful: true
-                    }
-                }
-                cleanWs deleteDirs: true, disableDeferredWipeout: true, notFailBuild: true
-            }
-        }
-        return myNode
-    })
-    
+        
     def centos7 = ["centos7"]
     def centos7Arch = ["i386"]
     tasks << getTasks(centos7, centos7Arch, { distro, arch -> 
