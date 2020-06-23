@@ -400,7 +400,7 @@ def buildDebianNative() {
     def ubuntuFocal = ["ubuntu-focal"]
     def ubuntuFocalArchs = []
     if (params.BUILD_ALL == true) {
-        ubuntuFocalArchs = ["amd64", "armhf", "arm64", "ppc64le", "s390x"]
+        ubuntuFocalArchs = ["amd64", "arm64", "ppc64le", "s390x"]
     } else {
         ubuntuFocalArchs = ["amd64"]
     }
