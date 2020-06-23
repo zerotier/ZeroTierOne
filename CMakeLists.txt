@@ -173,8 +173,8 @@ if(NOT PACKAGE_STATIC)
 				set(GOFLAGS 
 					${GOFLAGS}
 					-a 
-					-tags netgo
-					-ldflags '-w -extldflags \"-static -Wl,-unresolved-symbols=ignore-all\"'
+					-tags osusergo,netgo
+					-ldflags '-w -extldflags \"-static -w -s -Wl,-unresolved-symbols=ignore-all\"'
 				)
 			else(BUILD_STATIC)
 				set(GOFLAGS
