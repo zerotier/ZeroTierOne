@@ -131,11 +131,11 @@ def buildStaticBinaries() {
 
                         def cmakeFlags = 'CMAKE_ARGS="-DBUILD_STATIC=1"'
                         if (platform == "i386") {
-                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DBUILD_STATIC=1"'
+                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_STATIC=1"'
                         } else if (platform == "armel") {
-                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DBUILD_STATIC=1 -DBUILD_ARM_V5=1"'
+                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_STATIC=1 -DBUILD_ARM_V5=1"'
                         } else if (platform == "armhf") {
-                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DBUILD_STATIC=1 -DBUILD_ARM_V6=1"'
+                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_STATIC=1 -DBUILD_ARM_V6=1"'
                         }
                    
                         sh "${cmakeFlags} make"
