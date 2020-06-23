@@ -250,11 +250,11 @@ def packageStatic() {
                     dir('build/') {
                         def cmakeFlags = 'CMAKE_ARGS="-DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB"'
                         if (arch == "i386") {
-                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DBUILD_STATIC=1 -DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB"'
+                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB"'
                         } else if (arch == "armel") {
-                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DBUILD_STATIC=1 -DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB -DBUILD_ARM_V5=1"'
+                            cmakeFlags = 'CMAKE_ARGS="-DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB -DBUILD_ARM_V5=1"'
                         } else if (arch == "armhf") {
-                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DBUILD_STATIC=1 -DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB -DBUILD_ARM_V6=1"'
+                            cmakeFlags = 'CMAKE_ARGS="-DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB -DBUILD_ARM_V6=1"'
                         }
                    
                         unstash "static-${arch}"
@@ -296,9 +296,9 @@ def packageStatic() {
                         if (arch == "i386") {
                             cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DBUILD_STATIC=1 -DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB"'
                         } else if (arch == "armel") {
-                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DBUILD_STATIC=1 -DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB -DBUILD_ARM_V5=1"'
+                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_STATIC=1 -DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB -DBUILD_ARM_V5=1"'
                         } else if (arch == "armhf") {
-                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DBUILD_STATIC=1 -DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB -DBUILD_ARM_V6=1"'
+                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_STATIC=1 -DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB -DBUILD_ARM_V6=1"'
                         }
 
                         unstash "static-${arch}"
@@ -340,9 +340,9 @@ def packageStatic() {
                         if (arch == "i386") {
                             cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DBUILD_STATIC=1 -DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB"'
                         } else if (arch == "armel") {
-                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DBUILD_STATIC=1 -DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB -DBUILD_ARM_V5=1"'
+                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_STATIC=1 -DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB -DBUILD_ARM_V5=1"'
                         } else if (arch == "armhf") {
-                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DBUILD_STATIC=1 -DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB -DBUILD_ARM_V6=1"'
+                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_STATIC=1 -DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB -DBUILD_ARM_V6=1"'
                         }
                         unstash "static-${arch}"
                         sh "mkdir -p build"
@@ -388,9 +388,9 @@ def buildDebianNative() {
                     if (arch == "i386") {
                         cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DZT_PACKAGE_FORMAT=DEB"'
                     } else if (arch == "armel") {
-                        cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DZT_PACKAGE_FORMAT=DEB -DBUILD_ARM_V5=1"'
+                        cmakeFlags = 'CMAKE_ARGS="-DZT_PACKAGE_FORMAT=DEB -DBUILD_ARM_V5=1"'
                     } else if (arch == "armhf") {
-                        cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DZT_PACKAGE_FORMAT=DEB -DBUILD_ARM_V6=1"'
+                        cmakeFlags = 'CMAKE_ARGS="-DZT_PACKAGE_FORMAT=DEB -DBUILD_ARM_V6=1"'
                     }
                    
                     sh 'whoami'
