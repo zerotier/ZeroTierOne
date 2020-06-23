@@ -132,7 +132,11 @@ def buildStaticBinaries() {
                         def cmakeFlags = 'CMAKE_ARGS="-DBUILD_STATIC=1"'
                         if (platform == "i386") {
                             cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DBUILD_STATIC=1"'
-                         }
+                        } else if (platform == "armel") {
+                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DBUILD_STATIC=1 -DBUILD_ARM_V5=1"'
+                        } else if (platform == "armhf") {
+                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DBUILD_STATIC=1 -DBUILD_ARM_V6=1"'
+                        }
                    
                         sh "${cmakeFlags} make"
                         dir("build") {
@@ -244,10 +248,19 @@ def packageStatic() {
                 def runtime = docker.image("ztbuild/${distro}-${arch}:latest")
                 runtime.inside {
                     dir('build/') {
+                        def cmakeFlags = 'CMAKE_ARGS="-DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB"'
+                        if (platform == "i386") {
+                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DBUILD_STATIC=1 -DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB"'
+                        } else if (platform == "armel") {
+                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DBUILD_STATIC=1 -DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB -DBUILD_ARM_V5=1"'
+                        } else if (platform == "armhf") {
+                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DBUILD_STATIC=1 -DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB -DBUILD_ARM_V6=1"'
+                        }
+                   
                         unstash "static-${arch}"
                         sh "mkdir -p build"
                         sh "mv zerotier-static-${arch} build/zerotier && chmod +x build/zerotier" 
-                        sh 'CMAKE_ARGS="-DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB" make setup'
+                        sh "${cmakeFlags} make setup"
                         dir("build") {
                             sh 'make package'
                         }
@@ -279,10 +292,19 @@ def packageStatic() {
                 def runtime = docker.image("ztbuild/${distro}-${arch}:latest")
                 runtime.inside {
                     dir('build/') {
+                        def cmakeFlags = 'CMAKE_ARGS="-DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB"'
+                        if (platform == "i386") {
+                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DBUILD_STATIC=1 -DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB"'
+                        } else if (platform == "armel") {
+                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DBUILD_STATIC=1 -DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB -DBUILD_ARM_V5=1"'
+                        } else if (platform == "armhf") {
+                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DBUILD_STATIC=1 -DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB -DBUILD_ARM_V6=1"'
+                        }
+
                         unstash "static-${arch}"
                         sh "mkdir -p build"
                         sh "mv zerotier-static-${arch} build/zerotier && chmod +x build/zerotier" 
-                        sh 'CMAKE_ARGS="-DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB" make setup'
+                        sh "${cmakeArgs} make setup"
                         dir("build") {
                             sh 'make package'
                         }
@@ -314,10 +336,18 @@ def packageStatic() {
                 def runtime = docker.image("ztbuild/${distro}-${arch}:latest")
                 runtime.inside {
                     dir('build/') {
+                        def cmakeFlags = 'CMAKE_ARGS="-DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB"'
+                        if (platform == "i386") {
+                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DBUILD_STATIC=1 -DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB"'
+                        } else if (platform == "armel") {
+                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DBUILD_STATIC=1 -DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB -DBUILD_ARM_V5=1"'
+                        } else if (platform == "armhf") {
+                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DBUILD_STATIC=1 -DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB -DBUILD_ARM_V6=1"'
+                        }
                         unstash "static-${arch}"
                         sh "mkdir -p build"
                         sh "mv zerotier-static-${arch} build/zerotier && chmod +x build/zerotier" 
-                        sh 'CMAKE_ARGS="-DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB" make setup'
+                        sh "${cmakeArgs} make setup"
                         dir("build") {
                             sh 'make package'
                         }
@@ -357,6 +387,10 @@ def buildDebianNative() {
                     def cmakeFlags = 'CMAKE_ARGS="-DZT_PACKAGE_FORMAT=DEB"'
                     if (arch == "i386") {
                         cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DZT_PACKAGE_FORMAT=DEB"'
+                    } else if (arch == "armel") {
+                        cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DZT_PACKAGE_FORMAT=DEB -DBUILD_ARM_V5=1"'
+                    } else if (arch == "armhf") {
+                        cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DZT_PACKAGE_FORMAT=DEB -DBUILD_ARM_V6=1"'
                     }
                    
                     sh 'whoami'
