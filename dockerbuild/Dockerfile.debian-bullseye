@@ -1,13 +1,16 @@
 FROM debian:bullseye-20200607
 
 ARG go_pkg_url
+ARG BUILDPLATFORM
+ARG TARGETPLATFORM
 
 RUN apt-get update && apt-get upgrade -y && apt-get -y install build-essential curl ca-certificates devscripts dh-systemd libssl-dev
-RUN if [ $BUILDPLATFORM != "linux/mips64le" ]; then curl -s -k $go_pkg_url -o go.tar.gz; \
+RUN if test "$TARGETPLATFORM" = "linux/mips64le" ]; then \
+    apt-get install golang; \
+    else \
+    curl -s -k $go_pkg_url -o go.tar.gz; \
     tar -C /usr/local -xzf go.tar.gz; \
     rm go.tar.gz; \
-    else \
-    apt-get install golang; \
     fi;
 RUN curl -s -k -L https://github.com/Kitware/CMake/releases/download/v3.17.3/cmake-3.17.3.tar.gz -o cmake-3.17.3.tar.gz && tar -xzf cmake-3.17.3.tar.gz
 WORKDIR /cmake-3.17.3
