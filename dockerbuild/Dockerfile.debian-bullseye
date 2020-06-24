@@ -5,7 +5,7 @@ ARG BUILDPLATFORM
 ARG TARGETPLATFORM
 
 RUN apt-get update && apt-get upgrade -y && apt-get -y install build-essential curl ca-certificates devscripts dh-systemd libssl-dev
-RUN if test "$TARGETPLATFORM" = "linux/mips64le" ]; then \
+RUN if test "$TARGETPLATFORM" = "linux/mips64le"; then \
     apt-get install golang; \
     else \
     curl -s -k $go_pkg_url -o go.tar.gz; \

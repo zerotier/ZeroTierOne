@@ -1,16 +1,19 @@
-FROM debian:sid-20191224
+FROM debian:sid-20200607
 
 ARG go_pkg_url
 
 RUN apt-get update && apt-get upgrade -y && apt-get -y install build-essential curl ca-certificates devscripts dh-systemd
+RUN if test "$TARGETPLATFORM" = "linux/mips64le"; then \
+    apt-get install golang; \
+    else \
+    curl -s -k $go_pkg_url -o go.tar.gz; \
+    tar -C /usr/local -xzf go.tar.gz; \
+    rm go.tar.gz; \
+    fi;
 RUN curl -s -k -L https://github.com/Kitware/CMake/releases/download/v3.17.3/cmake-3.17.3.tar.gz -o cmake-3.17.3.tar.gz && tar -xzf cmake-3.17.3.tar.gz
 WORKDIR /cmake-3.17.3
 RUN ./bootstrap && make -j8 && make install
 WORKDIR /
-
-RUN curl -s -k $go_pkg_url -o go.tar.gz && \
-    tar -C /usr/local -xzf go.tar.gz && \
-    rm go.tar.gz
 
 RUN groupadd -g 1000 jenkins-build && useradd -u 1000 -g 1000 jenkins-build
 RUN chmod 777 /home && mkdir -p /home/jenkins-build && chown jenkins-build:jenkins-build /home/jenkins-build && chmod 777 /home/jenkins-build
