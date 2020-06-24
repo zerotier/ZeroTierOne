@@ -1,4 +1,4 @@
-FROM debian:bullseye-20191224
+FROM debian:bullseye-20200607
 
 ARG go_pkg_url
 
