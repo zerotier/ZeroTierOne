@@ -1,6 +1,8 @@
 FROM debian:stretch-20200607
 
 ARG go_pkg_url
+ARG BUILDPLATFORM
+ARG TARGETPLATFORM
 
 RUN apt-get update && apt-get -y install build-essential curl ca-certificates devscripts dh-systemd libssl-dev
 
