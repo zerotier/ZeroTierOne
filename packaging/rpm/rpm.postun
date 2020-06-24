@@ -1,0 +1,6 @@
+%if 0%{?rhel} >= 7
+%systemd_postun_with_restart zerotier-one.service
+%endif
+%if 0%{?fedora} >= 21
+%systemd_postun_with_restart zerotier-one.service
+%endif

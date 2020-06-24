@@ -22,18 +22,20 @@ pipeline {
                     tasks << buildDebianNative()
                     tasks << buildCentosNative()
                     tasks << buildMacOS()
+                    tasks << buildWindows()
+                    // tasks << buildFreeBSD()
 
                     parallel tasks
                 }
             }
         }
-        // stage ("Package Static") {
-        //     steps {
-        //         script {
-        //             parallel packageStatic()
-        //         }
-        //     }
-        // }
+        stage ("Package Static") {
+            steps {
+                script {
+                    parallel packageStatic()
+                }
+            }
+        }
     }
 }
 
@@ -41,12 +43,64 @@ def buildMacOS() {
     def tasks = [:]
     tasks << getTasks(['mac'],['amd64'], {unused1, unused2 ->
         def myNode = {
+            env.PATH = env.PATH + ":/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin:/home/jenkins-build/go/bin"
             node ('mac') {
                 dir("build") {
                     checkout scm
                     sh 'make'
+                }
+                cleanWs deleteDirs: true, disableDeferredWipeout: true, notFailBuild: true
+            }
+        }
+        return myNode
+    })
+    return tasks
+}
+
+def buildWindows() {
+    def tasks = [:]
+    tasks << getTasks(['windows'], ['amd64', 'i386'], { unused1, platform ->
+        def myNode = {
+            node ('windows') {
+                env.SHELL = 'C:/Windows/System32/cmd.exe'
+                dir ("build") {
+                    checkout scm
+                    
+                    dir ("build") {
+                        withEnv(["PATH=C:\\TDM-GCC-64\\bin;C:\\WINDOWS;C:\\Windows\\system32;C:\\CMake\\bin;C:\\Go\\bin"]) {
+                            def cmakeFlags = ""
+                            if (platform == "i386") {
+                                cmakeFlags = '-DBUILD_32BIT=1'
+                            }
+                            bat """
+                            cmake -G"MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release ${cmakeFlags} ..
+                            mingw32-make -j8
+                            """
+                        }
+                    }
                     cleanWs deleteDirs: true, disableDeferredWipeout: true, notFailBuild: true
                 }
+            }
+        }
+        return myNode
+    })
+
+    return tasks
+}
+
+def buildFreeBSD() {
+    def tasks = [:]
+    tasks << getTasks(['freebsd12'], ['amd64'], { unused1, unused2 ->
+        def myNode = {
+            node ('freebsd12') {
+                dir('build') {
+                    checkout scm
+                    sh 'make setup'
+                    dir('build') {
+                        sh 'make -j4'
+                    }
+                }
+                cleanWs deleteDirs: true, disableDeferredWipeout: true, notFailBuild: true
             }
         }
         return myNode
@@ -67,6 +121,7 @@ def buildStaticBinaries() {
     tasks << getTasks(dist, archs, { distro, platform -> 
         def myNode = {
             node ('linux-build') {
+                env.PATH = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin:/home/jenkins-build/go/bin"
                 dir ("build") {
                     checkout scm
                 }
@@ -76,8 +131,12 @@ def buildStaticBinaries() {
 
                         def cmakeFlags = 'CMAKE_ARGS="-DBUILD_STATIC=1"'
                         if (platform == "i386") {
-                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DBUILD_STATIC=1"'
-                         }
+                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_STATIC=1"'
+                        } else if (platform == "armel") {
+                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_STATIC=1 -DBUILD_ARM_V5=1"'
+                        } else if (platform == "armhf") {
+                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_STATIC=1 -DBUILD_ARM_V6=1"'
+                        }
                    
                         sh "${cmakeFlags} make"
                         dir("build") {
@@ -109,37 +168,13 @@ def getTasks(axisDistro, axisPlatform, task) {
 
 def packageStatic() {
     def tasks = [:]
-    
-    def centos6 = ["centos6"]
-    def centos6Arch = ["i386", "amd64"]
-    tasks << getTasks(centos6, centos6Arch, { distro, arch -> 
-        def myNode = {
-            node ('linux-build') {
-                dir ("build") {
-                    checkout scm
-                }
-                def runtime = docker.image("ztbuild/${distro}-${arch}:latest")
-                runtime.inside {
-                    dir("build") {
-                        unstash "static-${arch}"
-                        sh "mv zerotier-static-${arch} zerotier && chmod +x zerotier" 
-                        sh "make redhat"
-                        sh "mkdir -p ${distro}"
-                        sh "cp -av `find ~/rpmbuild/ -type f -name \"*.rpm\"` ${distro}/"
-                        archiveArtifacts artifacts: "${distro}/*.rpm", onlyIfSuccessful: true
-                    }
-                }
-                cleanWs deleteDirs: true, disableDeferredWipeout: true, notFailBuild: true
-            }
-        }
-        return myNode
-    })
-    
+        
     def centos7 = ["centos7"]
     def centos7Arch = ["i386"]
     tasks << getTasks(centos7, centos7Arch, { distro, arch -> 
         def myNode = {
             node ('linux-build') {
+                env.PATH = env.PATH + ":/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin:/home/jenkins-build/go/bin"
                 dir ("build") {
                     checkout scm
                 }
@@ -147,10 +182,14 @@ def packageStatic() {
                 runtime.inside {
                     dir("build") {
                         unstash "static-${arch}"
-                        sh "mv zerotier-static-${arch} zerotier && chmod +x zerotier" 
-                        sh "make redhat"
+                        sh "mkdir -p build"
+                        sh "mv zerotier-static-${arch} build/zerotier && chmod +x build/zerotier" 
+                        sh 'CMAKE_ARGS="-DBUILD_32BIT=1 -DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=RPM" make setup'
+                        dir("build") {
+                            sh 'make package -j4 VERBOSE=1'
+                        }
                         sh "mkdir -p ${distro}"
-                        sh "cp -av `find ~/rpmbuild/ -type f -name \"*.rpm\"` ${distro}/"
+                        sh "cp -av build/*.rpm ${distro}/"
                         archiveArtifacts artifacts: "${distro}/*.rpm", onlyIfSuccessful: true
                     }
                 }
@@ -166,6 +205,7 @@ def packageStatic() {
         tasks << getTasks(clefos7, clefos7Arch, { distro, arch -> 
             def myNode = {
                 node ('linux-build') {
+                    env.PATH = env.PATH + ":/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin:/home/jenkins-build/go/bin"
                     dir ("build") {
                         checkout scm
                     }
@@ -173,10 +213,14 @@ def packageStatic() {
                     runtime.inside {
                         dir("build/") {
                             unstash "static-${arch}"
-                            sh "mv zerotier-static-${arch} zerotier && chmod +x zerotier" 
-                            sh "make redhat"
+                            sh "mkdir -p build"
+                            sh "mv zerotier-static-${arch} build/zerotier && chmod +x build/zerotier" 
+                            sh 'CMAKE_ARGS="-DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=RPM" make setup'
+                            dir("build") {
+                                sh 'make package -j4 VERBOSE=1'
+                            }
                             sh "mkdir -p ${distro}"
-                            sh "cp -av `find ~/rpmbuild/ -type f -name \"*.rpm\"` ${distro}/"
+                            sh "cp -av build/*.rpm ${distro}/"
                             archiveArtifacts artifacts: "${distro}/*.rpm", onlyIfSuccessful: true
                         }
                     }
@@ -197,23 +241,33 @@ def packageStatic() {
     tasks << getTasks(debianJessie, debianJessieArch, { distro, arch -> 
         def myNode = {
             node ('linux-build') {
+                env.PATH = env.PATH + ":/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin:/home/jenkins-build/go/bin"
                 dir ("build") {
                     checkout scm
                 }
                 def runtime = docker.image("ztbuild/${distro}-${arch}:latest")
                 runtime.inside {
-                    sh "ls -la ."
                     dir('build/') {
-                        sh "ls -la ."
+                        def cmakeFlags = 'CMAKE_ARGS="-DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB"'
+                        if (arch == "i386") {
+                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB"'
+                        } else if (arch == "armel") {
+                            cmakeFlags = 'CMAKE_ARGS="-DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB -DBUILD_ARM_V5=1"'
+                        } else if (arch == "armhf") {
+                            cmakeFlags = 'CMAKE_ARGS="-DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB -DBUILD_ARM_V6=1"'
+                        }
+                   
                         unstash "static-${arch}"
-                        sh "pwd"
-                        sh "mv zerotier-static-${arch} zerotier && chmod +x zerotier && file ./zerotier" 
-                        sh "mv -f debian/rules.static debian/rules"
-                        sh "make debian"
+                        sh "mkdir -p build"
+                        sh "mv zerotier-static-${arch} build/zerotier && chmod +x build/zerotier" 
+                        sh "${cmakeFlags} make setup"
+                        dir("build") {
+                            sh 'make package -j4 VERBOSE=1'
+                        }
+                        sh "mkdir -p ${distro}"
+                        sh "cp -av build/*.deb ${distro}/"
+                        archiveArtifacts artifacts: "${distro}/*.deb", onlyIfSuccessful: true
                     }
-                    sh "mkdir -p ${distro}"
-                    sh "mv *.deb ${distro}"
-                    archiveArtifacts artifacts: "${distro}/*.deb", onlyIfSuccessful: true
                 }
                 cleanWs deleteDirs: true, disableDeferredWipeout: true, notFailBuild: true
             }
@@ -231,23 +285,33 @@ def packageStatic() {
     tasks << getTasks(ubuntuTrusty, ubuntuTrustyArch, { distro, arch -> 
         def myNode = {
             node ('linux-build') {
+                env.PATH = env.PATH + ":/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin:/home/jenkins-build/go/bin"
                 dir ("build") {
                     checkout scm
                 }
                 def runtime = docker.image("ztbuild/${distro}-${arch}:latest")
                 runtime.inside {
-                    sh "ls -la ."
                     dir('build/') {
-                        sh "ls -la ."
+                        def cmakeFlags = 'CMAKE_ARGS="-DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB"'
+                        if (arch == "i386") {
+                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DBUILD_STATIC=1 -DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB"'
+                        } else if (arch == "armel") {
+                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_STATIC=1 -DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB -DBUILD_ARM_V5=1"'
+                        } else if (arch == "armhf") {
+                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_STATIC=1 -DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB -DBUILD_ARM_V6=1"'
+                        }
+
                         unstash "static-${arch}"
-                        sh "pwd"
-                        sh "mv zerotier-static-${arch} zerotier && chmod +x zerotier && file ./zerotier" 
-                        sh "mv -f debian/rules.static debian/rules"
-                        sh "make debian"
+                        sh "mkdir -p build"
+                        sh "mv zerotier-static-${arch} build/zerotier && chmod +x build/zerotier" 
+                        sh "${cmakeFlags} make setup"
+                        dir("build") {
+                            sh 'make package -j4 VERBOSE=1'
+                        }
+                        sh "mkdir -p ${distro}"
+                        sh "cp -av build/*.deb ${distro}/"
+                        archiveArtifacts artifacts: "${distro}/*.deb", onlyIfSuccessful: true
                     }
-                    sh "mkdir -p ${distro}"
-                    sh "mv *.deb ${distro}"
-                    archiveArtifacts artifacts: "${distro}/*.deb", onlyIfSuccessful: true
                 }
                 cleanWs deleteDirs: true, disableDeferredWipeout: true, notFailBuild: true
             }
@@ -265,21 +329,32 @@ def packageStatic() {
     tasks << getTasks(debianJessie, debianJessieArch, { distro, arch -> 
         def myNode = {
             node ('linux-build') {
+                env.PATH = env.PATH + ":/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin:/home/jenkins-build/go/bin"
                 dir ("build") {
                     checkout scm
                 }
                 def runtime = docker.image("ztbuild/${distro}-${arch}:latest")
                 runtime.inside {
                     dir('build/') {
+                        def cmakeFlags = 'CMAKE_ARGS="-DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB"'
+                        if (arch == "i386") {
+                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DBUILD_STATIC=1 -DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB"'
+                        } else if (arch == "armel") {
+                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_STATIC=1 -DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB -DBUILD_ARM_V5=1"'
+                        } else if (arch == "armhf") {
+                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_STATIC=1 -DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=DEB -DBUILD_ARM_V6=1"'
+                        }
                         unstash "static-${arch}"
-                        sh "mv zerotier-static-${arch} zerotier && chmod +x zerotier && file ./zerotier" 
-                        sh "mv -f debian/rules.wheezy.static debian/rules"
-                        sh "mv -f debian/control.wheezy debian/control"
-                        sh "make debian"
+                        sh "mkdir -p build"
+                        sh "mv zerotier-static-${arch} build/zerotier && chmod +x build/zerotier" 
+                        sh "${cmakeFlags} make setup"
+                        dir("build") {
+                            sh 'make package -j4 VERBOSE=1'
+                        }
+                        sh "mkdir -p ${distro}"
+                        sh "cp -av build/*.deb ${distro}/"
+                        archiveArtifacts artifacts: "${distro}/*.deb", onlyIfSuccessful: true
                     }
-                    sh "mkdir -p ${distro}"
-                    sh "mv *.deb ${distro}"
-                    archiveArtifacts artifacts: "${distro}/*.deb", onlyIfSuccessful: true
                 }
                 cleanWs deleteDirs: true, disableDeferredWipeout: true, notFailBuild: true
             }
@@ -292,7 +367,7 @@ def packageStatic() {
 
 def buildDebianNative() {
     def tasks = [:]
-    def buster = ["debian-buster", "debian-stretch", "debian-bullseye", "debian-sid"]
+    def buster = ["debian-buster", /*"debian-stretch",*/ "debian-bullseye", "debian-sid"]
     def busterArchs = []
     if (params.BUILD_ALL) {
         busterArchs = ["s390x", "ppc64le", "i386", "armhf", "armel", "arm64", "amd64"]
@@ -303,23 +378,31 @@ def buildDebianNative() {
     def build = { distro, arch -> 
         def myNode = {
             node ('linux-build') {
+                env.PATH = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin:/home/jenkins-build/go/bin"
                 dir ("build") {
                     checkout scm
                 }
                 def runtime = docker.image("ztbuild/${distro}-${arch}:latest")
                 runtime.inside {
-                    def cmakeFlags = ""
+                    def cmakeFlags = 'CMAKE_ARGS="-DZT_PACKAGE_FORMAT=DEB"'
                     if (arch == "i386") {
-                        cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1"'
+                        cmakeFlags = 'CMAKE_ARGS="-DBUILD_32BIT=1 -DZT_PACKAGE_FORMAT=DEB"'
+                    } else if (arch == "armel") {
+                        cmakeFlags = 'CMAKE_ARGS="-DZT_PACKAGE_FORMAT=DEB -DBUILD_ARM_V5=1"'
+                    } else if (arch == "armhf") {
+                        cmakeFlags = 'CMAKE_ARGS="-DZT_PACKAGE_FORMAT=DEB -DBUILD_ARM_V6=1"'
                     }
                    
                     sh 'whoami'
                     dir("build") {
-                        sh "${cmakeFlags} make -j4"
+                        sh "${cmakeFlags} make setup"
+                        dir("build") {
+                            sh "make package -j4 VERBOSE=1"
+                        }
                     }
-                    // sh "mkdir -p ${distro}"
-                    // sh "mv *.deb ${distro}"
-                    // archiveArtifacts artifacts: "${distro}/*.deb", onlyIfSuccessful: true
+                    sh "mkdir -p ${distro}"
+                    sh "mv build/build/*.deb ${distro}"
+                    archiveArtifacts artifacts: "${distro}/*.deb", onlyIfSuccessful: true
                     cleanWs deleteDirs: true, disableDeferredWipeout: true, notFailBuild: true
                 }
             }
@@ -337,21 +420,21 @@ def buildDebianNative() {
     } else {
         xenialArchs = ["i386", "amd64"]
     }
-    tasks << getTasks(xenial, xenialArchs, build)
+    //tasks << getTasks(xenial, xenialArchs, build)
     
     def ubuntu = ["ubuntu-bionic", "ubuntu-eoan"]
     def ubuntuArchs = []
     if (params.BUILD_ALL == true) {
         ubuntuArchs = ["i386", "amd64", "armhf", "arm64", "ppc64le", "s390x"]
     } else {
-        ubuntuArchs = ["i386", "amd64"]
+        ubuntuArchs = ["i386" /*, "amd64"*/]
     }
     tasks << getTasks(ubuntu, ubuntuArchs, build)
     
     def ubuntuFocal = ["ubuntu-focal"]
     def ubuntuFocalArchs = []
     if (params.BUILD_ALL == true) {
-        ubuntuFocalArchs = ["amd64", "armhf", "arm64", "ppc64le", "s390x"]
+        ubuntuFocalArchs = ["amd64", "arm64", "ppc64le", "s390x"]
     } else {
         ubuntuFocalArchs = ["amd64"]
     }
@@ -370,6 +453,7 @@ def buildCentosNative() {
     def build = { distro, arch -> 
         def myNode = {
             node ('linux-build') {
+                env.PATH = env.PATH + ":/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin:/home/jenkins-build/go/bin"
                 dir ("build") {
                     checkout scm
                 }
@@ -377,15 +461,21 @@ def buildCentosNative() {
                 runtime.inside {
                     dir("build") {
                         if (distro == 'centos7' && arch == 'amd64') {
-                            sh 'source scl_source enable devtoolset-8 llvm-toolset-7 && make'
+                            sh 'source scl_source enable devtoolset-8 llvm-toolset-7 && CMAKE_ARGS="-DZT_PACKAGE_FORMAT=RPM" make setup'
                         } else {
-                            sh 'make'
+                            sh 'CMAKE_ARGS="-DZT_PACKAGE_FORMAT=RPM" make setup'
                         }
-                        // sh 'make redhat'
-                        // sh "mkdir -p ${distro}"
-                        // sh "cp -av `find ~/rpmbuild/ -type f -name \"*.rpm\"` ${distro}/"
-                        // archiveArtifacts artifacts: "${distro}/*.rpm", onlyIfSuccessful: true
+                        dir ("build") {
+                            if (distro == 'centos7' && arch == 'amd64') {
+                                sh 'source scl_source enable devtoolset-8 llvm-toolset-7 && make package -j4 VERBOSE=1'
+                            } else {
+                                sh 'make package -j4 VERBOSE=1'
+                            }
+                        }
                     }
+                    sh "mkdir -p ${distro}"
+                    sh "cp -av build/build/*.rpm ${distro}/"
+                    archiveArtifacts artifacts: "${distro}/*.rpm", onlyIfSuccessful: true
                     
                     cleanWs deleteDirs: true, disableDeferredWipeout: true, notFailBuild: true
                 }
