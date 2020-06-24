@@ -186,7 +186,7 @@ def packageStatic() {
                         sh "mv zerotier-static-${arch} build/zerotier && chmod +x build/zerotier" 
                         sh 'CMAKE_ARGS="-DBUILD_32BIT=1 -DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=RPM" make setup'
                         dir("build") {
-                            sh 'make package'
+                            sh 'make package -j4 VERBOSE=1'
                         }
                         sh "mkdir -p ${distro}"
                         sh "cp -av build/*.rpm ${distro}/"
@@ -217,7 +217,7 @@ def packageStatic() {
                             sh "mv zerotier-static-${arch} build/zerotier && chmod +x build/zerotier" 
                             sh 'CMAKE_ARGS="-DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=RPM" make setup'
                             dir("build") {
-                                sh 'make package'
+                                sh 'make package -j4 VERBOSE=1'
                             }
                             sh "mkdir -p ${distro}"
                             sh "cp -av build/*.rpm ${distro}/"
@@ -262,7 +262,7 @@ def packageStatic() {
                         sh "mv zerotier-static-${arch} build/zerotier && chmod +x build/zerotier" 
                         sh "${cmakeFlags} make setup"
                         dir("build") {
-                            sh 'make package'
+                            sh 'make package -j4 VERBOSE=1'
                         }
                         sh "mkdir -p ${distro}"
                         sh "cp -av build/*.deb ${distro}/"
@@ -306,7 +306,7 @@ def packageStatic() {
                         sh "mv zerotier-static-${arch} build/zerotier && chmod +x build/zerotier" 
                         sh "${cmakeFlags} make setup"
                         dir("build") {
-                            sh 'make package'
+                            sh 'make package -j4 VERBOSE=1'
                         }
                         sh "mkdir -p ${distro}"
                         sh "cp -av build/*.deb ${distro}/"
@@ -349,7 +349,7 @@ def packageStatic() {
                         sh "mv zerotier-static-${arch} build/zerotier && chmod +x build/zerotier" 
                         sh "${cmakeFlags} make setup"
                         dir("build") {
-                            sh 'make package'
+                            sh 'make package -j4 VERBOSE=1'
                         }
                         sh "mkdir -p ${distro}"
                         sh "cp -av build/*.deb ${distro}/"
@@ -397,7 +397,7 @@ def buildDebianNative() {
                     dir("build") {
                         sh "${cmakeFlags} make setup"
                         dir("build") {
-                            sh "make package -j4"
+                            sh "make package -j4 VERBOSE=1"
                         }
                     }
                     sh "mkdir -p ${distro}"
@@ -467,9 +467,9 @@ def buildCentosNative() {
                         }
                         dir ("build") {
                             if (distro == 'centos7' && arch == 'amd64') {
-                                sh 'source scl_source enable devtoolset-8 llvm-toolset-7 && make package -j4'
+                                sh 'source scl_source enable devtoolset-8 llvm-toolset-7 && make package -j4 VERBOSE=1'
                             } else {
-                                sh 'make package -j4'
+                                sh 'make package -j4 VERBOSE=1'
                             }
                         }
                     }
