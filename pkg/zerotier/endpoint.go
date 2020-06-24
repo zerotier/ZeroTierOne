@@ -1,11 +1,24 @@
+/*
+ * Copyright (c)2013-2020 ZeroTier, Inc.
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file in the project's root directory.
+ *
+ * Change Date: 2024-01-01
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2.0 of the Apache License.
+ */
+/****/
+
 package zerotier
 
 // #include "../../serviceiocore/GoGlue.h"
-// static inline const ZT_Fingerprint *_getFP(const ZT_Endpoint *ep) { return &(ep->value.fp); }
-// static inline uint64_t _getAddress(const ZT_Endpoint *ep) { return ep->value.fp.address; }
-// static inline uint64_t _getMAC(const ZT_Endpoint *ep) { return ep->value.mac; }
-// static inline const struct sockaddr_storage *_getSS(const ZT_Endpoint *ep) { return &(ep->value.ss); }
-// static inline void _setSS(ZT_Endpoint *ep,const void *ss) { memcpy(&(ep->value.ss),ss,sizeof(struct sockaddr_storage)); }
+// const ZT_Fingerprint *_getFP(const ZT_Endpoint *ep) { return &(ep->value.fp); }
+// uint64_t _getAddress(const ZT_Endpoint *ep) { return ep->value.fp.address; }
+// uint64_t _getMAC(const ZT_Endpoint *ep) { return ep->value.mac; }
+// const struct sockaddr_storage *_getSS(const ZT_Endpoint *ep) { return &(ep->value.ss); }
+// void _setSS(ZT_Endpoint *ep,const void *ss) { memcpy(&(ep->value.ss),ss,sizeof(struct sockaddr_storage)); }
 import "C"
 
 import (

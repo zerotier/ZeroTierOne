@@ -25,6 +25,7 @@
 #include "ScopedPtr.hpp"
 #include "Fingerprint.hpp"
 #include "Blob.hpp"
+#include "FCV.hpp"
 #include "Certificate.hpp"
 #include "Containers.hpp"
 
@@ -46,6 +47,7 @@ public:
 	 * This will not replace existing peers. In that case the existing peer
 	 * record is returned.
 	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param peer Peer to add
 	 * @return New or existing peer (should replace 'peer')
 	 */
@@ -115,7 +117,7 @@ public:
 	 */
 	ZT_INLINE SharedPtr< Peer > root() const
 	{
-		RWMutex::RLock l(m_peers_l);
+		RWMutex::RLock l(m_roots_l);
 		if (unlikely(m_rootPeers.empty()))
 			return SharedPtr< Peer >();
 		return m_rootPeers.front();
@@ -127,8 +129,8 @@ public:
 	 */
 	ZT_INLINE bool isRoot(const Identity &id) const
 	{
-		RWMutex::RLock l(m_peers_l);
-		return (m_roots.find(id) != m_roots.end());
+		RWMutex::RLock l(m_roots_l);
+		return (m_roots.find(id.fingerprint()) != m_roots.end());
 	}
 
 	/**
@@ -183,20 +185,6 @@ public:
 	SharedPtr< Peer > addRoot(void *tPtr, const Identity &id);
 
 	/**
-	 * Add or update a root set
-	 *
-	 * This does not check the certificate's validity. That must be done
-	 * first. It may however return a certificate error if something is
-	 * missing or wrong that prevents the certificate from being used
-	 * as a root set.
-	 *
-	 * @param tPtr Thread pointer
-	 * @param cert Certificate whose subject enumerates root identities
-	 * @return Zero on success or an error code
-	 */
-	ZT_CertificateError addRootSet(void *tPtr, const Certificate &cert);
-
-	/**
 	 * Remove a root server's identity from the root server set
 	 *
 	 * @param tPtr Thread pointer
@@ -222,12 +210,22 @@ public:
 	 */
 	void saveAll(void *tPtr);
 
+	/**
+	 * Add a certificate to the local certificate store
+	 *
+	 * @param cert Certificate to add (a copy will be made if added)
+	 * @return Error or 0 on success
+	 */
+	ZT_CertificateError addCertificate(void *tPtr, const Certificate &cert, const int64_t now, unsigned int localTrust);
+
 private:
+	void m_eraseCertificate_l_certs(const SharedPtr< const Certificate > &cert);
+	void m_cleanCertificates_l_certs(int64_t now);
+	bool m_verifyCertificateChain_l_certs(const Certificate *current, const int64_t now) const;
+	ZT_CertificateError m_verifyCertificate_l_certs(const Certificate &cert, const int64_t now, unsigned int localTrust, bool skipSignatureCheck) const;
 	void m_loadCached(void *tPtr, const Address &zta, SharedPtr< Peer > &peer);
-
-	void m_writeRootList(void *tPtr);
-
-	void m_updateRootPeers(void *tPtr);
+	void m_writeRootList_l_roots(void *tPtr);
+	void m_updateRootPeers_l_roots_certs(void *tPtr);
 
 	// This gets an integer key from an InetAddress for looking up paths.
 	static ZT_INLINE uint64_t s_getPathKey(const int64_t l, const InetAddress &r) noexcept
@@ -249,13 +247,22 @@ private:
 	}
 
 	const RuntimeEnvironment *const RR;
-	RWMutex m_paths_l; // locks m_paths
-	RWMutex m_peers_l; // locks m_peers, m_roots, and m_rootPeers
+
+	RWMutex m_paths_l; // m_paths
+	RWMutex m_peers_l; // m_peers
+	RWMutex m_roots_l; // m_roots, m_rootPeers
+	Mutex m_certs_l;   // m_certs, m_certsBySubjectIdentity
+
 	Map< uint64_t, SharedPtr< Path > > m_paths;
+
 	Map< Address, SharedPtr< Peer > > m_peers;
-	Map< Identity, Set< Blob<ZT_SHA384_DIGEST_SIZE> > > m_roots;
-	Map< String, Certificate > m_rootSets;
+
+	Map< Fingerprint, Set< SharedPtr< const Certificate > > > m_roots;
 	Vector< SharedPtr< Peer > > m_rootPeers;
+
+	Map< SHA384Hash, std::pair< SharedPtr< const Certificate >, unsigned int > > m_certs;
+	Map< Fingerprint, Map< SharedPtr< const Certificate >, unsigned int > > m_certsBySubjectIdentity;
+	Map< FCV< uint8_t, ZT_CERTIFICATE_MAX_UNIQUE_ID_SIZE >, std::pair< SharedPtr< const Certificate >, unsigned int > > m_certsBySubjectUniqueId;
 };
 
 } // namespace ZeroTier

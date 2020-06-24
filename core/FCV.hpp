@@ -32,7 +32,7 @@ namespace ZeroTier {
  * @tparam T Type to contain
  * @tparam C Maximum capacity of vector
  */
-template<typename T, unsigned int C>
+template< typename T, unsigned int C >
 class FCV
 {
 public:
@@ -46,13 +46,14 @@ public:
 	{ *this = v; }
 
 	ZT_INLINE FCV(const T *const contents, const unsigned int len) :
-		_s(0)
+		_s(len)
 	{
-		for (unsigned int i = 0;i < len;++i)
-			push_back(contents[i]);
+		const unsigned int l = std::min(len, C);
+		for (unsigned int i = 0; i < l; ++i)
+			new(reinterpret_cast<T *>(_m) + i) T(contents[i]);
 	}
 
-	template<typename I>
+	template< typename I >
 	ZT_INLINE FCV(I i, I end) :
 		_s(0)
 	{
@@ -71,7 +72,7 @@ public:
 			this->clear();
 			const unsigned int s = v._s;
 			_s = s;
-			for (unsigned int i = 0;i < s;++i)
+			for (unsigned int i = 0; i < s; ++i)
 				new(reinterpret_cast<T *>(_m) + i) T(*(reinterpret_cast<const T *>(v._m) + i));
 		}
 		return *this;
@@ -84,7 +85,7 @@ public:
 	{
 		const unsigned int s = _s;
 		_s = 0;
-		for (unsigned int i = 0;i < s;++i)
+		for (unsigned int i = 0; i < s; ++i)
 			(reinterpret_cast<T *>(_m) + i)->~T();
 	}
 
@@ -248,13 +249,13 @@ public:
 	 * @param start Starting iterator
 	 * @param end Ending iterator (must be greater than start)
 	 */
-	template<typename X>
+	template< typename X >
 	ZT_INLINE void assign(X start, const X &end)
 	{
-		const int l = std::min((int) std::distance(start, end), (int) C);
+		const int l = std::min((int)std::distance(start, end), (int)C);
 		if (l > 0) {
-			this->resize((unsigned int) l);
-			for (int i = 0;i < l;++i)
+			this->resize((unsigned int)l);
+			for (int i = 0; i < l; ++i)
 				reinterpret_cast<T *>(_m)[i] = *(start++);
 		} else {
 			this->clear();
@@ -264,7 +265,7 @@ public:
 	ZT_INLINE bool operator==(const FCV &v) const noexcept
 	{
 		if (_s == v._s) {
-			for (unsigned int i = 0;i < _s;++i) {
+			for (unsigned int i = 0; i < _s; ++i) {
 				if (!(*(reinterpret_cast<const T *>(_m) + i) == *(reinterpret_cast<const T *>(v._m) + i)))
 					return false;
 			}

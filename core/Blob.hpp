@@ -42,6 +42,9 @@ struct Blob
 	ZT_INLINE bool operator>=(const Blob &b) const noexcept { return (memcmp(data,b.data,S) >= 0); }
 };
 
+typedef Blob<48> SHA384Hash;
+typedef Blob<16> GUID;
+
 } // namespace ZeroTier
 
 #endif

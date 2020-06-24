@@ -63,7 +63,6 @@ public:
 	void clear();
 
 	Certificate &operator=(const ZT_Certificate &apiCert);
-
 	Certificate &operator=(const Certificate &cert);
 
 	/**
@@ -134,41 +133,41 @@ public:
 	bool sign(const Identity &issuer);
 
 	/**
-	 * Verify certificate signature against the issuer contained therein
+	 * Verify self-contained signatures and validity of certificate structure
 	 *
-	 * @return True if certificate is signed and signature is valid
+	 * This doesn't check the entire certificate chain, just the validity of
+	 * the certificate's internal signature and fields.
+	 *
+	 * @return OK (0) or error code indicating why certificate failed verification.
 	 */
-	bool verify() const;
+	ZT_CertificateError verify() const;
 
 	ZT_INLINE unsigned long hashCode() const noexcept
 	{ return (unsigned long)Utils::loadAsIsEndian< uint32_t >(this->serialNo); }
 
 	ZT_INLINE bool operator==(const ZT_Certificate &c) const noexcept
 	{ return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) == 0; }
-
 	ZT_INLINE bool operator!=(const ZT_Certificate &c) const noexcept
 	{ return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) != 0; }
-
 	ZT_INLINE bool operator<(const ZT_Certificate &c) const noexcept
 	{ return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) < 0; }
-
 	ZT_INLINE bool operator<=(const ZT_Certificate &c) const noexcept
 	{ return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) <= 0; }
-
 	ZT_INLINE bool operator>(const ZT_Certificate &c) const noexcept
 	{ return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) > 0; }
-
 	ZT_INLINE bool operator>=(const ZT_Certificate &c) const noexcept
 	{ return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) >= 0; }
 
 private:
+	void m_encodeSubject(Dictionary &d, bool omitUniqueIdProofSignature) const;
+
 	// These hold any identity or locator objects that are owned by and should
 	// be deleted with this certificate. Lists are used so the pointers never
 	// change.
 	List< Identity > m_identities;
 	List< Locator > m_locators;
 	List< String > m_strings;
-	List< Blob< ZT_SHA384_DIGEST_SIZE > > m_serials;
+	List< SHA384Hash > m_serials;
 
 	// These are stored in a vector because the memory needs to be contiguous.
 	Vector< ZT_Certificate_Identity > m_subjectIdentities;

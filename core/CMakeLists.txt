@@ -94,13 +94,18 @@ set(core_src
 )
 
 add_library(${PROJECT_NAME} STATIC ${core_src} ${core_headers})
-target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_11)
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_BINARY_DIR})
 
 if(WIN32)
 	set(libs ${libs} wsock32 ws2_32 rpcrt4 iphlpapi)
+	target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 else(WIN32)
 	set(libs ${libs} pthread)
+	if (APPLE)
+		target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
+	else(APPLE)
+		target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_11)
+	endif(APPLE)
 endif(WIN32)
 
 add_executable(zt_core_tests Tests.h Tests.cpp)

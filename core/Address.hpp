@@ -44,19 +44,14 @@ public:
 	{}
 
 	ZT_INLINE Address &operator=(const uint64_t a) noexcept
-	{
-		_a = a;
-		return *this;
-	}
+	{ _a = a; return *this; }
 
 	/**
 	 * @param bits Raw address -- 5 bytes, big-endian byte order
 	 * @param len Length of array
 	 */
 	ZT_INLINE void setTo(const uint8_t b[5]) noexcept
-	{
-		_a = ((uint64_t)b[0] << 32U) | ((uint64_t)b[1] << 24U) | ((uint64_t)b[2] << 16U) | ((uint64_t)b[3] << 8U) | (uint64_t)b[4];
-	}
+	{ _a = ((uint64_t)b[0] << 32U) | ((uint64_t)b[1] << 24U) | ((uint64_t)b[2] << 16U) | ((uint64_t)b[3] << 8U) | (uint64_t)b[4]; }
 
 	/**
 	 * @param bits Buffer to hold 5-byte address in big-endian byte order

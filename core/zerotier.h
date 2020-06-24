@@ -296,7 +296,7 @@ typedef struct
 /**
  * Maximum length of string fields in certificates
  */
-#define ZT_CERTIFICATE_MAX_STRING_LENGTH 63
+#define ZT_CERTIFICATE_MAX_STRING_LENGTH 127
 
 /**
  * Maximum length of a signature
@@ -304,9 +304,24 @@ typedef struct
 #define ZT_CERTIFICATE_MAX_SIGNATURE_SIZE 96
 
 /**
- * Flag indicating that the nodes in the subject are a set of roots
+ * Maximum size of a unique ID field in a certificate subject
  */
-#define ZT_CERTIFICATE_FLAG_CERTIFICATE_USE_ROOT_SET 0x0000000000000001ULL
+#define ZT_CERTIFICATE_MAX_UNIQUE_ID_SIZE 64
+
+/**
+ * Certificate is a root CA
+ */
+#define ZT_CERTIFICATE_LOCAL_TRUST_FLAG_ROOT_CA 0x0001U
+
+/**
+ * Certificate's subject describes a set of roots
+ */
+#define ZT_CERTIFICATE_LOCAL_TRUST_FLAG_ZEROTIER_ROOT_SET 0x0002U
+
+/**
+ * Public key type for NIST P-384 public keys used as subject unique IDs.
+ */
+#define ZT_CERTIFICATE_UNIQUE_ID_PUBLIC_KEY_TYPE_NIST_P_384 1
 
 /**
  * Errors returned by functions that verify or handle certificates.
@@ -319,34 +334,54 @@ enum ZT_CertificateError
 	ZT_CERTIFICATE_ERROR_NONE = 0,
 
 	/**
+	 * A newer certificate with the same issuer and subject serial plus CN exists.
+	 */
+	ZT_CERTIFICATE_ERROR_HAVE_NEWER_CERT = 1,
+
+	/**
 	 * Certificate format is invalid or required fields are missing
 	 */
-	ZT_CERTIFICATE_ERROR_INVALID_FORMAT = 1,
+	ZT_CERTIFICATE_ERROR_INVALID_FORMAT = -1,
 
 	/**
 	 * One or more identities in the certificate are invalid or fail consistency check
 	 */
-	ZT_CERTIFICATE_ERROR_INVALID_IDENTITY = 2,
+	ZT_CERTIFICATE_ERROR_INVALID_IDENTITY = -2,
 
 	/**
 	 * Certificate primary signature is invalid
 	 */
-	ZT_CERTIFICATE_ERROR_INVALID_PRIMARY_SIGNATURE = 3,
+	ZT_CERTIFICATE_ERROR_INVALID_PRIMARY_SIGNATURE = -3,
 
 	/**
 	 * Full chain validation of certificate failed
 	 */
-	ZT_CERTIFICATE_ERROR_INVALID_CHAIN = 4,
+	ZT_CERTIFICATE_ERROR_INVALID_CHAIN = -4,
 
 	/**
 	 * One or more signed components (e.g. a Locator) has an invalid signature.
 	 */
-	ZT_CERTIFICATE_ERROR_INVALID_COMPONENT_SIGNATURE = 5,
+	ZT_CERTIFICATE_ERROR_INVALID_COMPONENT_SIGNATURE = -5,
+
+	/**
+	 * Unique ID proof signature in subject was not valid.
+	 */
+	ZT_CERTIFICATE_ERROR_INVALID_UNIQUE_ID_PROOF = -6,
 
 	/**
 	 * Certificate is not appropriate for this use
 	 */
-	ZT_CERTIFICATE_ERROR_INAPPROPRIATE_FOR_USE = 6
+	ZT_CERTIFICATE_ERROR_INAPPROPRIATE_FOR_USE = -7,
+
+	/**
+	 * Certificate is missing a required field
+	 */
+	ZT_CERTIFICATE_ERROR_MISSING_REQUIRED_FIELDS = -8,
+
+	/**
+	 * Certificate is expired or not yet in effect
+	 */
+	ZT_CERTIFICATE_ERROR_OUT_OF_VALID_TIME_WINDOW = -9
 };
 
 /**
@@ -354,6 +389,8 @@ enum ZT_CertificateError
  */
 typedef struct
 {
+	char serialNo[ZT_CERTIFICATE_MAX_STRING_LENGTH + 1];
+	char commonName[ZT_CERTIFICATE_MAX_STRING_LENGTH + 1];
 	char country[ZT_CERTIFICATE_MAX_STRING_LENGTH + 1];
 	char organization[ZT_CERTIFICATE_MAX_STRING_LENGTH + 1];
 	char unit[ZT_CERTIFICATE_MAX_STRING_LENGTH + 1];
@@ -361,8 +398,6 @@ typedef struct
 	char province[ZT_CERTIFICATE_MAX_STRING_LENGTH + 1];
 	char streetAddress[ZT_CERTIFICATE_MAX_STRING_LENGTH + 1];
 	char postalCode[ZT_CERTIFICATE_MAX_STRING_LENGTH + 1];
-	char commonName[ZT_CERTIFICATE_MAX_STRING_LENGTH + 1];
-	char serialNo[ZT_CERTIFICATE_MAX_STRING_LENGTH + 1];
 	char email[ZT_CERTIFICATE_MAX_STRING_LENGTH + 1];
 	char url[ZT_CERTIFICATE_MAX_STRING_LENGTH + 1];
 } ZT_Certificate_Name;
@@ -405,6 +440,11 @@ typedef struct
 typedef struct
 {
 	/**
+	 * Timestamp of subject, can also be a revision ID for this subject's name.
+	 */
+	int64_t timestamp;
+
+	/**
 	 * Identities and optional locators of nodes
 	 */
 	ZT_Certificate_Identity *identities;
@@ -418,6 +458,11 @@ typedef struct
 	 * Serial numbers of other certificates being signed (each is 48 bytes / 384 bits)
 	 */
 	const uint8_t *const *certificates;
+
+	/**
+	 * URLs that can be consulted for updates to this certificate.
+	 */
+	const char *const *updateUrls;
 
 	/**
 	 * Number of identities
@@ -435,9 +480,34 @@ typedef struct
 	unsigned int certificateCount;
 
 	/**
+	 * Number of update URLs
+	 */
+	unsigned int updateUrlCount;
+
+	/**
 	 * Information about owner of items.
 	 */
 	ZT_Certificate_Name name;
+
+	/**
+	 * Unique ID, which can be a public key prefixed by a key type.
+	 */
+	uint8_t uniqueId[ZT_CERTIFICATE_MAX_UNIQUE_ID_SIZE];
+
+	/**
+	 * If unique ID is a public key, this can be a signature of the subject.
+	 */
+	uint8_t uniqueIdProofSignature[ZT_CERTIFICATE_MAX_SIGNATURE_SIZE];
+
+	/**
+	 * Size of unique ID in bytes or 0 if none.
+	 */
+	unsigned int uniqueIdSize;
+
+	/**
+	 * Proof signature size or 0 if none.
+	 */
+	unsigned int uniqueIdProofSignatureSize;
 } ZT_Certificate_Subject;
 
 /**
@@ -463,10 +533,12 @@ typedef struct
 	uint64_t flags;
 
 	/**
+	 * Certificate timestamp in milliseconds since epoch.
+	 */
+	int64_t timestamp;
+
+	/**
 	 * Valid time range: not before, not after.
-	 *
-	 * In ZeroTier the not before field is also the certificate issued time
-	 * and timestamp.
 	 */
 	int64_t validity[2];
 
@@ -486,16 +558,6 @@ typedef struct
 	ZT_Certificate_Name issuerName;
 
 	/**
-	 * URLs that can be consulted for updates to this certificate.
-	 */
-	const char *const *updateUrls;
-
-	/**
-	 * Number of update URLs
-	 */
-	unsigned int updateUrlCount;
-
-	/**
 	 * Maximum path length from this certificate toward further certificates.
 	 *
 	 * Subjects may sign other certificates whose path lengths are less than
@@ -505,14 +567,14 @@ typedef struct
 	unsigned int maxPathLength;
 
 	/**
-	 * Size of signature in bytes.
-	 */
-	unsigned int signatureSize;
-
-	/**
 	 * Signature by issuer (algorithm determined by identity type).
 	 */
 	uint8_t signature[ZT_CERTIFICATE_MAX_SIGNATURE_SIZE];
+
+	/**
+	 * Size of signature in bytes.
+	 */
+	unsigned int signatureSize;
 } ZT_Certificate;
 
 /**
@@ -916,7 +978,7 @@ enum ZT_VirtualNetworkStatus
 enum ZT_VirtualNetworkType
 {
 	/**
-	 * Private networks are authorized via certificates of membership
+	 * Private networks are authorized via membership credentials
 	 */
 	ZT_NETWORK_TYPE_PRIVATE = 0,
 
