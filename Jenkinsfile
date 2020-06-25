@@ -370,7 +370,7 @@ def buildDebianNative() {
     def buster = ["debian-buster", /*"debian-stretch",*/ "debian-bullseye"]
     def busterArchs = []
     if (params.BUILD_ALL) {
-        busterArchs = ["s390x", "ppc64le", "i386", "armhf", "armel", "arm64", "amd64"]
+        busterArchs = ["s390x", "ppc64le", "i386", "armhf", "armel", "arm64", "amd64", "mips64le"]
     } else {
         busterArchs = ["amd64", "i386"]
     }
@@ -416,7 +416,7 @@ def buildDebianNative() {
     def sid = ["debian-sid"]
     def sidArchs = []
     if (params.BUILD_ALL) {
-        busterArchs = ["s390x", "ppc64le", "i386", /*"armhf", "armel",*/ "arm64", "amd64"]
+        busterArchs = ["s390x", "ppc64le", "i386", /*"armhf", "armel",*/ "arm64", "amd64", "mips64le"]
     } else {
         busterArchs = ["amd64", "i386"]
     }
