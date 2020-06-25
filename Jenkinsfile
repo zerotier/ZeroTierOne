@@ -367,7 +367,7 @@ def packageStatic() {
 
 def buildDebianNative() {
     def tasks = [:]
-    def buster = ["debian-buster", /*"debian-stretch",*/ "debian-bullseye", "debian-sid"]
+    def buster = ["debian-buster", /*"debian-stretch",*/ "debian-bullseye"]
     def busterArchs = []
     if (params.BUILD_ALL) {
         busterArchs = ["s390x", "ppc64le", "i386", "armhf", "armel", "arm64", "amd64"]
@@ -412,6 +412,17 @@ def buildDebianNative() {
     
     tasks << getTasks(buster, busterArchs, build)
     
+    // 32-bit arm and CMake don't get along right now on Sid
+    def sid = ["debian-sid"]
+    def sidArchs = []
+    if (params.BUILD_ALL) {
+        busterArchs = ["s390x", "ppc64le", "i386", /*"armhf", "armel",*/ "arm64", "amd64"]
+    } else {
+        busterArchs = ["amd64", "i386"]
+    }
+    
+    tasks << getTasks(sid, sidArchs, build)
+
     // bash is broken when running under QEMU-s390x on Xenial
     def xenial = ["ubuntu-xenial"]
     def xenialArchs = []
