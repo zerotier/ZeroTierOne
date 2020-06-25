@@ -367,7 +367,7 @@ def packageStatic() {
 
 def buildDebianNative() {
     def tasks = [:]
-    def buster = ["debian-buster", /*"debian-stretch",*/ "debian-bullseye"]
+    def buster = ["debian-buster" /*, "debian-stretch",*/ ]
     def busterArchs = []
     if (params.BUILD_ALL) {
         busterArchs = ["s390x", "ppc64le", "i386", "armhf", "armel", "arm64", "amd64", "mips64le"]
@@ -412,8 +412,8 @@ def buildDebianNative() {
     
     tasks << getTasks(buster, busterArchs, build)
     
-    // 32-bit arm and CMake don't get along right now on Sid
-    def sid = ["debian-sid"]
+    // 32-bit arm and CMake don't get along right now on Sid/Bullseye
+    def sid = ["debian-sid", "debian-bullseye"]
     def sidArchs = []
     if (params.BUILD_ALL) {
         busterArchs = ["s390x", "ppc64le", "i386", /*"armhf", "armel",*/ "arm64", "amd64", "mips64le"]
