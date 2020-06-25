@@ -1,5 +1,4 @@
 cmake_minimum_required (VERSION 3.8)
-project(zerotier DESCRIPTION "ZeroTier Network Hypervisor" LANGUAGES CXX C)
 
 cmake_policy(SET CMP0048 NEW)
 
@@ -265,6 +264,8 @@ if(NOT PACKAGE_STATIC)
 		COMMENT "Compiling Go Code..."
 	)
 	add_dependencies(zerotier zt_osdep zt_core zt_controller zt_service_io_core)
+
+	install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/zerotier DESTINATION bin)
 
 else(NOT PACKAGE_STATIC)
 
