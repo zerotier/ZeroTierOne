@@ -273,7 +273,7 @@ private:
 
 	Map< SHA384Hash, std::pair< SharedPtr< const Certificate >, unsigned int > > m_certs;
 	Map< Fingerprint, Map< SharedPtr< const Certificate >, unsigned int > > m_certsBySubjectIdentity;
-	Map< FCV< uint8_t, ZT_CERTIFICATE_MAX_UNIQUE_ID_SIZE >, std::pair< SharedPtr< const Certificate >, unsigned int > > m_certsBySubjectUniqueId;
+	SortedMap< FCV< uint8_t, ZT_CERTIFICATE_MAX_UNIQUE_ID_SIZE >, std::pair< SharedPtr< const Certificate >, unsigned int > > m_certsBySubjectUniqueId;
 };
 
 } // namespace ZeroTier

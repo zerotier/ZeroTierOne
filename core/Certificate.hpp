@@ -47,6 +47,9 @@ namespace ZeroTier {
  */
 class Certificate : public ZT_Certificate
 {
+	friend class SharedPtr< Certificate >;
+	friend class SharedPtr< const Certificate >;
+
 public:
 	ZT_INLINE Certificate() noexcept
 	{ this->clear(); }
@@ -174,6 +177,8 @@ private:
 	Vector< ZT_Certificate_Network > m_subjectNetworks;
 	Vector< const uint8_t * > m_subjectCertificates;
 	Vector< const char * > m_updateUrls;
+
+	std::atomic<int> __refCount;
 };
 
 } // namespace ZeroTier

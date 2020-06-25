@@ -32,6 +32,9 @@ struct Blob
 	ZT_INLINE Blob() noexcept { Utils::zero<S>(data); }
 	explicit ZT_INLINE Blob(const void *const d) noexcept { Utils::copy<S>(data,d); }
 
+	ZT_INLINE unsigned long hashCode() const noexcept
+	{ return (unsigned long)Utils::fnv1a32(data, S); }
+
 	ZT_INLINE operator bool() const noexcept { return !Utils::allZero(data); }
 
 	ZT_INLINE bool operator==(const Blob &b) const noexcept { return (memcmp(data,b.data,S) == 0); }

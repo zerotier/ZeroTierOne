@@ -14,6 +14,7 @@ set(core_headers
 	C25519.hpp
 	CapabilityCredential.hpp
 	Certificate.hpp
+	Defaults.hpp
 	MembershipCredential.hpp
 	OwnershipCredential.hpp
 	Constants.hpp
@@ -64,6 +65,7 @@ set(core_src
 	C25519.cpp
 	CapabilityCredential.cpp
 	Certificate.cpp
+	Defaults.cpp
 	MembershipCredential.cpp
 	OwnershipCredential.cpp
 	Credential.cpp

@@ -724,7 +724,7 @@ func (n *Node) pathLookup(id *Identity) (net.IP, int) {
 	return nil, 0
 }
 
-func (n *Node) makeStateObjectPath(objType int, id [2]uint64) (string, bool) {
+func (n *Node) makeStateObjectPath(objType int, id []uint64) (string, bool) {
 	var fp string
 	secret := false
 	switch objType {
@@ -744,13 +744,17 @@ func (n *Node) makeStateObjectPath(objType int, id [2]uint64) (string, bool) {
 		fp = path.Join(n.basePath, "networks.d")
 		_ = os.Mkdir(fp, 0755)
 		fp = path.Join(fp, fmt.Sprintf("%.16x.conf", id[0]))
-	case C.ZT_STATE_OBJECT_ROOTS:
-		fp = path.Join(n.basePath, "roots")
+	case C.ZT_STATE_OBJECT_TRUST_STORE:
+		fp = path.Join(n.basePath, "truststore")
+	case C.ZT_STATE_OBJECT_CERT:
+		fp = path.Join(n.basePath, "certs.d")
+		_ = os.Mkdir(fp, 0755)
+		fp = path.Join(fp, Base32StdLowerCase.EncodeToString((*[48]byte)(unsafe.Pointer(&id[0]))[:]))
 	}
 	return fp, secret
 }
 
-func (n *Node) stateObjectPut(objType int, id [2]uint64, data []byte) {
+func (n *Node) stateObjectPut(objType int, id []uint64, data []byte) {
 	fp, secret := n.makeStateObjectPath(objType, id)
 	if len(fp) > 0 {
 		fileMode := os.FileMode(0644)
@@ -764,14 +768,14 @@ func (n *Node) stateObjectPut(objType int, id [2]uint64, data []byte) {
 	}
 }
 
-func (n *Node) stateObjectDelete(objType int, id [2]uint64) {
+func (n *Node) stateObjectDelete(objType int, id []uint64) {
 	fp, _ := n.makeStateObjectPath(objType, id)
 	if len(fp) > 0 {
 		_ = os.Remove(fp)
 	}
 }
 
-func (n *Node) stateObjectGet(objType int, id [2]uint64) ([]byte, bool) {
+func (n *Node) stateObjectGet(objType int, id []uint64) ([]byte, bool) {
 	fp, _ := n.makeStateObjectPath(objType, id)
 	if len(fp) > 0 {
 		fd, err := ioutil.ReadFile(fp)
@@ -854,21 +858,19 @@ func goStateObjectPutFunc(gn unsafe.Pointer, objType C.int, id, data unsafe.Poin
 		return
 	}
 
-	id2 := *((*[2]uint64)(id))
+	// NOTE: this is unsafe and depends on node.stateObjectDelete() and node.stateObjectPut()
+	// not accessing beyond the expected number of elements in the id.
+	id2 := (*[6]uint64)(id)
 	var data2 []byte
 	if len > 0 {
 		data2 = C.GoBytes(data, len)
 	}
 
-	node.runWaitGroup.Add(1)
-	go func() {
-		if len < 0 {
-			node.stateObjectDelete(int(objType), id2)
-		} else {
-			node.stateObjectPut(int(objType), id2, data2)
-		}
-		node.runWaitGroup.Done()
-	}()
+	if len < 0 {
+		node.stateObjectDelete(int(objType), id2[:])
+	} else {
+		node.stateObjectPut(int(objType), id2[:], data2)
+	}
 }
 
 //export goStateObjectGetFunc
@@ -879,7 +881,7 @@ func goStateObjectGetFunc(gn unsafe.Pointer, objType C.int, id, dataP unsafe.Poi
 	}
 
 	*((*uintptr)(dataP)) = 0
-	tmp, found := node.stateObjectGet(int(objType), *((*[2]uint64)(id)))
+	tmp, found := node.stateObjectGet(int(objType), ((*[6]uint64)(id))[:])
 	if found && len(tmp) > 0 {
 		cData := C.ZT_malloc(C.ulong(len(tmp))) // GoGlue sends free() to the core as the free function
 		if uintptr(cData) == 0 {

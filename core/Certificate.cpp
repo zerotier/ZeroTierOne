@@ -152,7 +152,6 @@ void Certificate::addUpdateUrl(const char *url)
 
 Vector< uint8_t > Certificate::encode(const bool omitSignature) const
 {
-	char tmp[256];
 	Vector< uint8_t > enc;
 	Dictionary d;
 

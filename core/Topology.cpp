@@ -431,8 +431,7 @@ void Topology::m_updateRootPeers_l_roots_certs(void *tPtr)
 
 	// Populate m_roots from certificate subject identities from certificates flagged
 	// as local root set certificates.
-	for (Map< FCV< uint8_t, ZT_CERTIFICATE_MAX_UNIQUE_ID_SIZE >, std::pair< SharedPtr< const Certificate >, unsigned int > >::const_iterator c(m_certsBySubjectUniqueId.begin()); c != m_certsBySubjectUniqueId.end();
-	     ++c) {
+	for (SortedMap< FCV< uint8_t, ZT_CERTIFICATE_MAX_UNIQUE_ID_SIZE >, std::pair< SharedPtr< const Certificate >, unsigned int > >::const_iterator c(m_certsBySubjectUniqueId.begin()); c != m_certsBySubjectUniqueId.end(); ++c) {
 		if ((c->second.second & ZT_CERTIFICATE_LOCAL_TRUST_FLAG_ZEROTIER_ROOT_SET) != 0) {
 			for (unsigned int i = 0; i < c->second.first->subject.identityCount; ++i)
 				m_roots[*reinterpret_cast<const Identity *>(c->second.first->subject.identities[i].identity)].insert(c->second.first);

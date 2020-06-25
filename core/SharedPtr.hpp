@@ -177,6 +177,9 @@ public:
 		return 0;
 	}
 
+	ZT_INLINE unsigned long hashCode() const noexcept
+	{ return (unsigned long)Utils::hash64((uint64_t)((uintptr_t)m_ptr)); }
+
 	ZT_INLINE bool operator==(const SharedPtr &sp) const noexcept
 	{ return (m_ptr == sp.m_ptr); }
 

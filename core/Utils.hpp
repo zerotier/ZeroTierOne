@@ -55,9 +55,11 @@ namespace Utils {
 #define ZT_ROL32(x, r) (((x) << (r)) | ((x) >> (32 - (r))))
 
 #ifdef ZT_ARCH_X64
+
 struct CPUIDRegisters
 {
 	CPUIDRegisters() noexcept;
+
 	bool rdrand;
 	bool aes;
 	bool avx;
@@ -68,6 +70,7 @@ struct CPUIDRegisters
 	bool sha;
 	bool fsrm;
 };
+
 extern const CPUIDRegisters CPUID;
 #endif
 
@@ -772,45 +775,7 @@ static ZT_INLINE void copy(void *const dest, const void *const src, unsigned int
  */
 template< unsigned int L >
 static ZT_INLINE void zero(void *const dest) noexcept
-{
-#ifdef ZT_ARCH_X64
-	uint8_t *volatile d = reinterpret_cast<uint8_t *>(dest);
-	__m128i z = _mm_setzero_si128();
-	for (unsigned int i = 0; i < (L >> 6U); ++i) {
-		_mm_storeu_si128(reinterpret_cast<__m128i *>(d), z);
-		_mm_storeu_si128(reinterpret_cast<__m128i *>(d + 16), z);
-		_mm_storeu_si128(reinterpret_cast<__m128i *>(d + 32), z);
-		_mm_storeu_si128(reinterpret_cast<__m128i *>(d + 48), z);
-		d += 64;
-	}
-	if ((L & 32U) != 0) {
-		_mm_storeu_si128(reinterpret_cast<__m128i *>(d), z);
-		_mm_storeu_si128(reinterpret_cast<__m128i *>(d + 16), z);
-		d += 32;
-	}
-	if ((L & 16U) != 0) {
-		_mm_storeu_si128(reinterpret_cast<__m128i *>(d), z);
-		d += 16;
-	}
-	if ((L & 8U) != 0) {
-		*reinterpret_cast<volatile uint64_t *>(d) = 0;
-		d += 8;
-	}
-	if ((L & 4U) != 0) {
-		*reinterpret_cast<volatile uint32_t *>(d) = 0;
-		d += 4;
-	}
-	if ((L & 2U) != 0) {
-		*reinterpret_cast<volatile uint16_t *>(d) = 0;
-		d += 2;
-	}
-	if ((L & 1U) != 0) {
-		*d = 0;
-	}
-#else
-	memset(dest,0,L);
-#endif
-}
+{ memset(dest, 0, L); }
 
 /**
  * Zero memory block whose size is known at run time
