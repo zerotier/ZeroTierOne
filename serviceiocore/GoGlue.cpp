@@ -107,8 +107,8 @@ const char *const ZT_PLATFORM_DEFAULT_HOMEPATH = defaultHomePath.c_str();
 // These are implemented in Go code.
 extern "C" int goPathCheckFunc(void *, const ZT_Identity *, int, const void *, int);
 extern "C" int goPathLookupFunc(void *, uint64_t, int, const ZT_Identity *, int *, uint8_t [16], int *);
-extern "C" void goStateObjectPutFunc(void *, int, const uint64_t [2], const void *, int);
-extern "C" int goStateObjectGetFunc(void *, int, const uint64_t [2], void **);
+extern "C" void goStateObjectPutFunc(void *, int, const uint64_t *, const void *, int);
+extern "C" int goStateObjectGetFunc(void *, int, const uint64_t *, void **);
 extern "C" void goVirtualNetworkConfigFunc(void *, ZT_GoTap *, uint64_t, int, const ZT_VirtualNetworkConfig *);
 extern "C" void goZtEvent(void *, int, const void *);
 extern "C" void goHandleTapAddedMulticastGroup(void *, ZT_GoTap *, uint64_t, uint64_t, uint32_t);

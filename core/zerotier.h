@@ -1584,7 +1584,7 @@ enum ZT_StateObjectType
 	/**
 	 * Public address and public key
 	 *
-	 * Object ID: (unused)
+	 * Object ID: (none)
 	 * Canonical path: <HOME>/identity.public
    * Persistence: required
 	 */
@@ -1593,7 +1593,7 @@ enum ZT_StateObjectType
 	/**
 	 * Full identity with secret key
 	 *
-	 * Object ID: (unused)
+	 * Object ID: (none)
 	 * Canonical path: <HOME>/identity.secret
    * Persistence: required, should be stored with restricted permissions e.g. mode 0600 on *nix
 	 */
@@ -1602,7 +1602,7 @@ enum ZT_StateObjectType
 	/**
 	 * This node's locator
 	 *
-	 * Object ID: (unused)
+	 * Object ID: (none)
 	 * Canonical path: <HOME>/locator
 	 * Persistence: optional
 	 */
@@ -1611,7 +1611,7 @@ enum ZT_StateObjectType
 	/**
 	 * Peer and related state
 	 *
-	 * Object ID: peer address
+	 * Object ID: [1]address (40 bits, in least significant 64 bits)
 	 * Canonical path: <HOME>/peers.d/<ID> (10-digit address)
 	 * Persistence: optional, can be cleared at any time
 	 */
@@ -1620,21 +1620,44 @@ enum ZT_StateObjectType
 	/**
 	 * Network configuration
 	 *
-	 * Object ID: network ID
+	 * Object ID: [1]id (64-bit network ID)
 	 * Canonical path: <HOME>/networks.d/<NETWORKID>.conf (16-digit hex ID)
 	 * Persistence: required if network memberships should persist
 	 */
 	ZT_STATE_OBJECT_NETWORK_CONFIG = 6,
 
 	/**
-	 * Root list
+	 * List of certificates and their local trust, and locally added roots
 	 *
-	 * Object ID: (unused)
-	 * Canonical path: <HOME>/roots
+	 * Object ID: (none)
+	 * Canonical path: <HOME>/trust
 	 * Persistence: required if root settings should persist
 	 */
-	ZT_STATE_OBJECT_ROOTS = 7
+	ZT_STATE_OBJECT_TRUST_STORE = 7,
+
+	/**
+	 * Certificate
+	 *
+	 * Object ID: [6]serial (384-bit serial packed into 6 uint64_t's)
+	 * Canonical path: <HOME>/certs.d/<serial> (96-digit hex serial)
+	 */
+	ZT_STATE_OBJECT_CERT = 8
 };
+
+/**
+ * Size of the object ID for peers (in 64-bit uint64_t's)
+ */
+#define ZT_STATE_OBJECT_PEER_ID_SIZE 1
+
+/**
+ * Size of the object ID for network configurations (in 64-bit uint64_t's)
+ */
+#define ZT_STATE_OBJECT_NETWORK_CONFIG_ID_SIZE 1
+
+/**
+ * Size of the object ID for certificates (in 64-bit uint64_t's)
+ */
+#define ZT_STATE_OBJECT_CERT_ID_SIZE 6
 
 /**
  * An instance of a ZeroTier One node (opaque)
@@ -1711,6 +1734,10 @@ typedef void (*ZT_EventCallback)(
  * See ZT_StateObjectType docs for information about each state object type
  * and when and if it needs to be persisted.
  *
+ * The state object ID's size depends on the object type, and is always
+ * in the form of one or more 64-bit unsigned integers. Some object types
+ * do not use this field, and for these it may be NULL.
+ *
  * An object of length -1 is sent to indicate that an object should be
  * deleted.
  */
@@ -1719,7 +1746,7 @@ typedef void (*ZT_StatePutFunction)(
 	void *,                                /* User ptr */
 	void *,                                /* Thread ptr */
 	enum ZT_StateObjectType,               /* State object type */
-	const uint64_t [2],                    /* State object ID (if applicable) */
+	const uint64_t *,                      /* State object ID (if applicable) */
 	const void *,                          /* State object data */
 	int);                                  /* Length of data or -1 to delete */
 
@@ -1737,7 +1764,7 @@ typedef int (*ZT_StateGetFunction)(
 	void *,                                /* User ptr */
 	void *,                                /* Thread ptr */
 	enum ZT_StateObjectType,               /* State object type */
-	const uint64_t [2],                    /* State object ID (if applicable) */
+	const uint64_t *,                      /* State object ID (if applicable) */
 	void **,                               /* Result parameter: data */
 	void (**)(void *));                    /* Result parameter: data free function */
 

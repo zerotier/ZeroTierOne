@@ -277,10 +277,10 @@ public:
 	 *
 	 * @param tPtr Thread pointer
 	 * @param type Object type to get
-	 * @param id Object ID
+	 * @param id Object ID or NULL if this type does not use one
 	 * @return Vector containing data or empty vector if not found or empty
 	 */
-	Vector<uint8_t> stateObjectGet(void *tPtr, ZT_StateObjectType type, const uint64_t id[2]);
+	Vector<uint8_t> stateObjectGet(void *tPtr, ZT_StateObjectType type, const uint64_t *id);
 
 	/**
 	 * Store a state object

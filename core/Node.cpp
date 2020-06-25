@@ -34,13 +34,13 @@ namespace {
 // Structure containing all the core objects for a ZeroTier node to reduce memory allocations.
 struct _NodeObjects
 {
-	ZT_INLINE _NodeObjects(RuntimeEnvironment *const RR, void *const tPtr) :
+	ZT_INLINE _NodeObjects(RuntimeEnvironment *const RR, void *const tPtr, const int64_t now) :
 		t(RR),
 		expect(),
 		vl2(RR),
 		vl1(RR),
 		sa(RR),
-		topology(RR, tPtr)
+		topology(RR, tPtr, now)
 	{
 		RR->t = &t;
 		RR->expect = &expect;
@@ -143,7 +143,7 @@ Node::Node(
 	// This constructs all the components of the ZeroTier core within a single contiguous memory container,
 	// which reduces memory fragmentation and may improve cache locality.
 	ZT_SPEW("initializing subsystem objects...");
-	m_objects = new _NodeObjects(RR, tPtr);
+	m_objects = new _NodeObjects(RR, tPtr, now);
 	ZT_SPEW("node initialized!");
 
 	postEvent(tPtr, ZT_EVENT_UP);
@@ -612,7 +612,7 @@ void Node::setController(void *networkControllerInstance)
 
 // Methods used only within the core ----------------------------------------------------------------------------------
 
-Vector< uint8_t > Node::stateObjectGet(void *const tPtr, ZT_StateObjectType type, const uint64_t id[2])
+Vector< uint8_t > Node::stateObjectGet(void *const tPtr, ZT_StateObjectType type, const uint64_t *id)
 {
 	Vector< uint8_t > r;
 	if (m_cb.stateGetFunction) {

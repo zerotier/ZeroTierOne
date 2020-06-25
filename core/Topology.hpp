@@ -39,7 +39,7 @@ class RuntimeEnvironment;
 class Topology
 {
 public:
-	Topology(const RuntimeEnvironment *renv, void *tPtr);
+	Topology(const RuntimeEnvironment *renv, void *tPtr, int64_t now);
 
 	/**
 	 * Add peer to database
@@ -130,7 +130,7 @@ public:
 	ZT_INLINE bool isRoot(const Identity &id) const
 	{
 		RWMutex::RLock l(m_roots_l);
-		return (m_roots.find(id.fingerprint()) != m_roots.end());
+		return (m_roots.find(id) != m_roots.end());
 	}
 
 	/**
@@ -202,30 +202,41 @@ public:
 
 	/**
 	 * Do periodic tasks such as database cleanup
+	 *
+	 * @param tPtr Thread pointer
+	 * @param now Current time
 	 */
 	void doPeriodicTasks(void *tPtr, int64_t now);
 
 	/**
 	 * Save all currently known peers to data store
+	 *
+	 * @param tPtr Thread pointer
 	 */
 	void saveAll(void *tPtr);
 
 	/**
 	 * Add a certificate to the local certificate store
 	 *
+	 * @param tPtr Thread pointer
 	 * @param cert Certificate to add (a copy will be made if added)
+	 * @param now Current time
+	 * @param localTrust Local trust bit flags
+	 * @param writeToLocalStore If true, write to local object store (via API callbacks)
+	 * @param refreshRootSets If true, refresh root sets in case a root set changed (default: true)
+	 * @param verify If true, verify certificate and certificate chain (default: true)
 	 * @return Error or 0 on success
 	 */
-	ZT_CertificateError addCertificate(void *tPtr, const Certificate &cert, const int64_t now, unsigned int localTrust);
+	ZT_CertificateError addCertificate(void *tPtr, const Certificate &cert, const int64_t now, unsigned int localTrust, bool writeToLocalStore, bool refreshRootSets = true, bool verify = true);
 
 private:
 	void m_eraseCertificate_l_certs(const SharedPtr< const Certificate > &cert);
-	void m_cleanCertificates_l_certs(int64_t now);
+	bool m_cleanCertificates_l_certs(int64_t now);
 	bool m_verifyCertificateChain_l_certs(const Certificate *current, const int64_t now) const;
 	ZT_CertificateError m_verifyCertificate_l_certs(const Certificate &cert, const int64_t now, unsigned int localTrust, bool skipSignatureCheck) const;
 	void m_loadCached(void *tPtr, const Address &zta, SharedPtr< Peer > &peer);
-	void m_writeRootList_l_roots(void *tPtr);
 	void m_updateRootPeers_l_roots_certs(void *tPtr);
+	void m_writeTrustStore_l_roots_certs(void *tPtr) const;
 
 	// This gets an integer key from an InetAddress for looking up paths.
 	static ZT_INLINE uint64_t s_getPathKey(const int64_t l, const InetAddress &r) noexcept
@@ -257,7 +268,7 @@ private:
 
 	Map< Address, SharedPtr< Peer > > m_peers;
 
-	Map< Fingerprint, Set< SharedPtr< const Certificate > > > m_roots;
+	Map< Identity, Set< SharedPtr< const Certificate > > > m_roots;
 	Vector< SharedPtr< Peer > > m_rootPeers;
 
 	Map< SHA384Hash, std::pair< SharedPtr< const Certificate >, unsigned int > > m_certs;
