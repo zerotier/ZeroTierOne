@@ -370,7 +370,7 @@ def buildDebianNative() {
     def buster = ["debian-buster" /*, "debian-stretch",*/ ]
     def busterArchs = []
     if (params.BUILD_ALL) {
-        busterArchs = ["s390x", "ppc64le", "i386", "armhf", "armel", "arm64", "amd64", "mips64le"]
+        busterArchs = ["s390x", "ppc64le", "i386", "armhf", "armel", "arm64", "amd64"]
     } else {
         busterArchs = ["amd64", "i386"]
     }
