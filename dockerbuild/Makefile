@@ -52,7 +52,7 @@ debian-stretch:
 	docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-386.tar.gz" --platform linux/386 -f Dockerfile.debian-stretch . -t ztbuild/debian-stretch-i386 --load
 	docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-ppc64le.tar.gz" --platform linux/ppc64le -f Dockerfile.debian-stretch . -t ztbuild/debian-stretch-ppc64le --load
 	docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-s390x.tar.gz" --platform linux/s390x -f Dockerfile.debian-stretch . -t ztbuild/debian-stretch-s390x --load
-	docker buildx build --platform linux/mips64le -f Dockerfile.debian-stretch . -t ztbuild/debian-stretch-mips64le --load
+	# docker buildx build --platform linux/mips64le -f Dockerfile.debian-stretch . -t ztbuild/debian-stretch-mips64le --load
 
 debian-bullseye:
 	docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz" --platform linux/amd64 -f Dockerfile.debian-bullseye . -t ztbuild/debian-bullseye-amd64 --load
