@@ -37,10 +37,10 @@ bool MembershipCredential::agreesWith(const MembershipCredential &other) const n
 	}
 
 	// us <> them
-	for (FCV<p_Qualifier, ZT_CERTIFICATEOFMEMBERSHIP_MAX_ADDITIONAL_QUALIFIERS>::const_iterator i(m_additionalQualifiers.begin());i != m_additionalQualifiers.end();++i) {
+	for (FCV<p_Qualifier, ZT_MEMBERSHIP_CREDENTIAL_MAX_ADDITIONAL_QUALIFIERS>::const_iterator i(m_additionalQualifiers.begin()); i != m_additionalQualifiers.end(); ++i) {
 		if (i->delta != 0xffffffffffffffffULL) {
 			const uint64_t *v2 = nullptr;
-			for (FCV<p_Qualifier, ZT_CERTIFICATEOFMEMBERSHIP_MAX_ADDITIONAL_QUALIFIERS>::const_iterator j(other.m_additionalQualifiers.begin());j != other.m_additionalQualifiers.end();++i) {
+			for (FCV<p_Qualifier, ZT_MEMBERSHIP_CREDENTIAL_MAX_ADDITIONAL_QUALIFIERS>::const_iterator j(other.m_additionalQualifiers.begin()); j != other.m_additionalQualifiers.end(); ++i) {
 				if (j->id == i->id) {
 					v2 = &(j->value);
 					break;
@@ -59,10 +59,10 @@ bool MembershipCredential::agreesWith(const MembershipCredential &other) const n
 	}
 
 	// them <> us (we need a second pass in case they have qualifiers we don't or vice versa)
-	for (FCV<p_Qualifier, ZT_CERTIFICATEOFMEMBERSHIP_MAX_ADDITIONAL_QUALIFIERS>::const_iterator i(other.m_additionalQualifiers.begin());i != other.m_additionalQualifiers.end();++i) {
+	for (FCV<p_Qualifier, ZT_MEMBERSHIP_CREDENTIAL_MAX_ADDITIONAL_QUALIFIERS>::const_iterator i(other.m_additionalQualifiers.begin()); i != other.m_additionalQualifiers.end(); ++i) {
 		if (i->delta != 0xffffffffffffffffULL) {
 			const uint64_t *v2 = nullptr;
-			for (FCV<p_Qualifier, ZT_CERTIFICATEOFMEMBERSHIP_MAX_ADDITIONAL_QUALIFIERS>::const_iterator j(m_additionalQualifiers.begin());j != m_additionalQualifiers.end();++i) {
+			for (FCV<p_Qualifier, ZT_MEMBERSHIP_CREDENTIAL_MAX_ADDITIONAL_QUALIFIERS>::const_iterator j(m_additionalQualifiers.begin()); j != m_additionalQualifiers.end(); ++i) {
 				if (j->id == i->id) {
 					v2 = &(j->value);
 					break;
@@ -88,13 +88,13 @@ bool MembershipCredential::agreesWith(const MembershipCredential &other) const n
 bool MembershipCredential::sign(const Identity &with) noexcept
 {
 	m_signedBy = with.address();
-	uint64_t buf[ZT_CERTIFICATEOFMEMBERSHIP_MARSHAL_SIZE_MAX / 8];
+	uint64_t buf[ZT_MEMBERSHIP_CREDENTIAL_MARSHAL_SIZE_MAX / 8];
 	const unsigned int bufSize = m_fillSigningBuf(buf);
 	m_signatureLength = with.sign(buf, bufSize, m_signature, sizeof(m_signature));
 	return m_signatureLength > 0;
 }
 
-int MembershipCredential::marshal(uint8_t data[ZT_CERTIFICATEOFMEMBERSHIP_MARSHAL_SIZE_MAX], const bool v2) const noexcept
+int MembershipCredential::marshal(uint8_t data[ZT_MEMBERSHIP_CREDENTIAL_MARSHAL_SIZE_MAX], const bool v2) const noexcept
 {
 	data[0] = v2 ? 2 : 1;
 
@@ -164,7 +164,7 @@ int MembershipCredential::unmarshal(const uint8_t *data, int len) noexcept
 	TriviallyCopyable::memoryZero(this);
 
 	const unsigned int numq = Utils::loadBigEndian<uint16_t>(data + 1);
-	if ((numq < 3) || (numq > (ZT_CERTIFICATEOFMEMBERSHIP_MAX_ADDITIONAL_QUALIFIERS + 3)))
+	if ((numq < 3) || (numq > (ZT_MEMBERSHIP_CREDENTIAL_MAX_ADDITIONAL_QUALIFIERS + 3)))
 		return -1;
 	int p = 3;
 	for (unsigned int q = 0;q < numq;++q) {
@@ -209,7 +209,7 @@ int MembershipCredential::unmarshal(const uint8_t *data, int len) noexcept
 				break;
 
 			default:
-				if (m_additionalQualifiers.size() >= ZT_CERTIFICATEOFMEMBERSHIP_MAX_ADDITIONAL_QUALIFIERS)
+				if (m_additionalQualifiers.size() >= ZT_MEMBERSHIP_CREDENTIAL_MAX_ADDITIONAL_QUALIFIERS)
 					return -1;
 				m_additionalQualifiers.push_back(p_Qualifier(id, value, delta));
 				break;
@@ -287,7 +287,7 @@ unsigned int MembershipCredential::m_fillSigningBuf(uint64_t *buf) const noexcep
 		buf[p++] = informational;
 	}
 
-	for (FCV<p_Qualifier, ZT_CERTIFICATEOFMEMBERSHIP_MAX_ADDITIONAL_QUALIFIERS>::const_iterator i(m_additionalQualifiers.begin());i != m_additionalQualifiers.end();++i) { // NOLINT(modernize-loop-convert)
+	for (FCV<p_Qualifier, ZT_MEMBERSHIP_CREDENTIAL_MAX_ADDITIONAL_QUALIFIERS>::const_iterator i(m_additionalQualifiers.begin()); i != m_additionalQualifiers.end(); ++i) { // NOLINT(modernize-loop-convert)
 		buf[p++] = Utils::hton(i->id);
 		buf[p++] = Utils::hton(i->value);
 		buf[p++] = Utils::hton(i->delta);

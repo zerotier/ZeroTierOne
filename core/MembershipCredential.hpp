@@ -32,10 +32,10 @@
 #include "FCV.hpp"
 
 // Maximum number of additional tuples beyond the standard always-present three.
-#define ZT_CERTIFICATEOFMEMBERSHIP_MAX_ADDITIONAL_QUALIFIERS 8
+#define ZT_MEMBERSHIP_CREDENTIAL_MAX_ADDITIONAL_QUALIFIERS 8
 
 // version + qualifier count + three required qualifiers + additional qualifiers +
-#define ZT_CERTIFICATEOFMEMBERSHIP_MARSHAL_SIZE_MAX (1 + 2 + (3 * 3 * 8) + (ZT_CERTIFICATEOFMEMBERSHIP_MAX_ADDITIONAL_QUALIFIERS * 3 * 8) + 144 + 5 + 2 + 96)
+#define ZT_MEMBERSHIP_CREDENTIAL_MARSHAL_SIZE_MAX (1 + 2 + (3 * 3 * 8) + (ZT_MEMBERSHIP_CREDENTIAL_MAX_ADDITIONAL_QUALIFIERS * 3 * 8) + 144 + 5 + 2 + 96)
 
 namespace ZeroTier {
 
@@ -186,8 +186,8 @@ public:
 
 	// NOTE: right now we use v1 serialization format which works with both ZeroTier 1.x and 2.x. V2 format
 	// will be switched on once 1.x is pretty much dead and out of support.
-	static constexpr int marshalSizeMax() noexcept { return ZT_CERTIFICATEOFMEMBERSHIP_MARSHAL_SIZE_MAX; }
-	int marshal(uint8_t data[ZT_CERTIFICATEOFMEMBERSHIP_MARSHAL_SIZE_MAX],bool v2 = false) const noexcept;
+	static constexpr int marshalSizeMax() noexcept { return ZT_MEMBERSHIP_CREDENTIAL_MARSHAL_SIZE_MAX; }
+	int marshal(uint8_t data[ZT_MEMBERSHIP_CREDENTIAL_MARSHAL_SIZE_MAX], bool v2 = false) const noexcept;
 	int unmarshal(const uint8_t *data,int len) noexcept;
 
 private:
@@ -203,7 +203,7 @@ private:
 		ZT_INLINE bool operator<(const p_Qualifier &q) const noexcept { return (id < q.id); } // sort order
 	};
 
-	FCV<p_Qualifier,ZT_CERTIFICATEOFMEMBERSHIP_MAX_ADDITIONAL_QUALIFIERS> m_additionalQualifiers;
+	FCV<p_Qualifier,ZT_MEMBERSHIP_CREDENTIAL_MAX_ADDITIONAL_QUALIFIERS> m_additionalQualifiers;
 	int64_t m_timestamp;
 	int64_t m_timestampMaxDelta;
 	uint64_t m_networkId;

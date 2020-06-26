@@ -74,7 +74,7 @@ public:
 	 * @param id Identity
 	 * @return Pointer to C struct
 	 */
-	ZT_Certificate_Identity *addSubjectNode(const Identity &id);
+	ZT_Certificate_Identity *addSubjectIdentity(const Identity &id);
 
 	/**
 	 * Add a subject node/identity with a locator
@@ -83,7 +83,7 @@ public:
 	 * @param loc Locator signed by identity (signature is NOT checked here)
 	 * @return Pointer to C struct
 	 */
-	ZT_Certificate_Identity *addSubjectNode(const Identity &id, const Locator &loc);
+	ZT_Certificate_Identity *addSubjectIdentity(const Identity &id, const Locator &loc);
 
 	/**
 	 * Add a subject network
@@ -106,7 +106,20 @@ public:
 	 *
 	 * @param url Update URL
 	 */
-	void addUpdateUrl(const char *url);
+	void addSubjectUpdateUrl(const char *url);
+
+	/**
+	 * Set the extended attributes of this certificate
+	 *
+	 * @param x Extended attributes (set by issuer)
+	 */
+	ZT_INLINE void setExtendedAttributes(const Dictionary &x)
+	{
+		m_extendedAttributes.clear();
+		x.encode(m_extendedAttributes);
+		this->extendedAttributes = m_extendedAttributes.data();
+		this->extendedAttributesSize = (unsigned int)m_extendedAttributes.size();
+	}
 
 	/**
 	 * Marshal this certificate in binary form
@@ -145,6 +158,28 @@ public:
 	 */
 	ZT_CertificateError verify() const;
 
+	/**
+	 * Create a subject unique ID and corresponding private key required for use
+	 *
+	 * @param uniqueId Buffer to receive unique ID
+	 * @param uniqueIdPrivate Buffer to receive private key
+	 */
+	static ZT_INLINE void createSubjectUniqueId(uint8_t uniqueId[ZT_CERTIFICATE_UNIQUE_ID_SIZE_TYPE_NIST_P_384], uint8_t uniqueIdPrivate[ZT_CERTIFICATE_UNIQUE_ID_PRIVATE_KEY_SIZE_TYPE_NIST_P_384])
+	{
+		uniqueId[0] = ZT_CERTIFICATE_UNIQUE_ID_PUBLIC_KEY_TYPE_NIST_P_384;
+		ECC384GenerateKey(uniqueId + 1, uniqueIdPrivate);
+	}
+
+	/**
+	 * Set the unique ID and unique ID proof signature fields in a subject.
+	 *
+	 * @param s Subject to set
+	 * @param uniqueId Unique ID (public)
+	 * @param uniqueIdPrivate Unique ID private key
+	 * @return True on success
+	 */
+	static bool setSubjectUniqueId(ZT_Certificate_Subject &s, const uint8_t uniqueId[ZT_CERTIFICATE_UNIQUE_ID_SIZE_TYPE_NIST_P_384], const uint8_t uniqueIdPrivate[ZT_CERTIFICATE_UNIQUE_ID_PRIVATE_KEY_SIZE_TYPE_NIST_P_384]);
+
 	ZT_INLINE unsigned long hashCode() const noexcept
 	{ return (unsigned long)Utils::loadAsIsEndian< uint32_t >(this->serialNo); }
 
@@ -162,7 +197,7 @@ public:
 	{ return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) >= 0; }
 
 private:
-	void m_encodeSubject(Dictionary &d, bool omitUniqueIdProofSignature) const;
+	static void m_encodeSubject(const ZT_Certificate_Subject &s, Dictionary &d, bool omitUniqueIdProofSignature);
 
 	// These hold any identity or locator objects that are owned by and should
 	// be deleted with this certificate. Lists are used so the pointers never
@@ -177,6 +212,7 @@ private:
 	Vector< ZT_Certificate_Network > m_subjectNetworks;
 	Vector< const uint8_t * > m_subjectCertificates;
 	Vector< const char * > m_updateUrls;
+	Vector< uint8_t > m_extendedAttributes;
 
 	std::atomic<int> __refCount;
 };

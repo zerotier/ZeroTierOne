@@ -30,6 +30,7 @@ void Certificate::clear()
 	m_subjectNetworks.clear();
 	m_updateUrls.clear();
 	m_subjectCertificates.clear();
+	m_extendedAttributes.clear();
 }
 
 Certificate &Certificate::operator=(const ZT_Certificate &apiCert)
@@ -45,16 +46,23 @@ Certificate &Certificate::operator=(const Certificate &cert)
 
 	// Zero these since we must explicitly attach all the objects from
 	// the other certificate to copy them into our containers.
+	this->subject.identities = nullptr;
 	this->subject.identityCount = 0;
+	this->subject.networks = nullptr;
 	this->subject.networkCount = 0;
+	this->subject.certificates = nullptr;
 	this->subject.certificateCount = 0;
+	this->subject.updateUrls = nullptr;
 	this->subject.updateUrlCount = 0;
+	this->extendedAttributes = nullptr;
+	this->extendedAttributesSize = 0;
+	this->issuer = nullptr;
 
 	for (unsigned int i = 0; i < cert.subject.identityCount; ++i) {
 		if (cert.subject.identities[i].identity) {
 			if (cert.subject.identities[i].locator)
-				addSubjectNode(*reinterpret_cast<const Identity *>(cert.subject.identities[i].identity), *reinterpret_cast<const Locator *>(cert.subject.identities[i].locator));
-			else addSubjectNode(*reinterpret_cast<const Identity *>(cert.subject.identities[i].identity));
+				addSubjectIdentity(*reinterpret_cast<const Identity *>(cert.subject.identities[i].identity), *reinterpret_cast<const Locator *>(cert.subject.identities[i].locator));
+			else addSubjectIdentity(*reinterpret_cast<const Identity *>(cert.subject.identities[i].identity));
 		}
 	}
 
@@ -71,8 +79,14 @@ Certificate &Certificate::operator=(const Certificate &cert)
 	if (cert.subject.updateUrls) {
 		for (unsigned int i = 0; i < cert.subject.updateUrlCount; ++i) {
 			if (cert.subject.updateUrls[i])
-				addUpdateUrl(cert.subject.updateUrls[i]);
+				addSubjectUpdateUrl(cert.subject.updateUrls[i]);
 		}
+	}
+
+	if ((cert.extendedAttributes) && (cert.extendedAttributesSize > 0)) {
+		m_extendedAttributes.assign(cert.extendedAttributes, cert.extendedAttributes + cert.extendedAttributesSize);
+		this->extendedAttributes = m_extendedAttributes.data();
+		this->extendedAttributesSize = (unsigned int)m_extendedAttributes.size();
 	}
 
 	if (cert.issuer) {
@@ -83,7 +97,7 @@ Certificate &Certificate::operator=(const Certificate &cert)
 	return *this;
 }
 
-ZT_Certificate_Identity *Certificate::addSubjectNode(const Identity &id)
+ZT_Certificate_Identity *Certificate::addSubjectIdentity(const Identity &id)
 {
 	// Enlarge array of ZT_Certificate_Identity structs and set pointer to potentially reallocated array.
 	m_subjectIdentities.resize(++this->subject.identityCount);
@@ -99,10 +113,10 @@ ZT_Certificate_Identity *Certificate::addSubjectNode(const Identity &id)
 	return &(m_subjectIdentities.back());
 }
 
-ZT_Certificate_Identity *Certificate::addSubjectNode(const Identity &id, const Locator &loc)
+ZT_Certificate_Identity *Certificate::addSubjectIdentity(const Identity &id, const Locator &loc)
 {
 	// Add identity as above.
-	ZT_Certificate_Identity *const n = addSubjectNode(id);
+	ZT_Certificate_Identity *const n = addSubjectIdentity(id);
 
 	// Store local copy of locator.
 	m_locators.push_back(loc);
@@ -138,7 +152,7 @@ void Certificate::addSubjectCertificate(const uint8_t serialNo[ZT_SHA384_DIGEST_
 	this->subject.certificates = m_subjectCertificates.data();
 }
 
-void Certificate::addUpdateUrl(const char *url)
+void Certificate::addSubjectUpdateUrl(const char *url)
 {
 	// Store local copy of URL.
 	m_strings.push_back(url);
@@ -159,28 +173,44 @@ Vector< uint8_t > Certificate::encode(const bool omitSignature) const
 	// format. Custom packed formats are used for credentials as these are smaller
 	// and faster to marshal/unmarshal.
 
-	d.add("f", this->flags);
+	if (this->flags != 0)
+		d.add("f", this->flags);
 	d.add("t", (uint64_t)this->timestamp);
 	d.add("v0", (uint64_t)this->validity[0]);
 	d.add("v1", (uint64_t)this->validity[1]);
+	if ((this->extendedAttributes) && (this->extendedAttributesSize > 0))
+		d["x"].assign(this->extendedAttributes, this->extendedAttributes + this->extendedAttributesSize);
 	d.add("mP", (uint64_t)this->maxPathLength);
 
-	m_encodeSubject(d, false);
+	m_encodeSubject(this->subject, d, false);
 
 	if (this->issuer)
 		d.addO("i", *reinterpret_cast<const Identity *>(this->issuer));
 
-	d.add("iN.c", this->issuerName.country);
-	d.add("iN.o", this->issuerName.organization);
-	d.add("iN.u", this->issuerName.unit);
-	d.add("iN.l", this->issuerName.locality);
-	d.add("iN.p", this->issuerName.province);
-	d.add("iN.sA", this->issuerName.streetAddress);
-	d.add("iN.pC", this->issuerName.postalCode);
-	d.add("iN.cN", this->issuerName.commonName);
-	d.add("iN.sN", this->issuerName.serialNo);
-	d.add("iN.e", this->issuerName.email);
-	d.add("iN.ur", this->issuerName.url);
+	if (this->issuerName.country[0])
+		d.add("iN.c", this->issuerName.country);
+	if (this->issuerName.organization[0])
+		d.add("iN.o", this->issuerName.organization);
+	if (this->issuerName.unit[0])
+		d.add("iN.u", this->issuerName.unit);
+	if (this->issuerName.locality[0])
+		d.add("iN.l", this->issuerName.locality);
+	if (this->issuerName.province[0])
+		d.add("iN.p", this->issuerName.province);
+	if (this->issuerName.streetAddress[0])
+		d.add("iN.sA", this->issuerName.streetAddress);
+	if (this->issuerName.postalCode[0])
+		d.add("iN.pC", this->issuerName.postalCode);
+	if (this->issuerName.commonName[0])
+		d.add("iN.cN", this->issuerName.commonName);
+	if (this->issuerName.serialNo[0])
+		d.add("iN.sN", this->issuerName.serialNo);
+	if (this->issuerName.email[0])
+		d.add("iN.e", this->issuerName.email);
+	if (this->issuerName.url[0])
+		d.add("iN.ur", this->issuerName.url);
+	if (this->issuerName.host[0])
+		d.add("iN.h", this->issuerName.host);
 
 	if ((!omitSignature) && (this->signatureSize > 0) && (this->signatureSize <= sizeof(this->signature)))
 		d["si"].assign(this->signature, this->signature + this->signatureSize);
@@ -204,7 +234,11 @@ bool Certificate::decode(const Vector< uint8_t > &data)
 	this->validity[0] = (int64_t)d.getUI("v0");
 	this->validity[1] = (int64_t)d.getUI("v1");
 	this->maxPathLength = (unsigned int)d.getUI("mP");
-
+	m_extendedAttributes = d["x"];
+	if (!m_extendedAttributes.empty()) {
+		this->extendedAttributes = m_extendedAttributes.data();
+		this->extendedAttributesSize = (unsigned int)m_extendedAttributes.size();
+	}
 	this->subject.timestamp = (int64_t)d.getUI("s.t");
 
 	unsigned int cnt = (unsigned int)d.getUI("s.i$");
@@ -220,9 +254,9 @@ bool Certificate::decode(const Vector< uint8_t > &data)
 			Locator loc;
 			if (loc.unmarshal(locatorData.data(), (unsigned int)locatorData.size()) <= 0)
 				return false;
-			this->addSubjectNode(id, loc);
+			this->addSubjectIdentity(id, loc);
 		} else {
-			this->addSubjectNode(id);
+			this->addSubjectIdentity(id);
 		}
 	}
 
@@ -257,6 +291,7 @@ bool Certificate::decode(const Vector< uint8_t > &data)
 	d.getS("s.n.pC", this->subject.name.postalCode, sizeof(this->subject.name.postalCode));
 	d.getS("s.n.e", this->subject.name.email, sizeof(this->subject.name.email));
 	d.getS("s.n.ur", this->subject.name.url, sizeof(this->subject.name.url));
+	d.getS("s.n.h", this->subject.name.host, sizeof(this->subject.name.host));
 
 	const Vector< uint8_t > &issuerData = d["i"];
 	if (!issuerData.empty()) {
@@ -278,12 +313,13 @@ bool Certificate::decode(const Vector< uint8_t > &data)
 	d.getS("iN.pC", this->issuerName.postalCode, sizeof(this->issuerName.postalCode));
 	d.getS("iN.e", this->issuerName.email, sizeof(this->issuerName.email));
 	d.getS("iN.ur", this->issuerName.url, sizeof(this->issuerName.url));
+	d.getS("iN.h", this->issuerName.host, sizeof(this->issuerName.host));
 
 	cnt = (unsigned int)d.getUI("u$");
 	for (unsigned int i = 0; i < cnt; ++i) {
 		const char *const url = d.getS(Dictionary::arraySubscript(tmp, "u$", i), tmp2, sizeof(tmp2));
 		if (url)
-			addUpdateUrl(tmp2);
+			addSubjectUpdateUrl(tmp2);
 		else return false;
 	}
 
@@ -326,7 +362,7 @@ ZT_CertificateError Certificate::verify() const
 				(this->subject.uniqueId[0] != ZT_CERTIFICATE_UNIQUE_ID_PUBLIC_KEY_TYPE_NIST_P_384))
 				return ZT_CERTIFICATE_ERROR_INVALID_UNIQUE_ID_PROOF;
 			Dictionary tmp;
-			m_encodeSubject(tmp, true);
+			m_encodeSubject(this->subject, tmp, true);
 			Vector< uint8_t > enc;
 			tmp.encode(enc);
 			uint8_t h[ZT_SHA384_DIGEST_SIZE];
@@ -368,55 +404,86 @@ ZT_CertificateError Certificate::verify() const
 	return ZT_CERTIFICATE_ERROR_NONE;
 }
 
-void Certificate::m_encodeSubject(Dictionary &d, bool omitUniqueIdProofSignature) const
+bool Certificate::setSubjectUniqueId(ZT_Certificate_Subject &s, const uint8_t uniqueId[ZT_CERTIFICATE_UNIQUE_ID_SIZE_TYPE_NIST_P_384], const uint8_t uniqueIdPrivate[ZT_CERTIFICATE_UNIQUE_ID_PRIVATE_KEY_SIZE_TYPE_NIST_P_384])
+{
+	Utils::copy<ZT_CERTIFICATE_UNIQUE_ID_SIZE_TYPE_NIST_P_384>(s.uniqueId, uniqueId);
+	s.uniqueIdSize = ZT_CERTIFICATE_UNIQUE_ID_SIZE_TYPE_NIST_P_384;
+
+	Dictionary d;
+	m_encodeSubject(s, d, true);
+	Vector< uint8_t > enc;
+	d.encode(enc);
+	uint8_t h[ZT_ECC384_SIGNATURE_HASH_SIZE];
+	SHA384(h, enc.data(), (unsigned int)enc.size());
+
+	ECC384ECDSASign(uniqueIdPrivate, h, s.uniqueIdProofSignature);
+	s.uniqueIdProofSignatureSize = ZT_ECC384_SIGNATURE_SIZE;
+
+	return true;
+}
+
+void Certificate::m_encodeSubject(const ZT_Certificate_Subject &s, Dictionary &d, bool omitUniqueIdProofSignature)
 {
 	char tmp[256];
 
-	d.add("s.t", (uint64_t)this->subject.timestamp);
+	d.add("s.t", (uint64_t)s.timestamp);
 
-	d.add("s.i$", (uint64_t)this->subject.identityCount);
-	for (unsigned int i = 0; i < this->subject.identityCount; ++i) {
-		if (this->subject.identities[i].identity)
-			d.addO(Dictionary::arraySubscript(tmp, "s.i$.i", i), *reinterpret_cast<const Identity *>(this->subject.identities[i].identity));
-		if (this->subject.identities[i].locator)
-			d.addO(Dictionary::arraySubscript(tmp, "s.i$.l", i), *reinterpret_cast<const Locator *>(this->subject.identities[i].locator));
+	d.add("s.i$", (uint64_t)s.identityCount);
+	for (unsigned int i = 0; i < s.identityCount; ++i) {
+		if (s.identities[i].identity)
+			d.addO(Dictionary::arraySubscript(tmp, "s.i$.i", i), *reinterpret_cast<const Identity *>(s.identities[i].identity));
+		if (s.identities[i].locator)
+			d.addO(Dictionary::arraySubscript(tmp, "s.i$.l", i), *reinterpret_cast<const Locator *>(s.identities[i].locator));
 	}
 
-	d.add("s.n$", (uint64_t)this->subject.networkCount);
-	for (unsigned int i = 0; i < this->subject.networkCount; ++i) {
-		d.add(Dictionary::arraySubscript(tmp, "s.n$.i", i), this->subject.networks[i].id);
-		Fingerprint fp(this->subject.networks[i].controller);
+	d.add("s.n$", (uint64_t)s.networkCount);
+	for (unsigned int i = 0; i < s.networkCount; ++i) {
+		d.add(Dictionary::arraySubscript(tmp, "s.n$.i", i), s.networks[i].id);
+		Fingerprint fp(s.networks[i].controller);
 		d.addO(Dictionary::arraySubscript(tmp, "s.n$.c", i), fp);
 	}
 
-	d.add("s.c$", (uint64_t)this->subject.certificateCount);
-	for (unsigned int i = 0; i < this->subject.certificateCount; ++i) {
-		if (this->subject.certificates[i])
-			d[Dictionary::arraySubscript(tmp, "s.c$", i)].assign(this->subject.certificates[i], this->subject.certificates[i] + ZT_SHA384_DIGEST_SIZE);
+	d.add("s.c$", (uint64_t)s.certificateCount);
+	for (unsigned int i = 0; i < s.certificateCount; ++i) {
+		if (s.certificates[i])
+			d[Dictionary::arraySubscript(tmp, "s.c$", i)].assign(s.certificates[i], s.certificates[i] + ZT_SHA384_DIGEST_SIZE);
 	}
 
-	d.add("s.u$", (uint64_t)this->subject.updateUrlCount);
-	if (this->subject.updateUrls) {
-		for (unsigned int i = 0; i < this->subject.updateUrlCount; ++i)
-			d.add(Dictionary::arraySubscript(tmp, "s.u$", i), this->subject.updateUrls[i]);
+	d.add("s.u$", (uint64_t)s.updateUrlCount);
+	if (s.updateUrls) {
+		for (unsigned int i = 0; i < s.updateUrlCount; ++i)
+			d.add(Dictionary::arraySubscript(tmp, "s.u$", i), s.updateUrls[i]);
 	}
 
-	d.add("s.n.c", this->subject.name.country);
-	d.add("s.n.o", this->subject.name.organization);
-	d.add("s.n.u", this->subject.name.unit);
-	d.add("s.n.l", this->subject.name.locality);
-	d.add("s.n.p", this->subject.name.province);
-	d.add("s.n.sA", this->subject.name.streetAddress);
-	d.add("s.n.pC", this->subject.name.postalCode);
-	d.add("s.n.cN", this->subject.name.commonName);
-	d.add("s.n.sN", this->subject.name.serialNo);
-	d.add("s.n.e", this->subject.name.email);
-	d.add("s.n.ur", this->subject.name.url);
+	if (s.name.country[0])
+		d.add("s.n.c", s.name.country);
+	if (s.name.organization[0])
+		d.add("s.n.o", s.name.organization);
+	if (s.name.unit[0])
+		d.add("s.n.u", s.name.unit);
+	if (s.name.locality[0])
+		d.add("s.n.l", s.name.locality);
+	if (s.name.province[0])
+		d.add("s.n.p", s.name.province);
+	if (s.name.streetAddress[0])
+		d.add("s.n.sA", s.name.streetAddress);
+	if (s.name.postalCode[0])
+		d.add("s.n.pC", s.name.postalCode);
+	if (s.name.commonName[0])
+		d.add("s.n.cN", s.name.commonName);
+	if (s.name.serialNo[0])
+		d.add("s.n.sN", s.name.serialNo);
+	if (s.name.email[0])
+		d.add("s.n.e", s.name.email);
+	if (s.name.url[0])
+		d.add("s.n.ur", s.name.url);
+	if (s.name.host[0])
+		d.add("s.n.h", s.name.host);
 
-	if ((this->subject.uniqueIdSize > 0) && (this->subject.uniqueIdSize <= ZT_CERTIFICATE_MAX_UNIQUE_ID_SIZE))
-		d["s.uI"].assign(this->subject.uniqueId, this->subject.uniqueId + this->subject.uniqueIdSize);
-	if ((!omitUniqueIdProofSignature) && (this->subject.uniqueIdProofSignatureSize > 0) && (this->subject.uniqueIdProofSignatureSize <= ZT_CERTIFICATE_MAX_SIGNATURE_SIZE))
-		d["s.uS"].assign(this->subject.uniqueIdProofSignature, this->subject.uniqueIdProofSignature + this->subject.uniqueIdProofSignatureSize);
+	if ((s.uniqueIdSize > 0) && (s.uniqueIdSize <= ZT_CERTIFICATE_MAX_UNIQUE_ID_SIZE))
+		d["s.uI"].assign(s.uniqueId, s.uniqueId + s.uniqueIdSize);
+	if ((!omitUniqueIdProofSignature) && (s.uniqueIdProofSignatureSize > 0) && (s.uniqueIdProofSignatureSize <= ZT_CERTIFICATE_MAX_SIGNATURE_SIZE))
+		d["s.uS"].assign(s.uniqueIdProofSignature, s.uniqueIdProofSignature + s.uniqueIdProofSignatureSize);
 }
 
 } // namespace ZeroTier

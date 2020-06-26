@@ -36,8 +36,8 @@
 #if ZT_CERTIFICATEOFOWNERSHIP_MARSHAL_SIZE_MAX > ZT_BUF_MEM_SIZE
 #error ZT_CERTIFICATEOFOWNERSHIP_MARSHAL_SIZE_MAX exceeds maximum buffer size
 #endif
-#if ZT_CERTIFICATEOFMEMBERSHIP_MARSHAL_SIZE_MAX > ZT_BUF_MEM_SIZE
-#error ZT_CERTIFICATEOFMEMBERSHIP_MARSHAL_SIZE_MAX exceeds maximum buffer size
+#if ZT_MEMBERSHIP_CREDENTIAL_MARSHAL_SIZE_MAX > ZT_BUF_MEM_SIZE
+#error ZT_MEMBERSHIP_CREDENTIAL_MARSHAL_SIZE_MAX exceeds maximum buffer size
 #endif
 
 namespace ZeroTier {
@@ -83,7 +83,7 @@ Credential::VerifyResult Credential::_verify(const RuntimeEnvironment *const RR,
 		return Credential::VERIFY_NEED_IDENTITY;
 
 	// Now verify the controller's signature.
-	uint64_t buf[ZT_CERTIFICATEOFMEMBERSHIP_MARSHAL_SIZE_MAX / 8];
+	uint64_t buf[ZT_MEMBERSHIP_CREDENTIAL_MARSHAL_SIZE_MAX / 8];
 	const unsigned int bufSize = credential.m_fillSigningBuf(buf);
 	return peer->identity().verify(buf, bufSize, credential.m_signature, credential.m_signatureLength) ? Credential::VERIFY_OK : Credential::VERIFY_BAD_SIGNATURE;
 }

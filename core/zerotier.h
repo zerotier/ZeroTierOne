@@ -324,6 +324,16 @@ typedef struct
 #define ZT_CERTIFICATE_UNIQUE_ID_PUBLIC_KEY_TYPE_NIST_P_384 1
 
 /**
+ * Size of a unique ID of the given key type (with type prefix byte)
+ */
+#define ZT_CERTIFICATE_UNIQUE_ID_SIZE_TYPE_NIST_P_384 50
+
+/**
+ * Size of the private key corresponding to a unique ID of the given type.
+ */
+#define ZT_CERTIFICATE_UNIQUE_ID_PRIVATE_KEY_SIZE_TYPE_NIST_P_384 48
+
+/**
  * Errors returned by functions that verify or handle certificates.
  */
 enum ZT_CertificateError
@@ -369,23 +379,21 @@ enum ZT_CertificateError
 	ZT_CERTIFICATE_ERROR_INVALID_UNIQUE_ID_PROOF = -6,
 
 	/**
-	 * Certificate is not appropriate for this use
-	 */
-	ZT_CERTIFICATE_ERROR_INAPPROPRIATE_FOR_USE = -7,
-
-	/**
 	 * Certificate is missing a required field
 	 */
-	ZT_CERTIFICATE_ERROR_MISSING_REQUIRED_FIELDS = -8,
+	ZT_CERTIFICATE_ERROR_MISSING_REQUIRED_FIELDS = -7,
 
 	/**
 	 * Certificate is expired or not yet in effect
 	 */
-	ZT_CERTIFICATE_ERROR_OUT_OF_VALID_TIME_WINDOW = -9
+	ZT_CERTIFICATE_ERROR_OUT_OF_VALID_TIME_WINDOW = -8
 };
 
 /**
  * Information about a real world entity.
+ *
+ * These fields are all optional and are all taken from the
+ * most common fields present in X509 certificates.
  */
 typedef struct
 {
@@ -400,6 +408,7 @@ typedef struct
 	char postalCode[ZT_CERTIFICATE_MAX_STRING_LENGTH + 1];
 	char email[ZT_CERTIFICATE_MAX_STRING_LENGTH + 1];
 	char url[ZT_CERTIFICATE_MAX_STRING_LENGTH + 1];
+	char host[ZT_CERTIFICATE_MAX_STRING_LENGTH + 1];
 } ZT_Certificate_Name;
 
 /**
@@ -490,12 +499,28 @@ typedef struct
 	ZT_Certificate_Name name;
 
 	/**
-	 * Unique ID, which can be a public key prefixed by a key type.
+	 * Globally unique ID for this subject
+	 *
+	 * Unique IDs are actually public keys. Their size makes them globally
+	 * unique (if generated from good randomness) to within ridiculous
+	 * probability bounds. If a subject has a unique ID it must also have
+	 * a unique ID proof signature, which is the signature of the subject
+	 * with the private key corresponding to its unique ID.
+	 *
+	 * This allows subjects to "own" themselves and exist independent of
+	 * CAs or delegated signers. It also allows a certificate for a given
+	 * subject to be updated.
+	 *
+	 * Subject unique IDs are optional. If no unique ID is specified these
+	 * and their corresponding size fields must be empty/zero.
+	 *
+	 * A subject is valid if it has no unique ID or has one with a valid
+	 * proof signature.
 	 */
 	uint8_t uniqueId[ZT_CERTIFICATE_MAX_UNIQUE_ID_SIZE];
 
 	/**
-	 * If unique ID is a public key, this can be a signature of the subject.
+	 * Signature proving ownership of unique ID.
 	 */
 	uint8_t uniqueIdProofSignature[ZT_CERTIFICATE_MAX_SIGNATURE_SIZE];
 
@@ -556,6 +581,16 @@ typedef struct
 	 * Issuer information
 	 */
 	ZT_Certificate_Name issuerName;
+
+	/**
+	 * Extended attributes set by issuer (in Dictionary format, NULL if none)
+	 */
+	uint8_t *extendedAttributes;
+
+	/**
+	 * Size of extended attributes field in bytes
+	 */
+	unsigned int extendedAttributesSize;
 
 	/**
 	 * Maximum path length from this certificate toward further certificates.
@@ -1627,7 +1662,7 @@ enum ZT_StateObjectType
 	ZT_STATE_OBJECT_NETWORK_CONFIG = 6,
 
 	/**
-	 * List of certificates and their local trust, and locally added roots
+	 * List of certificates, their local trust, and locally added roots
 	 *
 	 * Object ID: (none)
 	 * Canonical path: <HOME>/trust

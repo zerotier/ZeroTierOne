@@ -115,15 +115,22 @@ char *Dictionary::getS(const char *k, char *v, const unsigned int cap) const
 	if (cap == 0) // sanity check
 		return v;
 	const Vector< uint8_t > &e = (*this)[k];
+	if (e.empty()) {
+		v[0] = 0;
+		return v;
+	}
 	unsigned int i = 0;
 	const unsigned int last = cap - 1;
 	for (;;) {
-		if ((i == last) || (i >= (unsigned int)e.size()))
+		if ((i >= last) || (i >= (unsigned int)e.size())) {
+			v[i] = 0;
 			break;
-		v[i] = (char)e[i];
+		}
+		if ((v[i] = (char)e[i]) == 0) {
+			break;
+		}
 		++i;
 	}
-	v[i] = 0;
 	return v;
 }
 

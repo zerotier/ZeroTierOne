@@ -134,6 +134,17 @@ public:
 	int marshal(uint8_t data[ZT_LOCATOR_MARSHAL_SIZE_MAX], bool excludeSignature = false) const noexcept;
 	int unmarshal(const uint8_t *data, int len) noexcept;
 
+	ZT_INLINE bool operator==(const Locator &l) const noexcept
+	{
+		return (
+			(m_ts == l.m_ts) &&
+			(m_signer == l.m_signer) &&
+			(m_endpoints == l.m_endpoints) &&
+			(m_signature == l.m_signature));
+	}
+	ZT_INLINE bool operator!=(const Locator &l) const noexcept
+	{ return !(*this == l); }
+
 private:
 	int64_t m_ts;
 	Fingerprint m_signer;

@@ -702,58 +702,21 @@ static ZT_INLINE void storeLittleEndian(void *const p, const I i) noexcept
  * @param dest Destination memory
  * @param src Source memory
  */
-template< unsigned int L >
-static ZT_INLINE void copy(void *const dest, const void *const src) noexcept
+template< unsigned long L >
+static ZT_INLINE void copy(void *dest, const void *src) noexcept
 {
-#ifdef ZT_ARCH_X64
-	uint8_t *volatile d = reinterpret_cast<uint8_t *>(dest);
-	const uint8_t *s = reinterpret_cast<const uint8_t *>(src);
-	for (unsigned int i = 0; i < (L >> 6U); ++i) {
-		__m128i x0 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(s));
-		__m128i x1 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(s + 16));
-		__m128i x2 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(s + 32));
-		__m128i x3 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(s + 48));
-		s += 64;
-		_mm_storeu_si128(reinterpret_cast<__m128i *>(d), x0);
-		_mm_storeu_si128(reinterpret_cast<__m128i *>(d + 16), x1);
-		_mm_storeu_si128(reinterpret_cast<__m128i *>(d + 32), x2);
-		_mm_storeu_si128(reinterpret_cast<__m128i *>(d + 48), x3);
-		d += 64;
-	}
-	if ((L & 32U) != 0) {
-		__m128i x0 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(s));
-		__m128i x1 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(s + 16));
-		s += 32;
-		_mm_storeu_si128(reinterpret_cast<__m128i *>(d), x0);
-		_mm_storeu_si128(reinterpret_cast<__m128i *>(d + 16), x1);
-		d += 32;
-	}
-	if ((L & 16U) != 0) {
-		__m128i x0 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(s));
-		s += 16;
-		_mm_storeu_si128(reinterpret_cast<__m128i *>(d), x0);
-		d += 16;
-	}
-	if ((L & 8U) != 0) {
-		*reinterpret_cast<volatile uint64_t *>(d) = *reinterpret_cast<const uint64_t *>(s);
-		s += 8;
-		d += 8;
-	}
-	if ((L & 4U) != 0) {
-		*reinterpret_cast<volatile uint32_t *>(d) = *reinterpret_cast<const uint32_t *>(s);
-		s += 4;
-		d += 4;
-	}
-	if ((L & 2U) != 0) {
-		*reinterpret_cast<volatile uint16_t *>(d) = *reinterpret_cast<const uint16_t *>(s);
-		s += 2;
-		d += 2;
-	}
-	if ((L & 1U) != 0) {
-		*d = *s;
-	}
+#if defined(ZT_ARCH_X64) && defined(__GNUC__)
+	unsigned long l = L;
+	asm volatile ("rep movsb"
+		: "=D" (dest),
+		"=S" (src),
+		"=c" (l)
+		: "0" (dest),
+		"1" (src),
+		"2" (l)
+		: "memory");
 #else
-	memcpy(dest,src,L);
+	memcpy(dest, src, L);
 #endif
 }
 
@@ -764,8 +727,21 @@ static ZT_INLINE void copy(void *const dest, const void *const src) noexcept
  * @param src Source memory
  * @param len Bytes to copy
  */
-static ZT_INLINE void copy(void *const dest, const void *const src, unsigned int len) noexcept
-{ memcpy(dest, src, len); }
+static ZT_INLINE void copy(void *dest, const void *src, unsigned long len) noexcept
+{
+#if defined(ZT_ARCH_X64) && defined(__GNUC__)
+	asm volatile ("rep movsb"
+		: "=D" (dest),
+		"=S" (src),
+		"=c" (len)
+		: "0" (dest),
+		"1" (src),
+		"2" (len)
+		: "memory");
+#else
+	memcpy(dest, src, len);
+#endif
+}
 
 /**
  * Zero memory block whose size is known at compile time
@@ -773,7 +749,7 @@ static ZT_INLINE void copy(void *const dest, const void *const src, unsigned int
  * @tparam L Size in bytes
  * @param dest Memory to zero
  */
-template< unsigned int L >
+template< unsigned long L >
 static ZT_INLINE void zero(void *const dest) noexcept
 { memset(dest, 0, L); }
 
@@ -783,7 +759,7 @@ static ZT_INLINE void zero(void *const dest) noexcept
  * @param dest Memory to zero
  * @param len Size in bytes
  */
-static ZT_INLINE void zero(void *const dest, const unsigned int len) noexcept
+static ZT_INLINE void zero(void *const dest, const unsigned long len) noexcept
 { memset(dest, 0, len); }
 
 /**
