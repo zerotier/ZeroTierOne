@@ -5,7 +5,7 @@ pipeline {
         timestamps()
     }
     parameters {
-        booleanParam(name: "BUILD_ALL", defaultValue: false, description: "Build all supported platform/architecture combos.  Defaults to x86/x64 only")
+        booleanParam(name: "BUILD_ALL", defaultValue: true, description: "Build all supported platform/architecture combos.  Defaults to x86/x64 only")
     }
     environment {
         PATH = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin:/home/jenkins-build/go/bin"
@@ -23,7 +23,7 @@ pipeline {
                     tasks << buildCentosNative()
                     tasks << buildMacOS()
                     tasks << buildWindows()
-                    // tasks << buildFreeBSD()
+                    tasks << buildFreeBSD()
 
                     parallel tasks
                 }
@@ -367,7 +367,7 @@ def packageStatic() {
 
 def buildDebianNative() {
     def tasks = [:]
-    def buster = ["debian-buster", /*"debian-stretch",*/ "debian-bullseye", "debian-sid"]
+    def buster = ["debian-buster" , "debian-stretch"]
     def busterArchs = []
     if (params.BUILD_ALL) {
         busterArchs = ["s390x", "ppc64le", "i386", "armhf", "armel", "arm64", "amd64"]
@@ -412,6 +412,17 @@ def buildDebianNative() {
     
     tasks << getTasks(buster, busterArchs, build)
     
+    // 32-bit arm and CMake don't get along right now on Sid/Bullseye
+    def sid = ["debian-sid", "debian-bullseye"]
+    def sidArchs = []
+    if (params.BUILD_ALL) {
+        busterArchs = ["s390x", "ppc64le", "i386", /*"armhf", "armel",*/ "arm64", "amd64", "mips64le"]
+    } else {
+        busterArchs = ["amd64", "i386"]
+    }
+    
+    tasks << getTasks(sid, sidArchs, build)
+
     // bash is broken when running under QEMU-s390x on Xenial
     def xenial = ["ubuntu-xenial"]
     def xenialArchs = []
@@ -427,7 +438,7 @@ def buildDebianNative() {
     if (params.BUILD_ALL == true) {
         ubuntuArchs = ["i386", "amd64", "armhf", "arm64", "ppc64le", "s390x"]
     } else {
-        ubuntuArchs = ["i386" /*, "amd64"*/]
+        ubuntuArchs = ["i386", "amd64"]
     }
     tasks << getTasks(ubuntu, ubuntuArchs, build)
     

@@ -93,7 +93,6 @@ if(NOT PACKAGE_STATIC)
 		set(GOFLAGS
 			-a
 			-trimpath
-			-ldflags '-w'
 		)
 
 		if(BUILD_32BIT)

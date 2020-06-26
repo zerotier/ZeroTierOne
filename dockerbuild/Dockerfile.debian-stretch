@@ -7,6 +7,8 @@ ARG TARGETPLATFORM
 RUN apt-get update && apt-get -y install build-essential curl ca-certificates devscripts dh-systemd libssl-dev
 
 RUN if test "$TARGETPLATFORM" = "linux/mips64le"; then \
+    echo "deb http://deb.debian.org/debian stretch-backports main" > /etc/apt/sources.list.d/backports.list; \
+    apt-get update; \
     apt-get install -y golang; \
     else \
     curl -s -k $go_pkg_url -o go.tar.gz; \
