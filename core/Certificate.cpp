@@ -31,6 +31,9 @@ void Certificate::clear()
 	m_updateUrls.clear();
 	m_subjectCertificates.clear();
 	m_extendedAttributes.clear();
+	m_subjectUniqueId.clear();
+	m_subjectUniqueIdProofSignature.clear();
+	m_signature.clear();
 }
 
 Certificate &Certificate::operator=(const ZT_Certificate &apiCert)
@@ -176,8 +179,8 @@ Vector< uint8_t > Certificate::encode(const bool omitSignature) const
 	if (this->flags != 0)
 		d.add("f", this->flags);
 	d.add("t", (uint64_t)this->timestamp);
-	d.add("v0", (uint64_t)this->validity[0]);
-	d.add("v1", (uint64_t)this->validity[1]);
+	d.add("v#0", (uint64_t)this->validity[0]);
+	d.add("v#1", (uint64_t)this->validity[1]);
 	if ((this->extendedAttributes) && (this->extendedAttributesSize > 0))
 		d["x"].assign(this->extendedAttributes, this->extendedAttributes + this->extendedAttributesSize);
 	d.add("mP", (uint64_t)this->maxPathLength);
@@ -231,14 +234,16 @@ bool Certificate::decode(const Vector< uint8_t > &data)
 
 	this->flags = d.getUI("f");
 	this->timestamp = (int64_t)d.getUI("t");
-	this->validity[0] = (int64_t)d.getUI("v0");
-	this->validity[1] = (int64_t)d.getUI("v1");
+	this->validity[0] = (int64_t)d.getUI("v#0");
+	this->validity[1] = (int64_t)d.getUI("v#1");
 	this->maxPathLength = (unsigned int)d.getUI("mP");
+
 	m_extendedAttributes = d["x"];
 	if (!m_extendedAttributes.empty()) {
 		this->extendedAttributes = m_extendedAttributes.data();
 		this->extendedAttributesSize = (unsigned int)m_extendedAttributes.size();
 	}
+
 	this->subject.timestamp = (int64_t)d.getUI("s.t");
 
 	unsigned int cnt = (unsigned int)d.getUI("s.i$");
@@ -280,6 +285,10 @@ bool Certificate::decode(const Vector< uint8_t > &data)
 		this->addSubjectCertificate(serial.data());
 	}
 
+	cnt = (unsigned int)d.getUI("s.u$");
+	for (unsigned int i = 0; i < cnt; ++i)
+		addSubjectUpdateUrl(d.getS(Dictionary::arraySubscript(tmp, "s.u$", i), tmp, sizeof(tmp)));
+
 	d.getS("s.n.sN", this->subject.name.serialNo, sizeof(this->subject.name.serialNo));
 	d.getS("s.n.cN", this->subject.name.commonName, sizeof(this->subject.name.commonName));
 	d.getS("s.n.c", this->subject.name.country, sizeof(this->subject.name.country));
@@ -292,6 +301,17 @@ bool Certificate::decode(const Vector< uint8_t > &data)
 	d.getS("s.n.e", this->subject.name.email, sizeof(this->subject.name.email));
 	d.getS("s.n.ur", this->subject.name.url, sizeof(this->subject.name.url));
 	d.getS("s.n.h", this->subject.name.host, sizeof(this->subject.name.host));
+
+	m_subjectUniqueId = d["s.uI"];
+	if (!m_subjectUniqueId.empty()) {
+		this->subject.uniqueId = m_subjectUniqueId.data();
+		this->subject.uniqueIdSize = (unsigned int)m_subjectUniqueId.size();
+	}
+	m_subjectUniqueIdProofSignature = d["s.uS"];
+	if (!m_subjectUniqueIdProofSignature.empty()) {
+		this->subject.uniqueIdProofSignature = m_subjectUniqueIdProofSignature.data();
+		this->subject.uniqueIdProofSignatureSize = (unsigned int)m_subjectUniqueIdProofSignature.size();
+	}
 
 	const Vector< uint8_t > &issuerData = d["i"];
 	if (!issuerData.empty()) {
@@ -323,13 +343,13 @@ bool Certificate::decode(const Vector< uint8_t > &data)
 		else return false;
 	}
 
-	const Vector< uint8_t > &sig = d["si"];
-	if (sig.size() > sizeof(this->signature))
-		return false;
-	Utils::copy(this->signature, sig.data(), (unsigned int)sig.size());
-	this->signatureSize = (unsigned int)sig.size();
+	m_signature = d["si"];
+	if (!m_signature.empty()) {
+		this->signature = m_signature.data();
+		this->signatureSize = (unsigned int)m_signature.size();
+	}
 
-	Vector< uint8_t > enc(encode(true));
+	const Vector< uint8_t > enc(encode(true));
 	SHA384(this->serialNo, enc.data(), (unsigned int)enc.size());
 
 	return true;
@@ -339,7 +359,18 @@ bool Certificate::sign(const Identity &issuer)
 {
 	Vector< uint8_t > enc(encode(true));
 	SHA384(this->serialNo, enc.data(), (unsigned int)enc.size());
-	return (this->signatureSize = issuer.sign(enc.data(), (unsigned int)enc.size(), this->signature, sizeof(this->signature))) > 0;
+	uint8_t sig[ZT_SIGNATURE_BUFFER_SIZE];
+	const unsigned int sigSize = issuer.sign(enc.data(), (unsigned int)enc.size(), sig, sizeof(sig));
+	if (sigSize > 0) {
+		m_signature.assign(sig, sig + sigSize);
+		this->signature = m_signature.data();
+		this->signatureSize = sigSize;
+		return true;
+	}
+	m_signature.clear();
+	this->signature = nullptr;
+	this->signatureSize = 0;
+	return false;
 }
 
 ZT_CertificateError Certificate::verify() const
@@ -354,8 +385,6 @@ ZT_CertificateError Certificate::verify() const
 		}
 
 		if (this->subject.uniqueIdProofSignatureSize > 0) {
-			static_assert(ZT_ECC384_SIGNATURE_SIZE <= ZT_CERTIFICATE_MAX_SIGNATURE_SIZE, "overflow");
-			static_assert((ZT_ECC384_PUBLIC_KEY_SIZE + 1) <= ZT_CERTIFICATE_MAX_UNIQUE_ID_SIZE, "overflow");
 			if (
 				(this->subject.uniqueIdProofSignatureSize != ZT_ECC384_SIGNATURE_SIZE) ||
 				(this->subject.uniqueIdSize != (ZT_ECC384_PUBLIC_KEY_SIZE + 1)) ||
@@ -369,8 +398,8 @@ ZT_CertificateError Certificate::verify() const
 			SHA384(h, enc.data(), (unsigned int)enc.size());
 			if (!ECC384ECDSAVerify(this->subject.uniqueId + 1, h, this->subject.uniqueIdProofSignature))
 				return ZT_CERTIFICATE_ERROR_INVALID_UNIQUE_ID_PROOF;
-		} else if (this->subject.uniqueIdSize > ZT_CERTIFICATE_MAX_UNIQUE_ID_SIZE) {
-			return ZT_CERTIFICATE_ERROR_INVALID_FORMAT;
+		} else if (this->subject.uniqueIdSize > 0) {
+			return ZT_CERTIFICATE_ERROR_INVALID_UNIQUE_ID_PROOF;
 		}
 
 		for (unsigned int i = 0; i < this->subject.identityCount; ++i) {
@@ -402,24 +431,6 @@ ZT_CertificateError Certificate::verify() const
 	} catch (...) {}
 
 	return ZT_CERTIFICATE_ERROR_NONE;
-}
-
-bool Certificate::setSubjectUniqueId(ZT_Certificate_Subject &s, const uint8_t uniqueId[ZT_CERTIFICATE_UNIQUE_ID_SIZE_TYPE_NIST_P_384], const uint8_t uniqueIdPrivate[ZT_CERTIFICATE_UNIQUE_ID_PRIVATE_KEY_SIZE_TYPE_NIST_P_384])
-{
-	Utils::copy<ZT_CERTIFICATE_UNIQUE_ID_SIZE_TYPE_NIST_P_384>(s.uniqueId, uniqueId);
-	s.uniqueIdSize = ZT_CERTIFICATE_UNIQUE_ID_SIZE_TYPE_NIST_P_384;
-
-	Dictionary d;
-	m_encodeSubject(s, d, true);
-	Vector< uint8_t > enc;
-	d.encode(enc);
-	uint8_t h[ZT_ECC384_SIGNATURE_HASH_SIZE];
-	SHA384(h, enc.data(), (unsigned int)enc.size());
-
-	ECC384ECDSASign(uniqueIdPrivate, h, s.uniqueIdProofSignature);
-	s.uniqueIdProofSignatureSize = ZT_ECC384_SIGNATURE_SIZE;
-
-	return true;
 }
 
 void Certificate::m_encodeSubject(const ZT_Certificate_Subject &s, Dictionary &d, bool omitUniqueIdProofSignature)
@@ -480,9 +491,9 @@ void Certificate::m_encodeSubject(const ZT_Certificate_Subject &s, Dictionary &d
 	if (s.name.host[0])
 		d.add("s.n.h", s.name.host);
 
-	if ((s.uniqueIdSize > 0) && (s.uniqueIdSize <= ZT_CERTIFICATE_MAX_UNIQUE_ID_SIZE))
+	if ((s.uniqueIdSize > 0) && (s.uniqueId != nullptr))
 		d["s.uI"].assign(s.uniqueId, s.uniqueId + s.uniqueIdSize);
-	if ((!omitUniqueIdProofSignature) && (s.uniqueIdProofSignatureSize > 0) && (s.uniqueIdProofSignatureSize <= ZT_CERTIFICATE_MAX_SIGNATURE_SIZE))
+	if ((!omitUniqueIdProofSignature) && (s.uniqueIdProofSignatureSize > 0) && (s.uniqueIdProofSignature != nullptr))
 		d["s.uS"].assign(s.uniqueIdProofSignature, s.uniqueIdProofSignature + s.uniqueIdProofSignatureSize);
 }
 

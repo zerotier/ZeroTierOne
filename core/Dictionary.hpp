@@ -404,14 +404,14 @@ private:
 	}
 
 	template< typename V >
-	ZT_INLINE static void s_appendKey(V &out, const char *const k)
+	ZT_INLINE static void s_appendKey(V &out, const char *k)
 	{
-		for (unsigned int i = 0; i < 7; ++i) {
-			const char kc = k[i];
-			if (kc == 0)
+		for (;;) {
+			char c = *(k++);
+			if (c == 0)
 				break;
-			if ((kc >= 33) && (kc <= 126) && (kc != 61) && (kc != 92)) // printable ASCII with no spaces, equals, or backslash
-				out.push_back((uint8_t)kc);
+			if ((c >= 33) && (c <= 126) && (c != 61) && (c != 92)) // printable ASCII with no spaces, equals, or backslash
+				out.push_back((uint8_t)c);
 		}
 		out.push_back((uint8_t)'=');
 	}
@@ -419,15 +419,13 @@ private:
 	ZT_INLINE static String s_key(const char *k) noexcept
 	{
 		String buf;
-		buf.clear();
-		for (unsigned int i = 0; i < 7; ++i) {
-			const char kc = k[i];
-			if (kc == 0)
+		for(;;) {
+			char c = *(k++);
+			if (c == 0)
 				break;
-			if ((kc >= 33) && (kc <= 126) && (kc != 61) && (kc != 92)) // printable ASCII with no spaces, equals, or backslash
-				buf.push_back(kc);
+			if ((c >= 33) && (c <= 126) && (c != 61) && (c != 92)) // printable ASCII with no spaces, equals, or backslash
+				buf.push_back(c);
 		}
-		buf.push_back(0);
 		return buf;
 	}
 

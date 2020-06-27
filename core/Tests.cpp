@@ -242,7 +242,7 @@ static bool ZTT_deepCompareCertificateIdentities(const ZT_Certificate_Identity *
 
 static bool ZTT_deepCompareCertificateName(const ZT_Certificate_Name &a, const ZT_Certificate_Name &b)
 {
-	return (
+	return !(
 		(strcmp(a.serialNo, b.serialNo) != 0) ||
 		(strcmp(a.streetAddress, b.streetAddress) != 0) ||
 		(strcmp(a.organization, b.organization) != 0) ||
@@ -260,14 +260,11 @@ static bool ZTT_deepCompareCertificateName(const ZT_Certificate_Name &a, const Z
 // This performs a detailed deep comparison of two certificates to catch any
 // potential encode/decode errors that might not be caught by just testing
 // for serial number (hash) equivalency... as the hash is computed from the
-// decode output!
+// decode output! Note that serial number is not compared here as this is
+// checked by normal == operators.
 static bool ZTT_deepCompareCertificates(const Certificate &a, const Certificate &b)
 {
-	if (a != b)
-		return false;
-
 	if (
-		(memcmp(a.serialNo, b.serialNo, sizeof(a.serialNo)) != 0) ||
 		(a.flags != b.flags) ||
 		(a.timestamp != b.timestamp) ||
 		(a.validity[0] != b.validity[0]) ||
@@ -282,11 +279,18 @@ static bool ZTT_deepCompareCertificates(const Certificate &a, const Certificate 
 		(a.signatureSize != b.signatureSize)
 		) return false;
 
-	if (
-		(memcmp(a.subject.uniqueId, b.subject.uniqueId, a.subject.uniqueIdSize) != 0) ||
-		(memcmp(a.subject.uniqueIdProofSignature, b.subject.uniqueIdProofSignature, a.subject.uniqueIdProofSignatureSize) != 0) ||
-		(memcmp(a.signature, b.signature, a.signatureSize) != 0)
-		) return false;
+	if ((a.subject.uniqueId == nullptr) != (b.subject.uniqueId == nullptr))
+		return false;
+	if ((a.subject.uniqueIdProofSignature == nullptr) != (b.subject.uniqueIdProofSignature == nullptr))
+		return false;
+	if ((a.subject.uniqueId != nullptr) && (a.subject.uniqueIdProofSignature != nullptr)) {
+		if (
+			(memcmp(a.subject.uniqueId, b.subject.uniqueId, a.subject.uniqueIdSize) != 0) ||
+			(memcmp(a.subject.uniqueIdProofSignature, b.subject.uniqueIdProofSignature, a.subject.uniqueIdProofSignatureSize) != 0) ||
+			(memcmp(a.signature, b.signature, a.signatureSize) != 0)
+			)
+			return false;
+	}
 
 	if ((!ZTT_deepCompareCertificateName(a.subject.name, b.subject.name)) || (!ZTT_deepCompareCertificateName(a.issuerName, b.issuerName)))
 		return false;
@@ -300,6 +304,7 @@ static bool ZTT_deepCompareCertificates(const Certificate &a, const Certificate 
 		if (!ZTT_deepCompareCertificateIdentities(a.subject.identities + i, b.subject.identities + i))
 			return false;
 	}
+
 	for(unsigned int i=0;i<a.subject.networkCount;++i) {
 		if (a.subject.networks[i].id != b.subject.networks[i].id)
 			return false;
@@ -308,6 +313,7 @@ static bool ZTT_deepCompareCertificates(const Certificate &a, const Certificate 
 		if (memcmp(a.subject.networks[i].controller.hash, b.subject.networks[i].controller.hash, ZT_FINGERPRINT_HASH_SIZE) != 0)
 			return false;
 	}
+
 	for(unsigned int i=0;i<a.subject.certificateCount;++i) {
 		if ((!a.subject.certificates) || (!b.subject.certificates))
 			return false;
@@ -316,6 +322,7 @@ static bool ZTT_deepCompareCertificates(const Certificate &a, const Certificate 
 		if (memcmp(a.subject.certificates[i], b.subject.certificates[i], ZT_SHA384_DIGEST_SIZE) != 0)
 			return false;
 	}
+
 	for(unsigned int i=0;i<a.subject.updateUrlCount;++i) {
 		if ((!a.subject.updateUrls) || (!b.subject.updateUrls))
 			return false;
@@ -1113,10 +1120,21 @@ extern "C" const char *ZTT_crypto()
 			cert.validity[0] = 0;
 			cert.validity[1] = 9223372036854775807LL;
 			Utils::copy<sizeof(ZT_Certificate_Subject)>(&cert.issuerName, &cert.subject.name);
-			Certificate::setSubjectUniqueId(cert.subject, uniqueId, uniqueIdPrivate);
+			//Certificate::setSubjectUniqueId(cert.subject, uniqueId, uniqueIdPrivate);
 			cert.sign(testIssuerId);
 			Vector< uint8_t > enc(cert.encode());
 			ZT_T_PRINTF("OK (%d bytes)" ZT_EOL_S, (int)enc.size());
+
+			ZT_T_PRINTF("  Test certificate decode and verify... ");
+			Certificate cert2;
+			if (!cert2.decode(enc)) {
+				ZT_T_PRINTF("FAILED (decode)" ZT_EOL_S);
+				return "Certificate decode";
+			}
+			if (!ZTT_deepCompareCertificates(cert, cert2)) {
+				ZT_T_PRINTF("FAILED (compare decoded with original)" ZT_EOL_S);
+				return "Certificate decode and compare";
+			}
 		}
 	} catch (std::exception &e) {
 		ZT_T_PRINTF(ZT_EOL_S "[crypto] Unexpected exception: %s" ZT_EOL_S, e.what());

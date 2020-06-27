@@ -95,19 +95,11 @@ bool Dictionary::getB(const char *k, bool dfl) const
 
 uint64_t Dictionary::getUI(const char *k, uint64_t dfl) const
 {
-	uint8_t tmp[18];
-	uint64_t v = dfl;
-	const Vector< uint8_t > &e = (*this)[k];
-	if (!e.empty()) {
-		if (e.back() != 0) {
-			const unsigned long sl = e.size();
-			Utils::copy(tmp, e.data(), (sl > 17) ? 17 : sl);
-			tmp[17] = 0;
-			return Utils::unhex((const char *)tmp);
-		}
-		return Utils::unhex((const char *)e.data());
-	}
-	return v;
+	char tmp[32];
+	getS(k, tmp, sizeof(tmp));
+	if (tmp[0])
+		return Utils::unhex(tmp);
+	return dfl;
 }
 
 char *Dictionary::getS(const char *k, char *v, const unsigned int cap) const
@@ -196,10 +188,8 @@ bool Dictionary::decode(const void *data, unsigned int len)
 			} else if (c == (uint8_t)'=') {
 				k.push_back(0);
 				v = &m_entries[k];
-			} else if (k.size() < 7) {
-				k.push_back(c);
 			} else {
-				return false;
+				k.push_back(c);
 			}
 		}
 	}

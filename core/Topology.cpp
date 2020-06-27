@@ -234,8 +234,8 @@ ZT_CertificateError Topology::addCertificate(void *tPtr, const Certificate &cert
 		// the one we have if newer. Otherwise replace it. Note that the verification
 		// function will have checked the unique ID proof signature already if a unique
 		// ID was present.
-		FCV< uint8_t, ZT_CERTIFICATE_MAX_UNIQUE_ID_SIZE > uniqueId(cert.subject.uniqueId, cert.subject.uniqueIdSize);
-		if (!uniqueId.empty()) {
+		if ((cert.subject.uniqueId) && (cert.subject.uniqueIdSize > 0)) {
+			const Vector< uint8_t > uniqueId(cert.subject.uniqueId, cert.subject.uniqueId + cert.subject.uniqueIdSize);
 			std::pair< SharedPtr< const Certificate >, unsigned int > &bySubjectUniqueId = m_certsBySubjectUniqueId[uniqueId];
 			if (bySubjectUniqueId.first) {
 				if (bySubjectUniqueId.first->subject.timestamp >= cert.subject.timestamp)
@@ -289,7 +289,7 @@ void Topology::m_eraseCertificate_l_certs(const SharedPtr< const Certificate > &
 	m_certs.erase(SHA384Hash(cert->serialNo));
 
 	if (cert->subject.uniqueIdSize > 0)
-		m_certsBySubjectUniqueId.erase(FCV< uint8_t, ZT_CERTIFICATE_MAX_UNIQUE_ID_SIZE >(cert->subject.uniqueId, cert->subject.uniqueIdSize));
+		m_certsBySubjectUniqueId.erase(Vector< uint8_t >(cert->subject.uniqueId, cert->subject.uniqueId + cert->subject.uniqueIdSize));
 
 	for (unsigned int i = 0; i < cert->subject.identityCount; ++i) {
 		const Identity *const ii = reinterpret_cast<const Identity *>(cert->subject.identities[i].identity);
@@ -431,7 +431,7 @@ void Topology::m_updateRootPeers_l_roots_certs(void *tPtr)
 
 	// Populate m_roots from certificate subject identities from certificates flagged
 	// as local root set certificates.
-	for (SortedMap< FCV< uint8_t, ZT_CERTIFICATE_MAX_UNIQUE_ID_SIZE >, std::pair< SharedPtr< const Certificate >, unsigned int > >::const_iterator c(m_certsBySubjectUniqueId.begin()); c != m_certsBySubjectUniqueId.end(); ++c) {
+	for (SortedMap< Vector< uint8_t >, std::pair< SharedPtr< const Certificate >, unsigned int > >::const_iterator c(m_certsBySubjectUniqueId.begin()); c != m_certsBySubjectUniqueId.end(); ++c) {
 		if ((c->second.second & ZT_CERTIFICATE_LOCAL_TRUST_FLAG_ZEROTIER_ROOT_SET) != 0) {
 			for (unsigned int i = 0; i < c->second.first->subject.identityCount; ++i)
 				m_roots[*reinterpret_cast<const Identity *>(c->second.first->subject.identities[i].identity)].insert(c->second.first);

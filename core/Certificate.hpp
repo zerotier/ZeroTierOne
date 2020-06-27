@@ -170,16 +170,6 @@ public:
 		ECC384GenerateKey(uniqueId + 1, uniqueIdPrivate);
 	}
 
-	/**
-	 * Set the unique ID and unique ID proof signature fields in a subject.
-	 *
-	 * @param s Subject to set
-	 * @param uniqueId Unique ID (public)
-	 * @param uniqueIdPrivate Unique ID private key
-	 * @return True on success
-	 */
-	static bool setSubjectUniqueId(ZT_Certificate_Subject &s, const uint8_t uniqueId[ZT_CERTIFICATE_UNIQUE_ID_SIZE_TYPE_NIST_P_384], const uint8_t uniqueIdPrivate[ZT_CERTIFICATE_UNIQUE_ID_PRIVATE_KEY_SIZE_TYPE_NIST_P_384]);
-
 	ZT_INLINE unsigned long hashCode() const noexcept
 	{ return (unsigned long)Utils::loadAsIsEndian< uint32_t >(this->serialNo); }
 
@@ -213,6 +203,9 @@ private:
 	Vector< const uint8_t * > m_subjectCertificates;
 	Vector< const char * > m_updateUrls;
 	Vector< uint8_t > m_extendedAttributes;
+	Vector< uint8_t > m_subjectUniqueId;
+	Vector< uint8_t > m_subjectUniqueIdProofSignature;
+	Vector< uint8_t > m_signature;
 
 	std::atomic<int> __refCount;
 };

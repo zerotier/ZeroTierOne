@@ -299,16 +299,6 @@ typedef struct
 #define ZT_CERTIFICATE_MAX_STRING_LENGTH 127
 
 /**
- * Maximum length of a signature
- */
-#define ZT_CERTIFICATE_MAX_SIGNATURE_SIZE 96
-
-/**
- * Maximum size of a unique ID field in a certificate subject
- */
-#define ZT_CERTIFICATE_MAX_UNIQUE_ID_SIZE 64
-
-/**
  * Certificate is a root CA
  */
 #define ZT_CERTIFICATE_LOCAL_TRUST_FLAG_ROOT_CA 0x0001U
@@ -517,12 +507,12 @@ typedef struct
 	 * A subject is valid if it has no unique ID or has one with a valid
 	 * proof signature.
 	 */
-	uint8_t uniqueId[ZT_CERTIFICATE_MAX_UNIQUE_ID_SIZE];
+	const uint8_t *uniqueId;
 
 	/**
 	 * Signature proving ownership of unique ID.
 	 */
-	uint8_t uniqueIdProofSignature[ZT_CERTIFICATE_MAX_SIGNATURE_SIZE];
+	const uint8_t *uniqueIdProofSignature;
 
 	/**
 	 * Size of unique ID in bytes or 0 if none.
@@ -604,7 +594,7 @@ typedef struct
 	/**
 	 * Signature by issuer (algorithm determined by identity type).
 	 */
-	uint8_t signature[ZT_CERTIFICATE_MAX_SIGNATURE_SIZE];
+	const uint8_t *signature;
 
 	/**
 	 * Size of signature in bytes.
