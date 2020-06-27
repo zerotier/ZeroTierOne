@@ -433,6 +433,26 @@ ZT_CertificateError Certificate::verify() const
 	return ZT_CERTIFICATE_ERROR_NONE;
 }
 
+bool Certificate::setSubjectUniqueId(const uint8_t uniqueId[ZT_CERTIFICATE_UNIQUE_ID_SIZE_TYPE_NIST_P_384], const uint8_t uniqueIdPrivate[ZT_CERTIFICATE_UNIQUE_ID_PRIVATE_KEY_SIZE_TYPE_NIST_P_384])
+{
+	m_subjectUniqueId.assign(uniqueId, uniqueId + ZT_CERTIFICATE_UNIQUE_ID_SIZE_TYPE_NIST_P_384);
+	this->subject.uniqueId = m_subjectUniqueId.data();
+	this->subject.uniqueIdSize = ZT_CERTIFICATE_UNIQUE_ID_SIZE_TYPE_NIST_P_384;
+
+	Dictionary d;
+	m_encodeSubject(this->subject, d, true);
+	Vector< uint8_t > enc;
+	d.encode(enc);
+	uint8_t h[ZT_SHA384_DIGEST_SIZE];
+	SHA384(h, enc.data(), (unsigned int)enc.size());
+	m_subjectUniqueIdProofSignature.resize(ZT_ECC384_SIGNATURE_SIZE);
+	ECC384ECDSASign(uniqueIdPrivate, h, m_subjectUniqueIdProofSignature.data());
+	this->subject.uniqueIdProofSignature = m_subjectUniqueIdProofSignature.data();
+	this->subject.uniqueIdProofSignatureSize = ZT_ECC384_SIGNATURE_SIZE;
+
+	return true;
+}
+
 void Certificate::m_encodeSubject(const ZT_Certificate_Subject &s, Dictionary &d, bool omitUniqueIdProofSignature)
 {
 	char tmp[256];

@@ -159,6 +159,17 @@ public:
 	ZT_CertificateError verify() const;
 
 	/**
+	 * Set the unique ID of this certificate's subject
+	 *
+	 * This must be done after all other fields in the subject are set.
+	 *
+	 * @param uniqueId Unique ID
+	 * @param uniqueIdPrivate Private key associated with unique ID to prove ownership of it
+	 * @return True if successful
+	 */
+	bool setSubjectUniqueId(const uint8_t uniqueId[ZT_CERTIFICATE_UNIQUE_ID_SIZE_TYPE_NIST_P_384], const uint8_t uniqueIdPrivate[ZT_CERTIFICATE_UNIQUE_ID_PRIVATE_KEY_SIZE_TYPE_NIST_P_384]);
+
+	/**
 	 * Create a subject unique ID and corresponding private key required for use
 	 *
 	 * @param uniqueId Buffer to receive unique ID

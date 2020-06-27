@@ -1120,12 +1120,19 @@ extern "C" const char *ZTT_crypto()
 			cert.validity[0] = 0;
 			cert.validity[1] = 9223372036854775807LL;
 			Utils::copy<sizeof(ZT_Certificate_Subject)>(&cert.issuerName, &cert.subject.name);
-			//Certificate::setSubjectUniqueId(cert.subject, uniqueId, uniqueIdPrivate);
+			cert.setSubjectUniqueId(uniqueId, uniqueIdPrivate);
 			cert.sign(testIssuerId);
 			Vector< uint8_t > enc(cert.encode());
 			ZT_T_PRINTF("OK (%d bytes)" ZT_EOL_S, (int)enc.size());
 
-			ZT_T_PRINTF("  Test certificate decode and verify... ");
+			ZT_T_PRINTF("  Testing certificate verify... ");
+			if (!cert.verify()) {
+				ZT_T_PRINTF("FAILED (verify original)" ZT_EOL_S);
+				return "Verify original certificate";
+			}
+			ZT_T_PRINTF("OK" ZT_EOL_S);
+
+			ZT_T_PRINTF("  Test certificate decode from marshaled format... ");
 			Certificate cert2;
 			if (!cert2.decode(enc)) {
 				ZT_T_PRINTF("FAILED (decode)" ZT_EOL_S);
@@ -1135,6 +1142,11 @@ extern "C" const char *ZTT_crypto()
 				ZT_T_PRINTF("FAILED (compare decoded with original)" ZT_EOL_S);
 				return "Certificate decode and compare";
 			}
+			if (!cert2.verify()) {
+				ZT_T_PRINTF("FAILED (verify decoded certificate)");
+				return "Verify decoded certificate";
+			}
+			ZT_T_PRINTF("OK" ZT_EOL_S);
 		}
 	} catch (std::exception &e) {
 		ZT_T_PRINTF(ZT_EOL_S "[crypto] Unexpected exception: %s" ZT_EOL_S, e.what());
