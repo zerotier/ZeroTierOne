@@ -113,7 +113,7 @@ def buildStaticBinaries() {
     def dist = ["alpine"]
     def archs = []
     if (params.BUILD_ALL == true) {
-        archs = ["arm64", "amd64", "i386", "armhf", "armel", "ppc64le", "s390x"]
+        archs = ["arm64", "amd64", "i386", "armhf", "ppc64le", "s390x"]
     } else {
         archs = ["amd64", "i386"]
     }
@@ -132,8 +132,6 @@ def buildStaticBinaries() {
                         def cmakeFlags = 'CMAKE_ARGS="-DBUILD_STATIC=1"'
                         if (platform == "i386") {
                             cmakeFlags = 'CMAKE_ARGS="-DBUILD_STATIC=1"'
-                        } else if (platform == "armel") {
-                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_STATIC=1 -DBUILD_ARM_V5=1"'
                         } else if (platform == "armhf") {
                             cmakeFlags = 'CMAKE_ARGS="-DBUILD_STATIC=1 -DBUILD_ARM_V6=1"'
                         }
@@ -234,7 +232,7 @@ def packageStatic() {
     def debianJessie = ["debian-jessie"]
     def debianJessieArchs = []
     if (params.BUILD_ALL == true) {
-        debianJessieArch = ["armhf", "armel", "amd64", "i386"]
+        debianJessieArch = ["armhf", "amd64", "i386"]
     } else {
         debianJessieArch = ["amd64", "i386"]
     }
@@ -278,7 +276,7 @@ def packageStatic() {
     def ubuntuTrusty = ["ubuntu-trusty"]
     def ubuntuTrustyArch = []
     if (params.BUILD_ALL == true) {
-        ubuntuTrustyArch = ["i386", "amd64", "armhf", "arm64", "ppc64le"]
+        ubuntuTrustyArch = ["i386", "amd64", "arm64", "ppc64le"]
     } else {
         ubuntuTrustyArch = ["i386", "amd64"]
     }
@@ -322,7 +320,7 @@ def packageStatic() {
     def debianWheezy = ["debian-wheezy"]
     def debianWheezyArchs = []
     if (params.BUILD_ALL == true) {
-        debianWheezyArchs = ["armhf", "armel", "amd64", "i386"]
+        debianWheezyArchs = ["armhf", "amd64", "i386"]
     } else {
         debianWheezyArchs = ["amd64", "i386"]
     }

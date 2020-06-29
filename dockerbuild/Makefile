@@ -8,7 +8,6 @@ alpine:
 	docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-arm64.tar.gz" --platform linux/arm64 -f Dockerfile.alpine . -t ztbuild/alpine-arm64 --load
 	docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-386.tar.gz" --platform linux/386 -f Dockerfile.alpine . -t ztbuild/alpine-i386 --load
 	docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz" --platform linux/amd64 -f Dockerfile.alpine . -t ztbuild/alpine-amd64 --load
-	docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-armv6l.tar.gz" --platform linux/arm/v6 -f Dockerfile.alpine . -t ztbuild/alpine-armel --load
 	docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-armv6l.tar.gz" --platform linux/arm/v7 -f Dockerfile.alpine . -t ztbuild/alpine-armhf --load
 	docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-ppc64le.tar.gz" --platform linux/ppc64le -f Dockerfile.alpine . -t ztbuild/alpine-ppc64le --load
 	docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-s390x.tar.gz" --platform linux/s390x -f Dockerfile.alpine . -t ztbuild/alpine-s390x --load
