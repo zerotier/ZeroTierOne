@@ -170,7 +170,7 @@ if(NOT PACKAGE_STATIC)
 			option(BUILD_32BIT "Force building as 32-bit binary" OFF)
 			option(BUILD_STATIC "Build statically linked executable" OFF)
 			option(BUILD_ARM_V5 "Build ARMv5" OFF)
-			option(BUILD_ARM_v6 "Build ARMv6" OFF)
+			option(BUILD_ARM_V6 "Build ARMv6" OFF)
 
 			if(BUILD_ARM_V5 AND BUILD_ARM_V6)
 				message(FATAL_ERROR "BUILD_ARM_V5 and BUILD_ARM_V6 are mutually exclusive!")
@@ -250,6 +250,12 @@ if(NOT PACKAGE_STATIC)
 		set(GO_EXE_NAME "zerotier")
 		if(CMAKE_SYSTEM_NAME MATCHES "Linux")
 			set(GO_EXTRA_LIBRARIES "-lstdc++")
+			if(BUILD_ARM_V5)
+				set(GO_EXTRA_LIBRARIES
+					${GO_EXTRA_LIBRARIES}
+					"-latomic"
+				)
+			endif(BUILD_ARM_V5)
 		else()
 			set(GO_EXTRA_LIBRARIES "-lc++")
 		endif()
