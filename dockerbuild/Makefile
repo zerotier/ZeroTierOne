@@ -23,13 +23,11 @@ debian:	debian-wheezy debian-jessie debian-buster debian-stretch debian-bullseye
 
 debian-wheezy:
 	docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz" --platform linux/amd64 -f Dockerfile.debian-wheezy . -t ztbuild/debian-wheezy-amd64 --load
-	docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-armv6l.tar.gz" --platform linux/arm/v7 -f Dockerfile.debian-wheezy . -t ztbuild/debian-wheezy-armhf --load
 	docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-armv6l.tar.gz" --platform linux/arm/v6 -f Dockerfile.debian-wheezy . -t ztbuild/debian-wheezy-armel --load
 	docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-386.tar.gz" --platform linux/386 -f Dockerfile.debian-wheezy . -t ztbuild/debian-wheezy-i386 --load
 
 debian-jessie:
 	docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz" --platform linux/amd64 -f Dockerfile.debian-jessie . -t ztbuild/debian-jessie-amd64 --load
-	docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-armv6l.tar.gz" --platform linux/arm/v7 -f Dockerfile.debian-jessie . -t ztbuild/debian-jessie-armhf --load
 	docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-armv6l.tar.gz" --platform linux/arm/v6 -f Dockerfile.debian-jessie . -t ztbuild/debian-jessie-armel --load
 	docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-386.tar.gz" --platform linux/386 -f Dockerfile.debian-jessie . -t ztbuild/debian-jessie-i386 --load
 
