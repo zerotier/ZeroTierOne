@@ -19,7 +19,9 @@ RUN curl -s -k -L https://github.com/Kitware/CMake/releases/download/v3.17.3/cma
 WORKDIR /cmake-3.17.3
 RUN ./bootstrap && make -j8 && make install
 WORKDIR /
-
+RUN if test "$TARGETPLATFORM" = "linux/arm/v6"; then \
+    ln -s /lib/arm-linux-gnueabi/ld-2.30.so /lib/ld-linux-armhf.so.3; \
+    fi;
 
 RUN groupadd -g 1000 jenkins-build && useradd -u 1000 -g 1000 jenkins-build
 RUN chmod 777 /home && mkdir -p /home/jenkins-build && chown jenkins-build:jenkins-build /home/jenkins-build && chmod 777 /home/jenkins-build
