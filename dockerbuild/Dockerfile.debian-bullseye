@@ -14,7 +14,9 @@ RUN if test "$TARGETPLATFORM" = "linux/mips64le"; then \
     fi;
 RUN curl -s -k -L https://github.com/Kitware/CMake/releases/download/v3.17.3/cmake-3.17.3.tar.gz -o cmake-3.17.3.tar.gz && tar -xzf cmake-3.17.3.tar.gz
 WORKDIR /cmake-3.17.3
-RUN ./bootstrap --parallel=8 && make -j8 && make install
+RUN export CFLAGS="-D_FILE_OFFSET_BITS=64"; \
+    export CXXFLAGS="-D_FILE_OFFSET_BITS=64"; \
+    ./bootstrap --parallel=8 && make -j8 && make install
 WORKDIR /
 
 
