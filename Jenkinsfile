@@ -391,7 +391,6 @@ def buildDebianNative() {
                         cmakeFlags = 'CMAKE_ARGS="-DZT_PACKAGE_FORMAT=DEB -DBUILD_ARM_V6=1"'
                     }
                    
-                    sh 'whoami'
                     dir("build") {
                         sh "${cmakeFlags} make setup"
                         dir("build") {
