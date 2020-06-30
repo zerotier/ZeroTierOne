@@ -113,7 +113,7 @@ def buildStaticBinaries() {
     def dist = ["alpine"]
     def archs = []
     if (params.BUILD_ALL == true) {
-        archs = ["arm64", "amd64", "i386", "armhf", "armel", "ppc64le", "s390x"]
+        archs = ["arm64", "amd64", "i386", "armhf", "ppc64le", "s390x"]
     } else {
         archs = ["amd64", "i386"]
     }
@@ -132,8 +132,6 @@ def buildStaticBinaries() {
                         def cmakeFlags = 'CMAKE_ARGS="-DBUILD_STATIC=1"'
                         if (platform == "i386") {
                             cmakeFlags = 'CMAKE_ARGS="-DBUILD_STATIC=1"'
-                        } else if (platform == "armel") {
-                            cmakeFlags = 'CMAKE_ARGS="-DBUILD_STATIC=1 -DBUILD_ARM_V5=1"'
                         } else if (platform == "armhf") {
                             cmakeFlags = 'CMAKE_ARGS="-DBUILD_STATIC=1 -DBUILD_ARM_V6=1"'
                         }
@@ -200,7 +198,7 @@ def packageStatic() {
     })
     
     if (params.BUILD_ALL == true) {
-        def clefos7 = ["clefos"]
+        def s390xStatics = ["clefos", "debian-buster", "debian-sid", "debian-bullseye", "debian-stretch", "ubuntu-bionic", "ubuntu-eoan", "ubuntu-focal"]
         def clefos7Arch = ["s390x"]
         tasks << getTasks(clefos7, clefos7Arch, { distro, arch -> 
             def myNode = {
@@ -210,12 +208,16 @@ def packageStatic() {
                         checkout scm
                     }
                     def runtime = docker.image("ztbuild/${distro}-${arch}:latest")
+                    def pkgFormat = "DEB"
+                    if (distro == "clefos") {
+                        pkgFormat = "RPM"
+                    }
                     runtime.inside {
                         dir("build/") {
                             unstash "static-${arch}"
                             sh "mkdir -p build"
                             sh "mv zerotier-static-${arch} build/zerotier && chmod +x build/zerotier" 
-                            sh 'CMAKE_ARGS="-DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=RPM" make setup'
+                            sh "CMAKE_ARGS=\"-DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=${pkgFormat}\" make setup"
                             dir("build") {
                                 sh 'make package -j4 VERBOSE=1'
                             }
@@ -234,7 +236,7 @@ def packageStatic() {
     def debianJessie = ["debian-jessie"]
     def debianJessieArchs = []
     if (params.BUILD_ALL == true) {
-        debianJessieArch = ["armhf", "armel", "amd64", "i386"]
+        debianJessieArch = ["armhf", "amd64", "i386"]
     } else {
         debianJessieArch = ["amd64", "i386"]
     }
@@ -278,7 +280,7 @@ def packageStatic() {
     def ubuntuTrusty = ["ubuntu-trusty"]
     def ubuntuTrustyArch = []
     if (params.BUILD_ALL == true) {
-        ubuntuTrustyArch = ["i386", "amd64", "armhf", "arm64", "ppc64le"]
+        ubuntuTrustyArch = ["i386", "amd64", "arm64", "ppc64le"]
     } else {
         ubuntuTrustyArch = ["i386", "amd64"]
     }
@@ -322,7 +324,7 @@ def packageStatic() {
     def debianWheezy = ["debian-wheezy"]
     def debianWheezyArchs = []
     if (params.BUILD_ALL == true) {
-        debianWheezyArchs = ["armhf", "armel", "amd64", "i386"]
+        debianWheezyArchs = ["armhf", "amd64", "i386"]
     } else {
         debianWheezyArchs = ["amd64", "i386"]
     }
@@ -367,12 +369,12 @@ def packageStatic() {
 
 def buildDebianNative() {
     def tasks = [:]
-    def buster = ["debian-buster" , "debian-stretch"]
-    def busterArchs = []
+    def debian = ["debian-buster" , "debian-stretch", "debian-sid", "debian-bullseye"]
+    def debianArchs = []
     if (params.BUILD_ALL) {
-        busterArchs = ["s390x", "ppc64le", "i386", "armhf", "armel", "arm64", "amd64"]
+        debianArchs = ["ppc64le", "i386", "armhf", "armel", "arm64", "amd64"]
     } else {
-        busterArchs = ["amd64", "i386"]
+        debianArchs = ["amd64", "i386"]
     }
     
     def build = { distro, arch -> 
@@ -393,7 +395,6 @@ def buildDebianNative() {
                         cmakeFlags = 'CMAKE_ARGS="-DZT_PACKAGE_FORMAT=DEB -DBUILD_ARM_V6=1"'
                     }
                    
-                    sh 'whoami'
                     dir("build") {
                         sh "${cmakeFlags} make setup"
                         dir("build") {
@@ -410,19 +411,8 @@ def buildDebianNative() {
         return myNode
     }
     
-    tasks << getTasks(buster, busterArchs, build)
-    
-    // 32-bit arm and CMake don't get along right now on Sid/Bullseye
-    def sid = ["debian-sid", "debian-bullseye"]
-    def sidArchs = []
-    if (params.BUILD_ALL) {
-        busterArchs = ["s390x", "ppc64le", "i386", /*"armhf", "armel",*/ "arm64", "amd64", "mips64le"]
-    } else {
-        busterArchs = ["amd64", "i386"]
-    }
-    
-    tasks << getTasks(sid, sidArchs, build)
-
+    tasks << getTasks(debian, debianArchs, build)
+ 
     // bash is broken when running under QEMU-s390x on Xenial
     def xenial = ["ubuntu-xenial"]
     def xenialArchs = []
@@ -431,12 +421,12 @@ def buildDebianNative() {
     } else {
         xenialArchs = ["i386", "amd64"]
     }
-    //tasks << getTasks(xenial, xenialArchs, build)
+    tasks << getTasks(xenial, xenialArchs, build)
     
     def ubuntu = ["ubuntu-bionic", "ubuntu-eoan"]
     def ubuntuArchs = []
     if (params.BUILD_ALL == true) {
-        ubuntuArchs = ["i386", "amd64", "armhf", "arm64", "ppc64le", "s390x"]
+        ubuntuArchs = ["i386", "amd64", "armhf", "arm64", "ppc64le"]
     } else {
         ubuntuArchs = ["i386", "amd64"]
     }
@@ -445,7 +435,7 @@ def buildDebianNative() {
     def ubuntuFocal = ["ubuntu-focal"]
     def ubuntuFocalArchs = []
     if (params.BUILD_ALL == true) {
-        ubuntuFocalArchs = ["amd64", "arm64", "ppc64le", "s390x"]
+        ubuntuFocalArchs = ["amd64", "arm64", "ppc64le"]
     } else {
         ubuntuFocalArchs = ["amd64"]
     }
