@@ -198,7 +198,7 @@ def packageStatic() {
     })
     
     if (params.BUILD_ALL == true) {
-        def clefos7 = ["clefos"]
+        def s390xStatics = ["clefos", "debian-buster", "debian-sid", "debian-bullseye", "debian-stretch", "ubuntu-bionic", "ubuntu-eoan", "ubuntu-focal"]
         def clefos7Arch = ["s390x"]
         tasks << getTasks(clefos7, clefos7Arch, { distro, arch -> 
             def myNode = {
@@ -208,12 +208,16 @@ def packageStatic() {
                         checkout scm
                     }
                     def runtime = docker.image("ztbuild/${distro}-${arch}:latest")
+                    def pkgFormat = "DEB"
+                    if (distro == "clefos") {
+                        pkgFormat = "RPM"
+                    }
                     runtime.inside {
                         dir("build/") {
                             unstash "static-${arch}"
                             sh "mkdir -p build"
                             sh "mv zerotier-static-${arch} build/zerotier && chmod +x build/zerotier" 
-                            sh 'CMAKE_ARGS="-DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=RPM" make setup'
+                            sh "CMAKE_ARGS=\"-DPACKAGE_STATIC=1 -DZT_PACKAGE_FORMAT=${pkgFormat}\" make setup"
                             dir("build") {
                                 sh 'make package -j4 VERBOSE=1'
                             }
@@ -368,7 +372,7 @@ def buildDebianNative() {
     def debian = ["debian-buster" , "debian-stretch", "debian-sid", "debian-bullseye"]
     def debianArchs = []
     if (params.BUILD_ALL) {
-        debianArchs = ["s390x", "ppc64le", "i386", "armhf", "armel", "arm64", "amd64"]
+        debianArchs = ["ppc64le", "i386", "armhf", "armel", "arm64", "amd64"]
     } else {
         debianArchs = ["amd64", "i386"]
     }
@@ -422,7 +426,7 @@ def buildDebianNative() {
     def ubuntu = ["ubuntu-bionic", "ubuntu-eoan"]
     def ubuntuArchs = []
     if (params.BUILD_ALL == true) {
-        ubuntuArchs = ["i386", "amd64", "armhf", "arm64", "ppc64le", "s390x"]
+        ubuntuArchs = ["i386", "amd64", "armhf", "arm64", "ppc64le"]
     } else {
         ubuntuArchs = ["i386", "amd64"]
     }
@@ -431,7 +435,7 @@ def buildDebianNative() {
     def ubuntuFocal = ["ubuntu-focal"]
     def ubuntuFocalArchs = []
     if (params.BUILD_ALL == true) {
-        ubuntuFocalArchs = ["amd64", "arm64", "ppc64le", "s390x"]
+        ubuntuFocalArchs = ["amd64", "arm64", "ppc64le"]
     } else {
         ubuntuFocalArchs = ["amd64"]
     }
