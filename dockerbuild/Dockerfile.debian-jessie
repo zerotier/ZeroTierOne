@@ -14,7 +14,7 @@ RUN curl -s -k $go_pkg_url -o go.tar.gz && \
     tar -C /usr/local -xzf go.tar.gz && \
     rm go.tar.gz
 RUN if test "$TARGETPLATFORM" = "linux/arm/v6"; then \
-    ln -s /lib/arm-linux-gnueabi/ld-2.30.so /lib/ld-linux-armhf.so.3; \
+    ln -s /lib/arm-linux-gnueabi/ld-2.19.so /lib/ld-linux-armhf.so.3; \
     fi;
 
 RUN groupadd -g 1000 jenkins-build && useradd -u 1000 -g 1000 jenkins-build
