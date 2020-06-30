@@ -182,18 +182,18 @@ void Topology::doPeriodicTasks(void *tPtr, const int64_t now)
 
 	// Delete paths that are no longer held by anyone else ("weak reference" type behavior).
 	{
-		Vector< uint64_t > toDelete;
+		Vector< UniqueID > toDelete;
 		{
 			RWMutex::RLock l1(m_paths_l);
-			for (Map< uint64_t, SharedPtr< Path > >::iterator i(m_paths.begin()); i != m_paths.end();
+			for (Map< UniqueID, SharedPtr< Path > >::iterator i(m_paths.begin()); i != m_paths.end();
 			     ++i) {
 				if (i->second.weakGC())
 					toDelete.push_back(i->first);
 			}
 		}
-		for (Vector< uint64_t >::iterator i(toDelete.begin()); i != toDelete.end(); ++i) {
+		for (Vector< UniqueID >::iterator i(toDelete.begin()); i != toDelete.end(); ++i) {
 			RWMutex::Lock l1(m_paths_l);
-			const Map< uint64_t, SharedPtr< Path > >::iterator p(m_paths.find(*i));
+			const Map< UniqueID, SharedPtr< Path > >::iterator p(m_paths.find(*i));
 			if (likely(p != m_paths.end()))
 				m_paths.erase(p);
 		}

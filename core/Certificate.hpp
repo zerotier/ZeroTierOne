@@ -182,7 +182,7 @@ public:
 	}
 
 	ZT_INLINE unsigned long hashCode() const noexcept
-	{ return (unsigned long)Utils::loadAsIsEndian< uint32_t >(this->serialNo); }
+	{ return (unsigned long)Utils::loadMachineEndian< uint32_t >(this->serialNo); }
 
 	ZT_INLINE bool operator==(const ZT_Certificate &c) const noexcept
 	{ return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) == 0; }

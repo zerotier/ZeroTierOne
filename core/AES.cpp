@@ -349,8 +349,8 @@ void AES::GMAC::update(const void *const data, unsigned int len) noexcept
 			--len;
 			_r[_rp++] = *(in++);
 			if (_rp == 16) {
-				y0 ^= Utils::loadAsIsEndian< uint64_t >(_r);
-				y1 ^= Utils::loadAsIsEndian< uint64_t >(_r + 8);
+				y0 ^= Utils::loadMachineEndian< uint64_t >(_r);
+				y1 ^= Utils::loadMachineEndian< uint64_t >(_r + 8);
 				s_gfmul(h0, h1, y0, y1);
 				break;
 			}
@@ -358,8 +358,8 @@ void AES::GMAC::update(const void *const data, unsigned int len) noexcept
 	}
 
 	while (len >= 16) {
-		y0 ^= Utils::loadAsIsEndian< uint64_t >(in);
-		y1 ^= Utils::loadAsIsEndian< uint64_t >(in + 8);
+		y0 ^= Utils::loadMachineEndian< uint64_t >(in);
+		y1 ^= Utils::loadMachineEndian< uint64_t >(in + 8);
 		s_gfmul(h0, h1, y0, y1);
 		in += 16;
 		len -= 16;
@@ -488,8 +488,8 @@ void AES::GMAC::finish(uint8_t tag[16]) noexcept
 	if (_rp) {
 		while (_rp < 16)
 			_r[_rp++] = 0;
-		y0 ^= Utils::loadAsIsEndian< uint64_t >(_r);
-		y1 ^= Utils::loadAsIsEndian< uint64_t >(_r + 8);
+		y0 ^= Utils::loadMachineEndian< uint64_t >(_r);
+		y1 ^= Utils::loadMachineEndian< uint64_t >(_r + 8);
 		s_gfmul(h0, h1, y0, y1);
 	}
 
@@ -504,8 +504,8 @@ void AES::GMAC::finish(uint8_t tag[16]) noexcept
 	((uint8_t *)iv2)[15] = 1;
 	_aes._encryptSW((const uint8_t *)iv2, (uint8_t *)iv2);
 
-	Utils::storeAsIsEndian< uint64_t >(tag, iv2[0] ^ y0);
-	Utils::storeAsIsEndian< uint64_t >(tag + 8, iv2[1] ^ y1);
+	Utils::storeMachineEndian< uint64_t >(tag, iv2[0] ^ y0);
+	Utils::storeMachineEndian< uint64_t >(tag + 8, iv2[1] ^ y1);
 }
 
 // AES-CTR ------------------------------------------------------------------------------------------------------------

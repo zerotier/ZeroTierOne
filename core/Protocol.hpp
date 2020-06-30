@@ -834,11 +834,11 @@ static ZT_INLINE void salsa2012DeriveKey(const uint8_t *const in,uint8_t *const 
  */
 static ZT_INLINE int newPacket(uint8_t pkt[28],const uint64_t packetId,const Address destination,const Address source,const Verb verb) noexcept
 {
-	Utils::storeAsIsEndian<uint64_t>(pkt + ZT_PROTO_PACKET_ID_INDEX,packetId);
+	Utils::storeMachineEndian< uint64_t >(pkt + ZT_PROTO_PACKET_ID_INDEX, packetId);
 	destination.copyTo(pkt + ZT_PROTO_PACKET_DESTINATION_INDEX);
 	source.copyTo(pkt + ZT_PROTO_PACKET_SOURCE_INDEX);
 	pkt[ZT_PROTO_PACKET_FLAGS_INDEX] = 0;
-	Utils::storeAsIsEndian<uint64_t>(pkt + ZT_PROTO_PACKET_MAC_INDEX,0);
+	Utils::storeMachineEndian< uint64_t >(pkt + ZT_PROTO_PACKET_MAC_INDEX, 0);
 	pkt[ZT_PROTO_PACKET_VERB_INDEX] = (uint8_t)verb;
 	return ZT_PROTO_PACKET_VERB_INDEX + 1;
 }

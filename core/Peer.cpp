@@ -227,7 +227,7 @@ unsigned int Peer::hello(void *tPtr, int64_t localSocket, const InetAddress &atA
 	p1305.update(outp.unsafeData + ZT_PROTO_PACKET_ENCRYPTED_SECTION_START, ii - ZT_PROTO_PACKET_ENCRYPTED_SECTION_START);
 	uint64_t polyMac[2];
 	p1305.finish(polyMac);
-	Utils::storeAsIsEndian< uint64_t >(outp.unsafeData + ZT_PROTO_PACKET_MAC_INDEX, polyMac[0]);
+	Utils::storeMachineEndian< uint64_t >(outp.unsafeData + ZT_PROTO_PACKET_MAC_INDEX, polyMac[0]);
 
 	return (likely(RR->node->putPacket(tPtr, localSocket, atAddress, outp.unsafeData, ii))) ? ii : 0;
 }
@@ -704,7 +704,7 @@ unsigned int Peer::m_sendProbe(void *tPtr, int64_t localSocket, const InetAddres
 	const uint64_t packetId = k->nextMessage(RR->identity.address(), m_id.address());
 
 	uint8_t p[ZT_PROTO_MIN_PACKET_LENGTH];
-	Utils::storeAsIsEndian< uint64_t >(p + ZT_PROTO_PACKET_ID_INDEX, packetId);
+	Utils::storeMachineEndian< uint64_t >(p + ZT_PROTO_PACKET_ID_INDEX, packetId);
 	m_id.address().copyTo(p + ZT_PROTO_PACKET_DESTINATION_INDEX);
 	RR->identity.address().copyTo(p + ZT_PROTO_PACKET_SOURCE_INDEX);
 	p[ZT_PROTO_PACKET_FLAGS_INDEX] = 0;

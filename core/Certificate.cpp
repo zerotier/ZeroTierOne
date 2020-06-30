@@ -151,7 +151,7 @@ void Certificate::addSubjectCertificate(const uint8_t serialNo[ZT_SHA384_DIGEST_
 	// Enlarge array of uint8_t pointers, set new pointer to local copy of serial, and set
 	// certificates to point to potentially reallocated array.
 	m_subjectCertificates.resize(++this->subject.certificateCount);
-	m_subjectCertificates.back() = m_serials.back().data;
+	m_subjectCertificates.back() = m_serials.back().bytes();
 	this->subject.certificates = m_subjectCertificates.data();
 }
 

@@ -109,7 +109,7 @@ int Locator::marshal(uint8_t data[ZT_LOCATOR_MARSHAL_SIZE_MAX], const bool exclu
 		p += l;
 	}
 
-	Utils::storeAsIsEndian<uint16_t>(data + p, 0); // length of meta-data, currently always 0
+	Utils::storeMachineEndian< uint16_t >(data + p, 0); // length of meta-data, currently always 0
 	p += 2;
 
 	if (!excludeSignature) {

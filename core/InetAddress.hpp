@@ -19,6 +19,7 @@
 #include "MAC.hpp"
 #include "Containers.hpp"
 #include "TriviallyCopyable.hpp"
+#include "Blob.hpp"
 
 namespace ZeroTier {
 
@@ -74,7 +75,7 @@ public:
 	struct Hasher
 	{
 		ZT_INLINE std::size_t operator()(const InetAddress &a) const noexcept
-		{ return (std::size_t) a.hashCode(); }
+		{ return (std::size_t)a.hashCode(); }
 	};
 
 	ZT_INLINE InetAddress() noexcept
@@ -211,10 +212,10 @@ public:
 	{
 		switch (as.ss.ss_family) {
 			case AF_INET:
-				as.sa_in.sin_port = Utils::hton((uint16_t) port);
+				as.sa_in.sin_port = Utils::hton((uint16_t)port);
 				break;
 			case AF_INET6:
-				as.sa_in6.sin6_port = Utils::hton((uint16_t) port);
+				as.sa_in6.sin6_port = Utils::hton((uint16_t)port);
 				break;
 		}
 	}
@@ -387,7 +388,7 @@ public:
 				break;
 			case AF_INET6:
 				r.as.sa_in6.sin6_family = AF_INET6;
-				Utils::copy<16>(r.as.sa_in6.sin6_addr.s6_addr, as.sa_in6.sin6_addr.s6_addr);
+				Utils::copy< 16 >(r.as.sa_in6.sin6_addr.s6_addr, as.sa_in6.sin6_addr.s6_addr);
 				break;
 		}
 		return r;
@@ -436,12 +437,12 @@ public:
 	ZT_INLINE unsigned long hashCode() const noexcept
 	{
 		if (as.ss.ss_family == AF_INET) {
-			return (unsigned long) Utils::hash32(((uint32_t) as.sa_in.sin_addr.s_addr + (uint32_t) as.sa_in.sin_port) ^ (uint32_t) Utils::s_mapNonce);
+			return (unsigned long)Utils::hash32(((uint32_t)as.sa_in.sin_addr.s_addr + (uint32_t)as.sa_in.sin_port) ^ (uint32_t)Utils::s_mapNonce);
 		} else if (as.ss.ss_family == AF_INET6) {
-			return (unsigned long) Utils::hash64(
-				(Utils::loadAsIsEndian<uint64_t>(as.sa_in6.sin6_addr.s6_addr) +
-				 Utils::loadAsIsEndian<uint64_t>(as.sa_in6.sin6_addr.s6_addr + 8) +
-				 (uint64_t) as.sa_in6.sin6_port) ^
+			return (unsigned long)Utils::hash64(
+				(Utils::loadMachineEndian< uint64_t >(as.sa_in6.sin6_addr.s6_addr) +
+				 Utils::loadMachineEndian< uint64_t >(as.sa_in6.sin6_addr.s6_addr + 8) +
+				 (uint64_t)as.sa_in6.sin6_port) ^
 				Utils::s_mapNonce);
 		}
 		return Utils::fnv1a32(this, sizeof(InetAddress));
@@ -486,15 +487,15 @@ public:
 	{
 		if (as.ss.ss_family == a.as.ss.ss_family) {
 			if (as.ss.ss_family == AF_INET) {
-				const uint16_t p0 = Utils::ntoh((uint16_t) as.sa_in.sin_port);
-				const uint16_t p1 = Utils::ntoh((uint16_t) a.as.sa_in.sin_port);
+				const uint16_t p0 = Utils::ntoh((uint16_t)as.sa_in.sin_port);
+				const uint16_t p1 = Utils::ntoh((uint16_t)a.as.sa_in.sin_port);
 				if (p0 == p1)
-					return Utils::ntoh((uint32_t) as.sa_in.sin_addr.s_addr) < Utils::ntoh((uint32_t) a.as.sa_in.sin_addr.s_addr);
+					return Utils::ntoh((uint32_t)as.sa_in.sin_addr.s_addr) < Utils::ntoh((uint32_t)a.as.sa_in.sin_addr.s_addr);
 				return p0 < p1;
 			}
 			if (as.ss.ss_family == AF_INET6) {
-				const uint16_t p0 = Utils::ntoh((uint16_t) as.sa_in6.sin6_port);
-				const uint16_t p1 = Utils::ntoh((uint16_t) a.as.sa_in6.sin6_port);
+				const uint16_t p0 = Utils::ntoh((uint16_t)as.sa_in6.sin6_port);
+				const uint16_t p1 = Utils::ntoh((uint16_t)a.as.sa_in6.sin6_port);
 				if (p0 == p1)
 					return memcmp(as.sa_in6.sin6_addr.s6_addr, a.as.sa_in6.sin6_addr.s6_addr, 16) < 0;
 				return p0 < p1;
@@ -515,6 +516,34 @@ public:
 
 	ZT_INLINE bool operator>=(const InetAddress &a) const noexcept
 	{ return !(*this < a); }
+
+	/**
+	 * Generate a local unique key for this address
+	 *
+	 * This key is not comparable across instances or architectures.
+	 *
+	 * @return Local unique key
+	 */
+	ZT_INLINE UniqueID key() const noexcept
+	{
+		if (as.ss.ss_family == AF_INET) {
+			// For IPv4 we can just pack the IP and port into the first element.
+			return UniqueID(((uint64_t)as.sa_in.sin_addr.s_addr << 16U) ^ (uint64_t)as.sa_in.sin_port, 0);
+		} else if (likely(as.ss.ss_family == AF_INET6)) {
+			// The OR with (a2 == 0) is to make sure the second part of the UniqueID
+			// can never be zero, otherwise it could be made to collide with an IPv4
+			// IP address. We also construct this to make it so someone in a /64
+			// can't collide another address in the same /64.
+			const uint64_t a1 = Utils::loadMachineEndian< uint64_t >(as.sa_in6.sin6_addr.s6_addr);
+			const uint64_t a2 = Utils::hash64(Utils::s_mapNonce ^ Utils::loadMachineEndian< uint64_t >(as.sa_in6.sin6_addr.s6_addr + 8)) + (uint64_t)as.sa_in6.sin6_port;
+			return UniqueID(a1, a2 | (uint64_t)(a2 == 0));
+		} else if (likely(as.ss.ss_family == 0)) {
+			return UniqueID(0, 0);
+		} else {
+			// This should never be reached, but handle it somehow.
+			return UniqueID(Utils::fnv1a32(&as, sizeof(as)), 0);
+		}
+	}
 
 	/**
 	 * Compute an IPv6 link-local address

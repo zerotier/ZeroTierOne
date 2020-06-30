@@ -106,7 +106,7 @@ void InetAddress::set(const void *ipBytes, unsigned int ipLen, unsigned int port
 	if (ipLen == 4) {
 		as.sa_in.sin_family = AF_INET;
 		as.sa_in.sin_port = Utils::hton((uint16_t) port);
-		as.sa_in.sin_addr.s_addr = Utils::loadAsIsEndian<uint32_t>(ipBytes);
+		as.sa_in.sin_addr.s_addr = Utils::loadMachineEndian< uint32_t >(ipBytes);
 	} else if (ipLen == 16) {
 		as.sa_in6.sin6_family = AF_INET6;
 		as.sa_in6.sin6_port = Utils::hton((uint16_t) port);
@@ -369,14 +369,14 @@ int InetAddress::unmarshal(const uint8_t *restrict data, const int len) noexcept
 			if (unlikely(len < 7))
 				return -1;
 			as.sa_in.sin_family = AF_INET;
-			as.sa_in.sin_port = Utils::loadAsIsEndian<uint16_t>(data + 5);
-			as.sa_in.sin_addr.s_addr = Utils::loadAsIsEndian<uint32_t>(data + 1);
+			as.sa_in.sin_port = Utils::loadMachineEndian< uint16_t >(data + 5);
+			as.sa_in.sin_addr.s_addr = Utils::loadMachineEndian< uint32_t >(data + 1);
 			return 7;
 		case 6:
 			if (unlikely(len < 19))
 				return -1;
 			as.sa_in6.sin6_family = AF_INET6;
-			as.sa_in6.sin6_port = Utils::loadAsIsEndian<uint16_t>(data + 17);
+			as.sa_in6.sin6_port = Utils::loadMachineEndian< uint16_t >(data + 17);
 			Utils::copy<16>(as.sa_in6.sin6_addr.s6_addr, data + 1);
 			return 19;
 		default:

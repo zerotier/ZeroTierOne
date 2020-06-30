@@ -117,7 +117,7 @@ int MembershipCredential::marshal(uint8_t data[ZT_MEMBERSHIP_CREDENTIAL_MARSHAL_
 	p += 8;
 	Utils::storeBigEndian<uint64_t>(data + p, m_issuedTo.address);
 	p += 8;
-	Utils::storeAsIsEndian<uint64_t>(data + p, 0xffffffffffffffffULL);
+	Utils::storeMachineEndian< uint64_t >(data + p, 0xffffffffffffffffULL);
 	p += 8;
 
 	if (v2) {
@@ -131,9 +131,9 @@ int MembershipCredential::marshal(uint8_t data[ZT_MEMBERSHIP_CREDENTIAL_MARSHAL_
 		for (int k = 0;k < 6;++k) {
 			Utils::storeBigEndian<uint64_t>(data + p, (uint64_t) k + 3);
 			p += 8;
-			Utils::storeAsIsEndian<uint64_t>(data + p, Utils::loadAsIsEndian<uint64_t>(m_issuedTo.hash + (k * 8)));
+			Utils::storeMachineEndian< uint64_t >(data + p, Utils::loadMachineEndian< uint64_t >(m_issuedTo.hash + (k * 8)));
 			p += 8;
-			Utils::storeAsIsEndian<uint64_t>(data + p, 0xffffffffffffffffULL);
+			Utils::storeMachineEndian< uint64_t >(data + p, 0xffffffffffffffffULL);
 			p += 8;
 		}
 	}
@@ -268,22 +268,22 @@ unsigned int MembershipCredential::m_fillSigningBuf(uint64_t *buf) const noexcep
 	// embeded as a series of informational tuples.
 	if (m_issuedTo.haveHash()) {
 		buf[p++] = ZT_CONST_TO_BE_UINT64(3);
-		buf[p++] = Utils::loadAsIsEndian<uint64_t>(m_issuedTo.hash);
+		buf[p++] = Utils::loadMachineEndian< uint64_t >(m_issuedTo.hash);
 		buf[p++] = informational;
 		buf[p++] = ZT_CONST_TO_BE_UINT64(4);
-		buf[p++] = Utils::loadAsIsEndian<uint64_t>(m_issuedTo.hash + 8);
+		buf[p++] = Utils::loadMachineEndian< uint64_t >(m_issuedTo.hash + 8);
 		buf[p++] = informational;
 		buf[p++] = ZT_CONST_TO_BE_UINT64(5);
-		buf[p++] = Utils::loadAsIsEndian<uint64_t>(m_issuedTo.hash + 16);
+		buf[p++] = Utils::loadMachineEndian< uint64_t >(m_issuedTo.hash + 16);
 		buf[p++] = informational;
 		buf[p++] = ZT_CONST_TO_BE_UINT64(6);
-		buf[p++] = Utils::loadAsIsEndian<uint64_t>(m_issuedTo.hash + 24);
+		buf[p++] = Utils::loadMachineEndian< uint64_t >(m_issuedTo.hash + 24);
 		buf[p++] = informational;
 		buf[p++] = ZT_CONST_TO_BE_UINT64(7);
-		buf[p++] = Utils::loadAsIsEndian<uint64_t>(m_issuedTo.hash + 32);
+		buf[p++] = Utils::loadMachineEndian< uint64_t >(m_issuedTo.hash + 32);
 		buf[p++] = informational;
 		buf[p++] = ZT_CONST_TO_BE_UINT64(8);
-		buf[p++] = Utils::loadAsIsEndian<uint64_t>(m_issuedTo.hash + 40);
+		buf[p++] = Utils::loadMachineEndian< uint64_t >(m_issuedTo.hash + 40);
 		buf[p++] = informational;
 	}
 

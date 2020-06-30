@@ -16,37 +16,101 @@
 
 #include "Constants.hpp"
 #include "Utils.hpp"
+#include "TriviallyCopyable.hpp"
+
+#include <algorithm>
+
+// This header contains simple statically sized binary object types.
 
 namespace ZeroTier {
 
 /**
- * Container for arbitrary bytes for use in collections
- *
- * @tparam S Size of container in bytes
+ * Blob type for SHA384 hashes
  */
-template<unsigned int S>
-struct Blob
+struct SHA384Hash
 {
-	uint8_t data[S];
+	uint64_t data[6];
 
-	ZT_INLINE Blob() noexcept { Utils::zero<S>(data); }
-	explicit ZT_INLINE Blob(const void *const d) noexcept { Utils::copy<S>(data,d); }
+	ZT_INLINE SHA384Hash() noexcept
+	{ Utils::zero< 48 >(data); }
+
+	explicit ZT_INLINE SHA384Hash(const void *const d) noexcept
+	{ Utils::copy< 48 >(data, d); }
+
+	ZT_INLINE const uint8_t *bytes() const noexcept
+	{ return reinterpret_cast<const uint8_t *>(data); }
 
 	ZT_INLINE unsigned long hashCode() const noexcept
-	{ return (unsigned long)Utils::fnv1a32(data, S); }
+	{ return (unsigned long)data[0]; }
 
-	ZT_INLINE operator bool() const noexcept { return !Utils::allZero(data); }
+	ZT_INLINE operator bool() const noexcept
+	{ return ((data[0] != 0) && (data[1] != 0) && (data[2] != 0) && (data[3] != 0) && (data[4] != 0) && (data[5] != 0)); }
 
-	ZT_INLINE bool operator==(const Blob &b) const noexcept { return (memcmp(data,b.data,S) == 0); }
-	ZT_INLINE bool operator!=(const Blob &b) const noexcept { return (memcmp(data,b.data,S) != 0); }
-	ZT_INLINE bool operator<(const Blob &b) const noexcept { return (memcmp(data,b.data,S) < 0); }
-	ZT_INLINE bool operator>(const Blob &b) const noexcept { return (memcmp(data,b.data,S) > 0); }
-	ZT_INLINE bool operator<=(const Blob &b) const noexcept { return (memcmp(data,b.data,S) <= 0); }
-	ZT_INLINE bool operator>=(const Blob &b) const noexcept { return (memcmp(data,b.data,S) >= 0); }
+	ZT_INLINE bool operator==(const SHA384Hash &b) const noexcept
+	{ return ((data[0] == b.data[0]) && (data[1] == b.data[1]) && (data[2] == b.data[2]) && (data[3] == b.data[3]) && (data[4] == b.data[4]) && (data[5] == b.data[5])); }
+
+	ZT_INLINE bool operator!=(const SHA384Hash &b) const noexcept
+	{ return !(*this == b); }
+
+	ZT_INLINE bool operator<(const SHA384Hash &b) const noexcept
+	{ return (memcmp(data, b.data, 48) < 0); }
+
+	ZT_INLINE bool operator>(const SHA384Hash &b) const noexcept
+	{ return (memcmp(data, b.data, 48) > 0); }
+
+	ZT_INLINE bool operator<=(const SHA384Hash &b) const noexcept
+	{ return (memcmp(data, b.data, 48) <= 0); }
+
+	ZT_INLINE bool operator>=(const SHA384Hash &b) const noexcept
+	{ return (memcmp(data, b.data, 48) >= 0); }
 };
 
-typedef Blob<48> SHA384Hash;
-typedef Blob<16> GUID;
+/**
+ * Blob type for 128-bit GUIDs, UUIDs, etc.
+ */
+struct UniqueID
+{
+	uint64_t data[2];
+
+	ZT_INLINE UniqueID() noexcept
+	{}
+
+	ZT_INLINE UniqueID(const uint64_t a, const uint64_t b) noexcept
+	{
+		data[0] = a;
+		data[1] = b;
+	}
+
+	explicit ZT_INLINE UniqueID(const void *const d) noexcept
+	{ Utils::copy< 16 >(data, d); }
+
+	ZT_INLINE const uint8_t *bytes() const noexcept
+	{ return reinterpret_cast<const uint8_t *>(data); }
+
+	ZT_INLINE unsigned long hashCode() const noexcept
+	{ return (unsigned long)data[1]; }
+
+	ZT_INLINE operator bool() const noexcept
+	{ return ((data[0] != 0) && (data[1] != 0)); }
+
+	ZT_INLINE bool operator==(const SHA384Hash &b) const noexcept
+	{ return ((data[0] == b.data[0]) && (data[1] == b.data[1])); }
+
+	ZT_INLINE bool operator!=(const SHA384Hash &b) const noexcept
+	{ return !(*this == b); }
+
+	ZT_INLINE bool operator<(const SHA384Hash &b) const noexcept
+	{ return (memcmp(data, b.data, 16) < 0); }
+
+	ZT_INLINE bool operator>(const SHA384Hash &b) const noexcept
+	{ return (memcmp(data, b.data, 16) > 0); }
+
+	ZT_INLINE bool operator<=(const SHA384Hash &b) const noexcept
+	{ return (memcmp(data, b.data, 16) <= 0); }
+
+	ZT_INLINE bool operator>=(const SHA384Hash &b) const noexcept
+	{ return (memcmp(data, b.data, 16) >= 0); }
+};
 
 } // namespace ZeroTier
 

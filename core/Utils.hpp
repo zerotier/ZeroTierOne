@@ -593,7 +593,7 @@ static ZT_INLINE I ntoh(const I n) noexcept
  * @return Loaded raw integer
  */
 template< typename I >
-static ZT_INLINE I loadAsIsEndian(const void *const p) noexcept
+static ZT_INLINE I loadMachineEndian(const void *const p) noexcept
 {
 #ifdef ZT_NO_UNALIGNED_ACCESS
 	I tmp;
@@ -613,7 +613,7 @@ static ZT_INLINE I loadAsIsEndian(const void *const p) noexcept
  * @param i Integer to store
  */
 template< typename I >
-static ZT_INLINE void storeAsIsEndian(void *const p, const I i) noexcept
+static ZT_INLINE void storeMachineEndian(void *const p, const I i) noexcept
 {
 #ifdef ZT_NO_UNALIGNED_ACCESS
 	for(unsigned int k=0;k<sizeof(I);++k)

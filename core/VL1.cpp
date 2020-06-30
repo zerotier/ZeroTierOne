@@ -117,7 +117,7 @@ void VL1::onRemotePacket(void *const tPtr, const int64_t localSocket, const Inet
 			return;
 
 		static_assert((ZT_PROTO_PACKET_ID_INDEX + sizeof(uint64_t)) < ZT_PROTO_MIN_FRAGMENT_LENGTH, "overflow");
-		const uint64_t packetId = Utils::loadAsIsEndian< uint64_t >(data->unsafeData + ZT_PROTO_PACKET_ID_INDEX);
+		const uint64_t packetId = Utils::loadMachineEndian< uint64_t >(data->unsafeData + ZT_PROTO_PACKET_ID_INDEX);
 
 		static_assert((ZT_PROTO_PACKET_DESTINATION_INDEX + ZT_ADDRESS_LENGTH) < ZT_PROTO_MIN_FRAGMENT_LENGTH, "overflow");
 		const Address destination(data->unsafeData + ZT_PROTO_PACKET_DESTINATION_INDEX);
@@ -244,7 +244,7 @@ void VL1::onRemotePacket(void *const tPtr, const int64_t localSocket, const Inet
 					uint64_t mac[2];
 					s20cf.poly1305.finish(mac);
 					static_assert((ZT_PROTO_PACKET_MAC_INDEX + 8) < ZT_PROTO_MIN_PACKET_LENGTH, "overflow");
-					if (unlikely(Utils::loadAsIsEndian< uint64_t >(hdr + ZT_PROTO_PACKET_MAC_INDEX) != mac[0])) {
+					if (unlikely(Utils::loadMachineEndian< uint64_t >(hdr + ZT_PROTO_PACKET_MAC_INDEX) != mac[0])) {
 						ZT_SPEW("discarding packet %.16llx from %s(%s): packet MAC failed (none/poly1305)", packetId, source.toString().c_str(), fromAddr.toString().c_str());
 						RR->t->incomingPacketDropped(tPtr, 0xcc89c812, packetId, 0, peer->identity(), path->address(), hops, Protocol::VERB_NOP, ZT_TRACE_PACKET_DROP_REASON_MAC_FAILED);
 						return;
@@ -268,7 +268,7 @@ void VL1::onRemotePacket(void *const tPtr, const int64_t localSocket, const Inet
 					uint64_t mac[2];
 					s20cf.poly1305.finish(mac);
 					static_assert((ZT_PROTO_PACKET_MAC_INDEX + 8) < ZT_PROTO_MIN_PACKET_LENGTH, "overflow");
-					if (unlikely(Utils::loadAsIsEndian< uint64_t >(hdr + ZT_PROTO_PACKET_MAC_INDEX) != mac[0])) {
+					if (unlikely(Utils::loadMachineEndian< uint64_t >(hdr + ZT_PROTO_PACKET_MAC_INDEX) != mac[0])) {
 						ZT_SPEW("discarding packet %.16llx from %s(%s): packet MAC failed (salsa/poly1305)", packetId, source.toString().c_str(), fromAddr.toString().c_str());
 						RR->t->incomingPacketDropped(tPtr, 0xcc89c812, packetId, 0, peer->identity(), path->address(), hops, Protocol::VERB_NOP, ZT_TRACE_PACKET_DROP_REASON_MAC_FAILED);
 						return;
@@ -477,8 +477,8 @@ void VL1::m_sendPendingWhois(void *tPtr, int64_t now)
 
 SharedPtr< Peer > VL1::m_HELLO(void *tPtr, const SharedPtr< Path > &path, Buf &pkt, int packetSize)
 {
-	const uint64_t packetId = Utils::loadAsIsEndian< uint64_t >(pkt.unsafeData + ZT_PROTO_PACKET_ID_INDEX);
-	const uint64_t mac = Utils::loadAsIsEndian< uint64_t >(pkt.unsafeData + ZT_PROTO_PACKET_MAC_INDEX);
+	const uint64_t packetId = Utils::loadMachineEndian< uint64_t >(pkt.unsafeData + ZT_PROTO_PACKET_ID_INDEX);
+	const uint64_t mac = Utils::loadMachineEndian< uint64_t >(pkt.unsafeData + ZT_PROTO_PACKET_MAC_INDEX);
 	const uint8_t hops = pkt.unsafeData[ZT_PROTO_PACKET_FLAGS_INDEX] & ZT_PROTO_FLAG_FIELD_HOPS_MASK;
 
 	const uint8_t protoVersion = pkt.lI8< ZT_PROTO_PACKET_PAYLOAD_START >();
@@ -543,7 +543,7 @@ SharedPtr< Peer > VL1::m_HELLO(void *tPtr, const SharedPtr< Path > &path, Buf &p
 		}
 		packetSize -= ZT_HMACSHA384_LEN;
 		pkt.unsafeData[ZT_PROTO_PACKET_FLAGS_INDEX] &= ~ZT_PROTO_FLAG_FIELD_HOPS_MASK; // mask hops to 0
-		Utils::storeAsIsEndian< uint64_t >(pkt.unsafeData + ZT_PROTO_PACKET_MAC_INDEX, 0); // set MAC field to 0
+		Utils::storeMachineEndian< uint64_t >(pkt.unsafeData + ZT_PROTO_PACKET_MAC_INDEX, 0); // set MAC field to 0
 		HMACSHA384(peer->identityHelloHmacKey(), pkt.unsafeData, packetSize, hmac);
 		if (unlikely(!Utils::secureEq(hmac, pkt.unsafeData + packetSize, ZT_HMACSHA384_LEN))) {
 			RR->t->incomingPacketDropped(tPtr, 0x707a9891, packetId, 0, identityFromPeerPtr(peer), path->address(), hops, Protocol::VERB_HELLO, ZT_TRACE_PACKET_DROP_REASON_MAC_FAILED);

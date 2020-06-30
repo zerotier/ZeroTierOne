@@ -200,12 +200,12 @@ void HMACSHA384(const uint8_t key[ZT_SYMMETRIC_KEY_SIZE],const void *msg,const u
 	uint64_t kInPadded[16]; // input padded key
 	uint64_t outer[22]; // output padded key | H(input padded key | msg)
 
-	const uint64_t k0 = Utils::loadAsIsEndian<uint64_t>(key);
-	const uint64_t k1 = Utils::loadAsIsEndian<uint64_t>(key + 8);
-	const uint64_t k2 = Utils::loadAsIsEndian<uint64_t>(key + 16);
-	const uint64_t k3 = Utils::loadAsIsEndian<uint64_t>(key + 24);
-	const uint64_t k4 = Utils::loadAsIsEndian<uint64_t>(key + 32);
-	const uint64_t k5 = Utils::loadAsIsEndian<uint64_t>(key + 40);
+	const uint64_t k0 = Utils::loadMachineEndian< uint64_t >(key);
+	const uint64_t k1 = Utils::loadMachineEndian< uint64_t >(key + 8);
+	const uint64_t k2 = Utils::loadMachineEndian< uint64_t >(key + 16);
+	const uint64_t k3 = Utils::loadMachineEndian< uint64_t >(key + 24);
+	const uint64_t k4 = Utils::loadMachineEndian< uint64_t >(key + 32);
+	const uint64_t k5 = Utils::loadMachineEndian< uint64_t >(key + 40);
 
 	const uint64_t ipad = 0x3636363636363636ULL;
 	kInPadded[0] = k0 ^ ipad;

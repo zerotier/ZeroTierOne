@@ -94,7 +94,7 @@ public:
 	 */
 	ZT_INLINE SharedPtr< Path > path(const int64_t l, const InetAddress &r)
 	{
-		const uint64_t k = s_getPathKey(l, r);
+		const UniqueID k(r.key());
 		{
 			RWMutex::RLock lck(m_paths_l);
 			SharedPtr< Path > *const p = m_paths.get(k);
@@ -238,25 +238,6 @@ private:
 	void m_updateRootPeers_l_roots_certs(void *tPtr);
 	void m_writeTrustStore_l_roots_certs(void *tPtr) const;
 
-	// This gets an integer key from an InetAddress for looking up paths.
-	static ZT_INLINE uint64_t s_getPathKey(const int64_t l, const InetAddress &r) noexcept
-	{
-		// SECURITY: these will be used as keys in a Map<> which uses its own hasher that
-		// mixes in a per-invocation secret to work against hash collision attacks. See the
-		// map hasher in Containers.hpp. Otherwise the point here is really really fast
-		// path lookup by address. The number of paths is never likely to be high enough
-		// for a collision to be something we worry about. That would require a minimum of
-		// millions and millions of paths on a single node.
-		if (r.family() == AF_INET) {
-			return ((uint64_t)(r.as.sa_in.sin_addr.s_addr) << 32U) ^ ((uint64_t)r.as.sa_in.sin_port << 16U) ^ (uint64_t)l;
-		} else if (r.family() == AF_INET6) {
-			return Utils::loadAsIsEndian< uint64_t >(r.as.sa_in6.sin6_addr.s6_addr) + Utils::loadAsIsEndian< uint64_t >(r.as.sa_in6.sin6_addr.s6_addr + 8) + (uint64_t)r.as.sa_in6.sin6_port + (uint64_t)l;
-		} else {
-			// This should never really be used but it's here just in case.
-			return (uint64_t)Utils::fnv1a32(reinterpret_cast<const void *>(&r), sizeof(InetAddress)) + (uint64_t)l;
-		}
-	}
-
 	const RuntimeEnvironment *const RR;
 
 	RWMutex m_paths_l; // m_paths
@@ -264,7 +245,7 @@ private:
 	RWMutex m_roots_l; // m_roots, m_rootPeers
 	Mutex m_certs_l;   // m_certs, m_certsBySubjectIdentity
 
-	Map< uint64_t, SharedPtr< Path > > m_paths;
+	Map< UniqueID, SharedPtr< Path > > m_paths;
 
 	Map< Address, SharedPtr< Peer > > m_peers;
 
