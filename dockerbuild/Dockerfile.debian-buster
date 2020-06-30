@@ -13,7 +13,7 @@ RUN if test "$TARGETPLATFORM" = "linux/mips64le"; then \
     rm go.tar.gz; \
     fi;
 RUN if test "$TARGETPLATFORM" = "linux/arm/v6"; then \
-    ln -s /lib/arm-linux-gnueabi/ld-2.30.so /lib/ld-linux-armhf.so.3; \
+    ln -s /lib/arm-linux-gnueabi/ld-2.28.so /lib/ld-linux-armhf.so.3; \
     fi;
 
 RUN groupadd -g 1000 jenkins-build && useradd -u 1000 -g 1000 jenkins-build
