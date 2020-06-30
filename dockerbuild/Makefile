@@ -143,3 +143,9 @@ x86:
 	docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz" --platform linux/amd64 -f Dockerfile.ubuntu-eoan . -t ztbuild/ubuntu-eoan-amd64 --load
 	docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-386.tar.gz" --platform linux/386 -f Dockerfile.ubuntu-eoan . -t ztbuild/ubuntu-eoan-i386 --load
 	docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz" --platform linux/amd64 -f Dockerfile.kali-rolling . -t ztbuild/kali-rolling-amd64 --load
+
+armel:
+	docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-armv6l.tar.gz" --platform linux/arm/v6 -f Dockerfile.debian-buster . -t ztbuild/debian-buster-armel --load
+	docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-armv6l.tar.gz" --platform linux/arm/v6 -f Dockerfile.debian-stretch . -t ztbuild/debian-stretch-armel --load
+	docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-armv6l.tar.gz" --platform linux/arm/v6 -f Dockerfile.debian-bullseye . -t ztbuild/debian-bullseye-armel --load
+	docker buildx build --build-arg go_pkg_url="https://dl.google.com/go/go${GO_VERSION}.linux-armv6l.tar.gz" --platform linux/arm/v6 -f Dockerfile.debian-sid . -t ztbuild/debian-sid-armel --load
