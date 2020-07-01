@@ -307,12 +307,12 @@ std::vector<InetAddress> BSDEthernetTap::ips() const
 
 void BSDEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
 {
-	char putBuf[ZT_MAX_MTU + 64];
+	uint8_t putBuf[ZT_MAX_MTU + 64];
 	if ((_fd > 0)&&(len <= _mtu)&&(_enabled)) {
-		to.copyTo(putBuf,6);
-		from.copyTo(putBuf + 6,6);
-		*((uint16_t *)(putBuf + 12)) = htons((uint16_t)etherType);
-		memcpy(putBuf + 14,data,len);
+		to.copyTo(putBuf);
+		from.copyTo(putBuf + 6);
+		Utils::storeBigEndian(putBuf + 12, (uint16_t)etherType);
+		Utils::copy(putBuf + 14,data,len);
 		len += 14;
 		::write(_fd,putBuf,len);
 	}
@@ -340,7 +340,7 @@ void BSDEthernetTap::scanMulticastGroups(std::vector<MulticastGroup> &added,std:
 				struct sockaddr_dl *in = (struct sockaddr_dl *)p->ifma_name;
 				struct sockaddr_dl *la = (struct sockaddr_dl *)p->ifma_addr;
 				if ((la->sdl_alen == 6)&&(in->sdl_nlen <= _dev.length())&&(!memcmp(_dev.data(),in->sdl_data,in->sdl_nlen)))
-					newGroups.push_back(MulticastGroup(MAC(la->sdl_data + la->sdl_nlen,6),0));
+					newGroups.push_back(MulticastGroup(MAC(la->sdl_data + la->sdl_nlen),0));
 			}
 			p = p->ifma_next;
 		}
@@ -390,7 +390,7 @@ void BSDEthernetTap::threadMain()
 	fd_set readfds,nullfds;
 	MAC to,from;
 	int n,nfds,r;
-	char getBuf[ZT_MAX_MTU + 64];
+	uint8_t getBuf[ZT_MAX_MTU + 64];
 
 	// Wait for a moment after startup -- wait for Network to finish
 	// constructing itself.
@@ -424,10 +424,9 @@ void BSDEthernetTap::threadMain()
 						r = _mtu + 14;
 
 					if (_enabled) {
-						to.setTo(getBuf,6);
-						from.setTo(getBuf + 6,6);
-						unsigned int etherType = ntohs(((const uint16_t *)getBuf)[6]);
-						_handler(_arg,(void *)0,_nwid,from,to,etherType,0,(const void *)(getBuf + 14),r - 14);
+						to.setTo(getBuf);
+						from.setTo(getBuf + 6);
+						_handler(_arg,(void *)0,_nwid,from,to,Utils::loadBigEndian<uint16_t>(getBuf + 12),0,(const void *)(getBuf + 14),r - 14);
 					}
 
 					r = 0;
