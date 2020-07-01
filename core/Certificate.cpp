@@ -185,6 +185,14 @@ void Certificate::addSubjectUpdateUrl(const char *url)
 	this->subject.updateUrlCount = (unsigned int)m_updateUrls.size();
 }
 
+void Certificate::setExtendedAttributes(const Dictionary &x)
+{
+	m_extendedAttributes.clear();
+	x.encode(m_extendedAttributes);
+	this->extendedAttributes = m_extendedAttributes.data();
+	this->extendedAttributesSize = (unsigned int)m_extendedAttributes.size();
+}
+
 Vector< uint8_t > Certificate::encode(const bool omitSignature) const
 {
 	Vector< uint8_t > enc;

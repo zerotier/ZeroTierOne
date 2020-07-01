@@ -48,16 +48,12 @@ namespace ZeroTier {
 class Certificate : public ZT_Certificate
 {
 	friend class SharedPtr< Certificate >;
-
 	friend class SharedPtr< const Certificate >;
 
 public:
 	Certificate() noexcept;
-
 	Certificate(const ZT_Certificate &apiCert);
-
 	Certificate(const Certificate &cert);
-
 	~Certificate();
 
 	Certificate &operator=(const ZT_Certificate &cert);
@@ -116,13 +112,7 @@ public:
 	 *
 	 * @param x Extended attributes (set by issuer)
 	 */
-	ZT_INLINE void setExtendedAttributes(const Dictionary &x)
-	{
-		m_extendedAttributes.clear();
-		x.encode(m_extendedAttributes);
-		this->extendedAttributes = m_extendedAttributes.data();
-		this->extendedAttributesSize = (unsigned int)m_extendedAttributes.size();
-	}
+	void setExtendedAttributes(const Dictionary &x);
 
 	/**
 	 * Marshal this certificate in binary form

@@ -1161,9 +1161,14 @@ extern "C" const char *ZTT_crypto()
 				return "Verify decoded certificate";
 			}
 			ZT_T_PRINTF("OK" ZT_EOL_S);
-
-			cert.zero();
-			cert2.zero();
+			
+			ZT_T_PRINTF("  Test certificate copy/construct... ");
+			SharedPtr<Certificate> cert3(new Certificate(*cert2));
+			if (!ZTT_deepCompareCertificates(*cert2, *cert3)) {
+				ZT_T_PRINTF("FAILED (compare copy with original)" ZT_EOL_S);
+				return "Certificate copy";
+			}
+			ZT_T_PRINTF("OK" ZT_EOL_S);
 		}
 	} catch (std::exception &e) {
 		ZT_T_PRINTF(ZT_EOL_S "[crypto] Unexpected exception: %s" ZT_EOL_S, e.what());
