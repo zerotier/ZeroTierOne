@@ -379,6 +379,19 @@ extern "C" const char *ZTT_general()
 			ZT_T_PRINTF("OK" ZT_EOL_S);
 		}
 
+#ifdef ZT_ARCH_X64
+		ZT_T_PRINTF("[general] X64 CPUID: aes=%d avx=%d avx2=%d avx512f=%d fsrm=%d rdrand=%d sha=%d vaes=%d vpclmulqdq=%d" ZT_EOL_S,
+			Utils::CPUID.aes,
+			Utils::CPUID.avx,
+			Utils::CPUID.avx2,
+			Utils::CPUID.avx512f,
+			Utils::CPUID.fsrm,
+			Utils::CPUID.rdrand,
+			Utils::CPUID.sha,
+			Utils::CPUID.vaes,
+			Utils::CPUID.vpclmulqdq);
+#endif
+
 		{
 			ZT_T_PRINTF("[general] Testing Utils::countBits() functions... ");
 			uint32_t i32 = 0;
