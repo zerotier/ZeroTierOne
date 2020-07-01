@@ -219,30 +219,44 @@ public:
 	}
 
 	ZT_INLINE MAC &operator=(const uint64_t m) noexcept
-	{ m_mac = m; return *this; }
+	{
+		m_mac = m;
+		return *this;
+	}
 
 	ZT_INLINE bool operator==(const MAC &m) const noexcept
 	{ return (m_mac == m.m_mac); }
+
 	ZT_INLINE bool operator!=(const MAC &m) const noexcept
 	{ return (m_mac != m.m_mac); }
+
 	ZT_INLINE bool operator<(const MAC &m) const noexcept
 	{ return (m_mac < m.m_mac); }
+
 	ZT_INLINE bool operator<=(const MAC &m) const noexcept
 	{ return (m_mac <= m.m_mac); }
+
 	ZT_INLINE bool operator>(const MAC &m) const noexcept
 	{ return (m_mac > m.m_mac); }
+
 	ZT_INLINE bool operator>=(const MAC &m) const noexcept
 	{ return (m_mac >= m.m_mac); }
+
 	ZT_INLINE bool operator==(const uint64_t m) const noexcept
 	{ return (m_mac == m); }
+
 	ZT_INLINE bool operator!=(const uint64_t m) const noexcept
 	{ return (m_mac != m); }
+
 	ZT_INLINE bool operator<(const uint64_t m) const noexcept
 	{ return (m_mac < m); }
+
 	ZT_INLINE bool operator<=(const uint64_t m) const noexcept
 	{ return (m_mac <= m); }
+
 	ZT_INLINE bool operator>(const uint64_t m) const noexcept
 	{ return (m_mac > m); }
+
 	ZT_INLINE bool operator>=(const uint64_t m) const noexcept
 	{ return (m_mac >= m); }
 

@@ -707,14 +707,7 @@ static ZT_INLINE void copy(void *dest, const void *src) noexcept
 {
 #if defined(ZT_ARCH_X64) && defined(__GNUC__)
 	unsigned long l = L;
-	asm volatile ("rep movsb"
-		: "=D" (dest),
-		"=S" (src),
-		"=c" (l)
-		: "0" (dest),
-		"1" (src),
-		"2" (l)
-		: "memory");
+	asm volatile ("cld ; rep movsb" : "+c"(l), "+S"(src), "+D"(dest));
 #else
 	memcpy(dest, src, L);
 #endif
@@ -730,14 +723,7 @@ static ZT_INLINE void copy(void *dest, const void *src) noexcept
 static ZT_INLINE void copy(void *dest, const void *src, unsigned long len) noexcept
 {
 #if defined(ZT_ARCH_X64) && defined(__GNUC__)
-	asm volatile ("rep movsb"
-		: "=D" (dest),
-		"=S" (src),
-		"=c" (len)
-		: "0" (dest),
-		"1" (src),
-		"2" (len)
-		: "memory");
+	asm volatile ("cld ; rep movsb" : "+c"(len), "+S"(src), "+D"(dest));
 #else
 	memcpy(dest, src, len);
 #endif
@@ -750,8 +736,15 @@ static ZT_INLINE void copy(void *dest, const void *src, unsigned long len) noexc
  * @param dest Memory to zero
  */
 template< unsigned long L >
-static ZT_INLINE void zero(void *const dest) noexcept
-{ memset(dest, 0, L); }
+static ZT_INLINE void zero(void *dest) noexcept
+{
+#if defined(ZT_ARCH_X64) && defined(__GNUC__)
+	unsigned long l = L;
+	asm volatile ("cld ; rep stosb" :"+c" (l), "+D" (dest) : "a" (0));
+#else
+	memset(dest, 0, L);
+#endif
+}
 
 /**
  * Zero memory block whose size is known at run time
@@ -759,8 +752,14 @@ static ZT_INLINE void zero(void *const dest) noexcept
  * @param dest Memory to zero
  * @param len Size in bytes
  */
-static ZT_INLINE void zero(void *const dest, const unsigned long len) noexcept
-{ memset(dest, 0, len); }
+static ZT_INLINE void zero(void *dest, unsigned long len) noexcept
+{
+#if defined(ZT_ARCH_X64) && defined(__GNUC__)
+	asm volatile ("cld ; rep stosb" :"+c" (len), "+D" (dest) : "a" (0));
+#else
+	memset(dest, 0, len);
+#endif
+}
 
 } // namespace Utils
 

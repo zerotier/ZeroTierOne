@@ -88,7 +88,7 @@ struct UniqueID
 	{ return reinterpret_cast<const uint8_t *>(data); }
 
 	ZT_INLINE unsigned long hashCode() const noexcept
-	{ return (unsigned long)data[1]; }
+	{ return (unsigned long)(data[0] ^ data[1]); }
 
 	ZT_INLINE operator bool() const noexcept
 	{ return ((data[0] != 0) && (data[1] != 0)); }

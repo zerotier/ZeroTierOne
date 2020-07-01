@@ -541,7 +541,7 @@ public:
 			return UniqueID(0, 0);
 		} else {
 			// This should never be reached, but handle it somehow.
-			return UniqueID(Utils::fnv1a32(&as, sizeof(as)), 0);
+			return UniqueID(as.ss.ss_family, Utils::fnv1a32(&as, sizeof(as)));
 		}
 	}
 
