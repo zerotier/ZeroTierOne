@@ -17,35 +17,30 @@
 
 namespace ZeroTier {
 
-void Certificate::clear()
+Certificate::Certificate() noexcept
 {
-	Utils::zero< sizeof(ZT_Certificate) >((ZT_Certificate *)this);
-
-	m_identities.clear();
-	m_locators.clear();
-	m_strings.clear();
-	m_serials.clear();
-
-	m_subjectIdentities.clear();
-	m_subjectNetworks.clear();
-	m_updateUrls.clear();
-	m_subjectCertificates.clear();
-	m_extendedAttributes.clear();
-	m_subjectUniqueId.clear();
-	m_subjectUniqueIdProofSignature.clear();
-	m_signature.clear();
+	ZT_Certificate *const sup = this;
+	Utils::zero< sizeof(ZT_Certificate) >(sup);
 }
 
-Certificate &Certificate::operator=(const ZT_Certificate &apiCert)
+Certificate::Certificate(const ZT_Certificate &apiCert)
 {
-	clear();
-	Utils::copy< sizeof(ZT_Certificate) >((ZT_Certificate *)this, &apiCert);
-	return *this;
+	ZT_Certificate *const sup = this;
+	Utils::copy< sizeof(ZT_Certificate) >(sup, &apiCert);
 }
 
-Certificate &Certificate::operator=(const Certificate &cert)
+Certificate::Certificate(const Certificate &cert)
+{ *this = cert; }
+
+Certificate::~Certificate()
+{}
+
+Certificate &Certificate::operator=(const ZT_Certificate &cert)
 {
-	*this = *((const ZT_Certificate *)(&cert));
+	m_clear();
+
+	ZT_Certificate *const sup = this;
+	Utils::copy< sizeof(ZT_Certificate) >(sup, &cert);
 
 	// Zero these since we must explicitly attach all the objects from
 	// the other certificate to copy them into our containers.
@@ -57,9 +52,15 @@ Certificate &Certificate::operator=(const Certificate &cert)
 	this->subject.certificateCount = 0;
 	this->subject.updateUrls = nullptr;
 	this->subject.updateUrlCount = 0;
+	this->subject.uniqueId = nullptr;
+	this->subject.uniqueIdProofSignature = nullptr;
+	this->subject.uniqueIdSize = 0;
+	this->subject.uniqueIdProofSignatureSize = 0;
 	this->extendedAttributes = nullptr;
 	this->extendedAttributesSize = 0;
 	this->issuer = nullptr;
+	this->signature = nullptr;
+	this->signatureSize = 0;
 
 	for (unsigned int i = 0; i < cert.subject.identityCount; ++i) {
 		if (cert.subject.identities[i].identity) {
@@ -86,15 +87,32 @@ Certificate &Certificate::operator=(const Certificate &cert)
 		}
 	}
 
+	if ((cert.subject.uniqueId) && (cert.subject.uniqueIdSize > 0)) {
+		m_subjectUniqueId.assign(cert.subject.uniqueId, cert.subject.uniqueId + cert.subject.uniqueIdSize);
+		this->subject.uniqueId = m_subjectUniqueId.data();
+		this->subject.uniqueIdSize = (unsigned int)m_subjectUniqueId.size();
+	}
+	if ((cert.subject.uniqueIdProofSignature) && (cert.subject.uniqueIdProofSignatureSize > 0)) {
+		m_subjectUniqueIdProofSignature.assign(cert.subject.uniqueIdProofSignature, cert.subject.uniqueIdProofSignature + cert.subject.uniqueIdProofSignatureSize);
+		this->subject.uniqueIdProofSignature = m_subjectUniqueIdProofSignature.data();
+		this->subject.uniqueIdProofSignatureSize = (unsigned int)m_subjectUniqueIdProofSignature.size();
+	}
+
+	if (cert.issuer) {
+		m_identities.push_back(*reinterpret_cast<const Identity *>(cert.issuer));
+		this->issuer = &(m_identities.back());
+	}
+
 	if ((cert.extendedAttributes) && (cert.extendedAttributesSize > 0)) {
 		m_extendedAttributes.assign(cert.extendedAttributes, cert.extendedAttributes + cert.extendedAttributesSize);
 		this->extendedAttributes = m_extendedAttributes.data();
 		this->extendedAttributesSize = (unsigned int)m_extendedAttributes.size();
 	}
 
-	if (cert.issuer) {
-		m_identities.push_back(*reinterpret_cast<const Identity *>(cert.issuer));
-		this->issuer = &(m_identities.back());
+	if ((cert.signature) && (cert.signatureSize > 0)) {
+		m_signature.assign(cert.signature, cert.signature + cert.signatureSize);
+		this->signature = m_signature.data();
+		this->signatureSize = (unsigned int)m_signature.size();
 	}
 
 	return *this;
@@ -215,7 +233,10 @@ Vector< uint8_t > Certificate::encode(const bool omitSignature) const
 	if (this->issuerName.host[0])
 		d.add("iN.h", this->issuerName.host);
 
-	if ((!omitSignature) && (this->signatureSize > 0) && (this->signatureSize <= sizeof(this->signature)))
+	if ((this->extendedAttributes) && (this->extendedAttributesSize > 0))
+		d["x"].assign(this->extendedAttributes, this->extendedAttributes + this->extendedAttributesSize);
+
+	if ((!omitSignature) && (this->signatureSize > 0) && (this->signature))
 		d["si"].assign(this->signature, this->signature + this->signatureSize);
 
 	d.encode(enc);
@@ -226,7 +247,7 @@ bool Certificate::decode(const Vector< uint8_t > &data)
 {
 	char tmp[256], tmp2[ZT_CERTIFICATE_MAX_STRING_LENGTH + 1];
 
-	clear();
+	m_clear();
 
 	Dictionary d;
 	if (!d.decode(data.data(), (unsigned int)data.size()))
@@ -237,12 +258,6 @@ bool Certificate::decode(const Vector< uint8_t > &data)
 	this->validity[0] = (int64_t)d.getUI("v#0");
 	this->validity[1] = (int64_t)d.getUI("v#1");
 	this->maxPathLength = (unsigned int)d.getUI("mP");
-
-	m_extendedAttributes = d["x"];
-	if (!m_extendedAttributes.empty()) {
-		this->extendedAttributes = m_extendedAttributes.data();
-		this->extendedAttributesSize = (unsigned int)m_extendedAttributes.size();
-	}
 
 	this->subject.timestamp = (int64_t)d.getUI("s.t");
 
@@ -341,6 +356,12 @@ bool Certificate::decode(const Vector< uint8_t > &data)
 		if (url)
 			addSubjectUpdateUrl(tmp2);
 		else return false;
+	}
+
+	m_extendedAttributes = d["x"];
+	if (!m_extendedAttributes.empty()) {
+		this->extendedAttributes = m_extendedAttributes.data();
+		this->extendedAttributesSize = (unsigned int)m_extendedAttributes.size();
 	}
 
 	m_signature = d["si"];
@@ -453,9 +474,29 @@ bool Certificate::setSubjectUniqueId(const uint8_t uniqueId[ZT_CERTIFICATE_UNIQU
 	return true;
 }
 
+void Certificate::m_clear()
+{
+	ZT_Certificate *const sup = this;
+	Utils::zero< sizeof(ZT_Certificate) >(sup);
+
+	m_identities.clear();
+	m_locators.clear();
+	m_strings.clear();
+	m_serials.clear();
+
+	m_subjectIdentities.clear();
+	m_subjectNetworks.clear();
+	m_updateUrls.clear();
+	m_subjectCertificates.clear();
+	m_extendedAttributes.clear();
+	m_subjectUniqueId.clear();
+	m_subjectUniqueIdProofSignature.clear();
+	m_signature.clear();
+}
+
 void Certificate::m_encodeSubject(const ZT_Certificate_Subject &s, Dictionary &d, bool omitUniqueIdProofSignature)
 {
-	char tmp[256];
+	char tmp[64];
 
 	d.add("s.t", (uint64_t)s.timestamp);
 

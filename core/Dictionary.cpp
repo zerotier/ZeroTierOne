@@ -21,23 +21,14 @@ Dictionary::Dictionary()
 Dictionary::~Dictionary()
 {}
 
-Vector< uint8_t > &Dictionary::operator[](const char *k)
-{
-	if (k)
-		return m_entries[s_key(k)];
-	else return m_entries[""];
-}
+Vector< uint8_t > &Dictionary::operator[](const char *const k)
+{ return m_entries[s_key(k)]; }
 
-const Vector< uint8_t > &Dictionary::operator[](const char *k) const
+const Vector< uint8_t > &Dictionary::operator[](const char *const k) const
 {
 	static const Vector< uint8_t > s_emptyEntry;
-	if (k) {
-		SortedMap< String, Vector< uint8_t > >::const_iterator e(m_entries.find(s_key(k)));
-		return (e == m_entries.end()) ? s_emptyEntry : e->second;
-	} else {
-		SortedMap< String, Vector< uint8_t > >::const_iterator e(m_entries.find(""));
-		return (e == m_entries.end()) ? s_emptyEntry : e->second;
-	}
+	const SortedMap< String, Vector< uint8_t > >::const_iterator e(m_entries.find(s_key(k)));
+	return (e == m_entries.end()) ? s_emptyEntry : e->second;
 }
 
 void Dictionary::add(const char *k, bool v)
@@ -50,16 +41,16 @@ void Dictionary::add(const char *k, bool v)
 
 void Dictionary::add(const char *k, const Address &v)
 {
-	Vector< uint8_t > &e = (*this)[k];
-	e.resize(ZT_ADDRESS_STRING_SIZE_MAX);
-	v.toString((char *)e.data());
+	char tmp[ZT_ADDRESS_STRING_SIZE_MAX];
+	v.toString(tmp);
+	add(k, tmp);
 }
 
 void Dictionary::add(const char *k, const char *v)
 {
-	if ((v) && (*v)) {
-		Vector< uint8_t > &e = (*this)[k];
-		e.clear();
+	Vector< uint8_t > &e = (*this)[k];
+	e.clear();
+	if (v) {
 		while (*v)
 			e.push_back((uint8_t)*(v++));
 	}
@@ -68,7 +59,7 @@ void Dictionary::add(const char *k, const char *v)
 void Dictionary::add(const char *k, const void *data, unsigned int len)
 {
 	Vector< uint8_t > &e = (*this)[k];
-	if (len != 0) {
+	if (likely(len != 0)) {
 		e.assign((const uint8_t *)data, (const uint8_t *)data + len);
 	} else {
 		e.clear();
@@ -150,48 +141,48 @@ bool Dictionary::decode(const void *data, unsigned int len)
 	Vector< uint8_t > *v = nullptr;
 	bool escape = false;
 	for (unsigned int di = 0; di < len; ++di) {
-		uint8_t c = reinterpret_cast<const uint8_t *>(data)[di];
-		if (!c) break;
-		if (v) {
-			if (escape) {
-				escape = false;
-				switch (c) {
-					case 48:
-						v->push_back(0);
-						break;
-					case 101:
-						v->push_back(61);
-						break;
-					case 110:
-						v->push_back(10);
-						break;
-					case 114:
-						v->push_back(13);
-						break;
-					default:
-						v->push_back(c);
-						break;
-				}
-			} else {
-				if (c == (uint8_t)'\n') {
-					k.clear();
-					v = nullptr;
-				} else if (c == 92) { // backslash
-					escape = true;
+		const uint8_t c = reinterpret_cast<const uint8_t *>(data)[di];
+		if (c) {
+			if (v) {
+				if (escape) {
+					escape = false;
+					switch (c) {
+						case 48:
+							v->push_back(0);
+							break;
+						case 101:
+							v->push_back(61);
+							break;
+						case 110:
+							v->push_back(10);
+							break;
+						case 114:
+							v->push_back(13);
+							break;
+						default:
+							v->push_back(c);
+							break;
+					}
 				} else {
-					v->push_back(c);
+					if (c == (uint8_t)'\n') {
+						k.clear();
+						v = nullptr;
+					} else if (c == 92) { // backslash
+						escape = true;
+					} else {
+						v->push_back(c);
+					}
+				}
+			} else {
+				if (c == (uint8_t)'=') {
+					v = &m_entries[k];
+				} else if ((c < 33) || (c > 126) || (c == 92)) {
+					return false;
+				} else {
+					k.push_back(c);
 				}
 			}
-		} else {
-			if ((c < 33) || (c > 126) || (c == 92)) {
-				return false;
-			} else if (c == (uint8_t)'=') {
-				k.push_back(0);
-				v = &m_entries[k];
-			} else {
-				k.push_back(c);
-			}
-		}
+		} else break;
 	}
 	return true;
 }
@@ -206,6 +197,21 @@ char *Dictionary::arraySubscript(char buf[256],const char *name,const unsigned l
 		}
 	}
 	buf[0] = 0;
+	return buf;
+}
+
+String Dictionary::s_key(const char *k) noexcept
+{
+	String buf;
+	if (likely(k != nullptr)) {
+		for (;;) {
+			const char c = *(k++);
+			if ((c >= 33) && (c <= 126) && (c != 61) && (c != 92)) // printable ASCII with no spaces, equals, or backslash
+				buf.push_back(c);
+			else if (c == 0)
+				break;
+		}
+	}
 	return buf;
 }
 

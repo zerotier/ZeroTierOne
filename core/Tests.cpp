@@ -283,6 +283,7 @@ static bool ZTT_deepCompareCertificates(const Certificate &a, const Certificate 
 		return false;
 	if ((a.subject.uniqueIdProofSignature == nullptr) != (b.subject.uniqueIdProofSignature == nullptr))
 		return false;
+
 	if ((a.subject.uniqueId != nullptr) && (a.subject.uniqueIdProofSignature != nullptr)) {
 		if (
 			(memcmp(a.subject.uniqueId, b.subject.uniqueId, a.subject.uniqueIdSize) != 0) ||
@@ -1082,10 +1083,9 @@ extern "C" const char *ZTT_crypto()
 		}
 
 		{
-			char tmp[4096];
+			char tmp[256];
 
 			ZT_T_PRINTF("[crypto] Testing Certificate..." ZT_EOL_S);
-			Certificate cert;
 
 			ZT_T_PRINTF("  Create test subject and issuer identities... ");
 			Identity testSubjectId, testIssuerId;
@@ -1100,53 +1100,57 @@ extern "C" const char *ZTT_crypto()
 			ZT_T_PRINTF("OK %s" ZT_EOL_S, tmp);
 
 			ZT_T_PRINTF("  Create and sign certificate... ");
-			cert.subject.timestamp = now();
-			cert.addSubjectIdentity(testSubjectId);
-			cert.addSubjectNetwork(12345, testSubjectId.fingerprint());
-			cert.addSubjectUpdateUrl("https://www.zerotier.com/");
-			ZT_SETSTR(cert.subject.name.serialNo, "serialNo");
-			ZT_SETSTR(cert.subject.name.commonName, "commonName");
-			ZT_SETSTR(cert.subject.name.country, "country");
-			ZT_SETSTR(cert.subject.name.organization, "organization");
-			ZT_SETSTR(cert.subject.name.unit, "unit");
-			ZT_SETSTR(cert.subject.name.locality, "locality");
-			ZT_SETSTR(cert.subject.name.province, "province");
-			ZT_SETSTR(cert.subject.name.streetAddress, "streetAddress");
-			ZT_SETSTR(cert.subject.name.postalCode, "postalCode");
-			ZT_SETSTR(cert.subject.name.email, "email");
-			ZT_SETSTR(cert.subject.name.url, "url");
-			ZT_SETSTR(cert.subject.name.host, "host");
-			cert.timestamp = cert.subject.timestamp;
-			cert.validity[0] = 0;
-			cert.validity[1] = 9223372036854775807LL;
-			Utils::copy<sizeof(ZT_Certificate_Subject)>(&cert.issuerName, &cert.subject.name);
-			cert.setSubjectUniqueId(uniqueId, uniqueIdPrivate);
-			cert.sign(testIssuerId);
-			Vector< uint8_t > enc(cert.encode());
+			SharedPtr<Certificate> cert(new Certificate());
+			cert->subject.timestamp = now();
+			cert->addSubjectIdentity(testSubjectId);
+			cert->addSubjectNetwork(12345, testSubjectId.fingerprint());
+			cert->addSubjectUpdateUrl("https://www.zerotier.com/");
+			ZT_SETSTR(cert->subject.name.serialNo, "serialNo");
+			ZT_SETSTR(cert->subject.name.commonName, "commonName");
+			ZT_SETSTR(cert->subject.name.country, "country");
+			ZT_SETSTR(cert->subject.name.organization, "organization");
+			ZT_SETSTR(cert->subject.name.unit, "unit");
+			ZT_SETSTR(cert->subject.name.locality, "locality");
+			ZT_SETSTR(cert->subject.name.province, "province");
+			ZT_SETSTR(cert->subject.name.streetAddress, "streetAddress");
+			ZT_SETSTR(cert->subject.name.postalCode, "postalCode");
+			ZT_SETSTR(cert->subject.name.email, "email");
+			ZT_SETSTR(cert->subject.name.url, "url");
+			ZT_SETSTR(cert->subject.name.host, "host");
+			cert->timestamp = cert->subject.timestamp;
+			cert->validity[0] = 0;
+			cert->validity[1] = 9223372036854775807LL;
+			Utils::copy<sizeof(ZT_Certificate_Name)>(&cert->issuerName, &cert->subject.name);
+			cert->setSubjectUniqueId(uniqueId, uniqueIdPrivate);
+			cert->sign(testIssuerId);
+			Vector< uint8_t > enc(cert->encode());
 			ZT_T_PRINTF("OK (%d bytes)" ZT_EOL_S, (int)enc.size());
 
 			ZT_T_PRINTF("  Testing certificate verify... ");
-			if (!cert.verify()) {
+			if (!cert->verify()) {
 				ZT_T_PRINTF("FAILED (verify original)" ZT_EOL_S);
 				return "Verify original certificate";
 			}
 			ZT_T_PRINTF("OK" ZT_EOL_S);
 
 			ZT_T_PRINTF("  Test certificate decode from marshaled format... ");
-			Certificate cert2;
-			if (!cert2.decode(enc)) {
+			SharedPtr<Certificate> cert2(new Certificate());
+			if (!cert2->decode(enc)) {
 				ZT_T_PRINTF("FAILED (decode)" ZT_EOL_S);
 				return "Certificate decode";
 			}
-			if (!ZTT_deepCompareCertificates(cert, cert2)) {
+			if (!ZTT_deepCompareCertificates(*cert, *cert2)) {
 				ZT_T_PRINTF("FAILED (compare decoded with original)" ZT_EOL_S);
 				return "Certificate decode and compare";
 			}
-			if (!cert2.verify()) {
+			if (!cert2->verify()) {
 				ZT_T_PRINTF("FAILED (verify decoded certificate)");
 				return "Verify decoded certificate";
 			}
 			ZT_T_PRINTF("OK" ZT_EOL_S);
+
+			cert.zero();
+			cert2.zero();
 		}
 	} catch (std::exception &e) {
 		ZT_T_PRINTF(ZT_EOL_S "[crypto] Unexpected exception: %s" ZT_EOL_S, e.what());

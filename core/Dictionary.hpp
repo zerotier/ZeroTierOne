@@ -268,6 +268,7 @@ public:
 	template< typename V >
 	ZT_INLINE static void append(V &out, const char *const k, const uint64_t v)
 	{
+		s_appendKey(out, k);
 		char buf[17];
 		Utils::hex(v, buf);
 		unsigned int i = 0;
@@ -370,6 +371,14 @@ public:
 		return mlen;
 	}
 
+	/**
+	 * Append #sub where sub is a hexadecimal string to 'name' and store in 'buf'
+	 *
+	 * @param buf Buffer to store subscript key
+	 * @param name Root name
+	 * @param sub Subscript index
+	 * @return Pointer to 'buf'
+	 */
 	static char *arraySubscript(char buf[256],const char *name,const unsigned long sub) noexcept;
 
 private:
@@ -407,27 +416,16 @@ private:
 	ZT_INLINE static void s_appendKey(V &out, const char *k)
 	{
 		for (;;) {
-			char c = *(k++);
-			if (c == 0)
-				break;
+			const char c = *(k++);
 			if ((c >= 33) && (c <= 126) && (c != 61) && (c != 92)) // printable ASCII with no spaces, equals, or backslash
 				out.push_back((uint8_t)c);
+			else if (c == 0)
+				break;
 		}
 		out.push_back((uint8_t)'=');
 	}
 
-	ZT_INLINE static String s_key(const char *k) noexcept
-	{
-		String buf;
-		for(;;) {
-			char c = *(k++);
-			if (c == 0)
-				break;
-			if ((c >= 33) && (c <= 126) && (c != 61) && (c != 92)) // printable ASCII with no spaces, equals, or backslash
-				buf.push_back(c);
-		}
-		return buf;
-	}
+	static String s_key(const char *k) noexcept;
 
 	// Dictionary maps need to be sorted so that they always encode in the same order
 	// to yield blobs that can be hashed and signed reproducibly. Other than for areas

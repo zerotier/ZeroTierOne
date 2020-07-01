@@ -110,6 +110,7 @@
 #include <xmmintrin.h>
 #include <emmintrin.h>
 #include <immintrin.h>
+#include <tmmintrin.h>
 #include <mmintrin.h>
 #endif
 

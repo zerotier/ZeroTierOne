@@ -18,9 +18,10 @@
 #include "Poly1305.hpp"
 #include "Utils.hpp"
 #include "Endpoint.hpp"
-#include "Locator.hpp"
 
 #include <algorithm>
+#include <memory>
+#include <utility>
 
 namespace ZeroTier {
 
@@ -93,10 +94,8 @@ struct p_CompareLittleEndian
 };
 
 // This is a simpler memory-intensive frankenhash for V1 identity generation.
-bool identityV1ProofOfWorkCriteria(const void *in, const unsigned int len)
+bool identityV1ProofOfWorkCriteria(const void *in, const unsigned int len, uint64_t *const w)
 {
-	uint64_t w[ZT_IDENTITY_V1_POW_MEMORY_SIZE / 8];
-
 	// Fill work buffer with pseudorandom bytes using a construction that should be
 	// relatively hostile to GPU acceleration. GPUs usually implement branching by
 	// executing all branches and then selecting the answer, which means this
@@ -165,29 +164,36 @@ bool Identity::generate(const Type t)
 			break;
 
 		case P384: {
-			for (;;) {
-				// Loop until we pass the PoW criteria. The nonce is only 8 bits, so generate
-				// some new key material every time it wraps. The ECC384 generator is slightly
-				// faster so use that one.
-				m_pub[0] = 0; // zero nonce
-				C25519::generateCombined(m_pub + 1, m_priv + 1);
-				ECC384GenerateKey(m_pub + 1 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE, m_priv + ZT_C25519_COMBINED_PRIVATE_KEY_SIZE);
+			//uint64_t w[ZT_IDENTITY_V1_POW_MEMORY_SIZE / 8];
+			uint64_t *const w = (uint64_t *)malloc(ZT_IDENTITY_V1_POW_MEMORY_SIZE);
+			if (!w)
+				return false;
+			try {
 				for (;;) {
-					if (identityV1ProofOfWorkCriteria(m_pub, sizeof(m_pub)))
-						break;
-					if (++m_pub[0] == 0)
-						ECC384GenerateKey(m_pub + 1 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE, m_priv + ZT_C25519_COMBINED_PRIVATE_KEY_SIZE);
-				}
+					// Loop until we pass the PoW criteria. The nonce is only 8 bits, so generate
+					// some new key material every time it wraps. The ECC384 generator is slightly
+					// faster so use that one.
+					m_pub[0] = 0; // zero nonce
+					C25519::generateCombined(m_pub + 1, m_priv + 1);
+					ECC384GenerateKey(m_pub + 1 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE, m_priv + ZT_C25519_COMBINED_PRIVATE_KEY_SIZE);
+					for (;;) {
+						if (identityV1ProofOfWorkCriteria(m_pub, sizeof(m_pub), w))
+							break;
+						if (++m_pub[0] == 0)
+							ECC384GenerateKey(m_pub + 1 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE, m_priv + ZT_C25519_COMBINED_PRIVATE_KEY_SIZE);
+					}
 
-				// If we passed PoW then check that the address is valid, otherwise loop
-				// back around and run the whole process again.
-				m_computeHash();
-				const Address addr(m_fp.hash);
-				if (!addr.isReserved()) {
-					m_fp.address = addr;
-					break;
+					// If we passed PoW then check that the address is valid, otherwise loop
+					// back around and run the whole process again.
+					m_computeHash();
+					const Address addr(m_fp.hash);
+					if (!addr.isReserved()) {
+						m_fp.address = addr;
+						break;
+					}
 				}
-			}
+			} catch ( ... ) {}
+			free(w);
 		}
 			break;
 
@@ -215,7 +221,12 @@ bool Identity::locallyValidate() const noexcept
 				case P384: {
 					if (Address(m_fp.hash) != m_fp.address)
 						return false;
-					return identityV1ProofOfWorkCriteria(m_pub, sizeof(m_pub));
+					uint64_t *const w = (uint64_t *)malloc(ZT_IDENTITY_V1_POW_MEMORY_SIZE);
+					if (!w)
+						return false;
+					const bool valid = identityV1ProofOfWorkCriteria(m_pub, sizeof(m_pub), w);
+					free(w);
+					return valid;
 				}
 			}
 		}

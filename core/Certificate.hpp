@@ -48,25 +48,28 @@ namespace ZeroTier {
 class Certificate : public ZT_Certificate
 {
 	friend class SharedPtr< Certificate >;
+
 	friend class SharedPtr< const Certificate >;
 
 public:
-	ZT_INLINE Certificate() noexcept
-	{ this->clear(); }
+	Certificate() noexcept;
 
-	ZT_INLINE Certificate(const ZT_Certificate &apiCert)
-	{ *this = apiCert; }
+	Certificate(const ZT_Certificate &apiCert);
 
-	ZT_INLINE Certificate(const Certificate &cert)
-	{ *this = cert; }
+	Certificate(const Certificate &cert);
 
-	/**
-	 * Zero all fields and release all extra memory
-	 */
-	void clear();
+	~Certificate();
 
-	Certificate &operator=(const ZT_Certificate &apiCert);
-	Certificate &operator=(const Certificate &cert);
+	Certificate &operator=(const ZT_Certificate &cert);
+
+	ZT_INLINE Certificate &operator=(const Certificate &cert)
+	{
+		if (likely(&cert != this)) {
+			const ZT_Certificate *const sup = &cert;
+			*this = *sup;
+		}
+		return *this;
+	}
 
 	/**
 	 * Add a subject node/identity without a locator
@@ -186,18 +189,25 @@ public:
 
 	ZT_INLINE bool operator==(const ZT_Certificate &c) const noexcept
 	{ return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) == 0; }
+
 	ZT_INLINE bool operator!=(const ZT_Certificate &c) const noexcept
 	{ return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) != 0; }
+
 	ZT_INLINE bool operator<(const ZT_Certificate &c) const noexcept
 	{ return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) < 0; }
+
 	ZT_INLINE bool operator<=(const ZT_Certificate &c) const noexcept
 	{ return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) <= 0; }
+
 	ZT_INLINE bool operator>(const ZT_Certificate &c) const noexcept
 	{ return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) > 0; }
+
 	ZT_INLINE bool operator>=(const ZT_Certificate &c) const noexcept
 	{ return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) >= 0; }
 
 private:
+	void m_clear();
+
 	static void m_encodeSubject(const ZT_Certificate_Subject &s, Dictionary &d, bool omitUniqueIdProofSignature);
 
 	// These hold any identity or locator objects that are owned by and should
@@ -218,7 +228,7 @@ private:
 	Vector< uint8_t > m_subjectUniqueIdProofSignature;
 	Vector< uint8_t > m_signature;
 
-	std::atomic<int> __refCount;
+	std::atomic< int > __refCount;
 };
 
 } // namespace ZeroTier

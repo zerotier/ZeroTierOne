@@ -512,7 +512,9 @@ void AES::GMAC::finish(uint8_t tag[16]) noexcept
 
 #ifdef ZT_AES_AESNI
 
-#if !defined(__WINDOWS__)
+// Disable VAES stuff on compilers too old to compile these intrinsics,
+// and MinGW64 also seems not to support them so disable on Windows.
+#if !defined(__WINDOWS__) && ((__GNUC__ >= 8) || (__clang_major__ >= 7))
 
 #define ZT_AES_VAES512
 static
@@ -793,19 +795,34 @@ void AES::CTR::crypt(const void *const input, unsigned int len) noexcept
 		_len = totalLen + len;
 
 		if (likely(len >= 64)) {
+
+			// Compiler supports both AVX256 VAES and AVX512 VAES
 #if defined(ZT_AES_VAES512) && defined(ZT_AES_VAES256)
 			if (Utils::CPUID.vaes) {
-				if ((!Utils::CPUID.avx512f) || ((len < 1024))) {
+				if ((!Utils::CPUID.avx512f) || (len < 512)) {
 					p_aesCtrInnerVAES256(len, c0, c1, in, out, k);
 				} else {
 					p_aesCtrInnerVAES512(len, c0, c1, in, out, k);
 				}
 			} else {
-#endif
 				p_aesCtrInner128(len, c0, c1, in, out, k);
-#if defined(ZT_AES_VAES512) && defined(ZT_AES_VAES256)
 			}
 #endif
+
+			// Compiler only supports AVX256 VAES
+#if !defined(ZT_AES_VAES512) && defined(ZT_AES_VAES256)
+			if (Utils::CPUID.vaes) {
+				p_aesCtrInnerVAES256(len, c0, c1, in, out, k);
+			} else {
+				p_aesCtrInner128(len, c0, c1, in, out, k);
+			}
+#endif
+
+			// Compiler only support conventional AES-NI
+#if !defined(ZT_AES_VAES512) && !defined(ZT_AES_VAES256)
+			p_aesCtrInner128(len, c0, c1, in, out, k);
+#endif
+
 		}
 
 		while (len >= 16) {
@@ -1194,7 +1211,7 @@ void AES::_decryptSW(const uint8_t in[16], uint8_t out[16]) const noexcept
 
 #ifdef ZT_AES_AESNI
 
-static ZT_INLINE __m128i _init256_1_aesni(__m128i a, __m128i b) noexcept
+static __m128i _init256_1_aesni(__m128i a, __m128i b) noexcept
 {
 	__m128i x, y;
 	b = _mm_shuffle_epi32(b, 0xff);
@@ -1208,7 +1225,7 @@ static ZT_INLINE __m128i _init256_1_aesni(__m128i a, __m128i b) noexcept
 	return x;
 }
 
-static ZT_INLINE __m128i _init256_2_aesni(__m128i a, __m128i b) noexcept
+static __m128i _init256_2_aesni(__m128i a, __m128i b) noexcept
 {
 	__m128i x, y, z;
 	y = _mm_aeskeygenassist_si128(a, 0x00);
