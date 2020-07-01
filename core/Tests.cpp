@@ -1161,7 +1161,7 @@ extern "C" const char *ZTT_crypto()
 				return "Verify decoded certificate";
 			}
 			ZT_T_PRINTF("OK" ZT_EOL_S);
-			
+
 			ZT_T_PRINTF("  Test certificate copy/construct... ");
 			SharedPtr<Certificate> cert3(new Certificate(*cert2));
 			if (!ZTT_deepCompareCertificates(*cert2, *cert3)) {

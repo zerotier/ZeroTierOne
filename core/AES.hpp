@@ -57,14 +57,10 @@ public:
 	 * @param key 256-bit key
 	 */
 	explicit ZT_INLINE AES(const void *const key) noexcept
-	{
-		this->init(key);
-	}
+	{ this->init(key); }
 
 	ZT_INLINE ~AES()
-	{
-		Utils::burn(&_k, sizeof(_k));
-	}
+	{ Utils::burn(&_k, sizeof(_k)); }
 
 	/**
 	 * Set (or re-set) this AES256 cipher's key
@@ -117,7 +113,6 @@ public:
 	}
 
 	class GMACSIVEncryptor;
-
 	class GMACSIVDecryptor;
 
 	/**
@@ -126,7 +121,6 @@ public:
 	class GMAC
 	{
 		friend class GMACSIVEncryptor;
-
 		friend class GMACSIVDecryptor;
 
 	public:
@@ -201,7 +195,6 @@ public:
 	class CTR
 	{
 		friend class GMACSIVEncryptor;
-
 		friend class GMACSIVDecryptor;
 
 	public:
@@ -329,9 +322,7 @@ public:
 		 * @param len Length of plaintext chunk
 		 */
 		ZT_INLINE void update1(const void *const input, const unsigned int len) noexcept
-		{
-			_gmac.update(input, len);
-		}
+		{ _gmac.update(input, len); }
 
 		/**
 		 * Finish first pass, compute CTR IV, initialize second pass.
@@ -374,9 +365,7 @@ public:
 		 * @param len Length of plaintext chunk
 		 */
 		ZT_INLINE void update2(const void *const input, const unsigned int len) noexcept
-		{
-			_ctr.crypt(input, len);
-		}
+		{ _ctr.crypt(input, len); }
 
 		/**
 		 * Finish second pass and return a pointer to the opaque 128-bit IV+MAC block
@@ -500,9 +489,7 @@ private:
 	static const uint32_t rcon[10];
 
 	void _initSW(const uint8_t key[32]) noexcept;
-
 	void _encryptSW(const uint8_t in[16], uint8_t out[16]) const noexcept;
-
 	void _decryptSW(const uint8_t in[16], uint8_t out[16]) const noexcept;
 
 	union

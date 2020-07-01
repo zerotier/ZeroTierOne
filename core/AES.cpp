@@ -497,12 +497,13 @@ void AES::GMAC::finish(uint8_t tag[16]) noexcept
 	s_gfmul(h0, h1, y0, y1);
 
 	uint64_t iv2[2];
-	for (unsigned int i = 0; i < 12; ++i) ((uint8_t *)iv2)[i] = _iv[i];
-	((uint8_t *)iv2)[12] = 0;
-	((uint8_t *)iv2)[13] = 0;
-	((uint8_t *)iv2)[14] = 0;
-	((uint8_t *)iv2)[15] = 1;
-	_aes._encryptSW((const uint8_t *)iv2, (uint8_t *)iv2);
+	Utils::copy<12>(iv2, _iv);
+#if __BYTE_ORDER == __BIG_ENDIAN
+	reinterpret_cast<uint32_t *>(iv2)[3] = 0x00000001;
+#else
+	reinterpret_cast<uint32_t *>(iv2)[3] = 0x01000000;
+#endif
+	_aes._encryptSW(reinterpret_cast<const uint8_t *>(iv2), reinterpret_cast<uint8_t *>(iv2));
 
 	Utils::storeMachineEndian< uint64_t >(tag, iv2[0] ^ y0);
 	Utils::storeMachineEndian< uint64_t >(tag + 8, iv2[1] ^ y1);
@@ -966,9 +967,6 @@ void AES::CTR::finish() noexcept
 
 // Software AES and AES key expansion ---------------------------------------------------------------------------------
 
-#define readuint32_t(i) Utils::loadBigEndian<uint32_t>(i)
-#define writeuint32_t(o, v) Utils::storeBigEndian<uint32_t>((o),(uint32_t)(v))
-
 const uint32_t AES::Te0[256] = {0xc66363a5, 0xf87c7c84, 0xee777799, 0xf67b7b8d, 0xfff2f20d, 0xd66b6bbd, 0xde6f6fb1, 0x91c5c554, 0x60303050, 0x02010103, 0xce6767a9, 0x562b2b7d, 0xe7fefe19, 0xb5d7d762, 0x4dababe6, 0xec76769a, 0x8fcaca45, 0x1f82829d, 0x89c9c940, 0xfa7d7d87, 0xeffafa15, 0xb25959eb, 0x8e4747c9, 0xfbf0f00b, 0x41adadec, 0xb3d4d467, 0x5fa2a2fd, 0x45afafea, 0x239c9cbf, 0x53a4a4f7, 0xe4727296, 0x9bc0c05b, 0x75b7b7c2, 0xe1fdfd1c, 0x3d9393ae, 0x4c26266a, 0x6c36365a, 0x7e3f3f41, 0xf5f7f702, 0x83cccc4f, 0x6834345c, 0x51a5a5f4, 0xd1e5e534, 0xf9f1f108, 0xe2717193, 0xabd8d873, 0x62313153, 0x2a15153f, 0x0804040c, 0x95c7c752, 0x46232365, 0x9dc3c35e, 0x30181828, 0x379696a1, 0x0a05050f, 0x2f9a9ab5, 0x0e070709, 0x24121236, 0x1b80809b, 0xdfe2e23d, 0xcdebeb26, 0x4e272769, 0x7fb2b2cd, 0xea75759f,
                                 0x1209091b, 0x1d83839e, 0x582c2c74, 0x341a1a2e, 0x361b1b2d, 0xdc6e6eb2, 0xb45a5aee, 0x5ba0a0fb, 0xa45252f6, 0x763b3b4d, 0xb7d6d661, 0x7db3b3ce, 0x5229297b, 0xdde3e33e, 0x5e2f2f71, 0x13848497, 0xa65353f5, 0xb9d1d168, 0x00000000, 0xc1eded2c, 0x40202060, 0xe3fcfc1f, 0x79b1b1c8, 0xb65b5bed, 0xd46a6abe, 0x8dcbcb46, 0x67bebed9, 0x7239394b, 0x944a4ade, 0x984c4cd4, 0xb05858e8, 0x85cfcf4a, 0xbbd0d06b, 0xc5efef2a, 0x4faaaae5, 0xedfbfb16, 0x864343c5, 0x9a4d4dd7, 0x66333355, 0x11858594, 0x8a4545cf, 0xe9f9f910, 0x04020206, 0xfe7f7f81, 0xa05050f0, 0x783c3c44, 0x259f9fba, 0x4ba8a8e3, 0xa25151f3, 0x5da3a3fe, 0x804040c0, 0x058f8f8a, 0x3f9292ad, 0x219d9dbc, 0x70383848, 0xf1f5f504, 0x63bcbcdf, 0x77b6b6c1, 0xafdada75, 0x42212163, 0x20101030, 0xe5ffff1a, 0xfdf3f30e, 0xbfd2d26d,
                                 0x81cdcd4c, 0x180c0c14, 0x26131335, 0xc3ecec2f, 0xbe5f5fe1, 0x359797a2, 0x884444cc, 0x2e171739, 0x93c4c457, 0x55a7a7f2, 0xfc7e7e82, 0x7a3d3d47, 0xc86464ac, 0xba5d5de7, 0x3219192b, 0xe6737395, 0xc06060a0, 0x19818198, 0x9e4f4fd1, 0xa3dcdc7f, 0x44222266, 0x542a2a7e, 0x3b9090ab, 0x0b888883, 0x8c4646ca, 0xc7eeee29, 0x6bb8b8d3, 0x2814143c, 0xa7dede79, 0xbc5e5ee2, 0x160b0b1d, 0xaddbdb76, 0xdbe0e03b, 0x64323256, 0x743a3a4e, 0x140a0a1e, 0x924949db, 0x0c06060a, 0x4824246c, 0xb85c5ce4, 0x9fc2c25d, 0xbdd3d36e, 0x43acacef, 0xc46262a6, 0x399191a8, 0x319595a4, 0xd3e4e437, 0xf279798b, 0xd5e7e732, 0x8bc8c843, 0x6e373759, 0xda6d6db7, 0x018d8d8c, 0xb1d5d564, 0x9c4e4ed2, 0x49a9a9e0, 0xd86c6cb4, 0xac5656fa, 0xf3f4f407, 0xcfeaea25, 0xca6565af, 0xf47a7a8e, 0x47aeaee9, 0x10080818,
@@ -1013,14 +1011,14 @@ void AES::_initSW(const uint8_t key[32]) noexcept
 {
 	uint32_t *rk = _k.sw.ek;
 
-	rk[0] = readuint32_t(key);
-	rk[1] = readuint32_t(key + 4);
-	rk[2] = readuint32_t(key + 8);
-	rk[3] = readuint32_t(key + 12);
-	rk[4] = readuint32_t(key + 16);
-	rk[5] = readuint32_t(key + 20);
-	rk[6] = readuint32_t(key + 24);
-	rk[7] = readuint32_t(key + 28);
+	rk[0] = Utils::loadBigEndian<uint32_t>(key);
+	rk[1] = Utils::loadBigEndian<uint32_t>(key + 4);
+	rk[2] = Utils::loadBigEndian<uint32_t>(key + 8);
+	rk[3] = Utils::loadBigEndian<uint32_t>(key + 12);
+	rk[4] = Utils::loadBigEndian<uint32_t>(key + 16);
+	rk[5] = Utils::loadBigEndian<uint32_t>(key + 20);
+	rk[6] = Utils::loadBigEndian<uint32_t>(key + 24);
+	rk[7] = Utils::loadBigEndian<uint32_t>(key + 28);
 	for (int i = 0;;) {
 		uint32_t temp = rk[7];
 		rk[8] = rk[0] ^ (Te2[(temp >> 16U) & 0xffU] & 0xff000000U) ^ (Te3[(temp >> 8U) & 0xffU] & 0x00ff0000U) ^ (Te0[(temp) & 0xffU] & 0x0000ff00U) ^ (Te1[(temp >> 24U)] & 0x000000ffU) ^ rcon[i];
@@ -1076,10 +1074,10 @@ void AES::_encryptSW(const uint8_t in[16], uint8_t out[16]) const noexcept
 	const uint32_t *const restrict rk = _k.sw.ek;
 	const uint32_t m8 = 0xff;
 	uint32_t s0, s1, s2, s3, t0, t1, t2, t3;
-	s0 = readuint32_t(in) ^ rk[0];
-	s1 = readuint32_t(in + 4) ^ rk[1];
-	s2 = readuint32_t(in + 8) ^ rk[2];
-	s3 = readuint32_t(in + 12) ^ rk[3];
+	s0 = Utils::loadBigEndian<uint32_t>(in) ^ rk[0];
+	s1 = Utils::loadBigEndian<uint32_t>(in + 4) ^ rk[1];
+	s2 = Utils::loadBigEndian<uint32_t>(in + 8) ^ rk[2];
+	s3 = Utils::loadBigEndian<uint32_t>(in + 12) ^ rk[3];
 	t0 = Te0[s0 >> 24U] ^ Te1[(s1 >> 16U) & m8] ^ Te2[(s2 >> 8U) & m8] ^ Te3[s3 & m8] ^ rk[4];
 	t1 = Te0[s1 >> 24U] ^ Te1[(s2 >> 16U) & m8] ^ Te2[(s3 >> 8U) & m8] ^ Te3[s0 & m8] ^ rk[5];
 	t2 = Te0[s2 >> 24U] ^ Te1[(s3 >> 16U) & m8] ^ Te2[(s0 >> 8U) & m8] ^ Te3[s1 & m8] ^ rk[6];
@@ -1135,10 +1133,10 @@ void AES::_encryptSW(const uint8_t in[16], uint8_t out[16]) const noexcept
 	const uint32_t m8_24 = 0xff000000;
 	const uint32_t m8_16 = 0x00ff0000;
 	const uint32_t m8_8 = 0x0000ff00;
-	writeuint32_t(out, (Te2[(t0 >> 24U)] & m8_24) ^ (Te3[(t1 >> 16U) & m8] & m8_16) ^ (Te0[(t2 >> 8U) & m8] & m8_8) ^ (Te1[(t3) & m8] & m8) ^ rk[56]);
-	writeuint32_t(out + 4, (Te2[(t1 >> 24U)] & m8_24) ^ (Te3[(t2 >> 16U) & m8] & m8_16) ^ (Te0[(t3 >> 8U) & m8] & m8_8) ^ (Te1[(t0) & m8] & m8) ^ rk[57]);
-	writeuint32_t(out + 8, (Te2[(t2 >> 24U)] & m8_24) ^ (Te3[(t3 >> 16U) & m8] & m8_16) ^ (Te0[(t0 >> 8U) & m8] & m8_8) ^ (Te1[(t1) & m8] & m8) ^ rk[58]);
-	writeuint32_t(out + 12, (Te2[(t3 >> 24U)] & m8_24) ^ (Te3[(t0 >> 16U) & m8] & m8_16) ^ (Te0[(t1 >> 8U) & m8] & m8_8) ^ (Te1[(t2) & m8] & m8) ^ rk[59]);
+	Utils::storeBigEndian<uint32_t>(out, (Te2[(t0 >> 24U)] & m8_24) ^ (Te3[(t1 >> 16U) & m8] & m8_16) ^ (Te0[(t2 >> 8U) & m8] & m8_8) ^ (Te1[(t3) & m8] & m8) ^ rk[56]);
+	Utils::storeBigEndian<uint32_t>(out + 4, (Te2[(t1 >> 24U)] & m8_24) ^ (Te3[(t2 >> 16U) & m8] & m8_16) ^ (Te0[(t3 >> 8U) & m8] & m8_8) ^ (Te1[(t0) & m8] & m8) ^ rk[57]);
+	Utils::storeBigEndian<uint32_t>(out + 8, (Te2[(t2 >> 24U)] & m8_24) ^ (Te3[(t3 >> 16U) & m8] & m8_16) ^ (Te0[(t0 >> 8U) & m8] & m8_8) ^ (Te1[(t1) & m8] & m8) ^ rk[58]);
+	Utils::storeBigEndian<uint32_t>(out + 12, (Te2[(t3 >> 24U)] & m8_24) ^ (Te3[(t0 >> 16U) & m8] & m8_16) ^ (Te0[(t1 >> 8U) & m8] & m8_8) ^ (Te1[(t2) & m8] & m8) ^ rk[59]);
 }
 
 void AES::_decryptSW(const uint8_t in[16], uint8_t out[16]) const noexcept
@@ -1146,10 +1144,10 @@ void AES::_decryptSW(const uint8_t in[16], uint8_t out[16]) const noexcept
 	const uint32_t *restrict rk = _k.sw.dk;
 	uint32_t s0, s1, s2, s3, t0, t1, t2, t3;
 	const uint32_t m8 = 0xff;
-	s0 = readuint32_t(in) ^ rk[0];
-	s1 = readuint32_t(in + 4) ^ rk[1];
-	s2 = readuint32_t(in + 8) ^ rk[2];
-	s3 = readuint32_t(in + 12) ^ rk[3];
+	s0 = Utils::loadBigEndian<uint32_t>(in) ^ rk[0];
+	s1 = Utils::loadBigEndian<uint32_t>(in + 4) ^ rk[1];
+	s2 = Utils::loadBigEndian<uint32_t>(in + 8) ^ rk[2];
+	s3 = Utils::loadBigEndian<uint32_t>(in + 12) ^ rk[3];
 	t0 = Td0[s0 >> 24U] ^ Td1[(s3 >> 16U) & m8] ^ Td2[(s2 >> 8U) & m8] ^ Td3[s1 & m8] ^ rk[4];
 	t1 = Td0[s1 >> 24U] ^ Td1[(s0 >> 16U) & m8] ^ Td2[(s3 >> 8U) & m8] ^ Td3[s2 & m8] ^ rk[5];
 	t2 = Td0[s2 >> 24U] ^ Td1[(s1 >> 16U) & m8] ^ Td2[(s0 >> 8U) & m8] ^ Td3[s3 & m8] ^ rk[6];
@@ -1203,10 +1201,10 @@ void AES::_decryptSW(const uint8_t in[16], uint8_t out[16]) const noexcept
 	t2 = Td0[s2 >> 24U] ^ Td1[(s1 >> 16U) & m8] ^ Td2[(s0 >> 8U) & m8] ^ Td3[s3 & m8] ^ rk[54];
 	t3 = Td0[s3 >> 24U] ^ Td1[(s2 >> 16U) & m8] ^ Td2[(s1 >> 8U) & m8] ^ Td3[s0 & m8] ^ rk[55];
 	rk += 56;
-	writeuint32_t(out, (Td4[(t0 >> 24U)] << 24U) ^ (Td4[(t3 >> 16U) & m8] << 16U) ^ (Td4[(t2 >> 8U) & m8] << 8U) ^ (Td4[(t1) & m8]) ^ rk[0]);
-	writeuint32_t(out + 4, (Td4[(t1 >> 24U)] << 24U) ^ (Td4[(t0 >> 16U) & m8] << 16U) ^ (Td4[(t3 >> 8U) & m8] << 8U) ^ (Td4[(t2) & m8]) ^ rk[1]);
-	writeuint32_t(out + 8, (Td4[(t2 >> 24U)] << 24U) ^ (Td4[(t1 >> 16U) & m8] << 16U) ^ (Td4[(t0 >> 8U) & m8] << 8U) ^ (Td4[(t3) & m8]) ^ rk[2]);
-	writeuint32_t(out + 12, (Td4[(t3 >> 24U)] << 24U) ^ (Td4[(t2 >> 16U) & m8] << 16U) ^ (Td4[(t1 >> 8U) & m8] << 8U) ^ (Td4[(t0) & m8]) ^ rk[3]);
+	Utils::storeBigEndian<uint32_t>(out, (Td4[(t0 >> 24U)] << 24U) ^ (Td4[(t3 >> 16U) & m8] << 16U) ^ (Td4[(t2 >> 8U) & m8] << 8U) ^ (Td4[(t1) & m8]) ^ rk[0]);
+	Utils::storeBigEndian<uint32_t>(out + 4, (Td4[(t1 >> 24U)] << 24U) ^ (Td4[(t0 >> 16U) & m8] << 16U) ^ (Td4[(t3 >> 8U) & m8] << 8U) ^ (Td4[(t2) & m8]) ^ rk[1]);
+	Utils::storeBigEndian<uint32_t>(out + 8, (Td4[(t2 >> 24U)] << 24U) ^ (Td4[(t1 >> 16U) & m8] << 16U) ^ (Td4[(t0 >> 8U) & m8] << 8U) ^ (Td4[(t3) & m8]) ^ rk[2]);
+	Utils::storeBigEndian<uint32_t>(out + 12, (Td4[(t3 >> 24U)] << 24U) ^ (Td4[(t2 >> 16U) & m8] << 16U) ^ (Td4[(t1 >> 8U) & m8] << 8U) ^ (Td4[(t0) & m8]) ^ rk[3]);
 }
 
 #ifdef ZT_AES_AESNI
