@@ -340,7 +340,7 @@ void BSDEthernetTap::scanMulticastGroups(std::vector<MulticastGroup> &added,std:
 				struct sockaddr_dl *in = (struct sockaddr_dl *)p->ifma_name;
 				struct sockaddr_dl *la = (struct sockaddr_dl *)p->ifma_addr;
 				if ((la->sdl_alen == 6)&&(in->sdl_nlen <= _dev.length())&&(!memcmp(_dev.data(),in->sdl_data,in->sdl_nlen)))
-					newGroups.push_back(MulticastGroup(MAC(la->sdl_data + la->sdl_nlen),0));
+					newGroups.push_back(MulticastGroup(MAC((const uint8_t *)(la->sdl_data + la->sdl_nlen)),0));
 			}
 			p = p->ifma_next;
 		}
