@@ -472,35 +472,35 @@ extern "C" const char *ZTT_general()
 				return "Utils::storeMachineEndian() broken";
 			}
 #else
-			if (Utils::loadAsIsEndian<uint64_t>(&a) != 0x0807060504030201ULL) {
-				ZT_T_PRINTF("FAILED (loadAsIsEndian)" ZT_EOL_S);
-				return "Utils::loadAsIsEndian() broken";
+			if (Utils::loadMachineEndian<uint64_t>(&a) != 0x0807060504030201ULL) {
+				ZT_T_PRINTF("FAILED (loadMachineEndian)" ZT_EOL_S);
+				return "Utils::loadMachineEndian() broken";
 			}
-			if (Utils::loadAsIsEndian<uint32_t>(&b) != 0x04030201) {
-				ZT_T_PRINTF("FAILED (loadAsIsEndian)" ZT_EOL_S);
-				return "Utils::loadAsIsEndian() broken";
+			if (Utils::loadMachineEndian<uint32_t>(&b) != 0x04030201) {
+				ZT_T_PRINTF("FAILED (loadMachineEndian)" ZT_EOL_S);
+				return "Utils::loadMachineEndian() broken";
 			}
-			if (Utils::loadAsIsEndian<uint16_t>(&c) != 0x0201) {
-				ZT_T_PRINTF("FAILED (loadAsIsEndian)" ZT_EOL_S);
-				return "Utils::loadAsIsEndian() broken";
+			if (Utils::loadMachineEndian<uint16_t>(&c) != 0x0201) {
+				ZT_T_PRINTF("FAILED (loadMachineEndian)" ZT_EOL_S);
+				return "Utils::loadMachineEndian() broken";
 			}
 			Utils::zero<sizeof(t)>(t);
-			Utils::storeAsIsEndian<uint64_t>(t,0x0807060504030201ULL);
+			Utils::storeMachineEndian<uint64_t>(t,0x0807060504030201ULL);
 			if (t[0] != 8) {
-				ZT_T_PRINTF("FAILED (storeAsIsEndian)" ZT_EOL_S);
-				return "Utils::storeAsIsEndian() broken";
+				ZT_T_PRINTF("FAILED (storeMachineEndian)" ZT_EOL_S);
+				return "Utils::storeMachineEndian() broken";
 			}
 			Utils::zero<sizeof(t)>(t);
-			Utils::storeAsIsEndian<uint32_t>(t,0x04030201);
+			Utils::storeMachineEndian<uint32_t>(t,0x04030201);
 			if (t[0] != 4) {
-				ZT_T_PRINTF("FAILED (storeAsIsEndian)" ZT_EOL_S);
-				return "Utils::storeAsIsEndian() broken";
+				ZT_T_PRINTF("FAILED (storeMachineEndian)" ZT_EOL_S);
+				return "Utils::storeMachineEndian() broken";
 			}
 			Utils::zero<sizeof(t)>(t);
-			Utils::storeAsIsEndian<uint16_t>(t,0x0201);
+			Utils::storeMachineEndian<uint16_t>(t,0x0201);
 			if (t[0] != 2) {
-				ZT_T_PRINTF("FAILED (storeAsIsEndian)" ZT_EOL_S);
-				return "Utils::storeAsIsEndian() broken";
+				ZT_T_PRINTF("FAILED (storeMachineEndian)" ZT_EOL_S);
+				return "Utils::storeMachineEndian() broken";
 			}
 #endif
 			ZT_T_PRINTF("OK" ZT_EOL_S);

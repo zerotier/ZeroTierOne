@@ -651,7 +651,7 @@ template< typename I >
 static ZT_INLINE void storeBigEndian(void *const p, I i) noexcept
 {
 #ifdef ZT_NO_UNALIGNED_ACCESS
-	storeAsIsEndian(p,hton(i));
+	storeMachineEndian(p,hton(i));
 #else
 	*reinterpret_cast<I *>(p) = hton(i);
 #endif
@@ -685,10 +685,10 @@ template< typename I >
 static ZT_INLINE void storeLittleEndian(void *const p, const I i) noexcept
 {
 #if __BYTE_ORDER == __BIG_ENDIAN
-	storeAsIsEndian(p,_swap_bytes_bysize<I,sizeof(I)>::s(i));
+	storeMachineEndian(p,_swap_bytes_bysize<I,sizeof(I)>::s(i));
 #else
 #ifdef ZT_NO_UNALIGNED_ACCESS
-	storeAsIsEndian(p,i);
+	storeMachineEndian(p,i);
 #else
 	*reinterpret_cast<I *>(p) = i;
 #endif
