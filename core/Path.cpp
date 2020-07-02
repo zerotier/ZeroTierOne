@@ -19,7 +19,7 @@ namespace ZeroTier {
 
 bool Path::send(const RuntimeEnvironment *const RR, void *const tPtr, const void *const data, const unsigned int len, const int64_t now) noexcept
 {
-	if (RR->node->putPacket(tPtr, m_localSocket, m_addr, data, len)) {
+	if (likely(RR->node->putPacket(tPtr, m_localSocket, m_addr, data, len))) {
 		m_lastOut = now;
 		m_outMeter.log(now, len);
 		return true;

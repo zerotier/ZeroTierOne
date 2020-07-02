@@ -48,8 +48,7 @@ public:
 		m_lastOut(0),
 		m_latency(-1),
 		m_addr(r)
-	{
-	}
+	{}
 
 	/**
 	 * Send a packet via this path (last out time is also updated)
@@ -95,7 +94,7 @@ public:
 	ZT_INLINE void updateLatency(const unsigned int newMeasurement) noexcept
 	{
 		int lat = m_latency;
-		if (lat > 0) {
+		if (likely(lat > 0)) {
 			m_latency = (lat + newMeasurement) / 2;
 		} else {
 			m_latency = newMeasurement;

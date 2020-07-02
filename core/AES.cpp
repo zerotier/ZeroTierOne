@@ -170,7 +170,7 @@ void s_gfmul(const uint64_t h_high,const uint64_t h_low,uint64_t &y0,uint64_t &y
 // SSE shuffle parameter to reverse bytes in a 128-bit vector.
 static const __m128i s_sseSwapBytes = _mm_set_epi8(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
 
-static ZT_INLINE __m128i p_gmacPCLMUL128(const __m128i h, __m128i y) noexcept
+static __m128i p_gmacPCLMUL128(const __m128i h, __m128i y) noexcept
 {
 	y = _mm_shuffle_epi8(y, s_sseSwapBytes);
 	__m128i t1 = _mm_clmulepi64_si128(h, y, 0x00);
@@ -317,7 +317,7 @@ void AES::GMAC::update(const void *const data, unsigned int len) noexcept
 				t3 = _mm_xor_si128(t3, _mm_slli_si128(t7, 12));
 				t6 = _mm_xor_si128(t6, _mm_xor_si128(t3, _mm_xor_si128(_mm_xor_si128(_mm_srli_epi32(t3, 1), t8), _mm_xor_si128(_mm_srli_epi32(t3, 2), _mm_srli_epi32(t3, 7)))));
 				y = _mm_shuffle_epi8(t6, s_sseSwapBytes);
-			} while (len >= 64);
+			} while (likely(len >= 64));
 		}
 
 		while (len >= 16) {
@@ -565,7 +565,7 @@ void p_aesCtrInnerVAES512(unsigned int &len, const uint64_t c0, uint64_t &c1, co
 		d0 = _mm512_aesenclast_epi128(d0, kk14);
 		_mm512_storeu_si512(reinterpret_cast<__m512i *>(out), _mm512_xor_si512(p0, d0));
 		out += 64;
-	} while (len >= 64);
+	} while (likely(len >= 64));
 }
 
 #define ZT_AES_VAES256
@@ -634,12 +634,12 @@ void p_aesCtrInnerVAES256(unsigned int &len, uint64_t &c0, uint64_t &c1, const u
 		_mm256_storeu_si256(reinterpret_cast<__m256i *>(out), _mm256_xor_si256(d0, p0));
 		_mm256_storeu_si256(reinterpret_cast<__m256i *>(out + 32), _mm256_xor_si256(d1, p1));
 		out += 64;
-	} while (len >= 64);
+	} while (likely(len >= 64));
 }
 
 #endif
 
-static void p_aesCtrInner128(unsigned int &len, uint64_t &c0, uint64_t &c1, const uint8_t *&in, uint8_t *&out, const __m128i *const k) noexcept
+static ZT_INLINE void p_aesCtrInner128(unsigned int &len, uint64_t &c0, uint64_t &c1, const uint8_t *&in, uint8_t *&out, const __m128i *const k) noexcept
 {
 	const __m128i k0 = k[0];
 	const __m128i k1 = k[1];
@@ -739,7 +739,7 @@ static void p_aesCtrInner128(unsigned int &len, uint64_t &c0, uint64_t &c1, cons
 		_mm_prefetch(in, _MM_HINT_T0);
 		out += 64;
 		len -= 64;
-	} while (len >= 64);
+	} while (likely(len >= 64));
 }
 
 #endif

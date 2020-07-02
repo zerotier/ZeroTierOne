@@ -29,7 +29,7 @@ Peer::Peer(const RuntimeEnvironment *renv) :
 	m_ephemeralPairTimestamp(0),
 	m_lastReceive(0),
 	m_lastSend(0),
-	m_lastSentHello(),
+	m_lastSentHello(0),
 	m_lastWhoisRequestReceived(0),
 	m_lastEchoRequestReceived(0),
 	m_lastPrioritizedPaths(0),
@@ -40,13 +40,10 @@ Peer::Peer(const RuntimeEnvironment *renv) :
 	m_vMajor(0),
 	m_vMinor(0),
 	m_vRevision(0)
-{
-}
+{}
 
 Peer::~Peer()
-{
-	Utils::burn(m_helloMacKey, sizeof(m_helloMacKey));
-}
+{ Utils::burn(m_helloMacKey, sizeof(m_helloMacKey)); }
 
 bool Peer::init(const Identity &peerIdentity)
 {

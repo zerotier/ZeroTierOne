@@ -20,6 +20,7 @@ Derived from public domain code by D. J. Bernstein.
 
 #ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wunused-function"
+#pragma GCC diagnostic ignored "-Wuninitialized"
 #endif
 
 using namespace ZeroTier;

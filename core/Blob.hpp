@@ -32,7 +32,7 @@ struct SHA384Hash
 	uint64_t data[6];
 
 	ZT_INLINE SHA384Hash() noexcept
-	{ Utils::zero< 48 >(data); }
+	{ Utils::zero<sizeof(data)>(data); }
 
 	explicit ZT_INLINE SHA384Hash(const void *const d) noexcept
 	{ Utils::copy< 48 >(data, d); }
@@ -73,7 +73,7 @@ struct UniqueID
 	uint64_t data[2];
 
 	ZT_INLINE UniqueID() noexcept
-	{}
+	{ Utils::zero<sizeof(data)>(data); }
 
 	ZT_INLINE UniqueID(const uint64_t a, const uint64_t b) noexcept
 	{
@@ -93,22 +93,22 @@ struct UniqueID
 	ZT_INLINE operator bool() const noexcept
 	{ return ((data[0] != 0) && (data[1] != 0)); }
 
-	ZT_INLINE bool operator==(const SHA384Hash &b) const noexcept
+	ZT_INLINE bool operator==(const UniqueID &b) const noexcept
 	{ return ((data[0] == b.data[0]) && (data[1] == b.data[1])); }
 
-	ZT_INLINE bool operator!=(const SHA384Hash &b) const noexcept
+	ZT_INLINE bool operator!=(const UniqueID &b) const noexcept
 	{ return !(*this == b); }
 
-	ZT_INLINE bool operator<(const SHA384Hash &b) const noexcept
+	ZT_INLINE bool operator<(const UniqueID &b) const noexcept
 	{ return (memcmp(data, b.data, 16) < 0); }
 
-	ZT_INLINE bool operator>(const SHA384Hash &b) const noexcept
+	ZT_INLINE bool operator>(const UniqueID &b) const noexcept
 	{ return (memcmp(data, b.data, 16) > 0); }
 
-	ZT_INLINE bool operator<=(const SHA384Hash &b) const noexcept
+	ZT_INLINE bool operator<=(const UniqueID &b) const noexcept
 	{ return (memcmp(data, b.data, 16) <= 0); }
 
-	ZT_INLINE bool operator>=(const SHA384Hash &b) const noexcept
+	ZT_INLINE bool operator>=(const UniqueID &b) const noexcept
 	{ return (memcmp(data, b.data, 16) >= 0); }
 };
 

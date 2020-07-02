@@ -39,7 +39,6 @@ static ZT_INLINE void U32TO8_LITTLE(uint8_t *const c,const uint32_t v) { c[0] = 
 #endif // !ZT_SALSA20_SSE
 
 #ifdef ZT_SALSA20_SSE
-
 class _s20sseconsts
 {
 public:
@@ -48,10 +47,8 @@ public:
 		maskLo32 = _mm_shuffle_epi32(_mm_cvtsi32_si128(-1), _MM_SHUFFLE(1, 0, 1, 0));
 		maskHi32 = _mm_slli_epi64(maskLo32, 32);
 	}
-
 	__m128i maskLo32, maskHi32;
 };
-
 static const _s20sseconsts s_S20SSECONSTANTS;
 #endif
 

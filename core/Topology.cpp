@@ -131,6 +131,7 @@ struct p_RootRankingComparisonOperator
 				return true;
 			return bb < a->latency();
 		}
+		return false;
 	}
 };
 
