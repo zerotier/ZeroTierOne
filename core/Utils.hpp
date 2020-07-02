@@ -137,12 +137,13 @@ bool secureEq(const void *a, const void *b, unsigned int len) noexcept;
 /**
  * Be absolutely sure to zero memory
  *
- * This uses some hacks to be totally sure the compiler does not optimize it out.
+ * This uses a few tricks to make sure the compiler doesn't optimize it
+ * out, including passing the memory as volatile.
  *
  * @param ptr Memory to zero
  * @param len Length of memory in bytes
  */
-void burn(void *ptr, unsigned int len);
+void burn(volatile void *ptr, unsigned int len);
 
 /**
  * @param n Number to convert

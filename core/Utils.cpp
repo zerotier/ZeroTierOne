@@ -99,17 +99,15 @@ bool secureEq(const void *a, const void *b, unsigned int len) noexcept
 	return (diff == 0);
 }
 
-// Crazy hack to force memory to be securely zeroed in spite of the best efforts of optimizing compilers.
-static void _Utils_doBurn(volatile uint8_t *ptr, unsigned int len)
+void burn(volatile void *ptr, unsigned int len)
 {
-	for (unsigned int i = 0; i < len; ++i)
-		ptr[i] = 0;
+	Utils::zero((void *)ptr, len);
+	// This line is present to force the compiler not to optimize out the memory
+	// zeroing operation above, as burn() is used to erase secrets and other
+	// sensitive data.
+	if ((reinterpret_cast<volatile uint8_t *>(ptr)[0] | reinterpret_cast<volatile uint8_t *>(ptr)[len-1]) != 0)
+		throw BadAllocException;
 }
-
-static void (*volatile _Utils_doBurn_ptr)(volatile uint8_t *, unsigned int) = _Utils_doBurn;
-
-void burn(void *ptr, unsigned int len)
-{ (_Utils_doBurn_ptr)((volatile uint8_t *)ptr, len); }
 
 static unsigned long _Utils_itoa(unsigned long n, char *s)
 {
