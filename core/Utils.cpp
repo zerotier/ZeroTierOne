@@ -106,7 +106,7 @@ void burn(volatile void *ptr, unsigned int len)
 	// zeroing operation above, as burn() is used to erase secrets and other
 	// sensitive data.
 	if ((reinterpret_cast<volatile uint8_t *>(ptr)[0] | reinterpret_cast<volatile uint8_t *>(ptr)[len-1]) != 0)
-		throw BadAllocException;
+		burn(ptr, len);
 }
 
 static unsigned long _Utils_itoa(unsigned long n, char *s)
