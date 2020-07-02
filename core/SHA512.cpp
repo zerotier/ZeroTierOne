@@ -122,7 +122,7 @@ static void sha512_process(sha512_state *const md,const uint8_t *in,unsigned lon
 			inlen          -= 128;
 		} else {
 			unsigned long n = std::min(inlen,(128 - md->curlen));
-			memcpy(md->buf + md->curlen,in,n);
+			Utils::copy(md->buf + md->curlen,in,n);
 			md->curlen += n;
 			in             += n;
 			inlen          -= n;
@@ -179,7 +179,7 @@ void SHA384(void *digest,const void *data,unsigned int len)
 	sha384_init(&state);
 	sha512_process(&state,(uint8_t *)data,(unsigned long)len);
 	sha512_done(&state,tmp);
-	memcpy(digest,tmp,48);
+	Utils::copy<48>(digest,tmp);
 }
 
 void SHA384(void *digest,const void *data0,unsigned int len0,const void *data1,unsigned int len1)
@@ -190,7 +190,7 @@ void SHA384(void *digest,const void *data0,unsigned int len0,const void *data1,u
 	sha512_process(&state,(uint8_t *)data0,(unsigned long)len0);
 	sha512_process(&state,(uint8_t *)data1,(unsigned long)len1);
 	sha512_done(&state,tmp);
-	memcpy(digest,tmp,48);
+	Utils::copy<48>(digest,tmp);
 }
 
 #endif // !ZT_HAVE_NATIVE_SHA512

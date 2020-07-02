@@ -55,7 +55,6 @@ namespace Utils {
 #define ZT_ROL32(x, r) (((x) << (r)) | ((x) >> (32 - (r))))
 
 #ifdef ZT_ARCH_X64
-
 struct CPUIDRegisters
 {
 	CPUIDRegisters() noexcept;
@@ -70,7 +69,6 @@ struct CPUIDRegisters
 	bool sha;
 	bool fsrm;
 };
-
 extern const CPUIDRegisters CPUID;
 #endif
 
@@ -104,7 +102,9 @@ extern const uint64_t s_mapNonce;
  */
 static ZT_INLINE void memoryLock(const void *const p, const unsigned int l) noexcept
 {
-#ifndef __WINDOWS__
+#ifdef __WINDOWS__
+	VirtualLock(p, l);
+#else
 	mlock(p, l);
 #endif
 }
@@ -117,7 +117,9 @@ static ZT_INLINE void memoryLock(const void *const p, const unsigned int l) noex
  */
 static ZT_INLINE void memoryUnlock(const void *const p, const unsigned int l) noexcept
 {
-#ifndef __WINDOWS__
+#ifdef __WINDOWS__
+	VirtualUnlock(p, l);
+#else
 	munlock(p, l);
 #endif
 }
@@ -695,6 +697,23 @@ static ZT_INLINE void storeLittleEndian(void *const p, const I i) noexcept
 #endif
 }
 
+/*
+ * Note on copy() and zero():
+ *
+ * On X64, rep/movsb and rep/stosb are almost always faster for small memory
+ * regions on all but the oldest microarchitectures (and even there the
+ * difference is not large). While more aggressive memcpy() implementations
+ * may be faster in micro-benchmarks, these fail to account for real world
+ * context such as instruction cache and pipeline pressure. A simple
+ * instruction like rep/movsb takes up only a few spots in caches and pipelines
+ * and requires no branching or function calls. Specialized memcpy() can still
+ * be faster for large memory regions, but ZeroTier doesn't copy anything
+ * much larger than 16KiB.
+ *
+ * A templated version for statically known sizes is provided since this can
+ * allow some nice optimizations in some cases.
+ */
+
 /**
  * Copy memory block whose size is known at compile time.
  *
@@ -706,11 +725,42 @@ template< unsigned long L >
 static ZT_INLINE void copy(void *dest, const void *src) noexcept
 {
 #if defined(ZT_ARCH_X64) && defined(__GNUC__)
-	unsigned long l = L;
+	uintptr_t l = L;
 	asm volatile ("cld ; rep movsb" : "+c"(l), "+S"(src), "+D"(dest));
 #else
 	memcpy(dest, src, L);
 #endif
+}
+
+// Avoid rep/movsb startup time for some small common sizes.
+template<>
+ZT_INLINE void copy<4>(void *dest, const void *src) noexcept
+{
+	*reinterpret_cast<uint32_t *>(dest) = *reinterpret_cast<const uint32_t *>(src);
+}
+template<>
+ZT_INLINE void copy<8>(void *dest, const void *src) noexcept
+{
+	*reinterpret_cast<uint64_t *>(dest) = *reinterpret_cast<const uint64_t *>(src);
+}
+template<>
+ZT_INLINE void copy<12>(void *dest, const void *src) noexcept
+{
+	*reinterpret_cast<uint64_t *>(dest) = *reinterpret_cast<const uint64_t *>(src);
+	*reinterpret_cast<uint32_t *>(reinterpret_cast<uint8_t *>(dest) + 8) = *reinterpret_cast<const uint32_t *>(reinterpret_cast<const uint8_t *>(src) + 8);
+}
+template<>
+ZT_INLINE void copy<16>(void *dest, const void *src) noexcept
+{
+	*reinterpret_cast<uint64_t *>(dest) = *reinterpret_cast<const uint64_t *>(src);
+	*reinterpret_cast<uint64_t *>(reinterpret_cast<uint8_t *>(dest) + 8) = *reinterpret_cast<const uint64_t *>(reinterpret_cast<const uint8_t *>(src) + 8);
+}
+template<>
+ZT_INLINE void copy<24>(void *dest, const void *src) noexcept
+{
+	*reinterpret_cast<uint64_t *>(dest) = *reinterpret_cast<const uint64_t *>(src);
+	*reinterpret_cast<uint64_t *>(reinterpret_cast<uint8_t *>(dest) + 8) = *reinterpret_cast<const uint64_t *>(reinterpret_cast<const uint8_t *>(src) + 8);
+	*reinterpret_cast<uint64_t *>(reinterpret_cast<uint8_t *>(dest) + 16) = *reinterpret_cast<const uint64_t *>(reinterpret_cast<const uint8_t *>(src) + 16);
 }
 
 /**
@@ -739,7 +789,7 @@ template< unsigned long L >
 static ZT_INLINE void zero(void *dest) noexcept
 {
 #if defined(ZT_ARCH_X64) && defined(__GNUC__)
-	unsigned long l = L;
+	uintptr_t l = L;
 	asm volatile ("cld ; rep stosb" :"+c" (l), "+D" (dest) : "a" (0));
 #else
 	memset(dest, 0, L);
