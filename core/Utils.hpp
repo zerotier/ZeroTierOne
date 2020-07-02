@@ -103,7 +103,7 @@ extern const uint64_t s_mapNonce;
 static ZT_INLINE void memoryLock(const void *const p, const unsigned int l) noexcept
 {
 #ifdef __WINDOWS__
-	VirtualLock(const_cast<LPVOID>(reinterpret_cast<LPVOID>(p)), l);
+	VirtualLock(reinterpret_cast<LPVOID>(const_cast<void*>(p)), l);
 #else
 	mlock(p, l);
 #endif
@@ -118,7 +118,7 @@ static ZT_INLINE void memoryLock(const void *const p, const unsigned int l) noex
 static ZT_INLINE void memoryUnlock(const void *const p, const unsigned int l) noexcept
 {
 #ifdef __WINDOWS__
-	VirtualUnlock(const_cast<LPVOID>(reinterpret_cast<LPVOID>(p)), l);
+	VirtualUnlock(reinterpret_cast<LPVOID>(const_cast<void*>(p)), l);
 #else
 	munlock(p, l);
 #endif
