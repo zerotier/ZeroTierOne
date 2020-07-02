@@ -199,8 +199,8 @@ def packageStatic() {
     
     if (params.BUILD_ALL == true) {
         def s390xStatics = ["clefos", "debian-buster", "debian-sid", "debian-bullseye", "debian-stretch", "ubuntu-bionic", "ubuntu-eoan", "ubuntu-focal"]
-        def clefos7Arch = ["s390x"]
-        tasks << getTasks(clefos7, clefos7Arch, { distro, arch -> 
+        def s390x = ["s390x"]
+        tasks << getTasks(s390x, s390xStatics, { distro, arch -> 
             def myNode = {
                 node ('linux-build') {
                     env.PATH = env.PATH + ":/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin:/home/jenkins-build/go/bin"
