@@ -29,6 +29,9 @@ import (
 // LogoChar is the unicode character that is ZeroTier's logo
 const LogoChar = "⏁"
 
+// pointerSize is the size of a pointer on this system
+const pointerSize = unsafe.Sizeof(uintptr(0))
+
 // Base32StdLowerCase is a base32 encoder/decoder using a lower-case standard alphabet and no padding.
 var Base32StdLowerCase = base32.NewEncoding("abcdefghijklmnopqrstuvwxyz234567").WithPadding(base32.NoPadding)
 

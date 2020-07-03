@@ -30,6 +30,16 @@ type Locator struct {
 	cl          unsafe.Pointer
 }
 
+func newLocatorFromCLocator(cl unsafe.Pointer) (*Locator, error) {
+	loc := new(Locator)
+	loc.cl = cl
+	err := loc.init(false)
+	if err != nil {
+		return nil, err
+	}
+	return loc, nil
+}
+
 func NewLocator(ts int64, endpoints []Endpoint, signer *Identity) (*Locator, error) {
 	if ts <= 0 || len(endpoints) == 0 || signer == nil {
 		return nil, ErrInvalidParameter
@@ -46,7 +56,7 @@ func NewLocator(ts int64, endpoints []Endpoint, signer *Identity) (*Locator, err
 
 	goloc := new(Locator)
 	goloc.cl = unsafe.Pointer(loc)
-	return goloc, goloc.init()
+	return goloc, goloc.init(true)
 }
 
 func NewLocatorFromBytes(lb []byte) (*Locator, error) {
@@ -60,7 +70,7 @@ func NewLocatorFromBytes(lb []byte) (*Locator, error) {
 
 	goloc := new(Locator)
 	goloc.cl = unsafe.Pointer(loc)
-	return goloc, goloc.init()
+	return goloc, goloc.init(true)
 }
 
 func NewLocatorFromString(s string) (*Locator, error) {
@@ -76,7 +86,7 @@ func NewLocatorFromString(s string) (*Locator, error) {
 
 	goloc := new(Locator)
 	goloc.cl = unsafe.Pointer(loc)
-	return goloc, goloc.init()
+	return goloc, goloc.init(true)
 }
 
 func (loc *Locator) Validate(id *Identity) bool {
@@ -116,7 +126,7 @@ func (loc *Locator) UnmarshalJSON(j []byte) error {
 		return ErrInvalidParameter
 	}
 	loc.cl = cl
-	return loc.init()
+	return loc.init(true)
 }
 
 func locatorFinalizer(obj interface{}) {
@@ -125,7 +135,7 @@ func locatorFinalizer(obj interface{}) {
 	}
 }
 
-func (loc *Locator) init() error {
+func (loc *Locator) init(requiresDeletion bool) error {
 	loc.Timestamp = int64(C.ZT_Locator_timestamp(loc.cl))
 	cfp := C.ZT_Locator_fingerprint(loc.cl)
 	if uintptr(unsafe.Pointer(cfp)) == 0 {
@@ -139,6 +149,8 @@ func (loc *Locator) init() error {
 	}
 	var buf [4096]byte
 	loc.String = C.GoString(C.ZT_Locator_toString(loc.cl, (*C.char)(unsafe.Pointer(&buf[0])), 4096))
-	runtime.SetFinalizer(loc, locatorFinalizer)
+	if requiresDeletion {
+		runtime.SetFinalizer(loc, locatorFinalizer)
+	}
 	return nil
 }
