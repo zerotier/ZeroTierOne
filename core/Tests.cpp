@@ -1107,9 +1107,9 @@ extern "C" const char *ZTT_crypto()
 			ZT_T_PRINTF("OK" ZT_EOL_S);
 
 			ZT_T_PRINTF("  Create subject unique ID... ");
-			uint8_t uniqueId[ZT_CERTIFICATE_UNIQUE_ID_SIZE_TYPE_NIST_P_384], uniqueIdPrivate[ZT_CERTIFICATE_UNIQUE_ID_PRIVATE_KEY_SIZE_TYPE_NIST_P_384];
+			uint8_t uniqueId[ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE], uniqueIdPrivate[ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_PRIVATE_SIZE];
 			Certificate::createSubjectUniqueId(uniqueId, uniqueIdPrivate);
-			Utils::b32e(uniqueId, ZT_CERTIFICATE_UNIQUE_ID_SIZE_TYPE_NIST_P_384, tmp, sizeof(tmp));
+			Utils::b32e(uniqueId, ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE, tmp, sizeof(tmp));
 			ZT_T_PRINTF("OK %s" ZT_EOL_S, tmp);
 
 			ZT_T_PRINTF("  Create and sign certificate... ");
@@ -1148,7 +1148,7 @@ extern "C" const char *ZTT_crypto()
 
 			ZT_T_PRINTF("  Test certificate decode from marshaled format... ");
 			SharedPtr<Certificate> cert2(new Certificate());
-			if (!cert2->decode(enc)) {
+			if (!cert2->decode(enc.data(), (unsigned int)enc.size())) {
 				ZT_T_PRINTF("FAILED (decode)" ZT_EOL_S);
 				return "Certificate decode";
 			}

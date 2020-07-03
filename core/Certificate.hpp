@@ -129,9 +129,17 @@ public:
 	 * Decode this certificate from marshaled bytes.
 	 *
 	 * @param data Marshalled certificate
+	 * @param len Length of marshalled certificate
 	 * @return True if input is valid and was unmarshalled (signature is NOT checked)
 	 */
-	bool decode(const Vector< uint8_t > &data);
+	bool decode(const void *data, unsigned int len);
+
+	/**
+	 * Encode only the subject portion of this certificate as a CSR
+	 *
+	 * @return Encoded CSR
+	 */
+	Vector< uint8_t > encodeCSR();
 
 	/**
 	 * Sign this certificate (and also fill in serialNo).
@@ -160,7 +168,7 @@ public:
 	 * @param uniqueIdPrivate Private key associated with unique ID to prove ownership of it
 	 * @return True if successful
 	 */
-	bool setSubjectUniqueId(const uint8_t uniqueId[ZT_CERTIFICATE_UNIQUE_ID_SIZE_TYPE_NIST_P_384], const uint8_t uniqueIdPrivate[ZT_CERTIFICATE_UNIQUE_ID_PRIVATE_KEY_SIZE_TYPE_NIST_P_384]);
+	bool setSubjectUniqueId(const uint8_t uniqueId[ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE], const uint8_t uniqueIdPrivate[ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_PRIVATE_SIZE]);
 
 	/**
 	 * Create a subject unique ID and corresponding private key required for use
@@ -168,9 +176,9 @@ public:
 	 * @param uniqueId Buffer to receive unique ID
 	 * @param uniqueIdPrivate Buffer to receive private key
 	 */
-	static ZT_INLINE void createSubjectUniqueId(uint8_t uniqueId[ZT_CERTIFICATE_UNIQUE_ID_SIZE_TYPE_NIST_P_384], uint8_t uniqueIdPrivate[ZT_CERTIFICATE_UNIQUE_ID_PRIVATE_KEY_SIZE_TYPE_NIST_P_384])
+	static ZT_INLINE void createSubjectUniqueId(uint8_t uniqueId[ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE], uint8_t uniqueIdPrivate[ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_PRIVATE_SIZE])
 	{
-		uniqueId[0] = ZT_CERTIFICATE_UNIQUE_ID_PUBLIC_KEY_TYPE_NIST_P_384;
+		uniqueId[0] = ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384;
 		ECC384GenerateKey(uniqueId + 1, uniqueIdPrivate);
 	}
 

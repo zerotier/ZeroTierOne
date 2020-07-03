@@ -251,15 +251,15 @@ Vector< uint8_t > Certificate::encode(const bool omitSignature) const
 	return enc;
 }
 
-bool Certificate::decode(const Vector< uint8_t > &data)
+bool Certificate::decode(const void *const data, const unsigned int len)
 {
 	char tmp[256], tmp2[ZT_CERTIFICATE_MAX_STRING_LENGTH + 1];
 
-	m_clear();
-
 	Dictionary d;
-	if (!d.decode(data.data(), (unsigned int)data.size()))
+	if (!d.decode(data, len))
 		return false;
+
+	m_clear();
 
 	this->flags = d.getUI("f");
 	this->timestamp = (int64_t)d.getUI("t");
@@ -384,6 +384,15 @@ bool Certificate::decode(const Vector< uint8_t > &data)
 	return true;
 }
 
+Vector< uint8_t > Certificate::encodeCSR()
+{
+	Vector< uint8_t > enc;
+	Dictionary d;
+	m_encodeSubject(this->subject, d, false);
+	d.encode(enc);
+	return enc;
+}
+
 bool Certificate::sign(const Identity &issuer)
 {
 	Vector< uint8_t > enc(encode(true));
@@ -417,7 +426,7 @@ ZT_CertificateError Certificate::verify() const
 			if (
 				(this->subject.uniqueIdProofSignatureSize != ZT_ECC384_SIGNATURE_SIZE) ||
 				(this->subject.uniqueIdSize != (ZT_ECC384_PUBLIC_KEY_SIZE + 1)) ||
-				(this->subject.uniqueId[0] != ZT_CERTIFICATE_UNIQUE_ID_PUBLIC_KEY_TYPE_NIST_P_384))
+				(this->subject.uniqueId[0] != ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384))
 				return ZT_CERTIFICATE_ERROR_INVALID_UNIQUE_ID_PROOF;
 			Dictionary tmp;
 			m_encodeSubject(this->subject, tmp, true);
@@ -462,11 +471,11 @@ ZT_CertificateError Certificate::verify() const
 	return ZT_CERTIFICATE_ERROR_NONE;
 }
 
-bool Certificate::setSubjectUniqueId(const uint8_t uniqueId[ZT_CERTIFICATE_UNIQUE_ID_SIZE_TYPE_NIST_P_384], const uint8_t uniqueIdPrivate[ZT_CERTIFICATE_UNIQUE_ID_PRIVATE_KEY_SIZE_TYPE_NIST_P_384])
+bool Certificate::setSubjectUniqueId(const uint8_t uniqueId[ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE], const uint8_t uniqueIdPrivate[ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_PRIVATE_SIZE])
 {
-	m_subjectUniqueId.assign(uniqueId, uniqueId + ZT_CERTIFICATE_UNIQUE_ID_SIZE_TYPE_NIST_P_384);
+	m_subjectUniqueId.assign(uniqueId, uniqueId + ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE);
 	this->subject.uniqueId = m_subjectUniqueId.data();
-	this->subject.uniqueIdSize = ZT_CERTIFICATE_UNIQUE_ID_SIZE_TYPE_NIST_P_384;
+	this->subject.uniqueIdSize = ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE;
 
 	Dictionary d;
 	m_encodeSubject(this->subject, d, true);
@@ -567,3 +576,103 @@ void Certificate::m_encodeSubject(const ZT_Certificate_Subject &s, Dictionary &d
 }
 
 } // namespace ZeroTier
+
+extern "C" {
+
+int ZT_Certificate_newSubjectUniqueId(
+	enum ZT_CertificateUniqueIdType type,
+	void *uniqueId,
+	int *uniqueIdSize,
+	void *uniqueIdPrivate,
+	int *uniqueIdPrivateSize)
+{
+	switch(type) {
+		case ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384:
+			if ((*uniqueIdSize < ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE) || (*uniqueIdPrivateSize < ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_PRIVATE_SIZE))
+				return ZT_RESULT_ERROR_BAD_PARAMETER;
+			*uniqueIdSize = ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE;
+			*uniqueIdPrivateSize = ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_PRIVATE_SIZE;
+			ZeroTier::Certificate::createSubjectUniqueId(reinterpret_cast<uint8_t *>(uniqueId), reinterpret_cast<uint8_t *>(uniqueIdPrivate));
+			return ZT_RESULT_OK;
+	}
+	return ZT_RESULT_ERROR_BAD_PARAMETER;
+}
+
+int ZT_Certificate_newCSR(
+	const ZT_Certificate_Subject *subject,
+	const void *uniqueId,
+	int uniqueIdSize,
+	const void *uniqueIdPrivate,
+	int uniqueIdPrivateSize,
+	void *csr,
+	int *csrSize)
+{
+	ZeroTier::Certificate c;
+	ZeroTier::Utils::copy< sizeof(ZT_Certificate_Subject) >(&(c.subject), subject);
+	if ((uniqueId) && (uniqueIdSize > 0) && (uniqueIdPrivate) && (uniqueIdPrivateSize > 0)) {
+		if ((reinterpret_cast<const uint8_t *>(uniqueId)[0] != ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384) || (uniqueIdSize != ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE) || (uniqueIdPrivateSize != ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_PRIVATE_SIZE))
+			return ZT_RESULT_ERROR_BAD_PARAMETER;
+		if (!c.setSubjectUniqueId(reinterpret_cast<const uint8_t *>(uniqueId), reinterpret_cast<const uint8_t *>(uniqueIdPrivate)))
+			return ZT_RESULT_ERROR_INVALID_CREDENTIAL;
+	}
+	ZeroTier::Vector< uint8_t > csrV(c.encodeCSR());
+	if ((int)csrV.size() > *csrSize)
+		return ZT_RESULT_ERROR_BAD_PARAMETER;
+	ZeroTier::Utils::copy(csr, csrV.data(), (unsigned int)csrV.size());
+	*csrSize = (int)csrV.size();
+	return ZT_RESULT_OK;
+}
+
+int ZT_Certificate_sign(
+	const ZT_Certificate *cert,
+	const ZT_Identity *signer,
+	void *signedCert,
+	int *signedCertSize)
+{
+	ZeroTier::Certificate c(*cert);
+	if (!c.sign(*reinterpret_cast<const ZeroTier::Identity *>(signer)))
+		return ZT_RESULT_ERROR_BAD_PARAMETER;
+	ZeroTier::Vector< uint8_t > enc(c.encode());
+	if ((int)enc.size() > *signedCertSize)
+		return ZT_RESULT_ERROR_BAD_PARAMETER;
+	ZeroTier::Utils::copy(signedCert, enc.data(), (unsigned int)enc.size());
+	*signedCertSize = (int)enc.size();
+	return ZT_RESULT_OK;
+}
+
+enum ZT_CertificateError ZT_Certificate_decode(
+	ZT_Certificate **decodedCert,
+	const void *cert,
+	int certSize,
+	int verify)
+{
+	try {
+		if (!decodedCert)
+			return ZT_CERTIFICATE_ERROR_INVALID_FORMAT;
+		*decodedCert = nullptr;
+		ZeroTier::Certificate *const c = new ZeroTier::Certificate();
+		if (!c->decode(cert, certSize)) {
+			delete c;
+			return ZT_CERTIFICATE_ERROR_INVALID_FORMAT;
+		}
+		if (verify) {
+			ZT_CertificateError err = c->verify();
+			if (err != ZT_CERTIFICATE_ERROR_NONE) {
+				delete c;
+				return err;
+			}
+		}
+		*decodedCert = c;
+		return ZT_CERTIFICATE_ERROR_NONE;
+	} catch ( ... ) {
+		return ZT_CERTIFICATE_ERROR_INVALID_FORMAT;
+	}
+}
+
+ZT_SDK_API void ZT_Certificate_delete(ZT_Certificate *cert)
+{
+	if (cert)
+		delete reinterpret_cast<ZeroTier::Certificate *>(cert);
+}
+
+}

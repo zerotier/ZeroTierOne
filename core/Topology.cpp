@@ -34,7 +34,8 @@ Topology::Topology(const RuntimeEnvironment *renv, void *tPtr, const int64_t now
 			if (serialNo.size() == ZT_SHA384_DIGEST_SIZE) {
 				Utils::copy< 48 >(id, serialNo.data());
 				Certificate cert;
-				if (cert.decode(RR->node->stateObjectGet(tPtr, ZT_STATE_OBJECT_CERT, id)))
+				Vector< uint8_t > enc(RR->node->stateObjectGet(tPtr, ZT_STATE_OBJECT_CERT, id));
+				if (cert.decode(enc.data(), (unsigned int)enc.size()))
 					addCertificate(tPtr, cert, now, (unsigned int)d.getUI(Dictionary::arraySubscript(tmp, "c$.lt", idx)), false, false, false);
 			}
 		}

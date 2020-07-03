@@ -11,7 +11,9 @@
  */
 /****/
 
+#ifndef _WIN32_WINNT
 #define _WIN32_WINNT 0x06010000
+#endif
 
 #include "GoGlue.h"
 
@@ -22,11 +24,11 @@
 #include "../core/MAC.hpp"
 #include "../core/Address.hpp"
 #include "../core/Containers.hpp"
+#include "../core/Certificate.hpp"
 #include "../osdep/OSUtils.hpp"
 #include "../osdep/EthernetTap.hpp"
 
 #ifndef __WINDOWS__
-
 #include <unistd.h>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -35,16 +37,11 @@
 #include <ifaddrs.h>
 #include <net/if.h>
 #include <netinet/in.h>
-
 #ifdef __BSD__
-
 #include <netinet6/in6_var.h>
-
 #endif
-
 #include <arpa/inet.h>
 #include <errno.h>
-
 #ifdef __LINUX__
 #ifndef IPV6_DONTFRAG
 #define IPV6_DONTFRAG 62

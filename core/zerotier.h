@@ -38,7 +38,7 @@ extern "C" {
 
 /* This symbol may be defined to anything we need to put in front of API function prototypes. */
 #ifndef ZT_SDK_API
-#define ZT_SDK_API
+#define ZT_SDK_API extern
 #endif
 
 /* ---------------------------------------------------------------------------------------------------------------- */
@@ -309,19 +309,25 @@ typedef struct
 #define ZT_CERTIFICATE_LOCAL_TRUST_FLAG_ZEROTIER_ROOT_SET 0x0002U
 
 /**
- * Public key type for NIST P-384 public keys used as subject unique IDs.
- */
-#define ZT_CERTIFICATE_UNIQUE_ID_PUBLIC_KEY_TYPE_NIST_P_384 1
-
-/**
  * Size of a unique ID of the given key type (with type prefix byte)
  */
-#define ZT_CERTIFICATE_UNIQUE_ID_SIZE_TYPE_NIST_P_384 50
+#define ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE 50
 
 /**
  * Size of the private key corresponding to a unique ID of the given type.
  */
-#define ZT_CERTIFICATE_UNIQUE_ID_PRIVATE_KEY_SIZE_TYPE_NIST_P_384 48
+#define ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_PRIVATE_SIZE 48
+
+/**
+ * Unique ID types supported for certificate subject unique IDs
+ */
+enum ZT_CertificateUniqueIdType
+{
+	/**
+	 * Public key type for NIST P-384 public keys used as subject unique IDs.
+	 */
+	ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384 = 1
+};
 
 /**
  * Errors returned by functions that verify or handle certificates.
@@ -2620,7 +2626,10 @@ ZT_SDK_API ZT_Locator *ZT_Locator_fromString(const char *str);
  * @param bufSize Size of buffer in bytes (needs to be at least 2048 bytes in size)
  * @return Number of bytes stored to buf or -1 on error such as buffer too small
  */
-ZT_SDK_API int ZT_Locator_marshal(const ZT_Locator *loc,void *buf,unsigned int bufSize);
+ZT_SDK_API int ZT_Locator_marshal(
+	const ZT_Locator *loc,
+	void *buf,
+	unsigned int bufSize);
 
 /**
  * Get this locator in string format
@@ -2669,7 +2678,9 @@ ZT_SDK_API unsigned int ZT_Locator_endpointCount(const ZT_Locator *loc);
  * @param ep Endpoint number from 0 to 1 - endpointCount()
  * @return Endpoint or NULL if out of bounds
  */
-ZT_SDK_API const ZT_Endpoint *ZT_Locator_endpoint(const ZT_Locator *loc,const unsigned int ep);
+ZT_SDK_API const ZT_Endpoint *ZT_Locator_endpoint(
+	const ZT_Locator *loc,
+	const unsigned int ep);
 
 /**
  * Verify this locator's signature
@@ -2677,7 +2688,9 @@ ZT_SDK_API const ZT_Endpoint *ZT_Locator_endpoint(const ZT_Locator *loc,const un
  * @param signer Signing identity
  * @return Non-zero if locator is valid
  */
-ZT_SDK_API int ZT_Locator_verify(const ZT_Locator *loc,const ZT_Identity *signer);
+ZT_SDK_API int ZT_Locator_verify(
+	const ZT_Locator *loc,
+	const ZT_Identity *signer);
 
 /**
  * Delete a locator
@@ -2701,6 +2714,97 @@ ZT_SDK_API void ZT_version(
 	int *minor,
 	int *revision,
 	int *build);
+
+/* ---------------------------------------------------------------------------------------------------------------- */
+
+/**
+ * Create a new certificate subject unique ID and private key
+ *
+ * A unique ID is really a public/private key pair.
+ *
+ * @param type Unique ID type (key pair algorithm)
+ * @param uniqueId Unique ID buffer
+ * @param uniqueIdSize Value/result: size of buffer
+ * @param uniqueIdPrivate Unique ID private key buffer
+ * @param uniqueIdPrivateSize Value/result: size of buffer
+ * @return OK (0) or error
+ */
+ZT_SDK_API int ZT_Certificate_newSubjectUniqueId(
+	enum ZT_CertificateUniqueIdType type,
+	void *uniqueId,
+	int *uniqueIdSize,
+	void *uniqueIdPrivate,
+	int *uniqueIdPrivateSize);
+
+/**
+ * Create a new certificate signing request (CSR)
+ *
+ * A CSR is effectively just an encoded certificate subject.
+ * If both uniqueId and uniqueIdPrivate are specified, the subject
+ * will be signed with a unique ID. Otherwise these fields are not
+ * set. If a unique ID and unique ID signature are present in the
+ * supplied subject, these will be ignored.
+ *
+ * @param subject Subject filled in with fields for CSR
+ * @param uniqueId Unique ID or NULL if none
+ * @param uniqueIdSize Size of unique ID
+ * @param uniqueIdPrivate Unique ID private key or NULL if none
+ * @param uniqueIdPrivateSize Size of unique ID private key
+ * @param csr Buffer to hold CSR (recommended size: 16384 bytes)
+ * @param csrSize Value/result: size of buffer
+ * @return OK (0) or error
+ */
+ZT_SDK_API int ZT_Certificate_newCSR(
+	const ZT_Certificate_Subject *subject,
+	const void *uniqueId,
+	int uniqueIdSize,
+	const void *uniqueIdPrivate,
+	int uniqueIdPrivateSize,
+	void *csr,
+	int *csrSize);
+
+/**
+ * Sign a CSR to generate a complete certificate
+ *
+ * @param cert Certificate to sign
+ * @param signer Signer identity (must contain secret key)
+ * @param signedCert Signed certificate buffer (recommended size: 16384 bytes)
+ * @param signedCertSize Value/result: size of buffer
+ * @return OK (0) or error
+ */
+ZT_SDK_API int ZT_Certificate_sign(
+	const ZT_Certificate *cert,
+	const ZT_Identity *signer,
+	void *signedCert,
+	int *signedCertSize);
+
+/**
+ * Decode a certificate or CSR
+ *
+ * A CSR is just the encoded subject part of a certificate. Decoding a CSR
+ * results in a certificate whose subject is filled in but nothing else.
+ *
+ * If no error occurs and the pointer at decodedCert is set to non-NULL,
+ * the returned certificate must be freed with ZT_Certificate_delete().
+ *
+ * @param decodedCert Result parameter: target pointer is set to certificate
+ * @param cert Certificate or CSR data
+ * @param certSize Size of data
+ * @param verify If non-zero, verify signatures and structure
+ * @return Certificate error, if any
+ */
+ZT_SDK_API enum ZT_CertificateError ZT_Certificate_decode(
+	ZT_Certificate **decodedCert,
+	const void *cert,
+	int certSize,
+	int verify);
+
+/**
+ * Free a certificate created with ZT_Certificate_decode()
+ *
+ * @param cert Certificate to free
+ */
+ZT_SDK_API void ZT_Certificate_delete(ZT_Certificate *cert);
 
 /* ---------------------------------------------------------------------------------------------------------------- */
 
