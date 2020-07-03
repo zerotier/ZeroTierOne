@@ -279,10 +279,13 @@ func stringAsZeroTerminatedBytes(s string) (b []byte) {
 // cStrCopy copies src into dest as a zero-terminated C string
 func cStrCopy(dest unsafe.Pointer, destSize int, src string) {
 	sb := []byte(src)
-	b := C.GoBytes(dest, C.int(destSize))
 	if len(sb) > (destSize - 1) {
 		sb = sb[0:destSize - 1]
 	}
-	copy(b[:], sb[:])
-	b[len(sb)] = 0
+	dp := dest
+	for _, c := range sb {
+		*((*byte)(dp)) = c
+		dp = unsafe.Pointer(uintptr(dp) + 1)
+	}
+	*((*byte)(dp)) = 0
 }
