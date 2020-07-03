@@ -467,7 +467,7 @@ typedef struct
 	/**
 	 * URLs that can be consulted for updates to this certificate.
 	 */
-	const char *const *updateUrls;
+	const char *const *updateURLs;
 
 	/**
 	 * Number of identities
@@ -487,7 +487,7 @@ typedef struct
 	/**
 	 * Number of update URLs
 	 */
-	unsigned int updateUrlCount;
+	unsigned int updateURLCount;
 
 	/**
 	 * Information about owner of items.
@@ -581,7 +581,7 @@ typedef struct
 	/**
 	 * Extended attributes set by issuer (in Dictionary format, NULL if none)
 	 */
-	uint8_t *extendedAttributes;
+	const uint8_t *extendedAttributes;
 
 	/**
 	 * Size of extended attributes field in bytes
@@ -2702,7 +2702,7 @@ ZT_SDK_API void ZT_Locator_delete(ZT_Locator *loc);
 /* ---------------------------------------------------------------------------------------------------------------- */
 
 /**
- * Get ZeroTier One version
+ * Get ZeroTier core version
  *
  * @param major Result: major version
  * @param minor Result: minor version

@@ -50,8 +50,8 @@ Certificate &Certificate::operator=(const ZT_Certificate &cert)
 	this->subject.networkCount = 0;
 	this->subject.certificates = nullptr;
 	this->subject.certificateCount = 0;
-	this->subject.updateUrls = nullptr;
-	this->subject.updateUrlCount = 0;
+	this->subject.updateURLs = nullptr;
+	this->subject.updateURLCount = 0;
 	this->subject.uniqueId = nullptr;
 	this->subject.uniqueIdProofSignature = nullptr;
 	this->subject.uniqueIdSize = 0;
@@ -80,10 +80,10 @@ Certificate &Certificate::operator=(const ZT_Certificate &cert)
 			addSubjectCertificate(cert.subject.certificates[i]);
 	}
 
-	if (cert.subject.updateUrls) {
-		for (unsigned int i = 0; i < cert.subject.updateUrlCount; ++i) {
-			if (cert.subject.updateUrls[i])
-				addSubjectUpdateUrl(cert.subject.updateUrls[i]);
+	if (cert.subject.updateURLs) {
+		for (unsigned int i = 0; i < cert.subject.updateURLCount; ++i) {
+			if (cert.subject.updateURLs[i])
+				addSubjectUpdateUrl(cert.subject.updateURLs[i]);
 		}
 	}
 
@@ -181,8 +181,8 @@ void Certificate::addSubjectUpdateUrl(const char *url)
 	// Add pointer to local copy to pointer array and update C structure to point to
 	// potentially reallocated array.
 	m_updateUrls.push_back(m_strings.back().c_str());
-	this->subject.updateUrls = m_updateUrls.data();
-	this->subject.updateUrlCount = (unsigned int)m_updateUrls.size();
+	this->subject.updateURLs = m_updateUrls.data();
+	this->subject.updateURLCount = (unsigned int)m_updateUrls.size();
 }
 
 void Certificate::setExtendedAttributes(const Dictionary &x)
@@ -456,14 +456,14 @@ ZT_CertificateError Certificate::verify() const
 				return ZT_CERTIFICATE_ERROR_MISSING_REQUIRED_FIELDS;
 		}
 
-		if (this->subject.updateUrlCount) {
-			if (!this->subject.updateUrls)
+		if (this->subject.updateURLCount) {
+			if (!this->subject.updateURLs)
 				return ZT_CERTIFICATE_ERROR_INVALID_FORMAT;
-			for (unsigned int i = 0; i < this->subject.updateUrlCount; ++i) {
-				if (!this->subject.updateUrls[i])
+			for (unsigned int i = 0; i < this->subject.updateURLCount; ++i) {
+				if (!this->subject.updateURLs[i])
 					return ZT_CERTIFICATE_ERROR_MISSING_REQUIRED_FIELDS;
 			}
-		} else if (this->subject.updateUrls) {
+		} else if (this->subject.updateURLs) {
 			return ZT_CERTIFICATE_ERROR_INVALID_FORMAT;
 		}
 	} catch (...) {}
@@ -538,10 +538,10 @@ void Certificate::m_encodeSubject(const ZT_Certificate_Subject &s, Dictionary &d
 			d[Dictionary::arraySubscript(tmp, "s.c$", i)].assign(s.certificates[i], s.certificates[i] + ZT_SHA384_DIGEST_SIZE);
 	}
 
-	d.add("s.u$", (uint64_t)s.updateUrlCount);
-	if (s.updateUrls) {
-		for (unsigned int i = 0; i < s.updateUrlCount; ++i)
-			d.add(Dictionary::arraySubscript(tmp, "s.u$", i), s.updateUrls[i]);
+	d.add("s.u$", (uint64_t)s.updateURLCount);
+	if (s.updateURLs) {
+		for (unsigned int i = 0; i < s.updateURLCount; ++i)
+			d.add(Dictionary::arraySubscript(tmp, "s.u$", i), s.updateURLs[i]);
 	}
 
 	if (s.name.country[0])

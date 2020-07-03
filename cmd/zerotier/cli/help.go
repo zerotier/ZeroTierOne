@@ -81,7 +81,7 @@ Commands:
     verify <identity> <file> <sig>       Verify a signature
   certificate <command> [args]         - Certificate commands
     newid                                Create a new unique subject ID
-    newcsr <settings path>               Create a new CSR (signing request)
+    newcsr <subject json path>           Create a new CSR (signing request)
     sign <csr path> <identity path>      Sign a CSR to create a certificate
     verify <certificate>                 Verify a certificate
     show                                 List certificate for current node

@@ -272,7 +272,7 @@ static bool ZTT_deepCompareCertificates(const Certificate &a, const Certificate 
 		(a.subject.timestamp != b.subject.timestamp) ||
 		(a.subject.identityCount != b.subject.identityCount) ||
 		(a.subject.networkCount != b.subject.networkCount) ||
-		(a.subject.updateUrlCount != b.subject.updateUrlCount) ||
+		(a.subject.updateURLCount != b.subject.updateURLCount) ||
 		(a.subject.uniqueIdSize != b.subject.uniqueIdSize) ||
 		(a.subject.uniqueIdProofSignatureSize != b.subject.uniqueIdProofSignatureSize) ||
 		(a.maxPathLength != b.maxPathLength) ||
@@ -324,12 +324,12 @@ static bool ZTT_deepCompareCertificates(const Certificate &a, const Certificate 
 			return false;
 	}
 
-	for(unsigned int i=0;i<a.subject.updateUrlCount;++i) {
-		if ((!a.subject.updateUrls) || (!b.subject.updateUrls))
+	for(unsigned int i=0;i<a.subject.updateURLCount; ++i) {
+		if ((!a.subject.updateURLs) || (!b.subject.updateURLs))
 			return false;
-		if ((!a.subject.updateUrls[i]) || (!b.subject.updateUrls[i]))
+		if ((!a.subject.updateURLs[i]) || (!b.subject.updateURLs[i]))
 			return false;
-		if (strcmp(a.subject.updateUrls[i], b.subject.updateUrls[i]) != 0)
+		if (strcmp(a.subject.updateURLs[i], b.subject.updateURLs[i]) != 0)
 			return false;
 	}
 

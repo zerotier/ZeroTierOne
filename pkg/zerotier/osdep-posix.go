@@ -1,7 +1,7 @@
 // +build !windows
 
 /*
- * Copyright (c)2013-2020 ZeroTier, Inc.
+ * Copyright (C)2013-2020 ZeroTier, Inc.
  *
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
