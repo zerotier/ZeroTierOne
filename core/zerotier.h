@@ -629,15 +629,15 @@ enum ZT_CredentialType
  */
 enum ZT_EndpointType
 {
-	ZT_ENDPOINT_TYPE_NIL =           0,  // Nil/empty endpoint
-	ZT_ENDPOINT_TYPE_ZEROTIER =      1,  // ZeroTier relaying (address+fingerprint)
-	ZT_ENDPOINT_TYPE_ETHERNET =      2,  // Ethernet with ethertype 0x9993
-	ZT_ENDPOINT_TYPE_WIFI_DIRECT =   3,  // Ethernet using WiFi direct
-	ZT_ENDPOINT_TYPE_BLUETOOTH =     4,  // Bluetooth (same address type as Ethernet)
-	ZT_ENDPOINT_TYPE_IP =            5,  // Naked IP (protocol 193)
-	ZT_ENDPOINT_TYPE_IP_UDP =        6,  // IP/UDP
-	ZT_ENDPOINT_TYPE_IP_TCP =        7,  // IP/TCP
-	ZT_ENDPOINT_TYPE_IP_HTTP =       8   // IP/HTTP encapsulation
+	ZT_ENDPOINT_TYPE_NIL =           0,  /* Nil/empty endpoint */
+	ZT_ENDPOINT_TYPE_ZEROTIER =      1,  /* ZeroTier relaying (address+fingerprint) */
+	ZT_ENDPOINT_TYPE_ETHERNET =      2,  /* Ethernet with ethertype 0x9993 */
+	ZT_ENDPOINT_TYPE_WIFI_DIRECT =   3,  /* Ethernet using WiFi direct */
+	ZT_ENDPOINT_TYPE_BLUETOOTH =     4,  /* Bluetooth (same address type as Ethernet) */
+	ZT_ENDPOINT_TYPE_IP =            5,  /* Naked IP (protocol 193) */
+	ZT_ENDPOINT_TYPE_IP_UDP =        6,  /* IP/UDP */
+	ZT_ENDPOINT_TYPE_IP_TCP =        7,  /* IP/TCP */
+	ZT_ENDPOINT_TYPE_IP_HTTP =       8   /* IP/HTTP encapsulation */
 };
 
 /**
@@ -877,7 +877,7 @@ enum ZT_Event
 	 */
 	ZT_EVENT_DOWN = 3,
 
-	// 4 once signaled identity collision but this is no longer an error
+	/* 4 once signaled identity collision but this is no longer an error */
 
 	/**
 	 * Trace (debugging) message
@@ -1030,7 +1030,7 @@ enum ZT_VirtualNetworkType
  */
 enum ZT_VirtualNetworkRuleType
 {
-	// 0 to 15 reserved for actions
+	/* 0 to 15 reserved for actions */
 
 	/**
 	 * Drop frame
@@ -1163,10 +1163,10 @@ typedef struct
 		 * bytes and doesn't enlarge the overall size of this union.
 		 */
 		struct {
-			uint64_t start; // integer range start
-			uint32_t end; // end of integer range (relative to start, inclusive, 0 for equality w/start)
-			uint16_t idx; // index in packet of integer
-			uint8_t format; // bits in integer (range 1-64, ((format&63)+1)) and endianness (MSB 1 for little, 0 for big)
+			uint64_t start; /* integer range start */
+			uint32_t end;   /* end of integer range (relative to start, inclusive, 0 for equality w/start) */
+			uint16_t idx;   /* index in packet of integer */
+			uint8_t format; /* bits in integer (range 1-64, ((format&63)+1)) and endianness (MSB 1 for little, 0 for big) */
 		} intRange;
 
 		/**
@@ -1236,9 +1236,9 @@ typedef struct
 		 * ICMP type and code
 		 */
 		struct {
-			uint8_t type; // ICMP type, always matched
-			uint8_t code; // ICMP code if matched
-			uint8_t flags; // flag 0x01 means also match code, otherwise only match type
+			uint8_t type;  /* ICMP type, always matched */
+			uint8_t code;  /* ICMP code if matched */
+			uint8_t flags; /* flag 0x01 means also match code, otherwise only match type */
 		} icmp;
 
 		/**

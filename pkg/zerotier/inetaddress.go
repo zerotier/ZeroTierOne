@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/json"
-	"errors"
 	"net"
 	"strconv"
 	"strings"
@@ -96,8 +95,6 @@ func makeSockaddrStorage(ip net.IP, port int, ss *C.struct_sockaddr_storage) boo
 	}
 	return false
 }
-
-var ErrInvalidInetAddress = errors.New("invalid marshaled InetAddress object")
 
 // InetAddress implements net.Addr but has a ZeroTier-like string representation
 type InetAddress struct {

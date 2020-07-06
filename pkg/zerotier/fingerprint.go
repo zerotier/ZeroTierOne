@@ -29,8 +29,8 @@ const FingerprintHashSize = 48
 
 // Fingerprint bundles an address with an optional SHA384 full hash of the identity's key(s).
 type Fingerprint struct {
-	Address Address
-	Hash    []byte
+	Address Address `json:"address"`
+	Hash    []byte  `json:"hash"`
 }
 
 // NewFingerprintFromString decodes a string-format fingerprint.

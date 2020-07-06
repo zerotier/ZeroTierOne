@@ -30,10 +30,10 @@ type Locator struct {
 	cl          unsafe.Pointer
 }
 
-func newLocatorFromCLocator(cl unsafe.Pointer) (*Locator, error) {
+func newLocatorFromCLocator(cl unsafe.Pointer, requiresDeletion bool) (*Locator, error) {
 	loc := new(Locator)
 	loc.cl = cl
-	err := loc.init(false)
+	err := loc.init(requiresDeletion)
 	if err != nil {
 		return nil, err
 	}

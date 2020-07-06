@@ -15,7 +15,6 @@
 
 package zerotier
 
-//#cgo CFLAGS: -O3
 //#include "../../serviceiocore/GoGlue.h"
 import "C"
 

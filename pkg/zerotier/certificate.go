@@ -122,7 +122,7 @@ func NewCertificateFromCCertificate(ccptr unsafe.Pointer) *Certificate {
 		}
 		var loc *Locator
 		if cid.locator != nil {
-			loc, err = newLocatorFromCLocator(cid.locator)
+			loc, err = newLocatorFromCLocator(cid.locator, false)
 			if err != nil {
 				return nil
 			}
