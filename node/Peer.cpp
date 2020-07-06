@@ -93,26 +93,9 @@ void Peer::received(
 			break;
 	}
 
-	if (trustEstablished) {
+		if (trustEstablished) {
 		_lastTrustEstablishedPacketReceived = now;
 		path->trustedPacketReceived(now);
-	}
-
-	{
-		Mutex::Lock _l(_paths_m);
-
-		recordIncomingPacket(tPtr, path, packetId, payloadLength, verb, now);
-
-		if (_canUseMultipath) {
-			if (path->needsToSendQoS(now)) {
-				sendQOS_MEASUREMENT(tPtr, path, path->localSocket(), path->address(), now);
-			}
-			for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-				if (_paths[i].p) {
-					_paths[i].p->processBackgroundPathMeasurements(now);
-				}
-			}
-		}
 	}
 
 	if (hops == 0) {
@@ -135,27 +118,20 @@ void Peer::received(
 		if ((!havePath)&&(RR->node->shouldUsePathForZeroTierTraffic(tPtr,_id.address(),path->localSocket(),path->address()))) {
 			Mutex::Lock _l(_paths_m);
 
-			// Paths are redundant if they duplicate an alive path to the same IP or
+			// Paths are redunant if they duplicate an alive path to the same IP or
 			// with the same local socket and address family.
 			bool redundant = false;
-			unsigned int replacePath = ZT_MAX_PEER_NETWORK_PATHS;
 			for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
 				if (_paths[i].p) {
-					if ( (_paths[i].p->alive(now)) && ( ((_paths[i].p->localSocket() == path->localSocket())&&(_paths[i].p->address().ss_family == path->address().ss_family)) || (_paths[i].p->address().ipsEqual2(path->address())) ) ) {
+					if ( (_paths[i].p->alive(now)) && ( ((_paths[i].p->localSocket() == path->localSocket())&&(_paths[i].p->address().ss_family == path->address().ss_family)) || (_paths[i].p->address().ipsEqual2(path->address())) ) )  {
 						redundant = true;
-						break;
-					}
-					// If the path is the same address and port, simply assume this is a replacement
-					if ( (_paths[i].p->address().ipsEqual2(path->address()))) {
-						replacePath = i;
 						break;
 					}
 				} else break;
 			}
 
-			// If the path isn't a duplicate of the same localSocket AND we haven't already determined a replacePath,
-			// then find the worst path and replace it.
-			if (!redundant && replacePath == ZT_MAX_PEER_NETWORK_PATHS) {
+			if (!redundant) {
+				unsigned int replacePath = ZT_MAX_PEER_NETWORK_PATHS;
 				int replacePathQuality = 0;
 				for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
 					if (_paths[i].p) {
@@ -169,16 +145,16 @@ void Peer::received(
 						break;
 					}
 				}
-			}
 
-			if (replacePath != ZT_MAX_PEER_NETWORK_PATHS) {
-				if (verb == Packet::VERB_OK) {
-					RR->t->peerLearnedNewPath(tPtr,networkId,*this,path,packetId);
-					_paths[replacePath].lr = now;
-					_paths[replacePath].p = path;
-					_paths[replacePath].priority = 1;
-				} else {
-					attemptToContact = true;
+				if (replacePath != ZT_MAX_PEER_NETWORK_PATHS) {
+					if (verb == Packet::VERB_OK) {
+						RR->t->peerLearnedNewPath(tPtr,networkId,*this,path,packetId);
+						_paths[replacePath].lr = now;
+						_paths[replacePath].p = path;
+						_paths[replacePath].priority = 1;
+					} else {
+						attemptToContact = true;
+					}
 				}
 			}
 		}
