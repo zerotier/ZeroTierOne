@@ -265,7 +265,7 @@ if(NOT PACKAGE_STATIC)
 		zt_service_tests ALL
 		BYPRODUCTS ${CMAKE_BINARY_DIR}/zt_service_tests
 		SOURCES ${go_src}
-		COMMAND ${CMAKE_COMMAND} -E env ${GOARCH} ${GOARM} CGO_ENABLED=1 CGO_CFLAGS=\"-O3\" CGO_LDFLAGS=\"$<TARGET_FILE:zt_core> $<TARGET_FILE:zt_controller> $<TARGET_FILE:zt_service_io_core> $<TARGET_FILE:zt_osdep> ${GO_EXTRA_LIBRARIES}\" ${GO} build -mod=vendor ${GOFLAGS} -o ${CMAKE_BINARY_DIR}/zt_service_tests ${CMAKE_SOURCE_DIR}/cmd/zt_service_tests/*.go
+		COMMAND ${CMAKE_COMMAND} -E env ${GOARCH} ${GOARM} CGO_ENABLED=1 CGO_CFLAGS=\"-O3\" CGO_LDFLAGS=\"$<TARGET_FILE:zt_core> $<TARGET_FILE:zt_controller> $<TARGET_FILE:zt_service_io_core> $<TARGET_FILE:zt_osdep> ${GO_EXTRA_LIBRARIES}\" ${GO} build -mod=vendor ${GOFLAGS} -o ${CMAKE_BINARY_DIR}/zt_service_tests ${CMAKE_SOURCE_DIR}/cmd/zt_service_tests/zt_service_tests.go
 		COMMENT "Compiling zt_service_tests (Go/cgo self-tests)..."
 	)
 	add_dependencies(zt_service_tests zt_osdep zt_core zt_controller zt_service_io_core)
