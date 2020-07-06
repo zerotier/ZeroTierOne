@@ -242,12 +242,17 @@ if(NOT PACKAGE_STATIC)
 		${CMAKE_SOURCE_DIR}/cmd/cmd/*.go
 		${CMAKE_SOURCE_DIR}/pkg/zerotier/*.go
 	)
+	file(GLOB go_zt_service_tests_cmd_src
+		${CMAKE_SOURCE_DIR}/cmd/zt_service_tests/*.go
+	)
 
 	if(WIN32)
 		set(GO_EXE_NAME "zerotier.exe")
+		set(GO_SERVICE_TESTS_EXE_NAME "go_service_tests.exe")
 		set(GO_EXTRA_LIBRARIES "-lstdc++ -lwsock32 -lws2_32 -liphlpapi -lole32 -loleaut32 -lrpcrt4 -luuid")
 	else(WIN32)
 		set(GO_EXE_NAME "zerotier")
+		set(GO_SERVICE_TESTS_EXE_NAME "go_service_tests")
 		if(CMAKE_SYSTEM_NAME MATCHES "Linux")
 			set(GO_EXTRA_LIBRARIES "-lstdc++")
 			if(BUILD_ARM_V5)
@@ -264,8 +269,8 @@ if(NOT PACKAGE_STATIC)
 	add_custom_target(
 		zt_service_tests ALL
 		BYPRODUCTS ${CMAKE_BINARY_DIR}/zt_service_tests
-		SOURCES ${go_src}
-		COMMAND ${CMAKE_COMMAND} -E env ${GOARCH} ${GOARM} CGO_ENABLED=1 CGO_CFLAGS=\"-O3\" CGO_LDFLAGS=\"$<TARGET_FILE:zt_core> $<TARGET_FILE:zt_controller> $<TARGET_FILE:zt_service_io_core> $<TARGET_FILE:zt_osdep> ${GO_EXTRA_LIBRARIES}\" ${GO} build -mod=vendor ${GOFLAGS} -o ${CMAKE_BINARY_DIR}/zt_service_tests ${CMAKE_SOURCE_DIR}/cmd/zt_service_tests/*.go
+		SOURCES ${go_src} ${go_zt_service_tests_cmd_src}
+		COMMAND ${CMAKE_COMMAND} -E env ${GOARCH} ${GOARM} CGO_ENABLED=1 CGO_CFLAGS=\"-O3\" CGO_LDFLAGS=\"$<TARGET_FILE:zt_core> $<TARGET_FILE:zt_controller> $<TARGET_FILE:zt_service_io_core> $<TARGET_FILE:zt_osdep> ${GO_EXTRA_LIBRARIES}\" ${GO} build -mod=vendor ${GOFLAGS} -o ${CMAKE_BINARY_DIR}/${GO_SERVICE_TESTS_EXE_NAME} ${go_zt_service_tests_cmd_src}
 		COMMENT "Compiling zt_service_tests (Go/cgo self-tests)..."
 	)
 	add_dependencies(zt_service_tests zt_osdep zt_core zt_controller zt_service_io_core)
