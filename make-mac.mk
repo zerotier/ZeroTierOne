@@ -99,7 +99,7 @@ mac-agent: FORCE
 
 one:	$(CORE_OBJS) $(ONE_OBJS) one.o mac-agent
 	$(CXX) $(CXXFLAGS) -o zerotier-one $(CORE_OBJS) $(ONE_OBJS) one.o $(LIBS)
-	$(STRIP) zerotier-one
+	# $(STRIP) zerotier-one
 	ln -sf zerotier-one zerotier-idtool
 	ln -sf zerotier-one zerotier-cli
 	$(CODESIGN) -f -s $(CODESIGN_APP_CERT) zerotier-one
