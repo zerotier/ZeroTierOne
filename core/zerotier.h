@@ -2764,7 +2764,7 @@ ZT_SDK_API int ZT_Certificate_newCSR(
 	int *csrSize);
 
 /**
- * Sign a CSR to generate a complete certificate
+ * Sign a CSR to generate a complete certificate.
  *
  * @param cert Certificate to sign
  * @param signer Signer identity (must contain secret key)
@@ -2798,6 +2798,27 @@ ZT_SDK_API enum ZT_CertificateError ZT_Certificate_decode(
 	const void *cert,
 	int certSize,
 	int verify);
+
+/**
+ * Encode a certificate
+ *
+ * @param cert Certificate to encode
+ * @param encoded Buffer to store certificate (suggested size: 16384)
+ * @param encodedSize Value/result: size of certificate encoding buffer
+ * @return OK (0) or error
+ */
+ZT_SDK_API int ZT_Certificate_encode(
+	const ZT_Certificate *cert,
+	void *encoded,
+	int *encodedSize);
+
+/**
+ * Verify certificate signatures and internal structure.
+ *
+ * @param cert Certificate to verify
+ * @return Certificate error or ZT_CERTIFICATE_ERROR_NONE if no errors found.
+ */
+ZT_SDK_API enum ZT_CertificateError ZT_Certificate_verify(const ZT_Certificate *cert);
 
 /**
  * Free a certificate created with ZT_Certificate_decode()

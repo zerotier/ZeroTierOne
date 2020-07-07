@@ -17,12 +17,15 @@ package zerotier
 import "C"
 
 import (
+	"fmt"
 	"unsafe"
 )
 
 const (
 	CertificateSerialNoSize    = 48
 	CertificateMaxStringLength = int(C.ZT_CERTIFICATE_MAX_STRING_LENGTH)
+
+	CertificateUniqueIdTypeNistP384 = int(C.ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384)
 )
 
 // CertificateName identifies a real-world entity that owns a subject or has signed a certificate.
@@ -79,6 +82,8 @@ type Certificate struct {
 	Signature          []byte             `json:"signature,omitempty"`
 }
 
+// CCertificate wraps a pointer to a C ZT_Certificate with any related allocated memory.
+// Only the 'C' field should be used directly, and only this field is exported.
 type CCertificate struct {
 	C                             unsafe.Pointer
 	internalCertificate           C.ZT_Certificate
@@ -87,6 +92,65 @@ type CCertificate struct {
 	internalSubjectCertificates   []uintptr
 	internalSubjectUpdateURLs     []uintptr
 	internalSubjectUpdateURLsData [][]byte
+}
+
+func certificateErrorToError(cerr int) error {
+	switch cerr {
+	case C.ZT_CERTIFICATE_ERROR_NONE:
+		return nil
+	case C.ZT_CERTIFICATE_ERROR_HAVE_NEWER_CERT:
+		return ErrCertificateHaveNewerCert
+	case C.ZT_CERTIFICATE_ERROR_INVALID_FORMAT:
+		return ErrCertificateInvalidFormat
+	case C.ZT_CERTIFICATE_ERROR_INVALID_IDENTITY:
+		return ErrCertificateInvalidIdentity
+	case C.ZT_CERTIFICATE_ERROR_INVALID_PRIMARY_SIGNATURE:
+		return ErrCertificateInvalidPrimarySignature
+	case C.ZT_CERTIFICATE_ERROR_INVALID_CHAIN:
+		return ErrCertificateInvalidChain
+	case C.ZT_CERTIFICATE_ERROR_INVALID_COMPONENT_SIGNATURE:
+		return ErrCertificateInvalidComponentSignature
+	case C.ZT_CERTIFICATE_ERROR_INVALID_UNIQUE_ID_PROOF:
+		return ErrCertificateInvalidUniqueIDProof
+	case C.ZT_CERTIFICATE_ERROR_MISSING_REQUIRED_FIELDS:
+		return ErrCertificateMissingRequiredFields
+	case C.ZT_CERTIFICATE_ERROR_OUT_OF_VALID_TIME_WINDOW:
+		return ErrCertificateOutOfValidTimeWindow
+	}
+	return ErrInternal
+}
+
+// NewCertificateFromBytes decodes a certificate from an encoded byte string.
+// Note that this is also used to decode a CSR. When used for a CSR only the
+// Subject part of the certificate will contain anything and the rest will be
+// blank. If 'verify' is true the certificate will also be verified. If using
+// to decode a CSR this should be false as a CSR will not contain a full set
+// of fields or a certificate signature.
+func NewCertificateFromBytes(cert []byte, verify bool) (*Certificate, error) {
+	if len(cert) == 0 {
+		return nil, ErrInvalidParameter
+	}
+	var dec unsafe.Pointer
+	ver := C.int(0)
+	if verify {
+		ver = 1
+	}
+	cerr := C.ZT_Certificate_decode((**C.ZT_Certificate)(unsafe.Pointer(&dec)), unsafe.Pointer(&cert[0]), C.int(len(cert)), ver)
+	if dec != unsafe.Pointer(nil) {
+		defer C.ZT_Certificate_delete((*C.ZT_Certificate)(dec))
+	}
+	if cerr != 0 {
+		return nil, certificateErrorToError(int(cerr))
+	}
+	if dec == unsafe.Pointer(nil) {
+		return nil, ErrInternal
+	}
+
+	goCert := NewCertificateFromCCertificate(dec)
+	if goCert == nil {
+		return nil, ErrInternal
+	}
+	return goCert, nil
 }
 
 // NewCertificateFromCCertificate translates a C ZT_Certificate into a Go Certificate.
@@ -348,4 +412,78 @@ func (c *Certificate) CCertificate() *CCertificate {
 	}
 
 	return &cc
+}
+
+// Marshal encodes this certificae as a byte array.
+func (c *Certificate) Marshal() ([]byte, error) {
+	cc := c.CCertificate()
+	if cc == nil {
+		return nil, ErrInternal
+	}
+	var encoded [16384]byte
+	encodedSize := C.int(16384)
+	rv := int(C.ZT_Certificate_encode((*C.ZT_Certificate)(cc.C), unsafe.Pointer(&encoded[0]), &encodedSize))
+	if rv != 0 {
+		return nil, fmt.Errorf("Certificate encode error %d", rv)
+	}
+	return append(make([]byte, 0, int(encodedSize)), encoded[0:int(encodedSize)]...), nil
+}
+
+// Verify returns nil on success or a certificate error if there is a problem with this certificate.
+func (c *Certificate) Verify() error {
+	cc := c.CCertificate()
+	if cc == nil {
+		return ErrInternal
+	}
+	return certificateErrorToError(int(C.ZT_Certificate_verify((*C.ZT_Certificate)(cc.C))))
+}
+
+// NewCertificateSubjectUniqueId creates a new certificate subject unique ID and corresponding private key.
+// Right now only one type is supported: CertificateUniqueIdTypeNistP384
+func NewCertificateSubjectUniqueId(uniqueIdType int) (id []byte, priv []byte, err error) {
+	if uniqueIdType != CertificateUniqueIdTypeNistP384 {
+		err = ErrInvalidParameter
+		return
+	}
+	id = make([]byte, int(C.ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE))
+	priv = make([]byte, int(C.ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE))
+	idSize := C.int(len(id))
+	idPrivateSize := C.int(len(priv))
+	if C.ZT_Certificate_newSubjectUniqueId((C.enum_ZT_CertificateUniqueIdType)(uniqueIdType), unsafe.Pointer(&id[0]), &idSize, unsafe.Pointer(&priv[0]), &idPrivateSize) != 0 {
+		id = nil
+		priv = nil
+		err = ErrInvalidParameter
+		return
+	}
+	if int(idSize) != len(id) || int(idPrivateSize) != len(priv) {
+		id = nil
+		priv = nil
+		err = ErrInvalidParameter
+		return
+	}
+	return
+}
+
+// NewCertificateCSR creates a new certificate signing request (CSR) from a certificate subject and optional unique ID.
+func NewCertificateCSR(subject *CertificateSubject, uniqueId []byte, uniqueIdPrivate []byte) ([]byte, error) {
+	var tmp Certificate
+	tmp.Subject = *subject
+	ctmp := tmp.CCertificate()
+	if ctmp == nil {
+		return nil, ErrInternal
+	}
+	ccert := (*C.ZT_Certificate)(ctmp.C)
+	var uid unsafe.Pointer
+	var uidp unsafe.Pointer
+	if len(uniqueId) > 0 && len(uniqueIdPrivate) > 0 {
+		uid = unsafe.Pointer(&uniqueId[0])
+		uidp = unsafe.Pointer(&uniqueIdPrivate[0])
+	}
+	var csr [16384]byte
+	csrSize := C.int(16384)
+	rv := int(C.ZT_Certificate_newCSR(&(ccert.subject), uid, C.int(len(uniqueId)), uidp, C.int(len(uniqueIdPrivate)), unsafe.Pointer(&csr[0]), &csrSize))
+	if rv != 0 {
+		return nil, fmt.Errorf("newCSR error %d", rv)
+	}
+	return append(make([]byte, 0, int(csrSize)), csr[0:int(csrSize)]...), nil
 }

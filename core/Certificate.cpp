@@ -629,6 +629,8 @@ int ZT_Certificate_sign(
 	void *signedCert,
 	int *signedCertSize)
 {
+	if (!cert)
+		return ZT_RESULT_ERROR_BAD_PARAMETER;
 	ZeroTier::Certificate c(*cert);
 	if (!c.sign(*reinterpret_cast<const ZeroTier::Identity *>(signer)))
 		return ZT_RESULT_ERROR_BAD_PARAMETER;
@@ -669,7 +671,34 @@ enum ZT_CertificateError ZT_Certificate_decode(
 	}
 }
 
-ZT_SDK_API void ZT_Certificate_delete(ZT_Certificate *cert)
+int ZT_Certificate_encode(
+	const ZT_Certificate *cert,
+	void *encoded,
+	int *encodedSize)
+{
+	if ((!cert) || (!encoded) || (!encodedSize))
+		return ZT_RESULT_ERROR_BAD_PARAMETER;
+	ZeroTier::Certificate c(*cert);
+	ZeroTier::Vector< uint8_t > enc(c.encode());
+	if ((int)enc.size() > *encodedSize)
+		return ZT_RESULT_ERROR_BAD_PARAMETER;
+	ZeroTier::Utils::copy(encoded, enc.data(), (unsigned int)enc.size());
+	*encodedSize = (int)enc.size();
+	return ZT_RESULT_OK;
+}
+
+enum ZT_CertificateError ZT_Certificate_verify(const ZT_Certificate *cert)
+{
+	try {
+		if (!cert)
+			return ZT_CERTIFICATE_ERROR_INVALID_FORMAT;
+		return ZeroTier::Certificate(*cert).verify();
+	} catch ( ... ) {
+		return ZT_CERTIFICATE_ERROR_INVALID_FORMAT;
+	}
+}
+
+void ZT_Certificate_delete(ZT_Certificate *cert)
 {
 	if (cert)
 		delete reinterpret_cast<ZeroTier::Certificate *>(cert);

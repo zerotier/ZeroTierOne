@@ -29,6 +29,16 @@ const (
 	ErrTapInitFailed            Err = "unable to create native Tap instance"
 	ErrUnrecognizedIdentityType Err = "unrecognized identity type"
 	ErrInvalidKey               Err = "invalid key data"
+
+	ErrCertificateHaveNewerCert             Err = "a newer certificate for this subject unique ID is already loaded"
+	ErrCertificateInvalidFormat             Err = "invalid certificate format"
+	ErrCertificateInvalidIdentity           Err = "invalid identity in certificate"
+	ErrCertificateInvalidPrimarySignature   Err = "invalid primary signature"
+	ErrCertificateInvalidChain              Err = "certificate chain verification failed"
+	ErrCertificateInvalidComponentSignature Err = "an internal component of this certificate has an invalid signature"
+	ErrCertificateInvalidUniqueIDProof      Err = "certificate subject unique ID proof signature verification failed"
+	ErrCertificateMissingRequiredFields     Err = "certificate is missing one or more required fields"
+	ErrCertificateOutOfValidTimeWindow      Err = "certificate is out of its valid time window"
 )
 
 // APIErr is returned by the JSON API when a call fails
