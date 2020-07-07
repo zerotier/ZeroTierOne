@@ -2794,7 +2794,7 @@ ZT_SDK_API int ZT_Certificate_sign(
  * @return Certificate error, if any
  */
 ZT_SDK_API enum ZT_CertificateError ZT_Certificate_decode(
-	ZT_Certificate **decodedCert,
+	const ZT_Certificate **decodedCert,
 	const void *cert,
 	int certSize,
 	int verify);
@@ -2821,11 +2821,23 @@ ZT_SDK_API int ZT_Certificate_encode(
 ZT_SDK_API enum ZT_CertificateError ZT_Certificate_verify(const ZT_Certificate *cert);
 
 /**
+ * Deep clone a certificate, returning one allocated C-side.
+ *
+ * The returned certificate must be freed with ZT_Certificate_delete(). This is
+ * primarily to make copies of certificates that may contain pointers to objects
+ * on the stack, etc., before actually returning them.
+ *
+ * @param cert Certificate to deep clone
+ * @return New certificate with copies of all objects
+ */
+ZT_SDK_API const ZT_Certificate *ZT_Certificate_clone(const ZT_Certificate *cert);
+
+/**
  * Free a certificate created with ZT_Certificate_decode()
  *
  * @param cert Certificate to free
  */
-ZT_SDK_API void ZT_Certificate_delete(ZT_Certificate *cert);
+ZT_SDK_API void ZT_Certificate_delete(const ZT_Certificate *cert);
 
 /* ---------------------------------------------------------------------------------------------------------------- */
 

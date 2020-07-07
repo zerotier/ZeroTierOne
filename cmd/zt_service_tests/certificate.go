@@ -107,5 +107,28 @@ func TestCertificate() bool {
 		return false
 	}
 
+	fmt.Printf("Checking certificate marshal/unmarshal... ")
+	cb, err := c.Marshal()
+	if err != nil {
+		fmt.Printf("marshal FAILED (%s)\n", err.Error())
+		return false
+	}
+	fmt.Printf("marshal: %d bytes ", len(cb))
+	c2, err = zerotier.NewCertificateFromBytes(cb, false)
+	if err != nil {
+		fmt.Printf("unmarshal FAILED (%s)\n", err.Error())
+		return false
+	}
+	cb2, err := c2.Marshal()
+	if err != nil {
+		fmt.Printf("second marshal FAILED (%s)\n", err.Error())
+		return false
+	}
+	if !bytes.Equal(cb, cb2) {
+		fmt.Printf("FAILED (results not equal)\n")
+		return false
+	}
+	fmt.Println("OK")
+
 	return true
 }

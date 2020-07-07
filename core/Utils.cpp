@@ -79,7 +79,7 @@ CPUIDRegisters::CPUIDRegisters() noexcept
 	avx2 = avx && ((ebx & (1U << 5U)) != 0);
 	avx512f = avx && ((ebx & (1U << 16U)) != 0);
 	sha = ((ebx & (1U << 29U)) != 0);
-	fsrm = sha = ((edx & (1U << 4U)) != 0);
+	fsrm = ((edx & (1U << 4U)) != 0);
 }
 
 const CPUIDRegisters CPUID;

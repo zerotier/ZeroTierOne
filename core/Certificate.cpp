@@ -643,7 +643,7 @@ int ZT_Certificate_sign(
 }
 
 enum ZT_CertificateError ZT_Certificate_decode(
-	ZT_Certificate **decodedCert,
+	const ZT_Certificate **decodedCert,
 	const void *cert,
 	int certSize,
 	int verify)
@@ -698,10 +698,21 @@ enum ZT_CertificateError ZT_Certificate_verify(const ZT_Certificate *cert)
 	}
 }
 
-void ZT_Certificate_delete(ZT_Certificate *cert)
+const ZT_Certificate *ZT_Certificate_clone(const ZT_Certificate *cert)
+{
+	try {
+		if (!cert)
+			return nullptr;
+		return (const ZT_Certificate *)(new ZeroTier::Certificate(*cert));
+	} catch ( ... ) {
+		return nullptr;
+	}
+}
+
+void ZT_Certificate_delete(const ZT_Certificate *cert)
 {
 	if (cert)
-		delete reinterpret_cast<ZeroTier::Certificate *>(cert);
+		delete (const ZeroTier::Certificate *)(cert);
 }
 
 }
