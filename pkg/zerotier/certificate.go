@@ -491,24 +491,28 @@ func NewCertificateSubjectUniqueId(uniqueIdType int) (id []byte, priv []byte, er
 
 // NewCertificateCSR creates a new certificate signing request (CSR) from a certificate subject and optional unique ID.
 func NewCertificateCSR(subject *CertificateSubject, uniqueId []byte, uniqueIdPrivate []byte) ([]byte, error) {
-	var tmp Certificate
-	tmp.Subject = *subject
-	ctmp := tmp.CCertificate()
-	if ctmp == nil {
-		return nil, ErrInternal
-	}
-	ccert := (*C.ZT_Certificate)(ctmp.C)
 	var uid unsafe.Pointer
 	var uidp unsafe.Pointer
 	if len(uniqueId) > 0 && len(uniqueIdPrivate) > 0 {
 		uid = unsafe.Pointer(&uniqueId[0])
 		uidp = unsafe.Pointer(&uniqueIdPrivate[0])
 	}
+
+	var tmp Certificate
+	tmp.Subject = *subject
+	ctmp := tmp.CCertificate()
+	if ctmp == nil {
+		return nil, ErrInternal
+	}
+
 	var csr [16384]byte
 	csrSize := C.int(16384)
-	rv := int(C.ZT_Certificate_newCSR(&(ccert.subject), uid, C.int(len(uniqueId)), uidp, C.int(len(uniqueIdPrivate)), unsafe.Pointer(&csr[0]), &csrSize))
+	cc := (*C.ZT_Certificate)(ctmp.C)
+	rv := int(C.ZT_Certificate_newCSR(&(cc.subject), uid, C.int(len(uniqueId)), uidp, C.int(len(uniqueIdPrivate)), unsafe.Pointer(&csr[0]), &csrSize))
 	if rv != 0 {
 		return nil, fmt.Errorf("newCSR error %d", rv)
 	}
+	ctmp = nil
+
 	return append(make([]byte, 0, int(csrSize)), csr[0:int(csrSize)]...), nil
 }

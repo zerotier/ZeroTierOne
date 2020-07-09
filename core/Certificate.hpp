@@ -146,13 +146,6 @@ public:
 	bool decode(const void *data, unsigned int len);
 
 	/**
-	 * Encode only the subject portion of this certificate as a CSR
-	 *
-	 * @return Encoded CSR
-	 */
-	Vector< uint8_t > encodeCSR();
-
-	/**
 	 * Sign this certificate (and also fill in serialNo).
 	 *
 	 * @param issuer Issuer identity (must have secret key)
@@ -169,6 +162,18 @@ public:
 	 * @return OK (0) or error code indicating why certificate failed verification.
 	 */
 	ZT_CertificateError verify() const;
+
+	/**
+	 * Create a CSR that encodes the subject of this certificate
+	 *
+	 * @param s Subject to encode
+	 * @param uniqueId Unique ID to sign subject with or NULL if none
+	 * @param uniqueIdSize Size of unique ID or 0 if none
+	 * @param uniqueIdPrivate Unique ID private key for proof signature or NULL if none
+	 * @param uniqueIdPrivateSize Size of unique ID private key
+	 * @return Encoded subject (without any unique ID fields) or empty vector on error
+	 */
+	static Vector< uint8_t > createCSR(const ZT_Certificate_Subject &s, const void *uniqueId, unsigned int uniqueIdSize, const void *uniqueIdPrivate, unsigned int uniqueIdPrivateSize);
 
 	/**
 	 * Create a subject unique ID and corresponding private key required for use

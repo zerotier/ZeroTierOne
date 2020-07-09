@@ -195,7 +195,7 @@ static const C25519TestVector C25519_TEST_VECTORS[ZT_NUM_C25519_TEST_VECTORS] = 
 #define ZT_ENDIAN_S "big"
 #endif
 
-#define ZT_SETSTR(s,v) Utils::scopy((s), sizeof(s), v)
+#define ZT_SETSTR(s, v) Utils::scopy((s), sizeof(s), v)
 
 // Increments and decrements a counter based on object create/destroy
 class LifeCycleTracker
@@ -233,7 +233,7 @@ static bool ZTT_deepCompareCertificateIdentities(const ZT_Certificate_Identity *
 {
 	if (a == nullptr)
 		return (b == nullptr);
-	if ( ((a->identity == nullptr) != (b->identity == nullptr)) || ((a->locator == nullptr) != (b->locator == nullptr)) )
+	if (((a->identity == nullptr) != (b->identity == nullptr)) || ((a->locator == nullptr) != (b->locator == nullptr)))
 		return false;
 	if ((a->identity) && (*reinterpret_cast<const Identity *>(a->identity) != *reinterpret_cast<const Identity *>(b->identity)))
 		return false;
@@ -277,7 +277,8 @@ static bool ZTT_deepCompareCertificates(const Certificate &a, const Certificate 
 		(a.subject.uniqueIdProofSignatureSize != b.subject.uniqueIdProofSignatureSize) ||
 		(a.maxPathLength != b.maxPathLength) ||
 		(a.signatureSize != b.signatureSize)
-		) return false;
+		)
+		return false;
 
 	if ((a.subject.uniqueId == nullptr) != (b.subject.uniqueId == nullptr))
 		return false;
@@ -301,12 +302,12 @@ static bool ZTT_deepCompareCertificates(const Certificate &a, const Certificate 
 	if ((a.issuer != nullptr) && (*reinterpret_cast<const Identity *>(a.issuer) != *reinterpret_cast<const Identity *>(b.issuer)))
 		return false;
 
-	for(unsigned int i=0;i<a.subject.identityCount;++i) {
+	for (unsigned int i = 0; i < a.subject.identityCount; ++i) {
 		if (!ZTT_deepCompareCertificateIdentities(a.subject.identities + i, b.subject.identities + i))
 			return false;
 	}
 
-	for(unsigned int i=0;i<a.subject.networkCount;++i) {
+	for (unsigned int i = 0; i < a.subject.networkCount; ++i) {
 		if (a.subject.networks[i].id != b.subject.networks[i].id)
 			return false;
 		if (a.subject.networks[i].controller.address != b.subject.networks[i].controller.address)
@@ -315,7 +316,7 @@ static bool ZTT_deepCompareCertificates(const Certificate &a, const Certificate 
 			return false;
 	}
 
-	for(unsigned int i=0;i<a.subject.certificateCount;++i) {
+	for (unsigned int i = 0; i < a.subject.certificateCount; ++i) {
 		if ((!a.subject.certificates) || (!b.subject.certificates))
 			return false;
 		if ((!a.subject.certificates[i]) || (!b.subject.certificates[i]))
@@ -324,7 +325,7 @@ static bool ZTT_deepCompareCertificates(const Certificate &a, const Certificate 
 			return false;
 	}
 
-	for(unsigned int i=0;i<a.subject.updateURLCount; ++i) {
+	for (unsigned int i = 0; i < a.subject.updateURLCount; ++i) {
 		if ((!a.subject.updateURLs) || (!b.subject.updateURLs))
 			return false;
 		if ((!a.subject.updateURLs[i]) || (!b.subject.updateURLs[i]))
@@ -354,14 +355,14 @@ extern "C" const char *ZTT_general()
 			return "__BYTE_ORDER incorrectly defined";
 		}
 #else
-		if (endian != 0x0102030405060708ULL) {
-			ZT_T_PRINTF("[general] Error: __BYTE_ORDER == __BIG_ENDIAN but byte order is actually %.16llx" ZT_EOL_S,endian);
-			return "__BYTE_ORDER incorrectly defined";
-		}
+			if (endian != 0x0102030405060708ULL) {
+				ZT_T_PRINTF("[general] Error: __BYTE_ORDER == __BIG_ENDIAN but byte order is actually %.16llx" ZT_EOL_S,endian);
+				return "__BYTE_ORDER incorrectly defined";
+			}
 #endif
 
 #ifdef ZT_NO_UNALIGNED_ACCESS
-		ZT_T_PRINTF("[general] Platform is %d bit, %s-endian (%.16llx), unaligned variable access not allowed" ZT_EOL_S,(int)(sizeof(void *) * 8),ZT_ENDIAN_S,endian);
+			ZT_T_PRINTF("[general] Platform is %d bit, %s-endian (%.16llx), unaligned variable access not allowed" ZT_EOL_S,(int)(sizeof(void *) * 8),ZT_ENDIAN_S,endian);
 #else
 		ZT_T_PRINTF("[general] Platform is %d bit, %s-endian (%.16llx), unaligned variable access allowed" ZT_EOL_S, (int)(sizeof(void *) * 8), ZT_ENDIAN_S, endian);
 #endif
@@ -379,17 +380,43 @@ extern "C" const char *ZTT_general()
 			ZT_T_PRINTF("OK" ZT_EOL_S);
 		}
 
+		{
+			ZT_T_PRINTF("[general] Sanity checking memory zero and copy functions... ");
+			for (unsigned long k = 0; k < 1000; ++k) {
+				uint8_t *tmp = new uint8_t[131072];
+				uint8_t *tmp2 = new uint8_t[131072];
+				for (unsigned long i = 0; i < 131072; ++i) {
+					tmp[i] = (uint8_t)i;
+					tmp2[i] = 0;
+				}
+				unsigned long l = ((unsigned long)Utils::random() % 131072) + 1;
+				Utils::copy(tmp2, tmp, l);
+				if (memcmp(tmp2, tmp, l) != 0) {
+					ZT_T_PRINTF("FAILED (copy)" ZT_EOL_S);
+					return "memory copy";
+				}
+				Utils::zero(tmp2, l);
+				for (unsigned long i = 0; i < l; ++i) {
+					if (tmp2[i] != 0) {
+						ZT_T_PRINTF("FAILED (zero)" ZT_EOL_S);
+						return "memory zero";
+					}
+				}
+			}
+			ZT_T_PRINTF("OK" ZT_EOL_S);
+		}
+
 #ifdef ZT_ARCH_X64
 		ZT_T_PRINTF("[general] X64 CPUID: aes=%d avx=%d avx2=%d avx512f=%d fsrm=%d rdrand=%d sha=%d vaes=%d vpclmulqdq=%d" ZT_EOL_S,
-			Utils::CPUID.aes,
-			Utils::CPUID.avx,
-			Utils::CPUID.avx2,
-			Utils::CPUID.avx512f,
-			Utils::CPUID.fsrm,
-			Utils::CPUID.rdrand,
-			Utils::CPUID.sha,
-			Utils::CPUID.vaes,
-			Utils::CPUID.vpclmulqdq);
+		            Utils::CPUID.aes,
+		            Utils::CPUID.avx,
+		            Utils::CPUID.avx2,
+		            Utils::CPUID.avx512f,
+		            Utils::CPUID.fsrm,
+		            Utils::CPUID.rdrand,
+		            Utils::CPUID.sha,
+		            Utils::CPUID.vaes,
+		            Utils::CPUID.vpclmulqdq);
 #endif
 
 		{
@@ -472,36 +499,36 @@ extern "C" const char *ZTT_general()
 				return "Utils::storeMachineEndian() broken";
 			}
 #else
-			if (Utils::loadMachineEndian<uint64_t>(&a) != 0x0807060504030201ULL) {
-				ZT_T_PRINTF("FAILED (loadMachineEndian)" ZT_EOL_S);
-				return "Utils::loadMachineEndian() broken";
-			}
-			if (Utils::loadMachineEndian<uint32_t>(&b) != 0x04030201) {
-				ZT_T_PRINTF("FAILED (loadMachineEndian)" ZT_EOL_S);
-				return "Utils::loadMachineEndian() broken";
-			}
-			if (Utils::loadMachineEndian<uint16_t>(&c) != 0x0201) {
-				ZT_T_PRINTF("FAILED (loadMachineEndian)" ZT_EOL_S);
-				return "Utils::loadMachineEndian() broken";
-			}
-			Utils::zero<sizeof(t)>(t);
-			Utils::storeMachineEndian<uint64_t>(t,0x0807060504030201ULL);
-			if (t[0] != 8) {
-				ZT_T_PRINTF("FAILED (storeMachineEndian)" ZT_EOL_S);
-				return "Utils::storeMachineEndian() broken";
-			}
-			Utils::zero<sizeof(t)>(t);
-			Utils::storeMachineEndian<uint32_t>(t,0x04030201);
-			if (t[0] != 4) {
-				ZT_T_PRINTF("FAILED (storeMachineEndian)" ZT_EOL_S);
-				return "Utils::storeMachineEndian() broken";
-			}
-			Utils::zero<sizeof(t)>(t);
-			Utils::storeMachineEndian<uint16_t>(t,0x0201);
-			if (t[0] != 2) {
-				ZT_T_PRINTF("FAILED (storeMachineEndian)" ZT_EOL_S);
-				return "Utils::storeMachineEndian() broken";
-			}
+				if (Utils::loadMachineEndian<uint64_t>(&a) != 0x0807060504030201ULL) {
+					ZT_T_PRINTF("FAILED (loadMachineEndian)" ZT_EOL_S);
+					return "Utils::loadMachineEndian() broken";
+				}
+				if (Utils::loadMachineEndian<uint32_t>(&b) != 0x04030201) {
+					ZT_T_PRINTF("FAILED (loadMachineEndian)" ZT_EOL_S);
+					return "Utils::loadMachineEndian() broken";
+				}
+				if (Utils::loadMachineEndian<uint16_t>(&c) != 0x0201) {
+					ZT_T_PRINTF("FAILED (loadMachineEndian)" ZT_EOL_S);
+					return "Utils::loadMachineEndian() broken";
+				}
+				Utils::zero<sizeof(t)>(t);
+				Utils::storeMachineEndian<uint64_t>(t,0x0807060504030201ULL);
+				if (t[0] != 8) {
+					ZT_T_PRINTF("FAILED (storeMachineEndian)" ZT_EOL_S);
+					return "Utils::storeMachineEndian() broken";
+				}
+				Utils::zero<sizeof(t)>(t);
+				Utils::storeMachineEndian<uint32_t>(t,0x04030201);
+				if (t[0] != 4) {
+					ZT_T_PRINTF("FAILED (storeMachineEndian)" ZT_EOL_S);
+					return "Utils::storeMachineEndian() broken";
+				}
+				Utils::zero<sizeof(t)>(t);
+				Utils::storeMachineEndian<uint16_t>(t,0x0201);
+				if (t[0] != 2) {
+					ZT_T_PRINTF("FAILED (storeMachineEndian)" ZT_EOL_S);
+					return "Utils::storeMachineEndian() broken";
+				}
 #endif
 			ZT_T_PRINTF("OK" ZT_EOL_S);
 		}
@@ -1113,7 +1140,7 @@ extern "C" const char *ZTT_crypto()
 			ZT_T_PRINTF("OK %s" ZT_EOL_S, tmp);
 
 			ZT_T_PRINTF("  Create and sign certificate... ");
-			SharedPtr<Certificate> cert(new Certificate());
+			SharedPtr< Certificate > cert(new Certificate());
 			cert->subject.timestamp = now();
 			cert->addSubjectIdentity(testSubjectId);
 			cert->addSubjectNetwork(12345, testSubjectId.fingerprint());
@@ -1133,7 +1160,7 @@ extern "C" const char *ZTT_crypto()
 			cert->timestamp = cert->subject.timestamp;
 			cert->validity[0] = 0;
 			cert->validity[1] = 9223372036854775807LL;
-			Utils::copy<sizeof(ZT_Certificate_Name)>(&cert->issuerName, &cert->subject.name);
+			Utils::copy< sizeof(ZT_Certificate_Name) >(&cert->issuerName, &cert->subject.name);
 			cert->setSubjectUniqueId(uniqueId, uniqueIdPrivate);
 			cert->sign(testIssuerId);
 			Vector< uint8_t > enc(cert->encode());
@@ -1147,7 +1174,7 @@ extern "C" const char *ZTT_crypto()
 			ZT_T_PRINTF("OK" ZT_EOL_S);
 
 			ZT_T_PRINTF("  Test certificate decode from marshaled format... ");
-			SharedPtr<Certificate> cert2(new Certificate());
+			SharedPtr< Certificate > cert2(new Certificate());
 			if (!cert2->decode(enc.data(), (unsigned int)enc.size())) {
 				ZT_T_PRINTF("FAILED (decode)" ZT_EOL_S);
 				return "Certificate decode";
@@ -1163,7 +1190,7 @@ extern "C" const char *ZTT_crypto()
 			ZT_T_PRINTF("OK" ZT_EOL_S);
 
 			ZT_T_PRINTF("  Test certificate copy/construct... ");
-			SharedPtr<Certificate> cert3(new Certificate(*cert2));
+			SharedPtr< Certificate > cert3(new Certificate(*cert2));
 			if (!ZTT_deepCompareCertificates(*cert2, *cert3)) {
 				ZT_T_PRINTF("FAILED (compare copy with original)" ZT_EOL_S);
 				return "Certificate copy";
