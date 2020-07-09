@@ -115,6 +115,17 @@ public:
 	void setExtendedAttributes(const Dictionary &x);
 
 	/**
+	 * Set the unique ID of this certificate's subject
+	 *
+	 * This must be done after all other fields in the subject are set.
+	 *
+	 * @param uniqueId Unique ID
+	 * @param uniqueIdPrivate Private key associated with unique ID to prove ownership of it
+	 * @return True if successful
+	 */
+	bool setSubjectUniqueId(const uint8_t uniqueId[ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE], const uint8_t uniqueIdPrivate[ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_PRIVATE_SIZE]);
+
+	/**
 	 * Marshal this certificate in binary form
 	 *
 	 * The internal encoding used here is Dictionary to permit easy
@@ -160,17 +171,6 @@ public:
 	ZT_CertificateError verify() const;
 
 	/**
-	 * Set the unique ID of this certificate's subject
-	 *
-	 * This must be done after all other fields in the subject are set.
-	 *
-	 * @param uniqueId Unique ID
-	 * @param uniqueIdPrivate Private key associated with unique ID to prove ownership of it
-	 * @return True if successful
-	 */
-	bool setSubjectUniqueId(const uint8_t uniqueId[ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE], const uint8_t uniqueIdPrivate[ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_PRIVATE_SIZE]);
-
-	/**
 	 * Create a subject unique ID and corresponding private key required for use
 	 *
 	 * @param uniqueId Buffer to receive unique ID
@@ -211,10 +211,10 @@ private:
 	// These hold any identity or locator objects that are owned by and should
 	// be deleted with this certificate. Lists are used so the pointers never
 	// change.
-	List< Identity > m_identities;
-	List< Locator > m_locators;
-	List< String > m_strings;
-	List< SHA384Hash > m_serials;
+	ForwardList< Identity > m_identities;
+	ForwardList< Locator > m_locators;
+	ForwardList< String > m_strings;
+	ForwardList< SHA384Hash > m_serials;
 
 	// These are stored in a vector because the memory needs to be contiguous.
 	Vector< ZT_Certificate_Identity > m_subjectIdentities;

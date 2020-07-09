@@ -68,6 +68,12 @@ public:
 		memoryZero(this);
 	}
 
+	ZT_INLINE Identity(const Identity &id) noexcept
+	{
+		Utils::memoryLock(this, sizeof(Identity));
+		Utils::copy< sizeof(Identity) >(this, &id);
+	}
+
 	/**
 	 * Construct identity from string
 	 *
@@ -86,6 +92,13 @@ public:
 	{
 		Utils::memoryUnlock(this, sizeof(Identity));
 		Utils::burn(reinterpret_cast<void *>(&this->m_priv), sizeof(this->m_priv));
+	}
+
+	ZT_INLINE Identity &operator=(const Identity &id) noexcept
+	{
+		if (likely(this != &id))
+			Utils::copy< sizeof(Identity) >(this, &id);
+		return *this;
 	}
 
 	/**
@@ -212,6 +225,15 @@ public:
 	bool fromString(const char *str);
 
 	/**
+	 * Erase any private key in this identity object
+	 */
+	ZT_INLINE void erasePrivateKey() noexcept
+	{
+		Utils::burn(m_priv, sizeof(m_priv));
+		m_hasPrivate = false;
+	}
+
+	/**
 	 * @return True if this identity contains something
 	 */
 	explicit ZT_INLINE operator bool() const noexcept
@@ -222,20 +244,27 @@ public:
 
 	ZT_INLINE bool operator==(const Identity &id) const noexcept
 	{ return (m_fp == id.m_fp); }
+
 	ZT_INLINE bool operator!=(const Identity &id) const noexcept
 	{ return !(*this == id); }
+
 	ZT_INLINE bool operator<(const Identity &id) const noexcept
 	{ return (m_fp < id.m_fp); }
+
 	ZT_INLINE bool operator>(const Identity &id) const noexcept
 	{ return (id < *this); }
+
 	ZT_INLINE bool operator<=(const Identity &id) const noexcept
 	{ return !(id < *this); }
+
 	ZT_INLINE bool operator>=(const Identity &id) const noexcept
 	{ return !(*this < id); }
 
 	static constexpr int marshalSizeMax() noexcept
 	{ return ZT_IDENTITY_MARSHAL_SIZE_MAX; }
+
 	int marshal(uint8_t data[ZT_IDENTITY_MARSHAL_SIZE_MAX], bool includePrivate = false) const noexcept;
+
 	int unmarshal(const uint8_t *data, int len) noexcept;
 
 private:

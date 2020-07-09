@@ -22,21 +22,13 @@ Dictionary::~Dictionary()
 {}
 
 Vector< uint8_t > &Dictionary::operator[](const char *const k)
-{ return m_entries[s_key(k)]; }
+{ return m_entries[k]; }
 
 const Vector< uint8_t > &Dictionary::operator[](const char *const k) const
 {
 	static const Vector< uint8_t > s_emptyEntry;
-	const SortedMap< String, Vector< uint8_t > >::const_iterator e(m_entries.find(s_key(k)));
+	const SortedMap< String, Vector< uint8_t > >::const_iterator e(m_entries.find(k));
 	return (e == m_entries.end()) ? s_emptyEntry : e->second;
-}
-
-void Dictionary::add(const char *k, bool v)
-{
-	Vector< uint8_t > &e = (*this)[k];
-	e.resize(2);
-	e[0] = (uint8_t)(v ? '1' : '0');
-	e[1] = 0;
 }
 
 void Dictionary::add(const char *k, const Address &v)
@@ -66,24 +58,6 @@ void Dictionary::add(const char *k, const void *data, unsigned int len)
 	}
 }
 
-bool Dictionary::getB(const char *k, bool dfl) const
-{
-	const Vector< uint8_t > &e = (*this)[k];
-	if (!e.empty()) {
-		switch ((char)e[0]) {
-			case '1':
-			case 't':
-			case 'T':
-			case 'y':
-			case 'Y':
-				return true;
-			default:
-				return false;
-		}
-	}
-	return dfl;
-}
-
 uint64_t Dictionary::getUI(const char *k, uint64_t dfl) const
 {
 	char tmp[32];
@@ -97,23 +71,22 @@ char *Dictionary::getS(const char *k, char *v, const unsigned int cap) const
 {
 	if (cap == 0) // sanity check
 		return v;
+
 	const Vector< uint8_t > &e = (*this)[k];
 	if (e.empty()) {
 		v[0] = 0;
 		return v;
 	}
-	unsigned int i = 0;
-	const unsigned int last = cap - 1;
-	for (;;) {
+
+	for (unsigned int i = 0, last = (cap - 1);; ++i) {
 		if ((i >= last) || (i >= (unsigned int)e.size())) {
 			v[i] = 0;
 			break;
 		}
-		if ((v[i] = (char)e[i]) == 0) {
+		if ((v[i] = (char)e[i]) == 0)
 			break;
-		}
-		++i;
 	}
+
 	return v;
 }
 
@@ -131,7 +104,6 @@ void Dictionary::encode(Vector< uint8_t > &out) const
 			s_appendValueByte(out, *i);
 		out.push_back((uint8_t)'\n');
 	}
-	out.push_back(0);
 }
 
 bool Dictionary::decode(const void *data, unsigned int len)
@@ -176,20 +148,24 @@ bool Dictionary::decode(const void *data, unsigned int len)
 			} else {
 				if (c == (uint8_t)'=') {
 					v = &m_entries[k];
-				} else if ((c < 33) || (c > 126) || (c == 92)) {
-					return false;
 				} else {
 					k.push_back(c);
 				}
 			}
-		} else break;
+		} else {
+			break;
+		}
 	}
 	return true;
 }
 
-char *Dictionary::arraySubscript(char buf[256],const char *name,const unsigned long sub) noexcept
+char *Dictionary::arraySubscript(char *buf, unsigned int bufSize, const char *name, const unsigned long sub) noexcept
 {
-	for(unsigned int i=0;i<(256 - 17);++i) {
+	if (bufSize < 17) { // sanity check
+		buf[0] = 0;
+		return buf;
+	}
+	for (unsigned int i = 0; i < (bufSize - 17); ++i) {
 		if ((buf[i] = name[i]) == 0) {
 			buf[i++] = '#';
 			Utils::hex(sub, buf + i);
@@ -197,21 +173,6 @@ char *Dictionary::arraySubscript(char buf[256],const char *name,const unsigned l
 		}
 	}
 	buf[0] = 0;
-	return buf;
-}
-
-String Dictionary::s_key(const char *k) noexcept
-{
-	String buf;
-	if (likely(k != nullptr)) {
-		for (;;) {
-			const char c = *(k++);
-			if ((c >= 33) && (c <= 126) && (c != 61) && (c != 92)) // printable ASCII with no spaces, equals, or backslash
-				buf.push_back(c);
-			else if (c == 0)
-				break;
-		}
-	}
 	return buf;
 }
 

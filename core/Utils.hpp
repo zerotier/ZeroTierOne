@@ -733,7 +733,7 @@ static ZT_INLINE void copy(void *dest, const void *src) noexcept
 #endif
 }
 
-// Avoid rep/movsb startup time for some small common sizes.
+#ifndef ZT_NO_UNALIGNED_ACCESS
 template<>
 ZT_INLINE void copy<4>(void *dest, const void *src) noexcept
 {
@@ -756,13 +756,7 @@ ZT_INLINE void copy<16>(void *dest, const void *src) noexcept
 	*reinterpret_cast<uint64_t *>(dest) = *reinterpret_cast<const uint64_t *>(src);
 	*reinterpret_cast<uint64_t *>(reinterpret_cast<uint8_t *>(dest) + 8) = *reinterpret_cast<const uint64_t *>(reinterpret_cast<const uint8_t *>(src) + 8);
 }
-template<>
-ZT_INLINE void copy<24>(void *dest, const void *src) noexcept
-{
-	*reinterpret_cast<uint64_t *>(dest) = *reinterpret_cast<const uint64_t *>(src);
-	*reinterpret_cast<uint64_t *>(reinterpret_cast<uint8_t *>(dest) + 8) = *reinterpret_cast<const uint64_t *>(reinterpret_cast<const uint8_t *>(src) + 8);
-	*reinterpret_cast<uint64_t *>(reinterpret_cast<uint8_t *>(dest) + 16) = *reinterpret_cast<const uint64_t *>(reinterpret_cast<const uint8_t *>(src) + 16);
-}
+#endif
 
 /**
  * Copy memory block whose size is known at run time

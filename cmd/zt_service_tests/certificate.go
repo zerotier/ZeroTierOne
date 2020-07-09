@@ -29,6 +29,12 @@ func TestCertificate() bool {
 		return false
 	}
 
+	uniqueId, uniqueIdPrivate, err := zerotier.NewCertificateSubjectUniqueId(zerotier.CertificateUniqueIdTypeNistP384)
+	if err != nil {
+		fmt.Printf("  Error generating unique ID: %s", err.Error())
+		return false
+	}
+
 	var c zerotier.Certificate
 
 	c.SerialNo = make([]byte, 48)
@@ -39,6 +45,7 @@ func TestCertificate() bool {
 	c.Timestamp = 5678
 	c.Validity[0] = 1010
 	c.Validity[1] = 2020
+
 	c.Subject.Timestamp = 31337
 	c.Subject.Identities = append(c.Subject.Identities, zerotier.CertificateIdentity{
 		Identity: id,
@@ -65,8 +72,8 @@ func TestCertificate() bool {
 	c.Subject.Name.Email = "j"
 	c.Subject.Name.URL = "k"
 	c.Subject.Name.Host = "l"
-	c.Subject.UniqueID = []byte("asdf")
-	c.Subject.UniqueIDProofSignature = []byte("ghij")
+	c.Subject.UniqueID = uniqueId
+
 	c.Issuer = id
 	c.IssuerName.SerialNo = "m"
 	c.IssuerName.CommonName = "n"
@@ -80,6 +87,7 @@ func TestCertificate() bool {
 	c.IssuerName.Email = "v"
 	c.IssuerName.URL = "w"
 	c.IssuerName.Host = "x"
+
 	c.ExtendedAttributes = c.SerialNo
 	c.MaxPathLength = 9999
 	c.Signature = []byte("qwerty")
@@ -96,9 +104,8 @@ func TestCertificate() bool {
 		return false
 	}
 
-	j, _ := json.MarshalIndent(c, "", "  ")
-	j2, _ := json.MarshalIndent(c2, "", "  ")
-
+	j, _ := json.Marshal(c)
+	j2, _ := json.Marshal(c2)
 	if !bytes.Equal(j, j2) {
 		j, _ = json.MarshalIndent(c, "", "  ")
 		fmt.Print("  Deep equality test failed: certificates do not match! (see dumps below)\n\n")
@@ -126,6 +133,29 @@ func TestCertificate() bool {
 	}
 	if !bytes.Equal(cb, cb2) {
 		fmt.Printf("FAILED (results not equal)\n")
+		return false
+	}
+	fmt.Println("OK")
+
+	fmt.Printf("Checking certificate CSR sign/verify... ")
+	csr, err := zerotier.NewCertificateCSR(&c.Subject, uniqueId, uniqueIdPrivate)
+	if err != nil {
+		fmt.Printf("CSR generate FAILED (%s)\n", err.Error())
+		return false
+	}
+	fmt.Printf("CSR size: %d ",len(csr))
+	csr2, err := zerotier.NewCertificateFromBytes(csr, false)
+	if err != nil {
+		fmt.Printf("CSR decode FAILED (%s)\n", err.Error())
+		return false
+	}
+	signedCert, err := csr2.Sign(id)
+	if err != nil {
+		fmt.Printf("CSR sign FAILED (%s)\n", err.Error())
+		return false
+	}
+	if len(signedCert.Signature) == 0 {
+		fmt.Println("CSR sign FAILED (no signature found)", err.Error())
 		return false
 	}
 	fmt.Println("OK")

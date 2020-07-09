@@ -28,6 +28,7 @@
 #ifdef __CPP11__
 #include <atomic>
 #include <unordered_map>
+#include <forward_list>
 #endif
 
 namespace ZeroTier {
@@ -127,6 +128,20 @@ public:
 template< typename V >
 class List : public std::list< V >
 {};
+
+#ifdef __CPP11__
+
+template< typename V >
+class ForwardList : public std::forward_list< V >
+{};
+
+#else
+
+template< typename V >
+class ForwardList : public std::list< V >
+{};
+
+#endif
 
 template< typename V >
 class Set : public std::set< V, std::less< V > >

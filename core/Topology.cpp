@@ -20,7 +20,7 @@ static const SharedPtr< const Certificate > s_nullCert;
 Topology::Topology(const RuntimeEnvironment *renv, void *tPtr, const int64_t now) :
 	RR(renv)
 {
-	char tmp[256];
+	char tmp[32];
 	Vector< uint8_t > trustData(RR->node->stateObjectGet(tPtr, ZT_STATE_OBJECT_TRUST_STORE, Utils::ZERO256));
 
 	Dictionary d;
@@ -30,20 +30,20 @@ Topology::Topology(const RuntimeEnvironment *renv, void *tPtr, const int64_t now
 		const unsigned long certCount = (unsigned long)d.getUI("c$");
 		for (unsigned long idx = 0; idx < certCount; ++idx) {
 			uint64_t id[6];
-			const Vector< uint8_t > &serialNo = d[Dictionary::arraySubscript(tmp, "c$.s", idx)];
+			const Vector< uint8_t > &serialNo = d[Dictionary::arraySubscript(tmp, sizeof(tmp), "c$.s", idx)];
 			if (serialNo.size() == ZT_SHA384_DIGEST_SIZE) {
 				Utils::copy< 48 >(id, serialNo.data());
 				Certificate cert;
 				Vector< uint8_t > enc(RR->node->stateObjectGet(tPtr, ZT_STATE_OBJECT_CERT, id));
 				if (cert.decode(enc.data(), (unsigned int)enc.size()))
-					addCertificate(tPtr, cert, now, (unsigned int)d.getUI(Dictionary::arraySubscript(tmp, "c$.lt", idx)), false, false, false);
+					addCertificate(tPtr, cert, now, (unsigned int)d.getUI(Dictionary::arraySubscript(tmp, sizeof(tmp), "c$.lt", idx)), false, false, false);
 			}
 		}
 
 		const unsigned long localRootCount = (unsigned long)d.getUI("lr$");
 		for (unsigned long idx = 0; idx < localRootCount; ++idx) {
 			Identity lr;
-			if (d.getO(Dictionary::arraySubscript(tmp, "lr$.i", idx), lr)) {
+			if (d.getO(Dictionary::arraySubscript(tmp, sizeof(tmp), "lr$.i", idx), lr)) {
 				if (lr)
 					m_roots[lr].insert(s_nullCert);
 			}
@@ -456,7 +456,7 @@ void Topology::m_writeTrustStore_l_roots_certs(void *tPtr) const
 {
 	// assumes m_roots_l and m_certs_l are locked for write
 
-	char tmp[256];
+	char tmp[32];
 	Dictionary d;
 
 	d.add("v", (uint64_t)0); // version
@@ -464,15 +464,15 @@ void Topology::m_writeTrustStore_l_roots_certs(void *tPtr) const
 	unsigned long idx = 0;
 	d.add("c$", (uint64_t)m_certs.size());
 	for (Map< SHA384Hash, std::pair< SharedPtr< const Certificate >, unsigned int > >::const_iterator c(m_certs.begin()); c != m_certs.end(); ++c) {
-		d[Dictionary::arraySubscript(tmp, "c$.s", idx)].assign(c->first.data, c->first.data + ZT_SHA384_DIGEST_SIZE);
-		d.add(Dictionary::arraySubscript(tmp, "c$.lt", idx), (uint64_t)c->second.second);
+		d[Dictionary::arraySubscript(tmp, sizeof(tmp), "c$.s", idx)].assign(c->first.data, c->first.data + ZT_SHA384_DIGEST_SIZE);
+		d.add(Dictionary::arraySubscript(tmp, sizeof(tmp), "c$.lt", idx), (uint64_t)c->second.second);
 		++idx;
 	}
 
 	unsigned long localRootCount = 0;
 	for (Map< Identity, Set< SharedPtr< const Certificate > > >::const_iterator r(m_roots.begin()); r != m_roots.end();) {
 		if (r->second.find(s_nullCert) != r->second.end())
-			d.addO(Dictionary::arraySubscript(tmp, "lr$.i", localRootCount++), r->first);
+			d.addO(Dictionary::arraySubscript(tmp, sizeof(tmp), "lr$.i", localRootCount++), r->first);
 	}
 	d.add("lr$", (uint64_t)localRootCount);
 

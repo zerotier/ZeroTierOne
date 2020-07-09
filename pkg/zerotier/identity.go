@@ -78,7 +78,11 @@ func newIdentityFromCIdentity(cid unsafe.Pointer) (*Identity, error) {
 // initCIdentityPtr returns a pointer to the core ZT_Identity instance or nil/0 on error.
 func (id *Identity) initCIdentityPtr() bool {
 	if uintptr(id.cid) == 0 {
-		idCStr := C.CString(id.String())
+		str := id.PrivateKeyString()
+		if len(str) == 0 {
+			str = id.String()
+		}
+		idCStr := C.CString(str)
 		defer C.free(unsafe.Pointer(idCStr))
 		id.cid = C.ZT_Identity_fromString(idCStr)
 		if uintptr(id.cid) == 0 {

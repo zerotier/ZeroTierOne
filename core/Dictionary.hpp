@@ -42,9 +42,10 @@ class Identity;
 class Dictionary
 {
 public:
-	typedef SortedMap< String, Vector < uint8_t > >::const_iterator const_iterator;
+	typedef SortedMap< String, Vector< uint8_t > >::const_iterator const_iterator;
 
 	Dictionary();
+
 	~Dictionary();
 
 	/**
@@ -53,7 +54,7 @@ public:
 	 * @param k Key to look up
 	 * @return Reference to value
 	 */
-	Vector <uint8_t> &operator[](const char *k);
+	Vector< uint8_t > &operator[](const char *k);
 
 	/**
 	 * Get a const reference to a value
@@ -61,7 +62,7 @@ public:
 	 * @param k Key to look up
 	 * @return Reference to value or to empty vector if not found
 	 */
-	const Vector <uint8_t> &operator[](const char *k) const;
+	const Vector< uint8_t > &operator[](const char *k) const;
 
 	/**
 	 * @return Start of key->value pairs
@@ -76,18 +77,16 @@ public:
 	{ return m_entries.end(); }
 
 	/**
-	 * Add a boolean as '1' or '0'
-	 */
-	void add(const char *k, bool v);
-
-	/**
 	 * Add an integer as a hexadecimal string value
 	 *
 	 * @param k Key to set
 	 * @param v Integer to set, will be cast to uint64_t and stored as hex
 	 */
 	ZT_INLINE void add(const char *const k, const uint64_t v)
-	{ char buf[17]; add(k, Utils::hex((uint64_t)(v), buf)); }
+	{
+		char buf[24];
+		add(k, Utils::hex((uint64_t)(v), buf));
+	}
 
 	/**
 	 * Add an integer as a hexadecimal string value
@@ -96,7 +95,10 @@ public:
 	 * @param v Integer to set, will be cast to uint64_t and stored as hex
 	 */
 	ZT_INLINE void add(const char *const k, const int64_t v)
-	{ char buf[17]; add(k, Utils::hex((uint64_t)(v), buf)); }
+	{
+		char buf[24];
+		add(k, Utils::hex((uint64_t)(v), buf));
+	}
 
 	/**
 	 * Add an address in 10-digit hex string format
@@ -112,15 +114,6 @@ public:
 	 * Add a binary blob as a value
 	 */
 	void add(const char *k, const void *data, unsigned int len);
-
-	/**
-	 * Get a boolean
-	 *
-	 * @param k Key to look up
-	 * @param dfl Default value (default: false)
-	 * @return Value of key or default if not found
-	 */
-	bool getB(const char *k, bool dfl = false) const;
 
 	/**
 	 * Get an integer
@@ -171,13 +164,14 @@ public:
 	template< typename T >
 	ZT_INLINE bool addO(const char *k, T &obj)
 	{
-		uint8_t tmp[4096];
-		static_assert(sizeof(tmp) >= T::marshalSizeMax(),"buffer too small");
-		int l = obj.marshal(tmp);
+		Vector< uint8_t > &d = (*this)[k];
+		d.resize(T::marshalSizeMax());
+		const int l = obj.marshal(d.data());
 		if (l > 0) {
-			(*this)[k].assign(tmp, tmp + l);
+			d.resize(l);
 			return true;
 		}
+		d.clear();
 		return false;
 	}
 
@@ -203,7 +197,7 @@ public:
 	 *
 	 * @param out String encoded dictionary
 	 */
-	void encode(Vector <uint8_t> &out) const;
+	void encode(Vector< uint8_t > &out) const;
 
 	/**
 	 * Decode a string encoded dictionary
@@ -362,7 +356,7 @@ public:
 	template< typename V, typename T >
 	static ZT_INLINE int appendObject(V &out, const char *const k, const T &v)
 	{
-		uint8_t tmp[4096]; // large enough for any current object
+		uint8_t tmp[2048]; // large enough for any current object
 		if (T::marshalSizeMax() > sizeof(tmp))
 			return -1;
 		const int mlen = v.marshal(tmp);
@@ -379,7 +373,7 @@ public:
 	 * @param sub Subscript index
 	 * @return Pointer to 'buf'
 	 */
-	static char *arraySubscript(char buf[256],const char *name,const unsigned long sub) noexcept;
+	static char *arraySubscript(char *buf, unsigned int bufSize, const char *name, const unsigned long sub) noexcept;
 
 private:
 	template< typename V >
@@ -417,20 +411,17 @@ private:
 	{
 		for (;;) {
 			const char c = *(k++);
-			if ((c >= 33) && (c <= 126) && (c != 61) && (c != 92)) // printable ASCII with no spaces, equals, or backslash
-				out.push_back((uint8_t)c);
-			else if (c == 0)
+			if (c == 0)
 				break;
+			out.push_back((uint8_t)c);
 		}
 		out.push_back((uint8_t)'=');
 	}
 
-	static String s_key(const char *k) noexcept;
-
 	// Dictionary maps need to be sorted so that they always encode in the same order
 	// to yield blobs that can be hashed and signed reproducibly. Other than for areas
 	// where dictionaries are signed and verified the order doesn't matter.
-	SortedMap < String, Vector< uint8_t > > m_entries;
+	SortedMap< String, Vector< uint8_t > > m_entries;
 };
 
 } // namespace ZeroTier

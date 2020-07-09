@@ -18,6 +18,7 @@ package zerotier
 import "C"
 
 import (
+	"encoding/json"
 	"fmt"
 	"runtime"
 	"unsafe"
@@ -136,13 +137,11 @@ func NewCertificateFromBytes(cert []byte, verify bool) (*Certificate, error) {
 		ver = 1
 	}
 	cerr := C.ZT_Certificate_decode((**C.ZT_Certificate)(unsafe.Pointer(&dec)), unsafe.Pointer(&cert[0]), C.int(len(cert)), ver)
-	if dec != unsafe.Pointer(nil) {
-		defer C.ZT_Certificate_delete((*C.ZT_Certificate)(dec))
-	}
+	defer C.ZT_Certificate_delete((*C.ZT_Certificate)(dec))
 	if cerr != 0 {
 		return nil, certificateErrorToError(int(cerr))
 	}
-	if dec == unsafe.Pointer(nil) {
+	if dec == unsafe.Pointer(uintptr(0)) {
 		return nil, ErrInternal
 	}
 
@@ -309,7 +308,7 @@ func (c *Certificate) CCertificate() *CCertificate {
 			}
 		}
 		cc.subject.identities = &subjectIdentities[0]
-		cc.subject.identityCount = C.uint(len(c.Subject.Identities))
+		cc.subject.identityCount = C.uint(len(subjectIdentities))
 	}
 
 	if len(c.Subject.Networks) > 0 {
@@ -322,7 +321,7 @@ func (c *Certificate) CCertificate() *CCertificate {
 			}
 		}
 		cc.subject.networks = &subjectNetworks[0]
-		cc.subject.networkCount = C.uint(len(c.Subject.Networks))
+		cc.subject.networkCount = C.uint(len(subjectNetworks))
 	}
 
 	if len(c.Subject.Certificates) > 0 {
@@ -334,7 +333,7 @@ func (c *Certificate) CCertificate() *CCertificate {
 			subjectCertificates[i] = uintptr(unsafe.Pointer(&cert[0]))
 		}
 		cc.subject.certificates = (**C.uint8_t)(unsafe.Pointer(&subjectCertificates[0]))
-		cc.subject.certificateCount = C.uint(len(c.Subject.Certificates))
+		cc.subject.certificateCount = C.uint(len(subjectCertificates))
 	}
 
 	if len(c.Subject.UpdateURLs) > 0 {
@@ -345,7 +344,7 @@ func (c *Certificate) CCertificate() *CCertificate {
 			subjectUpdateURLs[i] = uintptr(unsafe.Pointer(&subjectUpdateURLsData[0][0]))
 		}
 		cc.subject.updateURLs = (**C.char)(unsafe.Pointer(&subjectUpdateURLs[0]))
-		cc.subject.updateURLCount = C.uint(len(c.Subject.UpdateURLs))
+		cc.subject.updateURLCount = C.uint(len(subjectUpdateURLs))
 	}
 
 	cStrCopy(unsafe.Pointer(&cc.subject.name.serialNo[0]), CertificateMaxStringLength+1, c.Subject.Name.SerialNo)
@@ -402,8 +401,8 @@ func (c *Certificate) CCertificate() *CCertificate {
 		cc.signatureSize = C.uint(len(c.Signature))
 	}
 
-	// HACK: pass pointer to cc as uintptr to disable Go's protection against go pointers to
-	// go pointers, as the C function called here will make a deep clone and then we are going
+	// HACK: pass pointer to cc as uintptr to disable Go's protection against "Go pointers to
+	// Go pointers," as the C function called here will make a deep clone and then we are going
 	// to throw away 'cc' and its components.
 	cc2 := &CCertificate{C: unsafe.Pointer(C._ZT_Certificate_clone2(C.uintptr_t(uintptr(unsafe.Pointer(&cc)))))}
 	runtime.SetFinalizer(cc2, func(obj interface{}) {
@@ -427,6 +426,27 @@ func (c *Certificate) Marshal() ([]byte, error) {
 	return append(make([]byte, 0, int(encodedSize)), encoded[0:int(encodedSize)]...), nil
 }
 
+// Sign signs this certificate and returns a new one with signature and issuer filled out.
+// This should only be used after decoding a CSR with NewCertificateFromBytes. The non-subject
+// parts of this Certificate, if any, are ignored. A new Certificate is returned with a completed
+// signature.
+func (c *Certificate) Sign(id *Identity) (*Certificate, error) {
+	if id == nil || !id.HasPrivate() || !id.initCIdentityPtr() {
+		return nil, ErrInvalidParameter
+	}
+	ctmp := c.CCertificate()
+	if ctmp == nil {
+		return nil, ErrInternal
+	}
+	var signedCert [16384]byte
+	signedCertSize := C.int(16384)
+	rv := int(C.ZT_Certificate_sign((*C.ZT_Certificate)(ctmp.C), id.cid, unsafe.Pointer(&signedCert[0]), &signedCertSize))
+	if rv != 0 {
+		return nil, fmt.Errorf("signing failed: error %d", rv)
+	}
+	return NewCertificateFromBytes(signedCert[0:int(signedCertSize)], true)
+}
+
 // Verify returns nil on success or a certificate error if there is a problem with this certificate.
 func (c *Certificate) Verify() error {
 	cc := c.CCertificate()
@@ -434,6 +454,12 @@ func (c *Certificate) Verify() error {
 		return ErrInternal
 	}
 	return certificateErrorToError(int(C.ZT_Certificate_verify((*C.ZT_Certificate)(cc.C))))
+}
+
+// JSON returns this certificate as a human-readable indented JSON string.
+func (c *Certificate) JSON() string {
+	j, _ := json.MarshalIndent(c, "", "  ")
+	return string(j)
 }
 
 // NewCertificateSubjectUniqueId creates a new certificate subject unique ID and corresponding private key.
@@ -444,13 +470,14 @@ func NewCertificateSubjectUniqueId(uniqueIdType int) (id []byte, priv []byte, er
 		return
 	}
 	id = make([]byte, int(C.ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE))
-	priv = make([]byte, int(C.ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE))
+	priv = make([]byte, int(C.ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_PRIVATE_SIZE))
 	idSize := C.int(len(id))
 	idPrivateSize := C.int(len(priv))
-	if C.ZT_Certificate_newSubjectUniqueId((C.enum_ZT_CertificateUniqueIdType)(uniqueIdType), unsafe.Pointer(&id[0]), &idSize, unsafe.Pointer(&priv[0]), &idPrivateSize) != 0 {
+	rv := int(C.ZT_Certificate_newSubjectUniqueId((C.enum_ZT_CertificateUniqueIdType)(uniqueIdType), unsafe.Pointer(&id[0]), &idSize, unsafe.Pointer(&priv[0]), &idPrivateSize))
+	if rv != 0 {
 		id = nil
 		priv = nil
-		err = ErrInvalidParameter
+		err = fmt.Errorf("error %d", rv)
 		return
 	}
 	if int(idSize) != len(id) || int(idPrivateSize) != len(priv) {

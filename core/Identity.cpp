@@ -258,6 +258,7 @@ unsigned int Identity::sign(const void *data, unsigned int len, void *sig, unsig
 					C25519::sign(m_priv, m_pub, data, len, sig);
 					return ZT_C25519_SIGNATURE_LEN;
 				}
+				break;
 			case P384:
 				if (siglen >= ZT_ECC384_SIGNATURE_SIZE) {
 					// SECURITY: signatures also include the public keys to further enforce their coupling.
@@ -267,6 +268,7 @@ unsigned int Identity::sign(const void *data, unsigned int len, void *sig, unsig
 					ECC384ECDSASign(m_priv + ZT_C25519_COMBINED_PRIVATE_KEY_SIZE, h, (uint8_t *)sig);
 					return ZT_ECC384_SIGNATURE_SIZE;
 				}
+				break;
 		}
 	}
 	return 0;
@@ -350,6 +352,8 @@ char *Identity::toString(bool includePrivate, char buf[ZT_IDENTITY_STRING_BUFFER
 			*p = (char)0;
 			return buf;
 		}
+		default:
+			buf[0] = 0;
 	}
 
 	return nullptr;
@@ -445,10 +449,9 @@ int Identity::marshal(uint8_t data[ZT_IDENTITY_MARSHAL_SIZE_MAX], const bool inc
 				data[ZT_ADDRESS_LENGTH + 1 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE] = ZT_C25519_COMBINED_PRIVATE_KEY_SIZE;
 				Utils::copy< ZT_C25519_COMBINED_PRIVATE_KEY_SIZE >(data + ZT_ADDRESS_LENGTH + 1 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE + 1, m_priv);
 				return ZT_ADDRESS_LENGTH + 1 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE + 1 + ZT_C25519_COMBINED_PRIVATE_KEY_SIZE;
-			} else {
-				data[ZT_ADDRESS_LENGTH + 1 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE] = 0;
-				return ZT_ADDRESS_LENGTH + 1 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE + 1;
 			}
+			data[ZT_ADDRESS_LENGTH + 1 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE] = 0;
+			return ZT_ADDRESS_LENGTH + 1 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE + 1;
 
 		case P384:
 			data[ZT_ADDRESS_LENGTH] = (uint8_t)P384;
@@ -457,10 +460,9 @@ int Identity::marshal(uint8_t data[ZT_IDENTITY_MARSHAL_SIZE_MAX], const bool inc
 				data[ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE] = ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE;
 				Utils::copy< ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE >(data + ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1, m_priv);
 				return ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1 + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE;
-			} else {
-				data[ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE] = 0;
-				return ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1;
 			}
+			data[ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE] = 0;
+			return ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1;
 
 	}
 	return -1;

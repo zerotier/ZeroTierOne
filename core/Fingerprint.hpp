@@ -37,7 +37,7 @@ public:
 	{ memoryZero(this); }
 
 	ZT_INLINE Fingerprint(const ZT_Fingerprint &fp) noexcept
-	{ Utils::copy<sizeof(ZT_Fingerprint)>(this, &fp); }
+	{ Utils::copy< sizeof(ZT_Fingerprint) >(this, &fp); }
 
 	/**
 	 * @return True if hash is not all zero (missing/unspecified)
@@ -59,7 +59,12 @@ public:
 		}
 		return s;
 	}
-	ZT_INLINE String toString() const { char tmp[ZT_FINGERPRINT_STRING_SIZE_MAX]; return String(toString(tmp)); }
+
+	ZT_INLINE String toString() const
+	{
+		char tmp[ZT_FINGERPRINT_STRING_SIZE_MAX];
+		return String(toString(tmp));
+	}
 
 	/**
 	 * Set this fingerprint to a base32-encoded string
@@ -71,18 +76,18 @@ public:
 	{
 		if (!s)
 			return false;
-		const int l = (int) strlen(s);
+		const int l = (int)strlen(s);
 		if (l < ZT_ADDRESS_LENGTH_HEX)
 			return false;
 		char a[ZT_ADDRESS_LENGTH_HEX + 1];
-		Utils::copy<ZT_ADDRESS_LENGTH_HEX>(a, s);
+		Utils::copy< ZT_ADDRESS_LENGTH_HEX >(a, s);
 		a[ZT_ADDRESS_LENGTH_HEX] = 0;
 		this->address = Utils::hexStrToU64(a) & ZT_ADDRESS_MASK;
 		if (l > (ZT_ADDRESS_LENGTH_HEX + 1)) {
 			if (Utils::b32d(s + (ZT_ADDRESS_LENGTH_HEX + 1), this->hash, ZT_FINGERPRINT_HASH_SIZE) != ZT_FINGERPRINT_HASH_SIZE)
 				return false;
 		} else {
-			Utils::zero<ZT_FINGERPRINT_HASH_SIZE>(this->hash);
+			Utils::zero< ZT_FINGERPRINT_HASH_SIZE >(this->hash);
 		}
 		return true;
 	}
@@ -120,7 +125,7 @@ public:
 	ZT_INLINE int marshal(uint8_t data[ZT_FINGERPRINT_MARSHAL_SIZE]) const noexcept
 	{
 		Address(this->address).copyTo(data);
-		Utils::copy<ZT_FINGERPRINT_HASH_SIZE>(data + ZT_ADDRESS_LENGTH,this->hash);
+		Utils::copy< ZT_FINGERPRINT_HASH_SIZE >(data + ZT_ADDRESS_LENGTH, this->hash);
 		return ZT_FINGERPRINT_MARSHAL_SIZE;
 	}
 
@@ -129,7 +134,7 @@ public:
 		if (unlikely(len < ZT_FINGERPRINT_MARSHAL_SIZE))
 			return -1;
 		this->address = Address(data);
-		Utils::copy<ZT_FINGERPRINT_HASH_SIZE>(hash,data + ZT_ADDRESS_LENGTH);
+		Utils::copy< ZT_FINGERPRINT_HASH_SIZE >(hash, data + ZT_ADDRESS_LENGTH);
 		return ZT_FINGERPRINT_MARSHAL_SIZE;
 	}
 
