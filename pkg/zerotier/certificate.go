@@ -20,7 +20,6 @@ import "C"
 import (
 	"encoding/json"
 	"fmt"
-	"runtime"
 	"unsafe"
 )
 
@@ -85,14 +84,6 @@ type Certificate struct {
 	ExtendedAttributes []byte             `json:"extendedAttributes,omitempty"`
 	MaxPathLength      uint               `json:"maxPathLength,omitempty"`
 	Signature          []byte             `json:"signature,omitempty"`
-}
-
-// CCertificate just wraps a C pointer so a Go finalizer can be attached to it.
-// This allows CCertificate() to be used without requiring the caller to
-// explicitly free memory. Ensure that a pointer to this structure is held until
-// the underlying C memory is no longer needed.
-type CCertificate struct {
-	C unsafe.Pointer
 }
 
 func certificateErrorToError(cerr int) error {
@@ -274,11 +265,14 @@ func NewCertificateFromCCertificate(ccptr unsafe.Pointer) *Certificate {
 	return c
 }
 
+// DeleteCCertificate deletes a ZT_Certificate object returned by Certificate.CCertificate()
+func DeleteCCertificate(cc unsafe.Pointer) {
+	C.ZT_Certificate_delete((*C.ZT_Certificate)(cc))
+}
+
 // CCertificate creates a C ZT_Certificate structure from the content of a Certificate.
-//
-// This will return nil if an error occurs, which would indicate an invalid C
-// structure or one with invalid values.
-func (c *Certificate) CCertificate() *CCertificate {
+// It must be deleted with DeleteCCertificate.
+func (c *Certificate) CCertificate() unsafe.Pointer {
 	var cc C.ZT_Certificate
 	var subjectIdentities []C.ZT_Certificate_Identity
 	var subjectNetworks []C.ZT_Certificate_Network
@@ -401,13 +395,7 @@ func (c *Certificate) CCertificate() *CCertificate {
 	// HACK: pass pointer to cc as uintptr to disable Go's protection against "Go pointers to
 	// Go pointers," as the C function called here will make a deep clone and then we are going
 	// to throw away 'cc' and its components.
-	cc2 := &CCertificate{C: unsafe.Pointer(C._ZT_Certificate_clone2(C.uintptr_t(uintptr(unsafe.Pointer(&cc)))))}
-	runtime.SetFinalizer(cc2, func(obj interface{}) {
-		if obj != nil {
-			C.ZT_Certificate_delete((*C.ZT_Certificate)(obj.(*CCertificate).C))
-		}
-	})
-	return cc2
+	return unsafe.Pointer(C._ZT_Certificate_clone2(C.uintptr_t(uintptr(unsafe.Pointer(&cc)))))
 }
 
 // Marshal encodes this certificate as a byte array.
@@ -416,9 +404,10 @@ func (c *Certificate) Marshal() ([]byte, error) {
 	if cc == nil {
 		return nil, ErrInternal
 	}
+	defer DeleteCCertificate(cc)
 	var encoded [16384]byte
 	encodedSize := C.int(16384)
-	rv := int(C.ZT_Certificate_encode((*C.ZT_Certificate)(cc.C), unsafe.Pointer(&encoded[0]), &encodedSize))
+	rv := int(C.ZT_Certificate_encode((*C.ZT_Certificate)(cc), unsafe.Pointer(&encoded[0]), &encodedSize))
 	if rv != 0 {
 		return nil, fmt.Errorf("Certificate encode error %d", rv)
 	}
@@ -437,9 +426,10 @@ func (c *Certificate) Sign(id *Identity) (*Certificate, error) {
 	if ctmp == nil {
 		return nil, ErrInternal
 	}
+	defer DeleteCCertificate(ctmp)
 	var signedCert [16384]byte
 	signedCertSize := C.int(16384)
-	rv := int(C.ZT_Certificate_sign((*C.ZT_Certificate)(ctmp.C), id.cIdentity(), unsafe.Pointer(&signedCert[0]), &signedCertSize))
+	rv := int(C.ZT_Certificate_sign((*C.ZT_Certificate)(ctmp), id.cIdentity(), unsafe.Pointer(&signedCert[0]), &signedCertSize))
 	if rv != 0 {
 		return nil, fmt.Errorf("signing failed: error %d", rv)
 	}
@@ -452,7 +442,14 @@ func (c *Certificate) Verify() error {
 	if cc == nil {
 		return ErrInternal
 	}
-	return certificateErrorToError(int(C.ZT_Certificate_verify((*C.ZT_Certificate)(cc.C))))
+	defer DeleteCCertificate(cc)
+	return certificateErrorToError(int(C.ZT_Certificate_verify((*C.ZT_Certificate)(cc))))
+}
+
+// String returns a compact JSON representation of this certificate.
+func (c *Certificate) String() string {
+	j, _ := json.Marshal(c)
+	return string(j)
 }
 
 // JSON returns this certificate as a human-readable indented JSON string.
@@ -503,15 +500,15 @@ func NewCertificateCSR(subject *CertificateSubject, uniqueId []byte, uniqueIdPri
 	if ctmp == nil {
 		return nil, ErrInternal
 	}
+	defer DeleteCCertificate(ctmp)
 
 	var csr [16384]byte
 	csrSize := C.int(16384)
-	cc := (*C.ZT_Certificate)(ctmp.C)
+	cc := (*C.ZT_Certificate)(ctmp)
 	rv := int(C.ZT_Certificate_newCSR(&(cc.subject), uid, C.int(len(uniqueId)), uidp, C.int(len(uniqueIdPrivate)), unsafe.Pointer(&csr[0]), &csrSize))
 	if rv != 0 {
-		return nil, fmt.Errorf("newCSR error %d", rv)
+		return nil, fmt.Errorf("ZT_Certificate_newCSR() failed: %d", rv)
 	}
-	ctmp = nil
 
 	return append(make([]byte, 0, int(csrSize)), csr[0:int(csrSize)]...), nil
 }

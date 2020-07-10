@@ -92,36 +92,39 @@ func TestCertificate() bool {
 	c.MaxPathLength = 9999
 	c.Signature = []byte("qwerty")
 
-	cc := c.CCertificate()
-	if cc == nil {
-		fmt.Println("  Error converting Certificate to ZT_Certificate")
-		return false
-	}
+	for k := 0; k < 1; k++ {
+		cc := c.CCertificate()
+		if cc == nil {
+			fmt.Println("  Error converting Certificate to ZT_Certificate")
+			return false
+		}
+		c2 := zerotier.NewCertificateFromCCertificate(cc)
+		if c2 == nil {
+			fmt.Println("  Error converting ZT_Certificate to Certificate")
+			return false
+		}
+		zerotier.DeleteCCertificate(cc)
 
-	c2 := zerotier.NewCertificateFromCCertificate(cc.C)
-	if c2 == nil {
-		fmt.Println("  Error converting ZT_Certificate to Certificate")
-		return false
-	}
-
-	j, _ := json.Marshal(c)
-	j2, _ := json.Marshal(c2)
-	if !bytes.Equal(j, j2) {
-		j, _ = json.MarshalIndent(c, "", "  ")
-		fmt.Print("  Deep equality test failed: certificates do not match! (see dumps below)\n\n")
-		fmt.Println(string(j))
-		fmt.Println(string(j2))
-		return false
+		j, _ := json.Marshal(c)
+		j2, _ := json.Marshal(c2)
+		if !bytes.Equal(j, j2) {
+			j, _ = json.MarshalIndent(c, "", "  ")
+			j2, _ = json.MarshalIndent(c2, "", "  ")
+			fmt.Print("  Deep equality test failed: certificates do not match! (see dumps below)\n\n")
+			fmt.Println(string(j))
+			fmt.Println(string(j2))
+			return false
+		}
 	}
 
 	fmt.Printf("Checking certificate marshal/unmarshal... ")
-	for k := 0; k < 1024; k++ {
+	for k := 0; k < 1; k++ {
 		cb, err := c.Marshal()
 		if err != nil {
 			fmt.Printf("marshal FAILED (%s)\n", err.Error())
 			return false
 		}
-		c2, err = zerotier.NewCertificateFromBytes(cb, false)
+		c2, err := zerotier.NewCertificateFromBytes(cb, false)
 		if err != nil {
 			fmt.Printf("unmarshal FAILED (%s)\n", err.Error())
 			return false
@@ -139,25 +142,27 @@ func TestCertificate() bool {
 	fmt.Println("OK")
 
 	fmt.Printf("Checking certificate CSR sign/verify... ")
-	csr, err := zerotier.NewCertificateCSR(&c.Subject, uniqueId, uniqueIdPrivate)
-	if err != nil {
-		fmt.Printf("CSR generate FAILED (%s)\n", err.Error())
-		return false
-	}
-	fmt.Printf("CSR size: %d ", len(csr))
-	csr2, err := zerotier.NewCertificateFromBytes(csr, false)
-	if err != nil {
-		fmt.Printf("CSR decode FAILED (%s)\n", err.Error())
-		return false
-	}
-	signedCert, err := csr2.Sign(id)
-	if err != nil {
-		fmt.Printf("CSR sign FAILED (%s)\n", err.Error())
-		return false
-	}
-	if len(signedCert.Signature) == 0 {
-		fmt.Println("CSR sign FAILED (no signature found)", err.Error())
-		return false
+	for k := 0; k < 1; k++ {
+		csr, err := zerotier.NewCertificateCSR(&c.Subject, uniqueId, uniqueIdPrivate)
+		if err != nil {
+			fmt.Printf("CSR generate FAILED (%s)\n", err.Error())
+			return false
+		}
+		fmt.Printf("CSR size: %d ", len(csr))
+		csr2, err := zerotier.NewCertificateFromBytes(csr, false)
+		if err != nil {
+			fmt.Printf("CSR decode FAILED (%s)\n", err.Error())
+			return false
+		}
+		signedCert, err := csr2.Sign(id)
+		if err != nil {
+			fmt.Printf("CSR sign FAILED (%s)\n", err.Error())
+			return false
+		}
+		if len(signedCert.Signature) == 0 {
+			fmt.Println("CSR sign FAILED (no signature found)", err.Error())
+			return false
+		}
 	}
 	fmt.Println("OK")
 

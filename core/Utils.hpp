@@ -710,9 +710,6 @@ static ZT_INLINE void storeLittleEndian(void *const p, const I i) noexcept
  * and requires no branching or function calls. Specialized memcpy() can still
  * be faster for large memory regions, but ZeroTier doesn't copy anything
  * much larger than 16KiB.
- *
- * A templated version for statically known sizes is provided since this can
- * allow some nice optimizations in some cases.
  */
 
 /**
@@ -732,31 +729,6 @@ static ZT_INLINE void copy(void *dest, const void *src) noexcept
 	memcpy(dest, src, L);
 #endif
 }
-
-#ifndef ZT_NO_UNALIGNED_ACCESS
-template<>
-ZT_INLINE void copy<4>(void *dest, const void *src) noexcept
-{
-	*reinterpret_cast<uint32_t *>(dest) = *reinterpret_cast<const uint32_t *>(src);
-}
-template<>
-ZT_INLINE void copy<8>(void *dest, const void *src) noexcept
-{
-	*reinterpret_cast<uint64_t *>(dest) = *reinterpret_cast<const uint64_t *>(src);
-}
-template<>
-ZT_INLINE void copy<12>(void *dest, const void *src) noexcept
-{
-	*reinterpret_cast<uint64_t *>(dest) = *reinterpret_cast<const uint64_t *>(src);
-	*reinterpret_cast<uint32_t *>(reinterpret_cast<uint8_t *>(dest) + 8) = *reinterpret_cast<const uint32_t *>(reinterpret_cast<const uint8_t *>(src) + 8);
-}
-template<>
-ZT_INLINE void copy<16>(void *dest, const void *src) noexcept
-{
-	*reinterpret_cast<uint64_t *>(dest) = *reinterpret_cast<const uint64_t *>(src);
-	*reinterpret_cast<uint64_t *>(reinterpret_cast<uint8_t *>(dest) + 8) = *reinterpret_cast<const uint64_t *>(reinterpret_cast<const uint8_t *>(src) + 8);
-}
-#endif
 
 /**
  * Copy memory block whose size is known at run time

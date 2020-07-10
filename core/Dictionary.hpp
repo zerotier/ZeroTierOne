@@ -48,7 +48,7 @@ public:
 
 	~Dictionary();
 
-	///*
+	/*
 	ZT_INLINE void dump() const
 	{
 		printf("\n--\n");
@@ -73,7 +73,7 @@ public:
 		}
 		printf("--\n");
 	}
-	//*/
+	*/
 
 	/**
 	 * Get a reference to a value

@@ -39,28 +39,13 @@ Certificate &Certificate::operator=(const ZT_Certificate &cert)
 {
 	m_clear();
 
-	ZT_Certificate *const sup = this;
-	Utils::copy< sizeof(ZT_Certificate) >(sup, &cert);
+	Utils::copy< 48 >(this->serialNo, cert.serialNo);
+	this->flags = cert.flags;
+	this->timestamp = cert.timestamp;
+	this->validity[0] = cert.validity[0];
+	this->validity[1] = cert.validity[1];
 
-	// Zero these since we must explicitly attach all the objects from
-	// the other certificate to copy them into our containers.
-	this->subject.identities = nullptr;
-	this->subject.identityCount = 0;
-	this->subject.networks = nullptr;
-	this->subject.networkCount = 0;
-	this->subject.certificates = nullptr;
-	this->subject.certificateCount = 0;
-	this->subject.updateURLs = nullptr;
-	this->subject.updateURLCount = 0;
-	this->subject.uniqueId = nullptr;
-	this->subject.uniqueIdProofSignature = nullptr;
-	this->subject.uniqueIdSize = 0;
-	this->subject.uniqueIdProofSignatureSize = 0;
-	this->extendedAttributes = nullptr;
-	this->extendedAttributesSize = 0;
-	this->issuer = nullptr;
-	this->signature = nullptr;
-	this->signatureSize = 0;
+	this->subject.timestamp = cert.subject.timestamp;
 
 	if (cert.subject.identities) {
 		for (unsigned int i = 0; i < cert.subject.identityCount; ++i) {
@@ -95,6 +80,8 @@ Certificate &Certificate::operator=(const ZT_Certificate &cert)
 		}
 	}
 
+	Utils::copy< sizeof(ZT_Certificate_Name) >(&(this->subject.name), &(cert.subject.name));
+
 	if ((cert.subject.uniqueId) && (cert.subject.uniqueIdSize > 0)) {
 		m_subjectUniqueId.assign(cert.subject.uniqueId, cert.subject.uniqueId + cert.subject.uniqueIdSize);
 		this->subject.uniqueId = m_subjectUniqueId.data();
@@ -111,11 +98,15 @@ Certificate &Certificate::operator=(const ZT_Certificate &cert)
 		this->issuer = &(m_identities.front());
 	}
 
+	Utils::copy< sizeof(ZT_Certificate_Name) >(&(this->issuerName), &(cert.issuerName));
+
 	if ((cert.extendedAttributes) && (cert.extendedAttributesSize > 0)) {
 		m_extendedAttributes.assign(cert.extendedAttributes, cert.extendedAttributes + cert.extendedAttributesSize);
 		this->extendedAttributes = m_extendedAttributes.data();
 		this->extendedAttributesSize = (unsigned int)m_extendedAttributes.size();
 	}
+
+	this->maxPathLength = cert.maxPathLength;
 
 	if ((cert.signature) && (cert.signatureSize > 0)) {
 		m_signature.assign(cert.signature, cert.signature + cert.signatureSize);
@@ -512,7 +503,7 @@ ZT_CertificateError Certificate::verify() const
 Vector< uint8_t > Certificate::createCSR(const ZT_Certificate_Subject &s, const void *uniqueId, unsigned int uniqueIdSize, const void *uniqueIdPrivate, unsigned int uniqueIdPrivateSize)
 {
 	ZT_Certificate_Subject sc;
-	Utils::copy< sizeof(ZT_Certificate_Subject) >(&sc,&s);
+	Utils::copy< sizeof(ZT_Certificate_Subject) >(&sc, &s);
 
 	if ((uniqueId) && (uniqueIdSize > 0) && (uniqueIdPrivate) && (uniqueIdPrivateSize > 0)) {
 		sc.uniqueId = reinterpret_cast<const uint8_t *>(uniqueId);
@@ -531,14 +522,15 @@ Vector< uint8_t > Certificate::createCSR(const ZT_Certificate_Subject &s, const 
 		uint8_t h[ZT_SHA384_DIGEST_SIZE];
 		SHA384(h, enc.data(), (unsigned int)enc.size());
 		enc.clear();
-		if (
-			(reinterpret_cast<const uint8_t *>(uniqueId)[0] == ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384) &&
-			(uniqueIdSize == ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE) &&
-			(uniqueIdPrivateSize == ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_PRIVATE_SIZE)) {
+		if ((reinterpret_cast<const uint8_t *>(uniqueId)[0] == ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384) &&
+		    (uniqueIdSize == ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE) &&
+		    (uniqueIdPrivateSize == ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_PRIVATE_SIZE)) {
 			uint8_t sig[ZT_ECC384_SIGNATURE_SIZE];
 			ECC384ECDSASign(reinterpret_cast<const uint8_t *>(uniqueIdPrivate), h, sig);
+
 			sc.uniqueIdProofSignature = sig;
 			sc.uniqueIdProofSignatureSize = ZT_ECC384_SIGNATURE_SIZE;
+
 			d.clear();
 			m_encodeSubject(sc, d, false);
 			d.encode(enc);

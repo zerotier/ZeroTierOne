@@ -26,7 +26,6 @@ import (
 	"unsafe"
 )
 
-// Constants from node/Identity.hpp (must be the same)
 const (
 	IdentityTypeC25519 = 0
 	IdentityTypeP384   = 1
