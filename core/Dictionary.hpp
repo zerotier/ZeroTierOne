@@ -48,6 +48,33 @@ public:
 
 	~Dictionary();
 
+	///*
+	ZT_INLINE void dump() const
+	{
+		printf("\n--\n");
+		for (const_iterator e(begin()); e != end(); ++e) {
+			printf("%.8x  %s=", Utils::fnv1a32(e->second.data(), (unsigned int)e->second.size()), e->first.c_str());
+			bool binary = false;
+			for (Vector< uint8_t >::const_iterator c(e->second.begin()); c != e->second.end(); ++c) {
+				if ((*c < 33) || (*c > 126)) {
+					binary = true;
+					break;
+				}
+			}
+			if (binary) {
+				for (Vector< uint8_t >::const_iterator c(e->second.begin()); c != e->second.end(); ++c)
+					printf("%.2x", (unsigned int)*c);
+			} else {
+				Vector< uint8_t > s(e->second);
+				s.push_back(0);
+				printf("%s", s.data());
+			}
+			printf("\n");
+		}
+		printf("--\n");
+	}
+	//*/
+
 	/**
 	 * Get a reference to a value
 	 *

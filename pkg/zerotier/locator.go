@@ -30,10 +30,10 @@ type Locator struct {
 	cl          unsafe.Pointer
 }
 
-func newLocatorFromCLocator(cl unsafe.Pointer, requiresDeletion bool) (*Locator, error) {
+func newLocatorFromCLocator(cl unsafe.Pointer, needFinalizer bool) (*Locator, error) {
 	loc := new(Locator)
 	loc.cl = cl
-	err := loc.init(requiresDeletion)
+	err := loc.init(needFinalizer)
 	if err != nil {
 		return nil, err
 	}
@@ -48,8 +48,7 @@ func NewLocator(ts int64, endpoints []Endpoint, signer *Identity) (*Locator, err
 	for _, e := range endpoints {
 		eps = append(eps, e.cep)
 	}
-	signer.initCIdentityPtr()
-	loc := C.ZT_Locator_create(C.int64_t(ts), &eps[0], C.uint(len(eps)), signer.cid)
+	loc := C.ZT_Locator_create(C.int64_t(ts), &eps[0], C.uint(len(eps)), signer.cIdentity())
 	if uintptr(loc) == 0 {
 		return nil, ErrInvalidParameter
 	}
@@ -93,8 +92,7 @@ func (loc *Locator) Validate(id *Identity) bool {
 	if id == nil {
 		return false
 	}
-	id.initCIdentityPtr()
-	return C.ZT_Locator_verify(loc.cl, id.cid) != 0
+	return C.ZT_Locator_verify(loc.cl, id.cIdentity()) != 0
 }
 
 func (loc *Locator) Bytes() []byte {
@@ -135,7 +133,7 @@ func locatorFinalizer(obj interface{}) {
 	}
 }
 
-func (loc *Locator) init(requiresDeletion bool) error {
+func (loc *Locator) init(needFinalizer bool) error {
 	loc.Timestamp = int64(C.ZT_Locator_timestamp(loc.cl))
 	cfp := C.ZT_Locator_fingerprint(loc.cl)
 	if uintptr(unsafe.Pointer(cfp)) == 0 {
@@ -149,7 +147,7 @@ func (loc *Locator) init(requiresDeletion bool) error {
 	}
 	var buf [4096]byte
 	loc.String = C.GoString(C.ZT_Locator_toString(loc.cl, (*C.char)(unsafe.Pointer(&buf[0])), 4096))
-	if requiresDeletion {
+	if needFinalizer {
 		runtime.SetFinalizer(loc, locatorFinalizer)
 	}
 	return nil

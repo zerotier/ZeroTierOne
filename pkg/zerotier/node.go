@@ -449,10 +449,7 @@ func (n *Node) Leave(nwid NetworkID) error {
 
 // AddRoot designates a peer as root, adding it if missing.
 func (n *Node) AddRoot(id *Identity) (*Peer, error) {
-	if !id.initCIdentityPtr() {
-		return nil, ErrInvalidKey
-	}
-	rc := C.ZT_Node_addRoot(n.zn, nil, id.cid)
+	rc := C.ZT_Node_addRoot(n.zn, nil, id.cIdentity())
 	if rc != 0 {
 		return nil, ErrInvalidParameter
 	}
@@ -537,10 +534,7 @@ func (n *Node) AddPeer(id *Identity) error {
 	if id == nil {
 		return ErrInvalidParameter
 	}
-	if !id.initCIdentityPtr() {
-		return ErrInvalidKey
-	}
-	rc := C.ZT_Node_addPeer(n.zn, nil, id.cid)
+	rc := C.ZT_Node_addPeer(n.zn, nil, id.cIdentity())
 	if rc != 0 {
 		return ErrInvalidParameter
 	}

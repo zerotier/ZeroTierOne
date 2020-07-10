@@ -38,7 +38,7 @@ func TestCertificate() bool {
 	var c zerotier.Certificate
 
 	c.SerialNo = make([]byte, 48)
-	for i := 0; i < 48 ;i++ {
+	for i := 0; i < 48; i++ {
 		c.SerialNo[i] = byte(i)
 	}
 	c.Flags = 1234
@@ -49,13 +49,13 @@ func TestCertificate() bool {
 	c.Subject.Timestamp = 31337
 	c.Subject.Identities = append(c.Subject.Identities, zerotier.CertificateIdentity{
 		Identity: id,
-		Locator: nil,
+		Locator:  nil,
 	})
 	c.Subject.Networks = append(c.Subject.Networks, zerotier.CertificateNetwork{
 		ID: 1111,
 		Controller: zerotier.Fingerprint{
 			Address: zerotier.Address(2222),
-			Hash: c.SerialNo,
+			Hash:    c.SerialNo,
 		},
 	})
 	c.Subject.Certificates = append(c.Subject.Certificates, c.SerialNo)
@@ -115,25 +115,26 @@ func TestCertificate() bool {
 	}
 
 	fmt.Printf("Checking certificate marshal/unmarshal... ")
-	cb, err := c.Marshal()
-	if err != nil {
-		fmt.Printf("marshal FAILED (%s)\n", err.Error())
-		return false
-	}
-	fmt.Printf("marshal: %d bytes ", len(cb))
-	c2, err = zerotier.NewCertificateFromBytes(cb, false)
-	if err != nil {
-		fmt.Printf("unmarshal FAILED (%s)\n", err.Error())
-		return false
-	}
-	cb2, err := c2.Marshal()
-	if err != nil {
-		fmt.Printf("second marshal FAILED (%s)\n", err.Error())
-		return false
-	}
-	if !bytes.Equal(cb, cb2) {
-		fmt.Printf("FAILED (results not equal)\n")
-		return false
+	for k := 0; k < 1024; k++ {
+		cb, err := c.Marshal()
+		if err != nil {
+			fmt.Printf("marshal FAILED (%s)\n", err.Error())
+			return false
+		}
+		c2, err = zerotier.NewCertificateFromBytes(cb, false)
+		if err != nil {
+			fmt.Printf("unmarshal FAILED (%s)\n", err.Error())
+			return false
+		}
+		cb2, err := c2.Marshal()
+		if err != nil {
+			fmt.Printf("second marshal FAILED (%s)\n", err.Error())
+			return false
+		}
+		if !bytes.Equal(cb, cb2) {
+			fmt.Printf("FAILED (results not equal)\n")
+			return false
+		}
 	}
 	fmt.Println("OK")
 
@@ -143,7 +144,7 @@ func TestCertificate() bool {
 		fmt.Printf("CSR generate FAILED (%s)\n", err.Error())
 		return false
 	}
-	fmt.Printf("CSR size: %d ",len(csr))
+	fmt.Printf("CSR size: %d ", len(csr))
 	csr2, err := zerotier.NewCertificateFromBytes(csr, false)
 	if err != nil {
 		fmt.Printf("CSR decode FAILED (%s)\n", err.Error())

@@ -307,19 +307,19 @@ bool Certificate::decode(const void *const data, const unsigned int len)
 	unsigned int cnt = (unsigned int)d.getUI("s.i$");
 	for (unsigned int i = 0; i < cnt; ++i) {
 		const Vector< uint8_t > &identityData = d[Dictionary::arraySubscript(tmp, sizeof(tmp), "s.i$.i", i)];
+		const Vector< uint8_t > &locatorData = d[Dictionary::arraySubscript(tmp, sizeof(tmp), "s.i$.l", i)];
 		if (identityData.empty())
 			return false;
 		Identity id;
 		if (id.unmarshal(identityData.data(), (unsigned int)identityData.size()) <= 0)
 			return false;
-		const Vector< uint8_t > &locatorData = d[Dictionary::arraySubscript(tmp, sizeof(tmp), "s.i$.l", i)];
-		if (!locatorData.empty()) {
+		if (locatorData.empty()) {
+			this->addSubjectIdentity(id);
+		} else {
 			Locator loc;
 			if (loc.unmarshal(locatorData.data(), (unsigned int)locatorData.size()) <= 0)
 				return false;
 			this->addSubjectIdentity(id, loc);
-		} else {
-			this->addSubjectIdentity(id);
 		}
 	}
 
@@ -463,10 +463,12 @@ ZT_CertificateError Certificate::verify() const
 				(this->subject.uniqueIdSize != ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE) ||
 				(this->subject.uniqueId[0] != ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384))
 				return ZT_CERTIFICATE_ERROR_INVALID_UNIQUE_ID_PROOF;
+
 			Dictionary d;
 			m_encodeSubject(this->subject, d, true);
 			Vector< uint8_t > enc;
 			d.encode(enc);
+
 			uint8_t h[ZT_SHA384_DIGEST_SIZE];
 			SHA384(h, enc.data(), (unsigned int)enc.size());
 			static_assert(ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE == (ZT_ECC384_PUBLIC_KEY_SIZE + 1), "incorrect size");
@@ -510,7 +512,7 @@ ZT_CertificateError Certificate::verify() const
 Vector< uint8_t > Certificate::createCSR(const ZT_Certificate_Subject &s, const void *uniqueId, unsigned int uniqueIdSize, const void *uniqueIdPrivate, unsigned int uniqueIdPrivateSize)
 {
 	ZT_Certificate_Subject sc;
-	Utils::copy< sizeof(ZT_Certificate_Subject) >(&sc, &s);
+	Utils::copy< sizeof(ZT_Certificate_Subject) >(&sc,&s);
 
 	if ((uniqueId) && (uniqueIdSize > 0) && (uniqueIdPrivate) && (uniqueIdPrivateSize > 0)) {
 		sc.uniqueId = reinterpret_cast<const uint8_t *>(uniqueId);

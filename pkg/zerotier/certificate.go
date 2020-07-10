@@ -137,13 +137,13 @@ func NewCertificateFromBytes(cert []byte, verify bool) (*Certificate, error) {
 		ver = 1
 	}
 	cerr := C.ZT_Certificate_decode((**C.ZT_Certificate)(unsafe.Pointer(&dec)), unsafe.Pointer(&cert[0]), C.int(len(cert)), ver)
-	defer C.ZT_Certificate_delete((*C.ZT_Certificate)(dec))
 	if cerr != 0 {
 		return nil, certificateErrorToError(int(cerr))
 	}
-	if dec == unsafe.Pointer(uintptr(0)) {
+	if dec == nil {
 		return nil, ErrInternal
 	}
+	defer C.ZT_Certificate_delete((*C.ZT_Certificate)(dec))
 
 	goCert := NewCertificateFromCCertificate(dec)
 	if goCert == nil {
@@ -299,10 +299,10 @@ func (c *Certificate) CCertificate() *CCertificate {
 	if len(c.Subject.Identities) > 0 {
 		subjectIdentities = make([]C.ZT_Certificate_Identity, len(c.Subject.Identities))
 		for i, id := range c.Subject.Identities {
-			if id.Identity == nil || !id.Identity.initCIdentityPtr() {
+			if id.Identity == nil {
 				return nil
 			}
-			subjectIdentities[i].identity = id.Identity.cid
+			subjectIdentities[i].identity = id.Identity.cIdentity()
 			if id.Locator != nil {
 				subjectIdentities[i].locator = id.Locator.cl
 			}
@@ -370,10 +370,7 @@ func (c *Certificate) CCertificate() *CCertificate {
 	}
 
 	if c.Issuer != nil {
-		if !c.Issuer.initCIdentityPtr() {
-			return nil
-		}
-		cc.issuer = c.Issuer.cid
+		cc.issuer = c.Issuer.cIdentity()
 	}
 
 	cStrCopy(unsafe.Pointer(&cc.issuerName.serialNo[0]), CertificateMaxStringLength+1, c.IssuerName.SerialNo)
@@ -406,12 +403,14 @@ func (c *Certificate) CCertificate() *CCertificate {
 	// to throw away 'cc' and its components.
 	cc2 := &CCertificate{C: unsafe.Pointer(C._ZT_Certificate_clone2(C.uintptr_t(uintptr(unsafe.Pointer(&cc)))))}
 	runtime.SetFinalizer(cc2, func(obj interface{}) {
-		C.ZT_Certificate_delete((*C.ZT_Certificate)(obj.(*CCertificate).C))
+		if obj != nil {
+			C.ZT_Certificate_delete((*C.ZT_Certificate)(obj.(*CCertificate).C))
+		}
 	})
 	return cc2
 }
 
-// Marshal encodes this certificae as a byte array.
+// Marshal encodes this certificate as a byte array.
 func (c *Certificate) Marshal() ([]byte, error) {
 	cc := c.CCertificate()
 	if cc == nil {
@@ -431,7 +430,7 @@ func (c *Certificate) Marshal() ([]byte, error) {
 // parts of this Certificate, if any, are ignored. A new Certificate is returned with a completed
 // signature.
 func (c *Certificate) Sign(id *Identity) (*Certificate, error) {
-	if id == nil || !id.HasPrivate() || !id.initCIdentityPtr() {
+	if id == nil || !id.HasPrivate() {
 		return nil, ErrInvalidParameter
 	}
 	ctmp := c.CCertificate()
@@ -440,7 +439,7 @@ func (c *Certificate) Sign(id *Identity) (*Certificate, error) {
 	}
 	var signedCert [16384]byte
 	signedCertSize := C.int(16384)
-	rv := int(C.ZT_Certificate_sign((*C.ZT_Certificate)(ctmp.C), id.cid, unsafe.Pointer(&signedCert[0]), &signedCertSize))
+	rv := int(C.ZT_Certificate_sign((*C.ZT_Certificate)(ctmp.C), id.cIdentity(), unsafe.Pointer(&signedCert[0]), &signedCertSize))
 	if rv != 0 {
 		return nil, fmt.Errorf("signing failed: error %d", rv)
 	}
