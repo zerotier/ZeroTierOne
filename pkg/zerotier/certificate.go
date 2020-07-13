@@ -50,7 +50,7 @@ type CertificateName struct {
 
 // CertificateIdentity bundles an identity with an optional locator.
 type CertificateIdentity struct {
-	Identity *Identity `json:"identity"`
+	Identity *Identity `json:"identity,omitempty"`
 	Locator  *Locator  `json:"locator,omitempty"`
 }
 
@@ -136,15 +136,15 @@ func NewCertificateFromBytes(cert []byte, verify bool) (*Certificate, error) {
 	}
 	defer C.ZT_Certificate_delete((*C.ZT_Certificate)(dec))
 
-	goCert := NewCertificateFromCCertificate(dec)
+	goCert := newCertificateFromCCertificate(dec)
 	if goCert == nil {
 		return nil, ErrInternal
 	}
 	return goCert, nil
 }
 
-// NewCertificateFromCCertificate translates a C ZT_Certificate into a Go Certificate.
-func NewCertificateFromCCertificate(ccptr unsafe.Pointer) *Certificate {
+// newCertificateFromCCertificate translates a C ZT_Certificate into a Go Certificate.
+func newCertificateFromCCertificate(ccptr unsafe.Pointer) *Certificate {
 	cc := (*C.ZT_Certificate)(ccptr)
 	c := new(Certificate)
 
@@ -265,14 +265,14 @@ func NewCertificateFromCCertificate(ccptr unsafe.Pointer) *Certificate {
 	return c
 }
 
-// DeleteCCertificate deletes a ZT_Certificate object returned by Certificate.CCertificate()
-func DeleteCCertificate(cc unsafe.Pointer) {
+// deleteCCertificate deletes a ZT_Certificate object returned by Certificate.CCertificate()
+func deleteCCertificate(cc unsafe.Pointer) {
 	C.ZT_Certificate_delete((*C.ZT_Certificate)(cc))
 }
 
-// CCertificate creates a C ZT_Certificate structure from the content of a Certificate.
-// It must be deleted with DeleteCCertificate.
-func (c *Certificate) CCertificate() unsafe.Pointer {
+// cCertificate creates a C ZT_Certificate structure from the content of a Certificate.
+// It must be deleted with deleteCCertificate.
+func (c *Certificate) cCertificate() unsafe.Pointer {
 	var cc C.ZT_Certificate
 	var subjectIdentities []C.ZT_Certificate_Identity
 	var subjectNetworks []C.ZT_Certificate_Network
@@ -400,11 +400,11 @@ func (c *Certificate) CCertificate() unsafe.Pointer {
 
 // Marshal encodes this certificate as a byte array.
 func (c *Certificate) Marshal() ([]byte, error) {
-	cc := c.CCertificate()
+	cc := c.cCertificate()
 	if cc == nil {
 		return nil, ErrInternal
 	}
-	defer DeleteCCertificate(cc)
+	defer deleteCCertificate(cc)
 	var encoded [16384]byte
 	encodedSize := C.int(16384)
 	rv := int(C.ZT_Certificate_encode((*C.ZT_Certificate)(cc), unsafe.Pointer(&encoded[0]), &encodedSize))
@@ -422,11 +422,11 @@ func (c *Certificate) Sign(id *Identity) (*Certificate, error) {
 	if id == nil || !id.HasPrivate() {
 		return nil, ErrInvalidParameter
 	}
-	ctmp := c.CCertificate()
+	ctmp := c.cCertificate()
 	if ctmp == nil {
 		return nil, ErrInternal
 	}
-	defer DeleteCCertificate(ctmp)
+	defer deleteCCertificate(ctmp)
 	var signedCert [16384]byte
 	signedCertSize := C.int(16384)
 	rv := int(C.ZT_Certificate_sign((*C.ZT_Certificate)(ctmp), id.cIdentity(), unsafe.Pointer(&signedCert[0]), &signedCertSize))
@@ -438,11 +438,11 @@ func (c *Certificate) Sign(id *Identity) (*Certificate, error) {
 
 // Verify returns nil on success or a certificate error if there is a problem with this certificate.
 func (c *Certificate) Verify() error {
-	cc := c.CCertificate()
+	cc := c.cCertificate()
 	if cc == nil {
 		return ErrInternal
 	}
-	defer DeleteCCertificate(cc)
+	defer deleteCCertificate(cc)
 	return certificateErrorToError(int(C.ZT_Certificate_verify((*C.ZT_Certificate)(cc))))
 }
 
@@ -496,11 +496,11 @@ func NewCertificateCSR(subject *CertificateSubject, uniqueId []byte, uniqueIdPri
 
 	var tmp Certificate
 	tmp.Subject = *subject
-	ctmp := tmp.CCertificate()
+	ctmp := tmp.cCertificate()
 	if ctmp == nil {
 		return nil, ErrInternal
 	}
-	defer DeleteCCertificate(ctmp)
+	defer deleteCCertificate(ctmp)
 
 	var csr [16384]byte
 	csrSize := C.int(16384)

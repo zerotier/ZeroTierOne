@@ -15,23 +15,20 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"zerotier/pkg/zerotier"
 )
 
 func TestCertificate() bool {
-	fmt.Println("Checking Certificate conversion to/from C ZT_Certificate structure...")
-
 	id, err := zerotier.NewIdentityFromString("8e4df28b72:0:ac3d46abe0c21f3cfe7a6c8d6a85cfcffcb82fbd55af6a4d6350657c68200843fa2e16f9418bbd9702cae365f2af5fb4c420908b803a681d4daef6114d78a2d7:bd8dd6e4ce7022d2f812797a80c6ee8ad180dc4ebf301dec8b06d1be08832bddd63a2f1cfa7b2c504474c75bdc8898ba476ef92e8e2d0509f8441985171ff16e")
 	if err != nil {
-		fmt.Printf("  Error deserializing test identity: %s\n", err.Error())
+		fmt.Printf("FATAL: error deserializing test identity: %s\n", err.Error())
 		return false
 	}
 
 	uniqueId, uniqueIdPrivate, err := zerotier.NewCertificateSubjectUniqueId(zerotier.CertificateUniqueIdTypeNistP384)
 	if err != nil {
-		fmt.Printf("  Error generating unique ID: %s", err.Error())
+		fmt.Printf("FATAL: error generating unique ID: %s", err.Error())
 		return false
 	}
 
@@ -92,33 +89,8 @@ func TestCertificate() bool {
 	c.MaxPathLength = 9999
 	c.Signature = []byte("qwerty")
 
-	for k := 0; k < 1; k++ {
-		cc := c.CCertificate()
-		if cc == nil {
-			fmt.Println("  Error converting Certificate to ZT_Certificate")
-			return false
-		}
-		c2 := zerotier.NewCertificateFromCCertificate(cc)
-		if c2 == nil {
-			fmt.Println("  Error converting ZT_Certificate to Certificate")
-			return false
-		}
-		zerotier.DeleteCCertificate(cc)
-
-		j, _ := json.Marshal(c)
-		j2, _ := json.Marshal(c2)
-		if !bytes.Equal(j, j2) {
-			j, _ = json.MarshalIndent(c, "", "  ")
-			j2, _ = json.MarshalIndent(c2, "", "  ")
-			fmt.Print("  Deep equality test failed: certificates do not match! (see dumps below)\n\n")
-			fmt.Println(string(j))
-			fmt.Println(string(j2))
-			return false
-		}
-	}
-
-	fmt.Printf("Checking certificate marshal/unmarshal... ")
-	for k := 0; k < 1; k++ {
+	fmt.Printf("Checking certificate marshal/unmarshal (10000 tests)... ")
+	for k := 0; k < 10000; k++ {
 		cb, err := c.Marshal()
 		if err != nil {
 			fmt.Printf("marshal FAILED (%s)\n", err.Error())
@@ -141,14 +113,14 @@ func TestCertificate() bool {
 	}
 	fmt.Println("OK")
 
-	fmt.Printf("Checking certificate CSR sign/verify... ")
-	for k := 0; k < 1; k++ {
+	fmt.Printf("Checking certificate CSR sign/verify (100 tests)... ")
+	for k := 0; k < 100; k++ {
 		csr, err := zerotier.NewCertificateCSR(&c.Subject, uniqueId, uniqueIdPrivate)
 		if err != nil {
 			fmt.Printf("CSR generate FAILED (%s)\n", err.Error())
 			return false
 		}
-		fmt.Printf("CSR size: %d ", len(csr))
+		//fmt.Printf("CSR size: %d ", len(csr))
 		csr2, err := zerotier.NewCertificateFromBytes(csr, false)
 		if err != nil {
 			fmt.Printf("CSR decode FAILED (%s)\n", err.Error())
