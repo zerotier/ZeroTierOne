@@ -129,7 +129,10 @@ func (loc *Locator) UnmarshalJSON(j []byte) error {
 
 func locatorFinalizer(obj interface{}) {
 	if obj != nil {
-		C.ZT_Locator_delete(obj.(Locator).cl)
+		cl := obj.(Locator).cl
+		if cl != nil {
+			C.ZT_Locator_delete(cl)
+		}
 	}
 }
 

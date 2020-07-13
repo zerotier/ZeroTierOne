@@ -52,43 +52,6 @@ func identityFinalizer(obj interface{}) {
 	}
 }
 
-func newIdentityFromCIdentity(cid unsafe.Pointer) (*Identity, error) {
-	if cid == nil {
-		return nil, ErrInvalidParameter
-	}
-
-	var idStrBuf [4096]byte
-	idStr := C.ZT_Identity_toString(cid, (*C.char)(unsafe.Pointer(&idStrBuf[0])), 4096, 1)
-	if uintptr(unsafe.Pointer(idStr)) == 0 {
-		return nil, ErrInternal
-	}
-
-	id, err := NewIdentityFromString(C.GoString(idStr))
-	if err != nil {
-		return nil, err
-	}
-
-	runtime.SetFinalizer(id, identityFinalizer)
-
-	return id, nil
-}
-
-// initCIdentityPtr returns a pointer to the core ZT_Identity instance or nil/0 on error.
-func (id *Identity) cIdentity() unsafe.Pointer {
-	if id.cid == nil {
-		str := []byte(id.PrivateKeyString())
-		if len(str) == 0 {
-			str = []byte(id.String())
-		}
-		if len(str) == 0 {
-			return nil
-		}
-		str = append(str, byte(0))
-		id.cid = C.ZT_Identity_fromString((*C.char)(unsafe.Pointer(&str[0])))
-	}
-	return id.cid
-}
-
 // NewIdentity generates a new identity of the selected type.
 func NewIdentity(identityType int) (*Identity, error) {
 	var cid unsafe.Pointer
@@ -166,6 +129,42 @@ func NewIdentityFromString(s string) (*Identity, error) {
 	}
 
 	return id, nil
+}
+
+func newIdentityFromCIdentity(cid unsafe.Pointer) (*Identity, error) {
+	if cid == nil {
+		return nil, ErrInvalidParameter
+	}
+
+	var idStrBuf [4096]byte
+	idStr := C.ZT_Identity_toString(cid, (*C.char)(unsafe.Pointer(&idStrBuf[0])), 4096, 1)
+	if uintptr(unsafe.Pointer(idStr)) == 0 {
+		return nil, ErrInternal
+	}
+
+	id, err := NewIdentityFromString(C.GoString(idStr))
+	if err != nil {
+		return nil, err
+	}
+
+	runtime.SetFinalizer(id, identityFinalizer)
+
+	return id, nil
+}
+
+func (id *Identity) cIdentity() unsafe.Pointer {
+	if id.cid == nil {
+		str := []byte(id.PrivateKeyString())
+		if len(str) == 0 {
+			str = []byte(id.String())
+		}
+		if len(str) == 0 {
+			return nil
+		}
+		str = append(str, byte(0))
+		id.cid = C.ZT_Identity_fromString((*C.char)(unsafe.Pointer(&str[0])))
+	}
+	return id.cid
 }
 
 // Address returns this identity's address.

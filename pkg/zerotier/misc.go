@@ -289,3 +289,14 @@ func cStrCopy(dest unsafe.Pointer, destSize int, src string) {
 	}
 	*((*byte)(dp)) = 0
 }
+
+// cStr returns an always zero-terminated byte array.
+// It's like C.CString but doesn't do a malloc or need a free.
+func cStr(s string) []byte {
+	sb := []byte(s)
+	if len(sb) > 0 {
+		return append(append(make([]byte, 0, len(sb)+1), sb...), byte(0))
+	} else {
+		return []byte{0}
+	}
+}
