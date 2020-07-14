@@ -13,5 +13,5 @@
 
 package cli
 
-func Controller(basePath, authToken string, args []string, jsonOutput bool) {
+func Cert(basePath, authToken string, args []string, jsonOutput bool) {
 }

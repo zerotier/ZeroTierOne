@@ -65,24 +65,13 @@ public:
 	{
 		{
 			RWMutex::RLock l(m_peers_l);
-			const SharedPtr< Peer > *const ap = m_peers.get(zta);
-			if (likely(ap != nullptr))
-				return *ap;
+			Map< Address, SharedPtr< Peer > >::const_iterator ap(m_peers.find(zta));
+			if (likely(ap != m_peers.end()))
+				return ap->second;
 		}
-		{
-			SharedPtr< Peer > p;
-			if (loadFromCached) {
-				m_loadCached(tPtr, zta, p);
-				if (p) {
-					RWMutex::Lock l(m_peers_l);
-					SharedPtr< Peer > &hp = m_peers[zta];
-					if (hp)
-						return hp;
-					hp = p;
-				}
-			}
-			return p;
-		}
+		if (loadFromCached)
+			return m_peerFromCached(tPtr, zta);
+		return SharedPtr< Peer >();
 	}
 
 	/**
@@ -97,9 +86,9 @@ public:
 		const UniqueID k(r.key());
 		{
 			RWMutex::RLock lck(m_paths_l);
-			SharedPtr< Path > *const p = m_paths.get(k);
-			if (likely(p != nullptr))
-				return *p;
+			Map< UniqueID, SharedPtr< Path > >::const_iterator p(m_paths.find(k));
+			if (likely(p != m_paths.end()))
+				return p->second;
 		}
 		{
 			SharedPtr< Path > p(new Path(l, r));
@@ -231,11 +220,19 @@ public:
 
 private:
 	void m_eraseCertificate_l_certs(const SharedPtr< const Certificate > &cert);
+
 	bool m_cleanCertificates_l_certs(int64_t now);
+
 	bool m_verifyCertificateChain_l_certs(const Certificate *current, const int64_t now) const;
+
 	ZT_CertificateError m_verifyCertificate_l_certs(const Certificate &cert, const int64_t now, unsigned int localTrust, bool skipSignatureCheck) const;
+
 	void m_loadCached(void *tPtr, const Address &zta, SharedPtr< Peer > &peer);
+
+	SharedPtr< Peer > m_peerFromCached(void *tPtr, const Address &zta);
+
 	void m_updateRootPeers_l_roots_certs(void *tPtr);
+
 	void m_writeTrustStore_l_roots_certs(void *tPtr) const;
 
 	const RuntimeEnvironment *const RR;

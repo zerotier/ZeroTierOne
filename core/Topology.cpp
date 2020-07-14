@@ -416,6 +416,20 @@ void Topology::m_loadCached(void *tPtr, const Address &zta, SharedPtr< Peer > &p
 	}
 }
 
+SharedPtr< Peer > Topology::m_peerFromCached(void *tPtr, const Address &zta)
+{
+	SharedPtr< Peer > p;
+	m_loadCached(tPtr, zta, p);
+	if (p) {
+		RWMutex::Lock l(m_peers_l);
+		SharedPtr< Peer > &hp = m_peers[zta];
+		if (hp)
+			return hp;
+		hp = p;
+	}
+	return p;
+}
+
 void Topology::m_updateRootPeers_l_roots_certs(void *tPtr)
 {
 	// assumes m_roots_l and m_certs_l are locked for write

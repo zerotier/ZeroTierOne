@@ -73,17 +73,16 @@ public:
 	 */
 	ZT_INLINE const TagCredential *getTag(const NetworkConfig &nconf, const uint32_t id) const noexcept
 	{
-		const TagCredential *const t = m_remoteTags.get(id);
-		return (((t)&&(m_isCredentialTimestampValid(nconf, *t))) ? t : (TagCredential *)0);
+		Map< uint32_t, TagCredential >::const_iterator t(m_remoteTags.find(id));
+		return (((t != m_remoteTags.end())&&(m_isCredentialTimestampValid(nconf, t->second))) ? &(t->second) : (TagCredential *)0);
 	}
 
 	/**
 	 * Clean internal databases of stale entries
 	 *
-	 * @param now Current time
 	 * @param nconf Current network configuration
 	 */
-	void clean(int64_t now,const NetworkConfig &nconf);
+	void clean(const NetworkConfig &nconf);
 
 	/**
 	 * Generates a key for internal use in indexing credentials by type and credential ID
@@ -166,8 +165,8 @@ private:
 	{
 		const int64_t ts = remoteCredential.timestamp();
 		if (((ts >= nconf.timestamp) ? (ts - nconf.timestamp) : (nconf.timestamp - ts)) <= nconf.credentialTimeMaxDelta) {
-			const int64_t *threshold = m_revocations.get(credentialKey(C::credentialType(), remoteCredential.id()));
-			return ((!threshold)||(ts > *threshold));
+			Map< uint64_t, int64_t >::const_iterator threshold(m_revocations.find(credentialKey(C::credentialType(), remoteCredential.id())));
+			return ((threshold == m_revocations.end())||(ts > threshold->second));
 		}
 		return false;
 	}

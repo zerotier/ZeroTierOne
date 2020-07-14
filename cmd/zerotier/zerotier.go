@@ -139,12 +139,13 @@ func main() {
 		cli.Peers(basePath, authTokenRequired(basePath, *tflag, *tTflag), cmdArgs, *jflag, true)
 	case "root":
 		cli.Root(basePath, authTokenRequired(basePath, *tflag, *tTflag), cmdArgs, *jflag)
+	case "controller":
 	case "set":
 		cli.Set(basePath, authTokenRequired(basePath, *tflag, *tTflag), cmdArgs)
-	case "controller":
-		cli.Controller(basePath, authTokenRequired(basePath, *tflag, *tTflag), cmdArgs, *jflag)
 	case "identity":
 		cli.Identity(cmdArgs)
+	case "cert":
+		cli.Cert(basePath, authTokenRequired(basePath, *tflag, *tTflag), cmdArgs, *jflag)
 	}
 	os.Exit(0)
 }

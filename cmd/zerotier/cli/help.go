@@ -79,7 +79,7 @@ Commands:
     validate <identity>                  Locally validate an identity
     sign <identity> <file>               Sign a file with an identity's key
     verify <identity> <file> <sig>       Verify a signature
-  certificate <command> [args]         - Certificate commands
+  cert <command> [args]                - Certificate commands
     newid                                Create a new unique subject ID
     newcsr <subject json path>           Create a new CSR (signing request)
     sign <csr path> <identity path>      Sign a CSR to create a certificate

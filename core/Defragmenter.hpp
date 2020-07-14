@@ -167,15 +167,15 @@ public:
 				// under the target size. This tries to minimize the amount of time the write
 				// lock is held since many threads can hold the read lock but all threads must
 				// wait if someone holds the write lock.
-				std::vector<std::pair<int64_t, uint64_t> > messagesByLastUsedTime;
+				std::vector< std::pair< int64_t, uint64_t > > messagesByLastUsedTime;
 				messagesByLastUsedTime.reserve(m_messages.size());
 
-				for (typename Map<uint64_t, p_E>::const_iterator i(m_messages.begin());i != m_messages.end();++i)
-					messagesByLastUsedTime.push_back(std::pair<int64_t, uint64_t>(i->second.lastUsed, i->first));
+				for (typename Map< uint64_t, p_E >::const_iterator i(m_messages.begin()); i != m_messages.end(); ++i)
+					messagesByLastUsedTime.push_back(std::pair< int64_t, uint64_t >(i->second.lastUsed, i->first));
 				std::sort(messagesByLastUsedTime.begin(), messagesByLastUsedTime.end());
 
 				ml.writing(); // acquire write lock on _messages
-				for (unsigned long x = 0, y = (messagesByLastUsedTime.size() - GCS);x <= y;++x)
+				for (unsigned long x = 0, y = (messagesByLastUsedTime.size() - GCS); x <= y; ++x)
 					m_messages.erase(messagesByLastUsedTime[x].second);
 			} catch (...) {
 				return ERR_OUT_OF_MEMORY;
@@ -183,15 +183,20 @@ public:
 		}
 
 		// Get or create message fragment.
-		p_E *e = m_messages.get(messageId);
-		if (!e) {
-			ml.writing(); // acquire write lock on _messages if not already
-			try {
-				e = &(m_messages[messageId]);
-			} catch (...) {
-				return ERR_OUT_OF_MEMORY;
+		Defragmenter< MF, MFP, GCS, GCT, P >::p_E *e;
+		{
+			typename Map< uint64_t, Defragmenter< MF, MFP, GCS, GCT, P >::p_E >::iterator ee(m_messages.find(messageId));
+			if (ee == m_messages.end()) {
+				ml.writing(); // acquire write lock on _messages if not already
+				try {
+					e = &(m_messages[messageId]);
+				} catch (...) {
+					return ERR_OUT_OF_MEMORY;
+				}
+				e->id = messageId;
+			} else {
+				e = &(ee->second);
 			}
-			e->id = messageId;
 		}
 
 		// Switch back to holding only the read lock on _messages if we have locked for write
@@ -343,7 +348,7 @@ private:
 		Mutex lock;
 	};
 
-	Map <uint64_t, Defragmenter<MF, MFP, GCS, GCT, P>::p_E> m_messages;
+	Map <uint64_t, Defragmenter< MF, MFP, GCS, GCT, P >::p_E> m_messages;
 	RWMutex m_messages_l;
 };
 

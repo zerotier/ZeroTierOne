@@ -32,6 +32,7 @@
 namespace ZeroTier {
 
 class RuntimeEnvironment;
+
 class Peer;
 
 /**
@@ -39,7 +40,7 @@ class Peer;
  */
 class Network
 {
-	friend class SharedPtr<Network>;
+	friend class SharedPtr< Network >;
 
 public:
 	/**
@@ -50,7 +51,8 @@ public:
 	/**
 	 * Compute primary controller device ID from network ID
 	 */
-	static ZT_INLINE Address controllerFor(uint64_t nwid) noexcept { return Address(nwid >> 24U); }
+	static ZT_INLINE Address controllerFor(uint64_t nwid) noexcept
+	{ return Address(nwid >> 24U); }
 
 	/**
 	 * Construct a new network
@@ -65,18 +67,33 @@ public:
 	 * @param uptr Arbitrary pointer used by externally-facing API (for user use)
 	 * @param nconf Network config, if known
 	 */
-	Network(const RuntimeEnvironment *renv,void *tPtr,uint64_t nwid,const Fingerprint &controllerFingerprint,void *uptr,const NetworkConfig *nconf);
+	Network(const RuntimeEnvironment *renv, void *tPtr, uint64_t nwid, const Fingerprint &controllerFingerprint, void *uptr, const NetworkConfig *nconf);
 
 	~Network();
 
-	ZT_INLINE uint64_t id() const noexcept { return m_id; }
-	ZT_INLINE Address controller() const noexcept { return Address(m_id >> 24U); }
-	ZT_INLINE bool multicastEnabled() const noexcept { return (m_config.multicastLimit > 0); }
-	ZT_INLINE bool hasConfig() const noexcept { return (m_config); }
-	ZT_INLINE uint64_t lastConfigUpdate() const noexcept { return m_lastConfigUpdate; }
-	ZT_INLINE ZT_VirtualNetworkStatus status() const noexcept { return m_status(); }
-	ZT_INLINE const NetworkConfig &config() const noexcept { return m_config; }
-	ZT_INLINE const MAC &mac() const noexcept { return m_mac; }
+	ZT_INLINE uint64_t id() const noexcept
+	{ return m_id; }
+
+	ZT_INLINE Address controller() const noexcept
+	{ return Address(m_id >> 24U); }
+
+	ZT_INLINE bool multicastEnabled() const noexcept
+	{ return (m_config.multicastLimit > 0); }
+
+	ZT_INLINE bool hasConfig() const noexcept
+	{ return (m_config); }
+
+	ZT_INLINE uint64_t lastConfigUpdate() const noexcept
+	{ return m_lastConfigUpdate; }
+
+	ZT_INLINE ZT_VirtualNetworkStatus status() const noexcept
+	{ return m_status(); }
+
+	ZT_INLINE const NetworkConfig &config() const noexcept
+	{ return m_config; }
+
+	ZT_INLINE const MAC &mac() const noexcept
+	{ return m_mac; }
 
 	/**
 	 * Apply filters to an outgoing packet
@@ -132,7 +149,7 @@ public:
 	 */
 	int filterIncomingPacket(
 		void *tPtr,
-		const SharedPtr<Peer> &sourcePeer,
+		const SharedPtr< Peer > &sourcePeer,
 		const Address &ztDest,
 		const MAC &macSource,
 		const MAC &macDest,
@@ -148,7 +165,7 @@ public:
 	 * @param includeBridgedGroups If true, also check groups we've learned via bridging
 	 * @return True if this network endpoint / peer is a member
 	 */
-	ZT_INLINE bool subscribedToMulticastGroup(const MulticastGroup &mg,const bool includeBridgedGroups) const
+	ZT_INLINE bool subscribedToMulticastGroup(const MulticastGroup &mg, const bool includeBridgedGroups) const
 	{
 		Mutex::Lock l(m_myMulticastGroups_l);
 		if (std::binary_search(m_myMulticastGroups.begin(), m_myMulticastGroups.end(), mg))
@@ -164,7 +181,7 @@ public:
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param mg New multicast group
 	 */
-	void multicastSubscribe(void *tPtr,const MulticastGroup &mg);
+	void multicastSubscribe(void *tPtr, const MulticastGroup &mg);
 
 	/**
 	 * Unsubscribe from a multicast group
@@ -189,7 +206,7 @@ public:
 	 * @param size Size of data in chunk buffer (total, not relative to ptr)
 	 * @return Update ID if update was fully assembled and accepted or 0 otherwise
 	 */
-	uint64_t handleConfigChunk(void *tPtr,uint64_t packetId,const SharedPtr<Peer> &source,const Buf &chunk,int ptr,int size);
+	uint64_t handleConfigChunk(void *tPtr, uint64_t packetId, const SharedPtr< Peer > &source, const Buf &chunk, int ptr, int size);
 
 	/**
 	 * Set network configuration
@@ -203,17 +220,19 @@ public:
 	 * @param saveToDisk Save to disk? Used during loading, should usually be true otherwise.
 	 * @return 0 == bad, 1 == accepted but duplicate/unchanged, 2 == accepted and new
 	 */
-	int setConfiguration(void *tPtr,const NetworkConfig &nconf,bool saveToDisk);
+	int setConfiguration(void *tPtr, const NetworkConfig &nconf, bool saveToDisk);
 
 	/**
 	 * Set netconf failure to 'access denied' -- called in IncomingPacket when controller reports this
 	 */
-	ZT_INLINE void setAccessDenied() noexcept { _netconfFailure = NETCONF_FAILURE_ACCESS_DENIED; }
+	ZT_INLINE void setAccessDenied() noexcept
+	{ _netconfFailure = NETCONF_FAILURE_ACCESS_DENIED; }
 
 	/**
 	 * Set netconf failure to 'not found' -- called by IncomingPacket when controller reports this
 	 */
-	ZT_INLINE void setNotFound() noexcept { _netconfFailure = NETCONF_FAILURE_NOT_FOUND; }
+	ZT_INLINE void setNotFound() noexcept
+	{ _netconfFailure = NETCONF_FAILURE_NOT_FOUND; }
 
 	/**
 	 * Determine whether this peer is permitted to communicate on this network
@@ -221,12 +240,12 @@ public:
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param peer Peer to check
 	 */
-	bool gate(void *tPtr,const SharedPtr<Peer> &peer) noexcept;
+	bool gate(void *tPtr, const SharedPtr< Peer > &peer) noexcept;
 
 	/**
 	 * Do periodic cleanup and housekeeping tasks
 	 */
-	void doPeriodicTasks(void *tPtr,int64_t now);
+	void doPeriodicTasks(void *tPtr, int64_t now);
 
 	/**
 	 * Find the node on this network that has this MAC behind it (if any)
@@ -237,8 +256,8 @@ public:
 	ZT_INLINE Address findBridgeTo(const MAC &mac) const
 	{
 		Mutex::Lock _l(m_remoteBridgeRoutes_l);
-		const Address *const br = m_remoteBridgeRoutes.get(mac);
-		return ((br) ? *br : Address());
+		Map< MAC, Address >::const_iterator br(m_remoteBridgeRoutes.find(mac));
+		return ((br == m_remoteBridgeRoutes.end()) ? Address() : br->second);
 	}
 
 	/**
@@ -247,7 +266,7 @@ public:
 	 * @param mac MAC address of destination
 	 * @param addr Bridge this MAC is reachable behind
 	 */
-	void learnBridgeRoute(const MAC &mac,const Address &addr);
+	void learnBridgeRoute(const MAC &mac, const Address &addr);
 
 	/**
 	 * Learn a multicast group that is bridged to our tap device
@@ -256,10 +275,10 @@ public:
 	 * @param mg Multicast group
 	 * @param now Current time
 	 */
-	ZT_INLINE void learnBridgedMulticastGroup(void *tPtr,const MulticastGroup &mg,int64_t now)
+	ZT_INLINE void learnBridgedMulticastGroup(void *tPtr, const MulticastGroup &mg, int64_t now)
 	{
 		Mutex::Lock l(m_myMulticastGroups_l);
-		m_multicastGroupsBehindMe.set(mg, now);
+		m_multicastGroupsBehindMe[mg] = now;
 	}
 
 	/**
@@ -294,7 +313,7 @@ public:
 	 * @param to Destination peer
 	 * @param now Current time
 	 */
-	void pushCredentials(void *tPtr,const SharedPtr<Peer> &to,int64_t now);
+	void pushCredentials(void *tPtr, const SharedPtr< Peer > &to, int64_t now);
 
 	/**
 	 * Destroy this network
@@ -316,12 +335,12 @@ public:
 	 *
 	 * @param f Function of (const Address,const Membership)
 	 */
-	template<typename F>
+	template< typename F >
 	ZT_INLINE void eachMember(F f)
 	{
 		Mutex::Lock ml(m_memberships_l);
-		for(Map<Address,Member>::iterator i(m_memberships.begin()); i != m_memberships.end(); ++i) { // NOLINT(modernize-loop-convert,hicpp-use-auto,modernize-use-auto)
-			if (!f(i->first,i->second))
+		for (Map< Address, Member >::iterator i(m_memberships.begin()); i != m_memberships.end(); ++i) { // NOLINT(modernize-loop-convert,hicpp-use-auto,modernize-use-auto)
+			if (!f(i->first, i->second))
 				break;
 		}
 	}
@@ -329,15 +348,20 @@ public:
 	/**
 	 * @return Externally usable pointer-to-pointer exported via the core API
 	 */
-	ZT_INLINE void **userPtr() noexcept { return &m_uPtr; }
+	ZT_INLINE void **userPtr() noexcept
+	{ return &m_uPtr; }
 
 private:
 	void m_requestConfiguration(void *tPtr);
+
 	ZT_VirtualNetworkStatus m_status() const;
+
 	void m_externalConfig(ZT_VirtualNetworkConfig *ec) const; // assumes _lock is locked
 	void m_announceMulticastGroups(void *tPtr, bool force);
-	void m_announceMulticastGroupsTo(void *tPtr, const Address &peer, const Vector<MulticastGroup> &allMulticastGroups);
-	Vector<MulticastGroup> m_allMulticastGroups() const;
+
+	void m_announceMulticastGroupsTo(void *tPtr, const Address &peer, const Vector< MulticastGroup > &allMulticastGroups);
+
+	Vector< MulticastGroup > m_allMulticastGroups() const;
 
 	const RuntimeEnvironment *const RR;
 	void *m_uPtr;
@@ -345,30 +369,31 @@ private:
 	Fingerprint m_controllerFingerprint;
 	MAC m_mac; // local MAC address
 	bool m_portInitialized;
-	std::atomic<bool> m_destroyed;
+	std::atomic< bool > m_destroyed;
 
-	Vector<MulticastGroup> m_myMulticastGroups; // multicast groups that we belong to (according to tap)
-	Map<MulticastGroup,int64_t> m_multicastGroupsBehindMe; // multicast groups that seem to be behind us and when we last saw them (if we are a bridge)
-	Map<MAC,Address> m_remoteBridgeRoutes; // remote addresses where given MACs are reachable (for tracking devices behind remote bridges)
+	Vector< MulticastGroup > m_myMulticastGroups; // multicast groups that we belong to (according to tap)
+	Map< MulticastGroup, int64_t > m_multicastGroupsBehindMe; // multicast groups that seem to be behind us and when we last saw them (if we are a bridge)
+	Map< MAC, Address > m_remoteBridgeRoutes; // remote addresses where given MACs are reachable (for tracking devices behind remote bridges)
 
 	NetworkConfig m_config;
-	std::atomic<int64_t> m_lastConfigUpdate;
+	std::atomic< int64_t > m_lastConfigUpdate;
 
-	volatile enum {
+	volatile enum
+	{
 		NETCONF_FAILURE_NONE,
 		NETCONF_FAILURE_ACCESS_DENIED,
 		NETCONF_FAILURE_NOT_FOUND,
 		NETCONF_FAILURE_INIT_FAILED
 	} _netconfFailure;
 
-	Map<Address,Member> m_memberships;
+	Map< Address, Member > m_memberships;
 
 	Mutex m_myMulticastGroups_l;
 	Mutex m_remoteBridgeRoutes_l;
 	Mutex m_config_l;
 	Mutex m_memberships_l;
 
-	std::atomic<int> __refCount;
+	std::atomic< int > __refCount;
 };
 
 } // namespace ZeroTier

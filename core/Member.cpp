@@ -115,7 +115,7 @@ void Member::pushCredentials(const RuntimeEnvironment *RR, void *tPtr, const int
 	m_lastPushedCredentials = now;
 }
 
-void Member::clean(const int64_t now, const NetworkConfig &nconf)
+void Member::clean(const NetworkConfig &nconf)
 {
 	m_cleanCredImpl< TagCredential >(nconf, m_remoteTags);
 	m_cleanCredImpl< CapabilityCredential >(nconf, m_remoteCaps);
@@ -164,18 +164,18 @@ static ZT_INLINE Member::AddCredentialResult _addCredImpl(
 	const NetworkConfig &nconf,
 	const C &cred)
 {
-	C *rc = remoteCreds.get(cred.id());
-	if (rc) {
-		if (rc->timestamp() > cred.timestamp()) {
+	typename Map< uint32_t, C >::const_iterator rc(remoteCreds.find(cred.id()));
+	if (rc != remoteCreds.end()) {
+		if (rc->second.timestamp() > cred.timestamp()) {
 			RR->t->credentialRejected(tPtr, 0x40000001, nconf.networkId, sourcePeerIdentity, cred.id(), cred.timestamp(), C::credentialType(), ZT_TRACE_CREDENTIAL_REJECTION_REASON_OLDER_THAN_LATEST);
 			return Member::ADD_REJECTED;
 		}
-		if (*rc == cred)
+		if (rc->second == cred)
 			return Member::ADD_ACCEPTED_REDUNDANT;
 	}
 
-	const int64_t *const rt = revocations.get(Member::credentialKey(C::credentialType(), cred.id()));
-	if ((rt) && (*rt >= cred.timestamp())) {
+	typename Map< uint64_t, int64_t >::const_iterator rt(revocations.find(Member::credentialKey(C::credentialType(), cred.id())));
+	if ((rt != revocations.end()) && (rt->second >= cred.timestamp())) {
 		RR->t->credentialRejected(tPtr, 0x24248124, nconf.networkId, sourcePeerIdentity, cred.id(), cred.timestamp(), C::credentialType(), ZT_TRACE_CREDENTIAL_REJECTION_REASON_REVOKED);
 		return Member::ADD_REJECTED;
 	}
@@ -185,9 +185,8 @@ static ZT_INLINE Member::AddCredentialResult _addCredImpl(
 			RR->t->credentialRejected(tPtr, 0x01feba012, nconf.networkId, sourcePeerIdentity, cred.id(), cred.timestamp(), C::credentialType(), ZT_TRACE_CREDENTIAL_REJECTION_REASON_INVALID);
 			return Member::ADD_REJECTED;
 		case 0:
-			if (!rc)
-				rc = &(remoteCreds[cred.id()]);
-			*rc = cred;
+			if (rc == remoteCreds.end())
+				remoteCreds[cred.id()] = cred;
 			return Member::ADD_ACCEPTED_NEW;
 		case 1:
 			return Member::ADD_DEFERRED_FOR_WHOIS;

@@ -55,7 +55,7 @@ public:
 		int64_t now,
 		int64_t localSocket,
 		const struct sockaddr_storage *remoteAddress,
-		SharedPtr<Buf> &packetData,
+		SharedPtr< Buf > &packetData,
 		unsigned int packetLength,
 		volatile int64_t *nextBackgroundTaskDeadline);
 
@@ -67,7 +67,7 @@ public:
 		uint64_t destMac,
 		unsigned int etherType,
 		unsigned int vlanId,
-		SharedPtr<Buf> &frameData,
+		SharedPtr< Buf > &frameData,
 		unsigned int frameLength,
 		volatile int64_t *nextBackgroundTaskDeadline);
 
@@ -222,19 +222,19 @@ public:
 	 * @param nwid Network ID
 	 * @return Network associated with ID
 	 */
-	ZT_INLINE SharedPtr<Network> network(const uint64_t nwid) const noexcept
+	ZT_INLINE SharedPtr< Network > network(const uint64_t nwid) const noexcept
 	{
 		RWMutex::RLock l(m_networks_l);
-		const SharedPtr<Network> *const n = m_networks.get(nwid);
-		if (n)
-			return *n;
-		return SharedPtr<Network>();
+		Map< uint64_t, SharedPtr< Network > >::const_iterator n(m_networks.find(nwid));
+		if (likely(n != m_networks.end()))
+			return n->second;
+		return SharedPtr< Network >();
 	}
 
 	/**
 	 * @return Known local interface addresses for this node
 	 */
-	ZT_INLINE Vector<ZT_InterfaceAddress> localInterfaceAddresses() const
+	ZT_INLINE Vector< ZT_InterfaceAddress > localInterfaceAddresses() const
 	{
 		Mutex::Lock _l(m_localInterfaceAddresses_m);
 		return m_localInterfaceAddresses;
@@ -280,7 +280,7 @@ public:
 	 * @param id Object ID or NULL if this type does not use one
 	 * @return Vector containing data or empty vector if not found or empty
 	 */
-	Vector<uint8_t> stateObjectGet(void *tPtr, ZT_StateObjectType type, const uint64_t *id);
+	Vector< uint8_t > stateObjectGet(void *tPtr, ZT_StateObjectType type, const uint64_t *id);
 
 	/**
 	 * Store a state object
@@ -398,16 +398,16 @@ private:
 		{ return ((a.nwid < nwid) || ((a.nwid == nwid) && (a.address < address))); }
 	};
 
-	Map<p_LocalControllerAuth, int64_t> m_localControllerAuthorizations;
+	Map< p_LocalControllerAuth, int64_t > m_localControllerAuthorizations;
 	Mutex m_localControllerAuthorizations_l;
 
 	// Locally joined networks by network ID.
-	Map<uint64_t, SharedPtr<Network> > m_networks;
+	Map< uint64_t, SharedPtr< Network > > m_networks;
 	RWMutex m_networks_l;
 
 	// These are local interface addresses that have been configured via the API
 	// and can be pushed to other nodes.
-	Vector<ZT_InterfaceAddress> m_localInterfaceAddresses;
+	Vector< ZT_InterfaceAddress > m_localInterfaceAddresses;
 	Mutex m_localInterfaceAddresses_m;
 
 	// This is locked while running processBackgroundTasks().
@@ -419,10 +419,10 @@ private:
 	int64_t m_lastNetworkHousekeepingRun;
 
 	// This is the most recent value for time passed in via any of the core API methods.
-	std::atomic<int64_t> m_now;
+	std::atomic< int64_t > m_now;
 
 	// True if at least one root appears reachable.
-	std::atomic<bool> m_online;
+	std::atomic< bool > m_online;
 };
 
 } // namespace ZeroTier

@@ -678,10 +678,11 @@ bool Node::externalPathLookup(void *tPtr, const Identity &id, int family, InetAd
 bool Node::localControllerHasAuthorized(const int64_t now, const uint64_t nwid, const Address &addr) const
 {
 	m_localControllerAuthorizations_l.lock();
-	const int64_t *const at = m_localControllerAuthorizations.get(p_LocalControllerAuth(nwid, addr));
+	Map<Node::p_LocalControllerAuth, int64_t>::const_iterator i(m_localControllerAuthorizations.find(p_LocalControllerAuth(nwid, addr)));
+	const int64_t at = (i == m_localControllerAuthorizations.end()) ? -1LL : i->second;
 	m_localControllerAuthorizations_l.unlock();
-	if (at)
-		return ((now - *at) < (ZT_NETWORK_AUTOCONF_DELAY * 3));
+	if (at > 0)
+		return ((now - at) < (ZT_NETWORK_AUTOCONF_DELAY * 3));
 	return false;
 }
 

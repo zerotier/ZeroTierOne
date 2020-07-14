@@ -41,35 +41,18 @@ struct intl_MapHasher
 	std::size_t operator()(const O &obj) const noexcept
 	{ return (std::size_t)obj.hashCode(); }
 	std::size_t operator()(const uint64_t i) const noexcept
-	{ return (std::size_t)Utils::hash64(i + Utils::s_mapNonce); }
+	{ return (std::size_t)Utils::hash64(i ^ Utils::s_mapNonce); }
 	std::size_t operator()(const int64_t i) const noexcept
-	{ return (std::size_t)Utils::hash64((uint64_t)i + Utils::s_mapNonce); }
+	{ return (std::size_t)Utils::hash64((uint64_t)i ^ Utils::s_mapNonce); }
 	std::size_t operator()(const uint32_t i) const noexcept
-	{ return (std::size_t)Utils::hash32(i + (uint32_t)Utils::s_mapNonce); }
+	{ return (std::size_t)Utils::hash32(i ^ (uint32_t)Utils::s_mapNonce); }
 	std::size_t operator()(const int32_t i) const noexcept
-	{ return (std::size_t)Utils::hash32((uint32_t)i + (uint32_t)Utils::s_mapNonce); }
+	{ return (std::size_t)Utils::hash32((uint32_t)i ^ (uint32_t)Utils::s_mapNonce); }
 };
 
 template< typename K, typename V >
 class Map : public std::unordered_map< K, V, intl_MapHasher >
-{
-public:
-	ZT_INLINE V *get(const K &key) noexcept
-	{
-		typename Map::iterator i(this->find(key));
-		if (i == this->end())
-			return nullptr;
-		return &(i->second);
-	}
-	ZT_INLINE const V *get(const K &key) const noexcept
-	{
-		typename Map::const_iterator i(this->find(key));
-		if (i == this->end())
-			return nullptr;
-		return &(i->second);
-	}
-	ZT_INLINE void set(const K &key, const V &value) { this->emplace(key, value); }
-};
+{};
 
 template< typename K, typename V >
 class MultiMap : public std::unordered_multimap< K, V, intl_MapHasher, std::equal_to< K > >
@@ -77,34 +60,13 @@ class MultiMap : public std::unordered_multimap< K, V, intl_MapHasher, std::equa
 
 #else
 
-template<typename K,typename V>
-class Map : public std::map< K,V,std::less<K> >
-{
-public:
-	ZT_INLINE V *get(const K &key) noexcept
-	{
-		typename Map::iterator i(this->find(key));
-		if (i == this->end())
-			return nullptr;
-		return &(i->second);
-	}
+template<typename K, typename V>
+class Map : public std::map< K, V >
+{};
 
-	ZT_INLINE const V *get(const K &key) const noexcept
-	{
-		typename Map::const_iterator i(this->find(key));
-		if (i == this->end())
-			return nullptr;
-		return &(i->second);
-	}
-
-	ZT_INLINE void set(const K &key,const V &value)
-	{ (*this)[key] = value; }
-};
-
-template<typename K,typename V>
-class MultiMap : public std::multimap< K,V,std::less<K>,Utils::Mallocator< std::pair<const K,V> > >
-{
-};
+template<typename K, typename V>
+class MultiMap : public std::multimap< K, V >
+{};
 
 #endif
 
