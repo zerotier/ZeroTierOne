@@ -373,9 +373,9 @@ public:
 					}
 #endif // __LINUX__
 					if (_bindingCount < ZT_BINDER_MAX_BINDINGS) {
-						_bindings[_bindingCount].udpSock = udps;
-						_bindings[_bindingCount].tcpListenSock = tcps;
-						_bindings[_bindingCount].address = ii->first;
+						_bindings[(unsigned int)_bindingCount].udpSock = udps;
+						_bindings[(unsigned int)_bindingCount].tcpListenSock = tcps;
+						_bindings[(unsigned int)_bindingCount].address = ii->first;
 						phy.setIfName(udps,(char*)ii->second.c_str(),(int)ii->second.length());
 						++_bindingCount;
 					}
