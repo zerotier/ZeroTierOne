@@ -108,13 +108,13 @@ private:
 	struct p_PhySurfaceEntry
 	{
 		InetAddress mySurface;
-		uint64_t ts;
+		int64_t ts;
 		bool trusted;
 
 		ZT_INLINE p_PhySurfaceEntry() noexcept: mySurface(), ts(0), trusted(false)
 		{}
 
-		ZT_INLINE p_PhySurfaceEntry(const InetAddress &a, const uint64_t t) noexcept: mySurface(a), ts(t), trusted(false)
+		ZT_INLINE p_PhySurfaceEntry(const InetAddress &a, const int64_t t) noexcept: mySurface(a), ts(t), trusted(false)
 		{}
 	};
 

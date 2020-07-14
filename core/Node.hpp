@@ -248,9 +248,7 @@ public:
 	 * @param md Event data or NULL if none
 	 */
 	ZT_INLINE void postEvent(void *tPtr, ZT_Event ev, const void *md = nullptr) noexcept
-	{
-		m_cb.eventCallback(reinterpret_cast<ZT_Node *>(this), m_uPtr, tPtr, ev, md);
-	}
+	{ m_cb.eventCallback(reinterpret_cast<ZT_Node *>(this), m_uPtr, tPtr, ev, md); }
 
 	/**
 	 * Post network port configuration via external callback
@@ -262,9 +260,7 @@ public:
 	 * @param nc Network config info
 	 */
 	ZT_INLINE void configureVirtualNetworkPort(void *tPtr, uint64_t nwid, void **nuptr, ZT_VirtualNetworkConfigOperation op, const ZT_VirtualNetworkConfig *nc) noexcept
-	{
-		m_cb.virtualNetworkConfigFunction(reinterpret_cast<ZT_Node *>(this), m_uPtr, tPtr, nwid, nuptr, op, nc);
-	}
+	{ m_cb.virtualNetworkConfigFunction(reinterpret_cast<ZT_Node *>(this), m_uPtr, tPtr, nwid, nuptr, op, nc); }
 
 	/**
 	 * @return True if node appears online

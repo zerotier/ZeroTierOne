@@ -86,17 +86,13 @@ public:
 	 * @return Next unique IV for next message
 	 */
 	ZT_INLINE uint64_t nextMessage(const Address sender, const Address receiver) noexcept
-	{
-		return m_nonce.fetch_add(1) ^ (((uint64_t)(sender > receiver)) << 63U);
-	}
+	{ return m_nonce.fetch_add(1) ^ (((uint64_t)(sender > receiver)) << 63U); }
 
 	/**
 	 * @return Number of times nextMessage() has been called since object creation
 	 */
 	ZT_INLINE uint64_t odometer() const noexcept
-	{
-		return m_nonce.load() - m_initialNonce;
-	}
+	{ return m_nonce.load() - m_initialNonce; }
 
 private:
 	const uint64_t m_initialNonce;
