@@ -217,6 +217,7 @@ void AES::GMAC::update(const void *const data, unsigned int len) noexcept
 		}
 
 		if (likely(len >= 64)) {
+			const __m128i sb = s_sseSwapBytes;
 			const __m128i h = _aes._k.ni.h[0];
 			const __m128i hh = _aes._k.ni.h[1];
 			const __m128i hhh = _aes._k.ni.h[2];
@@ -225,7 +226,6 @@ void AES::GMAC::update(const void *const data, unsigned int len) noexcept
 			const __m128i hh2 = _mm_xor_si128(_mm_shuffle_epi32(hh, 78), hh);
 			const __m128i hhh2 = _mm_xor_si128(_mm_shuffle_epi32(hhh, 78), hhh);
 			const __m128i hhhh2 = _mm_xor_si128(_mm_shuffle_epi32(hhhh, 78), hhhh);
-			const __m128i sb = s_sseSwapBytes;
 			const uint8_t *const end64 = in + (len & ~((unsigned int)63));
 			len &= 63;
 			do {
@@ -233,10 +233,11 @@ void AES::GMAC::update(const void *const data, unsigned int len) noexcept
 				__m128i d2 = _mm_shuffle_epi8(_mm_loadu_si128(reinterpret_cast<const __m128i *>(in + 16)), sb);
 				__m128i d3 = _mm_shuffle_epi8(_mm_loadu_si128(reinterpret_cast<const __m128i *>(in + 32)), sb);
 				__m128i d4 = _mm_shuffle_epi8(_mm_loadu_si128(reinterpret_cast<const __m128i *>(in + 48)), sb);
+				in += 64;
 				__m128i a = _mm_xor_si128(_mm_xor_si128(_mm_clmulepi64_si128(hhhh, d1, 0x00), _mm_clmulepi64_si128(hhh, d2, 0x00)), _mm_xor_si128(_mm_clmulepi64_si128(hh, d3, 0x00), _mm_clmulepi64_si128(h, d4, 0x00)));
 				__m128i b = _mm_xor_si128(_mm_xor_si128(_mm_clmulepi64_si128(hhhh, d1, 0x11), _mm_clmulepi64_si128(hhh, d2, 0x11)), _mm_xor_si128(_mm_clmulepi64_si128(hh, d3, 0x11), _mm_clmulepi64_si128(h, d4, 0x11)));
 				__m128i c = _mm_xor_si128(_mm_xor_si128(_mm_xor_si128(_mm_clmulepi64_si128(hhhh2, _mm_xor_si128(_mm_shuffle_epi32(d1, 78), d1), 0x00), _mm_clmulepi64_si128(hhh2, _mm_xor_si128(_mm_shuffle_epi32(d2, 78), d2), 0x00)), _mm_xor_si128(_mm_clmulepi64_si128(hh2, _mm_xor_si128(_mm_shuffle_epi32(d3, 78), d3), 0x00), _mm_clmulepi64_si128(h2, _mm_xor_si128(_mm_shuffle_epi32(d4, 78), d4), 0x00))), _mm_xor_si128(a, b));
-				in += 64;
+				_mm_prefetch(in, _MM_HINT_T0);
 				a = _mm_xor_si128(_mm_slli_si128(c, 8), a);
 				b = _mm_xor_si128(_mm_srli_si128(c, 8), b);
 				c = _mm_srli_epi32(a, 31);
@@ -579,6 +580,10 @@ void AES::CTR::crypt(const void *const input, unsigned int len) noexcept
 
 #ifdef ZT_AES_AESNI
 	if (likely(Utils::CPUID.aes)) {
+		_mm_prefetch(in + 32, _MM_HINT_T0);
+		_mm_prefetch(in + 64, _MM_HINT_T0);
+		_mm_prefetch(in + 96, _MM_HINT_T0);
+
 		const __m128i dd = _mm_set_epi64x(0, (long long)_ctr[0]);
 		uint64_t c1 = Utils::ntoh(_ctr[1]);
 
@@ -661,6 +666,7 @@ void AES::CTR::crypt(const void *const input, unsigned int len) noexcept
 			const uint8_t *const eof64 = in + (len & ~((unsigned int)63));
 			len &= 63;
 			do {
+				_mm_prefetch(in, _MM_HINT_T0);
 				__m128i d0 = _mm_insert_epi64(dd, (long long)Utils::hton(c1), 1);
 				__m128i d1 = _mm_insert_epi64(dd, (long long)Utils::hton(c1 + 1ULL), 1);
 				__m128i d2 = _mm_insert_epi64(dd, (long long)Utils::hton(c1 + 2ULL), 1);
