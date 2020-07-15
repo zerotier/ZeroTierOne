@@ -114,8 +114,6 @@ static ZT_INLINE void p_salsaCrypt(p_SalsaState *const state, const uint8_t *m, 
 	uint8_t *ctarget = c;
 
 #ifdef ZT_SALSA20_SSE
-	_mm_prefetch(m, _MM_HINT_T0);
-	_mm_prefetch(m + 64, _MM_HINT_T0);
 	__m128i X0 = state->v[0];
 	__m128i X1 = state->v[1];
 	__m128i X2 = state->v[2];
@@ -152,11 +150,6 @@ static ZT_INLINE void p_salsaCrypt(p_SalsaState *const state, const uint8_t *m, 
 			ctarget = c;
 			c = tmp;
 		}
-#ifdef ZT_SALSA20_SSE
-		else {
-			_mm_prefetch(m + 128, _MM_HINT_T0);
-		}
-#endif
 
 #ifdef ZT_SALSA20_SSE
 		__m128i X0s = X0;
