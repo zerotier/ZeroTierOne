@@ -348,10 +348,11 @@ public:
 		}
 
 		// Generate set of unique interface names (used for formation of logical link set in multipath code)
+		// TODO: Could be gated not to run if multipath is not enabled.
 		for(std::map<InetAddress,std::string>::const_iterator ii(localIfAddrs.begin());ii!=localIfAddrs.end();++ii) {
 			linkIfNames.insert(ii->second);
 		}
-		for (std::set<std::string>::iterator si(linkIfNames.begin());si!=linkIfNames.end();si++) {
+		for (std::set<std::string>::iterator si(linkIfNames.begin());si!=linkIfNames.end();) {
 			bool bFoundMatch = false;
 			for(std::map<InetAddress,std::string>::const_iterator ii(localIfAddrs.begin());ii!=localIfAddrs.end();++ii) {
 				if (ii->second == *si) {
@@ -360,7 +361,10 @@ public:
 				}
 			}
 			if (!bFoundMatch) {
-				linkIfNames.erase(si);
+				linkIfNames.erase(si++);
+			}
+			else {
+				++si;
 			}
 		}
 
