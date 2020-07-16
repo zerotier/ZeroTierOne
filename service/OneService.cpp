@@ -1016,7 +1016,7 @@ public:
 		}
 
 		// Set trusted paths if there are any
-		if (ppc.size() > 0) {
+		if (!ppc.empty()) {
 			for(std::map<InetAddress,ZT_PhysicalPathConfiguration>::iterator i(ppc.begin());i!=ppc.end();++i)
 				_node->setPhysicalPathConfiguration(reinterpret_cast<const struct sockaddr_storage *>(&(i->first)),&(i->second));
 		}
@@ -1132,7 +1132,7 @@ public:
 		 * URL encoding, and /'s in URL args will screw it up. But the only URL args
 		 * it really uses in ?jsonp=funcionName, and otherwise it just takes simple
 		 * paths to simply-named resources. */
-		if (ps.size() > 0) {
+		if (!ps.empty()) {
 			std::size_t qpos = ps[ps.size() - 1].find('?');
 			if (qpos != std::string::npos) {
 				std::string args(ps[ps.size() - 1].substr(qpos + 1));
@@ -1165,12 +1165,12 @@ public:
 		// Authenticate via Synology's built-in cgi script
 		if (!isAuth) {
 			int synotoken_pos = path.find("SynoToken");
-			int argpos = path.find("?");
+			int argpos = path.find('?');
 			if(synotoken_pos != std::string::npos && argpos != std::string::npos) {
 				std::string cookie = path.substr(argpos+1, synotoken_pos-(argpos+1));
 				std::string synotoken = path.substr(synotoken_pos);
-				std::string cookie_val = cookie.substr(cookie.find("=")+1);
-				std::string synotoken_val = synotoken.substr(synotoken.find("=")+1);
+				std::string cookie_val = cookie.substr(cookie.find('=')+1);
+				std::string synotoken_val = synotoken.substr(synotoken.find('=')+1);
 				// Set necessary env for auth script
 				std::map<std::string,std::string>::const_iterator ah2(headers.find("x-forwarded-for"));
 				setenv("HTTP_COOKIE", cookie_val.c_str(), true);
@@ -1661,7 +1661,7 @@ public:
 		if (!n.settings.allowManaged)
 			return false;
 
-		if (n.settings.allowManagedWhitelist.size() > 0) {
+		if (!n.settings.allowManagedWhitelist.empty()) {
 			bool allowed = false;
 			for (InetAddress addr : n.settings.allowManagedWhitelist) {
 				if (addr.containsAddress(target) && addr.netmaskBits() <= target.netmaskBits()) {
@@ -1932,7 +1932,7 @@ public:
 							bool allow;
 							{
 								Mutex::Lock _l(_localConfig_m);
-								if (_allowManagementFrom.size() == 0) {
+								if (_allowManagementFrom.empty()) {
 									allow = (tc->remoteAddr.ipScope() == InetAddress::IP_SCOPE_LOOPBACK);
 								} else {
 									allow = false;
@@ -2113,7 +2113,7 @@ public:
 							Dictionary<4096> nc;
 							nc.load(nlcbuf.c_str());
 							Buffer<1024> allowManaged;
-							if (nc.get("allowManaged", allowManaged) && allowManaged.size() != 0) {
+							if (nc.get("allowManaged", allowManaged) && !allowManaged.empty()) {
 								std::string addresses (allowManaged.begin(), allowManaged.size());
 								if (allowManaged.size() <= 5) { // untidy parsing for backward compatibility
 									if (allowManaged[0] == '1' || allowManaged[0] == 't' || allowManaged[0] == 'T') {
@@ -2671,7 +2671,7 @@ public:
 			lh = &_v6Hints;
 		else return 0;
 		const std::vector<InetAddress> *l = lh->get(ztaddr);
-		if ((l)&&(l->size() > 0)) {
+		if ((l)&&(!l->empty())) {
 			memcpy(result,&((*l)[(unsigned long)_node->prng() % l->size()]),sizeof(struct sockaddr_storage));
 			return 1;
 		} else return 0;

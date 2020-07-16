@@ -351,7 +351,7 @@ std::vector<std::string> OSUtils::split(const char *s,const char *const sep,cons
 			else if ((buf.size() <= 0)&&((quotTmp = strchr(quot,*s))))
 				quoteState = *quotTmp;
 			else if (strchr(sep,*s)) {
-				if (buf.size() > 0) {
+				if (!buf.empty()) {
 					fields.push_back(buf);
 					buf.clear();
 				} // else skip runs of separators

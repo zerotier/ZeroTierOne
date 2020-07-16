@@ -97,7 +97,7 @@ static json _renderRule(ZT_VirtualNetworkRule &rule)
 			break;
 	}
 
-	if (r.size() == 0) {
+	if (r.empty()) {
 		switch(rt) {
 			case ZT_NETWORK_RULE_MATCH_SOURCE_ZEROTIER_ADDRESS:
 				r["type"] = "MATCH_SOURCE_ZEROTIER_ADDRESS";
@@ -239,7 +239,7 @@ static json _renderRule(ZT_VirtualNetworkRule &rule)
 				break;
 		}
 
-		if (r.size() > 0) {
+		if (!r.empty()) {
 			r["not"] = ((rule.t & 0x80) != 0);
 			r["or"] = ((rule.t & 0x40) != 0);
 		}
@@ -554,7 +554,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 	std::string &responseBody,
 	std::string &responseContentType)
 {
-	if ((path.size() > 0)&&(path[0] == "network")) {
+	if ((!path.empty())&&(path[0] == "network")) {
 
 		if ((path.size() >= 2)&&(path[1].length() == 16)) {
 			const uint64_t nwid = Utils::hexStrToU64(path[1].c_str());
@@ -1227,11 +1227,11 @@ void EmbeddedNetworkController::_request(
 
 	Utils::hex(nwid,nwids);
 	_db.get(nwid,network,identity.address().toInt(),member,ns);
-	if ((!network.is_object())||(network.size() == 0)) {
+	if ((!network.is_object())||(network.empty())) {
 		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_OBJECT_NOT_FOUND);
 		return;
 	}
-	const bool newMember = ((!member.is_object())||(member.size() == 0));
+	const bool newMember = ((!member.is_object())||(member.empty()));
 	DB::initMember(member);
 
 	{
@@ -1437,11 +1437,11 @@ void EmbeddedNetworkController::_request(
 			std::map< uint64_t,json * >::const_iterator ctmp = capsById.find(capId);
 			if (ctmp != capsById.end()) {
 				json *cap = ctmp->second;
-				if ((cap)&&(cap->is_object())&&(cap->size() > 0)) {
+				if ((cap)&&(cap->is_object())&&(!cap->empty())) {
 					ZT_VirtualNetworkRule capr[ZT_MAX_CAPABILITY_RULES];
 					unsigned int caprc = 0;
 					json &caprj = (*cap)["rules"];
-					if ((caprj.is_array())&&(caprj.size() > 0)) {
+					if ((caprj.is_array())&&(!caprj.empty())) {
 						for(unsigned long j=0;j<caprj.size();++j) {
 							if (caprc >= ZT_MAX_CAPABILITY_RULES)
 								break;

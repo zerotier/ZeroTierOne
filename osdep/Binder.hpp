@@ -234,7 +234,7 @@ public:
 			}
 
 			// Get IPv4 addresses for each device
-			if (ifnames.size() > 0) {
+			if (!ifnames.empty()) {
 				const int controlfd = (int)socket(AF_INET,SOCK_DGRAM,0);
 				struct ifconf configuration;
 				configuration.ifc_len = 0;
@@ -276,7 +276,7 @@ public:
 				if (controlfd > 0) close(controlfd);
 			}
 
-			const bool gotViaProc = (localIfAddrs.size() > 0);
+			const bool gotViaProc = (!localIfAddrs.empty());
 #else
 			const bool gotViaProc = false;
 #endif

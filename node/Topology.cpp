@@ -183,7 +183,7 @@ bool Topology::isProhibitedEndpoint(const Address &ztaddr,const InetAddress &ipa
 	if (std::find(_upstreamAddresses.begin(),_upstreamAddresses.end(),ztaddr) != _upstreamAddresses.end()) {
 		for(std::vector<World::Root>::const_iterator r(_planet.roots().begin());r!=_planet.roots().end();++r) {
 			if (r->identity.address() == ztaddr) {
-				if (r->stableEndpoints.size() == 0)
+				if (r->stableEndpoints.empty())
 					return false; // no stable endpoints specified, so allow dynamic paths
 				for(std::vector<InetAddress>::const_iterator e(r->stableEndpoints.begin());e!=r->stableEndpoints.end();++e) {
 					if (ipaddr.ipsEqual(*e))
@@ -194,7 +194,7 @@ bool Topology::isProhibitedEndpoint(const Address &ztaddr,const InetAddress &ipa
 		for(std::vector<World>::const_iterator m(_moons.begin());m!=_moons.end();++m) {
 			for(std::vector<World::Root>::const_iterator r(m->roots().begin());r!=m->roots().end();++r) {
 				if (r->identity.address() == ztaddr) {
-					if (r->stableEndpoints.size() == 0)
+					if (r->stableEndpoints.empty())
 						return false; // no stable endpoints specified, so allow dynamic paths
 					for(std::vector<InetAddress>::const_iterator e(r->stableEndpoints.begin());e!=r->stableEndpoints.end();++e) {
 						if (ipaddr.ipsEqual(*e))
