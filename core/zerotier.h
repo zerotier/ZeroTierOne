@@ -299,14 +299,24 @@ typedef struct
 #define ZT_CERTIFICATE_MAX_STRING_LENGTH 127
 
 /**
- * Certificate is a root CA
+ * Certificate is a root CA (local trust flag)
  */
 #define ZT_CERTIFICATE_LOCAL_TRUST_FLAG_ROOT_CA 0x0001U
 
 /**
- * Certificate's subject describes a set of roots
+ * Certificate's subject describes a set of roots (local trust flag)
  */
 #define ZT_CERTIFICATE_LOCAL_TRUST_FLAG_ZEROTIER_ROOT_SET 0x0002U
+
+/**
+ * Certificate flag indicating that this certificate is a revocation.
+ *
+ * For certificate revocations only the certificates field of the subject
+ * is significant, and must enumerate the serial numbers (hashes) of
+ * certificates being revoked. Revoked certificates must be certificates
+ * signed by the issuer doing the revocation.
+ */
+#define ZT_CERTIFICATE_FLAG_REVOCATION 0x0001U
 
 /**
  * Size of a unique ID of the given key type (with type prefix byte)
