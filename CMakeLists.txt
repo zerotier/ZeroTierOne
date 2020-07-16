@@ -5,7 +5,6 @@ project (zerotiercore)
 
 set (PROJ_DIR ${PROJECT_SOURCE_DIR})
 set (ZT_DEFS -std=c++11)
-set (CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 file(GLOB core_src_glob ${PROJ_DIR}/node/*.cpp)
 add_library(zerotiercore STATIC ${core_src_glob})
