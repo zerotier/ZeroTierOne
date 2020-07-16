@@ -52,6 +52,23 @@
 
 #endif
 
+#ifdef __APPLE__
+
+#include <mach/mach.h>
+#include <mach/clock.h>
+#include <mach/mach_time.h>
+
+static clock_serv_t _machGetRealtimeClock() noexcept
+{
+	clock_serv_t c;
+	host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &c);
+	return c;
+}
+
+static clock_serv_t s_machRealtimeClock = _machGetRealtimeClock();
+
+#endif
+
 using namespace ZeroTier;
 
 static volatile unsigned int foo = 0;
@@ -60,12 +77,28 @@ static int64_t now()
 {
 #ifdef __WINDOWS__
 	FILETIME ft;
-	GetSystemTimeAsFileTime(&ft);
-	return (((LONGLONG)ft.dwLowDateTime + ((LONGLONG)(ft.dwHighDateTime) << 32)) / 10000LL) - 116444736000000000LL;
+		GetSystemTimeAsFileTime(&ft);
+		return (((LONGLONG)ft.dwLowDateTime + ((LONGLONG)(ft.dwHighDateTime) << 32)) / 10000LL) - 116444736000000000LL;
+#else
+#ifdef __LINUX__
+	timespec ts;
+#ifdef CLOCK_REALTIME_COARSE
+		clock_gettime(CLOCK_REALTIME_COARSE,&ts);
+#else
+		clock_gettime(CLOCK_REALTIME,&ts);
+#endif
+		return ( (1000LL * (int64_t)ts.tv_sec) + ((int64_t)(ts.tv_nsec / 1000000)) );
+#else
+#ifdef __APPLE__
+	mach_timespec_t mts;
+	clock_get_time(s_machRealtimeClock, &mts);
+	return ((1000LL * (int64_t)mts.tv_sec) + ((int64_t)(mts.tv_nsec / 1000000)));
 #else
 	timeval tv;
-	gettimeofday(&tv, nullptr);
-	return ((1000LL * (int64_t)tv.tv_sec) + (int64_t)(tv.tv_usec / 1000));
+	gettimeofday(&tv,(struct timezone *)0);
+	return ( (1000LL * (int64_t)tv.tv_sec) + (int64_t)(tv.tv_usec / 1000) );
+#endif
+#endif
 #endif
 };
 
@@ -299,7 +332,7 @@ static bool ZTT_deepCompareCertificates(const Certificate &a, const Certificate 
 
 	if ((a.issuer == nullptr) != (b.issuer == nullptr))
 		return false;
-	if ((a.issuer != nullptr) && (*reinterpret_cast<const Identity *>(a.issuer) != *reinterpret_cast<const Identity *>(b.issuer)))
+	if ((a.issuer != nullptr) && ((*reinterpret_cast<const Identity *>(a.issuer)) != (*reinterpret_cast<const Identity *>(b.issuer))))
 		return false;
 
 	for (unsigned int i = 0; i < a.subject.identityCount; ++i) {
@@ -1130,7 +1163,7 @@ extern "C" const char *ZTT_crypto()
 			ZT_T_PRINTF("  Create test subject and issuer identities... ");
 			Identity testSubjectId, testIssuerId;
 			testSubjectId.generate(Identity::C25519);
-			testSubjectId.generate(Identity::P384);
+			testIssuerId.generate(Identity::P384);
 			ZT_T_PRINTF("OK" ZT_EOL_S);
 
 			ZT_T_PRINTF("  Create subject unique ID... ");
@@ -1167,8 +1200,9 @@ extern "C" const char *ZTT_crypto()
 			ZT_T_PRINTF("OK (%d bytes)" ZT_EOL_S, (int)enc.size());
 
 			ZT_T_PRINTF("  Testing certificate verify... ");
-			if (!cert->verify()) {
-				ZT_T_PRINTF("FAILED (verify original)" ZT_EOL_S);
+			ZT_CertificateError vr = cert->verify();
+			if (vr != ZT_CERTIFICATE_ERROR_NONE) {
+				ZT_T_PRINTF("FAILED (verify original) (%d)" ZT_EOL_S, (int)vr);
 				return "Verify original certificate";
 			}
 			ZT_T_PRINTF("OK" ZT_EOL_S);
@@ -1179,13 +1213,13 @@ extern "C" const char *ZTT_crypto()
 				ZT_T_PRINTF("FAILED (decode)" ZT_EOL_S);
 				return "Certificate decode";
 			}
+			if (cert2->verify() != ZT_CERTIFICATE_ERROR_NONE) {
+				ZT_T_PRINTF("FAILED (verify decoded certificate)" ZT_EOL_S);
+				return "Verify decoded certificate";
+			}
 			if (!ZTT_deepCompareCertificates(*cert, *cert2)) {
 				ZT_T_PRINTF("FAILED (compare decoded with original)" ZT_EOL_S);
 				return "Certificate decode and compare";
-			}
-			if (!cert2->verify()) {
-				ZT_T_PRINTF("FAILED (verify decoded certificate)");
-				return "Verify decoded certificate";
 			}
 			ZT_T_PRINTF("OK" ZT_EOL_S);
 
