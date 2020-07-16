@@ -108,6 +108,12 @@ Certificate &Certificate::operator=(const ZT_Certificate &cert)
 
 	this->maxPathLength = cert.maxPathLength;
 
+	if ((cert.crl) && (cert.crlCount > 0)) {
+		for (unsigned int i = 0; i < cert.crlCount; ++i) {
+			if (cert.crl[i])
+				addCRLCertificate(cert.crl[i]);
+		}
+	}
 	if ((cert.signature) && (cert.signatureSize > 0)) {
 		m_signature.assign(cert.signature, cert.signature + cert.signatureSize);
 		this->signature = m_signature.data();
@@ -167,9 +173,9 @@ void Certificate::addSubjectCertificate(const uint8_t serialNo[ZT_SHA384_DIGEST_
 
 	// Enlarge array of uint8_t pointers, set new pointer to local copy of serial, and set
 	// certificates to point to potentially reallocated array.
-	m_subjectCertificates.resize(++this->subject.certificateCount);
-	m_subjectCertificates.back() = m_serials.front().bytes();
+	m_subjectCertificates.push_back(m_serials.front().bytes());
 	this->subject.certificates = m_subjectCertificates.data();
+	this->subject.certificateCount = (unsigned int)m_subjectCertificates.size();
 }
 
 void Certificate::addSubjectUpdateUrl(const char *url)
@@ -217,8 +223,17 @@ bool Certificate::setSubjectUniqueId(const uint8_t uniqueId[ZT_CERTIFICATE_UNIQU
 	return true;
 }
 
+void Certificate::addCRLCertificate(const uint8_t serialNo[ZT_SHA384_DIGEST_SIZE])
+{
+	m_serials.push_front(SHA384Hash(serialNo));
+	m_crl.push_back(m_serials.front().bytes());
+	this->crl = m_crl.data();
+	this->crlCount = (unsigned int)m_crl.size();
+}
+
 Vector< uint8_t > Certificate::encode(const bool omitSignature) const
 {
+	char tmp[32];
 	Vector< uint8_t > enc;
 	Dictionary d;
 
@@ -269,6 +284,14 @@ Vector< uint8_t > Certificate::encode(const bool omitSignature) const
 
 	if ((this->extendedAttributes) && (this->extendedAttributesSize > 0))
 		d["x"].assign(this->extendedAttributes, this->extendedAttributes + this->extendedAttributesSize);
+
+	if ((this->crl) && (this->crlCount > 0)) {
+		d.add("r$", (uint64_t)this->crlCount);
+		for (unsigned int i = 0; i < this->crlCount; ++i) {
+			if (this->crl[i])
+				d[Dictionary::arraySubscript(tmp, sizeof(tmp), "r$", i)].assign(this->crl[i], this->crl[i] + ZT_SHA384_DIGEST_SIZE);
+		}
+	}
 
 	if ((!omitSignature) && (this->signature) && (this->signatureSize > 0))
 		d["S"].assign(this->signature, this->signature + this->signatureSize);
@@ -398,6 +421,14 @@ bool Certificate::decode(const void *const data, const unsigned int len)
 	if (!m_extendedAttributes.empty()) {
 		this->extendedAttributes = m_extendedAttributes.data();
 		this->extendedAttributesSize = (unsigned int)m_extendedAttributes.size();
+	}
+
+	cnt = (unsigned int)d.getUI("r$");
+	for (unsigned int i = 0; i < cnt; ++i) {
+		const Vector< uint8_t > &cr = d[Dictionary::arraySubscript(tmp, sizeof(tmp), "r$", i)];
+		if (cr.size() != ZT_SHA384_DIGEST_SIZE)
+			return false;
+		this->addCRLCertificate(cr.data());
 	}
 
 	m_signature = d["S"];
@@ -557,6 +588,7 @@ void Certificate::m_clear()
 	m_extendedAttributes.clear();
 	m_subjectUniqueId.clear();
 	m_subjectUniqueIdProofSignature.clear();
+	m_crl.clear();
 	m_signature.clear();
 }
 

@@ -237,7 +237,6 @@ void AES::GMAC::update(const void *const data, unsigned int len) noexcept
 				__m128i a = _mm_xor_si128(_mm_xor_si128(_mm_clmulepi64_si128(hhhh, d1, 0x00), _mm_clmulepi64_si128(hhh, d2, 0x00)), _mm_xor_si128(_mm_clmulepi64_si128(hh, d3, 0x00), _mm_clmulepi64_si128(h, d4, 0x00)));
 				__m128i b = _mm_xor_si128(_mm_xor_si128(_mm_clmulepi64_si128(hhhh, d1, 0x11), _mm_clmulepi64_si128(hhh, d2, 0x11)), _mm_xor_si128(_mm_clmulepi64_si128(hh, d3, 0x11), _mm_clmulepi64_si128(h, d4, 0x11)));
 				__m128i c = _mm_xor_si128(_mm_xor_si128(_mm_xor_si128(_mm_clmulepi64_si128(hhhh2, _mm_xor_si128(_mm_shuffle_epi32(d1, 78), d1), 0x00), _mm_clmulepi64_si128(hhh2, _mm_xor_si128(_mm_shuffle_epi32(d2, 78), d2), 0x00)), _mm_xor_si128(_mm_clmulepi64_si128(hh2, _mm_xor_si128(_mm_shuffle_epi32(d3, 78), d3), 0x00), _mm_clmulepi64_si128(h2, _mm_xor_si128(_mm_shuffle_epi32(d4, 78), d4), 0x00))), _mm_xor_si128(a, b));
-				_mm_prefetch(in, _MM_HINT_T0);
 				a = _mm_xor_si128(_mm_slli_si128(c, 8), a);
 				b = _mm_xor_si128(_mm_srli_si128(c, 8), b);
 				c = _mm_srli_epi32(a, 31);
@@ -478,7 +477,6 @@ void p_aesCtrInnerVAES512(unsigned int &len, const uint64_t c0, uint64_t &c1, co
 		c1 += 4;
 		in += 64;
 		len -= 64;
-		_mm_prefetch(in, _MM_HINT_T0);
 		d0 = _mm512_xor_si512(d0, kk0);
 		d0 = _mm512_aesenc_epi128(d0, kk1);
 		d0 = _mm512_aesenc_epi128(d0, kk2);
@@ -532,7 +530,6 @@ void p_aesCtrInnerVAES256(unsigned int &len, const uint64_t c0, uint64_t &c1, co
 		c1 += 4;
 		in += 64;
 		len -= 64;
-		_mm_prefetch(in, _MM_HINT_T0);
 		d0 = _mm256_xor_si256(d0, kk0);
 		d1 = _mm256_xor_si256(d1, kk0);
 		d0 = _mm256_aesenc_epi128(d0, kk1);
@@ -580,10 +577,6 @@ void AES::CTR::crypt(const void *const input, unsigned int len) noexcept
 
 #ifdef ZT_AES_AESNI
 	if (likely(Utils::CPUID.aes)) {
-		_mm_prefetch(in + 32, _MM_HINT_T0);
-		_mm_prefetch(in + 64, _MM_HINT_T0);
-		_mm_prefetch(in + 96, _MM_HINT_T0);
-
 		const __m128i dd = _mm_set_epi64x(0, (long long)_ctr[0]);
 		uint64_t c1 = Utils::ntoh(_ctr[1]);
 
@@ -665,12 +658,16 @@ void AES::CTR::crypt(const void *const input, unsigned int len) noexcept
 
 			const uint8_t *const eof64 = in + (len & ~((unsigned int)63));
 			len &= 63;
+			__m128i d0, d1, d2, d3;
 			do {
-				_mm_prefetch(in, _MM_HINT_T0);
-				__m128i d0 = _mm_insert_epi64(dd, (long long)Utils::hton(c1), 1);
-				__m128i d1 = _mm_insert_epi64(dd, (long long)Utils::hton(c1 + 1ULL), 1);
-				__m128i d2 = _mm_insert_epi64(dd, (long long)Utils::hton(c1 + 2ULL), 1);
-				__m128i d3 = _mm_insert_epi64(dd, (long long)Utils::hton(c1 + 3ULL), 1);
+				const uint64_t c10 = Utils::hton(c1);
+				const uint64_t c11 = Utils::hton(c1 + 1ULL);
+				const uint64_t c12 = Utils::hton(c1 + 2ULL);
+				const uint64_t c13 = Utils::hton(c1 + 3ULL);
+				d0 = _mm_insert_epi64(dd, (long long)c10, 1);
+				d1 = _mm_insert_epi64(dd, (long long)c11, 1);
+				d2 = _mm_insert_epi64(dd, (long long)c12, 1);
+				d3 = _mm_insert_epi64(dd, (long long)c13, 1);
 				c1 += 4;
 				d0 = _mm_xor_si128(d0, k0);
 				d1 = _mm_xor_si128(d1, k0);

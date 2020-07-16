@@ -126,6 +126,13 @@ public:
 	bool setSubjectUniqueId(const uint8_t uniqueId[ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE], const uint8_t uniqueIdPrivate[ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_PRIVATE_SIZE]);
 
 	/**
+	 * Add a serial number to the CRL list
+	 *
+	 * @param serialNo Serial number of certificate to revoke
+	 */
+	void addCRLCertificate(const uint8_t serialNo[ZT_SHA384_DIGEST_SIZE]);
+
+	/**
 	 * Marshal this certificate in binary form
 	 *
 	 * The internal encoding used here is Dictionary to permit easy
@@ -229,6 +236,7 @@ private:
 	Vector< uint8_t > m_extendedAttributes;
 	Vector< uint8_t > m_subjectUniqueId;
 	Vector< uint8_t > m_subjectUniqueIdProofSignature;
+	Vector< const uint8_t * > m_crl;
 	Vector< uint8_t > m_signature;
 
 	std::atomic< int > __refCount;

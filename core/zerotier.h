@@ -309,16 +309,6 @@ typedef struct
 #define ZT_CERTIFICATE_LOCAL_TRUST_FLAG_ZEROTIER_ROOT_SET 0x0002U
 
 /**
- * Certificate flag indicating that this certificate is a revocation.
- *
- * For certificate revocations only the certificates field of the subject
- * is significant, and must enumerate the serial numbers (hashes) of
- * certificates being revoked. Revoked certificates must be certificates
- * signed by the issuer doing the revocation.
- */
-#define ZT_CERTIFICATE_FLAG_REVOCATION 0x0001U
-
-/**
  * Size of a unique ID of the given key type (with type prefix byte)
  */
 #define ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE 50
@@ -606,6 +596,16 @@ typedef struct
 	 * may be signed (not a CA).
 	 */
 	unsigned int maxPathLength;
+
+	/**
+	 * List of certificate serial numbers being revoked.
+	 */
+	const uint8_t *const *crl;
+
+	/**
+	 * Number of 48-byte serial numbers in crl list.
+	 */
+	unsigned int crlCount;
 
 	/**
 	 * Signature by issuer (algorithm determined by identity type).
