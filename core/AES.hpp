@@ -512,49 +512,9 @@ private:
 	} _k;
 
 #ifdef ZT_AES_AESNI
-
 	void _init_aesni(const uint8_t key[32]) noexcept;
-
-	ZT_INLINE void _encrypt_aesni(const void *const in, void *const out) const noexcept
-	{
-		__m128i tmp = _mm_loadu_si128((const __m128i *)in);
-		tmp = _mm_xor_si128(tmp, _k.ni.k[0]);
-		tmp = _mm_aesenc_si128(tmp, _k.ni.k[1]);
-		tmp = _mm_aesenc_si128(tmp, _k.ni.k[2]);
-		tmp = _mm_aesenc_si128(tmp, _k.ni.k[3]);
-		tmp = _mm_aesenc_si128(tmp, _k.ni.k[4]);
-		tmp = _mm_aesenc_si128(tmp, _k.ni.k[5]);
-		tmp = _mm_aesenc_si128(tmp, _k.ni.k[6]);
-		tmp = _mm_aesenc_si128(tmp, _k.ni.k[7]);
-		tmp = _mm_aesenc_si128(tmp, _k.ni.k[8]);
-		tmp = _mm_aesenc_si128(tmp, _k.ni.k[9]);
-		tmp = _mm_aesenc_si128(tmp, _k.ni.k[10]);
-		tmp = _mm_aesenc_si128(tmp, _k.ni.k[11]);
-		tmp = _mm_aesenc_si128(tmp, _k.ni.k[12]);
-		tmp = _mm_aesenc_si128(tmp, _k.ni.k[13]);
-		_mm_storeu_si128((__m128i *)out, _mm_aesenclast_si128(tmp, _k.ni.k[14]));
-	}
-
-	ZT_INLINE void _decrypt_aesni(const void *in, void *out) const noexcept
-	{
-		__m128i tmp = _mm_loadu_si128((const __m128i *)in);
-		tmp = _mm_xor_si128(tmp, _k.ni.k[14]);
-		tmp = _mm_aesdec_si128(tmp, _k.ni.k[15]);
-		tmp = _mm_aesdec_si128(tmp, _k.ni.k[16]);
-		tmp = _mm_aesdec_si128(tmp, _k.ni.k[17]);
-		tmp = _mm_aesdec_si128(tmp, _k.ni.k[18]);
-		tmp = _mm_aesdec_si128(tmp, _k.ni.k[19]);
-		tmp = _mm_aesdec_si128(tmp, _k.ni.k[20]);
-		tmp = _mm_aesdec_si128(tmp, _k.ni.k[21]);
-		tmp = _mm_aesdec_si128(tmp, _k.ni.k[22]);
-		tmp = _mm_aesdec_si128(tmp, _k.ni.k[23]);
-		tmp = _mm_aesdec_si128(tmp, _k.ni.k[24]);
-		tmp = _mm_aesdec_si128(tmp, _k.ni.k[25]);
-		tmp = _mm_aesdec_si128(tmp, _k.ni.k[26]);
-		tmp = _mm_aesdec_si128(tmp, _k.ni.k[27]);
-		_mm_storeu_si128((__m128i *)out, _mm_aesdeclast_si128(tmp, _k.ni.k[0]));
-	}
-
+	void _encrypt_aesni(const void *const in, void *const out) const noexcept;
+	void _decrypt_aesni(const void *in, void *out) const noexcept;
 #endif
 };
 
