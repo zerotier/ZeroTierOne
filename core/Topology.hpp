@@ -90,104 +90,28 @@ public:
 			if (likely(p != m_paths.end()))
 				return p->second;
 		}
-		{
-			SharedPtr< Path > p(new Path(l, r));
-			RWMutex::Lock lck(m_paths_l);
-			SharedPtr< Path > &p2 = m_paths[k];
-			if (p2)
-				return p2;
-			p2 = p;
-			return p;
-		}
+		return m_newPath(l, r, k);
 	}
 
 	/**
-	 * @return Current best root server
+	 * @return Current best root (lowest latency active root)
 	 */
-	ZT_INLINE SharedPtr< Peer > root() const
+	ZT_INLINE SharedPtr< Peer > root(const int64_t now)
 	{
-		RWMutex::RLock l(m_roots_l);
-		if (unlikely(m_rootPeers.empty()))
+		RWMutex::RMaybeWLock l(m_roots_l);
+		if (unlikely(m_roots.empty()))
 			return SharedPtr< Peer >();
-		return m_rootPeers.front();
-	}
-
-	/**
-	 * @param id Identity to check
-	 * @return True if this identity corresponds to a root
-	 */
-	ZT_INLINE bool isRoot(const Identity &id) const
-	{
-		RWMutex::RLock l(m_roots_l);
-		return (m_roots.find(id) != m_roots.end());
-	}
-
-	/**
-	 * Apply a function or function object to all peers
-	 *
-	 * This locks the peer map during execution, so calls to get() etc. during
-	 * eachPeer() will deadlock.
-	 *
-	 * @param f Function to apply
-	 * @tparam F Function or function object type
-	 */
-	template< typename F >
-	ZT_INLINE void eachPeer(F f) const
-	{
-		RWMutex::RLock l(m_peers_l);
-		for (Map< Address, SharedPtr< Peer > >::const_iterator i(m_peers.begin()); i != m_peers.end(); ++i)
-			f(i->second);
+		if (unlikely((now - m_lastRankedRoots) > (ZT_PATH_KEEPALIVE_PERIOD / 2))) {
+			l.writing();
+			m_rankRoots(now);
+		}
+		return m_roots.front();
 	}
 
 	/**
 	 * @param allPeers vector to fill with all current peers
 	 */
-	ZT_INLINE void getAllPeers(Vector< SharedPtr< Peer > > &allPeers) const
-	{
-		allPeers.clear();
-		RWMutex::RLock l(m_peers_l);
-		allPeers.reserve(m_peers.size());
-		for (Map< Address, SharedPtr< Peer > >::const_iterator i(m_peers.begin()); i != m_peers.end(); ++i)
-			allPeers.push_back(i->second);
-	}
-
-	/**
-	 * @param allPeers vector to fill with all current peers
-	 */
-	ZT_INLINE void getAllPeers(Vector< SharedPtr< Peer > > &allPeers, Vector< SharedPtr< Peer > > &rootPeers) const
-	{
-		allPeers.clear();
-		RWMutex::RLock l(m_peers_l);
-		allPeers.reserve(m_peers.size());
-		for (Map< Address, SharedPtr< Peer > >::const_iterator i(m_peers.begin()); i != m_peers.end(); ++i)
-			allPeers.push_back(i->second);
-		rootPeers = m_rootPeers;
-	}
-
-	/**
-	 * Flag a peer as a root, adding the peer if it is not known
-	 *
-	 * @param tPtr Thread pointer
-	 * @param id Root identity (will be locally validated)
-	 * @return Root peer or NULL if some problem occurred
-	 */
-	SharedPtr< Peer > addRoot(void *tPtr, const Identity &id);
-
-	/**
-	 * Remove a root server's identity from the root server set
-	 *
-	 * @param tPtr Thread pointer
-	 * @param address Root address
-	 * @return True if root found and removed, false if not found
-	 */
-	bool removeRoot(void *tPtr, Address address);
-
-	/**
-	 * Sort roots in ascending order of apparent latency
-	 *
-	 * @param now Current time
-	 */
-	void rankRoots();
+	void allPeers(Vector< SharedPtr< Peer > > &allPeers, Vector< SharedPtr< Peer > > &rootPeers) const;
 
 	/**
 	 * Do periodic tasks such as database cleanup
@@ -219,39 +143,31 @@ public:
 	ZT_CertificateError addCertificate(void *tPtr, const Certificate &cert, const int64_t now, unsigned int localTrust, bool writeToLocalStore, bool refreshRootSets = true, bool verify = true);
 
 private:
-	void m_eraseCertificate_l_certs(const SharedPtr< const Certificate > &cert);
-
-	bool m_cleanCertificates_l_certs(int64_t now);
-
-	bool m_verifyCertificateChain_l_certs(const Certificate *current, const int64_t now) const;
-
-	ZT_CertificateError m_verifyCertificate_l_certs(const Certificate &cert, const int64_t now, unsigned int localTrust, bool skipSignatureCheck) const;
-
+	void m_rankRoots(int64_t now);
+	void m_eraseCertificate(void *tPtr, const SharedPtr< const Certificate > &cert, const SHA384Hash *uniqueIdHash);
+	bool m_cleanCertificates(void *tPtr, int64_t now);
+	bool m_verifyCertificateChain(const Certificate *current, const int64_t now) const;
+	ZT_CertificateError m_verifyCertificate(const Certificate &cert, const int64_t now, unsigned int localTrust, bool skipSignatureCheck) const;
 	void m_loadCached(void *tPtr, const Address &zta, SharedPtr< Peer > &peer);
-
 	SharedPtr< Peer > m_peerFromCached(void *tPtr, const Address &zta);
-
-	void m_updateRootPeers_l_roots_certs(void *tPtr);
-
-	void m_writeTrustStore_l_roots_certs(void *tPtr) const;
+	SharedPtr< Path > m_newPath(const int64_t l, const InetAddress &r, const UniqueID &k);
+	void m_updateRootPeers(void *tPtr, int64_t now);
 
 	const RuntimeEnvironment *const RR;
 
-	RWMutex m_paths_l; // m_paths
-	RWMutex m_peers_l; // m_peers
-	RWMutex m_roots_l; // m_roots, m_rootPeers
-	Mutex m_certs_l;   // m_certs, m_certsBySubjectIdentity
-
-	Map< UniqueID, SharedPtr< Path > > m_paths;
-
+	int64_t m_lastRankedRoots;
+	Vector< SharedPtr< Peer > > m_roots;
 	Map< Address, SharedPtr< Peer > > m_peers;
-
-	Map< Identity, Set< SharedPtr< const Certificate > > > m_roots;
-	Vector< SharedPtr< Peer > > m_rootPeers;
+	Map< UniqueID, SharedPtr< Path > > m_paths;
 
 	Map< SHA384Hash, std::pair< SharedPtr< const Certificate >, unsigned int > > m_certs;
 	Map< Fingerprint, Map< SharedPtr< const Certificate >, unsigned int > > m_certsBySubjectIdentity;
-	SortedMap< Vector< uint8_t >, std::pair< SharedPtr< const Certificate >, unsigned int > > m_certsBySubjectUniqueId;
+	Map< SHA384Hash, std::pair< SharedPtr< const Certificate >, unsigned int > > m_certsBySubjectUniqueId;
+
+	RWMutex m_paths_l; // m_paths
+	RWMutex m_peers_l; // m_peers
+	RWMutex m_roots_l; // m_roots and m_lastRankedRoots
+	Mutex m_certs_l;   // m_certs and friends
 };
 
 } // namespace ZeroTier

@@ -14,8 +14,15 @@
 #ifndef ZT_DEFAULTS_HPP
 #define ZT_DEFAULTS_HPP
 
-namespace ZeroTier {
+#include "Constants.hpp"
 
+namespace ZeroTier {
+namespace Defaults {
+
+extern const unsigned int CERTIFICATES_BYTES;
+extern const uint8_t CERTIFICATES[];
+
+} // namespace Defaults
 } // namespace ZeroTier
 
 #endif

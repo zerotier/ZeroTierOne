@@ -33,6 +33,23 @@
 
 namespace ZeroTier {
 
+template< typename V >
+class Vector : public std::vector< V >
+{
+public:
+	ZT_INLINE Vector()
+	{}
+
+	template< typename I >
+	ZT_INLINE Vector(I begin,I end) :
+		std::vector< V >(begin, end)
+	{}
+};
+
+template< typename V >
+class List : public std::list< V >
+{};
+
 #ifdef __CPP11__
 
 struct intl_MapHasher
@@ -40,12 +57,16 @@ struct intl_MapHasher
 	template< typename O >
 	std::size_t operator()(const O &obj) const noexcept
 	{ return (std::size_t)obj.hashCode(); }
+
 	std::size_t operator()(const uint64_t i) const noexcept
 	{ return (std::size_t)Utils::hash64(i ^ Utils::s_mapNonce); }
+
 	std::size_t operator()(const int64_t i) const noexcept
 	{ return (std::size_t)Utils::hash64((uint64_t)i ^ Utils::s_mapNonce); }
+
 	std::size_t operator()(const uint32_t i) const noexcept
 	{ return (std::size_t)Utils::hash32(i ^ (uint32_t)Utils::s_mapNonce); }
+
 	std::size_t operator()(const int32_t i) const noexcept
 	{ return (std::size_t)Utils::hash32((uint32_t)i ^ (uint32_t)Utils::s_mapNonce); }
 };
@@ -72,23 +93,6 @@ class MultiMap : public std::multimap< K, V >
 
 template< typename K, typename V >
 class SortedMap : public std::map< K, V >
-{};
-
-template< typename V >
-class Vector : public std::vector< V >
-{
-public:
-	ZT_INLINE Vector()
-	{}
-
-	template< typename I >
-	ZT_INLINE Vector(I begin,I end) :
-		std::vector< V >(begin, end)
-	{}
-};
-
-template< typename V >
-class List : public std::list< V >
 {};
 
 #ifdef __CPP11__

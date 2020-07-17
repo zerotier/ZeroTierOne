@@ -241,7 +241,7 @@ ZT_ResultCode Node::processBackgroundTasks(
 			ZT_SPEW("running pulse() on each peer...");
 			try {
 				Vector< SharedPtr< Peer > > allPeers, rootPeers;
-				RR->topology->getAllPeers(allPeers, rootPeers);
+				RR->topology->allPeers(allPeers, rootPeers);
 
 				bool online = false;
 				for (Vector< SharedPtr< Peer > >::iterator p(allPeers.begin()); p != allPeers.end(); ++p) {
@@ -249,8 +249,6 @@ ZT_ResultCode Node::processBackgroundTasks(
 					(*p)->pulse(tPtr, now, isRoot);
 					online |= ((isRoot || rootPeers.empty()) && (*p)->directlyConnected(now));
 				}
-
-				RR->topology->rankRoots();
 
 				if (m_online.exchange(online) != online)
 					postEvent(tPtr, online ? ZT_EVENT_ONLINE : ZT_EVENT_OFFLINE);
@@ -382,21 +380,6 @@ ZT_ResultCode Node::multicastUnsubscribe(
 	} else return ZT_RESULT_ERROR_NETWORK_NOT_FOUND;
 }
 
-ZT_ResultCode Node::addRoot(
-	void *tPtr,
-	const ZT_Identity *id)
-{
-	return (RR->topology->addRoot(tPtr, *reinterpret_cast<const Identity *>(id))) ? ZT_RESULT_OK : ZT_RESULT_ERROR_BAD_PARAMETER;
-}
-
-ZT_ResultCode Node::removeRoot(
-	void *tPtr,
-	const uint64_t address)
-{
-	RR->topology->removeRoot(tPtr, Address(address));
-	return ZT_RESULT_OK;
-}
-
 uint64_t Node::address() const
 {
 	return RR->identity.address().toInt();
@@ -413,8 +396,9 @@ void Node::status(ZT_NodeStatus *status) const
 
 ZT_PeerList *Node::peers() const
 {
-	Vector< SharedPtr< Peer > > peers;
-	RR->topology->getAllPeers(peers);
+	Vector< SharedPtr< Peer > > peers, rootPeers;
+	RR->topology->allPeers(peers, rootPeers);
+
 	std::sort(peers.begin(), peers.end(), _sortPeerPtrsByAddress());
 
 	const unsigned int bufSize =
@@ -458,7 +442,7 @@ ZT_PeerList *Node::peers() const
 			p->versionRev = -1;
 		}
 		p->latency = (*pi)->latency();
-		p->root = RR->topology->isRoot((*pi)->identity()) ? 1 : 0;
+		p->root = (std::find(rootPeers.begin(), rootPeers.end(), *pi) != rootPeers.end()) ? 1 : 0;
 
 		p->networkCount = 0;
 		// TODO: enumerate network memberships
@@ -981,28 +965,6 @@ enum ZT_ResultCode ZT_Node_multicastUnsubscribe(ZT_Node *node, uint64_t nwid, ui
 {
 	try {
 		return reinterpret_cast<ZeroTier::Node *>(node)->multicastUnsubscribe(nwid, multicastGroup, multicastAdi);
-	} catch (std::bad_alloc &exc) {
-		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
-	} catch (...) {
-		return ZT_RESULT_ERROR_INTERNAL;
-	}
-}
-
-enum ZT_ResultCode ZT_Node_addRoot(ZT_Node *node, void *tptr, const ZT_Identity *id)
-{
-	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->addRoot(tptr, id);
-	} catch (std::bad_alloc &exc) {
-		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
-	} catch (...) {
-		return ZT_RESULT_ERROR_INTERNAL;
-	}
-}
-
-enum ZT_ResultCode ZT_Node_removeRoot(ZT_Node *node, void *tptr, const uint64_t address)
-{
-	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->removeRoot(tptr, address);
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch (...) {

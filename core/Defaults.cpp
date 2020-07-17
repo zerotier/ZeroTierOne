@@ -14,4 +14,10 @@
 #include "Defaults.hpp"
 
 namespace ZeroTier {
+namespace Defaults {
+
+const unsigned int CERTIFICATES_BYTES = 0;
+const uint8_t CERTIFICATES[4] = {0,0,0,0};
+
+} // namespace Defaults
 } // namespace ZeroTier

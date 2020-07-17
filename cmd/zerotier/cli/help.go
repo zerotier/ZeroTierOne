@@ -60,10 +60,6 @@ Commands:
     blacklist cidr <IP/bits> <boolean>   Toggle physical path blacklisting
     blacklist if <prefix> <boolean>      Toggle interface prefix blacklisting
     portmap <boolean>                    Toggle use of uPnP or NAT-PMP
-  roots                                  List root peers
-  root [command]                       - Root management commands
-    trust <identity | url> [endpoint]    Add a root or a set of roots
-    remove <address | url | serial>      Remove a root or set of roots
   controller <command> [option]        - Local controller management commands
     networks                             List networks run by local controller
     new                                  Create a new network

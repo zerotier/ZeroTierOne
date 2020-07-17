@@ -109,14 +109,6 @@ public:
 		uint64_t multicastGroup,
 		unsigned long multicastAdi);
 
-	ZT_ResultCode addRoot(
-		void *tptr,
-		const ZT_Identity *id);
-
-	ZT_ResultCode removeRoot(
-		void *tptr,
-		const uint64_t address);
-
 	uint64_t address() const;
 
 	void status(

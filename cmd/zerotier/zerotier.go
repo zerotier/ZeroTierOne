@@ -13,8 +13,6 @@
 
 package main
 
-import "C"
-
 import (
 	"flag"
 	"fmt"
@@ -137,8 +135,6 @@ func main() {
 		authTokenRequired(basePath, *tflag, *tTflag)
 	case "roots":
 		cli.Peers(basePath, authTokenRequired(basePath, *tflag, *tTflag), cmdArgs, *jflag, true)
-	case "root":
-		cli.Root(basePath, authTokenRequired(basePath, *tflag, *tTflag), cmdArgs, *jflag)
 	case "controller":
 	case "set":
 		cli.Set(basePath, authTokenRequired(basePath, *tflag, *tTflag), cmdArgs)

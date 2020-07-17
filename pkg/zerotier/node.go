@@ -447,24 +447,6 @@ func (n *Node) Leave(nwid NetworkID) error {
 	return nil
 }
 
-// AddRoot designates a peer as root, adding it if missing.
-func (n *Node) AddRoot(id *Identity) (*Peer, error) {
-	rc := C.ZT_Node_addRoot(n.zn, nil, id.cIdentity())
-	if rc != 0 {
-		return nil, ErrInvalidParameter
-	}
-	p := n.Peer(id.Fingerprint())
-	if p == nil {
-		return nil, ErrInvalidParameter
-	}
-	return p, nil
-}
-
-// RemoveRoot un-designates a peer as root.
-func (n *Node) RemoveRoot(address Address) {
-	C.ZT_Node_removeRoot(n.zn, nil, C.uint64_t(address))
-}
-
 // Network looks up a network by ID or returns nil if not joined
 func (n *Node) Network(nwid NetworkID) *Network {
 	n.networksLock.RLock()

@@ -156,7 +156,7 @@ void Peer::send(void *tPtr, int64_t now, const void *data, unsigned int len) noe
 	if (via) {
 		via->send(RR, tPtr, data, len, now);
 	} else {
-		const SharedPtr< Peer > root(RR->topology->root());
+		const SharedPtr< Peer > root(RR->topology->root(now));
 		if ((root) && (root.ptr() != this)) {
 			via = root->path(now);
 			if (via) {
@@ -397,7 +397,7 @@ void Peer::pulse(void *const tPtr, const int64_t now, const bool isRoot)
 
 	// Send a HELLO indirectly if we were not able to send one via any direct path.
 	if (needHello) {
-		const SharedPtr< Peer > root(RR->topology->root());
+		const SharedPtr< Peer > root(RR->topology->root(now));
 		if (root) {
 			const SharedPtr< Path > via(root->path(now));
 			if (via) {

@@ -18,7 +18,6 @@ import (
 	secrand "crypto/rand"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -346,22 +345,6 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 		}
 		apiSetStandardHeaders(out)
 
-		if req.URL.Path == "/peer/_addroot" {
-			if req.Method == http.MethodPost || req.Method == http.MethodPut {
-				rsdata, err := ioutil.ReadAll(io.LimitReader(req.Body, 16384))
-				if err != nil || len(rsdata) == 0 {
-					_ = apiSendObj(out, req, http.StatusBadRequest, &APIErr{"read error"})
-				} else {
-					// TODO
-					_ = apiSendObj(out, req, http.StatusOK, nil)
-				}
-			} else {
-				out.Header().Set("Allow", "POST, PUT")
-				_ = apiSendObj(out, req, http.StatusMethodNotAllowed, &APIErr{"no root spec supplied"})
-			}
-			return
-		}
-
 		var queriedStr string
 		var queriedID Address
 		var queriedFP *Fingerprint
@@ -400,22 +383,7 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 			}
 		}
 
-		if req.Method == http.MethodPost || req.Method == http.MethodPut {
-			if peer != nil {
-				var posted Peer
-				if apiReadObj(out, req, &posted) == nil {
-					if posted.Root && !peer.Root {
-						_ = apiSendObj(out, req, http.StatusBadRequest, &APIErr{"root spec must be submitted to /peer/_addroot, post to peers can only be used to clear the root flag"})
-					} else if !posted.Root && peer.Root {
-						peer.Root = false
-						node.RemoveRoot(peer.Address)
-						_ = apiSendObj(out, req, http.StatusOK, peer)
-					}
-				}
-			} else {
-				_ = apiSendObj(out, req, http.StatusNotFound, &APIErr{"peer not found"})
-			}
-		} else if req.Method == http.MethodGet || req.Method == http.MethodHead || req.Method == http.MethodPost || req.Method == http.MethodPut {
+		if req.Method == http.MethodGet || req.Method == http.MethodHead || req.Method == http.MethodPost || req.Method == http.MethodPut {
 			if peer != nil {
 				_ = apiSendObj(out, req, http.StatusOK, peer)
 			} else if len(queriedStr) > 0 {
@@ -424,7 +392,7 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 				_ = apiSendObj(out, req, http.StatusOK, peers)
 			}
 		} else {
-			out.Header().Set("Allow", "GET, HEAD, POST, PUT")
+			out.Header().Set("Allow", "GET, HEAD")
 			_ = apiSendObj(out, req, http.StatusMethodNotAllowed, &APIErr{"unsupported method"})
 		}
 	})

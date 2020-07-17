@@ -250,42 +250,6 @@ uint64_t random() noexcept;
 bool scopy(char *dest, unsigned int len, const char *src) noexcept;
 
 /**
- * Mix bits in a 64-bit integer (non-cryptographic, for hash tables)
- *
- * https://nullprogram.com/blog/2018/07/31/
- *
- * @param x Integer to mix
- * @return Hashed value
- */
-static ZT_INLINE uint64_t hash64(uint64_t x) noexcept
-{
-	x ^= x >> 30U;
-	x *= 0xbf58476d1ce4e5b9ULL;
-	x ^= x >> 27U;
-	x *= 0x94d049bb133111ebULL;
-	x ^= x >> 31U;
-	return x;
-}
-
-/**
- * Mix bits in a 32-bit integer (non-cryptographic, for hash tables)
- *
- * https://nullprogram.com/blog/2018/07/31/
- *
- * @param x Integer to mix
- * @return Hashed value
- */
-static ZT_INLINE uint32_t hash32(uint32_t x) noexcept
-{
-	x ^= x >> 16U;
-	x *= 0x7feb352dU;
-	x ^= x >> 15U;
-	x *= 0x846ca68bU;
-	x ^= x >> 16U;
-	return x;
-}
-
-/**
  * Check if a buffer's contents are all zero
  */
 static ZT_INLINE bool allZero(const void *const b, unsigned int l) noexcept
@@ -336,24 +300,6 @@ static ZT_INLINE unsigned long long hexStrToU64(const char *s) noexcept
 #else
 	return strtoull(s, nullptr, 16);
 #endif
-}
-
-/**
- * Compute 32-bit FNV-1a checksum
- *
- * See: http://www.isthe.com/chongo/tech/comp/fnv/
- *
- * @param data Data to checksum
- * @param len Length of data
- * @return FNV1a checksum
- */
-static ZT_INLINE uint32_t fnv1a32(const void *const data, const unsigned int len) noexcept
-{
-	uint32_t h = 0x811c9dc5;
-	const uint32_t p = 0x01000193;
-	for (unsigned int i = 0; i < len; ++i)
-		h = (h ^ (uint32_t)reinterpret_cast<const uint8_t *>(data)[i]) * p;
-	return h;
 }
 
 #ifdef __GNUC__
@@ -698,20 +644,6 @@ static ZT_INLINE void storeLittleEndian(void *const p, const I i) noexcept
 #endif
 }
 
-/*
- * Note on copy() and zero():
- *
- * On X64, rep/movsb and rep/stosb are almost always faster for small memory
- * regions on all but the oldest microarchitectures (and even there the
- * difference is not large). While more aggressive memcpy() implementations
- * may be faster in micro-benchmarks, these fail to account for real world
- * context such as instruction cache and pipeline pressure. A simple
- * instruction like rep/movsb takes up only a few spots in caches and pipelines
- * and requires no branching or function calls. Specialized memcpy() can still
- * be faster for large memory regions, but ZeroTier doesn't copy anything
- * much larger than 16KiB.
- */
-
 /**
  * Copy memory block whose size is known at compile time.
  *
@@ -776,6 +708,53 @@ static ZT_INLINE void zero(void *dest, unsigned long len) noexcept
 #else
 	memset(dest, 0, len);
 #endif
+}
+
+/**
+ * Compute 32-bit FNV-1a checksum
+ *
+ * See: http://www.isthe.com/chongo/tech/comp/fnv/
+ *
+ * @param data Data to checksum
+ * @param len Length of data
+ * @return FNV1a checksum
+ */
+uint32_t fnv1a32(const void *const data, const unsigned int len) noexcept;
+
+/**
+ * Mix bits in a 64-bit integer (non-cryptographic, for hash tables)
+ *
+ * https://nullprogram.com/blog/2018/07/31/
+ *
+ * @param x Integer to mix
+ * @return Hashed value
+ */
+static ZT_INLINE uint64_t hash64(uint64_t x) noexcept
+{
+	x ^= x >> 30U;
+	x *= 0xbf58476d1ce4e5b9ULL;
+	x ^= x >> 27U;
+	x *= 0x94d049bb133111ebULL;
+	x ^= x >> 31U;
+	return x;
+}
+
+/**
+ * Mix bits in a 32-bit integer (non-cryptographic, for hash tables)
+ *
+ * https://nullprogram.com/blog/2018/07/31/
+ *
+ * @param x Integer to mix
+ * @return Hashed value
+ */
+static ZT_INLINE uint32_t hash32(uint32_t x) noexcept
+{
+	x ^= x >> 16U;
+	x *= 0x7feb352dU;
+	x ^= x >> 15U;
+	x *= 0x846ca68bU;
+	x ^= x >> 16U;
+	return x;
 }
 
 } // namespace Utils

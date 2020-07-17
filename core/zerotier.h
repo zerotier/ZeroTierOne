@@ -2231,42 +2231,6 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_multicastUnsubscribe(
 	unsigned long multicastAdi);
 
 /**
- * Designate a peer as a root, adding if not already known
- *
- * ZeroTier does not take possession of the 'id' object. It still must be
- * deleted if it was allocated.
- *
- * @param node Node instance
- * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
- * @param id Identity of root to add
- * @return OK (0) or error code if an error condition has occurred
- */
-ZT_SDK_API enum ZT_ResultCode ZT_Node_addRoot(
-	ZT_Node *node,
-	void *tptr,
-	const ZT_Identity *id);
-
-/**
- * Un-designate a peer as a root
- *
- * This doesn't fully remove the peer from the peer list. It just removes
- * its root trust flag. If there is no longer any need to communicate with it
- * it may gradually time out and be removed.
- * 
- * The removeRoot() only takes an address since the identity is by definition
- * already known and pinned.
- *
- * @param node Node instance
- * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
- * @param address ZeroTier address to remove
- * @return OK (0) or error code if an error condition has occurred
- */
-ZT_SDK_API enum ZT_ResultCode ZT_Node_removeRoot(
-	ZT_Node *node,
-	void *tptr,
-	const uint64_t address);
-
-/**
  * Get this node's 40-bit ZeroTier address
  *
  * @param node Node instance

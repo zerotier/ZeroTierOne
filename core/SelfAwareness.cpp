@@ -75,8 +75,10 @@ void SelfAwareness::iam(void *tPtr, const Identity &reporter, const int64_t rece
 		}
 
 		// Reset all paths within this scope and address family
-		_ResetWithinScope rset(tPtr, now, myPhysicalAddress.family(), (InetAddress::IpScope)scope);
-		RR->topology->eachPeer< _ResetWithinScope & >(rset);
+		Vector< SharedPtr< Peer > > peers, rootPeers;
+		RR->topology->allPeers(peers, rootPeers);
+		for(Vector< SharedPtr< Peer > >::const_iterator p(peers.begin());p!=peers.end();++p)
+			(*p)->resetWithinScope(tPtr, (InetAddress::IpScope)scope, myPhysicalAddress.family(), now);
 
 		RR->t->resettingPathsInScope(tPtr, 0x9afff100, reporter, reporterPhysicalAddress, entry.mySurface, myPhysicalAddress, scope);
 	} else {
