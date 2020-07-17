@@ -499,6 +499,7 @@ private:
 		{
 			__m128i k[28];
 			__m128i h[4]; // h, hh, hhh, hhhh
+			__m128i h2[4]; // _mm_xor_si128(_mm_shuffle_epi32(h, 78), h), etc.
 		} ni;
 #endif
 

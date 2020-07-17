@@ -339,8 +339,7 @@ bool Topology::m_verifyCertificateChain(const Certificate *current, const int64_
 {
 	// assumes m_certs is at least locked for reading
 
-	Map< Fingerprint, Map< SharedPtr< const Certificate >, unsigned int > >::const_iterator
-		c = m_certsBySubjectIdentity.find(reinterpret_cast<const Identity *>(current->issuer)->fingerprint());
+	Map< Fingerprint, Map< SharedPtr< const Certificate >, unsigned int > >::const_iterator c(m_certsBySubjectIdentity.find(reinterpret_cast<const Identity *>(current->issuer)->fingerprint()));
 	if (c != m_certsBySubjectIdentity.end()) {
 		for (Map< SharedPtr< const Certificate >, unsigned int >::const_iterator cc(c->second.begin()); cc != c->second.end(); ++cc) {
 			if (

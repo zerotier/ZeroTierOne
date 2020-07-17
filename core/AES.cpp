@@ -222,10 +222,10 @@ void AES::GMAC::update(const void *const data, unsigned int len) noexcept
 			const __m128i hh = _aes._k.ni.h[1];
 			const __m128i hhh = _aes._k.ni.h[2];
 			const __m128i hhhh = _aes._k.ni.h[3];
-			const __m128i h2 = _mm_xor_si128(_mm_shuffle_epi32(h, 78), h);
-			const __m128i hh2 = _mm_xor_si128(_mm_shuffle_epi32(hh, 78), hh);
-			const __m128i hhh2 = _mm_xor_si128(_mm_shuffle_epi32(hhh, 78), hhh);
-			const __m128i hhhh2 = _mm_xor_si128(_mm_shuffle_epi32(hhhh, 78), hhhh);
+			const __m128i h2 = _aes._k.ni.h2[0];
+			const __m128i hh2 = _aes._k.ni.h2[1];
+			const __m128i hhh2 = _aes._k.ni.h2[2];
+			const __m128i hhhh2 = _aes._k.ni.h2[3];
 			const uint8_t *const end64 = in + (len & ~((unsigned int)63));
 			len &= 63;
 			do {
@@ -321,88 +321,56 @@ void AES::GMAC::finish(uint8_t tag[16]) noexcept
 		const __m128i h = _aes._k.ni.h[0];
 		y = _mm_xor_si128(y, _mm_set_epi64x(0LL, (long long)Utils::hton((uint64_t)_len << 3U)));
 		y = _mm_shuffle_epi8(y, s_sseSwapBytes);
-
 		__m128i encIV = _mm_xor_si128(_mm_loadu_si128(reinterpret_cast<const __m128i *>(_iv)), k[0]);
-
 		__m128i t1 = _mm_clmulepi64_si128(h, y, 0x00);
 		__m128i t2 = _mm_clmulepi64_si128(h, y, 0x01);
 		__m128i t3 = _mm_clmulepi64_si128(h, y, 0x10);
 		__m128i t4 = _mm_clmulepi64_si128(h, y, 0x11);
-
 		encIV = _mm_aesenc_si128(encIV, k[1]);
-
 		t2 = _mm_xor_si128(t2, t3);
 		t3 = _mm_slli_si128(t2, 8);
-
 		encIV = _mm_aesenc_si128(encIV, k[2]);
-
 		t2 = _mm_srli_si128(t2, 8);
 		t1 = _mm_xor_si128(t1, t3);
-
 		encIV = _mm_aesenc_si128(encIV, k[3]);
-
 		t4 = _mm_xor_si128(t4, t2);
 		__m128i t5 = _mm_srli_epi32(t1, 31);
 		t1 = _mm_slli_epi32(t1, 1);
 		__m128i t6 = _mm_srli_epi32(t4, 31);
-
 		encIV = _mm_aesenc_si128(encIV, k[4]);
-
 		t4 = _mm_slli_epi32(t4, 1);
 		t3 = _mm_srli_si128(t5, 12);
-
 		encIV = _mm_aesenc_si128(encIV, k[5]);
-
 		t6 = _mm_slli_si128(t6, 4);
 		t5 = _mm_slli_si128(t5, 4);
-
 		encIV = _mm_aesenc_si128(encIV, k[6]);
-
 		t1 = _mm_or_si128(t1, t5);
 		t4 = _mm_or_si128(t4, t6);
-
 		encIV = _mm_aesenc_si128(encIV, k[7]);
-
 		t4 = _mm_or_si128(t4, t3);
 		t5 = _mm_slli_epi32(t1, 31);
-
 		encIV = _mm_aesenc_si128(encIV, k[8]);
-
 		t6 = _mm_slli_epi32(t1, 30);
 		t3 = _mm_slli_epi32(t1, 25);
-
 		encIV = _mm_aesenc_si128(encIV, k[9]);
-
 		t5 = _mm_xor_si128(t5, t6);
 		t5 = _mm_xor_si128(t5, t3);
-
 		encIV = _mm_aesenc_si128(encIV, k[10]);
-
 		t6 = _mm_srli_si128(t5, 4);
 		t4 = _mm_xor_si128(t4, t6);
-
 		encIV = _mm_aesenc_si128(encIV, k[11]);
-
 		t5 = _mm_slli_si128(t5, 12);
 		t1 = _mm_xor_si128(t1, t5);
-
 		t4 = _mm_xor_si128(t4, t1);
 		t5 = _mm_srli_epi32(t1, 1);
-
 		encIV = _mm_aesenc_si128(encIV, k[12]);
-
 		t2 = _mm_srli_epi32(t1, 2);
 		t3 = _mm_srli_epi32(t1, 7);
-
 		encIV = _mm_aesenc_si128(encIV, k[13]);
-
 		t4 = _mm_xor_si128(t4, t2);
 		t4 = _mm_xor_si128(t4, t3);
-
 		encIV = _mm_aesenclast_si128(encIV, k[14]);
-
 		t4 = _mm_xor_si128(t4, t5);
-
 		_mm_storeu_si128(reinterpret_cast<__m128i *>(tag), _mm_xor_si128(_mm_shuffle_epi8(t4, s_sseSwapBytes), encIV));
 
 		return;
@@ -1238,9 +1206,13 @@ void AES::_init_aesni(const uint8_t key[32]) noexcept
 	__m128i hhh = p_gmacPCLMUL128(hswap, hh);
 	__m128i hhhh = p_gmacPCLMUL128(hswap, hhh);
 	_k.ni.h[0] = hswap;
-	_k.ni.h[1] = _mm_shuffle_epi8(hh, s_sseSwapBytes);
-	_k.ni.h[2] = _mm_shuffle_epi8(hhh, s_sseSwapBytes);
-	_k.ni.h[3] = _mm_shuffle_epi8(hhhh, s_sseSwapBytes);
+	_k.ni.h[1] = hh = _mm_shuffle_epi8(hh, s_sseSwapBytes);
+	_k.ni.h[2] = hhh = _mm_shuffle_epi8(hhh, s_sseSwapBytes);
+	_k.ni.h[3] = hhhh = _mm_shuffle_epi8(hhhh, s_sseSwapBytes);
+	_k.ni.h2[0] = _mm_xor_si128(_mm_shuffle_epi32(hswap, 78), hswap);
+	_k.ni.h2[1] = _mm_xor_si128(_mm_shuffle_epi32(hh, 78), hh);
+	_k.ni.h2[2] = _mm_xor_si128(_mm_shuffle_epi32(hhh, 78), hhh);
+	_k.ni.h2[3] = _mm_xor_si128(_mm_shuffle_epi32(hhhh, 78), hhhh);
 }
 
 #endif // ZT_AES_AESNI
