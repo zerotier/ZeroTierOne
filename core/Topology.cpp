@@ -77,11 +77,6 @@ void Topology::allPeers(Vector< SharedPtr< Peer > > &allPeers, Vector< SharedPtr
 
 void Topology::doPeriodicTasks(void *tPtr, const int64_t now)
 {
-	// Peer and path delete operations are batched to avoid holding write locks on
-	// these structures for any length of time. A list is compiled in read mode,
-	// then the write lock is acquired for each delete. This adds overhead if there
-	// are a lot of deletions, but that's not common.
-
 	// Clean any expired certificates
 	{
 		Mutex::Lock l1(m_certs_l);
@@ -92,7 +87,13 @@ void Topology::doPeriodicTasks(void *tPtr, const int64_t now)
 		}
 	}
 
-	// Delete peers that are stale or offline and are not roots.
+	// Cleaning of peers and paths uses a two pass method to avoid write locking
+	// m_peers or m_paths for any significant amount of time. This avoids pauses
+	// on nodes with large numbers of peers or paths.
+
+	// Delete peers that are stale or offline and are not roots. First pass: grab
+	// peers to delete in read lock mode. Second pass: delete peers one by one,
+	// acquiring hard write lock each time to avoid pauses.
 	{
 		Vector< uintptr_t > rootLookup;
 		{
@@ -101,7 +102,6 @@ void Topology::doPeriodicTasks(void *tPtr, const int64_t now)
 			for (Vector< SharedPtr< Peer > >::const_iterator r(m_roots.begin()); r != m_roots.end(); ++r)
 				rootLookup.push_back((uintptr_t)r->ptr());
 		}
-		std::sort(rootLookup.begin(), rootLookup.end());
 
 		Vector< Address > toDelete;
 		{
@@ -109,35 +109,45 @@ void Topology::doPeriodicTasks(void *tPtr, const int64_t now)
 			for (Map< Address, SharedPtr< Peer > >::iterator i(m_peers.begin()); i != m_peers.end(); ++i) {
 				// TODO: also delete if the peer has not exchanged meaningful communication in a while, such as
 				// a network frame or non-trivial control packet.
-				if (((now - i->second->lastReceive()) > ZT_PEER_ALIVE_TIMEOUT) && (!std::binary_search(rootLookup.begin(), rootLookup.end(), (uintptr_t)i->second.ptr())))
+				if (((now - i->second->lastReceive()) > ZT_PEER_ALIVE_TIMEOUT) && (std::find(rootLookup.begin(), rootLookup.end(), (uintptr_t)i->second.ptr()) == rootLookup.end()))
 					toDelete.push_back(i->first);
 			}
 		}
-		for (Vector< Address >::iterator i(toDelete.begin()); i != toDelete.end(); ++i) {
-			RWMutex::Lock l1(m_peers_l);
-			const Map< Address, SharedPtr< Peer > >::iterator p(m_peers.find(*i));
-			if (likely(p != m_peers.end())) {
-				p->second->save(tPtr);
-				m_peers.erase(p);
+		if (!toDelete.empty()) {
+			ZT_SPEW("garbage collecting %u offline or stale peer objects", (unsigned int)toDelete.size());
+			for (Vector< Address >::iterator i(toDelete.begin()); i != toDelete.end(); ++i) {
+				RWMutex::Lock l1(m_peers_l);
+				const Map< Address, SharedPtr< Peer > >::iterator p(m_peers.find(*i));
+				if (likely(p != m_peers.end())) {
+					p->second->save(tPtr);
+					m_peers.erase(p);
+				}
 			}
 		}
 	}
 
 	// Delete paths that are no longer held by anyone else ("weak reference" type behavior).
+	// First pass: make a list of paths with a reference count of 1 meaning they are likely
+	// orphaned. Second pass: call weakGC() on each of these which does a hard compare/exchange
+	// and delete those that actually are GC'd. Write lock is aquired only briefly on delete
+	// just as with peers.
 	{
-		Vector< UniqueID > toDelete;
+		Vector< UniqueID > possibleDelete;
 		{
 			RWMutex::RLock l1(m_paths_l);
 			for (Map< UniqueID, SharedPtr< Path > >::iterator i(m_paths.begin()); i != m_paths.end(); ++i) {
-				if (i->second.weakGC())
-					toDelete.push_back(i->first);
+				if (i->second.references() <= 1)
+					possibleDelete.push_back(i->first);
 			}
 		}
-		for (Vector< UniqueID >::iterator i(toDelete.begin()); i != toDelete.end(); ++i) {
-			RWMutex::Lock l1(m_paths_l);
-			const Map< UniqueID, SharedPtr< Path > >::iterator p(m_paths.find(*i));
-			if (likely(p != m_paths.end()))
-				m_paths.erase(p);
+		if (!possibleDelete.empty()) {
+			ZT_SPEW("garbage collecting (likely) %u orphaned paths", (unsigned int)possibleDelete.size());
+			for (Vector< UniqueID >::const_iterator i(possibleDelete.begin()); i != possibleDelete.end(); ++i) {
+				RWMutex::Lock l1(m_paths_l);
+				Map< UniqueID, SharedPtr< Path > >::iterator p(m_paths.find(*i));
+				if ((p != m_paths.end()) && p->second.weakGC())
+					m_paths.erase(p);
+			}
 		}
 	}
 }

@@ -168,6 +168,8 @@ public:
 	}
 
 	/**
+	 * Get the current reference count for this object, which can change at any time
+	 *
 	 * @return Number of references according to this object's ref count or 0 if NULL
 	 */
 	ZT_INLINE int references() noexcept
