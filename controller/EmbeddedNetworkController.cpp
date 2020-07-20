@@ -1029,6 +1029,30 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 						}
 					}
 
+					if (b.count("dns")) {
+						json &dns = b["dns"];
+						if (dns.is_array()) {
+							json nda = json::array();
+							for(unsigned int i=0;i<dns.size();++i) {
+								json &d = dns[i];
+								if (d.is_object()) {
+									json nd = json::object();
+									nd["domain"] = d["domain"];
+									json &srv = d["servers"];
+									if (srv.is_array()) {
+										json ns = json::array();
+										for(unsigned int j=0;j<srv.size();++j) {
+											ns.push_back(srv[i]);
+										}
+										nd["servers"] = ns;
+									}
+									nda.push_back(nd);
+								}
+							}
+							network["dns"] = nda;
+						}
+					}
+
 				} catch ( ... ) {
 					responseBody = "{ \"message\": \"exception occurred while parsing body variables\" }";
 					responseContentType = "application/json";
@@ -1392,6 +1416,7 @@ void EmbeddedNetworkController::_request(
 	json &tags = network["tags"];
 	json &memberCapabilities = member["capabilities"];
 	json &memberTags = member["tags"];
+	json &dns = member["dns"];
 
 	if (metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_RULES_ENGINE_REV,0) <= 0) {
 		// Old versions with no rules engine support get an allow everything rule.
@@ -1681,6 +1706,25 @@ void EmbeddedNetworkController::_request(
 						}
 					}
 				}
+			}
+		}
+	}
+	
+	if(dns.is_array()) {
+		nc->dnsCount = 0;
+		for(unsigned int p=0; p < dns.size(); ++p) {
+			json &d = dns[p];
+			if (d.is_object()) {
+				std::string domain = OSUtils::jsonString(d["domain"],"");
+				memcpy(nc->dns[nc->dnsCount].domain, domain.c_str(), domain.size());
+				json &addrArray = d["servers"];
+				if (addrArray.is_array()) {
+					for(unsigned int j = 0; j < addrArray.size() && j < ZT_MAX_DNS_SERVERS; ++j) {
+						json &addr = addrArray[j];
+						nc->dns[nc->dnsCount].server_addr[j] = InetAddress(OSUtils::jsonString(addr,"").c_str());
+					}
+				}
+				++nc->dnsCount;
 			}
 		}
 	}
