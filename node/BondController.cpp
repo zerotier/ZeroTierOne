@@ -52,7 +52,7 @@ void BondController::addCustomLink(std::string& policyAlias, SharedPtr<Link> lin
 		link->setAsUserSpecified(true);
 		_interfaceToLinkMap[policyAlias].insert(std::pair<std::string, SharedPtr<Link>>(link->ifname(), link));
 	} else {
-		fprintf(stderr, "link already exists=%s\n", link->ifname().c_str());
+		//fprintf(stderr, "link already exists=%s\n", link->ifname().c_str());
 		// Link is already defined, overlay user settings
 	}
 }
@@ -79,27 +79,27 @@ bool BondController::assignBondingPolicyToPeer(int64_t identity, const std::stri
 
 SharedPtr<Bond> BondController::createTransportTriggeredBond(const RuntimeEnvironment *renv, const SharedPtr<Peer>& peer)
 {
-	fprintf(stderr, "createTransportTriggeredBond\n");
+	//fprintf(stderr, "createTransportTriggeredBond\n");
 	Mutex::Lock _l(_bonds_m);
 	int64_t identity = peer->identity().address().toInt();
 	Bond *bond = nullptr;
 	if (!_bonds.count(identity)) {
 		std::string policyAlias;
-		fprintf(stderr, "new bond, registering for %llx\n", identity);
+		//fprintf(stderr, "new bond, registering for %llx\n", identity);
 		if (!_policyTemplateAssignments.count(identity)) {
 			if (_defaultBondingPolicy) {
-				fprintf(stderr, "  no assignment, using default (%d)\n", _defaultBondingPolicy);
+				//fprintf(stderr, "  no assignment, using default (%d)\n", _defaultBondingPolicy);
 				bond = new Bond(renv, _defaultBondingPolicy, peer);
 			}
 			if (!_defaultBondingPolicy && _defaultBondingPolicyStr.length()) {
-				fprintf(stderr, "  no assignment, using default custom (%s)\n", _defaultBondingPolicyStr.c_str());
+				//fprintf(stderr, "  no assignment, using default custom (%s)\n", _defaultBondingPolicyStr.c_str());
 				bond = new Bond(renv, _bondPolicyTemplates[_defaultBondingPolicyStr].ptr(), peer);
 			}
 		}
 		else {
-			fprintf(stderr, "  assignment found for %llx, using it as a template (%s)\n", identity,_policyTemplateAssignments[identity].c_str());
+			//fprintf(stderr, "  assignment found for %llx, using it as a template (%s)\n", identity,_policyTemplateAssignments[identity].c_str());
 			if (!_bondPolicyTemplates[_policyTemplateAssignments[identity]]) {
-				fprintf(stderr, "unable to locate template (%s), ignoring assignment for (%llx), using defaults\n", _policyTemplateAssignments[identity].c_str(), identity);
+				//fprintf(stderr, "unable to locate template (%s), ignoring assignment for (%llx), using defaults\n", _policyTemplateAssignments[identity].c_str(), identity);
 				bond = new Bond(renv, _defaultBondingPolicy, peer);
 			}
 			else {
@@ -108,7 +108,7 @@ SharedPtr<Bond> BondController::createTransportTriggeredBond(const RuntimeEnviro
 		}
 	}
 	else {
-		fprintf(stderr, "bond already exists for %llx.\n", identity);
+		//fprintf(stderr, "bond already exists for %llx.\n", identity);
 	}
 	if (bond) {
 		_bonds[identity] = bond;

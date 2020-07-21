@@ -1581,7 +1581,7 @@ public:
 			// Custom Policies
 			json &customBondingPolicies = settings["policies"];
 			for (json::iterator policyItr = customBondingPolicies.begin(); policyItr != customBondingPolicies.end();++policyItr) {
-				fprintf(stderr, "\n\n--- (%s)\n", policyItr.key().c_str());
+				//fprintf(stderr, "\n\n--- (%s)\n", policyItr.key().c_str());
 				// Custom Policy
 				std::string customPolicyStr(policyItr.key());
 				json &customPolicy = policyItr.value();
@@ -1635,7 +1635,7 @@ public:
 				// Policy-Specific link set
 				json &links = customPolicy["links"];
 				for (json::iterator linkItr = links.begin(); linkItr != links.end();++linkItr) {
-					fprintf(stderr, "\t--- link (%s)\n", linkItr.key().c_str());
+					//fprintf(stderr, "\t--- link (%s)\n", linkItr.key().c_str());
 					std::string linkNameStr(linkItr.key());
 					json &link = linkItr.value();
 
