@@ -139,6 +139,9 @@ void Peer::received(
 						if (q > replacePathQuality) {
 							replacePathQuality = q;
 							replacePath = i;
+							if (!_paths[i].p->alive(now)) {
+								break; // Stop searching, we found an identical dead path, replace the object
+							}
 						}
 					} else {
 						replacePath = i;
