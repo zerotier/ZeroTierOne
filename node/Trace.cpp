@@ -96,22 +96,24 @@ void Trace::peerConfirmingUnknownPath(void *const tPtr,const uint64_t networkId,
 
 void Trace::peerLinkNowRedundant(void *const tPtr,Peer &peer)
 {
-	ZT_LOCAL_TRACE(tPtr,RR,"link to peer %.10llx is fully redundant",peer.address().toInt());
+	//ZT_LOCAL_TRACE(tPtr,RR,"link to peer %.10llx is fully redundant",peer.address().toInt());
 }
 
 void Trace::peerLinkNoLongerRedundant(void *const tPtr,Peer &peer)
 {
-	ZT_LOCAL_TRACE(tPtr,RR,"link to peer %.10llx is no longer redundant",peer.address().toInt());
+	//ZT_LOCAL_TRACE(tPtr,RR,"link to peer %.10llx is no longer redundant",peer.address().toInt());
 }
 
 void Trace::peerLinkAggregateStatistics(void *const tPtr,Peer &peer)
 {
+	/*
 	ZT_LOCAL_TRACE(tPtr,RR,"link to peer %.10llx is composed of (%d) physical paths %s, has packet delay variance (%.0f ms), mean latency (%.0f ms)",
 		peer.address().toInt(),
 		peer.aggregateLinkPhysicalPathCount(),
 		peer.interfaceListStr(),
 		peer.computeAggregateLinkPacketDelayVariance(),
 		peer.computeAggregateLinkMeanLatency());
+	*/
 }
 
 void Trace::peerLearnedNewPath(void *const tPtr,const uint64_t networkId,Peer &peer,const SharedPtr<Path> &newPath,const uint64_t packetId)
