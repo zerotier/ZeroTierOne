@@ -83,6 +83,7 @@ type Certificate struct {
 	IssuerName         CertificateName    `json:"issuerName"`
 	ExtendedAttributes []byte             `json:"extendedAttributes,omitempty"`
 	MaxPathLength      uint               `json:"maxPathLength,omitempty"`
+	CRL                [][]byte           `json:"crl,omitempty"`
 	Signature          []byte             `json:"signature,omitempty"`
 }
 
@@ -258,6 +259,13 @@ func newCertificateFromCCertificate(ccptr unsafe.Pointer) *Certificate {
 
 	c.MaxPathLength = uint(cc.maxPathLength)
 
+	for i := 0; i < int(cc.crlCount); i++ {
+		csn := *((**[48]byte)(unsafe.Pointer(uintptr(unsafe.Pointer(cc.crl)) + (uintptr(i) * pointerSize))))
+		var tmp [48]byte
+		copy(tmp[:], csn[:])
+		c.CRL = append(c.CRL, tmp[:])
+	}
+
 	if cc.signatureSize > 0 {
 		c.Signature = C.GoBytes(unsafe.Pointer(cc.signature), C.int(cc.signatureSize))
 	}
@@ -279,6 +287,7 @@ func (c *Certificate) cCertificate() unsafe.Pointer {
 	var subjectCertificates []uintptr
 	var subjectUpdateURLs []uintptr
 	var subjectUpdateURLsData [][]byte
+	var crl []uintptr
 
 	if len(c.SerialNo) == 48 {
 		copy((*[48]byte)(unsafe.Pointer(&cc.serialNo[0]))[:], c.SerialNo)
@@ -386,6 +395,18 @@ func (c *Certificate) cCertificate() unsafe.Pointer {
 	}
 
 	cc.maxPathLength = C.uint(c.MaxPathLength)
+
+	if len(c.CRL) > 0 {
+		crl = make([]uintptr, len(c.CRL))
+		for i, cert := range c.CRL {
+			if len(cert) != 48 {
+				return nil
+			}
+			crl[i] = uintptr(unsafe.Pointer(&cert[0]))
+		}
+		cc.crl = (**C.uint8_t)(unsafe.Pointer(&crl[0]))
+		cc.crlCount = C.uint(len(crl))
+	}
 
 	if len(c.Signature) > 0 {
 		cc.signature = (*C.uint8_t)(unsafe.Pointer(&c.Signature[0]))

@@ -76,9 +76,9 @@ Commands:
     sign <identity> <file>               Sign a file with an identity's key
     verify <identity> <file> <sig>       Verify a signature
   cert <command> [args]                - Certificate commands
-    newid                                Create a new unique subject ID
-    newcsr <subject json path>           Create a new CSR (signing request)
-    sign <csr path> <identity path>      Sign a CSR to create a certificate
+    newsubject <subject> <secret>        Create a new subject and secret
+    newcsr <subject> <secret>            Create a subject CSR
+    sign <csr> <identity> <certificate>  Sign a CSR to create a certificate
     verify <certificate>                 Verify a certificate
     show                                 List certificate for current node
     import <certificate> [<trust>]       Import certificate into this node
