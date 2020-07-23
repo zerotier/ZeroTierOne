@@ -201,8 +201,8 @@ func newCertificateFromCCertificate(ccptr unsafe.Pointer) *Certificate {
 	}
 
 	for i := 0; i < int(cc.subject.certificateCount); i++ {
-		csn := *((**[48]byte)(unsafe.Pointer(uintptr(unsafe.Pointer(cc.subject.certificates)) + (uintptr(i) * pointerSize))))
-		var tmp [48]byte
+		csn := *((**[CertificateSerialNoSize]byte)(unsafe.Pointer(uintptr(unsafe.Pointer(cc.subject.certificates)) + (uintptr(i) * pointerSize))))
+		var tmp [CertificateSerialNoSize]byte
 		copy(tmp[:], csn[:])
 		c.Subject.Certificates = append(c.Subject.Certificates, tmp[:])
 	}
@@ -260,8 +260,8 @@ func newCertificateFromCCertificate(ccptr unsafe.Pointer) *Certificate {
 	c.MaxPathLength = uint(cc.maxPathLength)
 
 	for i := 0; i < int(cc.crlCount); i++ {
-		csn := *((**[48]byte)(unsafe.Pointer(uintptr(unsafe.Pointer(cc.crl)) + (uintptr(i) * pointerSize))))
-		var tmp [48]byte
+		csn := *((**[CertificateSerialNoSize]byte)(unsafe.Pointer(uintptr(unsafe.Pointer(cc.crl)) + (uintptr(i) * pointerSize))))
+		var tmp [CertificateSerialNoSize]byte
 		copy(tmp[:], csn[:])
 		c.CRL = append(c.CRL, tmp[:])
 	}
@@ -290,7 +290,7 @@ func (c *Certificate) cCertificate() unsafe.Pointer {
 	var crl []uintptr
 
 	if len(c.SerialNo) == 48 {
-		copy((*[48]byte)(unsafe.Pointer(&cc.serialNo[0]))[:], c.SerialNo)
+		copy((*[CertificateSerialNoSize]byte)(unsafe.Pointer(&cc.serialNo[0]))[:], c.SerialNo)
 	}
 	cc.flags = C.uint64_t(c.Flags)
 	cc.timestamp = C.int64_t(c.Timestamp)
@@ -330,7 +330,7 @@ func (c *Certificate) cCertificate() unsafe.Pointer {
 	if len(c.Subject.Certificates) > 0 {
 		subjectCertificates = make([]uintptr, len(c.Subject.Certificates))
 		for i, cert := range c.Subject.Certificates {
-			if len(cert) != 48 {
+			if len(cert) != CertificateSerialNoSize {
 				return nil
 			}
 			subjectCertificates[i] = uintptr(unsafe.Pointer(&cert[0]))
@@ -399,7 +399,7 @@ func (c *Certificate) cCertificate() unsafe.Pointer {
 	if len(c.CRL) > 0 {
 		crl = make([]uintptr, len(c.CRL))
 		for i, cert := range c.CRL {
-			if len(cert) != 48 {
+			if len(cert) != CertificateSerialNoSize {
 				return nil
 			}
 			crl[i] = uintptr(unsafe.Pointer(&cert[0]))
