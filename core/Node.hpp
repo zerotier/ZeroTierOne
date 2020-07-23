@@ -139,6 +139,14 @@ public:
 		const ZT_Endpoint *endpoint,
 		int retries);
 
+	ZT_CertificateError addCertificate(
+		void *tptr,
+		int64_t now,
+		unsigned int localTrust,
+		const ZT_Certificate *cert,
+		const void *certData,
+		unsigned int certSize);
+
 	int sendUserMessage(
 		void *tptr,
 		uint64_t dest,

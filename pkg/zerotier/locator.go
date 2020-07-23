@@ -48,7 +48,7 @@ func NewLocator(ts int64, endpoints []Endpoint, signer *Identity) (*Locator, err
 	for _, e := range endpoints {
 		eps = append(eps, e.cep)
 	}
-	loc := C.ZT_Locator_create(C.int64_t(ts), &eps[0], C.uint(len(eps)), signer.cIdentity())
+	loc := C.ZT_Locator_create(C.int64_t(ts), &eps[0], nil, C.uint(len(eps)), signer.cIdentity())
 	if uintptr(loc) == 0 {
 		return nil, ErrInvalidParameter
 	}

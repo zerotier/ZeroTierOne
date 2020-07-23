@@ -1493,6 +1493,14 @@ typedef struct
 } ZT_Endpoint;
 
 /**
+ * Endpoint attributes
+ *
+ * Right now this is typedef'd to void because there are none. It will become
+ * a struct once there's something to specify.
+ */
+typedef void ZT_EndpointAttributes;
+
+/**
  * Network path to a peer
  */
 typedef struct
@@ -2362,6 +2370,29 @@ ZT_SDK_API int ZT_Node_tryPeer(
 	int retries);
 
 /**
+ * Add a certificate to this node's certificate store
+ *
+ * This supports adding of certificates as expanded ZT_Certificate structures
+ * or as raw data. If 'cert' is NULL then certData/certSize must be set.
+ *
+ * @param node Node instance
+ * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
+ * @param localTrust Local trust flags (ORed together)
+ * @param cert Certificate object, or set to NULL if certData and certSize are to be used
+ * @param certData Certificate binary data if 'cert' is NULL, NULL otherwise
+ * @param certSize Size of certificate binary data, 0 if none
+ * @return
+ */
+ZT_SDK_API enum ZT_CertificateError ZT_Node_addCertificate(
+	ZT_Node *node,
+	void *tptr,
+	int64_t now,
+	unsigned int localTrust,
+	const ZT_Certificate *cert,
+	const void *certData,
+	unsigned int certSize);
+
+/**
  * Send a VERB_USER_MESSAGE to another ZeroTier node
  *
  * There is no delivery guarantee here. Failure can occur if the message is
@@ -2561,8 +2592,12 @@ ZT_SDK_API int ZT_Endpoint_fromString(
 /**
  * Create and sign a new locator
  *
+ * Note that attributes must be either NULL to use defaults for all or there
+ * must be an attributes object for each endpoint.
+ *
  * @param ts Locator timestamp
  * @param endpoints List of endpoints to store in locator
+ * @param endpointAttributes Array of ZT_EndpointAttributes objects or NULL to use defaults
  * @param endpointCount Number of endpoints (maximum: 8)
  * @param signer Identity to sign locator (must include private key)
  * @return Locator or NULL on error (too many endpoints or identity does not have private key)
@@ -2570,6 +2605,7 @@ ZT_SDK_API int ZT_Endpoint_fromString(
 ZT_SDK_API ZT_Locator *ZT_Locator_create(
 	int64_t ts,
 	const ZT_Endpoint *endpoints,
+	const ZT_EndpointAttributes *endpointAttributes,
 	unsigned int endpointCount,
 	const ZT_Identity *signer);
 
@@ -2807,7 +2843,7 @@ ZT_SDK_API enum ZT_CertificateError ZT_Certificate_verify(const ZT_Certificate *
 ZT_SDK_API const ZT_Certificate *ZT_Certificate_clone(const ZT_Certificate *cert);
 
 /**
- * Free a certificate created with ZT_Certificate_decode()
+ * Free a certificate created with ZT_Certificate_decode() or ZT_Certificate_clone()
  *
  * @param cert Certificate to free
  */

@@ -152,6 +152,7 @@ private:
 	SharedPtr< Peer > m_peerFromCached(void *tPtr, const Address &zta);
 	SharedPtr< Path > m_newPath(const int64_t l, const InetAddress &r, const UniqueID &k);
 	void m_updateRootPeers(void *tPtr, int64_t now);
+	void m_writeTrustStore(void *tPtr);
 
 	const RuntimeEnvironment *const RR;
 
@@ -160,9 +161,19 @@ private:
 	Map< Address, SharedPtr< Peer > > m_peers;
 	Map< UniqueID, SharedPtr< Path > > m_paths;
 
-	Map< SHA384Hash, std::pair< SharedPtr< const Certificate >, unsigned int > > m_certs;
+	struct p_CertEntry
+	{
+		ZT_INLINE p_CertEntry() :
+			certificate(),
+			localTrust(0)
+		{}
+		SharedPtr< const Certificate > certificate;
+		unsigned int localTrust;
+	};
+
+	Map< SHA384Hash, p_CertEntry > m_certs;
+	Map< SHA384Hash, p_CertEntry > m_certsBySubjectUniqueID;
 	Map< Fingerprint, Map< SharedPtr< const Certificate >, unsigned int > > m_certsBySubjectIdentity;
-	Map< SHA384Hash, std::pair< SharedPtr< const Certificate >, unsigned int > > m_certsBySubjectUniqueId;
 
 	RWMutex m_paths_l; // m_paths
 	RWMutex m_peers_l; // m_peers

@@ -564,6 +564,26 @@ int Node::tryPeer(
 	return 0;
 }
 
+ZT_CertificateError Node::addCertificate(
+	void *tptr,
+	int64_t now,
+	unsigned int localTrust,
+	const ZT_Certificate *cert,
+	const void *certData,
+	unsigned int certSize)
+{
+	Certificate c;
+	if (cert) {
+		c = *cert;
+	} else {
+		if ((!certData) || (!certSize))
+			return ZT_CERTIFICATE_ERROR_INVALID_FORMAT;
+		if (!c.decode(certData, certSize))
+			return ZT_CERTIFICATE_ERROR_INVALID_FORMAT;
+	}
+	return RR->topology->addCertificate(tptr, c, now, localTrust, true, true, true);
+}
+
 int Node::sendUserMessage(
 	void *tptr,
 	uint64_t dest,
@@ -1027,6 +1047,22 @@ int ZT_Node_tryPeer(
 		return reinterpret_cast<ZeroTier::Node *>(node)->tryPeer(tptr, fp, endpoint, retries);
 	} catch (...) {
 		return 0;
+	}
+}
+
+enum ZT_CertificateError ZT_Node_addCertificate(
+	ZT_Node *node,
+	void *tptr,
+	int64_t now,
+	unsigned int localTrust,
+	const ZT_Certificate *cert,
+	const void *certData,
+	unsigned int certSize)
+{
+	try {
+		return reinterpret_cast<ZeroTier::Node *>(node)->addCertificate(tptr, now, localTrust, cert, certData, certSize);
+	} catch (...) {
+		return ZT_CERTIFICATE_ERROR_INVALID_FORMAT;
 	}
 }
 

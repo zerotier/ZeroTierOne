@@ -254,14 +254,14 @@ void Peer::pulse(void *const tPtr, const int64_t now, const bool isRoot)
 			// callback (if one was supplied).
 
 			if (m_locator) {
-				for (Vector< Endpoint >::const_iterator ep(m_locator->endpoints().begin()); ep != m_locator->endpoints().end(); ++ep) {
-					if (ep->type == ZT_ENDPOINT_TYPE_IP_UDP) {
-						if (RR->node->shouldUsePathForZeroTierTraffic(tPtr, m_id, -1, ep->ip())) {
-							int64_t &lt = m_lastTried[*ep];
+				for (Vector< std::pair<Endpoint, Locator::EndpointAttributes > >::const_iterator ep(m_locator->endpoints().begin()); ep != m_locator->endpoints().end(); ++ep) {
+					if (ep->first.type == ZT_ENDPOINT_TYPE_IP_UDP) {
+						if (RR->node->shouldUsePathForZeroTierTraffic(tPtr, m_id, -1, ep->first.ip())) {
+							int64_t &lt = m_lastTried[ep->first];
 							if ((now - lt) > ZT_PATH_MIN_TRY_INTERVAL) {
 								lt = now;
-								RR->t->tryingNewPath(tPtr, 0x84b22322, m_id, ep->ip(), InetAddress::NIL, 0, 0, Identity::NIL);
-								sent(now, m_sendProbe(tPtr, -1, ep->ip(), nullptr, 0, now));
+								RR->t->tryingNewPath(tPtr, 0x84b22322, m_id, ep->first.ip(), InetAddress::NIL, 0, 0, Identity::NIL);
+								sent(now, m_sendProbe(tPtr, -1, ep->first.ip(), nullptr, 0, now));
 							}
 						}
 					}

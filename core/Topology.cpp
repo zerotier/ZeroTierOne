@@ -77,13 +77,16 @@ void Topology::allPeers(Vector< SharedPtr< Peer > > &allPeers, Vector< SharedPtr
 
 void Topology::doPeriodicTasks(void *tPtr, const int64_t now)
 {
-	// Clean any expired certificates
+	// Clean any expired certificates, updating roots if they have changed.
 	{
 		Mutex::Lock l1(m_certs_l);
 		if (m_cleanCertificates(tPtr, now)) {
-			RWMutex::Lock l3(m_peers_l);
-			RWMutex::Lock l2(m_roots_l);
-			m_updateRootPeers(tPtr, now);
+			m_writeTrustStore(tPtr);
+			{
+				RWMutex::Lock l3(m_peers_l);
+				RWMutex::Lock l2(m_roots_l);
+				m_updateRootPeers(tPtr, now);
+			}
 		}
 	}
 
@@ -109,19 +112,24 @@ void Topology::doPeriodicTasks(void *tPtr, const int64_t now)
 			for (Map< Address, SharedPtr< Peer > >::iterator i(m_peers.begin()); i != m_peers.end(); ++i) {
 				// TODO: also delete if the peer has not exchanged meaningful communication in a while, such as
 				// a network frame or non-trivial control packet.
-				if (((now - i->second->lastReceive()) > ZT_PEER_ALIVE_TIMEOUT) && (std::find(rootLookup.begin(), rootLookup.end(), (uintptr_t)i->second.ptr()) == rootLookup.end()))
+				if (((now - i->second->lastReceive()) > ZT_PEER_ALIVE_TIMEOUT) && (std::find(rootLookup.begin(), rootLookup.end(), (uintptr_t)(i->second.ptr())) == rootLookup.end()))
 					toDelete.push_back(i->first);
 			}
 		}
 		if (!toDelete.empty()) {
 			ZT_SPEW("garbage collecting %u offline or stale peer objects", (unsigned int)toDelete.size());
 			for (Vector< Address >::iterator i(toDelete.begin()); i != toDelete.end(); ++i) {
-				RWMutex::Lock l1(m_peers_l);
-				const Map< Address, SharedPtr< Peer > >::iterator p(m_peers.find(*i));
-				if (likely(p != m_peers.end())) {
-					p->second->save(tPtr);
-					m_peers.erase(p);
+				SharedPtr< Peer > toSave;
+				{
+					RWMutex::Lock l1(m_peers_l);
+					const Map< Address, SharedPtr< Peer > >::iterator p(m_peers.find(*i));
+					if (p != m_peers.end()) {
+						p->second.swap(toSave);
+						m_peers.erase(p);
+					}
 				}
+				if (toSave)
+					toSave->save(tPtr);
 			}
 		}
 	}
@@ -156,97 +164,75 @@ void Topology::saveAll(void *tPtr)
 {
 	{
 		RWMutex::RLock l(m_peers_l);
-		for (Map< Address, SharedPtr< Peer > >::iterator i(m_peers.begin()); i != m_peers.end(); ++i) {
+		for (Map< Address, SharedPtr< Peer > >::iterator i(m_peers.begin()); i != m_peers.end(); ++i)
 			i->second->save(tPtr);
-		}
 	}
 	{
-		char tmp[32];
-		Dictionary d;
-		{
-			Mutex::Lock l(m_certs_l);
-			unsigned long idx = 0;
-			d.add("c$", (uint64_t)m_certs.size());
-			for (Map< SHA384Hash, std::pair< SharedPtr< const Certificate >, unsigned int > >::const_iterator c(m_certs.begin()); c != m_certs.end(); ++c) {
-				d[Dictionary::arraySubscript(tmp, sizeof(tmp), "c$.s", idx)].assign(c->first.data, c->first.data + ZT_SHA384_DIGEST_SIZE);
-				d.add(Dictionary::arraySubscript(tmp, sizeof(tmp), "c$.lt", idx), (uint64_t)c->second.second);
-				++idx;
-			}
-		}
-		Vector< uint8_t > trustStore;
-		d.encode(trustStore);
-		RR->node->stateObjectPut(tPtr, ZT_STATE_OBJECT_TRUST_STORE, Utils::ZERO256, trustStore.data(), (unsigned int)trustStore.size());
+		Mutex::Lock l(m_certs_l);
+		m_writeTrustStore(tPtr);
 	}
 }
 
 ZT_CertificateError Topology::addCertificate(void *tPtr, const Certificate &cert, const int64_t now, const unsigned int localTrust, const bool writeToLocalStore, const bool refreshRootSets, const bool verify)
 {
 	{
+		const SHA384Hash serial(cert.serialNo);
+		p_CertEntry certEntry;
 		Mutex::Lock l1(m_certs_l);
 
-		// Check to see if we already have this specific certificate.
-		const SHA384Hash serial(cert.serialNo);
-		if (m_certs.find(serial) != m_certs.end())
-			return ZT_CERTIFICATE_ERROR_NONE;
-
-		// Verify certificate all the way to a trusted root. This also verifies inner
-		// signatures such as those of locators or the subject unique ID.
-		if (verify) {
-			const ZT_CertificateError err = m_verifyCertificate(cert, now, localTrust, false);
-			if (err != ZT_CERTIFICATE_ERROR_NONE)
-				return err;
+		{
+			Map< SHA384Hash, p_CertEntry >::iterator c(m_certs.find(serial));
+			if (c != m_certs.end()) {
+				if (c->second.localTrust == localTrust)
+					return ZT_CERTIFICATE_ERROR_NONE;
+				certEntry.certificate = c->second.certificate;
+			}
+		}
+		if (!certEntry.certificate) {
+			certEntry.certificate.set(new Certificate(cert));
+			if (verify) {
+				m_cleanCertificates(tPtr, now);
+				const ZT_CertificateError err = m_verifyCertificate(cert, now, localTrust, false);
+				if (err != ZT_CERTIFICATE_ERROR_NONE)
+					return err;
+			}
 		}
 
-		// Create entry containing copy of certificate and trust flags.
-		const std::pair< SharedPtr< const Certificate >, unsigned int > certEntry(SharedPtr< const Certificate >(new Certificate(cert)), localTrust);
+		certEntry.localTrust = localTrust;
 
-		// If the subject contains a unique ID, check if we already have a cert for the
-		// same uniquely identified subject. If so, check its subject timestamp and keep
-		// the one we have if newer. Otherwise replace it. Note that the verification
-		// function will have checked the unique ID proof signature already if a unique
-		// ID was present.
 		if ((cert.subject.uniqueId) && (cert.subject.uniqueIdSize > 0)) {
 			SHA384Hash uniqueIdHash;
 			SHA384(uniqueIdHash.data, cert.subject.uniqueId, cert.subject.uniqueIdSize);
-			std::pair< SharedPtr< const Certificate >, unsigned int > &bySubjectUniqueId = m_certsBySubjectUniqueId[uniqueIdHash];
-			if (bySubjectUniqueId.first) {
-				if (bySubjectUniqueId.first->subject.timestamp >= cert.subject.timestamp)
+			p_CertEntry &bySubjectUniqueId = m_certsBySubjectUniqueID[uniqueIdHash];
+			if (bySubjectUniqueId.certificate) {
+				if (bySubjectUniqueId.certificate->subject.timestamp >= cert.subject.timestamp)
 					return ZT_CERTIFICATE_ERROR_HAVE_NEWER_CERT;
-				m_eraseCertificate(tPtr, bySubjectUniqueId.first, &uniqueIdHash);
-				m_certsBySubjectUniqueId[uniqueIdHash] = certEntry;
+				m_eraseCertificate(tPtr, bySubjectUniqueId.certificate, &uniqueIdHash);
+				m_certsBySubjectUniqueID[uniqueIdHash] = certEntry;
 			} else {
 				bySubjectUniqueId = certEntry;
 			}
 		}
 
-		// Save certificate by serial number.
-		m_certs[serial] = certEntry;
-
-		// Add certificate to sets of certificates whose subject references a given identity.
 		for (unsigned int i = 0; i < cert.subject.identityCount; ++i) {
 			const Identity *const ii = reinterpret_cast<const Identity *>(cert.subject.identities[i].identity);
 			if (ii)
-				m_certsBySubjectIdentity[ii->fingerprint()].insert(certEntry);
+				m_certsBySubjectIdentity[ii->fingerprint()][certEntry.certificate] = localTrust;
 		}
 
-		// Clean any certificates whose chains are now broken, which can happen if there was
-		// an update that replaced an old cert with a given unique ID. Otherwise this generally
-		// does nothing here. Skip if verify is false since this means we're mindlessly loading
-		// certificates, which right now only happens on startup when they're loaded from the
-		// local certificate cache.
-		if (verify)
-			m_cleanCertificates(tPtr, now);
+		m_certs[serial] = certEntry;
 
-		// Refresh the root peers lists, since certs may enumerate roots.
 		if (refreshRootSets) {
 			RWMutex::Lock l3(m_peers_l);
 			RWMutex::Lock l2(m_roots_l);
 			m_updateRootPeers(tPtr, now);
 		}
+
+		if (writeToLocalStore)
+			m_writeTrustStore(tPtr);
 	}
 
 	if (writeToLocalStore) {
-		// Write certificate data prefixed by local trust flags as a 32-bit integer.
 		Vector< uint8_t > certData(cert.encode());
 		uint64_t id[6];
 		Utils::copy< 48 >(id, cert.serialNo);
@@ -293,10 +279,8 @@ void Topology::m_eraseCertificate(void *tPtr, const SharedPtr< const Certificate
 	const SHA384Hash serialNo(cert->serialNo);
 	m_certs.erase(serialNo);
 
-	RR->node->stateObjectDelete(tPtr, ZT_STATE_OBJECT_CERT, serialNo.data);
-
 	if (uniqueIdHash)
-		m_certsBySubjectUniqueId.erase(*uniqueIdHash);
+		m_certsBySubjectUniqueID.erase(*uniqueIdHash);
 
 	for (unsigned int i = 0; i < cert->subject.identityCount; ++i) {
 		const Identity *const ii = reinterpret_cast<const Identity *>(cert->subject.identities[i].identity);
@@ -308,6 +292,8 @@ void Topology::m_eraseCertificate(void *tPtr, const SharedPtr< const Certificate
 				m_certsBySubjectIdentity.erase(bySubjectIdentity);
 		}
 	}
+
+	RR->node->stateObjectDelete(tPtr, ZT_STATE_OBJECT_CERT, serialNo.data);
 }
 
 bool Topology::m_cleanCertificates(void *tPtr, int64_t now)
@@ -317,13 +303,13 @@ bool Topology::m_cleanCertificates(void *tPtr, int64_t now)
 	bool deleted = false;
 	Vector< SharedPtr< const Certificate >> toDelete;
 	for (;;) {
-		for (Map< SHA384Hash, std::pair< SharedPtr< const Certificate >, unsigned int > >::iterator c(m_certs.begin()); c != m_certs.end(); ++c) {
+		for (Map< SHA384Hash, p_CertEntry >::iterator c(m_certs.begin()); c != m_certs.end(); ++c) {
 			// Verify, but the last boolean option tells it to skip signature checks as this would
 			// already have been done. This will therefore just check the path and validity times
 			// of the certificate.
-			const ZT_CertificateError err = m_verifyCertificate(*(c->second.first), now, c->second.second, true);
+			const ZT_CertificateError err = m_verifyCertificate(*(c->second.certificate), now, c->second.localTrust, true);
 			if (err != ZT_CERTIFICATE_ERROR_NONE)
-				toDelete.push_back(c->second.first);
+				toDelete.push_back(c->second.certificate);
 		}
 
 		if (toDelete.empty())
@@ -479,6 +465,26 @@ void Topology::m_updateRootPeers(void *tPtr, const int64_t now)
 	}
 
 	m_rankRoots(now);
+}
+
+void Topology::m_writeTrustStore(void *tPtr)
+{
+	// assumes m_certs is locked
+
+	char tmp[32];
+	Dictionary d;
+
+	unsigned long idx = 0;
+	d.add("c$", (uint64_t)m_certs.size());
+	for (Map< SHA384Hash, p_CertEntry >::const_iterator c(m_certs.begin()); c != m_certs.end(); ++c) {
+		d[Dictionary::arraySubscript(tmp, sizeof(tmp), "c$.s", idx)].assign(c->first.data, c->first.data + ZT_SHA384_DIGEST_SIZE);
+		d.add(Dictionary::arraySubscript(tmp, sizeof(tmp), "c$.lt", idx), (uint64_t)c->second.localTrust);
+		++idx;
+	}
+
+	Vector< uint8_t > trustStore;
+	d.encode(trustStore);
+	RR->node->stateObjectPut(tPtr, ZT_STATE_OBJECT_TRUST_STORE, Utils::ZERO256, trustStore.data(), (unsigned int)trustStore.size());
 }
 
 } // namespace ZeroTier

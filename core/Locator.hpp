@@ -21,10 +21,26 @@
 #include "SharedPtr.hpp"
 #include "FCV.hpp"
 #include "Containers.hpp"
+#include "Dictionary.hpp"
 
-#define ZT_LOCATOR_MAX_ENDPOINTS 8
-#define ZT_LOCATOR_MARSHAL_SIZE_MAX (8 + ZT_FINGERPRINT_MARSHAL_SIZE + 2 + (ZT_LOCATOR_MAX_ENDPOINTS * ZT_ENDPOINT_MARSHAL_SIZE_MAX) + 2 + 2 + ZT_SIGNATURE_BUFFER_SIZE)
-#define ZT_LOCATOR_STRING_SIZE_MAX 4096
+/**
+ * Maximum size of endpoint attributes dictionary plus one byte for size.
+ *
+ * This cannot be (easily) changed.
+ */
+#define ZT_LOCATOR_MAX_ENDPOINT_ATTRIBUTES_SIZE 256
+
+/**
+ * Maximum number of endpoints, which can be increased.
+ */
+#define ZT_LOCATOR_MAX_ENDPOINTS 16
+
+#define ZT_LOCATOR_MARSHAL_SIZE_MAX (8 + ZT_FINGERPRINT_MARSHAL_SIZE + 2 + (ZT_LOCATOR_MAX_ENDPOINTS * (ZT_ENDPOINT_MARSHAL_SIZE_MAX + ZT_LOCATOR_MAX_ENDPOINT_ATTRIBUTES_SIZE)) + 2 + 2 + ZT_SIGNATURE_BUFFER_SIZE)
+
+/**
+ * Maximum size of a string format Locator (this is way larger than needed)
+ */
+#define ZT_LOCATOR_STRING_SIZE_MAX 16384
 
 namespace ZeroTier {
 
@@ -36,17 +52,56 @@ namespace ZeroTier {
  */
 class Locator
 {
-	friend class SharedPtr<Locator>;
-	friend class SharedPtr<const Locator>;
+	friend class SharedPtr< Locator >;
+
+	friend class SharedPtr< const Locator >;
 
 public:
-	ZT_INLINE Locator() noexcept :
+	/**
+	 * Attributes of an endpoint in this locator
+	 *
+	 * This is specified for future use, but there are currently no attributes
+	 * defined. A Dictionary is used for serialization for extensibility.
+	 */
+	struct EndpointAttributes
+	{
+		/**
+		 * Raw attributes data in the form of a dictionary prefixed by its size.
+		 *
+		 * The maximum size of attributes is 256, which is more than enough for
+		 * tiny things like bandwidth and priority.
+		 */
+		uint8_t data[ZT_LOCATOR_MAX_ENDPOINT_ATTRIBUTES_SIZE];
+
+		ZT_INLINE EndpointAttributes() noexcept
+		{ Utils::zero< ZT_LOCATOR_MAX_ENDPOINT_ATTRIBUTES_SIZE >(data); }
+
+		ZT_INLINE bool operator==(const EndpointAttributes &a) const noexcept
+		{ return ((data[0] == a.data[0]) && (memcmp(data, a.data, data[0]) == 0)); }
+
+		ZT_INLINE bool operator<(const EndpointAttributes &a) const noexcept
+		{ return ((data[0] < a.data[0]) || ((data[0] == a.data[0]) && (memcmp(data, a.data, data[0]) < 0))); }
+
+		ZT_INLINE bool operator!=(const EndpointAttributes &a) const noexcept
+		{ return !(*this == a); }
+
+		ZT_INLINE bool operator>(const EndpointAttributes &a) const noexcept
+		{ return (a < *this); }
+
+		ZT_INLINE bool operator<=(const EndpointAttributes &a) const noexcept
+		{ return !(a < *this); }
+
+		ZT_INLINE bool operator>=(const EndpointAttributes &a) const noexcept
+		{ return !(*this < a); }
+	};
+
+	ZT_INLINE Locator() noexcept:
 		m_ts(0)
 	{}
 
 	explicit Locator(const char *const str) noexcept;
 
-	ZT_INLINE Locator(const Locator &loc) noexcept :
+	ZT_INLINE Locator(const Locator &loc) noexcept:
 		m_ts(loc.m_ts),
 		m_signer(loc.m_signer),
 		m_endpoints(loc.m_endpoints),
@@ -69,13 +124,13 @@ public:
 	/**
 	 * @return Endpoints specified in locator
 	 */
-	ZT_INLINE const Vector<Endpoint> &endpoints() const noexcept
+	ZT_INLINE const Vector< std::pair< Endpoint, EndpointAttributes > > &endpoints() const noexcept
 	{ return m_endpoints; }
 
 	/**
 	 * @return Signature data
 	 */
-	ZT_INLINE const FCV<uint8_t, ZT_SIGNATURE_BUFFER_SIZE> &signature() const noexcept
+	ZT_INLINE const FCV< uint8_t, ZT_SIGNATURE_BUFFER_SIZE > &signature() const noexcept
 	{ return m_signature; }
 
 	/**
@@ -85,9 +140,10 @@ public:
 	 * care not to add duplicates.
 	 *
 	 * @param ep Endpoint to add
+	 * @param a Endpoint attributes
 	 * @return True if endpoint was added (or already present), false if locator is full
 	 */
-	bool add(const Endpoint &ep);
+	bool add(const Endpoint &ep, const EndpointAttributes &a);
 
 	/**
 	 * Sign this locator
@@ -117,7 +173,10 @@ public:
 	char *toString(char s[ZT_LOCATOR_STRING_SIZE_MAX]) const noexcept;
 
 	ZT_INLINE String toString() const
-	{ char tmp[ZT_LOCATOR_STRING_SIZE_MAX]; return String(toString(tmp)); }
+	{
+		char tmp[ZT_LOCATOR_STRING_SIZE_MAX];
+		return String(toString(tmp));
+	}
 
 	/**
 	 * Decode a string format locator
@@ -130,8 +189,11 @@ public:
 	explicit ZT_INLINE operator bool() const noexcept
 	{ return m_ts > 0; }
 
-	static constexpr int marshalSizeMax() noexcept { return ZT_LOCATOR_MARSHAL_SIZE_MAX; }
+	static constexpr int marshalSizeMax() noexcept
+	{ return ZT_LOCATOR_MARSHAL_SIZE_MAX; }
+
 	int marshal(uint8_t data[ZT_LOCATOR_MARSHAL_SIZE_MAX], bool excludeSignature = false) const noexcept;
+
 	int unmarshal(const uint8_t *data, int len) noexcept;
 
 	ZT_INLINE bool operator==(const Locator &l) const noexcept
@@ -142,15 +204,16 @@ public:
 			(m_endpoints == l.m_endpoints) &&
 			(m_signature == l.m_signature));
 	}
+
 	ZT_INLINE bool operator!=(const Locator &l) const noexcept
 	{ return !(*this == l); }
 
 private:
 	int64_t m_ts;
 	Fingerprint m_signer;
-	Vector<Endpoint> m_endpoints;
-	FCV<uint8_t, ZT_SIGNATURE_BUFFER_SIZE> m_signature;
-	std::atomic<int> __refCount;
+	Vector< std::pair< Endpoint, EndpointAttributes > > m_endpoints;
+	FCV< uint8_t, ZT_SIGNATURE_BUFFER_SIZE > m_signature;
+	std::atomic< int > __refCount;
 };
 
 } // namespace ZeroTier

@@ -28,21 +28,35 @@ Locator::Locator(const char *const str) noexcept
 	}
 }
 
-bool Locator::add(const Endpoint &ep)
+bool Locator::add(const Endpoint &ep, const EndpointAttributes &a)
 {
+	for (Vector< std::pair< Endpoint, EndpointAttributes > >::iterator i(m_endpoints.begin());i!=m_endpoints.end();++i) {
+		if (i->first == ep) {
+			i->second = a;
+			return true;
+		}
+	}
 	if (m_endpoints.size() < ZT_LOCATOR_MAX_ENDPOINTS) {
-		if (std::find(m_endpoints.begin(), m_endpoints.end(), ep) == m_endpoints.end())
-			m_endpoints.push_back(ep);
+		m_endpoints.push_back(std::pair<Endpoint, EndpointAttributes>(ep, a));
 		return true;
 	}
 	return false;
 }
 
+struct p_SortByEndpoint
+{
+	// There can't be more than one of the same endpoint, so only need to sort
+	// by endpoint.
+	ZT_INLINE bool operator()(const std::pair< Endpoint, Locator::EndpointAttributes > &a,const std::pair< Endpoint, Locator::EndpointAttributes > &b) const noexcept
+	{ return a.first < b.first; }
+};
+
 bool Locator::sign(const int64_t ts, const Identity &id) noexcept
 {
 	m_ts = ts;
 	m_signer = id.fingerprint();
-	std::sort(m_endpoints.begin(), m_endpoints.end());
+
+	std::sort(m_endpoints.begin(), m_endpoints.end(), p_SortByEndpoint());
 
 	uint8_t signdata[ZT_LOCATOR_MARSHAL_SIZE_MAX];
 	const unsigned int signlen = marshal(signdata, true);
@@ -102,10 +116,14 @@ int Locator::marshal(uint8_t data[ZT_LOCATOR_MARSHAL_SIZE_MAX], const bool exclu
 
 	Utils::storeBigEndian<uint16_t>(data + p, (uint16_t) m_endpoints.size());
 	p += 2;
-	for (Vector<Endpoint>::const_iterator e(m_endpoints.begin());e != m_endpoints.end();++e) {
-		l = e->marshal(data + p);
+	for (Vector< std::pair< Endpoint, EndpointAttributes> >::const_iterator e(m_endpoints.begin());e != m_endpoints.end();++e) {
+		l = e->first.marshal(data + p);
 		if (l <= 0)
 			return -1;
+		p += l;
+
+		l = (int)e->second.data[0] + 1;
+		Utils::copy(data + p, e->second.data, (unsigned int)l);
 		p += l;
 	}
 
@@ -143,9 +161,13 @@ int Locator::unmarshal(const uint8_t *data, const int len) noexcept
 	m_endpoints.resize(endpointCount);
 	m_endpoints.shrink_to_fit();
 	for (unsigned int i = 0;i < endpointCount;++i) {
-		l = m_endpoints[i].unmarshal(data + p, len - p);
+		l = m_endpoints[i].first.unmarshal(data + p, len - p);
 		if (l <= 0)
 			return -1;
+		p += l;
+
+		l = (int)data[p] + 1;
+		Utils::copy(m_endpoints[i].second.data, data + p, (unsigned int)l);
 		p += l;
 	}
 
@@ -175,15 +197,17 @@ extern "C" {
 ZT_Locator *ZT_Locator_create(
 	int64_t ts,
 	const ZT_Endpoint *endpoints,
+	const ZT_EndpointAttributes *endpointAttributes, // TODO: not used yet
 	unsigned int endpointCount,
 	const ZT_Identity *signer)
 {
 	try {
 		if ((ts <= 0) || (!endpoints) || (endpointCount == 0) || (!signer))
 			return nullptr;
+		ZeroTier::Locator::EndpointAttributes emptyAttributes;
 		ZeroTier::Locator *loc = new ZeroTier::Locator();
 		for (unsigned int i = 0;i < endpointCount;++i)
-			loc->add(reinterpret_cast<const ZeroTier::Endpoint *>(endpoints)[i]);
+			loc->add(reinterpret_cast<const ZeroTier::Endpoint *>(endpoints)[i], emptyAttributes);
 		if (!loc->sign(ts, *reinterpret_cast<const ZeroTier::Identity *>(signer))) {
 			delete loc;
 			return nullptr;

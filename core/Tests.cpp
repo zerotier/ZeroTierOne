@@ -898,8 +898,8 @@ extern "C" const char *ZTT_general()
 			Endpoint ep0(InetAddress::LO4);
 			Endpoint ep1(InetAddress::LO6);
 			Locator loc;
-			loc.add(ep0);
-			loc.add(ep1);
+			loc.add(ep0, Locator::EndpointAttributes());
+			loc.add(ep1, Locator::EndpointAttributes());
 			loc.sign(now(), v1id);
 			String locStr(loc.toString());
 			//ZT_T_PRINTF("%s %s %s ",locStr.c_str(),loc.endpoints()[0].toString().c_str(),loc.endpoints()[1].toString().c_str());
