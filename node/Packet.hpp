@@ -56,7 +56,7 @@
  *    + Inline push of CertificateOfMembership deprecated
  * 9  - 1.2.0 ... 1.2.14
  * 10 - 1.4.0 ... CURRENT
- *    + Multipath capability and load balancing
+ *    + Multipath capability and load balancing (tentative)
  */
 #define ZT_PROTO_VERSION 10
 

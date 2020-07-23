@@ -1660,7 +1660,6 @@ void Bond::setReasonableDefaults(int policy, SharedPtr<Bond> templateBond, bool 
 		memcpy(_qualityWeights, templateBond->_qualityWeights, ZT_QOS_WEIGHT_SIZE * sizeof(float));
 	}
 
-
 	//
 	// Second, apply user specified values (only if they make sense)
 
@@ -1705,11 +1704,8 @@ void Bond::setUserQualityWeights(float weights[], int len)
 	}
 }
 
-
 bool Bond::relevant() {
-	return _peer->identity().address().toInt() == 0x16a03a3d03
-		|| _peer->identity().address().toInt() == 0x4410300d03
-		|| _peer->identity().address().toInt() == 0x795cbf86fa;
+	return false;
 }
 
 SharedPtr<Link> Bond::getLink(const SharedPtr<Path>& path)
@@ -1719,145 +1715,7 @@ SharedPtr<Link> Bond::getLink(const SharedPtr<Path>& path)
 
 void Bond::dumpInfo(const int64_t now)
 {
-	char pathStr[128];
-	//char oldPathStr[128];
-	char currPathStr[128];
-
-	if (!relevant()) {
-		return;
-	}
-	/*
-	//fprintf(stderr, "---[ bp=%d, id=%llx, dd=%d, up=%d, pmi=%d, specifiedLinks=%d, _specifiedPrimaryLink=%d, _specifiedFailInst=%d ]\n",
-			_policy, _peer->identity().address().toInt(), _downDelay, _upDelay, _monitorInterval, _userHasSpecifiedLinks, _userHasSpecifiedPrimaryLink, _userHasSpecifiedFailoverInstructions);
-
-	if (_bondingPolicy == ZT_BONDING_POLICY_ACTIVE_BACKUP) {
-		//fprintf(stderr, "Paths (bp=%d, stats=%d, primaryReselect=%d) :\n",
-			_policy, _shouldCollectPathStatistics, _abLinkSelectMethod);
-	}
-	if (_bondingPolicy == ZT_BONDING_POLICY_BALANCE_RR
-		|| _bondingPolicy == ZT_BONDING_POLICY_BALANCE_XOR
-		|| _bondingPolicy == ZT_BONDING_POLICY_BALANCE_AWARE) {
-		//fprintf(stderr, "Paths (bp=%d, stats=%d, fh=%d) :\n",
-			_policy, _shouldCollectPathStatistics, _allowFlowHashing);
-	}*/
-	if ((now - _lastPrintTS) < 2000) {
-		return;
-	}
-	_lastPrintTS = now;
-
-	//fprintf(stderr, "\n\n");
-
-	for(int i=0; i<ZT_MAX_PEER_NETWORK_PATHS; ++i) {
-		if (_paths[i]) {
-			SharedPtr<Link> link =RR->bc->getLinkBySocket(_policyAlias, _paths[i]->localSocket());
-			_paths[i]->address().toString(pathStr);
-			/*fprintf(stderr, " %2d: lat=%8.3f, ac=%3d, fail%5s, fscore=%6d, in=%7d, out=%7d, age=%7ld, ack=%7ld, ref=%6d, ls=%llx",
-				i,
-				_paths[i]->_latencyMean,
-				_paths[i]->_allocation,
-				link->failoverToLink().c_str(),
-				_paths[i]->_failoverScore,
-				_paths[i]->_packetsIn,
-				_paths[i]->_packetsOut,
-				(long)_paths[i]->age(now),
-				(long)_paths[i]->ackAge(now),
-				_paths[i]->_refractoryPeriod,
-				_paths[i]->localSocket()
-			);
-			*/
-			if (link->spare()) {
-				//fprintf(stderr, " SPR.");
-			} else {
-				//fprintf(stderr, "     ");
-			}
-			if (link->primary()) {
-				//fprintf(stderr, " PRIM.");
-			} else {
-				//fprintf(stderr, "      ");
-			}
-			if (_paths[i]->allowed()) {
-				//fprintf(stderr, " ALL.");
-			} else {
-				//fprintf(stderr, "     ");
-			}
-			if (_paths[i]->eligible(now,_ackSendInterval)) {
-				//fprintf(stderr, " ELI.");
-			} else {
-				//fprintf(stderr, "     ");
-			}
-			if (_paths[i]->preferred()) {
-				//fprintf(stderr, " PREF.");
-			} else {
-				//fprintf(stderr, "      ");
-			}
-			if (_paths[i]->_negotiated) {
-				//fprintf(stderr, " NEG.");
-			} else {
-				//fprintf(stderr, "     ");
-			}
-			if (_paths[i]->bonded()) {
-				//fprintf(stderr, " BOND ");
-			} else {
-				//fprintf(stderr, "      ");
-			}
-			if (_bondingPolicy == ZT_BONDING_POLICY_ACTIVE_BACKUP && _abPath && (_abPath == _paths[i].ptr())) {
-				//fprintf(stderr, " ACTIVE  ");
-			} else if (_bondingPolicy == ZT_BONDING_POLICY_ACTIVE_BACKUP) {
-				//fprintf(stderr, "         ");
-			}
-			if (_bondingPolicy == ZT_BONDING_POLICY_ACTIVE_BACKUP && _abFailoverQueue.size() && (_abFailoverQueue.front().ptr() == _paths[i].ptr())) {
-				//fprintf(stderr, " NEXT    ");
-			} else  if (_bondingPolicy == ZT_BONDING_POLICY_ACTIVE_BACKUP) {
-				//fprintf(stderr, "         ");
-			}
-			//fprintf(stderr, "%5s %s\n", link->ifname().c_str(), pathStr);
-		}
-	}
-
-	if (_bondingPolicy == ZT_BONDING_POLICY_ACTIVE_BACKUP) {
-		if (!_abFailoverQueue.empty()) {
-			//fprintf(stderr, "\nFailover Queue:\n");
-			for (std::list<SharedPtr<Path> >::iterator it(_abFailoverQueue.begin()); it!=_abFailoverQueue.end();++it) {
-				(*it)->address().toString(currPathStr);
-				SharedPtr<Link> link =RR->bc->getLinkBySocket(_policyAlias, (*it)->localSocket());
-				/*fprintf(stderr, "\t%8s\tspeed=%7d\trelSpeed=%3d\tipvPref=%3d\tfscore=%9d\t\t%s\n",
-					link->ifname().c_str(),
-					link->speed(),
-					link->relativeSpeed(),
-					link->ipvPref(),
-					(*it)->_failoverScore,
-					currPathStr);
-				*/
-			}
-		}
-		else
-		{
-			//fprintf(stderr, "\nFailover Queue size = %lu\n", _abFailoverQueue.size());
-		}
-	}
-
-	if (_bondingPolicy == ZT_BONDING_POLICY_BALANCE_RR
-		|| _bondingPolicy == ZT_BONDING_POLICY_BALANCE_XOR
-		|| _bondingPolicy == ZT_BONDING_POLICY_BALANCE_AWARE) {
-		if (_numBondedPaths) {
-			//fprintf(stderr, "\nBonded Paths:\n");
-			for (int i=0; i<_numBondedPaths; ++i) {
-				_paths[_bondedIdx[i]]->address().toString(currPathStr);
-				SharedPtr<Link> link =RR->bc->getLinkBySocket(_policyAlias, _paths[_bondedIdx[i]]->localSocket());
-				//fprintf(stderr, " [%d]\t%8s\tflows=%3d\tspeed=%7d\trelSpeed=%3d\tipvPref=%3d\tfscore=%9d\t\t%s\n", i,
-				/*fprintf(stderr, " [%d]\t%8s\tspeed=%7d\trelSpeed=%3d\tflowCount=%2d\tipvPref=%3d\tfscore=%9d\t\t%s\n", i,
-					link->ifname().c_str(),
-					_paths[_bondedIdx[i]]->_assignedFlowCount,
-					link->speed(),
-					link->relativeSpeed(),
-					_paths[_bondedIdx[i]].p->assignedFlows.size(),
-					link->ipvPref(),
-					_paths[_bondedIdx[i]]->_failoverScore,
-					currPathStr);
-				*/
-			}
-		}
-	}
+	// Omitted
 }
 
 } // namespace ZeroTier

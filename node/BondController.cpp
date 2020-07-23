@@ -79,7 +79,6 @@ bool BondController::assignBondingPolicyToPeer(int64_t identity, const std::stri
 
 SharedPtr<Bond> BondController::createTransportTriggeredBond(const RuntimeEnvironment *renv, const SharedPtr<Peer>& peer)
 {
-	//fprintf(stderr, "createTransportTriggeredBond\n");
 	Mutex::Lock _l(_bonds_m);
 	int64_t identity = peer->identity().address().toInt();
 	Bond *bond = nullptr;
