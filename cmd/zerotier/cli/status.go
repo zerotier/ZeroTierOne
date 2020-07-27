@@ -15,12 +15,10 @@ package cli
 
 import (
 	"fmt"
-	"os"
-
 	"zerotier/pkg/zerotier"
 )
 
-func Status(basePath, authToken string, args []string, jsonOutput bool) {
+func Status(basePath, authToken string, args []string, jsonOutput bool) int {
 	var status zerotier.APIStatus
 	apiGet(basePath, authToken, "/status", &status)
 
@@ -70,5 +68,5 @@ func Status(basePath, authToken string, args []string, jsonOutput bool) {
 		fmt.Printf("\n")
 	}
 
-	os.Exit(0)
+	return 0
 }

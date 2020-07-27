@@ -76,14 +76,14 @@ Commands:
     sign <identity> <file>               Sign a file with an identity's key
     verify <identity> <file> <sig>       Verify a signature
   cert <command> [args]                - Certificate commands
-    newsubject <subject> <secret>        Create a new subject and secret
-    newcsr <subject> <secret>            Create a subject CSR
-    sign <csr> <identity> <certificate>  Sign a CSR to create a certificate
+    newsid [secret]                      Create a new subject unique ID
+    newcsr <subject> <secret> [csr]      Create a subject CSR
+    sign <csr> <identity> [certificate]  Sign a CSR to create a certificate
     verify <certificate>                 Verify a certificate
-    show                                 List certificate for current node
     import <certificate> [<trust>]       Import certificate into this node
-    export <serial>                      Export a certificate from this node
-    delete <serial>                      Delete certificate from this node
+    restore                              Re-import default certificates
+    export <serial> [path]               Export a certificate from this node
+    delete <serial|ALL>                  Delete certificate from this node
 
 An <address> may be specified as a 10-digit short ZeroTier address, a
 fingerprint containing both an address and a SHA384 hash, or an identity.

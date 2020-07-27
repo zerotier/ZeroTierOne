@@ -15,7 +15,6 @@ package cli
 
 import (
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 
@@ -85,20 +84,20 @@ func showNetwork(nwids string, network *zerotier.APINetwork, jsonOutput bool) {
 	}
 }
 
-func Network(basePath, authToken string, args []string, jsonOutput bool) {
+func Network(basePath, authToken string, args []string, jsonOutput bool) int {
 	if len(args) < 1 {
 		Help()
-		os.Exit(1)
+		return 1
 	}
 
 	if len(args[0]) != zerotier.NetworkIDStringLength {
 		fmt.Printf("ERROR: invalid network ID: %s\n", args[0])
-		os.Exit(1)
+		return 1
 	}
 	nwid, err := strconv.ParseUint(args[0], 16, 64)
 	if err != nil {
 		fmt.Printf("ERROR: invalid network ID: %s\n", args[0])
-		os.Exit(1)
+		return 1
 	}
 	nwids := fmt.Sprintf("%.16x", nwid)
 
@@ -114,6 +113,7 @@ func Network(basePath, authToken string, args []string, jsonOutput bool) {
 		case "set":
 			if len(args) > 3 {
 				Help()
+				return 1
 			} else if len(args) > 2 {
 				fieldName := strings.ToLower(strings.TrimSpace(args[2]))
 				var field *bool
@@ -130,7 +130,7 @@ func Network(basePath, authToken string, args []string, jsonOutput bool) {
 					field = &network.Settings.AllowDefaultRouteOverride
 				default:
 					Help()
-					os.Exit(1)
+					return 1
 				}
 
 				if len(args) == 3 {
@@ -148,5 +148,5 @@ func Network(basePath, authToken string, args []string, jsonOutput bool) {
 		}
 	}
 
-	os.Exit(0)
+	return 0
 }

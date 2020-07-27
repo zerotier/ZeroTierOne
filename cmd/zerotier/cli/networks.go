@@ -15,12 +15,10 @@ package cli
 
 import (
 	"fmt"
-	"os"
-
 	"zerotier/pkg/zerotier"
 )
 
-func Networks(basePath, authToken string, args []string, jsonOutput bool) {
+func Networks(basePath, authToken string, args []string, jsonOutput bool) int {
 	var networks []zerotier.APINetwork
 	apiGet(basePath, authToken, "/network", &networks)
 
@@ -44,5 +42,5 @@ func Networks(basePath, authToken string, args []string, jsonOutput bool) {
 		}
 	}
 
-	os.Exit(0)
+	return 0
 }

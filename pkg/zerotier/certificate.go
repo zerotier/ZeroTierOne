@@ -87,6 +87,12 @@ type Certificate struct {
 	Signature          []byte             `json:"signature,omitempty"`
 }
 
+// CertificateSubjectUniqueIDSecret bundles a certificate subject unique ID and its secret key.
+type CertificateSubjectUniqueIDSecret struct {
+	UniqueID       []byte `json:"uniqueId,omitempty"`
+	UniqueIDSecret []byte `json:"uniqueIdSecret,omitempty"`
+}
+
 func certificateErrorToError(cerr int) error {
 	switch cerr {
 	case C.ZT_CERTIFICATE_ERROR_NONE:

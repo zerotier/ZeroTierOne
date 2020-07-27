@@ -222,7 +222,7 @@ if(NOT PACKAGE_STATIC)
 		CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64"
 	)
 		message("++ Adding flags for processor ${CMAKE_SYSTEM_PROCESSOR}")
-		add_compile_options(-maes -mrdrnd -mpclmul -msse -msse2 -mssse3)
+		add_compile_options(-maes -mrdrnd -mpclmul -msse -msse2 -mssse3 -msse4)
 	endif()
 
 	set(GO_BUILD_TAGS)

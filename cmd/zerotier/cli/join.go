@@ -23,25 +23,23 @@ import (
 	"zerotier/pkg/zerotier"
 )
 
-func Join(basePath, authToken string, args []string) {
+func Join(basePath, authToken string, args []string) int {
 	joinOpts := flag.NewFlagSet("join", flag.ContinueOnError)
 	controllerAuthToken := joinOpts.String("a", "", "")
 	controllerFingerprint := joinOpts.String("c", "", "")
 	err := joinOpts.Parse(os.Args[1:])
 	if err != nil {
 		Help()
-		os.Exit(1)
-		return
+		return 1
 	}
 	args = joinOpts.Args()
 	if len(args) < 1 {
 		Help()
-		os.Exit(1)
-		return
+		return 1
 	}
 	if len(args[0]) != zerotier.NetworkIDStringLength {
 		fmt.Printf("ERROR: invalid network ID: %s\n", args[0])
-		os.Exit(1)
+		return 1
 	}
 
 	_ = *controllerAuthToken // TODO: not implemented yet
@@ -52,13 +50,13 @@ func Join(basePath, authToken string, args []string) {
 			fp, err = zerotier.NewFingerprintFromString(*controllerFingerprint)
 			if err != nil {
 				fmt.Printf("ERROR: invalid network controller fingerprint: %s\n", *controllerFingerprint)
-				os.Exit(1)
+				return 1
 			}
 		} else {
 			id, err := zerotier.NewIdentityFromString(*controllerFingerprint)
 			if err != nil {
 				fmt.Printf("ERROR: invalid network controller identity: %s\n", *controllerFingerprint)
-				os.Exit(1)
+				return 1
 			}
 			fp = id.Fingerprint()
 		}
@@ -67,7 +65,7 @@ func Join(basePath, authToken string, args []string) {
 	nwid, err := strconv.ParseUint(args[0], 16, 64)
 	if err != nil {
 		fmt.Printf("ERROR: invalid network ID: %s\n", args[0])
-		os.Exit(1)
+		return 1
 	}
 	nwids := fmt.Sprintf("%.16x", nwid)
 
@@ -85,5 +83,5 @@ func Join(basePath, authToken string, args []string) {
 		}
 	}
 
-	os.Exit(0)
+	return 0
 }

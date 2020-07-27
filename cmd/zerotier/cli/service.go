@@ -25,10 +25,10 @@ import (
 	"zerotier/pkg/zerotier"
 )
 
-func Service(basePath string, args []string) {
+func Service(basePath string, args []string) int {
 	if len(args) > 0 {
 		Help()
-		os.Exit(1)
+		return 1
 	}
 
 	pidPath := path.Join(basePath, "zerotier.pid")
@@ -45,5 +45,5 @@ func Service(basePath string, args []string) {
 	}
 
 	_ = os.Remove(pidPath)
-	os.Exit(1)
+	return 0
 }

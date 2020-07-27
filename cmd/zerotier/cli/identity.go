@@ -17,13 +17,12 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"strings"
 
 	"zerotier/pkg/zerotier"
 )
 
-func Identity(args []string) {
+func Identity(args []string) int {
 	if len(args) > 0 {
 		switch args[0] {
 
@@ -32,7 +31,7 @@ func Identity(args []string) {
 			if len(args) > 1 {
 				if len(args) > 2 {
 					Help()
-					os.Exit(1)
+					return 1
 				}
 				switch args[1] {
 				case "c25519", "C25519", "0":
@@ -41,37 +40,37 @@ func Identity(args []string) {
 					idType = zerotier.IdentityTypeP384
 				default:
 					Help()
-					os.Exit(1)
+					return 1
 				}
 			}
 			id, err := zerotier.NewIdentity(idType)
 			if err != nil {
 				fmt.Printf("ERROR: internal error generating identity: %s\n", err.Error())
-				os.Exit(1)
+				return 1
 			}
 			fmt.Println(id.PrivateKeyString())
-			os.Exit(0)
+			return 0
 
 		case "getpublic":
 			if len(args) == 2 {
 				fmt.Println(readIdentity(args[1]).String())
-				os.Exit(0)
+				return 0
 			}
 
 		case "fingerprint":
 			if len(args) == 2 {
 				fmt.Println(readIdentity(args[1]).Fingerprint().String())
-				os.Exit(0)
+				return 0
 			}
 
 		case "validate":
 			if len(args) == 2 {
 				if readIdentity(args[1]).LocallyValidate() {
 					fmt.Println("OK")
-					os.Exit(0)
+					return 0
 				}
 				fmt.Println("FAILED")
-				os.Exit(1)
+				return 1
 			}
 
 		case "sign", "verify":
@@ -80,7 +79,7 @@ func Identity(args []string) {
 				msg, err := ioutil.ReadFile(args[2])
 				if err != nil {
 					fmt.Printf("ERROR: unable to read input file: %s\n", err.Error())
-					os.Exit(1)
+					return 1
 				}
 
 				if args[0] == "verify" {
@@ -88,28 +87,29 @@ func Identity(args []string) {
 						sig, err := hex.DecodeString(strings.TrimSpace(args[3]))
 						if err != nil {
 							fmt.Println("FAILED")
-							os.Exit(1)
+							return 1
 						}
 						if id.Verify(msg, sig) {
 							fmt.Println("OK")
-							os.Exit(0)
+							return 0
 						}
 					}
 					fmt.Println("FAILED")
-					os.Exit(1)
+					return 1
 				} else {
 					sig, err := id.Sign(msg)
 					if err != nil {
 						fmt.Printf("ERROR: internal error signing message: %s\n", err.Error())
-						os.Exit(1)
+						return 1
 					}
 					fmt.Println(hex.EncodeToString(sig))
-					os.Exit(0)
+					return 0
 				}
 			}
 
 		}
 	}
+
 	Help()
-	os.Exit(1)
+	return 1
 }

@@ -27,33 +27,30 @@ import (
 	"zerotier/pkg/zerotier"
 )
 
-func getAuthTokenPaths(basePath string) (p []string) {
-	p = append(p, path.Join(basePath, "authtoken.secret"))
-	userHome, _ := os.UserHomeDir()
-	if len(userHome) > 0 {
-		if runtime.GOOS == "darwin" {
-			p = append(p, path.Join(userHome, "Library", "Application Support", "ZeroTier", "authtoken.secret"))
-			p = append(p, path.Join(userHome, "Library", "Application Support", "ZeroTier", "One", "authtoken.secret"))
-		}
-		p = append(p, path.Join(userHome, ".zerotierauth"))
-		p = append(p, path.Join(userHome, ".zeroTierOneAuthToken"))
-	}
-	return p
-}
-
-func authTokenRequired(basePath, tflag, tTflag string) string {
-	authTokenPaths := getAuthTokenPaths(basePath)
+func authToken(basePath, tflag, tTflag string) string {
 	var authToken string
 	if len(tflag) > 0 {
 		at, err := ioutil.ReadFile(tflag)
 		if err != nil || len(at) == 0 {
 			fmt.Println("FATAL: unable to read local service API authorization token from " + tflag)
-			os.Exit(1)
+			return ""
 		}
 		authToken = string(at)
 	} else if len(tTflag) > 0 {
 		authToken = tTflag
 	} else {
+		var authTokenPaths []string
+		authTokenPaths = append(authTokenPaths, path.Join(basePath, "authtoken.secret"))
+		userHome, _ := os.UserHomeDir()
+		if len(userHome) > 0 {
+			if runtime.GOOS == "darwin" {
+				authTokenPaths = append(authTokenPaths, path.Join(userHome, "Library", "Application Support", "ZeroTier", "authtoken.secret"))
+				authTokenPaths = append(authTokenPaths, path.Join(userHome, "Library", "Application Support", "ZeroTier", "One", "authtoken.secret"))
+			}
+			authTokenPaths = append(authTokenPaths, path.Join(userHome, ".zerotierauth"))
+			authTokenPaths = append(authTokenPaths, path.Join(userHome, ".zeroTierOneAuthToken"))
+		}
+
 		for _, p := range authTokenPaths {
 			tmp, _ := ioutil.ReadFile(p)
 			if len(tmp) > 0 {
@@ -61,19 +58,22 @@ func authTokenRequired(basePath, tflag, tTflag string) string {
 				break
 			}
 		}
+
 		if len(authToken) == 0 {
 			fmt.Println("FATAL: unable to read local service API authorization token from any of:")
 			for _, p := range authTokenPaths {
 				fmt.Println("  " + p)
 			}
-			os.Exit(1)
+			return ""
 		}
 	}
+
 	authToken = strings.TrimSpace(authToken)
 	if len(authToken) == 0 {
 		fmt.Println("FATAL: unable to read API authorization token from command line or any filesystem location.")
-		os.Exit(1)
+		return ""
 	}
+
 	return authToken
 }
 
@@ -111,37 +111,39 @@ func main() {
 		basePath = *pflag
 	}
 
+	exitCode := 0
 	switch args[0] {
 	default:
-	//case "help":
+		cli.Help()
+		exitCode = 1
+	case "help":
 		cli.Help()
 	case "version":
 		fmt.Printf("%d.%d.%d\n", zerotier.CoreVersionMajor, zerotier.CoreVersionMinor, zerotier.CoreVersionRevision)
 	case "service":
-		cli.Service(basePath, cmdArgs)
+		exitCode = cli.Service(basePath, cmdArgs)
 	case "status", "info":
-		cli.Status(basePath, authTokenRequired(basePath, *tflag, *tTflag), cmdArgs, *jflag)
+		exitCode = cli.Status(basePath, authToken(basePath, *tflag, *tTflag), cmdArgs, *jflag)
 	case "join":
-		cli.Join(basePath, authTokenRequired(basePath, *tflag, *tTflag), cmdArgs)
+		exitCode = cli.Join(basePath, authToken(basePath, *tflag, *tTflag), cmdArgs)
 	case "leave":
-		cli.Leave(basePath, authTokenRequired(basePath, *tflag, *tTflag), cmdArgs)
+		exitCode = cli.Leave(basePath, authToken(basePath, *tflag, *tTflag), cmdArgs)
 	case "networks", "listnetworks":
-		cli.Networks(basePath, authTokenRequired(basePath, *tflag, *tTflag), cmdArgs, *jflag)
+		exitCode = cli.Networks(basePath, authToken(basePath, *tflag, *tTflag), cmdArgs, *jflag)
 	case "network":
-		cli.Network(basePath, authTokenRequired(basePath, *tflag, *tTflag), cmdArgs, *jflag)
+		exitCode = cli.Network(basePath, authToken(basePath, *tflag, *tTflag), cmdArgs, *jflag)
 	case "peers", "listpeers", "lspeers":
-		cli.Peers(basePath, authTokenRequired(basePath, *tflag, *tTflag), cmdArgs, *jflag, false)
+		exitCode = cli.Peers(basePath, authToken(basePath, *tflag, *tTflag), cmdArgs, *jflag, false)
 	case "peer":
-		authTokenRequired(basePath, *tflag, *tTflag)
 	case "roots":
-		cli.Peers(basePath, authTokenRequired(basePath, *tflag, *tTflag), cmdArgs, *jflag, true)
+		exitCode = cli.Peers(basePath, authToken(basePath, *tflag, *tTflag), cmdArgs, *jflag, true)
 	case "controller":
 	case "set":
-		cli.Set(basePath, authTokenRequired(basePath, *tflag, *tTflag), cmdArgs)
+		exitCode = cli.Set(basePath, authToken(basePath, *tflag, *tTflag), cmdArgs)
 	case "identity":
-		cli.Identity(cmdArgs)
+		exitCode = cli.Identity(cmdArgs)
 	case "cert":
-		cli.Cert(basePath, authTokenRequired(basePath, *tflag, *tTflag), cmdArgs, *jflag)
+		exitCode = cli.Cert(basePath, authToken(basePath, *tflag, *tTflag), cmdArgs, *jflag)
 	}
-	os.Exit(0)
+	os.Exit(exitCode)
 }

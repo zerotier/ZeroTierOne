@@ -15,13 +15,12 @@ package cli
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"zerotier/pkg/zerotier"
 )
 
-func Peers(basePath, authToken string, args []string, jsonOutput bool, rootsOnly bool) {
+func Peers(basePath, authToken string, args []string, jsonOutput bool, rootsOnly bool) int {
 	var peers []zerotier.Peer
 	apiGet(basePath, authToken, "/peer", &peers)
 
@@ -64,5 +63,5 @@ func Peers(basePath, authToken string, args []string, jsonOutput bool, rootsOnly
 		}
 	}
 
-	os.Exit(0)
+	return 0
 }

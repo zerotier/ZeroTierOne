@@ -15,29 +15,29 @@ package cli
 
 import (
 	"fmt"
-	"os"
 	"strconv"
 	"zerotier/pkg/zerotier"
 )
 
-func Leave(basePath, authToken string, args []string) {
+func Leave(basePath, authToken string, args []string) int {
 	if len(args) != 1 {
 		Help()
-		os.Exit(1)
+		return 1
 	}
 
 	if len(args[0]) != zerotier.NetworkIDStringLength {
 		fmt.Printf("ERROR: invalid network ID: %s\n", args[0])
-		os.Exit(1)
+		return 1
 	}
 	nwid, err := strconv.ParseUint(args[0], 16, 64)
 	if err != nil {
 		fmt.Printf("ERROR: invalid network ID: %s\n", args[0])
-		os.Exit(1)
+		return 1
 	}
 	nwids := fmt.Sprintf("%.16x", nwid)
 
 	apiDelete(basePath, authToken, "/network/"+nwids, nil)
 	fmt.Printf("OK %s", nwids)
-	os.Exit(0)
+
+	return 0
 }

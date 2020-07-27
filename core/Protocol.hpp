@@ -106,7 +106,9 @@
  * 9  - 1.2.0 ... 1.2.14
  * 10 - 1.4.0 ... 1.4.6
  *    + Contained early pre-alpha versions of multipath, which are deprecated
- * 11 - 2.0.0 ... CURRENT
+ * 11 - 1.4.8 ... CURRENT 1.4
+ *    + AES-GMAC-SIV backported for faster peer-to-peer crypto
+ * 20 - 2.0.0 ... CURRENT
  *    + New more WAN-efficient P2P-assisted multicast algorithm
  *    + HELLO and OK(HELLO) include an extra HMAC to harden authentication
  *    + HELLO and OK(HELLO) carry meta-data in a dictionary that's encrypted
@@ -117,7 +119,7 @@
  *    + Short probe packets to reduce probe bandwidth
  *    + More aggressive NAT traversal techniques for IPv4 symmetric NATs
  */
-#define ZT_PROTO_VERSION 11
+#define ZT_PROTO_VERSION 20
 
 /**
  * Minimum supported protocol version
