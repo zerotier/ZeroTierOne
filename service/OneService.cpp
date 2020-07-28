@@ -253,6 +253,11 @@ static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer)
 	pj["version"] = tmp;
 	pj["latency"] = peer->latency;
 	pj["role"] = prole;
+	pj["isBonded"] = peer->isBonded;
+	pj["bondingPolicy"] = peer->bondingPolicy;
+	pj["isHealthy"] = peer->isHealthy;
+	pj["numAliveLinks"] = peer->numAliveLinks;
+	pj["numTotalLinks"] = peer->numTotalLinks;
 
 	nlohmann::json pa = nlohmann::json::array();
 	for(unsigned int i=0;i<peer->pathCount;++i) {
@@ -1320,6 +1325,35 @@ public:
 						_node->freeQueryResult((void *)nws);
 					} else scode = 500;
 				} else if (ps[0] == "peer") {
+					ZT_PeerList *pl = _node->peers();
+					if (pl) {
+						if (ps.size() == 1) {
+							// Return [array] of all peers
+
+							res = nlohmann::json::array();
+							for(unsigned long i=0;i<pl->peerCount;++i) {
+								nlohmann::json pj;
+								_peerToJson(pj,&(pl->peers[i]));
+								res.push_back(pj);
+							}
+
+							scode = 200;
+						} else if (ps.size() == 2) {
+							// Return a single peer by ID or 404 if not found
+
+							uint64_t wantp = Utils::hexStrToU64(ps[1].c_str());
+							for(unsigned long i=0;i<pl->peerCount;++i) {
+								if (pl->peers[i].address == wantp) {
+									_peerToJson(res,&(pl->peers[i]));
+									scode = 200;
+									break;
+								}
+							}
+
+						} else scode = 404;
+						_node->freeQueryResult((void *)pl);
+					} else scode = 500;
+				} else if (ps[0] == "bonds") {
 					ZT_PeerList *pl = _node->peers();
 					if (pl) {
 						if (ps.size() == 1) {

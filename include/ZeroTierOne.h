@@ -1475,16 +1475,39 @@ typedef struct
 	enum ZT_PeerRole role;
 
 	/**
-	 * Number of paths (size of paths[])
-	 */
-	unsigned int pathCount;
-
-	/**
-	 * Whether multiple paths to this peer are bonded
+	 * Whether a multi-link bond has formed
 	 */
 	bool isBonded;
 
+	/**
+	 * The bonding policy used to bond to this peer
+	 */
 	int bondingPolicy;
+
+	/**
+	 * The health status of the bond to this peer
+	 */
+	bool isHealthy;
+
+	/**
+	 * The number of links that comprise the bond to this peer that are considered alive
+	 */
+	int numAliveLinks;
+
+	/**
+	 * The number of links that comprise the bond to this peer
+	 */
+	int numTotalLinks;
+
+	/**
+	 * The user-specified bond template name
+	 */
+	char customBondName[32];
+
+	/**
+	 * Number of paths (size of paths[])
+	 */
+	unsigned int pathCount;
 
 	/**
 	 * Known network paths to peer

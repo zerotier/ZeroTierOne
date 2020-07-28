@@ -730,12 +730,19 @@ void Bond::curateBond(const int64_t now, bool rebuildBond)
 {
 	//fprintf(stderr, "%lu curateBond (rebuildBond=%d), _numBondedPaths=%d\n", ((now - RR->bc->getBondStartTime())), rebuildBond, _numBondedPaths);
 	char pathStr[128];
+
+	uint8_t tmpNumAliveLinks = 0;
+	uint8_t tmpNumTotalLinks = 0;
 	/**
 	 * Update path states
 	 */
 	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
 		if (!_paths[i]) {
 			continue;
+		}
+		tmpNumTotalLinks++;
+		if (_paths[i]->alive(now, true)) {
+			tmpNumAliveLinks++;
 		}
 		bool currEligibility = _paths[i]->eligible(now,_ackSendInterval);
 		//_paths[i]->address().toString(pathStr);
@@ -764,6 +771,46 @@ void Bond::curateBond(const int64_t now, bool rebuildBond)
 		}
 		_paths[i]->_lastEligibilityState = currEligibility;
 	}
+	_numAliveLinks = tmpNumAliveLinks;
+	_numTotalLinks = tmpNumTotalLinks;
+
+	/* Determine health status to report to user */
+
+	bool tmpHealthStatus = true;
+
+	if (_bondingPolicy == ZT_BONDING_POLICY_ACTIVE_BACKUP) {
+		if (_numAliveLinks < 2) {
+			// Considered healthy if there is at least one failover link
+			tmpHealthStatus = false;
+		}
+	}
+	if (_bondingPolicy == ZT_BONDING_POLICY_BROADCAST) {
+		if (_numAliveLinks < 1) {
+			// Considerd healthy if we're able to send frames at all
+			tmpHealthStatus = false;
+		}
+	}
+	if (_bondingPolicy == ZT_BONDING_POLICY_BALANCE_RR) {
+		if (_numAliveLinks < _numTotalLinks) {
+			// Considerd healthy if all known paths are alive, this should be refined to account for user bond config settings
+			tmpHealthStatus = false;
+		}
+	}
+	if (_bondingPolicy == ZT_BONDING_POLICY_BALANCE_XOR) {
+		if (_numAliveLinks < _numTotalLinks) {
+			// Considerd healthy if all known paths are alive, this should be refined to account for user bond config settings
+			tmpHealthStatus = false;
+		}
+	}
+	if (_bondingPolicy == ZT_BONDING_POLICY_BALANCE_AWARE) {
+		if (_numAliveLinks < _numTotalLinks) {
+			// Considerd healthy if all known paths are alive, this should be refined to account for user bond config settings
+			tmpHealthStatus = false;
+		}
+	}
+
+	_isHealthy = tmpHealthStatus;
+
 	/**
 	 * Curate the set of paths that are part of the bond proper. Selects a single path
 	 * per logical link according to eligibility and user-specified constraints.
@@ -1508,6 +1555,10 @@ void Bond::setReasonableDefaults(int policy, SharedPtr<Bond> templateBond, bool 
 	_freeRandomByte = 0;
 	_lastCheckUserPreferences = 0;
 	_lastBackgroundTaskCheck = 0;
+
+	_isHealthy = false;
+	_numAliveLinks = 0;
+	_numTotalLinks = 0;
 
 	_downDelay = 0;
 	_upDelay = 0;

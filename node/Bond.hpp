@@ -486,6 +486,21 @@ public:
 	inline uint8_t getPolicy() { return _bondingPolicy; }
 
 	/**
+	 * @return the health status of the bond
+	 */
+	inline bool isHealthy() { return _isHealthy; }
+
+	/**
+	 * @return the number of links comprising this bond which are considered alive
+	 */
+	inline uint8_t getNumAliveLinks() { return _numAliveLinks; };
+
+	/**
+	 * @return the number of links comprising this bond
+	 */
+	inline uint8_t getNumTotalLinks() { return _numTotalLinks; }
+
+	/**
 	 *
 	 * @param allowFlowHashing
 	 */
@@ -625,6 +640,10 @@ private:
 	uint16_t _maxAcceptableMeanLatency;
 	uint16_t _maxAcceptablePacketDelayVariance;
 	uint8_t _minAcceptableAllocation;
+
+	bool _isHealthy;
+	uint8_t _numAliveLinks;
+	uint8_t _numTotalLinks;
 
 	/**
 	 * Default initial punishment inflicted on misbehaving paths. Punishment slowly
