@@ -795,6 +795,7 @@ void PostgreSQL::membersDbWatcher()
 void PostgreSQL::_membersWatcher_Postgres(PGconn *conn) {
 	char buf[11] = {0};
 	std::string cmd = "LISTEN member_" + std::string(_myAddress.toString(buf));
+	fprintf(stderr, "Listening to member stream: %s\n", cmd.c_str());
 	PGresult *res = PQexec(conn, cmd.c_str());
 	if (!res || PQresultStatus(res) != PGRES_COMMAND_OK) {
 		fprintf(stderr, "LISTEN command failed: %s\n", PQresultErrorMessage(res));
@@ -836,7 +837,7 @@ void PostgreSQL::_membersWatcher_Postgres(PGconn *conn) {
 void PostgreSQL::_membersWatcher_Redis() {
 	char buf[11] = {0};
 	std::string key = "member-stream:{" + std::string(_myAddress.toString(buf)) + "}";
-	
+	fprintf(stderr, "Listening to member stream: %s\n", key.c_str());
 	while (_run == 1) {
 		try {
 			json tmp;
