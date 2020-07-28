@@ -413,6 +413,7 @@ ZT_PeerList *Node::peers() const
 	Utils::zero(buf, bufSize);
 	ZT_PeerList *pl = reinterpret_cast<ZT_PeerList *>(buf);
 	buf += sizeof(ZT_PeerList);
+	pl->freeFunction = reinterpret_cast<void (*)(const void *)>(free);
 	pl->peers = reinterpret_cast<ZT_Peer *>(buf);
 	buf += sizeof(ZT_Peer) * peers.size();
 	ZT_Path *peerPath = reinterpret_cast<ZT_Path *>(buf);
@@ -496,6 +497,7 @@ ZT_VirtualNetworkList *Node::networks() const
 	if (!buf)
 		return nullptr;
 	ZT_VirtualNetworkList *nl = (ZT_VirtualNetworkList *)buf; // NOLINT(modernize-use-auto,hicpp-use-auto)
+	nl->freeFunction = reinterpret_cast<void (*)(const void *)>(free);
 	nl->networks = (ZT_VirtualNetworkConfig *)(buf + sizeof(ZT_VirtualNetworkList));
 
 	nl->networkCount = 0;
@@ -582,6 +584,39 @@ ZT_CertificateError Node::addCertificate(
 			return ZT_CERTIFICATE_ERROR_INVALID_FORMAT;
 	}
 	return RR->topology->addCertificate(tptr, c, now, localTrust, true, true, true);
+}
+
+struct p_certificateListInternal
+{
+	Vector< SharedPtr< const Certificate > > c;
+	Vector< unsigned int > t;
+};
+
+static void p_freeCertificateList(const void *cl)
+{
+	if (cl) {
+		reinterpret_cast<const p_certificateListInternal *>(reinterpret_cast<const uint8_t *>(cl) + sizeof(ZT_CertificateList))->~p_certificateListInternal();
+		free(const_cast<void *>(cl));
+	}
+}
+
+ZT_CertificateList *Node::listCertificates()
+{
+	ZT_CertificateList *const cl = (ZT_CertificateList *)malloc(sizeof(ZT_CertificateList) + sizeof(p_certificateListInternal));
+	if (!cl)
+		return nullptr;
+
+	p_certificateListInternal *const clint = reinterpret_cast<p_certificateListInternal *>(reinterpret_cast<uint8_t *>(cl) + sizeof(ZT_CertificateList));
+	new (clint) p_certificateListInternal;
+	RR->topology->allCerts(clint->c, clint->t);
+
+	cl->freeFunction = p_freeCertificateList;
+	static_assert(sizeof(SharedPtr< const Certificate >) == sizeof(void *), "SharedPtr<> is not just a wrapped pointer");
+	cl->certs = reinterpret_cast<const ZT_Certificate **>(clint->c.data());
+	cl->localTrust = clint->t.data();
+	cl->certCount = (unsigned long)clint->c.size();
+
+	return cl;
 }
 
 int Node::sendUserMessage(
@@ -840,10 +875,15 @@ void ZT_freeBuffer(void *b)
 		delete _ZT_PTRTOBUF(b);
 }
 
-void ZT_freeQueryResult(void *qr)
+struct p_queryResultBase
 {
-	if (qr)
-		free(qr);
+	void (*freeFunction)(const void *);
+};
+
+void ZT_freeQueryResult(const void *qr)
+{
+	if ((qr) && (reinterpret_cast<const p_queryResultBase *>(qr)->freeFunction))
+		reinterpret_cast<const p_queryResultBase *>(qr)->freeFunction(qr);
 }
 
 enum ZT_ResultCode ZT_Node_new(ZT_Node **node, void *uptr, void *tptr, const struct ZT_Node_Callbacks *callbacks, int64_t now)
@@ -1063,6 +1103,15 @@ enum ZT_CertificateError ZT_Node_addCertificate(
 		return reinterpret_cast<ZeroTier::Node *>(node)->addCertificate(tptr, now, localTrust, cert, certData, certSize);
 	} catch (...) {
 		return ZT_CERTIFICATE_ERROR_INVALID_FORMAT;
+	}
+}
+
+ZT_SDK_API ZT_CertificateList *ZT_Node_listCertificates(ZT_Node *node)
+{
+	try {
+		return reinterpret_cast<ZeroTier::Node *>(node)->listCertificates();
+	} catch (...) {
+		return nullptr;
 	}
 }
 

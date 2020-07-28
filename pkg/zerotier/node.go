@@ -541,6 +541,23 @@ func (n *Node) TryPeer(fpOrAddress interface{}, ep *Endpoint, retries int) bool 
 	return C.ZT_Node_tryPeer(n.zn, nil, fp.cFingerprint(), &ep.cep, C.int(retries)) != 0
 }
 
+// ListCertificates lists certificates and their corresponding local trust flags.
+func (n *Node) ListCertificates() (certs []*Certificate, localTrust []uint, err error) {
+	cl := C.ZT_Node_listCertificates(n.zn)
+	if cl != nil {
+		for i := uintptr(0); i < uintptr(cl.certCount); i++ {
+			c := newCertificateFromCCertificate(unsafe.Pointer(uintptr(unsafe.Pointer(cl.certs)) + (i * pointerSize)))
+			if c != nil {
+				lt := *((*C.uint)(unsafe.Pointer(uintptr(unsafe.Pointer(cl.localTrust)) + (i * C.sizeof_int))))
+				certs = append(certs, c)
+				localTrust = append(localTrust, uint(lt))
+			}
+		}
+		C.ZT_freeQueryResult(unsafe.Pointer(cl))
+	}
+	return
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 func (n *Node) runMaintenance() {

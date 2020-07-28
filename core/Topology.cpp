@@ -242,6 +242,18 @@ ZT_CertificateError Topology::addCertificate(void *tPtr, const Certificate &cert
 	return ZT_CERTIFICATE_ERROR_NONE;
 }
 
+void Topology::allCerts(Vector< SharedPtr<const Certificate> > &c,Vector< unsigned int > &t) const noexcept
+{
+	Mutex::Lock l(m_certs_l);
+	const unsigned long cs = (unsigned long)m_certs.size();
+	c.reserve(cs);
+	t.reserve(cs);
+	for(Map< SHA384Hash, p_CertEntry >::const_iterator i(m_certs.begin());i!=m_certs.end();++i) {
+		c.push_back(i->second.certificate);
+		t.push_back(i->second.localTrust);
+	}
+}
+
 struct p_RootRankingComparisonOperator
 {
 	ZT_INLINE bool operator()(const SharedPtr< Peer > &a, const SharedPtr< Peer > &b) const noexcept

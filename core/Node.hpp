@@ -147,6 +147,8 @@ public:
 		const void *certData,
 		unsigned int certSize);
 
+	ZT_CertificateList *listCertificates();
+
 	int sendUserMessage(
 		void *tptr,
 		uint64_t dest,

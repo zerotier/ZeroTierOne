@@ -142,6 +142,14 @@ public:
 	 */
 	ZT_CertificateError addCertificate(void *tPtr, const Certificate &cert, const int64_t now, unsigned int localTrust, bool writeToLocalStore, bool refreshRootSets = true, bool verify = true);
 
+	/**
+	 * Fill vectors with all certificates and their corresponding local trust flags
+	 *
+	 * @param c Certificate vector
+	 * @param t Local trust vector
+	 */
+	void allCerts(Vector< SharedPtr<const Certificate> > &c,Vector< unsigned int > &t) const noexcept;
+
 private:
 	void m_rankRoots(int64_t now);
 	void m_eraseCertificate(void *tPtr, const SharedPtr< const Certificate > &cert, const SHA384Hash *uniqueIdHash);

@@ -619,6 +619,32 @@ typedef struct
 } ZT_Certificate;
 
 /**
+ * A list of certificates
+ */
+typedef struct
+{
+	/**
+	 * Function that is called to free this list (called by ZT_freeQueryResult)
+	 */
+	void (*freeFunction)(const void *);
+
+	/**
+	 * Array of pointers to certificates
+	 */
+	const ZT_Certificate *const *certs;
+
+	/**
+	 * Array of local trust flags for each certificate
+	 */
+	const unsigned int *localTrust;
+
+	/**
+	 * Number of certificates
+	 */
+	unsigned long certCount;
+} ZT_CertificateList;
+
+/**
  * Credential type IDs
  */
 enum ZT_CredentialType
@@ -1429,6 +1455,7 @@ typedef struct
  */
 typedef struct
 {
+	void (*freeFunction)(const void *);
 	ZT_VirtualNetworkConfig *networks;
 	unsigned long networkCount;
 } ZT_VirtualNetworkList;
@@ -1616,6 +1643,7 @@ typedef struct
  */
 typedef struct
 {
+	void (*freeFunction)(const void *);
 	ZT_Peer *peers;
 	unsigned long peerCount;
 } ZT_PeerList;
@@ -2003,7 +2031,7 @@ ZT_SDK_API void ZT_freeBuffer(void *b);
  *
  * @param qr Query result buffer
  */
-ZT_SDK_API void ZT_freeQueryResult(void *qr);
+ZT_SDK_API void ZT_freeQueryResult(const void *qr);
 
 /* ---------------------------------------------------------------------------------------------------------------- */
 
@@ -2391,6 +2419,14 @@ ZT_SDK_API enum ZT_CertificateError ZT_Node_addCertificate(
 	const ZT_Certificate *cert,
 	const void *certData,
 	unsigned int certSize);
+
+/**
+ * List certificates installed in this node's trust store
+ *
+ * @param node Node instance
+ * @return List of certificates or NULL on error
+ */
+ZT_SDK_API ZT_CertificateList *ZT_Node_listCertificates(ZT_Node *node);
 
 /**
  * Send a VERB_USER_MESSAGE to another ZeroTier node

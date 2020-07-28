@@ -8,7 +8,7 @@ import (
 
 func main() {
 	runtime.GOMAXPROCS(1)
-	debug.SetGCPercent(15)
+	debug.SetGCPercent(10)
 
 	if !TestCertificate() {
 		os.Exit(1)
