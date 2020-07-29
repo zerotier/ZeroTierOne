@@ -410,11 +410,14 @@ void AES::GMAC::finish(uint8_t tag[16]) noexcept
 
 #ifdef ZT_AES_AESNI
 
-// Disable VAES stuff on compilers too old to compile these intrinsics,
-// and MinGW64 also seems not to support them so disable on Windows.
+/* Disable VAES stuff on compilers too old to compile these intrinsics,
+ * and MinGW64 also seems not to support them so disable on Windows.
+ * The performance gain can be significant but regular SSE is already so
+ * fast it's highly unlikely to be a rate limiting factor except on massive
+ * servers and network infrastructure stuff. */
 #if !defined(__WINDOWS__) && ((__GNUC__ >= 8) || (__clang_major__ >= 7))
 
-#define ZT_AES_VAES512
+#define ZT_AES_VAES512 1
 
 static
 __attribute__((__target__("sse4,avx,avx2,vaes,avx512f,avx512bw")))
@@ -465,7 +468,7 @@ void p_aesCtrInnerVAES512(unsigned int &len, const uint64_t c0, uint64_t &c1, co
 	} while (likely(len >= 64));
 }
 
-#define ZT_AES_VAES256
+#define ZT_AES_VAES256 1
 
 static
 __attribute__((__target__("sse4,avx,avx2,vaes")))
@@ -534,9 +537,9 @@ void p_aesCtrInnerVAES256(unsigned int &len, const uint64_t c0, uint64_t &c1, co
 	} while (likely(len >= 64));
 }
 
-#endif
+#endif // does compiler support AVX2 and AVX512 AES intrinsics?
 
-#endif
+#endif // ZT_AES_AESNI
 
 void AES::CTR::crypt(const void *const input, unsigned int len) noexcept
 {
@@ -739,7 +742,107 @@ void AES::CTR::crypt(const void *const input, unsigned int len) noexcept
 		_ctr[1] = Utils::hton(c1);
 		return;
 	}
-#endif
+#endif // ZT_AES_AESNI
+
+#ifdef ZT_ARCH_ARM_HAS_NEON
+	if (true) {
+		uint8x16_t dd = vld1q_u8(reinterpret_cast<uint8_t *>(_ctr));
+		const uint32x4_t one = {0,0,0,1};
+
+		uint8x16_t k0 = _aes._k.neon.ek[0];
+		uint8x16_t k1 = _aes._k.neon.ek[1];
+		uint8x16_t k2 = _aes._k.neon.ek[2];
+		uint8x16_t k3 = _aes._k.neon.ek[3];
+		uint8x16_t k4 = _aes._k.neon.ek[4];
+		uint8x16_t k5 = _aes._k.neon.ek[5];
+		uint8x16_t k6 = _aes._k.neon.ek[6];
+		uint8x16_t k7 = _aes._k.neon.ek[7];
+		uint8x16_t k8 = _aes._k.neon.ek[8];
+		uint8x16_t k9 = _aes._k.neon.ek[9];
+		uint8x16_t k10 = _aes._k.neon.ek[10];
+		uint8x16_t k11 = _aes._k.neon.ek[11];
+		uint8x16_t k12 = _aes._k.neon.ek[12];
+		uint8x16_t k13 = _aes._k.neon.ek[13];
+		uint8x16_t k14 = _aes._k.neon.ek[14];
+
+		unsigned int totalLen = _len;
+		if ((totalLen & 15U)) {
+			for (;;) {
+				if (unlikely(!len)) {
+					vst1q_u8(reinterpret_cast<uint8_t *>(_ctr), dd);
+					_len = totalLen;
+					return;
+				}
+				--len;
+				out[totalLen++] = *(in++);
+				if (!(totalLen & 15U)) {
+					uint8x16_t tmp = dd;
+					dd = vrev32q_u8(dd);
+					dd = (uint8x16_t)vaddq_u32((uint32x4_t)dd, one);
+					dd = vrev32q_u8(dd);
+					tmp = vaesmcq_u8(vaeseq_u8(tmp, k0));
+					tmp = vaesmcq_u8(vaeseq_u8(tmp, k1));
+					tmp = vaesmcq_u8(vaeseq_u8(tmp, k2));
+					tmp = vaesmcq_u8(vaeseq_u8(tmp, k3));
+					tmp = vaesmcq_u8(vaeseq_u8(tmp, k4));
+					tmp = vaesmcq_u8(vaeseq_u8(tmp, k5));
+					tmp = vaesmcq_u8(vaeseq_u8(tmp, k6));
+					tmp = vaesmcq_u8(vaeseq_u8(tmp, k7));
+					tmp = vaesmcq_u8(vaeseq_u8(tmp, k8));
+					tmp = vaesmcq_u8(vaeseq_u8(tmp, k9));
+					tmp = vaesmcq_u8(vaeseq_u8(tmp, k10));
+					tmp = vaesmcq_u8(vaeseq_u8(tmp, k11));
+					tmp = vaesmcq_u8(vaeseq_u8(tmp, k12));
+					tmp = veorq_u8(vaeseq_u8(tmp, k13), k14);
+					uint8x16_t pt = vld1q_u8(reinterpret_cast<const uint8_t *>(out + (totalLen - 16)));
+					vst1q_u8(reinterpret_cast<uint8_t *>(out + (totalLen - 16)), veorq_u8(pt, tmp));
+					//__m128i *const outblk = reinterpret_cast<__m128i *>(out + (totalLen - 16));
+					//const __m128i p0 = _mm_loadu_si128(outblk);
+					//_mm_storeu_si128(outblk, _mm_xor_si128(p0, d0));
+					break;
+				}
+			}
+		}
+
+		out += totalLen;
+		_len = totalLen + len;
+
+		while (len >= 16) {
+			uint8x16_t tmp = dd;
+			dd = vrev32q_u8(dd);
+			dd = (uint8x16_t)vaddq_u32((uint32x4_t)dd, one);
+			dd = vrev32q_u8(dd);
+			tmp = vaesmcq_u8(vaeseq_u8(tmp, k0));
+			tmp = vaesmcq_u8(vaeseq_u8(tmp, k1));
+			tmp = vaesmcq_u8(vaeseq_u8(tmp, k2));
+			tmp = vaesmcq_u8(vaeseq_u8(tmp, k3));
+			tmp = vaesmcq_u8(vaeseq_u8(tmp, k4));
+			tmp = vaesmcq_u8(vaeseq_u8(tmp, k5));
+			tmp = vaesmcq_u8(vaeseq_u8(tmp, k6));
+			tmp = vaesmcq_u8(vaeseq_u8(tmp, k7));
+			tmp = vaesmcq_u8(vaeseq_u8(tmp, k8));
+			tmp = vaesmcq_u8(vaeseq_u8(tmp, k9));
+			tmp = vaesmcq_u8(vaeseq_u8(tmp, k10));
+			tmp = vaesmcq_u8(vaeseq_u8(tmp, k11));
+			tmp = vaesmcq_u8(vaeseq_u8(tmp, k12));
+			tmp = veorq_u8(vaeseq_u8(tmp, k13), k14);
+			uint8x16_t pt = vld1q_u8(reinterpret_cast<const uint8_t *>(in));
+			vst1q_u8(reinterpret_cast<uint8_t *>(out), veorq_u8(pt, tmp));
+			in += 16;
+      len -= 16;
+      out += 16;
+		}
+
+		// Any remaining input is placed in _out. This will be picked up and crypted
+		// on subsequent calls to crypt() or finish() as it'll mean _len will not be
+		// an even multiple of 16.
+		for (unsigned int i = 0; i < len; ++i)
+			out[i] = in[i];
+
+		vst1q_u8(reinterpret_cast<uint8_t *>(_ctr), dd);
+		return;
+	}
+#endif // ZT_ARCH_ARM_HAS_NEON
 
 	uint64_t keyStream[2];
 	uint32_t ctr = Utils::ntoh(reinterpret_cast<uint32_t *>(_ctr)[3]);
@@ -770,17 +873,17 @@ void AES::CTR::crypt(const void *const input, unsigned int len) noexcept
 #ifdef ZT_NO_UNALIGNED_ACCESS
 	if ((((uintptr_t)out | (uintptr_t)in) & 7U) == 0) { // if aligned we can do XORs in quadwords instead of bytes
 #endif
-	while (len >= 16) {
-		_aes._encryptSW(reinterpret_cast<const uint8_t *>(_ctr), reinterpret_cast<uint8_t *>(keyStream));
-		reinterpret_cast<uint32_t *>(_ctr)[3] = Utils::hton(++ctr);
-		reinterpret_cast<uint64_t *>(out)[0] = reinterpret_cast<const uint64_t *>(in)[0] ^ keyStream[0];
-		reinterpret_cast<uint64_t *>(out)[1] = reinterpret_cast<const uint64_t *>(in)[1] ^ keyStream[1];
-		out += 16;
-		len -= 16;
-		in += 16;
-	}
+		while (len >= 16) {
+			_aes._encryptSW(reinterpret_cast<const uint8_t *>(_ctr), reinterpret_cast<uint8_t *>(keyStream));
+			reinterpret_cast<uint32_t *>(_ctr)[3] = Utils::hton(++ctr);
+			reinterpret_cast<uint64_t *>(out)[0] = reinterpret_cast<const uint64_t *>(in)[0] ^ keyStream[0];
+			reinterpret_cast<uint64_t *>(out)[1] = reinterpret_cast<const uint64_t *>(in)[1] ^ keyStream[1];
+			out += 16;
+			len -= 16;
+			in += 16;
+		}
 #ifdef ZT_NO_UNALIGNED_ACCESS
-																																																													} else {
+	} else {
 		while (len >= 16) {
 			_aes._encryptSW(reinterpret_cast<const uint8_t *>(_ctr),reinterpret_cast<uint8_t *>(keyStream));
 			reinterpret_cast<uint32_t *>(_ctr)[3] = Utils::hton(++ctr);
@@ -804,40 +907,10 @@ void AES::CTR::crypt(const void *const input, unsigned int len) noexcept
 
 void AES::CTR::finish() noexcept
 {
+	uint8_t tmp[16];
 	const unsigned int rem = _len & 15U;
-
-#ifdef ZT_AES_AESNI
-	if (likely(Utils::CPUID.aes)) {
-		// Encrypt any remaining bytes as indicated by _len not being an even multiple of 16.
-		if (rem) {
-			uint8_t tmp[16];
-			__m128i d0 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(_ctr));
-			d0 = _mm_xor_si128(d0, _aes._k.ni.k[0]);
-			d0 = _mm_aesenc_si128(d0, _aes._k.ni.k[1]);
-			d0 = _mm_aesenc_si128(d0, _aes._k.ni.k[2]);
-			d0 = _mm_aesenc_si128(d0, _aes._k.ni.k[3]);
-			d0 = _mm_aesenc_si128(d0, _aes._k.ni.k[4]);
-			d0 = _mm_aesenc_si128(d0, _aes._k.ni.k[5]);
-			d0 = _mm_aesenc_si128(d0, _aes._k.ni.k[6]);
-			d0 = _mm_aesenc_si128(d0, _aes._k.ni.k[7]);
-			d0 = _mm_aesenc_si128(d0, _aes._k.ni.k[8]);
-			d0 = _mm_aesenc_si128(d0, _aes._k.ni.k[9]);
-			d0 = _mm_aesenc_si128(d0, _aes._k.ni.k[10]);
-			d0 = _mm_aesenc_si128(d0, _aes._k.ni.k[11]);
-			d0 = _mm_aesenc_si128(d0, _aes._k.ni.k[12]);
-			d0 = _mm_aesenc_si128(d0, _aes._k.ni.k[13]);
-			d0 = _mm_aesenclast_si128(d0, _aes._k.ni.k[14]);
-			_mm_storeu_si128(reinterpret_cast<__m128i *>(tmp), d0);
-			for (unsigned int i = 0, j = _len - rem; i < rem; ++i)
-				_out[j + i] ^= tmp[i];
-		}
-		return;
-	}
-#endif
-
 	if (rem) {
-		uint8_t tmp[16];
-		_aes._encryptSW(reinterpret_cast<const uint8_t *>(_ctr), tmp);
+		_aes.encrypt(_ctr, tmp);
 		for (unsigned int i = 0, j = _len - rem; i < rem; ++i)
 			_out[j + i] ^= tmp[i];
 	}
@@ -921,7 +994,7 @@ const uint8_t AES::Td4[256] = {0x52, 0x09, 0x6a, 0xd5, 0x30, 0x36, 0xa5, 0x38, 0
                                0x84, 0x90, 0xd8, 0xab, 0x00, 0x8c, 0xbc, 0xd3, 0x0a, 0xf7, 0xe4, 0x58, 0x05, 0xb8, 0xb3, 0x45, 0x06, 0xd0, 0x2c, 0x1e, 0x8f, 0xca, 0x3f, 0x0f, 0x02, 0xc1, 0xaf, 0xbd, 0x03, 0x01, 0x13, 0x8a, 0x6b,
                                0x3a, 0x91, 0x11, 0x41, 0x4f, 0x67, 0xdc, 0xea, 0x97, 0xf2, 0xcf, 0xce, 0xf0, 0xb4, 0xe6, 0x73, 0x96, 0xac, 0x74, 0x22, 0xe7, 0xad, 0x35, 0x85, 0xe2, 0xf9, 0x37, 0xe8, 0x1c, 0x75, 0xdf, 0x6e, 0x47, 0xf1, 0x1a, 0x71, 0x1d, 0x29, 0xc5, 0x89, 0x6f, 0xb7, 0x62, 0x0e, 0xaa, 0x18, 0xbe, 0x1b, 0xfc, 0x56, 0x3e, 0x4b, 0xc6, 0xd2, 0x79, 0x20, 0x9a, 0xdb, 0xc0, 0xfe, 0x78, 0xcd, 0x5a, 0xf4, 0x1f, 0xdd, 0xa8, 0x33, 0x88, 0x07, 0xc7, 0x31, 0xb1, 0x12, 0x10, 0x59, 0x27, 0x80, 0xec, 0x5f, 0x60, 0x51, 0x7f, 0xa9, 0x19, 0xb5, 0x4a, 0x0d, 0x2d, 0xe5, 0x7a, 0x9f, 0x93, 0xc9, 0x9c,
                                0xef, 0xa0, 0xe0, 0x3b, 0x4d, 0xae, 0x2a, 0xf5, 0xb0, 0xc8, 0xeb, 0xbb, 0x3c, 0x83, 0x53, 0x99, 0x61, 0x17, 0x2b, 0x04, 0x7e, 0xba, 0x77, 0xd6, 0x26, 0xe1, 0x69, 0x14, 0x63, 0x55, 0x21, 0x0c, 0x7d};
-const uint32_t AES::rcon[10] = {0x01000000, 0x02000000, 0x04000000, 0x08000000, 0x10000000, 0x20000000, 0x40000000, 0x80000000, 0x1B000000, 0x36000000};
+const uint32_t AES::rcon[15] = {0x01000000, 0x02000000, 0x04000000, 0x08000000, 0x10000000, 0x20000000, 0x40000000, 0x80000000, 0x1B000000, 0x36000000, 0x6c000000, 0xd8000000, 0xab000000, 0x4d000000, 0x9a000000};
 
 void AES::_initSW(const uint8_t key[32]) noexcept
 {
@@ -1259,43 +1332,82 @@ void AES::_decrypt_aesni(const void *in, void *out) const noexcept
 
 #ifdef ZT_ARCH_ARM_HAS_NEON
 
+#define ZT_INIT_ARMNEON_CRYPTO_SUBWORD(w) ((uint32_t)s_sbox[w & 0xffU] + ((uint32_t)s_sbox[(w >> 8U) & 0xffU] << 8U) + ((uint32_t)s_sbox[(w >> 16U) & 0xffU] << 16U) + ((uint32_t)s_sbox[(w >> 24U) & 0xffU] << 24U))
+#define ZT_INIT_ARMNEON_CRYPTO_ROTWORD(w) (((w) << 8U) | ((w) >> 24U))
+#define ZT_INIT_ARMNEON_CRYPTO_NK 8
+#define ZT_INIT_ARMNEON_CRYPTO_NB 4
+#define ZT_INIT_ARMNEON_CRYPTO_NR 14
+
+void AES::_init_armneon_crypto(const uint8_t key[32]) noexcept
+{
+	static const uint8_t s_sbox[256] = {0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b,0xfe, 0xd7, 0xab, 0x76, 0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0,0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0, 0xb7, 0xfd, 0x93, 0x26,0x36, 0x3f, 0xf7, 0xcc, 0x34, 0xa5, 0xe5, 0xf1, 0x71, 0xd8, 0x31, 0x15,0x04, 0xc7, 0x23, 0xc3, 0x18, 0x96, 0x05, 0x9a, 0x07, 0x12, 0x80, 0xe2,0xeb, 0x27, 0xb2, 0x75, 0x09, 0x83, 0x2c, 0x1a, 0x1b, 0x6e, 0x5a, 0xa0,0x52, 0x3b, 0xd6, 0xb3, 0x29, 0xe3, 0x2f, 0x84, 0x53, 0xd1, 0x00, 0xed,0x20, 0xfc, 0xb1, 0x5b, 0x6a, 0xcb, 0xbe, 0x39, 0x4a, 0x4c, 0x58, 0xcf,0xd0, 0xef, 0xaa, 0xfb, 0x43, 0x4d, 0x33, 0x85, 0x45, 0xf9, 0x02, 0x7f,0x50, 0x3c, 0x9f, 0xa8, 0x51, 0xa3, 0x40, 0x8f, 0x92, 0x9d, 0x38, 0xf5,0xbc, 0xb6, 0xda, 0x21, 0x10, 0xff, 0xf3, 0xd2, 0xcd, 0x0c, 0x13, 0xec,0x5f, 0x97, 0x44, 0x17, 0xc4, 0xa7, 0x7e, 0x3d, 0x64, 0x5d, 0x19, 0x73,0x60, 0x81, 0x4f, 0xdc, 0x22, 0x2a, 0x90, 0x88, 0x46, 0xee, 0xb8, 0x14,0xde, 0x5e, 0x0b, 0xdb, 0xe0, 0x32, 0x3a, 0x0a, 0x49, 0x06, 0x24, 0x5c,0xc2, 0xd3, 0xac, 0x62, 0x91, 0x95, 0xe4, 0x79, 0xe7, 0xc8, 0x37, 0x6d,0x8d, 0xd5, 0x4e, 0xa9, 0x6c, 0x56, 0xf4, 0xea, 0x65, 0x7a, 0xae, 0x08,0xba, 0x78, 0x25, 0x2e, 0x1c, 0xa6, 0xb4, 0xc6, 0xe8, 0xdd, 0x74, 0x1f,0x4b, 0xbd, 0x8b, 0x8a, 0x70, 0x3e, 0xb5, 0x66, 0x48, 0x03, 0xf6, 0x0e,0x61, 0x35, 0x57, 0xb9, 0x86, 0xc1, 0x1d, 0x9e, 0xe1, 0xf8, 0x98, 0x11,0x69, 0xd9, 0x8e, 0x94, 0x9b, 0x1e, 0x87, 0xe9, 0xce, 0x55, 0x28, 0xdf,0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f,0xb0, 0x54, 0xbb, 0x16};
+
+	{
+		uint32_t *const w = reinterpret_cast<uint32_t *>(_k.neon.ek);
+
+		for (unsigned int i=0;i<ZT_INIT_ARMNEON_CRYPTO_NK;++i) {
+			const unsigned int j = i * 4;
+			w[i] = ((uint32_t)key[j] << 24U) | ((uint32_t)key[j + 1] << 16U) | ((uint32_t)key[j + 2] << 8U) | (uint32_t)key[j + 3];
+		}
+
+		for (unsigned int i=ZT_INIT_ARMNEON_CRYPTO_NK;i<(ZT_INIT_ARMNEON_CRYPTO_NB * (ZT_INIT_ARMNEON_CRYPTO_NR + 1));++i) {
+			uint32_t t = w[i - 1];
+			const unsigned int imod = i & (ZT_INIT_ARMNEON_CRYPTO_NK - 1);
+			if (imod == 0) {
+				t = ZT_INIT_ARMNEON_CRYPTO_SUBWORD(ZT_INIT_ARMNEON_CRYPTO_ROTWORD(t)) ^ rcon[(i - 1) / ZT_INIT_ARMNEON_CRYPTO_NK];
+			} else if (imod == 4) {
+				t = ZT_INIT_ARMNEON_CRYPTO_SUBWORD(t);
+			}
+			w[i] = w[i - ZT_INIT_ARMNEON_CRYPTO_NK] ^ t;
+		}
+
+		for (unsigned int i=0;i<(ZT_INIT_ARMNEON_CRYPTO_NB * (ZT_INIT_ARMNEON_CRYPTO_NR + 1));++i)
+			w[i] = Utils::hton(w[i]);
+	}
+
+	_k.neon.dk[0] = _k.neon.ek[14];
+	for (int i=1;i<14;++i)
+		_k.neon.dk[i] = vaesimcq_u8(_k.neon.ek[14 - i]);
+	_k.neon.dk[14] = _k.neon.ek[0];
+}
+
 void AES::_encrypt_armneon_crypto(const void *const in, void *const out) const noexcept
 {
 	uint8x16_t tmp = vld1q_u8(reinterpret_cast<const uint8_t *>(in));
-	tmp = vaesmcq_u8(vaeseq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.ek)[0]));
-	tmp = vaesmcq_u8(vaeseq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.ek)[1]));
-	tmp = vaesmcq_u8(vaeseq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.ek)[2]));
-	tmp = vaesmcq_u8(vaeseq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.ek)[3]));
-	tmp = vaesmcq_u8(vaeseq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.ek)[4]));
-	tmp = vaesmcq_u8(vaeseq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.ek)[5]));
-	tmp = vaesmcq_u8(vaeseq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.ek)[6]));
-	tmp = vaesmcq_u8(vaeseq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.ek)[7]));
-	tmp = vaesmcq_u8(vaeseq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.ek)[8]));
-	tmp = vaesmcq_u8(vaeseq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.ek)[9]));
-	tmp = vaesmcq_u8(vaeseq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.ek)[10]));
-	tmp = vaesmcq_u8(vaeseq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.ek)[11]));
-	tmp = vaesmcq_u8(vaeseq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.ek)[12]));
-	tmp = veorq_u8(vaeseq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.ek)[13]), reinterpret_cast<const uint8x16_t *>(_k.sw.ek)[14]);
+	tmp = vaesmcq_u8(vaeseq_u8(tmp, _k.neon.ek[0]));
+	tmp = vaesmcq_u8(vaeseq_u8(tmp, _k.neon.ek[1]));
+	tmp = vaesmcq_u8(vaeseq_u8(tmp, _k.neon.ek[2]));
+	tmp = vaesmcq_u8(vaeseq_u8(tmp, _k.neon.ek[3]));
+	tmp = vaesmcq_u8(vaeseq_u8(tmp, _k.neon.ek[4]));
+	tmp = vaesmcq_u8(vaeseq_u8(tmp, _k.neon.ek[5]));
+	tmp = vaesmcq_u8(vaeseq_u8(tmp, _k.neon.ek[6]));
+	tmp = vaesmcq_u8(vaeseq_u8(tmp, _k.neon.ek[7]));
+	tmp = vaesmcq_u8(vaeseq_u8(tmp, _k.neon.ek[8]));
+	tmp = vaesmcq_u8(vaeseq_u8(tmp, _k.neon.ek[9]));
+	tmp = vaesmcq_u8(vaeseq_u8(tmp, _k.neon.ek[10]));
+	tmp = vaesmcq_u8(vaeseq_u8(tmp, _k.neon.ek[11]));
+	tmp = vaesmcq_u8(vaeseq_u8(tmp, _k.neon.ek[12]));
+	tmp = veorq_u8(vaeseq_u8(tmp, _k.neon.ek[13]), _k.neon.ek[14]);
 	vst1q_u8(reinterpret_cast<uint8_t *>(out), tmp);
 }
 
 void AES::_decrypt_armneon_crypto(const void *const in, void *const out) const noexcept
 {
 	uint8x16_t tmp = vld1q_u8(reinterpret_cast<const uint8_t *>(in));
-	tmp = vaesimcq_u8(vaesdq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.dk)[0]));
-	tmp = vaesimcq_u8(vaesdq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.dk)[1]));
-	tmp = vaesimcq_u8(vaesdq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.dk)[2]));
-	tmp = vaesimcq_u8(vaesdq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.dk)[3]));
-	tmp = vaesimcq_u8(vaesdq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.dk)[4]));
-	tmp = vaesimcq_u8(vaesdq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.dk)[5]));
-	tmp = vaesimcq_u8(vaesdq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.dk)[6]));
-	tmp = vaesimcq_u8(vaesdq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.dk)[7]));
-	tmp = vaesimcq_u8(vaesdq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.dk)[8]));
-	tmp = vaesimcq_u8(vaesdq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.dk)[9]));
-	tmp = vaesimcq_u8(vaesdq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.dk)[10]));
-	tmp = vaesimcq_u8(vaesdq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.dk)[11]));
-	tmp = vaesimcq_u8(vaesdq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.dk)[12]));
-	tmp = veorq_u8(vaesdq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.dk)[13]), reinterpret_cast<const uint8x16_t *>(_k.sw.dk)[14]);
+	tmp = vaesimcq_u8(vaesdq_u8(tmp, _k.neon.dk[0]));
+	tmp = vaesimcq_u8(vaesdq_u8(tmp, _k.neon.dk[1]));
+	tmp = vaesimcq_u8(vaesdq_u8(tmp, _k.neon.dk[2]));
+	tmp = vaesimcq_u8(vaesdq_u8(tmp, _k.neon.dk[3]));
+	tmp = vaesimcq_u8(vaesdq_u8(tmp, _k.neon.dk[4]));
+	tmp = vaesimcq_u8(vaesdq_u8(tmp, _k.neon.dk[5]));
+	tmp = vaesimcq_u8(vaesdq_u8(tmp, _k.neon.dk[6]));
+	tmp = vaesimcq_u8(vaesdq_u8(tmp, _k.neon.dk[7]));
+	tmp = vaesimcq_u8(vaesdq_u8(tmp, _k.neon.dk[8]));
+	tmp = vaesimcq_u8(vaesdq_u8(tmp, _k.neon.dk[9]));
+	tmp = vaesimcq_u8(vaesdq_u8(tmp, _k.neon.dk[10]));
+	tmp = vaesimcq_u8(vaesdq_u8(tmp, _k.neon.dk[11]));
+	tmp = vaesimcq_u8(vaesdq_u8(tmp, _k.neon.dk[12]));
+	tmp = veorq_u8(vaesdq_u8(tmp, _k.neon.dk[13]), _k.neon.dk[14]);
 	vst1q_u8(reinterpret_cast<uint8_t *>(out), tmp);
 }
 

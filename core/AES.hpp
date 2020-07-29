@@ -75,6 +75,12 @@ public:
 			return;
 		}
 #endif
+#ifdef ZT_ARCH_ARM_HAS_NEON
+		if (true) {
+			_init_armneon_crypto(reinterpret_cast<const uint8_t *>(key));
+			return;
+		}
+#endif
 		_initSW(reinterpret_cast<const uint8_t *>(key));
 	}
 
@@ -498,7 +504,7 @@ private:
 	static const uint32_t Td2[256];
 	static const uint32_t Td3[256];
 	static const uint8_t Td4[256];
-	static const uint32_t rcon[10];
+	static const uint32_t rcon[15];
 
 	void _initSW(const uint8_t key[32]) noexcept;
 	void _encryptSW(const uint8_t in[16], uint8_t out[16]) const noexcept;
@@ -515,16 +521,19 @@ private:
 		} ni;
 #endif
 
+#ifdef ZT_ARCH_ARM_HAS_NEON
+		struct
+		{
+			uint8x16_t ek[15];
+			uint8x16_t dk[15];
+			uint8x16_t h;
+		} neon;
+#endif
+
 		struct
 		{
 			uint64_t h[2];
-#if defined(ZT_ARCH_ARM_HAS_NEON) && !defined(_MSC_VER) && !defined(ZT_AES_NO_ACCEL)
-			__attribute__((aligned(16)))
-#endif
 			uint32_t ek[60];
-#if defined(ZT_ARCH_ARM_HAS_NEON) && !defined(_MSC_VER) && !defined(ZT_AES_NO_ACCEL)
-			__attribute__((aligned(16)))
-#endif
 			uint32_t dk[60];
 		} sw;
 	} _k;
@@ -536,6 +545,7 @@ private:
 #endif
 
 #ifdef ZT_ARCH_ARM_HAS_NEON
+	void _init_armneon_crypto(const uint8_t key[32]) noexcept;
 	void _encrypt_armneon_crypto(const void *const in, void *const out) const noexcept;
 	void _decrypt_armneon_crypto(const void *const in, void *const out) const noexcept;
 #endif
