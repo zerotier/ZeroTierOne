@@ -1257,4 +1257,48 @@ void AES::_decrypt_aesni(const void *in, void *out) const noexcept
 
 #endif // ZT_AES_AESNI
 
+#ifdef ZT_ARCH_ARM_HAS_NEON
+
+void AES::_encrypt_armneon_crypto(const void *const in, void *const out) const noexcept
+{
+	uint8x16_t tmp = vld1q_u8(reinterpret_cast<const uint8_t *>(in));
+	tmp = vaesmcq_u8(vaeseq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.ek)[0]));
+	tmp = vaesmcq_u8(vaeseq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.ek)[1]));
+	tmp = vaesmcq_u8(vaeseq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.ek)[2]));
+	tmp = vaesmcq_u8(vaeseq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.ek)[3]));
+	tmp = vaesmcq_u8(vaeseq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.ek)[4]));
+	tmp = vaesmcq_u8(vaeseq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.ek)[5]));
+	tmp = vaesmcq_u8(vaeseq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.ek)[6]));
+	tmp = vaesmcq_u8(vaeseq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.ek)[7]));
+	tmp = vaesmcq_u8(vaeseq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.ek)[8]));
+	tmp = vaesmcq_u8(vaeseq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.ek)[9]));
+	tmp = vaesmcq_u8(vaeseq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.ek)[10]));
+	tmp = vaesmcq_u8(vaeseq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.ek)[11]));
+	tmp = vaesmcq_u8(vaeseq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.ek)[12]));
+	tmp = veorq_u8(vaeseq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.ek)[13]), reinterpret_cast<const uint8x16_t *>(_k.sw.ek)[14]);
+	vst1q_u8(reinterpret_cast<uint8_t *>(out), tmp);
+}
+
+void AES::_decrypt_armneon_crypto(const void *const in, void *const out) const noexcept
+{
+	uint8x16_t tmp = vld1q_u8(reinterpret_cast<const uint8_t *>(in));
+	tmp = vaesimcq_u8(vaesdq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.dk)[0]));
+	tmp = vaesimcq_u8(vaesdq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.dk)[1]));
+	tmp = vaesimcq_u8(vaesdq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.dk)[2]));
+	tmp = vaesimcq_u8(vaesdq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.dk)[3]));
+	tmp = vaesimcq_u8(vaesdq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.dk)[4]));
+	tmp = vaesimcq_u8(vaesdq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.dk)[5]));
+	tmp = vaesimcq_u8(vaesdq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.dk)[6]));
+	tmp = vaesimcq_u8(vaesdq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.dk)[7]));
+	tmp = vaesimcq_u8(vaesdq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.dk)[8]));
+	tmp = vaesimcq_u8(vaesdq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.dk)[9]));
+	tmp = vaesimcq_u8(vaesdq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.dk)[10]));
+	tmp = vaesimcq_u8(vaesdq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.dk)[11]));
+	tmp = vaesimcq_u8(vaesdq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.dk)[12]));
+	tmp = veorq_u8(vaesdq_u8(tmp, reinterpret_cast<const uint8x16_t *>(_k.sw.dk)[13]), reinterpret_cast<const uint8x16_t *>(_k.sw.dk)[14]);
+	vst1q_u8(reinterpret_cast<uint8_t *>(out), tmp);
+}
+
+#endif // ZT_ARCH_ARM_HAS_NEON
+
 } // namespace ZeroTier

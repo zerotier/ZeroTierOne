@@ -115,6 +115,12 @@
 #include <mmintrin.h>
 #endif
 
+#if (defined(__ARM_NEON) || defined(__ARM_NEON__))
+#define ZT_ARCH_ARM_HAS_NEON 1
+#include <arm_neon.h>
+/*#include <arm_acle.h>*/
+#endif
+
 #if defined(ZT_ARCH_X64) || defined(i386) || defined(__i386) || defined(__i386__) || defined(__i486__) || defined(__i586__) || defined(__i686__) || defined(_M_IX86) || defined(__X86__) || defined(_X86_) || defined(__I86__) || defined(__INTEL__) || defined(__386)
 #define ZT_ARCH_X86 1
 #endif

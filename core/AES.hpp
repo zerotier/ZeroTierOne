@@ -92,6 +92,12 @@ public:
 			return;
 		}
 #endif
+#ifdef ZT_ARCH_ARM_HAS_NEON
+		if (true) {
+			_encrypt_armneon_crypto(in, out);
+			return;
+		}
+#endif
 		_encryptSW(reinterpret_cast<const uint8_t *>(in), reinterpret_cast<uint8_t *>(out));
 	}
 
@@ -106,6 +112,12 @@ public:
 #ifdef ZT_AES_AESNI
 		if (likely(Utils::CPUID.aes)) {
 			_decrypt_aesni(in, out);
+			return;
+		}
+#endif
+#ifdef ZT_ARCH_ARM_HAS_NEON
+		if (true) {
+			_decrypt_armneon_crypto(in, out);
 			return;
 		}
 #endif
@@ -506,7 +518,13 @@ private:
 		struct
 		{
 			uint64_t h[2];
+#if defined(ZT_ARCH_ARM_HAS_NEON) && !defined(_MSC_VER) && !defined(ZT_AES_NO_ACCEL)
+			__attribute__((aligned(16)))
+#endif
 			uint32_t ek[60];
+#if defined(ZT_ARCH_ARM_HAS_NEON) && !defined(_MSC_VER) && !defined(ZT_AES_NO_ACCEL)
+			__attribute__((aligned(16)))
+#endif
 			uint32_t dk[60];
 		} sw;
 	} _k;
@@ -515,6 +533,11 @@ private:
 	void _init_aesni(const uint8_t key[32]) noexcept;
 	void _encrypt_aesni(const void *const in, void *const out) const noexcept;
 	void _decrypt_aesni(const void *in, void *out) const noexcept;
+#endif
+
+#ifdef ZT_ARCH_ARM_HAS_NEON
+	void _encrypt_armneon_crypto(const void *const in, void *const out) const noexcept;
+	void _decrypt_armneon_crypto(const void *const in, void *const out) const noexcept;
 #endif
 };
 
