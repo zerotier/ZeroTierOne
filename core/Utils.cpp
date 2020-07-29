@@ -17,11 +17,9 @@
 #include "SHA512.hpp"
 
 #ifdef __UNIX_LIKE__
-
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/uio.h>
-
 #endif
 
 #include <time.h>
@@ -31,9 +29,37 @@
 #include <wincrypt.h>
 #endif
 
+#if defined(ZT_ARCH_ARM_HAS_NEON) && defined(__LINUX__)
+#include <sys/auxv.h>
+#include <asm/hwcap.h>
+#endif
+
 namespace ZeroTier {
 
 namespace Utils {
+
+#ifdef ZT_ARCH_ARM_HAS_NEON
+ARMCapabilities::ARMCapabilities() noexcept
+{
+	if (sizeof(void *) == 4) {
+		const long hwcaps2 = getauxval(AT_HWCAP2);
+		this->aes = (hwcaps2 & HWCAP2_AES) != 0;
+		this->crc32 = (hwcaps2 & HWCAP2_CRC32) != 0;
+		this->pmull = (hwcaps2 & HWCAP2_PMULL) != 0;
+		this->sha1 = (hwcaps2 & HWCAP2_SHA1) != 0;
+		this->sha2 = (hwcaps2 & HWCAP2_SHA2) != 0;
+	} else {
+		const long hwcaps = getauxval(AT_HWCAP);
+		this->aes = (hwcaps & HWCAP_AES) != 0;
+		this->crc32 = (hwcaps & HWCAP_CRC32) != 0;
+		this->pmull = (hwcaps & HWCAP_PMULL) != 0;
+		this->sha1 = (hwcaps & HWCAP_SHA1) != 0;
+		this->sha2 = (hwcaps & HWCAP_SHA2) != 0;
+	}
+}
+
+const ARMCapabilities ARMCAP;
+#endif
 
 #ifdef ZT_ARCH_X64
 

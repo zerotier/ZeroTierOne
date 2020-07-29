@@ -79,7 +79,7 @@ public:
 		}
 #endif
 #ifdef ZT_AES_NEON
-		if (s_hasNeonAes) {
+		if (Utils::ARMCAP.aes) {
 			_init_armneon_crypto(reinterpret_cast<const uint8_t *>(key));
 			return;
 		}
@@ -102,7 +102,7 @@ public:
 		}
 #endif
 #ifdef ZT_AES_NEON
-		if (s_hasNeonAes) {
+		if (Utils::ARMCAP.aes) {
 			_encrypt_armneon_crypto(in, out);
 			return;
 		}
@@ -125,7 +125,7 @@ public:
 		}
 #endif
 #ifdef ZT_AES_NEON
-		if (s_hasNeonAes) {
+		if (Utils::ARMCAP.aes) {
 			_decrypt_armneon_crypto(in, out);
 			return;
 		}
@@ -548,8 +548,6 @@ private:
 #endif
 
 #ifdef ZT_AES_NEON
-	static const bool s_hasNeonAes;
-	static const bool s_hasNeonGcm;
 	void _init_armneon_crypto(const uint8_t key[32]) noexcept;
 	void _encrypt_armneon_crypto(const void *const in, void *const out) const noexcept;
 	void _decrypt_armneon_crypto(const void *const in, void *const out) const noexcept;

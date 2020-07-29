@@ -745,7 +745,7 @@ void AES::CTR::crypt(const void *const input, unsigned int len) noexcept
 #endif // ZT_AES_AESNI
 
 #ifdef ZT_AES_NEON
-	if (s_hasNeonAes) {
+	if (Utils::ARMCAP.aes) {
 		uint8x16_t dd = vld1q_u8(reinterpret_cast<uint8_t *>(_ctr));
 		const uint32x4_t one = {0,0,0,1};
 
@@ -1331,9 +1331,6 @@ void AES::_decrypt_aesni(const void *in, void *out) const noexcept
 #endif // ZT_AES_AESNI
 
 #ifdef ZT_AES_NEON
-
-const bool AES::s_hasNeonAes = true;
-const bool AES::s_hasNeonGcm = true;
 
 #define ZT_INIT_ARMNEON_CRYPTO_SUBWORD(w) ((uint32_t)s_sbox[w & 0xffU] + ((uint32_t)s_sbox[(w >> 8U) & 0xffU] << 8U) + ((uint32_t)s_sbox[(w >> 16U) & 0xffU] << 16U) + ((uint32_t)s_sbox[(w >> 24U) & 0xffU] << 24U))
 #define ZT_INIT_ARMNEON_CRYPTO_ROTWORD(w) (((w) << 8U) | ((w) >> 24U))

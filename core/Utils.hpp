@@ -56,6 +56,20 @@ namespace Utils {
 #define ZT_ROR32(x, r) (((x) >> (r)) | ((x) << (32 - (r))))
 #define ZT_ROL32(x, r) (((x) << (r)) | ((x) >> (32 - (r))))
 
+#ifdef ZT_ARCH_ARM_HAS_NEON
+struct ARMCapabilities
+{
+	ARMCapabilities() noexcept;
+
+	bool aes;
+	bool crc32;
+	bool pmull;
+	bool sha1;
+	bool sha2;
+};
+extern const ARMCapabilities ARMCAP;
+#endif
+
 #ifdef ZT_ARCH_X64
 struct CPUIDRegisters
 {
