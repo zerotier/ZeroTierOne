@@ -21,6 +21,9 @@
 #if !defined(ZT_AES_NO_ACCEL) && defined(ZT_ARCH_X64)
 #define ZT_AES_AESNI 1
 #endif
+#if !defined(ZT_AES_NO_ACCEL) && defined(ZT_ARCH_ARM_HAS_NEON)
+#define ZT_AES_NEON 1
+#endif
 
 namespace ZeroTier {
 
@@ -75,8 +78,8 @@ public:
 			return;
 		}
 #endif
-#ifdef ZT_ARCH_ARM_HAS_NEON
-		if (true) {
+#ifdef ZT_AES_NEON
+		if (s_hasNeonAes) {
 			_init_armneon_crypto(reinterpret_cast<const uint8_t *>(key));
 			return;
 		}
@@ -98,8 +101,8 @@ public:
 			return;
 		}
 #endif
-#ifdef ZT_ARCH_ARM_HAS_NEON
-		if (true) {
+#ifdef ZT_AES_NEON
+		if (s_hasNeonAes) {
 			_encrypt_armneon_crypto(in, out);
 			return;
 		}
@@ -121,8 +124,8 @@ public:
 			return;
 		}
 #endif
-#ifdef ZT_ARCH_ARM_HAS_NEON
-		if (true) {
+#ifdef ZT_AES_NEON
+		if (s_hasNeonAes) {
 			_decrypt_armneon_crypto(in, out);
 			return;
 		}
@@ -521,7 +524,7 @@ private:
 		} ni;
 #endif
 
-#ifdef ZT_ARCH_ARM_HAS_NEON
+#ifdef ZT_AES_NEON
 		struct
 		{
 			uint8x16_t ek[15];
@@ -540,11 +543,13 @@ private:
 
 #ifdef ZT_AES_AESNI
 	void _init_aesni(const uint8_t key[32]) noexcept;
-	void _encrypt_aesni(const void *const in, void *const out) const noexcept;
+	void _encrypt_aesni(const void *in, void *out) const noexcept;
 	void _decrypt_aesni(const void *in, void *out) const noexcept;
 #endif
 
-#ifdef ZT_ARCH_ARM_HAS_NEON
+#ifdef ZT_AES_NEON
+	static const bool s_hasNeonAes;
+	static const bool s_hasNeonGcm;
 	void _init_armneon_crypto(const uint8_t key[32]) noexcept;
 	void _encrypt_armneon_crypto(const void *const in, void *const out) const noexcept;
 	void _decrypt_armneon_crypto(const void *const in, void *const out) const noexcept;
