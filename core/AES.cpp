@@ -47,7 +47,7 @@ ZT_INLINE uint8x16_t s_clmul_armneon_crypto(uint8x16_t a8, const uint8x16_t y, c
 	return vrbitq_u8(veorq_u8(r0, t0));
 }
 
-#endif
+#endif // ZT_AES_NEON
 
 #ifdef ZT_HAVE_UINT128
 

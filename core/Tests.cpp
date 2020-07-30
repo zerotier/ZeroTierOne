@@ -1115,7 +1115,7 @@ extern "C" const char *ZTT_crypto()
 
 		{
 			uint8_t tag[16];
-			ZT_T_PRINTF("[crypto] Testing AES-GMAC (hardware acceleration: %s)... ", AES::accelerated() ? "enabled" : "disabled");
+			ZT_T_PRINTF("[crypto] Testing AES-GMAC (hardware acceleration: %s)... ", AES::GMAC::accelerated() ? "enabled" : "disabled");
 			{
 				AES aes(AES_GMAC_VECTOR_0_KEY);
 				AES::GMAC gmac(aes);

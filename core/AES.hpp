@@ -150,6 +150,22 @@ public:
 
 	public:
 		/**
+		 * @return True if this system has hardware GMAC acceleration
+		 */
+		static ZT_INLINE bool accelerated()
+		{
+#ifdef ZT_AES_AESNI
+			return Utils::CPUID.aes;
+#else
+#ifdef ZT_AES_NEON
+			return Utils::ARMCAP.pmull;
+#else
+			return false;
+#endif
+#endif
+		}
+
+		/**
 		 * Create a new instance of GMAC (must be initialized with init() before use)
 		 *
 		 * @param aes Keyed AES instance to use
