@@ -443,8 +443,8 @@ void AES::GMAC::finish(uint8_t tag[16]) noexcept
 #ifdef ZT_AES_NEON
 	if (Utils::ARMCAP.pmull) {
 		uint64_t tmp[2];
-                uint8x16_t y = vld1q_u8(reinterpret_cast<const uint8_t *>(_y));
-                const uint8x16_t h = _aes._k.neon.h;
+		uint8x16_t y = vld1q_u8(reinterpret_cast<const uint8_t *>(_y));
+		const uint8x16_t h = _aes._k.neon.h;
 
 		if (_rp) {
 			while (_rp < 16)
