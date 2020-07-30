@@ -705,7 +705,7 @@ void AES::CTR::crypt(const void *const input, unsigned int len) noexcept
 		if (likely(len >= 64)) {
 
 #if defined(ZT_AES_VAES512) && defined(ZT_AES_VAES256)
-			if (Utils::CPUID.vaes) {
+			if (Utils::CPUID.vaes && (len >= 256)) {
 				if (Utils::CPUID.avx512f) {
 					p_aesCtrInnerVAES512(len, _ctr[0], c1, in, out, k);
 				} else {
@@ -716,7 +716,7 @@ void AES::CTR::crypt(const void *const input, unsigned int len) noexcept
 #endif
 
 #if !defined(ZT_AES_VAES512) && defined(ZT_AES_VAES256)
-			if (Utils::CPUID.vaes) {
+			if (Utils::CPUID.vaes && (len >= 256)) {
 				p_aesCtrInnerVAES256(len, _ctr[0], c1, in, out, k);
 				goto skip_conventional_aesni_64;
 			}
@@ -897,7 +897,7 @@ void AES::CTR::crypt(const void *const input, unsigned int len) noexcept
 		out += totalLen;
 		_len = totalLen + len;
 
-		if (len >= 64) {
+		if (likely(len >= 64)) {
 			const uint32x4_t four = {0,0,0,4};
 			uint8x16_t dd1 = (uint8x16_t)vaddq_u32((uint32x4_t)dd, one);
 			uint8x16_t dd2 = (uint8x16_t)vaddq_u32((uint32x4_t)dd1, one);
