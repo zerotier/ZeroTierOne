@@ -1,10 +1,10 @@
 /*
- * Copyright (c)2019 ZeroTier, Inc.
+ * Copyright (c)2013-2020 ZeroTier, Inc.
  *
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2023-01-01
+ * Change Date: 2024-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -34,6 +34,7 @@
 #include "Salsa20.hpp"
 #include "NetworkController.hpp"
 #include "Hashtable.hpp"
+#include "BondController.hpp"
 
 // Bit mask for "expecting reply" hash
 #define ZT_EXPECTING_REPLIES_BUCKET_MASK1 255
@@ -186,6 +187,8 @@ public:
 
 	inline const Identity &identity() const { return _RR.identity; }
 
+	inline BondController *bondController() const { return _RR.bc; }
+
 	/**
 	 * Register that we are expecting a reply to a packet ID
 	 *
@@ -247,9 +250,6 @@ public:
 	inline const Address &remoteTraceTarget() const { return _remoteTraceTarget; }
 	inline Trace::Level remoteTraceLevel() const { return _remoteTraceLevel; }
 
-	inline void setMultipathMode(uint8_t mode) { _multipathMode = mode; }
-	inline uint8_t getMultipathMode() { return _multipathMode; }
-
 	inline bool localControllerHasAuthorized(const int64_t now,const uint64_t nwid,const Address &addr) const
 	{
 		_localControllerAuthorizations_m.lock();
@@ -306,10 +306,9 @@ private:
 	Address _remoteTraceTarget;
 	enum Trace::Level _remoteTraceLevel;
 
-	uint8_t _multipathMode;
-
 	volatile int64_t _now;
 	int64_t _lastPingCheck;
+	int64_t _lastGratuitousPingCheck;
 	int64_t _lastHousekeepingRun;
 	int64_t _lastMemoizedTraceSettings;
 	volatile int64_t _prngState[2];

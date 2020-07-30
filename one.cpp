@@ -72,6 +72,8 @@
 #include "osdep/Http.hpp"
 #include "osdep/Thread.hpp"
 
+#include "node/BondController.hpp"
+
 #include "service/OneService.hpp"
 
 #include "ext/json/json.hpp"
@@ -459,6 +461,67 @@ static int cli(int argc,char **argv)
 							OSUtils::jsonString(p["role"],"-").c_str(),
 							(int)OSUtils::jsonInt(p["latency"],0),
 							bestPath.c_str());
+					}
+				}
+			}
+			return 0;
+		} else {
+			printf("%u %s %s" ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
+			return 1;
+		}
+	} else if (command == "listbonds") {
+		const unsigned int scode = Http::GET(1024 * 1024 * 16,60000,(const struct sockaddr *)&addr,"/bonds",requestHeaders,responseHeaders,responseBody);
+
+		if (scode == 0) {
+			printf("Error connecting to the ZeroTier service: %s\n\nPlease check that the service is running and that TCP port 9993 can be contacted via 127.0.0.1." ZT_EOL_S, responseBody.c_str());
+			return 1;
+		}
+
+		nlohmann::json j;
+		try {
+			j = OSUtils::jsonParse(responseBody);
+		} catch (std::exception &exc) {
+			printf("%u %s invalid JSON response (%s)" ZT_EOL_S,scode,command.c_str(),exc.what());
+			return 1;
+		} catch ( ... ) {
+			printf("%u %s invalid JSON response (unknown exception)" ZT_EOL_S,scode,command.c_str());
+			return 1;
+		}
+
+		if (scode == 200) {
+			if (json) {
+				printf("%s" ZT_EOL_S,OSUtils::jsonDump(j).c_str());
+			} else {
+				printf("    <peer>                        <bondtype>    <status>    <links>" ZT_EOL_S);
+				if (j.is_array()) {
+					for(unsigned long k=0;k<j.size();++k) {
+						nlohmann::json &p = j[k];
+
+						bool isBonded = p["isBonded"];
+						int8_t bondingPolicy = p["bondingPolicy"];
+						bool isHealthy = p["isHealthy"];
+						int8_t numAliveLinks = p["numAliveLinks"];
+						int8_t numTotalLinks = p["numTotalLinks"];
+
+						if (isBonded) {
+							std::string healthStr;
+							if (isHealthy) {
+								healthStr = "HEALTHY";
+							} else {
+								healthStr = "DEGRADED";
+							}
+							std::string policyStr = "none";
+							if (bondingPolicy >= ZT_BONDING_POLICY_NONE && bondingPolicy <= ZT_BONDING_POLICY_BALANCE_AWARE) {
+								policyStr = BondController::getPolicyStrByCode(bondingPolicy);
+							}
+
+							printf("%10s  %32s    %8s        %d/%d" ZT_EOL_S,
+								OSUtils::jsonString(p ["address"],"-").c_str(),
+								policyStr.c_str(),
+								healthStr.c_str(),
+								numAliveLinks,
+								numTotalLinks);
+						}
 					}
 				}
 			}

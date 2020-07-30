@@ -214,12 +214,12 @@ public:
 		return l;
 	}
 
-	static inline float normalize(float value, int64_t bigMin, int64_t bigMax, int32_t targetMin, int32_t targetMax)
+	static inline float normalize(float value, float bigMin, float bigMax, float targetMin, float targetMax)
 	{
-		int64_t bigSpan = bigMax - bigMin;
-		int64_t smallSpan = targetMax - targetMin;
-		float valueScaled = (value - (float)bigMin) / (float)bigSpan;
-		return (float)targetMin + valueScaled * (float)smallSpan;
+		float bigSpan = bigMax - bigMin;
+		float smallSpan = targetMax - targetMin;
+		float valueScaled = (value - bigMin) / bigSpan;
+		return targetMin + valueScaled * smallSpan;
 	}
 
 	/**
@@ -253,6 +253,7 @@ public:
 	static inline int strToInt(const char *s) { return (int)strtol(s,(char **)0,10); }
 	static inline unsigned long strToULong(const char *s) { return strtoul(s,(char **)0,10); }
 	static inline long strToLong(const char *s) { return strtol(s,(char **)0,10); }
+	static inline double strToDouble(const char *s) { return strtod(s,NULL); }
 	static inline unsigned long long strToU64(const char *s)
 	{
 #ifdef __WINDOWS__

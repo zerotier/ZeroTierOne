@@ -30,6 +30,7 @@ class Multicaster;
 class NetworkController;
 class SelfAwareness;
 class Trace;
+class BondController;
 
 /**
  * Holds global state for an instance of ZeroTier::Node
@@ -75,6 +76,7 @@ public:
 	Multicaster *mc;
 	Topology *topology;
 	SelfAwareness *sa;
+	BondController *bc;
 
 	// This node's identity and string representations thereof
 	Identity identity;

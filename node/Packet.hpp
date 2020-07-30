@@ -1,10 +1,10 @@
 /*
- * Copyright (c)2019 ZeroTier, Inc.
+ * Copyright (c)2013-2020 ZeroTier, Inc.
  *
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2023-01-01
+ * Change Date: 2024-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -56,7 +56,7 @@
  *    + Inline push of CertificateOfMembership deprecated
  * 9  - 1.2.0 ... 1.2.14
  * 10 - 1.4.0 ... CURRENT
- *    + Multipath capability and load balancing
+ *    + Multipath capability and load balancing (tentative)
  */
 #define ZT_PROTO_VERSION 10
 
@@ -931,13 +931,13 @@ public:
 		 *
 		 * Upon receipt of this packet, the local peer will verify that the correct
 		 * number of bytes were received by the remote peer. If these values do
-		 * not agree that could be an indicator of packet loss.
+		 * not agree that could be an indication of packet loss.
 		 *
 		 * Additionally, the local peer knows the interval of time that has
 		 * elapsed since the last received ACK. With this information it can compute
 		 * a rough estimate of the current throughput.
 		 *
-		 * This is sent at a maximum rate of once per every ZT_PATH_ACK_INTERVAL
+		 * This is sent at a maximum rate of once per every ZT_QOS_ACK_INTERVAL
 		 */
 		VERB_ACK = 0x12,
 
@@ -963,7 +963,8 @@ public:
 		 * measure of the amount of time between when a packet was received and the
 		 * egress time of its tracking QoS packet.
 		 *
-		 * This is sent at a maximum rate of once per every ZT_PATH_QOS_INTERVAL
+		 * This is sent at a maximum rate of once per every
+		 * ZT_QOS_MEASUREMENT_INTERVAL
 		 */
 		VERB_QOS_MEASUREMENT = 0x13,
 
@@ -996,7 +997,34 @@ public:
 		 * node on startup. This is helpful in identifying traces from different
 		 * members of a cluster.
 		 */
-		VERB_REMOTE_TRACE = 0x15
+		VERB_REMOTE_TRACE = 0x15,
+
+		/**
+		 * A request to a peer to use a specific path in a multi-path scenario:
+		 * <[2] 16-bit unsigned integer that encodes a path choice utility>
+		 *
+		 * This is sent when a node operating in multipath mode observes that
+		 * its inbound and outbound traffic aren't going over the same path. The
+		 * node will compute its perceived utility for using its chosen outbound
+		 * path and send this to a peer in an attempt to petition it to send
+		 * its traffic over this same path.
+		 *
+		 * Scenarios:
+		 *
+		 * (1) Remote peer utility is GREATER than ours:
+		 *     - Remote peer will refuse the petition and continue using current path
+		 * (2) Remote peer utility is LESS than than ours:
+		 *     - Remote peer will accept the petition and switch to our chosen path
+		 * (3) Remote peer utility is EQUAL to our own:
+		 *     - To prevent confusion and flapping, both side will agree to use the
+		 *       numerical values of their identities to determine which path to use.
+		 *       The peer with the greatest identity will win.
+		 *
+		 * If a node petitions a peer repeatedly with no effect it will regard
+		 * that as a refusal by the remote peer, in this case if the utility is
+		 * negligible it will voluntarily switch to the remote peer's chosen path.
+		 */
+		VERB_PATH_NEGOTIATION_REQUEST = 0x16
 	};
 
 	/**
