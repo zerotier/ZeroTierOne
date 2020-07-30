@@ -44,7 +44,11 @@ public:
 #ifdef ZT_AES_AESNI
 		return Utils::CPUID.aes;
 #else
+#ifdef ZT_AES_NEON
+		return Utils::ARMCAP.aes;
+#else
 		return false;
+#endif
 #endif
 	}
 
@@ -527,6 +531,7 @@ private:
 #ifdef ZT_AES_NEON
 		struct
 		{
+			uint64_t hsw[2]; // in case it has AES but not PMULL, not sure if that ever happens
 			uint8x16_t ek[15];
 			uint8x16_t dk[15];
 			uint8x16_t h;
@@ -549,8 +554,8 @@ private:
 
 #ifdef ZT_AES_NEON
 	void _init_armneon_crypto(const uint8_t key[32]) noexcept;
-	void _encrypt_armneon_crypto(const void *const in, void *const out) const noexcept;
-	void _decrypt_armneon_crypto(const void *const in, void *const out) const noexcept;
+	void _encrypt_armneon_crypto(const void *in, void *out) const noexcept;
+	void _decrypt_armneon_crypto(const void *in, void *out) const noexcept;
 #endif
 };
 

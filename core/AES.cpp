@@ -20,6 +20,35 @@ namespace ZeroTier {
 
 namespace {
 
+#ifdef ZT_AES_NEON
+
+ZT_INLINE uint8x16_t s_clmul_armneon_crypto(uint8x16_t a8, const uint8x16_t y, const uint8_t b[16]) noexcept
+{
+	const uint8x16_t p = vreinterpretq_u8_u64(vdupq_n_u64(0x0000000000000087));
+	const uint8x16_t z = vdupq_n_u8(0);
+	uint8x16_t b8 = vrbitq_u8(veorq_u8(vld1q_u8(b), y));
+	uint8x16_t r0, r1, t0, t1;
+	__asm__ __volatile__("pmull     %0.1q, %1.1d, %2.1d \n\t" : "=w" (r0) : "w" (a8), "w" (b8));
+	__asm__ __volatile__("pmull2   %0.1q, %1.2d, %2.2d \n\t" :"=w" (r1) : "w" (a8), "w" (b8));
+	t0 = vextq_u8(b8, b8, 8);
+	__asm__ __volatile__("pmull     %0.1q, %1.1d, %2.1d \n\t" : "=w" (t1) : "w" (a8), "w" (t0));
+	__asm__ __volatile__("pmull2   %0.1q, %1.2d, %2.2d \n\t" :"=w" (t0) : "w" (a8), "w" (t0));
+	t0 = veorq_u8(t0, t1);
+	t1 = vextq_u8(z, t0, 8);
+	r0 = veorq_u8(r0, t1);
+	t1 = vextq_u8(t0, z, 8);
+	r1 = veorq_u8(r1, t1);
+	__asm__ __volatile__("pmull2   %0.1q, %1.2d, %2.2d \n\t" :"=w" (t0) : "w" (r1), "w" (p));
+	t1 = vextq_u8(t0, z, 8);
+	r1 = veorq_u8(r1, t1);
+	t1 = vextq_u8(z, t0, 8);
+	r0 = veorq_u8(r0, t1);
+	__asm__ __volatile__("pmull     %0.1q, %1.1d, %2.1d \n\t" : "=w" (t0) : "w" (r1), "w" (p));
+	return vrbitq_u8(veorq_u8(r0, t0));
+}
+
+#endif
+
 #ifdef ZT_HAVE_UINT128
 
 ZT_INLINE void s_bmul64(const uint64_t x, const uint64_t y, uint64_t &r_high, uint64_t &r_low) noexcept
@@ -264,7 +293,41 @@ void AES::GMAC::update(const void *const data, unsigned int len) noexcept
 
 		return;
 	}
-#endif
+#endif // ZT_AES_AESNI
+
+#ifdef ZT_AES_NEON
+	if (Utils::ARMCAP.pmull) {
+		uint8x16_t y = vld1q_u8(reinterpret_cast<const uint8_t *>(_y));
+		const uint8x16_t h = _aes._k.neon.h;
+
+		if (_rp) {
+			for(;;) {
+				if (!len)
+					return;
+				--len;
+				_r[_rp++] = *(in++);
+				if (_rp == 16) {
+					y = s_clmul_armneon_crypto(h, y, _r);
+					break;
+				}
+			}
+		}
+
+		while (len >= 16) {
+			y = s_clmul_armneon_crypto(h, y, in);
+			in += 16;
+			len -= 16;
+		}
+
+		vst1q_u8(reinterpret_cast<uint8_t *>(_y), y);
+
+		for (unsigned int i = 0; i < len; ++i)
+			_r[i] = in[i];
+		_rp = len; // len is always less than 16 here
+
+		return;
+	}
+#endif // ZT_AES_NEON
 
 	const uint64_t h0 = _aes._k.sw.h[0];
 	const uint64_t h1 = _aes._k.sw.h[1];
@@ -294,12 +357,12 @@ void AES::GMAC::update(const void *const data, unsigned int len) noexcept
 		len -= 16;
 	}
 
+	_y[0] = y0;
+	_y[1] = y1;
+
 	for (unsigned int i = 0; i < len; ++i)
 		_r[i] = in[i];
 	_rp = len; // len is always less than 16 here
-
-	_y[0] = y0;
-	_y[1] = y1;
 }
 
 void AES::GMAC::finish(uint8_t tag[16]) noexcept
@@ -375,7 +438,39 @@ void AES::GMAC::finish(uint8_t tag[16]) noexcept
 
 		return;
 	}
+#endif // ZT_AES_AESNI
+
+#ifdef ZT_AES_NEON
+	if (Utils::ARMCAP.pmull) {
+		uint64_t tmp[2];
+                uint8x16_t y = vld1q_u8(reinterpret_cast<const uint8_t *>(_y));
+                const uint8x16_t h = _aes._k.neon.h;
+
+		if (_rp) {
+			while (_rp < 16)
+				_r[_rp++] = 0;
+			y = s_clmul_armneon_crypto(h, y, _r);
+		}
+
+		tmp[0] = Utils::hton((uint64_t)_len << 3U);
+		tmp[1] = 0;
+		y = s_clmul_armneon_crypto(h, y, reinterpret_cast<const uint8_t *>(tmp));
+
+		Utils::copy< 12 >(tmp, _iv);
+#if __BYTE_ORDER == __BIG_ENDIAN
+		reinterpret_cast<uint32_t *>(tmp)[3] = 0x00000001;
+#else
+		reinterpret_cast<uint32_t *>(tmp)[3] = 0x01000000;
 #endif
+		_aes.encrypt(tmp, tmp);
+
+		uint8x16_t yy = y;
+		Utils::storeMachineEndian< uint64_t >(tag, tmp[0] ^ reinterpret_cast<const uint64_t *>(&yy)[0]);
+		Utils::storeMachineEndian< uint64_t >(tag + 8, tmp[1] ^ reinterpret_cast<const uint64_t *>(&yy)[1]);
+
+		return;
+	}
+#endif // ZT_AES_NEON
 
 	const uint64_t h0 = _aes._k.sw.h[0];
 	const uint64_t h1 = _aes._k.sw.h[1];
@@ -400,7 +495,7 @@ void AES::GMAC::finish(uint8_t tag[16]) noexcept
 #else
 	reinterpret_cast<uint32_t *>(iv2)[3] = 0x01000000;
 #endif
-	_aes._encryptSW(reinterpret_cast<const uint8_t *>(iv2), reinterpret_cast<uint8_t *>(iv2));
+	_aes.encrypt(iv2, iv2);
 
 	Utils::storeMachineEndian< uint64_t >(tag, iv2[0] ^ y0);
 	Utils::storeMachineEndian< uint64_t >(tag + 8, iv2[1] ^ y1);
@@ -829,8 +924,8 @@ void AES::CTR::crypt(const void *const input, unsigned int len) noexcept
 			uint8x16_t pt = vld1q_u8(reinterpret_cast<const uint8_t *>(in));
 			vst1q_u8(reinterpret_cast<uint8_t *>(out), veorq_u8(pt, tmp));
 			in += 16;
-      len -= 16;
-      out += 16;
+			len -= 16;
+			out += 16;
 		}
 
 		// Any remaining input is placed in _out. This will be picked up and crypted
@@ -1024,10 +1119,7 @@ void AES::_initSW(const uint8_t key[32]) noexcept
 		rk += 8;
 	}
 
-	uint64_t zero[2];
-	zero[0] = 0;
-	zero[1] = 0;
-	_encryptSW((const uint8_t *)zero, (uint8_t *)_k.sw.h);
+	_encryptSW((const uint8_t *)Utils::ZERO256, (uint8_t *)_k.sw.h);
 	_k.sw.h[0] = Utils::ntoh(_k.sw.h[0]);
 	_k.sw.h[1] = Utils::ntoh(_k.sw.h[1]);
 
@@ -1342,33 +1434,38 @@ void AES::_init_armneon_crypto(const uint8_t key[32]) noexcept
 {
 	static const uint8_t s_sbox[256] = {0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b,0xfe, 0xd7, 0xab, 0x76, 0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0,0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0, 0xb7, 0xfd, 0x93, 0x26,0x36, 0x3f, 0xf7, 0xcc, 0x34, 0xa5, 0xe5, 0xf1, 0x71, 0xd8, 0x31, 0x15,0x04, 0xc7, 0x23, 0xc3, 0x18, 0x96, 0x05, 0x9a, 0x07, 0x12, 0x80, 0xe2,0xeb, 0x27, 0xb2, 0x75, 0x09, 0x83, 0x2c, 0x1a, 0x1b, 0x6e, 0x5a, 0xa0,0x52, 0x3b, 0xd6, 0xb3, 0x29, 0xe3, 0x2f, 0x84, 0x53, 0xd1, 0x00, 0xed,0x20, 0xfc, 0xb1, 0x5b, 0x6a, 0xcb, 0xbe, 0x39, 0x4a, 0x4c, 0x58, 0xcf,0xd0, 0xef, 0xaa, 0xfb, 0x43, 0x4d, 0x33, 0x85, 0x45, 0xf9, 0x02, 0x7f,0x50, 0x3c, 0x9f, 0xa8, 0x51, 0xa3, 0x40, 0x8f, 0x92, 0x9d, 0x38, 0xf5,0xbc, 0xb6, 0xda, 0x21, 0x10, 0xff, 0xf3, 0xd2, 0xcd, 0x0c, 0x13, 0xec,0x5f, 0x97, 0x44, 0x17, 0xc4, 0xa7, 0x7e, 0x3d, 0x64, 0x5d, 0x19, 0x73,0x60, 0x81, 0x4f, 0xdc, 0x22, 0x2a, 0x90, 0x88, 0x46, 0xee, 0xb8, 0x14,0xde, 0x5e, 0x0b, 0xdb, 0xe0, 0x32, 0x3a, 0x0a, 0x49, 0x06, 0x24, 0x5c,0xc2, 0xd3, 0xac, 0x62, 0x91, 0x95, 0xe4, 0x79, 0xe7, 0xc8, 0x37, 0x6d,0x8d, 0xd5, 0x4e, 0xa9, 0x6c, 0x56, 0xf4, 0xea, 0x65, 0x7a, 0xae, 0x08,0xba, 0x78, 0x25, 0x2e, 0x1c, 0xa6, 0xb4, 0xc6, 0xe8, 0xdd, 0x74, 0x1f,0x4b, 0xbd, 0x8b, 0x8a, 0x70, 0x3e, 0xb5, 0x66, 0x48, 0x03, 0xf6, 0x0e,0x61, 0x35, 0x57, 0xb9, 0x86, 0xc1, 0x1d, 0x9e, 0xe1, 0xf8, 0x98, 0x11,0x69, 0xd9, 0x8e, 0x94, 0x9b, 0x1e, 0x87, 0xe9, 0xce, 0x55, 0x28, 0xdf,0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f,0xb0, 0x54, 0xbb, 0x16};
 
-	{
-		uint32_t *const w = reinterpret_cast<uint32_t *>(_k.neon.ek);
+	uint64_t h[2];
+	uint32_t *const w = reinterpret_cast<uint32_t *>(_k.neon.ek);
 
-		for (unsigned int i=0;i<ZT_INIT_ARMNEON_CRYPTO_NK;++i) {
-			const unsigned int j = i * 4;
-			w[i] = ((uint32_t)key[j] << 24U) | ((uint32_t)key[j + 1] << 16U) | ((uint32_t)key[j + 2] << 8U) | (uint32_t)key[j + 3];
-		}
-
-		for (unsigned int i=ZT_INIT_ARMNEON_CRYPTO_NK;i<(ZT_INIT_ARMNEON_CRYPTO_NB * (ZT_INIT_ARMNEON_CRYPTO_NR + 1));++i) {
-			uint32_t t = w[i - 1];
-			const unsigned int imod = i & (ZT_INIT_ARMNEON_CRYPTO_NK - 1);
-			if (imod == 0) {
-				t = ZT_INIT_ARMNEON_CRYPTO_SUBWORD(ZT_INIT_ARMNEON_CRYPTO_ROTWORD(t)) ^ rcon[(i - 1) / ZT_INIT_ARMNEON_CRYPTO_NK];
-			} else if (imod == 4) {
-				t = ZT_INIT_ARMNEON_CRYPTO_SUBWORD(t);
-			}
-			w[i] = w[i - ZT_INIT_ARMNEON_CRYPTO_NK] ^ t;
-		}
-
-		for (unsigned int i=0;i<(ZT_INIT_ARMNEON_CRYPTO_NB * (ZT_INIT_ARMNEON_CRYPTO_NR + 1));++i)
-			w[i] = Utils::hton(w[i]);
+	for (unsigned int i=0;i<ZT_INIT_ARMNEON_CRYPTO_NK;++i) {
+		const unsigned int j = i * 4;
+		w[i] = ((uint32_t)key[j] << 24U) | ((uint32_t)key[j + 1] << 16U) | ((uint32_t)key[j + 2] << 8U) | (uint32_t)key[j + 3];
 	}
+
+	for (unsigned int i=ZT_INIT_ARMNEON_CRYPTO_NK;i<(ZT_INIT_ARMNEON_CRYPTO_NB * (ZT_INIT_ARMNEON_CRYPTO_NR + 1));++i) {
+		uint32_t t = w[i - 1];
+		const unsigned int imod = i & (ZT_INIT_ARMNEON_CRYPTO_NK - 1);
+		if (imod == 0) {
+			t = ZT_INIT_ARMNEON_CRYPTO_SUBWORD(ZT_INIT_ARMNEON_CRYPTO_ROTWORD(t)) ^ rcon[(i - 1) / ZT_INIT_ARMNEON_CRYPTO_NK];
+		} else if (imod == 4) {
+			t = ZT_INIT_ARMNEON_CRYPTO_SUBWORD(t);
+		}
+		w[i] = w[i - ZT_INIT_ARMNEON_CRYPTO_NK] ^ t;
+	}
+
+	for (unsigned int i=0;i<(ZT_INIT_ARMNEON_CRYPTO_NB * (ZT_INIT_ARMNEON_CRYPTO_NR + 1));++i)
+		w[i] = Utils::hton(w[i]);
 
 	_k.neon.dk[0] = _k.neon.ek[14];
 	for (int i=1;i<14;++i)
 		_k.neon.dk[i] = vaesimcq_u8(_k.neon.ek[14 - i]);
 	_k.neon.dk[14] = _k.neon.ek[0];
+
+	_encrypt_armneon_crypto(Utils::ZERO256, h);
+	Utils::copy<16>(&(_k.neon.h), h);
+	_k.neon.h = vrbitq_u8(_k.neon.h);
+	_k.sw.h[0] = Utils::ntoh(h[0]);
+	_k.sw.h[1] = Utils::ntoh(h[1]);
 }
 
 void AES::_encrypt_armneon_crypto(const void *const in, void *const out) const noexcept

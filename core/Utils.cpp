@@ -41,6 +41,7 @@ namespace Utils {
 #ifdef ZT_ARCH_ARM_HAS_NEON
 ARMCapabilities::ARMCapabilities() noexcept
 {
+#ifdef HWCAP2_AES
 	if (sizeof(void *) == 4) {
 		const long hwcaps2 = getauxval(AT_HWCAP2);
 		this->aes = (hwcaps2 & HWCAP2_AES) != 0;
@@ -49,13 +50,16 @@ ARMCapabilities::ARMCapabilities() noexcept
 		this->sha1 = (hwcaps2 & HWCAP2_SHA1) != 0;
 		this->sha2 = (hwcaps2 & HWCAP2_SHA2) != 0;
 	} else {
+#endif
 		const long hwcaps = getauxval(AT_HWCAP);
 		this->aes = (hwcaps & HWCAP_AES) != 0;
 		this->crc32 = (hwcaps & HWCAP_CRC32) != 0;
 		this->pmull = (hwcaps & HWCAP_PMULL) != 0;
 		this->sha1 = (hwcaps & HWCAP_SHA1) != 0;
 		this->sha2 = (hwcaps & HWCAP_SHA2) != 0;
+#ifdef HWCAP2_AES
 	}
+#endif
 }
 
 const ARMCapabilities ARMCAP;

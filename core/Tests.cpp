@@ -452,6 +452,15 @@ extern "C" const char *ZTT_general()
 		            Utils::CPUID.vpclmulqdq);
 #endif
 
+#ifdef ZT_ARCH_ARM_HAS_NEON
+		ZT_T_PRINTF("[general] ARM capabilities: aes=%d crc32=%d pmull=%d sha1=%d sha2=%d" ZT_EOL_S,
+			    Utils::ARMCAP.aes,
+			    Utils::ARMCAP.crc32,
+			    Utils::ARMCAP.pmull,
+			    Utils::ARMCAP.sha1,
+			    Utils::ARMCAP.sha2);
+#endif
+
 		{
 			ZT_T_PRINTF("[general] Testing Utils::countBits() functions... ");
 			uint32_t i32 = 0;
@@ -1114,7 +1123,13 @@ extern "C" const char *ZTT_crypto()
 				gmac.update(AES_GMAC_VECTOR_0_IN, sizeof(AES_GMAC_VECTOR_0_IN));
 				gmac.finish(tag);
 				if (memcmp(tag, AES_GMAC_VECTOR_0_OUT, 16) != 0) {
-					ZT_T_PRINTF("FAILED (test vector 0)" ZT_EOL_S);
+					ZT_T_PRINTF("FAILED (test vector 0, ");
+					for(int i=0;i<16;++i)
+						ZT_T_PRINTF("%.2x",(unsigned int)AES_GMAC_VECTOR_0_OUT[i]);
+					ZT_T_PRINTF(" != ");
+					for(int i=0;i<16;++i)
+						ZT_T_PRINTF("%.2x",(unsigned int)tag[i]);
+					ZT_T_PRINTF(")" ZT_EOL_S);
 					return "AES-GMAC test vector 0 failed";
 				}
 			}
