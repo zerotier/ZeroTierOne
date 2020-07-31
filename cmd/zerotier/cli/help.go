@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2024-01-01
+ * Change Date: 2025-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -37,10 +37,12 @@ Commands:
   service [-options]                     Start node (see below)
     -d                                   Fork into background (Unix only)
   status                                 Show node status and configuration
+
   join [-options] <network>              Join a virtual network
     -a <token>                           Token to submit to controller
     -c <identity | fingerprint>          Controller identity or fingerprint
   leave <network>                        Leave a virtual network
+
   networks                               List VL2 virtual networks
   network <network> [command] [option] - Network management commands
     show                                 Show network details (default)
@@ -50,16 +52,19 @@ Commands:
       globalips <boolean>                Allow assignment of global IPs?
       globalroutes <boolean>             Can global IP space routes be set?
       defaultroute <boolean>             Can default route be overridden?
+
   peers                                  List VL1 peers
   peer <address> [command] [option]    - Peer management commands
     show                                 Show peer details (default)
     try <endpoint> [...]                 Try peer at explicit endpoint
+
   set [option] [value]                 - Get or set a core config option
     port <port>                          Primary P2P port
     secondaryport <port/0>               Secondary P2P port (0 to disable)
     blacklist cidr <IP/bits> <boolean>   Toggle physical path blacklisting
     blacklist if <prefix> <boolean>      Toggle interface prefix blacklisting
     portmap <boolean>                    Toggle use of uPnP or NAT-PMP
+
   controller <command> [option]        - Local controller management commands
     networks                             List networks run by local controller
     new                                  Create a new network
@@ -68,23 +73,30 @@ Commands:
     member <network> [setting] [value]   Show or modify member level settings
     auth <address>                       Authorize a peer
     deauth <address>                     Deauthorize a peer
-  identity <command> [args]            - Identity management commands
+
+  identity <command> [args]            - Identity management
     new [c25519 | p384]                  Create identity (default: c25519)
     getpublic <identity>                 Extract only public part of identity
     fingerprint <identity>               Get an identity's fingerprint
     validate <identity>                  Locally validate an identity
     sign <identity> <file>               Sign a file with an identity's key
     verify <identity> <file> <sig>       Verify a signature
+
+  locator <command> [args]             - Locator management
+    new <identity> <endpoint> [...]      Create new signed locator
+    verify <identity> <locator>          Verify locator signature
+    show <locator>                       Show contents of a locator
+
   certs                                  List certificates
-  cert <command> [args]                - Certificate commands
+  cert <command> [args]                - Certificate management
     show [serial]                        List or show details of a certificate
     newsid <secret out>                  Create a new subject unique ID
     newcsr <subject> <secret> <csr out>  Create a subject CSR
     sign <csr> <identity> <cert out>     Sign a CSR to create a certificate
     verify <cert>                        Verify a certificate
     import <cert> [trust,[trust]]        Import certificate into this node
-      rootca                             Certificate is a root CA
-      ztrootset                          ZeroTier root node set
+      rootca                             Certificate is a root CA (trust flag)
+      ztrootset                          ZeroTier root node set (trust flag)
     restore                              Re-import default certificates
     export <serial> [path]               Export a certificate from this node
     delete <serial|ALL>                  Delete certificate from this node

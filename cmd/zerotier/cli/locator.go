@@ -11,18 +11,16 @@
  */
 /****/
 
-#ifndef ZT_DEFAULTS_HPP
-#define ZT_DEFAULTS_HPP
+package cli
 
-#include "Constants.hpp"
+func Locator(args []string) int {
+	if len(args) < 1 {
+		Help()
+		return 1
+	}
 
-namespace ZeroTier {
-namespace Defaults {
+	switch args[0] {
+	}
 
-extern const unsigned int CERTIFICATES_BYTES;
-extern const uint8_t CERTIFICATES[];
-
-} // namespace Defaults
-} // namespace ZeroTier
-
-#endif
+	return 0
+}
