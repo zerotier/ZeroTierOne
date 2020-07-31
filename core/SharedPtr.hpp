@@ -220,22 +220,6 @@ template< typename T >
 ZT_INLINE void swap(ZeroTier::SharedPtr< T > &a, ZeroTier::SharedPtr< T > &b) noexcept
 { a.swap(b); }
 
-template< typename T >
-constexpr bool is_swappable(ZeroTier::SharedPtr< T > &a) noexcept
-{ return true; }
-
-template< typename T >
-constexpr bool is_swappable_with(ZeroTier::SharedPtr< T > &a, ZeroTier::SharedPtr< T > &b) noexcept
-{ return true; }
-
-template< typename T >
-constexpr bool is_nothrow_swappable(ZeroTier::SharedPtr< T > &a) noexcept
-{ return true; }
-
-template< typename T >
-constexpr bool is_nothrow_swappable_with(ZeroTier::SharedPtr< T > &a, ZeroTier::SharedPtr< T > &b) noexcept
-{ return true; }
-
 } // namespace std
 
 #endif
