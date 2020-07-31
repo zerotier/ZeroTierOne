@@ -672,7 +672,7 @@ static ZT_INLINE void copy(void *dest, const void *src) noexcept
 {
 #if defined(ZT_ARCH_X64) && defined(__GNUC__)
 	uintptr_t l = L;
-	asm volatile ("cld ; rep movsb" : "+c"(l), "+S"(src), "+D"(dest));
+	__asm__ __volatile__ ("cld ; rep movsb" : "+c"(l), "+S"(src), "+D"(dest) :: "memory");
 #else
 	memcpy(dest, src, L);
 #endif
@@ -688,7 +688,7 @@ static ZT_INLINE void copy(void *dest, const void *src) noexcept
 static ZT_INLINE void copy(void *dest, const void *src, unsigned long len) noexcept
 {
 #if defined(ZT_ARCH_X64) && defined(__GNUC__)
-	asm volatile ("cld ; rep movsb" : "+c"(len), "+S"(src), "+D"(dest));
+	__asm__ __volatile__ ("cld ; rep movsb" : "+c"(len), "+S"(src), "+D"(dest) :: "memory");
 #else
 	memcpy(dest, src, len);
 #endif
@@ -705,7 +705,7 @@ static ZT_INLINE void zero(void *dest) noexcept
 {
 #if defined(ZT_ARCH_X64) && defined(__GNUC__)
 	uintptr_t l = L;
-	asm volatile ("cld ; rep stosb" :"+c" (l), "+D" (dest) : "a" (0));
+	__asm__ __volatile__ ("cld ; rep stosb" :"+c" (l), "+D" (dest) : "a" (0) : "memory");
 #else
 	memset(dest, 0, L);
 #endif
@@ -720,7 +720,7 @@ static ZT_INLINE void zero(void *dest) noexcept
 static ZT_INLINE void zero(void *dest, unsigned long len) noexcept
 {
 #if defined(ZT_ARCH_X64) && defined(__GNUC__)
-	asm volatile ("cld ; rep stosb" :"+c" (len), "+D" (dest) : "a" (0));
+	__asm__ __volatile__ ("cld ; rep stosb" :"+c" (len), "+D" (dest) : "a" (0) : "memory");
 #else
 	memset(dest, 0, len);
 #endif
@@ -735,7 +735,7 @@ static ZT_INLINE void zero(void *dest, unsigned long len) noexcept
  * @param len Length of data
  * @return FNV1a checksum
  */
-uint32_t fnv1a32(const void *const data, const unsigned int len) noexcept;
+uint32_t fnv1a32(const void *data, unsigned int len) noexcept;
 
 /**
  * Mix bits in a 64-bit integer (non-cryptographic, for hash tables)

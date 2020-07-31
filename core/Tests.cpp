@@ -802,7 +802,7 @@ extern "C" const char *ZTT_general()
 				return "Identity test failed: v0 unmarshal";
 			}
 			if (id != id2) {
-				ZT_T_PRINTF("FAILED (v0 unmarshal !=)" ZT_EOL_S);
+				ZT_T_PRINTF("FAILED (v0 unmarshal %s != %s)" ZT_EOL_S, id.toString(true).c_str(), id2.toString(true).c_str());
 				return "Identity test failed: v0 unmarshal !=";
 			}
 			ms = id.marshal(idm, false);

@@ -264,7 +264,6 @@ public:
 	{ return ZT_IDENTITY_MARSHAL_SIZE_MAX; }
 
 	int marshal(uint8_t data[ZT_IDENTITY_MARSHAL_SIZE_MAX], bool includePrivate = false) const noexcept;
-
 	int unmarshal(const uint8_t *data, int len) noexcept;
 
 private:

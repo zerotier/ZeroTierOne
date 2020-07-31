@@ -635,8 +635,7 @@ bool Network::filterOutgoingPacket(
 	Member *membership;
 	if (ztDest) {
 		Map<Address, Member>::iterator mm(m_memberships.find(ztDest));
-		if (mm != m_memberships.end())
-			membership = &(mm->second);
+		membership = (mm == m_memberships.end()) ? nullptr : &(mm->second);
 	} else {
 		membership = nullptr;
 	}
