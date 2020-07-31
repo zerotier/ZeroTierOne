@@ -64,37 +64,35 @@ func (t *nativeTap) Enabled() bool {
 }
 
 // AddIP adds an IP address (with netmask) to this tap
-func (t *nativeTap) AddIP(ip *net.IPNet) error {
-	bits, _ := ip.Mask.Size()
+func (t *nativeTap) AddIP(ip *InetAddress) error {
 	if len(ip.IP) == 16 {
-		if bits > 128 || bits < 0 {
+		if ip.Port > 128 || ip.Port < 0 {
 			return ErrInvalidParameter
 		}
-		C.ZT_GoTap_addIp(t.tap, C.int(syscall.AF_INET6), unsafe.Pointer(&ip.IP[0]), C.int(bits))
+		C.ZT_GoTap_addIp(t.tap, C.int(syscall.AF_INET6), unsafe.Pointer(&ip.IP[0]), C.int(ip.Port))
 	} else if len(ip.IP) == 4 {
-		if bits > 32 || bits < 0 {
+		if ip.Port > 32 || ip.Port < 0 {
 			return ErrInvalidParameter
 		}
-		C.ZT_GoTap_addIp(t.tap, C.int(syscall.AF_INET), unsafe.Pointer(&ip.IP[0]), C.int(bits))
+		C.ZT_GoTap_addIp(t.tap, C.int(syscall.AF_INET), unsafe.Pointer(&ip.IP[0]), C.int(ip.Port))
 	}
 	return ErrInvalidParameter
 }
 
 // RemoveIP removes this IP address (with netmask) from this tap
-func (t *nativeTap) RemoveIP(ip *net.IPNet) error {
-	bits, _ := ip.Mask.Size()
+func (t *nativeTap) RemoveIP(ip *InetAddress) error {
 	if len(ip.IP) == 16 {
-		if bits > 128 || bits < 0 {
+		if ip.Port > 128 || ip.Port < 0 {
 			return ErrInvalidParameter
 		}
-		C.ZT_GoTap_removeIp(t.tap, C.int(syscall.AF_INET6), unsafe.Pointer(&ip.IP[0]), C.int(bits))
+		C.ZT_GoTap_removeIp(t.tap, C.int(syscall.AF_INET6), unsafe.Pointer(&ip.IP[0]), C.int(ip.Port))
 		return nil
 	}
 	if len(ip.IP) == 4 {
-		if bits > 32 || bits < 0 {
+		if ip.Port > 32 || ip.Port < 0 {
 			return ErrInvalidParameter
 		}
-		C.ZT_GoTap_removeIp(t.tap, C.int(syscall.AF_INET), unsafe.Pointer(&ip.IP[0]), C.int(bits))
+		C.ZT_GoTap_removeIp(t.tap, C.int(syscall.AF_INET), unsafe.Pointer(&ip.IP[0]), C.int(ip.Port))
 		return nil
 	}
 	return ErrInvalidParameter

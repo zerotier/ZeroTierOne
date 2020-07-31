@@ -416,11 +416,12 @@ func (n *Node) Leave(nwid NetworkID) error {
 	nw := n.networks[nwid]
 	delete(n.networks, nwid)
 	n.networksLock.Unlock()
+
 	if nw != nil {
 		n.infoLog.Printf("leaving network %.16x", nwid)
 		nw.leaving()
+		C.ZT_GoNode_leave(n.gn, C.uint64_t(nwid))
 	}
-	C.ZT_GoNode_leave(n.gn, C.uint64_t(nwid))
 	return nil
 }
 
@@ -891,7 +892,8 @@ func goVirtualNetworkConfigFunc(gn, _ unsafe.Pointer, nwid C.uint64_t, op C.int,
 			for i := 0; i < int(ncc.assignedAddressCount); i++ {
 				a := sockaddrStorageToIPNet(&ncc.assignedAddresses[i])
 				if a != nil {
-					nc.AssignedAddresses = append(nc.AssignedAddresses, *a)
+					_, bits := a.Mask.Size()
+					nc.AssignedAddresses = append(nc.AssignedAddresses, InetAddress{IP: a.IP, Port: bits})
 				}
 			}
 			for i := 0; i < int(ncc.routeCount); i++ {

@@ -139,9 +139,11 @@ func main() {
 	case "peers", "listpeers", "lspeers":
 		exitCode = cli.Peers(basePath, authToken(basePath, *tflag, *tTflag), cmdArgs, *jflag, false)
 	case "peer":
+		exitCode = cli.Peer(basePath, authToken(basePath, *tflag, *tTflag), cmdArgs, *jflag)
 	case "roots":
 		exitCode = cli.Peers(basePath, authToken(basePath, *tflag, *tTflag), cmdArgs, *jflag, true)
 	case "controller":
+		exitCode = cli.Controller(basePath, authToken(basePath, *tflag, *tTflag), cmdArgs, *jflag)
 	case "set":
 		exitCode = cli.Set(basePath, authToken(basePath, *tflag, *tTflag), cmdArgs)
 	case "identity":

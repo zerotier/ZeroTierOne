@@ -33,10 +33,10 @@ type Tap interface {
 	Enabled() bool
 
 	// AddIP assigns an IP address to this tap device
-	AddIP(ip *net.IPNet) error
+	AddIP(ip *InetAddress) error
 
 	// RemoveIP removes an IP address from this tap
-	RemoveIP(ip *net.IPNet) error
+	RemoveIP(ip *InetAddress) error
 
 	// IPs returns an array of all IPs currently assigned to this tap including those not assigned by ZeroTier
 	IPs() ([]net.IPNet, error)

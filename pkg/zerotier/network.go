@@ -72,63 +72,62 @@ func (n *NetworkID) UnmarshalJSON(j []byte) error {
 	if err != nil {
 		return err
 	}
-	tmp, err := NewNetworkIDFromString(s)
-	*n = tmp
+	*n, err = NewNetworkIDFromString(s)
 	return err
 }
 
 // NetworkConfig represents the network's current configuration as distributed by its network controller.
 type NetworkConfig struct {
 	// ID is this network's 64-bit globally unique identifier
-	ID NetworkID
+	ID NetworkID `json:"id"`
 
 	// MAC is the Ethernet MAC address of this device on this network
-	MAC MAC
+	MAC MAC `json:"mac"`
 
 	// Name is a short human-readable name set by the controller
-	Name string
+	Name string `json:"name"`
 
 	// Status is a status code indicating this network's authorization status
-	Status int
+	Status int `json:"status"`
 
 	// Type is this network's type
-	Type int
+	Type int `json:"type"`
 
 	// MTU is the Ethernet MTU for this network
-	MTU int
+	MTU int `json:"mtu"`
 
 	// Bridge is true if this network is allowed to bridge in other devices with different Ethernet addresses
-	Bridge bool
+	Bridge bool `json:"bridge"`
 
 	// BroadcastEnabled is true if the broadcast (ff:ff:ff:ff:ff:ff) address works (excluding IPv4 ARP which is handled via a special path)
-	BroadcastEnabled bool
+	BroadcastEnabled bool `json:"broadcastEnabled"`
 
 	// NetconfRevision is the revision number reported by the controller
-	NetconfRevision uint64
+	NetconfRevision uint64 `json:"netconfRevision"`
 
 	// AssignedAddresses are static IPs assigned by the network controller to this device
-	AssignedAddresses []net.IPNet
+	AssignedAddresses []InetAddress `json:"assignedAddresses,omitempty"`
 
 	// Routes are static routes assigned by the network controller to this device
-	Routes []Route
+	Routes []Route `json:"routes,omitempty"`
 }
 
 // NetworkLocalSettings is settings for this network that can be changed locally
 type NetworkLocalSettings struct {
 	// AllowManagedIPs determines whether managed IP assignment is allowed
-	AllowManagedIPs bool
+	AllowManagedIPs bool `json:"allowManagedIPs"`
 
 	// AllowGlobalIPs determines if managed IPs that overlap with public Internet addresses are allowed
-	AllowGlobalIPs bool
+	AllowGlobalIPs bool `json:"allowGlobalIPs"`
 
 	// AllowManagedRoutes determines whether managed routes can be set
-	AllowManagedRoutes bool
+	AllowManagedRoutes bool `json:"allowManagedRoutes"`
 
 	// AllowGlobalRoutes determines if managed routes can overlap with public Internet addresses
-	AllowGlobalRoutes bool
+	AllowGlobalRoutes bool `json:"allowGlobalRoutes"`
 
 	// AllowDefaultRouteOverride determines if the default (0.0.0.0 or ::0) route on the system can be overridden ("full tunnel" mode)
-	AllowDefaultRouteOverride bool
+	AllowDefaultRouteOverride bool `json:"allowDefaultRouteOverride"`
 }
 
 // Network is a currently joined network
@@ -301,7 +300,7 @@ func (n *Network) updateConfig(nc *NetworkConfig, ls *NetworkLocalSettings) {
 	// and remove any IPs from the tap that were assigned that are no
 	// longer wanted. IPs assigned to the tap externally (e.g. by an
 	// "ifconfig" command) are left alone.
-	haveAssignedIPs := make(map[[3]uint64]*net.IPNet)
+	haveAssignedIPs := make(map[[3]uint64]*InetAddress)
 	wantAssignedIPs := make(map[[3]uint64]bool)
 	if n.settings.AllowManagedIPs {
 		for _, ip := range n.config.AssignedAddresses {

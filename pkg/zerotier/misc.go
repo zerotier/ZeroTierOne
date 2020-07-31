@@ -98,10 +98,9 @@ func randomUInt() uint {
 func TimeMs() int64 { return int64(time.Now().UnixNano()) / int64(1000000) }
 
 // ipNetToKey creates a key that can be used in a map[] from a net.IPNet
-func ipNetToKey(ipn *net.IPNet) (k [3]uint64) {
+func ipNetToKey(ipn *InetAddress) (k [3]uint64) {
 	copy(((*[16]byte)(unsafe.Pointer(&k[0])))[:], ipn.IP)
-	ones, bits := ipn.Mask.Size()
-	k[2] = (uint64(ones) << 32) | uint64(bits)
+	k[2] = uint64(ipn.Port)
 	return
 }
 
