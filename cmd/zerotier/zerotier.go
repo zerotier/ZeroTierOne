@@ -81,8 +81,12 @@ func main() {
 	// Reduce Go's thread and memory footprint. This would slow things down if the Go code
 	// were doing a lot, but it's not. It just manages the core and is not directly involved
 	// in pushing a lot of packets around. If that ever changes this should be adjusted.
-	runtime.GOMAXPROCS(1)
-	debug.SetGCPercent(15)
+	if runtime.NumCPU() > 1 {
+		runtime.GOMAXPROCS(2)
+	} else {
+		runtime.GOMAXPROCS(1)
+	}
+	debug.SetGCPercent(10)
 
 	globalOpts := flag.NewFlagSet("global", flag.ContinueOnError)
 	hflag := globalOpts.Bool("h", false, "") // support -h to be canonical with other Unix utilities
@@ -142,6 +146,8 @@ func main() {
 		exitCode = cli.Set(basePath, authToken(basePath, *tflag, *tTflag), cmdArgs)
 	case "identity":
 		exitCode = cli.Identity(cmdArgs)
+	case "certs", "listcerts", "lscerts": // same as "cert show" with no specific serial to show
+		exitCode = cli.Cert(basePath, authToken(basePath, *tflag, *tTflag), []string{"show"}, *jflag)
 	case "cert":
 		exitCode = cli.Cert(basePath, authToken(basePath, *tflag, *tTflag), cmdArgs, *jflag)
 	}

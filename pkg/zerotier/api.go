@@ -131,7 +131,7 @@ type APIStatus struct {
 	PeerCount               int            `json:"peerCount"`
 	PathCount               int            `json:"pathCount"`
 	Identity                *Identity      `json:"identity"`
-	InterfaceAddresses      []net.IP       `json:"interfaceAddresses,omitempty"`
+	InterfaceAddresses      []net.IP       `json:"localInterfaceAddresses,omitempty"`
 	MappedExternalAddresses []*InetAddress `json:"mappedExternalAddresses,omitempty"`
 	Version                 string         `json:"version"`
 	VersionMajor            int            `json:"versionMajor"`
@@ -280,7 +280,7 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 				PeerCount:               len(peers),
 				PathCount:               pathCount,
 				Identity:                node.Identity(),
-				InterfaceAddresses:      node.InterfaceAddresses(),
+				InterfaceAddresses:      node.LocalInterfaceAddresses(),
 				MappedExternalAddresses: nil,
 				Version:                 fmt.Sprintf("%d.%d.%d", CoreVersionMajor, CoreVersionMinor, CoreVersionRevision),
 				VersionMajor:            CoreVersionMajor,

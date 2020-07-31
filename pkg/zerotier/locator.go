@@ -26,7 +26,6 @@ type Locator struct {
 	Timestamp   int64        `json:"timestamp"`
 	Fingerprint *Fingerprint `json:"fingerprint"`
 	Endpoints   []Endpoint   `json:"endpoints"`
-	String      string       `json:"string"`
 	cl          unsafe.Pointer
 }
 
@@ -96,6 +95,9 @@ func (loc *Locator) Validate(id *Identity) bool {
 }
 
 func (loc *Locator) Bytes() []byte {
+	if loc.cl == nil {
+		return nil
+	}
 	var buf [4096]byte
 	bl := C.ZT_Locator_marshal(loc.cl, unsafe.Pointer(&buf[0]), 4096)
 	if bl <= 0 {
@@ -104,26 +106,28 @@ func (loc *Locator) Bytes() []byte {
 	return buf[0:int(bl)]
 }
 
+func (loc *Locator) String() string {
+	if loc.cl == nil {
+		return ""
+	}
+	var buf [4096]C.char
+	return C.GoString(C.ZT_Locator_toString(loc.cl, &buf[0], 4096))
+}
+
 func (loc *Locator) MarshalJSON() ([]byte, error) {
 	return json.Marshal(loc)
 }
 
 func (loc *Locator) UnmarshalJSON(j []byte) error {
-	C.ZT_Locator_delete(loc.cl)
-	loc.cl = unsafe.Pointer(nil)
+	if loc.cl != nil {
+		C.ZT_Locator_delete(loc.cl)
+		loc.cl = unsafe.Pointer(nil)
+	}
 
 	err := json.Unmarshal(j, loc)
 	if err != nil {
 		return err
 	}
-
-	sb := []byte(loc.String)
-	sb = append(sb, 0)
-	cl := C.ZT_Locator_fromString((*C.char)(unsafe.Pointer(&sb[0])))
-	if cl == nil {
-		return ErrInvalidParameter
-	}
-	loc.cl = cl
 	return loc.init(true)
 }
 
@@ -148,8 +152,6 @@ func (loc *Locator) init(needFinalizer bool) error {
 	for i := 0; i < epc; i++ {
 		loc.Endpoints[i].cep = *C.ZT_Locator_endpoint(loc.cl, C.uint(i))
 	}
-	var buf [4096]byte
-	loc.String = C.GoString(C.ZT_Locator_toString(loc.cl, (*C.char)(unsafe.Pointer(&buf[0])), 4096))
 	if needFinalizer {
 		runtime.SetFinalizer(loc, locatorFinalizer)
 	}

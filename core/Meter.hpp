@@ -43,7 +43,10 @@ public:
 	 *
 	 * @param now Start time
 	 */
-	ZT_INLINE Meter() noexcept
+	ZT_INLINE Meter() noexcept :
+		m_counts(),
+		m_totalExclCounts(0),
+		m_bucket(0)
 	{}
 
 	/**

@@ -254,7 +254,7 @@ void Peer::pulse(void *const tPtr, const int64_t now, const bool isRoot)
 			// callback (if one was supplied).
 
 			if (m_locator) {
-				for (Vector< std::pair<Endpoint, Locator::EndpointAttributes > >::const_iterator ep(m_locator->endpoints().begin()); ep != m_locator->endpoints().end(); ++ep) {
+				for (Vector< std::pair<Endpoint, SharedPtr< const Locator::EndpointAttributes > > >::const_iterator ep(m_locator->endpoints().begin()); ep != m_locator->endpoints().end(); ++ep) {
 					if (ep->first.type == ZT_ENDPOINT_TYPE_IP_UDP) {
 						if (RR->node->shouldUsePathForZeroTierTraffic(tPtr, m_id, -1, ep->first.ip())) {
 							int64_t &lt = m_lastTried[ep->first];

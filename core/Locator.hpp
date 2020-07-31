@@ -53,7 +53,6 @@ namespace ZeroTier {
 class Locator
 {
 	friend class SharedPtr< Locator >;
-
 	friend class SharedPtr< const Locator >;
 
 public:
@@ -65,6 +64,14 @@ public:
 	 */
 	struct EndpointAttributes
 	{
+		friend class SharedPtr< Locator::EndpointAttributes >;
+		friend class SharedPtr< const Locator::EndpointAttributes >;
+
+		/**
+		 * Default endpoint attributes
+		 */
+		static const SharedPtr< const Locator::EndpointAttributes > DEFAULT;
+
 		/**
 		 * Raw attributes data in the form of a dictionary prefixed by its size.
 		 *
@@ -93,6 +100,9 @@ public:
 
 		ZT_INLINE bool operator>=(const EndpointAttributes &a) const noexcept
 		{ return !(*this < a); }
+
+	private:
+		std::atomic< int > __refCount;
 	};
 
 	ZT_INLINE Locator() noexcept:
@@ -124,7 +134,7 @@ public:
 	/**
 	 * @return Endpoints specified in locator
 	 */
-	ZT_INLINE const Vector< std::pair< Endpoint, EndpointAttributes > > &endpoints() const noexcept
+	ZT_INLINE const Vector< std::pair< Endpoint, SharedPtr< const EndpointAttributes > > > &endpoints() const noexcept
 	{ return m_endpoints; }
 
 	/**
@@ -140,10 +150,10 @@ public:
 	 * care not to add duplicates.
 	 *
 	 * @param ep Endpoint to add
-	 * @param a Endpoint attributes
+	 * @param a Endpoint attributes or NULL to use default
 	 * @return True if endpoint was added (or already present), false if locator is full
 	 */
-	bool add(const Endpoint &ep, const EndpointAttributes &a);
+	bool add(const Endpoint &ep, const SharedPtr< const EndpointAttributes > &a);
 
 	/**
 	 * Sign this locator
@@ -191,27 +201,35 @@ public:
 
 	static constexpr int marshalSizeMax() noexcept
 	{ return ZT_LOCATOR_MARSHAL_SIZE_MAX; }
-
 	int marshal(uint8_t data[ZT_LOCATOR_MARSHAL_SIZE_MAX], bool excludeSignature = false) const noexcept;
-
 	int unmarshal(const uint8_t *data, int len) noexcept;
 
 	ZT_INLINE bool operator==(const Locator &l) const noexcept
 	{
-		return (
-			(m_ts == l.m_ts) &&
-			(m_signer == l.m_signer) &&
-			(m_endpoints == l.m_endpoints) &&
-			(m_signature == l.m_signature));
+		const unsigned long es = (unsigned long)m_endpoints.size();
+		if ((m_ts == l.m_ts) && (m_signer == l.m_signer) && (es == (unsigned long)l.m_endpoints.size()) && (m_signature == l.m_signature)) {
+			for(unsigned long i=0;i<es;++i) {
+				if (m_endpoints[i].first != l.m_endpoints[i].first)
+					return false;
+				if (!m_endpoints[i].second) {
+					if (l.m_endpoints[i].second)
+						return false;
+				} else {
+					if ((!l.m_endpoints[i].second) || (*(m_endpoints[i].second) != *(l.m_endpoints[i].second)))
+						return false;
+				}
+			}
+			return true;
+		}
+		return false;
 	}
-
 	ZT_INLINE bool operator!=(const Locator &l) const noexcept
 	{ return !(*this == l); }
 
 private:
 	int64_t m_ts;
 	Fingerprint m_signer;
-	Vector< std::pair< Endpoint, EndpointAttributes > > m_endpoints;
+	Vector< std::pair< Endpoint, SharedPtr< const EndpointAttributes > > > m_endpoints;
 	FCV< uint8_t, ZT_SIGNATURE_BUFFER_SIZE > m_signature;
 	std::atomic< int > __refCount;
 };

@@ -203,3 +203,11 @@ func networkStatusStr(status int) string {
 	}
 	return "???"
 }
+
+func readJSONFile(p string, obj interface{}) error {
+	b, err := ioutil.ReadFile(p)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(b, obj)
+}

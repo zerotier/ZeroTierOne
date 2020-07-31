@@ -211,7 +211,7 @@ public:
 	 * @return Number of entries
 	 */
 	ZT_INLINE unsigned int size() const noexcept
-	{ return m_entries.size(); }
+	{ return (unsigned int)m_entries.size(); }
 
 	/**
 	 * @return True if dictionary is not empty

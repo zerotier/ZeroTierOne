@@ -20,14 +20,14 @@
 /**
  * Number of buckets to use to maintain a list of expected replies.
  *
- * Making this a power of two improves efficiency a little by allowing bit shift division.
+ * This must be a power of two. Memory consumed will be about this*4 bytes.
  */
 #define ZT_EXPECT_BUCKETS 32768
 
 /**
  * 1/2 the TTL for expected replies in milliseconds
  *
- * Making this a power of two improves efficiency a little by allowing bit shift division.
+ * This must be a power of two.
  */
 #define ZT_EXPECT_TTL 4096LL
 
@@ -39,7 +39,8 @@ namespace ZeroTier {
 class Expect
 {
 public:
-	ZT_INLINE Expect()
+	ZT_INLINE Expect() :
+		m_packetIdSent()
 	{}
 
 	/**
@@ -49,13 +50,14 @@ public:
 	 * @param now Current time
 	 */
 	ZT_INLINE void sending(const uint64_t packetId, const int64_t now) noexcept
-	{ m_packetIdSent[Utils::hash64(packetId ^ Utils::s_mapNonce) % ZT_EXPECT_BUCKETS].store((uint32_t)(now / ZT_EXPECT_TTL)); }
+	{ m_packetIdSent[Utils::hash64(packetId ^ Utils::s_mapNonce) % ZT_EXPECT_BUCKETS] = (uint32_t)(now / ZT_EXPECT_TTL); }
 
 	/**
 	 * Check if an OK is expected and if so reset the corresponding bucket.
 	 *
 	 * This means this call mutates the state. If it returns true, it will
-	 * subsequently return false. This is for replay protection for OKs.
+	 * subsequently return false. This is to filter OKs against replays or
+	 * responses to queries we did not send.
 	 *
 	 * @param inRePacketId In-re packet ID we're expecting
 	 * @param now Current time

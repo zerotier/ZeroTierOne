@@ -44,27 +44,27 @@ import (
 var nullLogger = log.New(ioutil.Discard, "", 0)
 
 const (
-	NetworkIDStringLength = 16
-	NetworkIDLength       = 8
-	AddressStringLength   = 10
-	AddressLength         = 5
+	NetworkIDStringLength     = 16
+	NetworkIDLength           = 8
+	AddressStringLength       = 10
+	AddressLength             = 5
+	DefaultPort               = int(C.ZT_DEFAULT_PORT)
+	DefaultRawIPProto         = int(C.ZT_DEFAULT_RAW_IP_PROTOCOL)
+	DefaultEthernetProto      = int(C.ZT_DEFAULT_ETHERNET_PROTOCOL)
+	NetworkMaxShortNameLength = int(C.ZT_MAX_NETWORK_SHORT_NAME_LENGTH)
 
-	NetworkStatusRequestingConfiguration int = C.ZT_NETWORK_STATUS_REQUESTING_CONFIGURATION
-	NetworkStatusOK                      int = C.ZT_NETWORK_STATUS_OK
-	NetworkStatusAccessDenied            int = C.ZT_NETWORK_STATUS_ACCESS_DENIED
-	NetworkStatusNotFound                int = C.ZT_NETWORK_STATUS_NOT_FOUND
+	NetworkStatusRequestingConfiguration = int(C.ZT_NETWORK_STATUS_REQUESTING_CONFIGURATION)
+	NetworkStatusOK                      = int(C.ZT_NETWORK_STATUS_OK)
+	NetworkStatusAccessDenied            = int(C.ZT_NETWORK_STATUS_ACCESS_DENIED)
+	NetworkStatusNotFound                = int(C.ZT_NETWORK_STATUS_NOT_FOUND)
 
-	NetworkTypePrivate int = C.ZT_NETWORK_TYPE_PRIVATE
-	NetworkTypePublic  int = C.ZT_NETWORK_TYPE_PUBLIC
+	NetworkTypePrivate = int(C.ZT_NETWORK_TYPE_PRIVATE)
+	NetworkTypePublic  = int(C.ZT_NETWORK_TYPE_PUBLIC)
 
-	networkConfigOpUp     int = C.ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP
-	networkConfigOpUpdate int = C.ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE
-
-	defaultVirtualNetworkMTU = C.ZT_DEFAULT_MTU
-
-	// maxCNodeRefs is the maximum number of Node instances that can be created in this process.
-	// This is perfectly fine to increase.
-	maxCNodeRefs = 8
+	networkConfigOpUp        = int(C.ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP)
+	networkConfigOpUpdate    = int(C.ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE)
+	defaultVirtualNetworkMTU = int(C.ZT_DEFAULT_MTU)
+	maxCNodeRefs             = 8 // perfectly fine to increase this
 )
 
 var (
@@ -77,8 +77,9 @@ var (
 	// cNodeRefs maps an index to a *Node
 	cNodeRefs [maxCNodeRefs]*Node
 
-	// cNodeRefsUsed maps an index to whether or not the corresponding cNodeRefs[] entry is used.
-	cNodeRefUsed [maxCNodeRefs]uint32
+	// cNodeRefUsed maps an index to whether or not the corresponding cNodeRefs[] entry is used.
+	// This is accessed atomically to provide a really fast way to gate cNodeRefs.
+	cNodeRefUsed [maxCNodeRefs]uintptr
 )
 
 func init() {
@@ -96,46 +97,37 @@ type Node struct {
 	// Time this node was created
 	startupTime int64
 
-	// an arbitrary uintptr given to the core as its pointer back to Go's Node instance.
-	// This is an index in the cNodeRefs array, which is synchronized by way of a set of
-	// used/free booleans accessed atomically.
+	// cPtr is an arbitrary pseudo-pointer given to the core to map back to our Go object.
+	// This is an index into the cNodeRefs array.
 	cPtr uintptr
 
-	// networks contains networks we have joined, and networksByMAC by their local MAC address
-	networks      map[NetworkID]*Network
-	networksByMAC map[MAC]*Network // locked by networksLock
-	networksLock  sync.RWMutex
+	networks                    map[NetworkID]*Network
+	networksByMAC               map[MAC]*Network // locked by networksLock
+	networksLock                sync.RWMutex
+	localInterfaceAddresses     map[string]net.IP
+	localInterfaceAddressesLock sync.Mutex
+	running                     uintptr // atomic flag
+	online                      uintptr // atomic flag
+	basePath                    string
+	peersPath                   string
+	certsPath                   string
+	networksPath                string
+	localConfigPath             string
+	infoLogPath                 string
+	errorLogPath                string
+	localConfig                 *LocalConfig
+	previousLocalConfig         *LocalConfig
+	localConfigLock             sync.RWMutex
+	infoLogW                    *sizeLimitWriter
+	errLogW                     *sizeLimitWriter
+	traceLogW                   io.Writer
+	infoLog                     *log.Logger
+	errLog                      *log.Logger
+	traceLog                    *log.Logger
+	namedSocketAPIServer        *http.Server
+	tcpAPIServer                *http.Server
 
-	// interfaceAddresses are physical IPs assigned to the local machine.
-	// These are the detected IPs, not those configured explicitly. They include
-	// both private and global IPs.
-	interfaceAddresses     map[string]net.IP
-	interfaceAddressesLock sync.Mutex
-
-	running uint32
-	online  uint32
-
-	basePath        string
-	peersPath       string
-	networksPath    string
-	localConfigPath string
-	infoLogPath     string
-	errorLogPath    string
-
-	// localConfig is the current state of local.conf.
-	localConfig         *LocalConfig
-	previousLocalConfig *LocalConfig
-	localConfigLock     sync.RWMutex
-
-	infoLogW  *sizeLimitWriter
-	errLogW   *sizeLimitWriter
-	traceLogW io.Writer
-
-	infoLog  *log.Logger
-	errLog   *log.Logger
-	traceLog *log.Logger
-
-	// gn is the GoNode instance, see go/native/GoNode.hpp
+	// gn is the GoNode instance, see serviceiocore/GoNode.hpp
 	gn *C.ZT_GoNode
 
 	// zn is the underlying ZT_Node (ZeroTier::Node) instance
@@ -143,9 +135,6 @@ type Node struct {
 
 	// id is the identity of this node (includes private key)
 	id *Identity
-
-	namedSocketAPIServer *http.Server
-	tcpAPIServer         *http.Server
 
 	// runWaitGroup is used to wait for all node goroutines on shutdown.
 	// Any new goroutine is tracked via this wait group so node shutdown can
@@ -163,7 +152,7 @@ func NewNode(basePath string) (n *Node, err error) {
 	// returning an error.
 	cPtr := -1
 	for i := 0; i < maxCNodeRefs; i++ {
-		if atomic.CompareAndSwapUint32(&cNodeRefUsed[i], 0, 1) {
+		if atomic.CompareAndSwapUintptr(&cNodeRefUsed[i], 0, 1) {
 			cNodeRefs[i] = n
 			cPtr = i
 			n.cPtr = uintptr(i)
@@ -173,20 +162,16 @@ func NewNode(basePath string) (n *Node, err error) {
 	if cPtr < 0 {
 		return nil, ErrInternal
 	}
-
-	// Check and delete node reference pointer if it's non-negative. This helps
-	// with error handling cleanup. At the end we set cPtr to -1 to disable.
 	defer func() {
 		if cPtr >= 0 {
-			atomic.StoreUint32(&cNodeRefUsed[cPtr], 0)
+			atomic.StoreUintptr(&cNodeRefUsed[cPtr], 0)
 			cNodeRefs[cPtr] = nil
 		}
 	}()
 
 	n.networks = make(map[NetworkID]*Network)
 	n.networksByMAC = make(map[MAC]*Network)
-	n.interfaceAddresses = make(map[string]net.IP)
-
+	n.localInterfaceAddresses = make(map[string]net.IP)
 	n.running = 1
 
 	_ = os.MkdirAll(basePath, 0755)
@@ -200,16 +185,12 @@ func NewNode(basePath string) (n *Node, err error) {
 	if _, err = os.Stat(n.peersPath); err != nil {
 		return
 	}
+	n.certsPath = path.Join(basePath, "certs.d")
+	_ = os.MkdirAll(n.certsPath, 0755)
 	n.networksPath = path.Join(basePath, "networks.d")
 	_ = os.MkdirAll(n.networksPath, 0755)
-	if _, err = os.Stat(n.networksPath); err != nil {
-		return
-	}
 	n.localConfigPath = path.Join(basePath, "local.conf")
 
-	// Read local configuration, initializing with defaults if not found. We
-	// check for identity.secret's existence to determine if this is a new
-	// node or one that already existed. This influences some of the defaults.
 	_, isTotallyNewNode := os.Stat(path.Join(basePath, "identity.secret"))
 	n.localConfig = new(LocalConfig)
 	err = n.localConfig.Read(n.localConfigPath, true, isTotallyNewNode != nil)
@@ -282,9 +263,8 @@ func NewNode(basePath string) (n *Node, err error) {
 		return nil, err
 	}
 
-	cPath := C.CString(basePath)
-	n.gn = C.ZT_GoNode_new(cPath, C.uintptr_t(n.cPtr))
-	C.free(unsafe.Pointer(cPath))
+	cPath := cStr(basePath)
+	n.gn = C.ZT_GoNode_new((*C.char)(unsafe.Pointer(&cPath[0])), C.uintptr_t(n.cPtr))
 	if n.gn == nil {
 		n.infoLog.Println("FATAL: node initialization failed")
 		return nil, ErrNodeInitFailed
@@ -297,13 +277,11 @@ func NewNode(basePath string) (n *Node, err error) {
 		return nil, err
 	}
 
-	// Background maintenance goroutine that handles polling for local network changes, cleaning internal data
-	// structures, syncing local config changes, and numerous other things that must happen from time to time.
 	n.runWaitGroup.Add(1)
 	go func() {
 		defer n.runWaitGroup.Done()
 		lastMaintenanceRun := int64(0)
-		for atomic.LoadUint32(&n.running) != 0 {
+		for atomic.LoadUintptr(&n.running) != 0 {
 			time.Sleep(250 * time.Millisecond)
 			nowS := time.Now().Unix()
 			if (nowS - lastMaintenanceRun) >= 30 {
@@ -322,7 +300,7 @@ func NewNode(basePath string) (n *Node, err error) {
 
 // Close closes this Node and frees its underlying C++ Node structures
 func (n *Node) Close() {
-	if atomic.SwapUint32(&n.running, 0) != 0 {
+	if atomic.SwapUintptr(&n.running, 0) != 0 {
 		if n.namedSocketAPIServer != nil {
 			_ = n.namedSocketAPIServer.Close()
 		}
@@ -335,7 +313,7 @@ func (n *Node) Close() {
 		n.runWaitGroup.Wait()
 
 		cNodeRefs[n.cPtr] = nil
-		atomic.StoreUint32(&cNodeRefUsed[n.cPtr], 0)
+		atomic.StoreUintptr(&cNodeRefUsed[n.cPtr], 0)
 	}
 }
 
@@ -346,16 +324,16 @@ func (n *Node) Address() Address { return n.id.address }
 func (n *Node) Identity() *Identity { return n.id }
 
 // Online returns true if this node can reach something
-func (n *Node) Online() bool { return atomic.LoadUint32(&n.online) != 0 }
+func (n *Node) Online() bool { return atomic.LoadUintptr(&n.online) != 0 }
 
-// InterfaceAddresses are external IPs belonging to physical interfaces on this machine
-func (n *Node) InterfaceAddresses() []net.IP {
+// LocalInterfaceAddresses are external IPs belonging to physical interfaces on this machine
+func (n *Node) LocalInterfaceAddresses() []net.IP {
+	n.localInterfaceAddressesLock.Lock()
+	defer n.localInterfaceAddressesLock.Unlock()
 	var ea []net.IP
-	n.interfaceAddressesLock.Lock()
-	for _, a := range n.interfaceAddresses {
+	for _, a := range n.localInterfaceAddresses {
 		ea = append(ea, a)
 	}
-	n.interfaceAddressesLock.Unlock()
 	sort.Slice(ea, func(a, b int) bool { return bytes.Compare(ea[a], ea[b]) < 0 })
 	return ea
 }
@@ -395,14 +373,15 @@ func (n *Node) SetLocalConfig(lc *LocalConfig) (restartRequired bool, err error)
 // If tap is nil, the default system tap for this OS/platform is used (if available).
 func (n *Node) Join(nwid NetworkID, controllerFingerprint *Fingerprint, settings *NetworkLocalSettings, tap Tap) (*Network, error) {
 	n.networksLock.RLock()
+	defer n.networksLock.RUnlock()
+
 	if nw, have := n.networks[nwid]; have {
 		n.infoLog.Printf("join network %.16x ignored: already a member", nwid)
 		if settings != nil {
-			nw.SetLocalSettings(settings)
+			go nw.SetLocalSettings(settings) // "go" this to avoid possible deadlocks
 		}
 		return nw, nil
 	}
-	n.networksLock.RUnlock()
 
 	if tap != nil {
 		panic("non-native taps not yet implemented")
@@ -423,11 +402,9 @@ func (n *Node) Join(nwid NetworkID, controllerFingerprint *Fingerprint, settings
 		C.ZT_GoNode_leave(n.gn, C.uint64_t(nwid))
 		return nil, err
 	}
-	n.networksLock.Lock()
 	n.networks[nwid] = nw
-	n.networksLock.Unlock()
 	if settings != nil {
-		nw.SetLocalSettings(settings)
+		go nw.SetLocalSettings(settings)
 	}
 
 	return nw, nil
@@ -457,12 +434,12 @@ func (n *Node) Network(nwid NetworkID) *Network {
 
 // Networks returns a list of networks that this node has joined
 func (n *Node) Networks() []*Network {
-	var nws []*Network
 	n.networksLock.RLock()
+	defer n.networksLock.RUnlock()
+	var nws []*Network
 	for _, nw := range n.networks {
 		nws = append(nws, nw)
 	}
-	n.networksLock.RUnlock()
 	return nws
 }
 
@@ -471,13 +448,13 @@ func (n *Node) Peers() []*Peer {
 	var peers []*Peer
 	pl := C.ZT_Node_peers(n.zn)
 	if pl != nil {
+		defer C.ZT_freeQueryResult(unsafe.Pointer(pl))
 		for i := uintptr(0); i < uintptr(pl.peerCount); i++ {
 			p, _ := newPeerFromCPeer((*C.ZT_Peer)(unsafe.Pointer(uintptr(unsafe.Pointer(pl.peers)) + (i * C.sizeof_ZT_Peer))))
 			if p != nil {
 				peers = append(peers, p)
 			}
 		}
-		C.ZT_freeQueryResult(unsafe.Pointer(pl))
 	}
 	sort.Slice(peers, func(a, b int) bool {
 		return peers[a].Address < peers[b].Address
@@ -499,14 +476,13 @@ func (n *Node) Peer(fpOrAddress interface{}) *Peer {
 	}
 	pl := C.ZT_Node_peers(n.zn)
 	if pl != nil {
+		defer C.ZT_freeQueryResult(unsafe.Pointer(pl))
 		for i := uintptr(0); i < uintptr(pl.peerCount); i++ {
 			p, _ := newPeerFromCPeer((*C.ZT_Peer)(unsafe.Pointer(uintptr(unsafe.Pointer(pl.peers)) + (i * C.sizeof_ZT_Peer))))
 			if p != nil && p.Identity.Fingerprint().BestSpecificityEquals(fp) {
-				C.ZT_freeQueryResult(unsafe.Pointer(pl))
 				return p
 			}
 		}
-		C.ZT_freeQueryResult(unsafe.Pointer(pl))
 	}
 	return nil
 }
@@ -545,6 +521,7 @@ func (n *Node) TryPeer(fpOrAddress interface{}, ep *Endpoint, retries int) bool 
 func (n *Node) ListCertificates() (certs []*Certificate, localTrust []uint, err error) {
 	cl := C.ZT_Node_listCertificates(n.zn)
 	if cl != nil {
+		defer C.ZT_freeQueryResult(unsafe.Pointer(cl))
 		for i := uintptr(0); i < uintptr(cl.certCount); i++ {
 			c := newCertificateFromCCertificate(unsafe.Pointer(uintptr(unsafe.Pointer(cl.certs)) + (i * pointerSize)))
 			if c != nil {
@@ -553,7 +530,6 @@ func (n *Node) ListCertificates() (certs []*Certificate, localTrust []uint, err 
 				localTrust = append(localTrust, uint(lt))
 			}
 		}
-		C.ZT_freeQueryResult(unsafe.Pointer(cl))
 	}
 	return
 }
@@ -615,9 +591,9 @@ func (n *Node) runMaintenance() {
 	if n.localConfig.Settings.SecondaryPort > 0 && n.localConfig.Settings.SecondaryPort < 65536 {
 		ports = append(ports, n.localConfig.Settings.SecondaryPort)
 	}
-	n.interfaceAddressesLock.Lock()
+	n.localInterfaceAddressesLock.Lock()
 	for astr, ipn := range interfaceAddresses {
-		if _, alreadyKnown := n.interfaceAddresses[astr]; !alreadyKnown {
+		if _, alreadyKnown := n.localInterfaceAddresses[astr]; !alreadyKnown {
 			interfaceAddressesChanged = true
 			ipCstr := C.CString(ipn.String())
 			for pn, p := range ports {
@@ -631,7 +607,7 @@ func (n *Node) runMaintenance() {
 			C.free(unsafe.Pointer(ipCstr))
 		}
 	}
-	for astr, ipn := range n.interfaceAddresses {
+	for astr, ipn := range n.localInterfaceAddresses {
 		if _, stillPresent := interfaceAddresses[astr]; !stillPresent {
 			interfaceAddressesChanged = true
 			ipCstr := C.CString(ipn.String())
@@ -642,8 +618,8 @@ func (n *Node) runMaintenance() {
 			C.free(unsafe.Pointer(ipCstr))
 		}
 	}
-	n.interfaceAddresses = interfaceAddresses
-	n.interfaceAddressesLock.Unlock()
+	n.localInterfaceAddresses = interfaceAddresses
+	n.localInterfaceAddressesLock.Unlock()
 
 	// Update node's interface address list if detected or configured addresses have changed.
 	if interfaceAddressesChanged || n.previousLocalConfig == nil || !reflect.DeepEqual(n.localConfig.Settings.ExplicitAddresses, n.previousLocalConfig.Settings.ExplicitAddresses) {
@@ -729,20 +705,17 @@ func (n *Node) makeStateObjectPath(objType int, id []uint64) (string, bool) {
 	case C.ZT_STATE_OBJECT_LOCATOR:
 		fp = path.Join(n.basePath, "locator")
 	case C.ZT_STATE_OBJECT_PEER:
-		fp = path.Join(n.basePath, "peers.d")
-		_ = os.Mkdir(fp, 0700)
-		fp = path.Join(fp, fmt.Sprintf("%.10x.peer", id[0]))
+		_ = os.Mkdir(n.peersPath, 0700)
+		fp = path.Join(n.peersPath, fmt.Sprintf("%.10x.peer", id[0]))
 		secret = true
 	case C.ZT_STATE_OBJECT_NETWORK_CONFIG:
-		fp = path.Join(n.basePath, "networks.d")
-		_ = os.Mkdir(fp, 0755)
-		fp = path.Join(fp, fmt.Sprintf("%.16x.conf", id[0]))
+		_ = os.Mkdir(n.networksPath, 0755)
+		fp = path.Join(n.networksPath, fmt.Sprintf("%.16x.conf", id[0]))
 	case C.ZT_STATE_OBJECT_TRUST_STORE:
 		fp = path.Join(n.basePath, "truststore")
 	case C.ZT_STATE_OBJECT_CERT:
-		fp = path.Join(n.basePath, "certs.d")
-		_ = os.Mkdir(fp, 0755)
-		fp = path.Join(fp, Base32StdLowerCase.EncodeToString((*[48]byte)(unsafe.Pointer(&id[0]))[:]))
+		_ = os.Mkdir(n.certsPath, 0755)
+		fp = path.Join(n.certsPath, Base32StdLowerCase.EncodeToString((*[48]byte)(unsafe.Pointer(&id[0]))[:]))
 	}
 	return fp, secret
 }
@@ -956,8 +929,8 @@ func goZtEvent(gn unsafe.Pointer, eventType C.int, data unsafe.Pointer) {
 
 	switch eventType {
 	case C.ZT_EVENT_OFFLINE:
-		atomic.StoreUint32(&node.online, 0)
+		atomic.StoreUintptr(&node.online, 0)
 	case C.ZT_EVENT_ONLINE:
-		atomic.StoreUint32(&node.online, 1)
+		atomic.StoreUintptr(&node.online, 1)
 	}
 }

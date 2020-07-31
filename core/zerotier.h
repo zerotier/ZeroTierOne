@@ -51,7 +51,7 @@ extern "C" {
 /**
  * IP protocol number for naked IP encapsulation (this is not currently used)
  */
-#define ZT_DEFAULT_IP_PROTOCOL 193
+#define ZT_DEFAULT_RAW_IP_PROTOCOL 193
 
 /**
  * Ethernet type for naked Ethernet encapsulation (this is not currently used)
@@ -260,6 +260,8 @@ extern "C" {
 
 /**
  * Identity type codes (must be the same as Identity.hpp).
+ *
+ * Do not change these integer values. They're protocol constants.
  */
 enum ZT_IdentityType
 {
@@ -2726,7 +2728,7 @@ ZT_SDK_API unsigned int ZT_Locator_endpointCount(const ZT_Locator *loc);
  */
 ZT_SDK_API const ZT_Endpoint *ZT_Locator_endpoint(
 	const ZT_Locator *loc,
-	const unsigned int ep);
+	unsigned int ep);
 
 /**
  * Verify this locator's signature

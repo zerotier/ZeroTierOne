@@ -27,6 +27,9 @@ const (
 	CertificateSerialNoSize    = 48
 	CertificateMaxStringLength = int(C.ZT_CERTIFICATE_MAX_STRING_LENGTH)
 
+	CertificateLocalTrustFlagRootCA          = int(C.ZT_CERTIFICATE_LOCAL_TRUST_FLAG_ROOT_CA)
+	CertificateLocalTrustFlagZeroTierRootSet = int(C.ZT_CERTIFICATE_LOCAL_TRUST_FLAG_ZEROTIER_ROOT_SET)
+
 	CertificateUniqueIdTypeNistP384            = int(C.ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384)
 	CertificateUniqueIdTypeNistP384Size        = int(C.ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE)
 	CertificateUniqueIdTypeNistP384PrivateSize = int(C.ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_PRIVATE_SIZE)
@@ -425,7 +428,7 @@ func (c *Certificate) cCertificate() unsafe.Pointer {
 	return unsafe.Pointer(C._ZT_Certificate_clone2(C.uintptr_t(uintptr(unsafe.Pointer(&cc)))))
 }
 
-// Marshal encodes this certificate as a byte array.
+// Marshal encodes this certificate as a byte array (binary format).
 func (c *Certificate) Marshal() ([]byte, error) {
 	cc := c.cCertificate()
 	if cc == nil {
