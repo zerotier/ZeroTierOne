@@ -46,20 +46,12 @@ bool Locator::add(const Endpoint &ep, const SharedPtr< const EndpointAttributes 
 	return false;
 }
 
-struct p_SortByEndpoint
-{
-	// There can't be more than one of the same endpoint, so only need to sort
-	// by endpoint.
-	ZT_INLINE bool operator()(const std::pair< Endpoint, SharedPtr< const Locator::EndpointAttributes > > &a,const std::pair< Endpoint, SharedPtr< const Locator::EndpointAttributes > > &b) const noexcept
-	{ return a.first < b.first; }
-};
-
 bool Locator::sign(const int64_t ts, const Identity &id) noexcept
 {
 	m_ts = ts;
 	m_signer = id.fingerprint();
 
-	std::sort(m_endpoints.begin(), m_endpoints.end(), p_SortByEndpoint());
+	m_sortEndpoints();
 
 	uint8_t signdata[ZT_LOCATOR_MARSHAL_SIZE_MAX];
 	const unsigned int signlen = marshal(signdata, true);
@@ -195,8 +187,21 @@ int Locator::unmarshal(const uint8_t *data, const int len) noexcept
 	if (unlikely(p > len))
 		return -1;
 
+	m_sortEndpoints();
+
 	return p;
 }
+
+struct p_SortByEndpoint
+{
+	// There can't be more than one of the same endpoint, so only need to sort
+	// by endpoint.
+	ZT_INLINE bool operator()(const std::pair< Endpoint, SharedPtr< const Locator::EndpointAttributes > > &a,const std::pair< Endpoint, SharedPtr< const Locator::EndpointAttributes > > &b) const noexcept
+	{ return a.first < b.first; }
+};
+
+void Locator::m_sortEndpoints() noexcept
+{ std::sort(m_endpoints.begin(), m_endpoints.end(), p_SortByEndpoint()); }
 
 } // namespace ZeroTier
 

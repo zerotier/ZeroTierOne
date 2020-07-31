@@ -227,6 +227,8 @@ public:
 	{ return !(*this == l); }
 
 private:
+	void m_sortEndpoints() noexcept;
+
 	int64_t m_ts;
 	Fingerprint m_signer;
 	Vector< std::pair< Endpoint, SharedPtr< const EndpointAttributes > > > m_endpoints;
