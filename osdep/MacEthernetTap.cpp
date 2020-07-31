@@ -452,6 +452,11 @@ void MacEthernetTap::threadMain()
 	}
 }
 
+void MacEthernetTap::setDns(const char *domain, const std::vector<InetAddress> &servers)
+{
+
+}
+
 } // namespace ZeroTier
 
 #endif // __APPLE__

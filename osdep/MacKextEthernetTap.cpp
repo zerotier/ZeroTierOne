@@ -687,4 +687,9 @@ void MacKextEthernetTap::threadMain()
 	}
 }
 
+void MacKextEthernetTap::setDns(const char *domain, const std::vector<InetAddress> &servers)
+{
+	
+}
+
 } // namespace ZeroTier

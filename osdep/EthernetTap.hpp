@@ -53,6 +53,7 @@ public:
 	virtual void setFriendlyName(const char *friendlyName) = 0;
 	virtual void scanMulticastGroups(std::vector<MulticastGroup> &added,std::vector<MulticastGroup> &removed) = 0;
 	virtual void setMtu(unsigned int mtu) = 0;
+	virtual void setDns(const char *domain, const std::vector<InetAddress> &servers) = 0;
 };
 
 } // namespace ZeroTier

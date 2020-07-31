@@ -501,6 +501,7 @@ public:
 			settings.allowManaged = true;
 			settings.allowGlobal = false;
 			settings.allowDefault = false;
+			memset(&config, 0, sizeof(ZT_VirtualNetworkConfig));
 		}
 
 		std::shared_ptr<EthernetTap> tap;
@@ -831,7 +832,7 @@ public:
 						Mutex::Lock _l(_nets_m);
 						for(std::map<uint64_t,NetworkState>::iterator n(_nets.begin());n!=_nets.end();++n) {
 							if (n->second.tap)
-								syncManagedStuff(n->second,false,true);
+								syncManagedStuff(n->second,false,true,false);
 						}
 					}
 				}
@@ -1117,7 +1118,7 @@ public:
 		}
 
 		if (n->second.tap)
-			syncManagedStuff(n->second,true,true);
+			syncManagedStuff(n->second,true,true,true);
 
 		return true;
 	}
@@ -1864,7 +1865,7 @@ public:
 	}
 
 	// Apply or update managed IPs for a configured network (be sure n.tap exists)
-	void syncManagedStuff(NetworkState &n,bool syncIps,bool syncRoutes)
+	void syncManagedStuff(NetworkState &n,bool syncIps,bool syncRoutes, bool syncDns)
 	{
 		char ipbuf[64];
 
@@ -1982,6 +1983,26 @@ public:
 				if (!n.managedRoutes.back()->sync())
 					n.managedRoutes.pop_back();
 #endif
+			}
+		}
+
+		if (syncDns) {
+			char buf[128];
+			if (n.config.dnsCount > ZT_MAX_NETWORK_DNS) {
+				fprintf(stderr, "ERROR: %d records > max %d.  Skipping DNS\n", n.config.dnsCount, ZT_MAX_NETWORK_DNS);
+				return;
+			}
+			fprintf(stderr, "Syncing %d DNS configurations\n", n.config.dnsCount);
+			for (int i = 0; i < n.config.dnsCount; ++i) {
+				if (strlen(n.config.dns[i].domain) != 0) {
+					fprintf(stderr, "Syncing DNS for domain: %s\n", n.config.dns[i].domain);
+					for (int j = 0; j < ZT_MAX_DNS_SERVERS; ++j) {
+						InetAddress a(n.config.dns[i].server_addr[j]);
+						if (a.isV4() || a.isV6()) {
+							fprintf(stderr, "\t Server %d: %s\n", j+1, a.toIpString(buf));
+						}
+					}
+				}
 			}
 		}
 	}
@@ -2333,7 +2354,7 @@ public:
 						Sleep(10);
 					}
 #endif
-					syncManagedStuff(n,true,true);
+					syncManagedStuff(n,true,true,true);
 					n.tap->setMtu(nwc->mtu);
 				} else {
 					_nets.erase(nwid);

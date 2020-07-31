@@ -43,6 +43,7 @@ public:
     template<unsigned int C>
     static inline void deserializeDNS(const Buffer<C> &b, unsigned int &p, ZT_VirtualNetworkDNS *dns, const unsigned int dnsCount)
     {
+        memset(dns, 0, sizeof(ZT_VirtualNetworkDNS)*ZT_MAX_NETWORK_DNS);
         for(unsigned int i = 0; i < dnsCount; ++i) {
             char *d = (char*)b.data()+p;
             memcpy(dns[i].domain, d, 128);
