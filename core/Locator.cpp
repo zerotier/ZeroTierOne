@@ -35,12 +35,12 @@ bool Locator::add(const Endpoint &ep, const SharedPtr< const EndpointAttributes 
 {
 	for (Vector< std::pair< Endpoint, SharedPtr< const EndpointAttributes > > >::iterator i(m_endpoints.begin());i!=m_endpoints.end();++i) {
 		if (i->first == ep) {
-			i->second = (a) ? a : EndpointAttributes::DEFAULT;
+			i->second = ((a) && (a->data[0] != 0)) ? a : EndpointAttributes::DEFAULT;
 			return true;
 		}
 	}
 	if (m_endpoints.size() < ZT_LOCATOR_MAX_ENDPOINTS) {
-		m_endpoints.push_back(std::pair<Endpoint, SharedPtr< const EndpointAttributes > >(ep, (a) ? a : EndpointAttributes::DEFAULT));
+		m_endpoints.push_back(std::pair<Endpoint, SharedPtr< const EndpointAttributes > >(ep, ((a) && (a->data[0] != 0)) ? a : EndpointAttributes::DEFAULT));
 		return true;
 	}
 	return false;
