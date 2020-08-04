@@ -231,6 +231,21 @@ static void _networkToJson(nlohmann::json &nj,const ZT_VirtualNetworkConfig *nc,
 		mca.push_back(m);
 	}
 	nj["multicastSubscriptions"] = mca;
+
+	nj["dns"] = nlohmann::json::array();
+	for(unsigned int i=0;i<nc->dnsCount;++i) {
+		nlohmann::json m;
+		m["domain"] = nc->dns[i].domain;
+		m["servers"] = nlohmann::json::array();
+		for(int j=0;j<ZT_MAX_DNS_SERVERS;++j) {
+			
+			InetAddress a(nc->dns[i].server_addr[j]);
+			if (a.isV4() || a.isV6()) {
+				char buf[256];
+				m["servers"].push_back(a.toIpString(buf));
+			}
+		}
+	}
 }
 
 static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer)

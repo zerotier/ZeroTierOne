@@ -1390,6 +1390,7 @@ void EmbeddedNetworkController::_request(
 	nc->mtu = std::max(std::min((unsigned int)OSUtils::jsonInt(network["mtu"],ZT_DEFAULT_MTU),(unsigned int)ZT_MAX_MTU),(unsigned int)ZT_MIN_MTU);
 	nc->multicastLimit = (unsigned int)OSUtils::jsonInt(network["multicastLimit"],32ULL);
 
+	
 	std::string rtt(OSUtils::jsonString(member["remoteTraceTarget"],""));
 	if (rtt.length() == 10) {
 		nc->remoteTraceTarget = Address(Utils::hexStrToU64(rtt.c_str()));
@@ -1713,9 +1714,11 @@ void EmbeddedNetworkController::_request(
 	}
 	
 	if(dns.is_array()) {
+		fprintf(stderr, "dns is array of size %d\n", dns.size());
 		nc->dnsCount = 0;
 		for(unsigned int p=0; p < dns.size(); ++p) {
 			json &d = dns[p];
+			fprintf(stderr, "%s\n", OSUtils::jsonDump(d, 2).c_str());
 			if (d.is_object()) {
 				std::string domain = OSUtils::jsonString(d["domain"],"");
 				memcpy(nc->dns[nc->dnsCount].domain, domain.c_str(), domain.size());
@@ -1730,6 +1733,7 @@ void EmbeddedNetworkController::_request(
 			}
 		}
 	} else {
+		fprintf(stderr, "dns is NOT an array\n");
 		dns = json::array();
 	}
 
