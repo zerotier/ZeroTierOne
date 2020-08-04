@@ -468,7 +468,7 @@ void PostgreSQL::initializeNetworks(PGconn *conn)
 				obj["servers"] = servers;
 				config["dns"].push_back(obj);
 			}
-			fprintf(stderr, "%s\n", OSUtils::jsonDump(config["dns"], 2).c_str());
+			fprintf(stderr, "%s: %s\n", OSUtils::jsonString(config["nwid"], "").c_str(), OSUtils::jsonDump(config["dns"], 2).c_str());
 
 			PQclear(r2);
 
