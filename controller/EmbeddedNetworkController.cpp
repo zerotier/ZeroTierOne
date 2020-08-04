@@ -1416,7 +1416,9 @@ void EmbeddedNetworkController::_request(
 	json &tags = network["tags"];
 	json &memberCapabilities = member["capabilities"];
 	json &memberTags = member["tags"];
-	json &dns = member["dns"];
+	json &dns = network["dns"];
+
+	fprintf(stderr, "DNS Config for Network ID %.16llx: %s\n", nwid, OSUtils::jsonDump(dns, 2).c_str());
 
 	if (metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_RULES_ENGINE_REV,0) <= 0) {
 		// Old versions with no rules engine support get an allow everything rule.
@@ -1727,6 +1729,8 @@ void EmbeddedNetworkController::_request(
 				++nc->dnsCount;
 			}
 		}
+	} else {
+		dns = json::array();
 	}
 
 	// Issue a certificate of ownership for all static IPs

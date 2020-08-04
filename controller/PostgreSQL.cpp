@@ -430,6 +430,46 @@ void PostgreSQL::initializeNetworks(PGconn *conn)
 				config["routes"].push_back(route);
 			}
 
+			r2 = PQexecParams(conn,
+				"SELECT domain, servers FROM ztc_network_dns WHERE network_id = $1",
+				1,
+				NULL,
+				nwidparam,
+				NULL,
+				NULL,
+				0);
+			
+			if (PQresultStatus(r2) != PGRES_TUPLES_OK) {
+				fprintf(stderr, "ERROR: Error retrieving DNS settings for network: %s\n", PQresultErrorMessage(r2));
+				PQclear(r2);
+				PQclear(res);
+				exit(1);
+			}
+
+			n = PQntuples(r2);
+			config["dns"] = json::array();
+			for (int j = 0; j < n; ++j) {
+
+				json obj;
+				std::string domain = PQgetvalue(r2, j, 0);
+				std::string serverList = PQgetvalue(r2, j, 1);
+				auto servers = json::array();
+				if (serverList.rfind("{",0) != std::string::npos) {
+					serverList = serverList.substr(1, serverList.size()-2);
+					fprintf(stderr, "Server List: %s\n", serverList.c_str());
+					std::stringstream ss(serverList);
+					while(ss.good()) {
+						std::string server;
+						std::getline(ss, server, ',');
+						servers.push_back(server);
+					}
+				}
+				obj["domain"] = domain;
+				obj["servers"] = servers;
+				config["dns"].push_back(obj);
+			}
+			fprintf(stderr, "%s\n", OSUtils::jsonDump(config["dns"], 2).c_str());
+
 			PQclear(r2);
 
 			_networkChanged(empty, config, false);
@@ -1411,6 +1451,67 @@ void PostgreSQL::commitThread()
 
 						if (PQresultStatus(res) != PGRES_COMMAND_OK) {
 							fprintf(stderr, "ERROR: Error updating routes: %s\n", PQresultErrorMessage(res));
+							PQclear(res);
+							err = true;
+							break;
+						}
+						PQclear(res);
+					}
+					if (err) {
+						PQclear(PQexec(conn, "ROLLBACK"));
+						delete config;
+						config = nullptr;
+						continue;
+					}
+
+
+					res = PQexecParams(conn,
+						"DELETE FROM ztc_network_dns WHERE network_id = $1",
+						1,
+						NULL,
+						params,
+						NULL,
+						NULL,
+						0);
+
+					if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+						fprintf(stderr, "ERROR: Error updating dns: %s\n", PQresultErrorMessage(res));
+						PQclear(res);
+						PQclear(PQexec(conn, "ROLLBACK"));
+						delete config;
+						config = nullptr;
+						continue;
+					}
+
+					auto dns = (*config)["dns"];
+					err = false;
+					for (auto i = dns.begin(); i < dns.end(); ++i) {
+						std::string domain = (*i)["domain"];
+						std::stringstream servers;
+						servers << "{";
+						for (auto j = dns["servers"].begin(); j < dns["servers"].end(); ++j) {
+							servers << *j;
+							if ( (j+1) != dns["servers"].end()) {
+								servers << ",";
+							}
+						}
+						servers << "}";
+
+						const char *p[3] = {
+							id.c_str(),
+							domain.c_str(),
+							servers.str().c_str()
+						};
+
+						res = PQexecParams(conn, "INSERT INTO ztc_network_dns (network_id, domain, servers) VALUES ($1, $2, $3)",
+							3,
+							NULL,
+							p,
+							NULL,
+							NULL,
+							0);
+						if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+							fprintf(stderr, "ERROR: Error updating DNS: %s\n", PQresultErrorMessage(res));
 							PQclear(res);
 							err = true;
 							break;

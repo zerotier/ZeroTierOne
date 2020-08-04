@@ -1992,7 +1992,7 @@ public:
 				fprintf(stderr, "ERROR: %d records > max %d.  Skipping DNS\n", n.config.dnsCount, ZT_MAX_NETWORK_DNS);
 				return;
 			}
-			fprintf(stderr, "Syncing %d DNS configurations\n", n.config.dnsCount);
+			fprintf(stderr, "Syncing %d DNS configurations for network [%.16llx]\n", n.config.dnsCount, n.config.nwid);
 			for (int i = 0; i < n.config.dnsCount; ++i) {
 				if (strlen(n.config.dns[i].domain) != 0) {
 					fprintf(stderr, "Syncing DNS for domain: %s\n", n.config.dns[i].domain);
