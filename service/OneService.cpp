@@ -2011,12 +2011,15 @@ public:
 			for (int i = 0; i < n.config.dnsCount; ++i) {
 				if (strlen(n.config.dns[i].domain) != 0) {
 					fprintf(stderr, "Syncing DNS for domain: %s\n", n.config.dns[i].domain);
+					std::vector<InetAddress> servers;
 					for (int j = 0; j < ZT_MAX_DNS_SERVERS; ++j) {
 						InetAddress a(n.config.dns[i].server_addr[j]);
 						if (a.isV4() || a.isV6()) {
 							fprintf(stderr, "\t Server %d: %s\n", j+1, a.toIpString(buf));
+							servers.push_back(a);
 						}
 					}
+					n.tap->setDns(n.config.dns[i].domain, servers);
 				}
 			}
 		}

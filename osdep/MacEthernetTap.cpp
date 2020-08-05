@@ -21,6 +21,7 @@
 #include "OSUtils.hpp"
 #include "MacEthernetTap.hpp"
 #include "MacEthernetTapAgent.h"
+#include "MacDNSHelper.hpp"
 
 #include <stdint.h>
 #include <stdio.h>
@@ -54,6 +55,7 @@
 #include <map>
 #include <set>
 #include <algorithm>
+#include <filesystem>
 
 static const ZeroTier::MulticastGroup _blindWildcardMulticastGroup(ZeroTier::MAC(0xff),0);
 
@@ -454,7 +456,67 @@ void MacEthernetTap::threadMain()
 
 void MacEthernetTap::setDns(const char *domain, const std::vector<InetAddress> &servers)
 {
+	MacDNSHelper::doTheThing();
+	MacDNSHelper::setDNS(this->_nwid, domain, servers);
+	// _removeDnsConfig(domain, servers);
+	// _addDnsConfig(domain, servers);
+}
 
+void MacEthernetTap::_removeDnsConfig(const char *domain, const std::vector<InetAddress> &servers)
+{
+	std::string tmpfile = std::tmpnam(nullptr);
+	std::FILE *remf = std::fopen(tmpfile.c_str(), "w");
+	char buf[4096] = {0};
+	sprintf(buf, "remove State:/Network/Service/%.16llx/DNS\n", _nwid);
+	std::fputs(buf, remf);
+	std::fflush(remf);
+	std::fclose(remf);
+	fprintf(stderr, "wrote tmpfile %s\n", tmpfile.c_str());
+	long cpid = (long)vfork();
+	if (cpid == 0) {
+		char cmd[1024] = {0};
+		sprintf(cmd, "/usr/sbin/scutil < %s", tmpfile.c_str());
+		::execl("/bin/sh", "-c", cmd);
+	} else if (cpid > 0) {
+		int exitcode = -1;
+		::waitpid(cpid, &exitcode,0);
+		if (exitcode) {
+			throw std::runtime_error("scutil dns config remove error");
+		}
+	}
+}
+
+void MacEthernetTap::_addDnsConfig(const char *domain, const std::vector<InetAddress> &servers)
+{
+	std::string tmpfile = std::tmpnam(nullptr);
+	std::FILE *addf = std::fopen(tmpfile.c_str(), "w");
+	char buf[4096] = {0};
+	sprintf(buf, "d.init\n");
+	sprintf(buf, "d.add ServerAddresses *");
+	for (auto it = servers.begin(); it != servers.end(); ++it) {
+		char ipbuf[128] = {0};
+		sprintf(buf, " %s", it->toIpString(buf));
+	}
+	sprintf(buf, "\n");
+	sprintf(buf, "d.add SupplementalMatchDomains * %s\n", domain);
+	sprintf(buf, "set State:/Network/Service/%.16llx/DNS", _nwid);
+	std::fputs(buf, addf);
+	std::fflush(addf);
+	std::fclose(addf);
+	fprintf(stderr, "wrote add tmpfile %s\n", tmpfile.c_str());
+	long cpid = (long)vfork();
+	if (cpid == 0) {
+		char cmd[1024];
+		sprintf(cmd, "'/usr/bin/scutil < %s'", tmpfile.c_str());
+		fprintf(stderr, "%s\n", cmd);
+		::execl("/bin/sh", "-c", cmd);
+	} else if (cpid > 0) {
+		int exitcode = -1;
+		::waitpid(cpid, &exitcode, 0);
+		if (exitcode) {
+			throw std::runtime_error("scutil dns config add error");
+		}
+	}
 }
 
 } // namespace ZeroTier

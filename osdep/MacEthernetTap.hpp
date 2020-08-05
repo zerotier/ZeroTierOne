@@ -62,6 +62,9 @@ public:
 		throw();
 
 private:
+	void _removeDnsConfig(const char *domain, const std::vector<InetAddress> &servers);
+	void _addDnsConfig(const char *domain, const std::vector<InetAddress> &servers);
+
 	void (*_handler)(void *,void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int);
 	void *_arg;
 	uint64_t _nwid;

@@ -25,10 +25,10 @@ TIMESTAMP=$(shell date +"%Y%m%d%H%M")
 DEFS+=-DZT_BUILD_PLATFORM=$(ZT_BUILD_PLATFORM) -DZT_BUILD_ARCHITECTURE=$(ZT_BUILD_ARCHITECTURE)
 
 include objects.mk
-ONE_OBJS+=osdep/MacEthernetTap.o osdep/MacKextEthernetTap.o ext/http-parser/http_parser.o
+ONE_OBJS+=osdep/MacEthernetTap.o osdep/MacKextEthernetTap.o osdep/MacDNSHelper.o ext/http-parser/http_parser.o
 
 ifeq ($(ZT_CONTROLLER),1)
-	LIBS+=-L/usr/local/opt/libpq/lib -lpq ext/redis-plus-plus-1.1.1/install/macos/lib/libredis++.a ext/hiredis-0.14.1/lib/macos/libhiredis.a
+	LIBS+=-L/usr/local/opt/libpq/lib -lpq ext/redis-plus-plus-1.1.1/install/macos/lib/libredis++.a ext/hiredis-0.14.1/lib/macos/libhiredis.a -framework SystemConfiguration -framework CoreFoundation
 	DEFS+=-DZT_CONTROLLER_USE_LIBPQ -DZT_CONTROLLER_USE_REDIS -DZT_CONTROLLER 
 	INCLUDES+=-I/usr/local/opt/libpq/include -Iext/hiredis-0.14.1/include/ -Iext/redis-plus-plus-1.1.1/install/macos/include/sw/
 	
@@ -97,7 +97,11 @@ mac-agent: FORCE
 	$(CC) -Ofast -o MacEthernetTapAgent osdep/MacEthernetTapAgent.c
 	$(CODESIGN) -f -s $(CODESIGN_APP_CERT) MacEthernetTapAgent
 
+osdep/MacDNSHelper.o: osdep/MacDNSHelper.mm
+	$(CXX) $(CXXFLAGS) -c osdep/MacDNSHelper.mm -o osdep/MacDNSHelper.o 
+
 one:	$(CORE_OBJS) $(ONE_OBJS) one.o mac-agent
+	 
 	$(CXX) $(CXXFLAGS) -o zerotier-one $(CORE_OBJS) $(ONE_OBJS) one.o $(LIBS)
 	# $(STRIP) zerotier-one
 	ln -sf zerotier-one zerotier-idtool
