@@ -61,12 +61,29 @@ void MacDNSHelper::setDNS(uint64_t nwid, const char *domain, const std::vector<I
         fprintf(stderr, "Error writing DNS configuration\n");
     }
 
+    CFRelease(list);
+    CFRelease(key);
+    CFRelease(dict);
+    CFRelease(domainArray);
+    CFRelease(cfdomain);
+    CFRelease(serverArray);
+    for (int i = 0; i < servers.size(); ++i) {
+        CFRelease(s[i]);
+    }
     delete[] s;
+    CFRelease(ds);
 }
     
 void MacDNSHelper::removeDNS(uint64_t nwid) 
 {
+    SCDynamicStoreRef ds = SCDynamicStoreCreate(NULL, CFSTR("zerotier"), NULL, NULL);
 
+    char buf[256] = {0};
+    sprintf(buf, "State:/Network/Service/%.16llx/DNS", nwid);
+    CFStringRef key = CFStringCreateWithCString(NULL, buf, kCFStringEncodingUTF8);
+    SCDynamicStoreRemoveValue(ds, key);
+    CFRelease(key);
+    CFRelease(ds);
 }
 
 }
