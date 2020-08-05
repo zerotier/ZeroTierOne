@@ -1290,4 +1290,9 @@ void WindowsEthernetTap::_syncIps()
 	}
 }
 
+void WindowsEthernetTap::setDns(const char* domain, const std::vector<InetAddress>& servers)
+{
+
+}
+
 } // namespace ZeroTier

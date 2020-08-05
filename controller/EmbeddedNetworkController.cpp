@@ -585,7 +585,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 							responseBody.reserve((members.size() + 2) * 32);
 							std::string mid;
 							for(auto member=members.begin();member!=members.end();++member) {
-								mid = (*member)["id"];
+								mid = OSUtils::jsonString((*member)["id"], "");
 								char tmp[128];
 								OSUtils::ztsnprintf(tmp,sizeof(tmp),"%s\"%s\":%llu",(responseBody.length() > 1) ? "," : "",mid.c_str(),(unsigned long long)OSUtils::jsonInt((*member)["revision"],0));
 								responseBody.append(tmp);

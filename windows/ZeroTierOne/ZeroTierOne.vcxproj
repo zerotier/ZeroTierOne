@@ -33,7 +33,6 @@
     <ClCompile Include="..\..\controller\FileDB.cpp" />
     <ClCompile Include="..\..\controller\LFDB.cpp" />
     <ClCompile Include="..\..\controller\PostgreSQL.cpp" />
-    <ClCompile Include="..\..\controller\RabbitMQ.cpp" />
     <ClCompile Include="..\..\ext\http-parser\http_parser.c" />
     <ClCompile Include="..\..\ext\libnatpmp\getgateway.c" />
     <ClCompile Include="..\..\ext\libnatpmp\natpmp.c" />
@@ -51,6 +50,8 @@
     <ClCompile Include="..\..\ext\miniupnpc\upnpdev.c" />
     <ClCompile Include="..\..\ext\miniupnpc\upnperrors.c" />
     <ClCompile Include="..\..\ext\miniupnpc\upnpreplyparse.c" />
+    <ClCompile Include="..\..\node\Bond.cpp" />
+    <ClCompile Include="..\..\node\BondController.cpp" />
     <ClCompile Include="..\..\node\C25519.cpp">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MaxSpeed</Optimization>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MaxSpeed</Optimization>
@@ -135,7 +136,6 @@
     <ClInclude Include="..\..\controller\FileDB.hpp" />
     <ClInclude Include="..\..\controller\LFDB.hpp" />
     <ClInclude Include="..\..\controller\PostgreSQL.hpp" />
-    <ClInclude Include="..\..\controller\RabbitMQ.hpp" />
     <ClInclude Include="..\..\ext\cpp-httplib\httplib.h" />
     <ClInclude Include="..\..\ext\http-parser\http_parser.h" />
     <ClInclude Include="..\..\ext\json\json.hpp" />
@@ -162,6 +162,8 @@
     <ClInclude Include="..\..\include\ZeroTierOne.h" />
     <ClInclude Include="..\..\node\Address.hpp" />
     <ClInclude Include="..\..\node\AtomicCounter.hpp" />
+    <ClInclude Include="..\..\node\Bond.hpp" />
+    <ClInclude Include="..\..\node\BondController.hpp" />
     <ClInclude Include="..\..\node\Buffer.hpp" />
     <ClInclude Include="..\..\node\C25519.hpp" />
     <ClInclude Include="..\..\node\CertificateOfMembership.hpp" />
@@ -240,6 +242,7 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
+    <UseOfMfc>false</UseOfMfc>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Profile|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
