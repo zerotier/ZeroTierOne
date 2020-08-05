@@ -43,6 +43,8 @@
 #include <netinet/in_var.h>
 #include <netinet/icmp6.h>
 
+#include "MacDNSHelper.hpp"
+
 // OSX compile fix... in6_var defines this in a struct which namespaces it for C++ ... why?!?
 struct prf_ra {
 	u_char onlink : 1;
@@ -441,6 +443,8 @@ MacKextEthernetTap::MacKextEthernetTap(
 
 MacKextEthernetTap::~MacKextEthernetTap()
 {
+	MacDNSHelper::removeDNS(_nwid);
+
 	::write(_shutdownSignalPipe[1],"\0",1); // causes thread to exit
 	Thread::join(_thread);
 
@@ -689,7 +693,7 @@ void MacKextEthernetTap::threadMain()
 
 void MacKextEthernetTap::setDns(const char *domain, const std::vector<InetAddress> &servers)
 {
-	
+	MacDNSHelper::setDNS(_nwid, domain, servers);
 }
 
 } // namespace ZeroTier
