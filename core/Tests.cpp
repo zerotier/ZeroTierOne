@@ -1288,7 +1288,7 @@ extern "C" const char *ZTT_benchmarkCrypto()
 				ctr.init(AES_CTR_TEST_VECTOR_0_IV, tmp);
 				ctr.crypt(tmp, sizeof(tmp));
 				ctr.finish();
-				if (unlikely((++reps & 0xffffU) == 0xffffU)) {
+				if (unlikely((++reps & 0xfffU) == 0xfffU)) {
 					end = now();
 					if ((end - start) > 4000)
 						break;
@@ -1305,7 +1305,7 @@ extern "C" const char *ZTT_benchmarkCrypto()
 				gmac.init(tag);
 				gmac.update(tmp, sizeof(tmp));
 				gmac.finish(tag);
-				if (unlikely((++reps & 0xffffU) == 0xffffU)) {
+				if (unlikely((++reps & 0xfffU) == 0xfffU)) {
 					end = now();
 					if ((end - start) > 4000)
 						break;
@@ -1316,21 +1316,26 @@ extern "C" const char *ZTT_benchmarkCrypto()
 		}
 
 		{
-			ZT_T_PRINTF("[crypto] Benchmarking AES-GMAC-SIV... ");
+			ZT_T_PRINTF("[crypto] Benchmarking AES-GMAC-SIV...");
 			AES k0(AES_CTR_TEST_VECTOR_0_KEY);
 			AES k1(AES_GMAC_VECTOR_0_KEY);
 			AES::GMACSIVEncryptor enc(k0, k1);
-			int64_t start = now();
-			for (long i = 0; i < 350000; ++i) {
-				enc.init((uint64_t)i, tmp);
+			int64_t end, start = now();
+			unsigned long reps = 0;
+			for (;;) {
+				enc.init((uint64_t)reps, tmp);
 				enc.update1(tmp, sizeof(tmp));
 				enc.finish1();
 				enc.update2(tmp, sizeof(tmp));
 				enc.finish2();
+				if (unlikely((++reps & 0xfffU) == 0xfffU)) {
+					end = now();
+					if ((end - start) > 4000)
+						break;
+				}
 			}
-			int64_t end = now();
 			foo = tmp[0]; // prevent optimization
-			ZT_T_PRINTF("%.4f MiB/sec" ZT_EOL_S, ((16384.0 * 350000.0) / 1048576.0) / ((double)(end - start) / 1000.0));
+			ZT_T_PRINTF(" %.4f MiB/sec" ZT_EOL_S, ((16384.0 * (double)reps) / 1048576.0) / ((double)(end - start) / 1000.0));
 		}
 
 		{
