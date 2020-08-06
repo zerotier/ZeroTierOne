@@ -520,14 +520,8 @@ public:
 
 private:
 	static const uint32_t Te0[256];
-	static const uint32_t Te1[256];
-	static const uint32_t Te2[256];
-	static const uint32_t Te3[256];
 	static const uint32_t Te4[256];
 	static const uint32_t Td0[256];
-	static const uint32_t Td1[256];
-	static const uint32_t Td2[256];
-	static const uint32_t Td3[256];
 	static const uint8_t Td4[256];
 	static const uint32_t rcon[15];
 
