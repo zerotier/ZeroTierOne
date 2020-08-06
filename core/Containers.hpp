@@ -37,7 +37,8 @@ template< typename V >
 class Vector : public std::vector< V >
 {
 public:
-	ZT_INLINE Vector()
+	ZT_INLINE Vector() :
+		std::vector< V >()
 	{}
 
 	template< typename I >

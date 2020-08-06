@@ -23,19 +23,20 @@ func Help() {
 (c)2013-2020 ZeroTier, Inc.
 Licensed under the ZeroTier BSL (see LICENSE.txt)
 
-Usage: zerotier [-options] <command> [command args]
+Usage: zerotier [-global options] <command> [command args]
 
 Global Options:
+
   -j                                     Output raw JSON where applicable
   -p <path>                              Use alternate base path
   -t <path>                              Load secret auth token from a file
   -T <token>                             Set secret auth token on command line
 
-Commands:
+Common Operations:
+
   help                                   Show this help
   version                                Print version
-  service [-options]                     Start node (see below)
-    -d                                   Fork into background (Unix only)
+
   status                                 Show node status and configuration
 
   join [-options] <network>              Join a virtual network
@@ -58,12 +59,16 @@ Commands:
     show                                 Show peer details (default)
     try <endpoint> [...]                 Try peer at explicit endpoint
 
-  set [option] [value]                 - Get or set a core config option
+  set [option] [value]                 - Get or set node configuration
     port <port>                          Primary P2P port
     secondaryport <port/0>               Secondary P2P port (0 to disable)
     blacklist cidr <IP/bits> <boolean>   Toggle physical path blacklisting
     blacklist if <prefix> <boolean>      Toggle interface prefix blacklisting
     portmap <boolean>                    Toggle use of uPnP or NAT-PMP
+
+Advanced Operations:
+
+  service                                Start node (seldom used from CLI)
 
   controller <command> [option]        - Local controller management commands
     networks                             List networks run by local controller

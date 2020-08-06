@@ -18,6 +18,8 @@
 #include "Utils.hpp"
 #include "SHA512.hpp"
 
+//#define ZT_AES_NO_ACCEL
+
 #if !defined(ZT_AES_NO_ACCEL) && defined(ZT_ARCH_X64)
 #define ZT_AES_AESNI 1
 #endif

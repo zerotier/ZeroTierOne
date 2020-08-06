@@ -1057,31 +1057,99 @@ void AES::CTR::crypt(const void *const input, unsigned int len) noexcept
 	out += totalLen;
 	_len = (totalLen + len);
 
-#ifdef ZT_NO_UNALIGNED_ACCESS
-	if ((((uintptr_t)out | (uintptr_t)in) & 7U) == 0) { // if aligned we can do XORs in quadwords instead of bytes
-#endif
-		while (len >= 16) {
-			_aes._encryptSW(reinterpret_cast<const uint8_t *>(_ctr), reinterpret_cast<uint8_t *>(keyStream));
-			reinterpret_cast<uint32_t *>(_ctr)[3] = Utils::hton(++ctr);
-			reinterpret_cast<uint64_t *>(out)[0] = reinterpret_cast<const uint64_t *>(in)[0] ^ keyStream[0];
-			reinterpret_cast<uint64_t *>(out)[1] = reinterpret_cast<const uint64_t *>(in)[1] ^ keyStream[1];
-			out += 16;
-			len -= 16;
-			in += 16;
-		}
-#ifdef ZT_NO_UNALIGNED_ACCESS
-	} else {
-		while (len >= 16) {
-			_aes._encryptSW(reinterpret_cast<const uint8_t *>(_ctr),reinterpret_cast<uint8_t *>(keyStream));
-			reinterpret_cast<uint32_t *>(_ctr)[3] = Utils::hton(++ctr);
-			for (int i = 0;i < 16;++i)
-				out[i] = in[i] ^ reinterpret_cast<uint8_t *>(keyStream)[i];
-			out += 16;
-			len -= 16;
-			in += 16;
-		}
+	const uint32_t *const restrict rk = _aes._k.sw.ek;
+	const uint32_t m8 = 0xff;
+	const uint32_t ctr0rk0 = Utils::ntoh(reinterpret_cast<uint32_t *>(_ctr)[0]) ^ rk[0];
+	const uint32_t ctr1rk1 = Utils::ntoh(reinterpret_cast<uint32_t *>(_ctr)[1]) ^ rk[1];
+	const uint32_t ctr2rk2 = Utils::ntoh(reinterpret_cast<uint32_t *>(_ctr)[2]) ^ rk[2];
+	const uint32_t m8_24 = 0xff000000;
+	const uint32_t m8_16 = 0x00ff0000;
+	const uint32_t m8_8 = 0x0000ff00;
+	while (len >= 16) {
+		uint32_t s0, s1, s2, s3, t0, t1, t2, t3;
+		s0 = ctr0rk0;
+		s1 = ctr1rk1;
+		s2 = ctr2rk2;
+		s3 = ctr++ ^ rk[3];
+		t0 = Te0[s0 >> 24U] ^ Te1[(s1 >> 16U) & m8] ^ Te2[(s2 >> 8U) & m8] ^ Te3[s3 & m8] ^ rk[4];
+		t1 = Te0[s1 >> 24U] ^ Te1[(s2 >> 16U) & m8] ^ Te2[(s3 >> 8U) & m8] ^ Te3[s0 & m8] ^ rk[5];
+		t2 = Te0[s2 >> 24U] ^ Te1[(s3 >> 16U) & m8] ^ Te2[(s0 >> 8U) & m8] ^ Te3[s1 & m8] ^ rk[6];
+		t3 = Te0[s3 >> 24U] ^ Te1[(s0 >> 16U) & m8] ^ Te2[(s1 >> 8U) & m8] ^ Te3[s2 & m8] ^ rk[7];
+		s0 = Te0[t0 >> 24U] ^ Te1[(t1 >> 16U) & m8] ^ Te2[(t2 >> 8U) & m8] ^ Te3[t3 & m8] ^ rk[8];
+		s1 = Te0[t1 >> 24U] ^ Te1[(t2 >> 16U) & m8] ^ Te2[(t3 >> 8U) & m8] ^ Te3[t0 & m8] ^ rk[9];
+		s2 = Te0[t2 >> 24U] ^ Te1[(t3 >> 16U) & m8] ^ Te2[(t0 >> 8U) & m8] ^ Te3[t1 & m8] ^ rk[10];
+		s3 = Te0[t3 >> 24U] ^ Te1[(t0 >> 16U) & m8] ^ Te2[(t1 >> 8U) & m8] ^ Te3[t2 & m8] ^ rk[11];
+		t0 = Te0[s0 >> 24U] ^ Te1[(s1 >> 16U) & m8] ^ Te2[(s2 >> 8U) & m8] ^ Te3[s3 & m8] ^ rk[12];
+		t1 = Te0[s1 >> 24U] ^ Te1[(s2 >> 16U) & m8] ^ Te2[(s3 >> 8U) & m8] ^ Te3[s0 & m8] ^ rk[13];
+		t2 = Te0[s2 >> 24U] ^ Te1[(s3 >> 16U) & m8] ^ Te2[(s0 >> 8U) & m8] ^ Te3[s1 & m8] ^ rk[14];
+		t3 = Te0[s3 >> 24U] ^ Te1[(s0 >> 16U) & m8] ^ Te2[(s1 >> 8U) & m8] ^ Te3[s2 & m8] ^ rk[15];
+		s0 = Te0[t0 >> 24U] ^ Te1[(t1 >> 16U) & m8] ^ Te2[(t2 >> 8U) & m8] ^ Te3[t3 & m8] ^ rk[16];
+		s1 = Te0[t1 >> 24U] ^ Te1[(t2 >> 16U) & m8] ^ Te2[(t3 >> 8U) & m8] ^ Te3[t0 & m8] ^ rk[17];
+		s2 = Te0[t2 >> 24U] ^ Te1[(t3 >> 16U) & m8] ^ Te2[(t0 >> 8U) & m8] ^ Te3[t1 & m8] ^ rk[18];
+		s3 = Te0[t3 >> 24U] ^ Te1[(t0 >> 16U) & m8] ^ Te2[(t1 >> 8U) & m8] ^ Te3[t2 & m8] ^ rk[19];
+		t0 = Te0[s0 >> 24U] ^ Te1[(s1 >> 16U) & m8] ^ Te2[(s2 >> 8U) & m8] ^ Te3[s3 & m8] ^ rk[20];
+		t1 = Te0[s1 >> 24U] ^ Te1[(s2 >> 16U) & m8] ^ Te2[(s3 >> 8U) & m8] ^ Te3[s0 & m8] ^ rk[21];
+		t2 = Te0[s2 >> 24U] ^ Te1[(s3 >> 16U) & m8] ^ Te2[(s0 >> 8U) & m8] ^ Te3[s1 & m8] ^ rk[22];
+		t3 = Te0[s3 >> 24U] ^ Te1[(s0 >> 16U) & m8] ^ Te2[(s1 >> 8U) & m8] ^ Te3[s2 & m8] ^ rk[23];
+		s0 = Te0[t0 >> 24U] ^ Te1[(t1 >> 16U) & m8] ^ Te2[(t2 >> 8U) & m8] ^ Te3[t3 & m8] ^ rk[24];
+		s1 = Te0[t1 >> 24U] ^ Te1[(t2 >> 16U) & m8] ^ Te2[(t3 >> 8U) & m8] ^ Te3[t0 & m8] ^ rk[25];
+		s2 = Te0[t2 >> 24U] ^ Te1[(t3 >> 16U) & m8] ^ Te2[(t0 >> 8U) & m8] ^ Te3[t1 & m8] ^ rk[26];
+		s3 = Te0[t3 >> 24U] ^ Te1[(t0 >> 16U) & m8] ^ Te2[(t1 >> 8U) & m8] ^ Te3[t2 & m8] ^ rk[27];
+		t0 = Te0[s0 >> 24U] ^ Te1[(s1 >> 16U) & m8] ^ Te2[(s2 >> 8U) & m8] ^ Te3[s3 & m8] ^ rk[28];
+		t1 = Te0[s1 >> 24U] ^ Te1[(s2 >> 16U) & m8] ^ Te2[(s3 >> 8U) & m8] ^ Te3[s0 & m8] ^ rk[29];
+		t2 = Te0[s2 >> 24U] ^ Te1[(s3 >> 16U) & m8] ^ Te2[(s0 >> 8U) & m8] ^ Te3[s1 & m8] ^ rk[30];
+		t3 = Te0[s3 >> 24U] ^ Te1[(s0 >> 16U) & m8] ^ Te2[(s1 >> 8U) & m8] ^ Te3[s2 & m8] ^ rk[31];
+		s0 = Te0[t0 >> 24U] ^ Te1[(t1 >> 16U) & m8] ^ Te2[(t2 >> 8U) & m8] ^ Te3[t3 & m8] ^ rk[32];
+		s1 = Te0[t1 >> 24U] ^ Te1[(t2 >> 16U) & m8] ^ Te2[(t3 >> 8U) & m8] ^ Te3[t0 & m8] ^ rk[33];
+		s2 = Te0[t2 >> 24U] ^ Te1[(t3 >> 16U) & m8] ^ Te2[(t0 >> 8U) & m8] ^ Te3[t1 & m8] ^ rk[34];
+		s3 = Te0[t3 >> 24U] ^ Te1[(t0 >> 16U) & m8] ^ Te2[(t1 >> 8U) & m8] ^ Te3[t2 & m8] ^ rk[35];
+		t0 = Te0[s0 >> 24U] ^ Te1[(s1 >> 16U) & m8] ^ Te2[(s2 >> 8U) & m8] ^ Te3[s3 & m8] ^ rk[36];
+		t1 = Te0[s1 >> 24U] ^ Te1[(s2 >> 16U) & m8] ^ Te2[(s3 >> 8U) & m8] ^ Te3[s0 & m8] ^ rk[37];
+		t2 = Te0[s2 >> 24U] ^ Te1[(s3 >> 16U) & m8] ^ Te2[(s0 >> 8U) & m8] ^ Te3[s1 & m8] ^ rk[38];
+		t3 = Te0[s3 >> 24U] ^ Te1[(s0 >> 16U) & m8] ^ Te2[(s1 >> 8U) & m8] ^ Te3[s2 & m8] ^ rk[39];
+		s0 = Te0[t0 >> 24U] ^ Te1[(t1 >> 16U) & m8] ^ Te2[(t2 >> 8U) & m8] ^ Te3[t3 & m8] ^ rk[40];
+		s1 = Te0[t1 >> 24U] ^ Te1[(t2 >> 16U) & m8] ^ Te2[(t3 >> 8U) & m8] ^ Te3[t0 & m8] ^ rk[41];
+		s2 = Te0[t2 >> 24U] ^ Te1[(t3 >> 16U) & m8] ^ Te2[(t0 >> 8U) & m8] ^ Te3[t1 & m8] ^ rk[42];
+		s3 = Te0[t3 >> 24U] ^ Te1[(t0 >> 16U) & m8] ^ Te2[(t1 >> 8U) & m8] ^ Te3[t2 & m8] ^ rk[43];
+		t0 = Te0[s0 >> 24U] ^ Te1[(s1 >> 16U) & m8] ^ Te2[(s2 >> 8U) & m8] ^ Te3[s3 & m8] ^ rk[44];
+		t1 = Te0[s1 >> 24U] ^ Te1[(s2 >> 16U) & m8] ^ Te2[(s3 >> 8U) & m8] ^ Te3[s0 & m8] ^ rk[45];
+		t2 = Te0[s2 >> 24U] ^ Te1[(s3 >> 16U) & m8] ^ Te2[(s0 >> 8U) & m8] ^ Te3[s1 & m8] ^ rk[46];
+		t3 = Te0[s3 >> 24U] ^ Te1[(s0 >> 16U) & m8] ^ Te2[(s1 >> 8U) & m8] ^ Te3[s2 & m8] ^ rk[47];
+		s0 = Te0[t0 >> 24U] ^ Te1[(t1 >> 16U) & m8] ^ Te2[(t2 >> 8U) & m8] ^ Te3[t3 & m8] ^ rk[48];
+		s1 = Te0[t1 >> 24U] ^ Te1[(t2 >> 16U) & m8] ^ Te2[(t3 >> 8U) & m8] ^ Te3[t0 & m8] ^ rk[49];
+		s2 = Te0[t2 >> 24U] ^ Te1[(t3 >> 16U) & m8] ^ Te2[(t0 >> 8U) & m8] ^ Te3[t1 & m8] ^ rk[50];
+		s3 = Te0[t3 >> 24U] ^ Te1[(t0 >> 16U) & m8] ^ Te2[(t1 >> 8U) & m8] ^ Te3[t2 & m8] ^ rk[51];
+		t0 = Te0[s0 >> 24U] ^ Te1[(s1 >> 16U) & m8] ^ Te2[(s2 >> 8U) & m8] ^ Te3[s3 & m8] ^ rk[52];
+		t1 = Te0[s1 >> 24U] ^ Te1[(s2 >> 16U) & m8] ^ Te2[(s3 >> 8U) & m8] ^ Te3[s0 & m8] ^ rk[53];
+		t2 = Te0[s2 >> 24U] ^ Te1[(s3 >> 16U) & m8] ^ Te2[(s0 >> 8U) & m8] ^ Te3[s1 & m8] ^ rk[54];
+		t3 = Te0[s3 >> 24U] ^ Te1[(s0 >> 16U) & m8] ^ Te2[(s1 >> 8U) & m8] ^ Te3[s2 & m8] ^ rk[55];
+		s0 = (Te2[(t0 >> 24U)] & m8_24) ^ (Te3[(t1 >> 16U) & m8] & m8_16) ^ (Te0[(t2 >> 8U) & m8] & m8_8) ^ (Te1[(t3) & m8] & m8) ^ rk[56];
+		s1 = (Te2[(t1 >> 24U)] & m8_24) ^ (Te3[(t2 >> 16U) & m8] & m8_16) ^ (Te0[(t3 >> 8U) & m8] & m8_8) ^ (Te1[(t0) & m8] & m8) ^ rk[57];
+		s2 = (Te2[(t2 >> 24U)] & m8_24) ^ (Te3[(t3 >> 16U) & m8] & m8_16) ^ (Te0[(t0 >> 8U) & m8] & m8_8) ^ (Te1[(t1) & m8] & m8) ^ rk[58];
+		s3 = (Te2[(t3 >> 24U)] & m8_24) ^ (Te3[(t0 >> 16U) & m8] & m8_16) ^ (Te0[(t1 >> 8U) & m8] & m8_8) ^ (Te1[(t2) & m8] & m8) ^ rk[59];
+
+		out[0] = in[0] ^ (uint8_t)(s0 >> 24U);
+		out[1] = in[1] ^ (uint8_t)(s0 >> 16U);
+		out[2] = in[2] ^ (uint8_t)(s0 >> 8U);
+		out[3] = in[3] ^ (uint8_t)s0;
+		out[4] = in[4] ^ (uint8_t)(s1 >> 24U);
+		out[5] = in[5] ^ (uint8_t)(s1 >> 16U);
+		out[6] = in[6] ^ (uint8_t)(s1 >> 8U);
+		out[7] = in[7] ^ (uint8_t)s1;
+		out[8] = in[8] ^ (uint8_t)(s2 >> 24U);
+		out[9] = in[9] ^ (uint8_t)(s2 >> 16U);
+		out[10] = in[10] ^ (uint8_t)(s2 >> 8U);
+		out[11] = in[11] ^ (uint8_t)s2;
+		out[12] = in[12] ^ (uint8_t)(s3 >> 24U);
+		out[13] = in[13] ^ (uint8_t)(s3 >> 16U);
+		out[14] = in[14] ^ (uint8_t)(s3 >> 8U);
+		out[15] = in[15] ^ (uint8_t)s3;
+
+		out += 16;
+		len -= 16;
+		in += 16;
 	}
-#endif
+	reinterpret_cast<uint32_t *>(_ctr)[3] = Utils::hton(ctr);
 
 	// Any remaining input is placed in _out. This will be picked up and crypted
 	// on subsequent calls to crypt() or finish() as it'll mean _len will not be
@@ -1246,11 +1314,12 @@ void AES::_encryptSW(const uint8_t in[16], uint8_t out[16]) const noexcept
 {
 	const uint32_t *const restrict rk = _k.sw.ek;
 	const uint32_t m8 = 0xff;
-	uint32_t s0, s1, s2, s3, t0, t1, t2, t3;
+	uint32_t s0, s1, s2, s3;
 	s0 = Utils::loadBigEndian< uint32_t >(in) ^ rk[0];
 	s1 = Utils::loadBigEndian< uint32_t >(in + 4) ^ rk[1];
 	s2 = Utils::loadBigEndian< uint32_t >(in + 8) ^ rk[2];
 	s3 = Utils::loadBigEndian< uint32_t >(in + 12) ^ rk[3];
+	uint32_t t0, t1, t2, t3;
 	t0 = Te0[s0 >> 24U] ^ Te1[(s1 >> 16U) & m8] ^ Te2[(s2 >> 8U) & m8] ^ Te3[s3 & m8] ^ rk[4];
 	t1 = Te0[s1 >> 24U] ^ Te1[(s2 >> 16U) & m8] ^ Te2[(s3 >> 8U) & m8] ^ Te3[s0 & m8] ^ rk[5];
 	t2 = Te0[s2 >> 24U] ^ Te1[(s3 >> 16U) & m8] ^ Te2[(s0 >> 8U) & m8] ^ Te3[s1 & m8] ^ rk[6];

@@ -26,6 +26,8 @@ import (
 	"unsafe"
 )
 
+// TODO: export keys in ssh format?
+
 const (
 	IdentityTypeC25519 = 0
 	IdentityTypeP384   = 1
