@@ -1279,30 +1279,40 @@ extern "C" const char *ZTT_benchmarkCrypto()
 		}
 
 		{
-			ZT_T_PRINTF("[crypto] Benchmarking AES-CTR... ");
+			ZT_T_PRINTF("[crypto] Benchmarking AES-CTR...");
 			AES aes(AES_CTR_TEST_VECTOR_0_KEY);
 			AES::CTR ctr(aes);
-			int64_t start = now();
-			for (long i = 0; i < 350000; ++i) {
+			int64_t end, start = now();
+			unsigned long reps = 0;
+			for (;;) {
 				ctr.init(AES_CTR_TEST_VECTOR_0_IV, tmp);
 				ctr.crypt(tmp, sizeof(tmp));
 				ctr.finish();
+				if (unlikely((++reps & 0xffffU) == 0xffffU)) {
+					end = now();
+					if ((end - start) > 4000)
+						break;
+				}
 			}
-			int64_t end = now();
 			foo = tmp[0]; // prevent optimization
-			ZT_T_PRINTF("%.4f MiB/sec" ZT_EOL_S, ((16384.0 * 350000.0) / 1048576.0) / ((double)(end - start) / 1000.0));
+			ZT_T_PRINTF(" %.4f MiB/sec" ZT_EOL_S, ((16384.0 * (double)reps) / 1048576.0) / ((double)(end - start) / 1000.0));
 
-			ZT_T_PRINTF("[crypto] Benchmarking AES-GMAC... ");
+			ZT_T_PRINTF("[crypto] Benchmarking AES-GMAC...");
 			AES::GMAC gmac(aes);
 			start = now();
-			for (long i = 0; i < 350000; ++i) {
+			reps = 0;
+			for (;;) {
 				gmac.init(tag);
 				gmac.update(tmp, sizeof(tmp));
 				gmac.finish(tag);
+				if (unlikely((++reps & 0xffffU) == 0xffffU)) {
+					end = now();
+					if ((end - start) > 4000)
+						break;
+				}
 			}
-			end = now();
 			foo = tag[0]; // prevent optimization
-			ZT_T_PRINTF("%.4f MiB/sec" ZT_EOL_S, ((16384.0 * 350000.0) / 1048576.0) / ((double)(end - start) / 1000.0));
+			ZT_T_PRINTF(" %.4f MiB/sec" ZT_EOL_S, ((16384.0 * (double)reps) / 1048576.0) / ((double)(end - start) / 1000.0));
 		}
 
 		{
