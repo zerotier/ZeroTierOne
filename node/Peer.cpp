@@ -91,7 +91,7 @@ void Peer::received(
 			break;
 	}
 
-	recordIncomingPacket(tPtr, path, packetId, payloadLength, verb, flowId, now);
+	recordIncomingPacket(path, packetId, payloadLength, verb, flowId, now);
 
 	if (trustEstablished) {
 		_lastTrustEstablishedPacketReceived = now;
@@ -434,7 +434,7 @@ void Peer::tryMemorizedPath(void *tPtr,int64_t now)
 	}
 }
 
-void Peer::performMultipathStateCheck(int64_t now)
+void Peer::performMultipathStateCheck(void *tPtr, int64_t now)
 {
 	/**
 	 * Check for conditions required for multipath bonding and create a bond
@@ -481,7 +481,7 @@ unsigned int Peer::doPingAndKeepalive(void *tPtr,int64_t now)
 	unsigned int sent = 0;
 	Mutex::Lock _l(_paths_m);
 
-	performMultipathStateCheck(now);
+	performMultipathStateCheck(tPtr, now);
 
 	const bool sendFullHello = ((now - _lastSentFullHello) >= ZT_PEER_PING_PERIOD);
 	_lastSentFullHello = now;
@@ -597,7 +597,7 @@ void Peer::recordIncomingInvalidPacket(const SharedPtr<Path>& path)
 	_bondToPeer->recordIncomingInvalidPacket(path);
 }
 
-void Peer::recordIncomingPacket(void *tPtr, const SharedPtr<Path> &path, const uint64_t packetId,
+void Peer::recordIncomingPacket(const SharedPtr<Path> &path, const uint64_t packetId,
 	uint16_t payloadLength, const Packet::Verb verb, const int32_t flowId, int64_t now)
 {
 	if (!_shouldCollectPathStatistics || !_bondToPeer) {

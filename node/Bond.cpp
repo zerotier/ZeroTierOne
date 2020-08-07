@@ -13,6 +13,8 @@
 
 #include <cmath>
 
+#include "../osdep/OSUtils.hpp"
+
 #include "Peer.hpp"
 #include "Bond.hpp"
 #include "Switch.hpp"
@@ -23,12 +25,24 @@ namespace ZeroTier {
 
 Bond::Bond(const RuntimeEnvironment *renv, int policy, const SharedPtr<Peer>& peer) :
 	RR(renv),
-	_peer(peer)
+	_peer(peer),
+	_qosCutoffCount(0),
+	_ackCutoffCount(0),
+	_lastAckRateCheck(0),
+	_lastQoSRateCheck(0),
+	_lastQualityEstimation(0),
+	_lastCheckUserPreferences(0),
+	_lastBackgroundTaskCheck(0),
+	_lastBondStatusLog(0),
+	_lastPathNegotiationReceived(0),
+	_lastPathNegotiationCheck(0),
+	_lastSentPathNegotiationRequest(0),
+	_lastFlowStatReset(0),
+	_lastFlowExpirationCheck(0),
+	_lastFlowRebalance(0),
+	_lastFrame(0),
+	_lastActiveBackupPathChange(0)
 {
-	// TODO: Remove for production
-	_header=false;
-	_lastLogTS = RR->node->now();
-	_lastPrintTS = RR->node->now();
 	setReasonableDefaults(policy, SharedPtr<Bond>(), false);
 	_policyAlias = BondController::getPolicyStrByCode(policy);
 }
@@ -43,18 +57,26 @@ Bond::Bond(const RuntimeEnvironment *renv, std::string& basePolicy, std::string&
 
 Bond::Bond(const RuntimeEnvironment *renv, SharedPtr<Bond> originalBond, const SharedPtr<Peer>& peer) :
 	RR(renv),
-	_peer(peer)
+	_peer(peer),
+	_lastAckRateCheck(0),
+	_lastQoSRateCheck(0),
+	_lastQualityEstimation(0),
+	_lastCheckUserPreferences(0),
+	_lastBackgroundTaskCheck(0),
+	_lastBondStatusLog(0),
+	_lastPathNegotiationReceived(0),
+	_lastPathNegotiationCheck(0),
+	_lastFlowStatReset(0),
+	_lastFlowExpirationCheck(0),
+	_lastFlowRebalance(0),
+	_lastFrame(0)
 {
-	// TODO: Remove for production
-	_header=false;
-	_lastLogTS = RR->node->now();
-	_lastPrintTS = RR->node->now();
 	setReasonableDefaults(originalBond->_bondingPolicy, originalBond, true);
 }
 
 void Bond::nominatePath(const SharedPtr<Path>& path, int64_t now)
 {
-	char pathStr[128];path->address().toString(pathStr);//fprintf(stderr, "nominatePath: %s %s\n", getLink(path)->ifname().c_str(), pathStr);
+	char traceMsg[256]; char pathStr[128]; path->address().toString(pathStr);
 	Mutex::Lock _l(_paths_m);
 	if (!RR->bc->linkAllowed(_policyAlias, getLink(path))) {
 		return;
@@ -62,7 +84,7 @@ void Bond::nominatePath(const SharedPtr<Path>& path, int64_t now)
 	bool alreadyPresent = false;
 	for (int i=0; i<ZT_MAX_PEER_NETWORK_PATHS; ++i) {
 		if (path.ptr() == _paths[i].ptr()) {
-			//fprintf(stderr, "previously encountered path, not notifying bond (%s)\n", pathStr);
+			// Previously encountered path, not notifying bond
 			alreadyPresent = true;
 			break;
 		}
@@ -70,9 +92,10 @@ void Bond::nominatePath(const SharedPtr<Path>& path, int64_t now)
 	if (!alreadyPresent) {
 		for (int i=0; i<ZT_MAX_PEER_NETWORK_PATHS; ++i) {
 			if (!_paths[i]) {
-				//fprintf(stderr, "notifyOfNewPath(): Setting path %s to idx=%d\n", pathStr, i);
 				_paths[i] = path;
-				//_paths[i]->link = RR->bc->getLinkBySocket(_policyAlias, path->localSocket());
+				sprintf(traceMsg, "%s (bond) Nominating link %s/%s to peer %llx. It has now entered its trial period",
+					OSUtils::humanReadableTimestamp().c_str(), getLink(path)->ifname().c_str(), pathStr, _peer->_id.address().toInt());
+				RR->t->bondStateMessage(NULL, traceMsg);
 				_paths[i]->startTrial(now);
 				break;
 			}
@@ -107,7 +130,6 @@ SharedPtr<Path> Bond::getAppropriatePath(int64_t now, int32_t flowId)
 	 */
 	if (_bondingPolicy == ZT_BONDING_POLICY_BALANCE_RR) {
 		if (!_allowFlowHashing) {
-			//fprintf(stderr, "_rrPacketsSentOnCurrLink=%d, _numBondedPaths=%d, _rrIdx=%d\n", _rrPacketsSentOnCurrLink, _numBondedPaths, _rrIdx);
 			if (_packetsPerLink == 0) {
 				// Randomly select a path
 				return _paths[_bondedIdx[_freeRandomByte % _numBondedPaths]]; // TODO: Optimize
@@ -170,7 +192,10 @@ SharedPtr<Path> Bond::getAppropriatePath(int64_t now, int32_t flowId)
 
 void Bond::recordIncomingInvalidPacket(const SharedPtr<Path>& path)
 {
-	// char pathStr[128];path->address().toString(pathStr);//fprintf(stderr, "recordIncomingInvalidPacket() %s %s\n", getLink(path)->ifname().c_str(), pathStr);
+	//char traceMsg[256]; char pathStr[128]; path->address().toString(pathStr);
+	//sprintf(traceMsg, "%s (qos) Invalid packet on link %s/%s from peer %llx",
+	//	OSUtils::humanReadableTimestamp().c_str(), getLink(path)->ifname().c_str(), pathStr, _peer->_id.address().toInt());
+	//RR->t->bondStateMessage(NULL, traceMsg);
 	Mutex::Lock _l(_paths_m);
 	for (int i=0; i<ZT_MAX_PEER_NETWORK_PATHS; ++i) {
 		if (_paths[i] == path) {
@@ -182,7 +207,10 @@ void Bond::recordIncomingInvalidPacket(const SharedPtr<Path>& path)
 void Bond::recordOutgoingPacket(const SharedPtr<Path> &path, const uint64_t packetId,
 	uint16_t payloadLength, const Packet::Verb verb, const int32_t flowId, int64_t now)
 {
-	// char pathStr[128];path->address().toString(pathStr);//fprintf(stderr, "recordOutgoingPacket() %s %s, packetId=%llx, payloadLength=%d, verb=%x, flowId=%lx\n", getLink(path)->ifname().c_str(), pathStr, packetId, payloadLength, verb, flowId);
+	//char traceMsg[256]; char pathStr[128]; path->address().toString(pathStr);
+	//sprintf(traceMsg, "%s (bond) Outgoing packet on link %s/%s to peer %llx",
+	//	OSUtils::humanReadableTimestamp().c_str(), getLink(path)->ifname().c_str(), pathStr, _peer->_id.address().toInt());
+	//RR->t->bondStateMessage(NULL, traceMsg);
 	_freeRandomByte += (unsigned char)(packetId >> 8); // Grab entropy to use in path selection logic
 	if (!_shouldCollectPathStatistics) {
 		return;
@@ -218,7 +246,10 @@ void Bond::recordOutgoingPacket(const SharedPtr<Path> &path, const uint64_t pack
 void Bond::recordIncomingPacket(const SharedPtr<Path>& path, uint64_t packetId, uint16_t payloadLength,
 	Packet::Verb verb, int32_t flowId, int64_t now)
 {
-	//char pathStr[128];path->address().toString(pathStr);//fprintf(stderr, "recordIncomingPacket() %s %s, packetId=%llx, payloadLength=%d, verb=%x, flowId=%lx\n", getLink(path)->ifname().c_str(), pathStr, packetId, payloadLength, verb, flowId);
+	//char traceMsg[256]; char pathStr[128]; path->address().toString(pathStr);
+	//sprintf(traceMsg, "%s (bond) Incoming packet on link %s/%s from peer %llx [id=%llx, len=%d, verb=%d, flowId=%x]",
+	//	OSUtils::humanReadableTimestamp().c_str(), getLink(path)->ifname().c_str(), pathStr, _peer->_id.address().toInt(), packetId, payloadLength, verb, flowId);
+	//RR->t->bondStateMessage(NULL, traceMsg);
 	bool isFrame = (verb == Packet::VERB_FRAME || verb == Packet::VERB_EXT_FRAME);
 	bool shouldRecord = (packetId & (ZT_QOS_ACK_DIVISOR - 1)
 		&& (verb != Packet::VERB_ACK)
@@ -261,8 +292,11 @@ void Bond::recordIncomingPacket(const SharedPtr<Path>& path, uint64_t packetId, 
 
 void Bond::receivedQoS(const SharedPtr<Path>& path, int64_t now, int count, uint64_t *rx_id, uint16_t *rx_ts)
 {
-	//char pathStr[128];path->address().toString(pathStr);//fprintf(stderr, "receivedQoS() %s %s\n", getLink(path)->ifname().c_str(), pathStr);
 	Mutex::Lock _l(_paths_m);
+	//char traceMsg[256]; char pathStr[128]; path->address().toString(pathStr);
+	//sprintf(traceMsg, "%s (qos) Received QoS packet sampling %d frames from peer %llx via %s/%s",
+	//	OSUtils::humanReadableTimestamp().c_str(), count, _peer->_id.address().toInt(), getLink(path)->ifname().c_str(), pathStr);
+	//RR->t->bondStateMessage(NULL, traceMsg);
 	// Look up egress times and compute latency values for each record
 	std::map<uint64_t,uint64_t>::iterator it;
 	for (int j=0; j<count; j++) {
@@ -273,13 +307,15 @@ void Bond::receivedQoS(const SharedPtr<Path>& path, int64_t now, int count, uint
 		}
 	}
 	path->qosRecordSize.push(count);
-	//char pathStr[128];path->address().toString(pathStr);//fprintf(stderr, "receivedQoS() on path %s %s, count=%d, successful=%d, qosStatsOut.size()=%d\n", getLink(path)->ifname().c_str(), pathStr, count, path->aknowledgedQoSRecordCountSinceLastCheck, path->qosStatsOut.size());
 }
 
 void Bond::receivedAck(const SharedPtr<Path>& path, int64_t now, int32_t ackedBytes)
 {
 	Mutex::Lock _l(_paths_m);
-	//char pathStr[128];path->address().toString(pathStr);//fprintf(stderr, "receivedAck() %s %s, (ackedBytes=%d, lastAckReceived=%lld, ackAge=%lld)\n", getLink(path)->ifname().c_str(), pathStr, ackedBytes, path->lastAckReceived, path->ackAge(now));
+	//char traceMsg[256]; char pathStr[128]; path->address().toString(pathStr);
+	//sprintf(traceMsg, "%s (qos) Received ACK packet for %d bytes from peer %llx via %s/%s",
+	//	OSUtils::humanReadableTimestamp().c_str(), ackedBytes, _peer->_id.address().toInt(), getLink(path)->ifname().c_str(), pathStr);
+	//RR->t->bondStateMessage(NULL, traceMsg);
 	path->_lastAckReceived = now;
 	path->_unackedBytes = (ackedBytes > path->_unackedBytes) ? 0 : path->_unackedBytes - ackedBytes;
 	int64_t timeSinceThroughputEstimate = (now - path->_lastThroughputEstimation);
@@ -300,7 +336,6 @@ void Bond::receivedAck(const SharedPtr<Path>& path, int64_t now, int32_t ackedBy
 
 int32_t Bond::generateQoSPacket(const SharedPtr<Path>& path, int64_t now, char *qosBuffer)
 {
-	//char pathStr[128];path->address().toString(pathStr);//fprintf(stderr, "generateQoSPacket() %s %s\n", getLink(path)->ifname().c_str(), pathStr);
 	int32_t len = 0;
 	std::map<uint64_t,uint64_t>::iterator it = path->qosStatsIn.begin();
 	int i=0;
@@ -321,12 +356,15 @@ int32_t Bond::generateQoSPacket(const SharedPtr<Path>& path, int64_t now, char *
 
 bool Bond::assignFlowToBondedPath(SharedPtr<Flow> &flow, int64_t now)
 {
-	//fprintf(stderr, "assignFlowToBondedPath\n");
+	char traceMsg[256];
 	char curPathStr[128];
 	unsigned int idx = ZT_MAX_PEER_NETWORK_PATHS;
 	if (_bondingPolicy == ZT_BONDING_POLICY_BALANCE_XOR) {
 		idx = abs((int)(flow->id() % (_numBondedPaths)));
-		//fprintf(stderr, "flow->id()=%d, %x, _numBondedPaths=%d, idx=%d\n", flow->id(), flow->id(), _numBondedPaths, idx);
+		SharedPtr<Link> link = RR->bc->getLinkBySocket(_policyAlias, _paths[_bondedIdx[idx]]->localSocket());
+		sprintf(traceMsg, "%s (balance-xor) Assigned outgoing flow %x to peer %llx to link %s/%s, %lu active flow(s)\n",
+			OSUtils::humanReadableTimestamp().c_str(), flow->id(), _peer->_id.address().toInt(), link->ifname().c_str(), curPathStr, _flows.size());
+		RR->t->bondStateMessage(NULL, traceMsg);
 		flow->assignPath(_paths[_bondedIdx[idx]],now);
 		++(_paths[_bondedIdx[idx]]->_assignedFlowCount);
 	}
@@ -337,7 +375,9 @@ bool Bond::assignFlowToBondedPath(SharedPtr<Flow> &flow, int64_t now)
 			entropy %= _totalBondUnderload;
 		}
 		if (!_numBondedPaths) {
-			//fprintf(stderr, "no bonded paths for flow assignment\n");
+			sprintf(traceMsg, "%s (balance-aware) There are no bonded paths, cannot assign flow %x\n",
+				OSUtils::humanReadableTimestamp().c_str(), flow->id());
+			RR->t->bondStateMessage(NULL, traceMsg);
 			return false;
 		}
 		/* Since there may be scenarios where a path is removed before we can re-estimate
@@ -350,18 +390,14 @@ bool Bond::assignFlowToBondedPath(SharedPtr<Flow> &flow, int64_t now)
 				totalIncompleteAllocation += _paths[i]->_allocation;
 			}
 		}
-		//fprintf(stderr, "entropy     = %d, totalIncompleteAllocation=%d\n", entropy, totalIncompleteAllocation);
 		entropy %= totalIncompleteAllocation;
-		//fprintf(stderr, "new entropy = %d\n", entropy);
 		for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
 			if (_paths[i] && _paths[i]->bonded()) {
 				SharedPtr<Link> link = RR->bc->getLinkBySocket(_policyAlias, _paths[i]->localSocket());
 				_paths[i]->address().toString(curPathStr);
 				uint8_t probabilitySegment = (_totalBondUnderload > 0) ? _paths[i]->_affinity : _paths[i]->_allocation;
-				//fprintf(stderr, "i=%2d, entropy=%3d, alloc=%3d, byteload=%4d, segment=%3d, _totalBondUnderload=%3d, ifname=%s, path=%20s\n", i, entropy, _paths[i]->_allocation, _paths[i]->_relativeByteLoad, probabilitySegment, _totalBondUnderload, link->ifname().c_str(), curPathStr);
 				if (entropy <= probabilitySegment) {
 					idx = i;
-					//fprintf(stderr, "\t is best path\n");
 					break;
 				}
 				entropy -= probabilitySegment;
@@ -375,32 +411,37 @@ bool Bond::assignFlowToBondedPath(SharedPtr<Flow> &flow, int64_t now)
 			++(_paths[idx]->_assignedFlowCount);
 		}
 		else {
-			//fprintf(stderr, "could not assign flow?\n"); exit(0); // TODO: Remove for production
+			fprintf(stderr, "could not assign flow?\n"); exit(0); // TODO: Remove for production
 			return false;
 		}
 	}
 	flow->assignedPath()->address().toString(curPathStr);
 	SharedPtr<Link> link = RR->bc->getLinkBySocket(_policyAlias, flow->assignedPath()->localSocket());
-	//fprintf(stderr, "assigned (tx) flow %x with peer %llx to path %s on %s (idx=%d)\n", flow->id(), _peer->_id.address().toInt(), curPathStr, link->ifname().c_str(), idx);
+	sprintf(traceMsg, "%s (bond) Assigned outgoing flow %x to peer %llx to link %s/%s, %lu active flow(s)\n",
+		OSUtils::humanReadableTimestamp().c_str(), flow->id(), _peer->_id.address().toInt(), link->ifname().c_str(), curPathStr, _flows.size());
+	RR->t->bondStateMessage(NULL, traceMsg);
 	return true;
 }
 
 SharedPtr<Flow> Bond::createFlow(const SharedPtr<Path> &path, int32_t flowId, unsigned char entropy, int64_t now)
 {
-	//fprintf(stderr, "createFlow\n");
+	char traceMsg[256];
 	char curPathStr[128];
 	// ---
 	if (!_numBondedPaths) {
-		//fprintf(stderr, "there are no bonded paths, cannot assign flow\n");
+		sprintf(traceMsg, "%s (bond) There are no bonded paths to peer %llx, cannot assign flow %x\n",
+			OSUtils::humanReadableTimestamp().c_str(), _peer->_id.address().toInt(), flowId);
+		RR->t->bondStateMessage(NULL, traceMsg);
 		return SharedPtr<Flow>();
 	}
 	if (_flows.size() >= ZT_FLOW_MAX_COUNT) {
-		//fprintf(stderr, "max number of flows reached (%d), forcibly forgetting oldest flow\n", ZT_FLOW_MAX_COUNT);
-		forgetFlowsWhenNecessary(0,true,now);
+		sprintf(traceMsg, "%s (bond) Maximum number of flows on bond to peer %llx reached (%d), forcibly forgetting oldest flow\n",
+			OSUtils::humanReadableTimestamp().c_str(), _peer->_id.address().toInt(), ZT_FLOW_MAX_COUNT);
+		RR->t->bondStateMessage(NULL, traceMsg);
+		forgetFlowsWhenNecessary(0, true, now);
 	}
 	SharedPtr<Flow> flow = new Flow(flowId, now);
 	_flows[flowId] = flow;
-	//fprintf(stderr, "new flow %x detected with peer %llx, %lu active flow(s)\n", flowId, _peer->_id.address().toInt(), (_flows.size()));
 	/**
 	 * Add a flow with a given Path already provided. This is the case when a packet
 	 * is received on a path but no flow exists, in this case we simply assign the path
@@ -411,7 +452,9 @@ SharedPtr<Flow> Bond::createFlow(const SharedPtr<Path> &path, int32_t flowId, un
 		path->address().toString(curPathStr);
 		path->_assignedFlowCount++;
 		SharedPtr<Link> link = RR->bc->getLinkBySocket(_policyAlias, flow->assignedPath()->localSocket());
-		//fprintf(stderr, "assigned (rx) flow %x with peer %llx to path %s on %s\n", flow->id(), _peer->_id.address().toInt(), curPathStr, link->ifname().c_str());
+		sprintf(traceMsg, "%s (bond) Assigned incoming flow %x from peer %llx to link %s/%s, %lu active flow(s)\n",
+			OSUtils::humanReadableTimestamp().c_str(), flow->id(), _peer->_id.address().toInt(), link->ifname().c_str(), curPathStr, _flows.size());
+		RR->t->bondStateMessage(NULL, traceMsg);
 	}
 	/**
 	 * Add a flow when no path was provided. This means that it is an outgoing packet
@@ -425,14 +468,16 @@ SharedPtr<Flow> Bond::createFlow(const SharedPtr<Path> &path, int32_t flowId, un
 
 void Bond::forgetFlowsWhenNecessary(uint64_t age, bool oldest, int64_t now)
 {
-	//fprintf(stderr, "forgetFlowsWhenNecessary\n");
+	char traceMsg[256];
 	std::map<int32_t,SharedPtr<Flow> >::iterator it = _flows.begin();
 	std::map<int32_t,SharedPtr<Flow> >::iterator oldestFlow = _flows.end();
 	SharedPtr<Flow> expiredFlow;
 	if (age) { // Remove by specific age
 		while (it != _flows.end()) {
 			if (it->second->age(now) > age) {
-				//fprintf(stderr, "forgetting flow %x between this node and %llx, %lu active flow(s)\n", it->first, _peer->_id.address().toInt(), (_flows.size()-1));
+				sprintf(traceMsg, "%s (bond) Forgetting flow %x between this node and peer %llx, %lu active flow(s)\n",
+					OSUtils::humanReadableTimestamp().c_str(), it->first, _peer->_id.address().toInt(), (_flows.size()-1));
+				RR->t->bondStateMessage(NULL, traceMsg);
 				it->second->assignedPath()->_assignedFlowCount--;
 				it = _flows.erase(it);
 			} else {
@@ -450,7 +495,9 @@ void Bond::forgetFlowsWhenNecessary(uint64_t age, bool oldest, int64_t now)
 			++it;
 		}
 		if (oldestFlow != _flows.end()) {
-			//fprintf(stderr, "forgetting oldest flow %x (of age %llu) between this node and %llx, %lu active flow(s)\n", oldestFlow->first, oldestFlow->second->age(now), _peer->_id.address().toInt(), (_flows.size()-1));
+			sprintf(traceMsg, "%s (bond) Forgetting oldest flow %x (of age %llu) between this node and peer %llx, %lu active flow(s)\n",
+				OSUtils::humanReadableTimestamp().c_str(), oldestFlow->first, oldestFlow->second->age(now), _peer->_id.address().toInt(), (_flows.size()-1));
+			RR->t->bondStateMessage(NULL, traceMsg);
 			oldestFlow->second->assignedPath()->_assignedFlowCount--;
 			_flows.erase(oldestFlow);
 		}
@@ -459,7 +506,7 @@ void Bond::forgetFlowsWhenNecessary(uint64_t age, bool oldest, int64_t now)
 
 void Bond::processIncomingPathNegotiationRequest(uint64_t now, SharedPtr<Path> &path, int16_t remoteUtility)
 {
-	//fprintf(stderr, "processIncomingPathNegotiationRequest\n");
+	char traceMsg[256];
 	if (_abLinkSelectMethod != ZT_MULTIPATH_RESELECTION_POLICY_OPTIMIZE) {
 		return;
 	}
@@ -471,26 +518,36 @@ void Bond::processIncomingPathNegotiationRequest(uint64_t now, SharedPtr<Path> &
 	}
 	SharedPtr<Link> link = RR->bc->getLinkBySocket(_policyAlias, path->localSocket());
 	if (remoteUtility > _localUtility) {
-		//fprintf(stderr, "peer suggests path, its utility (%d) is greater than ours (%d), we will switch to %s on %s (ls=%llx)\n", remoteUtility, _localUtility, pathStr, link->ifname().c_str(), path->localSocket());
+		char pathStr[128]; path->address().toString(pathStr);
+		sprintf(traceMsg, "%s (bond) Peer %llx suggests using alternate link %s/%s. Remote utility (%d) is GREATER than local utility (%d), switching to said link\n",
+			OSUtils::humanReadableTimestamp().c_str(), _peer->_id.address().toInt(), link->ifname().c_str(), pathStr, remoteUtility, _localUtility);
+		RR->t->bondStateMessage(NULL, traceMsg);
 		negotiatedPath = path;
 	}
 	if (remoteUtility < _localUtility) {
-		//fprintf(stderr, "peer suggests path, its utility (%d) is less than ours (%d), we will NOT switch to %s on %s (ls=%llx)\n", remoteUtility, _localUtility, pathStr, link->ifname().c_str(), path->localSocket());
+		sprintf(traceMsg, "%s (bond) Peer %llx suggests using alternate link %s/%s. Remote utility (%d) is LESS than local utility (%d), not switching\n",
+			OSUtils::humanReadableTimestamp().c_str(), _peer->_id.address().toInt(), link->ifname().c_str(), pathStr, remoteUtility, _localUtility);
+		RR->t->bondStateMessage(NULL, traceMsg);
 	}
 	if (remoteUtility == _localUtility) {
-		//fprintf(stderr, "peer suggest path, but utility is equal, picking choice made by peer with greater identity.\n");
+		sprintf(traceMsg, "%s (bond) Peer %llx suggests using alternate link %s/%s. Remote utility (%d) is equal to local utility (%d)\n",
+			OSUtils::humanReadableTimestamp().c_str(), _peer->_id.address().toInt(), link->ifname().c_str(), pathStr, remoteUtility, _localUtility);
+		RR->t->bondStateMessage(NULL, traceMsg);
 		if (_peer->_id.address().toInt() > RR->node->identity().address().toInt()) {
-			//fprintf(stderr, "peer identity was greater, going with their choice of %s on %s (ls=%llx)\n", pathStr, link->ifname().c_str(), path->localSocket());
+			sprintf(traceMsg, "%s (bond) Agreeing with peer %llx to use alternate link %s/%s\n",
+				OSUtils::humanReadableTimestamp().c_str(), _peer->_id.address().toInt(), link->ifname().c_str(), pathStr);
+			RR->t->bondStateMessage(NULL, traceMsg);
 			negotiatedPath = path;
 		} else {
-			//fprintf(stderr, "our identity was greater, no change\n");
+			sprintf(traceMsg, "%s (bond) Ignoring petition from peer %llx to use alternate link %s/%s\n",
+				OSUtils::humanReadableTimestamp().c_str(), _peer->_id.address().toInt(), link->ifname().c_str(), pathStr);
+			RR->t->bondStateMessage(NULL, traceMsg);
 		}
 	}
 }
 
 void Bond::pathNegotiationCheck(void *tPtr, const int64_t now)
 {
-	//fprintf(stderr, "pathNegotiationCheck\n");
 	char pathStr[128];
 	int maxInPathIdx = ZT_MAX_PEER_NETWORK_PATHS;
 	int maxOutPathIdx = ZT_MAX_PEER_NETWORK_PATHS;
@@ -551,7 +608,10 @@ void Bond::pathNegotiationCheck(void *tPtr, const int64_t now)
 
 void Bond::sendPATH_NEGOTIATION_REQUEST(void *tPtr, const SharedPtr<Path> &path)
 {
-	//char pathStr[128];path->address().toString(pathStr);//fprintf(stderr, "sendPATH_NEGOTIATION_REQUEST() %s %s\n", getLink(path)->ifname().c_str(), pathStr);
+	char traceMsg[256]; char pathStr[128]; path->address().toString(pathStr);
+	sprintf(traceMsg, "%s (bond) Sending link negotiation request to peer %llx via link %s/%s, local utility is %d",
+		OSUtils::humanReadableTimestamp().c_str(), _peer->_id.address().toInt(), getLink(path)->ifname().c_str(), pathStr, _localUtility);
+	RR->t->bondStateMessage(NULL, traceMsg);
 	if (_abLinkSelectMethod != ZT_MULTIPATH_RESELECTION_POLICY_OPTIMIZE) {
 		return;
 	}
@@ -563,10 +623,9 @@ void Bond::sendPATH_NEGOTIATION_REQUEST(void *tPtr, const SharedPtr<Path> &path)
 	}
 }
 
-void Bond::sendACK(void *tPtr,const SharedPtr<Path> &path,const int64_t localSocket,
+void Bond::sendACK(void *tPtr, const SharedPtr<Path> &path,const int64_t localSocket,
 	const InetAddress &atAddress,int64_t now)
 {
-	//char pathStr[128];path->address().toString(pathStr);//fprintf(stderr, "sendACK() %s %s\n", getLink(path)->ifname().c_str(), pathStr);
 	Packet outp(_peer->_id.address(),RR->identity.address(),Packet::VERB_ACK);
 	int32_t bytesToAck = 0;
 	std::map<uint64_t,uint16_t>::iterator it = path->ackStatsIn.begin();
@@ -574,6 +633,10 @@ void Bond::sendACK(void *tPtr,const SharedPtr<Path> &path,const int64_t localSoc
 		bytesToAck += it->second;
 		++it;
 	}
+	//char traceMsg[256]; char pathStr[128]; path->address().toString(pathStr);
+	//sprintf(traceMsg, "%s (qos) Sending ACK packet for %d bytes to peer %llx via link %s/%s",
+	//	OSUtils::humanReadableTimestamp().c_str(), bytesToAck, _peer->_id.address().toInt(), getLink(path)->ifname().c_str(), pathStr);
+	//RR->t->bondStateMessage(NULL, traceMsg);
 	outp.append<uint32_t>(bytesToAck);
 	if (atAddress) {
 		outp.armor(_peer->key(),false);
@@ -589,7 +652,10 @@ void Bond::sendACK(void *tPtr,const SharedPtr<Path> &path,const int64_t localSoc
 void Bond::sendQOS_MEASUREMENT(void *tPtr,const SharedPtr<Path> &path,const int64_t localSocket,
 	const InetAddress &atAddress,int64_t now)
 {
-	//char pathStr[128];path->address().toString(pathStr);//fprintf(stderr, "sendQOS() %s %s\n", getLink(path)->ifname().c_str(), pathStr);
+	//char traceMsg[256]; char pathStr[128]; path->address().toString(pathStr);
+	//sprintf(traceMsg, "%s (qos) Sending QoS packet to peer %llx via link %s/%s",
+	//	OSUtils::humanReadableTimestamp().c_str(), _peer->_id.address().toInt(), getLink(path)->ifname().c_str(), pathStr);
+	//RR->t->bondStateMessage(NULL, traceMsg);
 	const int64_t _now = RR->node->now();
 	Packet outp(_peer->_id.address(),RR->identity.address(),Packet::VERB_QOS_MEASUREMENT);
 	char qosData[ZT_QOS_MAX_PACKET_SIZE];
@@ -618,8 +684,6 @@ void Bond::processBackgroundTasks(void *tPtr, const int64_t now)
 	if (_linkMonitorStrategy == ZT_MULTIPATH_SLAVE_MONITOR_STRATEGY_DYNAMIC) {
 		int suggestedMonitorInterval  = (now - _lastFrame) / 100;
 		_dynamicPathMonitorInterval = std::min(ZT_PATH_HEARTBEAT_PERIOD, ((suggestedMonitorInterval > _bondMonitorInterval) ? suggestedMonitorInterval : _bondMonitorInterval));
-		//fprintf(stderr, "_lastFrame=%llu, suggestedMonitorInterval=%d, _dynamicPathMonitorInterval=%d\n",
-		//	(now-_lastFrame), suggestedMonitorInterval, _dynamicPathMonitorInterval);
 	}
 	// TODO: Clarify and generalize this logic
 	if (_linkMonitorStrategy == ZT_MULTIPATH_SLAVE_MONITOR_STRATEGY_DYNAMIC) {
@@ -670,7 +734,7 @@ void Bond::processBackgroundTasks(void *tPtr, const int64_t now)
 	switch (_bondingPolicy)
 	{
 		case ZT_BONDING_POLICY_ACTIVE_BACKUP:
-			processActiveBackupTasks(now);
+			processActiveBackupTasks(tPtr, now);
 			break;
 		case ZT_BONDING_POLICY_BROADCAST:
 			break;
@@ -691,7 +755,6 @@ void Bond::processBackgroundTasks(void *tPtr, const int64_t now)
 
 void Bond::applyUserPrefs()
 {
-	//fprintf(stderr, "applyUserPrefs, _minReqPathMonitorInterval=%d\n", RR->bc->minReqPathMonitorInterval());
 	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
 		if (!_paths[i]) {
 			continue;
@@ -728,9 +791,8 @@ void Bond::applyUserPrefs()
 
 void Bond::curateBond(const int64_t now, bool rebuildBond)
 {
-	//fprintf(stderr, "%lu curateBond (rebuildBond=%d), _numBondedPaths=%d\n", ((now - RR->bc->getBondStartTime())), rebuildBond, _numBondedPaths);
+	char traceMsg[256];
 	char pathStr[128];
-
 	uint8_t tmpNumAliveLinks = 0;
 	uint8_t tmpNumTotalLinks = 0;
 	/**
@@ -745,24 +807,29 @@ void Bond::curateBond(const int64_t now, bool rebuildBond)
 			tmpNumAliveLinks++;
 		}
 		bool currEligibility = _paths[i]->eligible(now,_ackSendInterval);
-		//_paths[i]->address().toString(pathStr);
-		//fprintf(stderr, "\n\n%ld path eligibility (for %s, %s):\n", (RR->node->now() - RR->bc->getBondStartTime()), getLink(_paths[i])->ifname().c_str(), pathStr);
-		//_paths[i]->printEligible(now,_ackSendInterval);
 		if (currEligibility != _paths[i]->_lastEligibilityState) {
 			_paths[i]->address().toString(pathStr);
-			//fprintf(stderr, "\n\n%ld path eligibility (for %s, %s) has changed (from %d to %d)\n", (RR->node->now() - RR->bc->getBondStartTime()), getLink(_paths[i])->ifname().c_str(), pathStr, _paths[i]->lastCheckedEligibility, _paths[i]->eligible(now,_ackSendInterval));
+			char traceMsg[256]; _paths[i]->address().toString(pathStr);
+			sprintf(traceMsg, "%s (bond) Eligibility of link %s/%s to peer %llx has changed from %d to %d",
+				OSUtils::humanReadableTimestamp().c_str(), getLink(_paths[i])->ifname().c_str(), pathStr, _peer->_id.address().toInt(), _paths[i]->_lastEligibilityState, currEligibility);
+			RR->t->bondStateMessage(NULL, traceMsg);
 			if (currEligibility) {
 				rebuildBond = true;
 			}
 			if (!currEligibility) {
 				_paths[i]->adjustRefractoryPeriod(now, _defaultPathRefractoryPeriod, !currEligibility);
 				if (_paths[i]->bonded()) {
-					//fprintf(stderr, "the path was bonded, reallocation of its flows will occur soon\n");
+					char pathStr[128]; _paths[i]->address().toString(pathStr);
+					sprintf(traceMsg, "%s (bond) Link %s/%s to peer %llx was bonded, reallocation of its flows will occur soon",
+						OSUtils::humanReadableTimestamp().c_str(), getLink(_paths[i])->ifname().c_str(), pathStr, _peer->_id.address().toInt());
+					RR->t->bondStateMessage(NULL, traceMsg);
 					rebuildBond = true;
 					_paths[i]->_shouldReallocateFlows = _paths[i]->bonded();
 					_paths[i]->setBonded(false);
 				} else {
-					//fprintf(stderr, "the path was not bonded, no consequences\n");
+					sprintf(traceMsg, "%s (bond) Link %s/%s to peer %llx was not bonded, no allocation consequences",
+						OSUtils::humanReadableTimestamp().c_str(), getLink(_paths[i])->ifname().c_str(), pathStr, _peer->_id.address().toInt());
+					RR->t->bondStateMessage(NULL, traceMsg);
 				}
 			}
 		}
@@ -808,6 +875,17 @@ void Bond::curateBond(const int64_t now, bool rebuildBond)
 			tmpHealthStatus = false;
 		}
 	}
+	if (tmpHealthStatus != _isHealthy) {
+		std::string healthStatusStr;
+		if (tmpHealthStatus == true) {
+			healthStatusStr = "HEALTHY";
+		} else {
+			healthStatusStr = "DEGRADED";
+		}
+		sprintf(traceMsg, "%s (bond) Bond to peer %llx is in a %s state (%d/%d links)",
+			OSUtils::humanReadableTimestamp().c_str(), _peer->_id.address().toInt(), healthStatusStr.c_str(), _numAliveLinks, _numTotalLinks);
+		RR->t->bondStateMessage(NULL, traceMsg);
+	}
 
 	_isHealthy = tmpHealthStatus;
 
@@ -837,7 +915,6 @@ void Bond::curateBond(const int64_t now, bool rebuildBond)
 						//fprintf(stderr, " link representative path already exists! (%s %s)\n", getLink(_paths[i])->ifname().c_str(), pathStr);
 						if (_paths[i]->preferred() && !_paths[linkMap[link]]->preferred()) {
 							// Override previous choice if preferred
-							//fprintf(stderr, "overriding since its preferred!\n");
 							if (_paths[linkMap[link]]->_assignedFlowCount) {
 								_paths[linkMap[link]]->_deprecated = true;
 							}
@@ -852,7 +929,6 @@ void Bond::curateBond(const int64_t now, bool rebuildBond)
 							|| (!_paths[i]->preferred() && !_paths[linkMap[link]]->preferred())) {
 							if (_paths[i]->preferenceRank() > _paths[linkMap[link]]->preferenceRank()) {
 								// Override if higher preference
-								//fprintf(stderr, "overriding according to preference preferenceRank!\n");
 								if (_paths[linkMap[link]]->_assignedFlowCount) {
 									_paths[linkMap[link]]->_deprecated = true;
 								}
@@ -882,7 +958,6 @@ void Bond::curateBond(const int64_t now, bool rebuildBond)
 				}
 			}
 			_numBondedPaths = updatedBondedPathCount;
-
 			if (_bondingPolicy == ZT_BONDING_POLICY_BALANCE_RR) {
 				// Cause a RR reset since the currently used index might no longer be valid
 				_rrPacketsSentOnCurrLink = _packetsPerLink;
@@ -956,7 +1031,7 @@ void Bond::estimatePathQuality(const int64_t now)
 		while (it != _paths[i]->qosStatsOut.end()) {
 			int qosRecordTimeout = 5000; //_paths[i]->monitorInterval() * ZT_MULTIPATH_QOS_ACK_INTERVAL_MULTIPLIER * 8;
 			if ((now - it->second) >= qosRecordTimeout) {
-				//fprintf(stderr, "packetId=%llx was lost\n", it->first);
+				// Packet was lost
 				it = _paths[i]->qosStatsOut.erase(it);
 				++currentLostRecords;
 			} else { ++it; }
@@ -969,15 +1044,11 @@ void Bond::estimatePathQuality(const int64_t now)
 		pdv[i] = 1.0 / expf(4*Utils::normalize(_paths[i]->_latencyVariance,  0, _maxAcceptablePacketDelayVariance, 0, 1));
 		plr[i] = 1.0 / expf(4*Utils::normalize(_paths[i]->_packetLossRatio,  0, _maxAcceptablePacketLossRatio,     0, 1));
 		per[i] = 1.0 / expf(4*Utils::normalize(_paths[i]->_packetErrorRatio, 0, _maxAcceptablePacketErrorRatio,    0, 1));
-		//scp[i] = _paths[i]->ipvPref != 0 ? 1.0 : Utils::normalize(_paths[i]->ipScope(), InetAddress::IP_SCOPE_NONE, InetAddress::IP_SCOPE_PRIVATE, 0, 1);
 		// Record bond-wide maximums to determine relative values
 		maxLAT = lat[i] > maxLAT ? lat[i] : maxLAT;
 		maxPDV = pdv[i] > maxPDV ? pdv[i] : maxPDV;
 		maxPLR = plr[i] > maxPLR ? plr[i] : maxPLR;
 		maxPER = per[i] > maxPER ? per[i] : maxPER;
-		//fprintf(stdout, "EH   %d: lat=%8.3f,  ltm=%8.3f,  pdv=%8.3f,  plr=%5.3f,  per=%5.3f,  thr=%8f,  thm=%5.3f,  thv=%5.3f,  avl=%5.3f,  age=%8.2f,  scp=%4d,  q=%5.3f,  qtot=%5.3f,  ac=%d if=%s, path=%s\n",
-		//	              i,   lat[i],     ltm[i],     pdv[i],     plr[i],     per[i],     thr[i],     thm[i],     thv[i],     avl[i],     age[i],     scp[i], quality[i], totQuality, alloc[i], getLink(_paths[i])->ifname().c_str(), pathStr);
-
 	}
 	// Convert metrics to relative quantities and apply contribution weights
 	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
@@ -986,66 +1057,21 @@ void Bond::estimatePathQuality(const int64_t now)
 			quality[i] += ((maxPDV > 0.0f ? pdv[i] / maxPDV : 0.0f) * _qualityWeights[ZT_QOS_PDV_IDX]);
 			quality[i] += ((maxPLR > 0.0f ? plr[i] / maxPLR : 0.0f) * _qualityWeights[ZT_QOS_PLR_IDX]);
 			quality[i] += ((maxPER > 0.0f ? per[i] / maxPER : 0.0f) * _qualityWeights[ZT_QOS_PER_IDX]);
-			//quality[i] += (scp[i] * _qualityWeights[ZT_QOS_SCP_IDX]);
 			totQuality += quality[i];
 		}
 	}
-	//
+	// Normalize to 8-bit allocation values
 	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
 		if (_paths[i] && _paths[i]->bonded()) {
 			alloc[i] = std::ceil((quality[i] / totQuality) * (float)255);
 			_paths[i]->_allocation = alloc[i];
 		}
 	}
-	if ((now - _lastLogTS) > 500) {
-		if (!relevant()) {return;}
-		//fprintf(stderr, "\n");
-		_lastLogTS = now;
-		int numPlottablePaths=0;
-		for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-			if (_paths[i]) {
-				++numPlottablePaths;
-				_paths[i]->address().toString(pathStr);
-				//fprintf(stderr, "%lu FIN [%d/%d]: pmi=%5d, lat=%4.3f, ltm=%4.3f, pdv=%4.3f, plr=%4.3f, per=%4.3f, thr=%4.3f, thm=%4.3f, thv=%4.3f, age=%4.3f, scp=%4d, q=%4.3f, qtot=%4.3f, ac=%4d, asf=%3d, if=%s, path=%20s, bond=%d, qosout=%d, plrraw=%d\n",
-				//	((now - RR->bc->getBondStartTime())), i, _numBondedPaths,   _paths[i]->monitorInterval,
-				//	lat[i],     ltm[i],     pdv[i],     plr[i],     per[i],     thr[i],     thm[i],     thv[i],     age[i],     scp[i],
-				//	quality[i], totQuality, alloc[i], _paths[i]->assignedFlowCount, getLink(_paths[i])->ifname().c_str(), pathStr, _paths[i]->bonded(), _paths[i]->qosStatsOut.size(), _paths[i]->packetLossRatio);
-			}
-		}
-		if (numPlottablePaths < 2) {
-			return;
-		}
-		if (!_header) {
-			//fprintf(stdout, "now, bonded, relativeUnderload, flows, ");
-			for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-				if (_paths[i]) {
-					_paths[i]->address().toString(pathStr);
-					std::string label = std::string((pathStr)) + " " + getLink(_paths[i])->ifname();
-					for (int i=0; i<19; ++i) {
-						//fprintf(stdout, "%s, ", label.c_str());
-					}
-				}
-			}
-			_header=true;
-		}
-		/*
-		//fprintf(stdout, "%ld, %d, %d, %d, ",((now - RR->bc->getBondStartTime())),_numBondedPaths,_totalBondUnderload, _flows.size());
-		for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-			if (_paths[i]) {
-				_paths[i]->address().toString(pathStr);
-				//fprintf(stdout, "%s, %s, %8.3f, %8.3f, %8.3f, %5.3f, %5.3f, %5.3f, %8f, %5.3f, %5.3f, %d, %5.3f, %d, %d, %d, %d, %d, %d, ",
-								  getLink(_paths[i])->ifname().c_str(), pathStr, _paths[i]->_latencyMean, lat[i],pdv[i], _paths[i]->_packetLossRatio, plr[i],per[i],thr[i],thm[i],thv[i],(now - _paths[i]->lastIn()),quality[i],alloc[i],
-								  _paths[i]->_relativeByteLoad, _paths[i]->_assignedFlowCount, _paths[i]->alive(now, true), _paths[i]->eligible(now,_ackSendInterval), _paths[i]->qosStatsOut.size());
-			}
-		}*/
-		//fprintf(stdout, "\n");
-	}
 }
 
 void Bond::processBalanceTasks(const int64_t now)
 {
 	char curPathStr[128];
-
 	// TODO: Generalize
 	int totalAllocation = 0;
 	for (int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
@@ -1086,8 +1112,10 @@ void Bond::processBalanceTasks(const int64_t now)
 					continue;
 				}
 				if (!_paths[i]->eligible(now,_ackSendInterval) && _paths[i]->_shouldReallocateFlows) {
-					_paths[i]->address().toString(curPathStr);
-					//fprintf(stderr, "%d reallocating flows from dead path %s on %s\n", (RR->node->now() - RR->bc->getBondStartTime()), curPathStr, getLink(_paths[i])->ifname().c_str());
+					char traceMsg[256]; char pathStr[128]; _paths[i]->address().toString(pathStr);
+					sprintf(traceMsg, "%s (balance-*) Reallocating flows to peer %llx from dead link %s/%s to surviving links",
+						OSUtils::humanReadableTimestamp().c_str(), _peer->_id.address().toInt(), getLink(_paths[i])->ifname().c_str(), pathStr);
+					RR->t->bondStateMessage(NULL, traceMsg);
 					std::map<int32_t,SharedPtr<Flow> >::iterator flow_it = _flows.begin();
 					while (flow_it != _flows.end()) {
 						if (flow_it->second->assignedPath() == _paths[i]) {
@@ -1113,7 +1141,10 @@ void Bond::processBalanceTasks(const int64_t now)
 				}
 				if (_paths[i] && _paths[i]->bonded() && _paths[i]->eligible(now,_ackSendInterval) && (_paths[i]->_allocation < minimumAllocationValue) && _paths[i]->_assignedFlowCount) {
 					_paths[i]->address().toString(curPathStr);
-					//fprintf(stderr, "%d reallocating flows from under-performing path %s on %s\n", (RR->node->now() - RR->bc->getBondStartTime()), curPathStr, getLink(_paths[i])->ifname().c_str());
+					char traceMsg[256]; char pathStr[128]; _paths[i]->address().toString(pathStr);
+					sprintf(traceMsg, "%s (balance-*) Reallocating flows to peer %llx from under-performing link %s/%s\n",
+						OSUtils::humanReadableTimestamp().c_str(), _peer->_id.address().toInt(), getLink(_paths[i])->ifname().c_str(), pathStr);
+					RR->t->bondStateMessage(NULL, traceMsg);
 					std::map<int32_t,SharedPtr<Flow> >::iterator flow_it = _flows.begin();
 					while (flow_it != _flows.end()) {
 						if (flow_it->second->assignedPath() == _paths[i]) {
@@ -1202,7 +1233,6 @@ void Bond::processBalanceTasks(const int64_t now)
 
 void Bond::dequeueNextActiveBackupPath(const uint64_t now)
 {
-	//fprintf(stderr, "dequeueNextActiveBackupPath\n");
 	if (_abFailoverQueue.empty()) {
 		return;
 	}
@@ -1216,20 +1246,42 @@ void Bond::dequeueNextActiveBackupPath(const uint64_t now)
 	}
 }
 
-void Bond::processActiveBackupTasks(const int64_t now)
+void Bond::processActiveBackupTasks(void *tPtr, const int64_t now)
 {
-	//fprintf(stderr, "%llu processActiveBackupTasks\n", (now - RR->bc->getBondStartTime()));
-	char pathStr[128]; char prevPathStr[128]; char curPathStr[128];
+	char traceMsg[256];
+	char pathStr[128];
+	char prevPathStr[128];
+	char curPathStr[128];
 
 	SharedPtr<Path> prevActiveBackupPath = _abPath;
 	SharedPtr<Path> nonPreferredPath;
 	bool bFoundPrimaryLink = false;
 
 	/**
+	 * Generate periodic statuc report
+	 */
+	if ((now - _lastBondStatusLog) > ZT_MULTIPATH_BOND_STATUS_INTERVAL) {
+		_lastBondStatusLog = now;
+		if (_abPath) {
+			_abPath->address().toString(curPathStr);
+			sprintf(traceMsg, "%s (active-backup) Active link to peer %llx is %s/%s, failover queue size is %zu",
+				OSUtils::humanReadableTimestamp().c_str(), _peer->_id.address().toInt(), getLink(_abPath)->ifname().c_str(), curPathStr, _abFailoverQueue.size());
+			RR->t->bondStateMessage(NULL, traceMsg);
+		} else {
+			sprintf(traceMsg, "%s (active-backup) No active link to peer %llx",
+				OSUtils::humanReadableTimestamp().c_str(), _peer->_id.address().toInt());
+			RR->t->bondStateMessage(NULL, traceMsg);
+		}
+		if (_abFailoverQueue.empty()) {
+			sprintf(traceMsg, "%s (active-backup) Failover queue is empty, bond to peer %llx is NOT currently fault-tolerant",
+				OSUtils::humanReadableTimestamp().c_str(), _peer->_id.address().toInt());
+				RR->t->bondStateMessage(NULL, traceMsg);
+		}
+	}
+	/**
 	 * Select initial "active" active-backup link
 	 */
 	if (!_abPath) {
-		//fprintf(stderr, "%llu no active backup path yet...\n", ((now - RR->bc->getBondStartTime())));
 		/**
 		 * [Automatic mode]
 		 * The user has not explicitly specified links or their failover schedule,
@@ -1239,13 +1291,16 @@ void Bond::processActiveBackupTasks(const int64_t now)
 		 * simply find the next eligible path.
 		 */
 		if (!userHasSpecifiedLinks()) {
-			//fprintf(stderr, "%llu AB: (auto) user did not specify any links. waiting until we know more\n", ((now - RR->bc->getBondStartTime())));
+			sprintf(traceMsg, "%s (active-backup) No links to peer %llx specified. Searching...",
+				OSUtils::humanReadableTimestamp().c_str(), _peer->_id.address().toInt()); RR->t->bondStateMessage(NULL, traceMsg);
 			for (int i=0; i<ZT_MAX_PEER_NETWORK_PATHS; ++i) {
 				if (_paths[i] && _paths[i]->eligible(now,_ackSendInterval)) {
 					_paths[i]->address().toString(curPathStr);
 					SharedPtr<Link> link =RR->bc->getLinkBySocket(_policyAlias, _paths[i]->localSocket());
 					if (link) {
-						//fprintf(stderr, "%llu AB: (initial) [%d] found eligible path %s on: %s\n", ((now - RR->bc->getBondStartTime())), i, curPathStr, link->ifname().c_str());
+						sprintf(traceMsg, "%s (active-backup) Found eligible link %s/%s to peer %llx",
+							OSUtils::humanReadableTimestamp().c_str(), getLink(_paths[i])->ifname().c_str(), curPathStr, _peer->_id.address().toInt());
+						RR->t->bondStateMessage(NULL, traceMsg);
 					}
 					_abPath = _paths[i];
 					break;
@@ -1257,9 +1312,8 @@ void Bond::processActiveBackupTasks(const int64_t now)
 	 	 * The user has specified links or failover rules that the bonding policy should adhere to.
 	 	 */
 		else if (userHasSpecifiedLinks()) {
-			//fprintf(stderr, "%llu AB: (manual) no active backup link, checking local.conf\n", ((now - RR->bc->getBondStartTime())));
 			if (userHasSpecifiedPrimaryLink()) {
-				//fprintf(stderr, "%llu AB: (manual) user has specified primary link, looking for it.\n", ((now - RR->bc->getBondStartTime())));
+				//sprintf(traceMsg, "%s (active-backup) Checking local.conf for user-specified primary link\n", OSUtils::humanReadableTimestamp().c_str());
 				for (int i=0; i<ZT_MAX_PEER_NETWORK_PATHS; ++i) {
 					if (!_paths[i]) {
 						continue;
@@ -1268,19 +1322,16 @@ void Bond::processActiveBackupTasks(const int64_t now)
 					if (_paths[i]->eligible(now,_ackSendInterval) && link->primary()) {
 						if (!_paths[i]->preferred()) {
 							_paths[i]->address().toString(curPathStr);
-							//fprintf(stderr, "%llu AB: (initial) [%d] found path on primary link, taking note in case we don't find a preferred path\n", ((now - RR->bc->getBondStartTime())), i);
+							// Found path on primary link, take note in case we don't find a preferred path
 							nonPreferredPath = _paths[i];
 							bFoundPrimaryLink = true;
 						}
 						if (_paths[i]->preferred()) {
 							_abPath = _paths[i];
 							_abPath->address().toString(curPathStr);
-							SharedPtr<Link> link =RR->bc->getLinkBySocket(_policyAlias, _paths[i]->localSocket());
-							if (link) {
-								//fprintf(stderr, "%llu AB: (initial) [%d] found preferred path %s on primary link: %s\n", ((now - RR->bc->getBondStartTime())), i, curPathStr, link->ifname().c_str());
-							}
+							SharedPtr<Link> link = RR->bc->getLinkBySocket(_policyAlias, _paths[i]->localSocket());
 							bFoundPrimaryLink = true;
-							break;
+							break; // Found preferred path %s on primary link
 						}
 					}
 				}
@@ -1288,23 +1339,31 @@ void Bond::processActiveBackupTasks(const int64_t now)
 					_abPath->address().toString(curPathStr);
 					SharedPtr<Link> link =RR->bc->getLinkBySocket(_policyAlias, _abPath->localSocket());
 					if (link) {
-						//fprintf(stderr, "%llu AB: (initial) found preferred primary path: %s on %s\n", ((now - RR->bc->getBondStartTime())), curPathStr, link->ifname().c_str());
+						sprintf(traceMsg, "%s (active-backup) Found preferred primary link %s/%s to peer %llx",
+							OSUtils::humanReadableTimestamp().c_str(), getLink(_abPath)->ifname().c_str(), curPathStr, _peer->_id.address().toInt());
+						RR->t->bondStateMessage(NULL, traceMsg);
 					}
 				}
 				else {
 					if (bFoundPrimaryLink && nonPreferredPath) {
-						//fprintf(stderr, "%llu AB: (initial) found a non-preferred primary path\n", ((now - RR->bc->getBondStartTime())));
+						sprintf(traceMsg, "%s (active-backup) Found non-preferred primary link to peer %llx",
+							OSUtils::humanReadableTimestamp().c_str(), _peer->_id.address().toInt());
+						RR->t->bondStateMessage(NULL, traceMsg);
 						_abPath = nonPreferredPath;
 					}
 				}
 				if (!_abPath) {
-					//fprintf(stderr, "%llu AB: (initial) designated primary link is not yet ready\n", ((now - RR->bc->getBondStartTime())));
-					// TODO: Should fail-over to specified backup or just wait?
+					sprintf(traceMsg, "%s (active-backup) Designated primary link to peer %llx is not yet ready",
+						OSUtils::humanReadableTimestamp().c_str(), _peer->_id.address().toInt());
+					RR->t->bondStateMessage(NULL, traceMsg);
+					// TODO: Should wait for some time (failover interval?) and then swtich to spare link
 				}
 			}
 			else if (!userHasSpecifiedPrimaryLink()) {
 				int _abIdx = ZT_MAX_PEER_NETWORK_PATHS;
-				//fprintf(stderr, "%llu AB: (initial) user did not specify primary link, just picking something\n", ((now - RR->bc->getBondStartTime())));
+				sprintf(traceMsg, "%s (active-backup) User did not specify a primary link to peer %llx, selecting first available link",
+					OSUtils::humanReadableTimestamp().c_str(), _peer->_id.address().toInt());
+				RR->t->bondStateMessage(NULL, traceMsg);
 				for (int i=0; i<ZT_MAX_PEER_NETWORK_PATHS; ++i) {
 					if (_paths[i] && _paths[i]->eligible(now,_ackSendInterval)) {
 						_abIdx = i;
@@ -1312,13 +1371,16 @@ void Bond::processActiveBackupTasks(const int64_t now)
 					}
 				}
 				if (_abIdx == ZT_MAX_PEER_NETWORK_PATHS) {
-					//fprintf(stderr, "%llu AB: (initial) unable to find a candidate next-best, no change\n", ((now - RR->bc->getBondStartTime())));
+					// Unable to find a candidate next-best, no change
 				}
 				else {
 					_abPath = _paths[_abIdx];
 					SharedPtr<Link> link =RR->bc->getLinkBySocket(_policyAlias, _abPath->localSocket());
 					if (link) {
-						//fprintf(stderr, "%llu AB: (initial) selected non-primary link idx=%d, %s on %s\n", ((now - RR->bc->getBondStartTime())), _abIdx, pathStr, link->ifname().c_str());
+						_abPath->address().toString(curPathStr);
+						sprintf(traceMsg, "%s (active-backup) Selected non-primary link %s/%s to peer %llx",
+							OSUtils::humanReadableTimestamp().c_str(), getLink(_abPath)->ifname().c_str(), curPathStr, _peer->_id.address().toInt());
+						RR->t->bondStateMessage(NULL, traceMsg);
 					}
 				}
 			}
@@ -1334,10 +1396,12 @@ void Bond::processActiveBackupTasks(const int64_t now)
 			if ((*it) && !(*it)->eligible(now,_ackSendInterval)) {
 				(*it)->address().toString(curPathStr);
 				SharedPtr<Link> link =RR->bc->getLinkBySocket(_policyAlias, (*it)->localSocket());
-				if (link) {
-					//fprintf(stderr, "%llu AB: (fq) %s on %s is now ineligible, removing from failover queue\n", ((now - RR->bc->getBondStartTime())), curPathStr, link->ifname().c_str());
-				}
 				it = _abFailoverQueue.erase(it);
+				if (link) {
+					sprintf(traceMsg, "%s (active-backup) Link %s/%s to peer %llx is now ineligible, removing from failover queue, there are %zu links in the queue",
+						OSUtils::humanReadableTimestamp().c_str(), getLink(_abPath)->ifname().c_str(), curPathStr, _peer->_id.address().toInt(), _abFailoverQueue.size());
+					RR->t->bondStateMessage(NULL, traceMsg);
+				}
 			} else {
 				++it;
 			}
@@ -1355,7 +1419,7 @@ void Bond::processActiveBackupTasks(const int64_t now)
 					_paths[i]->_failoverScore = 0;
 				}
 			}
-			//fprintf(stderr, "AB: (fq) user has specified specific failover instructions, will follow them.\n");
+			// Follow user-specified failover instructions
 			for (int i=0; i<ZT_MAX_PEER_NETWORK_PATHS; ++i) {
 				if (!_paths[i] || !_paths[i]->allowed() || !_paths[i]->eligible(now,_ackSendInterval)) {
 					continue;
@@ -1364,21 +1428,17 @@ void Bond::processActiveBackupTasks(const int64_t now)
 				_paths[i]->address().toString(pathStr);
 
 				int failoverScoreHandicap = _paths[i]->_failoverScore;
-				if (_paths[i]->preferred())
-				{
+				if (_paths[i]->preferred()) {
 					failoverScoreHandicap += ZT_MULTIPATH_FAILOVER_HANDICAP_PREFERRED;
-					//fprintf(stderr, "%s on %s ----> %d for preferred\n", pathStr, _paths[i]->ifname().c_str(), failoverScoreHandicap);
 				}
 				if (link->primary()) {
 					// If using "optimize" primary reselect mode, ignore user link designations
 					failoverScoreHandicap += ZT_MULTIPATH_FAILOVER_HANDICAP_PRIMARY;
-					//fprintf(stderr, "%s on %s ----> %d for primary\n", pathStr, _paths[i]->ifname().c_str(), failoverScoreHandicap);
 				}
 				if (!_paths[i]->_failoverScore) {
 					// If we didn't inherit a failover score from a "parent" that wants to use this path as a failover
 					int newHandicap = failoverScoreHandicap ? failoverScoreHandicap : _paths[i]->_allocation;
 					_paths[i]->_failoverScore = newHandicap;
-					//fprintf(stderr, "%s on %s ----> %d for allocation\n", pathStr, _paths[i]->ifname().c_str(), newHandicap);
 				}
 				SharedPtr<Link> failoverLink;
 				if (link->failoverToLink().length()) {
@@ -1390,7 +1450,6 @@ void Bond::processActiveBackupTasks(const int64_t now)
 							_paths[j]->address().toString(pathStr);
 							int inheritedHandicap = failoverScoreHandicap - 10;
 							int newHandicap = _paths[j]->_failoverScore > inheritedHandicap ? _paths[j]->_failoverScore : inheritedHandicap;
-							//fprintf(stderr, "\thanding down %s on %s ----> %d\n", pathStr, getLink(_paths[j])->ifname().c_str(), newHandicap);
 							if (!_paths[j]->preferred()) {
 								newHandicap--;
 							}
@@ -1406,9 +1465,10 @@ void Bond::processActiveBackupTasks(const int64_t now)
 						}
 					}
 					if (!bFoundPathInQueue) {
-						_paths[i]->address().toString(curPathStr);
-						//fprintf(stderr, "%llu AB: (fq) [%d] added %s on %s to queue\n", ((now - RR->bc->getBondStartTime())), i, curPathStr, getLink(_paths[i])->ifname().c_str());
 						_abFailoverQueue.push_front(_paths[i]);
+						_paths[i]->address().toString(curPathStr); sprintf(traceMsg, "%s (active-backup) Added link %s/%s to peer %llx to failover queue, there are %zu links in the queue",
+							OSUtils::humanReadableTimestamp().c_str(), getLink(_abPath)->ifname().c_str(), curPathStr, _peer->_id.address().toInt(), _abFailoverQueue.size());
+						RR->t->bondStateMessage(NULL, traceMsg);
 					}
 				}
 			}
@@ -1451,17 +1511,16 @@ void Bond::processActiveBackupTasks(const int64_t now)
 						}
 					}
 					if (!bFoundPathInQueue) {
-						_paths[i]->address().toString(curPathStr);
-						//fprintf(stderr, "%llu AB: (fq) [%d] added %s on %s to queue\n", ((now - RR->bc->getBondStartTime())), i, curPathStr, getLink(_paths[i])->ifname().c_str());
 						_abFailoverQueue.push_front(_paths[i]);
+						_paths[i]->address().toString(curPathStr);
+						sprintf(traceMsg, "%s (active-backup) Added link %s/%s to peer %llx, there are %zu links in the queue",
+							OSUtils::humanReadableTimestamp().c_str(), getLink(_paths[i])->ifname().c_str(), curPathStr, _peer->_id.address().toInt(), _abFailoverQueue.size());
+						RR->t->bondStateMessage(NULL, traceMsg);
 					}
 				}
 			}
 		}
 		_abFailoverQueue.sort(PathQualityComparator());
-		if (_abFailoverQueue.empty()) {
-			//fprintf(stderr, "%llu AB: (fq) the failover queue is empty, the active-backup bond is no longer fault-tolerant\n", ((now - RR->bc->getBondStartTime())));
-		}
 	}
 	/**
 	 * Short-circuit if we have no queued paths
@@ -1473,13 +1532,20 @@ void Bond::processActiveBackupTasks(const int64_t now)
 	 * Fulfill primary reselect obligations
 	 */
 	if (_abPath && !_abPath->eligible(now,_ackSendInterval)) { // Implicit ZT_MULTIPATH_RESELECTION_POLICY_FAILURE
-		_abPath->address().toString(curPathStr); //fprintf(stderr, "%llu AB: (failure) failover event!, active backup path (%s) is no-longer eligible\n", ((now - RR->bc->getBondStartTime())), curPathStr);
+		_abPath->address().toString(curPathStr);
+		sprintf(traceMsg, "%s (active-backup) Link %s/%s to peer %llx has failed. Selecting new link from failover queue, there are %zu links in the queue",
+			OSUtils::humanReadableTimestamp().c_str(), getLink(_abPath)->ifname().c_str(), curPathStr, _peer->_id.address().toInt(), _abFailoverQueue.size());
+		RR->t->bondStateMessage(NULL, traceMsg);
 		if (!_abFailoverQueue.empty()) {
-			//fprintf(stderr, "%llu AB: (failure) there are (%lu) links in queue to choose from...\n", ((now - RR->bc->getBondStartTime())), _abFailoverQueue.size());
 			dequeueNextActiveBackupPath(now);
-			_abPath->address().toString(curPathStr); //fprintf(stderr, "%llu AB: (failure) switched to %s on %s\n", ((now - RR->bc->getBondStartTime())), curPathStr, getLink(_abPath)->ifname().c_str());
+			_abPath->address().toString(curPathStr);
+			sprintf(traceMsg, "%s (active-backup) Active link to peer %llx has been switched to %s/%s",
+				OSUtils::humanReadableTimestamp().c_str(), _peer->_id.address().toInt(), getLink(_abPath)->ifname().c_str(), curPathStr);
+			RR->t->bondStateMessage(NULL, traceMsg);
 		} else {
-			//fprintf(stderr, "%llu AB: (failure) nothing available in the link queue, doing nothing.\n", ((now - RR->bc->getBondStartTime())));
+			sprintf(traceMsg, "%s (active-backup) Failover queue is empty. No links to peer %llx to choose from",
+				OSUtils::humanReadableTimestamp().c_str(), _peer->_id.address().toInt());
+			RR->t->bondStateMessage(NULL, traceMsg);
 		}
 	}
 	/**
@@ -1491,17 +1557,23 @@ void Bond::processActiveBackupTasks(const int64_t now)
 	if (_abLinkSelectMethod == ZT_MULTIPATH_RESELECTION_POLICY_ALWAYS) {
 		if (_abPath && !getLink(_abPath)->primary()
 			&& getLink(_abFailoverQueue.front())->primary()) {
-			//fprintf(stderr, "%llu AB: (always) switching to available primary\n", ((now - RR->bc->getBondStartTime())));
 			dequeueNextActiveBackupPath(now);
+			_abPath->address().toString(curPathStr);
+			sprintf(traceMsg, "%s (active-backup) Switching back to available primary link %s/%s to peer %llx [linkSelectionMethod = always]",
+				OSUtils::humanReadableTimestamp().c_str(), getLink(_abPath)->ifname().c_str(), curPathStr, _peer->_id.address().toInt());
+			RR->t->bondStateMessage(NULL, traceMsg);
 		}
 	}
 	if (_abLinkSelectMethod == ZT_MULTIPATH_RESELECTION_POLICY_BETTER) {
 		if (_abPath && !getLink(_abPath)->primary()) {
-			//fprintf(stderr, "%llu AB: (better) active backup has switched to \"better\" primary link according to re-select policy.\n", ((now - RR->bc->getBondStartTime())));
+			// Active backup has switched to "better" primary link according to re-select policy.
 			if (getLink(_abFailoverQueue.front())->primary()
 				&& (_abFailoverQueue.front()->_failoverScore > _abPath->_failoverScore)) {
 				dequeueNextActiveBackupPath(now);
-				//fprintf(stderr, "%llu AB: (better) switched back to user-defined primary\n", ((now - RR->bc->getBondStartTime())));
+				_abPath->address().toString(curPathStr);
+				sprintf(traceMsg, "%s (active-backup) Switching back to user-defined primary link %s/%s to peer %llx [linkSelectionMethod = better]",
+					OSUtils::humanReadableTimestamp().c_str(), getLink(_abPath)->ifname().c_str(), curPathStr, _peer->_id.address().toInt());
+				RR->t->bondStateMessage(NULL, traceMsg);
 			}
 		}
 	}
@@ -1512,14 +1584,16 @@ void Bond::processActiveBackupTasks(const int64_t now)
 		if (_abFailoverQueue.front()->_negotiated) {
 			dequeueNextActiveBackupPath(now);
 			_abPath->address().toString(prevPathStr);
-			//fprintf(stderr, "%llu AB: (optimize) switched to negotiated path %s on %s\n", ((now - RR->bc->getBondStartTime())), prevPathStr, getLink(_abPath)->ifname().c_str());
 			_lastPathNegotiationCheck = now;
+			_abPath->address().toString(curPathStr);
+			sprintf(traceMsg, "%s (active-backup) Switching negotiated link %s/%s to peer %llx [linkSelectionMethod = optimize]",
+				OSUtils::humanReadableTimestamp().c_str(), getLink(_abPath)->ifname().c_str(), curPathStr, _peer->_id.address().toInt());
+			RR->t->bondStateMessage(NULL, traceMsg);
 		}
 		else {
 			// Try to find a better path and automatically switch to it -- not too often, though.
 			if ((now - _lastActiveBackupPathChange) > ZT_MULTIPATH_MIN_ACTIVE_BACKUP_AUTOFLOP_INTERVAL) {
 				if (!_abFailoverQueue.empty()) {
-					//fprintf(stderr, "AB: (optimize) there are (%d) links in queue to choose from...\n", _abFailoverQueue.size());
 					int newFScore = _abFailoverQueue.front()->_failoverScore;
 					int prevFScore = _abPath->_failoverScore;
 					// Establish a minimum switch threshold to prevent flapping
@@ -1530,7 +1604,9 @@ void Bond::processActiveBackupTasks(const int64_t now)
 						_abPath->address().toString(prevPathStr);
 						dequeueNextActiveBackupPath(now);
 						_abPath->address().toString(curPathStr);
-						//fprintf(stderr, "%llu AB: (optimize) switched from %s on %s (fs=%d) to %s on %s (fs=%d)\n", ((now - RR->bc->getBondStartTime())), prevPathStr, getLink(oldPath)->ifname().c_str(), prevFScore, curPathStr, getLink(_abPath)->ifname().c_str(), newFScore);
+						sprintf(traceMsg, "%s (active-backup) Switching from %s/%s (fscore=%d) to better link %s/%s (fscore=%d) for peer %llx [linkSelectionMethod = optimize]",
+							OSUtils::humanReadableTimestamp().c_str(), getLink(oldPath)->ifname().c_str(), prevPathStr, prevFScore, getLink(_abPath)->ifname().c_str(), curPathStr, newFScore, _peer->_id.address().toInt());
+						RR->t->bondStateMessage(NULL, traceMsg);
 					}
 				}
 			}
@@ -1540,6 +1616,11 @@ void Bond::processActiveBackupTasks(const int64_t now)
 
 void Bond::setReasonableDefaults(int policy, SharedPtr<Bond> templateBond, bool useTemplate)
 {
+	// TODO: Remove for production
+	_header=false;
+	_lastLogTS = RR->node->now();
+	_lastPrintTS = RR->node->now();
+
 	// If invalid bonding policy, try default
 	int _defaultBondingPolicy = BondController::defaultBondingPolicy();
 	if (policy <= ZT_BONDING_POLICY_NONE || policy > ZT_BONDING_POLICY_BALANCE_AWARE) {
@@ -1553,8 +1634,9 @@ void Bond::setReasonableDefaults(int policy, SharedPtr<Bond> templateBond, bool 
 	}
 
 	_freeRandomByte = 0;
-	_lastCheckUserPreferences = 0;
-	_lastBackgroundTaskCheck = 0;
+
+	_userHasSpecifiedPrimaryLink = false;
+	_userHasSpecifiedFailoverInstructions = false;
 
 	_isHealthy = false;
 	_numAliveLinks = 0;
@@ -1566,22 +1648,15 @@ void Bond::setReasonableDefaults(int policy, SharedPtr<Bond> templateBond, bool 
 	_bondMonitorInterval=0;
 	_shouldCollectPathStatistics=false;
 
-
 	// Path negotiation
 	_allowPathNegotiation=false;
-	_lastPathNegotiationReceived=0;
-	_lastPathNegotiationCheck=0;
 	_pathNegotiationCutoffCount=0;
 	_localUtility=0;
-
-	_lastFlowStatReset=0;
-	_lastFlowExpirationCheck=0;
 
 	_numBondedPaths=0;
 	_rrPacketsSentOnCurrLink=0;
 	_rrIdx=0;
 
-	_lastFlowRebalance=0;
 	_totalBondUnderload = 0;
 
 	_maxAcceptableLatency = 100;
@@ -1589,10 +1664,6 @@ void Bond::setReasonableDefaults(int policy, SharedPtr<Bond> templateBond, bool 
 	_maxAcceptablePacketLossRatio = 0.10;
 	_maxAcceptablePacketErrorRatio = 0.10;
 	_userHasSpecifiedLinkSpeeds=0;
-
-	_lastFrame=0;
-
-
 
 	/* ZT_MULTIPATH_FLOW_REBALANCE_STRATEGY_PASSIVE is the most conservative strategy and is
 	least likely to cause unexpected behavior */
@@ -1627,7 +1698,7 @@ void Bond::setReasonableDefaults(int policy, SharedPtr<Bond> templateBond, bool 
 		 * Paths are monitored to determine when/if one needs to be added or removed from the rotation
 		 */
 		case ZT_BONDING_POLICY_BALANCE_RR:
-			_failoverInterval = 500;
+			_failoverInterval = 3000;
 			_allowFlowHashing = false;
 			_packetsPerLink = 1024;
 			_linkMonitorStrategy = ZT_MULTIPATH_SLAVE_MONITOR_STRATEGY_DYNAMIC;
@@ -1646,7 +1717,7 @@ void Bond::setReasonableDefaults(int policy, SharedPtr<Bond> templateBond, bool 
 		 * path and where to place the next flow.
 		 */
 		case ZT_BONDING_POLICY_BALANCE_XOR:
-			_failoverInterval = 500;
+			_failoverInterval = 3000;
 			_upDelay = _bondMonitorInterval * 2;
 			_allowFlowHashing = true;
 			_linkMonitorStrategy = ZT_MULTIPATH_SLAVE_MONITOR_STRATEGY_DYNAMIC;
@@ -1690,19 +1761,6 @@ void Bond::setReasonableDefaults(int policy, SharedPtr<Bond> templateBond, bool 
 		_failoverInterval = templateBond->_failoverInterval;
 		_downDelay = templateBond->_downDelay;
 		_upDelay = templateBond->_upDelay;
-
-		/*fprintf(stderr, "TIMERS: strat=%d, fi= %d, bmi= %d, qos= %d, ack= %d, estimateInt= %d, refractory= %d, ud= %d, dd= %d\n",
-			_linkMonitorStrategy,
-			_failoverInterval,
-			_bondMonitorInterval,
-			_qosSendInterval,
-			_ackSendInterval,
-			_qualityEstimationInterval,
-			_defaultPathRefractoryPeriod,
-			_upDelay,
-			_downDelay);
-			*/
-
 		if (templateBond->_linkMonitorStrategy == ZT_MULTIPATH_SLAVE_MONITOR_STRATEGY_PASSIVE
 			&& templateBond->_failoverInterval != 0) {
 			//fprintf(stderr, "warning: passive path monitoring was specified, this will prevent failovers from happening in a timely manner.\n");
@@ -1710,36 +1768,31 @@ void Bond::setReasonableDefaults(int policy, SharedPtr<Bond> templateBond, bool 
 		_abLinkSelectMethod = templateBond->_abLinkSelectMethod;
 		memcpy(_qualityWeights, templateBond->_qualityWeights, ZT_QOS_WEIGHT_SIZE * sizeof(float));
 	}
-
-	//
-	// Second, apply user specified values (only if they make sense)
-
-	/**
-	 * Timer geometries and counters
-	 */
-	// TODO: Think more about the maximum
-	/*
-	if (originalBond._failoverInterval > 250 && originalBond._failoverInterval < 65535) {
-		_failoverInterval = originalBond._failoverInterval;
-	}
-	else {
-		//fprintf(stderr, "warning: _failoverInterval (%d) is out of range, using default (%d)\n", originalBond._failoverInterval, _failoverInterval);
-	}
-	*/
-
+	/* Set timer geometries */
 	_bondMonitorInterval = _failoverInterval / 3;
 	BondController::setMinReqPathMonitorInterval(_bondMonitorInterval);
 	_ackSendInterval = _failoverInterval;
 	_qualityEstimationInterval = _failoverInterval * 2;
 	_dynamicPathMonitorInterval = 0;
 	_ackCutoffCount = 0;
-	_lastAckRateCheck = 0;
 	_qosSendInterval = _bondMonitorInterval * 4;
 	_qosCutoffCount = 0;
-	_lastQoSRateCheck = 0;
-	_lastQualityEstimation=0;
 	throughputMeasurementInterval = _ackSendInterval * 2;
 	_defaultPathRefractoryPeriod = 8000;
+
+	char traceMsg[256];
+	sprintf(traceMsg, "%s (bond) Bond to peer %llx is configured as (monStrat=%d, fi= %d, bmi= %d, qos= %d, ack= %d, estimateInt= %d, refractory= %d, ud= %d, dd= %d)",
+		OSUtils::humanReadableTimestamp().c_str(), _peer->_id.address().toInt(),
+		_linkMonitorStrategy,
+		_failoverInterval,
+		_bondMonitorInterval,
+		_qosSendInterval,
+		_ackSendInterval,
+		_qualityEstimationInterval,
+		_defaultPathRefractoryPeriod,
+		_upDelay,
+		_downDelay);
+	RR->t->bondStateMessage(NULL, traceMsg);
 }
 
 void Bond::setUserQualityWeights(float weights[], int len)

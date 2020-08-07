@@ -151,7 +151,7 @@ public:
 	 * @param flowId Flow ID
 	 * @param now Current time
 	 */
-	void recordIncomingPacket(void *tPtr, const SharedPtr<Path> &path, const uint64_t packetId,
+	void recordIncomingPacket(const SharedPtr<Path> &path, const uint64_t packetId,
 		uint16_t payloadLength, const Packet::Verb verb, const int32_t flowId, int64_t now);
 
 	/**
@@ -229,7 +229,7 @@ public:
 	 * possible with this peer. This check should be performed early in the life-cycle of the peer
 	 * as well as during the process of learning new paths.
 	 */
-	void performMultipathStateCheck(int64_t now);
+	void performMultipathStateCheck(void *tPtr, int64_t now);
 
 	/**
 	 * Send pings or keepalives depending on configured timeouts

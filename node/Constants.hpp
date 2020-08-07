@@ -377,6 +377,11 @@
 #define ZT_AQM_DEFAULT_BUCKET 0
 
 /**
+ * How often we emit a one-liner bond summary for each peer
+ */
+#define ZT_MULTIPATH_BOND_STATUS_INTERVAL 30000
+
+/**
  * How long before we consider a path to be dead in the general sense. This is
  * used while searching for default or alternative paths to try in the absence
  * of direct guidance from the user or a selection policy.

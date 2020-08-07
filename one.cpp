@@ -492,6 +492,7 @@ static int cli(int argc,char **argv)
 			if (json) {
 				printf("%s" ZT_EOL_S,OSUtils::jsonDump(j).c_str());
 			} else {
+				bool bFoundBond = false;
 				printf("    <peer>                        <bondtype>    <status>    <links>" ZT_EOL_S);
 				if (j.is_array()) {
 					for(unsigned long k=0;k<j.size();++k) {
@@ -504,6 +505,7 @@ static int cli(int argc,char **argv)
 						int8_t numTotalLinks = p["numTotalLinks"];
 
 						if (isBonded) {
+							bFoundBond = true;
 							std::string healthStr;
 							if (isHealthy) {
 								healthStr = "HEALTHY";
@@ -523,6 +525,9 @@ static int cli(int argc,char **argv)
 								numTotalLinks);
 						}
 					}
+				}
+				if (!bFoundBond) {
+					printf("      NONE\t\t\t\tNONE\t    NONE       NONE" ZT_EOL_S);
 				}
 			}
 			return 0;

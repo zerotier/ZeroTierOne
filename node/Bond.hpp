@@ -244,7 +244,7 @@ public:
 	 * @param atAddress
 	 * @param now Current time
 	 */
-	void sendACK(void *tPtr,const SharedPtr<Path> &path,int64_t localSocket,
+	void sendACK(void *tPtr, const SharedPtr<Path> &path,int64_t localSocket,
 			const InetAddress &atAddress,int64_t now);
 
 	/**
@@ -276,9 +276,10 @@ public:
 	/**
 	 * Perform periodic tasks unique to active-backup
 	 *
+	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param now Current time
 	 */
-	void processActiveBackupTasks(int64_t now);
+	void processActiveBackupTasks(void *tPtr, int64_t now);
 
 	/**
 	 * Switches the active link in an active-backup scenario to the next best during
@@ -584,7 +585,6 @@ private:
 	SharedPtr<Path> _abPath; // current active path
 	std::list<SharedPtr<Path> > _abFailoverQueue;
 	uint8_t _abLinkSelectMethod; // link re-selection policy for the primary link in active-backup
-	uint64_t _lastActiveBackupPathChange;
 
 	// balance-rr
 	uint8_t _rrIdx; // index to path currently in use during Round Robin operation
@@ -602,7 +602,6 @@ private:
 
 	// dynamic link monitoring
 	uint8_t _linkMonitorStrategy;
-	uint64_t _lastFrame;
 	uint32_t _dynamicPathMonitorInterval;
 
 	// path negotiation
@@ -611,29 +610,19 @@ private:
 	uint8_t _numSentPathNegotiationRequests;
 	unsigned int _pathNegotiationCutoffCount;
 	bool _allowPathNegotiation;
-	uint64_t _lastPathNegotiationReceived;
-	uint64_t _lastSentPathNegotiationRequest;
 
-	// timers
+	/**
+	 * Timers and intervals
+	 */
 	uint32_t _failoverInterval;
 	uint32_t _qosSendInterval;
 	uint32_t _ackSendInterval;
-	uint16_t _ackCutoffCount;
-	uint64_t _lastAckRateCheck;
-	uint16_t _qosCutoffCount;
-	uint64_t _lastQoSRateCheck;
 	uint32_t throughputMeasurementInterval;
 	uint32_t _qualityEstimationInterval;
 
-	// timestamps
-	uint64_t _lastCheckUserPreferences;
-	uint64_t _lastQualityEstimation;
-	uint64_t _lastFlowStatReset;
-	uint64_t _lastFlowExpirationCheck;
-	uint64_t _lastFlowRebalance;
-	uint64_t _lastPathNegotiationCheck;
-	uint64_t _lastBackgroundTaskCheck;
-
+	/**
+	 * Acceptable quality thresholds
+	 */
 	float _maxAcceptablePacketLossRatio;
 	float _maxAcceptablePacketErrorRatio;
 	uint16_t _maxAcceptableLatency;
@@ -641,6 +630,9 @@ private:
 	uint16_t _maxAcceptablePacketDelayVariance;
 	uint8_t _minAcceptableAllocation;
 
+	/**
+	 * Link state reporting
+	 */
 	bool _isHealthy;
 	uint8_t _numAliveLinks;
 	uint8_t _numTotalLinks;
@@ -665,6 +657,30 @@ private:
 	 * Remote peer that this bond services
 	 */
 	SharedPtr<Peer> _peer;
+
+	/**
+	 * Rate-limit cutoffs
+	 */
+	uint16_t _qosCutoffCount;
+	uint16_t _ackCutoffCount;
+
+	/**
+	 * Recent event timestamps
+	 */
+	uint64_t _lastAckRateCheck;
+	uint64_t _lastQoSRateCheck;
+	uint64_t _lastQualityEstimation;
+	uint64_t _lastCheckUserPreferences;
+	uint64_t _lastBackgroundTaskCheck;
+	uint64_t _lastBondStatusLog;
+	uint64_t _lastPathNegotiationReceived;
+	uint64_t _lastPathNegotiationCheck;
+	uint64_t _lastSentPathNegotiationRequest;
+	uint64_t _lastFlowStatReset;
+	uint64_t _lastFlowExpirationCheck;
+	uint64_t _lastFlowRebalance;
+	uint64_t _lastFrame;
+	uint64_t _lastActiveBackupPathChange;
 
 	Mutex _paths_m;
 	Mutex _flows_m;

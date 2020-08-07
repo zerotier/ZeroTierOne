@@ -196,6 +196,20 @@ public:
 	static std::vector<InetAddress> resolve(const char *name);
 
 	/**
+	 * @return Current time in a human-readable format
+	 */
+	static inline std::string humanReadableTimestamp()
+	{
+		time_t rawtime;
+		struct tm * timeinfo;
+		char buffer [80];
+		time (&rawtime);
+		timeinfo = localtime (&rawtime);
+		strftime (buffer,80,"%F %T",timeinfo);
+		return std::string(buffer);
+	}
+
+	/**
 	 * @return Current time in milliseconds since epoch
 	 */
 	static inline int64_t now()
