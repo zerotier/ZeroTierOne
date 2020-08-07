@@ -14,6 +14,10 @@
 #include "Constants.hpp"
 #include "AES.hpp"
 
+#ifdef __GNUC__
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#endif
+
 #define Te1_r(x) ZT_ROR32(Te0[x], 8)
 #define Te2_r(x) ZT_ROR32(Te0[x], 16)
 #define Te3_r(x) ZT_ROR32(Te0[x], 24)
@@ -295,12 +299,22 @@ void AES::GMAC::update(const void *const data, unsigned int len) noexcept
 		}
 	}
 
-	while (len >= 16) {
-		y0 ^= Utils::loadMachineEndian< uint64_t >(in);
-		y1 ^= Utils::loadMachineEndian< uint64_t >(in + 8);
-		s_gfmul(h0, h1, y0, y1);
-		in += 16;
-		len -= 16;
+	if (likely(((uintptr_t)in & 7U) == 0U)) {
+		while (len >= 16) {
+			y0 ^= *reinterpret_cast<const uint64_t *>(in);
+			y1 ^= *reinterpret_cast<const uint64_t *>(in + 8);
+			in += 16;
+			s_gfmul(h0, h1, y0, y1);
+			len -= 16;
+		}
+	} else {
+		while (len >= 16) {
+			y0 ^= Utils::loadMachineEndian< uint64_t >(in);
+			y1 ^= Utils::loadMachineEndian< uint64_t >(in + 8);
+			in += 16;
+			s_gfmul(h0, h1, y0, y1);
+			len -= 16;
+		}
 	}
 
 	_y[0] = y0;
@@ -1001,22 +1015,26 @@ void AES::CTR::crypt(const void *const input, unsigned int len) noexcept
 	out += totalLen;
 	_len = (totalLen + len);
 
-	{
+	if (likely(len >= 16)) {
 		const uint32_t *const restrict rk = _aes._k.sw.ek;
-		const uint32_t ctr0rk0 = Utils::ntoh(reinterpret_cast<uint32_t *>(_ctr)[0]) ^ rk[0];
-		const uint32_t ctr1rk1 = Utils::ntoh(reinterpret_cast<uint32_t *>(_ctr)[1]) ^ rk[1];
-		const uint32_t ctr2rk2 = Utils::ntoh(reinterpret_cast<uint32_t *>(_ctr)[2]) ^ rk[2];
+		const uint32_t ctr0rk0 = Utils::ntoh(reinterpret_cast<const uint32_t *>(_ctr)[0]) ^ rk[0];
+		const uint32_t ctr1rk1 = Utils::ntoh(reinterpret_cast<const uint32_t *>(_ctr)[1]) ^ rk[1];
+		const uint32_t ctr2rk2 = Utils::ntoh(reinterpret_cast<const uint32_t *>(_ctr)[2]) ^ rk[2];
 		const uint32_t m8 = 0x000000ff;
 		const uint32_t m8_8 = 0x0000ff00;
 		const uint32_t m8_16 = 0x00ff0000;
 		const uint32_t m8_24 = 0xff000000;
-		if (likely((((uintptr_t)out & 3U) == 0U) && (((uintptr_t)in & 3U) == 0U))) {
-			while (len >= 16) {
+		if (likely((((uintptr_t)out & 7U) == 0U) && (((uintptr_t)in & 7U) == 0U))) {
+			do {
 				uint32_t s0, s1, s2, s3, t0, t1, t2, t3;
 				s0 = ctr0rk0;
 				s1 = ctr1rk1;
 				s2 = ctr2rk2;
 				s3 = ctr++ ^ rk[3];
+
+				const uint64_t in0 = *reinterpret_cast<const uint64_t *>(in);
+				const uint64_t in1 = *reinterpret_cast<const uint64_t *>(in + 8);
+				in += 16;
 
 				t0 = Te0[s0 >> 24U] ^ Te1_r((s1 >> 16U) & m8) ^ Te2_r((s2 >> 8U) & m8) ^ Te3_r(s3 & m8) ^ rk[4];
 				t1 = Te0[s1 >> 24U] ^ Te1_r((s2 >> 16U) & m8) ^ Te2_r((s3 >> 8U) & m8) ^ Te3_r(s0 & m8) ^ rk[5];
@@ -1075,21 +1093,12 @@ void AES::CTR::crypt(const void *const input, unsigned int len) noexcept
 				s2 = (Te2_r(t2 >> 24U) & m8_24) ^ (Te3_r((t3 >> 16U) & m8) & m8_16) ^ (Te0[(t0 >> 8U) & m8] & m8_8) ^ (Te1_r(t1 & m8) & m8) ^ rk[58];
 				s3 = (Te2_r(t3 >> 24U) & m8_24) ^ (Te3_r((t0 >> 16U) & m8) & m8_16) ^ (Te0[(t1 >> 8U) & m8] & m8_8) ^ (Te1_r(t2 & m8) & m8) ^ rk[59];
 
-				s0 = Utils::hton(s0) ^ *reinterpret_cast<const uint32_t *>(in);
-				s1 = Utils::hton(s1) ^ *reinterpret_cast<const uint32_t *>(in + 4);
-				s2 = Utils::hton(s2) ^ *reinterpret_cast<const uint32_t *>(in + 8);
-				s3 = Utils::hton(s3) ^ *reinterpret_cast<const uint32_t *>(in + 12);
-				*reinterpret_cast<uint32_t *>(out) = s0;
-				*reinterpret_cast<uint32_t *>(out + 4) = s1;
-				*reinterpret_cast<uint32_t *>(out + 8) = s2;
-				*reinterpret_cast<uint32_t *>(out + 12) = s3;
-
+				*reinterpret_cast<uint64_t *>(out) = in0 ^ Utils::hton(((uint64_t)s0 << 32U) | (uint64_t)s1);
+				*reinterpret_cast<uint64_t *>(out + 8) = in1 ^ Utils::hton(((uint64_t)s2 << 32U) | (uint64_t)s3);
 				out += 16;
-				len -= 16;
-				in += 16;
-			}
+			} while ((len -= 16) >= 16);
 		} else {
-			while (len >= 16) {
+			do {
 				uint32_t s0, s1, s2, s3, t0, t1, t2, t3;
 				s0 = ctr0rk0;
 				s1 = ctr1rk1;
@@ -1169,11 +1178,9 @@ void AES::CTR::crypt(const void *const input, unsigned int len) noexcept
 				out[13] = in[13] ^ (uint8_t)(s3 >> 16U);
 				out[14] = in[14] ^ (uint8_t)(s3 >> 8U);
 				out[15] = in[15] ^ (uint8_t)s3;
-
 				out += 16;
-				len -= 16;
 				in += 16;
-			}
+			} while ((len -= 16) >= 16);
 		}
 		reinterpret_cast<uint32_t *>(_ctr)[3] = Utils::hton(ctr);
 	}
