@@ -39,20 +39,20 @@ Common Operations:
 
   status                                 Show node status and configuration
 
-  set [option] [value]                 - Get or set node configuration
+· set [option] [value]                 - Get or set node configuration
     port <port>                          Primary P2P port
     secondaryport <port/0>               Secondary P2P port (0 to disable)
     blacklist cidr <IP/bits> <boolean>   Toggle physical path blacklisting
     blacklist if <prefix> <boolean>      Toggle interface prefix blacklisting
     portmap <boolean>                    Toggle use of uPnP or NAT-PMP
 
-  peer list                              List VL1 peers
-  peer <address> [command] [option]    - Peer management commands
+· peer list                              List VL1 peers
+· peer <address> [command] [option]    - Peer management commands
     show                                 Show peer details (default)
     try <endpoint> [...]                 Try peer at explicit endpoint
 
-  network list                           List VL2 networks
-  network <network> [command] [option] - Network management commands
+· network list                           List VL2 networks
+· network <network> [command] [option] - Network management commands
     show                                 Show network details (default)
     set [option] [value]               - Get or set network options
       manageips <boolean>                Is IP management allowed?
@@ -61,23 +61,23 @@ Common Operations:
       globalroutes <boolean>             Can global IP space routes be set?
       defaultroute <boolean>             Can default route be overridden?
 
-  join [-options] <network>              Join a virtual network
+· join [-options] <network>              Join a virtual network
     -a <token>                           Token to submit to controller
     -c <identity | fingerprint>          Controller identity or fingerprint
-  leave <network>                        Leave a virtual network
+· leave <network>                        Leave a virtual network
 
 Advanced Operations:
 
   service                                Start node (seldom used from CLI)
 
-  controller <command> [option]        - Local controller management commands
-    list                                 List networks run by local controller
-    new                                  Create a new network
-    set <network> [setting] [value]      Show or modify network settings
-    members <network>                    List members of a network
-    member <network> [setting] [value]   Show or modify member level settings
-    auth <address>                       Authorize a peer
-    deauth <address>                     Deauthorize a peer
+· controller <command> [option]        - Local controller management commands
+·   list                                 List networks run by local controller
+·   new                                  Create a new network
+·   set <network> [setting] [value]      Show or modify network settings
+·   members <network>                    List members of a network
+·   member <network> [setting] [value]   Show or modify member level settings
+·   auth <address>                       Authorize a peer
+·   deauth <address>                     Deauthorize a peer
 
   identity <command> [args]            - Identity management
     new [c25519 | p384]                  Create identity (default: c25519)
@@ -93,18 +93,20 @@ Advanced Operations:
     show <locator>                       Show contents of a locator
 
   cert <command> [args]                - Certificate management
-    list                                 List certificates in local node store
-    show [serial]                        List or show details of a certificate
+·   list                                 List certificates in local node store
+·   show [serial]                        List or show details of a certificate
     newsid <secret out>                  Create a new subject unique ID
     newcsr <subject> <secret> <csr out>  Create a subject CSR
     sign <csr> <identity> <cert out>     Sign a CSR to create a certificate
-    verify <cert>                        Verify a certificate
-    import <cert> [trust,[trust]]        Import certificate into this node
+·   verify <cert>                        Verify a certificate
+·   import <cert> [trust,[trust]]        Import certificate into this node
       rootca                             Certificate is a root CA (trust flag)
       ztrootset                          ZeroTier root node set (trust flag)
-    restore                              Re-import default certificates
-    export <serial> [path]               Export a certificate from this node
-    delete <serial|ALL>                  Delete certificate from this node
+·   restore                              Re-import default certificates
+·   export <serial> [path]               Export a certificate from this node
+·   delete <serial|ALL>                  Delete certificate from this node
+
+· Command requires a running node and access to a local API token.
 
 An <address> may be specified as a 10-digit short ZeroTier address, a
 fingerprint containing both an address and a SHA384 hash, or an identity.

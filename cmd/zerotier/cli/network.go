@@ -21,6 +21,33 @@ import (
 	"zerotier/pkg/zerotier"
 )
 
+func listNetworks(basePath, authToken string, jsonOutput bool) int {
+	var networks []zerotier.APINetwork
+	apiGet(basePath, authToken, "/network", &networks)
+
+	if jsonOutput {
+		fmt.Println(jsonDump(networks))
+	} else {
+		fmt.Printf("%-16s %-24s %-17s %-8s <type>  <device>         <managed IP(s)>\n", "<id>", "<name>", "<mac>", "<status>")
+		for _, nw := range networks {
+			t := "PRIVATE"
+			if nw.Config.Type == zerotier.NetworkTypePublic {
+				t = "PUBLIC"
+			}
+			fmt.Printf("%.16x %-24s %-17s %-16s %-7s %-16s ", uint64(nw.ID), nw.Config.Name, nw.Config.MAC.String(), networkStatusStr(nw.Config.Status), t, nw.PortName)
+			for i, ip := range nw.Config.AssignedAddresses {
+				if i > 0 {
+					fmt.Print(",")
+				}
+				fmt.Print(ip.String())
+			}
+			fmt.Print("\n")
+		}
+	}
+
+	return 0
+}
+
 func showNetwork(nwids string, network *zerotier.APINetwork, jsonOutput bool) {
 	if jsonOutput {
 		fmt.Println(jsonDump(&network))
@@ -85,11 +112,15 @@ func showNetwork(nwids string, network *zerotier.APINetwork, jsonOutput bool) {
 }
 
 func Network(basePath string, authTokenGenerator func() string, args []string, jsonOutput bool) int {
-	authToken := authTokenGenerator()
-
 	if len(args) < 1 {
 		Help()
 		return 1
+	}
+
+	authToken := authTokenGenerator()
+
+	if len(args) == 1 && args[0] == "list" {
+		return listNetworks(basePath, authToken, jsonOutput)
 	}
 
 	if len(args[0]) != zerotier.NetworkIDStringLength {

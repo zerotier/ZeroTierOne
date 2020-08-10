@@ -142,15 +142,13 @@ func main() {
 	case "leave":
 		exitCode = cli.Leave(basePath, authToken(basePath, *tflag, *tTflag), cmdArgs)
 	case "networks", "listnetworks":
-		exitCode = cli.Networks(basePath, authToken(basePath, *tflag, *tTflag), cmdArgs, *jflag)
+		exitCode = cli.Network(basePath, authToken(basePath, *tflag, *tTflag), []string{"list"}, *jflag)
 	case "network":
 		exitCode = cli.Network(basePath, authToken(basePath, *tflag, *tTflag), cmdArgs, *jflag)
-	case "peers", "listpeers", "lspeers":
-		exitCode = cli.Peers(basePath, authToken(basePath, *tflag, *tTflag), cmdArgs, *jflag, false)
+	case "peers", "listpeers":
+		exitCode = cli.Peer(basePath, authToken(basePath, *tflag, *tTflag), []string{"list"}, *jflag)
 	case "peer":
 		exitCode = cli.Peer(basePath, authToken(basePath, *tflag, *tTflag), cmdArgs, *jflag)
-	case "roots":
-		exitCode = cli.Peers(basePath, authToken(basePath, *tflag, *tTflag), cmdArgs, *jflag, true)
 	case "controller":
 		exitCode = cli.Controller(basePath, authToken(basePath, *tflag, *tTflag), cmdArgs, *jflag)
 	case "set":

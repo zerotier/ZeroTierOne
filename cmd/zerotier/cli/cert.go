@@ -28,6 +28,8 @@ func Cert(basePath string, authTokenGenerator func() string, args []string, json
 
 	switch args[0] {
 
+	case "list":
+
 	case "newsid":
 		if len(args) > 2 {
 			Help()
