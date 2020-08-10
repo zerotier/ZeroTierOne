@@ -13,7 +13,7 @@
 
 package cli
 
-func Controller(basePath, authToken string, args []string, jsonOutput bool) int {
+func Controller(basePath string, authTokenGenerator func() string, args []string, jsonOutput bool) int {
 	if len(args) < 1 {
 		Help()
 		return 1

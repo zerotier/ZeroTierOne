@@ -18,9 +18,9 @@ import (
 	"zerotier/pkg/zerotier"
 )
 
-func Networks(basePath, authToken string, args []string, jsonOutput bool) int {
+func Networks(basePath string, authTokenGenerator func() string, args []string, jsonOutput bool) int {
 	var networks []zerotier.APINetwork
-	apiGet(basePath, authToken, "/network", &networks)
+	apiGet(basePath, authTokenGenerator(), "/network", &networks)
 
 	if jsonOutput {
 		fmt.Println(jsonDump(networks))

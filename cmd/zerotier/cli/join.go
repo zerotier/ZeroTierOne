@@ -23,7 +23,9 @@ import (
 	"zerotier/pkg/zerotier"
 )
 
-func Join(basePath, authToken string, args []string) int {
+func Join(basePath string, authTokenGenerator func() string, args []string) int {
+	authToken := authTokenGenerator()
+
 	joinOpts := flag.NewFlagSet("join", flag.ContinueOnError)
 	controllerAuthToken := joinOpts.String("a", "", "")
 	controllerFingerprint := joinOpts.String("c", "", "")

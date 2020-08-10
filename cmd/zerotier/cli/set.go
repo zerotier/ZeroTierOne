@@ -13,6 +13,6 @@
 
 package cli
 
-func Set(basePath, authToken string, args []string) int {
+func Set(basePath string, authTokenGenerator func() string, args []string) int {
 	return 0
 }

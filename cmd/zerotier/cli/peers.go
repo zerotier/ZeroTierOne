@@ -20,9 +20,9 @@ import (
 	"zerotier/pkg/zerotier"
 )
 
-func Peers(basePath, authToken string, args []string, jsonOutput bool, rootsOnly bool) int {
+func Peers(basePath string, authTokenGenerator func() string, args []string, jsonOutput bool, rootsOnly bool) int {
 	var peers []zerotier.Peer
-	apiGet(basePath, authToken, "/peer", &peers)
+	apiGet(basePath, authTokenGenerator(), "/peer", &peers)
 
 	if rootsOnly {
 		roots := make([]zerotier.Peer, 0, len(peers))

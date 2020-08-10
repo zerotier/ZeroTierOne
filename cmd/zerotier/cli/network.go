@@ -84,7 +84,9 @@ func showNetwork(nwids string, network *zerotier.APINetwork, jsonOutput bool) {
 	}
 }
 
-func Network(basePath, authToken string, args []string, jsonOutput bool) int {
+func Network(basePath string, authTokenGenerator func() string, args []string, jsonOutput bool) int {
+	authToken := authTokenGenerator()
+
 	if len(args) < 1 {
 		Help()
 		return 1

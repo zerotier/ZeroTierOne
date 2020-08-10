@@ -19,7 +19,9 @@ import (
 	"zerotier/pkg/zerotier"
 )
 
-func Leave(basePath, authToken string, args []string) int {
+func Leave(basePath string, authTokenGenerator func() string, args []string) int {
+	authToken := authTokenGenerator()
+
 	if len(args) != 1 {
 		Help()
 		return 1

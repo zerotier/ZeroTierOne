@@ -7,9 +7,6 @@ Derived from public domain code by D. J. Bernstein.
 // Modified slightly for ZeroTier but remains in the public domain as per
 // its original license.
 
-#include <cstdint>
-#include <cstring>
-
 #include "C25519.hpp"
 #include "SHA512.hpp"
 #include "Utils.hpp"

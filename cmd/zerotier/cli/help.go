@@ -39,12 +39,19 @@ Common Operations:
 
   status                                 Show node status and configuration
 
-  join [-options] <network>              Join a virtual network
-    -a <token>                           Token to submit to controller
-    -c <identity | fingerprint>          Controller identity or fingerprint
-  leave <network>                        Leave a virtual network
+  set [option] [value]                 - Get or set node configuration
+    port <port>                          Primary P2P port
+    secondaryport <port/0>               Secondary P2P port (0 to disable)
+    blacklist cidr <IP/bits> <boolean>   Toggle physical path blacklisting
+    blacklist if <prefix> <boolean>      Toggle interface prefix blacklisting
+    portmap <boolean>                    Toggle use of uPnP or NAT-PMP
 
-  networks                               List VL2 virtual networks
+  peer list                              List VL1 peers
+  peer <address> [command] [option]    - Peer management commands
+    show                                 Show peer details (default)
+    try <endpoint> [...]                 Try peer at explicit endpoint
+
+  network list                           List VL2 networks
   network <network> [command] [option] - Network management commands
     show                                 Show network details (default)
     set [option] [value]               - Get or set network options
@@ -54,24 +61,17 @@ Common Operations:
       globalroutes <boolean>             Can global IP space routes be set?
       defaultroute <boolean>             Can default route be overridden?
 
-  peers                                  List VL1 peers
-  peer <address> [command] [option]    - Peer management commands
-    show                                 Show peer details (default)
-    try <endpoint> [...]                 Try peer at explicit endpoint
-
-  set [option] [value]                 - Get or set node configuration
-    port <port>                          Primary P2P port
-    secondaryport <port/0>               Secondary P2P port (0 to disable)
-    blacklist cidr <IP/bits> <boolean>   Toggle physical path blacklisting
-    blacklist if <prefix> <boolean>      Toggle interface prefix blacklisting
-    portmap <boolean>                    Toggle use of uPnP or NAT-PMP
+  join [-options] <network>              Join a virtual network
+    -a <token>                           Token to submit to controller
+    -c <identity | fingerprint>          Controller identity or fingerprint
+  leave <network>                        Leave a virtual network
 
 Advanced Operations:
 
   service                                Start node (seldom used from CLI)
 
   controller <command> [option]        - Local controller management commands
-    networks                             List networks run by local controller
+    list                                 List networks run by local controller
     new                                  Create a new network
     set <network> [setting] [value]      Show or modify network settings
     members <network>                    List members of a network
@@ -92,8 +92,8 @@ Advanced Operations:
     verify <identity> <locator>          Verify locator signature
     show <locator>                       Show contents of a locator
 
-  certs                                  List certificates
   cert <command> [args]                - Certificate management
+    list                                 List certificates in local node store
     show [serial]                        List or show details of a certificate
     newsid <secret out>                  Create a new subject unique ID
     newcsr <subject> <secret> <csr out>  Create a subject CSR

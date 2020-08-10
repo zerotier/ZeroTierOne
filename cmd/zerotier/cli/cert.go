@@ -20,7 +20,7 @@ import (
 	"zerotier/pkg/zerotier"
 )
 
-func Cert(basePath, authToken string, args []string, jsonOutput bool) int {
+func Cert(basePath string, authTokenGenerator func() string, args []string, jsonOutput bool) int {
 	if len(args) < 1 {
 		Help()
 		return 1

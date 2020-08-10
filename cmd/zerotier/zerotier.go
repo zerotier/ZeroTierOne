@@ -27,65 +27,74 @@ import (
 	"zerotier/pkg/zerotier"
 )
 
-func authToken(basePath, tflag, tTflag string) string {
-	var authToken string
-	if len(tflag) > 0 {
-		at, err := ioutil.ReadFile(tflag)
-		if err != nil || len(at) == 0 {
-			fmt.Println("FATAL: unable to read local service API authorization token from " + tflag)
-			return ""
-		}
-		authToken = string(at)
-	} else if len(tTflag) > 0 {
-		authToken = tTflag
-	} else {
-		var authTokenPaths []string
-		authTokenPaths = append(authTokenPaths, path.Join(basePath, "authtoken.secret"))
-		userHome, _ := os.UserHomeDir()
-		if len(userHome) > 0 {
-			if runtime.GOOS == "darwin" {
-				authTokenPaths = append(authTokenPaths, path.Join(userHome, "Library", "Application Support", "ZeroTier", "authtoken.secret"))
-				authTokenPaths = append(authTokenPaths, path.Join(userHome, "Library", "Application Support", "ZeroTier", "One", "authtoken.secret"))
-			}
-			authTokenPaths = append(authTokenPaths, path.Join(userHome, ".zerotierauth"))
-			authTokenPaths = append(authTokenPaths, path.Join(userHome, ".zeroTierOneAuthToken"))
+// authToken returns a function that reads the authorization token if needed.
+// If the authorization token can't be read, the function terminates the program with a fatal error.
+func authToken(basePath, tflag, tTflag string) func () string {
+	savedAuthToken := new(string)
+	return func() string {
+		authToken := *savedAuthToken
+		if len(authToken) > 0 {
+			return authToken
 		}
 
-		for _, p := range authTokenPaths {
-			tmp, _ := ioutil.ReadFile(p)
-			if len(tmp) > 0 {
-				authToken = string(tmp)
-				break
+		if len(tflag) > 0 {
+			at, err := ioutil.ReadFile(tflag)
+			if err != nil || len(at) == 0 {
+				fmt.Println("FATAL: unable to read local service API authorization token from " + tflag)
+				os.Exit(1)
+				return ""
 			}
-		}
+			authToken = string(at)
+		} else if len(tTflag) > 0 {
+			authToken = tTflag
+		} else {
+			var authTokenPaths []string
+			authTokenPaths = append(authTokenPaths, path.Join(basePath, "authtoken.secret"))
+			userHome, _ := os.UserHomeDir()
+			if len(userHome) > 0 {
+				if runtime.GOOS == "darwin" {
+					authTokenPaths = append(authTokenPaths, path.Join(userHome, "Library", "Application Support", "ZeroTier", "authtoken.secret"))
+					authTokenPaths = append(authTokenPaths, path.Join(userHome, "Library", "Application Support", "ZeroTier", "One", "authtoken.secret"))
+				}
+				authTokenPaths = append(authTokenPaths, path.Join(userHome, ".zerotierauth"))
+				authTokenPaths = append(authTokenPaths, path.Join(userHome, ".zeroTierOneAuthToken"))
+			}
 
-		if len(authToken) == 0 {
-			fmt.Println("FATAL: unable to read local service API authorization token from any of:")
 			for _, p := range authTokenPaths {
-				fmt.Println("  " + p)
+				tmp, _ := ioutil.ReadFile(p)
+				if len(tmp) > 0 {
+					authToken = string(tmp)
+					break
+				}
 			}
+
+			if len(authToken) == 0 {
+				fmt.Println("FATAL: unable to read local service API authorization token from any of:")
+				for _, p := range authTokenPaths {
+					fmt.Println("  " + p)
+				}
+				os.Exit(1)
+				return ""
+			}
+		}
+
+		authToken = strings.TrimSpace(authToken)
+		if len(authToken) == 0 {
+			fmt.Println("FATAL: unable to read API authorization token from command line or any filesystem location.")
+			os.Exit(1)
 			return ""
 		}
-	}
 
-	authToken = strings.TrimSpace(authToken)
-	if len(authToken) == 0 {
-		fmt.Println("FATAL: unable to read API authorization token from command line or any filesystem location.")
-		return ""
+		*savedAuthToken = authToken
+		return authToken
 	}
-
-	return authToken
 }
 
 func main() {
 	// Reduce Go's thread and memory footprint. This would slow things down if the Go code
 	// were doing a lot, but it's not. It just manages the core and is not directly involved
 	// in pushing a lot of packets around. If that ever changes this should be adjusted.
-	if runtime.NumCPU() > 1 {
-		runtime.GOMAXPROCS(2)
-	} else {
-		runtime.GOMAXPROCS(1)
-	}
+	runtime.GOMAXPROCS(1)
 	debug.SetGCPercent(10)
 
 	globalOpts := flag.NewFlagSet("global", flag.ContinueOnError)

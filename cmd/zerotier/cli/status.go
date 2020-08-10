@@ -18,9 +18,9 @@ import (
 	"zerotier/pkg/zerotier"
 )
 
-func Status(basePath, authToken string, args []string, jsonOutput bool) int {
+func Status(basePath string, authTokenGenerator func() string, args []string, jsonOutput bool) int {
 	var status zerotier.APIStatus
-	apiGet(basePath, authToken, "/status", &status)
+	apiGet(basePath, authTokenGenerator(), "/status", &status)
 
 	if jsonOutput {
 		fmt.Println(jsonDump(&status))
