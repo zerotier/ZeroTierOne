@@ -62,25 +62,23 @@ ZT_INLINE uint8x16_t s_clmul_armneon_crypto(uint8x16_t h, uint8x16_t y, const ui
 
 #endif // ZT_AES_NEON
 
-#define s_bmul32(x, y, rh, rl) { \
-	uint32_t x0t = (x) & 0x11111111U; \
-	uint32_t x1t = (x) & 0x22222222U; \
-	uint32_t x2t = (x) & 0x44444444U; \
-	uint32_t x3t = (x) & 0x88888888U; \
-	uint32_t y0t = (y) & 0x11111111U; \
-	uint32_t y1t = (y) & 0x22222222U; \
-	uint32_t y2t = (y) & 0x44444444U; \
-	uint32_t y3t = (y) & 0x88888888U; \
-	uint64_t z0t = (((uint64_t)x0t * y0t) ^ ((uint64_t)x1t * y3t) ^ ((uint64_t)x2t * y2t) ^ ((uint64_t)x3t * y1t)) & 0x1111111111111111ULL; \
-	uint64_t z1t = (((uint64_t)x0t * y1t) ^ ((uint64_t)x1t * y0t) ^ ((uint64_t)x2t * y3t) ^ ((uint64_t)x3t * y2t)) & 0x2222222222222222ULL; \
-	z0t |= z1t; \
-	uint64_t z2t = (((uint64_t)x0t * y2t) ^ ((uint64_t)x1t * y1t) ^ ((uint64_t)x2t * y0t) ^ ((uint64_t)x3t * y3t)) & 0x4444444444444444ULL; \
-	z2t |= z0t; \
-	uint64_t z3t = (((uint64_t)x0t * y3t) ^ ((uint64_t)x1t * y2t) ^ ((uint64_t)x2t * y1t) ^ ((uint64_t)x3t * y0t)) & 0x8888888888888888ULL; \
-	uint64_t zt = z2t | z3t; \
-	(rh) = (uint32_t)(zt >> 32U); \
-	(rl) = (uint32_t)zt; \
-}
+#define s_bmul32(N, x, y, rh, rl) \
+	uint32_t x0t_##N = (x) & 0x11111111U; \
+	uint32_t x1t_##N = (x) & 0x22222222U; \
+	uint32_t x2t_##N = (x) & 0x44444444U; \
+	uint32_t x3t_##N = (x) & 0x88888888U; \
+	uint32_t y0t_##N = (y) & 0x11111111U; \
+	uint32_t y1t_##N = (y) & 0x22222222U; \
+	uint32_t y2t_##N = (y) & 0x44444444U; \
+	uint32_t y3t_##N = (y) & 0x88888888U; \
+	uint64_t z0t_##N = (((uint64_t)x0t_##N * y0t_##N) ^ ((uint64_t)x1t_##N * y3t_##N) ^ ((uint64_t)x2t_##N * y2t_##N) ^ ((uint64_t)x3t_##N * y1t_##N)) & 0x1111111111111111ULL; \
+	uint64_t z1t_##N = (((uint64_t)x0t_##N * y1t_##N) ^ ((uint64_t)x1t_##N * y0t_##N) ^ ((uint64_t)x2t_##N * y3t_##N) ^ ((uint64_t)x3t_##N * y2t_##N)) & 0x2222222222222222ULL; \
+	uint64_t z2t_##N = (((uint64_t)x0t_##N * y2t_##N) ^ ((uint64_t)x1t_##N * y1t_##N) ^ ((uint64_t)x2t_##N * y0t_##N) ^ ((uint64_t)x3t_##N * y3t_##N)) & 0x4444444444444444ULL; \
+	z0t_##N |= z1t_##N; \
+	z2t_##N |= z0t_##N; \
+	uint64_t zt_##N = z2t_##N | ((((uint64_t)x0t_##N * y3t_##N) ^ ((uint64_t)x1t_##N * y2t_##N) ^ ((uint64_t)x2t_##N * y1t_##N) ^ ((uint64_t)x3t_##N * y0t_##N)) & 0x8888888888888888ULL); \
+	(rh) = (uint32_t)(zt_##N >> 32U); \
+	(rl) = (uint32_t)zt_##N;
 
 void s_gfmul(const uint64_t hh, const uint64_t hl, uint64_t &y0, uint64_t &y1) noexcept
 {
@@ -99,25 +97,25 @@ void s_gfmul(const uint64_t hh, const uint64_t hl, uint64_t &y0, uint64_t &y1) n
 	uint32_t cihXlh = cihh ^cilh;
 	uint32_t cihXll = cihl ^cill;
 	uint32_t aah, aal, abh, abl, ach, acl;
-	s_bmul32(cihh, hhh, aah, aal);
-	s_bmul32(cihl, hhl, abh, abl);
-	s_bmul32(cihh ^ cihl, hhh ^ hhl, ach, acl);
+	s_bmul32(M0, cihh, hhh, aah, aal);
+	s_bmul32(M1, cihl, hhl, abh, abl);
+	s_bmul32(M2, cihh ^ cihl, hhh ^ hhl, ach, acl);
 	ach ^= aah ^ abh;
 	acl ^= aal ^ abl;
 	aal ^= ach;
 	abh ^= acl;
 	uint32_t bah, bal, bbh, bbl, bch, bcl;
-	s_bmul32(cilh, hlh, bah, bal);
-	s_bmul32(cill, hll, bbh, bbl);
-	s_bmul32(cilh ^ cill, hlh ^ hll, bch, bcl);
+	s_bmul32(M3, cilh, hlh, bah, bal);
+	s_bmul32(M4, cill, hll, bbh, bbl);
+	s_bmul32(M5, cilh ^ cill, hlh ^ hll, bch, bcl);
 	bch ^= bah ^ bbh;
 	bcl ^= bal ^ bbl;
 	bal ^= bch;
 	bbh ^= bcl;
 	uint32_t cah, cal, cbh, cbl, cch, ccl;
-	s_bmul32(cihXlh, hhXlh, cah, cal);
-	s_bmul32(cihXll, hhXll, cbh, cbl);
-	s_bmul32(cihXlh ^ cihXll, hhXlh ^ hhXll, cch, ccl);
+	s_bmul32(M6, cihXlh, hhXlh, cah, cal);
+	s_bmul32(M7, cihXll, hhXll, cbh, cbl);
+	s_bmul32(M8, cihXlh ^ cihXll, hhXlh ^ hhXll, cch, ccl);
 	cch ^= cah ^ cbh;
 	ccl ^= cal ^ cbl;
 	cal ^= cch;
