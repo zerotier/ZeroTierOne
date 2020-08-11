@@ -211,3 +211,27 @@ func readJSONFile(p string, obj interface{}) error {
 	}
 	return json.Unmarshal(b, obj)
 }
+
+func isValidAddress(a string) bool {
+	if len(a) == zerotier.AddressStringLength {
+		for _, c := range a {
+			if !strings.ContainsRune("0123456789abcdefABCDEF", c) {
+				return false
+			}
+		}
+		return true
+	}
+	return false
+}
+
+func isValidNetworkID(a string) bool {
+	if len(a) == zerotier.NetworkIDStringLength {
+		for _, c := range a {
+			if !strings.ContainsRune("0123456789abcdefABCDEF", c) {
+				return false
+			}
+		}
+		return true
+	}
+	return false
+}

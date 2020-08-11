@@ -141,8 +141,10 @@ func Network(basePath string, authTokenGenerator func() string, args []string, j
 		showNetwork(nwids, &network, jsonOutput)
 	} else {
 		switch args[1] {
+
 		case "show", "info":
 			showNetwork(nwids, &network, jsonOutput)
+
 		case "set":
 			if len(args) > 3 {
 				Help()
@@ -178,6 +180,7 @@ func Network(basePath string, authTokenGenerator func() string, args []string, j
 				fmt.Printf("globalroutes\t%s\n", allowedBlocked(network.Settings.AllowGlobalRoutes))
 				fmt.Printf("defaultroute\t%s\n", allowedBlocked(network.Settings.AllowDefaultRouteOverride))
 			}
+
 		}
 	}
 

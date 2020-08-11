@@ -73,11 +73,27 @@ func Peer(basePath string, authTokenGenerator func() string, args []string, json
 
 	authToken := authTokenGenerator()
 
-	if len(args) == 1 && args[0] == "list" {
-		return listPeers(basePath, authToken, jsonOutput, false)
+	//var addr zerotier.Address
+	if isValidAddress(args[0]) {
+		//addr, _ = zerotier.NewAddressFromString(args[0])
+		args = args[1:]
+		if len(args) < 1 {
+			Help()
+			return 1
+		}
 	}
 
 	switch args[0] {
+
+	case "list":
+		return listPeers(basePath, authToken, jsonOutput, false)
+	case "listroots":
+		return listPeers(basePath, authToken, jsonOutput, true)
+
+	case "show":
+
+	case "try":
+
 	}
 
 	return 0

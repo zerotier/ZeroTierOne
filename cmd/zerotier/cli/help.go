@@ -46,9 +46,10 @@ Common Operations:
     blacklist if <prefix> <boolean>      Toggle interface prefix blacklisting
     portmap <boolean>                    Toggle use of uPnP or NAT-PMP
 
-· peer list                              List VL1 peers
-· peer <address> [command] [option]    - Peer management commands
-    show                                 Show peer details (default)
+· peer [address] [command] [option]    - Peer management commands
+    list                                 List peers
+    listroots                            List root peers
+    show                                 Show peer details
     try <endpoint> [...]                 Try peer at explicit endpoint
 
 · network list                           List VL2 networks

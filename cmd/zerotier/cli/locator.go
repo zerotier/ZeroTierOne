@@ -20,6 +20,13 @@ func Locator(args []string) int {
 	}
 
 	switch args[0] {
+
+	case "new":
+
+	case "verify":
+
+	case "show":
+
 	}
 
 	return 0

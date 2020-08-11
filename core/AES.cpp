@@ -62,25 +62,24 @@ ZT_INLINE uint8x16_t s_clmul_armneon_crypto(uint8x16_t h, uint8x16_t y, const ui
 
 #endif // ZT_AES_NEON
 
-ZT_INLINE void s_bmul32(const uint32_t x, const uint32_t y, uint32_t &rh, uint32_t &rl) noexcept
-{
-	uint32_t x0 = x & 0x11111111U;
-	uint32_t x1 = x & 0x22222222U;
-	uint32_t x2 = x & 0x44444444U;
-	uint32_t x3 = x & 0x88888888U;
-	uint32_t y0 = y & 0x11111111U;
-	uint32_t y1 = y & 0x22222222U;
-	uint32_t y2 = y & 0x44444444U;
-	uint32_t y3 = y & 0x88888888U;
-	uint64_t z0 = (((uint64_t)x0 * y0) ^ ((uint64_t)x1 * y3) ^ ((uint64_t)x2 * y2) ^ ((uint64_t)x3 * y1)) & 0x1111111111111111ULL;
-	uint64_t z1 = (((uint64_t)x0 * y1) ^ ((uint64_t)x1 * y0) ^ ((uint64_t)x2 * y3) ^ ((uint64_t)x3 * y2)) & 0x2222222222222222ULL;
-	z0 |= z1;
-	uint64_t z2 = (((uint64_t)x0 * y2) ^ ((uint64_t)x1 * y1) ^ ((uint64_t)x2 * y0) ^ ((uint64_t)x3 * y3)) & 0x4444444444444444ULL;
-	z2 |= z0;
-	uint64_t z3 = (((uint64_t)x0 * y3) ^ ((uint64_t)x1 * y2) ^ ((uint64_t)x2 * y1) ^ ((uint64_t)x3 * y0)) & 0x8888888888888888ULL;
-	uint64_t z = z2 | z3;
-	rh = (uint32_t)(z >> 32U);
-	rl = (uint32_t)z;
+#define s_bmul32(x, y, rh, rl) { \
+	uint32_t x0t = (x) & 0x11111111U; \
+	uint32_t x1t = (x) & 0x22222222U; \
+	uint32_t x2t = (x) & 0x44444444U; \
+	uint32_t x3t = (x) & 0x88888888U; \
+	uint32_t y0t = (y) & 0x11111111U; \
+	uint32_t y1t = (y) & 0x22222222U; \
+	uint32_t y2t = (y) & 0x44444444U; \
+	uint32_t y3t = (y) & 0x88888888U; \
+	uint64_t z0t = (((uint64_t)x0t * y0t) ^ ((uint64_t)x1t * y3t) ^ ((uint64_t)x2t * y2t) ^ ((uint64_t)x3t * y1t)) & 0x1111111111111111ULL; \
+	uint64_t z1t = (((uint64_t)x0t * y1t) ^ ((uint64_t)x1t * y0t) ^ ((uint64_t)x2t * y3t) ^ ((uint64_t)x3t * y2t)) & 0x2222222222222222ULL; \
+	z0t |= z1t; \
+	uint64_t z2t = (((uint64_t)x0t * y2t) ^ ((uint64_t)x1t * y1t) ^ ((uint64_t)x2t * y0t) ^ ((uint64_t)x3t * y3t)) & 0x4444444444444444ULL; \
+	z2t |= z0t; \
+	uint64_t z3t = (((uint64_t)x0t * y3t) ^ ((uint64_t)x1t * y2t) ^ ((uint64_t)x2t * y1t) ^ ((uint64_t)x3t * y0t)) & 0x8888888888888888ULL; \
+	uint64_t zt = z2t | z3t; \
+	(rh) = (uint32_t)(zt >> 32U); \
+	(rl) = (uint32_t)zt; \
 }
 
 void s_gfmul(const uint64_t hh, const uint64_t hl, uint64_t &y0, uint64_t &y1) noexcept
