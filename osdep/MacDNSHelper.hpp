@@ -9,8 +9,6 @@ namespace ZeroTier {
 class MacDNSHelper
 {
 public:
-    static void doTheThing();
-
     static void setDNS(uint64_t nwid, const char *domain, const std::vector<InetAddress> &servers);
     static void removeDNS(uint64_t nwid);
 };

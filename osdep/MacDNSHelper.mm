@@ -6,11 +6,6 @@
 
 namespace ZeroTier {
 
-void MacDNSHelper::doTheThing()
-{
-    fprintf(stderr, "\n\nDOING THE THING!!\n\n");
-}
-
 void MacDNSHelper::setDNS(uint64_t nwid, const char *domain, const std::vector<InetAddress> &servers)
 {
     SCDynamicStoreRef ds = SCDynamicStoreCreate(NULL, CFSTR("zerotier"), NULL, NULL);
@@ -49,15 +44,11 @@ void MacDNSHelper::setDNS(uint64_t nwid, const char *domain, const std::vector<I
     CFIndex i = 0, j = CFArrayGetCount(list);
     bool ret = TRUE;
     if (j <= 0) {
-        fprintf(stderr, "Key '%s' does not exist.  Creating.\n", buf);
         ret &= SCDynamicStoreAddValue(ds, key, dict);
     } else {
-        fprintf(stderr, "Key '%s' already exists.  Updating DNS config.\n", buf);
         ret &= SCDynamicStoreSetValue(ds, (CFStringRef)CFArrayGetValueAtIndex(list, i), dict);
     }
-    if (ret) {
-        fprintf(stderr, "DNS written successfully\n");
-    } else {
+    if (!ret) {
         fprintf(stderr, "Error writing DNS configuration\n");
     }
 

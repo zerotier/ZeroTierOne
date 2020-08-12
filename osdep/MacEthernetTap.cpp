@@ -458,7 +458,6 @@ void MacEthernetTap::threadMain()
 
 void MacEthernetTap::setDns(const char *domain, const std::vector<InetAddress> &servers)
 {
-	MacDNSHelper::doTheThing();
 	MacDNSHelper::setDNS(this->_nwid, domain, servers);
 }
 

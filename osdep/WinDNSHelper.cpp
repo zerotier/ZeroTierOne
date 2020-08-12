@@ -36,11 +36,9 @@ BOOL RegDelnodeRecurse(HKEY hKeyRoot, LPTSTR lpSubKey)
 	if (lResult != ERROR_SUCCESS)
 	{
 		if (lResult == ERROR_FILE_NOT_FOUND) {
-			printf("Key not found.\n");
 			return TRUE;
 		}
 		else {
-			printf("Error opening key.\n");
 			return FALSE;
 		}
 	}
@@ -160,7 +158,6 @@ std::vector<std::string> getSubKeys(const char* key)
 			&cbSecurityDescriptor,   // security descriptor 
 			&ftLastWriteTime);       // last write time 
 
-		fprintf(stderr, "num subkeys: %d\n", cSubKeys);
 		for (i = 0; i < cSubKeys; ++i) {
 			cbName = MAX_KEY_LENGTH;
 			retCode = RegEnumKeyEx(
@@ -222,7 +219,6 @@ std::vector<std::string> getValueList(const char* key) {
 			&cbSecurityDescriptor,   // security descriptor 
 			&ftLastWriteTime);       // last write time 
 		
-		fprintf(stderr, "Num values: %d\n", cValues);
 		for (i = 0, retCode = ERROR_SUCCESS; i < cValues; ++i) {
 			cchValue = MAX_VALUE_NAME;
 			achValue[0] = '\0';
@@ -254,10 +250,8 @@ std::pair<bool, std::string> WinDNSHelper::hasDNSConfig(uint64_t nwid)
 	for (auto it = subkeys.begin(); it != subkeys.end(); ++it) {
 		char sub[MAX_KEY_LENGTH] = { 0 };
 		sprintf(sub, "%s\\%s", baseKey, it->c_str());
-		fprintf(stderr, "Checking key: %s\n", sub);
 		auto dnsRecords = getValueList(sub);
 		for (auto it2 = dnsRecords.begin(); it2 != dnsRecords.end(); ++it2) {
-			fprintf(stderr, "\t%s\n", it2->c_str());
 			if ((*it2) == "Comment") {
 				HKEY hKey;
 				if (RegOpenKeyExA(HKEY_LOCAL_MACHINE,
