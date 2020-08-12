@@ -101,6 +101,7 @@
     <ClCompile Include="..\..\osdep\ManagedRoute.cpp" />
     <ClCompile Include="..\..\osdep\OSUtils.cpp" />
     <ClCompile Include="..\..\osdep\PortMapper.cpp" />
+    <ClCompile Include="..\..\osdep\WinDNSHelper.cpp" />
     <ClCompile Include="..\..\osdep\WindowsEthernetTap.cpp" />
     <ClCompile Include="..\..\selftest.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
@@ -136,6 +137,7 @@
     <ClInclude Include="..\..\controller\FileDB.hpp" />
     <ClInclude Include="..\..\controller\LFDB.hpp" />
     <ClInclude Include="..\..\controller\PostgreSQL.hpp" />
+    <ClInclude Include="..\..\controller\Redis.hpp" />
     <ClInclude Include="..\..\ext\cpp-httplib\httplib.h" />
     <ClInclude Include="..\..\ext\http-parser\http_parser.h" />
     <ClInclude Include="..\..\ext\json\json.hpp" />
@@ -207,6 +209,7 @@
     <ClInclude Include="..\..\osdep\Phy.hpp" />
     <ClInclude Include="..\..\osdep\PortMapper.hpp" />
     <ClInclude Include="..\..\osdep\Thread.hpp" />
+    <ClInclude Include="..\..\osdep\WinDNSHelper.hpp" />
     <ClInclude Include="..\..\osdep\WindowsEthernetTap.hpp" />
     <ClInclude Include="..\..\service\OneService.hpp" />
     <ClInclude Include="..\..\service\SoftwareUpdater.hpp" />
@@ -370,7 +373,7 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>wsock32.lib;ws2_32.lib;Iphlpapi.lib;Rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>wbemuuid.lib;wsock32.lib;ws2_32.lib;Iphlpapi.lib;Rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
       <AdditionalOptions>"notelemetry.obj" %(AdditionalOptions)</AdditionalOptions>
     </Link>
@@ -459,7 +462,7 @@
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>wsock32.lib;ws2_32.lib;Iphlpapi.lib;Rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>wbemuuid.lib;wsock32.lib;ws2_32.lib;Iphlpapi.lib;Rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
   </ItemDefinitionGroup>

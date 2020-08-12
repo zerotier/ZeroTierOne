@@ -90,9 +90,6 @@
     <ClCompile Include="..\..\service\OneService.cpp">
       <Filter>Source Files\service</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\osdep\WindowsEthernetTap.cpp">
-      <Filter>Source Files\osdep</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\osdep\Http.cpp">
       <Filter>Source Files\osdep</Filter>
     </ClCompile>
@@ -278,6 +275,12 @@
     </ClCompile>
     <ClCompile Include="..\..\node\BondController.cpp">
       <Filter>Source Files\node</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\osdep\WinDNSHelper.cpp">
+      <Filter>Source Files\osdep</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\osdep\WindowsEthernetTap.cpp">
+      <Filter>Source Files\osdep</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -535,6 +538,12 @@
     </ClInclude>
     <ClInclude Include="..\..\node\BondController.hpp">
       <Filter>Header Files\node</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\controller\Redis.hpp">
+      <Filter>Header Files\controller</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\osdep\WinDNSHelper.hpp">
+      <Filter>Header Files\osdep</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
