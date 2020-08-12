@@ -34,7 +34,6 @@ void MacDNSHelper::setDNS(uint64_t nwid, const char *domain, const std::vector<I
     CFDictionaryRef dict = CFDictionaryCreate(NULL,
         (const void**)keys, (const void**)values, 2, &kCFCopyStringDictionaryKeyCallBacks,
         &kCFTypeDictionaryValueCallBacks);
-    CFShow(dict);
 
     char buf[256] = {0};
     sprintf(buf, "State:/Network/Service/%.16llx/DNS", nwid);

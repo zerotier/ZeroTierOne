@@ -29,28 +29,24 @@ namespace ZeroTier {
 class DNS {
 public:
     template<unsigned int C>
-    static inline void serializeDNS(Buffer<C> &b, const ZT_VirtualNetworkDNS *dns, unsigned int dnsCount)
+    static inline void serializeDNS(Buffer<C> &b, const ZT_VirtualNetworkDNS *dns)
     {
-        for(unsigned int i = 0; i < dnsCount; ++i) {
-            b.append(dns[i].domain, 128);
-            for(unsigned int j = 0; j < ZT_MAX_DNS_SERVERS; ++j) {
-                InetAddress tmp(dns[i].server_addr[j]);
-                tmp.serialize(b);
-            }
+        b.append(dns->domain, 128);
+        for(unsigned int j = 0; j < ZT_MAX_DNS_SERVERS; ++j) {
+            InetAddress tmp(dns->server_addr[j]);
+            tmp.serialize(b);
         }
     }
 
     template<unsigned int C>
-    static inline void deserializeDNS(const Buffer<C> &b, unsigned int &p, ZT_VirtualNetworkDNS *dns, const unsigned int dnsCount)
+    static inline void deserializeDNS(const Buffer<C> &b, unsigned int &p, ZT_VirtualNetworkDNS *dns)
     {
-        memset(dns, 0, sizeof(ZT_VirtualNetworkDNS)*ZT_MAX_NETWORK_DNS);
-        for(unsigned int i = 0; i < dnsCount; ++i) {
-            char *d = (char*)b.data()+p;
-            memcpy(dns[i].domain, d, 128);
-            p += 128;
-            for (unsigned int j = 0; j < ZT_MAX_DNS_SERVERS; ++j) {
-                p += reinterpret_cast<InetAddress *>(&(dns[i].server_addr[j]))->deserialize(b, p);
-            }
+        char *d = (char*)b.data()+p;
+        memset(dns, 0, sizeof(ZT_VirtualNetworkDNS));
+        memcpy(dns->domain, d, 128);
+        p += 128;
+        for (unsigned int j = 0; j < ZT_MAX_DNS_SERVERS; ++j) {
+            p += reinterpret_cast<InetAddress *>(&(dns->server_addr[j]))->deserialize(b, p);
         }
     }
 };

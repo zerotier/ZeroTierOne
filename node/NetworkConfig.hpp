@@ -240,7 +240,7 @@ public:
 		memset(routes, 0, sizeof(ZT_VirtualNetworkRoute)*ZT_MAX_NETWORK_ROUTES);
 		memset(staticIps, 0, sizeof(InetAddress)*ZT_MAX_ZT_ASSIGNED_ADDRESSES);
 		memset(rules, 0, sizeof(ZT_VirtualNetworkRule)*ZT_MAX_NETWORK_RULES);
-		memset(dns, 0, sizeof(ZT_VirtualNetworkDNS)*ZT_MAX_NETWORK_DNS);
+		memset(&dns, 0, sizeof(ZT_VirtualNetworkDNS));
 	}
 
 	/**
@@ -603,7 +603,7 @@ public:
 	/**
 	 * ZT pushed DNS configuration
 	 */
-	ZT_VirtualNetworkDNS dns[ZT_MAX_NETWORK_DNS];
+	ZT_VirtualNetworkDNS dns;
 };
 
 } // namespace ZeroTier

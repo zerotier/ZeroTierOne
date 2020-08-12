@@ -1428,11 +1428,7 @@ void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const
 		ec->multicastSubscriptions[i].adi = _myMulticastGroups[i].adi();
 	}
 
-	ec->dnsCount = _config.dnsCount;
-	fprintf(stderr, "Network::_externalConfig dnsCount: %d\n", ec->dnsCount);
-	if (ec->dnsCount > 0) {
-		memcpy(&ec->dns, &_config.dns, sizeof(ZT_VirtualNetworkDNS));
-	}
+	memcpy(&ec->dns, &_config.dns, sizeof(ZT_VirtualNetworkDNS));
 }
 
 void Network::_sendUpdatesToMembers(void *tPtr,const MulticastGroup *const newMulticastGroup)

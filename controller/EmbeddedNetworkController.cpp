@@ -1711,25 +1711,18 @@ void EmbeddedNetworkController::_request(
 		}
 	}
 	
-	if(dns.is_array()) {
-		nc->dnsCount = 0;
-		for(unsigned int p=0; p < dns.size(); ++p) {
-			json &d = dns[p];
-			if (d.is_object()) {
-				std::string domain = OSUtils::jsonString(d["domain"],"");
-				memcpy(nc->dns[nc->dnsCount].domain, domain.c_str(), domain.size());
-				json &addrArray = d["servers"];
-				if (addrArray.is_array()) {
-					for(unsigned int j = 0; j < addrArray.size() && j < ZT_MAX_DNS_SERVERS; ++j) {
-						json &addr = addrArray[j];
-						nc->dns[nc->dnsCount].server_addr[j] = InetAddress(OSUtils::jsonString(addr,"").c_str());
-					}
-				}
-				++nc->dnsCount;
+	if(dns.is_object()) {
+		std::string domain = OSUtils::jsonString(dns["domain"],"");
+		memcpy(nc->dns.domain, domain.c_str(), domain.size());
+		json &addrArray = dns["servers"];
+		if (addrArray.is_array()) {
+			for(unsigned int j = 0; j < addrArray.size() && j < ZT_MAX_DNS_SERVERS; ++j) {
+				json &addr = addrArray[j];
+				nc->dns.server_addr[j] = InetAddress(OSUtils::jsonString(addr,"").c_str());
 			}
 		}
 	} else {
-		dns = json::array();
+		dns = json::object();
 	}
 
 	// Issue a certificate of ownership for all static IPs

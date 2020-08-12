@@ -232,20 +232,19 @@ static void _networkToJson(nlohmann::json &nj,const ZT_VirtualNetworkConfig *nc,
 	}
 	nj["multicastSubscriptions"] = mca;
 
-	nj["dns"] = nlohmann::json::array();
-	for(unsigned int i=0;i<nc->dnsCount;++i) {
-		nlohmann::json m;
-		m["domain"] = nc->dns[i].domain;
-		m["servers"] = nlohmann::json::array();
-		for(int j=0;j<ZT_MAX_DNS_SERVERS;++j) {
-			
-			InetAddress a(nc->dns[i].server_addr[j]);
-			if (a.isV4() || a.isV6()) {
-				char buf[256];
-				m["servers"].push_back(a.toIpString(buf));
-			}
+	nlohmann::json m;
+	m["domain"] = nc->dns.domain;
+	m["servers"] = nlohmann::json::array();
+	for(int j=0;j<ZT_MAX_DNS_SERVERS;++j) {
+		
+		InetAddress a(nc->dns.server_addr[j]);
+		if (a.isV4() || a.isV6()) {
+			char buf[256];
+			m["servers"].push_back(a.toIpString(buf));
 		}
 	}
+	nj["dns"] = m;
+	
 }
 
 static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer)
@@ -2002,25 +2001,15 @@ public:
 		}
 
 		if (syncDns) {
-			char buf[128];
-			if (n.config.dnsCount > ZT_MAX_NETWORK_DNS) {
-				fprintf(stderr, "ERROR: %d records > max %d.  Skipping DNS\n", n.config.dnsCount, ZT_MAX_NETWORK_DNS);
-				return;
-			}
-			fprintf(stderr, "Syncing %d DNS configurations for network [%.16llx]\n", n.config.dnsCount, n.config.nwid);
-			for (int i = 0; i < n.config.dnsCount; ++i) {
-				if (strlen(n.config.dns[i].domain) != 0) {
-					fprintf(stderr, "Syncing DNS for domain: %s\n", n.config.dns[i].domain);
-					std::vector<InetAddress> servers;
-					for (int j = 0; j < ZT_MAX_DNS_SERVERS; ++j) {
-						InetAddress a(n.config.dns[i].server_addr[j]);
-						if (a.isV4() || a.isV6()) {
-							fprintf(stderr, "\t Server %d: %s\n", j+1, a.toIpString(buf));
-							servers.push_back(a);
-						}
+			if (strlen(n.config.dns.domain) != 0) {
+				std::vector<InetAddress> servers;
+				for (int j = 0; j < ZT_MAX_DNS_SERVERS; ++j) {
+					InetAddress a(n.config.dns.server_addr[j]);
+					if (a.isV4() || a.isV6()) {
+						servers.push_back(a);
 					}
-					n.tap->setDns(n.config.dns[i].domain, servers);
 				}
+				n.tap->setDns(n.config.dns.domain, servers);
 			}
 		}
 	}
