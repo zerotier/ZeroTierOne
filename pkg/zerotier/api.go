@@ -16,6 +16,7 @@ package zerotier
 import (
 	"bytes"
 	secrand "crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -217,10 +218,12 @@ func apiCheckAuth(out http.ResponseWriter, req *http.Request, token string) bool
 	if len(ah) > 0 && strings.TrimSpace(ah) == ("bearer "+token) {
 		return true
 	}
+
 	ah = req.Header.Get("X-ZT1-Auth")
 	if len(ah) > 0 && strings.TrimSpace(ah) == token {
 		return true
 	}
+
 	_ = apiSendObj(out, req, http.StatusUnauthorized, &APIErr{"authorization token not found or incorrect (checked X-ZT1-Auth and Authorization headers)"})
 	return false
 }
@@ -251,6 +254,8 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 	}
 
 	smux := http.NewServeMux()
+
+	// -----------------------------------------------------------------------------------------------------------------
 
 	smux.HandleFunc("/status", func(out http.ResponseWriter, req *http.Request) {
 		defer func() {
@@ -298,6 +303,8 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 		}
 	})
 
+	// -----------------------------------------------------------------------------------------------------------------
+
 	smux.HandleFunc("/config", func(out http.ResponseWriter, req *http.Request) {
 		defer func() {
 			e := recover()
@@ -329,6 +336,8 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 			_ = apiSendObj(out, req, http.StatusMethodNotAllowed, &APIErr{"unsupported method: " + req.Method})
 		}
 	})
+
+	// -----------------------------------------------------------------------------------------------------------------
 
 	smux.HandleFunc("/peer/", func(out http.ResponseWriter, req *http.Request) {
 		var err error
@@ -397,6 +406,8 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 		}
 	})
 
+	// -----------------------------------------------------------------------------------------------------------------
+
 	smux.HandleFunc("/network/", func(out http.ResponseWriter, req *http.Request) {
 		defer func() {
 			e := recover()
@@ -421,6 +432,7 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 		}
 
 		if req.Method == http.MethodDelete {
+
 			if queriedID == 0 {
 				_ = apiSendObj(out, req, http.StatusBadRequest, &APIErr{"only specific networks can be deleted"})
 				return
@@ -434,7 +446,9 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 				}
 			}
 			_ = apiSendObj(out, req, http.StatusNotFound, &APIErr{"network not found"})
+
 		} else if req.Method == http.MethodPost || req.Method == http.MethodPut {
+
 			if queriedID == 0 {
 				_ = apiSendObj(out, req, http.StatusBadRequest, nil)
 				return
@@ -460,7 +474,9 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 					_ = apiSendObj(out, req, http.StatusOK, apiNetworkFromNetwork(n))
 				}
 			}
+
 		} else if req.Method == http.MethodGet || req.Method == http.MethodHead {
+
 			networks := node.Networks()
 			if queriedID == 0 { // no queried ID lists all networks
 				nws := make([]*APINetwork, 0, len(networks))
@@ -477,11 +493,81 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 				}
 			}
 			_ = apiSendObj(out, req, http.StatusNotFound, &APIErr{"network not found"})
+
 		} else {
 			out.Header().Set("Allow", "GET, HEAD, PUT, POST, DELETE")
 			_ = apiSendObj(out, req, http.StatusMethodNotAllowed, &APIErr{"unsupported method " + req.Method})
 		}
 	})
+
+	// -----------------------------------------------------------------------------------------------------------------
+
+	smux.HandleFunc("/cert/", func(out http.ResponseWriter, req *http.Request) {
+		defer func() {
+			e := recover()
+			if e != nil {
+				_ = apiSendObj(out, req, http.StatusInternalServerError, nil)
+			}
+		}()
+
+		if !apiCheckAuth(out, req, authToken) {
+			return
+		}
+		apiSetStandardHeaders(out)
+
+		var queriedSerialNo []byte
+		if len(req.URL.Path) > 6 {
+			b, err := base64.URLEncoding.DecodeString(req.URL.Path[6:])
+			if err != nil || len(b) != CertificateSerialNoSize {
+				_ = apiSendObj(out, req, http.StatusBadRequest, &APIErr{"invalid base64 serial number in certificate path"})
+				return
+			}
+			queriedSerialNo = b
+		}
+
+		if req.Method == http.MethodGet || req.Method == http.MethodHead {
+
+			certs, err := node.ListCertificates()
+			if err != nil {
+				_ = apiSendObj(out, req, http.StatusInternalServerError, &APIErr{"unexpected error listing certificates"})
+				return
+			}
+
+			if len(queriedSerialNo) == CertificateSerialNoSize {
+				for _, c := range certs {
+					if bytes.Equal(c.Certificate.SerialNo, queriedSerialNo) {
+						_ = apiSendObj(out, req, http.StatusOK, c)
+						break
+					}
+				}
+			} else {
+				_ = apiSendObj(out, req, http.StatusOK, certs)
+			}
+
+		} else if req.Method == http.MethodPost || req.Method == http.MethodPut {
+
+			var lc LocalCertificate
+			if apiReadObj(out, req, &lc) == nil {
+				if lc.Certificate == nil {
+					_ = apiSendObj(out, req, http.StatusBadRequest, &APIErr{"missing certificate"})
+					return
+				}
+			}
+
+		} else if req.Method == http.MethodDelete {
+
+			if len(queriedSerialNo) == CertificateSerialNoSize {
+			} else {
+				_ = apiSendObj(out, req, http.StatusNotFound, &APIErr{"certificate not found"})
+			}
+
+		} else {
+			out.Header().Set("Allow", "GET, HEAD, PUT, POST, DELETE")
+			_ = apiSendObj(out, req, http.StatusMethodNotAllowed, &APIErr{"unsupported method " + req.Method})
+		}
+	})
+
+	// -----------------------------------------------------------------------------------------------------------------
 
 	listener, err := createNamedSocketListener(basePath, APISocketName)
 	if err != nil {

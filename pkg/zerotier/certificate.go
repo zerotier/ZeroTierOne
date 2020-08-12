@@ -18,6 +18,7 @@ package zerotier
 import "C"
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"unsafe"
@@ -94,6 +95,12 @@ type Certificate struct {
 type CertificateSubjectUniqueIDSecret struct {
 	UniqueID       []byte `json:"uniqueId,omitempty"`
 	UniqueIDSecret []byte `json:"uniqueIdSecret,omitempty"`
+}
+
+// LocalCertificate combines a certificate with its local trust flags.
+type LocalCertificate struct {
+	Certificate *Certificate `json:"certificate,omitempty"`
+	LocalTrust  uint         `json:"localTrust"`
 }
 
 func certificateErrorToError(cerr int) error {
@@ -486,6 +493,11 @@ func (c *Certificate) String() string {
 func (c *Certificate) JSON() string {
 	j, _ := json.MarshalIndent(c, "", "  ")
 	return string(j)
+}
+
+// URLSerialNo returns the serial number encoded for use in /cert/### local API URLs.
+func (c *Certificate) URLSerialNo() string {
+	return base64.URLEncoding.EncodeToString(c.SerialNo)
 }
 
 // NewCertificateSubjectUniqueId creates a new certificate subject unique ID and corresponding private key.

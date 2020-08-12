@@ -519,7 +519,7 @@ func (n *Node) TryPeer(fpOrAddress interface{}, ep *Endpoint, retries int) bool 
 }
 
 // ListCertificates lists certificates and their corresponding local trust flags.
-func (n *Node) ListCertificates() (certs []*Certificate, localTrust []uint, err error) {
+func (n *Node) ListCertificates() (certs []LocalCertificate, err error) {
 	cl := C.ZT_Node_listCertificates(n.zn)
 	if cl != nil {
 		defer C.ZT_freeQueryResult(unsafe.Pointer(cl))
@@ -527,15 +527,22 @@ func (n *Node) ListCertificates() (certs []*Certificate, localTrust []uint, err 
 			c := newCertificateFromCCertificate(unsafe.Pointer(uintptr(unsafe.Pointer(cl.certs)) + (i * pointerSize)))
 			if c != nil {
 				lt := *((*C.uint)(unsafe.Pointer(uintptr(unsafe.Pointer(cl.localTrust)) + (i * C.sizeof_int))))
-				certs = append(certs, c)
-				localTrust = append(localTrust, uint(lt))
+				certs = append(certs, LocalCertificate{Certificate: c, LocalTrust: uint(lt)})
 			}
 		}
 	}
 	return
 }
 
-// --------------------------------------------------------------------------------------------------------------------
+// AddCertificate adds a certificate to this node's local certificate store (after verification).
+func (n *Node) AddCertificate(cert *Certificate) error {
+}
+
+// DeleteCertificate deletes a certificate from this node's local certificate store.
+func (n *Node) DeleteCertificate(serialNo []byte) error {
+}
+
+// -------------------------------------------------------------------------------------------------------------------
 
 func (n *Node) runMaintenance() {
 	n.localConfigLock.RLock()

@@ -37,7 +37,7 @@ Common Operations:
   help                                   Show this help
   version                                Print version
 
-  status                                 Show node status and configuration
+· status                                 Show node status and configuration
 
 · set [option] [value]                 - Get or set node configuration
     port <port>                          Primary P2P port
@@ -95,11 +95,12 @@ Advanced Operations:
 
   cert <command> [args]                - Certificate management
 ·   list                                 List certificates in local node store
-·   show [serial]                        List or show details of a certificate
+·   show <serial>                        List or show details of a certificate
     newsid <secret out>                  Create a new subject unique ID
     newcsr <subject> <secret> <csr out>  Create a subject CSR
     sign <csr> <identity> <cert out>     Sign a CSR to create a certificate
-·   verify <cert>                        Verify a certificate
+    verify <cert>                        Verify certificate (not entire chain)
+    dump <cert>                          Verify and print certificate
 ·   import <cert> [trust,[trust]]        Import certificate into this node
       rootca                             Certificate is a root CA (trust flag)
       ztrootset                          ZeroTier root node set (trust flag)

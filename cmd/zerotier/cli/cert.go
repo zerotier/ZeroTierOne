@@ -28,8 +28,6 @@ func Cert(basePath string, authTokenGenerator func() string, args []string, json
 
 	switch args[0] {
 
-	case "list":
-
 	case "newsid":
 		if len(args) > 2 {
 			Help()
@@ -86,17 +84,18 @@ func Cert(basePath string, authTokenGenerator func() string, args []string, json
 			Help()
 			return 1
 		}
-		var csr zerotier.Certificate
+
 		csrBytes, err := ioutil.ReadFile(args[1])
 		if err != nil {
 			fmt.Printf("ERROR: unable to read CSR from %s: %s\n", args[1], err.Error())
 			return 1
 		}
-		c, err := zerotier.NewCertificateFromBytes(csrBytes, false)
+		csr, err := zerotier.NewCertificateFromBytes(csrBytes, false)
 		if err != nil {
 			fmt.Printf("ERROR: CSR in %s is invalid: %s\n", args[1], err.Error())
 			return 1
 		}
+
 		id := readIdentity(args[2])
 		if id == nil {
 			fmt.Printf("ERROR: unable to read identity from %s\n", args[2])
@@ -106,12 +105,13 @@ func Cert(basePath string, authTokenGenerator func() string, args []string, json
 			fmt.Printf("ERROR: signing identity in %s lacks private key\n", args[2])
 			return 1
 		}
-		c, err = csr.Sign(id)
+
+		cert, err := csr.Sign(id)
 		if err != nil {
 			fmt.Printf("ERROR: error signing CSR or generating certificate: %s\n", err.Error())
 			return 1
 		}
-		cb, err := c.Marshal()
+		cb, err := cert.Marshal()
 		if err != nil {
 			fmt.Printf("ERROR: error marshaling signed certificate: %s\n", err.Error())
 			return 1
@@ -124,7 +124,28 @@ func Cert(basePath string, authTokenGenerator func() string, args []string, json
 			return 1
 		}
 
-	case "verify":
+	case "verify", "dump":
+		if len(args) != 2 {
+			Help()
+			return 1
+		}
+		certBytes, err := ioutil.ReadFile(args[1])
+		if err != nil {
+			fmt.Printf("ERROR: unable to read certificate from %s: %s\n", args[1], err.Error())
+			return 1
+		}
+		cert, err := zerotier.NewCertificateFromBytes(certBytes, true)
+		if err != nil {
+			fmt.Printf("FAILED: certificate in %s invalid: %s\n", args[1], err.Error())
+			return 1
+		}
+		if args[0] == "dump" {
+			fmt.Println(cert.JSON())
+		} else {
+			fmt.Println("OK")
+		}
+
+	case "list":
 
 	case "show":
 		if len(args) != 1 {

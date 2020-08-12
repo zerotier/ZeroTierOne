@@ -2411,7 +2411,7 @@ ZT_SDK_API int ZT_Node_tryPeer(
  * @param cert Certificate object, or set to NULL if certData and certSize are to be used
  * @param certData Certificate binary data if 'cert' is NULL, NULL otherwise
  * @param certSize Size of certificate binary data, 0 if none
- * @return
+ * @return Certificate error or ZT_CERTIFICATE_ERROR_NONE on success
  */
 ZT_SDK_API enum ZT_CertificateError ZT_Node_addCertificate(
 	ZT_Node *node,
@@ -2421,6 +2421,22 @@ ZT_SDK_API enum ZT_CertificateError ZT_Node_addCertificate(
 	const ZT_Certificate *cert,
 	const void *certData,
 	unsigned int certSize);
+
+/**
+ * Delete a certificate from this node's certificate store
+ *
+ * Note that deleting CA certificates may also imply deletion of certificates
+ * that depend on them for full chain verification.
+ *
+ * @param node Node instance
+ * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
+ * @param serialNo 48-byte / 384-bit serial number of certificate to delete
+ * @return OK (0) or error code
+ */
+ZT_SDK_API enum ZT_ResultCode ZT_Node_deleteCertificate(
+	ZT_Node *node,
+	void *tptr,
+	const void *serialNo);
 
 /**
  * List certificates installed in this node's trust store
