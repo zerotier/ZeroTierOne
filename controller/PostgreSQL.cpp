@@ -456,7 +456,6 @@ void PostgreSQL::initializeNetworks(PGconn *conn)
 				auto servers = json::array();
 				if (serverList.rfind("{",0) != std::string::npos) {
 					serverList = serverList.substr(1, serverList.size()-2);
-					fprintf(stderr, "Server List: %s\n", serverList.c_str());
 					std::stringstream ss(serverList);
 					while(ss.good()) {
 						std::string server;
@@ -468,7 +467,6 @@ void PostgreSQL::initializeNetworks(PGconn *conn)
 				obj["servers"] = servers;
 				config["dns"].push_back(obj);
 			}
-			fprintf(stderr, "%s: %s\n", OSUtils::jsonString(config["nwid"], "").c_str(), OSUtils::jsonDump(config["dns"], 2).c_str());
 
 			PQclear(r2);
 

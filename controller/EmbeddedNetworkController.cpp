@@ -1419,8 +1419,6 @@ void EmbeddedNetworkController::_request(
 	json &memberTags = member["tags"];
 	json &dns = network["dns"];
 
-	fprintf(stderr, "DNS Config for Network ID %.16llx: %s\n", nwid, OSUtils::jsonDump(dns, 2).c_str());
-
 	if (metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_RULES_ENGINE_REV,0) <= 0) {
 		// Old versions with no rules engine support get an allow everything rule.
 		// Since rules are enforced bidirectionally, newer versions *will* still
@@ -1714,11 +1712,9 @@ void EmbeddedNetworkController::_request(
 	}
 	
 	if(dns.is_array()) {
-		fprintf(stderr, "dns is array of size %d\n", dns.size());
 		nc->dnsCount = 0;
 		for(unsigned int p=0; p < dns.size(); ++p) {
 			json &d = dns[p];
-			fprintf(stderr, "%s\n", OSUtils::jsonDump(d, 2).c_str());
 			if (d.is_object()) {
 				std::string domain = OSUtils::jsonString(d["domain"],"");
 				memcpy(nc->dns[nc->dnsCount].domain, domain.c_str(), domain.size());
@@ -1733,7 +1729,6 @@ void EmbeddedNetworkController::_request(
 			}
 		}
 	} else {
-		fprintf(stderr, "dns is NOT an array\n");
 		dns = json::array();
 	}
 

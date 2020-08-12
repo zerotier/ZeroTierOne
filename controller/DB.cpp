@@ -112,7 +112,6 @@ bool DB::get(const uint64_t networkId,nlohmann::json &network)
 		std::lock_guard<std::mutex> l2(nw->lock);
 		network = nw->config;
 	}
-	fprintf(stderr, "DB::get(uint64_t,json): %s %s\n", OSUtils::jsonString(network["nwid"],"").c_str(), OSUtils::jsonDump(network["dns"], 2).c_str());
 	return true;
 }
 
@@ -135,7 +134,6 @@ bool DB::get(const uint64_t networkId,nlohmann::json &network,const uint64_t mem
 			return false;
 		member = m->second;
 	}
-	fprintf(stderr, "DB::get(uint64_t,json,uint64_t,mjson): %s %s\n", OSUtils::jsonString(network["nwid"],"").c_str(), OSUtils::jsonDump(network["dns"], 2).c_str());
 	return true;
 }
 
@@ -159,7 +157,6 @@ bool DB::get(const uint64_t networkId,nlohmann::json &network,const uint64_t mem
 			return false;
 		member = m->second;
 	}
-	fprintf(stderr, "DB::get(uint64_t,json,uint64_t,mjson,summary): %s %s\n", OSUtils::jsonString(network["nwid"],"").c_str(), OSUtils::jsonDump(network["dns"], 2).c_str());
 	return true;
 }
 
@@ -180,7 +177,6 @@ bool DB::get(const uint64_t networkId,nlohmann::json &network,std::vector<nlohma
 		for(auto m=nw->members.begin();m!=nw->members.end();++m)
 			members.push_back(m->second);
 	}
-	fprintf(stderr, "DB::get(uint64_t,json,members): %s %s\n", OSUtils::jsonString(network["nwid"],"").c_str(), OSUtils::jsonDump(network["dns"], 2).c_str());
 	return true;
 }
 
@@ -311,7 +307,6 @@ void DB::_networkChanged(nlohmann::json &old,nlohmann::json &networkConfig,bool 
 {
 	if (networkConfig.is_object()) {
 		const std::string ids = networkConfig["id"];
-		fprintf(stderr, "DB::_networkChanged(): %s\n", OSUtils::jsonDump(networkConfig["dns"]).c_str());
 		const uint64_t networkId = Utils::hexStrToU64(ids.c_str());
 		if (networkId) {
 			std::shared_ptr<_Network> nw;
