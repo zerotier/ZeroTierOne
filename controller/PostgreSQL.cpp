@@ -430,6 +430,44 @@ void PostgreSQL::initializeNetworks(PGconn *conn)
 				config["routes"].push_back(route);
 			}
 
+			r2 = PQexecParams(conn,
+				"SELECT domain, servers FROM ztc_network_dns WHERE network_id = $1",
+				1,
+				NULL,
+				nwidparam,
+				NULL,
+				NULL,
+				0);
+			
+			if (PQresultStatus(r2) != PGRES_TUPLES_OK) {
+				fprintf(stderr, "ERROR: Error retrieving DNS settings for network: %s\n", PQresultErrorMessage(r2));
+				PQclear(r2);
+				PQclear(res);
+				exit(1);
+			}
+
+			n = PQntuples(r2);
+			if (n > 1) {
+				fprintf(stderr, "ERROR: invalid number of DNS configurations for network %s.  Must be 0 or 1\n", nwid.c_str());
+			} else if (n == 1) {
+				json obj;
+				std::string domain = PQgetvalue(r2, 0, 0);
+				std::string serverList = PQgetvalue(r2, 0, 1);
+				auto servers = json::array();
+				if (serverList.rfind("{",0) != std::string::npos) {
+					serverList = serverList.substr(1, serverList.size()-2);
+					std::stringstream ss(serverList);
+					while(ss.good()) {
+						std::string server;
+						std::getline(ss, server, ',');
+						servers.push_back(server);
+					}
+				}
+				obj["domain"] = domain;
+				obj["servers"] = servers;
+				config["dns"] = obj;
+			}
+
 			PQclear(r2);
 
 			_networkChanged(empty, config, false);
@@ -1423,6 +1461,38 @@ void PostgreSQL::commitThread()
 						config = nullptr;
 						continue;
 					}
+					auto dns = (*config)["dns"];
+					std::string domain = dns["domain"];
+					std::stringstream servers;
+					servers << "{";
+					for (auto j = dns["servers"].begin(); j < dns["servers"].end(); ++j) {
+						servers << *j;
+						if ( (j+1) != dns["servers"].end()) {
+							servers << ",";
+						}
+					}
+					servers << "}";
+
+					const char *p[3] = {
+						id.c_str(),
+						domain.c_str(),
+						servers.str().c_str()
+					};
+
+					res = PQexecParams(conn, "INSERT INTO ztc_network_dns (network_id, domain, servers) VALUES ($1, $2, $3) ON CONFLICT (network_id) DO UPDATE SET domain = EXCLUDED.domain, servers = EXCLUDED.servers",
+						3,
+						NULL,
+						p,
+						NULL,
+						NULL,
+						0);
+					if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+						fprintf(stderr, "ERROR: Error updating DNS: %s\n", PQresultErrorMessage(res));
+						PQclear(res);
+						err = true;
+						break;
+					}
+					PQclear(res);
 
 					res = PQexec(conn, "COMMIT");
 					if (PQresultStatus(res) != PGRES_COMMAND_OK) {

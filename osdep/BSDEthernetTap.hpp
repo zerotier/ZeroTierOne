@@ -54,6 +54,7 @@ public:
 	virtual void setFriendlyName(const char *friendlyName);
 	virtual void scanMulticastGroups(std::vector<MulticastGroup> &added,std::vector<MulticastGroup> &removed);
 	virtual void setMtu(unsigned int mtu);
+	virtual void setDns(const char *domain, const std::vector<InetAddress> &servers) {}
 
 	void threadMain()
 		throw();

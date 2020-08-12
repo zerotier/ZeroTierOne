@@ -21,6 +21,7 @@
 #include "OSUtils.hpp"
 #include "MacEthernetTap.hpp"
 #include "MacEthernetTapAgent.h"
+#include "MacDNSHelper.hpp"
 
 #include <stdint.h>
 #include <stdio.h>
@@ -54,6 +55,7 @@
 #include <map>
 #include <set>
 #include <algorithm>
+#include <filesystem>
 
 static const ZeroTier::MulticastGroup _blindWildcardMulticastGroup(ZeroTier::MAC(0xff),0);
 
@@ -200,6 +202,8 @@ MacEthernetTap::MacEthernetTap(
 
 MacEthernetTap::~MacEthernetTap()
 {
+	MacDNSHelper::removeDNS(_nwid);
+	
 	Mutex::Lock _gl(globalTapCreateLock);
 	::write(_shutdownSignalPipe[1],"\0",1); // causes thread to exit
 	Thread::join(_thread);
@@ -450,6 +454,11 @@ void MacEthernetTap::threadMain()
 			*/
 		}
 	}
+}
+
+void MacEthernetTap::setDns(const char *domain, const std::vector<InetAddress> &servers)
+{
+	MacDNSHelper::setDNS(this->_nwid, domain, servers);
 }
 
 } // namespace ZeroTier

@@ -90,9 +90,6 @@
     <ClCompile Include="..\..\service\OneService.cpp">
       <Filter>Source Files\service</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\osdep\WindowsEthernetTap.cpp">
-      <Filter>Source Files\osdep</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\osdep\Http.cpp">
       <Filter>Source Files\osdep</Filter>
     </ClCompile>
@@ -264,9 +261,6 @@
     <ClCompile Include="..\..\controller\PostgreSQL.cpp">
       <Filter>Source Files\controller</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\controller\RabbitMQ.cpp">
-      <Filter>Source Files\controller</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\controller\LFDB.cpp">
       <Filter>Source Files\controller</Filter>
     </ClCompile>
@@ -274,6 +268,18 @@
       <Filter>Source Files\controller</Filter>
     </ClCompile>
     <ClCompile Include="..\..\osdep\EthernetTap.cpp">
+      <Filter>Source Files\osdep</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\node\Bond.cpp">
+      <Filter>Source Files\node</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\node\BondController.cpp">
+      <Filter>Source Files\node</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\osdep\WinDNSHelper.cpp">
+      <Filter>Source Files\osdep</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\osdep\WindowsEthernetTap.cpp">
       <Filter>Source Files\osdep</Filter>
     </ClCompile>
   </ItemGroup>
@@ -515,9 +521,6 @@
     <ClInclude Include="..\..\controller\PostgreSQL.hpp">
       <Filter>Header Files\controller</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\controller\RabbitMQ.hpp">
-      <Filter>Header Files\controller</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\controller\LFDB.hpp">
       <Filter>Header Files\controller</Filter>
     </ClInclude>
@@ -528,6 +531,18 @@
       <Filter>Header Files\controller</Filter>
     </ClInclude>
     <ClInclude Include="..\..\osdep\EthernetTap.hpp">
+      <Filter>Header Files\osdep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\node\Bond.hpp">
+      <Filter>Header Files\node</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\node\BondController.hpp">
+      <Filter>Header Files\node</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\controller\Redis.hpp">
+      <Filter>Header Files\controller</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\osdep\WinDNSHelper.hpp">
       <Filter>Header Files\osdep</Filter>
     </ClInclude>
   </ItemGroup>

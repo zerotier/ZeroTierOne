@@ -231,6 +231,20 @@ static void _networkToJson(nlohmann::json &nj,const ZT_VirtualNetworkConfig *nc,
 		mca.push_back(m);
 	}
 	nj["multicastSubscriptions"] = mca;
+
+	nlohmann::json m;
+	m["domain"] = nc->dns.domain;
+	m["servers"] = nlohmann::json::array();
+	for(int j=0;j<ZT_MAX_DNS_SERVERS;++j) {
+		
+		InetAddress a(nc->dns.server_addr[j]);
+		if (a.isV4() || a.isV6()) {
+			char buf[256];
+			m["servers"].push_back(a.toIpString(buf));
+		}
+	}
+	nj["dns"] = m;
+	
 }
 
 static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer)
@@ -501,6 +515,7 @@ public:
 			settings.allowManaged = true;
 			settings.allowGlobal = false;
 			settings.allowDefault = false;
+			memset(&config, 0, sizeof(ZT_VirtualNetworkConfig));
 		}
 
 		std::shared_ptr<EthernetTap> tap;
@@ -831,7 +846,7 @@ public:
 						Mutex::Lock _l(_nets_m);
 						for(std::map<uint64_t,NetworkState>::iterator n(_nets.begin());n!=_nets.end();++n) {
 							if (n->second.tap)
-								syncManagedStuff(n->second,false,true);
+								syncManagedStuff(n->second,false,true,false);
 						}
 					}
 				}
@@ -1117,7 +1132,7 @@ public:
 		}
 
 		if (n->second.tap)
-			syncManagedStuff(n->second,true,true);
+			syncManagedStuff(n->second,true,true,true);
 
 		return true;
 	}
@@ -1864,7 +1879,7 @@ public:
 	}
 
 	// Apply or update managed IPs for a configured network (be sure n.tap exists)
-	void syncManagedStuff(NetworkState &n,bool syncIps,bool syncRoutes)
+	void syncManagedStuff(NetworkState &n,bool syncIps,bool syncRoutes, bool syncDns)
 	{
 		char ipbuf[64];
 
@@ -1982,6 +1997,19 @@ public:
 				if (!n.managedRoutes.back()->sync())
 					n.managedRoutes.pop_back();
 #endif
+			}
+		}
+
+		if (syncDns) {
+			if (strlen(n.config.dns.domain) != 0) {
+				std::vector<InetAddress> servers;
+				for (int j = 0; j < ZT_MAX_DNS_SERVERS; ++j) {
+					InetAddress a(n.config.dns.server_addr[j]);
+					if (a.isV4() || a.isV6()) {
+						servers.push_back(a);
+					}
+				}
+				n.tap->setDns(n.config.dns.domain, servers);
 			}
 		}
 	}
@@ -2333,7 +2361,7 @@ public:
 						Sleep(10);
 					}
 #endif
-					syncManagedStuff(n,true,true);
+					syncManagedStuff(n,true,true,true);
 					n.tap->setMtu(nwc->mtu);
 				} else {
 					_nets.erase(nwid);

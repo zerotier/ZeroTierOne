@@ -196,6 +196,11 @@ extern "C" {
 #define ZT_PATH_LINK_QUALITY_MAX 0xff
 
 /**
+ * Maximum number of DNS servers per domain
+ */
+#define ZT_MAX_DNS_SERVERS 4
+
+/**
  * Packet characteristics flag: packet direction, 1 if inbound 0 if outbound
  */
 #define ZT_RULE_PACKET_CHARACTERISTICS_INBOUND 0x8000000000000000ULL
@@ -1107,6 +1112,15 @@ typedef struct
 } ZT_VirtualNetworkRoute;
 
 /**
+ * DNS configuration to be pushed on a virtual network
+ */
+typedef struct
+{
+	char domain[128];
+	struct sockaddr_storage server_addr[ZT_MAX_DNS_SERVERS];
+} ZT_VirtualNetworkDNS;
+
+/**
  * An Ethernet multicast group
  */
 typedef struct
@@ -1320,6 +1334,11 @@ typedef struct
 		uint64_t mac; /* MAC in lower 48 bits */
 		uint32_t adi; /* Additional distinguishing information, usually zero except for IPv4 ARP groups */
 	} multicastSubscriptions[ZT_MAX_MULTICAST_SUBSCRIPTIONS];
+	
+	/**
+	 * Network specific DNS configuration
+	 */
+	ZT_VirtualNetworkDNS dns;
 } ZT_VirtualNetworkConfig;
 
 /**

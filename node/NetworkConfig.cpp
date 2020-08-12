@@ -176,6 +176,12 @@ bool NetworkConfig::toDictionary(Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d,b
 			}
 		}
 
+		tmp->clear();
+		DNS::serializeDNS(*tmp, &dns);
+		if (tmp->size()) {
+			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_DNS,*tmp)) return false;
+		}
+
 		delete tmp;
 	} catch ( ... ) {
 		delete tmp;
@@ -353,6 +359,11 @@ bool NetworkConfig::fromDictionary(const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACI
 				this->ruleCount = 0;
 				unsigned int p = 0;
 				Capability::deserializeRules(*tmp,p,this->rules,this->ruleCount,ZT_MAX_NETWORK_RULES);
+			}
+
+			if (d.get(ZT_NETWORKCONFIG_DICT_KEY_DNS, *tmp)) {
+				unsigned int p = 0;
+				DNS::deserializeDNS(*tmp, p, &dns);
 			}
 		}
 

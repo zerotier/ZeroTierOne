@@ -97,6 +97,7 @@ public:
 	virtual void setFriendlyName(const char *friendlyName);
 	virtual void scanMulticastGroups(std::vector<MulticastGroup> &added,std::vector<MulticastGroup> &removed);
 	virtual void setMtu(unsigned int mtu);
+	virtual void setDns(const char* domain, const std::vector<InetAddress> &servers);
 
 	inline const NET_LUID &luid() const { return _deviceLuid; }
 	inline const GUID &guid() const { return _deviceGuid; }

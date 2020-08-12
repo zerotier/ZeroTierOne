@@ -585,7 +585,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 							responseBody.reserve((members.size() + 2) * 32);
 							std::string mid;
 							for(auto member=members.begin();member!=members.end();++member) {
-								mid = (*member)["id"];
+								mid = OSUtils::jsonString((*member)["id"], "");
 								char tmp[128];
 								OSUtils::ztsnprintf(tmp,sizeof(tmp),"%s\"%s\":%llu",(responseBody.length() > 1) ? "," : "",mid.c_str(),(unsigned long long)OSUtils::jsonInt((*member)["revision"],0));
 								responseBody.append(tmp);
@@ -1029,6 +1029,30 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 						}
 					}
 
+					if (b.count("dns")) {
+						json &dns = b["dns"];
+						if (dns.is_array()) {
+							json nda = json::array();
+							for(unsigned int i=0;i<dns.size();++i) {
+								json &d = dns[i];
+								if (d.is_object()) {
+									json nd = json::object();
+									nd["domain"] = d["domain"];
+									json &srv = d["servers"];
+									if (srv.is_array()) {
+										json ns = json::array();
+										for(unsigned int j=0;j<srv.size();++j) {
+											ns.push_back(srv[i]);
+										}
+										nd["servers"] = ns;
+									}
+									nda.push_back(nd);
+								}
+							}
+							network["dns"] = nda;
+						}
+					}
+
 				} catch ( ... ) {
 					responseBody = "{ \"message\": \"exception occurred while parsing body variables\" }";
 					responseContentType = "application/json";
@@ -1366,6 +1390,7 @@ void EmbeddedNetworkController::_request(
 	nc->mtu = std::max(std::min((unsigned int)OSUtils::jsonInt(network["mtu"],ZT_DEFAULT_MTU),(unsigned int)ZT_MAX_MTU),(unsigned int)ZT_MIN_MTU);
 	nc->multicastLimit = (unsigned int)OSUtils::jsonInt(network["multicastLimit"],32ULL);
 
+	
 	std::string rtt(OSUtils::jsonString(member["remoteTraceTarget"],""));
 	if (rtt.length() == 10) {
 		nc->remoteTraceTarget = Address(Utils::hexStrToU64(rtt.c_str()));
@@ -1392,6 +1417,7 @@ void EmbeddedNetworkController::_request(
 	json &tags = network["tags"];
 	json &memberCapabilities = member["capabilities"];
 	json &memberTags = member["tags"];
+	json &dns = network["dns"];
 
 	if (metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_RULES_ENGINE_REV,0) <= 0) {
 		// Old versions with no rules engine support get an allow everything rule.
@@ -1683,6 +1709,20 @@ void EmbeddedNetworkController::_request(
 				}
 			}
 		}
+	}
+	
+	if(dns.is_object()) {
+		std::string domain = OSUtils::jsonString(dns["domain"],"");
+		memcpy(nc->dns.domain, domain.c_str(), domain.size());
+		json &addrArray = dns["servers"];
+		if (addrArray.is_array()) {
+			for(unsigned int j = 0; j < addrArray.size() && j < ZT_MAX_DNS_SERVERS; ++j) {
+				json &addr = addrArray[j];
+				nc->dns.server_addr[j] = InetAddress(OSUtils::jsonString(addr,"").c_str());
+			}
+		}
+	} else {
+		dns = json::object();
 	}
 
 	// Issue a certificate of ownership for all static IPs

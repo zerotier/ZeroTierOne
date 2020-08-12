@@ -48,6 +48,8 @@ void DB::initNetwork(nlohmann::json &network)
 			{ "type","ACTION_ACCEPT" }
 		}};
 	}
+	if (!network.count("dns")) network["dns"] = nlohmann::json::array();
+
 	network["objtype"] = "network";
 }
 
