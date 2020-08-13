@@ -586,6 +586,16 @@ ZT_CertificateError Node::addCertificate(
 	return RR->topology->addCertificate(tptr, c, now, localTrust, true, true, true);
 }
 
+ZT_ResultCode Node::deleteCertificate(
+	void *tptr,
+	const void *serialNo)
+{
+	if (!serialNo)
+		return ZT_RESULT_ERROR_BAD_PARAMETER;
+	RR->topology->deleteCertificate(tptr, reinterpret_cast<const uint8_t *>(serialNo));
+	return ZT_RESULT_OK;
+}
+
 struct p_certificateListInternal
 {
 	Vector< SharedPtr< const Certificate > > c;
@@ -1103,6 +1113,18 @@ enum ZT_CertificateError ZT_Node_addCertificate(
 		return reinterpret_cast<ZeroTier::Node *>(node)->addCertificate(tptr, now, localTrust, cert, certData, certSize);
 	} catch (...) {
 		return ZT_CERTIFICATE_ERROR_INVALID_FORMAT;
+	}
+}
+
+ZT_SDK_API enum ZT_ResultCode ZT_Node_deleteCertificate(
+	ZT_Node *node,
+	void *tptr,
+	const void *serialNo)
+{
+	try {
+		return reinterpret_cast<ZeroTier::Node *>(node)->deleteCertificate(tptr, serialNo);
+	} catch (...) {
+		return ZT_RESULT_ERROR_INTERNAL;
 	}
 }
 

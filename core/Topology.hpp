@@ -140,7 +140,23 @@ public:
 	 * @param verify If true, verify certificate and certificate chain (default: true)
 	 * @return Error or 0 on success
 	 */
-	ZT_CertificateError addCertificate(void *tPtr, const Certificate &cert, const int64_t now, unsigned int localTrust, bool writeToLocalStore, bool refreshRootSets = true, bool verify = true);
+	ZT_CertificateError addCertificate(
+		void *tPtr,
+		const Certificate &cert,
+		int64_t now,
+		unsigned int localTrust,
+		bool writeToLocalStore,
+		bool refreshRootSets = true,
+		bool verify = true);
+
+	/**
+	 * Delete certificate
+	 *
+	 * @param tPtr Thread pointer
+	 * @param serialNo Serial number to delete
+	 * @return Number of deleted certificates
+	 */
+	unsigned int deleteCertificate(void *tPtr,const uint8_t serialNo[ZT_SHA384_DIGEST_SIZE]);
 
 	/**
 	 * Fill vectors with all certificates and their corresponding local trust flags
@@ -154,11 +170,11 @@ private:
 	void m_rankRoots(int64_t now);
 	void m_eraseCertificate(void *tPtr, const SharedPtr< const Certificate > &cert, const SHA384Hash *uniqueIdHash);
 	bool m_cleanCertificates(void *tPtr, int64_t now);
-	bool m_verifyCertificateChain(const Certificate *current, const int64_t now) const;
-	ZT_CertificateError m_verifyCertificate(const Certificate &cert, const int64_t now, unsigned int localTrust, bool skipSignatureCheck) const;
+	bool m_verifyCertificateChain(const Certificate *current, int64_t now) const;
+	ZT_CertificateError m_verifyCertificate(const Certificate &cert, int64_t now, unsigned int localTrust, bool skipSignatureCheck) const;
 	void m_loadCached(void *tPtr, const Address &zta, SharedPtr< Peer > &peer);
 	SharedPtr< Peer > m_peerFromCached(void *tPtr, const Address &zta);
-	SharedPtr< Path > m_newPath(const int64_t l, const InetAddress &r, const UniqueID &k);
+	SharedPtr< Path > m_newPath(int64_t l, const InetAddress &r, const UniqueID &k);
 	void m_updateRootPeers(void *tPtr, int64_t now);
 	void m_writeTrustStore(void *tPtr);
 

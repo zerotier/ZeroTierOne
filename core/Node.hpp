@@ -147,6 +147,10 @@ public:
 		const void *certData,
 		unsigned int certSize);
 
+	ZT_ResultCode deleteCertificate(
+		void *tptr,
+		const void *serialNo);
+
 	ZT_CertificateList *listCertificates();
 
 	int sendUserMessage(

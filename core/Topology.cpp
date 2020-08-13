@@ -242,6 +242,32 @@ ZT_CertificateError Topology::addCertificate(void *tPtr, const Certificate &cert
 	return ZT_CERTIFICATE_ERROR_NONE;
 }
 
+unsigned int Topology::deleteCertificate(void *tPtr,const uint8_t serialNo[ZT_SHA384_DIGEST_SIZE])
+{
+	Mutex::Lock l(m_certs_l);
+	const unsigned long origCertCount = (unsigned long)m_certs.size();
+	Map< SHA384Hash, p_CertEntry >::const_iterator c(m_certs.find(SHA384Hash(serialNo)));
+	if (c != m_certs.end()) {
+		if ((c->second.certificate->subject.uniqueId) && (c->second.certificate->subject.uniqueIdSize > 0)) {
+			SHA384Hash uniqueIdHash;
+			SHA384(uniqueIdHash.data, c->second.certificate->subject.uniqueId, c->second.certificate->subject.uniqueIdSize);
+			m_eraseCertificate(tPtr, c->second.certificate, &uniqueIdHash);
+		} else {
+			m_eraseCertificate(tPtr, c->second.certificate, nullptr);
+		}
+
+		const int64_t now = RR->node->now();
+		m_cleanCertificates(tPtr, now);
+		m_writeTrustStore(tPtr);
+		{
+			RWMutex::Lock l3(m_peers_l);
+			RWMutex::Lock l2(m_roots_l);
+			m_updateRootPeers(tPtr, now);
+		}
+	}
+	return (unsigned int)(origCertCount - (unsigned long)m_certs.size());
+}
+
 void Topology::allCerts(Vector< SharedPtr<const Certificate> > &c,Vector< unsigned int > &t) const noexcept
 {
 	Mutex::Lock l(m_certs_l);
@@ -296,8 +322,7 @@ void Topology::m_eraseCertificate(void *tPtr, const SharedPtr< const Certificate
 
 	for (unsigned int i = 0; i < cert->subject.identityCount; ++i) {
 		const Identity *const ii = reinterpret_cast<const Identity *>(cert->subject.identities[i].identity);
-		Map< Fingerprint, Map< SharedPtr< const Certificate >, unsigned int > >::iterator
-			bySubjectIdentity(m_certsBySubjectIdentity.find(ii->fingerprint()));
+		Map< Fingerprint, Map< SharedPtr< const Certificate >, unsigned int > >::iterator bySubjectIdentity(m_certsBySubjectIdentity.find(ii->fingerprint()));
 		if (bySubjectIdentity != m_certsBySubjectIdentity.end()) {
 			bySubjectIdentity->second.erase(cert);
 			if (bySubjectIdentity->second.empty())

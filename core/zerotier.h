@@ -2407,6 +2407,7 @@ ZT_SDK_API int ZT_Node_tryPeer(
  *
  * @param node Node instance
  * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
+ * @param now Current time
  * @param localTrust Local trust flags (ORed together)
  * @param cert Certificate object, or set to NULL if certData and certSize are to be used
  * @param certData Certificate binary data if 'cert' is NULL, NULL otherwise

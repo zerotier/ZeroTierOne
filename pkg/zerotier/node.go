@@ -535,11 +535,19 @@ func (n *Node) ListCertificates() (certs []LocalCertificate, err error) {
 }
 
 // AddCertificate adds a certificate to this node's local certificate store (after verification).
-func (n *Node) AddCertificate(cert *Certificate) error {
+func (n *Node) AddCertificate(cert *Certificate, localTrust uint) error {
+	ccert := cert.cCertificate()
+	defer deleteCCertificate(ccert)
+	return certificateErrorToError(int(C.ZT_Node_addCertificate(n.zn, nil, C.int64_t(TimeMs()), C.uint(localTrust), (*C.ZT_Certificate)(ccert), nil, 0)))
 }
 
 // DeleteCertificate deletes a certificate from this node's local certificate store.
 func (n *Node) DeleteCertificate(serialNo []byte) error {
+	if len(serialNo) != CertificateSerialNoSize {
+		return ErrInvalidParameter
+	}
+	C.ZT_Node_deleteCertificate(n.zn, nil, unsafe.Pointer(&serialNo[0]))
+	return nil
 }
 
 // -------------------------------------------------------------------------------------------------------------------
