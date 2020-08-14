@@ -554,12 +554,35 @@ func createAPIServer(basePath string, node *Node) (*http.Server, *http.Server, e
 				}
 			}
 
+			if len(queriedSerialNo) == CertificateSerialNoSize && !bytes.Equal(queriedSerialNo, lc.Certificate.SerialNo) {
+				_ = apiSendObj(out, req, http.StatusBadRequest, &APIErr{"certificate serial does not match serial in path"})
+				return
+			}
+
+			err := node.AddCertificate(lc.Certificate, lc.LocalTrust)
+			if err == nil {
+				_ = apiSendObj(out, req, http.StatusOK, lc)
+			} else {
+				_ = apiSendObj(out, req, http.StatusBadRequest, &APIErr{"certificate rejected: " + err.Error()})
+			}
+
 		} else if req.Method == http.MethodDelete {
 
 			if len(queriedSerialNo) == CertificateSerialNoSize {
-			} else {
-				_ = apiSendObj(out, req, http.StatusNotFound, &APIErr{"certificate not found"})
+				certs, err := node.ListCertificates()
+				if err != nil {
+					_ = apiSendObj(out, req, http.StatusInternalServerError, &APIErr{"unexpected error"})
+					return
+				}
+				for _, c := range certs {
+					if bytes.Equal(c.Certificate.SerialNo, queriedSerialNo) {
+						_ = node.DeleteCertificate(queriedSerialNo)
+						_ = apiSendObj(out, req, http.StatusOK, c)
+						return
+					}
+				}
 			}
+			_ = apiSendObj(out, req, http.StatusNotFound, &APIErr{"certificate not found"})
 
 		} else {
 			out.Header().Set("Allow", "GET, HEAD, PUT, POST, DELETE")

@@ -71,17 +71,6 @@ public:
 		unsigned int frameLength,
 		volatile int64_t *nextBackgroundTaskDeadline);
 
-	ZT_ResultCode processHTTPResponse(
-		void *tptr,
-		int64_t now,
-		void *requestId,
-		int responseCode,
-		const char **headerNames,
-		const char **headerValues,
-		const void *body,
-		unsigned int bodySize,
-		unsigned int flags);
-
 	ZT_ResultCode processBackgroundTasks(
 		void *tPtr,
 		int64_t now,

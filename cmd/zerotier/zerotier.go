@@ -22,6 +22,7 @@ import (
 	"runtime"
 	"runtime/debug"
 	"strings"
+	"time"
 
 	"zerotier/cmd/zerotier/cli"
 	"zerotier/pkg/zerotier"
@@ -133,6 +134,22 @@ func main() {
 		cli.Help()
 	case "version":
 		fmt.Printf("%d.%d.%d\n", zerotier.CoreVersionMajor, zerotier.CoreVersionMinor, zerotier.CoreVersionRevision)
+	case "now":
+		if len(args) > 2 {
+			cli.Help()
+			exitCode = 1
+		} else if len(args) == 2 {
+			d, err := time.ParseDuration(args[1])
+			if err == nil {
+				fmt.Printf("%d\n", zerotier.TimeMs() + d.Milliseconds())
+			} else {
+				fmt.Printf("FATAL: invalid duration \"%s\": %s\n", args[1], err.Error())
+				exitCode = 1
+			}
+		} else {
+			fmt.Printf("%d\n", zerotier.TimeMs())
+		}
+
 	case "service":
 		exitCode = cli.Service(basePath, cmdArgs)
 	case "status", "info":

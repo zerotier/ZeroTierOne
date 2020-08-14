@@ -212,20 +212,6 @@ ZT_ResultCode Node::processVirtualNetworkFrame(
 	}
 }
 
-ZT_ResultCode Node::processHTTPResponse(
-	void *tptr,
-	int64_t now,
-	void *requestId,
-	int responseCode,
-	const char **headerNames,
-	const char **headerValues,
-	const void *body,
-	unsigned int bodySize,
-	unsigned int flags)
-{
-	return ZT_RESULT_OK;
-}
-
 ZT_ResultCode Node::processBackgroundTasks(
 	void *tPtr,
 	int64_t now,
@@ -959,27 +945,6 @@ enum ZT_ResultCode ZT_Node_processVirtualNetworkFrame(
 	try {
 		ZeroTier::SharedPtr< ZeroTier::Buf > buf((isZtBuffer) ? _ZT_PTRTOBUF(frameData) : new ZeroTier::Buf(frameData, frameLength & ZT_BUF_MEM_MASK));
 		return reinterpret_cast<ZeroTier::Node *>(node)->processVirtualNetworkFrame(tptr, now, nwid, sourceMac, destMac, etherType, vlanId, buf, frameLength, nextBackgroundTaskDeadline);
-	} catch (std::bad_alloc &exc) {
-		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
-	} catch (...) {
-		return ZT_RESULT_ERROR_INTERNAL;
-	}
-}
-
-enum ZT_ResultCode ZT_Node_processHTTPResponse(
-	ZT_Node *node,
-	void *tptr,
-	int64_t now,
-	void *requestId,
-	int responseCode,
-	const char **headerNames,
-	const char **headerValues,
-	const void *body,
-	unsigned int bodySize,
-	unsigned int flags)
-{
-	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->processHTTPResponse(tptr, now, requestId, responseCode, headerNames, headerValues, body, bodySize, flags);
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch (...) {

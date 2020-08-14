@@ -36,6 +36,7 @@ Common Operations:
 
   help                                   Show this help
   version                                Print version
+  now [duration]                         Print current time [-]#[ms|s|m|h]
 
 · status                                 Show node status and configuration
 

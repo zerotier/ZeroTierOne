@@ -1873,29 +1873,6 @@ typedef int (*ZT_WirePacketSendFunction)(
 	unsigned int);                    /* TTL or 0 to use default */
 
 /**
- * Function to initiate HTTP requests
- *
- * The supplied HTTP request identifier is an opaque pointer that must
- * be returned via ZT_Node_processHttpResponse(). If this handler is
- * implemented then ZT_Node_processHttpResponse() must be called for
- * each call made by the core to this. This function itself does not
- * return any error code; use processHttpResponse() for that. It may
- * be called directly from inside the implementation of this.
- */
-typedef void (*ZT_HTTPRequestFunction)(
-	ZT_Node *,                        /* Node */
-	void *,                           /* User ptr */
-	void *,                           /* Thread ptr */
-	void *,                           /* HTTP request identifier */
-	const char *,                     /* HTTP method (GET, HEAD, etc.) */
-	const char *,                     /* URL */
-	const char **,                    /* Header names, NULL terminated */
-	const char **,                    /* Header values, NULL terminated */
-	const void *,                     /* Request body or NULL if none */
-	unsigned int,                     /* Length of request body in bytes */
-	unsigned int);                    /* Flags */
-
-/**
  * Function to check whether a path should be used for ZeroTier traffic
  *
  * Parameters:
@@ -1972,11 +1949,6 @@ struct ZT_Node_Callbacks
 	 * REQUIRED: Function to send packets over the physical wire
 	 */
 	ZT_WirePacketSendFunction wirePacketSendFunction;
-
-	/**
-	 * RECOMMENDED: Function to initiate HTTP requests
-	 */
-	ZT_HTTPRequestFunction httpRequestFunction;
 
 	/**
 	 * REQUIRED: Function to inject frames into a virtual network's TAP
@@ -2127,33 +2099,6 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_processVirtualNetworkFrame(
 	unsigned int frameLength,
 	int isZtBuffer,
 	volatile int64_t *nextBackgroundTaskDeadline);
-
-/**
- * Process a response from HTTP requests initiated via API callback
- *
- * @param node Node instance
- * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
- * @param now Current clock in milliseconds
- * @param requestId Opaque pointer provided via the requesting callback
- * @param responseCode HTTP response code (e.g. 200, 500)
- * @param headerNames HTTP header names, terminated by a NULL pointer
- * @param headerValues HTTP header values corresponding with each name
- * @param body Response body or NULL if none
- * @param bodySize Size of response body in bytes
- * @param flags Response flags
- * @return OK (0) or error code if a fatal error condition has occurred
- */
-ZT_SDK_API enum ZT_ResultCode ZT_Node_processHTTPResponse(
-	ZT_Node *node,
-	void *tptr,
-	int64_t now,
-	void *requestId,
-	int responseCode,
-	const char **headerNames,
-	const char **headerValues,
-	const void *body,
-	unsigned int bodySize,
-	unsigned int flags);
 
 /**
  * Perform periodic background operations
