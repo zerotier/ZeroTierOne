@@ -780,7 +780,7 @@ func (n *Node) handleTrace(traceMessage string) {
 // avoid blocking anything in the core.
 
 //export goPathCheckFunc
-func goPathCheckFunc(gn, _ unsafe.Pointer, af C.int, ip unsafe.Pointer, _ C.int) C.int {
+func goPathCheckFunc(gn, uptr unsafe.Pointer, af C.int, ip unsafe.Pointer, port C.int) C.int {
 	node := cNodeRefs[uintptr(gn)]
 	if node == nil {
 		return 0
@@ -802,7 +802,7 @@ func goPathCheckFunc(gn, _ unsafe.Pointer, af C.int, ip unsafe.Pointer, _ C.int)
 }
 
 //export goPathLookupFunc
-func goPathLookupFunc(gn unsafe.Pointer, _ C.uint64_t, _ int, identity, familyP, ipP, portP unsafe.Pointer) C.int {
+func goPathLookupFunc(gn unsafe.Pointer, ztAddress C.uint64_t, desiredAddressFamily int, identity, familyP, ipP, portP unsafe.Pointer) C.int {
 	node := cNodeRefs[uintptr(gn)]
 	if node == nil {
 		return 0
@@ -877,7 +877,7 @@ func goStateObjectGetFunc(gn unsafe.Pointer, objType C.int, id, dataP unsafe.Poi
 }
 
 //export goVirtualNetworkConfigFunc
-func goVirtualNetworkConfigFunc(gn, _ unsafe.Pointer, nwid C.uint64_t, op C.int, conf unsafe.Pointer) {
+func goVirtualNetworkConfigFunc(gn, uptr unsafe.Pointer, nwid C.uint64_t, op C.int, conf unsafe.Pointer) {
 	node := cNodeRefs[uintptr(gn)]
 	if node == nil {
 		return
