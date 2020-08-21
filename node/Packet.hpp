@@ -26,6 +26,7 @@
 #include "Address.hpp"
 #include "Poly1305.hpp"
 #include "Salsa20.hpp"
+#include "AES.hpp"
 #include "Utils.hpp"
 #include "Buffer.hpp"
 
@@ -55,10 +56,12 @@
  *    + Tags and Capabilities
  *    + Inline push of CertificateOfMembership deprecated
  * 9  - 1.2.0 ... 1.2.14
- * 10 - 1.4.0 ... CURRENT
- *    + Multipath capability and load balancing (tentative)
+ * 10 - 1.4.0 ... 1.4.6
+ * 11 - 1.4.8 ... end of 1.4 series
+ *    + Multipath capability and load balancing (beta)
+ *    + AES-GMAC-SIV backported for faster peer-to-peer crypto
  */
-#define ZT_PROTO_VERSION 10
+#define ZT_PROTO_VERSION 11
 
 /**
  * Minimum supported protocol version
@@ -95,6 +98,21 @@
  * Curve25519 elliptic curve Diffie-Hellman.
  */
 #define ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012 1
+
+/**
+ * AES-GMAC-SIV backported from 2.x
+ */
+#define ZT_PROTO_CIPHER_SUITE__AES_GMAC_SIV 3
+
+/**
+ * AES-GMAC-SIV first of two keys
+ */
+#define ZT_KBKDF_LABEL_AES_GMAC_SIV_K0 '0'
+
+/**
+ * AES-GMAC-SIV second of two keys
+ */
+#define ZT_KBKDF_LABEL_AES_GMAC_SIV_K1 '1'
 
 /**
  * Cipher suite: NONE
@@ -1295,8 +1313,9 @@ public:
 	 *
 	 * @param key 32-byte key
 	 * @param encryptPayload If true, encrypt packet payload, else just MAC
+	 * @param aes Use new AES-GMAC-SIV constrution
 	 */
-	void armor(const void *key,bool encryptPayload);
+	void armor(const void *key,bool encryptPayload,const AES aesKeys[2]);
 
 	/**
 	 * Verify and (if encrypted) decrypt packet

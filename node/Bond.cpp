@@ -618,7 +618,7 @@ void Bond::sendPATH_NEGOTIATION_REQUEST(void *tPtr, const SharedPtr<Path> &path)
 	Packet outp(_peer->_id.address(),RR->identity.address(),Packet::VERB_PATH_NEGOTIATION_REQUEST);
 	outp.append<int16_t>(_localUtility);
 	if (path->address()) {
-		outp.armor(_peer->key(),false);
+		outp.armor(_peer->key(),false,_peer->aesKeysIfSupported());
 		RR->node->putPacket(tPtr,path->localSocket(),path->address(),outp.data(),outp.size());
 	}
 }
@@ -639,7 +639,7 @@ void Bond::sendACK(void *tPtr, const SharedPtr<Path> &path,const int64_t localSo
 	//RR->t->bondStateMessage(NULL, traceMsg);
 	outp.append<uint32_t>(bytesToAck);
 	if (atAddress) {
-		outp.armor(_peer->key(),false);
+		outp.armor(_peer->key(),false,_peer->aesKeysIfSupported());
 		RR->node->putPacket(tPtr,localSocket,atAddress,outp.data(),outp.size());
 	} else {
 		RR->sw->send(tPtr,outp,false);
@@ -662,7 +662,7 @@ void Bond::sendQOS_MEASUREMENT(void *tPtr,const SharedPtr<Path> &path,const int6
 	int16_t len = generateQoSPacket(path, _now,qosData);
 	outp.append(qosData,len);
 	if (atAddress) {
-		outp.armor(_peer->key(),false);
+		outp.armor(_peer->key(),false,_peer->aesKeysIfSupported());
 		RR->node->putPacket(tPtr,localSocket,atAddress,outp.data(),outp.size());
 	} else {
 		RR->sw->send(tPtr,outp,false);

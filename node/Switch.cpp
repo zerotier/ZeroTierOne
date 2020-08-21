@@ -96,7 +96,7 @@ void Switch::onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddre
 				if ((now - _lastBeaconResponse) >= 2500) { // limit rate of responses
 					_lastBeaconResponse = now;
 					Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NOP);
-					outp.armor(peer->key(),true);
+					outp.armor(peer->key(),true,peer->aesKeysIfSupported());
 					path->send(RR,tPtr,outp.data(),outp.size(),now);
 				}
 			}
@@ -879,7 +879,6 @@ void Switch::requestWhois(void *tPtr,const int64_t now,const Address &addr)
 		int32_t flowId = ZT_QOS_NO_FLOW;
 		Packet outp(upstream->address(),RR->identity.address(),Packet::VERB_WHOIS);
 		addr.appendTo(outp);
-		RR->node->expectReplyTo(outp.packetId());
 		send(tPtr,outp,true,flowId);
 	}
 }
@@ -1042,13 +1041,15 @@ void Switch::_sendViaSpecificPath(void *tPtr,SharedPtr<Peer> peer,SharedPtr<Path
 	unsigned int chunkSize = std::min(packet.size(),mtu);
 	packet.setFragmented(chunkSize < packet.size());
 
-	peer->recordOutgoingPacket(viaPath, packet.packetId(), packet.payloadLength(), packet.verb(), flowId, now);
-
 	if (trustedPathId) {
 		packet.setTrusted(trustedPathId);
 	} else {
-		packet.armor(peer->key(),encrypt);
+		Packet::Verb v = packet.verb();
+		packet.armor(peer->key(),encrypt,peer->aesKeysIfSupported());
+		RR->node->expectReplyTo(packet.packetId());
 	}
+
+	peer->recordOutgoingPacket(viaPath, packet.packetId(), packet.payloadLength(), packet.verb(), flowId, now);
 
 	if (viaPath->send(RR,tPtr,packet.data(),chunkSize,now)) {
 		if (chunkSize < packet.size()) {

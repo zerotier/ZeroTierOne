@@ -194,7 +194,7 @@ void Multicaster::send(
 					outp.append((uint16_t)etherType);
 					outp.append(data,len);
 					if (!network->config().disableCompression()) outp.compress();
-					outp.armor(bestMulticastReplicator->key(),true);
+					outp.armor(bestMulticastReplicator->key(),true,bestMulticastReplicator->aesKeysIfSupported());
 					bestMulticastReplicatorPath->send(RR,tPtr,outp.data(),outp.size(),now);
 					return;
 				}

@@ -33,6 +33,7 @@
 #include "Mutex.hpp"
 #include "Bond.hpp"
 #include "BondController.hpp"
+#include "AES.hpp"
 
 #define ZT_PEER_MAX_SERIALIZED_STATE_SIZE (sizeof(Peer) + 32 + (sizeof(Path) * 2))
 
@@ -532,6 +533,9 @@ public:
 	 */
 	inline int8_t bondingPolicy() { return _bondingPolicy; }
 
+	const AES *aesKeysIfSupported() const
+	{ return (_vProto >= 10) ? _aesKeys : (const AES *)0; }
+
 private:
 	struct _PeerPath
 	{
@@ -542,6 +546,7 @@ private:
 	};
 
 	uint8_t _key[ZT_PEER_SECRET_KEY_LENGTH];
+	AES _aesKeys[2];
 
 	const RuntimeEnvironment *RR;
 

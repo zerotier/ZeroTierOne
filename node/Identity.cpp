@@ -34,7 +34,7 @@ namespace ZeroTier {
 static inline void _computeMemoryHardHash(const void *publicKey,unsigned int publicKeyBytes,void *digest,void *genmem)
 {
 	// Digest publicKey[] to obtain initial digest
-	SHA512::hash(digest,publicKey,publicKeyBytes);
+	SHA512(digest,publicKey,publicKeyBytes);
 
 	// Initialize genmem[] using Salsa20 in a CBC-like configuration since
 	// ordinary Salsa20 is randomly seek-able. This is good for a cipher

@@ -118,7 +118,7 @@ public:
 	inline bool sha512PrivateKey(void *sha) const
 	{
 		if (_privateKey) {
-			SHA512::hash(sha,_privateKey->data,ZT_C25519_PRIVATE_KEY_LEN);
+			SHA512(sha,_privateKey->data,ZT_C25519_PRIVATE_KEY_LEN);
 			return true;
 		}
 		return false;

@@ -174,6 +174,8 @@
  */
 #define ZT_ADDRESS_LENGTH_HEX 10
 
+#define ZT_SYMMETRIC_KEY_SIZE 48
+
 /**
  * Addresses beginning with this byte are reserved for the joy of in-band signaling
  */
