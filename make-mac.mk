@@ -1,10 +1,9 @@
-
 CC=clang
 CXX=clang++
 INCLUDES=
 DEFS=
 LIBS=
-ARCH_FLAGS=
+ARCH_FLAGS=-msse -msse2 -mssse3 -msse4 -msse4.1 -maes -mpclmul
 CODESIGN=echo
 PRODUCTSIGN=echo
 CODESIGN_APP_CERT=
@@ -67,7 +66,7 @@ endif
 # Debug mode -- dump trace output, build binary with -g
 ifeq ($(ZT_DEBUG),1)
 	ZT_TRACE=1
-	CFLAGS+=-Wall -g $(INCLUDES) $(DEFS)
+	CFLAGS+=-Wall -g $(INCLUDES) $(DEFS) $(ARCH_FLAGS)
 	STRIP=echo
 	# The following line enables optimization for the crypto code, since
 	# C25519 in particular is almost UNUSABLE in heavy testing without it.

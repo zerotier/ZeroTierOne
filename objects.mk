@@ -1,4 +1,5 @@
 CORE_OBJS=\
+	node/AES.o \
 	node/C25519.o \
 	node/Capability.o \
 	node/CertificateOfMembership.o \

@@ -29,6 +29,12 @@
 // Also makes sure __BYTE_ORDER is defined reasonably.
 //
 
+#ifndef ZT_INLINE
+#define ZT_INLINE inline
+#endif
+
+#define restrict
+
 // Hack: make sure __GCC__ is defined on old GCC compilers
 #ifndef __GCC__
 #if defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1) || defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2) || defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4)
@@ -94,6 +100,15 @@
 #ifndef RTF_MULTICAST
 #define RTF_MULTICAST   0x20000000
 #endif
+#endif
+
+#if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
+#define ZT_ARCH_X64 1
+#include <xmmintrin.h>
+#include <emmintrin.h>
+#include <immintrin.h>
+#include <tmmintrin.h>
+#include <mmintrin.h>
 #endif
 
 // Define ZT_NO_TYPE_PUNNING to disable reckless casts on anything other than x86/x64.

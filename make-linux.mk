@@ -125,11 +125,13 @@ ifeq ($(CC_MACH),x86_64)
 	ZT_ARCHITECTURE=2
 	ZT_USE_X64_ASM_SALSA=1
 	ZT_USE_X64_ASM_ED25519=1
+	override CFLAGS+=-msse -msse2 -mssse3 -msse4 -msse4.1 -maes -mpclmul
 endif
 ifeq ($(CC_MACH),amd64)
 	ZT_ARCHITECTURE=2
 	ZT_USE_X64_ASM_SALSA=1
 	ZT_USE_X64_ASM_ED25519=1
+	override CFLAGS+=-msse -msse2 -mssse3 -msse4 -msse4.1 -maes -mpclmul
 endif
 ifeq ($(CC_MACH),powerpc64le)
 	ZT_ARCHITECTURE=8
