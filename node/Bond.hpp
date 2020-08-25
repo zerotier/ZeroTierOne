@@ -87,7 +87,9 @@ public:
 	std::string policyAlias() { return _policyAlias; }
 
 	/**
-	 * Inform the bond about the path that its peer (owning object) just learned about
+	 * Inform the bond about the path that its peer (owning object) just learned about.
+	 * If the path is allowed to be used, it will be inducted into the bond on a trial
+	 * period where link statistics will be collected to judge its quality.
 	 *
 	 * @param path Newly-learned Path which should now be handled by the Bond
 	 * @param now Current time

@@ -1630,7 +1630,6 @@ public:
 			// Custom Policies
 			json &customBondingPolicies = settings["policies"];
 			for (json::iterator policyItr = customBondingPolicies.begin(); policyItr != customBondingPolicies.end();++policyItr) {
-				//fprintf(stderr, "\n\n--- (%s)\n", policyItr.key().c_str());
 				// Custom Policy
 				std::string customPolicyStr(policyItr.key());
 				json &customPolicy = policyItr.value();
@@ -1684,7 +1683,6 @@ public:
 				// Policy-Specific link set
 				json &links = customPolicy["links"];
 				for (json::iterator linkItr = links.begin(); linkItr != links.end();++linkItr) {
-					//fprintf(stderr, "\t--- link (%s)\n", linkItr.key().c_str());
 					std::string linkNameStr(linkItr.key());
 					json &link = linkItr.value();
 
@@ -1719,12 +1717,19 @@ public:
 					}
 					_node->bondController()->addCustomLink(customPolicyStr, new Link(linkNameStr,ipvPref,speed,linkMonitorInterval,upDelay,downDelay,enabled,linkMode,failoverToStr,alloc));
 				}
-				// TODO: This is dumb
 				std::string linkSelectMethodStr(OSUtils::jsonString(customPolicy["activeReselect"],"optimize"));
-				if (linkSelectMethodStr == "always") { newTemplateBond->setLinkSelectMethod(ZT_MULTIPATH_RESELECTION_POLICY_ALWAYS); }
-				if (linkSelectMethodStr == "better") { newTemplateBond->setLinkSelectMethod(ZT_MULTIPATH_RESELECTION_POLICY_BETTER); }
-				if (linkSelectMethodStr == "failure") { newTemplateBond->setLinkSelectMethod(ZT_MULTIPATH_RESELECTION_POLICY_FAILURE); }
-				if (linkSelectMethodStr == "optimize") { newTemplateBond->setLinkSelectMethod(ZT_MULTIPATH_RESELECTION_POLICY_OPTIMIZE); }
+				if (linkSelectMethodStr == "always") {
+					newTemplateBond->setLinkSelectMethod(ZT_MULTIPATH_RESELECTION_POLICY_ALWAYS);
+				}
+				if (linkSelectMethodStr == "better") {
+					newTemplateBond->setLinkSelectMethod(ZT_MULTIPATH_RESELECTION_POLICY_BETTER);
+				}
+				if (linkSelectMethodStr == "failure") {
+					newTemplateBond->setLinkSelectMethod(ZT_MULTIPATH_RESELECTION_POLICY_FAILURE);
+				}
+				if (linkSelectMethodStr == "optimize") {
+					newTemplateBond->setLinkSelectMethod(ZT_MULTIPATH_RESELECTION_POLICY_OPTIMIZE);
+				}
 				if (newTemplateBond->getLinkSelectMethod() < 0 || newTemplateBond->getLinkSelectMethod() > 3) {
 					fprintf(stderr, "warning: invalid value (%s) for linkSelectMethod, assuming mode: always\n", linkSelectMethodStr.c_str());
 				}
