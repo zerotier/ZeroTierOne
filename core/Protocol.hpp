@@ -106,8 +106,6 @@
  * 9  - 1.2.0 ... 1.2.14
  * 10 - 1.4.0 ... 1.4.6
  *    + Contained early pre-alpha versions of multipath, which are deprecated
- * 11 - 1.4.8 ... CURRENT 1.4
- *    + AES-GMAC-SIV backported for faster peer-to-peer crypto
  * 20 - 2.0.0 ... CURRENT
  *    + New more WAN-efficient P2P-assisted multicast algorithm
  *    + HELLO and OK(HELLO) include an extra HMAC to harden authentication
