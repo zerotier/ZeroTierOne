@@ -901,14 +901,16 @@ void Packet::armor(const void *key,bool encryptPayload,const AES aesKeys[2])
 		*reinterpret_cast<uint64_t *>(data + ZT_PACKET_IDX_MAC) = tag[1];
 #endif
 	} else {
-		uint8_t mangledKey[32];
 		setCipher(encryptPayload ? ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012 : ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_NONE);
+
+		uint8_t mangledKey[32];
 		_salsa20MangleKey((const unsigned char *)key,mangledKey);
+
 		if (ZT_HAS_FAST_CRYPTO()) {
-			const unsigned int encryptLen = (encryptPayload) ? (size() - ZT_PACKET_IDX_VERB) : 0;
+			const unsigned int payloadLen = (encryptPayload) ? (size() - ZT_PACKET_IDX_VERB) : 0;
 			uint64_t keyStream[(ZT_PROTO_MAX_PACKET_LENGTH + 64 + 8) / 8];
-			ZT_FAST_SINGLE_PASS_SALSA2012(keyStream,encryptLen + 64,(data + ZT_PACKET_IDX_IV),mangledKey);
-			Salsa20::memxor(data + ZT_PACKET_IDX_VERB,reinterpret_cast<const uint8_t *>(keyStream + 8),encryptLen);
+			ZT_FAST_SINGLE_PASS_SALSA2012(keyStream,payloadLen + 64,(data + ZT_PACKET_IDX_IV),mangledKey);
+			Salsa20::memxor(data + ZT_PACKET_IDX_VERB,reinterpret_cast<const uint8_t *>(keyStream + 8),payloadLen);
 			uint64_t mac[2];
 			Poly1305::compute(mac,data + ZT_PACKET_IDX_VERB,size() - ZT_PACKET_IDX_VERB,keyStream);
 #ifdef ZT_NO_TYPE_PUNNING
@@ -934,15 +936,33 @@ void Packet::armor(const void *key,bool encryptPayload,const AES aesKeys[2])
 	}
 }
 
-bool Packet::dearmor(const void *key)
+bool Packet::dearmor(const void *key,const AES aesKeys[2])
 {
-	uint8_t mangledKey[32];
 	uint8_t *const data = reinterpret_cast<uint8_t *>(unsafeData());
 	const unsigned int payloadLen = size() - ZT_PACKET_IDX_VERB;
 	unsigned char *const payload = data + ZT_PACKET_IDX_VERB;
 	const unsigned int cs = cipher();
 
-	if ((cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_NONE)||(cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012)) {
+	if (cs == ZT_PROTO_CIPHER_SUITE__AES_GMAC_SIV) {
+		if (aesKeys) {
+			AES::GMACSIVDecryptor dec(aesKeys[0],aesKeys[1]);
+
+			uint64_t tag[2];
+#ifdef ZT_NO_UNALIGNED_ACCESS
+			Utils::copy<8>(tag, data);
+			Utils::copy<8>(tag + 1, data + ZT_PACKET_IDX_MAC);
+#else
+			tag[0] = *reinterpret_cast<uint64_t *>(data);
+			tag[1] = *reinterpret_cast<uint64_t *>(data + ZT_PACKET_IDX_MAC);
+#endif
+
+			dec.init(tag, payload);
+			dec.aad(data + ZT_PACKET_IDX_DEST,11);
+			dec.update(payload, payloadLen);
+			return dec.finish();
+		}
+	} else if ((cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_NONE)||(cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012)) {
+		uint8_t mangledKey[32];
 		_salsa20MangleKey((const unsigned char *)key,mangledKey);
 		if (ZT_HAS_FAST_CRYPTO()) {
 			uint64_t keyStream[(ZT_PROTO_MAX_PACKET_LENGTH + 64 + 8) / 8];
@@ -974,11 +994,10 @@ bool Packet::dearmor(const void *key)
 			if (cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012)
 				s20.crypt12(payload,payload,payloadLen);
 		}
-
 		return true;
-	} else {
-		return false; // unrecognized cipher suite
 	}
+
+	return false;
 }
 
 void Packet::cryptField(const void *key,unsigned int start,unsigned int len)

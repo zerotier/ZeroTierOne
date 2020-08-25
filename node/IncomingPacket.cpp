@@ -67,7 +67,7 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,void *tPtr,int32_t f
 		const SharedPtr<Peer> peer(RR->topology->getPeer(tPtr,sourceAddress));
 		if (peer) {
 			if (!trusted) {
-				if (!dearmor(peer->key())) {
+				if (!dearmor(peer->key(), peer->aesKeysIfSupported())) {
 					RR->t->incomingPacketMessageAuthenticationFailure(tPtr,_path,packetId(),sourceAddress,hops(),"invalid MAC");
 					peer->recordIncomingInvalidPacket(_path);
 					return true;
@@ -288,7 +288,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool
 
 				uint8_t key[ZT_PEER_SECRET_KEY_LENGTH];
 				if (RR->identity.agree(id,key,ZT_PEER_SECRET_KEY_LENGTH)) {
-					if (dearmor(key)) { // ensure packet is authentic, otherwise drop
+					if (dearmor(key, peer->aesKeysIfSupported())) { // ensure packet is authentic, otherwise drop
 						RR->t->incomingPacketDroppedHELLO(tPtr,_path,pid,fromAddress,"address collision");
 						Packet outp(id.address(),RR->identity.address(),Packet::VERB_ERROR);
 						outp.append((uint8_t)Packet::VERB_HELLO);
@@ -307,7 +307,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool
 			} else {
 				// Identity is the same as the one we already have -- check packet integrity
 
-				if (!dearmor(peer->key())) {
+				if (!dearmor(peer->key(), peer->aesKeysIfSupported())) {
 					RR->t->incomingPacketMessageAuthenticationFailure(tPtr,_path,pid,fromAddress,hops(),"invalid MAC");
 					return true;
 				}
@@ -332,7 +332,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool
 
 		// Check packet integrity and MAC (this is faster than locallyValidate() so do it first to filter out total crap)
 		SharedPtr<Peer> newPeer(new Peer(RR,RR->identity,id));
-		if (!dearmor(newPeer->key())) {
+		if (!dearmor(newPeer->key(), newPeer->aesKeysIfSupported())) {
 			RR->t->incomingPacketMessageAuthenticationFailure(tPtr,_path,pid,fromAddress,hops(),"invalid MAC");
 			return true;
 		}
