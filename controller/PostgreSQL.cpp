@@ -1399,6 +1399,7 @@ void PostgreSQL::commitThread()
 						PQclear(res);
 					}
 					if (err) {
+						PQclear(res);
 						PQclear(PQexec(conn, "ROLLBACK"));
 						delete config;
 						config = nullptr;
@@ -1502,6 +1503,7 @@ void PostgreSQL::commitThread()
 					if (PQresultStatus(res) != PGRES_COMMAND_OK) {
 						fprintf(stderr, "ERROR: Error updating DNS: %s\n", PQresultErrorMessage(res));
 						PQclear(res);
+						PQclear(PQexec(conn, "ROLLBACK"));
 						err = true;
 						break;
 					}
