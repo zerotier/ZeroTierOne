@@ -1117,7 +1117,17 @@ void PostgreSQL::commitThread()
 						vproto.c_str()
 					};
 
-					PGresult *res = PQexecParams(conn,
+					PGresult *res = PQexec(conn, "BEGIN");
+					if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+						fprintf(stderr, "ERROR: Error beginning update transaction: %s\n", PQresultErrorMessage(res));
+						PQclear(res);
+						delete config;
+						config = nullptr;
+						continue;
+					}
+					
+					
+					res = PQexecParams(conn,
 						"INSERT INTO ztc_member (id, network_id, active_bridge, authorized, capabilities, "
 						"identity, last_authorized_time, last_deauthorized_time, no_auto_assign_ips, "
 						"remote_trace_level, remote_trace_target, revision, tags, v_major, v_minor, v_rev, v_proto) "
@@ -1141,17 +1151,7 @@ void PostgreSQL::commitThread()
 						fprintf(stderr, "ERROR: Error updating member: %s\n", PQresultErrorMessage(res));
 						fprintf(stderr, "%s", OSUtils::jsonDump(*config, 2).c_str());
 						PQclear(res);
-						delete config;
-						config = nullptr;
-						continue;
-					}
-
-					PQclear(res);
-
-					res = PQexec(conn, "BEGIN");
-					if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-						fprintf(stderr, "ERROR: Error beginning transaction: %s\n", PQresultErrorMessage(res));
-						PQclear(res);
+						PQclear(PQexec(conn, "ROLLBACK"));
 						delete config;
 						config = nullptr;
 						continue;
@@ -1185,6 +1185,7 @@ void PostgreSQL::commitThread()
 					PQclear(res);
 
 					std::vector<std::string> assignments;
+					bool ipAssignError = false;
 					for (auto i = (*config)["ipAssignments"].begin(); i != (*config)["ipAssignments"].end(); ++i) {
 						std::string addr = *i;
 
@@ -1211,17 +1212,27 @@ void PostgreSQL::commitThread()
 							fprintf(stderr, "ERROR: Error setting IP addresses for member: %s\n", PQresultErrorMessage(res));
 							PQclear(res);
 							PQclear(PQexec(conn, "ROLLBACK"));
-							break;;
+							ipAssignError = true;
+							break;
 						}
+						PQclear(res);
 						assignments.push_back(addr);
+					}
+					if (ipAssignError) {
+						delete config;
+						config = nullptr;
+						continue;
 					}
 
 					res = PQexec(conn, "COMMIT");
 					if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-						fprintf(stderr, "ERROR: Error committing ip address data: %s\n", PQresultErrorMessage(res));
+						fprintf(stderr, "ERROR: Error committing member transaction: %s\n", PQresultErrorMessage(res));
+						PQclear(res);
+						PQclear(PQexec(conn, "ROLLBACK"));
+						delete config;
+						config = nullptr;
+						continue;
 					}
-
-					PQclear(res);
 
 					const uint64_t nwidInt = OSUtils::jsonIntHex((*config)["nwid"], 0ULL);
 					const uint64_t memberidInt = OSUtils::jsonIntHex((*config)["id"], 0ULL);
@@ -1285,13 +1296,24 @@ void PostgreSQL::commitThread()
 						v6mode.c_str(),
 					};
 
+					PGresult *res = PQexec(conn, "BEGIN");
+					if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+						fprintf(stderr, "ERROR: Error beginnning transaction: %s\n", PQresultErrorMessage(res));
+						PQclear(res);
+						delete config;
+						config = nullptr;
+						continue;
+					}
+
+					PQclear(res);
+
 					// This ugly query exists because when we want to mirror networks to/from
 					// another data store (e.g. FileDB or LFDB) it is possible to get a network
 					// that doesn't exist in Central's database. This does an upsert and sets
 					// the owner_id to the "first" global admin in the user DB if the record
 					// did not previously exist. If the record already exists owner_id is left
 					// unchanged, so owner_id should be left out of the update clause.
-					PGresult *res = PQexecParams(conn,
+					res = PQexecParams(conn,
 						"INSERT INTO ztc_network (id, creation_time, owner_id, controller_id, capabilities, enable_broadcast, "
 						"last_modified, mtu, multicast_limit, name, private, "
 						"remote_trace_level, remote_trace_target, rules, rules_source, "
@@ -1318,24 +1340,14 @@ void PostgreSQL::commitThread()
 					if (PQresultStatus(res) != PGRES_COMMAND_OK) {
 						fprintf(stderr, "ERROR: Error updating network record: %s\n", PQresultErrorMessage(res));
 						PQclear(res);
+						PQclear(PQexec(conn, "ROLLBACK"));
 						delete config;
 						config = nullptr;
 						continue;
 					}
 
 					PQclear(res);
-
-					res = PQexec(conn, "BEGIN");
-					if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-						fprintf(stderr, "ERROR: Error beginnning transaction: %s\n", PQresultErrorMessage(res));
-						PQclear(res);
-						delete config;
-						config = nullptr;
-						continue;
-					}
-
-					PQclear(res);
-
+			
 					const char *params[1] = {
 						id.c_str()
 					};
@@ -1498,6 +1510,11 @@ void PostgreSQL::commitThread()
 					res = PQexec(conn, "COMMIT");
 					if (PQresultStatus(res) != PGRES_COMMAND_OK) {
 						fprintf(stderr, "ERROR: Error committing network update: %s\n", PQresultErrorMessage(res));
+						PQclear(res);
+						PQclear(PQexec(conn, "ROLLBACK"));
+						delete config;
+						config = nullptr;
+						continue;
 					}
 					PQclear(res);
 
