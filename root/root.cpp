@@ -359,7 +359,7 @@ static void handlePacket(const int v4s,const int v6s,const InetAddress *const ip
 							pkt.append((uint8_t)0);
 							pkt.append((uint16_t)0);
 							ip->serialize(pkt);
-							if (peer->vProto < 11) { // send planet file for pre-2.x peers
+							if (peer->vProto < 20) { // send planet file for pre-2.x peers
 								std::lock_guard<std::mutex> pl(s_planet_l);
 								if (s_planet.length() > 0) {
 									pkt.append((uint16_t)s_planet.size());
