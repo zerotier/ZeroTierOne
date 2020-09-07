@@ -316,8 +316,13 @@ public:
 
 #endif
 		} else {
-			for(std::vector<InetAddress>::const_iterator i(explicitBind.begin());i!=explicitBind.end();++i)
-				localIfAddrs.insert(std::pair<InetAddress,std::string>(*i,std::string()));
+			for(std::vector<InetAddress>::const_iterator i(explicitBind.begin());i!=explicitBind.end();++i) {
+				InetAddress ip = InetAddress(*i);
+				for(int x=0;x<(int)portCount;++x) {
+					ip.setPort(ports[x]);
+					localIfAddrs.insert(std::pair<InetAddress,std::string>(ip,std::string()));
+				}
+			}
 		}
 
 		// Default to binding to wildcard if we can't enumerate addresses
