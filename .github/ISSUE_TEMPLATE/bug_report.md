@@ -1,8 +1,12 @@
 ---
 name: Bug report
 about: Create a report to help us improve
+title: ''
+labels: ''
+assignees: ''
 
 ---
+
 **Alternative, faster ways to get help**
 If you have just started using ZeroTier, here are some places to get help:
 - my.zerotier.com has a _Community_ tab. It's a live chat with other users and the developers. 
@@ -43,4 +47,3 @@ Add any other context about the problem here.
 - Router Config
 - Firewall Config (try turning the firewall off)
 - General Network Environment: [ e.g Home, University Campus, Corporate LAN ]
-
