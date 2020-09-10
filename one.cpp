@@ -1,5 +1,5 @@
 /*
- * Copyright (c)2019 ZeroTier, Inc.
+ * Copyright (c)2020 ZeroTier, Inc.
  *
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
@@ -85,7 +85,7 @@ using namespace ZeroTier;
 static OneService *volatile zt1Service = (OneService *)0;
 
 #define PROGRAM_NAME "ZeroTier One"
-#define COPYRIGHT_NOTICE "Copyright (c) 2019 ZeroTier, Inc."
+#define COPYRIGHT_NOTICE "Copyright (c) 2020 ZeroTier, Inc."
 #define LICENSE_GRANT "Licensed under the ZeroTier BSL 1.1 (see LICENSE.txt)"
 
 /****************************************************************************/
@@ -232,9 +232,12 @@ static int cli(int argc,char **argv)
 	if (!homeDir.length())
 		homeDir = OneService::platformDefaultHomePath();
 
+	// TODO: cleanup this logic
+	// A lot of generic CLI errors land here; missing admin rights cause a bit of this.
 	if ((!port)||(!authToken.length())) {
 		if (!homeDir.length()) {
 			fprintf(stderr,"%s: missing port or authentication token and no home directory specified to auto-detect" ZT_EOL_S,argv[0]);
+			fprintf(stderr, "If you did not, please run this command as an Administrator / sudo / Root user. Thanks!");
 			return 2;
 		}
 
@@ -244,6 +247,7 @@ static int cli(int argc,char **argv)
 			port = Utils::strToUInt(portStr.c_str());
 			if ((port == 0)||(port > 0xffff)) {
 				fprintf(stderr,"%s: missing port and zerotier-one.port not found in %s" ZT_EOL_S,argv[0],homeDir.c_str());
+				fprintf(stderr, "If you did not, please run this command as an Administrator / sudo / Root user. Thanks!");
 				return 2;
 			}
 		}
@@ -266,6 +270,7 @@ static int cli(int argc,char **argv)
 #endif
 			if (!authToken.length()) {
 				fprintf(stderr,"%s: missing authentication token and authtoken.secret not found (or readable) in %s" ZT_EOL_S,argv[0],homeDir.c_str());
+				fprintf(stderr, "If you did not, please run this command as an Administrator / sudo / Root user. Thanks!");
 				return 2;
 			}
 		}
@@ -1316,6 +1321,7 @@ static BOOL WINAPI _winConsoleCtrlHandler(DWORD dwCtrlType)
 	return FALSE;
 }
 
+// TODO: revisit this with https://support.microsoft.com/en-us/help/947709/how-to-use-the-netsh-advfirewall-firewall-context-instead-of-the-netsh
 static void _winPokeAHole()
 {
 	char myPath[MAX_PATH];
@@ -1690,7 +1696,7 @@ int main(int argc,char **argv)
 			ptmp.append(*pi);
 			if ((*pi != ".")&&(*pi != "..")) {
 				if (!OSUtils::mkdir(ptmp))
-					throw std::runtime_error("home path does not exist, and could not create");
+					throw std::runtime_error("home path does not exist, and could not create. Please verify local system permissions.");
 			}
 		}
 	}
