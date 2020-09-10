@@ -424,6 +424,53 @@ public:
 	 * @param n Integer to swap
 	 * @return Integer with bytes reversed
 	 */
+	static ZT_INLINE uint64_t swapBytes(const uint64_t n) noexcept
+	{
+	#ifdef __GNUC__
+		return __builtin_bswap64(n);
+	#else
+	#ifdef _MSC_VER
+		return (uint64_t)_byteswap_uint64((unsigned __int64)n);
+	#else
+		return (
+			((n & 0x00000000000000ffULL) << 56) |
+			((n & 0x000000000000ff00ULL) << 40) |
+			((n & 0x0000000000ff0000ULL) << 24) |
+			((n & 0x00000000ff000000ULL) <<  8) |
+			((n & 0x000000ff00000000ULL) >>  8) |
+			((n & 0x0000ff0000000000ULL) >> 24) |
+			((n & 0x00ff000000000000ULL) >> 40) |
+			((n & 0xff00000000000000ULL) >> 56)
+		);
+	#endif
+	#endif
+	}
+
+	/**
+	 * Unconditionally swap bytes regardless of host byte order
+	 *
+	 * @param n Integer to swap
+	 * @return Integer with bytes reversed
+	 */
+	static ZT_INLINE uint32_t swapBytes(const uint32_t n) noexcept
+	{
+	#if defined(__GNUC__)
+		return __builtin_bswap32(n);
+	#else
+	#ifdef _MSC_VER
+		return (uint32_t)_byteswap_ulong((unsigned long)n);
+	#else
+		return htonl(n);
+	#endif
+	#endif
+	}
+
+	/**
+	 * Unconditionally swap bytes regardless of host byte order
+	 *
+	 * @param n Integer to swap
+	 * @return Integer with bytes reversed
+	 */
 	static ZT_INLINE uint16_t swapBytes(const uint16_t n) noexcept
 	{
 	#if defined(__GNUC__)

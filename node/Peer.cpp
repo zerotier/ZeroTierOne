@@ -62,12 +62,12 @@ Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Ident
 		throw ZT_EXCEPTION_INVALID_ARGUMENT;
 	}
 
-	uint8_t ktmp[32];
+	uint8_t ktmp[48];
 	KBKDFHMACSHA384(_key,ZT_KBKDF_LABEL_AES_GMAC_SIV_K0,0,0,ktmp);
 	_aesKeys[0].init(ktmp);
 	KBKDFHMACSHA384(_key,ZT_KBKDF_LABEL_AES_GMAC_SIV_K1,0,0,ktmp);
 	_aesKeys[0].init(ktmp);
-	Utils::burn(ktmp, 32);
+	Utils::burn(ktmp, 48);
 }
 
 void Peer::received(
