@@ -880,6 +880,8 @@ void Packet::armor(const void *key,bool encryptPayload,const AES aesKeys[2])
 {
 	uint8_t *const data = reinterpret_cast<uint8_t *>(unsafeData());
 	if ((aesKeys) && (encryptPayload)) {
+		char tmp0[16],tmp1[16];
+		printf("AES armor %.16llx %s -> %s %u\n",*reinterpret_cast<const uint64_t *>(data),Address(data + ZT_PACKET_IDX_SOURCE,5).toString(tmp0),Address(data + ZT_PACKET_IDX_DEST,5).toString(tmp1),size());
 		setCipher(ZT_PROTO_CIPHER_SUITE__AES_GMAC_SIV);
 
 		uint8_t *const payload = data + ZT_PACKET_IDX_VERB;
@@ -945,6 +947,7 @@ bool Packet::dearmor(const void *key,const AES aesKeys[2])
 
 	if (cs == ZT_PROTO_CIPHER_SUITE__AES_GMAC_SIV) {
 		if (aesKeys) {
+			printf("AES dearmor\n");
 			AES::GMACSIVDecryptor dec(aesKeys[0],aesKeys[1]);
 
 			uint64_t tag[2];

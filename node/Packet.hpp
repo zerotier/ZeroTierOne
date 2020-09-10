@@ -57,11 +57,12 @@
  *    + Inline push of CertificateOfMembership deprecated
  * 9  - 1.2.0 ... 1.2.14
  * 10 - 1.4.0 ... 1.4.6
- * 11 - 1.4.8 ... end of 1.4 series
+ * 11 - 1.4.7 ... 1.4.8
  *    + Multipath capability and load balancing (beta)
+ * 12 - 1.4.8 ... CURRENT (1.4 series)
  *    + AES-GMAC-SIV backported for faster peer-to-peer crypto
  */
-#define ZT_PROTO_VERSION 11
+#define ZT_PROTO_VERSION 12
 
 /**
  * Minimum supported protocol version
