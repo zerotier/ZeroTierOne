@@ -72,6 +72,12 @@
 #include <ifaddrs.h>
 #endif
 
+#ifdef __APPLE__
+#include "../osdep/MacDNSHelper.hpp"
+#elif defined(__WINDOWS__)
+#include "../osdep/WinDNSHelper.hpp"
+#endif
+
 #ifdef ZT_USE_SYSTEM_HTTP_PARSER
 #include <http_parser.h>
 #else
@@ -203,6 +209,7 @@ static void _networkToJson(nlohmann::json &nj,const ZT_VirtualNetworkConfig *nc,
 	nj["allowManaged"] = localSettings.allowManaged;
 	nj["allowGlobal"] = localSettings.allowGlobal;
 	nj["allowDefault"] = localSettings.allowDefault;
+	nj["allowDNS"] = localSettings.allowDNS;
 
 	nlohmann::json aa = nlohmann::json::array();
 	for(unsigned int i=0;i<nc->assignedAddressCount;++i) {
@@ -515,6 +522,7 @@ public:
 			settings.allowManaged = true;
 			settings.allowGlobal = false;
 			settings.allowDefault = false;
+			settings.allowDNS = false;
 			memset(&config, 0, sizeof(ZT_VirtualNetworkConfig));
 		}
 
@@ -1128,6 +1136,7 @@ public:
 			fprintf(out,"allowManaged=%d\n",(int)n->second.settings.allowManaged);
 			fprintf(out,"allowGlobal=%d\n",(int)n->second.settings.allowGlobal);
 			fprintf(out,"allowDefault=%d\n",(int)n->second.settings.allowDefault);
+			fprintf(out,"allowDNS=%d\n",(int)n->second.settings.allowDNS);
 			fclose(out);
 		}
 
@@ -1465,6 +1474,8 @@ public:
 											if (allowGlobal.is_boolean()) localSettings.allowGlobal = (bool)allowGlobal;
 											json &allowDefault = j["allowDefault"];
 											if (allowDefault.is_boolean()) localSettings.allowDefault = (bool)allowDefault;
+											json &allowDNS = j["allowDNS"];
+											if (allowDNS.is_boolean()) localSettings.allowDNS = (bool)allowDNS;
 										}
 									} catch ( ... ) {
 										// discard invalid JSON
@@ -2006,16 +2017,25 @@ public:
 		}
 
 		if (syncDns) {
-			if (strlen(n.config.dns.domain) != 0) {
-				std::vector<InetAddress> servers;
-				for (int j = 0; j < ZT_MAX_DNS_SERVERS; ++j) {
-					InetAddress a(n.config.dns.server_addr[j]);
-					if (a.isV4() || a.isV6()) {
-						servers.push_back(a);
+			if (n.settings.allowDNS) {
+				if (strlen(n.config.dns.domain) != 0) {
+					std::vector<InetAddress> servers;
+					for (int j = 0; j < ZT_MAX_DNS_SERVERS; ++j) {
+						InetAddress a(n.config.dns.server_addr[j]);
+						if (a.isV4() || a.isV6()) {
+							servers.push_back(a);
+						}
 					}
+					n.tap->setDns(n.config.dns.domain, servers);
 				}
-				n.tap->setDns(n.config.dns.domain, servers);
+			} else {
+#ifdef __APPLE__
+				MacDNSHelper::removeDNS(n.config.nwid);
+#elif defined(__WINDOWS__)
+				WinDNSHelper::removeDNS(n.config.nwid);
+#endif
 			}
+
 		}
 	}
 
@@ -2334,6 +2354,7 @@ public:
 							}
 							n.settings.allowGlobal = nc.getB("allowGlobal", false);
 							n.settings.allowDefault = nc.getB("allowDefault", false);
+							n.settings.allowDNS = nc.getB("allowDNS", false);
 						}
 					} catch (std::exception &exc) {
 #ifdef __WINDOWS__
