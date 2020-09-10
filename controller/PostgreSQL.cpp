@@ -1765,7 +1765,7 @@ void PostgreSQL::onlineNotification_Postgres()
 			PQclear(res);
 		}
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		std::this_thread::sleep_for(std::chrono::seconds(10));
 	}
 	fprintf(stderr, "%s: Fell out of run loop in onlineNotificationThread\n", _myAddressStr.c_str());
 	PQfinish(conn);
