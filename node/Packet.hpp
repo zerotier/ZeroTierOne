@@ -1313,7 +1313,7 @@ public:
 	 *
 	 * @param key 32-byte key
 	 * @param encryptPayload If true, encrypt packet payload, else just MAC
-	 * @param aes Use new AES-GMAC-SIV constrution
+	 * @param aesKeys If non-NULL these are the two keys for AES-GMAC-SIV
 	 */
 	void armor(const void *key,bool encryptPayload,const AES aesKeys[2]);
 
@@ -1325,9 +1325,10 @@ public:
 	 * address and MAC field match a trusted path.
 	 *
 	 * @param key 32-byte key
+	 * @param aesKeys If non-NULL these are the two keys for AES-GMAC-SIV
 	 * @return False if packet is invalid or failed MAC authenticity check
 	 */
-	bool dearmor(const void *key);
+	bool dearmor(const void *key,const AES aesKeys[2]);
 
 	/**
 	 * Encrypt/decrypt a separately armored portion of a packet
