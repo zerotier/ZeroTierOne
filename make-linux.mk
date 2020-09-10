@@ -65,8 +65,8 @@ ifeq ($(ZT_SANITIZE),1)
 	SANFLAGS+=-fsanitize=address -DASAN_OPTIONS=symbolize=1
 endif
 ifeq ($(ZT_DEBUG),1)
-	override CFLAGS+=-Wall -Wno-deprecated -g -pthread $(INCLUDES) $(DEFS)
-	override CXXFLAGS+=-Wall -Wno-deprecated -g -std=c++11 -pthread $(INCLUDES) $(DEFS)
+	override CFLAGS+=-Wall -Wno-deprecated -g -O -pthread $(INCLUDES) $(DEFS)
+	override CXXFLAGS+=-Wall -Wno-deprecated -g -O -std=c++11 -pthread $(INCLUDES) $(DEFS)
 	ZT_TRACE=1
 	STRIP?=echo
 	# The following line enables optimization for the crypto code, since
@@ -112,12 +112,6 @@ ifeq ($(ZT_VAULT_SUPPORT),1)
 	override LDLIBS+=-lcurl
 endif
 
-# Uncomment for gprof profile build
-#CFLAGS=-Wall -g -pg -pthread $(INCLUDES) $(DEFS)
-#CXXFLAGS=-Wall -g -pg -pthread $(INCLUDES) $(DEFS)
-#LDFLAGS=
-#STRIP=echo
-
 # Determine system build architecture from compiler target
 CC_MACH=$(shell $(CC) -dumpmachine | cut -d '-' -f 1)
 ZT_ARCHITECTURE=999
@@ -125,13 +119,15 @@ ifeq ($(CC_MACH),x86_64)
 	ZT_ARCHITECTURE=2
 	ZT_USE_X64_ASM_SALSA=1
 	ZT_USE_X64_ASM_ED25519=1
-	override CFLAGS+=-msse -msse2 -mssse3 -msse4 -msse4.1 -maes -mpclmul
+	override CFLAGS+=-msse -msse2 -mssse3 -msse4 -msse4.1 -msse4.2 -maes -mpclmul
+	override CXXFLAGS+=-msse -msse2 -mssse3 -msse4 -msse4.1 -msse4.2 -maes -mpclmul
 endif
 ifeq ($(CC_MACH),amd64)
 	ZT_ARCHITECTURE=2
 	ZT_USE_X64_ASM_SALSA=1
 	ZT_USE_X64_ASM_ED25519=1
-	override CFLAGS+=-msse -msse2 -mssse3 -msse4 -msse4.1 -maes -mpclmul
+	override CFLAGS+=-msse -msse2 -mssse3 -msse4 -msse4.1 -msse4.2 -maes -mpclmul
+	override CXXFLAGS+=-msse -msse2 -mssse3 -msse4 -msse4.1 -msse4.2 -maes -mpclmul
 endif
 ifeq ($(CC_MACH),powerpc64le)
 	ZT_ARCHITECTURE=8

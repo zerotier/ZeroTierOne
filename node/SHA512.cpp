@@ -272,3 +272,8 @@ void KBKDFHMACSHA384(const uint8_t key[ZT_SYMMETRIC_KEY_SIZE],const char label,c
 }
 
 } // namespace ZeroTier
+
+// Internally re-export to included C code, which includes some fast crypto code ported in on some platforms.
+// This eliminates the need to link against a third party SHA512() from this code
+extern "C" void ZT_sha512internal(void *digest,const void *data,unsigned int len)
+{ ZeroTier::SHA512(digest,data,len); }
