@@ -198,7 +198,7 @@ static int testCrypto()
 			bytes += 1234567.0;
 		}
 		uint64_t end = OSUtils::now();
-		SHA512::hash(buf1,bb,1234567);
+		SHA512(buf1,bb,1234567);
 		std::cout << ((bytes / 1048576.0) / ((long double)(end - start) / 1024.0)) << " MiB/second (" << Utils::hex(buf1,16,hexbuf) << ')' << std::endl;
 		::free((void *)bb);
 	}
@@ -250,13 +250,13 @@ static int testCrypto()
 			bytes += 1234567.0;
 		}
 		uint64_t end = OSUtils::now();
-		SHA512::hash(buf1,bb,1234567);
+		SHA512(buf1,bb,1234567);
 		std::cout << ((bytes / 1048576.0) / ((long double)(end - start) / 1024.0)) << " MiB/second (" << Utils::hex(buf1,16,hexbuf) << ')' << std::endl;
 		::free((void *)bb);
 	}
 
 	std::cout << "[crypto] Testing SHA-512... "; std::cout.flush();
-	SHA512::hash(buf1,sha512TV0Input,(unsigned int)strlen(sha512TV0Input));
+	SHA512(buf1,sha512TV0Input,(unsigned int)strlen(sha512TV0Input));
 	if (memcmp(buf1,sha512TV0Digest,64)) {
 		std::cout << "FAIL" << std::endl;
 		return -1;
@@ -617,8 +617,8 @@ static int testPacket()
 		return -1;
 	}
 
-	a.armor(salsaKey,true);
-	if (!a.dearmor(salsaKey)) {
+	a.armor(salsaKey,true,nullptr);
+	if (!a.dearmor(salsaKey,nullptr)) {
 		std::cout << "FAIL (encrypt-decrypt/verify)" << std::endl;
 		return -1;
 	}
