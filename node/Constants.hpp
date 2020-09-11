@@ -396,7 +396,7 @@
 /**
  * How often we emit a one-liner bond summary for each peer
  */
-#define ZT_MULTIPATH_BOND_STATUS_INTERVAL 30000
+#define ZT_MULTIPATH_BOND_STATUS_INTERVAL 60000
 
 /**
  * How long before we consider a path to be dead in the general sense. This is
