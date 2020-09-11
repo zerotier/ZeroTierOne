@@ -78,6 +78,13 @@
 
 #include "ext/json/json.hpp"
 
+#ifdef __APPLE__
+#include <SystemConfiguration/SystemConfiguration.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <ifaddrs.h>
+#endif
+
 #define ZT_PID_PATH "zerotier-one.pid"
 
 using namespace ZeroTier;
@@ -860,10 +867,17 @@ static int cli(int argc,char **argv)
 		}
 	} else if (command == "dump") {
 		std::stringstream dump;
-
+		dump << "platform: ";
+#ifdef __APPLE__ 
+		dump << "macOS" << ZT_EOL_S;
+#elif defined(_WIN32)
+		dump << "Windows" << ZT_EOL_S;
+#else
+		dump << "other unix based OS" << ZT_EOL_S;
+#endif
 		dump << "zerotier version: " << ZEROTIER_ONE_VERSION_MAJOR << "."
 			<< ZEROTIER_ONE_VERSION_MINOR << "." << ZEROTIER_ONE_VERSION_REVISION << ZT_EOL_S << ZT_EOL_S;
-			
+
 		// grab status
 		dump << "status" << ZT_EOL_S << "------" << ZT_EOL_S;
 		unsigned int scode = Http::GET(1024 * 1024 * 16,60000,(const struct sockaddr *)&addr,"/status",requestHeaders,responseHeaders,responseBody);
@@ -909,7 +923,59 @@ static int cli(int argc,char **argv)
 		responseHeaders.clear();
 		responseBody = "";
 
-		fprintf(stderr, "%s", dump.str().c_str());
+		dump << ZT_EOL_S << "local.conf" << ZT_EOL_S << "----------" << ZT_EOL_S;
+		// TODO:  Dump local.conf
+		dump << "TODO" << ZT_EOL_S;
+
+		dump << ZT_EOL_S << "Network Interfaces" << ZT_EOL_S << "------------------" << ZT_EOL_S << ZT_EOL_S;
+#ifdef __APPLE__
+		CFArrayRef interfaces = SCNetworkInterfaceCopyAll();
+		CFIndex size = CFArrayGetCount(interfaces);
+		for(CFIndex i = 0; i < size; ++i) {
+			SCNetworkInterfaceRef iface = (SCNetworkInterfaceRef)CFArrayGetValueAtIndex(interfaces, i);
+
+			dump << "Interface " << i << ZT_EOL_S << "-----------" << ZT_EOL_S;
+			CFStringRef tmp = SCNetworkInterfaceGetBSDName(iface);
+			char stringBuffer[512] = {};
+			CFStringGetCString(tmp,stringBuffer, sizeof(stringBuffer), kCFStringEncodingUTF8);
+			dump << "Name: " << stringBuffer << ZT_EOL_S;
+			std::string ifName(stringBuffer);
+			int mtuCur, mtuMin, mtuMax;
+			SCNetworkInterfaceCopyMTU(iface, &mtuCur, &mtuMin, &mtuMax);
+			dump << "MTU: " << mtuCur << ZT_EOL_S;
+			tmp = SCNetworkInterfaceGetHardwareAddressString(iface);
+			CFStringGetCString(tmp, stringBuffer, sizeof(stringBuffer), kCFStringEncodingUTF8);
+			dump << "MAC: " << stringBuffer << ZT_EOL_S;
+			tmp = SCNetworkInterfaceGetInterfaceType(iface);
+			CFStringGetCString(tmp, stringBuffer, sizeof(stringBuffer), kCFStringEncodingUTF8);
+			dump << "Type: " << stringBuffer << ZT_EOL_S;
+			dump << "Addresses:" << ZT_EOL_S;
+
+			struct ifaddrs *ifap, *ifa;
+			void *addr;
+			getifaddrs(&ifap);
+			for (ifa = ifap; ifa; ifa = ifa->ifa_next) {
+				if (strcmp(ifName.c_str(), ifa->ifa_name) == 0) {
+					if (ifa->ifa_addr->sa_family == AF_INET) {
+						struct sockaddr_in *ipv4 = (struct sockaddr_in*)ifa->ifa_addr;
+						addr = &ipv4->sin_addr;
+					} else if (ifa->ifa_addr->sa_family == AF_INET6) {
+						struct sockaddr_in6 *ipv6 = (struct sockaddr_in6*)ifa->ifa_addr;
+						addr = &ipv6->sin6_addr;
+					} else {
+						continue;
+					}
+					inet_ntop(ifa->ifa_addr->sa_family, addr, stringBuffer, sizeof(stringBuffer));
+					dump << stringBuffer << ZT_EOL_S;
+				}
+			}
+
+			dump << ZT_EOL_S;
+		}
+#endif
+
+	fprintf(stderr, "%s", dump.str().c_str());
+
 	} else {
 		cliPrintHelp(argv[0],stderr);
 		return 0;
