@@ -507,7 +507,16 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 
 		network->pushCredentialsIfNeeded(tPtr,toZT,RR->node->now());
 
-		if (fromBridged) {
+		if (!fromBridged) {
+			Packet outp(toZT,RR->identity.address(),Packet::VERB_FRAME);
+			outp.append(network->id());
+			outp.append((uint16_t)etherType);
+			outp.append(data,len);
+			// 1.4.8: disable compression for unicast as it almost never helps
+			//if (!network->config().disableCompression())
+			//	outp.compress();
+			aqm_enqueue(tPtr,network,outp,true,qosBucket,flowId);
+		} else {
 			Packet outp(toZT,RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(network->id());
 			outp.append((unsigned char)0x00);
@@ -515,16 +524,9 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 			from.appendTo(outp);
 			outp.append((uint16_t)etherType);
 			outp.append(data,len);
-			if (!network->config().disableCompression())
-				outp.compress();
-			aqm_enqueue(tPtr,network,outp,true,qosBucket,flowId);
-		} else {
-			Packet outp(toZT,RR->identity.address(),Packet::VERB_FRAME);
-			outp.append(network->id());
-			outp.append((uint16_t)etherType);
-			outp.append(data,len);
-			if (!network->config().disableCompression())
-				outp.compress();
+			// 1.4.8: disable compression for unicast as it almost never helps
+			//if (!network->config().disableCompression())
+			//	outp.compress();
 			aqm_enqueue(tPtr,network,outp,true,qosBucket,flowId);
 		}
 	} else {
@@ -579,8 +581,9 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 				from.appendTo(outp);
 				outp.append((uint16_t)etherType);
 				outp.append(data,len);
-				if (!network->config().disableCompression())
-					outp.compress();
+				// 1.4.8: disable compression for unicast as it almost never helps
+				//if (!network->config().disableCompression())
+				//	outp.compress();
 				aqm_enqueue(tPtr,network,outp,true,qosBucket,flowId);
 			} else {
 				RR->t->outgoingNetworkFrameDropped(tPtr,network,from,to,etherType,vlanId,len,"filter blocked (bridge replication)");
