@@ -86,6 +86,11 @@ public:
 		 * Allow overriding of system default routes for "full tunnel" operation?
 		 */
 		bool allowDefault;
+
+		/**
+		 * Allow configuration of DNS for the network
+		 */
+		bool allowDNS;
 	};
 
 	/**
