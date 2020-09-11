@@ -414,7 +414,7 @@
  * How long before we consider a flow to be dead and remove it from the
  * policy's list.
  */
-#define ZT_MULTIPATH_FLOW_EXPIRATION_INTERVAL 30000
+#define ZT_MULTIPATH_FLOW_EXPIRATION_INTERVAL (60000 * 5)
 
 /**
  * How often a flow's statistical counters are reset
