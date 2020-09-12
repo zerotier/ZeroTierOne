@@ -1,3 +1,12 @@
+---
+name: Game Connection Issue
+about: Game issues are better answered on our forum: https://discuss.zerotier.com
+title: ''
+labels: ''
+assignees: ''
+
+---
+
 Are you having trouble connecting to a game on your virtual network after installing ZeroTier?
 
 - [ ] Yes
