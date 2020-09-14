@@ -362,7 +362,8 @@ bool Bond::assignFlowToBondedPath(SharedPtr<Flow> &flow, int64_t now)
 	if (_bondingPolicy == ZT_BONDING_POLICY_BALANCE_XOR) {
 		idx = abs((int)(flow->id() % (_numBondedPaths)));
 		SharedPtr<Link> link = RR->bc->getLinkBySocket(_policyAlias, _paths[_bondedIdx[idx]]->localSocket());
-		sprintf(traceMsg, "%s (balance-xor) Assigned outgoing flow %x to peer %llx to link %s/%s, %lu active flow(s)\n",
+		_paths[_bondedIdx[idx]]->address().toString(curPathStr);
+		sprintf(traceMsg, "%s (balance-xor) Assigned outgoing flow %x to peer %llx to link %s/%s, %lu active flow(s)",
 			OSUtils::humanReadableTimestamp().c_str(), flow->id(), _peer->_id.address().toInt(), link->ifname().c_str(), curPathStr, _flows.size());
 		RR->t->bondStateMessage(NULL, traceMsg);
 		flow->assignPath(_paths[_bondedIdx[idx]],now);
@@ -417,7 +418,7 @@ bool Bond::assignFlowToBondedPath(SharedPtr<Flow> &flow, int64_t now)
 	}
 	flow->assignedPath()->address().toString(curPathStr);
 	SharedPtr<Link> link = RR->bc->getLinkBySocket(_policyAlias, flow->assignedPath()->localSocket());
-	sprintf(traceMsg, "%s (bond) Assigned outgoing flow %x to peer %llx to link %s/%s, %lu active flow(s)\n",
+	sprintf(traceMsg, "%s (bond) Assigned outgoing flow %x to peer %llx to link %s/%s, %lu active flow(s)",
 		OSUtils::humanReadableTimestamp().c_str(), flow->id(), _peer->_id.address().toInt(), link->ifname().c_str(), curPathStr, _flows.size());
 	RR->t->bondStateMessage(NULL, traceMsg);
 	return true;
@@ -452,7 +453,7 @@ SharedPtr<Flow> Bond::createFlow(const SharedPtr<Path> &path, int32_t flowId, un
 		path->address().toString(curPathStr);
 		path->_assignedFlowCount++;
 		SharedPtr<Link> link = RR->bc->getLinkBySocket(_policyAlias, flow->assignedPath()->localSocket());
-		sprintf(traceMsg, "%s (bond) Assigned incoming flow %x from peer %llx to link %s/%s, %lu active flow(s)\n",
+		sprintf(traceMsg, "%s (bond) Assigned incoming flow %x from peer %llx to link %s/%s, %lu active flow(s)",
 			OSUtils::humanReadableTimestamp().c_str(), flow->id(), _peer->_id.address().toInt(), link->ifname().c_str(), curPathStr, _flows.size());
 		RR->t->bondStateMessage(NULL, traceMsg);
 	}
@@ -475,7 +476,7 @@ void Bond::forgetFlowsWhenNecessary(uint64_t age, bool oldest, int64_t now)
 	if (age) { // Remove by specific age
 		while (it != _flows.end()) {
 			if (it->second->age(now) > age) {
-				sprintf(traceMsg, "%s (bond) Forgetting flow %x between this node and peer %llx, %lu active flow(s)\n",
+				sprintf(traceMsg, "%s (bond) Forgetting flow %x between this node and peer %llx, %lu active flow(s)",
 					OSUtils::humanReadableTimestamp().c_str(), it->first, _peer->_id.address().toInt(), (_flows.size()-1));
 				RR->t->bondStateMessage(NULL, traceMsg);
 				it->second->assignedPath()->_assignedFlowCount--;
@@ -495,7 +496,7 @@ void Bond::forgetFlowsWhenNecessary(uint64_t age, bool oldest, int64_t now)
 			++it;
 		}
 		if (oldestFlow != _flows.end()) {
-			sprintf(traceMsg, "%s (bond) Forgetting oldest flow %x (of age %llu) between this node and peer %llx, %lu active flow(s)\n",
+			sprintf(traceMsg, "%s (bond) Forgetting oldest flow %x (of age %llu) between this node and peer %llx, %lu active flow(s)",
 				OSUtils::humanReadableTimestamp().c_str(), oldestFlow->first, oldestFlow->second->age(now), _peer->_id.address().toInt(), (_flows.size()-1));
 			RR->t->bondStateMessage(NULL, traceMsg);
 			oldestFlow->second->assignedPath()->_assignedFlowCount--;
