@@ -28,6 +28,8 @@
 #include <lmcons.h>
 #include <newdev.h>
 #include <atlbase.h>
+#include <iphlpapi.h>
+#include <iomanip>
 #include "osdep/WindowsEthernetTap.hpp"
 #include "windows/ZeroTierOne/ServiceInstaller.h"
 #include "windows/ZeroTierOne/ServiceBase.h"
@@ -924,8 +926,14 @@ static int cli(int argc,char **argv)
 		responseBody = "";
 
 		dump << ZT_EOL_S << "local.conf" << ZT_EOL_S << "----------" << ZT_EOL_S;
-		// TODO:  Dump local.conf
-		dump << "TODO" << ZT_EOL_S;
+		std::string localConf;
+		OSUtils::readFile((homeDir + ZT_PATH_SEPARATOR_S + "local.conf").c_str(), localConf);
+		if (localConf.empty()) {
+			dump << "None Present" << ZT_EOL_S;
+		}
+		else {
+			dump << localConf << ZT_EOL_S;
+		}
 
 		dump << ZT_EOL_S << "Network Interfaces" << ZT_EOL_S << "------------------" << ZT_EOL_S << ZT_EOL_S;
 #ifdef __APPLE__
@@ -972,9 +980,73 @@ static int cli(int argc,char **argv)
 
 			dump << ZT_EOL_S;
 		}
+#elif defined(_WIN32)
+		ULONG buffLen = 16384;
+		PIP_ADAPTER_ADDRESSES addresses;
+		
+		ULONG ret = 0;
+		do {
+			addresses = (PIP_ADAPTER_ADDRESSES)malloc(buffLen);
+
+			ret = GetAdaptersAddresses(AF_UNSPEC, 0, NULL, addresses, &buffLen);
+			if (ret == ERROR_BUFFER_OVERFLOW) {
+				free(addresses);
+				addresses = NULL;
+			}
+			else {
+				break;
+			}
+		} while (ret == ERROR_BUFFER_OVERFLOW);
+		
+		int i = 0;
+		if (ret == NO_ERROR) {
+			PIP_ADAPTER_ADDRESSES curAddr = addresses;
+			while (curAddr) {
+				dump << "Interface " << i << ZT_EOL_S << "-----------" << ZT_EOL_S;
+				dump << "Name: " << curAddr->AdapterName << ZT_EOL_S;
+				dump << "MTU: " << curAddr->Mtu << ZT_EOL_S;
+				dump << "MAC: ";
+				char macBuffer[64] = {};
+				sprintf(macBuffer, "%02x:%02x:%02x:%02x:%02x:%02x",
+					curAddr->PhysicalAddress[0],
+					curAddr->PhysicalAddress[1],
+					curAddr->PhysicalAddress[2],
+					curAddr->PhysicalAddress[3],
+					curAddr->PhysicalAddress[4],
+					curAddr->PhysicalAddress[5]);
+				dump << macBuffer << ZT_EOL_S;
+				dump << "Type: " << curAddr->IfType << ZT_EOL_S;
+				dump << "Addresses:" << ZT_EOL_S;
+				PIP_ADAPTER_UNICAST_ADDRESS pUnicast = NULL;
+				pUnicast = curAddr->FirstUnicastAddress;
+				if (pUnicast) {
+					for (int j = 0; pUnicast != NULL; ++j) {
+						char buf[128] = {};
+						DWORD bufLen = 128;
+						LPSOCKADDR a = pUnicast->Address.lpSockaddr;
+						WSAAddressToStringA(
+							pUnicast->Address.lpSockaddr,
+							pUnicast->Address.iSockaddrLength,
+							NULL,
+							buf,
+							&bufLen
+						);
+						dump << buf << ZT_EOL_S;
+						pUnicast = pUnicast->Next;
+					}
+				}
+
+				curAddr = curAddr->Next;
+				++i;
+			}
+		}
+		if (addresses) {
+			free(addresses);
+			addresses = NULL;
+		}
 #endif
 
-	fprintf(stderr, "%s", dump.str().c_str());
+	fprintf(stderr, "%s\n", dump.str().c_str());
 
 	} else {
 		cliPrintHelp(argv[0],stderr);
