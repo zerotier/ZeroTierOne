@@ -50,6 +50,7 @@
     <ClCompile Include="..\..\ext\miniupnpc\upnpdev.c" />
     <ClCompile Include="..\..\ext\miniupnpc\upnperrors.c" />
     <ClCompile Include="..\..\ext\miniupnpc\upnpreplyparse.c" />
+    <ClCompile Include="..\..\node\AES.cpp" />
     <ClCompile Include="..\..\node\Bond.cpp" />
     <ClCompile Include="..\..\node\BondController.cpp" />
     <ClCompile Include="..\..\node\C25519.cpp">
