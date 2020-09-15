@@ -87,6 +87,7 @@
 
 #ifdef __APPLE__
 #include <SystemConfiguration/SystemConfiguration.h>
+#include <CoreServices/CoreServices.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <ifaddrs.h>
@@ -879,6 +880,8 @@ static int cli(int argc,char **argv)
 		dump << "macOS" << ZT_EOL_S;
 #elif defined(_WIN32)
 		dump << "Windows" << ZT_EOL_S;
+#elif defined(__LINUX__)
+		dump << "Linux" << ZT_EOL_S;
 #else
 		dump << "other unix based OS" << ZT_EOL_S;
 #endif
@@ -985,6 +988,30 @@ static int cli(int argc,char **argv)
 
 			dump << ZT_EOL_S;
 		}
+
+
+		FSRef fsref;
+		UInt8 path[PATH_MAX];
+		if (FSFindFolder(kUserDomain, kDesktopFolderType, kDontCreateFolder, &fsref) == noErr &&
+				FSRefMakePath(&fsref, path, sizeof(path)) == noErr) {
+			
+		} else if (getenv("SUDO_USER")) {
+			sprintf((char*)path, "/Users/%s/Desktop/", getenv("SUDO_USER"));
+		} else {
+			fprintf(stdout, "%s", dump.str().c_str());
+			return 0;
+		}
+
+		sprintf((char*)path, "%s%szerotier_dump.txt", (char*)path, ZT_PATH_SEPARATOR_S);
+
+		fprintf(stdout, "Writing dump to: %s\n", path);
+		int fd = open((char*)path, O_CREAT|O_RDWR,0664);
+		if (fd == -1) {
+			fprintf(stderr, "Error creating file.\n");
+			return 1;
+		}
+		write(fd, dump.str().c_str(), dump.str().size());	
+		close(fd);
 #elif defined(_WIN32)
 		ULONG buffLen = 16384;
 		PIP_ADAPTER_ADDRESSES addresses;
@@ -1118,6 +1145,7 @@ static int cli(int argc,char **argv)
 		int fd = open(cwd, O_CREAT|O_RDWR,0664);
 		if (fd == -1) {
 			fprintf(stderr, "Error creating file.\n");
+			return 1;
 		}
 		write(fd, dump.str().c_str(), dump.str().size());	
 		close(fd);
