@@ -28,6 +28,8 @@
 #include <lmcons.h>
 #include <newdev.h>
 #include <atlbase.h>
+#include <iphlpapi.h>
+#include <iomanip>
 #include "osdep/WindowsEthernetTap.hpp"
 #include "windows/ZeroTierOne/ServiceInstaller.h"
 #include "windows/ZeroTierOne/ServiceBase.h"
@@ -77,6 +79,13 @@
 #include "service/OneService.hpp"
 
 #include "ext/json/json.hpp"
+
+#ifdef __APPLE__
+#include <SystemConfiguration/SystemConfiguration.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <ifaddrs.h>
+#endif
 
 #define ZT_PID_PATH "zerotier-one.pid"
 
@@ -858,6 +867,187 @@ static int cli(int argc,char **argv)
 			printf("%u %s %s" ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
 			return 1;
 		}
+	} else if (command == "dump") {
+		std::stringstream dump;
+		dump << "platform: ";
+#ifdef __APPLE__ 
+		dump << "macOS" << ZT_EOL_S;
+#elif defined(_WIN32)
+		dump << "Windows" << ZT_EOL_S;
+#else
+		dump << "other unix based OS" << ZT_EOL_S;
+#endif
+		dump << "zerotier version: " << ZEROTIER_ONE_VERSION_MAJOR << "."
+			<< ZEROTIER_ONE_VERSION_MINOR << "." << ZEROTIER_ONE_VERSION_REVISION << ZT_EOL_S << ZT_EOL_S;
+
+		// grab status
+		dump << "status" << ZT_EOL_S << "------" << ZT_EOL_S;
+		unsigned int scode = Http::GET(1024 * 1024 * 16,60000,(const struct sockaddr *)&addr,"/status",requestHeaders,responseHeaders,responseBody);
+		if (scode != 200) {
+			printf("Error connecting to the ZeroTier service: %s\n\nPlease check that the service is running and that TCP port 9993 can be contacted via 127.0.0.1." ZT_EOL_S, responseBody.c_str());
+			return 1;
+		}
+		dump << responseBody << ZT_EOL_S;
+
+		responseHeaders.clear();
+		responseBody = "";
+
+		// grab network list
+		dump << ZT_EOL_S << "networks" << ZT_EOL_S << "--------" << ZT_EOL_S;
+		scode = Http::GET(1024 * 1024 * 16,60000,(const struct sockaddr *)&addr,"/network",requestHeaders,responseHeaders,responseBody);
+		if (scode != 200) {
+			printf("Error connecting to the ZeroTier service: %s\n\nPlease check that the service is running and that TCP port 9993 can be contacted via 127.0.0.1." ZT_EOL_S, responseBody.c_str());
+			return 1;
+		}
+		dump << responseBody << ZT_EOL_S;
+
+		responseHeaders.clear();
+		responseBody = "";
+
+		// list peers
+		dump << ZT_EOL_S << "peers" << ZT_EOL_S << "-----" << ZT_EOL_S;
+		scode = Http::GET(1024 * 1024 * 16,60000,(const struct sockaddr *)&addr,"/peer",requestHeaders,responseHeaders,responseBody);
+		if (scode != 200) {
+			printf("Error connecting to the ZeroTier service: %s\n\nPlease check that the service is running and that TCP port 9993 can be contacted via 127.0.0.1." ZT_EOL_S, responseBody.c_str());
+			return 1;
+		}
+		dump << responseBody << ZT_EOL_S;
+
+		// get bonds
+		dump << ZT_EOL_S << "bonds" << ZT_EOL_S << "-----" << ZT_EOL_S;
+		scode = Http::GET(1024 * 1024 * 16,60000,(const struct sockaddr *)&addr,"/bonds",requestHeaders,responseHeaders,responseBody);
+		if (scode != 200) {
+			printf("Error connecting to the ZeroTier service: %s\n\nPlease check that the service is running and that TCP port 9993 can be contacted via 127.0.0.1." ZT_EOL_S, responseBody.c_str());
+			return 1;
+		}
+		dump << responseBody << ZT_EOL_S;
+
+		responseHeaders.clear();
+		responseBody = "";
+
+		dump << ZT_EOL_S << "local.conf" << ZT_EOL_S << "----------" << ZT_EOL_S;
+		std::string localConf;
+		OSUtils::readFile((homeDir + ZT_PATH_SEPARATOR_S + "local.conf").c_str(), localConf);
+		if (localConf.empty()) {
+			dump << "None Present" << ZT_EOL_S;
+		}
+		else {
+			dump << localConf << ZT_EOL_S;
+		}
+
+		dump << ZT_EOL_S << "Network Interfaces" << ZT_EOL_S << "------------------" << ZT_EOL_S << ZT_EOL_S;
+#ifdef __APPLE__
+		CFArrayRef interfaces = SCNetworkInterfaceCopyAll();
+		CFIndex size = CFArrayGetCount(interfaces);
+		for(CFIndex i = 0; i < size; ++i) {
+			SCNetworkInterfaceRef iface = (SCNetworkInterfaceRef)CFArrayGetValueAtIndex(interfaces, i);
+
+			dump << "Interface " << i << ZT_EOL_S << "-----------" << ZT_EOL_S;
+			CFStringRef tmp = SCNetworkInterfaceGetBSDName(iface);
+			char stringBuffer[512] = {};
+			CFStringGetCString(tmp,stringBuffer, sizeof(stringBuffer), kCFStringEncodingUTF8);
+			dump << "Name: " << stringBuffer << ZT_EOL_S;
+			std::string ifName(stringBuffer);
+			int mtuCur, mtuMin, mtuMax;
+			SCNetworkInterfaceCopyMTU(iface, &mtuCur, &mtuMin, &mtuMax);
+			dump << "MTU: " << mtuCur << ZT_EOL_S;
+			tmp = SCNetworkInterfaceGetHardwareAddressString(iface);
+			CFStringGetCString(tmp, stringBuffer, sizeof(stringBuffer), kCFStringEncodingUTF8);
+			dump << "MAC: " << stringBuffer << ZT_EOL_S;
+			tmp = SCNetworkInterfaceGetInterfaceType(iface);
+			CFStringGetCString(tmp, stringBuffer, sizeof(stringBuffer), kCFStringEncodingUTF8);
+			dump << "Type: " << stringBuffer << ZT_EOL_S;
+			dump << "Addresses:" << ZT_EOL_S;
+
+			struct ifaddrs *ifap, *ifa;
+			void *addr;
+			getifaddrs(&ifap);
+			for (ifa = ifap; ifa; ifa = ifa->ifa_next) {
+				if (strcmp(ifName.c_str(), ifa->ifa_name) == 0) {
+					if (ifa->ifa_addr->sa_family == AF_INET) {
+						struct sockaddr_in *ipv4 = (struct sockaddr_in*)ifa->ifa_addr;
+						addr = &ipv4->sin_addr;
+					} else if (ifa->ifa_addr->sa_family == AF_INET6) {
+						struct sockaddr_in6 *ipv6 = (struct sockaddr_in6*)ifa->ifa_addr;
+						addr = &ipv6->sin6_addr;
+					} else {
+						continue;
+					}
+					inet_ntop(ifa->ifa_addr->sa_family, addr, stringBuffer, sizeof(stringBuffer));
+					dump << stringBuffer << ZT_EOL_S;
+				}
+			}
+
+			dump << ZT_EOL_S;
+		}
+#elif defined(_WIN32)
+		ULONG buffLen = 16384;
+		PIP_ADAPTER_ADDRESSES addresses;
+		
+		ULONG ret = 0;
+		do {
+			addresses = (PIP_ADAPTER_ADDRESSES)malloc(buffLen);
+
+			ret = GetAdaptersAddresses(AF_UNSPEC, 0, NULL, addresses, &buffLen);
+			if (ret == ERROR_BUFFER_OVERFLOW) {
+				free(addresses);
+				addresses = NULL;
+			}
+			else {
+				break;
+			}
+		} while (ret == ERROR_BUFFER_OVERFLOW);
+		
+		int i = 0;
+		if (ret == NO_ERROR) {
+			PIP_ADAPTER_ADDRESSES curAddr = addresses;
+			while (curAddr) {
+				dump << "Interface " << i << ZT_EOL_S << "-----------" << ZT_EOL_S;
+				dump << "Name: " << curAddr->AdapterName << ZT_EOL_S;
+				dump << "MTU: " << curAddr->Mtu << ZT_EOL_S;
+				dump << "MAC: ";
+				char macBuffer[64] = {};
+				sprintf(macBuffer, "%02x:%02x:%02x:%02x:%02x:%02x",
+					curAddr->PhysicalAddress[0],
+					curAddr->PhysicalAddress[1],
+					curAddr->PhysicalAddress[2],
+					curAddr->PhysicalAddress[3],
+					curAddr->PhysicalAddress[4],
+					curAddr->PhysicalAddress[5]);
+				dump << macBuffer << ZT_EOL_S;
+				dump << "Type: " << curAddr->IfType << ZT_EOL_S;
+				dump << "Addresses:" << ZT_EOL_S;
+				PIP_ADAPTER_UNICAST_ADDRESS pUnicast = NULL;
+				pUnicast = curAddr->FirstUnicastAddress;
+				if (pUnicast) {
+					for (int j = 0; pUnicast != NULL; ++j) {
+						char buf[128] = {};
+						DWORD bufLen = 128;
+						LPSOCKADDR a = pUnicast->Address.lpSockaddr;
+						WSAAddressToStringA(
+							pUnicast->Address.lpSockaddr,
+							pUnicast->Address.iSockaddrLength,
+							NULL,
+							buf,
+							&bufLen
+						);
+						dump << buf << ZT_EOL_S;
+						pUnicast = pUnicast->Next;
+					}
+				}
+
+				curAddr = curAddr->Next;
+				++i;
+			}
+		}
+		if (addresses) {
+			free(addresses);
+			addresses = NULL;
+		}
+#endif
+
+	fprintf(stderr, "%s\n", dump.str().c_str());
+
 	} else {
 		cliPrintHelp(argv[0],stderr);
 		return 0;

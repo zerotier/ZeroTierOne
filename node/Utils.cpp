@@ -32,6 +32,7 @@
 
 #ifdef __WINDOWS__
 #include <wincrypt.h>
+#include <intrin.h>
 #endif
 
 #include "Utils.hpp"
