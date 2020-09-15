@@ -1149,6 +1149,8 @@ static int cli(int argc,char **argv)
 		}
 		write(fd, dump.str().c_str(), dump.str().size());	
 		close(fd);
+#else
+	fprintf(stderr, "%s", dump.str().c_str());
 #endif
 
 		// fprintf(stderr, "%s\n", dump.str().c_str());
