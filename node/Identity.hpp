@@ -173,13 +173,12 @@ public:
 	 *
 	 * @param id Identity to agree with
 	 * @param key Result parameter to fill with key bytes
-	 * @param klen Length of key in bytes
 	 * @return Was agreement successful?
 	 */
-	inline bool agree(const Identity &id,void *key,unsigned int klen) const
+	inline bool agree(const Identity &id,void *const key) const
 	{
 		if (_privateKey) {
-			C25519::agree(*_privateKey,id._publicKey,key,klen);
+			C25519::agree(*_privateKey,id._publicKey,key,ZT_SYMMETRIC_KEY_SIZE);
 			return true;
 		}
 		return false;

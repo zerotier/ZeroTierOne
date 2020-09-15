@@ -202,11 +202,6 @@
 #define ZT_TX_QUEUE_SIZE 32
 
 /**
- * Length of secret key in bytes -- 256-bit -- do not change
- */
-#define ZT_PEER_SECRET_KEY_LENGTH 32
-
-/**
  * Minimum delay between timer task checks to prevent thrashing
  */
 #define ZT_CORE_TIMER_TASK_GRANULARITY 60

@@ -286,8 +286,8 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool
 				if (!RR->node->rateGateIdentityVerification(now,_path->address()))
 					return true;
 
-				uint8_t key[ZT_PEER_SECRET_KEY_LENGTH];
-				if (RR->identity.agree(id,key,ZT_PEER_SECRET_KEY_LENGTH)) {
+				uint8_t key[ZT_SYMMETRIC_KEY_SIZE];
+				if (RR->identity.agree(id,key)) {
 					if (dearmor(key, peer->aesKeysIfSupported())) { // ensure packet is authentic, otherwise drop
 						RR->t->incomingPacketDroppedHELLO(tPtr,_path,pid,fromAddress,"address collision");
 						Packet outp(id.address(),RR->identity.address(),Packet::VERB_ERROR);

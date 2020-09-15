@@ -881,7 +881,6 @@ void Packet::armor(const void *key,bool encryptPayload,const AES aesKeys[2])
 	uint8_t *const data = reinterpret_cast<uint8_t *>(unsafeData());
 	if ((aesKeys) && (encryptPayload)) {
 		char tmp0[16],tmp1[16];
-		printf("AES armor %.16llx %s -> %s %u\n",*reinterpret_cast<const uint64_t *>(data),Address(data + ZT_PACKET_IDX_SOURCE,5).toString(tmp0),Address(data + ZT_PACKET_IDX_DEST,5).toString(tmp1),size());
 		setCipher(ZT_PROTO_CIPHER_SUITE__AES_GMAC_SIV);
 
 		uint8_t *const payload = data + ZT_PACKET_IDX_VERB;
@@ -899,7 +898,7 @@ void Packet::armor(const void *key,bool encryptPayload,const AES aesKeys[2])
 		Utils::copy<8>(data,tag);
 		Utils::copy<8>(data + ZT_PACKET_IDX_MAC,tag + 1);
 #else
-		*reinterpret_cast<uint64_t *>(data) = tag[0];
+		*reinterpret_cast<uint64_t *>(data + ZT_PACKET_IDX_IV) = tag[0];
 		*reinterpret_cast<uint64_t *>(data + ZT_PACKET_IDX_MAC) = tag[1];
 #endif
 	} else {
@@ -947,20 +946,21 @@ bool Packet::dearmor(const void *key,const AES aesKeys[2])
 
 	if (cs == ZT_PROTO_CIPHER_SUITE__AES_GMAC_SIV) {
 		if (aesKeys) {
-			printf("AES dearmor\n");
-			AES::GMACSIVDecryptor dec(aesKeys[0],aesKeys[1]);
-
 			uint64_t tag[2];
 #ifdef ZT_NO_UNALIGNED_ACCESS
 			Utils::copy<8>(tag, data);
 			Utils::copy<8>(tag + 1, data + ZT_PACKET_IDX_MAC);
 #else
-			tag[0] = *reinterpret_cast<uint64_t *>(data);
+			tag[0] = *reinterpret_cast<uint64_t *>(data + ZT_PACKET_IDX_IV);
 			tag[1] = *reinterpret_cast<uint64_t *>(data + ZT_PACKET_IDX_MAC);
 #endif
 
+			AES::GMACSIVDecryptor dec(aesKeys[0],aesKeys[1]);
 			dec.init(tag, payload);
+			const uint8_t oldFlags = data[ZT_PACKET_IDX_FLAGS];
+			data[ZT_PACKET_IDX_FLAGS] &= 0xf8;
 			dec.aad(data + ZT_PACKET_IDX_DEST,11);
+			data[ZT_PACKET_IDX_FLAGS] = oldFlags;
 			dec.update(payload, payloadLen);
 			return dec.finish();
 		}

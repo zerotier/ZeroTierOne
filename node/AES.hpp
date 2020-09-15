@@ -376,9 +376,8 @@ public:
 		 */
 		ZT_INLINE void finish1() noexcept
 		{
-			uint64_t tmp[2];
-
 			// Compute 128-bit GMAC tag.
+			uint64_t tmp[2];
 			_gmac.finish(reinterpret_cast<uint8_t *>(tmp));
 
 			// Shorten to 64 bits, concatenate with message IV, and encrypt with AES to

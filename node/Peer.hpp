@@ -533,11 +533,11 @@ public:
 	 */
 	inline int8_t bondingPolicy() { return _bondingPolicy; }
 
-	const AES *aesKeysIfSupported() const
-	{ return (const AES *)0; }
-
 	//const AES *aesKeysIfSupported() const
-	//{ return (_vProto >= 12) ? _aesKeys : (const AES *)0; }
+	//{ return (const AES *)0; }
+
+	const AES *aesKeysIfSupported() const
+	{ return (_vProto >= 12) ? _aesKeys : (const AES *)0; }
 
 private:
 	struct _PeerPath
@@ -548,7 +548,7 @@ private:
 		long priority; // >= 1, higher is better
 	};
 
-	uint8_t _key[ZT_PEER_SECRET_KEY_LENGTH];
+	uint8_t _key[ZT_SYMMETRIC_KEY_SIZE];
 	AES _aesKeys[2];
 
 	const RuntimeEnvironment *RR;

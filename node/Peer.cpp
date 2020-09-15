@@ -58,16 +58,15 @@ Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Ident
 	_bondingPolicy(0),
 	_lastComputedAggregateMeanLatency(0)
 {
-	if (!myIdentity.agree(peerIdentity,_key,ZT_PEER_SECRET_KEY_LENGTH)) {
+	if (!myIdentity.agree(peerIdentity,_key))
 		throw ZT_EXCEPTION_INVALID_ARGUMENT;
-	}
 
-	uint8_t ktmp[48];
+	uint8_t ktmp[ZT_SYMMETRIC_KEY_SIZE];
 	KBKDFHMACSHA384(_key,ZT_KBKDF_LABEL_AES_GMAC_SIV_K0,0,0,ktmp);
 	_aesKeys[0].init(ktmp);
 	KBKDFHMACSHA384(_key,ZT_KBKDF_LABEL_AES_GMAC_SIV_K1,0,0,ktmp);
-	_aesKeys[0].init(ktmp);
-	Utils::burn(ktmp, 48);
+	_aesKeys[1].init(ktmp);
+	Utils::burn(ktmp,ZT_SYMMETRIC_KEY_SIZE);
 }
 
 void Peer::received(
