@@ -40,7 +40,6 @@ namespace WinUI
 
         private void UpdateNetworkData()
         {
-
             if (this.networkId.Text != network.NetworkId)
                 this.networkId.Text = network.NetworkId;
 
@@ -80,21 +79,18 @@ namespace WinUI
             this.allowGlobal.IsChecked = network.AllowGlobal;
             this.allowManaged.IsChecked = network.AllowManaged;
 
-						this.connectedCheckBox.Checked -= connectedCheckBox_Checked;
-						this.connectedCheckBox.Unchecked -= connectedCheckbox_Unchecked;
+            this.connectedCheckBox.Checked -= connectedCheckBox_Checked;
+            this.connectedCheckBox.Unchecked -= connectedCheckbox_Unchecked;
 
             this.connectedCheckBox.IsChecked = network.IsConnected;
 
-						this.connectedCheckBox.Checked += connectedCheckBox_Checked;
-						this.connectedCheckBox.Unchecked += connectedCheckbox_Unchecked;
-				}
+            this.connectedCheckBox.Checked += connectedCheckBox_Checked;
+            this.connectedCheckBox.Unchecked += connectedCheckbox_Unchecked;
+        }
 
         public bool HasNetwork(ZeroTierNetwork network)
         {
-            if (this.network.NetworkId.Equals(network.NetworkId))
-                return true;
-
-            return false;
+            return this.network.NetworkId.Equals(network.NetworkId);
         }
 
         public void SetNetworkInfo(ZeroTierNetwork network)
@@ -112,7 +108,6 @@ namespace WinUI
 
         private void AllowManaged_CheckStateChanged(object sender, RoutedEventArgs e)
         {
-            CheckBox cb = sender as CheckBox;
             APIHandler.Instance.JoinNetwork(this.Dispatcher, network.NetworkId,
                 allowManaged.IsChecked ?? false,
                 allowGlobal.IsChecked ?? false,
@@ -121,7 +116,6 @@ namespace WinUI
 
         private void AllowGlobal_CheckStateChanged(object sender, RoutedEventArgs e)
         {
-            CheckBox cb = sender as CheckBox;
             APIHandler.Instance.JoinNetwork(this.Dispatcher, network.NetworkId,
                 allowManaged.IsChecked ?? false,
                 allowGlobal.IsChecked ?? false,
@@ -130,7 +124,6 @@ namespace WinUI
 
         private void AllowDefault_CheckStateChanged(object sender, RoutedEventArgs e)
         {
-            CheckBox cb = sender as CheckBox;
             APIHandler.Instance.JoinNetwork(this.Dispatcher, network.NetworkId,
                 allowManaged.IsChecked ?? false,
                 allowGlobal.IsChecked ?? false,

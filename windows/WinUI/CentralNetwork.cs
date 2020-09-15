@@ -7,7 +7,7 @@ using Newtonsoft.Json;
 
 namespace WinUI
 {
-    class CentralNetwork
+    internal class CentralNetwork
     {
         [JsonProperty("id")]
         public string Id { get; set; }

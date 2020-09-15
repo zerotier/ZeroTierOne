@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace WinUI
 {
-    class NetworkNameGenerator
+    internal static class NetworkNameGenerator
     {
         public static string GenerateName()
         {
@@ -16,7 +16,7 @@ namespace WinUI
             return FIRST[firstIndex] + "_" + SECOND[secondIndex];
         }
 
-        private static string[] FIRST =
+        private static readonly string[] FIRST =
         {
               "admiring",
               "adoring",
@@ -74,7 +74,7 @@ namespace WinUI
               "trusting"
         };
 
-        private static string[] SECOND =
+        private static readonly string[] SECOND =
         {
             // constructed telephone-like devices in 1854
             "meucci",

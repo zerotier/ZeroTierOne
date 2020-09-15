@@ -7,7 +7,7 @@ using Newtonsoft.Json;
 
 namespace WinUI
 {
-    class CentralUser
+    internal class CentralUser
     {
         public class CentralGlobalPermissions
         {

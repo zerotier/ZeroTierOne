@@ -21,16 +21,15 @@ namespace WinUI
     public partial class PreferencesView : Window
     {
         public static string AppName = "ZeroTier One";
-        private RegistryKey rk = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true);
-        private string AppLocation = System.Reflection.Assembly.GetExecutingAssembly().Location;
+        private readonly RegistryKey rk = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true);
+        private readonly string AppLocation = System.Reflection.Assembly.GetExecutingAssembly().Location;
         public PreferencesView()
         {
             InitializeComponent();
 
-
             string keyValue = rk.GetValue(AppName) as string;
 
-            if (keyValue != null && keyValue.Equals(AppLocation))
+            if (keyValue?.Equals(AppLocation) == true)
             {
                 startupCheckbox.IsChecked = true;
             }
@@ -47,9 +46,11 @@ namespace WinUI
             if (api.Central.ServerURL != CentralInstanceTextBox.Text ||
                 api.Central.APIKey != APIKeyTextBox.Text)
             {
-                CentralServer newServer = new CentralServer();
-                newServer.ServerURL = CentralInstanceTextBox.Text;
-                newServer.APIKey = APIKeyTextBox.Text;
+                CentralServer newServer = new CentralServer
+                {
+                    ServerURL = CentralInstanceTextBox.Text,
+                    APIKey = APIKeyTextBox.Text
+                };
 
                 api.Central = newServer;
             }
@@ -62,7 +63,7 @@ namespace WinUI
             {
                 string keyValue = rk.GetValue(AppName) as string;
 
-                if (keyValue != null && keyValue.Equals(AppLocation))
+                if (keyValue?.Equals(AppLocation) == true)
                 {
                     rk.DeleteValue(AppName);
                 }

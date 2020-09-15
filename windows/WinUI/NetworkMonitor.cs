@@ -8,20 +8,19 @@ using System.Threading.Tasks;
 
 namespace WinUI
 {
-    class NetworkMonitor
+    internal sealed class NetworkMonitor
     {
         public delegate void NetworkListCallback(List<ZeroTierNetwork> networks);
         public delegate void StatusCallback(ZeroTierStatus status);
 
-        private Thread runThread;
+        private readonly Thread runThread;
         private NetworkListCallback _nwCb;
         private StatusCallback _stCb;
-
 
         private List<ZeroTierNetwork> _knownNetworks = new List<ZeroTierNetwork>();
 
         private static NetworkMonitor instance;
-        private static object syncRoot = new object();
+        private static readonly object syncRoot = new object();
 
         public static NetworkMonitor Instance
         {
@@ -59,7 +58,7 @@ namespace WinUI
         {
             String dataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "\\ZeroTier\\One";
             String dataFile = Path.Combine(dataPath, "networks.dat");
-            
+
             if (File.Exists(dataFile))
             {
                 List<ZeroTierNetwork> netList;
@@ -102,10 +101,10 @@ namespace WinUI
 
         private void apiNetworkCallback(List<ZeroTierNetwork> networks)
         {
-						if (networks == null)
-						{
-								return;
-						}
+            if (networks == null)
+            {
+                return;
+            }
 
             lock (_knownNetworks)
             {
@@ -113,14 +112,7 @@ namespace WinUI
 
                 foreach (ZeroTierNetwork n in _knownNetworks)
                 {
-                    if (networks.Contains(n))
-                    {
-                        n.IsConnected = true;
-                    }
-                    else
-                    {
-                        n.IsConnected = false;
-                    }
+                    n.IsConnected = networks.Contains(n);
                 }
 
                 _knownNetworks.Sort();
@@ -154,9 +146,9 @@ namespace WinUI
             }
             catch (Exception e)
             {
-                Console.WriteLine("Monitor Thread Exception: " + "\n" + e.StackTrace);
+                Console.WriteLine("Monitor Thread Exception: \n" + e.StackTrace);
             }
-			Console.WriteLine("Monitor Thread Ended");
+            Console.WriteLine("Monitor Thread Ended");
         }
 
         public void SubscribeStatusUpdates(StatusCallback cb)
@@ -181,7 +173,7 @@ namespace WinUI
 
         public void RemoveNetwork(String networkID)
         {
-            lock(_knownNetworks)
+            lock (_knownNetworks)
             {
                 foreach (ZeroTierNetwork n in _knownNetworks)
                 {

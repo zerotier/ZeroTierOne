@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace WinUI
 {
-    interface ISwitchable
+    internal interface ISwitchable
     {
         void UtilizeState(object state);
     }

@@ -71,7 +71,7 @@ namespace WinUI
         private NetworkInfoView ChildWithNetwork(ZeroTierNetwork network)
         {
             List<NetworkInfoView> list = wrapPanel.Children.OfType<NetworkInfoView>().ToList();
-           
+
             foreach (NetworkInfoView view in list)
             {
                 if (view.HasNetwork(network))

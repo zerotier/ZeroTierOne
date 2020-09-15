@@ -33,7 +33,7 @@ namespace WinUI
 
         private Int64 _lastMulticast;
         [JsonProperty("lastMulticastFrame")]
-        public Int64 LastMulticastFrame 
+        public Int64 LastMulticastFrame
         {
             get
             {
@@ -66,10 +66,7 @@ namespace WinUI
         {
             get
             {
-                if (Version == "-1.-1.-1")
-                    return "-";
-                else
-                    return Version;
+                return Version == "-1.-1.-1" ? "-" : Version;
             }
         }
 
@@ -87,7 +84,7 @@ namespace WinUI
             get
             {
                 string pathStr = "";
-                foreach(ZeroTierPeerPhysicalPath path in Paths)
+                foreach (ZeroTierPeerPhysicalPath path in Paths)
                 {
                     pathStr += path.Address + "\n";
                 }

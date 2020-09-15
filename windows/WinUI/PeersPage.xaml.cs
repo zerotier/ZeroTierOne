@@ -20,7 +20,7 @@ namespace WinUI
     /// </summary>
     public partial class PeersPage : UserControl
     {
-        private List<ZeroTierPeer> peersList = new List<ZeroTierPeer>();
+        private readonly List<ZeroTierPeer> peersList = new List<ZeroTierPeer>();
 
         public PeersPage()
         {
@@ -34,13 +34,12 @@ namespace WinUI
             if (list == null)
                 return;
 
-            
-            foreach(ZeroTierPeer p in list)
+            foreach (ZeroTierPeer p in list)
             {
                 ZeroTierPeer curPeer = peersList.Find(peer => peer.Equals(p));
                 if (curPeer == null)
                 {
-                    peersList.Add(p);                    
+                    peersList.Add(p);
                 }
                 else
                 {

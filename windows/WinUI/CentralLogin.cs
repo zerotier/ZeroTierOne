@@ -7,10 +7,8 @@ using Newtonsoft.Json;
 
 namespace WinUI
 {
-    class CentralLogin
+    internal class CentralLogin
     {
-
-
         public CentralLogin(string email, string password, bool isNew)
         {
             Login = email;

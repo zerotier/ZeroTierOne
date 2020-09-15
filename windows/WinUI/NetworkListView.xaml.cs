@@ -26,8 +26,8 @@ namespace WinUI
     /// </summary>
     public partial class NetworkListView : Window
     {
-        Regex charRegex = new Regex("[0-9a-fxA-FX]");
-        Regex wholeStringRegex = new Regex("^[0-9a-fxA-FX]+$");
+        private readonly Regex charRegex = new Regex("[0-9a-fxA-FX]");
+        private readonly Regex wholeStringRegex = new Regex("^[0-9a-fxA-FX]+$");
 
         public NetworkListView()
         {
@@ -36,10 +36,6 @@ namespace WinUI
             Closed += onClosed;
 
             NetworkMonitor.Instance.SubscribeNetworkUpdates(updateNetworks);
-        }
-
-        ~NetworkListView()
-        {
         }
 
         protected override void OnClosing(CancelEventArgs e)
@@ -57,10 +53,7 @@ namespace WinUI
         {
             if (networks != null)
             {
-                networksPage.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
-                {
-                    networksPage.setNetworks(networks);
-                }));
+                networksPage.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() => networksPage.setNetworks(networks)));
             }
         }
 

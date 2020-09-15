@@ -16,7 +16,7 @@ namespace WinUI
     {
         private TaskbarIcon tb;
 
-        private void InitApplication()
+        internal void InitApplication()
         {
             tb = (TaskbarIcon)FindResource("NotifyIcon");
             tb.Visibility = Visibility.Visible;

@@ -177,7 +177,8 @@ namespace WinUI
         }
 
         [JsonProperty("nwid")]
-        public string NetworkId {
+        public string NetworkId
+        {
             get
             {
                 return networkId;
@@ -229,7 +230,6 @@ namespace WinUI
                 networkStatus = value;
                 NotifyPropertyChanged();
             }
-
         }
 
         [JsonProperty("type")]
@@ -413,7 +413,7 @@ namespace WinUI
                 NotifyPropertyChanged();
             }
         }
-        
+
         public bool IsConnected
         {
             get
@@ -431,26 +431,15 @@ namespace WinUI
         {
             get
             {
-
-                if (NetworkName != null && NetworkName.Length > 0)
-                {
-                    return NetworkId + " (" + NetworkName + ")";
-                }
-                else
-                {
-                    return NetworkId;
-                }
+                return NetworkName?.Length > 0 ? NetworkId + " (" + NetworkName + ")" : NetworkId;
             }
         }
 
         public bool Equals(ZeroTierNetwork network)
         {
-            if (NetworkId == null || network == null)
-                return false;
-
-            return NetworkId.Equals(network.NetworkId);
+            return NetworkId == null || network == null ? false : NetworkId.Equals(network.NetworkId);
         }
-        
+
         public int CompareTo(ZeroTierNetwork network)
         {
             if (NetworkId == null || network == null)
@@ -463,18 +452,14 @@ namespace WinUI
             {
                 return 1;
             }
-            else if (thisNwid < otherNwid)
-            {
-                return -1;
-            }
             else
             {
-                return 0;
+                return thisNwid < otherNwid ? -1 : 0;
             }
         }
     }
 
-     public class NetworkEqualityComparer : IEqualityComparer<ZeroTierNetwork>
+    public class NetworkEqualityComparer : IEqualityComparer<ZeroTierNetwork>
     {
         public bool Equals(ZeroTierNetwork lhs, ZeroTierNetwork rhs)
         {

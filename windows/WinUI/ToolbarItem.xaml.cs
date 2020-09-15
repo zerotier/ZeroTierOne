@@ -29,28 +29,18 @@ namespace WinUI
     /// </summary>
     public partial class ToolbarItem : Window, INotifyPropertyChanged
     {
-        private APIHandler handler = APIHandler.Instance;
-
+        internal APIHandler handler = APIHandler.Instance;
         private Point netListLocation = new Point(0, 0);
         private Point joinNetLocation = new Point(0, 0);
         private Point aboutViewLocation = new Point(0, 0);
         private Point prefsViewLocation = new Point(0, 0);
-
         private NetworkListView netListView = new NetworkListView();
         private JoinNetworkView joinNetView = null;
         private AboutView aboutView = null;
         private PreferencesView prefsView = null;
-
         private NetworkMonitor mon = NetworkMonitor.Instance;
 
-        private ObservableCollection<MenuItem> _networkCollection = new ObservableCollection<MenuItem>();
-
-
-        public ObservableCollection<MenuItem> NetworkCollection
-        {
-            get { return _networkCollection; }
-            set { _networkCollection = value; }
-        }
+        public ObservableCollection<MenuItem> NetworkCollection { get; set; } = new ObservableCollection<MenuItem>();
 
         private string nodeId;
 
@@ -61,7 +51,7 @@ namespace WinUI
             mon.SubscribeNetworkUpdates(updateNetworks);
             mon.SubscribeStatusUpdates(updateStatus);
 
-            SystemEvents.DisplaySettingsChanged += new EventHandler(SystemEvents_DisplaySettingsChanged);
+            SystemEvents.DisplaySettingsChanged += SystemEvents_DisplaySettingsChanged;
         }
 
         ~ToolbarItem()
@@ -86,10 +76,12 @@ namespace WinUI
                     NetworkCollection.Clear();
                     foreach (ZeroTierNetwork n in networks)
                     {
-                        MenuItem item = new MenuItem();
-                        item.Header = n.Title.Replace("_", "__");
-                        item.DataContext = n;
-                        item.IsChecked = n.IsConnected;
+                        MenuItem item = new MenuItem
+                        {
+                            Header = n.Title.Replace("_", "__"),
+                            DataContext = n,
+                            IsChecked = n.IsConnected
+                        };
                         item.Click += ToolbarItem_NetworkClicked;
 
                         NetworkCollection.Add(item);
@@ -98,7 +90,7 @@ namespace WinUI
             }
         }
 
-        private void updateStatus(ZeroTierStatus status) 
+        private void updateStatus(ZeroTierStatus status)
         {
             if (status != null)
             {
@@ -108,14 +100,7 @@ namespace WinUI
                     nodeIdMenuItem.IsEnabled = true;
                     nodeId = status.Address;
 
-                    if (CentralAPI.Instance.HasAccessToken())
-                    {
-                        newNetworkItem.IsEnabled = true;
-                    }
-                    else
-                    {
-                        newNetworkItem.IsEnabled = false;
-                    }
+                    newNetworkItem.IsEnabled = CentralAPI.Instance.HasAccessToken();
                 }));
             }
         }
@@ -124,7 +109,7 @@ namespace WinUI
         {
             try
             {
-		            Clipboard.SetDataObject(nodeId);
+                Clipboard.SetDataObject(nodeId);
             }
             catch (ArgumentNullException)
             {
@@ -152,7 +137,7 @@ namespace WinUI
                 netListView.Top = netListLocation.Y;
                 netListNeedsMoving = false;
             }
-            
+
             netListView.Show();
 
             if (netListNeedsMoving)
@@ -289,7 +274,7 @@ namespace WinUI
 
         private void ToolbarItem_NetworkClicked(object sender, System.Windows.RoutedEventArgs e)
         {
-            if(sender.GetType() == typeof(MenuItem))
+            if (sender.GetType() == typeof(MenuItem))
             {
                 MenuItem item = e.Source as MenuItem;
                 if (item.DataContext != null)
@@ -303,7 +288,7 @@ namespace WinUI
                     {
                         APIHandler.Instance.JoinNetwork(Dispatcher, network.NetworkId, network.AllowManaged, network.AllowGlobal, network.AllowDefault);
                     }
-                }   
+                }
             }
         }
 
@@ -312,13 +297,13 @@ namespace WinUI
             if (CentralAPI.Instance.HasAccessToken())
             {
                 CentralAPI api = CentralAPI.Instance;
-                CentralNetwork newNetwork = await api.CreateNewNetwork();
+                CentralNetwork newNetwork = await api.CreateNewNetwork().ConfigureAwait(true);
 
                 APIHandler handler = APIHandler.Instance;
                 handler.JoinNetwork(this.Dispatcher, newNetwork.Id);
 
                 string nodeId = APIHandler.Instance.NodeAddress();
-                bool authorized = await CentralAPI.Instance.AuthorizeNode(nodeId, newNetwork.Id);
+                bool authorized = await CentralAPI.Instance.AuthorizeNode(nodeId, newNetwork.Id).ConfigureAwait(true);
             }
         }
 
@@ -332,7 +317,7 @@ namespace WinUI
 
             double top = screenHeight - height - 40;
             double left = screenWidth - width - 20;
-            
+
             w.Top = top;
             w.Left = left;
         }

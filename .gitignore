@@ -42,6 +42,8 @@ enc_temp_folder
 /windows/copyutil/bin
 /windows/copyutil/obj
 .vs/
+windows/.editorconfig
+windows/TapDriver6/Win7 Debug/
 
 # *nix/Mac build droppings
 /build-*
