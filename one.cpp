@@ -30,6 +30,7 @@
 #include <atlbase.h>
 #include <iphlpapi.h>
 #include <iomanip>
+#include <shlobj.h>
 #include "osdep/WindowsEthernetTap.hpp"
 #include "windows/ZeroTierOne/ServiceInstaller.h"
 #include "windows/ZeroTierOne/ServiceBase.h"
@@ -1075,6 +1076,41 @@ static int cli(int argc,char **argv)
 		if (addresses) {
 			free(addresses);
 			addresses = NULL;
+		}
+
+		char path[MAX_PATH + 1] = {};
+		if (SHGetFolderPathA(NULL, CSIDL_DESKTOP, NULL, 0, path) == S_OK) {
+			sprintf(path, "%s%szerotier_dump.txt", path, ZT_PATH_SEPARATOR_S);
+			fprintf(stdout, "Writing dump to: %s\n", path);
+			HANDLE file = CreateFileA(
+				path,
+				GENERIC_WRITE,
+				0,
+				NULL,
+				CREATE_ALWAYS,
+				FILE_ATTRIBUTE_NORMAL,
+				NULL
+			);
+			if (file == INVALID_HANDLE_VALUE) {
+				fprintf(stdout, "%s", dump.str().c_str());
+				return 0;
+			}
+
+			BOOL err = WriteFile(
+				file,
+				dump.str().c_str(),
+				dump.str().size(),
+				NULL,
+				NULL
+			);
+			if (err = FALSE) {
+				fprintf(stderr, "Error writing file");
+				return 1;
+			}
+			CloseHandle(file);
+		}
+		else {
+			fprintf(stdout, "%s", dump.str().c_str());
 		}
 #elif defined(__LINUX__)
 		struct ifreq ifr;
