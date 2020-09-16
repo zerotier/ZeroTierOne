@@ -59,10 +59,14 @@ InetAddress::IpScope InetAddress::ipScope() const
 					break;
 				case 0xc0:
 					if ((ip & 0xffff0000) == 0xc0a80000) return IP_SCOPE_PRIVATE;    // 192.168.0.0/16
+					if ((ip & 0xffffff00) == 0xc0000200) return IP_SCOPE_PRIVATE;    // 192.0.2.0/24
 					break;
 				case 0xc6:
-					if ((ip & 0xfffe0000) == 0xc6120000) return IP_SCOPE_PRIVATE;	 // 198.18.0.0/15
+					if ((ip & 0xfffe0000) == 0xc6120000) return IP_SCOPE_PRIVATE;    // 198.18.0.0/15
+					if ((ip & 0xffffff00) == 0xc6336400) return IP_SCOPE_PRIVATE;    // 198.51.100.0/24
 					break;
+				case 0xcb:
+					if ((ip & 0xffffff00) == 0xcb007100) return IP_SCOPE_PRIVATE;    // 203.0.113.0/24
 				case 0xff: return IP_SCOPE_NONE;                                   // 255.0.0.0/8 (broadcast, or unused/unusable)
 			}
 			switch(ip >> 28) {
