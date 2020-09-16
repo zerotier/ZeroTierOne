@@ -250,11 +250,9 @@ static int cli(int argc,char **argv)
 		homeDir = OneService::platformDefaultHomePath();
 
 	// TODO: cleanup this logic
-	// A lot of generic CLI errors land here; missing admin rights cause a bit of this.
 	if ((!port)||(!authToken.length())) {
 		if (!homeDir.length()) {
 			fprintf(stderr,"%s: missing port or authentication token and no home directory specified to auto-detect" ZT_EOL_S,argv[0]);
-			fprintf(stderr, "If you did not, please run this command as an Administrator / sudo / Root user. Thanks!");
 			return 2;
 		}
 
@@ -264,7 +262,6 @@ static int cli(int argc,char **argv)
 			port = Utils::strToUInt(portStr.c_str());
 			if ((port == 0)||(port > 0xffff)) {
 				fprintf(stderr,"%s: missing port and zerotier-one.port not found in %s" ZT_EOL_S,argv[0],homeDir.c_str());
-				fprintf(stderr, "If you did not, please run this command as an Administrator / sudo / Root user. Thanks!");
 				return 2;
 			}
 		}
@@ -287,7 +284,6 @@ static int cli(int argc,char **argv)
 #endif
 			if (!authToken.length()) {
 				fprintf(stderr,"%s: missing authentication token and authtoken.secret not found (or readable) in %s" ZT_EOL_S,argv[0],homeDir.c_str());
-				fprintf(stderr, "If you did not, please run this command as an Administrator / sudo / Root user. Thanks!");
 				return 2;
 			}
 		}
