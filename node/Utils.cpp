@@ -28,6 +28,9 @@
 #include <sys/stat.h>
 #include <sys/uio.h>
 #include <dirent.h>
+#ifdef __LINUX__
+#include <sys/auxv.h>
+#endif
 #endif
 
 #ifdef __WINDOWS__

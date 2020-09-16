@@ -111,6 +111,14 @@
 #include <mmintrin.h>
 #endif
 
+#if (defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(ZT_ARCH_ARM_HAS_NEON))
+#ifndef ZT_ARCH_ARM_HAS_NEON
+#define ZT_ARCH_ARM_HAS_NEON 1
+#endif
+#include <arm_neon.h>
+/*#include <arm_acle.h>*/
+#endif
+
 // Define ZT_NO_TYPE_PUNNING to disable reckless casts on anything other than x86/x64.
 #if (!(defined(__amd64__) || defined(__amd64) || defined(__x86_64__) || defined(__x86_64) || defined(_M_AMD64) || defined(_M_X64) || defined(i386) || defined(__i386) || defined(__i386__) || defined(__i486__) || defined(__i586__) || defined(__i686__) || defined(_M_IX86) || defined(__X86__) || defined(_X86_) || defined(__I86__) || defined(__INTEL__) || defined(__386)))
 #ifndef ZT_NO_TYPE_PUNNING

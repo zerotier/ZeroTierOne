@@ -208,11 +208,11 @@ ifeq ($(CC_MACH),armv7hl)
 endif
 ifeq ($(CC_MACH),arm64)
 	ZT_ARCHITECTURE=4
-	override DEFS+=-DZT_NO_TYPE_PUNNING
+	override DEFS+=-DZT_NO_TYPE_PUNNING -DZT_ARCH_ARM_HAS_NEON -march=armv8-a+aes+crypto -mtune=generic -mstrict-align
 endif
 ifeq ($(CC_MACH),aarch64)
 	ZT_ARCHITECTURE=4
-	override DEFS+=-DZT_NO_TYPE_PUNNING
+	override DEFS+=-DZT_NO_TYPE_PUNNING -DZT_ARCH_ARM_HAS_NEON -march=armv8-a+aes+crypto -mtune=generic -mstrict-align
 endif
 ifeq ($(CC_MACH),mipsel)
 	ZT_ARCHITECTURE=5
