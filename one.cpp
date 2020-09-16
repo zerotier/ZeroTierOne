@@ -30,6 +30,7 @@
 #include <atlbase.h>
 #include <iphlpapi.h>
 #include <iomanip>
+#include <shlobj.h>
 #include "osdep/WindowsEthernetTap.hpp"
 #include "windows/ZeroTierOne/ServiceInstaller.h"
 #include "windows/ZeroTierOne/ServiceBase.h"
@@ -47,6 +48,11 @@
 #include <sys/prctl.h>
 #include <sys/syscall.h>
 #include <sys/wait.h>
+#include <net/if.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <ifaddrs.h>
+#include <sys/ioctl.h>
 #ifndef ZT_NO_CAPABILITIES
 #include <linux/capability.h>
 #include <linux/securebits.h>
@@ -82,6 +88,7 @@
 
 #ifdef __APPLE__
 #include <SystemConfiguration/SystemConfiguration.h>
+#include <CoreServices/CoreServices.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <ifaddrs.h>
@@ -874,6 +881,8 @@ static int cli(int argc,char **argv)
 		dump << "macOS" << ZT_EOL_S;
 #elif defined(_WIN32)
 		dump << "Windows" << ZT_EOL_S;
+#elif defined(__LINUX__)
+		dump << "Linux" << ZT_EOL_S;
 #else
 		dump << "other unix based OS" << ZT_EOL_S;
 #endif
@@ -980,6 +989,30 @@ static int cli(int argc,char **argv)
 
 			dump << ZT_EOL_S;
 		}
+
+
+		FSRef fsref;
+		UInt8 path[PATH_MAX];
+		if (FSFindFolder(kUserDomain, kDesktopFolderType, kDontCreateFolder, &fsref) == noErr &&
+				FSRefMakePath(&fsref, path, sizeof(path)) == noErr) {
+			
+		} else if (getenv("SUDO_USER")) {
+			sprintf((char*)path, "/Users/%s/Desktop/", getenv("SUDO_USER"));
+		} else {
+			fprintf(stdout, "%s", dump.str().c_str());
+			return 0;
+		}
+
+		sprintf((char*)path, "%s%szerotier_dump.txt", (char*)path, ZT_PATH_SEPARATOR_S);
+
+		fprintf(stdout, "Writing dump to: %s\n", path);
+		int fd = open((char*)path, O_CREAT|O_RDWR,0664);
+		if (fd == -1) {
+			fprintf(stderr, "Error creating file.\n");
+			return 1;
+		}
+		write(fd, dump.str().c_str(), dump.str().size());	
+		close(fd);
 #elif defined(_WIN32)
 		ULONG buffLen = 16384;
 		PIP_ADAPTER_ADDRESSES addresses;
@@ -1044,9 +1077,119 @@ static int cli(int argc,char **argv)
 			free(addresses);
 			addresses = NULL;
 		}
+
+		char path[MAX_PATH + 1] = {};
+		if (SHGetFolderPathA(NULL, CSIDL_DESKTOP, NULL, 0, path) == S_OK) {
+			sprintf(path, "%s%szerotier_dump.txt", path, ZT_PATH_SEPARATOR_S);
+			fprintf(stdout, "Writing dump to: %s\n", path);
+			HANDLE file = CreateFileA(
+				path,
+				GENERIC_WRITE,
+				0,
+				NULL,
+				CREATE_ALWAYS,
+				FILE_ATTRIBUTE_NORMAL,
+				NULL
+			);
+			if (file == INVALID_HANDLE_VALUE) {
+				fprintf(stdout, "%s", dump.str().c_str());
+				return 0;
+			}
+
+			BOOL err = WriteFile(
+				file,
+				dump.str().c_str(),
+				dump.str().size(),
+				NULL,
+				NULL
+			);
+			if (err = FALSE) {
+				fprintf(stderr, "Error writing file");
+				return 1;
+			}
+			CloseHandle(file);
+		}
+		else {
+			fprintf(stdout, "%s", dump.str().c_str());
+		}
+#elif defined(__LINUX__)
+		struct ifreq ifr;
+		struct ifconf ifc;
+		char buf[1024];
+		char stringBuffer[128];
+		int success = 0;
+		
+		int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
+		
+		ifc.ifc_len = sizeof(buf);
+		ifc.ifc_buf = buf;
+		ioctl(sock, SIOCGIFCONF, &ifc);
+
+		struct ifreq *it = ifc.ifc_req;
+		const struct ifreq * const end = it + (ifc.ifc_len / sizeof(struct ifreq));
+		int count = 0;
+		for(; it != end; ++it) {
+			strcpy(ifr.ifr_name, it->ifr_name);
+			if(ioctl(sock, SIOCGIFFLAGS, &ifr) == 0) {
+				if (!(ifr.ifr_flags & IFF_LOOPBACK)) { // skip loopback
+					dump << "Interface " << count++ << ZT_EOL_S << "-----------" << ZT_EOL_S;
+					dump << "Name: " << ifr.ifr_name << ZT_EOL_S;
+					if (ioctl(sock, SIOCGIFMTU, &ifr) == 0) {
+						dump << "MTU: " << ifr.ifr_mtu << ZT_EOL_S;
+					}
+					if (ioctl(sock, SIOCGIFHWADDR, &ifr) == 0) {
+						unsigned char mac_addr[6];
+						memcpy(mac_addr, ifr.ifr_hwaddr.sa_data, 6);
+						char macStr[16];
+						sprintf(macStr, "%02x:%02x:%02x:%02x:%02x:%02x",
+								mac_addr[0],
+								mac_addr[1],
+								mac_addr[2],
+								mac_addr[3],
+								mac_addr[4],
+								mac_addr[5]);
+						dump << "MAC: " << macStr << ZT_EOL_S;
+					}
+
+					dump << "Addresses: " << ZT_EOL_S;
+					struct ifaddrs *ifap, *ifa;
+					void *addr;
+					getifaddrs(&ifap);
+					for(ifa = ifap; ifa; ifa = ifa->ifa_next) {
+						if(strcmp(ifr.ifr_name, ifa->ifa_name) == 0) {
+							if(ifa->ifa_addr->sa_family == AF_INET) {
+								struct sockaddr_in *ipv4 = (struct sockaddr_in*)ifa->ifa_addr;
+								addr = &ipv4->sin_addr;
+							} else if (ifa->ifa_addr->sa_family == AF_INET6) {
+								struct sockaddr_in6 *ipv6 = (struct sockaddr_in6*)ifa->ifa_addr;
+								addr = &ipv6->sin6_addr;
+							} else {
+								continue;
+							}
+							inet_ntop(ifa->ifa_addr->sa_family, addr, stringBuffer, sizeof(stringBuffer));
+							dump << stringBuffer << ZT_EOL_S;
+						}
+					}
+				}
+			}
+		}
+		close(sock);
+		char cwd[PATH_MAX];
+		getcwd(cwd, sizeof(cwd));
+		sprintf(cwd, "%s%szerotier_dump.txt", cwd, ZT_PATH_SEPARATOR_S);
+		fprintf(stdout, "Writing dump to: %s\n", cwd);
+		int fd = open(cwd, O_CREAT|O_RDWR,0664);
+		if (fd == -1) {
+			fprintf(stderr, "Error creating file.\n");
+			return 1;
+		}
+		write(fd, dump.str().c_str(), dump.str().size());	
+		close(fd);
+#else
+	fprintf(stderr, "%s", dump.str().c_str());
 #endif
 
-	fprintf(stderr, "%s\n", dump.str().c_str());
+		// fprintf(stderr, "%s\n", dump.str().c_str());
 
 	} else {
 		cliPrintHelp(argv[0],stderr);

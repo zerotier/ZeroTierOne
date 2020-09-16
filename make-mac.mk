@@ -32,7 +32,7 @@ ifeq ($(ZT_CONTROLLER),1)
 	INCLUDES+=-I/usr/local/opt/libpq/include -Iext/hiredis-0.14.1/include/ -Iext/redis-plus-plus-1.1.1/install/macos/include/sw/
 endif
 
-LIBS+=-framework SystemConfiguration -framework CoreFoundation
+LIBS+=-framework CoreServices -framework SystemConfiguration -framework CoreFoundation
 
 # Official releases are signed with our Apple cert and apply software updates by default
 ifeq ($(ZT_OFFICIAL_RELEASE),1)
