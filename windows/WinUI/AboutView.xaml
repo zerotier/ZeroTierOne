@@ -5,31 +5,35 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:WinUI"
         mc:Ignorable="d"
-        Title="AboutView" Height="368.267" Width="300" Icon="ZeroTierIcon.ico">
-	<Grid>
-		<Image x:Name="image" HorizontalAlignment="Center" Height="100" Margin="0,10,0,0" VerticalAlignment="Top" Width="100" Source="ZeroTierIcon.ico"/>
-		<RichTextBox x:Name="richTextBox" HorizontalAlignment="Left" Height="209" Margin="10,123,0,0" VerticalAlignment="Top" Width="275" IsReadOnly="True" IsDocumentEnabled="True" BorderThickness="0" FontSize="18" RenderTransformOrigin="0.506,0.63">
-			<RichTextBox.Resources>
-				<Style TargetType="Hyperlink">
-					<Setter Property="Cursor" Value="Hand" />
-				</Style>
-			</RichTextBox.Resources>
+        Title="AboutView" Height="404.226" Width="286.36" Icon="ZeroTierIcon.ico">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="42*"/>
+            <ColumnDefinition Width="31*"/>
+        </Grid.ColumnDefinitions>
+        <Image x:Name="image" HorizontalAlignment="Center" Height="100" Margin="96,10,96,0" VerticalAlignment="Top" Width="100" Source="ZeroTierIcon.ico" Grid.ColumnSpan="2"/>
+        <RichTextBox x:Name="richTextBox" HorizontalAlignment="Left" Height="241" Margin="3,120,0,0" VerticalAlignment="Top" Width="275" IsReadOnly="True" IsDocumentEnabled="True" BorderThickness="0" RenderTransformOrigin="0.506,0.63" Grid.ColumnSpan="2" FontSize="16">
+            <RichTextBox.Resources>
+                <Style TargetType="Hyperlink">
+                    <Setter Property="Cursor" Value="Hand" />
+                </Style>
+            </RichTextBox.Resources>
             <FlowDocument>
                 <Paragraph TextAlignment="Center">
                     <Run Text="ZeroTier One"/>
                 </Paragraph>
                 <Paragraph TextAlignment="Center">
-                    <Run FontSize="14" Text="Version 1.6.0"/>
+                    <Run Text="Version 1.6.0"/>
                     <LineBreak/>
-                    <Run FontSize="14" Text="(c) 2011-2020 ZeroTier, Inc."/>
+                    <Run Text="(c) 2011-2020 ZeroTier, Inc."/>
                     <LineBreak/>
-                    <Run FontSize="14" Text="www.zerotier.com"/>
+                    <Run Text="www.zerotier.com"/>
                 </Paragraph>
                 <Paragraph TextAlignment="Center">
-                    <Run FontSize="14" Text="ZeroTier One allows your computer to join virtual networks. Just select &quot;join&quot; and enter a network's 16-digit ID. Each network appears on your computer as a new network port."/>
+                    <Run Text="ZeroTier One allows your computer to join virtual networks. Just select &quot;join&quot; and enter a network's 16-digit ID. Each network appears on your computer as a new network port."/>
                 </Paragraph>
             </FlowDocument>
         </RichTextBox>
 
-	</Grid>
+    </Grid>
 </Window>
