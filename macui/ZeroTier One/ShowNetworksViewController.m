@@ -158,16 +158,19 @@ BOOL hasNetworkWithID(NSArray<Network*> *list, UInt64 nwid)
 
         cell.allowGlobal.enabled = YES;
         cell.allowManaged.enabled = YES;
+        cell.allowDNS.enabled = YES;
     }
     else {
         cell.connectedCheckbox.state = NSOffState;
         cell.allowDefault.enabled = NO;
         cell.allowGlobal.enabled = NO;
         cell.allowManaged.enabled = NO;
+        cell.allowDNS.enabled = NO;
     }
 
     cell.allowGlobal.state = network.allowGlobal ? NSOnState : NSOffState;
     cell.allowManaged.state = network.allowManaged ? NSOnState : NSOffState;
+    cell.allowDNS.state = network.allowDNS ? NSOnState : NSOffState;
 
     cell.addressesField.stringValue = @"";
 

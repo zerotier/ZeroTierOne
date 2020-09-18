@@ -50,6 +50,7 @@ enum NetworkType {
 @property (readonly) BOOL allowManaged;
 @property (readonly) BOOL allowGlobal;
 @property (readonly) BOOL allowDefault;
+@property (readonly) BOOL allowDNS;
 @property (readonly) BOOL connected; // not persisted.  set to YES if loaded via json
 
 - (id)initWithJsonData:(NSDictionary*)jsonData;

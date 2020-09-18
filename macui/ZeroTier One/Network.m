@@ -35,6 +35,7 @@ NSString *NetworkTypeKey = @"type";
 NSString *NetworkAllowManagedKey = @"allowManaged";
 NSString *NetworkAllowGlobalKey = @"allowGlobal";
 NSString *NetworkAllowDefaultKey = @"allowDefault";
+NSString *NetworkAllowDNSKey = @"allowDNS";
 
 @implementation Network
 
@@ -100,6 +101,11 @@ NSString *NetworkAllowDefaultKey = @"allowDefault";
 
         if([jsonData objectForKey:@"allowDefault"]) {
             _allowDefault = [(NSNumber*)[jsonData objectForKey:@"allowDefault"] boolValue];
+        }
+        if([jsonData objectForKey:@"allowDNS"]) {
+            _allowDNS = [(NSNumber*)[jsonData objectForKey:@"allowDNS"] boolValue];
+        } else {
+            _allowDNS = false;
         }
 
         if([jsonData objectForKey:@"status"]) {
@@ -207,6 +213,12 @@ NSString *NetworkAllowDefaultKey = @"allowDefault";
         if([aDecoder containsValueForKey:NetworkAllowDefaultKey]) {
             _allowDefault = [aDecoder decodeBoolForKey:NetworkAllowDefaultKey];
         }
+        
+        if([aDecoder containsValueForKey:NetworkAllowDNSKey]) {
+            _allowDNS = [aDecoder decodeBoolForKey:NetworkAllowDNSKey];
+        } else {
+            _allowDNS = false;
+        }
 
         _connected = NO;
     }
@@ -233,6 +245,7 @@ NSString *NetworkAllowDefaultKey = @"allowDefault";
     [aCoder encodeBool:_allowManaged forKey:NetworkAllowManagedKey];
     [aCoder encodeBool:_allowGlobal forKey:NetworkAllowGlobalKey];
     [aCoder encodeBool:_allowDefault forKey:NetworkAllowDefaultKey];
+    [aCoder encodeBool:_allowDNS forKey:NetworkAllowDNSKey];
 }
 
 + (BOOL)defaultRouteExists:(NSArray<Network *>*)netList
@@ -297,6 +310,7 @@ NSString *NetworkAllowDefaultKey = @"allowDefault";
         self.allowManaged == network.allowManaged &&
         self.allowGlobal == network.allowGlobal &&
         self.allowDefault == network.allowDefault &&
+        self.allowDNS == network.allowDNS &&
         self.connected == network.connected;
 }
 
@@ -331,6 +345,7 @@ NSString *NetworkAllowDefaultKey = @"allowDefault";
         self.allowManaged ^
         self.allowGlobal ^
         self.allowDefault ^
+        self.allowDNS ^
         self.connected;
 }
 
