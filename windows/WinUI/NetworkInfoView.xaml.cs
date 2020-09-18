@@ -36,6 +36,8 @@ namespace WinUI
             allowGlobal.Unchecked += AllowGlobal_CheckStateChanged;
             allowManaged.Checked += AllowManaged_CheckStateChanged;
             allowManaged.Unchecked += AllowManaged_CheckStateChanged;
+            allowDNS.Checked += AllowDNS_CheckStateChanged;
+            allowDNS.Unchecked += AllowDNS_CheckStateChanged;
         }
 
         private void UpdateNetworkData()
@@ -79,6 +81,7 @@ namespace WinUI
             this.allowDefault.IsChecked = network.AllowDefault;
             this.allowGlobal.IsChecked = network.AllowGlobal;
             this.allowManaged.IsChecked = network.AllowManaged;
+            this.allowDNS.IsChecked = network.AllowDNS;
 
 						this.connectedCheckBox.Checked -= connectedCheckBox_Checked;
 						this.connectedCheckBox.Unchecked -= connectedCheckbox_Unchecked;
@@ -116,7 +119,8 @@ namespace WinUI
             APIHandler.Instance.JoinNetwork(this.Dispatcher, network.NetworkId,
                 allowManaged.IsChecked ?? false,
                 allowGlobal.IsChecked ?? false,
-                allowDefault.IsChecked ?? false);
+                allowDefault.IsChecked ?? false,
+                allowDNS.IsChecked ?? false);
         }
 
         private void AllowGlobal_CheckStateChanged(object sender, RoutedEventArgs e)
@@ -125,7 +129,8 @@ namespace WinUI
             APIHandler.Instance.JoinNetwork(this.Dispatcher, network.NetworkId,
                 allowManaged.IsChecked ?? false,
                 allowGlobal.IsChecked ?? false,
-                allowDefault.IsChecked ?? false);
+                allowDefault.IsChecked ?? false,
+                allowDNS.IsChecked ?? false);
         }
 
         private void AllowDefault_CheckStateChanged(object sender, RoutedEventArgs e)
@@ -134,7 +139,18 @@ namespace WinUI
             APIHandler.Instance.JoinNetwork(this.Dispatcher, network.NetworkId,
                 allowManaged.IsChecked ?? false,
                 allowGlobal.IsChecked ?? false,
-                allowDefault.IsChecked ?? false);
+                allowDefault.IsChecked ?? false,
+                allowDNS.IsChecked ?? false);
+        }
+
+        private void AllowDNS_CheckStateChanged(object sender, RoutedEventArgs e)
+        {
+            CheckBox cb = sender as CheckBox;
+            APIHandler.Instance.JoinNetwork(this.Dispatcher, network.NetworkId,
+                allowManaged.IsChecked ?? false,
+                allowGlobal.IsChecked ?? false,
+                allowDefault.IsChecked ?? false,
+                allowDNS.IsChecked ?? false);
         }
 
         private void connectedCheckBox_Checked(object sender, RoutedEventArgs e)
@@ -154,8 +170,9 @@ namespace WinUI
                 bool global = allowGlobal.IsChecked.Value;
                 bool managed = allowManaged.IsChecked.Value;
                 bool defRoute = allowDefault.IsChecked.Value;
+                bool dns = allowDNS.IsChecked.Value;
 
-                APIHandler.Instance.JoinNetwork(this.Dispatcher, networkId.Text, managed, global, defRoute);
+                APIHandler.Instance.JoinNetwork(this.Dispatcher, networkId.Text, managed, global, defRoute, dns);
             }
             else
             {
