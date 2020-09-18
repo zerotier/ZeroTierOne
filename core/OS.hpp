@@ -115,8 +115,10 @@
 #include <mmintrin.h>
 #endif
 
-#if (defined(__ARM_NEON) || defined(__ARM_NEON__))
+#if (defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(ZT_ARCH_ARM_HAS_NEON))
+#ifndef ZT_ARCH_ARM_HAS_NEON
 #define ZT_ARCH_ARM_HAS_NEON 1
+#endif
 #include <arm_neon.h>
 /*#include <arm_acle.h>*/
 #endif
