@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
         xmlns:local="clr-namespace:WinUI"
         mc:Ignorable="d" x:Class="WinUI.NetworkListView"
-        Title="ZeroTier One" SizeToContent="Width" Height="500" Width="Auto" Icon="ZeroTierIcon.ico">
+        Title="ZeroTier One" SizeToContent="Width" Height="640" Width="Auto" Icon="ZeroTierIcon.ico" ResizeMode="CanMinimize">
 	
     <Window.Resources>
         <SolidColorBrush x:Key="GreenBrush" Color="#ff91a2a3"/>

@@ -26,8 +26,8 @@ namespace WinUI
     /// </summary>
     public partial class NetworkListView : Window
     {
-        Regex charRegex = new Regex("[0-9a-fxA-FX]");
-        Regex wholeStringRegex = new Regex("^[0-9a-fxA-FX]+$");
+        private Regex charRegex = new Regex("[0-9a-fxA-FX]");
+        private Regex wholeStringRegex = new Regex("^[0-9a-fxA-FX]+$");
 
         public NetworkListView()
         {
@@ -57,10 +57,7 @@ namespace WinUI
         {
             if (networks != null)
             {
-                networksPage.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
-                {
-                    networksPage.setNetworks(networks);
-                }));
+                networksPage.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() => networksPage.setNetworks(networks)));
             }
         }
 

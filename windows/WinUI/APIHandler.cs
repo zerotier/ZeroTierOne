@@ -13,7 +13,6 @@ using System.Windows.Threading;
 namespace WinUI
 {
 
-
     public class APIHandler
     {
         private string authtoken;
@@ -78,9 +77,8 @@ namespace WinUI
                 String curPath = System.Reflection.Assembly.GetEntryAssembly().Location;
                 int index = curPath.LastIndexOf("\\");
                 curPath = curPath.Substring(0, index);
-                ProcessStartInfo startInfo = new ProcessStartInfo(curPath + "\\copyutil.exe", "\"" + globalZtDir + "\"" + " " + "\"" + localZtDir + "\"");
+                ProcessStartInfo startInfo = new ProcessStartInfo(curPath + "\\copyutil.exe", "\"" + globalZtDir + "\" \"" + localZtDir + "\"");
                 startInfo.Verb = "runas";
-
 
                 var process = Process.Start(startInfo);
                 process.WaitForExit();
@@ -88,7 +86,7 @@ namespace WinUI
 
             authToken = readAuthToken(localZtDir + "\\authtoken.secret");
 
-            if ((authToken == null) || (authToken.Length <= 0))
+            if ((authToken == null) || (authToken.Length < 1))
             {
                 MessageBox.Show("Unable to read ZeroTier One authtoken", "ZeroTier One");
                 return false;
@@ -148,11 +146,9 @@ namespace WinUI
             this.authtoken = authtoken;
         }
 
-
-
         public void GetStatus(StatusCallback cb)
         {
-            var request = WebRequest.Create(url + "/status" + "?auth=" + authtoken) as HttpWebRequest;
+            var request = WebRequest.Create(url + "/status?auth=" + authtoken) as HttpWebRequest;
             if (request != null)
             {
                 request.Method = "GET";
@@ -197,7 +193,7 @@ namespace WinUI
             catch (System.Net.WebException e)
             {
                 HttpWebResponse res = (HttpWebResponse)e.Response;
-                if (res != null && res.StatusCode == HttpStatusCode.Unauthorized)
+                if (res?.StatusCode == HttpStatusCode.Unauthorized)
                 {
                     APIHandler.initHandler(true);
                 }
@@ -208,11 +204,9 @@ namespace WinUI
             }
         }
 
-
-
         public void GetNetworks(NetworkListCallback cb)
         {
-            var request = WebRequest.Create(url + "/network" + "?auth=" + authtoken) as HttpWebRequest;
+            var request = WebRequest.Create(url + "/network?auth=" + authtoken) as HttpWebRequest;
             if (request == null)
             {
                 cb(null);
@@ -261,7 +255,7 @@ namespace WinUI
             catch (System.Net.WebException e)
             {
                 HttpWebResponse res = (HttpWebResponse)e.Response;
-                if (res != null && res.StatusCode == HttpStatusCode.Unauthorized)
+                if (res?.StatusCode == HttpStatusCode.Unauthorized)
                 {
                     APIHandler.initHandler(true);
                 }
@@ -276,8 +270,7 @@ namespace WinUI
         {
             Task.Factory.StartNew(() =>
             {
-                var request = WebRequest.Create(url + "/network/" + nwid + "?auth=" + authtoken) as HttpWebRequest;
-                if (request == null)
+                if (!(WebRequest.Create(url + "/network/" + nwid + "?auth=" + authtoken) is HttpWebRequest request))
                 {
                     return;
                 }
@@ -300,10 +293,7 @@ namespace WinUI
                 }
                 catch (System.Net.WebException)
                 {
-                    d.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
-                    {
-                        MessageBox.Show("Error Joining Network: Cannot connect to ZeroTier service.");
-                    }));
+                    d.BeginInvoke(DispatcherPriority.Normal, new Action(() => MessageBox.Show("Error Joining Network: Cannot connect to ZeroTier service.")));
                     return;
                 }
 
@@ -322,22 +312,16 @@ namespace WinUI
                 }
                 catch (System.Net.Sockets.SocketException)
                 {
-                    d.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
-                    {
-                        MessageBox.Show("Error Joining Network: Cannot connect to ZeroTier service.");
-                    }));
+                    d.BeginInvoke(DispatcherPriority.Normal, new Action(() => MessageBox.Show("Error Joining Network: Cannot connect to ZeroTier service.")));
                 }
                 catch (System.Net.WebException e)
                 {
                     HttpWebResponse res = (HttpWebResponse)e.Response;
-                    if (res != null && res.StatusCode == HttpStatusCode.Unauthorized)
+                    if (res?.StatusCode == HttpStatusCode.Unauthorized)
                     {
                         APIHandler.initHandler(true);
                     }
-                    d.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
-                    {
-                        MessageBox.Show("Error Joining Network: Cannot connect to ZeroTier service.");
-                    }));
+                    d.BeginInvoke(DispatcherPriority.Normal, new Action(() => MessageBox.Show("Error Joining Network: Cannot connect to ZeroTier service.")));
                 }
             });
         }
@@ -346,8 +330,7 @@ namespace WinUI
         {
             Task.Factory.StartNew(() =>
             {
-                var request = WebRequest.Create(url + "/network/" + nwid + "?auth=" + authtoken) as HttpWebRequest;
-                if (request == null)
+                if (!(WebRequest.Create(url + "/network/" + nwid + "?auth=" + authtoken) is HttpWebRequest request))
                 {
                     return;
                 }
@@ -370,22 +353,16 @@ namespace WinUI
                 }
                 catch (System.Net.Sockets.SocketException)
                 {
-                    d.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
-                    {
-                        MessageBox.Show("Error Leaving Network: Cannot connect to ZeroTier service.");
-                    }));
+                    d.BeginInvoke(DispatcherPriority.Normal, new Action(() => MessageBox.Show("Error Leaving Network: Cannot connect to ZeroTier service.")));
                 }
                 catch (System.Net.WebException e)
                 {
                     HttpWebResponse res = (HttpWebResponse)e.Response;
-                    if (res != null && res.StatusCode == HttpStatusCode.Unauthorized)
+                    if (res?.StatusCode == HttpStatusCode.Unauthorized)
                     {
                         APIHandler.initHandler(true);
                     }
-                    d.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
-                    {
-                        MessageBox.Show("Error Leaving Network: Cannot connect to ZeroTier service.");
-                    }));
+                    d.BeginInvoke(DispatcherPriority.Normal, new Action(() => MessageBox.Show("Error Leaving Network: Cannot connect to ZeroTier service.")));
                 }
                 catch
                 {
@@ -398,7 +375,7 @@ namespace WinUI
 
         public void GetPeers(PeersCallback cb)
         {
-            var request = WebRequest.Create(url + "/peer" + "?auth=" + authtoken) as HttpWebRequest;
+            var request = WebRequest.Create(url + "/peer?auth=" + authtoken) as HttpWebRequest;
             if (request == null)
             {
                 cb(null);
@@ -440,7 +417,7 @@ namespace WinUI
             catch (System.Net.WebException e)
             {
                 HttpWebResponse res = (HttpWebResponse)e.Response;
-                if (res != null && res.StatusCode == HttpStatusCode.Unauthorized)
+                if (res?.StatusCode == HttpStatusCode.Unauthorized)
                 {
                     APIHandler.initHandler(true);
                 }

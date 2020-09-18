@@ -29,7 +29,8 @@ namespace WinUI
     /// </summary>
     public partial class ToolbarItem : Window, INotifyPropertyChanged
     {
-        private APIHandler handler = APIHandler.Instance;
+        //TODO: verify if this is used correctly
+        internal APIHandler handler = APIHandler.Instance;
 
         private Point netListLocation = new Point(0, 0);
         private Point joinNetLocation = new Point(0, 0);
@@ -44,7 +45,6 @@ namespace WinUI
         private NetworkMonitor mon = NetworkMonitor.Instance;
 
         private ObservableCollection<MenuItem> _networkCollection = new ObservableCollection<MenuItem>();
-
 
         public ObservableCollection<MenuItem> NetworkCollection
         {
@@ -98,7 +98,7 @@ namespace WinUI
             }
         }
 
-        private void updateStatus(ZeroTierStatus status) 
+        private void updateStatus(ZeroTierStatus status)
         {
             if (status != null)
             {
@@ -124,7 +124,7 @@ namespace WinUI
         {
             try
             {
-		            Clipboard.SetDataObject(nodeId);
+                Clipboard.SetDataObject(nodeId);
             }
             catch (ArgumentNullException)
             {
@@ -152,7 +152,7 @@ namespace WinUI
                 netListView.Top = netListLocation.Y;
                 netListNeedsMoving = false;
             }
-            
+
             netListView.Show();
 
             if (netListNeedsMoving)
@@ -289,7 +289,7 @@ namespace WinUI
 
         private void ToolbarItem_NetworkClicked(object sender, System.Windows.RoutedEventArgs e)
         {
-            if(sender.GetType() == typeof(MenuItem))
+            if (sender.GetType() == typeof(MenuItem))
             {
                 MenuItem item = e.Source as MenuItem;
                 if (item.DataContext != null)
@@ -303,7 +303,7 @@ namespace WinUI
                     {
                         APIHandler.Instance.JoinNetwork(Dispatcher, network.NetworkId, network.AllowManaged, network.AllowGlobal, network.AllowDefault);
                     }
-                }   
+                }
             }
         }
 
@@ -332,7 +332,7 @@ namespace WinUI
 
             double top = screenHeight - height - 40;
             double left = screenWidth - width - 20;
-            
+
             w.Top = top;
             w.Left = left;
         }

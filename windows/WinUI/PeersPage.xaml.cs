@@ -34,13 +34,13 @@ namespace WinUI
             if (list == null)
                 return;
 
-            
-            foreach(ZeroTierPeer p in list)
+
+            foreach (ZeroTierPeer p in list)
             {
                 ZeroTierPeer curPeer = peersList.Find(peer => peer.Equals(p));
                 if (curPeer == null)
                 {
-                    peersList.Add(p);                    
+                    peersList.Add(p);
                 }
                 else
                 {

@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:WinUI"
         mc:Ignorable="d"
-        Title="PreferencesView" SizeToContent="WidthAndHeight" Height="Auto" Width="Auto" Icon="ZeroTierIcon.ico">
+        Title="PreferencesView" SizeToContent="WidthAndHeight" Height="Auto" Width="Auto" Icon="ZeroTierIcon.ico" ResizeMode="CanMinimize">
   <Grid>
 		<Grid.ColumnDefinitions>
 			<ColumnDefinition Width="Auto"/>

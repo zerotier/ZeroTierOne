@@ -20,8 +20,8 @@ namespace WinUI
     /// </summary>
     public partial class JoinNetworkView : Window
     {
-        Regex charRegex = new Regex("[0-9a-fxA-FX]");
-        Regex wholeStringRegex = new Regex("^[0-9a-fxA-FX]+$");
+        private Regex charRegex = new Regex("[0-9a-fxA-FX]");
+        private Regex wholeStringRegex = new Regex("^[0-9a-fxA-FX]+$");
 
         public JoinNetworkView()
         {
@@ -35,7 +35,7 @@ namespace WinUI
         {
             e.Handled = !charRegex.IsMatch(e.Text);
 
-            if ( (joinNetworkBox.Text.Length + e.Text.Length) == 16)
+            if ((joinNetworkBox.Text.Length + e.Text.Length) == 16)
             {
                 joinButton.IsEnabled = true;
             }
@@ -109,7 +109,6 @@ namespace WinUI
 
         private void onCopyCut(object sender, DataObjectCopyingEventArgs e)
         {
-            
         }
 
         private void joinButton_Click(object sender, RoutedEventArgs e)

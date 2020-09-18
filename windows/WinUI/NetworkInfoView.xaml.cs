@@ -42,7 +42,6 @@ namespace WinUI
 
         private void UpdateNetworkData()
         {
-
             if (this.networkId.Text != network.NetworkId)
                 this.networkId.Text = network.NetworkId;
 
@@ -83,21 +82,18 @@ namespace WinUI
             this.allowManaged.IsChecked = network.AllowManaged;
             this.allowDNS.IsChecked = network.AllowDNS;
 
-						this.connectedCheckBox.Checked -= connectedCheckBox_Checked;
-						this.connectedCheckBox.Unchecked -= connectedCheckbox_Unchecked;
+            this.connectedCheckBox.Checked -= connectedCheckBox_Checked;
+            this.connectedCheckBox.Unchecked -= connectedCheckbox_Unchecked;
 
             this.connectedCheckBox.IsChecked = network.IsConnected;
 
-						this.connectedCheckBox.Checked += connectedCheckBox_Checked;
-						this.connectedCheckBox.Unchecked += connectedCheckbox_Unchecked;
-				}
+            this.connectedCheckBox.Checked += connectedCheckBox_Checked;
+            this.connectedCheckBox.Unchecked += connectedCheckbox_Unchecked;
+        }
 
         public bool HasNetwork(ZeroTierNetwork network)
         {
-            if (this.network.NetworkId.Equals(network.NetworkId))
-                return true;
-
-            return false;
+            return this.network.NetworkId.Equals(network.NetworkId);
         }
 
         public void SetNetworkInfo(ZeroTierNetwork network)

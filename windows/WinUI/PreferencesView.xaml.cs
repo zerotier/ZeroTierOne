@@ -27,10 +27,9 @@ namespace WinUI
         {
             InitializeComponent();
 
-
             string keyValue = rk.GetValue(AppName) as string;
 
-            if (keyValue != null && keyValue.Equals(AppLocation))
+            if (keyValue?.Equals(AppLocation) == true)
             {
                 startupCheckbox.IsChecked = true;
             }
@@ -62,7 +61,7 @@ namespace WinUI
             {
                 string keyValue = rk.GetValue(AppName) as string;
 
-                if (keyValue != null && keyValue.Equals(AppLocation))
+                if (keyValue?.Equals(AppLocation) == true)
                 {
                     rk.DeleteValue(AppName);
                 }

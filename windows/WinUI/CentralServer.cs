@@ -7,7 +7,7 @@ using Newtonsoft.Json;
 
 namespace WinUI
 {
-    class CentralServer
+    internal class CentralServer
     {
         public CentralServer()
         {

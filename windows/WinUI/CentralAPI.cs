@@ -10,7 +10,7 @@ using Newtonsoft.Json;
 
 namespace WinUI
 {
-    class CentralAPI
+    internal sealed class CentralAPI
     {
         private static volatile CentralAPI instance;
         private static object syncRoot = new Object();
@@ -53,8 +53,6 @@ namespace WinUI
             }
         }
 
-
-
         private CentralAPI()
         {
 #if DEBUG
@@ -79,7 +77,7 @@ namespace WinUI
                 if (ctmp != null)
                 {
                     Central = ctmp;
-                } 
+                }
                 else
                 {
                     Central = new CentralServer();
@@ -245,12 +243,7 @@ namespace WinUI
             var postContent = new StringContent(json, Encoding.UTF8, "application/json");
             HttpResponseMessage response = await client.PostAsync(postURL, postContent);
 
-            if (response.IsSuccessStatusCode)
-            {
-                return true;
-            }
-
-            return false;
+            return response.IsSuccessStatusCode;
         }
     }
 }

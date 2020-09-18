@@ -42,6 +42,8 @@ enc_temp_folder
 /windows/copyutil/bin
 /windows/copyutil/obj
 .vs/
+windows/Win7Debug
+windows/win7Release
 
 # *nix/Mac build droppings
 /build-*

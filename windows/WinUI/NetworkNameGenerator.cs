@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace WinUI
 {
-    class NetworkNameGenerator
+    internal class NetworkNameGenerator
     {
         public static string GenerateName()
         {

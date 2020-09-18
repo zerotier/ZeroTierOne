@@ -185,7 +185,8 @@ namespace WinUI
         }
 
         [JsonProperty("nwid")]
-        public string NetworkId {
+        public string NetworkId
+        {
             get
             {
                 return networkId;
@@ -237,7 +238,6 @@ namespace WinUI
                 networkStatus = value;
                 NotifyPropertyChanged();
             }
-
         }
 
         [JsonProperty("type")]
@@ -435,7 +435,7 @@ namespace WinUI
                 NotifyPropertyChanged();
             }
         }
-        
+
         public bool IsConnected
         {
             get
@@ -453,8 +453,7 @@ namespace WinUI
         {
             get
             {
-
-                if (NetworkName != null && NetworkName.Length > 0)
+                if (NetworkName?.Length > 0)
                 {
                     return NetworkId + " (" + NetworkName + ")";
                 }
@@ -472,7 +471,7 @@ namespace WinUI
 
             return NetworkId.Equals(network.NetworkId);
         }
-        
+
         public int CompareTo(ZeroTierNetwork network)
         {
             if (NetworkId == null || network == null)
@@ -496,7 +495,7 @@ namespace WinUI
         }
     }
 
-     public class NetworkEqualityComparer : IEqualityComparer<ZeroTierNetwork>
+    public class NetworkEqualityComparer : IEqualityComparer<ZeroTierNetwork>
     {
         public bool Equals(ZeroTierNetwork lhs, ZeroTierNetwork rhs)
         {

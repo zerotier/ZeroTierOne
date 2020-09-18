@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:WinUI"
         mc:Ignorable="d"
-        Title="Join a Network" SizeToContent="WidthAndHeight" Height="Auto" Width="Auto" Icon="ZeroTierIcon.ico">
+        Title="Join a Network" SizeToContent="WidthAndHeight" Height="Auto" Width="Auto" Icon="ZeroTierIcon.ico" ResizeMode="CanMinimize">
     <Grid HorizontalAlignment="Left" Margin="0,0,0,0" Width="315">
         <TextBox x:Name="joinNetworkBox" HorizontalAlignment="Left" Height="23" Margin="10,10,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="291" PreviewTextInput="joinNetworkBox_OnTextEntered" PreviewKeyDown="joinNetworkBox_OnKeyDown"/>
         <CheckBox x:Name="allowManagedCheckbox" Content="Allow Managed" HorizontalAlignment="Left" Margin="10,38,0,0" VerticalAlignment="Top" IsChecked="True"/>
