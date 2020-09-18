@@ -13,14 +13,14 @@ namespace WinUI
         public delegate void NetworkListCallback(List<ZeroTierNetwork> networks);
         public delegate void StatusCallback(ZeroTierStatus status);
 
-        private Thread runThread;
+        private readonly Thread runThread;
         private NetworkListCallback _nwCb;
         private StatusCallback _stCb;
 
         private List<ZeroTierNetwork> _knownNetworks = new List<ZeroTierNetwork>();
 
         private static NetworkMonitor instance;
-        private static object syncRoot = new object();
+        private static readonly object syncRoot = new object();
 
         public static NetworkMonitor Instance
         {
@@ -112,14 +112,7 @@ namespace WinUI
 
                 foreach (ZeroTierNetwork n in _knownNetworks)
                 {
-                    if (networks.Contains(n))
-                    {
-                        n.IsConnected = true;
-                    }
-                    else
-                    {
-                        n.IsConnected = false;
-                    }
+                    n.IsConnected = networks.Contains(n);
                 }
 
                 _knownNetworks.Sort();

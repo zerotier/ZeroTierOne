@@ -38,10 +38,6 @@ namespace WinUI
             NetworkMonitor.Instance.SubscribeNetworkUpdates(updateNetworks);
         }
 
-        ~NetworkListView()
-        {
-        }
-
         protected override void OnClosing(CancelEventArgs e)
         {
             e.Cancel = true;

@@ -13,11 +13,11 @@ namespace WinUI
     internal sealed class CentralAPI
     {
         private static volatile CentralAPI instance;
-        private static object syncRoot = new Object();
+        private static readonly object syncRoot = new Object();
 
-        private CookieContainer cookieContainer;
-        private HttpClientHandler clientHandler;
-        private HttpClient client;
+        private readonly CookieContainer cookieContainer;
+        private readonly HttpClientHandler clientHandler;
+        private readonly HttpClient client;
 
         private CentralServer server;
         public CentralServer Central
@@ -74,14 +74,7 @@ namespace WinUI
                 byte[] tmp = File.ReadAllBytes(centralConfigPath);
                 string json = Encoding.UTF8.GetString(tmp).Trim();
                 CentralServer ctmp = JsonConvert.DeserializeObject<CentralServer>(json);
-                if (ctmp != null)
-                {
-                    Central = ctmp;
-                }
-                else
-                {
-                    Central = new CentralServer();
-                }
+                Central = ctmp ?? new CentralServer();
             }
             else
             {
@@ -135,21 +128,21 @@ namespace WinUI
             string postURL = Central.ServerURL + "/api/_auth/local";
             CentralLogin login = new CentralLogin(email, password, isNewUser);
             var content = new StringContent(JsonConvert.SerializeObject(login), Encoding.UTF8, "application/json");
-            HttpResponseMessage response = await client.PostAsync(postURL, content);
+            HttpResponseMessage response = await client.PostAsync(postURL, content).ConfigureAwait(true);
 
             if (!response.IsSuccessStatusCode)
             {
                 return false;
             }
 
-            string resContent = await response.Content.ReadAsStringAsync();
+            string resContent = await response.Content.ReadAsStringAsync().ConfigureAwait(true);
 
             CentralUser user = JsonConvert.DeserializeObject<CentralUser>(resContent);
 
             if (user.Tokens.Count == 0)
             {
                 // create token
-                user = await CreateAuthToken(user);
+                user = await CreateAuthToken(user).ConfigureAwait(true);
             }
 
             Central.APIKey = user.Tokens[0];
@@ -163,7 +156,7 @@ namespace WinUI
         public async Task<CentralUser> CreateAuthToken(CentralUser user)
         {
             string randomTokenURL = Central.ServerURL + "/api/randomToken";
-            HttpResponseMessage response = await client.GetAsync(randomTokenURL);
+            HttpResponseMessage response = await client.GetAsync(randomTokenURL).ConfigureAwait(true);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -171,7 +164,7 @@ namespace WinUI
                 return null;
             }
 
-            string resContent = await response.Content.ReadAsStringAsync();
+            string resContent = await response.Content.ReadAsStringAsync().ConfigureAwait(true);
 
             CentralToken t = JsonConvert.DeserializeObject<CentralToken>(resContent);
 
@@ -181,7 +174,7 @@ namespace WinUI
 
             string postURL = Central.ServerURL + "/api/user/" + user.Id;
             var postContent = new StringContent(tokenObj, Encoding.UTF8, "application/json");
-            response = await client.PostAsync(postURL, postContent);
+            response = await client.PostAsync(postURL, postContent).ConfigureAwait(true);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -189,17 +182,15 @@ namespace WinUI
                 return null;
             }
 
-            resContent = await response.Content.ReadAsStringAsync();
-            user = JsonConvert.DeserializeObject<CentralUser>(resContent);
-
-            return user;
+            resContent = await response.Content.ReadAsStringAsync().ConfigureAwait(true);
+            return JsonConvert.DeserializeObject<CentralUser>(resContent);
         }
 
         public async Task<List<CentralNetwork>> GetNetworkList()
         {
             string networkURL = Central.ServerURL + "/api/network";
 
-            HttpResponseMessage response = await client.GetAsync(networkURL);
+            HttpResponseMessage response = await client.GetAsync(networkURL).ConfigureAwait(true);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -207,7 +198,7 @@ namespace WinUI
                 return new List<CentralNetwork>();
             }
 
-            string resContent = await response.Content.ReadAsStringAsync();
+            string resContent = await response.Content.ReadAsStringAsync().ConfigureAwait(true);
 
             List<CentralNetwork> networkList = JsonConvert.DeserializeObject<List<CentralNetwork>>(resContent);
 
@@ -222,14 +213,14 @@ namespace WinUI
             network.Config.Name = NetworkNameGenerator.GenerateName();
             string jsonNetwork = JsonConvert.SerializeObject(network);
             var postContent = new StringContent(jsonNetwork, Encoding.UTF8, "application/json");
-            HttpResponseMessage response = await client.PostAsync(networkURL, postContent);
+            HttpResponseMessage response = await client.PostAsync(networkURL, postContent).ConfigureAwait(true);
 
             if (!response.IsSuccessStatusCode)
             {
                 return null;
             }
 
-            string resContent = await response.Content.ReadAsStringAsync();
+            string resContent = await response.Content.ReadAsStringAsync().ConfigureAwait(true);
 
             CentralNetwork newNetwork = JsonConvert.DeserializeObject<CentralNetwork>(resContent);
 
@@ -238,10 +229,10 @@ namespace WinUI
 
         public async Task<bool> AuthorizeNode(string nodeAddress, string networkId)
         {
-            string json = "{ \"config\": { \"authorized\": true } }";
+            const string json = "{ \"config\": { \"authorized\": true } }";
             string postURL = Central.ServerURL + "/api/network/" + networkId + "/member/" + nodeAddress;
             var postContent = new StringContent(json, Encoding.UTF8, "application/json");
-            HttpResponseMessage response = await client.PostAsync(postURL, postContent);
+            HttpResponseMessage response = await client.PostAsync(postURL, postContent).ConfigureAwait(true);
 
             return response.IsSuccessStatusCode;
         }

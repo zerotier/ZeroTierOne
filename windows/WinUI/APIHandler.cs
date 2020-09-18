@@ -12,15 +12,14 @@ using System.Windows.Threading;
 
 namespace WinUI
 {
-
     public class APIHandler
     {
-        private string authtoken;
+        private readonly string authtoken;
 
-        private string url = null;
+        private readonly string url = null;
 
         private static volatile APIHandler instance;
-        private static object syncRoot = new Object();
+        private static readonly object syncRoot = new Object();
 
         public delegate void NetworkListCallback(List<ZeroTierNetwork> networks);
         public delegate void StatusCallback(ZeroTierStatus status);

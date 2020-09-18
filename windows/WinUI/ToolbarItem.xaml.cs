@@ -61,7 +61,7 @@ namespace WinUI
             mon.SubscribeNetworkUpdates(updateNetworks);
             mon.SubscribeStatusUpdates(updateStatus);
 
-            SystemEvents.DisplaySettingsChanged += new EventHandler(SystemEvents_DisplaySettingsChanged);
+            SystemEvents.DisplaySettingsChanged += SystemEvents_DisplaySettingsChanged;
         }
 
         ~ToolbarItem()
@@ -108,14 +108,7 @@ namespace WinUI
                     nodeIdMenuItem.IsEnabled = true;
                     nodeId = status.Address;
 
-                    if (CentralAPI.Instance.HasAccessToken())
-                    {
-                        newNetworkItem.IsEnabled = true;
-                    }
-                    else
-                    {
-                        newNetworkItem.IsEnabled = false;
-                    }
+                    newNetworkItem.IsEnabled = CentralAPI.Instance.HasAccessToken();
                 }));
             }
         }
@@ -312,13 +305,13 @@ namespace WinUI
             if (CentralAPI.Instance.HasAccessToken())
             {
                 CentralAPI api = CentralAPI.Instance;
-                CentralNetwork newNetwork = await api.CreateNewNetwork();
+                CentralNetwork newNetwork = await api.CreateNewNetwork().ConfigureAwait(true);
 
                 APIHandler handler = APIHandler.Instance;
                 handler.JoinNetwork(this.Dispatcher, newNetwork.Id);
 
                 string nodeId = APIHandler.Instance.NodeAddress();
-                bool authorized = await CentralAPI.Instance.AuthorizeNode(nodeId, newNetwork.Id);
+                bool authorized = await CentralAPI.Instance.AuthorizeNode(nodeId, newNetwork.Id).ConfigureAwait(true);
             }
         }
 

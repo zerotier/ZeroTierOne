@@ -9,7 +9,6 @@ namespace WinUI
 {
     internal class CentralLogin
     {
-
         public CentralLogin(string email, string password, bool isNew)
         {
             Login = email;
