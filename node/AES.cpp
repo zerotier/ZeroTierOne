@@ -18,6 +18,10 @@
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #endif
 
+#ifdef __APPLE__
+#include <arm_neon.h>
+#endif
+
 #define Te1_r(x) ZT_ROR32(Te0[x], 8U)
 #define Te2_r(x) ZT_ROR32(Te0[x], 16U)
 #define Te3_r(x) ZT_ROR32(Te0[x], 24U)

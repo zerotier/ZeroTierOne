@@ -112,11 +112,17 @@
 #endif
 
 #if (defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(ZT_ARCH_ARM_HAS_NEON))
+#if defined(__APPLE__) && !defined(__LP64__)
+#ifdef ZT_ARCH_ARM_HAS_NEON
+#undef ZT_ARCH_ARM_HAS_NEON
+#endif
+#else
 #ifndef ZT_ARCH_ARM_HAS_NEON
 #define ZT_ARCH_ARM_HAS_NEON 1
 #endif
 #include <arm_neon.h>
 /*#include <arm_acle.h>*/
+#endif
 #endif
 
 // Define ZT_NO_TYPE_PUNNING to disable reckless casts on anything other than x86/x64.
