@@ -375,7 +375,9 @@ public:
 #if defined(__GNUC__)
 #if defined(__FreeBSD__)
 		return bswap64(n);
-#elif (!defined(__OpenBSD__))
+#elif defined(__OpenBSD__)
+		return swap64(n);
+#else
 		return __builtin_bswap64(n);
 #endif
 #else
@@ -408,7 +410,9 @@ public:
 #if defined(__GNUC__)
 #if defined(__FreeBSD__)
 		return bswap64(n);
-#elif (!defined(__OpenBSD__))
+#elif defined(__OpenBSD__)
+		return swap64(n);
+#else
 		return __builtin_bswap64(n);
 #endif
 #else
