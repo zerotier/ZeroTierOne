@@ -12,9 +12,15 @@ LOCAL_LDLIBS := -llog
 # LOCAL_CFLAGS := -g
 
 LOCAL_CFLAGS := -DZT_USE_MINIUPNPC
+ifeq ($(TARGET_ARCH_ABI),x86_64)
+    LOCAL_CXXFLAGS := -maes -mpclmul -msse4.1
+endif
 
 # ZeroTierOne SDK source files
 LOCAL_SRC_FILES := \
+    $(ZT1)/node/AES.cpp \
+    $(ZT1)/node/Bond.cpp \
+    $(ZT1)/node/BondController.cpp \
     $(ZT1)/node/C25519.cpp \
 	$(ZT1)/node/Capability.cpp \
 	$(ZT1)/node/CertificateOfMembership.cpp \

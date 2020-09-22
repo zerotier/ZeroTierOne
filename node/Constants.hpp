@@ -111,8 +111,10 @@
 #include <mmintrin.h>
 #endif
 
+
+
 #if (defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(ZT_ARCH_ARM_HAS_NEON))
-#if defined(__APPLE__) && !defined(__LP64__)
+#if (defined(__APPLE__) && !defined(__LP64__)) || defined(__ANDROID__)
 #ifdef ZT_ARCH_ARM_HAS_NEON
 #undef ZT_ARCH_ARM_HAS_NEON
 #endif
