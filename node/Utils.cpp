@@ -46,6 +46,10 @@
 #include <TargetConditionals.h>
 #endif
 
+#if defined(__ANDROID__) && defined(__aarch64__)
+#include <asm/hwcap.h>
+#endif
+
 namespace ZeroTier {
 
 const uint64_t Utils::ZERO256[4] = {0ULL,0ULL,0ULL,0ULL};
