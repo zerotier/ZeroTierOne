@@ -1031,25 +1031,21 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 
 					if (b.count("dns")) {
 						json &dns = b["dns"];
-						if (dns.is_array()) {
-							json nda = json::array();
-							for(unsigned int i=0;i<dns.size();++i) {
-								json &d = dns[i];
-								if (d.is_object()) {
-									json nd = json::object();
-									nd["domain"] = d["domain"];
-									json &srv = d["servers"];
-									if (srv.is_array()) {
-										json ns = json::array();
-										for(unsigned int j=0;j<srv.size();++j) {
-											ns.push_back(srv[i]);
-										}
-										nd["servers"] = ns;
-									}
-									nda.push_back(nd);
+						if (dns.is_object()) {
+							json nd;
+
+							nd["domain"] = dns["domain"];
+
+							json &srv = dns["servers"];
+							if (srv.is_array()) {
+								json ns = json::array();
+								for(unsigned int i=0;i<srv.size();++i) {
+									ns.push_back(srv[i]);
 								}
+								nd["servers"] = ns;
 							}
-							network["dns"] = nda;
+
+							network["dns"] = nd;
 						}
 					}
 
