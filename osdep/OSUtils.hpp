@@ -225,11 +225,7 @@ public:
 		return (int64_t)( ((tmp.QuadPart - 116444736000000000LL) / 10000L) + st.wMilliseconds );
 #else
 		struct timeval tv;
-#ifdef __LINUX__
-		syscall(SYS_gettimeofday,&tv,0); /* fix for musl libc broken gettimeofday bug */
-#else
 		gettimeofday(&tv,(struct timezone *)0);
-#endif
 		return ( (1000LL * (int64_t)tv.tv_sec) + (int64_t)(tv.tv_usec / 1000) );
 #endif
 	};
