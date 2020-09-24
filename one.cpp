@@ -1171,7 +1171,7 @@ static int cli(int argc,char **argv)
 			}
 		}
 		close(sock);
-		char cwd[PATH_MAX];
+		char cwd[16384];
 		getcwd(cwd, sizeof(cwd));
 		sprintf(cwd, "%s%szerotier_dump.txt", cwd, ZT_PATH_SEPARATOR_S);
 		fprintf(stdout, "Writing dump to: %s\n", cwd);
