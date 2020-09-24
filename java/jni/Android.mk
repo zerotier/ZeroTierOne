@@ -11,10 +11,22 @@ LOCAL_C_INCLUDES := \
 LOCAL_LDLIBS := -llog
 # LOCAL_CFLAGS := -g
 
+APP_UNIFIED_HEADERS := true
+
 LOCAL_CFLAGS := -DZT_USE_MINIUPNPC
+ifeq ($(TARGET_ARCH_ABI),x86_64)
+    LOCAL_CXXFLAGS := -maes -mpclmul -msse4.1
+endif
+ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
+    LOCAL_ARM_NEON := true
+    LOCAL_CXXFLAGS := -march=armv8-a+crypto -mfloat-abi=softfp -mfpu=neon -maes -isystem $NDK/sysroot/usr/include/$TRIPLE
+endif
 
 # ZeroTierOne SDK source files
 LOCAL_SRC_FILES := \
+    $(ZT1)/node/AES.cpp \
+    $(ZT1)/node/Bond.cpp \
+    $(ZT1)/node/BondController.cpp \
     $(ZT1)/node/C25519.cpp \
 	$(ZT1)/node/Capability.cpp \
 	$(ZT1)/node/CertificateOfMembership.cpp \

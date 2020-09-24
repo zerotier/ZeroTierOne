@@ -42,6 +42,14 @@
 #include "Mutex.hpp"
 #include "Salsa20.hpp"
 
+#ifdef __APPLE__
+#include <TargetConditionals.h>
+#endif
+
+#if defined(__ANDROID__) && defined(__aarch64__)
+#include <asm/hwcap.h>
+#endif
+
 namespace ZeroTier {
 
 const uint64_t Utils::ZERO256[4] = {0ULL,0ULL,0ULL,0ULL};
@@ -51,6 +59,13 @@ const char Utils::HEXCHARS[16] = { '0','1','2','3','4','5','6','7','8','9','a','
 #ifdef ZT_ARCH_ARM_HAS_NEON
 Utils::ARMCapabilities::ARMCapabilities() noexcept
 {
+#if TARGET_OS_IPHONE
+    this->aes = true;
+    this->crc32 = true;
+    this->pmull = true;
+    this->sha1 = true;
+    this->sha2 = true;
+#else
 #ifdef HWCAP2_AES
 	if (sizeof(void *) == 4) {
 		const long hwcaps2 = getauxval(AT_HWCAP2);
@@ -70,6 +85,7 @@ Utils::ARMCapabilities::ARMCapabilities() noexcept
 #ifdef HWCAP2_AES
 	}
 #endif
+#endif // TARGET_OS_IPHONE
 }
 
 const Utils::ARMCapabilities Utils::ARMCAP;
