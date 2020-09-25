@@ -40,7 +40,7 @@ ifeq ($(ZT_OFFICIAL_RELEASE),1)
 	ZT_USE_MINIUPNPC=1
 	CODESIGN=codesign
 	PRODUCTSIGN=productsign
-	CODESIGN_APP_CERT="Developer ID Application: ZeroTier, Inc (8ZD9JUCZ4V)"
+	CODESIGN_APP_CERT="Apple Distribution: ZeroTier, Inc (8ZD9JUCZ4V)"
 	CODESIGN_INSTALLER_CERT="Developer ID Installer: ZeroTier, Inc (8ZD9JUCZ4V)"
 	NOTARIZE=xcrun altool
 	NOTARIZE_USER_ID="adam.ierymenko@gmail.com"
