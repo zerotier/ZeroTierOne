@@ -255,6 +255,31 @@ static int testCrypto()
 		::free((void *)bb);
 	}
 
+	std::cout << "[crypto] Benchmarking AES-GMAC-SIV... "; std::cout.flush();
+	{
+		uint64_t end,start = OSUtils::now();
+		uint64_t bytes = 0;
+		AES k0,k1;
+		k0.init(buf1);
+		k1.init(buf2);
+		AES::GMACSIVEncryptor enc(k0,k1);
+		for (;;) {
+			for(unsigned int i=0;i<10000;++i) {
+				enc.init(i,buf2);
+				enc.update1(buf1,sizeof(buf1));
+				enc.finish1();
+				enc.update2(buf1,sizeof(buf1));
+				enc.finish2();
+				buf1[0] = buf2[0];
+				bytes += sizeof(buf1);
+			}
+			end = OSUtils::now();
+			if ((end - start) >= 5000)
+				break;
+		}
+		std::cout << (((double)bytes / 1048576.0) / ((double)(end - start) / 1024.0)) << " MiB/second" << std::endl;
+	}
+
 	std::cout << "[crypto] Testing SHA-512... "; std::cout.flush();
 	SHA512(buf1,sha512TV0Input,(unsigned int)strlen(sha512TV0Input));
 	if (memcmp(buf1,sha512TV0Digest,64)) {
