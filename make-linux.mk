@@ -233,6 +233,9 @@ endif
 ifeq ($(CC_MACH),s390x)
 	ZT_ARCHITECTURE=16
 endif
+ifeq ($(CC_MACH),riscv64)
+	ZT_ARCHITECTURE=0
+endif
 
 # Fail if system architecture could not be determined
 ifeq ($(ZT_ARCHITECTURE),999)
