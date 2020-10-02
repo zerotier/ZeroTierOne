@@ -65,6 +65,7 @@
 		93DAFB261D3F0BEE004D5417 /* about.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = about.html; sourceTree = "<group>"; };
 		93DAFE4A1CFE53CA00547CC4 /* AuthtokenCopy.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AuthtokenCopy.m; sourceTree = "<group>"; };
 		93DAFE4C1CFE53DA00547CC4 /* AuthtokenCopy.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AuthtokenCopy.h; sourceTree = "<group>"; };
+		C13C72B12527E1B20094F8B4 /* ZeroTier One.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "ZeroTier One.entitlements"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -99,6 +100,7 @@
 		93326BDA1CE7C816005CA2AC /* ZeroTier One */ = {
 			isa = PBXGroup;
 			children = (
+				C13C72B12527E1B20094F8B4 /* ZeroTier One.entitlements */,
 				932D472E1D1CD499004BCFE2 /* ZeroTierIcon.icns */,
 				93326BDD1CE7C816005CA2AC /* Assets.xcassets */,
 				93326BDF1CE7C816005CA2AC /* MainMenu.xib */,
@@ -175,6 +177,7 @@
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
 			knownRegions = (
+				English,
 				en,
 				Base,
 			);
@@ -330,7 +333,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = "ZeroTier One/ZeroTier One.entitlements";
+				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = "ZeroTier One/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
@@ -345,7 +351,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = "ZeroTier One/ZeroTier One.entitlements";
+				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = "ZeroTier One/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
