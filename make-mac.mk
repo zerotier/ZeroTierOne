@@ -40,7 +40,7 @@ ifeq ($(ZT_OFFICIAL_RELEASE),1)
 	ZT_USE_MINIUPNPC=1
 	CODESIGN=codesign
 	PRODUCTSIGN=productsign
-	CODESIGN_APP_CERT="Apple Distribution: ZeroTier, Inc (8ZD9JUCZ4V)"
+	CODESIGN_APP_CERT="Developer ID Application: ZeroTier, Inc (8ZD9JUCZ4V)"
 	CODESIGN_INSTALLER_CERT="Developer ID Installer: ZeroTier, Inc (8ZD9JUCZ4V)"
 	NOTARIZE=xcrun altool
 	NOTARIZE_USER_ID="adam.ierymenko@gmail.com"
@@ -105,7 +105,7 @@ one:	$(CORE_OBJS) $(ONE_OBJS) one.o mac-agent
 	# $(STRIP) zerotier-one
 	ln -sf zerotier-one zerotier-idtool
 	ln -sf zerotier-one zerotier-cli
-	$(CODESIGN) -f -s $(CODESIGN_APP_CERT) zerotier-one
+	$(CODESIGN) -f --options=runtime -s $(CODESIGN_APP_CERT) zerotier-one
 
 zerotier-one: one
 
