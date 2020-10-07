@@ -1,9 +1,9 @@
 ZeroTier Release Notes
 ======
 
-# 2020-10-05 -- Version 1.6.0-beta1
+# 2020-10-05 -- Version 1.5.0 (actually 1.6.0-beta1)
 
-Version 1.6.0 is a significant release that incorporates a number of back-ported fixes and features from the ZeroTier 2.0 tree.
+Version 1.6.0 (1.5.0 is a beta!) is a significant release that incorporates a number of back-ported fixes and features from the ZeroTier 2.0 tree.
 
 Major new features are:
 
@@ -11,12 +11,14 @@ Major new features are:
  * **DNS configuration** push from network controllers to end nodes, with locally configurable permissions for whether or not push is allowed.
  * **AES-GMAC-SIV** encryption mode, which is both somewhat more secure and significantly faster than the old Salsa20/12-Poly1305 mode on hardware that supports AES acceleration. This includes virtually all X86-64 chips and most ARM64. This mode is based on AES-SIV and has been audited by Trail of Bits to ensure that it is equivalent security-wise.
 
-Known issues that are not yet fixed:
+Known issues that are not yet fixed in this beta:
 
  * Some Mac users have reported periods of 100% CPU in kernel_task and connection instability after leaving networks that have been joined for a period of time, or needing to kill ZeroTier and restart it to finish leaving a network. This doesn't appear to affect all users and we haven't diagnosed the root cause yet.
  * The service sometimes hangs on shutdown requiring a kill -9. This also does not affect all systems or users.
  * AES hardware acceleration is not yet supported on 32-bit ARM, PowerPC (32 or 64), or MIPS (32 or 64) systems. Currently supported are X86-64 and ARM64/AARCH64 with crypto extensions.
  * Some users have reported multicast/broadcast outages on networks lasting up to 30 seconds. Still investigating.
+
+We're trying to fix all these issues before the 1.6.0 release. Stay tuned.
 
 # 2019-08-30 -- Version 1.4.6
 
