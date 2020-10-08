@@ -184,11 +184,6 @@
 #define ZT_PROTO_PACKET_FRAGMENT_INDICATOR 0xff
 
 /**
- * Length of a probe packet
- */
-#define ZT_PROTO_PROBE_LENGTH 4
-
-/**
  * Index at which packet fragment payload starts
  */
 #define ZT_PROTO_PACKET_FRAGMENT_PAYLOAD_START_AT ZT_PROTO_MIN_FRAGMENT_LENGTH
