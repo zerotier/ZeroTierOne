@@ -110,7 +110,9 @@ MacEthernetTap::MacEthernetTap(
 		if (!getifaddrs(&ifa)) {
 			struct ifaddrs *p = ifa;
 			while (p) {
-				if ((!strncmp(p->ifa_name,"feth",4))&&(strlen(p->ifa_name) >= 7)&&(deleted.count(std::string(p->ifa_name)) == 0)) {
+				int nameLen = (int)strlen(p->ifa_name);
+				// Delete feth# from feth0 to feth9999, but don't touch >10000.
+				if ((!strncmp(p->ifa_name,"feth",4))&&(nameLen >= 5)&&(nameLen < 9)&&(deleted.count(std::string(p->ifa_name)) == 0)) {
 					deleted.insert(std::string(p->ifa_name));
 					const char *args[4];
 					args[0] = "/sbin/ifconfig";
