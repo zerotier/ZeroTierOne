@@ -1,10 +1,10 @@
 /*
- * Copyright (c)2019 ZeroTier, Inc.
+ * Copyright (c)2013-2020 ZeroTier, Inc.
  *
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2023-01-01
+ * Change Date: 2025-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -28,6 +28,12 @@
 //
 // Also makes sure __BYTE_ORDER is defined reasonably.
 //
+
+#ifndef ZT_INLINE
+#define ZT_INLINE inline
+#endif
+
+#define restrict
 
 // Hack: make sure __GCC__ is defined on old GCC compilers
 #ifndef __GCC__
@@ -96,6 +102,29 @@
 #endif
 #endif
 
+#if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
+#define ZT_ARCH_X64 1
+#include <xmmintrin.h>
+#include <emmintrin.h>
+#include <immintrin.h>
+#include <tmmintrin.h>
+#include <mmintrin.h>
+#endif
+
+#if (defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(ZT_ARCH_ARM_HAS_NEON))
+#if (defined(__APPLE__) && !defined(__LP64__)) || (defined(__ANDROID__) && defined(__arm__))
+#ifdef ZT_ARCH_ARM_HAS_NEON
+#undef ZT_ARCH_ARM_HAS_NEON
+#endif
+#else
+#ifndef ZT_ARCH_ARM_HAS_NEON
+#define ZT_ARCH_ARM_HAS_NEON 1
+#endif
+#include <arm_neon.h>
+/*#include <arm_acle.h>*/
+#endif
+#endif
+
 // Define ZT_NO_TYPE_PUNNING to disable reckless casts on anything other than x86/x64.
 #if (!(defined(__amd64__) || defined(__amd64) || defined(__x86_64__) || defined(__x86_64) || defined(_M_AMD64) || defined(_M_X64) || defined(i386) || defined(__i386) || defined(__i386__) || defined(__i486__) || defined(__i586__) || defined(__i686__) || defined(_M_IX86) || defined(__X86__) || defined(_X86_) || defined(__I86__) || defined(__INTEL__) || defined(__386)))
 #ifndef ZT_NO_TYPE_PUNNING
@@ -159,6 +188,8 @@
  */
 #define ZT_ADDRESS_LENGTH_HEX 10
 
+#define ZT_SYMMETRIC_KEY_SIZE 48
+
 /**
  * Addresses beginning with this byte are reserved for the joy of in-band signaling
  */
@@ -185,14 +216,9 @@
 #define ZT_TX_QUEUE_SIZE 32
 
 /**
- * Length of secret key in bytes -- 256-bit -- do not change
- */
-#define ZT_PEER_SECRET_KEY_LENGTH 32
-
-/**
  * Minimum delay between timer task checks to prevent thrashing
  */
-#define ZT_CORE_TIMER_TASK_GRANULARITY 500
+#define ZT_CORE_TIMER_TASK_GRANULARITY 60
 
 /**
  * How often Topology::clean() and Network::clean() and similar are called, in ms
@@ -254,184 +280,6 @@
 #define ZT_LOCAL_CONF_FILE_CHECK_INTERVAL 10000
 
 /**
- * How frequently to check for changes to the system's network interfaces. When
- * the service decides to use this constant it's because we want to react more
- * quickly to new interfaces that pop up or go down.
- */
-#define ZT_MULTIPATH_BINDER_REFRESH_PERIOD 5000
-
-/**
- * Packets are only used for QoS/ACK statistical sampling if their packet ID is divisible by
- * this integer. This is to provide a mechanism for both peers to agree on which packets need
- * special treatment without having to exchange information. Changing this value would be
- * a breaking change and would necessitate a protocol version upgrade. Since each incoming and
- * outgoing packet ID is checked against this value its evaluation is of the form:
- * (id & (divisor - 1)) == 0, thus the divisor must be a power of 2.
- *
- * This value is set at (16) so that given a normally-distributed RNG output we will sample
- * 1/16th (or ~6.25%) of packets.
- */
-#define ZT_PATH_QOS_ACK_PROTOCOL_DIVISOR 0x10
-
-/**
- * Time horizon for VERB_QOS_MEASUREMENT and VERB_ACK packet processing cutoff
- */
-#define ZT_PATH_QOS_ACK_CUTOFF_TIME 30000
-
-/**
- * Maximum number of VERB_QOS_MEASUREMENT and VERB_ACK packets allowed to be
- * processed within cutoff time. Separate totals are kept for each type but
- * the limit is the same for both.
- *
- * This limits how often this peer will compute statistical estimates
- * of various QoS measures from a VERB_QOS_MEASUREMENT or VERB_ACK packets to
- * CUTOFF_LIMIT times per CUTOFF_TIME milliseconds per peer to prevent
- * this from being useful for DOS amplification attacks.
- */
-#define ZT_PATH_QOS_ACK_CUTOFF_LIMIT 128
-
-/**
- * Path choice history window size. This is used to keep track of which paths were
- * previously selected so that we can maintain a target allocation over time.
- */
-#define ZT_MULTIPATH_PROPORTION_WIN_SZ 128
-
-/**
- * How often we will sample packet latency. Should be at least greater than ZT_PING_CHECK_INVERVAL
- * since we will record a 0 bit/s measurement if no valid latency measurement was made within this
- * window of time.
- */
-#define ZT_PATH_LATENCY_SAMPLE_INTERVAL (ZT_MULTIPATH_PEER_PING_PERIOD * 2)
-
-/**
- * Interval used for rate-limiting the computation of path quality estimates.
- */
-#define ZT_PATH_QUALITY_COMPUTE_INTERVAL 1000
-
-/**
- * Number of samples to consider when computing real-time path statistics
- */
-#define ZT_PATH_QUALITY_METRIC_REALTIME_CONSIDERATION_WIN_SZ 128
-
-/**
- * Number of samples to consider when computing performing long-term path quality analysis.
- * By default this value is set to ZT_PATH_QUALITY_METRIC_REALTIME_CONSIDERATION_WIN_SZ but can
- * be set to any value greater than that to observe longer-term path quality behavior.
- */
-#define ZT_PATH_QUALITY_METRIC_WIN_SZ ZT_PATH_QUALITY_METRIC_REALTIME_CONSIDERATION_WIN_SZ
-
-/**
- * Maximum acceptable Packet Delay Variance (PDV) over a path
- */
-#define ZT_PATH_MAX_PDV 1000
-
-/**
- * Maximum acceptable time interval between expectation and receipt of at least one ACK over a path
- */
-#define ZT_PATH_MAX_AGE 30000
-
-/**
- * Maximum acceptable mean latency over a path
- */
-#define ZT_PATH_MAX_MEAN_LATENCY 1000
-
-/**
- * How much each factor contributes to the "stability" score of a path
- */
-#define ZT_PATH_CONTRIB_PDV                    (1.0 / 3.0)
-#define ZT_PATH_CONTRIB_LATENCY                (1.0 / 3.0)
-#define ZT_PATH_CONTRIB_THROUGHPUT_DISTURBANCE (1.0 / 3.0)
-
-/**
- * How much each factor contributes to the "quality" score of a path
- */
-#define ZT_PATH_CONTRIB_STABILITY  (0.75 / 3.0)
-#define ZT_PATH_CONTRIB_THROUGHPUT (1.50 / 3.0)
-#define ZT_PATH_CONTRIB_SCOPE      (0.75 / 3.0)
-
-/**
- * How often a QoS packet is sent
- */
-#define ZT_PATH_QOS_INTERVAL 3000
-
-/**
- * Min and max acceptable sizes for a VERB_QOS_MEASUREMENT packet
- */
-#define ZT_PATH_MIN_QOS_PACKET_SZ 8 + 1
-#define ZT_PATH_MAX_QOS_PACKET_SZ 1400
-
-/**
- * How many ID:sojourn time pairs in a single QoS packet
- */
-#define ZT_PATH_QOS_TABLE_SIZE ((ZT_PATH_MAX_QOS_PACKET_SZ * 8) / (64 + 16))
-
-/**
- * Maximum number of outgoing packets we monitor for QoS information
- */
-#define ZT_PATH_MAX_OUTSTANDING_QOS_RECORDS 128
-
-/**
- * Timeout for QoS records
- */
-#define ZT_PATH_QOS_TIMEOUT (ZT_PATH_QOS_INTERVAL * 2)
-
-/**
- * How often the service tests the path throughput
- */
-#define ZT_PATH_THROUGHPUT_MEASUREMENT_INTERVAL (ZT_PATH_ACK_INTERVAL * 8)
-
-/**
- * Minimum amount of time between each ACK packet
- */
-#define ZT_PATH_ACK_INTERVAL 1000
-
-/**
- * How often an aggregate link statistics report is emitted into this tracing system
- */
-#define ZT_PATH_AGGREGATE_STATS_REPORT_INTERVAL 60000
-
-/**
- * How much an aggregate link's component paths can vary from their target allocation
- * before the link is considered to be in a state of imbalance.
- */
-#define ZT_PATH_IMBALANCE_THRESHOLD 0.20
-
-/**
- * Max allowable time spent in any queue
- */
-#define ZT_QOS_TARGET 5 // ms
-
-/**
- * Time period where the time spent in the queue by a packet should fall below
- * target at least once
- */
-#define ZT_QOS_INTERVAL 100 // ms
-
-/**
- * The number of bytes that each queue is allowed to send during each DRR cycle.
- * This approximates a single-byte-based fairness queuing scheme
- */
-#define ZT_QOS_QUANTUM ZT_DEFAULT_MTU
-
-/**
- * The maximum total number of packets that can be queued among all
- * active/inactive, old/new queues
- */
-#define ZT_QOS_MAX_ENQUEUED_PACKETS 1024
-
-/**
- * Number of QoS queues (buckets)
- */
-#define ZT_QOS_NUM_BUCKETS 9
-
-/**
- * All unspecified traffic is put in this bucket. Anything in a bucket with a smaller
- * value is de-prioritized. Anything in a bucket with a higher value is prioritized over
- * other traffic.
- */
-#define ZT_QOS_DEFAULT_BUCKET 0
-
-/**
  * How frequently to send heartbeats over in-use paths
  */
 #define ZT_PATH_HEARTBEAT_PERIOD 14000
@@ -447,16 +295,6 @@
 #define ZT_PEER_PING_PERIOD 60000
 
 /**
- * Delay between full-fledge pings of directly connected peers.
- *
- * With multipath bonding enabled ping peers more often to measure
- * packet loss and latency. This uses more bandwidth so is disabled
- * by default to avoid increasing idle bandwidth use for regular
- * links.
- */
-#define ZT_MULTIPATH_PEER_PING_PERIOD 5000
-
-/**
  * Paths are considered expired if they have not sent us a real packet in this long
  */
 #define ZT_PEER_PATH_EXPIRATION ((ZT_PEER_PING_PERIOD * 4) + 3000)
@@ -465,6 +303,210 @@
  * How often to retry expired paths that we're still remembering
  */
 #define ZT_PEER_EXPIRED_PATH_TRIAL_PERIOD (ZT_PEER_PING_PERIOD * 10)
+
+/**
+ * Outgoing packets are only used for QoS/ACK statistical sampling if their
+ * packet ID is divisible by this integer. This is to provide a mechanism for
+ * both peers to agree on which packets need special treatment without having
+ * to exchange information. Changing this value would be a breaking change and
+ * would necessitate a protocol version upgrade. Since each incoming and
+ * outgoing packet ID is checked against this value its evaluation is of the
+ * form:
+ *
+ * (id & (divisor - 1)) == 0, thus the divisor must be a power of 2.
+ *
+ * This value is set at (16) so that given a normally-distributed RNG output
+ * we will sample 1/16th (or ~6.25%) of packets.
+ */
+#define ZT_QOS_ACK_DIVISOR 0x2
+
+/**
+ * Time horizon for VERB_QOS_MEASUREMENT and VERB_ACK packet processing cutoff
+ */
+#define ZT_QOS_ACK_CUTOFF_TIME 30000
+
+/**
+ * Maximum number of VERB_QOS_MEASUREMENT and VERB_ACK packets allowed to be
+ * processed within cutoff time. Separate totals are kept for each type but
+ * the limit is the same for both.
+ *
+ * This limits how often this peer will compute statistical estimates
+ * of various QoS measures from a VERB_QOS_MEASUREMENT or VERB_ACK packets to
+ * CUTOFF_LIMIT times per CUTOFF_TIME milliseconds per peer to prevent
+ * this from being useful for DOS amplification attacks.
+ */
+#define ZT_QOS_ACK_CUTOFF_LIMIT 128
+
+/**
+ * Minimum acceptable size for a VERB_QOS_MEASUREMENT packet
+ */
+#define ZT_QOS_MIN_PACKET_SIZE (8 + 1)
+
+/**
+ * Maximum acceptable size for a VERB_QOS_MEASUREMENT packet
+ */
+#define ZT_QOS_MAX_PACKET_SIZE 1400
+
+/**
+ * How many ID:sojourn time pairs are in a single QoS packet
+ */
+#define ZT_QOS_TABLE_SIZE ((ZT_QOS_MAX_PACKET_SIZE * 8) / (64 + 16))
+
+/**
+ * Maximum number of outgoing packets we monitor for QoS information
+ */
+#define ZT_QOS_MAX_OUTSTANDING_RECORDS (1024*16)
+
+/**
+ * Interval used for rate-limiting the computation of path quality estimates.
+ */
+#define ZT_QOS_COMPUTE_INTERVAL 1000
+
+/**
+ * Number of samples to consider when processing real-time path statistics
+ */
+#define ZT_QOS_SHORTTERM_SAMPLE_WIN_SIZE 32
+
+/**
+ * Max allowable time spent in any queue (in ms)
+ */
+#define ZT_AQM_TARGET 5
+
+/**
+ * Time period where the time spent in the queue by a packet should fall below.
+ * target at least once. (in ms)
+ */
+#define ZT_AQM_INTERVAL 100
+
+/**
+ * The number of bytes that each queue is allowed to send during each DRR cycle.
+ * This approximates a single-byte-based fairness queuing scheme.
+ */
+#define ZT_AQM_QUANTUM ZT_DEFAULT_MTU
+
+/**
+ * The maximum total number of packets that can be queued among all
+ * active/inactive, old/new queues.
+ */
+#define ZT_AQM_MAX_ENQUEUED_PACKETS 1024
+
+/**
+ * Number of QoS queues (buckets)
+ */
+#define ZT_AQM_NUM_BUCKETS 9
+
+/**
+ * All unspecified traffic is put in this bucket. Anything in a bucket with a
+ * smaller value is deprioritized. Anything in a bucket with a higher value is
+ prioritized over other traffic.
+ */
+#define ZT_AQM_DEFAULT_BUCKET 0
+
+/**
+ * How often we emit a one-liner bond summary for each peer
+ */
+#define ZT_MULTIPATH_BOND_STATUS_INTERVAL 60000
+
+/**
+ * How long before we consider a path to be dead in the general sense. This is
+ * used while searching for default or alternative paths to try in the absence
+ * of direct guidance from the user or a selection policy.
+ */
+#define ZT_MULTIPATH_DEFAULT_FAILOVER_INTERVAL 10000
+
+/**
+ * How often flows are evaluated
+ */
+#define ZT_MULTIPATH_FLOW_CHECK_INTERVAL 10000
+
+/**
+ * How long before we consider a flow to be dead and remove it from the
+ * policy's list.
+ */
+#define ZT_MULTIPATH_FLOW_EXPIRATION_INTERVAL (60000 * 5)
+
+/**
+ * How often a flow's statistical counters are reset
+ */
+#define ZT_FLOW_STATS_RESET_INTERVAL ZT_MULTIPATH_FLOW_EXPIRATION_INTERVAL
+
+/**
+ * Maximum number of flows allowed before we start forcibly forgetting old ones
+ */
+#define ZT_FLOW_MAX_COUNT (1024*64)
+
+/**
+ * How often flows are rebalanced across link (if at all)
+ */
+#define ZT_FLOW_MIN_REBALANCE_INTERVAL 5000
+
+/**
+ * How often flows are rebalanced across link (if at all)
+ */
+#define ZT_FLOW_REBALANCE_INTERVAL 5000
+
+/**
+ * A defensive timer to prevent path quality metrics from being
+ * processed too often.
+ */
+#define ZT_BOND_BACKGROUND_TASK_MIN_INTERVAL ZT_CORE_TIMER_TASK_GRANULARITY
+
+/**
+ * How often a bonding policy's background tasks are processed,
+ * some need more frequent attention than others.
+ */
+#define ZT_MULTIPATH_ACTIVE_BACKUP_CHECK_INTERVAL ZT_CORE_TIMER_TASK_GRANULARITY
+
+/**
+ * Minimum amount of time (since a previous transition) before the active-backup bonding
+ * policy is allowed to transition to a different link. Only valid for active-backup.
+ */
+#define ZT_MULTIPATH_MIN_ACTIVE_BACKUP_AUTOFLOP_INTERVAL 10000
+
+/**
+ * How often a peer checks that incoming (and outgoing) traffic on a bonded link is
+ * appropriately paired.
+ */
+#define ZT_PATH_NEGOTIATION_CHECK_INTERVAL 15000
+
+/**
+ * Time horizon for path negotiation paths cutoff
+ */
+#define ZT_PATH_NEGOTIATION_CUTOFF_TIME 60000
+
+/**
+ * Maximum number of path negotiations within cutoff time
+ *
+ * This limits response to PATH_NEGOTIATION to CUTOFF_LIMIT responses
+ * per CUTOFF_TIME milliseconds per peer to prevent this from being
+ * useful for DOS amplification attacks.
+ */
+#define ZT_PATH_NEGOTIATION_CUTOFF_LIMIT 8
+
+/**
+ * How many times a peer will attempt to petition another peer to synchronize its
+ * traffic to the same path before giving up and surrendering to the other peer's preference.
+ */
+#define ZT_PATH_NEGOTIATION_TRY_COUNT 3
+
+/**
+ * How much greater the quality of a path should be before an
+ * optimization procedure triggers a switch.
+ */
+#define ZT_MULTIPATH_ACTIVE_BACKUP_OPTIMIZE_MIN_THRESHOLD 0.10
+
+/**
+ * Artificially inflates the failover score for paths which meet
+ * certain non-performance-related policy ranking criteria.
+ */
+#define ZT_MULTIPATH_FAILOVER_HANDICAP_PREFERRED 500
+#define ZT_MULTIPATH_FAILOVER_HANDICAP_PRIMARY 1000
+#define ZT_MULTIPATH_FAILOVER_HANDICAP_NEGOTIATED 5000
+
+/**
+ * An indicator that no flow is to be associated with the given packet
+ */
+#define ZT_QOS_NO_FLOW -1
 
 /**
  * Timeout for overall peer activity (measured from last receive)
@@ -537,6 +579,27 @@
  * Time horizon for push direct paths cutoff
  */
 #define ZT_PUSH_DIRECT_PATHS_CUTOFF_TIME 30000
+
+/**
+ * Drainage constants for VERB_ECHO rate-limiters
+ */
+#define ZT_ECHO_CUTOFF_LIMIT ((1000 / ZT_CORE_TIMER_TASK_GRANULARITY) * ZT_MAX_PEER_NETWORK_PATHS)
+#define ZT_ECHO_DRAINAGE_DIVISOR (1000 / ZT_ECHO_CUTOFF_LIMIT)
+
+/**
+ * Drainage constants for VERB_QOS rate-limiters
+ */
+#define ZT_QOS_CUTOFF_LIMIT ((1000 / ZT_CORE_TIMER_TASK_GRANULARITY) * ZT_MAX_PEER_NETWORK_PATHS)
+#define ZT_QOS_DRAINAGE_DIVISOR (1000 / ZT_QOS_CUTOFF_LIMIT)
+
+/**
+ * Drainage constants for VERB_ACK rate-limiters
+ */
+#define ZT_ACK_CUTOFF_LIMIT 128
+#define ZT_ACK_DRAINAGE_DIVISOR (1000 / ZT_ACK_CUTOFF_LIMIT)
+
+#define ZT_MULTIPATH_DEFAULT_REFRCTORY_PERIOD 8000
+#define ZT_MULTIPATH_MAX_REFRACTORY_PERIOD 600000
 
 /**
  * Maximum number of direct path pushes within cutoff time

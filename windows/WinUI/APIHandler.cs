@@ -272,7 +272,7 @@ namespace WinUI
             }
         }
 
-        public void JoinNetwork(Dispatcher d, string nwid, bool allowManaged = true, bool allowGlobal = false, bool allowDefault = false)
+        public void JoinNetwork(Dispatcher d, string nwid, bool allowManaged = true, bool allowGlobal = false, bool allowDefault = false, bool allowDNS = false)
         {
             Task.Factory.StartNew(() =>
             {
@@ -291,7 +291,8 @@ namespace WinUI
                     {
                         string json = "{\"allowManaged\":" + (allowManaged ? "true" : "false") + "," +
                                 "\"allowGlobal\":" + (allowGlobal ? "true" : "false") + "," +
-                                "\"allowDefault\":" + (allowDefault ? "true" : "false") + "}";
+                                "\"allowDefault\":" + (allowDefault ? "true" : "false") + "," +
+                                "\"allowDNS\":" + (allowDNS ? "true" : "false") + "}";
                         streamWriter.Write(json);
                         streamWriter.Flush();
                         streamWriter.Close();

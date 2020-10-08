@@ -336,6 +336,7 @@
                                     allowManaged:network.allowManaged
                                      allowGlobal:network.allowGlobal
                                     allowDefault:(network.allowDefault && ![Network defaultRouteExists:self.networks])
+                                        allowDNS:network.allowDNS
                                            error:&error];
 
         if (error) {

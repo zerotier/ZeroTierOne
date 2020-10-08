@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2023-01-01
+ * Change Date: 2025-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -118,7 +118,7 @@ public:
 	inline bool sha512PrivateKey(void *sha) const
 	{
 		if (_privateKey) {
-			SHA512::hash(sha,_privateKey->data,ZT_C25519_PRIVATE_KEY_LEN);
+			SHA512(sha,_privateKey->data,ZT_C25519_PRIVATE_KEY_LEN);
 			return true;
 		}
 		return false;
@@ -173,13 +173,12 @@ public:
 	 *
 	 * @param id Identity to agree with
 	 * @param key Result parameter to fill with key bytes
-	 * @param klen Length of key in bytes
 	 * @return Was agreement successful?
 	 */
-	inline bool agree(const Identity &id,void *key,unsigned int klen) const
+	inline bool agree(const Identity &id,void *const key) const
 	{
 		if (_privateKey) {
-			C25519::agree(*_privateKey,id._publicKey,key,klen);
+			C25519::agree(*_privateKey,id._publicKey,key,ZT_SYMMETRIC_KEY_SIZE);
 			return true;
 		}
 		return false;

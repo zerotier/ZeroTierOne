@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2023-01-01
+ * Change Date: 2025-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -21,6 +21,7 @@
 #include "OSUtils.hpp"
 #include "MacEthernetTap.hpp"
 #include "MacEthernetTapAgent.h"
+#include "MacDNSHelper.hpp"
 
 #include <stdint.h>
 #include <stdio.h>
@@ -54,6 +55,7 @@
 #include <map>
 #include <set>
 #include <algorithm>
+#include <filesystem>
 
 static const ZeroTier::MulticastGroup _blindWildcardMulticastGroup(ZeroTier::MAC(0xff),0);
 
@@ -108,7 +110,9 @@ MacEthernetTap::MacEthernetTap(
 		if (!getifaddrs(&ifa)) {
 			struct ifaddrs *p = ifa;
 			while (p) {
-				if ((!strncmp(p->ifa_name,"feth",4))&&(strlen(p->ifa_name) >= 7)&&(deleted.count(std::string(p->ifa_name)) == 0)) {
+				int nameLen = (int)strlen(p->ifa_name);
+				// Delete feth# from feth0 to feth9999, but don't touch >10000.
+				if ((!strncmp(p->ifa_name,"feth",4))&&(nameLen >= 5)&&(nameLen < 9)&&(deleted.count(std::string(p->ifa_name)) == 0)) {
 					deleted.insert(std::string(p->ifa_name));
 					const char *args[4];
 					args[0] = "/sbin/ifconfig";
@@ -200,6 +204,8 @@ MacEthernetTap::MacEthernetTap(
 
 MacEthernetTap::~MacEthernetTap()
 {
+	MacDNSHelper::removeDNS(_nwid);
+	
 	Mutex::Lock _gl(globalTapCreateLock);
 	::write(_shutdownSignalPipe[1],"\0",1); // causes thread to exit
 	Thread::join(_thread);
@@ -450,6 +456,11 @@ void MacEthernetTap::threadMain()
 			*/
 		}
 	}
+}
+
+void MacEthernetTap::setDns(const char *domain, const std::vector<InetAddress> &servers)
+{
+	MacDNSHelper::setDNS(this->_nwid, domain, servers);
 }
 
 } // namespace ZeroTier

@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2023-01-01
+ * Change Date: 2025-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -43,8 +43,7 @@
 namespace ZeroTier {
 
 class Node;
-
-struct MQConfig;
+struct RedisConfig;
 
 class EmbeddedNetworkController : public NetworkController,public DB::ChangeListener
 {
@@ -53,7 +52,7 @@ public:
 	 * @param node Parent node
 	 * @param dbPath Database path (file path or database credentials)
 	 */
-	EmbeddedNetworkController(Node *node,const char *ztPath,const char *dbPath, int listenPort, MQConfig *mqc = NULL);
+	EmbeddedNetworkController(Node *node,const char *ztPath,const char *dbPath, int listenPort, RedisConfig *rc);
 	virtual ~EmbeddedNetworkController();
 
 	virtual void init(const Identity &signingId,Sender *sender);
@@ -151,7 +150,7 @@ private:
 	std::unordered_map< _MemberStatusKey,_MemberStatus,_MemberStatusHash > _memberStatus;
 	std::mutex _memberStatus_l;
 
-	MQConfig *_mqc;
+	RedisConfig *_rc;
 };
 
 } // namespace ZeroTier

@@ -377,7 +377,12 @@
     [task resume];
 }
 
-- (void)joinNetwork:(NSString*)networkId allowManaged:(BOOL)allowManaged allowGlobal:(BOOL)allowGlobal allowDefault:(BOOL)allowDefault error:(NSError *__autoreleasing*)error
+- (void)joinNetwork:(NSString*)networkId
+       allowManaged:(BOOL)allowManaged
+        allowGlobal:(BOOL)allowGlobal
+       allowDefault:(BOOL)allowDefault
+           allowDNS:(BOOL)allowDNS
+              error:(NSError *__autoreleasing*)error
 {
     NSString *key = [self key:error];
     if(*error) {
@@ -395,6 +400,7 @@
     [jsonDict setObject:[NSNumber numberWithBool:allowManaged] forKey:@"allowManaged"];
     [jsonDict setObject:[NSNumber numberWithBool:allowGlobal] forKey:@"allowGlobal"];
     [jsonDict setObject:[NSNumber numberWithBool:allowDefault] forKey:@"allowDefault"];
+    [jsonDict setObject:[NSNumber numberWithBool:allowDNS] forKey:@"allowDNS"];
 
     NSError *err = nil;
 

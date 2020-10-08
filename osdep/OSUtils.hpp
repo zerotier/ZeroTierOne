@@ -1,10 +1,10 @@
 /*
- * Copyright (c)2019 ZeroTier, Inc.
+ * Copyright (c)2013-2020 ZeroTier, Inc.
  *
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2023-01-01
+ * Change Date: 2025-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -196,6 +196,20 @@ public:
 	static std::vector<InetAddress> resolve(const char *name);
 
 	/**
+	 * @return Current time in a human-readable format
+	 */
+	static inline std::string humanReadableTimestamp()
+	{
+		time_t rawtime;
+		struct tm * timeinfo;
+		char buffer [80];
+		time (&rawtime);
+		timeinfo = localtime (&rawtime);
+		strftime (buffer,80,"%F %T",timeinfo);
+		return std::string(buffer);
+	}
+
+	/**
 	 * @return Current time in milliseconds since epoch
 	 */
 	static inline int64_t now()
@@ -273,6 +287,7 @@ public:
 	static nlohmann::json jsonParse(const std::string &buf);
 	static std::string jsonDump(const nlohmann::json &j,int indentation = 1);
 	static uint64_t jsonInt(const nlohmann::json &jv,const uint64_t dfl);
+	static double jsonDouble(const nlohmann::json &jv,const double dfl);
 	static uint64_t jsonIntHex(const nlohmann::json &jv,const uint64_t dfl);
 	static bool jsonBool(const nlohmann::json &jv,const bool dfl);
 	static std::string jsonString(const nlohmann::json &jv,const char *dfl);

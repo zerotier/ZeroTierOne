@@ -260,7 +260,6 @@
     <None Include="Resources\ZeroTierIcon.ico" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <Import Project="$(MSBuildExtensionsPath)\Microsoft\Expression\Blend\.NETFramework\v4.5\Microsoft.Expression.Blend.WPF.targets" />
   <PropertyGroup>
     <PostBuildEvent>copy "$(SolutionDir)\copyutil\bin\$(ConfigurationName)\copyutil.exe" "$(ProjectDir)\$(OutDir)\copyutil.exe"</PostBuildEvent>
   </PropertyGroup>

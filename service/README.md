@@ -139,6 +139,7 @@ Most network settings are not writable, as they are defined by the network contr
 | allowManaged          | boolean       | Allow IP and route management                     | yes      |
 | allowGlobal           | boolean       | Allow IPs and routes that overlap with global IPs | yes      |
 | allowDefault          | boolean       | Allow overriding of system default route          | yes      |
+| allowDNS              | boolean       | Allow configuration of DNS on network             | yes      |
 
 Route objects:
 

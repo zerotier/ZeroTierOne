@@ -272,7 +272,8 @@ tapReadConfiguration(
 
         if (status == NDIS_STATUS_SUCCESS)
         {
-            if (configParameter->ParameterType == NdisParameterString)
+            if (configParameter->ParameterType == NdisParameterString
+                && configParameter->ParameterData.StringData.Length <= sizeof(Adapter->NetCfgInstanceIdBuffer) - sizeof(WCHAR))
             {
                 DEBUGP (("[TAP] NdisReadConfiguration (NetCfgInstanceId=%wZ)\n",
                     &configParameter->ParameterData.StringData ));

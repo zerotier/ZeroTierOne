@@ -34,7 +34,7 @@
 
 - (void)getNetworklist:(void (^)(NSArray<Network*>*))completionHandler error:(NSError* __autoreleasing *)error;
 - (void)getNodeStatus:(void (^)(NodeStatus*))completionHandler error:(NSError*__autoreleasing*)error;
-- (void)joinNetwork:(NSString*)networkId allowManaged:(BOOL)allowManaged allowGlobal:(BOOL)allowGlobal allowDefault:(BOOL)allowDefault error:(NSError*__autoreleasing*)error;
+- (void)joinNetwork:(NSString*)networkId allowManaged:(BOOL)allowManaged allowGlobal:(BOOL)allowGlobal allowDefault:(BOOL)allowDefault allowDNS:(BOOL)allowDNS error:(NSError*__autoreleasing*)error;
 - (void)leaveNetwork:(NSString*)networkId error:(NSError*__autoreleasing*)error;
 
 @end

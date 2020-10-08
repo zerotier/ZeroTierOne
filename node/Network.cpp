@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2023-01-01
+ * Change Date: 2025-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -586,6 +586,7 @@ Network::Network(const RuntimeEnvironment *renv,void *tPtr,uint64_t nwid,void *u
 
 	if (!_portInitialized) {
 		ZT_VirtualNetworkConfig ctmp;
+		memset(&ctmp, 0, sizeof(ZT_VirtualNetworkConfig));
 		_externalConfig(&ctmp);
 		_portError = RR->node->configureVirtualNetworkPort(tPtr,_id,&_uPtr,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP,&ctmp);
 		_portInitialized = true;
@@ -1426,6 +1427,8 @@ void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const
 		ec->multicastSubscriptions[i].mac = _myMulticastGroups[i].mac().toInt();
 		ec->multicastSubscriptions[i].adi = _myMulticastGroups[i].adi();
 	}
+
+	memcpy(&ec->dns, &_config.dns, sizeof(ZT_VirtualNetworkDNS));
 }
 
 void Network::_sendUpdatesToMembers(void *tPtr,const MulticastGroup *const newMulticastGroup)

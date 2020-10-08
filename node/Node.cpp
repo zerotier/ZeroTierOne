@@ -1,10 +1,10 @@
 /*
- * Copyright (c)2019 ZeroTier, Inc.
+ * Copyright (c)2013-2020 ZeroTier, Inc.
  *
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2023-01-01
+ * Change Date: 2025-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -48,6 +48,7 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,int64
 	_networks(8),
 	_now(now),
 	_lastPingCheck(0),
+	_lastGratuitousPingCheck(0),
 	_lastHousekeepingRun(0),
 	_lastMemoizedTraceSettings(0)
 {
@@ -102,8 +103,9 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,int64
 		const unsigned long mcs = sizeof(Multicaster) + (((sizeof(Multicaster) & 0xf) != 0) ? (16 - (sizeof(Multicaster) & 0xf)) : 0);
 		const unsigned long topologys = sizeof(Topology) + (((sizeof(Topology) & 0xf) != 0) ? (16 - (sizeof(Topology) & 0xf)) : 0);
 		const unsigned long sas = sizeof(SelfAwareness) + (((sizeof(SelfAwareness) & 0xf) != 0) ? (16 - (sizeof(SelfAwareness) & 0xf)) : 0);
+		const unsigned long bc = sizeof(BondController) + (((sizeof(BondController) & 0xf) != 0) ? (16 - (sizeof(BondController) & 0xf)) : 0);
 
-		m = reinterpret_cast<char *>(::malloc(16 + ts + sws + mcs + topologys + sas));
+		m = reinterpret_cast<char *>(::malloc(16 + ts + sws + mcs + topologys + sas + bc));
 		if (!m)
 			throw std::bad_alloc();
 		RR->rtmem = m;
@@ -118,12 +120,15 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,int64
 		RR->topology = new (m) Topology(RR,tptr);
 		m += topologys;
 		RR->sa = new (m) SelfAwareness(RR);
+		m += sas;
+		RR->bc = new (m) BondController(RR);
 	} catch ( ... ) {
 		if (RR->sa) RR->sa->~SelfAwareness();
 		if (RR->topology) RR->topology->~Topology();
 		if (RR->mc) RR->mc->~Multicaster();
 		if (RR->sw) RR->sw->~Switch();
 		if (RR->t) RR->t->~Trace();
+		if (RR->bc) RR->bc->~BondController();
 		::free(m);
 		throw;
 	}
@@ -142,6 +147,7 @@ Node::~Node()
 	if (RR->mc) RR->mc->~Multicaster();
 	if (RR->sw) RR->sw->~Switch();
 	if (RR->t) RR->t->~Trace();
+	if (RR->bc) RR->bc->~BondController();
 	::free(RR->rtmem);
 }
 
@@ -246,9 +252,23 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,int64_t now,volatile int64
 	_now = now;
 	Mutex::Lock bl(_backgroundTasksLock);
 
+
+	unsigned long bondCheckInterval = ZT_CORE_TIMER_TASK_GRANULARITY;
+	if (RR->bc->inUse()) {
+		// Gratuitously ping active peers so that QoS metrics have enough data to work with (if active path monitoring is enabled)
+		bondCheckInterval = std::min(std::max(RR->bc->minReqPathMonitorInterval(), ZT_CORE_TIMER_TASK_GRANULARITY), ZT_PING_CHECK_INVERVAL);
+		if ((now - _lastGratuitousPingCheck) >= bondCheckInterval) {
+			Hashtable< Address,std::vector<InetAddress> > alwaysContact;
+			_PingPeersThatNeedPing pfunc(RR,tptr,alwaysContact,now);
+			RR->topology->eachPeer<_PingPeersThatNeedPing &>(pfunc);
+			_lastGratuitousPingCheck = now;
+		}
+		RR->bc->processBackgroundTasks(tptr, now);
+	}
+
 	unsigned long timeUntilNextPingCheck = ZT_PING_CHECK_INVERVAL;
 	const int64_t timeSinceLastPingCheck = now - _lastPingCheck;
-	if (timeSinceLastPingCheck >= ZT_PING_CHECK_INVERVAL) {
+	if (timeSinceLastPingCheck >= timeUntilNextPingCheck) {
 		try {
 			_lastPingCheck = now;
 
@@ -354,7 +374,7 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,int64_t now,volatile int64
 	}
 
 	try {
-		*nextBackgroundTaskDeadline = now + (int64_t)std::max(std::min(timeUntilNextPingCheck,RR->sw->doTimerTasks(tptr,now)),(unsigned long)ZT_CORE_TIMER_TASK_GRANULARITY);
+		*nextBackgroundTaskDeadline = now + (int64_t)std::max(std::min(bondCheckInterval,std::min(timeUntilNextPingCheck,RR->sw->doTimerTasks(tptr,now))),(unsigned long)ZT_CORE_TIMER_TASK_GRANULARITY);
 	} catch ( ... ) {
 		return ZT_RESULT_FATAL_ERROR_INTERNAL;
 	}
@@ -461,7 +481,7 @@ ZT_PeerList *Node::peers() const
 	for(std::vector< std::pair< Address,SharedPtr<Peer> > >::iterator pi(peers.begin());pi!=peers.end();++pi) {
 		ZT_Peer *p = &(pl->peers[pl->peerCount++]);
 		p->address = pi->second->address().toInt();
-		p->hadAggregateLink = 0;
+		p->isBonded = 0;
 		if (pi->second->remoteVersionKnown()) {
 			p->versionMajor = pi->second->remoteVersionMajor();
 			p->versionMinor = pi->second->remoteVersionMinor();
@@ -478,27 +498,24 @@ ZT_PeerList *Node::peers() const
 
 		std::vector< SharedPtr<Path> > paths(pi->second->paths(_now));
 		SharedPtr<Path> bestp(pi->second->getAppropriatePath(_now,false));
-		p->hadAggregateLink |= pi->second->hasAggregateLink();
 		p->pathCount = 0;
 		for(std::vector< SharedPtr<Path> >::iterator path(paths.begin());path!=paths.end();++path) {
 			memcpy(&(p->paths[p->pathCount].address),&((*path)->address()),sizeof(struct sockaddr_storage));
+			p->paths[p->pathCount].localSocket = (*path)->localSocket();
 			p->paths[p->pathCount].lastSend = (*path)->lastOut();
 			p->paths[p->pathCount].lastReceive = (*path)->lastIn();
 			p->paths[p->pathCount].trustedPathId = RR->topology->getOutboundPathTrust((*path)->address());
 			p->paths[p->pathCount].expired = 0;
 			p->paths[p->pathCount].preferred = ((*path) == bestp) ? 1 : 0;
-			p->paths[p->pathCount].latency = (float)(*path)->latency();
-			p->paths[p->pathCount].packetDelayVariance = (*path)->packetDelayVariance();
-			p->paths[p->pathCount].throughputDisturbCoeff = (*path)->throughputDisturbanceCoefficient();
-			p->paths[p->pathCount].packetErrorRatio = (*path)->packetErrorRatio();
-			p->paths[p->pathCount].packetLossRatio = (*path)->packetLossRatio();
-			p->paths[p->pathCount].stability = (*path)->lastComputedStability();
-			p->paths[p->pathCount].throughput = (*path)->meanThroughput();
-			p->paths[p->pathCount].maxThroughput = (*path)->maxLifetimeThroughput();
-			p->paths[p->pathCount].allocation = (float)(*path)->allocation() / (float)255;
-			p->paths[p->pathCount].ifname = (*path)->getName();
-
+			p->paths[p->pathCount].scope = (*path)->ipScope();
 			++p->pathCount;
+		}
+		if (pi->second->bond()) {
+			p->isBonded = pi->second->bond();
+			p->bondingPolicy = pi->second->bond()->getPolicy();
+			p->isHealthy = pi->second->bond()->isHealthy();
+			p->numAliveLinks = pi->second->bond()->getNumAliveLinks();
+			p->numTotalLinks = pi->second->bond()->getNumTotalLinks();
 		}
 	}
 
