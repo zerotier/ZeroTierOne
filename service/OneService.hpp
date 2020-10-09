@@ -91,6 +91,11 @@ public:
 		 * Allow configuration of DNS for the network
 		 */
 		bool allowDNS;
+
+		/**
+		 * A disabled network will not be loaded, but does still exist and can be re-enabled without destroying and re-creating network adapters on Windows
+		 */
+		bool disabled;
 	};
 
 	/**

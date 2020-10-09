@@ -204,6 +204,7 @@ public:
 		_settings.allowGlobal = false;
 		_settings.allowDefault = false;
 		_settings.allowDNS = false;
+		_settings.disabled = false;
 		memset(&_config, 0, sizeof(ZT_VirtualNetworkConfig));
 	}
 
@@ -271,6 +272,14 @@ public:
 
 	bool allowDNS() const {
 		return _settings.allowDNS;
+	}
+	
+	void setDisabled(bool disabled) {
+		_settings.disabled = disabled;
+	}
+	
+	bool disabled() const {
+		return _settings.disabled;
 	}
 	
 	std::vector<InetAddress> allowManagedWhitelist() const {
@@ -479,6 +488,7 @@ static void _networkToJson(nlohmann::json &nj,NetworkState &ns)
 	nj["allowGlobal"] = localSettings.allowGlobal;
 	nj["allowDefault"] = localSettings.allowDefault;
 	nj["allowDNS"] = localSettings.allowDNS;
+	nj["disabled"] = localSettings.disabled;
 
 	nlohmann::json aa = nlohmann::json::array();
 	for(unsigned int i=0;i<ns.config().assignedAddressCount;++i) {
@@ -796,7 +806,7 @@ public:
 	// Deadline for the next background task service function
 	volatile int64_t _nextBackgroundTaskDeadline;
 
-	
+
 
 	std::map<uint64_t,NetworkState> _nets;
 	Mutex _nets_m;
@@ -1407,6 +1417,7 @@ public:
 			fprintf(out,"allowGlobal=%d\n",(int)settings.allowGlobal);
 			fprintf(out,"allowDefault=%d\n",(int)settings.allowDefault);
 			fprintf(out,"allowDNS=%d\n",(int)settings.allowDNS);
+			fprintf(out, "disabled=%d\n", (int)settings.disabled);
 			fclose(out);
 		}
 
@@ -1876,6 +1887,42 @@ public:
 						} else scode = 500;
 
 					} else scode = 404;
+				}
+				else if (ps[0] == "enable") {
+					if (ps.size() == 2) {
+						uint64_t wantnw = Utils::hexStrToU64(ps[1].c_str());
+						NetworkState state;
+						if (loadNetworkConfig(wantnw, state)) {
+							state.setDisabled(false);
+							setNetworkSettings(wantnw, state.settings());
+							_node->join(wantnw, (void*)0, (void*)0);
+							scode = 200;
+						} else scode = 404;
+					}
+				}
+				else if (ps[0] == "disable") {
+					if (ps.size() == 2) {
+						uint64_t wantnw = Utils::hexStrToU64(ps[1].c_str());
+						ZT_VirtualNetworkList* nws = _node->networks();
+						if (nws) {
+							for (unsigned long i = 0; i < nws->networkCount; ++i) {
+								if (nws->networks[i].nwid == wantnw) {
+									OneService::NetworkSettings localSettings;
+									getNetworkSettings(nws->networks[i].nwid, localSettings);
+									localSettings.disabled = true;
+									setNetworkSettings(nws->networks[i].nwid, localSettings);
+									auto network = _node->network(wantnw);
+									if (network) {
+										nodeVirtualNetworkConfigFunction(wantnw, network->userPtr(), ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN, 0);
+									}
+									_node->leave(wantnw, (void**)0, (void*)0, false);
+									scode = 200;
+									break;
+								}
+							}
+							_node->freeQueryResult((void*)nws);
+						} else scode = 500;
+					}
 				} else {
 					if (_controller)
 						scode = _controller->handleControlPlaneHttpPOST(std::vector<std::string>(ps.begin()+1,ps.end()),urlArgs,headers,body,responseBody,responseContentType);
@@ -1901,7 +1948,7 @@ public:
 							uint64_t wantnw = Utils::hexStrToU64(ps[1].c_str());
 							for(unsigned long i=0;i<nws->networkCount;++i) {
 								if (nws->networks[i].nwid == wantnw) {
-									_node->leave(wantnw,(void **)0,(void *)0);
+									_node->leave(wantnw,(void **)0,(void *)0, true);
 									res["result"] = true;
 									scode = 200;
 									break;
@@ -2673,6 +2720,47 @@ public:
 	inline void phyOnUnixData(PhySocket *sock,void **uptr,void *data,unsigned long len) {}
 	inline void phyOnUnixWritable(PhySocket *sock,void **uptr) {}
 
+	inline bool loadNetworkConfig(uint64_t nwid, NetworkState& n)
+	{
+		char nlcpath[256];
+		OSUtils::ztsnprintf(nlcpath,sizeof(nlcpath),"%s" ZT_PATH_SEPARATOR_S "networks.d" ZT_PATH_SEPARATOR_S "%.16llx.local.conf",_homePath.c_str(),nwid);
+		std::string nlcbuf;
+		if (OSUtils::readFile(nlcpath,nlcbuf)) {
+			Dictionary<4096> nc;
+			nc.load(nlcbuf.c_str());
+			Buffer<1024> allowManaged;
+			if (nc.get("allowManaged", allowManaged) && allowManaged.size() > 0) {
+				std::string addresses (allowManaged.begin(), allowManaged.size());
+				if (allowManaged.size() <= 5) { // untidy parsing for backward compatibility
+					if (allowManaged[0] == '1' || allowManaged[0] == 't' || allowManaged[0] == 'T') {
+						n.setAllowManaged(true);
+					} else {
+						n.setAllowManaged(false);
+					}
+				} else {
+					// this should be a list of IP addresses
+					n.setAllowManaged(true);
+					size_t pos = 0;
+					while (true) {
+						size_t nextPos = addresses.find(',', pos);
+						std::string address = addresses.substr(pos, (nextPos == std::string::npos ? addresses.size() : nextPos) - pos);
+						n.addToAllowManagedWhiteList(InetAddress(address.c_str()));
+						if (nextPos == std::string::npos) break;
+						pos = nextPos + 1;
+					}
+				}
+			} else {
+				n.setAllowManaged(true);
+			}
+			n.setAllowGlobal(nc.getB("allowGlobal", false));
+			n.setAllowDefault(nc.getB("allowDefault", false));
+			n.setAllowDNS(nc.getB("allowDNS", false));
+			n.setDisabled(nc.getB("disabled", false));
+			return true;
+		}
+		return false;
+	}
+
 	inline int nodeVirtualNetworkConfigFunction(uint64_t nwid,void **nuptr,enum ZT_VirtualNetworkConfigOperation op,const ZT_VirtualNetworkConfig *nwc)
 	{
 		Mutex::Lock _l(_nets_m);
@@ -2698,39 +2786,14 @@ public:
 							(void *)this));
 						*nuptr = (void *)&n;
 
-						char nlcpath[256];
-						OSUtils::ztsnprintf(nlcpath,sizeof(nlcpath),"%s" ZT_PATH_SEPARATOR_S "networks.d" ZT_PATH_SEPARATOR_S "%.16llx.local.conf",_homePath.c_str(),nwid);
-						std::string nlcbuf;
-						if (OSUtils::readFile(nlcpath,nlcbuf)) {
-							Dictionary<4096> nc;
-							nc.load(nlcbuf.c_str());
-							Buffer<1024> allowManaged;
-							if (nc.get("allowManaged", allowManaged) && allowManaged.size() > 0) {
-								std::string addresses (allowManaged.begin(), allowManaged.size());
-								if (allowManaged.size() <= 5) { // untidy parsing for backward compatibility
-									if (allowManaged[0] == '1' || allowManaged[0] == 't' || allowManaged[0] == 'T') {
-										n.setAllowManaged(true);
-									} else {
-										n.setAllowManaged(false);
-									}
-								} else {
-									// this should be a list of IP addresses
-									n.setAllowManaged(true);
-									size_t pos = 0;
-									while (true) {
-										size_t nextPos = addresses.find(',', pos);
-										std::string address = addresses.substr(pos, (nextPos == std::string::npos ? addresses.size() : nextPos) - pos);
-										n.addToAllowManagedWhiteList(InetAddress(address.c_str()));
-										if (nextPos == std::string::npos) break;
-										pos = nextPos + 1;
-									}
-								}
-							} else {
-								n.setAllowManaged(true);
-							}
-							n.setAllowGlobal(nc.getB("allowGlobal", false));
-							n.setAllowDefault(nc.getB("allowDefault", false));
-							n.setAllowDNS(nc.getB("allowDNS", false));
+						loadNetworkConfig(nwid, n);
+
+						if (n.disabled()) {
+							// Network is disabled, pretend init has failed and signal via return code
+							n.tap().reset();
+							_nets.erase(nwid);
+							// Tell network to tear down via specific error code
+							return -1001;
 						}
 					} catch (std::exception &exc) {
 #ifdef __WINDOWS__

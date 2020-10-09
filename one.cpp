@@ -139,6 +139,8 @@ static void cliPrintHelp(const char *pn,FILE *out)
 	fprintf(out,"  listnetworks            - List all networks" ZT_EOL_S);
 	fprintf(out,"  join <network ID>          - Join a network" ZT_EOL_S);
 	fprintf(out,"  leave <network ID>         - Leave a network" ZT_EOL_S);
+	fprintf(out,"  enable <network>           - Enables a network" ZT_EOL_S);
+	fprintf(out,"  disable <network>          - Disables a network" ZT_EOL_S);
 	fprintf(out,"  set <network ID> <setting> - Set a network setting" ZT_EOL_S);
 	fprintf(out,"  get <network ID> <setting> - Get a network setting" ZT_EOL_S);
 	fprintf(out,"  listmoons               - List moons (federated root sets)" ZT_EOL_S);
@@ -842,6 +844,66 @@ static int cli(int argc,char **argv)
 			return 0;
 		} else {
 			printf("%u %s %s" ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
+			return 1;
+		}
+	} else if (command == "enable") {
+		if (arg1.length() != 16) {
+			printf("invalid network id" ZT_EOL_S);
+			return 2;
+		}
+		requestHeaders["Content-Type"] = "application/json";
+		requestHeaders["Content-Length"] = "2";
+		unsigned int scode = Http::POST(
+			1024 * 1024 * 16,
+			60000,
+			(const struct sockaddr*)&addr,
+			(std::string("/enable/") + arg1).c_str(),
+			requestHeaders,
+			"{}",
+			2,
+			responseHeaders,
+			responseBody);
+		if (scode == 200) {
+			if (json) {
+				printf("%s", cliFixJsonCRs(responseBody).c_str());
+			}
+			else {
+				printf("200 enable OK" ZT_EOL_S);
+			}
+		return 0;
+		}
+		else {
+			printf("%u %s %s" ZT_EOL_S, scode, command.c_str(), responseBody.c_str());
+			return 1;
+		}
+	} else if (command == "disable") {
+		if (arg1.length() != 16) {
+			printf("invalid network id" ZT_EOL_S);
+			return 2;
+		}
+		requestHeaders["Content-Type"] = "application/json";
+		requestHeaders["Content-Length"] = "2";
+		unsigned int scode = Http::POST(
+			1024 * 1024 * 16,
+			60000,
+			(const struct sockaddr*)&addr,
+			(std::string("/disable/") + arg1).c_str(),
+			requestHeaders,
+			"{}",
+			2,
+			responseHeaders,
+			responseBody);
+		if (scode == 200) {
+			if (json) {
+				printf("%s", cliFixJsonCRs(responseBody).c_str());
+			}
+			else {
+				printf("200 disable OK" ZT_EOL_S);
+			}
+			return 0;
+		}
+		else {
+			printf("%u %s %s" ZT_EOL_S, scode, command.c_str(), responseBody.c_str());
 			return 1;
 		}
 	} else if (command == "listmoons") {

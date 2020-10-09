@@ -384,10 +384,13 @@ ZT_ResultCode Node::join(uint64_t nwid,void *uptr,void *tptr)
 	SharedPtr<Network> &nw = _networks[nwid];
 	if (!nw)
 		nw = SharedPtr<Network>(new Network(RR,tptr,nwid,uptr,(const NetworkConfig *)0));
+	if (nw->status() == ZT_NETWORK_DISABLED) {
+		leave(nwid, &uptr, tptr, false);
+	}
 	return ZT_RESULT_OK;
 }
 
-ZT_ResultCode Node::leave(uint64_t nwid,void **uptr,void *tptr)
+ZT_ResultCode Node::leave(uint64_t nwid,void **uptr,void *tptr, bool permanent)
 {
 	ZT_VirtualNetworkConfig ctmp;
 	void **nUserPtr = (void **)0;
@@ -399,12 +402,13 @@ ZT_ResultCode Node::leave(uint64_t nwid,void **uptr,void *tptr)
 			return ZT_RESULT_OK;
 		if (uptr)
 			*uptr = (*nw)->userPtr();
+
 		(*nw)->externalConfig(&ctmp);
 		(*nw)->destroy();
 		nUserPtr = (*nw)->userPtr();
 	}
 
-	if (nUserPtr)
+	if (nUserPtr && permanent)
 		RR->node->configureVirtualNetworkPort(tptr,nwid,nUserPtr,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY,&ctmp);
 
 	{
@@ -414,7 +418,8 @@ ZT_ResultCode Node::leave(uint64_t nwid,void **uptr,void *tptr)
 
 	uint64_t tmp[2];
 	tmp[0] = nwid; tmp[1] = 0;
-	RR->node->stateObjectDelete(tptr,ZT_STATE_OBJECT_NETWORK_CONFIG,tmp);
+	if(permanent)
+		RR->node->stateObjectDelete(tptr,ZT_STATE_OBJECT_NETWORK_CONFIG,tmp);
 
 	return ZT_RESULT_OK;
 }
@@ -872,7 +877,7 @@ enum ZT_ResultCode ZT_Node_join(ZT_Node *node,uint64_t nwid,void *uptr,void *tpt
 enum ZT_ResultCode ZT_Node_leave(ZT_Node *node,uint64_t nwid,void **uptr,void *tptr)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->leave(nwid,uptr,tptr);
+		return reinterpret_cast<ZeroTier::Node *>(node)->leave(nwid,uptr,tptr, true);
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch ( ... ) {

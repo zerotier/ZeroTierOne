@@ -674,7 +674,12 @@ enum ZT_VirtualNetworkStatus
 	/**
 	 * External authentication is required (e.g. SSO)
 	 */
-	ZT_NETWORK_STATUS_AUTHENTICATION_REQUIRED = 6
+	ZT_NETWORK_STATUS_AUTHENTICATION_REQUIRED = 6,
+
+	/**
+	 * The network is disabled by local config setting
+	 */
+	ZT_NETWORK_DISABLED = 7
 };
 
 /**

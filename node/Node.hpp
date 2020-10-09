@@ -84,7 +84,7 @@ public:
 		volatile int64_t *nextBackgroundTaskDeadline);
 	ZT_ResultCode processBackgroundTasks(void *tptr,int64_t now,volatile int64_t *nextBackgroundTaskDeadline);
 	ZT_ResultCode join(uint64_t nwid,void *uptr,void *tptr);
-	ZT_ResultCode leave(uint64_t nwid,void **uptr,void *tptr);
+	ZT_ResultCode leave(uint64_t nwid,void **uptr,void *tptr, bool permanent);
 	ZT_ResultCode multicastSubscribe(void *tptr,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
 	ZT_ResultCode multicastUnsubscribe(uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
 	ZT_ResultCode orbit(void *tptr,uint64_t moonWorldId,uint64_t moonSeed);
