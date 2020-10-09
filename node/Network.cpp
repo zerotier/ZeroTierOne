@@ -589,9 +589,6 @@ Network::Network(const RuntimeEnvironment *renv,void *tPtr,uint64_t nwid,void *u
 		memset(&ctmp, 0, sizeof(ZT_VirtualNetworkConfig));
 		_externalConfig(&ctmp);
 		_portError = RR->node->configureVirtualNetworkPort(tPtr,_id,&_uPtr,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP,&ctmp);
-		if (_portError == -1001) {
-			destroy();
-		}
 		_portInitialized = true;
 	}
 }
@@ -1382,10 +1379,11 @@ void Network::destroy()
 ZT_VirtualNetworkStatus Network::_status() const
 {
 	// assumes _lock is locked
-	if (_portError)
+	if (_portError) {
 		if (_portError == -1001)
 			return ZT_NETWORK_DISABLED;
 		return ZT_NETWORK_STATUS_PORT_ERROR;
+	}
 	switch(_netconfFailure) {
 		case NETCONF_FAILURE_ACCESS_DENIED:
 			return ZT_NETWORK_STATUS_ACCESS_DENIED;
