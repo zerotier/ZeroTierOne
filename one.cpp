@@ -1153,7 +1153,7 @@ static int cli(int argc,char **argv)
 					void *addr;
 					getifaddrs(&ifap);
 					for(ifa = ifap; ifa; ifa = ifa->ifa_next) {
-						if(strcmp(ifr.ifr_name, ifa->ifa_name) == 0) {
+						if(strcmp(ifr.ifr_name, ifa->ifa_name) == 0 && ifa->ifa_addr != NULL) {
 							if(ifa->ifa_addr->sa_family == AF_INET) {
 								struct sockaddr_in *ipv4 = (struct sockaddr_in*)ifa->ifa_addr;
 								addr = &ipv4->sin_addr;
