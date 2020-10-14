@@ -701,4 +701,25 @@ void ZT_Certificate_delete(const ZT_Certificate *cert)
 
 /********************************************************************************************************************/
 
+char *ZT_Endpoint_toString(
+	const ZT_Endpoint *ep,
+	char *buf,
+	int capacity)
+{
+	if ((!ep) || (!buf) || (capacity < ZT_ENDPOINT_STRING_SIZE_MAX))
+		return nullptr;
+	return reinterpret_cast<const ZeroTier::Endpoint *>(ep)->toString(buf);
+}
+
+int ZT_Endpoint_fromString(
+	ZT_Endpoint *ep,
+	const char *str)
+{
+	if ((!ep) || (!str))
+		return ZT_RESULT_ERROR_BAD_PARAMETER;
+	return reinterpret_cast<ZeroTier::Endpoint *>(ep)->fromString(str) ? ZT_RESULT_OK : ZT_RESULT_ERROR_BAD_PARAMETER;
+}
+
+/********************************************************************************************************************/
+
 } // extern "C"
