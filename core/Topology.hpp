@@ -194,7 +194,6 @@ private:
 		SharedPtr< const Certificate > certificate;
 		unsigned int localTrust;
 	};
-
 	Map< SHA384Hash, p_CertEntry > m_certs;
 	Map< SHA384Hash, p_CertEntry > m_certsBySubjectUniqueID;
 	Map< Fingerprint, Map< SharedPtr< const Certificate >, unsigned int > > m_certsBySubjectIdentity;

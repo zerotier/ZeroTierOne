@@ -63,6 +63,7 @@ set(core_src
 	AES.cpp
 	Buf.cpp
 	C25519.cpp
+	CAPI.cpp
 	CapabilityCredential.cpp
 	Certificate.cpp
 	Defaults.cpp

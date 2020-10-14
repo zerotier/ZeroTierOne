@@ -219,10 +219,13 @@ if(NOT PACKAGE_STATIC)
 	if (
 		CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64" OR
 		CMAKE_SYSTEM_PROCESSOR MATCHES "amd64" OR
-		CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64"
+		CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64" OR
+		CMAKE_SYSTEM_PROCESSOR MATCHES "X86_64" OR
+		CMAKE_SYSTEM_PROCESSOR MATCHES "x64" OR
+		CMAKE_SYSTEM_PROCESSOR MATCHES "X64"
 	)
 		message("++ Adding flags for processor ${CMAKE_SYSTEM_PROCESSOR}")
-		add_compile_options(-maes -mrdrnd -mpclmul -msse -msse2 -mssse3 -msse4 -msse4.1 -msse4.2)
+		add_compile_options(-maes -mrdrnd -mpclmul -msse -msse2)
 	endif()
 
 	if (

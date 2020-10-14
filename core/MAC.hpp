@@ -264,6 +264,8 @@ private:
 	uint64_t m_mac;
 };
 
+static_assert(sizeof(MAC) == sizeof(uint64_t),"MAC contains unnecessary padding");
+
 } // namespace ZeroTier
 
 #endif

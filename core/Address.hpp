@@ -158,6 +158,8 @@ private:
 	uint64_t _a;
 };
 
+static_assert(sizeof(Address) == sizeof(uint64_t),"Address has unnecessary extra padding");
+
 } // namespace ZeroTier
 
 #endif

@@ -112,6 +112,9 @@ struct UniqueID
 	{ return (memcmp(data, b.data, 16) >= 0); }
 };
 
+static_assert(sizeof(SHA384Hash) == 48,"SHA384Hash contains unnecessary padding");
+static_assert(sizeof(UniqueID) == 16,"UniqueID contains unnecessary padding");
+
 } // namespace ZeroTier
 
 #endif

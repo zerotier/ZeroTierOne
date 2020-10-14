@@ -115,14 +115,6 @@
 #include <mmintrin.h>
 #endif
 
-#if (defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(ZT_ARCH_ARM_HAS_NEON))
-#ifndef ZT_ARCH_ARM_HAS_NEON
-#define ZT_ARCH_ARM_HAS_NEON 1
-#endif
-#include <arm_neon.h>
-/*#include <arm_acle.h>*/
-#endif
-
 #if defined(ZT_ARCH_X64) || defined(i386) || defined(__i386) || defined(__i386__) || defined(__i486__) || defined(__i586__) || defined(__i686__) || defined(_M_IX86) || defined(__X86__) || defined(_X86_) || defined(__I86__) || defined(__INTEL__) || defined(__386)
 #define ZT_ARCH_X86 1
 #endif
@@ -130,6 +122,20 @@
 #if !defined(ZT_ARCH_X86)
 #ifndef ZT_NO_UNALIGNED_ACCESS
 #define ZT_NO_UNALIGNED_ACCESS 1
+#endif
+#endif
+
+#if (defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(ZT_ARCH_ARM_HAS_NEON))
+#if (defined(__APPLE__) && !defined(__LP64__)) || (defined(__ANDROID__) && defined(__arm__))
+#ifdef ZT_ARCH_ARM_HAS_NEON
+#undef ZT_ARCH_ARM_HAS_NEON
+#endif
+#else
+#ifndef ZT_ARCH_ARM_HAS_NEON
+#define ZT_ARCH_ARM_HAS_NEON 1
+#endif
+#include <arm_neon.h>
+/*#include <arm_acle.h>*/
 #endif
 #endif
 
@@ -216,10 +222,9 @@ typedef unsigned uint128_t __attribute__((mode(TI)));
 #endif
 #endif
 
-// Macro to print very verbose tracing information to standard error.
-#define ZT_VA_ARGS(...) , ##__VA_ARGS__
 #define ZT_DEBUG_SPEW
 #ifdef ZT_DEBUG_SPEW
+#define ZT_VA_ARGS(...) , ##__VA_ARGS__
 #define ZT_SPEW(f,...) fprintf(stderr,"%s:%d(%s): " f ZT_EOL_S,__FILE__,__LINE__,__FUNCTION__ ZT_VA_ARGS(__VA_ARGS__))
 #else
 #define ZT_SPEW(f,...)

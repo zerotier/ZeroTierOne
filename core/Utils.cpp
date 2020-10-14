@@ -38,9 +38,21 @@ namespace ZeroTier {
 
 namespace Utils {
 
-#ifdef ZT_ARCH_ARM_HAS_NEON
+#ifdef ZT_ARCH_ARM_HAS_NEON /****************************************************************************************/
 ARMCapabilities::ARMCapabilities() noexcept
 {
+
+#ifdef __APPLE__
+
+	this->aes = true;
+	this->crc32 = true;
+	this->pmull = true;
+	this->sha1 = true;
+	this->sha2 = true;
+
+#else
+
+#ifdef __LINUX__
 #ifdef HWCAP2_AES
 	if (sizeof(void *) == 4) {
 		const long hwcaps2 = getauxval(AT_HWCAP2);
@@ -60,13 +72,16 @@ ARMCapabilities::ARMCapabilities() noexcept
 #ifdef HWCAP2_AES
 	}
 #endif
+#endif
+
+#endif
+
 }
 
 const ARMCapabilities ARMCAP;
-#endif
+#endif /*************************************************************************************************************/
 
-#ifdef ZT_ARCH_X64
-
+#ifdef ZT_ARCH_X64 /*************************************************************************************************/
 CPUIDRegisters::CPUIDRegisters() noexcept
 {
 	uint32_t eax, ebx, ecx, edx;
@@ -113,7 +128,7 @@ CPUIDRegisters::CPUIDRegisters() noexcept
 }
 
 const CPUIDRegisters CPUID;
-#endif
+#endif /*************************************************************************************************************/
 
 const std::bad_alloc BadAllocException;
 const std::out_of_range OutOfRangeException("access out of range");
@@ -131,19 +146,18 @@ bool secureEq(const void *a, const void *b, unsigned int len) noexcept
 
 void burn(volatile void *ptr, unsigned int len)
 {
+	static volatile uintptr_t foo = 0;
 	Utils::zero((void *)ptr, len);
-	// This line is present to force the compiler not to optimize out the memory
-	// zeroing operation above, as burn() is used to erase secrets and other
-	// sensitive data.
-	if ((reinterpret_cast<volatile uint8_t *>(ptr)[0] | reinterpret_cast<volatile uint8_t *>(ptr)[len-1]) != 0)
-		burn(ptr, len);
+	// Force compiler not to optimize this function out by taking a volatile
+	// parameter and also updating a volatile variable.
+	foo += (uintptr_t)len ^ (uintptr_t)reinterpret_cast<volatile uint8_t *>(ptr)[0];
 }
 
-static unsigned long _Utils_itoa(unsigned long n, char *s)
+static unsigned long s_decimalRecursive(unsigned long n, char *s)
 {
 	if (n == 0)
 		return 0;
-	unsigned long pos = _Utils_itoa(n / 10, s);
+	unsigned long pos = s_decimalRecursive(n / 10, s);
 	if (pos >= 22) // sanity check,should be impossible
 		pos = 22;
 	s[pos] = (char)('0' + (n % 10));
@@ -157,7 +171,7 @@ char *decimal(unsigned long n, char s[24]) noexcept
 		s[1] = (char)0;
 		return s;
 	}
-	s[_Utils_itoa(n, s)] = (char)0;
+	s[s_decimalRecursive(n, s)] = (char)0;
 	return s;
 }
 
@@ -353,7 +367,7 @@ void getSecureRandom(void *const buf, unsigned int bytes) noexcept
 
 uint64_t getSecureRandomU64() noexcept
 {
-	uint64_t tmp = 0;
+	uint64_t tmp;
 	getSecureRandom(&tmp, sizeof(tmp));
 	return tmp;
 }
