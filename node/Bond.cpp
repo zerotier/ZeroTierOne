@@ -233,12 +233,10 @@ void Bond::recordOutgoingPacket(const SharedPtr<Path> &path, const uint64_t pack
 			}
 		}
 	}
-	if (_allowFlowHashing) {
-		if (_allowFlowHashing && (flowId != ZT_QOS_NO_FLOW)) {
-			Mutex::Lock _l(_flows_m);
-			if (_flows.count(flowId)) {
-				_flows[flowId]->recordOutgoingBytes(payloadLength);
-			}
+	if (_allowFlowHashing && (flowId != ZT_QOS_NO_FLOW)) {
+		Mutex::Lock _l(_flows_m);
+		if (_flows.count(flowId)) {
+			_flows[flowId]->recordOutgoingBytes(payloadLength);
 		}
 	}
 }
@@ -1164,18 +1162,13 @@ void Bond::processBalanceTasks(const int64_t now)
 	 * Tasks specific to (Balance Round Robin)
 	 */
 	if (_bondingPolicy == ZT_BONDING_POLICY_BALANCE_RR) {
-		if (_allowFlowHashing) {
-			// TODO: Should ideally failover from (idx) to a random link, this is so that (idx+1) isn't overloaded
-		}
-		else if (!_allowFlowHashing) {
-			// Nothing
-		}
+		// Nothing
 	}
 	/**
 	 * Tasks specific to (Balance XOR)
 	 */
 	if (_bondingPolicy == ZT_BONDING_POLICY_BALANCE_XOR) {
-		// Nothing specific for XOR
+		// Nothing
 	}
 	/**
 	 * Tasks specific to (Balance Aware)
