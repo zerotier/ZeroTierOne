@@ -1,3 +1,10 @@
+zerotier-one (1.5.0) unstable; urgency=medium
+
+  * Version 1.5.0 is actually 1.6.0-beta1
+  * See RELEASE-NOTES.md for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Mon, 05 Aug 2020 01:00:00 -0700
+
 zerotier-one (1.4.6) unstable; urgency=medium
 
   * Update default root server list

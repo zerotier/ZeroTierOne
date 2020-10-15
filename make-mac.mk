@@ -95,18 +95,17 @@ ext/x64-salsa2012-asm/salsa2012.o:
 
 mac-agent: FORCE
 	$(CC) -Ofast -o MacEthernetTapAgent osdep/MacEthernetTapAgent.c
-	$(CODESIGN) -f -s $(CODESIGN_APP_CERT) MacEthernetTapAgent
+	$(CODESIGN) -f --options=runtime -s $(CODESIGN_APP_CERT) MacEthernetTapAgent
 
 osdep/MacDNSHelper.o: osdep/MacDNSHelper.mm
 	$(CXX) $(CXXFLAGS) -c osdep/MacDNSHelper.mm -o osdep/MacDNSHelper.o 
 
 one:	$(CORE_OBJS) $(ONE_OBJS) one.o mac-agent
-	 
 	$(CXX) $(CXXFLAGS) -o zerotier-one $(CORE_OBJS) $(ONE_OBJS) one.o $(LIBS)
 	# $(STRIP) zerotier-one
 	ln -sf zerotier-one zerotier-idtool
 	ln -sf zerotier-one zerotier-cli
-	$(CODESIGN) -f -s $(CODESIGN_APP_CERT) zerotier-one
+	$(CODESIGN) -f --options=runtime -s $(CODESIGN_APP_CERT) zerotier-one
 
 zerotier-one: one
 
@@ -125,7 +124,7 @@ core: libzerotiercore.a
 
 macui:	FORCE
 	cd macui && xcodebuild -target "ZeroTier One" -configuration Release
-	$(CODESIGN) -f -s $(CODESIGN_APP_CERT) "macui/build/Release/ZeroTier One.app"
+	$(CODESIGN) -f --options=runtime -s $(CODESIGN_APP_CERT) "macui/build/Release/ZeroTier One.app"
 
 #cli:	FORCE
 #	$(CXX) $(CXXFLAGS) -o zerotier cli/zerotier.cpp osdep/OSUtils.cpp node/InetAddress.cpp node/Utils.cpp node/Salsa20.cpp node/Identity.cpp node/SHA512.cpp node/C25519.cpp -lcurl
@@ -145,7 +144,7 @@ mac-dist-pkg: FORCE
 	if [ -f "ZeroTier One Signed.pkg" ]; then mv -f "ZeroTier One Signed.pkg" "ZeroTier One.pkg"; fi
 	rm -f zt1_update_$(ZT_BUILD_PLATFORM)_$(ZT_BUILD_ARCHITECTURE)_*
 	cat ext/installfiles/mac-update/updater.tmpl.sh "ZeroTier One.pkg" >zt1_update_$(ZT_BUILD_PLATFORM)_$(ZT_BUILD_ARCHITECTURE)_$(ZT_VERSION_MAJOR).$(ZT_VERSION_MINOR).$(ZT_VERSION_REV)_$(ZT_VERSION_BUILD).exe
-	$(NOTARIZE) -t osx -f "ZeroTier One.pkg" --primary-bundle-id --output-format xml --notarize-app -u $(NOTARIZE_USER_ID)
+	$(NOTARIZE) -t osx -f "ZeroTier One.pkg" --primary-bundle-id com.zerotier.pkg.ZeroTierOne --output-format xml --notarize-app -u $(NOTARIZE_USER_ID)
 	echo '*** When Apple notifies that the app is notarized, run: xcrun stapler staple "ZeroTier One.pkg"'
 
 # For ZeroTier, Inc. to build official signed packages
@@ -157,7 +156,6 @@ official: FORCE
 
 central-controller-docker: FORCE
 	docker build --no-cache -t registry.zerotier.com/zerotier-central/ztcentral-controller:${TIMESTAMP} -f ext/central-controller-docker/Dockerfile --build-arg git_branch=$(shell git name-rev --name-only HEAD) .
-	
 
 clean:
 	rm -rf MacEthernetTapAgent *.dSYM build-* *.a *.pkg *.dmg *.o node/*.o controller/*.o service/*.o osdep/*.o ext/http-parser/*.o $(CORE_OBJS) $(ONE_OBJS) zerotier-one zerotier-idtool zerotier-selftest zerotier-cli zerotier doc/node_modules macui/build zt1_update_$(ZT_BUILD_PLATFORM)_$(ZT_BUILD_ARCHITECTURE)_*

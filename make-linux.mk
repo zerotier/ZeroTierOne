@@ -119,15 +119,15 @@ ifeq ($(CC_MACH),x86_64)
 	ZT_ARCHITECTURE=2
 	ZT_USE_X64_ASM_SALSA=1
 	ZT_USE_X64_ASM_ED25519=1
-	override CFLAGS+=-msse -msse2 -mssse3 -msse4 -msse4.1 -msse4.2 -maes -mpclmul
-	override CXXFLAGS+=-msse -msse2 -mssse3 -msse4 -msse4.1 -msse4.2 -maes -mpclmul
+	override CFLAGS+=-msse -msse2 -maes -mpclmul
+	override CXXFLAGS+=-msse -msse2 -maes -mpclmul
 endif
 ifeq ($(CC_MACH),amd64)
 	ZT_ARCHITECTURE=2
 	ZT_USE_X64_ASM_SALSA=1
 	ZT_USE_X64_ASM_ED25519=1
-	override CFLAGS+=-msse -msse2 -mssse3 -msse4 -msse4.1 -msse4.2 -maes -mpclmul
-	override CXXFLAGS+=-msse -msse2 -mssse3 -msse4 -msse4.1 -msse4.2 -maes -mpclmul
+	override CFLAGS+=-msse -msse2 -maes -mpclmul
+	override CXXFLAGS+=-msse -msse2 -maes -mpclmul
 endif
 ifeq ($(CC_MACH),powerpc64le)
 	ZT_ARCHITECTURE=8
@@ -232,6 +232,9 @@ ifeq ($(CC_MACH),mips64el)
 endif
 ifeq ($(CC_MACH),s390x)
 	ZT_ARCHITECTURE=16
+endif
+ifeq ($(CC_MACH),riscv64)
+	ZT_ARCHITECTURE=0
 endif
 
 # Fail if system architecture could not be determined

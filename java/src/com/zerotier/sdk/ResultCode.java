@@ -45,30 +45,35 @@ public enum ResultCode {
     /**
      * Ran out of memory
      */
-	RESULT_FATAL_ERROR_OUT_OF_MEMORY(1),
+	RESULT_FATAL_ERROR_OUT_OF_MEMORY(100),
 
     /**
      * Data store is not writable or has failed
      */
-	RESULT_FATAL_ERROR_DATA_STORE_FAILED(2),
+	RESULT_FATAL_ERROR_DATA_STORE_FAILED(101),
 
     /**
      * Internal error (e.g. unexpected exception indicating bug or build problem)
      */
-	RESULT_FATAL_ERROR_INTERNAL(3),
+	RESULT_FATAL_ERROR_INTERNAL(102),
 
     // non-fatal errors
 
     /**
      * Network ID not valid
      */
-	RESULT_ERROR_NETWORK_NOT_FOUND(1000);
+	RESULT_ERROR_NETWORK_NOT_FOUND(1000),
+
+    RESULT_ERROR_UNSUPPORTED_OPERATION(1001),
+
+    RESULT_ERROR_BAD_PARAMETER(1002);
+
 	
 	private final int id;
     ResultCode(int id) { this.id = id; }
     public int getValue() { return id; }
 
     public boolean isFatal(int id) {
-    	return (id > 0 && id < 1000);
+    	return (id > 100 && id < 1000);
     }
 }

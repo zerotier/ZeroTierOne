@@ -48,7 +48,7 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 		char maskingKey [128];
 		Utils::hex(sha512pk,32,maskingKey);
 
-		httplib::Client htcli(_lfNodeHost.c_str(),_lfNodePort,600);
+		httplib::Client htcli(_lfNodeHost.c_str(),_lfNodePort);
 		int64_t timeRangeStart = 0;
 		while (_running.load()) {
 			{

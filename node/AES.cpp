@@ -18,10 +18,6 @@
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #endif
 
-#ifdef __APPLE__
-#include <arm_neon.h>
-#endif
-
 #define Te1_r(x) ZT_ROR32(Te0[x], 8U)
 #define Te2_r(x) ZT_ROR32(Te0[x], 16U)
 #define Te3_r(x) ZT_ROR32(Te0[x], 24U)
@@ -150,6 +146,7 @@ void s_gfmul(const uint64_t hh, const uint64_t hl, uint64_t &y0, uint64_t &y1) n
 // SSE shuffle parameter to reverse bytes in a 128-bit vector.
 static const __m128i s_sseSwapBytes = _mm_set_epi8(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
 
+__attribute__((__target__("ssse3,sse4,sse4.1,sse4.2")))
 static __m128i p_gmacPCLMUL128(const __m128i h, __m128i y) noexcept
 {
 	y = _mm_shuffle_epi8(y, s_sseSwapBytes);
@@ -173,6 +170,7 @@ static __m128i p_gmacPCLMUL128(const __m128i h, __m128i y) noexcept
 
 #endif
 
+__attribute__((__target__("ssse3,sse4,sse4.1,sse4.2")))
 void AES::GMAC::update(const void *const data, unsigned int len) noexcept
 {
 	const uint8_t *in = reinterpret_cast<const uint8_t *>(data);
@@ -326,6 +324,7 @@ void AES::GMAC::update(const void *const data, unsigned int len) noexcept
 	_rp = len; // len is always less than 16 here
 }
 
+__attribute__((__target__("ssse3,sse4,sse4.1,sse4.2")))
 void AES::GMAC::finish(uint8_t tag[16]) noexcept
 {
 #ifdef ZT_AES_AESNI
@@ -597,6 +596,7 @@ void p_aesCtrInnerVAES256(unsigned int &len, const uint64_t c0, uint64_t &c1, co
 
 #endif // ZT_AES_AESNI
 
+__attribute__((__target__("ssse3,sse4,sse4.1,sse4.2")))
 void AES::CTR::crypt(const void *const input, unsigned int len) noexcept
 {
 	const uint8_t *in = reinterpret_cast<const uint8_t *>(input);
@@ -1477,6 +1477,7 @@ static __m128i _init256_2_aesni(__m128i a, __m128i b) noexcept
 	return x;
 }
 
+__attribute__((__target__("ssse3,sse4,sse4.1,sse4.2")))
 void AES::_init_aesni(const uint8_t key[32]) noexcept
 {
 	__m128i t1, t2, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10, k11, k12, k13;
