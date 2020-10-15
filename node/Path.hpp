@@ -184,7 +184,8 @@ public:
 	 *
 	 * @param t Time of receive
 	 */
-	inline void received(const uint64_t t) {
+	inline void received(const uint64_t t)
+	{
 		if (!alive(t,_bonded)) {
 			_lastAliveToggle = _lastIn;
 		}
@@ -311,15 +312,9 @@ public:
 	 */
 	inline long quality(const int64_t now) const
 	{
-		const long l = (long)_latency;
-		const long age = (long)std::min((now - _lastIn),(int64_t)(ZT_PATH_HEARTBEAT_PERIOD * 10)); // set an upper sanity limit to avoid overflow
-		return (
-			(
-				(age < (long)(ZT_PATH_HEARTBEAT_PERIOD + 5000)) ? l : (l + 0xffff + age)
-			) * (
-				((long)ZT_INETADDRESS_MAX_SCOPE - (long)_ipScope) + (_addr.isV6() ? (long)1 : (long)3)
-			)
-		);
+		const int l = (long)_latency;
+		const int age = (long)std::min((now - _lastIn),(int64_t)(ZT_PATH_HEARTBEAT_PERIOD * 10)); // set an upper sanity limit to avoid overflow
+		return (((age < (ZT_PATH_HEARTBEAT_PERIOD + 5000)) ? l : (l + 0xffff + age)) * (long)((ZT_INETADDRESS_MAX_SCOPE - _ipScope) + 1));
 	}
 
 	/**
