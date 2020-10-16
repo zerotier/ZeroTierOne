@@ -103,13 +103,13 @@ Advanced Operations:
     verify <cert>                        Verify certificate (not entire chain)
     dump <cert>                          Verify and print certificate
 ·   import <cert> [trust,[trust]]        Import certificate into this node
-      rootca                             Certificate is a root CA (trust flag)
-      ztrootset                          ZeroTier root node set (trust flag)
+      trust flag: rootca                 Certificate is a root CA
+      trust flag: ztrootset              ZeroTier root node set
 ·   restore                              Re-import default certificates
 ·   export <serial> [path]               Export a certificate from this node
 ·   delete <serial|ALL>                  Delete certificate from this node
 
-· Command requires a running node and access to a local API token.
+     · Command requires a running node and access to a local API token.
 
 An <address> may be specified as a 10-digit short ZeroTier address, a
 fingerprint containing both an address and a SHA384 hash, or an identity.

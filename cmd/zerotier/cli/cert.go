@@ -28,6 +28,14 @@ func Cert(basePath string, authTokenGenerator func() string, args []string, json
 
 	switch args[0] {
 
+	case "list":
+
+	case "show":
+		if len(args) != 1 {
+			Help()
+			return 1
+		}
+
 	case "newsid":
 		if len(args) > 2 {
 			Help()
@@ -143,14 +151,6 @@ func Cert(basePath string, authTokenGenerator func() string, args []string, json
 			fmt.Println(cert.JSON())
 		} else {
 			fmt.Println("OK")
-		}
-
-	case "list":
-
-	case "show":
-		if len(args) != 1 {
-			Help()
-			return 1
 		}
 
 	case "import":

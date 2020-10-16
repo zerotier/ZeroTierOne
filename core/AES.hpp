@@ -18,6 +18,7 @@
 #include "Utils.hpp"
 #include "SHA512.hpp"
 
+// Uncomment to disable all hardware acceleration (usually for testing)
 //#define ZT_AES_NO_ACCEL
 
 #if !defined(ZT_AES_NO_ACCEL) && defined(ZT_ARCH_X64)
@@ -73,7 +74,7 @@ public:
 	{ this->init(key); }
 
 	ZT_INLINE ~AES()
-	{ Utils::burn(&_k, sizeof(_k)); }
+	{ Utils::burn(&p_k, sizeof(p_k)); }
 
 	/**
 	 * Set (or re-set) this AES256 cipher's key
@@ -84,7 +85,7 @@ public:
 	{
 #ifdef ZT_AES_AESNI
 		if (likely(Utils::CPUID.aes)) {
-			_init_aesni(reinterpret_cast<const uint8_t *>(key));
+			p_init_aesni(reinterpret_cast<const uint8_t *>(key));
 			return;
 		}
 #endif
@@ -94,7 +95,7 @@ public:
 			return;
 		}
 #endif
-		_initSW(reinterpret_cast<const uint8_t *>(key));
+		p_initSW(reinterpret_cast<const uint8_t *>(key));
 	}
 
 	/**
@@ -107,7 +108,7 @@ public:
 	{
 #ifdef ZT_AES_AESNI
 		if (likely(Utils::CPUID.aes)) {
-			_encrypt_aesni(in, out);
+			p_encrypt_aesni(in, out);
 			return;
 		}
 #endif
@@ -117,7 +118,7 @@ public:
 			return;
 		}
 #endif
-		_encryptSW(reinterpret_cast<const uint8_t *>(in), reinterpret_cast<uint8_t *>(out));
+		p_encryptSW(reinterpret_cast<const uint8_t *>(in), reinterpret_cast<uint8_t *>(out));
 	}
 
 	/**
@@ -130,7 +131,7 @@ public:
 	{
 #ifdef ZT_AES_AESNI
 		if (likely(Utils::CPUID.aes)) {
-			_decrypt_aesni(in, out);
+			p_decrypt_aesni(in, out);
 			return;
 		}
 #endif
@@ -140,7 +141,7 @@ public:
 			return;
 		}
 #endif
-		_decryptSW(reinterpret_cast<const uint8_t *>(in), reinterpret_cast<uint8_t *>(out));
+		p_decryptSW(reinterpret_cast<const uint8_t *>(in), reinterpret_cast<uint8_t *>(out));
 	}
 
 	class GMACSIVEncryptor;
@@ -225,6 +226,11 @@ public:
 		void finish(uint8_t tag[16]) noexcept;
 
 	private:
+#ifdef ZT_AES_AESNI
+		void p_aesNIUpdate(const uint8_t *in, unsigned int len) noexcept;
+		void p_aesNIFinish(uint8_t tag[16]) noexcept;
+#endif
+
 		const AES &_aes;
 		unsigned int _rp;
 		unsigned int _len;
@@ -292,6 +298,10 @@ public:
 		void finish() noexcept;
 
 	private:
+#ifdef ZT_AES_AESNI
+		void p_aesNICrypt(const uint8_t *in, uint8_t *out, unsigned int len) noexcept;
+#endif
+
 		const AES &_aes;
 		uint64_t _ctr[2];
 		uint8_t *_out;
@@ -318,7 +328,7 @@ public:
 		 * @param k0 First of two AES instances keyed with K0
 		 * @param k1 Second of two AES instances keyed with K1
 		 */
-		ZT_INLINE GMACSIVEncryptor(const AES &k0, const AES &k1) noexcept:
+		ZT_INLINE GMACSIVEncryptor(const AES &k0, const AES &k1) noexcept :
 			_gmac(k0),
 			_ctr(k1)
 		{}
@@ -528,9 +538,9 @@ private:
 	static const uint8_t Td4[256];
 	static const uint32_t rcon[15];
 
-	void _initSW(const uint8_t key[32]) noexcept;
-	void _encryptSW(const uint8_t in[16], uint8_t out[16]) const noexcept;
-	void _decryptSW(const uint8_t in[16], uint8_t out[16]) const noexcept;
+	void p_initSW(const uint8_t *key) noexcept;
+	void p_encryptSW(const uint8_t *in, uint8_t *out) const noexcept;
+	void p_decryptSW(const uint8_t *in, uint8_t *out) const noexcept;
 
 	union
 	{
@@ -559,12 +569,12 @@ private:
 			uint32_t ek[60];
 			uint32_t dk[60];
 		} sw;
-	} _k;
+	} p_k;
 
 #ifdef ZT_AES_AESNI
-	void _init_aesni(const uint8_t key[32]) noexcept;
-	void _encrypt_aesni(const void *in, void *out) const noexcept;
-	void _decrypt_aesni(const void *in, void *out) const noexcept;
+	void p_init_aesni(const uint8_t *key) noexcept;
+	void p_encrypt_aesni(const void *in, void *out) const noexcept;
+	void p_decrypt_aesni(const void *in, void *out) const noexcept;
 #endif
 
 #ifdef ZT_AES_NEON
