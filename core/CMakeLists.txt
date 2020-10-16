@@ -62,6 +62,7 @@ set(core_headers
 set(core_src
 	AES.cpp
 	AES_aesni.cpp
+	AES_armcrypto.cpp
 	Buf.cpp
 	C25519.cpp
 	CAPI.cpp

@@ -91,7 +91,7 @@ public:
 #endif
 #ifdef ZT_AES_NEON
 		if (Utils::ARMCAP.aes) {
-			_init_armneon_crypto(reinterpret_cast<const uint8_t *>(key));
+			p_init_armneon_crypto(reinterpret_cast<const uint8_t *>(key));
 			return;
 		}
 #endif
@@ -114,7 +114,7 @@ public:
 #endif
 #ifdef ZT_AES_NEON
 		if (Utils::ARMCAP.aes) {
-			_encrypt_armneon_crypto(in, out);
+			p_encrypt_armneon_crypto(in, out);
 			return;
 		}
 #endif
@@ -137,7 +137,7 @@ public:
 #endif
 #ifdef ZT_AES_NEON
 		if (Utils::ARMCAP.aes) {
-			_decrypt_armneon_crypto(in, out);
+			p_decrypt_armneon_crypto(in, out);
 			return;
 		}
 #endif
@@ -230,7 +230,10 @@ public:
 		void p_aesNIUpdate(const uint8_t *in, unsigned int len) noexcept;
 		void p_aesNIFinish(uint8_t tag[16]) noexcept;
 #endif
-
+#ifdef ZT_AES_NEON
+		void p_armUpdate(const uint8_t *in, unsigned int len) noexcept;
+		void p_armFinish(uint8_t tag[16]) noexcept;
+#endif
 		const AES &_aes;
 		unsigned int _rp;
 		unsigned int _len;
@@ -301,7 +304,9 @@ public:
 #ifdef ZT_AES_AESNI
 		void p_aesNICrypt(const uint8_t *in, uint8_t *out, unsigned int len) noexcept;
 #endif
-
+#ifdef ZT_AES_NEON
+		void p_armCrypt(const uint8_t *in, uint8_t *out, unsigned int len) noexcept;
+#endif
 		const AES &_aes;
 		uint64_t _ctr[2];
 		uint8_t *_out;
@@ -578,9 +583,9 @@ private:
 #endif
 
 #ifdef ZT_AES_NEON
-	void _init_armneon_crypto(const uint8_t key[32]) noexcept;
-	void _encrypt_armneon_crypto(const void *in, void *out) const noexcept;
-	void _decrypt_armneon_crypto(const void *in, void *out) const noexcept;
+	void p_init_armneon_crypto(const uint8_t *key) noexcept;
+	void p_encrypt_armneon_crypto(const void *in, void *out) const noexcept;
+	void p_decrypt_armneon_crypto(const void *in, void *out) const noexcept;
 #endif
 };
 
