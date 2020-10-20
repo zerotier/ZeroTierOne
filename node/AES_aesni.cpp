@@ -274,7 +274,7 @@ void AES::GMAC::p_aesNIUpdate(const uint8_t *in, unsigned int len) noexcept
 	_rp = len; // len is always less than 16 here
 }
 
-__attribute__((__target__("ssse3,sse4,sse4.1,sse4.2,pclmul")))
+__attribute__((__target__("ssse3,sse4,sse4.1,sse4.2,pclmul,aes")))
 void AES::GMAC::p_aesNIFinish(uint8_t tag[16]) noexcept
 {
 	__m128i y = _mm_loadu_si128(reinterpret_cast<const __m128i *>(_y));
