@@ -22,4 +22,8 @@ public class VirtualNetworkDNS implements Comparable<VirtualNetworkDNS> {
     public int compareTo(VirtualNetworkDNS o) {
         return domain.compareTo(o.domain);
     }
+
+    public String getSearchDomain() { return domain; }
+
+    public ArrayList<InetSocketAddress> getServers() { return servers; }
 }
