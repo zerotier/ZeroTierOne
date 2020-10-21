@@ -747,7 +747,7 @@ jobject newNetworkConfig(JNIEnv *env, const ZT_VirtualNetworkConfig &vnetConfig)
         return NULL;
     }
 
-    dnsField = lookup.findField(vnetConfigClass, "dns", "Lcom/zerotier/sdk/VirtualNetworkDNS");
+    dnsField = lookup.findField(vnetConfigClass, "dns", "Lcom/zerotier/sdk/VirtualNetworkDNS;");
     if(env->ExceptionCheck() || dnsField == NULL)
     {
         LOGE("Error getting DNS field");
@@ -995,7 +995,7 @@ jobject newVirtualNetworkDNS(JNIEnv *env, const ZT_VirtualNetworkDNS &dns)
         return NULL;
     }
 
-    serversField = lookup.findField(virtualNetworkDNSClass, "servers", "[Ljava/net/InetSocketAddress;");
+    serversField = lookup.findField(virtualNetworkDNSClass, "servers", "Ljava/util/ArrayList;");
     if(env->ExceptionCheck() || serversField == NULL) {
         return NULL;
     }
