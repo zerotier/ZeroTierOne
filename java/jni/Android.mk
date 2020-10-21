@@ -58,6 +58,7 @@ LOCAL_SRC_FILES := \
 # JNI Files
 LOCAL_SRC_FILES += \
 	com_zerotierone_sdk_Node.cpp \
+	ZT_jniarray.cpp \
 	ZT_jniutils.cpp \
 	ZT_jnilookup.cpp
 
