@@ -1617,11 +1617,6 @@ void Bond::processActiveBackupTasks(void *tPtr, const int64_t now)
 
 void Bond::setReasonableDefaults(int policy, SharedPtr<Bond> templateBond, bool useTemplate)
 {
-	// TODO: Remove for production
-	_header=false;
-	_lastLogTS = RR->node->now();
-	_lastPrintTS = RR->node->now();
-
 	// If invalid bonding policy, try default
 	int _defaultBondingPolicy = BondController::defaultBondingPolicy();
 	if (policy <= ZT_BONDING_POLICY_NONE || policy > ZT_BONDING_POLICY_BALANCE_AWARE) {
@@ -1780,20 +1775,6 @@ void Bond::setReasonableDefaults(int policy, SharedPtr<Bond> templateBond, bool 
 	_qosCutoffCount = 0;
 	throughputMeasurementInterval = _ackSendInterval * 2;
 	_defaultPathRefractoryPeriod = 8000;
-
-	char traceMsg[256];
-	sprintf(traceMsg, "%s (bond) Bond to peer %llx is configured as (monStrat=%d, fi= %d, bmi= %d, qos= %d, ack= %d, estimateInt= %d, refractory= %d, ud= %d, dd= %d)",
-		OSUtils::humanReadableTimestamp().c_str(), _peer->_id.address().toInt(),
-		_linkMonitorStrategy,
-		_failoverInterval,
-		_bondMonitorInterval,
-		_qosSendInterval,
-		_ackSendInterval,
-		_qualityEstimationInterval,
-		_defaultPathRefractoryPeriod,
-		_upDelay,
-		_downDelay);
-	RR->t->bondStateMessage(NULL, traceMsg);
 }
 
 void Bond::setUserQualityWeights(float weights[], int len)
