@@ -18,8 +18,15 @@
 
 #include "ZT_jniutils.h"
 #include "ZT_jnilookup.h"
+#include "ZT_jniarray.h"
+
 #include <string>
 #include <assert.h>
+
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/types.h>
+#include <sys/socket.h>
 
 extern JniLookup lookup;
 
@@ -623,6 +630,7 @@ jobject newNetworkConfig(JNIEnv *env, const ZT_VirtualNetworkConfig &vnetConfig)
     jfieldID netconfRevisionField = NULL;
     jfieldID assignedAddressesField = NULL;
     jfieldID routesField = NULL;
+    jfieldID dnsField = NULL;
 
     vnetConfigClass = lookup.findClass("com/zerotier/sdk/VirtualNetworkConfig");
     if(vnetConfigClass == NULL)
@@ -739,6 +747,13 @@ jobject newNetworkConfig(JNIEnv *env, const ZT_VirtualNetworkConfig &vnetConfig)
         return NULL;
     }
 
+    dnsField = lookup.findField(vnetConfigClass, "dns", "Lcom/zerotier/sdk/VirtualNetworkDNS;");
+    if(env->ExceptionCheck() || dnsField == NULL)
+    {
+        LOGE("Error getting DNS field");
+        return NULL;
+    }
+
     env->SetLongField(vnetConfigObj, nwidField, vnetConfig.nwid);
     env->SetLongField(vnetConfigObj, macField, vnetConfig.mac);
     jstring nameStr = env->NewStringUTF(vnetConfig.name);
@@ -824,6 +839,10 @@ jobject newNetworkConfig(JNIEnv *env, const ZT_VirtualNetworkConfig &vnetConfig)
 
     env->SetObjectField(vnetConfigObj, routesField, routesArrayObj);
 
+    jobject dnsObj = newVirtualNetworkDNS(env, vnetConfig.dns);
+    if (dnsObj != NULL) {
+        env->SetObjectField(vnetConfigObj, dnsField, dnsObj);
+    }
     return vnetConfigObj;
 }
 
@@ -945,6 +964,66 @@ jobject newVirtualNetworkRoute(JNIEnv *env, const ZT_VirtualNetworkRoute &route)
     env->SetIntField(routeObj, metricField, (jint)route.metric);
 
     return routeObj;
+}
+
+jobject newVirtualNetworkDNS(JNIEnv *env, const ZT_VirtualNetworkDNS &dns)
+{
+    jclass virtualNetworkDNSClass = NULL;
+    jmethodID dnsConstructor = NULL;
+
+    virtualNetworkDNSClass = lookup.findClass("com/zerotier/sdk/VirtualNetworkDNS");
+    if (env->ExceptionCheck() || virtualNetworkDNSClass == NULL) {
+        return NULL;
+    }
+
+    dnsConstructor = lookup.findMethod(virtualNetworkDNSClass, "<init>", "()V");
+    if(env->ExceptionCheck() || dnsConstructor == NULL) {
+        return NULL;
+    }
+
+    jobject dnsObj = env->NewObject(virtualNetworkDNSClass, dnsConstructor);
+    if(env->ExceptionCheck() || dnsObj == NULL) {
+        return NULL;
+    }
+
+    jfieldID domainField = NULL;
+    jfieldID serversField = NULL;
+
+    domainField = lookup.findField(virtualNetworkDNSClass, "domain", "Ljava/lang/String;");
+    if(env->ExceptionCheck() || domainField == NULL)
+    {
+        return NULL;
+    }
+
+    serversField = lookup.findField(virtualNetworkDNSClass, "servers", "Ljava/util/ArrayList;");
+    if(env->ExceptionCheck() || serversField == NULL) {
+        return NULL;
+    }
+
+    if (strlen(dns.domain) > 0) {
+        InitListJNI(env);
+        jstring domain = env->NewStringUTF(dns.domain);
+
+        jobject addrArray = env->NewObject(java_util_ArrayList, java_util_ArrayList_, 0);
+
+        struct sockaddr_storage nullAddr;
+        memset(&nullAddr, 0, sizeof(struct sockaddr_storage));
+        for(int i = 0; i < ZT_MAX_DNS_SERVERS; ++i) {
+            struct sockaddr_storage tmp = dns.server_addr[i];
+
+            if (memcmp(&tmp, &nullAddr, sizeof(struct sockaddr_storage)) != 0) {
+                jobject addr = newInetSocketAddress(env, tmp);
+                env->CallBooleanMethod(addrArray, java_util_ArrayList_add, addr);
+                env->DeleteLocalRef(addr);
+            }
+        }
+
+        env->SetObjectField(dnsObj, domainField, domain);
+        env->SetObjectField(dnsObj, serversField, addrArray);
+
+        return dnsObj;
+    }
+    return NULL;
 }
 
 #ifdef __cplusplus

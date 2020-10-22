@@ -76,6 +76,8 @@ jobject newVersion(JNIEnv *env, int major, int minor, int rev);
 
 jobject newVirtualNetworkRoute(JNIEnv *env, const ZT_VirtualNetworkRoute &route);
 
+jobject newVirtualNetworkDNS(JNIEnv *env, const ZT_VirtualNetworkDNS &dns);
+
 #ifdef __cplusplus
 }
 #endif

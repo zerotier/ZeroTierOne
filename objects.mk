@@ -1,5 +1,7 @@
 CORE_OBJS=\
 	node/AES.o \
+	node/AES_aesni.o \
+	node/AES_armcrypto.o \
 	node/C25519.o \
 	node/Capability.o \
 	node/CertificateOfMembership.o \

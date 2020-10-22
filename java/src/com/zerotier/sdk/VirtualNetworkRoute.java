@@ -103,7 +103,6 @@ public final class VirtualNetworkRoute implements Comparable<VirtualNetworkRoute
             viaEquals = via.toString().equals(other.via.toString());
         }
 
-        return viaEquals &&
-                viaEquals;
+        return viaEquals && targetEquals;
     }
 }
