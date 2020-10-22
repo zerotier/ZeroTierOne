@@ -1578,7 +1578,7 @@ typedef struct
 	/**
 	 * SHA-384 of identity public key(s)
 	 */
-	ZT_Fingerprint fingerprint;
+	const ZT_Fingerprint *fingerprint;
 
 	/**
 	 * Remote major version or -1 if not known
@@ -1596,6 +1596,11 @@ typedef struct
 	int versionRev;
 
 	/**
+	 * Remote protocol version or -1 if not known
+	 */
+	int versionProto;
+
+	/**
 	 * Last measured latency in milliseconds or -1 if unknown
 	 */
 	int latency;
@@ -1606,19 +1611,14 @@ typedef struct
 	int root;
 
 	/**
-	 * Number of networks in which this peer is authenticated
-	 */
-	unsigned int networkCount;
-
-	/**
 	 * Network IDs for networks (array size: networkCount)
 	 */
 	uint64_t *networks;
 
 	/**
-	 * Number of paths (size of paths[])
+	 * Number of networks in which this peer is authenticated
 	 */
-	unsigned int pathCount;
+	unsigned int networkCount;
 
 	/**
 	 * Known network paths to peer (array size: pathCount).
@@ -1628,6 +1628,11 @@ typedef struct
 	 * a root.
 	 */
 	ZT_Path *paths;
+
+	/**
+	 * Number of paths (size of paths[])
+	 */
+	unsigned int pathCount;
 
 	/**
 	 * Size of locator in bytes or 0 if none

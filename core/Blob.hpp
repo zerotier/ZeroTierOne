@@ -115,6 +115,12 @@ struct UniqueID
 static_assert(sizeof(SHA384Hash) == 48,"SHA384Hash contains unnecessary padding");
 static_assert(sizeof(UniqueID) == 16,"UniqueID contains unnecessary padding");
 
+template<unsigned long S>
+struct Blob
+{
+	uint8_t data[S];
+};
+
 } // namespace ZeroTier
 
 #endif

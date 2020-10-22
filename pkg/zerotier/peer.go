@@ -37,7 +37,7 @@ func newPeerFromCPeer(cp *C.ZT_Peer) (p *Peer, err error) {
 	if err != nil {
 		return
 	}
-	p.Fingerprint = newFingerprintFromCFingerprint(&(cp.fingerprint))
+	p.Fingerprint = newFingerprintFromCFingerprint(cp.fingerprint)
 	p.Version[0] = int(cp.versionMajor)
 	p.Version[1] = int(cp.versionMinor)
 	p.Version[2] = int(cp.versionRev)

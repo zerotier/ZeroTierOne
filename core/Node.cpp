@@ -58,12 +58,6 @@ struct _NodeObjects
 	Topology topology;
 };
 
-struct _sortPeerPtrsByAddress
-{
-	ZT_INLINE bool operator()(const SharedPtr< Peer > &a, const SharedPtr< Peer > &b) const
-	{ return (a->address() < b->address()); }
-};
-
 } // anonymous namespace
 
 Node::Node(
@@ -152,6 +146,7 @@ Node::Node(
 Node::~Node()
 {
 	ZT_SPEW("node destructor run");
+
 	m_networks_l.lock();
 	m_networks_l.unlock();
 	m_networks.clear();
@@ -367,9 +362,7 @@ ZT_ResultCode Node::multicastUnsubscribe(
 }
 
 uint64_t Node::address() const
-{
-	return RR->identity.address().toInt();
-}
+{ return RR->identity.address().toInt(); }
 
 void Node::status(ZT_NodeStatus *status) const
 {
@@ -380,88 +373,109 @@ void Node::status(ZT_NodeStatus *status) const
 	status->online = m_online ? 1 : 0;
 }
 
+struct p_ZT_PeerListPrivate : public ZT_PeerList
+{
+	// Actual containers for the memory, hidden from external users.
+	std::vector< ZT_Peer > p_peers;
+	std::list< std::vector<ZT_Path> > p_paths;
+	std::list< Identity > p_identities;
+	std::list< Blob<ZT_LOCATOR_MARSHAL_SIZE_MAX> > p_locators;
+};
+static void p_peerListFreeFunction(const void *pl)
+{
+	if (pl)
+		delete reinterpret_cast<p_ZT_PeerListPrivate *>(const_cast<void *>(pl));
+}
+
+struct p_sortPeerPtrsByAddress
+{
+	ZT_INLINE bool operator()(const SharedPtr< Peer > &a, const SharedPtr< Peer > &b) const noexcept
+	{ return (a->address() < b->address()); }
+};
+
 ZT_PeerList *Node::peers() const
 {
-	Vector< SharedPtr< Peer > > peers, rootPeers;
-	RR->topology->allPeers(peers, rootPeers);
+	p_ZT_PeerListPrivate *pl = nullptr;
+	try {
+		pl = new p_ZT_PeerListPrivate;
+		pl->freeFunction = p_peerListFreeFunction;
 
-	std::sort(peers.begin(), peers.end(), _sortPeerPtrsByAddress());
+		Vector< SharedPtr< Peer > > peers, rootPeers;
+		RR->topology->allPeers(peers, rootPeers);
+		std::sort(peers.begin(), peers.end(), p_sortPeerPtrsByAddress());
+		std::sort(rootPeers.begin(), rootPeers.end());
+		int64_t now = m_now;
 
-	const unsigned int bufSize =
-		sizeof(ZT_PeerList) +
-		(sizeof(ZT_Peer) * peers.size()) +
-		((sizeof(ZT_Path) * ZT_MAX_PEER_NETWORK_PATHS) * peers.size()) +
-		(sizeof(Identity) * peers.size()) +
-		(ZT_LOCATOR_MARSHAL_SIZE_MAX * peers.size());
-	char *buf = (char *)malloc(bufSize);
-	if (!buf)
-		return nullptr;
-	Utils::zero(buf, bufSize);
-	ZT_PeerList *pl = reinterpret_cast<ZT_PeerList *>(buf);
-	buf += sizeof(ZT_PeerList);
-	pl->freeFunction = reinterpret_cast<void (*)(const void *)>(free);
-	pl->peers = reinterpret_cast<ZT_Peer *>(buf);
-	buf += sizeof(ZT_Peer) * peers.size();
-	ZT_Path *peerPath = reinterpret_cast<ZT_Path *>(buf);
-	buf += (sizeof(ZT_Path) * ZT_MAX_PEER_NETWORK_PATHS) * peers.size();
-	Identity *identities = reinterpret_cast<Identity *>(buf);
-	buf += sizeof(Identity) * peers.size();
-	uint8_t *locatorBuf = reinterpret_cast<uint8_t *>(buf);
+		for (Vector< SharedPtr< Peer > >::iterator pi(peers.begin()); pi != peers.end(); ++pi) {
+			pl->p_peers.push_back(ZT_Peer());
+			ZT_Peer &p = pl->p_peers.back();
+			Peer &pp = **pi;
 
-	const int64_t now = m_now;
+			p.address = pp.address();
+			pl->p_identities.push_back(pp.identity());
+			p.identity = reinterpret_cast<const ZT_Identity *>(&(pl->p_identities.back()));
+			p.fingerprint = &(pl->p_identities.back().fingerprint());
+			if (pp.remoteVersionKnown()) {
+				p.versionMajor = (int)pp.remoteVersionMajor();
+				p.versionMinor = (int)pp.remoteVersionMinor();
+				p.versionRev = (int)pp.remoteVersionRevision();
+				p.versionProto = (int)pp.remoteVersionProtocol();
+			} else {
+				p.versionMajor = -1;
+				p.versionMinor = -1;
+				p.versionRev = -1;
+				p.versionProto = -1;
+			}
+			p.latency = pp.latency();
+			p.root = std::binary_search(rootPeers.begin(), rootPeers.end(), *pi) ? 1 : 0;
 
-	pl->peerCount = 0;
-	for (Vector< SharedPtr< Peer > >::iterator pi(peers.begin()); pi != peers.end(); ++pi) {
-		ZT_Peer *const p = pl->peers + pl->peerCount;
+			p.networks = nullptr;
+			p.networkCount = 0; // TODO: networks this peer belongs to
 
-		p->address = (*pi)->address().toInt();
-		identities[pl->peerCount] = (*pi)->identity(); // need to make a copy in case peer gets deleted
-		p->identity = identities + pl->peerCount;
-		p->fingerprint.address = p->address;
-		Utils::copy< ZT_FINGERPRINT_HASH_SIZE >(p->fingerprint.hash, (*pi)->identity().fingerprint().hash);
-		if ((*pi)->remoteVersionKnown()) {
-			p->versionMajor = (int)(*pi)->remoteVersionMajor();
-			p->versionMinor = (int)(*pi)->remoteVersionMinor();
-			p->versionRev = (int)(*pi)->remoteVersionRevision();
-		} else {
-			p->versionMajor = -1;
-			p->versionMinor = -1;
-			p->versionRev = -1;
-		}
-		p->latency = (*pi)->latency();
-		p->root = (std::find(rootPeers.begin(), rootPeers.end(), *pi) != rootPeers.end()) ? 1 : 0;
+			Vector< SharedPtr<Path> > ztPaths;
+			pp.getAllPaths(ztPaths);
+			if (ztPaths.empty()) {
+				pl->p_paths.push_back(std::vector< ZT_Path >());
+				std::vector< ZT_Path > &apiPaths = pl->p_paths.back();
+				apiPaths.resize(ztPaths.size());
+				for (unsigned long i = 0; i < (unsigned long)ztPaths.size(); ++i) {
+					SharedPtr< Path > &ztp = ztPaths[i];
+					ZT_Path &apip = apiPaths[i];
+					apip.endpoint.type = ZT_ENDPOINT_TYPE_IP_UDP;
+					Utils::copy< sizeof(struct sockaddr_storage) >(&(apip.endpoint.value.ss), &(ztp->address().as.ss));
+					apip.lastSend = ztp->lastOut();
+					apip.lastReceive = ztp->lastIn();
+					apip.alive = ztp->alive(now) ? 1 : 0;
+					apip.preferred = (i == 0) ? 1 : 0;
+				}
+				p.paths = apiPaths.data();
+				p.pathCount = (unsigned int)apiPaths.size();
+			} else {
+				p.paths = nullptr;
+				p.pathCount = 0;
+			}
 
-		p->networkCount = 0;
-		// TODO: enumerate network memberships
-
-		Vector< SharedPtr< Path > > paths;
-		(*pi)->getAllPaths(paths);
-		p->pathCount = (unsigned int)paths.size();
-		p->paths = peerPath;
-		for (Vector< SharedPtr< Path > >::iterator path(paths.begin()); path != paths.end(); ++path) {
-			ZT_Path *const pp = peerPath++;
-			pp->endpoint.type = ZT_ENDPOINT_TYPE_IP_UDP; // only type supported right now
-			Utils::copy< sizeof(sockaddr_storage) >(&pp->endpoint.value.ss, &((*path)->address().as.ss));
-			pp->lastSend = (*path)->lastOut();
-			pp->lastReceive = (*path)->lastIn();
-			pp->alive = (*path)->alive(now) ? 1 : 0;
-			pp->preferred = (p->pathCount == 0) ? 1 : 0;
-		}
-
-		const SharedPtr< const Locator > loc((*pi)->locator());
-		if (loc) {
-			const int ls = loc->marshal(locatorBuf);
-			if (ls > 0) {
-				p->locatorSize = (unsigned int)ls;
-				p->locator = locatorBuf;
-				locatorBuf += ls;
+			const SharedPtr< const Locator > loc(pp.locator());
+			if (loc) {
+				pl->p_locators.push_back(Blob< ZT_LOCATOR_MARSHAL_SIZE_MAX >());
+				Blob< ZT_LOCATOR_MARSHAL_SIZE_MAX > &lb = pl->p_locators.back();
+				Utils::zero< ZT_LOCATOR_MARSHAL_SIZE_MAX >(lb.data);
+				const int ls = loc->marshal(lb.data);
+				if (ls > 0) {
+					p.locatorSize = (unsigned int)ls;
+					p.locator = lb.data;
+				}
 			}
 		}
 
-		++pl->peerCount;
-	}
+		pl->peers = pl->p_peers.data();
+		pl->peerCount = (unsigned long)pl->p_peers.size();
 
-	return pl;
+		return pl;
+	} catch ( ... ) {
+		delete pl;
+		return nullptr;
+	}
 }
 
 ZT_VirtualNetworkConfig *Node::networkConfig(uint64_t nwid) const
@@ -482,7 +496,7 @@ ZT_VirtualNetworkList *Node::networks() const
 	char *const buf = (char *)::malloc(sizeof(ZT_VirtualNetworkList) + (sizeof(ZT_VirtualNetworkConfig) * m_networks.size()));
 	if (!buf)
 		return nullptr;
-	ZT_VirtualNetworkList *nl = (ZT_VirtualNetworkList *)buf; // NOLINT(modernize-use-auto,hicpp-use-auto)
+	ZT_VirtualNetworkList *nl = (ZT_VirtualNetworkList *)buf;
 	nl->freeFunction = reinterpret_cast<void (*)(const void *)>(free);
 	nl->networks = (ZT_VirtualNetworkConfig *)(buf + sizeof(ZT_VirtualNetworkList));
 
