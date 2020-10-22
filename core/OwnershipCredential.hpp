@@ -14,11 +14,6 @@
 #ifndef ZT_CERTIFICATEOFOWNERSHIP_HPP
 #define ZT_CERTIFICATEOFOWNERSHIP_HPP
 
-#include <cstdint>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-
 #include "Constants.hpp"
 #include "Credential.hpp"
 #include "C25519.hpp"

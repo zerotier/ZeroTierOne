@@ -14,10 +14,6 @@
 #ifndef ZT_CAPABILITY_HPP
 #define ZT_CAPABILITY_HPP
 
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-
 #include "Constants.hpp"
 #include "Credential.hpp"
 #include "Address.hpp"
