@@ -51,7 +51,7 @@ func NewFingerprintFromString(fps string) (*Fingerprint, error) {
 		return nil, err
 	}
 	if len(ss) == 2 {
-		h, err := Base32StdLowerCase.DecodeString(ss[1])
+		h, err := Base32.DecodeString(ss[1])
 		if err != nil {
 			return nil, err
 		}
@@ -78,7 +78,7 @@ func newFingerprintFromCFingerprint(cfp *C.ZT_Fingerprint) *Fingerprint {
 // String returns an address or a full address-hash depenting on whether a hash is present.
 func (fp *Fingerprint) String() string {
 	if len(fp.Hash) == FingerprintHashSize {
-		return fmt.Sprintf("%.10x-%s", uint64(fp.Address), Base32StdLowerCase.EncodeToString(fp.Hash))
+		return fmt.Sprintf("%.10x-%s", uint64(fp.Address), Base32.EncodeToString(fp.Hash))
 	}
 	return fp.Address.String()
 }

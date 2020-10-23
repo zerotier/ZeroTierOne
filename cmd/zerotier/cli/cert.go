@@ -20,6 +20,13 @@ import (
 	"zerotier/pkg/zerotier"
 )
 
+func interactiveMakeSubject() *zerotier.CertificateSubject {
+	s := new(zerotier.CertificateSubject)
+
+
+	return s
+}
+
 func Cert(basePath string, authTokenGenerator func() string, args []string, jsonOutput bool) int {
 	if len(args) < 1 {
 		Help()

@@ -14,11 +14,13 @@
 package cli
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 
 	"zerotier/pkg/zerotier"
@@ -234,4 +236,41 @@ func isValidNetworkID(a string) bool {
 		return true
 	}
 	return false
+}
+
+func prompt(str string, dfl string) string {
+	if len(dfl) > 0 {
+		fmt.Printf("%s [%s]: ", str, dfl)
+		text, _ := bufio.NewReader(os.Stdin).ReadString('\n')
+		text = strings.TrimSpace(text)
+		if len(text) == 0 {
+			text = dfl
+		}
+		return text
+	}
+	fmt.Print(str)
+	text, _ := bufio.NewReader(os.Stdin).ReadString('\n')
+	return strings.TrimSpace(text)
+}
+
+func promptInt(str string, dfl int64) int64 {
+	s := prompt(str, "")
+	if len(s) > 0 {
+		i, err := strconv.ParseInt(s, 10, 64)
+		if err == nil {
+			return i
+		}
+	}
+	return dfl
+}
+
+func promptFile(str string) []byte {
+	s := prompt(str, "")
+	if len(s) > 0 {
+		b, err := ioutil.ReadFile(s)
+		if err == nil {
+			return b
+		}
+	}
+	return nil
 }

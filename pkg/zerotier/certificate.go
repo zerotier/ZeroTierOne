@@ -18,7 +18,6 @@ package zerotier
 import "C"
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"unsafe"
@@ -69,32 +68,32 @@ type CertificateSubject struct {
 	Timestamp              int64                 `json:"timestamp"`
 	Identities             []CertificateIdentity `json:"identities,omitempty"`
 	Networks               []CertificateNetwork  `json:"networks,omitempty"`
-	Certificates           [][]byte              `json:"certificates,omitempty"`
+	Certificates           []Base32Blob          `json:"certificates,omitempty"`
 	UpdateURLs             []string              `json:"updateURLs,omitempty"`
 	Name                   CertificateName       `json:"name"`
-	UniqueID               []byte                `json:"uniqueId,omitempty"`
-	UniqueIDProofSignature []byte                `json:"uniqueIdProofSignature,omitempty"`
+	UniqueID               Base32Blob            `json:"uniqueId,omitempty"`
+	UniqueIDProofSignature Base32Blob            `json:"uniqueIdProofSignature,omitempty"`
 }
 
 // Certificate is a Go reflection of the C ZT_Certificate struct.
 type Certificate struct {
-	SerialNo           []byte             `json:"serialNo,omitempty"`
+	SerialNo           Base32Blob         `json:"serialNo,omitempty"`
 	Flags              uint64             `json:"flags"`
 	Timestamp          int64              `json:"timestamp"`
 	Validity           [2]int64           `json:"validity"`
 	Subject            CertificateSubject `json:"subject"`
 	Issuer             *Identity          `json:"issuer,omitempty"`
 	IssuerName         CertificateName    `json:"issuerName"`
-	ExtendedAttributes []byte             `json:"extendedAttributes,omitempty"`
+	ExtendedAttributes Base32Blob         `json:"extendedAttributes,omitempty"`
 	MaxPathLength      uint               `json:"maxPathLength,omitempty"`
-	CRL                [][]byte           `json:"crl,omitempty"`
-	Signature          []byte             `json:"signature,omitempty"`
+	CRL                []Base32Blob       `json:"crl,omitempty"`
+	Signature          Base32Blob         `json:"signature,omitempty"`
 }
 
 // CertificateSubjectUniqueIDSecret bundles a certificate subject unique ID and its secret key.
 type CertificateSubjectUniqueIDSecret struct {
-	UniqueID       []byte `json:"uniqueId,omitempty"`
-	UniqueIDSecret []byte `json:"uniqueIdSecret,omitempty"`
+	UniqueID       Base32Blob `json:"uniqueId,omitempty"`
+	UniqueIDSecret Base32Blob `json:"uniqueIdSecret,omitempty"`
 }
 
 // LocalCertificate combines a certificate with its local trust flags.
@@ -493,11 +492,6 @@ func (c *Certificate) String() string {
 func (c *Certificate) JSON() string {
 	j, _ := json.MarshalIndent(c, "", "  ")
 	return string(j)
-}
-
-// URLSerialNo returns the serial number encoded for use in /cert/### local API URLs.
-func (c *Certificate) URLSerialNo() string {
-	return base64.URLEncoding.EncodeToString(c.SerialNo)
 }
 
 // NewCertificateSubjectUniqueId creates a new certificate subject unique ID and corresponding private key.

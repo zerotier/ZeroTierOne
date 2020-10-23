@@ -731,7 +731,7 @@ func (n *Node) makeStateObjectPath(objType int, id []uint64) (string, bool) {
 		fp = path.Join(n.basePath, "truststore")
 	case C.ZT_STATE_OBJECT_CERT:
 		_ = os.Mkdir(n.certsPath, 0755)
-		fp = path.Join(n.certsPath, Base32StdLowerCase.EncodeToString((*[48]byte)(unsafe.Pointer(&id[0]))[:]))
+		fp = path.Join(n.certsPath, Base32.EncodeToString((*[48]byte)(unsafe.Pointer(&id[0]))[:]))
 	}
 	return fp, secret
 }

@@ -34,80 +34,81 @@ Global Options:
 
 Common Operations:
 
-  help                                   Show this help
-  version                                Print version
-  now [duration]                         Print current time [-]#[ms|s|m|h]
+  help                                    Show this help
+  version                                 Print version
 
-· status                                 Show node status and configuration
+· status                                  Show node status and configuration
 
-· set [option] [value]                 - Get or set node configuration
-    port <port>                          Primary P2P port
-    secondaryport <port/0>               Secondary P2P port (0 to disable)
-    blacklist cidr <IP/bits> <boolean>   Toggle physical path blacklisting
-    blacklist if <prefix> <boolean>      Toggle interface prefix blacklisting
-    portmap <boolean>                    Toggle use of uPnP or NAT-PMP
+· set [option] [value]                    List all settings (with no args)
+·    port <port>                          Primary P2P port
+·    secondaryport <port/0>               Secondary P2P port (0 to disable)
+·    blacklist cidr <IP/bits> <boolean>   Toggle physical path blacklisting
+·    blacklist if <prefix> <boolean>      Toggle interface prefix blacklisting
+·    portmap <boolean>                    Toggle use of uPnP or NAT-PMP
 
-· peer [address] [command] [option]    - Peer management commands
-    list                                 List peers
-    listroots                            List root peers
-    show                                 Show peer details
-    try <endpoint> [...]                 Try peer at explicit endpoint
+· peer [address] [command] [option]       Peer management commands
+·   list                                  List peers
+·   listroots                             List root peers
+·   show                                  Show peer details
+·   try <endpoint> [...]                  Try peer at explicit endpoint
 
-· network list                           List VL2 networks
-· network <network> [command] [option] - Network management commands
-    show                                 Show network details (default)
-    set [option] [value]               - Get or set network options
-      manageips <boolean>                Is IP management allowed?
-      manageroutes <boolean>             Is route management allowed?
-      globalips <boolean>                Allow assignment of global IPs?
-      globalroutes <boolean>             Can global IP space routes be set?
-      defaultroute <boolean>             Can default route be overridden?
+· network list                            List VL2 networks
+· network <network> [command] [option]
+·   show                                  Show network details (default)
+·   set [option] [value]                  Get or set network options
+·     manageips <boolean>                 Is IP management allowed?
+·     manageroutes <boolean>              Is route management allowed?
+·     globalips <boolean>                 Allow assignment of global IPs?
+·     globalroutes <boolean>              Can global IP space routes be set?
+·     defaultroute <boolean>              Can default route be overridden?
 
-· join [-options] <network>              Join a virtual network
-    -a <token>                           Token to submit to controller
-    -c <identity | fingerprint>          Controller identity or fingerprint
-· leave <network>                        Leave a virtual network
+· join [-options] <network>               Join a virtual network
+    -a <token>                            Token to submit to controller
+    -c <identity | fingerprint>           Controller identity or fingerprint
+· leave <network>                         Leave a virtual network
 
 Advanced Operations:
 
-  service                                Start node (seldom used from CLI)
+  service                                 Start this node (runs until stopped)
+  now [duration]                          Print current time [-]#[ms|s|m|h]
 
-· controller <command> [option]        - Local controller management commands
-·   list                                 List networks run by local controller
-·   new                                  Create a new network
-·   set <network> [setting] [value]      Show or modify network settings
-·   members <network>                    List members of a network
-·   member <network> [setting] [value]   Show or modify member level settings
-·   auth <address>                       Authorize a peer
-·   deauth <address>                     Deauthorize a peer
+  controller <command> [option]
+·   list                                  List networks on controller
+·   new                                   Create a new network
+·   set <network> [setting] [value]       Show or modify network settings
+·   members <network>                     List members of a network
+·   member <network> [setting] [value]    Show or modify member level settings
+·   auth <address>                        Authorize a peer
+·   deauth <address>                      Deauthorize a peer
 
-  identity <command> [args]            - Identity management
-    new [c25519 | p384]                  Create identity (default: c25519)
-    getpublic <identity>                 Extract only public part of identity
-    fingerprint <identity>               Get an identity's fingerprint
-    validate <identity>                  Locally validate an identity
-    sign <identity> <file>               Sign a file with an identity's key
-    verify <identity> <file> <sig>       Verify a signature
+  identity <command> [args]
+    new [c25519 | p384]                   Create identity (default: c25519)
+    getpublic <identity>                  Extract only public part of identity
+    fingerprint <identity>                Get an identity's fingerprint
+    validate <identity>                   Locally validate an identity
+    sign <identity> <file>                Sign a file with an identity's key
+    verify <identity> <file> <sig>        Verify a signature
 
-  locator <command> [args]             - Locator management
-    new <identity> <endpoint> [...]      Create new signed locator
-    verify <identity> <locator>          Verify locator signature
-    show <locator>                       Show contents of a locator
+  locator <command> [args]
+    new <identity> <endpoint> [...]       Create new signed locator
+    verify <identity> <locator>           Verify locator signature
+    show <locator>                        Show contents of a locator
 
-  cert <command> [args]                - Certificate management
-·   list                                 List certificates in local node store
-·   show <serial>                        List or show details of a certificate
-    newsid <secret out>                  Create a new subject unique ID
-    newcsr <subject> <secret> <csr out>  Create a subject CSR
-    sign <csr> <identity> <cert out>     Sign a CSR to create a certificate
-    verify <cert>                        Verify certificate (not entire chain)
-    dump <cert>                          Verify and print certificate
-·   import <cert> [trust,[trust]]        Import certificate into this node
-      trust flag: rootca                 Certificate is a root CA
-      trust flag: ztrootset              ZeroTier root node set
-·   restore                              Re-import default certificates
-·   export <serial> [path]               Export a certificate from this node
-·   delete <serial|ALL>                  Delete certificate from this node
+  cert <command> [args]
+·   list                                  List certificates at local node
+·   show <serial>                         Show certificate details
+    newsubject <subject out>              Interactive subject creation
+    newsid <secret out>                   Create a new subject unique ID
+    newcsr <subject|-> <secret> <csr out> Create a subject CSR
+    sign <csr> <identity> <cert out>      Sign a CSR to create a certificate
+    verify <cert>                         Verify certificate (not chain)
+    dump <cert>                           Verify and print certificate
+·   import <cert> [trust,[trust]]         Import certificate into this node
+      trust flag: rootca                  Certificate is a root CA
+      trust flag: ztrootset               ZeroTier root node set
+·   restore                               Re-import default certificates
+·   export <serial> [path]                Export a certificate from this node
+·   delete <serial|ALL>                   Delete certificate from this node
 
      · Command requires a running node and access to a local API token.
 
