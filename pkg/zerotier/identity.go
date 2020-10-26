@@ -111,7 +111,7 @@ func NewIdentityFromString(s string) (*Identity, error) {
 		}
 
 	case 1:
-		id.publicKey, err = Base32StdLowerCase.DecodeString(ss[2])
+		id.publicKey, err = Base32.DecodeString(ss[2])
 		if err != nil {
 			return nil, err
 		}
@@ -119,7 +119,7 @@ func NewIdentityFromString(s string) (*Identity, error) {
 			return nil, ErrInvalidKey
 		}
 		if len(ss) >= 4 {
-			id.privateKey, err = Base32StdLowerCase.DecodeString(ss[3])
+			id.privateKey, err = Base32.DecodeString(ss[3])
 			if err != nil {
 				return nil, err
 			}
@@ -190,7 +190,7 @@ func (id *Identity) PrivateKeyString() string {
 		}
 	case IdentityTypeP384:
 		if len(id.publicKey) == IdentityTypeP384PublicKeySize && len(id.privateKey) == IdentityTypeP384PrivateKeySize {
-			return fmt.Sprintf("%.10x:1:%s:%s", uint64(id.address), Base32StdLowerCase.EncodeToString(id.publicKey), Base32StdLowerCase.EncodeToString(id.privateKey))
+			return fmt.Sprintf("%.10x:1:%s:%s", uint64(id.address), Base32.EncodeToString(id.publicKey), Base32.EncodeToString(id.privateKey))
 		}
 	}
 	return ""
@@ -206,7 +206,7 @@ func (id *Identity) String() string {
 		}
 	case IdentityTypeP384:
 		if len(id.publicKey) == IdentityTypeP384PublicKeySize {
-			return fmt.Sprintf("%.10x:1:%s", uint64(id.address), Base32StdLowerCase.EncodeToString(id.publicKey))
+			return fmt.Sprintf("%.10x:1:%s", uint64(id.address), Base32.EncodeToString(id.publicKey))
 		}
 	}
 	return ""

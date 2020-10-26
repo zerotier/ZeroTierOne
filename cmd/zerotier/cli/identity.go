@@ -43,11 +43,13 @@ func Identity(args []string) int {
 					return 1
 				}
 			}
+
 			id, err := zerotier.NewIdentity(idType)
 			if err != nil {
-				fmt.Printf("ERROR: internal error generating identity: %s\n", err.Error())
+				pErr("internal error generating identity: %s", err.Error())
 				return 1
 			}
+
 			fmt.Println(id.PrivateKeyString())
 			return 0
 
@@ -56,20 +58,24 @@ func Identity(args []string) int {
 				fmt.Println(readIdentity(args[1]).String())
 				return 0
 			}
+			pErr("no identity specified")
+			return 1
 
 		case "fingerprint":
 			if len(args) == 2 {
 				fmt.Println(readIdentity(args[1]).Fingerprint().String())
 				return 0
 			}
+			pErr("no identity specified")
+			return 1
 
 		case "validate":
 			if len(args) == 2 {
 				if readIdentity(args[1]).LocallyValidate() {
-					fmt.Println("OK")
+					fmt.Println("VALID")
 					return 0
 				}
-				fmt.Println("FAILED")
+				fmt.Println("INVALID")
 				return 1
 			}
 
@@ -78,7 +84,7 @@ func Identity(args []string) int {
 				id := readIdentity(args[1])
 				msg, err := ioutil.ReadFile(args[2])
 				if err != nil {
-					fmt.Printf("ERROR: unable to read input file: %s\n", err.Error())
+					pErr("unable to read input file: %s", err.Error())
 					return 1
 				}
 
@@ -99,7 +105,7 @@ func Identity(args []string) int {
 				} else {
 					sig, err := id.Sign(msg)
 					if err != nil {
-						fmt.Printf("ERROR: internal error signing message: %s\n", err.Error())
+						pErr("internal error signing message: %s", err.Error())
 						return 1
 					}
 					fmt.Println(hex.EncodeToString(sig))

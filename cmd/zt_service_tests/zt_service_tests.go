@@ -13,4 +13,7 @@ func main() {
 	if !TestCertificate() {
 		os.Exit(1)
 	}
+	if !TestLocator() {
+		os.Exit(1)
+	}
 }

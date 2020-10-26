@@ -39,7 +39,7 @@ func newLocatorFromCLocator(cl unsafe.Pointer, needFinalizer bool) (*Locator, er
 	return loc, nil
 }
 
-func NewLocator(ts int64, endpoints []Endpoint, signer *Identity) (*Locator, error) {
+func NewLocator(ts int64, endpoints []*Endpoint, signer *Identity) (*Locator, error) {
 	if ts <= 0 || len(endpoints) == 0 || signer == nil {
 		return nil, ErrInvalidParameter
 	}
@@ -110,8 +110,8 @@ func (loc *Locator) String() string {
 	if loc.cl == nil {
 		return ""
 	}
-	var buf [4096]C.char
-	return C.GoString(C.ZT_Locator_toString(loc.cl, &buf[0], 4096))
+	var buf [16384]C.char // 16384 == ZT_LOCATOR_STRING_SIZE_MAX
+	return C.GoString(C.ZT_Locator_toString(loc.cl, &buf[0], 16384))
 }
 
 func (loc *Locator) MarshalJSON() ([]byte, error) {

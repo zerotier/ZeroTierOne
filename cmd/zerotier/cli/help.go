@@ -97,7 +97,6 @@ Advanced Operations:
   cert <command> [args]
 ·   list                                  List certificates at local node
 ·   show <serial>                         Show certificate details
-    newsubject <subject out>              Interactive subject creation
     newsid <secret out>                   Create a new subject unique ID
     newcsr <subject|-> <secret> <csr out> Create a subject CSR
     sign <csr> <identity> <cert out>      Sign a CSR to create a certificate

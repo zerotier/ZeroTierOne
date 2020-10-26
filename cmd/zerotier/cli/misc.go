@@ -14,17 +14,25 @@
 package cli
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 
 	"zerotier/pkg/zerotier"
 )
+
+func pErr(format string, args ...interface{}) {
+	_, _ = fmt.Fprintf(os.Stdout, "ERROR: "+format, args...)
+	fmt.Println()
+}
+
+func pResult(format string, args ...interface{}) {
+	_, _ = fmt.Printf(format, args...)
+	fmt.Println()
+}
 
 func apiGet(basePath, authToken, urlPath string, result interface{}) int64 {
 	statusCode, clock, err := zerotier.APIGet(basePath, zerotier.APISocketName, authToken, urlPath, result)
@@ -238,6 +246,7 @@ func isValidNetworkID(a string) bool {
 	return false
 }
 
+/*
 func prompt(str string, dfl string) string {
 	if len(dfl) > 0 {
 		fmt.Printf("%s [%s]: ", str, dfl)
@@ -274,3 +283,4 @@ func promptFile(str string) []byte {
 	}
 	return nil
 }
+*/

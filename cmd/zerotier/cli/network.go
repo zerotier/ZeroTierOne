@@ -124,12 +124,12 @@ func Network(basePath string, authTokenGenerator func() string, args []string, j
 	}
 
 	if len(args[0]) != zerotier.NetworkIDStringLength {
-		fmt.Printf("ERROR: invalid network ID: %s\n", args[0])
+		pErr("ERROR: invalid network ID: %s", args[0])
 		return 1
 	}
 	nwid, err := strconv.ParseUint(args[0], 16, 64)
 	if err != nil {
-		fmt.Printf("ERROR: invalid network ID: %s\n", args[0])
+		pErr("ERROR: invalid network ID: %s", args[0])
 		return 1
 	}
 	nwids := fmt.Sprintf("%.16x", nwid)

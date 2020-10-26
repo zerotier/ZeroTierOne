@@ -35,8 +35,8 @@ const pointerSize = unsafe.Sizeof(uintptr(0))
 // Base32Alphabet is the Base32 alphabet used in ZeroTier.
 const Base32Alphabet = "abcdefghijklmnopqrstuvwxyz234567"
 
-// Base32 is an encoder using the ZeroTier base32 encoding.
-var Base32 = base32.NewEncoding(Base32Alphabet)
+// Base32 is an encoder using the ZeroTier base32 encoding and no padding (same as core).
+var Base32 = base32.NewEncoding(Base32Alphabet).WithPadding(base32.NoPadding)
 
 // unassignedPrivilegedPorts are ports below 1024 that do not appear to be assigned by IANA.
 // The new 2.0+ ZeroTier default is 793, which we will eventually seek to have assigned. These
