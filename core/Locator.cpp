@@ -117,9 +117,13 @@ int Locator::marshal(uint8_t data[ZT_LOCATOR_MARSHAL_SIZE_MAX], const bool exclu
 			return -1;
 		p += l;
 
-		l = (int)e->second->data[0] + 1;
-		Utils::copy(data + p, e->second->data, (unsigned int)l);
-		p += l;
+		l = (int)e->second->data[0];
+		if (l > 0) {
+			Utils::copy(data + p, e->second->data, (unsigned int)l);
+			p += l;
+		} else {
+			data[p++] = 0;
+		}
 	}
 
 	Utils::storeMachineEndian< uint16_t >(data + p, 0); // length of meta-data, currently always 0
@@ -139,7 +143,7 @@ int Locator::unmarshal(const uint8_t *data, const int len) noexcept
 {
 	if (unlikely(len < 8))
 		return -1;
-	m_ts = (int64_t) Utils::loadBigEndian<uint64_t>(data);
+	m_ts = (int64_t)Utils::loadBigEndian<uint64_t>(data);
 	int p = 8;
 
 	int l = m_signer.unmarshal(data + p, len - p);
@@ -161,25 +165,28 @@ int Locator::unmarshal(const uint8_t *data, const int len) noexcept
 			return -1;
 		p += l;
 
-		l = (int)data[p] + 1;
-		if (l <= 1) {
+		if (unlikely(p + 1) > len)
+			return -1;
+		l = (int)data[p];
+		if (l <= 0) {
 			m_endpoints[i].second = EndpointAttributes::DEFAULT;
+			++p;
 		} else {
 			m_endpoints[i].second.set(new EndpointAttributes());
 			Utils::copy(const_cast< uint8_t * >(m_endpoints[i].second->data), data + p, (unsigned int)l);
+			p += l;
 		}
-		p += l;
 	}
 
 	if (unlikely((p + 2) > len))
 		return -1;
-	p += 2 + (int) Utils::loadBigEndian<uint16_t>(data + p);
+	p += 2 + (int)Utils::loadBigEndian<uint16_t>(data + p);
 
 	if (unlikely((p + 2) > len))
 		return -1;
 	const unsigned int siglen = Utils::loadBigEndian<uint16_t>(data + p);
 	p += 2;
-	if (unlikely((siglen > ZT_SIGNATURE_BUFFER_SIZE) || ((p + (int) siglen) > len)))
+	if (unlikely((siglen > ZT_SIGNATURE_BUFFER_SIZE) || ((p + (int)siglen) > len)))
 		return -1;
 	m_signature.unsafeSetSize(siglen);
 	Utils::copy(m_signature.data(), data + p, siglen);

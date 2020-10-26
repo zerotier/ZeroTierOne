@@ -75,7 +75,7 @@ public:
 		/**
 		 * Raw attributes data in the form of a dictionary prefixed by its size.
 		 *
-		 * The maximum size of attributes is 256, which is more than enough for
+		 * The maximum size of attributes is 255, which is more than enough for
 		 * tiny things like bandwidth and priority.
 		 */
 		uint8_t data[ZT_LOCATOR_MAX_ENDPOINT_ATTRIBUTES_SIZE];

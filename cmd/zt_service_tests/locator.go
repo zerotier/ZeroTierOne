@@ -14,6 +14,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"zerotier/pkg/zerotier"
 )
@@ -47,7 +48,37 @@ func TestLocator() bool {
 		fmt.Printf("FAILED (%s)\n",err.Error())
 		return false
 	}
-	fmt.Printf("OK %s\n",loc.String())
+	locStr := loc.String()
+	locBytes := loc.Bytes()
+	fmt.Printf("OK (%d bytes)\n",len(locBytes))
+
+	fmt.Printf("Testing Locator Validate()... ")
+	if !loc.Validate(signer) {
+		fmt.Printf("FAILED (should have validated)\n")
+		return false
+	}
+	fmt.Printf("OK\n")
+
+	fmt.Printf("Testing Locator marshal/unmarshal... ")
+	loc2, err := zerotier.NewLocatorFromString(locStr)
+	if err != nil {
+		fmt.Printf("FAILED (%s)\n",err.Error())
+		return false
+	}
+	if !bytes.Equal(locBytes, loc2.Bytes()) {
+		fmt.Printf("FAILED (not equal)\n")
+		return false
+	}
+	loc2, err = zerotier.NewLocatorFromBytes(locBytes)
+	if err != nil {
+		fmt.Printf("FAILED (%s)\n",err.Error())
+		return false
+	}
+	if !bytes.Equal(locBytes, loc2.Bytes()) {
+		fmt.Printf("FAILED (not equal)\n")
+		return false
+	}
+	fmt.Printf("OK\n")
 
 	return true
 }

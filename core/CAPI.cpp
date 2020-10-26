@@ -397,7 +397,7 @@ int ZT_Locator_marshal(const ZT_Locator *loc, void *buf, unsigned int bufSize)
 {
 	if ((!loc) || (bufSize < ZT_LOCATOR_MARSHAL_SIZE_MAX))
 		return -1;
-	return reinterpret_cast<const ZeroTier::Locator *>(loc)->marshal(reinterpret_cast<uint8_t *>(buf), (int) bufSize);
+	return reinterpret_cast<const ZeroTier::Locator *>(loc)->marshal(reinterpret_cast<uint8_t *>(buf), false);
 }
 
 char *ZT_Locator_toString(

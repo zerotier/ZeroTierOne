@@ -98,8 +98,8 @@ func (loc *Locator) Bytes() []byte {
 	if loc.cl == nil {
 		return nil
 	}
-	var buf [4096]byte
-	bl := C.ZT_Locator_marshal(loc.cl, unsafe.Pointer(&buf[0]), 4096)
+	var buf [16384]byte // larger than ZT_LOCATOR_MARSHAL_SIZE_MAX
+	bl := C.ZT_Locator_marshal(loc.cl, unsafe.Pointer(&buf[0]), 16384)
 	if bl <= 0 {
 		return nil
 	}
@@ -133,7 +133,7 @@ func (loc *Locator) UnmarshalJSON(j []byte) error {
 
 func locatorFinalizer(obj interface{}) {
 	if obj != nil {
-		cl := obj.(Locator).cl
+		cl := obj.(*Locator).cl
 		if cl != nil {
 			C.ZT_Locator_delete(cl)
 		}
