@@ -42,7 +42,7 @@ type Endpoint struct {
 	cep C.ZT_Endpoint
 }
 
-func EndpointTypeToString(int t) string {
+func EndpointTypeToString(t int) string {
 	switch t {
 	case EndpointTypeZeroTier:
 		return "zerotier"
