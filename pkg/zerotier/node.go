@@ -292,7 +292,7 @@ func NewNode(basePath string) (n *Node, err error) {
 		}
 	}()
 
-	// Stop deferred cPtr table cleanup function from deregistering this instance
+	// Stop deferred cPtr table cleanup function from de-registering this instance
 	cPtr = -1
 
 	return n, nil
