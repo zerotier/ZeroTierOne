@@ -550,7 +550,7 @@ func (n *Node) DeleteCertificate(serialNo []byte) error {
 	return nil
 }
 
-// -------------------------------------------------------------------------------------------------------------------
+/********************************************************************************************************************/
 
 func (n *Node) runMaintenance() {
 	n.localConfigLock.RLock()
@@ -774,6 +774,8 @@ func (n *Node) handleTrace(traceMessage string) {
 		n.infoLog.Print("TRACE: " + traceMessage)
 	}
 }
+
+/********************************************************************************************************************/
 
 // These are callbacks called by the core and GoGlue stuff to talk to the
 // service. These launch goroutines to do their work where possible to

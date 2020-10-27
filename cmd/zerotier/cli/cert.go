@@ -122,7 +122,7 @@ func Cert(basePath string, authTokenGenerator func() string, args []string, json
 			return 1
 		}
 
-		signingIdentity := readIdentity(args[2])
+		signingIdentity := cliGetIdentityOrFatal(args[2])
 		if signingIdentity == nil {
 			pErr("unable to read identity from %s", args[2])
 			return 1

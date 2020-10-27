@@ -160,7 +160,7 @@ func parseAddressFingerprintOrIdentity(s string) (a zerotier.Address, fp *zeroti
 	return
 }
 
-func readIdentity(s string) *zerotier.Identity {
+func cliGetIdentityOrFatal(s string) *zerotier.Identity {
 	if strings.ContainsRune(s, ':') {
 		id, _ := zerotier.NewIdentityFromString(s)
 		if id != nil {
@@ -169,18 +169,18 @@ func readIdentity(s string) *zerotier.Identity {
 	}
 	idData, err := ioutil.ReadFile(s)
 	if err != nil {
-		fmt.Printf("FATAL: identity '%s' cannot be parsed as file or literal: %s", s, err.Error())
+		pErr("identity '%s' cannot be parsed as file or literal: %s", s, err.Error())
 		os.Exit(1)
 	}
 	id, err := zerotier.NewIdentityFromString(string(idData))
 	if err != nil {
-		fmt.Printf("FATAL: identity '%s' cannot be parsed as file or literal: %s", s, err.Error())
+		pErr("identity '%s' cannot be parsed as file or literal: %s", s, err.Error())
 		os.Exit(1)
 	}
 	return id
 }
 
-func readLocator(s string) *zerotier.Locator {
+func cliGetLocatorOrFatal(s string) *zerotier.Locator {
 	if strings.ContainsRune(s, '@') {
 		loc, _ := zerotier.NewLocatorFromString(s)
 		if loc != nil {
@@ -189,12 +189,12 @@ func readLocator(s string) *zerotier.Locator {
 	}
 	locData, err := ioutil.ReadFile(s)
 	if err != nil {
-		fmt.Printf("FATAL: locator '%s' cannot be parsed as file or literal: %s", s, err.Error())
+		pErr("locator '%s' cannot be parsed as file or literal: %s", s, err.Error())
 		os.Exit(1)
 	}
 	loc, err := zerotier.NewLocatorFromString(string(locData))
 	if err != nil {
-		fmt.Printf("FATAL: locator '%s' cannot be parsed as file or literal: %s", s, err.Error())
+		pErr("locator '%s' cannot be parsed as file or literal: %s", s, err.Error())
 		os.Exit(1)
 	}
 	return loc

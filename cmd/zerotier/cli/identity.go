@@ -55,7 +55,7 @@ func Identity(args []string) int {
 
 		case "getpublic":
 			if len(args) == 2 {
-				fmt.Println(readIdentity(args[1]).String())
+				fmt.Println(cliGetIdentityOrFatal(args[1]).String())
 				return 0
 			}
 			pErr("no identity specified")
@@ -63,7 +63,7 @@ func Identity(args []string) int {
 
 		case "fingerprint":
 			if len(args) == 2 {
-				fmt.Println(readIdentity(args[1]).Fingerprint().String())
+				fmt.Println(cliGetIdentityOrFatal(args[1]).Fingerprint().String())
 				return 0
 			}
 			pErr("no identity specified")
@@ -71,7 +71,7 @@ func Identity(args []string) int {
 
 		case "validate":
 			if len(args) == 2 {
-				if readIdentity(args[1]).LocallyValidate() {
+				if cliGetIdentityOrFatal(args[1]).LocallyValidate() {
 					fmt.Println("VALID")
 					return 0
 				}
@@ -81,7 +81,7 @@ func Identity(args []string) int {
 
 		case "sign", "verify":
 			if len(args) > 2 {
-				id := readIdentity(args[1])
+				id := cliGetIdentityOrFatal(args[1])
 				msg, err := ioutil.ReadFile(args[2])
 				if err != nil {
 					pErr("unable to read input file: %s", err.Error())
