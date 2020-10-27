@@ -42,6 +42,28 @@ type Endpoint struct {
 	cep C.ZT_Endpoint
 }
 
+func EndpointTypeToString(int t) string {
+	switch t {
+	case EndpointTypeZeroTier:
+		return "zerotier"
+	case EndpointTypeEthernet:
+		return "ethernet"
+	case EndpointTypeWifiDirect:
+		return "wifi-direct"
+	case EndpointTypeBluetooth:
+		return "bluetooth"
+	case EndpointTypeIp:
+		return "ip/raw"
+	case EndpointTypeIpUdp:
+		return "ip/udp"
+	case EndpointTypeIpTcp:
+		return "ip/tcp"
+	case EndpointTypeIpHttp:
+		return "ip/http"
+	}
+	return "unsupported"
+}
+
 // NewEndpointFromString constructs a new endpoint from an InetAddress or Endpoint string.
 // This will auto detect whether this is a plain InetAddress or an Endpoint in string
 // format. If the former it's created as a ZT_ENDPOINT_TYPE_IP_UDP endpoint.
@@ -74,6 +96,11 @@ func NewEndpointFromInetAddress(addr *InetAddress) (*Endpoint, error) {
 // Type returns this endpoint's type.
 func (ep *Endpoint) Type() int {
 	return int(ep.cep._type)
+}
+
+// TypeString returns a human-readable endpoint type.
+func (ep *Endpoint) TypeString() string {
+	return EndpointTypeToString(int(ep.cep._type))
 }
 
 // InetAddress gets this Endpoint as an InetAddress or nil if its type is not addressed by one.

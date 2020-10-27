@@ -71,9 +71,9 @@ func Locator(args []string) int {
 			return 1
 		}
 		loc := cliGetLocatorOrFatal(args[1])
-		fmt.Printf("%s %s\n",loc.Fingerprint.Address.String(),loc.Fingerprint.String())
+		fmt.Printf("%s fingerprint %s\n",loc.Fingerprint.Address.String(),loc.Fingerprint.String())
 		for _, e := range loc.Endpoints {
-			fmt.Printf("\t%s\n",e.String())
+			fmt.Printf("\tendpoint %s type %s\n",e.String(),e.TypeString())
 		}
 
 	}
