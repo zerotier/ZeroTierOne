@@ -29,13 +29,13 @@
  * is limited to 2048. AF_NDRV packet injection is required to inject
  * ZeroTier's large MTU frames.
  *
- * Benchmarks show that this performs similarly to the old tap.kext driver,
- * and a kext is no longer required. Splitting it off into an agent will
- * also make it easier to have zerotier-one itself drop permissions.
- *
  * All this stuff is basically undocumented. A lot of tracing through
  * the Darwin/XNU kernel source was required to figure out how to make
  * this actually work.
+ * 
+ * We hope to develop a DriverKit-based driver in the near-mid future to
+ * replace this weird hack, but it works for now through Big Sur in our
+ * testing.
  *
  * See also:
  *
