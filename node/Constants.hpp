@@ -107,8 +107,6 @@
 #include <xmmintrin.h>
 #include <emmintrin.h>
 #include <immintrin.h>
-#include <tmmintrin.h>
-#include <mmintrin.h>
 #endif
 
 #if (defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(ZT_ARCH_ARM_HAS_NEON))
