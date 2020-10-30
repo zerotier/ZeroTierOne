@@ -58,6 +58,7 @@ Common Operations:
 ·   set [option] [value]                  Get or set network options
 ·     manageips <boolean>                 Is IP management allowed?
 ·     manageroutes <boolean>              Is route management allowed?
+·     managedns <boolean>                 Allow network to push DNS config
 ·     globalips <boolean>                 Allow assignment of global IPs?
 ·     globalroutes <boolean>              Can global IP space routes be set?
 ·     defaultroute <boolean>              Can default route be overridden?
