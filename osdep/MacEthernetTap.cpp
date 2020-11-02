@@ -214,19 +214,9 @@ MacEthernetTap::~MacEthernetTap()
 
 	Mutex::Lock _gl(globalTapCreateLock);
 	::write(_shutdownSignalPipe[1],"\0",1); // causes thread to exit
-	::close(_shutdownSignalPipe[0]);
-	::close(_shutdownSignalPipe[1]);
 
 	int ec = 0;
 	::kill(_agentPid,SIGKILL);
-
-	::close(_agentStdin);
-	::close(_agentStdout);
-	::close(_agentStderr);
-	::close(_agentStdin2);
-	::close(_agentStdout2);
-	::close(_agentStderr2);
-
 	::waitpid(_agentPid,&ec,0);
 
 	args[0] = "/sbin/ifconfig";
@@ -496,6 +486,15 @@ void MacEthernetTap::threadMain()
 			*/
 		}
 	}
+
+	::close(_agentStdin);
+	::close(_agentStdout);
+	::close(_agentStderr);
+	::close(_agentStdin2);
+	::close(_agentStdout2);
+	::close(_agentStderr2);
+	::close(_shutdownSignalPipe[0]);
+	::close(_shutdownSignalPipe[1]);
 }
 
 void MacEthernetTap::setDns(const char *domain, const std::vector<InetAddress> &servers)
