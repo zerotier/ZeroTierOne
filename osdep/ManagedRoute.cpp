@@ -388,6 +388,29 @@ static bool _winHasRoute(const NET_LUID &interfaceLuid, const NET_IFINDEX &inter
 
 } // anonymous namespace
 
+ManagedRoute::ManagedRoute(const InetAddress &target,const InetAddress &via,const InetAddress &src,const char *device)
+{
+	_target = target;
+	_via = via;
+	_src = src;
+	if (via.ss_family == AF_INET)
+		_via.setPort(32);
+	else if (via.ss_family == AF_INET6)
+		_via.setPort(128);
+	if (src.ss_family == AF_INET) {
+		_src.setPort(32);
+	} else if (src.ss_family == AF_INET6) {
+		_src.setPort(128);
+	}
+	Utils::scopy(_device,sizeof(_device),device);
+	_systemDevice[0] = (char)0;
+}
+
+ManagedRoute::~ManagedRoute()
+{
+	this->remove();
+}
+
 /* Linux NOTE: for default route override, some Linux distributions will
  * require a change to the rp_filter parameter. A value of '1' will prevent
  * default route override from working properly.

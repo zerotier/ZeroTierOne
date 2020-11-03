@@ -529,7 +529,7 @@ public:
 		std::shared_ptr<EthernetTap> tap;
 		ZT_VirtualNetworkConfig config; // memcpy() of raw config from core
 		std::vector<InetAddress> managedIps;
-		std::list< SharedPtr<ManagedRoute> > managedRoutes;
+		std::map< InetAddress, SharedPtr<ManagedRoute> > managedRoutes;
 		NetworkSettings settings;
 	};
 	std::map<uint64_t,NetworkState> _nets;
@@ -1932,15 +1932,72 @@ public:
 		}
 
 		if (syncRoutes) {
-			char tapdev[64];
+			// Get tap device name (use LUID in hex on Windows) and IP addresses.
+			char tapdevbuf[64];
+			std::string tapdev;
 #if defined(__WINDOWS__) && !defined(ZT_SDK)
-			OSUtils::ztsnprintf(tapdev,sizeof(tapdev),"%.16llx",(unsigned long long)((WindowsEthernetTap *)(n.tap.get()))->luid().Value);
+			OSUtils::ztsnprintf(tapdevbuf,sizeof(tapdevbuf),"%.16llx",(unsigned long long)((WindowsEthernetTap *)(n.tap.get()))->luid().Value);
+			tapdev = tapdevbuf;
 #else
-			Utils::scopy(tapdev,sizeof(tapdev),n.tap->deviceName().c_str());
+			tapdev = n.tap->deviceName();
 #endif
-
 			std::vector<InetAddress> myIps(n.tap->ips());
 
+			// Add routes not already added.
+			std::set<InetAddress> haveRouteTargets;
+			for(unsigned int i=0;i<n.config.routeCount;++i) {
+				const InetAddress *const target = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].target));
+				const InetAddress *const via = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].via));
+
+				const InetAddress *src = NULL;
+				for (unsigned int j=0; j<n.config.assignedAddressCount; ++j) {
+					const InetAddress *const tmp = reinterpret_cast<const InetAddress *>(&(n.config.assignedAddresses[j]));
+					if (target->isV4() && tmp->isV4()) {
+						src = reinterpret_cast<InetAddress *>(&(n.config.assignedAddresses[j]));
+						break;
+					} else if (target->isV6() && tmp->isV6()) {
+						src = reinterpret_cast<InetAddress *>(&(n.config.assignedAddresses[j]));
+						break;
+					}
+				}
+				if (!src)
+					src = &NULL_INET_ADDR;
+
+				if ( (!checkIfManagedIsAllowed(n,*target)) || ((via->ss_family == target->ss_family)&&(matchIpOnly(myIps,*via))) )
+					continue;
+
+				// Ignore routes implied by local managed IPs since adding the IP adds the route
+#ifndef __APPLE__
+				bool haveRoute = false;
+				for(std::vector<InetAddress>::iterator ip(n.managedIps.begin());ip!=n.managedIps.end();++ip) {
+					if ((target->netmaskBits() == ip->netmaskBits())&&(target->containsAddress(*ip))) {
+						haveRoute = true;
+						break;
+					}
+				}
+				if (haveRoute)
+					continue;
+#endif
+
+				haveRouteTargets.insert(*target);
+
+#ifndef ZT_SDK
+				SharedPtr<ManagedRoute> &mr = n.managedRoutes[*target];
+				if (!mr)
+					mr.set(new ManagedRoute(*target, *via, *src, tapdev.c_str()));
+				mr->sync();
+#endif
+			}
+
+			// Destroy managed routes no longer in n.managedRoutes.
+			for(std::map< InetAddress, SharedPtr<ManagedRoute> >::iterator r(n.managedRoutes.begin());r!=n.managedRoutes.end();) {
+				if (haveRouteTargets.find(r->first) == haveRouteTargets.end())
+					n.managedRoutes.erase(r++);
+				else ++r;
+			}
+
+			// This is the old logic for applying managed routes, and is kept around for now for documentation purposes.
+#if 0
 			// Nuke applied routes that are no longer in n.config.routes[] and/or are not allowed
 			for(std::list< SharedPtr<ManagedRoute> >::iterator mr(n.managedRoutes.begin());mr!=n.managedRoutes.end();) {
 				bool haveRoute = false;
@@ -2014,6 +2071,7 @@ public:
 					n.managedRoutes.pop_back();
 #endif
 			}
+#endif // end old managed route apply logic
 		}
 
 		if (syncDns) {
