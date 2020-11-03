@@ -1933,9 +1933,9 @@ public:
 
 		if (syncRoutes) {
 			// Get tap device name (use LUID in hex on Windows) and IP addresses.
-			char tapdevbuf[64];
 			std::string tapdev;
 #if defined(__WINDOWS__) && !defined(ZT_SDK)
+			char tapdevbuf[64];
 			OSUtils::ztsnprintf(tapdevbuf,sizeof(tapdevbuf),"%.16llx",(unsigned long long)((WindowsEthernetTap *)(n.tap.get()))->luid().Value);
 			tapdev = tapdevbuf;
 #else
