@@ -1,5 +1,5 @@
 /*
- * Copyright (c)2013-2020 ZeroTier, Inc.
+ * Copyright (c)2019 ZeroTier, Inc.
  *
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
@@ -14,11 +14,11 @@
 #ifndef ZT_OSXETHERNETTAP_HPP
 #define ZT_OSXETHERNETTAP_HPP
 
-#include "../core/Constants.hpp"
-#include "../core/MAC.hpp"
-#include "../core/InetAddress.hpp"
-#include "../core/MulticastGroup.hpp"
-#include "../core/Mutex.hpp"
+#include "../node/Constants.hpp"
+#include "../node/MAC.hpp"
+#include "../node/InetAddress.hpp"
+#include "../node/MulticastGroup.hpp"
+#include "../node/Mutex.hpp"
 #include "Thread.hpp"
 #include "EthernetTap.hpp"
 
@@ -56,6 +56,7 @@ public:
 	virtual void setFriendlyName(const char *friendlyName);
 	virtual void scanMulticastGroups(std::vector<MulticastGroup> &added,std::vector<MulticastGroup> &removed);
 	virtual void setMtu(unsigned int mtu);
+	virtual void setDns(const char *domain, const std::vector<InetAddress> &servers);
 
 	void threadMain()
 		throw();
@@ -70,6 +71,8 @@ private:
 	std::vector<MulticastGroup> _multicastGroups;
 	Mutex _putLock;
 	unsigned int _mtu;
+	unsigned int _metric;
+	unsigned int _devNo;
 	int _shutdownSignalPipe[2];
 	int _agentStdin,_agentStdout,_agentStderr,_agentStdin2,_agentStdout2,_agentStderr2;
 	long _agentPid;

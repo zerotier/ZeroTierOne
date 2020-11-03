@@ -1,5 +1,5 @@
 /*
- * Copyright (c)2013-2020 ZeroTier, Inc.
+ * Copyright (c)2019 ZeroTier, Inc.
  *
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
@@ -29,13 +29,13 @@
  * is limited to 2048. AF_NDRV packet injection is required to inject
  * ZeroTier's large MTU frames.
  *
- * Benchmarks show that this performs similarly to the old tap.kext driver,
- * and a kext is no longer required. Splitting it off into an agent will
- * also make it easier to have zerotier-one itself drop permissions.
- *
  * All this stuff is basically undocumented. A lot of tracing through
  * the Darwin/XNU kernel source was required to figure out how to make
  * this actually work.
+ * 
+ * We hope to develop a DriverKit-based driver in the near-mid future to
+ * replace this weird hack, but it works for now through Big Sur in our
+ * testing.
  *
  * See also:
  *
@@ -79,7 +79,7 @@
 #include <netinet6/nd6.h>
 #include <ifaddrs.h>
 
-#include "../core/Constants.hpp"
+#include "../version.h"
 #include "MacEthernetTapAgent.h"
 
 #ifndef SIOCAUTOCONF_START
@@ -183,6 +183,7 @@ static void die()
 
 int main(int argc,char **argv)
 {
+	char buf[128];
 	struct ifreq ifr;
 	u_int fl;
 	fd_set rfds,wfds,efds;
@@ -308,7 +309,7 @@ int main(int argc,char **argv)
 		return ZT_MACETHERNETTAPAGENT_EXIT_CODE_UNABLE_TO_CREATE;
 	}
 
-	fprintf(stderr,"I %s %s %d.%d.%d.%d\n",s_deviceName,s_peerDeviceName,ZEROTIER_VERSION_MAJOR,ZEROTIER_VERSION_MINOR,ZEROTIER_VERSION_REVISION,ZEROTIER_VERSION_BUILD);
+	fprintf(stderr,"I %s %s %d.%d.%d.%d\n",s_deviceName,s_peerDeviceName,ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION,ZEROTIER_ONE_VERSION_BUILD);
 
 	FD_ZERO(&rfds);
 	FD_ZERO(&wfds);
