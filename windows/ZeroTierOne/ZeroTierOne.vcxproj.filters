@@ -285,6 +285,12 @@
     <ClCompile Include="..\..\node\AES.cpp">
       <Filter>Source Files\node</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\node\AES_aesni.cpp">
+      <Filter>Source Files\node</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\node\AES_armcrypto.cpp">
+      <Filter>Source Files\node</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
