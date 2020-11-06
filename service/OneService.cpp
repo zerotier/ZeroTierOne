@@ -1949,21 +1949,21 @@ public:
 				const InetAddress *const target = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].target));
 				const InetAddress *const via = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].via));
 
+				// Make sure we are allowed to set this managed route.
+				if ( (!checkIfManagedIsAllowed(n,*target)) || ((via->ss_family == target->ss_family)&&(matchIpOnly(myIps,*via))) )
+					continue;
+
+				// Find an IP on the interface that can be a source IP, abort if no IPs assigned.
 				const InetAddress *src = NULL;
-				for (unsigned int j=0; j<n.config.assignedAddressCount; ++j) {
-					const InetAddress *const tmp = reinterpret_cast<const InetAddress *>(&(n.config.assignedAddresses[j]));
-					if (target->isV4() && tmp->isV4()) {
-						src = reinterpret_cast<InetAddress *>(&(n.config.assignedAddresses[j]));
-						break;
-					} else if (target->isV6() && tmp->isV6()) {
-						src = reinterpret_cast<InetAddress *>(&(n.config.assignedAddresses[j]));
-						break;
+				unsigned int mostMatchingPrefixBits = 0;
+				for(std::vector<InetAddress>::const_iterator i(myIps.begin());i!=myIps.end();++i) {
+					const unsigned int matchingPrefixBits = i->matchingPrefixBits(*target);
+					if (matchingPrefixBits >= mostMatchingPrefixBits) {
+						mostMatchingPrefixBits = matchingPrefixBits;
+						src = &(*i);
 					}
 				}
 				if (!src)
-					src = &NULL_INET_ADDR;
-
-				if ( (!checkIfManagedIsAllowed(n,*target)) || ((via->ss_family == target->ss_family)&&(matchIpOnly(myIps,*via))) )
 					continue;
 
 				// Ignore routes implied by local managed IPs since adding the IP adds the route
