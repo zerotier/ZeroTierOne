@@ -50,6 +50,38 @@
 #include <asm/hwcap.h>
 #endif
 
+#if defined(__FreeBSD__)
+#include <elf.h>
+#include <sys/auxv.h>
+static inline long getauxval(int caps) {
+	long hwcaps = 0;
+	elf_aux_info(caps, &hwcaps, sizeof(hwcaps));
+	return hwcaps;
+}
+#endif
+
+// If these are not even defined, then they're not supported at all
+#ifndef HWCAP_AES
+#define HWCAP_AES 0
+#endif
+
+#ifndef HWCAP_CRC32
+#define HWCAP_CRC32 0
+#endif
+
+#ifndef HWCAP_PMULL
+#define HWCAP_PMULL 0
+#endif
+
+#ifndef HWCAP_SHA1
+#define HWCAP_SHA1 0
+#endif
+
+#ifndef HWCAP_SHA2
+#define HWCAP_SHA2 0
+#endif
+
+
 namespace ZeroTier {
 
 const uint64_t Utils::ZERO256[4] = {0ULL,0ULL,0ULL,0ULL};
