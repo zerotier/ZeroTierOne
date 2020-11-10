@@ -186,6 +186,9 @@
  */
 #define ZT_ADDRESS_LENGTH_HEX 10
 
+/**
+ * Size of symmetric key (only the first 32 bits are used for some ciphers)
+ */
 #define ZT_SYMMETRIC_KEY_SIZE 48
 
 /**
@@ -253,7 +256,7 @@
 /**
  * Period for multicast LIKE announcements
  */
-#define ZT_MULTICAST_ANNOUNCE_PERIOD 120000
+#define ZT_MULTICAST_ANNOUNCE_PERIOD 60000
 
 /**
  * Delay between explicit MULTICAST_GATHER requests for a given multicast channel
