@@ -166,31 +166,39 @@ LinuxEthernetTap::LinuxEthernetTap(
 		throw std::runtime_error("unable to configure TUN/TAP device for TAP operation");
 	}
 
-	_dev = ifr.ifr_name;
-
 	::ioctl(_fd,TUNSETPERSIST,0); // valgrind may generate a false alarm here
 
-	int sock = socket(AF_INET,SOCK_DGRAM,0);
+	const int sock = socket(AF_INET,SOCK_DGRAM,0);
 	if (sock <= 0) {
 		::close(_fd);
 		throw std::runtime_error("unable to open netlink socket");
 	}
 
-	if (fcntl(_fd,F_SETFL,fcntl(_fd,F_GETFL) & ~O_NONBLOCK) == -1) {
-		::close(_fd);
-		throw std::runtime_error("unable to set flags on file descriptor for TAP device");
-	}
+	_dev = ifr.ifr_name;
 
-	if (ioctl(sock,SIOCGIFFLAGS,(void *)&ifr) < 0) {
-		::close(_fd);
-		::close(sock);
-		throw std::runtime_error("unable to get TAP interface flags");
-	}
-	ifr.ifr_flags |= IFF_UP;
-	if (ioctl(sock,SIOCSIFFLAGS,(void *)&ifr) < 0) {
-		::close(_fd);
-		::close(sock);
-		throw std::runtime_error("unable to set TAP interface flags");
+	// Set/check loop is a workaround for a weird likely kernel bug in which
+	// the interface doesn't come up right away when set to up. This causes
+	// settings like the MAC address to not "take."
+	for(;;) {
+		if (ioctl(sock,SIOCGIFFLAGS,(void *)&ifr) < 0) {
+			::close(_fd);
+			::close(sock);
+			throw std::runtime_error("unable to get TAP interface flags");
+		}
+		ifr.ifr_flags |= IFF_UP;
+		if (ioctl(sock,SIOCSIFFLAGS,(void *)&ifr) < 0) {
+			::close(_fd);
+			::close(sock);
+			throw std::runtime_error("unable to bring up TAP interface");
+		}
+		if (ioctl(sock,SIOCGIFFLAGS,(void *)&ifr) < 0) {
+			::close(_fd);
+			::close(sock);
+			throw std::runtime_error("unable to get TAP interface flags");
+		}
+		usleep(1000);
+		if ((ifr.ifr_flags & IFF_UP) != 0)
+			break;
 	}
 
 	ifr.ifr_ifru.ifru_hwaddr.sa_family = ARPHRD_ETHER;
@@ -201,11 +209,17 @@ LinuxEthernetTap::LinuxEthernetTap(
 		throw std::runtime_error("unable to configure TAP hardware (MAC) address");
 		return;
 	}
+
 	ifr.ifr_ifru.ifru_mtu = (int)mtu;
 	if (ioctl(sock,SIOCSIFMTU,(void *)&ifr) < 0) {
 		::close(_fd);
 		::close(sock);
 		throw std::runtime_error("unable to configure TAP MTU");
+	}
+
+	if (fcntl(_fd,F_SETFL,fcntl(_fd,F_GETFL) & ~O_NONBLOCK) == -1) {
+		::close(_fd);
+		throw std::runtime_error("unable to set flags on file descriptor for TAP device");
 	}
 
 	::close(sock);
@@ -214,19 +228,6 @@ LinuxEthernetTap::LinuxEthernetTap(
 	::fcntl(_fd,F_SETFD,fcntl(_fd,F_GETFD) | FD_CLOEXEC);
 
 	(void)::pipe(_shutdownSignalPipe);
-
-	/*
-	globalDeviceMap[nwids] = _dev;
-	devmapf = fopen((_homePath + ZT_PATH_SEPARATOR_S + "devicemap").c_str(),"w");
-	if (devmapf) {
-		gdmEntry = globalDeviceMap.begin();
-		while (gdmEntry != globalDeviceMap.end()) {
-			fprintf(devmapf,"%s=%s\n",gdmEntry->first.c_str(),gdmEntry->second.c_str());
-			++gdmEntry;
-		}
-		fclose(devmapf);
-	}
-	*/
 
 	_thread = Thread::start(this);
 }
