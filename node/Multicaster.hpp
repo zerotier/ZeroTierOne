@@ -138,7 +138,7 @@ public:
 		unsigned int len);
 
 	/**
-	 * Clean up and resort database
+	 * Clean database
 	 *
 	 * @param RR Runtime environment
 	 * @param now Current time
@@ -172,14 +172,14 @@ private:
 		inline bool operator!=(const Address &a) const { return (address != a); }
 
 		Address address;
-		uint64_t timestamp; // time of last notification
+		int64_t timestamp; // time of last notification
 	};
 
 	struct MulticastGroupStatus
 	{
 		MulticastGroupStatus() : lastExplicitGather(0) {}
 
-		uint64_t lastExplicitGather;
+		int64_t lastExplicitGather;
 		std::list<OutboundMulticast> txQueue; // pending outbound multicasts
 		std::vector<MulticastGroupMember> members; // members of this group
 	};

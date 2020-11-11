@@ -371,39 +371,37 @@ void Multicaster::send(
 
 void Multicaster::clean(int64_t now)
 {
-	{
-		Mutex::Lock _l(_groups_m);
-		Multicaster::Key *k = (Multicaster::Key *)0;
-		MulticastGroupStatus *s = (MulticastGroupStatus *)0;
-		Hashtable<Multicaster::Key,MulticastGroupStatus>::Iterator mm(_groups);
-		while (mm.next(k,s)) {
-			for(std::list<OutboundMulticast>::iterator tx(s->txQueue.begin());tx!=s->txQueue.end();) {
-				if ((tx->expired(now))||(tx->atLimit()))
-					s->txQueue.erase(tx++);
-				else ++tx;
-			}
+	Mutex::Lock _l(_groups_m);
+	Multicaster::Key *k = (Multicaster::Key *)0;
+	MulticastGroupStatus *s = (MulticastGroupStatus *)0;
+	Hashtable<Multicaster::Key,MulticastGroupStatus>::Iterator mm(_groups);
+	while (mm.next(k,s)) {
+		for(std::list<OutboundMulticast>::iterator tx(s->txQueue.begin());tx!=s->txQueue.end();) {
+			if ((tx->expired(now))||(tx->atLimit()))
+				s->txQueue.erase(tx++);
+			else ++tx;
+		}
 
-			unsigned long count = 0;
-			{
-				std::vector<MulticastGroupMember>::iterator reader(s->members.begin());
-				std::vector<MulticastGroupMember>::iterator writer(reader);
-				while (reader != s->members.end()) {
-					if ((now - reader->timestamp) < ZT_MULTICAST_LIKE_EXPIRE) {
-						*writer = *reader;
-						++writer;
-						++count;
-					}
-					++reader;
+		unsigned long count = 0;
+		{
+			std::vector<MulticastGroupMember>::iterator reader(s->members.begin());
+			std::vector<MulticastGroupMember>::iterator writer(reader);
+			while (reader != s->members.end()) {
+				if ((now - reader->timestamp) < ZT_MULTICAST_LIKE_EXPIRE) {
+					*writer = *reader;
+					++writer;
+					++count;
 				}
+				++reader;
 			}
+		}
 
-			if (count) {
-				s->members.resize(count);
-			} else if (s->txQueue.empty()) {
-				_groups.erase(*k);
-			} else {
-				s->members.clear();
-			}
+		if (count) {
+			s->members.resize(count);
+		} else if (s->txQueue.empty()) {
+			_groups.erase(*k);
+		} else {
+			s->members.clear();
 		}
 	}
 }
