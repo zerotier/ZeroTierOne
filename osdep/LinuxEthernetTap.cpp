@@ -170,29 +170,10 @@ LinuxEthernetTap::LinuxEthernetTap(
 
 	::ioctl(_fd,TUNSETPERSIST,0); // valgrind may generate a false alarm here
 
-	// Open an arbitrary socket to talk to netlink
 	int sock = socket(AF_INET,SOCK_DGRAM,0);
 	if (sock <= 0) {
 		::close(_fd);
 		throw std::runtime_error("unable to open netlink socket");
-	}
-
-	// Set MAC address
-	ifr.ifr_ifru.ifru_hwaddr.sa_family = ARPHRD_ETHER;
-	mac.copyTo(ifr.ifr_ifru.ifru_hwaddr.sa_data,6);
-	if (ioctl(sock,SIOCSIFHWADDR,(void *)&ifr) < 0) {
-		::close(_fd);
-		::close(sock);
-		throw std::runtime_error("unable to configure TAP hardware (MAC) address");
-		return;
-	}
-
-	// Set MTU
-	ifr.ifr_ifru.ifru_mtu = (int)mtu;
-	if (ioctl(sock,SIOCSIFMTU,(void *)&ifr) < 0) {
-		::close(_fd);
-		::close(sock);
-		throw std::runtime_error("unable to configure TAP MTU");
 	}
 
 	if (fcntl(_fd,F_SETFL,fcntl(_fd,F_GETFL) & ~O_NONBLOCK) == -1) {
@@ -200,7 +181,6 @@ LinuxEthernetTap::LinuxEthernetTap(
 		throw std::runtime_error("unable to set flags on file descriptor for TAP device");
 	}
 
-	/* Bring interface up */
 	if (ioctl(sock,SIOCGIFFLAGS,(void *)&ifr) < 0) {
 		::close(_fd);
 		::close(sock);
@@ -211,6 +191,21 @@ LinuxEthernetTap::LinuxEthernetTap(
 		::close(_fd);
 		::close(sock);
 		throw std::runtime_error("unable to set TAP interface flags");
+	}
+
+	ifr.ifr_ifru.ifru_hwaddr.sa_family = ARPHRD_ETHER;
+	mac.copyTo(ifr.ifr_ifru.ifru_hwaddr.sa_data,6);
+	if (ioctl(sock,SIOCSIFHWADDR,(void *)&ifr) < 0) {
+		::close(_fd);
+		::close(sock);
+		throw std::runtime_error("unable to configure TAP hardware (MAC) address");
+		return;
+	}
+	ifr.ifr_ifru.ifru_mtu = (int)mtu;
+	if (ioctl(sock,SIOCSIFMTU,(void *)&ifr) < 0) {
+		::close(_fd);
+		::close(sock);
+		throw std::runtime_error("unable to configure TAP MTU");
 	}
 
 	::close(sock);
