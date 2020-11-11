@@ -80,6 +80,7 @@ LinuxEthernetTap::LinuxEthernetTap(
 	_handler(handler),
 	_arg(arg),
 	_nwid(nwid),
+	_mac(mac),
 	_homePath(homePath),
 	_mtu(mtu),
 	_fd(0),
@@ -432,7 +433,7 @@ void LinuxEthernetTap::threadMain()
 		Thread::sleep(500);
 
 		ifr.ifr_ifru.ifru_hwaddr.sa_family = ARPHRD_ETHER;
-		mac.copyTo(ifr.ifr_ifru.ifru_hwaddr.sa_data,6);
+		_mac.copyTo(ifr.ifr_ifru.ifru_hwaddr.sa_data,6);
 		if (ioctl(sock,SIOCSIFHWADDR,(void *)&ifr) < 0) {
 			::close(sock);
 			printf("WARNING: ioctl() failed setting up Linux tap device (set MAC)\n");
