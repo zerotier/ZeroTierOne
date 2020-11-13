@@ -224,7 +224,7 @@
 /**
  * How often Topology::clean() and Network::clean() and similar are called, in ms
  */
-#define ZT_HOUSEKEEPING_PERIOD 60000
+#define ZT_HOUSEKEEPING_PERIOD 30000
 
 /**
  * Delay between WHOIS retries in ms
