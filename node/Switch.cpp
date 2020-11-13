@@ -481,8 +481,6 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 			return;
 		}
 
-		network->pushCredentialsIfNeeded(tPtr,toZT,RR->node->now());
-
 		RR->mc->send(
 			tPtr,
 			RR->node->now(),

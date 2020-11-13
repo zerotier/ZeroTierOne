@@ -247,6 +247,7 @@ void Multicaster::send(
 
 			for(unsigned int i=0;i<activeBridgeCount;++i) {
 				if ((activeBridges[i] != RR->identity.address())&&(activeBridges[i] != origin)) {
+					network->pushCredentialsIfNeeded(tPtr,activeBridges[i],RR->node->now());
 					out.sendOnly(RR,tPtr,activeBridges[i]); // optimization: don't use dedup log if it's a one-pass send
 					if (++count >= limit)
 						break;
@@ -257,6 +258,7 @@ void Multicaster::send(
 			while ((count < limit)&&(idx < gs.members.size())) {
 				const Address ma(gs.members[indexes[idx++]].address);
 				if ((std::find(activeBridges,activeBridges + activeBridgeCount,ma) == (activeBridges + activeBridgeCount))&&(ma != origin)) {
+					network->pushCredentialsIfNeeded(tPtr,ma,RR->node->now());
 					out.sendOnly(RR,tPtr,ma); // optimization: don't use dedup log if it's a one-pass send
 					++count;
 				}
@@ -347,6 +349,7 @@ void Multicaster::send(
 
 			for(unsigned int i=0;i<activeBridgeCount;++i) {
 				if (activeBridges[i] != RR->identity.address()) {
+					network->pushCredentialsIfNeeded(tPtr,activeBridges[i],RR->node->now());
 					out.sendAndLog(RR,tPtr,activeBridges[i]);
 					if (++count >= limit)
 						break;
@@ -357,6 +360,7 @@ void Multicaster::send(
 			while ((count < limit)&&(idx < gs.members.size())) {
 				Address ma(gs.members[indexes[idx++]].address);
 				if (std::find(activeBridges,activeBridges + activeBridgeCount,ma) == (activeBridges + activeBridgeCount)) {
+					network->pushCredentialsIfNeeded(tPtr,ma,RR->node->now());
 					out.sendAndLog(RR,tPtr,ma);
 					++count;
 				}
@@ -414,6 +418,10 @@ void Multicaster::_add(void *tPtr,int64_t now,uint64_t nwid,const MulticastGroup
 	if (member == RR->identity.address())
 		return;
 
+	SharedPtr<Network> network(RR->node->network(nwid));
+	if (!network)
+		return;
+
 	std::vector<MulticastGroupMember>::iterator m(std::lower_bound(gs.members.begin(),gs.members.end(),member));
 	if (m != gs.members.end()) {
 		if (m->address == member) {
@@ -429,6 +437,7 @@ void Multicaster::_add(void *tPtr,int64_t now,uint64_t nwid,const MulticastGroup
 		if (tx->atLimit())
 			gs.txQueue.erase(tx++);
 		else {
+			network->pushCredentialsIfNeeded(tPtr,member,RR->node->now());
 			tx->sendIfNew(RR,tPtr,member);
 			if (tx->atLimit())
 				gs.txQueue.erase(tx++);
