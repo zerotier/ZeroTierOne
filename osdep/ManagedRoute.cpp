@@ -49,6 +49,9 @@
 #include <utility>
 
 #include "ManagedRoute.hpp"
+#ifdef __LINUX__
+#include "LinuxNetLink.hpp"
+#endif
 
 #define ZT_BSD_ROUTE_CMD "/sbin/route"
 #define ZT_LINUX_IP_COMMAND "/sbin/ip"
@@ -269,6 +272,8 @@ static void _routeCmd(const char *op,const InetAddress &target,const InetAddress
 #ifdef __LINUX__ // ----------------------------------------------------------
 #define ZT_ROUTING_SUPPORT_FOUND 1
 
+// This has been replaced by LinuxNetLink
+/*
 static void _routeCmd(const char *op,const InetAddress &target,const InetAddress &via,const char *localInterface)
 {
 	long p = (long)fork();
@@ -289,6 +294,7 @@ static void _routeCmd(const char *op,const InetAddress &target,const InetAddress
 		::_exit(-1);
 	}
 }
+*/
 
 #endif // __LINUX__ ----------------------------------------------------------
 
@@ -393,15 +399,19 @@ ManagedRoute::ManagedRoute(const InetAddress &target,const InetAddress &via,cons
 	_target = target;
 	_via = via;
 	_src = src;
-	if (via.ss_family == AF_INET)
+
+	if (_via.ss_family == AF_INET) {
 		_via.setPort(32);
-	else if (via.ss_family == AF_INET6)
+	} else if (_via.ss_family == AF_INET6) {
 		_via.setPort(128);
-	if (src.ss_family == AF_INET) {
+	}
+
+	if (_src.ss_family == AF_INET) {
 		_src.setPort(32);
-	} else if (src.ss_family == AF_INET6) {
+	} else if (_src.ss_family == AF_INET6) {
 		_src.setPort(128);
 	}
+
 	Utils::scopy(_device,sizeof(_device),device);
 	_systemDevice[0] = (char)0;
 }
@@ -510,11 +520,15 @@ bool ManagedRoute::sync()
 
 	if (!_applied.count(leftt)) {
 		_applied[leftt] = false; // boolean unused
-		_routeCmd("replace",leftt,_via,(_via) ? (const char *)0 : _device);
+		LinuxNetLink::getInstance().delRoute(leftt, _via, _src, (_via) ? (const char *)0 : _device);
+		LinuxNetLink::getInstance().addRoute(leftt, _via, _src, (_via) ? (const char *)0 : _device);
+		//_routeCmd("replace",leftt,_via,(_via) ? (const char *)0 : _device);
 	}
 	if ((rightt)&&(!_applied.count(rightt))) {
 		_applied[rightt] = false; // boolean unused
-		_routeCmd("replace",rightt,_via,(_via) ? (const char *)0 : _device);
+		LinuxNetLink::getInstance().delRoute(rightt, _via, _src, (_via) ? (const char *)0 : _device);
+		LinuxNetLink::getInstance().addRoute(rightt, _via, _src, (_via) ? (const char *)0 : _device);
+		//_routeCmd("replace",rightt,_via,(_via) ? (const char *)0 : _device);
 	}
 
 #endif // __LINUX__ ----------------------------------------------------------
@@ -562,7 +576,8 @@ void ManagedRoute::remove()
 #endif // __BSD__ ------------------------------------------------------------
 
 #ifdef __LINUX__ // ----------------------------------------------------------
-		_routeCmd("del",r->first,_via,(_via) ? (const char *)0 : _device);
+		//_routeCmd("del",r->first,_via,(_via) ? (const char *)0 : _device);
+		LinuxNetLink::getInstance().delRoute(r->first,_via,_src,(_via) ? (const char *)0 : _device);
 #endif // __LINUX__ ----------------------------------------------------------
 
 #ifdef __WINDOWS__ // --------------------------------------------------------

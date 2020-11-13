@@ -1951,12 +1951,13 @@ public:
 				const InetAddress *const target = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].target));
 				const InetAddress *const via = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].via));
 
-				// Make sure we are allowed to set this managed route.
+				// Make sure we are allowed to set this managed route, and that 'via' is not our IP. The latter
+				// avoids setting routes via the router on the router.
 				if ( (!checkIfManagedIsAllowed(n,*target)) || ((via->ss_family == target->ss_family)&&(matchIpOnly(myIps,*via))) )
 					continue;
 
 				// Find an IP on the interface that can be a source IP, abort if no IPs assigned.
-				const InetAddress *src = NULL;
+				const InetAddress *src = nullptr;
 				unsigned int mostMatchingPrefixBits = 0;
 				for(std::set<InetAddress>::const_iterator i(myIps.begin());i!=myIps.end();++i) {
 					const unsigned int matchingPrefixBits = i->matchingPrefixBits(*target);
@@ -1967,6 +1968,20 @@ public:
 				}
 				if (!src)
 					continue;
+
+				// Ignore routes implied by local managed IPs since adding the IP adds the route.
+				// Apple on the other hand seems to need this at least on some versions.
+#ifndef __APPLE__
+				bool haveRoute = false;
+				for(std::vector<InetAddress>::iterator ip(n.managedIps.begin());ip!=n.managedIps.end();++ip) {
+					if ((target->netmaskBits() == ip->netmaskBits())&&(target->containsAddress(*ip))) {
+						haveRoute = true;
+						break;
+					}
+				}
+				if (haveRoute)
+					continue;
+#endif
 
 				haveRouteTargets.insert(*target);
 
