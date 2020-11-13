@@ -1968,19 +1968,6 @@ public:
 				if (!src)
 					continue;
 
-				// Ignore routes implied by local managed IPs since adding the IP adds the route
-#ifndef __APPLE__
-				bool haveRoute = false;
-				for(std::vector<InetAddress>::iterator ip(n.managedIps.begin());ip!=n.managedIps.end();++ip) {
-					if ((target->netmaskBits() == ip->netmaskBits())&&(target->containsAddress(*ip))) {
-						haveRoute = true;
-						break;
-					}
-				}
-				if (haveRoute)
-					continue;
-#endif
-
 				haveRouteTargets.insert(*target);
 
 #ifndef ZT_SDK
