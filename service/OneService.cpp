@@ -1885,9 +1885,9 @@ public:
 	}
 
 	// Match only an IP from a vector of IPs -- used in syncManagedStuff()
-	bool matchIpOnly(const std::vector<InetAddress> &ips,const InetAddress &ip) const
+	inline bool matchIpOnly(const std::set<InetAddress> &ips,const InetAddress &ip) const
 	{
-		for(std::vector<InetAddress>::const_iterator i(ips.begin());i!=ips.end();++i) {
+		for(std::set<InetAddress>::const_iterator i(ips.begin());i!=ips.end();++i) {
 			if (i->ipsEqual(ip))
 				return true;
 		}
@@ -1933,17 +1933,19 @@ public:
 
 		if (syncRoutes) {
 			// Get tap device name (use LUID in hex on Windows) and IP addresses.
-			std::string tapdev;
 #if defined(__WINDOWS__) && !defined(ZT_SDK)
 			char tapdevbuf[64];
 			OSUtils::ztsnprintf(tapdevbuf,sizeof(tapdevbuf),"%.16llx",(unsigned long long)((WindowsEthernetTap *)(n.tap.get()))->luid().Value);
-			tapdev = tapdevbuf;
+			std::string tapdev(tapdevbuf);
 #else
-			tapdev = n.tap->deviceName();
+			std::string tapdev(n.tap->deviceName());
 #endif
-			std::vector<InetAddress> myIps(n.tap->ips());
 
-			// Add routes not already added.
+			std::vector<InetAddress> tapIps(n.tap->ips());
+			std::set<InetAddress> myIps(tapIps.begin(), tapIps.end());
+			for(unsigned int i=0;i<n.config.assignedAddressCount;++i)
+				myIps.insert(InetAddress(n.config.assignedAddresses[i]));
+
 			std::set<InetAddress> haveRouteTargets;
 			for(unsigned int i=0;i<n.config.routeCount;++i) {
 				const InetAddress *const target = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].target));
@@ -1956,7 +1958,7 @@ public:
 				// Find an IP on the interface that can be a source IP, abort if no IPs assigned.
 				const InetAddress *src = NULL;
 				unsigned int mostMatchingPrefixBits = 0;
-				for(std::vector<InetAddress>::const_iterator i(myIps.begin());i!=myIps.end();++i) {
+				for(std::set<InetAddress>::const_iterator i(myIps.begin());i!=myIps.end();++i) {
 					const unsigned int matchingPrefixBits = i->matchingPrefixBits(*target);
 					if (matchingPrefixBits >= mostMatchingPrefixBits) {
 						mostMatchingPrefixBits = matchingPrefixBits;
@@ -1989,89 +1991,11 @@ public:
 #endif
 			}
 
-			// Destroy managed routes no longer in n.managedRoutes.
 			for(std::map< InetAddress, SharedPtr<ManagedRoute> >::iterator r(n.managedRoutes.begin());r!=n.managedRoutes.end();) {
 				if (haveRouteTargets.find(r->first) == haveRouteTargets.end())
 					n.managedRoutes.erase(r++);
 				else ++r;
 			}
-
-			// This is the old logic for applying managed routes, and is kept around for now for documentation purposes.
-#if 0
-			// Nuke applied routes that are no longer in n.config.routes[] and/or are not allowed
-			for(std::list< SharedPtr<ManagedRoute> >::iterator mr(n.managedRoutes.begin());mr!=n.managedRoutes.end();) {
-				bool haveRoute = false;
-				if ( (checkIfManagedIsAllowed(n,(*mr)->target())) && (((*mr)->via().ss_family != (*mr)->target().ss_family)||(!matchIpOnly(myIps,(*mr)->via()))) ) {
-					for(unsigned int i=0;i<n.config.routeCount;++i) {
-						const InetAddress *const target = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].target));
-						const InetAddress *const via = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].via));
-						if ( ((*mr)->target() == *target) && ( ((via->ss_family == target->ss_family)&&((*mr)->via().ipsEqual(*via))) || (strcmp(tapdev,(*mr)->device())==0) ) ) {
-							haveRoute = true;
-							break;
-						}
-					}
-				}
-				if (haveRoute) {
-					++mr;
-				} else {
-					n.managedRoutes.erase(mr++);
-				}
-			}
-
-			// Apply routes in n.config.routes[] that we haven't applied yet, and sync those we have in case shadow routes need to change
-			for(unsigned int i=0;i<n.config.routeCount;++i) {
-				const InetAddress *const target = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].target));
-				const InetAddress *const via = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].via));
-
-				const InetAddress *src = NULL;
-				for (unsigned int j=0; j<n.config.assignedAddressCount; ++j) {
-					const InetAddress *const tmp = reinterpret_cast<const InetAddress *>(&(n.config.assignedAddresses[j]));
-					if (target->isV4() && tmp->isV4()) {
-						src = reinterpret_cast<InetAddress *>(&(n.config.assignedAddresses[j]));
-						break;
-					} else if (target->isV6() && tmp->isV6()) {
-						src = reinterpret_cast<InetAddress *>(&(n.config.assignedAddresses[j]));
-						break;
-					}
-				}
-				if (!src)
-					src = &NULL_INET_ADDR;
-
-				if ( (!checkIfManagedIsAllowed(n,*target)) || ((via->ss_family == target->ss_family)&&(matchIpOnly(myIps,*via))) )
-					continue;
-
-				bool haveRoute = false;
-
-				// Ignore routes implied by local managed IPs since adding the IP adds the route
-#ifndef __APPLE__
-				for(std::vector<InetAddress>::iterator ip(n.managedIps.begin());ip!=n.managedIps.end();++ip) {
-					if ((target->netmaskBits() == ip->netmaskBits())&&(target->containsAddress(*ip))) {
-						haveRoute = true;
-						break;
-					}
-				}
-#endif
-				if (haveRoute)
-					continue;
-#ifndef ZT_SDK
-				// If we've already applied this route, just sync it and continue
-				for(std::list< SharedPtr<ManagedRoute> >::iterator mr(n.managedRoutes.begin());mr!=n.managedRoutes.end();++mr) {
-					if ( ((*mr)->target() == *target) && ( ((via->ss_family == target->ss_family)&&((*mr)->via().ipsEqual(*via))) || (tapdev == (*mr)->device()) ) ) {
-						haveRoute = true;
-						(*mr)->sync();
-						break;
-					}
-				}
-				if (haveRoute)
-					continue;
-
-				// Add and apply new routes
-				n.managedRoutes.push_back(SharedPtr<ManagedRoute>(new ManagedRoute(*target,*via,*src,tapdev)));
-				if (!n.managedRoutes.back()->sync())
-					n.managedRoutes.pop_back();
-#endif
-			}
-#endif // end old managed route apply logic
 		}
 
 		if (syncDns) {
