@@ -19,6 +19,8 @@
 #ifdef __LINUX__
 
 #include <vector>
+#include <map>
+#include <set>
 
 #include <sys/socket.h>
 #include <asm/types.h>
@@ -123,7 +125,7 @@ private:
 
 	uint32_t _seq;
 
-	std::map< InetAddress,std::set<Route> > _routes;
+	std::map< InetAddress,std::set<LinuxNetLink::Route> > _routes;
 	Mutex _routes_m;
 
 	struct iface_entry {

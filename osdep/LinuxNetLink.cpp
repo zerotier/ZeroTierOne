@@ -13,7 +13,7 @@
 
 #include "../node/Constants.hpp"
 
-#define ZT_NETLINK_TRACE
+//#define ZT_NETLINK_TRACE
 
 #ifdef __LINUX__
 
@@ -357,7 +357,7 @@ void LinuxNetLink::_routeAdded(struct nlmsghdr *nlp)
 
 	if (wecare) {
 		Mutex::Lock rl(_routes_m);
-		_routes[target].insert(r);
+		_routes[r.target].insert(r);
 	}
 
 #ifdef ZT_NETLINK_TRACE
@@ -445,7 +445,7 @@ void LinuxNetLink::_routeDeleted(struct nlmsghdr *nlp)
 
 	if (wecare) {
 		Mutex::Lock rl(_routes_m);
-		_routes[target].erase(r);
+		_routes[r.target].erase(r);
 	}
 
 #ifdef ZT_NETLINK_TRACE
@@ -1145,12 +1145,12 @@ void LinuxNetLink::removeAddress(const InetAddress &addr, const char *iface)
 bool LinuxNetLink::routeIsSet(const InetAddress &target, const InetAddress &via, const InetAddress &src, const char *ifname)
 {
 	Mutex::Lock rl(_routes_m);
-	const std::set<Route> &rs = _routes[target];
-	for(std::set<Route>::const_iterator ri(rs.begin());ri!=rs.end();++ri) {
+	const std::set<LinuxNetLink::Route> &rs = _routes[target];
+	for(std::set<LinuxNetLink::Route>::const_iterator ri(rs.begin());ri!=rs.end();++ri) {
 		if ((ri->via == via)&&(ri->src == src)) {
 			if (ifname) {
 				Mutex::Lock ifl(_if_m);
-				const iface_entry *ife = _interfaces.get(rs->ifidx);
+				const iface_entry *ife = _interfaces.get(ri->ifidx);
 				if ((ife)&&(!strncmp(ife->ifacename,ifname,IFNAMSIZ)))
 					return true;
 			} else {
