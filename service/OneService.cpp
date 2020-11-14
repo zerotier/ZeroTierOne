@@ -1989,7 +1989,6 @@ public:
 				SharedPtr<ManagedRoute> &mr = n.managedRoutes[*target];
 				if (!mr)
 					mr.set(new ManagedRoute(*target, *via, *src, tapdev.c_str()));
-				mr->sync();
 #endif
 			}
 
@@ -1997,6 +1996,18 @@ public:
 				if (haveRouteTargets.find(r->first) == haveRouteTargets.end())
 					n.managedRoutes.erase(r++);
 				else ++r;
+			}
+
+			// Sync device-local managed routes first, then indirect results. That way
+			// we don't get destination unreachable for routes that are via things
+			// that do not yet have routes in the system.
+			for(std::map< InetAddress, SharedPtr<ManagedRoute> >::iterator r(n.managedRoutes.begin());r!=n.managedRoutes.end();++r) {
+				if (!r->second->via())
+					r->second->sync();
+			}
+			for(std::map< InetAddress, SharedPtr<ManagedRoute> >::iterator r(n.managedRoutes.begin());r!=n.managedRoutes.end();++r) {
+				if (r->second->via())
+					r->second->sync();
 			}
 		}
 

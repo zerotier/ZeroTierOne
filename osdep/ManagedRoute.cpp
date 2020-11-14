@@ -520,13 +520,13 @@ bool ManagedRoute::sync()
 
 	if (!_applied.count(leftt)) {
 		_applied[leftt] = false; // boolean unused
-		LinuxNetLink::getInstance().delRoute(leftt, _via, _src, (_via) ? (const char *)0 : _device);
+		//LinuxNetLink::getInstance().delRoute(leftt, _via, _src, (_via) ? (const char *)0 : _device);
 		LinuxNetLink::getInstance().addRoute(leftt, _via, _src, (_via) ? (const char *)0 : _device);
 		//_routeCmd("replace",leftt,_via,(_via) ? (const char *)0 : _device);
 	}
 	if ((rightt)&&(!_applied.count(rightt))) {
 		_applied[rightt] = false; // boolean unused
-		LinuxNetLink::getInstance().delRoute(rightt, _via, _src, (_via) ? (const char *)0 : _device);
+		//LinuxNetLink::getInstance().delRoute(rightt, _via, _src, (_via) ? (const char *)0 : _device);
 		LinuxNetLink::getInstance().addRoute(rightt, _via, _src, (_via) ? (const char *)0 : _device);
 		//_routeCmd("replace",rightt,_via,(_via) ? (const char *)0 : _device);
 	}
