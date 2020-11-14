@@ -45,6 +45,41 @@ private:
 	~LinuxNetLink();
 
 public:
+	struct Route {
+		InetAddress target;
+		InetAddress via;
+		InetAddress src;
+		int ifidx;
+
+		inline bool operator==(const Route &r) const
+		{ return ((target == r.target)&&(via == r.via)&&(src == r.src)&&(ifidx == r.ifidx)); }
+		inline bool operator!=(const Route &r) const
+		{ return (!(*this == r)); }
+		inline bool operator<(const Route &r) const
+		{
+			if (target < r.target) {
+				return true;
+			} else if (target == r.target) {
+				if (via < r.via) {
+					return true;
+				} else if (via == r.via) {
+					if (src < r.src) {
+						return true;
+					} else if (src == r.src) {
+						return (ifidx < r.ifidx);
+					}
+				}
+			}
+			return false;
+		}
+		inline bool operator>(const Route &r) const
+		{ return (r < *this); }
+		inline bool operator<=(const Route &r) const
+		{ return !(r < *this); }
+		inline bool operator>=(const Route &r) const
+		{ return !(*this < r); }
+	};
+
 	static LinuxNetLink& getInstance()
 	{
 		static LinuxNetLink instance;
@@ -60,7 +95,10 @@ public:
 	void addAddress(const InetAddress &addr, const char *iface);
 	void removeAddress(const InetAddress &addr, const char *iface);
 
+	bool routeIsSet(const InetAddress &target, const InetAddress &via, const InetAddress &src, const char *ifname);
+
 	void threadMain() throw();
+
 private:
 	int _doRecv(int fd);
 
@@ -85,7 +123,12 @@ private:
 
 	uint32_t _seq;
 
+	std::map< InetAddress,std::set<Route> > _routes;
+	Mutex _routes_m;
+
 	struct iface_entry {
+		iface_entry()
+		{ memset(this,0,sizeof(iface_entry)); }
 		int index;
 		char ifacename[IFNAMSIZ];
 		char mac[18];

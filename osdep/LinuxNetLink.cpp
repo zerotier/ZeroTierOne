@@ -280,7 +280,6 @@ void LinuxNetLink::_ipAddressDeleted(struct nlmsghdr *nlp)
 
 void LinuxNetLink::_routeAdded(struct nlmsghdr *nlp)
 {
-#ifdef ZT_NETLINK_TRACE
 	char dsts[40] = {0};
 	char gws[40] = {0};
 	char srcs[40] = {0};
@@ -291,33 +290,84 @@ void LinuxNetLink::_routeAdded(struct nlmsghdr *nlp)
 	struct rtattr *rtap = (struct rtattr *)RTM_RTA(rtp);
 	int rtl = RTM_PAYLOAD(nlp);
 
+	Route r;
+	bool wecare = false;
+
 	for(;RTA_OK(rtap, rtl); rtap=RTA_NEXT(rtap, rtl))
 	{
 		switch(rtap->rta_type)
 		{
 		case RTA_DST:
-			inet_ntop(rtp->rtm_family, RTA_DATA(rtap), dsts, rtp->rtm_family == AF_INET ? 24 : 40);
+			switch(rtp->rtm_family) {
+				case AF_INET:
+					inet_ntop(rtp->rtm_family, RTA_DATA(rtap), dsts, 24);
+					r.target.set(RTA_DATA(rtap), 4, 0);
+					wecare = true;
+					break;
+				case AF_INET6:
+					inet_ntop(rtp->rtm_family, RTA_DATA(rtap), dsts, 24);
+					r.target.set(RTA_DATA(rtap), 16, 0);
+					wecare = true;
+					break;
+			}
 			break;
 		case RTA_SRC:
-			inet_ntop(rtp->rtm_family, RTA_DATA(rtap), srcs, rtp->rtm_family == AF_INET ? 24: 40);
+			switch(rtp->rtm_family) {
+				case AF_INET:
+					inet_ntop(rtp->rtm_family, RTA_DATA(rtap), srcs, 24);
+					r.src.set(RTA_DATA(rtap), 4, 0);
+					wecare = true;
+					break;
+				case AF_INET6:
+					inet_ntop(rtp->rtm_family, RTA_DATA(rtap), srcs, 24);
+					r.src.set(RTA_DATA(rtap), 16, 0);
+					wecare = true;
+					break;
+			}
 			break;
 		case RTA_GATEWAY:
-			inet_ntop(rtp->rtm_family, RTA_DATA(rtap), gws, rtp->rtm_family == AF_INET ? 24 : 40);
+			switch(rtp->rtm_family) {
+				case AF_INET:
+					inet_ntop(rtp->rtm_family, RTA_DATA(rtap), gws, 24);
+					r.via.set(RTA_DATA(rtap), 4, 0);
+					wecare = true;
+					break;
+				case AF_INET6:
+					inet_ntop(rtp->rtm_family, RTA_DATA(rtap), gws, 24);
+					r.via.set(RTA_DATA(rtap), 16, 0);
+					wecare = true;
+					break;
+			}
 			break;
 		case RTA_OIF:
+			switch(rtp->rtm_family) {
+				case AF_INET:
+					r.ifidx = *((int*)RTA_DATA(rtap));
+					wecare = true;
+					break;
+				case AF_INET6:
+					r.ifidx = *((int*)RTA_DATA(rtap));
+					wecare = true;
+					break;
+			}
 			sprintf(ifs, "%d", *((int*)RTA_DATA(rtap)));
 			break;
 		}
 	}
-	sprintf(ms, "%d", rtp->rtm_dst_len);
 
+	if (wecare) {
+		Mutex::Lock rl(_routes_m);
+		_routes[target].insert(r);
+	}
+
+#ifdef ZT_NETLINK_TRACE
+	sprintf(ms, "%d", rtp->rtm_dst_len);
 	fprintf(stderr, "Route Added: dst %s/%s gw %s src %s if %s\n", dsts, ms, gws, srcs, ifs);
 #endif
 }
 
 void LinuxNetLink::_routeDeleted(struct nlmsghdr *nlp)
 {
-#ifdef ZT_NETLINK_TRACE
 	char dsts[40] = {0};
 	char gws[40] = {0};
 	char srcs[40] = {0};
@@ -328,26 +378,78 @@ void LinuxNetLink::_routeDeleted(struct nlmsghdr *nlp)
 	struct rtattr *rtap = (struct rtattr *)RTM_RTA(rtp);
 	int rtl = RTM_PAYLOAD(nlp);
 
+	Route r;
+	bool wecare = false;
+
 	for(;RTA_OK(rtap, rtl); rtap=RTA_NEXT(rtap, rtl))
 	{
 		switch(rtap->rta_type)
 		{
 		case RTA_DST:
-			inet_ntop(rtp->rtm_family, RTA_DATA(rtap), dsts, rtp->rtm_family == AF_INET ? 24 : 40);
+			switch(rtp->rtm_family) {
+				case AF_INET:
+					inet_ntop(rtp->rtm_family, RTA_DATA(rtap), dsts, 24);
+					r.target.set(RTA_DATA(rtap), 4, 0);
+					wecare = true;
+					break;
+				case AF_INET6:
+					inet_ntop(rtp->rtm_family, RTA_DATA(rtap), dsts, 24);
+					r.target.set(RTA_DATA(rtap), 16, 0);
+					wecare = true;
+					break;
+			}
 			break;
 		case RTA_SRC:
-			inet_ntop(rtp->rtm_family, RTA_DATA(rtap), srcs, rtp->rtm_family == AF_INET ? 24 : 40);
+			switch(rtp->rtm_family) {
+				case AF_INET:
+					inet_ntop(rtp->rtm_family, RTA_DATA(rtap), srcs, 24);
+					r.src.set(RTA_DATA(rtap), 4, 0);
+					wecare = true;
+					break;
+				case AF_INET6:
+					inet_ntop(rtp->rtm_family, RTA_DATA(rtap), srcs, 24);
+					r.src.set(RTA_DATA(rtap), 16, 0);
+					wecare = true;
+					break;
+			}
 			break;
 		case RTA_GATEWAY:
-			inet_ntop(rtp->rtm_family, RTA_DATA(rtap), gws, rtp->rtm_family == AF_INET ? 24 : 40);
+			switch(rtp->rtm_family) {
+				case AF_INET:
+					inet_ntop(rtp->rtm_family, RTA_DATA(rtap), gws, 24);
+					r.via.set(RTA_DATA(rtap), 4, 0);
+					wecare = true;
+					break;
+				case AF_INET6:
+					inet_ntop(rtp->rtm_family, RTA_DATA(rtap), gws, 24);
+					r.via.set(RTA_DATA(rtap), 16, 0);
+					wecare = true;
+					break;
+			}
 			break;
 		case RTA_OIF:
+			switch(rtp->rtm_family) {
+				case AF_INET:
+					r.ifidx = *((int*)RTA_DATA(rtap));
+					wecare = true;
+					break;
+				case AF_INET6:
+					r.ifidx = *((int*)RTA_DATA(rtap));
+					wecare = true;
+					break;
+			}
 			sprintf(ifs, "%d", *((int*)RTA_DATA(rtap)));
 			break;
 		}
 	}
-	sprintf(ms, "%d", rtp->rtm_dst_len);
 
+	if (wecare) {
+		Mutex::Lock rl(_routes_m);
+		_routes[target].erase(r);
+	}
+
+#ifdef ZT_NETLINK_TRACE
+	sprintf(ms, "%d", rtp->rtm_dst_len);
 	fprintf(stderr, "Route Deleted: dst %s/%s gw %s src %s if %s\n", dsts, ms, gws, srcs, ifs);
 #endif
 }
@@ -1038,6 +1140,25 @@ void LinuxNetLink::removeAddress(const InetAddress &addr, const char *iface)
 	_doRecv(fd);
 
 	close(fd);
+}
+
+bool LinuxNetLink::routeIsSet(const InetAddress &target, const InetAddress &via, const InetAddress &src, const char *ifname)
+{
+	Mutex::Lock rl(_routes_m);
+	const std::set<Route> &rs = _routes[target];
+	for(std::set<Route>::const_iterator ri(rs.begin());ri!=rs.end();++ri) {
+		if ((ri->via == via)&&(ri->src == src)) {
+			if (ifname) {
+				Mutex::Lock ifl(_if_m);
+				const iface_entry *ife = _interfaces.get(rs->ifidx);
+				if ((ife)&&(!strncmp(ife->ifacename,ifname,IFNAMSIZ)))
+					return true;
+			} else {
+				return true;
+			}
+		}
+	}
+	return false;
 }
 
 int LinuxNetLink::_indexForInterface(const char *iface)
