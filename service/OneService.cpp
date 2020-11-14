@@ -2002,11 +2002,11 @@ public:
 			// that do not yet have routes in the system.
 			for(std::map< InetAddress, SharedPtr<ManagedRoute> >::iterator r(n.managedRoutes.begin());r!=n.managedRoutes.end();++r) {
 				if (!r->second->via())
-					n->second->sync();
+					r->second->sync();
 			}
 			for(std::map< InetAddress, SharedPtr<ManagedRoute> >::iterator r(n.managedRoutes.begin());r!=n.managedRoutes.end();++r) {
 				if (r->second->via())
-					n->second->sync();
+					r->second->sync();
 			}
 		}
 
