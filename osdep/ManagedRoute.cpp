@@ -518,17 +518,14 @@ bool ManagedRoute::sync()
 
 #ifdef __LINUX__ // ----------------------------------------------------------
 
-	if (!_applied.count(leftt)) {
+	const char *const devptr = (_via) ? (const char *)0 : _device;
+	if (!LinuxNetLink::getInstance().routeIsSet(leftt,_via,_src,devptr)) {
 		_applied[leftt] = false; // boolean unused
-		//LinuxNetLink::getInstance().delRoute(leftt, _via, _src, (_via) ? (const char *)0 : _device);
-		LinuxNetLink::getInstance().addRoute(leftt, _via, _src, (_via) ? (const char *)0 : _device);
-		//_routeCmd("replace",leftt,_via,(_via) ? (const char *)0 : _device);
+		LinuxNetLink::getInstance().addRoute(leftt, _via, _src, devptr);
 	}
-	if ((rightt)&&(!_applied.count(rightt))) {
+	if ((rightt)&&(!LinuxNetLink::getInstance().routeIsSet(rightt,_via,_src,devptr))) {
 		_applied[rightt] = false; // boolean unused
-		//LinuxNetLink::getInstance().delRoute(rightt, _via, _src, (_via) ? (const char *)0 : _device);
-		LinuxNetLink::getInstance().addRoute(rightt, _via, _src, (_via) ? (const char *)0 : _device);
-		//_routeCmd("replace",rightt,_via,(_via) ? (const char *)0 : _device);
+		LinuxNetLink::getInstance().addRoute(rightt, _via, _src, devptr);
 	}
 
 #endif // __LINUX__ ----------------------------------------------------------
