@@ -43,7 +43,6 @@
 #include "../node/Peer.hpp"
 
 #include "../osdep/Phy.hpp"
-#include "../osdep/Thread.hpp"
 #include "../osdep/OSUtils.hpp"
 #include "../osdep/Http.hpp"
 #include "../osdep/PortMapper.hpp"
@@ -530,6 +529,7 @@ public:
 		ZT_VirtualNetworkConfig config; // memcpy() of raw config from core
 		std::vector<InetAddress> managedIps;
 		std::map< InetAddress, SharedPtr<ManagedRoute> > managedRoutes;
+		std::list< InetAddress > routeSyncQueue;
 		NetworkSettings settings;
 	};
 	std::map<uint64_t,NetworkState> _nets;
@@ -918,8 +918,23 @@ public:
 					OSUtils::cleanDirectory((_homePath + ZT_PATH_SEPARATOR_S "peers.d").c_str(),now - 2592000000LL); // delete older than 30 days
 				}
 
-				const unsigned long delay = (dl > now) ? (unsigned long)(dl - now) : 100;
-				clockShouldBe = now + (uint64_t)delay;
+				// Check to see if we have to sync any managed routes, and if so do it every 100ms to
+				// avoid route dependency problems.
+				{
+					Mutex::Lock nl(_nets_m);
+					for(std::map<uint64_t,NetworkState>::iterator n(_nets.begin());n!=_nets.end();++n) {
+						if (!n->second.routeSyncQueue.empty()) {
+							std::map< InetAddress, SharedPtr<ManagedRoute> >::const_iterator mr(n->second.managedRoutes.find(n->second.routeSyncQueue.front()));
+							if (mr != n->second.managedRoutes.end())
+								mr->second->sync();
+							n->second.routeSyncQueue.pop_front();
+							dl = now + 100;
+						}
+					}
+				}
+
+				const unsigned long delay = (dl > now) ? (unsigned long)(dl - now) : 500;
+				clockShouldBe = now + (int64_t)delay;
 				_phy.poll(delay);
 			}
 		} catch (std::exception &e) {
@@ -2003,11 +2018,11 @@ public:
 			// that do not yet have routes in the system.
 			for(std::map< InetAddress, SharedPtr<ManagedRoute> >::iterator r(n.managedRoutes.begin());r!=n.managedRoutes.end();++r) {
 				if (!r->second->via())
-					r->second->sync();
+					n.routeSyncQueue.push_back(r->first);
 			}
 			for(std::map< InetAddress, SharedPtr<ManagedRoute> >::iterator r(n.managedRoutes.begin());r!=n.managedRoutes.end();++r) {
 				if (r->second->via())
-					r->second->sync();
+					n.routeSyncQueue.push_back(r->first);
 			}
 		}
 
