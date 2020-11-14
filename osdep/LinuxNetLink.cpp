@@ -45,10 +45,6 @@ struct nl_adr_req {
 LinuxNetLink::LinuxNetLink()
 	: _t()
 	, _running(false)
-	, _routes_ipv4()
-	, _rv4_m()
-	, _routes_ipv6()
-	, _rv6_m()
 	, _seq(0)
 	, _interfaces()
 	, _if_m()
@@ -147,9 +143,9 @@ int LinuxNetLink::_doRecv(int fd)
 			}
 
 			if (nlp->nlmsg_type == NLMSG_OVERRUN) {
-//#ifdef ZT_NETLINK_TRACE
+#ifdef ZT_NETLINK_TRACE
 				fprintf(stderr, "NLMSG_OVERRUN: Data lost\n");
-//#endif
+#endif
 				p = buf;
 				nll = 0;
 				break;
@@ -175,11 +171,10 @@ int LinuxNetLink::_doRecv(int fd)
 void LinuxNetLink::threadMain() throw()
 {
 	int rtn = 0;
-
 	while(_running) {
 		rtn = _doRecv(_fd);
 		if (rtn <= 0) {
-			Thread::sleep(100);
+			Thread::sleep(250);
 			continue;
 		}
 	}
@@ -217,6 +212,7 @@ void LinuxNetLink::_processMessage(struct nlmsghdr *nlp, int nll)
 
 void LinuxNetLink::_ipAddressAdded(struct nlmsghdr *nlp)
 {
+#ifdef ZT_NETLINK_TRACE
 	struct ifaddrmsg *ifap = (struct ifaddrmsg *)NLMSG_DATA(nlp);
 	struct rtattr *rtap = (struct rtattr *)IFA_RTA(ifap);
 	int ifal = IFA_PAYLOAD(nlp);
@@ -244,13 +240,13 @@ void LinuxNetLink::_ipAddressAdded(struct nlmsghdr *nlp)
 		}
 	}
 
-#ifdef ZT_NETLINK_TRACE
 	fprintf(stderr,"Added IP Address %s local: %s label: %s broadcast: %s\n", addr, local, label, bcast);
 #endif
 }
 
 void LinuxNetLink::_ipAddressDeleted(struct nlmsghdr *nlp)
 {
+#ifdef ZT_NETLINK_TRACE
 	struct ifaddrmsg *ifap = (struct ifaddrmsg *)NLMSG_DATA(nlp);
 	struct rtattr *rtap = (struct rtattr *)IFA_RTA(ifap);
 	int ifal = IFA_PAYLOAD(nlp);
@@ -278,13 +274,13 @@ void LinuxNetLink::_ipAddressDeleted(struct nlmsghdr *nlp)
 		}
 	}
 
-#ifdef ZT_NETLINK_TRACE
 	fprintf(stderr, "Removed IP Address %s local: %s label: %s broadcast: %s\n", addr, local, label, bcast);
 #endif
 }
 
 void LinuxNetLink::_routeAdded(struct nlmsghdr *nlp)
 {
+#ifdef ZT_NETLINK_TRACE
 	char dsts[40] = {0};
 	char gws[40] = {0};
 	char srcs[40] = {0};
@@ -315,13 +311,13 @@ void LinuxNetLink::_routeAdded(struct nlmsghdr *nlp)
 	}
 	sprintf(ms, "%d", rtp->rtm_dst_len);
 
-#ifdef ZT_NETLINK_TRACE
 	fprintf(stderr, "Route Added: dst %s/%s gw %s src %s if %s\n", dsts, ms, gws, srcs, ifs);
 #endif
 }
 
 void LinuxNetLink::_routeDeleted(struct nlmsghdr *nlp)
 {
+#ifdef ZT_NETLINK_TRACE
 	char dsts[40] = {0};
 	char gws[40] = {0};
 	char srcs[40] = {0};
@@ -352,7 +348,6 @@ void LinuxNetLink::_routeDeleted(struct nlmsghdr *nlp)
 	}
 	sprintf(ms, "%d", rtp->rtm_dst_len);
 
-#ifdef ZT_NETLINK_TRACE
 	fprintf(stderr, "Route Deleted: dst %s/%s gw %s src %s if %s\n", dsts, ms, gws, srcs, ifs);
 #endif
 }
@@ -1043,16 +1038,6 @@ void LinuxNetLink::removeAddress(const InetAddress &addr, const char *iface)
 	_doRecv(fd);
 
 	close(fd);
-}
-
-RouteList LinuxNetLink::getIPV4Routes() const
-{
-	return _routes_ipv4;
-}
-
-RouteList LinuxNetLink::getIPV6Routes() const
-{
-	return _routes_ipv6;
 }
 
 int LinuxNetLink::_indexForInterface(const char *iface)
