@@ -173,9 +173,8 @@ LinuxEthernetTap::LinuxEthernetTap(
 
 	::ioctl(_fd,TUNSETPERSIST,0); // valgrind may generate a false alarm here
 	_dev = ifr.ifr_name;
-
-	// Set close-on-exec so that devices cannot persist if we fork/exec for update
 	::fcntl(_fd,F_SETFD,fcntl(_fd,F_GETFD) | FD_CLOEXEC);
+	::fcntl(_fd,F_SETFL,O_NONBLOCK);
 
 	(void)::pipe(_shutdownSignalPipe);
 
@@ -474,28 +473,29 @@ void LinuxEthernetTap::threadMain()
 			break;
 
 		if (FD_ISSET(_fd,&readfds)) {
-			n = (int)::read(_fd,getBuf + r,sizeof(getBuf) - r);
-			if (n < 0) {
-				if ((errno != EINTR)&&(errno != ETIMEDOUT))
+			for(int x=0;x<64;++x) {
+				n = (int)::read(_fd,getBuf + r,sizeof(getBuf) - r);
+				if (n < 0) {
 					break;
-			} else {
-				// Some tap drivers like to send the ethernet frame and the
-				// payload in two chunks, so handle that by accumulating
-				// data until we have at least a frame.
-				r += n;
-				if (r > 14) {
-					if (r > ((int)_mtu + 14)) // sanity check for weird TAP behavior on some platforms
-						r = _mtu + 14;
+				} else {
+					// Some tap drivers like to send the ethernet frame and the
+					// payload in two chunks, so handle that by accumulating
+					// data until we have at least a frame.
+					r += n;
+					if (r > 14) {
+						if (r > ((int)_mtu + 14)) // sanity check for weird TAP behavior on some platforms
+							r = _mtu + 14;
 
-					if (_enabled) {
-						to.setTo(getBuf,6);
-						from.setTo(getBuf + 6,6);
-						unsigned int etherType = ntohs(((const uint16_t *)getBuf)[6]);
-						// TODO: VLAN support
-						_handler(_arg,(void *)0,_nwid,from,to,etherType,0,(const void *)(getBuf + 14),r - 14);
+						if (_enabled) {
+							to.setTo(getBuf,6);
+							from.setTo(getBuf + 6,6);
+							unsigned int etherType = ntohs(((const uint16_t *)getBuf)[6]);
+							// TODO: VLAN support
+							_handler(_arg,(void *)0,_nwid,from,to,etherType,0,(const void *)(getBuf + 14),r - 14);
+						}
+
+						r = 0;
 					}
-
-					r = 0;
 				}
 			}
 		}
