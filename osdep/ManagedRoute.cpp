@@ -54,8 +54,6 @@
 #endif
 
 #define ZT_BSD_ROUTE_CMD "/sbin/route"
-#define ZT_LINUX_IP_COMMAND "/sbin/ip"
-#define ZT_LINUX_IP_COMMAND_2 "/usr/sbin/ip"
 
 namespace ZeroTier {
 
@@ -273,28 +271,6 @@ static void _routeCmd(const char *op,const InetAddress &target,const InetAddress
 #define ZT_ROUTING_SUPPORT_FOUND 1
 
 // This has been replaced by LinuxNetLink
-/*
-static void _routeCmd(const char *op,const InetAddress &target,const InetAddress &via,const char *localInterface)
-{
-	long p = (long)fork();
-	if (p > 0) {
-		int exitcode = -1;
-		::waitpid(p,&exitcode,0);
-	} else if (p == 0) {
-		::close(STDOUT_FILENO);
-		::close(STDERR_FILENO);
-		char ipbuf[64],ipbuf2[64];
-		if (via) {
-			::execl(ZT_LINUX_IP_COMMAND,ZT_LINUX_IP_COMMAND,(target.ss_family == AF_INET6) ? "-6" : "-4","route",op,target.toString(ipbuf),"via",via.toIpString(ipbuf2),(const char *)0);
-			::execl(ZT_LINUX_IP_COMMAND_2,ZT_LINUX_IP_COMMAND_2,(target.ss_family == AF_INET6) ? "-6" : "-4","route",op,target.toString(ipbuf),"via",via.toIpString(ipbuf2),(const char *)0);
-		} else if ((localInterface)&&(localInterface[0])) {
-			::execl(ZT_LINUX_IP_COMMAND,ZT_LINUX_IP_COMMAND,(target.ss_family == AF_INET6) ? "-6" : "-4","route",op,target.toString(ipbuf),"dev",localInterface,(const char *)0);
-			::execl(ZT_LINUX_IP_COMMAND_2,ZT_LINUX_IP_COMMAND_2,(target.ss_family == AF_INET6) ? "-6" : "-4","route",op,target.toString(ipbuf),"dev",localInterface,(const char *)0);
-		}
-		::_exit(-1);
-	}
-}
-*/
 
 #endif // __LINUX__ ----------------------------------------------------------
 

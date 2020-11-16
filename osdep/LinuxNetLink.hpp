@@ -26,7 +26,7 @@
 #include <asm/types.h>
 #include <linux/rtnetlink.h>
 #include <sys/socket.h>
-#include <linux/if.h>
+//#include <linux/if.h>
 
 #include "../node/InetAddress.hpp"
 #include "../node/MAC.hpp"
@@ -132,7 +132,7 @@ private:
 		iface_entry()
 		{ memset(this,0,sizeof(iface_entry)); }
 		int index;
-		char ifacename[IFNAMSIZ];
+		char ifacename[16]; // IFNAMSIZ on Linux == 16
 		char mac[18];
 		char mac_bin[6];
 		unsigned int mtu;
