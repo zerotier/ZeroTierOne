@@ -107,8 +107,6 @@
 #include <xmmintrin.h>
 #include <emmintrin.h>
 #include <immintrin.h>
-#include <tmmintrin.h>
-#include <mmintrin.h>
 #endif
 
 #if (defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(ZT_ARCH_ARM_HAS_NEON))
@@ -188,6 +186,9 @@
  */
 #define ZT_ADDRESS_LENGTH_HEX 10
 
+/**
+ * Size of symmetric key (only the first 32 bits are used for some ciphers)
+ */
 #define ZT_SYMMETRIC_KEY_SIZE 48
 
 /**
@@ -223,7 +224,7 @@
 /**
  * How often Topology::clean() and Network::clean() and similar are called, in ms
  */
-#define ZT_HOUSEKEEPING_PERIOD 60000
+#define ZT_HOUSEKEEPING_PERIOD 30000
 
 /**
  * Delay between WHOIS retries in ms
@@ -255,7 +256,7 @@
 /**
  * Period for multicast LIKE announcements
  */
-#define ZT_MULTICAST_ANNOUNCE_PERIOD 120000
+#define ZT_MULTICAST_ANNOUNCE_PERIOD 60000
 
 /**
  * Delay between explicit MULTICAST_GATHER requests for a given multicast channel

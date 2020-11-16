@@ -50,6 +50,43 @@
 #include <asm/hwcap.h>
 #endif
 
+#ifdef ZT_ARCH_ARM_HAS_NEON
+
+#ifdef __LINUX__
+#include <sys/auxv.h>
+#include <asm/hwcap.h>
+#endif
+
+#if defined(__FreeBSD__)
+#include <elf.h>
+#include <sys/auxv.h>
+static inline long getauxval(int caps)
+{
+	long hwcaps = 0;
+	elf_aux_info(caps, &hwcaps, sizeof(hwcaps));
+	return hwcaps;
+}
+#endif
+
+// If these are not even defined, obviously they are not supported.
+#ifndef HWCAP_AES
+#define HWCAP_AES 0
+#endif
+#ifndef HWCAP_CRC32
+#define HWCAP_CRC32 0
+#endif
+#ifndef HWCAP_PMULL
+#define HWCAP_PMULL 0
+#endif
+#ifndef HWCAP_SHA1
+#define HWCAP_SHA1 0
+#endif
+#ifndef HWCAP_SHA2
+#define HWCAP_SHA2 0
+#endif
+
+#endif // ZT_ARCH_ARM_HAS_NEON
+
 namespace ZeroTier {
 
 const uint64_t Utils::ZERO256[4] = {0ULL,0ULL,0ULL,0ULL};

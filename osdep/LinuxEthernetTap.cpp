@@ -80,6 +80,7 @@ LinuxEthernetTap::LinuxEthernetTap(
 	_handler(handler),
 	_arg(arg),
 	_nwid(nwid),
+	_mac(mac),
 	_homePath(homePath),
 	_mtu(mtu),
 	_fd(0),
@@ -166,72 +167,13 @@ LinuxEthernetTap::LinuxEthernetTap(
 		throw std::runtime_error("unable to configure TUN/TAP device for TAP operation");
 	}
 
-	_dev = ifr.ifr_name;
-
 	::ioctl(_fd,TUNSETPERSIST,0); // valgrind may generate a false alarm here
-
-	// Open an arbitrary socket to talk to netlink
-	int sock = socket(AF_INET,SOCK_DGRAM,0);
-	if (sock <= 0) {
-		::close(_fd);
-		throw std::runtime_error("unable to open netlink socket");
-	}
-
-	// Set MAC address
-	ifr.ifr_ifru.ifru_hwaddr.sa_family = ARPHRD_ETHER;
-	mac.copyTo(ifr.ifr_ifru.ifru_hwaddr.sa_data,6);
-	if (ioctl(sock,SIOCSIFHWADDR,(void *)&ifr) < 0) {
-		::close(_fd);
-		::close(sock);
-		throw std::runtime_error("unable to configure TAP hardware (MAC) address");
-		return;
-	}
-
-	// Set MTU
-	ifr.ifr_ifru.ifru_mtu = (int)mtu;
-	if (ioctl(sock,SIOCSIFMTU,(void *)&ifr) < 0) {
-		::close(_fd);
-		::close(sock);
-		throw std::runtime_error("unable to configure TAP MTU");
-	}
-
-	if (fcntl(_fd,F_SETFL,fcntl(_fd,F_GETFL) & ~O_NONBLOCK) == -1) {
-		::close(_fd);
-		throw std::runtime_error("unable to set flags on file descriptor for TAP device");
-	}
-
-	/* Bring interface up */
-	if (ioctl(sock,SIOCGIFFLAGS,(void *)&ifr) < 0) {
-		::close(_fd);
-		::close(sock);
-		throw std::runtime_error("unable to get TAP interface flags");
-	}
-	ifr.ifr_flags |= IFF_UP;
-	if (ioctl(sock,SIOCSIFFLAGS,(void *)&ifr) < 0) {
-		::close(_fd);
-		::close(sock);
-		throw std::runtime_error("unable to set TAP interface flags");
-	}
-
-	::close(sock);
+	_dev = ifr.ifr_name;
 
 	// Set close-on-exec so that devices cannot persist if we fork/exec for update
 	::fcntl(_fd,F_SETFD,fcntl(_fd,F_GETFD) | FD_CLOEXEC);
 
 	(void)::pipe(_shutdownSignalPipe);
-
-	/*
-	globalDeviceMap[nwids] = _dev;
-	devmapf = fopen((_homePath + ZT_PATH_SEPARATOR_S + "devicemap").c_str(),"w");
-	if (devmapf) {
-		gdmEntry = globalDeviceMap.begin();
-		while (gdmEntry != globalDeviceMap.end()) {
-			fprintf(devmapf,"%s=%s\n",gdmEntry->first.c_str(),gdmEntry->second.c_str());
-			++gdmEntry;
-		}
-		fclose(devmapf);
-	}
-	*/
 
 	_thread = Thread::start(this);
 }
@@ -464,7 +406,55 @@ void LinuxEthernetTap::threadMain()
 	int n,nfds,r;
 	char getBuf[ZT_MAX_MTU + 64];
 
-	Thread::sleep(500);
+	Thread::sleep(100);
+
+	{
+		struct ifreq ifr;
+		memset(&ifr,0,sizeof(ifr));
+
+		strcpy(ifr.ifr_name,_dev.c_str());
+
+		const int sock = socket(AF_INET,SOCK_DGRAM,0);
+		if (sock <= 0)
+			return;
+
+		if (ioctl(sock,SIOCGIFFLAGS,(void *)&ifr) < 0) {
+			::close(sock);
+			printf("WARNING: ioctl() failed setting up Linux tap device (bring interface up)\n");
+			return;
+		}
+		ifr.ifr_flags |= IFF_UP;
+		if (ioctl(sock,SIOCSIFFLAGS,(void *)&ifr) < 0) {
+			::close(sock);
+			printf("WARNING: ioctl() failed setting up Linux tap device (bring interface up)\n");
+			return;
+		}
+
+		Thread::sleep(500);
+
+		ifr.ifr_ifru.ifru_hwaddr.sa_family = ARPHRD_ETHER;
+		_mac.copyTo(ifr.ifr_ifru.ifru_hwaddr.sa_data,6);
+		if (ioctl(sock,SIOCSIFHWADDR,(void *)&ifr) < 0) {
+			::close(sock);
+			printf("WARNING: ioctl() failed setting up Linux tap device (set MAC)\n");
+			return;
+		}
+
+		ifr.ifr_ifru.ifru_mtu = (int)_mtu;
+		if (ioctl(sock,SIOCSIFMTU,(void *)&ifr) < 0) {
+			::close(sock);
+			printf("WARNING: ioctl() failed setting up Linux tap device (set MTU)\n");
+			return;
+		}
+
+		if (fcntl(_fd,F_SETFL,fcntl(_fd,F_GETFL) & ~O_NONBLOCK) == -1) {
+			::close(sock);
+			printf("WARNING: ioctl() failed setting up Linux tap device (set non-blocking)\n");
+			return;
+		}
+
+		::close(sock);
+	}
 
 	FD_ZERO(&readfds);
 	FD_ZERO(&nullfds);

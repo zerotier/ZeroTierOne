@@ -79,6 +79,7 @@ MacEthernetTap::MacEthernetTap(
 	_homePath(homePath),
 	_mtu(mtu),
 	_metric(metric),
+	_devNo(0),
 	_agentStdin(-1),
 	_agentStdout(-1),
 	_agentStderr(-1),
@@ -97,7 +98,7 @@ MacEthernetTap::MacEthernetTap(
 	agentPath.push_back(ZT_PATH_SEPARATOR);
 	agentPath.append("MacEthernetTapAgent");
 	if (!OSUtils::fileExists(agentPath.c_str()))
-		throw std::runtime_error("MacEthernetTapAgent not installed in ZeroTier home");
+		throw std::runtime_error("MacEthernetTapAgent not present in ZeroTier home");
 
 	Mutex::Lock _gl(globalTapCreateLock); // only make one at a time
 
@@ -112,7 +113,7 @@ MacEthernetTap::MacEthernetTap(
 			while (p) {
 				int nameLen = (int)strlen(p->ifa_name);
 				// Delete feth# from feth0 to feth9999, but don't touch >10000.
-				if ((!strncmp(p->ifa_name,"feth",4))&&(nameLen >= 5)&&(nameLen < 9)&&(deleted.count(std::string(p->ifa_name)) == 0)) {
+				if ((!strncmp(p->ifa_name,"feth",4))&&(nameLen >= 5)&&(nameLen <= 8)&&(deleted.count(std::string(p->ifa_name)) == 0)) {
 					deleted.insert(std::string(p->ifa_name));
 					const char *args[4];
 					args[0] = "/sbin/ifconfig";
@@ -156,10 +157,11 @@ MacEthernetTap::MacEthernetTap(
 			if (devNo < 100)
 				devNo = 100;
 		} else {
+			_dev = devstr;
+			_devNo = devNo;
 			break;
 		}
 	}
-	_dev = devstr;
 
 	if (::pipe(_shutdownSignalPipe))
 		throw std::runtime_error("pipe creation failed");
@@ -204,22 +206,50 @@ MacEthernetTap::MacEthernetTap(
 
 MacEthernetTap::~MacEthernetTap()
 {
+	char tmp[64];
+	const char *args[4];
+	pid_t pid0,pid1;
+
 	MacDNSHelper::removeDNS(_nwid);
-	
+
 	Mutex::Lock _gl(globalTapCreateLock);
 	::write(_shutdownSignalPipe[1],"\0",1); // causes thread to exit
-	Thread::join(_thread);
-	::close(_shutdownSignalPipe[0]);
-	::close(_shutdownSignalPipe[1]);
+
 	int ec = 0;
-	::kill(_agentPid,SIGTERM);
+	::kill(_agentPid,SIGKILL);
 	::waitpid(_agentPid,&ec,0);
-	::close(_agentStdin);
-	::close(_agentStdout);
-	::close(_agentStderr);
-	::close(_agentStdin2);
-	::close(_agentStdout2);
-	::close(_agentStderr2);
+
+	args[0] = "/sbin/ifconfig";
+	args[1] = _dev.c_str();
+	args[2] = "destroy";
+	args[3] = (char *)0;
+	pid0 = vfork();
+	if (pid0 == 0) {
+		execv(args[0],const_cast<char **>(args));
+		_exit(-1);
+	}
+
+	snprintf(tmp,sizeof(tmp),"feth%u",_devNo + 5000);
+	//args[0] = "/sbin/ifconfig";
+	args[1] = tmp;
+	//args[2] = "destroy";
+	//args[3] = (char *)0;
+	pid1 = vfork();
+	if (pid1 == 0) {
+		execv(args[0],const_cast<char **>(args));
+		_exit(-1);
+	}
+
+	if (pid0 > 0) {
+		int rv = 0;
+		waitpid(pid0,&rv,0);
+	}
+	if (pid1 > 0) {
+		int rv = 0;
+		waitpid(pid1,&rv,0);
+	}
+
+	Thread::join(_thread);
 }
 
 void MacEthernetTap::setEnabled(bool en) { _enabled = en; }
@@ -456,6 +486,15 @@ void MacEthernetTap::threadMain()
 			*/
 		}
 	}
+
+	::close(_agentStdin);
+	::close(_agentStdout);
+	::close(_agentStderr);
+	::close(_agentStdin2);
+	::close(_agentStdout2);
+	::close(_agentStderr2);
+	::close(_shutdownSignalPipe[0]);
+	::close(_shutdownSignalPipe[1]);
 }
 
 void MacEthernetTap::setDns(const char *domain, const std::vector<InetAddress> &servers)

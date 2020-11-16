@@ -1480,8 +1480,13 @@ static int idtool(int argc,char **argv)
 static void _sighandlerHup(int sig)
 {
 }
+static void _sighandlerReallyQuit(int sig)
+{
+	exit(0);
+}
 static void _sighandlerQuit(int sig)
 {
+	alarm(5); // force exit after 5s
 	OneService *s = zt1Service;
 	if (s)
 		s->terminate();
@@ -1873,7 +1878,7 @@ int main(int argc,char **argv)
 	signal(SIGIO,SIG_IGN);
 	signal(SIGUSR1,SIG_IGN);
 	signal(SIGUSR2,SIG_IGN);
-	signal(SIGALRM,SIG_IGN);
+	signal(SIGALRM,&_sighandlerReallyQuit);
 	signal(SIGINT,&_sighandlerQuit);
 	signal(SIGTERM,&_sighandlerQuit);
 	signal(SIGQUIT,&_sighandlerQuit);

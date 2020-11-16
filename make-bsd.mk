@@ -80,16 +80,16 @@ ifeq ($(CC_MACH),armv6kz)
 endif
 ifeq ($(CC_MACH),armv7)
 	ZT_ARCHITECTURE=3
-	override DEFS+=-DZT_NO_TYPE_PUNNING
+	override DEFS+=-DZT_NO_TYPE_PUNNING -DZT_AES_NO_ACCEL
 	ZT_USE_ARM32_NEON_ASM_SALSA2012=1
 endif
 ifeq ($(CC_MACH),arm64)
 	ZT_ARCHITECTURE=4
-	override DEFS+=-DZT_NO_TYPE_PUNNING
+	override DEFS+=-DZT_NO_TYPE_PUNNING -march=armv8-a+crypto
 endif
 ifeq ($(CC_MACH),aarch64)
 	ZT_ARCHITECTURE=4
-	override DEFS+=-DZT_NO_TYPE_PUNNING
+	override DEFS+=-DZT_NO_TYPE_PUNNING -march=armv8-a+crypto
 endif
 ifeq ($(CC_MACH),mipsel)
 	ZT_ARCHITECTURE=5
@@ -124,6 +124,7 @@ ifeq ($(ZT_USE_ARM32_NEON_ASM_SALSA2012),1)
 	override DEFS+=-DZT_USE_ARM32_NEON_ASM_SALSA2012
 	override CORE_OBJS+=ext/arm32-neon-salsa2012-asm/salsa2012.o
 	override ASFLAGS+=-meabi=5
+	override LDFLAGS+=-Wl,-z,notext
 endif
 
 override DEFS+=-DZT_BUILD_PLATFORM=$(ZT_BUILD_PLATFORM) -DZT_BUILD_ARCHITECTURE=$(ZT_ARCHITECTURE) -DZT_SOFTWARE_UPDATE_DEFAULT="\"disable\""

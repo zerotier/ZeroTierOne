@@ -36,28 +36,8 @@ class ManagedRoute
 	friend class SharedPtr<ManagedRoute>;
 
 public:
-	ManagedRoute(const InetAddress &target,const InetAddress &via,const InetAddress &src,const char *device)
-	{
-		_target = target;
-		_via = via;
-		_src = src;
-		if (via.ss_family == AF_INET)
-			_via.setPort(32);
-		else if (via.ss_family == AF_INET6)
-			_via.setPort(128);
-		if (src.ss_family == AF_INET) {
-			_src.setPort(32);
-		} else if (src.ss_family == AF_INET6) {
-			_src.setPort(128);
-		}
-		Utils::scopy(_device,sizeof(_device),device);
-		_systemDevice[0] = (char)0;
-	}
-
-	~ManagedRoute()
-	{
-		this->remove();
-	}
+	ManagedRoute(const InetAddress &target,const InetAddress &via,const InetAddress &src,const char *device);
+	~ManagedRoute();
 
 	/**
 	 * Set or update currently set route

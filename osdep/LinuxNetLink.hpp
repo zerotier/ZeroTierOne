@@ -19,6 +19,8 @@
 #ifdef __LINUX__
 
 #include <vector>
+#include <map>
+#include <set>
 
 #include <sys/socket.h>
 #include <asm/types.h>
@@ -35,84 +37,112 @@
 
 namespace ZeroTier {
 
-struct route_entry {
-	InetAddress target;
-	InetAddress via;
-	int if_index;
-	char iface[IFNAMSIZ];
-};
-typedef std::vector<route_entry> RouteList;
-
 /**
  * Interface with Linux's RTNETLINK
  */
 class LinuxNetLink
 {
 private:
-    LinuxNetLink();
-    ~LinuxNetLink();
+	LinuxNetLink();
+	~LinuxNetLink();
 
 public:
-    static LinuxNetLink& getInstance()
-    {
-        static LinuxNetLink instance;
-        return instance;
-    }
+	struct Route {
+		InetAddress target;
+		InetAddress via;
+		InetAddress src;
+		int ifidx;
 
-    LinuxNetLink(LinuxNetLink const&) = delete;
-    void operator=(LinuxNetLink const&) = delete;
+		inline bool operator==(const Route &r) const
+		{ return ((target == r.target)&&(via == r.via)&&(src == r.src)&&(ifidx == r.ifidx)); }
+		inline bool operator!=(const Route &r) const
+		{ return (!(*this == r)); }
+		inline bool operator<(const Route &r) const
+		{
+			if (target < r.target) {
+				return true;
+			} else if (target == r.target) {
+				if (via < r.via) {
+					return true;
+				} else if (via == r.via) {
+					if (src < r.src) {
+						return true;
+					} else if (src == r.src) {
+						return (ifidx < r.ifidx);
+					}
+				}
+			}
+			return false;
+		}
+		inline bool operator>(const Route &r) const
+		{ return (r < *this); }
+		inline bool operator<=(const Route &r) const
+		{ return !(r < *this); }
+		inline bool operator>=(const Route &r) const
+		{ return !(*this < r); }
+	};
 
-    void addRoute(const InetAddress &target, const InetAddress &via, const InetAddress &src, const char *ifaceName);
-    void delRoute(const InetAddress &target, const InetAddress &via, const InetAddress &src, const char *ifaceName);
-    RouteList getIPV4Routes() const;
-    RouteList getIPV6Routes() const;
+	static LinuxNetLink& getInstance()
+	{
+		static LinuxNetLink instance;
+		return instance;
+	}
 
-    void addAddress(const InetAddress &addr, const char *iface);
-    void removeAddress(const InetAddress &addr, const char *iface);
+	LinuxNetLink(LinuxNetLink const&) = delete;
+	void operator=(LinuxNetLink const&) = delete;
 
-    void threadMain() throw();
+	void addRoute(const InetAddress &target, const InetAddress &via, const InetAddress &src, const char *ifaceName);
+	void delRoute(const InetAddress &target, const InetAddress &via, const InetAddress &src, const char *ifaceName);
+
+	void addAddress(const InetAddress &addr, const char *iface);
+	void removeAddress(const InetAddress &addr, const char *iface);
+
+	bool routeIsSet(const InetAddress &target, const InetAddress &via, const InetAddress &src, const char *ifname);
+
+	void threadMain() throw();
+
 private:
-    int _doRecv(int fd);
+	int _doRecv(int fd);
 
-    void _processMessage(struct nlmsghdr *nlp, int nll);
-    void _routeAdded(struct nlmsghdr *nlp);
-    void _routeDeleted(struct nlmsghdr *nlp);
-    void _linkAdded(struct nlmsghdr *nlp);
-    void _linkDeleted(struct nlmsghdr *nlp);
-    void _ipAddressAdded(struct nlmsghdr *nlp);
-    void _ipAddressDeleted(struct nlmsghdr *nlp);
+	void _processMessage(struct nlmsghdr *nlp, int nll);
+	void _routeAdded(struct nlmsghdr *nlp);
+	void _routeDeleted(struct nlmsghdr *nlp);
+	void _linkAdded(struct nlmsghdr *nlp);
+	void _linkDeleted(struct nlmsghdr *nlp);
+	void _ipAddressAdded(struct nlmsghdr *nlp);
+	void _ipAddressDeleted(struct nlmsghdr *nlp);
 
-    void _requestInterfaceList();
-    void _requestIPv4Routes();
-    void _requestIPv6Routes();
+	void _requestInterfaceList();
+	void _requestIPv4Routes();
+	void _requestIPv6Routes();
 
-    int _indexForInterface(const char *iface);
+	int _indexForInterface(const char *iface);
 
-    void _setSocketTimeout(int fd, int seconds = 1);
+	void _setSocketTimeout(int fd, int seconds = 1);
 
-    Thread _t;
-    bool _running;
+	Thread _t;
+	bool _running;
 
-    RouteList _routes_ipv4;
-    Mutex _rv4_m;
-    RouteList _routes_ipv6;
-    Mutex _rv6_m;
+	uint32_t _seq;
 
-    uint32_t _seq;
+	std::map< InetAddress,std::set<LinuxNetLink::Route> > _routes;
+	Mutex _routes_m;
 
-    struct iface_entry {
-        int index;
-        char ifacename[IFNAMSIZ];
-        char mac[18];
-        char mac_bin[6];
-        unsigned int mtu;
-    };
-    Hashtable<int, iface_entry> _interfaces;
-    Mutex _if_m;
+	struct iface_entry {
+		iface_entry()
+		{ memset(this,0,sizeof(iface_entry)); }
+		int index;
+		char ifacename[IFNAMSIZ];
+		char mac[18];
+		char mac_bin[6];
+		unsigned int mtu;
+	};
+	Hashtable<int, iface_entry> _interfaces;
+	Mutex _if_m;
 
-    // socket communication vars;
-    int _fd;
-    struct sockaddr_nl _la;
+	// socket communication vars;
+	int _fd;
+	struct sockaddr_nl _la;
 };
 
 }
