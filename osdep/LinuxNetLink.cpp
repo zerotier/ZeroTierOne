@@ -22,6 +22,10 @@
 #include <unistd.h>
 #include <linux/if_tun.h>
 
+#ifndef IFNAMSIZ
+#define IFNAMSIZ 16
+#endif
+
 namespace ZeroTier {
 
 struct nl_route_req {

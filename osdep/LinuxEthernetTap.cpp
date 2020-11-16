@@ -48,6 +48,10 @@
 #include <utility>
 #include <string>
 
+#ifndef IFNAMSIZ
+#define IFNAMSIZ 16
+#endif
+
 // ff:ff:ff:ff:ff:ff with no ADI
 static const ZeroTier::MulticastGroup _blindWildcardMulticastGroup(ZeroTier::MAC(0xff),0);
 
