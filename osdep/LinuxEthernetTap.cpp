@@ -277,17 +277,14 @@ LinuxEthernetTap::LinuxEthernetTap(
 							if (_enabled) {
 								_tapq.post(std::pair<void *,int>(buf,r));
 								buf = nullptr;
-								/*
-								to.setTo(getBuf,6);
-								from.setTo(getBuf + 6,6);
-								unsigned int etherType = ntohs(((const uint16_t *)getBuf)[6]);
-								_handler(_arg,(void *)0,_nwid,from,to,etherType,0,(const void *)(getBuf + 14),r - 14);
-								*/
 							}
 
 							r = 0;
 						}
-					} else break; // return to outer select when read() fails
+					} else {
+						r = 0;
+						break;
+					}
 				}
 			}
 		}
