@@ -174,7 +174,6 @@ LinuxEthernetTap::LinuxEthernetTap(
 	::ioctl(_fd,TUNSETPERSIST,0); // valgrind may generate a false alarm here
 	_dev = ifr.ifr_name;
 	::fcntl(_fd,F_SETFD,fcntl(_fd,F_GETFD) | FD_CLOEXEC);
-	::fcntl(_fd,F_SETFL,O_NONBLOCK);
 
 	(void)::pipe(_shutdownSignalPipe);
 
@@ -450,7 +449,7 @@ void LinuxEthernetTap::threadMain()
 			return;
 		}
 
-		if (fcntl(_fd,F_SETFL,fcntl(_fd,F_GETFL) & ~O_NONBLOCK) == -1) {
+		if (fcntl(_fd,F_SETFL,O_NONBLOCK) == -1) {
 			::close(sock);
 			printf("WARNING: ioctl() failed setting up Linux tap device (set non-blocking)\n");
 			return;
