@@ -28,6 +28,9 @@
 #include "EthernetTap.hpp"
 #include "BlockingQueue.hpp"
 
+#define ZT_BUFFER_POOL_SIZE 64
+#define ZT_BUFFER_POOL_MASK 63U
+
 namespace ZeroTier {
 
 class LinuxEthernetTap : public EthernetTap
@@ -73,7 +76,8 @@ private:
 	std::thread _tapReaderThread;
 	std::thread _tapProcessorThread;
 	std::mutex _buffers_l;
-	std::vector<void *> _buffers;
+	std::atomic<uintptr_t> _buffers[ZT_BUFFER_POOL_SIZE];
+	std::atomic<uintptr_t> _bufferReadPtr,_bufferWritePtr;
 	BlockingQueue< std::pair<void *,int> > _tapq;
 };
 

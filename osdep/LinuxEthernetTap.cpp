@@ -92,11 +92,16 @@ LinuxEthernetTap::LinuxEthernetTap(
 	_homePath(homePath),
 	_mtu(mtu),
 	_fd(0),
-	_enabled(true)
+	_enabled(true),
+	_bufferReadPtr(0),
+	_bufferWritePtr(0)
 {
 	static std::mutex s_tapCreateLock;
 	char procpath[128],nwids[32];
 	struct stat sbuf;
+
+	for(unsigned long i=0;i<ZT_BUFFER_POOL_SIZE;++i)
+		_buffers[i] = 0;
 
 	// Create only one tap at a time globally.
 	std::lock_guard<std::mutex> tapCreateLock(s_tapCreateLock);
@@ -252,15 +257,14 @@ LinuxEthernetTap::LinuxEthernetTap(
 			if (FD_ISSET(_fd,&readfds)) {
 				for(;;) { // read until there are no more packets, then return to outer select() loop
 					if (!buf) {
-						std::lock_guard<std::mutex> l(_buffers_l);
-						if (_buffers.empty()) {
-							buf = malloc(ZT_TAP_BUF_SIZE);
-							if (!buf)
+						for(unsigned int k=0;k<ZT_BUFFER_POOL_SIZE;++k) {
+							buf = reinterpret_cast<void *>(_buffers[_bufferReadPtr++ & ZT_BUFFER_POOL_MASK].exchange(0));
+							if (buf)
 								break;
-						} else {
-							buf = _buffers.back();
-							_buffers.pop_back();
 						}
+						buf = malloc(ZT_TAP_BUF_SIZE);
+						if (!buf)
+							continue;
 					}
 
 					n = (int)::read(_fd,reinterpret_cast<uint8_t *>(buf) + r,ZT_TAP_BUF_SIZE - r);
@@ -294,16 +298,22 @@ LinuxEthernetTap::LinuxEthernetTap(
 		MAC to,from;
 		std::pair<void *,int> qi;
 		while (_tapq.get(qi)) {
-			uint8_t *const b = reinterpret_cast<uint8_t *>(qi.first);
+			uint8_t *b = reinterpret_cast<uint8_t *>(qi.first);
 			if (b) {
 				to.setTo(b, 6);
 				from.setTo(b + 6, 6);
 				unsigned int etherType = Utils::ntoh(((const uint16_t *)b)[6]);
 				_handler(_arg, nullptr, _nwid, from, to, etherType, 0, (const void *)(b + 14),(unsigned int)(qi.second - 14));
-				{
-					std::lock_guard<std::mutex> l(_buffers_l);
-					_buffers.push_back(qi.first);
+
+				for(unsigned int k=0;k<ZT_BUFFER_POOL_SIZE;++k) {
+					uintptr_t zero = 0;
+					if (_buffers[_bufferWritePtr++ & ZT_BUFFER_POOL_MASK].compare_exchange_strong(zero,reinterpret_cast<uintptr_t>(b))) {
+						b = nullptr;
+						break;
+					}
 				}
+				if (b)
+					free(b);
 			} else break;
 		}
 	});
@@ -321,8 +331,11 @@ LinuxEthernetTap::~LinuxEthernetTap()
 	_tapReaderThread.join();
 	_tapProcessorThread.join();
 
-	for(std::vector<void *>::iterator i(_buffers.begin());i!=_buffers.end();++i)
-		free(*i);
+	for(unsigned int k=0;k<ZT_BUFFER_POOL_SIZE;++k) {
+		void *p = reinterpret_cast<void *>(_buffers[k].load());
+		if (p)
+			free(p);
+	}
 	std::vector< std::pair<void *,int> > dv(_tapq.drain());
 	for(std::vector< std::pair<void *,int> >::iterator i(dv.begin());i!=dv.end();++i) {
 		if (i->first)
