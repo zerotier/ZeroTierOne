@@ -292,42 +292,36 @@ LinuxEthernetTap::LinuxEthernetTap(
 		}
 	});
 
-	for(int k=0;k<2;++k) {
-		_tapProcessorThread[k] = std::thread([this] {
-			MAC to,from;
-			std::pair<void *,int> qi;
-			while (_tapq.get(qi)) {
-				uint8_t *const b = reinterpret_cast<uint8_t *>(qi.first);
-				if (b) {
-					to.setTo(b, 6);
-					from.setTo(b + 6, 6);
-					unsigned int etherType = Utils::ntoh(((const uint16_t *)b)[6]);
-					_handler(_arg, nullptr, _nwid, from, to, etherType, 0, (const void *)(b + 14),(unsigned int)(qi.second - 14));
-					{
-						std::lock_guard<std::mutex> l(_buffers_l);
-						_buffers.push_back(qi.first);
-					}
-				} else break;
-			}
-		});
-	}
+	_tapProcessorThread = std::thread([this] {
+		MAC to,from;
+		std::pair<void *,int> qi;
+		while (_tapq.get(qi)) {
+			uint8_t *const b = reinterpret_cast<uint8_t *>(qi.first);
+			if (b) {
+				to.setTo(b, 6);
+				from.setTo(b + 6, 6);
+				unsigned int etherType = Utils::ntoh(((const uint16_t *)b)[6]);
+				_handler(_arg, nullptr, _nwid, from, to, etherType, 0, (const void *)(b + 14),(unsigned int)(qi.second - 14));
+				{
+					std::lock_guard<std::mutex> l(_buffers_l);
+					_buffers.push_back(qi.first);
+				}
+			} else break;
+		}
+	});
 }
 
 LinuxEthernetTap::~LinuxEthernetTap()
 {
 	(void)::write(_shutdownSignalPipe[1],"\0",1); // causes thread to exit
-	for(int k=0;k<64;++k) {
-		_tapq.post(std::pair<void *,int>(nullptr,0));
-	}
+	_tapq.post(std::pair<void *,int>(nullptr,0));
 
 	::close(_fd);
 	::close(_shutdownSignalPipe[0]);
 	::close(_shutdownSignalPipe[1]);
 
 	_tapReaderThread.join();
-	for(int k=0;k<2;++k) {
-		_tapProcessorThread[k].join();
-	}
+	_tapProcessorThread.join();
 
 	for(std::vector<void *>::iterator i(_buffers.begin());i!=_buffers.end();++i)
 		free(*i);
