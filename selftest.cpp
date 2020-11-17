@@ -47,7 +47,7 @@
 #include "osdep/PortMapper.hpp"
 #include "osdep/Thread.hpp"
 
-#ifdef ZT_USE_X64_ASM_SALSA2012
+#if defined(ZT_USE_X64_ASM_SALSA2012) && defined(ZT_ARCH_X64)
 #include "ext/x64-salsa2012-asm/salsa2012.h"
 #endif
 #ifdef ZT_USE_ARM32_NEON_ASM_SALSA2012
@@ -203,7 +203,7 @@ static int testCrypto()
 		::free((void *)bb);
 	}
 
-#ifdef ZT_USE_X64_ASM_SALSA2012
+#if defined(ZT_USE_X64_ASM_SALSA2012) && defined(ZT_ARCH_X64)
 	std::cout << "[crypto] Benchmarking Salsa20/12 fast x64 ASM... "; std::cout.flush();
 	{
 		unsigned char *bb = (unsigned char *)::malloc(1234567);

@@ -63,8 +63,6 @@ static const ZeroTier::MulticastGroup _blindWildcardMulticastGroup(ZeroTier::MAC
 
 namespace ZeroTier {
 
-static Mutex __tapCreateLock;
-
 static const char _base32_chars[32] = { 'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','2','3','4','5','6','7' };
 static void _base32_5_to_8(const uint8_t *in,char *out)
 {
@@ -96,15 +94,17 @@ LinuxEthernetTap::LinuxEthernetTap(
 	_fd(0),
 	_enabled(true)
 {
+	static std::mutex s_tapCreateLock;
 	char procpath[128],nwids[32];
 	struct stat sbuf;
 
-	// ensure netlink connection is started
+	// Create only one tap at a time globally.
+	std::lock_guard<std::mutex> tapCreateLock(s_tapCreateLock);
+
+	// Make sure Linux netlink is initialized.
 	(void)LinuxNetLink::getInstance();
 
 	OSUtils::ztsnprintf(nwids,sizeof(nwids),"%.16llx",nwid);
-
-	Mutex::Lock _l(__tapCreateLock); // create only one tap at a time, globally
 
 	_fd = ::open("/dev/net/tun",O_RDWR);
 	if (_fd <= 0) {
@@ -116,7 +116,8 @@ LinuxEthernetTap::LinuxEthernetTap(
 	struct ifreq ifr;
 	memset(&ifr,0,sizeof(ifr));
 
-	// Restore device names from legacy devicemap, but for new devices we use a base32-based canonical naming
+	// Restore device names from legacy devicemap, but for new devices we use a base32-based
+	// canonical device name.
 	std::map<std::string,std::string> globalDeviceMap;
 	FILE *devmapf = fopen((_homePath + ZT_PATH_SEPARATOR_S + "devicemap").c_str(),"r");
 	if (devmapf) {
@@ -188,11 +189,9 @@ LinuxEthernetTap::LinuxEthernetTap(
 		int n,nfds,r;
 		void *buf = nullptr;
 
-		usleep(100000);
 		{
 			struct ifreq ifr;
 			memset(&ifr,0,sizeof(ifr));
-
 			strcpy(ifr.ifr_name,_dev.c_str());
 
 			const int sock = socket(AF_INET,SOCK_DGRAM,0);
@@ -211,6 +210,10 @@ LinuxEthernetTap::LinuxEthernetTap(
 				return;
 			}
 
+			// Some kernel versions seem to require you to yield while the device comes up
+			// before they will accept MTU and MAC. For others it doesn't matter, but is
+			// harmless. This was moved to the worker thread though so as not to block the
+			// main ZeroTier loop.
 			usleep(500000);
 
 			ifr.ifr_ifru.ifru_hwaddr.sa_family = ARPHRD_ETHER;
@@ -247,7 +250,7 @@ LinuxEthernetTap::LinuxEthernetTap(
 				break;
 
 			if (FD_ISSET(_fd,&readfds)) {
-				for(int x=0;x<64;++x) {
+				for(;;) { // read until there are no more packets, then return to outer select() loop
 					if (!buf) {
 						std::lock_guard<std::mutex> l(_buffers_l);
 						if (_buffers.empty()) {
@@ -261,9 +264,8 @@ LinuxEthernetTap::LinuxEthernetTap(
 					}
 
 					n = (int)::read(_fd,reinterpret_cast<uint8_t *>(buf) + r,ZT_TAP_BUF_SIZE - r);
-					if (n < 0) {
-						break;
-					} else {
+
+					if (n > 0) {
 						// Some tap drivers like to send the ethernet frame and the
 						// payload in two chunks, so handle that by accumulating
 						// data until we have at least a frame.
@@ -279,14 +281,13 @@ LinuxEthernetTap::LinuxEthernetTap(
 								to.setTo(getBuf,6);
 								from.setTo(getBuf + 6,6);
 								unsigned int etherType = ntohs(((const uint16_t *)getBuf)[6]);
-								// TODO: VLAN support
 								_handler(_arg,(void *)0,_nwid,from,to,etherType,0,(const void *)(getBuf + 14),r - 14);
 								*/
 							}
 
 							r = 0;
 						}
-					}
+					} else break; // return to outer select when read() fails
 				}
 			}
 		}
@@ -313,8 +314,8 @@ LinuxEthernetTap::LinuxEthernetTap(
 
 LinuxEthernetTap::~LinuxEthernetTap()
 {
-	(void)::write(_shutdownSignalPipe[1],"\0",1); // causes thread to exit
-	_tapq.post(std::pair<void *,int>(nullptr,0));
+	(void)::write(_shutdownSignalPipe[1],"\0",1); // causes reader thread to exit
+	_tapq.post(std::pair<void *,int>(nullptr,0)); // causes processor thread to exit
 
 	::close(_fd);
 	::close(_shutdownSignalPipe[0]);
