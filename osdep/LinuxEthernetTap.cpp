@@ -11,6 +11,10 @@
  */
 /****/
 
+#ifdef __GNUC__
+#pragma GCC diagnostic ignored "-Wrestrict"
+#endif
+
 #include "../node/Constants.hpp"
 
 #ifdef __LINUX__
@@ -51,6 +55,8 @@
 #ifndef IFNAMSIZ
 #define IFNAMSIZ 16
 #endif
+
+#define ZT_TAP_BUF_SIZE 16384
 
 // ff:ff:ff:ff:ff:ff with no ADI
 static const ZeroTier::MulticastGroup _blindWildcardMulticastGroup(ZeroTier::MAC(0xff),0);
@@ -177,16 +183,153 @@ LinuxEthernetTap::LinuxEthernetTap(
 
 	(void)::pipe(_shutdownSignalPipe);
 
-	_thread = Thread::start(this);
+	_tapReaderThread = std::thread([this]{
+		fd_set readfds,nullfds;
+		int n,nfds,r;
+		void *buf = nullptr;
+
+		usleep(100000);
+		{
+			struct ifreq ifr;
+			memset(&ifr,0,sizeof(ifr));
+
+			strcpy(ifr.ifr_name,_dev.c_str());
+
+			const int sock = socket(AF_INET,SOCK_DGRAM,0);
+			if (sock <= 0)
+				return;
+
+			if (ioctl(sock,SIOCGIFFLAGS,(void *)&ifr) < 0) {
+				::close(sock);
+				printf("WARNING: ioctl() failed setting up Linux tap device (bring interface up)\n");
+				return;
+			}
+			ifr.ifr_flags |= IFF_UP;
+			if (ioctl(sock,SIOCSIFFLAGS,(void *)&ifr) < 0) {
+				::close(sock);
+				printf("WARNING: ioctl() failed setting up Linux tap device (bring interface up)\n");
+				return;
+			}
+
+			usleep(500000);
+
+			ifr.ifr_ifru.ifru_hwaddr.sa_family = ARPHRD_ETHER;
+			_mac.copyTo(ifr.ifr_ifru.ifru_hwaddr.sa_data,6);
+			if (ioctl(sock,SIOCSIFHWADDR,(void *)&ifr) < 0) {
+				::close(sock);
+				printf("WARNING: ioctl() failed setting up Linux tap device (set MAC)\n");
+				return;
+			}
+
+			ifr.ifr_ifru.ifru_mtu = (int)_mtu;
+			if (ioctl(sock,SIOCSIFMTU,(void *)&ifr) < 0) {
+				::close(sock);
+				printf("WARNING: ioctl() failed setting up Linux tap device (set MTU)\n");
+				return;
+			}
+
+			fcntl(_fd,F_SETFL,O_NONBLOCK);
+
+			::close(sock);
+		}
+
+		FD_ZERO(&readfds);
+		FD_ZERO(&nullfds);
+		nfds = (int)std::max(_shutdownSignalPipe[0],_fd) + 1;
+
+		r = 0;
+		for(;;) {
+			FD_SET(_shutdownSignalPipe[0],&readfds);
+			FD_SET(_fd,&readfds);
+			select(nfds,&readfds,&nullfds,&nullfds,(struct timeval *)0);
+
+			if (FD_ISSET(_shutdownSignalPipe[0],&readfds)) // writes to shutdown pipe terminate thread
+				break;
+
+			if (FD_ISSET(_fd,&readfds)) {
+				for(int x=0;x<64;++x) {
+					if (!buf) {
+						std::lock_guard<std::mutex> l(_buffers_l);
+						if (_buffers.empty()) {
+							buf = malloc(ZT_TAP_BUF_SIZE);
+							if (!buf)
+								break;
+						} else {
+							buf = _buffers.back();
+							_buffers.pop_back();
+						}
+					}
+
+					n = (int)::read(_fd,reinterpret_cast<uint8_t *>(buf) + r,ZT_TAP_BUF_SIZE - r);
+					if (n < 0) {
+						break;
+					} else {
+						// Some tap drivers like to send the ethernet frame and the
+						// payload in two chunks, so handle that by accumulating
+						// data until we have at least a frame.
+						r += n;
+						if (r > 14) {
+							if (r > ((int)_mtu + 14)) // sanity check for weird TAP behavior on some platforms
+								r = _mtu + 14;
+
+							if (_enabled) {
+								_tapq.post(std::pair<void *,int>(buf,r));
+								buf = nullptr;
+								/*
+								to.setTo(getBuf,6);
+								from.setTo(getBuf + 6,6);
+								unsigned int etherType = ntohs(((const uint16_t *)getBuf)[6]);
+								// TODO: VLAN support
+								_handler(_arg,(void *)0,_nwid,from,to,etherType,0,(const void *)(getBuf + 14),r - 14);
+								*/
+							}
+
+							r = 0;
+						}
+					}
+				}
+			}
+		}
+	});
+
+	_tapProcessorThread = std::thread([this] {
+		MAC to,from;
+		std::pair<void *,int> qi;
+		while (_tapq.get(qi)) {
+			uint8_t *const b = reinterpret_cast<uint8_t *>(qi.first);
+			if (b) {
+				to.setTo(b, 6);
+				from.setTo(b + 6, 6);
+				unsigned int etherType = Utils::ntoh(((const uint16_t *)b)[6]);
+				_handler(_arg, nullptr, _nwid, from, to, etherType, 0, (const void *)(b + 14),(unsigned int)(qi.second - 14));
+				{
+					std::lock_guard<std::mutex> l(_buffers_l);
+					_buffers.push_back(qi.first);
+				}
+			} else break;
+		}
+	});
 }
 
 LinuxEthernetTap::~LinuxEthernetTap()
 {
 	(void)::write(_shutdownSignalPipe[1],"\0",1); // causes thread to exit
-	Thread::join(_thread);
+	_tapq.post(std::pair<void *,int>(nullptr,0));
+
 	::close(_fd);
 	::close(_shutdownSignalPipe[0]);
 	::close(_shutdownSignalPipe[1]);
+
+	_tapReaderThread.join();
+	_tapProcessorThread.join();
+
+	for(std::vector<void *>::iterator i(_buffers.begin());i!=_buffers.end();++i)
+		free(*i);
+	std::vector< std::pair<void *,int> > dv(_tapq.drain());
+	for(std::vector< std::pair<void *,int> >::iterator i(dv.begin());i!=dv.end();++i) {
+		if (i->first)
+			free(i->first);
+	}
 }
 
 void LinuxEthernetTap::setEnabled(bool en)
@@ -396,107 +539,6 @@ void LinuxEthernetTap::setMtu(unsigned int mtu)
 			ifr.ifr_ifru.ifru_mtu = (int)mtu;
 			ioctl(sock,SIOCSIFMTU,(void *)&ifr);
 			close(sock);
-		}
-	}
-}
-
-void LinuxEthernetTap::threadMain()
-	throw()
-{
-	fd_set readfds,nullfds;
-	MAC to,from;
-	int n,nfds,r;
-	char getBuf[ZT_MAX_MTU + 64];
-
-	Thread::sleep(100);
-
-	{
-		struct ifreq ifr;
-		memset(&ifr,0,sizeof(ifr));
-
-		strcpy(ifr.ifr_name,_dev.c_str());
-
-		const int sock = socket(AF_INET,SOCK_DGRAM,0);
-		if (sock <= 0)
-			return;
-
-		if (ioctl(sock,SIOCGIFFLAGS,(void *)&ifr) < 0) {
-			::close(sock);
-			printf("WARNING: ioctl() failed setting up Linux tap device (bring interface up)\n");
-			return;
-		}
-		ifr.ifr_flags |= IFF_UP;
-		if (ioctl(sock,SIOCSIFFLAGS,(void *)&ifr) < 0) {
-			::close(sock);
-			printf("WARNING: ioctl() failed setting up Linux tap device (bring interface up)\n");
-			return;
-		}
-
-		Thread::sleep(500);
-
-		ifr.ifr_ifru.ifru_hwaddr.sa_family = ARPHRD_ETHER;
-		_mac.copyTo(ifr.ifr_ifru.ifru_hwaddr.sa_data,6);
-		if (ioctl(sock,SIOCSIFHWADDR,(void *)&ifr) < 0) {
-			::close(sock);
-			printf("WARNING: ioctl() failed setting up Linux tap device (set MAC)\n");
-			return;
-		}
-
-		ifr.ifr_ifru.ifru_mtu = (int)_mtu;
-		if (ioctl(sock,SIOCSIFMTU,(void *)&ifr) < 0) {
-			::close(sock);
-			printf("WARNING: ioctl() failed setting up Linux tap device (set MTU)\n");
-			return;
-		}
-
-		if (fcntl(_fd,F_SETFL,O_NONBLOCK) == -1) {
-			::close(sock);
-			printf("WARNING: ioctl() failed setting up Linux tap device (set non-blocking)\n");
-			return;
-		}
-
-		::close(sock);
-	}
-
-	FD_ZERO(&readfds);
-	FD_ZERO(&nullfds);
-	nfds = (int)std::max(_shutdownSignalPipe[0],_fd) + 1;
-
-	r = 0;
-	for(;;) {
-		FD_SET(_shutdownSignalPipe[0],&readfds);
-		FD_SET(_fd,&readfds);
-		select(nfds,&readfds,&nullfds,&nullfds,(struct timeval *)0);
-
-		if (FD_ISSET(_shutdownSignalPipe[0],&readfds)) // writes to shutdown pipe terminate thread
-			break;
-
-		if (FD_ISSET(_fd,&readfds)) {
-			for(int x=0;x<64;++x) {
-				n = (int)::read(_fd,getBuf + r,sizeof(getBuf) - r);
-				if (n < 0) {
-					break;
-				} else {
-					// Some tap drivers like to send the ethernet frame and the
-					// payload in two chunks, so handle that by accumulating
-					// data until we have at least a frame.
-					r += n;
-					if (r > 14) {
-						if (r > ((int)_mtu + 14)) // sanity check for weird TAP behavior on some platforms
-							r = _mtu + 14;
-
-						if (_enabled) {
-							to.setTo(getBuf,6);
-							from.setTo(getBuf + 6,6);
-							unsigned int etherType = ntohs(((const uint16_t *)getBuf)[6]);
-							// TODO: VLAN support
-							_handler(_arg,(void *)0,_nwid,from,to,etherType,0,(const void *)(getBuf + 14),r - 14);
-						}
-
-						r = 0;
-					}
-				}
-			}
 		}
 	}
 }
