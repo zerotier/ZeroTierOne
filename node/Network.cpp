@@ -40,7 +40,7 @@ namespace ZeroTier {
 namespace {
 
 // Returns true if packet appears valid; pos and proto will be set
-static bool _ipv6GetPayload(const uint8_t *frameData,unsigned int frameLen,unsigned int &pos,unsigned int &proto)
+static inline bool _ipv6GetPayload(const uint8_t *frameData,unsigned int frameLen,unsigned int &pos,unsigned int &proto)
 {
 	if (frameLen < 40)
 		return false;

@@ -21,10 +21,12 @@
 #include <vector>
 #include <stdexcept>
 #include <atomic>
-
+#include <array>
+#include <thread>
+#include <mutex>
 #include "../node/MulticastGroup.hpp"
-#include "Thread.hpp"
 #include "EthernetTap.hpp"
+#include "BlockingQueue.hpp"
 
 namespace ZeroTier {
 
@@ -56,15 +58,11 @@ public:
 	virtual void setMtu(unsigned int mtu);
 	virtual void setDns(const char *domain, const std::vector<InetAddress> &servers) {}
 
-	void threadMain()
-		throw();
-
 private:
 	void (*_handler)(void *,void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int);
 	void *_arg;
 	uint64_t _nwid;
 	MAC _mac;
-	Thread _thread;
 	std::string _homePath;
 	std::string _dev;
 	std::vector<MulticastGroup> _multicastGroups;
@@ -72,6 +70,11 @@ private:
 	int _fd;
 	int _shutdownSignalPipe[2];
 	std::atomic_bool _enabled;
+	std::thread _tapReaderThread;
+	std::thread _tapProcessorThread;
+	std::mutex _buffers_l;
+	std::vector<void *> _buffers;
+	BlockingQueue< std::pair<void *,int> > _tapq;
 };
 
 } // namespace ZeroTier

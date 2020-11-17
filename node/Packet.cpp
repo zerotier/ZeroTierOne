@@ -19,7 +19,7 @@
 
 #include "Packet.hpp"
 
-#ifdef ZT_USE_X64_ASM_SALSA2012
+#if defined(ZT_USE_X64_ASM_SALSA2012) && defined(ZT_ARCH_X64)
 #include "../ext/x64-salsa2012-asm/salsa2012.h"
 #endif
 #ifdef ZT_USE_ARM32_NEON_ASM_SALSA2012
@@ -42,7 +42,7 @@ namespace ZeroTier {
 /* Set up macros for fast single-pass ASM Salsa20/12 crypto, if we have it */
 
 // x64 SSE crypto
-#ifdef ZT_USE_X64_ASM_SALSA2012
+#if defined(ZT_USE_X64_ASM_SALSA2012) && defined(ZT_ARCH_X64)
 #define ZT_HAS_FAST_CRYPTO() (true)
 #define ZT_FAST_SINGLE_PASS_SALSA2012(b,l,n,k) zt_salsa2012_amd64_xmm6(reinterpret_cast<unsigned char *>(b),(l),reinterpret_cast<const unsigned char *>(n),reinterpret_cast<const unsigned char *>(k))
 #endif
@@ -880,7 +880,7 @@ void Packet::armor(const void *key,bool encryptPayload,const AES aesKeys[2])
 {
 	uint8_t *const data = reinterpret_cast<uint8_t *>(unsafeData());
 	if ((aesKeys) && (encryptPayload)) {
-		char tmp0[16],tmp1[16];
+		//char tmp0[16],tmp1[16];
 		setCipher(ZT_PROTO_CIPHER_SUITE__AES_GMAC_SIV);
 
 		uint8_t *const payload = data + ZT_PACKET_IDX_VERB;

@@ -351,14 +351,14 @@ public:
 				int tmpbs = bs;
 				if (setsockopt(s,SOL_SOCKET,SO_RCVBUF,(const char *)&tmpbs,sizeof(tmpbs)) == 0)
 					break;
-				bs -= 16384;
+				bs -= 4096;
 			}
 			bs = bufferSize;
 			while (bs >= 65536) {
 				int tmpbs = bs;
 				if (setsockopt(s,SOL_SOCKET,SO_SNDBUF,(const char *)&tmpbs,sizeof(tmpbs)) == 0)
 					break;
-				bs -= 16384;
+				bs -= 4096;
 			}
 		}
 
