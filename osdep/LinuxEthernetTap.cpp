@@ -188,6 +188,7 @@ LinuxEthernetTap::LinuxEthernetTap(
 		fd_set readfds,nullfds;
 		int n,nfds,r;
 		void *buf = nullptr;
+		std::vector buffers;
 
 		{
 			struct ifreq ifr;
@@ -252,14 +253,20 @@ LinuxEthernetTap::LinuxEthernetTap(
 			if (FD_ISSET(_fd,&readfds)) {
 				for(;;) { // read until there are no more packets, then return to outer select() loop
 					if (!buf) {
-						std::lock_guard<std::mutex> l(_buffers_l);
-						if (_buffers.empty()) {
+						// To reduce use of the mutex, we keep a local buffer vector and
+						// swap (which is a pointer swap) with the global one when it's
+						// empty. This retrieves a batch of buffers to use.
+						if (buffers.empty()) {
+							std::lock_guard<std::mutex> l(_buffers_l);
+							buffers.swap(_buffers);
+						}
+						if (buffers.empty()) {
 							buf = malloc(ZT_TAP_BUF_SIZE);
 							if (!buf)
 								break;
 						} else {
-							buf = _buffers.back();
-							_buffers.pop_back();
+							buf = buffers.back();
+							buffers.pop_back();
 						}
 					}
 
@@ -302,7 +309,9 @@ LinuxEthernetTap::LinuxEthernetTap(
 				_handler(_arg, nullptr, _nwid, from, to, etherType, 0, (const void *)(b + 14),(unsigned int)(qi.second - 14));
 				{
 					std::lock_guard<std::mutex> l(_buffers_l);
-					_buffers.push_back(qi.first);
+					if (_buffers.size() < 128)
+						_buffers.push_back(qi.first);
+					else free(qi.first);
 				}
 			} else break;
 		}
