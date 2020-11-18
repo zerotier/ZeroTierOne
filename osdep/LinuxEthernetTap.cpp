@@ -188,7 +188,7 @@ LinuxEthernetTap::LinuxEthernetTap(
 		fd_set readfds,nullfds;
 		int n,nfds,r;
 		void *buf = nullptr;
-		std::vector buffers;
+		std::vector<void *> buffers;
 
 		{
 			struct ifreq ifr;
