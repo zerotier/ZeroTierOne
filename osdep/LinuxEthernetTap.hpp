@@ -69,6 +69,7 @@ private:
 	unsigned int _mtu;
 	int _fd;
 	std::atomic_bool _enabled;
+	std::atomic_bool _running;
 	std::thread _tapReaderThread;
 	std::thread _tapProcessorThread;
 	std::mutex _buffers_l;
