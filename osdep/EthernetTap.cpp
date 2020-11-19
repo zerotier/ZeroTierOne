@@ -96,6 +96,35 @@ std::shared_ptr<EthernetTap> EthernetTap::newInstance(
 #endif // __LINUX__
 
 #ifdef __WINDOWS__
+	HRESULT hres = CoInitializeEx(0, COINIT_MULTITHREADED);
+	if (FAILED(hres)) {
+		throw std::runtime_error("WinEthernetTap: COM initialization failed");
+	}
+
+	static bool _comInit = false;
+	static Mutex _comInit_m;
+
+	{
+		Mutex::Lock l(_comInit_m);
+		if (!_comInit) {
+			hres = CoInitializeSecurity(
+				NULL,
+				-1,
+				NULL,
+				NULL,
+				RPC_C_AUTHN_LEVEL_DEFAULT,
+				RPC_C_IMP_LEVEL_IMPERSONATE,
+				NULL,
+				EOAC_NONE,
+				NULL
+			);
+			if (FAILED(hres)) {
+				CoUninitialize();
+				throw std::runtime_error("WinEthernetTap: Failed to initialize security");
+			}
+			_comInit = true;
+		}
+	}
 	return std::shared_ptr<EthernetTap>(new WindowsEthernetTap(homePath,mac,mtu,metric,nwid,friendlyName,handler,arg));
 #endif // __WINDOWS__
 
