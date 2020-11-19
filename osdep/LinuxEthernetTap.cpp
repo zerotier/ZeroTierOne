@@ -92,8 +92,7 @@ LinuxEthernetTap::LinuxEthernetTap(
 	_homePath(homePath),
 	_mtu(mtu),
 	_fd(0),
-	_enabled(true),
-	_running(true)
+	_enabled(true)
 {
 	static std::mutex s_tapCreateLock;
 	char procpath[128],nwids[32];
@@ -268,7 +267,7 @@ LinuxEthernetTap::LinuxEthernetTap(
 
 					r = 0;
 				}
-			} else if ((errno != EINTR)||(!_running.load())) {
+			} else {
 				r = 0;
 				break;
 			}
@@ -298,12 +297,9 @@ LinuxEthernetTap::LinuxEthernetTap(
 
 LinuxEthernetTap::~LinuxEthernetTap()
 {
-	_running = false;
-
 	_tapq.post(std::pair<void *,int>(nullptr,0));
 	::shutdown(_fd, SHUT_RDWR);
 	::close(_fd);
-	pthread_kill(_tapReaderThread.native_handle(), SIGUSR1);
 
 	_tapReaderThread.join();
 	_tapProcessorThread.join();
