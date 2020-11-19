@@ -474,29 +474,6 @@ WindowsEthernetTap::WindowsEthernetTap(
 	char data[1024];
 	char tag[24];
 
-	// Initialize COM
-	HRESULT hres = CoInitializeEx(0, COINIT_MULTITHREADED);
-	if (FAILED(hres)) {
-		throw std::runtime_error("WinEthernetTap: COM initialization failed");
-	}
-
-	hres = CoInitializeSecurity(
-		NULL,
-		-1,
-		NULL,
-		NULL,
-		RPC_C_AUTHN_LEVEL_DEFAULT,
-		RPC_C_IMP_LEVEL_IMPERSONATE,
-		NULL,
-		EOAC_NONE,
-		NULL
-	);
-	if (FAILED(hres)) {
-		CoUninitialize();
-		throw std::runtime_error("WinEthernetTap: Failed to initialize security");
-	}
-
-
 	// We "tag" registry entries with the network ID to identify persistent devices
 	OSUtils::ztsnprintf(tag,sizeof(tag),"%.16llx",(unsigned long long)nwid);
 
@@ -671,7 +648,6 @@ WindowsEthernetTap::WindowsEthernetTap(
 WindowsEthernetTap::~WindowsEthernetTap()
 {
 	WinDNSHelper::removeDNS(_nwid);
-	CoUninitialize();
 	_run = false;
 	ReleaseSemaphore(_injectSemaphore,1,NULL);
 	Thread::join(_thread);
@@ -970,6 +946,12 @@ NET_IFINDEX WindowsEthernetTap::interfaceIndex() const
 void WindowsEthernetTap::threadMain()
 	throw()
 {
+	HRESULT hres = CoInitializeEx(0, COINIT_MULTITHREADED);
+	if (FAILED(hres)) {
+		fprintf(stderr, "WinEthernetTap: COM initialization failed");
+		return;
+	}
+
 	char tapReadBuf[ZT_MAX_MTU + 32];
 	char tapPath[128];
 	HANDLE wait4[3];
@@ -1188,6 +1170,7 @@ void WindowsEthernetTap::threadMain()
 			// We will restart and re-open the tap unless _run == false
 		}
 	} catch ( ... ) {} // catch unexpected exceptions -- this should not happen but would prevent program crash or other weird issues since threads should not throw
+	CoUninitialize();
 }
 
 NET_IFINDEX WindowsEthernetTap::_getDeviceIndex()

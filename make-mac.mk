@@ -3,7 +3,7 @@ CXX=clang++
 INCLUDES=
 DEFS=
 LIBS=
-ARCH_FLAGS=-msse -msse2 -arch x86_64 -arch arm64e
+ARCH_FLAGS=-msse -msse2 -arch x86_64 -arch arm64 
 
 CODESIGN=echo
 PRODUCTSIGN=echo
@@ -67,6 +67,7 @@ endif
 # Debug mode -- dump trace output, build binary with -g
 ifeq ($(ZT_DEBUG),1)
 	ZT_TRACE=1
+	ARCH_FLAGS=
 	CFLAGS+=-Wall -g $(INCLUDES) $(DEFS) $(ARCH_FLAGS)
 	STRIP=echo
 	# The following line enables optimization for the crypto code, since
@@ -92,10 +93,10 @@ CXXFLAGS=$(CFLAGS) -std=c++11 -stdlib=libc++
 all: one macui
 
 ext/x64-salsa2012-asm/salsa2012.o:
-	as -o ext/x64-salsa2012-asm/salsa2012.o ext/x64-salsa2012-asm/salsa2012.s
+	as -arch x86_64 -o ext/x64-salsa2012-asm/salsa2012.o ext/x64-salsa2012-asm/salsa2012.s
 
 mac-agent: FORCE
-	$(CC) -Ofast -o MacEthernetTapAgent osdep/MacEthernetTapAgent.c
+	$(CC) -Ofast $(ARCH_FLAGS) -o MacEthernetTapAgent osdep/MacEthernetTapAgent.c
 	$(CODESIGN) -f --options=runtime -s $(CODESIGN_APP_CERT) MacEthernetTapAgent
 
 osdep/MacDNSHelper.o: osdep/MacDNSHelper.mm

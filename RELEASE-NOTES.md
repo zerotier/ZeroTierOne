@@ -1,6 +1,28 @@
 ZeroTier Release Notes
 ======
 
+# 2020-11-19 -- Version 1.6.0
+
+Version 1.6.0 is a major release that incorporates back-ported features from the 2.0 branch, which is still under development. It also fixes a number of issues.
+
+New features and improvements (including those listed under 1.5.0):
+
+ * **Apple Silicon** (MacOS ARM64) native support via universal binary. ZeroTier now requires the very latest Xcode to build.
+ * **Linux performance improvements** for up to 25% faster tun/tap I/O performance on multi-core systems.
+ * **Multipath support** with modes modeled after the Linux kernel's bonding driver. This includes active-passive and active-active modes with fast failover and load balancing. See section 2.1.5 of the manual.
+ * **DNS configuration** push from network controllers to end nodes, with locally configurable permissions for whether or not push is allowed.
+ * **AES-GMAC-SIV** encryption mode, which is both somewhat more secure and significantly faster than the old Salsa20/12-Poly1305 mode on hardware that supports AES acceleration. This includes virtually all X86-64 chips and most ARM64. This mode is based on AES-SIV and has been audited by Trail of Bits to ensure that it is equivalent security-wise.
+
+Bug fixes:
+
+ * **Managed route assignment fixes** to eliminate missing routes on Linux and what we believe to be the source of sporadic high CPU usage on MacOS.
+ * **Hang on shutdown** issues should be fixed.
+ * **Sporadic multicast outages** should be fixed.
+
+Known remaining issues:
+
+ * AES hardware acceleration is not yet supported on 32-bit ARM, PowerPC (32 or 64), or MIPS (32 or 64) systems. Currently supported are X86-64 and ARM64/AARCH64 with crypto extensions.
+
 # 2020-10-05 -- Version 1.5.0 (actually 1.6.0-beta1)
 
 Version 1.6.0 (1.5.0 is a beta!) is a significant release that incorporates a number of back-ported fixes and features from the ZeroTier 2.0 tree.
