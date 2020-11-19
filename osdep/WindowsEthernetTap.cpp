@@ -648,7 +648,6 @@ WindowsEthernetTap::WindowsEthernetTap(
 WindowsEthernetTap::~WindowsEthernetTap()
 {
 	WinDNSHelper::removeDNS(_nwid);
-	CoUninitialize();
 	_run = false;
 	ReleaseSemaphore(_injectSemaphore,1,NULL);
 	Thread::join(_thread);
@@ -1171,6 +1170,7 @@ void WindowsEthernetTap::threadMain()
 			// We will restart and re-open the tap unless _run == false
 		}
 	} catch ( ... ) {} // catch unexpected exceptions -- this should not happen but would prevent program crash or other weird issues since threads should not throw
+	CoUninitialize();
 }
 
 NET_IFINDEX WindowsEthernetTap::_getDeviceIndex()
