@@ -1,5 +1,5 @@
 /*
- * Copyright (c)2013-2020 ZeroTier, Inc.
+ * Copyright (c)2019 ZeroTier, Inc.
  *
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
@@ -21,10 +21,12 @@
 #include <vector>
 #include <stdexcept>
 #include <atomic>
-
-#include "../core/MulticastGroup.hpp"
-#include "Thread.hpp"
+#include <array>
+#include <thread>
+#include <mutex>
+#include "../node/MulticastGroup.hpp"
 #include "EthernetTap.hpp"
+#include "BlockingQueue.hpp"
 
 namespace ZeroTier {
 
@@ -54,15 +56,13 @@ public:
 	virtual void setFriendlyName(const char *friendlyName);
 	virtual void scanMulticastGroups(std::vector<MulticastGroup> &added,std::vector<MulticastGroup> &removed);
 	virtual void setMtu(unsigned int mtu);
-
-	void threadMain()
-		throw();
+	virtual void setDns(const char *domain, const std::vector<InetAddress> &servers) {}
 
 private:
 	void (*_handler)(void *,void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int);
 	void *_arg;
 	uint64_t _nwid;
-	Thread _thread;
+	MAC _mac;
 	std::string _homePath;
 	std::string _dev;
 	std::vector<MulticastGroup> _multicastGroups;
@@ -70,6 +70,11 @@ private:
 	int _fd;
 	int _shutdownSignalPipe[2];
 	std::atomic_bool _enabled;
+	std::thread _tapReaderThread;
+	std::thread _tapProcessorThread;
+	std::mutex _buffers_l;
+	std::vector<void *> _buffers;
+	BlockingQueue< std::pair<void *,int> > _tapq;
 };
 
 } // namespace ZeroTier

@@ -1,5 +1,5 @@
 /*
- * Copyright (c)2013-2020 ZeroTier, Inc.
+ * Copyright (c)2019 ZeroTier, Inc.
  *
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
@@ -14,32 +14,28 @@
 #ifndef ZT_LINUX_NETLINK_HPP
 #define ZT_LINUX_NETLINK_HPP
 
-#include "../core/Constants.hpp"
+#include "../node/Constants.hpp"
 
 #ifdef __LINUX__
 
 #include <vector>
+#include <map>
+#include <set>
 
 #include <sys/socket.h>
 #include <asm/types.h>
 #include <linux/rtnetlink.h>
 #include <sys/socket.h>
-#include <linux/if.h>
+//#include <linux/if.h>
 
-#include "../core/InetAddress.hpp"
-#include "../core/MAC.hpp"
+#include "../node/InetAddress.hpp"
+#include "../node/MAC.hpp"
 #include "Thread.hpp"
-#include "../core/Mutex.hpp"
+#include "../node/Hashtable.hpp"
+#include "../node/Mutex.hpp"
+
 
 namespace ZeroTier {
-
-struct route_entry {
-	InetAddress target;
-	InetAddress via;
-	int if_index;
-	char iface[IFNAMSIZ];
-};
-typedef std::vector<route_entry> RouteList;
 
 /**
  * Interface with Linux's RTNETLINK
@@ -51,6 +47,41 @@ private:
 	~LinuxNetLink();
 
 public:
+	struct Route {
+		InetAddress target;
+		InetAddress via;
+		InetAddress src;
+		int ifidx;
+
+		inline bool operator==(const Route &r) const
+		{ return ((target == r.target)&&(via == r.via)&&(src == r.src)&&(ifidx == r.ifidx)); }
+		inline bool operator!=(const Route &r) const
+		{ return (!(*this == r)); }
+		inline bool operator<(const Route &r) const
+		{
+			if (target < r.target) {
+				return true;
+			} else if (target == r.target) {
+				if (via < r.via) {
+					return true;
+				} else if (via == r.via) {
+					if (src < r.src) {
+						return true;
+					} else if (src == r.src) {
+						return (ifidx < r.ifidx);
+					}
+				}
+			}
+			return false;
+		}
+		inline bool operator>(const Route &r) const
+		{ return (r < *this); }
+		inline bool operator<=(const Route &r) const
+		{ return !(r < *this); }
+		inline bool operator>=(const Route &r) const
+		{ return !(*this < r); }
+	};
+
 	static LinuxNetLink& getInstance()
 	{
 		static LinuxNetLink instance;
@@ -62,11 +93,11 @@ public:
 
 	void addRoute(const InetAddress &target, const InetAddress &via, const InetAddress &src, const char *ifaceName);
 	void delRoute(const InetAddress &target, const InetAddress &via, const InetAddress &src, const char *ifaceName);
-	RouteList getIPV4Routes() const;
-	RouteList getIPV6Routes() const;
 
 	void addAddress(const InetAddress &addr, const char *iface);
 	void removeAddress(const InetAddress &addr, const char *iface);
+
+	bool routeIsSet(const InetAddress &target, const InetAddress &via, const InetAddress &src, const char *ifname);
 
 	void threadMain() throw();
 
@@ -92,21 +123,21 @@ private:
 	Thread _t;
 	bool _running;
 
-	RouteList _routes_ipv4;
-	Mutex _rv4_m;
-	RouteList _routes_ipv6;
-	Mutex _rv6_m;
-
 	uint32_t _seq;
 
+	std::map< InetAddress,std::set<LinuxNetLink::Route> > _routes;
+	Mutex _routes_m;
+
 	struct iface_entry {
+		iface_entry()
+		{ memset(this,0,sizeof(iface_entry)); }
 		int index;
-		char ifacename[IFNAMSIZ];
+		char ifacename[16]; // IFNAMSIZ on Linux == 16
 		char mac[18];
 		char mac_bin[6];
 		unsigned int mtu;
 	};
-	std::map<int, iface_entry> _interfaces;
+	Hashtable<int, iface_entry> _interfaces;
 	Mutex _if_m;
 
 	// socket communication vars;
