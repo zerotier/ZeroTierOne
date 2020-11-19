@@ -68,6 +68,7 @@ private:
 	std::vector<MulticastGroup> _multicastGroups;
 	unsigned int _mtu;
 	int _fd;
+	int _shutdownSignalPipe[2];
 	std::atomic_bool _enabled;
 	std::thread _tapReaderThread;
 	std::thread _tapProcessorThread;
