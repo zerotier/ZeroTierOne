@@ -185,7 +185,7 @@ LinuxEthernetTap::LinuxEthernetTap(
 	(void)::pipe(_shutdownSignalPipe);
 
 	for(unsigned int t=0;t<2;++t) {
-		_tapReaderThread = std::thread([this, t]{
+		_tapReaderThread[t] = std::thread([this, t]{
 			fd_set readfds,nullfds;
 			int n,nfds,r;
 			void *buf = nullptr;
@@ -324,14 +324,15 @@ LinuxEthernetTap::LinuxEthernetTap(
 
 LinuxEthernetTap::~LinuxEthernetTap()
 {
-	(void)::write(_shutdownSignalPipe[1],"\0",1); // causes reader thread to exit
+	(void)::write(_shutdownSignalPipe[1],"\0",1); // causes reader thread(s) to exit
 	_tapq.post(std::pair<void *,int>(nullptr,0)); // causes processor thread to exit
 
 	::close(_fd);
 	::close(_shutdownSignalPipe[0]);
 	::close(_shutdownSignalPipe[1]);
 
-	_tapReaderThread.join();
+	_tapReaderThread[0].join();
+	_tapReaderThread[1].join();
 	_tapProcessorThread.join();
 
 	for(std::vector<void *>::iterator i(_buffers.begin());i!=_buffers.end();++i)
