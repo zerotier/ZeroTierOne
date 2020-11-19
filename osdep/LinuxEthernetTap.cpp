@@ -184,14 +184,14 @@ LinuxEthernetTap::LinuxEthernetTap(
 
 	(void)::pipe(_shutdownSignalPipe);
 
-	for(unsigned int t=0;t<2;++t) {
-		_tapReaderThread[t] = std::thread([this, t]{
+	for(unsigned int tn=0,tc=(unsigned int)std::thread::hardware_concurrency();tn<=tc;++tn) {
+		_tapReaderThreads.push_back(std::thread([this, tn]{
 			fd_set readfds,nullfds;
 			int n,nfds,r;
 			void *buf = nullptr;
 			std::vector<void *> buffers;
 
-			if (t == 0) {
+			if (tn == 0) {
 				struct ifreq ifr;
 				memset(&ifr,0,sizeof(ifr));
 				strcpy(ifr.ifr_name,_dev.c_str());
@@ -298,7 +298,7 @@ LinuxEthernetTap::LinuxEthernetTap(
 					}
 				}
 			}
-		});
+		}));
 	}
 
 	_tapProcessorThread = std::thread([this] {
@@ -331,8 +331,8 @@ LinuxEthernetTap::~LinuxEthernetTap()
 	::close(_shutdownSignalPipe[0]);
 	::close(_shutdownSignalPipe[1]);
 
-	_tapReaderThread[0].join();
-	_tapReaderThread[1].join();
+	for(std::vector<std::thread>::iterator t(_tapReaderThreads.begin());t!=_tapReaderThreads.end();++t)
+		t->join();
 	_tapProcessorThread.join();
 
 	for(std::vector<void *>::iterator i(_buffers.begin());i!=_buffers.end();++i)
