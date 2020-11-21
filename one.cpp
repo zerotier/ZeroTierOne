@@ -11,6 +11,10 @@
  */
 /****/
 
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1872,6 +1876,16 @@ int __cdecl _tmain(int argc, _TCHAR* argv[])
 int main(int argc,char **argv)
 #endif
 {
+#ifdef __LINUX__
+	// This corrects for systems with abnormally small defaults (musl) and also
+	// shrinks the stack on systems with large defaults to save a bit of memory.
+	pthread_attr_t tattr;
+	pthread_attr_init(&tattr);
+	pthread_attr_setstacksize(&tattr,1048576);
+	pthread_setattr_default_np(&tattr);
+	pthread_attr_destroy(&tattr);
+#endif
+
 #ifdef __UNIX_LIKE__
 	signal(SIGHUP,&_sighandlerHup);
 	signal(SIGPIPE,SIG_IGN);
