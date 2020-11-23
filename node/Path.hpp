@@ -467,6 +467,32 @@ public:
 		_packetsOut = 0;
 	}
 
+
+	/**
+	 * The mean latency (computed from a sliding window.)
+	 */
+	float latencyMean() { return _latencyMean; }
+
+	/**
+	 * Packet delay variance (computed from a sliding window.)
+	 */
+	float latencyVariance() { return _latencyVariance; }
+
+	/**
+	 * The ratio of lost packets to received packets.
+	 */
+	float packetLossRatio() { return _packetLossRatio; }
+
+	/**
+	 * The ratio of packets that failed their MAC/CRC checks to those that did not.
+	 */
+	float packetErrorRatio() { return _packetErrorRatio; }
+
+	/**
+	*
+	*/
+	uint8_t allocation() { return _allocation; }
+
 private:
 
 	volatile int64_t _lastOut;

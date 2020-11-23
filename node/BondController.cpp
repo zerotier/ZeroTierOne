@@ -76,6 +76,12 @@ bool BondController::assignBondingPolicyToPeer(int64_t identity, const std::stri
 	return false;
 }
 
+SharedPtr<Bond> BondController::getBondByPeerId(int64_t identity)
+{
+	Mutex::Lock _l(_bonds_m);
+	return _bonds.count(identity) ? _bonds[identity] : SharedPtr<Bond>();
+}
+
 SharedPtr<Bond> BondController::createTransportTriggeredBond(const RuntimeEnvironment *renv, const SharedPtr<Peer>& peer)
 {
 	Mutex::Lock _l(_bonds_m);

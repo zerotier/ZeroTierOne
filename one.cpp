@@ -491,6 +491,198 @@ static int cli(int argc,char **argv)
 			printf("%u %s %s" ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
 			return 1;
 		}
+	} else if (command == "bond") {
+		/* zerotier-cli bond */
+		if (arg1.empty()) {
+			printf("(bond) command is missing required arugments" ZT_EOL_S);
+			return 2;
+		}
+		/* zerotier-cli bond list */
+		if (arg1 == "list") {
+			fprintf(stderr, "zerotier-cli bond list\n");
+			const unsigned int scode = Http::GET(1024 * 1024 * 16,60000,(const struct sockaddr *)&addr,"/bonds",requestHeaders,responseHeaders,responseBody);
+			if (scode == 0) {
+				printf("Error connecting to the ZeroTier service: %s\n\nPlease check that the service is running and that TCP port 9993 can be contacted via 127.0.0.1." ZT_EOL_S, responseBody.c_str());
+				return 1;
+			}
+			nlohmann::json j;
+			try {
+				j = OSUtils::jsonParse(responseBody);
+			} catch (std::exception &exc) {
+				printf("%u %s invalid JSON response (%s)" ZT_EOL_S,scode,command.c_str(),exc.what());
+				return 1;
+			} catch ( ... ) {
+				printf("%u %s invalid JSON response (unknown exception)" ZT_EOL_S,scode,command.c_str());
+				return 1;
+			}
+			if (scode == 200) {
+				if (json) {
+					printf("%s" ZT_EOL_S,OSUtils::jsonDump(j).c_str());
+				} else {
+					bool bFoundBond = false;
+					printf("    <peer>                        <bondtype>    <status>    <links>" ZT_EOL_S);
+					if (j.is_array()) {
+						for(unsigned long k=0;k<j.size();++k) {
+							nlohmann::json &p = j[k];
+							bool isBonded = p["isBonded"];
+							int8_t bondingPolicy = p["bondingPolicy"];
+							bool isHealthy = p["isHealthy"];
+							int8_t numAliveLinks = p["numAliveLinks"];
+							int8_t numTotalLinks = p["numTotalLinks"];
+							if (isBonded) {
+								bFoundBond = true;
+								std::string healthStr;
+								if (isHealthy) {
+									healthStr = "HEALTHY";
+								} else {
+									healthStr = "DEGRADED";
+								}
+								std::string policyStr = "none";
+								if (bondingPolicy >= ZT_BONDING_POLICY_NONE && bondingPolicy <= ZT_BONDING_POLICY_BALANCE_AWARE) {
+									policyStr = BondController::getPolicyStrByCode(bondingPolicy);
+								}
+								printf("%10s  %32s    %8s        %d/%d" ZT_EOL_S,
+									OSUtils::jsonString(p ["address"],"-").c_str(),
+									policyStr.c_str(),
+									healthStr.c_str(),
+									numAliveLinks,
+									numTotalLinks);
+							}
+						}
+					}
+					if (!bFoundBond) {
+						printf("      NONE\t\t\t\tNONE\t    NONE       NONE" ZT_EOL_S);
+					}
+				}
+				return 0;
+			} else {
+				printf("%u %s %s" ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
+				return 1;
+			}
+		}
+		else if (arg1.length() == 10) { /* zerotier-cli bond <peerId> enable */
+			if (arg2 == "enable") {
+				fprintf(stderr, "zerotier-cli bond <peerId> enable\n");
+				return 0;
+			}
+			if (arg2 == "rotate") { /* zerotier-cli bond <peerId> rotate */
+				fprintf(stderr, "zerotier-cli bond <peerId> rotate\n");
+				requestHeaders["Content-Type"] = "application/json";
+				requestHeaders["Content-Length"] = "2";
+				unsigned int scode = Http::POST(
+					1024 * 1024 * 16,
+					60000,
+					(const struct sockaddr *)&addr,
+					(std::string("/bond/") + arg2 + "/" + arg1).c_str(),
+					requestHeaders,
+					"{}",
+					2,
+					responseHeaders,
+					responseBody);
+				if (scode == 200) {
+					if (json) {
+						printf("%s",cliFixJsonCRs(responseBody).c_str());
+					} else {
+						printf("200 bond OK" ZT_EOL_S);
+					}
+					return 0;
+				} else {
+					printf("%u %s %s" ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
+					return 1;
+				}
+				return 0;
+			}
+			if (arg2 == "show") {
+				//fprintf(stderr, "zerotier-cli bond <peerId> show\n");
+				const unsigned int scode = Http::GET(
+					1024 * 1024 * 16,60000,
+					(const struct sockaddr *)&addr,(std::string("/bond/") + arg2 + "/" + arg1).c_str(),
+					requestHeaders,
+					responseHeaders,
+					responseBody);
+				if (scode == 0) {
+					printf("Error connecting to the ZeroTier service: %s\n\nPlease check that the service is running and that TCP port 9993 can be contacted via 127.0.0.1." ZT_EOL_S, responseBody.c_str());
+					return 1;
+				}
+				nlohmann::json j;
+				try {
+					j = OSUtils::jsonParse(responseBody);
+				} catch (std::exception &exc) {
+					printf("%u %s invalid JSON response (%s)" ZT_EOL_S,scode,command.c_str(),exc.what());
+					return 1;
+				} catch ( ... ) {
+					printf("%u %s invalid JSON response (unknown exception)" ZT_EOL_S,scode,command.c_str());
+					return 1;
+				}
+				if (scode == 200) {
+					if (json) {
+						printf("%s" ZT_EOL_S,OSUtils::jsonDump(j).c_str());
+					} else {
+						bool bFoundBond = false;
+						std::string healthStr;
+						if (OSUtils::jsonInt(j["isHealthy"],0)) {
+							healthStr = "Healthy";
+						} else {
+							healthStr = "Degraded";
+						}
+						int numAliveLinks = OSUtils::jsonInt(j["numAliveLinks"],0);
+						int numTotalLinks = OSUtils::jsonInt(j["numTotalLinks"],0);
+						printf("Peer               : %s\n", arg1.c_str());
+						printf("Bond               : %s\n", OSUtils::jsonString(j["bondingPolicy"],"-").c_str());
+						//if (bondingPolicy == ZT_BONDING_POLICY_ACTIVE_BACKUP) {
+						printf("Link Select Method : %d\n", OSUtils::jsonInt(j["linkSelectMethod"],0));
+						//}
+						printf("Status             : %s\n", healthStr.c_str());
+						printf("Links              : %d/%d\n", numAliveLinks, numTotalLinks);
+						printf("Failover Interval  : %d (ms)\n", OSUtils::jsonInt(j["failoverInterval"],0));
+						printf("Up Delay           : %d (ms)\n", OSUtils::jsonInt(j["upDelay"],0));
+						printf("Down Delay         : %d (ms)\n", OSUtils::jsonInt(j["downDelay"],0));
+						printf("Packets Per Link   : %d (ms)\n", OSUtils::jsonInt(j["packetsPerLink"],0));
+						nlohmann::json &p = j["links"];
+						if (p.is_array()) {
+							printf("\n     Interface Name\t\t\t\t\t     Path\t Alive\n");
+							for(int i=0; i<80; i++) { printf("-"); }
+							printf("\n");
+							for (int i=0; i<p.size(); i++)
+							{
+								printf("[%d] %15s %45s %12d\n",
+									i,
+									OSUtils::jsonString(p[i]["ifname"],"-").c_str(),
+									OSUtils::jsonString(p[i]["path"],"-").c_str(),
+									OSUtils::jsonInt(p[i]["alive"],0));
+							}
+							printf("\n        Latency     Jitter     Loss     Error        Speed   Alloc\n");
+							for(int i=0; i<80; i++) { printf("-"); }
+							printf("\n");
+							for (int i=0; i<p.size(); i++)
+							{
+								printf("[%d]       %5.3f      %5.3f    %5.3f     %5.3f     %8d   %5d\n",
+									i,
+									OSUtils::jsonDouble(p[i]["latencyMean"], 0),
+									OSUtils::jsonDouble(p[i]["latencyVariance"], 0),
+									OSUtils::jsonDouble(p[i]["packetLossRatio"], 0),
+									OSUtils::jsonDouble(p[i]["packetErrorRatio"], 0),
+									OSUtils::jsonInt(p[i]["givenLinkSpeed"], 0),
+									OSUtils::jsonInt(p[i]["allocation"], 0));
+							}
+						}
+					}
+					return 0;
+				} else {
+					printf("%u %s %s" ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
+					return 1;
+				}
+				return 2;
+			}
+		}
+		/* zerotier-cli bond command was malformed in some way */
+		printf("(bond) command is missing required arugments" ZT_EOL_S);
+		return 2;
+		const unsigned int scode = Http::GET(1024 * 1024 * 16,60000,(const struct sockaddr *)&addr,"/bonds",requestHeaders,responseHeaders,responseBody);
+		if (scode == 0) {
+			printf("Error connecting to the ZeroTier service: %s\n\nPlease check that the service is running and that TCP port 9993 can be contacted via 127.0.0.1." ZT_EOL_S, responseBody.c_str());
+			return 1;
+		}
 	} else if (command == "listbonds") {
 		const unsigned int scode = Http::GET(1024 * 1024 * 16,60000,(const struct sockaddr *)&addr,"/bonds",requestHeaders,responseHeaders,responseBody);
 
@@ -530,9 +722,9 @@ static int cli(int argc,char **argv)
 							bFoundBond = true;
 							std::string healthStr;
 							if (isHealthy) {
-								healthStr = "HEALTHY";
+								healthStr = "Healthy";
 							} else {
-								healthStr = "DEGRADED";
+								healthStr = "Degraded";
 							}
 							std::string policyStr = "none";
 							if (bondingPolicy >= ZT_BONDING_POLICY_NONE && bondingPolicy <= ZT_BONDING_POLICY_BALANCE_AWARE) {
@@ -540,7 +732,7 @@ static int cli(int argc,char **argv)
 							}
 
 							printf("%10s  %32s    %8s        %d/%d" ZT_EOL_S,
-								OSUtils::jsonString(p ["address"],"-").c_str(),
+								OSUtils::jsonString(p["address"],"-").c_str(),
 								policyStr.c_str(),
 								healthStr.c_str(),
 								numAliveLinks,

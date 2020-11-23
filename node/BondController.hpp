@@ -128,6 +128,14 @@ public:
 	bool assignBondingPolicyToPeer(int64_t identity, const std::string& policyAlias);
 
 	/**
+	 * Get pointer to bond by a given peer ID
+	 *
+	 * @param peer Remote peer ID
+	 * @return A pointer to the Bond
+	 */
+	SharedPtr<Bond> getBondByPeerId(int64_t identity);
+
+	/**
 	 * Add a new bond to the bond controller.
 	 *
 	 * @param renv Runtime environment

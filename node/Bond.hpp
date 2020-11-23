@@ -437,6 +437,11 @@ public:
 	inline void setFailoverInterval(uint32_t interval) { _failoverInterval = interval; }
 
 	/**
+	 * @param interval Maximum amount of time user expects a failover to take on this bond.
+	 */
+	inline uint32_t getFailoverInterval() { return _failoverInterval; }
+
+	/**
 	 * @param strategy Strategy that the bond uses to re-assign protocol flows.
 	 */
 	inline void setFlowRebalanceStrategy(uint32_t strategy) { _flowRebalanceStrategy = strategy; }
@@ -445,6 +450,11 @@ public:
 	 * @param strategy Strategy that the bond uses to prob for path aliveness and quality
 	 */
 	inline void setLinkMonitorStrategy(uint8_t strategy) { _linkMonitorStrategy = strategy; }
+
+	/**
+	 * @param abOverflowEnabled Whether "overflow" mode is enabled for this active-backup bond
+	 */
+	inline void setOverflowMode(bool abOverflowEnabled) { _abOverflowEnabled = abOverflowEnabled; }
 
 	/**
 	 * @return the current up delay parameter
@@ -521,6 +531,11 @@ public:
 	inline void setPacketsPerLink(int packetsPerLink) { _packetsPerLink = packetsPerLink; }
 
 	/**
+	 * @return Number of packets to be sent on each interface in a balance-rr bond
+	 */
+	inline int getPacketsPerLink() { return _packetsPerLink; }
+
+	/**
 	 *
 	 * @param linkSelectMethod
 	 */
@@ -543,6 +558,15 @@ public:
 	 * @return
 	 */
 	inline bool allowPathNegotiation() { return _allowPathNegotiation; }
+
+	/**
+	 * Forcibly rotates the currently active link used in an active-backup bond to the next link in the failover queue
+	 *
+	 * @return True if this operation succeeded, false if otherwise
+	 */
+	bool abForciblyRotateLink();
+
+	SharedPtr<Peer> getPeer() { return _peer; }
 
 private:
 
@@ -587,6 +611,7 @@ private:
 	SharedPtr<Path> _abPath; // current active path
 	std::list<SharedPtr<Path> > _abFailoverQueue;
 	uint8_t _abLinkSelectMethod; // link re-selection policy for the primary link in active-backup
+	bool _abOverflowEnabled;
 
 	// balance-rr
 	uint8_t _rrIdx; // index to path currently in use during Round Robin operation
