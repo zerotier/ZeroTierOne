@@ -67,6 +67,7 @@ InetAddress::IpScope InetAddress::ipScope() const
 					break;
 				case 0xcb:
 					if ((ip & 0xffffff00) == 0xcb007100) return IP_SCOPE_PRIVATE;    // 203.0.113.0/24
+					break;
 				case 0xff: return IP_SCOPE_NONE;                                   // 255.0.0.0/8 (broadcast, or unused/unusable)
 			}
 			switch(ip >> 28) {
