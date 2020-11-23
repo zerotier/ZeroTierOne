@@ -296,40 +296,48 @@ static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer)
 	pj["paths"] = pa;
 }
 
-static void _peerBondToJson(nlohmann::json &pj,const ZT_Peer *peer)
+static void _bondToJson(nlohmann::json &pj, SharedPtr<Bond> &bond)
 {
 	char tmp[256];
-	OSUtils::ztsnprintf(tmp,sizeof(tmp),"%.10llx",peer->address);
-	//pj["aggregateLinkLatency"] = peer->latency;
-	std::string policyStr = BondController::getPolicyStrByCode(peer->bondingPolicy);
-	pj["policy"] = policyStr;
+	uint64_t now = OSUtils::now();
+
+	int bondingPolicy = bond->getPolicy();
+	pj["bondingPolicy"] = BondController::getPolicyStrByCode(bondingPolicy);
+	if (bondingPolicy == ZT_BONDING_POLICY_NONE) {
+		return;
+	}
+
+	pj["isHealthy"] = bond->isHealthy();
+	pj["numAliveLinks"] = bond->getNumAliveLinks();
+	pj["numTotalLinks"] = bond->getNumTotalLinks();
+	pj["failoverInterval"] = bond->getFailoverInterval();
+	pj["downDelay"] = bond->getDownDelay();
+	pj["upDelay"] = bond->getUpDelay();
+	if (bondingPolicy == ZT_BONDING_POLICY_BALANCE_RR) {
+		pj["packetsPerLink"] = bond->getPacketsPerLink();
+	}
+	if (bondingPolicy == ZT_BONDING_POLICY_ACTIVE_BACKUP) {
+		pj["linkSelectMethod"] = bond->getLinkSelectMethod();
+	}
 
 	nlohmann::json pa = nlohmann::json::array();
-	for(unsigned int i=0;i<peer->pathCount;++i) {
-		int64_t lastSend = peer->paths[i].lastSend;
-		int64_t lastReceive = peer->paths[i].lastReceive;
-		nlohmann::json j;
-		j["ifname"] = std::string(peer->paths[i].ifname);
-		j["path"] = reinterpret_cast<const InetAddress *>(&(peer->paths[i].address))->toString(tmp);
-		j["lastTX"] = (lastSend < 0) ? 0 : lastSend;
-		j["lastRX"] = (lastReceive < 0) ? 0 : lastReceive;
-		j["lat"] = peer->paths[i].latencyMean;
-		j["pdv"] = peer->paths[i].latencyVariance;
+	std::vector< SharedPtr<Path> > paths = bond->getPeer()->paths(now);
 
-		//j["trustedPathId"] = peer->paths[i].trustedPathId;
-		//j["active"] = (bool)(peer->paths[i].expired == 0);
-		//j["expired"] = (bool)(peer->paths[i].expired != 0);
-		//j["preferred"] = (bool)(peer->paths[i].preferred != 0);
-		//j["ltm"] = peer->paths[i].latencyMax;
-		//j["plr"] = peer->paths[i].packetLossRatio;
-		//j["per"] = peer->paths[i].packetErrorRatio;
-		//j["thr"] = peer->paths[i].throughputMean;
-		//j["thm"] = peer->paths[i].throughputMax;
-		//j["thv"] = peer->paths[i].throughputVariance;
-		//j["avl"] = peer->paths[i].availability;
-		//j["age"] = peer->paths[i].age;
-		//j["alloc"] = peer->paths[i].allocation;
-		//j["ifname"] = peer->paths[i].ifname;
+	for(unsigned int i=0;i<paths.size();++i) {
+		char pathStr[128];
+		paths[i]->address().toString(pathStr);
+
+		nlohmann::json j;
+		j["ifname"] = bond->getLink(paths[i])->ifname();
+		j["path"] = pathStr;
+		j["alive"] = paths[i]->alive(now,true);
+		j["bonded"] = paths[i]->bonded();
+		j["latencyMean"] = paths[i]->latencyMean();
+		j["latencyVariance"] = paths[i]->latencyVariance();
+		j["packetLossRatio"] = paths[i]->packetLossRatio();
+		j["packetErrorRatio"] = paths[i]->packetErrorRatio();
+		j["givenLinkSpeed"] = 1000;
+		j["allocation"] = paths[i]->allocation();
 		pa.push_back(j);
 	}
 	pj["links"] = pa;
@@ -1104,6 +1112,7 @@ public:
 	virtual void terminate()
 	{
 		_run_m.lock();
+
 		_run = false;
 		_run_m.unlock();
 		_phy.whack();
@@ -1230,9 +1239,34 @@ public:
 			}
 		}
 #endif
-
 		if (httpMethod == HTTP_GET) {
 			if (isAuth) {
+				if (ps[0] == "bond") {
+					if (_node->bondController()->inUse()) {
+						if (ps.size() == 3) {
+							//fprintf(stderr, "ps[0]=%s\nps[1]=%s\nps[2]=%s\n", ps[0].c_str(), ps[1].c_str(), ps[2].c_str());
+							if (ps[2].length() == 10) {
+								// check if hex string
+								const uint64_t id = Utils::hexStrToU64(ps[2].c_str());
+								if (ps[1] == "show") {
+									SharedPtr<Bond> bond = _node->bondController()->getBondByPeerId(id);
+									if (bond) {
+										_bondToJson(res,bond);
+										scode = 200;
+									} else {
+										fprintf(stderr, "unable to find bond to peer %llx\n", id);
+										scode = 400;
+									}
+								}
+								if (ps[1] == "flows") {
+									fprintf(stderr, "displaying flows\n");
+								}
+							}
+						}
+					} else {
+						scode = 400; /* bond controller is not enabled */
+					}
+				}
 				if (ps[0] == "status") {
 					ZT_NodeStatus status;
 					_node->status(&status);
@@ -1257,7 +1291,7 @@ public:
 					json &settings = res["config"]["settings"];
 					settings["primaryPort"] = OSUtils::jsonInt(settings["primaryPort"],(uint64_t)_primaryPort) & 0xffff;
 					settings["allowTcpFallbackRelay"] = OSUtils::jsonBool(settings["allowTcpFallbackRelay"],_allowTcpFallbackRelay);
-
+/*
 					if (_node->bondController()->inUse()) {
 						json &multipathConfig = res["bonds"];
 						ZT_PeerList *pl = _node->peers();
@@ -1266,13 +1300,14 @@ public:
 							for(unsigned long i=0;i<pl->peerCount;++i) {
 								if (pl->peers[i].isBonded) {
 									nlohmann::json pj;
-									_peerBondToJson(pj,&(pl->peers[i]));
+									_bondToJson(pj,&(pl->peers[i]));
 									OSUtils::ztsnprintf(peerAddrStr,sizeof(peerAddrStr),"%.10llx",pl->peers[i].address);
 									multipathConfig[peerAddrStr] = (pj);
 								}
 							}
 						}
 					}
+*/
 
 #ifdef ZT_USE_MINIUPNPC
 					settings["portMappingEnabled"] = OSUtils::jsonBool(settings["portMappingEnabled"],true);
@@ -1413,8 +1448,32 @@ public:
 
 			} else scode = 401; // isAuth == false
 		} else if ((httpMethod == HTTP_POST)||(httpMethod == HTTP_PUT)) {
-			if (isAuth) {
-
+ 			if (isAuth) {
+				if (ps[0] == "bond") {
+					if (_node->bondController()->inUse()) {
+						if (ps.size() == 3) {
+							//fprintf(stderr, "ps[0]=%s\nps[1]=%s\nps[2]=%s\n", ps[0].c_str(), ps[1].c_str(), ps[2].c_str());
+							if (ps[2].length() == 10) {
+								// check if hex string
+								const uint64_t id = Utils::hexStrToU64(ps[2].c_str());
+								if (ps[1] == "rotate") {
+									SharedPtr<Bond> bond = _node->bondController()->getBondByPeerId(id);
+									if (bond) {
+										scode = bond->abForciblyRotateLink() ? 200 : 400;
+									} else {
+										fprintf(stderr, "unable to find bond to peer %llx\n", id);
+										scode = 400;
+									}
+								}
+								if (ps[1] == "enable") {
+									fprintf(stderr, "enabling bond\n");
+								}
+							}
+						}
+					} else {
+						scode = 400; /* bond controller is not enabled */
+					}
+				}
 				if (ps[0] == "moon") {
 					if (ps.size() == 2) {
 
@@ -1644,6 +1703,9 @@ public:
 				std::string customPolicyStr(policyItr.key());
 				json &customPolicy = policyItr.value();
 				std::string basePolicyStr(OSUtils::jsonString(customPolicy["basePolicy"],""));
+				if (basePolicyStr.empty()) {
+					fprintf(stderr, "error: no base policy was specified for custom policy (%s)\n", customPolicyStr.c_str());
+				}
 				if (_node->bondController()->getPolicyCodeByStr(basePolicyStr) == ZT_BONDING_POLICY_NONE) {
 					fprintf(stderr, "error: custom policy (%s) is invalid, unknown base policy (%s).\n",
 						customPolicyStr.c_str(), basePolicyStr.c_str());
@@ -1677,6 +1739,7 @@ public:
 					newTemplateBond->setUserQualityWeights(weights,ZT_QOS_WEIGHT_SIZE);
 				}
 				// Bond-specific properties
+				newTemplateBond->setOverflowMode(OSUtils::jsonInt(customPolicy["overflow"],false));
 				newTemplateBond->setUpDelay(OSUtils::jsonInt(customPolicy["upDelay"],-1));
 				newTemplateBond->setDownDelay(OSUtils::jsonInt(customPolicy["downDelay"],-1));
 				newTemplateBond->setFlowRebalanceStrategy(OSUtils::jsonInt(customPolicy["flowRebalanceStrategy"],(uint64_t)0));

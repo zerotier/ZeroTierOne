@@ -233,12 +233,10 @@ void Bond::recordOutgoingPacket(const SharedPtr<Path> &path, const uint64_t pack
 			}
 		}
 	}
-	if (_allowFlowHashing) {
-		if (_allowFlowHashing && (flowId != ZT_QOS_NO_FLOW)) {
-			Mutex::Lock _l(_flows_m);
-			if (_flows.count(flowId)) {
-				_flows[flowId]->recordOutgoingBytes(payloadLength);
-			}
+	if (_allowFlowHashing && (flowId != ZT_QOS_NO_FLOW)) {
+		Mutex::Lock _l(_flows_m);
+		if (_flows.count(flowId)) {
+			_flows[flowId]->recordOutgoingBytes(payloadLength);
 		}
 	}
 }
@@ -413,6 +411,16 @@ bool Bond::assignFlowToBondedPath(SharedPtr<Flow> &flow, int64_t now)
 		}
 		else {
 			fprintf(stderr, "could not assign flow?\n"); exit(0); // TODO: Remove for production
+			return false;
+		}
+	}
+	if (_bondingPolicy == ZT_BONDING_POLICY_ACTIVE_BACKUP) {
+		if (_abOverflowEnabled) {
+				flow->assignPath(_abPath, now);
+		} else {
+			sprintf(traceMsg, "%s (bond) Unable to assign outgoing flow %x to peer %llx, no active overflow link",
+				OSUtils::humanReadableTimestamp().c_str(), flow->id(), _peer->_id.address().toInt());
+			RR->t->bondStateMessage(NULL, traceMsg);
 			return false;
 		}
 	}
@@ -1164,18 +1172,13 @@ void Bond::processBalanceTasks(const int64_t now)
 	 * Tasks specific to (Balance Round Robin)
 	 */
 	if (_bondingPolicy == ZT_BONDING_POLICY_BALANCE_RR) {
-		if (_allowFlowHashing) {
-			// TODO: Should ideally failover from (idx) to a random link, this is so that (idx+1) isn't overloaded
-		}
-		else if (!_allowFlowHashing) {
-			// Nothing
-		}
+		// Nothing
 	}
 	/**
 	 * Tasks specific to (Balance XOR)
 	 */
 	if (_bondingPolicy == ZT_BONDING_POLICY_BALANCE_XOR) {
-		// Nothing specific for XOR
+		// Nothing
 	}
 	/**
 	 * Tasks specific to (Balance Aware)
@@ -1247,6 +1250,29 @@ void Bond::dequeueNextActiveBackupPath(const uint64_t now)
 	}
 }
 
+bool Bond::abForciblyRotateLink()
+{
+	char traceMsg[256];
+	char prevPathStr[128];
+	char curPathStr[128];
+	if (_bondingPolicy == ZT_BONDING_POLICY_ACTIVE_BACKUP) {
+		SharedPtr<Path> prevPath = _abPath;
+		_abPath->address().toString(prevPathStr);
+		dequeueNextActiveBackupPath(RR->node->now());
+		_abPath->address().toString(curPathStr);
+		sprintf(traceMsg, "%s (active-backup) Forcibly rotating peer %llx link from %s/%s to %s/%s",
+			OSUtils::humanReadableTimestamp().c_str(),
+			_peer->_id.address().toInt(),
+			getLink(prevPath)->ifname().c_str(),
+			prevPathStr,
+			getLink(_abPath)->ifname().c_str(),
+			curPathStr);
+		RR->t->bondStateMessage(NULL, traceMsg);
+		return true;
+	}
+	return false;
+}
+
 void Bond::processActiveBackupTasks(void *tPtr, const int64_t now)
 {
 	char traceMsg[256];
@@ -1309,9 +1335,9 @@ void Bond::processActiveBackupTasks(void *tPtr, const int64_t now)
 			}
 		}
 		/**
-	 	 * [Manual mode]
-	 	 * The user has specified links or failover rules that the bonding policy should adhere to.
-	 	 */
+		 * [Manual mode]
+		 * The user has specified links or failover rules that the bonding policy should adhere to.
+		 */
 		else if (userHasSpecifiedLinks()) {
 			if (userHasSpecifiedPrimaryLink()) {
 				//sprintf(traceMsg, "%s (active-backup) Checking local.conf for user-specified primary link\n", OSUtils::humanReadableTimestamp().c_str());
@@ -1514,7 +1540,7 @@ void Bond::processActiveBackupTasks(void *tPtr, const int64_t now)
 					if (!bFoundPathInQueue) {
 						_abFailoverQueue.push_front(_paths[i]);
 						_paths[i]->address().toString(curPathStr);
-						sprintf(traceMsg, "%s (active-backup) Added link %s/%s to peer %llx, there are %zu links in the queue",
+						sprintf(traceMsg, "%s (active-backup) Added link %s/%s to peer %llx to failover queue, there are %zu links in the queue",
 							OSUtils::humanReadableTimestamp().c_str(), getLink(_paths[i])->ifname().c_str(), curPathStr, _peer->_id.address().toInt(), _abFailoverQueue.size());
 						RR->t->bondStateMessage(NULL, traceMsg);
 					}
@@ -1754,7 +1780,7 @@ void Bond::setReasonableDefaults(int policy, SharedPtr<Bond> templateBond, bool 
 	them onto the defaults that were previously set */
 	if (useTemplate) {
 		_policyAlias = templateBond->_policyAlias;
-		_failoverInterval = templateBond->_failoverInterval;
+		_failoverInterval = templateBond->_failoverInterval >= 250 ? templateBond->_failoverInterval : _failoverInterval;
 		_downDelay = templateBond->_downDelay;
 		_upDelay = templateBond->_upDelay;
 		if (templateBond->_linkMonitorStrategy == ZT_MULTIPATH_SLAVE_MONITOR_STRATEGY_PASSIVE
