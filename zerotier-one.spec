@@ -43,18 +43,21 @@ like conventional VPNs or VLANs. It can run on native systems, VMs, or
 containers (Docker, OpenVZ, etc.).
 
 %prep
-#rm -rf *
-#ln -s %{getenv:PWD} %{name}-%{version}
-#tar --exclude=%{name}-%{version}/.git --exclude=%{name}-%{version}/%{name}-%{version} -czf %{_sourcedir}/%{name}-%{version}.tar.gz %{name}-%{version}/*
-#rm -f %{name}-%{version}
-#cp -a %{getenv:PWD}/* .
+%if 0%{?rhel} >= 7
+rm -rf *
+ln -s %{getenv:PWD} %{name}-%{version}
+tar --exclude=%{name}-%{version}/.git --exclude=%{name}-%{version}/%{name}-%{version} -czf %{_sourcedir}/%{name}-%{version}.tar.gz %{name}-%{version}/*
+rm -f %{name}-%{version}
+cp -a %{getenv:PWD}/* .
+%endif
 
 %build
 #%if 0%{?rhel} <= 7
 #make CFLAGS="`echo %{optflags} | sed s/stack-protector-strong/stack-protector/`" CXXFLAGS="`echo %{optflags} | sed s/stack-protector-strong/stack-protector/`" ZT_USE_MINIUPNPC=1 %{?_smp_mflags} one manpages selftest
 #%else
-#make CFLAGS="%{optflags}" CXXFLAGS="%{optflags}" ZT_USE_MINIUPNPC=1 %{?_smp_mflags} one manpages selftest
-#%endif
+%if 0%{?rhel} >= 7
+make ZT_USE_MINIUPNPC=1 %{?_smp_mflags} one
+%endif
 
 %pre
 %if 0%{?rhel} >= 7
@@ -66,9 +69,13 @@ containers (Docker, OpenVZ, etc.).
 
 %install
 rm -rf $RPM_BUILD_ROOT
+%if 0%{?rhel} < 7
 pushd %{getenv:PWD}
+%endif
 make install DESTDIR=$RPM_BUILD_ROOT
+%if 0%{?rhel} < 7
 popd
+%endif
 %if 0%{?rhel} >= 7
 mkdir -p $RPM_BUILD_ROOT%{_unitdir}
 cp %{getenv:PWD}/debian/zerotier-one.service $RPM_BUILD_ROOT%{_unitdir}/%{name}.service
@@ -155,9 +162,6 @@ esac
 - see https://github.com/zerotier/ZeroTierOne for release notes
 
 * Fri Aug 23 2019 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.4.4-0.1
-- see https://github.com/zerotier/ZeroTierOne for release notes
-
-* Mon Aug 04 2019 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.4.2-0.1
 - see https://github.com/zerotier/ZeroTierOne for release notes
 
 * Mon Jul 29 2019 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.4.0-0.1
