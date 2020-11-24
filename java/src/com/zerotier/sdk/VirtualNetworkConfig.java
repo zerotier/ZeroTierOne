@@ -152,7 +152,9 @@ public final class VirtualNetworkConfig implements Comparable<VirtualNetworkConf
         }
 
         boolean dnsEquals = false;
-        if (this.dns != null && cfg.dns != null) {
+        if (this.dns == null || cfg.dns == null) {
+            dnsEquals = true;
+        } else if (this.dns != null) {
             dnsEquals = this.dns.equals(cfg.dns);
         }
 
