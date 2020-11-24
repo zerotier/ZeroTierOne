@@ -1,7 +1,7 @@
 Name:           zerotier-one
-Version:        1.6.0
+Version:        1.6.1
 Release:        1%{?dist}
-Summary:        ZeroTier One network virtualization service
+Summary:        ZeroTier network virtualization service
 
 License:        ZeroTier BSL 1.1
 URL:            https://www.zerotier.com
@@ -37,7 +37,7 @@ It can be used for on-premise network virtualization, as a peer to peer VPN
 for mobile teams, for hybrid or multi-data-center cloud deployments, or just
 about anywhere else secure software defined virtual networking is useful.
 
-ZeroTier One is our OS-level client service. It allows Mac, Linux, Windows,
+This is our OS-level client service. It allows Mac, Linux, Windows,
 FreeBSD, and soon other types of clients to join ZeroTier virtual networks
 like conventional VPNs or VLANs. It can run on native systems, VMs, or
 containers (Docker, OpenVZ, etc.).
@@ -145,6 +145,9 @@ esac
 %endif
 
 %changelog
+* Tue Nov 24 2020 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.6.1-0.1
+- see https://github.com/zerotier/ZeroTierOne for release notes
+
 * Thu Nov 19 2020 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.6.0-0.1
 - see https://github.com/zerotier/ZeroTierOne for release notes
 

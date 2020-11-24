@@ -1,12 +1,15 @@
 ZeroTier Release Notes
 ======
 
-# ??? -- Version 1.6.1
+# 2020-11-24 -- Version 1.6.1
+
+This release fixes some minor bugs and other issues in 1.6.0.
 
  * Fixed a bug that caused IP addresses in the 203.0.0.0/8 block to be miscategorized as not being in global scope.
  * Changed Linux builds to (hopefully) fix LXC and SELinux issues.
  * Fixed unaligned memory access that caused crash on FreeBSD systems on the ARM architecture.
  * Merged CLI options for controlling bonded devices into the beta multipath code.
+ * Updated Windows driver with Microsoft cross-signing to fix issues on some Windows systems.
 
 # 2020-11-19 -- Version 1.6.0
 
