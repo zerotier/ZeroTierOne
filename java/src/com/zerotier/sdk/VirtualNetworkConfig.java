@@ -151,6 +151,13 @@ public final class VirtualNetworkConfig implements Comparable<VirtualNetworkConf
             }
         }
 
+        boolean dnsEquals = false;
+        if (this.dns == null || cfg.dns == null) {
+            dnsEquals = true;
+        } else if (this.dns != null) {
+            dnsEquals = this.dns.equals(cfg.dns);
+        }
+
         return this.nwid == cfg.nwid &&
                this.mac == cfg.mac &&
                this.name.equals(cfg.name) &&
@@ -162,7 +169,7 @@ public final class VirtualNetworkConfig implements Comparable<VirtualNetworkConf
                this.broadcastEnabled == cfg.broadcastEnabled &&
                this.portError == cfg.portError &&
                this.enabled == cfg.enabled &&
-               this.dns.equals(cfg.dns) &&
+               dnsEquals &&
                aaEqual && routesEqual;
     }
 
