@@ -63,7 +63,7 @@
 // Duplicates the functionality of OpenVPN's
 // --allow-nonadmin directive.
 //========================================================
-#define ENABLE_NONADMIN 1
+#define ENABLE_NONADMIN 0
 
 //
 // The driver has exactly one instance of the TAP_GLOBAL structure.  NDIS keeps

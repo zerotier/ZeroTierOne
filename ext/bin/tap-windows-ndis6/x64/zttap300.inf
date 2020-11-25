@@ -30,11 +30,11 @@ CatalogFile = zttap300.cat
 ClassGUID = {4d36e972-e325-11ce-bfc1-08002be10318}
 Provider = %Provider%
 Class = Net
-DriverVer=08/13/2015,6.2.9200.20557
+DriverVer=11/24/2020,3.00.00.1
 
 [Strings]
-DeviceDescription = "ZeroTier One Virtual Port"
-Provider = "ZeroTier Networks LLC" ; We're ZeroTier, Inc. now but kernel mode certs are $300+ so fuqdat.
+DeviceDescription = "ZeroTier Virtual Port"
+Provider = "ZeroTier"
 
 ; To build for x86, take NTamd64 off this and off the named section manually, build, then put it back!
 [Manufacturer]
@@ -140,4 +140,5 @@ zttap300.driver = 12
 
 [zttap300.driver]
 zttap300.sys,,,6     ; COPYFLG_NOSKIP | COPYFLG_NOVERSIONCHECK
+
 
