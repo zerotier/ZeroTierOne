@@ -3027,11 +3027,17 @@ public:
 		if ((ifname[0] == 't') && (ifname[1] == 'a') && (ifname[2] == 'p')) return false; // tap# is probably an OpenVPN tunnel or similar
 		if ((ifname[0] == 'u') && (ifname[1] == 't') && (ifname[2] == 'u') && (ifname[3] == 'n')) return false; // ... as is utun#
 #endif
+
 #ifdef _WIN32
 		if ((ifname[0] == 'Z') && (ifname[1] == 'e') && (ifname[2] == 'r') && ifname[3] == 'o' &&
 			(ifname[4] == 'T') && (ifname[5] == 'i') && (ifname[6] == 'e') && (ifname[7] == 'r')) {
 			return false;
 		}
+#endif
+
+#ifdef __FreeBSD__
+		if ((ifname[0] == 'l') && (ifname[1] == 'o')) return false; // loopback
+		if ((ifname[0] == 'z') && (ifname[1] == 't')) return false; // sanity check: zt#
 #endif
 
 		{
