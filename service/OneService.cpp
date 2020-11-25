@@ -2932,9 +2932,9 @@ public:
 		return 1;
 	}
 
-	inline int nodePathLookupFunction(uint64_t ztaddr,int family,struct sockaddr_storage *result)
+	inline int nodePathLookupFunction(uint64_t ztaddr, int family, struct sockaddr_storage* result)
 	{
-		const Hashtable< uint64_t,std::vector<InetAddress> > *lh = (const Hashtable< uint64_t,std::vector<InetAddress> > *)0;
+		const Hashtable< uint64_t, std::vector<InetAddress> >* lh = (const Hashtable< uint64_t, std::vector<InetAddress> > *)0;
 		if (family < 0)
 			lh = (_node->prng() & 1) ? &_v4Hints : &_v6Hints;
 		else if (family == AF_INET)
@@ -2942,19 +2942,20 @@ public:
 		else if (family == AF_INET6)
 			lh = &_v6Hints;
 		else return 0;
-		const std::vector<InetAddress> *l = lh->get(ztaddr);
-		if ((l)&&(!l->empty())) {
-			memcpy(result,&((*l)[(unsigned long)_node->prng() % l->size()]),sizeof(struct sockaddr_storage));
+		const std::vector<InetAddress>* l = lh->get(ztaddr);
+		if ((l) && (!l->empty())) {
+			memcpy(result, &((*l)[(unsigned long)_node->prng() % l->size()]), sizeof(struct sockaddr_storage));
 			return 1;
-		} else return 0;
+		}
+		else return 0;
 	}
 
-	inline void tapFrameHandler(uint64_t nwid,const MAC &from,const MAC &to,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
+	inline void tapFrameHandler(uint64_t nwid, const MAC& from, const MAC& to, unsigned int etherType, unsigned int vlanId, const void* data, unsigned int len)
 	{
-		_node->processVirtualNetworkFrame((void *)0,OSUtils::now(),nwid,from.toInt(),to.toInt(),etherType,vlanId,data,len,&_nextBackgroundTaskDeadline);
+		_node->processVirtualNetworkFrame((void*)0, OSUtils::now(), nwid, from.toInt(), to.toInt(), etherType, vlanId, data, len, &_nextBackgroundTaskDeadline);
 	}
 
-	inline void onHttpRequestToServer(TcpConnection *tc)
+	inline void onHttpRequestToServer(TcpConnection* tc)
 	{
 		char tmpn[4096];
 		std::string data;
@@ -2965,29 +2966,31 @@ public:
 		// phyOnTcpData(). If we made it here the source IP is okay.
 
 		try {
-			scode = handleControlPlaneHttpRequest(tc->remoteAddr,tc->parser.method,tc->url,tc->headers,tc->readq,data,contentType);
-		} catch (std::exception &exc) {
-			fprintf(stderr,"WARNING: unexpected exception processing control HTTP request: %s" ZT_EOL_S,exc.what());
+			scode = handleControlPlaneHttpRequest(tc->remoteAddr, tc->parser.method, tc->url, tc->headers, tc->readq, data, contentType);
+		}
+		catch (std::exception& exc) {
+			fprintf(stderr, "WARNING: unexpected exception processing control HTTP request: %s" ZT_EOL_S, exc.what());
 			scode = 500;
-		} catch ( ... ) {
-			fprintf(stderr,"WARNING: unexpected exception processing control HTTP request: unknown exception" ZT_EOL_S);
+		}
+		catch (...) {
+			fprintf(stderr, "WARNING: unexpected exception processing control HTTP request: unknown exception" ZT_EOL_S);
 			scode = 500;
 		}
 
-		const char *scodestr;
-		switch(scode) {
-			case 200: scodestr = "OK"; break;
-			case 400: scodestr = "Bad Request"; break;
-			case 401: scodestr = "Unauthorized"; break;
-			case 403: scodestr = "Forbidden"; break;
-			case 404: scodestr = "Not Found"; break;
-			case 500: scodestr = "Internal Server Error"; break;
-			case 501: scodestr = "Not Implemented"; break;
-			case 503: scodestr = "Service Unavailable"; break;
-			default: scodestr = "Error"; break;
+		const char* scodestr;
+		switch (scode) {
+		case 200: scodestr = "OK"; break;
+		case 400: scodestr = "Bad Request"; break;
+		case 401: scodestr = "Unauthorized"; break;
+		case 403: scodestr = "Forbidden"; break;
+		case 404: scodestr = "Not Found"; break;
+		case 500: scodestr = "Internal Server Error"; break;
+		case 501: scodestr = "Not Implemented"; break;
+		case 503: scodestr = "Service Unavailable"; break;
+		default: scodestr = "Error"; break;
 		}
 
-		OSUtils::ztsnprintf(tmpn,sizeof(tmpn),"HTTP/1.1 %.3u %s\r\nCache-Control: no-cache\r\nPragma: no-cache\r\nContent-Type: %s\r\nContent-Length: %lu\r\nConnection: close\r\n\r\n",
+		OSUtils::ztsnprintf(tmpn, sizeof(tmpn), "HTTP/1.1 %.3u %s\r\nCache-Control: no-cache\r\nPragma: no-cache\r\nContent-Type: %s\r\nContent-Length: %lu\r\nConnection: close\r\n\r\n",
 			scode,
 			scodestr,
 			contentType.c_str(),
@@ -2999,30 +3002,36 @@ public:
 				tc->writeq.append(data);
 		}
 
-		_phy.setNotifyWritable(tc->sock,true);
+		_phy.setNotifyWritable(tc->sock, true);
 	}
 
-	inline void onHttpResponseFromClient(TcpConnection *tc)
+	inline void onHttpResponseFromClient(TcpConnection* tc)
 	{
 		_phy.close(tc->sock);
 	}
 
-	bool shouldBindInterface(const char *ifname,const InetAddress &ifaddr)
+	bool shouldBindInterface(const char* ifname, const InetAddress& ifaddr)
 	{
 #if defined(__linux__) || defined(linux) || defined(__LINUX__) || defined(__linux)
-		if ((ifname[0] == 'l')&&(ifname[1] == 'o')) return false; // loopback
-		if ((ifname[0] == 'z')&&(ifname[1] == 't')) return false; // sanity check: zt#
-		if ((ifname[0] == 't')&&(ifname[1] == 'u')&&(ifname[2] == 'n')) return false; // tun# is probably an OpenVPN tunnel or similar
-		if ((ifname[0] == 't')&&(ifname[1] == 'a')&&(ifname[2] == 'p')) return false; // tap# is probably an OpenVPN tunnel or similar
+		if ((ifname[0] == 'l') && (ifname[1] == 'o')) return false; // loopback
+		if ((ifname[0] == 'z') && (ifname[1] == 't')) return false; // sanity check: zt#
+		if ((ifname[0] == 't') && (ifname[1] == 'u') && (ifname[2] == 'n')) return false; // tun# is probably an OpenVPN tunnel or similar
+		if ((ifname[0] == 't') && (ifname[1] == 'a') && (ifname[2] == 'p')) return false; // tap# is probably an OpenVPN tunnel or similar
 #endif
 
 #ifdef __APPLE__
-		if ((ifname[0] == 'f')&&(ifname[1] == 'e')&&(ifname[2] == 't')&&(ifname[3] == 'h')) return false; // ... as is feth#
-		if ((ifname[0] == 'l')&&(ifname[1] == 'o')) return false; // loopback
-		if ((ifname[0] == 'z')&&(ifname[1] == 't')) return false; // sanity check: zt#
-		if ((ifname[0] == 't')&&(ifname[1] == 'u')&&(ifname[2] == 'n')) return false; // tun# is probably an OpenVPN tunnel or similar
-		if ((ifname[0] == 't')&&(ifname[1] == 'a')&&(ifname[2] == 'p')) return false; // tap# is probably an OpenVPN tunnel or similar
-		if ((ifname[0] == 'u')&&(ifname[1] == 't')&&(ifname[2] == 'u')&&(ifname[3] == 'n')) return false; // ... as is utun#
+		if ((ifname[0] == 'f') && (ifname[1] == 'e') && (ifname[2] == 't') && (ifname[3] == 'h')) return false; // ... as is feth#
+		if ((ifname[0] == 'l') && (ifname[1] == 'o')) return false; // loopback
+		if ((ifname[0] == 'z') && (ifname[1] == 't')) return false; // sanity check: zt#
+		if ((ifname[0] == 't') && (ifname[1] == 'u') && (ifname[2] == 'n')) return false; // tun# is probably an OpenVPN tunnel or similar
+		if ((ifname[0] == 't') && (ifname[1] == 'a') && (ifname[2] == 'p')) return false; // tap# is probably an OpenVPN tunnel or similar
+		if ((ifname[0] == 'u') && (ifname[1] == 't') && (ifname[2] == 'u') && (ifname[3] == 'n')) return false; // ... as is utun#
+#endif
+#ifdef _WIN32
+		if ((ifname[0] == 'Z') && (ifname[1] == 'e') && (ifname[2] == 'r') && ifname[3] == 'o' &&
+			(ifname[4] == 'T') && (ifname[5] == 'i') && (ifname[6] == 'e') && (ifname[7] == 'r')) {
+			return false;
+		}
 #endif
 
 		{

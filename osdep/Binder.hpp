@@ -136,7 +136,9 @@ public:
 					PIP_ADAPTER_UNICAST_ADDRESS ua = a->FirstUnicastAddress;
 					while (ua) {
 						InetAddress ip(ua->Address.lpSockaddr);
-						if (ifChecker.shouldBindInterface("",ip)) {
+						char strBuf[128] = { 0 };
+						wcstombs(strBuf, a->FriendlyName, sizeof(strBuf));
+						if (ifChecker.shouldBindInterface(strBuf,ip)) {
 							switch(ip.ipScope()) {
 								default: break;
 								case InetAddress::IP_SCOPE_PSEUDOPRIVATE:
