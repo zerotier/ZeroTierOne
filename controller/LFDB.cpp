@@ -190,10 +190,10 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 				if (resp) {
 					if (resp->status == 200) {
 						nlohmann::json results(OSUtils::jsonParse(resp->body));
-						if ((results.is_array())&&(results.size() > 0)) {
+						if ((results.is_array())&&(!results.empty())) {
 							for(std::size_t ri=0;ri<results.size();++ri) {
 								nlohmann::json &rset = results[ri];
-								if ((rset.is_array())&&(rset.size() > 0)) {
+								if ((rset.is_array())&&(!rset.empty())) {
 
 									nlohmann::json &result = rset[0];
 									if (result.is_object()) {
@@ -258,10 +258,10 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 				if (resp) {
 					if (resp->status == 200) {
 						nlohmann::json results(OSUtils::jsonParse(resp->body));
-						if ((results.is_array())&&(results.size() > 0)) {
+						if ((results.is_array())&&(!results.empty())) {
 							for(std::size_t ri=0;ri<results.size();++ri) {
 								nlohmann::json &rset = results[ri];
-								if ((rset.is_array())&&(rset.size() > 0)) {
+								if ((rset.is_array())&&(!rset.empty())) {
 
 									nlohmann::json &result = rset[0];
 									if (result.is_object()) {

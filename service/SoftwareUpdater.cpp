@@ -161,7 +161,7 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 
 					if (v == VERB_GET_LATEST) {
 
-						if (_dist.size() > 0) {
+						if (!_dist.empty()) {
 							const nlohmann::json *latest = (const nlohmann::json *)0;
 							const std::string expectedSigner = OSUtils::jsonString(req[ZT_SOFTWARE_UPDATE_JSON_EXPECT_SIGNED_BY],"");
 							unsigned int bestVMaj = rvMaj;
@@ -241,7 +241,7 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 			}	break;
 
 			case VERB_GET_DATA:
-				if ((len >= 21)&&(_dist.size() > 0)) {
+				if ((len >= 21)&&(!_dist.empty())) {
 					unsigned long idx = (unsigned long)*(reinterpret_cast<const uint8_t *>(data) + 17) << 24;
 					idx |= (unsigned long)*(reinterpret_cast<const uint8_t *>(data) + 18) << 16;
 					idx |= (unsigned long)*(reinterpret_cast<const uint8_t *>(data) + 19) << 8;

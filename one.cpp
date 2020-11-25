@@ -829,7 +829,7 @@ static int cli(int argc,char **argv)
 							int addressCountOfType = 0;
 							for (int k = 0; k<std::min(ZT_MAX_ZT_ASSIGNED_ADDRESSES, (int)assignedAddresses.size());++k) {
 								nlohmann::json &addr = assignedAddresses[k];
-								if ((arg2 == "ip4" && addr.get<std::string>().find(".") != std::string::npos)
+								if ((arg2 == "ip4" && addr.get<std::string>().find('.') != std::string::npos)
 									|| ((arg2.find("ip6") == 0) && addr.get<std::string>().find(":") != std::string::npos)
 									|| (arg2 == "ip")
 									) {
@@ -844,19 +844,19 @@ static int cli(int argc,char **argv)
 								if (arg2.find("ip6p") == 0) {
 									if (arg2 == "ip6plane") {
 										if (addr.get<std::string>().find("fc") == 0) {
-											aa.append(addr.get<std::string>().substr(0,addr.get<std::string>().find("/")));
+											aa.append(addr.get<std::string>().substr(0,addr.get<std::string>().find('/')));
 											if (k < addressCountOfType-1) aa.append("\n");
 										}
 									}
 									if (arg2 == "ip6prefix") {
 										if (addr.get<std::string>().find("fc") == 0) {
-											aa.append(addr.get<std::string>().substr(0,addr.get<std::string>().find("/")).substr(0,24));
+											aa.append(addr.get<std::string>().substr(0,addr.get<std::string>().find('/')).substr(0,24));
 											if (k < addressCountOfType-1) aa.append("\n");
 										}
 									}
 								}
 								else {
-									aa.append(addr.get<std::string>().substr(0,addr.get<std::string>().find("/")));
+									aa.append(addr.get<std::string>().substr(0,addr.get<std::string>().find('/')));
 									if (k < addressCountOfType-1) aa.append("\n");
 								}
 							}
