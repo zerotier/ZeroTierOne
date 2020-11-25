@@ -144,6 +144,9 @@ endif
 ifeq ($(CC_MACH),ppc64el)
 	ZT_ARCHITECTURE=8
 endif
+ifeq ($(CC_MACH),e2k)
+	ZT_ARCHITECTURE=2
+endif
 ifeq ($(CC_MACH),i386)
 	ZT_ARCHITECTURE=1
 endif
@@ -205,6 +208,11 @@ ifeq ($(CC_MACH),armv7hl)
 	ZT_ARCHITECTURE=3
 	override DEFS+=-DZT_NO_TYPE_PUNNING
 	ZT_USE_ARM32_NEON_ASM_CRYPTO=1
+endif
+ifeq ($(CC_MACH),armv7ve)
+        ZT_ARCHITECTURE=3
+        override DEFS+=-DZT_NO_TYPE_PUNNING
+        ZT_USE_ARM32_NEON_ASM_CRYPTO=1
 endif
 ifeq ($(CC_MACH),arm64)
 	ZT_ARCHITECTURE=4
