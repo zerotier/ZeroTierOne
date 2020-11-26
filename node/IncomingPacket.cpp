@@ -430,7 +430,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool
 	if ((planetWorldId)&&(RR->topology->planetWorldTimestamp() > planetWorldTimestamp)&&(planetWorldId == RR->topology->planetWorldId())) {
 		RR->topology->planet().serialize(outp,false);
 	}
-	if (moonIdsAndTimestamps.size() > 0) {
+	if (!moonIdsAndTimestamps.empty()) {
 		std::vector<World> moons(RR->topology->moons());
 		for(std::vector<World>::const_iterator m(moons.begin());m!=moons.end();++m) {
 			for(std::vector< std::pair<uint64_t,uint64_t> >::const_iterator i(moonIdsAndTimestamps.begin());i!=moonIdsAndTimestamps.end();++i) {

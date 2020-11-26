@@ -131,7 +131,7 @@ void AES::CTR::p_armCrypt(const uint8_t *in, uint8_t *out, unsigned int len) noe
 	uint8x16_t k14 = _aes.p_k.neon.ek[14];
 
 	unsigned int totalLen = _len;
-	if ((totalLen & 15U)) {
+	if ((totalLen & 15U) != 0) {
 		for (;;) {
 			if (unlikely(!len)) {
 				vst1q_u8(reinterpret_cast<uint8_t *>(_ctr), vrev32q_u8(dd));
@@ -140,7 +140,7 @@ void AES::CTR::p_armCrypt(const uint8_t *in, uint8_t *out, unsigned int len) noe
 			}
 			--len;
 			out[totalLen++] = *(in++);
-			if (!(totalLen & 15U)) {
+			if ((totalLen & 15U) == 0) {
 				uint8_t *const otmp = out + (totalLen - 16);
 				uint8x16_t d0 = vrev32q_u8(dd);
 				uint8x16_t pt = vld1q_u8(otmp);
@@ -180,7 +180,10 @@ void AES::CTR::p_armCrypt(const uint8_t *in, uint8_t *out, unsigned int len) noe
 			uint8x16_t d2 = vrev32q_u8(dd2);
 			uint8x16_t d3 = vrev32q_u8(dd3);
 			uint8x16_t pt0 = vld1q_u8(in);
-			in += 16;
+			uint8x16_t pt1 = vld1q_u8(in + 16);
+			uint8x16_t pt2 = vld1q_u8(in + 16);
+			uint8x16_t pt3 = vld1q_u8(in + 16);
+
 			d0 = vaesmcq_u8(vaeseq_u8(d0, k0));
 			d1 = vaesmcq_u8(vaeseq_u8(d1, k0));
 			d2 = vaesmcq_u8(vaeseq_u8(d2, k0));
@@ -193,8 +196,6 @@ void AES::CTR::p_armCrypt(const uint8_t *in, uint8_t *out, unsigned int len) noe
 			d1 = vaesmcq_u8(vaeseq_u8(d1, k2));
 			d2 = vaesmcq_u8(vaeseq_u8(d2, k2));
 			d3 = vaesmcq_u8(vaeseq_u8(d3, k2));
-			uint8x16_t pt1 = vld1q_u8(in);
-			in += 16;
 			d0 = vaesmcq_u8(vaeseq_u8(d0, k3));
 			d1 = vaesmcq_u8(vaeseq_u8(d1, k3));
 			d2 = vaesmcq_u8(vaeseq_u8(d2, k3));
@@ -207,8 +208,6 @@ void AES::CTR::p_armCrypt(const uint8_t *in, uint8_t *out, unsigned int len) noe
 			d1 = vaesmcq_u8(vaeseq_u8(d1, k5));
 			d2 = vaesmcq_u8(vaeseq_u8(d2, k5));
 			d3 = vaesmcq_u8(vaeseq_u8(d3, k5));
-			uint8x16_t pt2 = vld1q_u8(in);
-			in += 16;
 			d0 = vaesmcq_u8(vaeseq_u8(d0, k6));
 			d1 = vaesmcq_u8(vaeseq_u8(d1, k6));
 			d2 = vaesmcq_u8(vaeseq_u8(d2, k6));
@@ -221,8 +220,6 @@ void AES::CTR::p_armCrypt(const uint8_t *in, uint8_t *out, unsigned int len) noe
 			d1 = vaesmcq_u8(vaeseq_u8(d1, k8));
 			d2 = vaesmcq_u8(vaeseq_u8(d2, k8));
 			d3 = vaesmcq_u8(vaeseq_u8(d3, k8));
-			uint8x16_t pt3 = vld1q_u8(in);
-			in += 16;
 			d0 = vaesmcq_u8(vaeseq_u8(d0, k9));
 			d1 = vaesmcq_u8(vaeseq_u8(d1, k9));
 			d2 = vaesmcq_u8(vaeseq_u8(d2, k9));
@@ -253,7 +250,9 @@ void AES::CTR::p_armCrypt(const uint8_t *in, uint8_t *out, unsigned int len) noe
 			vst1q_u8(out + 16, d1);
 			vst1q_u8(out + 32, d2);
 			vst1q_u8(out + 48, d3);
+
 			out += 64;
+			in += 64;
 
 			dd = (uint8x16_t)vaddq_u32((uint32x4_t)dd, four);
 			if (unlikely(len < 64))

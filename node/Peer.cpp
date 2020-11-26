@@ -183,7 +183,7 @@ void Peer::received(
 		if (sinceLastPush >= ((hops == 0) ? ZT_DIRECT_PATH_PUSH_INTERVAL_HAVEPATH : ZT_DIRECT_PATH_PUSH_INTERVAL)) {
 			_lastDirectPathPushSent = now;
 			std::vector<InetAddress> pathsToPush(RR->node->directPaths());
-			if (pathsToPush.size() > 0) {
+			if (!pathsToPush.empty()) {
 				std::vector<InetAddress>::const_iterator p(pathsToPush.begin());
 				while (p != pathsToPush.end()) {
 					Packet *const outp = new Packet(_id.address(),RR->identity.address(),Packet::VERB_PUSH_DIRECT_PATHS);

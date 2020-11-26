@@ -136,7 +136,9 @@ public:
 					PIP_ADAPTER_UNICAST_ADDRESS ua = a->FirstUnicastAddress;
 					while (ua) {
 						InetAddress ip(ua->Address.lpSockaddr);
-						if (ifChecker.shouldBindInterface("",ip)) {
+						char strBuf[128] = { 0 };
+						wcstombs(strBuf, a->FriendlyName, sizeof(strBuf));
+						if (ifChecker.shouldBindInterface(strBuf,ip)) {
 							switch(ip.ipScope()) {
 								default: break;
 								case InetAddress::IP_SCOPE_PSEUDOPRIVATE:
@@ -234,7 +236,7 @@ public:
 			}
 
 			// Get IPv4 addresses for each device
-			if (ifnames.size() > 0) {
+			if (!ifnames.empty()) {
 				const int controlfd = (int)socket(AF_INET,SOCK_DGRAM,0);
 				struct ifconf configuration;
 				configuration.ifc_len = 0;
@@ -276,7 +278,7 @@ public:
 				if (controlfd > 0) close(controlfd);
 			}
 
-			const bool gotViaProc = (localIfAddrs.size() > 0);
+			const bool gotViaProc = (!localIfAddrs.empty());
 #else
 			const bool gotViaProc = false;
 #endif
