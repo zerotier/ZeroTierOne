@@ -816,13 +816,7 @@ void WindowsEthernetTap::setFriendlyName(const char *dn)
 		RegCloseKey(ifp);
 	}
 
-	HRESULT hr = CoInitialize(nullptr);
-	if (hr != S_OK) return;
-	CoInitializeSecurity(NULL, -1, NULL, NULL,
-		RPC_C_AUTHN_LEVEL_PKT,
-		RPC_C_IMP_LEVEL_IMPERSONATE,
-		NULL, EOAC_NONE, NULL);
-	if (hr != S_OK) return;
+	HRESULT hr = S_OK;
 
 	INetSharingManager *nsm;
 	hr = CoCreateInstance(__uuidof(NetSharingManager), NULL, CLSCTX_ALL, __uuidof(INetSharingManager), (void**)&nsm);
