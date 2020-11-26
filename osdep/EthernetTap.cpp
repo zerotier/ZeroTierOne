@@ -112,7 +112,7 @@ std::shared_ptr<EthernetTap> EthernetTap::newInstance(
 				-1,
 				NULL,
 				NULL,
-				RPC_C_AUTHN_LEVEL_DEFAULT,
+				RPC_C_AUTHN_LEVEL_PKT,
 				RPC_C_IMP_LEVEL_IMPERSONATE,
 				NULL,
 				EOAC_NONE,
@@ -120,6 +120,7 @@ std::shared_ptr<EthernetTap> EthernetTap::newInstance(
 			);
 			if (FAILED(hres)) {
 				CoUninitialize();
+				fprintf(stderr, "WinEthernetTap: Failed to initialize security");
 				throw std::runtime_error("WinEthernetTap: Failed to initialize security");
 			}
 			_comInit = true;
