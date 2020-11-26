@@ -1,9 +1,14 @@
 ;
-; ZeroTier One Virtual Network Port NDIS6 Driver
+; ****************************************************************************
+; * Copyright (C) 2002-2014 OpenVPN Technologies, Inc.                       *
+; *  This program is free software; you can redistribute it and/or modify    *
+; *  it under the terms of the GNU General Public License version 2          *
+; *  as published by the Free Software Foundation.                           *
+; ****************************************************************************
 ;
-; Based on the OpenVPN tap-windows6 driver version 9.21.1 git
-; commit 48f027cfca52b16b5fd23d82e6016ed8a91fc4d3.
-; See: https://github.com/OpenVPN/tap-windows6
+
+;
+; ZeroTier One Virtual Network Port NDIS6 Driver
 ;
 ; Modified by ZeroTier, Inc. - https://www.zerotier.com/
 ;
@@ -15,14 +20,6 @@
 ; (5) Rename/rebrand driver as ZeroTier network port driver.
 ;
 ; Original copyright below. Modifications released under GPLv2 as well.
-;
-; ****************************************************************************
-; * Copyright (C) 2002-2014 OpenVPN Technologies, Inc.                       *
-; *  This program is free software; you can redistribute it and/or modify    *
-; *  it under the terms of the GNU General Public License version 2          *
-; *  as published by the Free Software Foundation.                           *
-; ****************************************************************************
-;
 
 [Version]
 Signature = "$Windows NT$"
@@ -36,11 +33,11 @@ DriverVer=11/24/2020,3.00.00.1
 DeviceDescription = "ZeroTier Virtual Port"
 Provider = "ZeroTier"
 
-; To build for x86, take NTamd64 off this and off the named section manually, build, then put it back!
 [Manufacturer]
-%Provider%=zttap300,NTamd64
+%Provider%=zttap300,NTx86
+;%Provider%=zttap300,NTamd64
 
-[zttap300]
+[zttap300.NTx86]
 %DeviceDescription% = zttap300.ndi, root\zttap300 ; Root enumerated
 %DeviceDescription% = zttap300.ndi, zttap300      ; Legacy
 
