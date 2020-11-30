@@ -1823,7 +1823,7 @@ public:
 			}
 			// Check settings
 			if (defaultBondingPolicyStr.length() && !defaultBondingPolicy && !_node->bondController()->inUse()) {
-				fprintf(stderr, "error: unknown policy (%s) specified by defaultBondingPolicy, link disabled.\n", defaultBondingPolicyStr.c_str());
+				fprintf(stderr, "error: unknown policy (%s) specified by defaultBondingPolicy, bond disabled.\n", defaultBondingPolicyStr.c_str());
 			}
 		}
 
