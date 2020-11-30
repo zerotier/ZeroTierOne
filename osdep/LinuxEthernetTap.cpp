@@ -239,7 +239,7 @@ LinuxEthernetTap::LinuxEthernetTap(
 
 				::close(sock);
 
-				_thread.init_l.unlock();
+				_thread_init_l.unlock();
 			} else {
 				_thread_init_l.lock();
 				_thread_init_l.unlock();
