@@ -70,9 +70,11 @@ private:
 	int _fd;
 	int _shutdownSignalPipe[2];
 	std::atomic_bool _enabled;
+	std::atomic_bool _run;
 	std::thread _tapReaderThread[2];
 	std::thread _tapProcessorThread;
 	std::mutex _buffers_l;
+	std::mutex _thread_init_l;
 	std::vector<void *> _buffers;
 	BlockingQueue< std::pair<void *,int> > _tapq;
 };
