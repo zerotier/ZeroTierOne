@@ -1,6 +1,11 @@
 ZeroTier Release Notes
 ======
 
+# 2020-11-30 -- Version 1.6.2
+
+ * Fix an ARM hardware AES crypto issue (not an exploitable vulnerability).
+ * Fix a Linux network leave hang due to a mutex deadlock.
+
 # 2020-11-24 -- Version 1.6.1
 
 This release fixes some minor bugs and other issues in 1.6.0.
