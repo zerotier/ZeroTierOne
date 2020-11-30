@@ -181,8 +181,8 @@ void AES::CTR::p_armCrypt(const uint8_t *in, uint8_t *out, unsigned int len) noe
 			uint8x16_t d3 = vrev32q_u8(dd3);
 			uint8x16_t pt0 = vld1q_u8(in);
 			uint8x16_t pt1 = vld1q_u8(in + 16);
-			uint8x16_t pt2 = vld1q_u8(in + 16);
-			uint8x16_t pt3 = vld1q_u8(in + 16);
+			uint8x16_t pt2 = vld1q_u8(in + 32);
+			uint8x16_t pt3 = vld1q_u8(in + 48);
 
 			d0 = vaesmcq_u8(vaeseq_u8(d0, k0));
 			d1 = vaesmcq_u8(vaeseq_u8(d1, k0));
