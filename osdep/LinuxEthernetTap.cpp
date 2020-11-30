@@ -327,13 +327,13 @@ LinuxEthernetTap::~LinuxEthernetTap()
 	(void)::write(_shutdownSignalPipe[1],"\0",1); // causes reader thread(s) to exit
 	_tapq.post(std::pair<void *,int>(nullptr,0)); // causes processor thread to exit
 
-	::close(_fd);
-	::close(_shutdownSignalPipe[0]);
-	::close(_shutdownSignalPipe[1]);
-
 	_tapReaderThread[0].join();
 	_tapReaderThread[1].join();
 	_tapProcessorThread.join();
+
+	::close(_fd);
+	::close(_shutdownSignalPipe[0]);
+	::close(_shutdownSignalPipe[1]);
 
 	for(std::vector<void *>::iterator i(_buffers.begin());i!=_buffers.end();++i)
 		free(*i);
