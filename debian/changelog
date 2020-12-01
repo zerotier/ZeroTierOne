@@ -1,3 +1,10 @@
+zerotier-one (1.6.2-2) unstable; urgency=medium
+
+  * This is a minor update to the 1.6.2 package to address issues with
+    running on ARMv6 CPUs like the Raspberry Pi Zero and original v1 Pi.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Tue, 31 Nov 2020 01:00:00 -0700
+
 zerotier-one (1.6.2) unstable; urgency=medium
 
   * See RELEASE-NOTES.md for release notes.
