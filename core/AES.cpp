@@ -149,22 +149,12 @@ void AES::GMAC::update(const void *const data, unsigned int len) noexcept
 		}
 	}
 
-	if (likely(((uintptr_t)in & 7U) == 0U)) {
-		while (len >= 16) {
-			y0 ^= *reinterpret_cast<const uint64_t *>(in);
-			y1 ^= *reinterpret_cast<const uint64_t *>(in + 8);
-			in += 16;
-			s_gfmul(h0, h1, y0, y1);
-			len -= 16;
-		}
-	} else {
-		while (len >= 16) {
-			y0 ^= Utils::loadMachineEndian< uint64_t >(in);
-			y1 ^= Utils::loadMachineEndian< uint64_t >(in + 8);
-			in += 16;
-			s_gfmul(h0, h1, y0, y1);
-			len -= 16;
-		}
+	while (len >= 16) {
+		y0 ^= Utils::loadMachineEndian< uint64_t >(in);
+		y1 ^= Utils::loadMachineEndian< uint64_t >(in + 8);
+		in += 16;
+		s_gfmul(h0, h1, y0, y1);
+		len -= 16;
 	}
 
 	_y[0] = y0;
