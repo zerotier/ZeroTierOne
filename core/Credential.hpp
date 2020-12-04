@@ -52,11 +52,11 @@ public:
 	};
 
 protected:
-	VerifyResult _verify(const RuntimeEnvironment *RR,void *tPtr,const MembershipCredential &credential) const;
-	VerifyResult _verify(const RuntimeEnvironment *RR,void *tPtr,const RevocationCredential &credential) const;
-	VerifyResult _verify(const RuntimeEnvironment *RR,void *tPtr,const TagCredential &credential) const;
-	VerifyResult _verify(const RuntimeEnvironment *RR,void *tPtr,const OwnershipCredential &credential) const;
-	VerifyResult _verify(const RuntimeEnvironment *RR,void *tPtr,const CapabilityCredential &credential) const;
+	static VerifyResult s_verify(const RuntimeEnvironment *RR, void *tPtr, const MembershipCredential &credential);
+	static VerifyResult s_verify(const RuntimeEnvironment *RR, void *tPtr, const RevocationCredential &credential);
+	static VerifyResult s_verify(const RuntimeEnvironment *RR, void *tPtr, const TagCredential &credential);
+	static VerifyResult s_verify(const RuntimeEnvironment *RR, void *tPtr, const OwnershipCredential &credential);
+	static VerifyResult s_verify(const RuntimeEnvironment *RR, void *tPtr, const CapabilityCredential &credential);
 };
 
 } // namespace ZeroTier

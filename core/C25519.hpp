@@ -11,8 +11,11 @@
  */
 /****/
 
-// Note that the actual code in C25519.cpp is in the public domain as per
-// its original license.
+/*
+ * The code in C25519.cpp is in the public domain rather than being under
+ * ZeroTier's license. Other than ZeroTier shims it contains public domain
+ * C25519/Ed25519 code by D. J. Bernstein and Matthew Dempsky.
+ */
 
 #ifndef ZT_C25519_HPP
 #define ZT_C25519_HPP

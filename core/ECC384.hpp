@@ -11,10 +11,21 @@
  */
 /****/
 
-// This is glue code to ease the use of the NIST P-384 elliptic curve.
-
-// Note that the code inside ECC384.cpp is third party code and
-// is under the BSD 2-clause license rather than ZeroTier's license.
+/*
+ * The contents of ECC384.cpp are third party code and are licensed under
+ * the BSD 2-clause license.
+ *
+ * The built-in implementation is easy-ecc by Kenneth MacKay and can be found
+ * here: https://github.com/esxgx/easy-ecc
+ *
+ * Our copy is trimmed down with unused stuff removed and also contains a few
+ * ZeroTier shims to implement these function interfaces. Otherwise it is
+ * unmodified from the original. It's a nice and fairly fast portable
+ * implementation that should build everywhere.
+ *
+ * For FIPS-compliant builds this will eventually link against FIPS-compliant
+ * crypto libraries instead of using the built-in version.
+ */
 
 #ifndef ZT_ECC384_HPP
 #define ZT_ECC384_HPP

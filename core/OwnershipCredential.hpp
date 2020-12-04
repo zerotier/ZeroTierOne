@@ -127,7 +127,7 @@ public:
 	 * @param tPtr That pointer we pass around
 	 * @return Credential verification result: OK, bad signature, or identity needed
 	 */
-	ZT_INLINE Credential::VerifyResult verify(const RuntimeEnvironment *RR,void *tPtr) const { return _verify(RR,tPtr,*this); }
+	ZT_INLINE Credential::VerifyResult verify(const RuntimeEnvironment *RR,void *tPtr) const { return s_verify(RR, tPtr, *this); }
 
 	static constexpr int marshalSizeMax() noexcept { return ZT_CERTIFICATEOFOWNERSHIP_MARSHAL_SIZE_MAX; }
 	int marshal(uint8_t data[ZT_CERTIFICATEOFOWNERSHIP_MARSHAL_SIZE_MAX],bool forSign = false) const noexcept;

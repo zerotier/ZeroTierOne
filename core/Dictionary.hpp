@@ -30,14 +30,12 @@ class Identity;
  * This data structure is used for network configurations, node meta-data,
  * and other open-definition protocol objects.
  *
- * If this seems a little odd, it is. It dates back to the very first alpha
- * versions of ZeroTier and if it were redesigned today we'd use some kind
- * of simple or standardized binary encoding. Nevertheless it is efficient
- * and it works so there is no need to change it and break backward
- * compatibility.
- * 
- * Use of the append functions is faster than building and then encoding a
- * dictionary for creating outbound packets.
+ * This is technically a binary encoding, but with delimiters chosen so that
+ * it looks like a series of key=value lines of the keys and values are
+ * human-readable strings.
+ *
+ * The fastest way to build a dictionary to send is to use the append
+ * static functions, not to populate and then encode a Dictionary.
  */
 class Dictionary
 {
@@ -408,7 +406,7 @@ private:
 	{
 		switch (c) {
 			case 0:
-				out.push_back(92); // backslash
+				out.push_back(92);
 				out.push_back(48);
 				break;
 			case 10:

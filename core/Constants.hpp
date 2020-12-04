@@ -26,7 +26,7 @@
 	((uint64_t)ZEROTIER_VERSION_MAJOR    << 48U) | \
 	((uint64_t)ZEROTIER_VERSION_MINOR    << 32U) | \
 	((uint64_t)ZEROTIER_VERSION_REVISION << 16U) | \
-	((uint64_t)ZEROTIER_VERSION_BUILD)         )
+	((uint64_t)ZEROTIER_VERSION_BUILD)             )
 
 /**
  * Length of a ZeroTier address in bytes

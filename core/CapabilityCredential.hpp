@@ -112,7 +112,7 @@ public:
 	 *
 	 * @param RR Runtime environment to provide for peer lookup, etc.
 	 */
-	ZT_INLINE Credential::VerifyResult verify(const RuntimeEnvironment *RR,void *tPtr) const noexcept { return _verify(RR,tPtr,*this); }
+	ZT_INLINE Credential::VerifyResult verify(const RuntimeEnvironment *RR,void *tPtr) const noexcept { return s_verify(RR, tPtr, *this); }
 
 	static constexpr int marshalSizeMax() noexcept { return ZT_CAPABILITY_MARSHAL_SIZE_MAX; }
 	int marshal(uint8_t data[ZT_CAPABILITY_MARSHAL_SIZE_MAX],bool forSign = false) const noexcept;

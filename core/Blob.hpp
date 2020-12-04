@@ -32,7 +32,7 @@ struct SHA384Hash
 	uint64_t data[6];
 
 	ZT_INLINE SHA384Hash() noexcept
-	{ Utils::zero<sizeof(data)>(data); }
+	{ Utils::zero< sizeof(data) >(data); }
 
 	explicit ZT_INLINE SHA384Hash(const void *const d) noexcept
 	{ Utils::copy< 48 >(data, d); }
@@ -73,7 +73,7 @@ struct UniqueID
 	uint64_t data[2];
 
 	ZT_INLINE UniqueID() noexcept
-	{ Utils::zero<sizeof(data)>(data); }
+	{ Utils::zero< sizeof(data) >(data); }
 
 	ZT_INLINE UniqueID(const uint64_t a, const uint64_t b) noexcept
 	{
@@ -112,10 +112,10 @@ struct UniqueID
 	{ return (memcmp(data, b.data, 16) >= 0); }
 };
 
-static_assert(sizeof(SHA384Hash) == 48,"SHA384Hash contains unnecessary padding");
-static_assert(sizeof(UniqueID) == 16,"UniqueID contains unnecessary padding");
+static_assert(sizeof(SHA384Hash) == 48, "SHA384Hash contains unnecessary padding");
+static_assert(sizeof(UniqueID) == 16, "UniqueID contains unnecessary padding");
 
-template<unsigned long S>
+template< unsigned long S >
 struct Blob
 {
 	uint8_t data[S];

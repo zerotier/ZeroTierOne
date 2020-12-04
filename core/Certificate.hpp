@@ -58,7 +58,7 @@ public:
 
 	Certificate &operator=(const ZT_Certificate &cert);
 
-	ZT_INLINE Certificate &operator=(const Certificate &cert)
+	ZT_INLINE Certificate &operator=(const Certificate &cert) noexcept
 	{
 		if (likely(&cert != this)) {
 			const ZT_Certificate *const sup = &cert;

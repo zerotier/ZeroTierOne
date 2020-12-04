@@ -111,7 +111,7 @@ public:
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 */
 	ZT_INLINE Credential::VerifyResult verify(const RuntimeEnvironment *RR, void *tPtr) const noexcept
-	{ return _verify(RR, tPtr, *this); }
+	{ return s_verify(RR, tPtr, *this); }
 
 	static constexpr int marshalSizeMax() noexcept
 	{ return ZT_REVOCATION_MARSHAL_SIZE_MAX; }

@@ -24,8 +24,8 @@ extern "C" {
 // These macros make the idiom of passing buffers to outside code via the API work properly even
 // if the first address of Buf does not overlap with its data field, since the C++ standard does
 // not absolutely guarantee this.
-#define _ZT_PTRTOBUF(p) ((ZeroTier::Buf *)( ((uintptr_t)(p)) - ((uintptr_t)&(((ZeroTier::Buf *)0)->unsafeData[0])) ))
-#define _ZT_BUFTOPTR(b) ((void *)(&((b)->unsafeData[0])))
+#define ZT_PTRTOBUF(p) ((ZeroTier::Buf *)( ((uintptr_t)(p)) - ((uintptr_t)&(((ZeroTier::Buf *)0)->unsafeData[0])) ))
+#define ZT_BUFTOPTR(b) ((void *)(&((b)->unsafeData[0])))
 
 void *ZT_getBuffer()
 {
@@ -35,7 +35,7 @@ void *ZT_getBuffer()
 	// When this occurs it's either sent back to the pool with Buf's delete operator or
 	// wrapped in a SharedPtr<> to be passed into the core.
 	try {
-		return _ZT_BUFTOPTR(new ZeroTier::Buf());
+		return ZT_BUFTOPTR(new ZeroTier::Buf());
 	} catch (...) {
 		return nullptr; // can only happen on out of memory condition
 	}
@@ -44,7 +44,7 @@ void *ZT_getBuffer()
 void ZT_freeBuffer(void *b)
 {
 	if (b)
-		delete _ZT_PTRTOBUF(b);
+		delete ZT_PTRTOBUF(b);
 }
 
 struct p_queryResultBase
@@ -74,7 +74,7 @@ void ZT_version(int *major, int *minor, int *revision, int *build)
 
 enum ZT_ResultCode ZT_Node_new(ZT_Node **node, void *uptr, void *tptr, const struct ZT_Node_Callbacks *callbacks, int64_t now)
 {
-	*node = (ZT_Node *)0;
+	*node = nullptr;
 	try {
 		*node = reinterpret_cast<ZT_Node *>(new ZeroTier::Node(uptr, tptr, callbacks, now));
 		return ZT_RESULT_OK;
@@ -107,7 +107,7 @@ enum ZT_ResultCode ZT_Node_processWirePacket(
 	volatile int64_t *nextBackgroundTaskDeadline)
 {
 	try {
-		ZeroTier::SharedPtr< ZeroTier::Buf > buf((isZtBuffer) ? _ZT_PTRTOBUF(packetData) : new ZeroTier::Buf(packetData, packetLength & ZT_BUF_MEM_MASK));
+		ZeroTier::SharedPtr< ZeroTier::Buf > buf((isZtBuffer) ? ZT_PTRTOBUF(packetData) : new ZeroTier::Buf(packetData, packetLength & ZT_BUF_MEM_MASK));
 		return reinterpret_cast<ZeroTier::Node *>(node)->processWirePacket(tptr, now, localSocket, remoteAddress, buf, packetLength, nextBackgroundTaskDeadline);
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
@@ -133,7 +133,7 @@ enum ZT_ResultCode ZT_Node_processVirtualNetworkFrame(
 	volatile int64_t *nextBackgroundTaskDeadline)
 {
 	try {
-		ZeroTier::SharedPtr< ZeroTier::Buf > buf((isZtBuffer) ? _ZT_PTRTOBUF(frameData) : new ZeroTier::Buf(frameData, frameLength & ZT_BUF_MEM_MASK));
+		ZeroTier::SharedPtr< ZeroTier::Buf > buf((isZtBuffer) ? ZT_PTRTOBUF(frameData) : new ZeroTier::Buf(frameData, frameLength & ZT_BUF_MEM_MASK));
 		return reinterpret_cast<ZeroTier::Node *>(node)->processVirtualNetworkFrame(tptr, now, nwid, sourceMac, destMac, etherType, vlanId, buf, frameLength, nextBackgroundTaskDeadline);
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;

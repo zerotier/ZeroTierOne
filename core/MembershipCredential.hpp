@@ -14,8 +14,6 @@
 #ifndef ZT_CERTIFICATEOFMEMBERSHIP_HPP
 #define ZT_CERTIFICATEOFMEMBERSHIP_HPP
 
-// TODO: redo
-
 #include <string>
 #include <stdexcept>
 #include <algorithm>
@@ -179,7 +177,7 @@ public:
 	 * @param RR Runtime environment for looking up peers
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 */
-	ZT_INLINE Credential::VerifyResult verify(const RuntimeEnvironment *RR,void *tPtr) const { return _verify(RR,tPtr,*this); }
+	ZT_INLINE Credential::VerifyResult verify(const RuntimeEnvironment *RR,void *tPtr) const { return s_verify(RR, tPtr, *this); }
 
 	// NOTE: right now we use v1 serialization format which works with both ZeroTier 1.x and 2.x. V2 format
 	// will be switched on once 1.x is pretty much dead and out of support.
