@@ -46,8 +46,8 @@ InetAddress::IpScope InetAddress::ipScope() const noexcept
 				case 0x1e: //return IP_SCOPE_PSEUDOPRIVATE;                        // 30.0.0.0/8 (US DISA)
 				case 0x33: //return IP_SCOPE_PSEUDOPRIVATE;                        // 51.0.0.0/8 (UK Department of Social Security)
 				case 0x37: //return IP_SCOPE_PSEUDOPRIVATE;                        // 55.0.0.0/8 (US DoD)
-				case 0x38:
-					return IP_SCOPE_PSEUDOPRIVATE;                                   // 56.0.0.0/8 (US Postal Service)
+				case 0x38:                                                         // 56.0.0.0/8 (US Postal Service)
+					return IP_SCOPE_PSEUDOPRIVATE;
 				case 0x64:
 					if ((ip & 0xffc00000) == 0x64400000) return IP_SCOPE_PRIVATE;    // 100.64.0.0/10
 					break;
@@ -61,6 +61,14 @@ InetAddress::IpScope InetAddress::ipScope() const noexcept
 					break;
 				case 0xc0:
 					if ((ip & 0xffff0000) == 0xc0a80000) return IP_SCOPE_PRIVATE;    // 192.168.0.0/16
+					if ((ip & 0xffffff00) == 0xc0000200) return IP_SCOPE_PRIVATE;    // 192.0.2.0/24
+					break;
+				case 0xc6:
+					if ((ip & 0xfffe0000) == 0xc6120000) return IP_SCOPE_PRIVATE;    // 198.18.0.0/15
+					if ((ip & 0xffffff00) == 0xc6336400) return IP_SCOPE_PRIVATE;    // 198.51.100.0/24
+					break;
+				case 0xcb:
+					if ((ip & 0xffffff00) == 0xcb007100) return IP_SCOPE_PRIVATE;    // 203.0.113.0/24
 					break;
 				case 0xff:
 					return IP_SCOPE_NONE;                                            // 255.0.0.0/8 (broadcast, or unused/unusable)
