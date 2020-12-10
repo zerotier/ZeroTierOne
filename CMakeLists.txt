@@ -20,15 +20,15 @@ project(zerotier
 
 if(NOT PACKAGE_STATIC)
 
-	find_program(
-		GO go
-		HINTS "/usr/local/go/bin" "/usr/bin" "/usr/local/bin" "C:/go/bin"
-	)
-	if(NOT GO)
-		message(FATAL_ERROR "Golang not found")
-	else(NOT GO)
-		message(STATUS "Found Golang at ${GO}")
-	endif(NOT GO)
+	#find_program(
+	#	GO go
+	#	HINTS "/usr/local/go/bin" "/usr/bin" "/usr/local/bin" "C:/go/bin"
+	#)
+	#if(NOT GO)
+	#	message(FATAL_ERROR "Golang not found")
+	#else(NOT GO)
+	#	message(STATUS "Found Golang at ${GO}")
+	#endif(NOT GO)
 
 	set(default_build_type "Release")
 
@@ -90,10 +90,10 @@ if(NOT PACKAGE_STATIC)
 			$<$<CONFIG:RELWITHDEBINFO>:-g>
 		)
 
-		set(GOFLAGS
-			-a
-			-trimpath
-		)
+		#set(GOFLAGS
+		#	-a
+		#	-trimpath
+		#)
 
 		if(BUILD_32BIT)
 			set(CMAKE_SYSTEM_PROCESSOR "x86" CACHE STRING "system processor")
@@ -110,16 +110,16 @@ if(NOT PACKAGE_STATIC)
 
 	else(WIN32)
 
-		set(GOFLAGS
-			-trimpath
-			-buildmode=pie
-		)
+		#set(GOFLAGS
+		#	-trimpath
+		#	-buildmode=pie
+		#)
 
 		if(APPLE)
 
 			message("++ Setting MacOS Compiler Flags ${CMAKE_BUILD_TYPE}")
 
-			set(MACOS_VERSION_MIN "10.12")
+			set(MACOS_VERSION_MIN "10.14")
 
 			add_compile_options(
 				-Wall
@@ -142,11 +142,11 @@ if(NOT PACKAGE_STATIC)
 				$<$<CONFIG:RELEASE>:-flto>
 			)
 
-			set(GOFLAGS
-				${GOFLAGS}
-				-a
-				-ldflags '-w -extldflags \"-Wl,-undefined -Wl,dynamic_lookup\"'
-			)
+			#set(GOFLAGS
+			#	${GOFLAGS}
+			#	-a
+			#	-ldflags '-w -extldflags \"-Wl,-undefined -Wl,dynamic_lookup\"'
+			#)
 
 		else(APPLE)
 
@@ -191,18 +191,18 @@ if(NOT PACKAGE_STATIC)
 					-static
 				)
 				set(CMAKE_EXE_LINKER_FLAGS "-static ${CMAKE_EXE_LINKER_FLAGS}")
-				set(GOFLAGS
-					${GOFLAGS}
-					-a
-					-tags osusergo,netgo
-					-ldflags '-w -extldflags \"-static -Wl,-unresolved-symbols=ignore-all\"'
-				)
+				#set(GOFLAGS
+				#	${GOFLAGS}
+				#	-a
+				#	-tags osusergo,netgo
+				#	-ldflags '-w -extldflags \"-static -Wl,-unresolved-symbols=ignore-all\"'
+				#)
 			else(BUILD_STATIC)
-				set(GOFLAGS
-					${GOFLAGS}
-					-a
-					-ldflags '-w -extldflags \"-Wl,-unresolved-symbols=ignore-all\"'
-				)
+				#set(GOFLAGS
+				#	${GOFLAGS}
+				#	-a
+				#	-ldflags '-w -extldflags \"-Wl,-unresolved-symbols=ignore-all\"'
+				#)
 			endif(BUILD_STATIC)
 
 			if(BUILD_ARM_V5)
@@ -225,7 +225,7 @@ if(NOT PACKAGE_STATIC)
 		CMAKE_SYSTEM_PROCESSOR MATCHES "X64"
 	)
 		message("++ Adding flags for processor ${CMAKE_SYSTEM_PROCESSOR}")
-		add_compile_options(-maes -mrdrnd -mpclmul -msse -msse2)
+		add_compile_options(-maes -mrdrnd -mpclmul)
 	endif()
 
 	if (
@@ -248,56 +248,56 @@ if(NOT PACKAGE_STATIC)
 	add_subdirectory(core)
 	add_subdirectory(controller)
 	add_subdirectory(osdep)
-	add_subdirectory(serviceiocore)
+	#add_subdirectory(serviceiocore)
 
-	file(GLOB go_src
-		${CMAKE_SOURCE_DIR}/cmd/*.go
-		${CMAKE_SOURCE_DIR}/cmd/cmd/*.go
-		${CMAKE_SOURCE_DIR}/pkg/zerotier/*.go
-	)
-	file(GLOB go_zt_service_tests_cmd_src
-		${CMAKE_SOURCE_DIR}/cmd/zt_service_tests/*.go
-	)
+	#file(GLOB go_src
+	#	${CMAKE_SOURCE_DIR}/cmd/*.go
+	#	${CMAKE_SOURCE_DIR}/cmd/cmd/*.go
+	#	${CMAKE_SOURCE_DIR}/pkg/zerotier/*.go
+	#)
+	#file(GLOB go_zt_service_tests_cmd_src
+	#	${CMAKE_SOURCE_DIR}/cmd/zt_service_tests/*.go
+	#)
 
-	if(WIN32)
-		set(GO_EXE_NAME "zerotier.exe")
-		set(GO_SERVICE_TESTS_EXE_NAME "zt_service_tests.exe")
-		set(GO_EXTRA_LIBRARIES "-lstdc++ -lwsock32 -lws2_32 -liphlpapi -lole32 -loleaut32 -lrpcrt4 -luuid")
-	else(WIN32)
-		set(GO_EXE_NAME "zerotier")
-		set(GO_SERVICE_TESTS_EXE_NAME "zt_service_tests")
-		if(CMAKE_SYSTEM_NAME MATCHES "Linux")
-			set(GO_EXTRA_LIBRARIES "-lstdc++")
-			if(BUILD_ARM_V5)
-				set(GO_EXTRA_LIBRARIES
-					${GO_EXTRA_LIBRARIES}
-					"-latomic"
-				)
-			endif(BUILD_ARM_V5)
-		else()
-			set(GO_EXTRA_LIBRARIES "-lc++" "-lm")
-		endif()
-	endif(WIN32)
+	#if(WIN32)
+	#	set(GO_EXE_NAME "zerotier.exe")
+	#	set(GO_SERVICE_TESTS_EXE_NAME "zt_service_tests.exe")
+	#	set(GO_EXTRA_LIBRARIES "-lstdc++ -lwsock32 -lws2_32 -liphlpapi -lole32 -loleaut32 -lrpcrt4 -luuid")
+	#else(WIN32)
+	#	set(GO_EXE_NAME "zerotier")
+	#	set(GO_SERVICE_TESTS_EXE_NAME "zt_service_tests")
+	#	if(CMAKE_SYSTEM_NAME MATCHES "Linux")
+	#		set(GO_EXTRA_LIBRARIES "-lstdc++")
+	#		if(BUILD_ARM_V5)
+	#			set(GO_EXTRA_LIBRARIES
+	#				${GO_EXTRA_LIBRARIES}
+	#				"-latomic"
+	#			)
+	#		endif(BUILD_ARM_V5)
+	#	else()
+	#		set(GO_EXTRA_LIBRARIES "-lc++" "-lm")
+	#	endif()
+	#endif(WIN32)
 
-	add_custom_target(
-		zt_service_tests ALL
-		BYPRODUCTS ${CMAKE_BINARY_DIR}/zt_service_tests
-		SOURCES ${go_src} ${go_zt_service_tests_cmd_src}
-		COMMAND ${CMAKE_COMMAND} -E env ${GOARCH} ${GOARM} CGO_ENABLED=1 CGO_CFLAGS=\"-O3\" CGO_LDFLAGS=\"$<TARGET_FILE:zt_core> $<TARGET_FILE:zt_controller> $<TARGET_FILE:zt_service_io_core> $<TARGET_FILE:zt_osdep> ${GO_EXTRA_LIBRARIES}\" ${GO} build -mod=vendor ${GOFLAGS} -o ${CMAKE_BINARY_DIR}/${GO_SERVICE_TESTS_EXE_NAME} ${go_zt_service_tests_cmd_src}
-		COMMENT "Compiling zt_service_tests (Go/cgo self-tests)..."
-	)
-	add_dependencies(zt_service_tests zt_osdep zt_core zt_controller zt_service_io_core)
+	#add_custom_target(
+	#	zt_service_tests ALL
+	#	BYPRODUCTS ${CMAKE_BINARY_DIR}/zt_service_tests
+	#	SOURCES ${go_src} ${go_zt_service_tests_cmd_src}
+	#	COMMAND ${CMAKE_COMMAND} -E env ${GOARCH} ${GOARM} CGO_ENABLED=1 CGO_CFLAGS=\"-O3\" CGO_LDFLAGS=\"$<TARGET_FILE:zt_core> $<TARGET_FILE:zt_controller> $<TARGET_FILE:zt_service_io_core> $<TARGET_FILE:zt_osdep> ${GO_EXTRA_LIBRARIES}\" ${GO} build -mod=vendor ${GOFLAGS} -o ${CMAKE_BINARY_DIR}/${GO_SERVICE_TESTS_EXE_NAME} ${go_zt_service_tests_cmd_src}
+	#	COMMENT "Compiling zt_service_tests (Go/cgo self-tests)..."
+	#)
+	#add_dependencies(zt_service_tests zt_osdep zt_core zt_controller zt_service_io_core)
 
-	add_custom_target(
-		zerotier ALL
-		BYPRODUCTS ${CMAKE_BINARY_DIR}/zerotier
-		SOURCES ${go_src}
-		COMMAND ${CMAKE_COMMAND} -E env ${GOARCH} ${GOARM} CGO_ENABLED=1 CGO_CFLAGS=\"-O3\" CGO_LDFLAGS=\"$<TARGET_FILE:zt_core> $<TARGET_FILE:zt_controller> $<TARGET_FILE:zt_service_io_core> $<TARGET_FILE:zt_osdep> ${GO_EXTRA_LIBRARIES}\" ${GO} build -mod=vendor ${GOFLAGS} -o ${CMAKE_BINARY_DIR}/${GO_EXE_NAME} ${CMAKE_SOURCE_DIR}/cmd/zerotier/zerotier.go
-		COMMENT "Compiling Go Code..."
-	)
-	add_dependencies(zerotier zt_osdep zt_core zt_controller zt_service_io_core)
+	#add_custom_target(
+	#	zerotier ALL
+	#	BYPRODUCTS ${CMAKE_BINARY_DIR}/zerotier
+	#	SOURCES ${go_src}
+	#	COMMAND ${CMAKE_COMMAND} -E env ${GOARCH} ${GOARM} CGO_ENABLED=1 CGO_CFLAGS=\"-O3\" CGO_LDFLAGS=\"$<TARGET_FILE:zt_core> $<TARGET_FILE:zt_controller> $<TARGET_FILE:zt_service_io_core> $<TARGET_FILE:zt_osdep> ${GO_EXTRA_LIBRARIES}\" ${GO} build -mod=vendor ${GOFLAGS} -o ${CMAKE_BINARY_DIR}/${GO_EXE_NAME} ${CMAKE_SOURCE_DIR}/cmd/zerotier/zerotier.go
+	#	COMMENT "Compiling Go Code..."
+	#)
+	#add_dependencies(zerotier zt_osdep zt_core zt_controller zt_service_io_core)
 
-	install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/zerotier DESTINATION bin)
+	#install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/zerotier DESTINATION bin)
 
 else(NOT PACKAGE_STATIC)
 
