@@ -6,26 +6,33 @@ TIMESTAMP=$(shell date +"%Y%m%d%H%M")
 all:	setup
 	cd ${BUILDDIR} && $(MAKE) -j4 VERBOSE=1
 
-setup:
+setup: FORCE
 	mkdir -p ${BUILDDIR} && cd ${BUILDDIR} && cmake .. -DCMAKE_BUILD_TYPE=Release ${CMAKE_ARGS}
 
-setup-debug:
+setup-debug: FORCE
 	mkdir -p ${BUILDDIR} && cd ${BUILDDIR} && cmake .. -DCMAKE_BUILD_TYPE=Debug ${CMAKE_ARGS}
 
-debug:
+debug: FORCE
 	mkdir -p ${BUILDDIR} && cd ${BUILDDIR} && cmake .. -DCMAKE_BUILD_TYPE=Debug ${CMAKE_ARGS} && $(MAKE)
 
-central-controller:
+central-controller: FORCE
 	mkdir -p ${BUILDDIR} && cd ${BUILDDIR} && cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_CENTRAL_CONTROLLER=1 ${CMAKE_ARGS} && $(MAKE) -j4
 
-central-controller-debug:
+central-controller-debug: FORCE
 	mkdir -p ${BUILDDIR} && cd ${BUILDDIR} && cmake .. -DCMAKE_BUILD_TYPE=Debug -DBUILD_CENTRAL_CONTROLLER=1 ${CMAKE_ARGS}  && $(MAKE) -j4
 
-central-controller-docker:
+central-controller-docker: FORCE
 	docker build -t registry.zerotier.com/zerotier-central/ztcentral-controller:${TIMESTAMP} -f controller/central-docker/Dockerfile .
 
-clean:
+clean: FORCE
 	rm -rf ${BUILDDIR}
 
-distclean:
+distclean: FORCE
 	rm -rf ${BUILDDIR}
+
+rust-zerotier-core-bindgen: FORCE
+	cargo install bindgen
+	rm -f rust-zerotier-core/src/capi/zerotier-capi.rs
+	bindgen core/zerotier.h >rust-zerotier-core/src/capi/zerotier-capi.rs
+
+FORCE:
