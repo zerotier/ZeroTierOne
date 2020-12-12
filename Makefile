@@ -32,7 +32,7 @@ distclean: FORCE
 
 rust-zerotier-core-bindgen: FORCE
 	cargo install bindgen
-	rm -f rust-zerotier-core/src/capi/zerotier-capi.rs
-	bindgen core/zerotier.h >rust-zerotier-core/src/capi/zerotier-capi.rs
+	rm -f rust-zerotier-core/src/bindings/capi.rs
+	bindgen --no-doc-comments core/zerotier.h >rust-zerotier-core/src/bindings/capi.rs
 
 FORCE:
