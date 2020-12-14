@@ -2856,6 +2856,27 @@ ZT_SDK_API void ZT_Certificate_delete(const ZT_Certificate *cert);
 
 /* ---------------------------------------------------------------------------------------------------------------- */
 
+/**
+ * Convert a Fingerprint to canonical string form
+ *
+ * @param fp Fingerprint to convert
+ * @param buf Buffer to contain string
+ * @param capacity Capacity, must be at least 128 bytes
+ * @return Pointer to 'buf' now filled with a string
+ */
+ZT_SDK_API char *ZT_Fingerprint_toString(const ZT_Fingerprint *fp, char *buf, int capacity);
+
+/**
+ * Decode a fingerprint from a string
+ *
+ * @param fp Buffer to fill with decoded fingerprint
+ * @param s String representation of fingerprint
+ * @return Non-zero on success
+ */
+ZT_SDK_API int ZT_Fingerprint_fromString(ZT_Fingerprint *fp, const char *s);
+
+/* ---------------------------------------------------------------------------------------------------------------- */
+
 #ifdef __cplusplus
 }
 #endif

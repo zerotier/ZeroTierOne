@@ -1,5 +1,8 @@
 use crate::*;
 use crate::bindings::capi as ztcore;
+use std::os::raw::{c_char, c_int};
+use std::ffi::CStr;
+use std::mem::MaybeUninit;
 
 pub struct Fingerprint {
     pub address: Address,
@@ -7,19 +10,32 @@ pub struct Fingerprint {
 }
 
 impl Fingerprint {
-    fn new_from_capi_fingerprint(cfp: *const ztcore::ZT_Fingerprint) -> Fingerprint {
+    pub fn new_from_string(s: &str) -> Result<Fingerprint, ResultCode> {
         unsafe {
-            return Fingerprint {
-                address: Address((*cfp).address),
-                hash: (*cfp).hash
+            let mut cfp: MaybeUninit<ztcore::ZT_Fingerprint> = MaybeUninit::uninit();
+            if ztcore::ZT_Fingerprint_fromString(cfp.as_mut_ptr(), s.as_ptr() as *const c_char) != 0 {
+                let fp = cfp.assume_init();
+                return Ok(Fingerprint{
+                    address: Address(fp.address),
+                    hash: fp.hash
+                });
             }
         }
+        return Err(ResultCode::ErrorBadParameter);
     }
+}
 
-    fn to_capi_fingerprint(&self) -> ztcore::ZT_Fingerprint {
-        ztcore::ZT_Fingerprint {
-            address: self.address.to_u64(),
-            hash: self.hash
+impl ToString for Fingerprint {
+    fn to_string(&self) -> String {
+        let mut buf: [u8; 256] = [0; 256];
+        unsafe {
+            if ztcore::ZT_Fingerprint_toString(&ztcore::ZT_Fingerprint {
+                address: self.address.to_u64(),
+                hash: self.hash
+            }, buf.as_mut_ptr() as *mut c_char, buf.len() as c_int).is_null() {
+                return String::from("(invalid)");
+            }
+            return String::from(CStr::from_bytes_with_nul(&buf).unwrap().to_str().unwrap());
         }
     }
 }

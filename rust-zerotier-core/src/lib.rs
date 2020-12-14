@@ -2,10 +2,13 @@ mod bindings;
 mod identity;
 mod address;
 mod fingerprint;
+mod endpoint;
+mod inetaddress;
 
 pub use identity::Identity;
 pub use address::Address;
 pub use fingerprint::Fingerprint;
+pub use endpoint::Endpoint;
 
 use bindings::capi as ztcore;
 use num_derive::FromPrimitive;
@@ -199,7 +202,7 @@ pub enum VirtualNetworkRuleType {
     MatchIpv6Destination = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_MATCH_IPV6_DEST as isize,
     MatchIpTos = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_MATCH_IP_TOS as isize,
     MatchIpProtocol = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_MATCH_IP_PROTOCOL as isize,
-    MatchEthertype = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_MATCH_ETHERTYPE as isize,
+    MatchEtherType = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_MATCH_ETHERTYPE as isize,
     MatchIcmp = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_MATCH_ICMP as isize,
     MatchIpSourcePortRange = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_MATCH_IP_SOURCE_PORT_RANGE as isize,
     MatchIpDestinationSourceRange = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_MATCH_IP_DEST_PORT_RANGE as isize,

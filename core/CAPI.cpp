@@ -722,4 +722,25 @@ int ZT_Endpoint_fromString(
 
 /********************************************************************************************************************/
 
+char *ZT_Fingerprint_toString(const ZT_Fingerprint *fp, char *buf, int capacity)
+{
+	if (capacity < ZT_FINGERPRINT_STRING_SIZE_MAX)
+		return nullptr;
+	return reinterpret_cast<const ZeroTier::Fingerprint *>(fp)->toString(buf);
+}
+
+int ZT_Fingerprint_fromString(ZT_Fingerprint *fp, const char *s)
+{
+	if ((!fp)||(!s))
+		return 0;
+	ZeroTier::Fingerprint f;
+	if (f.fromString(s)) {
+		*fp = f;
+		return 1;
+	}
+	return 0;
+}
+
+/********************************************************************************************************************/
+
 } // extern "C"
