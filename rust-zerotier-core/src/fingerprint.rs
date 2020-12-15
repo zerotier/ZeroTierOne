@@ -16,7 +16,7 @@ impl Fingerprint {
             if ztcore::ZT_Fingerprint_fromString(cfp.as_mut_ptr(), s.as_ptr() as *const c_char) != 0 {
                 let fp = cfp.assume_init();
                 return Ok(Fingerprint{
-                    address: Address(fp.address),
+                    address: fp.address as Address,
                     hash: fp.hash
                 });
             }
@@ -30,12 +30,12 @@ impl ToString for Fingerprint {
         let mut buf: [u8; 256] = [0; 256];
         unsafe {
             if ztcore::ZT_Fingerprint_toString(&ztcore::ZT_Fingerprint {
-                address: self.address.to_u64(),
+                address: self.address,
                 hash: self.hash
             }, buf.as_mut_ptr() as *mut c_char, buf.len() as c_int).is_null() {
                 return String::from("(invalid)");
             }
-            return String::from(CStr::from_bytes_with_nul(&buf).unwrap().to_str().unwrap());
+            return String::from(CStr::from_bytes_with_nul(buf.as_ref()).unwrap().to_str().unwrap());
         }
     }
 }

@@ -2,27 +2,36 @@ use crate::*;
 use crate::bindings::capi as ztcore;
 use std::os::raw::*;
 use std::ffi::CStr;
-use num_traits::ToPrimitive;
+use num_traits::{ToPrimitive, FromPrimitive};
 
 pub struct Identity {
     pub id_type: IdentityType,
     pub address: Address,
-    capi: *mut ztcore::ZT_Identity,
+    capi: *const ztcore::ZT_Identity,
+    requires_delete: bool
 }
 
 impl Identity {
+    pub(crate) fn new_from_capi(id: *const ztcore::ZT_Identity, requires_delete: bool) -> Identity {
+        unsafe {
+            let idt = ztcore::ZT_Identity_type(id);
+            let a = ztcore::ZT_Identity_address(id);
+            return Identity{
+                id_type: FromPrimitive::from_u32(idt as u32).unwrap(),
+                address: a as Address,
+                capi: id,
+                requires_delete: requires_delete
+            };
+        }
+    }
+
     pub fn generate(id_type: IdentityType) -> Result<Identity, ResultCode> {
         unsafe {
             let id = ztcore::ZT_Identity_new(id_type.to_u32().unwrap());
             if id.is_null() {
                 return Err(ResultCode::ErrorBadParameter); // this only really happens if type is invalid
             }
-            let a = ztcore::ZT_Identity_address(id);
-            return Ok(Identity {
-                id_type: id_type,
-                address: Address(a as u64),
-                capi: id,
-            });
+            return Ok(Identity::new_from_capi(id, true));
         }
     }
 
@@ -32,13 +41,7 @@ impl Identity {
             if id.is_null() {
                 return Err(ResultCode::ErrorBadParameter);
             }
-            let idt = ztcore::ZT_Identity_type(id);
-            let a = ztcore::ZT_Identity_address(id);
-            return Ok(Identity {
-                id_type: num_traits::FromPrimitive::from_u32(idt).unwrap(),
-                address: Address(a as u64),
-                capi: id
-            });
+            return Ok(Identity::new_from_capi(id, true));
         }
     }
 
@@ -48,7 +51,7 @@ impl Identity {
             if ztcore::ZT_Identity_toString(self.capi, buf.as_mut_ptr() as *mut c_char, buf.len() as c_int, if include_private { 1 } else { 0 }).is_null() {
                 return String::from("(invalid)");
             }
-            return String::from(CStr::from_bytes_with_nul(&buf).unwrap().to_str().unwrap());
+            return String::from(CStr::from_bytes_with_nul(buf.as_ref()).unwrap().to_str().unwrap());
         }
     }
 
@@ -74,7 +77,7 @@ impl Identity {
         unsafe {
             let cfp = ztcore::ZT_Identity_fingerprint(self.capi);
             return Fingerprint {
-                address: Address((*cfp).address),
+                address: (*cfp).address,
                 hash: (*cfp).hash
             }
         }
@@ -107,8 +110,10 @@ impl Identity {
 
 impl Drop for Identity {
     fn drop(&mut self) {
-        unsafe {
-            ztcore::ZT_Identity_delete(self.capi);
+        if self.requires_delete && !self.capi.is_null() {
+            unsafe {
+                ztcore::ZT_Identity_delete(self.capi);
+            }
         }
     }
 }

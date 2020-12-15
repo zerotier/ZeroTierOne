@@ -445,10 +445,10 @@ int ZT_Locator_verify(const ZT_Locator *loc, const ZT_Identity *signer)
 	return reinterpret_cast<const ZeroTier::Locator *>(loc)->verify(*reinterpret_cast<const ZeroTier::Identity *>(signer)) ? 1 : 0;
 }
 
-void ZT_Locator_delete(ZT_Locator *loc)
+void ZT_Locator_delete(const ZT_Locator *loc)
 {
 	if (loc)
-		delete reinterpret_cast<ZeroTier::Locator *>(loc);
+		delete reinterpret_cast<const ZeroTier::Locator *>(loc);
 }
 
 /********************************************************************************************************************/
@@ -464,6 +464,18 @@ ZT_Identity *ZT_Identity_new(enum ZT_IdentityType type)
 	} catch (...) {
 		return nullptr;
 	}
+}
+
+ZT_Identity *ZT_Identity_clone(const ZT_Identity *id)
+{
+	if (id) {
+		try {
+			return reinterpret_cast<ZT_Identity *>(new ZeroTier::Identity(*reinterpret_cast<const ZeroTier::Identity *>(id)));
+		} catch ( ... ) {
+			return nullptr;
+		}
+	}
+	return nullptr;
 }
 
 ZT_Identity *ZT_Identity_fromString(const char *idStr)
@@ -541,10 +553,10 @@ const ZT_Fingerprint *ZT_Identity_fingerprint(const ZT_Identity *id)
 	return &(reinterpret_cast<const ZeroTier::Identity *>(id)->fingerprint());
 }
 
-void ZT_Identity_delete(ZT_Identity *id)
+void ZT_Identity_delete(const ZT_Identity *id)
 {
 	if (id)
-		delete reinterpret_cast<ZeroTier::Identity *>(id);
+		delete reinterpret_cast<const ZeroTier::Identity *>(id);
 }
 
 /********************************************************************************************************************/

@@ -2453,6 +2453,14 @@ ZT_SDK_API void ZT_Node_setController(
 ZT_SDK_API ZT_Identity *ZT_Identity_new(enum ZT_IdentityType type);
 
 /**
+ * Make a copy of an identity
+ *
+ * @param id Identity to copy
+ * @return Copy, must be freed with ZT_Identity_delete.
+ */
+ZT_SDK_API ZT_Identity *ZT_Identity_clone(const ZT_Identity *id);
+
+/**
  * Create a new identity object from a string-serialized identity
  *
  * @param idStr Identity in string format
@@ -2560,7 +2568,7 @@ ZT_SDK_API const ZT_Fingerprint *ZT_Identity_fingerprint(const ZT_Identity *id);
  *
  * @param id Identity to delete
  */
-ZT_SDK_API void ZT_Identity_delete(ZT_Identity *id);
+ZT_SDK_API void ZT_Identity_delete(const ZT_Identity *id);
 
 /* ---------------------------------------------------------------------------------------------------------------- */
 
@@ -2712,7 +2720,7 @@ ZT_SDK_API int ZT_Locator_verify(
  *
  * @param loc Locator to delete
  */
-ZT_SDK_API void ZT_Locator_delete(ZT_Locator *loc);
+ZT_SDK_API void ZT_Locator_delete(const ZT_Locator *loc);
 
 /* ---------------------------------------------------------------------------------------------------------------- */
 

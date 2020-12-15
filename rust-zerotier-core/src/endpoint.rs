@@ -1,7 +1,7 @@
 use crate::*;
 use crate::bindings::capi as ztcore;
 use num_traits::FromPrimitive;
-use std::os::raw::c_char;
+use std::os::raw::{c_char, c_int};
 use std::ffi::CStr;
 use std::mem::MaybeUninit;
 
@@ -25,16 +25,25 @@ impl Endpoint {
             return Err(ResultCode::from_i32(ec).unwrap());
         }
     }
+
+    pub(crate) fn new_from_capi(ep: *const ztcore::ZT_Endpoint) -> Endpoint {
+        unsafe {
+            return Endpoint{
+                ep_type: EndpointType::from_u32((*ep).type_ as u32).unwrap(),
+                intl: *ep
+            };
+        }
+    }
 }
 
 impl ToString for Endpoint {
     fn to_string(&self) -> String {
-        let mut buf: [u8; 256] = [0; 256];
+        let mut buf: [u8; 1024] = [0; 1024];
         unsafe {
-            if ztcore::ZT_Endpoint_toString(&(self.intl) as *const ztcore::ZT_Endpoint,buf.as_mut_ptr() as *mut c_char, 1024).is_null() {
+            if ztcore::ZT_Endpoint_toString(&(self.intl) as *const ztcore::ZT_Endpoint,buf.as_mut_ptr() as *mut c_char, buf.len() as c_int).is_null() {
                 return String::from("(invalid)");
             }
-            return String::from(CStr::from_bytes_with_nul(&buf).unwrap().to_str().unwrap());
+            return String::from(CStr::from_bytes_with_nul(buf.as_ref()).unwrap().to_str().unwrap());
         }
     }
 }

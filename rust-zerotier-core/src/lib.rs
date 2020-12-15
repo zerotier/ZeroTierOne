@@ -3,12 +3,16 @@ mod identity;
 mod address;
 mod fingerprint;
 mod endpoint;
-mod inetaddress;
+mod certificate;
+mod networkid;
+mod locator;
 
 pub use identity::Identity;
-pub use address::Address;
+pub use address::*;
 pub use fingerprint::Fingerprint;
 pub use endpoint::Endpoint;
+pub use networkid::*;
+pub use locator::Locator;
 
 use bindings::capi as ztcore;
 use num_derive::FromPrimitive;
