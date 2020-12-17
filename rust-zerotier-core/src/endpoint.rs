@@ -6,11 +6,21 @@ use std::ffi::CStr;
 use std::mem::MaybeUninit;
 
 pub struct Endpoint {
-    pub ep_type: EndpointType,
+    pub type_: EndpointType,
     intl: ztcore::ZT_Endpoint
 }
 
 impl Endpoint {
+    #[inline]
+    pub(crate) fn new_from_capi(ep: *const ztcore::ZT_Endpoint) -> Endpoint {
+        unsafe {
+            return Endpoint{
+                type_: EndpointType::from_u32((*ep).type_ as u32).unwrap(),
+                intl: *ep
+            };
+        }
+    }
+
     pub fn new_from_string(s: &str) -> Result<Endpoint, ResultCode> {
         unsafe {
             let mut cep: MaybeUninit<ztcore::ZT_Endpoint> = MaybeUninit::uninit();
@@ -18,20 +28,11 @@ impl Endpoint {
             if ec == 0 {
                 let epi = cep.assume_init();
                 return Ok(Endpoint{
-                    ep_type: EndpointType::from_u32(epi.type_ as u32).unwrap(),
+                    type_: EndpointType::from_u32(epi.type_ as u32).unwrap(),
                     intl: epi
                 });
             }
             return Err(ResultCode::from_i32(ec).unwrap());
-        }
-    }
-
-    pub(crate) fn new_from_capi(ep: *const ztcore::ZT_Endpoint) -> Endpoint {
-        unsafe {
-            return Endpoint{
-                ep_type: EndpointType::from_u32((*ep).type_ as u32).unwrap(),
-                intl: *ep
-            };
         }
     }
 }
@@ -45,5 +46,35 @@ impl ToString for Endpoint {
             }
             return String::from(CStr::from_bytes_with_nul(buf.as_ref()).unwrap().to_str().unwrap());
         }
+    }
+}
+
+impl serde::Serialize for Endpoint {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
+        serializer.serialize_str(self.to_string().as_str())
+    }
+}
+
+struct EndpointVisitor;
+
+impl<'de> serde::de::Visitor<'de> for EndpointVisitor {
+    type Value = Endpoint;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        formatter.write_str("Endpoint value in string form")
+    }
+
+    fn visit_str<E>(self, s: &str) -> Result<Self::Value, E> where E: serde::de::Error {
+        let id = Endpoint::new_from_string(s);
+        if id.is_err() {
+            return Err(serde::de::Error::invalid_value(serde::de::Unexpected::Str(s), &self));
+        }
+        return Ok(id.ok().unwrap() as Self::Value);
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for Endpoint {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'de> {
+        deserializer.deserialize_str(EndpointVisitor)
     }
 }

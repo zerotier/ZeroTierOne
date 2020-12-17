@@ -38,3 +38,5 @@ node_modules
 /*.db
 /*.opendb
 /rust-zerotier-core/src/bindings/capi.rs
+/rust-zerotier-core/target
+/rust-zerotier-service/target

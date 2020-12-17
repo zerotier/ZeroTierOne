@@ -7,16 +7,18 @@ mod certificate;
 mod networkid;
 mod locator;
 
-pub use identity::Identity;
+pub use identity::*;
 pub use address::*;
-pub use fingerprint::Fingerprint;
-pub use endpoint::Endpoint;
+pub use fingerprint::*;
+pub use endpoint::*;
 pub use networkid::*;
-pub use locator::Locator;
+pub use locator::*;
+pub use certificate::*;
 
 use bindings::capi as ztcore;
 use num_derive::FromPrimitive;
 use num_derive::ToPrimitive;
+use std::os::raw::c_int;
 
 pub const DEFAULT_PORT: u16 = ztcore::ZT_DEFAULT_PORT as u16;
 
@@ -43,38 +45,6 @@ pub mod RulePacketCharacteristics {
     pub const TcpFlagRST: u64 = crate::bindings::capi::ZT_RULE_PACKET_CHARACTERISTICS_TCP_RST as u64;
     pub const TcpFlagSYN: u64 = crate::bindings::capi::ZT_RULE_PACKET_CHARACTERISTICS_TCP_SYN as u64;
     pub const TcpFlagFIN: u64 = crate::bindings::capi::ZT_RULE_PACKET_CHARACTERISTICS_TCP_FIN as u64;
-}
-
-#[derive(FromPrimitive,ToPrimitive)]
-pub enum IdentityType {
-    Curve25519 = ztcore::ZT_IdentityType_ZT_IDENTITY_TYPE_C25519 as isize,
-    NistP384 = ztcore::ZT_IdentityType_ZT_IDENTITY_TYPE_P384 as isize,
-}
-
-pub const CERTIFICATE_MAX_STRING_LENGTH: u32 = ztcore::ZT_CERTIFICATE_MAX_STRING_LENGTH;
-pub const CERTIFICATE_LOCAL_TRUST_FLAG_ROOT_CA: u32 = ztcore::ZT_CERTIFICATE_LOCAL_TRUST_FLAG_ROOT_CA;
-pub const CERTIFICATE_LOCAL_TRUST_FLAG_ZEROTIER_ROOT_SET: u32 = ztcore::ZT_CERTIFICATE_LOCAL_TRUST_FLAG_ZEROTIER_ROOT_SET;
-
-pub const CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE: u32 = ztcore::ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE;
-pub const CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_PRIVATE_SIZE: u32 = ztcore::ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_PRIVATE_SIZE;
-
-#[derive(FromPrimitive,ToPrimitive)]
-pub enum CertificateUniqueIdType {
-    NistP384 = ztcore::ZT_CertificateUniqueIdType_ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384 as isize
-}
-
-#[derive(FromPrimitive,ToPrimitive)]
-pub enum CertificateError {
-    None = ztcore::ZT_CertificateError_ZT_CERTIFICATE_ERROR_NONE as isize,
-    HaveNewerCert = ztcore::ZT_CertificateError_ZT_CERTIFICATE_ERROR_HAVE_NEWER_CERT as isize,
-    InvalidFormat = ztcore::ZT_CertificateError_ZT_CERTIFICATE_ERROR_INVALID_FORMAT as isize,
-    InvalidIdentity = ztcore::ZT_CertificateError_ZT_CERTIFICATE_ERROR_INVALID_IDENTITY as isize,
-    InvalidPrimarySignature = ztcore::ZT_CertificateError_ZT_CERTIFICATE_ERROR_INVALID_PRIMARY_SIGNATURE as isize,
-    InvalidChain = ztcore::ZT_CertificateError_ZT_CERTIFICATE_ERROR_INVALID_CHAIN as isize,
-    InvalidComponentSignature = ztcore::ZT_CertificateError_ZT_CERTIFICATE_ERROR_INVALID_COMPONENT_SIGNATURE as isize,
-    InvalidUniqueIdProof = ztcore::ZT_CertificateError_ZT_CERTIFICATE_ERROR_INVALID_UNIQUE_ID_PROOF as isize,
-    MissingRequiredFields = ztcore::ZT_CertificateError_ZT_CERTIFICATE_ERROR_MISSING_REQUIRED_FIELDS as isize,
-    OutOfValidTimeWindow = ztcore::ZT_CertificateError_ZT_CERTIFICATE_ERROR_OUT_OF_VALID_TIME_WINDOW as isize,
 }
 
 #[derive(FromPrimitive,ToPrimitive)]
@@ -240,6 +210,40 @@ pub enum StateObjectType {
     NetworkConfig = ztcore::ZT_StateObjectType_ZT_STATE_OBJECT_NETWORK_CONFIG as isize,
     TrustStore = ztcore::ZT_StateObjectType_ZT_STATE_OBJECT_TRUST_STORE as isize,
     Certificate = ztcore::ZT_StateObjectType_ZT_STATE_OBJECT_CERT as isize
+}
+
+pub fn version() -> (u32, u32, u32, u32) {
+    let mut major: c_int = 0;
+    let mut minor: c_int = 0;
+    let mut revision: c_int = 0;
+    let mut build: c_int = 0;
+    unsafe {
+        ztcore::ZT_version(&mut major as *mut c_int, &mut minor as *mut c_int, &mut revision as *mut c_int, &mut build as *mut c_int);
+    }
+    (major as u32, minor as u32, revision as u32, build as u32)
+}
+
+#[macro_export]
+macro_rules! implement_json_serializable {
+    ($struct_name:ident) => {
+        impl $struct_name {
+            pub fn new_from_json(json: &str) -> Result<$struct_name, String> {
+                let r: serde_json::error::Result<$struct_name> = serde_json::from_str(json);
+                if r.is_err() {
+                    let e = r.err();
+                    if e.is_none() {
+                        return Err(String::from("unknown error"));
+                    }
+                    return Err(e.unwrap().to_string());
+                }
+                Ok(r.unwrap())
+            }
+
+            pub fn to_json(&self) -> String {
+                serde_json::to_string_pretty(self).unwrap()
+            }
+        }
+    };
 }
 
 #[cfg(test)]

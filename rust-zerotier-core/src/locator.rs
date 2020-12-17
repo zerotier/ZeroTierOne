@@ -9,6 +9,7 @@ pub struct Locator {
 }
 
 impl Locator {
+    #[inline]
     pub(crate) fn new_from_capi(l: *const ztcore::ZT_Locator, requires_delete: bool) -> Locator {
         Locator{
             capi: l,
@@ -64,5 +65,35 @@ impl ToString for Locator {
             }
             return String::from(CStr::from_bytes_with_nul(buf.as_ref()).unwrap().to_str().unwrap());
         }
+    }
+}
+
+impl serde::Serialize for Locator {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
+        serializer.serialize_str(self.to_string().as_str())
+    }
+}
+
+struct LocatorVisitor;
+
+impl<'de> serde::de::Visitor<'de> for LocatorVisitor {
+    type Value = Locator;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        formatter.write_str("Locator value in string form")
+    }
+
+    fn visit_str<E>(self, s: &str) -> Result<Self::Value, E> where E: serde::de::Error {
+        let id = Locator::new_from_string(s);
+        if id.is_err() {
+            return Err(serde::de::Error::invalid_value(serde::de::Unexpected::Str(s), &self));
+        }
+        return Ok(id.ok().unwrap() as Self::Value);
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for Locator {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'de> {
+        deserializer.deserialize_str(LocatorVisitor)
     }
 }
