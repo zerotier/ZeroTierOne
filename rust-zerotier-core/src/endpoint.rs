@@ -7,18 +7,16 @@ use std::mem::MaybeUninit;
 
 pub struct Endpoint {
     pub type_: EndpointType,
-    intl: ztcore::ZT_Endpoint
+    capi: ztcore::ZT_Endpoint
 }
 
 impl Endpoint {
     #[inline]
-    pub(crate) fn new_from_capi(ep: *const ztcore::ZT_Endpoint) -> Endpoint {
-        unsafe {
-            return Endpoint{
-                type_: EndpointType::from_u32((*ep).type_ as u32).unwrap(),
-                intl: *ep
-            };
-        }
+    pub(crate) fn new_from_capi(ep: &ztcore::ZT_Endpoint) -> Endpoint {
+        return Endpoint{
+            type_: EndpointType::from_u32(ep.type_ as u32).unwrap(),
+            capi: *ep
+        };
     }
 
     pub fn new_from_string(s: &str) -> Result<Endpoint, ResultCode> {
@@ -29,7 +27,7 @@ impl Endpoint {
                 let epi = cep.assume_init();
                 return Ok(Endpoint{
                     type_: EndpointType::from_u32(epi.type_ as u32).unwrap(),
-                    intl: epi
+                    capi: epi
                 });
             }
             return Err(ResultCode::from_i32(ec).unwrap());
@@ -41,7 +39,7 @@ impl ToString for Endpoint {
     fn to_string(&self) -> String {
         let mut buf: [u8; 1024] = [0; 1024];
         unsafe {
-            if ztcore::ZT_Endpoint_toString(&(self.intl) as *const ztcore::ZT_Endpoint,buf.as_mut_ptr() as *mut c_char, buf.len() as c_int).is_null() {
+            if ztcore::ZT_Endpoint_toString(&(self.capi) as *const ztcore::ZT_Endpoint, buf.as_mut_ptr() as *mut c_char, buf.len() as c_int).is_null() {
                 return String::from("(invalid)");
             }
             return String::from(CStr::from_bytes_with_nul(buf.as_ref()).unwrap().to_str().unwrap());

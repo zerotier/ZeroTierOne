@@ -10,6 +10,14 @@ pub struct Fingerprint {
 }
 
 impl Fingerprint {
+    #[inline]
+    pub(crate) fn new_from_capi(fp: &ztcore::ZT_Fingerprint) -> Fingerprint {
+        Fingerprint{
+            address: Address(fp.address),
+            hash: fp.hash
+        }
+    }
+
     pub fn new_from_string(s: &str) -> Result<Fingerprint, ResultCode> {
         unsafe {
             let mut cfp: MaybeUninit<ztcore::ZT_Fingerprint> = MaybeUninit::uninit();

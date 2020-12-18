@@ -6,6 +6,8 @@ mod endpoint;
 mod certificate;
 mod networkid;
 mod locator;
+mod path;
+mod peer;
 
 pub use identity::*;
 pub use address::*;
@@ -14,10 +16,11 @@ pub use endpoint::*;
 pub use networkid::*;
 pub use locator::*;
 pub use certificate::*;
+pub use path::*;
+pub use peer::*;
 
 use bindings::capi as ztcore;
-use num_derive::FromPrimitive;
-use num_derive::ToPrimitive;
+use num_derive::{FromPrimitive, ToPrimitive};
 use std::os::raw::c_int;
 
 pub const DEFAULT_PORT: u16 = ztcore::ZT_DEFAULT_PORT as u16;
@@ -212,7 +215,8 @@ pub enum StateObjectType {
     Certificate = ztcore::ZT_StateObjectType_ZT_STATE_OBJECT_CERT as isize
 }
 
-pub fn version() -> (u32, u32, u32, u32) {
+/// Returns a tuple of major, minor, revision, and build version numbers from the ZeroTier core.
+pub fn version() -> (i32, i32, i32, i32) {
     let mut major: c_int = 0;
     let mut minor: c_int = 0;
     let mut revision: c_int = 0;
@@ -220,10 +224,10 @@ pub fn version() -> (u32, u32, u32, u32) {
     unsafe {
         ztcore::ZT_version(&mut major as *mut c_int, &mut minor as *mut c_int, &mut revision as *mut c_int, &mut build as *mut c_int);
     }
-    (major as u32, minor as u32, revision as u32, build as u32)
+    (major as i32, minor as i32, revision as i32, build as i32)
 }
 
-#[macro_export]
+#[macro_export(crate)]
 macro_rules! implement_json_serializable {
     ($struct_name:ident) => {
         impl $struct_name {

@@ -39,7 +39,10 @@ impl Locator {
             let ep_count = ztcore::ZT_Locator_endpointCount(self.capi) as usize;
             eps.reserve(ep_count as usize);
             for i in 0..ep_count {
-                eps.push(Endpoint::new_from_capi(ztcore::ZT_Locator_endpoint(self.capi, i as c_uint)));
+                let ep = ztcore::ZT_Locator_endpoint(self.capi, i as c_uint);
+                if !ep.is_null() {
+                    eps.push(Endpoint::new_from_capi(&(*ep)));
+                }
             }
         }
         eps.into_boxed_slice()
