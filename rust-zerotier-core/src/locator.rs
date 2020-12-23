@@ -51,7 +51,7 @@ impl Locator {
 
 impl Drop for Locator {
     fn drop(&mut self) {
-        if self.requires_delete && !self.capi.is_null() {
+        if self.requires_delete {
             unsafe {
                 ztcore::ZT_Locator_delete(self.capi);
             }

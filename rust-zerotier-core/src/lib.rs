@@ -8,16 +8,24 @@ mod networkid;
 mod locator;
 mod path;
 mod peer;
+mod node;
+mod mac;
+mod buffer;
+mod portableatomici64;
 
 pub use identity::*;
-pub use address::*;
-pub use fingerprint::*;
-pub use endpoint::*;
-pub use networkid::*;
-pub use locator::*;
+pub use address::Address;
+pub use fingerprint::Fingerprint;
+pub use endpoint::Endpoint;
+pub use networkid::NetworkId;
+pub use locator::Locator;
 pub use certificate::*;
-pub use path::*;
-pub use peer::*;
+pub use path::Path;
+pub use peer::Peer;
+pub use node::*;
+pub use mac::MAC;
+pub use buffer::Buffer;
+pub use portableatomici64::PortableAtomicI64;
 
 use bindings::capi as ztcore;
 use num_derive::{FromPrimitive, ToPrimitive};
@@ -225,6 +233,12 @@ pub fn version() -> (i32, i32, i32, i32) {
         ztcore::ZT_version(&mut major as *mut c_int, &mut minor as *mut c_int, &mut revision as *mut c_int, &mut build as *mut c_int);
     }
     (major as i32, minor as i32, revision as i32, build as i32)
+}
+
+/// Convenience function to get the number of milliseconds since the Unix epoch.
+#[inline]
+pub fn now() -> i64 {
+    (std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() & 0x7fffffffffffffff) as i64
 }
 
 #[macro_export(crate)]
