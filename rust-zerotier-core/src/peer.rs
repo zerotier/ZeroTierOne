@@ -14,8 +14,8 @@ pub struct Peer {
     versionProto: i32,
     latency: i32,
     root: bool,
-    networks: Box<[NetworkId]>,
-    paths: Box<[Path]>,
+    networks: Vec<NetworkId>,
+    paths: Vec<Path>,
     // locator: Locator
 }
 
@@ -33,7 +33,7 @@ impl Peer {
             }
             return Peer {
                 address: Address(p.address),
-                identity: Identity::new_from_capi(p.identity, false),
+                identity: Identity::new_from_capi(p.identity, false).clone(), // clone to get a copy independent of 'p'
                 fingerprint: Fingerprint::new_from_capi(&(*p.fingerprint)),
                 versionMajor: p.versionMajor as i32,
                 versionMinor: p.versionMinor as i32,
@@ -41,8 +41,8 @@ impl Peer {
                 versionProto: p.versionProto as i32,
                 latency: p.latency as i32,
                 root: p.root != 0,
-                networks: networks.into_boxed_slice(),
-                paths: paths.into_boxed_slice()
+                networks: networks,
+                paths: paths
             }
         }
     }

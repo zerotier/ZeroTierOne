@@ -13,7 +13,7 @@ mod mac;
 mod buffer;
 mod portableatomici64;
 
-pub use identity::*;
+pub use identity::{Identity, IdentityType};
 pub use address::Address;
 pub use fingerprint::Fingerprint;
 pub use endpoint::Endpoint;
@@ -22,7 +22,7 @@ pub use locator::Locator;
 pub use certificate::*;
 pub use path::Path;
 pub use peer::Peer;
-pub use node::*;
+pub use node::Node;
 pub use mac::MAC;
 pub use buffer::Buffer;
 pub use portableatomici64::PortableAtomicI64;

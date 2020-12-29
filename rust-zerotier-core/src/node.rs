@@ -1,10 +1,13 @@
 use std::cell::Cell;
 use std::mem::MaybeUninit;
-use std::os::raw::{c_uint, c_ulong, c_void};
+use std::os::raw::{c_int, c_uint, c_ulong, c_void};
 use std::ptr::null_mut;
 use std::sync::*;
 use std::sync::atomic::*;
 use std::time::Duration;
+use std::mem::transmute;
+use std::intrinsics::arith_offset;
+use std::ffi::CStr;
 
 use num_traits::FromPrimitive;
 use socket2::SockAddr;
@@ -12,23 +15,163 @@ use socket2::SockAddr;
 use crate::*;
 use crate::bindings::capi as ztcore;
 
+#[allow(non_snake_case)]
+pub struct NodeStatus {
+    pub address: Address,
+    pub identity: Identity,
+    pub publicIdentity: String,
+    pub secretIdentity: String,
+    pub online: bool
+}
+
 pub struct Node {
-    capi: *mut ztcore::ZT_Node,
+    capi: Cell<*mut ztcore::ZT_Node>,
+    node_uptr: Cell<Weak<Node>>, // A pointer to this Weak<Node> is passed in as 'uptr' for the core Node.
     background_thread: Cell<Option<std::thread::JoinHandle<()>>>,
     background_thread_run: Arc<AtomicBool>,
     now: PortableAtomicI64,
 }
 
+macro_rules! node_from_raw_ptr {
+    ($uptr:ident) => {
+        {
+            let ntmp = unsafe { (*($uptr as *mut Weak<Node>)).upgrade() };
+            if ntmp.is_none() { return; }
+            ntmp.unwrap()
+        }
+    }
+}
+
+#[no_mangle]
+extern "C" fn zt_virtual_network_config_function(
+    capi: *mut ztcore::ZT_Node,
+    uptr: *mut c_void,
+    tptr: *mut c_void,
+    nwid: u64,
+    nptr: *mut *mut c_void,
+    op: ztcore::ZT_VirtualNetworkConfigOperation,
+    conf: *const ztcore::ZT_VirtualNetworkConfig,
+) {
+    //let n = node_from_raw_ptr!(uptr);
+}
+
+#[no_mangle]
+extern "C" fn zt_virtual_network_frame_function(
+    capi: *mut ztcore::ZT_Node,
+    uptr: *mut c_void,
+    tptr: *mut c_void,
+    nwid: u64,
+    nptr: *mut *mut c_void,
+    source_mac: u64,
+    dest_mac: u64,
+    ethertype: c_uint,
+    vlan_id: c_uint,
+    data: *const c_void,
+    data_size: c_uint,
+) {}
+
+#[no_mangle]
+extern "C" fn zt_event_callback(
+    capi: *mut ztcore::ZT_Node,
+    uptr: *mut c_void,
+    tptr: *mut c_void,
+    ev: ztcore::ZT_Event,
+    data: *const c_void,
+) {}
+
+#[no_mangle]
+extern "C" fn zt_state_put_function(
+    capi: *mut ztcore::ZT_Node,
+    uptr: *mut c_void,
+    tptr: *mut c_void,
+    obj_type: ztcore::ZT_StateObjectType,
+    obj_id: *const u64,
+    obj_data: *const c_void,
+    obj_data_len: c_int
+) {}
+
+#[no_mangle]
+extern "C" fn zt_state_get_function(
+    capi: *mut ztcore::ZT_Node,
+    uptr: *mut c_void,
+    tptr: *mut c_void,
+    obj_type: ztcore::ZT_StateObjectType,
+    obj_id: *const u64,
+    obj_data: *mut *mut c_void,
+    obj_data_free_function: *mut *mut c_void
+) {}
+
+#[no_mangle]
+extern "C" fn zt_wire_packet_send_function(
+    capi: *mut ztcore::ZT_Node,
+    uptr: *mut c_void,
+    tptr: *mut c_void,
+    local_socket: i64,
+    sock_addr: *const ztcore::sockaddr_storage,
+    data: *const c_void,
+    data_size: c_uint,
+    packet_ttl: c_uint
+) {}
+
+#[no_mangle]
+extern "C" fn zt_path_check_function(
+    capi: *mut ztcore::ZT_Node,
+    uptr: *mut c_void,
+    tptr: *mut c_void,
+    address: u64,
+    identity: *const ztcore::ZT_Identity,
+    local_socket: i64,
+    sock_addr: *const ztcore::sockaddr_storage
+) {}
+
+#[no_mangle]
+extern "C" fn zt_path_lookup_function(
+    capi: *mut ztcore::ZT_Node,
+    uptr: *mut c_void,
+    tptr: *mut c_void,
+    address: u64,
+    identity: *const ztcore::ZT_Identity,
+    sock_family: c_int,
+    sock_addr: *mut ztcore::sockaddr_storage
+) {}
+
 impl Node {
-    pub fn new(base_dir: &std::path::Path) -> Arc<Node> {
-        let n: Arc<Node> = Arc::new(Node {
-            capi: null_mut(), // TODO
+    pub fn new(base_dir: &std::path::Path) -> Result<Arc<Node>, ResultCode> {
+        let now = now();
+
+        let n = Arc::new(Node {
+            capi: Cell::new(null_mut()),
+            node_uptr: Cell::new(Weak::new()),
             background_thread: Cell::new(None),
             background_thread_run: Arc::new(AtomicBool::new(true)),
-            now: PortableAtomicI64::new(now()),
+            now: PortableAtomicI64::new(now),
         });
 
         let wn = Arc::downgrade(&n);
+        n.node_uptr.replace(wn.clone());
+
+        let mut capi: *mut ztcore::ZT_Node = null_mut();
+        unsafe {
+            let callbacks = ztcore::ZT_Node_Callbacks {
+                statePutFunction: transmute(zt_state_put_function as *const ()),
+                stateGetFunction: transmute(zt_state_get_function as *const ()),
+                wirePacketSendFunction: transmute(zt_wire_packet_send_function as *const ()),
+                virtualNetworkFrameFunction: transmute(zt_virtual_network_frame_function as *const ()),
+                virtualNetworkConfigFunction: transmute(zt_virtual_network_config_function as *const ()),
+                eventCallback: transmute(zt_event_callback as *const ()),
+                pathCheckFunction: transmute(zt_path_check_function as *const ()),
+                pathLookupFunction: transmute(zt_path_lookup_function as *const ())
+            };
+
+            let rc = ztcore::ZT_Node_new(&mut capi as *mut *mut ztcore::ZT_Node, n.node_uptr.as_ptr() as *mut c_void, null_mut(), &callbacks as *const ztcore::ZT_Node_Callbacks, now);
+            if rc != 0 {
+                return Err(ResultCode::from_u32(rc as u32).unwrap_or(ResultCode::FatalErrorInternal));
+            } else if capi.is_null() {
+                return Err(ResultCode::FatalErrorInternal);
+            }
+        }
+        n.capi.replace(capi);
+
         let run = n.background_thread_run.clone();
         n.background_thread.replace(Some(std::thread::spawn(move || {
             let mut loop_delay = Duration::from_millis(500);
@@ -47,7 +190,7 @@ impl Node {
             }
         })));
 
-        n
+        Ok(n)
     }
 
     /// This is called periodically from internal background thread.
@@ -59,7 +202,7 @@ impl Node {
 
         let mut next_task_deadline: i64 = current_time;
         unsafe {
-            ztcore::ZT_Node_processBackgroundTasks(self.capi, 0 as *mut c_void, current_time, &mut next_task_deadline as *mut i64);
+            ztcore::ZT_Node_processBackgroundTasks(self.capi.get(), 0 as *mut c_void, current_time, &mut next_task_deadline as *mut i64);
         }
         let mut next_delay = next_task_deadline - current_time;
 
@@ -83,28 +226,21 @@ impl Node {
             }
         }
         unsafe {
-            let rc = ztcore::ZT_Node_join(self.capi, nwid.0, cfpp, null_mut(), null_mut());
+            let rc = ztcore::ZT_Node_join(self.capi.get(), nwid.0, cfpp, null_mut(), null_mut());
             return ResultCode::from_u32(rc as u32).unwrap();
         }
     }
 
     pub fn leave(&self, nwid: NetworkId) -> ResultCode {
         unsafe {
-            let rc = ztcore::ZT_Node_leave(self.capi, nwid.0, null_mut(), null_mut());
-            return ResultCode::from_u32(rc as u32).unwrap();
+            return ResultCode::from_u32(ztcore::ZT_Node_leave(self.capi.get(), nwid.0, null_mut(), null_mut()) as u32).unwrap();
         }
     }
 
     #[inline(always)]
     pub fn address(&self) -> Address {
         unsafe {
-            return Address(ztcore::ZT_Node_address(self.capi) as u64);
-        }
-    }
-
-    pub fn identity(&self) -> Identity {
-        unsafe {
-            return Identity::new_from_capi(ztcore::ZT_Node_identity(self.capi), false);
+            return Address(ztcore::ZT_Node_address(self.capi.get()) as u64);
         }
     }
 
@@ -113,7 +249,7 @@ impl Node {
         let current_time = self.now.get();
         let mut next_task_deadline: i64 = current_time;
         unsafe {
-            return ResultCode::from_u32(ztcore::ZT_Node_processWirePacket(self.capi, null_mut(), current_time, local_socket, remote_address.as_ptr() as *const ztcore::sockaddr_storage, data.zt_core_buf as *const c_void, data.data_size as u32, 1, &mut next_task_deadline as *mut i64) as u32).unwrap_or(ResultCode::ErrorInternalNonFatal);
+            return ResultCode::from_u32(ztcore::ZT_Node_processWirePacket(self.capi.get(), null_mut(), current_time, local_socket, remote_address.as_ptr() as *const ztcore::sockaddr_storage, data.zt_core_buf as *const c_void, data.data_size as u32, 1, &mut next_task_deadline as *mut i64) as u32).unwrap_or(ResultCode::ErrorInternalNonFatal);
         }
     }
 
@@ -122,20 +258,60 @@ impl Node {
         let current_time = self.now.get();
         let mut next_tick_deadline: i64 = current_time;
         unsafe {
-            return ResultCode::from_u32(ztcore::ZT_Node_processVirtualNetworkFrame(self.capi, null_mut(), current_time, nwid.0, source_mac.0, dest_mac.0, ethertype as c_uint, vlan_id as c_uint, data.zt_core_buf as *const c_void, data.data_size as u32, 1, &mut next_tick_deadline as *mut i64) as u32).unwrap_or(ResultCode::ErrorInternalNonFatal);
+            return ResultCode::from_u32(ztcore::ZT_Node_processVirtualNetworkFrame(self.capi.get(), null_mut(), current_time, nwid.0, source_mac.0, dest_mac.0, ethertype as c_uint, vlan_id as c_uint, data.zt_core_buf as *const c_void, data.data_size as u32, 1, &mut next_tick_deadline as *mut i64) as u32).unwrap_or(ResultCode::ErrorInternalNonFatal);
         }
     }
 
     pub fn multicast_subscribe(&self, nwid: &NetworkId, multicast_group: &MAC, multicast_adi: u32) -> ResultCode {
         unsafe {
-            return ResultCode::from_u32(ztcore::ZT_Node_multicastSubscribe(self.capi, null_mut(), nwid.0, multicast_group.0, multicast_adi as c_ulong) as u32).unwrap_or(ResultCode::ErrorInternalNonFatal);
+            return ResultCode::from_u32(ztcore::ZT_Node_multicastSubscribe(self.capi.get(), null_mut(), nwid.0, multicast_group.0, multicast_adi as c_ulong) as u32).unwrap_or(ResultCode::ErrorInternalNonFatal);
         }
     }
 
     pub fn multicast_unsubscribe(&self, nwid: &NetworkId, multicast_group: &MAC, multicast_adi: u32) -> ResultCode {
         unsafe {
-            return ResultCode::from_u32(ztcore::ZT_Node_multicastUnsubscribe(self.capi, nwid.0, multicast_group.0, multicast_adi as c_ulong) as u32).unwrap_or(ResultCode::ErrorInternalNonFatal);
+            return ResultCode::from_u32(ztcore::ZT_Node_multicastUnsubscribe(self.capi.get(), nwid.0, multicast_group.0, multicast_adi as c_ulong) as u32).unwrap_or(ResultCode::ErrorInternalNonFatal);
         }
+    }
+
+    pub fn identity(&self) -> Identity {
+        unsafe {
+            let mut id = ztcore::ZT_Node_identity(self.capi.get());
+            return Identity::new_from_capi(id, false).clone();
+        }
+    }
+
+    pub fn status(&self) -> NodeStatus {
+        unsafe {
+            let mut ns: MaybeUninit<ztcore::ZT_NodeStatus> = MaybeUninit::zeroed();
+            ztcore::ZT_Node_status(self.capi.get(), ns.as_mut_ptr());
+            let ns = ns.assume_init();
+            if ns.identity.is_null() {
+                panic!("ZT_Node_status() returned null identity");
+            }
+            return NodeStatus {
+                address: Address(ns.address),
+                identity: Identity::new_from_capi(&*ns.identity, false).clone(),
+                publicIdentity: String::from(CStr::from_ptr(ns.publicIdentity)),
+                secretIdentity: String::from(CStr::from_ptr(ns.secretIdentity)),
+                online: ns.online != 0
+            }
+        }
+    }
+
+    pub fn peers(&self) -> Vec<Peer> {
+        let mut p: Vec<Peer> = Vec::new();
+        unsafe {
+            let pl = ztcore::ZT_Node_peers(self.capi.get());
+            if !pl.is_null() {
+                p.reserve(pl.peerCount as usize);
+                for i in 0..(pl.peerCount as isize) {
+                    p.push(Peer::new_from_capi(&*arith_offset(pl.peers, i)));
+                }
+                ztcore::ZT_freeQueryResult(pl as *const c_void);
+            }
+        }
+        return p;
     }
 }
 
@@ -146,7 +322,6 @@ unsafe impl Send for Node {}
 impl Drop for Node {
     fn drop(&mut self) {
         self.background_thread_run.store(false, Ordering::Relaxed);
-        std::thread::yield_now();
         let bt = self.background_thread.replace(None);
         if bt.is_some() {
             let bt = bt.unwrap();
@@ -155,7 +330,7 @@ impl Drop for Node {
         }
 
         unsafe {
-            ztcore::ZT_Node_delete(self.capi, 0 as *mut c_void);
+            ztcore::ZT_Node_delete(self.capi.get(), null_mut());
         }
     }
 }

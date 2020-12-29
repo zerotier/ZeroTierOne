@@ -129,6 +129,14 @@ impl Identity {
     }
 }
 
+impl Clone for Identity {
+    fn clone(&self) -> Identity {
+        unsafe {
+            return Identity::new_from_capi(ztcore::ZT_Identity_clone(self.capi), true);
+        }
+    }
+}
+
 impl Drop for Identity {
     fn drop(&mut self) {
         if self.requires_delete {
