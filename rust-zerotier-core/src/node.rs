@@ -1,19 +1,20 @@
 use std::cell::Cell;
+use std::ffi::CStr;
 use std::mem::MaybeUninit;
+use std::mem::transmute;
 use std::os::raw::{c_int, c_uint, c_ulong, c_void};
 use std::ptr::null_mut;
 use std::sync::*;
 use std::sync::atomic::*;
 use std::time::Duration;
-use std::mem::transmute;
-use std::intrinsics::arith_offset;
-use std::ffi::CStr;
 
 use num_traits::FromPrimitive;
 use socket2::SockAddr;
 
 use crate::*;
 use crate::bindings::capi as ztcore;
+
+const NODE_BACKGROUND_MIN_DELAY: i64 = 250;
 
 #[allow(non_snake_case)]
 pub struct NodeStatus {
@@ -206,10 +207,10 @@ impl Node {
         }
         let mut next_delay = next_task_deadline - current_time;
 
-        if next_delay < 50 {
-            next_delay = 50;
-        } else if next_delay > 500 {
-            next_delay = 500;
+        if next_delay < 5 {
+            next_delay = 5;
+        } else if next_delay > NODE_BACKGROUND_MIN_DELAY {
+            next_delay = NODE_BACKGROUND_MIN_DELAY;
         }
         next_delay
     }
@@ -292,8 +293,8 @@ impl Node {
             return NodeStatus {
                 address: Address(ns.address),
                 identity: Identity::new_from_capi(&*ns.identity, false).clone(),
-                publicIdentity: String::from(CStr::from_ptr(ns.publicIdentity)),
-                secretIdentity: String::from(CStr::from_ptr(ns.secretIdentity)),
+                publicIdentity: String::from(CStr::from_ptr(ns.publicIdentity).to_str().unwrap()),
+                secretIdentity: String::from(CStr::from_ptr(ns.secretIdentity).to_str().unwrap()),
                 online: ns.online != 0
             }
         }
@@ -304,14 +305,47 @@ impl Node {
         unsafe {
             let pl = ztcore::ZT_Node_peers(self.capi.get());
             if !pl.is_null() {
-                p.reserve(pl.peerCount as usize);
-                for i in 0..(pl.peerCount as isize) {
-                    p.push(Peer::new_from_capi(&*arith_offset(pl.peers, i)));
+                let peer_count = (*pl).peerCount as usize;
+                p.reserve(peer_count);
+                for i in 0..peer_count as isize {
+                    p.push(Peer::new_from_capi(&*(*pl).peers.offset(i)));
                 }
                 ztcore::ZT_freeQueryResult(pl as *const c_void);
             }
         }
-        return p;
+        p
+    }
+
+    pub fn networks(&self) -> Vec<VirtualNetworkConfig> {
+        let mut n: Vec<VirtualNetworkConfig> = Vec::new();
+        unsafe {
+            let nl = ztcore::ZT_Node_networks(self.capi.get());
+            if !nl.is_null() {
+                let net_count = (*nl).networkCount as usize;
+                n.reserve(net_count);
+                for i in 0..net_count as isize {
+                    n.push(VirtualNetworkConfig::new_from_capi(&*(*nl).networks.offset(i)));
+                }
+                ztcore::ZT_freeQueryResult(nl as *const c_void);
+            }
+        }
+        n
+    }
+
+    pub fn certificates(&self) -> Vec<(Certificate, u32)> {
+        let mut c: Vec<(Certificate, u32)> = Vec::new();
+        unsafe {
+            let cl = ztcore::ZT_Node_listCertificates(self.capi.get());
+            if !cl.is_null() {
+                let cert_count = (*cl).certCount as usize;
+                c.reserve(cert_count);
+                for i in 0..cert_count as isize {
+                    c.push((Certificate::new_from_capi(&**(*cl).certs.offset(i)), *(*cl).localTrust.offset(i)));
+                }
+                ztcore::ZT_freeQueryResult(cl as *const c_void);
+            }
+        }
+        c
     }
 }
 

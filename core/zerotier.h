@@ -23,10 +23,12 @@
 #include <WS2tcpip.h>
 #include <Windows.h>
 #else
+
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+
 #endif
 
 #include <stdint.h>
@@ -266,7 +268,7 @@ extern "C" {
 enum ZT_IdentityType
 {
 	ZT_IDENTITY_TYPE_C25519 = 0, /* C25519/Ed25519 */
-	ZT_IDENTITY_TYPE_P384 =   1  /* Combined C25519/NIST-P-384 key */
+	ZT_IDENTITY_TYPE_P384 = 1  /* Combined C25519/NIST-P-384 key */
 };
 
 /**
@@ -651,12 +653,12 @@ typedef struct
  */
 enum ZT_CredentialType
 {
-	ZT_CREDENTIAL_TYPE_NULL =        0,
-	ZT_CREDENTIAL_TYPE_COM =         1,
-	ZT_CREDENTIAL_TYPE_CAPABILITY =  2,
-	ZT_CREDENTIAL_TYPE_TAG =         3,
-	ZT_CREDENTIAL_TYPE_COO =         4,
-	ZT_CREDENTIAL_TYPE_REVOCATION =  6
+	ZT_CREDENTIAL_TYPE_NULL = 0,
+	ZT_CREDENTIAL_TYPE_COM = 1,
+	ZT_CREDENTIAL_TYPE_CAPABILITY = 2,
+	ZT_CREDENTIAL_TYPE_TAG = 3,
+	ZT_CREDENTIAL_TYPE_COO = 4,
+	ZT_CREDENTIAL_TYPE_REVOCATION = 6
 };
 
 /**
@@ -667,15 +669,15 @@ enum ZT_CredentialType
  */
 enum ZT_EndpointType
 {
-	ZT_ENDPOINT_TYPE_NIL =           0,  /* Nil/empty endpoint */
-	ZT_ENDPOINT_TYPE_ZEROTIER =      1,  /* ZeroTier relaying (address+fingerprint) */
-	ZT_ENDPOINT_TYPE_ETHERNET =      2,  /* Ethernet with ethertype 0x9993 */
-	ZT_ENDPOINT_TYPE_WIFI_DIRECT =   3,  /* Ethernet using WiFi direct */
-	ZT_ENDPOINT_TYPE_BLUETOOTH =     4,  /* Bluetooth (same address type as Ethernet) */
-	ZT_ENDPOINT_TYPE_IP =            5,  /* Naked IP (protocol 193) */
-	ZT_ENDPOINT_TYPE_IP_UDP =        6,  /* IP/UDP */
-	ZT_ENDPOINT_TYPE_IP_TCP =        7,  /* IP/TCP */
-	ZT_ENDPOINT_TYPE_IP_HTTP =       8   /* IP/HTTP encapsulation */
+	ZT_ENDPOINT_TYPE_NIL = 0,  /* Nil/empty endpoint */
+	ZT_ENDPOINT_TYPE_ZEROTIER = 1,  /* ZeroTier relaying (address+fingerprint) */
+	ZT_ENDPOINT_TYPE_ETHERNET = 2,  /* Ethernet with ethertype 0x9993 */
+	ZT_ENDPOINT_TYPE_WIFI_DIRECT = 3,  /* Ethernet using WiFi direct */
+	ZT_ENDPOINT_TYPE_BLUETOOTH = 4,  /* Bluetooth (same address type as Ethernet) */
+	ZT_ENDPOINT_TYPE_IP = 5,  /* Naked IP (protocol 193) */
+	ZT_ENDPOINT_TYPE_IP_UDP = 6,  /* IP/UDP */
+	ZT_ENDPOINT_TYPE_IP_TCP = 7,  /* IP/TCP */
+	ZT_ENDPOINT_TYPE_IP_HTTP = 8   /* IP/HTTP encapsulation */
 };
 
 /**
@@ -705,15 +707,15 @@ enum ZT_EndpointType
  */
 enum ZT_TraceEventType
 {
-	ZT_TRACE_UNEXPECTED_ERROR =             0,
+	ZT_TRACE_UNEXPECTED_ERROR = 0,
 	ZT_TRACE_VL1_RESETTING_PATHS_IN_SCOPE = 1,
-	ZT_TRACE_VL1_TRYING_NEW_PATH =          2,
-	ZT_TRACE_VL1_LEARNED_NEW_PATH =         3,
-	ZT_TRACE_VL1_INCOMING_PACKET_DROPPED =  4,
-	ZT_TRACE_VL2_OUTGOING_FRAME_DROPPED =   100,
-	ZT_TRACE_VL2_INCOMING_FRAME_DROPPED =   101,
+	ZT_TRACE_VL1_TRYING_NEW_PATH = 2,
+	ZT_TRACE_VL1_LEARNED_NEW_PATH = 3,
+	ZT_TRACE_VL1_INCOMING_PACKET_DROPPED = 4,
+	ZT_TRACE_VL2_OUTGOING_FRAME_DROPPED = 100,
+	ZT_TRACE_VL2_INCOMING_FRAME_DROPPED = 101,
 	ZT_TRACE_VL2_NETWORK_CONFIG_REQUESTED = 102,
-	ZT_TRACE_VL2_NETWORK_FILTER =           103
+	ZT_TRACE_VL2_NETWORK_FILTER = 103
 };
 
 /**
@@ -721,15 +723,15 @@ enum ZT_TraceEventType
  */
 enum ZT_TracePacketDropReason
 {
-	ZT_TRACE_PACKET_DROP_REASON_UNSPECIFIED =             0,
-	ZT_TRACE_PACKET_DROP_REASON_PEER_TOO_OLD =            1,
-	ZT_TRACE_PACKET_DROP_REASON_MALFORMED_PACKET =        2,
-	ZT_TRACE_PACKET_DROP_REASON_MAC_FAILED =              3,
-	ZT_TRACE_PACKET_DROP_REASON_RATE_LIMIT_EXCEEDED =     4,
-	ZT_TRACE_PACKET_DROP_REASON_INVALID_OBJECT =          5,
+	ZT_TRACE_PACKET_DROP_REASON_UNSPECIFIED = 0,
+	ZT_TRACE_PACKET_DROP_REASON_PEER_TOO_OLD = 1,
+	ZT_TRACE_PACKET_DROP_REASON_MALFORMED_PACKET = 2,
+	ZT_TRACE_PACKET_DROP_REASON_MAC_FAILED = 3,
+	ZT_TRACE_PACKET_DROP_REASON_RATE_LIMIT_EXCEEDED = 4,
+	ZT_TRACE_PACKET_DROP_REASON_INVALID_OBJECT = 5,
 	ZT_TRACE_PACKET_DROP_REASON_INVALID_COMPRESSED_DATA = 6,
-	ZT_TRACE_PACKET_DROP_REASON_UNRECOGNIZED_VERB =       7,
-	ZT_TRACE_PACKET_DROP_REASON_REPLY_NOT_EXPECTED =      8
+	ZT_TRACE_PACKET_DROP_REASON_UNRECOGNIZED_VERB = 7,
+	ZT_TRACE_PACKET_DROP_REASON_REPLY_NOT_EXPECTED = 8
 };
 
 /**
@@ -737,14 +739,14 @@ enum ZT_TracePacketDropReason
  */
 enum ZT_TraceFrameDropReason
 {
-	ZT_TRACE_FRAME_DROP_REASON_UNSPECIFIED =                          0,
-	ZT_TRACE_FRAME_DROP_REASON_BRIDGING_NOT_ALLOWED_REMOTE =          1,
-	ZT_TRACE_FRAME_DROP_REASON_BRIDGING_NOT_ALLOWED_LOCAL =           2,
-	ZT_TRACE_FRAME_DROP_REASON_MULTICAST_DISABLED =                   3,
-	ZT_TRACE_FRAME_DROP_REASON_BROADCAST_DISABLED =                   4,
-	ZT_TRACE_FRAME_DROP_REASON_FILTER_BLOCKED =                       5,
+	ZT_TRACE_FRAME_DROP_REASON_UNSPECIFIED = 0,
+	ZT_TRACE_FRAME_DROP_REASON_BRIDGING_NOT_ALLOWED_REMOTE = 1,
+	ZT_TRACE_FRAME_DROP_REASON_BRIDGING_NOT_ALLOWED_LOCAL = 2,
+	ZT_TRACE_FRAME_DROP_REASON_MULTICAST_DISABLED = 3,
+	ZT_TRACE_FRAME_DROP_REASON_BROADCAST_DISABLED = 4,
+	ZT_TRACE_FRAME_DROP_REASON_FILTER_BLOCKED = 5,
 	ZT_TRACE_FRAME_DROP_REASON_FILTER_BLOCKED_AT_BRIDGE_REPLICATION = 6,
-	ZT_TRACE_FRAME_DROP_REASON_PERMISSION_DENIED =                    7
+	ZT_TRACE_FRAME_DROP_REASON_PERMISSION_DENIED = 7
 };
 
 /**
@@ -753,9 +755,9 @@ enum ZT_TraceFrameDropReason
 enum ZT_TraceCredentialRejectionReason
 {
 	ZT_TRACE_CREDENTIAL_REJECTION_REASON_SIGNATURE_VERIFICATION_FAILED = 1,
-	ZT_TRACE_CREDENTIAL_REJECTION_REASON_REVOKED =                       2,
-	ZT_TRACE_CREDENTIAL_REJECTION_REASON_OLDER_THAN_LATEST =             3,
-	ZT_TRACE_CREDENTIAL_REJECTION_REASON_INVALID =                       4
+	ZT_TRACE_CREDENTIAL_REJECTION_REASON_REVOKED = 2,
+	ZT_TRACE_CREDENTIAL_REJECTION_REASON_OLDER_THAN_LATEST = 3,
+	ZT_TRACE_CREDENTIAL_REJECTION_REASON_INVALID = 4
 };
 
 #define ZT_TRACE_FIELD_TYPE                               "t"
@@ -1176,11 +1178,13 @@ typedef struct
 	/**
 	 * Union containing the value of this rule -- which field is used depends on 't'
 	 */
-	union {
+	union
+	{
 		/**
 		 * IPv6 address in big-endian / network byte order and netmask bits
 		 */
-		struct {
+		struct
+		{
 			uint8_t ip[16];
 			uint8_t mask;
 		} ipv6;
@@ -1188,7 +1192,8 @@ typedef struct
 		/**
 		 * IPv4 address in big-endian / network byte order
 		 */
-		struct {
+		struct
+		{
 			uint32_t ip;
 			uint8_t mask;
 		} ipv4;
@@ -1200,7 +1205,8 @@ typedef struct
 		 * the range is +/- INT32_MAX. It's packed this way so it fits in 16
 		 * bytes and doesn't enlarge the overall size of this union.
 		 */
-		struct {
+		struct
+		{
 			uint64_t start; /* integer range start */
 			uint32_t end;   /* end of integer range (relative to start, inclusive, 0 for equality w/start) */
 			uint16_t idx;   /* index in packet of integer */
@@ -1260,7 +1266,8 @@ typedef struct
 		/**
 		 * IP type of service a.k.a. DSCP field
 		 */
-		struct {
+		struct
+		{
 			uint8_t mask;
 			uint8_t value[2];
 		} ipTos;
@@ -1273,7 +1280,8 @@ typedef struct
 		/**
 		 * ICMP type and code
 		 */
-		struct {
+		struct
+		{
 			uint8_t type;  /* ICMP type, always matched */
 			uint8_t code;  /* ICMP code if matched */
 			uint8_t flags; /* flag 0x01 means also match code, otherwise only match type */
@@ -1282,7 +1290,8 @@ typedef struct
 		/**
 		 * For tag-related rules
 		 */
-		struct {
+		struct
+		{
 			uint32_t id;
 			uint32_t value;
 		} tag;
@@ -1290,7 +1299,8 @@ typedef struct
 		/**
 		 * Destinations for TEE and REDIRECT
 		 */
-		struct {
+		struct
+		{
 			uint64_t address;
 			uint32_t flags;
 			uint16_t length;
@@ -1458,6 +1468,7 @@ typedef struct
 typedef struct
 {
 	void (*freeFunction)(const void *);
+
 	ZT_VirtualNetworkConfig *networks;
 	unsigned long networkCount;
 } ZT_VirtualNetworkList;
@@ -1488,7 +1499,8 @@ typedef struct
 	 */
 	enum ZT_EndpointType type;
 
-	union {
+	union
+	{
 		/**
 		 * Socket address generic buffer
 		 */
@@ -1651,6 +1663,7 @@ typedef struct
 typedef struct
 {
 	void (*freeFunction)(const void *);
+
 	ZT_Peer *peers;
 	unsigned long peerCount;
 } ZT_PeerList;

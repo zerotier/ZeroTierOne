@@ -59,6 +59,12 @@ impl Drop for Locator {
     }
 }
 
+impl Clone for Locator {
+    fn clone(&self) -> Locator {
+        Locator::new_from_string(self.to_string().as_str()).ok().unwrap()
+    }
+}
+
 impl ToString for Locator {
     fn to_string(&self) -> String {
         let mut buf: [u8; 4096] = [0; 4096];

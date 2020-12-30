@@ -1,16 +1,30 @@
 pub struct NetworkId(pub u64);
 
 impl NetworkId {
-    #[inline]
+    #[inline(always)]
     pub fn new_from_string(s: &str) -> NetworkId {
         return NetworkId(u64::from_str_radix(s, 16).unwrap_or(0));
     }
 }
 
 impl ToString for NetworkId {
-    #[inline]
+    #[inline(always)]
     fn to_string(&self) -> String {
         format!("{:0>16x}", self.0)
+    }
+}
+
+impl From<u64> for NetworkId {
+    #[inline(always)]
+    fn from(n: u64) -> Self {
+        NetworkId(n)
+    }
+}
+
+impl From<&str> for NetworkId {
+    #[inline(always)]
+    fn from(s: &str) -> Self {
+        NetworkId::new_from_string(s)
     }
 }
 

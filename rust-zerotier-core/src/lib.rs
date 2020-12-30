@@ -12,6 +12,7 @@ mod node;
 mod mac;
 mod buffer;
 mod portableatomici64;
+mod virtualnetworkconfig;
 
 pub use identity::{Identity, IdentityType};
 pub use address::Address;
@@ -26,6 +27,7 @@ pub use node::Node;
 pub use mac::MAC;
 pub use buffer::Buffer;
 pub use portableatomici64::PortableAtomicI64;
+pub use virtualnetworkconfig::*;
 
 use bindings::capi as ztcore;
 use num_derive::{FromPrimitive, ToPrimitive};
@@ -152,67 +154,6 @@ pub enum Event {
 }
 
 #[derive(FromPrimitive,ToPrimitive)]
-pub enum VirtualNetworkStatus {
-    RequestingConfiguration = ztcore::ZT_VirtualNetworkStatus_ZT_NETWORK_STATUS_REQUESTING_CONFIGURATION as isize,
-    Ok = ztcore::ZT_VirtualNetworkStatus_ZT_NETWORK_STATUS_OK as isize,
-    AccessDenied = ztcore::ZT_VirtualNetworkStatus_ZT_NETWORK_STATUS_ACCESS_DENIED as isize,
-    NotFound = ztcore::ZT_VirtualNetworkStatus_ZT_NETWORK_STATUS_NOT_FOUND as isize,
-}
-
-#[derive(FromPrimitive,ToPrimitive)]
-pub enum VirtualNetworkType {
-    Private = ztcore::ZT_VirtualNetworkType_ZT_NETWORK_TYPE_PRIVATE as isize,
-    Public = ztcore::ZT_VirtualNetworkType_ZT_NETWORK_TYPE_PUBLIC as isize,
-}
-
-#[derive(FromPrimitive,ToPrimitive)]
-pub enum VirtualNetworkRuleType {
-    ActionDrop = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_ACTION_DROP as isize,
-    ActionAccept = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_ACTION_ACCEPT as isize,
-    ActionTee = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_ACTION_TEE as isize,
-    ActionWatch = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_ACTION_WATCH as isize,
-    ActionRedirect = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_ACTION_REDIRECT as isize,
-    ActionBreak = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_ACTION_BREAK as isize,
-    ActionPriority = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_ACTION_PRIORITY as isize,
-    MatchSourceZeroTierAddress = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_MATCH_SOURCE_ZEROTIER_ADDRESS as isize,
-    MatchDestinationZeroTierAddress = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_MATCH_DEST_ZEROTIER_ADDRESS as isize,
-    MatchVlanId = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_MATCH_VLAN_ID as isize,
-    MatchVlanPcp = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_MATCH_VLAN_PCP as isize,
-    MatchVlanDei = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_MATCH_VLAN_DEI as isize,
-    MatchMacSource = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_MATCH_MAC_SOURCE as isize,
-    MatchMacDestination = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_MATCH_MAC_DEST as isize,
-    MatchIpv4Source = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_MATCH_IPV4_SOURCE as isize,
-    MatchIpv4Destination = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_MATCH_IPV4_DEST as isize,
-    MatchIpv6Source = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_MATCH_IPV6_SOURCE as isize,
-    MatchIpv6Destination = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_MATCH_IPV6_DEST as isize,
-    MatchIpTos = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_MATCH_IP_TOS as isize,
-    MatchIpProtocol = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_MATCH_IP_PROTOCOL as isize,
-    MatchEtherType = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_MATCH_ETHERTYPE as isize,
-    MatchIcmp = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_MATCH_ICMP as isize,
-    MatchIpSourcePortRange = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_MATCH_IP_SOURCE_PORT_RANGE as isize,
-    MatchIpDestinationSourceRange = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_MATCH_IP_DEST_PORT_RANGE as isize,
-    MatchCharacteristics = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_MATCH_CHARACTERISTICS as isize,
-    MatchFrameSizeRange = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE as isize,
-    MatchRandom = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_MATCH_RANDOM as isize,
-    MatchTagsDifference = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_MATCH_TAGS_DIFFERENCE as isize,
-    MatchTagsBitwiseAnd = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_AND as isize,
-    MatchTagsBitwiseOr = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_OR as isize,
-    MatchTagsBitwiseXor = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_XOR as isize,
-    MatchTagsEqual = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_MATCH_TAGS_EQUAL as isize,
-    MatchTagSender = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_MATCH_TAG_SENDER as isize,
-    MatchTagReceiver = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_MATCH_TAG_RECEIVER as isize,
-    MatchIntegerRange = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_MATCH_INTEGER_RANGE as isize,
-}
-
-#[derive(FromPrimitive,ToPrimitive)]
-pub enum VirtualNetworkConfigOperation {
-    Up = ztcore::ZT_VirtualNetworkConfigOperation_ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP as isize,
-    ConfigUpdate = ztcore::ZT_VirtualNetworkConfigOperation_ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE as isize,
-    Down = ztcore::ZT_VirtualNetworkConfigOperation_ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN as isize,
-    Destroy = ztcore::ZT_VirtualNetworkConfigOperation_ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY as isize
-}
-
-#[derive(FromPrimitive,ToPrimitive)]
 pub enum StateObjectType {
     IdentityPublic = ztcore::ZT_StateObjectType_ZT_STATE_OBJECT_IDENTITY_PUBLIC as isize,
     IdentitySecret = ztcore::ZT_StateObjectType_ZT_STATE_OBJECT_IDENTITY_SECRET as isize,
@@ -242,7 +183,7 @@ pub fn now() -> i64 {
 }
 
 #[macro_export(crate)]
-macro_rules! implement_json_serializable {
+macro_rules! implement_to_from_json {
     ($struct_name:ident) => {
         impl $struct_name {
             pub fn new_from_json(json: &str) -> Result<$struct_name, String> {
