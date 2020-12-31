@@ -13,7 +13,7 @@ pub enum IdentityType {
 pub struct Identity {
     pub type_: IdentityType,
     pub address: Address,
-    capi: *const ztcore::ZT_Identity,
+    pub(crate) capi: *const ztcore::ZT_Identity,
     requires_delete: bool,
 }
 

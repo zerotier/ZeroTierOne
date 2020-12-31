@@ -4,7 +4,7 @@ use std::os::raw::{c_char, c_int, c_uint};
 use std::ffi::CStr;
 
 pub struct Locator {
-    capi: *const ztcore::ZT_Locator,
+    pub(crate) capi: *const ztcore::ZT_Locator,
     requires_delete: bool
 }
 

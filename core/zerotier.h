@@ -2802,6 +2802,10 @@ ZT_SDK_API int ZT_Certificate_newCSR(
 /**
  * Sign a CSR to generate a complete certificate.
  *
+ * Note that the signer should fill out timestamp, validity, and other
+ * certificate fields before signing. Things outside the subject are
+ * filled in (or can be modified) by the signer.
+ *
  * @param cert Certificate to sign
  * @param signer Signer identity (must contain secret key)
  * @param signedCert Signed certificate buffer (recommended size: 16384 bytes)

@@ -91,7 +91,7 @@ public:
 	 * @param controller Network controller's full fingerprint
 	 * @return Pointer to C struct
 	 */
-	ZT_Certificate_Network *addSubjectNetwork(const uint64_t id, const ZT_Fingerprint &controller);
+	ZT_Certificate_Network *addSubjectNetwork(uint64_t id, const ZT_Fingerprint &controller);
 
 	/**
 	 * Add a subject certificate (by its serial number)
