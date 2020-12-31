@@ -1,4 +1,8 @@
+use std::os::raw::{c_char, c_int};
+use num_derive::{FromPrimitive, ToPrimitive};
+
 mod bindings;
+
 mod identity;
 mod address;
 mod fingerprint;
@@ -14,13 +18,15 @@ mod buffer;
 mod portableatomici64;
 mod virtualnetworkconfig;
 
-pub use identity::{Identity, IdentityType};
+use bindings::capi as ztcore;
+
+pub use identity::*;
 pub use address::Address;
 pub use fingerprint::Fingerprint;
 pub use endpoint::Endpoint;
+pub use certificate::*;
 pub use networkid::NetworkId;
 pub use locator::Locator;
-pub use certificate::*;
 pub use path::Path;
 pub use peer::Peer;
 pub use node::Node;
@@ -28,10 +34,6 @@ pub use mac::MAC;
 pub use buffer::Buffer;
 pub use portableatomici64::PortableAtomicI64;
 pub use virtualnetworkconfig::*;
-
-use bindings::capi as ztcore;
-use num_derive::{FromPrimitive, ToPrimitive};
-use std::os::raw::c_int;
 
 pub const DEFAULT_PORT: u16 = ztcore::ZT_DEFAULT_PORT as u16;
 
@@ -182,6 +184,24 @@ pub fn now() -> i64 {
     (std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() & 0x7fffffffffffffff) as i64
 }
 
+/// The CStr stuff is cumbersome, so this is an easier to use function to turn a C string into a String.
+/// This returns an empty string on a null pointer or invalid UTF-8. It's unsafe because it can crash if
+/// the string is not zero-terminated. A size limit can be passed in if available to reduce this risk, or
+/// the max_len parameter can be -1 if there is no known limit.
+pub unsafe fn cstr_to_string(cstr: *const c_char, max_len: isize) -> String {
+    if !cstr.is_null() {
+        let mut cstr_len: isize = 0;
+        while max_len < 0 || cstr_len < max_len {
+            if (unsafe { *cstr.offset(cstr_len) } == 0) {
+                break;
+            }
+            cstr_len += 1;
+        }
+        return String::from(std::str::from_utf8(unsafe { std::slice::from_raw_parts(cstr as *const u8, cstr_len as usize) }).unwrap_or(""));
+    }
+    String::new()
+}
+
 #[macro_export(crate)]
 macro_rules! implement_to_from_json {
     ($struct_name:ident) => {
@@ -203,12 +223,4 @@ macro_rules! implement_to_from_json {
             }
         }
     };
-}
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
 }
