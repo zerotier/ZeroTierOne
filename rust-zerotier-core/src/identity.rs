@@ -1,8 +1,11 @@
+use std::ffi::CStr;
+use std::mem::MaybeUninit;
+use std::os::raw::*;
+
+use num_traits::{FromPrimitive, ToPrimitive};
+
 use crate::*;
 use crate::bindings::capi as ztcore;
-use std::os::raw::*;
-use std::ffi::CStr;
-use num_traits::{ToPrimitive, FromPrimitive};
 
 #[derive(FromPrimitive,ToPrimitive)]
 pub enum IdentityType {
@@ -55,12 +58,12 @@ impl Identity {
     }
 
     fn intl_to_string(&self, include_private: bool) -> String {
-        let mut buf: [u8; 2048] = [0; 2048];
         unsafe {
-            if ztcore::ZT_Identity_toString(self.capi, buf.as_mut_ptr() as *mut c_char, buf.len() as c_int, if include_private { 1 } else { 0 }).is_null() {
+            let mut buf: MaybeUninit<[c_char; 4096]> = MaybeUninit::uninit();
+            if ztcore::ZT_Identity_toString(self.capi, (*buf.as_mut_ptr()).as_mut_ptr(), 4096, if include_private { 1 } else { 0 }).is_null() {
                 return String::from("(invalid)");
             }
-            return String::from(CStr::from_bytes_with_nul(buf.as_ref()).unwrap().to_str().unwrap());
+            return cstr_to_string((*buf.as_ptr()).as_ptr(), 4096);
         }
     }
 

@@ -1,5 +1,6 @@
 use std::cell::Cell;
 use std::ffi::{CStr, CString};
+use std::hash::{Hash, Hasher};
 use std::mem::{MaybeUninit, zeroed};
 use std::os::raw::{c_char, c_uint, c_void};
 use std::ptr::{copy_nonoverlapping, null, null_mut};
@@ -48,6 +49,7 @@ impl CertificateSerialNo {
 }
 
 impl From<&[u8; 48]> for CertificateSerialNo {
+    #[inline(always)]
     fn from(a: &[u8; 48]) -> CertificateSerialNo {
         CertificateSerialNo(*a)
     }
@@ -65,7 +67,15 @@ impl From<&[u8]> for CertificateSerialNo {
     }
 }
 
+impl Hash for CertificateSerialNo {
+    #[inline(always)]
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.0.hash(state);
+    }
+}
+
 impl ToString for CertificateSerialNo {
+    #[inline(always)]
     fn to_string(&self) -> String {
         hex::encode(self.0)
     }
@@ -162,7 +172,8 @@ impl<'de> serde::Deserialize<'de> for CertificateUniqueIdType {
 pub struct CertificateSubjectUniqueIdSecret {
     pub public: Vec<u8>,
     pub private: Vec<u8>,
-    pub type_: CertificateUniqueIdType,
+    #[serde(rename = "type")]
+    pub type_: CertificateUniqueIdType
 }
 
 const CERTIFICATE_UNIQUE_ID_CREATE_BUF_SIZE: usize = 128;
@@ -227,36 +238,56 @@ impl ToString for CertificateError {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#[allow(non_snake_case)]
 #[derive(Serialize, Deserialize)]
 pub struct CertificateName {
-    pub serialNo: String,
-    pub commonName: String,
+    #[serde(rename = "serialNo")]
+    pub serial_no: String,
+    #[serde(rename = "commonName")]
+    pub common_name: String,
     pub country: String,
     pub organization: String,
     pub unit: String,
     pub locality: String,
     pub province: String,
-    pub streetAddress: String,
-    pub postalCode: String,
+    #[serde(rename = "streetAddress")]
+    pub street_address: String,
+    #[serde(rename = "postalCode")]
+    pub postal_code: String,
     pub email: String,
     pub url: String,
     pub host: String,
 }
 
 impl CertificateName {
+    pub fn new() -> CertificateName {
+        CertificateName {
+            serial_no: String::new(),
+            common_name: String::new(),
+            country: String::new(),
+            organization: String::new(),
+            unit: String::new(),
+            locality: String::new(),
+            province: String::new(),
+            street_address: String::new(),
+            postal_code: String::new(),
+            email: String::new(),
+            url: String::new(),
+            host: String::new()
+        }
+    }
+
     pub(crate) unsafe fn new_from_capi(cn: &ztcore::ZT_Certificate_Name) -> CertificateName {
         unsafe {
             return CertificateName {
-                serialNo: cstr_to_string(cn.serialNo.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1),
-                commonName: cstr_to_string(cn.commonName.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1),
+                serial_no: cstr_to_string(cn.serialNo.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1),
+                common_name: cstr_to_string(cn.commonName.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1),
                 country: cstr_to_string(cn.country.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1),
                 organization: cstr_to_string(cn.organization.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1),
                 unit: cstr_to_string(cn.unit.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1),
                 locality: cstr_to_string(cn.locality.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1),
                 province: cstr_to_string(cn.province.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1),
-                streetAddress: cstr_to_string(cn.streetAddress.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1),
-                postalCode: cstr_to_string(cn.postalCode.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1),
+                street_address: cstr_to_string(cn.streetAddress.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1),
+                postal_code: cstr_to_string(cn.postalCode.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1),
                 email: cstr_to_string(cn.email.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1),
                 url: cstr_to_string(cn.url.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1),
                 host: cstr_to_string(cn.host.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1)
@@ -282,15 +313,15 @@ impl CertificateName {
     pub(crate) unsafe fn to_capi(&self) -> ztcore::ZT_Certificate_Name {
         unsafe {
             let mut cn: ztcore::ZT_Certificate_Name = zeroed();
-            Self::str_to_cert_cstr(&self.serialNo, &mut cn.serialNo);
-            Self::str_to_cert_cstr(&self.commonName, &mut cn.commonName);
+            Self::str_to_cert_cstr(&self.serial_no, &mut cn.serialNo);
+            Self::str_to_cert_cstr(&self.common_name, &mut cn.commonName);
             Self::str_to_cert_cstr(&self.country, &mut cn.country);
             Self::str_to_cert_cstr(&self.organization, &mut cn.organization);
             Self::str_to_cert_cstr(&self.unit, &mut cn.unit);
             Self::str_to_cert_cstr(&self.locality, &mut cn.locality);
             Self::str_to_cert_cstr(&self.province, &mut cn.province);
-            Self::str_to_cert_cstr(&self.streetAddress, &mut cn.streetAddress);
-            Self::str_to_cert_cstr(&self.postalCode, &mut cn.postalCode);
+            Self::str_to_cert_cstr(&self.street_address, &mut cn.streetAddress);
+            Self::str_to_cert_cstr(&self.postal_code, &mut cn.postalCode);
             Self::str_to_cert_cstr(&self.email, &mut cn.email);
             Self::str_to_cert_cstr(&self.url, &mut cn.url);
             Self::str_to_cert_cstr(&self.host, &mut cn.host);
@@ -364,17 +395,19 @@ implement_to_from_json!(CertificateIdentity);
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#[allow(non_snake_case)]
 #[derive(Serialize, Deserialize)]
 pub struct CertificateSubject {
     pub timestamp: i64,
     pub identities: Vec<CertificateIdentity>,
     pub networks: Vec<CertificateNetwork>,
     pub certificates: Vec<CertificateSerialNo>,
-    pub updateURLs: Vec<String>,
+    #[serde(rename = "updateURLs")]
+    pub update_urls: Vec<String>,
     pub name: CertificateName,
-    pub uniqueId: Vec<u8>,
-    pub uniqueIdProofSignature: Vec<u8>,
+    #[serde(rename = "uniqueId")]
+    pub unique_id: Vec<u8>,
+    #[serde(rename = "uniqueIdProofSignature")]
+    pub unique_id_proof_signature: Vec<u8>,
 }
 
 pub(crate) struct CertificateSubjectCAPIContainer {
@@ -387,6 +420,19 @@ pub(crate) struct CertificateSubjectCAPIContainer {
 }
 
 impl CertificateSubject {
+    pub fn new() -> CertificateSubject {
+        CertificateSubject {
+            timestamp: 0,
+            identities: Vec::new(),
+            networks: Vec::new(),
+            certificates: Vec::new(),
+            update_urls: Vec::new(),
+            name: CertificateName::new(),
+            unique_id: Vec::new(),
+            unique_id_proof_signature: Vec::new()
+        }
+    }
+
     pub(crate) unsafe fn new_from_capi(cs: &ztcore::ZT_Certificate_Subject) -> CertificateSubject {
         unsafe {
             let mut identities: Vec<CertificateIdentity> = Vec::new();
@@ -431,10 +477,10 @@ impl CertificateSubject {
                 identities: identities,
                 networks: networks,
                 certificates: certificates,
-                updateURLs: update_urls,
+                update_urls: update_urls,
                 name: CertificateName::new_from_capi(&cs.name),
-                uniqueId: Vec::from(std::slice::from_raw_parts(cs.uniqueId, cs.uniqueIdSize as usize)),
-                uniqueIdProofSignature: Vec::from(std::slice::from_raw_parts(cs.uniqueIdProofSignature, cs.uniqueIdProofSignatureSize as usize)),
+                unique_id: Vec::from(std::slice::from_raw_parts(cs.uniqueId, cs.uniqueIdSize as usize)),
+                unique_id_proof_signature: Vec::from(std::slice::from_raw_parts(cs.uniqueIdProofSignature, cs.uniqueIdProofSignatureSize as usize)),
             };
         }
     }
@@ -464,9 +510,9 @@ impl CertificateSubject {
                 capi_certificates.push((*i).0.as_ptr());
             }
         }
-        if !self.updateURLs.is_empty() {
-            capi_urls.reserve(self.updateURLs.len());
-            for i in self.updateURLs.iter() {
+        if !self.update_urls.is_empty() {
+            capi_urls.reserve(self.update_urls.len());
+            for i in self.update_urls.iter() {
                 let cs = CString::new((*i).as_str());
                 if cs.is_ok() {
                     capi_urls_strs.push(cs.unwrap());
@@ -487,10 +533,10 @@ impl CertificateSubject {
                 certificateCount: capi_certificates.len() as c_uint,
                 updateURLCount: capi_urls.len() as c_uint,
                 name: unsafe { self.name.to_capi() },
-                uniqueId: self.uniqueId.as_ptr(),
-                uniqueIdProofSignature: self.uniqueIdProofSignature.as_ptr(),
-                uniqueIdSize: self.uniqueId.len() as c_uint,
-                uniqueIdProofSignatureSize: self.uniqueIdProofSignature.len() as c_uint,
+                uniqueId: self.unique_id.as_ptr(),
+                uniqueIdProofSignature: self.unique_id_proof_signature.as_ptr(),
+                uniqueIdSize: self.unique_id.len() as c_uint,
+                uniqueIdProofSignatureSize: self.unique_id_proof_signature.len() as c_uint,
             },
             subject_identities: capi_identities,
             subject_networks: capi_networks,
@@ -527,85 +573,79 @@ implement_to_from_json!(CertificateSubject);
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#[allow(non_snake_case)]
 #[derive(Serialize, Deserialize)]
 pub struct Certificate {
-    pub serialNo: CertificateSerialNo,
+    #[serde(rename = "serialNo")]
+    pub serial_no: CertificateSerialNo,
     pub flags: u64,
     pub timestamp: i64,
     pub validity: [i64; 2],
     pub subject: CertificateSubject,
-    pub issuer: Identity,
-    pub issuerName: CertificateName,
-    pub extendedAttributes: Vec<u8>,
-    pub maxPathLength: u32,
-    pub crl: Vec<CertificateSerialNo>,
-    pub signature: Vec<u8>,
+    pub issuer: Option<Identity>,
+    #[serde(rename = "issuerName")]
+    pub issuer_name: CertificateName,
+    #[serde(rename = "extendedAttributes")]
+    pub extended_attributes: Vec<u8>,
+    #[serde(rename = "maxPathLength")]
+    pub max_path_length: u32,
+    pub signature: Vec<u8>
 }
 
 pub(crate) struct CertificateCAPIContainer {
     pub(crate) certificate: ztcore::ZT_Certificate,
-    certificate_crls: Vec<*const u8>,
     subject_container: CertificateSubjectCAPIContainer,
 }
 
 impl Certificate {
+    pub fn new() -> Certificate {
+        Certificate {
+            serial_no: CertificateSerialNo::new(),
+            flags: 0,
+            timestamp: 0,
+            validity: [0, i64::max_value()],
+            subject: CertificateSubject::new(),
+            issuer: None,
+            issuer_name: CertificateName::new(),
+            extended_attributes: Vec::new(),
+            max_path_length: 0,
+            signature: Vec::new()
+        }
+    }
+
     pub(crate) unsafe fn new_from_capi(c: &ztcore::ZT_Certificate) -> Certificate {
         unsafe {
-            let mut crl: Vec<CertificateSerialNo> = Vec::new();
-            if !c.crl.is_null() && c.crlCount > 0 {
-                let ccrl: &[*const u8] = std::slice::from_raw_parts(c.crl, c.crlCount as usize);
-                let mut ctmp: [u8; 48] = [0; 48];
-                for i in ccrl.iter() {
-                    if !(*i).is_null() {
-                        copy_nonoverlapping(*i, ctmp.as_mut_ptr(), 48);
-                        crl.push(CertificateSerialNo(ctmp));
-                    }
-                }
-            }
-
             return Certificate {
-                serialNo: CertificateSerialNo(c.serialNo),
+                serial_no: CertificateSerialNo(c.serialNo),
                 flags: c.flags,
                 timestamp: c.timestamp,
                 validity: c.validity,
                 subject: CertificateSubject::new_from_capi(&c.subject),
-                issuer: Identity::new_from_capi(c.issuer, false),
-                issuerName: CertificateName::new_from_capi(&c.issuerName),
-                extendedAttributes: Vec::from(std::slice::from_raw_parts(c.extendedAttributes, c.extendedAttributesSize as usize)),
-                maxPathLength: c.maxPathLength as u32,
-                crl: crl,
+                issuer: if c.issuer.is_null() { None } else { Some(Identity::new_from_capi(c.issuer, false)) },
+                issuer_name: CertificateName::new_from_capi(&c.issuerName),
+                extended_attributes: Vec::from(std::slice::from_raw_parts(c.extendedAttributes, c.extendedAttributesSize as usize)),
+                max_path_length: c.maxPathLength as u32,
                 signature: Vec::from(std::slice::from_raw_parts(c.signature, c.signatureSize as usize)),
             };
         }
     }
 
     pub(crate) unsafe fn to_capi(&self) -> CertificateCAPIContainer {
-        let mut capi_crls: Vec<*const u8> = Vec::new();
-        capi_crls.reserve(self.crl.len());
-        for i in self.crl.iter() {
-            capi_crls.push((*i).0.as_ptr());
-        }
-
         let subject = unsafe { self.subject.to_capi() };
         CertificateCAPIContainer {
             certificate: ztcore::ZT_Certificate {
-                serialNo: self.serialNo.0,
+                serialNo: self.serial_no.0,
                 flags: self.flags,
                 timestamp: self.timestamp,
                 validity: self.validity,
                 subject: subject.subject,
-                issuer: self.issuer.capi,
-                issuerName: unsafe { self.issuerName.to_capi() },
-                extendedAttributes: self.extendedAttributes.as_ptr(),
-                extendedAttributesSize: self.extendedAttributes.len() as c_uint,
-                maxPathLength: self.maxPathLength as c_uint,
-                crl: capi_crls.as_ptr(),
-                crlCount: capi_crls.len() as c_uint,
+                issuer: if self.issuer.is_some() { self.issuer.as_ref().unwrap().capi } else { null() },
+                issuerName: unsafe { self.issuer_name.to_capi() },
+                extendedAttributes: self.extended_attributes.as_ptr(),
+                extendedAttributesSize: self.extended_attributes.len() as c_uint,
+                maxPathLength: self.max_path_length as c_uint,
                 signature: self.signature.as_ptr(),
                 signatureSize: self.signature.len() as c_uint,
             },
-            certificate_crls: capi_crls,
             subject_container: subject,
         }
     }
@@ -669,3 +709,15 @@ impl Certificate {
 implement_to_from_json!(Certificate);
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#[cfg(test)]
+mod tests {
+    use crate::*;
+
+    #[test]
+    fn certificate_serial_no() {
+        let test: [u8; 48] = [1; 48];
+        let sn = CertificateSerialNo::from(&test[0..48]);
+        assert!(test.eq(&sn.0));
+    }
+}

@@ -83,12 +83,16 @@ pub struct VirtualNetworkConfig {
     pub mac: MAC,
     pub name: String,
     pub status: VirtualNetworkStatus,
+    #[serde(rename = "type")]
     pub type_: VirtualNetworkType,
     pub mtu: u32,
     pub bridge: bool,
-    pub broadcastEnabled: bool,
-    pub netconfRevision: u64,
-    pub assignedAddresses: Vec<SockAddr>,
+    #[serde(rename = "broadcastEnabled")]
+    pub broadcast_enabled: bool,
+    #[serde(rename = "netconfRevision")]
+    pub netconf_revision: u64,
+    #[serde(rename = "assignedAddresses")]
+    pub assigned_addresses: Vec<SockAddr>,
     pub routes: Vec<VirtualNetworkRoute>
 }
 
@@ -97,6 +101,10 @@ const SIZEOF_SOCKADDR_IN6: ztcore::socklen_t = size_of::<ztcore::sockaddr_in6>()
 
 /// Obtain a socket2::SockAddr from a C struct sockaddr_storage as used in the ZeroTier core.
 pub(crate) fn sockaddr_from_capi(ss: &ztcore::sockaddr_storage) -> Option<SockAddr> {
+    // The transmute() calls in here are to work around the fact that socket2
+    // uses sockaddr_storage from the libc crate, while ztcore uses it as
+    // generated from bindgen from the system headers. It's the same thing but
+    // Rust's type system doesn't know that.
     match ss.ss_family as u32 {
         ztcore::AF_INET => { unsafe { Some(SockAddr::from_raw_parts(transmute(ss as *const ztcore::sockaddr_storage), transmute(SIZEOF_SOCKADDR_IN))) } },
         ztcore::AF_INET6 => { unsafe { Some(SockAddr::from_raw_parts(transmute(ss as *const ztcore::sockaddr_storage), transmute(SIZEOF_SOCKADDR_IN6))) } },
@@ -136,9 +144,9 @@ impl VirtualNetworkConfig {
                 type_: FromPrimitive::from_u32(vnc.type_ as u32).unwrap(),
                 mtu: vnc.mtu as u32,
                 bridge: vnc.bridge != 0,
-                broadcastEnabled: vnc.broadcastEnabled != 0,
-                netconfRevision: vnc.netconfRevision as u64,
-                assignedAddresses: aa,
+                broadcast_enabled: vnc.broadcastEnabled != 0,
+                netconf_revision: vnc.netconfRevision as u64,
+                assigned_addresses: aa,
                 routes: rts
             }
         }

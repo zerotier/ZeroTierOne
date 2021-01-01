@@ -20,8 +20,10 @@ const NODE_BACKGROUND_MIN_DELAY: i64 = 250;
 pub struct NodeStatus {
     pub address: Address,
     pub identity: Identity,
-    pub publicIdentity: String,
-    pub secretIdentity: String,
+    #[serde(rename = "publicIdentity")]
+    pub public_identity: String,
+    #[serde(rename = "secretIdentity")]
+    pub secret_identity: String,
     pub online: bool
 }
 
@@ -293,8 +295,8 @@ impl Node {
             return NodeStatus {
                 address: Address(ns.address),
                 identity: Identity::new_from_capi(&*ns.identity, false).clone(),
-                publicIdentity: String::from(CStr::from_ptr(ns.publicIdentity).to_str().unwrap()),
-                secretIdentity: String::from(CStr::from_ptr(ns.secretIdentity).to_str().unwrap()),
+                public_identity: String::from(CStr::from_ptr(ns.publicIdentity).to_str().unwrap()),
+                secret_identity: String::from(CStr::from_ptr(ns.secretIdentity).to_str().unwrap()),
                 online: ns.online != 0
             }
         }

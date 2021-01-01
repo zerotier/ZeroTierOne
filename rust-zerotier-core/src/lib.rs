@@ -23,13 +23,13 @@ use bindings::capi as ztcore;
 pub use identity::*;
 pub use address::Address;
 pub use fingerprint::Fingerprint;
-pub use endpoint::Endpoint;
+pub use endpoint::*;
 pub use certificate::*;
 pub use networkid::NetworkId;
-pub use locator::Locator;
+pub use locator::*;
 pub use path::Path;
 pub use peer::Peer;
-pub use node::Node;
+pub use node::*;
 pub use mac::MAC;
 pub use buffer::Buffer;
 pub use portableatomici64::PortableAtomicI64;
@@ -70,19 +70,6 @@ pub enum CredentialType {
     Tag = ztcore::ZT_CredentialType_ZT_CREDENTIAL_TYPE_TAG as isize,
     CertificateOfOwnership = ztcore::ZT_CredentialType_ZT_CREDENTIAL_TYPE_COO as isize,
     Revocation = ztcore::ZT_CredentialType_ZT_CREDENTIAL_TYPE_REVOCATION as isize,
-}
-
-#[derive(FromPrimitive,ToPrimitive)]
-pub enum EndpointType {
-    Nil = ztcore::ZT_EndpointType_ZT_ENDPOINT_TYPE_NIL as isize,
-    ZeroTier = ztcore::ZT_EndpointType_ZT_ENDPOINT_TYPE_ZEROTIER as isize,
-    Ethernet = ztcore::ZT_EndpointType_ZT_ENDPOINT_TYPE_ETHERNET as isize,
-    WifiDirect = ztcore::ZT_EndpointType_ZT_ENDPOINT_TYPE_WIFI_DIRECT as isize,
-    Bluetooth = ztcore::ZT_EndpointType_ZT_ENDPOINT_TYPE_BLUETOOTH as isize,
-    Ip = ztcore::ZT_EndpointType_ZT_ENDPOINT_TYPE_IP as isize,
-    IpUdp = ztcore::ZT_EndpointType_ZT_ENDPOINT_TYPE_IP_UDP as isize,
-    IpTcp = ztcore::ZT_EndpointType_ZT_ENDPOINT_TYPE_IP_TCP as isize,
-    IpHttp = ztcore::ZT_EndpointType_ZT_ENDPOINT_TYPE_IP_HTTP as isize,
 }
 
 #[derive(FromPrimitive,ToPrimitive)]

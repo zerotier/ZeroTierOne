@@ -602,16 +602,6 @@ typedef struct
 	unsigned int maxPathLength;
 
 	/**
-	 * List of certificate serial numbers being revoked.
-	 */
-	const uint8_t *const *crl;
-
-	/**
-	 * Number of 48-byte serial numbers in crl list.
-	 */
-	unsigned int crlCount;
-
-	/**
 	 * Signature by issuer (algorithm determined by identity type).
 	 */
 	const uint8_t *signature;

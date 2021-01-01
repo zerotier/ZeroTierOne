@@ -1,9 +1,25 @@
-use crate::*;
-use crate::bindings::capi as ztcore;
-use num_traits::FromPrimitive;
-use std::os::raw::{c_char, c_int};
 use std::ffi::CStr;
 use std::mem::MaybeUninit;
+use std::os::raw::{c_char, c_int};
+
+use num_derive::{FromPrimitive, ToPrimitive};
+use num_traits::FromPrimitive;
+
+use crate::*;
+use crate::bindings::capi as ztcore;
+
+#[derive(FromPrimitive,ToPrimitive)]
+pub enum EndpointType {
+    Nil = ztcore::ZT_EndpointType_ZT_ENDPOINT_TYPE_NIL as isize,
+    ZeroTier = ztcore::ZT_EndpointType_ZT_ENDPOINT_TYPE_ZEROTIER as isize,
+    Ethernet = ztcore::ZT_EndpointType_ZT_ENDPOINT_TYPE_ETHERNET as isize,
+    WifiDirect = ztcore::ZT_EndpointType_ZT_ENDPOINT_TYPE_WIFI_DIRECT as isize,
+    Bluetooth = ztcore::ZT_EndpointType_ZT_ENDPOINT_TYPE_BLUETOOTH as isize,
+    Ip = ztcore::ZT_EndpointType_ZT_ENDPOINT_TYPE_IP as isize,
+    IpUdp = ztcore::ZT_EndpointType_ZT_ENDPOINT_TYPE_IP_UDP as isize,
+    IpTcp = ztcore::ZT_EndpointType_ZT_ENDPOINT_TYPE_IP_TCP as isize,
+    IpHttp = ztcore::ZT_EndpointType_ZT_ENDPOINT_TYPE_IP_HTTP as isize,
+}
 
 pub struct Endpoint {
     pub type_: EndpointType,
@@ -11,7 +27,6 @@ pub struct Endpoint {
 }
 
 impl Endpoint {
-    #[inline]
     pub(crate) fn new_from_capi(ep: &ztcore::ZT_Endpoint) -> Endpoint {
         return Endpoint{
             type_: EndpointType::from_u32(ep.type_ as u32).unwrap(),
@@ -37,12 +52,12 @@ impl Endpoint {
 
 impl ToString for Endpoint {
     fn to_string(&self) -> String {
-        let mut buf: [u8; 1024] = [0; 1024];
         unsafe {
-            if ztcore::ZT_Endpoint_toString(&(self.capi) as *const ztcore::ZT_Endpoint, buf.as_mut_ptr() as *mut c_char, buf.len() as c_int).is_null() {
+            let mut buf: MaybeUninit<[c_char; 1024]> = MaybeUninit::uninit();
+            if ztcore::ZT_Endpoint_toString(&(self.capi) as *const ztcore::ZT_Endpoint, (*buf.as_mut_ptr()).as_mut_ptr(), 1024).is_null() {
                 return String::from("(invalid)");
             }
-            return String::from(CStr::from_bytes_with_nul(buf.as_ref()).unwrap().to_str().unwrap());
+            return cstr_to_string((*buf.as_ptr()).as_ptr(), 1024);
         }
     }
 }
