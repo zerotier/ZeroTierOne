@@ -100,7 +100,7 @@ enum ZT_ResultCode ZT_Node_processWirePacket(
 	void *tptr,
 	int64_t now,
 	int64_t localSocket,
-	const struct sockaddr_storage *remoteAddress,
+	const ZT_InetAddress *remoteAddress,
 	const void *packetData,
 	unsigned int packetLength,
 	int isZtBuffer,
@@ -108,7 +108,7 @@ enum ZT_ResultCode ZT_Node_processWirePacket(
 {
 	try {
 		ZeroTier::SharedPtr< ZeroTier::Buf > buf((isZtBuffer) ? ZT_PTRTOBUF(packetData) : new ZeroTier::Buf(packetData, packetLength & ZT_BUF_MEM_MASK));
-		return reinterpret_cast<ZeroTier::Node *>(node)->processWirePacket(tptr, now, localSocket, remoteAddress, buf, packetLength, nextBackgroundTaskDeadline);
+		return reinterpret_cast<ZeroTier::Node *>(node)->processWirePacket(tptr, now, localSocket, ZT_InetAddress_ptr_cast_const_sockaddr_storage_ptr(remoteAddress), buf, packetLength, nextBackgroundTaskDeadline);
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch (...) {
@@ -751,6 +751,81 @@ int ZT_Fingerprint_fromString(ZT_Fingerprint *fp, const char *s)
 		return 1;
 	}
 	return 0;
+}
+
+/********************************************************************************************************************/
+
+void ZT_InetAddress_clear(ZT_InetAddress *ia)
+{
+	if (likely(ia != nullptr))
+		ZeroTier::Utils::zero<sizeof(ZT_InetAddress)>(ia);
+}
+
+char *ZT_InetAddress_toString(const ZT_InetAddress *ia, char *buf, unsigned int cap)
+{
+	if (likely((cap > 0)&&(buf != nullptr))) {
+		if (likely((ia != nullptr)&&(cap >= ZT_INETADDRESS_STRING_SIZE_MAX))) {
+			reinterpret_cast<const ZeroTier::InetAddress *>(ia)->toString(buf);
+		} else {
+			buf[0] = 0;
+		}
+	}
+	return buf;
+}
+
+int ZT_InetAddress_fromString(ZT_InetAddress *ia, const char *str)
+{
+	if (likely((ia != nullptr)&&(str != nullptr))) {
+		return (int)reinterpret_cast<ZeroTier::InetAddress *>(ia)->fromString(str);
+	}
+	return 0;
+}
+
+void ZT_InetAddress_set(ZT_InetAddress *ia, const void *saddr)
+{
+	if (likely(ia != nullptr))
+		(*reinterpret_cast<ZeroTier::InetAddress *>(ia)) = reinterpret_cast<const struct sockaddr *>(saddr);
+}
+
+void ZT_InetAddress_setIpBytes(ZT_InetAddress *ia, const void *ipBytes, unsigned int ipLen, unsigned int port)
+{
+	if (likely(ia != nullptr))
+		reinterpret_cast<ZeroTier::InetAddress *>(ia)->set(ipBytes, ipLen, port);
+}
+
+void ZT_InetAddress_setPort(ZT_InetAddress *ia, unsigned int port)
+{
+	if (likely(ia != nullptr))
+		reinterpret_cast<ZeroTier::InetAddress *>(ia)->setPort(port);
+}
+
+unsigned int ZT_InetAddress_port(const ZT_InetAddress *ia)
+{
+	if (likely(ia != nullptr))
+		return reinterpret_cast<const ZeroTier::InetAddress *>(ia)->port();
+	return 0;
+}
+
+int ZT_InetAddress_isNil(const ZT_InetAddress *ia)
+{
+	return (int)( (ia == nullptr) || ((reinterpret_cast<const sockaddr_storage *>(ia))->ss_family == 0) );
+}
+
+int ZT_InetAddress_isV4(const ZT_InetAddress *ia)
+{
+	return (int)( (ia != nullptr) && ((reinterpret_cast<const sockaddr_storage *>(ia))->ss_family == AF_INET) );
+}
+
+int ZT_InetAddress_isV6(const ZT_InetAddress *ia)
+{
+	return (int)( (ia != nullptr) && ((reinterpret_cast<const sockaddr_storage *>(ia))->ss_family == AF_INET6) );
+}
+
+enum ZT_InetAddress_IpScope ZT_InetAddress_ipScope(const ZT_InetAddress *ia)
+{
+	if (likely(ia != nullptr))
+		return reinterpret_cast<const ZeroTier::InetAddress *>(ia)->ipScope();
+	return ZT_IP_SCOPE_NONE;
 }
 
 /********************************************************************************************************************/

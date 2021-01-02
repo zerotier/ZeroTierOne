@@ -14,9 +14,13 @@
 #ifndef ZT_CONSTANTS_HPP
 #define ZT_CONSTANTS_HPP
 
-#include "zerotier.h"
-#include "OS.hpp"
+/**
+ * Indicates to some parts of zerotier.h that we are building the core
+ */
+#define ZT_CORE 1
 
+#include "OS.hpp"
+#include "zerotier.h"
 #include "version.h"
 
 /**

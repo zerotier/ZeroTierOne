@@ -1,19 +1,74 @@
-use std::ffi::CStr;
 use std::mem::{size_of, transmute, zeroed};
-use std::os::raw::{c_void, c_char};
 
+use serde::{Deserialize, Serialize};
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
-use socket2::SockAddr;
 
 use crate::*;
 use crate::bindings::capi as ztcore;
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[derive(FromPrimitive,ToPrimitive)]
 pub enum VirtualNetworkType {
     Private = ztcore::ZT_VirtualNetworkType_ZT_NETWORK_TYPE_PRIVATE as isize,
     Public = ztcore::ZT_VirtualNetworkType_ZT_NETWORK_TYPE_PUBLIC as isize
 }
+
+impl VirtualNetworkType {
+    pub fn to_str(&self) -> &str {
+        match *self {
+            //VirtualNetworkType::Private => "PRIVATE",
+            VirtualNetworkType::Public => "PUBLIC",
+            _ => "PRIVATE"
+        }
+    }
+}
+
+impl From<&str> for VirtualNetworkType {
+    fn from(s: &str) -> VirtualNetworkType {
+        match s.to_ascii_lowercase().as_str() {
+            //"requesting_configuration" | "requestingconfiguration" => VirtualNetworkStatus::RequestingConfiguration,
+            "public" => VirtualNetworkType::Public,
+            _ => VirtualNetworkType::Private
+        }
+    }
+}
+
+impl ToString for VirtualNetworkType {
+    #[inline(always)]
+    fn to_string(&self) -> String {
+        String::from(self.to_str())
+    }
+}
+
+impl serde::Serialize for VirtualNetworkType {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
+        serializer.serialize_str(self.to_str())
+    }
+}
+
+struct VirtualNetworkTypeVisitor;
+
+impl<'de> serde::de::Visitor<'de> for VirtualNetworkTypeVisitor {
+    type Value = VirtualNetworkType;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        formatter.write_str("VirtualNetworkType value in string form")
+    }
+
+    fn visit_str<E>(self, s: &str) -> Result<Self::Value, E> where E: serde::de::Error {
+        Ok(VirtualNetworkType::from(s))
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for VirtualNetworkType {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'de> {
+        deserializer.deserialize_str(VirtualNetworkTypeVisitor)
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[derive(FromPrimitive,ToPrimitive)]
 pub enum VirtualNetworkRuleType {
@@ -54,6 +109,8 @@ pub enum VirtualNetworkRuleType {
     MatchIntegerRange = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_MATCH_INTEGER_RANGE as isize
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 #[derive(FromPrimitive,ToPrimitive)]
 pub enum VirtualNetworkConfigOperation {
     Up = ztcore::ZT_VirtualNetworkConfigOperation_ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP as isize,
@@ -61,6 +118,8 @@ pub enum VirtualNetworkConfigOperation {
     Down = ztcore::ZT_VirtualNetworkConfigOperation_ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN as isize,
     Destroy = ztcore::ZT_VirtualNetworkConfigOperation_ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY as isize
 }
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[derive(FromPrimitive,ToPrimitive)]
 pub enum VirtualNetworkStatus {
@@ -70,14 +129,73 @@ pub enum VirtualNetworkStatus {
     NotFound = ztcore::ZT_VirtualNetworkStatus_ZT_NETWORK_STATUS_NOT_FOUND as isize
 }
 
+impl VirtualNetworkStatus {
+    pub fn to_str(&self) -> &str {
+        match *self {
+            VirtualNetworkStatus::RequestingConfiguration => "REQUESTING_CONFIGURATION",
+            VirtualNetworkStatus::Ok => "OK",
+            VirtualNetworkStatus::AccessDenied => "ACCESS_DENIED",
+            VirtualNetworkStatus::NotFound => "NOT_FOUND"
+        }
+    }
+}
+
+impl From<&str> for VirtualNetworkStatus {
+    fn from(s: &str) -> VirtualNetworkStatus {
+        match s.to_ascii_lowercase().as_str() {
+            //"requesting_configuration" | "requestingconfiguration" => VirtualNetworkStatus::RequestingConfiguration,
+            "ok" => VirtualNetworkStatus::Ok,
+            "access_denied" | "accessdenied" => VirtualNetworkStatus::AccessDenied,
+            "not_found" | "notfound" => VirtualNetworkStatus::NotFound,
+            _ => VirtualNetworkStatus::RequestingConfiguration
+        }
+    }
+}
+
+impl ToString for VirtualNetworkStatus {
+    #[inline(always)]
+    fn to_string(&self) -> String {
+        String::from(self.to_str())
+    }
+}
+
+impl serde::Serialize for VirtualNetworkStatus {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
+        serializer.serialize_str(self.to_str())
+    }
+}
+
+struct VirtualNetworkStatusVisitor;
+
+impl<'de> serde::de::Visitor<'de> for VirtualNetworkStatusVisitor {
+    type Value = VirtualNetworkStatus;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        formatter.write_str("VirtualNetworkStatus value in string form")
+    }
+
+    fn visit_str<E>(self, s: &str) -> Result<Self::Value, E> where E: serde::de::Error {
+        Ok(VirtualNetworkStatus::from(s))
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for VirtualNetworkStatus {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'de> {
+        deserializer.deserialize_str(VirtualNetworkStatusVisitor)
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#[derive(Serialize, Deserialize)]
 pub struct VirtualNetworkRoute {
-    pub target: Option<SockAddr>,
-    pub via: Option<SockAddr>,
+    pub target: Option<InetAddress>,
+    pub via: Option<InetAddress>,
     pub flags: u16,
     pub metric: u16
 }
 
-#[allow(non_snake_case)]
+#[derive(Serialize, Deserialize)]
 pub struct VirtualNetworkConfig {
     pub nwid: NetworkId,
     pub mac: MAC,
@@ -92,63 +210,45 @@ pub struct VirtualNetworkConfig {
     #[serde(rename = "netconfRevision")]
     pub netconf_revision: u64,
     #[serde(rename = "assignedAddresses")]
-    pub assigned_addresses: Vec<SockAddr>,
+    pub assigned_addresses: Vec<InetAddress>,
     pub routes: Vec<VirtualNetworkRoute>
-}
-
-const SIZEOF_SOCKADDR_IN: ztcore::socklen_t = size_of::<ztcore::sockaddr_in>() as ztcore::socklen_t;
-const SIZEOF_SOCKADDR_IN6: ztcore::socklen_t = size_of::<ztcore::sockaddr_in6>() as ztcore::socklen_t;
-
-/// Obtain a socket2::SockAddr from a C struct sockaddr_storage as used in the ZeroTier core.
-pub(crate) fn sockaddr_from_capi(ss: &ztcore::sockaddr_storage) -> Option<SockAddr> {
-    // The transmute() calls in here are to work around the fact that socket2
-    // uses sockaddr_storage from the libc crate, while ztcore uses it as
-    // generated from bindgen from the system headers. It's the same thing but
-    // Rust's type system doesn't know that.
-    match ss.ss_family as u32 {
-        ztcore::AF_INET => { unsafe { Some(SockAddr::from_raw_parts(transmute(ss as *const ztcore::sockaddr_storage), transmute(SIZEOF_SOCKADDR_IN))) } },
-        ztcore::AF_INET6 => { unsafe { Some(SockAddr::from_raw_parts(transmute(ss as *const ztcore::sockaddr_storage), transmute(SIZEOF_SOCKADDR_IN6))) } },
-        _ => None
-    }
 }
 
 impl VirtualNetworkConfig {
     pub(crate) fn new_from_capi(vnc: &ztcore::ZT_VirtualNetworkConfig) -> VirtualNetworkConfig {
-        unsafe {
-            let mut aa: Vec<SockAddr> = Vec::new();
-            let saptr = vnc.assignedAddresses.as_ptr();
-            for i in 0..vnc.assignedAddressCount as isize {
-                let sa = sockaddr_from_capi(&*saptr.offset(i));
-                if sa.is_some() {
-                    aa.push(sa.unwrap());
-                }
+        let mut aa: Vec<InetAddress> = Vec::new();
+        let saptr = vnc.assignedAddresses.as_ptr();
+        for i in 0..vnc.assignedAddressCount as isize {
+            let a = InetAddress::new_from_capi(unsafe { *saptr.offset(i) });
+            if a.is_some() {
+                aa.push(a.unwrap());
             }
+        }
 
-            let mut rts: Vec<VirtualNetworkRoute> = Vec::new();
-            let rtptr = vnc.routes.as_ptr();
-            for i in 0..vnc.routeCount as isize {
-                let r = *rtptr.offset(i);
-                rts.push(VirtualNetworkRoute{
-                    target: sockaddr_from_capi(&r.target),
-                    via: sockaddr_from_capi(&r.via),
-                    flags: r.flags,
-                    metric: r.metric
-                })
-            }
+        let mut rts: Vec<VirtualNetworkRoute> = Vec::new();
+        let rtptr = vnc.routes.as_ptr();
+        for i in 0..vnc.routeCount as isize {
+            let r = unsafe { *rtptr.offset(i) };
+            rts.push(VirtualNetworkRoute{
+                target: InetAddress::new_from_capi(r.target),
+                via: InetAddress::new_from_capi(r.via),
+                flags: r.flags,
+                metric: r.metric
+            })
+        }
 
-            return VirtualNetworkConfig{
-                nwid: NetworkId(vnc.nwid),
-                mac: MAC(vnc.mac),
-                name: String::from(CStr::from_ptr(vnc.name.as_ptr() as *const c_char).to_str().unwrap_or("")),
-                status: FromPrimitive::from_u32(vnc.status as u32).unwrap(),
-                type_: FromPrimitive::from_u32(vnc.type_ as u32).unwrap(),
-                mtu: vnc.mtu as u32,
-                bridge: vnc.bridge != 0,
-                broadcast_enabled: vnc.broadcastEnabled != 0,
-                netconf_revision: vnc.netconfRevision as u64,
-                assigned_addresses: aa,
-                routes: rts
-            }
+        return VirtualNetworkConfig{
+            nwid: NetworkId(vnc.nwid),
+            mac: MAC(vnc.mac),
+            name: unsafe { cstr_to_string(vnc.name.as_ptr(), vnc.name.len() as isize) },
+            status: FromPrimitive::from_u32(vnc.status as u32).unwrap(),
+            type_: FromPrimitive::from_u32(vnc.type_ as u32).unwrap(),
+            mtu: vnc.mtu as u32,
+            bridge: vnc.bridge != 0,
+            broadcast_enabled: vnc.broadcastEnabled != 0,
+            netconf_revision: vnc.netconfRevision as u64,
+            assigned_addresses: aa,
+            routes: rts
         }
     }
 }

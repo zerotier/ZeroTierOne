@@ -1,6 +1,6 @@
-use std::ffi::CStr;
+use std::ffi::{CStr, CString};
 use std::mem::MaybeUninit;
-use std::os::raw::{c_char, c_int};
+use std::os::raw::{c_char, c_int, c_void};
 
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
@@ -35,9 +35,14 @@ impl Endpoint {
     }
 
     pub fn new_from_string(s: &str) -> Result<Endpoint, ResultCode> {
+        let cs = CString::new(s);
+        if cs.is_err() {
+            return Err(ResultCode::ErrorBadParameter);
+        }
+        let cs = cs.unwrap();
         unsafe {
             let mut cep: MaybeUninit<ztcore::ZT_Endpoint> = MaybeUninit::uninit();
-            let ec = ztcore::ZT_Endpoint_fromString(cep.as_mut_ptr(), s.as_ptr() as *const c_char) as i32;
+            let ec = ztcore::ZT_Endpoint_fromString(cep.as_mut_ptr(), cs.as_ptr()) as i32;
             if ec == 0 {
                 let epi = cep.assume_init();
                 return Ok(Endpoint{
@@ -46,6 +51,18 @@ impl Endpoint {
                 });
             }
             return Err(ResultCode::from_i32(ec).unwrap());
+        }
+    }
+
+    /// Get a reference to the InetAddress in this endpoint or None if this is not of a relevant type.
+    pub fn as_inetaddress(&self) -> Option<&InetAddress> {
+        match self.type_ {
+            EndpointType::Ip | EndpointType::IpUdp | EndpointType::IpTcp | EndpointType::IpHttp => {
+                unsafe {
+                    Some(InetAddress::transmute_capi(&self.capi.value.ia))
+                }
+            },
+            _ => None
         }
     }
 }

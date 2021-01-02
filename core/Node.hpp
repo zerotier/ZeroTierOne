@@ -178,7 +178,7 @@ public:
 			m_uPtr,
 			tPtr,
 			localSocket,
-			&addr.as.ss,
+			reinterpret_cast<const ZT_InetAddress *>(&addr.as.ss),
 			data,
 			len,
 			ttl) == 0);

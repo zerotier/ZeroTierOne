@@ -59,17 +59,7 @@ public:
 	 * MUST remain that way or Path must be changed to reflect. Also be sure
 	 * to change ZT_INETADDRESS_MAX_SCOPE if the max changes.
 	 */
-	enum IpScope
-	{
-		IP_SCOPE_NONE = 0,          // NULL or not an IP address
-		IP_SCOPE_MULTICAST = 1,     // 224.0.0.0 and other V4/V6 multicast IPs
-		IP_SCOPE_LOOPBACK = 2,      // 127.0.0.1, ::1, etc.
-		IP_SCOPE_PSEUDOPRIVATE = 3, // 28.x.x.x, etc. -- unofficially unrouted IPv4 blocks often "bogarted"
-		IP_SCOPE_GLOBAL = 4,        // globally routable IP address (all others)
-		IP_SCOPE_LINK_LOCAL = 5,    // 169.254.x.x, IPv6 LL
-		IP_SCOPE_SHARED = 6,        // currently unused, formerly used for carrier-grade NAT ranges
-		IP_SCOPE_PRIVATE = 7        // 10.x.x.x, 192.168.x.x, etc.
-	};
+	typedef ZT_InetAddress_IpScope IpScope;
 
 	// Hasher for unordered sets and maps in C++11
 	struct Hasher
@@ -130,52 +120,52 @@ public:
 
 	ZT_INLINE InetAddress &operator=(const sockaddr_in &sa) noexcept
 	{
+		memoryZero(this);
 		as.sa_in = sa;
 		return *this;
 	}
 
 	ZT_INLINE InetAddress &operator=(const sockaddr_in *sa) noexcept
 	{
+		memoryZero(this);
 		if (sa)
 			as.sa_in = *sa;
-		else memoryZero(this);
 		return *this;
 	}
 
 	ZT_INLINE InetAddress &operator=(const sockaddr_in6 &sa) noexcept
 	{
+		memoryZero(this);
 		as.sa_in6 = sa;
 		return *this;
 	}
 
 	ZT_INLINE InetAddress &operator=(const sockaddr_in6 *sa) noexcept
 	{
+		memoryZero(this);
 		if (sa)
 			as.sa_in6 = *sa;
-		else memoryZero(this);
 		return *this;
 	}
 
 	ZT_INLINE InetAddress &operator=(const sockaddr &sa) noexcept
 	{
+		memoryZero(this);
 		if (sa.sa_family == AF_INET)
 			as.sa_in = *reinterpret_cast<const sockaddr_in *>(&sa);
 		else if (sa.sa_family == AF_INET6)
 			as.sa_in6 = *reinterpret_cast<const sockaddr_in6 *>(&sa);
-		else memoryZero(this);
 		return *this;
 	}
 
 	ZT_INLINE InetAddress &operator=(const sockaddr *sa) noexcept
 	{
+		memoryZero(this);
 		if (sa) {
 			if (sa->sa_family == AF_INET)
 				as.sa_in = *reinterpret_cast<const sockaddr_in *>(sa);
 			else if (sa->sa_family == AF_INET6)
 				as.sa_in6 = *reinterpret_cast<const sockaddr_in6 *>(sa);
-			else memoryZero(this);
-		} else {
-			memoryZero(this);
 		}
 		return *this;
 	}
@@ -625,6 +615,9 @@ static ZT_INLINE InetAddress *asInetAddress(sockaddr *const p) noexcept
 static ZT_INLINE InetAddress *asInetAddress(sockaddr_storage *const p) noexcept
 { return reinterpret_cast<InetAddress *>(p); }
 
+static ZT_INLINE InetAddress *asInetAddress(ZT_InetAddress *const p) noexcept
+{ return reinterpret_cast<InetAddress *>(p); }
+
 static ZT_INLINE const InetAddress *asInetAddress(const sockaddr_in *const p) noexcept
 { return reinterpret_cast<const InetAddress *>(p); }
 
@@ -635,6 +628,9 @@ static ZT_INLINE const InetAddress *asInetAddress(const sockaddr *const p) noexc
 { return reinterpret_cast<const InetAddress *>(p); }
 
 static ZT_INLINE const InetAddress *asInetAddress(const sockaddr_storage *const p) noexcept
+{ return reinterpret_cast<const InetAddress *>(p); }
+
+static ZT_INLINE const InetAddress *asInetAddress(const ZT_InetAddress *const p) noexcept
 { return reinterpret_cast<const InetAddress *>(p); }
 
 static ZT_INLINE InetAddress &asInetAddress(sockaddr_in &p) noexcept
@@ -649,6 +645,9 @@ static ZT_INLINE InetAddress &asInetAddress(sockaddr &p) noexcept
 static ZT_INLINE InetAddress &asInetAddress(sockaddr_storage &p) noexcept
 { return *reinterpret_cast<InetAddress *>(&p); }
 
+static ZT_INLINE InetAddress &asInetAddress(ZT_InetAddress &p) noexcept
+{ return *reinterpret_cast<InetAddress *>(&p); }
+
 static ZT_INLINE const InetAddress &asInetAddress(const sockaddr_in &p) noexcept
 { return *reinterpret_cast<const InetAddress *>(&p); }
 
@@ -659,6 +658,9 @@ static ZT_INLINE const InetAddress &asInetAddress(const sockaddr &p) noexcept
 { return *reinterpret_cast<const InetAddress *>(&p); }
 
 static ZT_INLINE const InetAddress &asInetAddress(const sockaddr_storage &p) noexcept
+{ return *reinterpret_cast<const InetAddress *>(&p); }
+
+static ZT_INLINE const InetAddress &asInetAddress(const ZT_InetAddress &p) noexcept
 { return *reinterpret_cast<const InetAddress *>(&p); }
 
 } // namespace ZeroTier

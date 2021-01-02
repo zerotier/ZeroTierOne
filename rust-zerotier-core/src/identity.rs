@@ -1,4 +1,4 @@
-use std::ffi::CStr;
+use std::ffi::{CStr, CString};
 use std::mem::MaybeUninit;
 use std::os::raw::*;
 
@@ -49,7 +49,12 @@ impl Identity {
     /// Construct from a string representation of this identity.
     pub fn new_from_string(s: &str) -> Result<Identity, ResultCode> {
         unsafe {
-            let id = ztcore::ZT_Identity_fromString(s.as_ptr() as *const c_char);
+            let cs = CString::new(s);
+            if cs.is_err() {
+                return Err(ResultCode::ErrorBadParameter);
+            }
+            let cs = cs.unwrap();
+            let id = ztcore::ZT_Identity_fromString(cs.as_ptr());
             if id.is_null() {
                 return Err(ResultCode::ErrorBadParameter);
             }

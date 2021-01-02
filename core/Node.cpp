@@ -703,7 +703,7 @@ bool Node::shouldUsePathForZeroTierTraffic(void *tPtr, const Identity &id, const
 			id.address().toInt(),
 			(const ZT_Identity *)&id,
 			localSocket,
-			reinterpret_cast<const struct sockaddr_storage *>(&remoteAddress)) != 0);
+			reinterpret_cast<const ZT_InetAddress *>(&remoteAddress)) != 0);
 	}
 
 	return true;
@@ -719,7 +719,7 @@ bool Node::externalPathLookup(void *tPtr, const Identity &id, int family, InetAd
 			id.address().toInt(),
 			reinterpret_cast<const ZT_Identity *>(&id),
 			family,
-			reinterpret_cast<sockaddr_storage *>(&addr)) == ZT_RESULT_OK);
+			reinterpret_cast<ZT_InetAddress *>(&addr)) == ZT_RESULT_OK);
 	}
 	return false;
 }

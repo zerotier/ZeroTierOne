@@ -1,3 +1,5 @@
+#[link(name = ":../../build/core/libzt_core.a")]
+
 use std::os::raw::{c_char, c_int};
 use num_derive::{FromPrimitive, ToPrimitive};
 
@@ -9,6 +11,7 @@ mod fingerprint;
 mod endpoint;
 mod certificate;
 mod networkid;
+mod inetaddress;
 mod locator;
 mod path;
 mod peer;
@@ -26,6 +29,7 @@ pub use fingerprint::Fingerprint;
 pub use endpoint::*;
 pub use certificate::*;
 pub use networkid::NetworkId;
+pub use inetaddress::*;
 pub use locator::*;
 pub use path::Path;
 pub use peer::Peer;

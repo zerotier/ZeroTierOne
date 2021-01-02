@@ -4,12 +4,9 @@ version = "0.1.0"
 authors = ["Adam Ierymenko <adam.ierymenko@zerotier.com>"]
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 num-traits = "0.2.14"
 num-derive = "0.3.3"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 hex = "0.4.2"
-socket2 = "0.3.18"

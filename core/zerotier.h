@@ -18,19 +18,6 @@
 #ifndef ZT_ZEROTIER_API_H
 #define ZT_ZEROTIER_API_H
 
-#if defined(_WIN32) || defined(_WIN64)
-#include <WinSock2.h>
-#include <WS2tcpip.h>
-#include <Windows.h>
-#else
-
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-
-#endif
-
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -280,6 +267,34 @@ typedef void ZT_Identity;
  * Locator is a signed list of endpoints
  */
 typedef void ZT_Locator;
+
+#define ZT_SOCKADDR_STORAGE_SIZE 128
+
+/**
+ * InetAddress holds a socket address
+ *
+ * This is a sized placeholder for InetAddress in the C++ code or the
+ * sockaddr_storage structure. Its size is checked at compile time in
+ * InetAddress.cpp against sizeof(sockaddr_storage) to ensure that it
+ * is correct for the platform. If it's not correct, a platform ifdef
+ * will be needed.
+ */
+typedef struct { uint64_t bits[ZT_SOCKADDR_STORAGE_SIZE / 8]; } ZT_InetAddress;
+
+/**
+ * IP scope types as identified by InetAddress.
+ */
+enum ZT_InetAddress_IpScope
+{
+	ZT_IP_SCOPE_NONE = 0,          // NULL or not an IP address
+	ZT_IP_SCOPE_MULTICAST = 1,     // 224.0.0.0 and other V4/V6 multicast IPs
+	ZT_IP_SCOPE_LOOPBACK = 2,      // 127.0.0.1, ::1, etc.
+	ZT_IP_SCOPE_PSEUDOPRIVATE = 3, // 28.x.x.x, etc. -- unofficially unrouted IPv4 blocks often "bogarted"
+	ZT_IP_SCOPE_GLOBAL = 4,        // globally routable IP address (all others)
+	ZT_IP_SCOPE_LINK_LOCAL = 5,    // 169.254.x.x, IPv6 LL
+	ZT_IP_SCOPE_SHARED = 6,        // currently unused, formerly used for carrier-grade NAT ranges
+	ZT_IP_SCOPE_PRIVATE = 7        // 10.x.x.x, 192.168.x.x, etc.
+};
 
 /**
  * Full identity fingerprint with address and 384-bit hash of public key(s)
@@ -1311,12 +1326,12 @@ typedef struct
 	/**
 	 * Target network / netmask bits (in port field) or NULL or 0.0.0.0/0 for default
 	 */
-	struct sockaddr_storage target;
+	ZT_InetAddress target;
 
 	/**
 	 * Gateway IP address (port ignored) or NULL (family == 0) for LAN-local (no gateway)
 	 */
-	struct sockaddr_storage via;
+	ZT_InetAddress via;
 
 	/**
 	 * Route flags
@@ -1439,7 +1454,7 @@ typedef struct
 	 * This is only used for ZeroTier-managed address assignments sent by the
 	 * virtual network's configuration master.
 	 */
-	struct sockaddr_storage assignedAddresses[ZT_MAX_ZT_ASSIGNED_ADDRESSES];
+	ZT_InetAddress assignedAddresses[ZT_MAX_ZT_ASSIGNED_ADDRESSES];
 
 	/**
 	 * Number of ZT-pushed routes
@@ -1471,7 +1486,7 @@ typedef struct
 	/**
 	 * IP and port as would be reachable by external nodes
 	 */
-	struct sockaddr_storage address;
+	ZT_InetAddress address;
 
 	/**
 	 * If nonzero this address is static and can be incorporated into this node's Locator
@@ -1492,6 +1507,15 @@ typedef struct
 	union
 	{
 		/**
+		 * ZT_InetAddress, which is identically sized to sockaddr_storage.
+		 *
+		 * The ZT_InetAddress conversion macros can be used to get this in the
+		 * form of a sockaddr, sockaddr_in, etc.
+		 */
+		ZT_InetAddress ia;
+
+#ifdef ZT_CORE
+		/**
 		 * Socket address generic buffer
 		 */
 		struct sockaddr_storage ss;
@@ -1510,6 +1534,7 @@ typedef struct
 		 * IPv6 address, for all ZT_ENDPOINT_TYPE_IP types if family is AF_INET6
 		 */
 		struct sockaddr_in6 sa_in6;
+#endif
 
 		/**
 		 * MAC address (least significant 48 bites) for ZT_ENDPOINT_TYPE_ETHERNET and other MAC addressed types
@@ -1875,7 +1900,7 @@ typedef int (*ZT_WirePacketSendFunction)(
 	void *,                           /* User ptr */
 	void *,                           /* Thread ptr */
 	int64_t,                          /* Local socket */
-	const struct sockaddr_storage *,  /* Remote address */
+	const ZT_InetAddress *,           /* Remote address */
 	const void *,                     /* Packet data */
 	unsigned int,                     /* Packet length */
 	unsigned int);                    /* TTL or 0 to use default */
@@ -1909,7 +1934,7 @@ typedef int (*ZT_PathCheckFunction)(
 	uint64_t,                         /* ZeroTier address */
 	const ZT_Identity *,              /* Full identity of node */
 	int64_t,                          /* Local socket or -1 if unknown */
-	const struct sockaddr_storage *); /* Remote address */
+	const ZT_InetAddress *);          /* Remote address */
 
 /**
  * Function to get physical addresses for ZeroTier peers
@@ -1934,7 +1959,7 @@ typedef int (*ZT_PathLookupFunction)(
 	uint64_t,                         /* ZeroTier address (40 bits) */
 	const ZT_Identity *,              /* Full identity of node */
 	int,                              /* Desired ss_family or -1 for any */
-	struct sockaddr_storage *);       /* Result buffer */
+	ZT_InetAddress *);                /* Result buffer */
 
 /* ---------------------------------------------------------------------------------------------------------------- */
 
@@ -2071,7 +2096,7 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_processWirePacket(
 	void *tptr,
 	int64_t now,
 	int64_t localSocket,
-	const struct sockaddr_storage *remoteAddress,
+	const ZT_InetAddress *remoteAddress,
 	const void *packetData,
 	unsigned int packetLength,
 	int isZtBuffer,
@@ -2891,6 +2916,65 @@ ZT_SDK_API char *ZT_Fingerprint_toString(const ZT_Fingerprint *fp, char *buf, in
 ZT_SDK_API int ZT_Fingerprint_fromString(ZT_Fingerprint *fp, const char *s);
 
 /* ---------------------------------------------------------------------------------------------------------------- */
+
+/*
+ * InetAddress casting macros depend on the relevant struct being defined.
+ * System headers with sockaddr, sockaddr_in, etc. must have already been
+ * included.
+ */
+
+#define ZT_InetAddress_ptr_cast_sockaddr_ptr(a) ((struct sockaddr *)(a))
+#define ZT_InetAddress_ptr_cast_sockaddr_in_ptr(a) ((struct sockaddr_in *)(a))
+#define ZT_InetAddress_ptr_cast_sockaddr_in6_ptr(a) ((struct sockaddr_in6 *)(a))
+#define ZT_InetAddress_ptr_cast_sockaddr_storage_ptr(a) ((struct sockaddr_storage *)(a))
+
+#define ZT_InetAddress_ptr_cast_const_sockaddr_ptr(a) ((const struct sockaddr *)(a))
+#define ZT_InetAddress_ptr_cast_const_sockaddr_in_ptr(a) ((const struct sockaddr_in *)(a))
+#define ZT_InetAddress_ptr_cast_const_sockaddr_in6_ptr(a) ((const struct sockaddr_in6 *)(a))
+#define ZT_InetAddress_ptr_cast_const_sockaddr_storage_ptr(a) ((const struct sockaddr_storage *)(a))
+
+#define ZT_InetAddress_cast_sockaddr_ptr(a) ((struct sockaddr *)(&(a)))
+#define ZT_InetAddress_cast_sockaddr_in_ptr(a) ((struct sockaddr_in *)(&(a)))
+#define ZT_InetAddress_cast_sockaddr_in6_ptr(a) ((struct sockaddr_in6 *)(&(a)))
+#define ZT_InetAddress_cast_sockaddr_storage_ptr(a) ((struct sockaddr_storage *)(&(a)))
+
+#define ZT_InetAddress_cast_const_sockaddr_ptr(a) ((const struct sockaddr *)(&(a)))
+#define ZT_InetAddress_cast_const_sockaddr_in_ptr(a) ((const struct sockaddr_in *)(&(a)))
+#define ZT_InetAddress_cast_const_sockaddr_in6_ptr(a) ((const struct sockaddr_in6 *)(&(a)))
+#define ZT_InetAddress_cast_const_sockaddr_storage_ptr(a) ((const struct sockaddr_storage *)(&(a)))
+
+ZT_SDK_API void ZT_InetAddress_clear(ZT_InetAddress *ia);
+
+/**
+ * Convert an IP/port pair to a string
+ *
+ * @param ia InetAddress to convert
+ * @param buf Buffer to store result
+ * @param cap Size of buffer, must be at least 64 bytes
+ * @return 'buf' is returned
+ */
+ZT_SDK_API char *ZT_InetAddress_toString(const ZT_InetAddress *ia, char *buf, unsigned int cap);
+
+ZT_SDK_API int ZT_InetAddress_fromString(ZT_InetAddress *ia, const char *str);
+
+ZT_SDK_API void ZT_InetAddress_set(ZT_InetAddress *ia, const void *saddr);
+
+ZT_SDK_API void ZT_InetAddress_setIpBytes(ZT_InetAddress *ia, const void *ipBytes, unsigned int ipLen, unsigned int port);
+
+ZT_SDK_API void ZT_InetAddress_setPort(ZT_InetAddress *ia, unsigned int port);
+
+ZT_SDK_API unsigned int ZT_InetAddress_port(const ZT_InetAddress *ia);
+
+ZT_SDK_API int ZT_InetAddress_isNil(const ZT_InetAddress *ia);
+
+ZT_SDK_API int ZT_InetAddress_isV4(const ZT_InetAddress *ia);
+
+ZT_SDK_API int ZT_InetAddress_isV6(const ZT_InetAddress *ia);
+
+ZT_SDK_API enum ZT_InetAddress_IpScope ZT_InetAddress_ipScope(const ZT_InetAddress *ia);
+
+/* ---------------------------------------------------------------------------------------------------------------- */
+
 
 #ifdef __cplusplus
 }

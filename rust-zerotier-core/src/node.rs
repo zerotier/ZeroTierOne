@@ -8,15 +8,16 @@ use std::sync::*;
 use std::sync::atomic::*;
 use std::time::Duration;
 
+use serde::{Deserialize, Serialize};
 use num_traits::FromPrimitive;
-use socket2::SockAddr;
 
 use crate::*;
 use crate::bindings::capi as ztcore;
+use crate::inetaddress::InetAddress;
 
 const NODE_BACKGROUND_MIN_DELAY: i64 = 250;
 
-#[allow(non_snake_case)]
+#[derive(Serialize, Deserialize)]
 pub struct NodeStatus {
     pub address: Address,
     pub identity: Identity,
@@ -110,7 +111,7 @@ extern "C" fn zt_wire_packet_send_function(
     uptr: *mut c_void,
     tptr: *mut c_void,
     local_socket: i64,
-    sock_addr: *const ztcore::sockaddr_storage,
+    sock_addr: *const ztcore::ZT_InetAddress,
     data: *const c_void,
     data_size: c_uint,
     packet_ttl: c_uint
@@ -124,7 +125,7 @@ extern "C" fn zt_path_check_function(
     address: u64,
     identity: *const ztcore::ZT_Identity,
     local_socket: i64,
-    sock_addr: *const ztcore::sockaddr_storage
+    sock_addr: *const ztcore::ZT_InetAddress
 ) {}
 
 #[no_mangle]
@@ -135,7 +136,7 @@ extern "C" fn zt_path_lookup_function(
     address: u64,
     identity: *const ztcore::ZT_Identity,
     sock_family: c_int,
-    sock_addr: *mut ztcore::sockaddr_storage
+    sock_addr: *mut ztcore::ZT_InetAddress
 ) {}
 
 impl Node {
@@ -248,11 +249,11 @@ impl Node {
     }
 
     #[inline(always)]
-    pub fn process_wire_packet(&self, local_socket: i64, remote_address: &SockAddr, data: &mut Buffer) -> ResultCode {
+    pub fn process_wire_packet<A>(&self, local_socket: i64, remote_address: &InetAddress, data: &mut Buffer) -> ResultCode {
         let current_time = self.now.get();
         let mut next_task_deadline: i64 = current_time;
         unsafe {
-            return ResultCode::from_u32(ztcore::ZT_Node_processWirePacket(self.capi.get(), null_mut(), current_time, local_socket, remote_address.as_ptr() as *const ztcore::sockaddr_storage, data.zt_core_buf as *const c_void, data.data_size as u32, 1, &mut next_task_deadline as *mut i64) as u32).unwrap_or(ResultCode::ErrorInternalNonFatal);
+            return ResultCode::from_u32(ztcore::ZT_Node_processWirePacket(self.capi.get(), null_mut(), current_time, local_socket, remote_address.as_ptr() as *const ztcore::ZT_InetAddress, data.zt_core_buf as *const c_void, data.data_size as u32, 1, &mut next_task_deadline as *mut i64) as u32).unwrap_or(ResultCode::ErrorInternalNonFatal);
         }
     }
 

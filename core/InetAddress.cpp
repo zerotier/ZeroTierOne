@@ -19,6 +19,10 @@
 
 namespace ZeroTier {
 
+static_assert(ZT_SOCKADDR_STORAGE_SIZE == sizeof(sockaddr_storage), "ZT_SOCKADDR_STORAGE_SIZE is incorrect on this platform, must be size of sockaddr_storage");
+static_assert(ZT_SOCKADDR_STORAGE_SIZE == sizeof(InetAddress), "ZT_SOCKADDR_STORAGE_SIZE should equal InetAddress, which should equal size of sockaddr_storage");
+static_assert(ZT_SOCKADDR_STORAGE_SIZE == sizeof(ZT_InetAddress), "ZT_SOCKADDR_STORAGE_SIZE should equal ZT_InetAddress, which should equal size of sockaddr_storage");
+
 const InetAddress InetAddress::LO4((const void *) ("\x7f\x00\x00\x01"), 4, 0);
 const InetAddress InetAddress::LO6((const void *) ("\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"), 16, 0);
 const InetAddress InetAddress::NIL;
@@ -31,11 +35,11 @@ InetAddress::IpScope InetAddress::ipScope() const noexcept
 			const uint32_t ip = Utils::ntoh((uint32_t)as.sa_in.sin_addr.s_addr);
 			switch (ip >> 24U) {
 				case 0x00:
-					return IP_SCOPE_NONE;                                            // 0.0.0.0/8 (reserved, never used)
+					return ZT_IP_SCOPE_NONE;                                            // 0.0.0.0/8 (reserved, never used)
 				case 0x06:
-					return IP_SCOPE_PSEUDOPRIVATE;                                   // 6.0.0.0/8 (US Army)
+					return ZT_IP_SCOPE_PSEUDOPRIVATE;                                   // 6.0.0.0/8 (US Army)
 				case 0x0a:
-					return IP_SCOPE_PRIVATE;                                         // 10.0.0.0/8
+					return ZT_IP_SCOPE_PRIVATE;                                         // 10.0.0.0/8
 				case 0x0b: //return IP_SCOPE_PSEUDOPRIVATE;                        // 11.0.0.0/8 (US DoD)
 				case 0x15: //return IP_SCOPE_PSEUDOPRIVATE;                        // 21.0.0.0/8 (US DDN-RVN)
 				case 0x16: //return IP_SCOPE_PSEUDOPRIVATE;                        // 22.0.0.0/8 (US DISA)
@@ -47,65 +51,65 @@ InetAddress::IpScope InetAddress::ipScope() const noexcept
 				case 0x33: //return IP_SCOPE_PSEUDOPRIVATE;                        // 51.0.0.0/8 (UK Department of Social Security)
 				case 0x37: //return IP_SCOPE_PSEUDOPRIVATE;                        // 55.0.0.0/8 (US DoD)
 				case 0x38:                                                         // 56.0.0.0/8 (US Postal Service)
-					return IP_SCOPE_PSEUDOPRIVATE;
+					return ZT_IP_SCOPE_PSEUDOPRIVATE;
 				case 0x64:
-					if ((ip & 0xffc00000) == 0x64400000) return IP_SCOPE_PRIVATE;    // 100.64.0.0/10
+					if ((ip & 0xffc00000) == 0x64400000) return ZT_IP_SCOPE_PRIVATE;    // 100.64.0.0/10
 					break;
 				case 0x7f:
-					return IP_SCOPE_LOOPBACK;                                        // 127.0.0.0/8
+					return ZT_IP_SCOPE_LOOPBACK;                                        // 127.0.0.0/8
 				case 0xa9:
-					if ((ip & 0xffff0000) == 0xa9fe0000) return IP_SCOPE_LINK_LOCAL; // 169.254.0.0/16
+					if ((ip & 0xffff0000) == 0xa9fe0000) return ZT_IP_SCOPE_LINK_LOCAL; // 169.254.0.0/16
 					break;
 				case 0xac:
-					if ((ip & 0xfff00000) == 0xac100000) return IP_SCOPE_PRIVATE;    // 172.16.0.0/12
+					if ((ip & 0xfff00000) == 0xac100000) return ZT_IP_SCOPE_PRIVATE;    // 172.16.0.0/12
 					break;
 				case 0xc0:
-					if ((ip & 0xffff0000) == 0xc0a80000) return IP_SCOPE_PRIVATE;    // 192.168.0.0/16
-					if ((ip & 0xffffff00) == 0xc0000200) return IP_SCOPE_PRIVATE;    // 192.0.2.0/24
+					if ((ip & 0xffff0000) == 0xc0a80000) return ZT_IP_SCOPE_PRIVATE;    // 192.168.0.0/16
+					if ((ip & 0xffffff00) == 0xc0000200) return ZT_IP_SCOPE_PRIVATE;    // 192.0.2.0/24
 					break;
 				case 0xc6:
-					if ((ip & 0xfffe0000) == 0xc6120000) return IP_SCOPE_PRIVATE;    // 198.18.0.0/15
-					if ((ip & 0xffffff00) == 0xc6336400) return IP_SCOPE_PRIVATE;    // 198.51.100.0/24
+					if ((ip & 0xfffe0000) == 0xc6120000) return ZT_IP_SCOPE_PRIVATE;    // 198.18.0.0/15
+					if ((ip & 0xffffff00) == 0xc6336400) return ZT_IP_SCOPE_PRIVATE;    // 198.51.100.0/24
 					break;
 				case 0xcb:
-					if ((ip & 0xffffff00) == 0xcb007100) return IP_SCOPE_PRIVATE;    // 203.0.113.0/24
+					if ((ip & 0xffffff00) == 0xcb007100) return ZT_IP_SCOPE_PRIVATE;    // 203.0.113.0/24
 					break;
 				case 0xff:
-					return IP_SCOPE_NONE;                                            // 255.0.0.0/8 (broadcast, or unused/unusable)
+					return ZT_IP_SCOPE_NONE;                                            // 255.0.0.0/8 (broadcast, or unused/unusable)
 			}
 			switch (ip >> 28U) {
 				case 0xe:
-					return IP_SCOPE_MULTICAST;                                       // 224.0.0.0/4
+					return ZT_IP_SCOPE_MULTICAST;                                       // 224.0.0.0/4
 				case 0xf:
-					return IP_SCOPE_PSEUDOPRIVATE;                                   // 240.0.0.0/4 ("reserved," usually unusable)
+					return ZT_IP_SCOPE_PSEUDOPRIVATE;                                   // 240.0.0.0/4 ("reserved," usually unusable)
 			}
-			return IP_SCOPE_GLOBAL;
+			return ZT_IP_SCOPE_GLOBAL;
 		}
 
 		case AF_INET6: {
 			const uint8_t *const ip = as.sa_in6.sin6_addr.s6_addr;
 			if ((ip[0] & 0xf0U) == 0xf0) {
-				if (ip[0] == 0xff) return IP_SCOPE_MULTICAST;                      // ff00::/8
+				if (ip[0] == 0xff) return ZT_IP_SCOPE_MULTICAST;                      // ff00::/8
 				if ((ip[0] == 0xfe) && ((ip[1] & 0xc0U) == 0x80)) {
 					unsigned int k = 2;
 					while ((!ip[k]) && (k < 15)) ++k;
 					if ((k == 15) && (ip[15] == 0x01))
-						return IP_SCOPE_LOOPBACK;                                      // fe80::1/128
-					else return IP_SCOPE_LINK_LOCAL;                                 // fe80::/10
+						return ZT_IP_SCOPE_LOOPBACK;                                      // fe80::1/128
+					else return ZT_IP_SCOPE_LINK_LOCAL;                                 // fe80::/10
 				}
-				if ((ip[0] & 0xfeU) == 0xfc) return IP_SCOPE_PRIVATE;              // fc00::/7
+				if ((ip[0] & 0xfeU) == 0xfc) return ZT_IP_SCOPE_PRIVATE;              // fc00::/7
 			}
 			unsigned int k = 0;
 			while ((!ip[k]) && (k < 15)) ++k;
 			if (k == 15) { // all 0's except last byte
-				if (ip[15] == 0x01) return IP_SCOPE_LOOPBACK;                      // ::1/128
-				if (ip[15] == 0x00) return IP_SCOPE_NONE;                          // ::/128
+				if (ip[15] == 0x01) return ZT_IP_SCOPE_LOOPBACK;                      // ::1/128
+				if (ip[15] == 0x00) return ZT_IP_SCOPE_NONE;                          // ::/128
 			}
-			return IP_SCOPE_GLOBAL;
+			return ZT_IP_SCOPE_GLOBAL;
 		}
 
 	}
-	return IP_SCOPE_NONE;
+	return ZT_IP_SCOPE_NONE;
 }
 
 void InetAddress::set(const void *ipBytes, unsigned int ipLen, unsigned int port) noexcept

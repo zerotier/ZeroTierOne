@@ -1,7 +1,7 @@
 use crate::*;
 use crate::bindings::capi as ztcore;
 use std::os::raw::{c_char, c_int, c_uint};
-use std::ffi::CStr;
+use std::ffi::CString;
 
 pub struct Locator {
     pub(crate) capi: *const ztcore::ZT_Locator,
@@ -19,7 +19,12 @@ impl Locator {
 
     pub fn new_from_string(s: &str) -> Result<Locator, ResultCode> {
         unsafe {
-            let l = ztcore::ZT_Locator_fromString(s.as_ptr() as *const c_char);
+            let cs = CString::new(s);
+            if cs.is_err() {
+                return Err(ResultCode::ErrorBadParameter);
+            }
+            let cs = cs.unwrap();
+            let l = ztcore::ZT_Locator_fromString(cs.as_ptr());
             if l.is_null() {
                 return Err(ResultCode::ErrorBadParameter);
             }
@@ -72,7 +77,7 @@ impl ToString for Locator {
             if ztcore::ZT_Locator_toString(self.capi, buf.as_mut_ptr() as *mut c_char, buf.len() as c_int).is_null() {
                 return String::from("(invalid)");
             }
-            return String::from(CStr::from_bytes_with_nul(buf.as_ref()).unwrap().to_str().unwrap());
+            return cstr_to_string(buf.as_ptr() as *const c_char, 4096);
         }
     }
 }

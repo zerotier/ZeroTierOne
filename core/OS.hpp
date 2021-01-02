@@ -58,6 +58,13 @@
 
 #endif /* Microsoft Windows */
 
+#ifndef __WINDOWS__
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#endif /* NOT Microsoft Windows */
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>

@@ -53,7 +53,7 @@ void SelfAwareness::iam(void *tPtr, const Identity &reporter, const int64_t rece
 {
 	const InetAddress::IpScope scope = myPhysicalAddress.ipScope();
 
-	if ((scope != reporterPhysicalAddress.ipScope()) || (scope == InetAddress::IP_SCOPE_NONE) || (scope == InetAddress::IP_SCOPE_LOOPBACK) || (scope == InetAddress::IP_SCOPE_MULTICAST))
+	if ((scope != reporterPhysicalAddress.ipScope()) || (scope == ZT_IP_SCOPE_NONE) || (scope == ZT_IP_SCOPE_LOOPBACK) || (scope == ZT_IP_SCOPE_MULTICAST))
 		return;
 
 	Mutex::Lock l(m_phy_l);
