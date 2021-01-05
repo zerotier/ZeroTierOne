@@ -183,12 +183,12 @@ pub unsafe fn cstr_to_string(cstr: *const c_char, max_len: isize) -> String {
     if !cstr.is_null() {
         let mut cstr_len: isize = 0;
         while max_len < 0 || cstr_len < max_len {
-            if (unsafe { *cstr.offset(cstr_len) } == 0) {
+            if (*cstr.offset(cstr_len) == 0) {
                 break;
             }
             cstr_len += 1;
         }
-        return String::from(std::str::from_utf8(unsafe { std::slice::from_raw_parts(cstr as *const u8, cstr_len as usize) }).unwrap_or(""));
+        return String::from(std::str::from_utf8(std::slice::from_raw_parts(cstr as *const u8, cstr_len as usize)).unwrap_or(""));
     }
     String::new()
 }

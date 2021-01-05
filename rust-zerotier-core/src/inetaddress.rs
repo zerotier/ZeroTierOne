@@ -3,6 +3,7 @@ use std::mem::{MaybeUninit, transmute, size_of};
 
 use serde::{Deserialize, Serialize};
 use num_derive::{FromPrimitive, ToPrimitive};
+use num_traits::FromPrimitive;
 
 use crate::*;
 use crate::bindings::capi as ztcore;
@@ -92,7 +93,7 @@ impl InetAddress {
 
     pub fn ip_scope(&self) -> IpScope {
         unsafe {
-            IpScope::from_u32(ztcore::ZT_InetAddress_ipScope(self.as_capi_ptr())).unwrap_or(IpScope::None)
+            IpScope::from_u32(ztcore::ZT_InetAddress_ipScope(self.as_capi_ptr()) as u32).unwrap_or(IpScope::None)
         }
     }
 }

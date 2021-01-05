@@ -277,22 +277,20 @@ impl CertificateName {
     }
 
     pub(crate) unsafe fn new_from_capi(cn: &ztcore::ZT_Certificate_Name) -> CertificateName {
-        unsafe {
-            return CertificateName {
-                serial_no: cstr_to_string(cn.serialNo.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1),
-                common_name: cstr_to_string(cn.commonName.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1),
-                country: cstr_to_string(cn.country.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1),
-                organization: cstr_to_string(cn.organization.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1),
-                unit: cstr_to_string(cn.unit.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1),
-                locality: cstr_to_string(cn.locality.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1),
-                province: cstr_to_string(cn.province.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1),
-                street_address: cstr_to_string(cn.streetAddress.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1),
-                postal_code: cstr_to_string(cn.postalCode.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1),
-                email: cstr_to_string(cn.email.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1),
-                url: cstr_to_string(cn.url.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1),
-                host: cstr_to_string(cn.host.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1)
-            };
-        }
+        return CertificateName {
+            serial_no: cstr_to_string(cn.serialNo.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1),
+            common_name: cstr_to_string(cn.commonName.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1),
+            country: cstr_to_string(cn.country.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1),
+            organization: cstr_to_string(cn.organization.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1),
+            unit: cstr_to_string(cn.unit.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1),
+            locality: cstr_to_string(cn.locality.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1),
+            province: cstr_to_string(cn.province.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1),
+            street_address: cstr_to_string(cn.streetAddress.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1),
+            postal_code: cstr_to_string(cn.postalCode.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1),
+            email: cstr_to_string(cn.email.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1),
+            url: cstr_to_string(cn.url.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1),
+            host: cstr_to_string(cn.host.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1)
+        };
     }
 
     fn str_to_cert_cstr(s: &String, cs: &mut [c_char; 128]) {
@@ -311,22 +309,20 @@ impl CertificateName {
     }
 
     pub(crate) unsafe fn to_capi(&self) -> ztcore::ZT_Certificate_Name {
-        unsafe {
-            let mut cn: ztcore::ZT_Certificate_Name = zeroed();
-            Self::str_to_cert_cstr(&self.serial_no, &mut cn.serialNo);
-            Self::str_to_cert_cstr(&self.common_name, &mut cn.commonName);
-            Self::str_to_cert_cstr(&self.country, &mut cn.country);
-            Self::str_to_cert_cstr(&self.organization, &mut cn.organization);
-            Self::str_to_cert_cstr(&self.unit, &mut cn.unit);
-            Self::str_to_cert_cstr(&self.locality, &mut cn.locality);
-            Self::str_to_cert_cstr(&self.province, &mut cn.province);
-            Self::str_to_cert_cstr(&self.street_address, &mut cn.streetAddress);
-            Self::str_to_cert_cstr(&self.postal_code, &mut cn.postalCode);
-            Self::str_to_cert_cstr(&self.email, &mut cn.email);
-            Self::str_to_cert_cstr(&self.url, &mut cn.url);
-            Self::str_to_cert_cstr(&self.host, &mut cn.host);
-            return cn;
-        }
+        let mut cn: ztcore::ZT_Certificate_Name = zeroed();
+        Self::str_to_cert_cstr(&self.serial_no, &mut cn.serialNo);
+        Self::str_to_cert_cstr(&self.common_name, &mut cn.commonName);
+        Self::str_to_cert_cstr(&self.country, &mut cn.country);
+        Self::str_to_cert_cstr(&self.organization, &mut cn.organization);
+        Self::str_to_cert_cstr(&self.unit, &mut cn.unit);
+        Self::str_to_cert_cstr(&self.locality, &mut cn.locality);
+        Self::str_to_cert_cstr(&self.province, &mut cn.province);
+        Self::str_to_cert_cstr(&self.street_address, &mut cn.streetAddress);
+        Self::str_to_cert_cstr(&self.postal_code, &mut cn.postalCode);
+        Self::str_to_cert_cstr(&self.email, &mut cn.email);
+        Self::str_to_cert_cstr(&self.url, &mut cn.url);
+        Self::str_to_cert_cstr(&self.host, &mut cn.host);
+        return cn;
     }
 }
 
@@ -434,55 +430,53 @@ impl CertificateSubject {
     }
 
     pub(crate) unsafe fn new_from_capi(cs: &ztcore::ZT_Certificate_Subject) -> CertificateSubject {
-        unsafe {
-            let mut identities: Vec<CertificateIdentity> = Vec::new();
-            if !cs.identities.is_null() && cs.identityCount > 0 {
-                let cidentities: &[ztcore::ZT_Certificate_Identity] = std::slice::from_raw_parts(cs.identities, cs.identityCount as usize);
-                for i in cidentities.iter() {
-                    let ci = CertificateIdentity::new_from_capi(i);
-                    if ci.is_some() {
-                        identities.push(ci.unwrap());
-                    }
+        let mut identities: Vec<CertificateIdentity> = Vec::new();
+        if !cs.identities.is_null() && cs.identityCount > 0 {
+            let cidentities: &[ztcore::ZT_Certificate_Identity] = std::slice::from_raw_parts(cs.identities, cs.identityCount as usize);
+            for i in cidentities.iter() {
+                let ci = CertificateIdentity::new_from_capi(i);
+                if ci.is_some() {
+                    identities.push(ci.unwrap());
                 }
             }
-
-            let mut networks: Vec<CertificateNetwork> = Vec::new();
-            if !cs.networks.is_null() && cs.networkCount > 0 {
-                let cnetworks: &[ztcore::ZT_Certificate_Network] = std::slice::from_raw_parts(cs.networks, cs.networkCount as usize);
-                for i in cnetworks.iter() {
-                    networks.push(CertificateNetwork::new_from_capi(i));
-                }
-            }
-
-            let mut certificates: Vec<CertificateSerialNo> = Vec::new();
-            if !cs.certificates.is_null() && cs.certificateCount > 0 {
-                let ccertificates: &[*const u8] = std::slice::from_raw_parts(cs.certificates, cs.certificateCount as usize);
-                let mut ctmp: [u8; 48] = [0; 48];
-                for i in ccertificates.iter() {
-                    copy_nonoverlapping(*i, ctmp.as_mut_ptr(), 48);
-                    certificates.push(CertificateSerialNo(ctmp));
-                }
-            }
-
-            let mut update_urls: Vec<String> = Vec::new();
-            if !cs.updateURLs.is_null() && cs.updateURLCount > 0 {
-                let cupdate_urls: &[*const c_char] = std::slice::from_raw_parts(cs.updateURLs, cs.updateURLCount as usize);
-                for i in cupdate_urls.iter() {
-                    update_urls.push(cstr_to_string(*i, CERTIFICATE_MAX_STRING_LENGTH - 1));
-                }
-            }
-
-            return CertificateSubject {
-                timestamp: cs.timestamp,
-                identities: identities,
-                networks: networks,
-                certificates: certificates,
-                update_urls: update_urls,
-                name: CertificateName::new_from_capi(&cs.name),
-                unique_id: Vec::from(std::slice::from_raw_parts(cs.uniqueId, cs.uniqueIdSize as usize)),
-                unique_id_proof_signature: Vec::from(std::slice::from_raw_parts(cs.uniqueIdProofSignature, cs.uniqueIdProofSignatureSize as usize)),
-            };
         }
+
+        let mut networks: Vec<CertificateNetwork> = Vec::new();
+        if !cs.networks.is_null() && cs.networkCount > 0 {
+            let cnetworks: &[ztcore::ZT_Certificate_Network] = std::slice::from_raw_parts(cs.networks, cs.networkCount as usize);
+            for i in cnetworks.iter() {
+                networks.push(CertificateNetwork::new_from_capi(i));
+            }
+        }
+
+        let mut certificates: Vec<CertificateSerialNo> = Vec::new();
+        if !cs.certificates.is_null() && cs.certificateCount > 0 {
+            let ccertificates: &[*const u8] = std::slice::from_raw_parts(cs.certificates, cs.certificateCount as usize);
+            let mut ctmp: [u8; 48] = [0; 48];
+            for i in ccertificates.iter() {
+                copy_nonoverlapping(*i, ctmp.as_mut_ptr(), 48);
+                certificates.push(CertificateSerialNo(ctmp));
+            }
+        }
+
+        let mut update_urls: Vec<String> = Vec::new();
+        if !cs.updateURLs.is_null() && cs.updateURLCount > 0 {
+            let cupdate_urls: &[*const c_char] = std::slice::from_raw_parts(cs.updateURLs, cs.updateURLCount as usize);
+            for i in cupdate_urls.iter() {
+                update_urls.push(cstr_to_string(*i, CERTIFICATE_MAX_STRING_LENGTH - 1));
+            }
+        }
+
+        return CertificateSubject {
+            timestamp: cs.timestamp,
+            identities: identities,
+            networks: networks,
+            certificates: certificates,
+            update_urls: update_urls,
+            name: CertificateName::new_from_capi(&cs.name),
+            unique_id: Vec::from(std::slice::from_raw_parts(cs.uniqueId, cs.uniqueIdSize as usize)),
+            unique_id_proof_signature: Vec::from(std::slice::from_raw_parts(cs.uniqueIdProofSignature, cs.uniqueIdProofSignatureSize as usize)),
+        };
     }
 
     pub(crate) unsafe fn to_capi(&self) -> CertificateSubjectCAPIContainer {
@@ -495,7 +489,7 @@ impl CertificateSubject {
         if !self.identities.is_empty() {
             capi_identities.reserve(self.identities.len());
             for i in self.identities.iter() {
-                capi_identities.push(unsafe { (*i).to_capi() });
+                capi_identities.push((*i).to_capi());
             }
         }
         if !self.networks.is_empty() {
@@ -532,7 +526,7 @@ impl CertificateSubject {
                 networkCount: capi_networks.len() as c_uint,
                 certificateCount: capi_certificates.len() as c_uint,
                 updateURLCount: capi_urls.len() as c_uint,
-                name: unsafe { self.name.to_capi() },
+                name: self.name.to_capi(),
                 uniqueId: self.unique_id.as_ptr(),
                 uniqueIdProofSignature: self.unique_id_proof_signature.as_ptr(),
                 uniqueIdSize: self.unique_id.len() as c_uint,
@@ -613,24 +607,22 @@ impl Certificate {
     }
 
     pub(crate) unsafe fn new_from_capi(c: &ztcore::ZT_Certificate) -> Certificate {
-        unsafe {
-            return Certificate {
-                serial_no: CertificateSerialNo(c.serialNo),
-                flags: c.flags,
-                timestamp: c.timestamp,
-                validity: c.validity,
-                subject: CertificateSubject::new_from_capi(&c.subject),
-                issuer: if c.issuer.is_null() { None } else { Some(Identity::new_from_capi(c.issuer, false)) },
-                issuer_name: CertificateName::new_from_capi(&c.issuerName),
-                extended_attributes: Vec::from(std::slice::from_raw_parts(c.extendedAttributes, c.extendedAttributesSize as usize)),
-                max_path_length: c.maxPathLength as u32,
-                signature: Vec::from(std::slice::from_raw_parts(c.signature, c.signatureSize as usize)),
-            };
-        }
+        return Certificate {
+            serial_no: CertificateSerialNo(c.serialNo),
+            flags: c.flags,
+            timestamp: c.timestamp,
+            validity: c.validity,
+            subject: CertificateSubject::new_from_capi(&c.subject),
+            issuer: if c.issuer.is_null() { None } else { Some(Identity::new_from_capi(c.issuer, false)) },
+            issuer_name: CertificateName::new_from_capi(&c.issuerName),
+            extended_attributes: Vec::from(std::slice::from_raw_parts(c.extendedAttributes, c.extendedAttributesSize as usize)),
+            max_path_length: c.maxPathLength as u32,
+            signature: Vec::from(std::slice::from_raw_parts(c.signature, c.signatureSize as usize)),
+        };
     }
 
     pub(crate) unsafe fn to_capi(&self) -> CertificateCAPIContainer {
-        let subject = unsafe { self.subject.to_capi() };
+        let subject = self.subject.to_capi();
         CertificateCAPIContainer {
             certificate: ztcore::ZT_Certificate {
                 serialNo: self.serial_no.0,
@@ -639,7 +631,7 @@ impl Certificate {
                 validity: self.validity,
                 subject: subject.subject,
                 issuer: if self.issuer.is_some() { self.issuer.as_ref().unwrap().capi } else { null() },
-                issuerName: unsafe { self.issuer_name.to_capi() },
+                issuerName: self.issuer_name.to_capi(),
                 extendedAttributes: self.extended_attributes.as_ptr(),
                 extendedAttributesSize: self.extended_attributes.len() as c_uint,
                 maxPathLength: self.max_path_length as c_uint,

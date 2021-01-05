@@ -219,7 +219,7 @@ impl VirtualNetworkConfig {
         let mut aa: Vec<InetAddress> = Vec::new();
         let saptr = vnc.assignedAddresses.as_ptr();
         for i in 0..vnc.assignedAddressCount as isize {
-            let a = InetAddress::new_from_capi(unsafe { *saptr.offset(i) });
+            let a = InetAddress::new_from_capi(unsafe { &*saptr.offset(i) });
             if a.is_some() {
                 aa.push(a.unwrap());
             }
@@ -230,8 +230,8 @@ impl VirtualNetworkConfig {
         for i in 0..vnc.routeCount as isize {
             let r = unsafe { *rtptr.offset(i) };
             rts.push(VirtualNetworkRoute{
-                target: InetAddress::new_from_capi(r.target),
-                via: InetAddress::new_from_capi(r.via),
+                target: InetAddress::new_from_capi(&r.target),
+                via: InetAddress::new_from_capi(&r.via),
                 flags: r.flags,
                 metric: r.metric
             })

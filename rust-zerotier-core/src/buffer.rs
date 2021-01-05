@@ -38,24 +38,6 @@ impl Buffer {
     }
 }
 
-impl AsRef<&[u8]> for Buffer {
-    #[inline(always)]
-    fn as_ref(&self) -> &[u8] {
-        unsafe {
-            return from_raw_parts(self.zt_core_buf, self.data_size as usize);
-        }
-    }
-}
-
-impl AsMut<&[u8]> for Buffer {
-    #[inline(always)]
-    fn as_mut(&mut self) -> &mut [u8] {
-        unsafe {
-            return from_raw_parts_mut(self.zt_core_buf, self.data_size as usize);
-        }
-    }
-}
-
 impl Drop for Buffer {
     #[inline(always)]
     fn drop(&mut self) {
