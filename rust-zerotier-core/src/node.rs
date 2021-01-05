@@ -56,7 +56,6 @@ macro_rules! node_from_raw_ptr {
     }
 }
 
-#[no_mangle]
 extern "C" fn zt_virtual_network_config_function<T: NodeEventHandler + 'static>(
     capi: *mut ztcore::ZT_Node,
     uptr: *mut c_void,
@@ -70,7 +69,6 @@ extern "C" fn zt_virtual_network_config_function<T: NodeEventHandler + 'static>(
     n.event_handler.virtual_network_config();
 }
 
-#[no_mangle]
 extern "C" fn zt_virtual_network_frame_function<T: NodeEventHandler + 'static>(
     capi: *mut ztcore::ZT_Node,
     uptr: *mut c_void,
@@ -88,7 +86,6 @@ extern "C" fn zt_virtual_network_frame_function<T: NodeEventHandler + 'static>(
     n.event_handler.virtual_network_frame();
 }
 
-#[no_mangle]
 extern "C" fn zt_event_callback<T: NodeEventHandler + 'static>(
     capi: *mut ztcore::ZT_Node,
     uptr: *mut c_void,
@@ -100,7 +97,6 @@ extern "C" fn zt_event_callback<T: NodeEventHandler + 'static>(
     n.event_handler.event();
 }
 
-#[no_mangle]
 extern "C" fn zt_state_put_function<T: NodeEventHandler + 'static>(
     capi: *mut ztcore::ZT_Node,
     uptr: *mut c_void,
@@ -114,7 +110,6 @@ extern "C" fn zt_state_put_function<T: NodeEventHandler + 'static>(
     n.event_handler.state_put();
 }
 
-#[no_mangle]
 extern "C" fn zt_state_get_function<T: NodeEventHandler + 'static>(
     capi: *mut ztcore::ZT_Node,
     uptr: *mut c_void,
@@ -128,7 +123,6 @@ extern "C" fn zt_state_get_function<T: NodeEventHandler + 'static>(
     n.event_handler.state_get();
 }
 
-#[no_mangle]
 extern "C" fn zt_wire_packet_send_function<T: NodeEventHandler + 'static>(
     capi: *mut ztcore::ZT_Node,
     uptr: *mut c_void,
@@ -143,7 +137,6 @@ extern "C" fn zt_wire_packet_send_function<T: NodeEventHandler + 'static>(
     n.event_handler.wire_packet_send();
 }
 
-#[no_mangle]
 extern "C" fn zt_path_check_function<T: NodeEventHandler + 'static>(
     capi: *mut ztcore::ZT_Node,
     uptr: *mut c_void,
@@ -157,7 +150,6 @@ extern "C" fn zt_path_check_function<T: NodeEventHandler + 'static>(
     n.event_handler.path_check();
 }
 
-#[no_mangle]
 extern "C" fn zt_path_lookup_function<T: NodeEventHandler + 'static>(
     capi: *mut ztcore::ZT_Node,
     uptr: *mut c_void,
@@ -309,10 +301,8 @@ impl<T: NodeEventHandler + 'static> Node<T> {
     }
 
     pub fn identity(&self) -> Identity {
-        unsafe {
-            let mut id = ztcore::ZT_Node_identity(self.capi.get());
-            return Identity::new_from_capi(id, false).clone();
-        }
+        let id = unsafe { ztcore::ZT_Node_identity(self.capi.get()) };
+        return Identity::new_from_capi(id, false).clone();
     }
 
     pub fn status(&self) -> NodeStatus {

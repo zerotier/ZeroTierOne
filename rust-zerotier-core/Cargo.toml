@@ -3,6 +3,7 @@ name = "rust-zerotier-core"
 version = "0.1.0"
 authors = ["Adam Ierymenko <adam.ierymenko@zerotier.com>"]
 edition = "2018"
+build = "build.rs"
 
 [dependencies]
 num-traits = "0.2.14"

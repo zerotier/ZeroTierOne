@@ -6,6 +6,7 @@ use std::os::raw::{c_char, c_uint, c_void};
 use std::ptr::{copy_nonoverlapping, null, null_mut};
 use std::sync::Mutex;
 
+use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
 use serde::{Deserialize, Serialize};
 
@@ -173,7 +174,7 @@ pub struct CertificateSubjectUniqueIdSecret {
     pub public: Vec<u8>,
     pub private: Vec<u8>,
     #[serde(rename = "type")]
-    pub type_: CertificateUniqueIdType
+    pub type_: CertificateUniqueIdType,
 }
 
 const CERTIFICATE_UNIQUE_ID_CREATE_BUF_SIZE: usize = 128;
@@ -236,6 +237,49 @@ impl ToString for CertificateError {
     }
 }
 
+impl From<&str> for CertificateError {
+    fn from(s: &str) -> CertificateError {
+        match s.to_ascii_lowercase().as_str() {
+            "havenewercert" => CertificateError::HaveNewerCert,
+            "invalidformat" => CertificateError::InvalidFormat,
+            "invalididentity" => CertificateError::InvalidIdentity,
+            "invalidprimarysignature" => CertificateError::InvalidPrimarySignature,
+            "invalidchain" => CertificateError::InvalidChain,
+            "invalidcomponentsignature" => CertificateError::InvalidComponentSignature,
+            "invaliduniqueidproof" => CertificateError::InvalidUniqueIdProof,
+            "missingrequiredfields" => CertificateError::MissingRequiredFields,
+            "outofvalidtimewindow" => CertificateError::OutOfValidTimeWindow,
+            _ => CertificateError::None // also "none"
+        }
+    }
+}
+
+impl serde::Serialize for CertificateError {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
+        serializer.serialize_str(self.to_string().as_str())
+    }
+}
+
+struct CertificateErrorVisitor;
+
+impl<'de> serde::de::Visitor<'de> for CertificateErrorVisitor {
+    type Value = CertificateError;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        formatter.write_str("CertificateError value in string form")
+    }
+
+    fn visit_str<E>(self, s: &str) -> Result<Self::Value, E> where E: serde::de::Error {
+        return Ok(CertificateError::from(s));
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for CertificateError {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'de> {
+        deserializer.deserialize_str(CertificateErrorVisitor)
+    }
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[derive(Serialize, Deserialize)]
@@ -272,7 +316,7 @@ impl CertificateName {
             postal_code: String::new(),
             email: String::new(),
             url: String::new(),
-            host: String::new()
+            host: String::new(),
         }
     }
 
@@ -289,7 +333,7 @@ impl CertificateName {
             postal_code: cstr_to_string(cn.postalCode.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1),
             email: cstr_to_string(cn.email.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1),
             url: cstr_to_string(cn.url.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1),
-            host: cstr_to_string(cn.host.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1)
+            host: cstr_to_string(cn.host.as_ptr(), CERTIFICATE_MAX_STRING_LENGTH - 1),
         };
     }
 
@@ -425,7 +469,7 @@ impl CertificateSubject {
             update_urls: Vec::new(),
             name: CertificateName::new(),
             unique_id: Vec::new(),
-            unique_id_proof_signature: Vec::new()
+            unique_id_proof_signature: Vec::new(),
         }
     }
 
@@ -582,7 +626,7 @@ pub struct Certificate {
     pub extended_attributes: Vec<u8>,
     #[serde(rename = "maxPathLength")]
     pub max_path_length: u32,
-    pub signature: Vec<u8>
+    pub signature: Vec<u8>,
 }
 
 pub(crate) struct CertificateCAPIContainer {
@@ -602,7 +646,7 @@ impl Certificate {
             issuer_name: CertificateName::new(),
             extended_attributes: Vec::new(),
             max_path_length: 0,
-            signature: Vec::new()
+            signature: Vec::new(),
         }
     }
 
@@ -711,5 +755,12 @@ mod tests {
         let test: [u8; 48] = [1; 48];
         let sn = CertificateSerialNo::from(&test[0..48]);
         assert!(test.eq(&sn.0));
+    }
+
+    #[test]
+    fn generate_certificate_unique_id() {
+        let uid = CertificateSubjectUniqueIdSecret::new(CertificateUniqueIdType::NistP384);
+        println!("certificate unique ID public: {}", hex::encode(uid.public).as_str());
+        println!("certificate unique ID private: {}", hex::encode(uid.private).as_str());
     }
 }

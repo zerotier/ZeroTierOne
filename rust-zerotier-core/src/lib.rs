@@ -1,5 +1,3 @@
-#[link(name = ":../../build/core/libzt_core.a")]
-
 use std::os::raw::{c_char, c_int};
 use num_derive::{FromPrimitive, ToPrimitive};
 
@@ -49,7 +47,7 @@ pub const DEFAULT_UDP_MTU: u32 = ztcore::ZT_DEFAULT_UDP_MTU;
 pub const MAX_UDP_MTU: u32 = ztcore::ZT_MAX_UDP_MTU;
 
 #[allow(non_snake_case,non_upper_case_globals)]
-pub mod RulePacketCharacteristics {
+pub mod RulePacketCharacteristicFlags {
     pub const Inbound: u64 = crate::bindings::capi::ZT_RULE_PACKET_CHARACTERISTICS_INBOUND as u64;
     pub const Multicast: u64 = crate::bindings::capi::ZT_RULE_PACKET_CHARACTERISTICS_MULTICAST as u64;
     pub const Broadcast: u64 = crate::bindings::capi::ZT_RULE_PACKET_CHARACTERISTICS_BROADCAST as u64;
@@ -183,7 +181,7 @@ pub unsafe fn cstr_to_string(cstr: *const c_char, max_len: isize) -> String {
     if !cstr.is_null() {
         let mut cstr_len: isize = 0;
         while max_len < 0 || cstr_len < max_len {
-            if (*cstr.offset(cstr_len) == 0) {
+            if *cstr.offset(cstr_len) == 0 {
                 break;
             }
             cstr_len += 1;

@@ -1,16 +1,21 @@
 pub struct Address(pub u64);
 
-impl Address {
-    #[inline]
-    pub fn new_from_string(s: &str) -> Address {
-        return Address(u64::from_str_radix(s, 16).unwrap_or(0));
+impl ToString for Address {
+    fn to_string(&self) -> String {
+        format!("{:0>10x}", self.0)
     }
 }
 
-impl ToString for Address {
-    #[inline]
-    fn to_string(&self) -> String {
-        format!("{:0>10x}", self.0)
+impl From<u64> for Address {
+    #[inline(always)]
+    fn from(i: u64) -> Address {
+        Address(i)
+    }
+}
+
+impl From<&str> for Address {
+    fn from(s: &str) -> Address {
+        Address(u64::from_str_radix(s, 16).unwrap_or(0))
     }
 }
 
@@ -30,7 +35,7 @@ impl<'de> serde::de::Visitor<'de> for AddressVisitor {
     }
 
     fn visit_str<E>(self, s: &str) -> Result<Self::Value, E> where E: serde::de::Error {
-        Ok(Address::new_from_string(s))
+        Ok(Address::from(s))
     }
 }
 
