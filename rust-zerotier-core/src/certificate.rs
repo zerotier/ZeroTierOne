@@ -1,5 +1,5 @@
 use std::cell::Cell;
-use std::ffi::{CStr, CString};
+use std::ffi::CString;
 use std::hash::{Hash, Hasher};
 use std::mem::{MaybeUninit, zeroed};
 use std::os::raw::{c_char, c_uint, c_void};

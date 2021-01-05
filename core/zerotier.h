@@ -2943,6 +2943,9 @@ ZT_SDK_API int ZT_Fingerprint_fromString(ZT_Fingerprint *fp, const char *s);
 #define ZT_InetAddress_cast_const_sockaddr_in6_ptr(a) ((const struct sockaddr_in6 *)(&(a)))
 #define ZT_InetAddress_cast_const_sockaddr_storage_ptr(a) ((const struct sockaddr_storage *)(&(a)))
 
+/**
+ * Zero the contents of an InetAddress
+ */
 ZT_SDK_API void ZT_InetAddress_clear(ZT_InetAddress *ia);
 
 /**
@@ -2955,22 +2958,65 @@ ZT_SDK_API void ZT_InetAddress_clear(ZT_InetAddress *ia);
  */
 ZT_SDK_API char *ZT_InetAddress_toString(const ZT_InetAddress *ia, char *buf, unsigned int cap);
 
+/**
+ * Parse an InetAddress in IP/port format
+ *
+ * @param ia InetAddress to fill with results
+ * @param str String to parse
+ * @return Non-zero on success, zero if IP/port is invalid
+ */
 ZT_SDK_API int ZT_InetAddress_fromString(ZT_InetAddress *ia, const char *str);
 
+/**
+ * Set to the value of a sockaddr such as sockaddr_in or sockaddr_in6.
+ *
+ * This takes a void type pointer to a sockaddr to avoid having to include
+ * all the network headers within zerotier.h. It's the responsibility of
+ * the caller to ensure that a valid sockaddr is supplied.
+ *
+ * @param ia InetAddress to fill
+ * @param saddr A pointer to a sockaddr
+ */
 ZT_SDK_API void ZT_InetAddress_set(ZT_InetAddress *ia, const void *saddr);
 
+/**
+ * Set raw IP bytes
+ *
+ * @param ia InetAddress to fill
+ * @param ipBytes Raw IP data
+ * @param ipLen Length of IP: 4 or 16 for IPv4 or IPv6
+ * @param port IP port
+ */
 ZT_SDK_API void ZT_InetAddress_setIpBytes(ZT_InetAddress *ia, const void *ipBytes, unsigned int ipLen, unsigned int port);
 
+/**
+ * Set IP port
+ */
 ZT_SDK_API void ZT_InetAddress_setPort(ZT_InetAddress *ia, unsigned int port);
 
+/**
+ * Get IP port, which can also be used as a CIDR in some use cases.
+ */
 ZT_SDK_API unsigned int ZT_InetAddress_port(const ZT_InetAddress *ia);
 
+/**
+ * Returns non-zero if this InetAddress is nil/zero.
+ */
 ZT_SDK_API int ZT_InetAddress_isNil(const ZT_InetAddress *ia);
 
+/**
+ * Returns non-zero if this is an IPv4 address.
+ */
 ZT_SDK_API int ZT_InetAddress_isV4(const ZT_InetAddress *ia);
 
+/**
+ * Returns non-zero if this is an IPv6 address.
+ */
 ZT_SDK_API int ZT_InetAddress_isV6(const ZT_InetAddress *ia);
 
+/**
+ * Classify the network scope of this IP address (local net, global, etc.)
+ */
 ZT_SDK_API enum ZT_InetAddress_IpScope ZT_InetAddress_ipScope(const ZT_InetAddress *ia);
 
 /* ---------------------------------------------------------------------------------------------------------------- */

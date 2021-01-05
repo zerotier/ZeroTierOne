@@ -1,8 +1,9 @@
+use std::ffi::CString;
+use std::mem::MaybeUninit;
+use std::os::raw::{c_char, c_int};
+
 use crate::*;
 use crate::bindings::capi as ztcore;
-use std::os::raw::{c_char, c_int};
-use std::ffi::{CStr, CString};
-use std::mem::MaybeUninit;
 
 pub struct Fingerprint {
     pub address: Address,

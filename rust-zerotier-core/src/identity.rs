@@ -1,4 +1,4 @@
-use std::ffi::{CStr, CString};
+use std::ffi::CString;
 use std::mem::MaybeUninit;
 use std::os::raw::*;
 

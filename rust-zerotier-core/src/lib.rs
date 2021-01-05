@@ -170,9 +170,9 @@ pub fn version() -> (i32, i32, i32, i32) {
 }
 
 /// Convenience function to get the number of milliseconds since the Unix epoch.
-#[inline]
+#[inline(always)]
 pub fn now() -> i64 {
-    (std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() & 0x7fffffffffffffff) as i64
+    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as i64
 }
 
 /// The CStr stuff is cumbersome, so this is an easier to use function to turn a C string into a String.

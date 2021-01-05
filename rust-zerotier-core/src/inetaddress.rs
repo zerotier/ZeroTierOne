@@ -2,9 +2,22 @@ use std::ffi::CString;
 use std::mem::{MaybeUninit, transmute, size_of};
 
 use serde::{Deserialize, Serialize};
+use num_derive::{FromPrimitive, ToPrimitive};
 
 use crate::*;
 use crate::bindings::capi as ztcore;
+
+#[derive(FromPrimitive,ToPrimitive)]
+pub enum IpScope {
+    None = ztcore::ZT_InetAddress_IpScope_ZT_IP_SCOPE_NONE as isize,
+    Multicast = ztcore::ZT_InetAddress_IpScope_ZT_IP_SCOPE_MULTICAST as isize,
+    Loopback = ztcore::ZT_InetAddress_IpScope_ZT_IP_SCOPE_LOOPBACK as isize,
+    PseudoPrivate = ztcore::ZT_InetAddress_IpScope_ZT_IP_SCOPE_PSEUDOPRIVATE as isize,
+    Global = ztcore::ZT_InetAddress_IpScope_ZT_IP_SCOPE_GLOBAL as isize,
+    LinkLocal = ztcore::ZT_InetAddress_IpScope_ZT_IP_SCOPE_LINK_LOCAL as isize,
+    Shared = ztcore::ZT_InetAddress_IpScope_ZT_IP_SCOPE_SHARED as isize,
+    Private = ztcore::ZT_InetAddress_IpScope_ZT_IP_SCOPE_PRIVATE as isize
+}
 
 /// Opaque structure that can hold an IPv4 or IPv6 address.
 pub struct InetAddress {
@@ -27,7 +40,7 @@ impl InetAddress {
         if cs.is_ok() {
             let cs = cs.unwrap();
             unsafe {
-                if ztcore::ZT_InetAddress_fromString(a.as_mut_ptr(), cs.as_ptr()) == 0 {
+                if ztcore::ZT_InetAddress_fromString(a.as_capi_mut_ptr(), cs.as_ptr()) == 0 {
                     return None
                 }
             }
@@ -36,13 +49,13 @@ impl InetAddress {
     }
 
     #[inline(always)]
-    pub(crate) unsafe fn transmute_capi(a: &ztcore::ZT_InetAddress) -> &InetAddress {
+    pub(crate) fn transmute_capi(a: &ztcore::ZT_InetAddress) -> &InetAddress {
         unsafe {
             transmute(a)
         }
     }
 
-    pub(crate) fn new_from_capi(a: ztcore::ZT_InetAddress) -> Option<InetAddress> {
+    pub(crate) fn new_from_capi(a: &ztcore::ZT_InetAddress) -> Option<InetAddress> {
         if a.bits[0] != 0 {
             Some(InetAddress {
                 bits: a.bits
@@ -64,16 +77,22 @@ impl InetAddress {
     }
 
     #[inline(always)]
-    pub(crate) fn as_ptr(&self) -> *const ztcore::ZT_InetAddress {
+    pub(crate) fn as_capi_ptr(&self) -> *const ztcore::ZT_InetAddress {
         unsafe {
             transmute(self as *const InetAddress)
         }
     }
 
     #[inline(always)]
-    pub(crate) fn as_mut_ptr(&mut self) -> *mut ztcore::ZT_InetAddress {
+    pub(crate) fn as_capi_mut_ptr(&mut self) -> *mut ztcore::ZT_InetAddress {
         unsafe {
             transmute(self as *mut InetAddress)
+        }
+    }
+
+    pub fn ip_scope(&self) -> IpScope {
+        unsafe {
+            IpScope::from_u32(ztcore::ZT_InetAddress_ipScope(self.as_capi_ptr())).unwrap_or(IpScope::None)
         }
     }
 }
@@ -82,7 +101,7 @@ impl ToString for InetAddress {
     fn to_string(&self) -> String {
         let mut buf: MaybeUninit<[c_char; 128]> = MaybeUninit::uninit();
         unsafe {
-            return cstr_to_string(ztcore::ZT_InetAddress_toString(self.as_ptr(), (*buf.as_mut_ptr()).as_mut_ptr(), 128), 128);
+            return cstr_to_string(ztcore::ZT_InetAddress_toString(self.as_capi_ptr(), (*buf.as_mut_ptr()).as_mut_ptr(), 128), 128);
         }
     }
 }
@@ -129,7 +148,7 @@ impl<'de> serde::Deserialize<'de> for InetAddress {
 
 #[cfg(test)]
 mod tests {
-    use std::mem::{size_of, zeroed};
+    use std::mem::size_of;
 
     use crate::*;
 

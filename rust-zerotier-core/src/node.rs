@@ -197,8 +197,7 @@ impl Node {
         Ok(n)
     }
 
-    /// This is called periodically from internal background thread.
-    /// Don't call directly.
+    /// This is called periodically from the background service thread.
     #[inline(always)]
     fn process_background_tasks(&self) -> i64 {
         let current_time = now();
@@ -249,21 +248,21 @@ impl Node {
     }
 
     #[inline(always)]
-    pub fn process_wire_packet<A>(&self, local_socket: i64, remote_address: &InetAddress, data: &mut Buffer) -> ResultCode {
+    pub fn process_wire_packet<A>(&self, local_socket: i64, remote_address: &InetAddress, data: Buffer) -> ResultCode {
         let current_time = self.now.get();
         let mut next_task_deadline: i64 = current_time;
-        unsafe {
-            return ResultCode::from_u32(ztcore::ZT_Node_processWirePacket(self.capi.get(), null_mut(), current_time, local_socket, remote_address.as_ptr() as *const ztcore::ZT_InetAddress, data.zt_core_buf as *const c_void, data.data_size as u32, 1, &mut next_task_deadline as *mut i64) as u32).unwrap_or(ResultCode::ErrorInternalNonFatal);
-        }
+        let rc = unsafe { ResultCode::from_u32(ztcore::ZT_Node_processWirePacket(self.capi.get(), null_mut(), current_time, local_socket, remote_address.as_capi_ptr(), data.zt_core_buf as *const c_void, data.data_size as u32, 1, &mut next_task_deadline as *mut i64) as u32).unwrap_or(ResultCode::ErrorInternalNonFatal) };
+        std::mem::forget(data); // prevent Buffer from being returned to ZT core twice
+        rc
     }
 
     #[inline(always)]
-    pub fn process_virtual_network_frame(&self, nwid: &NetworkId, source_mac: &MAC, dest_mac: &MAC, ethertype: u16, vlan_id: u16, data: &mut Buffer) -> ResultCode {
+    pub fn process_virtual_network_frame(&self, nwid: &NetworkId, source_mac: &MAC, dest_mac: &MAC, ethertype: u16, vlan_id: u16, data: Buffer) -> ResultCode {
         let current_time = self.now.get();
         let mut next_tick_deadline: i64 = current_time;
-        unsafe {
-            return ResultCode::from_u32(ztcore::ZT_Node_processVirtualNetworkFrame(self.capi.get(), null_mut(), current_time, nwid.0, source_mac.0, dest_mac.0, ethertype as c_uint, vlan_id as c_uint, data.zt_core_buf as *const c_void, data.data_size as u32, 1, &mut next_tick_deadline as *mut i64) as u32).unwrap_or(ResultCode::ErrorInternalNonFatal);
-        }
+        let rc = unsafe { ResultCode::from_u32(ztcore::ZT_Node_processVirtualNetworkFrame(self.capi.get(), null_mut(), current_time, nwid.0, source_mac.0, dest_mac.0, ethertype as c_uint, vlan_id as c_uint, data.zt_core_buf as *const c_void, data.data_size as u32, 1, &mut next_tick_deadline as *mut i64) as u32).unwrap_or(ResultCode::ErrorInternalNonFatal) };
+        std::mem::forget(data); // prevent Buffer from being returned to ZT core twice
+        rc
     }
 
     pub fn multicast_subscribe(&self, nwid: &NetworkId, multicast_group: &MAC, multicast_adi: u32) -> ResultCode {
