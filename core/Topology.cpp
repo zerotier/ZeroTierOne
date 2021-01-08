@@ -23,7 +23,7 @@ Topology::Topology(const RuntimeEnvironment *renv, void *tPtr, const int64_t now
 	char tmp[32];
 	Dictionary d;
 
-	Vector< uint8_t > trustData(RR->node->stateObjectGet(tPtr, ZT_STATE_OBJECT_TRUST_STORE, Utils::ZERO256));
+	Vector< uint8_t > trustData(RR->node->stateObjectGet(tPtr, ZT_STATE_OBJECT_TRUST_STORE, Utils::ZERO256, 0));
 	if (trustData.empty() || (!d.decode(trustData.data(), (unsigned int)trustData.size()))) {
 		if (!d.decode(Defaults::CERTIFICATES, Defaults::CERTIFICATES_BYTES))
 			d.clear();
@@ -37,7 +37,7 @@ Topology::Topology(const RuntimeEnvironment *renv, void *tPtr, const int64_t now
 			if (serialNo.size() == ZT_SHA384_DIGEST_SIZE) {
 				Utils::copy< 48 >(id, serialNo.data());
 				Certificate cert;
-				Vector< uint8_t > enc(RR->node->stateObjectGet(tPtr, ZT_STATE_OBJECT_CERT, id));
+				Vector< uint8_t > enc(RR->node->stateObjectGet(tPtr, ZT_STATE_OBJECT_CERT, id, 6));
 				if (cert.decode(enc.data(), (unsigned int)enc.size()))
 					addCertificate(tPtr, cert, now, (unsigned int)d.getUI(Dictionary::arraySubscript(tmp, sizeof(tmp), "c$.lt", idx)), false, false, false);
 			}
@@ -236,7 +236,7 @@ ZT_CertificateError Topology::addCertificate(void *tPtr, const Certificate &cert
 		Vector< uint8_t > certData(cert.encode());
 		uint64_t id[6];
 		Utils::copy< 48 >(id, cert.serialNo);
-		RR->node->stateObjectPut(tPtr, ZT_STATE_OBJECT_CERT, id, certData.data(), (unsigned int)certData.size());
+		RR->node->stateObjectPut(tPtr, ZT_STATE_OBJECT_CERT, id, 6, certData.data(), (unsigned int)certData.size());
 	}
 
 	return ZT_CERTIFICATE_ERROR_NONE;
@@ -330,7 +330,7 @@ void Topology::m_eraseCertificate(void *tPtr, const SharedPtr< const Certificate
 		}
 	}
 
-	RR->node->stateObjectDelete(tPtr, ZT_STATE_OBJECT_CERT, serialNo.data);
+	RR->node->stateObjectDelete(tPtr, ZT_STATE_OBJECT_CERT, serialNo.data, 6);
 }
 
 bool Topology::m_cleanCertificates(void *tPtr, int64_t now)
@@ -427,7 +427,7 @@ void Topology::m_loadCached(void *tPtr, const Address &zta, SharedPtr< Peer > &p
 		uint64_t id[2];
 		id[0] = zta.toInt();
 		id[1] = 0;
-		Vector< uint8_t > data(RR->node->stateObjectGet(tPtr, ZT_STATE_OBJECT_PEER, id));
+		Vector< uint8_t > data(RR->node->stateObjectGet(tPtr, ZT_STATE_OBJECT_PEER, id, 1));
 		if (data.size() > 8) {
 			const uint8_t *d = data.data();
 			int dl = (int)data.size();
@@ -521,7 +521,7 @@ void Topology::m_writeTrustStore(void *tPtr)
 
 	Vector< uint8_t > trustStore;
 	d.encode(trustStore);
-	RR->node->stateObjectPut(tPtr, ZT_STATE_OBJECT_TRUST_STORE, Utils::ZERO256, trustStore.data(), (unsigned int)trustStore.size());
+	RR->node->stateObjectPut(tPtr, ZT_STATE_OBJECT_TRUST_STORE, Utils::ZERO256, 0, trustStore.data(), (unsigned int)trustStore.size());
 }
 
 } // namespace ZeroTier

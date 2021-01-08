@@ -241,9 +241,10 @@ public:
 	 * @param tPtr Thread pointer
 	 * @param ev Event object
 	 * @param md Event data or NULL if none
+	 * @param mdSize Size of event data
 	 */
-	ZT_INLINE void postEvent(void *tPtr, ZT_Event ev, const void *md = nullptr) noexcept
-	{ m_cb.eventCallback(reinterpret_cast<ZT_Node *>(this), m_uPtr, tPtr, ev, md); }
+	ZT_INLINE void postEvent(void *tPtr, ZT_Event ev, const void *md = nullptr, const unsigned int mdSize = 0) noexcept
+	{ m_cb.eventCallback(reinterpret_cast<ZT_Node *>(this), m_uPtr, tPtr, ev, md, mdSize); }
 
 	/**
 	 * Post network port configuration via external callback
@@ -271,7 +272,7 @@ public:
 	 * @param id Object ID or NULL if this type does not use one
 	 * @return Vector containing data or empty vector if not found or empty
 	 */
-	Vector< uint8_t > stateObjectGet(void *tPtr, ZT_StateObjectType type, const uint64_t *id);
+	Vector< uint8_t > stateObjectGet(void *tPtr, ZT_StateObjectType type, const uint64_t *id, unsigned int idSize);
 
 	/**
 	 * Store a state object
@@ -282,10 +283,10 @@ public:
 	 * @param data Data to store
 	 * @param len Length of data
 	 */
-	ZT_INLINE void stateObjectPut(void *const tPtr, ZT_StateObjectType type, const uint64_t id[2], const void *const data, const unsigned int len) noexcept
+	ZT_INLINE void stateObjectPut(void *const tPtr, ZT_StateObjectType type, const uint64_t *const id, const unsigned int idSize, const void *const data, const unsigned int len) noexcept
 	{
 		if (m_cb.statePutFunction)
-			m_cb.statePutFunction(reinterpret_cast<ZT_Node *>(this), m_uPtr, tPtr, type, id, data, (int)len);
+			m_cb.statePutFunction(reinterpret_cast<ZT_Node *>(this), m_uPtr, tPtr, type, id, idSize, data, (int)len);
 	}
 
 	/**
@@ -295,10 +296,10 @@ public:
 	 * @param type Object type to delete
 	 * @param id Object ID
 	 */
-	ZT_INLINE void stateObjectDelete(void *const tPtr, ZT_StateObjectType type, const uint64_t id[2]) noexcept
+	ZT_INLINE void stateObjectDelete(void *const tPtr, ZT_StateObjectType type, const uint64_t *const id, const unsigned int idSize) noexcept
 	{
 		if (m_cb.statePutFunction)
-			m_cb.statePutFunction(reinterpret_cast<ZT_Node *>(this), m_uPtr, tPtr, type, id, nullptr, -1);
+			m_cb.statePutFunction(reinterpret_cast<ZT_Node *>(this), m_uPtr, tPtr, type, id, idSize, nullptr, -1);
 	}
 
 	/**

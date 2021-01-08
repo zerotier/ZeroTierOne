@@ -508,7 +508,7 @@ void Peer::save(void *tPtr) const
 		uint64_t id[2];
 		id[0] = m_id.address().toInt();
 		id[1] = 0;
-		RR->node->stateObjectPut(tPtr, ZT_STATE_OBJECT_PEER, id, buf, (unsigned int)len + 8);
+		RR->node->stateObjectPut(tPtr, ZT_STATE_OBJECT_PEER, id, 1, buf, (unsigned int)len + 8);
 	}
 }
 

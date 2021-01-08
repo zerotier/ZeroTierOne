@@ -83,7 +83,7 @@ Node::Node(
 	uint64_t idtmp[2];
 	idtmp[0] = 0;
 	idtmp[1] = 0;
-	Vector< uint8_t > data(stateObjectGet(tPtr, ZT_STATE_OBJECT_IDENTITY_SECRET, idtmp));
+	Vector< uint8_t > data(stateObjectGet(tPtr, ZT_STATE_OBJECT_IDENTITY_SECRET, idtmp, 0));
 	bool haveIdentity = false;
 	if (!data.empty()) {
 		data.push_back(0); // zero-terminate string
@@ -102,15 +102,16 @@ Node::Node(
 		RR->identity.toString(true, RR->secretIdentityStr);
 		idtmp[0] = RR->identity.address();
 		idtmp[1] = 0;
-		stateObjectPut(tPtr, ZT_STATE_OBJECT_IDENTITY_SECRET, idtmp, RR->secretIdentityStr, (unsigned int)strlen(RR->secretIdentityStr));
-		stateObjectPut(tPtr, ZT_STATE_OBJECT_IDENTITY_PUBLIC, idtmp, RR->publicIdentityStr, (unsigned int)strlen(RR->publicIdentityStr));
+		stateObjectPut(tPtr, ZT_STATE_OBJECT_IDENTITY_SECRET, idtmp, 1, RR->secretIdentityStr, (unsigned int)strlen(RR->secretIdentityStr));
+		stateObjectPut(tPtr, ZT_STATE_OBJECT_IDENTITY_PUBLIC, idtmp, 1, RR->publicIdentityStr, (unsigned int)strlen(RR->publicIdentityStr));
 		ZT_SPEW("no pre-existing identity found, created %s", RR->identity.toString().c_str());
 	} else {
 		idtmp[0] = RR->identity.address();
 		idtmp[1] = 0;
-		data = stateObjectGet(tPtr, ZT_STATE_OBJECT_IDENTITY_PUBLIC, idtmp);
-		if ((data.empty()) || (memcmp(data.data(), RR->publicIdentityStr, strlen(RR->publicIdentityStr)) != 0))
-			stateObjectPut(tPtr, ZT_STATE_OBJECT_IDENTITY_PUBLIC, idtmp, RR->publicIdentityStr, (unsigned int)strlen(RR->publicIdentityStr));
+		data = stateObjectGet(tPtr, ZT_STATE_OBJECT_IDENTITY_PUBLIC, idtmp, 1);
+		if ((data.empty()) || (memcmp(data.data(), RR->publicIdentityStr, strlen(RR->publicIdentityStr)) != 0)) {
+			stateObjectPut(tPtr, ZT_STATE_OBJECT_IDENTITY_PUBLIC, idtmp, 1, RR->publicIdentityStr, (unsigned int)strlen(RR->publicIdentityStr));
+		}
 	}
 
 	// Create a secret key for encrypting local data at rest.
@@ -329,7 +330,7 @@ ZT_ResultCode Node::leave(
 	uint64_t tmp[2];
 	tmp[0] = nwid;
 	tmp[1] = 0;
-	RR->node->stateObjectDelete(tptr, ZT_STATE_OBJECT_NETWORK_CONFIG, tmp);
+	RR->node->stateObjectDelete(tptr, ZT_STATE_OBJECT_NETWORK_CONFIG, tmp, 1);
 
 	return ZT_RESULT_OK;
 }
@@ -661,7 +662,7 @@ void Node::setController(void *networkControllerInstance)
 
 // Methods used only within the core ----------------------------------------------------------------------------------
 
-Vector< uint8_t > Node::stateObjectGet(void *const tPtr, ZT_StateObjectType type, const uint64_t *id)
+Vector< uint8_t > Node::stateObjectGet(void *const tPtr, ZT_StateObjectType type, const uint64_t *id, const unsigned int idSize)
 {
 	Vector< uint8_t > r;
 	if (m_cb.stateGetFunction) {
@@ -673,6 +674,7 @@ Vector< uint8_t > Node::stateObjectGet(void *const tPtr, ZT_StateObjectType type
 			tPtr,
 			type,
 			id,
+			idSize,
 			&data,
 			&freeFunc);
 		if ((l > 0) && (data) && (freeFunc)) {

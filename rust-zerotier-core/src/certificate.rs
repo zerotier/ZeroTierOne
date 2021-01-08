@@ -1,3 +1,16 @@
+/*
+ * Copyright (c)2013-2020 ZeroTier, Inc.
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file in the project's root directory.
+ *
+ * Change Date: 2025-01-01
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2.0 of the Apache License.
+ */
+/****/
+
 use std::cell::Cell;
 use std::ffi::CString;
 use std::hash::{Hash, Hasher};
@@ -199,8 +212,6 @@ impl CertificateSubjectUniqueIdSecret {
     }
 }
 
-implement_to_from_json!(CertificateSubjectUniqueIdSecret);
-
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /// Reasons a certificate may be rejected.
@@ -370,8 +381,6 @@ impl CertificateName {
     }
 }
 
-implement_to_from_json!(CertificateName);
-
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[derive(Serialize, Deserialize)]
@@ -402,8 +411,6 @@ impl CertificateNetwork {
     }
 }
 
-implement_to_from_json!(CertificateNetwork);
-
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[derive(Serialize, Deserialize)]
@@ -430,8 +437,6 @@ impl CertificateIdentity {
         }
     }
 }
-
-implement_to_from_json!(CertificateIdentity);
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -607,8 +612,6 @@ impl CertificateSubject {
     }
 }
 
-implement_to_from_json!(CertificateSubject);
-
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[derive(Serialize, Deserialize)]
@@ -741,8 +744,6 @@ impl Certificate {
         }
     }
 }
-
-implement_to_from_json!(Certificate);
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

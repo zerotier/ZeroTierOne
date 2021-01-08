@@ -1,3 +1,16 @@
+/*
+ * Copyright (c)2013-2020 ZeroTier, Inc.
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file in the project's root directory.
+ *
+ * Change Date: 2025-01-01
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2.0 of the Apache License.
+ */
+/****/
+
 use std::os::raw::{c_char, c_int};
 use num_derive::{FromPrimitive, ToPrimitive};
 
@@ -134,27 +147,6 @@ pub enum ResultCode {
     ErrorInternalNonFatal = ztcore::ZT_ResultCode_ZT_RESULT_ERROR_INTERNAL as isize,
 }
 
-#[derive(FromPrimitive,ToPrimitive)]
-pub enum Event {
-    Up = ztcore::ZT_Event_ZT_EVENT_UP as isize,
-    Offline = ztcore::ZT_Event_ZT_EVENT_OFFLINE as isize,
-    Online = ztcore::ZT_Event_ZT_EVENT_ONLINE as isize,
-    Down = ztcore::ZT_Event_ZT_EVENT_DOWN as isize,
-    Trace = ztcore::ZT_Event_ZT_EVENT_TRACE as isize,
-    UserMessage = ztcore::ZT_Event_ZT_EVENT_USER_MESSAGE as isize,
-}
-
-#[derive(FromPrimitive,ToPrimitive)]
-pub enum StateObjectType {
-    IdentityPublic = ztcore::ZT_StateObjectType_ZT_STATE_OBJECT_IDENTITY_PUBLIC as isize,
-    IdentitySecret = ztcore::ZT_StateObjectType_ZT_STATE_OBJECT_IDENTITY_SECRET as isize,
-    Locator = ztcore::ZT_StateObjectType_ZT_STATE_OBJECT_LOCATOR as isize,
-    Peer = ztcore::ZT_StateObjectType_ZT_STATE_OBJECT_PEER as isize,
-    NetworkConfig = ztcore::ZT_StateObjectType_ZT_STATE_OBJECT_NETWORK_CONFIG as isize,
-    TrustStore = ztcore::ZT_StateObjectType_ZT_STATE_OBJECT_TRUST_STORE as isize,
-    Certificate = ztcore::ZT_StateObjectType_ZT_STATE_OBJECT_CERT as isize
-}
-
 /// Returns a tuple of major, minor, revision, and build version numbers from the ZeroTier core.
 pub fn version() -> (i32, i32, i32, i32) {
     let mut major: c_int = 0;
@@ -191,6 +183,7 @@ pub unsafe fn cstr_to_string(cstr: *const c_char, max_len: isize) -> String {
     String::new()
 }
 
+/*
 #[macro_export(crate)]
 macro_rules! implement_to_from_json {
     ($struct_name:ident) => {
@@ -213,3 +206,4 @@ macro_rules! implement_to_from_json {
         }
     };
 }
+*/

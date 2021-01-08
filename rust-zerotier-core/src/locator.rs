@@ -1,7 +1,21 @@
+/*
+ * Copyright (c)2013-2020 ZeroTier, Inc.
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file in the project's root directory.
+ *
+ * Change Date: 2025-01-01
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2.0 of the Apache License.
+ */
+/****/
+
+use std::ffi::CString;
+use std::os::raw::{c_char, c_int, c_uint};
+
 use crate::*;
 use crate::bindings::capi as ztcore;
-use std::os::raw::{c_char, c_int, c_uint};
-use std::ffi::CString;
 
 pub struct Locator {
     pub(crate) capi: *const ztcore::ZT_Locator,

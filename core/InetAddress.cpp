@@ -464,4 +464,7 @@ InetAddress InetAddress::makeIpv66plane(uint64_t nwid, uint64_t zeroTierAddress)
 	return r;
 }
 
+const int ZT_AF_INET = (int)AF_INET;
+const int ZT_AF_INET6 = (int)AF_INET6;
+
 } // namespace ZeroTier

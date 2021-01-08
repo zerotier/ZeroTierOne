@@ -1,3 +1,16 @@
+/*
+ * Copyright (c)2013-2020 ZeroTier, Inc.
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file in the project's root directory.
+ *
+ * Change Date: 2025-01-01
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2.0 of the Apache License.
+ */
+/****/
+
 use std::ffi::CString;
 use std::mem::{MaybeUninit, transmute, size_of};
 
@@ -7,6 +20,14 @@ use num_traits::FromPrimitive;
 
 use crate::*;
 use crate::bindings::capi as ztcore;
+use std::os::raw::{c_void, c_uint};
+
+// WARNING: here be dragons! This defines an opaque blob in Rust that shadows
+// and is of the exact size as an opaque blob in C that shadows and is the
+// exact size of struct sockaddr_storage. This Rust code makes use of a good
+// deal of transmute() magic to save copying and allow these identically sized
+// blobs to be freely cast to one another. That the sizes are correct is
+// checked statically in the C++ code and in the tests in the Rust code.
 
 #[derive(FromPrimitive,ToPrimitive)]
 pub enum IpScope {
@@ -20,6 +41,12 @@ pub enum IpScope {
     Private = ztcore::ZT_InetAddress_IpScope_ZT_IP_SCOPE_PRIVATE as isize
 }
 
+pub enum InetAddressFamily {
+    Nil,
+    IPv4,
+    IPv6
+}
+
 /// Opaque structure that can hold an IPv4 or IPv6 address.
 pub struct InetAddress {
     // This must be the same size as ZT_InetAddress in zerotier.h. This is
@@ -28,13 +55,28 @@ pub struct InetAddress {
 }
 
 impl InetAddress {
-    #[inline(always)]
+    /// Create a new empty and "nil" InetAddress.
     pub fn new() -> InetAddress {
         InetAddress {
             bits: [0; (ztcore::ZT_SOCKADDR_STORAGE_SIZE / 8) as usize]
         }
     }
 
+    /// Create from a 4-byte IPv4 IP or a 16-byte IPv6 IP.
+    /// Returns None if ip is not 4 or 16 bytes.
+    pub fn new_from_ip_bytes(ip: &[u8], port: u16) -> Option<InetAddress> {
+        if ip.len() != 4 && ip.len() != 16 {
+            return None;
+        }
+        let mut a = InetAddress::new();
+        unsafe {
+            ztcore::ZT_InetAddress_setIpBytes(a.as_capi_mut_ptr(), ip.as_ptr() as *const c_void, ip.len() as c_uint, port as c_uint);
+        }
+        Some(a)
+    }
+
+    /// Create from an InetAddress in string form.
+    /// Returns None if the string is not valid.
     pub fn new_from_string(s: &str) -> Option<InetAddress> {
         let mut a = InetAddress::new();
         let cs = CString::new(s);
@@ -66,12 +108,14 @@ impl InetAddress {
         }
     }
 
+    /// Clear and set to the "nil" value.
     pub fn clear(&mut self) {
         for i in self.bits.iter_mut() {
             *i = 0;
         }
     }
 
+    /// Returns true if this InetAddress holds nothing.
     #[inline(always)]
     pub fn is_nil(&self) -> bool {
         self.bits[0] == 0 // if ss_family != 0, this will not be zero
@@ -91,10 +135,26 @@ impl InetAddress {
         }
     }
 
+    /// Get the network scope of the IP in this object.
     pub fn ip_scope(&self) -> IpScope {
         unsafe {
             IpScope::from_u32(ztcore::ZT_InetAddress_ipScope(self.as_capi_ptr()) as u32).unwrap_or(IpScope::None)
         }
+    }
+
+    /// Get the address family of this InetAddress.
+    pub fn family(&self) -> InetAddressFamily {
+        if !self.is_nil() {
+            unsafe {
+                if ztcore::ZT_InetAddress_isV4(self.as_capi_ptr()) != 0 {
+                    return InetAddressFamily::IPv6;
+                }
+                if ztcore::ZT_InetAddress_isV6(self.as_capi_ptr()) != 0 {
+                    return InetAddressFamily::IPv6;
+                }
+            }
+        }
+        InetAddressFamily::Nil
     }
 }
 

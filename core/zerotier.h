@@ -1838,17 +1838,14 @@ typedef void (*ZT_EventCallback)(
 	void *,                                /* User ptr */
 	void *,                                /* Thread ptr */
 	enum ZT_Event,                         /* Event type */
-	const void *);                         /* Event payload (if applicable) */
+	const void *,                          /* Event payload (if applicable) */
+	unsigned int);                         /* Size of event payload */
 
 /**
  * Callback for storing and/or publishing state information
  *
  * See ZT_StateObjectType docs for information about each state object type
  * and when and if it needs to be persisted.
- *
- * The state object ID's size depends on the object type, and is always
- * in the form of one or more 64-bit unsigned integers. Some object types
- * do not use this field, and for these it may be NULL.
  *
  * An object of length -1 is sent to indicate that an object should be
  * deleted.
@@ -1859,6 +1856,7 @@ typedef void (*ZT_StatePutFunction)(
 	void *,                                /* Thread ptr */
 	enum ZT_StateObjectType,               /* State object type */
 	const uint64_t *,                      /* State object ID (if applicable) */
+	unsigned int,                          /* Length of state object ID in quads */
 	const void *,                          /* State object data */
 	int);                                  /* Length of data or -1 to delete */
 
@@ -1877,6 +1875,7 @@ typedef int (*ZT_StateGetFunction)(
 	void *,                                /* Thread ptr */
 	enum ZT_StateObjectType,               /* State object type */
 	const uint64_t *,                      /* State object ID (if applicable) */
+	unsigned int,                          /* Length of object ID in quads */
 	void **,                               /* Result parameter: data */
 	void (**)(void *));                    /* Result parameter: data free function */
 
@@ -3018,6 +3017,9 @@ ZT_SDK_API int ZT_InetAddress_isV6(const ZT_InetAddress *ia);
  * Classify the network scope of this IP address (local net, global, etc.)
  */
 ZT_SDK_API enum ZT_InetAddress_IpScope ZT_InetAddress_ipScope(const ZT_InetAddress *ia);
+
+/* These mirror the values of AF_INET and AF_INET6 for use by Rust and other things that need it. */
+ZT_SDK_API const int ZT_AF_INET,ZT_AF_INET6;
 
 /* ---------------------------------------------------------------------------------------------------------------- */
 
