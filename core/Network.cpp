@@ -562,7 +562,7 @@ Network::Network(const RuntimeEnvironment *renv, void *tPtr, uint64_t nwid, cons
 		bool got = false;
 		try {
 			Dictionary dict;
-			Vector< uint8_t > nconfData(RR->node->stateObjectGet(tPtr, ZT_STATE_OBJECT_NETWORK_CONFIG, tmp));
+			Vector< uint8_t > nconfData(RR->node->stateObjectGet(tPtr, ZT_STATE_OBJECT_NETWORK_CONFIG, tmp, 1));
 			if (nconfData.size() > 2) {
 				nconfData.push_back(0);
 				if (dict.decode(nconfData.data(), (unsigned int)nconfData.size())) {
@@ -579,7 +579,7 @@ Network::Network(const RuntimeEnvironment *renv, void *tPtr, uint64_t nwid, cons
 		} catch (...) {}
 
 		if (!got)
-			RR->node->stateObjectPut(tPtr, ZT_STATE_OBJECT_NETWORK_CONFIG, tmp, "\n", 1);
+			RR->node->stateObjectPut(tPtr, ZT_STATE_OBJECT_NETWORK_CONFIG, tmp, 1, "\n", 1);
 	}
 
 	if (!m_portInitialized) {
@@ -1068,7 +1068,7 @@ int Network::setConfiguration(void *tPtr, const NetworkConfig &nconf, bool saveT
 					tmp[1] = 0;
 					Vector< uint8_t > d2;
 					d.encode(d2);
-					RR->node->stateObjectPut(tPtr, ZT_STATE_OBJECT_NETWORK_CONFIG, tmp, d2.data(), (unsigned int)d2.size());
+					RR->node->stateObjectPut(tPtr, ZT_STATE_OBJECT_NETWORK_CONFIG, tmp, 1, d2.data(), (unsigned int)d2.size());
 				}
 			} catch (...) {}
 		}

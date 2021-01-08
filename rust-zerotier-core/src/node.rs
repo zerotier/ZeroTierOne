@@ -190,7 +190,7 @@ extern "C" fn zt_event_callback<T: NodeEventHandler + 'static>(
         let ev2 = ev2.unwrap();
         let n = node_from_raw_ptr!(uptr);
         if data.is_null() {
-            n.event_handler.event(ev2, &[u8; 0]);
+            n.event_handler.event(ev2, &[0_u8; 0]);
         } else {
             let data2 = unsafe { &*slice_from_raw_parts(data.cast::<u8>(), data_size as usize) };
             n.event_handler.event(ev2, data2);
@@ -302,10 +302,12 @@ extern "C" fn zt_path_lookup_function<T: NodeEventHandler + 'static>(
     }
     let mut sock_family2: InetAddressFamily = InetAddressFamily::Nil;
     unsafe {
-        match sock_family {
-            ztcore::ZT_AF_INET => InetAddressFamily::IPv4,
-            ztcore::ZT_AF_INET6 => InetAddressFamily::IPv6,
-            _ => { return 0; }
+        if sock_family == ztcore::ZT_AF_INET {
+            sock_family2 = InetAddressFamily::IPv4;
+        } else if sock_family == ztcore::ZT_AF_INET6 {
+            sock_family2 = InetAddressFamily::IPv6;
+        } else {
+            return 0;
         }
     }
 

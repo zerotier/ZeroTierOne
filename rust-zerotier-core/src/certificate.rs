@@ -764,4 +764,24 @@ mod tests {
         println!("certificate unique ID public: {}", hex::encode(uid.public).as_str());
         println!("certificate unique ID private: {}", hex::encode(uid.private).as_str());
     }
+
+    /*
+    #[test]
+    fn cert_encoding_decoding() {
+        let mut cert = Certificate{
+            serial_no: CertificateSerialNo::new(),
+            flags: 1,
+            timestamp: 2,
+            validity: [ 3,4 ],
+            subject: CertificateSubject::new(),
+            issuer: None,
+            issuer_name: CertificateName::new(),
+            extended_attributes: Vec::new(),
+            max_path_length: 123,
+            signature: Vec::new()
+        };
+        cert.serial_no.0[1] = 2;
+        cert.subject.certificates.push(CertificateSerialNo::new());
+    }
+    */
 }

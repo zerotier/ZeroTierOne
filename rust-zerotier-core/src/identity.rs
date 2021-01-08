@@ -204,3 +204,22 @@ impl<'de> serde::Deserialize<'de> for Identity {
         deserializer.deserialize_str(IdentityVisitor)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::*;
+
+    #[test]
+    fn identity() {
+        let test1 = Identity::new_generate(IdentityType::Curve25519);
+        assert!(test1.is_ok());
+        let test1 = test1.ok().unwrap();
+
+        let test2 = Identity::new_generate(IdentityType::NistP384);
+        assert!(test2.is_ok());
+        let test2 = test2.ok().unwrap();
+
+        println!("test type 0: {}", test1.to_secret_string());
+        println!("test type 1: {}", test2.to_secret_string());
+    }
+}
