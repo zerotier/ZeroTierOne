@@ -87,7 +87,7 @@ impl Identity {
 
     /// Convert to a string and include the private key if present.
     /// If the private key is not present this is the same as to_string().
-    #[inline]
+    #[inline(always)]
     pub fn to_secret_string(&self) -> String {
         self.intl_to_string(true)
     }
@@ -150,6 +150,14 @@ impl Identity {
     }
 }
 
+impl PartialEq for Identity {
+    fn eq(&self, other: &Self) -> bool {
+        self.intl_to_string(false) == other.intl_to_string(false)
+    }
+}
+
+impl Eq for Identity {}
+
 impl Clone for Identity {
     fn clone(&self) -> Identity {
         unsafe {
@@ -169,7 +177,7 @@ impl Drop for Identity {
 }
 
 impl ToString for Identity {
-    #[inline]
+    #[inline(always)]
     fn to_string(&self) -> String {
         self.intl_to_string(false)
     }
@@ -208,12 +216,14 @@ impl<'de> serde::Deserialize<'de> for Identity {
 #[cfg(test)]
 mod tests {
     use crate::*;
+    use crate::StateObjectType::IdentitySecret;
 
     #[test]
     fn identity() {
         let test1 = Identity::new_generate(IdentityType::Curve25519);
         assert!(test1.is_ok());
         let test1 = test1.ok().unwrap();
+        assert!(test1.has_private());
 
         let test2 = Identity::new_generate(IdentityType::NistP384);
         assert!(test2.is_ok());
@@ -221,5 +231,40 @@ mod tests {
 
         println!("test type 0: {}", test1.to_secret_string());
         println!("test type 1: {}", test2.to_secret_string());
+
+        assert!(test1.clone() == test1);
+
+        let test12 = Identity::new_from_string(test1.to_string().as_str());
+        assert!(test12.is_ok());
+        let test12 = test12.ok().unwrap();
+        assert!(!test12.has_private());
+        let test22 = Identity::new_from_string(test2.to_string().as_str());
+        assert!(test22.is_ok());
+        let test22 = test22.ok().unwrap();
+        assert!(test1 == test12);
+        assert!(test2 == test22);
+
+        println!("test type 0, from string: {}", test12.to_string());
+        println!("test type 1, from string: {}", test22.to_string());
+
+        let from_str_fail = Identity::new_from_string("asdf:foo:invalid");
+        assert!(from_str_fail.is_err());
+
+        let mut to_sign: [u8; 4] = [ 1,2,3,4 ];
+
+        let signed = test1.sign(&to_sign);
+        assert!(signed.is_ok());
+        let signed = signed.ok().unwrap();
+        assert!(test1.verify(&to_sign, signed.as_ref()));
+        to_sign[0] = 2;
+        assert!(!test1.verify(&to_sign, signed.as_ref()));
+        to_sign[0] = 1;
+
+        let signed = test2.sign(&to_sign);
+        assert!(signed.is_ok());
+        let signed = signed.ok().unwrap();
+        assert!(test2.verify(&to_sign, signed.as_ref()));
+        to_sign[0] = 2;
+        assert!(!test2.verify(&to_sign, signed.as_ref()));
     }
 }

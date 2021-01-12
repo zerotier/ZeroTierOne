@@ -38,6 +38,15 @@ impl serde::Serialize for MAC {
     }
 }
 
+impl PartialEq for MAC {
+    #[inline(always)]
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
+
+impl Eq for MAC {}
+
 struct AddressVisitor;
 
 impl<'de> serde::de::Visitor<'de> for AddressVisitor {

@@ -183,7 +183,6 @@ pub unsafe fn cstr_to_string(cstr: *const c_char, max_len: isize) -> String {
     String::new()
 }
 
-/*
 #[macro_export(crate)]
 macro_rules! implement_to_from_json {
     ($struct_name:ident) => {
@@ -206,4 +205,3 @@ macro_rules! implement_to_from_json {
         }
     };
 }
-*/

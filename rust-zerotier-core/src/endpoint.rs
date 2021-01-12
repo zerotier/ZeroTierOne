@@ -92,6 +92,14 @@ impl ToString for Endpoint {
     }
 }
 
+impl PartialEq for Endpoint {
+    fn eq(&self, other: &Endpoint) -> bool {
+        self.to_string() == other.to_string()
+    }
+}
+
+impl Eq for Endpoint {}
+
 impl serde::Serialize for Endpoint {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
         serializer.serialize_str(self.to_string().as_str())

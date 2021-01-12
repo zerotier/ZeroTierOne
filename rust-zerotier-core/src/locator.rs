@@ -96,6 +96,14 @@ impl ToString for Locator {
     }
 }
 
+impl PartialEq for Locator {
+    fn eq(&self, other: &Locator) -> bool {
+        self.to_string() == other.to_string()
+    }
+}
+
+impl Eq for Locator {}
+
 impl serde::Serialize for Locator {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
         serializer.serialize_str(self.to_string().as_str())

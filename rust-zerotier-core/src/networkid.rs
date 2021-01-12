@@ -41,6 +41,15 @@ impl From<&str> for NetworkId {
     }
 }
 
+impl PartialEq for NetworkId {
+    #[inline(always)]
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
+
+impl Eq for NetworkId {}
+
 impl serde::Serialize for NetworkId {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
         serializer.serialize_str(self.to_string().as_str())

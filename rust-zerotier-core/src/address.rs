@@ -32,6 +32,15 @@ impl From<&str> for Address {
     }
 }
 
+impl PartialEq for Address {
+    #[inline(always)]
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
+
+impl Eq for Address {}
+
 impl serde::Serialize for Address {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
         serializer.serialize_str(self.to_string().as_str())

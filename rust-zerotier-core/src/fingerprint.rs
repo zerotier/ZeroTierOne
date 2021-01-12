@@ -18,6 +18,7 @@ use std::os::raw::{c_char, c_int};
 use crate::*;
 use crate::bindings::capi as ztcore;
 
+#[derive(PartialEq, Eq)]
 pub struct Fingerprint {
     pub address: Address,
     pub hash: [u8; 48]

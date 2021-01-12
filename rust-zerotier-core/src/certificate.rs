@@ -25,7 +25,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::*;
 use crate::bindings::capi as ztcore;
-use crate::bindings::capi::ZT_CertificateError;
 
 /// Maximum length of a string in a certificate (mostly for the certificate name fields).
 pub const CERTIFICATE_MAX_STRING_LENGTH: isize = ztcore::ZT_CERTIFICATE_MAX_STRING_LENGTH as isize;
@@ -44,6 +43,7 @@ pub const CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_PRIVATE_SIZE: u32 = ztcore::ZT_C
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+#[derive(PartialEq, Eq)]
 pub struct CertificateSerialNo(pub [u8; 48]);
 
 impl CertificateSerialNo {
@@ -128,7 +128,7 @@ impl<'de> serde::Deserialize<'de> for CertificateSerialNo {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /// Type of certificate subject unique ID
-#[derive(FromPrimitive, ToPrimitive)]
+#[derive(FromPrimitive, ToPrimitive, PartialEq, Eq)]
 pub enum CertificateUniqueIdType {
     NistP384 = ztcore::ZT_CertificateUniqueIdType_ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384 as isize
 }
@@ -182,7 +182,7 @@ impl<'de> serde::Deserialize<'de> for CertificateUniqueIdType {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, PartialEq, Eq)]
 pub struct CertificateSubjectUniqueIdSecret {
     pub public: Vec<u8>,
     pub private: Vec<u8>,
@@ -293,7 +293,7 @@ impl<'de> serde::Deserialize<'de> for CertificateError {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, PartialEq, Eq)]
 pub struct CertificateName {
     #[serde(rename = "serialNo")]
     pub serial_no: String,
@@ -383,7 +383,7 @@ impl CertificateName {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, PartialEq, Eq)]
 pub struct CertificateNetwork {
     pub id: NetworkId,
     pub controller: Fingerprint,
@@ -413,7 +413,7 @@ impl CertificateNetwork {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, PartialEq, Eq)]
 pub struct CertificateIdentity {
     pub identity: Identity,
     pub locator: Option<Locator>,
@@ -440,7 +440,7 @@ impl CertificateIdentity {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, PartialEq, Eq)]
 pub struct CertificateSubject {
     pub timestamp: i64,
     pub identities: Vec<CertificateIdentity>,
@@ -614,7 +614,7 @@ impl CertificateSubject {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, PartialEq, Eq)]
 pub struct Certificate {
     #[serde(rename = "serialNo")]
     pub serial_no: CertificateSerialNo,
@@ -745,6 +745,8 @@ impl Certificate {
     }
 }
 
+implement_to_from_json!(Certificate);
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
@@ -765,9 +767,11 @@ mod tests {
         println!("certificate unique ID private: {}", hex::encode(uid.private).as_str());
     }
 
-    /*
     #[test]
-    fn cert_encoding_decoding() {
+    fn cert_encode_decode() {
+        let uid = CertificateSubjectUniqueIdSecret::new(CertificateUniqueIdType::NistP384);
+        let id0 = Identity::new_generate(IdentityType::NistP384).ok().unwrap();
+
         let mut cert = Certificate{
             serial_no: CertificateSerialNo::new(),
             flags: 1,
@@ -780,8 +784,46 @@ mod tests {
             max_path_length: 123,
             signature: Vec::new()
         };
-        cert.serial_no.0[1] = 2;
+        cert.serial_no.0[1] = 99;
+        cert.subject.timestamp = 5;
+        cert.subject.identities.push(CertificateIdentity{
+            identity: id0.clone(),
+            locator: None
+        });
+        cert.subject.networks.push(CertificateNetwork{
+            id: NetworkId(0xdeadbeef),
+            controller: id0.fingerprint()
+        });
         cert.subject.certificates.push(CertificateSerialNo::new());
+        cert.subject.update_urls.push(String::from("http://foo.bar"));
+        cert.subject.name = CertificateName{
+            serial_no: String::from("12345"),
+            common_name: String::from("foo"),
+            country: String::from("bar"),
+            organization: String::from("baz"),
+            unit: String::from("asdf"),
+            locality: String::from("qwerty"),
+            province: String::from("province"),
+            street_address: String::from("street address"),
+            postal_code: String::from("postal code"),
+            email: String::from("nobody@nowhere.org"),
+            url: String::from("https://www.zerotier.com/"),
+            host: String::from("zerotier.com")
+        };
+
+        //println!("{}", cert.to_json().as_str());
+
+        unsafe {
+            let cert_capi = cert.to_capi();
+            let cert2 = Certificate::new_from_capi(&cert_capi.certificate);
+            assert!(cert == cert2);
+            //println!("{}", cert2.to_json().as_str());
+        }
+
+        {
+            let cert2 = Certificate::new_from_json(cert.to_json().as_str());
+            assert!(cert2.is_ok());
+            assert!(cert2.ok().unwrap() == cert);
+        }
     }
-    */
 }
