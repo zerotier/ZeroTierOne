@@ -219,7 +219,6 @@ bool Certificate::setSubjectUniqueId(const uint8_t uniqueId[ZT_CERTIFICATE_UNIQU
 
 Vector< uint8_t > Certificate::encode(const bool omitSignature) const
 {
-	char tmp[32];
 	Vector< uint8_t > enc;
 	Dictionary d;
 
@@ -488,13 +487,11 @@ ZT_CertificateError Certificate::verify() const
 
 		if (this->subject.updateURLCount > 0) {
 			if (!this->subject.updateURLs)
-				return ZT_CERTIFICATE_ERROR_INVALID_FORMAT;
+				return ZT_CERTIFICATE_ERROR_MISSING_REQUIRED_FIELDS;
 			for (unsigned int i = 0; i < this->subject.updateURLCount; ++i) {
 				if (!this->subject.updateURLs[i])
 					return ZT_CERTIFICATE_ERROR_MISSING_REQUIRED_FIELDS;
 			}
-		} else if (this->subject.updateURLs) {
-			return ZT_CERTIFICATE_ERROR_INVALID_FORMAT;
 		}
 	} catch (...) {}
 

@@ -42,7 +42,7 @@ pub struct Endpoint {
 impl Endpoint {
     pub(crate) fn new_from_capi(ep: &ztcore::ZT_Endpoint) -> Endpoint {
         return Endpoint{
-            type_: EndpointType::from_u32(ep.type_ as u32).unwrap(),
+            type_: EndpointType::from_i32(ep.type_ as i32).unwrap(),
             capi: *ep
         };
     }
@@ -59,7 +59,7 @@ impl Endpoint {
             if ec == 0 {
                 let epi = cep.assume_init();
                 return Ok(Endpoint{
-                    type_: EndpointType::from_u32(epi.type_ as u32).unwrap(),
+                    type_: EndpointType::from_i32(epi.type_ as i32).unwrap(),
                     capi: epi
                 });
             }

@@ -142,7 +142,7 @@ extern "C" fn zt_virtual_network_config_function<T: NodeEventHandler + 'static>(
     op: ztcore::ZT_VirtualNetworkConfigOperation,
     conf: *const ztcore::ZT_VirtualNetworkConfig,
 ) {
-    let op2 = VirtualNetworkConfigOperation::from_u32(op as u32);
+    let op2 = VirtualNetworkConfigOperation::from_i32(op as i32);
     if op2.is_some() {
         let op2 = op2.unwrap();
         let n = node_from_raw_ptr!(uptr);
@@ -185,7 +185,7 @@ extern "C" fn zt_event_callback<T: NodeEventHandler + 'static>(
     data: *const c_void,
     data_size: c_uint
 ) {
-    let ev2 = Event::from_u32(ev as u32);
+    let ev2 = Event::from_i32(ev as i32);
     if ev2.is_some() {
         let ev2 = ev2.unwrap();
         let n = node_from_raw_ptr!(uptr);
@@ -208,7 +208,7 @@ extern "C" fn zt_state_put_function<T: NodeEventHandler + 'static>(
     obj_data: *const c_void,
     obj_data_len: c_int,
 ) {
-    let obj_type2 = StateObjectType::from_u32(obj_type as u32);
+    let obj_type2 = StateObjectType::from_i32(obj_type as i32);
     if obj_type2.is_some() {
         let obj_type2 = obj_type2.unwrap();
         let n = node_from_raw_ptr!(uptr);
@@ -236,7 +236,7 @@ extern "C" fn zt_state_get_function<T: NodeEventHandler + 'static>(
         *obj_data_free_function = transmute(ztcore::free as *const ());
     }
 
-    let obj_type2 = StateObjectType::from_u32(obj_type as u32);
+    let obj_type2 = StateObjectType::from_i32(obj_type as i32);
     if obj_type2.is_some() {
         let obj_type2 = obj_type2.unwrap();
         let n = node_from_raw_ptr!(uptr);
@@ -356,7 +356,7 @@ impl<T: NodeEventHandler + 'static> Node<T> {
 
             let rc = ztcore::ZT_Node_new(&mut capi as *mut *mut ztcore::ZT_Node, transmute(Arc::as_ptr(&n)), null_mut(), &callbacks as *const ztcore::ZT_Node_Callbacks, now);
             if rc != 0 {
-                return Err(ResultCode::from_u32(rc as u32).unwrap_or(ResultCode::FatalErrorInternal));
+                return Err(ResultCode::from_i32(rc as i32).unwrap_or(ResultCode::FatalErrorInternal));
             } else if capi.is_null() {
                 return Err(ResultCode::FatalErrorInternal);
             }
@@ -423,7 +423,7 @@ impl<T: NodeEventHandler + 'static> Node<T> {
         if rc != ztcore::ZT_ResultCode_ZT_RESULT_OK {
             self.delete_network_uptr(nwid.0);
         }
-        return ResultCode::from_u32(rc as u32).unwrap_or(ResultCode::ErrorInternalNonFatal);
+        return ResultCode::from_i32(rc as i32).unwrap_or(ResultCode::ErrorInternalNonFatal);
     }
 
     fn delete_network_uptr(&self, nwid: u64) {
@@ -438,7 +438,7 @@ impl<T: NodeEventHandler + 'static> Node<T> {
     pub fn leave(&self, nwid: NetworkId) -> ResultCode {
         self.delete_network_uptr(nwid.0);
         unsafe {
-            return ResultCode::from_u32(ztcore::ZT_Node_leave(self.capi.get(), nwid.0, null_mut(), null_mut()) as u32).unwrap();
+            return ResultCode::from_i32(ztcore::ZT_Node_leave(self.capi.get(), nwid.0, null_mut(), null_mut()) as i32).unwrap_or(ResultCode::ErrorInternalNonFatal);
         }
     }
 
@@ -453,7 +453,7 @@ impl<T: NodeEventHandler + 'static> Node<T> {
     pub fn process_wire_packet<A>(&self, local_socket: i64, remote_address: &InetAddress, data: Buffer) -> ResultCode {
         let current_time = self.now.get();
         let mut next_task_deadline: i64 = current_time;
-        let rc = unsafe { ResultCode::from_u32(ztcore::ZT_Node_processWirePacket(self.capi.get(), null_mut(), current_time, local_socket, remote_address.as_capi_ptr(), data.zt_core_buf as *const c_void, data.data_size as u32, 1, &mut next_task_deadline as *mut i64) as u32).unwrap_or(ResultCode::ErrorInternalNonFatal) };
+        let rc = unsafe { ResultCode::from_i32(ztcore::ZT_Node_processWirePacket(self.capi.get(), null_mut(), current_time, local_socket, remote_address.as_capi_ptr(), data.zt_core_buf as *const c_void, data.data_size as u32, 1, &mut next_task_deadline as *mut i64) as i32).unwrap_or(ResultCode::ErrorInternalNonFatal) };
         std::mem::forget(data); // prevent Buffer from being returned to ZT core twice, see comment in drop() in buffer.rs
         rc
     }
@@ -462,20 +462,20 @@ impl<T: NodeEventHandler + 'static> Node<T> {
     pub fn process_virtual_network_frame(&self, nwid: &NetworkId, source_mac: &MAC, dest_mac: &MAC, ethertype: u16, vlan_id: u16, data: Buffer) -> ResultCode {
         let current_time = self.now.get();
         let mut next_tick_deadline: i64 = current_time;
-        let rc = unsafe { ResultCode::from_u32(ztcore::ZT_Node_processVirtualNetworkFrame(self.capi.get(), null_mut(), current_time, nwid.0, source_mac.0, dest_mac.0, ethertype as c_uint, vlan_id as c_uint, data.zt_core_buf as *const c_void, data.data_size as u32, 1, &mut next_tick_deadline as *mut i64) as u32).unwrap_or(ResultCode::ErrorInternalNonFatal) };
+        let rc = unsafe { ResultCode::from_i32(ztcore::ZT_Node_processVirtualNetworkFrame(self.capi.get(), null_mut(), current_time, nwid.0, source_mac.0, dest_mac.0, ethertype as c_uint, vlan_id as c_uint, data.zt_core_buf as *const c_void, data.data_size as u32, 1, &mut next_tick_deadline as *mut i64) as i32).unwrap_or(ResultCode::ErrorInternalNonFatal) };
         std::mem::forget(data); // prevent Buffer from being returned to ZT core twice, see comment in drop() in buffer.rs
         rc
     }
 
     pub fn multicast_subscribe(&self, nwid: &NetworkId, multicast_group: &MAC, multicast_adi: u32) -> ResultCode {
         unsafe {
-            return ResultCode::from_u32(ztcore::ZT_Node_multicastSubscribe(self.capi.get(), null_mut(), nwid.0, multicast_group.0, multicast_adi as c_ulong) as u32).unwrap_or(ResultCode::ErrorInternalNonFatal);
+            return ResultCode::from_i32(ztcore::ZT_Node_multicastSubscribe(self.capi.get(), null_mut(), nwid.0, multicast_group.0, multicast_adi as c_ulong) as i32).unwrap_or(ResultCode::ErrorInternalNonFatal);
         }
     }
 
     pub fn multicast_unsubscribe(&self, nwid: &NetworkId, multicast_group: &MAC, multicast_adi: u32) -> ResultCode {
         unsafe {
-            return ResultCode::from_u32(ztcore::ZT_Node_multicastUnsubscribe(self.capi.get(), nwid.0, multicast_group.0, multicast_adi as c_ulong) as u32).unwrap_or(ResultCode::ErrorInternalNonFatal);
+            return ResultCode::from_i32(ztcore::ZT_Node_multicastUnsubscribe(self.capi.get(), nwid.0, multicast_group.0, multicast_adi as c_ulong) as i32).unwrap_or(ResultCode::ErrorInternalNonFatal);
         }
     }
 

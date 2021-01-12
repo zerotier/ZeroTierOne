@@ -22,7 +22,7 @@ use crate::bindings::capi as ztcore;
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(FromPrimitive,ToPrimitive)]
+#[derive(FromPrimitive,ToPrimitive, PartialEq, Eq)]
 pub enum VirtualNetworkType {
     Private = ztcore::ZT_VirtualNetworkType_ZT_NETWORK_TYPE_PRIVATE as isize,
     Public = ztcore::ZT_VirtualNetworkType_ZT_NETWORK_TYPE_PUBLIC as isize
@@ -83,7 +83,7 @@ impl<'de> serde::Deserialize<'de> for VirtualNetworkType {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(FromPrimitive,ToPrimitive)]
+#[derive(FromPrimitive,ToPrimitive, PartialEq, Eq)]
 pub enum VirtualNetworkRuleType {
     ActionDrop = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_ACTION_DROP as isize,
     ActionAccept = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_ACTION_ACCEPT as isize,
@@ -124,7 +124,7 @@ pub enum VirtualNetworkRuleType {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(FromPrimitive,ToPrimitive)]
+#[derive(FromPrimitive,ToPrimitive, PartialEq, Eq)]
 pub enum VirtualNetworkConfigOperation {
     Up = ztcore::ZT_VirtualNetworkConfigOperation_ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP as isize,
     ConfigUpdate = ztcore::ZT_VirtualNetworkConfigOperation_ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE as isize,
@@ -134,7 +134,7 @@ pub enum VirtualNetworkConfigOperation {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(FromPrimitive,ToPrimitive)]
+#[derive(FromPrimitive,ToPrimitive, PartialEq, Eq)]
 pub enum VirtualNetworkStatus {
     RequestingConfiguration = ztcore::ZT_VirtualNetworkStatus_ZT_NETWORK_STATUS_REQUESTING_CONFIGURATION as isize,
     Ok = ztcore::ZT_VirtualNetworkStatus_ZT_NETWORK_STATUS_OK as isize,
@@ -200,7 +200,7 @@ impl<'de> serde::Deserialize<'de> for VirtualNetworkStatus {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, PartialEq, Eq)]
 pub struct VirtualNetworkRoute {
     pub target: Option<InetAddress>,
     pub via: Option<InetAddress>,
@@ -208,7 +208,7 @@ pub struct VirtualNetworkRoute {
     pub metric: u16
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, PartialEq, Eq)]
 pub struct VirtualNetworkConfig {
     pub nwid: NetworkId,
     pub mac: MAC,
@@ -254,8 +254,8 @@ impl VirtualNetworkConfig {
             nwid: NetworkId(vnc.nwid),
             mac: MAC(vnc.mac),
             name: unsafe { cstr_to_string(vnc.name.as_ptr(), vnc.name.len() as isize) },
-            status: FromPrimitive::from_u32(vnc.status as u32).unwrap(),
-            type_: FromPrimitive::from_u32(vnc.type_ as u32).unwrap(),
+            status: FromPrimitive::from_i32(vnc.status as i32).unwrap_or(VirtualNetworkStatus::RequestingConfiguration),
+            type_: FromPrimitive::from_i32(vnc.type_ as i32).unwrap_or(VirtualNetworkType::Private),
             mtu: vnc.mtu as u32,
             bridge: vnc.bridge != 0,
             broadcast_enabled: vnc.broadcastEnabled != 0,

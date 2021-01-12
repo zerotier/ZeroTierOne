@@ -39,7 +39,7 @@ impl Identity {
             let idt = ztcore::ZT_Identity_type(id);
             let a = ztcore::ZT_Identity_address(id);
             return Identity {
-                type_: FromPrimitive::from_u32(idt as u32).unwrap(),
+                type_: FromPrimitive::from_i32(idt as i32).unwrap(),
                 address: Address(a),
                 capi: id,
                 requires_delete: requires_delete,
@@ -76,8 +76,8 @@ impl Identity {
     }
 
     fn intl_to_string(&self, include_private: bool) -> String {
+        let mut buf: MaybeUninit<[c_char; 4096]> = MaybeUninit::uninit();
         unsafe {
-            let mut buf: MaybeUninit<[c_char; 4096]> = MaybeUninit::uninit();
             if ztcore::ZT_Identity_toString(self.capi, (*buf.as_mut_ptr()).as_mut_ptr(), 4096, if include_private { 1 } else { 0 }).is_null() {
                 return String::from("(invalid)");
             }

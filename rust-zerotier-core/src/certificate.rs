@@ -207,7 +207,7 @@ impl CertificateSubjectUniqueIdSecret {
         CertificateSubjectUniqueIdSecret {
             public: Vec::from(&unique_id[0..unique_id_size as usize]),
             private: Vec::from(&unique_id_private[0..unique_id_private_size as usize]),
-            type_: num_traits::FromPrimitive::from_u32(ct as u32).unwrap(),
+            type_: num_traits::FromPrimitive::from_i32(ct as i32).unwrap(),
         }
     }
 }
@@ -215,7 +215,7 @@ impl CertificateSubjectUniqueIdSecret {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /// Reasons a certificate may be rejected.
-#[derive(FromPrimitive, ToPrimitive)]
+#[derive(FromPrimitive, ToPrimitive, PartialEq, Eq)]
 pub enum CertificateError {
     None = ztcore::ZT_CertificateError_ZT_CERTIFICATE_ERROR_NONE as isize,
     HaveNewerCert = ztcore::ZT_CertificateError_ZT_CERTIFICATE_ERROR_HAVE_NEWER_CERT as isize,
@@ -555,12 +555,15 @@ impl CertificateSubject {
         }
         if !self.update_urls.is_empty() {
             capi_urls.reserve(self.update_urls.len());
+            capi_urls_strs.reserve(self.update_urls.len());
             for i in self.update_urls.iter() {
                 let cs = CString::new((*i).as_str());
                 if cs.is_ok() {
                     capi_urls_strs.push(cs.unwrap());
-                    capi_urls.push(capi_urls_strs.last().unwrap().as_ptr());
                 }
+            }
+            for i in capi_urls_strs.iter() {
+                capi_urls.push((*i).as_ptr());
             }
         }
 
@@ -694,7 +697,7 @@ impl Certificate {
         let capi_verify: c_int = if verify { 1 } else { 0 };
         let result = unsafe { ztcore::ZT_Certificate_decode(&mut capi_cert as *mut *const ztcore::ZT_Certificate, b.as_ptr() as *const c_void, b.len() as c_int, capi_verify) };
         if result != ztcore::ZT_CertificateError_ZT_CERTIFICATE_ERROR_NONE {
-            return Err(CertificateError::from_u32(result as u32).unwrap_or(CertificateError::InvalidFormat));
+            return Err(CertificateError::from_i32(result as i32).unwrap_or(CertificateError::InvalidFormat));
         }
         if capi_cert.is_null() {
             return Err(CertificateError::InvalidFormat);
@@ -740,7 +743,7 @@ impl Certificate {
     pub fn verify(&self) -> CertificateError {
         unsafe {
             let capi = self.to_capi();
-            return CertificateError::from_u32(ztcore::ZT_Certificate_verify(&capi.certificate as *const ztcore::ZT_Certificate) as u32).unwrap_or(CertificateError::InvalidFormat);
+            return CertificateError::from_i32(ztcore::ZT_Certificate_verify(&capi.certificate as *const ztcore::ZT_Certificate) as i32).unwrap_or(CertificateError::InvalidFormat);
         }
     }
 }
@@ -752,6 +755,7 @@ implement_to_from_json!(Certificate);
 #[cfg(test)]
 mod tests {
     use crate::*;
+    use num_traits::FromPrimitive;
 
     #[test]
     fn certificate_serial_no() {
@@ -768,8 +772,15 @@ mod tests {
     }
 
     #[test]
+    fn enum_from_primitive() {
+        let ce = CertificateError::from_i32(-2 as i32);
+        assert!(ce.is_some());
+        let ce = ce.unwrap();
+        assert!(ce == CertificateError::InvalidIdentity);
+    }
+
+    #[test]
     fn cert_encode_decode() {
-        let uid = CertificateSubjectUniqueIdSecret::new(CertificateUniqueIdType::NistP384);
         let id0 = Identity::new_generate(IdentityType::NistP384).ok().unwrap();
 
         let mut cert = Certificate{
@@ -825,5 +836,28 @@ mod tests {
             assert!(cert2.is_ok());
             assert!(cert2.ok().unwrap() == cert);
         }
+
+        let uid = CertificateSubjectUniqueIdSecret::new(CertificateUniqueIdType::NistP384);
+        let csr = cert.subject.new_csr(Some(&uid));
+        assert!(csr.is_ok());
+        let csr = csr.ok().unwrap();
+
+        let mut csr_decoded = Certificate::new_from_bytes(csr.as_ref(), false);
+        assert!(csr_decoded.is_ok());
+        let mut csr_decoded = csr_decoded.ok().unwrap();
+
+        let cert_signed = csr_decoded.sign(&id0);
+        assert!(cert_signed.is_ok());
+        let cert_signed = cert_signed.ok().unwrap();
+
+        let cert_signed_decoded = Certificate::new_from_bytes(cert_signed.as_slice(), false);
+        assert!(cert_signed_decoded.is_ok());
+        let cert_signed_decoded = cert_signed_decoded.ok().unwrap();
+        assert!(cert_signed_decoded.signature.len() > 0);
+
+        let cert_signed_verified = cert_signed_decoded.verify();
+        println!("{}", cert_signed_decoded.to_json().as_str());
+        println!("{}", cert_signed_verified.to_string());
+        assert!(cert_signed_verified == CertificateError::None);
     }
 }

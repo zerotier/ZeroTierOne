@@ -138,7 +138,7 @@ impl InetAddress {
     /// Get the network scope of the IP in this object.
     pub fn ip_scope(&self) -> IpScope {
         unsafe {
-            IpScope::from_u32(ztcore::ZT_InetAddress_ipScope(self.as_capi_ptr()) as u32).unwrap_or(IpScope::None)
+            IpScope::from_i32(ztcore::ZT_InetAddress_ipScope(self.as_capi_ptr()) as i32).unwrap_or(IpScope::None)
         }
     }
 
@@ -176,6 +176,15 @@ impl From<&str> for InetAddress {
         a.unwrap()
     }
 }
+
+impl PartialEq for InetAddress {
+    #[inline(always)]
+    fn eq(&self, other: &Self) -> bool {
+        self.to_string() == other.to_string()
+    }
+}
+
+impl Eq for InetAddress {}
 
 impl serde::Serialize for InetAddress {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
