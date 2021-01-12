@@ -27,6 +27,8 @@ namespace ZeroTier {
 
 namespace {
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // This is the memory-intensive hash function used to compute v0 identities from v0 public keys.
 #define ZT_V0_IDENTITY_GEN_MEMORY 2097152
 
@@ -80,12 +82,15 @@ struct identityV0ProofOfWorkCriteria
 	char *genmem;
 };
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 #define ZT_IDENTITY_V1_POW_MEMORY_SIZE 131072
 
 struct p_CompareLittleEndian
 {
 #if __BYTE_ORDER == __BIG_ENDIAN
-	ZT_INLINE bool operator()(const uint64_t a,const uint64_t b) const noexcept { return Utils::swapBytes(a) < Utils::swapBytes(b); }
+	ZT_INLINE bool operator()(const uint64_t a,const uint64_t b) const noexcept
+	{ return Utils::swapBytes(a) < Utils::swapBytes(b); }
 #else
 	ZT_INLINE bool operator()(const uint64_t a, const uint64_t b) const noexcept
 	{ return a < b; }
@@ -135,6 +140,8 @@ bool identityV1ProofOfWorkCriteria(const void *in, const unsigned int len, uint6
 	// identity collision resistance.
 	return (Utils::ntoh(w[0]) % 1000U) == 0;
 }
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 } // anonymous namespace
 
