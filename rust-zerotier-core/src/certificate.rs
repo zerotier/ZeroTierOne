@@ -663,7 +663,7 @@ impl Certificate {
             timestamp: c.timestamp,
             validity: c.validity,
             subject: CertificateSubject::new_from_capi(&c.subject),
-            issuer: if c.issuer.is_null() { None } else { Some(Identity::new_from_capi(c.issuer, false)) },
+            issuer: if c.issuer.is_null() { None } else { Some(Identity::new_from_capi(c.issuer, false).clone()) },
             issuer_name: CertificateName::new_from_capi(&c.issuerName),
             extended_attributes: Vec::from(std::slice::from_raw_parts(c.extendedAttributes, c.extendedAttributesSize as usize)),
             max_path_length: c.maxPathLength as u32,
@@ -855,9 +855,6 @@ mod tests {
         let cert_signed_decoded = cert_signed_decoded.ok().unwrap();
         assert!(cert_signed_decoded.signature.len() > 0);
 
-        let cert_signed_verified = cert_signed_decoded.verify();
-        println!("{}", cert_signed_decoded.to_json().as_str());
-        println!("{}", cert_signed_verified.to_string());
-        assert!(cert_signed_verified == CertificateError::None);
+        assert!(cert_signed_decoded.verify() == CertificateError::None);
     }
 }

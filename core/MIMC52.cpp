@@ -42,8 +42,30 @@ const uint32_t ZT_MIMC52_PRIMES[1024] = {4294895267, 4294895477, 4294895513, 429
                                          4294963313, 4294963349, 4294963427, 4294963547, 4294963559, 4294963721, 4294963799, 4294963817, 4294963901, 4294963919, 4294964021, 4294964279, 4294964297, 4294964363, 4294964387, 4294964411, 4294964567, 4294964603, 4294964687, 4294964777, 4294965041, 4294965071, 4294965119, 4294965221, 4294965251, 4294965287, 4294965413, 4294965569, 4294965647, 4294965671, 4294965689, 4294965779, 4294965839, 4294965893, 4294966091, 4294966109, 4294966127, 4294966157, 4294966187, 4294966199, 4294966211, 4294966403, 4294966457, 4294966499, 4294966541, 4294966637,
                                          4294966661, 4294966739, 4294966823, 4294966883, 4294966901, 4294966961, 4294967027, 4294967087, 4294967099, 4294967123, 4294967153, 4294967249};
 
-// 52-bit mulmod using FPU hack to achieve better performance than the majority of CPU dividers.
+#ifdef ZT_NO_IEEE_DOUBLE
+
+// Integer 64-bit modular multiply for systems without an IEEE FPU. This is
+// much slower on systems that can use the FPU hack.
+static uint64_t mulmod64(uint64_t a, uint64_t b, const uint64_t m)
+{
+	uint64_t res = 0;
+	while ((a)) {
+		if ((a << 63U))
+			res = (res + b) % m;
+		a >>= 1U;
+		b = (b << 1U) % m;
+	}
+	return res;
+}
+
+#define mulmod52(a, b, m, mf) mulmod64((a), (b), (m))
+
+#else
+
+// 52-bit mulmod using FPU hack, which is very fast on most systems with IEEE 64-bit floats.
 #define mulmod52(a, b, m, mf) ( ( ( a * b ) - ( ((uint64_t)(((double)a * (double)b) / mf) - 1) * m ) ) % m )
+
+#endif
 
 // Compute a^e%m (mf is m in floating point form to avoid repeated conversion)
 ZT_INLINE uint64_t modpow52(uint64_t a, uint64_t e, const uint64_t m, const double mf)

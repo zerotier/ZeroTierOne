@@ -20,7 +20,7 @@ use num_traits::{FromPrimitive, ToPrimitive};
 use crate::*;
 use crate::bindings::capi as ztcore;
 
-#[derive(FromPrimitive,ToPrimitive)]
+#[derive(FromPrimitive, ToPrimitive, PartialEq, Eq)]
 pub enum IdentityType {
     Curve25519 = ztcore::ZT_IdentityType_ZT_IDENTITY_TYPE_C25519 as isize,
     NistP384 = ztcore::ZT_IdentityType_ZT_IDENTITY_TYPE_P384 as isize,
@@ -78,10 +78,11 @@ impl Identity {
     fn intl_to_string(&self, include_private: bool) -> String {
         let mut buf: MaybeUninit<[c_char; 4096]> = MaybeUninit::uninit();
         unsafe {
-            if ztcore::ZT_Identity_toString(self.capi, (*buf.as_mut_ptr()).as_mut_ptr(), 4096, if include_private { 1 } else { 0 }).is_null() {
+            let bufptr = (*buf.as_mut_ptr()).as_mut_ptr();
+            if ztcore::ZT_Identity_toString(self.capi, bufptr, 4096, if include_private { 1 } else { 0 }).is_null() {
                 return String::from("(invalid)");
             }
-            return cstr_to_string((*buf.as_ptr()).as_ptr(), 4096);
+            return cstr_to_string(bufptr, 4096);
         }
     }
 
