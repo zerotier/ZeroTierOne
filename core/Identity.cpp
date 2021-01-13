@@ -18,6 +18,7 @@
 #include "Poly1305.hpp"
 #include "Utils.hpp"
 #include "Endpoint.hpp"
+#include "MIMC52.hpp"
 
 #include <algorithm>
 #include <memory>
@@ -26,8 +27,6 @@
 namespace ZeroTier {
 
 namespace {
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // This is the memory-intensive hash function used to compute v0 identities from v0 public keys.
 #define ZT_V0_IDENTITY_GEN_MEMORY 2097152
@@ -82,66 +81,24 @@ struct identityV0ProofOfWorkCriteria
 	char *genmem;
 };
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-#define ZT_IDENTITY_V1_POW_MEMORY_SIZE 131072
-
-struct p_CompareLittleEndian
+void v1ChallengeFromPub(const uint8_t pub[ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE], uint64_t challenge[4])
 {
-#if __BYTE_ORDER == __BIG_ENDIAN
-	ZT_INLINE bool operator()(const uint64_t a,const uint64_t b) const noexcept
-	{ return Utils::swapBytes(a) < Utils::swapBytes(b); }
-#else
-	ZT_INLINE bool operator()(const uint64_t a, const uint64_t b) const noexcept
-	{ return a < b; }
-
-#endif
-};
-
-// This is a simpler memory-intensive frankenhash for V1 identity generation.
-bool identityV1ProofOfWorkCriteria(const void *in, const unsigned int len, uint64_t *const w)
-{
-	// Fill work buffer with pseudorandom bytes using a construction that should be
-	// relatively hostile to GPU acceleration. GPUs usually implement branching by
-	// executing all branches and then selecting the answer, which means this
-	// construction should require a GPU to do ~3X the work of a CPU per iteration.
-	SHA512(w, in, len);
-	for (unsigned int i = 8, j = 0; i < (ZT_IDENTITY_V1_POW_MEMORY_SIZE / 8);) {
-		uint64_t *const ww = w + i;
-		const uint64_t *const wp = w + j;
-		i += 8;
-		j += 8;
-		if ((wp[0] & 7U) == 0) {
-			SHA512(ww, wp, 64);
-		} else if ((wp[1] & 15U) == 0) {
-			ww[0] = Utils::hton(Utils::ntoh(wp[0]) % 4503599627370101ULL);
-			ww[1] = Utils::hton(Utils::ntoh(wp[1]) % 4503599627370161ULL);
-			ww[2] = Utils::hton(Utils::ntoh(wp[2]) % 4503599627370227ULL);
-			ww[3] = Utils::hton(Utils::ntoh(wp[3]) % 4503599627370287ULL);
-			ww[4] = Utils::hton(Utils::ntoh(wp[4]) % 4503599627370299ULL);
-			ww[5] = Utils::hton(Utils::ntoh(wp[5]) % 4503599627370323ULL);
-			ww[6] = Utils::hton(Utils::ntoh(wp[6]) % 4503599627370353ULL);
-			ww[7] = Utils::hton(Utils::ntoh(wp[7]) % 4503599627370449ULL);
-			SHA384(ww, wp, 128);
-		} else {
-			Salsa20(wp, wp + 4).crypt12(wp, ww, 64);
-		}
-	}
-
-	// Sort 64-bit integers (little-endian) into ascending order and compute a
-	// cryptographic checksum. Sorting makes the order of values dependent on all
-	// other values, making a speed competitive implementation that skips on the
-	// memory requirement extremely hard.
-	std::sort(w, w + (ZT_IDENTITY_V1_POW_MEMORY_SIZE / 8), p_CompareLittleEndian());
-	Poly1305::compute(w, w, ZT_IDENTITY_V1_POW_MEMORY_SIZE, w);
-
-	// PoW criteria passed if this is true. The value 1093 was chosen experimentally
-	// to yield a good average performance balancing fast setup with intentional
-	// identity collision resistance.
-	return (Utils::ntoh(w[0]) % 1000U) == 0;
+	// This builds a 256-bit challenge by XORing the two public keys together. This doesn't need to be
+	// a hash, just different for different public keys. Public keys are basically kind of hashes of
+	// private keys, so that's good enough. This is only used to seed a PRNG in MIMC52 for a proof of
+	// sequential work. It's not used for authentication beyond checking PoW.
+	Utils::copy< 32 >(challenge, pub + 7);
+	challenge[0] ^= Utils::loadMachineEndian< uint64_t >(pub + 40);
+	challenge[1] ^= Utils::loadMachineEndian< uint64_t >(pub + 48);
+	challenge[2] ^= Utils::loadMachineEndian< uint64_t >(pub + 56);
+	challenge[3] ^= Utils::loadMachineEndian< uint64_t >(pub + 64);
+	challenge[0] ^= Utils::loadMachineEndian< uint64_t >(pub + 72);
+	challenge[1] ^= Utils::loadMachineEndian< uint64_t >(pub + 80);
+	challenge[2] ^= Utils::loadMachineEndian< uint64_t >(pub + 88);
+	challenge[3] ^= Utils::loadMachineEndian< uint64_t >(pub + 96);
+	challenge[0] ^= Utils::loadMachineEndian< uint64_t >(pub + 104);
+	challenge[1] ^= Utils::loadMachineEndian< uint64_t >(pub + 112);
 }
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 } // anonymous namespace
 
@@ -170,38 +127,29 @@ bool Identity::generate(const Type t)
 		}
 			break;
 
-		case P384: {
-			//uint64_t w[ZT_IDENTITY_V1_POW_MEMORY_SIZE / 8];
-			uint64_t *const w = (uint64_t *)malloc(ZT_IDENTITY_V1_POW_MEMORY_SIZE);
-			if (!w)
-				return false;
-			try {
-				for (;;) {
-					// Loop until we pass the PoW criteria. The nonce is only 8 bits, so generate
-					// some new key material every time it wraps. The ECC384 generator is slightly
-					// faster so use that one.
-					m_pub[0] = 0; // zero nonce
-					C25519::generateCombined(m_pub + 1, m_priv + 1);
-					ECC384GenerateKey(m_pub + 1 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE, m_priv + ZT_C25519_COMBINED_PRIVATE_KEY_SIZE);
-					for (;;) {
-						if (identityV1ProofOfWorkCriteria(m_pub, sizeof(m_pub), w))
-							break;
-						if (++m_pub[0] == 0)
-							ECC384GenerateKey(m_pub + 1 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE, m_priv + ZT_C25519_COMBINED_PRIVATE_KEY_SIZE);
-					}
+		case P384:
+			for (;;) {
+				C25519::generateCombined(m_pub + 7, m_priv);
+				ECC384GenerateKey(m_pub + 7 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE, m_priv + ZT_C25519_COMBINED_PRIVATE_KEY_SIZE);
 
-					// If we passed PoW then check that the address is valid, otherwise loop
-					// back around and run the whole process again.
-					m_computeHash();
-					const Address addr(m_fp.hash);
-					if (!addr.isReserved()) {
-						m_fp.address = addr;
-						break;
-					}
+				uint64_t challenge[4];
+				v1ChallengeFromPub(m_pub, challenge);
+				const uint64_t proof = MIMC52::delay(reinterpret_cast<const uint8_t *>(challenge), ZT_IDENTITY_TYPE1_MIMC52_ROUNDS);
+				m_pub[0] = (uint8_t)(proof >> 48U);
+				m_pub[1] = (uint8_t)(proof >> 40U);
+				m_pub[2] = (uint8_t)(proof >> 32U);
+				m_pub[3] = (uint8_t)(proof >> 24U);
+				m_pub[4] = (uint8_t)(proof >> 16U);
+				m_pub[5] = (uint8_t)(proof >> 8U);
+				m_pub[6] = (uint8_t)proof;
+
+				m_computeHash();
+				const Address addr(m_fp.hash);
+				if (!addr.isReserved()) {
+					m_fp.address = addr;
+					break;
 				}
-			} catch ( ... ) {}
-			free(w);
-		}
+			}
 			break;
 
 		default:
@@ -216,6 +164,7 @@ bool Identity::locallyValidate() const noexcept
 	try {
 		if ((m_fp) && ((!Address(m_fp.address).isReserved()))) {
 			switch (m_type) {
+
 				case C25519: {
 					uint8_t digest[64];
 					char *const genmem = (char *)malloc(ZT_V0_IDENTITY_GEN_MEMORY);
@@ -225,16 +174,15 @@ bool Identity::locallyValidate() const noexcept
 					free(genmem);
 					return ((Address(digest + 59) == m_fp.address) && (digest[0] < 17));
 				}
-				case P384: {
-					if (Address(m_fp.hash) != m_fp.address)
-						return false;
-					uint64_t *const w = (uint64_t *)malloc(ZT_IDENTITY_V1_POW_MEMORY_SIZE);
-					if (!w)
-						return false;
-					const bool valid = identityV1ProofOfWorkCriteria(m_pub, sizeof(m_pub), w);
-					free(w);
-					return valid;
-				}
+
+				case P384:
+					if (Address(m_fp.hash) == m_fp.address) {
+						uint64_t challenge[4];
+						v1ChallengeFromPub(m_pub, challenge);
+						return MIMC52::verify(reinterpret_cast<const uint8_t *>(challenge), ZT_IDENTITY_TYPE1_MIMC52_ROUNDS, ((uint64_t)m_pub[0] << 48U) | ((uint64_t)m_pub[1] << 40U) | ((uint64_t)m_pub[2] << 32U) | ((uint64_t)m_pub[3] << 24U) | ((uint64_t)m_pub[4] << 16U) | ((uint64_t)m_pub[5] << 8U) | (uint64_t)m_pub[6]);
+					}
+					return false;
+
 			}
 		}
 	} catch (...) {}
@@ -245,12 +193,15 @@ void Identity::hashWithPrivate(uint8_t h[ZT_FINGERPRINT_HASH_SIZE]) const
 {
 	if (m_hasPrivate) {
 		switch (m_type) {
+
 			case C25519:
 				SHA384(h, m_pub, ZT_C25519_COMBINED_PUBLIC_KEY_SIZE, m_priv, ZT_C25519_COMBINED_PRIVATE_KEY_SIZE);
 				return;
+
 			case P384:
 				SHA384(h, m_pub, sizeof(m_pub), m_priv, sizeof(m_priv));
 				return;
+
 		}
 	}
 	Utils::zero< ZT_FINGERPRINT_HASH_SIZE >(h);
@@ -260,15 +211,16 @@ unsigned int Identity::sign(const void *data, unsigned int len, void *sig, unsig
 {
 	if (m_hasPrivate) {
 		switch (m_type) {
+
 			case C25519:
 				if (siglen >= ZT_C25519_SIGNATURE_LEN) {
 					C25519::sign(m_priv, m_pub, data, len, sig);
 					return ZT_C25519_SIGNATURE_LEN;
 				}
 				break;
+
 			case P384:
 				if (siglen >= ZT_ECC384_SIGNATURE_SIZE) {
-					// SECURITY: signatures also include the public keys to further enforce their coupling.
 					static_assert(ZT_ECC384_SIGNATURE_HASH_SIZE == ZT_SHA384_DIGEST_SIZE, "weird!");
 					uint8_t h[ZT_ECC384_SIGNATURE_HASH_SIZE];
 					SHA384(h, data, len, m_pub, ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE);
@@ -276,6 +228,7 @@ unsigned int Identity::sign(const void *data, unsigned int len, void *sig, unsig
 					return ZT_ECC384_SIGNATURE_SIZE;
 				}
 				break;
+
 		}
 	}
 	return 0;
@@ -284,15 +237,18 @@ unsigned int Identity::sign(const void *data, unsigned int len, void *sig, unsig
 bool Identity::verify(const void *data, unsigned int len, const void *sig, unsigned int siglen) const
 {
 	switch (m_type) {
+
 		case C25519:
 			return C25519::verify(m_pub, data, len, sig, siglen);
+
 		case P384:
 			if (siglen == ZT_ECC384_SIGNATURE_SIZE) {
 				uint8_t h[ZT_ECC384_SIGNATURE_HASH_SIZE];
 				SHA384(h, data, len, m_pub, ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE);
-				return ECC384ECDSAVerify(m_pub + 1 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE, h, (const uint8_t *)sig);
+				return ECC384ECDSAVerify(m_pub + 7 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE, h, (const uint8_t *)sig);
 			}
 			break;
+
 	}
 	return false;
 }
@@ -315,7 +271,7 @@ bool Identity::agree(const Identity &id, uint8_t key[ZT_SYMMETRIC_KEY_SIZE]) con
 			// or something. For those who don't trust P384 this means the privacy of
 			// your traffic is also protected by C25519.
 			C25519::agree(m_priv, id.m_pub, rawkey);
-			ECC384ECDH(id.m_pub + 1 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE, m_priv + ZT_C25519_COMBINED_PRIVATE_KEY_SIZE, rawkey + ZT_C25519_ECDH_SHARED_SECRET_SIZE);
+			ECC384ECDH(id.m_pub + 7 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE, m_priv + ZT_C25519_COMBINED_PRIVATE_KEY_SIZE, rawkey + ZT_C25519_ECDH_SHARED_SECRET_SIZE);
 			SHA384(key, rawkey, ZT_C25519_ECDH_SHARED_SECRET_SIZE + ZT_ECC384_SHARED_SECRET_SIZE);
 			return true;
 		}
@@ -516,15 +472,15 @@ int Identity::unmarshal(const uint8_t *data, const int len) noexcept
 				return -1;
 
 			privlen = data[ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE];
-			if (privlen == ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE) {
+			if (privlen == 0) {
+				m_hasPrivate = false;
+				return ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1;
+			} else if (privlen == ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE) {
 				if (len < (ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1 + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE))
 					return -1;
 				m_hasPrivate = true;
 				Utils::copy< ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE >(&m_priv, data + ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1);
 				return ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1 + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE;
-			} else if (privlen == 0) {
-				m_hasPrivate = false;
-				return ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1;
 			}
 			break;
 
@@ -539,9 +495,11 @@ void Identity::m_computeHash()
 		default:
 			m_fp.zero();
 			break;
+
 		case C25519:
 			SHA384(m_fp.hash, m_pub, ZT_C25519_COMBINED_PUBLIC_KEY_SIZE);
 			break;
+
 		case P384:
 			SHA384(m_fp.hash, m_pub, ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE);
 			break;

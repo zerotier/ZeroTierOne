@@ -43,6 +43,7 @@
 #include "Endpoint.hpp"
 #include "Locator.hpp"
 #include "Certificate.hpp"
+#include "MIMC52.hpp"
 
 #ifdef __UNIX_LIKE__
 
@@ -67,7 +68,7 @@ static clock_serv_t _machGetRealtimeClock() noexcept
 
 static clock_serv_t s_machRealtimeClock = _machGetRealtimeClock();
 
-#endif
+#endif // __APPLE__
 
 using namespace ZeroTier;
 
@@ -218,7 +219,7 @@ static const C25519TestVector C25519_TEST_VECTORS[ZT_NUM_C25519_TEST_VECTORS] = 
 };
 
 #define IDENTITY_V0_KNOWN_GOOD_0 "8e4df28b72:0:ac3d46abe0c21f3cfe7a6c8d6a85cfcffcb82fbd55af6a4d6350657c68200843fa2e16f9418bbd9702cae365f2af5fb4c420908b803a681d4daef6114d78a2d7:bd8dd6e4ce7022d2f812797a80c6ee8ad180dc4ebf301dec8b06d1be08832bddd63a2f1cfa7b2c504474c75bdc8898ba476ef92e8e2d0509f8441985171ff16e"
-#define IDENTITY_V1_KNOWN_GOOD_0 "cb8be88914:1:uhvyeplt7yjunjissek2ndvj6p6aj5jl7fhdgu64dnqld6h6daixc2ngqxm6pu62hxwheioy3jr46qyaxbmy536qvk5asltqqeyuqhhxakzkfyc3ejza52a4qpp6fabitfiuu6337zji47c4exrepurn6blovy5fgocmp7icwkrohqx354kk55a:xw62q5dniqpm4v7tmagukxlzgmegm3gbhx6izatu43vkvgvi6gejcvzlfg3d7ovqduzosawkq7agwx4qriqv56tr57cpdxzhrouuht7thiptbcvkh5yqrsturbw2eiudf4fijl4zhivtpiw4rbcxhkaobzhhapynhnahswppjlpmvnf4ncia"
+#define IDENTITY_V1_KNOWN_GOOD_0 "26e83e3b8c:1:bwtgzeejkrkxeiuqyy35srdorynvz3nfrepqwiwedkm55bkhx77vaf6deknmikr2tgvymw3dxnifawo4m5pbfcqbnws6wzxlm7rgrad4xu52fcqg7ebwt4rhao6mjmrbn2bhdcevrlard5k7vropjrsuodoysvwbnjqef3q4fkrjgygddl4tatr5ztkjwt7f:a5vpcmommfyvjiqudkk7sjekscc4zyc3vqqdytkwlix5ahsxgz73ic3a62secgmyum65dok7b5aochdhdlinn3olyyswzy64ubx3pzbtryqsfmxpntxsvj7aqrd6kkrr3gobstl5yzln6bgqkihmhktbqt4vfwfqynkfjmncd4xqodogyxzq"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -440,7 +441,7 @@ extern "C" const char *ZTT_general()
 		}
 
 #ifdef ZT_ARCH_X64
-		ZT_T_PRINTF("[general] X64 CPUID: aes=%d avx=%d avx2=%d avx512f=%d fsrm=%d rdrand=%d sha=%d vaes=%d vpclmulqdq=%d" ZT_EOL_S,
+		ZT_T_PRINTF("[general] X64 CPUID features: aes=%d avx=%d avx2=%d avx512f=%d fsrm=%d rdrand=%d sha=%d vaes=%d vpclmulqdq=%d" ZT_EOL_S,
 		            Utils::CPUID.aes,
 		            Utils::CPUID.avx,
 		            Utils::CPUID.avx2,
@@ -937,6 +938,27 @@ extern "C" const char *ZTT_crypto()
 {
 	try {
 		{
+			ZT_T_PRINTF("[crypto] Testing MIMC52... ");
+			uint8_t challenge[32];
+			Utils::zero<32>(challenge);
+			uint64_t proof = MIMC52::delay(challenge, ZT_IDENTITY_TYPE1_MIMC52_ROUNDS);
+			if (!MIMC52::verify(challenge, ZT_IDENTITY_TYPE1_MIMC52_ROUNDS, proof)) {
+				ZT_T_PRINTF("FAILED (MIMC52 verify)" ZT_EOL_S);
+				return "MIMC52 failed (verify)";
+			}
+			if (proof != 0x0001bce730224699ULL) {
+				ZT_T_PRINTF("FAILED (MIMC52 proof not correct)" ZT_EOL_S);
+				return "MIMC52 failed (proof not correct)";
+			}
+			challenge[0] = 1;
+			if (MIMC52::verify(challenge, ZT_IDENTITY_TYPE1_MIMC52_ROUNDS, proof)) {
+				ZT_T_PRINTF("FAILED (MIMC52 verify known-bad)" ZT_EOL_S);
+				return "MIMC52 failed (verify known-bad)";
+			}
+			ZT_T_PRINTF("OK (%.16llx)" ZT_EOL_S, proof);
+		}
+
+		{
 			ZT_T_PRINTF("[crypto] Testing SHA384 and SHA512... ");
 			uint8_t h[64];
 			SHA512(h, SHA512_TV0_INPUT, strlen(SHA512_TV0_INPUT));
@@ -1262,6 +1284,22 @@ extern "C" const char *ZTT_benchmarkCrypto()
 		uint8_t tmp[16384], tag[16];
 		Utils::zero< sizeof(tmp) >(tmp);
 		Utils::zero< sizeof(tag) >(tag);
+
+		{
+			Utils::getSecureRandom(tmp, 32);
+			ZT_T_PRINTF("[crypto] Benchmarking MIMC52 for %u rounds... ", ZT_IDENTITY_TYPE1_MIMC52_ROUNDS);
+			int64_t start = now();
+			uint64_t proof = MIMC52::delay(tmp, ZT_IDENTITY_TYPE1_MIMC52_ROUNDS);
+			int64_t t = now() - start;
+			ZT_T_PRINTF("%llu ms total, %.8f ms/round, verification: " , t, (double)t / (double)ZT_IDENTITY_TYPE1_MIMC52_ROUNDS);
+			start = now();
+			if (!MIMC52::verify(tmp, ZT_IDENTITY_TYPE1_MIMC52_ROUNDS, proof)) {
+				ZT_T_PRINTF("FAILED" ZT_EOL_S);
+				return "MIMC52 verify failed";
+			}
+			t = now() - start;
+			ZT_T_PRINTF("%llu ms, %.4f per second" ZT_EOL_S, t, 1000.0 / (double)t);
+		}
 
 		{
 			ZT_T_PRINTF("[crypto] Benchmarking SHA384... ");
