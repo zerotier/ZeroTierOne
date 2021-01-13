@@ -21,7 +21,7 @@ use num_traits::FromPrimitive;
 use crate::*;
 use crate::bindings::capi as ztcore;
 
-#[derive(FromPrimitive,ToPrimitive)]
+#[derive(FromPrimitive, ToPrimitive, PartialEq, Eq)]
 pub enum EndpointType {
     Nil = ztcore::ZT_EndpointType_ZT_ENDPOINT_TYPE_NIL as isize,
     ZeroTier = ztcore::ZT_EndpointType_ZT_ENDPOINT_TYPE_ZEROTIER as isize,

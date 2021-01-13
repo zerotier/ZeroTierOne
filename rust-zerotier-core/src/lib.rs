@@ -77,7 +77,7 @@ pub mod RulePacketCharacteristicFlags {
     pub const TcpFlagFIN: u64 = crate::bindings::capi::ZT_RULE_PACKET_CHARACTERISTICS_TCP_FIN as u64;
 }
 
-#[derive(FromPrimitive,ToPrimitive)]
+#[derive(FromPrimitive, ToPrimitive, PartialEq, Eq)]
 pub enum CredentialType {
     Null = ztcore::ZT_CredentialType_ZT_CREDENTIAL_TYPE_NULL as isize,
     CertificateOfMembership = ztcore::ZT_CredentialType_ZT_CREDENTIAL_TYPE_COM as isize,
@@ -87,7 +87,7 @@ pub enum CredentialType {
     Revocation = ztcore::ZT_CredentialType_ZT_CREDENTIAL_TYPE_REVOCATION as isize,
 }
 
-#[derive(FromPrimitive,ToPrimitive)]
+#[derive(FromPrimitive, ToPrimitive, PartialEq, Eq)]
 pub enum TraceEventType {
     UnexpectedError = ztcore::ZT_TraceEventType_ZT_TRACE_UNEXPECTED_ERROR as isize,
     ResetingPathsInScope = ztcore::ZT_TraceEventType_ZT_TRACE_VL1_RESETTING_PATHS_IN_SCOPE as isize,
@@ -100,7 +100,7 @@ pub enum TraceEventType {
     NetworkFilter = ztcore::ZT_TraceEventType_ZT_TRACE_VL2_NETWORK_FILTER as isize,
 }
 
-#[derive(FromPrimitive,ToPrimitive)]
+#[derive(FromPrimitive, ToPrimitive, PartialEq, Eq)]
 pub enum TracePacketDropReason {
     Unspecified = ztcore::ZT_TracePacketDropReason_ZT_TRACE_PACKET_DROP_REASON_UNSPECIFIED as isize,
     PeerTooOld = ztcore::ZT_TracePacketDropReason_ZT_TRACE_PACKET_DROP_REASON_PEER_TOO_OLD as isize,
@@ -113,7 +113,7 @@ pub enum TracePacketDropReason {
     ReplyNotExpected = ztcore::ZT_TracePacketDropReason_ZT_TRACE_PACKET_DROP_REASON_REPLY_NOT_EXPECTED as isize,
 }
 
-#[derive(FromPrimitive,ToPrimitive)]
+#[derive(FromPrimitive, ToPrimitive, PartialEq, Eq)]
 pub enum TraceFrameDropReason {
     Unspecified = ztcore::ZT_TraceFrameDropReason_ZT_TRACE_FRAME_DROP_REASON_UNSPECIFIED as isize,
     BridgingNotAllowedRemote = ztcore::ZT_TraceFrameDropReason_ZT_TRACE_FRAME_DROP_REASON_BRIDGING_NOT_ALLOWED_REMOTE as isize,
@@ -125,7 +125,7 @@ pub enum TraceFrameDropReason {
     PermissionDenied = ztcore::ZT_TraceFrameDropReason_ZT_TRACE_FRAME_DROP_REASON_PERMISSION_DENIED as isize,
 }
 
-#[derive(FromPrimitive,ToPrimitive)]
+#[derive(FromPrimitive, ToPrimitive, PartialEq, Eq)]
 pub enum TraceCredentialRejectionReason {
     SignatureVerificationFailed = ztcore::ZT_TraceCredentialRejectionReason_ZT_TRACE_CREDENTIAL_REJECTION_REASON_SIGNATURE_VERIFICATION_FAILED as isize,
     Revoked = ztcore::ZT_TraceCredentialRejectionReason_ZT_TRACE_CREDENTIAL_REJECTION_REASON_REVOKED as isize,
@@ -133,7 +133,7 @@ pub enum TraceCredentialRejectionReason {
     Invalid = ztcore::ZT_TraceCredentialRejectionReason_ZT_TRACE_CREDENTIAL_REJECTION_REASON_INVALID as isize,
 }
 
-#[derive(FromPrimitive,ToPrimitive)]
+#[derive(FromPrimitive, ToPrimitive, PartialEq, Eq)]
 pub enum ResultCode {
     Ok = ztcore::ZT_ResultCode_ZT_RESULT_OK as isize,
     FatalErrorOutOfMemory = ztcore::ZT_ResultCode_ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY as isize,
@@ -183,6 +183,7 @@ pub unsafe fn cstr_to_string(cstr: *const c_char, max_len: isize) -> String {
     String::new()
 }
 
+/// Macro to implement to_json and new_from_json on types that are Serializable.
 #[macro_export(crate)]
 macro_rules! implement_to_from_json {
     ($struct_name:ident) => {

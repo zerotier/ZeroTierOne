@@ -29,7 +29,7 @@ use std::os::raw::{c_void, c_uint};
 // blobs to be freely cast to one another. That the sizes are correct is
 // checked statically in the C++ code and in the tests in the Rust code.
 
-#[derive(FromPrimitive,ToPrimitive)]
+#[derive(FromPrimitive, ToPrimitive, PartialEq, Eq)]
 pub enum IpScope {
     None = ztcore::ZT_InetAddress_IpScope_ZT_IP_SCOPE_NONE as isize,
     Multicast = ztcore::ZT_InetAddress_IpScope_ZT_IP_SCOPE_MULTICAST as isize,
@@ -41,6 +41,7 @@ pub enum IpScope {
     Private = ztcore::ZT_InetAddress_IpScope_ZT_IP_SCOPE_PRIVATE as isize
 }
 
+#[derive(PartialEq, Eq)]
 pub enum InetAddressFamily {
     Nil,
     IPv4,
@@ -91,6 +92,10 @@ impl InetAddress {
         Some(a)
     }
 
+    /// Transmute a ZT_InetAddress from the core into a reference to a Rust
+    /// InetAddress containing exactly the same data. The returned reference
+    /// of course only remains valid so long as the ZT_InetAddress remains
+    /// valid.
     #[inline(always)]
     pub(crate) fn transmute_capi(a: &ztcore::ZT_InetAddress) -> &InetAddress {
         unsafe {
@@ -98,6 +103,8 @@ impl InetAddress {
         }
     }
 
+    /// Create an InetAddress by copying a ZT_InetAddress instead of transmuting.
+    /// Returns None if the input is a nil address.
     pub(crate) fn new_from_capi(a: &ztcore::ZT_InetAddress) -> Option<InetAddress> {
         if a.bits[0] != 0 {
             Some(InetAddress {

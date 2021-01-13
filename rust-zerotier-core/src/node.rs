@@ -30,10 +30,9 @@ use serde::{Deserialize, Serialize};
 use crate::*;
 use crate::bindings::capi as ztcore;
 
-/// Minimum delay between iterations of the background loop.
-const NODE_BACKGROUND_MIN_DELAY: i64 = 250;
+const NODE_BACKGROUND_MAX_DELAY: i64 = 250;
 
-#[derive(FromPrimitive,ToPrimitive)]
+#[derive(FromPrimitive, ToPrimitive, PartialEq, Eq)]
 pub enum Event {
     Up = ztcore::ZT_Event_ZT_EVENT_UP as isize,
     Offline = ztcore::ZT_Event_ZT_EVENT_OFFLINE as isize,
@@ -43,7 +42,7 @@ pub enum Event {
     UserMessage = ztcore::ZT_Event_ZT_EVENT_USER_MESSAGE as isize,
 }
 
-#[derive(FromPrimitive,ToPrimitive)]
+#[derive(FromPrimitive, ToPrimitive, PartialEq, Eq)]
 pub enum StateObjectType {
     IdentityPublic = ztcore::ZT_StateObjectType_ZT_STATE_OBJECT_IDENTITY_PUBLIC as isize,
     IdentitySecret = ztcore::ZT_StateObjectType_ZT_STATE_OBJECT_IDENTITY_SECRET as isize,
@@ -55,6 +54,7 @@ pub enum StateObjectType {
 }
 
 impl StateObjectType {
+    /// Get the canonical file extension for this object type.
     pub fn to_file_ext(&self) -> &str {
         match *self {
             StateObjectType::IdentityPublic => "public",
@@ -171,9 +171,14 @@ extern "C" fn zt_virtual_network_frame_function<T: NodeEventHandler + 'static>(
 ) {
     if !nptr.is_null() {
         let n = node_from_raw_ptr!(uptr);
-        let network_obj: &Arc<dyn Any> = unsafe { &*((*nptr).cast::<Arc<dyn Any>>()) };
-        let data_slice = unsafe { &*slice_from_raw_parts(data.cast::<u8>(), data_size as usize) };
-        n.event_handler.virtual_network_frame(NetworkId(nwid), network_obj, MAC(source_mac), MAC(dest_mac), ethertype as u16, vlan_id as u16, data_slice);
+        n.event_handler.virtual_network_frame(
+            NetworkId(nwid),
+            unsafe { &*((*nptr).cast::<Arc<dyn Any>>()) },
+            MAC(source_mac),
+            MAC(dest_mac),
+            ethertype as u16,
+            vlan_id as u16,
+            unsafe { &*slice_from_raw_parts(data.cast::<u8>(), data_size as usize) });
     }
 }
 
@@ -366,7 +371,7 @@ impl<T: NodeEventHandler + 'static> Node<T> {
         let wn = Arc::downgrade(&n);
         let run = n.background_thread_run.clone();
         n.background_thread.replace(Some(std::thread::spawn(move || {
-            let mut loop_delay = Duration::from_millis(500);
+            let mut loop_delay = Duration::from_millis(NODE_BACKGROUND_MAX_DELAY as u64);
             while run.load(Ordering::Relaxed) {
                 std::thread::park_timeout(loop_delay);
                 if run.load(Ordering::Relaxed) {
@@ -386,7 +391,6 @@ impl<T: NodeEventHandler + 'static> Node<T> {
     }
 
     /// This is called periodically from the background service thread.
-    #[inline(always)]
     fn process_background_tasks(&self) -> i64 {
         let current_time = now();
         self.now.set(current_time);
@@ -399,8 +403,8 @@ impl<T: NodeEventHandler + 'static> Node<T> {
 
         if next_delay < 10 {
             next_delay = 10;
-        } else if next_delay > NODE_BACKGROUND_MIN_DELAY {
-            next_delay = NODE_BACKGROUND_MIN_DELAY;
+        } else if next_delay > NODE_BACKGROUND_MAX_DELAY {
+            next_delay = NODE_BACKGROUND_MAX_DELAY;
         }
         next_delay
     }
@@ -450,7 +454,7 @@ impl<T: NodeEventHandler + 'static> Node<T> {
     }
 
     #[inline(always)]
-    pub fn process_wire_packet<A>(&self, local_socket: i64, remote_address: &InetAddress, data: Buffer) -> ResultCode {
+    pub fn process_wire_packet(&self, local_socket: i64, remote_address: &InetAddress, data: Buffer) -> ResultCode {
         let current_time = self.now.get();
         let mut next_task_deadline: i64 = current_time;
         let rc = unsafe { ResultCode::from_i32(ztcore::ZT_Node_processWirePacket(self.capi.get(), null_mut(), current_time, local_socket, remote_address.as_capi_ptr(), data.zt_core_buf as *const c_void, data.data_size as u32, 1, &mut next_task_deadline as *mut i64) as i32).unwrap_or(ResultCode::ErrorInternalNonFatal) };
@@ -479,9 +483,17 @@ impl<T: NodeEventHandler + 'static> Node<T> {
         }
     }
 
+    /// Get a copy of this node's identity.
     pub fn identity(&self) -> Identity {
-        let id = unsafe { ztcore::ZT_Node_identity(self.capi.get()) };
-        return Identity::new_from_capi(id, false).clone();
+        unsafe { self.identity_fast().clone() }
+    }
+
+    /// Get an identity that simply holds a pointer to the underlying node's identity.
+    /// This is unsafe because the identity object becomes invalid if the node ceases
+    /// to exist the Identity becomes invalid. Use clone() on it to get a copy.
+    #[inline(always)]
+    pub(crate) unsafe fn identity_fast(&self) -> Identity {
+        Identity::new_from_capi(ztcore::ZT_Node_identity(self.capi.get()), false)
     }
 
     pub fn status(&self) -> NodeStatus {

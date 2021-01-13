@@ -44,11 +44,21 @@ impl Buffer {
         };
     }
 
-    /// Get the current size of the data held by this buffer. Initially this is
-    /// equal to CAPACITY.
+    /// Get the current size of the data held by this buffer.
+    /// Initially this is equal to CAPACITY.
     #[inline(always)]
     pub fn len(&self) -> u32 {
         self.data_size
+    }
+
+    #[inline(always)]
+    pub fn as_ptr(&self) -> *const u8 {
+        self.zt_core_buf
+    }
+
+    #[inline(always)]
+    pub fn as_mut_ptr(&mut self) -> *mut u8 {
+        self.zt_core_buf
     }
 
     /// Set the size of the data held by this buffer. This is unsafe because

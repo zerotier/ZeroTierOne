@@ -18,7 +18,8 @@ use std::sync::Mutex;
 use std::sync::atomic::{AtomicI64, Ordering};
 
 // This implements a basic atomic i64 that uses a mutex on 32-bit systems,
-// since you can't atomically access something larger than word size.
+// since you can't atomically access something larger than word size in most
+// cases.
 
 #[cfg(all(target_pointer_width = "32"))]
 pub struct PortableAtomicI64 {
