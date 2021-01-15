@@ -1,5 +1,5 @@
 [package]
-name = "rust-zerotier-core"
+name = "zerotier-core"
 version = "0.1.0"
 authors = ["Adam Ierymenko <adam.ierymenko@zerotier.com>"]
 edition = "2018"

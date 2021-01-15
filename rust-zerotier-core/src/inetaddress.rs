@@ -92,6 +92,15 @@ impl InetAddress {
         Some(a)
     }
 
+    /// Unsafely transmute a raw sockaddr_storage structure into an InetAddress.
+    /// The type S MUST have a size equal to the size of this type and the
+    /// OS's sockaddr_storage. If not, this may crash.
+    pub unsafe fn transmute_raw_sockaddr_storage<S>(ss: &S) -> &InetAddress {
+        unsafe {
+            transmute(ss)
+        }
+    }
+
     /// Transmute a ZT_InetAddress from the core into a reference to a Rust
     /// InetAddress containing exactly the same data. The returned reference
     /// of course only remains valid so long as the ZT_InetAddress remains
@@ -181,6 +190,15 @@ impl From<&str> for InetAddress {
             return InetAddress::new();
         }
         a.unwrap()
+    }
+}
+
+impl Clone for InetAddress {
+    #[inline(always)]
+    fn clone(&self) -> Self {
+        InetAddress{
+            bits: self.bits
+        }
     }
 }
 
