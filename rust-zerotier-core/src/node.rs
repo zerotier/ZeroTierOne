@@ -12,14 +12,13 @@
 /****/
 
 use std::any::Any;
-use std::cell::{Cell, RefCell};
+use std::cell::Cell;
 use std::collections::hash_map::HashMap;
 use std::ffi::CStr;
-use std::fs::copy;
 use std::intrinsics::copy_nonoverlapping;
 use std::mem::{MaybeUninit, transmute};
 use std::os::raw::{c_int, c_uint, c_ulong, c_void};
-use std::ptr::{null, null_mut, slice_from_raw_parts};
+use std::ptr::{null_mut, slice_from_raw_parts};
 use std::sync::*;
 use std::sync::atomic::*;
 use std::time::Duration;
@@ -305,7 +304,7 @@ extern "C" fn zt_path_lookup_function<T: NodeEventHandler + 'static>(
     if sock_addr.is_null() {
         return 0;
     }
-    let mut sock_family2: InetAddressFamily = InetAddressFamily::Nil;
+    let sock_family2: InetAddressFamily;
     unsafe {
         if sock_family == ztcore::ZT_AF_INET {
             sock_family2 = InetAddressFamily::IPv4;

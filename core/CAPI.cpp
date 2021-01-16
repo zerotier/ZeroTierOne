@@ -808,17 +808,23 @@ unsigned int ZT_InetAddress_port(const ZT_InetAddress *ia)
 
 int ZT_InetAddress_isNil(const ZT_InetAddress *ia)
 {
-	return (int)( (ia == nullptr) || ((reinterpret_cast<const sockaddr_storage *>(ia))->ss_family == 0) );
+	if (!ia)
+		return 0;
+	return (int)((bool)(*reinterpret_cast<const ZeroTier::InetAddress *>(ia)));
 }
 
 int ZT_InetAddress_isV4(const ZT_InetAddress *ia)
 {
-	return (int)( (ia != nullptr) && ((reinterpret_cast<const sockaddr_storage *>(ia))->ss_family == AF_INET) );
+	if (!ia)
+		return 0;
+	return (int)(reinterpret_cast<const ZeroTier::InetAddress *>(ia))->isV4();
 }
 
 int ZT_InetAddress_isV6(const ZT_InetAddress *ia)
 {
-	return (int)( (ia != nullptr) && ((reinterpret_cast<const sockaddr_storage *>(ia))->ss_family == AF_INET6) );
+	if (!ia)
+		return 0;
+	return (int)(reinterpret_cast<const ZeroTier::InetAddress *>(ia))->isV6();
 }
 
 enum ZT_InetAddress_IpScope ZT_InetAddress_ipScope(const ZT_InetAddress *ia)

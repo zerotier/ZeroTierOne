@@ -12,9 +12,8 @@
 /****/
 
 use std::ffi::CString;
-use std::mem::{MaybeUninit, transmute, size_of};
+use std::mem::{MaybeUninit, transmute};
 
-use serde::{Deserialize, Serialize};
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
 
@@ -96,9 +95,7 @@ impl InetAddress {
     /// The type S MUST have a size equal to the size of this type and the
     /// OS's sockaddr_storage. If not, this may crash.
     pub unsafe fn transmute_raw_sockaddr_storage<S>(ss: &S) -> &InetAddress {
-        unsafe {
-            transmute(ss)
-        }
+        transmute(ss)
     }
 
     /// Transmute a ZT_InetAddress from the core into a reference to a Rust
@@ -163,7 +160,7 @@ impl InetAddress {
         if !self.is_nil() {
             unsafe {
                 if ztcore::ZT_InetAddress_isV4(self.as_capi_ptr()) != 0 {
-                    return InetAddressFamily::IPv6;
+                    return InetAddressFamily::IPv4;
                 }
                 if ztcore::ZT_InetAddress_isV6(self.as_capi_ptr()) != 0 {
                     return InetAddressFamily::IPv6;

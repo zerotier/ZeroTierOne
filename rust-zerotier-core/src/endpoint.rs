@@ -13,7 +13,7 @@
 
 use std::ffi::CString;
 use std::mem::MaybeUninit;
-use std::os::raw::{c_char, c_int, c_void};
+use std::os::raw::c_char;
 
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;

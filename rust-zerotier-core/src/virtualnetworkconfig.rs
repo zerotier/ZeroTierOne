@@ -11,8 +11,6 @@
  */
 /****/
 
-use std::mem::{size_of, transmute, zeroed};
-
 use serde::{Deserialize, Serialize};
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;

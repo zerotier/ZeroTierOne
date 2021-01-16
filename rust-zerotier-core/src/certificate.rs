@@ -11,13 +11,11 @@
  */
 /****/
 
-use std::cell::Cell;
 use std::ffi::CString;
 use std::hash::{Hash, Hasher};
-use std::mem::{MaybeUninit, zeroed};
+use std::mem::zeroed;
 use std::os::raw::{c_char, c_uint, c_void};
 use std::ptr::{copy_nonoverlapping, null, null_mut};
-use std::sync::Mutex;
 
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
@@ -455,6 +453,7 @@ pub struct CertificateSubject {
     pub unique_id_proof_signature: Vec<u8>,
 }
 
+#[allow(unused)]
 pub(crate) struct CertificateSubjectCAPIContainer {
     pub(crate) subject: ztcore::ZT_Certificate_Subject,
     subject_identities: Vec<ztcore::ZT_Certificate_Identity>,
@@ -635,6 +634,7 @@ pub struct Certificate {
     pub signature: Vec<u8>,
 }
 
+#[allow(unused)]
 pub(crate) struct CertificateCAPIContainer {
     pub(crate) certificate: ztcore::ZT_Certificate,
     subject_container: CertificateSubjectCAPIContainer,
