@@ -836,4 +836,9 @@ enum ZT_InetAddress_IpScope ZT_InetAddress_ipScope(const ZT_InetAddress *ia)
 
 /********************************************************************************************************************/
 
+uint64_t ZT_random()
+{
+	return ZeroTier::Utils::random();
+}
+
 } // extern "C"

@@ -9,6 +9,10 @@ edition = "2018"
 [dependencies]
 zerotier-core = { path = "../rust-zerotier-core" }
 num_cpus = "1.13"
+tokio = { version = "1", features = ["full"] }
+warp = "0.3"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 
 [target."cfg(unix)".dependencies]
 libc = "0.2.82"

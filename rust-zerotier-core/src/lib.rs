@@ -165,6 +165,14 @@ pub fn now() -> i64 {
     std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as i64
 }
 
+/// Get a random 64-bit integer using the non-cryptographic PRNG in the ZeroTier core.
+#[inline(always)]
+pub fn random() -> u64 {
+    unsafe {
+        return ztcore::ZT_random();
+    }
+}
+
 /// The CStr stuff is cumbersome, so this is an easier to use function to turn a C string into a String.
 /// This returns an empty string on a null pointer or invalid UTF-8. It's unsafe because it can crash if
 /// the string is not zero-terminated. A size limit can be passed in if available to reduce this risk, or

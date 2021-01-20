@@ -206,6 +206,8 @@ pub struct VirtualNetworkRoute {
     pub metric: u16
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 #[derive(Serialize, Deserialize, PartialEq, Eq)]
 pub struct VirtualNetworkConfig {
     pub nwid: NetworkId,

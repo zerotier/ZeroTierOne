@@ -12,7 +12,6 @@
 /****/
 
 use std::os::raw::c_void;
-use std::ptr::{slice_from_raw_parts, slice_from_raw_parts_mut};
 
 use crate::bindings::capi as ztcore;
 
@@ -23,12 +22,12 @@ use crate::bindings::capi as ztcore;
 /// packet data is passed into and out of the core.
 pub struct Buffer {
     pub(crate) zt_core_buf: *mut u8,
-    pub(crate) data_size: u32
+    pub(crate) data_size: usize,
 }
 
 impl Buffer {
     /// Maximum capacity of a ZeroTier reusable buffer.
-    pub const CAPACITY: u32 = ztcore::ZT_BUF_SIZE as u32;
+    pub const CAPACITY: usize = ztcore::ZT_BUF_SIZE as usize;
 
     /// Obtain a new buffer from the core and set the size of its data to CAPACITY.
     /// The contents of the buffer are not defined.
@@ -38,16 +37,16 @@ impl Buffer {
         if b.is_null() {
             panic!("out of memory calling ZT_getBuffer()");
         }
-        return Buffer {
+        Buffer {
             zt_core_buf: b,
-            data_size: ztcore::ZT_BUF_SIZE
-        };
+            data_size: ztcore::ZT_BUF_SIZE as usize
+        }
     }
 
     /// Get the current size of the data held by this buffer.
     /// Initially this is equal to CAPACITY.
     #[inline(always)]
-    pub fn len(&self) -> u32 {
+    pub fn len(&self) -> usize {
         self.data_size
     }
 
@@ -65,28 +64,8 @@ impl Buffer {
     /// setting it to a value larger than CAPACITY will place the buffer into
     /// an invalid state.
     #[inline(always)]
-    pub unsafe fn set_len(&mut self, s: u32) {
+    pub unsafe fn set_len(&mut self, s: usize) {
         self.data_size = s;
-    }
-
-    /// Get a slice that points to this buffer's data. This is unsafe because
-    /// the returned slice will be invalid if set_len() has been called with a
-    /// value higher than CAPACITY or if this has been consumed by the ZeroTier
-    /// core. The latter case is handled automatically in node.rs though, so it
-    /// is not something you generally have to worry about.
-    #[inline(always)]
-    pub unsafe fn as_mut_slice(&mut self) -> &mut [u8] {
-        return &mut *slice_from_raw_parts_mut(self.zt_core_buf, self.data_size as usize);
-    }
-
-    /// Get a slice that points to this buffer's data. This is unsafe because
-    /// the returned slice will be invalid if set_len() has been called with a
-    /// value higher than CAPACITY or if this has been consumed by the ZeroTier
-    /// core. The latter case is handled automatically in node.rs though, so it
-    /// is not something you generally have to worry about.
-    #[inline(always)]
-    pub unsafe fn as_slice(&mut self) -> &[u8] {
-        return &*slice_from_raw_parts(self.zt_core_buf, self.data_size as usize);
     }
 }
 
