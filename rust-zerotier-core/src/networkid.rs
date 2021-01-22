@@ -23,7 +23,6 @@ impl NetworkId {
 }
 
 impl ToString for NetworkId {
-    #[inline(always)]
     fn to_string(&self) -> String {
         format!("{:0>16x}", self.0)
     }

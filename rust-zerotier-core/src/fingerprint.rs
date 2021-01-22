@@ -25,7 +25,7 @@ pub struct Fingerprint {
 }
 
 impl Fingerprint {
-    #[inline]
+    #[inline(always)]
     pub(crate) fn new_from_capi(fp: &ztcore::ZT_Fingerprint) -> Fingerprint {
         Fingerprint{
             address: Address(fp.address),

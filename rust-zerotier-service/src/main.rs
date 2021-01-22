@@ -1,10 +1,23 @@
+/*
+ * Copyright (c)2013-2020 ZeroTier, Inc.
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file in the project's root directory.
+ *
+ * Change Date: 2025-01-01
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2.0 of the Apache License.
+ */
+/****/
+
 mod fastudpsocket;
 mod localconfig;
 mod physicallink;
 mod log;
 mod store;
+mod network;
 
-use std::any::Any;
 use std::cell::Cell;
 use std::collections::BTreeMap;
 use std::net::IpAddr;
@@ -16,26 +29,28 @@ use std::time::Duration;
 
 use warp::Filter;
 
-use zerotier_core::{Address, Buffer, Event, Identity, InetAddress, InetAddressFamily, MAC, NetworkId, Node, NodeEventHandler, StateObjectType, VirtualNetworkConfig, VirtualNetworkConfigOperation};
+use zerotier_core::*;
 
 use crate::fastudpsocket::*;
 use crate::localconfig::*;
-use crate::physicallink::PhysicalLink;
 use crate::log::Log;
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+use crate::physicallink::PhysicalLink;
+use crate::network::Network;
 
 pub struct ServiceEventHandler {}
 
 impl FastUDPSocketPacketHandler for ServiceEventHandler {
-    fn incoming_udp_packet(&self, raw_socket: &FastUDPRawOsSocket, from_adddress: &InetAddress, data: Buffer) {}
+    #[inline(always)]
+    fn incoming_udp_packet(&self, raw_socket: &FastUDPRawOsSocket, from_adddress: &InetAddress, data: Buffer) {
+    }
 }
 
-impl NodeEventHandler for ServiceEventHandler {
-    fn virtual_network_config(&self, network_id: NetworkId, network_obj: &Arc<dyn Any>, config_op: VirtualNetworkConfigOperation, config: Option<&VirtualNetworkConfig>) {
+impl NodeEventHandler<Network> for ServiceEventHandler {
+    fn virtual_network_config(&self, network_id: NetworkId, network_obj: &Arc<Network>, config_op: VirtualNetworkConfigOperation, config: Option<&VirtualNetworkConfig>) {
     }
 
-    fn virtual_network_frame(&self, network_id: NetworkId, network_obj: &Arc<dyn Any>, source_mac: MAC, dest_mac: MAC, ethertype: u16, vlan_id: u16, data: &[u8]) {
+    #[inline(always)]
+    fn virtual_network_frame(&self, network_id: NetworkId, network_obj: &Arc<Network>, source_mac: MAC, dest_mac: MAC, ethertype: u16, vlan_id: u16, data: &[u8]) {
     }
 
     fn event(&self, event: Event, event_data: &[u8]) {
@@ -48,6 +63,7 @@ impl NodeEventHandler for ServiceEventHandler {
         None
     }
 
+    #[inline(always)]
     fn wire_packet_send(&self, local_socket: i64, sock_addr: &InetAddress, data: &[u8], packet_ttl: u32) -> i32 {
         0
     }
@@ -60,8 +76,6 @@ impl NodeEventHandler for ServiceEventHandler {
         None
     }
 }
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 fn main() {
     tokio::runtime::Builder::new_multi_thread().thread_stack_size(zerotier_core::RECOMMENDED_THREAD_STACK_SIZE).build().unwrap().block_on(async {

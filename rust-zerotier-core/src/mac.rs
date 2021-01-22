@@ -47,6 +47,13 @@ impl PartialEq for MAC {
 
 impl Eq for MAC {}
 
+impl Clone for MAC {
+    #[inline(always)]
+    fn clone(&self) -> Self {
+        MAC(self.0)
+    }
+}
+
 struct AddressVisitor;
 
 impl<'de> serde::de::Visitor<'de> for AddressVisitor {

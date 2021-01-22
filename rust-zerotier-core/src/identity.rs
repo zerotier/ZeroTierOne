@@ -94,23 +94,15 @@ impl Identity {
     }
 
     /// Validate this identity, which can be slightly time consuming in some cases (20-40ms).
+    #[inline(always)]
     pub fn validate(&self) -> bool {
-        unsafe {
-            if ztcore::ZT_Identity_validate(self.capi) != 0 {
-                return true;
-            }
-        }
-        false
+        unsafe { ztcore::ZT_Identity_validate(self.capi) != 0 }
     }
 
     /// Returns true if this Identity includes its corresponding private key.
+    #[inline(always)]
     pub fn has_private(&self) -> bool {
-        unsafe {
-            if ztcore::ZT_Identity_hasPrivate(self.capi) != 0 {
-                return true;
-            }
-        }
-        false
+        unsafe { ztcore::ZT_Identity_hasPrivate(self.capi) != 0 }
     }
 
     /// Obtain the full fingerprint of this identity, which includes a SHA384 hash of the public key.
@@ -138,16 +130,9 @@ impl Identity {
     }
 
     /// Verify a signature by this identity.
+    #[inline(always)]
     pub fn verify(&self, data: &[u8], signature: &[u8]) -> bool {
-        if signature.len() == 0 {
-            return false;
-        }
-        unsafe {
-            if ztcore::ZT_Identity_verify(self.capi, data.as_ptr() as *const c_void, data.len() as c_uint, signature.as_ptr() as *const c_void, signature.len() as c_uint) != 0 {
-                return true;
-            }
-        }
-        false
+        unsafe { signature.len() > 0 && ztcore::ZT_Identity_verify(self.capi, data.as_ptr() as *const c_void, data.len() as c_uint, signature.as_ptr() as *const c_void, signature.len() as c_uint) != 0 }
     }
 }
 

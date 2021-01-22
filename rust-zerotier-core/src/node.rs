@@ -11,7 +11,6 @@
  */
 /****/
 
-use std::any::Any;
 use std::cell::Cell;
 use std::collections::hash_map::HashMap;
 use std::ffi::CStr;
@@ -67,12 +66,12 @@ pub struct NodeStatus {
 /// An event handler that receives events, frames, and packets from the core.
 /// Note that these handlers can be called concurrently from any thread and
 /// must be thread safe.
-pub trait NodeEventHandler {
+pub trait NodeEventHandler<N: 'static> {
     /// Called when a configuration change or update should be applied to a network.
-    fn virtual_network_config(&self, network_id: NetworkId, network_obj: &Arc<dyn Any>, config_op: VirtualNetworkConfigOperation, config: Option<&VirtualNetworkConfig>);
+    fn virtual_network_config(&self, network_id: NetworkId, network_obj: &Arc<N>, config_op: VirtualNetworkConfigOperation, config: Option<&VirtualNetworkConfig>);
 
     /// Called when a frame should be injected into the virtual network (physical -> virtual).
-    fn virtual_network_frame(&self, network_id: NetworkId, network_obj: &Arc<dyn Any>, source_mac: MAC, dest_mac: MAC, ethertype: u16, vlan_id: u16, data: &[u8]);
+    fn virtual_network_frame(&self, network_id: NetworkId, network_obj: &Arc<N>, source_mac: MAC, dest_mac: MAC, ethertype: u16, vlan_id: u16, data: &[u8]);
 
     /// Called when a core ZeroTier event occurs.
     fn event(&self, event: Event, event_data: &[u8]);
@@ -96,13 +95,13 @@ pub trait NodeEventHandler {
 /// An instance of the ZeroTier core.
 /// This is templated on the actual implementation of NodeEventHandler for performance reasons,
 /// as it avoids an extra indirect function call.
-pub struct Node<T: NodeEventHandler + 'static> {
+pub struct Node<T: NodeEventHandler<N> + 'static, N: 'static> {
     event_handler: Arc<T>,
     capi: Cell<*mut ztcore::ZT_Node>,
     background_thread: Cell<Option<std::thread::JoinHandle<()>>>,
     background_thread_run: Arc<AtomicBool>,
     now: PortableAtomicI64,
-    networks_by_id: Mutex<HashMap<u64, *mut Arc<dyn Any>>> // pointer to an Arc<> is a raw value created from Box<Arc<N>>
+    networks_by_id: Mutex<HashMap<u64, *mut Arc<N>>> // pointer to an Arc<> is a raw value created from Box<Arc<N>>
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -110,14 +109,14 @@ pub struct Node<T: NodeEventHandler + 'static> {
 macro_rules! node_from_raw_ptr {
     ($uptr:ident) => {
         unsafe {
-            let ntmp: *const Node<T> = $uptr.cast::<Node<T>>();
-            let ntmp: &Node<T> = &*ntmp;
+            let ntmp: *const Node<T, N> = $uptr.cast::<Node<T, N>>();
+            let ntmp: &Node<T, N> = &*ntmp;
             ntmp
         }
     }
 }
 
-extern "C" fn zt_virtual_network_config_function<T: NodeEventHandler + 'static>(
+extern "C" fn zt_virtual_network_config_function<T: NodeEventHandler<N> + 'static, N: 'static>(
     _: *mut ztcore::ZT_Node,
     uptr: *mut c_void,
     _: *mut c_void,
@@ -130,7 +129,7 @@ extern "C" fn zt_virtual_network_config_function<T: NodeEventHandler + 'static>(
     if op2.is_some() {
         let op2 = op2.unwrap();
         let n = node_from_raw_ptr!(uptr);
-        let network_obj: &Arc<dyn Any> = unsafe { &*((*nptr).cast::<Arc<dyn Any>>()) };
+        let network_obj = unsafe { &*((*nptr).cast::<Arc<N>>()) };
         if conf.is_null() {
             n.event_handler.virtual_network_config(NetworkId(nwid), network_obj, op2, None);
         } else {
@@ -140,7 +139,7 @@ extern "C" fn zt_virtual_network_config_function<T: NodeEventHandler + 'static>(
     }
 }
 
-extern "C" fn zt_virtual_network_frame_function<T: NodeEventHandler + 'static>(
+extern "C" fn zt_virtual_network_frame_function<T: NodeEventHandler<N> + 'static, N: 'static>(
     _: *mut ztcore::ZT_Node,
     uptr: *mut c_void,
     _: *mut c_void,
@@ -157,7 +156,7 @@ extern "C" fn zt_virtual_network_frame_function<T: NodeEventHandler + 'static>(
         let n = node_from_raw_ptr!(uptr);
         n.event_handler.virtual_network_frame(
             NetworkId(nwid),
-            unsafe { &*((*nptr).cast::<Arc<dyn Any>>()) },
+            unsafe { &*((*nptr).cast::<Arc<N>>()) },
             MAC(source_mac),
             MAC(dest_mac),
             ethertype as u16,
@@ -166,7 +165,7 @@ extern "C" fn zt_virtual_network_frame_function<T: NodeEventHandler + 'static>(
     }
 }
 
-extern "C" fn zt_event_callback<T: NodeEventHandler + 'static>(
+extern "C" fn zt_event_callback<T: NodeEventHandler<N> + 'static, N: 'static>(
     _: *mut ztcore::ZT_Node,
     uptr: *mut c_void,
     _: *mut c_void,
@@ -187,7 +186,7 @@ extern "C" fn zt_event_callback<T: NodeEventHandler + 'static>(
     }
 }
 
-extern "C" fn zt_state_put_function<T: NodeEventHandler + 'static>(
+extern "C" fn zt_state_put_function<T: NodeEventHandler<N> + 'static, N: 'static>(
     _: *mut ztcore::ZT_Node,
     uptr: *mut c_void,
     _: *mut c_void,
@@ -207,7 +206,7 @@ extern "C" fn zt_state_put_function<T: NodeEventHandler + 'static>(
     }
 }
 
-extern "C" fn zt_state_get_function<T: NodeEventHandler + 'static>(
+extern "C" fn zt_state_get_function<T: NodeEventHandler<N> + 'static, N: 'static>(
     _: *mut ztcore::ZT_Node,
     uptr: *mut c_void,
     _: *mut c_void,
@@ -249,7 +248,7 @@ extern "C" fn zt_state_get_function<T: NodeEventHandler + 'static>(
     return -1;
 }
 
-extern "C" fn zt_wire_packet_send_function<T: NodeEventHandler + 'static>(
+extern "C" fn zt_wire_packet_send_function<T: NodeEventHandler<N> + 'static, N: 'static>(
     _: *mut ztcore::ZT_Node,
     uptr: *mut c_void,
     _: *mut c_void,
@@ -263,7 +262,7 @@ extern "C" fn zt_wire_packet_send_function<T: NodeEventHandler + 'static>(
     return n.event_handler.wire_packet_send(local_socket, InetAddress::transmute_capi(unsafe { &*sock_addr }), unsafe { &*slice_from_raw_parts(data.cast::<u8>(), data_size as usize) }, packet_ttl as u32) as c_int;
 }
 
-extern "C" fn zt_path_check_function<T: NodeEventHandler + 'static>(
+extern "C" fn zt_path_check_function<T: NodeEventHandler<N> + 'static, N: 'static>(
     _: *mut ztcore::ZT_Node,
     uptr: *mut c_void,
     _: *mut c_void,
@@ -280,7 +279,7 @@ extern "C" fn zt_path_check_function<T: NodeEventHandler + 'static>(
     return 0;
 }
 
-extern "C" fn zt_path_lookup_function<T: NodeEventHandler + 'static>(
+extern "C" fn zt_path_lookup_function<T: NodeEventHandler<N> + 'static, N: 'static>(
     _: *mut ztcore::ZT_Node,
     uptr: *mut c_void,
     _: *mut c_void,
@@ -319,9 +318,9 @@ extern "C" fn zt_path_lookup_function<T: NodeEventHandler + 'static>(
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-impl<T: NodeEventHandler + 'static> Node<T> {
+impl<T: NodeEventHandler<N> + 'static, N: 'static> Node<T, N> {
     /// Create a new Node with a given event handler.
-    pub fn new(event_handler: Arc<T>) -> Result<Arc<Node<T>>, ResultCode> {
+    pub fn new(event_handler: Arc<T>) -> Result<Arc<Node<T, N>>, ResultCode> {
         let now = now();
 
         let n = Arc::new(Node {
@@ -336,14 +335,14 @@ impl<T: NodeEventHandler + 'static> Node<T> {
         let mut capi: *mut ztcore::ZT_Node = null_mut();
         unsafe {
             let callbacks = ztcore::ZT_Node_Callbacks {
-                statePutFunction: transmute(zt_state_put_function::<T> as *const ()),
-                stateGetFunction: transmute(zt_state_get_function::<T> as *const ()),
-                wirePacketSendFunction: transmute(zt_wire_packet_send_function::<T> as *const ()),
-                virtualNetworkFrameFunction: transmute(zt_virtual_network_frame_function::<T> as *const ()),
-                virtualNetworkConfigFunction: transmute(zt_virtual_network_config_function::<T> as *const ()),
-                eventCallback: transmute(zt_event_callback::<T> as *const ()),
-                pathCheckFunction: transmute(zt_path_check_function::<T> as *const ()),
-                pathLookupFunction: transmute(zt_path_lookup_function::<T> as *const ()),
+                statePutFunction: transmute(zt_state_put_function::<T, N> as *const ()),
+                stateGetFunction: transmute(zt_state_get_function::<T, N> as *const ()),
+                wirePacketSendFunction: transmute(zt_wire_packet_send_function::<T, N> as *const ()),
+                virtualNetworkFrameFunction: transmute(zt_virtual_network_frame_function::<T, N> as *const ()),
+                virtualNetworkConfigFunction: transmute(zt_virtual_network_config_function::<T, N> as *const ()),
+                eventCallback: transmute(zt_event_callback::<T, N> as *const ()),
+                pathCheckFunction: transmute(zt_path_check_function::<T, N> as *const ()),
+                pathLookupFunction: transmute(zt_path_lookup_function::<T, N> as *const ()),
             };
 
             let rc = ztcore::ZT_Node_new(&mut capi as *mut *mut ztcore::ZT_Node, transmute(Arc::as_ptr(&n)), null_mut(), &callbacks as *const ztcore::ZT_Node_Callbacks, now);
@@ -396,7 +395,7 @@ impl<T: NodeEventHandler + 'static> Node<T> {
         next_delay
     }
 
-    pub fn join(&self, nwid: NetworkId, controller_fingerprint: Option<Fingerprint>, network_obj: &Arc<dyn Any>) -> ResultCode {
+    pub fn join(&self, nwid: NetworkId, controller_fingerprint: Option<Fingerprint>, network_obj: &Arc<N>) -> ResultCode {
         let mut cfp: MaybeUninit<ztcore::ZT_Fingerprint> = MaybeUninit::uninit();
         let mut cfpp: *mut ztcore::ZT_Fingerprint = null_mut();
         if controller_fingerprint.is_some() {
@@ -458,12 +457,14 @@ impl<T: NodeEventHandler + 'static> Node<T> {
         rc
     }
 
+    #[inline(always)]
     pub fn multicast_subscribe(&self, nwid: &NetworkId, multicast_group: &MAC, multicast_adi: u32) -> ResultCode {
         unsafe {
             return ResultCode::from_i32(ztcore::ZT_Node_multicastSubscribe(self.capi.get(), null_mut(), nwid.0, multicast_group.0, multicast_adi as c_ulong) as i32).unwrap_or(ResultCode::ErrorInternalNonFatal);
         }
     }
 
+    #[inline(always)]
     pub fn multicast_unsubscribe(&self, nwid: &NetworkId, multicast_group: &MAC, multicast_adi: u32) -> ResultCode {
         unsafe {
             return ResultCode::from_i32(ztcore::ZT_Node_multicastUnsubscribe(self.capi.get(), nwid.0, multicast_group.0, multicast_adi as c_ulong) as i32).unwrap_or(ResultCode::ErrorInternalNonFatal);
@@ -471,6 +472,7 @@ impl<T: NodeEventHandler + 'static> Node<T> {
     }
 
     /// Get a copy of this node's identity.
+    #[inline(always)]
     pub fn identity(&self) -> Identity {
         unsafe { self.identity_fast().clone() }
     }
@@ -550,11 +552,11 @@ impl<T: NodeEventHandler + 'static> Node<T> {
     }
 }
 
-unsafe impl<T: NodeEventHandler + 'static> Sync for Node<T> {}
+unsafe impl<T: NodeEventHandler<N> + 'static, N: 'static> Sync for Node<T, N> {}
 
-unsafe impl<T: NodeEventHandler + 'static> Send for Node<T> {}
+unsafe impl<T: NodeEventHandler<N> + 'static, N: 'static> Send for Node<T, N> {}
 
-impl<T: NodeEventHandler + 'static> Drop for Node<T> {
+impl<T: NodeEventHandler<N> + 'static,N: 'static> Drop for Node<T, N> {
     fn drop(&mut self) {
         self.background_thread_run.store(false, Ordering::Relaxed);
         let bt = self.background_thread.replace(None);

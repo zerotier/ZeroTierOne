@@ -95,6 +95,7 @@ impl InetAddress {
     /// Unsafely transmute a raw sockaddr_storage structure into an InetAddress.
     /// The type S MUST have a size equal to the size of this type and the
     /// OS's sockaddr_storage. If not, this may crash.
+    #[inline(always)]
     pub unsafe fn transmute_raw_sockaddr_storage<S>(ss: &S) -> &InetAddress {
         transmute(ss)
     }
@@ -149,12 +150,14 @@ impl InetAddress {
         }
     }
 
+    #[inline(always)]
     pub fn port(&self) -> u16 {
         unsafe {
             ztcore::ZT_InetAddress_port(self.as_capi_ptr()) as u16
         }
     }
 
+    #[inline(always)]
     pub fn set_port(&mut self, port: u16) {
         unsafe {
             ztcore::ZT_InetAddress_setPort(self.as_capi_mut_ptr(), port as c_uint);
@@ -162,6 +165,7 @@ impl InetAddress {
     }
 
     /// Get the network scope of the IP in this object.
+    #[inline(always)]
     pub fn ip_scope(&self) -> IpScope {
         unsafe {
             IpScope::from_i32(ztcore::ZT_InetAddress_ipScope(self.as_capi_ptr()) as i32).unwrap_or(IpScope::None)

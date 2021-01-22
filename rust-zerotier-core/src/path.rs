@@ -13,8 +13,8 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::*;
 use crate::bindings::capi as ztcore;
+use crate::Endpoint;
 
 #[derive(Serialize, Deserialize)]
 pub struct Path {

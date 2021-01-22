@@ -23,7 +23,7 @@ pub struct Locator {
 }
 
 impl Locator {
-    #[inline]
+    #[inline(always)]
     pub(crate) fn new_from_capi(l: *const ztcore::ZT_Locator, requires_delete: bool) -> Locator {
         Locator{
             capi: l,
@@ -46,6 +46,7 @@ impl Locator {
         }
     }
 
+    #[inline(always)]
     pub fn timestamp(&self) -> i64 {
         unsafe {
             return ztcore::ZT_Locator_timestamp(self.capi) as i64;
