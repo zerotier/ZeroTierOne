@@ -16,7 +16,6 @@ use std::ffi::CStr;
 use std::ptr::{null_mut, copy_nonoverlapping};
 use std::mem::size_of;
 
-#[derive(Clone)]
 pub struct PhysicalLink {
     pub address: InetAddress,
     pub device: String

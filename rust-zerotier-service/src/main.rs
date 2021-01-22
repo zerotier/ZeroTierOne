@@ -27,6 +27,8 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
+use futures::stream::{self, StreamExt};
+
 use warp::Filter;
 
 use zerotier_core::*;
@@ -36,6 +38,7 @@ use crate::localconfig::*;
 use crate::log::Log;
 use crate::physicallink::PhysicalLink;
 use crate::network::Network;
+use futures::TryFutureExt;
 
 pub struct ServiceEventHandler {}
 
@@ -85,34 +88,43 @@ fn main() {
         let mut udp_sockets: BTreeMap<InetAddress, FastUDPSocket<ServiceEventHandler>> = BTreeMap::new();
         let handler: Arc<ServiceEventHandler> = Arc::new(ServiceEventHandler{});
         let run: AtomicBool = AtomicBool::new(true);
+        let (mut interrupt_tx, mut interrupt_rx) = futures::channel::mpsc::channel::<u8>(2);
+
+        //
+        // The inner loop periodically updates UDP socket bindings and does other housekeeping, but
+        // otherwise does nothing. If it detects that the primary port has changed, it breaks and
+        // causes the outer loop to run which reboots the HTTP server. If the 'run' flag is set
+        // to false this causes a break of both loops which terminates the service.
+        //
 
         loop {
             let mut warp_server_port = local_config.settings.primary_port;
+
+            let root = warp::path::end().map(|| { warp::reply::with_status("not found", warp::hyper::StatusCode::NOT_FOUND) });
+            let status = warp::path("status").map(|| { "status" });
+            let network = warp::path!("network" / String).map(|nwid_str| { "network" });
+            let peer = warp::path!("peer" / String).map(|peer_str| { "peer" });
+
+            let (shutdown_tx, shutdown_rx) = futures::channel::oneshot::channel();
+            let (_, warp_server) = warp::serve(warp::any().and(
+                root
+                    .or(status)
+                    .or(network)
+                    .or(peer)
+            )).bind_with_graceful_shutdown((inaddr_v6_any, warp_server_port), async {
+                let _ = shutdown_rx.await;
+            });
+            let warp_server = tokio::spawn(warp_server);
+
+            let mut loop_delay = 10;
             loop {
-                let root = warp::path::end().map(|| { warp::reply::with_status("not found", warp::hyper::StatusCode::NOT_FOUND) });
-                let status = warp::path("status").map(|| { "status" });
-                let network = warp::path!("network" / String).map(|nwid_str| { "network" });
-                let peer = warp::path!("peer" / String).map(|peer_str| { "peer" });
+                let _ = tokio::time::timeout(Duration::from_secs(loop_delay), interrupt_rx.next());
 
-                let (shutdown_tx, shutdown_rx) = futures::channel::oneshot::channel();
-                let (_, warp_server) = warp::serve(warp::any().and(
-                    root
-                        .or(status)
-                        .or(network)
-                        .or(peer)
-                )).bind_with_graceful_shutdown((inaddr_v6_any, warp_server_port), async {
-                    let _ = shutdown_rx.await;
-                });
-                let warp_server = tokio::spawn(warp_server);
-
-                tokio::time::sleep(Duration::from_secs(10)).await;
-
-                // Diff system addresses against currently bound UDP sockets and update as needed.
-                // Also check interface prefix blacklists.
+                // Enumerate physical addresses on the system, creating a map with an entry for
+                // the primary_port and another for the secondary_port if bound.
                 let mut system_addrs: BTreeMap<InetAddress, Rc<PhysicalLink>> = BTreeMap::new();
                 PhysicalLink::map(|link: PhysicalLink| {
                     if !local_config.settings.is_interface_blacklisted(link.device.as_str()) {
-                        // Add two entries to system_addrs: one for primary port, and one for secondary if enabled.
                         let l = Rc::new(link);
                         let mut a = l.address.clone();
                         a.set_port(local_config.settings.primary_port);
@@ -124,6 +136,7 @@ fn main() {
                         }
                     }
                 });
+
                 let mut udp_sockets_to_close: Vec<InetAddress> = Vec::new();
                 for sock in udp_sockets.iter() {
                     if !system_addrs.contains_key(sock.0) {
@@ -133,6 +146,7 @@ fn main() {
                 for k in udp_sockets_to_close.iter() {
                     udp_sockets.remove(k);
                 }
+
                 for addr in system_addrs.iter() {
                     if !udp_sockets.contains_key(addr.0) {
                         let s = FastUDPSocket::new(addr.1.device.as_str(), addr.0, &handler);
@@ -142,13 +156,13 @@ fn main() {
                     }
                 }
 
-                // Breaking the inner loop causes the HTTP server to recycle, or may exit entirely if run is false.
                 if local_config.settings.primary_port != warp_server_port || !run.load(Ordering::Relaxed) {
                     let _ = shutdown_tx.send(());
                     let _ = warp_server.await;
                     break;
                 }
             }
+
             tokio::time::sleep(Duration::from_millis(250)).await;
             if !run.load(Ordering::Relaxed) {
                 break;

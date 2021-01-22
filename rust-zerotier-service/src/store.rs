@@ -34,7 +34,7 @@ impl Store {
             return Err(std::io::Error::new(std::io::ErrorKind::PermissionDenied, "base path does not exist or is not writable"));
         }
         Ok(Store{
-            base_path: bp.into_path_buf().into_boxed_path(),
+            base_path: bp.to_path_buf().into_boxed_path(),
             peers_path: bp.join("peers.d").into_boxed_path(),
             controller_path: bp.join("controller.d").into_boxed_path(),
             networks_path: bp.join("networks.d").into_boxed_path(),
@@ -42,13 +42,13 @@ impl Store {
         })
     }
 
-    pub fn make_obj_path(&self, obj_type: StateObjectType, obj_id: &[u64]) -> Result<PathBuf, std::io::Error> {
-        Ok(match obj_type {
+    fn make_obj_path(&self, obj_type: StateObjectType, obj_id: &[u64]) -> Option<PathBuf> {
+        Some(match obj_type {
             StateObjectType::IdentityPublic => self.base_path.join("identity.public"),
             StateObjectType::IdentitySecret => self.base_path.join("identity.secret"),
             StateObjectType::Certificate => {
                 if obj_id.len() < 6 {
-                    return Err(std::io::Error(std::io::ErrorKind::NotFound));
+                    return None;
                 }
                 self.certs_path.join(format!("{:0>16x}{:0>16x}{:0>16x}{:0>16x}{:0>16x}{:0>16x}.cert",obj_id[0],obj_id[1],obj_id[2],obj_id[3],obj_id[4],obj_id[5]))
             },
@@ -56,44 +56,52 @@ impl Store {
             StateObjectType::Locator => self.base_path.join("locator"),
             StateObjectType::NetworkConfig => {
                 if obj_id.len() < 1 {
-                    return Err(std::io::Error(std::io::ErrorKind::NotFound));
+                    return None;
                 }
                 self.networks_path.join(format!("{:0>16x}.conf", obj_id[0]))
             },
             StateObjectType::Peer => {
                 if obj_id.len() < 1 {
-                    return Err(std::io::Error(std::io::ErrorKind::NotFound));
+                    return None;
                 }
                 self.peers_path.join(format!("{:0>10x}.peer", obj_id[0]))
             }
         })
     }
 
-    pub fn load(&self, obj_type: StateObjectType, obj_id: &[u64]) -> Result<Box<[u8]>, std::io::Error> {
-        let obj_path = self.make_obj_path(obj_type, obj_id)?;
-        let fmd = obj_path.metadata()?;
-        if fmd.is_file() {
-            let flen = fmd.len();
-            if flen <= Store::MAX_OBJECT_SIZE as u64 {
-                let mut f = std::fs::File::open(obj_path)?;
-                let mut buf: Vec<u8> = Vec::new();
-                buf.reserve(flen as usize);
-                let rs = f.read_to_end(&mut buf)?;
-                buf.resize(rs as usize, 0);
-                return Ok(buf.into_boxed_slice());
+    pub fn load(&self, obj_type: StateObjectType, obj_id: &[u64]) -> std::io::Result<Box<[u8]>> {
+        let obj_path = self.make_obj_path(obj_type, obj_id);
+        if obj_path.is_some() {
+            let obj_path = obj_path.unwrap();
+            let fmd = obj_path.metadata()?;
+            if fmd.is_file() {
+                let flen = fmd.len();
+                if flen <= Store::MAX_OBJECT_SIZE as u64 {
+                    let mut f = std::fs::File::open(obj_path)?;
+                    let mut buf: Vec<u8> = Vec::new();
+                    buf.reserve(flen as usize);
+                    let rs = f.read_to_end(&mut buf)?;
+                    buf.resize(rs as usize, 0);
+                    return Ok(buf.into_boxed_slice());
+                }
             }
         }
-        Err(std::io::Error(std::io::ErrorKind::NotFound))
+        Err(std::io::Error::new(std::io::ErrorKind::NotFound, "does not exist or is not readable"))
     }
 
     pub fn erase(&self, obj_type: StateObjectType, obj_id: &[u64]) {
         let obj_path = self.make_obj_path(obj_type, obj_id);
-        if obj_path.is_ok() {
+        if obj_path.is_some() {
             let _ = std::fs::remove_file(obj_path.unwrap());
         }
     }
 
-    pub fn store(&self, obj_type: StateObjectType, obj_id: &[u64], obj_data: &[u8]) -> Result<(), std::io::Error> {
-        std::fs::OpenOptions::new().write(true).truncate(true).create(true).open(self.make_obj_path(obj_type, obj_id)?)?.write_all(obj_data)
+    pub fn store(&self, obj_type: StateObjectType, obj_id: &[u64], obj_data: &[u8]) -> std::io::Result<()> {
+        let obj_path = self.make_obj_path(obj_type, obj_id);
+        if obj_path.is_some() {
+            std::fs::OpenOptions::new().write(true).truncate(true).create(true).open(obj_path.unwrap())?.write_all(obj_data)
+        } else {
+            Err(std::io::Error::new(std::io::ErrorKind::InvalidInput, "object ID not valid"))
+        }
     }
 }
