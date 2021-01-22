@@ -3018,6 +3018,11 @@ ZT_SDK_API int ZT_InetAddress_isV6(const ZT_InetAddress *ia);
  */
 ZT_SDK_API enum ZT_InetAddress_IpScope ZT_InetAddress_ipScope(const ZT_InetAddress *ia);
 
+/**
+ * Compare a and b, return non-zero if a < b
+ */
+ZT_SDK_API int ZT_InetAddress_lessThan(const ZT_InetAddress *a, const ZT_InetAddress *b);
+
 /* These mirror the values of AF_INET and AF_INET6 for use by Rust and other things that need it. */
 ZT_SDK_API const int ZT_AF_INET,ZT_AF_INET6;
 

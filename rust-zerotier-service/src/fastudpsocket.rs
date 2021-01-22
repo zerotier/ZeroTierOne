@@ -121,7 +121,7 @@ pub struct FastUDPSocket<H: FastUDPSocketPacketHandler + Send + Sync + 'static> 
     threads: Vec<std::thread::JoinHandle<()>>,
     thread_run: Arc<AtomicBool>,
     sockets: Vec<FastUDPRawOsSocket>,
-    bind_address: InetAddress,
+    pub bind_address: InetAddress,
 }
 
 #[cfg(unix)]
@@ -154,12 +154,6 @@ fn fast_udp_socket_recvfrom(socket: &FastUDPRawOsSocket, buf: &mut Buffer, from_
     }
 }
 
-// Integer incremented to select sockets on a mostly round robin basis. This
-// isn't synchronized since if all cores don't see it the same there is no
-// significant impact. It's just a faster way to pick a socket for sending
-// than a random number generator.
-static mut SOCKET_SPIN_INT: usize = 0;
-
 impl<H: FastUDPSocketPacketHandler + Send + Sync + 'static> FastUDPSocket<H> {
     pub fn new(device_name: &str, address: &InetAddress, handler: &Arc<H>) -> Result<FastUDPSocket<H>, String> {
         let thread_count = num_cpus::get();
@@ -181,7 +175,7 @@ impl<H: FastUDPSocketPacketHandler + Send + Sync + 'static> FastUDPSocket<H> {
 
                 let thread_run = s.thread_run.clone();
                 let handler_weak = Arc::downgrade(&s.handler);
-                s.threads.push(std::thread::spawn(move || {
+                s.threads.push(std::thread::Builder::new().stack_size(zerotier_core::RECOMMENDED_THREAD_STACK_SIZE).spawn(move || {
                     let mut from_address = InetAddress::new();
                     while thread_run.load(Ordering::Relaxed) {
                         let mut buf = Buffer::new();
@@ -189,7 +183,7 @@ impl<H: FastUDPSocketPacketHandler + Send + Sync + 'static> FastUDPSocket<H> {
                         if read_length > 0 {
                             let handler = handler_weak.upgrade();
                             if handler.is_some() {
-                                unsafe { buf.set_len(read_length as u32); }
+                                unsafe { buf.set_len(read_length as usize); }
                                 handler.unwrap().incoming_udp_packet(&thread_socket, &from_address, buf);
                             } else {
                                 break;
@@ -198,7 +192,7 @@ impl<H: FastUDPSocketPacketHandler + Send + Sync + 'static> FastUDPSocket<H> {
                             break;
                         }
                     }
-                }));
+                }).unwrap());
             } else {
                 bind_failed_reason = thread_socket.err().unwrap();
             }
@@ -217,13 +211,13 @@ impl<H: FastUDPSocketPacketHandler + Send + Sync + 'static> FastUDPSocket<H> {
     /// Sockets are thread safe.
     #[inline(always)]
     pub fn send(&self, to_address: &InetAddress, data: *const u8, len: usize, packet_ttl: i32) {
-        let mut i;
-        unsafe {
-            i = SOCKET_SPIN_INT;
-            SOCKET_SPIN_INT = i + 1;
-        }
-        i %= self.sockets.len();
-        fast_udp_socket_sendto(self.sockets.get(i).unwrap(), to_address, data, len, packet_ttl);
+        fast_udp_socket_sendto(self.sockets.get(0).unwrap(), to_address, data, len, packet_ttl);
+    }
+
+    /// Get a raw socket that can be used to send UDP packets.
+    #[inline(always)]
+    pub fn raw_socket(&self) -> FastUDPRawOsSocket {
+        *self.sockets.get(0).unwrap()
     }
 
     /// Get the number of threads this socket is currently running.

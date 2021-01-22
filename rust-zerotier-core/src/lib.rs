@@ -50,6 +50,8 @@ pub use buffer::Buffer;
 pub use portableatomici64::PortableAtomicI64;
 pub use virtualnetworkconfig::*;
 
+pub const RECOMMENDED_THREAD_STACK_SIZE: usize = 262144;
+
 pub const DEFAULT_PORT: u16 = ztcore::ZT_DEFAULT_PORT as u16;
 
 pub const BUF_SIZE: u32 = ztcore::ZT_BUF_SIZE;
@@ -192,7 +194,7 @@ pub unsafe fn cstr_to_string(cstr: *const c_char, max_len: isize) -> String {
 }
 
 /// Macro to implement to_json and new_from_json on types that are Serializable.
-#[macro_export(crate)]
+#[macro_export]
 macro_rules! implement_to_from_json {
     ($struct_name:ident) => {
         impl $struct_name {

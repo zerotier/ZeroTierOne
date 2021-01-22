@@ -834,6 +834,18 @@ enum ZT_InetAddress_IpScope ZT_InetAddress_ipScope(const ZT_InetAddress *ia)
 	return ZT_IP_SCOPE_NONE;
 }
 
+int ZT_InetAddress_lessThan(const ZT_InetAddress *a, const ZT_InetAddress *b)
+{
+	if ((a)&&(b)) {
+		return (int)(*reinterpret_cast<const ZeroTier::InetAddress *>(a) < *reinterpret_cast<const ZeroTier::InetAddress *>(b));
+	} else if (a) {
+		return 0;
+	} else if (b) {
+		return 1;
+	}
+	return 0;
+}
+
 /********************************************************************************************************************/
 
 uint64_t ZT_random()

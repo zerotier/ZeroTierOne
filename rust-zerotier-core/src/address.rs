@@ -11,6 +11,8 @@
  */
 /****/
 
+use std::cmp::Ordering;
+
 pub struct Address(pub u64);
 
 impl ToString for Address {
@@ -40,6 +42,27 @@ impl PartialEq for Address {
 }
 
 impl Eq for Address {}
+
+impl Ord for Address {
+    #[inline(always)]
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.0.cmp(&other.0)
+    }
+}
+
+impl PartialOrd for Address {
+    #[inline(always)]
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.0.cmp(&other.0))
+    }
+}
+
+impl Clone for Address {
+    #[inline(always)]
+    fn clone(&self) -> Self {
+        Address(self.0)
+    }
+}
 
 impl serde::Serialize for Address {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {

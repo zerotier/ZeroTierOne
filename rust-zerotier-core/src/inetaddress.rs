@@ -20,6 +20,7 @@ use num_traits::FromPrimitive;
 use crate::*;
 use crate::bindings::capi as ztcore;
 use std::os::raw::{c_void, c_uint};
+use std::cmp::Ordering;
 
 // WARNING: here be dragons! This defines an opaque blob in Rust that shadows
 // and is of the exact size as an opaque blob in C that shadows and is the
@@ -148,6 +149,18 @@ impl InetAddress {
         }
     }
 
+    pub fn port(&self) -> u16 {
+        unsafe {
+            ztcore::ZT_InetAddress_port(self.as_capi_ptr()) as u16
+        }
+    }
+
+    pub fn set_port(&mut self, port: u16) {
+        unsafe {
+            ztcore::ZT_InetAddress_setPort(self.as_capi_mut_ptr(), port as c_uint);
+        }
+    }
+
     /// Get the network scope of the IP in this object.
     pub fn ip_scope(&self) -> IpScope {
         unsafe {
@@ -196,6 +209,26 @@ impl Clone for InetAddress {
         InetAddress{
             bits: self.bits
         }
+    }
+}
+
+impl Ord for InetAddress {
+    fn cmp(&self, other: &Self) -> Ordering {
+        unsafe {
+            if ztcore::ZT_InetAddress_lessThan(self.as_capi_ptr(), other.as_capi_ptr()) != 0 {
+                return Ordering::Less;
+            } else if ztcore::ZT_InetAddress_lessThan(other.as_capi_ptr(), self.as_capi_ptr()) != 0 {
+                return Ordering::Greater;
+            }
+            return Ordering::Equal;
+        }
+    }
+}
+
+impl PartialOrd for InetAddress {
+    #[inline(always)]
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
 

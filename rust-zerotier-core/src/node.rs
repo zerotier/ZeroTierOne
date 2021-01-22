@@ -29,7 +29,7 @@ use serde::{Deserialize, Serialize};
 use crate::*;
 use crate::bindings::capi as ztcore;
 
-const NODE_BACKGROUND_MAX_DELAY: i64 = 250;
+const NODE_BACKGROUND_MAX_DELAY: i64 = 500;
 
 #[derive(FromPrimitive, ToPrimitive, PartialEq, Eq)]
 pub enum Event {
@@ -50,21 +50,6 @@ pub enum StateObjectType {
     NetworkConfig = ztcore::ZT_StateObjectType_ZT_STATE_OBJECT_NETWORK_CONFIG as isize,
     TrustStore = ztcore::ZT_StateObjectType_ZT_STATE_OBJECT_TRUST_STORE as isize,
     Certificate = ztcore::ZT_StateObjectType_ZT_STATE_OBJECT_CERT as isize
-}
-
-impl StateObjectType {
-    /// Get the canonical file extension for this object type.
-    pub fn to_file_ext(&self) -> &str {
-        match *self {
-            StateObjectType::IdentityPublic => "public",
-            StateObjectType::IdentitySecret => "secret",
-            StateObjectType::Locator => "locator",
-            StateObjectType::Peer => "peer",
-            StateObjectType::NetworkConfig => "network",
-            StateObjectType::TrustStore => "trust",
-            StateObjectType::Certificate => "cert"
-        }
-    }
 }
 
 /// The status of a ZeroTier node.
@@ -96,7 +81,7 @@ pub trait NodeEventHandler {
     fn state_put(&self, obj_type: StateObjectType, obj_id: &[u64], obj_data: &[u8]);
 
     /// Called to retrieve an object from the object store.
-    fn state_get(&self, obj_type: StateObjectType, obj_id: &[u64]) -> Box<[u8]>;
+    fn state_get(&self, obj_type: StateObjectType, obj_id: &[u64]) -> Option<Box<[u8]>>;
 
     /// Called to send a packet over the physical network (virtual -> physical).
     fn wire_packet_send(&self, local_socket: i64, sock_addr: &InetAddress, data: &[u8], packet_ttl: u32) -> i32;
@@ -246,14 +231,17 @@ extern "C" fn zt_state_get_function<T: NodeEventHandler + 'static>(
         let n = node_from_raw_ptr!(uptr);
         let obj_id2 = unsafe { &*slice_from_raw_parts(obj_id, obj_id_len as usize) };
         let obj_data_result = n.event_handler.state_get(obj_type2, obj_id2);
-        if obj_data_result.len() > 0 {
-            unsafe {
-                let obj_data_len: c_int = obj_data_result.len() as c_int;
-                let obj_data_raw = ztcore::malloc(obj_data_len as c_ulong);
-                if !obj_data_raw.is_null() {
-                    copy_nonoverlapping(obj_data_result.as_ptr(), obj_data_raw.cast::<u8>(), obj_data_len as usize);
-                    *obj_data = obj_data_raw;
-                    return obj_data_len;
+        if obj_data_result.is_some() {
+            let obj_data_result = obj_data_result.unwrap();
+            if obj_data_result.len() > 0 {
+                unsafe {
+                    let obj_data_len: c_int = obj_data_result.len() as c_int;
+                    let obj_data_raw = ztcore::malloc(obj_data_len as c_ulong);
+                    if !obj_data_raw.is_null() {
+                        copy_nonoverlapping(obj_data_result.as_ptr(), obj_data_raw.cast::<u8>(), obj_data_len as usize);
+                        *obj_data = obj_data_raw;
+                        return obj_data_len;
+                    }
                 }
             }
         }
@@ -369,7 +357,7 @@ impl<T: NodeEventHandler + 'static> Node<T> {
 
         let wn = Arc::downgrade(&n);
         let run = n.background_thread_run.clone();
-        n.background_thread.replace(Some(std::thread::spawn(move || {
+        n.background_thread.replace(Some(std::thread::Builder::new().stack_size(RECOMMENDED_THREAD_STACK_SIZE).spawn(move || {
             let mut loop_delay = Duration::from_millis(NODE_BACKGROUND_MAX_DELAY as u64);
             while run.load(Ordering::Relaxed) {
                 std::thread::park_timeout(loop_delay);
@@ -384,12 +372,12 @@ impl<T: NodeEventHandler + 'static> Node<T> {
                     break;
                 }
             }
-        })));
+        }).unwrap()));
 
         Ok(n)
     }
 
-    /// This is called periodically from the background service thread.
+    /// This is called periodically from the background service thread. It's not called from anywhere else.
     fn process_background_tasks(&self) -> i64 {
         let current_time = now();
         self.now.set(current_time);

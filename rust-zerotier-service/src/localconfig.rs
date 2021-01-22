@@ -48,61 +48,71 @@ pub const UNASSIGNED_PRIVILEGED_PORTS: [u16; 299] = [
     1023,
 ];
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub struct LocalConfigPhysicalPathConfig {
-    blacklist: bool
+    pub blacklist: bool
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub struct LocalConfigVirtualConfig {
     #[serde(rename = "try")]
-    try_: Vec<InetAddress>
+    pub try_: Vec<InetAddress>
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub struct LocalConfigNetworkSettings {
     #[serde(rename = "allowManagedIPs")]
-    allow_managed_ips: bool,
+    pub allow_managed_ips: bool,
     #[serde(rename = "allowGlobalIPs")]
-    allow_global_ips: bool,
+    pub allow_global_ips: bool,
     #[serde(rename = "allowManagedRoutes")]
-    allow_managed_routes: bool,
+    pub allow_managed_routes: bool,
     #[serde(rename = "allowGlobalRoutes")]
-    allow_global_routes: bool,
+    pub allow_global_routes: bool,
     #[serde(rename = "allowDefaultRouteOverride")]
-    allow_default_route_override: bool,
+    pub allow_default_route_override: bool,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub struct LocalConfigSettings {
     #[serde(rename = "primaryPort")]
-    primary_port: u16,
+    pub primary_port: u16,
     #[serde(rename = "secondaryPort")]
-    secondary_port: Option<u16>,
+    pub secondary_port: Option<u16>,
     #[serde(rename = "autoPortSearch")]
-    auto_port_search: bool,
+    pub auto_port_search: bool,
     #[serde(rename = "portMapping")]
-    port_mapping: bool,
+    pub port_mapping: bool,
     #[serde(rename = "logSizeMax")]
-    log_size_max: usize,
+    pub log_size_max: usize,
+    #[serde(rename = "logVL1Events")]
+    pub log_vl1_events: bool,
+    #[serde(rename = "logVL2Events")]
+    pub log_vl2_events: bool,
+    #[serde(rename = "logFilterEvents")]
+    pub log_filter_events: bool,
+    #[serde(rename = "logMulticastEvents")]
+    pub log_multicast_events: bool,
+    #[serde(rename = "logDebug")]
+    pub log_debug: bool,
     #[serde(rename = "interfacePrefixBlacklist")]
-    interface_prefix_blacklist: Vec<String>,
+    pub interface_prefix_blacklist: Vec<String>,
     #[serde(rename = "explicitAddresses")]
-    explicit_addresses: Vec<InetAddress>,
+    pub explicit_addresses: Vec<InetAddress>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub struct LocalConfig {
-    physical: BTreeMap<InetAddress, LocalConfigPhysicalPathConfig>,
+    pub physical: BTreeMap<InetAddress, LocalConfigPhysicalPathConfig>,
     #[serde(rename = "virtual")]
-    virtual_: BTreeMap<Address, LocalConfigVirtualConfig>,
-    network: BTreeMap<NetworkId, LocalConfigNetworkSettings>,
-    settings: LocalConfigSettings,
+    pub virtual_: BTreeMap<Address, LocalConfigVirtualConfig>,
+    pub network: BTreeMap<NetworkId, LocalConfigNetworkSettings>,
+    pub settings: LocalConfigSettings,
 }
 
 impl Default for LocalConfigPhysicalPathConfig {
@@ -135,10 +145,23 @@ impl Default for LocalConfigNetworkSettings {
 
 impl LocalConfigSettings {
     #[cfg(target_os = "macos")]
-    const DEFAULT_PREFIX_BLACKLIST: [&str; 7] = ["lo", "utun", "gif", "stf", "iptap", "pktap", "feth"];
+    const DEFAULT_PREFIX_BLACKLIST: [&'static str; 7] = ["lo", "utun", "gif", "stf", "iptap", "pktap", "feth"];
 
     #[cfg(target_os = "linux")]
-    const DEFAULT_PREFIX_BLACKLIST: [&str; 5] = ["lo", "tun", "tap", "ipsec", "zt"];
+    const DEFAULT_PREFIX_BLACKLIST: [&'static str; 5] = ["lo", "tun", "tap", "ipsec", "zt"];
+
+    // This is not applicable on Windows as it doesn't use the same device name semantics.
+    #[cfg(windows)]
+    const DEFAULT_PREFIX_BLACKLIST: [&'static str; 0] = [];
+
+    pub fn is_interface_blacklisted(&self, ifname: &str) -> bool {
+        for p in self.interface_prefix_blacklist.iter() {
+            if ifname.starts_with(p.as_str()) {
+                return true;
+            }
+        }
+        false
+    }
 }
 
 impl Default for LocalConfigSettings {
@@ -154,7 +177,12 @@ impl Default for LocalConfigSettings {
             secondary_port: Some(293), // this is one of UNASSIGNED_PRIVILEGED_PORTS that we will default to
             auto_port_search: true,
             port_mapping: true,
-            log_size_max: 16777216,
+            log_size_max: 1048576,
+            log_vl1_events: false,
+            log_vl2_events: false,
+            log_filter_events: false,
+            log_multicast_events: false,
+            log_debug: false,
             interface_prefix_blacklist: bl,
             explicit_addresses: Vec::new()
         }

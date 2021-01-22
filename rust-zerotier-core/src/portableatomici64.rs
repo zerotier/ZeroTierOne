@@ -44,6 +44,14 @@ impl PortableAtomicI64 {
     pub fn set(&self, v: i64) {
         *self.i.lock().unwrap() = v;
     }
+
+    #[inline(always)]
+    pub fn fetch_add(&self, v: i64) -> i64 {
+        let i = self.i.lock().unwrap();
+        let j = *i;
+        *i += v;
+        j
+    }
 }
 
 #[cfg(all(target_pointer_width = "64"))]
@@ -68,5 +76,10 @@ impl PortableAtomicI64 {
     #[inline(always)]
     pub fn set(&self, v: i64) {
         self.i.store(v, Ordering::Relaxed)
+    }
+
+    #[inline(always)]
+    pub fn fetch_add(&self, v: i64) -> i64 {
+        self.i.fetch_add(v, Ordering::Relaxed)
     }
 }
