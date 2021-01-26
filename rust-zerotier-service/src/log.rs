@@ -49,7 +49,7 @@ impl Log {
         self.max_size.store(if new_max_size < Log::MIN_MAX_SIZE { Log::MIN_MAX_SIZE } else { new_max_size },Ordering::Relaxed);
     }
 
-    pub fn log<S: Display>(&self, s: &S) {
+    pub fn log<S: Into<String>>(&self, s: S) {
         let mut fc = self.file.lock().unwrap();
 
         let max_size = self.max_size.load(Ordering::Relaxed);
@@ -81,7 +81,7 @@ impl Log {
 
         let mut f = fc.get_mut().as_mut().unwrap();
         let now_str = chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
-        let log_line = format!("{}[{}] {}\n", self.prefix.as_str(), now_str.as_str(), s);
+        let log_line = format!("{}[{}] {}\n", self.prefix.as_str(), now_str.as_str(), s.into());
         let _ = f.write_all(log_line.as_bytes());
         let _ = f.flush();
         self.cur_size.fetch_add(log_line.len() as i64);

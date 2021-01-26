@@ -42,9 +42,11 @@ class Dictionary
 public:
 	typedef SortedMap< String, Vector< uint8_t > >::const_iterator const_iterator;
 
-	Dictionary();
+	ZT_INLINE Dictionary()
+	{}
 
-	~Dictionary();
+	ZT_INLINE ~Dictionary()
+	{}
 
 	/*
 	ZT_INLINE void dump() const

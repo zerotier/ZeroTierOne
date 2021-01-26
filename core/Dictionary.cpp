@@ -15,12 +15,6 @@
 
 namespace ZeroTier {
 
-Dictionary::Dictionary()
-{}
-
-Dictionary::~Dictionary()
-{}
-
 Vector< uint8_t > &Dictionary::operator[](const char *const k)
 { return m_entries[k]; }
 
@@ -91,9 +85,7 @@ char *Dictionary::getS(const char *k, char *v, const unsigned int cap) const
 }
 
 void Dictionary::clear()
-{
-	m_entries.clear();
-}
+{ m_entries.clear(); }
 
 void Dictionary::encode(Vector< uint8_t > &out) const
 {

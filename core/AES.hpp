@@ -48,13 +48,14 @@ public:
 	 */
 	static ZT_INLINE bool accelerated()
 	{
+#ifdef ZT_AES_NO_ACCEL
+		return false;
+#else
 #ifdef ZT_AES_AESNI
 		return Utils::CPUID.aes;
-#else
+#endif
 #ifdef ZT_AES_NEON
 		return Utils::ARMCAP.aes;
-#else
-		return false;
 #endif
 #endif
 	}
