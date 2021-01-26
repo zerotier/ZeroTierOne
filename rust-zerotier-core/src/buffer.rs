@@ -70,6 +70,7 @@ impl Buffer {
 }
 
 impl Drop for Buffer {
+    #[inline(always)]
     fn drop(&mut self) {
         // NOTE: in node.rs std::mem::forget() is used to prevent this from
         // being called on buffers that have been returned via one of the

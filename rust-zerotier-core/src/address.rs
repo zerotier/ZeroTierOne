@@ -29,6 +29,7 @@ impl From<u64> for Address {
 }
 
 impl From<&str> for Address {
+    #[inline(always)]
     fn from(s: &str) -> Address {
         Address(u64::from_str_radix(s, 16).unwrap_or(0))
     }

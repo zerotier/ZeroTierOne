@@ -14,7 +14,8 @@
 use std::os::raw::{c_char, c_int};
 use num_derive::{FromPrimitive, ToPrimitive};
 
-mod bindings;
+#[allow(non_snake_case,non_upper_case_globals,non_camel_case_types,dead_code,improper_ctypes)]
+mod capi;
 
 mod identity;
 mod address;
@@ -31,8 +32,9 @@ mod mac;
 mod buffer;
 mod portableatomici64;
 mod virtualnetworkconfig;
+mod multicastgroup;
 
-use bindings::capi as ztcore;
+use crate::capi as ztcore;
 
 pub use identity::*;
 pub use address::Address;
@@ -49,34 +51,45 @@ pub use mac::MAC;
 pub use buffer::Buffer;
 pub use portableatomici64::PortableAtomicI64;
 pub use virtualnetworkconfig::*;
+pub use multicastgroup::MulticastGroup;
 
+/// Recommended minimum thread stack size for ZeroTier threads.
 pub const RECOMMENDED_THREAD_STACK_SIZE: usize = 262144;
 
+/// Default TCP and UDP port for ZeroTier.
 pub const DEFAULT_PORT: u16 = ztcore::ZT_DEFAULT_PORT as u16;
 
+/// Size of a ZeroTier core "Buffer" in bytes.
 pub const BUF_SIZE: u32 = ztcore::ZT_BUF_SIZE;
 
+/// Minimum physical MTU.
 pub const MIN_MTU: u32 = ztcore::ZT_MIN_MTU;
+
+/// Maximum physical MTU.
 pub const MAX_MTU: u32 = ztcore::ZT_MAX_MTU;
+
+/// Default physica UDP MTU (not including IP or UDP headers).
 pub const DEFAULT_UDP_MTU: u32 = ztcore::ZT_DEFAULT_UDP_MTU;
+
+/// Maximum UDP MTU (we never actually get this high).
 pub const MAX_UDP_MTU: u32 = ztcore::ZT_MAX_UDP_MTU;
 
 #[allow(non_snake_case,non_upper_case_globals)]
 pub mod RulePacketCharacteristicFlags {
-    pub const Inbound: u64 = crate::bindings::capi::ZT_RULE_PACKET_CHARACTERISTICS_INBOUND as u64;
-    pub const Multicast: u64 = crate::bindings::capi::ZT_RULE_PACKET_CHARACTERISTICS_MULTICAST as u64;
-    pub const Broadcast: u64 = crate::bindings::capi::ZT_RULE_PACKET_CHARACTERISTICS_BROADCAST as u64;
-    pub const SenderIpAuthenticated: u64 = crate::bindings::capi::ZT_RULE_PACKET_CHARACTERISTICS_SENDER_IP_AUTHENTICATED as u64;
-    pub const SenderMacAuthenticated: u64 = crate::bindings::capi::ZT_RULE_PACKET_CHARACTERISTICS_SENDER_MAC_AUTHENTICATED as u64;
-    pub const TcpFlagNS: u64 = crate::bindings::capi::ZT_RULE_PACKET_CHARACTERISTICS_TCP_NS as u64;
-    pub const TcpFlagCWR: u64 = crate::bindings::capi::ZT_RULE_PACKET_CHARACTERISTICS_TCP_CWR as u64;
-    pub const TcpFlagECE: u64 = crate::bindings::capi::ZT_RULE_PACKET_CHARACTERISTICS_TCP_ECE as u64;
-    pub const TcpFlagURG: u64 = crate::bindings::capi::ZT_RULE_PACKET_CHARACTERISTICS_TCP_URG as u64;
-    pub const TcpFlagACK: u64 = crate::bindings::capi::ZT_RULE_PACKET_CHARACTERISTICS_TCP_ACK as u64;
-    pub const TcpFlagPSH: u64 = crate::bindings::capi::ZT_RULE_PACKET_CHARACTERISTICS_TCP_PSH as u64;
-    pub const TcpFlagRST: u64 = crate::bindings::capi::ZT_RULE_PACKET_CHARACTERISTICS_TCP_RST as u64;
-    pub const TcpFlagSYN: u64 = crate::bindings::capi::ZT_RULE_PACKET_CHARACTERISTICS_TCP_SYN as u64;
-    pub const TcpFlagFIN: u64 = crate::bindings::capi::ZT_RULE_PACKET_CHARACTERISTICS_TCP_FIN as u64;
+    pub const Inbound: u64 = crate::capi::ZT_RULE_PACKET_CHARACTERISTICS_INBOUND as u64;
+    pub const Multicast: u64 = crate::capi::ZT_RULE_PACKET_CHARACTERISTICS_MULTICAST as u64;
+    pub const Broadcast: u64 = crate::capi::ZT_RULE_PACKET_CHARACTERISTICS_BROADCAST as u64;
+    pub const SenderIpAuthenticated: u64 = crate::capi::ZT_RULE_PACKET_CHARACTERISTICS_SENDER_IP_AUTHENTICATED as u64;
+    pub const SenderMacAuthenticated: u64 = crate::capi::ZT_RULE_PACKET_CHARACTERISTICS_SENDER_MAC_AUTHENTICATED as u64;
+    pub const TcpFlagNS: u64 = crate::capi::ZT_RULE_PACKET_CHARACTERISTICS_TCP_NS as u64;
+    pub const TcpFlagCWR: u64 = crate::capi::ZT_RULE_PACKET_CHARACTERISTICS_TCP_CWR as u64;
+    pub const TcpFlagECE: u64 = crate::capi::ZT_RULE_PACKET_CHARACTERISTICS_TCP_ECE as u64;
+    pub const TcpFlagURG: u64 = crate::capi::ZT_RULE_PACKET_CHARACTERISTICS_TCP_URG as u64;
+    pub const TcpFlagACK: u64 = crate::capi::ZT_RULE_PACKET_CHARACTERISTICS_TCP_ACK as u64;
+    pub const TcpFlagPSH: u64 = crate::capi::ZT_RULE_PACKET_CHARACTERISTICS_TCP_PSH as u64;
+    pub const TcpFlagRST: u64 = crate::capi::ZT_RULE_PACKET_CHARACTERISTICS_TCP_RST as u64;
+    pub const TcpFlagSYN: u64 = crate::capi::ZT_RULE_PACKET_CHARACTERISTICS_TCP_SYN as u64;
+    pub const TcpFlagFIN: u64 = crate::capi::ZT_RULE_PACKET_CHARACTERISTICS_TCP_FIN as u64;
 }
 
 #[derive(FromPrimitive, ToPrimitive, PartialEq, Eq)]

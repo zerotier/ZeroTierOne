@@ -17,6 +17,10 @@ mod physicallink;
 mod log;
 mod store;
 mod network;
+mod vnp;
+
+#[allow(non_snake_case,non_upper_case_globals,non_camel_case_types,dead_code,improper_ctypes)]
+mod osdep;
 
 use std::cell::Cell;
 use std::collections::BTreeMap;

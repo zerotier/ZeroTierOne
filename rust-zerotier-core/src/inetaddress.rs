@@ -11,16 +11,16 @@
  */
 /****/
 
+use std::cmp::Ordering;
 use std::ffi::CString;
 use std::mem::{MaybeUninit, transmute};
+use std::os::raw::{c_uint, c_void};
 
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
 
 use crate::*;
 use crate::bindings::capi as ztcore;
-use std::os::raw::{c_void, c_uint};
-use std::cmp::Ordering;
 
 // WARNING: here be dragons! This defines an opaque blob in Rust that shadows
 // and is of the exact size as an opaque blob in C that shadows and is the

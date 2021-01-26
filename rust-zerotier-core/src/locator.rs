@@ -70,6 +70,7 @@ impl Locator {
 }
 
 impl Drop for Locator {
+    #[inline(always)]
     fn drop(&mut self) {
         if self.requires_delete {
             unsafe {
@@ -80,6 +81,7 @@ impl Drop for Locator {
 }
 
 impl Clone for Locator {
+    #[inline(always)]
     fn clone(&self) -> Locator {
         Locator::new_from_string(self.to_string().as_str()).ok().unwrap()
     }

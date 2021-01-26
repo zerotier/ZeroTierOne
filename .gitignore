@@ -37,6 +37,7 @@ node_modules
 *.vcxproj.backup
 /*.db
 /*.opendb
-/rust-zerotier-core/src/bindings/capi.rs
+/rust-zerotier-core/src/capi.rs
 /rust-zerotier-core/target
 /rust-zerotier-service/target
+/rust-zerotier-service/src/osdep.rs

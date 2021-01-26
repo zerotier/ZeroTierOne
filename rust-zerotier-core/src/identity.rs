@@ -145,6 +145,7 @@ impl PartialEq for Identity {
 impl Eq for Identity {}
 
 impl Clone for Identity {
+    #[inline(always)]
     fn clone(&self) -> Identity {
         unsafe {
             return Identity::new_from_capi(ztcore::ZT_Identity_clone(self.capi), true);
@@ -153,6 +154,7 @@ impl Clone for Identity {
 }
 
 impl Drop for Identity {
+    #[inline(always)]
     fn drop(&mut self) {
         if self.requires_delete {
             unsafe {

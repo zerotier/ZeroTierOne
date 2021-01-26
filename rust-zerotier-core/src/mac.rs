@@ -11,6 +11,8 @@
  */
 /****/
 
+use std::cmp::Ordering;
+
 pub struct MAC(pub u64);
 
 impl ToString for MAC {
@@ -46,6 +48,20 @@ impl PartialEq for MAC {
 }
 
 impl Eq for MAC {}
+
+impl Ord for MAC {
+    #[inline(always)]
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.0.cmp(&other.0)
+    }
+}
+
+impl PartialOrd for MAC {
+    #[inline(always)]
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.0.cmp(&other.0))
+    }
+}
 
 impl Clone for MAC {
     #[inline(always)]
