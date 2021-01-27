@@ -225,7 +225,6 @@ int main(int argc,char **argv)
 	const char *mac = argv[2];
 	const char *mtu = argv[3];
 	const char *metric = argv[4];
-	int i = NDRV_SETDMXSPEC;
 
 	s_ndrvfd = socket(AF_NDRV,SOCK_RAW,0);
 	if (s_ndrvfd < 0) {

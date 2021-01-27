@@ -172,6 +172,20 @@ impl InetAddress {
         }
     }
 
+    #[inline(always)]
+    pub fn is_v4(&self) -> bool {
+        unsafe {
+            ztcore::ZT_InetAddress_isV4(self.as_capi_ptr()) != 0
+        }
+    }
+
+    #[inline(always)]
+    pub fn is_v6(&self) -> bool {
+        unsafe {
+            ztcore::ZT_InetAddress_isV6(self.as_capi_ptr()) != 0
+        }
+    }
+
     /// Get the address family of this InetAddress.
     pub fn family(&self) -> InetAddressFamily {
         if !self.is_nil() {

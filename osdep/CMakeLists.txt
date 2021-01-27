@@ -5,6 +5,7 @@ set(src
 	EthernetTap.cpp
 	ManagedRoute.cpp
 	OSUtils.cpp
+	rust-osdep.cpp
 )
 
 set(headers

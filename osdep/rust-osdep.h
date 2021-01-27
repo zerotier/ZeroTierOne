@@ -25,10 +25,21 @@
 #include <netinet6/in6_var.h>
 #include <netinet6/nd6.h>
 #include <ifaddrs.h>
-#ifndef SIOCAUTOCONF_START
-#define SIOCAUTOCONF_START _IOWR('i', 132, struct in6_ifreq)    /* accept rtadvd on this interface */
+#ifdef __cplusplus
+extern "C" {
 #endif
-#ifndef SIOCAUTOCONF_STOP
-#define SIOCAUTOCONF_STOP _IOWR('i', 133, struct in6_ifreq)    /* stop accepting rtadv for this interface */
+/* These complex macros don't translate well with Rust bindgen, so compute them with the C compiler and export them. */
+extern const unsigned long c_BIOCSBLEN;
+extern const unsigned long c_BIOCIMMEDIATE;
+extern const unsigned long c_BIOCSSEESENT;
+extern const unsigned long c_BIOCSETIF;
+extern const unsigned long c_BIOCSHDRCMPLT;
+extern const unsigned long c_BIOCPROMISC;
+extern const unsigned long c_SIOCGIFINFO_IN6;
+extern const unsigned long c_SIOCSIFINFO_FLAGS;
+extern const unsigned long c_SIOCAUTOCONF_START;
+extern const unsigned long c_SIOCAUTOCONF_STOP;
+#ifdef __cplusplus
+}
 #endif
 #endif
