@@ -41,13 +41,3 @@ target_include_directories(
 	PUBLIC
 	${CMAKE_BINARY_DIR}/core
 )
-
-if(APPLE)
-	add_executable(MacEthernetTapAgent MacEthernetTapAgent.c MacEthernetTapAgent.h)
-	target_include_directories(MacEthernetTapAgent PRIVATE ${CMAKE_BINARY_DIR})
-	target_include_directories(
-		MacEthernetTapAgent
-		PUBLIC
-		${CMAKE_BINARY_DIR}/core
-	)
-endif(APPLE)

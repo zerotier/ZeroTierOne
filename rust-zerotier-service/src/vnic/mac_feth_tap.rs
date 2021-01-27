@@ -1,6 +1,6 @@
 /*
  * This creates a pair of feth devices with the lower numbered device
- * being the ZeroTier virtual interface and the other being the device
+ * being the ZeroTier virtual interface and the higher being the device
  * used to actually read and write packets. The latter gets no IP config
  * and is only used for I/O. The behavior of feth is similar to the
  * veth pairs that exist on Linux.
@@ -16,9 +16,10 @@
  * is limited to 2048. AF_NDRV packet injection is required to inject
  * ZeroTier's large MTU frames.
  *
- * All this stuff is completely undocumented. A lot of tracing through
- * the Darwin/XNU kernel source was required to find feth in the first place
- * and figure out how to make this work.
+ * This is all completely undocumented. Finding it and learning how to
+ * use it required sifting through XNU/Darwin kernel source code on
+ * opensource.apple.com. Needless to say we are exploring other options
+ * for future releases, but this works for now.
  */
 
 use std::cell::Cell;
@@ -26,7 +27,7 @@ use std::collections::BTreeSet;
 use std::error::Error;
 use std::ffi::CString;
 use std::ptr::{null_mut, copy_nonoverlapping};
-use std::mem::transmute;
+use std::mem::{transmute, zeroed};
 use std::os::raw::{c_int, c_uchar, c_ulong, c_void};
 use std::process::Command;
 use std::sync::Mutex;
@@ -88,6 +89,45 @@ lazy_static! {
     static ref MAC_FETH_BPF_DEVICES_USED: Mutex<BTreeSet<u32>> = Mutex::new(BTreeSet::new());
 }
 
+fn device_ipv6_set_params(device: &String, perform_nud: bool, accept_ra: bool) -> bool {
+    let dev = device.as_bytes();
+    let mut ok = true;
+    unsafe {
+
+        let s = osdep::socket(osdep::AF_INET6 as c_int, osdep::SOCK_DGRAM as c_int, 0);
+        if s < 0 {
+            return false;
+        }
+
+        let mut nd: osdep::in6_ndireq = zeroed();
+        copy_nonoverlapping(dev.as_ptr(), nd.ifname.as_mut_ptr().cast::<u8>(), if dev.len() > (nd.ifname.len() - 1) { nd.ifname.len() - 1 } else { dev.len() });
+        if osdep::ioctl(s, osdep::c_SIOCGIFINFO_IN6, (&nd as *mut osdep::in6_ndireq).cast()) == 0 {
+            let oldflags = nd.ndi.flags;
+            if perform_nud {
+                nd.ndi.flags |= osdep::ND6_IFF_PERFORMNUD as osdep::u_int32_t;
+            } else {
+                nd.ndi.flags &= !(osdep::ND6_IFF_PERFORMNUD as osdep::u_int32_t);
+            }
+            if nd.ndi.flags != oldflags {
+                if osdep::ioctl(s, osdep::c_SIOCSIFINFO_FLAGS, (&nd as *mut osdep::in6_ndireq).cast()) != 0 {
+                    ok = false;
+                }
+            }
+        } else {
+            ok = false;
+        }
+
+        let mut ifr: osdep::in6_ifreq = zeroed();
+        copy_nonoverlapping(dev.as_ptr(), ifr.ifr_name.as_mut_ptr().cast::<u8>(), if dev.len() > (ifr.ifr_name.len() - 1) { ifr.ifr_name.len() - 1 } else { dev.len() });
+        if osdep::ioctl(s, if accept_ra { osdep::c_SIOCAUTOCONF_START } else { osdep::c_SIOCAUTOCONF_STOP }, (&ifr as *mut osdep::in6_ifreq).cast()) != 0 {
+            ok = false;
+        }
+
+        osdep::close(s);
+    }
+    ok
+}
+
 impl MacFethTap {
     /// Create a new MacFethTap with a function to call for Ethernet frames.
     /// The function F should return as quickly as possible. It should pass copies
@@ -129,6 +169,7 @@ impl MacFethTap {
             }
             device_feth_ctr += 1;
         }
+        device_ipv6_set_params(&device_name, true, false);
 
         let cmd = Command::new(IFCONFIG).arg(&device_name).arg("create").spawn();
         if cmd.is_err() {
