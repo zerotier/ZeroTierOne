@@ -14,6 +14,9 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use zerotier_core::{Buffer, InetAddress, InetAddressFamily};
+use num_traits::cast::AsPrimitive;
+use std::os::raw::c_int;
+use crate::osdep as osdep;
 
 //
 // A very low-level fast UDP socket that uses thread-per-core semantics to
@@ -31,7 +34,7 @@ use winapi::um::winsock2 as winsock2;
 pub type FastUDPRawOsSocket = winsock2::SOCKET;
 
 #[cfg(unix)]
-pub type FastUDPRawOsSocket = libc::c_int;
+pub type FastUDPRawOsSocket = c_int;
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // bind_udp_socket() implementations for each platform
@@ -43,76 +46,76 @@ fn bind_udp_socket(_: &str, address: &InetAddress) -> Result<FastUDPRawOsSocket,
         let sa_len;
         match address.family() {
             InetAddressFamily::IPv4 => {
-                af = libc::AF_INET;
-                sa_len = std::mem::size_of::<libc::sockaddr_in>() as libc::socklen_t;
+                af = osdep::AF_INET;
+                sa_len = std::mem::size_of::<osdep::sockaddr_in>() as osdep::socklen_t;
             },
             InetAddressFamily::IPv6 => {
-                af = libc::AF_INET6;
-                sa_len = std::mem::size_of::<libc::sockaddr_in6>() as libc::socklen_t;
+                af = osdep::AF_INET6;
+                sa_len = std::mem::size_of::<osdep::sockaddr_in6>() as osdep::socklen_t;
             },
             _ => {
                 return Err("unrecognized address family");
             }
         };
 
-        let s = libc::socket(af, libc::SOCK_DGRAM, 0);
+        let s = osdep::socket(af.as_(), osdep::SOCK_DGRAM.as_(), 0);
         if s < 0 {
             return Err("unable to create socket");
         }
 
-        let mut fl: libc::c_int;
-        let fl_size = std::mem::size_of::<libc::c_int>() as libc::socklen_t;
-        let mut setsockopt_results: libc::c_int = 0;
+        let mut fl: c_int;
+        let fl_size = std::mem::size_of::<c_int>() as osdep::socklen_t;
+        let mut setsockopt_results: c_int = 0;
 
         // Set options that must succeed: reuse port for multithreading, enable broadcast, disable SIGPIPE, and
         // for IPv6 sockets disable receipt of IPv4 packets.
         fl = 1;
-        setsockopt_results |= libc::setsockopt(s, libc::SOL_SOCKET, libc::SO_REUSEPORT, (&mut fl as *mut libc::c_int).cast(), fl_size);
+        setsockopt_results |= osdep::setsockopt(s, osdep::SOL_SOCKET.as_(), osdep::SO_REUSEPORT.as_(), (&mut fl as *mut c_int).cast(), fl_size);
         //fl = 1;
-        //setsockopt_results |= libc::setsockopt(s, libc::SOL_SOCKET, libc::SO_REUSEADDR, (&mut fl as *mut libc::c_int).cast(), fl_size);
+        //setsockopt_results |= osdep::setsockopt(s, osdep::SOL_SOCKET, osdep::SO_REUSEADDR, (&mut fl as *mut c_int).cast(), fl_size);
         fl = 1;
-        setsockopt_results |= libc::setsockopt(s, libc::SOL_SOCKET, libc::SO_BROADCAST, (&mut fl as *mut libc::c_int).cast(), fl_size);
+        setsockopt_results |= osdep::setsockopt(s, osdep::SOL_SOCKET.as_(), osdep::SO_BROADCAST.as_(), (&mut fl as *mut c_int).cast(), fl_size);
         fl = 1;
-        setsockopt_results |= libc::setsockopt(s, libc::SOL_SOCKET, libc::SO_NOSIGPIPE, (&mut fl as *mut libc::c_int).cast(), fl_size);
-        if af == libc::AF_INET6 {
+        setsockopt_results |= osdep::setsockopt(s, osdep::SOL_SOCKET.as_(), osdep::SO_NOSIGPIPE.as_(), (&mut fl as *mut c_int).cast(), fl_size);
+        if af == osdep::AF_INET6 {
             fl = 1;
-            setsockopt_results |= libc::setsockopt(s, libc::IPPROTO_IPV6, libc::IPV6_V6ONLY, (&mut fl as *mut libc::c_int).cast(), fl_size);
+            setsockopt_results |= osdep::setsockopt(s, osdep::IPPROTO_IPV6.as_(), osdep::IPV6_V6ONLY.as_(), (&mut fl as *mut c_int).cast(), fl_size);
         }
         if setsockopt_results != 0 {
-            libc::close(s);
+            osdep::close(s);
             return Err("setsockopt() failed");
         }
 
         // Enable UDP fragmentation, which should never really be needed but might make this work if
         // somebody finds themselves on a weird network. These are okay if they fail.
-        if af == libc::AF_INET {
+        if af == osdep::AF_INET {
             fl = 0;
-            libc::setsockopt(s, libc::IPPROTO_IP, 0x4000 /* IP_DF */, (&mut fl as *mut libc::c_int).cast(), fl_size);
+            osdep::setsockopt(s, osdep::IPPROTO_IP.as_(), 0x4000 /* IP_DF */, (&mut fl as *mut c_int).cast(), fl_size);
         }
-        if af == libc::AF_INET6 {
+        if af == osdep::AF_INET6 {
             fl = 0;
-            libc::setsockopt(s, libc::IPPROTO_IPV6, 62 /* IPV6_DONTFRAG */, (&mut fl as *mut libc::c_int).cast(), fl_size);
+            osdep::setsockopt(s, osdep::IPPROTO_IPV6.as_(), 62 /* IPV6_DONTFRAG */, (&mut fl as *mut c_int).cast(), fl_size);
         }
 
         // Set send and receive buffers to the largest acceptable value up to desired 1MiB.
         fl = 1048576;
         while fl >= 131072 {
-            if libc::setsockopt(s, libc::SOL_SOCKET, libc::SO_RCVBUF, (&mut fl as *mut libc::c_int).cast(), fl_size) == 0 {
+            if osdep::setsockopt(s, osdep::SOL_SOCKET.as_(), osdep::SO_RCVBUF.as_(), (&mut fl as *mut c_int).cast(), fl_size) == 0 {
                 break;
             }
             fl -= 65536;
         }
         fl = 1048576;
         while fl >= 131072 {
-            if libc::setsockopt(s, libc::SOL_SOCKET, libc::SO_SNDBUF, (&mut fl as *mut libc::c_int).cast(), fl_size) == 0 {
+            if osdep::setsockopt(s, osdep::SOL_SOCKET.as_(), osdep::SO_SNDBUF.as_(), (&mut fl as *mut c_int).cast(), fl_size) == 0 {
                 break;
             }
             fl -= 65536;
         }
 
-        if libc::bind(s, (address as *const InetAddress).cast(), sa_len) != 0 {
-            //libc::perror(std::ptr::null());
-            libc::close(s);
+        if osdep::bind(s, (address as *const InetAddress).cast(), sa_len) != 0 {
+            //osdep::perror(std::ptr::null());
+            osdep::close(s);
             return Err("bind to address failed");
         }
 
@@ -142,13 +145,13 @@ pub struct FastUDPSocket<H: FastUDPSocketPacketHandler + Send + Sync + 'static> 
 pub fn fast_udp_socket_sendto(socket: &FastUDPRawOsSocket, to_address: &InetAddress, data: *const u8, len: usize, packet_ttl: i32) {
     unsafe {
         if packet_ttl <= 0 {
-            libc::sendto(*socket, data.cast(), len as libc::size_t, 0, (to_address as *const InetAddress).cast(), std::mem::size_of::<InetAddress>() as libc::socklen_t);
+            osdep::sendto(*socket, data.cast(), len as osdep::size_t, 0, (to_address as *const InetAddress).cast(), std::mem::size_of::<InetAddress>() as osdep::socklen_t);
         } else {
-            let mut ttl = packet_ttl as libc::c_int;
-            libc::setsockopt(*socket, libc::IPPROTO_IP, libc::IP_TTL, (&mut ttl as *mut libc::c_int).cast(), std::mem::size_of::<libc::c_int>() as libc::socklen_t);
-            libc::sendto(*socket, data.cast(), len as libc::size_t, 0, (to_address as *const InetAddress).cast(), std::mem::size_of::<InetAddress>() as libc::socklen_t);
+            let mut ttl = packet_ttl as c_int;
+            osdep::setsockopt(*socket, osdep::IPPROTO_IP.as_(), osdep::IP_TTL.as_(), (&mut ttl as *mut c_int).cast(), std::mem::size_of::<c_int>() as osdep::socklen_t);
+            osdep::sendto(*socket, data.cast(), len as osdep::size_t, 0, (to_address as *const InetAddress).cast(), std::mem::size_of::<InetAddress>() as osdep::socklen_t);
             ttl = 255;
-            libc::setsockopt(*socket, libc::IPPROTO_IP, libc::IP_TTL, (&mut ttl as *mut libc::c_int).cast(), std::mem::size_of::<libc::c_int>() as libc::socklen_t);
+            osdep::setsockopt(*socket, osdep::IPPROTO_IP.as_(), osdep::IP_TTL.as_(), (&mut ttl as *mut c_int).cast(), std::mem::size_of::<c_int>() as osdep::socklen_t);
         }
     }
 }
@@ -162,8 +165,8 @@ pub fn fast_udp_socket_sendto(socket: &FastUDPRawOsSocket, to_address: &InetAddr
 #[inline(always)]
 fn fast_udp_socket_recvfrom(socket: &FastUDPRawOsSocket, buf: &mut Buffer, from_address: &mut InetAddress) -> i32 {
     unsafe {
-        let mut addrlen = std::mem::size_of::<InetAddress>() as libc::socklen_t;
-        libc::recvfrom(*socket, buf.as_mut_ptr().cast(), Buffer::CAPACITY as libc::size_t, 0, (from_address as *mut InetAddress).cast(), &mut addrlen) as i32
+        let mut addrlen = std::mem::size_of::<InetAddress>() as osdep::socklen_t;
+        osdep::recvfrom(*socket, buf.as_mut_ptr().cast(), Buffer::CAPACITY as osdep::size_t, 0, (from_address as *mut InetAddress).cast(), &mut addrlen) as i32
     }
 }
 
@@ -256,17 +259,17 @@ impl<H: FastUDPSocketPacketHandler + Send + Sync + 'static> Drop for FastUDPSock
         self.thread_run.store(false, Ordering::Relaxed);
         for s in self.sockets.iter() {
             unsafe {
-                libc::sendto(*s, tmp.as_ptr().cast(), 0, 0, (&self.bind_address as *const InetAddress).cast(), std::mem::size_of::<InetAddress>() as libc::socklen_t);
+                osdep::sendto(*s, tmp.as_ptr().cast(), 0, 0, (&self.bind_address as *const InetAddress).cast(), std::mem::size_of::<InetAddress>() as osdep::socklen_t);
             }
         }
         for s in self.sockets.iter() {
             unsafe {
-                libc::shutdown(*s, libc::SHUT_RDWR);
+                osdep::shutdown(*s, osdep::SHUT_RDWR.as_());
             }
         }
         for s in self.sockets.iter() {
             unsafe {
-                libc::close(*s);
+                osdep::close(*s);
             }
         }
         while !self.threads.is_empty() {

@@ -18,7 +18,7 @@ use std::os::raw::*;
 use num_traits::{FromPrimitive, ToPrimitive};
 
 use crate::*;
-use crate::bindings::capi as ztcore;
+use crate::capi as ztcore;
 
 #[derive(FromPrimitive, ToPrimitive, PartialEq, Eq)]
 pub enum IdentityType {

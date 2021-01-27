@@ -16,7 +16,7 @@ use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
 
 use crate::*;
-use crate::bindings::capi as ztcore;
+use crate::capi as ztcore;
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

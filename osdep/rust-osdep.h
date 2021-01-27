@@ -1,20 +1,12 @@
 #ifdef __APPLE__
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <stdarg.h>
 #include <unistd.h>
-#include <signal.h>
 #include <fcntl.h>
-#include <errno.h>
-#include <sys/signal.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
-#include <sys/wait.h>
-#include <sys/select.h>
 #include <sys/cdefs.h>
-#include <sys/uio.h>
 #include <sys/param.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
@@ -33,4 +25,10 @@
 #include <netinet6/in6_var.h>
 #include <netinet6/nd6.h>
 #include <ifaddrs.h>
+#ifndef SIOCAUTOCONF_START
+#define SIOCAUTOCONF_START _IOWR('i', 132, struct in6_ifreq)    /* accept rtadvd on this interface */
+#endif
+#ifndef SIOCAUTOCONF_STOP
+#define SIOCAUTOCONF_STOP _IOWR('i', 133, struct in6_ifreq)    /* stop accepting rtadv for this interface */
+#endif
 #endif

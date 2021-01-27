@@ -20,7 +20,7 @@ use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
 
 use crate::*;
-use crate::bindings::capi as ztcore;
+use crate::capi as ztcore;
 
 // WARNING: here be dragons! This defines an opaque blob in Rust that shadows
 // and is of the exact size as an opaque blob in C that shadows and is the

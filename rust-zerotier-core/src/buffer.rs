@@ -12,8 +12,7 @@
 /****/
 
 use std::os::raw::c_void;
-
-use crate::bindings::capi as ztcore;
+use crate::capi as ztcore;
 
 /// A reusable buffer for I/O to/from the ZeroTier core.
 /// The core allocates and manages a pool of these. This provides a Rust

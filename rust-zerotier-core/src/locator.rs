@@ -15,7 +15,7 @@ use std::ffi::CString;
 use std::os::raw::{c_char, c_int, c_uint};
 
 use crate::*;
-use crate::bindings::capi as ztcore;
+use crate::capi as ztcore;
 
 pub struct Locator {
     pub(crate) capi: *const ztcore::ZT_Locator,

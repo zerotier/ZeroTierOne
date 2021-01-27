@@ -26,7 +26,7 @@ use num_traits::FromPrimitive;
 use serde::{Deserialize, Serialize};
 
 use crate::*;
-use crate::bindings::capi as ztcore;
+use crate::capi as ztcore;
 
 const NODE_BACKGROUND_MAX_DELAY: i64 = 500;
 

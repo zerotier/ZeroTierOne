@@ -22,7 +22,7 @@ use num_traits::FromPrimitive;
 use serde::{Deserialize, Serialize};
 
 use crate::*;
-use crate::bindings::capi as ztcore;
+use crate::capi as ztcore;
 
 /// Maximum length of a string in a certificate (mostly for the certificate name fields).
 pub const CERTIFICATE_MAX_STRING_LENGTH: isize = ztcore::ZT_CERTIFICATE_MAX_STRING_LENGTH as isize;

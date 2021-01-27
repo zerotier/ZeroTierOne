@@ -2,15 +2,12 @@ cmake_minimum_required(VERSION 3.0)
 project(zt_osdep)
 
 set(src
-	Arp.cpp
 	EthernetTap.cpp
 	ManagedRoute.cpp
-	NeighborDiscovery.cpp
 	OSUtils.cpp
 )
 
 set(headers
-	Arp.hpp
 	BlockingQueue.hpp
 	EthernetTap.hpp
 	ManagedRoute.hpp
