@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.0)
 project(zt_osdep)
 
 set(src
-	EthernetTap.cpp
 	ManagedRoute.cpp
 	OSUtils.cpp
 	rust-osdep.cpp
@@ -10,7 +9,6 @@ set(src
 
 set(headers
 	BlockingQueue.hpp
-	EthernetTap.hpp
 	ManagedRoute.hpp
 	OSUtils.hpp
 	Thread.hpp
@@ -20,11 +18,6 @@ if(WIN32)
 	set(src ${src} WindowsEthernetTap.cpp)
 	set(headers ${headers} WindowsEthernetTap.hpp)
 elseif(UNIX)
-	if(APPLE)
-		set(src ${src} MacEthernetTap.cpp MacKextEthernetTap.cpp)
-		set(headers ${headers} MacEthernetTap.hpp MacKextEthernetTap.hpp)
-	endif(APPLE)
-
 	if(CMAKE_SYSTEM_NAME MATCHES "BSD")
 		set(src ${src} BSDEthernetTap.cpp)
 		set(headers ${headers} BSDEthernetTap.hpp)
