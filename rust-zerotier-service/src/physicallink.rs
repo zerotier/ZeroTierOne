@@ -24,8 +24,8 @@ pub struct PhysicalLink {
 }
 
 #[inline(always)]
-fn s6_addr_as_ptr<A>(a: &A) -> *A {
-    a as *A
+fn s6_addr_as_ptr<A>(a: &A) -> *const A {
+    a as *const A
 }
 
 impl PhysicalLink {
@@ -39,10 +39,10 @@ impl PhysicalLink {
                     if !(*i).ifa_addr.is_null() {
                         let mut a = InetAddress::new();
 
-                        let sa_family = (*(*i).ifa_addr).sa_family;
-                        if sa_family == osdep::AF_INET.as_() {
+                        let sa_family = (*(*i).ifa_addr).sa_family as u8;
+                        if sa_family == osdep::AF_INET as u8 {
                             copy_nonoverlapping((*i).ifa_addr.cast::<u8>(), (&mut a as *mut InetAddress).cast::<u8>(), size_of::<osdep::sockaddr_in>());
-                        } else if sa_family == osdep::AF_INET6.as_() {
+                        } else if sa_family == osdep::AF_INET6 as u8 {
                             copy_nonoverlapping((*i).ifa_addr.cast::<u8>(), (&mut a as *mut InetAddress).cast::<u8>(), size_of::<osdep::sockaddr_in6>());
                         } else {
                             continue;
@@ -50,10 +50,10 @@ impl PhysicalLink {
 
                         let mut netmask_bits: u16 = 0;
                         if !(*i).ifa_netmask.is_null() {
-                            if sa_family == osdep::AF_INET.as_() {
+                            if sa_family == osdep::AF_INET as u8 {
                                 let mut a = (*(*i).ifa_netmask.cast::<osdep::sockaddr_in>()).sin_addr.s_addr as u32;
                                 netmask_bits = a.leading_ones() as u16;
-                            } else if sa_family == osdep::AF_INET6.as_() {
+                            } else if sa_family == osdep::AF_INET6 as u8 {
                                 let a = s6_addr_as_ptr(&((*(*i).ifa_netmask.cast::<osdep::sockaddr_in6>()).sin6_addr)).cast::<u8>();
                                 for i in 0..16 as isize {
                                     let mut b = *a.offset(i);

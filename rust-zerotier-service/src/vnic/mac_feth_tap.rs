@@ -22,22 +22,24 @@
  */
 
 use std::cell::Cell;
+use std::collections::BTreeSet;
 use std::error::Error;
 use std::ffi::CString;
-use std::os::raw::{c_int, c_ulong, c_void};
+use std::ptr::{null_mut, copy_nonoverlapping};
+use std::mem::transmute;
+use std::os::raw::{c_int, c_uchar, c_ulong, c_void};
 use std::process::Command;
 use std::sync::Mutex;
 use std::thread::JoinHandle;
-use std::intrinsics::copy_nonoverlapping;
 
 use lazy_static::lazy_static;
+use num_traits::cast::AsPrimitive;
 
-use zerotier_core::{NetworkId, MAC, InetAddress, MulticastGroup};
+use zerotier_core::{InetAddress, MAC, MulticastGroup, NetworkId};
 
 use crate::osdep as osdep;
 use crate::physicallink::PhysicalLink;
-use crate::vnp::Port;
-use std::collections::BTreeSet;
+use crate::vnic::VNIC;
 
 const BPF_BUFFER_SIZE: usize = 131072;
 const IFCONFIG: &str = "/sbin/ifconfig";
@@ -66,7 +68,9 @@ impl Drop for MacFethDevice {
 pub struct MacFethTap {
     network_id: u64,
     device: MacFethDevice,
+    ndrv_fd: c_int,
     bpf_fd: c_int,
+    bpf_no: u32,
     bpf_read_thread: Cell<Option<JoinHandle<()>>>,
 }
 
@@ -74,14 +78,14 @@ pub struct MacFethTap {
 // #define BPF_WORDALIGN(x) (((x)+(BPF_ALIGNMENT-1))&~(BPF_ALIGNMENT-1))
 // ... and also ...
 // #define BPF_ALIGNMENT sizeof(int32_t)
-#[inline(always)]
 #[allow(non_snake_case)]
-pub fn BPF_WORDALIGN(x: isize) -> isize {
+#[inline(always)]
+fn BPF_WORDALIGN(x: isize) -> isize {
     (((x + 3) as usize) & (!(3 as usize))) as isize
 }
 
 lazy_static! {
-    static ref MAC_FETH_GLOBAL_LOCK: Mutex<i32> = Mutex::new(0_i32);
+    static ref MAC_FETH_BPF_DEVICES_USED: Mutex<BTreeSet<u32>> = Mutex::new(BTreeSet::new());
 }
 
 impl MacFethTap {
@@ -92,7 +96,10 @@ impl MacFethTap {
     /// from another thread that is spawned here, so all its bound references must
     /// be "Send" and "Sync" e.g. Arc<>.
     pub fn new<F: Fn(&[u8]) + Send + Sync + 'static>(nwid: &NetworkId, mac: &MAC, mtu: i32, metric: i32, eth_frame_func: F) -> Result<MacFethTap, String> {
-        let _one_at_a_time = unsafe { MAC_FETH_GLOBAL_LOCK.lock().unwrap() };
+        // This tracks BPF devices we are using so we don't try to reopen them, and also
+        // doubles as a global lock to ensure that only one feth tap is created at once per
+        // ZeroTier process per system.
+        let mut bpf_devices_used = MAC_FETH_BPF_DEVICES_USED.lock().unwrap();
 
         if unsafe { osdep::getuid() } != 0 {
             return Err(String::from("ZeroTier MacFethTap must run as root"));
@@ -165,15 +172,19 @@ impl MacFethTap {
         let mut bpf_no: u32 = 1; // start at 1 since some software hard-codes /dev/bpf0
         let mut bpf_fd: c_int = -1;
         loop {
-            let bpf_dev = CString::new(format!("/dev/bpf{}", bpf_no)).unwrap();
-            let bpf_dev = bpf_dev.as_bytes_with_nul();
-            bpf_fd = unsafe { osdep::open(bpf_dev.as_ptr().cast(), osdep::O_RDWR as c_int) };
-            if bpf_fd >= 0 {
-                break;
-            }
-            bpf_no += 1;
-            if bpf_no > 1000 {
-                break;
+            if bpf_devices_used.contains(&bpf_no) {
+                bpf_no += 1;
+            } else {
+                let bpf_dev = CString::new(format!("/dev/bpf{}", bpf_no)).unwrap();
+                let bpf_dev = bpf_dev.as_bytes_with_nul();
+                bpf_fd = unsafe { osdep::open(bpf_dev.as_ptr().cast(), osdep::O_RDWR as c_int) };
+                if bpf_fd >= 0 {
+                    break;
+                }
+                bpf_no += 1;
+                if bpf_no > 1000 {
+                    break;
+                }
             }
         }
         if bpf_fd < 0 {
@@ -206,7 +217,7 @@ impl MacFethTap {
         let mut bpf_ifr: osdep::ifreq = unsafe { std::mem::zeroed() };
         let peer_dev_name_bytes = device.peer_name.as_bytes();
         unsafe { copy_nonoverlapping(peer_dev_name_bytes.as_ptr(), bpf_ifr.ifr_name.as_mut_ptr().cast::<u8>(), if peer_dev_name_bytes.len() > (bpf_ifr.ifr_name.len() - 1) { bpf_ifr.ifr_name.len() - 1 } else { peer_dev_name_bytes.len() }); }
-        if unsafe { osdep::ioctl(bpf_fd as c_int, BIOCSETIF, (&mut bpf_ifr as *mut osdep::ifreq).cast::<c_void>()) } != 0 {
+        if unsafe { osdep::ioctl(bpf_fd as c_int, osdep::c_BIOCSETIF, (&mut bpf_ifr as *mut osdep::ifreq).cast::<c_void>()) } != 0 {
             unsafe { osdep::close(bpf_fd); }
             return Err(String::from("unable to configure BPF device"));
         }
@@ -225,7 +236,8 @@ impl MacFethTap {
             return Err(String::from("unable to configure BPF device"));
         }
 
-        let t = std::thread::Builder::new().stack_size(zerotier_core::RECOMMENDED_THREAD_STACK_SIZE).spawn(|| {
+        // Create BPF listener thread, which calls the supplied function on each incoming packet.
+        let t = std::thread::Builder::new().stack_size(zerotier_core::RECOMMENDED_THREAD_STACK_SIZE).spawn(move || {
             let mut buf: [u8; BPF_BUFFER_SIZE] = [0_u8; BPF_BUFFER_SIZE];
             let hdr_struct_size = std::mem::size_of::<osdep::bpf_hdr>() as isize;
             loop {
@@ -254,10 +266,37 @@ impl MacFethTap {
             return Err(String::from("unable to start thread"));
         }
 
+        // Create AF_NDRV socket used to inject packets. We could inject with BPF but that has
+        // a hard MTU limit of 2048 so we have to use AF_NDRV instead. Performance is probably
+        // the same, but it means another socket.
+        let ndrv_fd = unsafe { osdep::socket(osdep::AF_NDRV as c_int, osdep::SOCK_RAW as c_int, 0) };
+        if ndrv_fd < 0 {
+            unsafe { osdep::close(bpf_fd); }
+            return Err(String::from("unable to create AF_NDRV socket"));
+        }
+        let mut ndrv_sa: osdep::sockaddr_ndrv = unsafe { std::mem::zeroed() };
+        ndrv_sa.snd_len = std::mem::size_of::<osdep::sockaddr_ndrv>() as c_uchar;
+        ndrv_sa.snd_family = osdep::AF_NDRV as c_uchar;
+        unsafe { copy_nonoverlapping(peer_dev_name_bytes.as_ptr(), ndrv_sa.snd_name.as_mut_ptr().cast::<u8>(), if peer_dev_name_bytes.len() > (bpf_ifr.ifr_name.len() - 1) { bpf_ifr.ifr_name.len() - 1 } else { peer_dev_name_bytes.len() }); }
+        if unsafe { osdep::bind(ndrv_fd, (&ndrv_sa as *const osdep::sockaddr_ndrv).cast(), std::mem::size_of::<osdep::sockaddr_ndrv>() as osdep::socklen_t) } != 0 {
+            unsafe { osdep::close(bpf_fd); }
+            unsafe { osdep::close(ndrv_fd); }
+            return Err(String::from("unable to bind AF_NDRV socket"));
+        }
+        if unsafe { osdep::connect(ndrv_fd, (&ndrv_sa as *const osdep::sockaddr_ndrv).cast(), std::mem::size_of::<osdep::sockaddr_ndrv>() as osdep::socklen_t) } != 0 {
+            unsafe { osdep::close(bpf_fd); }
+            unsafe { osdep::close(ndrv_fd); }
+            return Err(String::from("unable to connect AF_NDRV socket"));
+        }
+
+        bpf_devices_used.insert(bpf_no);
+
         Ok(MacFethTap {
             network_id: nwid.0,
             device: device,
+            ndrv_fd: ndrv_fd,
             bpf_fd: bpf_fd,
+            bpf_no: bpf_no,
             bpf_read_thread: Cell::new(Some(t.unwrap()))
         })
     }
@@ -265,7 +304,7 @@ impl MacFethTap {
     fn have_ip(&self, ip: &InetAddress) -> bool {
         let mut have_ip = false;
         PhysicalLink::map(|link: PhysicalLink| {
-            if link.device.eq(dev) && link.address.eq(ip) {
+            if link.device.eq(&self.device.name) && link.address.eq(ip) {
                 have_ip = true;
             }
         });
@@ -273,7 +312,7 @@ impl MacFethTap {
     }
 }
 
-impl Port for MacFethTap {
+impl VNIC for MacFethTap {
     fn add_ip(&self, ip: &InetAddress) -> bool {
         if !self.have_ip(ip) {
             let cmd = Command::new(IFCONFIG).arg(&self.device.name).arg(if ip.is_v6() { "inet6" } else { "inet" }).arg(ip.to_string()).arg("alias").spawn();
@@ -315,8 +354,72 @@ impl Port for MacFethTap {
     }
 
     fn get_multicast_groups(&self) -> BTreeSet<MulticastGroup> {
-        let groups: BTreeSet<MulticastGroup> = BTreeSet::new();
+        let dev = self.device.name.as_bytes();
+        let mut groups: BTreeSet<MulticastGroup> = BTreeSet::new();
+        unsafe {
+            let mut maddrs: *mut osdep::ifmaddrs = null_mut();
+            if osdep::getifmaddrs(&mut maddrs as *mut *mut osdep::ifmaddrs) == 0 {
+                let mut i = maddrs;
+                while !i.is_null() {
+                    if !(*i).ifma_name.is_null() && !(*i).ifma_addr.is_null() && (*(*i).ifma_addr).sa_family == osdep::AF_LINK as osdep::sa_family_t {
+                        let in_: &osdep::sockaddr_dl = &*((*i).ifma_name.cast());
+                        let la: &osdep::sockaddr_dl = &*((*i).ifma_addr.cast());
+                        if la.sdl_alen == 6 && in_.sdl_nlen <= dev.len() as osdep::u_char && osdep::memcmp(dev.as_ptr().cast(), in_.sdl_data.as_ptr().cast(), in_.sdl_nlen as c_ulong) == 0 {
+                            let mi = la.sdl_nlen as usize;
+                            groups.insert(MulticastGroup{
+                                mac: MAC(
+                                    (la.sdl_data[mi] as u64) << 40 |
+                                    (la.sdl_data[mi+1] as u64) << 32 |
+                                    (la.sdl_data[mi+2] as u64) << 24 |
+                                    (la.sdl_data[mi+3] as u64) << 16 |
+                                    (la.sdl_data[mi+4] as u64) << 8 |
+                                    la.sdl_data[mi+5] as u64
+                                ),
+                                adi: 0,
+                            });
+                        }
+                    }
+                    i = (*i).ifma_next;
+                }
+                osdep::freeifmaddrs(maddrs);
+            }
+        }
         groups
+    }
+
+    #[inline(always)]
+    fn put(&self, source_mac: &zerotier_core::MAC, dest_mac: &zerotier_core::MAC, ethertype: u16, vlan_id: u16, data: *const u8, len: usize) -> bool {
+        let dm = dest_mac.0;
+        let sm = source_mac.0;
+        let mut hdr: [u8; 14] = [
+            (dm >> 40) as u8,
+            (dm >> 32) as u8,
+            (dm >> 24) as u8,
+            (dm >> 16) as u8,
+            (dm >> 8) as u8,
+            dm as u8,
+            (sm >> 40) as u8,
+            (sm >> 32) as u8,
+            (sm >> 24) as u8,
+            (sm >> 16) as u8,
+            (sm >> 8) as u8,
+            sm as u8,
+            (ethertype >> 8) as u8,
+            ethertype as u8
+        ];
+        unsafe {
+            let iov: [osdep::iovec; 2] = [
+                osdep::iovec {
+                    iov_base: hdr.as_mut_ptr().cast(),
+                    iov_len: 14,
+                },
+                osdep::iovec {
+                    iov_base: transmute(data), // have to "cast away const" even though data is not modified by writev()
+                    iov_len: len as osdep::size_t,
+                },
+            ];
+            osdep::writev(self.ndrv_fd, iov.as_ptr(), 2) == (len + 14) as osdep::ssize_t
+        }
     }
 }
 
@@ -326,6 +429,12 @@ impl Drop for MacFethTap {
             unsafe {
                 osdep::shutdown(self.bpf_fd, osdep::SHUT_RDWR as c_int);
                 osdep::close(self.bpf_fd);
+                MAC_FETH_BPF_DEVICES_USED.lock().unwrap().remove(&self.bpf_no);
+            }
+        }
+        if self.ndrv_fd >= 0 {
+            unsafe {
+                osdep::close(self.ndrv_fd);
             }
         }
         let t = self.bpf_read_thread.replace(None);

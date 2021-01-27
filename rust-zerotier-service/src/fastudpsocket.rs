@@ -18,14 +18,11 @@ use num_traits::cast::AsPrimitive;
 use std::os::raw::c_int;
 use crate::osdep as osdep;
 
-//
-// A very low-level fast UDP socket that uses thread-per-core semantics to
-// achieve maximum possible throughput. This will spawn a lot of threads but
-// these threads will be inactive unless packets are being received with them.
-//
-// On most OSes this is by far the fastest way to handle incoming UDP except
-// for bypassing the kernel's TCP/IP stack entirely.
-//
+/*
+ * This is a threaded UDP socket listener for high performance. The fastest way to receive UDP
+ * (without heroic efforts like kernel bypass) on most platforms is to create a separate socket
+ * for each thread using options like SO_REUSEPORT and concurrent packet listening.
+ */
 
 #[cfg(windows)]
 use winapi::um::winsock2 as winsock2;
@@ -125,33 +122,29 @@ fn bind_udp_socket(_: &str, address: &InetAddress) -> Result<FastUDPRawOsSocket,
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-/// Handler for incoming packets received by a FastUDPSocket.
-/// Note that this may be called concurrently from any number of threads.
-pub trait FastUDPSocketPacketHandler {
-    fn incoming_udp_packet(&self, raw_socket: &FastUDPRawOsSocket, from_adddress: &InetAddress, data: Buffer);
-}
-
 /// A multi-threaded (or otherwise fast) UDP socket that binds to both IPv4 and IPv6 addresses.
-pub struct FastUDPSocket<H: FastUDPSocketPacketHandler + Send + Sync + 'static> {
-    handler: Arc<H>,
+pub struct FastUDPSocket {
     threads: Vec<std::thread::JoinHandle<()>>,
     thread_run: Arc<AtomicBool>,
     sockets: Vec<FastUDPRawOsSocket>,
     pub bind_address: InetAddress,
 }
 
+/// Send to a raw UDP socket with optional packet TTL.
+/// If the packet_ttl option is <=0, packet is sent with the default TTL. TTL setting is only used
+/// in ZeroTier right now to do escalating TTL probes for IPv4 NAT traversal.
 #[cfg(unix)]
 #[inline(always)]
 pub fn fast_udp_socket_sendto(socket: &FastUDPRawOsSocket, to_address: &InetAddress, data: *const u8, len: usize, packet_ttl: i32) {
     unsafe {
         if packet_ttl <= 0 {
-            osdep::sendto(*socket, data.cast(), len as osdep::size_t, 0, (to_address as *const InetAddress).cast(), std::mem::size_of::<InetAddress>() as osdep::socklen_t);
+            osdep::sendto(*socket, data.cast(), len.as_(), 0, (to_address as *const InetAddress).cast(), std::mem::size_of::<InetAddress>().as_());
         } else {
             let mut ttl = packet_ttl as c_int;
-            osdep::setsockopt(*socket, osdep::IPPROTO_IP.as_(), osdep::IP_TTL.as_(), (&mut ttl as *mut c_int).cast(), std::mem::size_of::<c_int>() as osdep::socklen_t);
-            osdep::sendto(*socket, data.cast(), len as osdep::size_t, 0, (to_address as *const InetAddress).cast(), std::mem::size_of::<InetAddress>() as osdep::socklen_t);
+            osdep::setsockopt(*socket, osdep::IPPROTO_IP.as_(), osdep::IP_TTL.as_(), (&mut ttl as *mut c_int).cast(), std::mem::size_of::<c_int>().as_());
+            osdep::sendto(*socket, data.cast(), len.as_(), 0, (to_address as *const InetAddress).cast(), std::mem::size_of::<InetAddress>().as_());
             ttl = 255;
-            osdep::setsockopt(*socket, osdep::IPPROTO_IP.as_(), osdep::IP_TTL.as_(), (&mut ttl as *mut c_int).cast(), std::mem::size_of::<c_int>() as osdep::socklen_t);
+            osdep::setsockopt(*socket, osdep::IPPROTO_IP.as_(), osdep::IP_TTL.as_(), (&mut ttl as *mut c_int).cast(), std::mem::size_of::<c_int>().as_());
         }
     }
 }
@@ -166,16 +159,15 @@ pub fn fast_udp_socket_sendto(socket: &FastUDPRawOsSocket, to_address: &InetAddr
 fn fast_udp_socket_recvfrom(socket: &FastUDPRawOsSocket, buf: &mut Buffer, from_address: &mut InetAddress) -> i32 {
     unsafe {
         let mut addrlen = std::mem::size_of::<InetAddress>() as osdep::socklen_t;
-        osdep::recvfrom(*socket, buf.as_mut_ptr().cast(), Buffer::CAPACITY as osdep::size_t, 0, (from_address as *mut InetAddress).cast(), &mut addrlen) as i32
+        osdep::recvfrom(*socket, buf.as_mut_ptr().cast(), Buffer::CAPACITY.as_(), 0, (from_address as *mut InetAddress).cast(), &mut addrlen) as i32
     }
 }
 
-impl<H: FastUDPSocketPacketHandler + Send + Sync + 'static> FastUDPSocket<H> {
-    pub fn new(device_name: &str, address: &InetAddress, handler: &Arc<H>) -> Result<FastUDPSocket<H>, String> {
-        let thread_count = num_cpus::get();
+impl FastUDPSocket {
+    pub fn new<F: Fn(&FastUDPRawOsSocket, &InetAddress, Buffer) + Send + Sync + Clone + 'static>(device_name: &str, address: &InetAddress, handler: F) -> Result<FastUDPSocket, String> {
+        let thread_count = num_cpus::get_physical().min(num_cpus::get());
 
         let mut s = FastUDPSocket{
-            handler: handler.clone(),
             thread_run: Arc::new(AtomicBool::new(true)),
             threads: Vec::new(),
             sockets: Vec::new(),
@@ -190,20 +182,15 @@ impl<H: FastUDPSocketPacketHandler + Send + Sync + 'static> FastUDPSocket<H> {
                 s.sockets.push(thread_socket);
 
                 let thread_run = s.thread_run.clone();
-                let handler_weak = Arc::downgrade(&s.handler);
+                let handler_copy = handler.clone();
                 s.threads.push(std::thread::Builder::new().stack_size(zerotier_core::RECOMMENDED_THREAD_STACK_SIZE).spawn(move || {
                     let mut from_address = InetAddress::new();
                     while thread_run.load(Ordering::Relaxed) {
                         let mut buf = Buffer::new();
                         let read_length = fast_udp_socket_recvfrom(&thread_socket, &mut buf, &mut from_address);
                         if read_length > 0 {
-                            let handler = handler_weak.upgrade();
-                            if handler.is_some() {
-                                unsafe { buf.set_len(read_length as usize); }
-                                handler.unwrap().incoming_udp_packet(&thread_socket, &from_address, buf);
-                            } else {
-                                break;
-                            }
+                            unsafe { buf.set_len(read_length as usize); }
+                            handler_copy(&thread_socket, &from_address, buf);
                         } else if read_length < 0 {
                             break;
                         }
@@ -214,6 +201,9 @@ impl<H: FastUDPSocketPacketHandler + Send + Sync + 'static> FastUDPSocket<H> {
             }
         }
 
+        // This is successful if it is able to bind successfully once and launch at least one thread,
+        // since in a few cases it may be impossible to do multithreaded binding such as old Linux
+        // kernels or emulation layers.
         if s.sockets.is_empty() {
             return Err(format!("unable to bind to address for IPv4 or IPv6 ({})", bind_failed_reason));
         }
@@ -243,14 +233,10 @@ impl<H: FastUDPSocketPacketHandler + Send + Sync + 'static> FastUDPSocket<H> {
     }
 }
 
-impl<H: FastUDPSocketPacketHandler + Send + Sync + 'static> Drop for FastUDPSocket<H> {
+impl Drop for FastUDPSocket {
     #[cfg(windows)]
     fn drop(&mut self) {
-        self.thread_run.store(false, Ordering::Relaxed);
         // TODO
-        for t in self.threads.iter() {
-            t.join()
-        }
     }
 
     #[cfg(unix)]
@@ -273,11 +259,12 @@ impl<H: FastUDPSocketPacketHandler + Send + Sync + 'static> Drop for FastUDPSock
             }
         }
         while !self.threads.is_empty() {
-            self.threads.pop().unwrap().join().expect("unable to join to thread");
+            let _ = self.threads.pop().unwrap().join();
         }
     }
 }
 
+/*
 #[cfg(test)]
 mod tests {
     use crate::fastudpsocket::*;
@@ -336,3 +323,4 @@ mod tests {
         //println!("FastUDPSocket shutdown successful");
     }
 }
+*/

@@ -17,7 +17,7 @@ mod physicallink;
 mod log;
 mod store;
 mod network;
-mod vnp;
+mod vnic;
 
 #[allow(non_snake_case,non_upper_case_globals,non_camel_case_types,dead_code,improper_ctypes)]
 mod osdep;
@@ -46,12 +46,6 @@ use crate::physicallink::PhysicalLink;
 use crate::network::Network;
 
 pub struct ServiceEventHandler {}
-
-impl FastUDPSocketPacketHandler for ServiceEventHandler {
-    #[inline(always)]
-    fn incoming_udp_packet(&self, raw_socket: &FastUDPRawOsSocket, from_adddress: &InetAddress, data: Buffer) {
-    }
-}
 
 impl NodeEventHandler<Network> for ServiceEventHandler {
     fn virtual_network_config(&self, network_id: NetworkId, network_obj: &Arc<Network>, config_op: VirtualNetworkConfigOperation, config: Option<&VirtualNetworkConfig>) {
@@ -99,7 +93,7 @@ fn main() {
     let tokio_rt = tokio::runtime::Builder::new_multi_thread().thread_stack_size(zerotier_core::RECOMMENDED_THREAD_STACK_SIZE).build().unwrap();
     tokio_rt.block_on(async {
         // Keeps track of FastUDPSocket instances by bound address.
-        let mut udp_sockets: BTreeMap<InetAddress, FastUDPSocket<ServiceEventHandler>> = BTreeMap::new();
+        let mut udp_sockets: BTreeMap<InetAddress, FastUDPSocket> = BTreeMap::new();
 
         // Send something to interrupt_tx to interrupt the inner loop and force it to
         // detect a change or exit if run has been set to false.
@@ -194,7 +188,9 @@ fn main() {
                 // Bind addresses that are not already bound.
                 for addr in system_addrs.iter() {
                     if !udp_sockets.contains_key(addr.0) {
-                        let s = FastUDPSocket::new(addr.1.device.as_str(), addr.0, &handler);
+                        let s = FastUDPSocket::new(addr.1.device.as_str(), addr.0, |raw_socket: &FastUDPRawOsSocket, from_address: &InetAddress, data: Buffer| {
+                            // TODO
+                        });
                         if s.is_ok() {
                             udp_sockets.insert(addr.0.clone(), s.unwrap());
                         } else if addr.0.port() == local_config.settings.primary_port {
