@@ -101,7 +101,7 @@ fn device_ipv6_set_params(device: &String, perform_nud: bool, accept_ra: bool) -
 
         let mut nd: osdep::in6_ndireq = zeroed();
         copy_nonoverlapping(dev.as_ptr(), nd.ifname.as_mut_ptr().cast::<u8>(), if dev.len() > (nd.ifname.len() - 1) { nd.ifname.len() - 1 } else { dev.len() });
-        if osdep::ioctl(s, osdep::c_SIOCGIFINFO_IN6, (&nd as *mut osdep::in6_ndireq).cast()) == 0 {
+        if osdep::ioctl(s, osdep::c_SIOCGIFINFO_IN6, (&mut nd as *mut osdep::in6_ndireq).cast::<c_void>()) == 0 {
             let oldflags = nd.ndi.flags;
             if perform_nud {
                 nd.ndi.flags |= osdep::ND6_IFF_PERFORMNUD as osdep::u_int32_t;
@@ -109,7 +109,7 @@ fn device_ipv6_set_params(device: &String, perform_nud: bool, accept_ra: bool) -
                 nd.ndi.flags &= !(osdep::ND6_IFF_PERFORMNUD as osdep::u_int32_t);
             }
             if nd.ndi.flags != oldflags {
-                if osdep::ioctl(s, osdep::c_SIOCSIFINFO_FLAGS, (&nd as *mut osdep::in6_ndireq).cast()) != 0 {
+                if osdep::ioctl(s, osdep::c_SIOCSIFINFO_FLAGS, (&mut nd as *mut osdep::in6_ndireq).cast::<c_void>()) != 0 {
                     ok = false;
                 }
             }
@@ -119,7 +119,7 @@ fn device_ipv6_set_params(device: &String, perform_nud: bool, accept_ra: bool) -
 
         let mut ifr: osdep::in6_ifreq = zeroed();
         copy_nonoverlapping(dev.as_ptr(), ifr.ifr_name.as_mut_ptr().cast::<u8>(), if dev.len() > (ifr.ifr_name.len() - 1) { ifr.ifr_name.len() - 1 } else { dev.len() });
-        if osdep::ioctl(s, if accept_ra { osdep::c_SIOCAUTOCONF_START } else { osdep::c_SIOCAUTOCONF_STOP }, (&ifr as *mut osdep::in6_ifreq).cast()) != 0 {
+        if osdep::ioctl(s, if accept_ra { osdep::c_SIOCAUTOCONF_START } else { osdep::c_SIOCAUTOCONF_STOP }, (&mut ifr as *mut osdep::in6_ifreq).cast::<c_void>()) != 0 {
             ok = false;
         }
 

@@ -61,20 +61,20 @@ pub const UNASSIGNED_PRIVILEGED_PORTS: [u16; 299] = [
     1023,
 ];
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(default)]
 pub struct LocalConfigPhysicalPathConfig {
     pub blacklist: bool
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(default)]
 pub struct LocalConfigVirtualConfig {
     #[serde(rename = "try")]
     pub try_: Vec<InetAddress>
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(default)]
 pub struct LocalConfigNetworkSettings {
     #[serde(rename = "allowManagedIPs")]
@@ -89,7 +89,7 @@ pub struct LocalConfigNetworkSettings {
     pub allow_default_route_override: bool,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(default)]
 pub struct LocalConfigSettings {
     #[serde(rename = "primaryPort")]
@@ -118,7 +118,7 @@ pub struct LocalConfigSettings {
     pub explicit_addresses: Vec<InetAddress>,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(default)]
 pub struct LocalConfig {
     pub physical: BTreeMap<InetAddress, LocalConfigPhysicalPathConfig>,
@@ -163,7 +163,6 @@ impl LocalConfigSettings {
     #[cfg(target_os = "linux")]
     const DEFAULT_PREFIX_BLACKLIST: [&'static str; 5] = ["lo", "tun", "tap", "ipsec", "zt"];
 
-    // This is not applicable on Windows as it doesn't use the same device name semantics.
     #[cfg(windows)]
     const DEFAULT_PREFIX_BLACKLIST: [&'static str; 0] = [];
 
@@ -187,7 +186,7 @@ impl Default for LocalConfigSettings {
 
         LocalConfigSettings {
             primary_port: zerotier_core::DEFAULT_PORT,
-            secondary_port: Some(293), // this is one of UNASSIGNED_PRIVILEGED_PORTS that we will default to
+            secondary_port: Some(zerotier_core::DEFAULT_SECONDARY_PORT),
             auto_port_search: true,
             port_mapping: true,
             log_size_max: 1048576,
@@ -210,5 +209,31 @@ impl Default for LocalConfig {
             network: BTreeMap::new(),
             settings: LocalConfigSettings::default()
         }
+    }
+}
+
+zerotier_core::implement_to_from_json!(LocalConfig);
+
+impl LocalConfig {
+    pub fn load(path: &String) -> std::io::Result<LocalConfig> {
+        let md = std::path::Path::new(path).metadata();
+        if md.is_err() {
+            return Err(md.err().unwrap());
+        }
+        if md.unwrap().len() > 1048576 {
+        }
+        let json = std::fs::read_to_string(path);
+        if json.is_err() {
+            return Err(json.err().unwrap());
+        }
+        let json = Self::new_from_json(json.unwrap().as_str());
+        if json.is_err() {
+            return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput, json.err().unwrap().to_string()));
+        }
+        Ok(json.unwrap())
+    }
+
+    pub fn save(&self, path: &String) -> std::io::Result<()> {
+        std::fs::write(path, self.to_json())
     }
 }

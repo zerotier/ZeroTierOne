@@ -9,18 +9,18 @@ build = "build.rs"
 
 [dependencies]
 zerotier-core = { path = "../rust-zerotier-core" }
-num_cpus = "1.13"
+num_cpus = "1"
 tokio = { version = "1", features = ["full"] }
-warp = "0.3"
+warp = "0"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-futures = "0.3"
-clap = { version = "2", features = ["default"] }
-chrono = "0.4"
-hex = "0.4"
+futures = "0"
+clap = { version = "2", features = ["suggestions", "wrap_help"] }
+chrono = "0"
+hex = "0"
 lazy_static = "1"
-num-traits = "0.2"
-num-derive = "0.3"
+num-traits = "0"
+num-derive = "0"
 
 [target."cfg(windows)".dependencies]
 winapi = { version = "0.3.9", features = ["handleapi", "ws2ipdef", "ws2tcpip"] }

@@ -33,9 +33,14 @@ extern "C" {
 /* ---------------------------------------------------------------------------------------------------------------- */
 
 /**
- * Default primary UDP port for devices running a ZeroTier endpoint
+ * Default primary UDP port
  */
 #define ZT_DEFAULT_PORT 9993
+
+/**
+ * Default secondary UDP port (if enabled)
+ */
+#define ZT_DEFAULT_SECONDARY_PORT 293
 
 /**
  * IP protocol number for naked IP encapsulation (this is not currently used)

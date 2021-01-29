@@ -53,14 +53,17 @@ pub use portableatomici64::PortableAtomicI64;
 pub use virtualnetworkconfig::*;
 pub use multicastgroup::MulticastGroup;
 
-/// Recommended minimum thread stack size for ZeroTier threads.
+/// Recommended minimum thread stack size for background threads.
 pub const RECOMMENDED_THREAD_STACK_SIZE: usize = 262144;
 
-/// Default TCP and UDP port for ZeroTier.
+/// Default TCP and UDP port.
 pub const DEFAULT_PORT: u16 = ztcore::ZT_DEFAULT_PORT as u16;
 
+/// Default secondary UDP port if enabled.
+pub const DEFAULT_SECONDARY_PORT: u16 = ztcore::ZT_DEFAULT_SECONDARY_PORT as u16;
+
 /// Size of a ZeroTier core "Buffer" in bytes.
-pub const BUF_SIZE: u32 = ztcore::ZT_BUF_SIZE;
+pub const BUF_SIZE: usize = ztcore::ZT_BUF_SIZE as usize;
 
 /// Minimum physical MTU.
 pub const MIN_MTU: u32 = ztcore::ZT_MIN_MTU;

@@ -11,6 +11,7 @@
  */
 /****/
 
+mod cli;
 mod fastudpsocket;
 mod localconfig;
 mod physicallink;
@@ -70,6 +71,7 @@ impl NodeEventHandler<Network> for ServiceEventHandler {
         0
     }
 
+    #[inline(always)]
     fn path_check(&self, address: Address, id: &Identity, local_socket: i64, sock_addr: &InetAddress) -> bool {
         true
     }
@@ -80,6 +82,8 @@ impl NodeEventHandler<Network> for ServiceEventHandler {
 }
 
 fn main() {
+    let cli_args = Some(cli::parse_cli_args());
+
     let inaddr_v6_any = IpAddr::from_str("::0").unwrap();
     let mut process_exit_value: i32 = 0;
 
@@ -137,7 +141,7 @@ fn main() {
                     .or(status)
                     .or(network)
                     .or(peer)
-            )).try_bind_with_graceful_shutdown((inaddr_v6_any, warp_server_port), async { shutdown_rx.await; });
+            )).try_bind_with_graceful_shutdown((inaddr_v6_any, warp_server_port), async { let _ = shutdown_rx.await; });
             if warp_server.is_err() {
                 // TODO: log unable to bind to primary port
                 run.store(false, Ordering::Relaxed);
