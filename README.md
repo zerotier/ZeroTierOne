@@ -13,7 +13,7 @@ Visit [ZeroTier's site](https://www.zerotier.com/) for more information and [pre
 
 ZeroTier is licensed under the [BSL version 1.1](https://mariadb.com/bsl11/). See [LICENSE.txt](LICENSE.txt) and the [ZeroTier pricing page](https://www.zerotier.com/pricing) for details. ZeroTier is free to use internally in businesses and academic institutions and for non-commercial purposes. Certain types of commercial use such as building closed-source apps and devices based on ZeroTier or offering ZeroTier network controllers and network management as a SaaS service require a commercial license.
 
-A small amount of third party code is also included in ZeroTier and is not subject to our BSL license. See [AUTHORS.md] for a list of third party code, where it is included, and the licenses that apply to it. All of the third party code in ZeroTier is liberally licensed (MIT, BSD, Apache, public domain, etc.).
+A small amount of third party code is also included in ZeroTier and is not subject to our BSL license. See [AUTHORS.md](AUTHORS.md) for a list of third party code, where it is included, and the licenses that apply to it. All of the third party code in ZeroTier is liberally licensed (MIT, BSD, Apache, public domain, etc.).
 
 ### Getting Started
 
@@ -44,7 +44,7 @@ The base path contains the ZeroTier One service main entry point (`one.cpp`), se
 
 ### Build and Platform Notes
 
-To build on Mac and Linux just type `make`. On FreeBSD and OpenBSD `gmake` (GNU make) is required and can be installed from packages or ports. For Windows there is a Visual Studio solution in `windows/'.
+To build on Mac and Linux just type `make`. On FreeBSD and OpenBSD `gmake` (GNU make) is required and can be installed from packages or ports. For Windows there is a Visual Studio solution in `windows/`.
 
  - **Mac**
    - Xcode command line tools for OSX 10.8 or newer are required.
@@ -64,7 +64,7 @@ Typing `make selftest` will build a *zerotier-selftest* binary which unit tests 
 
 ### Running
 
-Running *zerotier-one* with -h will show help.
+Running *zerotier-one* with `-h` option will show help.
 
 On Linux and BSD you can start the service with:
 
@@ -72,7 +72,7 @@ On Linux and BSD you can start the service with:
 
 A home folder for your system will automatically be created.
 
-The service is controlled via the JSON API, which by default is available at 127.0.0.1 port 9993. We include a *zerotier-cli* command line utility to make API calls for standard things like joining and leaving networks. The *authtoken.secret* file in the home folder contains the secret token for accessing this API. See README.md in [service/](service/) for API documentation.
+The service is controlled via the JSON API, which by default is available at 127.0.0.1 port 9993. We include a *zerotier-cli* command line utility to make API calls for standard things like joining and leaving networks. The *authtoken.secret* file in the home folder contains the secret token for accessing this API. See [service/README.md](service/README.md) for API documentation.
 
 Here's where home folders live (by default) on each OS:
 
@@ -105,4 +105,4 @@ Users behind certain types of firewalls and "symmetric" NAT devices may not able
 
 If a firewall between you and the Internet blocks ZeroTier's UDP traffic, you will fall back to last-resort TCP tunneling to rootservers over port 443 (https impersonation). This will work almost anywhere but is *very slow* compared to UDP or direct peer to peer connectivity.
 
-Additional help [can be found in our knowledge base](https://zerotier.atlassian.net/wiki/spaces/SD/overview).
+Additional help can be found in our [knowledge base](https://zerotier.atlassian.net/wiki/spaces/SD/overview).
