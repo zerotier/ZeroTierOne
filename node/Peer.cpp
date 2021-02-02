@@ -171,51 +171,6 @@ void Peer::received(
 					RR->t->peerConfirmingUnknownPath(tPtr,networkId,*this,path,packetId,verb);
 				}
 			}
-
-/*
-			// Paths are redunant if they duplicate an alive path to the same IP or
-			// with the same local socket and address family.
-			bool redundant = false;
-			for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-				if (_paths[i].p) {
-					if ( _paths[i].p->alive(now) && (_paths[i].p->localSocket() == path->localSocket()) && _paths[i].p->address().ipsEqual(path->address()) ) {
-						redundant = true;
-						break;
-					}
-				} else break;
-			}
-
-			if (!redundant) {
-				unsigned int replacePath = ZT_MAX_PEER_NETWORK_PATHS;
-				int replacePathQuality = 0;
-				for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-					if (_paths[i].p) {
-						const int q = _paths[i].p->quality(now);
-						if (q > replacePathQuality) {
-							replacePathQuality = q;
-							replacePath = i;
-							if (!_paths[i].p->alive(now)) {
-								break; // Stop searching, we found an identical dead path, replace the object
-							}
-						}
-					} else {
-						replacePath = i;
-						break;
-					}
-				}
-
-				if (replacePath != ZT_MAX_PEER_NETWORK_PATHS) {
-					if (verb == Packet::VERB_OK) {
-						RR->t->peerLearnedNewPath(tPtr,networkId,*this,path,packetId);
-						_paths[replacePath].lr = now;
-						_paths[replacePath].p = path;
-						_paths[replacePath].priority = 1;
-					} else {
-						attemptToContact = true;
-					}
-				}
-			}
-*/
 		}
 	}
 
