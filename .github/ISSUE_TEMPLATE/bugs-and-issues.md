@@ -12,10 +12,8 @@ assignees: ''
 _Using these will ensure you get quicker support, and make this space available for code-related issues. Thank you!_
 
 - [Knowledge Base](https://zerotier.atlassian.net/wiki/spaces/SD/overview) => Guides and documentation on how to use ZeroTier.
-- [Discuss Forum](https://discuss.zerotier.com/) => Our discussion forum for users and support to mutally resolve issues & suggest ideas.
-- [Reddit](https://www.reddit.com/r/zerotier/) => Our subreddit, which we monitor regularly and is fairly active.
+- [Community Forum](https://discuss.zerotier.com/) => Our discussion forum for users and support to mutally resolve issues & suggest ideas.
 - https://www.zerotier.com/contact/ => Sales and licensing queries
-- https://zerotier.atlassian.net/servicedesk/customer/portals => Customer Support Portal
 
 # If you still want to file a Bug Report
 
