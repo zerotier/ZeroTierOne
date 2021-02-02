@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y zerotier-one=1.6.2
 COPY ext/installfiles/linux/zerotier-containerized/main.sh /var/lib/zerotier-one/main.sh
 
 FROM debian:buster-slim
-LABEL version="1.6.2"
+LABEL version="1.6.3"
 LABEL description="Containerized ZeroTier One for use on CoreOS or other Docker-only Linux hosts."
 
 # ZeroTier relies on UDP port 9993
