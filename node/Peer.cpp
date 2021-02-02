@@ -128,12 +128,15 @@ void Peer::received(
 				long replacePathQuality = 0;
 				for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
 					if (_paths[i].p) {
-						const long q = _paths[i].p->quality(now);
-						if (q > replacePathQuality) {
-							replacePathQuality = q;
+						if ( (!_paths[i].p->alive(now)) || _paths[i].p->address().ipsEqual(path->address()) ) {
 							replacePath = i;
-							if ( (!_paths[i].p->alive(now)) || _paths[i].p->address().ipsEqual(path->address()) )
-								break;
+							break;
+						} else {
+							const long q = _paths[i].p->quality(now);
+							if (q > replacePathQuality) {
+								replacePathQuality = q;
+								replacePath = i;
+							}
 						}
 					} else {
 						replacePath = i;
@@ -147,10 +150,26 @@ void Peer::received(
 					_paths[replacePath].p = path;
 					_paths[replacePath].priority = 1;
 				}
+
+				{
+					Mutex::Lock ltl(_lastTriedPath_m);
+					uint64_t *k = (uint64_t *)0;
+					int64_t *v = (int64_t *)0;
+					Hashtable< uint64_t,int64_t >::Iterator i(_lastTriedPath);
+					while (i.next(k, v)) {
+						if ((now - *v) >= 2000)
+							_lastTriedPath.erase(*k);
+					}
+				}
 			} else {
-				attemptToContactAt(tPtr,path->localSocket(),path->address(),now,true);
-				path->sent(now);
-				RR->t->peerConfirmingUnknownPath(tPtr,networkId,*this,path,packetId,verb);
+				Mutex::Lock ltl(_lastTriedPath_m);
+				int64_t &lt = _lastTriedPath[(uint64_t)path.ptr()];
+				if ((now - lt) >= 2000) {
+					lt = now;
+					attemptToContactAt(tPtr,path->localSocket(),path->address(),now,true);
+					path->sent(now);
+					RR->t->peerConfirmingUnknownPath(tPtr,networkId,*this,path,packetId,verb);
+				}
 			}
 
 /*

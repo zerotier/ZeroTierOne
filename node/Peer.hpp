@@ -573,6 +573,9 @@ private:
 	uint16_t _vMinor;
 	uint16_t _vRevision;
 
+	Hashtable< uint64_t, int64_t > _lastTriedPath;
+	Mutex _lastTriedPath_m;
+
 	_PeerPath _paths[ZT_MAX_PEER_NETWORK_PATHS];
 	Mutex _paths_m;
 
