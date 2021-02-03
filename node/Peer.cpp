@@ -116,7 +116,9 @@ void Peer::received(
 						havePath = true;
 						break;
 					}
-				} else break;
+				} else {
+					break;
+				}
 			}
 		}
 
@@ -132,7 +134,7 @@ void Peer::received(
 							replacePath = i;
 							break;
 						} else {
-							const long q = _paths[i].p->quality(now);
+							const long q = _paths[i].p->quality(now) / _paths[i].priority;
 							if (q > replacePathQuality) {
 								replacePathQuality = q;
 								replacePath = i;
@@ -150,22 +152,23 @@ void Peer::received(
 					_paths[replacePath].p = path;
 					_paths[replacePath].priority = 1;
 				}
-
-				{
-					Mutex::Lock ltl(_lastTriedPath_m);
-					uint64_t *k = (uint64_t *)0;
-					int64_t *v = (int64_t *)0;
-					Hashtable< uint64_t,int64_t >::Iterator i(_lastTriedPath);
-					while (i.next(k, v)) {
-						if ((now - *v) >= 2000)
-							_lastTriedPath.erase(*k);
-					}
-				}
 			} else {
 				Mutex::Lock ltl(_lastTriedPath_m);
-				int64_t &lt = _lastTriedPath[(uint64_t)path.ptr()];
-				if ((now - lt) >= 2000) {
-					lt = now;
+
+				bool triedTooRecently = false;
+				for(std::vector< std::pair< Path *, int64_t > >::iterator i(_lastTriedPath.begin());i!=_lastTriedPath.end();) {
+					if ((now - i->second) > 1000) {
+						_lastTriedPath.erase(i++);
+					} else if (i->first == path.ptr()) {
+						++i;
+						triedTooRecently = true;
+					} else {
+						++i;
+					}
+				}
+
+				if (!triedTooRecently) {
+					_lastTriedPath.push_back(std::pair< Path *, int64_t >(path.ptr(), now));
 					attemptToContactAt(tPtr,path->localSocket(),path->address(),now,true);
 					path->sent(now);
 					RR->t->peerConfirmingUnknownPath(tPtr,networkId,*this,path,packetId,verb);
