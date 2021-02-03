@@ -173,6 +173,8 @@ impl FastUDPSocket {
             sockets: Vec::new(),
             bind_address: address.clone()
         };
+        s.threads.reserve(thread_count);
+        s.sockets.reserve(thread_count);
 
         let mut bind_failed_reason: &'static str = "";
         for _ in 0..thread_count {
@@ -209,6 +211,12 @@ impl FastUDPSocket {
         }
 
         Ok(s)
+    }
+
+    /// Get a slice of all raw sockets used.
+    #[inline(always)]
+    pub fn all_sockets(&self) -> &[FastUDPRawOsSocket] {
+        self.sockets.as_slice()
     }
 
     /// Send from this socket.

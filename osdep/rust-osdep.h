@@ -46,3 +46,14 @@ extern const unsigned long c_SIOCAUTOCONF_STOP;
 }
 #endif
 #endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+extern const char *platformDefaultHomePath();
+extern int64_t msSinceEpoch();
+
+#ifdef __cplusplus
+}
+#endif

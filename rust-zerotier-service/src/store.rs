@@ -27,7 +27,7 @@ pub struct Store {
 impl Store {
     const MAX_OBJECT_SIZE: usize = 131072; // sanity limit
 
-    pub fn new(base_path: &str) -> Result<Store, std::io::Error> {
+    pub fn new(base_path: &str) -> std::io::Result<Store> {
         let bp = Path::new(base_path);
         let md = bp.metadata()?;
         if !md.is_dir() || md.permissions().readonly() {

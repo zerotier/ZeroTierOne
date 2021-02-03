@@ -220,7 +220,8 @@ impl LocalConfig {
         if md.is_err() {
             return Err(md.err().unwrap());
         }
-        if md.unwrap().len() > 1048576 {
+        if md.unwrap().len() > 1048576 { // anti-memory-overflow sanity limit
+            return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput, "local config file too large (sanity limit: 1MiB)"))
         }
         let json = std::fs::read_to_string(path);
         if json.is_err() {

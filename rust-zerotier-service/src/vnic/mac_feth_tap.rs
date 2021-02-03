@@ -1,4 +1,17 @@
 /*
+ * Copyright (c)2013-2020 ZeroTier, Inc.
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file in the project's root directory.
+ *
+ * Change Date: 2025-01-01
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2.0 of the Apache License.
+ */
+/****/
+
+/*
  * This creates a pair of feth devices with the lower numbered device
  * being the ZeroTier virtual interface and the higher being the device
  * used to actually read and write packets. The latter gets no IP config
@@ -28,7 +41,7 @@ use std::error::Error;
 use std::ffi::CString;
 use std::ptr::{null_mut, copy_nonoverlapping};
 use std::mem::{transmute, zeroed};
-use std::os::raw::{c_int, c_uchar, c_ulong, c_void};
+use std::os::raw::{c_int, c_uchar, c_void};
 use std::process::Command;
 use std::sync::Mutex;
 use std::thread::JoinHandle;
@@ -39,7 +52,7 @@ use num_traits::cast::AsPrimitive;
 use zerotier_core::{InetAddress, MAC, MulticastGroup, NetworkId};
 
 use crate::osdep as osdep;
-use crate::physicallink::PhysicalLink;
+use crate::getifaddrs;
 use crate::vnic::VNIC;
 
 const BPF_BUFFER_SIZE: usize = 131072;
@@ -154,8 +167,8 @@ impl MacFethTap {
             device_name = format!("feth{}", device_feth_no);
             peer_device_name = format!("feth{}", device_feth_no + 5000);
             let mut already_allocated = false;
-            PhysicalLink::map(|link: PhysicalLink| {
-                if link.device.eq(&device_name) || link.device.eq(&peer_device_name) {
+            getifaddrs::for_each_address(|_: &InetAddress, dn: &str| {
+                if dn.eq(&device_name) || dn.eq(&peer_device_name) {
                     already_allocated = true;
                 }
             });
@@ -164,7 +177,7 @@ impl MacFethTap {
             }
 
             device_alloc_tries += 1;
-            if device_alloc_tries >= 4899 {
+            if device_alloc_tries >= 1000 {
                 return Err(String::from("unable to find unallocated 'feth' device"));
             }
             device_feth_ctr += 1;
@@ -394,60 +407,16 @@ impl VNIC for MacFethTap {
         self.device.name.clone()
     }
 
+    #[inline(always)]
     fn get_multicast_groups(&self) -> BTreeSet<MulticastGroup> {
-        let dev = self.device.name.as_bytes();
-        let mut groups: BTreeSet<MulticastGroup> = BTreeSet::new();
-        unsafe {
-            let mut maddrs: *mut osdep::ifmaddrs = null_mut();
-            if osdep::getifmaddrs(&mut maddrs as *mut *mut osdep::ifmaddrs) == 0 {
-                let mut i = maddrs;
-                while !i.is_null() {
-                    if !(*i).ifma_name.is_null() && !(*i).ifma_addr.is_null() && (*(*i).ifma_addr).sa_family == osdep::AF_LINK as osdep::sa_family_t {
-                        let in_: &osdep::sockaddr_dl = &*((*i).ifma_name.cast());
-                        let la: &osdep::sockaddr_dl = &*((*i).ifma_addr.cast());
-                        if la.sdl_alen == 6 && in_.sdl_nlen <= dev.len() as osdep::u_char && osdep::memcmp(dev.as_ptr().cast(), in_.sdl_data.as_ptr().cast(), in_.sdl_nlen as c_ulong) == 0 {
-                            let mi = la.sdl_nlen as usize;
-                            groups.insert(MulticastGroup{
-                                mac: MAC(
-                                    (la.sdl_data[mi] as u64) << 40 |
-                                    (la.sdl_data[mi+1] as u64) << 32 |
-                                    (la.sdl_data[mi+2] as u64) << 24 |
-                                    (la.sdl_data[mi+3] as u64) << 16 |
-                                    (la.sdl_data[mi+4] as u64) << 8 |
-                                    la.sdl_data[mi+5] as u64
-                                ),
-                                adi: 0,
-                            });
-                        }
-                    }
-                    i = (*i).ifma_next;
-                }
-                osdep::freeifmaddrs(maddrs);
-            }
-        }
-        groups
+        crate::vnic::common::bsd_get_multicast_groups(self.device.name.as_str())
     }
 
     #[inline(always)]
     fn put(&self, source_mac: &zerotier_core::MAC, dest_mac: &zerotier_core::MAC, ethertype: u16, vlan_id: u16, data: *const u8, len: usize) -> bool {
         let dm = dest_mac.0;
         let sm = source_mac.0;
-        let mut hdr: [u8; 14] = [
-            (dm >> 40) as u8,
-            (dm >> 32) as u8,
-            (dm >> 24) as u8,
-            (dm >> 16) as u8,
-            (dm >> 8) as u8,
-            dm as u8,
-            (sm >> 40) as u8,
-            (sm >> 32) as u8,
-            (sm >> 24) as u8,
-            (sm >> 16) as u8,
-            (sm >> 8) as u8,
-            sm as u8,
-            (ethertype >> 8) as u8,
-            ethertype as u8
-        ];
+        let mut hdr: [u8; 14] = [(dm >> 40) as u8, (dm >> 32) as u8, (dm >> 24) as u8, (dm >> 16) as u8, (dm >> 8) as u8, dm as u8, (sm >> 40) as u8, (sm >> 32) as u8, (sm >> 24) as u8, (sm >> 16) as u8, (sm >> 8) as u8, sm as u8, (ethertype >> 8) as u8, ethertype as u8];
         unsafe {
             let iov: [osdep::iovec; 2] = [
                 osdep::iovec {

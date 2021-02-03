@@ -8,10 +8,10 @@ set(src
 )
 
 set(headers
-	BlockingQueue.hpp
 	ManagedRoute.hpp
 	OSUtils.hpp
 	Thread.hpp
+	rust-osdep.h
 )
 
 if(WIN32)
@@ -27,11 +27,6 @@ elseif(UNIX)
 		set(src ${src} freebsd_getifmaddrs.c)
 		set(headers ${headers} freebsd_getifmaddrs.h)
 	endif(CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
-
-	if(CMAKE_SYSTEM_NAME MATCHES "Linux")
-		set(src ${src} LinuxEthernetTap.cpp LinuxNetLink.cpp)
-		set(headers ${headers} LinuxEthernetTap.hpp LinuxNetLink.hpp)
-	endif(CMAKE_SYSTEM_NAME MATCHES "Linux")
 endif(WIN32)
 
 add_library(${PROJECT_NAME} STATIC ${src} ${headers})
