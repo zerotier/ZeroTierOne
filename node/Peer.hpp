@@ -15,6 +15,7 @@
 #define ZT_PEER_HPP
 
 #include <vector>
+#include <list>
 
 #include "../include/ZeroTierOne.h"
 
@@ -573,7 +574,7 @@ private:
 	uint16_t _vMinor;
 	uint16_t _vRevision;
 
-	std::vector< std::pair< Path *, int64_t > > _lastTriedPath;
+	std::list< std::pair< Path *, int64_t > > _lastTriedPath;
 	Mutex _lastTriedPath_m;
 
 	_PeerPath _paths[ZT_MAX_PEER_NETWORK_PATHS];

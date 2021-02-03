@@ -156,7 +156,7 @@ void Peer::received(
 				Mutex::Lock ltl(_lastTriedPath_m);
 
 				bool triedTooRecently = false;
-				for(std::vector< std::pair< Path *, int64_t > >::iterator i(_lastTriedPath.begin());i!=_lastTriedPath.end();) {
+				for(std::list< std::pair< Path *, int64_t > >::iterator i(_lastTriedPath.begin());i!=_lastTriedPath.end();) {
 					if ((now - i->second) > 1000) {
 						_lastTriedPath.erase(i++);
 					} else if (i->first == path.ptr()) {
