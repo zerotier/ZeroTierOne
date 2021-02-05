@@ -16,7 +16,7 @@ use std::path::{Path, PathBuf};
 use zerotier_core::StateObjectType;
 use std::io::{Read, Write};
 
-pub struct Store {
+pub(crate) struct Store {
     pub base_path: Box<Path>,
     pub peers_path: Box<Path>,
     pub controller_path: Box<Path>,

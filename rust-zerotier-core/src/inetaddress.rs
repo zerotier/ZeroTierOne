@@ -48,6 +48,9 @@ pub enum InetAddressFamily {
     IPv6
 }
 
+pub const IPV4_INADDR_ANY: [u8; 4] = [0; 4];
+pub const IPV6_INADDR_ANY: [u8; 16] = [0; 16];
+
 /// Opaque structure that can hold an IPv4 or IPv6 address.
 pub struct InetAddress {
     // This must be the same size as ZT_InetAddress in zerotier.h. This is
@@ -61,6 +64,24 @@ impl InetAddress {
         InetAddress {
             bits: [0; (ztcore::ZT_SOCKADDR_STORAGE_SIZE / 8) as usize]
         }
+    }
+
+    /// Create an IPv4 0.0.0.0 InetAddress
+    pub fn new_ipv4_any(port: u16) -> InetAddress {
+        let mut ia = InetAddress::new();
+        unsafe {
+            ztcore::ZT_InetAddress_setIpBytes(ia.as_capi_mut_ptr(), IPV4_INADDR_ANY.as_ptr().cast(), 4, port as c_uint);
+        }
+        ia
+    }
+
+    /// Create an IPv6 ::0 InetAddress
+    pub fn new_ipv6_any(port: u16) -> InetAddress {
+        let mut ia = InetAddress::new();
+        unsafe {
+            ztcore::ZT_InetAddress_setIpBytes(ia.as_capi_mut_ptr(), IPV6_INADDR_ANY.as_ptr().cast(), 16, port as c_uint);
+        }
+        ia
     }
 
     /// Create from a 4-byte IPv4 IP or a 16-byte IPv6 IP.

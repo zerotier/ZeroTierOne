@@ -11,7 +11,7 @@
  */
 /****/
 
-pub trait VNIC {
+pub(crate) trait VNIC {
     fn add_ip(&self, ip: &zerotier_core::InetAddress) -> bool;
     fn remove_ip(&self, ip: &zerotier_core::InetAddress) -> bool;
     fn ips(&self) -> Vec<zerotier_core::InetAddress>;

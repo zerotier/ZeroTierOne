@@ -15,7 +15,7 @@ use std::os::raw::{c_char, c_int};
 use num_derive::{FromPrimitive, ToPrimitive};
 
 #[allow(non_snake_case,non_upper_case_globals,non_camel_case_types,dead_code,improper_ctypes)]
-mod capi;
+mod capi; // bindgen generated
 
 mod identity;
 mod address;

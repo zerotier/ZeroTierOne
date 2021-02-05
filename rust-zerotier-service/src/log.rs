@@ -11,16 +11,18 @@
  */
 /****/
 
-use std::fs::{File, OpenOptions};
-use std::sync::Mutex;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::io::{Write, Seek, SeekFrom};
 use std::cell::Cell;
-use zerotier_core::PortableAtomicI64;
-use chrono::Datelike;
 use std::fmt::Display;
+use std::fs::{File, OpenOptions};
+use std::io::{Seek, SeekFrom, Write};
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Mutex;
 
-pub struct Log {
+use chrono::Datelike;
+
+use zerotier_core::PortableAtomicI64;
+
+pub(crate) struct Log {
     prefix: String,
     path: String,
     file: Mutex<Cell<Option<File>>>,
@@ -29,7 +31,7 @@ pub struct Log {
 }
 
 impl Log {
-    const MIN_MAX_SIZE: usize = 4096;
+    const MIN_MAX_SIZE: usize = 1024;
 
     pub fn new(path: &str, max_size: usize, prefix: &str) -> Log {
         let mut p = String::from(prefix);

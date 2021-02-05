@@ -54,6 +54,7 @@ use zerotier_core::{InetAddress, MAC, MulticastGroup, NetworkId};
 use crate::osdep as osdep;
 use crate::getifaddrs;
 use crate::vnic::VNIC;
+use crate::osdep::getifmaddrs;
 
 const BPF_BUFFER_SIZE: usize = 131072;
 const IFCONFIG: &str = "/sbin/ifconfig";
@@ -79,7 +80,7 @@ impl Drop for MacFethDevice {
     }
 }
 
-pub struct MacFethTap {
+pub(crate) struct MacFethTap {
     network_id: u64,
     device: MacFethDevice,
     ndrv_fd: c_int,
@@ -106,7 +107,6 @@ fn device_ipv6_set_params(device: &String, perform_nud: bool, accept_ra: bool) -
     let dev = device.as_bytes();
     let mut ok = true;
     unsafe {
-
         let s = osdep::socket(osdep::AF_INET6 as c_int, osdep::SOCK_DGRAM as c_int, 0);
         if s < 0 {
             return false;
@@ -148,7 +148,7 @@ impl MacFethTap {
     /// given will not remain valid after it returns. Also note that F will be called
     /// from another thread that is spawned here, so all its bound references must
     /// be "Send" and "Sync" e.g. Arc<>.
-    pub fn new<F: Fn(&[u8]) + Send + Sync + 'static>(nwid: &NetworkId, mac: &MAC, mtu: i32, metric: i32, eth_frame_func: F) -> Result<MacFethTap, String> {
+    pub(crate) fn new<F: Fn(&[u8]) + Send + Sync + 'static>(nwid: &NetworkId, mac: &MAC, mtu: i32, metric: i32, eth_frame_func: F) -> Result<MacFethTap, String> {
         // This tracks BPF devices we are using so we don't try to reopen them, and also
         // doubles as a global lock to ensure that only one feth tap is created at once per
         // ZeroTier process per system.
@@ -357,8 +357,8 @@ impl MacFethTap {
 
     fn have_ip(&self, ip: &InetAddress) -> bool {
         let mut have_ip = false;
-        PhysicalLink::map(|link: PhysicalLink| {
-            if link.device.eq(&self.device.name) && link.address.eq(ip) {
+        getifaddrs::for_each_address(|addr: &InetAddress, device_name: &str| {
+            if device_name.eq(&self.device.name) && addr.eq(ip) {
                 have_ip = true;
             }
         });
@@ -393,9 +393,9 @@ impl VNIC for MacFethTap {
         let mut ipv: Vec<InetAddress> = Vec::new();
         ipv.reserve(8);
         let dev = self.device.name.as_str();
-        PhysicalLink::map(|link: PhysicalLink| {
-            if link.device.eq(dev) {
-                ipv.push(link.address.clone());
+        getifaddrs::for_each_address(|addr: &InetAddress, device_name: &str| {
+            if device_name.eq(dev) {
+                ipv.push(addr.clone());
             }
         });
         ipv.sort();

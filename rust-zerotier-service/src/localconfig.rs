@@ -100,6 +100,8 @@ pub struct LocalConfigSettings {
     pub auto_port_search: bool,
     #[serde(rename = "portMapping")]
     pub port_mapping: bool,
+    #[serde(rename = "logPath")]
+    pub log_path: Option<String>,
     #[serde(rename = "logSizeMax")]
     pub log_size_max: usize,
     #[serde(rename = "logVL1Events")]
@@ -189,6 +191,7 @@ impl Default for LocalConfigSettings {
             secondary_port: Some(zerotier_core::DEFAULT_SECONDARY_PORT),
             auto_port_search: true,
             port_mapping: true,
+            log_path: None,
             log_size_max: 1048576,
             log_vl1_events: false,
             log_vl2_events: false,

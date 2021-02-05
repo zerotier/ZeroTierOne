@@ -1519,25 +1519,13 @@ typedef struct
 		 */
 		ZT_InetAddress ia;
 
+		/* When compiling the ZeroTier core, we want to explicitly define these
+		 * in the union. Otherwise we don't because that would require these
+		 * structures to be included. */
 #ifdef ZT_CORE
-		/**
-		 * Socket address generic buffer
-		 */
 		struct sockaddr_storage ss;
-
-		/**
-		 * Socket address header, for all ZT_ENDPOINT_TYPE_IP types
-		 */
 		struct sockaddr sa;
-
-		/**
-		 * IPv4 address, for all ZT_ENDPOINT_TYPE_IP types if family is AF_INET
-		 */
 		struct sockaddr_in sa_in;
-
-		/**
-		 * IPv6 address, for all ZT_ENDPOINT_TYPE_IP types if family is AF_INET6
-		 */
 		struct sockaddr_in6 sa_in6;
 #endif
 

@@ -11,6 +11,7 @@
  */
 /****/
 
+mod api;
 mod cli;
 mod commands;
 mod fastudpsocket;
@@ -22,7 +23,7 @@ mod network;
 mod vnic;
 
 #[allow(non_snake_case,non_upper_case_globals,non_camel_case_types,dead_code,improper_ctypes)]
-mod osdep;
+mod osdep; // bindgen generated
 
 use std::boxed::Box;
 use std::ffi::CStr;
@@ -30,19 +31,14 @@ use std::path::Path;
 
 fn main() {
     let mut process_exit_value: i32 = 0;
-
-    let mut zerotier_path;
-    unsafe {
-        zerotier_path = zerotier_core::cstr_to_string(osdep::platformDefaultHomePath(), 256);
-    }
-
+    let mut zerotier_path = unsafe { zerotier_core::cstr_to_string(osdep::platformDefaultHomePath(), 256) };
     let mut cli_args = Some(Box::new(cli::parse_cli_args()));
 
     let json_output;
     let mut token: Option<String> = None;
     let mut token_path = Path::new(&zerotier_path).join("authtoken.secret");
     {
-        let a = cli_args.unwrap();
+        let a = cli_args.as_ref().unwrap();
         json_output = a.is_present("json");
         let v = a.value_of("path");
         if v.is_some() {
@@ -54,11 +50,11 @@ fn main() {
         }
         let v = a.value_of("token_path");
         if v.is_some() {
-            token_path = Path::new(v.unwrap().trim()).into_path_buf();
+            token_path = Path::new(v.unwrap().trim()).to_path_buf();
         }
     }
 
-    match cli_args.unwrap().subcommand_name().unwrap() {
+    match cli_args.as_ref().unwrap().subcommand_name().unwrap() {
         "version" => {
             let ver = zerotier_core::version();
             println!("{}.{}.{}", ver.0, ver.1, ver.2);
