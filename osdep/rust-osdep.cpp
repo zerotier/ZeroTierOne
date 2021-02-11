@@ -1,3 +1,12 @@
+/* Fix for an issue with this structure not being present on MacOS */
+#ifdef __APPLE__
+struct prf_ra {
+	unsigned char onlink : 1;
+	unsigned char autonomous : 1;
+	unsigned char reserved : 6;
+} prf_ra;
+#endif
+
 #include "../core/Constants.hpp"
 #include "../core/Mutex.hpp"
 #include "../core/Containers.hpp"
@@ -103,5 +112,8 @@ const char *platformDefaultHomePath()
 
 int64_t msSinceEpoch()
 { return ZeroTier::OSUtils::now(); }
+
+void lockDownFile(const char *path, int isDir)
+{ ZeroTier::OSUtils::lockDownFile(path, isDir != 0); }
 
 }

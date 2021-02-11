@@ -11,11 +11,14 @@
  */
 /****/
 
-use zerotier_core::InetAddress;
 use std::ffi::CStr;
-use std::ptr::{null_mut, copy_nonoverlapping};
 use std::mem::size_of;
+use std::ptr::{copy_nonoverlapping, null_mut};
+
 use num_traits::cast::AsPrimitive;
+
+use zerotier_core::InetAddress;
+
 use crate::osdep as osdep;
 
 #[inline(always)]

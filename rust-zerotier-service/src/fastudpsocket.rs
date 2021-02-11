@@ -161,6 +161,19 @@ fn fast_udp_socket_close(socket: &FastUDPRawOsSocket) {
     }
 }
 
+#[inline(always)]
+pub(crate) fn fast_udp_socket_to_i64(socket: &FastUDPRawOsSocket) -> i64 {
+    (*socket) as i64
+}
+
+#[inline(always)]
+pub(crate) fn fast_udp_socket_from_i64(socket: i64) -> Option<FastUDPRawOsSocket> {
+    if socket >= 0 {
+        return Some(socket as FastUDPRawOsSocket);
+    }
+    None
+}
+
 /// Send to a raw UDP socket with optional packet TTL.
 /// If the packet_ttl option is <=0, packet is sent with the default TTL. TTL setting is only used
 /// in ZeroTier right now to do escalating TTL probes for IPv4 NAT traversal.
@@ -303,58 +316,42 @@ impl Drop for FastUDPSocket {
     }
 }
 
-/*
 #[cfg(test)]
 mod tests {
     use crate::fastudpsocket::*;
     use zerotier_core::{InetAddress, Buffer};
-    use std::sync::Arc;
     use std::sync::atomic::{AtomicU32, Ordering};
-
-    #[allow(dead_code)]
-    struct TestPacketHandler {
-        cnt: AtomicU32,
-        side: &'static str
-    }
-
-    impl FastUDPSocketPacketHandler for TestPacketHandler {
-        #[allow(unused)]
-        fn incoming_udp_packet(&self, raw_socket: &FastUDPRawOsSocket, from_adddress: &InetAddress, data: Buffer) {
-            self.cnt.fetch_add(1, Ordering::Relaxed);
-            //println!("{}: {} bytes from {} (socket: {})", self.side, data.len(), from_adddress.to_string().as_str(), *raw_socket);
-        }
-    }
 
     #[test]
     fn test_udp_bind_and_transfer() {
         {
-            let ba1 = InetAddress::new_from_string("127.0.0.1/23333");
+            let ba0 = InetAddress::new_from_string("127.0.0.1/23333");
+            assert!(ba0.is_some());
+            let ba0 = ba0.unwrap();
+            let cnt0 = Arc::new(AtomicU32::new(0));
+            let cnt0c = cnt0.clone();
+            let s0 = FastUDPSocket::new("", &ba0, move |sock: &FastUDPRawOsSocket, _: &InetAddress, data: Buffer| {
+                cnt0c.fetch_add(1, Ordering::Relaxed);
+            });
+            assert!(s0.is_ok());
+            let s0 = s0.unwrap();
+
+            let ba1 = InetAddress::new_from_string("127.0.0.1/23334");
             assert!(ba1.is_some());
             let ba1 = ba1.unwrap();
-            let h1: Arc<TestPacketHandler> = Arc::new(TestPacketHandler {
-                cnt: AtomicU32::new(0),
-                side: "Alice",
+            let cnt1 = Arc::new(AtomicU32::new(0));
+            let cnt1c = cnt1.clone();
+            let s1 = FastUDPSocket::new("", &ba1, move |sock: &FastUDPRawOsSocket, _: &InetAddress, data: Buffer| {
+                cnt1c.fetch_add(1, Ordering::Relaxed);
             });
-            let s1 = FastUDPSocket::new("lo0", &ba1, &h1);
             assert!(s1.is_ok());
-            let s1 = s1.ok().unwrap();
-
-            let ba2 = InetAddress::new_from_string("127.0.0.1/23334");
-            assert!(ba2.is_some());
-            let ba2 = ba2.unwrap();
-            let h2: Arc<TestPacketHandler> = Arc::new(TestPacketHandler {
-                cnt: AtomicU32::new(0),
-                side: "Bob",
-            });
-            let s2 = FastUDPSocket::new("lo0", &ba2, &h2);
-            assert!(s2.is_ok());
-            let s2 = s2.ok().unwrap();
+            let s1 = s1.unwrap();
 
             let data_bytes = [0_u8; 1024];
             loop {
-                s1.send(&ba2, data_bytes.as_ptr(), data_bytes.len(), 0);
-                s2.send(&ba1, data_bytes.as_ptr(), data_bytes.len(), 0);
-                if h1.cnt.load(Ordering::Relaxed) > 10000 && h2.cnt.load(Ordering::Relaxed) > 10000 {
+                s0.send(&ba1, data_bytes.as_ptr(), data_bytes.len(), 0);
+                s1.send(&ba0, data_bytes.as_ptr(), data_bytes.len(), 0);
+                if cnt0.load(Ordering::Relaxed) > 10000 && cnt1.load(Ordering::Relaxed) > 10000 {
                     break;
                 }
             }
@@ -362,4 +359,3 @@ mod tests {
         //println!("FastUDPSocket shutdown successful");
     }
 }
-*/

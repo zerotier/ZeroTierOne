@@ -5,11 +5,15 @@
 #ifdef __APPLE__
 #include <unistd.h>
 #include <fcntl.h>
-#include <sys/uio.h>
+#include <errno.h>
+#include <sys/signal.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
+#include <sys/wait.h>
+#include <sys/select.h>
 #include <sys/cdefs.h>
+#include <sys/uio.h>
 #include <sys/param.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
@@ -53,6 +57,7 @@ extern "C" {
 
 extern const char *platformDefaultHomePath();
 extern int64_t msSinceEpoch();
+extern void lockDownFile(const char *path, int isDir);
 
 #ifdef __cplusplus
 }

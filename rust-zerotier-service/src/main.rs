@@ -29,11 +29,14 @@ use std::boxed::Box;
 use std::ffi::CStr;
 use std::path::Path;
 
+use crate::store::Store;
+use std::sync::Arc;
+
 fn main() {
     let mut process_exit_value: i32 = 0;
-    let mut zerotier_path = unsafe { zerotier_core::cstr_to_string(osdep::platformDefaultHomePath(), 256) };
-    let mut cli_args = Some(Box::new(cli::parse_cli_args()));
 
+    let mut cli_args = Some(Box::new(cli::parse_cli_args()));
+    let mut zerotier_path = unsafe { zerotier_core::cstr_to_string(osdep::platformDefaultHomePath(), 256) };
     let json_output;
     let mut token: Option<String> = None;
     let mut token_path = Path::new(&zerotier_path).join("authtoken.secret");
@@ -54,6 +57,13 @@ fn main() {
         }
     }
 
+    let store = Store::new(zerotier_path.as_str());
+    if store.is_err() {
+        println!("FATAL: error accessing directory '{}': {}", zerotier_path, store.err().unwrap().to_string());
+        std::process::exit(1);
+    }
+    let store = Arc::new(store.unwrap());
+
     match cli_args.as_ref().unwrap().subcommand_name().unwrap() {
         "version" => {
             let ver = zerotier_core::version();
@@ -61,7 +71,7 @@ fn main() {
         },
         "service" => {
             cli_args = None; // free any memory we can when launching service
-            process_exit_value = commands::service::run()
+            process_exit_value = commands::service::run(&store);
         },
         _ => cli::print_help(), // includes "help"
     }

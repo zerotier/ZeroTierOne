@@ -246,9 +246,8 @@ if(NOT PACKAGE_STATIC)
 	endif(BUILD_CENTRAL_CONTROLLER)
 
 	add_subdirectory(core)
-	add_subdirectory(controller)
+#	add_subdirectory(controller)
 	add_subdirectory(osdep)
-	#add_subdirectory(serviceiocore)
 
 	#file(GLOB go_src
 	#	${CMAKE_SOURCE_DIR}/cmd/*.go

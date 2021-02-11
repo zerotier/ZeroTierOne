@@ -11,6 +11,7 @@
  */
 /****/
 
+use std::cell::Cell;
 use std::collections::BTreeMap;
 use std::net::IpAddr;
 use std::rc::Rc;
@@ -24,17 +25,32 @@ use warp::{Filter, Rejection, Reply};
 use warp::http::{HeaderMap, Method, StatusCode};
 use warp::hyper::body::Bytes;
 
-use zerotier_core::*;
+use zerotier_core::{Buffer, Address, IpScope, Node, NodeEventHandler, NetworkId, VirtualNetworkConfigOperation, VirtualNetworkConfig, StateObjectType, MAC, Event, InetAddress, InetAddressFamily, Identity};
 
 use crate::fastudpsocket::*;
 use crate::getifaddrs;
 use crate::localconfig::*;
 use crate::log::Log;
 use crate::network::Network;
+use crate::store::Store;
+
+// Check local addresses and bindings every (this) milliseconds.
+const BINDING_CHECK_INTERVAL: i64 = 5000;
 
 struct Service {
-    local_config: Mutex<LocalConfig>,
-    run: AtomicBool,
+    local_config: Mutex<Arc<LocalConfig>>,
+    run: Arc<AtomicBool>,
+    store: Arc<Store>,
+}
+
+impl Clone for Service {
+    fn clone(&self) -> Self {
+        Service {
+            local_config: Mutex::new(self.local_config.lock().unwrap().clone()),
+            run: self.run.clone(),
+            store: self.store.clone(),
+        }
+    }
 }
 
 impl NodeEventHandler<Network> for Service {
@@ -46,13 +62,24 @@ impl NodeEventHandler<Network> for Service {
     }
 
     fn event(&self, event: Event, event_data: &[u8]) {
+        match event {
+            Event::Up => {},
+            Event::Down => {},
+            Event::Online => {},
+            Event::Offline => {},
+            Event::Trace => {},
+            Event::UserMessage => {},
+        }
     }
 
-    fn state_put(&self, obj_type: StateObjectType, obj_id: &[u64], obj_data: &[u8]) {
+    #[inline(always)]
+    fn state_put(&self, obj_type: StateObjectType, obj_id: &[u64], obj_data: &[u8]) -> std::io::Result<()> {
+        self.store.store_object(&obj_type, obj_id, obj_data)
     }
 
-    fn state_get(&self, obj_type: StateObjectType, obj_id: &[u64]) -> Option<Box<[u8]>> {
-        None
+    #[inline(always)]
+    fn state_get(&self, obj_type: StateObjectType, obj_id: &[u64]) -> std::io::Result<Vec<u8>> {
+        self.store.load_object(&obj_type, obj_id)
     }
 
     #[inline(always)]
@@ -65,7 +92,18 @@ impl NodeEventHandler<Network> for Service {
     }
 
     fn path_lookup(&self, address: Address, id: &Identity, desired_family: InetAddressFamily) -> Option<InetAddress> {
-        None
+        let lc = self.get_local_config();
+        let vc = lc.virtual_.get(&address);
+        vc.map_or(None, |c: &LocalConfigVirtualConfig| {
+            if c.try_.is_empty() {
+                None
+            } else {
+                let t = c.try_.get((zerotier_core::random() as usize) % c.try_.len());
+                t.map_or(None, |v: &InetAddress| {
+                    Some(v.clone())
+                })
+            }
+        })
     }
 }
 
@@ -84,9 +122,20 @@ impl Service {
     fn web_api_peer(&self, peer_str: String, method: Method, headers: HeaderMap, post_data: Bytes) -> Box<dyn Reply> {
         Box::new(warp::http::StatusCode::BAD_REQUEST)
     }
+
+    #[inline(always)]
+    fn get_local_config(&self) -> Arc<LocalConfig> {
+        self.local_config.lock().unwrap().clone()
+    }
+
+    #[inline(always)]
+    fn set_local_config(&self, new_lc: &Arc<LocalConfig>) {
+        let mut lc = self.local_config.lock().unwrap();
+        *lc = new_lc.clone();
+    }
 }
 
-pub(crate) fn run() -> i32 {
+pub(crate) fn run(store: &Arc<Store>) -> i32 {
     let mut process_exit_value: i32 = 0;
 
     let tokio_rt = tokio::runtime::Builder::new_current_thread().build().unwrap();
@@ -94,36 +143,49 @@ pub(crate) fn run() -> i32 {
         let mut udp_sockets: BTreeMap<InetAddress, FastUDPSocket> = BTreeMap::new();
         let (mut interrupt_tx, mut interrupt_rx) = futures::channel::mpsc::channel::<u8>(2);
 
-        let service: Arc<Service> = Arc::new(Service {
-            local_config: Mutex::new(LocalConfig::default()),
-            run: AtomicBool::new(true),
-        });
+        let service = Service {
+            local_config: Mutex::new(Arc::new(LocalConfig::default())),
+            run: Arc::new(AtomicBool::new(true)),
+            store: store.clone(),
+        };
+
+        let node = Node::new(service.clone());
+        if node.is_err() {
+            // TODO: log and handle error
+            return;
+        }
+        let node = Arc::new(node.ok().unwrap());
 
         let mut primary_port_bind_failure = false;
+        let mut last_checked_bindings: i64 = 0;
+        let mut loop_delay = zerotier_core::NODE_BACKGROUND_TASKS_MAX_INTERVAL;
         loop {
-            let current_local_config_settings = service.local_config.lock().unwrap().settings.clone();
+            let mut current_local_config = service.get_local_config();
 
             let (mut shutdown_tx, mut shutdown_rx) = futures::channel::oneshot::channel();
-            let s0 = service.clone();
-            let s1 = service.clone();
-            let s2 = service.clone();
-            let warp_server = warp::serve(warp::any().and(warp::path::end().map(|| { warp::reply::with_status("404", warp::hyper::StatusCode::NOT_FOUND) })
-                .or(warp::path("status").and(warp::method()).and(warp::header::headers_cloned()).and(warp::body::bytes())
-                    .map(move |method: Method, headers: HeaderMap, post_data: Bytes| { s0.web_api_status(method, headers, post_data) }))
-                .or(warp::path!("network" / String).and(warp::method()).and(warp::header::headers_cloned()).and(warp::body::bytes())
-                    .map(move |network_str: String, method: Method, headers: HeaderMap, post_data: Bytes| { s1.web_api_network(network_str, method, headers, post_data) }))
-                .or(warp::path!("peer" / String).and(warp::method()).and(warp::header::headers_cloned()).and(warp::body::bytes())
-                    .map(move |peer_str: String, method: Method, headers: HeaderMap, post_data: Bytes| { s2.web_api_peer(peer_str, method, headers, post_data) }))
-            )).try_bind_with_graceful_shutdown((IpAddr::from([127_u8, 0_u8, 0_u8, 1_u8]), current_local_config_settings.primary_port), async { let _ = shutdown_rx.await; });
+            let warp_server;
+            {
+                let s0 = service.clone();
+                let s1 = service.clone();
+                let s2 = service.clone();
+                warp_server = warp::serve(warp::any().and(warp::path::end().map(|| { warp::reply::with_status("404", warp::hyper::StatusCode::NOT_FOUND) })
+                    .or(warp::path("status").and(warp::method()).and(warp::header::headers_cloned()).and(warp::body::bytes())
+                        .map(move |method: Method, headers: HeaderMap, post_data: Bytes| { s0.web_api_status(method, headers, post_data) }))
+                    .or(warp::path!("network" / String).and(warp::method()).and(warp::header::headers_cloned()).and(warp::body::bytes())
+                        .map(move |network_str: String, method: Method, headers: HeaderMap, post_data: Bytes| { s1.web_api_network(network_str, method, headers, post_data) }))
+                    .or(warp::path!("peer" / String).and(warp::method()).and(warp::header::headers_cloned()).and(warp::body::bytes())
+                        .map(move |peer_str: String, method: Method, headers: HeaderMap, post_data: Bytes| { s2.web_api_peer(peer_str, method, headers, post_data) }))
+                )).try_bind_with_graceful_shutdown((IpAddr::from([127_u8, 0_u8, 0_u8, 1_u8]), current_local_config.settings.primary_port), async { let _ = shutdown_rx.await; });
+            }
             if warp_server.is_err() {
                 primary_port_bind_failure = true;
                 break;
             }
+            let warp_server = tokio_rt.spawn(warp_server.unwrap().1);
 
-            let mut loop_delay = 10;
             loop {
                 tokio::select! {
-                    _ = tokio::time::sleep(Duration::from_secs(loop_delay)) => {},
+                    _ = tokio::time::sleep(Duration::from_millis(loop_delay)) => {},
                     _ = interrupt_rx.next() => {},
                     _ = tokio::signal::ctrl_c() => {
                         // TODO: log CTRL+C received
@@ -133,64 +195,73 @@ pub(crate) fn run() -> i32 {
                     }
                 }
 
-                let mut system_addrs: BTreeMap<InetAddress, String> = BTreeMap::new();
-                getifaddrs::for_each_address(|addr: &InetAddress, dev: &str| {
-                    match addr.ip_scope() {
-                        IpScope::Global | IpScope::Private | IpScope::PseudoPrivate | IpScope::Shared => {
-                            if !current_local_config_settings.is_interface_blacklisted(dev) {
-                                let mut a = addr.clone();
-                                a.set_port(current_local_config_settings.primary_port);
-                                system_addrs.insert(a, String::from(dev));
-                                if current_local_config_settings.secondary_port.is_some() {
+                loop_delay = node.process_background_tasks();
+
+                let now = zerotier_core::now();
+                if (now - last_checked_bindings) >= BINDING_CHECK_INTERVAL {
+                    last_checked_bindings = now;
+
+                    let mut system_addrs: BTreeMap<InetAddress, String> = BTreeMap::new();
+                    getifaddrs::for_each_address(|addr: &InetAddress, dev: &str| {
+                        match addr.ip_scope() {
+                            IpScope::Global | IpScope::Private | IpScope::PseudoPrivate | IpScope::Shared => {
+                                if !current_local_config.settings.is_interface_blacklisted(dev) {
                                     let mut a = addr.clone();
-                                    a.set_port(current_local_config_settings.secondary_port.unwrap());
+                                    a.set_port(current_local_config.settings.primary_port);
                                     system_addrs.insert(a, String::from(dev));
+                                    if current_local_config.settings.secondary_port.is_some() {
+                                        let mut a = addr.clone();
+                                        a.set_port(current_local_config.settings.secondary_port.unwrap());
+                                        system_addrs.insert(a, String::from(dev));
+                                    }
                                 }
-                            }
-                        },
-                        _ => {}
-                    }
-                });
+                            },
+                            _ => {}
+                        }
+                    });
 
-                let mut udp_sockets_to_close: Vec<InetAddress> = Vec::new();
-                for sock in udp_sockets.iter() {
-                    if !system_addrs.contains_key(sock.0) {
-                        udp_sockets_to_close.push(sock.0.clone());
-                    }
-                }
-                for k in udp_sockets_to_close.iter() {
-                    udp_sockets.remove(k);
-                }
-
-                for addr in system_addrs.iter() {
-                    if !udp_sockets.contains_key(addr.0) {
-                        let s = FastUDPSocket::new(addr.1.as_str(), addr.0, |raw_socket: &FastUDPRawOsSocket, from_address: &InetAddress, data: Buffer| {
-                            // TODO: incoming packet handler
-                        });
-                        if s.is_ok() {
-                            udp_sockets.insert(addr.0.clone(), s.unwrap());
+                    let mut udp_sockets_to_close: Vec<InetAddress> = Vec::new();
+                    for sock in udp_sockets.iter() {
+                        if !system_addrs.contains_key(sock.0) {
+                            udp_sockets_to_close.push(sock.0.clone());
                         }
                     }
-                }
+                    for k in udp_sockets_to_close.iter() {
+                        udp_sockets.remove(k);
+                    }
 
-                primary_port_bind_failure = true;
-                for s in udp_sockets.iter() {
-                    if s.0.port() == current_local_config_settings.primary_port {
-                        primary_port_bind_failure = false;
+                    for addr in system_addrs.iter() {
+                        if !udp_sockets.contains_key(addr.0) {
+                            let s = FastUDPSocket::new(addr.1.as_str(), addr.0, |raw_socket: &FastUDPRawOsSocket, from_address: &InetAddress, data: Buffer| {
+                                // TODO: incoming packet handler
+                            });
+                            if s.is_ok() {
+                                udp_sockets.insert(addr.0.clone(), s.unwrap());
+                            }
+                        }
+                    }
+
+                    primary_port_bind_failure = true;
+                    for s in udp_sockets.iter() {
+                        if s.0.port() == current_local_config.settings.primary_port {
+                            primary_port_bind_failure = false;
+                            break;
+                        }
+                    }
+                    if primary_port_bind_failure {
                         break;
                     }
                 }
-                if primary_port_bind_failure {
-                    break;
-                }
 
-                if !service.run.load(Ordering::Relaxed) || current_local_config_settings.primary_port != service.local_config.lock().unwrap().settings.primary_port {
+                let next_local_config = service.get_local_config();
+                if !service.run.load(Ordering::Relaxed) || current_local_config.settings.primary_port != next_local_config.settings.primary_port {
                     let _ = shutdown_tx.send(());
                     break;
                 }
+                current_local_config = next_local_config;
             }
 
-            let _ = warp_server.unwrap().1.await;
+            let _ = warp_server.await;
 
             if !service.run.load(Ordering::Relaxed) {
                 break;
@@ -201,7 +272,7 @@ pub(crate) fn run() -> i32 {
             }
 
             if primary_port_bind_failure {
-                let local_config = service.local_config.lock().unwrap();
+                let local_config = service.get_local_config();
                 if local_config.settings.auto_port_search {
                     // TODO: port hunting if enabled
                 }
