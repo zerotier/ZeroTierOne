@@ -534,11 +534,14 @@ public:
 	 */
 	inline int8_t bondingPolicy() { return _bondingPolicy; }
 
-	//const AES *aesKeysIfSupported() const
+	//inline const AES *aesKeysIfSupported() const
 	//{ return (const AES *)0; }
 
-	const AES *aesKeysIfSupported() const
+	inline const AES *aesKeysIfSupported() const
 	{ return (_vProto >= 12) ? _aesKeys : (const AES *)0; }
+
+	inline const AES *aesKeys() const
+	{ return _aesKeys; }
 
 private:
 	struct _PeerPath
