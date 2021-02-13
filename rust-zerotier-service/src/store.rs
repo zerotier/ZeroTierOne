@@ -14,6 +14,7 @@
 use std::error::Error;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 use std::ffi::CString;
 
 use zerotier_core::{StateObjectType, NetworkId};
@@ -23,6 +24,7 @@ use crate::localconfig::LocalConfig;
 pub(crate) struct Store {
     pub base_path: Box<Path>,
     pub default_log_path: Box<Path>,
+    prev_local_config: Mutex<String>,
     peers_path: Box<Path>,
     controller_path: Box<Path>,
     networks_path: Box<Path>,
@@ -53,6 +55,7 @@ impl Store {
         let s = Store {
             base_path: bp.to_path_buf().into_boxed_path(),
             default_log_path: bp.join("service.log").into_boxed_path(),
+            prev_local_config: Mutex::new(String::new()),
             peers_path: bp.join("peers.d").into_boxed_path(),
             controller_path: bp.join("controller.d").into_boxed_path(),
             networks_path: bp.join("networks.d").into_boxed_path(),
@@ -161,13 +164,24 @@ impl Store {
     }
 
     /// Write a file to the base ZeroTier home directory.
+    /// Error code std::io::ErrorKind::Other is returned if skip_if_unchanged is true
+    /// and there has been no change from the last read.
     pub fn write_file(&self, fname: &str, data: &[u8]) -> std::io::Result<()> {
         std::fs::OpenOptions::new().write(true).truncate(true).create(true).open(self.base_path.join(fname))?.write_all(data)
     }
 
     /// Reads local.conf and deserializes into a LocalConfig object.
-    pub fn read_local_conf(&self) -> std::io::Result<LocalConfig> {
+    pub fn read_local_conf(&self, skip_if_unchanged: bool) -> std::io::Result<LocalConfig> {
         let data = self.read_file_str("local.conf")?;
+        if skip_if_unchanged {
+            let mut prev = self.prev_local_config.lock().unwrap();
+            if prev.eq(&data) {
+                return Err(std::io::Error::new(std::io::ErrorKind::Other, "unchangd"));
+            }
+            *prev = data.clone();
+        } else {
+            *(self.prev_local_config.lock().unwrap()) = data.clone();
+        }
         let lc = LocalConfig::new_from_json(data.as_str());
         if lc.is_err() {
             return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, lc.err().unwrap()));
@@ -182,9 +196,9 @@ impl Store {
     }
 
     /// Reads the authtoken.secret file in the home directory.
+    #[inline(always)]
     pub fn read_authtoken_secret(&self) -> std::io::Result<String> {
-        let data = self.read_file_str("authtoken.secret")?;
-        Ok(data.trim().to_string())
+        Ok(self.read_file_str("authtoken.secret")?)
     }
 
     /// Write authtoken.secret and lock down file permissions.
@@ -219,12 +233,14 @@ impl Store {
         if obj_path.is_some() {
             let obj_path = obj_path.unwrap();
             std::fs::OpenOptions::new().write(true).truncate(true).create(true).open(&obj_path)?.write_all(obj_data)?;
+
             if obj_type.eq(&StateObjectType::IdentitySecret) || obj_type.eq(&StateObjectType::TrustStore) {
                 lock_down_file(obj_path.to_str().unwrap());
             }
+
             Ok(())
         } else {
-            Err(std::io::Error::new(std::io::ErrorKind::InvalidInput, "object ID not valid"))
+            Err(std::io::Error::new(std::io::ErrorKind::InvalidInput, "object type or ID not valid"))
         }
     }
 }

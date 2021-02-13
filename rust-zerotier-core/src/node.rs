@@ -11,15 +11,12 @@
  */
 /****/
 
-use std::cell::Cell;
 use std::collections::hash_map::HashMap;
 use std::intrinsics::copy_nonoverlapping;
 use std::mem::{MaybeUninit, transmute};
 use std::os::raw::{c_int, c_uint, c_ulong, c_void};
 use std::ptr::{null_mut, slice_from_raw_parts};
 use std::sync::*;
-use std::sync::atomic::*;
-use std::time::Duration;
 
 use num_traits::FromPrimitive;
 use serde::{Deserialize, Serialize};

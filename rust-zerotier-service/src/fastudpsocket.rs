@@ -33,6 +33,21 @@ pub(crate) type FastUDPRawOsSocket = winsock2::SOCKET;
 #[cfg(unix)]
 pub(crate) type FastUDPRawOsSocket = c_int;
 
+/// Test bind UDP to a port at 0.0.0.0 and ::0, returning whether IPv4 and/or IPv6 succeeded (respectively).
+pub(crate) fn test_bind_udp(port: u16) -> (bool, bool) {
+    let v4 = InetAddress::new_ipv4_any(port);
+    let v6 = InetAddress::new_ipv6_any(port);
+    let v4b = bind_udp_socket("", &v4);
+    if v4b.is_ok() {
+        fast_udp_socket_close(v4b.as_ref().unwrap());
+    }
+    let v6b = bind_udp_socket("", &v6);
+    if v6b.is_ok() {
+        fast_udp_socket_close(v6b.as_ref().unwrap());
+    }
+    (v4b.is_ok(), v6b.is_ok())
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // bind_udp_socket() implementations for each platform
 
@@ -121,21 +136,6 @@ fn bind_udp_socket(_: &str, address: &InetAddress) -> Result<FastUDPRawOsSocket,
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/// Test bind UDP to a port at 0.0.0.0 and ::0, returning whether IPv4 and/or IPv6 succeeded (respectively).
-pub(crate) fn test_bind_udp(port: u16) -> (bool, bool) {
-    let v4 = InetAddress::new_ipv4_any(port);
-    let v6 = InetAddress::new_ipv6_any(port);
-    let v4b = bind_udp_socket("", &v4);
-    if v4b.is_ok() {
-        fast_udp_socket_close(v4b.as_ref().unwrap());
-    }
-    let v6b = bind_udp_socket("", &v6);
-    if v6b.is_ok() {
-        fast_udp_socket_close(v6b.as_ref().unwrap());
-    }
-    (v4b.is_ok(), v6b.is_ok())
-}
 
 /// A multi-threaded (or otherwise fast) UDP socket that binds to both IPv4 and IPv6 addresses.
 pub(crate) struct FastUDPSocket {

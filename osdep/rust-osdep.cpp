@@ -10,6 +10,7 @@ struct prf_ra {
 #include "../core/Constants.hpp"
 #include "../core/Mutex.hpp"
 #include "../core/Containers.hpp"
+#include "../core/SHA512.hpp"
 #include "OSUtils.hpp"
 
 #include "rust-osdep.h"
@@ -115,5 +116,14 @@ int64_t msSinceEpoch()
 
 void lockDownFile(const char *path, int isDir)
 { ZeroTier::OSUtils::lockDownFile(path, isDir != 0); }
+
+void getSecureRandom(void *buf, unsigned int len)
+{ ZeroTier::Utils::getSecureRandom(buf, len); }
+
+void sha384(const void *in, unsigned int len, void *out)
+{ ZeroTier::SHA384(out, in, len); }
+
+void sha512(const void *in, unsigned int len, void *out)
+{ ZeroTier::SHA512(out, in, len); }
 
 }

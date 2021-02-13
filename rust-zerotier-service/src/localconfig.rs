@@ -160,7 +160,7 @@ impl Default for LocalConfigNetworkSettings {
 
 impl LocalConfigSettings {
     #[cfg(target_os = "macos")]
-    const DEFAULT_PREFIX_BLACKLIST: [&'static str; 7] = ["lo", "utun", "gif", "stf", "iptap", "pktap", "feth"];
+    const DEFAULT_PREFIX_BLACKLIST: [&'static str; 8] = ["lo", "utun", "gif", "stf", "iptap", "pktap", "feth", "zt"];
 
     #[cfg(target_os = "linux")]
     const DEFAULT_PREFIX_BLACKLIST: [&'static str; 5] = ["lo", "tun", "tap", "ipsec", "zt"];

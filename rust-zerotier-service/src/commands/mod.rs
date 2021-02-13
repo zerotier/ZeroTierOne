@@ -11,7 +11,6 @@
  */
 /****/
 
-pub(crate) mod service;
 pub(crate) mod status;
 pub(crate) mod set;
 pub(crate) mod peer;

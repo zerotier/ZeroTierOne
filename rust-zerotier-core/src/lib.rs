@@ -165,6 +165,23 @@ pub enum ResultCode {
     ErrorInternalNonFatal = ztcore::ZT_ResultCode_ZT_RESULT_ERROR_INTERNAL as isize,
 }
 
+impl ToString for ResultCode {
+    fn to_string(&self) -> String {
+        match *self {
+            ResultCode::Ok => "Ok",
+            ResultCode::FatalErrorOutOfMemory => "FatalErrorOutOfMemory",
+            ResultCode::FatalErrorDataStoreFailed => "FatalErrorDataStoreFailed",
+            ResultCode::FatalErrorInternal => "FatalErrorInternal",
+            ResultCode::ErrorNetworkNotFound => "ErrorNetworkNotFound",
+            ResultCode::ErrorUnsupportedOperation => "ErrorUnsupportedOperation",
+            ResultCode::ErrorBadParameter => "ErrorBadParameter",
+            ResultCode::ErrorInvalidCredential => "ErrorInvalidCredential",
+            ResultCode::ErrorCollidingObject => "ErrorCollidingObject",
+            ResultCode::ErrorInternalNonFatal => "ErrorInternalNonFatal",
+        }.to_string()
+    }
+}
+
 /// Returns a tuple of major, minor, revision, and build version numbers from the ZeroTier core.
 pub fn version() -> (i32, i32, i32, i32) {
     let mut major: c_int = 0;
