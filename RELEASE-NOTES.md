@@ -1,6 +1,10 @@
 ZeroTier Release Notes
 ======
 
+# 2021-02-15 -- Version 1.6.4
+
+ * The groundhog saw his shadow, which meant that the "connection coma" bug still wasn't gone. We think we found it this time.
+
 # 2021-02-02 -- Version 1.6.3
 
  * Likely fix for GitHub issue #1334, an issue that could cause ZeroTier to
