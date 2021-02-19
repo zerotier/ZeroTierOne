@@ -732,6 +732,16 @@ int ZT_Endpoint_fromString(
 	return reinterpret_cast<ZeroTier::Endpoint *>(ep)->fromString(str) ? ZT_RESULT_OK : ZT_RESULT_ERROR_BAD_PARAMETER;
 }
 
+int ZT_Endpoint_fromBytes(
+	ZT_Endpoint *ep,
+	const void *bytes,
+	unsigned int len)
+{
+	if ((!ep) || (!bytes) || (!len))
+		return ZT_RESULT_ERROR_BAD_PARAMETER;
+	return (reinterpret_cast<ZeroTier::Endpoint *>(ep)->unmarshal(reinterpret_cast<const uint8_t *>(bytes), (int)len) > 0) ? 0 : ZT_RESULT_ERROR_BAD_PARAMETER;
+}
+
 /********************************************************************************************************************/
 
 char *ZT_Fingerprint_toString(const ZT_Fingerprint *fp, char *buf, int capacity)
@@ -841,6 +851,20 @@ int ZT_InetAddress_lessThan(const ZT_InetAddress *a, const ZT_InetAddress *b)
 	} else if (a) {
 		return 0;
 	} else if (b) {
+		return 1;
+	}
+	return 0;
+}
+
+/********************************************************************************************************************/
+
+int ZT_Dictionary_parse(const void *const dict, const unsigned int len, void *const arg, void (*f)(void *, const char *, unsigned int, const void *, unsigned int))
+{
+	ZeroTier::Dictionary d;
+	if (d.decode(dict, len)) {
+		for(ZeroTier::Dictionary::const_iterator i(d.begin());i!=d.end();++i) {
+			f(arg, i->first.c_str(), (unsigned int)i->first.length(), i->second.data(), (unsigned int)i->second.size());
+		}
 		return 1;
 	}
 	return 0;

@@ -14,7 +14,7 @@
 use std::cell::Cell;
 use std::fmt::Display;
 use std::fs::{File, OpenOptions};
-use std::io::{Seek, SeekFrom, Write};
+use std::io::{Seek, SeekFrom, Write, stderr};
 use std::sync::Mutex;
 
 use chrono::Datelike;
@@ -23,18 +23,19 @@ struct LogIntl {
     file: Option<File>,
     cur_size: u64,
     max_size: usize,
+    log_to_stderr: bool,
 }
 
 pub(crate) struct Log {
     prefix: String,
     path: String,
-    intl: Mutex<LogIntl>,
+    inner: Mutex<LogIntl>,
 }
 
 impl Log {
     const MIN_MAX_SIZE: usize = 1024;
 
-    pub fn new(path: &str, max_size: usize, prefix: &str) -> Log {
+    pub fn new(path: &str, max_size: usize, log_to_stderr: bool, prefix: &str) -> Log {
         let mut p = String::from(prefix);
         if !p.is_empty() {
             p.push(' ');
@@ -42,25 +43,33 @@ impl Log {
         Log{
             prefix: p,
             path: String::from(path),
-            intl: Mutex::new(LogIntl {
+            inner: Mutex::new(LogIntl {
                 file: None,
                 cur_size: 0,
                 max_size: if max_size < Log::MIN_MAX_SIZE { Log::MIN_MAX_SIZE } else { max_size },
+                log_to_stderr: log_to_stderr,
             }),
         }
     }
 
     pub fn set_max_size(&self, new_max_size: usize) {
-        self.intl.lock().unwrap().max_size = if new_max_size < Log::MIN_MAX_SIZE { Log::MIN_MAX_SIZE } else { new_max_size };
+        self.inner.lock().unwrap().max_size = if new_max_size < Log::MIN_MAX_SIZE { Log::MIN_MAX_SIZE } else { new_max_size };
+    }
+
+    pub fn set_log_to_stderr(&self, log_to_stderr: bool) {
+        self.inner.lock().unwrap().log_to_stderr = log_to_stderr;
     }
 
     pub fn log<S: AsRef<str>>(&self, s: S) {
+        // Output FATAL errors to stderr.
         let ss: &str = s.as_ref();
         if ss.starts_with("FATAL") {
             eprintln!("{}", ss);
         }
 
-        let mut l = self.intl.lock().unwrap();
+        let mut l = self.inner.lock().unwrap();
+
+        // If the file isn't open, open or create and seek to end.
         if l.file.is_none() {
             let mut f = OpenOptions::new().read(true).write(true).create(true).open(self.path.as_str());
             if f.is_err() {
@@ -75,6 +84,7 @@ impl Log {
             l.file = Some(f);
         }
 
+        // If there is a maximum size limit configured, rotate if exceeded.
         if l.max_size > 0 && l.cur_size > l.max_size as u64 {
             l.file = None;
             l.cur_size = 0;
@@ -92,12 +102,19 @@ impl Log {
             l.file = Some(f.unwrap());
         }
 
+        let log_line = format!("{}[{}] {}\n", self.prefix.as_str(), chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string(), ss);
+        if l.log_to_stderr {
+            stderr().write_all(log_line.as_bytes());
+        }
         let f = l.file.as_mut().unwrap();
-        let now_str = chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
-        let log_line = format!("{}[{}] {}\n", self.prefix.as_str(), now_str.as_str(), ss);
-        let _ = f.write_all(log_line.as_bytes());
-        let _ = f.flush();
-        l.cur_size += log_line.len() as u64;
+        let e = f.write_all(log_line.as_bytes());
+        if e.is_err() {
+            eprintln!("ERROR: I/O error writing to log: {}", e.err().unwrap().to_string());
+            l.file = None;
+        } else {
+            let _ = f.flush();
+            l.cur_size += log_line.len() as u64;
+        }
     }
 }
 

@@ -33,6 +33,8 @@ mod buffer;
 mod portableatomici64;
 mod virtualnetworkconfig;
 mod multicastgroup;
+mod dictionary;
+pub mod trace;
 
 use crate::capi as ztcore;
 
@@ -52,6 +54,7 @@ pub use buffer::Buffer;
 pub use portableatomici64::PortableAtomicI64;
 pub use virtualnetworkconfig::*;
 pub use multicastgroup::MulticastGroup;
+pub use dictionary::*;
 
 /// Recommended minimum thread stack size for background threads.
 pub const RECOMMENDED_THREAD_STACK_SIZE: usize = 262144;
@@ -106,52 +109,6 @@ pub enum CredentialType {
 }
 
 #[derive(FromPrimitive, ToPrimitive, PartialEq, Eq)]
-pub enum TraceEventType {
-    UnexpectedError = ztcore::ZT_TraceEventType_ZT_TRACE_UNEXPECTED_ERROR as isize,
-    ResetingPathsInScope = ztcore::ZT_TraceEventType_ZT_TRACE_VL1_RESETTING_PATHS_IN_SCOPE as isize,
-    TryingNewPath = ztcore::ZT_TraceEventType_ZT_TRACE_VL1_TRYING_NEW_PATH as isize,
-    LearnedNewPath = ztcore::ZT_TraceEventType_ZT_TRACE_VL1_LEARNED_NEW_PATH as isize,
-    IncomingPacketDropped = ztcore::ZT_TraceEventType_ZT_TRACE_VL1_INCOMING_PACKET_DROPPED as isize,
-    OutgoingFrameDropped = ztcore::ZT_TraceEventType_ZT_TRACE_VL2_OUTGOING_FRAME_DROPPED as isize,
-    IncomingFrameDropped = ztcore::ZT_TraceEventType_ZT_TRACE_VL2_INCOMING_FRAME_DROPPED as isize,
-    NetworkConfigRequested = ztcore::ZT_TraceEventType_ZT_TRACE_VL2_NETWORK_CONFIG_REQUESTED as isize,
-    NetworkFilter = ztcore::ZT_TraceEventType_ZT_TRACE_VL2_NETWORK_FILTER as isize,
-}
-
-#[derive(FromPrimitive, ToPrimitive, PartialEq, Eq)]
-pub enum TracePacketDropReason {
-    Unspecified = ztcore::ZT_TracePacketDropReason_ZT_TRACE_PACKET_DROP_REASON_UNSPECIFIED as isize,
-    PeerTooOld = ztcore::ZT_TracePacketDropReason_ZT_TRACE_PACKET_DROP_REASON_PEER_TOO_OLD as isize,
-    MalformedPacket = ztcore::ZT_TracePacketDropReason_ZT_TRACE_PACKET_DROP_REASON_MALFORMED_PACKET as isize,
-    MacFailed = ztcore::ZT_TracePacketDropReason_ZT_TRACE_PACKET_DROP_REASON_MAC_FAILED as isize,
-    RateLimitExceeded = ztcore::ZT_TracePacketDropReason_ZT_TRACE_PACKET_DROP_REASON_RATE_LIMIT_EXCEEDED as isize,
-    InvalidObject = ztcore::ZT_TracePacketDropReason_ZT_TRACE_PACKET_DROP_REASON_INVALID_OBJECT as isize,
-    InvalidCompressedData = ztcore::ZT_TracePacketDropReason_ZT_TRACE_PACKET_DROP_REASON_INVALID_COMPRESSED_DATA as isize,
-    UnrecognizedVerb = ztcore::ZT_TracePacketDropReason_ZT_TRACE_PACKET_DROP_REASON_UNRECOGNIZED_VERB as isize,
-    ReplyNotExpected = ztcore::ZT_TracePacketDropReason_ZT_TRACE_PACKET_DROP_REASON_REPLY_NOT_EXPECTED as isize,
-}
-
-#[derive(FromPrimitive, ToPrimitive, PartialEq, Eq)]
-pub enum TraceFrameDropReason {
-    Unspecified = ztcore::ZT_TraceFrameDropReason_ZT_TRACE_FRAME_DROP_REASON_UNSPECIFIED as isize,
-    BridgingNotAllowedRemote = ztcore::ZT_TraceFrameDropReason_ZT_TRACE_FRAME_DROP_REASON_BRIDGING_NOT_ALLOWED_REMOTE as isize,
-    BridgingNotAllowedLocal = ztcore::ZT_TraceFrameDropReason_ZT_TRACE_FRAME_DROP_REASON_BRIDGING_NOT_ALLOWED_LOCAL as isize,
-    MulticastDisabled = ztcore::ZT_TraceFrameDropReason_ZT_TRACE_FRAME_DROP_REASON_MULTICAST_DISABLED as isize,
-    BroadcastDisabled = ztcore::ZT_TraceFrameDropReason_ZT_TRACE_FRAME_DROP_REASON_BROADCAST_DISABLED as isize,
-    FilterBlocked = ztcore::ZT_TraceFrameDropReason_ZT_TRACE_FRAME_DROP_REASON_FILTER_BLOCKED as isize,
-    FilterBlockedAtBridgeReplication = ztcore::ZT_TraceFrameDropReason_ZT_TRACE_FRAME_DROP_REASON_FILTER_BLOCKED_AT_BRIDGE_REPLICATION as isize,
-    PermissionDenied = ztcore::ZT_TraceFrameDropReason_ZT_TRACE_FRAME_DROP_REASON_PERMISSION_DENIED as isize,
-}
-
-#[derive(FromPrimitive, ToPrimitive, PartialEq, Eq)]
-pub enum TraceCredentialRejectionReason {
-    SignatureVerificationFailed = ztcore::ZT_TraceCredentialRejectionReason_ZT_TRACE_CREDENTIAL_REJECTION_REASON_SIGNATURE_VERIFICATION_FAILED as isize,
-    Revoked = ztcore::ZT_TraceCredentialRejectionReason_ZT_TRACE_CREDENTIAL_REJECTION_REASON_REVOKED as isize,
-    OlderThanLatest = ztcore::ZT_TraceCredentialRejectionReason_ZT_TRACE_CREDENTIAL_REJECTION_REASON_OLDER_THAN_LATEST as isize,
-    Invalid = ztcore::ZT_TraceCredentialRejectionReason_ZT_TRACE_CREDENTIAL_REJECTION_REASON_INVALID as isize,
-}
-
-#[derive(FromPrimitive, ToPrimitive, PartialEq, Eq)]
 pub enum ResultCode {
     Ok = ztcore::ZT_ResultCode_ZT_RESULT_OK as isize,
     FatalErrorOutOfMemory = ztcore::ZT_ResultCode_ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY as isize,
@@ -192,12 +149,6 @@ pub fn version() -> (i32, i32, i32, i32) {
         ztcore::ZT_version(&mut major as *mut c_int, &mut minor as *mut c_int, &mut revision as *mut c_int, &mut build as *mut c_int);
     }
     (major as i32, minor as i32, revision as i32, build as i32)
-}
-
-/// Convenience function to get the number of milliseconds since the Unix epoch.
-#[inline(always)]
-pub fn now() -> i64 {
-    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as i64
 }
 
 /// Get a random 64-bit integer using the non-cryptographic PRNG in the ZeroTier core.

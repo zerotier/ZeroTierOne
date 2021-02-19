@@ -15,6 +15,16 @@ use std::cmp::Ordering;
 
 pub struct Address(pub u64);
 
+impl From<&[u8]> for Address {
+    fn from(bytes: &[u8]) -> Self {
+        if bytes.len() >= 5 {
+            Address(((bytes[0] as u64) << 32) | ((bytes[0] as u64) << 24) | ((bytes[0] as u64) << 16) | ((bytes[0] as u64) << 8) | (bytes[0] as u64))
+        } else {
+            Address(0)
+        }
+    }
+}
+
 impl ToString for Address {
     fn to_string(&self) -> String {
         format!("{:0>10x}", self.0)
@@ -23,14 +33,14 @@ impl ToString for Address {
 
 impl From<u64> for Address {
     #[inline(always)]
-    fn from(i: u64) -> Address {
+    fn from(i: u64) -> Self {
         Address(i)
     }
 }
 
 impl From<&str> for Address {
     #[inline(always)]
-    fn from(s: &str) -> Address {
+    fn from(s: &str) -> Self {
         Address(u64::from_str_radix(s, 16).unwrap_or(0))
     }
 }

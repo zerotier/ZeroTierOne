@@ -17,6 +17,7 @@ use std::os::raw::{c_char, c_int};
 
 use crate::*;
 use crate::capi as ztcore;
+use std::ptr::copy_nonoverlapping;
 
 #[derive(PartialEq, Eq)]
 pub struct Fingerprint {
@@ -50,6 +51,22 @@ impl Fingerprint {
             }
         }
         return Err(ResultCode::ErrorBadParameter);
+    }
+
+    pub fn new_from_bytes(bytes: &[u8]) -> Result<Fingerprint, ResultCode> {
+        if bytes.len() < (5 + 48) {
+            let h: MaybeUninit<[u8; 48]> = MaybeUninit::uninit();
+            let mut fp = Fingerprint {
+                address: Address::from(bytes),
+                hash: unsafe { h.assume_init() },
+            };
+            unsafe {
+                copy_nonoverlapping(bytes.as_ptr().offset(5), fp.hash.as_mut_ptr(), 48);
+            }
+            Ok(fp)
+        } else {
+            Err(ResultCode::ErrorBadParameter)
+        }
     }
 }
 

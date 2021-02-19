@@ -725,7 +725,8 @@ enum ZT_TraceEventType
 	ZT_TRACE_VL2_OUTGOING_FRAME_DROPPED = 100,
 	ZT_TRACE_VL2_INCOMING_FRAME_DROPPED = 101,
 	ZT_TRACE_VL2_NETWORK_CONFIG_REQUESTED = 102,
-	ZT_TRACE_VL2_NETWORK_FILTER = 103
+	ZT_TRACE_VL2_NETWORK_FILTER = 103,
+	ZT_TRACE_VL2_NETWORK_CREDENTIAL_REJECTED = 104,
 };
 
 /**
@@ -778,10 +779,10 @@ enum ZT_TraceCredentialRejectionReason
 #define ZT_TRACE_FIELD_TRIGGER_FROM_ENDPOINT              "te"
 #define ZT_TRACE_FIELD_TRIGGER_FROM_PACKET_ID             "ti"
 #define ZT_TRACE_FIELD_TRIGGER_FROM_PACKET_VERB           "tv"
-#define ZT_TRACE_FIELD_TRIGGER_FROM_PEER_FINGERPRINT_HASH "tp"
+#define ZT_TRACE_FIELD_TRIGGER_FROM_PEER_FINGERPRINT      "tp"
 #define ZT_TRACE_FIELD_MESSAGE                            "m"
 #define ZT_TRACE_FIELD_RESET_ADDRESS_SCOPE                "rs"
-#define ZT_TRACE_FIELD_IDENTITY_FINGERPRINT_HASH          "f"
+#define ZT_TRACE_FIELD_IDENTITY_FINGERPRINT               "f"
 #define ZT_TRACE_FIELD_PACKET_ID                          "p"
 #define ZT_TRACE_FIELD_PACKET_VERB                        "v"
 #define ZT_TRACE_FIELD_PACKET_HOPS                        "h"
@@ -933,9 +934,10 @@ enum ZT_Event
 	 * Trace (debugging) message
 	 *
 	 * These events are only generated if this is a TRACE-enabled build.
-	 * This is for local debug traces, not remote trace diagnostics.
+	 * This is for local debug traces, not remote trace diagnostics. The
+	 * supplied Dictionary will always be null-terminated.
 	 *
-	 * Meta-data: struct of type ZT_Trace_*
+	 * Meta-data: null-terminated Dictionary containing trace info
 	 */
 	ZT_EVENT_TRACE = 5,
 
@@ -2620,6 +2622,19 @@ ZT_SDK_API int ZT_Endpoint_fromString(
 	ZT_Endpoint *ep,
 	const char *str);
 
+/**
+ * Decode a binary serialized endpoint
+ *
+ * @param ep Endpoint structure to populate
+ * @param bytes Bytes to decode
+ * @param len Length of bytes
+ * @return OK (0) or error code
+ */
+ZT_SDK_API int ZT_Endpoint_fromBytes(
+	ZT_Endpoint *ep,
+	const void *bytes,
+	unsigned int len);
+
 /* ---------------------------------------------------------------------------------------------------------------- */
 
 /**
@@ -3018,6 +3033,24 @@ ZT_SDK_API int ZT_InetAddress_lessThan(const ZT_InetAddress *a, const ZT_InetAdd
 
 /* These mirror the values of AF_INET and AF_INET6 for use by Rust and other things that need it. */
 ZT_SDK_API const int ZT_AF_INET,ZT_AF_INET6;
+
+/* ---------------------------------------------------------------------------------------------------------------- */
+
+/**
+ * Parse a dictionary and invoke 'f' for each key/value pair.
+ *
+ * This can be used to parse a dictionary such as a network config or trace
+ * data supplied with a trace event.
+ *
+ * Function arguments are: arg, key, length of key (not including terminating null),
+ * value, length of value in bytes.
+ *
+ * @param dict Dictionary in serialized form
+ * @param len Maximum length of 'dict' (will also end at first zero)
+ * @param f Function to invoke with each key and (binary) value
+ * @return Non-zero if dictionary was valid
+ */
+ZT_SDK_API int ZT_Dictionary_parse(const void *dict, unsigned int len, void *arg, void (*f)(void *, const char *, unsigned int, const void *, unsigned int));
 
 /* ---------------------------------------------------------------------------------------------------------------- */
 

@@ -53,7 +53,7 @@ impl Locator {
         }
     }
 
-    pub fn endpoints(&self) -> Box<[Endpoint]> {
+    pub fn endpoints(&self) -> Vec<Endpoint> {
         let mut eps: Vec<Endpoint> = Vec::new();
         unsafe {
             let ep_count = ztcore::ZT_Locator_endpointCount(self.capi) as usize;
@@ -65,7 +65,7 @@ impl Locator {
                 }
             }
         }
-        eps.into_boxed_slice()
+        eps
     }
 }
 

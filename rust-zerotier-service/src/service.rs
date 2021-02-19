@@ -23,10 +23,10 @@ use warp::{Filter, Reply};
 use warp::http::{HeaderMap, Method, StatusCode};
 use warp::hyper::body::Bytes;
 
-use zerotier_core::{Buffer, Address, IpScope, Node, NodeEventHandler, NetworkId, VirtualNetworkConfigOperation, VirtualNetworkConfig, StateObjectType, MAC, Event, InetAddress, InetAddressFamily, Identity};
+use zerotier_core::{Buffer, Address, IpScope, Node, NodeEventHandler, NetworkId, VirtualNetworkConfigOperation, VirtualNetworkConfig, StateObjectType, MAC, Event, InetAddress, InetAddressFamily, Identity, Dictionary};
 
 use crate::fastudpsocket::*;
-use crate::getifaddrs;
+use crate::{getifaddrs, ms_since_epoch};
 use crate::localconfig::*;
 use crate::log::Log;
 use crate::network::Network;
@@ -40,8 +40,9 @@ struct Service {
     log: Arc<Log>,
     _local_config: Arc<Mutex<Arc<LocalConfig>>>,
     run: Arc<AtomicBool>,
+    online: Arc<AtomicBool>,
     store: Arc<Store>,
-    node: Weak<Node<Service, Network>>, // weak since Node can hold a reference to this
+    node: Weak<Node<Service, Network>>, // weak since Node itself may hold a reference to this
 }
 
 impl NodeEventHandler<Network> for Service {
@@ -53,10 +54,21 @@ impl NodeEventHandler<Network> for Service {
     fn event(&self, event: Event, event_data: &[u8]) {
         match event {
             Event::Up => {}
-            Event::Down => {}
-            Event::Online => {}
-            Event::Offline => {}
-            Event::Trace => {}
+            Event::Down => {
+                self.run.store(false, Ordering::Relaxed);
+            }
+            Event::Online => {
+                self.online.store(true, Ordering::Relaxed);
+            }
+            Event::Offline => {
+                self.online.store(true, Ordering::Relaxed);
+            }
+            Event::Trace => {
+                if !event_data.is_empty() {
+                    let _ = Dictionary::new_from_bytes(event_data).map(|tm| {
+                    });
+                }
+            }
             Event::UserMessage => {}
         }
     }
@@ -126,21 +138,23 @@ impl Service {
 pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
     let mut process_exit_value: i32 = 0;
 
-    let init_local_config = Arc::new(store.read_local_conf(false).unwrap_or(LocalConfig::default()));
+    let init_local_config = Arc::new(store.read_local_conf(false).unwrap_or_else(|_| { LocalConfig::default() }));
 
-    // Open log in store.
     let log = Arc::new(Log::new(
-        if init_local_config.settings.log_path.as_ref().is_some() { init_local_config.settings.log_path.as_ref().unwrap().as_str() } else { store.default_log_path.to_str().unwrap() },
+        if init_local_config.settings.log_path.as_ref().is_some() {
+            init_local_config.settings.log_path.as_ref().unwrap().as_str()
+        } else {
+            store.default_log_path.to_str().unwrap()
+        },
         init_local_config.settings.log_size_max,
+        init_local_config.settings.log_to_stderr,
         "",
     ));
 
     // Generate authtoken.secret from secure random bytes if not already set.
     let auth_token = auth_token.unwrap_or_else(|| {
         let mut rb = [0_u8; 64];
-        unsafe {
-            crate::osdep::getSecureRandom(rb.as_mut_ptr().cast(), 64);
-        }
+        unsafe { crate::osdep::getSecureRandom(rb.as_mut_ptr().cast(), 64) };
         let mut t = String::new();
         t.reserve(64);
         for b in rb.iter() {
@@ -172,12 +186,13 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
             log: log.clone(),
             _local_config: Arc::new(Mutex::new(init_local_config)),
             run: Arc::new(AtomicBool::new(true)),
+            online: Arc::new(AtomicBool::new(false)),
             store: store.clone(),
             node: Weak::new(),
         };
 
         // Create instance of Node which will call Service on events.
-        let node = Node::new(service.clone());
+        let node = Node::new(service.clone(), ms_since_epoch());
         if node.is_err() {
             process_exit_value = 1;
             l!(log, "FATAL: error initializing node: {}", node.err().unwrap().to_string());
@@ -188,7 +203,6 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
         service.node = Arc::downgrade(&node);
         let service = service; // make immutable after setting node
 
-        let mut last_checked_config: i64 = 0;
         let mut loop_delay = zerotier_core::NODE_BACKGROUND_TASKS_MAX_INTERVAL;
         loop {
             let mut local_config = service.local_config();
@@ -221,17 +235,32 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
                 );
             }
             if warp_server.is_err() {
-                l!(log, "ERROR: local API http server failed to bind to port {}: {}", local_config.settings.primary_port, warp_server.err().unwrap().to_string());
+                l!(log, "ERROR: local API http server failed to bind to port {} or failed to start: {}", local_config.settings.primary_port, warp_server.err().unwrap().to_string());
                 break;
             }
             let warp_server = tokio_rt.spawn(warp_server.unwrap().1);
 
+            // Write zerotier.port which is used by the CLI to know how to reach the HTTP API.
+            store.write_port(local_config.settings.primary_port);
+
+            let mut last_checked_config: i64 = 0;
             loop {
+                let loop_start = ms_since_epoch();
+                let mut now: i64 = 0;
+
                 // Wait for (1) loop delay elapsed, (2) a signal to interrupt delay now, or
                 // (3) an external signal to exit.
                 tokio::select! {
-                    _ = tokio::time::sleep(Duration::from_millis(loop_delay)) => {},
-                    _ = interrupt_rx.next() => {},
+                    _ = tokio::time::sleep(Duration::from_millis(loop_delay)) => {
+                        now = ms_since_epoch();
+                        let actual_delay = now - loop_start;
+                        if actual_delay > (loop_delay * 4) {
+                            // TODO: handle likely sleep/wake or other system interruption
+                        }
+                    },
+                    _ = interrupt_rx.next() => {
+                        now = ms_since_epoch();
+                    },
                     _ = tokio::signal::ctrl_c() => {
                         l!(log, "exit signal received, shutting down...");
                         service.run.store(false, Ordering::Relaxed);
@@ -241,7 +270,6 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
 
                 // Check every CONFIG_CHECK_INTERVAL for changes to either the system configuration
                 // or the node's local configuration and take actions as needed.
-                let now = zerotier_core::now();
                 if (now - last_checked_config) >= CONFIG_CHECK_INTERVAL {
                     last_checked_config = now;
 
@@ -251,11 +279,16 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
                         service.set_local_config(new_config.unwrap());
                     }
 
-                    // Check for configuration changes that require a reboot of the inner loop
-                    // or other actions to be taken.
+                    // Check for and handle configuration changes, some of which require inner loop restart.
                     let next_local_config = service.local_config();
                     if local_config.settings.primary_port != next_local_config.settings.primary_port {
                         break;
+                    }
+                    if local_config.settings.log_size_max != next_local_config.settings.log_size_max {
+                        log.set_max_size(next_local_config.settings.log_size_max);
+                    }
+                    if local_config.settings.log_to_stderr != next_local_config.settings.log_to_stderr {
+                        log.set_log_to_stderr(next_local_config.settings.log_to_stderr);
                     }
                     local_config = next_local_config;
 
@@ -320,17 +353,22 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
                             }
                         }
                     }
+
                     if primary_port_bind_failure {
                         if local_config.settings.auto_port_search {
-                            // TODO: port hunting if enabled
+                            // TODO: port hunting
                         } else {
                             l!(log, "primary port {} failed to bind, waiting and trying again...", local_config.settings.primary_port);
                             break;
                         }
                     }
+
                     if secondary_port_bind_failure {
-                        l!(log, "secondary port {} failed to bind (non-fatal, will try again)", local_config.settings.secondary_port.unwrap_or(0));
-                        // hunt for a secondary port.
+                        if local_config.settings.auto_port_search {
+                            // TODO: port hunting
+                        } else {
+                            l!(log, "secondary port {} failed to bind (non-fatal, will try again)", local_config.settings.secondary_port.unwrap_or(0));
+                        }
                     }
                 }
 
@@ -340,7 +378,7 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
                 }
 
                 // Run background task handler in ZeroTier core.
-                loop_delay = node.process_background_tasks();
+                loop_delay = node.process_background_tasks(now);
             }
 
             // Gracefully shut down the local web server.

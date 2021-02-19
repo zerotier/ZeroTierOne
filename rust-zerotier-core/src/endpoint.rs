@@ -13,7 +13,7 @@
 
 use std::ffi::CString;
 use std::mem::MaybeUninit;
-use std::os::raw::c_char;
+use std::os::raw::{c_char, c_uint};
 
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
@@ -45,6 +45,21 @@ impl Endpoint {
             type_: EndpointType::from_i32(ep.type_ as i32).unwrap(),
             capi: *ep
         };
+    }
+
+    pub fn new_from_bytes(bytes: &[u8]) -> Result<Endpoint, ResultCode> {
+        unsafe {
+            let mut cep: MaybeUninit<ztcore::ZT_Endpoint> = MaybeUninit::uninit();
+            let ec = ztcore::ZT_Endpoint_fromBytes(bytes.as_ptr().cast(), bytes.len() as c_uint);
+            if ec == 0 {
+                let epi = cep.assume_init();
+                return Ok(Endpoint{
+                    type_: EndpointType::from_i32(epi.type_ as i32).unwrap(),
+                    capi: epi
+                });
+            }
+            return Err(ResultCode::from_i32(ec).unwrap());
+        }
     }
 
     pub fn new_from_string(s: &str) -> Result<Endpoint, ResultCode> {

@@ -25,7 +25,7 @@ use crate::*;
 use crate::capi as ztcore;
 
 /// Maximum delay between calls to run_background_tasks()
-pub const NODE_BACKGROUND_TASKS_MAX_INTERVAL: u64 = 250;
+pub const NODE_BACKGROUND_TASKS_MAX_INTERVAL: u64 = 200;
 
 #[derive(FromPrimitive, ToPrimitive, PartialEq, Eq)]
 pub enum Event {
@@ -316,9 +316,7 @@ extern "C" fn zt_path_lookup_function<T: NodeEventHandler<N> + Sync + Send + Clo
 
 impl<T: NodeEventHandler<N> + Sync + Send + Clone + 'static, N: 'static> Node<T, N> {
     /// Create a new Node with a given event handler.
-    pub fn new(event_handler: T) -> Result<Node<T, N>, ResultCode> {
-        let now = now();
-
+    pub fn new(event_handler: T, now: i64) -> Result<Node<T, N>, ResultCode> {
         let mut n = Node {
             event_handler: event_handler.clone(),
             capi: null_mut(),
@@ -354,15 +352,14 @@ impl<T: NodeEventHandler<N> + Sync + Send + Clone + 'static, N: 'static> Node<T,
     /// The first call should happen no more than NODE_BACKGROUND_TASKS_MAX_INTERVAL milliseconds
     /// since the node was created, and after this runs it returns the amount of time the caller
     /// should wait before calling it again.
-    pub fn process_background_tasks(&self) -> u64 {
-        let current_time = now();
-        self.now.set(current_time);
+    pub fn process_background_tasks(&self, now: i64) -> u64 {
+        self.now.set(now);
 
-        let mut next_task_deadline: i64 = current_time;
+        let mut next_task_deadline: i64 = now;
         unsafe {
-            ztcore::ZT_Node_processBackgroundTasks(self.capi, null_mut(), current_time, (&mut next_task_deadline as *mut i64).cast());
+            ztcore::ZT_Node_processBackgroundTasks(self.capi, null_mut(), now, (&mut next_task_deadline as *mut i64).cast());
         }
-        let mut next_delay = next_task_deadline - current_time;
+        let mut next_delay = next_task_deadline - now;
 
         if next_delay < 1 {
             next_delay = 1;

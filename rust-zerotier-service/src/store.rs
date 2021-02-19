@@ -15,12 +15,14 @@ use std::error::Error;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
+use std::str::FromStr;
 use std::ffi::CString;
 
 use zerotier_core::{StateObjectType, NetworkId};
 
 use crate::localconfig::LocalConfig;
 
+/// In-filesystem data store for configuration and objects.
 pub(crate) struct Store {
     pub base_path: Box<Path>,
     pub default_log_path: Box<Path>,
@@ -195,6 +197,21 @@ impl Store {
         self.write_file("local.conf", json.as_bytes())
     }
 
+    /// Writes the primary port number bound to zerotier.port.
+    pub fn write_port(&self, port: u16) -> std::io::Result<()> {
+        let ps = port.to_string();
+        self.write_file("zerotier.port", ps.as_bytes())
+    }
+
+    /// Read zerotier.port and return port or 0 if not found or not readable.
+    pub fn read_port(&self) -> u16 {
+        self.read_file_str("zerotier.port").map_or_else(|_| {
+            0_u16
+        },|s| {
+            u16::from_str(s.trim()).unwrap_or(0_u16)
+        })
+    }
+
     /// Reads the authtoken.secret file in the home directory.
     #[inline(always)]
     pub fn read_authtoken_secret(&self) -> std::io::Result<String> {
@@ -207,6 +224,18 @@ impl Store {
         let _ = std::fs::OpenOptions::new().write(true).truncate(true).create(true).open(&p)?.write_all(sec.as_bytes())?;
         lock_down_file(p.to_str().unwrap());
         Ok(())
+    }
+
+    /// Write zerotier.pid file with current process's PID.
+    #[cfg(unix)]
+    pub fn write_pid(&self) -> std::io::Result<()> {
+        let pid = unsafe { crate::osdep::getpid() }.to_string();
+        self.write_file(self.base_path.join("zerotier.pid").to_str().unwrap(), pid.as_bytes())
+    }
+
+    /// Erase zerotier.pid if present.
+    pub fn erase_pid(&self) {
+        std::fs::remove_file(self.base_path.join("zerotier.pid"));
     }
 
     /// Load a ZeroTier core object.

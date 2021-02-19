@@ -112,8 +112,8 @@ pub struct LocalConfigSettings {
     pub log_filter_events: bool,
     #[serde(rename = "logMulticastEvents")]
     pub log_multicast_events: bool,
-    #[serde(rename = "logDebug")]
-    pub log_debug: bool,
+    #[serde(rename = "logToStderr")]
+    pub log_to_stderr: bool,
     #[serde(rename = "interfacePrefixBlacklist")]
     pub interface_prefix_blacklist: Vec<String>,
     #[serde(rename = "explicitAddresses")]
@@ -197,7 +197,7 @@ impl Default for LocalConfigSettings {
             log_vl2_events: false,
             log_filter_events: false,
             log_multicast_events: false,
-            log_debug: false,
+            log_to_stderr: true, // TODO: change for release
             interface_prefix_blacklist: bl,
             explicit_addresses: Vec::new()
         }
