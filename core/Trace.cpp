@@ -77,18 +77,21 @@ void Trace::_tryingNewPath(
 	const uint8_t triggeringPacketVerb,
 	const Identity &triggeringPeer)
 {
-	FCV< uint8_t, 4096 > buf;
-	Dictionary::append(buf, ZT_TRACE_FIELD_TYPE, ZT_TRACE_VL1_TRYING_NEW_PATH);
-	Dictionary::append(buf, ZT_TRACE_FIELD_CODE_LOCATION, codeLocation);
-	Dictionary::appendObject(buf, ZT_TRACE_FIELD_IDENTITY_FINGERPRINT, trying.fingerprint());
-	if (triggerAddress)
-		Dictionary::appendObject(buf, ZT_TRACE_FIELD_TRIGGER_FROM_ENDPOINT, Endpoint(triggerAddress));
-	Dictionary::appendPacketId(buf, ZT_TRACE_FIELD_TRIGGER_FROM_PACKET_ID, triggeringPacketId);
-	Dictionary::append(buf, ZT_TRACE_FIELD_TRIGGER_FROM_PACKET_VERB, triggeringPacketVerb);
-	if (triggeringPeer)
-		Dictionary::appendObject(buf, ZT_TRACE_FIELD_TRIGGER_FROM_PEER_FINGERPRINT, triggeringPeer.fingerprint());
-	buf.push_back(0);
-	RR->node->postEvent(tPtr, ZT_EVENT_TRACE, buf.data());
+	if ((trying)&&(physicalAddress)) {
+		FCV< uint8_t, 4096 > buf;
+		Dictionary::append(buf, ZT_TRACE_FIELD_TYPE, ZT_TRACE_VL1_TRYING_NEW_PATH);
+		Dictionary::append(buf, ZT_TRACE_FIELD_CODE_LOCATION, codeLocation);
+		Dictionary::appendObject(buf, ZT_TRACE_FIELD_IDENTITY_FINGERPRINT, trying.fingerprint());
+		Dictionary::appendObject(buf, ZT_TRACE_FIELD_ENDPOINT, physicalAddress);
+		if (triggerAddress)
+			Dictionary::appendObject(buf, ZT_TRACE_FIELD_TRIGGER_FROM_ENDPOINT, Endpoint(triggerAddress));
+		Dictionary::appendPacketId(buf, ZT_TRACE_FIELD_TRIGGER_FROM_PACKET_ID, triggeringPacketId);
+		Dictionary::append(buf, ZT_TRACE_FIELD_TRIGGER_FROM_PACKET_VERB, triggeringPacketVerb);
+		if (triggeringPeer)
+			Dictionary::appendObject(buf, ZT_TRACE_FIELD_TRIGGER_FROM_PEER_FINGERPRINT, triggeringPeer.fingerprint());
+		buf.push_back(0);
+		RR->node->postEvent(tPtr, ZT_EVENT_TRACE, buf.data());
+	}
 }
 
 void Trace::_learnedNewPath(
@@ -99,17 +102,19 @@ void Trace::_learnedNewPath(
 	const InetAddress &physicalAddress,
 	const InetAddress &replaced)
 {
-	FCV< uint8_t, 4096 > buf;
-	Dictionary::append(buf, ZT_TRACE_FIELD_TYPE, ZT_TRACE_VL1_LEARNED_NEW_PATH);
-	Dictionary::append(buf, ZT_TRACE_FIELD_CODE_LOCATION, codeLocation);
-	Dictionary::appendPacketId(buf, ZT_TRACE_FIELD_PACKET_ID, packetId);
-	Dictionary::appendObject(buf, ZT_TRACE_FIELD_IDENTITY_FINGERPRINT, peerIdentity.fingerprint());
-	if (physicalAddress)
-		Dictionary::appendObject(buf, ZT_TRACE_FIELD_ENDPOINT, Endpoint(physicalAddress));
-	if (replaced)
-		Dictionary::appendObject(buf, ZT_TRACE_FIELD_OLD_ENDPOINT, Endpoint(replaced));
-	buf.push_back(0);
-	RR->node->postEvent(tPtr, ZT_EVENT_TRACE, buf.data());
+	if (peerIdentity) {
+		FCV< uint8_t, 4096 > buf;
+		Dictionary::append(buf, ZT_TRACE_FIELD_TYPE, ZT_TRACE_VL1_LEARNED_NEW_PATH);
+		Dictionary::append(buf, ZT_TRACE_FIELD_CODE_LOCATION, codeLocation);
+		Dictionary::appendPacketId(buf, ZT_TRACE_FIELD_PACKET_ID, packetId);
+		Dictionary::appendObject(buf, ZT_TRACE_FIELD_IDENTITY_FINGERPRINT, peerIdentity.fingerprint());
+		if (physicalAddress)
+			Dictionary::appendObject(buf, ZT_TRACE_FIELD_ENDPOINT, Endpoint(physicalAddress));
+		if (replaced)
+			Dictionary::appendObject(buf, ZT_TRACE_FIELD_OLD_ENDPOINT, Endpoint(replaced));
+		buf.push_back(0);
+		RR->node->postEvent(tPtr, ZT_EVENT_TRACE, buf.data());
+	}
 }
 
 void Trace::_incomingPacketDropped(
@@ -184,6 +189,7 @@ void Trace::_incomingNetworkFrameDropped(
 	FCV< uint8_t, 4096 > buf;
 	Dictionary::append(buf, ZT_TRACE_FIELD_TYPE, ZT_TRACE_VL2_INCOMING_FRAME_DROPPED);
 	Dictionary::append(buf, ZT_TRACE_FIELD_CODE_LOCATION, codeLocation);
+	Dictionary::append(buf, ZT_TRACE_FIELD_NETWORK_ID, networkId);
 	Dictionary::append(buf, ZT_TRACE_FIELD_SOURCE_MAC, sourceMac.toInt());
 	Dictionary::append(buf, ZT_TRACE_FIELD_DEST_MAC, destMac.toInt());
 	Dictionary::append(buf, ZT_TRACE_FIELD_ETHERTYPE, etherType);

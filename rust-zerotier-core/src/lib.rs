@@ -108,6 +108,19 @@ pub enum CredentialType {
     Revocation = ztcore::ZT_CredentialType_ZT_CREDENTIAL_TYPE_REVOCATION as isize,
 }
 
+impl CredentialType {
+    pub fn to_str(&self) -> &'static str {
+        match *self {
+            CredentialType::Null => "Null",
+            CredentialType::CertificateOfMembership => "CertificateOfMembership",
+            CredentialType::Capability => "Capability",
+            CredentialType::Tag => "Tag",
+            CredentialType::CertificateOfOwnership => "CertificateOfOwnership",
+            CredentialType::Revocation => "Revocation",
+        }
+    }
+}
+
 #[derive(FromPrimitive, ToPrimitive, PartialEq, Eq)]
 pub enum ResultCode {
     Ok = ztcore::ZT_ResultCode_ZT_RESULT_OK as isize,
@@ -122,8 +135,8 @@ pub enum ResultCode {
     ErrorInternalNonFatal = ztcore::ZT_ResultCode_ZT_RESULT_ERROR_INTERNAL as isize,
 }
 
-impl ToString for ResultCode {
-    fn to_string(&self) -> String {
+impl ResultCode {
+    pub fn to_str(&self) -> &'static str {
         match *self {
             ResultCode::Ok => "Ok",
             ResultCode::FatalErrorOutOfMemory => "FatalErrorOutOfMemory",
@@ -135,7 +148,7 @@ impl ToString for ResultCode {
             ResultCode::ErrorInvalidCredential => "ErrorInvalidCredential",
             ResultCode::ErrorCollidingObject => "ErrorCollidingObject",
             ResultCode::ErrorInternalNonFatal => "ErrorInternalNonFatal",
-        }.to_string()
+        }
     }
 }
 
@@ -196,6 +209,25 @@ macro_rules! implement_to_from_json {
 
             pub fn to_json(&self) -> String {
                 serde_json::to_string_pretty(self).unwrap()
+            }
+        }
+    };
+}
+
+#[macro_export(crate)]
+macro_rules! enum_str {
+    (enum $name:ident {
+        $($variant:ident = $val:expr),*,
+    }) => {
+        enum $name {
+            $($variant = $val),*
+        }
+
+        impl $name {
+            fn name(&self) -> &'static str {
+                match self {
+                    $($name::$variant => stringify!($variant)),*
+                }
             }
         }
     };

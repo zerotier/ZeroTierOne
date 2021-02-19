@@ -42,8 +42,6 @@ extern "C" fn populate_dict_callback(arg: *mut c_void, c_key: *const c_char, key
     }
 }
 
-pub type DictionaryIter = std::collections::hash_map::Iter<'_, String, Vec<u8>>;
-
 impl Dictionary {
     #[inline(always)]
     pub fn new() -> Dictionary {
@@ -70,9 +68,15 @@ impl Dictionary {
         self.data.get(&ks)
     }
 
+    pub fn get_or_empty<K: AsRef<[u8]>>(&self, k: K) -> Vec<u8> {
+        let ks = String::from(String::from_utf8_lossy(k.as_ref()));
+        self.data.get(&ks).map_or_else(|| -> Vec<u8> { Vec::new() }, |d| -> Vec<u8> { d.clone() })
+    }
+
     pub fn get_str<K: AsRef<[u8]>>(&self, k: K) -> Option<&str> {
-        let v = self.data.get(k);
-        v.map_or(None, |v: Vec<u8>| {
+        let ks = String::from(String::from_utf8_lossy(k.as_ref()));
+        let v = self.data.get(&ks);
+        v.map_or(None, |v: &Vec<u8>| {
             let vs = std::str::from_utf8(v.as_slice());
             vs.map_or(None, |v: &str| {
                 Some(v)
@@ -95,8 +99,8 @@ impl Dictionary {
     }
 
     #[inline(always)]
-    pub fn iter(&self) -> DictionaryIter {
-        self.data.iter()
+    pub fn len(&self) -> usize {
+        self.data.len()
     }
 }
 

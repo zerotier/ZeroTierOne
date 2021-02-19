@@ -19,7 +19,8 @@ use zerotier_core::{MAC, MulticastGroup};
 
 use crate::osdep as osdep;
 
-#[cfg(any(target_os = "macos", target_os = "freebsd", target_os = "netbsd", target_os = "openbsd", target_os = "dragonfly", target_os = "ios"))]
+/// BSD based OSes support getifmaddrs().
+#[cfg(any(target_os = "macos", target_os = "freebsd", target_os = "netbsd", target_os = "openbsd", target_os = "dragonfly", target_os = "ios", target_os = "bsd", target_os = "darwin"))]
 pub(crate) fn bsd_get_multicast_groups(dev: &str) -> BTreeSet<MulticastGroup> {
     let mut groups: BTreeSet<MulticastGroup> = BTreeSet::new();
     let dev = dev.as_bytes();
@@ -47,6 +48,7 @@ pub(crate) fn bsd_get_multicast_groups(dev: &str) -> BTreeSet<MulticastGroup> {
     groups
 }
 
+/// Linux stores this stuff in /proc and it needs to be fetched from there.
 #[cfg(target_os = "linux")]
 pub(crate) fn linux_get_multicast_groups(dev: &str) -> BTreeSet<MulticastGroup> {
     let mut groups: BTreeSet<MulticastGroup> = BTreeSet::new();

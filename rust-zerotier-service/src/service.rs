@@ -175,6 +175,7 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
     }
     let auth_token = Arc::new(auth_token);
 
+    // From this point on we're in tokio / async.
     let tokio_rt = tokio::runtime::Builder::new_current_thread().build().unwrap();
     tokio_rt.block_on(async {
         let mut udp_sockets: BTreeMap<InetAddress, FastUDPSocket> = BTreeMap::new();
@@ -195,7 +196,7 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
         let node = Node::new(service.clone(), ms_since_epoch());
         if node.is_err() {
             process_exit_value = 1;
-            l!(log, "FATAL: error initializing node: {}", node.err().unwrap().to_string());
+            l!(log, "FATAL: error initializing node: {}", node.err().unwrap().to_str());
             return;
         }
         let node = Arc::new(node.ok().unwrap());
@@ -254,7 +255,7 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
                     _ = tokio::time::sleep(Duration::from_millis(loop_delay)) => {
                         now = ms_since_epoch();
                         let actual_delay = now - loop_start;
-                        if actual_delay > (loop_delay * 4) {
+                        if actual_delay > ((loop_delay as i64) * 4_i64) {
                             // TODO: handle likely sleep/wake or other system interruption
                         }
                     },

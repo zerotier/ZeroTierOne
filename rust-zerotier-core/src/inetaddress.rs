@@ -41,11 +41,36 @@ pub enum IpScope {
     Private = ztcore::ZT_InetAddress_IpScope_ZT_IP_SCOPE_PRIVATE as isize
 }
 
+impl IpScope {
+    pub fn to_str(&self) -> &'static str {
+        match *self {
+            IpScope::None => "None",
+            IpScope::Multicast => "Multicast",
+            IpScope::Loopback => "Loopback",
+            IpScope::PseudoPrivate => "PseudoPrivate",
+            IpScope::Global => "Global",
+            IpScope::LinkLocal => "LinkLocal",
+            IpScope::Shared => "Shared",
+            IpScope::Private => "Private",
+        }
+    }
+}
+
 #[derive(PartialEq, Eq)]
 pub enum InetAddressFamily {
     Nil,
     IPv4,
     IPv6
+}
+
+impl InetAddressFamily {
+    pub fn to_str(&self) -> &'static str {
+        match *self {
+            InetAddressFamily::Nil => "Nil",
+            InetAddressFamily::IPv4 => "IPv4",
+            InetAddressFamily::IPv6 => "IPv6",
+        }
+    }
 }
 
 pub const IPV4_INADDR_ANY: [u8; 4] = [0; 4];

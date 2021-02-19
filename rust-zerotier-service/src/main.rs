@@ -107,13 +107,13 @@ fn main() {
             auth_token = Some(t.unwrap().trim().to_string());
         }
     } else {
+        drop(auth_token_path);
         auth_token = Some(auth_token.unwrap().trim().to_string());
     }
 
     drop(zerotier_path);
-    drop(auth_token_path);
 
-    match cli_args.as_ref().unwrap().subcommand_name().unwrap() {
+    match cli_args.as_ref().subcommand_name().unwrap() {
         "version" => {
             let ver = zerotier_core::version();
             println!("{}.{}.{}", ver.0, ver.1, ver.2);
