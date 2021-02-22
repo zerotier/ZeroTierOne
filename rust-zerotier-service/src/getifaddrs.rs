@@ -11,7 +11,6 @@
  */
 /****/
 
-use std::ffi::CStr;
 use std::mem::size_of;
 use std::ptr::{copy_nonoverlapping, null_mut};
 
@@ -30,6 +29,7 @@ fn s6_addr_as_ptr<A>(a: &A) -> *const A {
 #[cfg(unix)]
 pub(crate) fn for_each_address<F: FnMut(&InetAddress, &str)>(mut f: F) {
     unsafe {
+        let mut ifa_name = [0_u8; osdep::IFNAMSIZ as usize];
         let mut ifap: *mut osdep::ifaddrs = null_mut();
         if osdep::getifaddrs((&mut ifap as *mut *mut osdep::ifaddrs).cast()) == 0 {
             let mut i = ifap;
@@ -43,6 +43,7 @@ pub(crate) fn for_each_address<F: FnMut(&InetAddress, &str)>(mut f: F) {
                     } else if sa_family == osdep::AF_INET6 as u8 {
                         copy_nonoverlapping((*i).ifa_addr.cast::<u8>(), (&mut a as *mut InetAddress).cast::<u8>(), size_of::<osdep::sockaddr_in6>());
                     } else {
+                        i = (*i).ifa_next;
                         continue;
                     }
 
@@ -66,14 +67,40 @@ pub(crate) fn for_each_address<F: FnMut(&InetAddress, &str)>(mut f: F) {
                     }
                     a.set_port(netmask_bits);
 
-                    let dev = CStr::from_ptr((*i).ifa_name).to_str();
-                    if dev.is_ok() {
-                        f(&a, dev.unwrap());
+                    let mut namlen: usize = 0;
+                    while namlen < (osdep::IFNAMSIZ as usize) {
+                        let c = *(*i).ifa_name.offset(namlen as isize);
+                        if c != 0 {
+                            ifa_name[namlen] = c as u8;
+                            namlen += 1;
+                        } else {
+                            break;
+                        }
+                    }
+                    if namlen > 0 {
+                        let dev = String::from_utf8_lossy(&ifa_name[0..namlen]);
+                        if dev.len() > 0 {
+                            f(&a, dev.as_ref());
+                        }
                     }
                 }
                 i = (*i).ifa_next;
             }
             osdep::freeifaddrs(ifap.cast());
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use zerotier_core::InetAddress;
+
+    #[test]
+    fn test_getifaddrs() {
+        println!("starting getifaddrs...");
+        crate::getifaddrs::for_each_address(|a: &InetAddress, dev: &str| {
+            println!("  device: {} ip: {}", dev, a.to_string())
+        });
+        println!("done.")
     }
 }

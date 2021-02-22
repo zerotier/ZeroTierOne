@@ -12,7 +12,7 @@
 /****/
 
 use std::collections::BTreeMap;
-use std::net::IpAddr;
+use std::net::{IpAddr, SocketAddr};
 use std::str::FromStr;
 use std::sync::{Arc, Mutex, Weak};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -66,6 +66,10 @@ impl NodeEventHandler<Network> for Service {
             Event::Trace => {
                 if !event_data.is_empty() {
                     let _ = Dictionary::new_from_bytes(event_data).map(|tm| {
+                        let tm = zerotier_core::trace::TraceEvent::parse_message(&tm);
+                        let _ = tm.map(|tm| {
+                            self.log.log(tm.to_string());
+                        });
                     });
                 }
             }
@@ -110,17 +114,17 @@ impl NodeEventHandler<Network> for Service {
 
 impl Service {
     #[inline(always)]
-    fn web_api_status(&self, method: Method, headers: HeaderMap, post_data: Bytes) -> Box<dyn Reply> {
+    fn web_api_status(&self, remote: Option<SocketAddr>, method: Method, headers: HeaderMap, post_data: Bytes) -> Box<dyn Reply> {
         Box::new(StatusCode::BAD_REQUEST)
     }
 
     #[inline(always)]
-    fn web_api_network(&self, network_str: String, method: Method, headers: HeaderMap, post_data: Bytes) -> Box<dyn Reply> {
+    fn web_api_network(&self, network_str: String, remote: Option<SocketAddr>, method: Method, headers: HeaderMap, post_data: Bytes) -> Box<dyn Reply> {
         Box::new(StatusCode::BAD_REQUEST)
     }
 
     #[inline(always)]
-    fn web_api_peer(&self, peer_str: String, method: Method, headers: HeaderMap, post_data: Bytes) -> Box<dyn Reply> {
+    fn web_api_peer(&self, peer_str: String, remote: Option<SocketAddr>, method: Method, headers: HeaderMap, post_data: Bytes) -> Box<dyn Reply> {
         Box::new(StatusCode::BAD_REQUEST)
     }
 
@@ -204,6 +208,9 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
         service.node = Arc::downgrade(&node);
         let service = service; // make immutable after setting node
 
+        // The outer loop runs for as long as the service runs. It repeatedly restarts
+        // the inner loop, which can exit if it needs to be restarted. This is the case
+        // if a major configuration change occurs.
         let mut loop_delay = zerotier_core::NODE_BACKGROUND_TASKS_MAX_INTERVAL;
         loop {
             let mut local_config = service.local_config();
@@ -214,26 +221,31 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
                 let s0 = service.clone();
                 let s1 = service.clone();
                 let s2 = service.clone();
-                warp_server = warp::serve(
-                    warp::any().and(warp::path::end().map(|| {
-                        warp::reply::with_status("404", StatusCode::NOT_FOUND)
-                    })
-                    .or(warp::path("status").and(warp::method()).and(warp::header::headers_cloned()).and(warp::body::bytes())
-                        .map(move |method: Method, headers: HeaderMap, post_data: Bytes| {
-                            s0.web_api_status(method, headers, post_data)
-                        }))
-                    .or(warp::path!("network" / String).and(warp::method()).and(warp::header::headers_cloned()).and(warp::body::bytes())
-                        .map(move |network_str: String, method: Method, headers: HeaderMap, post_data: Bytes| {
-                            s1.web_api_network(network_str, method, headers, post_data)
-                        }))
-                    .or(warp::path!("peer" / String).and(warp::method()).and(warp::header::headers_cloned()).and(warp::body::bytes())
-                        .map(move |peer_str: String, method: Method, headers: HeaderMap, post_data: Bytes| {
-                            s2.web_api_peer(peer_str, method, headers, post_data)
-                        }))
-                )).try_bind_with_graceful_shutdown(
-                    (IpAddr::from([127_u8, 0_u8, 0_u8, 1_u8]), local_config.settings.primary_port),
-                    async { let _ = shutdown_rx.await; },
-                );
+                warp_server = warp::serve(warp::any()
+                    .and(warp::path::end().map(|| { warp::reply::with_status("404", StatusCode::NOT_FOUND) })
+                        .or(warp::path("status")
+                            .and(warp::addr::remote())
+                            .and(warp::method())
+                            .and(warp::header::headers_cloned())
+                            .and(warp::body::content_length_limit(1048576))
+                            .and(warp::body::bytes())
+                            .map(move |remote: Option<SocketAddr>, method: Method, headers: HeaderMap, post_data: Bytes| { s0.web_api_status(remote, method, headers, post_data) }))
+                        .or(warp::path!("network" / String)
+                            .and(warp::addr::remote())
+                            .and(warp::method())
+                            .and(warp::header::headers_cloned())
+                            .and(warp::body::content_length_limit(1048576))
+                            .and(warp::body::bytes())
+                            .map(move |network_str: String, remote: Option<SocketAddr>, method: Method, headers: HeaderMap, post_data: Bytes| { s1.web_api_network(network_str, remote, method, headers, post_data) }))
+                        .or(warp::path!("peer" / String)
+                            .and(warp::addr::remote())
+                            .and(warp::method())
+                            .and(warp::header::headers_cloned())
+                            .and(warp::body::content_length_limit(1048576))
+                            .and(warp::body::bytes())
+                            .map(move |peer_str: String, remote: Option<SocketAddr>, method: Method, headers: HeaderMap, post_data: Bytes| { s2.web_api_peer(peer_str, remote, method, headers, post_data) }))
+                    )
+                ).try_bind_with_graceful_shutdown((IpAddr::from([127_u8, 0_u8, 0_u8, 1_u8]), local_config.settings.primary_port), async { let _ = shutdown_rx.await; });
             }
             if warp_server.is_err() {
                 l!(log, "ERROR: local API http server failed to bind to port {} or failed to start: {}", local_config.settings.primary_port, warp_server.err().unwrap().to_string());
@@ -244,6 +256,9 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
             // Write zerotier.port which is used by the CLI to know how to reach the HTTP API.
             store.write_port(local_config.settings.primary_port);
 
+            // The inner loop runs the web server in the "background" (async) while periodically
+            // scanning for significant configuration changes. Some major changes may require
+            // the inner loop to exit and be restarted.
             let mut last_checked_config: i64 = 0;
             loop {
                 let loop_start = ms_since_epoch();
@@ -256,6 +271,7 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
                         now = ms_since_epoch();
                         let actual_delay = now - loop_start;
                         if actual_delay > ((loop_delay as i64) * 4_i64) {
+                            l!(log, "likely sleep/wake detected, reestablishing links...");
                             // TODO: handle likely sleep/wake or other system interruption
                         }
                     },
