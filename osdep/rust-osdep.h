@@ -1,3 +1,16 @@
+/*
+ * Copyright (c)2013-2021 ZeroTier, Inc.
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file in the project's root directory.
+ *
+ * Change Date: 2026-01-01
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2.0 of the Apache License.
+ */
+/****/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -35,7 +48,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-/* These complex macros don't translate well with Rust bindgen, so compute them with the C compiler and export them. */
+/* These complex macros don't translate well with Rust bindgen, so compute
+ * them with the C compiler and export them. */
 extern const unsigned long c_BIOCSBLEN;
 extern const unsigned long c_BIOCIMMEDIATE;
 extern const unsigned long c_BIOCSSEESENT;
@@ -49,7 +63,9 @@ extern const unsigned long c_SIOCAUTOCONF_STOP;
 #ifdef __cplusplus
 }
 #endif
-#endif
+#endif /* __APPLE__ */
+
+/********************************************************************************************************************/
 
 #ifdef __cplusplus
 extern "C" {

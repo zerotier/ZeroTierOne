@@ -1,10 +1,10 @@
 /*
- * Copyright (c)2013-2020 ZeroTier, Inc.
+ * Copyright (c)2013-2021 ZeroTier, Inc.
  *
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2025-01-01
+ * Change Date: 2026-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -22,44 +22,15 @@ mod store;
 mod network;
 mod vnic;
 mod service;
+mod utils;
 
 #[allow(non_snake_case,non_upper_case_globals,non_camel_case_types,dead_code,improper_ctypes)]
 mod osdep; // bindgen generated
 
-use std::ffi::CStr;
-use std::path::Path;
 use std::boxed::Box;
 use std::sync::Arc;
-use std::mem::MaybeUninit;
-use std::os::raw::c_uint;
 
 use crate::store::Store;
-
-#[inline(always)]
-pub(crate) fn sha512<T: AsRef<[u8]>>(data: T) -> [u8; 64] {
-    unsafe {
-        let mut r: MaybeUninit<[u8; 64]> = MaybeUninit::uninit();
-        let d = data.as_ref();
-        osdep::sha512(d.as_ptr().cast(), d.len() as c_uint, r.as_mut_ptr().cast());
-        r.assume_init()
-    }
-}
-
-#[inline(always)]
-pub(crate) fn sha384<T: AsRef<[u8]>>(data: T) -> [u8; 48] {
-    unsafe {
-        let mut r: MaybeUninit<[u8; 48]> = MaybeUninit::uninit();
-        let d = data.as_ref();
-        osdep::sha384(d.as_ptr().cast(), d.len() as c_uint, r.as_mut_ptr().cast());
-        r.assume_init()
-    }
-}
-
-#[inline(always)]
-pub(crate) fn ms_since_epoch() -> i64 {
-    // This is easy to do in the Rust stdlib, but the version in OSUtils is probably faster.
-    unsafe { osdep::msSinceEpoch() }
-}
 
 fn main() {
     let mut process_exit_value: i32 = 0;
@@ -118,10 +89,12 @@ fn main() {
             let ver = zerotier_core::version();
             println!("{}.{}.{}", ver.0, ver.1, ver.2);
         },
+
         "service" => {
             drop(cli_args); // free unnecssary memory before launching service
             process_exit_value = service::run(&store, auth_token);
         },
+
         _ => cli::print_help(), // includes "help"
     }
 

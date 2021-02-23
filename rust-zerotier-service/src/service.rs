@@ -1,10 +1,10 @@
 /*
- * Copyright (c)2013-2020 ZeroTier, Inc.
+ * Copyright (c)2013-2021 ZeroTier, Inc.
  *
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2025-01-01
+ * Change Date: 2026-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -23,22 +23,28 @@ use warp::{Filter, Reply};
 use warp::http::{HeaderMap, Method, StatusCode};
 use warp::hyper::body::Bytes;
 
-use zerotier_core::{Buffer, Address, IpScope, Node, NodeEventHandler, NetworkId, VirtualNetworkConfigOperation, VirtualNetworkConfig, StateObjectType, MAC, Event, InetAddress, InetAddressFamily, Identity, Dictionary};
+use zerotier_core::*;
 
 use crate::fastudpsocket::*;
-use crate::{getifaddrs, ms_since_epoch};
+use crate::getifaddrs;
 use crate::localconfig::*;
 use crate::log::Log;
 use crate::network::Network;
 use crate::store::Store;
+use crate::utils::ms_since_epoch;
 
 const CONFIG_CHECK_INTERVAL: i64 = 5000;
 
+/// Core ZeroTier service.
+/// This object must be clonable across threads, so all its innards are in
+/// Arc containers. It's probably faster to clone all these Arcs when new
+/// threads are created (a rare event) so we only have to dereference each
+/// Arc once for common events like packet receipt.
 #[derive(Clone)]
 struct Service {
     auth_token: Arc<String>,
     log: Arc<Log>,
-    _local_config: Arc<Mutex<Arc<LocalConfig>>>,
+    _local_config: Arc<Mutex<Arc<LocalConfig>>>, // Arc -> shared Mutex container so it can be changed globally
     run: Arc<AtomicBool>,
     online: Arc<AtomicBool>,
     store: Arc<Store>,
@@ -46,11 +52,13 @@ struct Service {
 }
 
 impl NodeEventHandler<Network> for Service {
+    #[inline(always)]
     fn virtual_network_config(&self, network_id: NetworkId, network_obj: &Arc<Network>, config_op: VirtualNetworkConfigOperation, config: Option<&VirtualNetworkConfig>) {}
 
     #[inline(always)]
     fn virtual_network_frame(&self, network_id: NetworkId, network_obj: &Arc<Network>, source_mac: MAC, dest_mac: MAC, ethertype: u16, vlan_id: u16, data: &[u8]) {}
 
+    #[inline(always)]
     fn event(&self, event: Event, event_data: &[u8]) {
         match event {
             Event::Up => {}
@@ -92,10 +100,12 @@ impl NodeEventHandler<Network> for Service {
         0
     }
 
+    #[inline(always)]
     fn path_check(&self, address: Address, id: &Identity, local_socket: i64, sock_addr: &InetAddress) -> bool {
         true
     }
 
+    #[inline(always)]
     fn path_lookup(&self, address: Address, id: &Identity, desired_family: InetAddressFamily) -> Option<InetAddress> {
         let lc = self.local_config();
         let vc = lc.virtual_.get(&address);
@@ -142,36 +152,36 @@ impl Service {
 pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
     let mut process_exit_value: i32 = 0;
 
-    let init_local_config = Arc::new(store.read_local_conf(false).unwrap_or_else(|_| { LocalConfig::default() }));
+    let local_config = Arc::new(store.read_local_conf(false).unwrap_or_else(|_| { LocalConfig::default() }));
 
     let log = Arc::new(Log::new(
-        if init_local_config.settings.log_path.as_ref().is_some() {
-            init_local_config.settings.log_path.as_ref().unwrap().as_str()
+        if local_config.settings.log_path.as_ref().is_some() {
+            local_config.settings.log_path.as_ref().unwrap().as_str()
         } else {
             store.default_log_path.to_str().unwrap()
         },
-        init_local_config.settings.log_size_max,
-        init_local_config.settings.log_to_stderr,
+        local_config.settings.log_size_max,
+        local_config.settings.log_to_stderr,
         "",
     ));
 
     // Generate authtoken.secret from secure random bytes if not already set.
-    let auth_token = auth_token.unwrap_or_else(|| {
+    let auth_token = auth_token.unwrap_or_else(|| -> String {
         let mut rb = [0_u8; 64];
         unsafe { crate::osdep::getSecureRandom(rb.as_mut_ptr().cast(), 64) };
-        let mut t = String::new();
-        t.reserve(64);
+        let mut generated_auth_token = String::new();
+        generated_auth_token.reserve(rb.len());
         for b in rb.iter() {
             if *b > 127_u8 {
-                t.push((65 + (*b % 26)) as char); // A..Z
+                generated_auth_token.push((65 + (*b % 26)) as char); // A..Z
             } else {
-                t.push((97 + (*b % 26)) as char); // a..z
+                generated_auth_token.push((97 + (*b % 26)) as char); // a..z
             }
         }
-        if store.write_authtoken_secret(t.as_str()).is_err() {
-            t.clear();
+        if store.write_authtoken_secret(generated_auth_token.as_str()).is_err() {
+            generated_auth_token.clear();
         }
-        t
+        generated_auth_token
     });
     if auth_token.is_empty() {
         l!(log, "FATAL: unable to write authtoken.secret to '{}'", store.base_path.to_str().unwrap());
@@ -185,22 +195,20 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
         let mut udp_sockets: BTreeMap<InetAddress, FastUDPSocket> = BTreeMap::new();
         let (mut interrupt_tx, mut interrupt_rx) = futures::channel::mpsc::channel::<()>(1);
 
-        // Create clonable implementation of NodeEventHandler and local web API endpoints.
         let mut service = Service {
             auth_token: auth_token.clone(),
             log: log.clone(),
-            _local_config: Arc::new(Mutex::new(init_local_config)),
+            _local_config: Arc::new(Mutex::new(local_config)),
             run: Arc::new(AtomicBool::new(true)),
             online: Arc::new(AtomicBool::new(false)),
             store: store.clone(),
             node: Weak::new(),
         };
 
-        // Create instance of Node which will call Service on events.
         let node = Node::new(service.clone(), ms_since_epoch());
         if node.is_err() {
-            process_exit_value = 1;
             l!(log, "FATAL: error initializing node: {}", node.err().unwrap().to_str());
+            process_exit_value = 1;
             return;
         }
         let node = Arc::new(node.ok().unwrap());
@@ -208,9 +216,6 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
         service.node = Arc::downgrade(&node);
         let service = service; // make immutable after setting node
 
-        // The outer loop runs for as long as the service runs. It repeatedly restarts
-        // the inner loop, which can exit if it needs to be restarted. This is the case
-        // if a major configuration change occurs.
         let mut loop_delay = zerotier_core::NODE_BACKGROUND_TASKS_MAX_INTERVAL;
         loop {
             let mut local_config = service.local_config();
@@ -343,7 +348,7 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
                     // Create sockets for unbound addresses.
                     for addr in system_addrs.iter() {
                         if !udp_sockets.contains_key(addr.0) {
-                            let s = FastUDPSocket::new(addr.1.as_str(), addr.0, |raw_socket: &FastUDPRawOsSocket, from_address: &InetAddress, data: Buffer| {
+                            let s = FastUDPSocket::new(addr.1.as_str(), addr.0, move |raw_socket: &FastUDPRawOsSocket, from_address: &InetAddress, data: Buffer| {
                                 // TODO: incoming packet handler
                             });
                             if s.is_ok() {
@@ -389,7 +394,6 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
                     }
                 }
 
-                // Check to make sure nothing outside this code turned off the run flag.
                 if !service.run.load(Ordering::Relaxed) {
                     break;
                 }
@@ -407,7 +411,7 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
             if !service.run.load(Ordering::Relaxed) {
                 break;
             }
-            tokio::time::sleep(Duration::from_secs(1)).await;
+            let _ = tokio::time::sleep(Duration::from_secs(1)).await;
             if !service.run.load(Ordering::Relaxed) {
                 break;
             }

@@ -11,7 +11,7 @@ Parameters
 
 Licensor:             ZeroTier, Inc.
 Licensed Work:        ZeroTier Network Virtualization Engine
-                      The Licensed Work is (c)2013-2020 ZeroTier, Inc.
+                      The Licensed Work is (c)2013-2021 ZeroTier, Inc.
 Additional Use Grant: You may make use of the Licensed Work, provided you
                       do not use it in any of the following ways:
 
