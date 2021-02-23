@@ -58,6 +58,7 @@ use crate::osdep::getifmaddrs;
 
 const BPF_BUFFER_SIZE: usize = 131072;
 const IFCONFIG: &str = "/sbin/ifconfig";
+const SYSCTL: &str = "/usr/sbin/sysctl";
 
 // Holds names of feth devices and destroys them on Drop.
 struct MacFethDevice {
@@ -184,6 +185,12 @@ impl MacFethTap {
         }
         device_ipv6_set_params(&device_name, true, false);
 
+        // Set sysctl for max if_fake MTU. This is allowed to fail since this sysctl doesn't
+        // exist on older versions of MacOS (and isn't required there). 16000 is larger than
+        // anything ZeroTier supports. OS max is 16384 - some overhead.
+        let _ = Command::new(SYSCTL).arg("net.link.fake.max_mtu").arg("16000").spawn().map(|mut c| { let _ = c.wait(); });
+
+        // Create pair of feth interfaces and create MacFethDevice struct.
         let cmd = Command::new(IFCONFIG).arg(&device_name).arg("create").spawn();
         if cmd.is_err() {
             return Err(format!("unable to create device '{}': {}", device_name.as_str(), cmd.err().unwrap().to_string()));
@@ -194,36 +201,43 @@ impl MacFethTap {
             return Err(format!("unable to create device '{}': {}", peer_device_name.as_str(), cmd.err().unwrap().to_string()));
         }
         let _ = cmd.unwrap().wait();
-
-        let device = MacFethDevice{
+        let device = MacFethDevice {
             name: device_name,
             peer_name: peer_device_name,
         };
 
+        // Set link-layer (MAC) address of primary interface.
         let cmd = Command::new(IFCONFIG).arg(&device.name).arg("lladdr").arg(mac.to_string()).spawn();
         if cmd.is_err() {
             return Err(format!("unable to configure device '{}': {}", &device.name, cmd.err().unwrap().to_string()));
         }
         let _ = cmd.unwrap().wait();
 
+        // Bind peer interfaces together.
         let cmd = Command::new(IFCONFIG).arg(&device.peer_name).arg("peer").arg(device.name.as_str()).spawn();
         if cmd.is_err() {
             return Err(format!("unable to configure device '{}': {}", &device.peer_name, cmd.err().unwrap().to_string()));
         }
         let _ = cmd.unwrap().wait();
-        let cmd = Command::new(IFCONFIG).arg(&device.peer_name).arg("mtu").arg("16370").arg("up").spawn();
+
+        // Set MTU of secondary peer interface, bring up.
+        let cmd = Command::new(IFCONFIG).arg(&device.peer_name).arg("mtu").arg(mtu.to_string()).arg("up").spawn();
         if cmd.is_err() {
             return Err(format!("unable to configure device '{}': {}", &device.peer_name, cmd.err().unwrap().to_string()));
         }
         let _ = cmd.unwrap().wait();
 
+        // Set MTU and metric of primary interface, bring up.
         let cmd = Command::new(IFCONFIG).arg(&device.name).arg("mtu").arg(mtu.to_string()).arg("metric").arg(metric.to_string()).arg("up").spawn();
         if cmd.is_err() {
             return Err(format!("unable to configure device '{}': {}", &device.name.as_str(), cmd.err().unwrap().to_string()));
         }
         let _ = cmd.unwrap().wait();
 
-        let mut bpf_no: u32 = 1; // start at 1 since some software hard-codes /dev/bpf0
+        // Look for a /dev/bpf node to open. Start at 1 since some software
+        // hard codes /dev/bpf0 and we don't want to break it. If all BPF nodes
+        // are taken MacOS automatically adds more, so we shouldn't run out.
+        let mut bpf_no: u32 = 1;
         let mut bpf_fd: c_int = -1;
         loop {
             if bpf_devices_used.contains(&bpf_no) {
@@ -245,7 +259,8 @@ impl MacFethTap {
             return Err(String::from("unable to open /dev/bpf## where attempted ## from 1 to 1000"));
         }
 
-        // Set/get buffer length.
+        // Set/get buffer length to use with reads from BPF device, trying to
+        // use up to BPF_BUFFER_SIZE bytes.
         let mut fl: c_int = BPF_BUFFER_SIZE as c_int;
         if unsafe { osdep::ioctl(bpf_fd as c_int, osdep::c_BIOCSBLEN, (&mut fl as *mut c_int).cast::<c_void>()) } != 0 {
             unsafe { osdep::close(bpf_fd); }
@@ -253,21 +268,21 @@ impl MacFethTap {
         }
         let bpf_read_size = fl as osdep::size_t;
 
-        // Set immediate mode.
+        // Set immediate mode for "live" capture.
         fl = 1;
         if unsafe { osdep::ioctl(bpf_fd as c_int, osdep::c_BIOCIMMEDIATE, (&mut fl as *mut c_int).cast::<c_void>()) } != 0 {
             unsafe { osdep::close(bpf_fd); }
             return Err(String::from("unable to configure BPF device"));
         }
 
-        // We don't want to see packets we inject.
+        // Do not send us back packets we inject or send.
         fl = 0;
         if unsafe { osdep::ioctl(bpf_fd as c_int, osdep::c_BIOCSSEESENT, (&mut fl as *mut c_int).cast::<c_void>()) } != 0 {
             unsafe { osdep::close(bpf_fd); }
             return Err(String::from("unable to configure BPF device"));
         }
 
-        // Set device name that we're monitoring.
+        // Bind BPF to secondary feth device.
         let mut bpf_ifr: osdep::ifreq = unsafe { std::mem::zeroed() };
         let peer_dev_name_bytes = device.peer_name.as_bytes();
         unsafe { copy_nonoverlapping(peer_dev_name_bytes.as_ptr(), bpf_ifr.ifr_name.as_mut_ptr().cast::<u8>(), if peer_dev_name_bytes.len() > (bpf_ifr.ifr_name.len() - 1) { bpf_ifr.ifr_name.len() - 1 } else { peer_dev_name_bytes.len() }); }
@@ -276,14 +291,14 @@ impl MacFethTap {
             return Err(String::from("unable to configure BPF device"));
         }
 
-        // Include Ethernet header.
+        // Include Ethernet header in BPF captures.
         fl = 1;
         if unsafe { osdep::ioctl(bpf_fd as c_int, osdep::c_BIOCSHDRCMPLT, (&mut fl as *mut c_int).cast::<c_void>()) } != 0 {
             unsafe { osdep::close(bpf_fd); }
             return Err(String::from("unable to configure BPF device"));
         }
 
-        // Set promiscuous mode so bridging could work, etc.
+        // Set promiscuous mode so bridging can work.
         fl = 1;
         if unsafe { osdep::ioctl(bpf_fd as c_int, osdep::c_BIOCPROMISC, (&mut fl as *mut c_int).cast::<c_void>()) } != 0 {
             unsafe { osdep::close(bpf_fd); }
@@ -347,10 +362,10 @@ impl MacFethTap {
 
         Ok(MacFethTap {
             network_id: nwid.0,
-            device: device,
-            ndrv_fd: ndrv_fd,
-            bpf_fd: bpf_fd,
-            bpf_no: bpf_no,
+            device,
+            ndrv_fd,
+            bpf_fd,
+            bpf_no,
             bpf_read_thread: Cell::new(Some(t.unwrap()))
         })
     }
@@ -413,7 +428,7 @@ impl VNIC for MacFethTap {
     }
 
     #[inline(always)]
-    fn put(&self, source_mac: &zerotier_core::MAC, dest_mac: &zerotier_core::MAC, ethertype: u16, vlan_id: u16, data: *const u8, len: usize) -> bool {
+    fn put(&self, source_mac: &zerotier_core::MAC, dest_mac: &zerotier_core::MAC, ethertype: u16, _vlan_id: u16, data: *const u8, len: usize) -> bool {
         let dm = dest_mac.0;
         let sm = source_mac.0;
         let mut hdr: [u8; 14] = [(dm >> 40) as u8, (dm >> 32) as u8, (dm >> 24) as u8, (dm >> 16) as u8, (dm >> 8) as u8, dm as u8, (sm >> 40) as u8, (sm >> 32) as u8, (sm >> 24) as u8, (sm >> 16) as u8, (sm >> 8) as u8, sm as u8, (ethertype >> 8) as u8, ethertype as u8];
@@ -451,5 +466,6 @@ impl Drop for MacFethTap {
         if t.is_some() {
             let _ = t.unwrap().join();
         }
+        // NOTE: the feth devices are destroyed by MacFethDevice's drop().
     }
 }

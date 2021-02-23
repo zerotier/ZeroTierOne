@@ -91,6 +91,22 @@ pub struct LocalConfigNetworkSettings {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(default)]
+pub struct LocalConfigLogSettings {
+    pub path: Option<String>,
+    #[serde(rename = "maxSize")]
+    pub max_size: usize,
+    pub vl1: bool,
+    pub vl2: bool,
+    #[serde(rename = "vl2TraceRules")]
+    pub vl2_trace_rules: bool,
+    #[serde(rename = "vl2TraceMulticast")]
+    pub vl2_trace_multicast: bool,
+    pub debug: bool,
+    pub stderr: bool,
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
+#[serde(default)]
 pub struct LocalConfigSettings {
     #[serde(rename = "primaryPort")]
     pub primary_port: u16,
@@ -100,20 +116,8 @@ pub struct LocalConfigSettings {
     pub auto_port_search: bool,
     #[serde(rename = "portMapping")]
     pub port_mapping: bool,
-    #[serde(rename = "logPath")]
-    pub log_path: Option<String>,
-    #[serde(rename = "logSizeMax")]
-    pub log_size_max: usize,
-    #[serde(rename = "logVL1Events")]
-    pub log_vl1_events: bool,
-    #[serde(rename = "logVL2Events")]
-    pub log_vl2_events: bool,
-    #[serde(rename = "logFilterEvents")]
-    pub log_filter_events: bool,
-    #[serde(rename = "logMulticastEvents")]
-    pub log_multicast_events: bool,
-    #[serde(rename = "logToStderr")]
-    pub log_to_stderr: bool,
+    #[serde(rename = "log")]
+    pub log: LocalConfigLogSettings,
     #[serde(rename = "interfacePrefixBlacklist")]
     pub interface_prefix_blacklist: Vec<String>,
     #[serde(rename = "explicitAddresses")]
@@ -158,6 +162,22 @@ impl Default for LocalConfigNetworkSettings {
     }
 }
 
+impl Default for LocalConfigLogSettings {
+    fn default() -> Self {
+        // TODO: change before release to saner defaults
+        LocalConfigLogSettings {
+            path: None,
+            max_size: 131072,
+            vl1: true,
+            vl2: true,
+            vl2_trace_rules: true,
+            vl2_trace_multicast: true,
+            debug: true,
+            stderr: true,
+        }
+    }
+}
+
 impl LocalConfigSettings {
     #[cfg(target_os = "macos")]
     const DEFAULT_PREFIX_BLACKLIST: [&'static str; 8] = ["lo", "utun", "gif", "stf", "iptap", "pktap", "feth", "zt"];
@@ -191,13 +211,7 @@ impl Default for LocalConfigSettings {
             secondary_port: Some(zerotier_core::DEFAULT_SECONDARY_PORT),
             auto_port_search: true,
             port_mapping: true,
-            log_path: None,
-            log_size_max: 1048576,
-            log_vl1_events: false,
-            log_vl2_events: false,
-            log_filter_events: false,
-            log_multicast_events: false,
-            log_to_stderr: true, // TODO: change for release
+            log: LocalConfigLogSettings::default(),
             interface_prefix_blacklist: bl,
             explicit_addresses: Vec::new()
         }

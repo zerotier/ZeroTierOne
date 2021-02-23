@@ -24,6 +24,7 @@ use warp::http::{HeaderMap, Method, StatusCode};
 use warp::hyper::body::Bytes;
 
 use zerotier_core::*;
+use zerotier_core::trace::{TraceEvent, TraceEventLayer};
 
 use crate::fastudpsocket::*;
 use crate::getifaddrs;
@@ -61,27 +62,43 @@ impl NodeEventHandler<Network> for Service {
     #[inline(always)]
     fn event(&self, event: Event, event_data: &[u8]) {
         match event {
-            Event::Up => {}
+            Event::Up => {
+                let _ = self.node.upgrade().map(|n: Arc<Node<Service, Network>>| {
+                    d!(self.log, "node {} started up in data store '{}'", n.address().to_string(), self.store.base_path.to_str().unwrap());
+                });
+            },
             Event::Down => {
+                d!(self.log, "node shutting down.");
                 self.run.store(false, Ordering::Relaxed);
-            }
+            },
             Event::Online => {
+                d!(self.log, "node is online.");
                 self.online.store(true, Ordering::Relaxed);
-            }
+            },
             Event::Offline => {
+                d!(self.log, "node is offline.");
                 self.online.store(true, Ordering::Relaxed);
-            }
+            },
             Event::Trace => {
                 if !event_data.is_empty() {
                     let _ = Dictionary::new_from_bytes(event_data).map(|tm| {
-                        let tm = zerotier_core::trace::TraceEvent::parse_message(&tm);
-                        let _ = tm.map(|tm| {
-                            self.log.log(tm.to_string());
+                        let tm = TraceEvent::parse_message(&tm);
+                        let _ = tm.map(|tm: TraceEvent| {
+                            let local_config = self.local_config();
+                            if match tm.layer() {
+                                TraceEventLayer::VL1 => local_config.settings.log.vl1,
+                                TraceEventLayer::VL2 => local_config.settings.log.vl2,
+                                TraceEventLayer::VL2Filter => local_config.settings.log.vl2_trace_rules,
+                                TraceEventLayer::VL2Multicast => local_config.settings.log.vl2_trace_multicast,
+                                TraceEventLayer::Other => true,
+                            } {
+                                self.log.log(tm.to_string());
+                            }
                         });
                     });
                 }
-            }
-            Event::UserMessage => {}
+            },
+            Event::UserMessage => {},
         }
     }
 
@@ -101,7 +118,7 @@ impl NodeEventHandler<Network> for Service {
     }
 
     #[inline(always)]
-    fn path_check(&self, address: Address, id: &Identity, local_socket: i64, sock_addr: &InetAddress) -> bool {
+    fn path_check(&self, _: Address, _: &Identity, _: i64, _: &InetAddress) -> bool {
         true
     }
 
@@ -115,6 +132,7 @@ impl NodeEventHandler<Network> for Service {
             } else {
                 let t = c.try_.get((zerotier_core::random() as usize) % c.try_.len());
                 t.map_or(None, |v: &InetAddress| {
+                    d!(self.log, "path lookup for {} returned {}", address.to_string(), v.to_string());
                     Some(v.clone())
                 })
             }
@@ -155,18 +173,20 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
     let local_config = Arc::new(store.read_local_conf(false).unwrap_or_else(|_| { LocalConfig::default() }));
 
     let log = Arc::new(Log::new(
-        if local_config.settings.log_path.as_ref().is_some() {
-            local_config.settings.log_path.as_ref().unwrap().as_str()
+        if local_config.settings.log.path.as_ref().is_some() {
+            local_config.settings.log.path.as_ref().unwrap().as_str()
         } else {
             store.default_log_path.to_str().unwrap()
         },
-        local_config.settings.log_size_max,
-        local_config.settings.log_to_stderr,
+        local_config.settings.log.max_size,
+        local_config.settings.log.stderr,
+        local_config.settings.log.debug,
         "",
     ));
 
     // Generate authtoken.secret from secure random bytes if not already set.
     let auth_token = auth_token.unwrap_or_else(|| -> String {
+        d!(log, "authtoken.secret not found, generating new...");
         let mut rb = [0_u8; 64];
         unsafe { crate::osdep::getSecureRandom(rb.as_mut_ptr().cast(), 64) };
         let mut generated_auth_token = String::new();
@@ -184,7 +204,7 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
         generated_auth_token
     });
     if auth_token.is_empty() {
-        l!(log, "FATAL: unable to write authtoken.secret to '{}'", store.base_path.to_str().unwrap());
+        log.fatal(format!("unable to write authtoken.secret to '{}'", store.base_path.to_str().unwrap()));
         return 1;
     }
     let auth_token = Arc::new(auth_token);
@@ -207,7 +227,7 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
 
         let node = Node::new(service.clone(), ms_since_epoch());
         if node.is_err() {
-            l!(log, "FATAL: error initializing node: {}", node.err().unwrap().to_str());
+            log.fatal(format!("error initializing node: {}", node.err().unwrap().to_str()));
             process_exit_value = 1;
             return;
         }
@@ -220,6 +240,7 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
         loop {
             let mut local_config = service.local_config();
 
+            d!(log, "starting local HTTP API server on 127.0.0.1 port {}", local_config.settings.primary_port);
             let (mut shutdown_tx, mut shutdown_rx) = futures::channel::oneshot::channel();
             let warp_server;
             {
@@ -253,7 +274,7 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
                 ).try_bind_with_graceful_shutdown((IpAddr::from([127_u8, 0_u8, 0_u8, 1_u8]), local_config.settings.primary_port), async { let _ = shutdown_rx.await; });
             }
             if warp_server.is_err() {
-                l!(log, "ERROR: local API http server failed to bind to port {} or failed to start: {}", local_config.settings.primary_port, warp_server.err().unwrap().to_string());
+                l!(log, "ERROR: local API http server failed to bind to port {} or failed to start: {}, restarting inner loop...", local_config.settings.primary_port, warp_server.err().unwrap().to_string());
                 break;
             }
             let warp_server = tokio_rt.spawn(warp_server.unwrap().1);
@@ -265,6 +286,7 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
             // scanning for significant configuration changes. Some major changes may require
             // the inner loop to exit and be restarted.
             let mut last_checked_config: i64 = 0;
+            d!(log, "local HTTP API server running, inner loop starting.");
             loop {
                 let loop_start = ms_since_epoch();
                 let mut now: i64 = 0;
@@ -276,11 +298,12 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
                         now = ms_since_epoch();
                         let actual_delay = now - loop_start;
                         if actual_delay > ((loop_delay as i64) * 4_i64) {
-                            l!(log, "likely sleep/wake detected, reestablishing links...");
+                            l!(log, "likely sleep/wake detected due to excess delay, reestablishing links...");
                             // TODO: handle likely sleep/wake or other system interruption
                         }
                     },
                     _ = interrupt_rx.next() => {
+                        d!(log, "inner loop delay interrupted!");
                         now = ms_since_epoch();
                     },
                     _ = tokio::signal::ctrl_c() => {
@@ -298,6 +321,7 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
                     // Check for changes to local.conf.
                     let new_config = store.read_local_conf(true);
                     if new_config.is_ok() {
+                        d!(log, "local.conf changed on disk, reloading.");
                         service.set_local_config(new_config.unwrap());
                     }
 
@@ -306,11 +330,14 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
                     if local_config.settings.primary_port != next_local_config.settings.primary_port {
                         break;
                     }
-                    if local_config.settings.log_size_max != next_local_config.settings.log_size_max {
-                        log.set_max_size(next_local_config.settings.log_size_max);
+                    if local_config.settings.log.max_size != next_local_config.settings.log.max_size {
+                        log.set_max_size(next_local_config.settings.log.max_size);
                     }
-                    if local_config.settings.log_to_stderr != next_local_config.settings.log_to_stderr {
-                        log.set_log_to_stderr(next_local_config.settings.log_to_stderr);
+                    if local_config.settings.log.stderr != next_local_config.settings.log.stderr {
+                        log.set_log_to_stderr(next_local_config.settings.log.stderr);
+                    }
+                    if local_config.settings.log.debug != next_local_config.settings.log.debug {
+                        log.set_debug(next_local_config.settings.log.debug);
                     }
                     local_config = next_local_config;
 
@@ -342,18 +369,21 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
                         }
                     }
                     for k in udp_sockets_to_close.iter() {
+                        d!(log, "unbinding UDP socket at {} (no longer appears to be present or port has changed)", k.to_string());
                         udp_sockets.remove(k);
                     }
 
                     // Create sockets for unbound addresses.
                     for addr in system_addrs.iter() {
                         if !udp_sockets.contains_key(addr.0) {
-                            let s = FastUDPSocket::new(addr.1.as_str(), addr.0, move |raw_socket: &FastUDPRawOsSocket, from_address: &InetAddress, data: Buffer| {
+                            let _ = FastUDPSocket::new(addr.1.as_str(), addr.0, move |raw_socket: &FastUDPRawOsSocket, from_address: &InetAddress, data: Buffer| {
                                 // TODO: incoming packet handler
-                            });
-                            if s.is_ok() {
+                            }).map_or_else(|e| {
+                                d!(log, "error binding UDP socket to {}: {}", addr.0.to_string(), e.to_string());
+                            }, |s| {
+                                d!(log, "bound UDP socket at {}", addr.0.to_string());
                                 udp_sockets.insert(addr.0.clone(), s.unwrap());
-                            }
+                            });
                         }
                     }
 
@@ -375,21 +405,18 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
                             }
                         }
                     }
-
                     if primary_port_bind_failure {
                         if local_config.settings.auto_port_search {
                             // TODO: port hunting
                         } else {
-                            l!(log, "primary port {} failed to bind, waiting and trying again...", local_config.settings.primary_port);
-                            break;
+                            l!(log, "WARNING: failed to bind to any address at primary port {} (will try again)", local_config.settings.primary_port);
                         }
                     }
-
                     if secondary_port_bind_failure {
                         if local_config.settings.auto_port_search {
                             // TODO: port hunting
                         } else {
-                            l!(log, "secondary port {} failed to bind (non-fatal, will try again)", local_config.settings.secondary_port.unwrap_or(0));
+                            l!(log, "WARNING: failed to bind to any address at secondary port {} (will try again)", local_config.settings.secondary_port.unwrap_or(0));
                         }
                     }
                 }
@@ -402,6 +429,8 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
                 loop_delay = node.process_background_tasks(now);
             }
 
+            d!(log, "inner loop exited, shutting down local API HTTP server...");
+
             // Gracefully shut down the local web server.
             let _ = shutdown_tx.send(());
             let _ = warp_server.await;
@@ -409,10 +438,12 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
             // Sleep for a brief period of time to prevent thrashing if some invalid
             // state is hit that causes the inner loop to keep breaking.
             if !service.run.load(Ordering::Relaxed) {
+                d!(log, "exiting.");
                 break;
             }
             let _ = tokio::time::sleep(Duration::from_secs(1)).await;
             if !service.run.load(Ordering::Relaxed) {
+                d!(log, "exiting.");
                 break;
             }
         }

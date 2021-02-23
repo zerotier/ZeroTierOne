@@ -344,7 +344,34 @@ fn trace_optional_fingerprint(bytes: Option<&Vec<u8>>) -> Option<Fingerprint> {
     })
 }
 
+/// What layer or log level does this trace event belong to?
+pub enum TraceEventLayer {
+    VL1,
+    VL2,
+    VL2Filter,
+    VL2Multicast,
+    Other,
+}
+
 impl TraceEvent {
+    #[inline(always)]
+    pub fn layer(&self) -> TraceEventLayer {
+        match *self {
+            TraceEvent::UnexpectedError => TraceEventLayer::Other,
+
+            TraceEvent::ResetingPathsInScope => TraceEventLayer::VL1,
+            TraceEvent::TryingNewPath => TraceEventLayer::VL1,
+            TraceEvent::LearnedNewPath => TraceEventLayer::VL1,
+            TraceEvent::IncomingPacketDropped => TraceEventLayer::VL1,
+
+            TraceEvent::OutgoingFrameDropped => TraceEventLayer::VL2,
+            TraceEvent::IncomingFrameDropped => TraceEventLayer::VL2,
+            TraceEvent::NetworkConfigRequested => TraceEventLayer::VL2,
+            TraceEvent::NetworkFilter => TraceEventLayer::VL2Filter,
+            TraceEvent::NetworkCredentialRejected => TraceEventLayer::VL2,
+        }
+    }
+
     /// Decode a trace event packaged in a dictionary and return a TraceEvent if it is valid.
     pub fn parse_message(msg: &Dictionary) -> Option<TraceEvent> {
         msg.get_ui(ztcore::ZT_TRACE_FIELD_TYPE).map_or(None, |mt: u64| -> Option<TraceEvent> {
