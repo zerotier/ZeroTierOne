@@ -14,9 +14,8 @@
 use std::str;
 
 use crate::{capi as ztcore, Dictionary, Endpoint, Fingerprint, IpScope, MAC, Address, CredentialType};
-use num_derive::{FromPrimitive, ToPrimitive};
+use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
-use crate::trace::TraceEvent::TryingNewPath;
 
 #[derive(FromPrimitive, PartialEq, Eq)]
 pub enum TracePacketDropReason {
@@ -357,18 +356,18 @@ impl TraceEvent {
     #[inline(always)]
     pub fn layer(&self) -> TraceEventLayer {
         match *self {
-            TraceEvent::UnexpectedError => TraceEventLayer::Other,
+            TraceEvent::UnexpectedError {..} => TraceEventLayer::Other,
 
-            TraceEvent::ResetingPathsInScope => TraceEventLayer::VL1,
-            TraceEvent::TryingNewPath => TraceEventLayer::VL1,
-            TraceEvent::LearnedNewPath => TraceEventLayer::VL1,
-            TraceEvent::IncomingPacketDropped => TraceEventLayer::VL1,
+            TraceEvent::ResetingPathsInScope {..} => TraceEventLayer::VL1,
+            TraceEvent::TryingNewPath {..} => TraceEventLayer::VL1,
+            TraceEvent::LearnedNewPath {..} => TraceEventLayer::VL1,
+            TraceEvent::IncomingPacketDropped {..} => TraceEventLayer::VL1,
 
-            TraceEvent::OutgoingFrameDropped => TraceEventLayer::VL2,
-            TraceEvent::IncomingFrameDropped => TraceEventLayer::VL2,
-            TraceEvent::NetworkConfigRequested => TraceEventLayer::VL2,
-            TraceEvent::NetworkFilter => TraceEventLayer::VL2Filter,
-            TraceEvent::NetworkCredentialRejected => TraceEventLayer::VL2,
+            TraceEvent::OutgoingFrameDropped {..} => TraceEventLayer::VL2,
+            TraceEvent::IncomingFrameDropped {..} => TraceEventLayer::VL2,
+            TraceEvent::NetworkConfigRequested {..} => TraceEventLayer::VL2,
+            TraceEvent::NetworkFilter {..} => TraceEventLayer::VL2Filter,
+            TraceEvent::NetworkCredentialRejected {..} => TraceEventLayer::VL2,
         }
     }
 
@@ -376,17 +375,7 @@ impl TraceEvent {
     pub fn parse_message(msg: &Dictionary) -> Option<TraceEvent> {
         msg.get_ui(ztcore::ZT_TRACE_FIELD_TYPE).map_or(None, |mt: u64| -> Option<TraceEvent> {
             let cl = msg.get_ui(ztcore::ZT_TRACE_FIELD_CODE_LOCATION).unwrap_or(0) as u32;
-            match mt as u32 {
-                _ => { // ztcore::ZT_TraceEventType_ZT_TRACE_UNEXPECTED_ERROR
-                    Some(TraceEvent::UnexpectedError {
-                        code_location: cl,
-                        message: msg.get_str(ztcore::ZT_TRACE_FIELD_MESSAGE).map_or_else(|| {
-                            format!("WARNING: unknown trace message type {}, this version may be too old!", mt)
-                        }, |m| {
-                            m.to_string()
-                        }),
-                    })
-                }
+            match mt as ztcore::ZT_TraceEventType {
                 ztcore::ZT_TraceEventType_ZT_TRACE_VL1_RESETTING_PATHS_IN_SCOPE => {
                     Some(TraceEvent::ResetingPathsInScope {
                         code_location: cl,
@@ -396,7 +385,7 @@ impl TraceEvent {
                         my_new_external: trace_optional_endpoint(msg.get(ztcore::ZT_TRACE_FIELD_NEW_ENDPOINT)),
                         scope: IpScope::from_i32(msg.get_ui(ztcore::ZT_TRACE_FIELD_RESET_ADDRESS_SCOPE).unwrap_or(0) as i32).unwrap_or(IpScope::None),
                     })
-                }
+                },
                 ztcore::ZT_TraceEventType_ZT_TRACE_VL1_TRYING_NEW_PATH => {
                     let tf = msg.get(ztcore::ZT_TRACE_FIELD_IDENTITY_FINGERPRINT);
                     let ep = msg.get(ztcore::ZT_TRACE_FIELD_ENDPOINT);
@@ -416,7 +405,7 @@ impl TraceEvent {
                         }
                     }
                     None
-                }
+                },
                 ztcore::ZT_TraceEventType_ZT_TRACE_VL1_LEARNED_NEW_PATH => {
                     let fp = msg.get(ztcore::ZT_TRACE_FIELD_IDENTITY_FINGERPRINT);
                     if fp.is_some() {
@@ -432,7 +421,7 @@ impl TraceEvent {
                         }
                     }
                     None
-                }
+                },
                 ztcore::ZT_TraceEventType_ZT_TRACE_VL1_INCOMING_PACKET_DROPPED => {
                     Some(TraceEvent::IncomingPacketDropped {
                         code_location: cl,
@@ -444,7 +433,7 @@ impl TraceEvent {
                         verb: msg.get_ui(ztcore::ZT_TRACE_FIELD_PACKET_VERB).unwrap_or(0) as i32,
                         reason: TracePacketDropReason::from_i32(msg.get_ui(ztcore::ZT_TRACE_FIELD_REASON).unwrap_or(0) as i32).unwrap_or(TracePacketDropReason::Unspecified),
                     })
-                }
+                },
                 ztcore::ZT_TraceEventType_ZT_TRACE_VL2_OUTGOING_FRAME_DROPPED => {
                     Some(TraceEvent::OutgoingFrameDropped {
                         code_location: cl,
@@ -460,7 +449,7 @@ impl TraceEvent {
                         }),
                         reason: TraceFrameDropReason::from_i32(msg.get_ui(ztcore::ZT_TRACE_FIELD_REASON).unwrap_or(0) as i32).unwrap_or(TraceFrameDropReason::Unspecified),
                     })
-                }
+                },
                 ztcore::ZT_TraceEventType_ZT_TRACE_VL2_INCOMING_FRAME_DROPPED => {
                     let fp = msg.get(ztcore::ZT_TRACE_FIELD_IDENTITY_FINGERPRINT);
                     if fp.is_some() {
@@ -484,13 +473,13 @@ impl TraceEvent {
                         }
                     }
                     None
-                }
+                },
                 ztcore::ZT_TraceEventType_ZT_TRACE_VL2_NETWORK_CONFIG_REQUESTED => {
                     Some(TraceEvent::NetworkConfigRequested {
                         code_location: cl,
                         network_id: msg.get_ui(ztcore::ZT_TRACE_FIELD_NETWORK_ID).unwrap_or(0),
                     })
-                }
+                },
                 ztcore::ZT_TraceEventType_ZT_TRACE_VL2_NETWORK_FILTER => {
                     let verdict_int = msg.get(ztcore::ZT_TRACE_FIELD_RULE_FLAG_ACCEPT).map_or_else(|| -> i32 { 0 as i32 }, |a| -> i32 { i32::from_str_radix(str::from_utf8(a).unwrap_or("0"), 16).unwrap_or(0) });
                     let mut verdict = TraceFilterResult::Reject;
@@ -518,7 +507,7 @@ impl TraceEvent {
                         inbound: msg.get_ui(ztcore::ZT_TRACE_FIELD_RULE_FLAG_INBOUND).unwrap_or(0) != 0,
                         result: verdict,
                     })
-                }
+                },
                 ztcore::ZT_TraceEventType_ZT_TRACE_VL2_NETWORK_CREDENTIAL_REJECTED => {
                     let fp = msg.get(ztcore::ZT_TRACE_FIELD_IDENTITY_FINGERPRINT);
                     if fp.is_some() {
@@ -536,7 +525,17 @@ impl TraceEvent {
                         }
                     }
                     None
-                }
+                },
+                _ => { // ztcore::ZT_TraceEventType_ZT_TRACE_UNEXPECTED_ERROR
+                    Some(TraceEvent::UnexpectedError {
+                        code_location: cl,
+                        message: msg.get_str(ztcore::ZT_TRACE_FIELD_MESSAGE).map_or_else(|| {
+                            format!("WARNING: unknown trace message type {}, this version may be too old!", mt)
+                        }, |m| {
+                            m.to_string()
+                        }),
+                    })
+                },
             }
         })
     }

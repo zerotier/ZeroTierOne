@@ -144,14 +144,14 @@ impl Log {
 
 #[macro_export]
 macro_rules! l(
-    ($logger:ident, $($arg:tt)*) => {
+    ($logger:expr, $($arg:tt)*) => {
         $logger.log(format!($($arg)*))
     }
 );
 
 #[macro_export]
 macro_rules! d(
-    ($logger:ident, $($arg:tt)*) => {
+    ($logger:expr, $($arg:tt)*) => {
         $logger.debug(format!($($arg)*))
     }
 );

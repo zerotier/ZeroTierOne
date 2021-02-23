@@ -382,7 +382,7 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
                                 d!(log, "error binding UDP socket to {}: {}", addr.0.to_string(), e.to_string());
                             }, |s| {
                                 d!(log, "bound UDP socket at {}", addr.0.to_string());
-                                udp_sockets.insert(addr.0.clone(), s.unwrap());
+                                udp_sockets.insert(addr.0.clone(), s);
                             });
                         }
                     }
