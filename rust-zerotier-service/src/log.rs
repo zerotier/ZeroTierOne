@@ -11,13 +11,9 @@
  */
 /****/
 
-use std::cell::Cell;
-use std::fmt::Display;
 use std::fs::{File, OpenOptions};
 use std::io::{Seek, SeekFrom, Write, stderr};
 use std::sync::Mutex;
-
-use chrono::Datelike;
 
 struct LogIntl {
     prefix: String,
@@ -117,7 +113,7 @@ impl Log {
             }
 
             if l.log_to_stderr {
-                stderr().write_all(log_line.as_bytes());
+                let _ = stderr().write_all(log_line.as_bytes());
             }
         }
     }
@@ -130,14 +126,14 @@ impl Log {
     pub fn debug<S: AsRef<str>>(&self, s: S) {
         let mut l = self.inner.lock().unwrap();
         if l.debug {
-            self.log_internal(&mut (*l), s.as_ref(), "DEBUG");
+            self.log_internal(&mut (*l), s.as_ref(), "DEBUG: ");
         }
     }
 
     pub fn fatal<S: AsRef<str>>(&self, s: S) {
         let mut l = self.inner.lock().unwrap();
         let ss = s.as_ref();
-        self.log_internal(&mut (*l), ss, "FATAL");
+        self.log_internal(&mut (*l), ss, "FATAL: ");
         eprintln!("FATAL: {}", ss);
     }
 }

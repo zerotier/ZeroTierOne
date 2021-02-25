@@ -21,6 +21,7 @@ use num_traits::FromPrimitive;
 
 use crate::*;
 use crate::capi as ztcore;
+use std::net::{SocketAddr, IpAddr, Ipv4Addr};
 
 // WARNING: here be dragons! This defines an opaque blob in Rust that shadows
 // and is of the exact size as an opaque blob in C that shadows and is the
@@ -245,6 +246,23 @@ impl InetAddress {
             }
         }
         InetAddressFamily::Nil
+    }
+
+    /// Convert to std::net::SocketAddr for use with std::net APIs
+    pub fn to_socketaddr(&self) -> Option<SocketAddr> {
+        let mut buf: MaybeUninit<[u8; 16]> = MaybeUninit::uninit();
+        let len;
+        let buf = unsafe {
+            len = ztcore::ZT_InetAddress_ipBytes(self.as_capi_ptr(), buf.as_mut_ptr().cast());
+            buf.assume_init()
+        };
+        if len == 4 {
+            Some(SocketAddr::new(IpAddr::from(Ipv4Addr::new(buf[0], buf[1], buf[2], buf[3])), self.port()))
+        } else if len == 16 {
+            Some(SocketAddr::new(IpAddr::from(buf), self.port()))
+        } else {
+            None
+        }
     }
 }
 

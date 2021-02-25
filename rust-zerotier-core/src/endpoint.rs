@@ -31,7 +31,7 @@ pub enum EndpointType {
     Ip = ztcore::ZT_EndpointType_ZT_ENDPOINT_TYPE_IP as isize,
     IpUdp = ztcore::ZT_EndpointType_ZT_ENDPOINT_TYPE_IP_UDP as isize,
     IpTcp = ztcore::ZT_EndpointType_ZT_ENDPOINT_TYPE_IP_TCP as isize,
-    IpHttp = ztcore::ZT_EndpointType_ZT_ENDPOINT_TYPE_IP_HTTP as isize,
+    IpTcpWs = ztcore::ZT_EndpointType_ZT_ENDPOINT_TYPE_IP_TCP_WS as isize,
 }
 
 pub struct Endpoint {

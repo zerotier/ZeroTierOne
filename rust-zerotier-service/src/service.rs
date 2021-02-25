@@ -12,16 +12,15 @@
 /****/
 
 use std::collections::BTreeMap;
-use std::net::{IpAddr, SocketAddr};
 use std::str::FromStr;
 use std::sync::{Arc, Mutex, Weak};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
-use futures::stream::StreamExt;
-use warp::{Filter, Reply};
-use warp::http::{HeaderMap, Method, StatusCode};
-use warp::hyper::body::Bytes;
+//use futures::stream::StreamExt;
+//use warp::{Filter, Reply};
+//use warp::http::{HeaderMap, Method, StatusCode};
+//use warp::hyper::body::Bytes;
 
 use zerotier_core::*;
 use zerotier_core::trace::{TraceEvent, TraceEventLayer};
@@ -42,14 +41,14 @@ const CONFIG_CHECK_INTERVAL: i64 = 5000;
 /// threads are created (a rare event) so we only have to dereference each
 /// Arc once for common events like packet receipt.
 #[derive(Clone)]
-struct Service {
-    auth_token: Arc<String>,
-    log: Arc<Log>,
+pub(crate) struct Service {
+    pub auth_token: Arc<String>,
+    pub log: Arc<Log>,
     _local_config: Arc<Mutex<Arc<LocalConfig>>>, // Arc -> shared Mutex container so it can be changed globally
     run: Arc<AtomicBool>,
-    online: Arc<AtomicBool>,
-    store: Arc<Store>,
-    node: Weak<Node<Service, Network>>, // weak since Node itself may hold a reference to this
+    pub online: Arc<AtomicBool>,
+    pub store: Arc<Store>,
+    pub node: Weak<Node<Service, Network>>, // weak since Node itself may hold a reference to this
 }
 
 impl NodeEventHandler<Network> for Service {
@@ -67,18 +66,22 @@ impl NodeEventHandler<Network> for Service {
                     d!(self.log, "node {} started up in data store '{}'", n.address().to_string(), self.store.base_path.to_str().unwrap());
                 });
             },
+
             Event::Down => {
                 d!(self.log, "node shutting down.");
                 self.run.store(false, Ordering::Relaxed);
             },
+
             Event::Online => {
                 d!(self.log, "node is online.");
                 self.online.store(true, Ordering::Relaxed);
             },
+
             Event::Offline => {
                 d!(self.log, "node is offline.");
                 self.online.store(true, Ordering::Relaxed);
             },
+
             Event::Trace => {
                 if !event_data.is_empty() {
                     let _ = Dictionary::new_from_bytes(event_data).map(|tm| {
@@ -98,13 +101,19 @@ impl NodeEventHandler<Network> for Service {
                     });
                 }
             },
+
             Event::UserMessage => {},
         }
     }
 
     #[inline(always)]
     fn state_put(&self, obj_type: StateObjectType, obj_id: &[u64], obj_data: &[u8]) -> std::io::Result<()> {
-        self.store.store_object(&obj_type, obj_id, obj_data)
+        if !obj_data.is_empty() {
+            self.store.store_object(&obj_type, obj_id, obj_data)
+        } else {
+            self.store.erase_object(&obj_type, obj_id);
+            Ok(())
+        }
     }
 
     #[inline(always)]
@@ -142,21 +151,6 @@ impl NodeEventHandler<Network> for Service {
 
 impl Service {
     #[inline(always)]
-    fn web_api_status(&self, remote: Option<SocketAddr>, method: Method, headers: HeaderMap, post_data: Bytes) -> Box<dyn Reply> {
-        Box::new(StatusCode::BAD_REQUEST)
-    }
-
-    #[inline(always)]
-    fn web_api_network(&self, network_str: String, remote: Option<SocketAddr>, method: Method, headers: HeaderMap, post_data: Bytes) -> Box<dyn Reply> {
-        Box::new(StatusCode::BAD_REQUEST)
-    }
-
-    #[inline(always)]
-    fn web_api_peer(&self, peer_str: String, remote: Option<SocketAddr>, method: Method, headers: HeaderMap, post_data: Bytes) -> Box<dyn Reply> {
-        Box::new(StatusCode::BAD_REQUEST)
-    }
-
-    #[inline(always)]
     fn local_config(&self) -> Arc<LocalConfig> {
         self._local_config.lock().unwrap().clone()
     }
@@ -187,7 +181,7 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
     // Generate authtoken.secret from secure random bytes if not already set.
     let auth_token = auth_token.unwrap_or_else(|| -> String {
         d!(log, "authtoken.secret not found, generating new...");
-        let mut rb = [0_u8; 64];
+        let mut rb = [0_u8; 32];
         unsafe { crate::osdep::getSecureRandom(rb.as_mut_ptr().cast(), 64) };
         let mut generated_auth_token = String::new();
         generated_auth_token.reserve(rb.len());
@@ -209,9 +203,7 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
     }
     let auth_token = Arc::new(auth_token);
 
-    // From this point on we're in tokio / async.
-    let tokio_rt = tokio::runtime::Builder::new_current_thread().build().unwrap();
-    tokio_rt.block_on(async {
+    let _ = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
         let mut udp_sockets: BTreeMap<InetAddress, FastUDPSocket> = BTreeMap::new();
         let (mut interrupt_tx, mut interrupt_rx) = futures::channel::mpsc::channel::<()>(1);
 
@@ -240,47 +232,45 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
         loop {
             let mut local_config = service.local_config();
 
-            d!(log, "starting local HTTP API server on 127.0.0.1 port {}", local_config.settings.primary_port);
+            /*
+            let web_service = warp::service(warp::any()
+                .and(warp::path::end().map(|| { warp::reply::with_status("404", StatusCode::NOT_FOUND) })
+                    .or(warp::path("status")
+                        .and(warp::addr::remote())
+                        .and(warp::method())
+                        .and(warp::header::headers_cloned())
+                        .and(warp::body::content_length_limit(1048576))
+                        .and(warp::body::bytes())
+                        .map(move |remote: Option<SocketAddr>, method: Method, headers: HeaderMap, post_data: Bytes| { s0.web_api_status(remote, method, headers, post_data) }))
+                    .or(warp::path!("network" / String)
+                        .and(warp::addr::remote())
+                        .and(warp::method())
+                        .and(warp::header::headers_cloned())
+                        .and(warp::body::content_length_limit(1048576))
+                        .and(warp::body::bytes())
+                        .map(move |network_str: String, remote: Option<SocketAddr>, method: Method, headers: HeaderMap, post_data: Bytes| { s1.web_api_network(network_str, remote, method, headers, post_data) }))
+                    .or(warp::path!("peer" / String)
+                        .and(warp::addr::remote())
+                        .and(warp::method())
+                        .and(warp::header::headers_cloned())
+                        .and(warp::body::content_length_limit(1048576))
+                        .and(warp::body::bytes())
+                        .map(move |peer_str: String, remote: Option<SocketAddr>, method: Method, headers: HeaderMap, post_data: Bytes| { s2.web_api_peer(peer_str, remote, method, headers, post_data) }))
+                )
+            );
+            l!(log, "starting local HTTP API server on 127.0.0.1/{}", local_config.settings.primary_port);
             let (mut shutdown_tx, mut shutdown_rx) = futures::channel::oneshot::channel();
-            let warp_server;
-            {
-                let s0 = service.clone();
-                let s1 = service.clone();
-                let s2 = service.clone();
-                warp_server = warp::serve(warp::any()
-                    .and(warp::path::end().map(|| { warp::reply::with_status("404", StatusCode::NOT_FOUND) })
-                        .or(warp::path("status")
-                            .and(warp::addr::remote())
-                            .and(warp::method())
-                            .and(warp::header::headers_cloned())
-                            .and(warp::body::content_length_limit(1048576))
-                            .and(warp::body::bytes())
-                            .map(move |remote: Option<SocketAddr>, method: Method, headers: HeaderMap, post_data: Bytes| { s0.web_api_status(remote, method, headers, post_data) }))
-                        .or(warp::path!("network" / String)
-                            .and(warp::addr::remote())
-                            .and(warp::method())
-                            .and(warp::header::headers_cloned())
-                            .and(warp::body::content_length_limit(1048576))
-                            .and(warp::body::bytes())
-                            .map(move |network_str: String, remote: Option<SocketAddr>, method: Method, headers: HeaderMap, post_data: Bytes| { s1.web_api_network(network_str, remote, method, headers, post_data) }))
-                        .or(warp::path!("peer" / String)
-                            .and(warp::addr::remote())
-                            .and(warp::method())
-                            .and(warp::header::headers_cloned())
-                            .and(warp::body::content_length_limit(1048576))
-                            .and(warp::body::bytes())
-                            .map(move |peer_str: String, remote: Option<SocketAddr>, method: Method, headers: HeaderMap, post_data: Bytes| { s2.web_api_peer(peer_str, remote, method, headers, post_data) }))
-                    )
-                ).try_bind_with_graceful_shutdown((IpAddr::from([127_u8, 0_u8, 0_u8, 1_u8]), local_config.settings.primary_port), async { let _ = shutdown_rx.await; });
-            }
+            let (s0, s1, s2) = (service.clone(), service.clone(), service.clone()); // clones to move to closures
+            let warp_server = warp::serve(web_service).try_bind_with_graceful_shutdown((IpAddr::from([127_u8, 0_u8, 0_u8, 1_u8]), local_config.settings.primary_port), async { let _ = shutdown_rx.await; });
             if warp_server.is_err() {
                 l!(log, "ERROR: local API http server failed to bind to port {} or failed to start: {}, restarting inner loop...", local_config.settings.primary_port, warp_server.err().unwrap().to_string());
                 break;
             }
-            let warp_server = tokio_rt.spawn(warp_server.unwrap().1);
+            let warp_server = tokio::spawn(warp_server.unwrap().1);
+            */
 
             // Write zerotier.port which is used by the CLI to know how to reach the HTTP API.
-            store.write_port(local_config.settings.primary_port);
+            let _ = store.write_port(local_config.settings.primary_port);
 
             // The inner loop runs the web server in the "background" (async) while periodically
             // scanning for significant configuration changes. Some major changes may require
@@ -369,7 +359,7 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
                         }
                     }
                     for k in udp_sockets_to_close.iter() {
-                        d!(log, "unbinding UDP socket at {} (no longer appears to be present or port has changed)", k.to_string());
+                        l!(log, "unbinding UDP socket at {} (no longer appears to be present or port has changed)", k.to_string());
                         udp_sockets.remove(k);
                     }
 
@@ -379,9 +369,9 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
                             let _ = FastUDPSocket::new(addr.1.as_str(), addr.0, move |raw_socket: &FastUDPRawOsSocket, from_address: &InetAddress, data: Buffer| {
                                 // TODO: incoming packet handler
                             }).map_or_else(|e| {
-                                d!(log, "error binding UDP socket to {}: {}", addr.0.to_string(), e.to_string());
+                                l!(log, "error binding UDP socket to {}: {}", addr.0.to_string(), e.to_string());
                             }, |s| {
-                                d!(log, "bound UDP socket at {}", addr.0.to_string());
+                                l!(log, "bound UDP socket at {}", addr.0.to_string());
                                 udp_sockets.insert(addr.0.clone(), s);
                             });
                         }
@@ -432,8 +422,8 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
             d!(log, "inner loop exited, shutting down local API HTTP server...");
 
             // Gracefully shut down the local web server.
-            let _ = shutdown_tx.send(());
-            let _ = warp_server.await;
+            //let _ = shutdown_tx.send(());
+            //let _ = warp_server.await;
 
             // Sleep for a brief period of time to prevent thrashing if some invalid
             // state is hit that causes the inner loop to keep breaking.

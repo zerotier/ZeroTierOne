@@ -679,15 +679,15 @@ enum ZT_CredentialType
  */
 enum ZT_EndpointType
 {
-	ZT_ENDPOINT_TYPE_NIL = 0,  /* Nil/empty endpoint */
-	ZT_ENDPOINT_TYPE_ZEROTIER = 1,  /* ZeroTier relaying (address+fingerprint) */
-	ZT_ENDPOINT_TYPE_ETHERNET = 2,  /* Ethernet with ethertype 0x9993 */
-	ZT_ENDPOINT_TYPE_WIFI_DIRECT = 3,  /* Ethernet using WiFi direct */
-	ZT_ENDPOINT_TYPE_BLUETOOTH = 4,  /* Bluetooth (same address type as Ethernet) */
-	ZT_ENDPOINT_TYPE_IP = 5,  /* Naked IP (protocol 193) */
-	ZT_ENDPOINT_TYPE_IP_UDP = 6,  /* IP/UDP */
-	ZT_ENDPOINT_TYPE_IP_TCP = 7,  /* IP/TCP */
-	ZT_ENDPOINT_TYPE_IP_HTTP = 8   /* IP/HTTP encapsulation */
+	ZT_ENDPOINT_TYPE_NIL = 0,         /* Nil/empty endpoint */
+	ZT_ENDPOINT_TYPE_ZEROTIER = 1,    /* ZeroTier relaying (address+fingerprint) */
+	ZT_ENDPOINT_TYPE_ETHERNET = 2,    /* Ethernet with ethertype 0x9993 */
+	ZT_ENDPOINT_TYPE_WIFI_DIRECT = 3, /* Ethernet using WiFi direct */
+	ZT_ENDPOINT_TYPE_BLUETOOTH = 4,   /* Bluetooth (same address type as Ethernet) */
+	ZT_ENDPOINT_TYPE_IP = 5,          /* Naked IP (protocol 193) */
+	ZT_ENDPOINT_TYPE_IP_UDP = 6,      /* IP/UDP */
+	ZT_ENDPOINT_TYPE_IP_TCP = 7,      /* IP/TCP */
+	ZT_ENDPOINT_TYPE_IP_TCP_WS = 8    /* IP/TCP web sockets */
 };
 
 /**
@@ -3020,6 +3020,15 @@ ZT_SDK_API int ZT_InetAddress_isV4(const ZT_InetAddress *ia);
  * Returns non-zero if this is an IPv6 address.
  */
 ZT_SDK_API int ZT_InetAddress_isV6(const ZT_InetAddress *ia);
+
+/**
+ * Fill buffer with IP address bytes, return length in bytes
+ *
+ * @param ia InetAddress to access
+ * @param buf Buffer with at least 16 bytes of space (to hold IPv6)
+ * @return 0 on failure or nil, 4 if buf contains IPv4 IP, 16 if buf contains IPv6 IP
+ */
+ZT_SDK_API unsigned int ZT_InetAddress_ipBytes(const ZT_InetAddress *ia, void *buf);
 
 /**
  * Classify the network scope of this IP address (local net, global, etc.)

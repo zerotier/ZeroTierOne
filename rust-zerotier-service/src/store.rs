@@ -11,7 +11,6 @@
  */
 /****/
 
-use std::error::Error;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
@@ -49,6 +48,7 @@ impl Store {
 
     pub fn new(base_path: &str) -> std::io::Result<Store> {
         let bp = Path::new(base_path);
+        let _ = std::fs::create_dir_all(bp);
         let md = bp.metadata()?;
         if !md.is_dir() || md.permissions().readonly() {
             return Err(std::io::Error::new(std::io::ErrorKind::PermissionDenied, "base path does not exist or is not writable"));
@@ -235,7 +235,7 @@ impl Store {
 
     /// Erase zerotier.pid if present.
     pub fn erase_pid(&self) {
-        std::fs::remove_file(self.base_path.join("zerotier.pid"));
+        let _ = std::fs::remove_file(self.base_path.join("zerotier.pid"));
     }
 
     /// Load a ZeroTier core object.

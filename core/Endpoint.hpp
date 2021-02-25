@@ -116,7 +116,7 @@ public:
 			case ZT_ENDPOINT_TYPE_IP:
 			case ZT_ENDPOINT_TYPE_IP_UDP:
 			case ZT_ENDPOINT_TYPE_IP_TCP:
-			case ZT_ENDPOINT_TYPE_IP_HTTP:
+			case ZT_ENDPOINT_TYPE_IP_TCP_WS:
 				return true;
 			default:
 				return false;
@@ -138,12 +138,12 @@ public:
 			case ZT_ENDPOINT_TYPE_IP:
 			case ZT_ENDPOINT_TYPE_IP_UDP:
 			case ZT_ENDPOINT_TYPE_IP_TCP:
-			case ZT_ENDPOINT_TYPE_IP_HTTP:
+			case ZT_ENDPOINT_TYPE_IP_TCP_WS:
 				switch (ep.type) {
 					case ZT_ENDPOINT_TYPE_IP:
 					case ZT_ENDPOINT_TYPE_IP_UDP:
 					case ZT_ENDPOINT_TYPE_IP_TCP:
-					case ZT_ENDPOINT_TYPE_IP_HTTP:
+					case ZT_ENDPOINT_TYPE_IP_TCP_WS:
 						return ip().ipsEqual(ep.ip());
 					default:
 						break;
@@ -193,7 +193,7 @@ public:
 			case ZT_ENDPOINT_TYPE_IP:
 			case ZT_ENDPOINT_TYPE_IP_UDP:
 			case ZT_ENDPOINT_TYPE_IP_TCP:
-			case ZT_ENDPOINT_TYPE_IP_HTTP:
+			case ZT_ENDPOINT_TYPE_IP_TCP_WS:
 				return ip().hashCode();
 		}
 	}

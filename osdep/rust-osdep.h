@@ -15,6 +15,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+/********************************************************************************************************************/
+
 #ifdef __APPLE__
 #include <unistd.h>
 #include <fcntl.h>
@@ -64,6 +66,29 @@ extern const unsigned long c_SIOCAUTOCONF_STOP;
 }
 #endif
 #endif /* __APPLE__ */
+
+/********************************************************************************************************************/
+
+#if defined(__linux__) || defined(linux) || defined(__LINUX__) || defined(__linux)
+#include <unistd.h>
+#include <signal.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/ioctl.h>
+#include <sys/wait.h>
+#include <sys/select.h>
+#include <netinet/in.h>
+#include <net/if_arp.h>
+#include <arpa/inet.h>
+#include <linux/if.h>
+#include <linux/if_tun.h>
+#include <linux/if_addr.h>
+#include <linux/if_ether.h>
+#include <ifaddrs.h>
+#endif /* __linux__ */
 
 /********************************************************************************************************************/
 

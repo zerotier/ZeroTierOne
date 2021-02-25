@@ -12,7 +12,6 @@
 /****/
 
 use std::collections::BTreeSet;
-use std::os::raw::c_ulong;
 use std::ptr::null_mut;
 
 use zerotier_core::{MAC, MulticastGroup};

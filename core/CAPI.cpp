@@ -837,6 +837,21 @@ int ZT_InetAddress_isV6(const ZT_InetAddress *ia)
 	return (int)(reinterpret_cast<const ZeroTier::InetAddress *>(ia))->isV6();
 }
 
+unsigned int ZT_InetAddress_ipBytes(const ZT_InetAddress *ia, void *buf)
+{
+	if (ia) {
+		switch(reinterpret_cast<const ZeroTier::InetAddress *>(ia)->as.sa.sa_family) {
+			case AF_INET:
+				ZeroTier::Utils::copy<4>(buf, &(reinterpret_cast<const ZeroTier::InetAddress *>(ia)->as.sa_in.sin_addr.s_addr));
+				return 4;
+			case AF_INET6:
+				ZeroTier::Utils::copy<16>(buf, reinterpret_cast<const ZeroTier::InetAddress *>(ia)->as.sa_in6.sin6_addr.s6_addr);
+				return 16;
+		}
+	}
+	return 0;
+}
+
 enum ZT_InetAddress_IpScope ZT_InetAddress_ipScope(const ZT_InetAddress *ia)
 {
 	if (likely(ia != nullptr))

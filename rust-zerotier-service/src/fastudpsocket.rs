@@ -48,10 +48,7 @@ pub(crate) fn test_bind_udp(port: u16) -> (bool, bool) {
     (v4b.is_ok(), v6b.is_ok())
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// bind_udp_socket() implementations for each platform
-
-#[cfg(target_os = "macos")]
+#[cfg(unix)]
 fn bind_udp_socket(_: &str, address: &InetAddress) -> Result<FastUDPRawOsSocket, &'static str> {
     unsafe {
         let af;
@@ -60,17 +57,20 @@ fn bind_udp_socket(_: &str, address: &InetAddress) -> Result<FastUDPRawOsSocket,
             InetAddressFamily::IPv4 => {
                 af = osdep::AF_INET;
                 sa_len = std::mem::size_of::<osdep::sockaddr_in>() as osdep::socklen_t;
-            },
+            }
             InetAddressFamily::IPv6 => {
                 af = osdep::AF_INET6;
                 sa_len = std::mem::size_of::<osdep::sockaddr_in6>() as osdep::socklen_t;
-            },
+            }
             _ => {
                 return Err("unrecognized address family");
             }
         };
 
-        let s = osdep::socket(af.as_(), osdep::SOCK_DGRAM.as_(), 0);
+        #[cfg(not(target_os = "linux"))]
+            let s = osdep::socket(af.as_(), osdep::SOCK_DGRAM.as_(), 0);
+        #[cfg(target_os = "linux")]
+            let s = osdep::socket(af.as_(), 2, 0);
         if s < 0 {
             return Err("unable to create socket");
         }
@@ -79,37 +79,49 @@ fn bind_udp_socket(_: &str, address: &InetAddress) -> Result<FastUDPRawOsSocket,
         let fl_size = std::mem::size_of::<c_int>() as osdep::socklen_t;
         let mut setsockopt_results: c_int = 0;
 
-        // Set options that must succeed: reuse port for multithreading, enable broadcast, disable SIGPIPE, and
-        // for IPv6 sockets disable receipt of IPv4 packets.
         fl = 1;
         setsockopt_results |= osdep::setsockopt(s, osdep::SOL_SOCKET.as_(), osdep::SO_REUSEPORT.as_(), (&mut fl as *mut c_int).cast(), fl_size);
         //fl = 1;
         //setsockopt_results |= osdep::setsockopt(s, osdep::SOL_SOCKET, osdep::SO_REUSEADDR, (&mut fl as *mut c_int).cast(), fl_size);
         fl = 1;
         setsockopt_results |= osdep::setsockopt(s, osdep::SOL_SOCKET.as_(), osdep::SO_BROADCAST.as_(), (&mut fl as *mut c_int).cast(), fl_size);
-        fl = 1;
-        setsockopt_results |= osdep::setsockopt(s, osdep::SOL_SOCKET.as_(), osdep::SO_NOSIGPIPE.as_(), (&mut fl as *mut c_int).cast(), fl_size);
         if af == osdep::AF_INET6 {
             fl = 1;
             setsockopt_results |= osdep::setsockopt(s, osdep::IPPROTO_IPV6.as_(), osdep::IPV6_V6ONLY.as_(), (&mut fl as *mut c_int).cast(), fl_size);
         }
+
+        #[cfg(any(target_os = "macos", target_os = "ios"))] {
+            fl = 1;
+            setsockopt_results |= osdep::setsockopt(s, osdep::SOL_SOCKET.as_(), osdep::SO_NOSIGPIPE.as_(), (&mut fl as *mut c_int).cast(), fl_size)
+        }
+
         if setsockopt_results != 0 {
             osdep::close(s);
             return Err("setsockopt() failed");
         }
 
-        // Enable UDP fragmentation, which should never really be needed but might make this work if
-        // somebody finds themselves on a weird network. These are okay if they fail.
         if af == osdep::AF_INET {
-            fl = 0;
-            osdep::setsockopt(s, osdep::IPPROTO_IP.as_(), 0x4000 /* IP_DF */, (&mut fl as *mut c_int).cast(), fl_size);
-        }
-        if af == osdep::AF_INET6 {
-            fl = 0;
-            osdep::setsockopt(s, osdep::IPPROTO_IPV6.as_(), 62 /* IPV6_DONTFRAG */, (&mut fl as *mut c_int).cast(), fl_size);
+            #[cfg(any(target_os = "macos", target_os = "ios"))] {
+                fl = 0;
+                osdep::setsockopt(s, osdep::IPPROTO_IP.as_(), 0x4000 /* IP_DF */, (&mut fl as *mut c_int).cast(), fl_size);
+            }
+            #[cfg(target_os = "linux")] {
+                fl = osdep::IP_PMTUDISC_DONT.as_();
+                osdep::setsockopt(s, osdep::IPPROTO_IP.as_(), osdep::IP_MTU_DISCOVER.as_(), (&mut fl as *mut c_int).cast(), fl_size);
+            }
         }
 
-        // Set send and receive buffers to the largest acceptable value up to desired 1MiB.
+        if af == osdep::AF_INET6 {
+            #[cfg(any(target_os = "macos", target_os = "ios"))] {
+                fl = 0;
+                osdep::setsockopt(s, osdep::IPPROTO_IPV6.as_(), 62 /* IPV6_DONTFRAG */, (&mut fl as *mut c_int).cast(), fl_size);
+            }
+            #[cfg(target_os = "linux")] {
+                fl = 0;
+                osdep::setsockopt(s, osdep::IPPROTO_IPV6.as_(), osdep::IPV6_DONTFRAG.as_(), (&mut fl as *mut c_int).cast(), fl_size);
+            }
+        }
+
         fl = 1048576;
         while fl >= 131072 {
             if osdep::setsockopt(s, osdep::SOL_SOCKET.as_(), osdep::SO_RCVBUF.as_(), (&mut fl as *mut c_int).cast(), fl_size) == 0 {
@@ -134,8 +146,6 @@ fn bind_udp_socket(_: &str, address: &InetAddress) -> Result<FastUDPRawOsSocket,
         Ok(s)
     }
 }
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /// A multi-threaded (or otherwise fast) UDP socket that binds to both IPv4 and IPv6 addresses.
 pub(crate) struct FastUDPSocket {
@@ -195,8 +205,7 @@ pub(crate) fn fast_udp_socket_sendto(socket: &FastUDPRawOsSocket, to_address: &I
 
 #[cfg(windows)]
 #[inline(always)]
-pub(crate) fn fast_udp_socket_sendto(socket: &FastUDPRawOsSocket, to_address: &InetAddress, data: &[u8], packet_ttl: i32) {
-}
+pub(crate) fn fast_udp_socket_sendto(socket: &FastUDPRawOsSocket, to_address: &InetAddress, data: &[u8], packet_ttl: i32) {}
 
 #[cfg(unix)]
 #[inline(always)]
@@ -211,11 +220,11 @@ impl FastUDPSocket {
     pub fn new<F: Fn(&FastUDPRawOsSocket, &InetAddress, Buffer) + Send + Sync + Clone + 'static>(device_name: &str, address: &InetAddress, handler: F) -> Result<FastUDPSocket, String> {
         let thread_count = num_cpus::get_physical().min(num_cpus::get());
 
-        let mut s = FastUDPSocket{
+        let mut s = FastUDPSocket {
             thread_run: Arc::new(AtomicBool::new(true)),
             threads: Vec::new(),
             sockets: Vec::new(),
-            bind_address: address.clone()
+            bind_address: address.clone(),
         };
         s.threads.reserve(thread_count);
         s.sockets.reserve(thread_count);
