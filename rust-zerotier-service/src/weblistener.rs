@@ -24,6 +24,7 @@ use hyper::server::Server;
 use hyper::service::{make_service_fn, service_fn};
 use net2::TcpBuilder;
 #[cfg(unix)] use net2::unix::UnixTcpBuilderExt;
+use tokio::task::JoinHandle;
 
 use zerotier_core::InetAddress;
 
@@ -37,7 +38,7 @@ async fn web_handler(service: Service, req: Request<Body>) -> Result<Response<Bo
 /// Listener for http connections to the API or for TCP P2P.
 pub(crate) struct WebListener {
     shutdown_tx: RefCell<Option<tokio::sync::oneshot::Sender<()>>>,
-    server: Box<dyn Any>,
+    server: JoinHandle<hyper::Result<()>>,
 }
 
 impl WebListener {
@@ -87,7 +88,7 @@ impl WebListener {
 
         let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel::<()>();
         let service = service.clone();
-        let server = builder.serve(make_service_fn(move |_| {
+        let server = tokio::task::spawn(builder.serve(make_service_fn(move |_| {
             let service = service.clone();
             async move {
                 Ok::<_, Infallible>(service_fn(move |req: Request<Body>| {
@@ -97,11 +98,11 @@ impl WebListener {
                     }
                 }))
             }
-        })).with_graceful_shutdown(async { let _ = shutdown_rx.await; });
+        })).with_graceful_shutdown(async { let _ = shutdown_rx.await; }));
 
         Ok(WebListener {
             shutdown_tx: RefCell::new(Some(shutdown_tx)),
-            server: Box::new(server),
+            server,
         })
     }
 }
@@ -109,5 +110,6 @@ impl WebListener {
 impl Drop for WebListener {
     fn drop(&mut self) {
         let _ = self.shutdown_tx.take().map(|tx| { tx.send(()); });
+        self.server.abort();
     }
 }
