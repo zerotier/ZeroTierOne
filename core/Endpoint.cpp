@@ -113,14 +113,11 @@ bool Endpoint::fromString(const char *s) noexcept
 					return false;
 			} break;
 		}
-	} else {
+	} else if (strchr(s, '/') != nullptr) {
 		// IP/port is parsed as an IP_UDP endpoint for backward compatibility.
-		if (strchr(s, '/')) {
-			return asInetAddress(this->value.ss).fromString(s);
-		} else {
-			return false;
-		}
+		return asInetAddress(this->value.ss).fromString(s);
 	}
+	return false;
 }
 
 int Endpoint::marshal(uint8_t data[ZT_ENDPOINT_MARSHAL_SIZE_MAX]) const noexcept

@@ -25,7 +25,7 @@
 #include <algorithm>
 #include <utility>
 
-#ifdef __GCC__
+#if defined(__GCC__) || defined(__GNUC__)
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
 

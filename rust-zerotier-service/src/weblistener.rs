@@ -11,91 +11,103 @@
  */
 /****/
 
-use std::net::TcpListener;
-use std::time::Duration;
+use std::any::Any;
+use std::cell::RefCell;
 use std::convert::Infallible;
+use std::net::{SocketAddr, TcpListener};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
+
+use futures::TryFutureExt;
+use hyper::{Body, Request, Response};
+use hyper::server::Server;
+use hyper::service::{make_service_fn, service_fn};
+use net2::TcpBuilder;
+#[cfg(unix)] use net2::unix::UnixTcpBuilderExt;
 
 use zerotier_core::InetAddress;
-use hyper::{Request, Response, Body};
-use hyper::service::{make_service_fn, service_fn};
-use futures::Future;
-use futures::future::{AbortHandle, abortable};
-use net2::TcpBuilder;
 
 use crate::service::Service;
 
+#[inline(always)]
+async fn web_handler(service: Service, req: Request<Body>) -> Result<Response<Body>, Infallible> {
+    Ok(Response::new("Hello, World".into()))
+}
+
 /// Listener for http connections to the API or for TCP P2P.
 pub(crate) struct WebListener {
-    server: dyn Future,
-    abort_handle: AbortHandle,
+    shutdown_tx: RefCell<Option<tokio::sync::oneshot::Sender<()>>>,
+    server: Box<dyn Any>,
 }
 
 impl WebListener {
     /// Create a new "background" TCP WebListener using the current tokio reactor async runtime.
-    pub fn new(_device_name: &str, addr: &InetAddress, service: Arc<Service>) -> Result<WebListener, dyn std::error::Error> {
-        let addr = addr.to_socketaddr();
-        if addr.is_none() {
-            return Err(std::io::Error::new(std::io::ErrorKind::AddrNotAvailable, "invalid address"));
-        }
-        let addr = addr.unwrap();
-
+    pub fn new(_device_name: &str, addr: SocketAddr, service: &Service) -> Result<WebListener, Box<dyn std::error::Error>> {
         let listener = if addr.is_ipv4() {
             let l = TcpBuilder::new_v4();
             if l.is_err() {
-                return Err(l.err().unwrap());
+                return Err(Box::new(l.err().unwrap()));
             }
-            l.unwrap()
+            let l = l.unwrap();
+            #[cfg(unix)] {
+                let _ = l.reuse_port(true);
+            }
+            l
         } else {
             let l = TcpBuilder::new_v6();
             if l.is_err() {
-                return Err(l.err().unwrap());
+                return Err(Box::new(l.err().unwrap()));
             }
             let l = l.unwrap();
-            l.only_v6(true);
+            let _ = l.only_v6(true);
+            #[cfg(unix)] {
+                let _ = l.reuse_port(true);
+            }
             l
         };
+        // TODO: bind to device on Linux?
         let listener = listener.bind(addr);
         if listener.is_err() {
-            return Err(listener.err().unwrap());
+            return Err(Box::new(listener.err().unwrap()));
         }
         let listener = listener.unwrap().listen(128);
         if listener.is_err() {
-            return Err(listener.err().unwrap());
+            return Err(Box::new(listener.err().unwrap()));
         }
         let listener = listener.unwrap();
 
-        let builder = hyper::server::Server::from_tcp(listener);
+        let builder = Server::from_tcp(listener);
         if builder.is_err() {
-            return Err(builder.err().unwrap());
+            return Err(Box::new(builder.err().unwrap()));
         }
         let builder = builder.unwrap()
-            .executor(tokio::spawn)
             .http1_half_close(false)
             .http1_keepalive(true)
-            .http1_max_buf_size(131072)
-            .http2_keep_alive_interval(Duration::from_secs(30))
-            .http2_keep_alive_timeout(Duration::from_secs(90))
-            .http2_adaptive_window(true)
-            .http2_max_frame_size(131072)
-            .http2_max_concurrent_streams(16);
+            .http1_max_buf_size(131072);
 
-        let (server, abort_handle) = abortable(builder.serve(make_service_fn(|_| async move {
-            Ok::<_, Infallible>(service_fn(|req: Request<Body>| -> Result<Response<Body>, Infallible> async move {
-                Ok(Response::new("Hello, World".into()))
-            }))
-        })));
+        let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel::<()>();
+        let service = service.clone();
+        let server = builder.serve(make_service_fn(move |_| {
+            let service = service.clone();
+            async move {
+                Ok::<_, Infallible>(service_fn(move |req: Request<Body>| {
+                    let service = service.clone();
+                    async move {
+                        web_handler(service, req).await
+                    }
+                }))
+            }
+        })).with_graceful_shutdown(async { let _ = shutdown_rx.await; });
 
         Ok(WebListener {
-            server,
-            abort_handle,
+            shutdown_tx: RefCell::new(Some(shutdown_tx)),
+            server: Box::new(server),
         })
     }
 }
 
 impl Drop for WebListener {
     fn drop(&mut self) {
-        self.abort_handle.abort();
-        self.server.await;
+        let _ = self.shutdown_tx.take().map(|tx| { tx.send(()); });
     }
 }

@@ -85,7 +85,7 @@ impl Endpoint {
     /// Get a reference to the InetAddress in this endpoint or None if this is not of a relevant type.
     pub fn as_inetaddress(&self) -> Option<&InetAddress> {
         match self.type_ {
-            EndpointType::Ip | EndpointType::IpUdp | EndpointType::IpTcp | EndpointType::IpHttp => {
+            EndpointType::Ip | EndpointType::IpUdp | EndpointType::IpTcp | EndpointType::IpTcpWs => {
                 unsafe {
                     Some(InetAddress::transmute_capi(&self.capi.value.ia))
                 }
@@ -109,7 +109,11 @@ impl ToString for Endpoint {
 
 impl PartialEq for Endpoint {
     fn eq(&self, other: &Endpoint) -> bool {
-        self.to_string() == other.to_string()
+        if self.type_ == other.type_ {
+            self.to_string() == other.to_string()
+        } else {
+            false
+        }
     }
 }
 

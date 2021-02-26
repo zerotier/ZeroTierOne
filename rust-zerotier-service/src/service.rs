@@ -12,18 +12,15 @@
 /****/
 
 use std::collections::BTreeMap;
+use std::net::{SocketAddr, Ipv4Addr, IpAddr, Ipv6Addr};
 use std::str::FromStr;
 use std::sync::{Arc, Mutex, Weak};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, Ordering, AtomicPtr};
 use std::time::Duration;
-
-//use futures::stream::StreamExt;
-//use warp::{Filter, Reply};
-//use warp::http::{HeaderMap, Method, StatusCode};
-//use warp::hyper::body::Bytes;
 
 use zerotier_core::*;
 use zerotier_core::trace::{TraceEvent, TraceEventLayer};
+use futures::StreamExt;
 
 use crate::fastudpsocket::*;
 use crate::getifaddrs;
@@ -32,23 +29,27 @@ use crate::log::Log;
 use crate::network::Network;
 use crate::store::Store;
 use crate::utils::ms_since_epoch;
+use crate::weblistener::WebListener;
 
+/// How often to check for major configuration changes. This shouldn't happen
+/// too often since it uses a bit of CPU.
 const CONFIG_CHECK_INTERVAL: i64 = 5000;
 
-/// Core ZeroTier service.
-/// This object must be clonable across threads, so all its innards are in
-/// Arc containers. It's probably faster to clone all these Arcs when new
-/// threads are created (a rare event) so we only have to dereference each
-/// Arc once for common events like packet receipt.
+struct ServiceIntl {
+    auth_token: String,
+    interrupt: Mutex<futures::channel::mpsc::Sender<()>>,
+    local_config: Mutex<Arc<LocalConfig>>,
+    run: AtomicBool,
+    online: AtomicBool,
+}
+
+/// Core ZeroTier service, which is sort of just a container for all the things.
 #[derive(Clone)]
 pub(crate) struct Service {
-    pub auth_token: Arc<String>,
-    pub log: Arc<Log>,
-    _local_config: Arc<Mutex<Arc<LocalConfig>>>, // Arc -> shared Mutex container so it can be changed globally
-    run: Arc<AtomicBool>,
-    pub online: Arc<AtomicBool>,
-    pub store: Arc<Store>,
-    pub node: Weak<Node<Service, Network>>, // weak since Node itself may hold a reference to this
+    pub(crate) log: Arc<Log>,
+    pub(crate) store: Arc<Store>,
+    _node: Weak<Node<Service, Network>>,
+    intl: Arc<ServiceIntl>,
 }
 
 impl NodeEventHandler<Network> for Service {
@@ -62,25 +63,23 @@ impl NodeEventHandler<Network> for Service {
     fn event(&self, event: Event, event_data: &[u8]) {
         match event {
             Event::Up => {
-                let _ = self.node.upgrade().map(|n: Arc<Node<Service, Network>>| {
-                    d!(self.log, "node {} started up in data store '{}'", n.address().to_string(), self.store.base_path.to_str().unwrap());
-                });
-            },
+                d!(self.log, "node started up in data store '{}'", self.store.base_path.to_str().unwrap());
+            }
 
             Event::Down => {
                 d!(self.log, "node shutting down.");
-                self.run.store(false, Ordering::Relaxed);
-            },
+                self.intl.run.store(false, Ordering::Relaxed);
+            }
 
             Event::Online => {
                 d!(self.log, "node is online.");
-                self.online.store(true, Ordering::Relaxed);
-            },
+                self.intl.online.store(true, Ordering::Relaxed);
+            }
 
             Event::Offline => {
                 d!(self.log, "node is offline.");
-                self.online.store(true, Ordering::Relaxed);
-            },
+                self.intl.online.store(true, Ordering::Relaxed);
+            }
 
             Event::Trace => {
                 if !event_data.is_empty() {
@@ -100,9 +99,9 @@ impl NodeEventHandler<Network> for Service {
                         });
                     });
                 }
-            },
+            }
 
-            Event::UserMessage => {},
+            Event::UserMessage => {}
         }
     }
 
@@ -151,14 +150,263 @@ impl NodeEventHandler<Network> for Service {
 
 impl Service {
     #[inline(always)]
-    fn local_config(&self) -> Arc<LocalConfig> {
-        self._local_config.lock().unwrap().clone()
+    pub fn local_config(&self) -> Arc<LocalConfig> {
+        self.intl.local_config.lock().unwrap().clone()
     }
 
     #[inline(always)]
-    fn set_local_config(&self, new_lc: LocalConfig) {
-        *(self._local_config.lock().unwrap()) = Arc::new(new_lc);
+    pub fn set_local_config(&self, new_lc: LocalConfig) {
+        *(self.intl.local_config.lock().unwrap()) = Arc::new(new_lc);
     }
+
+    /// Get the node running with this service.
+    /// This should never return None, but technically it could if Service
+    /// persisted beyond the life span of Node. Check this to be technically
+    /// pure "safe" Rust.
+    #[inline(always)]
+    pub fn node(&self) -> Option<Arc<Node<Service, Network>>> {
+        self._node.upgrade()
+    }
+
+    #[inline(always)]
+    pub fn online(&self) -> bool {
+        self.intl.online.load(Ordering::Relaxed)
+    }
+
+    pub fn shutdown(&self) {
+        self.intl.run.store(false, Ordering::Relaxed);
+        let _ = self.intl.interrupt.lock().unwrap().try_send(());
+    }
+}
+
+unsafe impl Send for Service {}
+
+unsafe impl Sync for Service {}
+
+async fn run_async(store: &Arc<Store>, auth_token: String, log: Arc<Log>, local_config: Arc<LocalConfig>) -> i32 {
+    let mut process_exit_value: i32 = 0;
+
+    let mut udp_sockets: BTreeMap<InetAddress, FastUDPSocket> = BTreeMap::new();
+    let mut web_listeners: BTreeMap<InetAddress, WebListener> = BTreeMap::new();
+    let mut local_web_listeners: (Option<WebListener>, Option<WebListener>) = (None, None); // IPv4, IPv6
+
+    let (interrupt_tx, mut interrupt_rx) = futures::channel::mpsc::channel::<()>(1);
+    let mut service = Service {
+        log: log.clone(),
+        store: store.clone(),
+        _node: Weak::new(),
+        intl: Arc::new(ServiceIntl {
+            auth_token,
+            interrupt: Mutex::new(interrupt_tx),
+            local_config: Mutex::new(local_config),
+            run: AtomicBool::new(true),
+            online: AtomicBool::new(false),
+        }),
+    };
+
+    let node = Node::new(service.clone(), ms_since_epoch());
+    if node.is_err() {
+        log.fatal(format!("error initializing node: {}", node.err().unwrap().to_str()));
+        return 1;
+    }
+    let node = Arc::new(node.ok().unwrap());
+
+    service._node = Arc::downgrade(&node);
+    let service = service; // make immutable after setting node
+
+    let mut now: i64 = ms_since_epoch();
+    let mut loop_delay = zerotier_core::NODE_BACKGROUND_TASKS_MAX_INTERVAL;
+    let mut last_checked_config: i64 = 0;
+    let mut local_config = service.local_config();
+    while service.intl.run.load(Ordering::Relaxed) {
+        let loop_start = ms_since_epoch();
+
+        // Write zerotier.port which is used by the CLI to know how to reach the HTTP API.
+        //let _ = store.write_port(local_config.settings.primary_port);
+
+        // Wait for (1) loop delay elapsed, (2) a signal to interrupt delay now, or
+        // (3) an external signal to exit.
+        tokio::select! {
+            _ = tokio::time::sleep(Duration::from_millis(loop_delay)) => {
+                now = ms_since_epoch();
+                let actual_delay = now - loop_start;
+                if actual_delay > ((loop_delay as i64) * 4_i64) {
+                    l!(log, "likely sleep/wake detected due to excess delay, reestablishing links...");
+                    // TODO: handle likely sleep/wake or other system interruption
+                }
+            },
+            _ = interrupt_rx.next() => {
+                d!(log, "inner loop delay interrupted!");
+                if !service.intl.run.load(Ordering::Relaxed) {
+                    break;
+                }
+                now = ms_since_epoch();
+            },
+            _ = tokio::signal::ctrl_c() => {
+                l!(log, "exit signal received, shutting down...");
+                service.intl.run.store(false, Ordering::Relaxed);
+                break;
+            },
+        }
+
+        // Check every CONFIG_CHECK_INTERVAL for changes to either the system configuration
+        // or the node's local configuration and take actions as needed.
+        if (now - last_checked_config) >= CONFIG_CHECK_INTERVAL {
+            last_checked_config = now;
+
+            // Check for changes to local.conf.
+            let new_config = store.read_local_conf(true);
+            if new_config.is_ok() {
+                d!(log, "local.conf changed on disk, reloading.");
+                service.set_local_config(new_config.unwrap());
+            }
+
+            // Check for and handle configuration changes, some of which require inner loop restart.
+            let next_local_config = service.local_config();
+            if local_config.settings.primary_port != next_local_config.settings.primary_port {
+                local_web_listeners.0 = None;
+                local_web_listeners.1 = None;
+            }
+            if local_config.settings.log.max_size != next_local_config.settings.log.max_size {
+                log.set_max_size(next_local_config.settings.log.max_size);
+            }
+            if local_config.settings.log.stderr != next_local_config.settings.log.stderr {
+                log.set_log_to_stderr(next_local_config.settings.log.stderr);
+            }
+            if local_config.settings.log.debug != next_local_config.settings.log.debug {
+                log.set_debug(next_local_config.settings.log.debug);
+            }
+            local_config = next_local_config;
+
+            let mut system_addrs: BTreeMap<InetAddress, String> = BTreeMap::new();
+            getifaddrs::for_each_address(|addr: &InetAddress, dev: &str| {
+                match addr.ip_scope() {
+                    IpScope::Global | IpScope::Private | IpScope::PseudoPrivate | IpScope::Shared => {
+                        if !local_config.settings.is_interface_blacklisted(dev) {
+                            let mut a = addr.clone();
+                            a.set_port(local_config.settings.primary_port);
+                            system_addrs.insert(a, String::from(dev));
+                            if local_config.settings.secondary_port.is_some() {
+                                let mut a = addr.clone();
+                                a.set_port(local_config.settings.secondary_port.unwrap());
+                                system_addrs.insert(a, String::from(dev));
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            });
+
+            let mut udp_sockets_to_close: Vec<InetAddress> = Vec::new();
+            for sock in udp_sockets.iter() {
+                if !system_addrs.contains_key(sock.0) {
+                    udp_sockets_to_close.push(sock.0.clone());
+                }
+            }
+            for k in udp_sockets_to_close.iter() {
+                l!(log, "unbinding UDP socket at {}", k.to_string());
+                udp_sockets.remove(k);
+            }
+
+            for addr in system_addrs.iter() {
+                if !udp_sockets.contains_key(addr.0) {
+                    let _ = FastUDPSocket::new(addr.1.as_str(), addr.0, move |raw_socket: &FastUDPRawOsSocket, from_address: &InetAddress, data: Buffer| {
+                        // TODO: incoming packet handler
+                    }).map_or_else(|e| {
+                        l!(log, "error binding UDP socket to {}: {}", addr.0.to_string(), e.to_string());
+                    }, |s| {
+                        l!(log, "bound UDP socket at {}", addr.0.to_string());
+                        udp_sockets.insert(addr.0.clone(), s);
+                    });
+                }
+            }
+
+            let mut udp_primary_port_bind_failure = true;
+            let mut udp_secondary_port_bind_failure = local_config.settings.secondary_port.is_some();
+            for s in udp_sockets.iter() {
+                if s.0.port() == local_config.settings.primary_port {
+                    udp_primary_port_bind_failure = false;
+                    if !udp_secondary_port_bind_failure {
+                        break;
+                    }
+                }
+                if s.0.port() == local_config.settings.secondary_port.unwrap() {
+                    udp_secondary_port_bind_failure = false;
+                    if !udp_primary_port_bind_failure {
+                        break;
+                    }
+                }
+            }
+            if udp_primary_port_bind_failure {
+                if local_config.settings.auto_port_search {
+                    // TODO: port hunting
+                } else {
+                    l!(log, "WARNING: failed to bind to any address at primary port {}", local_config.settings.primary_port);
+                }
+            }
+            if udp_secondary_port_bind_failure {
+                if local_config.settings.auto_port_search {
+                    // TODO: port hunting
+                } else {
+                    l!(log, "WARNING: failed to bind to any address at secondary port {}", local_config.settings.secondary_port.unwrap_or(0));
+                }
+            }
+
+            let mut web_listeners_to_close: Vec<InetAddress> = Vec::new();
+            for l in web_listeners.iter() {
+                if !system_addrs.contains_key(l.0) {
+                    web_listeners_to_close.push(l.0.clone());
+                }
+            }
+            for k in web_listeners_to_close.iter() {
+                l!(log, "closing HTTP listener at {}", k.to_string());
+                web_listeners.remove(k);
+            }
+
+            for addr in system_addrs.iter() {
+                if addr.0.port() == local_config.settings.primary_port && !web_listeners.contains_key(addr.0) {
+                    let sa = addr.0.to_socketaddr();
+                    if sa.is_some() {
+                        let wl = WebListener::new(addr.1.as_str(), sa.unwrap(), &service).map_or_else(|e| {
+                            l!(log, "error creating HTTP listener at {}: {}", addr.0.to_string(), e.to_string());
+                        }, |l| {
+                            l!(log, "created HTTP listener at {}", addr.0.to_string());
+                            web_listeners.insert(addr.0.clone(), l);
+                        });
+                    }
+                }
+            }
+
+            if local_web_listeners.0.is_none() {
+                let _ = WebListener::new("", SocketAddr::new(IpAddr::from(Ipv4Addr::LOCALHOST), local_config.settings.primary_port), &service).map(|wl| {
+                    local_web_listeners.0 = Some(wl);
+                });
+            }
+            if local_web_listeners.1.is_none() {
+                let _ = WebListener::new("", SocketAddr::new(IpAddr::from(Ipv6Addr::LOCALHOST), local_config.settings.primary_port), &service).map(|wl| {
+                    local_web_listeners.1 = Some(wl);
+                });
+            }
+            if local_web_listeners.0.is_none() && local_web_listeners.1.is_none() {
+                l!(log, "error creating HTTP listener on 127.0.0.1/{} or ::1/{}", local_config.settings.primary_port, local_config.settings.primary_port);
+            }
+        }
+
+        // Run background task handler in ZeroTier core.
+        loop_delay = node.process_background_tasks(now);
+    }
+
+    l!(log, "shutting down normally...");
+
+    drop(udp_sockets);
+    drop(web_listeners);
+    drop(local_web_listeners);
+    drop(service);
+    drop(node);
+
+    d!(log, "shutdown complete.");
+
+    process_exit_value
 }
 
 pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
@@ -201,243 +449,10 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
         log.fatal(format!("unable to write authtoken.secret to '{}'", store.base_path.to_str().unwrap()));
         return 1;
     }
-    let auth_token = Arc::new(auth_token);
 
-    let _ = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
-        let mut udp_sockets: BTreeMap<InetAddress, FastUDPSocket> = BTreeMap::new();
-        let (mut interrupt_tx, mut interrupt_rx) = futures::channel::mpsc::channel::<()>(1);
-
-        let mut service = Service {
-            auth_token: auth_token.clone(),
-            log: log.clone(),
-            _local_config: Arc::new(Mutex::new(local_config)),
-            run: Arc::new(AtomicBool::new(true)),
-            online: Arc::new(AtomicBool::new(false)),
-            store: store.clone(),
-            node: Weak::new(),
-        };
-
-        let node = Node::new(service.clone(), ms_since_epoch());
-        if node.is_err() {
-            log.fatal(format!("error initializing node: {}", node.err().unwrap().to_str()));
-            process_exit_value = 1;
-            return;
-        }
-        let node = Arc::new(node.ok().unwrap());
-
-        service.node = Arc::downgrade(&node);
-        let service = service; // make immutable after setting node
-
-        let mut loop_delay = zerotier_core::NODE_BACKGROUND_TASKS_MAX_INTERVAL;
-        loop {
-            let mut local_config = service.local_config();
-
-            /*
-            let web_service = warp::service(warp::any()
-                .and(warp::path::end().map(|| { warp::reply::with_status("404", StatusCode::NOT_FOUND) })
-                    .or(warp::path("status")
-                        .and(warp::addr::remote())
-                        .and(warp::method())
-                        .and(warp::header::headers_cloned())
-                        .and(warp::body::content_length_limit(1048576))
-                        .and(warp::body::bytes())
-                        .map(move |remote: Option<SocketAddr>, method: Method, headers: HeaderMap, post_data: Bytes| { s0.web_api_status(remote, method, headers, post_data) }))
-                    .or(warp::path!("network" / String)
-                        .and(warp::addr::remote())
-                        .and(warp::method())
-                        .and(warp::header::headers_cloned())
-                        .and(warp::body::content_length_limit(1048576))
-                        .and(warp::body::bytes())
-                        .map(move |network_str: String, remote: Option<SocketAddr>, method: Method, headers: HeaderMap, post_data: Bytes| { s1.web_api_network(network_str, remote, method, headers, post_data) }))
-                    .or(warp::path!("peer" / String)
-                        .and(warp::addr::remote())
-                        .and(warp::method())
-                        .and(warp::header::headers_cloned())
-                        .and(warp::body::content_length_limit(1048576))
-                        .and(warp::body::bytes())
-                        .map(move |peer_str: String, remote: Option<SocketAddr>, method: Method, headers: HeaderMap, post_data: Bytes| { s2.web_api_peer(peer_str, remote, method, headers, post_data) }))
-                )
-            );
-            l!(log, "starting local HTTP API server on 127.0.0.1/{}", local_config.settings.primary_port);
-            let (mut shutdown_tx, mut shutdown_rx) = futures::channel::oneshot::channel();
-            let (s0, s1, s2) = (service.clone(), service.clone(), service.clone()); // clones to move to closures
-            let warp_server = warp::serve(web_service).try_bind_with_graceful_shutdown((IpAddr::from([127_u8, 0_u8, 0_u8, 1_u8]), local_config.settings.primary_port), async { let _ = shutdown_rx.await; });
-            if warp_server.is_err() {
-                l!(log, "ERROR: local API http server failed to bind to port {} or failed to start: {}, restarting inner loop...", local_config.settings.primary_port, warp_server.err().unwrap().to_string());
-                break;
-            }
-            let warp_server = tokio::spawn(warp_server.unwrap().1);
-            */
-
-            // Write zerotier.port which is used by the CLI to know how to reach the HTTP API.
-            let _ = store.write_port(local_config.settings.primary_port);
-
-            // The inner loop runs the web server in the "background" (async) while periodically
-            // scanning for significant configuration changes. Some major changes may require
-            // the inner loop to exit and be restarted.
-            let mut last_checked_config: i64 = 0;
-            d!(log, "local HTTP API server running, inner loop starting.");
-            loop {
-                let loop_start = ms_since_epoch();
-                let mut now: i64 = 0;
-
-                // Wait for (1) loop delay elapsed, (2) a signal to interrupt delay now, or
-                // (3) an external signal to exit.
-                tokio::select! {
-                    _ = tokio::time::sleep(Duration::from_millis(loop_delay)) => {
-                        now = ms_since_epoch();
-                        let actual_delay = now - loop_start;
-                        if actual_delay > ((loop_delay as i64) * 4_i64) {
-                            l!(log, "likely sleep/wake detected due to excess delay, reestablishing links...");
-                            // TODO: handle likely sleep/wake or other system interruption
-                        }
-                    },
-                    _ = interrupt_rx.next() => {
-                        d!(log, "inner loop delay interrupted!");
-                        now = ms_since_epoch();
-                    },
-                    _ = tokio::signal::ctrl_c() => {
-                        l!(log, "exit signal received, shutting down...");
-                        service.run.store(false, Ordering::Relaxed);
-                        break;
-                    }
-                }
-
-                // Check every CONFIG_CHECK_INTERVAL for changes to either the system configuration
-                // or the node's local configuration and take actions as needed.
-                if (now - last_checked_config) >= CONFIG_CHECK_INTERVAL {
-                    last_checked_config = now;
-
-                    // Check for changes to local.conf.
-                    let new_config = store.read_local_conf(true);
-                    if new_config.is_ok() {
-                        d!(log, "local.conf changed on disk, reloading.");
-                        service.set_local_config(new_config.unwrap());
-                    }
-
-                    // Check for and handle configuration changes, some of which require inner loop restart.
-                    let next_local_config = service.local_config();
-                    if local_config.settings.primary_port != next_local_config.settings.primary_port {
-                        break;
-                    }
-                    if local_config.settings.log.max_size != next_local_config.settings.log.max_size {
-                        log.set_max_size(next_local_config.settings.log.max_size);
-                    }
-                    if local_config.settings.log.stderr != next_local_config.settings.log.stderr {
-                        log.set_log_to_stderr(next_local_config.settings.log.stderr);
-                    }
-                    if local_config.settings.log.debug != next_local_config.settings.log.debug {
-                        log.set_debug(next_local_config.settings.log.debug);
-                    }
-                    local_config = next_local_config;
-
-                    // Enumerate all useful addresses bound to interfaces on the system.
-                    let mut system_addrs: BTreeMap<InetAddress, String> = BTreeMap::new();
-                    getifaddrs::for_each_address(|addr: &InetAddress, dev: &str| {
-                        match addr.ip_scope() {
-                            IpScope::Global | IpScope::Private | IpScope::PseudoPrivate | IpScope::Shared => {
-                                if !local_config.settings.is_interface_blacklisted(dev) {
-                                    let mut a = addr.clone();
-                                    a.set_port(local_config.settings.primary_port);
-                                    system_addrs.insert(a, String::from(dev));
-                                    if local_config.settings.secondary_port.is_some() {
-                                        let mut a = addr.clone();
-                                        a.set_port(local_config.settings.secondary_port.unwrap());
-                                        system_addrs.insert(a, String::from(dev));
-                                    }
-                                }
-                            }
-                            _ => {}
-                        }
-                    });
-
-                    // Drop bound sockets that are no longer valid or are now blacklisted.
-                    let mut udp_sockets_to_close: Vec<InetAddress> = Vec::new();
-                    for sock in udp_sockets.iter() {
-                        if !system_addrs.contains_key(sock.0) {
-                            udp_sockets_to_close.push(sock.0.clone());
-                        }
-                    }
-                    for k in udp_sockets_to_close.iter() {
-                        l!(log, "unbinding UDP socket at {} (no longer appears to be present or port has changed)", k.to_string());
-                        udp_sockets.remove(k);
-                    }
-
-                    // Create sockets for unbound addresses.
-                    for addr in system_addrs.iter() {
-                        if !udp_sockets.contains_key(addr.0) {
-                            let _ = FastUDPSocket::new(addr.1.as_str(), addr.0, move |raw_socket: &FastUDPRawOsSocket, from_address: &InetAddress, data: Buffer| {
-                                // TODO: incoming packet handler
-                            }).map_or_else(|e| {
-                                l!(log, "error binding UDP socket to {}: {}", addr.0.to_string(), e.to_string());
-                            }, |s| {
-                                l!(log, "bound UDP socket at {}", addr.0.to_string());
-                                udp_sockets.insert(addr.0.clone(), s);
-                            });
-                        }
-                    }
-
-                    // Determine if primary and secondary port (if secondary enabled) failed to
-                    // bind to any interface.
-                    let mut primary_port_bind_failure = true;
-                    let mut secondary_port_bind_failure = local_config.settings.secondary_port.is_some();
-                    for s in udp_sockets.iter() {
-                        if s.0.port() == local_config.settings.primary_port {
-                            primary_port_bind_failure = false;
-                            if !secondary_port_bind_failure {
-                                break;
-                            }
-                        }
-                        if s.0.port() == local_config.settings.secondary_port.unwrap() {
-                            secondary_port_bind_failure = false;
-                            if !primary_port_bind_failure {
-                                break;
-                            }
-                        }
-                    }
-                    if primary_port_bind_failure {
-                        if local_config.settings.auto_port_search {
-                            // TODO: port hunting
-                        } else {
-                            l!(log, "WARNING: failed to bind to any address at primary port {} (will try again)", local_config.settings.primary_port);
-                        }
-                    }
-                    if secondary_port_bind_failure {
-                        if local_config.settings.auto_port_search {
-                            // TODO: port hunting
-                        } else {
-                            l!(log, "WARNING: failed to bind to any address at secondary port {} (will try again)", local_config.settings.secondary_port.unwrap_or(0));
-                        }
-                    }
-                }
-
-                if !service.run.load(Ordering::Relaxed) {
-                    break;
-                }
-
-                // Run background task handler in ZeroTier core.
-                loop_delay = node.process_background_tasks(now);
-            }
-
-            d!(log, "inner loop exited, shutting down local API HTTP server...");
-
-            // Gracefully shut down the local web server.
-            //let _ = shutdown_tx.send(());
-            //let _ = warp_server.await;
-
-            // Sleep for a brief period of time to prevent thrashing if some invalid
-            // state is hit that causes the inner loop to keep breaking.
-            if !service.run.load(Ordering::Relaxed) {
-                d!(log, "exiting.");
-                break;
-            }
-            let _ = tokio::time::sleep(Duration::from_secs(1)).await;
-            if !service.run.load(Ordering::Relaxed) {
-                d!(log, "exiting.");
-                break;
-            }
-        }
-    });
+    let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
+    process_exit_value = rt.block_on(async move { run_async(store, auth_token, log, local_config).await });
+    rt.shutdown_timeout(Duration::from_millis(500));
 
     process_exit_value
 }
