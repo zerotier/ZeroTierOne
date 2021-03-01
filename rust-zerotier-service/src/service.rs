@@ -39,6 +39,7 @@ struct ServiceIntl {
     auth_token: String,
     interrupt: Mutex<futures::channel::mpsc::Sender<()>>,
     local_config: Mutex<Arc<LocalConfig>>,
+    store: Arc<Store>,
     run: AtomicBool,
     online: AtomicBool,
 }
@@ -47,28 +48,27 @@ struct ServiceIntl {
 #[derive(Clone)]
 pub(crate) struct Service {
     pub(crate) log: Arc<Log>,
-    pub(crate) store: Arc<Store>,
     _node: Weak<Node<Service, Network>>,
     intl: Arc<ServiceIntl>,
 }
 
 impl NodeEventHandler<Network> for Service {
     #[inline(always)]
-    fn virtual_network_config(&self, network_id: NetworkId, network_obj: &Arc<Network>, config_op: VirtualNetworkConfigOperation, config: Option<&VirtualNetworkConfig>) {}
+    fn virtual_network_config(&self, network_id: NetworkId, network_obj: &Network, config_op: VirtualNetworkConfigOperation, config: Option<&VirtualNetworkConfig>) {}
 
     #[inline(always)]
-    fn virtual_network_frame(&self, network_id: NetworkId, network_obj: &Arc<Network>, source_mac: MAC, dest_mac: MAC, ethertype: u16, vlan_id: u16, data: &[u8]) {}
+    fn virtual_network_frame(&self, network_id: NetworkId, network_obj: &Network, source_mac: MAC, dest_mac: MAC, ethertype: u16, vlan_id: u16, data: &[u8]) {}
 
     #[inline(always)]
     fn event(&self, event: Event, event_data: &[u8]) {
         match event {
             Event::Up => {
-                d!(self.log, "node started up in data store '{}'", self.store.base_path.to_str().unwrap());
+                d!(self.log, "node startup event received.");
             }
 
             Event::Down => {
-                d!(self.log, "node shutting down.");
-                self.intl.run.store(false, Ordering::Relaxed);
+                d!(self.log, "node shutdown event received.");
+                self.intl.online.store(false, Ordering::Relaxed);
             }
 
             Event::Online => {
@@ -78,7 +78,7 @@ impl NodeEventHandler<Network> for Service {
 
             Event::Offline => {
                 d!(self.log, "node is offline.");
-                self.intl.online.store(true, Ordering::Relaxed);
+                self.intl.online.store(false, Ordering::Relaxed);
             }
 
             Event::Trace => {
@@ -108,16 +108,16 @@ impl NodeEventHandler<Network> for Service {
     #[inline(always)]
     fn state_put(&self, obj_type: StateObjectType, obj_id: &[u64], obj_data: &[u8]) -> std::io::Result<()> {
         if !obj_data.is_empty() {
-            self.store.store_object(&obj_type, obj_id, obj_data)
+            self.intl.store.store_object(&obj_type, obj_id, obj_data)
         } else {
-            self.store.erase_object(&obj_type, obj_id);
+            self.intl.store.erase_object(&obj_type, obj_id);
             Ok(())
         }
     }
 
     #[inline(always)]
     fn state_get(&self, obj_type: StateObjectType, obj_id: &[u64]) -> std::io::Result<Vec<u8>> {
-        self.store.load_object(&obj_type, obj_id)
+        self.intl.store.load_object(&obj_type, obj_id)
     }
 
     #[inline(always)]
@@ -160,12 +160,17 @@ impl Service {
     }
 
     /// Get the node running with this service.
-    /// This should never return None, but technically it could if Service
-    /// persisted beyond the life span of Node. Check this to be technically
-    /// pure "safe" Rust.
+    /// This can return None if we are in the midst of shutdown. In this case
+    /// whatever operation is in progress should abort. None will never be
+    /// returned during normal operation.
     #[inline(always)]
     pub fn node(&self) -> Option<Arc<Node<Service, Network>>> {
         self._node.upgrade()
+    }
+
+    #[inline(always)]
+    pub fn store(&self) -> &Arc<Store> {
+        &self.intl.store
     }
 
     #[inline(always)]
@@ -183,7 +188,13 @@ unsafe impl Send for Service {}
 
 unsafe impl Sync for Service {}
 
-async fn run_async(store: &Arc<Store>, auth_token: String, log: Arc<Log>, local_config: Arc<LocalConfig>) -> i32 {
+impl Drop for Service {
+    fn drop(&mut self) {
+        self.log.debug("Service::drop()");
+    }
+}
+
+async fn run_async(store: &Arc<Store>, auth_token: String, log: &Arc<Log>, local_config: Arc<LocalConfig>) -> i32 {
     let mut process_exit_value: i32 = 0;
 
     let mut udp_sockets: BTreeMap<InetAddress, FastUDPSocket> = BTreeMap::new();
@@ -193,12 +204,12 @@ async fn run_async(store: &Arc<Store>, auth_token: String, log: Arc<Log>, local_
     let (interrupt_tx, mut interrupt_rx) = futures::channel::mpsc::channel::<()>(1);
     let mut service = Service {
         log: log.clone(),
-        store: store.clone(),
         _node: Weak::new(),
         intl: Arc::new(ServiceIntl {
             auth_token,
             interrupt: Mutex::new(interrupt_tx),
             local_config: Mutex::new(local_config),
+            store: store.clone(),
             run: AtomicBool::new(true),
             online: AtomicBool::new(false),
         }),
@@ -214,20 +225,17 @@ async fn run_async(store: &Arc<Store>, auth_token: String, log: Arc<Log>, local_
     service._node = Arc::downgrade(&node);
     let service = service; // make immutable after setting node
 
+    let mut local_config = service.local_config();
+    store.write_port(local_config.settings.primary_port);
+
     let mut now: i64 = ms_since_epoch();
     let mut loop_delay = zerotier_core::NODE_BACKGROUND_TASKS_MAX_INTERVAL;
     let mut last_checked_config: i64 = 0;
-    let mut local_config = service.local_config();
     while service.intl.run.load(Ordering::Relaxed) {
         let loop_start = ms_since_epoch();
 
-        // Write zerotier.port which is used by the CLI to know how to reach the HTTP API.
-        //let _ = store.write_port(local_config.settings.primary_port);
-
-        // Wait for (1) loop delay elapsed, (2) a signal to interrupt delay now, or
-        // (3) an external signal to exit.
         tokio::select! {
-            _ = tokio::time::sleep(Duration::from_millis(loop_delay)) => {
+            _ = tokio::time::sleep(Duration::from_millis(loop_delay as u64)) => {
                 now = ms_since_epoch();
                 let actual_delay = now - loop_start;
                 if actual_delay > ((loop_delay as i64) * 4_i64) {
@@ -249,23 +257,20 @@ async fn run_async(store: &Arc<Store>, auth_token: String, log: Arc<Log>, local_
             },
         }
 
-        // Check every CONFIG_CHECK_INTERVAL for changes to either the system configuration
-        // or the node's local configuration and take actions as needed.
         if (now - last_checked_config) >= CONFIG_CHECK_INTERVAL {
             last_checked_config = now;
 
-            // Check for changes to local.conf.
             let new_config = store.read_local_conf(true);
             if new_config.is_ok() {
                 d!(log, "local.conf changed on disk, reloading.");
                 service.set_local_config(new_config.unwrap());
             }
 
-            // Check for and handle configuration changes, some of which require inner loop restart.
             let next_local_config = service.local_config();
             if local_config.settings.primary_port != next_local_config.settings.primary_port {
                 local_web_listeners.0 = None;
                 local_web_listeners.1 = None;
+                store.write_port(next_local_config.settings.primary_port);
             }
             if local_config.settings.log.max_size != next_local_config.settings.log.max_size {
                 log.set_max_size(next_local_config.settings.log.max_size);
@@ -278,6 +283,7 @@ async fn run_async(store: &Arc<Store>, auth_token: String, log: Arc<Log>, local_
             }
             local_config = next_local_config;
 
+            let mut loopback_dev_name = String::new();
             let mut system_addrs: BTreeMap<InetAddress, String> = BTreeMap::new();
             getifaddrs::for_each_address(|addr: &InetAddress, dev: &str| {
                 match addr.ip_scope() {
@@ -292,8 +298,13 @@ async fn run_async(store: &Arc<Store>, auth_token: String, log: Arc<Log>, local_
                                 system_addrs.insert(a, String::from(dev));
                             }
                         }
-                    }
-                    _ => {}
+                    },
+                    IpScope::Loopback => {
+                        if loopback_dev_name.is_empty() {
+                            loopback_dev_name.push_str(dev);
+                        }
+                    },
+                    _ => {},
                 }
             });
 
@@ -378,12 +389,12 @@ async fn run_async(store: &Arc<Store>, auth_token: String, log: Arc<Log>, local_
             }
 
             if local_web_listeners.0.is_none() {
-                let _ = WebListener::new("", SocketAddr::new(IpAddr::from(Ipv4Addr::LOCALHOST), local_config.settings.primary_port), &service).map(|wl| {
+                let _ = WebListener::new(loopback_dev_name.as_str(), SocketAddr::new(IpAddr::from(Ipv4Addr::LOCALHOST), local_config.settings.primary_port), &service).map(|wl| {
                     local_web_listeners.0 = Some(wl);
                 });
             }
             if local_web_listeners.1.is_none() {
-                let _ = WebListener::new("", SocketAddr::new(IpAddr::from(Ipv6Addr::LOCALHOST), local_config.settings.primary_port), &service).map(|wl| {
+                let _ = WebListener::new(loopback_dev_name.as_str(), SocketAddr::new(IpAddr::from(Ipv6Addr::LOCALHOST), local_config.settings.primary_port), &service).map(|wl| {
                     local_web_listeners.1 = Some(wl);
                 });
             }
@@ -396,13 +407,13 @@ async fn run_async(store: &Arc<Store>, auth_token: String, log: Arc<Log>, local_
         loop_delay = node.process_background_tasks(now);
     }
 
-    l!(log, "shutting down normally...");
+    l!(log, "shutting down normally.");
 
     drop(udp_sockets);
     drop(web_listeners);
     drop(local_web_listeners);
-    drop(service);
     drop(node);
+    drop(service);
 
     d!(log, "shutdown complete.");
 
@@ -410,8 +421,6 @@ async fn run_async(store: &Arc<Store>, auth_token: String, log: Arc<Log>, local_
 }
 
 pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
-    let mut process_exit_value: i32 = 0;
-
     let local_config = Arc::new(store.read_local_conf(false).unwrap_or_else(|_| { LocalConfig::default() }));
 
     let log = Arc::new(Log::new(
@@ -451,7 +460,7 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
     }
 
     let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
-    process_exit_value = rt.block_on(async move { run_async(store, auth_token, log, local_config).await });
+    let process_exit_value = rt.block_on(async move { run_async(store, auth_token, &log, local_config).await });
     rt.shutdown_timeout(Duration::from_millis(500));
 
     process_exit_value

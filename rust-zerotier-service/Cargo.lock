@@ -308,17 +308,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "net2"
-version = "0.2.37"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "391630d12b68002ae1e25e8f974306474966550ad82dac6886fb8910c19568ae"
-dependencies = [
- "cfg-if 0.1.10",
- "libc",
- "winapi",
-]
-
-[[package]]
 name = "ntapi"
 version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -675,12 +664,12 @@ dependencies = [
  "hex",
  "hyper",
  "lazy_static",
- "net2",
  "num-derive",
  "num-traits",
  "num_cpus",
  "serde",
  "serde_json",
+ "socket2",
  "tokio",
  "winapi",
  "zerotier-core",

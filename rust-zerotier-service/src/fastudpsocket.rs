@@ -18,6 +18,8 @@ use num_traits::cast::AsPrimitive;
 use std::os::raw::c_int;
 use crate::osdep as osdep;
 
+#[cfg(target_os = "linux")]
+
 /*
  * This is a threaded UDP socket listener for high performance. The fastest way to receive UDP
  * (without heroic efforts like kernel bypass) on most platforms is to create a separate socket
@@ -49,7 +51,7 @@ pub(crate) fn test_bind_udp(port: u16) -> (bool, bool) {
 }
 
 #[cfg(unix)]
-fn bind_udp_socket(_: &str, address: &InetAddress) -> Result<FastUDPRawOsSocket, &'static str> {
+fn bind_udp_socket(_device_name: &str, address: &InetAddress) -> Result<FastUDPRawOsSocket, &'static str> {
     unsafe {
         let af;
         let sa_len;
@@ -93,6 +95,22 @@ fn bind_udp_socket(_: &str, address: &InetAddress) -> Result<FastUDPRawOsSocket,
         #[cfg(any(target_os = "macos", target_os = "ios"))] {
             fl = 1;
             setsockopt_results |= osdep::setsockopt(s, osdep::SOL_SOCKET.as_(), osdep::SO_NOSIGPIPE.as_(), (&mut fl as *mut c_int).cast(), fl_size)
+        }
+
+        #[cfg(target_os = "linux")] {
+            if !_device_name.is_empty() {
+                unsafe {
+                    let _ = std::ffi::CString::new(_device_name).map(|dn| {
+                        let dnb = dn.as_bytes_with_nul();
+                        let _ = osdep::setsockopt(
+                            s.as_(),
+                            osdep::SOL_SOCKET.as_(),
+                            osdep::SO_BINDTODEVICE.as_(),
+                            dnb.as_ptr().cast(),
+                            (dnb.len() - 1).as_());
+                    });
+                }
+            }
         }
 
         if setsockopt_results != 0 {

@@ -21,7 +21,7 @@ lazy_static = "1"
 num-traits = "0"
 num-derive = "0"
 hyper = { version = "0", features = ["http1", "runtime", "server", "client", "tcp", "stream"] }
-net2 = "0.2"
+socket2 = { version = "0", features = ["reuseport", "unix", "pair"] }
 
 [target."cfg(windows)".dependencies]
 winapi = { version = "0.3.9", features = ["handleapi", "ws2ipdef", "ws2tcpip"] }

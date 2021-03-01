@@ -11,31 +11,31 @@
  */
 /****/
 
-use std::any::Any;
 use std::cell::RefCell;
 use std::convert::Infallible;
 use std::net::{SocketAddr, TcpListener};
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
 
-use futures::TryFutureExt;
 use hyper::{Body, Request, Response};
 use hyper::server::Server;
 use hyper::service::{make_service_fn, service_fn};
-use net2::TcpBuilder;
-#[cfg(unix)] use net2::unix::UnixTcpBuilderExt;
 use tokio::task::JoinHandle;
 
 use zerotier_core::InetAddress;
 
 use crate::service::Service;
 
+#[cfg(target_os = "linux")]
+use std::os::unix::io::AsRawFd;
+
+/// Handles API dispatch and other HTTP handler stuff.
 #[inline(always)]
 async fn web_handler(service: Service, req: Request<Body>) -> Result<Response<Body>, Infallible> {
     Ok(Response::new("Hello, World".into()))
 }
 
 /// Listener for http connections to the API or for TCP P2P.
+/// Dropping a listener initiates shutdown of the background hyper Server instance,
+/// but it might not shut down instantly as this occurs asynchronously.
 pub(crate) struct WebListener {
     shutdown_tx: RefCell<Option<tokio::sync::oneshot::Sender<()>>>,
     server: JoinHandle<hyper::Result<()>>,
@@ -45,37 +45,50 @@ impl WebListener {
     /// Create a new "background" TCP WebListener using the current tokio reactor async runtime.
     pub fn new(_device_name: &str, addr: SocketAddr, service: &Service) -> Result<WebListener, Box<dyn std::error::Error>> {
         let listener = if addr.is_ipv4() {
-            let l = TcpBuilder::new_v4();
+            let l = socket2::Socket::new(socket2::Domain::ipv4(), socket2::Type::stream(), Some(socket2::Protocol::tcp()));
             if l.is_err() {
                 return Err(Box::new(l.err().unwrap()));
             }
             let l = l.unwrap();
             #[cfg(unix)] {
-                let _ = l.reuse_port(true);
+                let _ = l.set_reuse_port(true);
             }
             l
         } else {
-            let l = TcpBuilder::new_v6();
+            let l = socket2::Socket::new(socket2::Domain::ipv6(), socket2::Type::stream(), Some(socket2::Protocol::tcp()));
             if l.is_err() {
                 return Err(Box::new(l.err().unwrap()));
             }
             let l = l.unwrap();
-            let _ = l.only_v6(true);
-            #[cfg(unix)] {
-                let _ = l.reuse_port(true);
-            }
+            let _ = l.set_only_v6(true);
             l
         };
-        // TODO: bind to device on Linux?
-        let listener = listener.bind(addr);
-        if listener.is_err() {
-            return Err(Box::new(listener.err().unwrap()));
+
+        #[cfg(target_os = "linux")] {
+            if !_device_name.is_empty() {
+                let sock = listener.as_raw_fd();
+                unsafe {
+                    let _ = std::ffi::CString::new(_device_name).map(|dn| {
+                        let dnb = dn.as_bytes_with_nul();
+                        let _ = crate::osdep::setsockopt(
+                            sock as std::os::raw::c_int,
+                            crate::osdep::SOL_SOCKET as std::os::raw::c_int,
+                            crate::osdep::SO_BINDTODEVICE as std::os::raw::c_int,
+                            dnb.as_ptr().cast(),
+                            (dnb.len() - 1) as crate::osdep::socklen_t);
+                    });
+                }
+            }
         }
-        let listener = listener.unwrap().listen(128);
-        if listener.is_err() {
-            return Err(Box::new(listener.err().unwrap()));
+
+        let addr = socket2::SockAddr::from(addr);
+        if let Err(e) = listener.bind(&addr) {
+            return Err(Box::new(e));
         }
-        let listener = listener.unwrap();
+        if let Err(e) = listener.listen(128) {
+            return Err(Box::new(e));
+        }
+        let listener = listener.into_tcp_listener();
 
         let builder = Server::from_tcp(listener);
         if builder.is_err() {
@@ -109,7 +122,9 @@ impl WebListener {
 
 impl Drop for WebListener {
     fn drop(&mut self) {
-        let _ = self.shutdown_tx.take().map(|tx| { tx.send(()); });
-        self.server.abort();
+        let _ = self.shutdown_tx.take().map(|tx| {
+            let _ = tx.send(());
+            self.server.abort();
+        });
     }
 }
