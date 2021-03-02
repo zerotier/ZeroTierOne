@@ -28,6 +28,7 @@
 #include "FCV.hpp"
 #include "Certificate.hpp"
 #include "Containers.hpp"
+#include "Spinlock.hpp"
 
 namespace ZeroTier {
 
@@ -94,18 +95,28 @@ public:
 	}
 
 	/**
-	 * @return Current best root (lowest latency active root)
+	 * Get current best root
+	 *
+	 * @return Root peer or nullptr if none
 	 */
-	ZT_INLINE SharedPtr< Peer > root(const int64_t now)
+	ZT_INLINE SharedPtr< Peer > root()
 	{
-		RWMutex::RMaybeWLock l(m_roots_l);
-		if (unlikely(m_roots.empty()))
-			return SharedPtr< Peer >();
-		if (unlikely((now - m_lastRankedRoots) > (ZT_PATH_KEEPALIVE_PERIOD / 2))) {
-			l.writing();
-			m_rankRoots(now);
-		}
-		return m_roots.front();
+		l_bestRoot.lock(); // spinlock
+		SharedPtr< Peer > r(m_bestRoot);
+		l_bestRoot.unlock();
+		return r;
+	}
+
+	/**
+	 * Get current best root by setting a result parameter
+	 *
+	 * @param root Set to best root or nullptr if none
+	 */
+	ZT_INLINE void root(SharedPtr< Peer > &root)
+	{
+		l_bestRoot.lock(); // spinlock
+		root = m_bestRoot;
+		l_bestRoot.unlock();
 	}
 
 	/**
@@ -114,12 +125,23 @@ public:
 	void allPeers(Vector< SharedPtr< Peer > > &allPeers, Vector< SharedPtr< Peer > > &rootPeers) const;
 
 	/**
-	 * Do periodic tasks such as database cleanup
+	 * Do periodic tasks such as database cleanup, cert cleanup, root ranking, etc.
 	 *
 	 * @param tPtr Thread pointer
 	 * @param now Current time
 	 */
 	void doPeriodicTasks(void *tPtr, int64_t now);
+
+	/**
+	 * Rank root servers in descending order of quality
+	 *
+	 * @param now Current time
+	 */
+	ZT_INLINE void rankRoots(int64_t now)
+	{
+		Mutex::Lock l(m_roots_l);
+		m_rankRoots(now);
+	}
 
 	/**
 	 * Save all currently known peers to data store
@@ -180,7 +202,6 @@ private:
 
 	const RuntimeEnvironment *const RR;
 
-	int64_t m_lastRankedRoots;
 	Vector< SharedPtr< Peer > > m_roots;
 	Map< Address, SharedPtr< Peer > > m_peers;
 	Map< UniqueID, SharedPtr< Path > > m_paths;
@@ -198,10 +219,13 @@ private:
 	Map< SHA384Hash, p_CertEntry > m_certsBySubjectUniqueID;
 	Map< Fingerprint, Map< SharedPtr< const Certificate >, unsigned int > > m_certsBySubjectIdentity;
 
-	RWMutex m_paths_l; // m_paths
 	RWMutex m_peers_l; // m_peers
-	RWMutex m_roots_l; // m_roots and m_lastRankedRoots
+	RWMutex m_paths_l; // m_paths
+	Mutex m_roots_l;   // m_roots and m_lastRankedRoots
 	Mutex m_certs_l;   // m_certs and friends
+
+	SharedPtr< Peer > m_bestRoot;
+	Spinlock l_bestRoot;
 };
 
 } // namespace ZeroTier

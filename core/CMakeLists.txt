@@ -50,6 +50,7 @@ set(core_headers
 	SelfAwareness.hpp
 	SHA512.hpp
 	SharedPtr.hpp
+	Spinlock.hpp
 	SymmetricKey.hpp
 	TagCredential.hpp
 	Topology.hpp

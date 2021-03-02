@@ -383,10 +383,8 @@ impl<T: NodeEventHandler<N> + Sync + Send + Clone + 'static, N: Sync + Send + 's
     /// (if any) of this function is returned, or None if we are not joined to
     /// this network.
     #[inline(always)]
-    pub fn network<F: FnOnce(&N) -> R, R>(&self, nwid: NetworkId, f: F) -> Option<R> {
-        self.intl.networks_by_id.lock().unwrap().get(&nwid.0).map_or_else(|| {
-            None
-        }, |nw| {
+    pub fn with_network<F: FnOnce(&N) -> R, R>(&self, nwid: NetworkId, f: F) -> Option<R> {
+        self.intl.networks_by_id.lock().unwrap().get(&nwid.0).map_or(None, |nw| {
             Some(f(&*nw))
         })
     }
@@ -504,6 +502,14 @@ impl<T: NodeEventHandler<N> + Sync + Send + Clone + 'static, N: Sync + Send + 's
             }
         }
         c
+    }
+}
+
+impl<T: NodeEventHandler<N> + Sync + Send + Clone + 'static, N: Sync + Send + Clone + 'static> Node<T, N> {
+    /// Get a copy of this network's associated object.
+    /// This is only available if N implements Clone.
+    pub fn network(&self, nwid: NetworkId) -> Option<N> {
+        self.intl.networks_by_id.lock().unwrap().get(&nwid.0).map_or(None, |nw| { Some(nw.as_ref().get_ref().clone()) })
     }
 }
 

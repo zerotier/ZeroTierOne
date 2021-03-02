@@ -31,7 +31,9 @@ namespace ZeroTier {
 
 namespace {
 
-// Structure containing all the core objects for a ZeroTier node to reduce memory allocations.
+/*
+ * All the core objects of ZeroTier in a single struct to reduce allocations.
+ */
 struct _NodeObjects
 {
 	ZT_INLINE _NodeObjects(RuntimeEnvironment *const RR, void *const tPtr, const int64_t now) :
@@ -74,10 +76,11 @@ Node::Node(
 	m_lastPeerPulse(0),
 	m_lastHousekeepingRun(0),
 	m_lastNetworkHousekeepingRun(0),
+	m_lastRootRank(0),
 	m_now(now),
 	m_online(false)
 {
-	ZT_SPEW("starting up...");
+	ZT_SPEW("Node starting up!");
 
 	// Load this node's identity.
 	uint64_t idtmp[2];
@@ -135,27 +138,22 @@ Node::Node(
 		}
 	}
 
-	// This constructs all the components of the ZeroTier core within a single contiguous memory container,
-	// which reduces memory fragmentation and may improve cache locality.
-	ZT_SPEW("initializing subsystem objects...");
+	// Create all the things!
 	m_objects = new _NodeObjects(RR, tPtr, now);
-	ZT_SPEW("node initialized!");
 
+	ZT_SPEW("node initialized!");
 	postEvent(tPtr, ZT_EVENT_UP);
 }
 
 Node::~Node()
 {
-	ZT_SPEW("node destructor run");
+	ZT_SPEW("Node shutting down (destructor called).");
 
 	m_networks_l.lock();
 	m_networks_l.unlock();
 	m_networks.clear();
-	m_networks_l.lock();
-	m_networks_l.unlock();
 
-	if (m_objects)
-		delete (_NodeObjects *)m_objects;
+	delete (_NodeObjects *)m_objects;
 
 	// Let go of cached Buf objects. If other nodes happen to be running in this
 	// same process space new Bufs will be allocated as needed, but this is almost
@@ -166,7 +164,6 @@ Node::~Node()
 
 void Node::shutdown(void *tPtr)
 {
-	ZT_SPEW("explicit shutdown() called");
 	postEvent(tPtr, ZT_EVENT_DOWN);
 	if (RR->topology)
 		RR->topology->saveAll(tPtr);
@@ -200,7 +197,7 @@ ZT_ResultCode Node::processVirtualNetworkFrame(
 {
 	m_now = now;
 	SharedPtr< Network > nw(this->network(nwid));
-	if (nw) {
+	if (likely(nw)) {
 		RR->vl2->onLocalEthernet(tPtr, nw, MAC(sourceMac), MAC(destMac), etherType, vlanId, frameData, frameLength);
 		return ZT_RESULT_OK;
 	} else {
@@ -217,7 +214,6 @@ ZT_ResultCode Node::processBackgroundTasks(
 	Mutex::Lock bl(m_backgroundTasksLock);
 
 	try {
-		// Call peer pulse() method of all peers every ZT_PEER_PULSE_INTERVAL.
 		if ((now - m_lastPeerPulse) >= ZT_PEER_PULSE_INTERVAL) {
 			m_lastPeerPulse = now;
 			ZT_SPEW("running pulse() on each peer...");
@@ -239,7 +235,6 @@ ZT_ResultCode Node::processBackgroundTasks(
 			}
 		}
 
-		// Perform network housekeeping and possibly request new certs and configs every ZT_NETWORK_HOUSEKEEPING_PERIOD.
 		if ((now - m_lastNetworkHousekeepingRun) >= ZT_NETWORK_HOUSEKEEPING_PERIOD) {
 			m_lastHousekeepingRun = now;
 			ZT_SPEW("running networking housekeeping...");
@@ -249,7 +244,6 @@ ZT_ResultCode Node::processBackgroundTasks(
 			}
 		}
 
-		// Clean up other stuff every ZT_HOUSEKEEPING_PERIOD.
 		if ((now - m_lastHousekeepingRun) >= ZT_HOUSEKEEPING_PERIOD) {
 			m_lastHousekeepingRun = now;
 			ZT_SPEW("running housekeeping...");
@@ -269,6 +263,12 @@ ZT_ResultCode Node::processBackgroundTasks(
 			RR->sa->clean(now);
 		}
 
+		if ((now - m_lastRootRank) >= ZT_ROOT_RANK_PERIOD) {
+			m_lastRootRank = now;
+			ZT_SPEW("ranking roots...");
+			RR->topology->rankRoots(now);
+		}
+
 		*nextBackgroundTaskDeadline = now + ZT_TIMER_TASK_INTERVAL;
 	} catch (...) {
 		return ZT_RESULT_FATAL_ERROR_INTERNAL;
@@ -286,7 +286,7 @@ ZT_ResultCode Node::join(
 	Fingerprint fp;
 	if (controllerFingerprint) {
 		fp = *controllerFingerprint;
-		ZT_SPEW("joining network %.16llx with fingerprint %s", nwid, fp.toString().c_str());
+		ZT_SPEW("joining network %.16llx with controller fingerprint %s", nwid, fp.toString().c_str());
 	} else {
 		ZT_SPEW("joining network %.16llx", nwid);
 	}

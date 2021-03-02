@@ -17,8 +17,7 @@
 namespace ZeroTier {
 
 Topology::Topology(const RuntimeEnvironment *renv, void *tPtr, const int64_t now) :
-	RR(renv),
-	m_lastRankedRoots(0)
+	RR(renv)
 {
 	char tmp[32];
 	Dictionary d;
@@ -70,7 +69,7 @@ void Topology::allPeers(Vector< SharedPtr< Peer > > &allPeers, Vector< SharedPtr
 			allPeers.push_back(i->second);
 	}
 	{
-		RWMutex::RLock l(m_roots_l);
+		Mutex::Lock l(m_roots_l);
 		rootPeers = m_roots;
 	}
 }
@@ -83,11 +82,21 @@ void Topology::doPeriodicTasks(void *tPtr, const int64_t now)
 		if (m_cleanCertificates(tPtr, now)) {
 			m_writeTrustStore(tPtr);
 			{
+				Mutex::Lock l2(m_roots_l);
 				RWMutex::Lock l3(m_peers_l);
-				RWMutex::Lock l2(m_roots_l);
 				m_updateRootPeers(tPtr, now);
 			}
 		}
+	}
+
+	// Rank roots and get root lookup map.
+	Vector< uintptr_t > rootLookup;
+	{
+		Mutex::Lock l(m_roots_l);
+		m_rankRoots(now);
+		rootLookup.reserve(m_roots.size());
+		for (Vector< SharedPtr< Peer > >::const_iterator r(m_roots.begin()); r != m_roots.end(); ++r)
+			rootLookup.push_back((uintptr_t)r->ptr());
 	}
 
 	// Cleaning of peers and paths uses a two pass method to avoid write locking
@@ -98,14 +107,6 @@ void Topology::doPeriodicTasks(void *tPtr, const int64_t now)
 	// peers to delete in read lock mode. Second pass: delete peers one by one,
 	// acquiring hard write lock each time to avoid pauses.
 	{
-		Vector< uintptr_t > rootLookup;
-		{
-			RWMutex::RLock l2(m_roots_l);
-			rootLookup.reserve(m_roots.size());
-			for (Vector< SharedPtr< Peer > >::const_iterator r(m_roots.begin()); r != m_roots.end(); ++r)
-				rootLookup.push_back((uintptr_t)r->ptr());
-		}
-
 		Vector< Address > toDelete;
 		{
 			RWMutex::RLock l1(m_peers_l);
@@ -223,8 +224,8 @@ ZT_CertificateError Topology::addCertificate(void *tPtr, const Certificate &cert
 		m_certs[serial] = certEntry;
 
 		if (refreshRootSets) {
+			Mutex::Lock l2(m_roots_l);
 			RWMutex::Lock l3(m_peers_l);
-			RWMutex::Lock l2(m_roots_l);
 			m_updateRootPeers(tPtr, now);
 		}
 
@@ -260,8 +261,8 @@ unsigned int Topology::deleteCertificate(void *tPtr,const uint8_t serialNo[ZT_SH
 		m_cleanCertificates(tPtr, now);
 		m_writeTrustStore(tPtr);
 		{
+			Mutex::Lock l2(m_roots_l);
 			RWMutex::Lock l3(m_peers_l);
-			RWMutex::Lock l2(m_roots_l);
 			m_updateRootPeers(tPtr, now);
 		}
 	}
@@ -306,8 +307,17 @@ struct p_RootRankingComparisonOperator
 void Topology::m_rankRoots(const int64_t now)
 {
 	// assumes m_roots is locked
-	m_lastRankedRoots = now;
 	std::sort(m_roots.begin(), m_roots.end(), p_RootRankingComparisonOperator());
+
+	if (unlikely(m_roots.empty())) {
+		l_bestRoot.lock();
+		m_bestRoot.zero();
+		l_bestRoot.unlock();
+	} else {
+		l_bestRoot.lock();
+		m_bestRoot = m_roots.front();
+		l_bestRoot.unlock();
+	}
 }
 
 void Topology::m_eraseCertificate(void *tPtr, const SharedPtr< const Certificate > &cert, const SHA384Hash *uniqueIdHash)

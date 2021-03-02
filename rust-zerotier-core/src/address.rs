@@ -13,6 +13,7 @@
 
 use std::cmp::Ordering;
 
+#[derive(Copy)]
 pub struct Address(pub u64);
 
 impl From<&[u8]> for Address {

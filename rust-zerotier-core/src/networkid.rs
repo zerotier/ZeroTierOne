@@ -13,6 +13,7 @@
 
 use std::cmp::Ordering;
 
+#[derive(Copy)]
 pub struct NetworkId(pub u64);
 
 impl NetworkId {

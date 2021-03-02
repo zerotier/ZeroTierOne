@@ -30,11 +30,11 @@ template< typename T >
 class SharedPtr : public TriviallyCopyable
 {
 public:
-	ZT_INLINE SharedPtr() noexcept: m_ptr((T *)0)
+	ZT_INLINE SharedPtr() noexcept: m_ptr(nullptr)
 	{}
 
 	explicit ZT_INLINE SharedPtr(T *obj) noexcept: m_ptr(obj)
-	{ if (likely(obj != nullptr)) ++*const_cast<std::atomic< int > *>(&(obj->__refCount)); }
+	{ if (likely(obj != nullptr)) const_cast<std::atomic< int > *>(&(obj->__refCount))->fetch_add(1, std::memory_order_relaxed); }
 
 	ZT_INLINE SharedPtr(const SharedPtr &sp) noexcept: m_ptr(sp._getAndInc())
 	{}
@@ -42,7 +42,7 @@ public:
 	ZT_INLINE ~SharedPtr()
 	{
 		if (likely(m_ptr != nullptr)) {
-			if (unlikely(--*const_cast<std::atomic< int > *>(&(m_ptr->__refCount)) <= 0))
+			if (unlikely(const_cast<std::atomic< int > *>(&(m_ptr->__refCount))->fetch_sub(1, std::memory_order_relaxed) <= 0))
 				delete m_ptr;
 		}
 	}
@@ -50,9 +50,9 @@ public:
 	ZT_INLINE SharedPtr &operator=(const SharedPtr &sp)
 	{
 		if (likely(m_ptr != sp.m_ptr)) {
-			T *p = sp._getAndInc();
+			T *const p = sp._getAndInc();
 			if (likely(m_ptr != nullptr)) {
-				if (unlikely(--*const_cast<std::atomic< int > *>(&(m_ptr->__refCount)) <= 0))
+				if (unlikely(const_cast<std::atomic< int > *>(&(m_ptr->__refCount))->fetch_sub(1, std::memory_order_relaxed) <= 0))
 					delete m_ptr;
 			}
 			m_ptr = p;
@@ -60,30 +60,15 @@ public:
 		return *this;
 	}
 
-	/**
-	 * Set to a naked pointer and increment its reference count
-	 *
-	 * This assumes this SharedPtr is NULL and that ptr is not a 'zombie.' No
-	 * checks are performed.
-	 *
-	 * @param ptr Naked pointer to assign
-	 */
 	ZT_INLINE void set(T *ptr) noexcept
 	{
-		zero();
-		++*const_cast<std::atomic< int > *>(&(ptr->__refCount));
+		if (likely(m_ptr != nullptr)) {
+			if (unlikely(const_cast<std::atomic< int > *>(&(m_ptr->__refCount))->fetch_sub(1, std::memory_order_relaxed) <= 0))
+				delete m_ptr;
+		}
+		const_cast<std::atomic< int > *>(&(ptr->__refCount))->fetch_add(1, std::memory_order_relaxed);
 		m_ptr = ptr;
 	}
-
-	/**
-	 * Stupidly set this SharedPtr to 'ptr', ignoring current value and not incrementing reference counter
-	 *
-	 * This must only be used in code that knows what it's doing. :)
-	 *
-	 * @param ptr Pointer to set
-	 */
-	ZT_INLINE void unsafeSet(T *ptr) noexcept
-	{ m_ptr = ptr; }
 
 	/**
 	 * Swap with another pointer 'for free' without ref count overhead
@@ -92,7 +77,7 @@ public:
 	 */
 	ZT_INLINE void swap(SharedPtr &with) noexcept
 	{
-		T *tmp = m_ptr;
+		T *const tmp = m_ptr;
 		m_ptr = with.m_ptr;
 		with.m_ptr = tmp;
 	}
@@ -107,8 +92,8 @@ public:
 	 */
 	ZT_INLINE void move(SharedPtr &from)
 	{
-		if (likely(m_ptr != nullptr)) {
-			if (--*const_cast<std::atomic< int > *>(&(m_ptr->__refCount)) <= 0)
+		if (m_ptr != nullptr) {
+			if (const_cast<std::atomic< int > *>(&(m_ptr->__refCount))->fetch_sub(1, std::memory_order_relaxed) <= 0)
 				delete m_ptr;
 		}
 		m_ptr = from.m_ptr;
@@ -136,7 +121,7 @@ public:
 	ZT_INLINE void zero()
 	{
 		if (likely(m_ptr != nullptr)) {
-			if (unlikely(--*const_cast<std::atomic< int > *>(&(m_ptr->__refCount)) <= 0))
+			if (unlikely(const_cast<std::atomic< int > *>(&(m_ptr->__refCount))->fetch_sub(1, std::memory_order_relaxed) <= 0))
 				delete m_ptr;
 			m_ptr = nullptr;
 		}
@@ -203,8 +188,8 @@ public:
 private:
 	ZT_INLINE T *_getAndInc() const noexcept
 	{
-		if (m_ptr)
-			++*const_cast<std::atomic< int > *>(&(m_ptr->__refCount));
+		if (likely(m_ptr))
+			const_cast<std::atomic< int > *>(&(m_ptr->__refCount))->fetch_add(1, std::memory_order_relaxed);
 		return m_ptr;
 	}
 

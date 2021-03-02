@@ -111,6 +111,11 @@
 #define ZT_NETWORK_HOUSEKEEPING_PERIOD 30000
 
 /**
+ * How often to rank roots
+ */
+#define ZT_ROOT_RANK_PERIOD 5000
+
+/**
  * Delay between WHOIS retries in ms
  */
 #define ZT_WHOIS_RETRY_DELAY 500

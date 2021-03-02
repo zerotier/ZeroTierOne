@@ -188,12 +188,6 @@ unsafe impl Send for Service {}
 
 unsafe impl Sync for Service {}
 
-impl Drop for Service {
-    fn drop(&mut self) {
-        self.log.debug("Service::drop()");
-    }
-}
-
 async fn run_async(store: &Arc<Store>, auth_token: String, log: &Arc<Log>, local_config: Arc<LocalConfig>) -> i32 {
     let mut process_exit_value: i32 = 0;
 

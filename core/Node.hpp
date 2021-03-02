@@ -409,6 +409,7 @@ private:
 	int64_t m_lastPeerPulse;
 	int64_t m_lastHousekeepingRun;
 	int64_t m_lastNetworkHousekeepingRun;
+	int64_t m_lastRootRank;
 
 	// This is the most recent value for time passed in via any of the core API methods.
 	std::atomic< int64_t > m_now;

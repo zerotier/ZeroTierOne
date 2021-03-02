@@ -13,6 +13,7 @@
 
 use std::cmp::Ordering;
 
+#[derive(Copy)]
 pub struct MAC(pub u64);
 
 impl ToString for MAC {
