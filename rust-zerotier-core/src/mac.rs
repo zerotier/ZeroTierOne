@@ -13,7 +13,7 @@
 
 use std::cmp::Ordering;
 
-#[derive(Copy)]
+#[derive(PartialEq, Eq, Clone, Copy)]
 pub struct MAC(pub u64);
 
 impl ToString for MAC {
@@ -41,15 +41,6 @@ impl serde::Serialize for MAC {
     }
 }
 
-impl PartialEq for MAC {
-    #[inline(always)]
-    fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0
-    }
-}
-
-impl Eq for MAC {}
-
 impl Ord for MAC {
     #[inline(always)]
     fn cmp(&self, other: &Self) -> Ordering {
@@ -61,13 +52,6 @@ impl PartialOrd for MAC {
     #[inline(always)]
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.0.cmp(&other.0))
-    }
-}
-
-impl Clone for MAC {
-    #[inline(always)]
-    fn clone(&self) -> Self {
-        MAC(self.0)
     }
 }
 

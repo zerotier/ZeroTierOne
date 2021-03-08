@@ -41,9 +41,10 @@ Topology::Topology(const RuntimeEnvironment *renv, void *tPtr, const int64_t now
 					addCertificate(tPtr, cert, now, (unsigned int)d.getUI(Dictionary::arraySubscript(tmp, sizeof(tmp), "c$.lt", idx)), false, false, false);
 			}
 		}
-		m_cleanCertificates(tPtr, now);
-		m_updateRootPeers(tPtr, now);
 	}
+
+	m_cleanCertificates(tPtr, now);
+	m_updateRootPeers(tPtr, now);
 }
 
 SharedPtr< Peer > Topology::add(void *tPtr, const SharedPtr< Peer > &peer)
@@ -89,7 +90,7 @@ void Topology::doPeriodicTasks(void *tPtr, const int64_t now)
 		}
 	}
 
-	// Rank roots and get root lookup map.
+	// Get a list of root peer pointer addresses for filtering during peer cleanup.
 	Vector< uintptr_t > rootLookup;
 	{
 		Mutex::Lock l(m_roots_l);
@@ -102,17 +103,12 @@ void Topology::doPeriodicTasks(void *tPtr, const int64_t now)
 	// Cleaning of peers and paths uses a two pass method to avoid write locking
 	// m_peers or m_paths for any significant amount of time. This avoids pauses
 	// on nodes with large numbers of peers or paths.
-
-	// Delete peers that are stale or offline and are not roots. First pass: grab
-	// peers to delete in read lock mode. Second pass: delete peers one by one,
-	// acquiring hard write lock each time to avoid pauses.
 	{
 		Vector< Address > toDelete;
 		{
 			RWMutex::RLock l1(m_peers_l);
 			for (Map< Address, SharedPtr< Peer > >::iterator i(m_peers.begin()); i != m_peers.end(); ++i) {
-				// TODO: also delete if the peer has not exchanged meaningful communication in a while, such as
-				// a network frame or non-trivial control packet.
+				// TODO: also delete if the peer has not exchanged meaningful communication in a while, such as a network frame or non-trivial control packet.
 				if (((now - i->second->lastReceive()) > ZT_PEER_ALIVE_TIMEOUT) && (std::find(rootLookup.begin(), rootLookup.end(), (uintptr_t)(i->second.ptr())) == rootLookup.end()))
 					toDelete.push_back(i->first);
 			}
@@ -307,13 +303,12 @@ struct p_RootRankingComparisonOperator
 void Topology::m_rankRoots(const int64_t now)
 {
 	// assumes m_roots is locked
-	std::sort(m_roots.begin(), m_roots.end(), p_RootRankingComparisonOperator());
-
 	if (unlikely(m_roots.empty())) {
 		l_bestRoot.lock();
 		m_bestRoot.zero();
 		l_bestRoot.unlock();
 	} else {
+		std::sort(m_roots.begin(), m_roots.end(), p_RootRankingComparisonOperator());
 		l_bestRoot.lock();
 		m_bestRoot = m_roots.front();
 		l_bestRoot.unlock();

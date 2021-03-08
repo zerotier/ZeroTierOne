@@ -16,13 +16,13 @@
 #include "AES.hpp"
 #include "SHA512.hpp"
 
+#include <time.h>
+
 #ifdef __UNIX_LIKE__
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/uio.h>
 #endif
-
-#include <time.h>
 
 #ifdef __WINDOWS__
 #include <intrin.h>
@@ -64,13 +64,13 @@ static inline long getauxval(int caps)
 #define HWCAP_SHA2 0
 #endif
 
-#endif // ZT_ARCH_ARM_HAS_NEON
+#endif /* ZT_ARCH_ARM_HAS_NEON */
 
 namespace ZeroTier {
 
 namespace Utils {
 
-#ifdef ZT_ARCH_ARM_HAS_NEON /****************************************************************************************/
+#ifdef ZT_ARCH_ARM_HAS_NEON
 ARMCapabilities::ARMCapabilities() noexcept
 {
 
@@ -111,9 +111,9 @@ ARMCapabilities::ARMCapabilities() noexcept
 }
 
 const ARMCapabilities ARMCAP;
-#endif /*************************************************************************************************************/
+#endif /* ZT_ARCH_ARM_HAS_NEON */
 
-#ifdef ZT_ARCH_X64 /*************************************************************************************************/
+#ifdef ZT_ARCH_X64
 CPUIDRegisters::CPUIDRegisters() noexcept
 {
 	uint32_t eax, ebx, ecx, edx;
@@ -160,7 +160,7 @@ CPUIDRegisters::CPUIDRegisters() noexcept
 }
 
 const CPUIDRegisters CPUID;
-#endif /*************************************************************************************************************/
+#endif /* ZT_ARCH_X64 */
 
 const std::bad_alloc BadAllocException;
 const std::out_of_range OutOfRangeException("access out of range");
@@ -313,28 +313,29 @@ void getSecureRandom(void *const buf, unsigned int bytes) noexcept
 
 	Mutex::Lock gl(globalLock);
 
-	// Re-initialize the generator every ITERATIONS_PER_GENERATOR bytes.
-	if (unlikely((randomByteCounter += bytes) >= ZT_GETSECURERANDOM_ITERATIONS_PER_GENERATOR)) {
-		// On first run fill randomState with random bits from the system.
+	// Re-initialize the PRNG every ZT_GETSECURERANDOM_ITERATIONS_PER_GENERATOR bytes. Note that
+	// if 'bytes' is larger than ZT_GETSECURERANDOM_ITERATIONS_PER_GENERATOR we can generate more
+	// than this, but this isn't an issue. ZT_GETSECURERANDOM_ITERATIONS_PER_GENERATOR could be
+	// much larger if we wanted and this would still be safe.
+	randomByteCounter += bytes;
+	if (unlikely(randomByteCounter >= ZT_GETSECURERANDOM_ITERATIONS_PER_GENERATOR)) {
+		randomByteCounter = 0;
+
 		if (unlikely(!initialized)) {
 			initialized = true;
-
-			// Don't let randomState be swapped to disk (if supported by OS).
 			Utils::memoryLock(randomState, sizeof(randomState));
-
-			// Fill randomState with entropy from the system. Failure equals hard exit.
 			Utils::zero< sizeof(randomState) >(randomState);
 #ifdef __WINDOWS__
 			HCRYPTPROV cryptProvider = NULL;
-				if (!CryptAcquireContextA(&cryptProvider,NULL,NULL,PROV_RSA_FULL,CRYPT_VERIFYCONTEXT|CRYPT_SILENT)) {
-					fprintf(stderr,"FATAL: Utils::getSecureRandom() unable to obtain WinCrypt context!\r\n");
-					exit(1);
-				}
-				if (!CryptGenRandom(cryptProvider,(DWORD)sizeof(randomState),(BYTE *)randomState)) {
-					fprintf(stderr,"FATAL: Utils::getSecureRandom() CryptGenRandom failed!\r\n");
-					exit(1);
-				}
-				CryptReleaseContext(cryptProvider,0);
+			if (!CryptAcquireContextA(&cryptProvider,NULL,NULL,PROV_RSA_FULL,CRYPT_VERIFYCONTEXT|CRYPT_SILENT)) {
+				fprintf(stderr,"FATAL: Utils::getSecureRandom() unable to obtain WinCrypt context!\r\n");
+				exit(1);
+			}
+			if (!CryptGenRandom(cryptProvider,(DWORD)sizeof(randomState),(BYTE *)randomState)) {
+				fprintf(stderr,"FATAL: Utils::getSecureRandom() CryptGenRandom failed!\r\n");
+				exit(1);
+			}
+			CryptReleaseContext(cryptProvider,0);
 #else
 			int devURandomFd = ::open("/dev/urandom", O_RDONLY);
 			if (devURandomFd < 0) {
@@ -348,19 +349,17 @@ void getSecureRandom(void *const buf, unsigned int bytes) noexcept
 			}
 			close(devURandomFd);
 #endif
-
 #ifdef __UNIX_LIKE__
 			randomState[0] += (uint64_t)getpid();
 			randomState[1] += (uint64_t)getppid();
 #endif
 #ifdef ZT_ARCH_X64
 			if (CPUID.rdrand) {
-				// RDRAND is very slow on some chips, so only sample it a little bit for extra entropy.
 				uint64_t tmp = 0;
-				_rdrand64_step((unsigned long long *)&tmp);
-				randomState[2] ^= tmp;
-				_rdrand64_step((unsigned long long *)&tmp);
-				randomState[3] ^= tmp;
+				for (unsigned long i = 0; i < ZT_GETSECURERANDOM_STATE_SIZE; ++i) {
+					_rdrand64_step((unsigned long long *)&tmp);
+					randomState[i] ^= tmp;
+				}
 			}
 #endif
 		}
@@ -368,10 +367,7 @@ void getSecureRandom(void *const buf, unsigned int bytes) noexcept
 		// Initialize or re-initialize generator by hashing the full state,
 		// replacing the first 64 bytes with this hash, and then re-initializing
 		// AES with the first 32 bytes.
-		randomByteCounter = 0;
-		randomState[4] += (uint64_t)((uintptr_t)buf);
-		randomState[5] += (uint64_t)bytes;
-		randomState[6] += (uint64_t)time(nullptr);
+		randomState[0] += (uint64_t)time(nullptr);
 		SHA512(randomState, randomState, sizeof(randomState));
 		randomGen.init(randomState);
 	}
@@ -381,12 +377,14 @@ void getSecureRandom(void *const buf, unsigned int bytes) noexcept
 	// for a random generator.
 	uint64_t *const ctr = randomState + 4;
 	uint8_t *out = reinterpret_cast<uint8_t *>(buf);
+
 	while (bytes >= 16) {
 		++*ctr;
 		randomGen.encrypt(ctr, out);
 		out += 16;
 		bytes -= 16;
 	}
+
 	if (bytes > 0) {
 		uint8_t tmp[16];
 		++*ctr;
@@ -482,19 +480,18 @@ int b32d(const char *encoded, uint8_t *result, int bufSize) noexcept
 
 uint64_t random() noexcept
 {
-	// https://en.wikipedia.org/wiki/Xorshift#xoshiro256**
-
 	static volatile uint64_t s_s0 = getSecureRandomU64();
 	static volatile uint64_t s_s1 = getSecureRandomU64();
 	static volatile uint64_t s_s2 = getSecureRandomU64();
 	static volatile uint64_t s_s3 = getSecureRandomU64();
 
+	// https://en.wikipedia.org/wiki/Xorshift#xoshiro256**
 	uint64_t s0 = s_s0;
 	uint64_t s1 = s_s1;
 	uint64_t s2 = s_s2;
 	uint64_t s3 = s_s3;
-	const uint64_t s1x5 = s1 * 5;
-	const uint64_t result = ((s1x5 << 7U) | (s1x5 >> 57U)) * 9;
+	const uint64_t s1x5 = s1 * 5ULL;
+	const uint64_t result = ((s1x5 << 7U) | (s1x5 >> 57U)) * 9ULL;
 	const uint64_t t = s1 << 17U;
 	s2 ^= s0;
 	s3 ^= s1;
@@ -512,9 +509,10 @@ uint64_t random() noexcept
 
 bool scopy(char *const dest, const unsigned int len, const char *const src) noexcept
 {
-	if (!len)
-		return false; // sanity check
-	if (!src) {
+	if (unlikely((len == 0)||(dest == nullptr))) {
+		return false;
+	}
+	if (unlikely(src == nullptr)) {
 		*dest = (char)0;
 		return true;
 	}
@@ -524,8 +522,9 @@ bool scopy(char *const dest, const unsigned int len, const char *const src) noex
 			dest[len - 1] = 0;
 			return false;
 		}
-		if ((dest[i] = src[i]) == 0)
+		if ((dest[i] = src[i]) == 0) {
 			return true;
+		}
 		++i;
 	}
 }

@@ -14,9 +14,14 @@
 #ifndef ZT_SPINLOCK_HPP
 #define ZT_SPINLOCK_HPP
 
-#include "OS.hpp"
+#include "Constants.hpp"
+#include "Mutex.hpp"
 
+#ifdef __LINUX__
+#include <sched.h>
+#else
 #include <thread>
+#endif
 
 /**
  * Simple spinlock
@@ -27,14 +32,18 @@
 class Spinlock
 {
 public:
-	ZT_INLINE Spinlock() noexcept
-	{ m_locked.clear(); }
+	ZT_INLINE Spinlock() noexcept: m_locked(false)
+	{}
 
 	ZT_INLINE void lock() noexcept
 	{
 		if (unlikely(m_locked.test_and_set(std::memory_order_acquire))) {
 			do {
+#ifdef __LINUX__
+				sched_yield();
+#else
 				std::this_thread::yield();
+#endif
 			} while (m_locked.test_and_set(std::memory_order_acquire));
 		}
 	}

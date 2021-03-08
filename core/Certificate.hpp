@@ -52,7 +52,7 @@ class Certificate : public ZT_Certificate
 
 public:
 	Certificate() noexcept;
-	Certificate(const ZT_Certificate &apiCert);
+	explicit Certificate(const ZT_Certificate &apiCert);
 	Certificate(const Certificate &cert);
 	~Certificate();
 

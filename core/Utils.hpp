@@ -60,12 +60,7 @@ namespace Utils {
 struct ARMCapabilities
 {
 	ARMCapabilities() noexcept;
-
-	bool aes;
-	bool crc32;
-	bool pmull;
-	bool sha1;
-	bool sha2;
+	bool aes, crc32, pmull, sha1, sha2;
 };
 extern const ARMCapabilities ARMCAP;
 #endif
@@ -74,16 +69,7 @@ extern const ARMCapabilities ARMCAP;
 struct CPUIDRegisters
 {
 	CPUIDRegisters() noexcept;
-
-	bool rdrand;
-	bool aes;
-	bool avx;
-	bool vaes; // implies AVX
-	bool vpclmulqdq; // implies AVX
-	bool avx2;
-	bool avx512f;
-	bool sha;
-	bool fsrm;
+	bool rdrand, aes, avx, vaes, vpclmulqdq, avx2, avx512f, sha, fsrm;
 };
 extern const CPUIDRegisters CPUID;
 #endif

@@ -11,6 +11,8 @@
  */
 /****/
 
+// AES for ARM crypto extensions and NEON.
+
 #include "Constants.hpp"
 #include "AES.hpp"
 

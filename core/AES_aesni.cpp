@@ -11,6 +11,9 @@
  */
 /****/
 
+// AES for X64 AES-NI extensions (no 32-bit X86 support). Supports AVX2 and
+// AVX512 VAES for performance in excess of 10GiB/sec/core on newer chips.
+
 #include "Constants.hpp"
 #include "AES.hpp"
 

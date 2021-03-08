@@ -45,8 +45,8 @@ const uint32_t ZT_MIMC52_PRIMES[1024] = {4294895267, 4294895477, 4294895513, 429
 
 #ifdef ZT_NO_IEEE_DOUBLE
 
-// Integer 64-bit modular multiply for systems without an IEEE FPU. This is
-// much slower on systems that can use the FPU hack.
+/* Integer 64-bit modular multiply for systems without an IEEE FPU. This is
+ * much slower on systems that can use the FPU hack. */
 static uint64_t mulmod64(uint64_t a, uint64_t b, const uint64_t m)
 {
 	uint64_t res = 0;
@@ -63,6 +63,10 @@ static uint64_t mulmod64(uint64_t a, uint64_t b, const uint64_t m)
 
 #else
 
+/* If we have IEEE double precision FPU support, we can do this trick to
+ * execute a 52-bit mulmod faster than the integer ALU. This trick is why
+ * this is a 52-bit work function and not a 64-bit work function, as it
+ * performs fairly equally across CPUs. */
 ZT_INLINE uint64_t mulmod52(uint64_t a, const uint64_t b, const uint64_t m, const double mf)
 {
 	a = ( ( a * b ) - ( ((uint64_t)(((double)a * (double)b) / mf) - 1) * m ) );

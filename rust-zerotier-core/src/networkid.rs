@@ -13,7 +13,7 @@
 
 use std::cmp::Ordering;
 
-#[derive(Copy)]
+#[derive(PartialEq, Eq, Clone, Copy)]
 pub struct NetworkId(pub u64);
 
 impl NetworkId {
@@ -56,22 +56,6 @@ impl PartialOrd for NetworkId {
         Some(self.0.cmp(&other.0))
     }
 }
-
-impl PartialEq for NetworkId {
-    #[inline(always)]
-    fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0
-    }
-}
-
-impl Clone for NetworkId {
-    #[inline(always)]
-    fn clone(&self) -> Self {
-        NetworkId(self.0)
-    }
-}
-
-impl Eq for NetworkId {}
 
 impl serde::Serialize for NetworkId {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {

@@ -222,9 +222,15 @@ Vector< uint8_t > Certificate::encode(const bool omitSignature) const
 	Vector< uint8_t > enc;
 	Dictionary d;
 
-	// A Dictionary is used to encode certificates as it's a common and extensible
-	// format. Custom packed formats are used for credentials as these are smaller
-	// and faster to marshal/unmarshal.
+	/*
+	 * A Dictionary is used to encode certificates as it's a common and extensible
+	 * format. Custom packed formats are used for credentials as these are smaller
+	 * and faster to marshal/unmarshal.
+	 *
+	 * We use the slower actually-insert-keys method of building a dictionary
+	 * instead of the faster append method because for signing and verification
+	 * purposes the keys must be always be in order.
+	 */
 
 	if (this->flags != 0)
 		d.add("f", this->flags);

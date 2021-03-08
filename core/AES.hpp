@@ -190,21 +190,22 @@ public:
 		{
 			_rp = 0;
 			_len = 0;
+
 			// We fill the least significant 32 bits in the _iv field with 1 since in GCM mode
-			// this would hold the counter, but we're not doing GCM. The counter is therefore
-			// always 1.
+			// this would hold the counter, but we're not doing GCM just GMAC. That means the
+			// counter always stays just 1.
 #ifdef ZT_AES_AESNI // also implies an x64 processor
 			*reinterpret_cast<uint64_t *>(_iv) = *reinterpret_cast<const uint64_t *>(iv);
 			*reinterpret_cast<uint32_t *>(_iv + 8) = *reinterpret_cast<const uint64_t *>(iv + 8);
 			*reinterpret_cast<uint32_t *>(_iv + 12) = 0x01000000; // 0x00000001 in big-endian byte order
 #else
-			for(int i=0;i<12;++i)
-				_iv[i] = iv[i];
+			Utils::copy<12>(_iv, iv);
 			_iv[12] = 0;
 			_iv[13] = 0;
 			_iv[14] = 0;
 			_iv[15] = 1;
 #endif
+
 			_y[0] = 0;
 			_y[1] = 0;
 		}
@@ -247,7 +248,8 @@ public:
 	 * Streaming AES-CTR encrypt/decrypt
 	 *
 	 * NOTE: this doesn't support overflow of the counter in the least significant 32 bits.
-	 * AES-GMAC-CTR doesn't need this, so we don't support it as an optimization.
+	 * We will never encrypt more than a tiny fraction of 2^32 blocks, so this is left out as
+	 * an optimization.
 	 */
 	class CTR
 	{
@@ -359,10 +361,9 @@ public:
 		/**
 		 * Process AAD (additional authenticated data) that is not being encrypted.
 		 *
-		 * If such data exists this must be called before update1() and finish1().
-		 *
-		 * Note: current code only supports one single chunk of AAD. Don't call this
-		 * multiple times per message.
+		 * This MUST be called before update1() and finish1() if there is AAD to
+		 * be included. This also MUST NOT be called more than once as the current
+		 * code only supports one chunk of AAD.
 		 *
 		 * @param aad Additional authenticated data
 		 * @param len Length of AAD in bytes
@@ -375,7 +376,7 @@ public:
 			// End of AAD is padded to a multiple of 16 bytes to ensure unique encoding.
 			len &= 0xfU;
 			if (len != 0)
-				_gmac.update(Utils::ZERO256, 16 - len);
+				_gmac.update(Utils::ZERO256, 16U - len);
 		}
 
 		/**
@@ -401,7 +402,7 @@ public:
 			// this get split into the packet ID (64 bits) and the MAC (64 bits) in each
 			// packet and then recombined on receipt for legacy reasons (but with no
 			// cryptographic or performance impact).
-			_tag[1] = tmp[0] ^ tmp[1];
+			_tag[1] = tmp[0] ^ tmp[1]; // NOTE: _tag[0] already contains message IV, see init()
 			_ctr._aes.encrypt(_tag, _tag);
 
 			// Initialize CTR with 96-bit CTR nonce and 32-bit counter. The counter
@@ -420,8 +421,9 @@ public:
 		/**
 		 * Second pass plaintext input function
 		 *
-		 * The same plaintext must be fed in the second time in the same order,
-		 * though chunk boundaries do not have to be the same.
+		 * The same plaintext must be fed in the second time. Chunk boundaries
+		 * (between calls to update2()) do not have to be the same, just the order
+		 * of the bytes.
 		 *
 		 * @param input Plaintext chunk
 		 * @param len Length of plaintext chunk
