@@ -242,7 +242,7 @@ static void _networkToJson(nlohmann::json &nj,const ZT_VirtualNetworkConfig *nc,
 	m["domain"] = nc->dns.domain;
 	m["servers"] = nlohmann::json::array();
 	for(int j=0;j<ZT_MAX_DNS_SERVERS;++j) {
-		
+
 		InetAddress a(nc->dns.server_addr[j]);
 		if (a.isV4() || a.isV6()) {
 			char buf[256];
@@ -250,7 +250,7 @@ static void _networkToJson(nlohmann::json &nj,const ZT_VirtualNetworkConfig *nc,
 		}
 	}
 	nj["dns"] = m;
-	
+
 }
 
 static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer)
@@ -274,10 +274,12 @@ static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer)
 	pj["latency"] = peer->latency;
 	pj["role"] = prole;
 	pj["isBonded"] = peer->isBonded;
-	pj["bondingPolicy"] = peer->bondingPolicy;
-	pj["isHealthy"] = peer->isHealthy;
-	pj["numAliveLinks"] = peer->numAliveLinks;
-	pj["numTotalLinks"] = peer->numTotalLinks;
+	if (peer->isBonded) {
+		pj["bondingPolicy"] = peer->bondingPolicy;
+		pj["isHealthy"] = peer->isHealthy;
+		pj["numAliveLinks"] = peer->numAliveLinks;
+		pj["numTotalLinks"] = peer->numTotalLinks;
+	}
 
 	nlohmann::json pa = nlohmann::json::array();
 	for(unsigned int i=0;i<peer->pathCount;++i) {
@@ -3049,7 +3051,9 @@ public:
 				if (!strncmp(p->c_str(),ifname,p->length()))
 					return false;
 			}
-			return _node->bondController()->allowedToBind(std::string(ifname));
+			if (!_node->bondController()->allowedToBind(std::string(ifname))) {
+				return false;
+			}
 		}
 		{
 			// Check global blacklists
