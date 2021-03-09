@@ -287,7 +287,7 @@ static int cli(int argc,char **argv)
 			}
 #endif
 			if (!authToken.length()) {
-				fprintf(stderr,"%s: missing authentication token and authtoken.secret not found (or readable) in %s" ZT_EOL_S,argv[0],homeDir.c_str());
+				fprintf(stderr,"%s: authtoken.secret not found or readable in %s (try again as root)" ZT_EOL_S,argv[0],homeDir.c_str());
 				return 2;
 			}
 		}
@@ -1070,7 +1070,7 @@ static int cli(int argc,char **argv)
 	} else if (command == "dump") {
 		std::stringstream dump;
 		dump << "platform: ";
-#ifdef __APPLE__ 
+#ifdef __APPLE__
 		dump << "macOS" << ZT_EOL_S;
 #elif defined(_WIN32)
 		dump << "Windows" << ZT_EOL_S;
@@ -1188,7 +1188,7 @@ static int cli(int argc,char **argv)
 		UInt8 path[PATH_MAX];
 		if (FSFindFolder(kUserDomain, kDesktopFolderType, kDontCreateFolder, &fsref) == noErr &&
 				FSRefMakePath(&fsref, path, sizeof(path)) == noErr) {
-			
+
 		} else if (getenv("SUDO_USER")) {
 			sprintf((char*)path, "/Users/%s/Desktop/", getenv("SUDO_USER"));
 		} else {
@@ -1204,12 +1204,12 @@ static int cli(int argc,char **argv)
 			fprintf(stderr, "Error creating file.\n");
 			return 1;
 		}
-		write(fd, dump.str().c_str(), dump.str().size());	
+		write(fd, dump.str().c_str(), dump.str().size());
 		close(fd);
 #elif defined(_WIN32)
 		ULONG buffLen = 16384;
 		PIP_ADAPTER_ADDRESSES addresses;
-		
+
 		ULONG ret = 0;
 		do {
 			addresses = (PIP_ADAPTER_ADDRESSES)malloc(buffLen);
@@ -1223,7 +1223,7 @@ static int cli(int argc,char **argv)
 				break;
 			}
 		} while (ret == ERROR_BUFFER_OVERFLOW);
-		
+
 		int i = 0;
 		if (ret == NO_ERROR) {
 			PIP_ADAPTER_ADDRESSES curAddr = addresses;
@@ -1311,9 +1311,9 @@ static int cli(int argc,char **argv)
 		char buf[1024];
 		char stringBuffer[128];
 		int success = 0;
-		
+
 		int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
-		
+
 		ifc.ifc_len = sizeof(buf);
 		ifc.ifc_buf = buf;
 		ioctl(sock, SIOCGIFCONF, &ifc);
@@ -1376,7 +1376,7 @@ static int cli(int argc,char **argv)
 			fprintf(stderr, "Error creating file.\n");
 			return 1;
 		}
-		write(fd, dump.str().c_str(), dump.str().size());	
+		write(fd, dump.str().c_str(), dump.str().size());
 		close(fd);
 #else
 	fprintf(stderr, "%s", dump.str().c_str());
