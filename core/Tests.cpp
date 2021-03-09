@@ -649,18 +649,18 @@ extern "C" const char *ZTT_general()
 					bufs.push_back(SharedPtr< Buf >(new Buf()));
 				cnt += ZT_BUF_MAX_POOL_SIZE + 100;
 				if (Buf::poolAllocated() != cnt) {
-					ZT_T_PRINTF("FAILED" ZT_EOL_S);
+					ZT_T_PRINTF("FAILED (1)" ZT_EOL_S);
 					return "Buf memory pool test failed";
 				}
 				bufs.clear();
 				if (Buf::poolAllocated() != ZT_BUF_MAX_POOL_SIZE) {
-					ZT_T_PRINTF("FAILED" ZT_EOL_S);
+					ZT_T_PRINTF("FAILED (2)" ZT_EOL_S);
 					return "Buf memory pool test failed";
 				}
 				Buf::freePool();
 				cnt -= ZT_BUF_MAX_POOL_SIZE + 100;
 				if (Buf::poolAllocated() != cnt) {
-					ZT_T_PRINTF("FAILED" ZT_EOL_S);
+					ZT_T_PRINTF("FAILED (3)" ZT_EOL_S);
 					return "Buf memory pool test failed";
 				}
 			} catch (...) {

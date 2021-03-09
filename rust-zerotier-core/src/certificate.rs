@@ -41,86 +41,41 @@ pub const CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_PRIVATE_SIZE: u32 = ztcore::ZT_C
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
 pub struct CertificateSerialNo(pub [u8; 48]);
 
 impl CertificateSerialNo {
-    /// Create a new empty (all zero) serial number.
     #[inline(always)]
-    pub fn new() -> CertificateSerialNo {
-        CertificateSerialNo([0; 48])
-    }
-
-    pub fn new_from_string(s: &str) -> Result<CertificateSerialNo, ResultCode> {
-        let b = hex::decode(s);
-        if b.is_err() {
-            return Err(ResultCode::ErrorBadParameter);
-        }
-        return Ok(CertificateSerialNo::from(b.unwrap().as_slice()));
-    }
+    pub fn new() -> CertificateSerialNo { CertificateSerialNo([0; 48]) }
+    pub fn new_from_string(s: &str) -> Result<CertificateSerialNo, ResultCode> { hex::decode(s).map_or_else(|_| { Err(ResultCode::ErrorBadParameter) }, |b| { Ok(CertificateSerialNo::from(b.unwrap().as_slice())) }) }
 }
 
 impl From<&[u8; 48]> for CertificateSerialNo {
     #[inline(always)]
-    fn from(a: &[u8; 48]) -> CertificateSerialNo {
-        CertificateSerialNo(*a)
-    }
-}
-
-impl From<&[u8]> for CertificateSerialNo {
-    fn from(v: &[u8]) -> CertificateSerialNo {
-        let mut l = v.len();
-        if l > 48 {
-            l = 48;
-        }
-        let mut s = CertificateSerialNo::new();
-        s.0[0..l].copy_from_slice(&v[0..l]);
-        s
-    }
+    fn from(a: &[u8; 48]) -> CertificateSerialNo { CertificateSerialNo(*a) }
 }
 
 impl Hash for CertificateSerialNo {
     #[inline(always)]
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.0.hash(state);
-    }
+    fn hash<H: Hasher>(&self, state: &mut H) { self.0.hash(state); }
 }
 
 impl ToString for CertificateSerialNo {
     #[inline(always)]
-    fn to_string(&self) -> String {
-        hex::encode(self.0)
-    }
+    fn to_string(&self) -> String { hex::encode(self.0) }
 }
 
 impl serde::Serialize for CertificateSerialNo {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
-        serializer.serialize_str(self.to_string().as_str())
-    }
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer { serializer.serialize_str(self.to_string().as_str()) }
 }
-
 struct CertificateSerialNoVisitor;
-
 impl<'de> serde::de::Visitor<'de> for CertificateSerialNoVisitor {
     type Value = CertificateSerialNo;
-
-    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-        formatter.write_str("CertificateSerialNoVisitor value in string form")
-    }
-
-    fn visit_str<E>(self, s: &str) -> Result<Self::Value, E> where E: serde::de::Error {
-        let id = CertificateSerialNo::new_from_string(s);
-        if id.is_err() {
-            return Err(serde::de::Error::invalid_value(serde::de::Unexpected::Str(s), &self));
-        }
-        return Ok(id.ok().unwrap() as Self::Value);
-    }
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result { formatter.write_str("object") }
+    fn visit_str<E>(self, s: &str) -> Result<Self::Value, E> where E: serde::de::Error { Self::Value::new_from_string(s).map_or_else(|_| { Err(serde::de::Error::invalid_value(serde::de::Unexpected::Str(s), &self)) },|id| { Ok(id as Self::Value) }) }
 }
-
 impl<'de> serde::Deserialize<'de> for CertificateSerialNo {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'de> {
-        deserializer.deserialize_str(CertificateSerialNoVisitor)
-    }
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'de> { deserializer.deserialize_str(CertificateSerialNoVisitor) }
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -149,33 +104,16 @@ impl ToString for CertificateUniqueIdType {
 }
 
 impl serde::Serialize for CertificateUniqueIdType {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
-        serializer.serialize_str(self.to_string().as_str())
-    }
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer { serializer.serialize_str(self.to_string().as_str()) }
 }
-
 struct CertificateUniqueIdTypeVisitor;
-
 impl<'de> serde::de::Visitor<'de> for CertificateUniqueIdTypeVisitor {
     type Value = CertificateUniqueIdType;
-
-    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-        formatter.write_str("CertificateUniqueIdType value in string form")
-    }
-
-    fn visit_str<E>(self, s: &str) -> Result<Self::Value, E> where E: serde::de::Error {
-        let id = CertificateUniqueIdType::new_from_string(s);
-        if id.is_err() {
-            return Err(serde::de::Error::invalid_value(serde::de::Unexpected::Str(s), &self));
-        }
-        return Ok(id.ok().unwrap() as Self::Value);
-    }
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result { formatter.write_str("object") }
+    fn visit_str<E>(self, s: &str) -> Result<Self::Value, E> where E: serde::de::Error { Self::Value::new_from_string(s).map_or_else(|_| { Err(serde::de::Error::invalid_value(serde::de::Unexpected::Str(s), &self)) },|id| { Ok(id as Self::Value) }) }
 }
-
 impl<'de> serde::Deserialize<'de> for CertificateUniqueIdType {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'de> {
-        deserializer.deserialize_str(CertificateUniqueIdTypeVisitor)
-    }
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'de> { deserializer.deserialize_str(CertificateUniqueIdTypeVisitor) }
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -210,9 +148,10 @@ impl CertificateSubjectUniqueIdSecret {
     }
 }
 
+implement_to_from_json!(CertificateSubjectUniqueIdSecret);
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-/// Reasons a certificate may be rejected.
 #[derive(FromPrimitive, ToPrimitive, PartialEq, Eq)]
 pub enum CertificateError {
     None = ztcore::ZT_CertificateError_ZT_CERTIFICATE_ERROR_NONE as isize,
@@ -246,9 +185,9 @@ impl ToString for CertificateError {
     }
 }
 
-impl From<&str> for CertificateError {
-    fn from(s: &str) -> CertificateError {
-        match s.to_ascii_lowercase().as_str() {
+impl<S: AsRef<str>> From<S> for CertificateError {
+    fn from(s: S) -> CertificateError {
+        match s.as_ref().to_ascii_lowercase().as_str() {
             "havenewercert" => CertificateError::HaveNewerCert,
             "invalidformat" => CertificateError::InvalidFormat,
             "invalididentity" => CertificateError::InvalidIdentity,
@@ -264,29 +203,16 @@ impl From<&str> for CertificateError {
 }
 
 impl serde::Serialize for CertificateError {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
-        serializer.serialize_str(self.to_string().as_str())
-    }
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer { serializer.serialize_str(self.to_string().as_str()) }
 }
-
 struct CertificateErrorVisitor;
-
 impl<'de> serde::de::Visitor<'de> for CertificateErrorVisitor {
     type Value = CertificateError;
-
-    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-        formatter.write_str("CertificateError value in string form")
-    }
-
-    fn visit_str<E>(self, s: &str) -> Result<Self::Value, E> where E: serde::de::Error {
-        return Ok(CertificateError::from(s));
-    }
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result { formatter.write_str("object") }
+    fn visit_str<E>(self, s: &str) -> Result<Self::Value, E> where E: serde::de::Error { return Ok(CertificateError::from(s)); }
 }
-
 impl<'de> serde::Deserialize<'de> for CertificateError {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'de> {
-        deserializer.deserialize_str(CertificateErrorVisitor)
-    }
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'de> { deserializer.deserialize_str(CertificateErrorVisitor) }
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -379,6 +305,8 @@ impl CertificateName {
     }
 }
 
+implement_to_from_json!(CertificateName);
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[derive(Serialize, Deserialize, PartialEq, Eq)]
@@ -409,6 +337,8 @@ impl CertificateNetwork {
     }
 }
 
+implement_to_from_json!(CertificateNetwork);
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[derive(Serialize, Deserialize, PartialEq, Eq)]
@@ -435,6 +365,8 @@ impl CertificateIdentity {
         }
     }
 }
+
+implement_to_from_json!(CertificateIdentity);
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -613,6 +545,8 @@ impl CertificateSubject {
         return Ok(csr.into_boxed_slice());
     }
 }
+
+implement_to_from_json!(CertificateSubject);
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

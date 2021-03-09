@@ -25,13 +25,14 @@ mod service;
 mod utils;
 mod weblistener;
 
-#[allow(non_snake_case,non_upper_case_globals,non_camel_case_types,dead_code,improper_ctypes)]
+#[allow(non_snake_case, non_upper_case_globals, non_camel_case_types, dead_code, improper_ctypes)]
 mod osdep; // bindgen generated
 
 use std::boxed::Box;
 use std::sync::Arc;
 
 use crate::store::Store;
+use clap::ArgMatches;
 
 fn main() {
     let mut process_exit_value: i32 = 0;
@@ -85,18 +86,34 @@ fn main() {
 
     drop(zerotier_path);
 
-    match cli_args.as_ref().subcommand_name().unwrap() {
-        "version" => {
+    match cli_args.subcommand() {
+        ("help", None) => {
+            cli::print_help()
+        }
+        ("version", None) => {
             let ver = zerotier_core::version();
             println!("{}.{}.{}", ver.0, ver.1, ver.2);
-        },
-
-        "service" => {
+        }
+        ("status", None) => {}
+        ("set", Some(sub_cli_args)) => {}
+        ("peer", Some(sub_cli_args)) => {}
+        ("network", Some(sub_cli_args)) => {}
+        ("join", Some(sub_cli_args)) => {}
+        ("leave", Some(sub_cli_args)) => {}
+        ("service", None) => {
             drop(cli_args); // free unnecssary memory before launching service
             process_exit_value = service::run(&store, auth_token);
-        },
-
-        _ => cli::print_help(), // includes "help"
+        }
+        ("controller", Some(sub_cli_args)) => {}
+        ("identity", Some(sub_cli_args)) => {}
+        ("locator", Some(sub_cli_args)) => {}
+        ("cert", Some(sub_cli_args)) => {
+            process_exit_value = crate::commands::cert::run(&store, sub_cli_args, &auth_token);
+        }
+        _ => {
+            cli::print_help();
+            process_exit_value = 1;
+        }
     }
 
     store.erase_pid();

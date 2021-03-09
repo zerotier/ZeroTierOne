@@ -437,7 +437,7 @@ void VL1::m_relay(void *tPtr, const SharedPtr< Path > &path, Address destination
 
 void VL1::m_sendPendingWhois(void *tPtr, int64_t now)
 {
-	const SharedPtr< Peer > root(RR->topology->root(now));
+	const SharedPtr< Peer > root(RR->topology->root());
 	if (unlikely(!root))
 		return;
 	const SharedPtr< Path > rootPath(root->path(now));

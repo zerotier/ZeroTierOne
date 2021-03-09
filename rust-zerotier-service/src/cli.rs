@@ -93,8 +93,8 @@ Advanced Operations:
   cert <command> [args]
 ·   list                                  List certificates at local node
 ·   show <serial>                         Show certificate details
-    newsid <secret out>                   Create a new subject unique ID
-    newcsr <subject> <secret> <csr out>   Create a subject CSR
+    newsid [sid secret out]               Create a new subject unique ID
+    newcsr <sid secret> <csr out>         Create a subject CSR
     sign <csr> <identity> <cert out>      Sign a CSR to create a certificate
     verify <cert>                         Verify certificate (not chain)
     dump <cert>                           Verify and print certificate
@@ -229,15 +229,14 @@ pub(crate) fn parse_cli_args() -> ArgMatches<'static> {
             .subcommand(App::new("show")
                 .arg(Arg::with_name("serial").index(1).required(true)))
             .subcommand(App::new("newsid")
-                .arg(Arg::with_name("path").index(1).required(true)))
+                .arg(Arg::with_name("path").index(1).required(false)))
             .subcommand(App::new("newcsr")
-                .arg(Arg::with_name("subject").index(1).required(true))
-                .arg(Arg::with_name("secret").index(2).required(true))
-                .arg(Arg::with_name("output").index(3).required(true)))
+                .arg(Arg::with_name("secret").index(1).required(true))
+                .arg(Arg::with_name("output").index(2).required(false)))
             .subcommand(App::new("sign")
                 .arg(Arg::with_name("csr").index(1).required(true))
                 .arg(Arg::with_name("identity").index(2).required(true))
-                .arg(Arg::with_name("output").index(3).required(true)))
+                .arg(Arg::with_name("output").index(3).required(false)))
             .subcommand(App::new("verify")
                 .arg(Arg::with_name("cert").index(1).required(true)))
             .subcommand(App::new("dump")
@@ -248,7 +247,7 @@ pub(crate) fn parse_cli_args() -> ArgMatches<'static> {
             .subcommand(App::new("restore"))
             .subcommand(App::new("export")
                 .arg(Arg::with_name("serial").index(1).required(true))
-                .arg(Arg::with_name("path").index(2)))
+                .arg(Arg::with_name("path").index(2).required(false)))
             .subcommand(App::new("delete")
                 .arg(Arg::with_name("serial").index(1).required(true))))
         .help(help.as_str())

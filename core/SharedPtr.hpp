@@ -42,7 +42,7 @@ public:
 	ZT_INLINE ~SharedPtr()
 	{
 		if (likely(m_ptr != nullptr)) {
-			if (unlikely(const_cast<std::atomic< int > *>(&(m_ptr->__refCount))->fetch_sub(1, std::memory_order_relaxed) <= 0))
+			if (unlikely(const_cast<std::atomic< int > *>(&(m_ptr->__refCount))->fetch_sub(1, std::memory_order_relaxed) <= 1))
 				delete m_ptr;
 		}
 	}
@@ -52,7 +52,7 @@ public:
 		if (likely(m_ptr != sp.m_ptr)) {
 			T *const p = sp._getAndInc();
 			if (likely(m_ptr != nullptr)) {
-				if (unlikely(const_cast<std::atomic< int > *>(&(m_ptr->__refCount))->fetch_sub(1, std::memory_order_relaxed) <= 0))
+				if (unlikely(const_cast<std::atomic< int > *>(&(m_ptr->__refCount))->fetch_sub(1, std::memory_order_relaxed) <= 1))
 					delete m_ptr;
 			}
 			m_ptr = p;
@@ -63,7 +63,7 @@ public:
 	ZT_INLINE void set(T *ptr) noexcept
 	{
 		if (likely(m_ptr != nullptr)) {
-			if (unlikely(const_cast<std::atomic< int > *>(&(m_ptr->__refCount))->fetch_sub(1, std::memory_order_relaxed) <= 0))
+			if (unlikely(const_cast<std::atomic< int > *>(&(m_ptr->__refCount))->fetch_sub(1, std::memory_order_relaxed) <= 1))
 				delete m_ptr;
 		}
 		const_cast<std::atomic< int > *>(&(ptr->__refCount))->fetch_add(1, std::memory_order_relaxed);
@@ -93,7 +93,7 @@ public:
 	ZT_INLINE void move(SharedPtr &from)
 	{
 		if (m_ptr != nullptr) {
-			if (const_cast<std::atomic< int > *>(&(m_ptr->__refCount))->fetch_sub(1, std::memory_order_relaxed) <= 0)
+			if (const_cast<std::atomic< int > *>(&(m_ptr->__refCount))->fetch_sub(1, std::memory_order_relaxed) <= 1)
 				delete m_ptr;
 		}
 		m_ptr = from.m_ptr;
@@ -121,7 +121,7 @@ public:
 	ZT_INLINE void zero()
 	{
 		if (likely(m_ptr != nullptr)) {
-			if (unlikely(const_cast<std::atomic< int > *>(&(m_ptr->__refCount))->fetch_sub(1, std::memory_order_relaxed) <= 0))
+			if (unlikely(const_cast<std::atomic< int > *>(&(m_ptr->__refCount))->fetch_sub(1, std::memory_order_relaxed) <= 1))
 				delete m_ptr;
 			m_ptr = nullptr;
 		}
@@ -188,7 +188,7 @@ public:
 private:
 	ZT_INLINE T *_getAndInc() const noexcept
 	{
-		if (likely(m_ptr))
+		if (likely(m_ptr != nullptr))
 			const_cast<std::atomic< int > *>(&(m_ptr->__refCount))->fetch_add(1, std::memory_order_relaxed);
 		return m_ptr;
 	}
