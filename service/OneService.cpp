@@ -676,6 +676,9 @@ public:
 			readLocalSettings();
 			applyLocalConfig();
 
+			// Save original port number to show it if bind error
+			const int _configuredPort = _primaryPort;
+
 			// Make sure we can use the primary port, and hunt for one if configured to do so
 			const int portTrials = (_primaryPort == 0) ? 256 : 1; // if port is 0, pick random
 			for(int k=0;k<portTrials;++k) {
@@ -693,7 +696,7 @@ public:
 			if (_ports[0] == 0) {
 				Mutex::Lock _l(_termReason_m);
 				_termReason = ONE_UNRECOVERABLE_ERROR;
-				_fatalErrorMessage = "cannot bind to local control interface port";
+				_fatalErrorMessage = std::string("cannot bind to local control interface port ")+std::to_string(_configuredPort);
 				return _termReason;
 			}
 
