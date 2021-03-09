@@ -1333,7 +1333,7 @@ static int cli(int argc,char **argv)
 					if (ioctl(sock, SIOCGIFHWADDR, &ifr) == 0) {
 						unsigned char mac_addr[6];
 						memcpy(mac_addr, ifr.ifr_hwaddr.sa_data, 6);
-						char macStr[16];
+						char macStr[18];
 						sprintf(macStr, "%02x:%02x:%02x:%02x:%02x:%02x",
 								mac_addr[0],
 								mac_addr[1],
