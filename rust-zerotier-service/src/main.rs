@@ -61,10 +61,6 @@ fn main() {
         std::process::exit(1);
     }
     let store = Arc::new(store.unwrap());
-    if store.write_pid().is_err() {
-        eprintln!("FATAL: error writing to directory '{}': unable to write zerotier.pid", zerotier_path);
-        std::process::exit(1);
-    }
 
     // From this point on we shouldn't call std::process::exit() since that would
     // fail to erase zerotier.pid from the working directory.
@@ -116,6 +112,5 @@ fn main() {
         }
     }
 
-    store.erase_pid();
     std::process::exit(process_exit_value);
 }

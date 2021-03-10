@@ -415,6 +415,11 @@ async fn run_async(store: &Arc<Store>, auth_token: String, log: &Arc<Log>, local
 }
 
 pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
+    if store.write_pid().is_err() {
+        eprintln!("FATAL: error writing to directory '{}': unable to write zerotier.pid", store.base_path.to_str().unwrap());
+        return 1;
+    }
+
     let local_config = Arc::new(store.read_local_conf(false).unwrap_or_else(|_| { LocalConfig::default() }));
 
     let log = Arc::new(Log::new(
@@ -456,6 +461,8 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
     let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
     let process_exit_value = rt.block_on(async move { run_async(store, auth_token, &log, local_config).await });
     rt.shutdown_timeout(Duration::from_millis(500));
+
+    store.erase_pid();
 
     process_exit_value
 }

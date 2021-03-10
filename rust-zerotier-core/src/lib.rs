@@ -13,6 +13,7 @@
 
 use std::os::raw::{c_char, c_int};
 use num_derive::{FromPrimitive, ToPrimitive};
+#[macro_use] extern crate base64_serde;
 
 #[allow(non_snake_case,non_upper_case_globals,non_camel_case_types,dead_code,improper_ctypes)]
 mod capi; // bindgen generated
@@ -55,6 +56,8 @@ pub use portableatomici64::PortableAtomicI64;
 pub use virtualnetworkconfig::*;
 pub use multicastgroup::MulticastGroup;
 pub use dictionary::*;
+
+base64_serde_type!(Base64Standard, base64::URL_SAFE_NO_PAD);
 
 /// Recommended minimum thread stack size for background threads.
 pub const RECOMMENDED_THREAD_STACK_SIZE: usize = 262144;
@@ -206,7 +209,6 @@ macro_rules! implement_to_from_json {
                 }
                 Ok(r.unwrap())
             }
-
             pub fn to_json(&self) -> String {
                 serde_json::to_string_pretty(self).unwrap()
             }
@@ -222,7 +224,6 @@ macro_rules! enum_str {
         enum $name {
             $($variant = $val),*
         }
-
         impl $name {
             fn name(&self) -> &'static str {
                 match self {

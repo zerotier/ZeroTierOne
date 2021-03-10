@@ -126,7 +126,9 @@ impl<'de> serde::Deserialize<'de> for CertificateUniqueIdType {
 
 #[derive(Serialize, Deserialize, PartialEq, Eq)]
 pub struct CertificateSubjectUniqueIdSecret {
+    #[serde(with = "Base64Standard")]
     pub public: Vec<u8>,
+    #[serde(with = "Base64Standard")]
     pub private: Vec<u8>,
     #[serde(rename = "type")]
     pub type_: CertificateUniqueIdType,
@@ -385,8 +387,10 @@ pub struct CertificateSubject {
     #[serde(rename = "updateURLs")]
     pub update_urls: Vec<String>,
     pub name: CertificateName,
+    #[serde(with = "Base64Standard")]
     #[serde(rename = "uniqueId")]
     pub unique_id: Vec<u8>,
+    #[serde(with = "Base64Standard")]
     #[serde(rename = "uniqueIdProofSignature")]
     pub unique_id_proof_signature: Vec<u8>,
 }
@@ -571,6 +575,7 @@ pub struct Certificate {
     pub extended_attributes: Vec<u8>,
     #[serde(rename = "maxPathLength")]
     pub max_path_length: u32,
+    #[serde(with = "Base64Standard")]
     pub signature: Vec<u8>,
 }
 

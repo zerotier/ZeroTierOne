@@ -45,6 +45,11 @@ fn newsid<'a>(store: &Store, cli_args: Option<&ArgMatches<'a>>, auth_token: &Opt
 }
 
 #[inline(always)]
+fn newcsr<'a>(store: &Store, cli_args: &ArgMatches<'a>, auth_token: &Option<String>) -> i32 {
+    0
+}
+
+#[inline(always)]
 fn sign<'a>(store: &Store, cli_args: &ArgMatches<'a>, auth_token: &Option<String>) -> i32 {
     0
 }
