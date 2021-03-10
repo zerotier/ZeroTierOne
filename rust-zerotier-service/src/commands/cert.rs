@@ -38,7 +38,7 @@ fn newsid<'a>(store: &Store, cli_args: Option<&ArgMatches<'a>>, auth_token: &Opt
         std::fs::write(path, sid.as_bytes()).map_or_else(|e| {
             eprintln!("FATAL: error writing '{}': {}", path, e.to_string());
             e.raw_os_error().unwrap_or(1)
-        }, || {
+        }, |_| {
             0
         })
     }

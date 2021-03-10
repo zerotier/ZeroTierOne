@@ -40,21 +40,13 @@ public:
 	{}
 
 	ZT_INLINE ~SharedPtr()
-	{
-		if (likely(m_ptr != nullptr)) {
-			if (unlikely(const_cast<std::atomic< int > *>(&(m_ptr->__refCount))->fetch_sub(1, std::memory_order_relaxed) <= 1))
-				delete m_ptr;
-		}
-	}
+	{ _release(); }
 
 	ZT_INLINE SharedPtr &operator=(const SharedPtr &sp)
 	{
 		if (likely(m_ptr != sp.m_ptr)) {
 			T *const p = sp._getAndInc();
-			if (likely(m_ptr != nullptr)) {
-				if (unlikely(const_cast<std::atomic< int > *>(&(m_ptr->__refCount))->fetch_sub(1, std::memory_order_relaxed) <= 1))
-					delete m_ptr;
-			}
+			_release();
 			m_ptr = p;
 		}
 		return *this;
@@ -62,12 +54,8 @@ public:
 
 	ZT_INLINE void set(T *ptr) noexcept
 	{
-		if (likely(m_ptr != nullptr)) {
-			if (unlikely(const_cast<std::atomic< int > *>(&(m_ptr->__refCount))->fetch_sub(1, std::memory_order_relaxed) <= 1))
-				delete m_ptr;
-		}
-		const_cast<std::atomic< int > *>(&(ptr->__refCount))->fetch_add(1, std::memory_order_relaxed);
-		m_ptr = ptr;
+		_release();
+		const_cast<std::atomic< int > *>(&((m_ptr = ptr)->__refCount))->fetch_add(1, std::memory_order_relaxed);
 	}
 
 	/**
@@ -92,10 +80,7 @@ public:
 	 */
 	ZT_INLINE void move(SharedPtr &from)
 	{
-		if (m_ptr != nullptr) {
-			if (const_cast<std::atomic< int > *>(&(m_ptr->__refCount))->fetch_sub(1, std::memory_order_relaxed) <= 1)
-				delete m_ptr;
-		}
+		_release();
 		m_ptr = from.m_ptr;
 		from.m_ptr = nullptr;
 	}
@@ -120,11 +105,8 @@ public:
 	 */
 	ZT_INLINE void zero()
 	{
-		if (likely(m_ptr != nullptr)) {
-			if (unlikely(const_cast<std::atomic< int > *>(&(m_ptr->__refCount))->fetch_sub(1, std::memory_order_relaxed) <= 1))
-				delete m_ptr;
-			m_ptr = nullptr;
-		}
+		_release();
+		m_ptr = nullptr;
 	}
 
 	/**
@@ -174,16 +156,16 @@ public:
 	{ return (m_ptr != sp.m_ptr); }
 
 	ZT_INLINE bool operator>(const SharedPtr &sp) const noexcept
-	{ return (m_ptr > sp.m_ptr); }
+	{ return (reinterpret_cast<const uint8_t *>(m_ptr) > reinterpret_cast<const uint8_t *>(sp.m_ptr)); }
 
 	ZT_INLINE bool operator<(const SharedPtr &sp) const noexcept
-	{ return (m_ptr < sp.m_ptr); }
+	{ return (reinterpret_cast<const uint8_t *>(m_ptr) < reinterpret_cast<const uint8_t *>(sp.m_ptr)); }
 
 	ZT_INLINE bool operator>=(const SharedPtr &sp) const noexcept
-	{ return (m_ptr >= sp.m_ptr); }
+	{ return (reinterpret_cast<const uint8_t *>(m_ptr) >= reinterpret_cast<const uint8_t *>(sp.m_ptr)); }
 
 	ZT_INLINE bool operator<=(const SharedPtr &sp) const noexcept
-	{ return (m_ptr <= sp.m_ptr); }
+	{ return (reinterpret_cast<const uint8_t *>(m_ptr) <= reinterpret_cast<const uint8_t *>(sp.m_ptr)); }
 
 private:
 	ZT_INLINE T *_getAndInc() const noexcept
@@ -191,6 +173,12 @@ private:
 		if (likely(m_ptr != nullptr))
 			const_cast<std::atomic< int > *>(&(m_ptr->__refCount))->fetch_add(1, std::memory_order_relaxed);
 		return m_ptr;
+	}
+
+	ZT_INLINE void _release() const noexcept
+	{
+		if (unlikely((m_ptr != nullptr)&&(const_cast<std::atomic< int > *>(&(m_ptr->__refCount))->fetch_sub(1, std::memory_order_relaxed) <= 1)))
+			delete m_ptr;
 	}
 
 	T *m_ptr;

@@ -13,7 +13,6 @@
 
 use std::ffi::CString;
 use std::hash::{Hash, Hasher};
-use std::mem::zeroed;
 use std::os::raw::{c_char, c_uint, c_void};
 use std::ptr::{copy_nonoverlapping, null, null_mut};
 
@@ -23,6 +22,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::*;
 use crate::capi as ztcore;
+use std::mem::zeroed;
 
 /// Maximum length of a string in a certificate (mostly for the certificate name fields).
 pub const CERTIFICATE_MAX_STRING_LENGTH: isize = ztcore::ZT_CERTIFICATE_MAX_STRING_LENGTH as isize;
@@ -47,12 +47,18 @@ pub struct CertificateSerialNo(pub [u8; 48]);
 impl CertificateSerialNo {
     #[inline(always)]
     pub fn new() -> CertificateSerialNo { CertificateSerialNo([0; 48]) }
-    pub fn new_from_string(s: &str) -> Result<CertificateSerialNo, ResultCode> { hex::decode(s).map_or_else(|_| { Err(ResultCode::ErrorBadParameter) }, |b| { Ok(CertificateSerialNo::from(b.unwrap().as_slice())) }) }
+    pub fn new_from_string(s: &str) -> Result<CertificateSerialNo, ResultCode> { hex::decode(s).map_or_else(|_| { Err(ResultCode::ErrorBadParameter) }, |b| { Ok(CertificateSerialNo::from(b)) }) }
 }
 
-impl From<&[u8; 48]> for CertificateSerialNo {
-    #[inline(always)]
-    fn from(a: &[u8; 48]) -> CertificateSerialNo { CertificateSerialNo(*a) }
+impl<A: AsRef<[u8]>> From<A> for CertificateSerialNo {
+    fn from(a: A) -> CertificateSerialNo {
+        let mut sn = CertificateSerialNo::new();
+        let aa = a.as_ref();
+        for i in 0..aa.len() {
+            sn.0[i] = aa[i];
+        }
+        sn
+    }
 }
 
 impl Hash for CertificateSerialNo {
