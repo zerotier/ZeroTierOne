@@ -220,7 +220,7 @@ async fn run_async(store: &Arc<Store>, auth_token: String, log: &Arc<Log>, local
     let service = service; // make immutable after setting node
 
     let mut local_config = service.local_config();
-    store.write_port(local_config.settings.primary_port);
+    let _ = store.write_port(local_config.settings.primary_port);
 
     let mut now: i64 = ms_since_epoch();
     let mut loop_delay = zerotier_core::NODE_BACKGROUND_TASKS_MAX_INTERVAL;

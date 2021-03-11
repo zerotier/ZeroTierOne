@@ -20,89 +20,91 @@ fn make_help() -> String {
 (c)2013-2021 ZeroTier, Inc.
 Licensed under the ZeroTier BSL (see LICENSE.txt)
 
-Usage: zerotier [-global options] <command> [command args]
+Usage: zerotier [-...] <command> [command args]
 
 Global Options:
 
-  -j                                     Output raw JSON where applicable
-  -p <path>                              Use alternate base path
-  -t <path>                              Load secret auth token from a file
-  -T <token>                             Set secret auth token on command line
+  -j                                       Output raw JSON where applicable
+  -p <path>                                Use alternate base path
+  -t <path>                                Load secret auth token from a file
+  -T <token>                               Set secret token on command line
 
 Common Operations:
 
-  help                                    Show this help
-  version                                 Print version
+  help                                     Show this help
+  version                                  Print version
 
-· status                                  Show node status and configuration
+· status                                   Show node status and configuration
 
-· set [setting] [value]                   List all settings (with no args)
-·   port <port>                             Primary P2P port
-·   secondaryport <port/0>                  Secondary P2P port (0 to disable)
-·   blacklist cidr <IP/bits> <boolean>      Toggle physical path blacklisting
-·   blacklist if <prefix> <boolean>         [Un]blacklist interface prefix
-·   portmap <boolean>                       Toggle use of uPnP and NAT-PMP
+· set [setting] [value]                    List all settings (with no args)
+·   port <port>                              Primary P2P port
+·   secondaryport <port/0>                   Secondary P2P port (0 to disable)
+·   blacklist cidr <IP/bits> <boolean>       Toggle physical path blacklisting
+·   blacklist if <prefix> <boolean>          [Un]blacklist interface prefix
+·   portmap <boolean>                        Toggle use of uPnP and NAT-PMP
 
 · peer <command> [option]
-·   show <address>                        Show detailed peer information
-·   list                                  List peers
-·   listroots                             List root peers
-·   try <address> <endpoint> [...]        Try peer at explicit endpoint
+·   show <address>                         Show detailed peer information
+·   list                                   List peers
+·   listroots                              List root peers
+·   try <address> <endpoint> [...]         Try peer at explicit endpoint
 
 · network <command> [option]
-·   show <network ID>                     Show detailed network information
-·   list                                  List networks
-·   set <network ID> [option] [value]     Get or set network options
-·     manageips <boolean>                   Is IP management allowed?
-·     manageroutes <boolean>                Is route management allowed?
-·     managedns <boolean>                   Allow network to push DNS config
-·     globalips <boolean>                   Allow assignment of global IPs?
-·     globalroutes <boolean>                Can global IP space routes be set?
-·     defaultroute <boolean>                Can default route be overridden?
+·   show <network ID>                      Show detailed network information
+·   list                                   List networks
+·   set <network ID> [option] [value]      Get or set network options
+·     manageips <boolean>                    Is IP management allowed?
+·     manageroutes <boolean>                 Is route management allowed?
+·     managedns <boolean>                    Allow network to push DNS config
+·     globalips <boolean>                    Allow assignment of global IPs?
+·     globalroutes <boolean>                 Can global IP routes be set?
+·     defaultroute <boolean>                 Can default route be overridden?
 
-· join [-options] <network>               Join a virtual network
-    -c <identity | fingerprint>             Controller identity or fingerprint
-· leave <network>                         Leave a virtual network
+· join [-...] <network>                    Join a virtual network
+    -c <identity | fingerprint>              Controller identity / fingerprint
+· leave <network>                          Leave a virtual network
 
 Advanced Operations:
 
-  service                                 Start this node (runs until stopped)
+  service                                  Start this node
+                                           (usually not run directly)
 
   controller <command> [option]
-·   list                                  List networks on controller
-·   new                                   Create a new network
-·   set <network> [setting] [value]       Show or modify network settings
-·   show <network> [<address>]            Show network or member status
-·   auth <address>                        Authorize a peer
-·   deauth <address>                      Deauthorize a peer
+·   list                                   List networks on controller
+·   new                                    Create a new network
+·   set <network> [setting] [value]        Show or modify network settings
+·   show <network> [<address>]             Show network or member status
+·   auth <address>                         Authorize a peer
+·   deauth <address>                       Deauthorize a peer
 
   identity <command> [args]
-    new [c25519 | p384]                   Create identity (default: c25519)
-    getpublic <identity>                  Extract only public part of identity
-    fingerprint <identity>                Get an identity's fingerprint
-    validate <identity>                   Locally validate an identity
-    sign <identity> <file>                Sign a file with an identity's key
-    verify <identity> <file> <sig>        Verify a signature
+    new [c25519 | p384]                    Create identity (default: c25519)
+    getpublic <identity>                   Extract public part of identity
+    fingerprint <identity>                 Get an identity's fingerprint
+    validate <identity>                    Locally validate an identity
+    sign <identity> <file>                 Sign a file with an identity's key
+    verify <identity> <file> <sig>         Verify a signature
 
   locator <command> [args]
-    new <identity> <endpoint> [...]       Create new signed locator
-    verify <identity> <locator>           Verify locator signature
-    show <locator>                        Show contents of a locator
+    new [-...] <identity> <endpoint> [...] Create new signed locator
+      -t <timestamp>                         Timestamp (default: system time)
+    verify <identity> <locator>            Verify locator signature
+    show <locator>                         Show contents of a locator
 
   cert <command> [args]
-·   list                                  List certificates at local node
-·   show <serial>                         Show certificate details
-    newsid [sid secret out]               Create a new subject unique ID
-    newcsr <csr output path>              Create a subject CSR (interactive)
-    sign <csr> <identity> [cert out]      Sign a CSR to create a certificate
-    verify <cert>                         Verify certificate (not chain)
-    dump <cert>                           Verify and print certificate
-·   import <cert> [trust,trust,...]       Import certificate into this node
-      trust flag: rootca                    Certificate is a root CA
-      trust flag: ztrootset                 ZeroTier root node set
-·   factoryreset                          Re-import compiled-in default certs
-·   export <serial> [path]                Export a certificate from this node
-·   delete <serial|ALL>                   Delete certificate from this node
+·   list                                   List certificates at local node
+·   show <serial>                          Show certificate details
+    newsid [sid secret out]                Create a new subject unique ID
+    newcsr <csr output path>               Create a subject CSR (interactive)
+    sign <csr> <identity> [cert out]       Sign a CSR to create a certificate
+    verify <cert>                          Verify certificate (not chain)
+    dump <cert>                            Verify and print certificate
+·   import <cert> [trust,trust,...]        Import certificate into this node
+      trust flag: rootca                     Certificate is a root CA
+      trust flag: ztrootset                  ZeroTier root node set
+·   factoryreset                           Re-import compiled-in default certs
+·   export <serial> [path]                 Export a certificate from this node
+·   delete <serial|ALL>                    Delete certificate from this node
 
 · Command requires a running node and access to a local API token.
 
@@ -144,6 +146,8 @@ fn is_valid_port(v: String) -> Result<(), String> {
 
 /// Parses CLI arguments, prints error and exits on failure.
 pub(crate) fn parse_cli_args() -> ArgMatches<'static> {
+    // NOTE: the names of these arguments must match the names used to look
+    // them up in the various command demuxers under commands/.
     let help = make_help();
     let args = App::new("zerotier")
         .arg(Arg::with_name("json").short("j"))
@@ -219,6 +223,7 @@ pub(crate) fn parse_cli_args() -> ArgMatches<'static> {
                 .arg(Arg::with_name("signature").index(3).required(true))))
         .subcommand(App::new("locator")
             .subcommand(App::new("new")
+                .arg(Arg::with_name("timestamp").short("t").required(false))
                 .arg(Arg::with_name("identity").index(1).required(true))
                 .arg(Arg::with_name("endpoint").index(2).multiple(true).required(true)))
             .subcommand(App::new("verify")

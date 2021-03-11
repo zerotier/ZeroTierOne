@@ -16,6 +16,7 @@ use std::os::raw::{c_char, c_int, c_uint};
 
 use crate::*;
 use crate::capi as ztcore;
+use std::ptr::null;
 
 pub struct Locator {
     pub(crate) capi: *const ztcore::ZT_Locator,
@@ -23,6 +24,22 @@ pub struct Locator {
 }
 
 impl Locator {
+    /// Create and sign a new locator.
+    /// The signer must include its secret key.
+    pub fn new(signer: &Identity, timestamp: i64, endpoints: &Vec<Endpoint>) -> Result<Locator, ResultCode> {
+        let mut capi_endpoints: Vec<ztcore::ZT_Endpoint> = Vec::new();
+        capi_endpoints.reserve(endpoints.len());
+        for ep in endpoints.iter() {
+            capi_endpoints.push(ep.capi);
+        }
+        let loc = unsafe { ztcore::ZT_Locator_create(timestamp, capi_endpoints.as_ptr(), null(), capi_endpoints.len() as c_uint, signer.capi) };
+        if loc.is_null() {
+            Err(ResultCode::ErrorBadParameter)
+        } else {
+            Ok(Locator::new_from_capi(loc, true))
+        }
+    }
+
     #[inline(always)]
     pub(crate) fn new_from_capi(l: *const ztcore::ZT_Locator, requires_delete: bool) -> Locator {
         Locator{
@@ -89,7 +106,7 @@ impl Clone for Locator {
 
 impl ToString for Locator {
     fn to_string(&self) -> String {
-        let mut buf: [u8; 4096] = [0; 4096];
+        let mut buf = [0_u8; 16384];
         unsafe {
             if ztcore::ZT_Locator_toString(self.capi, buf.as_mut_ptr() as *mut c_char, buf.len() as c_int).is_null() {
                 return String::from("(invalid)");

@@ -102,7 +102,9 @@ fn main() {
         }
         ("controller", Some(sub_cli_args)) => {}
         ("identity", Some(sub_cli_args)) => {}
-        ("locator", Some(sub_cli_args)) => {}
+        ("locator", Some(sub_cli_args)) => {
+            process_exit_value = crate::commands::locator::run(&store, sub_cli_args, &auth_token);
+        }
         ("cert", Some(sub_cli_args)) => {
             process_exit_value = crate::commands::cert::run(&store, sub_cli_args, &auth_token);
         }

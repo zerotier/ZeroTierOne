@@ -36,7 +36,7 @@ pub enum EndpointType {
 
 pub struct Endpoint {
     pub type_: EndpointType,
-    capi: ztcore::ZT_Endpoint
+    pub(crate) capi: ztcore::ZT_Endpoint
 }
 
 impl Endpoint {

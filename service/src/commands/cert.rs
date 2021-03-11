@@ -16,8 +16,6 @@ use std::str::FromStr;
 
 use clap::ArgMatches;
 use dialoguer::Input;
-use lazy_static::lazy_static;
-
 use zerotier_core::*;
 
 use crate::store::Store;
@@ -260,7 +258,7 @@ fn import<'a>(store: &Store, cli_args: &ArgMatches<'a>, auth_token: &Option<Stri
     0
 }
 
-fn restore(store: &Store, auth_token: &Option<String>) -> i32 {
+fn factoryreset(store: &Store, auth_token: &Option<String>) -> i32 {
     0
 }
 
@@ -282,7 +280,7 @@ pub(crate) fn run<'a>(store: &Store, cli_args: &ArgMatches<'a>, auth_token: &Opt
         ("verify", Some(sub_cli_args)) => verify(store, sub_cli_args, auth_token),
         ("dump", Some(sub_cli_args)) => dump(store, sub_cli_args, auth_token),
         ("import", Some(sub_cli_args)) => import(store, sub_cli_args, auth_token),
-        ("factoryreset", None) => restore(store, auth_token),
+        ("factoryreset", None) => factoryreset(store, auth_token),
         ("export", Some(sub_cli_args)) => export(store, sub_cli_args, auth_token),
         ("delete", Some(sub_cli_args)) => delete(store, sub_cli_args, auth_token),
         _ => {
