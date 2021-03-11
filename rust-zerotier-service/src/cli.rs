@@ -37,11 +37,11 @@ Common Operations:
 · status                                  Show node status and configuration
 
 · set [setting] [value]                   List all settings (with no args)
-·    port <port>                          Primary P2P port
-·    secondaryport <port/0>               Secondary P2P port (0 to disable)
-·    blacklist cidr <IP/bits> <boolean>   Toggle physical path blacklisting
-·    blacklist if <prefix> <boolean>      Toggle interface prefix blacklisting
-·    portmap <boolean>                    Toggle use of uPnP or NAT-PMP
+·   port <port>                             Primary P2P port
+·   secondaryport <port/0>                  Secondary P2P port (0 to disable)
+·   blacklist cidr <IP/bits> <boolean>      Toggle physical path blacklisting
+·   blacklist if <prefix> <boolean>         [Un]blacklist interface prefix
+·   portmap <boolean>                       Toggle use of uPnP and NAT-PMP
 
 · peer <command> [option]
 ·   show <address>                        Show detailed peer information
@@ -53,16 +53,15 @@ Common Operations:
 ·   show <network ID>                     Show detailed network information
 ·   list                                  List networks
 ·   set <network ID> [option] [value]     Get or set network options
-·     manageips <boolean>                 Is IP management allowed?
-·     manageroutes <boolean>              Is route management allowed?
-·     managedns <boolean>                 Allow network to push DNS config
-·     globalips <boolean>                 Allow assignment of global IPs?
-·     globalroutes <boolean>              Can global IP space routes be set?
-·     defaultroute <boolean>              Can default route be overridden?
+·     manageips <boolean>                   Is IP management allowed?
+·     manageroutes <boolean>                Is route management allowed?
+·     managedns <boolean>                   Allow network to push DNS config
+·     globalips <boolean>                   Allow assignment of global IPs?
+·     globalroutes <boolean>                Can global IP space routes be set?
+·     defaultroute <boolean>                Can default route be overridden?
 
 · join [-options] <network>               Join a virtual network
-    -t <token>                            Token to submit to controller
-    -c <identity | fingerprint>           Controller identity or fingerprint
+    -c <identity | fingerprint>             Controller identity or fingerprint
 · leave <network>                         Leave a virtual network
 
 Advanced Operations:
@@ -94,14 +93,14 @@ Advanced Operations:
 ·   list                                  List certificates at local node
 ·   show <serial>                         Show certificate details
     newsid [sid secret out]               Create a new subject unique ID
-    newcsr <sid secret> <csr out>         Create a subject CSR
-    sign <csr> <identity> <cert out>      Sign a CSR to create a certificate
+    newcsr [csr out]                      Create a subject CSR
+    sign <csr> <identity> [cert out]      Sign a CSR to create a certificate
     verify <cert>                         Verify certificate (not chain)
     dump <cert>                           Verify and print certificate
-·   import <cert> [trust] [...]           Import certificate into this node
-      trust flag: rootca                  Certificate is a root CA
-      trust flag: ztrootset               ZeroTier root node set
-·   restore                               Re-import default certificates
+·   import <cert> [trust,trust,...]       Import certificate into this node
+      trust flag: rootca                    Certificate is a root CA
+      trust flag: ztrootset                 ZeroTier root node set
+·   factoryreset                          Re-import compiled-in default certs
 ·   export <serial> [path]                Export a certificate from this node
 ·   delete <serial|ALL>                   Delete certificate from this node
 
@@ -161,7 +160,7 @@ pub(crate) fn parse_cli_args() -> ArgMatches<'static> {
                 .arg(Arg::with_name("port#").index(1).validator(is_valid_port)))
             .subcommand(App::new("blacklist")
                 .subcommand(App::new("cidr")
-                    .arg(Arg::with_name("ip/bits").index(1))
+                    .arg(Arg::with_name("ip_bits").index(1))
                     .arg(Arg::with_name("boolean").index(2).validator(is_bool)))
                 .subcommand(App::new("if")
                     .arg(Arg::with_name("prefix").index(1))
@@ -175,15 +174,18 @@ pub(crate) fn parse_cli_args() -> ArgMatches<'static> {
             .subcommand(App::new("listroots"))
             .subcommand(App::new("try")))
         .subcommand(App::new("network")
-            .subcommand(App::new("show"))
+            .subcommand(App::new("show")
+                .arg(Arg::with_name("nwid").index(1).required(true)))
             .subcommand(App::new("list"))
-            .subcommand(App::new("set")))
+            .subcommand(App::new("set")
+                .arg(Arg::with_name("nwid").index(1).required(true))
+                .arg(Arg::with_name("setting").index(2).required(false))
+                .arg(Arg::with_name("value").index(3).required(false))))
         .subcommand(App::new("join")
-            .arg(Arg::with_name("token").short("t").takes_value(true))
             .arg(Arg::with_name("controller").short("c").takes_value(true))
-            .arg(Arg::with_name("id").index(1).required(true)))
+            .arg(Arg::with_name("nwid").index(1).required(true)))
         .subcommand(App::new("leave")
-            .arg(Arg::with_name("id").index(1).required(true)))
+            .arg(Arg::with_name("nwid").index(1).required(true)))
         .subcommand(App::new("service"))
         .subcommand(App::new("controller")
             .subcommand(App::new("list"))
@@ -231,8 +233,7 @@ pub(crate) fn parse_cli_args() -> ArgMatches<'static> {
             .subcommand(App::new("newsid")
                 .arg(Arg::with_name("path").index(1).required(false)))
             .subcommand(App::new("newcsr")
-                .arg(Arg::with_name("secret").index(1).required(true))
-                .arg(Arg::with_name("output").index(2).required(false)))
+                .arg(Arg::with_name("path").index(2).required(false)))
             .subcommand(App::new("sign")
                 .arg(Arg::with_name("csr").index(1).required(true))
                 .arg(Arg::with_name("identity").index(2).required(true))
@@ -243,8 +244,8 @@ pub(crate) fn parse_cli_args() -> ArgMatches<'static> {
                 .arg(Arg::with_name("cert").index(1).required(true)))
             .subcommand(App::new("import")
                 .arg(Arg::with_name("cert").index(1).required(true))
-                .arg(Arg::with_name("trust").possible_value("rootca").possible_value("ztrootset").index(2).multiple(true)))
-            .subcommand(App::new("restore"))
+                .arg(Arg::with_name("trust").index(2).required(false)))
+            .subcommand(App::new("factoryreset"))
             .subcommand(App::new("export")
                 .arg(Arg::with_name("serial").index(1).required(true))
                 .arg(Arg::with_name("path").index(2).required(false)))

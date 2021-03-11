@@ -45,7 +45,7 @@ fn newsid<'a>(store: &Store, cli_args: Option<&ArgMatches<'a>>, auth_token: &Opt
 }
 
 #[inline(always)]
-fn newcsr<'a>(store: &Store, cli_args: &ArgMatches<'a>, auth_token: &Option<String>) -> i32 {
+fn newcsr<'a>(store: &Store, cli_args: Option<&ArgMatches<'a>>, auth_token: &Option<String>) -> i32 {
     0
 }
 
@@ -89,12 +89,12 @@ pub(crate) fn run<'a>(store: &Store, cli_args: &ArgMatches<'a>, auth_token: &Opt
         ("list", None) => list(store, auth_token),
         ("show", Some(sub_cli_args)) => show(store, sub_cli_args, auth_token),
         ("newsid", sub_cli_args) => newsid(store, sub_cli_args, auth_token),
-        ("newcsr", Some(sub_cli_args)) => newcsr(store, sub_cli_args, auth_token),
+        ("newcsr", sub_cli_args) => newcsr(store, sub_cli_args, auth_token),
         ("sign", Some(sub_cli_args)) => sign(store, sub_cli_args, auth_token),
         ("verify", Some(sub_cli_args)) => verify(store, sub_cli_args, auth_token),
         ("dump", Some(sub_cli_args)) => dump(store, sub_cli_args, auth_token),
         ("import", Some(sub_cli_args)) => import(store, sub_cli_args, auth_token),
-        ("restore", None) => restore(store, auth_token),
+        ("factoryreset", None) => restore(store, auth_token),
         ("export", Some(sub_cli_args)) => export(store, sub_cli_args, auth_token),
         ("delete", Some(sub_cli_args)) => delete(store, sub_cli_args, auth_token),
         _ => {

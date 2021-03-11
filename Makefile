@@ -25,7 +25,7 @@ central-controller-docker: FORCE
 	docker build -t registry.zerotier.com/zerotier-central/ztcentral-controller:${TIMESTAMP} -f controller/central-docker/Dockerfile .
 
 clean: FORCE
-	rm -rf ${BUILDDIR} rust-zerotier-core/target rust-zerotier-service/target
+	rm -rf ${BUILDDIR} rust-zerotier-core/target rust-zerotier-service/target rust-zerotier-core/src/capi.rs rust-zerotier-service/src/osdep.rs
 
 distclean: FORCE
 	rm -rf ${BUILDDIR}
