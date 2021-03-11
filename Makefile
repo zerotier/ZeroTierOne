@@ -25,15 +25,15 @@ central-controller-docker: FORCE
 	docker build -t registry.zerotier.com/zerotier-central/ztcentral-controller:${TIMESTAMP} -f controller/central-docker/Dockerfile .
 
 clean: FORCE
-	rm -rf ${BUILDDIR} rust-zerotier-core/target rust-zerotier-service/target rust-zerotier-core/src/capi.rs rust-zerotier-service/src/osdep.rs
+	rm -rf ${BUILDDIR} rust-zerotier-core/target service/target rust-zerotier-core/src/capi.rs service/src/osdep.rs
 
 distclean: FORCE
 	rm -rf ${BUILDDIR}
 
 rust-bindgen: FORCE
 	cargo install bindgen
-	rm -f rust-zerotier-core/src/capi.rs rust-zerotier-service/src/osdep.rs
+	rm -f rust-zerotier-core/src/capi.rs service/src/osdep.rs
 	bindgen --no-doc-comments --no-layout-tests --no-derive-debug core/zerotier.h >rust-zerotier-core/src/capi.rs
-	bindgen --no-doc-comments --no-layout-tests --no-derive-debug osdep/rust-osdep.h >rust-zerotier-service/src/osdep.rs
+	bindgen --no-doc-comments --no-layout-tests --no-derive-debug osdep/rust-osdep.h >service/src/osdep.rs
 
 FORCE:
