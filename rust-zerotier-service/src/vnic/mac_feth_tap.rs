@@ -57,8 +57,8 @@ use crate::vnic::VNIC;
 use crate::osdep::getifmaddrs;
 
 const BPF_BUFFER_SIZE: usize = 131072;
-const IFCONFIG: &str = "/sbin/ifconfig";
-const SYSCTL: &str = "/usr/sbin/sysctl";
+const IFCONFIG: &'static str = "/sbin/ifconfig";
+const SYSCTL: &'static str = "/usr/sbin/sysctl";
 
 // Holds names of feth devices and destroys them on Drop.
 struct MacFethDevice {

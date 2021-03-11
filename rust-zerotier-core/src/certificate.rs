@@ -320,28 +320,45 @@ implement_to_from_json!(CertificateName);
 #[derive(Serialize, Deserialize, PartialEq, Eq)]
 pub struct CertificateNetwork {
     pub id: NetworkId,
-    pub controller: Fingerprint,
+    pub controller: Option<Fingerprint>,
 }
 
 impl CertificateNetwork {
     pub(crate) fn new_from_capi(cn: &ztcore::ZT_Certificate_Network) -> CertificateNetwork {
-        CertificateNetwork {
-            id: NetworkId(cn.id),
-            controller: Fingerprint {
-                address: Address(cn.controller.address),
-                hash: cn.controller.hash,
-            },
+        if is_all_zeroes(cn.controller.hash) {
+            CertificateNetwork {
+                id: NetworkId(cn.id),
+                controller: None,
+            }
+        } else {
+            CertificateNetwork {
+                id: NetworkId(cn.id),
+                controller: Some(Fingerprint {
+                    address: Address(cn.controller.address),
+                    hash: cn.controller.hash,
+                }),
+            }
         }
     }
 
     pub(crate) fn to_capi(&self) -> ztcore::ZT_Certificate_Network {
-        ztcore::ZT_Certificate_Network {
-            id: self.id.0,
-            controller: ztcore::ZT_Fingerprint {
-                address: self.controller.address.0,
-                hash: self.controller.hash,
-            },
-        }
+        self.controller.as_ref().map_or_else(|| {
+            ztcore::ZT_Certificate_Network {
+                id: self.id.0,
+                controller: ztcore::ZT_Fingerprint {
+                    address: 0,
+                    hash: [0_u8; 48],
+                }
+            }
+        }, |controller| {
+            ztcore::ZT_Certificate_Network {
+                id: self.id.0,
+                controller: ztcore::ZT_Fingerprint {
+                    address: controller.address.0,
+                    hash: controller.hash,
+                },
+            }
+        })
     }
 }
 
@@ -533,10 +550,10 @@ impl CertificateSubject {
         }
     }
 
-    pub fn new_csr(&self, uid: Option<&CertificateSubjectUniqueIdSecret>) -> Result<Box<[u8]>, ResultCode> {
+    pub fn new_csr(&self, uid: Option<&CertificateSubjectUniqueIdSecret>) -> Result<Vec<u8>, ResultCode> {
         let mut csr: Vec<u8> = Vec::new();
-        csr.resize(16384, 0);
-        let mut csr_size: c_int = 16384;
+        csr.resize(65536, 0);
+        let mut csr_size: c_int = 65536;
 
         unsafe {
             let capi = self.to_capi();
@@ -551,8 +568,9 @@ impl CertificateSubject {
                 }
             }
         }
+        csr.resize(csr_size as usize, 0);
 
-        return Ok(csr.into_boxed_slice());
+        return Ok(csr);
     }
 }
 

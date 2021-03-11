@@ -93,7 +93,7 @@ Advanced Operations:
 ·   list                                  List certificates at local node
 ·   show <serial>                         Show certificate details
     newsid [sid secret out]               Create a new subject unique ID
-    newcsr [csr out]                      Create a subject CSR
+    newcsr <csr output path>              Create a subject CSR (interactive)
     sign <csr> <identity> [cert out]      Sign a CSR to create a certificate
     verify <cert>                         Verify certificate (not chain)
     dump <cert>                           Verify and print certificate
@@ -233,7 +233,7 @@ pub(crate) fn parse_cli_args() -> ArgMatches<'static> {
             .subcommand(App::new("newsid")
                 .arg(Arg::with_name("path").index(1).required(false)))
             .subcommand(App::new("newcsr")
-                .arg(Arg::with_name("path").index(2).required(false)))
+                .arg(Arg::with_name("path").index(1).required(true)))
             .subcommand(App::new("sign")
                 .arg(Arg::with_name("csr").index(1).required(true))
                 .arg(Arg::with_name("identity").index(2).required(true))

@@ -175,6 +175,17 @@ pub fn random() -> u64 {
     }
 }
 
+/// Test whether this byte array or slice is all zeroes.
+pub fn is_all_zeroes<B: AsRef<[u8]>>(b: B) -> bool {
+    let bb = b.as_ref();
+    for c in bb.iter() {
+        if *c != 0 {
+            return false;
+        }
+    }
+    true
+}
+
 /// The CStr stuff is cumbersome, so this is an easier to use function to turn a C string into a String.
 /// This returns an empty string on a null pointer or invalid UTF-8. It's unsafe because it can crash if
 /// the string is not zero-terminated. A size limit can be passed in if available to reduce this risk, or
