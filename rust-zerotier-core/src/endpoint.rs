@@ -120,20 +120,12 @@ impl PartialEq for Endpoint {
 impl Eq for Endpoint {}
 
 impl serde::Serialize for Endpoint {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
-        serializer.serialize_str(self.to_string().as_str())
-    }
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer { serializer.serialize_str(self.to_string().as_str()) }
 }
-
 struct EndpointVisitor;
-
 impl<'de> serde::de::Visitor<'de> for EndpointVisitor {
     type Value = Endpoint;
-
-    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-        formatter.write_str("Endpoint value in string form")
-    }
-
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result { formatter.write_str("Endpoint value in string form") }
     fn visit_str<E>(self, s: &str) -> Result<Self::Value, E> where E: serde::de::Error {
         let id = Endpoint::new_from_string(s);
         if id.is_err() {
@@ -142,9 +134,6 @@ impl<'de> serde::de::Visitor<'de> for EndpointVisitor {
         return Ok(id.ok().unwrap() as Self::Value);
     }
 }
-
 impl<'de> serde::Deserialize<'de> for Endpoint {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'de> {
-        deserializer.deserialize_str(EndpointVisitor)
-    }
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'de> { deserializer.deserialize_str(EndpointVisitor) }
 }

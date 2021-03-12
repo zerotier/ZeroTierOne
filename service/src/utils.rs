@@ -18,7 +18,7 @@ use std::mem::MaybeUninit;
 use std::os::raw::c_uint;
 use std::path::Path;
 
-use zerotier_core::Identity;
+use zerotier_core::{Identity, Locator};
 
 use crate::osdep;
 
@@ -57,38 +57,53 @@ pub(crate) fn read_limit<P: AsRef<Path>>(path: P, limit: usize) -> std::io::Resu
 }
 
 /// Read an identity as either a literal or from a file.
-/// This is used in parsing command lines, allowing either a literal or a path
-/// to be specified and automagically disambiguating.
 pub(crate) fn read_identity(input: &str, validate: bool) -> Result<Identity, String> {
-    let id = Identity::new_from_string(input);
-    if id.is_err() {
-        let input = Path::new(input);
-        if !input.exists() || !input.is_file() {
-            return Err(format!("invalid identity: {}", id.err().unwrap().to_str()));
-        }
+    let parse_func = |s: &str| {
+        Identity::new_from_string(s).map_or_else(|e| {
+            Err(format!("invalid identity: {}", e.to_str()))
+        }, |id| {
+            if !validate || id.validate() {
+                Ok(id)
+            } else {
+                Err(String::from("invalid identity: local validation failed"))
+            }
+        })
+    };
+    if Path::new(input).exists() {
         read_limit(input, 16384).map_or_else(|e| {
             Err(e.to_string())
         }, |v| {
             String::from_utf8(v).map_or_else(|e| {
                 Err(e.to_string())
             }, |s| {
-                Identity::new_from_string(s.as_str()).map_or_else(|_| {
-                    Err(format!("Invalid identity in file {}", input.to_str().unwrap_or("")))
-                }, |id| {
-                    if validate && !id.validate() {
-                        Err(String::from("invalid identity: local validation failed"))
-                    } else {
-                        Ok(id)
-                    }
-                })
+                parse_func(s.as_str())
             })
         })
     } else {
-        let id = id.ok().unwrap();
-        if validate && !id.validate() {
-            Err(String::from("invalid identity: local validation failed"))
-        } else {
-            Ok(id)
-        }
+        parse_func(input)
+    }
+}
+
+/// Read a locator as either a literal or from a file.
+pub(crate) fn read_locator(input: &str) -> Result<Locator, String> {
+    let parse_func = |s: &str| {
+        Locator::new_from_string(s).map_or_else(|e| {
+            Err(format!("invalid locator: {}", e.to_str()))
+        }, |loc| {
+            Ok(loc)
+        })
+    };
+    if Path::new(input).exists() {
+        read_limit(input, 16384).map_or_else(|e| {
+            Err(e.to_string())
+        }, |v| {
+            String::from_utf8(v).map_or_else(|e| {
+                Err(e.to_string())
+            }, |s| {
+                parse_func(s.as_str())
+            })
+        })
+    } else {
+        parse_func(input)
     }
 }

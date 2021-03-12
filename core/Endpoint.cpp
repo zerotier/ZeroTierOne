@@ -115,6 +115,7 @@ bool Endpoint::fromString(const char *s) noexcept
 		}
 	} else if (strchr(s, '/') != nullptr) {
 		// IP/port is parsed as an IP_UDP endpoint for backward compatibility.
+		this->type = ZT_ENDPOINT_TYPE_IP_UDP;
 		return asInetAddress(this->value.ss).fromString(s);
 	}
 	return false;

@@ -67,7 +67,7 @@ Common Operations:
 Advanced Operations:
 
   service                                  Start this node
-                                           (usually not run directly)
+                                           (usually not invoked directly)
 
   controller <command> [option]
 ·   list                                   List networks on controller
@@ -110,16 +110,8 @@ Advanced Operations:
 
 An <address> may be specified as a 10-digit short ZeroTier address, a
 fingerprint containing both an address and a SHA384 hash, or an identity.
-The latter two options are equivalent in terms of specificity and may be
-used if stronger security guarantees are desired than those provided by
-the basic ZeroTier addressing system. Fields of type <identity> must be
-full identities and may be specified either verbatim or as a path to a file.
-
-An <endpoint> is a place where a peer may be reached. Currently these are
-just 'IP/port' format addresses but other types may be added in the future.
-
-The 'service' command starts a node. It will run until the node receives
-an exit signal and is normally not used directly."###, ver.0, ver.1, ver.2)
+Identities and locators can be specified as either paths to files on the
+filesystem or verbatim objects in string format. This is auto-detected."###, ver.0, ver.1, ver.2)
 }
 
 pub(crate) fn print_help() {

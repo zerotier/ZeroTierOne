@@ -70,10 +70,38 @@ fn new_<'a>(store: &Store, cli_args: &ArgMatches<'a>) -> i32 {
 }
 
 fn verify<'a>(store: &Store, cli_args: &ArgMatches<'a>) -> i32 {
-    0
+    let identity = crate::utils::read_identity(cli_args.value_of("identity").unwrap(), true);
+    if identity.is_err() {
+        println!("ERROR: identity invalid: {}", identity.err().unwrap());
+        return 1;
+    }
+    let identity = identity.unwrap();
+    let locator = crate::utils::read_locator(cli_args.value_of("locator").unwrap());
+    if locator.is_err() {
+        println!("ERROR: locator invalid: {}", locator.err().unwrap());
+        return 1;
+    }
+    if locator.unwrap().verify(&identity) {
+        println!("OK");
+        0
+    } else {
+        println!("FAILED");
+        1
+    }
 }
 
 fn show<'a>(store: &Store, cli_args: &ArgMatches<'a>) -> i32 {
+    let locator = crate::utils::read_locator(cli_args.value_of("locator").unwrap());
+    if locator.is_err() {
+        println!("ERROR: locator invalid: {}", locator.err().unwrap());
+        return 1;
+    }
+    let locator = locator.unwrap();
+    println!("{} timestamp {}", locator.signer().to_string(), (locator.timestamp() as f64) / 1000.0);
+    let endpoints = locator.endpoints();
+    for ep in endpoints.iter() {
+        println!("  {}", (*ep).to_string())
+    }
     0
 }
 

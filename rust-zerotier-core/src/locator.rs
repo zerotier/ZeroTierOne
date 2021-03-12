@@ -13,10 +13,10 @@
 
 use std::ffi::CString;
 use std::os::raw::{c_char, c_int, c_uint};
+use std::ptr::null;
 
 use crate::*;
 use crate::capi as ztcore;
-use std::ptr::null;
 
 pub struct Locator {
     pub(crate) capi: *const ztcore::ZT_Locator,
@@ -84,6 +84,20 @@ impl Locator {
         }
         eps
     }
+
+    pub fn verify(&self, id: &Identity) -> bool {
+        unsafe { ztcore::ZT_Locator_verify(self.capi, id.capi) != 0 }
+    }
+
+    pub fn signer(&self) -> Fingerprint {
+        unsafe {
+            let fp = ztcore::ZT_Locator_fingerprint(self.capi);
+            if fp.is_null() {
+                panic!("ZT_Locator_fingerprint() returned null, should not be allowed");
+            }
+            Fingerprint::new_from_capi(&*fp)
+        }
+    }
 }
 
 impl Drop for Locator {
@@ -125,20 +139,12 @@ impl PartialEq for Locator {
 impl Eq for Locator {}
 
 impl serde::Serialize for Locator {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
-        serializer.serialize_str(self.to_string().as_str())
-    }
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer { serializer.serialize_str(self.to_string().as_str()) }
 }
-
 struct LocatorVisitor;
-
 impl<'de> serde::de::Visitor<'de> for LocatorVisitor {
     type Value = Locator;
-
-    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-        formatter.write_str("Locator value in string form")
-    }
-
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result { formatter.write_str("Locator value in string form") }
     fn visit_str<E>(self, s: &str) -> Result<Self::Value, E> where E: serde::de::Error {
         let id = Locator::new_from_string(s);
         if id.is_err() {
@@ -147,9 +153,6 @@ impl<'de> serde::de::Visitor<'de> for LocatorVisitor {
         return Ok(id.ok().unwrap() as Self::Value);
     }
 }
-
 impl<'de> serde::Deserialize<'de> for Locator {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'de> {
-        deserializer.deserialize_str(LocatorVisitor)
-    }
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'de> { deserializer.deserialize_str(LocatorVisitor) }
 }

@@ -19,8 +19,6 @@ use dialoguer::Input;
 use zerotier_core::*;
 
 use crate::store::Store;
-use crate::utils::read_identity;
-use futures::SinkExt;
 
 fn list(store: &Store, auth_token: &Option<String>) -> i32 {
     0
@@ -98,7 +96,7 @@ fn newcsr<'a>(store: &Store, cli_args: &ArgMatches<'a>, auth_token: &Option<Stri
         if identity.is_empty() {
             break;
         }
-        let identity = read_identity(identity.as_str(), true);
+        let identity = crate::utils::read_identity(identity.as_str(), true);
         if identity.is_err() {
             println!("ERROR: identity invalid or unable to read from file.");
             return 1;
@@ -110,19 +108,24 @@ fn newcsr<'a>(store: &Store, cli_args: &ArgMatches<'a>, auth_token: &Option<Stri
         }
 
         let locator: String = Input::with_theme(theme)
-            .with_prompt(format!("  [{}] Locator for {} (optional)", identities.len() + 1, identity.address.to_string()))
+            .with_prompt(format!("  [{}] Locator or path to locator for {} (optional)", identities.len() + 1, identity.address.to_string()))
             .allow_empty(true)
             .interact_text()
             .unwrap_or_default();
         let locator = if locator.is_empty() {
             None
         } else {
-            let l = Locator::new_from_string(locator.as_str());
+            let l = crate::utils::read_locator(locator.as_str());
             if l.is_err() {
-                println!("ERROR: locator invalid: {}", l.err().unwrap().to_str());
+                println!("ERROR: locator invalid: {}", l.err().unwrap());
                 return 1;
             }
-            l.ok()
+            let l = l.ok();
+            if !l.as_ref().unwrap().verify(&identity) {
+                println!("ERROR: locator not signed by this identity.");
+                return 1;
+            }
+            l
         };
 
         identities.push(CertificateIdentity {
