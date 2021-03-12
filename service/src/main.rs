@@ -101,7 +101,9 @@ fn main() {
             process_exit_value = service::run(&store, auth_token);
         }
         ("controller", Some(sub_cli_args)) => {}
-        ("identity", Some(sub_cli_args)) => {}
+        ("identity", Some(sub_cli_args)) => {
+            process_exit_value = crate::commands::identity::run(&store, sub_cli_args, &auth_token);
+        }
         ("locator", Some(sub_cli_args)) => {
             process_exit_value = crate::commands::locator::run(&store, sub_cli_args, &auth_token);
         }

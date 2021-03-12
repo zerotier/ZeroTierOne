@@ -199,7 +199,7 @@ pub(crate) fn parse_cli_args() -> ArgMatches<'static> {
                 .arg(Arg::with_name("member").index(1).required(true))))
         .subcommand(App::new("identity")
             .subcommand(App::new("new")
-                .arg(Arg::with_name("type").possible_value("p384").possible_value("c25519").index(1)))
+                .arg(Arg::with_name("type").possible_value("p384").possible_value("c25519").default_value("c25519").index(1)))
             .subcommand(App::new("getpublic")
                 .arg(Arg::with_name("identity").index(1).required(true)))
             .subcommand(App::new("fingerprint")

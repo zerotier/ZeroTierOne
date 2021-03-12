@@ -20,10 +20,16 @@ use num_traits::{FromPrimitive, ToPrimitive};
 use crate::*;
 use crate::capi as ztcore;
 
-#[derive(FromPrimitive, ToPrimitive, PartialEq, Eq)]
+#[derive(FromPrimitive, ToPrimitive, PartialEq, Eq, Clone, Copy)]
 pub enum IdentityType {
     Curve25519 = ztcore::ZT_IdentityType_ZT_IDENTITY_TYPE_C25519 as isize,
     NistP384 = ztcore::ZT_IdentityType_ZT_IDENTITY_TYPE_P384 as isize,
+}
+
+impl ToString for IdentityType {
+    fn to_string(&self) -> String {
+        String::from(if *self == IdentityType::Curve25519 { "c25519" } else { "p384" })
+    }
 }
 
 pub struct Identity {
