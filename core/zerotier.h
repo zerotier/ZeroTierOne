@@ -674,6 +674,9 @@ enum ZT_CredentialType
 /**
  * Endpoint address and protocol types
  *
+ * Do not change these. They're used as protocol constants and the
+ * fact that IP types start at 5 is exploited in the code.
+ *
  * Most of these are not currently implemented and are just reserved
  * for future use.
  */
@@ -685,10 +688,15 @@ enum ZT_EndpointType
 	ZT_ENDPOINT_TYPE_WIFI_DIRECT = 3, /* Ethernet using WiFi direct */
 	ZT_ENDPOINT_TYPE_BLUETOOTH = 4,   /* Bluetooth (same address type as Ethernet) */
 	ZT_ENDPOINT_TYPE_IP = 5,          /* Naked IP (protocol 193) */
-	ZT_ENDPOINT_TYPE_IP_UDP = 6,      /* IP/UDP */
+	ZT_ENDPOINT_TYPE_IP_UDP = 6,      /* IP/UDP (the default and original) */
 	ZT_ENDPOINT_TYPE_IP_TCP = 7,      /* IP/TCP */
 	ZT_ENDPOINT_TYPE_IP_TCP_WS = 8    /* IP/TCP web sockets */
 };
+
+/**
+ * Maximum numeric value of the ZT_EndpointType enum.
+ */
+#define ZT_ENDPOINT_TYPE__MAX 8
 
 /**
  * Flag indicating that VL1 tracing should be generated

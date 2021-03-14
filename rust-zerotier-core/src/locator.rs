@@ -66,7 +66,7 @@ impl Locator {
     #[inline(always)]
     pub fn timestamp(&self) -> i64 {
         unsafe {
-            return ztcore::ZT_Locator_timestamp(self.capi) as i64;
+            ztcore::ZT_Locator_timestamp(self.capi) as i64
         }
     }
 

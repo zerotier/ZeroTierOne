@@ -17,7 +17,7 @@ use zerotier_core::*;
 
 use crate::store::Store;
 
-fn new_<'a>(store: &Store, cli_args: &ArgMatches<'a>) -> i32 {
+fn new_(cli_args: &ArgMatches) -> i32 {
     let timestamp = cli_args.value_of("timestamp").map_or(crate::utils::ms_since_epoch(), |ts| {
         if ts.is_empty() {
             0_i64
@@ -69,7 +69,7 @@ fn new_<'a>(store: &Store, cli_args: &ArgMatches<'a>) -> i32 {
     })
 }
 
-fn verify<'a>(store: &Store, cli_args: &ArgMatches<'a>) -> i32 {
+fn verify(cli_args: &ArgMatches) -> i32 {
     let identity = crate::utils::read_identity(cli_args.value_of("identity").unwrap(), true);
     if identity.is_err() {
         println!("ERROR: identity invalid: {}", identity.err().unwrap());
@@ -90,7 +90,7 @@ fn verify<'a>(store: &Store, cli_args: &ArgMatches<'a>) -> i32 {
     }
 }
 
-fn show<'a>(store: &Store, cli_args: &ArgMatches<'a>) -> i32 {
+fn show(cli_args: &ArgMatches) -> i32 {
     let locator = crate::utils::read_locator(cli_args.value_of("locator").unwrap());
     if locator.is_err() {
         println!("ERROR: locator invalid: {}", locator.err().unwrap());
@@ -105,11 +105,11 @@ fn show<'a>(store: &Store, cli_args: &ArgMatches<'a>) -> i32 {
     0
 }
 
-pub(crate) fn run<'a>(store: &Store, cli_args: &ArgMatches<'a>, _: &Option<String>) -> i32 {
+pub(crate) fn run<'a>(_: &Store, cli_args: &ArgMatches<'a>, _: &Option<String>) -> i32 {
     match cli_args.subcommand() {
-        ("new", Some(sub_cli_args)) => new_(store, sub_cli_args),
-        ("verify", Some(sub_cli_args)) => verify(store, sub_cli_args),
-        ("show", Some(sub_cli_args)) => show(store, sub_cli_args),
+        ("new", Some(sub_cli_args)) => new_(sub_cli_args),
+        ("verify", Some(sub_cli_args)) => verify(sub_cli_args),
+        ("show", Some(sub_cli_args)) => show(sub_cli_args),
         _ => {
             crate::cli::print_help();
             1

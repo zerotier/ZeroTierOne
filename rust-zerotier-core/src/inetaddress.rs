@@ -14,6 +14,7 @@
 use std::cmp::Ordering;
 use std::ffi::CString;
 use std::mem::{MaybeUninit, transmute};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::os::raw::{c_uint, c_void};
 
 use num_derive::{FromPrimitive, ToPrimitive};
@@ -21,7 +22,6 @@ use num_traits::FromPrimitive;
 
 use crate::*;
 use crate::capi as ztcore;
-use std::net::{SocketAddr, IpAddr, Ipv4Addr};
 
 // WARNING: here be dragons! This defines an opaque blob in Rust that shadows
 // and is of the exact size as an opaque blob in C that shadows and is the
@@ -324,20 +324,12 @@ impl PartialEq for InetAddress {
 impl Eq for InetAddress {}
 
 impl serde::Serialize for InetAddress {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
-        serializer.serialize_str(self.to_string().as_str())
-    }
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer { serializer.serialize_str(self.to_string().as_str()) }
 }
-
 struct InetAddressVisitor;
-
 impl<'de> serde::de::Visitor<'de> for InetAddressVisitor {
     type Value = InetAddress;
-
-    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-        formatter.write_str("InetAddress value in string form")
-    }
-
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result { formatter.write_str("InetAddress value in string form") }
     fn visit_str<E>(self, s: &str) -> Result<Self::Value, E> where E: serde::de::Error {
         let id = InetAddress::new_from_string(s);
         if id.is_none() {
@@ -346,11 +338,8 @@ impl<'de> serde::de::Visitor<'de> for InetAddressVisitor {
         return Ok(id.unwrap() as Self::Value);
     }
 }
-
 impl<'de> serde::Deserialize<'de> for InetAddress {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'de> {
-        deserializer.deserialize_str(InetAddressVisitor)
-    }
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'de> { deserializer.deserialize_str(InetAddressVisitor) }
 }
 
 #[cfg(test)]

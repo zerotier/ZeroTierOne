@@ -25,9 +25,10 @@ impl Ord for MulticastGroup {
     fn cmp(&self, other: &Self) -> Ordering {
         let o1 = self.mac.0.cmp(&other.mac.0);
         if o1 == Ordering::Equal {
-            return self.adi.cmp(&other.adi);
+            self.adi.cmp(&other.adi)
+        } else {
+            o1
         }
-        o1
     }
 }
 

@@ -35,42 +35,25 @@ impl From<&str> for MAC {
     }
 }
 
-impl serde::Serialize for MAC {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
-        serializer.serialize_str(self.to_string().as_str())
-    }
-}
-
 impl Ord for MAC {
     #[inline(always)]
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.0.cmp(&other.0)
-    }
+    fn cmp(&self, other: &Self) -> Ordering { self.0.cmp(&other.0) }
 }
 
 impl PartialOrd for MAC {
     #[inline(always)]
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.0.cmp(&other.0))
-    }
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.0.cmp(&other.0)) }
 }
 
+impl serde::Serialize for MAC {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer { serializer.serialize_str(self.to_string().as_str()) }
+}
 struct AddressVisitor;
-
 impl<'de> serde::de::Visitor<'de> for AddressVisitor {
     type Value = MAC;
-
-    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-        formatter.write_str("Ethernet MAC address in string format (with or without : separators)")
-    }
-
-    fn visit_str<E>(self, s: &str) -> Result<Self::Value, E> where E: serde::de::Error {
-        Ok(MAC::from(s))
-    }
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result { formatter.write_str("Ethernet MAC address in string format (with or without : separators)") }
+    fn visit_str<E>(self, s: &str) -> Result<Self::Value, E> where E: serde::de::Error { Ok(MAC::from(s)) }
 }
-
 impl<'de> serde::Deserialize<'de> for MAC {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'de> {
-        deserializer.deserialize_str(AddressVisitor)
-    }
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'de> { deserializer.deserialize_str(AddressVisitor) }
 }

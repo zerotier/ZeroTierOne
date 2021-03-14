@@ -177,8 +177,7 @@ pub fn random() -> u64 {
 
 /// Test whether this byte array or slice is all zeroes.
 pub fn is_all_zeroes<B: AsRef<[u8]>>(b: B) -> bool {
-    let bb = b.as_ref();
-    for c in bb.iter() {
+    for c in b.as_ref().iter() {
         if *c != 0 {
             return false;
         }

@@ -44,6 +44,10 @@ struct ServiceIntl {
     online: AtomicBool,
 }
 
+unsafe impl Send for ServiceIntl {}
+
+unsafe impl Sync for ServiceIntl {}
+
 /// Core ZeroTier service, which is sort of just a container for all the things.
 #[derive(Clone)]
 pub(crate) struct Service {
@@ -133,8 +137,7 @@ impl NodeEventHandler<Network> for Service {
     #[inline(always)]
     fn path_lookup(&self, address: Address, id: &Identity, desired_family: InetAddressFamily) -> Option<InetAddress> {
         let lc = self.local_config();
-        let vc = lc.virtual_.get(&address);
-        vc.map_or(None, |c: &LocalConfigVirtualConfig| {
+        lc.virtual_.get(&address).map_or(None, |c: &LocalConfigVirtualConfig| {
             if c.try_.is_empty() {
                 None
             } else {
@@ -415,11 +418,6 @@ async fn run_async(store: &Arc<Store>, auth_token: String, log: &Arc<Log>, local
 }
 
 pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
-    if store.write_pid().is_err() {
-        eprintln!("FATAL: error writing to directory '{}': unable to write zerotier.pid", store.base_path.to_str().unwrap());
-        return 1;
-    }
-
     let local_config = Arc::new(store.read_local_conf(false).unwrap_or_else(|_| { LocalConfig::default() }));
 
     let log = Arc::new(Log::new(
@@ -434,7 +432,6 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
         "",
     ));
 
-    // Generate authtoken.secret from secure random bytes if not already set.
     let auth_token = auth_token.unwrap_or_else(|| -> String {
         d!(log, "authtoken.secret not found, generating new...");
         let mut rb = [0_u8; 32];
@@ -455,6 +452,11 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
     });
     if auth_token.is_empty() {
         log.fatal(format!("unable to write authtoken.secret to '{}'", store.base_path.to_str().unwrap()));
+        return 1;
+    }
+
+    if store.write_pid().is_err() {
+        eprintln!("FATAL: error writing to directory '{}': unable to write zerotier.pid", store.base_path.to_str().unwrap());
         return 1;
     }
 

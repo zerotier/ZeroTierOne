@@ -766,7 +766,7 @@ mod tests {
         });
         cert.subject.networks.push(CertificateNetwork{
             id: NetworkId(0xdeadbeef),
-            controller: id0.fingerprint()
+            controller: Some(id0.fingerprint())
         });
         cert.subject.certificates.push(CertificateSerialNo::new());
         cert.subject.update_urls.push(String::from("http://foo.bar"));

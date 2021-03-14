@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use crate::*;
 use crate::capi as ztcore;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Peer {
     pub address: Address,
     pub identity: Identity,
@@ -36,7 +36,6 @@ pub struct Peer {
 }
 
 impl Peer {
-    #[inline(always)]
     pub(crate) fn new_from_capi(p: &ztcore::ZT_Peer) -> Peer {
         unsafe {
             let mut networks: Vec<NetworkId> = Vec::new();
@@ -57,8 +56,8 @@ impl Peer {
                 version_proto: p.versionProto as i32,
                 latency: p.latency as i32,
                 root: p.root != 0,
-                networks: networks,
-                paths: paths,
+                networks,
+                paths,
                 locator: if p.locator.is_null() { None } else { Some(Locator::new_from_capi(p.locator, false).clone() )}
             }
         }
