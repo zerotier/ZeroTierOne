@@ -158,4 +158,10 @@ bool EthernetTap::addIps(std::vector<InetAddress> ips)
 	return true;
 }
 
+std::string EthernetTap::friendlyName() const
+{
+	// Most platforms do not have this.
+	return std::string();
+}
+
 } // namespace ZeroTier

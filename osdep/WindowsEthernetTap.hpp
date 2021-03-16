@@ -95,6 +95,7 @@ public:
 	virtual void put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len);
 	virtual std::string deviceName() const;
 	virtual void setFriendlyName(const char *friendlyName);
+	virtual std::string friendlyName() const;
 	virtual void scanMulticastGroups(std::vector<MulticastGroup> &added,std::vector<MulticastGroup> &removed);
 	virtual void setMtu(unsigned int mtu);
 	virtual void setDns(const char* domain, const std::vector<InetAddress> &servers);
@@ -130,8 +131,8 @@ private:
 	std::string _netCfgInstanceId;
 	std::string _deviceInstanceId;
 	std::string _mySubkeyName;
-
 	std::string _friendlyName;
+	Mutex _friendlyName_m;
 
 	std::vector<InetAddress> _assignedIps; // IPs assigned with addIp
 	Mutex _assignedIps_m;
