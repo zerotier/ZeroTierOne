@@ -1,0 +1,22 @@
+# vim: ft=dockerfile
+
+FROM debian:buster as stage
+
+ARG PACKAGE_BASEURL=https://download.zerotier.com/debian/buster/pool/main/z/zerotier-one/
+ARG ARCH=amd64
+ARG VERSION
+
+RUN apt-get update -qq && apt-get install curl -y
+RUN curl -sSL -o zerotier-one.deb "${PACKAGE_BASEURL}/zerotier-one_${VERSION}_${ARCH}.deb"
+
+FROM debian:buster
+
+COPY --from=stage zerotier-one.deb .
+
+RUN dpkg -i zerotier-one.deb && rm -f zerotier-one.deb
+RUN echo "${VERSION}" >/etc/zerotier-version
+
+COPY entrypoint.sh.release /entrypoint.sh
+RUN chmod 755 /entrypoint.sh
+
+CMD /entrypoint.sh

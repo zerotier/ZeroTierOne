@@ -242,7 +242,7 @@ static void _networkToJson(nlohmann::json &nj,const ZT_VirtualNetworkConfig *nc,
 	m["domain"] = nc->dns.domain;
 	m["servers"] = nlohmann::json::array();
 	for(int j=0;j<ZT_MAX_DNS_SERVERS;++j) {
-		
+
 		InetAddress a(nc->dns.server_addr[j]);
 		if (a.isV4() || a.isV6()) {
 			char buf[256];
@@ -250,7 +250,7 @@ static void _networkToJson(nlohmann::json &nj,const ZT_VirtualNetworkConfig *nc,
 		}
 	}
 	nj["dns"] = m;
-	
+
 }
 
 static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer)
@@ -274,10 +274,12 @@ static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer)
 	pj["latency"] = peer->latency;
 	pj["role"] = prole;
 	pj["isBonded"] = peer->isBonded;
-	pj["bondingPolicy"] = peer->bondingPolicy;
-	pj["isHealthy"] = peer->isHealthy;
-	pj["numAliveLinks"] = peer->numAliveLinks;
-	pj["numTotalLinks"] = peer->numTotalLinks;
+	if (peer->isBonded) {
+		pj["bondingPolicy"] = peer->bondingPolicy;
+		pj["isHealthy"] = peer->isHealthy;
+		pj["numAliveLinks"] = peer->numAliveLinks;
+		pj["numTotalLinks"] = peer->numTotalLinks;
+	}
 
 	nlohmann::json pa = nlohmann::json::array();
 	for(unsigned int i=0;i<peer->pathCount;++i) {
@@ -676,6 +678,9 @@ public:
 			readLocalSettings();
 			applyLocalConfig();
 
+			// Save original port number to show it if bind error
+			const int _configuredPort = _primaryPort;
+
 			// Make sure we can use the primary port, and hunt for one if configured to do so
 			const int portTrials = (_primaryPort == 0) ? 256 : 1; // if port is 0, pick random
 			for(int k=0;k<portTrials;++k) {
@@ -693,7 +698,7 @@ public:
 			if (_ports[0] == 0) {
 				Mutex::Lock _l(_termReason_m);
 				_termReason = ONE_UNRECOVERABLE_ERROR;
-				_fatalErrorMessage = "cannot bind to local control interface port";
+				_fatalErrorMessage = std::string("cannot bind to local control interface port ")+std::to_string(_configuredPort);
 				return _termReason;
 			}
 
@@ -3039,7 +3044,9 @@ public:
 				if (!strncmp(p->c_str(),ifname,p->length()))
 					return false;
 			}
-			return _node->bondController()->allowedToBind(std::string(ifname));
+			if (!_node->bondController()->allowedToBind(std::string(ifname))) {
+				return false;
+			}
 		}
 		{
 			// Check global blacklists

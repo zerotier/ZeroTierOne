@@ -45,10 +45,6 @@ endif
 # Trying to use dynamically linked libhttp-parser causes tons of compatibility problems.
 ONE_OBJS+=ext/http-parser/http_parser.o
 
-# Build with address sanitization library for advanced debugging (clang)
-ifeq ($(ZT_SANITIZE),1)
-	DEFS+=-fsanitize=address -DASAN_OPTIONS=symbolize=1
-endif
 ifeq ($(ZT_DEBUG_TRACE),1)
 	DEFS+=-DZT_DEBUG_TRACE
 endif
@@ -62,7 +58,7 @@ endif
 
 # Build with address sanitization library for advanced debugging (clang)
 ifeq ($(ZT_SANITIZE),1)
-	SANFLAGS+=-fsanitize=address -DASAN_OPTIONS=symbolize=1
+	override DEFS+=-fsanitize=address -DASAN_OPTIONS=symbolize=1
 endif
 ifeq ($(ZT_DEBUG),1)
 	override CFLAGS+=-Wall -Wno-deprecated -g -O -pthread $(INCLUDES) $(DEFS)
@@ -408,7 +404,7 @@ uninstall:	FORCE
 # These are just for convenience for building Linux packages
 
 debian:	FORCE
-	debuild --no-lintian -I -i -us -uc -nc -b 
+	debuild --no-lintian -I -i -us -uc -nc -b
 
 debian-clean: FORCE
 	rm -rf debian/files debian/zerotier-one*.debhelper debian/zerotier-one.substvars debian/*.log debian/zerotier-one debian/.debhelper debian/debhelper-build-stamp
