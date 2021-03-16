@@ -30,6 +30,8 @@ pub(crate) struct Store {
     controller_path: Box<Path>,
     networks_path: Box<Path>,
     certs_path: Box<Path>,
+    auth_token_path: Mutex<Box<Path>>,
+    auth_token: Mutex<String>,
 }
 
 /// Restrict file permissions using OS-specific code in osdep/OSUtils.cpp.
@@ -46,7 +48,7 @@ pub fn lock_down_file(path: &str) {
 impl Store {
     const MAX_OBJECT_SIZE: usize = 262144; // sanity limit
 
-    pub fn new(base_path: &str) -> std::io::Result<Store> {
+    pub fn new(base_path: &str, auth_token_path_override: Option<String>, auth_token_override: Option<String>) -> std::io::Result<Store> {
         let bp = Path::new(base_path);
         let _ = std::fs::create_dir_all(bp);
         let md = bp.metadata()?;
@@ -62,6 +64,16 @@ impl Store {
             controller_path: bp.join("controller.d").into_boxed_path(),
             networks_path: bp.join("networks.d").into_boxed_path(),
             certs_path: bp.join("certs.d").into_boxed_path(),
+            auth_token_path: Mutex::new(auth_token_path_override.map_or_else(|| {
+                bp.join("authtoken.secret").into_boxed_path()
+            }, |auth_token_path_override| {
+                PathBuf::from(auth_token_path_override).into_boxed_path()
+            })),
+            auth_token: Mutex::new(auth_token_override.map_or_else(|| {
+                String::new()
+            }, |auth_token_override| {
+                auth_token_override
+            })),
         };
 
         let _ = std::fs::create_dir_all(&s.peers_path);
@@ -72,7 +84,7 @@ impl Store {
         Ok(s)
     }
 
-    fn make_obj_path(&self, obj_type: &StateObjectType, obj_id: &[u64]) -> Option<PathBuf> {
+    fn make_obj_path_internal(&self, obj_type: &StateObjectType, obj_id: &[u64]) -> Option<PathBuf> {
         match obj_type {
             StateObjectType::IdentityPublic => {
                 Some(self.base_path.join("identity.public"))
@@ -125,6 +137,46 @@ impl Store {
             }
         }
         Err(std::io::Error::new(std::io::ErrorKind::NotFound, "does not exist or is not readable"))
+    }
+
+    /// Get content of authtoken.secret or optionally generate and save if missing.
+    pub fn auth_token(&self, generate_if_missing: bool) -> std::io::Result<String> {
+        let mut token = self.auth_token.lock().unwrap();
+        if token.is_empty() {
+            let p = self.auth_token_path.lock().unwrap();
+            let ps = p.to_str().unwrap();
+
+            let token2 = self.read_file(ps).map_or(String::new(), |sb| { String::from_utf8(sb).unwrap_or(String::new()).trim().to_string() });
+            if token2.is_empty() {
+                if generate_if_missing {
+                    let mut rb = [0_u8; 32];
+                    unsafe { crate::osdep::getSecureRandom(rb.as_mut_ptr().cast(), 64) };
+                    token.reserve(rb.len());
+                    for b in rb.iter() {
+                        if *b > 127_u8 {
+                            token.push((65 + (*b % 26)) as char); // A..Z
+                        } else {
+                            token.push((97 + (*b % 26)) as char); // a..z
+                        }
+                    }
+                    let res = self.write_file(ps, token.as_bytes());
+                    if res.is_err() {
+                        token.clear();
+                        Err(res.err().unwrap())
+                    } else {
+                        lock_down_file(ps);
+                        Ok(token.clone())
+                    }
+                } else {
+                    Err(std::io::Error::new(std::io::ErrorKind::NotFound, ""))
+                }
+            } else {
+                *token = token2;
+                Ok(token.clone())
+            }
+        } else {
+            Ok(token.clone())
+        }
     }
 
     /// Get a list of the network IDs to which this node is joined.
@@ -212,20 +264,6 @@ impl Store {
         })
     }
 
-    /// Reads the authtoken.secret file in the home directory.
-    #[inline(always)]
-    pub fn read_authtoken_secret(&self) -> std::io::Result<String> {
-        Ok(self.read_file_str("authtoken.secret")?)
-    }
-
-    /// Write authtoken.secret and lock down file permissions.
-    pub fn write_authtoken_secret(&self, sec: &str) -> std::io::Result<()> {
-        let p = self.base_path.join("authtoken.secret");
-        let _ = std::fs::OpenOptions::new().write(true).truncate(true).create(true).open(&p)?.write_all(sec.as_bytes())?;
-        lock_down_file(p.to_str().unwrap());
-        Ok(())
-    }
-
     /// Write zerotier.pid file with current process's PID.
     #[cfg(unix)]
     pub fn write_pid(&self) -> std::io::Result<()> {
@@ -240,7 +278,7 @@ impl Store {
 
     /// Load a ZeroTier core object.
     pub fn load_object(&self, obj_type: &StateObjectType, obj_id: &[u64]) -> std::io::Result<Vec<u8>> {
-        let obj_path = self.make_obj_path(&obj_type, obj_id);
+        let obj_path = self.make_obj_path_internal(&obj_type, obj_id);
         if obj_path.is_some() {
             return self.read_internal(obj_path.unwrap());
         }
@@ -249,7 +287,7 @@ impl Store {
 
     /// Erase a ZeroTier core object.
     pub fn erase_object(&self, obj_type: &StateObjectType, obj_id: &[u64]) {
-        let obj_path = self.make_obj_path(obj_type, obj_id);
+        let obj_path = self.make_obj_path_internal(obj_type, obj_id);
         if obj_path.is_some() {
             let _ = std::fs::remove_file(obj_path.unwrap());
         }
@@ -258,7 +296,7 @@ impl Store {
     /// Store a ZeroTier core object.
     /// Permissions will also be restricted for some object types.
     pub fn store_object(&self, obj_type: &StateObjectType, obj_id: &[u64], obj_data: &[u8]) -> std::io::Result<()> {
-        let obj_path = self.make_obj_path(obj_type, obj_id);
+        let obj_path = self.make_obj_path_internal(obj_type, obj_id);
         if obj_path.is_some() {
             let obj_path = obj_path.unwrap();
             std::fs::OpenOptions::new().write(true).truncate(true).create(true).open(&obj_path)?.write_all(obj_data)?;

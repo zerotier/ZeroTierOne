@@ -13,6 +13,7 @@
 
 use std::io::Write;
 use std::str::FromStr;
+use std::sync::Arc;
 
 use clap::ArgMatches;
 use dialoguer::Input;
@@ -20,15 +21,15 @@ use zerotier_core::*;
 
 use crate::store::Store;
 
-fn list(store: &Store, auth_token: &Option<String>) -> i32 {
+fn list(store: &Arc<Store>) -> i32 {
     0
 }
 
-fn show<'a>(store: &Store, cli_args: &ArgMatches<'a>, auth_token: &Option<String>) -> i32 {
+fn show<'a>(store: &Arc<Store>, cli_args: &ArgMatches<'a>) -> i32 {
     0
 }
 
-fn newsid<'a>(store: &Store, cli_args: Option<&ArgMatches<'a>>, auth_token: &Option<String>) -> i32 {
+fn newsid(cli_args: Option<&ArgMatches>) -> i32 {
     let sid = CertificateSubjectUniqueIdSecret::new(CertificateUniqueIdType::NistP384); // right now there's only one type
     let sid = sid.to_json();
     let path = cli_args.map_or("", |cli_args| { cli_args.value_of("path").unwrap_or("") });
@@ -45,7 +46,7 @@ fn newsid<'a>(store: &Store, cli_args: Option<&ArgMatches<'a>>, auth_token: &Opt
     }
 }
 
-fn newcsr<'a>(store: &Store, cli_args: &ArgMatches<'a>, auth_token: &Option<String>) -> i32 {
+fn newcsr(cli_args: &ArgMatches) -> i32 {
     let theme = &dialoguer::theme::SimpleTheme;
 
     let subject_unique_id: String = Input::with_theme(theme)
@@ -245,47 +246,47 @@ fn newcsr<'a>(store: &Store, cli_args: &ArgMatches<'a>, auth_token: &Option<Stri
     })
 }
 
-fn sign<'a>(store: &Store, cli_args: &ArgMatches<'a>, auth_token: &Option<String>) -> i32 {
+fn sign<'a>(store: &Arc<Store>, cli_args: &ArgMatches<'a>) -> i32 {
     0
 }
 
-fn verify<'a>(store: &Store, cli_args: &ArgMatches<'a>, auth_token: &Option<String>) -> i32 {
+fn verify<'a>(store: &Arc<Store>, cli_args: &ArgMatches<'a>) -> i32 {
     0
 }
 
-fn dump<'a>(store: &Store, cli_args: &ArgMatches<'a>, auth_token: &Option<String>) -> i32 {
+fn dump<'a>(store: &Arc<Store>, cli_args: &ArgMatches<'a>) -> i32 {
     0
 }
 
-fn import<'a>(store: &Store, cli_args: &ArgMatches<'a>, auth_token: &Option<String>) -> i32 {
+fn import<'a>(store: &Arc<Store>, cli_args: &ArgMatches<'a>) -> i32 {
     0
 }
 
-fn factoryreset(store: &Store, auth_token: &Option<String>) -> i32 {
+fn factoryreset(store: &Arc<Store>) -> i32 {
     0
 }
 
-fn export<'a>(store: &Store, cli_args: &ArgMatches<'a>, auth_token: &Option<String>) -> i32 {
+fn export<'a>(store: &Arc<Store>, cli_args: &ArgMatches<'a>) -> i32 {
     0
 }
 
-fn delete<'a>(store: &Store, cli_args: &ArgMatches<'a>, auth_token: &Option<String>) -> i32 {
+fn delete<'a>(store: &Arc<Store>, cli_args: &ArgMatches<'a>) -> i32 {
     0
 }
 
-pub(crate) fn run<'a>(store: &Store, cli_args: &ArgMatches<'a>, auth_token: &Option<String>) -> i32 {
+pub(crate) fn run<'a>(store: Arc<Store>, cli_args: &ArgMatches<'a>) -> i32 {
     match cli_args.subcommand() {
-        ("list", None) => list(store, auth_token),
-        ("show", Some(sub_cli_args)) => show(store, sub_cli_args, auth_token),
-        ("newsid", sub_cli_args) => newsid(store, sub_cli_args, auth_token),
-        ("newcsr", Some(sub_cli_args)) => newcsr(store, sub_cli_args, auth_token),
-        ("sign", Some(sub_cli_args)) => sign(store, sub_cli_args, auth_token),
-        ("verify", Some(sub_cli_args)) => verify(store, sub_cli_args, auth_token),
-        ("dump", Some(sub_cli_args)) => dump(store, sub_cli_args, auth_token),
-        ("import", Some(sub_cli_args)) => import(store, sub_cli_args, auth_token),
-        ("factoryreset", None) => factoryreset(store, auth_token),
-        ("export", Some(sub_cli_args)) => export(store, sub_cli_args, auth_token),
-        ("delete", Some(sub_cli_args)) => delete(store, sub_cli_args, auth_token),
+        ("list", None) => list(&store),
+        ("show", Some(sub_cli_args)) => show(&store, sub_cli_args),
+        ("newsid", sub_cli_args) => newsid(sub_cli_args),
+        ("newcsr", Some(sub_cli_args)) => newcsr(sub_cli_args),
+        ("sign", Some(sub_cli_args)) => sign(&store, sub_cli_args),
+        ("verify", Some(sub_cli_args)) => verify(&store, sub_cli_args),
+        ("dump", Some(sub_cli_args)) => dump(&store, sub_cli_args),
+        ("import", Some(sub_cli_args)) => import(&store, sub_cli_args),
+        ("factoryreset", None) => factoryreset(&store),
+        ("export", Some(sub_cli_args)) => export(&store, sub_cli_args),
+        ("delete", Some(sub_cli_args)) => delete(&store, sub_cli_args),
         _ => {
             crate::cli::print_help();
             1

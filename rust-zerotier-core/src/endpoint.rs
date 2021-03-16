@@ -21,7 +21,7 @@ use num_traits::FromPrimitive;
 use crate::*;
 use crate::capi as ztcore;
 
-#[derive(FromPrimitive, ToPrimitive, PartialEq, Eq)]
+#[derive(FromPrimitive, ToPrimitive, PartialEq, Eq, Clone, Copy)]
 pub enum EndpointType {
     Nil = ztcore::ZT_EndpointType_ZT_ENDPOINT_TYPE_NIL as isize,
     ZeroTier = ztcore::ZT_EndpointType_ZT_ENDPOINT_TYPE_ZEROTIER as isize,
@@ -34,6 +34,7 @@ pub enum EndpointType {
     IpTcpWs = ztcore::ZT_EndpointType_ZT_ENDPOINT_TYPE_IP_TCP_WS as isize,
 }
 
+#[derive(Clone)]
 pub struct Endpoint {
     pub type_: EndpointType,
     pub(crate) capi: ztcore::ZT_Endpoint

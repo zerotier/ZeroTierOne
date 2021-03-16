@@ -11,14 +11,15 @@
  */
 /****/
 
+use std::os::raw::c_int;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
-use zerotier_core::{Buffer, InetAddress, InetAddressFamily};
-use num_traits::cast::AsPrimitive;
-use std::os::raw::c_int;
-use crate::osdep as osdep;
 
-#[cfg(target_os = "linux")]
+use num_traits::cast::AsPrimitive;
+
+use zerotier_core::{Buffer, InetAddress, InetAddressFamily};
+
+use crate::osdep as osdep;
 
 /*
  * This is a threaded UDP socket listener for high performance. The fastest way to receive UDP
@@ -26,29 +27,10 @@ use crate::osdep as osdep;
  * for each thread using options like SO_REUSEPORT and concurrent packet listening.
  */
 
-#[cfg(windows)]
-use winapi::um::winsock2 as winsock2;
+#[cfg(windows)] use winapi::um::winsock2 as winsock2;
 
-#[cfg(windows)]
-pub(crate) type FastUDPRawOsSocket = winsock2::SOCKET;
-
-#[cfg(unix)]
-pub(crate) type FastUDPRawOsSocket = c_int;
-
-/// Test bind UDP to a port at 0.0.0.0 and ::0, returning whether IPv4 and/or IPv6 succeeded (respectively).
-pub(crate) fn test_bind_udp(port: u16) -> (bool, bool) {
-    let v4 = InetAddress::new_ipv4_any(port);
-    let v6 = InetAddress::new_ipv6_any(port);
-    let v4b = bind_udp_socket("", &v4);
-    if v4b.is_ok() {
-        fast_udp_socket_close(v4b.as_ref().unwrap());
-    }
-    let v6b = bind_udp_socket("", &v6);
-    if v6b.is_ok() {
-        fast_udp_socket_close(v6b.as_ref().unwrap());
-    }
-    (v4b.is_ok(), v6b.is_ok())
-}
+#[cfg(windows)] pub(crate) type FastUDPRawOsSocket = winsock2::SOCKET;
+#[cfg(unix)] pub(crate) type FastUDPRawOsSocket = c_int;
 
 #[cfg(unix)]
 fn bind_udp_socket(_device_name: &str, address: &InetAddress) -> Result<FastUDPRawOsSocket, &'static str> {
@@ -70,9 +52,10 @@ fn bind_udp_socket(_device_name: &str, address: &InetAddress) -> Result<FastUDPR
         };
 
         #[cfg(not(target_os = "linux"))]
-            let s = osdep::socket(af.as_(), osdep::SOCK_DGRAM.as_(), 0);
+        let s = osdep::socket(af.as_(), osdep::SOCK_DGRAM.as_(), 0);
         #[cfg(target_os = "linux")]
-            let s = osdep::socket(af.as_(), 2, 0);
+        let s = osdep::socket(af.as_(), 2, 0);
+
         if s < 0 {
             return Err("unable to create socket");
         }
@@ -97,17 +80,15 @@ fn bind_udp_socket(_device_name: &str, address: &InetAddress) -> Result<FastUDPR
             setsockopt_results |= osdep::setsockopt(s, osdep::SOL_SOCKET.as_(), osdep::SO_NOSIGPIPE.as_(), (&mut fl as *mut c_int).cast(), fl_size)
         }
 
+        // On linux we bind to device so default route override can work. This
+        // is not required on BSDs as they behave this way if the socket is
+        // bound to the device's address.
         #[cfg(target_os = "linux")] {
             if !_device_name.is_empty() {
                 unsafe {
                     let _ = std::ffi::CString::new(_device_name).map(|dn| {
                         let dnb = dn.as_bytes_with_nul();
-                        let _ = osdep::setsockopt(
-                            s.as_(),
-                            osdep::SOL_SOCKET.as_(),
-                            osdep::SO_BINDTODEVICE.as_(),
-                            dnb.as_ptr().cast(),
-                            (dnb.len() - 1).as_());
+                        let _ = osdep::setsockopt(s.as_(), osdep::SOL_SOCKET.as_(), osdep::SO_BINDTODEVICE.as_(), dnb.as_ptr().cast(), (dnb.len() - 1).as_());
                     });
                 }
             }
@@ -119,25 +100,19 @@ fn bind_udp_socket(_device_name: &str, address: &InetAddress) -> Result<FastUDPR
         }
 
         if af == osdep::AF_INET {
-            #[cfg(any(target_os = "macos", target_os = "ios"))] {
+            #[cfg(not(target_os = "linux"))] {
                 fl = 0;
-                osdep::setsockopt(s, osdep::IPPROTO_IP.as_(), 0x4000 /* IP_DF */, (&mut fl as *mut c_int).cast(), fl_size);
+                osdep::setsockopt(s, osdep::IPPROTO_IP.as_(), osdep::IP_DF.as_(), (&mut fl as *mut c_int).cast(), fl_size);
             }
             #[cfg(target_os = "linux")] {
-                fl = osdep::IP_PMTUDISC_DONT.as_();
+                fl = osdep::IP_PMTUDISC_DONT as c_int;
                 osdep::setsockopt(s, osdep::IPPROTO_IP.as_(), osdep::IP_MTU_DISCOVER.as_(), (&mut fl as *mut c_int).cast(), fl_size);
             }
         }
 
         if af == osdep::AF_INET6 {
-            #[cfg(any(target_os = "macos", target_os = "ios"))] {
-                fl = 0;
-                osdep::setsockopt(s, osdep::IPPROTO_IPV6.as_(), 62 /* IPV6_DONTFRAG */, (&mut fl as *mut c_int).cast(), fl_size);
-            }
-            #[cfg(target_os = "linux")] {
-                fl = 0;
-                osdep::setsockopt(s, osdep::IPPROTO_IPV6.as_(), osdep::IPV6_DONTFRAG.as_(), (&mut fl as *mut c_int).cast(), fl_size);
-            }
+            fl = 0;
+            osdep::setsockopt(s, osdep::IPPROTO_IPV6.as_(), osdep::IPV6_DONTFRAG.as_(), (&mut fl as *mut c_int).cast(), fl_size);
         }
 
         fl = 1048576;
@@ -345,9 +320,11 @@ impl Drop for FastUDPSocket {
 
 #[cfg(test)]
 mod tests {
-    use crate::fastudpsocket::*;
-    use zerotier_core::{InetAddress, Buffer};
     use std::sync::atomic::{AtomicU32, Ordering};
+
+    use zerotier_core::{Buffer, InetAddress};
+
+    use crate::fastudpsocket::*;
 
     #[test]
     fn test_udp_bind_and_transfer() {

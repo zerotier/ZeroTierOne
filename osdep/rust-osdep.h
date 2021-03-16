@@ -42,7 +42,10 @@
 #include <net/if_dl.h>
 #include <net/if_media.h>
 #include <net/ndrv.h>
+#include <netinet/ip.h>
+#include <netinet/ip6.h>
 #include <netinet/in_var.h>
+#include <netinet/in.h>
 #include <netinet/icmp6.h>
 #include <netinet6/in6_var.h>
 #include <netinet6/nd6.h>
@@ -64,6 +67,9 @@ extern const unsigned long c_SIOCAUTOCONF_START;
 extern const unsigned long c_SIOCAUTOCONF_STOP;
 #ifdef __cplusplus
 }
+#endif
+#ifndef IPV6_DONTFRAG
+#define IPV6_DONTFRAG 62
 #endif
 #endif /* __APPLE__ */
 

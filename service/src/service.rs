@@ -36,7 +36,6 @@ use crate::weblistener::WebListener;
 const CONFIG_CHECK_INTERVAL: i64 = 5000;
 
 struct ServiceIntl {
-    auth_token: String,
     interrupt: Mutex<futures::channel::mpsc::Sender<()>>,
     local_config: Mutex<Arc<LocalConfig>>,
     store: Arc<Store>,
@@ -191,7 +190,7 @@ unsafe impl Send for Service {}
 
 unsafe impl Sync for Service {}
 
-async fn run_async(store: &Arc<Store>, auth_token: String, log: &Arc<Log>, local_config: Arc<LocalConfig>) -> i32 {
+async fn run_async(store: Arc<Store>, log: Arc<Log>, local_config: Arc<LocalConfig>) -> i32 {
     let mut process_exit_value: i32 = 0;
 
     let mut udp_sockets: BTreeMap<InetAddress, FastUDPSocket> = BTreeMap::new();
@@ -203,7 +202,6 @@ async fn run_async(store: &Arc<Store>, auth_token: String, log: &Arc<Log>, local
         log: log.clone(),
         _node: Weak::new(),
         intl: Arc::new(ServiceIntl {
-            auth_token,
             interrupt: Mutex::new(interrupt_tx),
             local_config: Mutex::new(local_config),
             store: store.clone(),
@@ -417,7 +415,7 @@ async fn run_async(store: &Arc<Store>, auth_token: String, log: &Arc<Log>, local
     process_exit_value
 }
 
-pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
+pub(crate) fn run(store: Arc<Store>) -> i32 {
     let local_config = Arc::new(store.read_local_conf(false).unwrap_or_else(|_| { LocalConfig::default() }));
 
     let log = Arc::new(Log::new(
@@ -432,36 +430,18 @@ pub(crate) fn run(store: &Arc<Store>, auth_token: Option<String>) -> i32 {
         "",
     ));
 
-    let auth_token = auth_token.unwrap_or_else(|| -> String {
-        d!(log, "authtoken.secret not found, generating new...");
-        let mut rb = [0_u8; 32];
-        unsafe { crate::osdep::getSecureRandom(rb.as_mut_ptr().cast(), 64) };
-        let mut generated_auth_token = String::new();
-        generated_auth_token.reserve(rb.len());
-        for b in rb.iter() {
-            if *b > 127_u8 {
-                generated_auth_token.push((65 + (*b % 26)) as char); // A..Z
-            } else {
-                generated_auth_token.push((97 + (*b % 26)) as char); // a..z
-            }
-        }
-        if store.write_authtoken_secret(generated_auth_token.as_str()).is_err() {
-            generated_auth_token.clear();
-        }
-        generated_auth_token
-    });
-    if auth_token.is_empty() {
-        log.fatal(format!("unable to write authtoken.secret to '{}'", store.base_path.to_str().unwrap()));
+    if store.auth_token(true).is_err() {
+        eprintln!("FATAL: error writing new web API authorization token (likely permission problem).");
         return 1;
     }
-
     if store.write_pid().is_err() {
-        eprintln!("FATAL: error writing to directory '{}': unable to write zerotier.pid", store.base_path.to_str().unwrap());
+        eprintln!("FATAL: error writing to directory '{}': unable to write zerotier.pid (likely permission problem).", store.base_path.to_str().unwrap());
         return 1;
     }
 
     let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
-    let process_exit_value = rt.block_on(async move { run_async(store, auth_token, &log, local_config).await });
+    let store2 = store.clone();
+    let process_exit_value = rt.block_on(async move { run_async(store2, log, local_config).await });
     rt.shutdown_timeout(Duration::from_millis(500));
 
     store.erase_pid();

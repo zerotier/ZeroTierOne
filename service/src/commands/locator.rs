@@ -105,7 +105,7 @@ fn show(cli_args: &ArgMatches) -> i32 {
     0
 }
 
-pub(crate) fn run<'a>(_: &Store, cli_args: &ArgMatches<'a>, _: &Option<String>) -> i32 {
+pub(crate) fn run<'a>(cli_args: &ArgMatches<'a>) -> i32 {
     match cli_args.subcommand() {
         ("new", Some(sub_cli_args)) => new_(sub_cli_args),
         ("verify", Some(sub_cli_args)) => verify(sub_cli_args),

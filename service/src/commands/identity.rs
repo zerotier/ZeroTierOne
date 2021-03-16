@@ -14,6 +14,7 @@
 use clap::ArgMatches;
 use crate::store::Store;
 use zerotier_core::{IdentityType, Identity};
+use std::sync::Arc;
 
 fn new_(cli_args: &ArgMatches) -> i32 {
     let id_type = cli_args.value_of("type").map_or(IdentityType::Curve25519, |idt| {
@@ -118,7 +119,7 @@ fn verify(cli_args: &ArgMatches) -> i32 {
     })
 }
 
-pub(crate) fn run<'a>(_: &Store, cli_args: &ArgMatches<'a>, _: &Option<String>) -> i32 {
+pub(crate) fn run<'a>(cli_args: &ArgMatches<'a>) -> i32 {
     match cli_args.subcommand() {
         ("new", Some(sub_cli_args)) => new_(sub_cli_args),
         ("getpublic", Some(sub_cli_args)) => getpublic(sub_cli_args),

@@ -29,92 +29,48 @@ mod weblistener;
 mod osdep; // bindgen generated
 
 use std::boxed::Box;
+use std::rc::Rc;
 use std::sync::Arc;
 
 use crate::store::Store;
 use clap::ArgMatches;
 
 fn main() {
-    let mut process_exit_value: i32 = 0;
-
-    let cli_args = Box::new(cli::parse_cli_args());
-    let mut zerotier_path = unsafe { zerotier_core::cstr_to_string(osdep::platformDefaultHomePath(), -1) };
-    let mut auth_token: Option<String> = None;
-    let mut auth_token_path: Option<String> = None;
-    //let json_output = cli_args.is_present("json");
-    let v = cli_args.value_of("path");
-    if v.is_some() {
-        zerotier_path = String::from(v.unwrap());
-    }
-    let v = cli_args.value_of("token");
-    if v.is_some() {
-        auth_token = Some(v.unwrap().trim().to_string());
-    }
-    let v = cli_args.value_of("token_path");
-    if v.is_some() {
-        auth_token_path = Some(v.unwrap().to_string());
-    }
-
-    let store = Store::new(zerotier_path.as_str());
-    if store.is_err() {
-        eprintln!("FATAL: error accessing directory '{}': {}", zerotier_path, store.err().unwrap().to_string());
-        std::process::exit(1);
-    }
-    let store = Arc::new(store.unwrap());
-
-    // From this point on we shouldn't call std::process::exit() since that would
-    // fail to erase zerotier.pid from the working directory.
-
-    if auth_token.is_none() {
-        let t;
-        if auth_token_path.is_some() {
-            t = store.read_file_str(auth_token_path.unwrap().trim());
-        } else {
-            t = store.read_authtoken_secret();
+    let cli_args = cli::parse_cli_args();
+    let store = || {
+        //let json_output = cli_args.is_present("json"); // TODO
+        let zerotier_path = cli_args.value_of("path").map_or_else(|| unsafe { zerotier_core::cstr_to_string(osdep::platformDefaultHomePath(), -1) }, |ztp| ztp.to_string());
+        let store = Store::new(zerotier_path.as_str(), cli_args.value_of("token_path").map_or(None, |tp| Some(tp.to_string())), cli_args.value_of("token").map_or(None, |tok| Some(tok.trim().to_string())));
+        if store.is_err() {
+            eprintln!("FATAL: error accessing directory '{}': {}", zerotier_path, store.err().unwrap().to_string());
+            std::process::exit(1);
         }
-        if t.is_ok() {
-            auth_token = Some(t.unwrap().trim().to_string());
-        }
-    } else {
-        drop(auth_token_path);
-        auth_token = Some(auth_token.unwrap().trim().to_string());
-    }
-
-    drop(zerotier_path);
-
-    match cli_args.subcommand() {
+        Arc::new(store.unwrap())
+    };
+    std::process::exit(match cli_args.subcommand() {
         ("help", None) => {
-            cli::print_help()
+            cli::print_help();
+            0
         }
         ("version", None) => {
             let ver = zerotier_core::version();
             println!("{}.{}.{}", ver.0, ver.1, ver.2);
+            0
         }
-        ("status", None) => {}
-        ("set", Some(sub_cli_args)) => {}
-        ("peer", Some(sub_cli_args)) => {}
-        ("network", Some(sub_cli_args)) => {}
-        ("join", Some(sub_cli_args)) => {}
-        ("leave", Some(sub_cli_args)) => {}
-        ("service", None) => {
-            drop(cli_args); // free unnecssary memory before launching service
-            process_exit_value = service::run(&store, auth_token);
-        }
-        ("controller", Some(sub_cli_args)) => {}
-        ("identity", Some(sub_cli_args)) => {
-            process_exit_value = crate::commands::identity::run(&store, sub_cli_args, &auth_token);
-        }
-        ("locator", Some(sub_cli_args)) => {
-            process_exit_value = crate::commands::locator::run(&store, sub_cli_args, &auth_token);
-        }
-        ("cert", Some(sub_cli_args)) => {
-            process_exit_value = crate::commands::cert::run(&store, sub_cli_args, &auth_token);
-        }
+        ("status", None) => { 0 }
+        ("set", Some(sub_cli_args)) => { 0 }
+        ("peer", Some(sub_cli_args)) => { 0 }
+        ("network", Some(sub_cli_args)) => { 0 }
+        ("join", Some(sub_cli_args)) => { 0 }
+        ("leave", Some(sub_cli_args)) => { 0 }
+        ("service", None) => service::run(store()),
+        ("controller", Some(sub_cli_args)) => { 0 }
+        ("identity", Some(sub_cli_args)) => crate::commands::identity::run(sub_cli_args),
+        ("locator", Some(sub_cli_args)) => crate::commands::locator::run(sub_cli_args),
+        ("cert", Some(sub_cli_args)) => crate::commands::cert::run(store(), sub_cli_args),
         _ => {
             cli::print_help();
-            process_exit_value = 1;
+            1
         }
-    }
-
-    std::process::exit(process_exit_value);
+    });
 }
