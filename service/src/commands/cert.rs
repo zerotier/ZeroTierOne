@@ -288,7 +288,7 @@ pub(crate) fn run<'a>(store: Arc<Store>, cli_args: &ArgMatches<'a>) -> i32 {
         ("export", Some(sub_cli_args)) => export(&store, sub_cli_args),
         ("delete", Some(sub_cli_args)) => delete(&store, sub_cli_args),
         _ => {
-            crate::cli::print_help();
+            crate::print_help();
             1
         }
     }

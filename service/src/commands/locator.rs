@@ -111,7 +111,7 @@ pub(crate) fn run<'a>(cli_args: &ArgMatches<'a>) -> i32 {
         ("verify", Some(sub_cli_args)) => verify(sub_cli_args),
         ("show", Some(sub_cli_args)) => show(sub_cli_args),
         _ => {
-            crate::cli::print_help();
+            crate::print_help();
             1
         }
     }
