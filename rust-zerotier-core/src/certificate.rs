@@ -41,7 +41,7 @@ pub const CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_PRIVATE_SIZE: u32 = ztcore::ZT_C
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(PartialEq, Eq, PartialOrd, Ord)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct CertificateSerialNo(pub [u8; 48]);
 
 impl CertificateSerialNo {
@@ -87,7 +87,7 @@ impl<'de> serde::Deserialize<'de> for CertificateSerialNo {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /// Type of certificate subject unique ID
-#[derive(FromPrimitive, ToPrimitive, PartialEq, Eq)]
+#[derive(FromPrimitive, ToPrimitive, PartialEq, Eq, Clone, Copy)]
 pub enum CertificateUniqueIdType {
     NistP384 = ztcore::ZT_CertificateUniqueIdType_ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384 as isize
 }
@@ -124,7 +124,7 @@ impl<'de> serde::Deserialize<'de> for CertificateUniqueIdType {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct CertificateSubjectUniqueIdSecret {
     #[serde(with = "Base64Standard")]
     pub public: Vec<u8>,
@@ -160,7 +160,7 @@ implement_to_from_json!(CertificateSubjectUniqueIdSecret);
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(FromPrimitive, ToPrimitive, PartialEq, Eq)]
+#[derive(FromPrimitive, ToPrimitive, PartialEq, Eq, Clone, Copy)]
 pub enum CertificateError {
     None = ztcore::ZT_CertificateError_ZT_CERTIFICATE_ERROR_NONE as isize,
     HaveNewerCert = ztcore::ZT_CertificateError_ZT_CERTIFICATE_ERROR_HAVE_NEWER_CERT as isize,
@@ -225,7 +225,7 @@ impl<'de> serde::Deserialize<'de> for CertificateError {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct CertificateName {
     #[serde(rename = "serialNo")]
     pub serial_no: String,
@@ -317,7 +317,7 @@ implement_to_from_json!(CertificateName);
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct CertificateNetwork {
     pub id: NetworkId,
     pub controller: Option<Fingerprint>,
@@ -366,7 +366,7 @@ implement_to_from_json!(CertificateNetwork);
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct CertificateIdentity {
     pub identity: Identity,
     pub locator: Option<Locator>,
@@ -395,7 +395,7 @@ implement_to_from_json!(CertificateIdentity);
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct CertificateSubject {
     pub timestamp: i64,
     pub identities: Vec<CertificateIdentity>,
@@ -578,7 +578,7 @@ implement_to_from_json!(CertificateSubject);
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct Certificate {
     #[serde(rename = "serialNo")]
     pub serial_no: CertificateSerialNo,

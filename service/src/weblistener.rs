@@ -28,7 +28,6 @@ use crate::service::Service;
 use std::os::unix::io::AsRawFd;
 
 /// Handles API dispatch and other HTTP handler stuff.
-#[inline(always)]
 async fn web_handler(service: Service, req: Request<Body>) -> Result<Response<Body>, Infallible> {
     Ok(Response::new("Hello, World".into()))
 }
@@ -45,23 +44,26 @@ impl WebListener {
     /// Create a new "background" TCP WebListener using the current tokio reactor async runtime.
     pub fn new(_device_name: &str, addr: SocketAddr, service: &Service) -> Result<WebListener, Box<dyn std::error::Error>> {
         let listener = if addr.is_ipv4() {
-            let l = socket2::Socket::new(socket2::Domain::ipv4(), socket2::Type::stream(), Some(socket2::Protocol::tcp()));
-            if l.is_err() {
-                return Err(Box::new(l.err().unwrap()));
+            let listener = socket2::Socket::new(socket2::Domain::ipv4(), socket2::Type::stream(), Some(socket2::Protocol::tcp()));
+            if listener.is_err() {
+                return Err(Box::new(listener.err().unwrap()));
             }
-            let l = l.unwrap();
+            let listener = listener.unwrap();
             #[cfg(unix)] {
-                let _ = l.set_reuse_port(true);
+                let _ = listener.set_reuse_port(true);
             }
-            l
+            listener
         } else {
-            let l = socket2::Socket::new(socket2::Domain::ipv6(), socket2::Type::stream(), Some(socket2::Protocol::tcp()));
-            if l.is_err() {
-                return Err(Box::new(l.err().unwrap()));
+            let listener = socket2::Socket::new(socket2::Domain::ipv6(), socket2::Type::stream(), Some(socket2::Protocol::tcp()));
+            if listener.is_err() {
+                return Err(Box::new(listener.err().unwrap()));
             }
-            let l = l.unwrap();
-            let _ = l.set_only_v6(true);
-            l
+            let listener = listener.unwrap();
+            #[cfg(unix)] {
+                let _ = listener.set_reuse_port(true);
+            }
+            let _ = listener.set_only_v6(true);
+            listener
         };
 
         #[cfg(target_os = "linux")] {
@@ -70,12 +72,7 @@ impl WebListener {
                 unsafe {
                     let _ = std::ffi::CString::new(_device_name).map(|dn| {
                         let dnb = dn.as_bytes_with_nul();
-                        let _ = crate::osdep::setsockopt(
-                            sock as std::os::raw::c_int,
-                            crate::osdep::SOL_SOCKET as std::os::raw::c_int,
-                            crate::osdep::SO_BINDTODEVICE as std::os::raw::c_int,
-                            dnb.as_ptr().cast(),
-                            (dnb.len() - 1) as crate::osdep::socklen_t);
+                        let _ = crate::osdep::setsockopt(sock as std::os::raw::c_int, crate::osdep::SOL_SOCKET as std::os::raw::c_int, crate::osdep::SO_BINDTODEVICE as std::os::raw::c_int, dnb.as_ptr().cast(), (dnb.len() - 1) as crate::osdep::socklen_t);
                     });
                 }
             }
@@ -94,10 +91,7 @@ impl WebListener {
         if builder.is_err() {
             return Err(Box::new(builder.err().unwrap()));
         }
-        let builder = builder.unwrap()
-            .http1_half_close(false)
-            .http1_keepalive(true)
-            .http1_max_buf_size(131072);
+        let builder = builder.unwrap().http1_half_close(false).http1_keepalive(true).http1_max_buf_size(131072);
 
         let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel::<()>();
         let service = service.clone();

@@ -80,9 +80,6 @@ fn bind_udp_socket(_device_name: &str, address: &InetAddress) -> Result<FastUDPR
             setsockopt_results |= osdep::setsockopt(s, osdep::SOL_SOCKET.as_(), osdep::SO_NOSIGPIPE.as_(), (&mut fl as *mut c_int).cast(), fl_size)
         }
 
-        // On linux we bind to device so default route override can work. This
-        // is not required on BSDs as they behave this way if the socket is
-        // bound to the device's address.
         #[cfg(target_os = "linux")] {
             if !_device_name.is_empty() {
                 unsafe {
@@ -131,7 +128,6 @@ fn bind_udp_socket(_device_name: &str, address: &InetAddress) -> Result<FastUDPR
         }
 
         if osdep::bind(s, (address as *const InetAddress).cast(), sa_len) != 0 {
-            //osdep::perror(std::ptr::null());
             osdep::close(s);
             return Err("bind to address failed");
         }

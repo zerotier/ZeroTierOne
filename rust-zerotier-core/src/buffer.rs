@@ -59,12 +59,14 @@ impl Buffer {
         self.zt_core_buf
     }
 
-    /// Set the size of the data held by this buffer. This is unsafe because
-    /// setting it to a value larger than CAPACITY will place the buffer into
-    /// an invalid state.
+    /// Set the size of the data held by this buffer.
+    /// This is usually called after writing data into the buffer.
     #[inline(always)]
-    pub unsafe fn set_len(&mut self, s: usize) {
-        self.data_size = s;
+    pub fn set_len(&mut self, s: usize) {
+        // CAPACITY will always be a power of two, so we can just mask this
+        // to make this safe. This is a sanity check to make it impossible to
+        // set this to an invalid size.
+        self.data_size = s & (Buffer::CAPACITY - 1);
     }
 }
 

@@ -95,7 +95,7 @@ impl NodeEventHandler<Network> for Service {
                                 TraceEventLayer::VL2 => local_config.settings.log.vl2,
                                 TraceEventLayer::VL2Filter => local_config.settings.log.vl2_trace_rules,
                                 TraceEventLayer::VL2Multicast => local_config.settings.log.vl2_trace_multicast,
-                                TraceEventLayer::Other => true,
+                                _ => true,
                             } {
                                 self.log.log(tm.to_string());
                             }

@@ -28,6 +28,7 @@ mod weblistener;
 mod osdep; // bindgen generated
 
 use std::boxed::Box;
+use std::io::Write;
 use std::rc::Rc;
 use std::sync::Arc;
 use std::str::FromStr;
@@ -133,21 +134,28 @@ Advanced Operations:
 An <address> may be specified as a 10-digit short ZeroTier address, a
 fingerprint containing both an address and a SHA384 hash, or an identity.
 Identities and locators can be specified as either paths to files on the
-filesystem or verbatim objects in string format. This is auto-detected."###, ver.0, ver.1, ver.2)
+filesystem or verbatim objects in string format. This is auto-detected.
+"###, ver.0, ver.1, ver.2)
 }
 
 pub(crate) fn print_help() {
-    println!("{}", make_help());
+    let h = make_help();
+    std::io::stdout().write_all(h.as_bytes());
 }
 
-fn is_bool(v: String) -> Result<(), String> {
+pub(crate) fn parse_bool(v: &str) -> Result<bool, String> {
     if !v.is_empty() {
         match v.chars().next().unwrap() {
-            'y' | 'Y' | '1' | 't' | 'T' | 'n' | 'N' | '0' | 'f' | 'F' => { return Ok(()); }
+            'y' | 'Y' | '1' | 't' | 'T' => { return Ok(true); }
+            'n' | 'N' | '0' | 'f' | 'F' => { return Ok(false); }
             _ => {}
         }
     }
     Err(format!("invalid boolean value: '{}'", v))
+}
+
+fn is_valid_bool(v: String) -> Result<(), String> {
+    parse_bool(v.as_str()).map(|_| ())
 }
 
 fn is_valid_port(v: String) -> Result<(), String> {
@@ -156,6 +164,17 @@ fn is_valid_port(v: String) -> Result<(), String> {
         return Ok(());
     }
     Err(format!("invalid TCP/IP port number: {}", v))
+}
+
+fn make_store(cli_args: &ArgMatches) -> Arc<Store> {
+    //let json_output = cli_args.is_present("json"); // TODO
+    let zerotier_path = cli_args.value_of("path").map_or_else(|| unsafe { zerotier_core::cstr_to_string(osdep::platformDefaultHomePath(), -1) }, |ztp| ztp.to_string());
+    let store = Store::new(zerotier_path.as_str(), cli_args.value_of("token_path").map_or(None, |tp| Some(tp.to_string())), cli_args.value_of("token").map_or(None, |tok| Some(tok.trim().to_string())));
+    if store.is_err() {
+        eprintln!("FATAL: error accessing directory '{}': {}", zerotier_path, store.err().unwrap().to_string());
+        std::process::exit(1);
+    }
+    Arc::new(store.unwrap())
 }
 
 fn main() {
@@ -177,12 +196,12 @@ fn main() {
                 .subcommand(App::new("blacklist")
                     .subcommand(App::new("cidr")
                         .arg(Arg::with_name("ip_bits").index(1))
-                        .arg(Arg::with_name("boolean").index(2).validator(is_bool)))
+                        .arg(Arg::with_name("boolean").index(2).validator(is_valid_bool)))
                     .subcommand(App::new("if")
                         .arg(Arg::with_name("prefix").index(1))
-                        .arg(Arg::with_name("boolean").index(2).validator(is_bool))))
+                        .arg(Arg::with_name("boolean").index(2).validator(is_valid_bool))))
                 .subcommand(App::new("portmap")
-                    .arg(Arg::with_name("boolean").index(1).validator(is_bool))))
+                    .arg(Arg::with_name("boolean").index(1).validator(is_valid_bool))))
             .subcommand(App::new("peer")
                 .subcommand(App::new("show")
                     .arg(Arg::with_name("address").index(1).required(true)))
@@ -286,17 +305,6 @@ fn main() {
         args
     };
 
-    let store = || {
-        //let json_output = cli_args.is_present("json"); // TODO
-        let zerotier_path = cli_args.value_of("path").map_or_else(|| unsafe { zerotier_core::cstr_to_string(osdep::platformDefaultHomePath(), -1) }, |ztp| ztp.to_string());
-        let store = Store::new(zerotier_path.as_str(), cli_args.value_of("token_path").map_or(None, |tp| Some(tp.to_string())), cli_args.value_of("token").map_or(None, |tok| Some(tok.trim().to_string())));
-        if store.is_err() {
-            eprintln!("FATAL: error accessing directory '{}': {}", zerotier_path, store.err().unwrap().to_string());
-            std::process::exit(1);
-        }
-        Arc::new(store.unwrap())
-    };
-
     std::process::exit(match cli_args.subcommand() {
         ("help", None) => {
             print_help();
@@ -314,14 +322,14 @@ fn main() {
         ("join", Some(sub_cli_args)) => { 0 }
         ("leave", Some(sub_cli_args)) => { 0 }
         ("service", None) => {
-            let store = store();
-            drop(cli_args); // try to let go of unnecessary heap before running service
+            let store = make_store(&cli_args);
+            drop(cli_args); // free memory
             service::run(store)
         },
         ("controller", Some(sub_cli_args)) => { 0 }
         ("identity", Some(sub_cli_args)) => crate::commands::identity::run(sub_cli_args),
         ("locator", Some(sub_cli_args)) => crate::commands::locator::run(sub_cli_args),
-        ("cert", Some(sub_cli_args)) => crate::commands::cert::run(store(), sub_cli_args),
+        ("cert", Some(sub_cli_args)) => crate::commands::cert::run(make_store(&cli_args), sub_cli_args),
         _ => {
             print_help();
             1
