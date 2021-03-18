@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use crate::Endpoint;
 use crate::capi as ztcore;
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Eq, PartialEq)]
 pub struct Path {
     pub endpoint: Endpoint,
     #[serde(rename = "lastSend")]

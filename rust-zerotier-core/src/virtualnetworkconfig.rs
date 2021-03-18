@@ -20,7 +20,7 @@ use crate::capi as ztcore;
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(FromPrimitive,ToPrimitive, PartialEq, Eq, Clone)]
+#[derive(FromPrimitive,ToPrimitive, PartialEq, Eq, Clone, Copy)]
 pub enum VirtualNetworkType {
     Private = ztcore::ZT_VirtualNetworkType_ZT_NETWORK_TYPE_PRIVATE as isize,
     Public = ztcore::ZT_VirtualNetworkType_ZT_NETWORK_TYPE_PUBLIC as isize
@@ -49,7 +49,7 @@ impl From<&str> for VirtualNetworkType {
 impl ToString for VirtualNetworkType {
     #[inline(always)]
     fn to_string(&self) -> String {
-        String::from(self.to_str())
+        self.to_str().to_owned()
     }
 }
 
@@ -81,7 +81,7 @@ impl<'de> serde::Deserialize<'de> for VirtualNetworkType {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(FromPrimitive,ToPrimitive, PartialEq, Eq, Clone)]
+#[derive(FromPrimitive,ToPrimitive, PartialEq, Eq, Clone, Copy)]
 pub enum VirtualNetworkRuleType {
     ActionDrop = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_ACTION_DROP as isize,
     ActionAccept = ztcore::ZT_VirtualNetworkRuleType_ZT_NETWORK_RULE_ACTION_ACCEPT as isize,
@@ -122,7 +122,7 @@ pub enum VirtualNetworkRuleType {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(FromPrimitive,ToPrimitive, PartialEq, Eq, Clone)]
+#[derive(FromPrimitive,ToPrimitive, PartialEq, Eq, Clone, Copy)]
 pub enum VirtualNetworkConfigOperation {
     Up = ztcore::ZT_VirtualNetworkConfigOperation_ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP as isize,
     ConfigUpdate = ztcore::ZT_VirtualNetworkConfigOperation_ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE as isize,
@@ -132,7 +132,7 @@ pub enum VirtualNetworkConfigOperation {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(FromPrimitive,ToPrimitive, PartialEq, Eq, Clone)]
+#[derive(FromPrimitive,ToPrimitive, PartialEq, Eq, Clone, Copy)]
 pub enum VirtualNetworkStatus {
     RequestingConfiguration = ztcore::ZT_VirtualNetworkStatus_ZT_NETWORK_STATUS_REQUESTING_CONFIGURATION as isize,
     Ok = ztcore::ZT_VirtualNetworkStatus_ZT_NETWORK_STATUS_OK as isize,
@@ -166,7 +166,7 @@ impl From<&str> for VirtualNetworkStatus {
 impl ToString for VirtualNetworkStatus {
     #[inline(always)]
     fn to_string(&self) -> String {
-        String::from(self.to_str())
+        self.to_str().to_owned()
     }
 }
 

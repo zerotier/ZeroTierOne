@@ -296,13 +296,13 @@ impl Clone for InetAddress {
 
 impl Ord for InetAddress {
     fn cmp(&self, other: &Self) -> Ordering {
-        unsafe {
-            if ztcore::ZT_InetAddress_lessThan(self.as_capi_ptr(), other.as_capi_ptr()) != 0 {
-                return Ordering::Less;
-            } else if ztcore::ZT_InetAddress_lessThan(other.as_capi_ptr(), self.as_capi_ptr()) != 0 {
-                return Ordering::Greater;
-            }
-            return Ordering::Equal;
+        let c = unsafe { ztcore::ZT_InetAddress_compare(self.as_capi_ptr(), other.as_capi_ptr()) };
+        if c < 0 {
+            Ordering::Less
+        } else if c > 0 {
+            Ordering::Greater
+        } else {
+            Ordering::Equal
         }
     }
 }
@@ -317,7 +317,7 @@ impl PartialOrd for InetAddress {
 impl PartialEq for InetAddress {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
-        self.to_string() == other.to_string()
+        unsafe { ztcore::ZT_InetAddress_compare(self.as_capi_ptr(), other.as_capi_ptr()) == 0 }
     }
 }
 

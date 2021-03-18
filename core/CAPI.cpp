@@ -553,6 +553,27 @@ const ZT_Fingerprint *ZT_Identity_fingerprint(const ZT_Identity *id)
 	return &(reinterpret_cast<const ZeroTier::Identity *>(id)->fingerprint());
 }
 
+int ZT_Identity_compare(const ZT_Identity *a, const ZT_Identity *b)
+{
+	if (a) {
+		if (b) {
+			if (*reinterpret_cast<const ZeroTier::Identity *>(a) < *reinterpret_cast<const ZeroTier::Identity *>(b)) {
+				return -1;
+			} else if (*reinterpret_cast<const ZeroTier::Identity *>(b) < *reinterpret_cast<const ZeroTier::Identity *>(a)) {
+				return 1;
+			} else {
+				return 0;
+			}
+		} else {
+			return 1;
+		}
+	} else if (b) {
+		return -1;
+	} else {
+		return 0;
+	}
+}
+
 void ZT_Identity_delete(const ZT_Identity *id)
 {
 	if (id)
@@ -859,16 +880,25 @@ enum ZT_InetAddress_IpScope ZT_InetAddress_ipScope(const ZT_InetAddress *ia)
 	return ZT_IP_SCOPE_NONE;
 }
 
-int ZT_InetAddress_lessThan(const ZT_InetAddress *a, const ZT_InetAddress *b)
+int ZT_InetAddress_compare(const ZT_InetAddress *a, const ZT_InetAddress *b)
 {
-	if ((a)&&(b)) {
-		return (int)(*reinterpret_cast<const ZeroTier::InetAddress *>(a) < *reinterpret_cast<const ZeroTier::InetAddress *>(b));
-	} else if (a) {
-		return 0;
+	if (a) {
+		if (b) {
+			if (*reinterpret_cast<const ZeroTier::InetAddress *>(a) < *reinterpret_cast<const ZeroTier::InetAddress *>(b)) {
+				return -1;
+			} else if (*reinterpret_cast<const ZeroTier::InetAddress *>(b) < *reinterpret_cast<const ZeroTier::InetAddress *>(a)) {
+				return 1;
+			} else {
+				return 0;
+			}
+		} else {
+			return 1;
+		}
 	} else if (b) {
-		return 1;
+		return -1;
+	} else {
+		return 0;
 	}
-	return 0;
 }
 
 /********************************************************************************************************************/

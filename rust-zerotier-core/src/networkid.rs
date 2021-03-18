@@ -11,9 +11,7 @@
  */
 /****/
 
-use std::cmp::Ordering;
-
-#[derive(PartialEq, Eq, Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy, PartialOrd, Ord)]
 pub struct NetworkId(pub u64);
 
 impl NetworkId {
@@ -40,20 +38,6 @@ impl From<&str> for NetworkId {
     #[inline(always)]
     fn from(s: &str) -> Self {
         NetworkId::new_from_string(s)
-    }
-}
-
-impl Ord for NetworkId {
-    #[inline(always)]
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.0.cmp(&other.0)
-    }
-}
-
-impl PartialOrd for NetworkId {
-    #[inline(always)]
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.0.cmp(&other.0))
     }
 }
 

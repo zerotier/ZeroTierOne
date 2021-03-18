@@ -15,10 +15,21 @@ use std::os::raw::c_void;
 use crate::capi as ztcore;
 
 /// A reusable buffer for I/O to/from the ZeroTier core.
+///
 /// The core allocates and manages a pool of these. This provides a Rust
 /// interface to that pool. ZT core buffers are used to reduce the need for
 /// memory copying by passing buffers around instead of memcpy'ing when
 /// packet data is passed into and out of the core.
+///
+/// IMPORTANT NOTE: when these are fed into the ZeroTier core, drop() is
+/// elided via std::mem::forget(). Node does this automatically so usually
+/// users of this API do not need to be aware of it, but it's worth mentioning
+/// in case someone re-implements calls directly into the core. Dropping this
+/// after handing it back to the core could result in mytserious corruption
+/// bugs or double-free.
+///
+/// This does not implement copy or clone because that would result in this
+/// memory being dropped more than once. Use Rc or Arc to share.
 pub struct Buffer {
     pub(crate) zt_core_buf: *mut u8,
     pub(crate) data_size: usize,
@@ -73,10 +84,6 @@ impl Buffer {
 impl Drop for Buffer {
     #[inline(always)]
     fn drop(&mut self) {
-        // NOTE: in node.rs std::mem::forget() is used to prevent this from
-        // being called on buffers that have been returned via one of the
-        // process_XX() methods on ZT_Node. This destructor only exists to
-        // return buffers that were not consumed normally.
         unsafe {
             ztcore::ZT_freeBuffer(self.zt_core_buf as *mut c_void);
         }

@@ -13,6 +13,7 @@
 
 use std::ffi::CString;
 use std::os::raw::{c_char, c_int, c_uint};
+use std::mem::MaybeUninit;
 use std::ptr::null;
 
 use crate::*;
@@ -120,12 +121,12 @@ impl Clone for Locator {
 
 impl ToString for Locator {
     fn to_string(&self) -> String {
-        let mut buf = [0_u8; 16384];
-        unsafe {
-            if ztcore::ZT_Locator_toString(self.capi, buf.as_mut_ptr() as *mut c_char, buf.len() as c_int).is_null() {
-                return String::from("(invalid)");
-            }
-            return cstr_to_string(buf.as_ptr() as *const c_char, 4096);
+        const LOCATOR_STRING_BUF_LEN: usize = 16384;
+        let mut buf: MaybeUninit<[u8; LOCATOR_STRING_BUF_LEN]> = MaybeUninit::uninit();
+        if unsafe { ztcore::ZT_Locator_toString(self.capi, buf.as_mut_ptr().cast(), LOCATOR_STRING_BUF_LEN as c_int).is_null() }{
+            "(invalid)".to_owned()
+        } else {
+            unsafe { cstr_to_string(buf.as_ptr().cast(), LOCATOR_STRING_BUF_LEN as isize) }
         }
     }
 }

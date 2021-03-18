@@ -2591,6 +2591,15 @@ ZT_SDK_API uint64_t ZT_Identity_address(const ZT_Identity *id);
 ZT_SDK_API const ZT_Fingerprint *ZT_Identity_fingerprint(const ZT_Identity *id);
 
 /**
+ * Compare two identities
+ *
+ * @param a First identity
+ * @param b Second identity
+ * @return -1, 0, or 1 if a is less than, equal to, or greater than b
+ */
+ZT_SDK_API int ZT_Identity_compare(const ZT_Identity *a, const ZT_Identity *b);
+
+/**
  * Delete an identity and free associated memory
  *
  * This should only be used with identities created via Identity_new
@@ -3044,9 +3053,13 @@ ZT_SDK_API unsigned int ZT_InetAddress_ipBytes(const ZT_InetAddress *ia, void *b
 ZT_SDK_API enum ZT_InetAddress_IpScope ZT_InetAddress_ipScope(const ZT_InetAddress *ia);
 
 /**
- * Compare a and b, return non-zero if a < b
+ * Compare a and b
+ *
+ * @param a First InetAddress
+ * @param b Second InetAddress
+ * @return -1, 0, or 1 if a is less than, equal to, or greater than b
  */
-ZT_SDK_API int ZT_InetAddress_lessThan(const ZT_InetAddress *a, const ZT_InetAddress *b);
+ZT_SDK_API int ZT_InetAddress_compare(const ZT_InetAddress *a, const ZT_InetAddress *b);
 
 /* These mirror the values of AF_INET and AF_INET6 for use by Rust and other things that need it. */
 ZT_SDK_API const int ZT_AF_INET,ZT_AF_INET6;

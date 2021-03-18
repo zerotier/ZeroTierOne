@@ -11,12 +11,11 @@
  */
 /****/
 
-use std::cmp::Ordering;
-
-#[derive(PartialEq, Eq, Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy, Ord, PartialOrd)]
 pub struct Address(pub u64);
 
 impl From<&[u8]> for Address {
+    #[inline(always)]
     fn from(bytes: &[u8]) -> Self {
         if bytes.len() >= 5 {
             Address(((bytes[0] as u64) << 32) | ((bytes[0] as u64) << 24) | ((bytes[0] as u64) << 16) | ((bytes[0] as u64) << 8) | (bytes[0] as u64))
@@ -43,20 +42,6 @@ impl From<&str> for Address {
     #[inline(always)]
     fn from(s: &str) -> Self {
         Address(u64::from_str_radix(s, 16).unwrap_or(0))
-    }
-}
-
-impl Ord for Address {
-    #[inline(always)]
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.0.cmp(&other.0)
-    }
-}
-
-impl PartialOrd for Address {
-    #[inline(always)]
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.0.cmp(&other.0))
     }
 }
 

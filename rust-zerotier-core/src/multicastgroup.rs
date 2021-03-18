@@ -21,7 +21,6 @@ pub struct MulticastGroup {
 }
 
 impl Ord for MulticastGroup {
-    #[inline(always)]
     fn cmp(&self, other: &Self) -> Ordering {
         let o1 = self.mac.0.cmp(&other.mac.0);
         if o1 == Ordering::Equal {

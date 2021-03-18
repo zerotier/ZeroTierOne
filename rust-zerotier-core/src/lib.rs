@@ -12,6 +12,7 @@
 /****/
 
 use std::os::raw::{c_char, c_int};
+
 use num_derive::{FromPrimitive, ToPrimitive};
 #[macro_use] extern crate base64_serde;
 
@@ -226,6 +227,7 @@ macro_rules! implement_to_from_json {
     };
 }
 
+/*
 #[macro_export(crate)]
 macro_rules! enum_str {
     (enum $name:ident {
@@ -243,3 +245,4 @@ macro_rules! enum_str {
         }
     };
 }
+*/

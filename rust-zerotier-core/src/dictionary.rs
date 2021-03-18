@@ -19,6 +19,7 @@ use crate::{cstr_to_string, ResultCode};
 use crate::capi::ZT_Dictionary_parse;
 
 /// Rust interface to the Dictionary data structure.
+#[derive(Clone, Eq, PartialEq)]
 pub struct Dictionary {
     data: HashMap<String, Vec<u8>>,
 }
@@ -45,21 +46,15 @@ extern "C" fn populate_dict_callback(arg: *mut c_void, c_key: *const c_char, key
 impl Dictionary {
     #[inline(always)]
     pub fn new() -> Dictionary {
-        Dictionary {
-            data: HashMap::new(),
-        }
+        Dictionary { data: HashMap::new() }
     }
 
     pub fn new_from_bytes(dict: &[u8]) -> Result<Dictionary, ResultCode> {
-        let mut d = Dictionary{
-            data: HashMap::new(),
-        };
-        unsafe {
-            if ZT_Dictionary_parse(dict.as_ptr().cast(), dict.len() as c_uint, (&mut d as *mut Dictionary).cast(), Some(populate_dict_callback)) != 0 {
-                Ok(d)
-            } else {
-                Err(ResultCode::ErrorBadParameter)
-            }
+        let mut d = Dictionary{ data: HashMap::new() };
+        if unsafe { ZT_Dictionary_parse(dict.as_ptr().cast(), dict.len() as c_uint, (&mut d as *mut Dictionary).cast(), Some(populate_dict_callback)) != 0 } {
+            Ok(d)
+        } else {
+            Err(ResultCode::ErrorBadParameter)
         }
     }
 
@@ -101,13 +96,5 @@ impl Dictionary {
     #[inline(always)]
     pub fn len(&self) -> usize {
         self.data.len()
-    }
-}
-
-impl Clone for Dictionary {
-    fn clone(&self) -> Self {
-        Dictionary {
-            data: self.data.clone(),
-        }
     }
 }

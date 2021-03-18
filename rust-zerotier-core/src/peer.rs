@@ -11,11 +11,13 @@
  */
 /****/
 
+use std::cmp::Ordering;
+
 use serde::{Deserialize, Serialize};
 use crate::*;
 use crate::capi as ztcore;
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct Peer {
     pub address: Address,
     pub identity: Identity,
@@ -60,6 +62,24 @@ impl Peer {
                 paths,
                 locator: if p.locator.is_null() { None } else { Some(Locator::new_from_capi(p.locator, false).clone() )}
             }
+        }
+    }
+}
+
+impl PartialOrd for Peer {
+    #[inline(always)]
+    fn partial_cmp(&self, p: &Self) -> Option<Ordering> {
+        Some(self.cmp(&p))
+    }
+}
+
+impl Ord for Peer {
+    fn cmp(&self, p: &Self) -> Ordering {
+        let c = self.address.cmp(&p.address);
+        if c == Ordering::Equal {
+            self.identity.cmp(&p.identity)
+        } else {
+            c
         }
     }
 }

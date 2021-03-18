@@ -19,6 +19,7 @@ use num_traits::{FromPrimitive, ToPrimitive};
 
 use crate::*;
 use crate::capi as ztcore;
+use std::cmp::Ordering;
 
 #[derive(FromPrimitive, ToPrimitive, PartialEq, Eq, Clone, Copy)]
 pub enum IdentityType {
@@ -143,12 +144,33 @@ impl Identity {
 }
 
 impl PartialEq for Identity {
+    #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
-        self.intl_to_string(false) == other.intl_to_string(false)
+        unsafe { ztcore::ZT_Identity_compare(self.capi, other.capi) == 0 }
     }
 }
 
 impl Eq for Identity {}
+
+impl Ord for Identity {
+    fn cmp(&self, b: &Self) -> Ordering {
+        let c = unsafe { ztcore::ZT_Identity_compare(self.capi, b.capi) };
+        if c < 0 {
+            Ordering::Less
+        } else if c > 0 {
+            Ordering::Greater
+        } else {
+            Ordering::Equal
+        }
+    }
+}
+
+impl PartialOrd for Identity {
+    #[inline(always)]
+    fn partial_cmp(&self, b: &Self) -> Option<Ordering> {
+        Some(self.cmp(b))
+    }
+}
 
 impl Clone for Identity {
     #[inline(always)]
