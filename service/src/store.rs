@@ -249,31 +249,36 @@ impl Store {
         self.write_file("local.conf", json.as_bytes())
     }
 
-    /// Writes the primary port number bound to zerotier.port.
-    pub fn write_port(&self, port: u16) -> std::io::Result<()> {
-        let ps = port.to_string();
-        self.write_file("zerotier.port", ps.as_bytes())
-    }
-
-    /// Read zerotier.port and return port or 0 if not found or not readable.
-    pub fn read_port(&self) -> u16 {
-        self.read_file_str("zerotier.port").map_or_else(|_| {
-            0_u16
-        },|s| {
-            u16::from_str(s.trim()).unwrap_or(0_u16)
-        })
-    }
-
     /// Write zerotier.pid file with current process's PID.
     #[cfg(unix)]
     pub fn write_pid(&self) -> std::io::Result<()> {
         let pid = unsafe { crate::osdep::getpid() }.to_string();
-        self.write_file(self.base_path.join("zerotier.pid").to_str().unwrap(), pid.as_bytes())
+        self.write_file("zerotier.pid", pid.as_bytes())
     }
 
     /// Erase zerotier.pid if present.
     pub fn erase_pid(&self) {
         let _ = std::fs::remove_file(self.base_path.join("zerotier.pid"));
+    }
+
+    /// Write a string to zerotier.uri
+    pub fn write_uri(&self, uri: &str) -> std::io::Result<()> {
+        self.write_file("zerotier.uri", uri.as_bytes())
+    }
+
+    /// Load zerotier.uri if present
+    pub fn load_uri(&self) -> std::io::Result<hyper::Uri> {
+        let uri = String::from_utf8(self.read_file("zerotier.uri")?);
+        uri.map_or_else(|e| {
+            Err(std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string()))
+        }, |uri| {
+            let uri = hyper::Uri::from_str(uri.trim());
+            uri.map_or_else(|e| {
+                Err(std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string()))
+            }, |uri| {
+                Ok(uri)
+            })
+        })
     }
 
     /// Load a ZeroTier core object.

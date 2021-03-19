@@ -22,6 +22,7 @@ mod network;
 mod vnic;
 mod service;
 mod utils;
+mod webclient;
 mod weblistener;
 
 #[allow(non_snake_case, non_upper_case_globals, non_camel_case_types, dead_code, improper_ctypes)]
@@ -291,9 +292,8 @@ fn main() {
             .get_matches_from_safe(std::env::args());
         if args.is_err() {
             let e = args.err().unwrap();
-            match e.kind {
-                ErrorKind::HelpDisplayed => {}
-                _ => { print_help(); }
+            if e.kind != ErrorKind::HelpDisplayed {
+                print_help();
             }
             std::process::exit(1);
         }
@@ -306,22 +306,22 @@ fn main() {
     };
 
     std::process::exit(match cli_args.subcommand() {
-        ("help", None) => {
+        ("help", _) => {
             print_help();
             0
         }
-        ("version", None) => {
+        ("version", _) => {
             let ver = zerotier_core::version();
             println!("{}.{}.{}", ver.0, ver.1, ver.2);
             0
         }
-        ("status", None) => { 0 }
+        ("status", _) => crate::commands::status::run(make_store(&cli_args)),
         ("set", Some(sub_cli_args)) => { 0 }
         ("peer", Some(sub_cli_args)) => { 0 }
         ("network", Some(sub_cli_args)) => { 0 }
         ("join", Some(sub_cli_args)) => { 0 }
         ("leave", Some(sub_cli_args)) => { 0 }
-        ("service", None) => {
+        ("service", _) => {
             let store = make_store(&cli_args);
             drop(cli_args); // free memory
             service::run(store)

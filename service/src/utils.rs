@@ -21,6 +21,7 @@ use std::path::Path;
 use zerotier_core::{Identity, Locator};
 
 use crate::osdep;
+use crate::osdep::time;
 
 #[inline(always)]
 pub(crate) fn sha512<T: AsRef<[u8]>>(data: T) -> [u8; 64] {
@@ -105,5 +106,35 @@ pub(crate) fn read_locator(input: &str) -> Result<Locator, String> {
         })
     } else {
         parse_func(input)
+    }
+}
+
+/// Create a new HTTP authorization nonce by encrypting the current time.
+/// The key used to encrypt the current time is random and is re-created for
+/// each execution of the process. By decrypting this nonce when it is returned,
+/// the client and server may check the age of a digest auth exchange.
+pub(crate) fn create_http_auth_nonce(timestamp: u64) -> String {
+    let mut nonce_plaintext: [u64; 2] = [timestamp, 12345]; // the second u64 is arbitrary and unused
+    unsafe {
+        osdep::encryptHttpAuthNonce(nonce_plaintext.as_mut_ptr().cast());
+        hex::encode(*nonce_plaintext.as_ptr().cast::<[u8; 16]>())
+    }
+}
+
+/// Decrypt HTTP auth nonce encrypted by this process and return the timestamp.
+/// This returns zero if the input was not valid.
+pub(crate) fn decrypt_http_auth_nonce(nonce: &str) -> u64 {
+    let nonce = hex::decode(nonce.trim());
+    if nonce.is_err() {
+        return 0;
+    }
+    let mut nonce = nonce.unwrap();
+    if nonce.len() != 16 {
+        return 0;
+    }
+    unsafe {
+        osdep::decryptHttpAuthNonce(nonce.as_mut_ptr().cast());
+        let nonce = *nonce.as_ptr().cast::<[u64; 2]>();
+        nonce[0]
     }
 }

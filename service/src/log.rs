@@ -71,7 +71,7 @@ impl Log {
             let log_line = format!("{}[{}] {}{}\n", l.prefix.as_str(), chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string(), pfx, s);
             if !l.path.is_empty() {
                 if l.file.is_none() {
-                    let mut f = OpenOptions::new().read(true).write(true).create(true).open(l.path.as_str());
+                    let f = OpenOptions::new().read(true).write(true).create(true).open(l.path.as_str());
                     if f.is_err() {
                         return;
                     }
@@ -94,7 +94,7 @@ impl Log {
                     let _ = std::fs::rename(l.path.as_str(), old_path.as_str());
                     let _ = std::fs::remove_file(l.path.as_str()); // should fail
 
-                    let mut f = OpenOptions::new().read(true).write(true).create(true).open(l.path.as_str());
+                    let f = OpenOptions::new().read(true).write(true).create(true).open(l.path.as_str());
                     if f.is_err() {
                         return;
                     }

@@ -24,6 +24,7 @@ struct prf_ra {
 #include "../core/Mutex.hpp"
 #include "../core/Containers.hpp"
 #include "../core/SHA512.hpp"
+#include "../core/AES.hpp"
 #include "OSUtils.hpp"
 
 #include "rust-osdep.h"
@@ -139,4 +140,18 @@ void sha384(const void *in, unsigned int len, void *out)
 void sha512(const void *in, unsigned int len, void *out)
 { ZeroTier::SHA512(out, in, len); }
 
+static ZT_INLINE ZeroTier::AES _makeHttpAuthCipher() noexcept
+{
+	uint8_t key[32];
+	ZeroTier::Utils::getSecureRandom(key, 32);
+	return ZeroTier::AES(key);
 }
+static const ZeroTier::AES HTTP_AUTH_CIPHER = _makeHttpAuthCipher();
+
+void encryptHttpAuthNonce(void *block)
+{ HTTP_AUTH_CIPHER.encrypt(block, block); }
+
+void decryptHttpAuthNonce(void *block)
+{ HTTP_AUTH_CIPHER.decrypt(block, block); }
+
+} /* extern "C" */

@@ -233,7 +233,7 @@ impl FastUDPSocket {
                         let mut buf = Buffer::new();
                         let read_length = fast_udp_socket_recvfrom(&thread_socket, &mut buf, &mut from_address);
                         if read_length > 0 {
-                            unsafe { buf.set_len(read_length as usize); }
+                            buf.set_len(read_length as usize);
                             handler_copy(&thread_socket, &from_address, buf);
                         } else if read_length < 0 {
                             break;

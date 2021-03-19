@@ -221,7 +221,6 @@ async fn run_async(store: Arc<Store>, log: Arc<Log>, local_config: Arc<LocalConf
     let service = service; // make immutable after setting node
 
     let mut local_config = service.local_config();
-    let _ = store.write_port(local_config.settings.primary_port);
 
     let mut now: i64 = ms_since_epoch();
     let mut loop_delay = zerotier_core::NODE_BACKGROUND_TASKS_MAX_INTERVAL;
@@ -265,7 +264,6 @@ async fn run_async(store: Arc<Store>, log: Arc<Log>, local_config: Arc<LocalConf
             if local_config.settings.primary_port != next_local_config.settings.primary_port {
                 local_web_listeners.0 = None;
                 local_web_listeners.1 = None;
-                store.write_port(next_local_config.settings.primary_port);
             }
             if local_config.settings.log.max_size != next_local_config.settings.log.max_size {
                 log.set_max_size(next_local_config.settings.log.max_size);
@@ -373,7 +371,7 @@ async fn run_async(store: Arc<Store>, log: Arc<Log>, local_config: Arc<LocalConf
                 if addr.0.port() == local_config.settings.primary_port && !web_listeners.contains_key(addr.0) {
                     let sa = addr.0.to_socketaddr();
                     if sa.is_some() {
-                        let wl = WebListener::new(addr.1.as_str(), sa.unwrap(), &service).map_or_else(|e| {
+                        let wl = WebListener::new(addr.1.as_str(), sa.unwrap(), &service).await.map_or_else(|e| {
                             l!(log, "error creating HTTP listener at {}: {}", addr.0.to_string(), e.to_string());
                         }, |l| {
                             l!(log, "created HTTP listener at {}", addr.0.to_string());
@@ -384,13 +382,17 @@ async fn run_async(store: Arc<Store>, log: Arc<Log>, local_config: Arc<LocalConf
             }
 
             if local_web_listeners.0.is_none() {
-                let _ = WebListener::new(loopback_dev_name.as_str(), SocketAddr::new(IpAddr::from(Ipv4Addr::LOCALHOST), local_config.settings.primary_port), &service).map(|wl| {
+                let _ = WebListener::new(loopback_dev_name.as_str(), SocketAddr::new(IpAddr::from(Ipv4Addr::LOCALHOST), local_config.settings.primary_port), &service).await.map(|wl| {
                     local_web_listeners.0 = Some(wl);
+                    let _ = store.write_uri(format!("http://127.0.0.1:{}/", local_config.settings.primary_port).as_str());
                 });
             }
             if local_web_listeners.1.is_none() {
-                let _ = WebListener::new(loopback_dev_name.as_str(), SocketAddr::new(IpAddr::from(Ipv6Addr::LOCALHOST), local_config.settings.primary_port), &service).map(|wl| {
+                let _ = WebListener::new(loopback_dev_name.as_str(), SocketAddr::new(IpAddr::from(Ipv6Addr::LOCALHOST), local_config.settings.primary_port), &service).await.map(|wl| {
                     local_web_listeners.1 = Some(wl);
+                    if local_web_listeners.0.is_none() {
+                        let _ = store.write_uri(format!("http://[::1]:{}/", local_config.settings.primary_port).as_str());
+                    }
                 });
             }
             if local_web_listeners.0.is_none() && local_web_listeners.1.is_none() {

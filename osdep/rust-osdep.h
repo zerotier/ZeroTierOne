@@ -108,6 +108,8 @@ extern void lockDownFile(const char *path, int isDir);
 extern void getSecureRandom(void *buf, unsigned int len);
 extern void sha384(const void *in, unsigned int len, void *out);
 extern void sha512(const void *in, unsigned int len, void *out);
+extern void encryptHttpAuthNonce(void *block);
+extern void decryptHttpAuthNonce(void *block);
 
 #ifdef __cplusplus
 }

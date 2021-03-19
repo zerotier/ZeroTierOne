@@ -48,12 +48,12 @@ pub(crate) fn for_each_address<F: FnMut(&InetAddress, &str)>(mut f: F) {
                     let mut netmask_bits: u16 = 0;
                     if !(*i).ifa_netmask.is_null() {
                         if sa_family == osdep::AF_INET as u8 {
-                            let mut a = (*(*i).ifa_netmask.cast::<osdep::sockaddr_in>()).sin_addr.s_addr as u32;
+                            let a = (*(*i).ifa_netmask.cast::<osdep::sockaddr_in>()).sin_addr.s_addr as u32;
                             netmask_bits = a.leading_ones() as u16;
                         } else if sa_family == osdep::AF_INET6 as u8 {
                             let a = s6_addr_as_ptr(&((*(*i).ifa_netmask.cast::<osdep::sockaddr_in6>()).sin6_addr)).cast::<u8>();
                             for i in 0..16 as isize {
-                                let mut b = *a.offset(i);
+                                let b = *a.offset(i);
                                 if b == 0xff {
                                     netmask_bits += 8;
                                 } else {

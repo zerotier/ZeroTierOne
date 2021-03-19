@@ -42,7 +42,7 @@ pub(crate) struct WebListener {
 
 impl WebListener {
     /// Create a new "background" TCP WebListener using the current tokio reactor async runtime.
-    pub fn new(_device_name: &str, addr: SocketAddr, service: &Service) -> Result<WebListener, Box<dyn std::error::Error>> {
+    pub async fn new(_device_name: &str, addr: SocketAddr, service: &Service) -> Result<WebListener, Box<dyn std::error::Error>> {
         let listener = if addr.is_ipv4() {
             let listener = socket2::Socket::new(socket2::Domain::ipv4(), socket2::Type::stream(), Some(socket2::Protocol::tcp()));
             if listener.is_err() {
