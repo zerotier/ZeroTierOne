@@ -23,7 +23,7 @@ num-derive = "0"
 hyper = { version = "0", features = ["http1", "runtime", "server", "client", "tcp", "stream"] }
 socket2 = { version = "0", features = ["reuseport", "unix", "pair"] }
 dialoguer = "0"
-www-authenticate = "0"
+digest_auth = "0"
 
 [target."cfg(windows)".dependencies]
 winapi = { version = "0.3.9", features = ["handleapi", "ws2ipdef", "ws2tcpip"] }

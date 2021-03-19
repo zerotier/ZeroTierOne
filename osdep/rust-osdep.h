@@ -102,15 +102,28 @@ extern const unsigned long c_SIOCAUTOCONF_STOP;
 extern "C" {
 #endif
 
+// Get the default home path for this platform.
 extern const char *platformDefaultHomePath();
+
+// This ms-since-epoch function may be faster than the one in Rust's stdlib.
 extern int64_t msSinceEpoch();
+
+// Rust glue to C code to lock down a file, which is simple on Unix-like OSes
+// and horrible on Windows.
 extern void lockDownFile(const char *path, int isDir);
+
+// Rust glue to ZeroTier's secure random PRNG.
 extern void getSecureRandom(void *buf, unsigned int len);
-extern void sha384(const void *in, unsigned int len, void *out);
-extern void sha512(const void *in, unsigned int len, void *out);
+
+// These AES encrypt and decrypt a single block using a key that is randomly
+// generated at process init and never exported. It's used to generate HTTP
+// digest authentication tokens that can just be decrypted to get and check
+// a timestamp to prevent replay attacks.
 extern void encryptHttpAuthNonce(void *block);
 extern void decryptHttpAuthNonce(void *block);
 
 #ifdef __cplusplus
 }
 #endif
+
+/********************************************************************************************************************/

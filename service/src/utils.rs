@@ -24,26 +24,6 @@ use crate::osdep;
 use crate::osdep::time;
 
 #[inline(always)]
-pub(crate) fn sha512<T: AsRef<[u8]>>(data: T) -> [u8; 64] {
-    let mut r: MaybeUninit<[u8; 64]> = MaybeUninit::uninit();
-    let d = data.as_ref();
-    unsafe {
-        osdep::sha512(d.as_ptr().cast(), d.len() as c_uint, r.as_mut_ptr().cast());
-        r.assume_init()
-    }
-}
-
-#[inline(always)]
-pub(crate) fn sha384<T: AsRef<[u8]>>(data: T) -> [u8; 48] {
-    let mut r: MaybeUninit<[u8; 48]> = MaybeUninit::uninit();
-    let d = data.as_ref();
-    unsafe {
-        osdep::sha384(d.as_ptr().cast(), d.len() as c_uint, r.as_mut_ptr().cast());
-        r.assume_init()
-    }
-}
-
-#[inline(always)]
 pub(crate) fn ms_since_epoch() -> i64 {
     // This is easy to do in the Rust stdlib, but the version in OSUtils is probably faster.
     unsafe { osdep::msSinceEpoch() }

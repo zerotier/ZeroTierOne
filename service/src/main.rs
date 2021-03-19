@@ -28,9 +28,7 @@ mod weblistener;
 #[allow(non_snake_case, non_upper_case_globals, non_camel_case_types, dead_code, improper_ctypes)]
 mod osdep; // bindgen generated
 
-use std::boxed::Box;
 use std::io::Write;
-use std::rc::Rc;
 use std::sync::Arc;
 use std::str::FromStr;
 
@@ -315,7 +313,7 @@ fn main() {
             println!("{}.{}.{}", ver.0, ver.1, ver.2);
             0
         }
-        ("status", _) => crate::commands::status::run(make_store(&cli_args)),
+        ("status", _) => crate::webclient::run_command(make_store(&cli_args), crate::commands::status::run),
         ("set", Some(sub_cli_args)) => { 0 }
         ("peer", Some(sub_cli_args)) => { 0 }
         ("network", Some(sub_cli_args)) => { 0 }
@@ -323,7 +321,7 @@ fn main() {
         ("leave", Some(sub_cli_args)) => { 0 }
         ("service", _) => {
             let store = make_store(&cli_args);
-            drop(cli_args); // free memory
+            drop(cli_args); // free no longer needed memory before entering service
             service::run(store)
         },
         ("controller", Some(sub_cli_args)) => { 0 }

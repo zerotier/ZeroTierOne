@@ -134,12 +134,6 @@ void lockDownFile(const char *path, int isDir)
 void getSecureRandom(void *buf, unsigned int len)
 { ZeroTier::Utils::getSecureRandom(buf, len); }
 
-void sha384(const void *in, unsigned int len, void *out)
-{ ZeroTier::SHA384(out, in, len); }
-
-void sha512(const void *in, unsigned int len, void *out)
-{ ZeroTier::SHA512(out, in, len); }
-
 static ZT_INLINE ZeroTier::AES _makeHttpAuthCipher() noexcept
 {
 	uint8_t key[32];

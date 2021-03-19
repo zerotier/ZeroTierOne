@@ -11,22 +11,17 @@
  */
 /****/
 
+use std::rc::Rc;
 use std::str::FromStr;
 use std::sync::Arc;
 
 use hyper::Uri;
-use crate::store::Store;
 
-pub(crate) fn run(store: Arc<Store>) -> i32 {
-    crate::webclient::command(store.clone(), move |client, uri| {
-        async move {
-            let mut res = client.get(uri).await?;
-            println!("status: {}", res.status().as_str());
-            let body = hyper::body::to_bytes(res.body_mut()).await?;
-            String::from_utf8(body.to_vec()).map(|body| {
-                println!("body: {}", body.as_str());
-            });
-            Ok(0)
-        }
-    })
+use crate::store::Store;
+use crate::webclient::HttpClient;
+
+pub(crate) async fn run(store: Arc<Store>, client: HttpClient, api_base_uri: Uri, auth_token: String) -> hyper::Result<i32> {
+    let mut res = client.get(api_base_uri).await?;
+    let body = hyper::body::to_bytes(res.body_mut()).await?;
+    Ok(0)
 }
