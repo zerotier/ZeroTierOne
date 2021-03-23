@@ -31,7 +31,7 @@ fn show<'a>(store: &Arc<Store>, cli_args: &ArgMatches<'a>) -> i32 {
 
 fn newsid(cli_args: Option<&ArgMatches>) -> i32 {
     let sid = CertificateSubjectUniqueIdSecret::new(CertificateUniqueIdType::NistP384); // right now there's only one type
-    let sid = sid.to_json();
+    let sid = serde_json::to_string(&sid).unwrap();
     let path = cli_args.map_or("", |cli_args| { cli_args.value_of("path").unwrap_or("") });
     if path.is_empty() {
         let _ = std::io::stdout().write_all(sid.as_bytes());
@@ -67,7 +67,7 @@ fn newcsr(cli_args: &ArgMatches) -> i32 {
             println!("ERROR: invalid subject unique ID secret: {}", json.err().unwrap().to_string());
             return 1;
         }
-        let sid = CertificateSubjectUniqueIdSecret::new_from_json(json.unwrap().as_str());
+        let sid = serde_json::from_str::<CertificateSubjectUniqueIdSecret>(json.unwrap().as_str());
         if sid.is_err() {
             println!("ERROR: invalid subject unique ID secret: {}", sid.err().unwrap());
             return 1;

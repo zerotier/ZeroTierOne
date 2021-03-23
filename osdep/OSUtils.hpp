@@ -43,6 +43,7 @@ class OSUtils
 private:
 #ifdef __APPLE__
 	static clock_serv_t s_machRealtimeClock;
+	static clock_serv_t s_machMonotonicClock;
 #endif
 
 public:
@@ -169,6 +170,42 @@ public:
 #ifdef __APPLE__
 		mach_timespec_t mts;
 		clock_get_time(s_machRealtimeClock,&mts);
+		return ( (1000LL * (int64_t)mts.tv_sec) + ((int64_t)(mts.tv_nsec / 1000000)) );
+#else
+		timeval tv;
+		gettimeofday(&tv,(struct timezone *)0);
+		return ( (1000LL * (int64_t)tv.tv_sec) + (int64_t)(tv.tv_usec / 1000) );
+#endif
+#endif
+#endif
+	};
+
+	/**
+	 * Get monotonic time since some point in the past
+	 *
+	 * On some systems this may fall back to the same return value as now(), but
+	 * if a monotonic (not affected by time changes) source is available it will
+	 * be used.
+	 *
+   * @return Current monotonic time in milliseconds (usually since system boot, but origin point is undefined)
+   */
+	static ZT_INLINE int64_t now_monotonic()
+	{
+#ifdef __WINDOWS__
+		return (int64_t)GetTickCount64();
+#else
+#ifdef __LINUX__
+		timespec ts;
+#ifdef CLOCK_MONOTONIC_COARSE
+		clock_gettime(CLOCK_MONOTONIC_COARSE,&ts);
+#else
+		clock_gettime(CLOCK_MONOTONIC,&ts);
+#endif
+		return ( (1000LL * (int64_t)ts.tv_sec) + ((int64_t)(ts.tv_nsec / 1000000)) );
+#else
+#ifdef __APPLE__
+		mach_timespec_t mts;
+		clock_get_time(s_machMonotonicClock,&mts);
 		return ( (1000LL * (int64_t)mts.tv_sec) + ((int64_t)(mts.tv_nsec / 1000000)) );
 #else
 		timeval tv;

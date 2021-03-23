@@ -13,6 +13,7 @@
 
 use crate::MAC;
 use std::cmp::Ordering;
+use std::hash::{Hash, Hasher};
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct MulticastGroup {
@@ -20,13 +21,34 @@ pub struct MulticastGroup {
     pub adi: u32,
 }
 
+impl ToString for MulticastGroup {
+    fn to_string(&self) -> String {
+        format!("{}/{}", self.mac.to_string(), self.adi)
+    }
+}
+
+impl Hash for MulticastGroup {
+    #[inline(always)]
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.mac.0.hash(state);
+        self.adi.hash(state);
+    }
+}
+
 impl Ord for MulticastGroup {
     fn cmp(&self, other: &Self) -> Ordering {
-        let o1 = self.mac.0.cmp(&other.mac.0);
-        if o1 == Ordering::Equal {
-            self.adi.cmp(&other.adi)
+        if self.mac.0 < other.mac.0 {
+            Ordering::Less
+        } else if self.mac.0 > other.mac.0 {
+            Ordering::Greater
         } else {
-            o1
+            if self.adi < other.adi {
+                Ordering::Less
+            } else if self.adi > other.adi {
+                Ordering::Greater
+            } else {
+                Ordering::Equal
+            }
         }
     }
 }

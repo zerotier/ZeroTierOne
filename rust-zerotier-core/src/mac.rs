@@ -17,13 +17,7 @@ pub struct MAC(pub u64);
 impl ToString for MAC {
     fn to_string(&self) -> String {
         let x = self.0;
-        format!("{:0>2x}:{:0>2x}:{:0>2x}:{:0>2x}:{:0>2x}:{:0>2x}",
-            (x >> 40) & 0xff,
-            (x >> 32) & 0xff,
-            (x >> 24) & 0xff,
-            (x >> 16) & 0xff,
-            (x >> 8) & 0xff,
-            x & 0xff)
+        format!("{:0>2x}:{:0>2x}:{:0>2x}:{:0>2x}:{:0>2x}:{:0>2x}", (x >> 40) & 0xff, (x >> 32) & 0xff, (x >> 24) & 0xff, (x >> 16) & 0xff, (x >> 8) & 0xff, x & 0xff)
     }
 }
 

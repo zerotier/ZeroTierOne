@@ -11,6 +11,7 @@
  */
 /****/
 
+use std::cell::Cell;
 use std::collections::BTreeMap;
 use std::net::{SocketAddr, Ipv4Addr, IpAddr, Ipv6Addr};
 use std::str::FromStr;
@@ -28,17 +29,45 @@ use crate::localconfig::*;
 use crate::log::Log;
 use crate::network::Network;
 use crate::store::Store;
-use crate::utils::ms_since_epoch;
+use crate::utils::{ms_since_epoch, ms_monotonic};
 use crate::weblistener::WebListener;
 
 /// How often to check for major configuration changes. This shouldn't happen
 /// too often since it uses a bit of CPU.
 const CONFIG_CHECK_INTERVAL: i64 = 5000;
 
+/// ServiceStatus is the object returned by the API /status endpoint
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
+pub struct ServiceStatus {
+    pub address: Address,
+    pub clock: i64,
+    pub uptime: i64,
+    pub config: Arc<LocalConfig>,
+    pub online: bool,
+    #[serde(rename = "publicIdentity")]
+    pub public_identity: Identity,
+    pub version: String,
+    #[serde(rename = "versionMajor")]
+    pub version_major: i32,
+    #[serde(rename = "versionMinor")]
+    pub version_minor: i32,
+    #[serde(rename = "versionRev")]
+    pub version_revision: i32,
+    #[serde(rename = "versionBuild")]
+    pub version_build: i32,
+    #[serde(rename = "udpLocalEndpoints")]
+    pub udp_local_endpoints: Vec<InetAddress>,
+    #[serde(rename = "httpLocalEndpoints")]
+    pub http_local_endpoints: Vec<InetAddress>,
+}
+
 struct ServiceIntl {
+    udp_local_endpoints: Mutex<Vec<InetAddress>>,
+    http_local_endpoints: Mutex<Vec<InetAddress>>,
     interrupt: Mutex<futures::channel::mpsc::Sender<()>>,
     local_config: Mutex<Arc<LocalConfig>>,
     store: Arc<Store>,
+    starup_time: i64,
     run: AtomicBool,
     online: AtomicBool,
 }
@@ -151,12 +180,10 @@ impl NodeEventHandler<Network> for Service {
 }
 
 impl Service {
-    #[inline(always)]
     pub fn local_config(&self) -> Arc<LocalConfig> {
         self.intl.local_config.lock().unwrap().clone()
     }
 
-    #[inline(always)]
     pub fn set_local_config(&self, new_lc: LocalConfig) {
         *(self.intl.local_config.lock().unwrap()) = Arc::new(new_lc);
     }
@@ -165,17 +192,14 @@ impl Service {
     /// This can return None if we are in the midst of shutdown. In this case
     /// whatever operation is in progress should abort. None will never be
     /// returned during normal operation.
-    #[inline(always)]
     pub fn node(&self) -> Option<Arc<Node<Service, Network>>> {
         self._node.upgrade()
     }
 
-    #[inline(always)]
     pub fn store(&self) -> &Arc<Store> {
         &self.intl.store
     }
 
-    #[inline(always)]
     pub fn online(&self) -> bool {
         self.intl.online.load(Ordering::Relaxed)
     }
@@ -183,6 +207,32 @@ impl Service {
     pub fn shutdown(&self) {
         self.intl.run.store(false, Ordering::Relaxed);
         let _ = self.intl.interrupt.lock().unwrap().try_send(());
+    }
+
+    pub fn uptime(&self) -> i64 {
+        ms_since_epoch() - self.intl.starup_time
+    }
+
+    /// Get service status for API, or None if a shutdown is in progress.
+    pub fn status(&self) -> Option<ServiceStatus> {
+        let ver = zerotier_core::version();
+        self.node().map(|node| {
+            ServiceStatus {
+                address: node.address(),
+                clock: ms_since_epoch(),
+                uptime: self.uptime(),
+                config: self.local_config(),
+                online: self.online(),
+                public_identity: node.identity(),
+                version: format!("{}.{}.{}", ver.0, ver.1, ver.2),
+                version_major: ver.0,
+                version_minor: ver.1,
+                version_revision: ver.2,
+                version_build: ver.3,
+                udp_local_endpoints: self.intl.udp_local_endpoints.lock().unwrap().clone(),
+                http_local_endpoints: self.intl.http_local_endpoints.lock().unwrap().clone(),
+            }
+        })
     }
 }
 
@@ -202,9 +252,12 @@ async fn run_async(store: Arc<Store>, log: Arc<Log>, local_config: Arc<LocalConf
         log: log.clone(),
         _node: Weak::new(),
         intl: Arc::new(ServiceIntl {
+            udp_local_endpoints: Mutex::new(Vec::new()),
+            http_local_endpoints: Mutex::new(Vec::new()),
             interrupt: Mutex::new(interrupt_tx),
             local_config: Mutex::new(local_config),
             store: store.clone(),
+            starup_time: ms_monotonic(),
             run: AtomicBool::new(true),
             online: AtomicBool::new(false),
         }),
@@ -254,16 +307,18 @@ async fn run_async(store: Arc<Store>, log: Arc<Log>, local_config: Arc<LocalConf
         if (now - last_checked_config) >= CONFIG_CHECK_INTERVAL {
             last_checked_config = now;
 
-            let new_config = store.read_local_conf(true);
-            if new_config.is_ok() {
+            let mut bindings_changed = false;
+
+            let _ = store.read_local_conf(true).map(|new_config| new_config.map(|new_config| {
                 d!(log, "local.conf changed on disk, reloading.");
-                service.set_local_config(new_config.unwrap());
-            }
+                service.set_local_config(new_config);
+            }));
 
             let next_local_config = service.local_config();
             if local_config.settings.primary_port != next_local_config.settings.primary_port {
                 local_web_listeners.0 = None;
                 local_web_listeners.1 = None;
+                bindings_changed = true;
             }
             if local_config.settings.log.max_size != next_local_config.settings.log.max_size {
                 log.set_max_size(next_local_config.settings.log.max_size);
@@ -311,16 +366,18 @@ async fn run_async(store: Arc<Store>, log: Arc<Log>, local_config: Arc<LocalConf
                 l!(log, "unbinding UDP socket at {}", k.to_string());
                 udp_sockets.remove(k);
             }
+            drop(udp_sockets_to_close);
 
             for addr in system_addrs.iter() {
                 if !udp_sockets.contains_key(addr.0) {
-                    let _ = FastUDPSocket::new(addr.1.as_str(), addr.0, move |raw_socket: &FastUDPRawOsSocket, from_address: &InetAddress, data: Buffer| {
+                    let _ = FastUDPSocket::new(addr.1.as_str(), addr.0, |raw_socket: &FastUDPRawOsSocket, from_address: &InetAddress, data: Buffer| {
                         // TODO: incoming packet handler
                     }).map_or_else(|e| {
                         l!(log, "error binding UDP socket to {}: {}", addr.0.to_string(), e.to_string());
                     }, |s| {
                         l!(log, "bound UDP socket at {}", addr.0.to_string());
                         udp_sockets.insert(addr.0.clone(), s);
+                        bindings_changed = true;
                     });
                 }
             }
@@ -360,12 +417,14 @@ async fn run_async(store: Arc<Store>, log: Arc<Log>, local_config: Arc<LocalConf
             for l in web_listeners.iter() {
                 if !system_addrs.contains_key(l.0) {
                     web_listeners_to_close.push(l.0.clone());
+                    bindings_changed = true;
                 }
             }
             for k in web_listeners_to_close.iter() {
                 l!(log, "closing HTTP listener at {}", k.to_string());
                 web_listeners.remove(k);
             }
+            drop(web_listeners_to_close);
 
             for addr in system_addrs.iter() {
                 if addr.0.port() == local_config.settings.primary_port && !web_listeners.contains_key(addr.0) {
@@ -376,6 +435,7 @@ async fn run_async(store: Arc<Store>, log: Arc<Log>, local_config: Arc<LocalConf
                         }, |l| {
                             l!(log, "created HTTP listener at {}", addr.0.to_string());
                             web_listeners.insert(addr.0.clone(), l);
+                            bindings_changed = true;
                         });
                     }
                 }
@@ -385,6 +445,7 @@ async fn run_async(store: Arc<Store>, log: Arc<Log>, local_config: Arc<LocalConf
                 let _ = WebListener::new(loopback_dev_name.as_str(), SocketAddr::new(IpAddr::from(Ipv4Addr::LOCALHOST), local_config.settings.primary_port), &service).await.map(|wl| {
                     local_web_listeners.0 = Some(wl);
                     let _ = store.write_uri(format!("http://127.0.0.1:{}/", local_config.settings.primary_port).as_str());
+                    bindings_changed = true;
                 });
             }
             if local_web_listeners.1.is_none() {
@@ -393,10 +454,34 @@ async fn run_async(store: Arc<Store>, log: Arc<Log>, local_config: Arc<LocalConf
                     if local_web_listeners.0.is_none() {
                         let _ = store.write_uri(format!("http://[::1]:{}/", local_config.settings.primary_port).as_str());
                     }
+                    bindings_changed = true;
                 });
             }
             if local_web_listeners.0.is_none() && local_web_listeners.1.is_none() {
                 l!(log, "error creating HTTP listener on 127.0.0.1/{} or ::1/{}", local_config.settings.primary_port, local_config.settings.primary_port);
+            }
+
+            if bindings_changed {
+                service.intl.udp_local_endpoints.lock().as_mut().map(|udp_local_endpoints| {
+                    udp_local_endpoints.clear();
+                    for ep in udp_sockets.iter() {
+                        udp_local_endpoints.push(ep.0.clone());
+                    }
+                    udp_local_endpoints.sort();
+                });
+                service.intl.http_local_endpoints.lock().as_mut().map(|http_local_endpoints| {
+                    http_local_endpoints.clear();
+                    for ep in web_listeners.iter() {
+                        http_local_endpoints.push(ep.0.clone());
+                    }
+                    if local_web_listeners.0.is_some() {
+                        http_local_endpoints.push(InetAddress::new_ipv4_loopback(local_web_listeners.0.unwrap().address.port()));
+                    }
+                    if local_web_listeners.1.is_some() {
+                        http_local_endpoints.push(InetAddress::new_ipv6_loopback(local_web_listeners.1.unwrap().address.port()));
+                    }
+                    http_local_endpoints.sort();
+                });
             }
         }
 
@@ -418,7 +503,7 @@ async fn run_async(store: Arc<Store>, log: Arc<Log>, local_config: Arc<LocalConf
 }
 
 pub(crate) fn run(store: Arc<Store>) -> i32 {
-    let local_config = Arc::new(store.read_local_conf(false).unwrap_or_else(|_| { LocalConfig::default() }));
+    let local_config = Arc::new(store.read_local_conf_or_default());
 
     let log = Arc::new(Log::new(
         if local_config.settings.log.path.as_ref().is_some() {

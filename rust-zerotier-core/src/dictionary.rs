@@ -16,10 +16,9 @@ use std::ffi::c_void;
 use std::os::raw::{c_char, c_uint};
 
 use crate::{cstr_to_string, ResultCode};
-use crate::capi::ZT_Dictionary_parse;
 
 /// Rust interface to the Dictionary data structure.
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone)]
 pub struct Dictionary {
     data: HashMap<String, Vec<u8>>,
 }
@@ -51,7 +50,7 @@ impl Dictionary {
 
     pub fn new_from_bytes(dict: &[u8]) -> Result<Dictionary, ResultCode> {
         let mut d = Dictionary{ data: HashMap::new() };
-        if unsafe { ZT_Dictionary_parse(dict.as_ptr().cast(), dict.len() as c_uint, (&mut d as *mut Dictionary).cast(), Some(populate_dict_callback)) != 0 } {
+        if unsafe { crate::capi::ZT_Dictionary_parse(dict.as_ptr().cast(), dict.len() as c_uint, (&mut d as *mut Dictionary).cast(), Some(populate_dict_callback)) != 0 } {
             Ok(d)
         } else {
             Err(ResultCode::ErrorBadParameter)

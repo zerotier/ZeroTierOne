@@ -275,12 +275,6 @@ impl FastUDPSocket {
     pub fn raw_socket(&self) -> FastUDPRawOsSocket {
         *self.sockets.get(0).unwrap()
     }
-
-    /// Get the number of threads this socket is currently running.
-    #[inline(always)]
-    pub fn thread_count(&self) -> usize {
-        self.threads.len()
-    }
 }
 
 impl Drop for FastUDPSocket {

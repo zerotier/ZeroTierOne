@@ -11,7 +11,6 @@
  */
 /****/
 
-mod api;
 mod commands;
 mod fastudpsocket;
 mod localconfig;
@@ -35,6 +34,8 @@ use std::str::FromStr;
 use clap::{App, Arg, ArgMatches, ErrorKind};
 
 use crate::store::Store;
+
+pub const HTTP_API_OBJECT_SIZE_LIMIT: usize = 131072;
 
 fn make_help() -> String {
     let ver = zerotier_core::version();
@@ -139,7 +140,7 @@ filesystem or verbatim objects in string format. This is auto-detected.
 
 pub(crate) fn print_help() {
     let h = make_help();
-    std::io::stdout().write_all(h.as_bytes());
+    let _ = std::io::stdout().write_all(h.as_bytes());
 }
 
 pub(crate) fn parse_bool(v: &str) -> Result<bool, String> {
@@ -166,7 +167,6 @@ fn is_valid_port(v: String) -> Result<(), String> {
 }
 
 fn make_store(cli_args: &ArgMatches) -> Arc<Store> {
-    //let json_output = cli_args.is_present("json"); // TODO
     let zerotier_path = cli_args.value_of("path").map_or_else(|| unsafe { zerotier_core::cstr_to_string(osdep::platformDefaultHomePath(), -1) }, |ztp| ztp.to_string());
     let store = Store::new(zerotier_path.as_str(), cli_args.value_of("token_path").map_or(None, |tp| Some(tp.to_string())), cli_args.value_of("token").map_or(None, |tok| Some(tok.trim().to_string())));
     if store.is_err() {
@@ -174,6 +174,17 @@ fn make_store(cli_args: &ArgMatches) -> Arc<Store> {
         std::process::exit(1);
     }
     Arc::new(store.unwrap())
+}
+
+#[derive(Clone)]
+pub struct GlobalFlags {
+    pub json_output: bool,
+}
+
+fn get_global_flags(cli_args: &ArgMatches) -> GlobalFlags {
+    GlobalFlags {
+        json_output: cli_args.is_present("json")
+    }
 }
 
 fn main() {
@@ -313,7 +324,7 @@ fn main() {
             println!("{}.{}.{}", ver.0, ver.1, ver.2);
             0
         }
-        ("status", _) => crate::webclient::run_command(make_store(&cli_args), crate::commands::status::run),
+        ("status", _) => crate::webclient::run_command(make_store(&cli_args), get_global_flags(&cli_args), crate::commands::status::run),
         ("set", Some(sub_cli_args)) => { 0 }
         ("peer", Some(sub_cli_args)) => { 0 }
         ("network", Some(sub_cli_args)) => { 0 }

@@ -128,6 +128,9 @@ const char *platformDefaultHomePath()
 int64_t msSinceEpoch()
 { return ZeroTier::OSUtils::now(); }
 
+int64_t msMonotonic()
+{ return ZeroTier::OSUtils::now_monotonic(); }
+
 void lockDownFile(const char *path, int isDir)
 { ZeroTier::OSUtils::lockDownFile(path, isDir != 0); }
 

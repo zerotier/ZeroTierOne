@@ -108,6 +108,9 @@ extern const char *platformDefaultHomePath();
 // This ms-since-epoch function may be faster than the one in Rust's stdlib.
 extern int64_t msSinceEpoch();
 
+// This is the number of milliseconds since some time in the past, unaffected by the clock (or msSinceEpoch() if not supported by host).
+extern int64_t msMonotonic();
+
 // Rust glue to C code to lock down a file, which is simple on Unix-like OSes
 // and horrible on Windows.
 extern void lockDownFile(const char *path, int isDir);

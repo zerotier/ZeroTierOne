@@ -76,6 +76,8 @@ impl InetAddressFamily {
 
 pub const IPV4_INADDR_ANY: [u8; 4] = [0; 4];
 pub const IPV6_INADDR_ANY: [u8; 16] = [0; 16];
+pub const IPV4_LOOPBACK: [u8; 4] = [127, 0, 0, 1];
+pub const IPV6_LOOPBACK: [u8; 16] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1];
 
 /// Opaque structure that can hold an IPv4 or IPv6 address.
 pub struct InetAddress {
@@ -106,6 +108,24 @@ impl InetAddress {
         let mut ia = InetAddress::new();
         unsafe {
             ztcore::ZT_InetAddress_setIpBytes(ia.as_capi_mut_ptr(), IPV6_INADDR_ANY.as_ptr().cast(), 16, port as c_uint);
+        }
+        ia
+    }
+
+    /// Create 127.0.0.1/port
+    pub fn new_ipv4_loopback(port: u16) -> InetAddress {
+        let mut ia = InetAddress::new();
+        unsafe {
+            ztcore::ZT_InetAddress_setIpBytes(ia.as_capi_mut_ptr(), IPV4_LOOPBACK.as_ptr().cast(), 4, port as c_uint);
+        }
+        ia
+    }
+
+    /// Create ::1/port
+    pub fn new_ipv6_loopback(port: u16) -> InetAddress {
+        let mut ia = InetAddress::new();
+        unsafe {
+            ztcore::ZT_InetAddress_setIpBytes(ia.as_capi_mut_ptr(), IPV6_LOOPBACK.as_ptr().cast(), 16, port as c_uint);
         }
         ia
     }

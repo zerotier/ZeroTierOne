@@ -13,14 +13,12 @@
 
 use std::cell::RefCell;
 use std::convert::Infallible;
-use std::net::{SocketAddr, TcpListener};
+use std::net::SocketAddr;
 
 use hyper::{Body, Request, Response};
 use hyper::server::Server;
 use hyper::service::{make_service_fn, service_fn};
 use tokio::task::JoinHandle;
-
-use zerotier_core::InetAddress;
 
 use crate::service::Service;
 
@@ -36,13 +34,14 @@ async fn web_handler(service: Service, req: Request<Body>) -> Result<Response<Bo
 /// Dropping a listener initiates shutdown of the background hyper Server instance,
 /// but it might not shut down instantly as this occurs asynchronously.
 pub(crate) struct WebListener {
+    pub address: SocketAddr,
     shutdown_tx: RefCell<Option<tokio::sync::oneshot::Sender<()>>>,
     server: JoinHandle<hyper::Result<()>>,
 }
 
 impl WebListener {
     /// Create a new "background" TCP WebListener using the current tokio reactor async runtime.
-    pub async fn new(_device_name: &str, addr: SocketAddr, service: &Service) -> Result<WebListener, Box<dyn std::error::Error>> {
+    pub async fn new(_device_name: &str, address: SocketAddr, service: &Service) -> Result<WebListener, Box<dyn std::error::Error>> {
         let listener = if addr.is_ipv4() {
             let listener = socket2::Socket::new(socket2::Domain::ipv4(), socket2::Type::stream(), Some(socket2::Protocol::tcp()));
             if listener.is_err() {
@@ -78,7 +77,7 @@ impl WebListener {
             }
         }
 
-        let addr = socket2::SockAddr::from(addr);
+        let addr = socket2::SockAddr::from(address);
         if let Err(e) = listener.bind(&addr) {
             return Err(Box::new(e));
         }
@@ -108,6 +107,7 @@ impl WebListener {
         })).with_graceful_shutdown(async { let _ = shutdown_rx.await; }));
 
         Ok(WebListener {
+            address,
             shutdown_tx: RefCell::new(Some(shutdown_tx)),
             server,
         })

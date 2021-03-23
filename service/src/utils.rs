@@ -21,12 +21,15 @@ use std::path::Path;
 use zerotier_core::{Identity, Locator};
 
 use crate::osdep;
-use crate::osdep::time;
 
 #[inline(always)]
 pub(crate) fn ms_since_epoch() -> i64 {
-    // This is easy to do in the Rust stdlib, but the version in OSUtils is probably faster.
     unsafe { osdep::msSinceEpoch() }
+}
+
+#[inline(always)]
+pub(crate) fn ms_monotonic() -> i64 {
+    unsafe { osdep::msMonotonic() }
 }
 
 /// Convenience function to read up to limit bytes from a file.

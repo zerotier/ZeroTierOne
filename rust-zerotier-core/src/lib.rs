@@ -204,29 +204,6 @@ pub unsafe fn cstr_to_string(cstr: *const c_char, max_len: isize) -> String {
     String::new()
 }
 
-/// Macro to implement to_json and new_from_json on types that are Serializable.
-#[macro_export]
-macro_rules! implement_to_from_json {
-    ($struct_name:ident) => {
-        impl $struct_name {
-            pub fn new_from_json(json: &str) -> Result<$struct_name, String> {
-                let r: serde_json::error::Result<$struct_name> = serde_json::from_str(json);
-                if r.is_err() {
-                    let e = r.err();
-                    if e.is_none() {
-                        return Err(String::from("unknown error"));
-                    }
-                    return Err(e.unwrap().to_string());
-                }
-                Ok(r.unwrap())
-            }
-            pub fn to_json(&self) -> String {
-                serde_json::to_string_pretty(self).unwrap()
-            }
-        }
-    };
-}
-
 /*
 #[macro_export(crate)]
 macro_rules! enum_str {

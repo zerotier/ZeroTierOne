@@ -424,7 +424,7 @@ impl VNIC for MacFethTap {
 
     #[inline(always)]
     fn get_multicast_groups(&self) -> BTreeSet<MulticastGroup> {
-        crate::vnic::common::bsd_get_multicast_groups(self.device.name.as_str())
+        crate::vnic::common::get_l2_multicast_subscriptions(self.device.name.as_str())
     }
 
     #[inline(always)]

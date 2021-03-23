@@ -228,30 +228,3 @@ impl Default for LocalConfig {
         }
     }
 }
-
-zerotier_core::implement_to_from_json!(LocalConfig);
-
-impl LocalConfig {
-    pub fn load(path: &String) -> std::io::Result<LocalConfig> {
-        let md = std::path::Path::new(path).metadata();
-        if md.is_err() {
-            return Err(md.err().unwrap());
-        }
-        if md.unwrap().len() > 1048576 { // anti-memory-overflow sanity limit
-            return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput, "local config file too large (sanity limit: 1MiB)"))
-        }
-        let json = std::fs::read_to_string(path);
-        if json.is_err() {
-            return Err(json.err().unwrap());
-        }
-        let json = Self::new_from_json(json.unwrap().as_str());
-        if json.is_err() {
-            return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput, json.err().unwrap().to_string()));
-        }
-        Ok(json.unwrap())
-    }
-
-    pub fn save(&self, path: &String) -> std::io::Result<()> {
-        std::fs::write(path, self.to_json())
-    }
-}

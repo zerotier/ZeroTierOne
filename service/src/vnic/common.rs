@@ -20,8 +20,8 @@ use num_traits::cast::AsPrimitive;
 use crate::osdep as osdep;
 
 /// BSD based OSes support getifmaddrs().
-#[cfg(any(target_os = "macos", target_os = "freebsd", target_os = "netbsd", target_os = "openbsd", target_os = "dragonfly", target_os = "ios", target_os = "bsd", target_os = "darwin"))]
-pub(crate) fn bsd_get_multicast_groups(dev: &str) -> BTreeSet<MulticastGroup> {
+#[cfg(any(target_os = "macos", target_os = "ios", target_os = "netbsd", target_os = "openbsd", target_os = "dragonfly", target_os = "freebsd", target_os = "darwin"))]
+pub(crate) fn get_l2_multicast_subscriptions(dev: &str) -> BTreeSet<MulticastGroup> {
     let mut groups: BTreeSet<MulticastGroup> = BTreeSet::new();
     let dev = dev.as_bytes();
     unsafe {
@@ -50,7 +50,7 @@ pub(crate) fn bsd_get_multicast_groups(dev: &str) -> BTreeSet<MulticastGroup> {
 
 /// Linux stores this stuff in /proc and it needs to be fetched from there.
 #[cfg(target_os = "linux")]
-pub(crate) fn linux_get_multicast_groups(dev: &str) -> BTreeSet<MulticastGroup> {
+pub(crate) fn get_l2_multicast_subscriptions(dev: &str) -> BTreeSet<MulticastGroup> {
     let mut groups: BTreeSet<MulticastGroup> = BTreeSet::new();
     groups
 }

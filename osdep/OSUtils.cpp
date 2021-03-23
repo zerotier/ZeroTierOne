@@ -38,7 +38,14 @@ static clock_serv_t _machGetRealtimeClock() noexcept
 	host_get_clock_service(mach_host_self(),CALENDAR_CLOCK,&c);
 	return c;
 }
+static clock_serv_t _machGetMonotonicClock() noexcept
+{
+	clock_serv_t c;
+	host_get_clock_service(mach_host_self(),REALTIME_CLOCK,&c);
+	return c;
+}
 clock_serv_t OSUtils::s_machRealtimeClock = _machGetRealtimeClock();
+clock_serv_t OSUtils::s_machMonotonicClock = _machGetMonotonicClock();
 #endif
 
 unsigned int OSUtils::ztsnprintf(char *buf,unsigned int len,const char *fmt,...)
