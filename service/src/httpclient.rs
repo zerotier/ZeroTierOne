@@ -40,13 +40,17 @@ impl std::fmt::Display for IncorrectAuthTokenError {
 }
 
 #[derive(Debug)]
-pub(crate) struct UnexpectedStatusCodeError(pub StatusCode);
+pub(crate) struct UnexpectedStatusCodeError(pub StatusCode, pub &'static str);
 
 impl Error for UnexpectedStatusCodeError {}
 
 impl std::fmt::Display for UnexpectedStatusCodeError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "unexpected status code: {} {}", self.0.as_str(), self.0.canonical_reason().unwrap_or("???"))
+        if self.1.is_empty() {
+            write!(f, "unexpected status code: {} {}", self.0.as_str(), self.0.canonical_reason().unwrap_or("???"))
+        } else {
+            write!(f, "unexpected status code: {} {} ({})", self.0.as_str(), self.0.canonical_reason().unwrap_or("???"), self.1)
+        }
     }
 }
 
@@ -109,7 +113,7 @@ pub(crate) async fn request(client: &HttpClient, method: Method, uri: Uri, data:
     if res.status() == StatusCode::UNAUTHORIZED {
         let auth = res.headers().get(hyper::header::WWW_AUTHENTICATE);
         if auth.is_none() {
-            return Ok(res); // return the 401 reply
+            return Err(Box::new(UnexpectedStatusCodeError(StatusCode::UNAUTHORIZED, "host returned 401 but no WWW-Authenticate header found")))
         }
         let auth = auth.unwrap().to_str();
         if auth.is_err() {

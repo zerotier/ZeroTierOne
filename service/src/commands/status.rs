@@ -20,7 +20,7 @@ use hyper::{Uri, Method, StatusCode};
 use colored::*;
 
 use crate::store::Store;
-use crate::webclient::*;
+use crate::httpclient::*;
 use crate::service::ServiceStatus;
 use crate::{GlobalFlags, HTTP_API_OBJECT_SIZE_LIMIT};
 
@@ -48,6 +48,6 @@ pub(crate) async fn run(store: Arc<Store>, global_flags: GlobalFlags, client: Ht
 
             Ok(0)
         },
-        _ => Err(Box::new(UnexpectedStatusCodeError(res.status())))
+        _ => Err(Box::new(UnexpectedStatusCodeError(res.status(), "")))
     }
 }

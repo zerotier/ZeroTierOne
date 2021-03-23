@@ -21,8 +21,8 @@ mod network;
 mod vnic;
 mod service;
 mod utils;
-mod webclient;
-mod weblistener;
+mod httplistener;
+mod httpclient;
 
 #[allow(non_snake_case, non_upper_case_globals, non_camel_case_types, dead_code, improper_ctypes)]
 mod osdep; // bindgen generated
@@ -324,7 +324,7 @@ fn main() {
             println!("{}.{}.{}", ver.0, ver.1, ver.2);
             0
         }
-        ("status", _) => crate::webclient::run_command(make_store(&cli_args), get_global_flags(&cli_args), crate::commands::status::run),
+        ("status", _) => crate::httpclient::run_command(make_store(&cli_args), get_global_flags(&cli_args), crate::commands::status::run),
         ("set", Some(sub_cli_args)) => { 0 }
         ("peer", Some(sub_cli_args)) => { 0 }
         ("network", Some(sub_cli_args)) => { 0 }

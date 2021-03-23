@@ -30,7 +30,7 @@ use crate::log::Log;
 use crate::network::Network;
 use crate::store::Store;
 use crate::utils::{ms_since_epoch, ms_monotonic};
-use crate::weblistener::WebListener;
+use crate::httplistener::HttpListener;
 
 /// How often to check for major configuration changes. This shouldn't happen
 /// too often since it uses a bit of CPU.
@@ -244,8 +244,8 @@ async fn run_async(store: Arc<Store>, log: Arc<Log>, local_config: Arc<LocalConf
     let mut process_exit_value: i32 = 0;
 
     let mut udp_sockets: BTreeMap<InetAddress, FastUDPSocket> = BTreeMap::new();
-    let mut web_listeners: BTreeMap<InetAddress, WebListener> = BTreeMap::new();
-    let mut local_web_listeners: (Option<WebListener>, Option<WebListener>) = (None, None); // IPv4, IPv6
+    let mut web_listeners: BTreeMap<InetAddress, HttpListener> = BTreeMap::new();
+    let mut local_web_listeners: (Option<HttpListener>, Option<HttpListener>) = (None, None); // IPv4, IPv6
 
     let (interrupt_tx, mut interrupt_rx) = futures::channel::mpsc::channel::<()>(1);
     let mut service = Service {
@@ -430,7 +430,7 @@ async fn run_async(store: Arc<Store>, log: Arc<Log>, local_config: Arc<LocalConf
                 if addr.0.port() == local_config.settings.primary_port && !web_listeners.contains_key(addr.0) {
                     let sa = addr.0.to_socketaddr();
                     if sa.is_some() {
-                        let wl = WebListener::new(addr.1.as_str(), sa.unwrap(), &service).await.map_or_else(|e| {
+                        let wl = HttpListener::new(addr.1.as_str(), sa.unwrap(), &service).await.map_or_else(|e| {
                             l!(log, "error creating HTTP listener at {}: {}", addr.0.to_string(), e.to_string());
                         }, |l| {
                             l!(log, "created HTTP listener at {}", addr.0.to_string());
@@ -442,14 +442,14 @@ async fn run_async(store: Arc<Store>, log: Arc<Log>, local_config: Arc<LocalConf
             }
 
             if local_web_listeners.0.is_none() {
-                let _ = WebListener::new(loopback_dev_name.as_str(), SocketAddr::new(IpAddr::from(Ipv4Addr::LOCALHOST), local_config.settings.primary_port), &service).await.map(|wl| {
+                let _ = HttpListener::new(loopback_dev_name.as_str(), SocketAddr::new(IpAddr::from(Ipv4Addr::LOCALHOST), local_config.settings.primary_port), &service).await.map(|wl| {
                     local_web_listeners.0 = Some(wl);
                     let _ = store.write_uri(format!("http://127.0.0.1:{}/", local_config.settings.primary_port).as_str());
                     bindings_changed = true;
                 });
             }
             if local_web_listeners.1.is_none() {
-                let _ = WebListener::new(loopback_dev_name.as_str(), SocketAddr::new(IpAddr::from(Ipv6Addr::LOCALHOST), local_config.settings.primary_port), &service).await.map(|wl| {
+                let _ = HttpListener::new(loopback_dev_name.as_str(), SocketAddr::new(IpAddr::from(Ipv6Addr::LOCALHOST), local_config.settings.primary_port), &service).await.map(|wl| {
                     local_web_listeners.1 = Some(wl);
                     if local_web_listeners.0.is_none() {
                         let _ = store.write_uri(format!("http://[::1]:{}/", local_config.settings.primary_port).as_str());
