@@ -15,20 +15,16 @@ use std::cell::RefCell;
 use std::convert::Infallible;
 use std::net::SocketAddr;
 
-use hyper::{Body, Request, Response};
+use hyper::{Body, Request, Response, StatusCode};
 use hyper::server::Server;
 use hyper::service::{make_service_fn, service_fn};
 use tokio::task::JoinHandle;
 
 use crate::service::Service;
+use crate::api;
 
 #[cfg(target_os = "linux")]
 use std::os::unix::io::AsRawFd;
-
-/// Handles API dispatch and other HTTP handler stuff.
-async fn http_handler(service: Service, req: Request<Body>) -> Result<Response<Body>, Infallible> {
-    Ok(Response::new("Hello, World".into()))
-}
 
 /// Listener for http connections to the API or for TCP P2P.
 /// Dropping a listener initiates shutdown of the background hyper Server instance,
@@ -42,7 +38,7 @@ pub(crate) struct HttpListener {
 impl HttpListener {
     /// Create a new "background" TCP WebListener using the current tokio reactor async runtime.
     pub async fn new(_device_name: &str, address: SocketAddr, service: &Service) -> Result<HttpListener, Box<dyn std::error::Error>> {
-        let listener = if addr.is_ipv4() {
+        let listener = if address.is_ipv4() {
             let listener = socket2::Socket::new(socket2::Domain::ipv4(), socket2::Type::stream(), Some(socket2::Protocol::tcp()));
             if listener.is_err() {
                 return Err(Box::new(listener.err().unwrap()));
@@ -100,7 +96,17 @@ impl HttpListener {
                 Ok::<_, Infallible>(service_fn(move |req: Request<Body>| {
                     let service = service.clone();
                     async move {
-                        http_handler(service, req).await
+                        let req_path = req.uri().path();
+                        let (status, body) = if req_path == "/status" {
+                            api::status(service, req)
+                        } else if req_path.starts_with("/peer") {
+                            api::peer(service, req)
+                        } else if req_path.starts_with("/network") {
+                            api::network(service, req)
+                        } else {
+                            (StatusCode::NOT_FOUND, "not found")
+                        };
+                        Ok(Response::builder().header("Content-Type", "application/json").status(status).body(body).unwrap())
                     }
                 }))
             }

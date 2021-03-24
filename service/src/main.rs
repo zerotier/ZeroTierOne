@@ -11,6 +11,7 @@
  */
 /****/
 
+mod api;
 mod commands;
 mod fastudpsocket;
 mod localconfig;
