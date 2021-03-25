@@ -11,10 +11,8 @@
  */
 /****/
 
-use std::cell::Cell;
 use std::collections::BTreeMap;
 use std::net::{SocketAddr, Ipv4Addr, IpAddr, Ipv6Addr};
-use std::str::FromStr;
 use std::sync::{Arc, Mutex, Weak};
 use std::sync::atomic::{AtomicBool, Ordering, AtomicPtr};
 use std::time::Duration;
@@ -41,7 +39,7 @@ const CONFIG_CHECK_INTERVAL: i64 = 5000;
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct ServiceStatus {
     #[serde(rename = "objectType")]
-    pub object_type: &'static str,
+    pub object_type: String,
     pub address: Address,
     pub clock: i64,
     #[serde(rename = "startTime")]
@@ -220,7 +218,7 @@ impl Service {
         let ver = zerotier_core::version();
         self.node().map(|node| {
             ServiceStatus {
-                object_type: "status",
+                object_type: "status".to_owned(),
                 address: node.address(),
                 clock: ms_since_epoch(),
                 start_time: self.intl.startup_time,

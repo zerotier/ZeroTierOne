@@ -200,9 +200,13 @@ impl ToString for Identity {
 }
 
 impl serde::Serialize for Identity {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer { serializer.serialize_str(self.intl_to_string(false).as_str()) }
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
+        serializer.serialize_str(self.intl_to_string(false).as_str())
+    }
 }
+
 struct IdentityVisitor;
+
 impl<'de> serde::de::Visitor<'de> for IdentityVisitor {
     type Value = Identity;
     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result { formatter.write_str("ZeroTier Identity in string format") }
@@ -214,8 +218,11 @@ impl<'de> serde::de::Visitor<'de> for IdentityVisitor {
         return Ok(id.ok().unwrap() as Self::Value);
     }
 }
+
 impl<'de> serde::Deserialize<'de> for Identity {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'de> { deserializer.deserialize_str(IdentityVisitor) }
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'de> {
+        deserializer.deserialize_str(IdentityVisitor)
+    }
 }
 
 #[cfg(test)]
@@ -255,7 +262,7 @@ mod tests {
         let from_str_fail = Identity::new_from_string("asdf:foo:invalid");
         assert!(from_str_fail.is_err());
 
-        let mut to_sign: [u8; 4] = [ 1,2,3,4 ];
+        let mut to_sign: [u8; 4] = [1, 2, 3, 4];
 
         let signed = test1.sign(&to_sign);
         assert!(signed.is_ok());

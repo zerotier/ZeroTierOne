@@ -82,12 +82,10 @@ fn bind_udp_socket(_device_name: &str, address: &InetAddress) -> Result<FastUDPR
 
         #[cfg(target_os = "linux")] {
             if !_device_name.is_empty() {
-                unsafe {
-                    let _ = std::ffi::CString::new(_device_name).map(|dn| {
-                        let dnb = dn.as_bytes_with_nul();
-                        let _ = osdep::setsockopt(s.as_(), osdep::SOL_SOCKET.as_(), osdep::SO_BINDTODEVICE.as_(), dnb.as_ptr().cast(), (dnb.len() - 1).as_());
-                    });
-                }
+                let _ = std::ffi::CString::new(_device_name).map(|dn| {
+                    let dnb = dn.as_bytes_with_nul();
+                    let _ = osdep::setsockopt(s.as_(), osdep::SOL_SOCKET.as_(), osdep::SO_BINDTODEVICE.as_(), dnb.as_ptr().cast(), (dnb.len() - 1).as_());
+                });
             }
         }
 

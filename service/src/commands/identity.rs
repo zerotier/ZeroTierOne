@@ -12,9 +12,10 @@
 /****/
 
 use clap::ArgMatches;
+
+use zerotier_core::{Identity, IdentityType};
+
 use crate::store::Store;
-use zerotier_core::{IdentityType, Identity};
-use std::sync::Arc;
 
 fn new_(cli_args: &ArgMatches) -> i32 {
     let id_type = cli_args.value_of("type").map_or(IdentityType::Curve25519, |idt| {

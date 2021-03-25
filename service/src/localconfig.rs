@@ -67,11 +67,27 @@ pub struct LocalConfigPhysicalPathConfig {
     pub blacklist: bool
 }
 
+impl Default for LocalConfigPhysicalPathConfig {
+    fn default() -> Self {
+        LocalConfigPhysicalPathConfig {
+            blacklist: false
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(default)]
 pub struct LocalConfigVirtualConfig {
     #[serde(rename = "try")]
     pub try_: Vec<InetAddress>
+}
+
+impl Default for LocalConfigVirtualConfig {
+    fn default() -> Self {
+        LocalConfigVirtualConfig {
+            try_: Vec::new()
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
@@ -89,6 +105,18 @@ pub struct LocalConfigNetworkSettings {
     pub allow_default_route_override: bool,
 }
 
+impl Default for LocalConfigNetworkSettings {
+    fn default() -> Self {
+        LocalConfigNetworkSettings {
+            allow_managed_ips: true,
+            allow_global_ips: false,
+            allow_managed_routes: true,
+            allow_global_routes: false,
+            allow_default_route_override: false
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(default)]
 pub struct LocalConfigLogSettings {
@@ -103,6 +131,22 @@ pub struct LocalConfigLogSettings {
     pub vl2_trace_multicast: bool,
     pub debug: bool,
     pub stderr: bool,
+}
+
+impl Default for LocalConfigLogSettings {
+    fn default() -> Self {
+        // TODO: change before release to saner defaults
+        LocalConfigLogSettings {
+            path: None,
+            max_size: 131072,
+            vl1: true,
+            vl2: true,
+            vl2_trace_rules: true,
+            vl2_trace_multicast: true,
+            debug: true,
+            stderr: true,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
@@ -124,56 +168,22 @@ pub struct LocalConfigSettings {
     pub explicit_addresses: Vec<InetAddress>,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
-#[serde(default)]
-pub struct LocalConfig {
-    pub physical: BTreeMap<InetAddress, LocalConfigPhysicalPathConfig>,
-    #[serde(rename = "virtual")]
-    pub virtual_: BTreeMap<Address, LocalConfigVirtualConfig>,
-    pub network: BTreeMap<NetworkId, LocalConfigNetworkSettings>,
-    pub settings: LocalConfigSettings,
-}
-
-impl Default for LocalConfigPhysicalPathConfig {
+impl Default for LocalConfigSettings {
     fn default() -> Self {
-        LocalConfigPhysicalPathConfig {
-            blacklist: false
+        let mut bl: Vec<String> = Vec::new();
+        bl.reserve(LocalConfigSettings::DEFAULT_PREFIX_BLACKLIST.len());
+        for n in LocalConfigSettings::DEFAULT_PREFIX_BLACKLIST.iter() {
+            bl.push(String::from(*n));
         }
-    }
-}
 
-impl Default for LocalConfigVirtualConfig {
-    fn default() -> Self {
-        LocalConfigVirtualConfig {
-            try_: Vec::new()
-        }
-    }
-}
-
-impl Default for LocalConfigNetworkSettings {
-    fn default() -> Self {
-        LocalConfigNetworkSettings {
-            allow_managed_ips: true,
-            allow_global_ips: false,
-            allow_managed_routes: true,
-            allow_global_routes: false,
-            allow_default_route_override: false
-        }
-    }
-}
-
-impl Default for LocalConfigLogSettings {
-    fn default() -> Self {
-        // TODO: change before release to saner defaults
-        LocalConfigLogSettings {
-            path: None,
-            max_size: 131072,
-            vl1: true,
-            vl2: true,
-            vl2_trace_rules: true,
-            vl2_trace_multicast: true,
-            debug: true,
-            stderr: true,
+        LocalConfigSettings {
+            primary_port: zerotier_core::DEFAULT_PORT,
+            secondary_port: Some(zerotier_core::DEFAULT_SECONDARY_PORT),
+            auto_port_search: true,
+            port_mapping: true,
+            log: LocalConfigLogSettings::default(),
+            interface_prefix_blacklist: bl,
+            explicit_addresses: Vec::new()
         }
     }
 }
@@ -198,24 +208,14 @@ impl LocalConfigSettings {
     }
 }
 
-impl Default for LocalConfigSettings {
-    fn default() -> Self {
-        let mut bl: Vec<String> = Vec::new();
-        bl.reserve(LocalConfigSettings::DEFAULT_PREFIX_BLACKLIST.len());
-        for n in LocalConfigSettings::DEFAULT_PREFIX_BLACKLIST.iter() {
-            bl.push(String::from(*n));
-        }
-
-        LocalConfigSettings {
-            primary_port: zerotier_core::DEFAULT_PORT,
-            secondary_port: Some(zerotier_core::DEFAULT_SECONDARY_PORT),
-            auto_port_search: true,
-            port_mapping: true,
-            log: LocalConfigLogSettings::default(),
-            interface_prefix_blacklist: bl,
-            explicit_addresses: Vec::new()
-        }
-    }
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
+#[serde(default)]
+pub struct LocalConfig {
+    pub physical: BTreeMap<InetAddress, LocalConfigPhysicalPathConfig>,
+    #[serde(rename = "virtual")]
+    pub virtual_: BTreeMap<Address, LocalConfigVirtualConfig>,
+    pub network: BTreeMap<NetworkId, LocalConfigNetworkSettings>,
+    pub settings: LocalConfigSettings,
 }
 
 impl Default for LocalConfig {

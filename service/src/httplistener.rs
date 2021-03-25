@@ -99,14 +99,16 @@ impl HttpListener {
                         let req_path = req.uri().path();
                         let (status, body) = if req_path == "/status" {
                             api::status(service, req)
+                        } else if req_path.starts_with("/config") {
+                            api::config(service, req)
                         } else if req_path.starts_with("/peer") {
                             api::peer(service, req)
                         } else if req_path.starts_with("/network") {
                             api::network(service, req)
                         } else {
-                            (StatusCode::NOT_FOUND, "not found")
+                            (StatusCode::NOT_FOUND, Body::from("not found"))
                         };
-                        Ok(Response::builder().header("Content-Type", "application/json").status(status).body(body).unwrap())
+                        Ok::<Response<Body>, Infallible>(Response::builder().header("Content-Type", "application/json").status(status).body(body).unwrap())
                     }
                 }))
             }

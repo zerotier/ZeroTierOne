@@ -12,19 +12,26 @@
 /****/
 
 use crate::service::Service;
-use hyper::{Request, Body, StatusCode, Response, Method};
+use hyper::{Request, Body, StatusCode, Method};
 
 pub(crate) fn status(service: Service, req: Request<Body>) -> (StatusCode, Body) {
     if req.method() == Method::GET {
-        let status = service.status();
-        if status.is_none() {
+        service.status().map_or_else(|| {
             (StatusCode::SERVICE_UNAVAILABLE, Body::from("node shutdown in progress"))
-        } else {
-            (StatusCode::OK, Body::from(serde_json::to_string(status.as_ref().unwrap()).unwrap()))
-        }
+        }, |status| {
+            (StatusCode::OK, Body::from(serde_json::to_string(&status).unwrap()))
+        })
     } else {
         (StatusCode::METHOD_NOT_ALLOWED, Body::from("/status allows method(s): GET"))
     }
+}
+
+pub(crate) fn config(service: Service, req: Request<Body>) -> (StatusCode, Body) {
+    let config = service.local_config();
+    if req.method() == Method::POST || req.method() == Method::PUT {
+        // TODO: diff config
+    }
+    (StatusCode::OK, Body::from(serde_json::to_string(config.as_ref()).unwrap()))
 }
 
 pub(crate) fn peer(service: Service, req: Request<Body>) -> (StatusCode, Body) {

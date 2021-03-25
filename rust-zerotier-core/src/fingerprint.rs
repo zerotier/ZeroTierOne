@@ -22,15 +22,15 @@ use crate::capi as ztcore;
 #[derive(PartialEq, Eq, Clone)]
 pub struct Fingerprint {
     pub address: Address,
-    pub hash: [u8; 48]
+    pub hash: [u8; 48],
 }
 
 impl Fingerprint {
     #[inline(always)]
     pub(crate) fn new_from_capi(fp: &ztcore::ZT_Fingerprint) -> Fingerprint {
-        Fingerprint{
+        Fingerprint {
             address: Address(fp.address),
-            hash: fp.hash
+            hash: fp.hash,
         }
     }
 
@@ -44,9 +44,9 @@ impl Fingerprint {
         unsafe {
             if ztcore::ZT_Fingerprint_fromString(cfp.as_mut_ptr(), cs.as_ptr()) != 0 {
                 let fp = cfp.assume_init();
-                return Ok(Fingerprint{
+                return Ok(Fingerprint {
                     address: Address(fp.address),
-                    hash: fp.hash
+                    hash: fp.hash,
                 });
             }
         }
@@ -84,9 +84,13 @@ impl ToString for Fingerprint {
 }
 
 impl serde::Serialize for Fingerprint {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer { serializer.serialize_str(self.to_string().as_str()) }
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
+        serializer.serialize_str(self.to_string().as_str())
+    }
 }
+
 struct FingerprintVisitor;
+
 impl<'de> serde::de::Visitor<'de> for FingerprintVisitor {
     type Value = Fingerprint;
     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result { formatter.write_str("ZeroTier Fingerprint in string format") }
@@ -98,6 +102,9 @@ impl<'de> serde::de::Visitor<'de> for FingerprintVisitor {
         return Ok(id.ok().unwrap() as Self::Value);
     }
 }
+
 impl<'de> serde::Deserialize<'de> for Fingerprint {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'de> { deserializer.deserialize_str(FingerprintVisitor) }
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'de> {
+        deserializer.deserialize_str(FingerprintVisitor)
+    }
 }

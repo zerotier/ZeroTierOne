@@ -12,10 +12,12 @@
 /****/
 
 use std::collections::BTreeSet;
-use std::ptr::null_mut;
 
+#[allow(unused_imports)]
 use zerotier_core::{MAC, MulticastGroup};
-use num_traits::cast::AsPrimitive;
+
+#[allow(unused_imports)]
+use num_traits::AsPrimitive;
 
 use crate::osdep as osdep;
 
@@ -25,7 +27,7 @@ pub(crate) fn get_l2_multicast_subscriptions(dev: &str) -> BTreeSet<MulticastGro
     let mut groups: BTreeSet<MulticastGroup> = BTreeSet::new();
     let dev = dev.as_bytes();
     unsafe {
-        let mut maddrs: *mut osdep::ifmaddrs = null_mut();
+        let mut maddrs: *mut osdep::ifmaddrs = std::ptr::null_mut();
         if osdep::getifmaddrs(&mut maddrs as *mut *mut osdep::ifmaddrs) == 0 {
             let mut i = maddrs;
             while !i.is_null() {

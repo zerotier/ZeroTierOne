@@ -15,8 +15,6 @@ use clap::ArgMatches;
 
 use zerotier_core::*;
 
-use crate::store::Store;
-
 fn new_(cli_args: &ArgMatches) -> i32 {
     let timestamp = cli_args.value_of("timestamp").map_or(crate::utils::ms_since_epoch(), |ts| {
         if ts.is_empty() {

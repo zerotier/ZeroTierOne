@@ -11,7 +11,7 @@
  */
 /****/
 
-use std::error::Error;
+use std::borrow::Borrow;
 use std::fs::File;
 use std::io::Read;
 use std::mem::MaybeUninit;
@@ -19,6 +19,9 @@ use std::os::raw::c_uint;
 use std::path::Path;
 
 use zerotier_core::{Identity, Locator};
+
+use serde::Serialize;
+use serde::de::DeserializeOwned;
 
 use crate::osdep;
 
@@ -120,4 +123,45 @@ pub(crate) fn decrypt_http_auth_nonce(nonce: &str) -> u64 {
         let nonce = *nonce.as_ptr().cast::<[u64; 2]>();
         nonce[0]
     }
+}
+
+/// Recursively patch a JSON object.
+/// This is slightly different from a usual JSON merge. For objects in the target their fields
+/// are updated by recursively calling json_patch if the same field is present in the source.
+/// If the source tries to set an object to something other than another object, this is ignored.
+/// Other fields are replaced. This is used for RESTful config object updates. The depth limit
+/// field is to prevent stack overflows via the API.
+pub(crate) fn json_patch(target: &mut serde_json::value::Value, source: &serde_json::value::Value, depth_limit: usize) {
+    if target.is_object() {
+        if source.is_object() {
+            let source = source.as_object().unwrap();
+            for kv in target.as_object_mut().unwrap() {
+                let _ = source.get(kv.0).map(|new_value| {
+                    if depth_limit > 0 {
+                        json_patch(kv.1, new_value, depth_limit - 1)
+                    }
+                });
+            }
+        }
+    } else {
+        *target = source.clone();
+    }
+}
+
+/// Patch a serializable object with the fields present in a JSON object.
+/// If there are no changes, None is returned. The depth limit is passed through to json_patch and
+/// should be set to a sanity check value to prevent overflows.
+pub(crate) fn json_patch_object<O: Serialize + DeserializeOwned + Eq>(obj: O, patch: &str, depth_limit: usize) -> Result<Option<O>, serde_json::Error> {
+    serde_json::from_str::<serde_json::value::Value>(patch).map_or_else(|e| Err(e), |patch| {
+        serde_json::value::to_value(obj.borrow()).map_or_else(|e| Err(e), |mut obj_value| {
+            json_patch(&mut obj_value, &patch, depth_limit);
+            serde_json::value::from_value::<O>(obj_value).map_or_else(|e| Err(e), |obj_merged| {
+                if obj.eq(&obj_merged) {
+                    Ok(None)
+                } else {
+                    Ok(Some(obj_merged))
+                }
+            })
+        })
+    })
 }

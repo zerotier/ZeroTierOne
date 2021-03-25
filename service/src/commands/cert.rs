@@ -146,7 +146,7 @@ fn newcsr(cli_args: &ArgMatches) -> i32 {
         if nwid.len() != 16 {
             break;
         }
-        let nwid = NetworkId::new_from_string(nwid.as_str());
+        let nwid = NetworkId::from(nwid.as_str());
 
         let fingerprint: String = Input::with_theme(theme)
             .with_prompt(format!("  [{}] Fingerprint of primary controller (optional)", networks.len() + 1))

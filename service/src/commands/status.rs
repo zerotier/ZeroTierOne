@@ -12,8 +12,6 @@
 /****/
 
 use std::error::Error;
-use std::rc::Rc;
-use std::str::FromStr;
 use std::sync::Arc;
 
 use hyper::{Uri, Method, StatusCode};
