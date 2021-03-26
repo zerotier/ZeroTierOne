@@ -23,6 +23,7 @@
 
 // For the struct sockaddr_storage structure
 #if defined(_WIN32) || defined(_WIN64)
+#define NOMINMAX
 #include <WinSock2.h>
 #include <WS2tcpip.h>
 #include <Windows.h>
