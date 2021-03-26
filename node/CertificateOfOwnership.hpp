@@ -60,12 +60,12 @@ public:
 	}
 
 	CertificateOfOwnership(const uint64_t nwid,const int64_t ts,const Address &issuedTo,const uint32_t id)
+		: _issuedTo(issuedTo)
 	{
 		memset(reinterpret_cast<void *>(this),0,sizeof(CertificateOfOwnership));
 		_networkId = nwid;
 		_ts = ts;
 		_id = id;
-		_issuedTo = issuedTo;
 	}
 
 	inline uint64_t networkId() const { return _networkId; }
