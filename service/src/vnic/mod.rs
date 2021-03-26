@@ -16,5 +16,3 @@ mod common;
 
 #[cfg(target_os = "macos")]
 mod mac_feth_tap;
-
-pub(crate) use vnic::VNIC;

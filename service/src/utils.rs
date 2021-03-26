@@ -14,8 +14,6 @@
 use std::borrow::Borrow;
 use std::fs::File;
 use std::io::Read;
-use std::mem::MaybeUninit;
-use std::os::raw::c_uint;
 use std::path::Path;
 
 use zerotier_core::{Identity, Locator};
@@ -99,8 +97,8 @@ pub(crate) fn read_locator(input: &str) -> Result<Locator, String> {
 /// The key used to encrypt the current time is random and is re-created for
 /// each execution of the process. By decrypting this nonce when it is returned,
 /// the client and server may check the age of a digest auth exchange.
-pub(crate) fn create_http_auth_nonce(timestamp: u64) -> String {
-    let mut nonce_plaintext: [u64; 2] = [timestamp, 12345]; // the second u64 is arbitrary and unused
+pub(crate) fn create_http_auth_nonce(timestamp: i64) -> String {
+    let mut nonce_plaintext: [u64; 2] = [timestamp as u64, 12345]; // the second u64 is arbitrary and unused
     unsafe {
         osdep::encryptHttpAuthNonce(nonce_plaintext.as_mut_ptr().cast());
         hex::encode(*nonce_plaintext.as_ptr().cast::<[u8; 16]>())
@@ -109,7 +107,7 @@ pub(crate) fn create_http_auth_nonce(timestamp: u64) -> String {
 
 /// Decrypt HTTP auth nonce encrypted by this process and return the timestamp.
 /// This returns zero if the input was not valid.
-pub(crate) fn decrypt_http_auth_nonce(nonce: &str) -> u64 {
+pub(crate) fn decrypt_http_auth_nonce(nonce: &str) -> i64 {
     let nonce = hex::decode(nonce.trim());
     if nonce.is_err() {
         return 0;
@@ -121,7 +119,7 @@ pub(crate) fn decrypt_http_auth_nonce(nonce: &str) -> u64 {
     unsafe {
         osdep::decryptHttpAuthNonce(nonce.as_mut_ptr().cast());
         let nonce = *nonce.as_ptr().cast::<[u64; 2]>();
-        nonce[0]
+        nonce[0] as i64
     }
 }
 
@@ -134,16 +132,22 @@ pub(crate) fn decrypt_http_auth_nonce(nonce: &str) -> u64 {
 pub(crate) fn json_patch(target: &mut serde_json::value::Value, source: &serde_json::value::Value, depth_limit: usize) {
     if target.is_object() {
         if source.is_object() {
+            let mut target = target.as_object_mut().unwrap();
             let source = source.as_object().unwrap();
-            for kv in target.as_object_mut().unwrap() {
+            for kv in target.iter_mut() {
                 let _ = source.get(kv.0).map(|new_value| {
                     if depth_limit > 0 {
                         json_patch(kv.1, new_value, depth_limit - 1)
                     }
                 });
             }
+            for kv in source.iter() {
+                if !target.contains_key(kv.0) && !kv.1.is_null() {
+                    target.insert(kv.0.clone(), kv.1.clone());
+                }
+            }
         }
-    } else {
+    } else if *target != *source {
         *target = source.clone();
     }
 }
@@ -156,7 +160,7 @@ pub(crate) fn json_patch_object<O: Serialize + DeserializeOwned + Eq>(obj: O, pa
         serde_json::value::to_value(obj.borrow()).map_or_else(|e| Err(e), |mut obj_value| {
             json_patch(&mut obj_value, &patch, depth_limit);
             serde_json::value::from_value::<O>(obj_value).map_or_else(|e| Err(e), |obj_merged| {
-                if obj.eq(&obj_merged) {
+                if obj == obj_merged {
                     Ok(None)
                 } else {
                     Ok(Some(obj_merged))

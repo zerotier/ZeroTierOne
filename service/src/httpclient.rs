@@ -123,13 +123,20 @@ pub(crate) async fn request(client: &HttpClient, method: Method, uri: Uri, data:
         if auth.is_err() {
             return Err(Box::new(auth.err().unwrap()));
         }
-        let ac = digest_auth::AuthContext::new("zerotier", auth_token, uri.to_string());
+        let ac = digest_auth::AuthContext::new_with_method("", auth_token, uri.to_string(), None::<&[u8]>, match method {
+            Method::GET => digest_auth::HttpMethod::GET,
+            Method::POST => digest_auth::HttpMethod::POST,
+            Method::HEAD => digest_auth::HttpMethod::HEAD,
+            Method::PUT => digest_auth::HttpMethod::OTHER("PUT"),
+            Method::DELETE => digest_auth::HttpMethod::OTHER("DELETE"),
+            _ => digest_auth::HttpMethod::OTHER(""),
+        });
         let auth = auth.unwrap().respond(&ac);
         if auth.is_err() {
             return Err(Box::new(auth.err().unwrap()));
         }
 
-        let req = Request::builder().method(&method).version(hyper::Version::HTTP_11).uri(&uri).header(hyper::header::WWW_AUTHENTICATE, auth.unwrap().to_header_string()).body(Body::from(body));
+        let req = Request::builder().method(&method).version(hyper::Version::HTTP_11).uri(&uri).header(hyper::header::AUTHORIZATION, auth.unwrap().to_header_string()).body(Body::from(body));
         if req.is_err() {
             return Err(Box::new(req.err().unwrap()));
         }

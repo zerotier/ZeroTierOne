@@ -19,8 +19,6 @@ use zerotier_core::{MAC, MulticastGroup};
 #[allow(unused_imports)]
 use num_traits::AsPrimitive;
 
-use crate::osdep as osdep;
-
 /// BSD based OSes support getifmaddrs().
 #[cfg(any(target_os = "macos", target_os = "ios", target_os = "netbsd", target_os = "openbsd", target_os = "dragonfly", target_os = "freebsd", target_os = "darwin"))]
 pub(crate) fn get_l2_multicast_subscriptions(dev: &str) -> BTreeSet<MulticastGroup> {

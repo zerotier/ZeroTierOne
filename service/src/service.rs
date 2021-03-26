@@ -14,7 +14,7 @@
 use std::collections::BTreeMap;
 use std::net::{SocketAddr, Ipv4Addr, IpAddr, Ipv6Addr};
 use std::sync::{Arc, Mutex, Weak};
-use std::sync::atomic::{AtomicBool, Ordering, AtomicPtr};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use zerotier_core::*;
@@ -200,8 +200,9 @@ impl Service {
         self._node.upgrade()
     }
 
-    pub fn store(&self) -> Arc<Store> {
-        self.intl.store.clone()
+    #[inline(always)]
+    pub fn store(&self) -> &Arc<Store> {
+        &self.intl.store
     }
 
     pub fn online(&self) -> bool {
