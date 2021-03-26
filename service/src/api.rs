@@ -11,10 +11,13 @@
  */
 /****/
 
-use crate::service::Service;
+use std::sync::Arc;
+
 use hyper::{Request, Body, StatusCode, Method};
 
-pub(crate) fn status(service: Service, req: Request<Body>) -> (StatusCode, Body) {
+use crate::service::Service;
+
+pub(crate) fn status(service: Arc<Service>, req: Request<Body>) -> (StatusCode, Body) {
     if req.method() == Method::GET {
         service.status().map_or_else(|| {
             (StatusCode::SERVICE_UNAVAILABLE, Body::from("node shutdown in progress"))
@@ -26,7 +29,7 @@ pub(crate) fn status(service: Service, req: Request<Body>) -> (StatusCode, Body)
     }
 }
 
-pub(crate) fn config(service: Service, req: Request<Body>) -> (StatusCode, Body) {
+pub(crate) fn config(service: Arc<Service>, req: Request<Body>) -> (StatusCode, Body) {
     let config = service.local_config();
     if req.method() == Method::POST || req.method() == Method::PUT {
         // TODO: diff config
@@ -34,10 +37,10 @@ pub(crate) fn config(service: Service, req: Request<Body>) -> (StatusCode, Body)
     (StatusCode::OK, Body::from(serde_json::to_string(config.as_ref()).unwrap()))
 }
 
-pub(crate) fn peer(service: Service, req: Request<Body>) -> (StatusCode, Body) {
+pub(crate) fn peer(service: Arc<Service>, req: Request<Body>) -> (StatusCode, Body) {
     (StatusCode::NOT_IMPLEMENTED, Body::from(""))
 }
 
-pub(crate) fn network(service: Service, req: Request<Body>) -> (StatusCode, Body) {
+pub(crate) fn network(service: Arc<Service>, req: Request<Body>) -> (StatusCode, Body) {
     (StatusCode::NOT_IMPLEMENTED, Body::from(""))
 }

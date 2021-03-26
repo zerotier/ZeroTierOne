@@ -11,14 +11,16 @@
  */
 /****/
 
-use std::cell::RefCell;
+use std::cell::Cell;
 use std::convert::Infallible;
+use std::sync::Arc;
 use std::net::SocketAddr;
 
 use hyper::{Body, Request, Response, StatusCode, Method};
 use hyper::server::Server;
 use hyper::service::{make_service_fn, service_fn};
 use tokio::task::JoinHandle;
+use digest_auth::{AuthContext, AuthorizationHeader, Charset, WwwAuthenticateHeader};
 
 use crate::service::Service;
 use crate::api;
@@ -26,7 +28,6 @@ use crate::utils::{decrypt_http_auth_nonce, ms_since_epoch, create_http_auth_non
 
 #[cfg(target_os = "linux")]
 use std::os::unix::io::AsRawFd;
-use digest_auth::{AuthContext, AuthorizationHeader, Charset, WwwAuthenticateHeader};
 
 const HTTP_MAX_NONCE_AGE_MS: i64 = 30000;
 
@@ -35,17 +36,19 @@ const HTTP_MAX_NONCE_AGE_MS: i64 = 30000;
 /// but it might not shut down instantly as this occurs asynchronously.
 pub(crate) struct HttpListener {
     pub address: SocketAddr,
-    shutdown_tx: RefCell<Option<tokio::sync::oneshot::Sender<()>>>,
+    shutdown_tx: Cell<Option<tokio::sync::oneshot::Sender<()>>>,
     server: JoinHandle<hyper::Result<()>>,
 }
 
-async fn http_handler(service: Service, req: Request<Body>) -> Result<Response<Body>, Infallible> {
+async fn http_handler(service: Arc<Service>, req: Request<Body>) -> Result<Response<Body>, Infallible> {
+    let req_path = req.uri().path();
+
     let mut authorized = false;
     let mut stale = false;
 
     let auth_token = service.store().auth_token(false);
     if auth_token.is_err() {
-        return Ok::<Response<Body>, Infallible>(Response::builder().status(StatusCode::INTERNAL_SERVER_ERROR).body(Body::from("authorization token unreadable")).unwrap());
+        return Ok(Response::builder().status(StatusCode::INTERNAL_SERVER_ERROR).body(Body::from("authorization token unreadable")).unwrap());
     }
     let auth_context = AuthContext::new_with_method("", auth_token.unwrap(), req.uri().to_string(), None::<&[u8]>, match *req.method() {
         Method::GET => digest_auth::HttpMethod::GET,
@@ -53,14 +56,16 @@ async fn http_handler(service: Service, req: Request<Body>) -> Result<Response<B
         Method::HEAD => digest_auth::HttpMethod::HEAD,
         Method::PUT => digest_auth::HttpMethod::OTHER("PUT"),
         Method::DELETE => digest_auth::HttpMethod::OTHER("DELETE"),
-        _ => digest_auth::HttpMethod::OTHER(""),
+        _ => {
+            return Ok(Response::builder().status(StatusCode::METHOD_NOT_ALLOWED).body(Body::from("unrecognized method")).unwrap());
+        }
     });
 
     let auth_header = req.headers().get(hyper::header::AUTHORIZATION);
     if auth_header.is_some() {
         let auth_header = AuthorizationHeader::parse(auth_header.unwrap().to_str().unwrap_or(""));
         if auth_header.is_err() {
-            return Ok::<Response<Body>, Infallible>(Response::builder().status(StatusCode::BAD_REQUEST).body(Body::from(format!("invalid authorization header: {}", auth_header.err().unwrap().to_string()))).unwrap());
+            return Ok(Response::builder().status(StatusCode::BAD_REQUEST).body(Body::from(format!("invalid authorization header: {}", auth_header.err().unwrap().to_string()))).unwrap());
         }
         let auth_header = auth_header.unwrap();
 
@@ -88,11 +93,8 @@ async fn http_handler(service: Service, req: Request<Body>) -> Result<Response<B
     }
 
     if authorized {
-        let req_path = req.uri().path();
         let (status, body) =
-            if req_path == "/_zt" {
-                (StatusCode::NOT_IMPLEMENTED, Body::from("not implemented yet"))
-            } else if req_path == "/status" {
+            if req_path == "/status" {
                 api::status(service, req)
             } else if req_path == "/config" {
                 api::config(service, req)
@@ -107,9 +109,9 @@ async fn http_handler(service: Service, req: Request<Body>) -> Result<Response<B
             } else {
                 (StatusCode::NOT_FOUND, Body::from("not found"))
             };
-        Ok::<Response<Body>, Infallible>(Response::builder().header("Content-Type", "application/json").status(status).body(body).unwrap())
+        Ok(Response::builder().header("Content-Type", "application/json").status(status).body(body).unwrap())
     } else {
-        Ok::<Response<Body>, Infallible>(Response::builder().header(hyper::header::WWW_AUTHENTICATE, WwwAuthenticateHeader {
+        Ok(Response::builder().header(hyper::header::WWW_AUTHENTICATE, WwwAuthenticateHeader {
             domain: None,
             realm: "zerotier-service-api".to_owned(),
             nonce: create_http_auth_nonce(ms_since_epoch()),
@@ -126,7 +128,7 @@ async fn http_handler(service: Service, req: Request<Body>) -> Result<Response<B
 
 impl HttpListener {
     /// Create a new "background" TCP WebListener using the current tokio reactor async runtime.
-    pub async fn new(_device_name: &str, address: SocketAddr, service: &Service) -> Result<HttpListener, Box<dyn std::error::Error>> {
+    pub async fn new(_device_name: &str, address: SocketAddr, service: &Arc<Service>) -> Result<HttpListener, Box<dyn std::error::Error>> {
         let listener = if address.is_ipv4() {
             let listener = socket2::Socket::new(socket2::Domain::ipv4(), socket2::Type::stream(), Some(socket2::Protocol::tcp()));
             if listener.is_err() {
@@ -188,7 +190,7 @@ impl HttpListener {
 
         Ok(HttpListener {
             address,
-            shutdown_tx: RefCell::new(Some(shutdown_tx)),
+            shutdown_tx: Cell::new(Some(shutdown_tx)),
             server,
         })
     }

@@ -11,6 +11,7 @@
  */
 /****/
 
+use std::cell::Cell;
 use std::collections::BTreeMap;
 use std::net::{SocketAddr, Ipv4Addr, IpAddr, Ipv6Addr};
 use std::sync::{Arc, Mutex, Weak};
@@ -64,7 +65,10 @@ pub struct ServiceStatus {
     pub http_local_endpoints: Vec<InetAddress>,
 }
 
-struct ServiceIntl {
+/// Core ZeroTier service, which is sort of just a container for all the things.
+pub(crate) struct Service {
+    pub(crate) log: Log,
+    _node: Cell<Weak<Node<Arc<Service>, Network, Service>>>, // never modified after node is created
     udp_local_endpoints: Mutex<Vec<InetAddress>>,
     http_local_endpoints: Mutex<Vec<InetAddress>>,
     interrupt: Mutex<futures::channel::mpsc::Sender<()>>,
@@ -74,18 +78,6 @@ struct ServiceIntl {
     startup_time_monotonic: i64,
     run: AtomicBool,
     online: AtomicBool,
-}
-
-unsafe impl Send for ServiceIntl {}
-
-unsafe impl Sync for ServiceIntl {}
-
-/// Core ZeroTier service, which is sort of just a container for all the things.
-#[derive(Clone)]
-pub(crate) struct Service {
-    pub(crate) log: Arc<Log>,
-    _node: Weak<Node<Service, Network>>,
-    intl: Arc<ServiceIntl>,
 }
 
 impl NodeEventHandler<Network> for Service {
@@ -104,17 +96,17 @@ impl NodeEventHandler<Network> for Service {
 
             Event::Down => {
                 d!(self.log, "node shutdown event received.");
-                self.intl.online.store(false, Ordering::Relaxed);
+                self.online.store(false, Ordering::Relaxed);
             }
 
             Event::Online => {
                 d!(self.log, "node is online.");
-                self.intl.online.store(true, Ordering::Relaxed);
+                self.online.store(true, Ordering::Relaxed);
             }
 
             Event::Offline => {
                 d!(self.log, "node is offline.");
-                self.intl.online.store(false, Ordering::Relaxed);
+                self.online.store(false, Ordering::Relaxed);
             }
 
             Event::Trace => {
@@ -144,16 +136,16 @@ impl NodeEventHandler<Network> for Service {
     #[inline(always)]
     fn state_put(&self, obj_type: StateObjectType, obj_id: &[u64], obj_data: &[u8]) -> std::io::Result<()> {
         if !obj_data.is_empty() {
-            self.intl.store.store_object(&obj_type, obj_id, obj_data)
+            self.store.store_object(&obj_type, obj_id, obj_data)
         } else {
-            self.intl.store.erase_object(&obj_type, obj_id);
+            self.store.erase_object(&obj_type, obj_id);
             Ok(())
         }
     }
 
     #[inline(always)]
     fn state_get(&self, obj_type: StateObjectType, obj_id: &[u64]) -> std::io::Result<Vec<u8>> {
-        self.intl.store.load_object(&obj_type, obj_id)
+        self.store.load_object(&obj_type, obj_id)
     }
 
     #[inline(always)]
@@ -185,33 +177,34 @@ impl NodeEventHandler<Network> for Service {
 
 impl Service {
     pub fn local_config(&self) -> Arc<LocalConfig> {
-        self.intl.local_config.lock().unwrap().clone()
+        self.local_config.lock().unwrap().clone()
     }
 
     pub fn set_local_config(&self, new_lc: LocalConfig) {
-        *(self.intl.local_config.lock().unwrap()) = Arc::new(new_lc);
+        *(self.local_config.lock().unwrap()) = Arc::new(new_lc);
     }
 
     /// Get the node running with this service.
-    /// This can return None if we are in the midst of shutdown. In this case
-    /// whatever operation is in progress should abort. None will never be
-    /// returned during normal operation.
-    pub fn node(&self) -> Option<Arc<Node<Service, Network>>> {
-        self._node.upgrade()
+    /// This can return None during shutdown because Service holds a weak
+    /// reference to Node to avoid circular Arc<> pointers. This will only
+    /// return None during shutdown, in which case whatever is happening
+    /// should abort as quietly as possible.
+    pub fn node(&self) -> Option<Arc<Node<Arc<Service>, Network, Service>>> {
+        unsafe { &*self._node.as_ptr() }.upgrade()
     }
 
     #[inline(always)]
     pub fn store(&self) -> &Arc<Store> {
-        &self.intl.store
+        &self.store
     }
 
     pub fn online(&self) -> bool {
-        self.intl.online.load(Ordering::Relaxed)
+        self.online.load(Ordering::Relaxed)
     }
 
     pub fn shutdown(&self) {
-        self.intl.run.store(false, Ordering::Relaxed);
-        let _ = self.intl.interrupt.lock().unwrap().try_send(());
+        self.run.store(false, Ordering::Relaxed);
+        let _ = self.interrupt.lock().unwrap().try_send(());
     }
 
     /// Get service status for API, or None if a shutdown is in progress.
@@ -222,8 +215,8 @@ impl Service {
                 object_type: "status".to_owned(),
                 address: node.address(),
                 clock: ms_since_epoch(),
-                start_time: self.intl.startup_time,
-                uptime: ms_monotonic() - self.intl.startup_time_monotonic,
+                start_time: self.startup_time,
+                uptime: ms_monotonic() - self.startup_time_monotonic,
                 config: (*self.local_config()).clone(),
                 online: self.online(),
                 public_identity: node.identity(),
@@ -232,8 +225,8 @@ impl Service {
                 version_minor: ver.1,
                 version_revision: ver.2,
                 version_build: ver.3,
-                udp_local_endpoints: self.intl.udp_local_endpoints.lock().unwrap().clone(),
-                http_local_endpoints: self.intl.http_local_endpoints.lock().unwrap().clone(),
+                udp_local_endpoints: self.udp_local_endpoints.lock().unwrap().clone(),
+                http_local_endpoints: self.http_local_endpoints.lock().unwrap().clone(),
             }
         })
     }
@@ -243,7 +236,7 @@ unsafe impl Send for Service {}
 
 unsafe impl Sync for Service {}
 
-async fn run_async(store: Arc<Store>, log: Arc<Log>, local_config: Arc<LocalConfig>) -> i32 {
+async fn run_async(store: Arc<Store>, local_config: Arc<LocalConfig>) -> i32 {
     let mut process_exit_value: i32 = 0;
 
     let mut udp_sockets: BTreeMap<InetAddress, FastUDPSocket> = BTreeMap::new();
@@ -251,58 +244,64 @@ async fn run_async(store: Arc<Store>, log: Arc<Log>, local_config: Arc<LocalConf
     let mut loopback_http_listeners: (Option<HttpListener>, Option<HttpListener>) = (None, None); // 127.0.0.1, ::1
 
     let (interrupt_tx, mut interrupt_rx) = futures::channel::mpsc::channel::<()>(1);
-    let mut service = Service {
-        log: log.clone(),
-        _node: Weak::new(),
-        intl: Arc::new(ServiceIntl {
-            udp_local_endpoints: Mutex::new(Vec::new()),
-            http_local_endpoints: Mutex::new(Vec::new()),
-            interrupt: Mutex::new(interrupt_tx),
-            local_config: Mutex::new(local_config),
-            store: store.clone(),
-            startup_time: ms_since_epoch(),
-            startup_time_monotonic: ms_monotonic(),
-            run: AtomicBool::new(true),
-            online: AtomicBool::new(false),
-        }),
-    };
+    let service = Arc::new(Service {
+        log: Log::new(
+            if local_config.settings.log.path.as_ref().is_some() {
+                local_config.settings.log.path.as_ref().unwrap().as_str()
+            } else {
+                store.default_log_path.to_str().unwrap()
+            },
+            local_config.settings.log.max_size,
+            local_config.settings.log.stderr,
+            local_config.settings.log.debug,
+            "",
+        ),
+        _node: Cell::new(Weak::new()),
+        udp_local_endpoints: Mutex::new(Vec::new()),
+        http_local_endpoints: Mutex::new(Vec::new()),
+        interrupt: Mutex::new(interrupt_tx),
+        local_config: Mutex::new(local_config),
+        store: store.clone(),
+        startup_time: ms_since_epoch(),
+        startup_time_monotonic: ms_monotonic(),
+        run: AtomicBool::new(true),
+        online: AtomicBool::new(false),
+    });
 
     let node = Node::new(service.clone(), ms_monotonic());
     if node.is_err() {
-        log.fatal(format!("error initializing node: {}", node.err().unwrap().to_str()));
+        service.log.fatal(format!("error initializing node: {}", node.err().unwrap().to_str()));
         return 1;
     }
     let node = Arc::new(node.ok().unwrap());
-
-    service._node = Arc::downgrade(&node);
-    let service = service; // make immutable after setting node
+    service._node.replace(Arc::downgrade(&node));
 
     let mut local_config = service.local_config();
 
     let mut now: i64 = ms_monotonic();
     let mut loop_delay = zerotier_core::NODE_BACKGROUND_TASKS_MAX_INTERVAL;
     let mut last_checked_config: i64 = 0;
-    while service.intl.run.load(Ordering::Relaxed) {
+    while service.run.load(Ordering::Relaxed) {
         let loop_delay_start = ms_monotonic();
         tokio::select! {
             _ = tokio::time::sleep(Duration::from_millis(loop_delay as u64)) => {
                 now = ms_monotonic();
                 let actual_delay = now - loop_delay_start;
                 if actual_delay > ((loop_delay as i64) * 4_i64) {
-                    l!(log, "likely sleep/wake detected due to excessive loop delay, cycling links...");
+                    l!(service.log, "likely sleep/wake detected due to excessive loop delay, cycling links...");
                     // TODO: handle likely sleep/wake or other system interruption
                 }
             },
             _ = interrupt_rx.next() => {
-                d!(log, "inner loop delay interrupted!");
-                if !service.intl.run.load(Ordering::Relaxed) {
+                d!(service.log, "inner loop delay interrupted!");
+                if !service.run.load(Ordering::Relaxed) {
                     break;
                 }
                 now = ms_monotonic();
             },
             _ = tokio::signal::ctrl_c() => {
-                l!(log, "exit signal received, shutting down...");
-                service.intl.run.store(false, Ordering::Relaxed);
+                l!(service.log, "exit signal received, shutting down...");
+                service.run.store(false, Ordering::Relaxed);
                 break;
             },
         }
@@ -313,7 +312,7 @@ async fn run_async(store: Arc<Store>, log: Arc<Log>, local_config: Arc<LocalConf
             let mut bindings_changed = false;
 
             let _ = store.read_local_conf(true).map(|new_config| new_config.map(|new_config| {
-                d!(log, "local.conf changed on disk, reloading.");
+                d!(service.log, "local.conf changed on disk, reloading.");
                 service.set_local_config(new_config);
             }));
 
@@ -324,13 +323,13 @@ async fn run_async(store: Arc<Store>, log: Arc<Log>, local_config: Arc<LocalConf
                 bindings_changed = true;
             }
             if local_config.settings.log.max_size != next_local_config.settings.log.max_size {
-                log.set_max_size(next_local_config.settings.log.max_size);
+                service.log.set_max_size(next_local_config.settings.log.max_size);
             }
             if local_config.settings.log.stderr != next_local_config.settings.log.stderr {
-                log.set_log_to_stderr(next_local_config.settings.log.stderr);
+                service.log.set_log_to_stderr(next_local_config.settings.log.stderr);
             }
             if local_config.settings.log.debug != next_local_config.settings.log.debug {
-                log.set_debug(next_local_config.settings.log.debug);
+                service.log.set_debug(next_local_config.settings.log.debug);
             }
             local_config = next_local_config;
 
@@ -362,7 +361,7 @@ async fn run_async(store: Arc<Store>, log: Arc<Log>, local_config: Arc<LocalConf
             // TODO: need to also inform the core about these IPs...
 
             for k in udp_sockets.keys().filter_map(|a| if system_addrs.contains_key(a) { None } else { Some(a.clone()) }).collect::<Vec<InetAddress>>().iter() {
-                l!(log, "unbinding UDP socket at {} (address no longer exists on system or port has changed)", k.to_string());
+                l!(service.log, "unbinding UDP socket at {} (address no longer exists on system or port has changed)", k.to_string());
                 udp_sockets.remove(k);
                 bindings_changed = true;
             }
@@ -371,9 +370,9 @@ async fn run_async(store: Arc<Store>, log: Arc<Log>, local_config: Arc<LocalConf
                     let _ = FastUDPSocket::new(a.1.as_str(), a.0, |raw_socket: &FastUDPRawOsSocket, from_address: &InetAddress, data: Buffer| {
                         // TODO: incoming packet handler
                     }).map_or_else(|e| {
-                        l!(log, "error binding UDP socket to {}: {}", a.0.to_string(), e.to_string());
+                        l!(service.log, "error binding UDP socket to {}: {}", a.0.to_string(), e.to_string());
                     }, |s| {
-                        l!(log, "bound UDP socket at {}", a.0.to_string());
+                        l!(service.log, "bound UDP socket at {}", a.0.to_string());
                         udp_sockets.insert(a.0.clone(), s);
                         bindings_changed = true;
                     });
@@ -400,19 +399,19 @@ async fn run_async(store: Arc<Store>, log: Arc<Log>, local_config: Arc<LocalConf
                 if local_config.settings.auto_port_search {
                     // TODO: port hunting
                 } else {
-                    l!(log, "WARNING: failed to bind to any address at primary port {}", local_config.settings.primary_port);
+                    l!(service.log, "WARNING: failed to bind to any address at primary port {}", local_config.settings.primary_port);
                 }
             }
             if udp_secondary_port_bind_failure {
                 if local_config.settings.auto_port_search {
                     // TODO: port hunting
                 } else {
-                    l!(log, "WARNING: failed to bind to any address at secondary port {}", local_config.settings.secondary_port.unwrap_or(0));
+                    l!(service.log, "WARNING: failed to bind to any address at secondary port {}", local_config.settings.secondary_port.unwrap_or(0));
                 }
             }
 
             for k in http_listeners.keys().filter_map(|a| if system_addrs.contains_key(a) { None } else { Some(a.clone()) }).collect::<Vec<InetAddress>>().iter() {
-                l!(log, "closing HTTP listener at {} (address no longer exists on system or port has changed)", k.to_string());
+                l!(service.log, "closing HTTP listener at {} (address no longer exists on system or port has changed)", k.to_string());
                 http_listeners.remove(k);
                 bindings_changed = true;
             }
@@ -421,9 +420,9 @@ async fn run_async(store: Arc<Store>, log: Arc<Log>, local_config: Arc<LocalConf
                     let sa = a.0.to_socketaddr();
                     if sa.is_some() {
                         let wl = HttpListener::new(a.1.as_str(), sa.unwrap(), &service).await.map_or_else(|e| {
-                            l!(log, "error creating HTTP listener at {}: {}", a.0.to_string(), e.to_string());
+                            l!(service.log, "error creating HTTP listener at {}: {}", a.0.to_string(), e.to_string());
                         }, |l| {
-                            l!(log, "created HTTP listener at {}", a.0.to_string());
+                            l!(service.log, "created HTTP listener at {}", a.0.to_string());
                             http_listeners.insert(a.0.clone(), l);
                             bindings_changed = true;
                         });
@@ -449,12 +448,12 @@ async fn run_async(store: Arc<Store>, log: Arc<Log>, local_config: Arc<LocalConf
             }
             if loopback_http_listeners.0.is_none() && loopback_http_listeners.1.is_none() {
                 // TODO: port hunting
-                l!(log, "CRITICAL: unable to create HTTP endpoint on 127.0.0.1/{} or ::1/{}, service control API will not work!", local_config.settings.primary_port, local_config.settings.primary_port);
+                l!(service.log, "CRITICAL: unable to create HTTP endpoint on 127.0.0.1/{} or ::1/{}, service control API will not work!", local_config.settings.primary_port, local_config.settings.primary_port);
             }
 
             if bindings_changed {
                 {
-                    let mut udp_local_endpoints = service.intl.udp_local_endpoints.lock().unwrap();
+                    let mut udp_local_endpoints = service.udp_local_endpoints.lock().unwrap();
                     udp_local_endpoints.clear();
                     for ep in udp_sockets.iter() {
                         udp_local_endpoints.push(ep.0.clone());
@@ -462,7 +461,7 @@ async fn run_async(store: Arc<Store>, log: Arc<Log>, local_config: Arc<LocalConf
                     udp_local_endpoints.sort();
                 }
                 {
-                    let mut http_local_endpoints = service.intl.http_local_endpoints.lock().unwrap();
+                    let mut http_local_endpoints = service.http_local_endpoints.lock().unwrap();
                     http_local_endpoints.clear();
                     for ep in http_listeners.iter() {
                         http_local_endpoints.push(ep.0.clone());
@@ -482,7 +481,7 @@ async fn run_async(store: Arc<Store>, log: Arc<Log>, local_config: Arc<LocalConf
         loop_delay = node.process_background_tasks(now);
     }
 
-    l!(log, "shutting down normally.");
+    l!(service.log, "shutting down normally.");
 
     drop(udp_sockets);
     drop(http_listeners);
@@ -490,25 +489,11 @@ async fn run_async(store: Arc<Store>, log: Arc<Log>, local_config: Arc<LocalConf
     drop(node);
     drop(service);
 
-    d!(log, "shutdown complete.");
-
     process_exit_value
 }
 
 pub(crate) fn run(store: Arc<Store>) -> i32 {
     let local_config = Arc::new(store.read_local_conf_or_default());
-
-    let log = Arc::new(Log::new(
-        if local_config.settings.log.path.as_ref().is_some() {
-            local_config.settings.log.path.as_ref().unwrap().as_str()
-        } else {
-            store.default_log_path.to_str().unwrap()
-        },
-        local_config.settings.log.max_size,
-        local_config.settings.log.stderr,
-        local_config.settings.log.debug,
-        "",
-    ));
 
     if store.auth_token(true).is_err() {
         eprintln!("FATAL: error writing new web API authorization token (likely permission problem).");
@@ -521,7 +506,7 @@ pub(crate) fn run(store: Arc<Store>) -> i32 {
 
     let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
     let store2 = store.clone();
-    let process_exit_value = rt.block_on(async move { run_async(store2, log, local_config).await });
+    let process_exit_value = rt.block_on(async move { run_async(store2, local_config).await });
     rt.shutdown_timeout(Duration::from_millis(500));
 
     store.erase_pid();

@@ -93,10 +93,11 @@ pub(crate) fn run_command<
 }
 
 /// Send a request to the API with support for HTTP digest authentication.
-/// The data option is for PUT and POST requests. For GET it is ignored. Errors indicate total
-/// failure such as connection refused. A returned result must still have its status checked.
-/// Note that if authorization is required and the auth token doesn't work, IncorrectAuthTokenError
-/// is returned as an error instead of a 401 response object.
+/// The data option is for PUT and POST requests. For GET it is ignored. This will try to
+/// authenticate if a WWW-Authorized header is sent in an unauthorized response. If authentication
+/// with auth_token fails, IncorrectAuthTokenError is returned as an error. If the request is
+/// unauthorizred and no WWW-Authorired header is present, a normal response is returned. The
+/// caller must always check the response status code.
 pub(crate) async fn request(client: &HttpClient, method: Method, uri: Uri, data: Option<&[u8]>, auth_token: &str) -> Result<Response<Body>, Box<dyn Error>> {
     let body: Vec<u8> = data.map_or_else(|| Vec::new(), |data| data.to_vec());
 
@@ -113,7 +114,7 @@ pub(crate) async fn request(client: &HttpClient, method: Method, uri: Uri, data:
     if res.status() == StatusCode::UNAUTHORIZED {
         let auth = res.headers().get(hyper::header::WWW_AUTHENTICATE);
         if auth.is_none() {
-            return Err(Box::new(UnexpectedStatusCodeError(StatusCode::UNAUTHORIZED, "host returned 401 but no WWW-Authenticate header found")))
+            return Ok(res);
         }
         let auth = auth.unwrap().to_str();
         if auth.is_err() {
