@@ -536,8 +536,7 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,void *tPtr,const SharedP
 		case Packet::VERB_MULTICAST_FRAME: {
 			const unsigned int flags = (*this)[ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_FLAGS];
 			networkId = at<uint64_t>(ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_NETWORK_ID);
-			const MulticastGroup mg(MAC(field(ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_MAC,6),6),at<uint32_t>(ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_ADI));
-
+			
 			const SharedPtr<Network> network(RR->node->network(networkId));
 			if (network) {
 				unsigned int offset = 0;
@@ -550,6 +549,8 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,void *tPtr,const SharedP
 				}
 
 				if ((flags & 0x02) != 0) {
+					const MulticastGroup mg(MAC(field(ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_MAC, 6), 6),
+						at<uint32_t>(ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_ADI));
 					// OK(MULTICAST_FRAME) includes implicit gather results
 					offset += ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_COM_AND_GATHER_RESULTS;
 					unsigned int totalKnown = at<uint32_t>(offset); offset += 4;
@@ -1052,7 +1053,6 @@ bool IncomingPacket::_doMULTICAST_GATHER(const RuntimeEnvironment *RR,void *tPtr
 {
 	const uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_MULTICAST_GATHER_IDX_NETWORK_ID);
 	const unsigned int flags = (*this)[ZT_PROTO_VERB_MULTICAST_GATHER_IDX_FLAGS];
-	const MulticastGroup mg(MAC(field(ZT_PROTO_VERB_MULTICAST_GATHER_IDX_MAC,6),6),at<uint32_t>(ZT_PROTO_VERB_MULTICAST_GATHER_IDX_ADI));
 	const unsigned int gatherLimit = at<uint32_t>(ZT_PROTO_VERB_MULTICAST_GATHER_IDX_GATHER_LIMIT);
 
 	const SharedPtr<Network> network(RR->node->network(nwid));
@@ -1078,6 +1078,8 @@ bool IncomingPacket::_doMULTICAST_GATHER(const RuntimeEnvironment *RR,void *tPtr
 
 	const int64_t now = RR->node->now();
 	if ((gatherLimit > 0)&&((trustEstablished)||(RR->topology->amUpstream())||(RR->node->localControllerHasAuthorized(now,nwid,peer->address())))) {
+		const MulticastGroup mg(MAC(field(ZT_PROTO_VERB_MULTICAST_GATHER_IDX_MAC, 6), 6),
+			at<uint32_t>(ZT_PROTO_VERB_MULTICAST_GATHER_IDX_ADI));
 		Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
 		outp.append((unsigned char)Packet::VERB_MULTICAST_GATHER);
 		outp.append(packetId());

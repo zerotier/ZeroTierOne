@@ -642,6 +642,7 @@ void Switch::aqm_enqueue(void *tPtr, const SharedPtr<Network> &network, Packet &
 		}
 	}
 	if (!selectedQueue) {
+		_aqm_m.unlock();
 		return;
 	}
 
@@ -831,7 +832,7 @@ void Switch::aqm_dequeue(void *tPtr)
 				break;
 			}
 		}
-		nqcb++;
+		++nqcb;
 		_aqm_m.unlock();
 	}
 }

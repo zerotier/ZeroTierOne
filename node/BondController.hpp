@@ -95,7 +95,7 @@ public:
 	 *
 	 * @param alias Human-readable string alias for bonding policy
 	 */
-	void setBondingLayerDefaultPolicyStr(std::string alias) { _defaultBondingPolicyStr = alias; }
+	void setBondingLayerDefaultPolicyStr(const std::string& alias) { _defaultBondingPolicyStr = std::move(alias); }
 
 	/**
 	 * @return The default bonding policy

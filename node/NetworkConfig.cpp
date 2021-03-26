@@ -29,24 +29,24 @@ bool NetworkConfig::toDictionary(Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d,b
 
 		// Try to put the more human-readable fields first
 
-		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_VERSION,(uint64_t)ZT_NETWORKCONFIG_VERSION)) return false;
-		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_NETWORK_ID,this->networkId)) return false;
-		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP,this->timestamp)) return false;
-		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_CREDENTIAL_TIME_MAX_DELTA,this->credentialTimeMaxDelta)) return false;
-		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_REVISION,this->revision)) return false;
-		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO,this->issuedTo.toString(tmp2))) return false;
-		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_REMOTE_TRACE_TARGET,this->remoteTraceTarget.toString(tmp2))) return false;
-		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_REMOTE_TRACE_LEVEL,(uint64_t)this->remoteTraceLevel)) return false;
-		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_FLAGS,this->flags)) return false;
-		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT,(uint64_t)this->multicastLimit)) return false;
-		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_TYPE,(uint64_t)this->type)) return false;
-		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_NAME,this->name)) return false;
-		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_MTU,(uint64_t)this->mtu)) return false;
+		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_VERSION,(uint64_t)ZT_NETWORKCONFIG_VERSION)) { delete tmp; return false; }
+		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_NETWORK_ID,this->networkId)) { delete tmp; return false; }
+		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP,this->timestamp)) { delete tmp; return false; }
+		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_CREDENTIAL_TIME_MAX_DELTA,this->credentialTimeMaxDelta)) { delete tmp; return false; }
+		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_REVISION,this->revision)) { delete tmp; return false; }
+		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO,this->issuedTo.toString(tmp2))) { delete tmp; return false; }
+		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_REMOTE_TRACE_TARGET,this->remoteTraceTarget.toString(tmp2))) { delete tmp; return false; }
+		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_REMOTE_TRACE_LEVEL,(uint64_t)this->remoteTraceLevel)) { delete tmp; return false; }
+		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_FLAGS,this->flags)) { delete tmp; return false; }
+		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT,(uint64_t)this->multicastLimit)) { delete tmp; return false; }
+		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_TYPE,(uint64_t)this->type)) { delete tmp; return false; }
+		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_NAME,this->name)) { delete tmp; return false; }
+		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_MTU,(uint64_t)this->mtu)) { delete tmp; return false; }
 
 #ifdef ZT_SUPPORT_OLD_STYLE_NETCONF
 		if (includeLegacy) {
-			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_ENABLE_BROADCAST_OLD,this->enableBroadcast())) return false;
-			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_PRIVATE_OLD,this->isPrivate())) return false;
+			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_ENABLE_BROADCAST_OLD,this->enableBroadcast())) { delete tmp; return false; }
+			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_PRIVATE_OLD,this->isPrivate())) { delete tmp; return false; }
 
 			std::string v4s;
 			for(unsigned int i=0;i<staticIpCount;++i) {
@@ -58,7 +58,7 @@ bool NetworkConfig::toDictionary(Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d,b
 				}
 			}
 			if (v4s.length() > 0) {
-				if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_IPV4_STATIC_OLD,v4s.c_str())) return false;
+				if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_IPV4_STATIC_OLD,v4s.c_str())) { delete tmp; return false; }
 			}
 			std::string v6s;
 			for(unsigned int i=0;i<staticIpCount;++i) {
@@ -70,7 +70,7 @@ bool NetworkConfig::toDictionary(Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d,b
 				}
 			}
 			if (v6s.length() > 0) {
-				if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_IPV6_STATIC_OLD,v6s.c_str())) return false;
+				if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_IPV6_STATIC_OLD,v6s.c_str())) { delete tmp; return false; }
 			}
 
 			std::string ets;
@@ -92,11 +92,11 @@ bool NetworkConfig::toDictionary(Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d,b
 				lastrt = rt;
 			}
 			if (ets.length() > 0) {
-				if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_ALLOWED_ETHERNET_TYPES_OLD,ets.c_str())) return false;
+				if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_ALLOWED_ETHERNET_TYPES_OLD,ets.c_str())) { delete tmp; return false; }
 			}
 
 			if (this->com) {
-				if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATE_OF_MEMBERSHIP_OLD,this->com.toString().c_str())) return false;
+				if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATE_OF_MEMBERSHIP_OLD,this->com.toString().c_str())) { delete tmp; return false; }
 			}
 
 			std::string ab;
@@ -109,7 +109,7 @@ bool NetworkConfig::toDictionary(Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d,b
 				}
 			}
 			if (ab.length() > 0) {
-				if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_ACTIVE_BRIDGES_OLD,ab.c_str())) return false;
+				if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_ACTIVE_BRIDGES_OLD,ab.c_str())) { delete tmp; return false; }
 			}
 		}
 #endif // ZT_SUPPORT_OLD_STYLE_NETCONF
@@ -119,35 +119,35 @@ bool NetworkConfig::toDictionary(Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d,b
 		if (this->com) {
 			tmp->clear();
 			this->com.serialize(*tmp);
-			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_COM,*tmp)) return false;
+			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_COM,*tmp)) { delete tmp; return false; }
 		}
 
 		tmp->clear();
 		for(unsigned int i=0;i<this->capabilityCount;++i)
 			this->capabilities[i].serialize(*tmp);
 		if (tmp->size()) {
-			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_CAPABILITIES,*tmp)) return false;
+			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_CAPABILITIES,*tmp)) { delete tmp; return false; }
 		}
 
 		tmp->clear();
 		for(unsigned int i=0;i<this->tagCount;++i)
 			this->tags[i].serialize(*tmp);
 		if (tmp->size()) {
-			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_TAGS,*tmp)) return false;
+			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_TAGS,*tmp)) { delete tmp; return false; }
 		}
 
 		tmp->clear();
 		for(unsigned int i=0;i<this->certificateOfOwnershipCount;++i)
 			this->certificatesOfOwnership[i].serialize(*tmp);
 		if (tmp->size()) {
-			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATES_OF_OWNERSHIP,*tmp)) return false;
+			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATES_OF_OWNERSHIP,*tmp)) { delete tmp; return false; }
 		}
 
 		tmp->clear();
 		for(unsigned int i=0;i<this->specialistCount;++i)
 			tmp->append((uint64_t)this->specialists[i]);
 		if (tmp->size()) {
-			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_SPECIALISTS,*tmp)) return false;
+			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_SPECIALISTS,*tmp)) { delete tmp; return false; }
 		}
 
 		tmp->clear();
@@ -158,28 +158,28 @@ bool NetworkConfig::toDictionary(Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d,b
 			tmp->append((uint16_t)this->routes[i].metric);
 		}
 		if (tmp->size()) {
-			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_ROUTES,*tmp)) return false;
+			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_ROUTES,*tmp)) { delete tmp; return false; }
 		}
 
 		tmp->clear();
 		for(unsigned int i=0;i<this->staticIpCount;++i)
 			this->staticIps[i].serialize(*tmp);
 		if (tmp->size()) {
-			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_STATIC_IPS,*tmp)) return false;
+			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_STATIC_IPS,*tmp)) { delete tmp; return false; }
 		}
 
 		if (this->ruleCount) {
 			tmp->clear();
 			Capability::serializeRules(*tmp,rules,ruleCount);
 			if (tmp->size()) {
-				if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_RULES,*tmp)) return false;
+				if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_RULES,*tmp)) { delete tmp; return false; }
 			}
 		}
 
 		tmp->clear();
 		DNS::serializeDNS(*tmp, &dns);
 		if (tmp->size()) {
-			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_DNS,*tmp)) return false;
+			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_DNS,*tmp)) { delete tmp; return false; }
 		}
 
 		delete tmp;
@@ -300,7 +300,10 @@ bool NetworkConfig::fromDictionary(const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACI
 						p += cap.deserialize(*tmp,p);
 						this->capabilities[this->capabilityCount++] = cap;
 					}
-				} catch ( ... ) {}
+				} catch ( ... ) {
+					delete tmp;
+					return false;
+				}
 				std::sort(&(this->capabilities[0]),&(this->capabilities[this->capabilityCount]));
 			}
 
@@ -312,7 +315,10 @@ bool NetworkConfig::fromDictionary(const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACI
 						p += tag.deserialize(*tmp,p);
 						this->tags[this->tagCount++] = tag;
 					}
-				} catch ( ... ) {}
+				} catch ( ... ) {
+					delete tmp;
+					return false;
+				}
 				std::sort(&(this->tags[0]),&(this->tags[this->tagCount]));
 			}
 

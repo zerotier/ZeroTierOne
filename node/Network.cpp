@@ -115,7 +115,7 @@ static _doZtFilterResult _doZtFilter(
 			if (thisSetMatches) {
 				switch(rt) {
 					case ZT_NETWORK_RULE_ACTION_PRIORITY:
-						qosBucket = (rules[rn].v.qosBucket >= 0 || rules[rn].v.qosBucket <= 8) ? rules[rn].v.qosBucket : 4; // 4 = default bucket (no priority)
+						qosBucket = (rules[rn].v.qosBucket >= 8) ? 4 : rules[rn].v.qosBucket; // 4 = default bucket (no priority)
 						return DOZTFILTER_ACCEPT;
 
 					case ZT_NETWORK_RULE_ACTION_DROP:
@@ -567,17 +567,22 @@ Network::Network(const RuntimeEnvironment *renv,void *tPtr,uint64_t nwid,void *u
 		try {
 			int n = RR->node->stateObjectGet(tPtr,ZT_STATE_OBJECT_NETWORK_CONFIG,tmp,dict->unsafeData(),ZT_NETWORKCONFIG_DICT_CAPACITY - 1);
 			if (n > 1) {
-				NetworkConfig *nconf = new NetworkConfig();
+				NetworkConfig *netconf = new NetworkConfig();
 				try {
-					if (nconf->fromDictionary(*dict)) {
-						this->setConfiguration(tPtr,*nconf,false);
+					if (netconf->fromDictionary(*dict)) {
+						this->setConfiguration(tPtr,*netconf,false);
 						_lastConfigUpdate = 0; // still want to re-request an update since it's likely outdated
 						got = true;
 					}
-				} catch ( ... ) {}
-				delete nconf;
+				} catch ( ... ) {
+					delete netconf;
+					delete dict;
+				}
+				delete netconf;
 			}
-		} catch ( ... ) {}
+		} catch ( ... ) {
+			delete dict;
+		}
 		delete dict;
 
 		if (!got)
@@ -961,7 +966,7 @@ uint64_t Network::handleConfigChunk(void *tPtr,const uint64_t packetId,const Add
 			c->haveBytes = 0;
 		}
 		if (c->haveChunks >= ZT_NETWORK_MAX_UPDATE_CHUNKS)
-			return false;
+			return 0;
 		c->haveChunkIds[c->haveChunks++] = chunkId;
 
 		memcpy(c->data.unsafeData() + chunkIndex,chunkData,chunkLen);
@@ -1031,7 +1036,10 @@ int Network::setConfiguration(void *tPtr,const NetworkConfig &nconf,bool saveToD
 					tmp[0] = _id; tmp[1] = 0;
 					RR->node->stateObjectPut(tPtr,ZT_STATE_OBJECT_NETWORK_CONFIG,tmp,d->data(),d->sizeBytes());
 				}
-			} catch ( ... ) {}
+			} catch ( ... ) {
+				delete d;
+				return 1;
+			}
 			delete d;
 		}
 
@@ -1235,7 +1243,9 @@ bool Network::gate(void *tPtr,const SharedPtr<Peer> &peer)
 				return true;
 			}
 		}
-	} catch ( ... ) {}
+	} catch ( ... ) {
+		return false;
+	}
 	return false;
 }
 

@@ -361,7 +361,10 @@ void Multicaster::send(
 				}
 			}
 		}
-	} catch ( ... ) {} // this is a sanity check to catch any failures and make sure indexes[] still gets deleted
+	} catch ( ... ) {
+		delete[] indexes;
+		return;
+	} // this is a sanity check to catch any failures and make sure indexes[] still gets deleted
 
 	// Free allocated memory buffer if any
 	if (indexes != idxbuf)
