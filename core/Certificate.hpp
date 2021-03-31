@@ -18,7 +18,6 @@
 #include "SHA512.hpp"
 #include "C25519.hpp"
 #include "ECC384.hpp"
-#include "SharedPtr.hpp"
 #include "Identity.hpp"
 #include "Locator.hpp"
 #include "Dictionary.hpp"
@@ -47,9 +46,6 @@ namespace ZeroTier {
  */
 class Certificate : public ZT_Certificate
 {
-	friend class SharedPtr< Certificate >;
-	friend class SharedPtr< const Certificate >;
-
 public:
 	Certificate() noexcept;
 	explicit Certificate(const ZT_Certificate &apiCert);
@@ -159,9 +155,11 @@ public:
 	 * This doesn't check the entire certificate chain, just the validity of
 	 * the certificate's internal signature and fields.
 	 *
+	 * @param clock If non-negative, check that certificate is in valid time window
+	 * @param checkSignatures If true, perform full signature check (which is more expensive than other checks)
 	 * @return OK (0) or error code indicating why certificate failed verification.
 	 */
-	ZT_CertificateError verify() const;
+	ZT_CertificateError verify(int64_t clock, bool checkSignatures) const;
 
 	/**
 	 * Create a CSR that encodes the subject of this certificate
@@ -230,8 +228,6 @@ private:
 	Vector< uint8_t > m_subjectUniqueId;
 	Vector< uint8_t > m_subjectUniqueIdProofSignature;
 	Vector< uint8_t > m_signature;
-
-	std::atomic< int > __refCount;
 };
 
 } // namespace ZeroTier

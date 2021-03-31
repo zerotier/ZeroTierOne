@@ -443,13 +443,22 @@ bool Certificate::sign(const Identity &issuer)
 	return false;
 }
 
-ZT_CertificateError Certificate::verify() const
+ZT_CertificateError Certificate::verify(const int64_t clock, const bool checkSignatures) const
 {
 	try {
+		if (this->validity[0] > this->validity[1]) {
+			return ZT_CERTIFICATE_ERROR_INVALID_FORMAT;
+		}
+		if ((clock >= 0) && ((this->validity[0] > clock) || (this->validity[1] < clock))) {
+			return ZT_CERTIFICATE_ERROR_OUT_OF_VALID_TIME_WINDOW;
+		}
+
 		if (this->issuer) {
-			const Vector< uint8_t > enc(encode(true));
-			if (!reinterpret_cast<const Identity *>(this->issuer)->verify(enc.data(), (unsigned int)enc.size(), this->signature, this->signatureSize))
-				return ZT_CERTIFICATE_ERROR_INVALID_PRIMARY_SIGNATURE;
+			if (checkSignatures) {
+				const Vector< uint8_t > enc(encode(true));
+				if (!reinterpret_cast<const Identity *>(this->issuer)->verify(enc.data(), (unsigned int)enc.size(), this->signature, this->signatureSize))
+					return ZT_CERTIFICATE_ERROR_INVALID_PRIMARY_SIGNATURE;
+			}
 		} else {
 			return ZT_CERTIFICATE_ERROR_INVALID_PRIMARY_SIGNATURE;
 		}
@@ -461,16 +470,18 @@ ZT_CertificateError Certificate::verify() const
 				(this->subject.uniqueId[0] != ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384))
 				return ZT_CERTIFICATE_ERROR_INVALID_UNIQUE_ID_PROOF;
 
-			Dictionary d;
-			m_encodeSubject(this->subject, d, true);
-			Vector< uint8_t > enc;
-			d.encode(enc);
+			if (checkSignatures) {
+				Dictionary d;
+				m_encodeSubject(this->subject, d, true);
+				Vector< uint8_t > enc;
+				d.encode(enc);
 
-			uint8_t h[ZT_SHA384_DIGEST_SIZE];
-			SHA384(h, enc.data(), (unsigned int)enc.size());
-			static_assert(ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE == (ZT_ECC384_PUBLIC_KEY_SIZE + 1), "incorrect size");
-			if (!ECC384ECDSAVerify(this->subject.uniqueId + 1, h, this->subject.uniqueIdProofSignature))
-				return ZT_CERTIFICATE_ERROR_INVALID_UNIQUE_ID_PROOF;
+				uint8_t h[ZT_SHA384_DIGEST_SIZE];
+				SHA384(h, enc.data(), (unsigned int)enc.size());
+				static_assert(ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE == (ZT_ECC384_PUBLIC_KEY_SIZE + 1), "incorrect size");
+				if (!ECC384ECDSAVerify(this->subject.uniqueId + 1, h, this->subject.uniqueIdProofSignature))
+					return ZT_CERTIFICATE_ERROR_INVALID_UNIQUE_ID_PROOF;
+			}
 		} else if (this->subject.uniqueIdSize > 0) {
 			return ZT_CERTIFICATE_ERROR_INVALID_UNIQUE_ID_PROOF;
 		}
@@ -478,11 +489,13 @@ ZT_CertificateError Certificate::verify() const
 		for (unsigned int i = 0; i < this->subject.identityCount; ++i) {
 			if (!this->subject.identities[i].identity)
 				return ZT_CERTIFICATE_ERROR_MISSING_REQUIRED_FIELDS;
-			if (!reinterpret_cast<const Identity *>(this->subject.identities[i].identity)->locallyValidate())
-				return ZT_CERTIFICATE_ERROR_INVALID_IDENTITY;
-			if (this->subject.identities[i].locator) {
-				if (!reinterpret_cast<const Locator *>(this->subject.identities[i].locator)->verify(*reinterpret_cast<const Identity *>(this->subject.identities[i].identity)))
-					return ZT_CERTIFICATE_ERROR_INVALID_COMPONENT_SIGNATURE;
+			if (checkSignatures) {
+				if (!reinterpret_cast<const Identity *>(this->subject.identities[i].identity)->locallyValidate())
+					return ZT_CERTIFICATE_ERROR_INVALID_IDENTITY;
+				if (this->subject.identities[i].locator) {
+					if (!reinterpret_cast<const Locator *>(this->subject.identities[i].locator)->verify(*reinterpret_cast<const Identity *>(this->subject.identities[i].identity)))
+						return ZT_CERTIFICATE_ERROR_INVALID_COMPONENT_SIGNATURE;
+				}
 			}
 		}
 

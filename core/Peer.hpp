@@ -106,17 +106,17 @@ public:
 	 * This checks the locator's timestamp against the current locator and
 	 * replace it if newer.
 	 *
-	 * SECURITY: note that this does NOT validate the locator's signature
-	 * or structural validity. This MUST be done before calling this.
-	 *
 	 * @param loc Locator update
+	 * @param verify If true, verify locator's signature and structure
 	 * @return New locator or previous if it was not replaced.
 	 */
-	ZT_INLINE SharedPtr< const Locator > setLocator(const SharedPtr< const Locator > &loc) noexcept
+	ZT_INLINE SharedPtr< const Locator > setLocator(const SharedPtr< const Locator > &loc, bool verify) noexcept
 	{
 		RWMutex::Lock l(m_lock);
-		if ((loc) && ((!m_locator) || (m_locator->timestamp() < loc->timestamp())))
-			m_locator = loc;
+		if ((loc) && ((!m_locator) || (m_locator->timestamp() < loc->timestamp()))) {
+			if ((!verify) || loc->verify(m_id))
+				m_locator = loc;
+		}
 		return m_locator;
 	}
 

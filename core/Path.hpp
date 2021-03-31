@@ -42,6 +42,93 @@ class Path
 	class Defragmenter;
 
 public:
+	/**
+	 * Map key for paths designed for very fast lookup
+	 */
+	class Key
+	{
+	public:
+		/**
+		 * Construct key with undefined value
+		 */
+		ZT_INLINE Key() noexcept
+		{}
+
+		ZT_INLINE Key(const Key &k) noexcept: m_hashCode(k.m_hashCode), m_v664(k.m_v664), m_port(k.m_port)
+		{}
+
+		ZT_INLINE Key(const InetAddress &ip) noexcept
+		{
+			const unsigned int family = ip.as.sa.sa_family;
+			if (family == AF_INET) {
+				const uint16_t p = (uint16_t)ip.as.sa_in.sin_port;
+				m_hashCode = Utils::hash64((((uint64_t)ip.as.sa_in.sin_addr.s_addr) << 16U) ^ ((uint64_t)p) ^ Utils::s_mapNonce);
+				m_v664 = 0; // IPv6 /64 is 0 for IPv4
+				m_port = p;
+			} else {
+				if (likely(family == AF_INET6)) {
+					const uint64_t a = Utils::loadMachineEndian< uint64_t >(reinterpret_cast<const uint8_t *>(ip.as.sa_in6.sin6_addr.s6_addr));
+					const uint64_t b = Utils::loadMachineEndian< uint64_t >(reinterpret_cast<const uint8_t *>(ip.as.sa_in6.sin6_addr.s6_addr) + 8);
+					const uint16_t p = ip.as.sa_in6.sin6_port;
+					m_hashCode = Utils::hash64(a ^ b ^ ((uint64_t)p) ^ Utils::s_mapNonce);
+					m_v664 = a; // IPv6 /64
+					m_port = p;
+				} else {
+					// This isn't reachable since only IPv4 and IPv6 are used with InetAddress, but implement
+					// something here for technical completeness.
+					m_hashCode = Utils::fnv1a32(&ip, sizeof(InetAddress));
+					m_v664 = Utils::fnv1a32(ip.as.sa.sa_data, sizeof(ip.as.sa.sa_data));
+					m_port = (uint16_t)family;
+				}
+			}
+		}
+
+		ZT_INLINE Key &operator=(const Key &k) noexcept
+		{
+			m_hashCode = k.m_hashCode;
+			m_v664 = k.m_v664;
+			m_port = k.m_port;
+			return *this;
+		}
+
+		ZT_INLINE unsigned long hashCode() const noexcept
+		{ return (unsigned long)m_hashCode; }
+
+		ZT_INLINE bool operator==(const Key &k) const noexcept
+		{ return (m_hashCode == k.m_hashCode) && (m_v664 == k.m_v664) && (m_port == k.m_port); }
+
+		ZT_INLINE bool operator!=(const Key &k) const noexcept
+		{ return (!(*this == k)); }
+
+		ZT_INLINE bool operator<(const Key &k) const noexcept
+		{
+			if (m_hashCode < k.m_hashCode) {
+				return true;
+			} else if (m_hashCode == k.m_hashCode) {
+				if (m_v664 < k.m_v664) {
+					return true;
+				} else if (m_v664 == k.m_v664) {
+					return (m_port < k.m_port);
+				}
+			}
+			return false;
+		}
+
+		ZT_INLINE bool operator>(const Key &k) const noexcept
+		{ return (k < *this); }
+
+		ZT_INLINE bool operator<=(const Key &k) const noexcept
+		{ return !(k < *this); }
+
+		ZT_INLINE bool operator>=(const Key &k) const noexcept
+		{ return !(*this < k); }
+
+	private:
+		uint64_t m_hashCode;
+		uint64_t m_v664;
+		uint16_t m_port;
+	};
+
 	ZT_INLINE Path(const int64_t l, const InetAddress &r) noexcept:
 		m_localSocket(l),
 		m_lastIn(0),

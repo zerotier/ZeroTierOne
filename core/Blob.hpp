@@ -65,55 +65,7 @@ struct SHA384Hash
 	{ return (memcmp(data, b.data, 48) >= 0); }
 };
 
-/**
- * Blob type for 128-bit GUIDs, UUIDs, etc.
- */
-struct UniqueID
-{
-	uint64_t data[2];
-
-	ZT_INLINE UniqueID() noexcept
-	{ Utils::zero< sizeof(data) >(data); }
-
-	ZT_INLINE UniqueID(const uint64_t a, const uint64_t b) noexcept
-	{
-		data[0] = a;
-		data[1] = b;
-	}
-
-	explicit ZT_INLINE UniqueID(const void *const d) noexcept
-	{ Utils::copy< 16 >(data, d); }
-
-	ZT_INLINE const uint8_t *bytes() const noexcept
-	{ return reinterpret_cast<const uint8_t *>(data); }
-
-	ZT_INLINE unsigned long hashCode() const noexcept
-	{ return (unsigned long)(data[0] ^ data[1]); }
-
-	ZT_INLINE operator bool() const noexcept
-	{ return ((data[0] != 0) && (data[1] != 0)); }
-
-	ZT_INLINE bool operator==(const UniqueID &b) const noexcept
-	{ return ((data[0] == b.data[0]) && (data[1] == b.data[1])); }
-
-	ZT_INLINE bool operator!=(const UniqueID &b) const noexcept
-	{ return !(*this == b); }
-
-	ZT_INLINE bool operator<(const UniqueID &b) const noexcept
-	{ return (memcmp(data, b.data, 16) < 0); }
-
-	ZT_INLINE bool operator>(const UniqueID &b) const noexcept
-	{ return (memcmp(data, b.data, 16) > 0); }
-
-	ZT_INLINE bool operator<=(const UniqueID &b) const noexcept
-	{ return (memcmp(data, b.data, 16) <= 0); }
-
-	ZT_INLINE bool operator>=(const UniqueID &b) const noexcept
-	{ return (memcmp(data, b.data, 16) >= 0); }
-};
-
 static_assert(sizeof(SHA384Hash) == 48, "SHA384Hash contains unnecessary padding");
-static_assert(sizeof(UniqueID) == 16, "UniqueID contains unnecessary padding");
 
 template< unsigned long S >
 struct Blob

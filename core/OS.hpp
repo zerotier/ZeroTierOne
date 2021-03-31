@@ -168,13 +168,16 @@
 #endif
 #endif
 
-/* Right now we fail if no C++11. The core could be ported to old C++ compilers
- * if a shim for <atomic> were included. */
-#ifndef __CPP11__
-#error TODO: to build on pre-c++11 compilers we will need to make a subset of std::atomic for integers
-#define nullptr (0)
-#define constexpr ZT_INLINE
-#define noexcept throw()
+#if defined(ZT_ARCH_X64) || defined(__aarch64__)
+#ifndef ZT_ARCH_APPEARS_64BIT
+#define ZT_ARCH_APPEARS_64BIT 1
+#endif
+#endif
+#ifdef UINTPTR_MAX
+#if UINTPTR_MAX == UINT64_MAX
+#ifndef ZT_ARCH_APPEARS_64BIT
+#define ZT_ARCH_APPEARS_64BIT 1
+#endif
 #endif
 #endif
 
@@ -187,6 +190,17 @@
 #else
 #define ZT_INLINE inline
 #endif
+#endif
+#endif
+
+/* Right now we fail if no C++11. The core could be ported to old C++ compilers
+ * if a shim for <atomic> were included. */
+#ifndef __CPP11__
+#error TODO: to build on pre-c++11 compilers we will need to make a subset of std::atomic for integers
+#define nullptr (0)
+#define constexpr ZT_INLINE
+#define noexcept throw()
+#define explicit
 #endif
 #endif
 

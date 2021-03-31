@@ -19,7 +19,6 @@
 #include "MAC.hpp"
 #include "Containers.hpp"
 #include "TriviallyCopyable.hpp"
-#include "Blob.hpp"
 
 namespace ZeroTier {
 
@@ -506,34 +505,6 @@ public:
 
 	ZT_INLINE bool operator>=(const InetAddress &a) const noexcept
 	{ return !(*this < a); }
-
-	/**
-	 * Generate a local unique key for this address
-	 *
-	 * This key is not comparable across instances or architectures.
-	 *
-	 * @return Local unique key
-	 */
-	ZT_INLINE UniqueID key() const noexcept
-	{
-		if (as.ss.ss_family == AF_INET) {
-			// For IPv4 we can just pack the IP and port into the first element.
-			return UniqueID(((uint64_t)as.sa_in.sin_addr.s_addr << 16U) ^ (uint64_t)as.sa_in.sin_port, 0);
-		} else if (likely(as.ss.ss_family == AF_INET6)) {
-			// The OR with (a2 == 0) is to make sure the second part of the UniqueID
-			// can never be zero, otherwise it could be made to collide with an IPv4
-			// IP address. We also construct this to make it so someone in a /64
-			// can't collide another address in the same /64.
-			const uint64_t a1 = Utils::loadMachineEndian< uint64_t >(as.sa_in6.sin6_addr.s6_addr);
-			const uint64_t a2 = Utils::hash64(Utils::s_mapNonce ^ Utils::loadMachineEndian< uint64_t >(as.sa_in6.sin6_addr.s6_addr + 8)) + (uint64_t)as.sa_in6.sin6_port;
-			return UniqueID(a1, a2 | (uint64_t)(a2 == 0));
-		} else if (likely(as.ss.ss_family == 0)) {
-			return UniqueID(0, 0);
-		} else {
-			// This should never be reached, but handle it somehow.
-			return UniqueID(as.ss.ss_family, Utils::fnv1a32(&as, sizeof(as)));
-		}
-	}
 
 	/**
 	 * Compute an IPv6 link-local address

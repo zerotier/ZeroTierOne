@@ -84,10 +84,10 @@ public:
 	 */
 	ZT_INLINE SharedPtr< Path > path(const int64_t l, const InetAddress &r)
 	{
-		const UniqueID k(r.key());
+		const Path::Key k(r);
 		{
 			RWMutex::RLock lck(m_paths_l);
-			Map< UniqueID, SharedPtr< Path > >::const_iterator p(m_paths.find(k));
+			Map< Path::Key, SharedPtr< Path > >::const_iterator p(m_paths.find(k));
 			if (likely(p != m_paths.end()))
 				return p->second;
 		}
@@ -150,79 +150,21 @@ public:
 	 */
 	void saveAll(void *tPtr);
 
-	/**
-	 * Add a certificate to the local certificate store
-	 *
-	 * @param tPtr Thread pointer
-	 * @param cert Certificate to add (a copy will be made if added)
-	 * @param now Current time
-	 * @param localTrust Local trust bit flags
-	 * @param writeToLocalStore If true, write to local object store (via API callbacks)
-	 * @param refreshRootSets If true, refresh root sets in case a root set changed (default: true)
-	 * @param verify If true, verify certificate and certificate chain (default: true)
-	 * @return Error or 0 on success
-	 */
-	ZT_CertificateError addCertificate(
-		void *tPtr,
-		const Certificate &cert,
-		int64_t now,
-		unsigned int localTrust,
-		bool writeToLocalStore,
-		bool refreshRootSets = true,
-		bool verify = true);
-
-	/**
-	 * Delete certificate
-	 *
-	 * @param tPtr Thread pointer
-	 * @param serialNo Serial number to delete
-	 * @return Number of deleted certificates
-	 */
-	unsigned int deleteCertificate(void *tPtr,const uint8_t serialNo[ZT_SHA384_DIGEST_SIZE]);
-
-	/**
-	 * Fill vectors with all certificates and their corresponding local trust flags
-	 *
-	 * @param c Certificate vector
-	 * @param t Local trust vector
-	 */
-	void allCerts(Vector< SharedPtr<const Certificate> > &c,Vector< unsigned int > &t) const noexcept;
-
 private:
 	void m_rankRoots(int64_t now);
-	void m_eraseCertificate(void *tPtr, const SharedPtr< const Certificate > &cert, const SHA384Hash *uniqueIdHash);
-	bool m_cleanCertificates(void *tPtr, int64_t now);
-	bool m_verifyCertificateChain(const Certificate *current, int64_t now) const;
-	ZT_CertificateError m_verifyCertificate(const Certificate &cert, int64_t now, unsigned int localTrust, bool skipSignatureCheck) const;
 	void m_loadCached(void *tPtr, const Address &zta, SharedPtr< Peer > &peer);
 	SharedPtr< Peer > m_peerFromCached(void *tPtr, const Address &zta);
-	SharedPtr< Path > m_newPath(int64_t l, const InetAddress &r, const UniqueID &k);
-	void m_updateRootPeers(void *tPtr, int64_t now);
-	void m_writeTrustStore(void *tPtr);
+	SharedPtr< Path > m_newPath(int64_t l, const InetAddress &r, const Path::Key &k);
 
 	const RuntimeEnvironment *const RR;
 
 	Vector< SharedPtr< Peer > > m_roots;
 	Map< Address, SharedPtr< Peer > > m_peers;
-	Map< UniqueID, SharedPtr< Path > > m_paths;
-
-	struct p_CertEntry
-	{
-		ZT_INLINE p_CertEntry() :
-			certificate(),
-			localTrust(0)
-		{}
-		SharedPtr< const Certificate > certificate;
-		unsigned int localTrust;
-	};
-	Map< SHA384Hash, p_CertEntry > m_certs;
-	Map< SHA384Hash, p_CertEntry > m_certsBySubjectUniqueID;
-	Map< Fingerprint, Map< SharedPtr< const Certificate >, unsigned int > > m_certsBySubjectIdentity;
+	Map< Path::Key, SharedPtr< Path > > m_paths;
 
 	RWMutex m_peers_l; // m_peers
 	RWMutex m_paths_l; // m_paths
 	Mutex m_roots_l;   // m_roots and m_lastRankedRoots
-	Mutex m_certs_l;   // m_certs and friends
 
 	SharedPtr< Peer > m_bestRoot;
 	Spinlock l_bestRoot;

@@ -323,6 +323,11 @@ typedef struct
 #define ZT_CERTIFICATE_MAX_STRING_LENGTH 127
 
 /**
+ * Maximum certificate path length to CA (a sanity limit value)
+ */
+#define ZT_CERTIFICATE_MAX_PATH_LENGTH 256
+
+/**
  * Certificate is a root CA (local trust flag)
  */
 #define ZT_CERTIFICATE_LOCAL_TRUST_FLAG_ROOT_CA 0x0001U

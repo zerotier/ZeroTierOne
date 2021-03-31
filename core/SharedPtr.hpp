@@ -146,6 +146,14 @@ public:
 		return 0;
 	}
 
+	/**
+	 * Cast this SharedPtr<> to one that holds a const instance of the type
+	 *
+	 * @return "this" casted in place to hold "const T"
+	 */
+	ZT_INLINE const SharedPtr<const T> &constify() const noexcept
+	{ return reinterpret_cast< const SharedPtr<const T> >(*this); }
+
 	ZT_INLINE unsigned long hashCode() const noexcept
 	{ return (unsigned long)Utils::hash64((uint64_t)((uintptr_t)m_ptr)); }
 

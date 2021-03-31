@@ -56,6 +56,7 @@ set(core_headers
 	Topology.hpp
 	Trace.hpp
 	TriviallyCopyable.hpp
+	TrustStore.hpp
 	Utils.hpp
 	VL1.hpp
 	VL2.hpp
@@ -96,6 +97,7 @@ set(core_src
 	TagCredential.cpp
 	Topology.cpp
 	Trace.cpp
+	TrustStore.cpp
 	Utils.cpp
 	VL1.cpp
 	VL2.cpp
