@@ -64,6 +64,12 @@ public:
 	}
 
 	/**
+	 * @return SHA384Hash containing serial number
+	 */
+	ZT_INLINE SHA384Hash getSerialNo() const noexcept
+	{ return SHA384Hash(this->serialNo); }
+
+	/**
 	 * Add a subject node/identity without a locator
 	 *
 	 * @param id Identity

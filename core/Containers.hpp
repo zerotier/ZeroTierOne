@@ -59,6 +59,9 @@ struct intl_MapHasher
 	std::size_t operator()(const O &obj) const noexcept
 	{ return (std::size_t)obj.hashCode(); }
 
+	std::size_t operator()(const Vector< uint8_t > &bytes) const noexcept
+	{ return (std::size_t)Utils::fnv1a32(bytes.data(), (unsigned int)bytes.size()); }
+
 	std::size_t operator()(const uint64_t i) const noexcept
 	{ return (std::size_t)Utils::hash64(i ^ Utils::s_mapNonce); }
 

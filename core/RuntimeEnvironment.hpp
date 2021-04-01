@@ -29,6 +29,7 @@ class NetworkController;
 class SelfAwareness;
 class Trace;
 class Expect;
+class TrustStore;
 
 /**
  * ZeroTier::Node execution context
@@ -44,13 +45,13 @@ public:
 		instanceId(Utils::getSecureRandomU64()),
 		node(n),
 		localNetworkController(nullptr),
-		rtmem(nullptr),
 		t(nullptr),
 		expect(nullptr),
 		vl2(nullptr),
 		vl1(nullptr),
 		topology(nullptr),
-		sa(nullptr)
+		sa(nullptr),
+		ts(nullptr)
 	{
 		publicIdentityStr[0] = 0;
 		secretIdentityStr[0] = 0;
@@ -70,15 +71,13 @@ public:
 	// This is set externally to an instance of this base class
 	NetworkController *localNetworkController;
 
-	// Memory actually occupied by Trace, Switch, etc.
-	void *rtmem;
-
 	Trace *t;
 	Expect *expect;
 	VL2 *vl2;
 	VL1 *vl1;
 	Topology *topology;
 	SelfAwareness *sa;
+	TrustStore *ts;
 
 	// This node's identity and string representations thereof
 	Identity identity;

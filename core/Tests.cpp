@@ -44,6 +44,7 @@
 #include "Locator.hpp"
 #include "Certificate.hpp"
 #include "MIMC52.hpp"
+#include "ScopedPtr.hpp"
 
 #ifdef __UNIX_LIKE__
 
@@ -1210,7 +1211,7 @@ extern "C" const char *ZTT_crypto()
 			ZT_T_PRINTF("OK %s" ZT_EOL_S, tmp);
 
 			ZT_T_PRINTF("  Create and sign certificate... ");
-			SharedPtr< Certificate > cert(new Certificate());
+			ScopedPtr< Certificate > cert(new Certificate());
 			cert->subject.timestamp = now();
 			cert->addSubjectIdentity(testSubjectId);
 			cert->addSubjectNetwork(12345, testSubjectId.fingerprint());
@@ -1237,7 +1238,7 @@ extern "C" const char *ZTT_crypto()
 			ZT_T_PRINTF("OK (%d bytes)" ZT_EOL_S, (int)enc.size());
 
 			ZT_T_PRINTF("  Testing certificate verify... ");
-			ZT_CertificateError vr = cert->verify();
+			ZT_CertificateError vr = cert->verify(-1, true);
 			if (vr != ZT_CERTIFICATE_ERROR_NONE) {
 				ZT_T_PRINTF("FAILED (verify original) (%d)" ZT_EOL_S, (int)vr);
 				return "Verify original certificate";
@@ -1245,12 +1246,12 @@ extern "C" const char *ZTT_crypto()
 			ZT_T_PRINTF("OK" ZT_EOL_S);
 
 			ZT_T_PRINTF("  Test certificate decode from marshaled format... ");
-			SharedPtr< Certificate > cert2(new Certificate());
+			ScopedPtr< Certificate > cert2(new Certificate());
 			if (!cert2->decode(enc.data(), (unsigned int)enc.size())) {
 				ZT_T_PRINTF("FAILED (decode)" ZT_EOL_S);
 				return "Certificate decode";
 			}
-			if (cert2->verify() != ZT_CERTIFICATE_ERROR_NONE) {
+			if (cert2->verify(-1, true) != ZT_CERTIFICATE_ERROR_NONE) {
 				ZT_T_PRINTF("FAILED (verify decoded certificate)" ZT_EOL_S);
 				return "Verify decoded certificate";
 			}
@@ -1261,7 +1262,7 @@ extern "C" const char *ZTT_crypto()
 			ZT_T_PRINTF("OK" ZT_EOL_S);
 
 			ZT_T_PRINTF("  Test certificate copy/construct... ");
-			SharedPtr< Certificate > cert3(new Certificate(*cert2));
+			ScopedPtr< Certificate > cert3(new Certificate(*cert2));
 			if (!ZTT_deepCompareCertificates(*cert2, *cert3)) {
 				ZT_T_PRINTF("FAILED (compare copy with original)" ZT_EOL_S);
 				return "Certificate copy";

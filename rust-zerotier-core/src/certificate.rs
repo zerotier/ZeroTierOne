@@ -694,10 +694,10 @@ impl Certificate {
         return Ok(signed_cert);
     }
 
-    pub fn verify(&self) -> CertificateError {
+    pub fn verify(&self, clock: i64) -> CertificateError {
         unsafe {
             let capi = self.to_capi();
-            return CertificateError::from_i32(ztcore::ZT_Certificate_verify(&capi.certificate as *const ztcore::ZT_Certificate) as i32).unwrap_or(CertificateError::InvalidFormat);
+            return CertificateError::from_i32(ztcore::ZT_Certificate_verify(&capi.certificate as *const ztcore::ZT_Certificate, clock) as i32).unwrap_or(CertificateError::InvalidFormat);
         }
     }
 }

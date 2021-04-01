@@ -43,61 +43,100 @@ public:
 		friend class SharedPtr< const TrustStore::Entry >;
 		friend class TrustStore;
 
-	private:
-		ZT_INLINE Entry(const Certificate &cert, const unsigned int lt) noexcept:
-			m_certificate(cert),
-			m_localTrust(lt)
-		{}
-
 	public:
+		/**
+		 * @return Reference to held certificate
+		 */
 		ZT_INLINE const Certificate &certificate() const noexcept
 		{ return m_certificate; }
 
+		/**
+		 * Get the local trust for this certificate
+		 *
+		 * This value may be changed dynamically by calls to update().
+		 *
+		 * @return Local trust bit mask
+		 */
 		ZT_INLINE unsigned int localTrust() const noexcept
 		{ return m_localTrust.load(std::memory_order_relaxed); }
 
+		/**
+		 * Change the local trust of this entry
+		 *
+		 * @param lt New local trust bit mask
+		 */
+		ZT_INLINE void setLocalTrust(const unsigned int lt) noexcept
+		{ m_localTrust.store(lt, std::memory_order_relaxed); }
+
+		/**
+		 * Get the error code for this certificate
+		 *
+		 * @return Error or ZT_CERTIFICATE_ERROR_NONE if none
+		 */
+		ZT_INLINE ZT_CertificateError error() const noexcept
+		{ return (ZT_CertificateError)m_error.load(std::memory_order_relaxed); }
+
 	private:
+		Entry() {}
+		Entry(const Entry &) {}
+		Entry &operator=(const Entry &) { return *this; }
+
+		ZT_INLINE Entry(const Certificate &cert, const unsigned int lt) noexcept:
+			m_certificate(cert),
+			m_localTrust(lt),
+			m_error((int)ZT_CERTIFICATE_ERROR_NONE)
+		{}
+
 		Certificate m_certificate;
 		std::atomic< unsigned int > m_localTrust;
+		std::atomic< int > m_error;
 		std::atomic< int > __refCount;
 	};
 
 	TrustStore();
-
 	~TrustStore();
 
 	/**
 	 * Get certificate by certificate serial number
 	 *
+	 * Note that the error code should be checked. The certificate may be
+	 * rejected and may still be in the store unless the store has been
+	 * purged.
+	 *
 	 * @param serial SHA384 hash of certificate
 	 * @return Entry or empty/nil if not found
 	 */
-	SharedPtr< const Entry > get(const SHA384Hash &serial) const;
+	SharedPtr< Entry > get(const SHA384Hash &serial) const;
 
 	/**
-	 * Get current root peers based on root-enumerating certs in trust store
+	 * Get roots specified by root set certificates in the local store.
 	 *
-	 * Root peers are created or obtained via this node's Topology. This should
-	 * never be called while relevant data structures in Topology are locked.
+	 * If more than one certificate locally trusted as a root set specifies
+	 * the root, it will be returned once (as per Map behavior) but the latest
+	 * locator will be returned from among those available.
 	 *
-	 * Locators in root peers are also updated if the locator present in the
-	 * certificate is valid and newer.
-	 *
-	 * @param tPtr Caller pointer
-	 * @param RR Runtime environment
-	 * @return All roots (sort order undefined)
+	 * @return Roots and the latest locator specified for each (if any)
 	 */
-	Vector< SharedPtr< Peer > > roots(void *tPtr, const RuntimeEnvironment *RR);
+	Map< Identity, SharedPtr< const Locator > > roots();
 
 	/**
+	 * @param includeRejectedCertificates If true, also include certificates with error codes
 	 * @return All certificates in asecending sort order by serial
 	 */
-	Vector< SharedPtr< const Entry > > all() const;
+	Vector< SharedPtr< Entry > > all(bool includeRejectedCertificates) const;
+
+	/**
+	 * Get a copy of the current rejected certificate set.
+	 *
+	 * @return Rejected certificates
+	 */
+	Vector< SharedPtr< Entry > > rejects() const;
 
 	/**
 	 * Add a certificate
 	 *
-	 * A copy is made so it's fine if the original is freed after this call.
+	 * A copy is made so it's fine if the original is freed after this call. If
+	 * the certificate already exists its local trust flags are updated.
 	 *
 	 * IMPORTANT: The caller MUST also call update() after calling add() one or
 	 * more times to actually add and revalidate certificates and their signature
@@ -108,28 +147,30 @@ public:
 	void add(const Certificate &cert, unsigned int localTrust);
 
 	/**
+	 * Queue a certificate to be deleted
+	 *
+	 * Actual delete does not happen until the next update().
+	 *
+	 * @param serial Serial of certificate to delete
+	 */
+	void erase(const SHA384Hash &serial);
+
+	/**
 	 * Validate all certificates and their certificate chains
 	 *
 	 * This also processes any certificates added with add() since the last call to update().
 	 *
-	 * @param clock Current time in milliseconds since epoch
+	 * @param clock Current time in milliseconds since epoch, or -1 to not check times on this pass
 	 * @param purge If non-NULL, purge rejected certificates and return them in this vector (vector should be empty)
 	 */
-	void update(int64_t clock, Vector< std::pair< SharedPtr<Entry>, ZT_CertificateError > > *purge);
-
-	/**
-	 * Get a copy of the current rejected certificate set.
-	 *
-	 * @return Rejected certificates
-	 */
-	Vector< std::pair< SharedPtr<Entry>, ZT_CertificateError > > rejects() const;
+	void update(int64_t clock, Vector< SharedPtr< Entry > > *purge);
 
 private:
-	Map< SHA384Hash, SharedPtr< Entry > > m_bySerial;
-	Map< Vector< uint8_t >, SharedPtr< Entry > > m_bySubjectUniqueId;
-	Map< Fingerprint, Vector< SharedPtr< Entry > > > m_bySubjectIdentity;
+	Map< SHA384Hash, SharedPtr< Entry > > m_bySerial; // all certificates
+	Map< Vector< uint8_t >, SharedPtr< Entry > > m_bySubjectUniqueId; // non-rejected certificates only
+	Map< Fingerprint, Vector< SharedPtr< Entry > > > m_bySubjectIdentity; // non-rejected certificates only
 	ForwardList< SharedPtr< Entry > > m_addQueue;
-	Map< SharedPtr< Entry >, ZT_CertificateError > m_rejected;
+	ForwardList< SHA384Hash > m_deleteQueue;
 	RWMutex m_lock;
 };
 

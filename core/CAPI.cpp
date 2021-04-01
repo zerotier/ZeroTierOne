@@ -669,7 +669,7 @@ enum ZT_CertificateError ZT_Certificate_decode(
 			return ZT_CERTIFICATE_ERROR_INVALID_FORMAT;
 		}
 		if (verify) {
-			const ZT_CertificateError err = c->verify();
+			const ZT_CertificateError err = c->verify(-1, true);
 			if (err != ZT_CERTIFICATE_ERROR_NONE) {
 				delete c;
 				return err;
@@ -702,12 +702,14 @@ int ZT_Certificate_encode(
 	}
 }
 
-enum ZT_CertificateError ZT_Certificate_verify(const ZT_Certificate *cert)
+enum ZT_CertificateError ZT_Certificate_verify(
+	const ZT_Certificate *cert,
+	int64_t clock)
 {
 	try {
 		if (!cert)
 			return ZT_CERTIFICATE_ERROR_INVALID_FORMAT;
-		return ZeroTier::Certificate(*cert).verify();
+		return ZeroTier::Certificate(*cert).verify(clock, true);
 	} catch (...) {
 		return ZT_CERTIFICATE_ERROR_INVALID_FORMAT;
 	}

@@ -2900,9 +2900,12 @@ ZT_SDK_API int ZT_Certificate_encode(
  * Verify certificate signatures and internal structure.
  *
  * @param cert Certificate to verify
+ * @param clock Clock to check timestamp or -1 to skip this check
  * @return Certificate error or ZT_CERTIFICATE_ERROR_NONE if no errors found.
  */
-ZT_SDK_API enum ZT_CertificateError ZT_Certificate_verify(const ZT_Certificate *cert);
+ZT_SDK_API enum ZT_CertificateError ZT_Certificate_verify(
+	const ZT_Certificate *cert,
+	int64_t clock);
 
 /**
  * Deep clone a certificate, returning one allocated C-side.

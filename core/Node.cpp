@@ -26,6 +26,7 @@
 #include "VL1.hpp"
 #include "VL2.hpp"
 #include "Buf.hpp"
+#include "TrustStore.hpp"
 
 namespace ZeroTier {
 
@@ -41,23 +42,26 @@ struct _NodeObjects
 		expect(),
 		vl2(RR),
 		vl1(RR),
+		topology(RR, tPtr, now),
 		sa(RR),
-		topology(RR, tPtr, now)
+		ts()
 	{
 		RR->t = &t;
 		RR->expect = &expect;
 		RR->vl2 = &vl2;
 		RR->vl1 = &vl1;
-		RR->sa = &sa;
 		RR->topology = &topology;
+		RR->sa = &sa;
+		RR->ts = &ts;
 	}
 
 	Trace t;
 	Expect expect;
 	VL2 vl2;
 	VL1 vl1;
-	SelfAwareness sa;
 	Topology topology;
+	SelfAwareness sa;
+	TrustStore ts;
 };
 
 } // anonymous namespace
@@ -153,7 +157,7 @@ Node::~Node()
 	m_networks_l.unlock();
 	m_networks.clear();
 
-	delete (_NodeObjects *)m_objects;
+	delete reinterpret_cast<_NodeObjects *>(m_objects);
 
 	// Let go of cached Buf objects. If other nodes happen to be running in this
 	// same process space new Bufs will be allocated as needed, but this is almost
@@ -584,7 +588,10 @@ ZT_CertificateError Node::addCertificate(
 		if (!c.decode(certData, certSize))
 			return ZT_CERTIFICATE_ERROR_INVALID_FORMAT;
 	}
-	return RR->topology->addCertificate(tptr, c, now, localTrust, true, true, true);
+	RR->ts->add(c, localTrust);
+	RR->ts->update(now, nullptr);
+	SharedPtr< TrustStore::Entry > ent(RR->ts->get(c.getSerialNo()));
+	return (ent) ? ent->error() : ZT_CERTIFICATE_ERROR_INVALID_FORMAT; // should never be null, but if so it means invalid
 }
 
 ZT_ResultCode Node::deleteCertificate(
@@ -593,13 +600,15 @@ ZT_ResultCode Node::deleteCertificate(
 {
 	if (!serialNo)
 		return ZT_RESULT_ERROR_BAD_PARAMETER;
-	RR->topology->deleteCertificate(tptr, reinterpret_cast<const uint8_t *>(serialNo));
+	RR->ts->erase(SHA384Hash(serialNo));
+	RR->ts->update(-1, nullptr);
 	return ZT_RESULT_OK;
 }
 
 struct p_certificateListInternal
 {
-	Vector< SharedPtr< const Certificate > > c;
+	Vector< SharedPtr< TrustStore::Entry > > entries;
+	Vector< const ZT_Certificate * > c;
 	Vector< unsigned int > t;
 };
 
@@ -619,11 +628,17 @@ ZT_CertificateList *Node::listCertificates()
 
 	p_certificateListInternal *const clint = reinterpret_cast<p_certificateListInternal *>(reinterpret_cast<uint8_t *>(cl) + sizeof(ZT_CertificateList));
 	new (clint) p_certificateListInternal;
-	RR->topology->allCerts(clint->c, clint->t);
+
+	clint->entries = RR->ts->all(false);
+	clint->c.reserve(clint->entries.size());
+	clint->t.reserve(clint->entries.size());
+	for(Vector< SharedPtr< TrustStore::Entry > >::const_iterator i(clint->entries.begin()); i!=clint->entries.end(); ++i) {
+		clint->c.push_back(&((*i)->certificate()));
+		clint->t.push_back((*i)->localTrust());
+	}
 
 	cl->freeFunction = p_freeCertificateList;
-	static_assert(sizeof(SharedPtr< const Certificate >) == sizeof(void *), "SharedPtr<> is not just a wrapped pointer");
-	cl->certs = reinterpret_cast<const ZT_Certificate **>(clint->c.data());
+	cl->certs = clint->c.data();
 	cl->localTrust = clint->t.data();
 	cl->certCount = (unsigned long)clint->c.size();
 
