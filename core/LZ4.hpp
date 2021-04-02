@@ -18,6 +18,9 @@
 
 namespace ZeroTier {
 
+#define LZ4_MAX_INPUT_SIZE 0x7E000000
+#define LZ4_COMPRESSBOUND(isize) ((unsigned)(isize) > (unsigned)LZ4_MAX_INPUT_SIZE ? 0 : (isize) + ((isize)/255) + 16)
+
 int LZ4_compress_fast(const char *source,char *dest,int inputSize,int maxOutputSize,int acceleration = 1) noexcept;
 int LZ4_decompress_safe(const char *source,char *dest,int compressedSize,int maxDecompressedSize) noexcept;
 

@@ -218,9 +218,9 @@ private:
 	// Pointer to a struct defined in Node that holds instances of core objects.
 	void *m_objects;
 
-	// This isn't the primary network lookup but holds a vector of networks for rapid iteration through all of them.
-	Vector< SharedPtr< Network > > m_networks;
-	Mutex m_networks_l;
+	// This stores networks for rapid iteration, while RR->networks is the primary lookup.
+	Vector< SharedPtr< Network > > m_allNetworks;
+	Mutex m_allNetworks_l;
 
 	// These are local interface addresses that have been configured via the API
 	// and can be pushed to other nodes.

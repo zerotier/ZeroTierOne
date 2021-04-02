@@ -12,6 +12,7 @@
 /****/
 
 #include "TrustStore.hpp"
+#include "LZ4.hpp"
 
 namespace ZeroTier {
 
@@ -221,6 +222,105 @@ void TrustStore::update(const int64_t clock, Vector< SharedPtr< Entry > > *const
 			}
 		}
 	}
+}
+
+Vector< uint8_t > TrustStore::save() const
+{
+	Vector< uint8_t> comp;
+
+	int compSize;
+	{
+		Vector< uint8_t > b;
+		b.reserve(65536);
+
+		RWMutex::RLock l(m_lock);
+
+		b.push_back(0); // version byte
+
+		for (Map< H384, SharedPtr< Entry > >::const_iterator c(m_bySerial.begin()); c != m_bySerial.end(); ++c) {
+			const Vector< uint8_t > cdata(c->second->certificate().encode());
+			if (!cdata.empty()) {
+				const uint32_t localTrust = (uint32_t)c->second->localTrust();
+				b.push_back((uint8_t)(localTrust >> 24U));
+				b.push_back((uint8_t)(localTrust >> 16U));
+				b.push_back((uint8_t)(localTrust >> 8U));
+				b.push_back((uint8_t)localTrust);
+				const uint32_t size = (uint32_t)cdata.size();
+				b.push_back((uint8_t)(size >> 24U));
+				b.push_back((uint8_t)(size >> 16U));
+				b.push_back((uint8_t)(size >> 8U));
+				b.push_back((uint8_t)size);
+				b.insert(b.end(), cdata.begin(), cdata.end());
+			}
+		}
+
+		comp.resize((unsigned long)LZ4_COMPRESSBOUND(b.size()) + 8);
+		compSize = LZ4_compress_fast(reinterpret_cast<const char *>(b.data()), reinterpret_cast<char *>(comp.data() + 8), (int)b.size(), (int)(comp.size() - 8));
+		if (unlikely(compSize <= 0)) // shouldn't be possible
+			return Vector< uint8_t >();
+
+		const uint32_t uncompSize = (uint32_t)b.size();
+		const uint32_t cksum = Utils::fnv1a32(b.data(), (unsigned int)uncompSize);
+		comp[0] = (uint8_t)(uncompSize >> 24);
+		comp[1] = (uint8_t)(uncompSize >> 16);
+		comp[2] = (uint8_t)(uncompSize >> 8);
+		comp[3] = (uint8_t)uncompSize;
+		comp[4] = (uint8_t)(cksum >> 24);
+		comp[5] = (uint8_t)(cksum >> 16);
+		comp[6] = (uint8_t)(cksum >> 8);
+		comp[7] = (uint8_t)cksum;
+		compSize += 8;
+	}
+
+	comp.resize((unsigned long)compSize);
+	comp.shrink_to_fit();
+
+	return comp;
+}
+
+int TrustStore::load(const Vector< uint8_t > &data)
+{
+	if (data.size() < 8)
+		return -1;
+
+	const unsigned long uncompSize = Utils::loadBigEndian<uint32_t>(data.data());
+	if (uncompSize > (data.size() * 256)) // sanity check
+		return -1;
+	if (uncompSize < 1) // no room for at least version and count
+		return -1;
+
+	Vector< uint8_t > uncomp;
+	uncomp.resize(uncompSize);
+
+	if (LZ4_decompress_safe(reinterpret_cast<const char *>(data.data() + 8), reinterpret_cast<char *>(uncomp.data()), (int)(data.size() - 8), (int)uncompSize) != (int)uncompSize)
+		return -1;
+	const uint8_t *b = uncomp.data();
+	if (Utils::fnv1a32(b, (unsigned int)uncompSize) != Utils::loadBigEndian<uint32_t>(data.data() + 4))
+		return -1;
+	const uint8_t *const eof = b + uncompSize;
+
+	if (*(b++) != 0) // unrecognized version
+		return -1;
+
+	int readCount = 0;
+	for(;;) {
+		if ((b + 8) > eof)
+			break;
+		const uint32_t localTrust = Utils::loadBigEndian<uint32_t>(b);
+		b += 4;
+		const uint32_t cdataSize = Utils::loadBigEndian<uint32_t>(b);
+		b += 4;
+
+		if ((b + cdataSize) > eof)
+			break;
+		Certificate c;
+		if (c.decode(b, (unsigned int)cdataSize)) {
+			this->add(c, (unsigned int)localTrust);
+			++readCount;
+		}
+		b += cdataSize;
+	}
+	return readCount;
 }
 
 } // namespace ZeroTier

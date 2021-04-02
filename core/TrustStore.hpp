@@ -164,6 +164,24 @@ public:
 	 */
 	void update(int64_t clock, Vector< SharedPtr< Entry > > *purge);
 
+	/**
+	 * Create a compressed binary version of certificates and their local trust
+	 *
+	 * @return Binary compressed certificates and local trust info
+	 */
+	Vector< uint8_t > save() const;
+
+	/**
+	 * Decode a saved trust store
+	 *
+	 * Decoded certificates are added to the add queue, so update() must be
+	 * called after this to actually apply them.
+	 *
+	 * @param data Data to decode
+	 * @return Number of certificates or -1 if input is invalid
+	 */
+	int load(const Vector< uint8_t > &data);
+
 private:
 	Map< H384, SharedPtr< Entry > > m_bySerial; // all certificates
 	Map< Vector< uint8_t >, SharedPtr< Entry > > m_bySubjectUniqueId; // non-rejected certificates only

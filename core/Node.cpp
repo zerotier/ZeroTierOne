@@ -143,10 +143,10 @@ Node::~Node()
 {
 	ZT_SPEW("Node shutting down (in destructor).");
 
-	m_networks_l.lock();
+	m_allNetworks_l.lock();
 	RR->networks->clear();
-	m_networks.clear();
-	m_networks_l.unlock();
+	m_allNetworks.clear();
+	m_allNetworks_l.unlock();
 
 	delete reinterpret_cast<_NodeObjects *>(m_objects);
 
@@ -159,10 +159,10 @@ Node::~Node()
 
 void Node::shutdown(void *tPtr)
 {
-	m_networks_l.lock();
+	m_allNetworks_l.lock();
 	RR->networks->clear();
-	m_networks.clear();
-	m_networks_l.unlock();
+	m_allNetworks.clear();
+	m_allNetworks_l.unlock();
 	postEvent(tPtr, ZT_EVENT_DOWN);
 	if (RR->topology)
 		RR->topology->saveAll(tPtr);
@@ -201,8 +201,8 @@ ZT_ResultCode Node::processBackgroundTasks(
 		if ((now - m_lastNetworkHousekeepingRun) >= ZT_NETWORK_HOUSEKEEPING_PERIOD) {
 			m_lastHousekeepingRun = now;
 			ZT_SPEW("running networking housekeeping...");
-			Mutex::Lock l(m_networks_l);
-			for (Vector< SharedPtr< Network > >::const_iterator i(m_networks.begin()); i != m_networks.end(); ++i) {
+			Mutex::Lock l(m_allNetworks_l);
+			for (Vector< SharedPtr< Network > >::const_iterator i(m_allNetworks.begin()); i != m_allNetworks.end(); ++i) {
 				(*i)->doPeriodicTasks(tPtr, now);
 			}
 		}
@@ -235,7 +235,7 @@ ZT_ResultCode Node::join(
 	void *uptr,
 	void *tptr)
 {
-	Mutex::Lock l(m_networks_l);
+	Mutex::Lock l(m_allNetworks_l);
 
 	Fingerprint fp;
 	if (controllerFingerprint) {
@@ -245,12 +245,12 @@ ZT_ResultCode Node::join(
 		ZT_SPEW("joining network %.16llx", nwid);
 	}
 
-	for (Vector< SharedPtr< Network > >::iterator n(m_networks.begin()); n != m_networks.end(); ++n) {
+	for (Vector< SharedPtr< Network > >::iterator n(m_allNetworks.begin()); n != m_allNetworks.end(); ++n) {
 		if ((*n)->id() == nwid)
 			return ZT_RESULT_OK;
 	}
 	SharedPtr< Network > network(new Network(RR, tptr, nwid, fp, uptr, nullptr));
-	m_networks.push_back(network);
+	m_allNetworks.push_back(network);
 	RR->networks->set(nwid, network);
 
 	return ZT_RESULT_OK;
@@ -261,17 +261,17 @@ ZT_ResultCode Node::leave(
 	void **uptr,
 	void *tptr)
 {
-	Mutex::Lock l(m_networks_l);
+	Mutex::Lock l(m_allNetworks_l);
 
 	ZT_SPEW("leaving network %.16llx", nwid);
 	ZT_VirtualNetworkConfig ctmp;
 
 	SharedPtr< Network > network;
 	RR->networks->erase(nwid);
-	for (Vector< SharedPtr< Network > >::iterator n(m_networks.begin()); n != m_networks.end(); ++n) {
+	for (Vector< SharedPtr< Network > >::iterator n(m_allNetworks.begin()); n != m_allNetworks.end(); ++n) {
 		if ((*n)->id() == nwid) {
 			network.move(*n);
-			m_networks.erase(n);
+			m_allNetworks.erase(n);
 			break;
 		}
 	}
@@ -452,9 +452,9 @@ ZT_VirtualNetworkConfig *Node::networkConfig(uint64_t nwid) const
 
 ZT_VirtualNetworkList *Node::networks() const
 {
-	Mutex::Lock l(m_networks_l);
+	Mutex::Lock l(m_allNetworks_l);
 
-	char *const buf = (char *)::malloc(sizeof(ZT_VirtualNetworkList) + (sizeof(ZT_VirtualNetworkConfig) * m_networks.size()));
+	char *const buf = (char *)::malloc(sizeof(ZT_VirtualNetworkList) + (sizeof(ZT_VirtualNetworkConfig) * m_allNetworks.size()));
 	if (!buf)
 		return nullptr;
 	ZT_VirtualNetworkList *nl = (ZT_VirtualNetworkList *)buf;
@@ -462,7 +462,7 @@ ZT_VirtualNetworkList *Node::networks() const
 	nl->networks = (ZT_VirtualNetworkConfig *)(buf + sizeof(ZT_VirtualNetworkList));
 
 	nl->networkCount = 0;
-	for (Vector< SharedPtr< Network > >::const_iterator i(m_networks.begin()); i != m_networks.end(); ++i)
+	for (Vector< SharedPtr< Network > >::const_iterator i(m_allNetworks.begin()); i != m_allNetworks.end(); ++i)
 		(*i)->externalConfig(&(nl->networks[nl->networkCount++]));
 
 	return nl;
@@ -474,9 +474,9 @@ void Node::setNetworkUserPtr(
 {
 	SharedPtr< Network > nw(RR->networks->get(nwid));
 	if (nw) {
-		m_networks_l.lock(); // ensure no concurrent modification of user PTR in network
+		m_allNetworks_l.lock(); // ensure no concurrent modification of user PTR in network
 		*(nw->userPtr()) = ptr;
-		m_networks_l.unlock();
+		m_allNetworks_l.unlock();
 	}
 }
 
@@ -639,8 +639,8 @@ void Node::setController(void *networkControllerInstance)
 bool Node::shouldUsePathForZeroTierTraffic(void *tPtr, const Identity &id, const int64_t localSocket, const InetAddress &remoteAddress)
 {
 	{
-		Mutex::Lock l(m_networks_l);
-		for (Vector< SharedPtr< Network > >::iterator i(m_networks.begin()); i != m_networks.end(); ++i) {
+		Mutex::Lock l(m_allNetworks_l);
+		for (Vector< SharedPtr< Network > >::iterator i(m_allNetworks.begin()); i != m_allNetworks.end(); ++i) {
 			for (unsigned int k = 0, j = (*i)->config().staticIpCount; k < j; ++k) {
 				if ((*i)->config().staticIps[k].containsAddress(remoteAddress))
 					return false;
