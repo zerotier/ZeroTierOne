@@ -286,7 +286,7 @@ static ZT_INLINE bool allZero(const void *const b, unsigned int l) noexcept
 static ZT_INLINE char *stok(char *str, const char *delim, char **saveptr) noexcept
 {
 #ifdef __WINDOWS__
-	return strtok_s(str,delim,saveptr);
+	return strtok_s(str, delim, saveptr);
 #else
 	return strtok_r(str, delim, saveptr);
 #endif
@@ -319,6 +319,7 @@ static ZT_INLINE unsigned int countBits(const uint64_t v) noexcept
 { return (unsigned int)__builtin_popcountll((unsigned long long)v); }
 
 #else
+
 template<typename T>
 static ZT_INLINE unsigned int countBits(T v) noexcept
 {
@@ -327,6 +328,7 @@ static ZT_INLINE unsigned int countBits(T v) noexcept
 	v = (v + (v >> 4)) & (T)~(T)0/255*15;
 	return (unsigned int)((v * ((~((T)0))/((T)255))) >> ((sizeof(T) - 1) * 8));
 }
+
 #endif
 
 /**

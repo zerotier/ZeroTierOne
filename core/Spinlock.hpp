@@ -32,6 +32,24 @@
 class Spinlock
 {
 public:
+	/**
+	 * Pause current thread using whatever methods might be available
+	 *
+	 * This is broken out since it's used in a few other places where
+	 * spinlock-like constructions are used.
+	 */
+	ZT_INLINE static void pause() noexcept
+	{
+#ifdef ZT_ARCH_X64
+		_mm_pause();
+#endif
+#ifdef __LINUX__
+		sched_yield();
+#else
+		std::this_thread::yield();
+#endif
+	}
+
 	ZT_INLINE Spinlock() noexcept: m_locked(false)
 	{}
 
@@ -39,11 +57,7 @@ public:
 	{
 		if (unlikely(m_locked.test_and_set(std::memory_order_acquire))) {
 			do {
-#ifdef __LINUX__
-				sched_yield();
-#else
-				std::this_thread::yield();
-#endif
+				Spinlock::pause();
 			} while (m_locked.test_and_set(std::memory_order_acquire));
 		}
 	}

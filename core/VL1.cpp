@@ -13,7 +13,6 @@
 
 #include "VL1.hpp"
 #include "RuntimeEnvironment.hpp"
-#include "Node.hpp"
 #include "Topology.hpp"
 #include "VL2.hpp"
 #include "AES.hpp"

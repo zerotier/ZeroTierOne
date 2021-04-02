@@ -24,6 +24,7 @@
 #include <list>
 #include <set>
 #include <string>
+#include <algorithm>
 
 #ifdef __CPP11__
 #include <atomic>
@@ -118,6 +119,60 @@ class Set : public std::set< V, std::less< V > >
 {};
 
 typedef std::string String;
+
+/**
+ * A 384-bit hash
+ */
+struct H384
+{
+	uint64_t data[6];
+
+	ZT_INLINE H384() noexcept
+	{ Utils::zero< sizeof(data) >(data); }
+
+	explicit ZT_INLINE H384(const void *const d) noexcept
+	{ Utils::copy< 48 >(data, d); }
+
+	ZT_INLINE const uint8_t *bytes() const noexcept
+	{ return reinterpret_cast<const uint8_t *>(data); }
+
+	ZT_INLINE unsigned long hashCode() const noexcept
+	{ return (unsigned long)data[0]; }
+
+	ZT_INLINE operator bool() const noexcept
+	{ return ((data[0] != 0) && (data[1] != 0) && (data[2] != 0) && (data[3] != 0) && (data[4] != 0) && (data[5] != 0)); }
+
+	ZT_INLINE bool operator==(const H384 &b) const noexcept
+	{ return ((data[0] == b.data[0]) && (data[1] == b.data[1]) && (data[2] == b.data[2]) && (data[3] == b.data[3]) && (data[4] == b.data[4]) && (data[5] == b.data[5])); }
+
+	ZT_INLINE bool operator!=(const H384 &b) const noexcept
+	{ return !(*this == b); }
+
+	ZT_INLINE bool operator<(const H384 &b) const noexcept
+	{ return std::lexicographical_compare(data, data + 6, b.data, b.data + 6); }
+
+	ZT_INLINE bool operator>(const H384 &b) const noexcept
+	{ return (b < *this); }
+
+	ZT_INLINE bool operator<=(const H384 &b) const noexcept
+	{ return !(b < *this); }
+
+	ZT_INLINE bool operator>=(const H384 &b) const noexcept
+	{ return !(*this < b); }
+};
+
+static_assert(sizeof(H384) == 48, "H384 contains unnecessary padding");
+
+/**
+ * A byte array
+ *
+ * @tparam S Size in bytes
+ */
+template< unsigned long S >
+struct Blob
+{
+	uint8_t data[S];
+};
 
 } // ZeroTier
 

@@ -21,10 +21,10 @@ TrustStore::TrustStore()
 TrustStore::~TrustStore()
 {}
 
-SharedPtr< TrustStore::Entry > TrustStore::get(const SHA384Hash &serial) const
+SharedPtr< TrustStore::Entry > TrustStore::get(const H384 &serial) const
 {
 	RWMutex::RLock l(m_lock);
-	Map< SHA384Hash, SharedPtr< Entry > >::const_iterator i(m_bySerial.find(serial));
+	Map< H384, SharedPtr< Entry > >::const_iterator i(m_bySerial.find(serial));
 	return (i != m_bySerial.end()) ? i->second : SharedPtr< TrustStore::Entry >();
 }
 
@@ -55,7 +55,7 @@ Vector< SharedPtr< TrustStore::Entry > > TrustStore::all(const bool includeRejec
 	RWMutex::RLock l(m_lock);
 	Vector< SharedPtr< Entry > > r;
 	r.reserve(m_bySerial.size());
-	for (Map< SHA384Hash, SharedPtr< Entry > >::const_iterator i(m_bySerial.begin()); i != m_bySerial.end(); ++i) {
+	for (Map< H384, SharedPtr< Entry > >::const_iterator i(m_bySerial.begin()); i != m_bySerial.end(); ++i) {
 		if ((includeRejectedCertificates) || (i->second->error() == ZT_CERTIFICATE_ERROR_NONE))
 			r.push_back(i->second);
 	}
@@ -66,7 +66,7 @@ Vector< SharedPtr< TrustStore::Entry > > TrustStore::rejects() const
 {
 	RWMutex::RLock l(m_lock);
 	Vector< SharedPtr< Entry > > r;
-	for (Map< SHA384Hash, SharedPtr< Entry > >::const_iterator c(m_bySerial.begin()); c != m_bySerial.end(); ++c) {
+	for (Map< H384, SharedPtr< Entry > >::const_iterator c(m_bySerial.begin()); c != m_bySerial.end(); ++c) {
 		if (c->second->error() != ZT_CERTIFICATE_ERROR_NONE)
 			r.push_back(c->second);
 	}
@@ -79,7 +79,7 @@ void TrustStore::add(const Certificate &cert, const unsigned int localTrust)
 	m_addQueue.push_front(SharedPtr< Entry >(new Entry(cert, localTrust)));
 }
 
-void TrustStore::erase(const SHA384Hash &serial)
+void TrustStore::erase(const H384 &serial)
 {
 	RWMutex::Lock l(m_lock);
 	m_deleteQueue.push_front(serial);
@@ -88,12 +88,12 @@ void TrustStore::erase(const SHA384Hash &serial)
 // Recursive function to trace a certificate up the chain to a CA, returning true
 // if the CA is reached and the path length is less than the maximum. Note that only
 // non-rejected (no errors) certificates will be in bySignedCert.
-static bool p_validatePath(const Map< SHA384Hash, Vector< SharedPtr< TrustStore::Entry > > > &bySignedCert, const SharedPtr< TrustStore::Entry > &entry, unsigned int pathLength)
+static bool p_validatePath(const Map< H384, Vector< SharedPtr< TrustStore::Entry > > > &bySignedCert, const SharedPtr< TrustStore::Entry > &entry, unsigned int pathLength)
 {
 	if (((entry->localTrust() & ZT_CERTIFICATE_LOCAL_TRUST_FLAG_ROOT_CA) != 0) && (pathLength <= entry->certificate().maxPathLength))
 		return true;
 	if (pathLength < ZT_CERTIFICATE_MAX_PATH_LENGTH) {
-		const Map< SHA384Hash, Vector< SharedPtr< TrustStore::Entry > > >::const_iterator signers(bySignedCert.find(SHA384Hash(entry->certificate().serialNo)));
+		const Map< H384, Vector< SharedPtr< TrustStore::Entry > > >::const_iterator signers(bySignedCert.find(H384(entry->certificate().serialNo)));
 		if (signers != bySignedCert.end()) {
 			for (Vector< SharedPtr< TrustStore::Entry > >::const_iterator signer(signers->second.begin()); signer != signers->second.end(); ++signer) {
 				if ((*signer != entry) && (p_validatePath(bySignedCert, *signer, pathLength + 1)))
@@ -111,7 +111,7 @@ void TrustStore::update(const int64_t clock, Vector< SharedPtr< Entry > > *const
 	// (Re)compute error codes for existing certs, but we don't have to do a full
 	// signature check here since that's done when they're taken out of the add queue.
 	bool errorStateModified = false;
-	for (Map< SHA384Hash, SharedPtr< Entry > >::const_iterator c(m_bySerial.begin()); c != m_bySerial.end(); ++c) {
+	for (Map< H384, SharedPtr< Entry > >::const_iterator c(m_bySerial.begin()); c != m_bySerial.end(); ++c) {
 		const ZT_CertificateError err = c->second->m_certificate.verify(clock, false);
 		errorStateModified |= (c->second->m_error.exchange((int)err, std::memory_order_relaxed) != (int)err);
 	}
@@ -127,7 +127,7 @@ void TrustStore::update(const int64_t clock, Vector< SharedPtr< Entry > > *const
 	// performed here.
 	while (!m_addQueue.empty()) {
 		m_addQueue.front()->m_error.store((int)m_addQueue.front()->m_certificate.verify(clock, true), std::memory_order_relaxed);
-		m_bySerial[SHA384Hash(m_addQueue.front()->m_certificate.serialNo)].move(m_addQueue.front());
+		m_bySerial[H384(m_addQueue.front()->m_certificate.serialNo)].move(m_addQueue.front());
 		m_addQueue.pop_front();
 	}
 
@@ -137,19 +137,19 @@ void TrustStore::update(const int64_t clock, Vector< SharedPtr< Entry > > *const
 		m_deleteQueue.pop_front();
 	}
 
-	Map< SHA384Hash, Vector< SharedPtr< Entry > > > bySignedCert;
+	Map< H384, Vector< SharedPtr< Entry > > > bySignedCert;
 	for (;;) {
 		// Create a reverse lookup mapping from signed certs to signer certs for certificate
 		// path validation. Only include good certificates.
-		for (Map< SHA384Hash, SharedPtr< Entry > >::const_iterator c(m_bySerial.begin()); c != m_bySerial.end(); ++c) {
+		for (Map< H384, SharedPtr< Entry > >::const_iterator c(m_bySerial.begin()); c != m_bySerial.end(); ++c) {
 			if (c->second->error() == ZT_CERTIFICATE_ERROR_NONE) {
 				for (unsigned int j = 0; j < c->second->m_certificate.subject.certificateCount; ++j)
-					bySignedCert[SHA384Hash(c->second->m_certificate.subject.certificates[j])].push_back(c->second);
+					bySignedCert[H384(c->second->m_certificate.subject.certificates[j])].push_back(c->second);
 			}
 		}
 
 		// Validate certificate paths and reject any certificates that do not trace back to a CA.
-		for (Map< SHA384Hash, SharedPtr< Entry > >::const_iterator c(m_bySerial.begin()); c != m_bySerial.end(); ++c) {
+		for (Map< H384, SharedPtr< Entry > >::const_iterator c(m_bySerial.begin()); c != m_bySerial.end(); ++c) {
 			if (c->second->error() == ZT_CERTIFICATE_ERROR_NONE) {
 				if (!p_validatePath(bySignedCert, c->second, 0))
 					c->second->m_error.store((int)ZT_CERTIFICATE_ERROR_INVALID_CHAIN, std::memory_order_relaxed);
@@ -160,7 +160,7 @@ void TrustStore::update(const int64_t clock, Vector< SharedPtr< Entry > > *const
 		// that have been superseded by newly issued certificates with the same subject.
 		bool exitLoop = true;
 		m_bySubjectUniqueId.clear();
-		for (Map< SHA384Hash, SharedPtr< Entry > >::const_iterator c(m_bySerial.begin()); c != m_bySerial.end();) {
+		for (Map< H384, SharedPtr< Entry > >::const_iterator c(m_bySerial.begin()); c != m_bySerial.end();) {
 			if (c->second->error() == ZT_CERTIFICATE_ERROR_NONE) {
 				const unsigned int uniqueIdSize = c->second->m_certificate.subject.uniqueIdSize;
 				if ((uniqueIdSize > 0) && (uniqueIdSize <= 1024)) { // 1024 is a sanity check value, actual unique IDs are <100 bytes
@@ -200,7 +200,7 @@ void TrustStore::update(const int64_t clock, Vector< SharedPtr< Entry > > *const
 
 	// Populate mapping of identities to certificates whose subjects reference them.
 	m_bySubjectIdentity.clear();
-	for (Map< SHA384Hash, SharedPtr< Entry > >::const_iterator c(m_bySerial.begin()); c != m_bySerial.end(); ++c) {
+	for (Map< H384, SharedPtr< Entry > >::const_iterator c(m_bySerial.begin()); c != m_bySerial.end(); ++c) {
 		if (c->second->error() == ZT_CERTIFICATE_ERROR_NONE) {
 			for (unsigned int i = 0; i < c->second->m_certificate.subject.identityCount; ++i) {
 				const Identity *const id = reinterpret_cast<const Identity *>(c->second->m_certificate.subject.identities[i].identity);
@@ -212,7 +212,7 @@ void TrustStore::update(const int64_t clock, Vector< SharedPtr< Entry > > *const
 
 	// Purge and return purged certificates if this option is selected.
 	if (purge) {
-		for (Map< SHA384Hash, SharedPtr< Entry > >::const_iterator c(m_bySerial.begin()); c != m_bySerial.end();) {
+		for (Map< H384, SharedPtr< Entry > >::const_iterator c(m_bySerial.begin()); c != m_bySerial.end();) {
 			if (c->second->error() != ZT_CERTIFICATE_ERROR_NONE) {
 				purge->push_back(c->second);
 				m_bySerial.erase(c++);

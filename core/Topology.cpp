@@ -170,7 +170,7 @@ void Topology::m_loadCached(void *tPtr, const Address &zta, SharedPtr< Peer > &p
 		uint64_t id[2];
 		id[0] = zta.toInt();
 		id[1] = 0;
-		Vector< uint8_t > data(RR->node->stateObjectGet(tPtr, ZT_STATE_OBJECT_PEER, id, 1));
+		Vector< uint8_t > data(RR->store->get(tPtr, ZT_STATE_OBJECT_PEER, id, 1));
 		if (data.size() > 8) {
 			const uint8_t *d = data.data();
 			int dl = (int)data.size();

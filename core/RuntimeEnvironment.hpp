@@ -18,6 +18,8 @@
 #include "Utils.hpp"
 #include "Identity.hpp"
 #include "AES.hpp"
+#include "TinyMap.hpp"
+#include "SharedPtr.hpp"
 
 namespace ZeroTier {
 
@@ -30,6 +32,8 @@ class SelfAwareness;
 class Trace;
 class Expect;
 class TrustStore;
+class Store;
+class Network;
 
 /**
  * ZeroTier::Node execution context
@@ -44,7 +48,9 @@ public:
 	ZT_INLINE RuntimeEnvironment(Node *const n) noexcept:
 		instanceId(Utils::getSecureRandomU64()),
 		node(n),
+		uPtr(nullptr),
 		localNetworkController(nullptr),
+		store(nullptr),
 		t(nullptr),
 		expect(nullptr),
 		vl2(nullptr),
@@ -68,9 +74,17 @@ public:
 	// Node instance that owns this RuntimeEnvironment
 	Node *const node;
 
+	// Callbacks specified by caller who created node
+	ZT_Node_Callbacks cb;
+
+	// User pointer specified by external code via API
+	void *uPtr;
+
 	// This is set externally to an instance of this base class
 	NetworkController *localNetworkController;
 
+	Store *store;
+	TinyMap< SharedPtr< Network > > *networks;
 	Trace *t;
 	Expect *expect;
 	VL2 *vl2;
@@ -84,8 +98,8 @@ public:
 	char publicIdentityStr[ZT_IDENTITY_STRING_BUFFER_LENGTH];
 	char secretIdentityStr[ZT_IDENTITY_STRING_BUFFER_LENGTH];
 
-	// AES keyed with a hash of this node's identity secret keys for local cache encryption at rest (where needed).
-	AES localCacheSymmetric;
+	// Symmetric key for encrypting secrets at rest on this system.
+	AES localSecretCipher;
 
 	// Privileged ports from 1 to 1023 in a random order (for IPv4 NAT traversal)
 	uint16_t randomPrivilegedPortOrder[1023];

@@ -9,7 +9,6 @@ configure_file(
 set(core_headers
 	zerotier.h
 	Address.hpp
-	Blob.hpp
 	Buf.hpp
 	C25519.hpp
 	CapabilityCredential.hpp
@@ -51,8 +50,10 @@ set(core_headers
 	SHA512.hpp
 	SharedPtr.hpp
 	Spinlock.hpp
+	Store.hpp
 	SymmetricKey.hpp
 	TagCredential.hpp
+	TinyMap.hpp
 	Topology.hpp
 	Trace.hpp
 	TriviallyCopyable.hpp

@@ -20,11 +20,10 @@
 namespace ZeroTier {
 
 /**
- * Simple zero-overhead introspective reference counted pointer
+ * An introspective reference counted pointer.
  *
- * This is an introspective shared pointer. Classes that need to be reference
- * counted must list this as a 'friend' and must have a private instance of
- * atomic<int> called __refCount.
+ * Classes must have an atomic<int> field called __refCount and set this class
+ * as a friend to be used with this.
  */
 template< typename T >
 class SharedPtr : public TriviallyCopyable

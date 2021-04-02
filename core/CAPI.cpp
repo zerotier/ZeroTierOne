@@ -16,6 +16,9 @@
 #include "Identity.hpp"
 #include "Locator.hpp"
 #include "Certificate.hpp"
+#include "InetAddress.hpp"
+#include "VL1.hpp"
+#include "VL2.hpp"
 
 extern "C" {
 
@@ -108,14 +111,14 @@ enum ZT_ResultCode ZT_Node_processWirePacket(
 {
 	try {
 		ZeroTier::SharedPtr< ZeroTier::Buf > buf((isZtBuffer) ? ZT_PTRTOBUF(packetData) : new ZeroTier::Buf(packetData, packetLength & ZT_BUF_MEM_MASK));
-		return reinterpret_cast<ZeroTier::Node *>(node)->processWirePacket(tptr, now, localSocket, ZT_InetAddress_ptr_cast_const_sockaddr_storage_ptr(remoteAddress), buf, packetLength, nextBackgroundTaskDeadline);
+		reinterpret_cast<ZeroTier::Node *>(node)->RR->vl1->onRemotePacket(tptr, localSocket, *ZeroTier::asInetAddress(remoteAddress), buf, packetLength);
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch (...) {
 		// "OK" since invalid packets are simply dropped, but the system is still up.
 		// We should never make it here, but if we did that would be the interpretation.
-		return ZT_RESULT_OK;
 	}
+	return ZT_RESULT_OK;
 }
 
 enum ZT_ResultCode ZT_Node_processVirtualNetworkFrame(
@@ -133,8 +136,14 @@ enum ZT_ResultCode ZT_Node_processVirtualNetworkFrame(
 	volatile int64_t *nextBackgroundTaskDeadline)
 {
 	try {
-		ZeroTier::SharedPtr< ZeroTier::Buf > buf((isZtBuffer) ? ZT_PTRTOBUF(frameData) : new ZeroTier::Buf(frameData, frameLength & ZT_BUF_MEM_MASK));
-		return reinterpret_cast<ZeroTier::Node *>(node)->processVirtualNetworkFrame(tptr, now, nwid, sourceMac, destMac, etherType, vlanId, buf, frameLength, nextBackgroundTaskDeadline);
+		ZeroTier::SharedPtr< ZeroTier::Network > network(reinterpret_cast<ZeroTier::Node *>(node)->RR->networks->get(nwid));
+		if (likely(network)) {
+			ZeroTier::SharedPtr< ZeroTier::Buf > buf((isZtBuffer) ? ZT_PTRTOBUF(frameData) : new ZeroTier::Buf(frameData, frameLength & ZT_BUF_MEM_MASK));
+			reinterpret_cast<ZeroTier::Node *>(node)->RR->vl2->onLocalEthernet(tptr, network, ZeroTier::MAC(sourceMac), ZeroTier::MAC(destMac), etherType, vlanId, buf, frameLength);
+			return ZT_RESULT_OK;
+		} else {
+			return ZT_RESULT_ERROR_NETWORK_NOT_FOUND;
+		}
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch (...) {
@@ -198,14 +207,10 @@ enum ZT_ResultCode ZT_Node_multicastUnsubscribe(ZT_Node *node, uint64_t nwid, ui
 }
 
 uint64_t ZT_Node_address(ZT_Node *node)
-{
-	return reinterpret_cast<ZeroTier::Node *>(node)->address();
-}
+{ return reinterpret_cast<ZeroTier::Node *>(node)->RR->identity.address().toInt(); }
 
 const ZT_Identity *ZT_Node_identity(ZT_Node *node)
-{
-	return (const ZT_Identity *)(&(reinterpret_cast<ZeroTier::Node *>(node)->identity()));
-}
+{ return (const ZT_Identity *)(&(reinterpret_cast<ZeroTier::Node *>(node)->identity())); }
 
 void ZT_Node_status(ZT_Node *node, ZT_NodeStatus *status)
 {
@@ -920,8 +925,6 @@ int ZT_Dictionary_parse(const void *const dict, const unsigned int len, void *co
 /********************************************************************************************************************/
 
 uint64_t ZT_random()
-{
-	return ZeroTier::Utils::random();
-}
+{ return ZeroTier::Utils::random(); }
 
 } // extern "C"

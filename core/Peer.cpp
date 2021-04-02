@@ -226,7 +226,7 @@ unsigned int Peer::hello(void *tPtr, int64_t localSocket, const InetAddress &atA
 	p1305.finish(polyMac);
 	Utils::storeMachineEndian< uint64_t >(outp.unsafeData + ZT_PROTO_PACKET_MAC_INDEX, polyMac[0]);
 
-	return (likely(RR->node->putPacket(tPtr, localSocket, atAddress, outp.unsafeData, ii))) ? ii : 0;
+	return (likely(RR->cb.wirePacketSendFunction(reinterpret_cast<ZT_Node *>(RR->node), RR->uPtr, tPtr, localSocket, reinterpret_cast<const ZT_InetAddress *>(&atAddress), outp.unsafeData, ii, 0) == 0)) ? ii : 0;
 }
 
 void Peer::pulse(void *const tPtr, const int64_t now, const bool isRoot)
@@ -443,7 +443,7 @@ void Peer::contact(void *tPtr, const int64_t now, const Endpoint &ep, int tries)
 	// traverse some NAT types. It has no effect otherwise.
 	if (ep.isInetAddr() && ep.ip().isV4()) {
 		++foo;
-		RR->node->putPacket(tPtr, -1, ep.ip(), &foo, 1, 2);
+		RR->cb.wirePacketSendFunction(reinterpret_cast<ZT_Node *>(RR->node), RR->uPtr, tPtr, -1, reinterpret_cast<const ZT_InetAddress *>(&ep.ip()), &foo, 1, 2);
 	}
 
 	// Make sure address is not already in the try queue. If so just update it.
@@ -508,7 +508,7 @@ void Peer::save(void *tPtr) const
 		uint64_t id[2];
 		id[0] = m_id.address().toInt();
 		id[1] = 0;
-		RR->node->stateObjectPut(tPtr, ZT_STATE_OBJECT_PEER, id, 1, buf, (unsigned int)len + 8);
+		RR->store->put(tPtr, ZT_STATE_OBJECT_PEER, id, 1, buf, (unsigned int)len + 8);
 	}
 }
 
@@ -528,9 +528,9 @@ int Peer::marshal(uint8_t data[ZT_PEER_MARSHAL_SIZE_MAX]) const noexcept
 	// SECURITY: encryption in place is only to protect secrets if they are
 	// cached to local storage. It's not used over the wire. Dumb ECB is fine
 	// because secret keys are random and have no structure to reveal.
-	RR->localCacheSymmetric.encrypt(m_identityKey->secret, data + 1 + ZT_ADDRESS_LENGTH);
-	RR->localCacheSymmetric.encrypt(m_identityKey->secret + 16, data + 1 + ZT_ADDRESS_LENGTH + 16);
-	RR->localCacheSymmetric.encrypt(m_identityKey->secret + 32, data + 1 + ZT_ADDRESS_LENGTH + 32);
+	RR->localSecretCipher.encrypt(m_identityKey->secret, data + 1 + ZT_ADDRESS_LENGTH);
+	RR->localSecretCipher.encrypt(m_identityKey->secret + 16, data + 1 + ZT_ADDRESS_LENGTH + 16);
+	RR->localSecretCipher.encrypt(m_identityKey->secret + 32, data + 1 + ZT_ADDRESS_LENGTH + 32);
 
 	int p = 1 + ZT_ADDRESS_LENGTH + 48;
 
@@ -593,9 +593,9 @@ int Peer::unmarshal(const uint8_t *restrict data, const int len) noexcept
 	if (Address(data + 1) == RR->identity.address()) {
 		uint8_t k[ZT_SYMMETRIC_KEY_SIZE];
 		static_assert(ZT_SYMMETRIC_KEY_SIZE == 48, "marshal() and unmarshal() must be revisited if ZT_SYMMETRIC_KEY_SIZE is changed");
-		RR->localCacheSymmetric.decrypt(data + 1 + ZT_ADDRESS_LENGTH, k);
-		RR->localCacheSymmetric.decrypt(data + 1 + ZT_ADDRESS_LENGTH + 16, k + 16);
-		RR->localCacheSymmetric.decrypt(data + 1 + ZT_ADDRESS_LENGTH + 32, k + 32);
+		RR->localSecretCipher.decrypt(data + 1 + ZT_ADDRESS_LENGTH, k);
+		RR->localSecretCipher.decrypt(data + 1 + ZT_ADDRESS_LENGTH + 16, k + 16);
+		RR->localSecretCipher.decrypt(data + 1 + ZT_ADDRESS_LENGTH + 32, k + 32);
 		m_identityKey.set(new SymmetricKey(RR->node->now(), k));
 		Utils::burn(k, sizeof(k));
 	}
@@ -715,11 +715,11 @@ unsigned int Peer::m_sendProbe(void *tPtr, int64_t localSocket, const InetAddres
 		InetAddress tmp(atAddress);
 		for (unsigned int i = 0; i < numPorts; ++i) {
 			tmp.setPort(ports[i]);
-			RR->node->putPacket(tPtr, -1, tmp, p, ZT_PROTO_MIN_PACKET_LENGTH);
+			RR->cb.wirePacketSendFunction(reinterpret_cast<ZT_Node *>(RR->node), RR->uPtr, tPtr, -1, reinterpret_cast<const ZT_InetAddress *>(&tmp), p, ZT_PROTO_MIN_PACKET_LENGTH, 0);
 		}
 		return ZT_PROTO_MIN_PACKET_LENGTH * numPorts;
 	} else {
-		RR->node->putPacket(tPtr, -1, atAddress, p, ZT_PROTO_MIN_PACKET_LENGTH);
+		RR->cb.wirePacketSendFunction(reinterpret_cast<ZT_Node *>(RR->node), RR->uPtr, tPtr, -1, reinterpret_cast<const ZT_InetAddress *>(&atAddress), p, ZT_PROTO_MIN_PACKET_LENGTH, 0);
 		return ZT_PROTO_MIN_PACKET_LENGTH;
 	}
 }

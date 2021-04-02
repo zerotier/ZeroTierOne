@@ -18,7 +18,6 @@
 #include "RuntimeEnvironment.hpp"
 #include "Containers.hpp"
 #include "Certificate.hpp"
-#include "Blob.hpp"
 #include "SHA512.hpp"
 #include "SharedPtr.hpp"
 #include "Identity.hpp"
@@ -106,7 +105,7 @@ public:
 	 * @param serial SHA384 hash of certificate
 	 * @return Entry or empty/nil if not found
 	 */
-	SharedPtr< Entry > get(const SHA384Hash &serial) const;
+	SharedPtr< Entry > get(const H384 &serial) const;
 
 	/**
 	 * Get roots specified by root set certificates in the local store.
@@ -153,7 +152,7 @@ public:
 	 *
 	 * @param serial Serial of certificate to delete
 	 */
-	void erase(const SHA384Hash &serial);
+	void erase(const H384 &serial);
 
 	/**
 	 * Validate all certificates and their certificate chains
@@ -166,11 +165,11 @@ public:
 	void update(int64_t clock, Vector< SharedPtr< Entry > > *purge);
 
 private:
-	Map< SHA384Hash, SharedPtr< Entry > > m_bySerial; // all certificates
+	Map< H384, SharedPtr< Entry > > m_bySerial; // all certificates
 	Map< Vector< uint8_t >, SharedPtr< Entry > > m_bySubjectUniqueId; // non-rejected certificates only
 	Map< Fingerprint, Vector< SharedPtr< Entry > > > m_bySubjectIdentity; // non-rejected certificates only
 	ForwardList< SharedPtr< Entry > > m_addQueue;
-	ForwardList< SHA384Hash > m_deleteQueue;
+	ForwardList< H384 > m_deleteQueue;
 	RWMutex m_lock;
 };
 

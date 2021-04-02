@@ -24,7 +24,6 @@
 #include "SharedPtr.hpp"
 #include "ScopedPtr.hpp"
 #include "Fingerprint.hpp"
-#include "Blob.hpp"
 #include "FCV.hpp"
 #include "Certificate.hpp"
 #include "Containers.hpp"

@@ -163,7 +163,7 @@ ZT_Certificate_Network *Certificate::addSubjectNetwork(const uint64_t id, const 
 void Certificate::addSubjectCertificate(const uint8_t serialNo[ZT_SHA384_DIGEST_SIZE])
 {
 	// Store local copy of serial in m_serials container.
-	m_serials.push_front(SHA384Hash(serialNo));
+	m_serials.push_front(H384(serialNo));
 
 	// Enlarge array of uint8_t pointers, set new pointer to local copy of serial, and set
 	// certificates to point to potentially reallocated array.

@@ -22,7 +22,6 @@
 #include "Locator.hpp"
 #include "Dictionary.hpp"
 #include "Utils.hpp"
-#include "Blob.hpp"
 #include "Containers.hpp"
 
 namespace ZeroTier {
@@ -63,11 +62,8 @@ public:
 		return *this;
 	}
 
-	/**
-	 * @return SHA384Hash containing serial number
-	 */
-	ZT_INLINE SHA384Hash getSerialNo() const noexcept
-	{ return SHA384Hash(this->serialNo); }
+	ZT_INLINE H384 getSerialNo() const noexcept
+	{ return H384(this->serialNo); }
 
 	/**
 	 * Add a subject node/identity without a locator
@@ -223,7 +219,7 @@ private:
 	ForwardList< Identity > m_identities;
 	ForwardList< Locator > m_locators;
 	ForwardList< String > m_strings;
-	ForwardList< SHA384Hash > m_serials;
+	ForwardList< H384 > m_serials;
 
 	// These are stored in a vector because the memory needs to be contiguous.
 	Vector< ZT_Certificate_Identity > m_subjectIdentities;

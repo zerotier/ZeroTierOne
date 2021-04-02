@@ -31,12 +31,10 @@ namespace ZeroTier {
 class Address : public TriviallyCopyable
 {
 public:
-	ZT_INLINE Address() noexcept:
-		_a(0)
+	ZT_INLINE Address() noexcept: _a(0)
 	{}
 
-	ZT_INLINE Address(const uint64_t a) noexcept:
-		_a(a)
+	ZT_INLINE Address(const uint64_t a) noexcept: _a(a)
 	{}
 
 	explicit ZT_INLINE Address(const uint8_t b[5]) noexcept:

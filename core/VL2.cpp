@@ -13,7 +13,6 @@
 
 #include "VL2.hpp"
 #include "RuntimeEnvironment.hpp"
-#include "Node.hpp"
 #include "VL1.hpp"
 #include "Topology.hpp"
 #include "Peer.hpp"
