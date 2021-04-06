@@ -28,7 +28,7 @@ Member::Member() :
 {
 }
 
-void Member::pushCredentials(const RuntimeEnvironment *RR, void *tPtr, const int64_t now, const SharedPtr< Peer > &to, const NetworkConfig &nconf)
+void Member::pushCredentials(const RuntimeEnvironment *RR, CallContext &cc, const SharedPtr< Peer > &to, const NetworkConfig &nconf)
 {
 	if (!nconf.com) // sanity check
 		return;
@@ -112,7 +112,7 @@ void Member::pushCredentials(const RuntimeEnvironment *RR, void *tPtr, const int
 	}
 #endif
 
-	m_lastPushedCredentials = now;
+	m_lastPushedCredentials = cc.ticks;
 }
 
 void Member::clean(const NetworkConfig &nconf)
@@ -122,31 +122,31 @@ void Member::clean(const NetworkConfig &nconf)
 	m_cleanCredImpl< OwnershipCredential >(nconf, m_remoteCoos);
 }
 
-Member::AddCredentialResult Member::addCredential(const RuntimeEnvironment *RR, void *tPtr, const Identity &sourcePeerIdentity, const NetworkConfig &nconf, const MembershipCredential &com)
+Member::AddCredentialResult Member::addCredential(const RuntimeEnvironment *RR, CallContext &cc, const Identity &sourcePeerIdentity, const NetworkConfig &nconf, const MembershipCredential &com)
 {
 	const int64_t newts = com.timestamp();
 	if (newts <= m_comRevocationThreshold) {
-		RR->t->credentialRejected(tPtr, 0xd9992121, com.networkId(), sourcePeerIdentity, com.id(), com.timestamp(), ZT_CREDENTIAL_TYPE_COM, ZT_TRACE_CREDENTIAL_REJECTION_REASON_REVOKED);
+		RR->t->credentialRejected(cc, 0xd9992121, com.networkId(), sourcePeerIdentity, com.id(), com.timestamp(), ZT_CREDENTIAL_TYPE_COM, ZT_TRACE_CREDENTIAL_REJECTION_REASON_REVOKED);
 		return ADD_REJECTED;
 	}
 
 	const int64_t oldts = m_com.timestamp();
 	if (newts < oldts) {
-		RR->t->credentialRejected(tPtr, 0xd9928192, com.networkId(), sourcePeerIdentity, com.id(), com.timestamp(), ZT_CREDENTIAL_TYPE_COM, ZT_TRACE_CREDENTIAL_REJECTION_REASON_OLDER_THAN_LATEST);
+		RR->t->credentialRejected(cc, 0xd9928192, com.networkId(), sourcePeerIdentity, com.id(), com.timestamp(), ZT_CREDENTIAL_TYPE_COM, ZT_TRACE_CREDENTIAL_REJECTION_REASON_OLDER_THAN_LATEST);
 		return ADD_REJECTED;
 	}
 	if ((newts == oldts) && (m_com == com))
 		return ADD_ACCEPTED_REDUNDANT;
 
-	switch (com.verify(RR, tPtr)) {
+	switch (com.verify(RR, cc)) {
 		default:
-			RR->t->credentialRejected(tPtr, 0x0f198241, com.networkId(), sourcePeerIdentity, com.id(), com.timestamp(), ZT_CREDENTIAL_TYPE_COM, ZT_TRACE_CREDENTIAL_REJECTION_REASON_INVALID);
+			RR->t->credentialRejected(cc, 0x0f198241, com.networkId(), sourcePeerIdentity, com.id(), com.timestamp(), ZT_CREDENTIAL_TYPE_COM, ZT_TRACE_CREDENTIAL_REJECTION_REASON_INVALID);
 			return Member::ADD_REJECTED;
 		case Credential::VERIFY_OK:
 			m_com = com;
 			return ADD_ACCEPTED_NEW;
 		case Credential::VERIFY_BAD_SIGNATURE:
-			RR->t->credentialRejected(tPtr, 0xbaf0aaaa, com.networkId(), sourcePeerIdentity, com.id(), com.timestamp(), ZT_CREDENTIAL_TYPE_COM, ZT_TRACE_CREDENTIAL_REJECTION_REASON_SIGNATURE_VERIFICATION_FAILED);
+			RR->t->credentialRejected(cc, 0xbaf0aaaa, com.networkId(), sourcePeerIdentity, com.id(), com.timestamp(), ZT_CREDENTIAL_TYPE_COM, ZT_TRACE_CREDENTIAL_REJECTION_REASON_SIGNATURE_VERIFICATION_FAILED);
 			return ADD_REJECTED;
 		case Credential::VERIFY_NEED_IDENTITY:
 			return ADD_DEFERRED_FOR_WHOIS;
@@ -159,15 +159,15 @@ static ZT_INLINE Member::AddCredentialResult _addCredImpl(
 	Map< uint32_t, C > &remoteCreds,
 	const Map< uint64_t, int64_t > &revocations,
 	const RuntimeEnvironment *const RR,
-	void *const tPtr,
+	CallContext &cc,
 	const Identity &sourcePeerIdentity,
 	const NetworkConfig &nconf,
 	const C &cred)
 {
 	typename Map< uint32_t, C >::const_iterator rc(remoteCreds.find(cred.id()));
 	if (rc != remoteCreds.end()) {
-		if (rc->second.timestamp() > cred.timestamp()) {
-			RR->t->credentialRejected(tPtr, 0x40000001, nconf.networkId, sourcePeerIdentity, cred.id(), cred.timestamp(), C::credentialType(), ZT_TRACE_CREDENTIAL_REJECTION_REASON_OLDER_THAN_LATEST);
+		if (rc->second.revision() > cred.revision()) {
+			RR->t->credentialRejected(cc, 0x40000001, nconf.networkId, sourcePeerIdentity, cred.id(), cred.revision(), C::credentialType(), ZT_TRACE_CREDENTIAL_REJECTION_REASON_OLDER_THAN_LATEST);
 			return Member::ADD_REJECTED;
 		}
 		if (rc->second == cred)
@@ -175,14 +175,14 @@ static ZT_INLINE Member::AddCredentialResult _addCredImpl(
 	}
 
 	typename Map< uint64_t, int64_t >::const_iterator rt(revocations.find(Member::credentialKey(C::credentialType(), cred.id())));
-	if ((rt != revocations.end()) && (rt->second >= cred.timestamp())) {
-		RR->t->credentialRejected(tPtr, 0x24248124, nconf.networkId, sourcePeerIdentity, cred.id(), cred.timestamp(), C::credentialType(), ZT_TRACE_CREDENTIAL_REJECTION_REASON_REVOKED);
+	if ((rt != revocations.end()) && (rt->second >= cred.revision())) {
+		RR->t->credentialRejected(cc, 0x24248124, nconf.networkId, sourcePeerIdentity, cred.id(), cred.revision(), C::credentialType(), ZT_TRACE_CREDENTIAL_REJECTION_REASON_REVOKED);
 		return Member::ADD_REJECTED;
 	}
 
-	switch (cred.verify(RR, tPtr)) {
+	switch (cred.verify(RR, cc)) {
 		default:
-			RR->t->credentialRejected(tPtr, 0x01feba012, nconf.networkId, sourcePeerIdentity, cred.id(), cred.timestamp(), C::credentialType(), ZT_TRACE_CREDENTIAL_REJECTION_REASON_INVALID);
+			RR->t->credentialRejected(cc, 0x01feba012, nconf.networkId, sourcePeerIdentity, cred.id(), cred.revision(), C::credentialType(), ZT_TRACE_CREDENTIAL_REJECTION_REASON_INVALID);
 			return Member::ADD_REJECTED;
 		case 0:
 			if (rc == remoteCreds.end())
@@ -193,21 +193,21 @@ static ZT_INLINE Member::AddCredentialResult _addCredImpl(
 	}
 }
 
-Member::AddCredentialResult Member::addCredential(const RuntimeEnvironment *RR, void *tPtr, const Identity &sourcePeerIdentity, const NetworkConfig &nconf, const TagCredential &tag)
-{ return _addCredImpl< TagCredential >(m_remoteTags, m_revocations, RR, tPtr, sourcePeerIdentity, nconf, tag); }
+Member::AddCredentialResult Member::addCredential(const RuntimeEnvironment *RR, CallContext &cc, const Identity &sourcePeerIdentity, const NetworkConfig &nconf, const TagCredential &tag)
+{ return _addCredImpl< TagCredential >(m_remoteTags, m_revocations, RR, cc, sourcePeerIdentity, nconf, tag); }
 
-Member::AddCredentialResult Member::addCredential(const RuntimeEnvironment *RR, void *tPtr, const Identity &sourcePeerIdentity, const NetworkConfig &nconf, const CapabilityCredential &cap)
-{ return _addCredImpl< CapabilityCredential >(m_remoteCaps, m_revocations, RR, tPtr, sourcePeerIdentity, nconf, cap); }
+Member::AddCredentialResult Member::addCredential(const RuntimeEnvironment *RR, CallContext &cc, const Identity &sourcePeerIdentity, const NetworkConfig &nconf, const CapabilityCredential &cap)
+{ return _addCredImpl< CapabilityCredential >(m_remoteCaps, m_revocations, RR, cc, sourcePeerIdentity, nconf, cap); }
 
-Member::AddCredentialResult Member::addCredential(const RuntimeEnvironment *RR, void *tPtr, const Identity &sourcePeerIdentity, const NetworkConfig &nconf, const OwnershipCredential &coo)
-{ return _addCredImpl< OwnershipCredential >(m_remoteCoos, m_revocations, RR, tPtr, sourcePeerIdentity, nconf, coo); }
+Member::AddCredentialResult Member::addCredential(const RuntimeEnvironment *RR, CallContext &cc, const Identity &sourcePeerIdentity, const NetworkConfig &nconf, const OwnershipCredential &coo)
+{ return _addCredImpl< OwnershipCredential >(m_remoteCoos, m_revocations, RR, cc, sourcePeerIdentity, nconf, coo); }
 
-Member::AddCredentialResult Member::addCredential(const RuntimeEnvironment *RR, void *tPtr, const Identity &sourcePeerIdentity, const NetworkConfig &nconf, const RevocationCredential &rev)
+Member::AddCredentialResult Member::addCredential(const RuntimeEnvironment *RR, CallContext &cc, const Identity &sourcePeerIdentity, const NetworkConfig &nconf, const RevocationCredential &rev)
 {
 	int64_t *rt;
-	switch (rev.verify(RR, tPtr)) {
+	switch (rev.verify(RR, cc)) {
 		default:
-			RR->t->credentialRejected(tPtr, 0x938fffff, nconf.networkId, sourcePeerIdentity, rev.id(), 0, ZT_CREDENTIAL_TYPE_REVOCATION, ZT_TRACE_CREDENTIAL_REJECTION_REASON_INVALID);
+			RR->t->credentialRejected(cc, 0x938fffff, nconf.networkId, sourcePeerIdentity, rev.id(), 0, ZT_CREDENTIAL_TYPE_REVOCATION, ZT_TRACE_CREDENTIAL_REJECTION_REASON_INVALID);
 			return ADD_REJECTED;
 		case 0: {
 			const ZT_CredentialType ct = rev.typeBeingRevoked();
@@ -229,7 +229,7 @@ Member::AddCredentialResult Member::addCredential(const RuntimeEnvironment *RR, 
 					}
 					return ADD_ACCEPTED_REDUNDANT;
 				default:
-					RR->t->credentialRejected(tPtr, 0x0bbbb1a4, nconf.networkId, sourcePeerIdentity, rev.id(), 0, ZT_CREDENTIAL_TYPE_REVOCATION, ZT_TRACE_CREDENTIAL_REJECTION_REASON_INVALID);
+					RR->t->credentialRejected(cc, 0x0bbbb1a4, nconf.networkId, sourcePeerIdentity, rev.id(), 0, ZT_CREDENTIAL_TYPE_REVOCATION, ZT_TRACE_CREDENTIAL_REJECTION_REASON_INVALID);
 					return ADD_REJECTED;
 			}
 		}

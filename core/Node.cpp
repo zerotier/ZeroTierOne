@@ -35,13 +35,13 @@ namespace {
 
 struct _NodeObjects
 {
-	ZT_INLINE _NodeObjects(RuntimeEnvironment *const RR, Node *const n, void *const tPtr, const int64_t now) :
+	ZT_INLINE _NodeObjects(RuntimeEnvironment *const RR, CallContext &cc) :
 		networks(),
 		t(RR),
 		expect(),
 		vl2(RR),
 		vl1(RR),
-		topology(RR, tPtr, now),
+		topology(RR, cc),
 		sa(RR),
 		ts()
 	{
@@ -69,9 +69,8 @@ struct _NodeObjects
 
 Node::Node(
 	void *uPtr,
-	void *tPtr,
 	const struct ZT_Node_Callbacks *callbacks,
-	int64_t now) :
+	CallContext &cc) :
 	m_RR(this),
 	RR(&m_RR),
 	m_store(&m_RR),
@@ -79,8 +78,7 @@ Node::Node(
 	m_lastPeerPulse(0),
 	m_lastHousekeepingRun(0),
 	m_lastNetworkHousekeepingRun(0),
-	m_lastRootRank(0),
-	m_now(now),
+	m_lastTrustStoreUpdate(0),
 	m_online(false)
 {
 	ZT_SPEW("Node starting up!");
@@ -89,7 +87,7 @@ Node::Node(
 	m_RR.uPtr = uPtr;
 	m_RR.store = &m_store;
 
-	Vector< uint8_t > data(m_store.get(tPtr, ZT_STATE_OBJECT_IDENTITY_SECRET, Utils::ZERO256, 0));
+	Vector< uint8_t > data(m_store.get(cc, ZT_STATE_OBJECT_IDENTITY_SECRET, Utils::ZERO256, 0));
 	bool haveIdentity = false;
 	if (!data.empty()) {
 		data.push_back(0); // zero-terminate string
@@ -105,13 +103,13 @@ Node::Node(
 		m_RR.identity.generate(Identity::C25519);
 		m_RR.identity.toString(false, m_RR.publicIdentityStr);
 		m_RR.identity.toString(true, m_RR.secretIdentityStr);
-		m_store.put(tPtr, ZT_STATE_OBJECT_IDENTITY_SECRET, Utils::ZERO256, 0, m_RR.secretIdentityStr, (unsigned int)strlen(m_RR.secretIdentityStr));
-		m_store.put(tPtr, ZT_STATE_OBJECT_IDENTITY_PUBLIC, Utils::ZERO256, 0, m_RR.publicIdentityStr, (unsigned int)strlen(m_RR.publicIdentityStr));
+		m_store.put(cc, ZT_STATE_OBJECT_IDENTITY_SECRET, Utils::ZERO256, 0, m_RR.secretIdentityStr, (unsigned int)strlen(m_RR.secretIdentityStr));
+		m_store.put(cc, ZT_STATE_OBJECT_IDENTITY_PUBLIC, Utils::ZERO256, 0, m_RR.publicIdentityStr, (unsigned int)strlen(m_RR.publicIdentityStr));
 		ZT_SPEW("no pre-existing identity found, created %s", RR->identity.toString().c_str());
 	} else {
-		data = m_store.get(tPtr, ZT_STATE_OBJECT_IDENTITY_PUBLIC, Utils::ZERO256, 0);
+		data = m_store.get(cc, ZT_STATE_OBJECT_IDENTITY_PUBLIC, Utils::ZERO256, 0);
 		if ((data.empty()) || (memcmp(data.data(), m_RR.publicIdentityStr, strlen(m_RR.publicIdentityStr)) != 0))
-			m_store.put(tPtr, ZT_STATE_OBJECT_IDENTITY_PUBLIC, Utils::ZERO256, 0, m_RR.publicIdentityStr, (unsigned int)strlen(m_RR.publicIdentityStr));
+			m_store.put(cc, ZT_STATE_OBJECT_IDENTITY_PUBLIC, Utils::ZERO256, 0, m_RR.publicIdentityStr, (unsigned int)strlen(m_RR.publicIdentityStr));
 	}
 
 	uint8_t localSecretCipherKey[ZT_FINGERPRINT_HASH_SIZE];
@@ -133,10 +131,10 @@ Node::Node(
 		}
 	}
 
-	m_objects = new _NodeObjects(&m_RR, this, tPtr, now);
+	m_objects = new _NodeObjects(&m_RR, cc);
 
 	ZT_SPEW("node initialized!");
-	postEvent(tPtr, ZT_EVENT_UP);
+	postEvent(cc.tPtr, ZT_EVENT_UP);
 }
 
 Node::~Node()
@@ -157,28 +155,59 @@ Node::~Node()
 	Buf::freePool();
 }
 
-void Node::shutdown(void *tPtr)
+void Node::shutdown(CallContext &cc)
 {
 	m_allNetworks_l.lock();
 	RR->networks->clear();
 	m_allNetworks.clear();
 	m_allNetworks_l.unlock();
-	postEvent(tPtr, ZT_EVENT_DOWN);
+
+	postEvent(cc.tPtr, ZT_EVENT_DOWN);
+
 	if (RR->topology)
-		RR->topology->saveAll(tPtr);
+		RR->topology->saveAll(cc);
 }
 
 ZT_ResultCode Node::processBackgroundTasks(
-	void *tPtr,
-	int64_t now,
+	CallContext &cc,
 	volatile int64_t *nextBackgroundTaskDeadline)
 {
-	m_now = now;
 	Mutex::Lock bl(m_backgroundTasksLock);
 
 	try {
-		if ((now - m_lastPeerPulse) >= ZT_PEER_PULSE_INTERVAL) {
-			m_lastPeerPulse = now;
+		// Updating the trust store means checking certificates and certificate chains
+		// against the current time, etc., and also resynchronizing roots as specified by
+		// certificates. This also happens on demand when the trust store is changed.
+		if ((cc.ticks - m_lastTrustStoreUpdate) >= ZT_TRUSTSTORE_UPDATE_PERIOD) {
+			m_lastTrustStoreUpdate = cc.ticks;
+			if (RR->ts->update(cc.ticks, nullptr))
+				RR->topology->trustStoreChanged(cc);
+		}
+
+		// Networks perform housekeeping here such as refreshing configs.
+		if ((cc.ticks - m_lastNetworkHousekeepingRun) >= ZT_NETWORK_HOUSEKEEPING_PERIOD) {
+			m_lastNetworkHousekeepingRun = cc.ticks;
+			ZT_SPEW("running networking housekeeping...");
+			Mutex::Lock l(m_allNetworks_l);
+			for (Vector< SharedPtr< Network > >::const_iterator n(m_allNetworks.begin()); n != m_allNetworks.end(); ++n)
+				(*n)->doPeriodicTasks(cc);
+		}
+
+		// Perform general housekeeping for other objects in the system.
+		if ((cc.ticks - m_lastHousekeepingRun) >= ZT_HOUSEKEEPING_PERIOD) {
+			m_lastHousekeepingRun = cc.ticks;
+			ZT_SPEW("running housekeeping...");
+
+			RR->topology->doPeriodicTasks(cc);
+			RR->sa->clean(cc);
+		}
+
+		// Peers have a "pulse" method that does things like keepalive and path housekeeping.
+		// This happens last because keepalives are only necessary if nothing has been sent
+		// in a while, and some of the above actions may cause peers to send things which may
+		// reduce the need for keepalives. Root ranking also happens here.
+		if ((cc.ticks - m_lastPeerPulse) >= ZT_PEER_PULSE_INTERVAL) {
+			m_lastPeerPulse = cc.ticks;
 			ZT_SPEW("running pulse() on each peer...");
 			try {
 				Vector< SharedPtr< Peer > > allPeers, rootPeers;
@@ -187,41 +216,21 @@ ZT_ResultCode Node::processBackgroundTasks(
 				bool online = false;
 				for (Vector< SharedPtr< Peer > >::iterator p(allPeers.begin()); p != allPeers.end(); ++p) {
 					const bool isRoot = std::find(rootPeers.begin(), rootPeers.end(), *p) != rootPeers.end();
-					(*p)->pulse(tPtr, now, isRoot);
-					online |= ((isRoot || rootPeers.empty()) && (*p)->directlyConnected(now));
+					(*p)->pulse(cc, isRoot);
+					online |= ((isRoot || rootPeers.empty()) && (*p)->directlyConnected(cc));
 				}
 
 				if (m_online.exchange(online) != online)
-					postEvent(tPtr, online ? ZT_EVENT_ONLINE : ZT_EVENT_OFFLINE);
+					postEvent(cc.tPtr, online ? ZT_EVENT_ONLINE : ZT_EVENT_OFFLINE);
+
+				ZT_SPEW("ranking roots...");
+				RR->topology->rankRoots(cc);
 			} catch (...) {
 				return ZT_RESULT_FATAL_ERROR_INTERNAL;
 			}
 		}
 
-		if ((now - m_lastNetworkHousekeepingRun) >= ZT_NETWORK_HOUSEKEEPING_PERIOD) {
-			m_lastHousekeepingRun = now;
-			ZT_SPEW("running networking housekeeping...");
-			Mutex::Lock l(m_allNetworks_l);
-			for (Vector< SharedPtr< Network > >::const_iterator i(m_allNetworks.begin()); i != m_allNetworks.end(); ++i) {
-				(*i)->doPeriodicTasks(tPtr, now);
-			}
-		}
-
-		if ((now - m_lastHousekeepingRun) >= ZT_HOUSEKEEPING_PERIOD) {
-			m_lastHousekeepingRun = now;
-			ZT_SPEW("running housekeeping...");
-
-			RR->topology->doPeriodicTasks(tPtr, now);
-			RR->sa->clean(now);
-		}
-
-		if ((now - m_lastRootRank) >= ZT_ROOT_RANK_PERIOD) {
-			m_lastRootRank = now;
-			ZT_SPEW("ranking roots...");
-			RR->topology->rankRoots(now);
-		}
-
-		*nextBackgroundTaskDeadline = now + ZT_TIMER_TASK_INTERVAL;
+		*nextBackgroundTaskDeadline = cc.ticks + ZT_TIMER_TASK_INTERVAL;
 	} catch (...) {
 		return ZT_RESULT_FATAL_ERROR_INTERNAL;
 	}
@@ -233,7 +242,7 @@ ZT_ResultCode Node::join(
 	uint64_t nwid,
 	const ZT_Fingerprint *controllerFingerprint,
 	void *uptr,
-	void *tptr)
+	CallContext &cc)
 {
 	Mutex::Lock l(m_allNetworks_l);
 
@@ -249,7 +258,7 @@ ZT_ResultCode Node::join(
 		if ((*n)->id() == nwid)
 			return ZT_RESULT_OK;
 	}
-	SharedPtr< Network > network(new Network(RR, tptr, nwid, fp, uptr, nullptr));
+	SharedPtr< Network > network(new Network(RR, cc, nwid, fp, uptr, nullptr));
 	m_allNetworks.push_back(network);
 	RR->networks->set(nwid, network);
 
@@ -259,7 +268,7 @@ ZT_ResultCode Node::join(
 ZT_ResultCode Node::leave(
 	uint64_t nwid,
 	void **uptr,
-	void *tptr)
+	CallContext &cc)
 {
 	Mutex::Lock l(m_allNetworks_l);
 
@@ -279,21 +288,22 @@ ZT_ResultCode Node::leave(
 	uint64_t tmp[2];
 	tmp[0] = nwid;
 	tmp[1] = 0;
-	m_store.erase(tptr, ZT_STATE_OBJECT_NETWORK_CONFIG, tmp, 1);
+	m_store.erase(cc, ZT_STATE_OBJECT_NETWORK_CONFIG, tmp, 1);
 
 	if (network) {
 		if (uptr)
 			*uptr = *network->userPtr();
 		network->externalConfig(&ctmp);
-		RR->node->configureVirtualNetworkPort(tptr, nwid, uptr, ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY, &ctmp);
+		RR->cb.virtualNetworkConfigFunction(reinterpret_cast<ZT_Node *>(this), RR->uPtr, cc.tPtr, nwid, network->userPtr(), ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY, &ctmp);
 		network->destroy();
 		return ZT_RESULT_OK;
+	} else {
+		return ZT_RESULT_ERROR_NETWORK_NOT_FOUND;
 	}
-	return ZT_RESULT_ERROR_NETWORK_NOT_FOUND;
 }
 
 ZT_ResultCode Node::multicastSubscribe(
-	void *tPtr,
+	CallContext &cc,
 	uint64_t nwid,
 	uint64_t multicastGroup,
 	unsigned long multicastAdi)
@@ -301,7 +311,7 @@ ZT_ResultCode Node::multicastSubscribe(
 	ZT_SPEW("multicast subscribe to %s:%lu", MAC(multicastGroup).toString().c_str(), multicastAdi);
 	const SharedPtr< Network > nw(RR->networks->get(nwid));
 	if (nw) {
-		nw->multicastSubscribe(tPtr, MulticastGroup(MAC(multicastGroup), (uint32_t)(multicastAdi & 0xffffffff)));
+		nw->multicastSubscribe(cc, MulticastGroup(MAC(multicastGroup), (uint32_t)(multicastAdi & 0xffffffff)));
 		return ZT_RESULT_OK;
 	} else {
 		return ZT_RESULT_ERROR_NETWORK_NOT_FOUND;
@@ -309,6 +319,7 @@ ZT_ResultCode Node::multicastSubscribe(
 }
 
 ZT_ResultCode Node::multicastUnsubscribe(
+	CallContext &cc,
 	uint64_t nwid,
 	uint64_t multicastGroup,
 	unsigned long multicastAdi)
@@ -353,7 +364,7 @@ struct p_sortPeerPtrsByAddress
 	{ return (a->address() < b->address()); }
 };
 
-ZT_PeerList *Node::peers() const
+ZT_PeerList *Node::peers(CallContext &cc) const
 {
 	p_ZT_PeerListPrivate *pl = nullptr;
 	try {
@@ -364,7 +375,6 @@ ZT_PeerList *Node::peers() const
 		RR->topology->allPeers(peers, rootPeers);
 		std::sort(peers.begin(), peers.end(), p_sortPeerPtrsByAddress());
 		std::sort(rootPeers.begin(), rootPeers.end());
-		int64_t now = m_now;
 
 		for (Vector< SharedPtr< Peer > >::iterator pi(peers.begin()); pi != peers.end(); ++pi) {
 			pl->p_peers.push_back(ZT_Peer());
@@ -405,7 +415,7 @@ ZT_PeerList *Node::peers() const
 					Utils::copy< sizeof(struct sockaddr_storage) >(&(apip.endpoint.value.ss), &(ztp->address().as.ss));
 					apip.lastSend = ztp->lastOut();
 					apip.lastReceive = ztp->lastIn();
-					apip.alive = ztp->alive(now) ? 1 : 0;
+					apip.alive = ztp->alive(cc) ? 1 : 0;
 					apip.preferred = (i == 0) ? 1 : 0;
 				}
 				p.paths = apiPaths.data();
@@ -499,40 +509,8 @@ void Node::setInterfaceAddresses(
 	}
 }
 
-ZT_ResultCode Node::addPeer(
-	void *tptr,
-	const ZT_Identity *identity)
-{
-	if (!identity)
-		return ZT_RESULT_ERROR_BAD_PARAMETER;
-	SharedPtr< Peer > peer(RR->topology->peer(tptr, reinterpret_cast<const Identity *>(identity)->address()));
-	if (!peer) {
-		peer.set(new Peer(RR));
-		peer->init(*reinterpret_cast<const Identity *>(identity));
-		peer = RR->topology->add(tptr, peer);
-	}
-	return (peer->identity() == *reinterpret_cast<const Identity *>(identity)) ? ZT_RESULT_OK : ZT_RESULT_ERROR_COLLIDING_OBJECT;
-}
-
-int Node::tryPeer(
-	void *tptr,
-	const ZT_Fingerprint *fp,
-	const ZT_Endpoint *endpoint,
-	int retries)
-{
-	if ((!fp) || (!endpoint))
-		return 0;
-	const SharedPtr< Peer > peer(RR->topology->peer(tptr, fp->address, true));
-	if ((peer) && (peer->identity().fingerprint().bestSpecificityEquals(*fp))) {
-		peer->contact(tptr, m_now, Endpoint(*endpoint), std::min(retries, 1));
-		return 1;
-	}
-	return 0;
-}
-
 ZT_CertificateError Node::addCertificate(
-	void *tptr,
-	int64_t now,
+	CallContext &cc,
 	unsigned int localTrust,
 	const ZT_Certificate *cert,
 	const void *certData,
@@ -548,13 +526,13 @@ ZT_CertificateError Node::addCertificate(
 			return ZT_CERTIFICATE_ERROR_INVALID_FORMAT;
 	}
 	RR->ts->add(c, localTrust);
-	RR->ts->update(now, nullptr);
+	RR->ts->update(cc.clock, nullptr);
 	SharedPtr< TrustStore::Entry > ent(RR->ts->get(c.getSerialNo()));
 	return (ent) ? ent->error() : ZT_CERTIFICATE_ERROR_INVALID_FORMAT; // should never be null, but if so it means invalid
 }
 
 ZT_ResultCode Node::deleteCertificate(
-	void *tptr,
+	CallContext &cc,
 	const void *serialNo)
 {
 	if (!serialNo)
@@ -605,11 +583,11 @@ ZT_CertificateList *Node::listCertificates()
 }
 
 int Node::sendUserMessage(
-	void *tptr,
+	CallContext &cc,
 	uint64_t dest,
-	uint64_t typeId,
-	const void *data,
-	unsigned int len)
+	uint64_t /*typeId*/,
+	const void */*data*/,
+	unsigned int /*len*/)
 {
 	try {
 		if (RR->identity.address().toInt() != dest) {
@@ -679,13 +657,14 @@ bool Node::externalPathLookup(void *tPtr, const Identity &id, int family, InetAd
 
 // Implementation of NetworkController::Sender ------------------------------------------------------------------------
 
-void Node::ncSendConfig(uint64_t nwid, uint64_t requestPacketId, const Address &destination, const NetworkConfig &nc, bool sendLegacyFormatConfig)
+void Node::ncSendConfig(void *tPtr, int64_t clock, int64_t ticks, uint64_t nwid, uint64_t requestPacketId, const Address &destination, const NetworkConfig &nc, bool sendLegacyFormatConfig)
 {
 	if (destination == RR->identity.address()) {
 		SharedPtr< Network > n(RR->networks->get(nwid));
 		if (!n)
 			return;
-		n->setConfiguration((void *)0, nc, true);
+		CallContext cc(clock, ticks, tPtr);
+		n->setConfiguration(cc, nc, true);
 	} else {
 		Dictionary dconf;
 		if (nc.toDictionary(dconf)) {
@@ -731,13 +710,14 @@ void Node::ncSendConfig(uint64_t nwid, uint64_t requestPacketId, const Address &
 	}
 }
 
-void Node::ncSendRevocation(const Address &destination, const RevocationCredential &rev)
+void Node::ncSendRevocation(void *tPtr, int64_t clock, int64_t ticks, const Address &destination, const RevocationCredential &rev)
 {
 	if (destination == RR->identity.address()) {
 		SharedPtr< Network > n(RR->networks->get(rev.networkId()));
 		if (!n)
 			return;
-		n->addCredential(nullptr, RR->identity, rev);
+		CallContext cc(clock, ticks, tPtr);
+		n->addCredential(cc, RR->identity, rev);
 	} else {
 		// TODO
 		/*
@@ -753,7 +733,7 @@ void Node::ncSendRevocation(const Address &destination, const RevocationCredenti
 	}
 }
 
-void Node::ncSendError(uint64_t nwid, uint64_t requestPacketId, const Address &destination, NetworkController::ErrorCode errorCode)
+void Node::ncSendError(void *tPtr, int64_t clock, int64_t ticks, uint64_t nwid, uint64_t requestPacketId, const Address &destination, NetworkController::ErrorCode errorCode)
 {
 	if (destination == RR->identity.address()) {
 		SharedPtr< Network > n(RR->networks->get(nwid));

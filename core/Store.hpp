@@ -17,6 +17,7 @@
 #include "Constants.hpp"
 #include "Containers.hpp"
 #include "RuntimeEnvironment.hpp"
+#include "CallContext.hpp"
 
 namespace ZeroTier {
 
@@ -32,18 +33,17 @@ public:
 	/**
 	 * Get a state object
 	 *
-	 * @param tPtr Thread pointer to pass through
 	 * @param type Object type
 	 * @param id Object ID
 	 * @param idSize Size of object ID in qwords
 	 * @return Data or empty vector if not found
 	 */
-	ZT_INLINE Vector< uint8_t > get(void *tPtr, ZT_StateObjectType type, const uint64_t *id, unsigned int idSize) const
+	ZT_INLINE Vector< uint8_t > get(CallContext &cc, ZT_StateObjectType type, const uint64_t *id, unsigned int idSize) const
 	{
 		Vector< uint8_t > dv;
 		void *data = nullptr;
 		void (*freeFunc)(void *) = nullptr;
-		const int r = RR->cb.stateGetFunction(reinterpret_cast<ZT_Node *>(RR->node), RR->uPtr, tPtr, type, id, idSize, &data, &freeFunc);
+		const int r = RR->cb.stateGetFunction(reinterpret_cast<ZT_Node *>(RR->node), RR->uPtr, cc.tPtr, type, id, idSize, &data, &freeFunc);
 		if (r > 0)
 			dv.assign(reinterpret_cast<const uint8_t *>(data), reinterpret_cast<const uint8_t *>(data) + r);
 		if ((data) && (freeFunc))
@@ -54,26 +54,24 @@ public:
 	/**
 	 * Store a state object
 	 *
-	 * @param tPtr Thread pointer to pass through
 	 * @param type Object type
 	 * @param id Object ID
 	 * @param idSize Size of object ID in qwords
 	 * @param data Data to store
 	 * @param len Length of data
 	 */
-	ZT_INLINE void put(void *const tPtr, ZT_StateObjectType type, const uint64_t *const id, const unsigned int idSize, const void *const data, const unsigned int len) noexcept
-	{ RR->cb.statePutFunction(reinterpret_cast<ZT_Node *>(this), RR->uPtr, tPtr, type, id, idSize, data, (int)len); }
+	ZT_INLINE void put(CallContext &cc, ZT_StateObjectType type, const uint64_t *const id, const unsigned int idSize, const void *const data, const unsigned int len) noexcept
+	{ RR->cb.statePutFunction(reinterpret_cast<ZT_Node *>(this), RR->uPtr, cc.tPtr, type, id, idSize, data, (int)len); }
 
 	/**
 	 * Erase a state object from the object store
 	 *
-	 * @param tPtr Thread pointer to pass through
 	 * @param type Object type
 	 * @param id Object ID
 	 * @param idSize Size of object ID in qwords
 	 */
-	ZT_INLINE void erase(void *const tPtr, ZT_StateObjectType type, const uint64_t *const id, const unsigned int idSize) noexcept
-	{ RR->cb.statePutFunction(reinterpret_cast<ZT_Node *>(this), RR->uPtr, tPtr, type, id, idSize, nullptr, -1); }
+	ZT_INLINE void erase(CallContext &cc, ZT_StateObjectType type, const uint64_t *const id, const unsigned int idSize) noexcept
+	{ RR->cb.statePutFunction(reinterpret_cast<ZT_Node *>(this), RR->uPtr, cc.tPtr, type, id, idSize, nullptr, -1); }
 
 private:
 	const RuntimeEnvironment *RR;

@@ -161,11 +161,22 @@
 #endif
 
 #ifdef __cplusplus
-#if __cplusplus > 199711L
+#if __cplusplus >= 199711L
+
 #include <atomic>
 #ifndef __CPP11__
 #define __CPP11__ 1
 #endif
+
+#if __cplusplus >= 201703L
+#define ZT_MAYBE_UNUSED [[maybe_unused]]
+#ifndef __CPP17__
+#define __CPP17__ 1
+#endif
+#else
+#define ZT_MAYBE_UNUSED
+#endif
+
 #endif
 
 #if defined(ZT_ARCH_X64) || defined(__aarch64__)

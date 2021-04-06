@@ -167,7 +167,7 @@ void Certificate::addSubjectCertificate(const uint8_t serialNo[ZT_SHA384_DIGEST_
 
 	// Enlarge array of uint8_t pointers, set new pointer to local copy of serial, and set
 	// certificates to point to potentially reallocated array.
-	m_subjectCertificates.push_back(m_serials.front().bytes());
+	m_subjectCertificates.push_back(reinterpret_cast<const uint8_t *>(m_serials.front().data));
 	this->subject.certificates = m_subjectCertificates.data();
 	this->subject.certificateCount = (unsigned int)m_subjectCertificates.size();
 }
@@ -187,6 +187,7 @@ void Certificate::addSubjectUpdateUrl(const char *url)
 	this->subject.updateURLCount = (unsigned int)m_updateUrls.size();
 }
 
+/*
 void Certificate::setExtendedAttributes(const Dictionary &x)
 {
 	m_extendedAttributes.clear();
@@ -194,6 +195,7 @@ void Certificate::setExtendedAttributes(const Dictionary &x)
 	this->extendedAttributes = m_extendedAttributes.data();
 	this->extendedAttributesSize = (unsigned int)m_extendedAttributes.size();
 }
+*/
 
 bool Certificate::setSubjectUniqueId(const uint8_t uniqueId[ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE], const uint8_t uniqueIdPrivate[ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_PRIVATE_SIZE])
 {

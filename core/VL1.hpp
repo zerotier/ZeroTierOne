@@ -22,6 +22,7 @@
 #include "Mutex.hpp"
 #include "FCV.hpp"
 #include "Containers.hpp"
+#include "CallContext.hpp"
 
 #define ZT_VL1_MAX_WHOIS_WAITING_PACKETS 32
 
@@ -56,38 +57,37 @@ public:
 	 * contents should not be used after this call. Make a copy if the
 	 * data might still be needed.
 	 *
-	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param localSocket Local I/O socket as supplied by external code
 	 * @param fromAddr Internet IP address of origin
 	 * @param data Packet data
 	 * @param len Packet length
 	 */
-	void onRemotePacket(void *tPtr, int64_t localSocket, const InetAddress &fromAddr, SharedPtr< Buf > &data, unsigned int len) noexcept;
+	void onRemotePacket(CallContext &cc, int64_t localSocket, const InetAddress &fromAddr, SharedPtr< Buf > &data, unsigned int len) noexcept;
 
 private:
 	const RuntimeEnvironment *RR;
 
-	void m_relay(void *tPtr, const SharedPtr< Path > &path, Address destination, SharedPtr< Buf > &pkt, int pktSize);
+	void m_relay(CallContext &cc, const SharedPtr< Path > &path, Address destination, SharedPtr< Buf > &pkt, int pktSize);
 
-	void m_sendPendingWhois(void *tPtr, int64_t now);
+	void m_sendPendingWhois(CallContext &cc);
 
-	SharedPtr< Peer > m_HELLO(void *tPtr, const SharedPtr< Path > &path, Buf &pkt, int packetSize);
+	SharedPtr< Peer > m_HELLO(CallContext &cc, const SharedPtr< Path > &path, Buf &pkt, int packetSize);
 
-	bool m_ERROR(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, const SharedPtr< Peer > &peer, Buf &pkt, int packetSize, Protocol::Verb &inReVerb);
+	bool m_ERROR(CallContext &cc, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, const SharedPtr< Peer > &peer, Buf &pkt, int packetSize, Protocol::Verb &inReVerb);
 
-	bool m_OK(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, const SharedPtr< Peer > &peer, Buf &pkt, int packetSize, Protocol::Verb &inReVerb);
+	bool m_OK(CallContext &cc, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, const SharedPtr< Peer > &peer, Buf &pkt, int packetSize, Protocol::Verb &inReVerb);
 
-	bool m_WHOIS(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, const SharedPtr< Peer > &peer, Buf &pkt, int packetSize);
+	bool m_WHOIS(CallContext &cc, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, const SharedPtr< Peer > &peer, Buf &pkt, int packetSize);
 
-	bool m_RENDEZVOUS(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, const SharedPtr< Peer > &peer, Buf &pkt, int packetSize);
+	bool m_RENDEZVOUS(CallContext &cc, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, const SharedPtr< Peer > &peer, Buf &pkt, int packetSize);
 
-	bool m_ECHO(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, const SharedPtr< Peer > &peer, Buf &pkt, int packetSize);
+	bool m_ECHO(CallContext &cc, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, const SharedPtr< Peer > &peer, Buf &pkt, int packetSize);
 
-	bool m_PUSH_DIRECT_PATHS(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, const SharedPtr< Peer > &peer, Buf &pkt, int packetSize);
+	bool m_PUSH_DIRECT_PATHS(CallContext &cc, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, const SharedPtr< Peer > &peer, Buf &pkt, int packetSize);
 
-	bool m_USER_MESSAGE(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, const SharedPtr< Peer > &peer, Buf &pkt, int packetSize);
+	bool m_USER_MESSAGE(CallContext &cc, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, const SharedPtr< Peer > &peer, Buf &pkt, int packetSize);
 
-	bool m_ENCAP(void *tPtr, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, const SharedPtr< Peer > &peer, Buf &pkt, int packetSize);
+	bool m_ENCAP(CallContext &cc, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, const SharedPtr< Peer > &peer, Buf &pkt, int packetSize);
 
 	// Defragmentation engine for handling inbound packets with more than one fragment.
 	Defragmenter< ZT_MAX_PACKET_FRAGMENTS > m_inputPacketAssembler;

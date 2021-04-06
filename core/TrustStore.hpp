@@ -125,13 +125,6 @@ public:
 	Vector< SharedPtr< Entry > > all(bool includeRejectedCertificates) const;
 
 	/**
-	 * Get a copy of the current rejected certificate set.
-	 *
-	 * @return Rejected certificates
-	 */
-	Vector< SharedPtr< Entry > > rejects() const;
-
-	/**
 	 * Add a certificate
 	 *
 	 * A copy is made so it's fine if the original is freed after this call. If
@@ -161,8 +154,9 @@ public:
 	 *
 	 * @param clock Current time in milliseconds since epoch, or -1 to not check times on this pass
 	 * @param purge If non-NULL, purge rejected certificates and return them in this vector (vector should be empty)
+	 * @return True if there were changes
 	 */
-	void update(int64_t clock, Vector< SharedPtr< Entry > > *purge);
+	bool update(int64_t clock, Vector< SharedPtr< Entry > > *purge);
 
 	/**
 	 * Create a compressed binary version of certificates and their local trust
@@ -184,7 +178,7 @@ public:
 
 private:
 	Map< H384, SharedPtr< Entry > > m_bySerial; // all certificates
-	Map< Vector< uint8_t >, SharedPtr< Entry > > m_bySubjectUniqueId; // non-rejected certificates only
+	Map< Blob< ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE >, SharedPtr< Entry > > m_bySubjectUniqueId; // non-rejected certificates only
 	Map< Fingerprint, Vector< SharedPtr< Entry > > > m_bySubjectIdentity; // non-rejected certificates only
 	ForwardList< SharedPtr< Entry > > m_addQueue;
 	ForwardList< H384 > m_deleteQueue;

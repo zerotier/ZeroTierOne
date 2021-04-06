@@ -50,7 +50,7 @@ template<
 	unsigned int MFP = ZT_MAX_INCOMING_FRAGMENTS_PER_PATH,
 	unsigned int GCS = (ZT_MAX_PACKET_FRAGMENTS * 2),
 	unsigned int GCT = (ZT_MAX_PACKET_FRAGMENTS * 4),
-	typename P = SharedPtr <Path> >
+	typename P = SharedPtr< Path > >
 class Defragmenter
 {
 public:
@@ -136,19 +136,19 @@ public:
 	 * @param fragmentDataSize Length of data in fragment's data.bytes (fragment's data.fields type is ignored)
 	 * @param fragmentNo Number of fragment (0..totalFragmentsExpected, non-inclusive)
 	 * @param totalFragmentsExpected Total number of expected fragments in this message or 0 to use cached value
-	 * @param now Current time
+	 * @param ts Current time
 	 * @param via If non-NULL this is the path on which this message fragment was received
 	 * @return Result code
 	 */
 	ZT_INLINE ResultCode assemble(
 		const uint64_t messageId,
-		FCV <Buf::Slice, MF> &message,
-		SharedPtr <Buf> &fragment,
+		FCV< Buf::Slice, MF > &message,
+		SharedPtr< Buf > &fragment,
 		const unsigned int fragmentDataIndex,
 		const unsigned int fragmentDataSize,
 		const unsigned int fragmentNo,
 		const unsigned int totalFragmentsExpected,
-		const int64_t now,
+		const int64_t ts,
 		const P &via)
 	{
 		// Sanity checks for malformed fragments or invalid input parameters.
@@ -210,7 +210,7 @@ public:
 			return ERR_DUPLICATE_FRAGMENT;
 
 		// Update last-activity timestamp for this entry, delaying GC.
-		e->lastUsed = now;
+		e->lastUsed = ts;
 
 		// Learn total fragments expected if a value is given. Otherwise the cached
 		// value gets used. This is to support the implementation of fragmentation
@@ -344,11 +344,11 @@ private:
 		unsigned int totalFragmentsExpected;
 		unsigned int fragmentsReceived;
 		P via;
-		FCV <Buf::Slice, MF> message;
+		FCV< Buf::Slice, MF > message;
 		Mutex lock;
 	};
 
-	Map <uint64_t, Defragmenter< MF, MFP, GCS, GCT, P >::p_E> m_messages;
+	Map< uint64_t, Defragmenter< MF, MFP, GCS, GCT, P >::p_E > m_messages;
 	RWMutex m_messages_l;
 };
 

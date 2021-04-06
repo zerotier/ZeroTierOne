@@ -35,7 +35,6 @@ pub(crate) struct Store {
     peers_path: Box<Path>,
     controller_path: Box<Path>,
     networks_path: Box<Path>,
-    certs_path: Box<Path>,
     auth_token_path: Mutex<Box<Path>>,
     auth_token: Mutex<String>,
 }
@@ -69,7 +68,6 @@ impl Store {
             peers_path: bp.join("peers.d").into_boxed_path(),
             controller_path: bp.join("controller.d").into_boxed_path(),
             networks_path: bp.join("networks.d").into_boxed_path(),
-            certs_path: bp.join("certs.d").into_boxed_path(),
             auth_token_path: Mutex::new(auth_token_path_override.map_or_else(|| {
                 bp.join(AUTHTOKEN_SECRET).into_boxed_path()
             }, |auth_token_path_override| {
@@ -85,32 +83,16 @@ impl Store {
         let _ = std::fs::create_dir_all(&s.peers_path);
         let _ = std::fs::create_dir_all(&s.controller_path);
         let _ = std::fs::create_dir_all(&s.networks_path);
-        let _ = std::fs::create_dir_all(&s.certs_path);
 
         Ok(s)
     }
 
     fn make_obj_path_internal(&self, obj_type: &StateObjectType, obj_id: &[u64]) -> Option<PathBuf> {
         match obj_type {
-            StateObjectType::IdentityPublic => {
-                Some(self.base_path.join("identity.public"))
-            },
-            StateObjectType::IdentitySecret => {
-                Some(self.base_path.join("identity.secret"))
-            },
-            StateObjectType::Certificate => {
-                if obj_id.len() < 6 {
-                    None
-                } else {
-                    Some(self.certs_path.join(format!("{:0>16x}{:0>16x}{:0>16x}{:0>16x}{:0>16x}{:0>16x}.cert", obj_id[0], obj_id[1], obj_id[2], obj_id[3], obj_id[4], obj_id[5])))
-                }
-            },
-            StateObjectType::TrustStore => {
-                Some(self.base_path.join("trust"))
-            },
-            StateObjectType::Locator => {
-                Some(self.base_path.join("locator"))
-            },
+            StateObjectType::IdentityPublic => Some(self.base_path.join("identity.public")),
+            StateObjectType::IdentitySecret => Some(self.base_path.join("identity.secret")),
+            StateObjectType::TrustStore => Some(self.base_path.join("truststore")),
+            StateObjectType::Locator => Some(self.base_path.join("locator")),
             StateObjectType::NetworkConfig => {
                 if obj_id.len() < 1 {
                     None
@@ -306,7 +288,7 @@ impl Store {
             let obj_path = obj_path.unwrap();
             std::fs::OpenOptions::new().write(true).truncate(true).create(true).open(&obj_path)?.write_all(obj_data)?;
 
-            if obj_type.eq(&StateObjectType::IdentitySecret) || obj_type.eq(&StateObjectType::TrustStore) {
+            if obj_type.is_secret() {
                 lock_down_file(obj_path.to_str().unwrap());
             }
 

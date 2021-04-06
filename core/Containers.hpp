@@ -27,9 +27,11 @@
 #include <algorithm>
 
 #ifdef __CPP11__
+
 #include <atomic>
 #include <unordered_map>
 #include <forward_list>
+
 #endif
 
 namespace ZeroTier {
@@ -43,14 +45,15 @@ public:
 	{}
 
 	template< typename I >
-	ZT_INLINE Vector(I begin,I end) :
+	ZT_INLINE Vector(I begin, I end) :
 		std::vector< V >(begin, end)
 	{}
 };
 
 template< typename V >
 class List : public std::list< V >
-{};
+{
+};
 
 #ifdef __CPP11__
 
@@ -78,11 +81,13 @@ struct intl_MapHasher
 
 template< typename K, typename V >
 class Map : public std::unordered_map< K, V, intl_MapHasher >
-{};
+{
+};
 
 template< typename K, typename V >
 class MultiMap : public std::unordered_multimap< K, V, intl_MapHasher, std::equal_to< K > >
-{};
+{
+};
 
 #else
 
@@ -98,13 +103,15 @@ class MultiMap : public std::multimap< K, V >
 
 template< typename K, typename V >
 class SortedMap : public std::map< K, V >
-{};
+{
+};
 
 #ifdef __CPP11__
 
 template< typename V >
 class ForwardList : public std::forward_list< V >
-{};
+{
+};
 
 #else
 
@@ -116,7 +123,8 @@ class ForwardList : public std::list< V >
 
 template< typename V >
 class Set : public std::set< V, std::less< V > >
-{};
+{
+};
 
 typedef std::string String;
 
@@ -130,11 +138,17 @@ struct H384
 	ZT_INLINE H384() noexcept
 	{ Utils::zero< sizeof(data) >(data); }
 
+	ZT_INLINE H384(const H384 &b) noexcept
+	{ Utils::copy< 48 >(data, b.data); }
+
 	explicit ZT_INLINE H384(const void *const d) noexcept
 	{ Utils::copy< 48 >(data, d); }
 
-	ZT_INLINE const uint8_t *bytes() const noexcept
-	{ return reinterpret_cast<const uint8_t *>(data); }
+	ZT_INLINE H384 &operator=(const H384 &b) noexcept
+	{
+		Utils::copy< 48 >(data, b.data);
+		return *this;
+	}
 
 	ZT_INLINE unsigned long hashCode() const noexcept
 	{ return (unsigned long)data[0]; }
@@ -151,11 +165,11 @@ struct H384
 	ZT_INLINE bool operator<(const H384 &b) const noexcept
 	{ return std::lexicographical_compare(data, data + 6, b.data, b.data + 6); }
 
-	ZT_INLINE bool operator>(const H384 &b) const noexcept
-	{ return (b < *this); }
-
 	ZT_INLINE bool operator<=(const H384 &b) const noexcept
 	{ return !(b < *this); }
+
+	ZT_INLINE bool operator>(const H384 &b) const noexcept
+	{ return (b < *this); }
 
 	ZT_INLINE bool operator>=(const H384 &b) const noexcept
 	{ return !(*this < b); }
@@ -164,7 +178,7 @@ struct H384
 static_assert(sizeof(H384) == 48, "H384 contains unnecessary padding");
 
 /**
- * A byte array
+ * A fixed size byte array
  *
  * @tparam S Size in bytes
  */
@@ -172,6 +186,53 @@ template< unsigned long S >
 struct Blob
 {
 	uint8_t data[S];
+
+	ZT_INLINE Blob() noexcept
+	{ Utils::zero< S >(data); }
+
+	ZT_INLINE Blob(const Blob &b) noexcept
+	{ Utils::copy< S >(data, b.data); }
+
+	explicit ZT_INLINE Blob(const void *const d) noexcept
+	{ Utils::copy< S >(data, d); }
+
+	explicit ZT_INLINE Blob(const void *const d, const unsigned int l) noexcept
+	{
+		Utils::copy(data, d, l);
+		if (l < S) {
+			Utils::zero(data + l, S - l);
+		}
+	}
+
+	ZT_INLINE Blob &operator=(const Blob &b) noexcept
+	{
+		Utils::copy< S >(data, b.data);
+		return *this;
+	}
+
+	ZT_INLINE unsigned long hashCode() const noexcept
+	{ return Utils::fnv1a32(data, (unsigned int)S); }
+
+	ZT_INLINE operator bool() const noexcept
+	{ return Utils::allZero(data, (unsigned int)S); }
+
+	ZT_INLINE bool operator==(const Blob &b) const noexcept
+	{ return (memcmp(data, b.data, S) == 0); }
+
+	ZT_INLINE bool operator!=(const Blob &b) const noexcept
+	{ return (memcmp(data, b.data, S) != 0); }
+
+	ZT_INLINE bool operator<(const Blob &b) const noexcept
+	{ return (memcmp(data, b.data, S) < 0); }
+
+	ZT_INLINE bool operator<=(const Blob &b) const noexcept
+	{ return (memcmp(data, b.data, S) <= 0); }
+
+	ZT_INLINE bool operator>(const Blob &b) const noexcept
+	{ return (memcmp(data, b.data, S) > 0); }
+
+	ZT_INLINE bool operator>=(const Blob &b) const noexcept
+	{ return (memcmp(data, b.data, S) >= 0); }
 };
 
 } // ZeroTier

@@ -54,7 +54,7 @@ public:
 		 * @param nc Network configuration to send
 		 * @param sendLegacyFormatConfig If true, send an old-format network config
 		 */
-		virtual void ncSendConfig(uint64_t nwid,uint64_t requestPacketId,const Address &destination,const NetworkConfig &nc,bool sendLegacyFormatConfig) = 0;
+		virtual void ncSendConfig(void *tPtr, int64_t clock, int64_t ticks, uint64_t nwid, uint64_t requestPacketId, const Address &destination, const NetworkConfig &nc, bool sendLegacyFormatConfig) = 0;
 
 		/**
 		 * Send revocation to a node
@@ -62,7 +62,7 @@ public:
 		 * @param destination Destination node address
 		 * @param rev Revocation to send
 		 */
-		virtual void ncSendRevocation(const Address &destination,const RevocationCredential &rev) = 0;
+		virtual void ncSendRevocation(void *tPtr, int64_t clock, int64_t ticks, const Address &destination, const RevocationCredential &rev) = 0;
 
 		/**
 		 * Send a network configuration request error
@@ -72,7 +72,7 @@ public:
 		 * @param destination Destination peer Address
 		 * @param errorCode Error code
 		 */
-		virtual void ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &destination,NetworkController::ErrorCode errorCode) = 0;
+		virtual void ncSendError(void *tPtr, int64_t clock, int64_t ticks, uint64_t nwid, uint64_t requestPacketId, const Address &destination, NetworkController::ErrorCode errorCode) = 0;
 	};
 
 	NetworkController() {}
@@ -84,7 +84,7 @@ public:
 	 * @param signingId Identity for signing of network configurations, certs, etc.
 	 * @param sender Sender implementation for sending replies or config pushes
 	 */
-	virtual void init(const Identity &signingId,Sender *sender) = 0;
+	virtual void init(const Identity &signingId, Sender *sender) = 0;
 
 	/**
 	 * Handle a network configuration request

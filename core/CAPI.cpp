@@ -19,6 +19,7 @@
 #include "InetAddress.hpp"
 #include "VL1.hpp"
 #include "VL2.hpp"
+#include "CallContext.hpp"
 
 extern "C" {
 
@@ -30,7 +31,7 @@ extern "C" {
 #define ZT_PTRTOBUF(p) ((ZeroTier::Buf *)( ((uintptr_t)(p)) - ((uintptr_t)&(((ZeroTier::Buf *)0)->unsafeData[0])) ))
 #define ZT_BUFTOPTR(b) ((void *)(&((b)->unsafeData[0])))
 
-void *ZT_getBuffer()
+ZT_MAYBE_UNUSED void *ZT_getBuffer()
 {
 	// When external code requests a Buf, grab one from the pool (or freshly allocated)
 	// and return it with its reference count left at zero. It's the responsibility of
@@ -44,7 +45,7 @@ void *ZT_getBuffer()
 	}
 }
 
-void ZT_freeBuffer(void *b)
+ZT_MAYBE_UNUSED void ZT_freeBuffer(void *b)
 {
 	if (b)
 		delete ZT_PTRTOBUF(b);
@@ -55,13 +56,13 @@ struct p_queryResultBase
 	void (*freeFunction)(const void *);
 };
 
-void ZT_freeQueryResult(const void *qr)
+ZT_MAYBE_UNUSED void ZT_freeQueryResult(const void *qr)
 {
 	if ((qr) && (reinterpret_cast<const p_queryResultBase *>(qr)->freeFunction))
 		reinterpret_cast<const p_queryResultBase *>(qr)->freeFunction(qr);
 }
 
-void ZT_version(int *major, int *minor, int *revision, int *build)
+ZT_MAYBE_UNUSED void ZT_version(int *major, int *minor, int *revision, int *build)
 {
 	if (major)
 		*major = ZEROTIER_VERSION_MAJOR;
@@ -75,11 +76,18 @@ void ZT_version(int *major, int *minor, int *revision, int *build)
 
 /********************************************************************************************************************/
 
-enum ZT_ResultCode ZT_Node_new(ZT_Node **node, void *uptr, void *tptr, const struct ZT_Node_Callbacks *callbacks, int64_t now)
+ZT_MAYBE_UNUSED enum ZT_ResultCode ZT_Node_new(
+	ZT_Node **node,
+	int64_t clock,
+	int64_t ticks,
+	void *tptr,
+	void *uptr,
+	const struct ZT_Node_Callbacks *callbacks)
 {
 	*node = nullptr;
 	try {
-		*node = reinterpret_cast<ZT_Node *>(new ZeroTier::Node(uptr, tptr, callbacks, now));
+		ZeroTier::CallContext cc(clock, ticks, tptr);
+		*node = reinterpret_cast<ZT_Node *>(new ZeroTier::Node(uptr, callbacks, cc));
 		return ZT_RESULT_OK;
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
@@ -90,18 +98,24 @@ enum ZT_ResultCode ZT_Node_new(ZT_Node **node, void *uptr, void *tptr, const str
 	}
 }
 
-void ZT_Node_delete(ZT_Node *node, void *tPtr)
+ZT_MAYBE_UNUSED void ZT_Node_delete(
+	ZT_Node *node,
+	int64_t clock,
+	int64_t ticks,
+	void *tptr)
 {
 	try {
-		reinterpret_cast<ZeroTier::Node *>(node)->shutdown(tPtr);
+		ZeroTier::CallContext cc(clock, ticks, tptr);
+		reinterpret_cast<ZeroTier::Node *>(node)->shutdown(cc);
 		delete (reinterpret_cast<ZeroTier::Node *>(node));
 	} catch (...) {}
 }
 
-enum ZT_ResultCode ZT_Node_processWirePacket(
+ZT_MAYBE_UNUSED enum ZT_ResultCode ZT_Node_processWirePacket(
 	ZT_Node *node,
+	int64_t clock,
+	int64_t ticks,
 	void *tptr,
-	int64_t now,
 	int64_t localSocket,
 	const ZT_InetAddress *remoteAddress,
 	const void *packetData,
@@ -110,8 +124,9 @@ enum ZT_ResultCode ZT_Node_processWirePacket(
 	volatile int64_t *nextBackgroundTaskDeadline)
 {
 	try {
+		ZeroTier::CallContext cc(clock, ticks, tptr);
 		ZeroTier::SharedPtr< ZeroTier::Buf > buf((isZtBuffer) ? ZT_PTRTOBUF(packetData) : new ZeroTier::Buf(packetData, packetLength & ZT_BUF_MEM_MASK));
-		reinterpret_cast<ZeroTier::Node *>(node)->RR->vl1->onRemotePacket(tptr, localSocket, *ZeroTier::asInetAddress(remoteAddress), buf, packetLength);
+		reinterpret_cast<ZeroTier::Node *>(node)->RR->vl1->onRemotePacket(cc, localSocket, *ZeroTier::asInetAddress(remoteAddress), buf, packetLength);
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch (...) {
@@ -121,10 +136,11 @@ enum ZT_ResultCode ZT_Node_processWirePacket(
 	return ZT_RESULT_OK;
 }
 
-enum ZT_ResultCode ZT_Node_processVirtualNetworkFrame(
+ZT_MAYBE_UNUSED enum ZT_ResultCode ZT_Node_processVirtualNetworkFrame(
 	ZT_Node *node,
+	int64_t clock,
+	int64_t ticks,
 	void *tptr,
-	int64_t now,
 	uint64_t nwid,
 	uint64_t sourceMac,
 	uint64_t destMac,
@@ -136,10 +152,11 @@ enum ZT_ResultCode ZT_Node_processVirtualNetworkFrame(
 	volatile int64_t *nextBackgroundTaskDeadline)
 {
 	try {
+		ZeroTier::CallContext cc(clock, ticks, tptr);
 		ZeroTier::SharedPtr< ZeroTier::Network > network(reinterpret_cast<ZeroTier::Node *>(node)->RR->networks->get(nwid));
 		if (likely(network)) {
 			ZeroTier::SharedPtr< ZeroTier::Buf > buf((isZtBuffer) ? ZT_PTRTOBUF(frameData) : new ZeroTier::Buf(frameData, frameLength & ZT_BUF_MEM_MASK));
-			reinterpret_cast<ZeroTier::Node *>(node)->RR->vl2->onLocalEthernet(tptr, network, ZeroTier::MAC(sourceMac), ZeroTier::MAC(destMac), etherType, vlanId, buf, frameLength);
+			reinterpret_cast<ZeroTier::Node *>(node)->RR->vl2->onLocalEthernet(cc, network, ZeroTier::MAC(sourceMac), ZeroTier::MAC(destMac), etherType, vlanId, buf, frameLength);
 			return ZT_RESULT_OK;
 		} else {
 			return ZT_RESULT_ERROR_NETWORK_NOT_FOUND;
@@ -151,10 +168,16 @@ enum ZT_ResultCode ZT_Node_processVirtualNetworkFrame(
 	}
 }
 
-enum ZT_ResultCode ZT_Node_processBackgroundTasks(ZT_Node *node, void *tptr, int64_t now, volatile int64_t *nextBackgroundTaskDeadline)
+ZT_MAYBE_UNUSED enum ZT_ResultCode ZT_Node_processBackgroundTasks(
+	ZT_Node *node,
+	int64_t clock,
+	int64_t ticks,
+	void *tptr,
+	volatile int64_t *nextBackgroundTaskDeadline)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->processBackgroundTasks(tptr, now, nextBackgroundTaskDeadline);
+		ZeroTier::CallContext cc(clock, ticks, tptr);
+		return reinterpret_cast<ZeroTier::Node *>(node)->processBackgroundTasks(cc, nextBackgroundTaskDeadline);
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch (...) {
@@ -162,10 +185,18 @@ enum ZT_ResultCode ZT_Node_processBackgroundTasks(ZT_Node *node, void *tptr, int
 	}
 }
 
-enum ZT_ResultCode ZT_Node_join(ZT_Node *node, uint64_t nwid, const ZT_Fingerprint *controllerFingerprint, void *uptr, void *tptr)
+ZT_MAYBE_UNUSED enum ZT_ResultCode ZT_Node_join(
+	ZT_Node *node,
+	int64_t clock,
+	int64_t ticks,
+	void *tptr,
+	void *uptr,
+	uint64_t nwid,
+	const ZT_Fingerprint *controllerFingerprint)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->join(nwid, controllerFingerprint, uptr, tptr);
+		ZeroTier::CallContext cc(clock, ticks, tptr);
+		return reinterpret_cast<ZeroTier::Node *>(node)->join(nwid, controllerFingerprint, uptr, cc);
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch (...) {
@@ -173,10 +204,17 @@ enum ZT_ResultCode ZT_Node_join(ZT_Node *node, uint64_t nwid, const ZT_Fingerpri
 	}
 }
 
-enum ZT_ResultCode ZT_Node_leave(ZT_Node *node, uint64_t nwid, void **uptr, void *tptr)
+ZT_MAYBE_UNUSED enum ZT_ResultCode ZT_Node_leave(
+	ZT_Node *node,
+	int64_t clock,
+	int64_t ticks,
+	void *tptr,
+	void **uptr,
+	uint64_t nwid)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->leave(nwid, uptr, tptr);
+		ZeroTier::CallContext cc(clock, ticks, tptr);
+		return reinterpret_cast<ZeroTier::Node *>(node)->leave(nwid, uptr, cc);
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch (...) {
@@ -184,10 +222,18 @@ enum ZT_ResultCode ZT_Node_leave(ZT_Node *node, uint64_t nwid, void **uptr, void
 	}
 }
 
-enum ZT_ResultCode ZT_Node_multicastSubscribe(ZT_Node *node, void *tptr, uint64_t nwid, uint64_t multicastGroup, unsigned long multicastAdi)
+ZT_MAYBE_UNUSED enum ZT_ResultCode ZT_Node_multicastSubscribe(
+	ZT_Node *node,
+	int64_t clock,
+	int64_t ticks,
+	void *tptr,
+	uint64_t nwid,
+	uint64_t multicastGroup,
+	unsigned long multicastAdi)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->multicastSubscribe(tptr, nwid, multicastGroup, multicastAdi);
+		ZeroTier::CallContext cc(clock, ticks, tptr);
+		return reinterpret_cast<ZeroTier::Node *>(node)->multicastSubscribe(cc, nwid, multicastGroup, multicastAdi);
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch (...) {
@@ -195,10 +241,18 @@ enum ZT_ResultCode ZT_Node_multicastSubscribe(ZT_Node *node, void *tptr, uint64_
 	}
 }
 
-enum ZT_ResultCode ZT_Node_multicastUnsubscribe(ZT_Node *node, uint64_t nwid, uint64_t multicastGroup, unsigned long multicastAdi)
+ZT_MAYBE_UNUSED enum ZT_ResultCode ZT_Node_multicastUnsubscribe(
+	ZT_Node *node,
+	int64_t clock,
+	int64_t ticks,
+	void *tptr,
+	uint64_t nwid,
+	uint64_t multicastGroup,
+	unsigned long multicastAdi)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->multicastUnsubscribe(nwid, multicastGroup, multicastAdi);
+		ZeroTier::CallContext cc(clock, ticks, tptr);
+		return reinterpret_cast<ZeroTier::Node *>(node)->multicastUnsubscribe(cc, nwid, multicastGroup, multicastAdi);
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch (...) {
@@ -206,29 +260,44 @@ enum ZT_ResultCode ZT_Node_multicastUnsubscribe(ZT_Node *node, uint64_t nwid, ui
 	}
 }
 
-uint64_t ZT_Node_address(ZT_Node *node)
+ZT_MAYBE_UNUSED uint64_t ZT_Node_address(ZT_Node *node)
 { return reinterpret_cast<ZeroTier::Node *>(node)->RR->identity.address().toInt(); }
 
-const ZT_Identity *ZT_Node_identity(ZT_Node *node)
+ZT_MAYBE_UNUSED const ZT_Identity *ZT_Node_identity(ZT_Node *node)
 { return (const ZT_Identity *)(&(reinterpret_cast<ZeroTier::Node *>(node)->identity())); }
 
-void ZT_Node_status(ZT_Node *node, ZT_NodeStatus *status)
+ZT_MAYBE_UNUSED void ZT_Node_status(
+	ZT_Node *node,
+	int64_t clock,
+	int64_t ticks,
+	void *tptr,
+	ZT_NodeStatus *status)
 {
 	try {
 		reinterpret_cast<ZeroTier::Node *>(node)->status(status);
 	} catch (...) {}
 }
 
-ZT_PeerList *ZT_Node_peers(ZT_Node *node)
+ZT_MAYBE_UNUSED ZT_PeerList *ZT_Node_peers(
+	ZT_Node *node,
+	int64_t clock,
+	int64_t ticks,
+	void *tptr)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->peers();
+		ZeroTier::CallContext cc(clock, ticks, tptr);
+		return reinterpret_cast<ZeroTier::Node *>(node)->peers(cc);
 	} catch (...) {
 		return (ZT_PeerList *)0;
 	}
 }
 
-ZT_VirtualNetworkConfig *ZT_Node_networkConfig(ZT_Node *node, uint64_t nwid)
+ZT_MAYBE_UNUSED ZT_VirtualNetworkConfig *ZT_Node_networkConfig(
+	ZT_Node *node,
+	int64_t clock,
+	int64_t ticks,
+	void *tptr,
+	uint64_t nwid)
 {
 	try {
 		return reinterpret_cast<ZeroTier::Node *>(node)->networkConfig(nwid);
@@ -237,7 +306,7 @@ ZT_VirtualNetworkConfig *ZT_Node_networkConfig(ZT_Node *node, uint64_t nwid)
 	}
 }
 
-ZT_VirtualNetworkList *ZT_Node_networks(ZT_Node *node)
+ZT_MAYBE_UNUSED ZT_VirtualNetworkList *ZT_Node_networks(ZT_Node *node)
 {
 	try {
 		return reinterpret_cast<ZeroTier::Node *>(node)->networks();
@@ -246,49 +315,67 @@ ZT_VirtualNetworkList *ZT_Node_networks(ZT_Node *node)
 	}
 }
 
-int ZT_Node_tryPeer(
+ZT_MAYBE_UNUSED void ZT_Node_setNetworkUserPtr(
 	ZT_Node *node,
-	void *tptr,
-	const ZT_Fingerprint *fp,
-	const ZT_Endpoint *endpoint,
-	int retries)
+	uint64_t nwid,
+	void *ptr)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->tryPeer(tptr, fp, endpoint, retries);
-	} catch (...) {
-		return 0;
-	}
+		reinterpret_cast<ZeroTier::Node *>(node)->setNetworkUserPtr(nwid, ptr);
+	} catch (...) {}
 }
 
-enum ZT_CertificateError ZT_Node_addCertificate(
+ZT_MAYBE_UNUSED void ZT_Node_setInterfaceAddresses(
 	ZT_Node *node,
+	int64_t clock,
+	int64_t ticks,
 	void *tptr,
-	int64_t now,
+	const ZT_InterfaceAddress *addrs,
+	unsigned int addrCount)
+{
+	try {
+		reinterpret_cast<ZeroTier::Node *>(node)->setInterfaceAddresses(addrs, addrCount);
+	} catch (...) {}
+}
+
+ZT_MAYBE_UNUSED enum ZT_CertificateError ZT_Node_addCertificate(
+	ZT_Node *node,
+	int64_t clock,
+	int64_t ticks,
+	void *tptr,
 	unsigned int localTrust,
 	const ZT_Certificate *cert,
 	const void *certData,
 	unsigned int certSize)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->addCertificate(tptr, now, localTrust, cert, certData, certSize);
+		ZeroTier::CallContext cc(clock, ticks, tptr);
+		return reinterpret_cast<ZeroTier::Node *>(node)->addCertificate(cc, localTrust, cert, certData, certSize);
 	} catch (...) {
 		return ZT_CERTIFICATE_ERROR_INVALID_FORMAT;
 	}
 }
 
-ZT_SDK_API enum ZT_ResultCode ZT_Node_deleteCertificate(
+ZT_MAYBE_UNUSED enum ZT_ResultCode ZT_Node_deleteCertificate(
 	ZT_Node *node,
+	int64_t clock,
+	int64_t ticks,
 	void *tptr,
 	const void *serialNo)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->deleteCertificate(tptr, serialNo);
+		ZeroTier::CallContext cc(clock, ticks, tptr);
+		return reinterpret_cast<ZeroTier::Node *>(node)->deleteCertificate(cc, serialNo);
 	} catch (...) {
 		return ZT_RESULT_ERROR_INTERNAL;
 	}
 }
 
-ZT_SDK_API ZT_CertificateList *ZT_Node_listCertificates(ZT_Node *node)
+ZT_MAYBE_UNUSED ZT_CertificateList *ZT_Node_listCertificates(
+	ZT_Node *node,
+	int64_t clock,
+	int64_t ticks,
+	void *tptr)
 {
 	try {
 		return reinterpret_cast<ZeroTier::Node *>(node)->listCertificates();
@@ -297,42 +384,27 @@ ZT_SDK_API ZT_CertificateList *ZT_Node_listCertificates(ZT_Node *node)
 	}
 }
 
-void ZT_Node_setNetworkUserPtr(ZT_Node *node, uint64_t nwid, void *ptr)
-{
-	try {
-		reinterpret_cast<ZeroTier::Node *>(node)->setNetworkUserPtr(nwid, ptr);
-	} catch (...) {}
-}
-
-void ZT_Node_setInterfaceAddresses(ZT_Node *node, const ZT_InterfaceAddress *addrs, unsigned int addrCount)
-{
-	try {
-		reinterpret_cast<ZeroTier::Node *>(node)->setInterfaceAddresses(addrs, addrCount);
-	} catch (...) {}
-}
-
-enum ZT_ResultCode ZT_Node_addPeer(
+ZT_MAYBE_UNUSED int ZT_Node_sendUserMessage(
 	ZT_Node *node,
+	int64_t clock,
+	int64_t ticks,
 	void *tptr,
-	const ZT_Identity *id)
+	uint64_t dest,
+	uint64_t typeId,
+	const void *data,
+	unsigned int len)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->addPeer(tptr, id);
-	} catch (...) {
-		return ZT_RESULT_ERROR_INTERNAL;
-	}
-}
-
-int ZT_Node_sendUserMessage(ZT_Node *node, void *tptr, uint64_t dest, uint64_t typeId, const void *data, unsigned int len)
-{
-	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->sendUserMessage(tptr, dest, typeId, data, len);
+		ZeroTier::CallContext cc(clock, ticks, tptr);
+		return reinterpret_cast<ZeroTier::Node *>(node)->sendUserMessage(cc, dest, typeId, data, len);
 	} catch (...) {
 		return 0;
 	}
 }
 
-void ZT_Node_setController(ZT_Node *node, void *networkControllerInstance)
+ZT_MAYBE_UNUSED void ZT_Node_setController(
+	ZT_Node *node,
+	void *networkControllerInstance)
 {
 	try {
 		reinterpret_cast<ZeroTier::Node *>(node)->setController(networkControllerInstance);
@@ -341,20 +413,20 @@ void ZT_Node_setController(ZT_Node *node, void *networkControllerInstance)
 
 /********************************************************************************************************************/
 
-ZT_Locator *ZT_Locator_create(
-	int64_t ts,
+ZT_MAYBE_UNUSED ZT_Locator *ZT_Locator_create(
+	int64_t rev,
 	const ZT_Endpoint *endpoints,
-	const ZT_EndpointAttributes *endpointAttributes, // TODO: not used yet
+	const ZT_EndpointAttributes *endpointAttributes,
 	unsigned int endpointCount,
 	const ZT_Identity *signer)
 {
 	try {
-		if ((ts <= 0) || (!endpoints) || (endpointCount == 0) || (!signer))
+		if ((!endpoints) || (endpointCount == 0) || (!signer))
 			return nullptr;
 		ZeroTier::Locator *loc = new ZeroTier::Locator();
 		for (unsigned int i = 0;i < endpointCount;++i)
 			loc->add(reinterpret_cast< const ZeroTier::Endpoint * >(endpoints)[i], ZeroTier::Locator::EndpointAttributes::DEFAULT);
-		if (!loc->sign(ts, *reinterpret_cast< const ZeroTier::Identity * >(signer))) {
+		if (!loc->sign(rev, *reinterpret_cast< const ZeroTier::Identity * >(signer))) {
 			delete loc;
 			return nullptr;
 		}
@@ -364,7 +436,7 @@ ZT_Locator *ZT_Locator_create(
 	}
 }
 
-ZT_Locator *ZT_Locator_fromString(const char *str)
+ZT_MAYBE_UNUSED ZT_Locator *ZT_Locator_fromString(const char *str)
 {
 	try {
 		if (!str)
@@ -380,7 +452,7 @@ ZT_Locator *ZT_Locator_fromString(const char *str)
 	}
 }
 
-ZT_Locator *ZT_Locator_unmarshal(
+ZT_MAYBE_UNUSED ZT_Locator *ZT_Locator_unmarshal(
 	const void *data,
 	unsigned int len)
 {
@@ -398,14 +470,14 @@ ZT_Locator *ZT_Locator_unmarshal(
 	}
 }
 
-int ZT_Locator_marshal(const ZT_Locator *loc, void *buf, unsigned int bufSize)
+ZT_MAYBE_UNUSED int ZT_Locator_marshal(const ZT_Locator *loc, void *buf, unsigned int bufSize)
 {
 	if ((!loc) || (bufSize < ZT_LOCATOR_MARSHAL_SIZE_MAX))
 		return -1;
 	return reinterpret_cast<const ZeroTier::Locator *>(loc)->marshal(reinterpret_cast<uint8_t *>(buf), false);
 }
 
-char *ZT_Locator_toString(
+ZT_MAYBE_UNUSED char *ZT_Locator_toString(
 	const ZT_Locator *loc,
 	char *buf,
 	int capacity)
@@ -415,26 +487,24 @@ char *ZT_Locator_toString(
 	return reinterpret_cast<const ZeroTier::Locator *>(loc)->toString(buf);
 }
 
-const ZT_Fingerprint *ZT_Locator_fingerprint(const ZT_Locator *loc)
+ZT_MAYBE_UNUSED const ZT_Fingerprint *ZT_Locator_fingerprint(const ZT_Locator *loc)
 {
 	if (!loc)
 		return nullptr;
 	return (ZT_Fingerprint *) (&(reinterpret_cast<const ZeroTier::Locator *>(loc)->signer()));
 }
 
-int64_t ZT_Locator_timestamp(const ZT_Locator *loc)
+ZT_MAYBE_UNUSED int64_t ZT_Locator_revision(const ZT_Locator *loc)
 {
 	if (!loc)
 		return 0;
-	return reinterpret_cast<const ZeroTier::Locator *>(loc)->timestamp();
+	return reinterpret_cast<const ZeroTier::Locator *>(loc)->revision();
 }
 
-unsigned int ZT_Locator_endpointCount(const ZT_Locator *loc)
-{
-	return (loc) ? (unsigned int) (reinterpret_cast<const ZeroTier::Locator *>(loc)->endpoints().size()) : 0;
-}
+ZT_MAYBE_UNUSED unsigned int ZT_Locator_endpointCount(const ZT_Locator *loc)
+{ return (loc) ? (unsigned int) (reinterpret_cast<const ZeroTier::Locator *>(loc)->endpoints().size()) : 0; }
 
-const ZT_Endpoint *ZT_Locator_endpoint(const ZT_Locator *loc, const unsigned int ep)
+ZT_MAYBE_UNUSED const ZT_Endpoint *ZT_Locator_endpoint(const ZT_Locator *loc, const unsigned int ep)
 {
 	if (!loc)
 		return nullptr;
@@ -443,14 +513,14 @@ const ZT_Endpoint *ZT_Locator_endpoint(const ZT_Locator *loc, const unsigned int
 	return reinterpret_cast<const ZT_Endpoint *>(&(reinterpret_cast<const ZeroTier::Locator *>(loc)->endpoints()[ep]));
 }
 
-int ZT_Locator_verify(const ZT_Locator *loc, const ZT_Identity *signer)
+ZT_MAYBE_UNUSED int ZT_Locator_verify(const ZT_Locator *loc, const ZT_Identity *signer)
 {
 	if ((!loc) || (!signer))
 		return 0;
 	return reinterpret_cast<const ZeroTier::Locator *>(loc)->verify(*reinterpret_cast<const ZeroTier::Identity *>(signer)) ? 1 : 0;
 }
 
-void ZT_Locator_delete(const ZT_Locator *loc)
+ZT_MAYBE_UNUSED void ZT_Locator_delete(const ZT_Locator *loc)
 {
 	if (loc)
 		delete reinterpret_cast<const ZeroTier::Locator *>(loc);
@@ -458,7 +528,7 @@ void ZT_Locator_delete(const ZT_Locator *loc)
 
 /********************************************************************************************************************/
 
-ZT_Identity *ZT_Identity_new(enum ZT_IdentityType type)
+ZT_MAYBE_UNUSED ZT_Identity *ZT_Identity_new(enum ZT_IdentityType type)
 {
 	if ((type != ZT_IDENTITY_TYPE_C25519) && (type != ZT_IDENTITY_TYPE_P384))
 		return nullptr;
@@ -471,7 +541,7 @@ ZT_Identity *ZT_Identity_new(enum ZT_IdentityType type)
 	}
 }
 
-ZT_Identity *ZT_Identity_clone(const ZT_Identity *id)
+ZT_MAYBE_UNUSED ZT_Identity *ZT_Identity_clone(const ZT_Identity *id)
 {
 	if (id) {
 		try {
@@ -483,7 +553,7 @@ ZT_Identity *ZT_Identity_clone(const ZT_Identity *id)
 	return nullptr;
 }
 
-ZT_Identity *ZT_Identity_fromString(const char *idStr)
+ZT_MAYBE_UNUSED ZT_Identity *ZT_Identity_fromString(const char *idStr)
 {
 	if (!idStr)
 		return nullptr;
@@ -499,14 +569,14 @@ ZT_Identity *ZT_Identity_fromString(const char *idStr)
 	}
 }
 
-int ZT_Identity_validate(const ZT_Identity *id)
+ZT_MAYBE_UNUSED int ZT_Identity_validate(const ZT_Identity *id)
 {
 	if (!id)
 		return 0;
 	return reinterpret_cast<const ZeroTier::Identity *>(id)->locallyValidate() ? 1 : 0;
 }
 
-unsigned int ZT_Identity_sign(const ZT_Identity *id, const void *data, unsigned int len, void *signature, unsigned int signatureBufferLength)
+ZT_MAYBE_UNUSED unsigned int ZT_Identity_sign(const ZT_Identity *id, const void *data, unsigned int len, void *signature, unsigned int signatureBufferLength)
 {
 	if (!id)
 		return 0;
@@ -515,21 +585,21 @@ unsigned int ZT_Identity_sign(const ZT_Identity *id, const void *data, unsigned 
 	return reinterpret_cast<const ZeroTier::Identity *>(id)->sign(data, len, signature, signatureBufferLength);
 }
 
-int ZT_Identity_verify(const ZT_Identity *id, const void *data, unsigned int len, const void *signature, unsigned int sigLen)
+ZT_MAYBE_UNUSED int ZT_Identity_verify(const ZT_Identity *id, const void *data, unsigned int len, const void *signature, unsigned int sigLen)
 {
 	if ((!id) || (!signature) || (!sigLen))
 		return 0;
 	return reinterpret_cast<const ZeroTier::Identity *>(id)->verify(data, len, signature, sigLen) ? 1 : 0;
 }
 
-enum ZT_IdentityType ZT_Identity_type(const ZT_Identity *id)
+ZT_MAYBE_UNUSED enum ZT_IdentityType ZT_Identity_type(const ZT_Identity *id)
 {
 	if (!id)
 		return (ZT_IdentityType)0;
 	return (enum ZT_IdentityType)reinterpret_cast<const ZeroTier::Identity *>(id)->type();
 }
 
-char *ZT_Identity_toString(const ZT_Identity *id, char *buf, int capacity, int includePrivate)
+ZT_MAYBE_UNUSED char *ZT_Identity_toString(const ZT_Identity *id, char *buf, int capacity, int includePrivate)
 {
 	if ((!id) || (!buf) || (capacity < ZT_IDENTITY_STRING_BUFFER_LENGTH))
 		return nullptr;
@@ -537,28 +607,28 @@ char *ZT_Identity_toString(const ZT_Identity *id, char *buf, int capacity, int i
 	return buf;
 }
 
-int ZT_Identity_hasPrivate(const ZT_Identity *id)
+ZT_MAYBE_UNUSED int ZT_Identity_hasPrivate(const ZT_Identity *id)
 {
 	if (!id)
 		return 0;
 	return reinterpret_cast<const ZeroTier::Identity *>(id)->hasPrivate() ? 1 : 0;
 }
 
-uint64_t ZT_Identity_address(const ZT_Identity *id)
+ZT_MAYBE_UNUSED uint64_t ZT_Identity_address(const ZT_Identity *id)
 {
 	if (!id)
 		return 0;
 	return reinterpret_cast<const ZeroTier::Identity *>(id)->address();
 }
 
-const ZT_Fingerprint *ZT_Identity_fingerprint(const ZT_Identity *id)
+ZT_MAYBE_UNUSED const ZT_Fingerprint *ZT_Identity_fingerprint(const ZT_Identity *id)
 {
 	if (!id)
 		return nullptr;
 	return &(reinterpret_cast<const ZeroTier::Identity *>(id)->fingerprint());
 }
 
-int ZT_Identity_compare(const ZT_Identity *a, const ZT_Identity *b)
+ZT_MAYBE_UNUSED int ZT_Identity_compare(const ZT_Identity *a, const ZT_Identity *b)
 {
 	if (a) {
 		if (b) {
@@ -579,7 +649,7 @@ int ZT_Identity_compare(const ZT_Identity *a, const ZT_Identity *b)
 	}
 }
 
-void ZT_Identity_delete(const ZT_Identity *id)
+ZT_MAYBE_UNUSED void ZT_Identity_delete(const ZT_Identity *id)
 {
 	if (id)
 		delete reinterpret_cast<const ZeroTier::Identity *>(id);
@@ -587,7 +657,7 @@ void ZT_Identity_delete(const ZT_Identity *id)
 
 /********************************************************************************************************************/
 
-int ZT_Certificate_newSubjectUniqueId(
+ZT_MAYBE_UNUSED int ZT_Certificate_newSubjectUniqueId(
 	enum ZT_CertificateUniqueIdType type,
 	void *uniqueId,
 	int *uniqueIdSize,
@@ -610,7 +680,7 @@ int ZT_Certificate_newSubjectUniqueId(
 	}
 }
 
-int ZT_Certificate_newCSR(
+ZT_MAYBE_UNUSED int ZT_Certificate_newCSR(
 	const ZT_Certificate_Subject *subject,
 	const void *uniqueId,
 	int uniqueIdSize,
@@ -633,7 +703,7 @@ int ZT_Certificate_newCSR(
 	}
 }
 
-int ZT_Certificate_sign(
+ZT_MAYBE_UNUSED int ZT_Certificate_sign(
 	const ZT_Certificate *cert,
 	const ZT_Identity *signer,
 	void *signedCert,
@@ -658,7 +728,7 @@ int ZT_Certificate_sign(
 	}
 }
 
-enum ZT_CertificateError ZT_Certificate_decode(
+ZT_MAYBE_UNUSED enum ZT_CertificateError ZT_Certificate_decode(
 	const ZT_Certificate **decodedCert,
 	const void *cert,
 	int certSize,
@@ -687,7 +757,7 @@ enum ZT_CertificateError ZT_Certificate_decode(
 	}
 }
 
-int ZT_Certificate_encode(
+ZT_MAYBE_UNUSED int ZT_Certificate_encode(
 	const ZT_Certificate *cert,
 	void *encoded,
 	int *encodedSize)
@@ -707,7 +777,7 @@ int ZT_Certificate_encode(
 	}
 }
 
-enum ZT_CertificateError ZT_Certificate_verify(
+ZT_MAYBE_UNUSED enum ZT_CertificateError ZT_Certificate_verify(
 	const ZT_Certificate *cert,
 	int64_t clock)
 {
@@ -720,7 +790,7 @@ enum ZT_CertificateError ZT_Certificate_verify(
 	}
 }
 
-const ZT_Certificate *ZT_Certificate_clone(const ZT_Certificate *cert)
+ZT_MAYBE_UNUSED const ZT_Certificate *ZT_Certificate_clone(const ZT_Certificate *cert)
 {
 	try {
 		if (!cert)
@@ -731,7 +801,7 @@ const ZT_Certificate *ZT_Certificate_clone(const ZT_Certificate *cert)
 	}
 }
 
-void ZT_Certificate_delete(const ZT_Certificate *cert)
+ZT_MAYBE_UNUSED void ZT_Certificate_delete(const ZT_Certificate *cert)
 {
 	try {
 		if (cert)
@@ -741,7 +811,7 @@ void ZT_Certificate_delete(const ZT_Certificate *cert)
 
 /********************************************************************************************************************/
 
-char *ZT_Endpoint_toString(
+ZT_MAYBE_UNUSED char *ZT_Endpoint_toString(
 	const ZT_Endpoint *ep,
 	char *buf,
 	int capacity)
@@ -751,7 +821,7 @@ char *ZT_Endpoint_toString(
 	return reinterpret_cast<const ZeroTier::Endpoint *>(ep)->toString(buf);
 }
 
-int ZT_Endpoint_fromString(
+ZT_MAYBE_UNUSED int ZT_Endpoint_fromString(
 	ZT_Endpoint *ep,
 	const char *str)
 {
@@ -760,7 +830,7 @@ int ZT_Endpoint_fromString(
 	return reinterpret_cast<ZeroTier::Endpoint *>(ep)->fromString(str) ? ZT_RESULT_OK : ZT_RESULT_ERROR_BAD_PARAMETER;
 }
 
-int ZT_Endpoint_fromBytes(
+ZT_MAYBE_UNUSED int ZT_Endpoint_fromBytes(
 	ZT_Endpoint *ep,
 	const void *bytes,
 	unsigned int len)
@@ -772,14 +842,14 @@ int ZT_Endpoint_fromBytes(
 
 /********************************************************************************************************************/
 
-char *ZT_Fingerprint_toString(const ZT_Fingerprint *fp, char *buf, int capacity)
+ZT_MAYBE_UNUSED char *ZT_Fingerprint_toString(const ZT_Fingerprint *fp, char *buf, int capacity)
 {
 	if (capacity < ZT_FINGERPRINT_STRING_SIZE_MAX)
 		return nullptr;
 	return reinterpret_cast<const ZeroTier::Fingerprint *>(fp)->toString(buf);
 }
 
-int ZT_Fingerprint_fromString(ZT_Fingerprint *fp, const char *s)
+ZT_MAYBE_UNUSED int ZT_Fingerprint_fromString(ZT_Fingerprint *fp, const char *s)
 {
 	if ((!fp)||(!s))
 		return 0;
@@ -793,13 +863,13 @@ int ZT_Fingerprint_fromString(ZT_Fingerprint *fp, const char *s)
 
 /********************************************************************************************************************/
 
-void ZT_InetAddress_clear(ZT_InetAddress *ia)
+ZT_MAYBE_UNUSED void ZT_InetAddress_clear(ZT_InetAddress *ia)
 {
 	if (likely(ia != nullptr))
 		ZeroTier::Utils::zero<sizeof(ZT_InetAddress)>(ia);
 }
 
-char *ZT_InetAddress_toString(const ZT_InetAddress *ia, char *buf, unsigned int cap)
+ZT_MAYBE_UNUSED char *ZT_InetAddress_toString(const ZT_InetAddress *ia, char *buf, unsigned int cap)
 {
 	if (likely((cap > 0)&&(buf != nullptr))) {
 		if (likely((ia != nullptr)&&(cap >= ZT_INETADDRESS_STRING_SIZE_MAX))) {
@@ -811,7 +881,7 @@ char *ZT_InetAddress_toString(const ZT_InetAddress *ia, char *buf, unsigned int 
 	return buf;
 }
 
-int ZT_InetAddress_fromString(ZT_InetAddress *ia, const char *str)
+ZT_MAYBE_UNUSED int ZT_InetAddress_fromString(ZT_InetAddress *ia, const char *str)
 {
 	if (likely((ia != nullptr)&&(str != nullptr))) {
 		return (int)reinterpret_cast<ZeroTier::InetAddress *>(ia)->fromString(str);
@@ -819,53 +889,53 @@ int ZT_InetAddress_fromString(ZT_InetAddress *ia, const char *str)
 	return 0;
 }
 
-void ZT_InetAddress_set(ZT_InetAddress *ia, const void *saddr)
+ZT_MAYBE_UNUSED void ZT_InetAddress_set(ZT_InetAddress *ia, const void *saddr)
 {
 	if (likely(ia != nullptr))
 		(*reinterpret_cast<ZeroTier::InetAddress *>(ia)) = reinterpret_cast<const struct sockaddr *>(saddr);
 }
 
-void ZT_InetAddress_setIpBytes(ZT_InetAddress *ia, const void *ipBytes, unsigned int ipLen, unsigned int port)
+ZT_MAYBE_UNUSED void ZT_InetAddress_setIpBytes(ZT_InetAddress *ia, const void *ipBytes, unsigned int ipLen, unsigned int port)
 {
 	if (likely(ia != nullptr))
 		reinterpret_cast<ZeroTier::InetAddress *>(ia)->set(ipBytes, ipLen, port);
 }
 
-void ZT_InetAddress_setPort(ZT_InetAddress *ia, unsigned int port)
+ZT_MAYBE_UNUSED void ZT_InetAddress_setPort(ZT_InetAddress *ia, unsigned int port)
 {
 	if (likely(ia != nullptr))
 		reinterpret_cast<ZeroTier::InetAddress *>(ia)->setPort(port);
 }
 
-unsigned int ZT_InetAddress_port(const ZT_InetAddress *ia)
+ZT_MAYBE_UNUSED unsigned int ZT_InetAddress_port(const ZT_InetAddress *ia)
 {
 	if (likely(ia != nullptr))
 		return reinterpret_cast<const ZeroTier::InetAddress *>(ia)->port();
 	return 0;
 }
 
-int ZT_InetAddress_isNil(const ZT_InetAddress *ia)
+ZT_MAYBE_UNUSED int ZT_InetAddress_isNil(const ZT_InetAddress *ia)
 {
 	if (!ia)
 		return 0;
 	return (int)((bool)(*reinterpret_cast<const ZeroTier::InetAddress *>(ia)));
 }
 
-int ZT_InetAddress_isV4(const ZT_InetAddress *ia)
+ZT_MAYBE_UNUSED int ZT_InetAddress_isV4(const ZT_InetAddress *ia)
 {
 	if (!ia)
 		return 0;
 	return (int)(reinterpret_cast<const ZeroTier::InetAddress *>(ia))->isV4();
 }
 
-int ZT_InetAddress_isV6(const ZT_InetAddress *ia)
+ZT_MAYBE_UNUSED int ZT_InetAddress_isV6(const ZT_InetAddress *ia)
 {
 	if (!ia)
 		return 0;
 	return (int)(reinterpret_cast<const ZeroTier::InetAddress *>(ia))->isV6();
 }
 
-unsigned int ZT_InetAddress_ipBytes(const ZT_InetAddress *ia, void *buf)
+ZT_MAYBE_UNUSED unsigned int ZT_InetAddress_ipBytes(const ZT_InetAddress *ia, void *buf)
 {
 	if (ia) {
 		switch(reinterpret_cast<const ZeroTier::InetAddress *>(ia)->as.sa.sa_family) {
@@ -880,14 +950,14 @@ unsigned int ZT_InetAddress_ipBytes(const ZT_InetAddress *ia, void *buf)
 	return 0;
 }
 
-enum ZT_InetAddress_IpScope ZT_InetAddress_ipScope(const ZT_InetAddress *ia)
+ZT_MAYBE_UNUSED enum ZT_InetAddress_IpScope ZT_InetAddress_ipScope(const ZT_InetAddress *ia)
 {
 	if (likely(ia != nullptr))
 		return reinterpret_cast<const ZeroTier::InetAddress *>(ia)->ipScope();
 	return ZT_IP_SCOPE_NONE;
 }
 
-int ZT_InetAddress_compare(const ZT_InetAddress *a, const ZT_InetAddress *b)
+ZT_MAYBE_UNUSED int ZT_InetAddress_compare(const ZT_InetAddress *a, const ZT_InetAddress *b)
 {
 	if (a) {
 		if (b) {
@@ -910,7 +980,7 @@ int ZT_InetAddress_compare(const ZT_InetAddress *a, const ZT_InetAddress *b)
 
 /********************************************************************************************************************/
 
-int ZT_Dictionary_parse(const void *const dict, const unsigned int len, void *const arg, void (*f)(void *, const char *, unsigned int, const void *, unsigned int))
+ZT_MAYBE_UNUSED int ZT_Dictionary_parse(const void *const dict, const unsigned int len, void *const arg, void (*f)(void *, const char *, unsigned int, const void *, unsigned int))
 {
 	ZeroTier::Dictionary d;
 	if (d.decode(dict, len)) {
@@ -924,7 +994,7 @@ int ZT_Dictionary_parse(const void *const dict, const unsigned int len, void *co
 
 /********************************************************************************************************************/
 
-uint64_t ZT_random()
+ZT_MAYBE_UNUSED uint64_t ZT_random()
 { return ZeroTier::Utils::random(); }
 
 } // extern "C"

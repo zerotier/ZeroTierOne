@@ -27,13 +27,13 @@ pub struct Locator {
 impl Locator {
     /// Create and sign a new locator.
     /// The signer must include its secret key.
-    pub fn new(signer: &Identity, timestamp: i64, endpoints: &Vec<Endpoint>) -> Result<Locator, ResultCode> {
+    pub fn new(signer: &Identity, revision: i64, endpoints: &Vec<Endpoint>) -> Result<Locator, ResultCode> {
         let mut capi_endpoints: Vec<ztcore::ZT_Endpoint> = Vec::new();
         capi_endpoints.reserve(endpoints.len());
         for ep in endpoints.iter() {
             capi_endpoints.push(ep.capi);
         }
-        let loc = unsafe { ztcore::ZT_Locator_create(timestamp, capi_endpoints.as_ptr(), null(), capi_endpoints.len() as c_uint, signer.capi) };
+        let loc = unsafe { ztcore::ZT_Locator_create(revision, capi_endpoints.as_ptr(), null(), capi_endpoints.len() as c_uint, signer.capi) };
         if loc.is_null() {
             Err(ResultCode::ErrorBadParameter)
         } else {
@@ -65,9 +65,9 @@ impl Locator {
     }
 
     #[inline(always)]
-    pub fn timestamp(&self) -> i64 {
+    pub fn revision(&self) -> i64 {
         unsafe {
-            ztcore::ZT_Locator_timestamp(self.capi) as i64
+            ztcore::ZT_Locator_revision(self.capi) as i64
         }
     }
 

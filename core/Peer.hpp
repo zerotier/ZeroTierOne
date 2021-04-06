@@ -77,7 +77,7 @@ public:
 	 * @param peerIdentity The peer's identity
 	 * @return True if initialization was succcesful
 	 */
-	bool init(const Identity &peerIdentity);
+	bool init(CallContext &cc, const Identity &peerIdentity);
 
 	/**
 	 * @return This peer's ZT address (short for identity().address())
@@ -113,7 +113,7 @@ public:
 	ZT_INLINE SharedPtr< const Locator > setLocator(const SharedPtr< const Locator > &loc, bool verify) noexcept
 	{
 		RWMutex::Lock l(m_lock);
-		if ((loc) && ((!m_locator) || (m_locator->timestamp() < loc->timestamp()))) {
+		if ((loc) && ((!m_locator) || (m_locator->revision() < loc->revision()))) {
 			if ((!verify) || loc->verify(m_id))
 				m_locator = loc;
 		}
@@ -126,7 +126,6 @@ public:
 	 * This is called by the decode pipe when a packet is proven to be authentic
 	 * and appears to be valid.
 	 *
-	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param path Path over which packet was received
 	 * @param hops ZeroTier (not IP) hops
 	 * @param packetId Packet ID
@@ -134,7 +133,7 @@ public:
 	 * @param inReVerb In-reply verb for OK or ERROR verbs
 	 */
 	void received(
-		void *tPtr,
+		CallContext &cc,
 		const SharedPtr< Path > &path,
 		unsigned int hops,
 		uint64_t packetId,
@@ -145,38 +144,36 @@ public:
 	/**
 	 * Log sent data
 	 *
-	 * @param now Current time
 	 * @param bytes Number of bytes written
 	 */
-	ZT_INLINE void sent(const int64_t now, const unsigned int bytes) noexcept
+	ZT_INLINE void sent(CallContext &cc, const unsigned int bytes) noexcept
 	{
-		m_lastSend = now;
-		m_outMeter.log(now, bytes);
+		m_lastSend = cc.ticks;
+		m_outMeter.log(cc.ticks, bytes);
 	}
 
 	/**
 	 * Called when traffic destined for a different peer is sent to this one
 	 *
-	 * @param now Current time
 	 * @param bytes Number of bytes relayed
 	 */
-	ZT_INLINE void relayed(const int64_t now, const unsigned int bytes) noexcept
-	{ m_relayedMeter.log(now, bytes); }
+	ZT_INLINE void relayed(CallContext &cc, const unsigned int bytes) noexcept
+	{ m_relayedMeter.log(cc.ticks, bytes); }
 
 	/**
 	 * Get the current best direct path or NULL if none
 	 *
 	 * @return Current best path or NULL if there is no direct path
 	 */
-	ZT_INLINE SharedPtr< Path > path(const int64_t now) noexcept
+	ZT_INLINE SharedPtr< Path > path(CallContext &cc) noexcept
 	{
-		if (likely((now - m_lastPrioritizedPaths) < ZT_PEER_PRIORITIZE_PATHS_INTERVAL)) {
+		if (likely((cc.ticks - m_lastPrioritizedPaths) < ZT_PEER_PRIORITIZE_PATHS_INTERVAL)) {
 			RWMutex::RLock l(m_lock);
 			if (m_alivePathCount > 0)
 				return m_paths[0];
 		} else {
 			RWMutex::Lock l(m_lock);
-			m_prioritizePaths(now);
+			m_prioritizePaths(cc);
 			if (m_alivePathCount > 0)
 				return m_paths[0];
 		}
@@ -186,16 +183,14 @@ public:
 	/**
 	 * Send data to this peer over a specific path only
 	 *
-	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
-	 * @param now Current time
 	 * @param data Data to send
 	 * @param len Length in bytes
 	 * @param via Path over which to send data (may or may not be an already-learned path for this peer)
 	 */
-	ZT_INLINE void send(void *tPtr, int64_t now, const void *data, unsigned int len, const SharedPtr< Path > &via) noexcept
+	ZT_INLINE void send(CallContext &cc, const void *data, unsigned int len, const SharedPtr< Path > &via) noexcept
 	{
-		via->send(RR, tPtr, data, len, now);
-		sent(now, len);
+		via->send(RR, cc, data, len);
+		sent(cc, len);
 	}
 
 	/**
@@ -204,42 +199,34 @@ public:
 	 * If there is a working direct path it will be used. Otherwise the data will be
 	 * sent via a root server.
 	 *
-	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
-	 * @param now Current time
 	 * @param data Data to send
 	 * @param len Length in bytes
 	 */
-	void send(void *tPtr, int64_t now, const void *data, unsigned int len) noexcept;
+	void send(CallContext &cc, const void *data, unsigned int len) noexcept;
 
 	/**
 	 * Send a HELLO to this peer at a specified physical address.
 	 *
-	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param localSocket Local source socket
 	 * @param atAddress Destination address
-	 * @param now Current time
 	 * @return Number of bytes sent
 	 */
-	unsigned int hello(void *tPtr, int64_t localSocket, const InetAddress &atAddress, int64_t now);
+	unsigned int hello(CallContext &cc, int64_t localSocket, const InetAddress &atAddress);
 
 	/**
 	 * Ping this peer if needed and/or perform other periodic tasks.
 	 *
-	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
-	 * @param now Current time
 	 * @param isRoot True if this peer is a root
 	 */
-	void pulse(void *tPtr, int64_t now, bool isRoot);
+	void pulse(CallContext &cc, bool isRoot);
 
 	/**
 	 * Attempt to contact this peer at a given endpoint.
 	 *
-	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
-	 * @param now Current time
 	 * @param ep Endpoint to attempt to contact
 	 * @param tries Number of times to try (default: 1)
 	 */
-	void contact(void *tPtr, int64_t now, const Endpoint &ep, int tries = 1);
+	void contact(CallContext &cc, const Endpoint &ep, int tries = 1);
 
 	/**
 	 * Reset paths within a given IP scope and address family
@@ -249,12 +236,10 @@ public:
 	 * to our external IP or another system change that might invalidate
 	 * many or all current paths.
 	 *
-	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param scope IP scope
 	 * @param inetAddressFamily Family e.g. AF_INET
-	 * @param now Current time
 	 */
-	void resetWithinScope(void *tPtr, InetAddress::IpScope scope, int inetAddressFamily, int64_t now);
+	void resetWithinScope(CallContext &cc, InetAddress::IpScope scope, int inetAddressFamily);
 
 	/**
 	 * @return Time of last receive of anything, whether direct or relayed
@@ -372,7 +357,7 @@ public:
 	/**
 	 * @return True if there is at least one alive direct path
 	 */
-	bool directlyConnected(int64_t now);
+	bool directlyConnected(CallContext &cc);
 
 	/**
 	 * Get all paths
@@ -384,7 +369,7 @@ public:
 	/**
 	 * Save the latest version of this peer to the data store
 	 */
-	void save(void *tPtr) const;
+	void save(CallContext &cc) const;
 
 	// NOTE: peer marshal/unmarshal only saves/restores the identity, locator, most
 	// recent bootstrap address, and version information.
@@ -393,15 +378,15 @@ public:
 
 	int marshal(uint8_t data[ZT_PEER_MARSHAL_SIZE_MAX]) const noexcept;
 
-	int unmarshal(const uint8_t *restrict data, int len) noexcept;
+	int unmarshal(int64_t ticks, const uint8_t *restrict data, int len) noexcept;
 
 	/**
 	 * Rate limit gate for inbound WHOIS requests
 	 */
-	ZT_INLINE bool rateGateInboundWhoisRequest(const int64_t now) noexcept
+	ZT_INLINE bool rateGateInboundWhoisRequest(CallContext &cc) noexcept
 	{
-		if ((now - m_lastWhoisRequestReceived) >= ZT_PEER_WHOIS_RATE_LIMIT) {
-			m_lastWhoisRequestReceived = now;
+		if ((cc.ticks - m_lastWhoisRequestReceived) >= ZT_PEER_WHOIS_RATE_LIMIT) {
+			m_lastWhoisRequestReceived = cc.ticks;
 			return true;
 		}
 		return false;
@@ -410,10 +395,10 @@ public:
 	/**
 	 * Rate limit gate for inbound ECHO requests
 	 */
-	ZT_INLINE bool rateGateEchoRequest(const int64_t now) noexcept
+	ZT_INLINE bool rateGateEchoRequest(CallContext &cc) noexcept
 	{
-		if ((now - m_lastEchoRequestReceived) >= ZT_PEER_GENERAL_RATE_LIMIT) {
-			m_lastEchoRequestReceived = now;
+		if ((cc.ticks - m_lastEchoRequestReceived) >= ZT_PEER_GENERAL_RATE_LIMIT) {
+			m_lastEchoRequestReceived = cc.ticks;
 			return true;
 		}
 		return false;
@@ -422,10 +407,10 @@ public:
 	/**
 	 * Rate limit gate for inbound probes
 	 */
-	ZT_INLINE bool rateGateProbeRequest(const int64_t now) noexcept
+	ZT_INLINE bool rateGateProbeRequest(CallContext &cc) noexcept
 	{
-		if ((now - m_lastProbeReceived) > ZT_PEER_PROBE_RESPONSE_RATE_LIMIT) {
-			m_lastProbeReceived = now;
+		if ((cc.ticks - m_lastProbeReceived) > ZT_PEER_PROBE_RESPONSE_RATE_LIMIT) {
+			m_lastProbeReceived = cc.ticks;
 			return true;
 		}
 		return false;
@@ -447,10 +432,8 @@ public:
 	}
 
 private:
-	void m_prioritizePaths(int64_t now);
-
-	unsigned int m_sendProbe(void *tPtr, int64_t localSocket, const InetAddress &atAddress, const uint16_t *ports, unsigned int numPorts, int64_t now);
-
+	void m_prioritizePaths(CallContext &cc);
+	unsigned int m_sendProbe(CallContext &cc, int64_t localSocket, const InetAddress &atAddress, const uint16_t *ports, unsigned int numPorts);
 	void m_deriveSecondaryIdentityKeys() noexcept;
 
 	ZT_INLINE SharedPtr< SymmetricKey > m_key() noexcept

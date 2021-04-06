@@ -24,7 +24,7 @@ Locator::Locator(const char *const str) noexcept :
 	__refCount(0)
 {
 	if (!fromString(str)) {
-		m_ts = 0;
+		m_revision = 0;
 		m_signer.zero();
 		m_endpoints.clear();
 		m_signature.clear();
@@ -46,9 +46,9 @@ bool Locator::add(const Endpoint &ep, const SharedPtr< const EndpointAttributes 
 	return false;
 }
 
-bool Locator::sign(const int64_t ts, const Identity &id) noexcept
+bool Locator::sign(const int64_t rev, const Identity &id) noexcept
 {
-	m_ts = ts;
+	m_revision = rev;
 	m_signer = id.fingerprint();
 
 	m_sortEndpoints();
@@ -67,7 +67,7 @@ bool Locator::sign(const int64_t ts, const Identity &id) noexcept
 bool Locator::verify(const Identity &id) const noexcept
 {
 	try {
-		if ((m_ts > 0) && (m_signer == id.fingerprint())) {
+		if ((m_revision > 0) && (m_signer == id.fingerprint())) {
 			uint8_t signdata[ZT_LOCATOR_MARSHAL_SIZE_MAX];
 			const unsigned int signlen = marshal(signdata, true);
 			return id.verify(signdata, signlen, m_signature.data(), m_signature.size());
@@ -101,7 +101,7 @@ bool Locator::fromString(const char *s) noexcept
 
 int Locator::marshal(uint8_t data[ZT_LOCATOR_MARSHAL_SIZE_MAX], const bool excludeSignature) const noexcept
 {
-	Utils::storeBigEndian<uint64_t>(data, (uint64_t) m_ts);
+	Utils::storeBigEndian<uint64_t>(data, (uint64_t) m_revision);
 	int p = 8;
 
 	int l = m_signer.marshal(data + p);
@@ -143,7 +143,7 @@ int Locator::unmarshal(const uint8_t *data, const int len) noexcept
 {
 	if (unlikely(len < 8))
 		return -1;
-	m_ts = (int64_t)Utils::loadBigEndian<uint64_t>(data);
+	m_revision = (int64_t)Utils::loadBigEndian<uint64_t>(data);
 	int p = 8;
 
 	int l = m_signer.unmarshal(data + p, len - p);

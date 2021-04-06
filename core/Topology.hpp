@@ -28,6 +28,7 @@
 #include "Certificate.hpp"
 #include "Containers.hpp"
 #include "Spinlock.hpp"
+#include "CallContext.hpp"
 
 namespace ZeroTier {
 
@@ -39,7 +40,7 @@ class RuntimeEnvironment;
 class Topology
 {
 public:
-	Topology(const RuntimeEnvironment *renv, void *tPtr, int64_t now);
+	Topology(const RuntimeEnvironment *renv, CallContext &cc);
 
 	/**
 	 * Add peer to database
@@ -47,21 +48,19 @@ public:
 	 * This will not replace existing peers. In that case the existing peer
 	 * record is returned.
 	 *
-	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param peer Peer to add
 	 * @return New or existing peer (should replace 'peer')
 	 */
-	SharedPtr< Peer > add(void *tPtr, const SharedPtr< Peer > &peer);
+	SharedPtr< Peer > add(CallContext &cc, const SharedPtr< Peer > &peer);
 
 	/**
 	 * Get a peer from its address
 	 *
-	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param zta ZeroTier address of peer
 	 * @param loadFromCached If false do not load from cache if not in memory (default: true)
 	 * @return Peer or NULL if not found
 	 */
-	ZT_INLINE SharedPtr< Peer > peer(void *tPtr, const Address &zta, const bool loadFromCached = true)
+	ZT_INLINE SharedPtr< Peer > peer(CallContext &cc, const Address &zta, const bool loadFromCached = true)
 	{
 		{
 			RWMutex::RLock l(m_peers_l);
@@ -70,7 +69,7 @@ public:
 				return ap->second;
 		}
 		if (loadFromCached)
-			return m_peerFromCached(tPtr, zta);
+			return m_peerFromCached(cc, zta);
 		return SharedPtr< Peer >();
 	}
 
@@ -125,34 +124,34 @@ public:
 
 	/**
 	 * Do periodic tasks such as database cleanup, cert cleanup, root ranking, etc.
-	 *
-	 * @param tPtr Thread pointer
-	 * @param now Current time
 	 */
-	void doPeriodicTasks(void *tPtr, int64_t now);
+	void doPeriodicTasks(CallContext &cc);
 
 	/**
 	 * Rank root servers in descending order of quality
 	 *
 	 * @param now Current time
 	 */
-	ZT_INLINE void rankRoots(int64_t now)
+	ZT_INLINE void rankRoots(CallContext &cc)
 	{
 		Mutex::Lock l(m_roots_l);
-		m_rankRoots(now);
+		m_rankRoots();
 	}
 
 	/**
-	 * Save all currently known peers to data store
-	 *
-	 * @param tPtr Thread pointer
+	 * Perform internal updates based on changes in the trust store
 	 */
-	void saveAll(void *tPtr);
+	void trustStoreChanged(CallContext &cc);
+
+	/**
+	 * Save all currently known peers to data store
+	 */
+	void saveAll(CallContext &cc);
 
 private:
-	void m_rankRoots(int64_t now);
-	void m_loadCached(void *tPtr, const Address &zta, SharedPtr< Peer > &peer);
-	SharedPtr< Peer > m_peerFromCached(void *tPtr, const Address &zta);
+	void m_rankRoots();
+	void m_loadCached(CallContext &cc, const Address &zta, SharedPtr< Peer > &peer);
+	SharedPtr< Peer > m_peerFromCached(CallContext &cc, const Address &zta);
 	SharedPtr< Path > m_newPath(int64_t l, const InetAddress &r, const Path::Key &k);
 
 	const RuntimeEnvironment *const RR;

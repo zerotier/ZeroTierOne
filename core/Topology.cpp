@@ -13,20 +13,22 @@
 
 #include "Topology.hpp"
 #include "Defaults.hpp"
+#include "TrustStore.hpp"
+#include "Locator.hpp"
 
 namespace ZeroTier {
 
-Topology::Topology(const RuntimeEnvironment *renv, void *tPtr, const int64_t now) :
+Topology::Topology(const RuntimeEnvironment *renv, CallContext &cc) :
 	RR(renv)
 {}
 
-SharedPtr< Peer > Topology::add(void *tPtr, const SharedPtr< Peer > &peer)
+SharedPtr< Peer > Topology::add(CallContext &cc, const SharedPtr< Peer > &peer)
 {
 	RWMutex::Lock _l(m_peers_l);
 	SharedPtr< Peer > &hp = m_peers[peer->address()];
 	if (hp)
 		return hp;
-	m_loadCached(tPtr, peer->address(), hp);
+	m_loadCached(cc, peer->address(), hp);
 	if (hp)
 		return hp;
 	hp = peer;
@@ -48,13 +50,13 @@ void Topology::allPeers(Vector< SharedPtr< Peer > > &allPeers, Vector< SharedPtr
 	}
 }
 
-void Topology::doPeriodicTasks(void *tPtr, const int64_t now)
+void Topology::doPeriodicTasks(CallContext &cc)
 {
 	// Get a list of root peer pointer addresses for filtering during peer cleanup.
 	Vector< uintptr_t > rootLookup;
 	{
 		Mutex::Lock l(m_roots_l);
-		m_rankRoots(now);
+		m_rankRoots();
 		rootLookup.reserve(m_roots.size());
 		for (Vector< SharedPtr< Peer > >::const_iterator r(m_roots.begin()); r != m_roots.end(); ++r)
 			rootLookup.push_back((uintptr_t)r->ptr());
@@ -69,7 +71,7 @@ void Topology::doPeriodicTasks(void *tPtr, const int64_t now)
 			RWMutex::RLock l1(m_peers_l);
 			for (Map< Address, SharedPtr< Peer > >::iterator i(m_peers.begin()); i != m_peers.end(); ++i) {
 				// TODO: also delete if the peer has not exchanged meaningful communication in a while, such as a network frame or non-trivial control packet.
-				if (((now - i->second->lastReceive()) > ZT_PEER_ALIVE_TIMEOUT) && (std::find(rootLookup.begin(), rootLookup.end(), (uintptr_t)(i->second.ptr())) == rootLookup.end()))
+				if (((cc.ticks - i->second->lastReceive()) > ZT_PEER_ALIVE_TIMEOUT) && (std::find(rootLookup.begin(), rootLookup.end(), (uintptr_t)(i->second.ptr())) == rootLookup.end()))
 					toDelete.push_back(i->first);
 			}
 		}
@@ -86,7 +88,7 @@ void Topology::doPeriodicTasks(void *tPtr, const int64_t now)
 					}
 				}
 				if (toSave)
-					toSave->save(tPtr);
+					toSave->save(cc);
 			}
 		}
 	}
@@ -117,11 +119,37 @@ void Topology::doPeriodicTasks(void *tPtr, const int64_t now)
 	}
 }
 
-void Topology::saveAll(void *tPtr)
+void Topology::trustStoreChanged(CallContext &cc)
+{
+	Map< Identity, SharedPtr< const Locator > > roots(RR->ts->roots());
+
+	Vector< SharedPtr< Peer > > newRootList;
+	newRootList.reserve(roots.size());
+
+	for (Map< Identity, SharedPtr< const Locator > >::const_iterator r(roots.begin()); r != roots.end(); ++r) {
+		SharedPtr< Peer > root(this->peer(cc, r->first.address(), true));
+		if (!root) {
+			root.set(new Peer(RR));
+			root->init(cc, r->first);
+			root = this->add(cc, root);
+		}
+		newRootList.push_back(root);
+		if (r->second)
+			root->setLocator(r->second, true);
+	}
+
+	{
+		Mutex::Lock l(m_roots_l);
+		m_roots.swap(newRootList);
+		m_rankRoots();
+	}
+}
+
+void Topology::saveAll(CallContext &cc)
 {
 	RWMutex::RLock l(m_peers_l);
 	for (Map< Address, SharedPtr< Peer > >::iterator i(m_peers.begin()); i != m_peers.end(); ++i)
-		i->second->save(tPtr);
+		i->second->save(cc);
 }
 
 struct p_RootRankingComparisonOperator
@@ -147,7 +175,7 @@ struct p_RootRankingComparisonOperator
 	}
 };
 
-void Topology::m_rankRoots(const int64_t now)
+void Topology::m_rankRoots()
 {
 	// assumes m_roots is locked
 	if (unlikely(m_roots.empty())) {
@@ -162,7 +190,7 @@ void Topology::m_rankRoots(const int64_t now)
 	}
 }
 
-void Topology::m_loadCached(void *tPtr, const Address &zta, SharedPtr< Peer > &peer)
+void Topology::m_loadCached(CallContext &cc, const Address &zta, SharedPtr< Peer > &peer)
 {
 	// does not require any locks to be held
 
@@ -170,19 +198,19 @@ void Topology::m_loadCached(void *tPtr, const Address &zta, SharedPtr< Peer > &p
 		uint64_t id[2];
 		id[0] = zta.toInt();
 		id[1] = 0;
-		Vector< uint8_t > data(RR->store->get(tPtr, ZT_STATE_OBJECT_PEER, id, 1));
+		Vector< uint8_t > data(RR->store->get(cc, ZT_STATE_OBJECT_PEER, id, 1));
 		if (data.size() > 8) {
 			const uint8_t *d = data.data();
 			int dl = (int)data.size();
 
 			const int64_t ts = (int64_t)Utils::loadBigEndian< uint64_t >(d);
 			Peer *const p = new Peer(RR);
-			int n = p->unmarshal(d + 8, dl - 8);
+			int n = p->unmarshal(cc.ticks, d + 8, dl - 8);
 			if (n < 0) {
 				delete p;
 				return;
 			}
-			if ((RR->node->now() - ts) < ZT_PEER_GLOBAL_TIMEOUT) {
+			if ((cc.ticks - ts) < ZT_PEER_GLOBAL_TIMEOUT) {
 				// TODO: handle many peers, same address (?)
 				peer.set(p);
 				return;
@@ -193,10 +221,10 @@ void Topology::m_loadCached(void *tPtr, const Address &zta, SharedPtr< Peer > &p
 	}
 }
 
-SharedPtr< Peer > Topology::m_peerFromCached(void *tPtr, const Address &zta)
+SharedPtr< Peer > Topology::m_peerFromCached(CallContext &cc, const Address &zta)
 {
 	SharedPtr< Peer > p;
-	m_loadCached(tPtr, zta, p);
+	m_loadCached(cc, zta, p);
 	if (p) {
 		RWMutex::Lock l(m_peers_l);
 		SharedPtr< Peer > &hp = m_peers[zta];

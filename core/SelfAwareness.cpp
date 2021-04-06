@@ -24,32 +24,12 @@
 
 namespace ZeroTier {
 
-class _ResetWithinScope
-{
-public:
-	ZT_INLINE _ResetWithinScope(void *tPtr, int64_t now, int inetAddressFamily, InetAddress::IpScope scope) :
-		_now(now),
-		_tPtr(tPtr),
-		_family(inetAddressFamily),
-		_scope(scope)
-	{}
-
-	ZT_INLINE void operator()(const SharedPtr< Peer > &p)
-	{ p->resetWithinScope(_tPtr, _scope, _family, _now); }
-
-private:
-	int64_t _now;
-	void *_tPtr;
-	int _family;
-	InetAddress::IpScope _scope;
-};
-
 SelfAwareness::SelfAwareness(const RuntimeEnvironment *renv) :
 	RR(renv)
 {
 }
 
-void SelfAwareness::iam(void *tPtr, const Identity &reporter, const int64_t receivedOnLocalSocket, const InetAddress &reporterPhysicalAddress, const InetAddress &myPhysicalAddress, bool trusted, int64_t now)
+void SelfAwareness::iam(CallContext &cc, const Identity &reporter, const int64_t receivedOnLocalSocket, const InetAddress &reporterPhysicalAddress, const InetAddress &myPhysicalAddress, bool trusted)
 {
 	const InetAddress::IpScope scope = myPhysicalAddress.ipScope();
 
@@ -59,10 +39,10 @@ void SelfAwareness::iam(void *tPtr, const Identity &reporter, const int64_t rece
 	Mutex::Lock l(m_phy_l);
 	p_PhySurfaceEntry &entry = m_phy[p_PhySurfaceKey(reporter.address(), receivedOnLocalSocket, reporterPhysicalAddress, scope)];
 
-	if ((trusted) && ((now - entry.ts) < ZT_SELFAWARENESS_ENTRY_TIMEOUT) && (!entry.mySurface.ipsEqual(myPhysicalAddress))) {
+	if ((trusted) && ((cc.ticks - entry.timestampTicks) < ZT_SELFAWARENESS_ENTRY_TIMEOUT) && (!entry.mySurface.ipsEqual(myPhysicalAddress))) {
 		// Changes to external surface reported by trusted peers causes path reset in this scope
 		entry.mySurface = myPhysicalAddress;
-		entry.ts = now;
+		entry.timestampTicks = cc.ticks;
 		entry.trusted = trusted;
 
 		// Erase all entries in this scope that were not reported from this remote address to prevent 'thrashing'
@@ -78,28 +58,28 @@ void SelfAwareness::iam(void *tPtr, const Identity &reporter, const int64_t rece
 		Vector< SharedPtr< Peer > > peers, rootPeers;
 		RR->topology->allPeers(peers, rootPeers);
 		for(Vector< SharedPtr< Peer > >::const_iterator p(peers.begin());p!=peers.end();++p)
-			(*p)->resetWithinScope(tPtr, (InetAddress::IpScope)scope, myPhysicalAddress.family(), now);
+			(*p)->resetWithinScope(cc, (InetAddress::IpScope)scope, myPhysicalAddress.as.sa.sa_family);
 
-		RR->t->resettingPathsInScope(tPtr, 0x9afff100, reporter, reporterPhysicalAddress, entry.mySurface, myPhysicalAddress, scope);
+		RR->t->resettingPathsInScope(cc, 0x9afff100, reporter, reporterPhysicalAddress, entry.mySurface, myPhysicalAddress, scope);
 	} else {
 		// Otherwise just update DB to use to determine external surface info
 		entry.mySurface = myPhysicalAddress;
-		entry.ts = now;
+		entry.timestampTicks = cc.ticks;
 		entry.trusted = trusted;
 	}
 }
 
-void SelfAwareness::clean(int64_t now)
+void SelfAwareness::clean(CallContext &cc)
 {
 	Mutex::Lock l(m_phy_l);
 	for (Map< p_PhySurfaceKey, p_PhySurfaceEntry >::iterator i(m_phy.begin()); i != m_phy.end();) {
-		if ((now - i->second.ts) >= ZT_SELFAWARENESS_ENTRY_TIMEOUT)
+		if ((cc.ticks - i->second.timestampTicks) >= ZT_SELFAWARENESS_ENTRY_TIMEOUT)
 			m_phy.erase(i++);
 		else ++i;
 	}
 }
 
-MultiMap< unsigned int, InetAddress > SelfAwareness::externalAddresses(const int64_t now) const
+MultiMap< unsigned int, InetAddress > SelfAwareness::externalAddresses(CallContext &cc) const
 {
 	MultiMap< unsigned int, InetAddress > r;
 
@@ -108,7 +88,7 @@ MultiMap< unsigned int, InetAddress > SelfAwareness::externalAddresses(const int
 	{
 		Mutex::Lock l(m_phy_l);
 		for (Map< p_PhySurfaceKey, p_PhySurfaceEntry >::const_iterator i(m_phy.begin()); i != m_phy.end(); ++i) {
-			if ((now - i->second.ts) < ZT_SELFAWARENESS_ENTRY_TIMEOUT)
+			if ((cc.ticks - i->second.timestampTicks) < ZT_SELFAWARENESS_ENTRY_TIMEOUT)
 				++counts[i->second.mySurface];
 		}
 	}

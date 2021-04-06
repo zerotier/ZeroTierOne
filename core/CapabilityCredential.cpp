@@ -38,7 +38,7 @@ int CapabilityCredential::marshal(uint8_t data[ZT_CAPABILITY_MARSHAL_SIZE_MAX], 
 
 	Utils::storeBigEndian<uint64_t>(data + p, m_nwid);
 	p += 8;
-	Utils::storeBigEndian<uint64_t>(data + p, (uint64_t) m_ts);
+	Utils::storeBigEndian<uint64_t>(data + p, (uint64_t) m_timestamp);
 	p += 8;
 	Utils::storeBigEndian<uint32_t>(data + p, m_id);
 	p += 4;
@@ -84,7 +84,7 @@ int CapabilityCredential::unmarshal(const uint8_t *data, int len) noexcept
 		return -1;
 
 	m_nwid = Utils::loadBigEndian<uint64_t>(data);
-	m_ts = (int64_t) Utils::loadBigEndian<uint64_t>(data + 8);
+	m_timestamp = (int64_t) Utils::loadBigEndian<uint64_t>(data + 8);
 	m_id = Utils::loadBigEndian<uint32_t>(data + 16);
 
 	const unsigned int rc = Utils::loadBigEndian<uint16_t>(data + 20);

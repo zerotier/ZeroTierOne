@@ -43,28 +43,25 @@ public:
 	 *
 	 * @param now Start time
 	 */
-	ZT_INLINE Meter() noexcept :
-		m_counts(),
-		m_totalExclCounts(0),
-		m_bucket(0)
+	ZT_INLINE Meter() noexcept
 	{}
 
 	/**
 	 * Add a measurement
 	 *
-	 * @param now Current time
+	 * @param ts Timestamp for measurement
 	 * @param count Count of items (usually bytes)
 	 */
-	ZT_INLINE void log(const int64_t now, uint64_t count) noexcept
+	ZT_INLINE void log(const int64_t ts, const uint64_t count) noexcept
 	{
 		// We log by choosing a log bucket based on the current time in units modulo
 		// the log size and then if it's a new bucket setting it or otherwise adding
 		// to it.
-		const unsigned long bucket = ((unsigned long)(now / TUNIT)) % LSIZE;
-		if (m_bucket.exchange(bucket) != bucket) {
-			m_totalExclCounts.fetch_add(m_counts[bucket].exchange(count));
+		const unsigned long bucket = ((unsigned long)(ts / TUNIT)) % LSIZE;
+		if (m_bucket.exchange(bucket, std::memory_order_relaxed) != bucket) {
+			m_totalExclCounts.fetch_add(m_counts[bucket].exchange(count, std::memory_order_relaxed), std::memory_order_relaxed);
 		} else {
-			m_counts[bucket].fetch_add(count);
+			m_counts[bucket].fetch_add(count, std::memory_order_relaxed);
 		}
 	}
 
@@ -79,9 +76,9 @@ public:
 	{
 		total = 0;
 		for (unsigned long i = 0;i < LSIZE;++i)
-			total += m_counts[i].load();
+			total += m_counts[i].load(std::memory_order_relaxed);
 		rate = (double) total / (double) LSIZE;
-		total += m_totalExclCounts.load();
+		total += m_totalExclCounts.load(std::memory_order_relaxed);
 	}
 
 private:

@@ -84,6 +84,9 @@ public:
 	ZT_INLINE int64_t timestamp() const noexcept
 	{ return m_ts; }
 
+	ZT_INLINE int64_t revision() const noexcept
+	{ return m_ts; }
+
 	ZT_INLINE const Address &issuedTo() const noexcept
 	{ return m_issuedTo; }
 
@@ -110,8 +113,8 @@ public:
 	 * @param RR Runtime environment to allow identity lookup for signedBy
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 */
-	ZT_INLINE Credential::VerifyResult verify(const RuntimeEnvironment *RR, void *tPtr) const noexcept
-	{ return s_verify(RR, tPtr, *this); }
+	ZT_INLINE Credential::VerifyResult verify(const RuntimeEnvironment *RR, CallContext &cc) const noexcept
+	{ return s_verify(RR, cc, *this); }
 
 	static constexpr int marshalSizeMax() noexcept
 	{ return ZT_TAG_MARSHAL_SIZE_MAX; }

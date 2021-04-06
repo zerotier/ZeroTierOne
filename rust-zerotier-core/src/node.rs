@@ -48,7 +48,14 @@ pub enum StateObjectType {
     Peer = ztcore::ZT_StateObjectType_ZT_STATE_OBJECT_PEER as isize,
     NetworkConfig = ztcore::ZT_StateObjectType_ZT_STATE_OBJECT_NETWORK_CONFIG as isize,
     TrustStore = ztcore::ZT_StateObjectType_ZT_STATE_OBJECT_TRUST_STORE as isize,
-    Certificate = ztcore::ZT_StateObjectType_ZT_STATE_OBJECT_CERT as isize,
+}
+
+impl StateObjectType {
+    /// True if this state object should be protected.
+    #[inline(always)]
+    pub fn is_secret(&self) -> bool {
+        *self == StateObjectType::IdentitySecret || *self == StateObjectType::TrustStore
+    }
 }
 
 /// The status of a ZeroTier node.

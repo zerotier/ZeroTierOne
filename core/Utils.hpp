@@ -546,7 +546,7 @@ static ZT_INLINE I ntoh(const I n) noexcept
  * @return Loaded raw integer
  */
 template< typename I >
-static ZT_INLINE I loadMachineEndian(const void *const p) noexcept
+static ZT_INLINE I loadMachineEndian(const void *const restrict p) noexcept
 {
 #ifdef ZT_NO_UNALIGNED_ACCESS
 	I tmp;
@@ -566,7 +566,7 @@ static ZT_INLINE I loadMachineEndian(const void *const p) noexcept
  * @param i Integer to store
  */
 template< typename I >
-static ZT_INLINE void storeMachineEndian(void *const p, const I i) noexcept
+static ZT_INLINE void storeMachineEndian(void *const restrict p, const I i) noexcept
 {
 #ifdef ZT_NO_UNALIGNED_ACCESS
 	for(unsigned int k=0;k<sizeof(I);++k)
@@ -584,7 +584,7 @@ static ZT_INLINE void storeMachineEndian(void *const p, const I i) noexcept
  * @return Decoded integer
  */
 template< typename I >
-static ZT_INLINE I loadBigEndian(const void *const p) noexcept
+static ZT_INLINE I loadBigEndian(const void *const restrict p) noexcept
 {
 #ifdef ZT_NO_UNALIGNED_ACCESS
 	return _load_be_bysize<I,sizeof(I)>::l(reinterpret_cast<const uint8_t *>(p));
@@ -601,7 +601,7 @@ static ZT_INLINE I loadBigEndian(const void *const p) noexcept
  * #param i Integer to write
  */
 template< typename I >
-static ZT_INLINE void storeBigEndian(void *const p, I i) noexcept
+static ZT_INLINE void storeBigEndian(void *const restrict p, I i) noexcept
 {
 #ifdef ZT_NO_UNALIGNED_ACCESS
 	storeMachineEndian(p,hton(i));
@@ -618,7 +618,7 @@ static ZT_INLINE void storeBigEndian(void *const p, I i) noexcept
  * @return Decoded integer
  */
 template< typename I >
-static ZT_INLINE I loadLittleEndian(const void *const p) noexcept
+static ZT_INLINE I loadLittleEndian(const void *const restrict p) noexcept
 {
 #if __BYTE_ORDER == __BIG_ENDIAN || defined(ZT_NO_UNALIGNED_ACCESS)
 	return _load_le_bysize<I,sizeof(I)>::l(reinterpret_cast<const uint8_t *>(p));
@@ -635,7 +635,7 @@ static ZT_INLINE I loadLittleEndian(const void *const p) noexcept
  * #param i Integer to write
  */
 template< typename I >
-static ZT_INLINE void storeLittleEndian(void *const p, const I i) noexcept
+static ZT_INLINE void storeLittleEndian(void *const restrict p, const I i) noexcept
 {
 #if __BYTE_ORDER == __BIG_ENDIAN
 	storeMachineEndian(p,_swap_bytes_bysize<I,sizeof(I)>::s(i));
@@ -723,7 +723,7 @@ static ZT_INLINE void zero(void *dest, unsigned long len) noexcept
  * @param len Length of data
  * @return FNV1a checksum
  */
-uint32_t fnv1a32(const void *data, unsigned int len) noexcept;
+uint32_t fnv1a32(const void *restrict data, unsigned int len) noexcept;
 
 /**
  * Mix bits in a 64-bit integer (non-cryptographic, for hash tables)

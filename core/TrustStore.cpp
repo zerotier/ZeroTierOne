@@ -41,7 +41,7 @@ Map< Identity, SharedPtr< const Locator > > TrustStore::roots()
 					if (likely((id != nullptr) && (*id))) { // sanity check
 						SharedPtr< const Locator > &existingLoc = r[*id];
 						const Locator *const loc = reinterpret_cast<const Locator *>((*c)->certificate().subject.identities[j].locator);
-						if ((loc != nullptr) && ((!existingLoc) || (existingLoc->timestamp() < loc->timestamp())))
+						if ((loc != nullptr) && ((!existingLoc) || (existingLoc->revision() < loc->revision())))
 							existingLoc.set(new Locator(*loc));
 					}
 				}
@@ -59,17 +59,6 @@ Vector< SharedPtr< TrustStore::Entry > > TrustStore::all(const bool includeRejec
 	for (Map< H384, SharedPtr< Entry > >::const_iterator i(m_bySerial.begin()); i != m_bySerial.end(); ++i) {
 		if ((includeRejectedCertificates) || (i->second->error() == ZT_CERTIFICATE_ERROR_NONE))
 			r.push_back(i->second);
-	}
-	return r;
-}
-
-Vector< SharedPtr< TrustStore::Entry > > TrustStore::rejects() const
-{
-	RWMutex::RLock l(m_lock);
-	Vector< SharedPtr< Entry > > r;
-	for (Map< H384, SharedPtr< Entry > >::const_iterator c(m_bySerial.begin()); c != m_bySerial.end(); ++c) {
-		if (c->second->error() != ZT_CERTIFICATE_ERROR_NONE)
-			r.push_back(c->second);
 	}
 	return r;
 }
@@ -105,7 +94,7 @@ static bool p_validatePath(const Map< H384, Vector< SharedPtr< TrustStore::Entry
 	return false;
 }
 
-void TrustStore::update(const int64_t clock, Vector< SharedPtr< Entry > > *const purge)
+bool TrustStore::update(const int64_t clock, Vector< SharedPtr< Entry > > *const purge)
 {
 	RWMutex::Lock l(m_lock);
 
@@ -113,15 +102,21 @@ void TrustStore::update(const int64_t clock, Vector< SharedPtr< Entry > > *const
 	// signature check here since that's done when they're taken out of the add queue.
 	bool errorStateModified = false;
 	for (Map< H384, SharedPtr< Entry > >::const_iterator c(m_bySerial.begin()); c != m_bySerial.end(); ++c) {
-		const ZT_CertificateError err = c->second->m_certificate.verify(clock, false);
-		errorStateModified |= (c->second->m_error.exchange((int)err, std::memory_order_relaxed) != (int)err);
+		const ZT_CertificateError err = c->second->error();
+		if ((err != ZT_CERTIFICATE_ERROR_HAVE_NEWER_CERT) && (err != ZT_CERTIFICATE_ERROR_INVALID_CHAIN)) {
+			const ZT_CertificateError newErr = c->second->m_certificate.verify(clock, false);
+			if (newErr != err) {
+				c->second->m_error.store((int)newErr, std::memory_order_relaxed);
+				errorStateModified = true;
+			}
+		}
 	}
 
 	// If no certificate error statuses changed and there are no new certificates to
 	// add, there is nothing to do and we don't need to do more expensive path validation
 	// and structure rebuilding.
 	if ((!errorStateModified) && (m_addQueue.empty()) && (m_deleteQueue.empty()))
-		return;
+		return false;
 
 	// Add new certificates to m_bySerial, which is the master certificate set. They still
 	// have yet to have their full certificate chains validated. Full signature checking is
@@ -164,8 +159,8 @@ void TrustStore::update(const int64_t clock, Vector< SharedPtr< Entry > > *const
 		for (Map< H384, SharedPtr< Entry > >::const_iterator c(m_bySerial.begin()); c != m_bySerial.end();) {
 			if (c->second->error() == ZT_CERTIFICATE_ERROR_NONE) {
 				const unsigned int uniqueIdSize = c->second->m_certificate.subject.uniqueIdSize;
-				if ((uniqueIdSize > 0) && (uniqueIdSize <= 1024)) { // 1024 is a sanity check value, actual unique IDs are <100 bytes
-					SharedPtr< Entry > &current = m_bySubjectUniqueId[Vector< uint8_t >(c->second->m_certificate.subject.uniqueId, c->second->m_certificate.subject.uniqueId + uniqueIdSize)];
+				if ((uniqueIdSize > 0) && (uniqueIdSize <= ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE)) {
+					SharedPtr< Entry > &current = m_bySubjectUniqueId[Blob< ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE >(c->second->m_certificate.subject.uniqueId, uniqueIdSize)];
 					if (current) {
 						exitLoop = false;
 						if (c->second->m_certificate.subject.timestamp > current->m_certificate.subject.timestamp) {
@@ -222,6 +217,8 @@ void TrustStore::update(const int64_t clock, Vector< SharedPtr< Entry > > *const
 			}
 		}
 	}
+
+	return true;
 }
 
 Vector< uint8_t > TrustStore::save() const

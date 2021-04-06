@@ -42,43 +42,50 @@
 
 namespace ZeroTier {
 
-template<typename CRED>
-static ZT_INLINE Credential::VerifyResult p_credVerify(const RuntimeEnvironment *RR,void *tPtr,CRED credential)
+template< typename CRED >
+static ZT_INLINE Credential::VerifyResult p_credVerify(const RuntimeEnvironment *RR, CallContext &cc, CRED credential)
 {
 	uint8_t tmp[ZT_BUF_MEM_SIZE + 16];
 
 	const Address signedBy(credential.signer());
 	const uint64_t networkId = credential.networkId();
-	if ((!signedBy)||(signedBy != Network::controllerFor(networkId)))
+	if ((!signedBy) || (signedBy != Network::controllerFor(networkId)))
 		return Credential::VERIFY_BAD_SIGNATURE;
 
-	const SharedPtr<Peer> peer(RR->topology->peer(tPtr,signedBy));
+	const SharedPtr< Peer > peer(RR->topology->peer(cc, signedBy));
 	if (!peer)
 		return Credential::VERIFY_NEED_IDENTITY;
 
 	try {
-		int l = credential.marshal(tmp,true);
+		int l = credential.marshal(tmp, true);
 		if (l <= 0)
 			return Credential::VERIFY_BAD_SIGNATURE;
-		return (peer->identity().verify(tmp,(unsigned int)l,credential.signature(),credential.signatureLength()) ? Credential::VERIFY_OK : Credential::VERIFY_BAD_SIGNATURE);
-	} catch ( ... ) {}
+		return (peer->identity().verify(tmp, (unsigned int)l, credential.signature(), credential.signatureLength()) ? Credential::VERIFY_OK : Credential::VERIFY_BAD_SIGNATURE);
+	} catch (...) {}
 
 	return Credential::VERIFY_BAD_SIGNATURE;
 }
 
-Credential::VerifyResult Credential::s_verify(const RuntimeEnvironment *RR, void *tPtr, const RevocationCredential &credential) { return p_credVerify(RR, tPtr, credential); }
-Credential::VerifyResult Credential::s_verify(const RuntimeEnvironment *RR, void *tPtr, const TagCredential &credential) { return p_credVerify(RR, tPtr, credential); }
-Credential::VerifyResult Credential::s_verify(const RuntimeEnvironment *RR, void *tPtr, const CapabilityCredential &credential) { return p_credVerify(RR, tPtr, credential); }
-Credential::VerifyResult Credential::s_verify(const RuntimeEnvironment *RR, void *tPtr, const OwnershipCredential &credential) { return p_credVerify(RR, tPtr, credential); }
+Credential::VerifyResult Credential::s_verify(const RuntimeEnvironment *RR, CallContext &cc, const RevocationCredential &credential)
+{ return p_credVerify(RR, cc, credential); }
 
-Credential::VerifyResult Credential::s_verify(const RuntimeEnvironment *RR, void *tPtr, const MembershipCredential &credential)
+Credential::VerifyResult Credential::s_verify(const RuntimeEnvironment *RR, CallContext &cc, const TagCredential &credential)
+{ return p_credVerify(RR, cc, credential); }
+
+Credential::VerifyResult Credential::s_verify(const RuntimeEnvironment *RR, CallContext &cc, const CapabilityCredential &credential)
+{ return p_credVerify(RR, cc, credential); }
+
+Credential::VerifyResult Credential::s_verify(const RuntimeEnvironment *RR, CallContext &cc, const OwnershipCredential &credential)
+{ return p_credVerify(RR, cc, credential); }
+
+Credential::VerifyResult Credential::s_verify(const RuntimeEnvironment *RR, CallContext &cc, const MembershipCredential &credential)
 {
 	// Sanity check network ID.
 	if ((!credential.m_signedBy) || (credential.m_signedBy != Network::controllerFor(credential.m_networkId)))
 		return Credential::VERIFY_BAD_SIGNATURE;
 
 	// If we don't know the peer, get its identity. This shouldn't happen here but should be handled.
-	const SharedPtr<Peer> peer(RR->topology->peer(tPtr,credential.m_signedBy));
+	const SharedPtr< Peer > peer(RR->topology->peer(cc, credential.m_signedBy));
 	if (!peer)
 		return Credential::VERIFY_NEED_IDENTITY;
 

@@ -22,6 +22,7 @@
 #include "MAC.hpp"
 #include "Containers.hpp"
 #include "Utils.hpp"
+#include "CallContext.hpp"
 
 #define ZT_TRACE_F_VL1           0x01U
 #define ZT_TRACE_F_VL2           0x02U
@@ -31,25 +32,15 @@
 namespace ZeroTier {
 
 class RuntimeEnvironment;
-
 class Identity;
-
 class Peer;
-
 class Path;
-
 class Network;
-
 class MembershipCredential;
-
 class OwnershipCredential;
-
 class RevocationCredential;
-
 class TagCredential;
-
 class CapabilityCredential;
-
 struct NetworkConfig;
 
 /**
@@ -73,31 +64,25 @@ public:
 		uint8_t l[ZT_MAX_NETWORK_RULES / 2]; // ZT_MAX_NETWORK_RULES 4-bit fields
 
 		ZT_INLINE void log(const unsigned int rn, const uint8_t thisRuleMatches, const uint8_t thisSetMatches) noexcept
-		{
-			l[rn >> 1U] |= (((thisRuleMatches + 1U) << 2U) | (thisSetMatches + 1U)) << ((rn & 1U) << 2U);
-		}
+		{ l[rn >> 1U] |= (((thisRuleMatches + 1U) << 2U) | (thisSetMatches + 1U)) << ((rn & 1U) << 2U); }
 
 		ZT_INLINE void logSkipped(const unsigned int rn, const uint8_t thisSetMatches) noexcept
-		{
-			l[rn >> 1U] |= (thisSetMatches + 1U) << ((rn & 1U) << 2U);
-		}
+		{ l[rn >> 1U] |= (thisSetMatches + 1U) << ((rn & 1U) << 2U); }
 
 		ZT_INLINE void clear() noexcept
-		{
-			memoryZero(this);
-		}
+		{ memoryZero(this); }
 	};
 
 	explicit Trace(const RuntimeEnvironment *renv);
 
 	void unexpectedError(
-		void *tPtr,
+		CallContext &cc,
 		uint32_t codeLocation,
 		const char *message,
 		...);
 
 	ZT_INLINE void resettingPathsInScope(
-		void *const tPtr,
+		CallContext &cc,
 		const uint32_t codeLocation,
 		const Identity &reporter,
 		const InetAddress &from,
@@ -105,12 +90,12 @@ public:
 		const InetAddress &newExternal,
 		const InetAddress::IpScope scope)
 	{
-		if ((m_traceFlags & ZT_TRACE_F_VL1) != 0)
-			_resettingPathsInScope(tPtr, codeLocation, reporter, from, oldExternal, newExternal, scope);
+		if (unlikely((m_traceFlags & ZT_TRACE_F_VL1) != 0))
+			m_resettingPathsInScope(cc.tPtr, codeLocation, reporter, from, oldExternal, newExternal, scope);
 	}
 
 	ZT_INLINE void tryingNewPath(
-		void *const tPtr,
+		CallContext &cc,
 		const uint32_t codeLocation,
 		const Identity &trying,
 		const InetAddress &physicalAddress,
@@ -119,24 +104,24 @@ public:
 		uint8_t triggeringPacketVerb,
 		const Identity &triggeringPeer)
 	{
-		if ((m_traceFlags & ZT_TRACE_F_VL1) != 0)
-			_tryingNewPath(tPtr, codeLocation, trying, physicalAddress, triggerAddress, triggeringPacketId, triggeringPacketVerb, triggeringPeer);
+		if (unlikely((m_traceFlags & ZT_TRACE_F_VL1) != 0))
+			m_tryingNewPath(cc.tPtr, codeLocation, trying, physicalAddress, triggerAddress, triggeringPacketId, triggeringPacketVerb, triggeringPeer);
 	}
 
 	ZT_INLINE void learnedNewPath(
-		void *const tPtr,
+		CallContext &cc,
 		const uint32_t codeLocation,
 		uint64_t packetId,
 		const Identity &peerIdentity,
 		const InetAddress &physicalAddress,
 		const InetAddress &replaced)
 	{
-		if ((m_traceFlags & ZT_TRACE_F_VL1) != 0)
-			_learnedNewPath(tPtr, codeLocation, packetId, peerIdentity, physicalAddress, replaced);
+		if (unlikely((m_traceFlags & ZT_TRACE_F_VL1) != 0))
+			m_learnedNewPath(cc.tPtr, codeLocation, packetId, peerIdentity, physicalAddress, replaced);
 	}
 
 	ZT_INLINE void incomingPacketDropped(
-		void *const tPtr,
+		CallContext &cc,
 		const uint32_t codeLocation,
 		uint64_t packetId,
 		uint64_t networkId,
@@ -146,12 +131,12 @@ public:
 		uint8_t verb,
 		const ZT_TracePacketDropReason reason)
 	{
-		if ((m_traceFlags & ZT_TRACE_F_VL1) != 0)
-			_incomingPacketDropped(tPtr, codeLocation, packetId, networkId, peerIdentity, physicalAddress, hops, verb, reason);
+		if (unlikely((m_traceFlags & ZT_TRACE_F_VL1) != 0))
+			m_incomingPacketDropped(cc.tPtr, codeLocation, packetId, networkId, peerIdentity, physicalAddress, hops, verb, reason);
 	}
 
 	ZT_INLINE void outgoingNetworkFrameDropped(
-		void *const tPtr,
+		CallContext &cc,
 		const uint32_t codeLocation,
 		uint64_t networkId,
 		const MAC &sourceMac,
@@ -161,12 +146,12 @@ public:
 		const uint8_t *frameData,
 		ZT_TraceFrameDropReason reason)
 	{
-		if ((m_traceFlags & ZT_TRACE_F_VL2) != 0)
-			_outgoingNetworkFrameDropped(tPtr, codeLocation, networkId, sourceMac, destMac, etherType, frameLength, frameData, reason);
+		if (unlikely((m_traceFlags & ZT_TRACE_F_VL2) != 0))
+			m_outgoingNetworkFrameDropped(cc.tPtr, codeLocation, networkId, sourceMac, destMac, etherType, frameLength, frameData, reason);
 	}
 
 	ZT_INLINE void incomingNetworkFrameDropped(
-		void *const tPtr,
+		CallContext &cc,
 		const uint32_t codeLocation,
 		uint64_t networkId,
 		const MAC &sourceMac,
@@ -181,21 +166,21 @@ public:
 		bool credentialRequestSent,
 		ZT_TraceFrameDropReason reason)
 	{
-		if ((m_traceFlags & ZT_TRACE_F_VL2) != 0)
-			_incomingNetworkFrameDropped(tPtr, codeLocation, networkId, sourceMac, destMac, etherType, peerIdentity, physicalAddress, hops, frameLength, frameData, verb, credentialRequestSent, reason);
+		if (unlikely((m_traceFlags & ZT_TRACE_F_VL2) != 0))
+			m_incomingNetworkFrameDropped(cc.tPtr, codeLocation, networkId, sourceMac, destMac, etherType, peerIdentity, physicalAddress, hops, frameLength, frameData, verb, credentialRequestSent, reason);
 	}
 
 	ZT_INLINE void networkConfigRequestSent(
-		void *const tPtr,
+		CallContext &cc,
 		const uint32_t codeLocation,
 		uint64_t networkId)
 	{
-		if ((m_traceFlags & ZT_TRACE_F_VL2) != 0)
-			_networkConfigRequestSent(tPtr, codeLocation, networkId);
+		if (unlikely((m_traceFlags & ZT_TRACE_F_VL2) != 0))
+			m_networkConfigRequestSent(cc.tPtr, codeLocation, networkId);
 	}
 
 	ZT_INLINE void networkFilter(
-		void *const tPtr,
+		CallContext &cc,
 		const uint32_t codeLocation,
 		uint64_t networkId,
 		const uint8_t primaryRuleSetLog[512],
@@ -214,9 +199,9 @@ public:
 		bool inbound,
 		int accept)
 	{
-		if ((m_traceFlags & ZT_TRACE_F_VL2_FILTER) != 0) {
-			_networkFilter(
-				tPtr,
+		if (unlikely((m_traceFlags & ZT_TRACE_F_VL2_FILTER) != 0)) {
+			m_networkFilter(
+				cc.tPtr,
 				codeLocation,
 				networkId,
 				primaryRuleSetLog,
@@ -238,7 +223,7 @@ public:
 	}
 
 	ZT_INLINE void credentialRejected(
-		void *const tPtr,
+		CallContext &cc,
 		const uint32_t codeLocation,
 		uint64_t networkId,
 		const Identity &identity,
@@ -247,12 +232,12 @@ public:
 		uint8_t credentialType,
 		ZT_TraceCredentialRejectionReason reason)
 	{
-		if ((m_traceFlags & ZT_TRACE_F_VL2) != 0)
-			_credentialRejected(tPtr, codeLocation, networkId, identity, credentialId, credentialTimestamp, credentialType, reason);
+		if (unlikely((m_traceFlags & ZT_TRACE_F_VL2) != 0))
+			m_credentialRejected(cc.tPtr, codeLocation, networkId, identity, credentialId, credentialTimestamp, credentialType, reason);
 	}
 
 private:
-	void _resettingPathsInScope(
+	void m_resettingPathsInScope(
 		void *tPtr,
 		uint32_t codeLocation,
 		const Identity &reporter,
@@ -261,7 +246,7 @@ private:
 		const InetAddress &newExternal,
 		InetAddress::IpScope scope);
 
-	void _tryingNewPath(
+	void m_tryingNewPath(
 		void *tPtr,
 		uint32_t codeLocation,
 		const Identity &trying,
@@ -271,7 +256,7 @@ private:
 		uint8_t triggeringPacketVerb,
 		const Identity &triggeringPeer);
 
-	void _learnedNewPath(
+	void m_learnedNewPath(
 		void *tPtr,
 		uint32_t codeLocation,
 		uint64_t packetId,
@@ -279,7 +264,7 @@ private:
 		const InetAddress &physicalAddress,
 		const InetAddress &replaced);
 
-	void _incomingPacketDropped(
+	void m_incomingPacketDropped(
 		void *tPtr,
 		uint32_t codeLocation,
 		uint64_t packetId,
@@ -290,7 +275,7 @@ private:
 		uint8_t verb,
 		ZT_TracePacketDropReason reason);
 
-	void _outgoingNetworkFrameDropped(
+	void m_outgoingNetworkFrameDropped(
 		void *tPtr,
 		uint32_t codeLocation,
 		uint64_t networkId,
@@ -301,7 +286,7 @@ private:
 		const uint8_t *frameData,
 		ZT_TraceFrameDropReason reason);
 
-	void _incomingNetworkFrameDropped(
+	void m_incomingNetworkFrameDropped(
 		void *tPtr,
 		uint32_t codeLocation,
 		uint64_t networkId,
@@ -317,17 +302,17 @@ private:
 		bool credentialRequestSent,
 		ZT_TraceFrameDropReason reason);
 
-	void _networkConfigRequestSent(
+	void m_networkConfigRequestSent(
 		void *tPtr,
 		uint32_t codeLocation,
 		uint64_t networkId);
 
-	void _networkFilter(
+	void m_networkFilter(
 		void *tPtr,
 		uint32_t codeLocation,
 		uint64_t networkId,
-		const uint8_t primaryRuleSetLog[512],
-		const uint8_t matchingCapabilityRuleSetLog[512],
+		const uint8_t *primaryRuleSetLog,
+		const uint8_t *matchingCapabilityRuleSetLog,
 		uint32_t matchingCapabilityId,
 		int64_t matchingCapabilityTimestamp,
 		const Address &source,
@@ -342,7 +327,7 @@ private:
 		bool inbound,
 		int accept);
 
-	void _credentialRejected(
+	void m_credentialRejected(
 		void *tPtr,
 		uint32_t codeLocation,
 		uint64_t networkId,

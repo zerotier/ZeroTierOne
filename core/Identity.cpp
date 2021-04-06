@@ -15,12 +15,10 @@
 #include "Identity.hpp"
 #include "SHA512.hpp"
 #include "Salsa20.hpp"
-#include "Poly1305.hpp"
 #include "Utils.hpp"
 #include "Endpoint.hpp"
 #include "MIMC52.hpp"
 
-#include <algorithm>
 #include <memory>
 #include <utility>
 
@@ -31,7 +29,7 @@ namespace {
 // This is the memory-intensive hash function used to compute v0 identities from v0 public keys.
 #define ZT_V0_IDENTITY_GEN_MEMORY 2097152
 
-void identityV0ProofOfWorkFrankenhash(const void *const publicKey, unsigned int publicKeyBytes, void *const digest, void *const genmem) noexcept
+void identityV0ProofOfWorkFrankenhash(const void *const restrict publicKey, unsigned int publicKeyBytes, void *const restrict digest, void *const restrict genmem) noexcept
 {
 	// Digest publicKey[] to obtain initial digest
 	SHA512(digest, publicKey, publicKeyBytes);
@@ -68,7 +66,7 @@ void identityV0ProofOfWorkFrankenhash(const void *const publicKey, unsigned int 
 
 struct identityV0ProofOfWorkCriteria
 {
-	ZT_INLINE identityV0ProofOfWorkCriteria(unsigned char *sb, char *gm) noexcept: digest(sb), genmem(gm)
+	ZT_INLINE identityV0ProofOfWorkCriteria(unsigned char *restrict sb, char *restrict gm) noexcept: digest(sb), genmem(gm)
 	{}
 
 	ZT_INLINE bool operator()(const uint8_t pub[ZT_C25519_COMBINED_PUBLIC_KEY_SIZE]) const noexcept

@@ -11,6 +11,7 @@ set(core_headers
 	Address.hpp
 	Buf.hpp
 	C25519.hpp
+	CallContext.hpp
 	CapabilityCredential.hpp
 	Certificate.hpp
 	Defaults.hpp

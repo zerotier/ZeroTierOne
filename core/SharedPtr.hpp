@@ -33,7 +33,7 @@ public:
 	{}
 
 	explicit ZT_INLINE SharedPtr(T *obj) noexcept: m_ptr(obj)
-	{ if (likely(obj != nullptr)) const_cast<std::atomic< int > *>(&(obj->__refCount))->fetch_add(1, std::memory_order_relaxed); }
+	{ if (likely(obj != nullptr)) const_cast<std::atomic< int > *>(&(obj->__refCount))->fetch_add(1, std::memory_order_acquire); }
 
 	ZT_INLINE SharedPtr(const SharedPtr &sp) noexcept: m_ptr(sp._getAndInc())
 	{}
@@ -54,7 +54,7 @@ public:
 	ZT_INLINE void set(T *ptr) noexcept
 	{
 		_release();
-		const_cast<std::atomic< int > *>(&((m_ptr = ptr)->__refCount))->fetch_add(1, std::memory_order_relaxed);
+		const_cast<std::atomic< int > *>(&((m_ptr = ptr)->__refCount))->fetch_add(1, std::memory_order_acquire);
 	}
 
 	/**
@@ -122,7 +122,7 @@ public:
 	{
 		if (likely(m_ptr != nullptr)) {
 			int one = 1;
-			if (const_cast<std::atomic< int > *>(&(m_ptr->__refCount))->compare_exchange_strong(one, (int)0)) {
+			if (const_cast<std::atomic< int > *>(&(m_ptr->__refCount))->compare_exchange_strong(one, (int)0, std::memory_order_acq_rel)) {
 				delete m_ptr;
 				m_ptr = nullptr;
 				return true;
@@ -144,14 +144,6 @@ public:
 			return m_ptr->__refCount;
 		return 0;
 	}
-
-	/**
-	 * Cast this SharedPtr<> to one that holds a const instance of the type
-	 *
-	 * @return "this" casted in place to hold "const T"
-	 */
-	ZT_INLINE const SharedPtr<const T> &constify() const noexcept
-	{ return reinterpret_cast< const SharedPtr<const T> >(*this); }
 
 	ZT_INLINE unsigned long hashCode() const noexcept
 	{ return (unsigned long)Utils::hash64((uint64_t)((uintptr_t)m_ptr)); }
@@ -178,13 +170,13 @@ private:
 	ZT_INLINE T *_getAndInc() const noexcept
 	{
 		if (likely(m_ptr != nullptr))
-			const_cast<std::atomic< int > *>(&(m_ptr->__refCount))->fetch_add(1, std::memory_order_relaxed);
+			const_cast<std::atomic< int > *>(&(m_ptr->__refCount))->fetch_add(1, std::memory_order_acquire);
 		return m_ptr;
 	}
 
 	ZT_INLINE void _release() const noexcept
 	{
-		if (unlikely((m_ptr != nullptr)&&(const_cast<std::atomic< int > *>(&(m_ptr->__refCount))->fetch_sub(1, std::memory_order_relaxed) <= 1)))
+		if (unlikely((m_ptr != nullptr)&&(const_cast<std::atomic< int > *>(&(m_ptr->__refCount))->fetch_sub(1, std::memory_order_release) <= 1)))
 			delete m_ptr;
 	}
 
@@ -197,8 +189,12 @@ private:
 namespace std {
 
 template< typename T >
-ZT_INLINE void swap(ZeroTier::SharedPtr< T > &a, ZeroTier::SharedPtr< T > &b) noexcept
+ZT_MAYBE_UNUSED ZT_INLINE void swap(ZeroTier::SharedPtr< T > &a, ZeroTier::SharedPtr< T > &b) noexcept
 { a.swap(b); }
+
+template< typename T >
+ZT_MAYBE_UNUSED ZT_INLINE void move(ZeroTier::SharedPtr< T > &a, ZeroTier::SharedPtr< T > &b) noexcept
+{ a.move(b); }
 
 } // namespace std
 

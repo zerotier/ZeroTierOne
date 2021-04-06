@@ -81,7 +81,7 @@ public:
 	 * @param k Key to look up
 	 * @return Reference to value
 	 */
-	Vector< uint8_t > &operator[](const char *k);
+	ZT_MAYBE_UNUSED Vector< uint8_t > &operator[](const char *k);
 
 	/**
 	 * Get a const reference to a value
@@ -89,18 +89,18 @@ public:
 	 * @param k Key to look up
 	 * @return Reference to value or to empty vector if not found
 	 */
-	const Vector< uint8_t > &operator[](const char *k) const;
+	ZT_MAYBE_UNUSED const Vector< uint8_t > &operator[](const char *k) const;
 
 	/**
 	 * @return Start of key->value pairs
 	 */
-	ZT_INLINE const_iterator begin() const noexcept
+	ZT_MAYBE_UNUSED ZT_INLINE const_iterator begin() const noexcept
 	{ return m_entries.begin(); }
 
 	/**
 	 * @return End of key->value pairs
 	 */
-	ZT_INLINE const_iterator end() const noexcept
+	ZT_MAYBE_UNUSED ZT_INLINE const_iterator end() const noexcept
 	{ return m_entries.end(); }
 
 	/**
@@ -109,7 +109,7 @@ public:
 	 * @param k Key to set
 	 * @param v Integer to set, will be cast to uint64_t and stored as hex
 	 */
-	ZT_INLINE void add(const char *const k, const uint64_t v)
+	ZT_MAYBE_UNUSED ZT_INLINE void add(const char *const k, const uint64_t v)
 	{
 		char buf[24];
 		add(k, Utils::hex((uint64_t)(v), buf));
@@ -121,7 +121,7 @@ public:
 	 * @param k Key to set
 	 * @param v Integer to set, will be cast to uint64_t and stored as hex
 	 */
-	ZT_INLINE void add(const char *const k, const int64_t v)
+	ZT_MAYBE_UNUSED ZT_INLINE void add(const char *const k, const int64_t v)
 	{
 		char buf[24];
 		add(k, Utils::hex((uint64_t)(v), buf));
@@ -130,17 +130,17 @@ public:
 	/**
 	 * Add an address in 10-digit hex string format
 	 */
-	void add(const char *k, const Address &v);
+	ZT_MAYBE_UNUSED void add(const char *k, const Address &v);
 
 	/**
 	 * Add a C string as a value
 	 */
-	void add(const char *k, const char *v);
+	ZT_MAYBE_UNUSED void add(const char *k, const char *v);
 
 	/**
 	 * Add a binary blob as a value
 	 */
-	void add(const char *k, const void *data, unsigned int len);
+	ZT_MAYBE_UNUSED void add(const char *k, const void *data, unsigned int len);
 
 	/**
 	 * Get an integer
@@ -149,7 +149,7 @@ public:
 	 * @param dfl Default value (default: 0)
 	 * @return Value of key or default if not found
 	 */
-	uint64_t getUI(const char *k, uint64_t dfl = 0) const;
+	ZT_MAYBE_UNUSED uint64_t getUI(const char *k, uint64_t dfl = 0) const;
 
 	/**
 	 * Get a C string
@@ -161,7 +161,7 @@ public:
 	 * @param v Buffer to hold string
 	 * @param cap Maximum size of string (including terminating null)
 	 */
-	char *getS(const char *k, char *v, unsigned int cap) const;
+	ZT_MAYBE_UNUSED char *getS(const char *k, char *v, unsigned int cap) const;
 
 	/**
 	 * Get an object supporting the marshal/unmarshal interface pattern
@@ -172,7 +172,7 @@ public:
 	 * @return True if unmarshal was successful
 	 */
 	template< typename T >
-	ZT_INLINE bool getO(const char *k, T &obj) const
+	ZT_MAYBE_UNUSED ZT_INLINE bool getO(const char *k, T &obj) const
 	{
 		const Vector< uint8_t > &d = (*this)[k];
 		if (d.empty())
@@ -189,7 +189,7 @@ public:
 	 * @return True if successful
 	 */
 	template< typename T >
-	ZT_INLINE bool addO(const char *k, T &obj)
+	ZT_MAYBE_UNUSED ZT_INLINE bool addO(const char *k, T &obj)
 	{
 		Vector< uint8_t > &d = (*this)[k];
 		d.resize(T::marshalSizeMax());
@@ -205,18 +205,18 @@ public:
 	/**
 	 * Erase all entries in dictionary
 	 */
-	void clear();
+	ZT_MAYBE_UNUSED void clear();
 
 	/**
 	 * @return Number of entries
 	 */
-	ZT_INLINE unsigned int size() const noexcept
+	ZT_MAYBE_UNUSED ZT_INLINE unsigned int size() const noexcept
 	{ return (unsigned int)m_entries.size(); }
 
 	/**
 	 * @return True if dictionary is not empty
 	 */
-	ZT_INLINE bool empty() const noexcept
+	ZT_MAYBE_UNUSED ZT_INLINE bool empty() const noexcept
 	{ return m_entries.empty(); }
 
 	/**
@@ -224,7 +224,7 @@ public:
 	 *
 	 * @param out String encoded dictionary
 	 */
-	void encode(Vector< uint8_t > &out) const;
+	ZT_MAYBE_UNUSED void encode(Vector< uint8_t > &out) const;
 
 	/**
 	 * Decode a string encoded dictionary
@@ -236,7 +236,7 @@ public:
 	 * @param len Length of data
 	 * @return True if dictionary was formatted correctly and valid, false on error
 	 */
-	bool decode(const void *data, unsigned int len);
+	ZT_MAYBE_UNUSED bool decode(const void *data, unsigned int len);
 
 	/**
 	 * Append a key=value pair to a buffer (vector or FCV)
@@ -246,7 +246,7 @@ public:
 	 * @param v Value
 	 */
 	template< typename V >
-	ZT_INLINE static void append(V &out, const char *const k, const bool v)
+	ZT_MAYBE_UNUSED ZT_INLINE static void append(V &out, const char *const k, const bool v)
 	{
 		s_appendKey(out, k);
 		out.push_back((uint8_t)(v ? '1' : '0'));
@@ -261,7 +261,7 @@ public:
 	 * @param v Value
 	 */
 	template< typename V >
-	ZT_INLINE static void append(V &out, const char *const k, const Address v)
+	ZT_MAYBE_UNUSED ZT_INLINE static void append(V &out, const char *const k, const Address v)
 	{
 		s_appendKey(out, k);
 		const uint64_t a = v.toInt();
@@ -287,7 +287,7 @@ public:
 	 * @param v Value
 	 */
 	template< typename V >
-	ZT_INLINE static void append(V &out, const char *const k, const uint64_t v)
+	ZT_MAYBE_UNUSED ZT_INLINE static void append(V &out, const char *const k, const uint64_t v)
 	{
 		s_appendKey(out, k);
 		char buf[17];
@@ -299,31 +299,31 @@ public:
 	}
 
 	template< typename V >
-	ZT_INLINE static void append(V &out, const char *const k, const int64_t v)
+	ZT_MAYBE_UNUSED ZT_INLINE static void append(V &out, const char *const k, const int64_t v)
 	{ append(out, k, (uint64_t)v); }
 
 	template< typename V >
-	ZT_INLINE static void append(V &out, const char *const k, const uint32_t v)
+	ZT_MAYBE_UNUSED ZT_INLINE static void append(V &out, const char *const k, const uint32_t v)
 	{ append(out, k, (uint64_t)v); }
 
 	template< typename V >
-	ZT_INLINE static void append(V &out, const char *const k, const int32_t v)
+	ZT_MAYBE_UNUSED ZT_INLINE static void append(V &out, const char *const k, const int32_t v)
 	{ append(out, k, (uint64_t)v); }
 
 	template< typename V >
-	ZT_INLINE static void append(V &out, const char *const k, const uint16_t v)
+	ZT_MAYBE_UNUSED ZT_INLINE static void append(V &out, const char *const k, const uint16_t v)
 	{ append(out, k, (uint64_t)v); }
 
 	template< typename V >
-	ZT_INLINE static void append(V &out, const char *const k, const int16_t v)
+	ZT_MAYBE_UNUSED ZT_INLINE static void append(V &out, const char *const k, const int16_t v)
 	{ append(out, k, (uint64_t)v); }
 
 	template< typename V >
-	ZT_INLINE static void append(V &out, const char *const k, const uint8_t v)
+	ZT_MAYBE_UNUSED ZT_INLINE static void append(V &out, const char *const k, const uint8_t v)
 	{ append(out, k, (uint64_t)v); }
 
 	template< typename V >
-	ZT_INLINE static void append(V &out, const char *const k, const int8_t v)
+	ZT_MAYBE_UNUSED ZT_INLINE static void append(V &out, const char *const k, const int8_t v)
 	{ append(out, k, (uint64_t)v); }
 
 	/**
@@ -334,7 +334,7 @@ public:
 	 * @param v Value
 	 */
 	template< typename V >
-	ZT_INLINE static void append(V &out, const char *const k, const char *v)
+	ZT_MAYBE_UNUSED ZT_INLINE static void append(V &out, const char *const k, const char *v)
 	{
 		if ((v) && (*v)) {
 			s_appendKey(out, k);
@@ -353,7 +353,7 @@ public:
 	 * @param vlen Value length in bytes
 	 */
 	template< typename V >
-	ZT_INLINE static void append(V &out, const char *const k, const void *const v, const unsigned int vlen)
+	ZT_MAYBE_UNUSED ZT_INLINE static void append(V &out, const char *const k, const void *const v, const unsigned int vlen)
 	{
 		s_appendKey(out, k);
 		for (unsigned int i = 0; i < vlen; ++i)
@@ -369,7 +369,7 @@ public:
 	 * @param pid Packet ID
 	 */
 	template< typename V >
-	static ZT_INLINE void appendPacketId(V &out, const char *const k, const uint64_t pid)
+	ZT_MAYBE_UNUSED static ZT_INLINE void appendPacketId(V &out, const char *const k, const uint64_t pid)
 	{ append(out, k, &pid, 8); }
 
 	/**
@@ -381,7 +381,7 @@ public:
 	 * @return Bytes appended or negative on error (return value of marshal())
 	 */
 	template< typename V, typename T >
-	static ZT_INLINE int appendObject(V &out, const char *const k, const T &v)
+	ZT_MAYBE_UNUSED static ZT_INLINE int appendObject(V &out, const char *const k, const T &v)
 	{
 		uint8_t tmp[2048]; // large enough for any current object
 		if (T::marshalSizeMax() > sizeof(tmp))
@@ -400,7 +400,7 @@ public:
 	 * @param sub Subscript index
 	 * @return Pointer to 'buf'
 	 */
-	static char *arraySubscript(char *buf, unsigned int bufSize, const char *name, const unsigned long sub) noexcept;
+	ZT_MAYBE_UNUSED static char *arraySubscript(char *buf, unsigned int bufSize, const char *name, const unsigned long sub) noexcept;
 
 private:
 	template< typename V >

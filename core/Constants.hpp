@@ -102,9 +102,9 @@
 #define ZT_NETWORK_HOUSEKEEPING_PERIOD 30000
 
 /**
- * How often to rank roots
+ * Period between calls to update() in TrustStore
  */
-#define ZT_ROOT_RANK_PERIOD 5000
+#define ZT_TRUSTSTORE_UPDATE_PERIOD 300000
 
 /**
  * Delay between WHOIS retries in ms

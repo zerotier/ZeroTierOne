@@ -19,6 +19,7 @@
 #include "Containers.hpp"
 #include "Address.hpp"
 #include "Mutex.hpp"
+#include "CallContext.hpp"
 
 namespace ZeroTier {
 
@@ -44,24 +45,20 @@ public:
 	 * @param reporterPhysicalAddress Physical address that reporting peer seems to have
 	 * @param myPhysicalAddress Physical address that peer says we have
 	 * @param trusted True if this peer is trusted as an authority to inform us of external address changes
-	 * @param now Current time
 	 */
-	void iam(void *tPtr, const Identity &reporter, int64_t receivedOnLocalSocket, const InetAddress &reporterPhysicalAddress, const InetAddress &myPhysicalAddress, bool trusted, int64_t now);
+	void iam(CallContext &cc, const Identity &reporter, int64_t receivedOnLocalSocket, const InetAddress &reporterPhysicalAddress, const InetAddress &myPhysicalAddress, bool trusted);
 
 	/**
 	 * Clean up database periodically
-	 *
-	 * @param now Current time
 	 */
-	void clean(int64_t now);
+	void clean(CallContext &cc);
 
 	/**
 	 * Get external address consensus, which is the statistical "mode" of external addresses.
 	 *
-	 * @param now Current time
 	 * @return Map of count to IP/port representing how many endpoints reported each address
 	 */
-	MultiMap< unsigned int, InetAddress > externalAddresses(int64_t now) const;
+	MultiMap< unsigned int, InetAddress > externalAddresses(CallContext &cc) const;
 
 private:
 	struct p_PhySurfaceKey
@@ -108,13 +105,13 @@ private:
 	struct p_PhySurfaceEntry
 	{
 		InetAddress mySurface;
-		int64_t ts;
+		int64_t timestampTicks;
 		bool trusted;
 
-		ZT_INLINE p_PhySurfaceEntry() noexcept: mySurface(), ts(0), trusted(false)
+		ZT_INLINE p_PhySurfaceEntry() noexcept: mySurface(), timestampTicks(0), trusted(false)
 		{}
 
-		ZT_INLINE p_PhySurfaceEntry(const InetAddress &a, const int64_t t) noexcept: mySurface(a), ts(t), trusted(false)
+		ZT_INLINE p_PhySurfaceEntry(const InetAddress &a, const int64_t t) noexcept: mySurface(a), timestampTicks(t), trusted(false)
 		{}
 	};
 

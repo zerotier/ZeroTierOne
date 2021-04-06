@@ -51,21 +51,23 @@ class CapabilityCredential : public Credential
 	friend class Credential;
 
 public:
-	static constexpr ZT_CredentialType credentialType() noexcept { return ZT_CREDENTIAL_TYPE_CAPABILITY; }
+	static constexpr ZT_CredentialType credentialType() noexcept
+	{ return ZT_CREDENTIAL_TYPE_CAPABILITY; }
 
-	ZT_INLINE CapabilityCredential() noexcept { memoryZero(this); }
+	ZT_INLINE CapabilityCredential() noexcept
+	{ memoryZero(this); }
 
 	/**
 	 * @param id Capability ID
 	 * @param nwid Network ID
-	 * @param ts Timestamp (at controller)
+	 * @param timestamp Timestamp (at controller)
 	 * @param mccl Maximum custody chain length (1 to create non-transferable capability)
 	 * @param rules Network flow rules for this capability
 	 * @param ruleCount Number of flow rules
 	 */
-	ZT_INLINE CapabilityCredential(const uint32_t id, const uint64_t nwid, const int64_t ts, const ZT_VirtualNetworkRule *const rules, const unsigned int ruleCount) noexcept : // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+	ZT_INLINE CapabilityCredential(const uint32_t id, const uint64_t nwid, const int64_t timestamp, const ZT_VirtualNetworkRule *const rules, const unsigned int ruleCount) noexcept: // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 		m_nwid(nwid),
-		m_ts(ts),
+		m_timestamp(timestamp),
 		m_id(id),
 		m_ruleCount((ruleCount < ZT_MAX_CAPABILITY_RULES) ? ruleCount : ZT_MAX_CAPABILITY_RULES),
 		m_signatureLength(0)
@@ -77,20 +79,38 @@ public:
 	/**
 	 * @return Rules -- see ruleCount() for size of array
 	 */
-	ZT_INLINE const ZT_VirtualNetworkRule *rules() const noexcept { return m_rules; }
+	ZT_INLINE const ZT_VirtualNetworkRule *rules() const noexcept
+	{ return m_rules; }
 
 	/**
 	 * @return Number of rules in rules()
 	 */
-	ZT_INLINE unsigned int ruleCount() const noexcept { return m_ruleCount; }
+	ZT_INLINE unsigned int ruleCount() const noexcept
+	{ return m_ruleCount; }
 
-	ZT_INLINE uint32_t id() const noexcept { return m_id; }
-	ZT_INLINE uint64_t networkId() const noexcept { return m_nwid; }
-	ZT_INLINE int64_t timestamp() const noexcept { return m_ts; }
-	ZT_INLINE const Address &issuedTo() const noexcept { return m_issuedTo; }
-	ZT_INLINE const Address &signer() const noexcept { return m_signedBy; }
-	ZT_INLINE const uint8_t *signature() const noexcept { return m_signature; }
-	ZT_INLINE unsigned int signatureLength() const noexcept { return m_signatureLength; }
+	ZT_INLINE uint32_t id() const noexcept
+	{ return m_id; }
+
+	ZT_INLINE uint64_t networkId() const noexcept
+	{ return m_nwid; }
+
+	ZT_INLINE int64_t timestamp() const noexcept
+	{ return m_timestamp; }
+
+	ZT_INLINE int64_t revision() const noexcept
+	{ return m_timestamp; }
+
+	ZT_INLINE const Address &issuedTo() const noexcept
+	{ return m_issuedTo; }
+
+	ZT_INLINE const Address &signer() const noexcept
+	{ return m_signedBy; }
+
+	ZT_INLINE const uint8_t *signature() const noexcept
+	{ return m_signature; }
+
+	ZT_INLINE unsigned int signatureLength() const noexcept
+	{ return m_signatureLength; }
 
 	/**
 	 * Sign this capability and add signature to its chain of custody
@@ -105,18 +125,22 @@ public:
 	 * @param to Recipient of this signature
 	 * @return True if signature successful and chain of custody appended
 	 */
-	bool sign(const Identity &from,const Address &to) noexcept;
+	bool sign(const Identity &from, const Address &to) noexcept;
 
 	/**
 	 * Verify this capability's chain of custody and signatures
 	 *
 	 * @param RR Runtime environment to provide for peer lookup, etc.
 	 */
-	ZT_INLINE Credential::VerifyResult verify(const RuntimeEnvironment *RR,void *tPtr) const noexcept { return s_verify(RR, tPtr, *this); }
+	ZT_INLINE Credential::VerifyResult verify(const RuntimeEnvironment *RR, CallContext &cc) const noexcept
+	{ return s_verify(RR, cc, *this); }
 
-	static constexpr int marshalSizeMax() noexcept { return ZT_CAPABILITY_MARSHAL_SIZE_MAX; }
-	int marshal(uint8_t data[ZT_CAPABILITY_MARSHAL_SIZE_MAX],bool forSign = false) const noexcept;
-	int unmarshal(const uint8_t *data,int len) noexcept;
+	static constexpr int marshalSizeMax() noexcept
+	{ return ZT_CAPABILITY_MARSHAL_SIZE_MAX; }
+
+	int marshal(uint8_t data[ZT_CAPABILITY_MARSHAL_SIZE_MAX], bool forSign = false) const noexcept;
+
+	int unmarshal(const uint8_t *data, int len) noexcept;
 
 	/**
 	 * Marshal a set of virtual network rules
@@ -126,7 +150,7 @@ public:
 	 * @param ruleCount Number of rules
 	 * @return Number of bytes written or -1 on error
 	 */
-	static int marshalVirtualNetworkRules(uint8_t *data,const ZT_VirtualNetworkRule *rules,unsigned int ruleCount) noexcept;
+	static int marshalVirtualNetworkRules(uint8_t *data, const ZT_VirtualNetworkRule *rules, unsigned int ruleCount) noexcept;
 
 	/**
 	 * Unmarshal a set of virtual network rules
@@ -138,17 +162,21 @@ public:
 	 * @param maxRuleCount Capacity of rules buffer
 	 * @return Number of bytes unmarshaled or -1 on error
 	 */
-	static int unmarshalVirtualNetworkRules(const uint8_t *data,int len,ZT_VirtualNetworkRule *rules,unsigned int &ruleCount,unsigned int maxRuleCount) noexcept;
+	static int unmarshalVirtualNetworkRules(const uint8_t *data, int len, ZT_VirtualNetworkRule *rules, unsigned int &ruleCount, unsigned int maxRuleCount) noexcept;
 
 	// Provides natural sort order by ID
-	ZT_INLINE bool operator<(const CapabilityCredential &c) const noexcept { return (m_id < c.m_id); }
+	ZT_INLINE bool operator<(const CapabilityCredential &c) const noexcept
+	{ return (m_id < c.m_id); }
 
-	ZT_INLINE bool operator==(const CapabilityCredential &c) const noexcept { return (memcmp(this, &c, sizeof(CapabilityCredential)) == 0); }
-	ZT_INLINE bool operator!=(const CapabilityCredential &c) const noexcept { return (memcmp(this, &c, sizeof(CapabilityCredential)) != 0); }
+	ZT_INLINE bool operator==(const CapabilityCredential &c) const noexcept
+	{ return (memcmp(this, &c, sizeof(CapabilityCredential)) == 0); }
+
+	ZT_INLINE bool operator!=(const CapabilityCredential &c) const noexcept
+	{ return (memcmp(this, &c, sizeof(CapabilityCredential)) != 0); }
 
 private:
 	uint64_t m_nwid;
-	int64_t m_ts;
+	int64_t m_timestamp;
 	uint32_t m_id;
 	unsigned int m_ruleCount;
 	ZT_VirtualNetworkRule m_rules[ZT_MAX_CAPABILITY_RULES];

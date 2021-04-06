@@ -26,6 +26,7 @@
 #include "Buf.hpp"
 #include "Containers.hpp"
 #include "Store.hpp"
+#include "CallContext.hpp"
 
 namespace ZeroTier {
 
@@ -43,37 +44,35 @@ public:
 	void operator delete(void* p) { _mm_free(p); }
 #endif
 
-	Node(void *uPtr, void *tPtr, const struct ZT_Node_Callbacks *callbacks, int64_t now);
+	Node(void *uPtr, const struct ZT_Node_Callbacks *callbacks, CallContext &cc);
 
 	virtual ~Node();
 
-	void shutdown(void *tPtr);
-
-	// Public API Functions ---------------------------------------------------------------------------------------------
+	void shutdown(CallContext &cc);
 
 	ZT_ResultCode processBackgroundTasks(
-		void *tPtr,
-		int64_t now,
+		CallContext &cc,
 		volatile int64_t *nextBackgroundTaskDeadline);
 
 	ZT_ResultCode join(
 		uint64_t nwid,
 		const ZT_Fingerprint *controllerFingerprint,
 		void *uptr,
-		void *tptr);
+		CallContext &cc);
 
 	ZT_ResultCode leave(
 		uint64_t nwid,
 		void **uptr,
-		void *tptr);
+		CallContext &cc);
 
 	ZT_ResultCode multicastSubscribe(
-		void *tPtr,
+		CallContext &cc,
 		uint64_t nwid,
 		uint64_t multicastGroup,
 		unsigned long multicastAdi);
 
 	ZT_ResultCode multicastUnsubscribe(
+		CallContext &cc,
 		uint64_t nwid,
 		uint64_t multicastGroup,
 		unsigned long multicastAdi);
@@ -81,7 +80,8 @@ public:
 	void status(
 		ZT_NodeStatus *status) const;
 
-	ZT_PeerList *peers() const;
+	ZT_PeerList *peers(
+		CallContext &cc) const;
 
 	ZT_VirtualNetworkConfig *networkConfig(
 		uint64_t nwid) const;
@@ -96,32 +96,21 @@ public:
 		const ZT_InterfaceAddress *addrs,
 		unsigned int addrCount);
 
-	ZT_ResultCode addPeer(
-		void *tptr,
-		const ZT_Identity *identity);
-
-	int tryPeer(
-		void *tptr,
-		const ZT_Fingerprint *fp,
-		const ZT_Endpoint *endpoint,
-		int retries);
-
 	ZT_CertificateError addCertificate(
-		void *tptr,
-		int64_t now,
+		CallContext &cc,
 		unsigned int localTrust,
 		const ZT_Certificate *cert,
 		const void *certData,
 		unsigned int certSize);
 
 	ZT_ResultCode deleteCertificate(
-		void *tptr,
+		CallContext &cc,
 		const void *serialNo);
 
 	ZT_CertificateList *listCertificates();
 
 	int sendUserMessage(
-		void *tptr,
+		CallContext &cc,
 		uint64_t dest,
 		uint64_t typeId,
 		const void *data,
@@ -129,23 +118,6 @@ public:
 
 	void setController(
 		void *networkControllerInstance);
-
-	// Internal functions -----------------------------------------------------------------------------------------------
-
-	/**
-	 * @return Most recent time value supplied to core via API
-	 */
-	ZT_INLINE int64_t now() const noexcept
-	{ return m_now; }
-
-	/**
-	 * @return Known local interface addresses for this node
-	 */
-	ZT_INLINE Vector< ZT_InterfaceAddress > localInterfaceAddresses() const
-	{
-		Mutex::Lock _l(m_localInterfaceAddresses_m);
-		return m_localInterfaceAddresses;
-	}
 
 	/**
 	 * Post an event via external callback
@@ -157,18 +129,6 @@ public:
 	 */
 	ZT_INLINE void postEvent(void *tPtr, ZT_Event ev, const void *md = nullptr, const unsigned int mdSize = 0) noexcept
 	{ RR->cb.eventCallback(reinterpret_cast<ZT_Node *>(this), RR->uPtr, tPtr, ev, md, mdSize); }
-
-	/**
-	 * Post network port configuration via external callback
-	 *
-	 * @param tPtr Thread pointer
-	 * @param nwid Network ID
-	 * @param nuptr Network-associated user pointer
-	 * @param op Config operation or event type
-	 * @param nc Network config info
-	 */
-	ZT_INLINE void configureVirtualNetworkPort(void *tPtr, uint64_t nwid, void **nuptr, ZT_VirtualNetworkConfigOperation op, const ZT_VirtualNetworkConfig *nc) noexcept
-	{ RR->cb.virtualNetworkConfigFunction(reinterpret_cast<ZT_Node *>(this), RR->uPtr, tPtr, nwid, nuptr, op, nc); }
 
 	/**
 	 * Check whether a path should be used for ZeroTier traffic
@@ -201,9 +161,9 @@ public:
 	{ return m_RR.identity; }
 
 	// Implementation of NetworkController::Sender interface
-	virtual void ncSendConfig(uint64_t nwid, uint64_t requestPacketId, const Address &destination, const NetworkConfig &nc, bool sendLegacyFormatConfig);
-	virtual void ncSendRevocation(const Address &destination, const RevocationCredential &rev);
-	virtual void ncSendError(uint64_t nwid, uint64_t requestPacketId, const Address &destination, NetworkController::ErrorCode errorCode);
+	virtual void ncSendConfig(void *tPtr, int64_t clock, int64_t ticks, uint64_t nwid, uint64_t requestPacketId, const Address &destination, const NetworkConfig &nc, bool sendLegacyFormatConfig);
+	virtual void ncSendRevocation(void *tPtr, int64_t clock, int64_t ticks, const Address &destination, const RevocationCredential &rev);
+	virtual void ncSendError(void *tPtr, int64_t clock, int64_t ticks, uint64_t nwid, uint64_t requestPacketId, const Address &destination, NetworkController::ErrorCode errorCode);
 
 private:
 	RuntimeEnvironment m_RR;
@@ -234,10 +194,7 @@ private:
 	int64_t m_lastPeerPulse;
 	int64_t m_lastHousekeepingRun;
 	int64_t m_lastNetworkHousekeepingRun;
-	int64_t m_lastRootRank;
-
-	// This is the most recent value for time passed in via any of the core API methods.
-	std::atomic< int64_t > m_now;
+	int64_t m_lastTrustStoreUpdate;
 
 	// True if at least one root appears reachable.
 	std::atomic< bool > m_online;

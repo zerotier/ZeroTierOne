@@ -84,6 +84,6 @@ namespace std {
 template< typename T >
 ZT_INLINE void swap(ZeroTier::ScopedPtr< T > &a, ZeroTier::ScopedPtr< T > &b) noexcept
 { a.swap(b); }
-}
+} // namespace std
 
 #endif

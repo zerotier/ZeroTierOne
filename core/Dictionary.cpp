@@ -15,24 +15,24 @@
 
 namespace ZeroTier {
 
-Vector< uint8_t > &Dictionary::operator[](const char *const k)
+ZT_MAYBE_UNUSED Vector< uint8_t > &Dictionary::operator[](const char *const k)
 { return m_entries[k]; }
 
-const Vector< uint8_t > &Dictionary::operator[](const char *const k) const
+ZT_MAYBE_UNUSED const Vector< uint8_t > &Dictionary::operator[](const char *const k) const
 {
 	static const Vector< uint8_t > s_emptyEntry;
 	const SortedMap< String, Vector< uint8_t > >::const_iterator e(m_entries.find(k));
 	return (e == m_entries.end()) ? s_emptyEntry : e->second;
 }
 
-void Dictionary::add(const char *k, const Address &v)
+ZT_MAYBE_UNUSED void Dictionary::add(const char *k, const Address &v)
 {
 	char tmp[ZT_ADDRESS_STRING_SIZE_MAX];
 	v.toString(tmp);
 	add(k, tmp);
 }
 
-void Dictionary::add(const char *k, const char *v)
+ZT_MAYBE_UNUSED void Dictionary::add(const char *k, const char *v)
 {
 	Vector< uint8_t > &e = (*this)[k];
 	e.clear();
@@ -42,7 +42,7 @@ void Dictionary::add(const char *k, const char *v)
 	}
 }
 
-void Dictionary::add(const char *k, const void *data, unsigned int len)
+ZT_MAYBE_UNUSED void Dictionary::add(const char *k, const void *data, unsigned int len)
 {
 	Vector< uint8_t > &e = (*this)[k];
 	if (likely(len != 0)) {
@@ -52,7 +52,7 @@ void Dictionary::add(const char *k, const void *data, unsigned int len)
 	}
 }
 
-uint64_t Dictionary::getUI(const char *k, uint64_t dfl) const
+ZT_MAYBE_UNUSED uint64_t Dictionary::getUI(const char *k, uint64_t dfl) const
 {
 	char tmp[32];
 	getS(k, tmp, sizeof(tmp));
@@ -61,7 +61,7 @@ uint64_t Dictionary::getUI(const char *k, uint64_t dfl) const
 	return dfl;
 }
 
-char *Dictionary::getS(const char *k, char *v, const unsigned int cap) const
+ZT_MAYBE_UNUSED char *Dictionary::getS(const char *k, char *v, const unsigned int cap) const
 {
 	if (cap == 0) // sanity check
 		return v;
@@ -84,10 +84,10 @@ char *Dictionary::getS(const char *k, char *v, const unsigned int cap) const
 	return v;
 }
 
-void Dictionary::clear()
+ZT_MAYBE_UNUSED void Dictionary::clear()
 { m_entries.clear(); }
 
-void Dictionary::encode(Vector< uint8_t > &out) const
+ZT_MAYBE_UNUSED void Dictionary::encode(Vector< uint8_t > &out) const
 {
 	out.clear();
 	for (SortedMap< String, Vector< uint8_t > >::const_iterator ti(m_entries.begin()); ti != m_entries.end(); ++ti) {
@@ -98,7 +98,7 @@ void Dictionary::encode(Vector< uint8_t > &out) const
 	}
 }
 
-bool Dictionary::decode(const void *data, unsigned int len)
+ZT_MAYBE_UNUSED bool Dictionary::decode(const void *data, unsigned int len)
 {
 	clear();
 	String k;
@@ -151,7 +151,7 @@ bool Dictionary::decode(const void *data, unsigned int len)
 	return true;
 }
 
-char *Dictionary::arraySubscript(char *buf, unsigned int bufSize, const char *name, const unsigned long sub) noexcept
+ZT_MAYBE_UNUSED char *Dictionary::arraySubscript(char *buf, unsigned int bufSize, const char *name, const unsigned long sub) noexcept
 {
 	if (bufSize < 17) { // sanity check
 		buf[0] = 0;

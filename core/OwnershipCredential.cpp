@@ -19,11 +19,11 @@ void OwnershipCredential::addThing(const InetAddress &ip)
 {
 	if (m_thingCount >= ZT_CERTIFICATEOFOWNERSHIP_MAX_THINGS)
 		return;
-	if (ip.family() == AF_INET) {
+	if (ip.as.sa.sa_family == AF_INET) {
 		m_thingTypes[m_thingCount] = THING_IPV4_ADDRESS;
 		Utils::copy<4>(m_thingValues[m_thingCount], &(reinterpret_cast<const struct sockaddr_in *>(&ip)->sin_addr.s_addr));
 		++m_thingCount;
-	} else if (ip.family() == AF_INET6) {
+	} else if (ip.as.sa.sa_family == AF_INET6) {
 		m_thingTypes[m_thingCount] = THING_IPV6_ADDRESS;
 		Utils::copy<16>(m_thingValues[m_thingCount], reinterpret_cast<const struct sockaddr_in6 *>(&ip)->sin6_addr.s6_addr);
 		++m_thingCount;

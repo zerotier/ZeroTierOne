@@ -16,6 +16,7 @@
 
 #include "Constants.hpp"
 #include "TriviallyCopyable.hpp"
+#include "CallContext.hpp"
 
 #include <string>
 #include <memory>
@@ -52,11 +53,11 @@ public:
 	};
 
 protected:
-	static VerifyResult s_verify(const RuntimeEnvironment *RR, void *tPtr, const MembershipCredential &credential);
-	static VerifyResult s_verify(const RuntimeEnvironment *RR, void *tPtr, const RevocationCredential &credential);
-	static VerifyResult s_verify(const RuntimeEnvironment *RR, void *tPtr, const TagCredential &credential);
-	static VerifyResult s_verify(const RuntimeEnvironment *RR, void *tPtr, const OwnershipCredential &credential);
-	static VerifyResult s_verify(const RuntimeEnvironment *RR, void *tPtr, const CapabilityCredential &credential);
+	static VerifyResult s_verify(const RuntimeEnvironment *RR, CallContext &cc, const MembershipCredential &credential);
+	static VerifyResult s_verify(const RuntimeEnvironment *RR, CallContext &cc, const RevocationCredential &credential);
+	static VerifyResult s_verify(const RuntimeEnvironment *RR, CallContext &cc, const TagCredential &credential);
+	static VerifyResult s_verify(const RuntimeEnvironment *RR, CallContext &cc, const OwnershipCredential &credential);
+	static VerifyResult s_verify(const RuntimeEnvironment *RR, CallContext &cc, const CapabilityCredential &credential);
 };
 
 } // namespace ZeroTier

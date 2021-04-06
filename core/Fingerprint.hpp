@@ -92,24 +92,6 @@ public:
 		return true;
 	}
 
-	/**
-	 * Check for equality with best possible specificity.
-	 * 
-	 * If both fingerprints have a hash, that is compared. Otherwise just the
-	 * addresses are compared.
-	 * 
-	 * @param fp Fingerprint to test
-	 */
-	ZT_INLINE bool bestSpecificityEquals(const ZT_Fingerprint &fp) const noexcept
-	{
-		if (address == fp.address) {
-			if (Utils::allZero(fp.hash, ZT_FINGERPRINT_HASH_SIZE) || Utils::allZero(hash, ZT_FINGERPRINT_HASH_SIZE))
-				return true;
-			return (memcmp(hash, fp.hash, ZT_FINGERPRINT_HASH_SIZE) == 0);
-		}
-		return false;
-	}
-
 	ZT_INLINE void zero() noexcept
 	{ memoryZero(this); }
 

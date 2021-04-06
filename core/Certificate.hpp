@@ -110,7 +110,7 @@ public:
 	 *
 	 * @param x Extended attributes (set by issuer)
 	 */
-	void setExtendedAttributes(const Dictionary &x);
+	//void setExtendedAttributes(const Dictionary &x);
 
 	/**
 	 * Set the unique ID of this certificate's subject

@@ -26,43 +26,43 @@ VL2::VL2(const RuntimeEnvironment *renv)
 {
 }
 
-void VL2::onLocalEthernet(void *const tPtr, const SharedPtr< Network > &network, const MAC &from, const MAC &to, const unsigned int etherType, unsigned int vlanId, SharedPtr< Buf > &data, unsigned int len)
+void VL2::onLocalEthernet(CallContext &cc, const SharedPtr< Network > &network, const MAC &from, const MAC &to, const unsigned int etherType, unsigned int vlanId, SharedPtr< Buf > &data, unsigned int len)
 {
 }
 
-bool VL2::m_FRAME(void *tPtr, const uint64_t packetId, const unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize)
+bool VL2::m_FRAME(CallContext &cc, const uint64_t packetId, const unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize)
 {
 }
 
-bool VL2::m_EXT_FRAME(void *tPtr, const uint64_t packetId, const unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize)
+bool VL2::m_EXT_FRAME(CallContext &cc, const uint64_t packetId, const unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize)
 {
 }
 
-bool VL2::m_MULTICAST_LIKE(void *tPtr, const uint64_t packetId, const unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize)
+bool VL2::m_MULTICAST_LIKE(CallContext &cc, const uint64_t packetId, const unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize)
 {
 }
 
-bool VL2::m_NETWORK_CREDENTIALS(void *tPtr, const uint64_t packetId, const unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize)
+bool VL2::m_NETWORK_CREDENTIALS(CallContext &cc, const uint64_t packetId, const unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize)
 {
 }
 
-bool VL2::m_NETWORK_CONFIG_REQUEST(void *tPtr, const uint64_t packetId, const unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize)
+bool VL2::m_NETWORK_CONFIG_REQUEST(CallContext &cc, const uint64_t packetId, const unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize)
 {
 }
 
-bool VL2::m_NETWORK_CONFIG(void *tPtr, const uint64_t packetId, const unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize)
+bool VL2::m_NETWORK_CONFIG(CallContext &cc, const uint64_t packetId, const unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize)
 {
 }
 
-bool VL2::m_MULTICAST_GATHER(void *tPtr, const uint64_t packetId, const unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize)
+bool VL2::m_MULTICAST_GATHER(CallContext &cc, const uint64_t packetId, const unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize)
 {
 }
 
-bool VL2::m_MULTICAST_FRAME_deprecated(void *tPtr, const uint64_t packetId, const unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize)
+bool VL2::m_MULTICAST_FRAME_deprecated(CallContext &cc, const uint64_t packetId, const unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize)
 {
 }
 
-bool VL2::m_MULTICAST(void *tPtr, const uint64_t packetId, const unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize)
+bool VL2::m_MULTICAST(CallContext &cc, const uint64_t packetId, const unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize)
 {
 }
 

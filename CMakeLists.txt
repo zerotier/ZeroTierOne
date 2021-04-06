@@ -82,6 +82,7 @@ if(NOT PACKAGE_STATIC)
 			-Wno-deprecated
 			-Wno-unused-function
 			-Wno-format
+			-Wno-attributes
 			$<$<CONFIG:DEBUG>:-g>
 			$<$<CONFIG:DEBUG>:-O0>
 			$<$<CONFIG:RELEASE>:-O3>
@@ -125,6 +126,7 @@ if(NOT PACKAGE_STATIC)
 				-Wall
 				-Wno-deprecated
 				-Wno-unused-function
+				-Wno-attributes
 				-mmacosx-version-min=${MACOS_VERSION_MIN}
 				$<$<CONFIG:DEBUG>:-g>
 				$<$<CONFIG:DEBUG>:-O0>
@@ -157,6 +159,7 @@ if(NOT PACKAGE_STATIC)
 				-Wno-deprecated
 				-Wno-unused-function
 				-Wno-format
+				-Wno-attributes
 				$<$<CONFIG:DEBUG>:-g>
 				$<$<CONFIG:DEBUG>:-O0>
 				$<$<CONFIG:RELEASE>:-O3>

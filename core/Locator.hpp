@@ -106,13 +106,13 @@ public:
 	};
 
 	ZT_INLINE Locator() noexcept:
-		m_ts(0)
+		m_revision(0)
 	{}
 
 	explicit Locator(const char *const str) noexcept;
 
 	ZT_INLINE Locator(const Locator &loc) noexcept:
-		m_ts(loc.m_ts),
+		m_revision(loc.m_revision),
 		m_signer(loc.m_signer),
 		m_endpoints(loc.m_endpoints),
 		m_signature(loc.m_signature),
@@ -122,8 +122,8 @@ public:
 	/**
 	 * @return Timestamp (a.k.a. revision number) set by Location signer
 	 */
-	ZT_INLINE int64_t timestamp() const noexcept
-	{ return m_ts; }
+	ZT_INLINE int64_t revision() const noexcept
+	{ return m_revision; }
 
 	/**
 	 * @return Fingerprint of identity that signed this locator
@@ -164,7 +164,7 @@ public:
 	 * @param id Identity that includes private key
 	 * @return True if signature successful
 	 */
-	bool sign(int64_t ts, const Identity &id) noexcept;
+	bool sign(int64_t rev, const Identity &id) noexcept;
 
 	/**
 	 * Verify this Locator's validity and signature
@@ -197,7 +197,7 @@ public:
 	bool fromString(const char *s) noexcept;
 
 	explicit ZT_INLINE operator bool() const noexcept
-	{ return m_ts > 0; }
+	{ return m_revision > 0; }
 
 	static constexpr int marshalSizeMax() noexcept
 	{ return ZT_LOCATOR_MARSHAL_SIZE_MAX; }
@@ -207,7 +207,7 @@ public:
 	ZT_INLINE bool operator==(const Locator &l) const noexcept
 	{
 		const unsigned long es = (unsigned long)m_endpoints.size();
-		if ((m_ts == l.m_ts) && (m_signer == l.m_signer) && (es == (unsigned long)l.m_endpoints.size()) && (m_signature == l.m_signature)) {
+		if ((m_revision == l.m_revision) && (m_signer == l.m_signer) && (es == (unsigned long)l.m_endpoints.size()) && (m_signature == l.m_signature)) {
 			for(unsigned long i=0;i<es;++i) {
 				if (m_endpoints[i].first != l.m_endpoints[i].first)
 					return false;
@@ -229,7 +229,7 @@ public:
 private:
 	void m_sortEndpoints() noexcept;
 
-	int64_t m_ts;
+	int64_t m_revision;
 	Fingerprint m_signer;
 	Vector< std::pair< Endpoint, SharedPtr< const EndpointAttributes > > > m_endpoints;
 	FCV< uint8_t, ZT_SIGNATURE_BUFFER_SIZE > m_signature;

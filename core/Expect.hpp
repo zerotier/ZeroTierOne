@@ -68,7 +68,7 @@ public:
 
 private:
 	// Each bucket contains a timestamp in units of the max expect duration.
-	std::atomic<uint32_t> m_packetIdSent[ZT_EXPECT_BUCKETS];
+	std::atomic< uint32_t > m_packetIdSent[ZT_EXPECT_BUCKETS];
 };
 
 } // namespace ZeroTier

@@ -538,7 +538,7 @@ _doZtFilterResult _doZtFilter(
 
 const ZeroTier::MulticastGroup Network::BROADCAST(ZeroTier::MAC(0xffffffffffffULL), 0);
 
-Network::Network(const RuntimeEnvironment *renv, void *tPtr, uint64_t nwid, const Fingerprint &controllerFingerprint, void *uptr, const NetworkConfig *nconf) :
+Network::Network(const RuntimeEnvironment *renv, CallContext &cc, uint64_t nwid, const Fingerprint &controllerFingerprint, void *uptr, const NetworkConfig *nconf) :
 	RR(renv),
 	m_uPtr(uptr),
 	m_id(nwid),
@@ -552,7 +552,7 @@ Network::Network(const RuntimeEnvironment *renv, void *tPtr, uint64_t nwid, cons
 		m_controllerFingerprint = controllerFingerprint;
 
 	if (nconf) {
-		this->setConfiguration(tPtr, *nconf, false);
+		this->setConfiguration(cc, *nconf, false);
 		m_lastConfigUpdate = 0; // still want to re-request since it's likely outdated
 	} else {
 		uint64_t tmp[2];
@@ -562,14 +562,14 @@ Network::Network(const RuntimeEnvironment *renv, void *tPtr, uint64_t nwid, cons
 		bool got = false;
 		try {
 			Dictionary dict;
-			Vector< uint8_t > nconfData(RR->store->get(tPtr, ZT_STATE_OBJECT_NETWORK_CONFIG, tmp, 1));
+			Vector< uint8_t > nconfData(RR->store->get(cc, ZT_STATE_OBJECT_NETWORK_CONFIG, tmp, 1));
 			if (nconfData.size() > 2) {
 				nconfData.push_back(0);
 				if (dict.decode(nconfData.data(), (unsigned int)nconfData.size())) {
 					try {
 						ScopedPtr< NetworkConfig > nconf2(new NetworkConfig());
 						if (nconf2->fromDictionary(dict)) {
-							this->setConfiguration(tPtr, *nconf2, false);
+							this->setConfiguration(cc, *nconf2, false);
 							m_lastConfigUpdate = 0; // still want to re-request an update since it's likely outdated
 							got = true;
 						}
@@ -579,13 +579,13 @@ Network::Network(const RuntimeEnvironment *renv, void *tPtr, uint64_t nwid, cons
 		} catch (...) {}
 
 		if (!got)
-			RR->store->put(tPtr, ZT_STATE_OBJECT_NETWORK_CONFIG, tmp, 1, "\n", 1);
+			RR->store->put(cc, ZT_STATE_OBJECT_NETWORK_CONFIG, tmp, 1, "\n", 1);
 	}
 
 	if (!m_portInitialized) {
 		ZT_VirtualNetworkConfig ctmp;
 		m_externalConfig(&ctmp);
-		RR->node->configureVirtualNetworkPort(tPtr, m_id, &m_uPtr, ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP, &ctmp);
+		RR->cb.virtualNetworkConfigFunction(reinterpret_cast<ZT_Node *>(RR->node), RR->uPtr, cc.tPtr, m_id, &m_uPtr, ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP, &ctmp);
 		m_portInitialized = true;
 	}
 }
@@ -604,12 +604,12 @@ Network::~Network()
 		// This is done in Node::leave() so we can pass tPtr properly
 		//RR->node->configureVirtualNetworkPort((void *)0,_id,&_uPtr,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY,&ctmp);
 	} else {
-		RR->node->configureVirtualNetworkPort(nullptr, m_id, &m_uPtr, ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN, &ctmp);
+		RR->cb.virtualNetworkConfigFunction(reinterpret_cast<ZT_Node *>(RR->node), RR->uPtr, nullptr, m_id, &m_uPtr, ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN, &ctmp);
 	}
 }
 
 bool Network::filterOutgoingPacket(
-	void *tPtr,
+	CallContext &cc,
 	const bool noTee,
 	const Address &ztSource,
 	const Address &ztDest,
@@ -625,7 +625,7 @@ bool Network::filterOutgoingPacket(
 	Address ztFinalDest(ztDest);
 	int localCapabilityIndex = -1;
 	int accept = 0;
-	Address cc;
+	Address ccNodeAddress;
 	unsigned int ccLength = 0;
 	bool ccWatch = false;
 
@@ -640,7 +640,7 @@ bool Network::filterOutgoingPacket(
 		membership = nullptr;
 	}
 
-	switch (_doZtFilter(RR, rrl, m_config, membership, false, ztSource, ztFinalDest, macSource, macDest, frameData, frameLen, etherType, vlanId, m_config.rules, m_config.ruleCount, cc, ccLength, ccWatch, qosBucket)) {
+	switch (_doZtFilter(RR, rrl, m_config, membership, false, ztSource, ztFinalDest, macSource, macDest, frameData, frameLen, etherType, vlanId, m_config.rules, m_config.ruleCount, ccNodeAddress, ccLength, ccWatch, qosBucket)) {
 
 		case DOZTFILTER_NO_MATCH: {
 			for (unsigned int c = 0; c < m_config.capabilityCount; ++c) {
@@ -683,7 +683,7 @@ bool Network::filterOutgoingPacket(
 			break;
 
 		case DOZTFILTER_DROP:
-			RR->t->networkFilter(tPtr, 0xadea5a2a, m_id, rrl.l, nullptr, 0, 0, ztSource, ztDest, macSource, macDest, (uint16_t)frameLen, frameData, (uint16_t)etherType, (uint16_t)vlanId, noTee, false, 0);
+			RR->t->networkFilter(cc, 0xadea5a2a, m_id, rrl.l, nullptr, 0, 0, ztSource, ztDest, macSource, macDest, (uint16_t)frameLen, frameData, (uint16_t)etherType, (uint16_t)vlanId, noTee, false, 0);
 			return false;
 
 		case DOZTFILTER_REDIRECT: // interpreted as ACCEPT but ztFinalDest will have been changed in _doZtFilter()
@@ -697,7 +697,7 @@ bool Network::filterOutgoingPacket(
 	}
 
 	if (accept != 0) {
-		if ((!noTee) && (cc)) {
+		if ((!noTee) && (ccNodeAddress)) {
 			// TODO
 			/*
 			Packet outp(cc,RR->identity.address(),Packet::VERB_EXT_FRAME);
@@ -733,16 +733,16 @@ bool Network::filterOutgoingPacket(
 
 	if (localCapabilityIndex >= 0) {
 		const CapabilityCredential &cap = m_config.capabilities[localCapabilityIndex];
-		RR->t->networkFilter(tPtr, 0x56ff1a93, m_id, rrl.l, crrl.l, cap.id(), cap.timestamp(), ztSource, ztDest, macSource, macDest, (uint16_t)frameLen, frameData, (uint16_t)etherType, (uint16_t)vlanId, noTee, false, accept);
+		RR->t->networkFilter(cc, 0x56ff1a93, m_id, rrl.l, crrl.l, cap.id(), cap.timestamp(), ztSource, ztDest, macSource, macDest, (uint16_t)frameLen, frameData, (uint16_t)etherType, (uint16_t)vlanId, noTee, false, accept);
 	} else {
-		RR->t->networkFilter(tPtr, 0x112fbbab, m_id, rrl.l, nullptr, 0, 0, ztSource, ztDest, macSource, macDest, (uint16_t)frameLen, frameData, (uint16_t)etherType, (uint16_t)vlanId, noTee, false, accept);
+		RR->t->networkFilter(cc, 0x112fbbab, m_id, rrl.l, nullptr, 0, 0, ztSource, ztDest, macSource, macDest, (uint16_t)frameLen, frameData, (uint16_t)etherType, (uint16_t)vlanId, noTee, false, accept);
 	}
 
 	return (accept != 0);
 }
 
 int Network::filterIncomingPacket(
-	void *tPtr,
+	CallContext &cc,
 	const SharedPtr< Peer > &sourcePeer,
 	const Address &ztDest,
 	const MAC &macSource,
@@ -755,7 +755,7 @@ int Network::filterIncomingPacket(
 	Address ztFinalDest(ztDest);
 	Trace::RuleResultLog rrl, crrl;
 	int accept = 0;
-	Address cc;
+	Address ccNodeAddress;
 	unsigned int ccLength = 0;
 	bool ccWatch = false;
 	const CapabilityCredential *c = nullptr;
@@ -767,7 +767,7 @@ int Network::filterIncomingPacket(
 
 	Member &membership = m_memberships[sourcePeer->address()];
 
-	switch (_doZtFilter(RR, rrl, m_config, &membership, true, sourcePeer->address(), ztFinalDest, macSource, macDest, frameData, frameLen, etherType, vlanId, m_config.rules, m_config.ruleCount, cc, ccLength, ccWatch, qosBucket)) {
+	switch (_doZtFilter(RR, rrl, m_config, &membership, true, sourcePeer->address(), ztFinalDest, macSource, macDest, frameData, frameLen, etherType, vlanId, m_config.rules, m_config.ruleCount, ccNodeAddress, ccLength, ccWatch, qosBucket)) {
 
 		case DOZTFILTER_NO_MATCH: {
 			Member::CapabilityIterator mci(membership, m_config);
@@ -825,7 +825,7 @@ int Network::filterIncomingPacket(
 	}
 
 	if (accept) {
-		if (cc) {
+		if (ccNodeAddress) {
 			// TODO
 			/*
 			Packet outp(cc,RR->identity.address(),Packet::VERB_EXT_FRAME);
@@ -865,13 +865,13 @@ int Network::filterIncomingPacket(
 	return accept;
 }
 
-void Network::multicastSubscribe(void *tPtr, const MulticastGroup &mg)
+void Network::multicastSubscribe(CallContext &cc, const MulticastGroup &mg)
 {
 	Mutex::Lock l(m_myMulticastGroups_l);
 	if (!std::binary_search(m_myMulticastGroups.begin(), m_myMulticastGroups.end(), mg)) {
 		m_myMulticastGroups.insert(std::upper_bound(m_myMulticastGroups.begin(), m_myMulticastGroups.end(), mg), mg);
 		Mutex::Lock l2(m_memberships_l);
-		m_announceMulticastGroups(tPtr, true);
+		m_announceMulticastGroups(cc.tPtr, true);
 	}
 }
 
@@ -883,7 +883,7 @@ void Network::multicastUnsubscribe(const MulticastGroup &mg)
 		m_myMulticastGroups.erase(i);
 }
 
-uint64_t Network::handleConfigChunk(void *tPtr, uint64_t packetId, const SharedPtr< Peer > &source, const Buf &chunk, int ptr, int size)
+uint64_t Network::handleConfigChunk(CallContext &cc, uint64_t packetId, const SharedPtr< Peer > &source, const Buf &chunk, int ptr, int size)
 {
 	// If the controller's full fingerprint is known or was explicitly specified on join(),
 	// require that the controller's identity match. Otherwise learn it.
@@ -1027,7 +1027,7 @@ uint64_t Network::handleConfigChunk(void *tPtr, uint64_t packetId, const SharedP
 #endif
 }
 
-int Network::setConfiguration(void *tPtr, const NetworkConfig &nconf, bool saveToDisk)
+int Network::setConfiguration(CallContext &cc, const NetworkConfig &nconf, bool saveToDisk)
 {
 	if (m_destroyed)
 		return 0;
@@ -1048,7 +1048,7 @@ int Network::setConfiguration(void *tPtr, const NetworkConfig &nconf, bool saveT
 			Mutex::Lock l1(m_config_l);
 
 			m_config = nconf;
-			m_lastConfigUpdate = RR->node->now();
+			m_lastConfigUpdate = cc.ticks;
 			_netconfFailure = NETCONF_FAILURE_NONE;
 
 			oldPortInitialized = m_portInitialized;
@@ -1057,7 +1057,7 @@ int Network::setConfiguration(void *tPtr, const NetworkConfig &nconf, bool saveT
 			m_externalConfig(&ctmp);
 		}
 
-		RR->node->configureVirtualNetworkPort(tPtr, m_id, &m_uPtr, (oldPortInitialized) ? ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE : ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP, &ctmp);
+		RR->cb.virtualNetworkConfigFunction(reinterpret_cast<ZT_Node *>(RR->node), RR->uPtr, cc.tPtr, nconf.networkId, &m_uPtr, (oldPortInitialized) ? ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE : ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP, &ctmp);
 
 		if (saveToDisk) {
 			try {
@@ -1068,7 +1068,7 @@ int Network::setConfiguration(void *tPtr, const NetworkConfig &nconf, bool saveT
 					tmp[1] = 0;
 					Vector< uint8_t > d2;
 					d.encode(d2);
-					RR->store->put(tPtr, ZT_STATE_OBJECT_NETWORK_CONFIG, tmp, 1, d2.data(), (unsigned int)d2.size());
+					RR->store->put(cc, ZT_STATE_OBJECT_NETWORK_CONFIG, tmp, 1, d2.data(), (unsigned int)d2.size());
 				}
 			} catch (...) {}
 		}
@@ -1095,13 +1095,13 @@ bool Network::gate(void *tPtr, const SharedPtr< Peer > &peer) noexcept
 	return false;
 }
 
-void Network::doPeriodicTasks(void *tPtr, const int64_t now)
+void Network::doPeriodicTasks(CallContext &cc)
 {
 	if (m_destroyed)
 		return;
 
-	if ((now - m_lastConfigUpdate) >= ZT_NETWORK_AUTOCONF_DELAY)
-		m_requestConfiguration(tPtr);
+	if ((cc.ticks - m_lastConfigUpdate) >= ZT_NETWORK_AUTOCONF_DELAY)
+		m_requestConfiguration(cc);
 
 	{
 		Mutex::Lock l1(m_memberships_l);
@@ -1157,31 +1157,31 @@ void Network::learnBridgeRoute(const MAC &mac, const Address &addr)
 	}
 }
 
-Member::AddCredentialResult Network::addCredential(void *tPtr, const Identity &sourcePeerIdentity, const MembershipCredential &com)
+Member::AddCredentialResult Network::addCredential(CallContext &cc, const Identity &sourcePeerIdentity, const MembershipCredential &com)
 {
 	if (com.networkId() != m_id)
 		return Member::ADD_REJECTED;
 	Mutex::Lock _l(m_memberships_l);
-	return m_memberships[com.issuedTo().address].addCredential(RR, tPtr, sourcePeerIdentity, m_config, com);
+	return m_memberships[com.issuedTo().address].addCredential(RR, cc, sourcePeerIdentity, m_config, com);
 }
 
-Member::AddCredentialResult Network::addCredential(void *tPtr, const Identity &sourcePeerIdentity, const CapabilityCredential &cap)
+Member::AddCredentialResult Network::addCredential(CallContext &cc, const Identity &sourcePeerIdentity, const CapabilityCredential &cap)
 {
 	if (cap.networkId() != m_id)
 		return Member::ADD_REJECTED;
 	Mutex::Lock _l(m_memberships_l);
-	return m_memberships[cap.issuedTo()].addCredential(RR, tPtr, sourcePeerIdentity, m_config, cap);
+	return m_memberships[cap.issuedTo()].addCredential(RR, cc, sourcePeerIdentity, m_config, cap);
 }
 
-Member::AddCredentialResult Network::addCredential(void *tPtr, const Identity &sourcePeerIdentity, const TagCredential &tag)
+Member::AddCredentialResult Network::addCredential(CallContext &cc, const Identity &sourcePeerIdentity, const TagCredential &tag)
 {
 	if (tag.networkId() != m_id)
 		return Member::ADD_REJECTED;
 	Mutex::Lock _l(m_memberships_l);
-	return m_memberships[tag.issuedTo()].addCredential(RR, tPtr, sourcePeerIdentity, m_config, tag);
+	return m_memberships[tag.issuedTo()].addCredential(RR, cc, sourcePeerIdentity, m_config, tag);
 }
 
-Member::AddCredentialResult Network::addCredential(void *tPtr, const Identity &sourcePeerIdentity, const RevocationCredential &rev)
+Member::AddCredentialResult Network::addCredential(CallContext &cc, const Identity &sourcePeerIdentity, const RevocationCredential &rev)
 {
 	if (rev.networkId() != m_id)
 		return Member::ADD_REJECTED;
@@ -1189,7 +1189,7 @@ Member::AddCredentialResult Network::addCredential(void *tPtr, const Identity &s
 	Mutex::Lock l1(m_memberships_l);
 	Member &m = m_memberships[rev.target()];
 
-	const Member::AddCredentialResult result = m.addCredential(RR, tPtr, sourcePeerIdentity, m_config, rev);
+	const Member::AddCredentialResult result = m.addCredential(RR, cc, sourcePeerIdentity, m_config, rev);
 
 	if ((result == Member::ADD_ACCEPTED_NEW) && (rev.fastPropagate())) {
 		// TODO
@@ -1215,22 +1215,21 @@ Member::AddCredentialResult Network::addCredential(void *tPtr, const Identity &s
 	return result;
 }
 
-Member::AddCredentialResult Network::addCredential(void *tPtr, const Identity &sourcePeerIdentity, const OwnershipCredential &coo)
+Member::AddCredentialResult Network::addCredential(CallContext &cc, const Identity &sourcePeerIdentity, const OwnershipCredential &coo)
 {
 	if (coo.networkId() != m_id)
 		return Member::ADD_REJECTED;
 	Mutex::Lock _l(m_memberships_l);
-	return m_memberships[coo.issuedTo()].addCredential(RR, tPtr, sourcePeerIdentity, m_config, coo);
+	return m_memberships[coo.issuedTo()].addCredential(RR, cc, sourcePeerIdentity, m_config, coo);
 }
 
-void Network::pushCredentials(void *tPtr, const SharedPtr< Peer > &to, const int64_t now)
+void Network::pushCredentials(CallContext &cc, const SharedPtr< Peer > &to)
 {
 	const int64_t tout = std::min(m_config.credentialTimeMaxDelta, m_config.com.timestampMaxDelta());
 	Mutex::Lock _l(m_memberships_l);
 	Member &m = m_memberships[to->address()];
-	if (((now - m.lastPushedCredentials()) + 5000) >= tout) {
-		m.pushCredentials(RR, tPtr, now, to, m_config);
-	}
+	if (((cc.ticks - m.lastPushedCredentials()) + 5000) >= tout)
+		m.pushCredentials(RR, cc, to, m_config);
 }
 
 void Network::destroy()
@@ -1248,7 +1247,7 @@ void Network::externalConfig(ZT_VirtualNetworkConfig *ec) const
 	m_externalConfig(ec);
 }
 
-void Network::m_requestConfiguration(void *tPtr)
+void Network::m_requestConfiguration(CallContext &cc)
 {
 	if (m_destroyed)
 		return;
@@ -1261,7 +1260,7 @@ void Network::m_requestConfiguration(void *tPtr)
 				ScopedPtr< NetworkConfig > nconf(new NetworkConfig());
 
 				nconf->networkId = m_id;
-				nconf->timestamp = RR->node->now();
+				nconf->timestamp = (cc.clock < 0) ? cc.ticks : cc.clock;
 				nconf->credentialTimeMaxDelta = ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MAX_MAX_DELTA;
 				nconf->revision = 1;
 				nconf->issuedTo = RR->identity.address();
@@ -1319,7 +1318,7 @@ void Network::m_requestConfiguration(void *tPtr)
 				Utils::hex((uint16_t)endPortRange, nconf->name + 11);
 				nconf->name[15] = (char)0;
 
-				this->setConfiguration(tPtr, *nconf, false);
+				this->setConfiguration(cc, *nconf, false);
 			} else {
 				this->setNotFound();
 			}
@@ -1340,7 +1339,7 @@ void Network::m_requestConfiguration(void *tPtr)
 			ScopedPtr< NetworkConfig > nconf(new NetworkConfig());
 
 			nconf->networkId = m_id;
-			nconf->timestamp = RR->node->now();
+			nconf->timestamp = (cc.clock < 0) ? cc.ticks : cc.clock;
 			nconf->credentialTimeMaxDelta = ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MAX_MAX_DELTA;
 			nconf->revision = 1;
 			nconf->issuedTo = RR->identity.address();
@@ -1377,7 +1376,7 @@ void Network::m_requestConfiguration(void *tPtr)
 			nconf->name[nn++] = '0';
 			nconf->name[nn] = (char)0;
 
-			this->setConfiguration(tPtr, *nconf, false);
+			this->setConfiguration(cc, *nconf, false);
 		}
 		return;
 	}
@@ -1397,7 +1396,7 @@ void Network::m_requestConfiguration(void *tPtr)
 	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_FLAGS, (uint64_t)0);
 	rmd.add(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_RULES_ENGINE_REV, (uint64_t)ZT_RULES_ENGINE_REVISION);
 
-	RR->t->networkConfigRequestSent(tPtr, 0x335bb1a2, m_id);
+	RR->t->networkConfigRequestSent(cc, 0x335bb1a2, m_id);
 
 	if (ctrl == RR->identity.address()) {
 		if (RR->localNetworkController) {

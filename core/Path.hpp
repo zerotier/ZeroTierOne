@@ -21,6 +21,7 @@
 #include "Mutex.hpp"
 #include "Meter.hpp"
 #include "Containers.hpp"
+#include "CallContext.hpp"
 
 namespace ZeroTier {
 
@@ -140,14 +141,11 @@ public:
 	/**
 	 * Send a packet via this path (last out time is also updated)
 	 *
-	 * @param RR Runtime environment
-	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param data Packet data
 	 * @param len Packet length
-	 * @param now Current time
 	 * @return True if transport reported success
 	 */
-	bool send(const RuntimeEnvironment *RR, void *tPtr, const void *data, unsigned int len, int64_t now) noexcept;
+	bool send(const RuntimeEnvironment *RR, CallContext &cc, const void *data, unsigned int len) noexcept;
 
 	/**
 	 * Explicitly update last sent time
@@ -155,10 +153,10 @@ public:
 	 * @param now Time of send
 	 * @param bytes Bytes sent
 	 */
-	ZT_INLINE void sent(const int64_t now, const unsigned int bytes) noexcept
+	ZT_INLINE void sent(const CallContext &cc, const unsigned int bytes) noexcept
 	{
-		m_lastOut.store(now);
-		m_outMeter.log(now, bytes);
+		m_lastOut.store(cc.ticks, std::memory_order_relaxed);
+		m_outMeter.log(cc.ticks, bytes);
 	}
 
 	/**
@@ -167,10 +165,10 @@ public:
 	 * @param now Time of receive
 	 * @param bytes Bytes received
 	 */
-	ZT_INLINE void received(const int64_t now, const unsigned int bytes) noexcept
+	ZT_INLINE void received(const CallContext &cc, const unsigned int bytes) noexcept
 	{
-		m_lastIn.store(now);
-		m_inMeter.log(now, bytes);
+		m_lastIn.store(cc.ticks, std::memory_order_relaxed);
+		m_inMeter.log(cc.ticks, bytes);
 	}
 
 	/**
@@ -199,8 +197,8 @@ public:
 	 *
 	 * @param now Current time
 	 */
-	ZT_INLINE bool alive(const int64_t now) const noexcept
-	{ return ((now - m_lastIn.load()) < ZT_PATH_ALIVE_TIMEOUT); }
+	ZT_INLINE bool alive(const CallContext &cc) const noexcept
+	{ return ((cc.ticks - m_lastIn.load()) < ZT_PATH_ALIVE_TIMEOUT); }
 
 	/**
 	 * @return Physical address

@@ -529,7 +529,7 @@ bool scopy(char *const dest, const unsigned int len, const char *const src) noex
 	}
 }
 
-uint32_t fnv1a32(const void *const data, const unsigned int len) noexcept
+uint32_t fnv1a32(const void *const restrict data, const unsigned int len) noexcept
 {
 	uint32_t h = 0x811c9dc5;
 	const uint32_t p = 0x01000193;

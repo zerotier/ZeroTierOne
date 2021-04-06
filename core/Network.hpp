@@ -26,6 +26,7 @@
 #include "NetworkConfig.hpp"
 #include "MembershipCredential.hpp"
 #include "Containers.hpp"
+#include "CallContext.hpp"
 
 #define ZT_NETWORK_MAX_INCOMING_UPDATES 3
 
@@ -60,14 +61,18 @@ public:
 	 * Note that init() should be called immediately after the network is
 	 * constructed to actually configure the port.
 	 *
-	 * @param renv Runtime environment
-	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param nwid Network ID
 	 * @param controllerFingerprint Initial controller fingerprint if non-NULL
 	 * @param uptr Arbitrary pointer used by externally-facing API (for user use)
 	 * @param nconf Network config, if known
 	 */
-	Network(const RuntimeEnvironment *renv, void *tPtr, uint64_t nwid, const Fingerprint &controllerFingerprint, void *uptr, const NetworkConfig *nconf);
+	Network(
+		const RuntimeEnvironment *renv,
+		CallContext &cc,
+		uint64_t nwid,
+		const Fingerprint &controllerFingerprint,
+		void *uptr,
+		const NetworkConfig *nconf);
 
 	~Network();
 
@@ -103,7 +108,6 @@ public:
 	 * such as TEE may be taken, and credentials may be pushed, so this is not
 	 * side-effect-free. It's basically step one in sending something over VL2.
 	 *
-	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param noTee If true, do not TEE anything anywhere (for two-pass filtering as done with multicast and bridging)
 	 * @param ztSource Source ZeroTier address
 	 * @param ztDest Destination ZeroTier address
@@ -116,7 +120,7 @@ public:
 	 * @return True if packet should be sent, false if dropped or redirected
 	 */
 	bool filterOutgoingPacket(
-		void *tPtr,
+		CallContext &cc,
 		bool noTee,
 		const Address &ztSource,
 		const Address &ztDest,
@@ -136,7 +140,6 @@ public:
 	 * a match certain actions may be taken such as sending a copy of the packet
 	 * to a TEE or REDIRECT target.
 	 *
-	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param sourcePeer Source Peer
 	 * @param ztDest Destination ZeroTier address
 	 * @param macSource Ethernet layer source address
@@ -148,7 +151,7 @@ public:
 	 * @return 0 == drop, 1 == accept, 2 == accept even if bridged
 	 */
 	int filterIncomingPacket(
-		void *tPtr,
+		CallContext &cc,
 		const SharedPtr< Peer > &sourcePeer,
 		const Address &ztDest,
 		const MAC &macSource,
@@ -159,29 +162,11 @@ public:
 		unsigned int vlanId);
 
 	/**
-	 * Check whether we are subscribed to a multicast group
-	 *
-	 * @param mg Multicast group
-	 * @param includeBridgedGroups If true, also check groups we've learned via bridging
-	 * @return True if this network endpoint / peer is a member
-	 */
-	ZT_INLINE bool subscribedToMulticastGroup(const MulticastGroup &mg, const bool includeBridgedGroups) const
-	{
-		Mutex::Lock l(m_myMulticastGroups_l);
-		if (std::binary_search(m_myMulticastGroups.begin(), m_myMulticastGroups.end(), mg))
-			return true;
-		else if (includeBridgedGroups)
-			return (m_multicastGroupsBehindMe.find(mg) != m_multicastGroupsBehindMe.end());
-		return false;
-	}
-
-	/**
 	 * Subscribe to a multicast group
 	 *
-	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param mg New multicast group
 	 */
-	void multicastSubscribe(void *tPtr, const MulticastGroup &mg);
+	void multicastSubscribe(CallContext &cc, const MulticastGroup &mg);
 
 	/**
 	 * Unsubscribe from a multicast group
@@ -198,7 +183,6 @@ public:
 	 * bit of packet parsing code that also verifies chunks and replicates
 	 * them (via rumor mill flooding) if their fast propagate flag is set.
 	 *
-	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param packetId Packet ID or 0 if none (e.g. via cluster path)
 	 * @param source Peer that actually sent this chunk (probably controller)
 	 * @param chunk Buffer containing chunk
@@ -206,7 +190,13 @@ public:
 	 * @param size Size of data in chunk buffer (total, not relative to ptr)
 	 * @return Update ID if update was fully assembled and accepted or 0 otherwise
 	 */
-	uint64_t handleConfigChunk(void *tPtr, uint64_t packetId, const SharedPtr< Peer > &source, const Buf &chunk, int ptr, int size);
+	uint64_t handleConfigChunk(
+		CallContext &cc,
+		uint64_t packetId,
+		const SharedPtr< Peer > &source,
+		const Buf &chunk,
+		int ptr,
+		int size);
 
 	/**
 	 * Set network configuration
@@ -215,12 +205,14 @@ public:
 	 * and fully assembled, but it can also be called on Node startup when
 	 * cached configurations are re-read from the data store.
 	 *
-	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param nconf Network configuration
 	 * @param saveToDisk Save to disk? Used during loading, should usually be true otherwise.
 	 * @return 0 == bad, 1 == accepted but duplicate/unchanged, 2 == accepted and new
 	 */
-	int setConfiguration(void *tPtr, const NetworkConfig &nconf, bool saveToDisk);
+	int setConfiguration(
+		CallContext &cc,
+		const NetworkConfig &nconf,
+		bool saveToDisk);
 
 	/**
 	 * Set netconf failure to 'access denied' -- called in IncomingPacket when controller reports this
@@ -245,7 +237,7 @@ public:
 	/**
 	 * Do periodic cleanup and housekeeping tasks
 	 */
-	void doPeriodicTasks(void *tPtr, int64_t now);
+	void doPeriodicTasks(CallContext &cc);
 
 	/**
 	 * Find the node on this network that has this MAC behind it (if any)
@@ -275,7 +267,7 @@ public:
 	 * @param mg Multicast group
 	 * @param now Current time
 	 */
-	ZT_INLINE void learnBridgedMulticastGroup(void *tPtr, const MulticastGroup &mg, int64_t now)
+	ZT_INLINE void learnBridgedMulticastGroup(const MulticastGroup &mg, int64_t now)
 	{
 		Mutex::Lock l(m_myMulticastGroups_l);
 		m_multicastGroupsBehindMe[mg] = now;
@@ -284,36 +276,34 @@ public:
 	/**
 	 * Validate a credential and learn it if it passes certificate and other checks
 	 */
-	Member::AddCredentialResult addCredential(void *tPtr, const Identity &sourcePeerIdentity, const MembershipCredential &com);
+	Member::AddCredentialResult addCredential(CallContext &cc, const Identity &sourcePeerIdentity, const MembershipCredential &com);
 
 	/**
 	 * Validate a credential and learn it if it passes certificate and other checks
 	 */
-	Member::AddCredentialResult addCredential(void *tPtr, const Identity &sourcePeerIdentity, const CapabilityCredential &cap);
+	Member::AddCredentialResult addCredential(CallContext &cc, const Identity &sourcePeerIdentity, const CapabilityCredential &cap);
 
 	/**
 	 * Validate a credential and learn it if it passes certificate and other checks
 	 */
-	Member::AddCredentialResult addCredential(void *tPtr, const Identity &sourcePeerIdentity, const TagCredential &tag);
+	Member::AddCredentialResult addCredential(CallContext &cc, const Identity &sourcePeerIdentity, const TagCredential &tag);
 
 	/**
 	 * Validate a credential and learn it if it passes certificate and other checks
 	 */
-	Member::AddCredentialResult addCredential(void *tPtr, const Identity &sourcePeerIdentity, const RevocationCredential &rev);
+	Member::AddCredentialResult addCredential(CallContext &cc, const Identity &sourcePeerIdentity, const RevocationCredential &rev);
 
 	/**
 	 * Validate a credential and learn it if it passes certificate and other checks
 	 */
-	Member::AddCredentialResult addCredential(void *tPtr, const Identity &sourcePeerIdentity, const OwnershipCredential &coo);
+	Member::AddCredentialResult addCredential(CallContext &cc, const Identity &sourcePeerIdentity, const OwnershipCredential &coo);
 
 	/**
 	 * Push credentials to a peer if timeouts indicate that we should do so
 	 *
-	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param to Destination peer
-	 * @param now Current time
 	 */
-	void pushCredentials(void *tPtr, const SharedPtr< Peer > &to, int64_t now);
+	void pushCredentials(CallContext &cc, const SharedPtr< Peer > &to);
 
 	/**
 	 * Destroy this network
@@ -352,7 +342,7 @@ public:
 	{ return &m_uPtr; }
 
 private:
-	void m_requestConfiguration(void *tPtr);
+	void m_requestConfiguration(CallContext &cc);
 
 	ZT_VirtualNetworkStatus m_status() const;
 

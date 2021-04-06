@@ -1750,18 +1750,10 @@ enum ZT_StateObjectType
 	 * List of certificates, their local trust, and locally added roots
 	 *
 	 * Object ID: (none)
-	 * Canonical path: <HOME>/trust
+	 * Canonical path: <HOME>/truststore
 	 * Persistence: required if root settings should persist
 	 */
-	ZT_STATE_OBJECT_TRUST_STORE = 7,
-
-	/**
-	 * Certificate
-	 *
-	 * Object ID: [6]serial (384-bit serial packed into 6 uint64_t's)
-	 * Canonical path: <HOME>/certs.d/<serial> (96-digit hex serial)
-	 */
-	ZT_STATE_OBJECT_CERT = 8
+	ZT_STATE_OBJECT_TRUST_STORE = 7
 };
 
 /**
@@ -2028,7 +2020,7 @@ struct ZT_Node_Callbacks
  *
  * @return Pointer to I/O buffer
  */
-ZT_SDK_API void *ZT_getBuffer();
+ZT_SDK_API [[maybe_unused]]  void *ZT_getBuffer();
 
 /**
  * Free an unused buffer obtained via getBuffer
@@ -2059,37 +2051,32 @@ ZT_SDK_API void ZT_freeQueryResult(const void *qr);
  *
  * @param node Result: pointer is set to new node instance on success
  * @param uptr User pointer to pass to functions/callbacks
- * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
  * @param callbacks Callback function configuration
- * @param now Current clock in milliseconds
  * @return OK (0) or error code if a fatal error condition has occurred
  */
 ZT_SDK_API enum ZT_ResultCode ZT_Node_new(
 	ZT_Node **node,
-	void *uptr,
+	int64_t clock,
+	int64_t ticks,
 	void *tptr,
-	const struct ZT_Node_Callbacks *callbacks,
-	int64_t now);
+	void *uptr,
+	const struct ZT_Node_Callbacks *callbacks);
 
 /**
  * Delete a node and free all resources it consumes
  *
  * If you are using multiple threads, all other threads must be shut down
  * first. This can crash if processXXX() methods are in progress.
- *
- * @param node Node to delete
- * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
  */
 ZT_SDK_API void ZT_Node_delete(
 	ZT_Node *node,
+	int64_t clock,
+	int64_t ticks,
 	void *tptr);
 
 /**
  * Process a packet received from the physical wire
  *
- * @param node Node instance
- * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
- * @param now Current clock in milliseconds
  * @param localSocket Local socket (you can use 0 if only one local socket is bound and ignore this)
  * @param remoteAddress Origin of packet
  * @param packetData Packet data
@@ -2100,8 +2087,9 @@ ZT_SDK_API void ZT_Node_delete(
  */
 ZT_SDK_API enum ZT_ResultCode ZT_Node_processWirePacket(
 	ZT_Node *node,
+	int64_t clock,
+	int64_t ticks,
 	void *tptr,
-	int64_t now,
 	int64_t localSocket,
 	const ZT_InetAddress *remoteAddress,
 	const void *packetData,
@@ -2112,9 +2100,6 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_processWirePacket(
 /**
  * Process a frame from a virtual network port (tap)
  *
- * @param node Node instance
- * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
- * @param now Current clock in milliseconds
  * @param nwid ZeroTier 64-bit virtual network ID
  * @param sourceMac Source MAC address (least significant 48 bits)
  * @param destMac Destination MAC address (least significant 48 bits)
@@ -2128,8 +2113,9 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_processWirePacket(
  */
 ZT_SDK_API enum ZT_ResultCode ZT_Node_processVirtualNetworkFrame(
 	ZT_Node *node,
+	int64_t clock,
+	int64_t ticks,
 	void *tptr,
-	int64_t now,
 	uint64_t nwid,
 	uint64_t sourceMac,
 	uint64_t destMac,
@@ -2143,16 +2129,15 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_processVirtualNetworkFrame(
 /**
  * Perform periodic background operations
  *
- * @param node Node instance
- * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
  * @param now Current clock in milliseconds
  * @param nextBackgroundTaskDeadline Value/result: set to deadline for next call to processBackgroundTasks()
  * @return OK (0) or error code if a fatal error condition has occurred
  */
 ZT_SDK_API enum ZT_ResultCode ZT_Node_processBackgroundTasks(
 	ZT_Node *node,
+	int64_t clock,
+	int64_t ticks,
 	void *tptr,
-	int64_t now,
 	volatile int64_t *nextBackgroundTaskDeadline);
 
 /**
@@ -2164,19 +2149,18 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_processBackgroundTasks(
  * If we are already a member of the network, nothing is done and OK is
  * returned.
  *
- * @param node Node instance
  * @param nwid 64-bit ZeroTier network ID
  * @param fingerprintHash If non-NULL this is the full fingerprint of the controller
- * @param uptr An arbitrary pointer to associate with this network (default: NULL)
- * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
  * @return OK (0) or error code if a fatal error condition has occurred
  */
 ZT_SDK_API enum ZT_ResultCode ZT_Node_join(
 	ZT_Node *node,
-	uint64_t nwid,
-	const ZT_Fingerprint *controllerFingerprint,
+	int64_t clock,
+	int64_t ticks,
+	void *tptr,
 	void *uptr,
-	void *tptr);
+	uint64_t nwid,
+	const ZT_Fingerprint *controllerFingerprint);
 
 /**
  * Leave a network
@@ -2188,17 +2172,15 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_join(
  * The uptr parameter is optional and is NULL by default. If it is not NULL,
  * the pointer it points to is set to this network's uptr on success.
  *
- * @param node Node instance
- * @param nwid 64-bit network ID
- * @param uptr Target pointer is set to uptr (if not NULL)
- * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
  * @return OK (0) or error code if a fatal error condition has occurred
  */
 ZT_SDK_API enum ZT_ResultCode ZT_Node_leave(
 	ZT_Node *node,
-	uint64_t nwid,
+	int64_t clock,
+	int64_t ticks,
+	void *tptr,
 	void **uptr,
-	void *tptr);
+	uint64_t nwid);
 
 /**
  * Subscribe to an Ethernet multicast group
@@ -2219,8 +2201,6 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_leave(
  *
  * This does not generate an update call to networkConfigCallback().
  *
- * @param node Node instance
- * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
  * @param nwid 64-bit network ID
  * @param multicastGroup Ethernet multicast or broadcast MAC (least significant 48 bits)
  * @param multicastAdi Multicast ADI (least significant 32 bits only, use 0 if not needed)
@@ -2228,6 +2208,8 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_leave(
  */
 ZT_SDK_API enum ZT_ResultCode ZT_Node_multicastSubscribe(
 	ZT_Node *node,
+	int64_t clock,
+	int64_t ticks,
 	void *tptr,
 	uint64_t nwid,
 	uint64_t multicastGroup,
@@ -2241,7 +2223,6 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_multicastSubscribe(
  *
  * This does not generate an update call to networkConfigCallback().
  *
- * @param node Node instance
  * @param nwid 64-bit network ID
  * @param multicastGroup Ethernet multicast or broadcast MAC (least significant 48 bits)
  * @param multicastAdi Multicast ADI (least significant 32 bits only, use 0 if not needed)
@@ -2249,6 +2230,9 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_multicastSubscribe(
  */
 ZT_SDK_API enum ZT_ResultCode ZT_Node_multicastUnsubscribe(
 	ZT_Node *node,
+	int64_t clock,
+	int64_t ticks,
+	void *tptr,
 	uint64_t nwid,
 	uint64_t multicastGroup,
 	unsigned long multicastAdi);
@@ -2256,10 +2240,10 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_multicastUnsubscribe(
 /**
  * Get this node's 40-bit ZeroTier address
  *
- * @param node Node instance
  * @return ZeroTier address (least significant 40 bits of 64-bit int)
  */
-ZT_SDK_API uint64_t ZT_Node_address(ZT_Node *node);
+ZT_SDK_API uint64_t ZT_Node_address(
+	ZT_Node *node);
 
 /**
  * Get this node's identity
@@ -2267,19 +2251,21 @@ ZT_SDK_API uint64_t ZT_Node_address(ZT_Node *node);
  * The identity pointer returned by this function need not and should not be
  * freed with ZT_Identity_delete(). It's valid until the node is deleted.
  *
- * @param node Node instance
  * @return Identity
  */
-ZT_SDK_API const ZT_Identity *ZT_Node_identity(ZT_Node *node);
+ZT_SDK_API const ZT_Identity *ZT_Node_identity(
+	ZT_Node *node);
 
 /**
  * Get the status of this node
  *
- * @param node Node instance
  * @param status Buffer to fill with current node status
  */
 ZT_SDK_API void ZT_Node_status(
 	ZT_Node *node,
+	int64_t clock,
+	int64_t ticks,
+	void *tptr,
 	ZT_NodeStatus *status);
 
 /**
@@ -2288,10 +2274,13 @@ ZT_SDK_API void ZT_Node_status(
  * The pointer returned here must be freed with freeQueryResult()
  * when you are done with it.
  *
- * @param node Node instance
  * @return List of known peers or NULL on failure
  */
-ZT_SDK_API ZT_PeerList *ZT_Node_peers(ZT_Node *node);
+ZT_SDK_API ZT_PeerList *ZT_Node_peers(
+	ZT_Node *node,
+	int64_t clock,
+	int64_t ticks,
+	void *tptr);
 
 /**
  * Get the status of a virtual network
@@ -2299,12 +2288,14 @@ ZT_SDK_API ZT_PeerList *ZT_Node_peers(ZT_Node *node);
  * The pointer returned here must be freed with freeQueryResult()
  * when you are done with it.
  *
- * @param node Node instance
  * @param nwid 64-bit network ID
  * @return Network configuration or NULL if we are not a member of this network
  */
 ZT_SDK_API ZT_VirtualNetworkConfig *ZT_Node_networkConfig(
 	ZT_Node *node,
+	int64_t clock,
+	int64_t ticks,
+	void *tptr,
 	uint64_t nwid);
 
 /**
@@ -2313,7 +2304,8 @@ ZT_SDK_API ZT_VirtualNetworkConfig *ZT_Node_networkConfig(
  * @param node Node instance
  * @return List of networks or NULL on failure
  */
-ZT_SDK_API ZT_VirtualNetworkList *ZT_Node_networks(ZT_Node *node);
+ZT_SDK_API ZT_VirtualNetworkList *ZT_Node_networks(
+	ZT_Node *node);
 
 /**
  * Set the network-associated user-defined pointer for a given network
@@ -2338,51 +2330,11 @@ ZT_SDK_API void ZT_Node_setNetworkUserPtr(
  */
 ZT_SDK_API void ZT_Node_setInterfaceAddresses(
 	ZT_Node *node,
+	int64_t clock,
+	int64_t ticks,
+	void *tptr,
 	const ZT_InterfaceAddress *addrs,
 	unsigned int addrCount);
-
-/**
- * Add a peer directly by supplying its identity
- * 
- * This does not authorize the peer on a network (only the network's
- * controller can do that) or otherwise give it special privileges. It
- * also doesn't guarantee it will be contacted. It just adds it to the
- * internal peer data set if it is not already present.
- * 
- * @param node Node instance
- * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
- * @param id Identity of peer to add
- * @return OK (0) or error code
- */
-ZT_SDK_API enum ZT_ResultCode ZT_Node_addPeer(
-	ZT_Node *node,
-	void *tptr,
-	const ZT_Identity *id);
-
-/**
- * Attempt to contact a peer at an explicit endpoint address.
- * 
- * If the fingerprint structure's hash is all zeroes, the peer is
- * looked up only by address.
- * 
- * This can only fail if the peer was not found.
- * 
- * Note that this can immediately (before this returns) result in
- * calls to the send packet functions supplied to the core.
- * 
- * @param node Node instance
- * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
- * @param fp Fingerprint (or only address)
- * @param endpoint Endpoint
- * @param retries If greater than zero, try this many times
- * @return Boolean: non-zero on success, zero if peer was not found
- */
-ZT_SDK_API int ZT_Node_tryPeer(
-	ZT_Node *node,
-	void *tptr,
-	const ZT_Fingerprint *fp,
-	const ZT_Endpoint *endpoint,
-	int retries);
 
 /**
  * Add a certificate to this node's certificate store
@@ -2390,9 +2342,6 @@ ZT_SDK_API int ZT_Node_tryPeer(
  * This supports adding of certificates as expanded ZT_Certificate structures
  * or as raw data. If 'cert' is NULL then certData/certSize must be set.
  *
- * @param node Node instance
- * @param tptr Thread pointer to pass to functions/callbacks resulting from this call
- * @param now Current time
  * @param localTrust Local trust flags (ORed together)
  * @param cert Certificate object, or set to NULL if certData and certSize are to be used
  * @param certData Certificate binary data if 'cert' is NULL, NULL otherwise
@@ -2401,8 +2350,9 @@ ZT_SDK_API int ZT_Node_tryPeer(
  */
 ZT_SDK_API enum ZT_CertificateError ZT_Node_addCertificate(
 	ZT_Node *node,
+	int64_t clock,
+	int64_t ticks,
 	void *tptr,
-	int64_t now,
 	unsigned int localTrust,
 	const ZT_Certificate *cert,
 	const void *certData,
@@ -2421,6 +2371,8 @@ ZT_SDK_API enum ZT_CertificateError ZT_Node_addCertificate(
  */
 ZT_SDK_API enum ZT_ResultCode ZT_Node_deleteCertificate(
 	ZT_Node *node,
+	int64_t clock,
+	int64_t ticks,
 	void *tptr,
 	const void *serialNo);
 
@@ -2430,7 +2382,11 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_deleteCertificate(
  * @param node Node instance
  * @return List of certificates or NULL on error
  */
-ZT_SDK_API ZT_CertificateList *ZT_Node_listCertificates(ZT_Node *node);
+ZT_SDK_API ZT_CertificateList *ZT_Node_listCertificates(
+	ZT_Node *node,
+	int64_t clock,
+	int64_t ticks,
+	void *tptr);
 
 /**
  * Send a VERB_USER_MESSAGE to another ZeroTier node
@@ -2448,6 +2404,8 @@ ZT_SDK_API ZT_CertificateList *ZT_Node_listCertificates(ZT_Node *node);
  */
 ZT_SDK_API int ZT_Node_sendUserMessage(
 	ZT_Node *node,
+	int64_t clock,
+	int64_t ticks,
 	void *tptr,
 	uint64_t dest,
 	uint64_t typeId,
@@ -2665,7 +2623,7 @@ ZT_SDK_API int ZT_Endpoint_fromBytes(
  * Note that attributes must be either NULL to use defaults for all or there
  * must be an attributes object for each endpoint.
  *
- * @param ts Locator timestamp
+ * @param rev Locator timestamp
  * @param endpoints List of endpoints to store in locator
  * @param endpointAttributes Array of ZT_EndpointAttributes objects or NULL to use defaults
  * @param endpointCount Number of endpoints (maximum: 8)
@@ -2673,7 +2631,7 @@ ZT_SDK_API int ZT_Endpoint_fromBytes(
  * @return Locator or NULL on error (too many endpoints or identity does not have private key)
  */
 ZT_SDK_API ZT_Locator *ZT_Locator_create(
-	int64_t ts,
+	int64_t rev,
 	const ZT_Endpoint *endpoints,
 	const ZT_EndpointAttributes *endpointAttributes,
 	unsigned int endpointCount,
@@ -2735,12 +2693,12 @@ ZT_SDK_API char *ZT_Locator_toString(
 ZT_SDK_API const ZT_Fingerprint *ZT_Locator_fingerprint(const ZT_Locator *loc);
 
 /**
- * Get a locator's timestamp
+ * Get a locator's revision
  *
  * @param loc Locator to query
- * @return Locator timestamp in milliseconds since epoch
+ * @return Locator revision
  */
-ZT_SDK_API int64_t ZT_Locator_timestamp(const ZT_Locator *loc);
+ZT_SDK_API int64_t ZT_Locator_revision(const ZT_Locator *loc);
 
 /**
  * Get the number of endpoints in this locator

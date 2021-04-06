@@ -29,7 +29,7 @@ Trace::Trace(const RuntimeEnvironment *renv) :
 }
 
 void Trace::unexpectedError(
-	void *tPtr,
+	CallContext &cc,
 	uint32_t codeLocation,
 	const char *message,
 	...)
@@ -39,17 +39,17 @@ void Trace::unexpectedError(
 	Dictionary::append(buf, ZT_TRACE_FIELD_CODE_LOCATION, codeLocation);
 	Dictionary::append(buf, ZT_TRACE_FIELD_MESSAGE, message);
 	buf.push_back(0);
-	RR->node->postEvent(tPtr, ZT_EVENT_TRACE, buf.data());
+	RR->node->postEvent(cc.tPtr, ZT_EVENT_TRACE, buf.data());
 }
 
-void Trace::_resettingPathsInScope(
-	void *const tPtr,
-	const uint32_t codeLocation,
+void Trace::m_resettingPathsInScope(
+	void *tPtr,
+	uint32_t codeLocation,
 	const Identity &reporter,
 	const InetAddress &from,
 	const InetAddress &oldExternal,
 	const InetAddress &newExternal,
-	const InetAddress::IpScope scope)
+	ZT_InetAddress_IpScope scope)
 {
 	FCV< uint8_t, 4096 > buf;
 	Dictionary::append(buf, ZT_TRACE_FIELD_TYPE, ZT_TRACE_VL1_RESETTING_PATHS_IN_SCOPE);
@@ -67,14 +67,14 @@ void Trace::_resettingPathsInScope(
 	RR->node->postEvent(tPtr, ZT_EVENT_TRACE, buf.data());
 }
 
-void Trace::_tryingNewPath(
-	void *const tPtr,
-	const uint32_t codeLocation,
+void Trace::m_tryingNewPath(
+	void *tPtr,
+	uint32_t codeLocation,
 	const Identity &trying,
 	const InetAddress &physicalAddress,
 	const InetAddress &triggerAddress,
-	const uint64_t triggeringPacketId,
-	const uint8_t triggeringPacketVerb,
+	uint64_t triggeringPacketId,
+	uint8_t triggeringPacketVerb,
 	const Identity &triggeringPeer)
 {
 	if ((trying)&&(physicalAddress)) {
@@ -94,10 +94,10 @@ void Trace::_tryingNewPath(
 	}
 }
 
-void Trace::_learnedNewPath(
-	void *const tPtr,
-	const uint32_t codeLocation,
-	const uint64_t packetId,
+void Trace::m_learnedNewPath(
+	void *tPtr,
+	uint32_t codeLocation,
+	uint64_t packetId,
 	const Identity &peerIdentity,
 	const InetAddress &physicalAddress,
 	const InetAddress &replaced)
@@ -117,16 +117,16 @@ void Trace::_learnedNewPath(
 	}
 }
 
-void Trace::_incomingPacketDropped(
-	void *const tPtr,
-	const uint32_t codeLocation,
-	const uint64_t packetId,
-	const uint64_t networkId,
+void Trace::m_incomingPacketDropped(
+	void *tPtr,
+	uint32_t codeLocation,
+	uint64_t packetId,
+	uint64_t networkId,
 	const Identity &peerIdentity,
 	const InetAddress &physicalAddress,
-	const uint8_t hops,
-	const uint8_t verb,
-	const ZT_TracePacketDropReason reason)
+	uint8_t hops,
+	uint8_t verb,
+	ZT_TracePacketDropReason reason)
 {
 	FCV< uint8_t, 4096 > buf;
 	Dictionary::append(buf, ZT_TRACE_FIELD_TYPE, ZT_TRACE_VL1_INCOMING_PACKET_DROPPED);
@@ -144,16 +144,16 @@ void Trace::_incomingPacketDropped(
 	RR->node->postEvent(tPtr, ZT_EVENT_TRACE, buf.data());
 }
 
-void Trace::_outgoingNetworkFrameDropped(
-	void *const tPtr,
-	const uint32_t codeLocation,
-	const uint64_t networkId,
+void Trace::m_outgoingNetworkFrameDropped(
+	void *tPtr,
+	uint32_t codeLocation,
+	uint64_t networkId,
 	const MAC &sourceMac,
 	const MAC &destMac,
-	const uint16_t etherType,
-	const uint16_t frameLength,
+	uint16_t etherType,
+	uint16_t frameLength,
 	const uint8_t *frameData,
-	const ZT_TraceFrameDropReason reason)
+	ZT_TraceFrameDropReason reason)
 {
 	FCV< uint8_t, 4096 > buf;
 	Dictionary::append(buf, ZT_TRACE_FIELD_TYPE, ZT_TRACE_VL1_INCOMING_PACKET_DROPPED);
@@ -170,21 +170,21 @@ void Trace::_outgoingNetworkFrameDropped(
 	RR->node->postEvent(tPtr, ZT_EVENT_TRACE, buf.data());
 }
 
-void Trace::_incomingNetworkFrameDropped(
-	void *const tPtr,
-	const uint32_t codeLocation,
-	const uint64_t networkId,
+void Trace::m_incomingNetworkFrameDropped(
+	void *tPtr,
+	uint32_t codeLocation,
+	uint64_t networkId,
 	const MAC &sourceMac,
 	const MAC &destMac,
 	const uint16_t etherType,
 	const Identity &peerIdentity,
 	const InetAddress &physicalAddress,
-	const uint8_t hops,
-	const uint16_t frameLength,
+	uint8_t hops,
+	uint16_t frameLength,
 	const uint8_t *frameData,
-	const uint8_t verb,
-	const bool credentialRequestSent,
-	const ZT_TraceFrameDropReason reason)
+	uint8_t verb,
+	bool credentialRequestSent,
+	ZT_TraceFrameDropReason reason)
 {
 	FCV< uint8_t, 4096 > buf;
 	Dictionary::append(buf, ZT_TRACE_FIELD_TYPE, ZT_TRACE_VL2_INCOMING_FRAME_DROPPED);
@@ -207,10 +207,10 @@ void Trace::_incomingNetworkFrameDropped(
 	RR->node->postEvent(tPtr, ZT_EVENT_TRACE, buf.data());
 }
 
-void Trace::_networkConfigRequestSent(
-	void *const tPtr,
-	const uint32_t codeLocation,
-	const uint64_t networkId)
+void Trace::m_networkConfigRequestSent(
+	void *tPtr,
+	uint32_t codeLocation,
+	uint64_t networkId)
 {
 	FCV< uint8_t, 4096 > buf;
 	Dictionary::append(buf, ZT_TRACE_FIELD_TYPE, ZT_TRACE_VL2_NETWORK_CONFIG_REQUESTED);
@@ -220,25 +220,25 @@ void Trace::_networkConfigRequestSent(
 	RR->node->postEvent(tPtr, ZT_EVENT_TRACE, buf.data());
 }
 
-void Trace::_networkFilter(
-	void *const tPtr,
-	const uint32_t codeLocation,
-	const uint64_t networkId,
-	const uint8_t primaryRuleSetLog[512],
-	const uint8_t matchingCapabilityRuleSetLog[512],
-	const uint32_t matchingCapabilityId,
-	const int64_t matchingCapabilityTimestamp,
+void Trace::m_networkFilter(
+	void *tPtr,
+	uint32_t codeLocation,
+	uint64_t networkId,
+	const uint8_t *primaryRuleSetLog,
+	const uint8_t *matchingCapabilityRuleSetLog,
+	uint32_t matchingCapabilityId,
+	int64_t matchingCapabilityTimestamp,
 	const Address &source,
 	const Address &dest,
 	const MAC &sourceMac,
 	const MAC &destMac,
-	const uint16_t frameLength,
+	uint16_t frameLength,
 	const uint8_t *frameData,
-	const uint16_t etherType,
-	const uint16_t vlanId,
-	const bool noTee,
-	const bool inbound,
-	const int accept)
+	uint16_t etherType,
+	uint16_t vlanId,
+	bool noTee,
+	bool inbound,
+	int accept)
 {
 	FCV< uint8_t, 4096 > buf;
 	Dictionary::append(buf, ZT_TRACE_FIELD_TYPE, ZT_TRACE_VL2_NETWORK_FILTER);
@@ -266,15 +266,15 @@ void Trace::_networkFilter(
 	RR->node->postEvent(tPtr, ZT_EVENT_TRACE, buf.data());
 }
 
-void Trace::_credentialRejected(
-	void *const tPtr,
-	const uint32_t codeLocation,
-	const uint64_t networkId,
+void Trace::m_credentialRejected(
+	void *tPtr,
+	uint32_t codeLocation,
+	uint64_t networkId,
 	const Identity &identity,
-	const uint32_t credentialId,
-	const int64_t credentialTimestamp,
-	const uint8_t credentialType,
-	const ZT_TraceCredentialRejectionReason reason)
+	uint32_t credentialId,
+	int64_t credentialTimestamp,
+	uint8_t credentialType,
+	ZT_TraceCredentialRejectionReason reason)
 {
 	FCV< uint8_t, 4096 > buf;
 	Dictionary::append(buf, ZT_TRACE_FIELD_TYPE, ZT_TRACE_VL2_NETWORK_CREDENTIAL_REJECTED);

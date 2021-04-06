@@ -26,6 +26,7 @@
 namespace ZeroTier {
 
 class RuntimeEnvironment;
+
 class Network;
 
 /**
@@ -51,18 +52,16 @@ public:
 	/**
 	 * Send COM and other credentials to this peer
 	 *
-	 * @param RR Runtime environment
-	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
-	 * @param now Current time
 	 * @param to Peer identity
 	 * @param nconf My network config
 	 */
-	void pushCredentials(const RuntimeEnvironment *RR,void *tPtr,int64_t now,const SharedPtr<Peer> &to,const NetworkConfig &nconf);
+	void pushCredentials(const RuntimeEnvironment *RR, CallContext &cc, const SharedPtr< Peer > &to, const NetworkConfig &nconf);
 
 	/**
 	 * @return Time we last pushed credentials to this member
 	 */
-	ZT_INLINE int64_t lastPushedCredentials() const noexcept { return m_lastPushedCredentials; }
+	ZT_INLINE int64_t lastPushedCredentials() const noexcept
+	{ return m_lastPushedCredentials; }
 
 	/**
 	 * Get a remote member's tag (if we have it)
@@ -74,7 +73,7 @@ public:
 	ZT_INLINE const TagCredential *getTag(const NetworkConfig &nconf, const uint32_t id) const noexcept
 	{
 		Map< uint32_t, TagCredential >::const_iterator t(m_remoteTags.find(id));
-		return (((t != m_remoteTags.end())&&(m_isCredentialTimestampValid(nconf, t->second))) ? &(t->second) : (TagCredential *)0);
+		return (((t != m_remoteTags.end()) && (m_isCredentialTimestampValid(nconf, t->second))) ? &(t->second) : (TagCredential *)0);
 	}
 
 	/**
@@ -87,7 +86,8 @@ public:
 	/**
 	 * Generates a key for internal use in indexing credentials by type and credential ID
 	 */
-	static ZT_INLINE uint64_t credentialKey(const ZT_CredentialType &t,const uint32_t i) noexcept { return (((uint64_t)t << 32U) | (uint64_t)i); }
+	static ZT_INLINE uint64_t credentialKey(const ZT_CredentialType &t, const uint32_t i) noexcept
+	{ return (((uint64_t)t << 32U) | (uint64_t)i); }
 
 	/**
 	 * Check whether the peer represented by this Membership owns a given address
@@ -97,12 +97,12 @@ public:
 	 * @param r Resource to check
 	 * @return True if this peer has a certificate of ownership for the given resource
 	 */
-	template<typename T>
+	template< typename T >
 	ZT_INLINE bool peerOwnsAddress(const NetworkConfig &nconf, const T &r) const noexcept
 	{
 		if (m_isUnspoofableAddress(nconf, r))
 			return true;
-		for(Map< uint32_t,OwnershipCredential >::const_iterator i(m_remoteCoos.begin()); i != m_remoteCoos.end(); ++i) {
+		for (Map< uint32_t, OwnershipCredential >::const_iterator i(m_remoteCoos.begin()); i != m_remoteCoos.end(); ++i) {
 			if (m_isCredentialTimestampValid(nconf, i->second) && (i->second.owns(r)))
 				return true;
 		}
@@ -145,36 +145,38 @@ public:
 		return false;
 	}
 
-	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const Identity &sourcePeerIdentity,const NetworkConfig &nconf,const MembershipCredential &com);
-	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const Identity &sourcePeerIdentity,const NetworkConfig &nconf,const TagCredential &tag);
-	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const Identity &sourcePeerIdentity,const NetworkConfig &nconf,const CapabilityCredential &cap);
-	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const Identity &sourcePeerIdentity,const NetworkConfig &nconf,const OwnershipCredential &coo);
-	AddCredentialResult addCredential(const RuntimeEnvironment *RR,void *tPtr,const Identity &sourcePeerIdentity,const NetworkConfig &nconf,const RevocationCredential &rev);
+	AddCredentialResult addCredential(const RuntimeEnvironment *RR, CallContext &cc, const Identity &sourcePeerIdentity, const NetworkConfig &nconf, const MembershipCredential &com);
+	AddCredentialResult addCredential(const RuntimeEnvironment *RR, CallContext &cc, const Identity &sourcePeerIdentity, const NetworkConfig &nconf, const TagCredential &tag);
+	AddCredentialResult addCredential(const RuntimeEnvironment *RR, CallContext &cc, const Identity &sourcePeerIdentity, const NetworkConfig &nconf, const CapabilityCredential &cap);
+	AddCredentialResult addCredential(const RuntimeEnvironment *RR, CallContext &cc, const Identity &sourcePeerIdentity, const NetworkConfig &nconf, const OwnershipCredential &coo);
+	AddCredentialResult addCredential(const RuntimeEnvironment *RR, CallContext &cc, const Identity &sourcePeerIdentity, const NetworkConfig &nconf, const RevocationCredential &rev);
 
 private:
 	// This returns true if a resource is an IPv6 NDP-emulated address. These embed the ZT
 	// address of the peer and therefore cannot be spoofed, causing peerOwnsAddress() to
 	// always return true for them. A certificate is not required for these.
-	ZT_INLINE bool m_isUnspoofableAddress(const NetworkConfig &nconf, const MAC &m) const noexcept { return false; }
+	ZT_INLINE bool m_isUnspoofableAddress(const NetworkConfig &nconf, const MAC &m) const noexcept
+	{ return false; }
+
 	bool m_isUnspoofableAddress(const NetworkConfig &nconf, const InetAddress &ip) const noexcept;
 
 	// This compares the remote credential's timestamp to the timestamp in our network config
 	// plus or minus the permitted maximum timestamp delta.
-	template<typename C>
+	template< typename C >
 	ZT_INLINE bool m_isCredentialTimestampValid(const NetworkConfig &nconf, const C &remoteCredential) const noexcept
 	{
-		const int64_t ts = remoteCredential.timestamp();
+		const int64_t ts = remoteCredential.revision();
 		if (((ts >= nconf.timestamp) ? (ts - nconf.timestamp) : (nconf.timestamp - ts)) <= nconf.credentialTimeMaxDelta) {
 			Map< uint64_t, int64_t >::const_iterator threshold(m_revocations.find(credentialKey(C::credentialType(), remoteCredential.id())));
-			return ((threshold == m_revocations.end())||(ts > threshold->second));
+			return ((threshold == m_revocations.end()) || (ts > threshold->second));
 		}
 		return false;
 	}
 
-	template<typename C>
-	ZT_INLINE void m_cleanCredImpl(const NetworkConfig &nconf, Map<uint32_t,C> &remoteCreds)
+	template< typename C >
+	ZT_INLINE void m_cleanCredImpl(const NetworkConfig &nconf, Map< uint32_t, C > &remoteCreds)
 	{
-		for(typename Map<uint32_t,C>::iterator i(remoteCreds.begin());i!=remoteCreds.end();) {
+		for (typename Map< uint32_t, C >::iterator i(remoteCreds.begin()); i != remoteCreds.end();) {
 			if (!m_isCredentialTimestampValid(nconf, i->second))
 				remoteCreds.erase(i++);
 			else ++i;
@@ -188,24 +190,24 @@ private:
 	int64_t m_lastPushedCredentials;
 
 	// COM timestamps at which we last agreed-- used to memo-ize agreement and avoid having to recompute constantly.
-	int64_t m_comAgreementLocalTimestamp,m_comAgreementRemoteTimestamp;
+	int64_t m_comAgreementLocalTimestamp, m_comAgreementRemoteTimestamp;
 
 	// Remote member's latest network COM
 	MembershipCredential m_com;
 
 	// Revocations by credentialKey()
-	Map<uint64_t,int64_t> m_revocations;
+	Map< uint64_t, int64_t > m_revocations;
 
 	// Remote credentials that we have received from this member (and that are valid)
-	Map<uint32_t,TagCredential> m_remoteTags;
-	Map<uint32_t,CapabilityCredential> m_remoteCaps;
-	Map<uint32_t,OwnershipCredential> m_remoteCoos;
+	Map< uint32_t, TagCredential > m_remoteTags;
+	Map< uint32_t, CapabilityCredential > m_remoteCaps;
+	Map< uint32_t, OwnershipCredential > m_remoteCoos;
 
 public:
 	class CapabilityIterator
 	{
 	public:
-		ZT_INLINE CapabilityIterator(Member &m, const NetworkConfig &nconf) noexcept :
+		ZT_INLINE CapabilityIterator(Member &m, const NetworkConfig &nconf) noexcept:
 			m_hti(m.m_remoteCaps.begin()),
 			m_parent(m),
 			m_nconf(nconf)
@@ -215,7 +217,7 @@ public:
 		ZT_INLINE CapabilityCredential *next() noexcept
 		{
 			while (m_hti != m_parent.m_remoteCaps.end()) {
-				Map< uint32_t,CapabilityCredential >::iterator i(m_hti++);
+				Map< uint32_t, CapabilityCredential >::iterator i(m_hti++);
 				if (m_parent.m_isCredentialTimestampValid(m_nconf, i->second))
 					return &(i->second);
 			}
@@ -223,7 +225,7 @@ public:
 		}
 
 	private:
-		Map< uint32_t,CapabilityCredential >::iterator m_hti;
+		Map< uint32_t, CapabilityCredential >::iterator m_hti;
 		Member &m_parent;
 		const NetworkConfig &m_nconf;
 	};

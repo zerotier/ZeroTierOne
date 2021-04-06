@@ -27,7 +27,7 @@ const InetAddress InetAddress::LO4((const void *) ("\x7f\x00\x00\x01"), 4, 0);
 const InetAddress InetAddress::LO6((const void *) ("\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"), 16, 0);
 const InetAddress InetAddress::NIL;
 
-InetAddress::IpScope InetAddress::ipScope() const noexcept
+ZT_MAYBE_UNUSED InetAddress::IpScope InetAddress::ipScope() const noexcept
 {
 	switch (as.ss.ss_family) {
 
@@ -40,17 +40,17 @@ InetAddress::IpScope InetAddress::ipScope() const noexcept
 					return ZT_IP_SCOPE_PSEUDOPRIVATE;                                   // 6.0.0.0/8 (US Army)
 				case 0x0a:
 					return ZT_IP_SCOPE_PRIVATE;                                         // 10.0.0.0/8
-				case 0x0b: //return IP_SCOPE_PSEUDOPRIVATE;                        // 11.0.0.0/8 (US DoD)
-				case 0x15: //return IP_SCOPE_PSEUDOPRIVATE;                        // 21.0.0.0/8 (US DDN-RVN)
-				case 0x16: //return IP_SCOPE_PSEUDOPRIVATE;                        // 22.0.0.0/8 (US DISA)
-				case 0x19: //return IP_SCOPE_PSEUDOPRIVATE;                        // 25.0.0.0/8 (UK Ministry of Defense)
-				case 0x1a: //return IP_SCOPE_PSEUDOPRIVATE;                        // 26.0.0.0/8 (US DISA)
-				case 0x1c: //return IP_SCOPE_PSEUDOPRIVATE;                        // 28.0.0.0/8 (US DSI-North)
-				case 0x1d: //return IP_SCOPE_PSEUDOPRIVATE;                        // 29.0.0.0/8 (US DISA)
-				case 0x1e: //return IP_SCOPE_PSEUDOPRIVATE;                        // 30.0.0.0/8 (US DISA)
-				case 0x33: //return IP_SCOPE_PSEUDOPRIVATE;                        // 51.0.0.0/8 (UK Department of Social Security)
-				case 0x37: //return IP_SCOPE_PSEUDOPRIVATE;                        // 55.0.0.0/8 (US DoD)
-				case 0x38:                                                         // 56.0.0.0/8 (US Postal Service)
+				case 0x0b: //return IP_SCOPE_PSEUDOPRIVATE;                           // 11.0.0.0/8 (US DoD)
+				case 0x15: //return IP_SCOPE_PSEUDOPRIVATE;                           // 21.0.0.0/8 (US DDN-RVN)
+				case 0x16: //return IP_SCOPE_PSEUDOPRIVATE;                           // 22.0.0.0/8 (US DISA)
+				case 0x19: //return IP_SCOPE_PSEUDOPRIVATE;                           // 25.0.0.0/8 (UK Ministry of Defense)
+				case 0x1a: //return IP_SCOPE_PSEUDOPRIVATE;                           // 26.0.0.0/8 (US DISA)
+				case 0x1c: //return IP_SCOPE_PSEUDOPRIVATE;                           // 28.0.0.0/8 (US DSI-North)
+				case 0x1d: //return IP_SCOPE_PSEUDOPRIVATE;                           // 29.0.0.0/8 (US DISA)
+				case 0x1e: //return IP_SCOPE_PSEUDOPRIVATE;                           // 30.0.0.0/8 (US DISA)
+				case 0x33: //return IP_SCOPE_PSEUDOPRIVATE;                           // 51.0.0.0/8 (UK Department of Social Security)
+				case 0x37: //return IP_SCOPE_PSEUDOPRIVATE;                           // 55.0.0.0/8 (US DoD)
+				case 0x38:                                                            // 56.0.0.0/8 (US Postal Service)
 					return ZT_IP_SCOPE_PSEUDOPRIVATE;
 				case 0x64:
 					if ((ip & 0xffc00000) == 0x64400000) return ZT_IP_SCOPE_PRIVATE;    // 100.64.0.0/10
@@ -112,7 +112,7 @@ InetAddress::IpScope InetAddress::ipScope() const noexcept
 	return ZT_IP_SCOPE_NONE;
 }
 
-void InetAddress::set(const void *ipBytes, unsigned int ipLen, unsigned int port) noexcept
+ZT_MAYBE_UNUSED void InetAddress::set(const void *ipBytes, unsigned int ipLen, unsigned int port) noexcept
 {
 	memoryZero(this);
 	if (ipLen == 4) {
@@ -126,7 +126,7 @@ void InetAddress::set(const void *ipBytes, unsigned int ipLen, unsigned int port
 	}
 }
 
-bool InetAddress::isDefaultRoute() const noexcept
+ZT_MAYBE_UNUSED bool InetAddress::isDefaultRoute() const noexcept
 {
 	switch (as.ss.ss_family) {
 		case AF_INET:
@@ -145,7 +145,7 @@ bool InetAddress::isDefaultRoute() const noexcept
 	}
 }
 
-char *InetAddress::toString(char buf[ZT_INETADDRESS_STRING_SIZE_MAX]) const noexcept
+ZT_MAYBE_UNUSED char *InetAddress::toString(char buf[ZT_INETADDRESS_STRING_SIZE_MAX]) const noexcept
 {
 	char *p = toIpString(buf);
 	if (*p) {
@@ -156,7 +156,7 @@ char *InetAddress::toString(char buf[ZT_INETADDRESS_STRING_SIZE_MAX]) const noex
 	return buf;
 }
 
-char *InetAddress::toIpString(char buf[ZT_INETADDRESS_STRING_SIZE_MAX]) const noexcept
+ZT_MAYBE_UNUSED char *InetAddress::toIpString(char buf[ZT_INETADDRESS_STRING_SIZE_MAX]) const noexcept
 {
 	buf[0] = (char) 0;
 	switch (as.ss.ss_family) {
@@ -170,7 +170,7 @@ char *InetAddress::toIpString(char buf[ZT_INETADDRESS_STRING_SIZE_MAX]) const no
 	return buf;
 }
 
-bool InetAddress::fromString(const char *ipSlashPort) noexcept
+ZT_MAYBE_UNUSED bool InetAddress::fromString(const char *ipSlashPort) noexcept
 {
 	char buf[64];
 
@@ -205,7 +205,7 @@ bool InetAddress::fromString(const char *ipSlashPort) noexcept
 	return false;
 }
 
-InetAddress InetAddress::netmask() const noexcept
+ZT_MAYBE_UNUSED InetAddress InetAddress::netmask() const noexcept
 {
 	InetAddress r(*this);
 	switch (r.as.ss.ss_family) {
@@ -229,7 +229,7 @@ InetAddress InetAddress::netmask() const noexcept
 	return r;
 }
 
-InetAddress InetAddress::broadcast() const noexcept
+ZT_MAYBE_UNUSED InetAddress InetAddress::broadcast() const noexcept
 {
 	if (as.ss.ss_family == AF_INET) {
 		InetAddress r(*this);
@@ -239,7 +239,7 @@ InetAddress InetAddress::broadcast() const noexcept
 	return InetAddress();
 }
 
-InetAddress InetAddress::network() const noexcept
+ZT_MAYBE_UNUSED InetAddress InetAddress::network() const noexcept
 {
 	InetAddress r(*this);
 	switch (r.as.ss.ss_family) {
@@ -259,7 +259,7 @@ InetAddress InetAddress::network() const noexcept
 	return r;
 }
 
-bool InetAddress::isEqualPrefix(const InetAddress &addr) const noexcept
+ZT_MAYBE_UNUSED bool InetAddress::isEqualPrefix(const InetAddress &addr) const noexcept
 {
 	if (addr.as.ss.ss_family == as.ss.ss_family) {
 		switch (as.ss.ss_family) {
@@ -281,7 +281,7 @@ bool InetAddress::isEqualPrefix(const InetAddress &addr) const noexcept
 	return false;
 }
 
-bool InetAddress::containsAddress(const InetAddress &addr) const noexcept
+ZT_MAYBE_UNUSED bool InetAddress::containsAddress(const InetAddress &addr) const noexcept
 {
 	if (addr.as.ss.ss_family == as.ss.ss_family) {
 		switch (as.ss.ss_family) {
@@ -310,7 +310,7 @@ bool InetAddress::containsAddress(const InetAddress &addr) const noexcept
 	return false;
 }
 
-bool InetAddress::isNetwork() const noexcept
+ZT_MAYBE_UNUSED bool InetAddress::isNetwork() const noexcept
 {
 	switch (as.ss.ss_family) {
 		case AF_INET: {
@@ -342,7 +342,7 @@ bool InetAddress::isNetwork() const noexcept
 	return false;
 }
 
-int InetAddress::marshal(uint8_t data[ZT_INETADDRESS_MARSHAL_SIZE_MAX]) const noexcept
+ZT_MAYBE_UNUSED int InetAddress::marshal(uint8_t data[ZT_INETADDRESS_MARSHAL_SIZE_MAX]) const noexcept
 {
 	unsigned int port;
 	switch (as.ss.ss_family) {
@@ -369,7 +369,7 @@ int InetAddress::marshal(uint8_t data[ZT_INETADDRESS_MARSHAL_SIZE_MAX]) const no
 	}
 }
 
-int InetAddress::unmarshal(const uint8_t *restrict data, const int len) noexcept
+ZT_MAYBE_UNUSED int InetAddress::unmarshal(const uint8_t *restrict data, const int len) noexcept
 {
 	memoryZero(this);
 	if (unlikely(len <= 0))
@@ -396,7 +396,7 @@ int InetAddress::unmarshal(const uint8_t *restrict data, const int len) noexcept
 	}
 }
 
-InetAddress InetAddress::makeIpv6LinkLocal(const MAC &mac) noexcept
+ZT_MAYBE_UNUSED InetAddress InetAddress::makeIpv6LinkLocal(const MAC &mac) noexcept
 {
 	InetAddress r;
 	r.as.sa_in6.sin6_family = AF_INET6;
@@ -420,7 +420,7 @@ InetAddress InetAddress::makeIpv6LinkLocal(const MAC &mac) noexcept
 	return r;
 }
 
-InetAddress InetAddress::makeIpv6rfc4193(uint64_t nwid, uint64_t zeroTierAddress) noexcept
+ZT_MAYBE_UNUSED InetAddress InetAddress::makeIpv6rfc4193(uint64_t nwid, uint64_t zeroTierAddress) noexcept
 {
 	InetAddress r;
 	r.as.sa_in6.sin6_family = AF_INET6;
@@ -444,7 +444,7 @@ InetAddress InetAddress::makeIpv6rfc4193(uint64_t nwid, uint64_t zeroTierAddress
 	return r;
 }
 
-InetAddress InetAddress::makeIpv66plane(uint64_t nwid, uint64_t zeroTierAddress) noexcept
+ZT_MAYBE_UNUSED InetAddress InetAddress::makeIpv66plane(uint64_t nwid, uint64_t zeroTierAddress) noexcept
 {
 	nwid ^= (nwid >> 32U);
 	InetAddress r;
@@ -465,8 +465,8 @@ InetAddress InetAddress::makeIpv66plane(uint64_t nwid, uint64_t zeroTierAddress)
 }
 
 extern "C" {
-extern const int ZT_AF_INET = (int)AF_INET;
-extern const int ZT_AF_INET6 = (int)AF_INET6;
+ZT_MAYBE_UNUSED extern const int ZT_AF_INET = (int)AF_INET;
+ZT_MAYBE_UNUSED extern const int ZT_AF_INET6 = (int)AF_INET6;
 }
 
 } // namespace ZeroTier

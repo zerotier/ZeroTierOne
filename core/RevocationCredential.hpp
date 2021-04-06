@@ -110,8 +110,8 @@ public:
 	 * @param RR Runtime environment to provide for peer lookup, etc.
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 */
-	ZT_INLINE Credential::VerifyResult verify(const RuntimeEnvironment *RR, void *tPtr) const noexcept
-	{ return s_verify(RR, tPtr, *this); }
+	ZT_INLINE Credential::VerifyResult verify(const RuntimeEnvironment *RR, CallContext &cc) const noexcept
+	{ return s_verify(RR, cc, *this); }
 
 	static constexpr int marshalSizeMax() noexcept
 	{ return ZT_REVOCATION_MARSHAL_SIZE_MAX; }
