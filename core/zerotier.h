@@ -2020,7 +2020,7 @@ struct ZT_Node_Callbacks
  *
  * @return Pointer to I/O buffer
  */
-ZT_SDK_API [[maybe_unused]]  void *ZT_getBuffer();
+ZT_SDK_API void *ZT_getBuffer();
 
 /**
  * Free an unused buffer obtained via getBuffer

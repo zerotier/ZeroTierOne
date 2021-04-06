@@ -111,7 +111,7 @@ Advanced Operations:
 
   locator <command> [args]
     new [-...] <identity> <endpoint> [...] Create new signed locator
-      -t <timestamp>                         Timestamp (default: system time)
+      -r <revision>                        Revision number
     verify <identity> <locator>            Verify locator signature
     show <locator>                         Show contents of a locator
 
@@ -265,7 +265,7 @@ fn main() {
                     .arg(Arg::with_name("signature").index(3).required(true))))
             .subcommand(App::new("locator")
                 .subcommand(App::new("new")
-                    .arg(Arg::with_name("timestamp").short("t").required(false))
+                    .arg(Arg::with_name("revision").short("r").required(false))
                     .arg(Arg::with_name("identity").index(1).required(true))
                     .arg(Arg::with_name("endpoint").index(2).multiple(true).required(true)))
                 .subcommand(App::new("verify")

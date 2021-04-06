@@ -16,14 +16,14 @@ use clap::ArgMatches;
 use zerotier_core::*;
 
 fn new_(cli_args: &ArgMatches) -> i32 {
-    let timestamp = cli_args.value_of("timestamp").map_or(crate::utils::ms_since_epoch(), |ts| {
+    let revision = cli_args.value_of("revision").map_or(crate::utils::ms_since_epoch(), |ts| {
         if ts.is_empty() {
             0_i64
         } else {
             i64::from_str_radix(ts, 10).unwrap_or(0_i64) * 1000_i64 // internally uses ms since epoch
         }
     });
-    if timestamp <= 0 {
+    if revision <= 0 {
         println!("ERROR: invalid or empty timestamp specified.");
         return 1;
     }
@@ -58,7 +58,7 @@ fn new_(cli_args: &ArgMatches) -> i32 {
         return 1;
     }
 
-    Locator::new(&identity, timestamp, &endpoints).map_or_else(|e| {
+    Locator::new(&identity, revision, &endpoints).map_or_else(|e| {
         println!("ERROR: failure creating locator: {}", e.to_str());
         1
     }, |loc| {
@@ -95,7 +95,7 @@ fn show(cli_args: &ArgMatches) -> i32 {
         return 1;
     }
     let locator = locator.unwrap();
-    println!("{} timestamp {}", locator.signer().to_string(), (locator.timestamp() as f64) / 1000.0);
+    println!("{} revision {}", locator.signer().to_string(), locator.revision());
     let endpoints = locator.endpoints();
     for ep in endpoints.iter() {
         println!("  {}", (*ep).to_string())
@@ -103,7 +103,7 @@ fn show(cli_args: &ArgMatches) -> i32 {
     0
 }
 
-pub(crate) fn run<'a>(cli_args: &ArgMatches<'a>) -> i32 {
+pub(crate) fn run(cli_args: &ArgMatches) -> i32 {
     match cli_args.subcommand() {
         ("new", Some(sub_cli_args)) => new_(sub_cli_args),
         ("verify", Some(sub_cli_args)) => verify(sub_cli_args),

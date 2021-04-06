@@ -268,7 +268,7 @@ async fn run_async(store: Arc<Store>, local_config: Arc<LocalConfig>) -> i32 {
         online: AtomicBool::new(false),
     });
 
-    let node = Node::new(service.clone(), ms_monotonic());
+    let node = Node::new(service.clone(), ms_since_epoch(), ms_monotonic());
     if node.is_err() {
         service.log.fatal(format!("error initializing node: {}", node.err().unwrap().to_str()));
         return 1;
@@ -278,15 +278,15 @@ async fn run_async(store: Arc<Store>, local_config: Arc<LocalConfig>) -> i32 {
 
     let mut local_config = service.local_config();
 
-    let mut now: i64 = ms_monotonic();
+    let mut ticks: i64 = ms_monotonic();
     let mut loop_delay = zerotier_core::NODE_BACKGROUND_TASKS_MAX_INTERVAL;
     let mut last_checked_config: i64 = 0;
     while service.run.load(Ordering::Relaxed) {
         let loop_delay_start = ms_monotonic();
         tokio::select! {
             _ = tokio::time::sleep(Duration::from_millis(loop_delay as u64)) => {
-                now = ms_monotonic();
-                let actual_delay = now - loop_delay_start;
+                ticks = ms_monotonic();
+                let actual_delay = ticks - loop_delay_start;
                 if actual_delay > ((loop_delay as i64) * 4_i64) {
                     l!(service.log, "likely sleep/wake detected due to excessive loop delay, cycling links...");
                     // TODO: handle likely sleep/wake or other system interruption
@@ -297,7 +297,7 @@ async fn run_async(store: Arc<Store>, local_config: Arc<LocalConfig>) -> i32 {
                 if !service.run.load(Ordering::Relaxed) {
                     break;
                 }
-                now = ms_monotonic();
+                ticks = ms_monotonic();
             },
             _ = tokio::signal::ctrl_c() => {
                 l!(service.log, "exit signal received, shutting down...");
@@ -306,8 +306,8 @@ async fn run_async(store: Arc<Store>, local_config: Arc<LocalConfig>) -> i32 {
             },
         }
 
-        if (now - last_checked_config) >= CONFIG_CHECK_INTERVAL {
-            last_checked_config = now;
+        if (ticks - last_checked_config) >= CONFIG_CHECK_INTERVAL {
+            last_checked_config = ticks;
 
             let mut bindings_changed = false;
 
@@ -478,7 +478,7 @@ async fn run_async(store: Arc<Store>, local_config: Arc<LocalConfig>) -> i32 {
         }
 
         // Run background task handler in ZeroTier core.
-        loop_delay = node.process_background_tasks(now);
+        loop_delay = node.process_background_tasks(ms_since_epoch(), ticks);
     }
 
     l!(service.log, "shutting down normally.");
