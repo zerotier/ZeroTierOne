@@ -494,7 +494,7 @@ static int cli(int argc,char **argv)
 	} else if (command == "bond") {
 		/* zerotier-cli bond */
 		if (arg1.empty()) {
-			printf("(bond) command is missing required arugments" ZT_EOL_S);
+			printf("(bond) command is missing required arguments" ZT_EOL_S);
 			return 2;
 		}
 		/* zerotier-cli bond list */
@@ -676,7 +676,7 @@ static int cli(int argc,char **argv)
 			}
 		}
 		/* zerotier-cli bond command was malformed in some way */
-		printf("(bond) command is missing required arugments" ZT_EOL_S);
+		printf("(bond) command is missing required arguments" ZT_EOL_S);
 		return 2;
 		const unsigned int scode = Http::GET(1024 * 1024 * 16,60000,(const struct sockaddr *)&addr,"/bonds",requestHeaders,responseHeaders,responseBody);
 		if (scode == 0) {
@@ -713,12 +713,13 @@ static int cli(int argc,char **argv)
 						nlohmann::json &p = j[k];
 
 						bool isBonded = p["isBonded"];
-						int8_t bondingPolicy = p["bondingPolicy"];
-						bool isHealthy = p["isHealthy"];
-						int8_t numAliveLinks = p["numAliveLinks"];
-						int8_t numTotalLinks = p["numTotalLinks"];
 
 						if (isBonded) {
+							int8_t bondingPolicy = p["bondingPolicy"];
+							bool isHealthy = p["isHealthy"];
+							int8_t numAliveLinks = p["numAliveLinks"];
+							int8_t numTotalLinks = p["numTotalLinks"];
+
 							bFoundBond = true;
 							std::string healthStr;
 							if (isHealthy) {
