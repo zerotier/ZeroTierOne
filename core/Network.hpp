@@ -32,7 +32,7 @@
 
 namespace ZeroTier {
 
-class RuntimeEnvironment;
+class Context;
 
 class Peer;
 
@@ -67,8 +67,8 @@ public:
 	 * @param nconf Network config, if known
 	 */
 	Network(
-		const RuntimeEnvironment *renv,
-		CallContext &cc,
+		const Context &ctx,
+		const CallContext &cc,
 		uint64_t nwid,
 		const Fingerprint &controllerFingerprint,
 		void *uptr,
@@ -120,7 +120,7 @@ public:
 	 * @return True if packet should be sent, false if dropped or redirected
 	 */
 	bool filterOutgoingPacket(
-		CallContext &cc,
+		const CallContext &cc,
 		bool noTee,
 		const Address &ztSource,
 		const Address &ztDest,
@@ -151,7 +151,7 @@ public:
 	 * @return 0 == drop, 1 == accept, 2 == accept even if bridged
 	 */
 	int filterIncomingPacket(
-		CallContext &cc,
+		const CallContext &cc,
 		const SharedPtr< Peer > &sourcePeer,
 		const Address &ztDest,
 		const MAC &macSource,
@@ -166,7 +166,7 @@ public:
 	 *
 	 * @param mg New multicast group
 	 */
-	void multicastSubscribe(CallContext &cc, const MulticastGroup &mg);
+	void multicastSubscribe(const CallContext &cc, const MulticastGroup &mg);
 
 	/**
 	 * Unsubscribe from a multicast group
@@ -191,7 +191,7 @@ public:
 	 * @return Update ID if update was fully assembled and accepted or 0 otherwise
 	 */
 	uint64_t handleConfigChunk(
-		CallContext &cc,
+		const CallContext &cc,
 		uint64_t packetId,
 		const SharedPtr< Peer > &source,
 		const Buf &chunk,
@@ -210,7 +210,7 @@ public:
 	 * @return 0 == bad, 1 == accepted but duplicate/unchanged, 2 == accepted and new
 	 */
 	int setConfiguration(
-		CallContext &cc,
+		const CallContext &cc,
 		const NetworkConfig &nconf,
 		bool saveToDisk);
 
@@ -342,18 +342,14 @@ public:
 	{ return &m_uPtr; }
 
 private:
-	void m_requestConfiguration(CallContext &cc);
-
+	void m_requestConfiguration(const CallContext &cc);
 	ZT_VirtualNetworkStatus m_status() const;
-
 	void m_externalConfig(ZT_VirtualNetworkConfig *ec) const; // assumes _lock is locked
 	void m_announceMulticastGroups(void *tPtr, bool force);
-
 	void m_announceMulticastGroupsTo(void *tPtr, const Address &peer, const Vector< MulticastGroup > &allMulticastGroups);
-
 	Vector< MulticastGroup > m_allMulticastGroups() const;
 
-	const RuntimeEnvironment *const RR;
+	const Context &m_ctx;
 	void *m_uPtr;
 	const uint64_t m_id;
 	Fingerprint m_controllerFingerprint;

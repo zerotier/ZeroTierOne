@@ -12,7 +12,7 @@
 /****/
 
 #include "Trace.hpp"
-#include "RuntimeEnvironment.hpp"
+#include "Context.hpp"
 #include "Node.hpp"
 #include "Peer.hpp"
 #include "InetAddress.hpp"
@@ -22,14 +22,13 @@
 
 namespace ZeroTier {
 
-Trace::Trace(const RuntimeEnvironment *renv) :
-	RR(renv),
+Trace::Trace(const Context &ctx) :
+	m_ctx(ctx),
 	m_traceFlags(0)
-{
-}
+{}
 
 void Trace::unexpectedError(
-	CallContext &cc,
+	const CallContext &cc,
 	uint32_t codeLocation,
 	const char *message,
 	...)
@@ -39,7 +38,7 @@ void Trace::unexpectedError(
 	Dictionary::append(buf, ZT_TRACE_FIELD_CODE_LOCATION, codeLocation);
 	Dictionary::append(buf, ZT_TRACE_FIELD_MESSAGE, message);
 	buf.push_back(0);
-	RR->node->postEvent(cc.tPtr, ZT_EVENT_TRACE, buf.data());
+	m_ctx.node->postEvent(cc.tPtr, ZT_EVENT_TRACE, buf.data());
 }
 
 void Trace::m_resettingPathsInScope(
@@ -64,7 +63,7 @@ void Trace::m_resettingPathsInScope(
 		Dictionary::appendObject(buf, ZT_TRACE_FIELD_NEW_ENDPOINT, Endpoint(newExternal));
 	Dictionary::append(buf, ZT_TRACE_FIELD_RESET_ADDRESS_SCOPE, scope);
 	buf.push_back(0);
-	RR->node->postEvent(tPtr, ZT_EVENT_TRACE, buf.data());
+	m_ctx.node->postEvent(tPtr, ZT_EVENT_TRACE, buf.data());
 }
 
 void Trace::m_tryingNewPath(
@@ -90,7 +89,7 @@ void Trace::m_tryingNewPath(
 		if (triggeringPeer)
 			Dictionary::appendObject(buf, ZT_TRACE_FIELD_TRIGGER_FROM_PEER_FINGERPRINT, triggeringPeer.fingerprint());
 		buf.push_back(0);
-		RR->node->postEvent(tPtr, ZT_EVENT_TRACE, buf.data());
+		m_ctx.node->postEvent(tPtr, ZT_EVENT_TRACE, buf.data());
 	}
 }
 
@@ -113,7 +112,7 @@ void Trace::m_learnedNewPath(
 		if (replaced)
 			Dictionary::appendObject(buf, ZT_TRACE_FIELD_OLD_ENDPOINT, Endpoint(replaced));
 		buf.push_back(0);
-		RR->node->postEvent(tPtr, ZT_EVENT_TRACE, buf.data());
+		m_ctx.node->postEvent(tPtr, ZT_EVENT_TRACE, buf.data());
 	}
 }
 
@@ -141,7 +140,7 @@ void Trace::m_incomingPacketDropped(
 	Dictionary::append(buf, ZT_TRACE_FIELD_PACKET_VERB, verb);
 	Dictionary::append(buf, ZT_TRACE_FIELD_REASON, reason);
 	buf.push_back(0);
-	RR->node->postEvent(tPtr, ZT_EVENT_TRACE, buf.data());
+	m_ctx.node->postEvent(tPtr, ZT_EVENT_TRACE, buf.data());
 }
 
 void Trace::m_outgoingNetworkFrameDropped(
@@ -167,7 +166,7 @@ void Trace::m_outgoingNetworkFrameDropped(
 		Dictionary::append(buf, ZT_TRACE_FIELD_FRAME_DATA, frameData, std::min((unsigned int)64, (unsigned int)frameLength));
 	Dictionary::append(buf, ZT_TRACE_FIELD_REASON, reason);
 	buf.push_back(0);
-	RR->node->postEvent(tPtr, ZT_EVENT_TRACE, buf.data());
+	m_ctx.node->postEvent(tPtr, ZT_EVENT_TRACE, buf.data());
 }
 
 void Trace::m_incomingNetworkFrameDropped(
@@ -204,7 +203,7 @@ void Trace::m_incomingNetworkFrameDropped(
 	Dictionary::append(buf, ZT_TRACE_FIELD_FLAG_CREDENTIAL_REQUEST_SENT, credentialRequestSent);
 	Dictionary::append(buf, ZT_TRACE_FIELD_REASON, reason);
 	buf.push_back(0);
-	RR->node->postEvent(tPtr, ZT_EVENT_TRACE, buf.data());
+	m_ctx.node->postEvent(tPtr, ZT_EVENT_TRACE, buf.data());
 }
 
 void Trace::m_networkConfigRequestSent(
@@ -217,7 +216,7 @@ void Trace::m_networkConfigRequestSent(
 	Dictionary::append(buf, ZT_TRACE_FIELD_CODE_LOCATION, codeLocation);
 	Dictionary::append(buf, ZT_TRACE_FIELD_NETWORK_ID, networkId);
 	buf.push_back(0);
-	RR->node->postEvent(tPtr, ZT_EVENT_TRACE, buf.data());
+	m_ctx.node->postEvent(tPtr, ZT_EVENT_TRACE, buf.data());
 }
 
 void Trace::m_networkFilter(
@@ -263,7 +262,7 @@ void Trace::m_networkFilter(
 	Dictionary::append(buf, ZT_TRACE_FIELD_RULE_FLAG_INBOUND, inbound);
 	Dictionary::append(buf, ZT_TRACE_FIELD_RULE_FLAG_ACCEPT, (int32_t)accept);
 	buf.push_back(0);
-	RR->node->postEvent(tPtr, ZT_EVENT_TRACE, buf.data());
+	m_ctx.node->postEvent(tPtr, ZT_EVENT_TRACE, buf.data());
 }
 
 void Trace::m_credentialRejected(
@@ -286,7 +285,7 @@ void Trace::m_credentialRejected(
 	Dictionary::append(buf, ZT_TRACE_FIELD_CREDENTIAL_TYPE, credentialType);
 	Dictionary::append(buf, ZT_TRACE_FIELD_REASON, reason);
 	buf.push_back(0);
-	RR->node->postEvent(tPtr, ZT_EVENT_TRACE, buf.data());
+	m_ctx.node->postEvent(tPtr, ZT_EVENT_TRACE, buf.data());
 }
 
 } // namespace ZeroTier

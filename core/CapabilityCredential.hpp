@@ -26,7 +26,7 @@
 
 namespace ZeroTier {
 
-class RuntimeEnvironment;
+class Context;
 
 /**
  * A set of grouped and signed network flow rules for a specific member.
@@ -132,8 +132,8 @@ public:
 	 *
 	 * @param RR Runtime environment to provide for peer lookup, etc.
 	 */
-	ZT_INLINE Credential::VerifyResult verify(const RuntimeEnvironment *RR, CallContext &cc) const noexcept
-	{ return s_verify(RR, cc, *this); }
+	ZT_INLINE Credential::VerifyResult verify(const Context &ctx, const CallContext &cc) const noexcept
+	{ return s_verify(ctx, cc, *this); }
 
 	static constexpr int marshalSizeMax() noexcept
 	{ return ZT_CAPABILITY_MARSHAL_SIZE_MAX; }

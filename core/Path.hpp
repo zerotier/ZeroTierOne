@@ -25,7 +25,7 @@
 
 namespace ZeroTier {
 
-class RuntimeEnvironment;
+class Context;
 
 template< unsigned int MF, unsigned int MFP, unsigned int GCT, unsigned int GCS, typename P >
 class Defragmenter;
@@ -145,7 +145,7 @@ public:
 	 * @param len Packet length
 	 * @return True if transport reported success
 	 */
-	bool send(const RuntimeEnvironment *RR, CallContext &cc, const void *data, unsigned int len) noexcept;
+	bool send(const Context &ctx, const CallContext &cc, const void *data, unsigned int len) noexcept;
 
 	/**
 	 * Explicitly update last sent time

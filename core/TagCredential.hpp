@@ -24,7 +24,7 @@
 
 namespace ZeroTier {
 
-class RuntimeEnvironment;
+class Context;
 
 /**
  * A tag that can be associated with members and matched in rules
@@ -113,8 +113,8 @@ public:
 	 * @param RR Runtime environment to allow identity lookup for signedBy
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 */
-	ZT_INLINE Credential::VerifyResult verify(const RuntimeEnvironment *RR, CallContext &cc) const noexcept
-	{ return s_verify(RR, cc, *this); }
+	ZT_INLINE Credential::VerifyResult verify(const Context &ctx, const CallContext &cc) const noexcept
+	{ return s_verify(ctx, cc, *this); }
 
 	static constexpr int marshalSizeMax() noexcept
 	{ return ZT_TAG_MARSHAL_SIZE_MAX; }

@@ -126,7 +126,7 @@ ZT_MAYBE_UNUSED enum ZT_ResultCode ZT_Node_processWirePacket(
 	try {
 		ZeroTier::CallContext cc(clock, ticks, tptr);
 		ZeroTier::SharedPtr< ZeroTier::Buf > buf((isZtBuffer) ? ZT_PTRTOBUF(packetData) : new ZeroTier::Buf(packetData, packetLength & ZT_BUF_MEM_MASK));
-		reinterpret_cast<ZeroTier::Node *>(node)->RR->vl1->onRemotePacket(cc, localSocket, *ZeroTier::asInetAddress(remoteAddress), buf, packetLength);
+		reinterpret_cast<ZeroTier::Node *>(node)->context().vl1->onRemotePacket(cc, localSocket, *ZeroTier::asInetAddress(remoteAddress), buf, packetLength);
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch (...) {
@@ -153,10 +153,11 @@ ZT_MAYBE_UNUSED enum ZT_ResultCode ZT_Node_processVirtualNetworkFrame(
 {
 	try {
 		ZeroTier::CallContext cc(clock, ticks, tptr);
-		ZeroTier::SharedPtr< ZeroTier::Network > network(reinterpret_cast<ZeroTier::Node *>(node)->RR->networks->get(nwid));
+		const ZeroTier::Context &ctx = reinterpret_cast<ZeroTier::Node *>(node)->context();
+		ZeroTier::SharedPtr< ZeroTier::Network > network(ctx.networks->get(nwid));
 		if (likely(network)) {
 			ZeroTier::SharedPtr< ZeroTier::Buf > buf((isZtBuffer) ? ZT_PTRTOBUF(frameData) : new ZeroTier::Buf(frameData, frameLength & ZT_BUF_MEM_MASK));
-			reinterpret_cast<ZeroTier::Node *>(node)->RR->vl2->onLocalEthernet(cc, network, ZeroTier::MAC(sourceMac), ZeroTier::MAC(destMac), etherType, vlanId, buf, frameLength);
+			ctx.vl2->onLocalEthernet(cc, network, ZeroTier::MAC(sourceMac), ZeroTier::MAC(destMac), etherType, vlanId, buf, frameLength);
 			return ZT_RESULT_OK;
 		} else {
 			return ZT_RESULT_ERROR_NETWORK_NOT_FOUND;
@@ -261,7 +262,7 @@ ZT_MAYBE_UNUSED enum ZT_ResultCode ZT_Node_multicastUnsubscribe(
 }
 
 ZT_MAYBE_UNUSED uint64_t ZT_Node_address(ZT_Node *node)
-{ return reinterpret_cast<ZeroTier::Node *>(node)->RR->identity.address().toInt(); }
+{ return reinterpret_cast<ZeroTier::Node *>(node)->context().identity.address().toInt(); }
 
 ZT_MAYBE_UNUSED const ZT_Identity *ZT_Node_identity(ZT_Node *node)
 { return (const ZT_Identity *)(&(reinterpret_cast<ZeroTier::Node *>(node)->identity())); }

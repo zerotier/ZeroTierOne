@@ -15,7 +15,7 @@
 #define ZT_PEER_HPP
 
 #include "Constants.hpp"
-#include "RuntimeEnvironment.hpp"
+#include "Context.hpp"
 #include "Node.hpp"
 #include "Path.hpp"
 #include "Address.hpp"
@@ -55,7 +55,6 @@ class Topology;
 class Peer
 {
 	friend class SharedPtr< Peer >;
-
 	friend class Topology;
 
 public:
@@ -64,10 +63,8 @@ public:
 	 *
 	 * New peers must be initialized via either init() or unmarshal() prior to
 	 * use or null pointer dereference may occur.
-	 *
-	 * @param renv Runtime environment
 	 */
-	explicit Peer(const RuntimeEnvironment *renv);
+	Peer();
 
 	~Peer();
 
@@ -77,7 +74,7 @@ public:
 	 * @param peerIdentity The peer's identity
 	 * @return True if initialization was succcesful
 	 */
-	bool init(CallContext &cc, const Identity &peerIdentity);
+	bool init(const Context &ctx, const CallContext &cc, const Identity &peerIdentity);
 
 	/**
 	 * @return This peer's ZT address (short for identity().address())
@@ -133,7 +130,8 @@ public:
 	 * @param inReVerb In-reply verb for OK or ERROR verbs
 	 */
 	void received(
-		CallContext &cc,
+		const Context &ctx,
+		const CallContext &cc,
 		const SharedPtr< Path > &path,
 		unsigned int hops,
 		uint64_t packetId,
@@ -146,7 +144,7 @@ public:
 	 *
 	 * @param bytes Number of bytes written
 	 */
-	ZT_INLINE void sent(CallContext &cc, const unsigned int bytes) noexcept
+	ZT_INLINE void sent(const CallContext &cc, const unsigned int bytes) noexcept
 	{
 		m_lastSend = cc.ticks;
 		m_outMeter.log(cc.ticks, bytes);
@@ -157,7 +155,7 @@ public:
 	 *
 	 * @param bytes Number of bytes relayed
 	 */
-	ZT_INLINE void relayed(CallContext &cc, const unsigned int bytes) noexcept
+	ZT_INLINE void relayed(const CallContext &cc, const unsigned int bytes) noexcept
 	{ m_relayedMeter.log(cc.ticks, bytes); }
 
 	/**
@@ -165,7 +163,7 @@ public:
 	 *
 	 * @return Current best path or NULL if there is no direct path
 	 */
-	ZT_INLINE SharedPtr< Path > path(CallContext &cc) noexcept
+	ZT_INLINE SharedPtr< Path > path(const CallContext &cc) noexcept
 	{
 		if (likely((cc.ticks - m_lastPrioritizedPaths) < ZT_PEER_PRIORITIZE_PATHS_INTERVAL)) {
 			RWMutex::RLock l(m_lock);
@@ -187,9 +185,9 @@ public:
 	 * @param len Length in bytes
 	 * @param via Path over which to send data (may or may not be an already-learned path for this peer)
 	 */
-	ZT_INLINE void send(CallContext &cc, const void *data, unsigned int len, const SharedPtr< Path > &via) noexcept
+	ZT_INLINE void send(const Context &ctx, const CallContext &cc, const void *data, unsigned int len, const SharedPtr< Path > &via) noexcept
 	{
-		via->send(RR, cc, data, len);
+		via->send(ctx, cc, data, len);
 		sent(cc, len);
 	}
 
@@ -202,7 +200,7 @@ public:
 	 * @param data Data to send
 	 * @param len Length in bytes
 	 */
-	void send(CallContext &cc, const void *data, unsigned int len) noexcept;
+	void send(const Context &ctx, const CallContext &cc, const void *data, unsigned int len) noexcept;
 
 	/**
 	 * Send a HELLO to this peer at a specified physical address.
@@ -211,14 +209,14 @@ public:
 	 * @param atAddress Destination address
 	 * @return Number of bytes sent
 	 */
-	unsigned int hello(CallContext &cc, int64_t localSocket, const InetAddress &atAddress);
+	unsigned int hello(const Context &ctx, const CallContext &cc, int64_t localSocket, const InetAddress &atAddress);
 
 	/**
 	 * Ping this peer if needed and/or perform other periodic tasks.
 	 *
 	 * @param isRoot True if this peer is a root
 	 */
-	void pulse(CallContext &cc, bool isRoot);
+	void pulse(const Context &ctx, const CallContext &cc, bool isRoot);
 
 	/**
 	 * Attempt to contact this peer at a given endpoint.
@@ -226,7 +224,7 @@ public:
 	 * @param ep Endpoint to attempt to contact
 	 * @param tries Number of times to try (default: 1)
 	 */
-	void contact(CallContext &cc, const Endpoint &ep, int tries = 1);
+	void contact(const Context &ctx, const CallContext &cc, const Endpoint &ep, int tries = 1);
 
 	/**
 	 * Reset paths within a given IP scope and address family
@@ -239,22 +237,22 @@ public:
 	 * @param scope IP scope
 	 * @param inetAddressFamily Family e.g. AF_INET
 	 */
-	void resetWithinScope(CallContext &cc, InetAddress::IpScope scope, int inetAddressFamily);
+	void resetWithinScope(const Context &ctx, const CallContext &cc, InetAddress::IpScope scope, int inetAddressFamily);
 
 	/**
 	 * @return Time of last receive of anything, whether direct or relayed
 	 */
 	ZT_INLINE int64_t lastReceive() const noexcept
-	{ return m_lastReceive; }
+	{ return m_lastReceive.load(std::memory_order_relaxed); }
 
 	/**
 	 * @return Average latency of all direct paths or -1 if no direct paths or unknown
 	 */
 	ZT_INLINE int latency() const noexcept
 	{
+		RWMutex::RLock l(m_lock);
 		int ltot = 0;
 		int lcnt = 0;
-		RWMutex::RLock l(m_lock);
 		for (unsigned int i = 0; i < m_alivePathCount; ++i) {
 			int lat = m_paths[i]->latency();
 			if (lat > 0) {
@@ -369,16 +367,16 @@ public:
 	/**
 	 * Save the latest version of this peer to the data store
 	 */
-	void save(CallContext &cc) const;
+	void save(const Context &ctx, const CallContext &cc) const;
 
 	// NOTE: peer marshal/unmarshal only saves/restores the identity, locator, most
 	// recent bootstrap address, and version information.
 	static constexpr int marshalSizeMax() noexcept
 	{ return ZT_PEER_MARSHAL_SIZE_MAX; }
 
-	int marshal(uint8_t data[ZT_PEER_MARSHAL_SIZE_MAX]) const noexcept;
+	int marshal(const Context &ctx, uint8_t data[ZT_PEER_MARSHAL_SIZE_MAX]) const noexcept;
 
-	int unmarshal(int64_t ticks, const uint8_t *restrict data, int len) noexcept;
+	int unmarshal(const Context &ctx, int64_t ticks, const uint8_t *restrict data, int len) noexcept;
 
 	/**
 	 * Rate limit gate for inbound WHOIS requests
@@ -432,8 +430,8 @@ public:
 	}
 
 private:
-	void m_prioritizePaths(CallContext &cc);
-	unsigned int m_sendProbe(CallContext &cc, int64_t localSocket, const InetAddress &atAddress, const uint16_t *ports, unsigned int numPorts);
+	void m_prioritizePaths(const CallContext &cc);
+	unsigned int m_sendProbe(const Context &ctx, const CallContext &cc, int64_t localSocket, const InetAddress &atAddress, const uint16_t *ports, unsigned int numPorts);
 	void m_deriveSecondaryIdentityKeys() noexcept;
 
 	ZT_INLINE SharedPtr< SymmetricKey > m_key() noexcept
@@ -441,8 +439,6 @@ private:
 		// assumes m_lock is locked (for read at least)
 		return (m_ephemeralKeys[0]) ? m_ephemeralKeys[0] : m_identityKey;
 	}
-
-	const RuntimeEnvironment *RR;
 
 	// Read/write mutex for non-atomic non-const fields.
 	RWMutex m_lock;

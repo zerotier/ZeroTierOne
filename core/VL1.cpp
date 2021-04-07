@@ -12,7 +12,7 @@
 /****/
 
 #include "VL1.hpp"
-#include "RuntimeEnvironment.hpp"
+#include "Context.hpp"
 #include "Topology.hpp"
 #include "VL2.hpp"
 #include "AES.hpp"
@@ -95,13 +95,13 @@ struct p_PolyCopyFunction
 
 } // anonymous namespace
 
-VL1::VL1(const RuntimeEnvironment *renv) :
-	RR(renv)
+VL1::VL1(const Context &ctx) :
+	m_ctx(ctx)
 {}
 
 void VL1::onRemotePacket(CallContext &cc, const int64_t localSocket, const InetAddress &fromAddr, SharedPtr< Buf > &data, const unsigned int len) noexcept
 {
-	const SharedPtr< Path > path(RR->topology->path(localSocket, fromAddr));
+	const SharedPtr< Path > path(m_ctx.topology->path(localSocket, fromAddr));
 
 	ZT_SPEW("%u bytes from %s (local socket %lld)", len, fromAddr.toString().c_str(), localSocket);
 	path->received(cc, len);
@@ -119,7 +119,7 @@ void VL1::onRemotePacket(CallContext &cc, const int64_t localSocket, const InetA
 
 		static_assert((ZT_PROTO_PACKET_DESTINATION_INDEX + ZT_ADDRESS_LENGTH) < ZT_PROTO_MIN_FRAGMENT_LENGTH, "overflow");
 		const Address destination(data->unsafeData + ZT_PROTO_PACKET_DESTINATION_INDEX);
-		if (destination != RR->identity.address()) {
+		if (destination != m_ctx.identity.address()) {
 			m_relay(cc, path, destination, data, len);
 			return;
 		}
@@ -215,7 +215,7 @@ void VL1::onRemotePacket(CallContext &cc, const int64_t localSocket, const InetA
 			}
 			const SharedPtr< Peer > peer(m_HELLO(cc, path, *pkt, pktSize));
 			if (likely(peer))
-				peer->received(cc, path, hops, packetId, pktSize - ZT_PROTO_PACKET_PAYLOAD_START, Protocol::VERB_HELLO, Protocol::VERB_NOP);
+				peer->received(m_ctx, cc, path, hops, packetId, pktSize - ZT_PROTO_PACKET_PAYLOAD_START, Protocol::VERB_HELLO, Protocol::VERB_NOP);
 			return;
 		}
 
@@ -224,7 +224,7 @@ void VL1::onRemotePacket(CallContext &cc, const int64_t localSocket, const InetA
 		// secrecy status.
 		unsigned int auth = 0;
 
-		SharedPtr< Peer > peer(RR->topology->peer(cc, source));
+		SharedPtr< Peer > peer(m_ctx.topology->peer(cc, source));
 		if (likely(peer)) {
 			switch (cipher) {
 
@@ -244,7 +244,7 @@ void VL1::onRemotePacket(CallContext &cc, const int64_t localSocket, const InetA
 					static_assert((ZT_PROTO_PACKET_MAC_INDEX + 8) < ZT_PROTO_MIN_PACKET_LENGTH, "overflow");
 					if (unlikely(Utils::loadMachineEndian< uint64_t >(hdr + ZT_PROTO_PACKET_MAC_INDEX) != mac[0])) {
 						ZT_SPEW("discarding packet %.16llx from %s(%s): packet MAC failed (none/poly1305)", packetId, source.toString().c_str(), fromAddr.toString().c_str());
-						RR->t->incomingPacketDropped(cc, 0xcc89c812, packetId, 0, peer->identity(), path->address(), hops, Protocol::VERB_NOP, ZT_TRACE_PACKET_DROP_REASON_MAC_FAILED);
+						m_ctx.t->incomingPacketDropped(cc, 0xcc89c812, packetId, 0, peer->identity(), path->address(), hops, Protocol::VERB_NOP, ZT_TRACE_PACKET_DROP_REASON_MAC_FAILED);
 						return;
 					}
 
@@ -268,7 +268,7 @@ void VL1::onRemotePacket(CallContext &cc, const int64_t localSocket, const InetA
 					static_assert((ZT_PROTO_PACKET_MAC_INDEX + 8) < ZT_PROTO_MIN_PACKET_LENGTH, "overflow");
 					if (unlikely(Utils::loadMachineEndian< uint64_t >(hdr + ZT_PROTO_PACKET_MAC_INDEX) != mac[0])) {
 						ZT_SPEW("discarding packet %.16llx from %s(%s): packet MAC failed (salsa/poly1305)", packetId, source.toString().c_str(), fromAddr.toString().c_str());
-						RR->t->incomingPacketDropped(cc, 0xcc89c812, packetId, 0, peer->identity(), path->address(), hops, Protocol::VERB_NOP, ZT_TRACE_PACKET_DROP_REASON_MAC_FAILED);
+						m_ctx.t->incomingPacketDropped(cc, 0xcc89c812, packetId, 0, peer->identity(), path->address(), hops, Protocol::VERB_NOP, ZT_TRACE_PACKET_DROP_REASON_MAC_FAILED);
 						return;
 					}
 
@@ -287,7 +287,7 @@ void VL1::onRemotePacket(CallContext &cc, const int64_t localSocket, const InetA
 					break;
 
 				default:
-					RR->t->incomingPacketDropped(cc, 0x5b001099, packetId, 0, identityFromPeerPtr(peer), path->address(), hops, Protocol::VERB_NOP, ZT_TRACE_PACKET_DROP_REASON_INVALID_OBJECT);
+					m_ctx.t->incomingPacketDropped(cc, 0x5b001099, packetId, 0, identityFromPeerPtr(peer), path->address(), hops, Protocol::VERB_NOP, ZT_TRACE_PACKET_DROP_REASON_INVALID_OBJECT);
 					return;
 			}
 		}
@@ -326,7 +326,7 @@ void VL1::onRemotePacket(CallContext &cc, const int64_t localSocket, const InetA
 					ZT_SPEW("decompressed packet: %d -> %d", pktSize, ZT_PROTO_PACKET_PAYLOAD_START + uncompressedLen);
 					pktSize = ZT_PROTO_PACKET_PAYLOAD_START + uncompressedLen;
 				} else {
-					RR->t->incomingPacketDropped(cc, 0xee9e4392, packetId, 0, identityFromPeerPtr(peer), path->address(), hops, verb, ZT_TRACE_PACKET_DROP_REASON_INVALID_COMPRESSED_DATA);
+					m_ctx.t->incomingPacketDropped(cc, 0xee9e4392, packetId, 0, identityFromPeerPtr(peer), path->address(), hops, verb, ZT_TRACE_PACKET_DROP_REASON_INVALID_COMPRESSED_DATA);
 					return;
 				}
 			}
@@ -359,31 +359,31 @@ void VL1::onRemotePacket(CallContext &cc, const int64_t localSocket, const InetA
 					ok = m_RENDEZVOUS(cc, packetId, auth, path, peer, *pkt, pktSize);
 					break;
 				case Protocol::VERB_FRAME:
-					ok = RR->vl2->m_FRAME(cc, packetId, auth, path, peer, *pkt, pktSize);
+					ok = m_ctx.vl2->m_FRAME(cc, packetId, auth, path, peer, *pkt, pktSize);
 					break;
 				case Protocol::VERB_EXT_FRAME:
-					ok = RR->vl2->m_EXT_FRAME(cc, packetId, auth, path, peer, *pkt, pktSize);
+					ok = m_ctx.vl2->m_EXT_FRAME(cc, packetId, auth, path, peer, *pkt, pktSize);
 					break;
 				case Protocol::VERB_ECHO:
 					ok = m_ECHO(cc, packetId, auth, path, peer, *pkt, pktSize);
 					break;
 				case Protocol::VERB_MULTICAST_LIKE:
-					ok = RR->vl2->m_MULTICAST_LIKE(cc, packetId, auth, path, peer, *pkt, pktSize);
+					ok = m_ctx.vl2->m_MULTICAST_LIKE(cc, packetId, auth, path, peer, *pkt, pktSize);
 					break;
 				case Protocol::VERB_NETWORK_CREDENTIALS:
-					ok = RR->vl2->m_NETWORK_CREDENTIALS(cc, packetId, auth, path, peer, *pkt, pktSize);
+					ok = m_ctx.vl2->m_NETWORK_CREDENTIALS(cc, packetId, auth, path, peer, *pkt, pktSize);
 					break;
 				case Protocol::VERB_NETWORK_CONFIG_REQUEST:
-					ok = RR->vl2->m_NETWORK_CONFIG_REQUEST(cc, packetId, auth, path, peer, *pkt, pktSize);
+					ok = m_ctx.vl2->m_NETWORK_CONFIG_REQUEST(cc, packetId, auth, path, peer, *pkt, pktSize);
 					break;
 				case Protocol::VERB_NETWORK_CONFIG:
-					ok = RR->vl2->m_NETWORK_CONFIG(cc, packetId, auth, path, peer, *pkt, pktSize);
+					ok = m_ctx.vl2->m_NETWORK_CONFIG(cc, packetId, auth, path, peer, *pkt, pktSize);
 					break;
 				case Protocol::VERB_MULTICAST_GATHER:
-					ok = RR->vl2->m_MULTICAST_GATHER(cc, packetId, auth, path, peer, *pkt, pktSize);
+					ok = m_ctx.vl2->m_MULTICAST_GATHER(cc, packetId, auth, path, peer, *pkt, pktSize);
 					break;
 				case Protocol::VERB_MULTICAST_FRAME_deprecated:
-					ok = RR->vl2->m_MULTICAST_FRAME_deprecated(cc, packetId, auth, path, peer, *pkt, pktSize);
+					ok = m_ctx.vl2->m_MULTICAST_FRAME_deprecated(cc, packetId, auth, path, peer, *pkt, pktSize);
 					break;
 				case Protocol::VERB_PUSH_DIRECT_PATHS:
 					ok = m_PUSH_DIRECT_PATHS(cc, packetId, auth, path, peer, *pkt, pktSize);
@@ -392,18 +392,18 @@ void VL1::onRemotePacket(CallContext &cc, const int64_t localSocket, const InetA
 					ok = m_USER_MESSAGE(cc, packetId, auth, path, peer, *pkt, pktSize);
 					break;
 				case Protocol::VERB_MULTICAST:
-					ok = RR->vl2->m_MULTICAST(cc, packetId, auth, path, peer, *pkt, pktSize);
+					ok = m_ctx.vl2->m_MULTICAST(cc, packetId, auth, path, peer, *pkt, pktSize);
 					break;
 				case Protocol::VERB_ENCAP:
 					ok = m_ENCAP(cc, packetId, auth, path, peer, *pkt, pktSize);
 					break;
 
 				default:
-					RR->t->incomingPacketDropped(cc, 0xeeeeeff0, packetId, 0, identityFromPeerPtr(peer), path->address(), hops, verb, ZT_TRACE_PACKET_DROP_REASON_UNRECOGNIZED_VERB);
+					m_ctx.t->incomingPacketDropped(cc, 0xeeeeeff0, packetId, 0, identityFromPeerPtr(peer), path->address(), hops, verb, ZT_TRACE_PACKET_DROP_REASON_UNRECOGNIZED_VERB);
 					break;
 			}
 			if (likely(ok))
-				peer->received(cc, path, hops, packetId, pktSize - ZT_PROTO_PACKET_PAYLOAD_START, verb, inReVerb);
+				peer->received(m_ctx, cc, path, hops, packetId, pktSize - ZT_PROTO_PACKET_PAYLOAD_START, verb, inReVerb);
 		} else {
 			// If decryption and authentication were not successful, try to look up identities.
 			// This is rate limited by virtue of the retry rate limit timer.
@@ -425,7 +425,7 @@ void VL1::onRemotePacket(CallContext &cc, const int64_t localSocket, const InetA
 			}
 		}
 	} catch (...) {
-		RR->t->unexpectedError(cc, 0xea1b6dea, "unexpected exception in onRemotePacket() parsing packet from %s", path->address().toString().c_str());
+		m_ctx.t->unexpectedError(cc, 0xea1b6dea, "unexpected exception in onRemotePacket() parsing packet from %s", path->address().toString().c_str());
 	}
 }
 
@@ -435,7 +435,7 @@ void VL1::m_relay(CallContext &cc, const SharedPtr< Path > &path, Address destin
 
 void VL1::m_sendPendingWhois(CallContext &cc)
 {
-	const SharedPtr< Peer > root(RR->topology->root());
+	const SharedPtr< Peer > root(m_ctx.topology->root());
 	if (unlikely(!root))
 		return;
 	const SharedPtr< Path > rootPath(root->path(cc));
@@ -459,16 +459,16 @@ void VL1::m_sendPendingWhois(CallContext &cc)
 		uint8_t outp[ZT_DEFAULT_UDP_MTU - ZT_PROTO_MIN_PACKET_LENGTH];
 		Vector< Address >::iterator a(toSend.begin());
 		while (a != toSend.end()) {
-			const uint64_t packetId = key->nextMessage(RR->identity.address(), root->address());
-			int p = Protocol::newPacket(outp, packetId, root->address(), RR->identity.address(), Protocol::VERB_WHOIS);
+			const uint64_t packetId = key->nextMessage(m_ctx.identity.address(), root->address());
+			int p = Protocol::newPacket(outp, packetId, root->address(), m_ctx.identity.address(), Protocol::VERB_WHOIS);
 			while ((a != toSend.end()) && (p < (sizeof(outp) - ZT_ADDRESS_LENGTH))) {
 				a->copyTo(outp + p);
 				++a;
 				p += ZT_ADDRESS_LENGTH;
 			}
 			Protocol::armor(outp, p, key, root->cipher());
-			RR->expect->sending(packetId, cc.ticks);
-			root->send(cc, outp, p, rootPath);
+			m_ctx.expect->sending(packetId, cc.ticks);
+			root->send(m_ctx, cc, outp, p, rootPath);
 		}
 	}
 }
@@ -481,7 +481,7 @@ SharedPtr< Peer > VL1::m_HELLO(CallContext &cc, const SharedPtr< Path > &path, B
 
 	const uint8_t protoVersion = pkt.lI8< ZT_PROTO_PACKET_PAYLOAD_START >();
 	if (unlikely(protoVersion < ZT_PROTO_VERSION_MIN)) {
-		RR->t->incomingPacketDropped(cc, 0x907a9891, packetId, 0, Identity::NIL, path->address(), hops, Protocol::VERB_HELLO, ZT_TRACE_PACKET_DROP_REASON_PEER_TOO_OLD);
+		m_ctx.t->incomingPacketDropped(cc, 0x907a9891, packetId, 0, Identity::NIL, path->address(), hops, Protocol::VERB_HELLO, ZT_TRACE_PACKET_DROP_REASON_PEER_TOO_OLD);
 		return SharedPtr< Peer >();
 	}
 	const unsigned int versionMajor = pkt.lI8< ZT_PROTO_PACKET_PAYLOAD_START + 1 >();
@@ -494,19 +494,19 @@ SharedPtr< Peer > VL1::m_HELLO(CallContext &cc, const SharedPtr< Path > &path, B
 	// Get identity and verify that it matches the sending address in the packet.
 	Identity id;
 	if (unlikely(pkt.rO(ii, id) < 0)) {
-		RR->t->incomingPacketDropped(cc, 0x707a9810, packetId, 0, Identity::NIL, path->address(), hops, Protocol::VERB_HELLO, ZT_TRACE_PACKET_DROP_REASON_INVALID_OBJECT);
+		m_ctx.t->incomingPacketDropped(cc, 0x707a9810, packetId, 0, Identity::NIL, path->address(), hops, Protocol::VERB_HELLO, ZT_TRACE_PACKET_DROP_REASON_INVALID_OBJECT);
 		return SharedPtr< Peer >();
 	}
 	if (unlikely(id.address() != Address(pkt.unsafeData + ZT_PROTO_PACKET_SOURCE_INDEX))) {
-		RR->t->incomingPacketDropped(cc, 0x707a9010, packetId, 0, Identity::NIL, path->address(), hops, Protocol::VERB_HELLO, ZT_TRACE_PACKET_DROP_REASON_MAC_FAILED);
+		m_ctx.t->incomingPacketDropped(cc, 0x707a9010, packetId, 0, Identity::NIL, path->address(), hops, Protocol::VERB_HELLO, ZT_TRACE_PACKET_DROP_REASON_MAC_FAILED);
 		return SharedPtr< Peer >();
 	}
 
 	// Get the peer that matches this identity, or learn a new one if we don't know it.
-	SharedPtr< Peer > peer(RR->topology->peer(cc, id.address(), true));
+	SharedPtr< Peer > peer(m_ctx.topology->peer(cc, id.address(), true));
 	if (peer) {
 		if (unlikely(peer->identity() != id)) {
-			RR->t->incomingPacketDropped(cc, 0x707a9891, packetId, 0, identityFromPeerPtr(peer), path->address(), hops, Protocol::VERB_HELLO, ZT_TRACE_PACKET_DROP_REASON_MAC_FAILED);
+			m_ctx.t->incomingPacketDropped(cc, 0x707a9891, packetId, 0, identityFromPeerPtr(peer), path->address(), hops, Protocol::VERB_HELLO, ZT_TRACE_PACKET_DROP_REASON_MAC_FAILED);
 			return SharedPtr< Peer >();
 		}
 		if (unlikely(peer->deduplicateIncomingPacket(packetId))) {
@@ -515,15 +515,15 @@ SharedPtr< Peer > VL1::m_HELLO(CallContext &cc, const SharedPtr< Path > &path, B
 		}
 	} else {
 		if (unlikely(!id.locallyValidate())) {
-			RR->t->incomingPacketDropped(cc, 0x707a9892, packetId, 0, identityFromPeerPtr(peer), path->address(), hops, Protocol::VERB_HELLO, ZT_TRACE_PACKET_DROP_REASON_INVALID_OBJECT);
+			m_ctx.t->incomingPacketDropped(cc, 0x707a9892, packetId, 0, identityFromPeerPtr(peer), path->address(), hops, Protocol::VERB_HELLO, ZT_TRACE_PACKET_DROP_REASON_INVALID_OBJECT);
 			return SharedPtr< Peer >();
 		}
-		peer.set(new Peer(RR));
-		if (unlikely(!peer->init(cc, id))) {
-			RR->t->incomingPacketDropped(cc, 0x707a9893, packetId, 0, identityFromPeerPtr(peer), path->address(), hops, Protocol::VERB_HELLO, ZT_TRACE_PACKET_DROP_REASON_UNSPECIFIED);
+		peer.set(new Peer());
+		if (unlikely(!peer->init(m_ctx, cc, id))) {
+			m_ctx.t->incomingPacketDropped(cc, 0x707a9893, packetId, 0, identityFromPeerPtr(peer), path->address(), hops, Protocol::VERB_HELLO, ZT_TRACE_PACKET_DROP_REASON_UNSPECIFIED);
 			return SharedPtr< Peer >();
 		}
-		peer = RR->topology->add(cc, peer);
+		peer = m_ctx.topology->add(cc, peer);
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
@@ -536,7 +536,7 @@ SharedPtr< Peer > VL1::m_HELLO(CallContext &cc, const SharedPtr< Path > &path, B
 		// field is ignored, and eventually it'll be undefined.
 		uint8_t hmac[ZT_HMACSHA384_LEN];
 		if (unlikely(packetSize < ZT_HMACSHA384_LEN)) {
-			RR->t->incomingPacketDropped(cc, 0xab9c9891, packetId, 0, identityFromPeerPtr(peer), path->address(), hops, Protocol::VERB_HELLO, ZT_TRACE_PACKET_DROP_REASON_MAC_FAILED);
+			m_ctx.t->incomingPacketDropped(cc, 0xab9c9891, packetId, 0, identityFromPeerPtr(peer), path->address(), hops, Protocol::VERB_HELLO, ZT_TRACE_PACKET_DROP_REASON_MAC_FAILED);
 			return SharedPtr< Peer >();
 		}
 		packetSize -= ZT_HMACSHA384_LEN;
@@ -544,7 +544,7 @@ SharedPtr< Peer > VL1::m_HELLO(CallContext &cc, const SharedPtr< Path > &path, B
 		Utils::storeMachineEndian< uint64_t >(pkt.unsafeData + ZT_PROTO_PACKET_MAC_INDEX, 0); // set MAC field to 0
 		HMACSHA384(peer->identityHelloHmacKey(), pkt.unsafeData, packetSize, hmac);
 		if (unlikely(!Utils::secureEq(hmac, pkt.unsafeData + packetSize, ZT_HMACSHA384_LEN))) {
-			RR->t->incomingPacketDropped(cc, 0x707a9891, packetId, 0, identityFromPeerPtr(peer), path->address(), hops, Protocol::VERB_HELLO, ZT_TRACE_PACKET_DROP_REASON_MAC_FAILED);
+			m_ctx.t->incomingPacketDropped(cc, 0x707a9891, packetId, 0, identityFromPeerPtr(peer), path->address(), hops, Protocol::VERB_HELLO, ZT_TRACE_PACKET_DROP_REASON_MAC_FAILED);
 			return SharedPtr< Peer >();
 		}
 	} else {
@@ -559,11 +559,11 @@ SharedPtr< Peer > VL1::m_HELLO(CallContext &cc, const SharedPtr< Path > &path, B
 			uint64_t polyMac[2];
 			poly1305.finish(polyMac);
 			if (unlikely(mac != polyMac[0])) {
-				RR->t->incomingPacketDropped(cc, 0x11bfff82, packetId, 0, id, path->address(), hops, Protocol::VERB_NOP, ZT_TRACE_PACKET_DROP_REASON_MAC_FAILED);
+				m_ctx.t->incomingPacketDropped(cc, 0x11bfff82, packetId, 0, id, path->address(), hops, Protocol::VERB_NOP, ZT_TRACE_PACKET_DROP_REASON_MAC_FAILED);
 				return SharedPtr< Peer >();
 			}
 		} else {
-			RR->t->incomingPacketDropped(cc, 0x11bfff81, packetId, 0, id, path->address(), hops, Protocol::VERB_NOP, ZT_TRACE_PACKET_DROP_REASON_MAC_FAILED);
+			m_ctx.t->incomingPacketDropped(cc, 0x11bfff81, packetId, 0, id, path->address(), hops, Protocol::VERB_NOP, ZT_TRACE_PACKET_DROP_REASON_MAC_FAILED);
 			return SharedPtr< Peer >();
 		}
 	}
@@ -574,7 +574,7 @@ SharedPtr< Peer > VL1::m_HELLO(CallContext &cc, const SharedPtr< Path > &path, B
 
 	InetAddress sentTo;
 	if (unlikely(pkt.rO(ii, sentTo) < 0)) {
-		RR->t->incomingPacketDropped(cc, 0x707a9811, packetId, 0, identityFromPeerPtr(peer), path->address(), hops, Protocol::VERB_HELLO, ZT_TRACE_PACKET_DROP_REASON_INVALID_OBJECT);
+		m_ctx.t->incomingPacketDropped(cc, 0x707a9811, packetId, 0, identityFromPeerPtr(peer), path->address(), hops, Protocol::VERB_HELLO, ZT_TRACE_PACKET_DROP_REASON_INVALID_OBJECT);
 		return SharedPtr< Peer >();
 	}
 
@@ -594,12 +594,12 @@ SharedPtr< Peer > VL1::m_HELLO(CallContext &cc, const SharedPtr< Path > &path, B
 			ii += 2; // skip reserved field
 			const unsigned int dictSize = pkt.rI16(ii);
 			if (unlikely((ii + dictSize) > packetSize)) {
-				RR->t->incomingPacketDropped(cc, 0x707a9815, packetId, 0, identityFromPeerPtr(peer), path->address(), hops, Protocol::VERB_HELLO, ZT_TRACE_PACKET_DROP_REASON_INVALID_OBJECT);
+				m_ctx.t->incomingPacketDropped(cc, 0x707a9815, packetId, 0, identityFromPeerPtr(peer), path->address(), hops, Protocol::VERB_HELLO, ZT_TRACE_PACKET_DROP_REASON_INVALID_OBJECT);
 				return peer;
 			}
 			Dictionary md;
 			if (!md.decode(pkt.unsafeData + ii, dictSize)) {
-				RR->t->incomingPacketDropped(cc, 0x707a9816, packetId, 0, identityFromPeerPtr(peer), path->address(), hops, Protocol::VERB_HELLO, ZT_TRACE_PACKET_DROP_REASON_INVALID_OBJECT);
+				m_ctx.t->incomingPacketDropped(cc, 0x707a9816, packetId, 0, identityFromPeerPtr(peer), path->address(), hops, Protocol::VERB_HELLO, ZT_TRACE_PACKET_DROP_REASON_INVALID_OBJECT);
 				return peer;
 			}
 
@@ -609,7 +609,7 @@ SharedPtr< Peer > VL1::m_HELLO(CallContext &cc, const SharedPtr< Path > &path, B
 		}
 	}
 
-	Protocol::newPacket(pkt, key->nextMessage(RR->identity.address(), peer->address()), peer->address(), RR->identity.address(), Protocol::VERB_OK);
+	Protocol::newPacket(pkt, key->nextMessage(m_ctx.identity.address(), peer->address()), peer->address(), m_ctx.identity.address(), Protocol::VERB_OK);
 	ii = ZT_PROTO_PACKET_PAYLOAD_START;
 	pkt.wI8(ii, Protocol::VERB_HELLO);
 	pkt.wI64(ii, packetId);
@@ -634,7 +634,7 @@ SharedPtr< Peer > VL1::m_HELLO(CallContext &cc, const SharedPtr< Path > &path, B
 	}
 
 	peer->setRemoteVersion(protoVersion, versionMajor, versionMinor, versionRev);
-	peer->send(cc, pkt.unsafeData, ii, path);
+	peer->send(m_ctx, cc, pkt.unsafeData, ii, path);
 	return peer;
 }
 
@@ -692,12 +692,12 @@ bool VL1::m_OK(CallContext &cc, const uint64_t packetId, const unsigned int auth
 	inReVerb = (Protocol::Verb)pkt.rI8(ii);
 	const uint64_t inRePacketId = pkt.rI64(ii);
 	if (unlikely(Buf::readOverflow(ii, packetSize))) {
-		RR->t->incomingPacketDropped(cc, 0x4c1f1ff7, packetId, 0, identityFromPeerPtr(peer), path->address(), 0, Protocol::VERB_OK, ZT_TRACE_PACKET_DROP_REASON_MALFORMED_PACKET);
+		m_ctx.t->incomingPacketDropped(cc, 0x4c1f1ff7, packetId, 0, identityFromPeerPtr(peer), path->address(), 0, Protocol::VERB_OK, ZT_TRACE_PACKET_DROP_REASON_MALFORMED_PACKET);
 		return false;
 	}
 
-	if (unlikely(!RR->expect->expecting(inRePacketId, cc.ticks))) {
-		RR->t->incomingPacketDropped(cc, 0x4c1f1ff8, packetId, 0, identityFromPeerPtr(peer), path->address(), 0, Protocol::VERB_OK, ZT_TRACE_PACKET_DROP_REASON_REPLY_NOT_EXPECTED);
+	if (unlikely(!m_ctx.expect->expecting(inRePacketId, cc.ticks))) {
+		m_ctx.t->incomingPacketDropped(cc, 0x4c1f1ff8, packetId, 0, identityFromPeerPtr(peer), path->address(), 0, Protocol::VERB_OK, ZT_TRACE_PACKET_DROP_REASON_REPLY_NOT_EXPECTED);
 		return false;
 	}
 

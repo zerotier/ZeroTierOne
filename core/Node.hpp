@@ -15,7 +15,7 @@
 #define ZT_NODE_HPP
 
 #include "Constants.hpp"
-#include "RuntimeEnvironment.hpp"
+#include "Context.hpp"
 #include "InetAddress.hpp"
 #include "Mutex.hpp"
 #include "MAC.hpp"
@@ -128,7 +128,7 @@ public:
 	 * @param mdSize Size of event data
 	 */
 	ZT_INLINE void postEvent(void *tPtr, ZT_Event ev, const void *md = nullptr, const unsigned int mdSize = 0) noexcept
-	{ RR->cb.eventCallback(reinterpret_cast<ZT_Node *>(this), RR->uPtr, tPtr, ev, md, mdSize); }
+	{ m_ctx.cb.eventCallback(reinterpret_cast<ZT_Node *>(this), m_ctx.uPtr, tPtr, ev, md, mdSize); }
 
 	/**
 	 * Check whether a path should be used for ZeroTier traffic
@@ -154,11 +154,11 @@ public:
 	 */
 	bool externalPathLookup(void *tPtr, const Identity &id, int family, InetAddress &addr);
 
-	/**
-	 * @return This node's identity
-	 */
 	ZT_INLINE const Identity &identity() const noexcept
-	{ return m_RR.identity; }
+	{ return m_ctx.identity; }
+
+	ZT_INLINE const Context &context() const noexcept
+	{ return m_ctx; }
 
 	// Implementation of NetworkController::Sender interface
 	virtual void ncSendConfig(void *tPtr, int64_t clock, int64_t ticks, uint64_t nwid, uint64_t requestPacketId, const Address &destination, const NetworkConfig &nc, bool sendLegacyFormatConfig);
@@ -166,12 +166,8 @@ public:
 	virtual void ncSendError(void *tPtr, int64_t clock, int64_t ticks, uint64_t nwid, uint64_t requestPacketId, const Address &destination, NetworkController::ErrorCode errorCode);
 
 private:
-	RuntimeEnvironment m_RR;
+	Context m_ctx;
 
-public:
-	const RuntimeEnvironment *const RR;
-
-private:
 	// Data store wrapper
 	Store m_store;
 

@@ -25,7 +25,7 @@ namespace ZeroTier {
 
 class Identity;
 
-class RuntimeEnvironment;
+class Context;
 
 /**
  * SelfAwareness manages awareness of this peer's external address(es) and NAT situation.
@@ -35,7 +35,7 @@ class RuntimeEnvironment;
 class SelfAwareness
 {
 public:
-	explicit SelfAwareness(const RuntimeEnvironment *renv);
+	explicit SelfAwareness(const Context &ctx);
 
 	/**
 	 * Called when a remote peer informs us of our external network address
@@ -115,7 +115,7 @@ private:
 		{}
 	};
 
-	const RuntimeEnvironment *RR;
+	const Context &m_ctx;
 	Map< p_PhySurfaceKey, p_PhySurfaceEntry > m_phy;
 	Mutex m_phy_l;
 };

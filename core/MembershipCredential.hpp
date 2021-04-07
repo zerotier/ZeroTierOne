@@ -34,7 +34,7 @@
 
 namespace ZeroTier {
 
-class RuntimeEnvironment;
+class Context;
 
 /**
  * Certificate of network membership
@@ -180,7 +180,7 @@ public:
 	 * @param RR Runtime environment for looking up peers
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 */
-	ZT_INLINE Credential::VerifyResult verify(const RuntimeEnvironment *RR, CallContext &cc) const { return s_verify(RR, cc, *this); }
+	ZT_INLINE Credential::VerifyResult verify(const Context &ctx, const CallContext &cc) const { return s_verify(ctx, cc, *this); }
 
 	// NOTE: right now we use v1 serialization format which works with both ZeroTier 1.x and 2.x. V2 format
 	// will be switched on once 1.x is pretty much dead and out of support.

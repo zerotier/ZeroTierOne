@@ -16,7 +16,7 @@
 
 #include "Constants.hpp"
 #include "Containers.hpp"
-#include "RuntimeEnvironment.hpp"
+#include "Context.hpp"
 #include "CallContext.hpp"
 
 namespace ZeroTier {
@@ -27,7 +27,7 @@ namespace ZeroTier {
 class Store
 {
 public:
-	ZT_INLINE Store(const RuntimeEnvironment *const renv): RR(renv)
+	ZT_INLINE Store(const Context *const renv): RR(renv)
 	{}
 
 	/**
@@ -38,7 +38,7 @@ public:
 	 * @param idSize Size of object ID in qwords
 	 * @return Data or empty vector if not found
 	 */
-	ZT_INLINE Vector< uint8_t > get(CallContext &cc, ZT_StateObjectType type, const uint64_t *id, unsigned int idSize) const
+	ZT_INLINE Vector< uint8_t > get(const CallContext &cc, ZT_StateObjectType type, const uint64_t *id, unsigned int idSize) const
 	{
 		Vector< uint8_t > dv;
 		void *data = nullptr;
@@ -60,7 +60,7 @@ public:
 	 * @param data Data to store
 	 * @param len Length of data
 	 */
-	ZT_INLINE void put(CallContext &cc, ZT_StateObjectType type, const uint64_t *const id, const unsigned int idSize, const void *const data, const unsigned int len) noexcept
+	ZT_INLINE void put(const CallContext &cc, ZT_StateObjectType type, const uint64_t *const id, const unsigned int idSize, const void *const data, const unsigned int len) noexcept
 	{ RR->cb.statePutFunction(reinterpret_cast<ZT_Node *>(this), RR->uPtr, cc.tPtr, type, id, idSize, data, (int)len); }
 
 	/**
@@ -70,11 +70,11 @@ public:
 	 * @param id Object ID
 	 * @param idSize Size of object ID in qwords
 	 */
-	ZT_INLINE void erase(CallContext &cc, ZT_StateObjectType type, const uint64_t *const id, const unsigned int idSize) noexcept
+	ZT_INLINE void erase(const CallContext &cc, ZT_StateObjectType type, const uint64_t *const id, const unsigned int idSize) noexcept
 	{ RR->cb.statePutFunction(reinterpret_cast<ZT_Node *>(this), RR->uPtr, cc.tPtr, type, id, idSize, nullptr, -1); }
 
 private:
-	const RuntimeEnvironment *RR;
+	const Context *RR;
 };
 
 } // namespace ZeroTier

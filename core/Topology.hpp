@@ -32,7 +32,7 @@
 
 namespace ZeroTier {
 
-class RuntimeEnvironment;
+class Context;
 
 /**
  * Database of network topology
@@ -40,7 +40,7 @@ class RuntimeEnvironment;
 class Topology
 {
 public:
-	Topology(const RuntimeEnvironment *renv, CallContext &cc);
+	Topology(const Context &ctx, const CallContext &cc);
 
 	/**
 	 * Add peer to database
@@ -51,7 +51,7 @@ public:
 	 * @param peer Peer to add
 	 * @return New or existing peer (should replace 'peer')
 	 */
-	SharedPtr< Peer > add(CallContext &cc, const SharedPtr< Peer > &peer);
+	SharedPtr< Peer > add(const CallContext &cc, const SharedPtr< Peer > &peer);
 
 	/**
 	 * Get a peer from its address
@@ -60,7 +60,7 @@ public:
 	 * @param loadFromCached If false do not load from cache if not in memory (default: true)
 	 * @return Peer or NULL if not found
 	 */
-	ZT_INLINE SharedPtr< Peer > peer(CallContext &cc, const Address &zta, const bool loadFromCached = true)
+	ZT_INLINE SharedPtr< Peer > peer(const CallContext &cc, const Address &zta, const bool loadFromCached = true)
 	{
 		{
 			RWMutex::RLock l(m_peers_l);
@@ -125,14 +125,14 @@ public:
 	/**
 	 * Do periodic tasks such as database cleanup, cert cleanup, root ranking, etc.
 	 */
-	void doPeriodicTasks(CallContext &cc);
+	void doPeriodicTasks(const CallContext &cc);
 
 	/**
 	 * Rank root servers in descending order of quality
 	 *
 	 * @param now Current time
 	 */
-	ZT_INLINE void rankRoots(CallContext &cc)
+	ZT_INLINE void rankRoots(const CallContext &cc)
 	{
 		Mutex::Lock l(m_roots_l);
 		m_rankRoots();
@@ -141,20 +141,20 @@ public:
 	/**
 	 * Perform internal updates based on changes in the trust store
 	 */
-	void trustStoreChanged(CallContext &cc);
+	void trustStoreChanged(const CallContext &cc);
 
 	/**
 	 * Save all currently known peers to data store
 	 */
-	void saveAll(CallContext &cc);
+	void saveAll(const CallContext &cc);
 
 private:
 	void m_rankRoots();
-	void m_loadCached(CallContext &cc, const Address &zta, SharedPtr< Peer > &peer);
-	SharedPtr< Peer > m_peerFromCached(CallContext &cc, const Address &zta);
+	void m_loadCached(const CallContext &cc, const Address &zta, SharedPtr< Peer > &peer);
+	SharedPtr< Peer > m_peerFromCached(const CallContext &cc, const Address &zta);
 	SharedPtr< Path > m_newPath(int64_t l, const InetAddress &r, const Path::Key &k);
 
-	const RuntimeEnvironment *const RR;
+	const Context &m_ctx;
 
 	Vector< SharedPtr< Peer > > m_roots;
 	Map< Address, SharedPtr< Peer > > m_peers;

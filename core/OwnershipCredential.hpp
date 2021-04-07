@@ -32,7 +32,7 @@
 
 namespace ZeroTier {
 
-class RuntimeEnvironment;
+class Context;
 
 /**
  * Certificate indicating ownership of a "thing" such as an IP address
@@ -146,12 +146,10 @@ public:
 	/**
 	 * Verify certificate signature
 	 *
-	 * @param RR Runtime environment
-	 * @param tPtr That pointer we pass around
 	 * @return Credential verification result: OK, bad signature, or identity needed
 	 */
-	ZT_INLINE Credential::VerifyResult verify(const RuntimeEnvironment *RR, CallContext &cc) const
-	{ return s_verify(RR, cc, *this); }
+	ZT_INLINE Credential::VerifyResult verify(const Context &ctx, const CallContext &cc) const
+	{ return s_verify(ctx, cc, *this); }
 
 	static constexpr int marshalSizeMax() noexcept
 	{ return ZT_CERTIFICATEOFOWNERSHIP_MARSHAL_SIZE_MAX; }

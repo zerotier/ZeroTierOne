@@ -36,21 +36,18 @@ class Store;
 class Network;
 
 /**
- * ZeroTier::Node execution context
- *
- * This just holds pointers and various other information used by all the
- * various moving parts of a node. It's stored or passed as 'RR' to give it
- * a common name througout the code.
+ * Node instance context
  */
-class RuntimeEnvironment
+class Context
 {
 public:
-	ZT_INLINE RuntimeEnvironment(Node *const n) noexcept:
+	ZT_INLINE Context(Node *const n) noexcept:
 		instanceId(Utils::getSecureRandomU64()),
 		node(n),
 		uPtr(nullptr),
 		localNetworkController(nullptr),
 		store(nullptr),
+		networks(nullptr),
 		t(nullptr),
 		expect(nullptr),
 		vl2(nullptr),
@@ -63,7 +60,7 @@ public:
 		secretIdentityStr[0] = 0;
 	}
 
-	ZT_INLINE ~RuntimeEnvironment() noexcept
+	ZT_INLINE ~Context() noexcept
 	{
 		Utils::burn(secretIdentityStr, sizeof(secretIdentityStr));
 	}
@@ -72,26 +69,26 @@ public:
 	const uint64_t instanceId;
 
 	// Node instance that owns this RuntimeEnvironment
-	Node *const node;
+	Node *const restrict node;
 
 	// Callbacks specified by caller who created node
 	ZT_Node_Callbacks cb;
 
 	// User pointer specified by external code via API
-	void *uPtr;
+	void *restrict uPtr;
 
 	// This is set externally to an instance of this base class
-	NetworkController *localNetworkController;
+	NetworkController *restrict localNetworkController;
 
-	Store *store;
-	TinyMap< SharedPtr< Network > > *networks;
-	Trace *t;
-	Expect *expect;
-	VL2 *vl2;
-	VL1 *vl1;
-	Topology *topology;
-	SelfAwareness *sa;
-	TrustStore *ts;
+	Store *restrict store;
+	TinyMap< SharedPtr< Network > > *restrict networks;
+	Trace *restrict t;
+	Expect *restrict expect;
+	VL2 *restrict vl2;
+	VL1 *restrict vl1;
+	Topology *restrict topology;
+	SelfAwareness *restrict sa;
+	TrustStore *restrict ts;
 
 	// This node's identity and string representations thereof
 	Identity identity;

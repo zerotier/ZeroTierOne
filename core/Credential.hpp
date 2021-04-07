@@ -29,7 +29,7 @@ class RevocationCredential;
 class TagCredential;
 class MembershipCredential;
 class OwnershipCredential;
-class RuntimeEnvironment;
+class Context;
 
 /**
  * Base class for credentials
@@ -53,11 +53,11 @@ public:
 	};
 
 protected:
-	static VerifyResult s_verify(const RuntimeEnvironment *RR, CallContext &cc, const MembershipCredential &credential);
-	static VerifyResult s_verify(const RuntimeEnvironment *RR, CallContext &cc, const RevocationCredential &credential);
-	static VerifyResult s_verify(const RuntimeEnvironment *RR, CallContext &cc, const TagCredential &credential);
-	static VerifyResult s_verify(const RuntimeEnvironment *RR, CallContext &cc, const OwnershipCredential &credential);
-	static VerifyResult s_verify(const RuntimeEnvironment *RR, CallContext &cc, const CapabilityCredential &credential);
+	static VerifyResult s_verify(const Context &ctx, const CallContext &cc, const MembershipCredential &credential);
+	static VerifyResult s_verify(const Context &ctx, const CallContext &cc, const RevocationCredential &credential);
+	static VerifyResult s_verify(const Context &ctx, const CallContext &cc, const TagCredential &credential);
+	static VerifyResult s_verify(const Context &ctx, const CallContext &cc, const OwnershipCredential &credential);
+	static VerifyResult s_verify(const Context &ctx, const CallContext &cc, const CapabilityCredential &credential);
 };
 
 } // namespace ZeroTier

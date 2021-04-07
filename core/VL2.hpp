@@ -26,15 +26,10 @@
 namespace ZeroTier {
 
 class Path;
-
 class Peer;
-
-class RuntimeEnvironment;
-
+class Context;
 class VL1;
-
 class Network;
-
 class MAC;
 
 class VL2
@@ -42,7 +37,7 @@ class VL2
 	friend class VL1;
 
 public:
-	explicit VL2(const RuntimeEnvironment *renv);
+	explicit VL2(const Context &ctx);
 
 	/**
 	 * Called when a packet comes from a local Ethernet tap
@@ -77,6 +72,7 @@ protected:
 	bool m_MULTICAST(CallContext &cc, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize);
 
 private:
+	const Context &m_ctx;
 };
 
 } // namespace ZeroTier

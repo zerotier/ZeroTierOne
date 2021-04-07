@@ -13,7 +13,7 @@
 
 #include "Constants.hpp"
 #include "SelfAwareness.hpp"
-#include "RuntimeEnvironment.hpp"
+#include "Context.hpp"
 #include "Topology.hpp"
 #include "Peer.hpp"
 #include "Trace.hpp"
@@ -24,10 +24,9 @@
 
 namespace ZeroTier {
 
-SelfAwareness::SelfAwareness(const RuntimeEnvironment *renv) :
-	RR(renv)
-{
-}
+SelfAwareness::SelfAwareness(const Context &ctx) :
+	m_ctx(ctx)
+{}
 
 void SelfAwareness::iam(CallContext &cc, const Identity &reporter, const int64_t receivedOnLocalSocket, const InetAddress &reporterPhysicalAddress, const InetAddress &myPhysicalAddress, bool trusted)
 {
@@ -56,11 +55,11 @@ void SelfAwareness::iam(CallContext &cc, const Identity &reporter, const int64_t
 
 		// Reset all paths within this scope and address family
 		Vector< SharedPtr< Peer > > peers, rootPeers;
-		RR->topology->allPeers(peers, rootPeers);
+		m_ctx.topology->allPeers(peers, rootPeers);
 		for(Vector< SharedPtr< Peer > >::const_iterator p(peers.begin());p!=peers.end();++p)
-			(*p)->resetWithinScope(cc, (InetAddress::IpScope)scope, myPhysicalAddress.as.sa.sa_family);
+			(*p)->resetWithinScope(m_ctx, cc, (InetAddress::IpScope)scope, myPhysicalAddress.as.sa.sa_family);
 
-		RR->t->resettingPathsInScope(cc, 0x9afff100, reporter, reporterPhysicalAddress, entry.mySurface, myPhysicalAddress, scope);
+		m_ctx.t->resettingPathsInScope(cc, 0x9afff100, reporter, reporterPhysicalAddress, entry.mySurface, myPhysicalAddress, scope);
 	} else {
 		// Otherwise just update DB to use to determine external surface info
 		entry.mySurface = myPhysicalAddress;

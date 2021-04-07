@@ -30,7 +30,7 @@
 
 namespace ZeroTier {
 
-class RuntimeEnvironment;
+class Context;
 
 /**
  * Revocation certificate to instantaneously revoke a COM, capability, or tag
@@ -44,7 +44,7 @@ public:
 	{ return ZT_CREDENTIAL_TYPE_REVOCATION; }
 
 	ZT_INLINE RevocationCredential() noexcept
-	{ memoryZero(this); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+	{ memoryZero(this); }
 
 	/**
 	 * @param i ID (arbitrary for revocations, currently random)
@@ -110,8 +110,8 @@ public:
 	 * @param RR Runtime environment to provide for peer lookup, etc.
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 */
-	ZT_INLINE Credential::VerifyResult verify(const RuntimeEnvironment *RR, CallContext &cc) const noexcept
-	{ return s_verify(RR, cc, *this); }
+	ZT_INLINE Credential::VerifyResult verify(const Context &ctx, const CallContext &cc) const noexcept
+	{ return s_verify(ctx, cc, *this); }
 
 	static constexpr int marshalSizeMax() noexcept
 	{ return ZT_REVOCATION_MARSHAL_SIZE_MAX; }

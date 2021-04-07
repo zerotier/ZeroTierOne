@@ -35,24 +35,24 @@ namespace {
 
 struct _NodeObjects
 {
-	ZT_INLINE _NodeObjects(RuntimeEnvironment *const RR, CallContext &cc) :
+	ZT_INLINE _NodeObjects(Context &ctx, const CallContext &cc) :
 		networks(),
-		t(RR),
+		t(ctx),
 		expect(),
-		vl2(RR),
-		vl1(RR),
-		topology(RR, cc),
-		sa(RR),
+		vl2(ctx),
+		vl1(ctx),
+		topology(ctx, cc),
+		sa(ctx),
 		ts()
 	{
-		RR->networks = &networks;
-		RR->t = &t;
-		RR->expect = &expect;
-		RR->vl2 = &vl2;
-		RR->vl1 = &vl1;
-		RR->topology = &topology;
-		RR->sa = &sa;
-		RR->ts = &ts;
+		ctx.networks = &networks;
+		ctx.t = &t;
+		ctx.expect = &expect;
+		ctx.vl2 = &vl2;
+		ctx.vl1 = &vl1;
+		ctx.topology = &topology;
+		ctx.sa = &sa;
+		ctx.ts = &ts;
 	}
 
 	TinyMap< SharedPtr< Network > > networks;
@@ -71,9 +71,8 @@ Node::Node(
 	void *uPtr,
 	const struct ZT_Node_Callbacks *callbacks,
 	CallContext &cc) :
-	m_RR(this),
-	RR(&m_RR),
-	m_store(&m_RR),
+	m_ctx(this),
+	m_store(&m_ctx),
 	m_objects(nullptr),
 	m_lastPeerPulse(0),
 	m_lastHousekeepingRun(0),
@@ -83,55 +82,55 @@ Node::Node(
 {
 	ZT_SPEW("Node starting up!");
 
-	Utils::copy< sizeof(ZT_Node_Callbacks) >(&m_RR.cb, callbacks);
-	m_RR.uPtr = uPtr;
-	m_RR.store = &m_store;
+	Utils::copy< sizeof(ZT_Node_Callbacks) >(&m_ctx.cb, callbacks);
+	m_ctx.uPtr = uPtr;
+	m_ctx.store = &m_store;
 
 	Vector< uint8_t > data(m_store.get(cc, ZT_STATE_OBJECT_IDENTITY_SECRET, Utils::ZERO256, 0));
 	bool haveIdentity = false;
 	if (!data.empty()) {
 		data.push_back(0); // zero-terminate string
-		if (m_RR.identity.fromString((const char *)data.data())) {
-			m_RR.identity.toString(false, m_RR.publicIdentityStr);
-			m_RR.identity.toString(true, m_RR.secretIdentityStr);
+		if (m_ctx.identity.fromString((const char *)data.data())) {
+			m_ctx.identity.toString(false, m_ctx.publicIdentityStr);
+			m_ctx.identity.toString(true, m_ctx.secretIdentityStr);
 			haveIdentity = true;
-			ZT_SPEW("loaded identity %s", RR->identity.toString().c_str());
+			ZT_SPEW("loaded identity %s", m_ctx.identity.toString().c_str());
 		}
 	}
 
 	if (!haveIdentity) {
-		m_RR.identity.generate(Identity::C25519);
-		m_RR.identity.toString(false, m_RR.publicIdentityStr);
-		m_RR.identity.toString(true, m_RR.secretIdentityStr);
-		m_store.put(cc, ZT_STATE_OBJECT_IDENTITY_SECRET, Utils::ZERO256, 0, m_RR.secretIdentityStr, (unsigned int)strlen(m_RR.secretIdentityStr));
-		m_store.put(cc, ZT_STATE_OBJECT_IDENTITY_PUBLIC, Utils::ZERO256, 0, m_RR.publicIdentityStr, (unsigned int)strlen(m_RR.publicIdentityStr));
-		ZT_SPEW("no pre-existing identity found, created %s", RR->identity.toString().c_str());
+		m_ctx.identity.generate(Identity::C25519);
+		m_ctx.identity.toString(false, m_ctx.publicIdentityStr);
+		m_ctx.identity.toString(true, m_ctx.secretIdentityStr);
+		m_store.put(cc, ZT_STATE_OBJECT_IDENTITY_SECRET, Utils::ZERO256, 0, m_ctx.secretIdentityStr, (unsigned int)strlen(m_ctx.secretIdentityStr));
+		m_store.put(cc, ZT_STATE_OBJECT_IDENTITY_PUBLIC, Utils::ZERO256, 0, m_ctx.publicIdentityStr, (unsigned int)strlen(m_ctx.publicIdentityStr));
+		ZT_SPEW("no pre-existing identity found, created %s", m_ctx.identity.toString().c_str());
 	} else {
 		data = m_store.get(cc, ZT_STATE_OBJECT_IDENTITY_PUBLIC, Utils::ZERO256, 0);
-		if ((data.empty()) || (memcmp(data.data(), m_RR.publicIdentityStr, strlen(m_RR.publicIdentityStr)) != 0))
-			m_store.put(cc, ZT_STATE_OBJECT_IDENTITY_PUBLIC, Utils::ZERO256, 0, m_RR.publicIdentityStr, (unsigned int)strlen(m_RR.publicIdentityStr));
+		if ((data.empty()) || (memcmp(data.data(), m_ctx.publicIdentityStr, strlen(m_ctx.publicIdentityStr)) != 0))
+			m_store.put(cc, ZT_STATE_OBJECT_IDENTITY_PUBLIC, Utils::ZERO256, 0, m_ctx.publicIdentityStr, (unsigned int)strlen(m_ctx.publicIdentityStr));
 	}
 
 	uint8_t localSecretCipherKey[ZT_FINGERPRINT_HASH_SIZE];
-	m_RR.identity.hashWithPrivate(localSecretCipherKey);
+	m_ctx.identity.hashWithPrivate(localSecretCipherKey);
 	++localSecretCipherKey[0];
 	SHA384(localSecretCipherKey, localSecretCipherKey, ZT_FINGERPRINT_HASH_SIZE);
-	m_RR.localSecretCipher.init(localSecretCipherKey);
+	m_ctx.localSecretCipher.init(localSecretCipherKey);
 
 	for (unsigned int i = 0; i < 1023; ++i)
-		m_RR.randomPrivilegedPortOrder[i] = (uint16_t)(i + 1);
+		m_ctx.randomPrivilegedPortOrder[i] = (uint16_t)(i + 1);
 	for (unsigned int i = 0; i < 512; ++i) {
 		uint64_t rn = Utils::random();
 		const unsigned int a = (unsigned int)rn % 1023;
 		const unsigned int b = (unsigned int)(rn >> 32U) % 1023;
 		if (a != b) {
-			const uint16_t tmp = m_RR.randomPrivilegedPortOrder[a];
-			m_RR.randomPrivilegedPortOrder[a] = m_RR.randomPrivilegedPortOrder[b];
-			m_RR.randomPrivilegedPortOrder[b] = tmp;
+			const uint16_t tmp = m_ctx.randomPrivilegedPortOrder[a];
+			m_ctx.randomPrivilegedPortOrder[a] = m_ctx.randomPrivilegedPortOrder[b];
+			m_ctx.randomPrivilegedPortOrder[b] = tmp;
 		}
 	}
 
-	m_objects = new _NodeObjects(&m_RR, cc);
+	m_objects = new _NodeObjects(m_ctx, cc);
 
 	ZT_SPEW("node initialized!");
 	postEvent(cc.tPtr, ZT_EVENT_UP);
@@ -142,7 +141,7 @@ Node::~Node()
 	ZT_SPEW("Node shutting down (in destructor).");
 
 	m_allNetworks_l.lock();
-	RR->networks->clear();
+	m_ctx.networks->clear();
 	m_allNetworks.clear();
 	m_allNetworks_l.unlock();
 
@@ -158,14 +157,14 @@ Node::~Node()
 void Node::shutdown(CallContext &cc)
 {
 	m_allNetworks_l.lock();
-	RR->networks->clear();
+	m_ctx.networks->clear();
 	m_allNetworks.clear();
 	m_allNetworks_l.unlock();
 
 	postEvent(cc.tPtr, ZT_EVENT_DOWN);
 
-	if (RR->topology)
-		RR->topology->saveAll(cc);
+	if (m_ctx.topology)
+		m_ctx.topology->saveAll(cc);
 }
 
 ZT_ResultCode Node::processBackgroundTasks(
@@ -180,8 +179,8 @@ ZT_ResultCode Node::processBackgroundTasks(
 		// certificates. This also happens on demand when the trust store is changed.
 		if ((cc.ticks - m_lastTrustStoreUpdate) >= ZT_TRUSTSTORE_UPDATE_PERIOD) {
 			m_lastTrustStoreUpdate = cc.ticks;
-			if (RR->ts->update(cc.ticks, nullptr))
-				RR->topology->trustStoreChanged(cc);
+			if (m_ctx.ts->update(cc.ticks, nullptr))
+				m_ctx.topology->trustStoreChanged(cc);
 		}
 
 		// Networks perform housekeeping here such as refreshing configs.
@@ -198,8 +197,8 @@ ZT_ResultCode Node::processBackgroundTasks(
 			m_lastHousekeepingRun = cc.ticks;
 			ZT_SPEW("running housekeeping...");
 
-			RR->topology->doPeriodicTasks(cc);
-			RR->sa->clean(cc);
+			m_ctx.topology->doPeriodicTasks(cc);
+			m_ctx.sa->clean(cc);
 		}
 
 		// Peers have a "pulse" method that does things like keepalive and path housekeeping.
@@ -211,12 +210,12 @@ ZT_ResultCode Node::processBackgroundTasks(
 			ZT_SPEW("running pulse() on each peer...");
 			try {
 				Vector< SharedPtr< Peer > > allPeers, rootPeers;
-				RR->topology->allPeers(allPeers, rootPeers);
+				m_ctx.topology->allPeers(allPeers, rootPeers);
 
 				bool online = false;
 				for (Vector< SharedPtr< Peer > >::iterator p(allPeers.begin()); p != allPeers.end(); ++p) {
 					const bool isRoot = std::find(rootPeers.begin(), rootPeers.end(), *p) != rootPeers.end();
-					(*p)->pulse(cc, isRoot);
+					(*p)->pulse(m_ctx, cc, isRoot);
 					online |= ((isRoot || rootPeers.empty()) && (*p)->directlyConnected(cc));
 				}
 
@@ -224,7 +223,7 @@ ZT_ResultCode Node::processBackgroundTasks(
 					postEvent(cc.tPtr, online ? ZT_EVENT_ONLINE : ZT_EVENT_OFFLINE);
 
 				ZT_SPEW("ranking roots...");
-				RR->topology->rankRoots(cc);
+				m_ctx.topology->rankRoots(cc);
 			} catch (...) {
 				return ZT_RESULT_FATAL_ERROR_INTERNAL;
 			}
@@ -258,9 +257,9 @@ ZT_ResultCode Node::join(
 		if ((*n)->id() == nwid)
 			return ZT_RESULT_OK;
 	}
-	SharedPtr< Network > network(new Network(RR, cc, nwid, fp, uptr, nullptr));
+	SharedPtr< Network > network(new Network(m_ctx, cc, nwid, fp, uptr, nullptr));
 	m_allNetworks.push_back(network);
-	RR->networks->set(nwid, network);
+	m_ctx.networks->set(nwid, network);
 
 	return ZT_RESULT_OK;
 }
@@ -276,7 +275,7 @@ ZT_ResultCode Node::leave(
 	ZT_VirtualNetworkConfig ctmp;
 
 	SharedPtr< Network > network;
-	RR->networks->erase(nwid);
+	m_ctx.networks->erase(nwid);
 	for (Vector< SharedPtr< Network > >::iterator n(m_allNetworks.begin()); n != m_allNetworks.end(); ++n) {
 		if ((*n)->id() == nwid) {
 			network.move(*n);
@@ -294,7 +293,7 @@ ZT_ResultCode Node::leave(
 		if (uptr)
 			*uptr = *network->userPtr();
 		network->externalConfig(&ctmp);
-		RR->cb.virtualNetworkConfigFunction(reinterpret_cast<ZT_Node *>(this), RR->uPtr, cc.tPtr, nwid, network->userPtr(), ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY, &ctmp);
+		m_ctx.cb.virtualNetworkConfigFunction(reinterpret_cast<ZT_Node *>(this), m_ctx.uPtr, cc.tPtr, nwid, network->userPtr(), ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY, &ctmp);
 		network->destroy();
 		return ZT_RESULT_OK;
 	} else {
@@ -309,7 +308,7 @@ ZT_ResultCode Node::multicastSubscribe(
 	unsigned long multicastAdi)
 {
 	ZT_SPEW("multicast subscribe to %s:%lu", MAC(multicastGroup).toString().c_str(), multicastAdi);
-	const SharedPtr< Network > nw(RR->networks->get(nwid));
+	const SharedPtr< Network > nw(m_ctx.networks->get(nwid));
 	if (nw) {
 		nw->multicastSubscribe(cc, MulticastGroup(MAC(multicastGroup), (uint32_t)(multicastAdi & 0xffffffff)));
 		return ZT_RESULT_OK;
@@ -325,7 +324,7 @@ ZT_ResultCode Node::multicastUnsubscribe(
 	unsigned long multicastAdi)
 {
 	ZT_SPEW("multicast unsubscribe from %s:%lu", MAC(multicastGroup).toString().c_str(), multicastAdi);
-	const SharedPtr< Network > nw(RR->networks->get(nwid));
+	const SharedPtr< Network > nw(m_ctx.networks->get(nwid));
 	if (nw) {
 		nw->multicastUnsubscribe(MulticastGroup(MAC(multicastGroup), (uint32_t)(multicastAdi & 0xffffffff)));
 		return ZT_RESULT_OK;
@@ -336,10 +335,10 @@ ZT_ResultCode Node::multicastUnsubscribe(
 
 void Node::status(ZT_NodeStatus *status) const
 {
-	status->address = RR->identity.address().toInt();
-	status->identity = reinterpret_cast<const ZT_Identity *>(&RR->identity);
-	status->publicIdentity = RR->publicIdentityStr;
-	status->secretIdentity = RR->secretIdentityStr;
+	status->address = m_ctx.identity.address().toInt();
+	status->identity = reinterpret_cast<const ZT_Identity *>(&m_ctx.identity);
+	status->publicIdentity = m_ctx.publicIdentityStr;
+	status->secretIdentity = m_ctx.secretIdentityStr;
 	status->online = m_online ? 1 : 0;
 }
 
@@ -372,7 +371,7 @@ ZT_PeerList *Node::peers(CallContext &cc) const
 		pl->freeFunction = p_peerListFreeFunction;
 
 		Vector< SharedPtr< Peer > > peers, rootPeers;
-		RR->topology->allPeers(peers, rootPeers);
+		m_ctx.topology->allPeers(peers, rootPeers);
 		std::sort(peers.begin(), peers.end(), p_sortPeerPtrsByAddress());
 		std::sort(rootPeers.begin(), rootPeers.end());
 
@@ -450,7 +449,7 @@ ZT_PeerList *Node::peers(CallContext &cc) const
 
 ZT_VirtualNetworkConfig *Node::networkConfig(uint64_t nwid) const
 {
-	const SharedPtr< Network > nw(RR->networks->get(nwid));
+	const SharedPtr< Network > nw(m_ctx.networks->get(nwid));
 	if (nw) {
 		ZT_VirtualNetworkConfig *const nc = (ZT_VirtualNetworkConfig *)::malloc(sizeof(ZT_VirtualNetworkConfig));
 		nw->externalConfig(nc);
@@ -482,7 +481,7 @@ void Node::setNetworkUserPtr(
 	uint64_t nwid,
 	void *ptr)
 {
-	SharedPtr< Network > nw(RR->networks->get(nwid));
+	SharedPtr< Network > nw(m_ctx.networks->get(nwid));
 	if (nw) {
 		m_allNetworks_l.lock(); // ensure no concurrent modification of user PTR in network
 		*(nw->userPtr()) = ptr;
@@ -525,9 +524,9 @@ ZT_CertificateError Node::addCertificate(
 		if (!c.decode(certData, certSize))
 			return ZT_CERTIFICATE_ERROR_INVALID_FORMAT;
 	}
-	RR->ts->add(c, localTrust);
-	RR->ts->update(cc.clock, nullptr);
-	SharedPtr< TrustStore::Entry > ent(RR->ts->get(c.getSerialNo()));
+	m_ctx.ts->add(c, localTrust);
+	m_ctx.ts->update(cc.clock, nullptr);
+	SharedPtr< TrustStore::Entry > ent(m_ctx.ts->get(c.getSerialNo()));
 	return (ent) ? ent->error() : ZT_CERTIFICATE_ERROR_INVALID_FORMAT; // should never be null, but if so it means invalid
 }
 
@@ -537,8 +536,8 @@ ZT_ResultCode Node::deleteCertificate(
 {
 	if (!serialNo)
 		return ZT_RESULT_ERROR_BAD_PARAMETER;
-	RR->ts->erase(H384(serialNo));
-	RR->ts->update(-1, nullptr);
+	m_ctx.ts->erase(H384(serialNo));
+	m_ctx.ts->update(-1, nullptr);
 	return ZT_RESULT_OK;
 }
 
@@ -566,7 +565,7 @@ ZT_CertificateList *Node::listCertificates()
 	p_certificateListInternal *const clint = reinterpret_cast<p_certificateListInternal *>(reinterpret_cast<uint8_t *>(cl) + sizeof(ZT_CertificateList));
 	new(clint) p_certificateListInternal;
 
-	clint->entries = RR->ts->all(false);
+	clint->entries = m_ctx.ts->all(false);
 	clint->c.reserve(clint->entries.size());
 	clint->t.reserve(clint->entries.size());
 	for (Vector< SharedPtr< TrustStore::Entry > >::const_iterator i(clint->entries.begin()); i != clint->entries.end(); ++i) {
@@ -590,14 +589,14 @@ int Node::sendUserMessage(
 	unsigned int /*len*/)
 {
 	try {
-		if (RR->identity.address().toInt() != dest) {
+		if (m_ctx.identity.address().toInt() != dest) {
 			// TODO
 			/*
-			Packet outp(Address(dest),RR->identity.address(),Packet::VERB_USER_MESSAGE);
+			Packet outp(Address(dest),m_ctx.identity.address(),Packet::VERB_USER_MESSAGE);
 			outp.append(typeId);
 			outp.append(data,len);
 			outp.compress();
-			RR->sw->send(tptr,outp,true);
+			m_ctx.sw->send(tptr,outp,true);
 			*/
 			return 1;
 		}
@@ -607,9 +606,9 @@ int Node::sendUserMessage(
 
 void Node::setController(void *networkControllerInstance)
 {
-	m_RR.localNetworkController = reinterpret_cast<NetworkController *>(networkControllerInstance);
+	m_ctx.localNetworkController = reinterpret_cast<NetworkController *>(networkControllerInstance);
 	if (networkControllerInstance)
-		m_RR.localNetworkController->init(RR->identity, this);
+		m_ctx.localNetworkController->init(m_ctx.identity, this);
 }
 
 // Methods used only within the core ----------------------------------------------------------------------------------
@@ -626,10 +625,10 @@ bool Node::shouldUsePathForZeroTierTraffic(void *tPtr, const Identity &id, const
 		}
 	}
 
-	if (RR->cb.pathCheckFunction) {
-		return (RR->cb.pathCheckFunction(
+	if (m_ctx.cb.pathCheckFunction) {
+		return (m_ctx.cb.pathCheckFunction(
 			reinterpret_cast<ZT_Node *>(this),
-			RR->uPtr,
+			m_ctx.uPtr,
 			tPtr,
 			id.address().toInt(),
 			(const ZT_Identity *)&id,
@@ -642,10 +641,10 @@ bool Node::shouldUsePathForZeroTierTraffic(void *tPtr, const Identity &id, const
 
 bool Node::externalPathLookup(void *tPtr, const Identity &id, int family, InetAddress &addr)
 {
-	if (RR->cb.pathLookupFunction) {
-		return (RR->cb.pathLookupFunction(
+	if (m_ctx.cb.pathLookupFunction) {
+		return (m_ctx.cb.pathLookupFunction(
 			reinterpret_cast<ZT_Node *>(this),
-			RR->uPtr,
+			m_ctx.uPtr,
 			tPtr,
 			id.address().toInt(),
 			reinterpret_cast<const ZT_Identity *>(&id),
@@ -659,8 +658,8 @@ bool Node::externalPathLookup(void *tPtr, const Identity &id, int family, InetAd
 
 void Node::ncSendConfig(void *tPtr, int64_t clock, int64_t ticks, uint64_t nwid, uint64_t requestPacketId, const Address &destination, const NetworkConfig &nc, bool sendLegacyFormatConfig)
 {
-	if (destination == RR->identity.address()) {
-		SharedPtr< Network > n(RR->networks->get(nwid));
+	if (destination == m_ctx.identity.address()) {
+		SharedPtr< Network > n(m_ctx.networks->get(nwid));
 		if (!n)
 			return;
 		CallContext cc(clock, ticks, tPtr);
@@ -679,7 +678,7 @@ void Node::ncSendConfig(void *tPtr, int64_t clock, int64_t ticks, uint64_t nwid,
 			unsigned int chunkIndex = 0;
 			while (chunkIndex < totalSize) {
 				const unsigned int chunkLen = std::min(totalSize - chunkIndex,(unsigned int)(ZT_PROTO_MAX_PACKET_LENGTH - (ZT_PACKET_IDX_PAYLOAD + 256)));
-				Packet outp(destination,RR->identity.address(),(requestPacketId) ? Packet::VERB_OK : Packet::VERB_NETWORK_CONFIG);
+				Packet outp(destination,m_ctx.identity.address(),(requestPacketId) ? Packet::VERB_OK : Packet::VERB_NETWORK_CONFIG);
 				if (requestPacketId) {
 					outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
 					outp.append(requestPacketId);
@@ -696,13 +695,13 @@ void Node::ncSendConfig(void *tPtr, int64_t clock, int64_t ticks, uint64_t nwid,
 				outp.append((uint32_t)chunkIndex);
 
 				uint8_t sig[256];
-				const unsigned int siglen = RR->identity.sign(reinterpret_cast<const uint8_t *>(outp.data()) + sigStart,outp.size() - sigStart,sig,sizeof(sig));
+				const unsigned int siglen = m_ctx.identity.sign(reinterpret_cast<const uint8_t *>(outp.data()) + sigStart,outp.size() - sigStart,sig,sizeof(sig));
 				outp.append((uint8_t)1);
 				outp.append((uint16_t)siglen);
 				outp.append(sig,siglen);
 
 				outp.compress();
-				RR->sw->send((void *)0,outp,true);
+				m_ctx.sw->send((void *)0,outp,true);
 				chunkIndex += chunkLen;
 			}
 			*/
@@ -712,31 +711,31 @@ void Node::ncSendConfig(void *tPtr, int64_t clock, int64_t ticks, uint64_t nwid,
 
 void Node::ncSendRevocation(void *tPtr, int64_t clock, int64_t ticks, const Address &destination, const RevocationCredential &rev)
 {
-	if (destination == RR->identity.address()) {
-		SharedPtr< Network > n(RR->networks->get(rev.networkId()));
+	if (destination == m_ctx.identity.address()) {
+		SharedPtr< Network > n(m_ctx.networks->get(rev.networkId()));
 		if (!n)
 			return;
 		CallContext cc(clock, ticks, tPtr);
-		n->addCredential(cc, RR->identity, rev);
+		n->addCredential(cc, m_ctx.identity, rev);
 	} else {
 		// TODO
 		/*
-		Packet outp(destination,RR->identity.address(),Packet::VERB_NETWORK_CREDENTIALS);
+		Packet outp(destination,m_ctx.identity.address(),Packet::VERB_NETWORK_CREDENTIALS);
 		outp.append((uint8_t)0x00);
 		outp.append((uint16_t)0);
 		outp.append((uint16_t)0);
 		outp.append((uint16_t)1);
 		rev.serialize(outp);
 		outp.append((uint16_t)0);
-		RR->sw->send((void *)0,outp,true);
+		m_ctx.sw->send((void *)0,outp,true);
 		*/
 	}
 }
 
 void Node::ncSendError(void *tPtr, int64_t clock, int64_t ticks, uint64_t nwid, uint64_t requestPacketId, const Address &destination, NetworkController::ErrorCode errorCode)
 {
-	if (destination == RR->identity.address()) {
-		SharedPtr< Network > n(RR->networks->get(nwid));
+	if (destination == m_ctx.identity.address()) {
+		SharedPtr< Network > n(m_ctx.networks->get(nwid));
 		if (!n)
 			return;
 		switch (errorCode) {
@@ -754,7 +753,7 @@ void Node::ncSendError(void *tPtr, int64_t clock, int64_t ticks, uint64_t nwid, 
 	} else if (requestPacketId) {
 		// TODO
 		/*
-		Packet outp(destination,RR->identity.address(),Packet::VERB_ERROR);
+		Packet outp(destination,m_ctx.identity.address(),Packet::VERB_ERROR);
 		outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
 		outp.append(requestPacketId);
 		switch(errorCode) {
@@ -768,7 +767,7 @@ void Node::ncSendError(void *tPtr, int64_t clock, int64_t ticks, uint64_t nwid, 
 				break;
 		}
 		outp.append(nwid);
-		RR->sw->send((void *)0,outp,true);
+		m_ctx.sw->send((void *)0,outp,true);
 		*/
 	} // else we can't send an ERROR() in response to nothing, so discard
 }

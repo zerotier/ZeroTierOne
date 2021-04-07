@@ -15,7 +15,7 @@
 #define ZT_TRUSTSTORE_HPP
 
 #include "Constants.hpp"
-#include "RuntimeEnvironment.hpp"
+#include "Context.hpp"
 #include "Containers.hpp"
 #include "Certificate.hpp"
 #include "SHA512.hpp"

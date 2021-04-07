@@ -12,7 +12,7 @@
 /****/
 
 #include "VL2.hpp"
-#include "RuntimeEnvironment.hpp"
+#include "Context.hpp"
 #include "VL1.hpp"
 #include "Topology.hpp"
 #include "Peer.hpp"
@@ -22,7 +22,8 @@
 
 namespace ZeroTier {
 
-VL2::VL2(const RuntimeEnvironment *renv)
+VL2::VL2(const Context &ctx):
+	m_ctx(ctx)
 {
 }
 

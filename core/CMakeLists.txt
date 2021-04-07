@@ -14,6 +14,7 @@ set(core_headers
 	CallContext.hpp
 	CapabilityCredential.hpp
 	Certificate.hpp
+	Context.hpp
 	Defaults.hpp
 	MembershipCredential.hpp
 	OwnershipCredential.hpp
@@ -44,7 +45,6 @@ set(core_headers
 	Peer.hpp
 	Poly1305.hpp
 	Protocol.hpp
-	RuntimeEnvironment.hpp
 	Salsa20.hpp
 	ScopedPtr.hpp
 	SelfAwareness.hpp

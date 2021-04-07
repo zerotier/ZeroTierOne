@@ -31,7 +31,7 @@
 
 namespace ZeroTier {
 
-class RuntimeEnvironment;
+class Context;
 class Identity;
 class Peer;
 class Path;
@@ -73,16 +73,16 @@ public:
 		{ memoryZero(this); }
 	};
 
-	explicit Trace(const RuntimeEnvironment *renv);
+	explicit Trace(const Context &ctx);
 
 	void unexpectedError(
-		CallContext &cc,
+		const CallContext &cc,
 		uint32_t codeLocation,
 		const char *message,
 		...);
 
 	ZT_INLINE void resettingPathsInScope(
-		CallContext &cc,
+		const CallContext &cc,
 		const uint32_t codeLocation,
 		const Identity &reporter,
 		const InetAddress &from,
@@ -95,7 +95,7 @@ public:
 	}
 
 	ZT_INLINE void tryingNewPath(
-		CallContext &cc,
+		const CallContext &cc,
 		const uint32_t codeLocation,
 		const Identity &trying,
 		const InetAddress &physicalAddress,
@@ -109,7 +109,7 @@ public:
 	}
 
 	ZT_INLINE void learnedNewPath(
-		CallContext &cc,
+		const CallContext &cc,
 		const uint32_t codeLocation,
 		uint64_t packetId,
 		const Identity &peerIdentity,
@@ -121,7 +121,7 @@ public:
 	}
 
 	ZT_INLINE void incomingPacketDropped(
-		CallContext &cc,
+		const CallContext &cc,
 		const uint32_t codeLocation,
 		uint64_t packetId,
 		uint64_t networkId,
@@ -136,7 +136,7 @@ public:
 	}
 
 	ZT_INLINE void outgoingNetworkFrameDropped(
-		CallContext &cc,
+		const CallContext &cc,
 		const uint32_t codeLocation,
 		uint64_t networkId,
 		const MAC &sourceMac,
@@ -151,7 +151,7 @@ public:
 	}
 
 	ZT_INLINE void incomingNetworkFrameDropped(
-		CallContext &cc,
+		const CallContext &cc,
 		const uint32_t codeLocation,
 		uint64_t networkId,
 		const MAC &sourceMac,
@@ -171,7 +171,7 @@ public:
 	}
 
 	ZT_INLINE void networkConfigRequestSent(
-		CallContext &cc,
+		const CallContext &cc,
 		const uint32_t codeLocation,
 		uint64_t networkId)
 	{
@@ -180,7 +180,7 @@ public:
 	}
 
 	ZT_INLINE void networkFilter(
-		CallContext &cc,
+		const CallContext &cc,
 		const uint32_t codeLocation,
 		uint64_t networkId,
 		const uint8_t primaryRuleSetLog[512],
@@ -223,7 +223,7 @@ public:
 	}
 
 	ZT_INLINE void credentialRejected(
-		CallContext &cc,
+		const CallContext &cc,
 		const uint32_t codeLocation,
 		uint64_t networkId,
 		const Identity &identity,
@@ -337,7 +337,7 @@ private:
 		uint8_t credentialType,
 		ZT_TraceCredentialRejectionReason reason);
 
-	const RuntimeEnvironment *const RR;
+	const Context &m_ctx;
 	volatile unsigned int m_traceFlags; // faster than atomic, but may not "instantly" change... should be okay
 };
 
