@@ -70,7 +70,7 @@ struct _NodeObjects
 Node::Node(
 	void *uPtr,
 	const struct ZT_Node_Callbacks *callbacks,
-	CallContext &cc) :
+	const CallContext &cc) :
 	m_ctx(this),
 	m_store(&m_ctx),
 	m_objects(nullptr),
@@ -154,7 +154,7 @@ Node::~Node()
 	Buf::freePool();
 }
 
-void Node::shutdown(CallContext &cc)
+void Node::shutdown(const CallContext &cc)
 {
 	m_allNetworks_l.lock();
 	m_ctx.networks->clear();
@@ -168,7 +168,7 @@ void Node::shutdown(CallContext &cc)
 }
 
 ZT_ResultCode Node::processBackgroundTasks(
-	CallContext &cc,
+	const CallContext &cc,
 	volatile int64_t *nextBackgroundTaskDeadline)
 {
 	Mutex::Lock bl(m_backgroundTasksLock);
@@ -241,7 +241,7 @@ ZT_ResultCode Node::join(
 	uint64_t nwid,
 	const ZT_Fingerprint *controllerFingerprint,
 	void *uptr,
-	CallContext &cc)
+	const CallContext &cc)
 {
 	Mutex::Lock l(m_allNetworks_l);
 
@@ -267,7 +267,7 @@ ZT_ResultCode Node::join(
 ZT_ResultCode Node::leave(
 	uint64_t nwid,
 	void **uptr,
-	CallContext &cc)
+	const CallContext &cc)
 {
 	Mutex::Lock l(m_allNetworks_l);
 
@@ -302,7 +302,7 @@ ZT_ResultCode Node::leave(
 }
 
 ZT_ResultCode Node::multicastSubscribe(
-	CallContext &cc,
+	const CallContext &cc,
 	uint64_t nwid,
 	uint64_t multicastGroup,
 	unsigned long multicastAdi)
@@ -318,7 +318,7 @@ ZT_ResultCode Node::multicastSubscribe(
 }
 
 ZT_ResultCode Node::multicastUnsubscribe(
-	CallContext &cc,
+	const CallContext &cc,
 	uint64_t nwid,
 	uint64_t multicastGroup,
 	unsigned long multicastAdi)
@@ -363,7 +363,7 @@ struct p_sortPeerPtrsByAddress
 	{ return (a->address() < b->address()); }
 };
 
-ZT_PeerList *Node::peers(CallContext &cc) const
+ZT_PeerList *Node::peers(const CallContext &cc) const
 {
 	p_ZT_PeerListPrivate *pl = nullptr;
 	try {
@@ -509,7 +509,7 @@ void Node::setInterfaceAddresses(
 }
 
 ZT_CertificateError Node::addCertificate(
-	CallContext &cc,
+	const CallContext &cc,
 	unsigned int localTrust,
 	const ZT_Certificate *cert,
 	const void *certData,
@@ -531,7 +531,7 @@ ZT_CertificateError Node::addCertificate(
 }
 
 ZT_ResultCode Node::deleteCertificate(
-	CallContext &cc,
+	const CallContext &cc,
 	const void *serialNo)
 {
 	if (!serialNo)
@@ -582,7 +582,7 @@ ZT_CertificateList *Node::listCertificates()
 }
 
 int Node::sendUserMessage(
-	CallContext &cc,
+	const CallContext &cc,
 	uint64_t dest,
 	uint64_t /*typeId*/,
 	const void */*data*/,

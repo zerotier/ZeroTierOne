@@ -61,9 +61,7 @@ public:
 	}
 
 	ZT_INLINE ~Context() noexcept
-	{
-		Utils::burn(secretIdentityStr, sizeof(secretIdentityStr));
-	}
+	{ Utils::burn(secretIdentityStr, sizeof(secretIdentityStr)); }
 
 	// Unique ID generated on startup
 	const uint64_t instanceId;

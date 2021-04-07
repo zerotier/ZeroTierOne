@@ -237,7 +237,7 @@ public:
 	/**
 	 * Do periodic cleanup and housekeeping tasks
 	 */
-	void doPeriodicTasks(CallContext &cc);
+	void doPeriodicTasks(const CallContext &cc);
 
 	/**
 	 * Find the node on this network that has this MAC behind it (if any)
@@ -276,34 +276,34 @@ public:
 	/**
 	 * Validate a credential and learn it if it passes certificate and other checks
 	 */
-	Member::AddCredentialResult addCredential(CallContext &cc, const Identity &sourcePeerIdentity, const MembershipCredential &com);
+	Member::AddCredentialResult addCredential(const CallContext &cc, const Identity &sourcePeerIdentity, const MembershipCredential &com);
 
 	/**
 	 * Validate a credential and learn it if it passes certificate and other checks
 	 */
-	Member::AddCredentialResult addCredential(CallContext &cc, const Identity &sourcePeerIdentity, const CapabilityCredential &cap);
+	Member::AddCredentialResult addCredential(const CallContext &cc, const Identity &sourcePeerIdentity, const CapabilityCredential &cap);
 
 	/**
 	 * Validate a credential and learn it if it passes certificate and other checks
 	 */
-	Member::AddCredentialResult addCredential(CallContext &cc, const Identity &sourcePeerIdentity, const TagCredential &tag);
+	Member::AddCredentialResult addCredential(const CallContext &cc, const Identity &sourcePeerIdentity, const TagCredential &tag);
 
 	/**
 	 * Validate a credential and learn it if it passes certificate and other checks
 	 */
-	Member::AddCredentialResult addCredential(CallContext &cc, const Identity &sourcePeerIdentity, const RevocationCredential &rev);
+	Member::AddCredentialResult addCredential(const CallContext &cc, const Identity &sourcePeerIdentity, const RevocationCredential &rev);
 
 	/**
 	 * Validate a credential and learn it if it passes certificate and other checks
 	 */
-	Member::AddCredentialResult addCredential(CallContext &cc, const Identity &sourcePeerIdentity, const OwnershipCredential &coo);
+	Member::AddCredentialResult addCredential(const CallContext &cc, const Identity &sourcePeerIdentity, const OwnershipCredential &coo);
 
 	/**
 	 * Push credentials to a peer if timeouts indicate that we should do so
 	 *
 	 * @param to Destination peer
 	 */
-	void pushCredentials(CallContext &cc, const SharedPtr< Peer > &to);
+	void pushCredentials(const CallContext &cc, const SharedPtr< Peer > &to);
 
 	/**
 	 * Destroy this network

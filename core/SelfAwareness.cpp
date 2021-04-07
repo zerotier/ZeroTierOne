@@ -28,7 +28,7 @@ SelfAwareness::SelfAwareness(const Context &ctx) :
 	m_ctx(ctx)
 {}
 
-void SelfAwareness::iam(CallContext &cc, const Identity &reporter, const int64_t receivedOnLocalSocket, const InetAddress &reporterPhysicalAddress, const InetAddress &myPhysicalAddress, bool trusted)
+void SelfAwareness::iam(const CallContext &cc, const Identity &reporter, const int64_t receivedOnLocalSocket, const InetAddress &reporterPhysicalAddress, const InetAddress &myPhysicalAddress, bool trusted)
 {
 	const InetAddress::IpScope scope = myPhysicalAddress.ipScope();
 
@@ -68,7 +68,7 @@ void SelfAwareness::iam(CallContext &cc, const Identity &reporter, const int64_t
 	}
 }
 
-void SelfAwareness::clean(CallContext &cc)
+void SelfAwareness::clean(const CallContext &cc)
 {
 	Mutex::Lock l(m_phy_l);
 	for (Map< p_PhySurfaceKey, p_PhySurfaceEntry >::iterator i(m_phy.begin()); i != m_phy.end();) {

@@ -475,7 +475,7 @@ void Peer::resetWithinScope(const Context &ctx, const CallContext &cc, InetAddre
 		m_paths[pc++].zero();
 }
 
-bool Peer::directlyConnected(CallContext &cc)
+bool Peer::directlyConnected(const CallContext &cc)
 {
 	if ((cc.ticks - m_lastPrioritizedPaths) > ZT_PEER_PRIORITIZE_PATHS_INTERVAL) {
 		RWMutex::Lock l(m_lock);

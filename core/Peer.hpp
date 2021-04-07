@@ -355,7 +355,7 @@ public:
 	/**
 	 * @return True if there is at least one alive direct path
 	 */
-	bool directlyConnected(CallContext &cc);
+	bool directlyConnected(const CallContext &cc);
 
 	/**
 	 * Get all paths

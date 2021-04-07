@@ -44,35 +44,35 @@ public:
 	void operator delete(void* p) { _mm_free(p); }
 #endif
 
-	Node(void *uPtr, const struct ZT_Node_Callbacks *callbacks, CallContext &cc);
+	Node(void *uPtr, const struct ZT_Node_Callbacks *callbacks, const CallContext &cc);
 
 	virtual ~Node();
 
-	void shutdown(CallContext &cc);
+	void shutdown(const CallContext &cc);
 
 	ZT_ResultCode processBackgroundTasks(
-		CallContext &cc,
+		const CallContext &cc,
 		volatile int64_t *nextBackgroundTaskDeadline);
 
 	ZT_ResultCode join(
 		uint64_t nwid,
 		const ZT_Fingerprint *controllerFingerprint,
 		void *uptr,
-		CallContext &cc);
+		const CallContext &cc);
 
 	ZT_ResultCode leave(
 		uint64_t nwid,
 		void **uptr,
-		CallContext &cc);
+		const CallContext &cc);
 
 	ZT_ResultCode multicastSubscribe(
-		CallContext &cc,
+		const CallContext &cc,
 		uint64_t nwid,
 		uint64_t multicastGroup,
 		unsigned long multicastAdi);
 
 	ZT_ResultCode multicastUnsubscribe(
-		CallContext &cc,
+		const CallContext &cc,
 		uint64_t nwid,
 		uint64_t multicastGroup,
 		unsigned long multicastAdi);
@@ -81,7 +81,7 @@ public:
 		ZT_NodeStatus *status) const;
 
 	ZT_PeerList *peers(
-		CallContext &cc) const;
+		const CallContext &cc) const;
 
 	ZT_VirtualNetworkConfig *networkConfig(
 		uint64_t nwid) const;
@@ -97,20 +97,20 @@ public:
 		unsigned int addrCount);
 
 	ZT_CertificateError addCertificate(
-		CallContext &cc,
+		const CallContext &cc,
 		unsigned int localTrust,
 		const ZT_Certificate *cert,
 		const void *certData,
 		unsigned int certSize);
 
 	ZT_ResultCode deleteCertificate(
-		CallContext &cc,
+		const CallContext &cc,
 		const void *serialNo);
 
 	ZT_CertificateList *listCertificates();
 
 	int sendUserMessage(
-		CallContext &cc,
+		const CallContext &cc,
 		uint64_t dest,
 		uint64_t typeId,
 		const void *data,

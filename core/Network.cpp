@@ -1095,7 +1095,7 @@ bool Network::gate(void *tPtr, const SharedPtr< Peer > &peer) noexcept
 	return false;
 }
 
-void Network::doPeriodicTasks(CallContext &cc)
+void Network::doPeriodicTasks(const CallContext &cc)
 {
 	if (m_destroyed)
 		return;
@@ -1157,7 +1157,7 @@ void Network::learnBridgeRoute(const MAC &mac, const Address &addr)
 	}
 }
 
-Member::AddCredentialResult Network::addCredential(CallContext &cc, const Identity &sourcePeerIdentity, const MembershipCredential &com)
+Member::AddCredentialResult Network::addCredential(const CallContext &cc, const Identity &sourcePeerIdentity, const MembershipCredential &com)
 {
 	if (com.networkId() != m_id)
 		return Member::ADD_REJECTED;
@@ -1165,7 +1165,7 @@ Member::AddCredentialResult Network::addCredential(CallContext &cc, const Identi
 	return m_memberships[com.issuedTo().address].addCredential(m_ctx, cc, sourcePeerIdentity, m_config, com);
 }
 
-Member::AddCredentialResult Network::addCredential(CallContext &cc, const Identity &sourcePeerIdentity, const CapabilityCredential &cap)
+Member::AddCredentialResult Network::addCredential(const CallContext &cc, const Identity &sourcePeerIdentity, const CapabilityCredential &cap)
 {
 	if (cap.networkId() != m_id)
 		return Member::ADD_REJECTED;
@@ -1173,7 +1173,7 @@ Member::AddCredentialResult Network::addCredential(CallContext &cc, const Identi
 	return m_memberships[cap.issuedTo()].addCredential(m_ctx, cc, sourcePeerIdentity, m_config, cap);
 }
 
-Member::AddCredentialResult Network::addCredential(CallContext &cc, const Identity &sourcePeerIdentity, const TagCredential &tag)
+Member::AddCredentialResult Network::addCredential(const CallContext &cc, const Identity &sourcePeerIdentity, const TagCredential &tag)
 {
 	if (tag.networkId() != m_id)
 		return Member::ADD_REJECTED;
@@ -1181,7 +1181,7 @@ Member::AddCredentialResult Network::addCredential(CallContext &cc, const Identi
 	return m_memberships[tag.issuedTo()].addCredential(m_ctx, cc, sourcePeerIdentity, m_config, tag);
 }
 
-Member::AddCredentialResult Network::addCredential(CallContext &cc, const Identity &sourcePeerIdentity, const RevocationCredential &rev)
+Member::AddCredentialResult Network::addCredential(const CallContext &cc, const Identity &sourcePeerIdentity, const RevocationCredential &rev)
 {
 	if (rev.networkId() != m_id)
 		return Member::ADD_REJECTED;
@@ -1215,7 +1215,7 @@ Member::AddCredentialResult Network::addCredential(CallContext &cc, const Identi
 	return result;
 }
 
-Member::AddCredentialResult Network::addCredential(CallContext &cc, const Identity &sourcePeerIdentity, const OwnershipCredential &coo)
+Member::AddCredentialResult Network::addCredential(const CallContext &cc, const Identity &sourcePeerIdentity, const OwnershipCredential &coo)
 {
 	if (coo.networkId() != m_id)
 		return Member::ADD_REJECTED;
@@ -1223,7 +1223,7 @@ Member::AddCredentialResult Network::addCredential(CallContext &cc, const Identi
 	return m_memberships[coo.issuedTo()].addCredential(m_ctx, cc, sourcePeerIdentity, m_config, coo);
 }
 
-void Network::pushCredentials(CallContext &cc, const SharedPtr< Peer > &to)
+void Network::pushCredentials(const CallContext &cc, const SharedPtr< Peer > &to)
 {
 	const int64_t tout = std::min(m_config.credentialTimeMaxDelta, m_config.com.timestampMaxDelta());
 	Mutex::Lock _l(m_memberships_l);
