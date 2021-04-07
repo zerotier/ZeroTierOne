@@ -61,6 +61,7 @@ void Topology::doPeriodicTasks(const CallContext &cc)
 		for (Vector< SharedPtr< Peer > >::const_iterator r(m_roots.begin()); r != m_roots.end(); ++r)
 			rootLookup.push_back((uintptr_t)r->ptr());
 	}
+	std::sort(rootLookup.begin(), rootLookup.end());
 
 	// Cleaning of peers and paths uses a two pass method to avoid write locking
 	// m_peers or m_paths for any significant amount of time. This avoids pauses
@@ -71,7 +72,7 @@ void Topology::doPeriodicTasks(const CallContext &cc)
 			RWMutex::RLock l1(m_peers_l);
 			for (Map< Address, SharedPtr< Peer > >::iterator i(m_peers.begin()); i != m_peers.end(); ++i) {
 				// TODO: also delete if the peer has not exchanged meaningful communication in a while, such as a network frame or non-trivial control packet.
-				if (((cc.ticks - i->second->lastReceive()) > ZT_PEER_ALIVE_TIMEOUT) && (std::find(rootLookup.begin(), rootLookup.end(), (uintptr_t)(i->second.ptr())) == rootLookup.end()))
+				if (((cc.ticks - i->second->lastReceive()) > ZT_PEER_ALIVE_TIMEOUT) && (!std::binary_search(rootLookup.begin(), rootLookup.end(), reinterpret_cast<uintptr_t>(i->second.ptr()))))
 					toDelete.push_back(i->first);
 			}
 		}
@@ -93,28 +94,28 @@ void Topology::doPeriodicTasks(const CallContext &cc)
 		}
 	}
 
-	// Delete paths that are no longer held by anyone else ("weak reference" type behavior).
-	// First pass: make a list of paths with a reference count of 1 meaning they are likely
-	// orphaned. Second pass: call weakGC() on each of these which does a hard compare/exchange
-	// and delete those that actually are GC'd. Write lock is aquired only briefly on delete
-	// just as with peers.
 	{
-		Vector< Path::Key > possibleDelete;
+		Vector< Path * > toDelete;
 		{
-			RWMutex::RLock l1(m_paths_l);
-			for (Map< Path::Key, SharedPtr< Path > >::iterator i(m_paths.begin()); i != m_paths.end(); ++i) {
-				if (i->second.references() <= 1)
-					possibleDelete.push_back(i->first);
+			RWMutex::Lock l1(m_paths_l);
+			for (Map< Path::Key, SharedPtr< Path > >::iterator i(m_paths.begin()); i != m_paths.end();) {
+				Path *const d = i->second.weakGC();
+				if (likely(d == nullptr)) {
+					++i;
+				} else {
+					m_paths.erase(i++);
+					try {
+						toDelete.push_back(d);
+					} catch (...) {
+						delete d;
+					}
+				}
 			}
 		}
-		if (!possibleDelete.empty()) {
-			ZT_SPEW("garbage collecting (likely) %u orphaned paths", (unsigned int)possibleDelete.size());
-			for (Vector< Path::Key >::const_iterator i(possibleDelete.begin()); i != possibleDelete.end(); ++i) {
-				RWMutex::Lock l1(m_paths_l);
-				Map< Path::Key, SharedPtr< Path > >::iterator p(m_paths.find(*i));
-				if ((p != m_paths.end()) && p->second.weakGC())
-					m_paths.erase(p);
-			}
+		if (!toDelete.empty()) {
+			for (Vector< Path * >::iterator i(toDelete.begin()); i != toDelete.end(); ++i)
+				delete *i;
+			ZT_SPEW("garbage collected %u orphaned paths", (unsigned int)toDelete.size());
 		}
 	}
 }

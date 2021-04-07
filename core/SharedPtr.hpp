@@ -116,20 +116,23 @@ public:
 	 * but with the caveat that it only works if there is only one remaining
 	 * SharedPtr to be treated as weak.
 	 *
-	 * @return True if object was in fact deleted OR this pointer was already NULL
+	 * This does not delete the object. It returns it as a naked pointer.
+	 *
+	 * @return Pointer to T if reference count was only one (this shared ptr is left NULL)
 	 */
-	ZT_INLINE bool weakGC()
+	ZT_INLINE T *weakGC()
 	{
 		if (likely(m_ptr != nullptr)) {
 			int one = 1;
-			if (const_cast<std::atomic< int > *>(&(m_ptr->__refCount))->compare_exchange_strong(one, (int)0, std::memory_order_acq_rel)) {
-				delete m_ptr;
+			if (const_cast<std::atomic< int > *>(&(m_ptr->__refCount))->compare_exchange_strong(one, (int)0)) {
+				T *const ptr = m_ptr;
 				m_ptr = nullptr;
-				return true;
+				return ptr;
+			} else {
+				return nullptr;
 			}
-			return false;
 		} else {
-			return true;
+			return nullptr;
 		}
 	}
 
@@ -141,7 +144,7 @@ public:
 	ZT_INLINE int references() noexcept
 	{
 		if (likely(m_ptr != nullptr))
-			return m_ptr->__refCount;
+			return m_ptr->__refCount.load(std::memory_order_relaxed);
 		return 0;
 	}
 

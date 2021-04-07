@@ -211,15 +211,16 @@ ZT_ResultCode Node::processBackgroundTasks(
 			try {
 				Vector< SharedPtr< Peer > > allPeers, rootPeers;
 				m_ctx.topology->allPeers(allPeers, rootPeers);
+				std::sort(rootPeers.begin(), rootPeers.end());
 
 				bool online = false;
 				for (Vector< SharedPtr< Peer > >::iterator p(allPeers.begin()); p != allPeers.end(); ++p) {
-					const bool isRoot = std::find(rootPeers.begin(), rootPeers.end(), *p) != rootPeers.end();
+					const bool isRoot = std::binary_search(rootPeers.begin(), rootPeers.end(), *p);
 					(*p)->pulse(m_ctx, cc, isRoot);
 					online |= ((isRoot || rootPeers.empty()) && (*p)->directlyConnected(cc));
 				}
 
-				if (m_online.exchange(online) != online)
+				if (m_online.exchange(online, std::memory_order_relaxed) != online)
 					postEvent(cc.tPtr, online ? ZT_EVENT_ONLINE : ZT_EVENT_OFFLINE);
 
 				ZT_SPEW("ranking roots...");
@@ -346,9 +347,9 @@ struct p_ZT_PeerListPrivate : public ZT_PeerList
 {
 	// Actual containers for the memory, hidden from external users.
 	Vector< ZT_Peer > p_peers;
-	List< Vector< ZT_Path > > p_paths;
-	List< Identity > p_identities;
-	List< Blob< ZT_LOCATOR_MARSHAL_SIZE_MAX > > p_locators;
+	ForwardList< Vector< ZT_Path > > p_paths;
+	ForwardList< Identity > p_identities;
+	ForwardList< Blob< ZT_LOCATOR_MARSHAL_SIZE_MAX > > p_locators;
 };
 
 static void p_peerListFreeFunction(const void *pl)
@@ -381,9 +382,9 @@ ZT_PeerList *Node::peers(const CallContext &cc) const
 			Peer &pp = **pi;
 
 			p.address = pp.address();
-			pl->p_identities.push_back(pp.identity());
-			p.identity = reinterpret_cast<const ZT_Identity *>(&(pl->p_identities.back()));
-			p.fingerprint = &(pl->p_identities.back().fingerprint());
+			pl->p_identities.push_front(pp.identity());
+			p.identity = reinterpret_cast<const ZT_Identity *>(&(pl->p_identities.front()));
+			p.fingerprint = &(pl->p_identities.front().fingerprint());
 			if (pp.remoteVersionKnown()) {
 				p.versionMajor = (int)pp.remoteVersionMajor();
 				p.versionMinor = (int)pp.remoteVersionMinor();
@@ -404,8 +405,8 @@ ZT_PeerList *Node::peers(const CallContext &cc) const
 			Vector< SharedPtr< Path > > ztPaths;
 			pp.getAllPaths(ztPaths);
 			if (ztPaths.empty()) {
-				pl->p_paths.push_back(Vector< ZT_Path >());
-				std::vector< ZT_Path > &apiPaths = pl->p_paths.back();
+				pl->p_paths.push_front(Vector< ZT_Path >());
+				std::vector< ZT_Path > &apiPaths = pl->p_paths.front();
 				apiPaths.resize(ztPaths.size());
 				for (unsigned long i = 0; i < (unsigned long)ztPaths.size(); ++i) {
 					SharedPtr< Path > &ztp = ztPaths[i];
@@ -426,8 +427,8 @@ ZT_PeerList *Node::peers(const CallContext &cc) const
 
 			const SharedPtr< const Locator > loc(pp.locator());
 			if (loc) {
-				pl->p_locators.push_back(Blob< ZT_LOCATOR_MARSHAL_SIZE_MAX >());
-				Blob< ZT_LOCATOR_MARSHAL_SIZE_MAX > &lb = pl->p_locators.back();
+				pl->p_locators.push_front(Blob< ZT_LOCATOR_MARSHAL_SIZE_MAX >());
+				Blob< ZT_LOCATOR_MARSHAL_SIZE_MAX > &lb = pl->p_locators.front();
 				Utils::zero< ZT_LOCATOR_MARSHAL_SIZE_MAX >(lb.data);
 				const int ls = loc->marshal(lb.data);
 				if (ls > 0) {
@@ -610,8 +611,6 @@ void Node::setController(void *networkControllerInstance)
 	if (networkControllerInstance)
 		m_ctx.localNetworkController->init(m_ctx.identity, this);
 }
-
-// Methods used only within the core ----------------------------------------------------------------------------------
 
 bool Node::shouldUsePathForZeroTierTraffic(void *tPtr, const Identity &id, const int64_t localSocket, const InetAddress &remoteAddress)
 {
