@@ -16,9 +16,7 @@
 
 #include "Constants.hpp"
 #include "Utils.hpp"
-#include "InetAddress.hpp"
 #include "AES.hpp"
-#include "SharedPtr.hpp"
 #include "Address.hpp"
 
 namespace ZeroTier {
@@ -28,54 +26,69 @@ namespace ZeroTier {
  */
 class SymmetricKey
 {
-	friend class SharedPtr< SymmetricKey >;
-
 public:
 	/**
-	 * Secret key
+	 * Construct an uninitialized key (init() must be called)
 	 */
-	const uint8_t secret[ZT_SYMMETRIC_KEY_SIZE];
-
-	/**
-	 * Symmetric cipher keyed with this key
-	 */
-	const AES cipher;
+	ZT_INLINE SymmetricKey():
+		m_secret(),
+		m_ts(-1),
+		m_initialNonce(0),
+		m_cipher(),
+		m_nonce(0)
+	{}
 
 	/**
 	 * Construct a new symmetric key
 	 *
-	 * SECURITY: we use a best effort method to construct the nonce's starting point so as
-	 * to avoid nonce duplication across invocations. The most significant bits are the
-	 * number of seconds since epoch but with the most significant bit masked to zero.
-	 * The least significant bits are random. Key life time is limited to 2^31 messages
-	 * per key as per the AES-GMAC-SIV spec, and this is a SIV mode anyway so nonce repetition
-	 * is non-catastrophic.
-	 * 
-	 * The masking of the most significant bit is because we bisect the nonce space by
-	 * which direction the message is going. If the sender's ZeroTier address is
-	 * numerically greater than the receiver, this bit is flipped. This means that
-	 * two sides of a conversation that have created their key instances at the same
-	 * time are much less likely to duplicate nonces when sending pacekts from either
-	 * end.
-	 * 
-	 * @param ts Current time
-	 * @param key 48-bit / 384-byte key
+	 * SECURITY: the MSB of the nonce is always 0 because this bit is set to 0
+	 * or 1 depending on which "direction" data is moving. See nextMessage().
+	 *
+	 * @param ts Key timestamp
+	 * @param key Key (must be 48 bytes / 384 bits)
 	 */
-	explicit ZT_INLINE SymmetricKey(const int64_t ts, const void *const key) noexcept:
-		secret(),
-		cipher(key), // AES-256 uses first 256 bits of 384-bit key
-		m_initialNonce(((((uint64_t)ts / 1000ULL) << 32U) & 0x7fffffff00000000ULL) | (Utils::random() & 0x00000000ffffffffULL)),
-		m_nonce(m_initialNonce),
-		__refCount(0)
-	{
-		Utils::memoryLock(this, sizeof(SymmetricKey));
-		Utils::copy< ZT_SYMMETRIC_KEY_SIZE >(const_cast<uint8_t *>(secret), key);
-	}
+	ZT_INLINE SymmetricKey(const int64_t ts, const void *const key) noexcept:
+		m_secret(key),
+		m_ts(ts),
+		m_initialNonce(Utils::getSecureRandomU64() >> 1U),
+		m_cipher(key),
+		m_nonce(m_initialNonce)
+	{}
+
+	ZT_INLINE SymmetricKey(const SymmetricKey &k) noexcept:
+		m_secret(k.m_secret),
+		m_ts(k.m_ts),
+		m_initialNonce(k.m_initialNonce),
+		m_cipher(k.m_secret.data),
+		m_nonce(k.m_nonce.load(std::memory_order_relaxed))
+	{}
 
 	ZT_INLINE ~SymmetricKey() noexcept
+	{ Utils::burn(m_secret.data, ZT_SYMMETRIC_KEY_SIZE); }
+
+	ZT_INLINE SymmetricKey &operator=(const SymmetricKey &k) noexcept
 	{
-		Utils::burn(const_cast<uint8_t *>(secret), ZT_SYMMETRIC_KEY_SIZE);
-		Utils::memoryUnlock(this, sizeof(SymmetricKey));
+		m_secret = k.m_secret;
+		m_ts = k.m_ts;
+		m_initialNonce = k.m_initialNonce;
+		m_cipher.init(k.m_secret.data);
+		m_nonce.store(k.m_nonce.load(std::memory_order_relaxed), std::memory_order_relaxed);
+		return *this;
+	}
+
+	/**
+	 * Initialize or re-initialize a symmetric key
+	 *
+	 * @param ts Key timestamp
+	 * @param key Key (must be 48 bytes / 384 bits)
+	 */
+	ZT_INLINE void init(const int64_t ts, const void *const key) noexcept
+	{
+		Utils::copy< ZT_SYMMETRIC_KEY_SIZE >(m_secret.data, key);
+		m_ts = ts;
+		m_initialNonce = Utils::getSecureRandomU64() >> 1U;
+		m_cipher.init(key);
+		m_nonce.store(m_initialNonce, std::memory_order_relaxed);
 	}
 
 	/**
@@ -86,18 +99,43 @@ public:
 	 * @return Next unique IV for next message
 	 */
 	ZT_INLINE uint64_t nextMessage(const Address sender, const Address receiver) noexcept
-	{ return m_nonce.fetch_add(1) ^ (((uint64_t)(sender > receiver)) << 63U); }
+	{ return m_nonce.fetch_add(1, std::memory_order_relaxed) ^ (((uint64_t)(sender > receiver)) << 63U); }
 
 	/**
+	 * Get the number of times this key has been used.
+	 *
+	 * This is used along with the key's initial timestamp to determine key age
+	 * for ephemeral key rotation.
+	 *
 	 * @return Number of times nextMessage() has been called since object creation
 	 */
 	ZT_INLINE uint64_t odometer() const noexcept
-	{ return m_nonce.load() - m_initialNonce; }
+	{ return m_nonce.load(std::memory_order_relaxed) - m_initialNonce; }
+
+	/**
+	 * @return Key creation timestamp or -1 if this is a long-lived key
+	 */
+	ZT_INLINE int64_t timestamp() const noexcept
+	{ return m_ts; }
+
+	/**
+	 * @return 48-byte / 384-bit secret key
+	 */
+	ZT_INLINE const uint8_t *key() const noexcept
+	{ return m_secret.data; }
+
+	/**
+	 * @return AES cipher (already initialized with secret key)
+	 */
+	ZT_INLINE const AES &aes() const noexcept
+	{ return m_cipher; }
 
 private:
-	const uint64_t m_initialNonce;
+	Blob< ZT_SYMMETRIC_KEY_SIZE > m_secret;
+	int64_t m_ts;
+	uint64_t m_initialNonce;
+	AES m_cipher;
 	std::atomic< uint64_t > m_nonce;
-	std::atomic< int > __refCount;
 };
 
 } // namespace ZeroTier

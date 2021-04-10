@@ -168,7 +168,7 @@ const uint64_t ZERO256[4] = {0, 0, 0, 0};
 const char HEXCHARS[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
 const uint64_t s_mapNonce = getSecureRandomU64();
 
-bool secureEq(const void *a, const void *b, unsigned int len) noexcept
+bool secureEq(const void *const a, const void *const b, const unsigned int len) noexcept
 {
 	uint8_t diff = 0;
 	for (unsigned int i = 0; i < len; ++i)
@@ -176,7 +176,7 @@ bool secureEq(const void *a, const void *b, unsigned int len) noexcept
 	return (diff == 0);
 }
 
-void burn(volatile void *ptr, unsigned int len)
+void burn(volatile void *const ptr, const unsigned int len)
 {
 	static volatile uintptr_t foo = 0;
 	Utils::zero((void *)ptr, len);
@@ -323,7 +323,6 @@ void getSecureRandom(void *const buf, unsigned int bytes) noexcept
 
 		if (unlikely(!initialized)) {
 			initialized = true;
-			Utils::memoryLock(randomState, sizeof(randomState));
 			Utils::zero< sizeof(randomState) >(randomState);
 #ifdef __WINDOWS__
 			HCRYPTPROV cryptProvider = NULL;

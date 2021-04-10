@@ -211,8 +211,7 @@ public:
 			m_hti(m.m_remoteCaps.begin()),
 			m_parent(m),
 			m_nconf(nconf)
-		{
-		}
+		{}
 
 		ZT_INLINE CapabilityCredential *next() noexcept
 		{

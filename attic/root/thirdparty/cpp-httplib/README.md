@@ -154,20 +154,20 @@ auto res = cli.Post("/post", params);
 ### PUT
 
 ```c++
-res = cli.Put("/resource/foo", "text", "text/plain");
+res = cli.Put("/resource/s_arbitraryByte", "text", "text/plain");
 ```
 
 ### DELETE
 
 ```c++
-res = cli.Delete("/resource/foo");
+res = cli.Delete("/resource/s_arbitraryByte");
 ```
 
 ### OPTIONS
 
 ```c++
 res = cli.Options("*");
-res = cli.Options("/resource/foo");
+res = cli.Options("/resource/s_arbitraryByte");
 ```
 
 ### Connection Timeout

@@ -21,7 +21,7 @@
 #include "Spinlock.hpp"
 
 #define ZT_TINYMAP_BUCKETS 1024
-#define ZT_TINYMAP_BUCKET_MASK 1023
+#define ZT_TINYMAP_BUCKETS_MASK 1023
 #define ZT_TINYMAP_LOCKED_POINTER (~((uintptr_t)0))
 
 namespace ZeroTier {
@@ -67,7 +67,7 @@ public:
 	ZT_INLINE V get(const uint64_t key) noexcept
 	{
 		V tmp;
-		std::atomic<uintptr_t> &bucket = m_buckets[(key ^ (key >> 32)) & ZT_TINYMAP_BUCKET_MASK];
+		std::atomic<uintptr_t> &bucket = m_buckets[(key ^ (key >> 32)) & ZT_TINYMAP_BUCKETS_MASK];
 		for(;;) {
 			const uintptr_t vptr = bucket.exchange(ZT_TINYMAP_LOCKED_POINTER, std::memory_order_acquire);
 			if (likely(vptr != ZT_TINYMAP_LOCKED_POINTER)) {
@@ -89,7 +89,7 @@ public:
 
 	ZT_INLINE void set(const uint64_t key, const V &value)
 	{
-		std::atomic<uintptr_t> &bucket = m_buckets[(key ^ (key >> 32)) & ZT_TINYMAP_BUCKET_MASK];
+		std::atomic<uintptr_t> &bucket = m_buckets[(key ^ (key >> 32)) & ZT_TINYMAP_BUCKETS_MASK];
 		for(;;) {
 			uintptr_t vptr = bucket.exchange(ZT_TINYMAP_LOCKED_POINTER, std::memory_order_acquire);
 			if (likely(vptr != ZT_TINYMAP_LOCKED_POINTER)) {
@@ -115,7 +115,7 @@ public:
 
 	ZT_INLINE void erase(const uint64_t key)
 	{
-		std::atomic<uintptr_t> &bucket = m_buckets[(key ^ (key >> 32)) & ZT_TINYMAP_BUCKET_MASK];
+		std::atomic<uintptr_t> &bucket = m_buckets[(key ^ (key >> 32)) & ZT_TINYMAP_BUCKETS_MASK];
 		for(;;) {
 			uintptr_t vptr = bucket.exchange(ZT_TINYMAP_LOCKED_POINTER, std::memory_order_acquire);
 			if (likely(vptr != ZT_TINYMAP_LOCKED_POINTER)) {
@@ -142,6 +142,8 @@ public:
 private:
 	std::atomic<uintptr_t> m_buckets[ZT_TINYMAP_BUCKETS];
 };
+
+static_assert((ZT_TINYMAP_BUCKETS % (sizeof(uintptr_t) * 8)) == 0, "ZT_TINYMAP_BUCKETS is not a power of two");
 
 } // namespace ZeroTier
 

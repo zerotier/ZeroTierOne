@@ -144,7 +144,7 @@
 /**
  * Delay between calls to the pulse() method in Peer for each peer
  */
-#define ZT_PEER_PULSE_INTERVAL 8000
+#define ZT_PEER_PULSE_INTERVAL 10000
 
 /**
  * Interval between HELLOs to peers.
@@ -164,16 +164,6 @@
  * peers and their identity<>address mappings.
  */
 #define ZT_PEER_GLOBAL_TIMEOUT 2592000000LL
-
-/**
- * Interval between sort/prioritize of paths for a peer
- */
-#define ZT_PEER_PRIORITIZE_PATHS_INTERVAL 5000
-
-/**
- * Number of previous endpoints to cache in peer records.
- */
-#define ZT_PEER_ENDPOINT_CACHE_SIZE 8
 
 /**
  * Delay between requests for updated network autoconf information

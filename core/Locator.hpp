@@ -134,7 +134,7 @@ public:
 	/**
 	 * @return Endpoints specified in locator
 	 */
-	ZT_INLINE const Vector< std::pair< Endpoint, SharedPtr< const EndpointAttributes > > > &endpoints() const noexcept
+	ZT_INLINE const Vector <std::pair< Endpoint, SharedPtr< const EndpointAttributes > >> &endpoints() const noexcept
 	{ return m_endpoints; }
 
 	/**
@@ -201,6 +201,7 @@ public:
 
 	static constexpr int marshalSizeMax() noexcept
 	{ return ZT_LOCATOR_MARSHAL_SIZE_MAX; }
+
 	int marshal(uint8_t data[ZT_LOCATOR_MARSHAL_SIZE_MAX], bool excludeSignature = false) const noexcept;
 	int unmarshal(const uint8_t *data, int len) noexcept;
 
@@ -208,7 +209,7 @@ public:
 	{
 		const unsigned long es = (unsigned long)m_endpoints.size();
 		if ((m_revision == l.m_revision) && (m_signer == l.m_signer) && (es == (unsigned long)l.m_endpoints.size()) && (m_signature == l.m_signature)) {
-			for(unsigned long i=0;i<es;++i) {
+			for (unsigned long i = 0; i < es; ++i) {
 				if (m_endpoints[i].first != l.m_endpoints[i].first)
 					return false;
 				if (!m_endpoints[i].second) {
@@ -223,6 +224,7 @@ public:
 		}
 		return false;
 	}
+
 	ZT_INLINE bool operator!=(const Locator &l) const noexcept
 	{ return !(*this == l); }
 
@@ -231,7 +233,7 @@ private:
 
 	int64_t m_revision;
 	Fingerprint m_signer;
-	Vector< std::pair< Endpoint, SharedPtr< const EndpointAttributes > > > m_endpoints;
+	Vector <std::pair< Endpoint, SharedPtr< const EndpointAttributes > >> m_endpoints;
 	FCV< uint8_t, ZT_SIGNATURE_BUFFER_SIZE > m_signature;
 	std::atomic< int > __refCount;
 };

@@ -18,6 +18,24 @@
 
 namespace ZeroTier {
 
+CapabilityCredential::CapabilityCredential(
+	const uint32_t id,
+	const uint64_t nwid,
+	const int64_t timestamp,
+	const ZT_VirtualNetworkRule *const rules,
+	const unsigned int ruleCount) noexcept:
+	m_nwid(nwid),
+	m_timestamp(timestamp),
+	m_id(id),
+	m_ruleCount((ruleCount < ZT_MAX_CAPABILITY_RULES) ? ruleCount : ZT_MAX_CAPABILITY_RULES),
+	m_signatureLength(0)
+{
+	Utils::zero< sizeof(m_rules) >(m_rules);
+	if (m_ruleCount > 0)
+		Utils::copy(m_rules, rules, sizeof(ZT_VirtualNetworkRule) * m_ruleCount);
+	Utils::zero< sizeof(m_signature) >(m_signature);
+}
+
 bool CapabilityCredential::sign(const Identity &from, const Address &to) noexcept
 {
 	uint8_t buf[ZT_CAPABILITY_MARSHAL_SIZE_MAX + 16];

@@ -65,16 +65,12 @@ public:
 	 * @param rules Network flow rules for this capability
 	 * @param ruleCount Number of flow rules
 	 */
-	ZT_INLINE CapabilityCredential(const uint32_t id, const uint64_t nwid, const int64_t timestamp, const ZT_VirtualNetworkRule *const rules, const unsigned int ruleCount) noexcept: // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
-		m_nwid(nwid),
-		m_timestamp(timestamp),
-		m_id(id),
-		m_ruleCount((ruleCount < ZT_MAX_CAPABILITY_RULES) ? ruleCount : ZT_MAX_CAPABILITY_RULES),
-		m_signatureLength(0)
-	{
-		if (m_ruleCount > 0)
-			Utils::copy(m_rules, rules, sizeof(ZT_VirtualNetworkRule) * m_ruleCount);
-	}
+	CapabilityCredential(
+		const uint32_t id,
+		const uint64_t nwid,
+		const int64_t timestamp,
+		const ZT_VirtualNetworkRule *const rules,
+		const unsigned int ruleCount) noexcept;
 
 	/**
 	 * @return Rules -- see ruleCount() for size of array
@@ -139,7 +135,6 @@ public:
 	{ return ZT_CAPABILITY_MARSHAL_SIZE_MAX; }
 
 	int marshal(uint8_t data[ZT_CAPABILITY_MARSHAL_SIZE_MAX], bool forSign = false) const noexcept;
-
 	int unmarshal(const uint8_t *data, int len) noexcept;
 
 	/**

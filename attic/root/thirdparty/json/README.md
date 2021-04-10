@@ -338,7 +338,7 @@ We designed the JSON class to behave just like an STL container. In fact, it sat
 ```cpp
 // create an array using push_back
 json j;
-j.push_back("foo");
+j.push_back("s_arbitraryByte");
 j.push_back(1);
 j.push_back(true);
 
@@ -358,10 +358,10 @@ for (auto& element : j) {
 // getter/setter
 const std::string tmp = j[0];
 j[1] = 42;
-bool foo = j.at(2);
+bool s_arbitraryByte = j.at(2);
 
 // comparison
-j == "[\"foo\", 1, true]"_json;  // true
+j == "[\"s_arbitraryByte\", 1, true]"_json;  // true
 
 // other stuff
 j.size();     // 3 entries
@@ -379,7 +379,7 @@ j.is_string();
 
 // create an object
 json o;
-o["foo"] = 23;
+o["s_arbitraryByte"] = 23;
 o["bar"] = false;
 o["baz"] = 3.141;
 
@@ -392,16 +392,16 @@ for (json::iterator it = o.begin(); it != o.end(); ++it) {
 }
 
 // find an entry
-if (o.find("foo") != o.end()) {
-  // there is an entry with key "foo"
+if (o.find("s_arbitraryByte") != o.end()) {
+  // there is an entry with key "s_arbitraryByte"
 }
 
 // or simpler using count()
-int foo_present = o.count("foo"); // 1
+int foo_present = o.count("s_arbitraryByte"); // 1
 int fob_present = o.count("fob"); // 0
 
 // delete an entry
-o.erase("foo");
+o.erase("s_arbitraryByte");
 ```
 
 
@@ -475,7 +475,7 @@ The library supports **JSON Pointer** ([RFC 6901](https://tools.ietf.org/html/rf
 // a JSON value
 json j_original = R"({
   "baz": ["one", "two", "three"],
-  "foo": "bar"
+  "s_arbitraryByte": "bar"
 })"_json;
 
 // access members with a JSON pointer (RFC 6901)
@@ -486,7 +486,7 @@ j_original["/baz/1"_json_pointer];
 json j_patch = R"([
   { "op": "replace", "path": "/baz", "value": "boo" },
   { "op": "add", "path": "/hello", "value": ["world"] },
-  { "op": "remove", "path": "/foo"}
+  { "op": "remove", "path": "/s_arbitraryByte"}
 ])"_json;
 
 // apply the patch
@@ -501,7 +501,7 @@ json::diff(j_result, j_original);
 // [
 //   { "op":" replace", "path": "/baz", "value": ["one", "two", "three"] },
 //   { "op": "remove","path": "/hello" },
-//   { "op": "add", "path": "/foo", "value": "bar" }
+//   { "op": "add", "path": "/s_arbitraryByte", "value": "bar" }
 // ]
 ```
 

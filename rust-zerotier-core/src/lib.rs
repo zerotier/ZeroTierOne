@@ -61,7 +61,7 @@ pub use dictionary::*;
 base64_serde_type!(Base64Standard, base64::URL_SAFE_NO_PAD);
 
 /// Recommended minimum thread stack size for background threads.
-pub const RECOMMENDED_THREAD_STACK_SIZE: usize = 262144;
+pub const RECOMMENDED_THREAD_STACK_SIZE: usize = 524288;
 
 /// Default TCP and UDP port.
 pub const DEFAULT_PORT: u16 = ztcore::ZT_DEFAULT_PORT as u16;

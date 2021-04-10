@@ -206,7 +206,7 @@ void VL1::onRemotePacket(CallContext &cc, const int64_t localSocket, const InetA
 		int pktSize = 0;
 
 		static_assert(ZT_PROTO_PACKET_VERB_INDEX < ZT_PROTO_MIN_PACKET_LENGTH, "overflow");
-		if (unlikely(((cipher == ZT_PROTO_CIPHER_SUITE__POLY1305_NONE) || (cipher == ZT_PROTO_CIPHER_SUITE__NONE)) && ((hdr[ZT_PROTO_PACKET_VERB_INDEX] & ZT_PROTO_VERB_MASK) == Protocol::VERB_HELLO))) {
+		if (unlikely(((cipher == ZT_PROTO_CIPHER_POLY1305_NONE) || (cipher == ZT_PROTO_CIPHER_NONE)) && ((hdr[ZT_PROTO_PACKET_VERB_INDEX] & ZT_PROTO_VERB_MASK) == Protocol::VERB_HELLO))) {
 			// Handle unencrypted HELLO packets.
 			pktSize = pktv.mergeCopy(*pkt);
 			if (unlikely(pktSize < ZT_PROTO_MIN_PACKET_LENGTH)) {
@@ -228,7 +228,7 @@ void VL1::onRemotePacket(CallContext &cc, const int64_t localSocket, const InetA
 		if (likely(peer)) {
 			switch (cipher) {
 
-				case ZT_PROTO_CIPHER_SUITE__POLY1305_NONE: {
+				case ZT_PROTO_CIPHER_POLY1305_NONE: {
 					uint8_t perPacketKey[ZT_SALSA20_KEY_SIZE];
 					Protocol::salsa2012DeriveKey(peer->rawIdentityKey(), perPacketKey, *pktv[0].b, pktv.totalSize());
 					p_PolyCopyFunction s20cf(perPacketKey, &packetId);
@@ -252,7 +252,7 @@ void VL1::onRemotePacket(CallContext &cc, const int64_t localSocket, const InetA
 				}
 					break;
 
-				case ZT_PROTO_CIPHER_SUITE__POLY1305_SALSA2012: {
+				case ZT_PROTO_CIPHER_POLY1305_SALSA2012: {
 					uint8_t perPacketKey[ZT_SALSA20_KEY_SIZE];
 					Protocol::salsa2012DeriveKey(peer->rawIdentityKey(), perPacketKey, *pktv[0].b, pktv.totalSize());
 					p_SalsaPolyCopyFunction s20cf(perPacketKey, &packetId);
@@ -276,12 +276,12 @@ void VL1::onRemotePacket(CallContext &cc, const int64_t localSocket, const InetA
 				}
 					break;
 
-				case ZT_PROTO_CIPHER_SUITE__NONE: {
+				case ZT_PROTO_CIPHER_NONE: {
 					// TODO
 				}
 					break;
 
-				case ZT_PROTO_CIPHER_SUITE__AES_GMAC_SIV: {
+				case ZT_PROTO_CIPHER_AES_GMAC_SIV: {
 					// TODO
 				}
 					break;
@@ -455,19 +455,18 @@ void VL1::m_sendPendingWhois(CallContext &cc)
 	}
 
 	if (!toSend.empty()) {
-		const SharedPtr< SymmetricKey > key(root->key());
+		SymmetricKey &key = root->key();
 		uint8_t outp[ZT_DEFAULT_UDP_MTU - ZT_PROTO_MIN_PACKET_LENGTH];
 		Vector< Address >::iterator a(toSend.begin());
 		while (a != toSend.end()) {
-			const uint64_t packetId = key->nextMessage(m_ctx.identity.address(), root->address());
+			const uint64_t packetId = key.nextMessage(m_ctx.identity.address(), root->address());
 			int p = Protocol::newPacket(outp, packetId, root->address(), m_ctx.identity.address(), Protocol::VERB_WHOIS);
 			while ((a != toSend.end()) && (p < (sizeof(outp) - ZT_ADDRESS_LENGTH))) {
 				a->copyTo(outp + p);
 				++a;
 				p += ZT_ADDRESS_LENGTH;
 			}
-			Protocol::armor(outp, p, key, root->cipher());
-			m_ctx.expect->sending(packetId, cc.ticks);
+			m_ctx.expect->sending(Protocol::armor(outp, p, key, root->cipher()), cc.ticks);
 			root->send(m_ctx, cc, outp, p, rootPath);
 		}
 	}
@@ -578,7 +577,7 @@ SharedPtr< Peer > VL1::m_HELLO(CallContext &cc, const SharedPtr< Path > &path, B
 		return SharedPtr< Peer >();
 	}
 
-	const SharedPtr< SymmetricKey > key(peer->identityKey());
+	SymmetricKey &key = peer->key();
 
 	if (protoVersion >= 11) {
 		// V2.x and newer supports an encrypted section and has a new OK format.
@@ -609,7 +608,7 @@ SharedPtr< Peer > VL1::m_HELLO(CallContext &cc, const SharedPtr< Path > &path, B
 		}
 	}
 
-	Protocol::newPacket(pkt, key->nextMessage(m_ctx.identity.address(), peer->address()), peer->address(), m_ctx.identity.address(), Protocol::VERB_OK);
+	Protocol::newPacket(pkt, key.nextMessage(m_ctx.identity.address(), peer->address()), peer->address(), m_ctx.identity.address(), Protocol::VERB_OK);
 	ii = ZT_PROTO_PACKET_PAYLOAD_START;
 	pkt.wI8(ii, Protocol::VERB_HELLO);
 	pkt.wI64(ii, packetId);

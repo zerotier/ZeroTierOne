@@ -24,7 +24,6 @@
 namespace ZeroTier {
 
 class Identity;
-
 class Context;
 
 /**

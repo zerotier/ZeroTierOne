@@ -155,7 +155,6 @@ public:
 	{ return ZT_CERTIFICATEOFOWNERSHIP_MARSHAL_SIZE_MAX; }
 
 	int marshal(uint8_t data[ZT_CERTIFICATEOFOWNERSHIP_MARSHAL_SIZE_MAX], bool forSign = false) const noexcept;
-
 	int unmarshal(const uint8_t *data, int len) noexcept;
 
 	// Provides natural sort order by ID

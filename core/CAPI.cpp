@@ -121,7 +121,7 @@ ZT_MAYBE_UNUSED enum ZT_ResultCode ZT_Node_processWirePacket(
 	const void *packetData,
 	unsigned int packetLength,
 	int isZtBuffer,
-	volatile int64_t *nextBackgroundTaskDeadline)
+	volatile int64_t *)
 {
 	try {
 		ZeroTier::CallContext cc(clock, ticks, tptr);
@@ -149,7 +149,7 @@ ZT_MAYBE_UNUSED enum ZT_ResultCode ZT_Node_processVirtualNetworkFrame(
 	const void *frameData,
 	unsigned int frameLength,
 	int isZtBuffer,
-	volatile int64_t *nextBackgroundTaskDeadline)
+	volatile int64_t *)
 {
 	try {
 		ZeroTier::CallContext cc(clock, ticks, tptr);
@@ -269,9 +269,9 @@ ZT_MAYBE_UNUSED const ZT_Identity *ZT_Node_identity(ZT_Node *node)
 
 ZT_MAYBE_UNUSED void ZT_Node_status(
 	ZT_Node *node,
-	int64_t clock,
-	int64_t ticks,
-	void *tptr,
+	int64_t,
+	int64_t,
+	void *,
 	ZT_NodeStatus *status)
 {
 	try {
@@ -295,9 +295,9 @@ ZT_MAYBE_UNUSED ZT_PeerList *ZT_Node_peers(
 
 ZT_MAYBE_UNUSED ZT_VirtualNetworkConfig *ZT_Node_networkConfig(
 	ZT_Node *node,
-	int64_t clock,
-	int64_t ticks,
-	void *tptr,
+	int64_t,
+	int64_t,
+	void *,
 	uint64_t nwid)
 {
 	try {
@@ -328,9 +328,9 @@ ZT_MAYBE_UNUSED void ZT_Node_setNetworkUserPtr(
 
 ZT_MAYBE_UNUSED void ZT_Node_setInterfaceAddresses(
 	ZT_Node *node,
-	int64_t clock,
-	int64_t ticks,
-	void *tptr,
+	int64_t,
+	int64_t,
+	void *,
 	const ZT_InterfaceAddress *addrs,
 	unsigned int addrCount)
 {
@@ -374,9 +374,9 @@ ZT_MAYBE_UNUSED enum ZT_ResultCode ZT_Node_deleteCertificate(
 
 ZT_MAYBE_UNUSED ZT_CertificateList *ZT_Node_listCertificates(
 	ZT_Node *node,
-	int64_t clock,
-	int64_t ticks,
-	void *tptr)
+	int64_t,
+	int64_t,
+	void *)
 {
 	try {
 		return reinterpret_cast<ZeroTier::Node *>(node)->listCertificates();
@@ -417,7 +417,7 @@ ZT_MAYBE_UNUSED void ZT_Node_setController(
 ZT_MAYBE_UNUSED ZT_Locator *ZT_Locator_create(
 	int64_t rev,
 	const ZT_Endpoint *endpoints,
-	const ZT_EndpointAttributes *endpointAttributes,
+	const ZT_EndpointAttributes *,
 	unsigned int endpointCount,
 	const ZT_Identity *signer)
 {

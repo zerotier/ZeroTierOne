@@ -58,7 +58,7 @@ public:
 		// the log size and then if it's a new bucket setting it or otherwise adding
 		// to it.
 		const unsigned long bucket = ((unsigned long)(ts / TUNIT)) % LSIZE;
-		if (m_bucket.exchange(bucket, std::memory_order_relaxed) != bucket) {
+		if (unlikely(m_bucket.exchange(bucket, std::memory_order_relaxed) != bucket)) {
 			m_totalExclCounts.fetch_add(m_counts[bucket].exchange(count, std::memory_order_relaxed), std::memory_order_relaxed);
 		} else {
 			m_counts[bucket].fetch_add(count, std::memory_order_relaxed);

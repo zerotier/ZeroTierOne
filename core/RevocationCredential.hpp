@@ -117,7 +117,6 @@ public:
 	{ return ZT_REVOCATION_MARSHAL_SIZE_MAX; }
 
 	int marshal(uint8_t data[ZT_REVOCATION_MARSHAL_SIZE_MAX], bool forSign = false) const noexcept;
-
 	int unmarshal(const uint8_t *restrict data, int len) noexcept;
 
 private:

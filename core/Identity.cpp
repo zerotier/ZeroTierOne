@@ -29,10 +29,10 @@ namespace {
 // This is the memory-intensive hash function used to compute v0 identities from v0 public keys.
 #define ZT_V0_IDENTITY_GEN_MEMORY 2097152
 
-void identityV0ProofOfWorkFrankenhash(const void *const restrict publicKey, unsigned int publicKeyBytes, void *const restrict digest, void *const restrict genmem) noexcept
+void identityV0ProofOfWorkFrankenhash(const void *const restrict c25519CombinedPublicKey, void *const restrict digest, void *const restrict genmem) noexcept
 {
 	// Digest publicKey[] to obtain initial digest
-	SHA512(digest, publicKey, publicKeyBytes);
+	SHA512(digest, c25519CombinedPublicKey, ZT_C25519_COMBINED_PUBLIC_KEY_SIZE);
 
 	// Initialize genmem[] using Salsa20 in a CBC-like configuration since
 	// ordinary Salsa20 is randomly seek-able. This is good for a cipher
@@ -55,8 +55,8 @@ void identityV0ProofOfWorkFrankenhash(const void *const restrict publicKey, unsi
 
 	// Render final digest using genmem as a lookup table
 	for (unsigned long i = 0; i < (ZT_V0_IDENTITY_GEN_MEMORY / sizeof(uint64_t));) {
-		unsigned long idx1 = (unsigned long)(Utils::ntoh(((uint64_t *)genmem)[i++]) % (64 / sizeof(uint64_t))); // NOLINT(hicpp-use-auto,modernize-use-auto)
-		unsigned long idx2 = (unsigned long)(Utils::ntoh(((uint64_t *)genmem)[i++]) % (ZT_V0_IDENTITY_GEN_MEMORY / sizeof(uint64_t))); // NOLINT(hicpp-use-auto,modernize-use-auto)
+		unsigned long idx1 = (unsigned long)(Utils::ntoh(((uint64_t *)genmem)[i++]) % (64 / sizeof(uint64_t)));
+		unsigned long idx2 = (unsigned long)(Utils::ntoh(((uint64_t *)genmem)[i++]) % (ZT_V0_IDENTITY_GEN_MEMORY / sizeof(uint64_t)));
 		uint64_t tmp = ((uint64_t *)genmem)[idx2];
 		((uint64_t *)genmem)[idx2] = ((uint64_t *)digest)[idx1];
 		((uint64_t *)digest)[idx1] = tmp;
@@ -71,12 +71,12 @@ struct identityV0ProofOfWorkCriteria
 
 	ZT_INLINE bool operator()(const uint8_t pub[ZT_C25519_COMBINED_PUBLIC_KEY_SIZE]) const noexcept
 	{
-		identityV0ProofOfWorkFrankenhash(pub, ZT_C25519_COMBINED_PUBLIC_KEY_SIZE, digest, genmem);
+		identityV0ProofOfWorkFrankenhash(pub, digest, genmem);
 		return (digest[0] < 17);
 	}
 
-	unsigned char *digest;
-	char *genmem;
+	unsigned char *restrict digest;
+	char *restrict genmem;
 };
 
 void v1ChallengeFromPub(const uint8_t pub[ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE], uint64_t challenge[4])
@@ -168,7 +168,7 @@ bool Identity::locallyValidate() const noexcept
 					char *const genmem = (char *)malloc(ZT_V0_IDENTITY_GEN_MEMORY);
 					if (!genmem)
 						return false;
-					identityV0ProofOfWorkFrankenhash(m_pub, ZT_C25519_COMBINED_PUBLIC_KEY_SIZE, digest, genmem);
+					identityV0ProofOfWorkFrankenhash(m_pub, digest, genmem);
 					free(genmem);
 					return ((Address(digest + 59) == m_fp.address) && (digest[0] < 17));
 				}
@@ -254,7 +254,7 @@ bool Identity::verify(const void *data, unsigned int len, const void *sig, unsig
 bool Identity::agree(const Identity &id, uint8_t key[ZT_SYMMETRIC_KEY_SIZE]) const
 {
 	uint8_t rawkey[128], h[64];
-	if (likely(m_hasPrivate)) {
+	if (m_hasPrivate) {
 		if ((m_type == C25519) || (id.m_type == C25519)) {
 			// If we are a C25519 key we can agree with another C25519 key or with only the
 			// C25519 portion of a type 1 P-384 key.

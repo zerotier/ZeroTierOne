@@ -20,7 +20,7 @@
 namespace ZeroTier {
 
 /**
- * An introspective reference counted pointer.
+ * An intrusive reference counted pointer.
  *
  * Classes must have an atomic<int> field called __refCount and set this class
  * as a friend to be used with this.
@@ -35,17 +35,17 @@ public:
 	explicit ZT_INLINE SharedPtr(T *obj) noexcept: m_ptr(obj)
 	{ if (likely(obj != nullptr)) const_cast<std::atomic< int > *>(&(obj->__refCount))->fetch_add(1, std::memory_order_acquire); }
 
-	ZT_INLINE SharedPtr(const SharedPtr &sp) noexcept: m_ptr(sp._getAndInc())
+	ZT_INLINE SharedPtr(const SharedPtr &sp) noexcept: m_ptr(sp.m_acquire())
 	{}
 
 	ZT_INLINE ~SharedPtr()
-	{ _release(); }
+	{ m_release(); }
 
 	ZT_INLINE SharedPtr &operator=(const SharedPtr &sp)
 	{
 		if (likely(m_ptr != sp.m_ptr)) {
-			T *const p = sp._getAndInc();
-			_release();
+			T *const p = sp.m_acquire();
+			m_release();
 			m_ptr = p;
 		}
 		return *this;
@@ -53,12 +53,15 @@ public:
 
 	ZT_INLINE void set(T *ptr) noexcept
 	{
-		_release();
+		m_release();
 		const_cast<std::atomic< int > *>(&((m_ptr = ptr)->__refCount))->fetch_add(1, std::memory_order_acquire);
 	}
 
 	/**
-	 * Swap with another pointer 'for free' without ref count overhead
+	 * Swap with another pointer.
+	 *
+	 * This is much faster than using assignment as it requires no atomic
+	 * operations at all.
 	 *
 	 * @param with Pointer to swap with
 	 */
@@ -70,16 +73,17 @@ public:
 	}
 
 	/**
-	 * Set this value to one from another pointer and set that pointer to zero (take ownership from)
+	 * Move pointer from another SharedPtr to this one, zeroing target.
 	 *
-	 * This is faster than setting and zeroing the source pointer since it
-	 * avoids a synchronized reference count change.
+	 * This is faster than assignment as it saves one atomically synchronized
+	 * increment. If this pointer is null there are no atomic operations at
+	 * all.
 	 *
-	 * @param from Origin pointer; will be zeroed
+	 * @param from Source pointer; will be changed to NULL
 	 */
 	ZT_INLINE void move(SharedPtr &from)
 	{
-		_release();
+		m_release();
 		m_ptr = from.m_ptr;
 		from.m_ptr = nullptr;
 	}
@@ -104,21 +108,19 @@ public:
 	 */
 	ZT_INLINE void zero()
 	{
-		_release();
+		m_release();
 		m_ptr = nullptr;
 	}
 
 	/**
-	 * Set pointer to NULL and delete object if reference count is only 1
+	 * Return held object and null this pointer if reference count is one.
 	 *
-	 * This can be called periodically to implement something like a weak
-	 * reference as it exists in other more managed languages like Java,
-	 * but with the caveat that it only works if there is only one remaining
-	 * SharedPtr to be treated as weak.
+	 * If the reference count is one, the reference count is changed to zero
+	 * and the object is returned. It is not deleted; the caller must do that
+	 * if that is desired. This pointer will be set to NULL. If the reference
+	 * count is not one nothing happens and NULL is returned.
 	 *
-	 * This does not delete the object. It returns it as a naked pointer.
-	 *
-	 * @return Pointer to T if reference count was only one (this shared ptr is left NULL)
+	 * @return Pointer or NULL if more than one reference
 	 */
 	ZT_INLINE T *weakGC()
 	{
@@ -136,20 +138,8 @@ public:
 		}
 	}
 
-	/**
-	 * Get the current reference count for this object, which can change at any time
-	 *
-	 * @return Number of references according to this object's ref count or 0 if NULL
-	 */
-	ZT_INLINE int references() noexcept
-	{
-		if (likely(m_ptr != nullptr))
-			return m_ptr->__refCount.load(std::memory_order_relaxed);
-		return 0;
-	}
-
 	ZT_INLINE unsigned long hashCode() const noexcept
-	{ return (unsigned long)Utils::hash64((uint64_t)((uintptr_t)m_ptr)); }
+	{ return (unsigned long)((uintptr_t)m_ptr + (uintptr_t)Utils::hash32((uint32_t)m_ptr)); }
 
 	ZT_INLINE bool operator==(const SharedPtr &sp) const noexcept
 	{ return (m_ptr == sp.m_ptr); }
@@ -170,14 +160,14 @@ public:
 	{ return (reinterpret_cast<const uint8_t *>(m_ptr) <= reinterpret_cast<const uint8_t *>(sp.m_ptr)); }
 
 private:
-	ZT_INLINE T *_getAndInc() const noexcept
+	ZT_INLINE T *m_acquire() const noexcept
 	{
 		if (likely(m_ptr != nullptr))
 			const_cast<std::atomic< int > *>(&(m_ptr->__refCount))->fetch_add(1, std::memory_order_acquire);
 		return m_ptr;
 	}
 
-	ZT_INLINE void _release() const noexcept
+	ZT_INLINE void m_release() const noexcept
 	{
 		if (unlikely((m_ptr != nullptr)&&(const_cast<std::atomic< int > *>(&(m_ptr->__refCount))->fetch_sub(1, std::memory_order_release) <= 1)))
 			delete m_ptr;

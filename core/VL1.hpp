@@ -65,8 +65,6 @@ public:
 	void onRemotePacket(CallContext &cc, int64_t localSocket, const InetAddress &fromAddr, SharedPtr< Buf > &data, unsigned int len) noexcept;
 
 private:
-	const Context &m_ctx;
-
 	void m_relay(CallContext &cc, const SharedPtr< Path > &path, Address destination, SharedPtr< Buf > &pkt, int pktSize);
 	void m_sendPendingWhois(CallContext &cc);
 	SharedPtr< Peer > m_HELLO(CallContext &cc, const SharedPtr< Path > &path, Buf &pkt, int packetSize);
@@ -78,6 +76,8 @@ private:
 	bool m_PUSH_DIRECT_PATHS(CallContext &cc, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, const SharedPtr< Peer > &peer, Buf &pkt, int packetSize);
 	bool m_USER_MESSAGE(CallContext &cc, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, const SharedPtr< Peer > &peer, Buf &pkt, int packetSize);
 	bool m_ENCAP(CallContext &cc, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, const SharedPtr< Peer > &peer, Buf &pkt, int packetSize);
+
+	const Context &m_ctx;
 
 	// Defragmentation engine for handling inbound packets with more than one fragment.
 	Defragmenter< ZT_MAX_PACKET_FRAGMENTS > m_inputPacketAssembler;

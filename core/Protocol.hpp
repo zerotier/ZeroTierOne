@@ -106,6 +106,8 @@
  * 9  - 1.2.0 ... 1.2.14
  * 10 - 1.4.0 ... 1.4.6
  *    + Contained early pre-alpha versions of multipath, which are deprecated
+ * 11 - 1.6.0 ... 2.0.0
+ *    + Supports AES-GMAC-SIV symmetric crypto, backported from v2 tree.
  * 20 - 2.0.0 ... CURRENT
  *    + New more WAN-efficient P2P-assisted multicast algorithm
  *    + HELLO and OK(HELLO) include an extra HMAC to harden authentication
@@ -156,22 +158,27 @@
 /**
  * NONE/Poly1305 (used for HELLO for backward compatibility)
  */
-#define ZT_PROTO_CIPHER_SUITE__POLY1305_NONE 0
+#define ZT_PROTO_CIPHER_POLY1305_NONE 0
 
 /**
  * Salsa2012/Poly1305 (legacy)
  */
-#define ZT_PROTO_CIPHER_SUITE__POLY1305_SALSA2012 1
+#define ZT_PROTO_CIPHER_POLY1305_SALSA2012 1
 
 /**
  * Deprecated, not currently used.
  */
-#define ZT_PROTO_CIPHER_SUITE__NONE 2
+#define ZT_PROTO_CIPHER_NONE 2
 
 /**
  * AES-GMAC-SIV
  */
-#define ZT_PROTO_CIPHER_SUITE__AES_GMAC_SIV 3
+#define ZT_PROTO_CIPHER_AES_GMAC_SIV 3
+
+/**
+ * Ephemeral key consisting of both a C25519 and a NIST P-384 key pair.
+ */
+#define ZT_PROTO_EPHEMERAL_KEY_TYPE_C25519_P384 1
 
 /**
  * Minimum viable length for a fragment
@@ -245,8 +252,8 @@
 #define ZT_PROTO_HELLO_NODE_META_EPHEMERAL_PUBLIC           "e"
 #define ZT_PROTO_HELLO_NODE_META_EPHEMERAL_ACK              "E"
 
-static_assert(ZT_PROTO_MAX_PACKET_LENGTH < ZT_BUF_MEM_SIZE,"maximum packet length won't fit in Buf");
-static_assert(ZT_PROTO_PACKET_ENCRYPTED_SECTION_START == (ZT_PROTO_MIN_PACKET_LENGTH-1),"encrypted packet section must start right before protocol verb at one less than minimum packet size");
+static_assert(ZT_PROTO_MAX_PACKET_LENGTH < ZT_BUF_MEM_SIZE, "maximum packet length won't fit in Buf");
+static_assert(ZT_PROTO_PACKET_ENCRYPTED_SECTION_START == (ZT_PROTO_MIN_PACKET_LENGTH - 1), "encrypted packet section must start right before protocol verb at one less than minimum packet size");
 
 namespace ZeroTier {
 namespace Protocol {
@@ -328,17 +335,20 @@ enum Verb
 	 * Dictionary fields (defines start with ZT_PROTO_HELLO_NODE_META_):
 	 * 
 	 *   INSTANCE_ID - a 64-bit unique value generated on each node start
-	 *   PREFERRED_CIPHER_MODE - preferred symmetric encryption mode
 	 *   LOCATOR - signed record enumerating this node's trusted contact points
 	 *   EPHEMERAL_PUBLIC - Ephemeral public key(s)
 	 * 
-	 * OK will contain EPHEMERAL_PUBLIC (of the sender) and:
+	 * OK will contain EPHEMERAL_PUBLIC of the responding node and:
 	 * 
-	 *   EPHEMERAL_ACK - SHA384 of EPHEMERAL_PUBLIC received
+	 *   EPHEMERAL_ACK - SHA384(EPHEMERAL_PUBLIC from HELLO)
 	 *
 	 * The following optional fields may also be present:
 	 *
+	 *   PREFERRED_CIPHER - preferred symmetric encryption mode
 	 *   HOSTNAME - arbitrary short host name for this node
+	 *   ARCH - system architecture (CPU type, bits, etc.)
+	 *   OSNAME - system operating system name
+	 *   OSVERSION - operating system version
 	 *   CONTACT - arbitrary short contact information string for this node
 	 *   SOFTWARE_VENDOR - short name or description of vendor, such as a URL
 	 *   COMPLIANCE - bit mask containing bits for e.g. a FIPS-compliant node
@@ -674,31 +684,53 @@ enum Verb
 };
 
 #ifdef ZT_DEBUG_SPEW
+
 static ZT_INLINE const char *verbName(const Verb v) noexcept
 {
-	switch(v) {
-		case VERB_NOP:                        return "NOP";
-		case VERB_HELLO:                      return "HELLO";
-		case VERB_ERROR:                      return "ERROR";
-		case VERB_OK:                         return "OK";
-		case VERB_WHOIS:                      return "WHOIS";
-		case VERB_RENDEZVOUS:                 return "RENDEZVOUS";
-		case VERB_FRAME:                      return "FRAME";
-		case VERB_EXT_FRAME:                  return "EXT_FRAME";
-		case VERB_ECHO:                       return "ECHO";
-		case VERB_MULTICAST_LIKE:             return "MULTICAST_LIKE";
-		case VERB_NETWORK_CREDENTIALS:        return "NETWORK_CREDENTIALS";
-		case VERB_NETWORK_CONFIG_REQUEST:     return "NETWORK_CONFIG_REQUEST";
-		case VERB_NETWORK_CONFIG:             return "NETWORK_CONFIG";
-		case VERB_MULTICAST_GATHER:           return "MULTICAST_GATHER";
-		case VERB_MULTICAST_FRAME_deprecated: return "MULTICAST_FRAME_deprecated";
-		case VERB_PUSH_DIRECT_PATHS:          return "PUSH_DIRECT_PATHS";
-		case VERB_USER_MESSAGE:               return "USER_MESSAGE";
-		case VERB_MULTICAST:                  return "MULTICAST";
-		case VERB_ENCAP:                      return "ENCAP";
-		default:                              return "(unknown)";
+	switch (v) {
+		case VERB_NOP:
+			return "NOP";
+		case VERB_HELLO:
+			return "HELLO";
+		case VERB_ERROR:
+			return "ERROR";
+		case VERB_OK:
+			return "OK";
+		case VERB_WHOIS:
+			return "WHOIS";
+		case VERB_RENDEZVOUS:
+			return "RENDEZVOUS";
+		case VERB_FRAME:
+			return "FRAME";
+		case VERB_EXT_FRAME:
+			return "EXT_FRAME";
+		case VERB_ECHO:
+			return "ECHO";
+		case VERB_MULTICAST_LIKE:
+			return "MULTICAST_LIKE";
+		case VERB_NETWORK_CREDENTIALS:
+			return "NETWORK_CREDENTIALS";
+		case VERB_NETWORK_CONFIG_REQUEST:
+			return "NETWORK_CONFIG_REQUEST";
+		case VERB_NETWORK_CONFIG:
+			return "NETWORK_CONFIG";
+		case VERB_MULTICAST_GATHER:
+			return "MULTICAST_GATHER";
+		case VERB_MULTICAST_FRAME_deprecated:
+			return "MULTICAST_FRAME_deprecated";
+		case VERB_PUSH_DIRECT_PATHS:
+			return "PUSH_DIRECT_PATHS";
+		case VERB_USER_MESSAGE:
+			return "USER_MESSAGE";
+		case VERB_MULTICAST:
+			return "MULTICAST";
+		case VERB_ENCAP:
+			return "ENCAP";
+		default:
+			return "(unknown)";
 	}
 }
+
 #endif
 
 /**
@@ -784,7 +816,7 @@ enum NetworkConfigFlag
  * @param in Input key (32 bytes)
  * @param out Output buffer (32 bytes)
  */
-static ZT_INLINE void salsa2012DeriveKey(const uint8_t *const in,uint8_t *const out,const Buf &packet,const unsigned int packetSize) noexcept
+static ZT_INLINE void salsa2012DeriveKey(const uint8_t *const in, uint8_t *const out, const Buf &packet, const unsigned int packetSize) noexcept
 {
 	// IV and source/destination addresses. Using the addresses divides the
 	// key space into two halves-- A->B and B->A (since order will change).
@@ -827,7 +859,7 @@ static ZT_INLINE void salsa2012DeriveKey(const uint8_t *const in,uint8_t *const 
  * @param verb Protocol verb
  * @return Index of packet start
  */
-static ZT_INLINE int newPacket(uint8_t pkt[28],const uint64_t packetId,const Address destination,const Address source,const Verb verb) noexcept
+static ZT_INLINE int newPacket(uint8_t pkt[28], const uint64_t packetId, const Address destination, const Address source, const Verb verb) noexcept
 {
 	Utils::storeMachineEndian< uint64_t >(pkt + ZT_PROTO_PACKET_ID_INDEX, packetId);
 	destination.copyTo(pkt + ZT_PROTO_PACKET_DESTINATION_INDEX);
@@ -837,7 +869,9 @@ static ZT_INLINE int newPacket(uint8_t pkt[28],const uint64_t packetId,const Add
 	pkt[ZT_PROTO_PACKET_VERB_INDEX] = (uint8_t)verb;
 	return ZT_PROTO_PACKET_VERB_INDEX + 1;
 }
-static ZT_INLINE int newPacket(Buf &pkt,const uint64_t packetId,const Address destination,const Address source,const Verb verb) noexcept { return newPacket(pkt.unsafeData,packetId,destination,source,verb); }
+
+static ZT_INLINE int newPacket(Buf &pkt, const uint64_t packetId, const Address destination, const Address source, const Verb verb) noexcept
+{ return newPacket(pkt.unsafeData, packetId, destination, source, verb); }
 
 /**
  * Encrypt and compute packet MAC
@@ -846,9 +880,11 @@ static ZT_INLINE int newPacket(Buf &pkt,const uint64_t packetId,const Address de
  * @param packetSize Packet size, must be at least ZT_PROTO_MIN_PACKET_LENGTH or crash will occur
  * @param key Key to use for encryption
  * @param cipherSuite Cipher suite to use for AEAD encryption or just MAC
+ * @return Packet ID of packet (which may change!)
  */
-static ZT_INLINE void armor(uint8_t *const pkt,const int packetSize,const SharedPtr<SymmetricKey> &key,const uint8_t cipherSuite) noexcept
+static ZT_INLINE uint64_t armor(uint8_t *const pkt, const int packetSize, const SymmetricKey &key, const uint8_t cipherSuite) noexcept
 {
+	// TODO
 #if 0
 	Protocol::Header &ph = pkt.as<Protocol::Header>(); // NOLINT(hicpp-use-auto,modernize-use-auto)
 	ph.flags = (ph.flags & 0xc7U) | ((cipherSuite << 3U) & 0x38U); // flags: FFCCCHHH where CCC is cipher
@@ -889,6 +925,7 @@ static ZT_INLINE void armor(uint8_t *const pkt,const int packetSize,const Shared
 		} break;
 	}
 #endif
+	return 0;
 }
 
 /**
@@ -903,7 +940,7 @@ static ZT_INLINE void armor(uint8_t *const pkt,const int packetSize,const Shared
  * @param packetSize Total size of packet in bytes (including headers)
  * @return New size of packet after compression or original size of compression wasn't helpful
  */
-static ZT_INLINE int compress(SharedPtr<Buf> &pkt,int packetSize) noexcept
+static ZT_INLINE int compress(Buf &pkt, int packetSize) noexcept
 {
 	// TODO
 	return packetSize;

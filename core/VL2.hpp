@@ -54,21 +54,13 @@ public:
 
 protected:
 	bool m_FRAME(CallContext &cc, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize);
-
 	bool m_EXT_FRAME(CallContext &cc, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize);
-
 	bool m_MULTICAST_LIKE(CallContext &cc, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize);
-
 	bool m_NETWORK_CREDENTIALS(CallContext &cc, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize);
-
 	bool m_NETWORK_CONFIG_REQUEST(CallContext &cc, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize);
-
 	bool m_NETWORK_CONFIG(CallContext &cc, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize);
-
 	bool m_MULTICAST_GATHER(CallContext &cc, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize);
-
 	bool m_MULTICAST_FRAME_deprecated(CallContext &cc, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize);
-
 	bool m_MULTICAST(CallContext &cc, uint64_t packetId, unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize);
 
 private:

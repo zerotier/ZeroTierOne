@@ -18,10 +18,6 @@
 #include "TriviallyCopyable.hpp"
 #include "CallContext.hpp"
 
-#include <string>
-#include <memory>
-#include <stdexcept>
-
 namespace ZeroTier {
 
 class CapabilityCredential;

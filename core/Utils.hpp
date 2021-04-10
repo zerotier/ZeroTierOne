@@ -93,40 +93,6 @@ extern const char HEXCHARS[16];
 extern const uint64_t s_mapNonce;
 
 /**
- * Lock memory to prevent swapping out to secondary storage (if possible)
- *
- * This is used to attempt to prevent the swapping out of long-term stored secure
- * credentials like secret keys. It isn't supported on all platforms and may not
- * be absolutely guaranteed to work, but it's a countermeasure.
- *
- * @param p Memory to lock
- * @param l Size of memory
- */
-static ZT_INLINE void memoryLock(const void *const p, const unsigned int l) noexcept
-{
-#ifdef __WINDOWS__
-	VirtualLock(reinterpret_cast<LPVOID>(const_cast<void*>(p)), l);
-#else
-	mlock(p, l);
-#endif
-}
-
-/**
- * Unlock memory locked with memoryLock()
- *
- * @param p Memory to unlock
- * @param l Size of memory
- */
-static ZT_INLINE void memoryUnlock(const void *const p, const unsigned int l) noexcept
-{
-#ifdef __WINDOWS__
-	VirtualUnlock(reinterpret_cast<LPVOID>(const_cast<void*>(p)), l);
-#else
-	munlock(p, l);
-#endif
-}
-
-/**
  * Perform a time-invariant binary comparison
  *
  * @param a First binary string
@@ -254,24 +220,12 @@ bool scopy(char *dest, unsigned int len, const char *src) noexcept;
 /**
  * Check if a buffer's contents are all zero
  */
-static ZT_INLINE bool allZero(const void *const b, unsigned int l) noexcept
+static ZT_INLINE bool allZero(const void *const b, const unsigned int l) noexcept
 {
-	const uint8_t *p = reinterpret_cast<const uint8_t *>(b);
-
-#ifndef ZT_NO_UNALIGNED_ACCESS
-	while (l >= 8) {
-		if (*reinterpret_cast<const uint64_t *>(p) != 0)
-			return false;
-		p += 8;
-		l -= 8;
-	}
-#endif
-
-	for (unsigned int i = 0; i < l; ++i) {
-		if (reinterpret_cast<const uint8_t *>(p)[i] != 0)
+	for (unsigned int i=0;i<l;++i) {
+		if (reinterpret_cast<const uint8_t *>(b)[i] != 0)
 			return false;
 	}
-
 	return true;
 }
 

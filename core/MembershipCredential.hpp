@@ -101,12 +101,14 @@ class MembershipCredential : public Credential
 	friend class Credential;
 
 public:
-	static constexpr ZT_CredentialType credentialType() noexcept { return ZT_CREDENTIAL_TYPE_COM; }
+	static constexpr ZT_CredentialType credentialType() noexcept
+	{ return ZT_CREDENTIAL_TYPE_COM; }
 
 	/**
 	 * Create an empty certificate of membership
 	 */
-	ZT_INLINE MembershipCredential() noexcept { memoryZero(this); }
+	ZT_INLINE MembershipCredential() noexcept
+	{ memoryZero(this); }
 
 	/**
 	 * Create from required fields common to all networks
@@ -121,17 +123,20 @@ public:
 	/**
 	 * @return True if there's something here
 	 */
-	ZT_INLINE operator bool() const noexcept { return (m_networkId != 0); }
+	ZT_INLINE operator bool() const noexcept
+	{ return (m_networkId != 0); }
 
 	/**
 	 * @return Credential ID, always 0 for COMs
 	 */
-	ZT_INLINE uint32_t id() const noexcept { return 0; }
+	ZT_INLINE uint32_t id() const noexcept
+	{ return 0; }
 
 	/**
 	 * @return Timestamp for this cert and maximum delta for timestamp
 	 */
-	ZT_INLINE int64_t timestamp() const noexcept { return m_timestamp; }
+	ZT_INLINE int64_t timestamp() const noexcept
+	{ return m_timestamp; }
 
 	ZT_INLINE int64_t revision() const noexcept
 	{ return m_timestamp; }
@@ -139,17 +144,20 @@ public:
 	/**
 	 * @return Maximum allowed difference between timestamps
 	 */
-	ZT_INLINE int64_t timestampMaxDelta() const noexcept { return m_timestampMaxDelta; }
+	ZT_INLINE int64_t timestampMaxDelta() const noexcept
+	{ return m_timestampMaxDelta; }
 
 	/**
 	 * @return Fingerprint of identity to which this cert was issued
 	 */
-	ZT_INLINE const Fingerprint &issuedTo() const noexcept { return m_issuedTo; }
+	ZT_INLINE const Fingerprint &issuedTo() const noexcept
+	{ return m_issuedTo; }
 
 	/**
 	 * @return Network ID for which this cert was issued
 	 */
-	ZT_INLINE uint64_t networkId() const noexcept { return m_networkId; }
+	ZT_INLINE uint64_t networkId() const noexcept
+	{ return m_networkId; }
 
 	/**
 	 * Compare two certificates for parameter agreement
@@ -180,28 +188,34 @@ public:
 	 * @param RR Runtime environment for looking up peers
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 */
-	ZT_INLINE Credential::VerifyResult verify(const Context &ctx, const CallContext &cc) const { return s_verify(ctx, cc, *this); }
+	ZT_INLINE Credential::VerifyResult verify(const Context &ctx, const CallContext &cc) const
+	{ return s_verify(ctx, cc, *this); }
 
-	// NOTE: right now we use v1 serialization format which works with both ZeroTier 1.x and 2.x. V2 format
-	// will be switched on once 1.x is pretty much dead and out of support.
-	static constexpr int marshalSizeMax() noexcept { return ZT_MEMBERSHIP_CREDENTIAL_MARSHAL_SIZE_MAX; }
+	static constexpr int marshalSizeMax() noexcept
+	{ return ZT_MEMBERSHIP_CREDENTIAL_MARSHAL_SIZE_MAX; }
+
 	int marshal(uint8_t data[ZT_MEMBERSHIP_CREDENTIAL_MARSHAL_SIZE_MAX], bool v2 = false) const noexcept;
-	int unmarshal(const uint8_t *data,int len) noexcept;
+	int unmarshal(const uint8_t *data, int len) noexcept;
 
 private:
 	unsigned int m_fillSigningBuf(uint64_t *buf) const noexcept;
 
 	struct p_Qualifier
 	{
-		ZT_INLINE p_Qualifier() noexcept : id(0), value(0), delta(0) {}
-		ZT_INLINE p_Qualifier(const uint64_t id_, const uint64_t value_, const uint64_t delta_) noexcept : id(id_), value(value_), delta(delta_) {}
+		ZT_INLINE p_Qualifier() noexcept: id(0), value(0), delta(0)
+		{}
+
+		ZT_INLINE p_Qualifier(const uint64_t id_, const uint64_t value_, const uint64_t delta_) noexcept: id(id_), value(value_), delta(delta_)
+		{}
+
 		uint64_t id;
 		uint64_t value;
 		uint64_t delta;
-		ZT_INLINE bool operator<(const p_Qualifier &q) const noexcept { return (id < q.id); } // sort order
+		ZT_INLINE bool operator<(const p_Qualifier &q) const noexcept
+		{ return (id < q.id); } // sort order
 	};
 
-	FCV<p_Qualifier,ZT_MEMBERSHIP_CREDENTIAL_MAX_ADDITIONAL_QUALIFIERS> m_additionalQualifiers;
+	FCV< p_Qualifier, ZT_MEMBERSHIP_CREDENTIAL_MAX_ADDITIONAL_QUALIFIERS > m_additionalQualifiers;
 	int64_t m_timestamp;
 	int64_t m_timestampMaxDelta;
 	uint64_t m_networkId;

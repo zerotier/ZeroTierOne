@@ -67,12 +67,9 @@ struct _NodeObjects
 
 } // anonymous namespace
 
-Node::Node(
-	void *uPtr,
-	const struct ZT_Node_Callbacks *callbacks,
-	const CallContext &cc) :
+Node::Node(void *uPtr, const struct ZT_Node_Callbacks *callbacks, const CallContext &cc) :
 	m_ctx(this),
-	m_store(&m_ctx),
+	m_store(m_ctx),
 	m_objects(nullptr),
 	m_lastPeerPulse(0),
 	m_lastHousekeepingRun(0),
@@ -167,9 +164,7 @@ void Node::shutdown(const CallContext &cc)
 		m_ctx.topology->saveAll(cc);
 }
 
-ZT_ResultCode Node::processBackgroundTasks(
-	const CallContext &cc,
-	volatile int64_t *nextBackgroundTaskDeadline)
+ZT_ResultCode Node::processBackgroundTasks(const CallContext &cc, volatile int64_t *nextBackgroundTaskDeadline)
 {
 	Mutex::Lock bl(m_backgroundTasksLock);
 
@@ -179,7 +174,7 @@ ZT_ResultCode Node::processBackgroundTasks(
 		// certificates. This also happens on demand when the trust store is changed.
 		if ((cc.ticks - m_lastTrustStoreUpdate) >= ZT_TRUSTSTORE_UPDATE_PERIOD) {
 			m_lastTrustStoreUpdate = cc.ticks;
-			if (m_ctx.ts->update(cc.ticks, nullptr))
+			if (unlikely(m_ctx.ts->update(cc.ticks, nullptr)))
 				m_ctx.topology->trustStoreChanged(cc);
 		}
 
@@ -196,7 +191,6 @@ ZT_ResultCode Node::processBackgroundTasks(
 		if ((cc.ticks - m_lastHousekeepingRun) >= ZT_HOUSEKEEPING_PERIOD) {
 			m_lastHousekeepingRun = cc.ticks;
 			ZT_SPEW("running housekeeping...");
-
 			m_ctx.topology->doPeriodicTasks(cc);
 			m_ctx.sa->clean(cc);
 		}
@@ -215,12 +209,13 @@ ZT_ResultCode Node::processBackgroundTasks(
 
 				bool online = false;
 				for (Vector< SharedPtr< Peer > >::iterator p(allPeers.begin()); p != allPeers.end(); ++p) {
-					const bool isRoot = std::binary_search(rootPeers.begin(), rootPeers.end(), *p);
-					(*p)->pulse(m_ctx, cc, isRoot);
-					online |= ((isRoot || rootPeers.empty()) && (*p)->directlyConnected(cc));
+					(*p)->pulse(m_ctx, cc);
+					if (!online) {
+						online = ((std::binary_search(rootPeers.begin(), rootPeers.end(), *p) || rootPeers.empty()) && (*p)->directlyConnected());
+					}
 				}
 
-				if (m_online.exchange(online, std::memory_order_relaxed) != online)
+				if (unlikely(m_online.exchange(online, std::memory_order_relaxed) != online))
 					postEvent(cc.tPtr, online ? ZT_EVENT_ONLINE : ZT_EVENT_OFFLINE);
 
 				ZT_SPEW("ranking roots...");
@@ -238,11 +233,7 @@ ZT_ResultCode Node::processBackgroundTasks(
 	return ZT_RESULT_OK;
 }
 
-ZT_ResultCode Node::join(
-	uint64_t nwid,
-	const ZT_Fingerprint *controllerFingerprint,
-	void *uptr,
-	const CallContext &cc)
+ZT_ResultCode Node::join(uint64_t nwid, const ZT_Fingerprint *controllerFingerprint, void *uptr, const CallContext &cc)
 {
 	Mutex::Lock l(m_allNetworks_l);
 
@@ -265,10 +256,7 @@ ZT_ResultCode Node::join(
 	return ZT_RESULT_OK;
 }
 
-ZT_ResultCode Node::leave(
-	uint64_t nwid,
-	void **uptr,
-	const CallContext &cc)
+ZT_ResultCode Node::leave(uint64_t nwid, void **uptr, const CallContext &cc)
 {
 	Mutex::Lock l(m_allNetworks_l);
 
@@ -302,11 +290,7 @@ ZT_ResultCode Node::leave(
 	}
 }
 
-ZT_ResultCode Node::multicastSubscribe(
-	const CallContext &cc,
-	uint64_t nwid,
-	uint64_t multicastGroup,
-	unsigned long multicastAdi)
+ZT_ResultCode Node::multicastSubscribe(const CallContext &cc, uint64_t nwid, uint64_t multicastGroup, unsigned long multicastAdi)
 {
 	ZT_SPEW("multicast subscribe to %s:%lu", MAC(multicastGroup).toString().c_str(), multicastAdi);
 	const SharedPtr< Network > nw(m_ctx.networks->get(nwid));
@@ -318,11 +302,7 @@ ZT_ResultCode Node::multicastSubscribe(
 	}
 }
 
-ZT_ResultCode Node::multicastUnsubscribe(
-	const CallContext &cc,
-	uint64_t nwid,
-	uint64_t multicastGroup,
-	unsigned long multicastAdi)
+ZT_ResultCode Node::multicastUnsubscribe(const CallContext &cc, uint64_t nwid, uint64_t multicastGroup, unsigned long multicastAdi)
 {
 	ZT_SPEW("multicast unsubscribe from %s:%lu", MAC(multicastGroup).toString().c_str(), multicastAdi);
 	const SharedPtr< Network > nw(m_ctx.networks->get(nwid));
@@ -385,11 +365,12 @@ ZT_PeerList *Node::peers(const CallContext &cc) const
 			pl->p_identities.push_front(pp.identity());
 			p.identity = reinterpret_cast<const ZT_Identity *>(&(pl->p_identities.front()));
 			p.fingerprint = &(pl->p_identities.front().fingerprint());
-			if (pp.remoteVersionKnown()) {
-				p.versionMajor = (int)pp.remoteVersionMajor();
-				p.versionMinor = (int)pp.remoteVersionMinor();
-				p.versionRev = (int)pp.remoteVersionRevision();
-				p.versionProto = (int)pp.remoteVersionProtocol();
+			uint16_t vProto, vMajor, vMinor, vRevision;
+			if (pp.remoteVersion(vProto, vMajor, vMinor, vRevision)) {
+				p.versionMajor = (int)vMajor;
+				p.versionMinor = (int)vMinor;
+				p.versionRev = (int)vRevision;
+				p.versionProto = (int)vProto;
 			} else {
 				p.versionMajor = -1;
 				p.versionMinor = -1;
@@ -612,7 +593,7 @@ void Node::setController(void *networkControllerInstance)
 		m_ctx.localNetworkController->init(m_ctx.identity, this);
 }
 
-bool Node::shouldUsePathForZeroTierTraffic(void *tPtr, const Identity &id, const int64_t localSocket, const InetAddress &remoteAddress)
+bool Node::filterPotentialPath(void *tPtr, const Identity &id, int64_t localSocket, const InetAddress &remoteAddress)
 {
 	{
 		Mutex::Lock l(m_allNetworks_l);

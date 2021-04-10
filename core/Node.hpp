@@ -127,7 +127,7 @@ public:
 	 * @param md Event data or NULL if none
 	 * @param mdSize Size of event data
 	 */
-	ZT_INLINE void postEvent(void *tPtr, ZT_Event ev, const void *md = nullptr, const unsigned int mdSize = 0) noexcept
+	ZT_INLINE void postEvent(void *const tPtr, const ZT_Event ev, const void *const md = nullptr, const unsigned int mdSize = 0) noexcept
 	{ m_ctx.cb.eventCallback(reinterpret_cast<ZT_Node *>(this), m_ctx.uPtr, tPtr, ev, md, mdSize); }
 
 	/**
@@ -141,7 +141,7 @@ public:
 	 * @param remoteAddress Remote address
 	 * @return True if path should be used
 	 */
-	bool shouldUsePathForZeroTierTraffic(void *tPtr, const Identity &id, int64_t localSocket, const InetAddress &remoteAddress);
+	bool filterPotentialPath(void *tPtr, const Identity &id, int64_t localSocket, const InetAddress &remoteAddress);
 
 	/**
 	 * Query callback for a physical address for a peer

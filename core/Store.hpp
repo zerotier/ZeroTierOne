@@ -27,7 +27,7 @@ namespace ZeroTier {
 class Store
 {
 public:
-	ZT_INLINE Store(const Context *const renv): RR(renv)
+	ZT_INLINE Store(const Context &ctx): m_ctx(ctx)
 	{}
 
 	/**
@@ -38,12 +38,12 @@ public:
 	 * @param idSize Size of object ID in qwords
 	 * @return Data or empty vector if not found
 	 */
-	ZT_INLINE Vector< uint8_t > get(const CallContext &cc, ZT_StateObjectType type, const uint64_t *id, unsigned int idSize) const
+	ZT_INLINE Vector< uint8_t > get(const CallContext &cc, ZT_StateObjectType type, const uint64_t *const id, unsigned int idSize) const
 	{
 		Vector< uint8_t > dv;
 		void *data = nullptr;
 		void (*freeFunc)(void *) = nullptr;
-		const int r = RR->cb.stateGetFunction(reinterpret_cast<ZT_Node *>(RR->node), RR->uPtr, cc.tPtr, type, id, idSize, &data, &freeFunc);
+		const int r = m_ctx.cb.stateGetFunction(reinterpret_cast<ZT_Node *>(m_ctx.node), m_ctx.uPtr, cc.tPtr, type, id, idSize, &data, &freeFunc);
 		if (r > 0)
 			dv.assign(reinterpret_cast<const uint8_t *>(data), reinterpret_cast<const uint8_t *>(data) + r);
 		if ((data) && (freeFunc))
@@ -61,7 +61,7 @@ public:
 	 * @param len Length of data
 	 */
 	ZT_INLINE void put(const CallContext &cc, ZT_StateObjectType type, const uint64_t *const id, const unsigned int idSize, const void *const data, const unsigned int len) noexcept
-	{ RR->cb.statePutFunction(reinterpret_cast<ZT_Node *>(this), RR->uPtr, cc.tPtr, type, id, idSize, data, (int)len); }
+	{ m_ctx.cb.statePutFunction(reinterpret_cast<ZT_Node *>(this), m_ctx.uPtr, cc.tPtr, type, id, idSize, data, (int)len); }
 
 	/**
 	 * Erase a state object from the object store
@@ -71,10 +71,10 @@ public:
 	 * @param idSize Size of object ID in qwords
 	 */
 	ZT_INLINE void erase(const CallContext &cc, ZT_StateObjectType type, const uint64_t *const id, const unsigned int idSize) noexcept
-	{ RR->cb.statePutFunction(reinterpret_cast<ZT_Node *>(this), RR->uPtr, cc.tPtr, type, id, idSize, nullptr, -1); }
+	{ m_ctx.cb.statePutFunction(reinterpret_cast<ZT_Node *>(this), m_ctx.uPtr, cc.tPtr, type, id, idSize, nullptr, -1); }
 
 private:
-	const Context *RR;
+	const Context &m_ctx;
 };
 
 } // namespace ZeroTier

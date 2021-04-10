@@ -131,12 +131,17 @@ void Topology::trustStoreChanged(const CallContext &cc)
 		SharedPtr< Peer > root(this->peer(cc, r->first.address(), true));
 		if (!root) {
 			root.set(new Peer());
-			root->init(m_ctx, cc, r->first);
-			root = this->add(cc, root);
+			if (root->init(m_ctx, cc, r->first)) {
+				root = this->add(cc, root);
+			} else {
+				root.zero();
+			}
 		}
-		newRootList.push_back(root);
-		if (r->second)
-			root->setLocator(r->second, true);
+		if (root) {
+			newRootList.push_back(root);
+			if (r->second)
+				root->setLocator(r->second, true);
+		}
 	}
 
 	{

@@ -28,7 +28,6 @@
 #include "Locator.hpp"
 #include "Protocol.hpp"
 #include "AES.hpp"
-#include "EphemeralKey.hpp"
 #include "SymmetricKey.hpp"
 #include "Containers.hpp"
 
@@ -38,12 +37,13 @@
   ZT_SYMMETRIC_KEY_SIZE + \
   ZT_IDENTITY_MARSHAL_SIZE_MAX + \
   1 + ZT_LOCATOR_MARSHAL_SIZE_MAX + \
-  2 + ((8 + ZT_ENDPOINT_MARSHAL_SIZE_MAX) * ZT_PEER_ENDPOINT_CACHE_SIZE) + \
   (2 * 4) + \
   2 )
 
 #define ZT_PEER_DEDUP_BUFFER_SIZE 1024
 #define ZT_PEER_DEDUP_BUFFER_MASK 1023U
+#define ZT_PEER_EPHEMERAL_KEY_BUFFER_SIZE 3
+#define ZT_PEER_EPHEMERAL_KEY_COUNT_MAX (ZT_PEER_EPHEMERAL_KEY_BUFFER_SIZE + 1)
 
 namespace ZeroTier {
 
@@ -91,7 +91,7 @@ public:
 	/**
 	 * @return Current locator or NULL if no locator is known
 	 */
-	ZT_INLINE const SharedPtr< const Locator > &locator() const noexcept
+	ZT_INLINE const SharedPtr< const Locator > locator() const noexcept
 	{
 		RWMutex::RLock l(m_lock);
 		return m_locator;
@@ -107,7 +107,7 @@ public:
 	 * @param verify If true, verify locator's signature and structure
 	 * @return New locator or previous if it was not replaced.
 	 */
-	ZT_INLINE SharedPtr< const Locator > setLocator(const SharedPtr< const Locator > &loc, bool verify) noexcept
+	ZT_INLINE SharedPtr< const Locator > setLocator(const SharedPtr< const Locator > &loc, const bool verify) noexcept
 	{
 		RWMutex::Lock l(m_lock);
 		if ((loc) && ((!m_locator) || (m_locator->revision() < loc->revision()))) {
@@ -146,7 +146,7 @@ public:
 	 */
 	ZT_INLINE void sent(const CallContext &cc, const unsigned int bytes) noexcept
 	{
-		m_lastSend = cc.ticks;
+		m_lastSend.store(cc.ticks, std::memory_order_relaxed);
 		m_outMeter.log(cc.ticks, bytes);
 	}
 
@@ -164,19 +164,7 @@ public:
 	 * @return Current best path or NULL if there is no direct path
 	 */
 	ZT_INLINE SharedPtr< Path > path(const CallContext &cc) noexcept
-	{
-		if (likely((cc.ticks - m_lastPrioritizedPaths) < ZT_PEER_PRIORITIZE_PATHS_INTERVAL)) {
-			RWMutex::RLock l(m_lock);
-			if (m_alivePathCount > 0)
-				return m_paths[0];
-		} else {
-			RWMutex::Lock l(m_lock);
-			m_prioritizePaths(cc);
-			if (m_alivePathCount > 0)
-				return m_paths[0];
-		}
-		return SharedPtr< Path >();
-	}
+	{ return SharedPtr< Path >(reinterpret_cast<Path *>(m_bestPath.load(std::memory_order_acquire))); }
 
 	/**
 	 * Send data to this peer over a specific path only
@@ -203,23 +191,15 @@ public:
 	void send(const Context &ctx, const CallContext &cc, const void *data, unsigned int len) noexcept;
 
 	/**
-	 * Send a HELLO to this peer at a specified physical address.
-	 *
-	 * @param localSocket Local source socket
-	 * @param atAddress Destination address
-	 * @return Number of bytes sent
+	 * Do ping, probes, re-keying, and keepalive with this peer, as needed.
 	 */
-	unsigned int hello(const Context &ctx, const CallContext &cc, int64_t localSocket, const InetAddress &atAddress);
-
-	/**
-	 * Ping this peer if needed and/or perform other periodic tasks.
-	 *
-	 * @param isRoot True if this peer is a root
-	 */
-	void pulse(const Context &ctx, const CallContext &cc, bool isRoot);
+	void pulse(const Context &ctx, const CallContext &cc);
 
 	/**
 	 * Attempt to contact this peer at a given endpoint.
+	 *
+	 * The attempt doesn't happen immediately. It's added to a queue for the
+	 * next invocation of pulse().
 	 *
 	 * @param ep Endpoint to attempt to contact
 	 * @param tries Number of times to try (default: 1)
@@ -270,56 +250,77 @@ public:
 	{
 		//if (m_vProto >= 11)
 		//	return ZT_PROTO_CIPHER_SUITE__AES_GMAC_SIV;
-		return ZT_PROTO_CIPHER_SUITE__POLY1305_SALSA2012;
+		return ZT_PROTO_CIPHER_POLY1305_SALSA2012;
 	}
 
 	/**
 	 * @return The permanent shared key for this peer computed by simple identity agreement
 	 */
-	ZT_INLINE SharedPtr< SymmetricKey > identityKey() noexcept
+	ZT_INLINE SymmetricKey &identityKey() noexcept
 	{ return m_identityKey; }
 
 	/**
 	 * @return AES instance for HELLO dictionary / encrypted section encryption/decryption
 	 */
-	ZT_INLINE const AES &identityHelloDictionaryEncryptionCipher() noexcept
+	ZT_INLINE const AES &identityHelloDictionaryEncryptionCipher() const noexcept
 	{ return m_helloCipher; }
 
 	/**
 	 * @return Key for HMAC on HELLOs
 	 */
-	ZT_INLINE const uint8_t *identityHelloHmacKey() noexcept
+	ZT_INLINE const uint8_t *identityHelloHmacKey() const noexcept
 	{ return m_helloMacKey; }
 
 	/**
 	 * @return Raw identity key bytes
 	 */
-	ZT_INLINE const uint8_t *rawIdentityKey() noexcept
-	{
-		RWMutex::RLock l(m_lock);
-		return m_identityKey->secret;
-	}
+	ZT_INLINE const uint8_t *rawIdentityKey() const noexcept
+	{ return m_identityKey.key(); }
 
 	/**
 	 * @return Current best key: either the latest ephemeral or the identity key
 	 */
-	ZT_INLINE SharedPtr< SymmetricKey > key() noexcept
+	ZT_INLINE SymmetricKey &key() noexcept
+	{ return *reinterpret_cast<SymmetricKey *>(m_key.load(std::memory_order_relaxed)); }
+
+	/**
+	 * Get keys other than a key we have already tried.
+	 *
+	 * This is used when a packet arrives that doesn't decrypt with the preferred
+	 * key. It fills notYetTried[] with other keys that haven't been tried yet,
+	 * which can include the identity key and any older session keys.
+	 *
+	 * @param alreadyTried Key we've already tried or NULL if none
+	 * @param notYetTried All keys known (long lived or session) other than alreadyTried
+	 * @return Number of pointers written to notYetTried[]
+	 */
+	ZT_INLINE int getOtherKeys(const SymmetricKey *const alreadyTried, SymmetricKey *notYetTried[ZT_PEER_EPHEMERAL_KEY_COUNT_MAX]) noexcept
 	{
 		RWMutex::RLock l(m_lock);
-		return m_key();
+		int cnt = 0;
+		if (alreadyTried != &m_identityKey)
+			notYetTried[cnt++] = &m_identityKey;
+		for (unsigned int k=0;k<ZT_PEER_EPHEMERAL_KEY_BUFFER_SIZE;++k) {
+			SymmetricKey *const kk = &m_ephemeralSessions[k].key;
+			if (m_ephemeralSessions[k].established && (alreadyTried != kk))
+				notYetTried[cnt++] = kk;
+		}
+		return cnt;
 	}
 
 	/**
-	 * Check whether a key is ephemeral
+	 * Set a flag ordering a key renegotiation ASAP.
 	 *
-	 * This is used to check whether a packet is received with forward secrecy enabled
-	 * or not.
-	 *
-	 * @param k Key to check
-	 * @return True if this key is ephemeral, false if it's the long-lived identity key
+	 * This can be called if there's any hint of an issue with the current key.
+	 * It's also called if any of the secondary possible keys returned by
+	 * getOtherKeys() decrypt a valid packet, indicating a desynchronization
+	 * in which key should be used.
 	 */
-	ZT_INLINE bool isEphemeral(const SharedPtr< SymmetricKey > &k) const noexcept
-	{ return m_identityKey != k; }
+	ZT_INLINE void setKeyRenegotiationNeeded() noexcept
+	{
+		RWMutex::Lock l(m_lock);
+		m_keyRenegotiationNeeded = true;
+	}
 
 	/**
 	 * Set the currently known remote version of this peer's client
@@ -331,51 +332,60 @@ public:
 	 */
 	ZT_INLINE void setRemoteVersion(unsigned int vproto, unsigned int vmaj, unsigned int vmin, unsigned int vrev) noexcept
 	{
+		RWMutex::Lock l(m_lock);
 		m_vProto = (uint16_t)vproto;
 		m_vMajor = (uint16_t)vmaj;
 		m_vMinor = (uint16_t)vmin;
 		m_vRevision = (uint16_t)vrev;
 	}
 
-	ZT_INLINE unsigned int remoteVersionProtocol() const noexcept
-	{ return m_vProto; }
-
-	ZT_INLINE unsigned int remoteVersionMajor() const noexcept
-	{ return m_vMajor; }
-
-	ZT_INLINE unsigned int remoteVersionMinor() const noexcept
-	{ return m_vMinor; }
-
-	ZT_INLINE unsigned int remoteVersionRevision() const noexcept
-	{ return m_vRevision; }
-
-	ZT_INLINE bool remoteVersionKnown() const noexcept
-	{ return (m_vMajor > 0) || (m_vMinor > 0) || (m_vRevision > 0); }
+	/**
+	 * Get the remote version of this peer.
+	 *
+	 * If false is returned, the value of the value-result variables is
+	 * undefined.
+	 *
+	 * @param vProto Set to protocol version
+	 * @param vMajor Set to major version
+	 * @param vMinor Set to minor version
+	 * @param vRevision Set to revision
+	 * @return True if remote version is known
+	 */
+	ZT_INLINE bool remoteVersion(uint16_t &vProto, uint16_t &vMajor, uint16_t &vMinor, uint16_t &vRevision)
+	{
+		RWMutex::RLock l(m_lock);
+		return (((vProto = m_vProto)|(vMajor = m_vMajor)|(vMinor = m_vMinor)|(vRevision = m_vRevision)) != 0);
+	}
 
 	/**
 	 * @return True if there is at least one alive direct path
 	 */
-	bool directlyConnected(const CallContext &cc);
+	ZT_INLINE bool directlyConnected() const noexcept
+	{
+		RWMutex::RLock l(m_lock);
+		return m_alivePathCount > 0;
+	}
 
 	/**
 	 * Get all paths
 	 *
 	 * @param paths Vector of paths with the first path being the current preferred path
 	 */
-	void getAllPaths(Vector< SharedPtr< Path > > &paths);
+	ZT_INLINE void getAllPaths(Vector< SharedPtr< Path > > &paths) const
+	{
+		RWMutex::RLock l(m_lock);
+		paths.assign(m_paths, m_paths + m_alivePathCount);
+	}
 
 	/**
 	 * Save the latest version of this peer to the data store
 	 */
 	void save(const Context &ctx, const CallContext &cc) const;
 
-	// NOTE: peer marshal/unmarshal only saves/restores the identity, locator, most
-	// recent bootstrap address, and version information.
 	static constexpr int marshalSizeMax() noexcept
 	{ return ZT_PEER_MARSHAL_SIZE_MAX; }
 
 	int marshal(const Context &ctx, uint8_t data[ZT_PEER_MARSHAL_SIZE_MAX]) const noexcept;
-
 	int unmarshal(const Context &ctx, int64_t ticks, const uint8_t *restrict data, int len) noexcept;
 
 	/**
@@ -383,8 +393,8 @@ public:
 	 */
 	ZT_INLINE bool rateGateInboundWhoisRequest(CallContext &cc) noexcept
 	{
-		if ((cc.ticks - m_lastWhoisRequestReceived) >= ZT_PEER_WHOIS_RATE_LIMIT) {
-			m_lastWhoisRequestReceived = cc.ticks;
+		if ((cc.ticks - m_lastWhoisRequestReceived.load(std::memory_order_relaxed)) >= ZT_PEER_WHOIS_RATE_LIMIT) {
+			m_lastWhoisRequestReceived.store(cc.ticks, std::memory_order_relaxed);
 			return true;
 		}
 		return false;
@@ -395,8 +405,8 @@ public:
 	 */
 	ZT_INLINE bool rateGateEchoRequest(CallContext &cc) noexcept
 	{
-		if ((cc.ticks - m_lastEchoRequestReceived) >= ZT_PEER_GENERAL_RATE_LIMIT) {
-			m_lastEchoRequestReceived = cc.ticks;
+		if ((cc.ticks - m_lastEchoRequestReceived.load(std::memory_order_relaxed)) >= ZT_PEER_GENERAL_RATE_LIMIT) {
+			m_lastEchoRequestReceived.store(cc.ticks, std::memory_order_relaxed);
 			return true;
 		}
 		return false;
@@ -407,8 +417,8 @@ public:
 	 */
 	ZT_INLINE bool rateGateProbeRequest(CallContext &cc) noexcept
 	{
-		if ((cc.ticks - m_lastProbeReceived) > ZT_PEER_PROBE_RESPONSE_RATE_LIMIT) {
-			m_lastProbeReceived = cc.ticks;
+		if ((cc.ticks - m_lastProbeReceived.load(std::memory_order_relaxed)) > ZT_PEER_PROBE_RESPONSE_RATE_LIMIT) {
+			m_lastProbeReceived.store(cc.ticks, std::memory_order_relaxed);
 			return true;
 		}
 		return false;
@@ -424,27 +434,53 @@ public:
 	 * @return True if this is a duplicate
 	 */
 	ZT_INLINE bool deduplicateIncomingPacket(const uint64_t packetId) noexcept
-	{
-		// TODO: should take instance ID into account too, but this isn't fully wired.
-		return m_dedup[Utils::hash32((uint32_t)packetId) & ZT_PEER_DEDUP_BUFFER_MASK].exchange(packetId) == packetId;
-	}
+	{ return m_dedup[Utils::hash32((uint32_t)packetId) & ZT_PEER_DEDUP_BUFFER_MASK].exchange(packetId, std::memory_order_relaxed) == packetId; }
 
 private:
+	struct p_EphemeralPublic
+	{
+		uint8_t type;
+		uint8_t c25519Public[ZT_C25519_ECDH_PUBLIC_KEY_SIZE];
+		uint8_t p384Public[ZT_ECC384_PUBLIC_KEY_SIZE];
+	};
+
+	static_assert(sizeof(p_EphemeralPublic) == (1 + ZT_C25519_ECDH_PUBLIC_KEY_SIZE + ZT_ECC384_PUBLIC_KEY_SIZE), "p_EphemeralPublic has extra padding");
+
+	struct p_EphemeralPrivate
+	{
+		ZT_INLINE p_EphemeralPrivate() noexcept: creationTime(-1)
+		{}
+
+		ZT_INLINE ~p_EphemeralPrivate()
+		{ Utils::burn(this, sizeof(p_EphemeralPublic)); }
+
+		int64_t creationTime;
+		uint64_t sha384OfPublic[6];
+		p_EphemeralPublic pub;
+		uint8_t c25519Private[ZT_C25519_ECDH_PRIVATE_KEY_SIZE];
+		uint8_t p384Private[ZT_ECC384_PRIVATE_KEY_SIZE];
+	};
+
+	struct p_EphemeralSession
+	{
+		ZT_INLINE p_EphemeralSession() noexcept: established(false)
+		{}
+
+		uint64_t sha384OfPeerPublic[6];
+		SymmetricKey key;
+		bool established;
+	};
+
 	void m_prioritizePaths(const CallContext &cc);
 	unsigned int m_sendProbe(const Context &ctx, const CallContext &cc, int64_t localSocket, const InetAddress &atAddress, const uint16_t *ports, unsigned int numPorts);
 	void m_deriveSecondaryIdentityKeys() noexcept;
+	unsigned int m_hello(const Context &ctx, const CallContext &cc, int64_t localSocket, const InetAddress &atAddress, bool forceNewKey);
 
-	ZT_INLINE SharedPtr< SymmetricKey > m_key() noexcept
-	{
-		// assumes m_lock is locked (for read at least)
-		return (m_ephemeralKeys[0]) ? m_ephemeralKeys[0] : m_identityKey;
-	}
-
-	// Read/write mutex for non-atomic non-const fields.
+		// Guards all fields except those otherwise indicated (and atomics of course).
 	RWMutex m_lock;
 
-	// Static identity key
-	SharedPtr< SymmetricKey > m_identityKey;
+	// Long lived key resulting from agreement with this peer's identity.
+	SymmetricKey m_identityKey;
 
 	// Cipher for encrypting or decrypting the encrypted section of HELLO packets.
 	AES m_helloCipher;
@@ -452,17 +488,25 @@ private:
 	// Key for HELLO HMAC-SHA384
 	uint8_t m_helloMacKey[ZT_SYMMETRIC_KEY_SIZE];
 
-	// Currently active ephemeral public key pair
-	EphemeralKey m_ephemeralPair;
-	int64_t m_ephemeralPairTimestamp;
+	// Keys we have generated and sent.
+	p_EphemeralPrivate m_ephemeralKeysSent[ZT_PEER_EPHEMERAL_KEY_BUFFER_SIZE];
 
-	// Current and previous ephemeral key
-	SharedPtr< SymmetricKey > m_ephemeralKeys[2];
+	// Sessions created when OK(HELLO) is received.
+	p_EphemeralSession m_ephemeralSessions[ZT_PEER_EPHEMERAL_KEY_BUFFER_SIZE];
 
+	// Pointer to active key (SymmetricKey).
+	std::atomic< uintptr_t > m_key;
+
+	// Flag indicating that we should rekey at next pulse().
+	bool m_keyRenegotiationNeeded;
+
+	// This peer's public identity.
 	Identity m_id;
+
+	// This peer's most recent (by revision) locator, or NULL if none on file.
 	SharedPtr< const Locator > m_locator;
 
-	// the last time something was sent or received from this peer (direct or indirect).
+	// The last time something was received or sent.
 	std::atomic< int64_t > m_lastReceive;
 	std::atomic< int64_t > m_lastSend;
 
@@ -475,13 +519,10 @@ private:
 	// The last time an ECHO request was received from this peer (anti-DOS / anti-flood).
 	std::atomic< int64_t > m_lastEchoRequestReceived;
 
-	// The last time we sorted paths in order of preference. (This happens pretty often.)
-	std::atomic< int64_t > m_lastPrioritizedPaths;
-
 	// The last time we got a probe from this peer.
 	std::atomic< int64_t > m_lastProbeReceived;
 
-	// Deduplication buffer
+	// Deduplication buffer.
 	std::atomic< uint64_t > m_dedup[ZT_PEER_DEDUP_BUFFER_SIZE];
 
 	// Meters measuring actual bandwidth in, out, and relayed via this peer (mostly if this is a root).
@@ -492,26 +533,14 @@ private:
 	// Direct paths sorted in descending order of preference.
 	SharedPtr< Path > m_paths[ZT_MAX_PEER_NETWORK_PATHS];
 
-	// Number of paths current alive (number of non-NULL entries in _paths).
+	// Size of m_paths[] in non-NULL paths (max: MAX_PEER_NETWORK_PATHS).
 	unsigned int m_alivePathCount;
+
+	// Current best path (pointer to Path).
+	std::atomic<uintptr_t> m_bestPath;
 
 	// For SharedPtr<>
 	std::atomic< int > __refCount;
-
-	struct p_EndpointCacheItem
-	{
-		Endpoint target;
-		int64_t lastSeen;
-
-		ZT_INLINE bool operator<(const p_EndpointCacheItem &ci) const noexcept
-		{ return lastSeen < ci.lastSeen; }
-
-		ZT_INLINE p_EndpointCacheItem() noexcept: target(), lastSeen(0)
-		{}
-	};
-
-	// Endpoint cache sorted in ascending order of times seen followed by first seen time.
-	p_EndpointCacheItem m_endpointCache[ZT_PEER_ENDPOINT_CACHE_SIZE];
 
 	struct p_TryQueueItem
 	{
@@ -529,9 +558,13 @@ private:
 		int iteration;
 	};
 
+	// Queue of endpoints to try.
 	List< p_TryQueueItem > m_tryQueue;
+
+	// Time each endpoint was last tried, for rate limiting.
 	Map< Endpoint, int64_t > m_lastTried;
 
+	// Version of remote peer, if known.
 	uint16_t m_vProto;
 	uint16_t m_vMajor;
 	uint16_t m_vMinor;

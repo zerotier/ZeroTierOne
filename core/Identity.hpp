@@ -62,16 +62,10 @@ public:
 	static const Identity NIL;
 
 	ZT_INLINE Identity() noexcept
-	{
-		Utils::memoryLock(this, sizeof(Identity));
-		memoryZero(this);
-	}
+	{ memoryZero(this); }
 
 	ZT_INLINE Identity(const Identity &id) noexcept
-	{
-		Utils::memoryLock(this, sizeof(Identity));
-		Utils::copy< sizeof(Identity) >(this, &id);
-	}
+	{ Utils::copy< sizeof(Identity) >(this, &id); }
 
 	/**
 	 * Construct identity from string
@@ -82,16 +76,10 @@ public:
 	 * @param str Identity in canonical string format
 	 */
 	explicit ZT_INLINE Identity(const char *str)
-	{
-		Utils::memoryLock(this, sizeof(Identity));
-		fromString(str);
-	}
+	{ fromString(str); }
 
 	ZT_INLINE ~Identity()
-	{
-		Utils::memoryUnlock(this, sizeof(Identity));
-		Utils::burn(reinterpret_cast<void *>(&this->m_priv), sizeof(this->m_priv));
-	}
+	{ Utils::burn(reinterpret_cast<void *>(&this->m_priv), sizeof(this->m_priv)); }
 
 	ZT_INLINE Identity &operator=(const Identity &id) noexcept
 	{
