@@ -34,13 +34,10 @@ int TagCredential::marshal(uint8_t data[ZT_TAG_MARSHAL_SIZE_MAX], bool forSign) 
 			data[p++] = 0x7f;
 	}
 	Utils::storeBigEndian< uint64_t >(data + p, m_networkId);
-	p += 8;
-	Utils::storeBigEndian< uint64_t >(data + p, (uint64_t)m_ts);
-	p += 8;
-	Utils::storeBigEndian< uint32_t >(data + p, m_id);
-	p += 4;
-	Utils::storeBigEndian< uint32_t >(data + p, m_value);
-	p += 4;
+	Utils::storeBigEndian< uint64_t >(data + p + 8, (uint64_t)m_ts);
+	Utils::storeBigEndian< uint32_t >(data + p + 16, m_id);
+	Utils::storeBigEndian< uint32_t >(data + p + 20, m_value);
+	p += 24;
 	m_issuedTo.copyTo(data + p);
 	p += ZT_ADDRESS_LENGTH;
 	m_signedBy.copyTo(data + p);

@@ -55,9 +55,6 @@ public:
 		ZT_INLINE Key() noexcept
 		{}
 
-		ZT_INLINE Key(const Key &k) noexcept: m_hashCode(k.m_hashCode), m_v664(k.m_v664), m_port(k.m_port)
-		{}
-
 		ZT_INLINE Key(const InetAddress &ip) noexcept
 		{
 			const unsigned int family = ip.as.sa.sa_family;
@@ -82,14 +79,6 @@ public:
 					m_port = (uint16_t)family;
 				}
 			}
-		}
-
-		ZT_INLINE Key &operator=(const Key &k) noexcept
-		{
-			m_hashCode = k.m_hashCode;
-			m_v664 = k.m_v664;
-			m_port = k.m_port;
-			return *this;
 		}
 
 		ZT_INLINE unsigned long hashCode() const noexcept

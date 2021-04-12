@@ -102,23 +102,15 @@ int MembershipCredential::marshal(uint8_t data[ZT_MEMBERSHIP_CREDENTIAL_MARSHAL_
 	// equality compare, and the address of the issued-to node as an informational tuple.
 	int p = 3;
 	Utils::storeBigEndian<uint64_t>(data + p, 0);
-	p += 8;
-	Utils::storeBigEndian<uint64_t>(data + p, (uint64_t) m_timestamp);
-	p += 8;
-	Utils::storeBigEndian<uint64_t>(data + p, (uint64_t) m_timestampMaxDelta);
-	p += 8;
-	Utils::storeBigEndian<uint64_t>(data + p, 1);
-	p += 8;
-	Utils::storeBigEndian<uint64_t>(data + p, m_networkId);
-	p += 8;
-	Utils::storeBigEndian<uint64_t>(data + p, 0);
-	p += 8;
-	Utils::storeBigEndian<uint64_t>(data + p, 2);
-	p += 8;
-	Utils::storeBigEndian<uint64_t>(data + p, m_issuedTo.address);
-	p += 8;
-	Utils::storeMachineEndian< uint64_t >(data + p, 0xffffffffffffffffULL);
-	p += 8;
+	Utils::storeBigEndian<uint64_t>(data + p + 8, (uint64_t) m_timestamp);
+	Utils::storeBigEndian<uint64_t>(data + p + 16, (uint64_t) m_timestampMaxDelta);
+	Utils::storeBigEndian<uint64_t>(data + p + 24, 1);
+	Utils::storeBigEndian<uint64_t>(data + p + 32, m_networkId);
+	Utils::storeBigEndian<uint64_t>(data + p + 40, 0);
+	Utils::storeBigEndian<uint64_t>(data + p + 48, 2);
+	Utils::storeBigEndian<uint64_t>(data + p + 56, m_issuedTo.address);
+	Utils::storeMachineEndian< uint64_t >(data + p + 64, 0xffffffffffffffffULL);
+	p += 72;
 
 	if (v2) {
 		// V2 marshal format will have three tuples followed by the fingerprint hash.
@@ -130,11 +122,9 @@ int MembershipCredential::marshal(uint8_t data[ZT_MEMBERSHIP_CREDENTIAL_MARSHAL_
 		Utils::storeBigEndian<uint16_t>(data + 1, 9);
 		for (int k = 0;k < 6;++k) {
 			Utils::storeBigEndian<uint64_t>(data + p, (uint64_t) k + 3);
-			p += 8;
-			Utils::storeMachineEndian< uint64_t >(data + p, Utils::loadMachineEndian< uint64_t >(m_issuedTo.hash + (k * 8)));
-			p += 8;
-			Utils::storeMachineEndian< uint64_t >(data + p, 0xffffffffffffffffULL);
-			p += 8;
+			Utils::storeMachineEndian< uint64_t >(data + p + 8, Utils::loadMachineEndian< uint64_t >(m_issuedTo.hash + (k * 8)));
+			Utils::storeMachineEndian< uint64_t >(data + p + 16, 0xffffffffffffffffULL);
+			p += 24;
 		}
 	}
 
@@ -146,7 +136,7 @@ int MembershipCredential::marshal(uint8_t data[ZT_MEMBERSHIP_CREDENTIAL_MARSHAL_
 		Utils::storeBigEndian<uint16_t>(data + p, (uint16_t) m_signatureLength);
 		p += 2;
 		Utils::copy(data + p, m_signature, m_signatureLength);
-		p += (int) m_signatureLength;
+		p += (int)m_signatureLength;
 	} else {
 		// V1 only supports 96-byte signature fields.
 		Utils::copy<96>(data + p, m_signature);

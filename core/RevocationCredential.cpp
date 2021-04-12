@@ -34,19 +34,13 @@ int RevocationCredential::marshal(uint8_t data[ZT_REVOCATION_MARSHAL_SIZE_MAX], 
 			data[p++] = 0x7f;
 	}
 	Utils::storeBigEndian< uint32_t >(data + p, 0);
-	p += 4;
-	Utils::storeBigEndian< uint32_t >(data + p, m_id);
-	p += 4;
-	Utils::storeBigEndian< uint64_t >(data + p, m_networkId);
-	p += 8;
-	Utils::storeBigEndian< uint32_t >(data + p, 0);
-	p += 4;
-	Utils::storeBigEndian< uint32_t >(data + p, m_credentialId);
-	p += 4;
-	Utils::storeBigEndian< uint64_t >(data + p, (uint64_t)m_threshold);
-	p += 8;
-	Utils::storeBigEndian< uint64_t >(data + p, m_flags);
-	p += 8;
+	Utils::storeBigEndian< uint32_t >(data + p + 4, m_id);
+	Utils::storeBigEndian< uint64_t >(data + p + 8, m_networkId);
+	Utils::storeBigEndian< uint32_t >(data + p + 16, 0);
+	Utils::storeBigEndian< uint32_t >(data + p + 20, m_credentialId);
+	Utils::storeBigEndian< uint64_t >(data + p + 24, (uint64_t)m_threshold);
+	Utils::storeBigEndian< uint64_t >(data + p + 32, m_flags);
+	p += 40;
 	m_target.copyTo(data + p);
 	p += ZT_ADDRESS_LENGTH;
 	m_signedBy.copyTo(data + p);

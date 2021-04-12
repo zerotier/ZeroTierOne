@@ -69,8 +69,7 @@ public:
 		m_issuedTo(issuedTo),
 		m_signedBy(),
 		m_signatureLength(0)
-	{
-	}
+	{}
 
 	ZT_INLINE uint32_t id() const noexcept
 	{ return m_id; }

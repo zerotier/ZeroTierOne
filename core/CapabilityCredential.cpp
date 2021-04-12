@@ -55,11 +55,9 @@ int CapabilityCredential::marshal(uint8_t data[ZT_CAPABILITY_MARSHAL_SIZE_MAX], 
 	}
 
 	Utils::storeBigEndian<uint64_t>(data + p, m_nwid);
-	p += 8;
-	Utils::storeBigEndian<uint64_t>(data + p, (uint64_t) m_timestamp);
-	p += 8;
-	Utils::storeBigEndian<uint32_t>(data + p, m_id);
-	p += 4;
+	Utils::storeBigEndian<uint64_t>(data + p + 8, (uint64_t) m_timestamp);
+	Utils::storeBigEndian<uint32_t>(data + p + 16, m_id);
+	p += 20;
 
 	Utils::storeBigEndian<uint16_t>(data + p, (uint16_t) m_ruleCount);
 	p += 2;
@@ -67,18 +65,17 @@ int CapabilityCredential::marshal(uint8_t data[ZT_CAPABILITY_MARSHAL_SIZE_MAX], 
 
 	// LEGACY: older versions supported multiple records with this being a maximum custody
 	// chain length. This is deprecated so set the max chain length to one.
-	data[p++] = (uint8_t) 1;
+	data[p++] = (uint8_t)1;
 
 	if (!forSign) {
 		m_issuedTo.copyTo(data + p);
-		p += ZT_ADDRESS_LENGTH;
-		m_signedBy.copyTo(data + 0);
-		p += ZT_ADDRESS_LENGTH;
+		m_signedBy.copyTo(data + p + ZT_ADDRESS_LENGTH);
+		p += ZT_ADDRESS_LENGTH + ZT_ADDRESS_LENGTH;
 		data[p++] = 1; // LEGACY: old versions require a reserved byte here
 		Utils::storeBigEndian<uint16_t>(data + p, (uint16_t) m_signatureLength);
 		p += 2;
 		Utils::copy(data + p, m_signature, m_signatureLength);
-		p += (int) m_signatureLength;
+		p += (int)m_signatureLength;
 
 		// LEGACY: older versions supported more than one record terminated by a zero address.
 		for (int k = 0;k < ZT_ADDRESS_LENGTH;++k)
