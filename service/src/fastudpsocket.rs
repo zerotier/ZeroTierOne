@@ -35,17 +35,9 @@ use crate::osdep as osdep;
 #[cfg(unix)]
 fn bind_udp_socket(_device_name: &str, address: &InetAddress) -> Result<FastUDPRawOsSocket, &'static str> {
     unsafe {
-        let af;
-        let sa_len;
-        match address.family() {
-            InetAddressFamily::IPv4 => {
-                af = osdep::AF_INET;
-                sa_len = std::mem::size_of::<osdep::sockaddr_in>() as osdep::socklen_t;
-            }
-            InetAddressFamily::IPv6 => {
-                af = osdep::AF_INET6;
-                sa_len = std::mem::size_of::<osdep::sockaddr_in6>() as osdep::socklen_t;
-            }
+        let (af, sa_len) = match address.family() {
+            InetAddressFamily::IPv4 => (osdep::AF_INET, std::mem::size_of::<osdep::sockaddr_in>() as osdep::socklen_t),
+            InetAddressFamily::IPv6 => (osdep::AF_INET6, std::mem::size_of::<osdep::sockaddr_in6>() as osdep::socklen_t),
             _ => {
                 return Err("unrecognized address family");
             }

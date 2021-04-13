@@ -18,7 +18,6 @@ use zerotier_core::InetAddress;
 
 use crate::osdep as osdep;
 
-#[inline(always)]
 fn s6_addr_as_ptr<A>(a: &A) -> *const A {
     a as *const A
 }

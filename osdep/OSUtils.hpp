@@ -196,11 +196,7 @@ public:
 #else
 #ifdef __LINUX__
 		timespec ts;
-#ifdef CLOCK_MONOTONIC_COARSE
-		clock_gettime(CLOCK_MONOTONIC_COARSE,&ts);
-#else
-		clock_gettime(CLOCK_MONOTONIC,&ts);
-#endif
+		clock_gettime(CLOCK_BOOTTIME,&ts);
 		return ( (1000LL * (int64_t)ts.tv_sec) + ((int64_t)(ts.tv_nsec / 1000000)) );
 #else
 #ifdef __APPLE__

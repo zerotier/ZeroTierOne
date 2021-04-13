@@ -274,7 +274,7 @@ fn delete<'a>(store: &Arc<Store>, cli_args: &ArgMatches<'a>) -> i32 {
     0
 }
 
-pub(crate) fn run<'a>(store: Arc<Store>, cli_args: &ArgMatches<'a>) -> i32 {
+pub(crate) fn run(store: Arc<Store>, cli_args: &ArgMatches) -> i32 {
     match cli_args.subcommand() {
         ("list", None) => list(&store),
         ("show", Some(sub_cli_args)) => show(&store, sub_cli_args),

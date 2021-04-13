@@ -47,9 +47,9 @@ impl Error for UnexpectedStatusCodeError {}
 impl std::fmt::Display for UnexpectedStatusCodeError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         if self.1.is_empty() {
-            write!(f, "unexpected status code: {} {}", self.0.as_str(), self.0.canonical_reason().unwrap_or("???"))
+            write!(f, "{} {} (???)", self.0.as_str(), self.0.canonical_reason().unwrap_or("???"))
         } else {
-            write!(f, "unexpected status code: {} {} ({})", self.0.as_str(), self.0.canonical_reason().unwrap_or("???"), self.1)
+            write!(f, "{} {} ({})", self.0.as_str(), self.0.canonical_reason().unwrap_or("???"), self.1)
         }
     }
 }

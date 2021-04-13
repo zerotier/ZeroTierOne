@@ -19,10 +19,11 @@
 namespace ZeroTier {
 
 /**
- * A per-API-call equivalent to the runtime
+ * A per-API-call equivalent to the general context.
  *
- * This captures several things that are passed into API calls and follow
- * the call chain. Some such as tPtr may be supplied to callbacks.
+ * This is created when external C API calls are made and follows the call
+ * graph around from function to function as needed. It's cleaner and probably
+ * faster than passing clock, ticks, and tPtr around everywhere.
  */
 class CallContext
 {

@@ -18,8 +18,10 @@
 #include <sys/stat.h>
 
 #ifndef __WINDOWS__
+
 #include <dirent.h>
 #include <fcntl.h>
+
 #endif
 
 #include <algorithm>
@@ -32,31 +34,35 @@
 namespace ZeroTier {
 
 #ifdef __APPLE__
+
 static clock_serv_t _machGetRealtimeClock() noexcept
 {
 	clock_serv_t c;
-	host_get_clock_service(mach_host_self(),CALENDAR_CLOCK,&c);
+	host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &c);
 	return c;
 }
+
 static clock_serv_t _machGetMonotonicClock() noexcept
 {
 	clock_serv_t c;
-	host_get_clock_service(mach_host_self(),REALTIME_CLOCK,&c);
+	host_get_clock_service(mach_host_self(), SYSTEM_CLOCK, &c);
 	return c;
 }
+
 clock_serv_t OSUtils::s_machRealtimeClock = _machGetRealtimeClock();
 clock_serv_t OSUtils::s_machMonotonicClock = _machGetMonotonicClock();
+
 #endif
 
-unsigned int OSUtils::ztsnprintf(char *buf,unsigned int len,const char *fmt,...)
+unsigned int OSUtils::ztsnprintf(char *buf, unsigned int len, const char *fmt, ...)
 {
 	va_list ap;
 
-	va_start(ap,fmt);
-	int n = (int)vsnprintf(buf,len,fmt,ap);
+	va_start(ap, fmt);
+	int n = (int)vsnprintf(buf, len, fmt, ap);
 	va_end(ap);
 
-	if ((n >= (int)len)||(n < 0)) {
+	if ((n >= (int)len) || (n < 0)) {
 		if (len)
 			buf[len - 1] = (char)0;
 		throw std::length_error("buf[] overflow");
@@ -66,13 +72,14 @@ unsigned int OSUtils::ztsnprintf(char *buf,unsigned int len,const char *fmt,...)
 }
 
 #ifdef __UNIX_LIKE__
-bool OSUtils::redirectUnixOutputs(const char *stdoutPath,const char *stderrPath)
+
+bool OSUtils::redirectUnixOutputs(const char *stdoutPath, const char *stderrPath)
 {
-	int fdout = open(stdoutPath,O_WRONLY|O_CREAT,0600);
+	int fdout = open(stdoutPath, O_WRONLY | O_CREAT, 0600);
 	if (fdout > 0) {
 		int fderr;
 		if (stderrPath) {
-			fderr = open(stderrPath,O_WRONLY|O_CREAT,0600);
+			fderr = open(stderrPath, O_WRONLY | O_CREAT, 0600);
 			if (fderr <= 0) {
 				::close(fdout);
 				return false;
@@ -80,17 +87,18 @@ bool OSUtils::redirectUnixOutputs(const char *stdoutPath,const char *stderrPath)
 		} else fderr = fdout;
 		::close(STDOUT_FILENO);
 		::close(STDERR_FILENO);
-		::dup2(fdout,STDOUT_FILENO);
-		::dup2(fderr,STDERR_FILENO);
+		::dup2(fdout, STDOUT_FILENO);
+		::dup2(fderr, STDERR_FILENO);
 		return true;
 	}
 	return false;
 }
+
 #endif // __UNIX_LIKE__
 
-Vector<String> OSUtils::listDirectory(const char *path,bool includeDirectories)
+Vector< String > OSUtils::listDirectory(const char *path, bool includeDirectories)
 {
-	Vector<String> r;
+	Vector< String > r;
 
 #ifdef __WINDOWS__
 	HANDLE hFind;
@@ -109,11 +117,11 @@ Vector<String> OSUtils::listDirectory(const char *path,bool includeDirectories)
 	if (!d)
 		return r;
 	dptr = (struct dirent *)0;
-	for(;;) {
-		if (readdir_r(d,&de,&dptr))
+	for (;;) {
+		if (readdir_r(d, &de, &dptr))
 			break;
 		if (dptr) {
-			if ((strcmp(dptr->d_name,".") != 0)&&(strcmp(dptr->d_name,"..") != 0)&&((dptr->d_type != DT_DIR)||(includeDirectories)))
+			if ((strcmp(dptr->d_name, ".") != 0) && (strcmp(dptr->d_name, "..") != 0) && ((dptr->d_type != DT_DIR) || (includeDirectories)))
 				r.push_back(String(dptr->d_name));
 		} else break;
 	}
@@ -150,12 +158,12 @@ bool OSUtils::rmDashRf(const char *path)
 	if (!d)
 		return true;
 	dptr = (struct dirent *)0;
-	for(;;) {
-		if (readdir_r(d,&de,&dptr) != 0)
+	for (;;) {
+		if (readdir_r(d, &de, &dptr) != 0)
 			break;
 		if (!dptr)
 			break;
-		if ((strcmp(dptr->d_name,".") != 0)&&(strcmp(dptr->d_name,"..") != 0)&&(strlen(dptr->d_name) > 0)) {
+		if ((strcmp(dptr->d_name, ".") != 0) && (strcmp(dptr->d_name, "..") != 0) && (strlen(dptr->d_name) > 0)) {
 			String p(path);
 			p.push_back(ZT_PATH_SEPARATOR);
 			p.append(dptr->d_name);
@@ -170,10 +178,10 @@ bool OSUtils::rmDashRf(const char *path)
 #endif
 }
 
-void OSUtils::lockDownFile(const char *path,bool isDir)
+void OSUtils::lockDownFile(const char *path, bool isDir)
 {
 #ifdef __UNIX_LIKE__
-	chmod(path,isDir ? 0700 : 0600);
+	chmod(path, isDir ? 0700 : 0600);
 #else
 #ifdef __WINDOWS__
 	{
@@ -202,25 +210,25 @@ void OSUtils::lockDownFile(const char *path,bool isDir)
 #endif
 }
 
-bool OSUtils::fileExists(const char *path,bool followLinks)
+bool OSUtils::fileExists(const char *path, bool followLinks)
 {
 	struct stat s;
 #ifdef __UNIX_LIKE__
 	if (!followLinks)
-		return (lstat(path,&s) == 0);
+		return (lstat(path, &s) == 0);
 #endif
-	return (stat(path,&s) == 0);
+	return (stat(path, &s) == 0);
 }
 
-bool OSUtils::readFile(const char *path,String &buf)
+bool OSUtils::readFile(const char *path, String &buf)
 {
 	char tmp[16384];
-	FILE *f = fopen(path,"rb");
+	FILE *f = fopen(path, "rb");
 	if (f) {
-		for(;;) {
-			long n = (long)fread(tmp,1,sizeof(tmp),f);
+		for (;;) {
+			long n = (long)fread(tmp, 1, sizeof(tmp), f);
 			if (n > 0)
-				buf.append(tmp,n);
+				buf.append(tmp, n);
 			else break;
 		}
 		fclose(f);
@@ -229,11 +237,11 @@ bool OSUtils::readFile(const char *path,String &buf)
 	return false;
 }
 
-bool OSUtils::writeFile(const char *path,const void *buf,unsigned int len)
+bool OSUtils::writeFile(const char *path, const void *buf, unsigned int len)
 {
-	FILE *f = fopen(path,"wb");
+	FILE *f = fopen(path, "wb");
 	if (f) {
-		if ((long)fwrite(buf,1,len,f) != (long)len) {
+		if ((long)fwrite(buf, 1, len, f) != (long)len) {
 			fclose(f);
 			return false;
 		} else {
@@ -244,9 +252,9 @@ bool OSUtils::writeFile(const char *path,const void *buf,unsigned int len)
 	return false;
 }
 
-Vector<String> OSUtils::split(const char *s,const char *const sep,const char *esc,const char *quot)
+Vector< String > OSUtils::split(const char *s, const char *const sep, const char *esc, const char *quot)
 {
-	Vector<String> fields;
+	Vector< String > fields;
 	String buf;
 
 	if (!esc)
@@ -268,11 +276,11 @@ Vector<String> OSUtils::split(const char *s,const char *const sep,const char *es
 			} else buf.push_back(*s);
 		} else {
 			const char *quotTmp;
-			if (strchr(esc,*s))
+			if (strchr(esc, *s))
 				escapeState = true;
-			else if ((buf.size() <= 0)&&((quotTmp = strchr(quot,*s))))
+			else if ((buf.size() <= 0) && ((quotTmp = strchr(quot, *s))))
 				quoteState = *quotTmp;
-			else if (strchr(sep,*s)) {
+			else if (strchr(sep, *s)) {
 				if (buf.size() > 0) {
 					fields.push_back(buf);
 					buf.clear();
@@ -292,23 +300,23 @@ ZeroTier::String OSUtils::platformDefaultHomePath()
 {
 #ifdef __QNAP__
 	char *cmd = "/sbin/getcfg zerotier Install_Path -f /etc/config/qpkg.conf";
-    char buf[128];
-    FILE *fp;
-    if ((fp = popen(cmd, "r")) == NULL) {
-        printf("Error opening pipe!\n");
-        return NULL;
-    }
-    while (fgets(buf, 128, fp) != NULL) { }
-    if(pclose(fp))  {
-        printf("Command not found or exited with error status\n");
-        return NULL;
-    }
-    String homeDir = String(buf);
-    homeDir.erase(std::remove(homeDir.begin(), homeDir.end(), '\n'), homeDir.end());
-    return homeDir;
+		char buf[128];
+		FILE *fp;
+		if ((fp = popen(cmd, "r")) == NULL) {
+				printf("Error opening pipe!\n");
+				return NULL;
+		}
+		while (fgets(buf, 128, fp) != NULL) { }
+		if(pclose(fp))  {
+				printf("Command not found or exited with error status\n");
+				return NULL;
+		}
+		String homeDir = String(buf);
+		homeDir.erase(std::remove(homeDir.begin(), homeDir.end(), '\n'), homeDir.end());
+		return homeDir;
 #endif
 
-    // Check for user-defined environment variable before using defaults
+	// Check for user-defined environment variable before using defaults
 #ifdef __WINDOWS__
 	DWORD bufferSize = 65535;
 	ZeroTier::String userDefinedPath;
@@ -316,7 +324,7 @@ ZeroTier::String OSUtils::platformDefaultHomePath()
 	if (bufferSize)
 		return userDefinedPath;
 #else
-	if(const char* userDefinedPath = getenv("ZEROTIER_HOME"))
+	if (const char *userDefinedPath = getenv("ZEROTIER_HOME"))
 		return String(userDefinedPath);
 #endif
 

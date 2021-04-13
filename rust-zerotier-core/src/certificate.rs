@@ -807,6 +807,6 @@ mod tests {
         let cert_signed_decoded = cert_signed_decoded.ok().unwrap();
         assert!(cert_signed_decoded.signature.len() > 0);
 
-        assert!(cert_signed_decoded.verify() == CertificateError::None);
+        assert!(cert_signed_decoded.verify(-1) == CertificateError::None);
     }
 }
