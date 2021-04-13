@@ -1,3 +1,11 @@
+zerotier-one (1.6.5) unstable; urgency=medium
+
+  * Fix path filtering bug that could cause "software laser" effect.
+  * Fix printf overflow in CLI (not exploitable or security related)
+  * Fix Windows device enumeration issue.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Tue, 13 Apr 2021 01:00:00 -0700
+
 zerotier-one (1.6.4) unstable; urgency=medium
 
   * REALLY fix a problem causing nodes to go into a "coma" with some network configurations.
