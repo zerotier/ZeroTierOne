@@ -309,32 +309,25 @@ static bool ZTT_deepCompareCertificates(const Certificate &a, const Certificate 
 		(a.subject.networkCount != b.subject.networkCount) ||
 		(a.subject.updateURLCount != b.subject.updateURLCount) ||
 		(a.subject.uniqueIdSize != b.subject.uniqueIdSize) ||
-		(a.subject.uniqueIdProofSignatureSize != b.subject.uniqueIdProofSignatureSize) ||
+		(a.subject.uniqueIdSignatureSize != b.subject.uniqueIdSignatureSize) ||
 		(a.maxPathLength != b.maxPathLength) ||
 		(a.signatureSize != b.signatureSize)
 		)
 		return false;
 
-	if ((a.subject.uniqueId == nullptr) != (b.subject.uniqueId == nullptr))
-		return false;
-	if ((a.subject.uniqueIdProofSignature == nullptr) != (b.subject.uniqueIdProofSignature == nullptr))
+
+	if ((memcmp(a.subject.uniqueId, b.subject.uniqueId, a.subject.uniqueIdSize) != 0) || (memcmp(a.subject.uniqueIdSignature, b.subject.uniqueIdSignature, a.subject.uniqueIdSignatureSize) != 0) || (memcmp(a.signature, b.signature, a.signatureSize) != 0))
 		return false;
 
-	if ((a.subject.uniqueId != nullptr) && (a.subject.uniqueIdProofSignature != nullptr)) {
-		if (
-			(memcmp(a.subject.uniqueId, b.subject.uniqueId, a.subject.uniqueIdSize) != 0) ||
-			(memcmp(a.subject.uniqueIdProofSignature, b.subject.uniqueIdProofSignature, a.subject.uniqueIdProofSignatureSize) != 0) ||
-			(memcmp(a.signature, b.signature, a.signatureSize) != 0)
-			)
-			return false;
-	}
-
-	if ((!ZTT_deepCompareCertificateName(a.subject.name, b.subject.name)) || (!ZTT_deepCompareCertificateName(a.issuerName, b.issuerName)))
+	if (!ZTT_deepCompareCertificateName(a.subject.name, b.subject.name))
 		return false;
 
-	if ((a.issuer == nullptr) != (b.issuer == nullptr))
+	if (memcmp(a.issuer, b.issuer, ZT_CERTIFICATE_HASH_SIZE) != 0)
 		return false;
-	if ((a.issuer != nullptr) && ((*reinterpret_cast<const Identity *>(a.issuer)) != (*reinterpret_cast<const Identity *>(b.issuer))))
+	if ((a.issuerPublicKeySize != b.issuerPublicKeySize) || (memcmp(a.issuerPublicKey, b.issuerPublicKey, a.issuerPublicKeySize) != 0))
+		return false;
+
+	if ((a.publicKeySize != b.publicKeySize) || (memcmp(a.publicKey, b.publicKey, a.publicKeySize)))
 		return false;
 
 	for (unsigned int i = 0; i < a.subject.identityCount; ++i) {
@@ -655,7 +648,7 @@ extern "C" const char *ZTT_general()
 				}
 				bufs.clear();
 				if (Buf::poolAllocated() != ZT_BUF_MAX_POOL_SIZE) {
-					ZT_T_PRINTF("FAILED (2)" ZT_EOL_S);
+					ZT_T_PRINTF("FAILED (2) (%ld)" ZT_EOL_S, Buf::poolAllocated());
 					return "Buf memory pool test failed";
 				}
 				Buf::freePool();
@@ -1195,19 +1188,24 @@ extern "C" const char *ZTT_crypto()
 
 		{
 			char tmp[256];
+			uint8_t fakeIssuer[48];
+			Utils::getSecureRandom(fakeIssuer, sizeof(fakeIssuer));
 
 			ZT_T_PRINTF("[crypto] Testing Certificate..." ZT_EOL_S);
 
-			ZT_T_PRINTF("  Create test subject and issuer identities... ");
-			Identity testSubjectId, testIssuerId;
+			ZT_T_PRINTF("  Create test identities... ");
+			Identity testSubjectId;
 			testSubjectId.generate(Identity::C25519);
-			testIssuerId.generate(Identity::P384);
 			ZT_T_PRINTF("OK" ZT_EOL_S);
 
-			ZT_T_PRINTF("  Create subject unique ID... ");
-			uint8_t uniqueId[ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE], uniqueIdPrivate[ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_PRIVATE_SIZE];
-			Certificate::createSubjectUniqueId(uniqueId, uniqueIdPrivate);
-			Utils::b32e(uniqueId, ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE, tmp, sizeof(tmp));
+			ZT_T_PRINTF("  Create subject unique ID key pair... ");
+			uint8_t uniqueId[ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE], uniqueIdPrivate[ZT_CERTIFICATE_MAX_PRIVATE_KEY_SIZE];
+			int uniqueIdSize = 0, uniqueIdPrivateKeySize = 0;
+			if (!Certificate::newKeyPair(ZT_CERTIFICATE_PUBLIC_KEY_ALGORITHM_ECDSA_NIST_P_384, uniqueId, &uniqueIdSize, uniqueIdPrivate, &uniqueIdPrivateKeySize)) {
+				ZT_T_PRINTF("FAILED" ZT_EOL_S);
+				return "Certificate key pair create";
+			}
+			Utils::b32e(uniqueId, uniqueIdSize, tmp, sizeof(tmp));
 			ZT_T_PRINTF("OK %s" ZT_EOL_S, tmp);
 
 			ZT_T_PRINTF("  Create and sign certificate... ");
@@ -1231,9 +1229,15 @@ extern "C" const char *ZTT_crypto()
 			cert->timestamp = cert->subject.timestamp;
 			cert->validity[0] = 0;
 			cert->validity[1] = 9223372036854775807LL;
-			Utils::copy< sizeof(ZT_Certificate_Name) >(&cert->issuerName, &cert->subject.name);
-			cert->setSubjectUniqueId(uniqueId, uniqueIdPrivate);
-			cert->sign(testIssuerId);
+			uint8_t issuerPrivateKey[ZT_CERTIFICATE_MAX_PRIVATE_KEY_SIZE], certPrivateKey[ZT_CERTIFICATE_MAX_PRIVATE_KEY_SIZE];
+			int issuerPrivateKeySize = 0, certPrivateKeySize = 0;
+			Certificate::newKeyPair(ZT_CERTIFICATE_PUBLIC_KEY_ALGORITHM_ECDSA_NIST_P_384, cert->issuerPublicKey, (int *)&cert->issuerPublicKeySize, issuerPrivateKey, &issuerPrivateKeySize);
+			Certificate::newKeyPair(ZT_CERTIFICATE_PUBLIC_KEY_ALGORITHM_ECDSA_NIST_P_384, cert->publicKey, (int *)&cert->publicKeySize, certPrivateKey, &certPrivateKeySize);
+			cert->setSubjectUniqueId(uniqueIdPrivate, uniqueIdPrivateKeySize);
+			if (!cert->sign(fakeIssuer, issuerPrivateKey, issuerPrivateKeySize)) {
+				ZT_T_PRINTF("FAILED" ZT_EOL_S);
+				return "Certificate sign";
+			}
 			Vector< uint8_t > enc(cert->encode());
 			ZT_T_PRINTF("OK (%d bytes)" ZT_EOL_S, (int)enc.size());
 

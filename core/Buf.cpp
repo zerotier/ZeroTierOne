@@ -27,43 +27,46 @@ void *Buf::operator new(std::size_t sz)
 	uintptr_t bb;
 	for (;;) {
 		bb = s_pool.exchange(ZT_ATOMIC_PTR_LOCKED, std::memory_order_acquire);
-		if (likely(bb != ZT_ATOMIC_PTR_LOCKED))
-			break;
+
+		if (likely(bb != ZT_ATOMIC_PTR_LOCKED)) {
+			Buf *b;
+			if (likely(bb != 0)) {
+				b = reinterpret_cast<Buf *>(bb);
+				s_pool.store(b->__nextInPool, std::memory_order_release);
+			} else {
+				s_pool.store(0, std::memory_order_release);
+				b = reinterpret_cast<Buf *>(malloc(sz));
+				if (!b)
+					throw Utils::BadAllocException;
+				s_allocated.fetch_add(1, std::memory_order_relaxed);
+			}
+
+			b->__refCount.store(0, std::memory_order_relaxed);
+
+			return reinterpret_cast<void *>(b);
+		}
+
 		Spinlock::pause();
 	}
-
-	Buf *b;
-	if (bb) {
-		s_pool.store(((Buf *)bb)->__nextInPool.load(std::memory_order_relaxed), std::memory_order_release);
-		b = (Buf *)bb;
-	} else {
-		s_pool.store(0, std::memory_order_release);
-		b = (Buf *)malloc(sz);
-		if (!b)
-			throw Utils::BadAllocException;
-		s_allocated.fetch_add(1, std::memory_order_relaxed);
-	}
-
-	b->__refCount.store(0, std::memory_order_relaxed);
-	return (void *)b;
 }
 
 void Buf::operator delete(void *ptr)
 {
-	if (ptr) {
+	if (likely(ptr != nullptr)) {
 		if (s_allocated.load(std::memory_order_relaxed) > ZT_BUF_MAX_POOL_SIZE) {
+			s_allocated.fetch_sub(1, std::memory_order_relaxed);
 			free(ptr);
 		} else {
 			uintptr_t bb;
 			for (;;) {
 				bb = s_pool.exchange(ZT_ATOMIC_PTR_LOCKED, std::memory_order_acquire);
-				if (likely(bb != ZT_ATOMIC_PTR_LOCKED))
-					break;
+				if (likely(bb != ZT_ATOMIC_PTR_LOCKED)) {
+					reinterpret_cast<Buf *>(ptr)->__nextInPool = bb;
+					s_pool.store(reinterpret_cast<uintptr_t>(ptr), std::memory_order_release);
+					return;
+				}
 				Spinlock::pause();
 			}
-
-			((Buf *)ptr)->__nextInPool.store(bb, std::memory_order_relaxed);
-			s_pool.store((uintptr_t)ptr, std::memory_order_release);
 		}
 	}
 }
@@ -73,18 +76,21 @@ void Buf::freePool() noexcept
 	uintptr_t bb;
 	for (;;) {
 		bb = s_pool.exchange(ZT_ATOMIC_PTR_LOCKED, std::memory_order_acquire);
-		if (likely(bb != ZT_ATOMIC_PTR_LOCKED))
-			break;
+
+		if (likely(bb != ZT_ATOMIC_PTR_LOCKED)) {
+			s_pool.store(0, std::memory_order_release);
+
+			while (bb != 0) {
+				const uintptr_t next = reinterpret_cast<Buf *>(bb)->__nextInPool;
+				s_allocated.fetch_sub(1, std::memory_order_relaxed);
+				free(reinterpret_cast<void *>(bb));
+				bb = next;
+			}
+
+			return;
+		}
+
 		Spinlock::pause();
-	}
-
-	s_pool.store(0, std::memory_order_release);
-
-	while (bb != 0) {
-		const uintptr_t next = ((Buf *)bb)->__nextInPool.load(std::memory_order_relaxed);
-		s_allocated.fetch_sub(1, std::memory_order_relaxed);
-		free((void *)bb);
-		bb = next;
 	}
 }
 

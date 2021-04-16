@@ -106,22 +106,17 @@ public:
 	void addSubjectUpdateUrl(const char *url);
 
 	/**
-	 * Set the extended attributes of this certificate
+	 * Sign subject with unique ID private key and set.
 	 *
-	 * @param x Extended attributes (set by issuer)
+	 * This is done when you createCSR but can also be done explicitly here. This
+	 * is mostly for testing purposes.
+	 *
+	 * @param uniqueIdPrivate Unique ID private key (includes public)
+	 * @param uniqueIdPrivateSize Size of private key
+	 * @return True on success
 	 */
-	//void setExtendedAttributes(const Dictionary &x);
-
-	/**
-	 * Set the unique ID of this certificate's subject
-	 *
-	 * This must be done after all other fields in the subject are set.
-	 *
-	 * @param uniqueId Unique ID
-	 * @param uniqueIdPrivate Private key associated with unique ID to prove ownership of it
-	 * @return True if successful
-	 */
-	bool setSubjectUniqueId(const uint8_t uniqueId[ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE], const uint8_t uniqueIdPrivate[ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_PRIVATE_SIZE]);
+	ZT_INLINE bool setSubjectUniqueId(const void *uniqueIdPrivate, unsigned int uniqueIdPrivateSize)
+	{ return m_setSubjectUniqueId(this->subject, uniqueIdPrivate, uniqueIdPrivateSize); }
 
 	/**
 	 * Marshal this certificate in binary form
@@ -144,12 +139,13 @@ public:
 	bool decode(const void *data, unsigned int len);
 
 	/**
-	 * Sign this certificate (and also fill in serialNo).
+	 * Sign this certificate.
 	 *
-	 * @param issuer Issuer identity (must have secret key)
+	 * This sets serialNo, issuer, issuerPublicKey, and signature.
+	 *
 	 * @return True on success
 	 */
-	bool sign(const Identity &issuer);
+	bool sign(const uint8_t issuer[ZT_CERTIFICATE_HASH_SIZE], const void *issuerPrivateKey, unsigned int issuerPrivateKeySize);
 
 	/**
 	 * Verify self-contained signatures and validity of certificate structure
@@ -164,28 +160,28 @@ public:
 	ZT_CertificateError verify(int64_t clock, bool checkSignatures) const;
 
 	/**
+	 * Create a new certificate public/private key pair
+	 *
+	 * @param type Key pair type to create
+	 * @param publicKey Buffer to fill with public key
+	 * @param publicKeySize Result parameter: set to size of public key
+	 * @param privateKey Buffer to fill with private key
+	 * @param privateKeySize Result parameter: set to size of private key
+	 * @return True on success
+	 */
+	static bool newKeyPair(const ZT_CertificatePublicKeyAlgorithm type, uint8_t publicKey[ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE], int *const publicKeySize, uint8_t privateKey[ZT_CERTIFICATE_MAX_PRIVATE_KEY_SIZE], int *const privateKeySize);
+
+	/**
 	 * Create a CSR that encodes the subject of this certificate
 	 *
 	 * @param s Subject to encode
-	 * @param uniqueId Unique ID to sign subject with or NULL if none
-	 * @param uniqueIdSize Size of unique ID or 0 if none
+	 * @param certificatePublicKey Public key for certificate
+	 * @param certificatePublicKeySize Size of public key
 	 * @param uniqueIdPrivate Unique ID private key for proof signature or NULL if none
 	 * @param uniqueIdPrivateSize Size of unique ID private key
 	 * @return Encoded subject (without any unique ID fields) or empty vector on error
 	 */
-	static Vector< uint8_t > createCSR(const ZT_Certificate_Subject &s, const void *uniqueId, unsigned int uniqueIdSize, const void *uniqueIdPrivate, unsigned int uniqueIdPrivateSize);
-
-	/**
-	 * Create a subject unique ID and corresponding private key required for use
-	 *
-	 * @param uniqueId Buffer to receive unique ID
-	 * @param uniqueIdPrivate Buffer to receive private key
-	 */
-	static ZT_INLINE void createSubjectUniqueId(uint8_t uniqueId[ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE], uint8_t uniqueIdPrivate[ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_PRIVATE_SIZE])
-	{
-		uniqueId[0] = ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384;
-		ECC384GenerateKey(uniqueId + 1, uniqueIdPrivate);
-	}
+	static Vector< uint8_t > createCSR(const ZT_Certificate_Subject &s, const void *certificatePublicKey, unsigned int certificatePublicKeySize, const void *uniqueIdPrivate, unsigned int uniqueIdPrivateSize);
 
 	ZT_INLINE unsigned long hashCode() const noexcept
 	{ return (unsigned long)Utils::loadMachineEndian< uint32_t >(this->serialNo); }
@@ -210,7 +206,7 @@ public:
 
 private:
 	void m_clear();
-
+	static bool m_setSubjectUniqueId(ZT_Certificate_Subject &s, const void *uniqueIdPrivate, unsigned int uniqueIdPrivateSize);
 	static void m_encodeSubject(const ZT_Certificate_Subject &s, Dictionary &d, bool omitUniqueIdProofSignature);
 
 	// These hold any identity or locator objects that are owned by and should
@@ -227,9 +223,6 @@ private:
 	Vector< const uint8_t * > m_subjectCertificates;
 	Vector< const char * > m_updateUrls;
 	Vector< uint8_t > m_extendedAttributes;
-	Vector< uint8_t > m_subjectUniqueId;
-	Vector< uint8_t > m_subjectUniqueIdProofSignature;
-	Vector< uint8_t > m_signature;
 };
 
 } // namespace ZeroTier

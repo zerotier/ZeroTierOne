@@ -178,7 +178,7 @@ public:
 
 private:
 	Map< H384, SharedPtr< Entry > > m_bySerial; // all certificates
-	Map< Blob< ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE >, SharedPtr< Entry > > m_bySubjectUniqueId; // non-rejected certificates only
+	Map< Blob< ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE >, SharedPtr< Entry > > m_bySubjectUniqueId; // non-rejected certificates only
 	Map< Fingerprint, Vector< SharedPtr< Entry > > > m_bySubjectIdentity; // non-rejected certificates only
 	ForwardList< SharedPtr< Entry > > m_addQueue;
 	ForwardList< H384 > m_deleteQueue;

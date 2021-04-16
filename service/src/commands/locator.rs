@@ -20,11 +20,11 @@ fn new_(cli_args: &ArgMatches) -> i32 {
         if ts.is_empty() {
             0_i64
         } else {
-            i64::from_str_radix(ts, 10).unwrap_or(0_i64) * 1000_i64 // internally uses ms since epoch
+            i64::from_str_radix(ts, 10).unwrap_or(0)
         }
     });
-    if revision <= 0 {
-        println!("ERROR: invalid or empty timestamp specified.");
+    if revision < 0 {
+        println!("ERROR: invalid revision (must be >= 0).");
         return 1;
     }
 

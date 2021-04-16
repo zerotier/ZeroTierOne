@@ -54,7 +54,8 @@ public:
 	ZT_INLINE void set(T *ptr) noexcept
 	{
 		m_release();
-		const_cast<std::atomic< int > *>(&((m_ptr = ptr)->__refCount))->fetch_add(1, std::memory_order_acquire);
+		m_ptr = ptr;
+		const_cast<std::atomic< int > *>(&(ptr->__refCount))->fetch_add(1, std::memory_order_acquire);
 	}
 
 	/**
@@ -169,8 +170,10 @@ private:
 
 	ZT_INLINE void m_release() const noexcept
 	{
-		if (unlikely((m_ptr != nullptr)&&(const_cast<std::atomic< int > *>(&(m_ptr->__refCount))->fetch_sub(1, std::memory_order_release) <= 1)))
-			delete m_ptr;
+		if (likely(m_ptr != nullptr)) {
+			if (unlikely(const_cast<std::atomic< int > *>(&(m_ptr->__refCount))->fetch_sub(1, std::memory_order_release) <= 1))
+				delete m_ptr;
+		}
 	}
 
 	T *m_ptr;

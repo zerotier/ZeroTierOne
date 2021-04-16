@@ -857,10 +857,7 @@ public:
 	{ return ZT_BUF_MEM_SIZE; }
 
 private:
-	// Next item in free buffer pool linked list if Buf is placed in pool, undefined and unused otherwise
-	std::atomic< uintptr_t > __nextInPool;
-
-	// Reference counter for SharedPtr<>
+	volatile uintptr_t __nextInPool;
 	std::atomic< int > __refCount;
 };
 

@@ -25,8 +25,8 @@ TrustStore::~TrustStore()
 SharedPtr< TrustStore::Entry > TrustStore::get(const H384 &serial) const
 {
 	RWMutex::RLock l(m_lock);
-	Map< H384, SharedPtr< Entry > >::const_iterator i(m_bySerial.find(serial));
-	return (i != m_bySerial.end()) ? i->second : SharedPtr< TrustStore::Entry >();
+	Map< H384, SharedPtr< Entry > >::const_iterator c(m_bySerial.find(serial));
+	return (c != m_bySerial.end()) ? c->second : SharedPtr< TrustStore::Entry >();
 }
 
 Map< Identity, SharedPtr< const Locator > > TrustStore::roots()
@@ -56,9 +56,9 @@ Vector< SharedPtr< TrustStore::Entry > > TrustStore::all(const bool includeRejec
 	RWMutex::RLock l(m_lock);
 	Vector< SharedPtr< Entry > > r;
 	r.reserve(m_bySerial.size());
-	for (Map< H384, SharedPtr< Entry > >::const_iterator i(m_bySerial.begin()); i != m_bySerial.end(); ++i) {
-		if ((includeRejectedCertificates) || (i->second->error() == ZT_CERTIFICATE_ERROR_NONE))
-			r.push_back(i->second);
+	for (Map< H384, SharedPtr< Entry > >::const_iterator c(m_bySerial.begin()); c != m_bySerial.end(); ++c) {
+		if ((includeRejectedCertificates) || (c->second->error() == ZT_CERTIFICATE_ERROR_NONE))
+			r.push_back(c->second);
 	}
 	return r;
 }
@@ -73,25 +73,6 @@ void TrustStore::erase(const H384 &serial)
 {
 	RWMutex::Lock l(m_lock);
 	m_deleteQueue.push_front(serial);
-}
-
-// Recursive function to trace a certificate up the chain to a CA, returning true
-// if the CA is reached and the path length is less than the maximum. Note that only
-// non-rejected (no errors) certificates will be in bySignedCert.
-static bool p_validatePath(const Map< H384, Vector< SharedPtr< TrustStore::Entry > > > &bySignedCert, const SharedPtr< TrustStore::Entry > &entry, unsigned int pathLength)
-{
-	if (((entry->localTrust() & ZT_CERTIFICATE_LOCAL_TRUST_FLAG_ROOT_CA) != 0) && (pathLength <= entry->certificate().maxPathLength))
-		return true;
-	if (pathLength < ZT_CERTIFICATE_MAX_PATH_LENGTH) {
-		const Map< H384, Vector< SharedPtr< TrustStore::Entry > > >::const_iterator signers(bySignedCert.find(H384(entry->certificate().serialNo)));
-		if (signers != bySignedCert.end()) {
-			for (Vector< SharedPtr< TrustStore::Entry > >::const_iterator signer(signers->second.begin()); signer != signers->second.end(); ++signer) {
-				if ((*signer != entry) && (p_validatePath(bySignedCert, *signer, pathLength + 1)))
-					return true;
-			}
-		}
-	}
-	return false;
 }
 
 bool TrustStore::update(const int64_t clock, Vector< SharedPtr< Entry > > *const purge)
@@ -135,20 +116,30 @@ bool TrustStore::update(const int64_t clock, Vector< SharedPtr< Entry > > *const
 
 	Map< H384, Vector< SharedPtr< Entry > > > bySignedCert;
 	for (;;) {
-		// Create a reverse lookup mapping from signed certs to signer certs for certificate
-		// path validation. Only include good certificates.
-		for (Map< H384, SharedPtr< Entry > >::const_iterator c(m_bySerial.begin()); c != m_bySerial.end(); ++c) {
-			if (c->second->error() == ZT_CERTIFICATE_ERROR_NONE) {
-				for (unsigned int j = 0; j < c->second->m_certificate.subject.certificateCount; ++j)
-					bySignedCert[H384(c->second->m_certificate.subject.certificates[j])].push_back(c->second);
-			}
-		}
-
 		// Validate certificate paths and reject any certificates that do not trace back to a CA.
-		for (Map< H384, SharedPtr< Entry > >::const_iterator c(m_bySerial.begin()); c != m_bySerial.end(); ++c) {
+		for (Map< H384, SharedPtr< Entry > >::iterator c(m_bySerial.begin()); c != m_bySerial.end(); ++c) {
 			if (c->second->error() == ZT_CERTIFICATE_ERROR_NONE) {
-				if (!p_validatePath(bySignedCert, c->second, 0))
+				unsigned int pathLength = 0;
+				Map< H384, SharedPtr< Entry > >::const_iterator current(c);
+				Set< H384 > visited; // prevent infinite loops if there's a cycle
+				for (;;) {
+					if (pathLength <= current->second->m_certificate.maxPathLength) {
+						if ((current->second->localTrust() & ZT_CERTIFICATE_LOCAL_TRUST_FLAG_ROOT_CA) == 0) {
+							visited.insert(current->second->m_certificate.getSerialNo());
+							const H384 next(current->second->m_certificate.issuer);
+							if (visited.find(next) == visited.end()) {
+								current = m_bySerial.find(next);
+								if ((current != m_bySerial.end()) && (current->second->error() == ZT_CERTIFICATE_ERROR_NONE)) {
+									++pathLength;
+									continue;
+								}
+							}
+						} else {
+							break; // traced to root CA, abort without setting error
+						}
+					}
 					c->second->m_error.store((int)ZT_CERTIFICATE_ERROR_INVALID_CHAIN, std::memory_order_relaxed);
+				}
 			}
 		}
 
@@ -159,8 +150,8 @@ bool TrustStore::update(const int64_t clock, Vector< SharedPtr< Entry > > *const
 		for (Map< H384, SharedPtr< Entry > >::const_iterator c(m_bySerial.begin()); c != m_bySerial.end();) {
 			if (c->second->error() == ZT_CERTIFICATE_ERROR_NONE) {
 				const unsigned int uniqueIdSize = c->second->m_certificate.subject.uniqueIdSize;
-				if ((uniqueIdSize > 0) && (uniqueIdSize <= ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE)) {
-					SharedPtr< Entry > &current = m_bySubjectUniqueId[Blob< ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE >(c->second->m_certificate.subject.uniqueId, uniqueIdSize)];
+				if ((uniqueIdSize > 0) && (uniqueIdSize <= ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE)) {
+					SharedPtr< Entry > &current = m_bySubjectUniqueId[Blob< ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE >(c->second->m_certificate.subject.uniqueId, uniqueIdSize)];
 					if (current) {
 						exitLoop = false;
 						if (c->second->m_certificate.subject.timestamp > current->m_certificate.subject.timestamp) {

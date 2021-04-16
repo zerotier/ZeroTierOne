@@ -20,6 +20,7 @@
 #include "VL1.hpp"
 #include "VL2.hpp"
 #include "CallContext.hpp"
+#include "ECC384.hpp"
 
 extern "C" {
 
@@ -658,43 +659,34 @@ ZT_MAYBE_UNUSED void ZT_Identity_delete(const ZT_Identity *id)
 
 /********************************************************************************************************************/
 
-ZT_MAYBE_UNUSED int ZT_Certificate_newSubjectUniqueId(
-	enum ZT_CertificateUniqueIdType type,
-	void *uniqueId,
-	int *uniqueIdSize,
-	void *uniqueIdPrivate,
-	int *uniqueIdPrivateSize)
+ZT_MAYBE_UNUSED int ZT_Certificate_newKeyPair(
+	const enum ZT_CertificatePublicKeyAlgorithm type,
+	uint8_t publicKey[ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE],
+	int *const publicKeySize,
+	uint8_t privateKey[ZT_CERTIFICATE_MAX_PRIVATE_KEY_SIZE],
+	int *const privateKeySize)
 {
 	try {
-		switch (type) {
-			case ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384:
-				if ((*uniqueIdSize < ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE) || (*uniqueIdPrivateSize < ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_PRIVATE_SIZE))
-					return ZT_RESULT_ERROR_BAD_PARAMETER;
-				*uniqueIdSize = ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE;
-				*uniqueIdPrivateSize = ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_PRIVATE_SIZE;
-				ZeroTier::Certificate::createSubjectUniqueId(reinterpret_cast<uint8_t *>(uniqueId), reinterpret_cast<uint8_t *>(uniqueIdPrivate));
-				return ZT_RESULT_OK;
-		}
-		return ZT_RESULT_ERROR_BAD_PARAMETER;
-	} catch (...) {
+		return ZeroTier::Certificate::newKeyPair(type, publicKey, publicKeySize, privateKey, privateKeySize) ? ZT_RESULT_OK : ZT_RESULT_ERROR_BAD_PARAMETER;
+	} catch ( ... ) {
 		return ZT_RESULT_FATAL_ERROR_INTERNAL;
 	}
 }
 
 ZT_MAYBE_UNUSED int ZT_Certificate_newCSR(
 	const ZT_Certificate_Subject *subject,
-	const void *uniqueId,
-	int uniqueIdSize,
-	const void *uniqueIdPrivate,
-	int uniqueIdPrivateSize,
-	void *csr,
-	int *csrSize)
+	const void *const certificatePublicKey,
+	const int certificatePublicKeySize,
+	const void *const uniqueIdPrivateKey,
+	const int uniqueIdPrivateKeySize,
+	void *const csr,
+	int *const csrSize)
 {
 	try {
-		if (!subject)
+		if ((!subject) || (!certificatePublicKey) || (certificatePublicKeySize <= 0) || (certificatePublicKeySize > ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE))
 			return ZT_RESULT_ERROR_BAD_PARAMETER;
-		const ZeroTier::Vector< uint8_t > csrV(ZeroTier::Certificate::createCSR(*subject, uniqueId, uniqueIdSize, uniqueIdPrivate, uniqueIdPrivateSize));
-		if ((int)csrV.size() > *csrSize)
+		const ZeroTier::Vector< uint8_t > csrV(ZeroTier::Certificate::createCSR(*subject, certificatePublicKey, (unsigned int)certificatePublicKeySize, uniqueIdPrivateKey, (unsigned int)uniqueIdPrivateKeySize));
+		if (csrV.empty() || ((int)csrV.size() > *csrSize))
 			return ZT_RESULT_ERROR_BAD_PARAMETER;
 		ZeroTier::Utils::copy(csr, csrV.data(), (unsigned int)csrV.size());
 		*csrSize = (int)csrV.size();
@@ -704,29 +696,21 @@ ZT_MAYBE_UNUSED int ZT_Certificate_newCSR(
 	}
 }
 
-ZT_MAYBE_UNUSED int ZT_Certificate_sign(
+ZT_MAYBE_UNUSED ZT_Certificate *ZT_Certificate_sign(
 	const ZT_Certificate *cert,
-	const ZT_Identity *signer,
-	void *signedCert,
-	int *signedCertSize)
+	const uint8_t issuer[ZT_CERTIFICATE_HASH_SIZE],
+	const void *issuerPrivateKey,
+	int issuerPrivateKeySize)
 {
 	try {
-		if (!cert)
-			return ZT_RESULT_ERROR_BAD_PARAMETER;
-		ZeroTier::Certificate c(*cert);
-		if (!c.sign(*reinterpret_cast<const ZeroTier::Identity *>(signer)))
-			return ZT_RESULT_ERROR_INTERNAL;
-
-		const ZeroTier::Vector< uint8_t > enc(c.encode());
-		if ((int)enc.size() > *signedCertSize)
-			return ZT_RESULT_ERROR_BAD_PARAMETER;
-		ZeroTier::Utils::copy(signedCert, enc.data(), (unsigned int)enc.size());
-		*signedCertSize = (int)enc.size();
-
-		return ZT_RESULT_OK;
-	} catch (...) {
-		return ZT_RESULT_FATAL_ERROR_INTERNAL;
-	}
+		ZeroTier::Certificate *const c = new ZeroTier::Certificate(*cert);
+		if (c->sign(issuer, issuerPrivateKey, issuerPrivateKeySize)) {
+			return c;
+		} else {
+			delete c;
+		}
+	} catch (...) {}
+	return nullptr;
 }
 
 ZT_MAYBE_UNUSED enum ZT_CertificateError ZT_Certificate_decode(

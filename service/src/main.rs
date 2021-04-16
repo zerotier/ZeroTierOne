@@ -111,7 +111,7 @@ Advanced Operations:
 
   locator <command> [args]
     new [-...] <identity> <endpoint> [...] Create new signed locator
-      -r <revision>                        Revision number
+      -r <revision>                        Revision number (default: time)
     verify <identity> <locator>            Verify locator signature
     show <locator>                         Show contents of a locator
 

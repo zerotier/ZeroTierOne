@@ -198,7 +198,7 @@ struct Blob
 
 	explicit ZT_INLINE Blob(const void *const d, const unsigned int l) noexcept
 	{
-		Utils::copy(data, d, l);
+		Utils::copy(data, d, (l > (unsigned int)S) ? (unsigned int)S : l);
 		if (l < S) {
 			Utils::zero(data + l, S - l);
 		}

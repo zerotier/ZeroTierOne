@@ -338,27 +338,6 @@ typedef struct
 #define ZT_CERTIFICATE_LOCAL_TRUST_FLAG_ZEROTIER_ROOT_SET 0x0002U
 
 /**
- * Size of a unique ID of the given key type (with type prefix byte)
- */
-#define ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE 50
-
-/**
- * Size of the private key corresponding to a unique ID of the given type.
- */
-#define ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_PRIVATE_SIZE 48
-
-/**
- * Unique ID types supported for certificate subject unique IDs
- */
-enum ZT_CertificateUniqueIdType
-{
-	/**
-	 * Public key type for NIST P-384 public keys used as subject unique IDs.
-	 */
-	ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384 = 1
-};
-
-/**
  * Errors returned by functions that verify or handle certificates.
  */
 enum ZT_CertificateError
@@ -415,6 +394,42 @@ enum ZT_CertificateError
 };
 
 /**
+ * Public key signing algorithm for certificates
+ */
+enum ZT_CertificatePublicKeyAlgorithm
+{
+	/**
+	 * Nil value indicating no signature.
+	 */
+	ZT_CERTIFICATE_PUBLIC_KEY_ALGORITHM_NONE = 0,
+
+	/**
+	 * ECDSA with the NIST P-384 curve.
+	 */
+	ZT_CERTIFICATE_PUBLIC_KEY_ALGORITHM_ECDSA_NIST_P_384 = 1
+};
+
+/**
+ * Maximum size of a public key in bytes (can be increased)
+ */
+#define ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE 64
+
+/**
+ * Maximum size of a private key in bytes (can be increased)
+ */
+#define ZT_CERTIFICATE_MAX_PRIVATE_KEY_SIZE 128
+
+/**
+ * Maximum size of a signature in bytes (can be increased)
+ */
+#define ZT_CERTIFICATE_MAX_SIGNATURE_SIZE 128
+
+/**
+ * Size of a SHA384 hash
+ */
+#define ZT_CERTIFICATE_HASH_SIZE 48
+
+/**
  * Information about a real world entity.
  *
  * These fields are all optional and are all taken from the
@@ -447,7 +462,7 @@ typedef struct
 	const ZT_Identity *identity;
 
 	/**
-	 * Locator, or NULL if none
+	 * Locator (NULL if no locator included)
 	 */
 	const ZT_Locator *locator;
 } ZT_Certificate_Identity;
@@ -526,28 +541,15 @@ typedef struct
 	/**
 	 * Globally unique ID for this subject
 	 *
-	 * Unique IDs are actually public keys. Their size makes them globally
-	 * unique (if generated from good randomness) to within ridiculous
-	 * probability bounds. If a subject has a unique ID it must also have
-	 * a unique ID proof signature, which is the signature of the subject
-	 * with the private key corresponding to its unique ID.
-	 *
-	 * This allows subjects to "own" themselves and exist independent of
-	 * CAs or delegated signers. It also allows a certificate for a given
-	 * subject to be updated.
-	 *
-	 * Subject unique IDs are optional. If no unique ID is specified these
-	 * and their corresponding size fields must be empty/zero.
-	 *
-	 * A subject is valid if it has no unique ID or has one with a valid
-	 * proof signature.
+	 * This is actually a public key and is generated the same way as a normal
+	 * certificate public key.
 	 */
-	const uint8_t *uniqueId;
+	uint8_t uniqueId[ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE];
 
 	/**
 	 * Signature proving ownership of unique ID.
 	 */
-	const uint8_t *uniqueIdProofSignature;
+	uint8_t uniqueIdSignature[ZT_CERTIFICATE_MAX_SIGNATURE_SIZE];
 
 	/**
 	 * Size of unique ID in bytes or 0 if none.
@@ -557,7 +559,7 @@ typedef struct
 	/**
 	 * Proof signature size or 0 if none.
 	 */
-	unsigned int uniqueIdProofSignatureSize;
+	unsigned int uniqueIdSignatureSize;
 } ZT_Certificate_Subject;
 
 /**
@@ -573,9 +575,9 @@ typedef struct
 typedef struct
 {
 	/**
-	 * Serial number, a SHA384 hash of this certificate.
+	 * Serial number, a SHA384 hash of this certificate (minus signature).
 	 */
-	uint8_t serialNo[48];
+	uint8_t serialNo[ZT_CERTIFICATE_HASH_SIZE];
 
 	/**
 	 * Flags indicating certificate usage and any other attributes.
@@ -598,14 +600,29 @@ typedef struct
 	ZT_Certificate_Subject subject;
 
 	/**
-	 * Issuer node identity and public key(s).
+	 * Issuer certificate serial number.
 	 */
-	const ZT_Identity *issuer;
+	uint8_t issuer[ZT_CERTIFICATE_HASH_SIZE];
 
 	/**
-	 * Issuer information
+	 * Public key of issuer certificate.
 	 */
-	ZT_Certificate_Name issuerName;
+	uint8_t issuerPublicKey[ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE];
+
+	/**
+	 * Certificate public key (first byte is ZT_CertificatePublicKeyAlgorithm)
+	 */
+	uint8_t publicKey[ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE];
+
+	/**
+	 * Size of issuer public key.
+	 */
+	unsigned int issuerPublicKeySize;
+
+	/**
+	 * Size of public key in bytes
+	 */
+	unsigned int publicKeySize;
 
 	/**
 	 * Extended attributes set by issuer (in Dictionary format, NULL if none)
@@ -618,6 +635,16 @@ typedef struct
 	unsigned int extendedAttributesSize;
 
 	/**
+	 * Signature by issuer.
+	 */
+	uint8_t signature[ZT_CERTIFICATE_MAX_SIGNATURE_SIZE];
+
+	/**
+	 * Size of signature in bytes.
+	 */
+	unsigned int signatureSize;
+
+	/**
 	 * Maximum path length from this certificate toward further certificates.
 	 *
 	 * Subjects may sign other certificates whose path lengths are less than
@@ -625,16 +652,6 @@ typedef struct
 	 * may be signed (not a CA).
 	 */
 	unsigned int maxPathLength;
-
-	/**
-	 * Signature by issuer (algorithm determined by identity type).
-	 */
-	const uint8_t *signature;
-
-	/**
-	 * Size of signature in bytes.
-	 */
-	unsigned int signatureSize;
 } ZT_Certificate;
 
 /**
@@ -2756,23 +2773,24 @@ ZT_SDK_API void ZT_version(
 /* ---------------------------------------------------------------------------------------------------------------- */
 
 /**
- * Create a new certificate subject unique ID and private key
+ * Create a new public/private key pair.
  *
- * A unique ID is really a public/private key pair.
+ * This is for use as a certificate public key or as the unique ID for
+ * enforcing subject ownership.
  *
- * @param type Unique ID type (key pair algorithm)
- * @param uniqueId Unique ID buffer
- * @param uniqueIdSize Value/result: size of buffer
- * @param uniqueIdPrivate Unique ID private key buffer
- * @param uniqueIdPrivateSize Value/result: size of buffer
+ * @param type Type to create
+ * @param publicKey Public key buffer
+ * @param publicKeySize Result parameter: set to size of public key
+ * @param privateKey Private key buffer
+ * @param privateKeySize Result parameter: set to size of private key
  * @return OK (0) or error
  */
-ZT_SDK_API int ZT_Certificate_newSubjectUniqueId(
-	enum ZT_CertificateUniqueIdType type,
-	void *uniqueId,
-	int *uniqueIdSize,
-	void *uniqueIdPrivate,
-	int *uniqueIdPrivateSize);
+ZT_SDK_API int ZT_Certificate_newKeyPair(
+	enum ZT_CertificatePublicKeyAlgorithm type,
+	uint8_t publicKey[ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE],
+	int *const publicKeySize,
+	uint8_t privateKey[ZT_CERTIFICATE_MAX_PRIVATE_KEY_SIZE],
+	int *const privateKeySize);
 
 /**
  * Create a new certificate signing request (CSR)
@@ -2784,20 +2802,20 @@ ZT_SDK_API int ZT_Certificate_newSubjectUniqueId(
  * supplied subject, these will be ignored.
  *
  * @param subject Subject filled in with fields for CSR
- * @param uniqueId Unique ID or NULL if none
- * @param uniqueIdSize Size of unique ID
- * @param uniqueIdPrivate Unique ID private key or NULL if none
- * @param uniqueIdPrivateSize Size of unique ID private key
+ * @param certificatePublicKey Public key for new certificate
+ * @param certificatePublicKeySize Public key size in bytes
+ * @param uniqueIdPrivateKey Unique ID private key or NULL if none
+ * @param uniqueIdPrivateKeySize Size of unique ID private key
  * @param csr Buffer to hold CSR (recommended size: 16384 bytes)
  * @param csrSize Value/result: size of buffer
  * @return OK (0) or error
  */
 ZT_SDK_API int ZT_Certificate_newCSR(
 	const ZT_Certificate_Subject *subject,
-	const void *uniqueId,
-	int uniqueIdSize,
-	const void *uniqueIdPrivate,
-	int uniqueIdPrivateSize,
+	const void *certificatePublicKey,
+	int certificatePublicKeySize,
+	const void *uniqueIdPrivateKey,
+	int uniqueIdPrivateKeySize,
 	void *csr,
 	int *csrSize);
 
@@ -2808,17 +2826,19 @@ ZT_SDK_API int ZT_Certificate_newCSR(
  * certificate fields before signing. Things outside the subject are
  * filled in (or can be modified) by the signer.
  *
+ * The returned certificate must be freed with ZT_Certificate_delete().
+ *
  * @param cert Certificate to sign
- * @param signer Signer identity (must contain secret key)
- * @param signedCert Signed certificate buffer (recommended size: 16384 bytes)
- * @param signedCertSize Value/result: size of buffer
- * @return OK (0) or error
+ * @param issuer Serial number of issuer certificate
+ * @param issuerPrivateKey Private key of issuer (also includes public)
+ * @param issuerPrivateKeySize Size of private key in bytes
+ * @return Signed certificate or NULL on error
  */
-ZT_SDK_API int ZT_Certificate_sign(
+ZT_SDK_API ZT_Certificate *ZT_Certificate_sign(
 	const ZT_Certificate *cert,
-	const ZT_Identity *signer,
-	void *signedCert,
-	int *signedCertSize);
+	const uint8_t issuer[ZT_CERTIFICATE_HASH_SIZE],
+	const void *issuerPrivateKey,
+	int issuerPrivateKeySize);
 
 /**
  * Decode a certificate or CSR
