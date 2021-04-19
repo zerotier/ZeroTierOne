@@ -29,20 +29,27 @@ fn show<'a>(store: &Arc<Store>, cli_args: &ArgMatches<'a>) -> i32 {
     0
 }
 
-fn newsid(cli_args: Option<&ArgMatches>) -> i32 {
-    let sid = CertificateSubjectUniqueIdSecret::new(CertificateUniqueIdType::NistP384); // right now there's only one type
-    let sid = serde_json::to_string(&sid).unwrap();
-    let path = cli_args.map_or("", |cli_args| { cli_args.value_of("path").unwrap_or("") });
-    if path.is_empty() {
-        let _ = std::io::stdout().write_all(sid.as_bytes());
-        0
+fn newsuid(cli_args: Option<&ArgMatches>) -> i32 {
+    let key_pair = Certificate::new_key_pair(CertificatePublicKeyAlgorithm::ECDSANistP384);
+    if key_pair.is_err() {
+        println!("ERROR: internal error creating key pair: {}", key_pair.err().unwrap().to_str());
+        1
     } else {
-        std::fs::write(path, sid.as_bytes()).map_or_else(|e| {
-            eprintln!("FATAL: error writing '{}': {}", path, e.to_string());
-            e.raw_os_error().unwrap_or(1)
-        }, |_| {
+        let (_, privk) = key_pair.ok().unwrap();
+        let privk_hex = hex::encode(privk);
+        let path = cli_args.map_or("", |cli_args| { cli_args.value_of("path").unwrap_or("") });
+        if path.is_empty() {
+            println!("{}", privk_hex);
             0
-        })
+        } else {
+            std::fs::write(path, privk_hex.as_bytes()).map_or_else(|e| {
+                eprintln!("FATAL: error writing '{}': {}", path, e.to_string());
+                e.raw_os_error().unwrap_or(1)
+            }, |_| {
+                println!("Subject unique ID secret written to: {} (public is included)", path);
+                0
+            })
+        }
     }
 }
 
@@ -50,29 +57,29 @@ fn newcsr(cli_args: &ArgMatches) -> i32 {
     let theme = &dialoguer::theme::SimpleTheme;
 
     let subject_unique_id: String = Input::with_theme(theme)
-        .with_prompt("Path to subject unique ID secret key (recommended)")
+        .with_prompt("Path to subject unique ID secret key (empty to create unsigned subject)")
         .allow_empty(true)
         .interact_text()
         .unwrap_or_default();
-    let subject_unique_id: Option<CertificateSubjectUniqueIdSecret> = if subject_unique_id.is_empty() {
+    let subject_unique_id_private_key = if subject_unique_id.is_empty() {
         None
     } else {
-        let b = crate::utils::read_limit(subject_unique_id, 16384);
+        let b = crate::utils::read_limit(subject_unique_id, 1024);
         if b.is_err() {
             println!("ERROR: unable to read subject unique ID secret file: {}", b.err().unwrap().to_string());
             return 1;
         }
-        let json = String::from_utf8(b.unwrap());
-        if json.is_err() {
-            println!("ERROR: invalid subject unique ID secret: {}", json.err().unwrap().to_string());
+        let privk_hex = String::from_utf8(b.unwrap());
+        if privk_hex.is_err() {
+            println!("ERROR: invalid UTF-8 in secret");
             return 1;
         }
-        let sid = serde_json::from_str::<CertificateSubjectUniqueIdSecret>(json.unwrap().as_str());
-        if sid.is_err() {
-            println!("ERROR: invalid subject unique ID secret: {}", sid.err().unwrap());
+        let privk = hex::decode(privk_hex.unwrap().trim());
+        if privk.is_err() || privk.as_ref().unwrap().is_empty() {
+            println!("ERROR: invalid unique ID secret: {}", privk.err().unwrap().to_string());
             return 1;
         }
-        Some(sid.unwrap())
+        Some(privk.unwrap())
     };
 
     let timestamp: i64 = Input::with_theme(theme)
@@ -86,7 +93,7 @@ fn newcsr(cli_args: &ArgMatches) -> i32 {
         return 1;
     }
 
-    println!("Identities to include in subject");
+    println!("Subject identities");
     let mut identities: Vec<CertificateIdentity> = Vec::new();
     loop {
         let identity: String = Input::with_theme(theme)
@@ -123,7 +130,7 @@ fn newcsr(cli_args: &ArgMatches) -> i32 {
             }
             let l = l.ok();
             if !l.as_ref().unwrap().verify(&identity) {
-                println!("ERROR: locator not signed by this identity.");
+                println!("ERROR: locator was not signed by this identity.");
                 return 1;
             }
             l
@@ -135,7 +142,7 @@ fn newcsr(cli_args: &ArgMatches) -> i32 {
         });
     }
 
-    println!("Networks to include in subject (empty to end)");
+    println!("Subject networks (empty to end)");
     let mut networks: Vec<CertificateNetwork> = Vec::new();
     loop {
         let nwid: String = Input::with_theme(theme)
@@ -170,26 +177,7 @@ fn newcsr(cli_args: &ArgMatches) -> i32 {
         })
     }
 
-    println!("Certificates to reference in subject (empty to end)");
-    let mut certificates: Vec<CertificateSerialNo> = Vec::new();
-    loop {
-        let sn: String = Input::with_theme(theme)
-            .with_prompt(format!("  [{}] Certificate serial number (empty to end)", certificates.len() + 1))
-            .allow_empty(true)
-            .interact_text()
-            .unwrap_or_default();
-        if sn.is_empty() {
-            break;
-        }
-        let sn = CertificateSerialNo::new_from_string(sn.as_str());
-        if sn.is_err() {
-            println!("ERROR: invalid certificate serial number: {}", sn.err().unwrap().to_str());
-            return 1;
-        }
-        certificates.push(sn.ok().unwrap());
-    }
-
-    println!("URLs to check for updated certificates for this subject");
+    println!("Subject certificate update URLs");
     let mut update_urls: Vec<String> = Vec::new();
     loop {
         let url: String = Input::with_theme(theme)
@@ -208,7 +196,7 @@ fn newcsr(cli_args: &ArgMatches) -> i32 {
         update_urls.push(url);
     }
 
-    println!("Certificate \"name\" (same as X509 certificates, all fields optional)");
+    println!("Certificate name information (all fields are optional)");
     let name = CertificateName {
         serial_no: Input::with_theme(theme).with_prompt("  Serial").allow_empty(true).interact_text().unwrap_or_default(),
         common_name: Input::with_theme(theme).with_prompt("  Common Name").allow_empty(true).interact_text().unwrap_or_default(),
@@ -228,20 +216,30 @@ fn newcsr(cli_args: &ArgMatches) -> i32 {
         timestamp,
         identities,
         networks,
-        certificates,
         update_urls,
         name,
         unique_id: Vec::new(),
-        unique_id_proof_signature: Vec::new(),
+        unique_id_signature: Vec::new(),
     };
-    subject.new_csr(subject_unique_id.as_ref()).map_or(1, |csr| {
-        let p = cli_args.value_of("path").unwrap();
-        std::fs::write(p, csr).map_or_else(|e| {
+    let (pubk, privk) = Certificate::new_key_pair(CertificatePublicKeyAlgorithm::ECDSANistP384).ok().unwrap();
+    subject.new_csr(pubk.as_ref(), subject_unique_id_private_key.as_ref().map(|k| k.as_ref())).map_or_else(|e| {
+        println!("ERROR: error creating CRL: {}", e.to_str());
+        1
+    }, |csr| {
+        let csr_path = cli_args.value_of("csrpath").unwrap();
+        std::fs::write(csr_path, csr).map_or_else(|e| {
             println!("ERROR: unable to write CSR: {}", e.to_string());
             1
         }, |_| {
-            println!("CSR written to {}", p);
-            0
+            let secret_path = cli_args.value_of("secretpath").unwrap();
+            std::fs::write(secret_path, hex::encode(privk)).map_or_else(|e| {
+                let _ = std::fs::remove_file(csr_path);
+                println!("ERROR: unable to write secret: {}", e.to_string());
+                1
+            }, |_| {
+                println!("CSR written to '{}', certificate secret to '{}'", csr_path, secret_path);
+                0
+            })
         })
     })
 }
@@ -278,7 +276,7 @@ pub(crate) fn run(store: Arc<Store>, cli_args: &ArgMatches) -> i32 {
     match cli_args.subcommand() {
         ("list", None) => list(&store),
         ("show", Some(sub_cli_args)) => show(&store, sub_cli_args),
-        ("newsid", sub_cli_args) => newsid(sub_cli_args),
+        ("newsuid", sub_cli_args) => newsuid(sub_cli_args),
         ("newcsr", Some(sub_cli_args)) => newcsr(sub_cli_args),
         ("sign", Some(sub_cli_args)) => sign(&store, sub_cli_args),
         ("verify", Some(sub_cli_args)) => verify(&store, sub_cli_args),

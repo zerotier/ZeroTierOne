@@ -92,13 +92,6 @@ public:
 	ZT_Certificate_Network *addSubjectNetwork(uint64_t id, const ZT_Fingerprint &controller);
 
 	/**
-	 * Add a subject certificate (by its serial number)
-	 *
-	 * @param serialNo 384-bit serial number
-	 */
-	void addSubjectCertificate(const uint8_t serialNo[ZT_SHA384_DIGEST_SIZE]);
-
-	/**
 	 * Add an update URL to the updateUrls list
 	 *
 	 * @param url Update URL
@@ -215,12 +208,10 @@ private:
 	ForwardList< Identity > m_identities;
 	ForwardList< Locator > m_locators;
 	ForwardList< String > m_strings;
-	ForwardList< H384 > m_serials;
 
 	// These are stored in a vector because the memory needs to be contiguous.
 	Vector< ZT_Certificate_Identity > m_subjectIdentities;
 	Vector< ZT_Certificate_Network > m_subjectNetworks;
-	Vector< const uint8_t * > m_subjectCertificates;
 	Vector< const char * > m_updateUrls;
 	Vector< uint8_t > m_extendedAttributes;
 };

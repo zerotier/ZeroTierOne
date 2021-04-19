@@ -13,7 +13,9 @@
 
 use std::ffi::CString;
 use std::hash::{Hash, Hasher};
+use std::mem::zeroed;
 use std::os::raw::{c_char, c_uint, c_void};
+use std::pin::Pin;
 use std::ptr::{copy_nonoverlapping, null, null_mut};
 
 use num_derive::{FromPrimitive, ToPrimitive};
@@ -22,7 +24,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::*;
 use crate::capi as ztcore;
-use std::mem::zeroed;
 
 /// Maximum length of a string in a certificate (mostly for the certificate name fields).
 pub const CERTIFICATE_MAX_STRING_LENGTH: isize = ztcore::ZT_CERTIFICATE_MAX_STRING_LENGTH as isize;
@@ -33,11 +34,33 @@ pub const CERTIFICATE_LOCAL_TRUST_FLAG_ROOT_CA: u32 = ztcore::ZT_CERTIFICATE_LOC
 /// Certificate local trust bit field flag: this certificate specifies a set of ZeroTier roots.
 pub const CERTIFICATE_LOCAL_TRUST_FLAG_ZEROTIER_ROOT_SET: u32 = ztcore::ZT_CERTIFICATE_LOCAL_TRUST_FLAG_ZEROTIER_ROOT_SET;
 
-/// Length of a NIST P-384 unique ID (public key).
-pub const CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE: u32 = ztcore::ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_SIZE;
+fn vec_to_array<const L: usize>(v: &Vec<u8>) -> [u8; L] {
+    let mut a = [0_u8; L];
+    unsafe { copy_nonoverlapping(v.as_ptr(), a.as_mut_ptr(), v.len().min(L)) };
+    a
+}
 
-/// Length of a private key corresponding to a NIST P-384 unique ID.
-pub const CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_PRIVATE_SIZE: u32 = ztcore::ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384_PRIVATE_SIZE;
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#[derive(FromPrimitive, PartialEq, Eq, Clone, Copy)]
+pub enum CertificatePublicKeyAlgorithm {
+    None = ztcore::ZT_CertificatePublicKeyAlgorithm_ZT_CERTIFICATE_PUBLIC_KEY_ALGORITHM_NONE as isize,
+    ECDSANistP384 = ztcore::ZT_CertificatePublicKeyAlgorithm_ZT_CERTIFICATE_PUBLIC_KEY_ALGORITHM_ECDSA_NIST_P_384 as isize,
+}
+
+impl CertificatePublicKeyAlgorithm {
+    #[inline(always)]
+    pub fn to_i32(&self) -> i32 {
+        *self as i32
+    }
+}
+
+impl From<i32> for CertificatePublicKeyAlgorithm {
+    #[inline(always)]
+    fn from(n: i32) -> CertificatePublicKeyAlgorithm {
+        CertificatePublicKeyAlgorithm::from_i32(n).unwrap_or(CertificatePublicKeyAlgorithm::None)
+    }
+}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -86,79 +109,6 @@ impl<'de> serde::Deserialize<'de> for CertificateSerialNo {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-/// Type of certificate subject unique ID
-#[derive(FromPrimitive, ToPrimitive, PartialEq, Eq, Clone, Copy)]
-pub enum CertificateUniqueIdType {
-    NistP384 = ztcore::ZT_CertificateUniqueIdType_ZT_CERTIFICATE_UNIQUE_ID_TYPE_NIST_P_384 as isize
-}
-
-impl CertificateUniqueIdType {
-    pub fn new_from_string(s: &str) -> Result<CertificateUniqueIdType, ResultCode> {
-        if s.to_ascii_lowercase() == "nistp384" {
-            return Ok(CertificateUniqueIdType::NistP384);
-        }
-        return Err(ResultCode::ErrorBadParameter);
-    }
-}
-
-impl ToString for CertificateUniqueIdType {
-    fn to_string(&self) -> String {
-        match *self {
-            CertificateUniqueIdType::NistP384 => String::from("NistP384")
-        }
-    }
-}
-
-impl serde::Serialize for CertificateUniqueIdType {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer { serializer.serialize_str(self.to_string().as_str()) }
-}
-struct CertificateUniqueIdTypeVisitor;
-impl<'de> serde::de::Visitor<'de> for CertificateUniqueIdTypeVisitor {
-    type Value = CertificateUniqueIdType;
-    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result { formatter.write_str("object") }
-    fn visit_str<E>(self, s: &str) -> Result<Self::Value, E> where E: serde::de::Error { Self::Value::new_from_string(s).map_or_else(|_| { Err(serde::de::Error::invalid_value(serde::de::Unexpected::Str(s), &self)) },|id| { Ok(id as Self::Value) }) }
-}
-impl<'de> serde::Deserialize<'de> for CertificateUniqueIdType {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'de> { deserializer.deserialize_str(CertificateUniqueIdTypeVisitor) }
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-#[derive(Serialize, Deserialize, PartialEq, Eq, Clone)]
-pub struct CertificateSubjectUniqueIdSecret {
-    #[serde(with = "Base64Standard")]
-    pub public: Vec<u8>,
-    #[serde(with = "Base64Standard")]
-    pub private: Vec<u8>,
-    #[serde(rename = "type")]
-    pub type_: CertificateUniqueIdType,
-}
-
-const CERTIFICATE_UNIQUE_ID_CREATE_BUF_SIZE: usize = 128;
-
-impl CertificateSubjectUniqueIdSecret {
-    pub fn new(t: CertificateUniqueIdType) -> Self {
-        let mut unique_id: [u8; CERTIFICATE_UNIQUE_ID_CREATE_BUF_SIZE] = [0; CERTIFICATE_UNIQUE_ID_CREATE_BUF_SIZE];
-        let mut unique_id_private: [u8; CERTIFICATE_UNIQUE_ID_CREATE_BUF_SIZE] = [0; CERTIFICATE_UNIQUE_ID_CREATE_BUF_SIZE];
-        let mut unique_id_size = CERTIFICATE_UNIQUE_ID_CREATE_BUF_SIZE as c_int;
-        let mut unique_id_private_size = CERTIFICATE_UNIQUE_ID_CREATE_BUF_SIZE as c_int;
-        let ct: ztcore::ZT_CertificateUniqueIdType = num_traits::ToPrimitive::to_u32(&t).unwrap();
-        unsafe {
-            if ztcore::ZT_Certificate_newSubjectUniqueId(ct, unique_id.as_mut_ptr() as *mut c_void, &mut unique_id_size, unique_id_private.as_mut_ptr() as *mut c_void, &mut unique_id_private_size) != 0 {
-                panic!("fatal internal error: ZT_Certificate_newSubjectUniqueId failed.");
-            }
-        }
-        CertificateSubjectUniqueIdSecret {
-            public: Vec::from(&unique_id[0..unique_id_size as usize]),
-            private: Vec::from(&unique_id_private[0..unique_id_private_size as usize]),
-            type_: num_traits::FromPrimitive::from_i32(ct as i32).unwrap(),
-        }
-    }
-}
-
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 #[derive(FromPrimitive, ToPrimitive, PartialEq, Eq, Clone, Copy)]
 pub enum CertificateError {
     None = ztcore::ZT_CertificateError_ZT_CERTIFICATE_ERROR_NONE as isize,
@@ -204,7 +154,7 @@ impl<S: AsRef<str>> From<S> for CertificateError {
             "invaliduniqueidproof" => CertificateError::InvalidUniqueIdProof,
             "missingrequiredfields" => CertificateError::MissingRequiredFields,
             "outofvalidtimewindow" => CertificateError::OutOfValidTimeWindow,
-            _ => CertificateError::None // also "none"
+            _ => CertificateError::None
         }
     }
 }
@@ -288,9 +238,7 @@ impl CertificateName {
         if l > 126 {
             l = 126;
         }
-        unsafe {
-            copy_nonoverlapping(s.as_ptr(), cs.as_mut_ptr() as *mut u8, l);
-        }
+        unsafe { copy_nonoverlapping(s.as_ptr(), cs.as_mut_ptr() as *mut u8, l); }
         cs[l + 1] = 0;
     }
 
@@ -393,7 +341,6 @@ pub struct CertificateSubject {
     pub timestamp: i64,
     pub identities: Vec<CertificateIdentity>,
     pub networks: Vec<CertificateNetwork>,
-    pub certificates: Vec<CertificateSerialNo>,
     #[serde(rename = "updateURLs")]
     pub update_urls: Vec<String>,
     pub name: CertificateName,
@@ -401,18 +348,17 @@ pub struct CertificateSubject {
     #[serde(rename = "uniqueId")]
     pub unique_id: Vec<u8>,
     #[serde(with = "Base64Standard")]
-    #[serde(rename = "uniqueIdProofSignature")]
-    pub unique_id_proof_signature: Vec<u8>,
+    #[serde(rename = "uniqueIdSignature")]
+    pub unique_id_signature: Vec<u8>,
 }
 
 #[allow(unused)]
 pub(crate) struct CertificateSubjectCAPIContainer {
     pub(crate) subject: ztcore::ZT_Certificate_Subject,
-    subject_identities: Vec<ztcore::ZT_Certificate_Identity>,
-    subject_networks: Vec<ztcore::ZT_Certificate_Network>,
-    subject_certificates: Vec<*const u8>,
-    subject_urls: Vec<*const c_char>,
-    subject_urls_strs: Vec<CString>,
+    subject_identities: Pin<Box<[ztcore::ZT_Certificate_Identity]>>,
+    subject_networks: Pin<Box<[ztcore::ZT_Certificate_Network]>>,
+    subject_urls: Pin<Box<[*const c_char]>>,
+    subject_urls_strs: Pin<Box<[CString]>>,
 }
 
 impl CertificateSubject {
@@ -421,11 +367,10 @@ impl CertificateSubject {
             timestamp: 0,
             identities: Vec::new(),
             networks: Vec::new(),
-            certificates: Vec::new(),
             update_urls: Vec::new(),
             name: CertificateName::new(),
             unique_id: Vec::new(),
-            unique_id_proof_signature: Vec::new(),
+            unique_id_signature: Vec::new(),
         }
     }
 
@@ -449,16 +394,6 @@ impl CertificateSubject {
             }
         }
 
-        let mut certificates: Vec<CertificateSerialNo> = Vec::new();
-        if !cs.certificates.is_null() && cs.certificateCount > 0 {
-            let ccertificates: &[*const u8] = std::slice::from_raw_parts(cs.certificates, cs.certificateCount as usize);
-            let mut ctmp: [u8; 48] = [0; 48];
-            for i in ccertificates.iter() {
-                copy_nonoverlapping(*i, ctmp.as_mut_ptr(), 48);
-                certificates.push(CertificateSerialNo(ctmp));
-            }
-        }
-
         let mut update_urls: Vec<String> = Vec::new();
         if !cs.updateURLs.is_null() && cs.updateURLCount > 0 {
             let cupdate_urls: &[*const c_char] = std::slice::from_raw_parts(cs.updateURLs, cs.updateURLCount as usize);
@@ -469,20 +404,18 @@ impl CertificateSubject {
 
         return CertificateSubject {
             timestamp: cs.timestamp,
-            identities: identities,
-            networks: networks,
-            certificates: certificates,
-            update_urls: update_urls,
+            identities,
+            networks,
+            update_urls,
             name: CertificateName::new_from_capi(&cs.name),
-            unique_id: Vec::from(std::slice::from_raw_parts(cs.uniqueId, cs.uniqueIdSize as usize)),
-            unique_id_proof_signature: Vec::from(std::slice::from_raw_parts(cs.uniqueIdProofSignature, cs.uniqueIdProofSignatureSize as usize)),
+            unique_id: cs.uniqueId[0..(cs.uniqueIdSize as usize)].to_vec(),
+            unique_id_signature: cs.uniqueIdSignature[0..cs.uniqueIdSignatureSize as usize].to_vec(),
         };
     }
 
     pub(crate) unsafe fn to_capi(&self) -> CertificateSubjectCAPIContainer {
         let mut capi_identities: Vec<ztcore::ZT_Certificate_Identity> = Vec::new();
         let mut capi_networks: Vec<ztcore::ZT_Certificate_Network> = Vec::new();
-        let mut capi_certificates: Vec<*const u8> = Vec::new();
         let mut capi_urls: Vec<*const c_char> = Vec::new();
         let mut capi_urls_strs: Vec<CString> = Vec::new();
 
@@ -496,12 +429,6 @@ impl CertificateSubject {
             capi_networks.reserve(self.networks.len());
             for i in self.networks.iter() {
                 capi_networks.push((*i).to_capi());
-            }
-        }
-        if !self.certificates.is_empty() {
-            capi_certificates.reserve(self.certificates.len());
-            for i in self.certificates.iter() {
-                capi_certificates.push((*i).0.as_ptr());
             }
         }
         if !self.update_urls.is_empty() {
@@ -518,52 +445,54 @@ impl CertificateSubject {
             }
         }
 
+        let mut capi_identities = Pin::from(capi_identities.into_boxed_slice());
+        let mut capi_networks = Pin::from(capi_networks.into_boxed_slice());
+        let mut capi_urls = Pin::from(capi_urls.into_boxed_slice());
+        let mut capi_urls_strs = Pin::from(capi_urls_strs.into_boxed_slice());
+
         CertificateSubjectCAPIContainer {
             subject: ztcore::ZT_Certificate_Subject {
                 timestamp: self.timestamp,
                 identities: capi_identities.as_mut_ptr(),
                 networks: capi_networks.as_mut_ptr(),
-                certificates: capi_certificates.as_ptr(),
                 updateURLs: capi_urls.as_ptr(),
                 identityCount: capi_identities.len() as c_uint,
                 networkCount: capi_networks.len() as c_uint,
-                certificateCount: capi_certificates.len() as c_uint,
                 updateURLCount: capi_urls.len() as c_uint,
                 name: self.name.to_capi(),
-                uniqueId: self.unique_id.as_ptr(),
-                uniqueIdProofSignature: self.unique_id_proof_signature.as_ptr(),
+                uniqueId: vec_to_array(&self.unique_id),
+                uniqueIdSignature: vec_to_array(&self.unique_id_signature),
                 uniqueIdSize: self.unique_id.len() as c_uint,
-                uniqueIdProofSignatureSize: self.unique_id_proof_signature.len() as c_uint,
+                uniqueIdSignatureSize: self.unique_id_signature.len() as c_uint,
             },
             subject_identities: capi_identities,
             subject_networks: capi_networks,
-            subject_certificates: capi_certificates,
             subject_urls: capi_urls,
             subject_urls_strs: capi_urls_strs,
         }
     }
 
-    pub fn new_csr(&self, uid: Option<&CertificateSubjectUniqueIdSecret>) -> Result<Vec<u8>, ResultCode> {
+    /// Create a new certificate signing request.
+    /// A CSR is a Certificate containing only the subject (with optional unique ID and signature)
+    /// and its private key. Other fields must be filled in by the owner of the signing certificate.
+    pub fn new_csr(&self, certificate_public_key: &[u8], subject_unique_id_private_key: Option<&[u8]>) -> Result<Vec<u8>, ResultCode> {
         let mut csr: Vec<u8> = Vec::new();
         csr.resize(65536, 0);
         let mut csr_size: c_int = 65536;
 
-        unsafe {
-            let capi = self.to_capi();
-            if uid.is_some() {
-                let uid2 = uid.unwrap();
-                if ztcore::ZT_Certificate_newCSR(&capi.subject as *const ztcore::ZT_Certificate_Subject, uid2.public.as_ptr() as *const c_void, uid2.public.len() as c_int, uid2.private.as_ptr() as *const c_void, uid2.private.len() as c_int, csr.as_mut_ptr() as *mut c_void, &mut csr_size) != 0 {
-                    return Err(ResultCode::ErrorBadParameter);
-                }
-            } else {
-                if ztcore::ZT_Certificate_newCSR(&capi.subject, null(), -1, null(), -1, csr.as_mut_ptr() as *mut c_void, &mut csr_size) != 0 {
-                    return Err(ResultCode::ErrorBadParameter);
-                }
-            }
-        }
-        csr.resize(csr_size as usize, 0);
+        let (uid, uid_size) = subject_unique_id_private_key.map_or((null::<u8>(), 0 as c_int), |b| (b.as_ptr(), b.len() as c_int));
+        let r = unsafe {
+            let s = self.to_capi();
+            ztcore::ZT_Certificate_newCSR(&s.subject, certificate_public_key.as_ptr().cast(), certificate_public_key.len() as c_int, uid.cast(), uid_size, csr.as_mut_ptr().cast(), &mut csr_size)
+        };
 
-        return Ok(csr);
+        if r == 0 {
+            csr.resize(csr_size as usize, 0);
+            csr.shrink_to_fit();
+            Ok(csr)
+        } else {
+            Err(ResultCode::from_i32(r as i32).unwrap_or(ResultCode::ErrorInternalNonFatal))
+        }
     }
 }
 
@@ -577,15 +506,17 @@ pub struct Certificate {
     pub timestamp: i64,
     pub validity: [i64; 2],
     pub subject: CertificateSubject,
-    pub issuer: Option<Identity>,
-    #[serde(rename = "issuerName")]
-    pub issuer_name: CertificateName,
+    pub issuer: CertificateSerialNo,
+    #[serde(rename = "issuerPublicKey")]
+    pub issuer_public_key: Vec<u8>,
+    #[serde(rename = "publicKey")]
+    pub public_key: Vec<u8>,
     #[serde(rename = "extendedAttributes")]
     pub extended_attributes: Vec<u8>,
-    #[serde(rename = "maxPathLength")]
-    pub max_path_length: u32,
     #[serde(with = "Base64Standard")]
     pub signature: Vec<u8>,
+    #[serde(rename = "maxPathLength")]
+    pub max_path_length: u32,
 }
 
 #[allow(unused)]
@@ -595,15 +526,37 @@ pub(crate) struct CertificateCAPIContainer {
 }
 
 impl Certificate {
+    /// Create a new public/private key pair for use in certificate signing or subject unique IDs.
+    /// This returns a pair of (public, private) or an error. The first byte of both the
+    /// public and private are the type.
+    pub fn new_key_pair(alg: CertificatePublicKeyAlgorithm) -> Result<(Vec<u8>, Vec<u8>), ResultCode> {
+        let mut public_key = [0_u8; ztcore::ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE as usize];
+        let mut private_key = [0_u8; ztcore::ZT_CERTIFICATE_MAX_PRIVATE_KEY_SIZE as usize];
+        let mut public_key_size: c_int = 0;
+        let mut private_key_size: c_int = 0;
+        let r = unsafe { ztcore::ZT_Certificate_newKeyPair(alg.to_i32() as ztcore::ZT_CertificatePublicKeyAlgorithm, public_key.as_mut_ptr(), &mut public_key_size, private_key.as_mut_ptr(), &mut private_key_size) };
+        if r == 0 {
+            if public_key_size > 0 && private_key_size > 0 {
+                Ok((public_key[0..public_key_size as usize].to_vec(), private_key[0..private_key_size as usize].to_vec()))
+            } else {
+                Err(ResultCode::ErrorInternalNonFatal)
+            }
+        } else {
+            Err(ResultCode::from_i32(r as i32).unwrap_or(ResultCode::ErrorBadParameter))
+        }
+    }
+
+    /// Create an empty certificate structure.
     pub fn new() -> Certificate {
         Certificate {
             serial_no: CertificateSerialNo::new(),
             flags: 0,
             timestamp: 0,
-            validity: [0, i64::max_value()],
+            validity: [0, i64::MAX],
             subject: CertificateSubject::new(),
-            issuer: None,
-            issuer_name: CertificateName::new(),
+            issuer: CertificateSerialNo::new(),
+            issuer_public_key: Vec::new(),
+            public_key: Vec::new(),
             extended_attributes: Vec::new(),
             max_path_length: 0,
             signature: Vec::new(),
@@ -617,11 +570,12 @@ impl Certificate {
             timestamp: c.timestamp,
             validity: c.validity,
             subject: CertificateSubject::new_from_capi(&c.subject),
-            issuer: if c.issuer.is_null() { None } else { Some(Identity::new_from_capi(c.issuer, false).clone()) },
-            issuer_name: CertificateName::new_from_capi(&c.issuerName),
+            issuer: CertificateSerialNo(c.issuer),
+            issuer_public_key: c.issuerPublicKey[0..(c.issuerPublicKeySize as usize)].to_vec(),
+            public_key: c.publicKey[0..(c.publicKeySize as usize)].to_vec(),
             extended_attributes: Vec::from(std::slice::from_raw_parts(c.extendedAttributes, c.extendedAttributesSize as usize)),
             max_path_length: c.maxPathLength as u32,
-            signature: Vec::from(std::slice::from_raw_parts(c.signature, c.signatureSize as usize)),
+            signature: c.signature[0..(c.signatureSize as usize)].to_vec(),
         };
     }
 
@@ -634,12 +588,15 @@ impl Certificate {
                 timestamp: self.timestamp,
                 validity: self.validity,
                 subject: subject.subject,
-                issuer: if self.issuer.is_some() { self.issuer.as_ref().unwrap().capi } else { null() },
-                issuerName: self.issuer_name.to_capi(),
+                issuer: self.issuer.0,
+                issuerPublicKey: vec_to_array(&self.issuer_public_key),
+                publicKey: vec_to_array(&self.public_key),
+                issuerPublicKeySize: self.issuer_public_key.len() as c_uint,
+                publicKeySize: self.public_key.len() as c_uint,
                 extendedAttributes: self.extended_attributes.as_ptr(),
                 extendedAttributesSize: self.extended_attributes.len() as c_uint,
                 maxPathLength: self.max_path_length as c_uint,
-                signature: self.signature.as_ptr(),
+                signature: vec_to_array(&self.signature),
                 signatureSize: self.signature.len() as c_uint,
             },
             subject_container: subject,
@@ -677,23 +634,24 @@ impl Certificate {
         return Ok(cert.into_boxed_slice());
     }
 
-    pub fn sign(&self, id: &Identity) -> Result<Vec<u8>, ResultCode> {
-        if !id.has_private() {
-            return Err(ResultCode::ErrorBadParameter);
+    /// Sign this certificate, returning new signed certificate.
+    pub fn sign(&self, issuer: &CertificateSerialNo, issuer_private_key: &[u8]) -> Result<Certificate, ResultCode> {
+        let signed_cert = unsafe {
+            let c = self.to_capi();
+            ztcore::ZT_Certificate_sign(&c.certificate, issuer.0.as_ptr(), issuer_private_key.as_ptr().cast(), issuer_private_key.len() as c_int)
+        };
+        if signed_cert.is_null() {
+            Err(ResultCode::ErrorBadParameter)
+        } else {
+            let signed_cert2 = unsafe { Certificate::new_from_capi(&*signed_cert) };
+            unsafe { ztcore::ZT_Certificate_delete(signed_cert) };
+            Ok(signed_cert2)
         }
-        let mut signed_cert: Vec<u8> = Vec::new();
-        signed_cert.resize(16384, 0);
-        let mut signed_cert_size: c_int = 16384;
-        unsafe {
-            let capi = self.to_capi();
-            if ztcore::ZT_Certificate_sign(&capi.certificate as *const ztcore::ZT_Certificate, id.capi, signed_cert.as_mut_ptr() as *mut c_void, &mut signed_cert_size) != 0 {
-                return Err(ResultCode::ErrorBadParameter);
-            }
-        }
-        signed_cert.resize(signed_cert_size as usize, 0);
-        return Ok(signed_cert);
     }
 
+    /// Verify certificate structure and signatures.
+    /// This does not verify the full certificate chain, just what can be verified
+    /// by looking at the certificate itself.
     pub fn verify(&self, clock: i64) -> CertificateError {
         unsafe {
             let capi = self.to_capi();
@@ -710,17 +668,10 @@ mod tests {
     use num_traits::FromPrimitive;
 
     #[test]
-    fn certificate_serial_no() {
-        let test: [u8; 48] = [1; 48];
-        let sn = CertificateSerialNo::from(&test[0..48]);
-        assert!(test.eq(&sn.0));
-    }
-
-    #[test]
     fn generate_certificate_unique_id() {
-        let uid = CertificateSubjectUniqueIdSecret::new(CertificateUniqueIdType::NistP384);
-        println!("certificate unique ID public: {}", hex::encode(uid.public).as_str());
-        println!("certificate unique ID private: {}", hex::encode(uid.private).as_str());
+        let (pubk, privk) = Certificate::new_key_pair(CertificatePublicKeyAlgorithm::ECDSANistP384).ok().unwrap();
+        println!("certificate unique ID public: {}", hex::encode(pubk.as_ref()).as_str());
+        println!("certificate unique ID private: {}", hex::encode(privk.as_ref()).as_str());
     }
 
     #[test]
@@ -732,22 +683,27 @@ mod tests {
     }
 
     #[test]
-    fn cert_encode_decode() {
-        let id0 = Identity::new_generate(IdentityType::NistP384).ok().unwrap();
+    fn cert() {
+        let (issuer_pubk, issuer_privk) = Certificate::new_key_pair(CertificatePublicKeyAlgorithm::ECDSANistP384).ok().unwrap();
+        let (pubk, privk) = Certificate::new_key_pair(CertificatePublicKeyAlgorithm::ECDSANistP384).ok().unwrap();
+        let (unique_id, unique_id_private) = Certificate::new_key_pair(CertificatePublicKeyAlgorithm::ECDSANistP384).ok().unwrap();
+        let id0 = Identity::new_generate(IdentityType::Curve25519).ok().unwrap();
 
         let mut cert = Certificate{
             serial_no: CertificateSerialNo::new(),
             flags: 1,
             timestamp: 2,
-            validity: [ 3,4 ],
+            validity: [ 1,10 ],
             subject: CertificateSubject::new(),
-            issuer: None,
-            issuer_name: CertificateName::new(),
+            issuer: CertificateSerialNo::new(),
+            issuer_public_key: issuer_pubk,
+            public_key: pubk,
             extended_attributes: Vec::new(),
             max_path_length: 123,
             signature: Vec::new()
         };
         cert.serial_no.0[1] = 99;
+        cert.issuer.0[1] = 199;
         cert.subject.timestamp = 5;
         cert.subject.identities.push(CertificateIdentity{
             identity: id0.clone(),
@@ -757,7 +713,6 @@ mod tests {
             id: NetworkId(0xdeadbeef),
             controller: Some(id0.fingerprint())
         });
-        cert.subject.certificates.push(CertificateSerialNo::new());
         cert.subject.update_urls.push(String::from("http://foo.bar"));
         cert.subject.name = CertificateName{
             serial_no: String::from("12345"),
@@ -774,7 +729,7 @@ mod tests {
             host: String::from("zerotier.com")
         };
 
-        //println!("{}", cert.to_json().as_str());
+        println!("{}", cert.to_json().as_str());
 
         unsafe {
             let cert_capi = cert.to_capi();
@@ -789,8 +744,7 @@ mod tests {
             assert!(cert2.ok().unwrap() == cert);
         }
 
-        let uid = CertificateSubjectUniqueIdSecret::new(CertificateUniqueIdType::NistP384);
-        let csr = cert.subject.new_csr(Some(&uid));
+        let csr = cert.subject.new_csr(pubk.as_ref(), Some(unique_id_private.as_ref()));
         assert!(csr.is_ok());
         let csr = csr.ok().unwrap();
 
@@ -798,15 +752,12 @@ mod tests {
         assert!(csr_decoded.is_ok());
         let mut csr_decoded = csr_decoded.ok().unwrap();
 
-        let cert_signed = csr_decoded.sign(&id0);
+        let cert_signed = csr_decoded.sign(&cert.issuer, issuer_privk.as_ref());
         assert!(cert_signed.is_ok());
         let cert_signed = cert_signed.ok().unwrap();
 
-        let cert_signed_decoded = Certificate::new_from_bytes(cert_signed.as_slice(), false);
-        assert!(cert_signed_decoded.is_ok());
-        let cert_signed_decoded = cert_signed_decoded.ok().unwrap();
-        assert!(cert_signed_decoded.signature.len() > 0);
-
-        assert!(cert_signed_decoded.verify(-1) == CertificateError::None);
+        assert!(cert_signed.verify(-1) == CertificateError::None);
+        assert!(cert_signed.verify(5) == CertificateError::None);
+        assert!(cert_signed.verify(15) != CertificateError::None);
     }
 }

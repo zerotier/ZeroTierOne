@@ -67,14 +67,6 @@ Certificate &Certificate::operator=(const ZT_Certificate &cert)
 		}
 	}
 
-	if (cert.subject.certificates != nullptr) {
-		for (unsigned int i = 0; i < cert.subject.certificateCount; ++i) {
-			if (cert.subject.certificates[i]) {
-				addSubjectCertificate(cert.subject.certificates[i]);
-			}
-		}
-	}
-
 	if (cert.subject.updateURLs != nullptr) {
 		for (unsigned int i = 0; i < cert.subject.updateURLCount; ++i) {
 			if (cert.subject.updateURLs[i]) {
@@ -85,7 +77,6 @@ Certificate &Certificate::operator=(const ZT_Certificate &cert)
 
 	this->subject.identityCount = cert.subject.identityCount;
 	this->subject.networkCount = cert.subject.networkCount;
-	this->subject.certificateCount = cert.subject.certificateCount;
 	this->subject.updateURLCount = cert.subject.updateURLCount;
 
 	Utils::copy< sizeof(ZT_Certificate_Name) >(&(this->subject.name), &(cert.subject.name));
@@ -158,18 +149,6 @@ ZT_Certificate_Network *Certificate::addSubjectNetwork(const uint64_t id, const 
 	Utils::copy< sizeof(ZT_Fingerprint) >(&(m_subjectNetworks.back().controller), &controller);
 
 	return &(m_subjectNetworks.back());
-}
-
-void Certificate::addSubjectCertificate(const uint8_t serialNo[ZT_SHA384_DIGEST_SIZE])
-{
-	// Store local copy of serial in m_serials container.
-	m_serials.push_front(H384(serialNo));
-
-	// Enlarge array of uint8_t pointers, set new pointer to local copy of serial, and set
-	// certificates to point to potentially reallocated array.
-	m_subjectCertificates.push_back(reinterpret_cast<const uint8_t *>(m_serials.front().data));
-	this->subject.certificates = m_subjectCertificates.data();
-	this->subject.certificateCount = (unsigned int)m_subjectCertificates.size();
 }
 
 void Certificate::addSubjectUpdateUrl(const char *url)
@@ -280,14 +259,6 @@ bool Certificate::decode(const void *const data, const unsigned int len)
 		if (fp.unmarshal(fingerprintData.data(), (unsigned int)fingerprintData.size()) <= 0)
 			return false;
 		this->addSubjectNetwork(nwid, fp);
-	}
-
-	cnt = (unsigned int)d.getUI("s.c$");
-	for (unsigned int i = 0; i < cnt; ++i) {
-		const Vector< uint8_t > &serial = d[Dictionary::arraySubscript(tmp, sizeof(tmp), "s.c$", i)];
-		if (serial.size() != ZT_SHA384_DIGEST_SIZE)
-			return false;
-		this->addSubjectCertificate(serial.data());
 	}
 
 	cnt = (unsigned int)d.getUI("s.u$");
@@ -529,12 +500,10 @@ void Certificate::m_clear()
 	m_identities.clear();
 	m_locators.clear();
 	m_strings.clear();
-	m_serials.clear();
 
 	m_subjectIdentities.clear();
 	m_subjectNetworks.clear();
 	m_updateUrls.clear();
-	m_subjectCertificates.clear();
 	m_extendedAttributes.clear();
 }
 
@@ -589,14 +558,6 @@ void Certificate::m_encodeSubject(const ZT_Certificate_Subject &s, Dictionary &d
 			d.add(Dictionary::arraySubscript(tmp, sizeof(tmp), "s.nw$.i", i), s.networks[i].id);
 			Fingerprint fp(s.networks[i].controller);
 			d.addO(Dictionary::arraySubscript(tmp, sizeof(tmp), "s.nw$.c", i), fp);
-		}
-	}
-
-	if (s.certificates) {
-		d.add("s.c$", (uint64_t)s.certificateCount);
-		for (unsigned int i = 0; i < s.certificateCount; ++i) {
-			if (s.certificates[i])
-				d[Dictionary::arraySubscript(tmp, sizeof(tmp), "s.c$", i)].assign(s.certificates[i], s.certificates[i] + ZT_SHA384_DIGEST_SIZE);
 		}
 	}
 

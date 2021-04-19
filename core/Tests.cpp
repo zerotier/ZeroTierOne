@@ -344,15 +344,6 @@ static bool ZTT_deepCompareCertificates(const Certificate &a, const Certificate 
 			return false;
 	}
 
-	for (unsigned int i = 0; i < a.subject.certificateCount; ++i) {
-		if ((!a.subject.certificates) || (!b.subject.certificates))
-			return false;
-		if ((!a.subject.certificates[i]) || (!b.subject.certificates[i]))
-			return false;
-		if (memcmp(a.subject.certificates[i], b.subject.certificates[i], ZT_SHA384_DIGEST_SIZE) != 0)
-			return false;
-	}
-
 	for (unsigned int i = 0; i < a.subject.updateURLCount; ++i) {
 		if ((!a.subject.updateURLs) || (!b.subject.updateURLs))
 			return false;

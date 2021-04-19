@@ -118,8 +118,8 @@ Advanced Operations:
   cert <command> [args]
 ·   list                                   List certificates at local node
 ·   show <serial>                          Show certificate details
-    newsid [sid secret out]                Create a new subject unique ID
-    newcsr <csr output path>               Create a subject CSR (interactive)
+    newsuid [suid secret out]              Create a subject unique ID secret
+    newcsr <csr out> <secret out>          Create a CSR (interactive)
     sign <csr> <identity> [cert out]       Sign a CSR to create a certificate
     verify <cert>                          Verify certificate (not chain)
     dump <cert>                            Verify and print certificate
@@ -277,10 +277,11 @@ fn main() {
                 .subcommand(App::new("list"))
                 .subcommand(App::new("show")
                     .arg(Arg::with_name("serial").index(1).required(true)))
-                .subcommand(App::new("newsid")
+                .subcommand(App::new("newsuid")
                     .arg(Arg::with_name("path").index(1).required(false)))
                 .subcommand(App::new("newcsr")
-                    .arg(Arg::with_name("path").index(1).required(true)))
+                    .arg(Arg::with_name("csrpath").index(1).required(true))
+                    .arg(Arg::with_name("secretpath").index(2).required(true)))
                 .subcommand(App::new("sign")
                     .arg(Arg::with_name("csr").index(1).required(true))
                     .arg(Arg::with_name("identity").index(2).required(true))

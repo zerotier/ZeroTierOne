@@ -504,11 +504,6 @@ typedef struct
 	ZT_Certificate_Network *networks;
 
 	/**
-	 * Serial numbers of other certificates being signed (each is 48 bytes / 384 bits)
-	 */
-	const uint8_t *const *certificates;
-
-	/**
 	 * URLs that can be consulted for updates to this certificate.
 	 */
 	const char *const *updateURLs;
@@ -522,11 +517,6 @@ typedef struct
 	 * Number of networks
 	 */
 	unsigned int networkCount;
-
-	/**
-	 * Number of certificates
-	 */
-	unsigned int certificateCount;
 
 	/**
 	 * Number of update URLs
