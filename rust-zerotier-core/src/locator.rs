@@ -45,7 +45,7 @@ impl Locator {
     pub(crate) fn new_from_capi(l: *const ztcore::ZT_Locator, requires_delete: bool) -> Locator {
         Locator{
             capi: l,
-            requires_delete: requires_delete
+            requires_delete
         }
     }
 
@@ -66,9 +66,12 @@ impl Locator {
 
     #[inline(always)]
     pub fn revision(&self) -> i64 {
-        unsafe {
-            ztcore::ZT_Locator_revision(self.capi) as i64
-        }
+        unsafe { ztcore::ZT_Locator_revision(self.capi) as i64 }
+    }
+
+    #[inline(always)]
+    pub fn signer(&self) -> Address {
+        unsafe { Address(ztcore::ZT_Locator_signer(self.capi)) }
     }
 
     pub fn endpoints(&self) -> Vec<Endpoint> {
@@ -86,18 +89,9 @@ impl Locator {
         eps
     }
 
+    #[inline(always)]
     pub fn verify(&self, id: &Identity) -> bool {
         unsafe { ztcore::ZT_Locator_verify(self.capi, id.capi) != 0 }
-    }
-
-    pub fn signer(&self) -> Fingerprint {
-        unsafe {
-            let fp = ztcore::ZT_Locator_fingerprint(self.capi);
-            if fp.is_null() {
-                panic!("ZT_Locator_fingerprint() returned null, should not be allowed");
-            }
-            Fingerprint::new_from_capi(&*fp)
-        }
     }
 }
 
@@ -105,9 +99,7 @@ impl Drop for Locator {
     #[inline(always)]
     fn drop(&mut self) {
         if self.requires_delete {
-            unsafe {
-                ztcore::ZT_Locator_delete(self.capi);
-            }
+            unsafe { ztcore::ZT_Locator_delete(self.capi); }
         }
     }
 }
@@ -132,8 +124,9 @@ impl ToString for Locator {
 }
 
 impl PartialEq for Locator {
+    #[inline(always)]
     fn eq(&self, other: &Locator) -> bool {
-        self.to_string() == other.to_string()
+        unsafe { ztcore::ZT_Locator_equals(self.capi, other.capi) != 0 }
     }
 }
 

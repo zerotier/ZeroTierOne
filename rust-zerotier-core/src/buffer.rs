@@ -84,8 +84,6 @@ impl Buffer {
 impl Drop for Buffer {
     #[inline(always)]
     fn drop(&mut self) {
-        unsafe {
-            ztcore::ZT_freeBuffer(self.zt_core_buf as *mut c_void);
-        }
+        unsafe { ztcore::ZT_freeBuffer(self.zt_core_buf as *mut c_void); }
     }
 }

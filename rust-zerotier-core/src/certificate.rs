@@ -19,7 +19,7 @@ use std::pin::Pin;
 use std::ptr::{copy_nonoverlapping, null, null_mut};
 
 use num_derive::{FromPrimitive, ToPrimitive};
-use num_traits::FromPrimitive;
+use num_traits::{FromPrimitive, ToPrimitive};
 use serde::{Deserialize, Serialize};
 
 use crate::*;
@@ -42,17 +42,10 @@ fn vec_to_array<const L: usize>(v: &Vec<u8>) -> [u8; L] {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(FromPrimitive, PartialEq, Eq, Clone, Copy)]
+#[derive(FromPrimitive, ToPrimitive, PartialEq, Eq, Clone, Copy)]
 pub enum CertificatePublicKeyAlgorithm {
     None = ztcore::ZT_CertificatePublicKeyAlgorithm_ZT_CERTIFICATE_PUBLIC_KEY_ALGORITHM_NONE as isize,
     ECDSANistP384 = ztcore::ZT_CertificatePublicKeyAlgorithm_ZT_CERTIFICATE_PUBLIC_KEY_ALGORITHM_ECDSA_NIST_P_384 as isize,
-}
-
-impl CertificatePublicKeyAlgorithm {
-    #[inline(always)]
-    pub fn to_i32(&self) -> i32 {
-        *self as i32
-    }
 }
 
 impl From<i32> for CertificatePublicKeyAlgorithm {
@@ -534,7 +527,7 @@ impl Certificate {
         let mut private_key = [0_u8; ztcore::ZT_CERTIFICATE_MAX_PRIVATE_KEY_SIZE as usize];
         let mut public_key_size: c_int = 0;
         let mut private_key_size: c_int = 0;
-        let r = unsafe { ztcore::ZT_Certificate_newKeyPair(alg.to_i32() as ztcore::ZT_CertificatePublicKeyAlgorithm, public_key.as_mut_ptr(), &mut public_key_size, private_key.as_mut_ptr(), &mut private_key_size) };
+        let r = unsafe { ztcore::ZT_Certificate_newKeyPair(alg.to_i32().unwrap() as ztcore::ZT_CertificatePublicKeyAlgorithm, public_key.as_mut_ptr(), &mut public_key_size, private_key.as_mut_ptr(), &mut private_key_size) };
         if r == 0 {
             if public_key_size > 0 && private_key_size > 0 {
                 Ok((public_key[0..public_key_size as usize].to_vec(), private_key[0..private_key_size as usize].to_vec()))

@@ -489,18 +489,31 @@ ZT_MAYBE_UNUSED char *ZT_Locator_toString(
 	return reinterpret_cast<const ZeroTier::Locator *>(loc)->toString(buf);
 }
 
-ZT_MAYBE_UNUSED const ZT_Fingerprint *ZT_Locator_fingerprint(const ZT_Locator *loc)
-{
-	if (!loc)
-		return nullptr;
-	return (ZT_Fingerprint *) (&(reinterpret_cast<const ZeroTier::Locator *>(loc)->signer()));
-}
-
 ZT_MAYBE_UNUSED int64_t ZT_Locator_revision(const ZT_Locator *loc)
 {
 	if (!loc)
 		return 0;
 	return reinterpret_cast<const ZeroTier::Locator *>(loc)->revision();
+}
+
+ZT_MAYBE_UNUSED uint64_t ZT_Locator_signer(const ZT_Locator *loc)
+{
+	if (!loc)
+		return 0;
+	return reinterpret_cast<const ZeroTier::Locator *>(loc)->signer().toInt();
+}
+
+ZT_MAYBE_UNUSED int ZT_Locator_equals(const ZT_Locator *a, const ZT_Locator *b)
+{
+	if (a) {
+		if (b) {
+			if (*reinterpret_cast<const ZeroTier::Locator *>(a) == *reinterpret_cast<const ZeroTier::Locator *>(b))
+				return 1;
+		}
+	} else if (!b) {
+		return 1;
+	}
+	return 0;
 }
 
 ZT_MAYBE_UNUSED unsigned int ZT_Locator_endpointCount(const ZT_Locator *loc)

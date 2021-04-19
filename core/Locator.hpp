@@ -35,7 +35,7 @@
  */
 #define ZT_LOCATOR_MAX_ENDPOINTS 16
 
-#define ZT_LOCATOR_MARSHAL_SIZE_MAX (8 + ZT_FINGERPRINT_MARSHAL_SIZE + 2 + (ZT_LOCATOR_MAX_ENDPOINTS * (ZT_ENDPOINT_MARSHAL_SIZE_MAX + ZT_LOCATOR_MAX_ENDPOINT_ATTRIBUTES_SIZE)) + 2 + 2 + ZT_SIGNATURE_BUFFER_SIZE)
+#define ZT_LOCATOR_MARSHAL_SIZE_MAX (8 + ZT_ADDRESS_LENGTH + 2 + (ZT_LOCATOR_MAX_ENDPOINTS * (ZT_ENDPOINT_MARSHAL_SIZE_MAX + ZT_LOCATOR_MAX_ENDPOINT_ATTRIBUTES_SIZE)) + 2 + 2 + ZT_SIGNATURE_BUFFER_SIZE)
 
 /**
  * Maximum size of a string format Locator (this is way larger than needed)
@@ -109,15 +109,15 @@ public:
 		m_revision(0)
 	{}
 
-	explicit Locator(const char *const str) noexcept;
-
-	ZT_INLINE Locator(const Locator &loc) noexcept:
-		m_revision(loc.m_revision),
-		m_signer(loc.m_signer),
-		m_endpoints(loc.m_endpoints),
-		m_signature(loc.m_signature),
+	ZT_INLINE Locator(const Locator &l) noexcept:
+		m_revision(l.m_revision),
+		m_signer(l.m_signer),
+		m_endpoints(l.m_endpoints),
+		m_signature(l.m_signature),
 		__refCount(0)
 	{}
+
+	explicit Locator(const char *const str) noexcept;
 
 	/**
 	 * @return Timestamp (a.k.a. revision number) set by Location signer
@@ -126,9 +126,9 @@ public:
 	{ return m_revision; }
 
 	/**
-	 * @return Fingerprint of identity that signed this locator
+	 * @return ZeroTier address of signer
 	 */
-	ZT_INLINE const Fingerprint &signer() const noexcept
+	ZT_INLINE Address signer() const noexcept
 	{ return m_signer; }
 
 	/**
@@ -232,7 +232,7 @@ private:
 	void m_sortEndpoints() noexcept;
 
 	int64_t m_revision;
-	Fingerprint m_signer;
+	Address m_signer;
 	Vector <std::pair< Endpoint, SharedPtr< const EndpointAttributes > >> m_endpoints;
 	FCV< uint8_t, ZT_SIGNATURE_BUFFER_SIZE > m_signature;
 	std::atomic< int > __refCount;

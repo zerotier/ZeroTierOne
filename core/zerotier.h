@@ -2690,22 +2690,29 @@ ZT_SDK_API char *ZT_Locator_toString(
 	int capacity);
 
 /**
- * Get a pointer to the fingerprint of this locator's signer.
- *
- * The returned pointer remains valid as long as the Locator is not deleted.
- *
- * @param loc Locator to query
- * @return Pointer to fingerprint of signer
- */
-ZT_SDK_API const ZT_Fingerprint *ZT_Locator_fingerprint(const ZT_Locator *loc);
-
-/**
  * Get a locator's revision
  *
  * @param loc Locator to query
  * @return Locator revision
  */
 ZT_SDK_API int64_t ZT_Locator_revision(const ZT_Locator *loc);
+
+/**
+ * Get a locator's signer
+ *
+ * @param loc Locator to query
+ * @return 40-bit ZeroTier address of signer
+ */
+ZT_SDK_API uint64_t ZT_Locator_signer(const ZT_Locator *loc);
+
+/**
+ * Compare two locators
+ *
+ * @param a First locator
+ * @param b Second locator
+ * @return Non-zero if a equals b
+ */
+ZT_SDK_API int ZT_Locator_equals(const ZT_Locator *a, const ZT_Locator *b);
 
 /**
  * Get the number of endpoints in this locator
