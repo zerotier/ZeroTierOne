@@ -27,7 +27,7 @@ const InetAddress InetAddress::LO4((const void *) ("\x7f\x00\x00\x01"), 4, 0);
 const InetAddress InetAddress::LO6((const void *) ("\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"), 16, 0);
 const InetAddress InetAddress::NIL;
 
-ZT_MAYBE_UNUSED InetAddress::IpScope InetAddress::ipScope() const noexcept
+InetAddress::IpScope InetAddress::ipScope() const noexcept
 {
 	switch (as.ss.ss_family) {
 
@@ -112,7 +112,7 @@ ZT_MAYBE_UNUSED InetAddress::IpScope InetAddress::ipScope() const noexcept
 	return ZT_IP_SCOPE_NONE;
 }
 
-ZT_MAYBE_UNUSED void InetAddress::set(const void *ipBytes, unsigned int ipLen, unsigned int port) noexcept
+void InetAddress::set(const void *ipBytes, unsigned int ipLen, unsigned int port) noexcept
 {
 	memoryZero(this);
 	if (ipLen == 4) {
@@ -126,7 +126,7 @@ ZT_MAYBE_UNUSED void InetAddress::set(const void *ipBytes, unsigned int ipLen, u
 	}
 }
 
-ZT_MAYBE_UNUSED bool InetAddress::isDefaultRoute() const noexcept
+bool InetAddress::isDefaultRoute() const noexcept
 {
 	switch (as.ss.ss_family) {
 		case AF_INET:
@@ -145,7 +145,7 @@ ZT_MAYBE_UNUSED bool InetAddress::isDefaultRoute() const noexcept
 	}
 }
 
-ZT_MAYBE_UNUSED char *InetAddress::toString(char buf[ZT_INETADDRESS_STRING_SIZE_MAX]) const noexcept
+char *InetAddress::toString(char buf[ZT_INETADDRESS_STRING_SIZE_MAX]) const noexcept
 {
 	char *p = toIpString(buf);
 	if (*p) {
@@ -156,7 +156,7 @@ ZT_MAYBE_UNUSED char *InetAddress::toString(char buf[ZT_INETADDRESS_STRING_SIZE_
 	return buf;
 }
 
-ZT_MAYBE_UNUSED char *InetAddress::toIpString(char buf[ZT_INETADDRESS_STRING_SIZE_MAX]) const noexcept
+char *InetAddress::toIpString(char buf[ZT_INETADDRESS_STRING_SIZE_MAX]) const noexcept
 {
 	buf[0] = (char) 0;
 	switch (as.ss.ss_family) {
@@ -170,7 +170,7 @@ ZT_MAYBE_UNUSED char *InetAddress::toIpString(char buf[ZT_INETADDRESS_STRING_SIZ
 	return buf;
 }
 
-ZT_MAYBE_UNUSED bool InetAddress::fromString(const char *ipSlashPort) noexcept
+bool InetAddress::fromString(const char *ipSlashPort) noexcept
 {
 	char buf[64];
 
@@ -205,7 +205,7 @@ ZT_MAYBE_UNUSED bool InetAddress::fromString(const char *ipSlashPort) noexcept
 	return false;
 }
 
-ZT_MAYBE_UNUSED InetAddress InetAddress::netmask() const noexcept
+InetAddress InetAddress::netmask() const noexcept
 {
 	InetAddress r(*this);
 	switch (r.as.ss.ss_family) {
@@ -229,7 +229,7 @@ ZT_MAYBE_UNUSED InetAddress InetAddress::netmask() const noexcept
 	return r;
 }
 
-ZT_MAYBE_UNUSED InetAddress InetAddress::broadcast() const noexcept
+InetAddress InetAddress::broadcast() const noexcept
 {
 	if (as.ss.ss_family == AF_INET) {
 		InetAddress r(*this);
@@ -239,7 +239,7 @@ ZT_MAYBE_UNUSED InetAddress InetAddress::broadcast() const noexcept
 	return InetAddress();
 }
 
-ZT_MAYBE_UNUSED InetAddress InetAddress::network() const noexcept
+InetAddress InetAddress::network() const noexcept
 {
 	InetAddress r(*this);
 	switch (r.as.ss.ss_family) {
@@ -259,7 +259,7 @@ ZT_MAYBE_UNUSED InetAddress InetAddress::network() const noexcept
 	return r;
 }
 
-ZT_MAYBE_UNUSED bool InetAddress::isEqualPrefix(const InetAddress &addr) const noexcept
+bool InetAddress::isEqualPrefix(const InetAddress &addr) const noexcept
 {
 	if (addr.as.ss.ss_family == as.ss.ss_family) {
 		switch (as.ss.ss_family) {
@@ -281,7 +281,7 @@ ZT_MAYBE_UNUSED bool InetAddress::isEqualPrefix(const InetAddress &addr) const n
 	return false;
 }
 
-ZT_MAYBE_UNUSED bool InetAddress::containsAddress(const InetAddress &addr) const noexcept
+bool InetAddress::containsAddress(const InetAddress &addr) const noexcept
 {
 	if (addr.as.ss.ss_family == as.ss.ss_family) {
 		switch (as.ss.ss_family) {
@@ -310,7 +310,7 @@ ZT_MAYBE_UNUSED bool InetAddress::containsAddress(const InetAddress &addr) const
 	return false;
 }
 
-ZT_MAYBE_UNUSED bool InetAddress::isNetwork() const noexcept
+bool InetAddress::isNetwork() const noexcept
 {
 	switch (as.ss.ss_family) {
 		case AF_INET: {
@@ -342,7 +342,7 @@ ZT_MAYBE_UNUSED bool InetAddress::isNetwork() const noexcept
 	return false;
 }
 
-ZT_MAYBE_UNUSED int InetAddress::marshal(uint8_t data[ZT_INETADDRESS_MARSHAL_SIZE_MAX]) const noexcept
+int InetAddress::marshal(uint8_t data[ZT_INETADDRESS_MARSHAL_SIZE_MAX]) const noexcept
 {
 	unsigned int port;
 	switch (as.ss.ss_family) {
@@ -369,7 +369,7 @@ ZT_MAYBE_UNUSED int InetAddress::marshal(uint8_t data[ZT_INETADDRESS_MARSHAL_SIZ
 	}
 }
 
-ZT_MAYBE_UNUSED int InetAddress::unmarshal(const uint8_t *restrict data, const int len) noexcept
+int InetAddress::unmarshal(const uint8_t *restrict data, const int len) noexcept
 {
 	memoryZero(this);
 	if (unlikely(len <= 0))
@@ -396,7 +396,7 @@ ZT_MAYBE_UNUSED int InetAddress::unmarshal(const uint8_t *restrict data, const i
 	}
 }
 
-ZT_MAYBE_UNUSED InetAddress InetAddress::makeIpv6LinkLocal(const MAC &mac) noexcept
+InetAddress InetAddress::makeIpv6LinkLocal(const MAC &mac) noexcept
 {
 	InetAddress r;
 	r.as.sa_in6.sin6_family = AF_INET6;
@@ -420,7 +420,7 @@ ZT_MAYBE_UNUSED InetAddress InetAddress::makeIpv6LinkLocal(const MAC &mac) noexc
 	return r;
 }
 
-ZT_MAYBE_UNUSED InetAddress InetAddress::makeIpv6rfc4193(uint64_t nwid, uint64_t zeroTierAddress) noexcept
+InetAddress InetAddress::makeIpv6rfc4193(uint64_t nwid, uint64_t zeroTierAddress) noexcept
 {
 	InetAddress r;
 	r.as.sa_in6.sin6_family = AF_INET6;
@@ -444,7 +444,7 @@ ZT_MAYBE_UNUSED InetAddress InetAddress::makeIpv6rfc4193(uint64_t nwid, uint64_t
 	return r;
 }
 
-ZT_MAYBE_UNUSED InetAddress InetAddress::makeIpv66plane(uint64_t nwid, uint64_t zeroTierAddress) noexcept
+InetAddress InetAddress::makeIpv66plane(uint64_t nwid, uint64_t zeroTierAddress) noexcept
 {
 	nwid ^= (nwid >> 32U);
 	InetAddress r;
@@ -465,8 +465,8 @@ ZT_MAYBE_UNUSED InetAddress InetAddress::makeIpv66plane(uint64_t nwid, uint64_t 
 }
 
 extern "C" {
-ZT_MAYBE_UNUSED extern const int ZT_AF_INET = (int)AF_INET;
-ZT_MAYBE_UNUSED extern const int ZT_AF_INET6 = (int)AF_INET6;
+extern const int ZT_AF_INET = (int)AF_INET;
+extern const int ZT_AF_INET6 = (int)AF_INET6;
 }
 
 } // namespace ZeroTier

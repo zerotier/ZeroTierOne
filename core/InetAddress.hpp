@@ -162,13 +162,13 @@ public:
 		return *this;
 	}
 
-	ZT_MAYBE_UNUSED ZT_INLINE void clear() noexcept
+	ZT_INLINE void clear() noexcept
 	{ memoryZero(this); }
 
 	/**
 	 * @return IP scope classification (e.g. loopback, link-local, private, global)
 	 */
-	ZT_MAYBE_UNUSED IpScope ipScope() const noexcept;
+	IpScope ipScope() const noexcept;
 
 	/**
 	 * Set from a raw IP and port number
@@ -177,14 +177,14 @@ public:
 	 * @param ipLen Length of IP address: 4 or 16
 	 * @param port Port number or 0 for none
 	 */
-	ZT_MAYBE_UNUSED void set(const void *ipBytes, unsigned int ipLen, unsigned int port) noexcept;
+	void set(const void *ipBytes, unsigned int ipLen, unsigned int port) noexcept;
 
 	/**
 	 * Set the port component
 	 *
 	 * @param port Port, 0 to 65535
 	 */
-	ZT_MAYBE_UNUSED ZT_INLINE void setPort(unsigned int port) noexcept
+	ZT_INLINE void setPort(unsigned int port) noexcept
 	{
 		switch (as.ss.ss_family) {
 			case AF_INET:
@@ -199,14 +199,14 @@ public:
 	/**
 	 * @return True if this network/netmask route describes a default route (e.g. 0.0.0.0/0)
 	 */
-	ZT_MAYBE_UNUSED bool isDefaultRoute() const noexcept;
+	bool isDefaultRoute() const noexcept;
 
 	/**
 	 * @return ASCII IP/port format representation
 	 */
-	ZT_MAYBE_UNUSED char *toString(char buf[ZT_INETADDRESS_STRING_SIZE_MAX]) const noexcept;
+	char *toString(char buf[ZT_INETADDRESS_STRING_SIZE_MAX]) const noexcept;
 
-	ZT_MAYBE_UNUSED ZT_INLINE String toString() const
+	ZT_INLINE String toString() const
 	{
 		char buf[ZT_INETADDRESS_STRING_SIZE_MAX];
 		toString(buf);
@@ -216,9 +216,9 @@ public:
 	/**
 	 * @return IP portion only, in ASCII string format
 	 */
-	ZT_MAYBE_UNUSED char *toIpString(char buf[ZT_INETADDRESS_STRING_SIZE_MAX]) const noexcept;
+	char *toIpString(char buf[ZT_INETADDRESS_STRING_SIZE_MAX]) const noexcept;
 
-	ZT_MAYBE_UNUSED ZT_INLINE String toIpString() const
+	ZT_INLINE String toIpString() const
 	{
 		char buf[ZT_INETADDRESS_STRING_SIZE_MAX];
 		toIpString(buf);
@@ -229,12 +229,12 @@ public:
 	 * @param ipSlashPort IP/port (port is optional, will be 0 if not included)
 	 * @return True if address appeared to be valid
 	 */
-	ZT_MAYBE_UNUSED bool fromString(const char *ipSlashPort) noexcept;
+	bool fromString(const char *ipSlashPort) noexcept;
 
 	/**
 	 * @return Port or 0 if no port component defined
 	 */
-	ZT_MAYBE_UNUSED ZT_INLINE unsigned int port() const noexcept
+	ZT_INLINE unsigned int port() const noexcept
 	{
 		switch (as.ss.ss_family) {
 			case AF_INET:
@@ -255,13 +255,13 @@ public:
 	 *
 	 * @return Netmask bits
 	 */
-	ZT_MAYBE_UNUSED ZT_INLINE unsigned int netmaskBits() const noexcept
+	ZT_INLINE unsigned int netmaskBits() const noexcept
 	{ return port(); }
 
 	/**
 	 * @return True if netmask bits is valid for the address type
 	 */
-	ZT_MAYBE_UNUSED ZT_INLINE bool netmaskBitsValid() const noexcept
+	ZT_INLINE bool netmaskBitsValid() const noexcept
 	{
 		const unsigned int n = port();
 		switch (as.ss.ss_family) {
@@ -281,7 +281,7 @@ public:
 	 *
 	 * @return Gateway metric
 	 */
-	ZT_MAYBE_UNUSED ZT_INLINE unsigned int metric() const noexcept
+	ZT_INLINE unsigned int metric() const noexcept
 	{ return port(); }
 
 	/**
@@ -289,7 +289,7 @@ public:
 	 *
 	 * @return Netmask such as 255.255.255.0 if this address is /24 (port field will be unchanged)
 	 */
-	ZT_MAYBE_UNUSED InetAddress netmask() const noexcept;
+	InetAddress netmask() const noexcept;
 
 	/**
 	 * Constructs a broadcast address from a network/netmask address
@@ -299,14 +299,14 @@ public:
 	 *
 	 * @return Broadcast address (only IP portion is meaningful)
 	 */
-	ZT_MAYBE_UNUSED InetAddress broadcast() const noexcept;
+	InetAddress broadcast() const noexcept;
 
 	/**
 	 * Return the network -- a.k.a. the IP ANDed with the netmask
 	 *
 	 * @return Network e.g. 10.0.1.0/24 from 10.0.1.200/24
 	 */
-	ZT_MAYBE_UNUSED InetAddress network() const noexcept;
+	InetAddress network() const noexcept;
 
 	/**
 	 * Test whether this IPv6 prefix matches the prefix of a given IPv6 address
@@ -314,7 +314,7 @@ public:
 	 * @param addr Address to check
 	 * @return True if this IPv6 prefix matches the prefix of a given IPv6 address
 	 */
-	ZT_MAYBE_UNUSED bool isEqualPrefix(const InetAddress &addr) const noexcept;
+	bool isEqualPrefix(const InetAddress &addr) const noexcept;
 
 	/**
 	 * Test whether this IP/netmask contains this address
@@ -322,24 +322,24 @@ public:
 	 * @param addr Address to check
 	 * @return True if this IP/netmask (route) contains this address
 	 */
-	ZT_MAYBE_UNUSED bool containsAddress(const InetAddress &addr) const noexcept;
+	bool containsAddress(const InetAddress &addr) const noexcept;
 
 	/**
 	 * @return True if this is an IPv4 address
 	 */
-	ZT_MAYBE_UNUSED ZT_INLINE bool isV4() const noexcept
+	ZT_INLINE bool isV4() const noexcept
 	{ return (as.ss.ss_family == AF_INET); }
 
 	/**
 	 * @return True if this is an IPv6 address
 	 */
-	ZT_MAYBE_UNUSED ZT_INLINE bool isV6() const noexcept
+	ZT_INLINE bool isV6() const noexcept
 	{ return (as.ss.ss_family == AF_INET6); }
 
 	/**
 	 * @return pointer to raw address bytes or NULL if not available
 	 */
-	ZT_MAYBE_UNUSED ZT_INLINE const void *rawIpData() const noexcept
+	ZT_INLINE const void *rawIpData() const noexcept
 	{
 		switch (as.ss.ss_family) {
 			case AF_INET:
@@ -354,7 +354,7 @@ public:
 	/**
 	 * @return InetAddress containing only the IP portion of this address and a zero port, or NULL if not IPv4 or IPv6
 	 */
-	ZT_MAYBE_UNUSED ZT_INLINE InetAddress ipOnly() const noexcept
+	ZT_INLINE InetAddress ipOnly() const noexcept
 	{
 		InetAddress r;
 		switch (as.ss.ss_family) {
@@ -376,7 +376,7 @@ public:
 	 * @param a InetAddress to compare again
 	 * @return True if only IP portions are equal (false for non-IP or null addresses)
 	 */
-	ZT_MAYBE_UNUSED ZT_INLINE bool ipsEqual(const InetAddress &a) const noexcept
+	ZT_INLINE bool ipsEqual(const InetAddress &a) const noexcept
 	{
 		const uint8_t f = as.ss.ss_family;
 		if (f == a.as.ss.ss_family) {
@@ -397,7 +397,7 @@ public:
 	 * @param a InetAddress to compare again
 	 * @return True if only IP portions are equal (false for non-IP or null addresses)
 	 */
-	ZT_MAYBE_UNUSED ZT_INLINE bool ipsEqual2(const InetAddress &a) const noexcept
+	ZT_INLINE bool ipsEqual2(const InetAddress &a) const noexcept
 	{
 		const uint8_t f = as.ss.ss_family;
 		if (f == a.as.ss.ss_family) {
@@ -410,7 +410,7 @@ public:
 		return false;
 	}
 
-	ZT_MAYBE_UNUSED ZT_INLINE unsigned long hashCode() const noexcept
+	ZT_INLINE unsigned long hashCode() const noexcept
 	{
 		if (as.ss.ss_family == AF_INET) {
 			return (unsigned long)Utils::hash32(((uint32_t)as.sa_in.sin_addr.s_addr + (uint32_t)as.sa_in.sin_port) ^ (uint32_t)Utils::s_mapNonce);
@@ -432,20 +432,20 @@ public:
 	 *
 	 * @return True if everything after netmask bits is zero
 	 */
-	ZT_MAYBE_UNUSED bool isNetwork() const noexcept;
+	bool isNetwork() const noexcept;
 
 	/**
 	 * @return True if address family is non-zero
 	 */
-	ZT_MAYBE_UNUSED explicit ZT_INLINE operator bool() const noexcept
+	explicit ZT_INLINE operator bool() const noexcept
 	{ return (as.ss.ss_family != 0); }
 
-	ZT_MAYBE_UNUSED static constexpr int marshalSizeMax() noexcept
+	static constexpr int marshalSizeMax() noexcept
 	{ return ZT_INETADDRESS_MARSHAL_SIZE_MAX; }
 
-	ZT_MAYBE_UNUSED int marshal(uint8_t data[ZT_INETADDRESS_MARSHAL_SIZE_MAX]) const noexcept;
+	int marshal(uint8_t data[ZT_INETADDRESS_MARSHAL_SIZE_MAX]) const noexcept;
 
-	ZT_MAYBE_UNUSED int unmarshal(const uint8_t *restrict data, int len) noexcept;
+	int unmarshal(const uint8_t *restrict data, int len) noexcept;
 
 	ZT_INLINE bool operator==(const InetAddress &a) const noexcept
 	{
@@ -499,7 +499,7 @@ public:
 	 * @param mac MAC address seed
 	 * @return IPv6 link-local address
 	 */
-	ZT_MAYBE_UNUSED static InetAddress makeIpv6LinkLocal(const MAC &mac) noexcept;
+	static InetAddress makeIpv6LinkLocal(const MAC &mac) noexcept;
 
 	/**
 	 * Compute private IPv6 unicast address from network ID and ZeroTier address
@@ -561,64 +561,64 @@ public:
 	} as;
 };
 
-ZT_MAYBE_UNUSED static ZT_INLINE InetAddress *asInetAddress(sockaddr_in *const p) noexcept
+static ZT_INLINE InetAddress *asInetAddress(sockaddr_in *const p) noexcept
 { return reinterpret_cast<InetAddress *>(p); }
 
-ZT_MAYBE_UNUSED static ZT_INLINE InetAddress *asInetAddress(sockaddr_in6 *const p) noexcept
+static ZT_INLINE InetAddress *asInetAddress(sockaddr_in6 *const p) noexcept
 { return reinterpret_cast<InetAddress *>(p); }
 
-ZT_MAYBE_UNUSED static ZT_INLINE InetAddress *asInetAddress(sockaddr *const p) noexcept
+static ZT_INLINE InetAddress *asInetAddress(sockaddr *const p) noexcept
 { return reinterpret_cast<InetAddress *>(p); }
 
-ZT_MAYBE_UNUSED static ZT_INLINE InetAddress *asInetAddress(sockaddr_storage *const p) noexcept
+static ZT_INLINE InetAddress *asInetAddress(sockaddr_storage *const p) noexcept
 { return reinterpret_cast<InetAddress *>(p); }
 
-ZT_MAYBE_UNUSED static ZT_INLINE InetAddress *asInetAddress(ZT_InetAddress *const p) noexcept
+static ZT_INLINE InetAddress *asInetAddress(ZT_InetAddress *const p) noexcept
 { return reinterpret_cast<InetAddress *>(p); }
 
-ZT_MAYBE_UNUSED static ZT_INLINE const InetAddress *asInetAddress(const sockaddr_in *const p) noexcept
+static ZT_INLINE const InetAddress *asInetAddress(const sockaddr_in *const p) noexcept
 { return reinterpret_cast<const InetAddress *>(p); }
 
-ZT_MAYBE_UNUSED static ZT_INLINE const InetAddress *asInetAddress(const sockaddr_in6 *const p) noexcept
+static ZT_INLINE const InetAddress *asInetAddress(const sockaddr_in6 *const p) noexcept
 { return reinterpret_cast<const InetAddress *>(p); }
 
-ZT_MAYBE_UNUSED static ZT_INLINE const InetAddress *asInetAddress(const sockaddr *const p) noexcept
+static ZT_INLINE const InetAddress *asInetAddress(const sockaddr *const p) noexcept
 { return reinterpret_cast<const InetAddress *>(p); }
 
-ZT_MAYBE_UNUSED static ZT_INLINE const InetAddress *asInetAddress(const sockaddr_storage *const p) noexcept
+static ZT_INLINE const InetAddress *asInetAddress(const sockaddr_storage *const p) noexcept
 { return reinterpret_cast<const InetAddress *>(p); }
 
-ZT_MAYBE_UNUSED static ZT_INLINE const InetAddress *asInetAddress(const ZT_InetAddress *const p) noexcept
+static ZT_INLINE const InetAddress *asInetAddress(const ZT_InetAddress *const p) noexcept
 { return reinterpret_cast<const InetAddress *>(p); }
 
-ZT_MAYBE_UNUSED static ZT_INLINE InetAddress &asInetAddress(sockaddr_in &p) noexcept
+static ZT_INLINE InetAddress &asInetAddress(sockaddr_in &p) noexcept
 { return *reinterpret_cast<InetAddress *>(&p); }
 
-ZT_MAYBE_UNUSED static ZT_INLINE InetAddress &asInetAddress(sockaddr_in6 &p) noexcept
+static ZT_INLINE InetAddress &asInetAddress(sockaddr_in6 &p) noexcept
 { return *reinterpret_cast<InetAddress *>(&p); }
 
-ZT_MAYBE_UNUSED static ZT_INLINE InetAddress &asInetAddress(sockaddr &p) noexcept
+static ZT_INLINE InetAddress &asInetAddress(sockaddr &p) noexcept
 { return *reinterpret_cast<InetAddress *>(&p); }
 
-ZT_MAYBE_UNUSED static ZT_INLINE InetAddress &asInetAddress(sockaddr_storage &p) noexcept
+static ZT_INLINE InetAddress &asInetAddress(sockaddr_storage &p) noexcept
 { return *reinterpret_cast<InetAddress *>(&p); }
 
-ZT_MAYBE_UNUSED static ZT_INLINE InetAddress &asInetAddress(ZT_InetAddress &p) noexcept
+static ZT_INLINE InetAddress &asInetAddress(ZT_InetAddress &p) noexcept
 { return *reinterpret_cast<InetAddress *>(&p); }
 
-ZT_MAYBE_UNUSED static ZT_INLINE const InetAddress &asInetAddress(const sockaddr_in &p) noexcept
+static ZT_INLINE const InetAddress &asInetAddress(const sockaddr_in &p) noexcept
 { return *reinterpret_cast<const InetAddress *>(&p); }
 
-ZT_MAYBE_UNUSED static ZT_INLINE const InetAddress &asInetAddress(const sockaddr_in6 &p) noexcept
+static ZT_INLINE const InetAddress &asInetAddress(const sockaddr_in6 &p) noexcept
 { return *reinterpret_cast<const InetAddress *>(&p); }
 
-ZT_MAYBE_UNUSED static ZT_INLINE const InetAddress &asInetAddress(const sockaddr &p) noexcept
+static ZT_INLINE const InetAddress &asInetAddress(const sockaddr &p) noexcept
 { return *reinterpret_cast<const InetAddress *>(&p); }
 
-ZT_MAYBE_UNUSED static ZT_INLINE const InetAddress &asInetAddress(const sockaddr_storage &p) noexcept
+static ZT_INLINE const InetAddress &asInetAddress(const sockaddr_storage &p) noexcept
 { return *reinterpret_cast<const InetAddress *>(&p); }
 
-ZT_MAYBE_UNUSED static ZT_INLINE const InetAddress &asInetAddress(const ZT_InetAddress &p) noexcept
+static ZT_INLINE const InetAddress &asInetAddress(const ZT_InetAddress &p) noexcept
 { return *reinterpret_cast<const InetAddress *>(&p); }
 
 } // namespace ZeroTier

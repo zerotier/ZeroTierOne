@@ -81,7 +81,7 @@ public:
 	/**
 	 * Clear this vector, destroying all content objects
 	 */
-	ZT_MAYBE_UNUSED ZT_INLINE void clear()
+	ZT_INLINE void clear()
 	{
 		const unsigned int s = _s;
 		_s = 0;
@@ -94,51 +94,51 @@ public:
 	 *
 	 * @param v Target vector
 	 */
-	ZT_MAYBE_UNUSED ZT_INLINE void unsafeMoveTo(FCV &v) noexcept
+	ZT_INLINE void unsafeMoveTo(FCV &v) noexcept
 	{
 		Utils::copy(v._m, _m, (v._s = _s) * sizeof(T));
 		_s = 0;
 	}
 
-	ZT_MAYBE_UNUSED ZT_INLINE iterator begin() noexcept
+	ZT_INLINE iterator begin() noexcept
 	{ return reinterpret_cast<T *>(_m); }
 
-	ZT_MAYBE_UNUSED ZT_INLINE iterator end() noexcept
+	ZT_INLINE iterator end() noexcept
 	{ return reinterpret_cast<T *>(_m) + _s; }
 
-	ZT_MAYBE_UNUSED ZT_INLINE const_iterator begin() const noexcept
+	ZT_INLINE const_iterator begin() const noexcept
 	{ return reinterpret_cast<const T *>(_m); }
 
-	ZT_MAYBE_UNUSED ZT_INLINE const_iterator end() const noexcept
+	ZT_INLINE const_iterator end() const noexcept
 	{ return reinterpret_cast<const T *>(_m) + _s; }
 
-	ZT_MAYBE_UNUSED ZT_INLINE T &operator[](const unsigned int i)
+	ZT_INLINE T &operator[](const unsigned int i)
 	{
 		if (likely(i < _s))
 			return reinterpret_cast<T *>(_m)[i];
 		throw Utils::OutOfRangeException;
 	}
 
-	ZT_MAYBE_UNUSED ZT_INLINE const T &operator[](const unsigned int i) const
+	ZT_INLINE const T &operator[](const unsigned int i) const
 	{
 		if (likely(i < _s))
 			return reinterpret_cast<const T *>(_m)[i];
 		throw Utils::OutOfRangeException;
 	}
 
-	ZT_MAYBE_UNUSED static constexpr unsigned int capacity() noexcept
+	static constexpr unsigned int capacity() noexcept
 	{ return C; }
 
-	ZT_MAYBE_UNUSED ZT_INLINE unsigned int size() const noexcept
+	ZT_INLINE unsigned int size() const noexcept
 	{ return _s; }
 
-	ZT_MAYBE_UNUSED ZT_INLINE bool empty() const noexcept
+	ZT_INLINE bool empty() const noexcept
 	{ return (_s == 0); }
 
-	ZT_MAYBE_UNUSED ZT_INLINE T *data() noexcept
+	ZT_INLINE T *data() noexcept
 	{ return reinterpret_cast<T *>(_m); }
 
-	ZT_MAYBE_UNUSED ZT_INLINE const T *data() const noexcept
+	ZT_INLINE const T *data() const noexcept
 	{ return reinterpret_cast<const T *>(_m); }
 
 	/**
@@ -148,7 +148,7 @@ public:
 	 *
 	 * @param v Value to push
 	 */
-	ZT_MAYBE_UNUSED ZT_INLINE void push_back(const T &v)
+	ZT_INLINE void push_back(const T &v)
 	{
 		if (likely(_s < C))
 			new(reinterpret_cast<T *>(_m) + _s++) T(v);
@@ -160,7 +160,7 @@ public:
 	 *
 	 * @return Reference to new item
 	 */
-	ZT_MAYBE_UNUSED ZT_INLINE T &push()
+	ZT_INLINE T &push()
 	{
 		if (likely(_s < C)) {
 			return *(new(reinterpret_cast<T *>(_m) + _s++) T());
@@ -174,7 +174,7 @@ public:
 	 *
 	 * @return Reference to new item
 	 */
-	ZT_MAYBE_UNUSED ZT_INLINE T &push(const T &v)
+	ZT_INLINE T &push(const T &v)
 	{
 		if (likely(_s < C)) {
 			return *(new(reinterpret_cast<T *>(_m) + _s++) T(v));
@@ -188,7 +188,7 @@ public:
 	/**
 	 * Remove the last element if this vector is not empty
 	 */
-	ZT_MAYBE_UNUSED ZT_INLINE void pop_back()
+	ZT_INLINE void pop_back()
 	{
 		if (likely(_s != 0))
 			(reinterpret_cast<T *>(_m) + --_s)->~T();
@@ -199,7 +199,7 @@ public:
 	 *
 	 * @param ns New size (clipped to C if larger than capacity)
 	 */
-	ZT_MAYBE_UNUSED ZT_INLINE void resize(unsigned int ns)
+	ZT_INLINE void resize(unsigned int ns)
 	{
 		if (unlikely(ns > C))
 			throw Utils::OutOfRangeException;
@@ -216,7 +216,7 @@ public:
 	 *
 	 * @param ns New size
 	 */
-	ZT_MAYBE_UNUSED ZT_INLINE void unsafeSetSize(unsigned int ns)
+	ZT_INLINE void unsafeSetSize(unsigned int ns)
 	{ _s = ns; }
 
 	/**
@@ -228,7 +228,7 @@ public:
 	 * @param i Index to obtain as a reference, resizing if needed
 	 * @return Reference to value at this index
 	 */
-	ZT_MAYBE_UNUSED ZT_INLINE T &at(unsigned int i)
+	ZT_INLINE T &at(unsigned int i)
 	{
 		if (i >= _s) {
 			if (unlikely(i >= C))
@@ -250,7 +250,7 @@ public:
 	 * @param end Ending iterator (must be greater than start)
 	 */
 	template< typename X >
-	ZT_MAYBE_UNUSED ZT_INLINE void assign(X start, const X &end)
+	ZT_INLINE void assign(X start, const X &end)
 	{
 		const int l = std::min((int)std::distance(start, end), (int)C);
 		if (l > 0) {
@@ -262,7 +262,7 @@ public:
 		}
 	}
 
-	ZT_MAYBE_UNUSED ZT_INLINE bool operator==(const FCV &v) const noexcept
+	ZT_INLINE bool operator==(const FCV &v) const noexcept
 	{
 		if (_s == v._s) {
 			for (unsigned int i = 0; i < _s; ++i) {
@@ -274,19 +274,19 @@ public:
 		return false;
 	}
 
-	ZT_MAYBE_UNUSED ZT_INLINE bool operator!=(const FCV &v) const noexcept
+	ZT_INLINE bool operator!=(const FCV &v) const noexcept
 	{ return *this != v; }
 
-	ZT_MAYBE_UNUSED ZT_INLINE bool operator<(const FCV &v) const noexcept
+	ZT_INLINE bool operator<(const FCV &v) const noexcept
 	{ return std::lexicographical_compare(begin(), end(), v.begin(), v.end()); }
 
-	ZT_MAYBE_UNUSED ZT_INLINE bool operator>(const FCV &v) const noexcept
+	ZT_INLINE bool operator>(const FCV &v) const noexcept
 	{ return (v < *this); }
 
-	ZT_MAYBE_UNUSED ZT_INLINE bool operator<=(const FCV &v) const noexcept
+	ZT_INLINE bool operator<=(const FCV &v) const noexcept
 	{ return v >= *this; }
 
-	ZT_MAYBE_UNUSED ZT_INLINE bool operator>=(const FCV &v) const noexcept
+	ZT_INLINE bool operator>=(const FCV &v) const noexcept
 	{ return *this >= v; }
 
 private:
