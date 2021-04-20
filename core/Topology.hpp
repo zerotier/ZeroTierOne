@@ -45,11 +45,11 @@ public:
 	/**
 	 * Add peer to database
 	 *
-	 * This will not replace existing peers. In that case the existing peer
-	 * record is returned.
+	 * If there's already a peer with this address, the existing peer is
+	 * returned. Otherwise the new peer is added and returned.
 	 *
 	 * @param peer Peer to add
-	 * @return New or existing peer (should replace 'peer')
+	 * @return New or existing peer
 	 */
 	SharedPtr< Peer > add(const CallContext &cc, const SharedPtr< Peer > &peer);
 
@@ -118,7 +118,8 @@ public:
 	}
 
 	/**
-	 * @param allPeers vector to fill with all current peers
+	 * @param allPeers Vector to fill with all current peers
+	 * @param rootPeers Vector to fill with peers that are roots
 	 */
 	void allPeers(Vector< SharedPtr< Peer > > &allPeers, Vector< SharedPtr< Peer > > &rootPeers) const;
 
@@ -129,8 +130,6 @@ public:
 
 	/**
 	 * Rank root servers in descending order of quality
-	 *
-	 * @param now Current time
 	 */
 	ZT_INLINE void rankRoots(const CallContext &cc)
 	{
@@ -162,7 +161,7 @@ private:
 
 	RWMutex m_peers_l; // m_peers
 	RWMutex m_paths_l; // m_paths
-	Mutex m_roots_l;   // m_roots and m_lastRankedRoots
+	Mutex m_roots_l;   // m_roots
 
 	SharedPtr< Peer > m_bestRoot;
 	Spinlock l_bestRoot;

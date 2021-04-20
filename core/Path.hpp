@@ -49,9 +49,6 @@ public:
 	class Key
 	{
 	public:
-		/**
-		 * Construct key with undefined value
-		 */
 		ZT_INLINE Key() noexcept
 		{}
 
@@ -61,7 +58,7 @@ public:
 			if (family == AF_INET) {
 				const uint16_t p = (uint16_t)ip.as.sa_in.sin_port;
 				m_hashCode = Utils::hash64((((uint64_t)ip.as.sa_in.sin_addr.s_addr) << 16U) ^ ((uint64_t)p) ^ Utils::s_mapNonce);
-				m_v664 = 0; // IPv6 /64 is 0 for IPv4
+				m_ipv6Net64 = 0; // 0 for IPv4, never 0 for IPv6
 				m_port = p;
 			} else {
 				if (likely(family == AF_INET6)) {
@@ -69,13 +66,12 @@ public:
 					const uint64_t b = Utils::loadMachineEndian< uint64_t >(reinterpret_cast<const uint8_t *>(ip.as.sa_in6.sin6_addr.s6_addr) + 8);
 					const uint16_t p = ip.as.sa_in6.sin6_port;
 					m_hashCode = Utils::hash64(a ^ b ^ ((uint64_t)p) ^ Utils::s_mapNonce);
-					m_v664 = a; // IPv6 /64
+					m_ipv6Net64 = a; // IPv6 /64
 					m_port = p;
 				} else {
-					// This isn't reachable since only IPv4 and IPv6 are used with InetAddress, but implement
-					// something here for technical completeness.
+					// This is not reachable since InetAddress can only be AF_INET or AF_INET6, but implement something.
 					m_hashCode = Utils::fnv1a32(&ip, sizeof(InetAddress));
-					m_v664 = Utils::fnv1a32(ip.as.sa.sa_data, sizeof(ip.as.sa.sa_data));
+					m_ipv6Net64 = 0;
 					m_port = (uint16_t)family;
 				}
 			}
@@ -85,7 +81,7 @@ public:
 		{ return (unsigned long)m_hashCode; }
 
 		ZT_INLINE bool operator==(const Key &k) const noexcept
-		{ return (m_hashCode == k.m_hashCode) && (m_v664 == k.m_v664) && (m_port == k.m_port); }
+		{ return (m_hashCode == k.m_hashCode) && (m_ipv6Net64 == k.m_ipv6Net64) && (m_port == k.m_port); }
 
 		ZT_INLINE bool operator!=(const Key &k) const noexcept
 		{ return (!(*this == k)); }
@@ -95,9 +91,9 @@ public:
 			if (m_hashCode < k.m_hashCode) {
 				return true;
 			} else if (m_hashCode == k.m_hashCode) {
-				if (m_v664 < k.m_v664) {
+				if (m_ipv6Net64 < k.m_ipv6Net64) {
 					return true;
-				} else if (m_v664 == k.m_v664) {
+				} else if (m_ipv6Net64 == k.m_ipv6Net64) {
 					return (m_port < k.m_port);
 				}
 			}
@@ -115,7 +111,7 @@ public:
 
 	private:
 		uint64_t m_hashCode;
-		uint64_t m_v664;
+		uint64_t m_ipv6Net64;
 		uint16_t m_port;
 	};
 
@@ -167,11 +163,11 @@ public:
 	 */
 	ZT_INLINE void updateLatency(const unsigned int newMeasurement) noexcept
 	{
-		int lat = m_latency;
+		const int lat = m_latency.load(std::memory_order_relaxed);
 		if (likely(lat > 0)) {
-			m_latency = (lat + newMeasurement) / 2;
+			m_latency.store((lat + (int)newMeasurement) >> 1U, std::memory_order_relaxed);
 		} else {
-			m_latency = newMeasurement;
+			m_latency.store((int)newMeasurement, std::memory_order_relaxed);
 		}
 	}
 
@@ -179,7 +175,7 @@ public:
 	 * @return Latency in milliseconds or -1 if unknown
 	 */
 	ZT_INLINE int latency() const noexcept
-	{ return m_latency; }
+	{ return m_latency.load(std::memory_order_relaxed); }
 
 	/**
 	 * Check path aliveness
@@ -187,7 +183,7 @@ public:
 	 * @param now Current time
 	 */
 	ZT_INLINE bool alive(const CallContext &cc) const noexcept
-	{ return ((cc.ticks - m_lastIn.load()) < ZT_PATH_ALIVE_TIMEOUT); }
+	{ return ((cc.ticks - m_lastIn.load(std::memory_order_relaxed)) < ZT_PATH_ALIVE_TIMEOUT); }
 
 	/**
 	 * @return Physical address
@@ -205,13 +201,13 @@ public:
 	 * @return Last time we received anything
 	 */
 	ZT_INLINE int64_t lastIn() const noexcept
-	{ return m_lastIn.load(); }
+	{ return m_lastIn.load(std::memory_order_relaxed); }
 
 	/**
 	 * @return Last time we sent something
 	 */
 	ZT_INLINE int64_t lastOut() const noexcept
-	{ return m_lastOut.load(); }
+	{ return m_lastOut.load(std::memory_order_relaxed); }
 
 private:
 	const int64_t m_localSocket;

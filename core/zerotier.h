@@ -323,11 +323,6 @@ typedef struct
 #define ZT_CERTIFICATE_MAX_STRING_LENGTH 127
 
 /**
- * Maximum certificate path length to CA (a sanity limit value)
- */
-#define ZT_CERTIFICATE_MAX_PATH_LENGTH 256
-
-/**
  * Certificate is a root CA (local trust flag)
  */
 #define ZT_CERTIFICATE_LOCAL_TRUST_FLAG_ROOT_CA 0x0001U
@@ -348,49 +343,49 @@ enum ZT_CertificateError
 	ZT_CERTIFICATE_ERROR_NONE = 0,
 
 	/**
-	 * A newer certificate with the same issuer and subject serial plus CN exists.
-	 */
-	ZT_CERTIFICATE_ERROR_HAVE_NEWER_CERT = 1,
-
-	/**
 	 * Certificate format is invalid or required fields are missing
 	 */
-	ZT_CERTIFICATE_ERROR_INVALID_FORMAT = -1,
+	ZT_CERTIFICATE_ERROR_INVALID_FORMAT = 1,
 
 	/**
 	 * One or more identities in the certificate are invalid or fail consistency check
 	 */
-	ZT_CERTIFICATE_ERROR_INVALID_IDENTITY = -2,
+	ZT_CERTIFICATE_ERROR_INVALID_IDENTITY = 2,
 
 	/**
 	 * Certificate primary signature is invalid
 	 */
-	ZT_CERTIFICATE_ERROR_INVALID_PRIMARY_SIGNATURE = -3,
+	ZT_CERTIFICATE_ERROR_INVALID_PRIMARY_SIGNATURE = 3,
 
 	/**
 	 * Full chain validation of certificate failed
 	 */
-	ZT_CERTIFICATE_ERROR_INVALID_CHAIN = -4,
+	ZT_CERTIFICATE_ERROR_INVALID_CHAIN = 4,
 
 	/**
 	 * One or more signed components (e.g. a Locator) has an invalid signature.
 	 */
-	ZT_CERTIFICATE_ERROR_INVALID_COMPONENT_SIGNATURE = -5,
+	ZT_CERTIFICATE_ERROR_INVALID_COMPONENT_SIGNATURE = 5,
 
 	/**
 	 * Unique ID proof signature in subject was not valid.
 	 */
-	ZT_CERTIFICATE_ERROR_INVALID_UNIQUE_ID_PROOF = -6,
+	ZT_CERTIFICATE_ERROR_INVALID_UNIQUE_ID_PROOF = 6,
 
 	/**
 	 * Certificate is missing a required field
 	 */
-	ZT_CERTIFICATE_ERROR_MISSING_REQUIRED_FIELDS = -7,
+	ZT_CERTIFICATE_ERROR_MISSING_REQUIRED_FIELDS = 7,
 
 	/**
 	 * Certificate is expired or not yet in effect
 	 */
-	ZT_CERTIFICATE_ERROR_OUT_OF_VALID_TIME_WINDOW = -8
+	ZT_CERTIFICATE_ERROR_OUT_OF_VALID_TIME_WINDOW = 8,
+
+	/**
+	 * Certificate explicitly revoked
+	 */
+	ZT_CERTIFICATE_ERROR_REVOKED = 9
 };
 
 /**
@@ -428,6 +423,13 @@ enum ZT_CertificatePublicKeyAlgorithm
  * Size of a SHA384 hash
  */
 #define ZT_CERTIFICATE_HASH_SIZE 48
+
+/*
+ * Maximum number of certificates that can be revoked at once.
+ *
+ * This shouldn't be changed and is set to be small enough to fit in a packet.
+ */
+#define ZT_CERTIFICATE_REVOCATION_MAX_CERTIFICATES 24
 
 /**
  * Information about a real world entity.
@@ -506,7 +508,7 @@ typedef struct
 	/**
 	 * URLs that can be consulted for updates to this certificate.
 	 */
-	const char *const *updateURLs;
+	const char **updateURLs;
 
 	/**
 	 * Number of identities
@@ -643,6 +645,47 @@ typedef struct
 	 */
 	unsigned int maxPathLength;
 } ZT_Certificate;
+
+/**
+ * A revocation for one or more certificates.
+ */
+typedef struct
+{
+	/**
+	 * Certificate issuing this revocation.
+	 */
+	uint8_t issuer[ZT_CERTIFICATE_HASH_SIZE];
+
+	/**
+	 * Timestamp in milliseconds since epoch.
+	 */
+	int64_t timestamp;
+
+	/**
+	 * Revoked certificate serials.
+	 */
+	uint8_t serials[ZT_CERTIFICATE_REVOCATION_MAX_CERTIFICATES][ZT_CERTIFICATE_HASH_SIZE];
+
+	/**
+	 * Short optional human-readable reason or URL.
+	 */
+	char reason[ZT_CERTIFICATE_MAX_STRING_LENGTH + 1];
+
+	/**
+	 * Signature of revocation by revoking issuer.
+	 */
+	uint8_t signature[ZT_CERTIFICATE_MAX_SIGNATURE_SIZE];
+
+	/**
+	 * Number of revoked certificates.
+	 */
+	unsigned int count;
+
+	/**
+	 * Size of signature in bytes.
+	 */
+	unsigned int signatureSize;
+} ZT_CertificateRevocation;
 
 /**
  * A list of certificates

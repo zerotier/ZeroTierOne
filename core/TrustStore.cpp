@@ -33,19 +33,27 @@ Map< Identity, SharedPtr< const Locator > > TrustStore::roots()
 {
 	RWMutex::RLock l(m_lock);
 	Map< Identity, SharedPtr< const Locator > > r;
+
+	// Iterate using m_bySubjectIdentity to only scan certificates with subject identities.
+	// This map also does not contian error or deprecated certificates.
 	for (Map< Fingerprint, Vector< SharedPtr< Entry > > >::const_iterator cv(m_bySubjectIdentity.begin()); cv != m_bySubjectIdentity.end(); ++cv) {
 		for (Vector< SharedPtr< Entry > >::const_iterator c(cv->second.begin()); c != cv->second.end(); ++c) {
-			if (((*c)->error() == ZT_CERTIFICATE_ERROR_NONE) && (((*c)->localTrust() & ZT_CERTIFICATE_LOCAL_TRUST_FLAG_ZEROTIER_ROOT_SET) != 0)) {
+
+			if (((*c)->m_localTrust & ZT_CERTIFICATE_LOCAL_TRUST_FLAG_ZEROTIER_ROOT_SET) != 0) {
 				for (unsigned int j = 0; j < (*c)->certificate().subject.identityCount; ++j) {
 					const Identity *const id = reinterpret_cast<const Identity *>((*c)->certificate().subject.identities[j].identity);
-					if (likely((id != nullptr) && (*id))) { // sanity check
+					if ((id) && (*id)) { // sanity check
 						SharedPtr< const Locator > &existingLoc = r[*id];
 						const Locator *const loc = reinterpret_cast<const Locator *>((*c)->certificate().subject.identities[j].locator);
-						if ((loc != nullptr) && ((!existingLoc) || (existingLoc->revision() < loc->revision())))
-							existingLoc.set(new Locator(*loc));
+						if (loc) {
+							// If more than one certificate names a root, this ensures that the newest locator is used.
+							if ((!existingLoc) || (existingLoc->revision() < loc->revision()))
+								existingLoc.set(new Locator(*loc));
+						}
 					}
 				}
 			}
+
 		}
 	}
 	return r;
@@ -66,7 +74,7 @@ Vector< SharedPtr< TrustStore::Entry > > TrustStore::all(const bool includeRejec
 void TrustStore::add(const Certificate &cert, const unsigned int localTrust)
 {
 	RWMutex::Lock l(m_lock);
-	m_addQueue.push_front(SharedPtr< Entry >(new Entry(cert, localTrust)));
+	m_addQueue.push_front(SharedPtr< Entry >(new Entry(this->m_lock, cert, localTrust)));
 }
 
 void TrustStore::erase(const H384 &serial)
@@ -79,23 +87,32 @@ bool TrustStore::update(const int64_t clock, Vector< SharedPtr< Entry > > *const
 {
 	RWMutex::Lock l(m_lock);
 
-	// (Re)compute error codes for existing certs, but we don't have to do a full
-	// signature check here since that's done when they're taken out of the add queue.
+	// Check for certificate time validity status changes. If any of these occur then
+	// full re-validation is required.
 	bool errorStateModified = false;
 	for (Map< H384, SharedPtr< Entry > >::const_iterator c(m_bySerial.begin()); c != m_bySerial.end(); ++c) {
-		const ZT_CertificateError err = c->second->error();
-		if ((err != ZT_CERTIFICATE_ERROR_HAVE_NEWER_CERT) && (err != ZT_CERTIFICATE_ERROR_INVALID_CHAIN)) {
-			const ZT_CertificateError newErr = c->second->m_certificate.verify(clock, false);
-			if (newErr != err) {
-				c->second->m_error.store((int)newErr, std::memory_order_relaxed);
-				errorStateModified = true;
-			}
+		const bool timeValid = c->second->m_certificate.verifyTimeWindow(clock);
+		switch (c->second->m_error) {
+			case ZT_CERTIFICATE_ERROR_NONE:
+			case ZT_CERTIFICATE_ERROR_INVALID_CHAIN:
+				if (!timeValid) {
+					c->second->m_error = ZT_CERTIFICATE_ERROR_OUT_OF_VALID_TIME_WINDOW;
+					errorStateModified = true;
+				}
+				break;
+			case ZT_CERTIFICATE_ERROR_OUT_OF_VALID_TIME_WINDOW:
+				if (timeValid) {
+					c->second->m_error = c->second->m_certificate.verify(-1, false);
+					errorStateModified = true;
+				}
+				break;
+			default:
+				break;
 		}
 	}
 
-	// If no certificate error statuses changed and there are no new certificates to
-	// add, there is nothing to do and we don't need to do more expensive path validation
-	// and structure rebuilding.
+	// If there were not any such changes and if the add and delete queues are empty,
+	// there is nothing more to be done.
 	if ((!errorStateModified) && (m_addQueue.empty()) && (m_deleteQueue.empty()))
 		return false;
 
@@ -103,8 +120,9 @@ bool TrustStore::update(const int64_t clock, Vector< SharedPtr< Entry > > *const
 	// have yet to have their full certificate chains validated. Full signature checking is
 	// performed here.
 	while (!m_addQueue.empty()) {
-		m_addQueue.front()->m_error.store((int)m_addQueue.front()->m_certificate.verify(clock, true), std::memory_order_relaxed);
-		m_bySerial[H384(m_addQueue.front()->m_certificate.serialNo)].move(m_addQueue.front());
+		SharedPtr< Entry > &qi = m_addQueue.front();
+		qi->m_error = qi->m_certificate.verify(clock, true);
+		m_bySerial[H384(qi->m_certificate.serialNo)].move(qi);
 		m_addQueue.pop_front();
 	}
 
@@ -114,81 +132,102 @@ bool TrustStore::update(const int64_t clock, Vector< SharedPtr< Entry > > *const
 		m_deleteQueue.pop_front();
 	}
 
-	Map< H384, Vector< SharedPtr< Entry > > > bySignedCert;
-	for (;;) {
-		// Validate certificate paths and reject any certificates that do not trace back to a CA.
-		for (Map< H384, SharedPtr< Entry > >::iterator c(m_bySerial.begin()); c != m_bySerial.end(); ++c) {
-			if (c->second->error() == ZT_CERTIFICATE_ERROR_NONE) {
-				unsigned int pathLength = 0;
-				Map< H384, SharedPtr< Entry > >::const_iterator current(c);
-				Set< H384 > visited; // prevent infinite loops if there's a cycle
-				for (;;) {
-					if (pathLength <= current->second->m_certificate.maxPathLength) {
-						if ((current->second->localTrust() & ZT_CERTIFICATE_LOCAL_TRUST_FLAG_ROOT_CA) == 0) {
-							visited.insert(current->second->m_certificate.getSerialNo());
-							const H384 next(current->second->m_certificate.issuer);
-							if (visited.find(next) == visited.end()) {
-								current = m_bySerial.find(next);
-								if ((current != m_bySerial.end()) && (current->second->error() == ZT_CERTIFICATE_ERROR_NONE)) {
-									++pathLength;
-									continue;
-								}
-							}
-						} else {
-							break; // traced to root CA, abort without setting error
-						}
-					}
-					c->second->m_error.store((int)ZT_CERTIFICATE_ERROR_INVALID_CHAIN, std::memory_order_relaxed);
-				}
-			}
-		}
-
-		// Populate mapping of subject unique IDs to certificates and reject any certificates
-		// that have been superseded by newly issued certificates with the same subject.
-		bool exitLoop = true;
-		m_bySubjectUniqueId.clear();
-		for (Map< H384, SharedPtr< Entry > >::const_iterator c(m_bySerial.begin()); c != m_bySerial.end();) {
-			if (c->second->error() == ZT_CERTIFICATE_ERROR_NONE) {
-				const unsigned int uniqueIdSize = c->second->m_certificate.subject.uniqueIdSize;
-				if ((uniqueIdSize > 0) && (uniqueIdSize <= ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE)) {
-					SharedPtr< Entry > &current = m_bySubjectUniqueId[Blob< ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE >(c->second->m_certificate.subject.uniqueId, uniqueIdSize)];
-					if (current) {
-						exitLoop = false;
-						if (c->second->m_certificate.subject.timestamp > current->m_certificate.subject.timestamp) {
-							current->m_error.store((int)ZT_CERTIFICATE_ERROR_HAVE_NEWER_CERT, std::memory_order_relaxed);
-							current = c->second;
-						} else if (c->second->m_certificate.subject.timestamp < current->m_certificate.subject.timestamp) {
-							c->second->m_error.store((int)ZT_CERTIFICATE_ERROR_HAVE_NEWER_CERT, std::memory_order_relaxed);
-						} else {
-							// Equal timestamps should never happen, but handle it by comparing serials for deterministic completeness.
-							if (memcmp(c->second->m_certificate.serialNo, current->m_certificate.serialNo, ZT_SHA384_DIGEST_SIZE) > 0) {
-								current->m_error.store((int)ZT_CERTIFICATE_ERROR_HAVE_NEWER_CERT, std::memory_order_relaxed);
-								current = c->second;
-							} else {
-								c->second->m_error.store((int)ZT_CERTIFICATE_ERROR_HAVE_NEWER_CERT, std::memory_order_relaxed);
-							}
-						}
-					} else {
-						current = c->second;
-					}
-				}
-			}
-		}
-
-		// If no certificates were tagged out during the unique ID pass, we can exit. Otherwise
-		// the last few steps have to be repeated because removing any certificate could in
-		// theory affect the result of certificate path validation.
-		if (exitLoop) {
-			break;
-		} else {
-			bySignedCert.clear();
+	// Reset flags for deprecation and a cert being on a trust path, which are
+	// recomputed when chain and subjects are checked below.
+	for (Map< H384, SharedPtr< Entry > >::const_iterator c(m_bySerial.begin()); c != m_bySerial.end(); ++c) {
+		if (c->second->m_error == ZT_CERTIFICATE_ERROR_NONE) {
+			c->second->m_subjectDeprecated = false;
+			c->second->m_onTrustPath = false;
 		}
 	}
 
-	// Populate mapping of identities to certificates whose subjects reference them.
+	// Validate certificate trust paths.
+	{
+		Vector< Entry * > visited;
+		visited.reserve(8);
+		for (Map< H384, SharedPtr< Entry > >::iterator c(m_bySerial.begin()); c != m_bySerial.end(); ++c) {
+			if ((c->second->m_error == ZT_CERTIFICATE_ERROR_NONE) && (!c->second->m_onTrustPath) && ((c->second->m_localTrust & ZT_CERTIFICATE_LOCAL_TRUST_FLAG_ROOT_CA) == 0)) {
+				// Trace the path of each certificate all the way back to a trusted CA.
+				unsigned int pathLength = 0;
+				Map< H384, SharedPtr< Entry > >::const_iterator current(c);
+				visited.clear();
+				for (;;) {
+					if (pathLength <= current->second->m_certificate.maxPathLength) {
+
+						// Check if this cert isn't a CA or already part of a valid trust path. If so then step upward toward CA.
+						if (((current->second->m_localTrust & ZT_CERTIFICATE_LOCAL_TRUST_FLAG_ROOT_CA) == 0) && (!current->second->m_onTrustPath)) {
+							// If the issuer (parent) certificiate is (1) valid, (2) not already visited (to prevent loops),
+							// and (3) has a public key that matches this cert's issuer public key (sanity check), proceed
+							// up the certificate graph toward a potential CA.
+							visited.push_back(current->second.ptr());
+							const Map< H384, SharedPtr< Entry > >::const_iterator prevChild(current);
+							current = m_bySerial.find(H384(current->second->m_certificate.issuer));
+							if ((current != m_bySerial.end()) &&
+							    (std::find(visited.begin(), visited.end(), current->second.ptr()) == visited.end()) &&
+							    (current->second->m_error == ZT_CERTIFICATE_ERROR_NONE) &&
+							    (current->second->m_certificate.publicKeySize == prevChild->second->m_certificate.issuerPublicKeySize) &&
+							    (memcmp(current->second->m_certificate.publicKey, prevChild->second->m_certificate.issuerPublicKey, current->second->m_certificate.publicKeySize) == 0)) {
+								++pathLength;
+								continue;
+							}
+						} else {
+							// If we've traced this to a root CA, flag its parents as also being on a trust path. Then
+							// break the loop without setting an error. We don't flag the current cert as being on a
+							// trust path since no other certificates depend on it.
+							for (Vector< Entry * >::const_iterator v(visited.begin()); v != visited.end(); ++v) {
+								if (*v != c->second.ptr())
+									(*v)->m_onTrustPath = true;
+							}
+							break;
+						}
+
+					}
+
+					// If we made it here without breaking or continuing, no path to a
+					// CA was found and the certificate's chain is invalid.
+					c->second->m_error = ZT_CERTIFICATE_ERROR_INVALID_CHAIN;
+					break;
+				}
+			}
+		}
+	}
+
+	// Repopulate mapping of subject unique IDs to their certificates, marking older
+	// certificates for the same subject as deprecated. A deprecated certificate is not invalid
+	// but will be purged if it is also not part of a trust path. Error certificates are ignored.
+	m_bySubjectUniqueId.clear();
+	for (Map< H384, SharedPtr< Entry > >::const_iterator c(m_bySerial.begin()); c != m_bySerial.end();) {
+		if (c->second->m_error == ZT_CERTIFICATE_ERROR_NONE) {
+			const unsigned int uniqueIdSize = c->second->m_certificate.subject.uniqueIdSize;
+			if ((uniqueIdSize > 0) && (uniqueIdSize <= ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE)) {
+				SharedPtr< Entry > &entry = m_bySubjectUniqueId[Blob< ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE >(c->second->m_certificate.subject.uniqueId, uniqueIdSize)];
+				if (entry) {
+					if (c->second->m_certificate.subject.timestamp > entry->m_certificate.subject.timestamp) {
+						entry->m_subjectDeprecated = true;
+						entry = c->second;
+					} else if (c->second->m_certificate.subject.timestamp < entry->m_certificate.subject.timestamp) {
+						c->second->m_subjectDeprecated = true;
+					} else {
+						// Equal timestamps should never happen, but handle it anyway by comparing serials.
+						if (memcmp(c->second->m_certificate.serialNo, entry->m_certificate.serialNo, ZT_CERTIFICATE_HASH_SIZE) > 0) {
+							entry->m_subjectDeprecated = true;
+							entry = c->second;
+						} else {
+							c->second->m_subjectDeprecated = true;
+						}
+					}
+				} else {
+					entry = c->second;
+				}
+			}
+		}
+	}
+
+	// Populate mapping of identities to certificates whose subjects reference them, ignoring
+	// error or deprecated certificates.
 	m_bySubjectIdentity.clear();
 	for (Map< H384, SharedPtr< Entry > >::const_iterator c(m_bySerial.begin()); c != m_bySerial.end(); ++c) {
-		if (c->second->error() == ZT_CERTIFICATE_ERROR_NONE) {
+		if ((c->second->m_error == ZT_CERTIFICATE_ERROR_NONE) && (!c->second->m_subjectDeprecated)) {
 			for (unsigned int i = 0; i < c->second->m_certificate.subject.identityCount; ++i) {
 				const Identity *const id = reinterpret_cast<const Identity *>(c->second->m_certificate.subject.identities[i].identity);
 				if ((id) && (*id)) // sanity check
@@ -197,10 +236,12 @@ bool TrustStore::update(const int64_t clock, Vector< SharedPtr< Entry > > *const
 		}
 	}
 
-	// Purge and return purged certificates if this option is selected.
+	// Purge error certificates and return them if 'purge' is non-NULL. This purges error certificates
+	// and deprecated certificates not on a trust path. Deprecated certificates on a trust path remain
+	// as they are still technically valid and other possibly wanted certificates depend on them.
 	if (purge) {
 		for (Map< H384, SharedPtr< Entry > >::const_iterator c(m_bySerial.begin()); c != m_bySerial.end();) {
-			if (c->second->error() != ZT_CERTIFICATE_ERROR_NONE) {
+			if ( (c->second->error() != ZT_CERTIFICATE_ERROR_NONE) || ((c->second->m_subjectDeprecated) && (!c->second->m_onTrustPath)) ) {
 				purge->push_back(c->second);
 				m_bySerial.erase(c++);
 			} else {
@@ -214,7 +255,7 @@ bool TrustStore::update(const int64_t clock, Vector< SharedPtr< Entry > > *const
 
 Vector< uint8_t > TrustStore::save() const
 {
-	Vector< uint8_t> comp;
+	Vector< uint8_t > comp;
 
 	int compSize;
 	{
@@ -223,24 +264,26 @@ Vector< uint8_t > TrustStore::save() const
 
 		RWMutex::RLock l(m_lock);
 
-		b.push_back(0); // version byte
+		// A version byte.
+		b.push_back(0);
 
+		// <size> <certificate> <trust> tuples terminated by a 0 size.
 		for (Map< H384, SharedPtr< Entry > >::const_iterator c(m_bySerial.begin()); c != m_bySerial.end(); ++c) {
 			const Vector< uint8_t > cdata(c->second->certificate().encode());
-			if (!cdata.empty()) {
+			const unsigned long size = (uint32_t)cdata.size();
+			if ((size > 0) && (size <= 0xffff)) {
+				b.push_back((uint8_t)(size >> 8U));
+				b.push_back((uint8_t)size);
+				b.insert(b.end(), cdata.begin(), cdata.end());
 				const uint32_t localTrust = (uint32_t)c->second->localTrust();
 				b.push_back((uint8_t)(localTrust >> 24U));
 				b.push_back((uint8_t)(localTrust >> 16U));
 				b.push_back((uint8_t)(localTrust >> 8U));
 				b.push_back((uint8_t)localTrust);
-				const uint32_t size = (uint32_t)cdata.size();
-				b.push_back((uint8_t)(size >> 24U));
-				b.push_back((uint8_t)(size >> 16U));
-				b.push_back((uint8_t)(size >> 8U));
-				b.push_back((uint8_t)size);
-				b.insert(b.end(), cdata.begin(), cdata.end());
 			}
 		}
+		b.push_back(0);
+		b.push_back(0);
 
 		comp.resize((unsigned long)LZ4_COMPRESSBOUND(b.size()) + 8);
 		compSize = LZ4_compress_fast(reinterpret_cast<const char *>(b.data()), reinterpret_cast<char *>(comp.data() + 8), (int)b.size(), (int)(comp.size() - 8));
@@ -271,10 +314,8 @@ int TrustStore::load(const Vector< uint8_t > &data)
 	if (data.size() < 8)
 		return -1;
 
-	const unsigned long uncompSize = Utils::loadBigEndian<uint32_t>(data.data());
-	if (uncompSize > (data.size() * 256)) // sanity check
-		return -1;
-	if (uncompSize < 1) // no room for at least version and count
+	const unsigned long uncompSize = Utils::loadBigEndian< uint32_t >(data.data());
+	if ((uncompSize == 0) || (uncompSize > (data.size() * 128)))
 		return -1;
 
 	Vector< uint8_t > uncomp;
@@ -283,7 +324,7 @@ int TrustStore::load(const Vector< uint8_t > &data)
 	if (LZ4_decompress_safe(reinterpret_cast<const char *>(data.data() + 8), reinterpret_cast<char *>(uncomp.data()), (int)(data.size() - 8), (int)uncompSize) != (int)uncompSize)
 		return -1;
 	const uint8_t *b = uncomp.data();
-	if (Utils::fnv1a32(b, (unsigned int)uncompSize) != Utils::loadBigEndian<uint32_t>(data.data() + 4))
+	if (Utils::fnv1a32(b, (unsigned int)uncompSize) != Utils::loadBigEndian< uint32_t >(data.data() + 4))
 		return -1;
 	const uint8_t *const eof = b + uncompSize;
 
@@ -291,23 +332,28 @@ int TrustStore::load(const Vector< uint8_t > &data)
 		return -1;
 
 	int readCount = 0;
-	for(;;) {
-		if ((b + 8) > eof)
-			break;
-		const uint32_t localTrust = Utils::loadBigEndian<uint32_t>(b);
-		b += 4;
-		const uint32_t cdataSize = Utils::loadBigEndian<uint32_t>(b);
-		b += 4;
 
-		if ((b + cdataSize) > eof)
+	for (;;) {
+		if ((b + 2) > eof)
+			break;
+		const uint32_t cdataSize = Utils::loadBigEndian< uint16_t >(b);
+		b += 2;
+
+		if (cdataSize == 0)
+			break;
+
+		if ((b + cdataSize + 4) > eof)
 			break;
 		Certificate c;
 		if (c.decode(b, (unsigned int)cdataSize)) {
+			b += cdataSize;
+			const uint32_t localTrust = Utils::loadBigEndian< uint32_t >(b);
+			b += 4;
 			this->add(c, (unsigned int)localTrust);
 			++readCount;
 		}
-		b += cdataSize;
 	}
+
 	return readCount;
 }
 

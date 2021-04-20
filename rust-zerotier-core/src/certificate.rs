@@ -105,7 +105,6 @@ impl<'de> serde::Deserialize<'de> for CertificateSerialNo {
 #[derive(FromPrimitive, ToPrimitive, PartialEq, Eq, Clone, Copy)]
 pub enum CertificateError {
     None = ztcore::ZT_CertificateError_ZT_CERTIFICATE_ERROR_NONE as isize,
-    HaveNewerCert = ztcore::ZT_CertificateError_ZT_CERTIFICATE_ERROR_HAVE_NEWER_CERT as isize,
     InvalidFormat = ztcore::ZT_CertificateError_ZT_CERTIFICATE_ERROR_INVALID_FORMAT as isize,
     InvalidIdentity = ztcore::ZT_CertificateError_ZT_CERTIFICATE_ERROR_INVALID_IDENTITY as isize,
     InvalidPrimarySignature = ztcore::ZT_CertificateError_ZT_CERTIFICATE_ERROR_INVALID_PRIMARY_SIGNATURE as isize,
@@ -114,6 +113,7 @@ pub enum CertificateError {
     InvalidUniqueIdProof = ztcore::ZT_CertificateError_ZT_CERTIFICATE_ERROR_INVALID_UNIQUE_ID_PROOF as isize,
     MissingRequiredFields = ztcore::ZT_CertificateError_ZT_CERTIFICATE_ERROR_MISSING_REQUIRED_FIELDS as isize,
     OutOfValidTimeWindow = ztcore::ZT_CertificateError_ZT_CERTIFICATE_ERROR_OUT_OF_VALID_TIME_WINDOW as isize,
+    Revoked = ztcore::ZT_CertificateError_ZT_CERTIFICATE_ERROR_REVOKED as isize,
 }
 
 impl ToString for CertificateError {
@@ -121,7 +121,6 @@ impl ToString for CertificateError {
         String::from(
             match self {
                 CertificateError::None => "None",
-                CertificateError::HaveNewerCert => "HaveNewerCert",
                 CertificateError::InvalidFormat => "InvalidFormat",
                 CertificateError::InvalidIdentity => "InvalidIdentity",
                 CertificateError::InvalidPrimarySignature => "InvalidPrimarySignature",
@@ -129,7 +128,8 @@ impl ToString for CertificateError {
                 CertificateError::InvalidComponentSignature => "InvalidComponentSignature",
                 CertificateError::InvalidUniqueIdProof => "InvalidUniqueIdProof",
                 CertificateError::MissingRequiredFields => "MissingRequiredFields",
-                CertificateError::OutOfValidTimeWindow => "OutOfValidTimeWindow"
+                CertificateError::OutOfValidTimeWindow => "OutOfValidTimeWindow",
+                CertificateError::Revoked => "Revoked",
             }
         )
     }
@@ -138,7 +138,6 @@ impl ToString for CertificateError {
 impl<S: AsRef<str>> From<S> for CertificateError {
     fn from(s: S) -> CertificateError {
         match s.as_ref().to_ascii_lowercase().as_str() {
-            "havenewercert" => CertificateError::HaveNewerCert,
             "invalidformat" => CertificateError::InvalidFormat,
             "invalididentity" => CertificateError::InvalidIdentity,
             "invalidprimarysignature" => CertificateError::InvalidPrimarySignature,
@@ -147,6 +146,7 @@ impl<S: AsRef<str>> From<S> for CertificateError {
             "invaliduniqueidproof" => CertificateError::InvalidUniqueIdProof,
             "missingrequiredfields" => CertificateError::MissingRequiredFields,
             "outofvalidtimewindow" => CertificateError::OutOfValidTimeWindow,
+            "revoked" => CertificateError::Revoked,
             _ => CertificateError::None
         }
     }
@@ -348,10 +348,10 @@ pub struct CertificateSubject {
 #[allow(unused)]
 pub(crate) struct CertificateSubjectCAPIContainer {
     pub(crate) subject: ztcore::ZT_Certificate_Subject,
-    subject_identities: Pin<Box<[ztcore::ZT_Certificate_Identity]>>,
-    subject_networks: Pin<Box<[ztcore::ZT_Certificate_Network]>>,
-    subject_urls: Pin<Box<[*const c_char]>>,
-    subject_urls_strs: Pin<Box<[CString]>>,
+    subject_identities: Option<Pin<Box<[ztcore::ZT_Certificate_Identity]>>>,
+    subject_networks: Option<Pin<Box<[ztcore::ZT_Certificate_Network]>>>,
+    subject_urls: Option<Pin<Box<[*const c_char]>>>,
+    subject_urls_strs: Option<Pin<Box<[CString]>>>,
 }
 
 impl CertificateSubject {
@@ -407,51 +407,64 @@ impl CertificateSubject {
     }
 
     pub(crate) unsafe fn to_capi(&self) -> CertificateSubjectCAPIContainer {
-        let mut capi_identities: Vec<ztcore::ZT_Certificate_Identity> = Vec::new();
-        let mut capi_networks: Vec<ztcore::ZT_Certificate_Network> = Vec::new();
-        let mut capi_urls: Vec<*const c_char> = Vec::new();
-        let mut capi_urls_strs: Vec<CString> = Vec::new();
+        let mut identity_count: c_uint = 0;
+        let mut network_count: c_uint = 0;
+        let mut update_url_count: c_uint = 0;
 
-        if !self.identities.is_empty() {
+        let mut capi_identities = if self.identities.is_empty() {
+            None
+        } else {
+            let mut capi_identities: Vec<ztcore::ZT_Certificate_Identity> = Vec::new();
             capi_identities.reserve(self.identities.len());
             for i in self.identities.iter() {
                 capi_identities.push((*i).to_capi());
             }
-        }
-        if !self.networks.is_empty() {
+            identity_count = capi_identities.len() as c_uint;
+            Some(Pin::from(capi_identities.into_boxed_slice()))
+        };
+
+        let mut capi_networks = if self.networks.is_empty() {
+            None
+        } else {
+            let mut capi_networks: Vec<ztcore::ZT_Certificate_Network> = Vec::new();
             capi_networks.reserve(self.networks.len());
             for i in self.networks.iter() {
                 capi_networks.push((*i).to_capi());
             }
-        }
-        if !self.update_urls.is_empty() {
-            capi_urls.reserve(self.update_urls.len());
+            network_count = capi_networks.len() as c_uint;
+            Some(Pin::from(capi_networks.into_boxed_slice()))
+        };
+
+        let (mut capi_urls, capi_urls_strs) = if self.update_urls.is_empty() {
+            (None, None)
+        } else {
+            let mut capi_urls_strs: Vec<CString> = Vec::new();
+            let mut capi_urls: Vec<*const c_char> = Vec::new();
             capi_urls_strs.reserve(self.update_urls.len());
+            capi_urls.reserve(self.update_urls.len());
             for i in self.update_urls.iter() {
                 let cs = CString::new((*i).as_str());
                 if cs.is_ok() {
                     capi_urls_strs.push(cs.unwrap());
                 }
             }
+            let capi_urls_strs = Pin::from(capi_urls_strs.into_boxed_slice());
             for i in capi_urls_strs.iter() {
                 capi_urls.push((*i).as_ptr());
             }
-        }
-
-        let mut capi_identities = Pin::from(capi_identities.into_boxed_slice());
-        let mut capi_networks = Pin::from(capi_networks.into_boxed_slice());
-        let mut capi_urls = Pin::from(capi_urls.into_boxed_slice());
-        let mut capi_urls_strs = Pin::from(capi_urls_strs.into_boxed_slice());
+            update_url_count = capi_urls.len() as c_uint;
+            (Some(Pin::from(capi_urls.into_boxed_slice())), Some(capi_urls_strs))
+        };
 
         CertificateSubjectCAPIContainer {
             subject: ztcore::ZT_Certificate_Subject {
                 timestamp: self.timestamp,
-                identities: capi_identities.as_mut_ptr(),
-                networks: capi_networks.as_mut_ptr(),
-                updateURLs: capi_urls.as_ptr(),
-                identityCount: capi_identities.len() as c_uint,
-                networkCount: capi_networks.len() as c_uint,
-                updateURLCount: capi_urls.len() as c_uint,
+                identities: capi_identities.as_mut().map_or(null_mut(), |v| v.as_mut_ptr()),
+                networks: capi_networks.as_mut().map_or(null_mut(), |v| v.as_mut_ptr()),
+                updateURLs: capi_urls.as_mut().map_or(null_mut(), |v| v.as_mut_ptr()),
+                identityCount: identity_count,
+                networkCount: network_count,
+                updateURLCount: update_url_count,
                 name: self.name.to_capi(),
                 uniqueId: vec_to_array(&self.unique_id),
                 uniqueIdSignature: vec_to_array(&self.unique_id_signature),

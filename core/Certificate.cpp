@@ -360,8 +360,64 @@ ZT_CertificateError Certificate::verify(const int64_t clock, const bool checkSig
 		if (this->validity[0] > this->validity[1]) {
 			return ZT_CERTIFICATE_ERROR_INVALID_FORMAT;
 		}
-		if ((clock >= 0) && ((this->validity[0] > clock) || (this->validity[1] < clock))) {
-			return ZT_CERTIFICATE_ERROR_OUT_OF_VALID_TIME_WINDOW;
+
+		if (this->subject.identityCount > 0) {
+			if (this->subject.identities) {
+				for (unsigned int i = 0; i < this->subject.identityCount; ++i) {
+					if (!this->subject.identities[i].identity) {
+						return ZT_CERTIFICATE_ERROR_INVALID_FORMAT;
+					}
+					if (checkSignatures) {
+						if (!reinterpret_cast<const Identity *>(this->subject.identities[i].identity)->locallyValidate()) {
+							return ZT_CERTIFICATE_ERROR_INVALID_IDENTITY;
+						}
+						if ((this->subject.identities[i].locator) && (!reinterpret_cast<const Locator *>(this->subject.identities[i].locator)->verify(*reinterpret_cast<const Identity *>(this->subject.identities[i].identity)))) {
+							return ZT_CERTIFICATE_ERROR_INVALID_COMPONENT_SIGNATURE;
+						}
+					}
+				}
+			} else {
+				return ZT_CERTIFICATE_ERROR_INVALID_FORMAT;
+			}
+		}
+
+		if (this->subject.networkCount > 0) {
+			if (this->subject.networks) {
+				for (unsigned int i = 0; i < this->subject.networkCount; ++i) {
+					if (!this->subject.networks[i].id) {
+						return ZT_CERTIFICATE_ERROR_MISSING_REQUIRED_FIELDS;
+					}
+				}
+			} else {
+				return ZT_CERTIFICATE_ERROR_INVALID_FORMAT;
+			}
+		}
+
+		if (this->subject.updateURLCount > 0) {
+			if (this->subject.updateURLs) {
+				for (unsigned int i = 0; i < this->subject.updateURLCount; ++i) {
+					if (!this->subject.updateURLs[i])
+						return ZT_CERTIFICATE_ERROR_MISSING_REQUIRED_FIELDS;
+				}
+			} else {
+				return ZT_CERTIFICATE_ERROR_MISSING_REQUIRED_FIELDS;
+			}
+		}
+
+		if ((this->subject.uniqueIdSize > sizeof(this->subject.uniqueId)) || (this->subject.uniqueIdSignatureSize > sizeof(this->subject.uniqueIdSignature))) {
+			return ZT_CERTIFICATE_ERROR_INVALID_FORMAT;
+		}
+
+		if ((this->issuerPublicKeySize > sizeof(this->issuerPublicKey)) || (this->publicKeySize > sizeof(this->publicKey))) {
+			return ZT_CERTIFICATE_ERROR_INVALID_FORMAT;
+		}
+
+		if ((this->extendedAttributesSize > 0) && (!this->extendedAttributes)) {
+			return ZT_CERTIFICATE_ERROR_INVALID_FORMAT;
+		}
+
+		if (this->signatureSize > sizeof(this->signature)) {
+			return ZT_CERTIFICATE_ERROR_INVALID_FORMAT;
 		}
 
 		if (checkSignatures) {
@@ -423,33 +479,9 @@ ZT_CertificateError Certificate::verify(const int64_t clock, const bool checkSig
 			}
 		}
 
-		for (unsigned int i = 0; i < this->subject.identityCount; ++i) {
-			if (!this->subject.identities[i].identity)
-				return ZT_CERTIFICATE_ERROR_MISSING_REQUIRED_FIELDS;
-			if (checkSignatures) {
-				if (!reinterpret_cast<const Identity *>(this->subject.identities[i].identity)->locallyValidate()) {
-					return ZT_CERTIFICATE_ERROR_INVALID_IDENTITY;
-				}
-				if ((this->subject.identities[i].locator) && (!reinterpret_cast<const Locator *>(this->subject.identities[i].locator)->verify(*reinterpret_cast<const Identity *>(this->subject.identities[i].identity)))) {
-					return ZT_CERTIFICATE_ERROR_INVALID_COMPONENT_SIGNATURE;
-				}
-			}
-		}
-
-		for (unsigned int i = 0; i < this->subject.networkCount; ++i) {
-			if (!this->subject.networks[i].id) {
-				return ZT_CERTIFICATE_ERROR_MISSING_REQUIRED_FIELDS;
-			}
-		}
-
-		if (this->subject.updateURLCount > 0) {
-			if (!this->subject.updateURLs) {
-				return ZT_CERTIFICATE_ERROR_MISSING_REQUIRED_FIELDS;
-			}
-			for (unsigned int i = 0; i < this->subject.updateURLCount; ++i) {
-				if (!this->subject.updateURLs[i])
-					return ZT_CERTIFICATE_ERROR_MISSING_REQUIRED_FIELDS;
-			}
+		if (clock >= 0) {
+			if (!this->verifyTimeWindow(clock))
+				return ZT_CERTIFICATE_ERROR_OUT_OF_VALID_TIME_WINDOW;
 		}
 	} catch (...) {
 		return ZT_CERTIFICATE_ERROR_INVALID_FORMAT;

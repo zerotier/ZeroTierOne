@@ -143,14 +143,23 @@ public:
 	/**
 	 * Verify self-contained signatures and validity of certificate structure
 	 *
-	 * This doesn't check the entire certificate chain, just the validity of
-	 * the certificate's internal signature and fields.
+	 * This cannot check the chain of trust back to a CA, only the internal validity
+	 * of this certificate.
 	 *
-	 * @param clock If non-negative, check that certificate is in valid time window
+	 * @param clock If non-negative, also do verifyTimeWindow()
 	 * @param checkSignatures If true, perform full signature check (which is more expensive than other checks)
 	 * @return OK (0) or error code indicating why certificate failed verification.
 	 */
 	ZT_CertificateError verify(int64_t clock, bool checkSignatures) const;
+
+	/**
+	 * Check this certificate's expiration status
+	 *
+	 * @param clock Current real world time in milliseconds since epoch
+	 * @return True if certificate is not expired or outside window
+	 */
+	ZT_INLINE bool verifyTimeWindow(int64_t clock) const noexcept
+	{ return ((clock >= this->validity[0]) && (clock <= this->validity[1]) && (this->validity[0] <= this->validity[1])); }
 
 	/**
 	 * Create a new certificate public/private key pair

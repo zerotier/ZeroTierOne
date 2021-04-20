@@ -28,7 +28,20 @@
 namespace ZeroTier {
 
 /**
- * Certificate store and chain validator
+ * Certificate store and chain validator.
+ *
+ * WARNING: SharedPtr<Entry> entries returned from a trust store are valid
+ * only as long as the trust store exists. The trust store is a core object
+ * that lives as long as a Node, so this isn't an issue in the core, but it
+ * should be remembered when testing.
+ *
+ * This is because each Entry includes a reference to its parent's mutex and
+ * is synchronized by this mutex so its fields are safe to access while the
+ * parent trust store is being modified or synchronized.
+ *
+ * This also means entries can't be moved between TrustStore instances,
+ * hence there are no methods for doing that. There's only one instance in a
+ * node anyway.
  */
 class TrustStore
 {
@@ -57,7 +70,10 @@ public:
 		 * @return Local trust bit mask
 		 */
 		ZT_INLINE unsigned int localTrust() const noexcept
-		{ return m_localTrust.load(std::memory_order_relaxed); }
+		{
+			RWMutex::RLock l(m_lock);
+			return m_localTrust;
+		}
 
 		/**
 		 * Change the local trust of this entry
@@ -65,7 +81,10 @@ public:
 		 * @param lt New local trust bit mask
 		 */
 		ZT_INLINE void setLocalTrust(const unsigned int lt) noexcept
-		{ m_localTrust.store(lt, std::memory_order_relaxed); }
+		{
+			RWMutex::Lock l(m_lock);
+			m_localTrust = lt;
+		}
 
 		/**
 		 * Get the error code for this certificate
@@ -73,23 +92,30 @@ public:
 		 * @return Error or ZT_CERTIFICATE_ERROR_NONE if none
 		 */
 		ZT_INLINE ZT_CertificateError error() const noexcept
-		{ return (ZT_CertificateError)m_error.load(std::memory_order_relaxed); }
+		{
+			RWMutex::RLock l(m_lock);
+			return m_error;
+		}
 
 	private:
-		Entry() {}
-		Entry(const Entry &) {}
 		Entry &operator=(const Entry &) { return *this; }
 
-		ZT_INLINE Entry(const Certificate &cert, const unsigned int lt) noexcept:
+		ZT_INLINE Entry(RWMutex &l, const Certificate &cert, const unsigned int lt) noexcept:
+			m_lock(l),
 			m_certificate(cert),
 			m_localTrust(lt),
-			m_error((int)ZT_CERTIFICATE_ERROR_NONE)
+			m_error(ZT_CERTIFICATE_ERROR_NONE),
+			m_subjectDeprecated(false),
+			m_onTrustPath(false)
 		{}
 
-		Certificate m_certificate;
-		std::atomic< unsigned int > m_localTrust;
-		std::atomic< int > m_error;
+		RWMutex &m_lock;
+		const Certificate m_certificate;
+		unsigned int m_localTrust;
+		ZT_CertificateError m_error;
 		std::atomic< int > __refCount;
+		bool m_subjectDeprecated;
+		bool m_onTrustPath;
 	};
 
 	TrustStore();
