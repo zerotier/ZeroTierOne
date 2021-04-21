@@ -11,7 +11,6 @@
  */
 /****/
 
-use std::io::Write;
 use std::str::FromStr;
 use std::sync::Arc;
 

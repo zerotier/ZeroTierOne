@@ -19,6 +19,7 @@ use std::pin::Pin;
 use std::ptr::{copy_nonoverlapping, null, null_mut};
 
 use num_derive::{FromPrimitive, ToPrimitive};
+#[allow(unused_imports)]
 use num_traits::{FromPrimitive, ToPrimitive};
 use serde::{Deserialize, Serialize};
 
@@ -671,28 +672,19 @@ impl Certificate {
 #[cfg(test)]
 mod tests {
     use crate::*;
-    use num_traits::FromPrimitive;
 
     #[test]
-    fn generate_certificate_unique_id() {
+    fn generate_key_pair() {
         let (pubk, privk) = Certificate::new_key_pair(CertificatePublicKeyAlgorithm::ECDSANistP384).ok().unwrap();
-        println!("certificate unique ID public: {}", hex::encode(pubk.as_ref()).as_str());
-        println!("certificate unique ID private: {}", hex::encode(privk.as_ref()).as_str());
-    }
-
-    #[test]
-    fn enum_from_primitive() {
-        let ce = CertificateError::from_i32(-2 as i32);
-        assert!(ce.is_some());
-        let ce = ce.unwrap();
-        assert!(ce == CertificateError::InvalidIdentity);
+        println!("key pair public: {}", hex::encode(pubk).as_str());
+        println!("key pair private: {}", hex::encode(privk).as_str());
     }
 
     #[test]
     fn cert() {
         let (issuer_pubk, issuer_privk) = Certificate::new_key_pair(CertificatePublicKeyAlgorithm::ECDSANistP384).ok().unwrap();
-        let (pubk, privk) = Certificate::new_key_pair(CertificatePublicKeyAlgorithm::ECDSANistP384).ok().unwrap();
-        let (unique_id, unique_id_private) = Certificate::new_key_pair(CertificatePublicKeyAlgorithm::ECDSANistP384).ok().unwrap();
+        let (pubk, _) = Certificate::new_key_pair(CertificatePublicKeyAlgorithm::ECDSANistP384).ok().unwrap();
+        let (_, unique_id_private) = Certificate::new_key_pair(CertificatePublicKeyAlgorithm::ECDSANistP384).ok().unwrap();
         let id0 = Identity::new_generate(IdentityType::Curve25519).ok().unwrap();
 
         let mut cert = Certificate{
@@ -703,7 +695,7 @@ mod tests {
             subject: CertificateSubject::new(),
             issuer: CertificateSerialNo::new(),
             issuer_public_key: issuer_pubk,
-            public_key: pubk,
+            public_key: pubk.clone(),
             extended_attributes: Vec::new(),
             max_path_length: 123,
             signature: Vec::new()
@@ -735,28 +727,21 @@ mod tests {
             host: String::from("zerotier.com")
         };
 
-        println!("{}", cert.to_json().as_str());
-
         unsafe {
             let cert_capi = cert.to_capi();
             let cert2 = Certificate::new_from_capi(&cert_capi.certificate);
             assert!(cert == cert2);
-            //println!("{}", cert2.to_json().as_str());
-        }
-
-        {
-            let cert2 = Certificate::new_from_json(cert.to_json().as_str());
-            assert!(cert2.is_ok());
-            assert!(cert2.ok().unwrap() == cert);
         }
 
         let csr = cert.subject.new_csr(pubk.as_ref(), Some(unique_id_private.as_ref()));
         assert!(csr.is_ok());
         let csr = csr.ok().unwrap();
 
-        let mut csr_decoded = Certificate::new_from_bytes(csr.as_ref(), false);
+        let csr_decoded = Certificate::new_from_bytes(csr.as_ref(), false);
         assert!(csr_decoded.is_ok());
         let mut csr_decoded = csr_decoded.ok().unwrap();
+
+        csr_decoded.validity = cert.validity;
 
         let cert_signed = csr_decoded.sign(&cert.issuer, issuer_privk.as_ref());
         assert!(cert_signed.is_ok());

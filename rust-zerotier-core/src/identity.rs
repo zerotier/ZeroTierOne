@@ -49,7 +49,7 @@ impl Identity {
                 type_: FromPrimitive::from_i32(idt as i32).unwrap(),
                 address: Address(a),
                 capi: id,
-                requires_delete: requires_delete,
+                requires_delete,
             };
         }
     }
@@ -228,7 +228,6 @@ impl<'de> serde::Deserialize<'de> for Identity {
 #[cfg(test)]
 mod tests {
     use crate::*;
-    use crate::StateObjectType::IdentitySecret;
 
     #[test]
     fn identity() {

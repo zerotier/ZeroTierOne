@@ -20,8 +20,10 @@
 #include "Network.hpp"
 #include "Spinlock.hpp"
 
+// The number of buckets must be a power of two.
 #define ZT_TINYMAP_BUCKETS 1024
-#define ZT_TINYMAP_BUCKETS_MASK 1023
+
+#define ZT_TINYMAP_BUCKETS_MASK (ZT_TINYMAP_BUCKETS - 1)
 #define ZT_TINYMAP_LOCKED_POINTER (~((uintptr_t)0))
 
 namespace ZeroTier {
