@@ -207,6 +207,12 @@ LinuxEthernetTap::LinuxEthernetTap(
 					printf("WARNING: ioctl() failed setting up Linux tap device (bring interface up)\n");
 					return;
 				}
+				ifr.ifr_flags |= IFF_UP;
+				if (ioctl(sock,SIOCSIFFLAGS,(void *)&ifr) < 0) {
+					::close(sock);
+					printf("WARNING: ioctl() failed setting up Linux tap device (bring interface up)\n");
+					return;
+				}
 
 				// Some kernel versions seem to require you to yield while the device comes up
 				// before they will accept MTU and MAC. For others it doesn't matter, but is
@@ -226,13 +232,6 @@ LinuxEthernetTap::LinuxEthernetTap(
 				if (ioctl(sock,SIOCSIFMTU,(void *)&ifr) < 0) {
 					::close(sock);
 					printf("WARNING: ioctl() failed setting up Linux tap device (set MTU)\n");
-					return;
-				}
-
-				ifr.ifr_flags |= IFF_UP;
-				if (ioctl(sock,SIOCSIFFLAGS,(void *)&ifr) < 0) {
-					::close(sock);
-					printf("WARNING: ioctl() failed setting up Linux tap device (bring interface up)\n");
 					return;
 				}
 
