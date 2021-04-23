@@ -19,13 +19,163 @@ use dialoguer::Input;
 use zerotier_core::*;
 
 use crate::store::Store;
+use crate::utils::{read_limit, ms_since_epoch, to_json_pretty};
+use crate::GlobalFlags;
+
+/// Dump a certificate in human-readable format to stdout.
+fn dump_cert(certificate: &Certificate) {
+    let mut subject_identities = String::new();
+    let mut subject_networks = String::new();
+    let mut subject_update_urls = String::new();
+    let mut usage_flags = String::new();
+
+    fn string_or_dash(s: &str) -> &str {
+        if s.is_empty() {
+            "-"
+        } else {
+            s
+        }
+    }
+
+    if certificate.subject.identities.is_empty() {
+        subject_identities.push_str(":           (none)");
+    } else {
+        for x in certificate.subject.identities.iter() {
+            subject_identities.push_str("\n    ");
+            subject_identities.push_str(x.identity.to_string().as_str());
+            if x.locator.is_some() {
+                subject_identities.push_str(" ");
+                subject_identities.push_str(x.locator.as_ref().unwrap().to_string().as_str());
+            }
+        }
+    }
+
+    if certificate.subject.networks.is_empty() {
+        subject_networks.push_str(":             (none)");
+    } else {
+        for x in certificate.subject.networks.iter() {
+            subject_networks.push_str("\n    ");
+            subject_networks.push_str(x.id.to_string().as_str());
+            if x.controller.is_some() {
+                subject_networks.push_str(" at ");
+                subject_networks.push_str(x.controller.as_ref().unwrap().to_string().as_str());
+            }
+        }
+    }
+
+    if certificate.subject.update_urls.is_empty() {
+        subject_update_urls.push_str(":          (none)");
+    } else {
+        for x in certificate.subject.update_urls.iter() {
+            subject_update_urls.push_str("\n    ");
+            subject_update_urls.push_str(x.as_ref());
+        }
+    }
+
+    if certificate.usage_flags != 0 {
+        usage_flags.push_str(" (");
+        for f in ALL_CERTIFICATE_USAGE_FLAGS.iter() {
+            if (certificate.usage_flags & (*f).0) != 0 {
+                if !usage_flags.is_empty() {
+                    usage_flags.push(',');
+                }
+                usage_flags.push_str((*f).1);
+            }
+        }
+        usage_flags.push(')');
+    }
+
+    println!(r###"Serial Number (SHA384): {}
+Usage Flags:            0x{:0>8x}{}
+Timestamp:              {}
+Validity:               {} to {}
+Subject
+  Timestamp:            {}
+  Identities{}
+  Networks{}
+  Update URLs{}
+  Name
+    Serial:             {}
+    Common Name:        {}
+    Country:            {}
+    Organization:       {}
+    Unit:               {}
+    Locality:           {}
+    State/Province:     {}
+    Street Address:     {}
+    Postal Code:        {}
+    E-Mail:             {}
+    URL:                {}
+    Host:               {}
+  Unique ID:            {}
+  Unique ID Signature:  {}
+Issuer:                 {}
+Issuer Public Key:      {}
+Public Key:             {}
+Extended Attributes:    {} bytes
+Signature:              {}
+Maximum Path Length:    {}{}"###,
+             certificate.serial_no.to_string(),
+             certificate.usage_flags, usage_flags,
+             certificate.timestamp,
+             certificate.validity[0], certificate.validity[1],
+             certificate.subject.timestamp,
+             subject_identities,
+             subject_networks,
+             subject_update_urls,
+             string_or_dash(certificate.subject.name.serial_no.as_str()),
+             string_or_dash(certificate.subject.name.common_name.as_str()),
+             string_or_dash(certificate.subject.name.country.as_str()),
+             string_or_dash(certificate.subject.name.organization.as_str()),
+             string_or_dash(certificate.subject.name.unit.as_str()),
+             string_or_dash(certificate.subject.name.locality.as_str()),
+             string_or_dash(certificate.subject.name.province.as_str()),
+             string_or_dash(certificate.subject.name.street_address.as_str()),
+             string_or_dash(certificate.subject.name.postal_code.as_str()),
+             string_or_dash(certificate.subject.name.email.as_str()),
+             string_or_dash(certificate.subject.name.url.as_str()),
+             string_or_dash(certificate.subject.name.host.as_str()),
+             string_or_dash(base64_encode(&certificate.subject.unique_id).as_str()),
+             string_or_dash(base64_encode(&certificate.subject.unique_id_signature).as_str()),
+             certificate.issuer.to_string(),
+             string_or_dash(base64_encode(&certificate.issuer_public_key).as_str()),
+             string_or_dash(base64_encode(&certificate.public_key).as_str()),
+             certificate.extended_attributes.len(),
+             string_or_dash(base64_encode(&certificate.signature).as_str()),
+             certificate.max_path_length, if certificate.max_path_length == 0 { " (leaf)" } else { " (CA or sub-CA)" });
+}
 
 fn list(store: &Arc<Store>) -> i32 {
     0
 }
 
-fn show<'a>(store: &Arc<Store>, cli_args: &ArgMatches<'a>) -> i32 {
-    0
+fn show<'a>(store: &Arc<Store>, global_flags: &GlobalFlags, cli_args: &ArgMatches<'a>) -> i32 {
+    let serial_or_path = cli_args.value_of("serialorpath").unwrap().trim();
+    CertificateSerialNo::new_from_string(serial_or_path).map_or_else(|| {
+        read_limit(serial_or_path, 65536).map_or_else(|e| {
+            println!("ERROR: unable to read certificate from '{}': {}", serial_or_path, e.to_string());
+            1
+        }, |cert_json| {
+            serde_json::from_slice::<Certificate>(cert_json.as_ref()).map_or_else(|e| {
+                println!("ERROR: unable to decode certificate from '{}': {}", serial_or_path, e.to_string());
+                1
+            }, |certificate| {
+                if global_flags.json_output {
+                    println!("{}", to_json_pretty(&certificate));
+                } else {
+                    dump_cert(&certificate);
+                }
+                let cv = certificate.verify(ms_since_epoch());
+                if cv != CertificateError::None {
+                    println!("\nWARNING: certificate validity check failed: {}", cv.to_str());
+                }
+                0
+            })
+        })
+    }, |serial| {
+        // TODO: query node
+        0
+    })
 }
 
 fn newsuid(cli_args: Option<&ArgMatches>) -> i32 {
@@ -35,13 +185,13 @@ fn newsuid(cli_args: Option<&ArgMatches>) -> i32 {
         1
     } else {
         let (_, privk) = key_pair.ok().unwrap();
-        let privk_hex = hex::encode(privk);
+        let privk_base64 = base64_encode(&privk);
         let path = cli_args.map_or("", |cli_args| { cli_args.value_of("path").unwrap_or("") });
         if path.is_empty() {
-            println!("{}", privk_hex);
+            println!("{}", privk_base64);
             0
         } else {
-            std::fs::write(path, privk_hex.as_bytes()).map_or_else(|e| {
+            std::fs::write(path, privk_base64.as_bytes()).map_or_else(|e| {
                 eprintln!("FATAL: error writing '{}': {}", path, e.to_string());
                 e.raw_os_error().unwrap_or(1)
             }, |_| {
@@ -251,10 +401,6 @@ fn verify<'a>(store: &Arc<Store>, cli_args: &ArgMatches<'a>) -> i32 {
     0
 }
 
-fn dump<'a>(store: &Arc<Store>, cli_args: &ArgMatches<'a>) -> i32 {
-    0
-}
-
 fn import<'a>(store: &Arc<Store>, cli_args: &ArgMatches<'a>) -> i32 {
     0
 }
@@ -271,19 +417,18 @@ fn delete<'a>(store: &Arc<Store>, cli_args: &ArgMatches<'a>) -> i32 {
     0
 }
 
-pub(crate) fn run(store: Arc<Store>, cli_args: &ArgMatches) -> i32 {
+pub(crate) fn run(store: Arc<Store>, global_flags: GlobalFlags, cli_args: &ArgMatches) -> i32 {
     match cli_args.subcommand() {
         ("list", None) => list(&store),
-        ("show", Some(sub_cli_args)) => show(&store, sub_cli_args),
+        ("show", Some(sub_cli_args)) => show(&store, &global_flags, sub_cli_args),
         ("newsuid", sub_cli_args) => newsuid(sub_cli_args),
         ("newcsr", Some(sub_cli_args)) => newcsr(sub_cli_args),
         ("sign", Some(sub_cli_args)) => sign(&store, sub_cli_args),
         ("verify", Some(sub_cli_args)) => verify(&store, sub_cli_args),
-        ("dump", Some(sub_cli_args)) => dump(&store, sub_cli_args),
         ("import", Some(sub_cli_args)) => import(&store, sub_cli_args),
-        ("factoryreset", None) => factoryreset(&store),
         ("export", Some(sub_cli_args)) => export(&store, sub_cli_args),
         ("delete", Some(sub_cli_args)) => delete(&store, sub_cli_args),
+        ("factoryreset", None) => factoryreset(&store),
         _ => {
             crate::print_help();
             1

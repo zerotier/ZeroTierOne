@@ -11,6 +11,8 @@
  */
 /****/
 
+use std::hash::{Hash, Hasher};
+
 #[derive(PartialEq, Eq, Clone, Copy, PartialOrd, Ord)]
 pub struct NetworkId(pub u64);
 
@@ -18,6 +20,13 @@ impl Default for NetworkId {
     #[inline(always)]
     fn default() -> NetworkId {
         NetworkId(0)
+    }
+}
+
+impl Hash for NetworkId {
+    #[inline(always)]
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.0.hash(state);
     }
 }
 

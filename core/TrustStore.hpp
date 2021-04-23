@@ -101,6 +101,7 @@ public:
 		Entry &operator=(const Entry &) { return *this; }
 
 		ZT_INLINE Entry(RWMutex &l, const Certificate &cert, const unsigned int lt) noexcept:
+			__refCount(0),
 			m_lock(l),
 			m_certificate(cert),
 			m_localTrust(lt),
@@ -109,11 +110,12 @@ public:
 			m_onTrustPath(false)
 		{}
 
+		std::atomic< int > __refCount;
+
 		RWMutex &m_lock;
 		const Certificate m_certificate;
 		unsigned int m_localTrust;
 		ZT_CertificateError m_error;
-		std::atomic< int > __refCount;
 		bool m_subjectDeprecated;
 		bool m_onTrustPath;
 	};

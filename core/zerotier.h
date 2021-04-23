@@ -328,9 +328,81 @@ typedef struct
 #define ZT_CERTIFICATE_LOCAL_TRUST_FLAG_ROOT_CA 0x0001U
 
 /**
- * Certificate's subject describes a set of roots (local trust flag)
+ * Certificate can affect configuration of the node.
+ *
+ * An example is a ZeroTier root set certificate which adds root servers.
  */
-#define ZT_CERTIFICATE_LOCAL_TRUST_FLAG_ZEROTIER_ROOT_SET 0x0002U
+#define ZT_CERTIFICATE_LOCAL_TRUST_FLAG_CONFIG 0x0002U
+
+/*
+ * Certificate usage flags
+ *
+ * Not all of these are used in ZeroTier. Some are simply reserved because
+ * same named usage attributes exist in X509 and we want to be future proof
+ * against future desires to translate over X509 functionality.
+ */
+
+/**
+ * Certificate can sign things (general).
+ */
+#define ZT_CERTIFICATE_USAGE_DIGITAL_SIGNATURE          0x00000001U
+
+/**
+ * Certificate can verify signatures to verify actions.
+ *
+ * (not used in ZeroTier)
+ */
+#define ZT_CERTIFICATE_USAGE_NON_REPUDIATION            0x00000002U
+
+/**
+ * Certificate's key can encipher other keys.
+ *
+ * (not used in ZeroTier)
+ */
+#define ZT_CERTIFICATE_USAGE_KEY_ENCIPHERMENT           0x00000004U
+
+/**
+ * Certificate's key can encipher data.
+ *
+ * (not used in ZeroTier)
+ */
+#define ZT_CERTIFICATE_USAGE_DATA_ENCIPHERMENT          0x00000008U
+
+/**
+ * Certificate's key can be used for Diffie-Hellman style key agreemtn.
+ *
+ * (not used in ZeroTier)
+ */
+#define ZT_CERTIFICATE_USAGE_KEY_AGREEMENT              0x00000010U
+
+/**
+ * Certificate can sign other certificates.
+ */
+#define ZT_CERTIFICATE_USAGE_CERTIFICATE_SIGNING        0x00000020U
+
+/**
+ * Certificate can revoke signatures.
+ */
+#define ZT_CERTIFICATE_USAGE_CRL_SIGNING                0x00000040U
+
+/**
+ * Certificate can sign executable code.
+ *
+ * (not used in ZeroTier)
+ */
+#define ZT_CERTIFICATE_USAGE_EXECUTABLE_SIGNATURE       0x00000080U
+
+/**
+ * Certificate's public key can be used for a timestamp service.
+ *
+ * (not used in ZeroTier)
+ */
+#define ZT_CERTIFICATE_USAGE_TIMESTAMPING               0x00000100U
+
+/**
+ * Certificate can enumerate a set of ZeroTier root nodes.
+ */
+#define ZT_CERTIFICATE_USAGE_ZEROTIER_ROOT_SET          0x00000200U
 
 /**
  * Errors returned by functions that verify or handle certificates.
@@ -572,9 +644,9 @@ typedef struct
 	uint8_t serialNo[ZT_CERTIFICATE_HASH_SIZE];
 
 	/**
-	 * Flags indicating certificate usage and any other attributes.
+	 * Certificate usage flags.
 	 */
-	uint64_t flags;
+	uint64_t usageFlags;
 
 	/**
 	 * Certificate timestamp in milliseconds since epoch.

@@ -85,12 +85,12 @@ Common Operations:
 ·     defaultroute <boolean>                 Can default route be overridden?
 
 · join [-...] <network>                    Join a virtual network
-    -c <identity | fingerprint>              Controller identity / fingerprint
+    -c <?identity | fingerprint>             Controller identity / fingerprint
 · leave <network>                          Leave a virtual network
 
 Advanced Operations:
 
-  service                                  Start this node
+  service                                  Start node
                                            (usually not invoked directly)
 
   controller <command> [option]
@@ -103,39 +103,35 @@ Advanced Operations:
 
   identity <command> [args]
     new [c25519 | p384]                    Create identity (default: c25519)
-    getpublic <identity>                   Extract public part of identity
-    fingerprint <identity>                 Get an identity's fingerprint
-    validate <identity>                    Locally validate an identity
-    sign <identity> <file>                 Sign a file with an identity's key
-    verify <identity> <file> <sig>         Verify a signature
+    getpublic <?identity>                  Extract public part of identity
+    fingerprint <?identity>                Get an identity's fingerprint
+    validate <?identity>                   Locally validate an identity
+    sign <?identity> <@file>               Sign a file with an identity's key
+    verify <?identity> <@file> <sig>       Verify a signature
 
   locator <command> [args]
-    new [-...] <identity> <endpoint> [...] Create new signed locator
+    new [-...] <?identity> <endpoint,...>  Create new signed locator
       -r <revision>                        Revision number (default: time)
-    verify <identity> <locator>            Verify locator signature
-    show <locator>                         Show contents of a locator
+    verify <?identity> <?locator>          Verify locator signature
+    show <?locator>                        Show contents of a locator
 
   cert <command> [args]
 ·   list                                   List certificates at local node
-·   show <serial>                          Show certificate details
-    newsuid [suid secret out]              Create a subject unique ID secret
-    newcsr <csr out> <secret out>          Create a CSR (interactive)
-    sign <csr> <identity> [cert out]       Sign a CSR to create a certificate
-    verify <cert>                          Verify certificate (not chain)
-    dump <cert>                            Verify and print certificate
-·   import <cert> [trust,trust,...]        Import certificate into this node
-      trust flag: rootca                     Certificate is a root CA
-      trust flag: ztrootset                  ZeroTier root node set
-·   factoryreset                           Re-import compiled-in default certs
-·   export <serial> [path]                 Export a certificate from this node
+    show <@cert|·serial>                   Show certificate details
+    newsuid [@secret]                      Create a subject unique ID secret
+    newcsr <@csr> <@secret>                Create a CSR (interactive)
+    sign <@csr> <@secret> <@cert>          Sign a CSR to create a certificate
+    verify <@cert>                         Internally verify certificate
+·   import <@cert> [trust,trust,...]       Import certificate into this node
+      trust flag: rootca                     Root (or self-signed) CA
+      trust flag: config                     Can influence node configuration
+·   export <serial> [@cert]                Export a certificate from this node
 ·   delete <serial|ALL>                    Delete certificate from this node
+·   factoryreset                           Re-import compiled-in default certs
 
-· Command requires a running node and access to a local API token.
-
-An <address> may be specified as a 10-digit short ZeroTier address, a
-fingerprint containing both an address and a SHA384 hash, or an identity.
-Identities and locators can be specified as either paths to files on the
-filesystem or verbatim objects in string format. This is auto-detected.
+    · Command (or command with argument type) requires a running node.
+    @ Argument is a path to an object, not the object itself.
+    ? Argument can be either an inline value or a path to it.
 "###, ver.0, ver.1, ver.2)
 }
 
@@ -178,10 +174,11 @@ fn make_store(cli_args: &ArgMatches) -> Arc<Store> {
 }
 
 #[derive(Clone)]
-pub struct GlobalFlags {
+pub(crate) struct GlobalFlags {
     pub json_output: bool,
 }
 
+#[inline(always)]
 fn get_global_flags(cli_args: &ArgMatches) -> GlobalFlags {
     GlobalFlags {
         json_output: cli_args.is_present("json")
@@ -276,7 +273,7 @@ fn main() {
             .subcommand(App::new("cert")
                 .subcommand(App::new("list"))
                 .subcommand(App::new("show")
-                    .arg(Arg::with_name("serial").index(1).required(true)))
+                    .arg(Arg::with_name("serialorpath").index(1).required(true)))
                 .subcommand(App::new("newsuid")
                     .arg(Arg::with_name("path").index(1).required(false)))
                 .subcommand(App::new("newcsr")
@@ -284,7 +281,7 @@ fn main() {
                     .arg(Arg::with_name("secretpath").index(2).required(true)))
                 .subcommand(App::new("sign")
                     .arg(Arg::with_name("csr").index(1).required(true))
-                    .arg(Arg::with_name("identity").index(2).required(true))
+                    .arg(Arg::with_name("secretpath").index(2).required(true))
                     .arg(Arg::with_name("output").index(3).required(false)))
                 .subcommand(App::new("verify")
                     .arg(Arg::with_name("cert").index(1).required(true)))
@@ -340,7 +337,7 @@ fn main() {
         ("controller", Some(sub_cli_args)) => { 0 }
         ("identity", Some(sub_cli_args)) => crate::commands::identity::run(sub_cli_args),
         ("locator", Some(sub_cli_args)) => crate::commands::locator::run(sub_cli_args),
-        ("cert", Some(sub_cli_args)) => crate::commands::cert::run(make_store(&cli_args), sub_cli_args),
+        ("cert", Some(sub_cli_args)) => crate::commands::cert::run(make_store(&cli_args), get_global_flags(&cli_args), sub_cli_args),
         _ => {
             print_help();
             1

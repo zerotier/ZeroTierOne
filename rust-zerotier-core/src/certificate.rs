@@ -13,10 +13,10 @@
 
 use std::ffi::CString;
 use std::hash::{Hash, Hasher};
-use std::mem::zeroed;
+use std::mem::{zeroed, MaybeUninit};
 use std::os::raw::{c_char, c_uint, c_void};
 use std::pin::Pin;
-use std::ptr::{copy_nonoverlapping, null, null_mut};
+use std::ptr::{copy_nonoverlapping, null, null_mut, read_unaligned, write_bytes};
 
 use num_derive::{FromPrimitive, ToPrimitive};
 #[allow(unused_imports)]
@@ -32,13 +32,39 @@ pub const CERTIFICATE_MAX_STRING_LENGTH: isize = ztcore::ZT_CERTIFICATE_MAX_STRI
 /// Certificate local trust bit field flag: this certificate self-signs a root CA.
 pub const CERTIFICATE_LOCAL_TRUST_FLAG_ROOT_CA: u32 = ztcore::ZT_CERTIFICATE_LOCAL_TRUST_FLAG_ROOT_CA;
 
-/// Certificate local trust bit field flag: this certificate specifies a set of ZeroTier roots.
-pub const CERTIFICATE_LOCAL_TRUST_FLAG_ZEROTIER_ROOT_SET: u32 = ztcore::ZT_CERTIFICATE_LOCAL_TRUST_FLAG_ZEROTIER_ROOT_SET;
+pub const CERTIFICATE_USAGE_DIGITAL_SIGNATURE: u64 = ztcore::ZT_CERTIFICATE_USAGE_DIGITAL_SIGNATURE as u64;
+pub const CERTIFICATE_USAGE_NON_REPUDIATION: u64 = ztcore::ZT_CERTIFICATE_USAGE_NON_REPUDIATION as u64;
+pub const CERTIFICATE_USAGE_KEY_ENCIPHERMENT: u64 = ztcore::ZT_CERTIFICATE_USAGE_KEY_ENCIPHERMENT as u64;
+pub const CERTIFICATE_USAGE_DATA_ENCIPHERMENT: u64 = ztcore::ZT_CERTIFICATE_USAGE_DATA_ENCIPHERMENT as u64;
+pub const CERTIFICATE_USAGE_KEY_AGREEMENT: u64 = ztcore::ZT_CERTIFICATE_USAGE_KEY_AGREEMENT as u64;
+pub const CERTIFICATE_USAGE_CERTIFICATE_SIGNING: u64 = ztcore::ZT_CERTIFICATE_USAGE_CERTIFICATE_SIGNING as u64;
+pub const CERTIFICATE_USAGE_CRL_SIGNING: u64 = ztcore::ZT_CERTIFICATE_USAGE_CRL_SIGNING as u64;
+pub const CERTIFICATE_USAGE_EXECUTABLE_SIGNATURE: u64 = ztcore::ZT_CERTIFICATE_USAGE_EXECUTABLE_SIGNATURE as u64;
+pub const CERTIFICATE_USAGE_TIMESTAMPING: u64 = ztcore::ZT_CERTIFICATE_USAGE_TIMESTAMPING as u64;
 
+/// All certificate usage flags and their corresponding canonical abbreviations.
+pub const ALL_CERTIFICATE_USAGE_FLAGS: [(u64, &'static str); 9] = [
+    (CERTIFICATE_USAGE_DIGITAL_SIGNATURE, "ds"),
+    (CERTIFICATE_USAGE_NON_REPUDIATION, "nr"),
+    (CERTIFICATE_USAGE_KEY_ENCIPHERMENT, "ke"),
+    (CERTIFICATE_USAGE_DATA_ENCIPHERMENT, "de"),
+    (CERTIFICATE_USAGE_KEY_AGREEMENT, "ka"),
+    (CERTIFICATE_USAGE_CERTIFICATE_SIGNING, "cs"),
+    (CERTIFICATE_USAGE_CRL_SIGNING, "crl"),
+    (CERTIFICATE_USAGE_EXECUTABLE_SIGNATURE, "es"),
+    (CERTIFICATE_USAGE_TIMESTAMPING, "ts"),
+];
+
+#[inline(always)]
 fn vec_to_array<const L: usize>(v: &Vec<u8>) -> [u8; L] {
-    let mut a = [0_u8; L];
-    unsafe { copy_nonoverlapping(v.as_ptr(), a.as_mut_ptr(), v.len().min(L)) };
-    a
+    unsafe {
+        let mut a: MaybeUninit<[u8; L]> = MaybeUninit::uninit();
+        copy_nonoverlapping(v.as_ptr(), a.as_mut_ptr().cast::<u8>(), v.len().min(L));
+        if v.len() < L {
+            write_bytes(a.as_mut_ptr().cast::<u8>(), 0, L - v.len());
+        }
+        a.assume_init()
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -62,25 +88,44 @@ impl From<i32> for CertificatePublicKeyAlgorithm {
 pub struct CertificateSerialNo(pub [u8; 48]);
 
 impl CertificateSerialNo {
-    #[inline(always)]
-    pub fn new() -> CertificateSerialNo { CertificateSerialNo([0; 48]) }
-    pub fn new_from_string(s: &str) -> Result<CertificateSerialNo, ResultCode> { hex::decode(s).map_or_else(|_| { Err(ResultCode::ErrorBadParameter) }, |b| { Ok(CertificateSerialNo::from(b)) }) }
-}
+    pub const SIZE: usize = 48;
+    pub const SIZE_HEX: usize = 96;
 
-impl<A: AsRef<[u8]>> From<A> for CertificateSerialNo {
-    fn from(a: A) -> CertificateSerialNo {
-        let mut sn = CertificateSerialNo::new();
-        let aa = a.as_ref();
-        for i in 0..aa.len() {
-            sn.0[i] = aa[i];
-        }
-        sn
+    #[inline(always)]
+    pub fn new() -> CertificateSerialNo { CertificateSerialNo([0_u8; 48]) }
+
+    /// Create a new certificate serial from a hex string, returning None if invalid.
+    /// The from() alternative for converting from a string returns an a nil (all zero) serial on error.
+    pub fn new_from_string(s: &str) -> Option<CertificateSerialNo> {
+        hex::decode(s).map_or(None, |b| {
+            if b.len() == Self::SIZE {
+                Some(CertificateSerialNo(vec_to_array::<48>(&b)))
+            } else {
+                None
+            }
+        })
+    }
+
+    /// Returns true if serial is all zeroes.
+    #[inline(always)]
+    pub fn is_nil(&self) -> bool {
+        is_all_zeroes(self.0)
     }
 }
 
 impl Hash for CertificateSerialNo {
     #[inline(always)]
-    fn hash<H: Hasher>(&self, state: &mut H) { self.0.hash(state); }
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        // Serials are SHA384 hashes, so we can just use the first 8 bytes as-is.
+        state.write_u64(unsafe { read_unaligned::<u64>(self.0.as_ptr().cast()) })
+    }
+}
+
+impl<S: AsRef<str>> From<S> for CertificateSerialNo {
+    #[inline(always)]
+    fn from(s: S) -> CertificateSerialNo {
+        Self::new_from_string(s.as_ref()).unwrap_or_else(|| CertificateSerialNo::new())
+    }
 }
 
 impl ToString for CertificateSerialNo {
@@ -95,7 +140,7 @@ struct CertificateSerialNoVisitor;
 impl<'de> serde::de::Visitor<'de> for CertificateSerialNoVisitor {
     type Value = CertificateSerialNo;
     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result { formatter.write_str("object") }
-    fn visit_str<E>(self, s: &str) -> Result<Self::Value, E> where E: serde::de::Error { Self::Value::new_from_string(s).map_or_else(|_| { Err(serde::de::Error::invalid_value(serde::de::Unexpected::Str(s), &self)) },|id| { Ok(id as Self::Value) }) }
+    fn visit_str<E>(self, s: &str) -> Result<Self::Value, E> where E: serde::de::Error { Self::Value::new_from_string(s).map_or_else(|| { Err(serde::de::Error::invalid_value(serde::de::Unexpected::Str(s), &self)) },|serial| { Ok(serial as Self::Value) }) }
 }
 impl<'de> serde::Deserialize<'de> for CertificateSerialNo {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'de> { deserializer.deserialize_str(CertificateSerialNoVisitor) }
@@ -117,22 +162,27 @@ pub enum CertificateError {
     Revoked = ztcore::ZT_CertificateError_ZT_CERTIFICATE_ERROR_REVOKED as isize,
 }
 
+impl CertificateError {
+    pub fn to_str(&self) -> &'static str {
+        match self {
+            CertificateError::None => "None",
+            CertificateError::InvalidFormat => "InvalidFormat",
+            CertificateError::InvalidIdentity => "InvalidIdentity",
+            CertificateError::InvalidPrimarySignature => "InvalidPrimarySignature",
+            CertificateError::InvalidChain => "InvalidChain",
+            CertificateError::InvalidComponentSignature => "InvalidComponentSignature",
+            CertificateError::InvalidUniqueIdProof => "InvalidUniqueIdProof",
+            CertificateError::MissingRequiredFields => "MissingRequiredFields",
+            CertificateError::OutOfValidTimeWindow => "OutOfValidTimeWindow",
+            CertificateError::Revoked => "Revoked",
+        }
+    }
+}
+
 impl ToString for CertificateError {
+    #[inline(always)]
     fn to_string(&self) -> String {
-        String::from(
-            match self {
-                CertificateError::None => "None",
-                CertificateError::InvalidFormat => "InvalidFormat",
-                CertificateError::InvalidIdentity => "InvalidIdentity",
-                CertificateError::InvalidPrimarySignature => "InvalidPrimarySignature",
-                CertificateError::InvalidChain => "InvalidChain",
-                CertificateError::InvalidComponentSignature => "InvalidComponentSignature",
-                CertificateError::InvalidUniqueIdProof => "InvalidUniqueIdProof",
-                CertificateError::MissingRequiredFields => "MissingRequiredFields",
-                CertificateError::OutOfValidTimeWindow => "OutOfValidTimeWindow",
-                CertificateError::Revoked => "Revoked",
-            }
-        )
+        String::from(self.to_str())
     }
 }
 
@@ -338,10 +388,10 @@ pub struct CertificateSubject {
     #[serde(rename = "updateURLs")]
     pub update_urls: Vec<String>,
     pub name: CertificateName,
-    #[serde(with = "Base64Standard")]
+    #[serde(with = "Base64URLSafeNoPad")]
     #[serde(rename = "uniqueId")]
     pub unique_id: Vec<u8>,
-    #[serde(with = "Base64Standard")]
+    #[serde(with = "Base64URLSafeNoPad")]
     #[serde(rename = "uniqueIdSignature")]
     pub unique_id_signature: Vec<u8>,
 }
@@ -509,7 +559,8 @@ impl CertificateSubject {
 pub struct Certificate {
     #[serde(rename = "serialNo")]
     pub serial_no: CertificateSerialNo,
-    pub flags: u64,
+    #[serde(rename = "usageFlags")]
+    pub usage_flags: u64,
     pub timestamp: i64,
     pub validity: [i64; 2],
     pub subject: CertificateSubject,
@@ -520,7 +571,7 @@ pub struct Certificate {
     pub public_key: Vec<u8>,
     #[serde(rename = "extendedAttributes")]
     pub extended_attributes: Vec<u8>,
-    #[serde(with = "Base64Standard")]
+    #[serde(with = "Base64URLSafeNoPad")]
     pub signature: Vec<u8>,
     #[serde(rename = "maxPathLength")]
     pub max_path_length: u32,
@@ -557,7 +608,7 @@ impl Certificate {
     pub fn new() -> Certificate {
         Certificate {
             serial_no: CertificateSerialNo::new(),
-            flags: 0,
+            usage_flags: 0,
             timestamp: 0,
             validity: [0, i64::MAX],
             subject: CertificateSubject::new(),
@@ -573,7 +624,7 @@ impl Certificate {
     pub(crate) unsafe fn new_from_capi(c: &ztcore::ZT_Certificate) -> Certificate {
         return Certificate {
             serial_no: CertificateSerialNo(c.serialNo),
-            flags: c.flags,
+            usage_flags: c.usageFlags,
             timestamp: c.timestamp,
             validity: c.validity,
             subject: CertificateSubject::new_from_capi(&c.subject),
@@ -591,7 +642,7 @@ impl Certificate {
         CertificateCAPIContainer {
             certificate: ztcore::ZT_Certificate {
                 serialNo: self.serial_no.0,
-                flags: self.flags,
+                usageFlags: self.usage_flags,
                 timestamp: self.timestamp,
                 validity: self.validity,
                 subject: subject.subject,
@@ -689,7 +740,7 @@ mod tests {
 
         let mut cert = Certificate{
             serial_no: CertificateSerialNo::new(),
-            flags: 1,
+            usage_flags: 1,
             timestamp: 2,
             validity: [ 1,10 ],
             subject: CertificateSubject::new(),

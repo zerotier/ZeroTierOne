@@ -11,15 +11,17 @@
  */
 /****/
 
+use std::cmp::Ordering;
 use std::ffi::CString;
-use std::mem::MaybeUninit;
+use std::mem::{MaybeUninit, transmute};
 use std::os::raw::*;
+use std::hash::{Hash, Hasher};
 
+use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::{FromPrimitive, ToPrimitive};
 
 use crate::*;
 use crate::capi as ztcore;
-use std::cmp::Ordering;
 
 #[derive(FromPrimitive, ToPrimitive, PartialEq, Eq, Clone, Copy)]
 pub enum IdentityType {
@@ -27,9 +29,15 @@ pub enum IdentityType {
     NistP384 = ztcore::ZT_IdentityType_ZT_IDENTITY_TYPE_P384 as isize,
 }
 
+impl IdentityType {
+    fn to_str(&self) -> &'static str {
+        if *self == IdentityType::Curve25519 { "c25519" } else { "p384" }
+    }
+}
+
 impl ToString for IdentityType {
     fn to_string(&self) -> String {
-        String::from(if *self == IdentityType::Curve25519 { "c25519" } else { "p384" })
+        String::from(self.to_str())
     }
 }
 
@@ -43,15 +51,23 @@ pub struct Identity {
 impl Identity {
     pub(crate) fn new_from_capi(id: *const ztcore::ZT_Identity, requires_delete: bool) -> Identity {
         unsafe {
-            let idt = ztcore::ZT_Identity_type(id);
-            let a = ztcore::ZT_Identity_address(id);
-            return Identity {
-                type_: FromPrimitive::from_i32(idt as i32).unwrap(),
-                address: Address(a),
+            Identity {
+                type_: FromPrimitive::from_i32(ztcore::ZT_Identity_type(id) as i32).unwrap(),
+                address: Address(ztcore::ZT_Identity_address(id)),
                 capi: id,
                 requires_delete,
-            };
+            }
         }
+    }
+
+    /// Sync type and address fields with C API.
+    /// This isn't truly unsafe because these are primitive types, but it's marked as such
+    /// because it breaks the rules slightly. It's used in Node to make sure its identity
+    /// wrapper matches the one in C++-land even if the latter changes.
+    pub(crate) unsafe fn sync_type_and_address_with_capi(&self) {
+        let s: *mut Identity = transmute(self as *const Identity);
+        (*s).type_ = FromPrimitive::from_i32(ztcore::ZT_Identity_type(self.capi) as i32).unwrap();
+        (*s).address.0 = ztcore::ZT_Identity_address(self.capi);
     }
 
     /// Generate a new identity.
@@ -140,6 +156,13 @@ impl Identity {
     #[inline(always)]
     pub fn verify(&self, data: &[u8], signature: &[u8]) -> bool {
         unsafe { signature.len() > 0 && ztcore::ZT_Identity_verify(self.capi, data.as_ptr() as *const c_void, data.len() as c_uint, signature.as_ptr() as *const c_void, signature.len() as c_uint) != 0 }
+    }
+}
+
+impl Hash for Identity {
+    #[inline(always)]
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        (self.address.0 | (self.type_.to_u64().unwrap_or(0) << 40)).hash(state);
     }
 }
 

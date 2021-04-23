@@ -12,19 +12,20 @@
 /****/
 
 use std::collections::hash_map::HashMap;
-use std::intrinsics::copy_nonoverlapping;
+use std::marker::PhantomData;
 use std::mem::{MaybeUninit, transmute};
 use std::os::raw::{c_int, c_uint, c_ulong, c_void};
 use std::pin::Pin;
-use std::ptr::{null_mut, slice_from_raw_parts};
+use std::ptr::{null_mut, slice_from_raw_parts, copy_nonoverlapping};
 use std::sync::Mutex;
 
+use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
+
 use serde::{Deserialize, Serialize};
 
 use crate::*;
 use crate::capi as ztcore;
-use std::marker::PhantomData;
 
 pub const NODE_BACKGROUND_TASKS_MAX_INTERVAL: i64 = 200;
 
@@ -51,7 +52,8 @@ pub enum StateObjectType {
 }
 
 impl StateObjectType {
-    /// True if this state object should be protected.
+    /// True if this state object should be protected in a data store.
+    /// This could mean its file permissions should be locked down so they're only readable by the service, for example.
     #[inline(always)]
     pub fn is_secret(&self) -> bool {
         *self == StateObjectType::IdentitySecret || *self == StateObjectType::TrustStore
@@ -71,8 +73,8 @@ pub struct NodeStatus {
 }
 
 /// An event handler that receives events, frames, and packets from the core.
-/// Note that these handlers can be called concurrently from any thread and
-/// must be thread safe.
+/// Note that if multiple threads are calling into Node these may be called by any of these threads
+/// at any time and must be thread safe.
 pub trait NodeEventHandler<N: Sync + Send + 'static> {
     /// Called when a configuration change or update should be applied to a network.
     fn virtual_network_config(&self, network_id: NetworkId, network_obj: &N, config_op: VirtualNetworkConfigOperation, config: Option<&VirtualNetworkConfig>);
@@ -99,7 +101,7 @@ pub trait NodeEventHandler<N: Sync + Send + 'static> {
     fn path_lookup(&self, address: Address, id: &Identity, desired_family: InetAddressFamily) -> Option<InetAddress>;
 }
 
-pub struct NodeIntl<T: AsRef<H> + Sync + Send + Clone + 'static, N: Sync + Send + 'static, H: NodeEventHandler<N>> {
+pub(crate) struct NodeIntl<T: AsRef<H> + Sync + Send + Clone + 'static, N: Sync + Send + 'static, H: NodeEventHandler<N>> {
     event_handler: T,
     capi: *mut ztcore::ZT_Node,
     networks_by_id: Mutex<HashMap<u64, Pin<Box<N>>>>,
@@ -120,6 +122,7 @@ pub struct NodeIntl<T: AsRef<H> + Sync + Send + Clone + 'static, N: Sync + Send 
 /// multithreaded or async.
 pub struct Node<T: AsRef<H> + Sync + Send + Clone + 'static, N: Sync + Send + 'static, H: NodeEventHandler<N>> {
     intl: Pin<Box<NodeIntl<T, N, H>>>,
+    identity_wrapper: Option<Identity>,
     event_handler_placeholder: PhantomData<H>,
 }
 
@@ -323,6 +326,7 @@ impl<T: AsRef<H> + Sync + Send + Clone + 'static, N: Sync + Send + 'static, H: N
                 recent_clock: PortableAtomicI64::new(clock),
                 recent_ticks: PortableAtomicI64::new(ticks),
             }),
+            identity_wrapper: None,
             event_handler_placeholder: PhantomData::default(),
         };
 
@@ -342,6 +346,7 @@ impl<T: AsRef<H> + Sync + Send + Clone + 'static, N: Sync + Send + 'static, H: N
 
         if rc == 0 {
             assert!(!n.intl.capi.is_null());
+            n.identity_wrapper.replace(Identity::new_from_capi(unsafe { ztcore::ZT_Node_identity(n.intl.capi) }, false));
             Ok(n)
         } else {
             Err(ResultCode::from_i32(rc as i32).unwrap_or(ResultCode::FatalErrorInternal))
@@ -352,6 +357,7 @@ impl<T: AsRef<H> + Sync + Send + Clone + 'static, N: Sync + Send + 'static, H: N
     /// The first call should happen no more than NODE_BACKGROUND_TASKS_MAX_INTERVAL milliseconds
     /// since the node was created, and after this runs it returns the amount of time the caller
     /// should wait before calling it again.
+    #[inline(always)]
     pub fn process_background_tasks(&self, clock: i64, ticks: i64) -> i64 {
         self.intl.recent_clock.set(clock);
         self.intl.recent_ticks.set(ticks);
@@ -392,7 +398,9 @@ impl<T: AsRef<H> + Sync + Send + Clone + 'static, N: Sync + Send + 'static, H: N
         self.intl.networks_by_id.lock().unwrap().remove(&nwid.0).map_or_else(|| {
             ResultCode::ErrorNetworkNotFound
         }, |_| {
-            unsafe { ResultCode::from_i32(ztcore::ZT_Node_leave(self.intl.capi, clock, ticks, null_mut(), null_mut(), nwid.0) as i32).unwrap_or(ResultCode::ErrorInternalNonFatal) }
+            unsafe {
+                ResultCode::from_i32(ztcore::ZT_Node_leave(self.intl.capi, clock, ticks, null_mut(), null_mut(), nwid.0) as i32).unwrap_or(ResultCode::ErrorInternalNonFatal)
+            }
         })
     }
 
@@ -410,11 +418,14 @@ impl<T: AsRef<H> + Sync + Send + Clone + 'static, N: Sync + Send + 'static, H: N
         })
     }
 
+    /// Get the address of this node.
     #[inline(always)]
     pub fn address(&self) -> Address {
         unsafe { Address(ztcore::ZT_Node_address(self.intl.capi) as u64) }
     }
 
+    /// Handle a wire packet read from the physical network.
+    /// This is physical -> virtual.
     #[inline(always)]
     pub fn process_wire_packet(&self, clock: i64, ticks: i64, local_socket: i64, remote_address: &InetAddress, data: Buffer, next_task_deadline: &mut i64) -> ResultCode {
         let intl = &*self.intl;
@@ -423,6 +434,8 @@ impl<T: AsRef<H> + Sync + Send + Clone + 'static, N: Sync + Send + 'static, H: N
         rc
     }
 
+    /// Handle a packet sent via a virtual network interface such as a tun/tap device.
+    /// This is virtual -> physical.
     #[inline(always)]
     pub fn process_virtual_network_frame(&self, clock: i64, ticks: i64, nwid: &NetworkId, source_mac: &MAC, dest_mac: &MAC, ethertype: u16, vlan_id: u16, data: Buffer, next_task_deadline: &mut i64) -> ResultCode {
         let intl = &*self.intl;
@@ -431,30 +444,27 @@ impl<T: AsRef<H> + Sync + Send + Clone + 'static, N: Sync + Send + 'static, H: N
         rc
     }
 
+    /// Subscribe to a multicast group on a given network.
     #[inline(always)]
     pub fn multicast_subscribe(&self, clock: i64, ticks: i64, nwid: &NetworkId, multicast_group: &MAC, multicast_adi: u32) -> ResultCode {
         unsafe { ResultCode::from_i32(ztcore::ZT_Node_multicastSubscribe(self.intl.capi, clock, ticks, null_mut(), nwid.0, multicast_group.0, multicast_adi as c_ulong) as i32).unwrap_or(ResultCode::ErrorInternalNonFatal) }
     }
 
+    /// Unsubscribe from a multicast group on a given network.
     #[inline(always)]
     pub fn multicast_unsubscribe(&self, clock: i64, ticks: i64, nwid: &NetworkId, multicast_group: &MAC, multicast_adi: u32) -> ResultCode {
         unsafe { ResultCode::from_i32(ztcore::ZT_Node_multicastUnsubscribe(self.intl.capi, clock, ticks, null_mut(), nwid.0, multicast_group.0, multicast_adi as c_ulong) as i32).unwrap_or(ResultCode::ErrorInternalNonFatal) }
     }
 
-    /// Get a copy of this node's identity.
+    /// Get this node's identity.
     #[inline(always)]
-    pub fn identity(&self) -> Identity {
-        unsafe { self.identity_fast().clone() }
+    pub fn identity(&self) -> &Identity {
+        let id = self.identity_wrapper.as_ref().unwrap();
+        unsafe { id.sync_type_and_address_with_capi() };
+        id
     }
 
-    /// Get an identity that simply holds a pointer to the underlying node's identity.
-    /// This is unsafe because the identity object becomes invalid if the node ceases
-    /// to exist the Identity becomes invalid. Use clone() on it to get a copy.
-    #[inline(always)]
-    pub(crate) unsafe fn identity_fast(&self) -> Identity {
-        Identity::new_from_capi(ztcore::ZT_Node_identity(self.intl.capi), false)
-    }
-
+    /// Get status information for this node.
     pub fn status(&self, clock: i64, ticks: i64) -> NodeStatus {
         let mut ns: MaybeUninit<ztcore::ZT_NodeStatus> = MaybeUninit::zeroed();
         unsafe {
@@ -473,6 +483,8 @@ impl<T: AsRef<H> + Sync + Send + Clone + 'static, N: Sync + Send + 'static, H: N
         }
     }
 
+    /// Get a list of all peers with which this node is communicating or has very recently communicated.
+    /// The presence of a peer on this list doesn't mean it has actual access to any network.
     pub fn peers(&self, clock: i64, ticks: i64) -> Vec<Peer> {
         let mut p: Vec<Peer> = Vec::new();
         unsafe {
@@ -489,6 +501,7 @@ impl<T: AsRef<H> + Sync + Send + Clone + 'static, N: Sync + Send + 'static, H: N
         p
     }
 
+    /// Get the networks this node has joined.
     pub fn networks(&self) -> Vec<VirtualNetworkConfig> {
         let mut n: Vec<VirtualNetworkConfig> = Vec::new();
         unsafe {
@@ -505,6 +518,7 @@ impl<T: AsRef<H> + Sync + Send + Clone + 'static, N: Sync + Send + 'static, H: N
         n
     }
 
+    /// Get the certificates in this node's trust store and their local trust flags.
     pub fn certificates(&self, clock: i64, ticks: i64) -> Vec<(Certificate, u32)> {
         let mut c: Vec<(Certificate, u32)> = Vec::new();
         unsafe {

@@ -219,7 +219,7 @@ impl Service {
                 uptime: ms_monotonic() - self.startup_time_monotonic,
                 config: (*self.local_config()).clone(),
                 online: self.online(),
-                public_identity: node.identity(),
+                public_identity: node.identity().clone(),
                 version: format!("{}.{}.{}", ver.0, ver.1, ver.2),
                 version_major: ver.0,
                 version_minor: ver.1,
@@ -237,7 +237,7 @@ unsafe impl Send for Service {}
 unsafe impl Sync for Service {}
 
 async fn run_async(store: Arc<Store>, local_config: Arc<LocalConfig>) -> i32 {
-    let mut process_exit_value: i32 = 0;
+    let process_exit_value: i32 = 0;
 
     let mut udp_sockets: BTreeMap<InetAddress, FastUDPSocket> = BTreeMap::new();
     let mut http_listeners: BTreeMap<InetAddress, HttpListener> = BTreeMap::new();

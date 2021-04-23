@@ -11,6 +11,8 @@
  */
 /****/
 
+use std::hash::{Hash, Hasher};
+
 #[derive(PartialEq, Eq, Clone, Copy, Ord, PartialOrd)]
 pub struct Address(pub u64);
 
@@ -28,14 +30,10 @@ impl Address {
     }
 }
 
-impl From<&[u8]> for Address {
+impl Hash for Address {
     #[inline(always)]
-    fn from(bytes: &[u8]) -> Self {
-        if bytes.len() >= 5 {
-            Address(((bytes[0] as u64) << 32) | ((bytes[1] as u64) << 24) | ((bytes[2] as u64) << 16) | ((bytes[3] as u64) << 8) | (bytes[4] as u64))
-        } else {
-            Address(0)
-        }
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.0.hash(state);
     }
 }
 
@@ -48,14 +46,25 @@ impl ToString for Address {
 impl From<u64> for Address {
     #[inline(always)]
     fn from(i: u64) -> Self {
-        Address(i)
+        Address(i & 0xffffffffff)
     }
 }
 
 impl From<&str> for Address {
     #[inline(always)]
     fn from(s: &str) -> Self {
-        Address(u64::from_str_radix(s, 16).unwrap_or(0))
+        Address::from(u64::from_str_radix(s, 16).unwrap_or(0))
+    }
+}
+
+impl From<&[u8]> for Address {
+    #[inline(always)]
+    fn from(bytes: &[u8]) -> Self {
+        if bytes.len() >= 5 {
+            Address(((bytes[0] as u64) << 32) | ((bytes[1] as u64) << 24) | ((bytes[2] as u64) << 16) | ((bytes[3] as u64) << 8) | (bytes[4] as u64))
+        } else {
+            Address(0)
+        }
     }
 }
 
@@ -77,6 +86,7 @@ impl<'de> serde::de::Visitor<'de> for AddressVisitor {
     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result { formatter.write_str("ZeroTier Address") }
     fn visit_str<E>(self, s: &str) -> Result<Self::Value, E> where E: serde::de::Error { Ok(Address::from(s)) }
     fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E> where E: serde::de::Error { Ok(Address::from(v)) }
+    fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E> where E: serde::de::Error { Ok(Address::from(v)) }
 }
 
 impl<'de> serde::Deserialize<'de> for Address {

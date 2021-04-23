@@ -96,7 +96,7 @@ mod tests {
     fn test_getifaddrs() {
         println!("starting getifaddrs...");
         crate::getifaddrs::for_each_address(|a: &InetAddress, dev: &str| {
-            println!("  device: {} ip: {}", dev, a.to_string())
+            println!("  {} {}", dev, a.to_string())
         });
         println!("done.")
     }

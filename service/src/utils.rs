@@ -123,6 +123,16 @@ pub(crate) fn decrypt_http_auth_nonce(nonce: &str) -> i64 {
     }
 }
 
+/// Shortcut to use serde_json to serialize an object, returns "null" on error.
+pub(crate) fn to_json<O: serde::Serialize>(o: &O) -> String {
+    serde_json::to_string(o).unwrap_or("null".into())
+}
+
+/// Shortcut to use serde_json to serialize an object, returns "null" on error.
+pub(crate) fn to_json_pretty<O: serde::Serialize>(o: &O) -> String {
+    serde_json::to_string_pretty(o).unwrap_or("null".into())
+}
+
 /// Recursively patch a JSON object.
 /// This is slightly different from a usual JSON merge. For objects in the target their fields
 /// are updated by recursively calling json_patch if the same field is present in the source.

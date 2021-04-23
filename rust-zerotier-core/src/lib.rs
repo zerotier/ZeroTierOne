@@ -58,7 +58,7 @@ pub use virtualnetworkconfig::*;
 pub use multicastgroup::MulticastGroup;
 pub use dictionary::*;
 
-base64_serde_type!(Base64Standard, base64::URL_SAFE_NO_PAD);
+base64_serde_type!(Base64URLSafeNoPad, base64::URL_SAFE_NO_PAD);
 
 /// Recommended minimum thread stack size for background threads.
 pub const RECOMMENDED_THREAD_STACK_SIZE: usize = 524288;
@@ -83,6 +83,16 @@ pub const DEFAULT_UDP_MTU: u32 = ztcore::ZT_DEFAULT_UDP_MTU;
 
 /// Maximum UDP MTU (we never actually get this high).
 pub const MAX_UDP_MTU: u32 = ztcore::ZT_MAX_UDP_MTU;
+
+/// Base64 encode using the URL-safe with no padding configuration.
+pub fn base64_encode<T: AsRef<[u8]>>(t: &T) -> String {
+    base64::encode_config(t, base64::URL_SAFE_NO_PAD)
+}
+
+/// Base64 decode using the URL-safe with no padding configuration.
+pub fn base64_decode<T: AsRef<[u8]>>(t: &T) -> Result<Vec<u8>, base64::DecodeError> {
+    base64::decode_config(t, base64::URL_SAFE_NO_PAD)
+}
 
 #[allow(non_snake_case,non_upper_case_globals)]
 pub mod RulePacketCharacteristicFlags {

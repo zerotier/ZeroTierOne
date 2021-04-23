@@ -32,7 +32,7 @@ pub(crate) fn get_l2_multicast_subscriptions(dev: &str) -> BTreeSet<MulticastGro
                 if !(*i).ifma_name.is_null() && !(*i).ifma_addr.is_null() && (*(*i).ifma_addr).sa_family as i32 == osdep::AF_LINK as i32 {
                     let in_: &osdep::sockaddr_dl = &*((*i).ifma_name.cast());
                     let la: &osdep::sockaddr_dl = &*((*i).ifma_addr.cast());
-                    if la.sdl_alen == 6 && in_.sdl_nlen <= dev.len().as_() && osdep::memcmp(dev.as_ptr().cast(), in_.sdl_data.as_ptr().cast(), in_.sdl_nlen.as_()) == 0 {
+                    if la.sdl_alen == 6 && in_.sdl_nlen <= dev.len().as_() && crate::osdep::memcmp(dev.as_ptr().cast(), in_.sdl_data.as_ptr().cast(), in_.sdl_nlen.as_()) == 0 {
                         let mi = la.sdl_nlen as usize;
                         groups.insert(MulticastGroup{
                             mac: MAC((la.sdl_data[mi] as u64) << 40 | (la.sdl_data[mi+1] as u64) << 32 | (la.sdl_data[mi+2] as u64) << 24 | (la.sdl_data[mi+3] as u64) << 16 | (la.sdl_data[mi+4] as u64) << 8 | la.sdl_data[mi+5] as u64),

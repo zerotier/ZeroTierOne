@@ -300,7 +300,7 @@ static bool ZTT_deepCompareCertificateName(const ZT_Certificate_Name &a, const Z
 static bool ZTT_deepCompareCertificates(const Certificate &a, const Certificate &b)
 {
 	if (
-		(a.flags != b.flags) ||
+		(a.usageFlags != b.usageFlags) ||
 		(a.timestamp != b.timestamp) ||
 		(a.validity[0] != b.validity[0]) ||
 		(a.validity[1] != b.validity[1]) ||

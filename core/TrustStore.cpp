@@ -39,19 +39,22 @@ Map< Identity, SharedPtr< const Locator > > TrustStore::roots()
 	for (Map< Fingerprint, Vector< SharedPtr< Entry > > >::const_iterator cv(m_bySubjectIdentity.begin()); cv != m_bySubjectIdentity.end(); ++cv) {
 		for (Vector< SharedPtr< Entry > >::const_iterator c(cv->second.begin()); c != cv->second.end(); ++c) {
 
-			if (((*c)->m_localTrust & ZT_CERTIFICATE_LOCAL_TRUST_FLAG_ZEROTIER_ROOT_SET) != 0) {
+			// A root set cert must be marked for this use and authorized to influence this node's config.
+			if ((((*c)->m_certificate.usageFlags & ZT_CERTIFICATE_USAGE_ZEROTIER_ROOT_SET) != 0) && (((*c)->m_localTrust & ZT_CERTIFICATE_LOCAL_TRUST_FLAG_CONFIG) != 0)) {
+
+				// Add all identities to the root set, and for each entry in the set make sure we have the latest locator if there's more than one cert with one.
 				for (unsigned int j = 0; j < (*c)->certificate().subject.identityCount; ++j) {
 					const Identity *const id = reinterpret_cast<const Identity *>((*c)->certificate().subject.identities[j].identity);
 					if ((id) && (*id)) { // sanity check
 						SharedPtr< const Locator > &existingLoc = r[*id];
 						const Locator *const loc = reinterpret_cast<const Locator *>((*c)->certificate().subject.identities[j].locator);
 						if (loc) {
-							// If more than one certificate names a root, this ensures that the newest locator is used.
 							if ((!existingLoc) || (existingLoc->revision() < loc->revision()))
 								existingLoc.set(new Locator(*loc));
 						}
 					}
 				}
+
 			}
 
 		}
@@ -198,10 +201,13 @@ bool TrustStore::update(const int64_t clock, Vector< SharedPtr< Entry > > *const
 	m_bySubjectUniqueId.clear();
 	for (Map< H384, SharedPtr< Entry > >::const_iterator c(m_bySerial.begin()); c != m_bySerial.end();) {
 		if (c->second->m_error == ZT_CERTIFICATE_ERROR_NONE) {
+
 			const unsigned int uniqueIdSize = c->second->m_certificate.subject.uniqueIdSize;
 			if ((uniqueIdSize > 0) && (uniqueIdSize <= ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE)) {
 				SharedPtr< Entry > &entry = m_bySubjectUniqueId[Blob< ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE >(c->second->m_certificate.subject.uniqueId, uniqueIdSize)];
 				if (entry) {
+
+					// If there's already an entry, see if there's a newer certificate for this subject.
 					if (c->second->m_certificate.subject.timestamp > entry->m_certificate.subject.timestamp) {
 						entry->m_subjectDeprecated = true;
 						entry = c->second;
@@ -216,10 +222,12 @@ bool TrustStore::update(const int64_t clock, Vector< SharedPtr< Entry > > *const
 							c->second->m_subjectDeprecated = true;
 						}
 					}
+
 				} else {
 					entry = c->second;
 				}
 			}
+
 		}
 	}
 
@@ -228,17 +236,17 @@ bool TrustStore::update(const int64_t clock, Vector< SharedPtr< Entry > > *const
 	m_bySubjectIdentity.clear();
 	for (Map< H384, SharedPtr< Entry > >::const_iterator c(m_bySerial.begin()); c != m_bySerial.end(); ++c) {
 		if ((c->second->m_error == ZT_CERTIFICATE_ERROR_NONE) && (!c->second->m_subjectDeprecated)) {
+
 			for (unsigned int i = 0; i < c->second->m_certificate.subject.identityCount; ++i) {
 				const Identity *const id = reinterpret_cast<const Identity *>(c->second->m_certificate.subject.identities[i].identity);
 				if ((id) && (*id)) // sanity check
 					m_bySubjectIdentity[id->fingerprint()].push_back(c->second);
 			}
+
 		}
 	}
 
-	// Purge error certificates and return them if 'purge' is non-NULL. This purges error certificates
-	// and deprecated certificates not on a trust path. Deprecated certificates on a trust path remain
-	// as they are still technically valid and other possibly wanted certificates depend on them.
+	// If purge is set, erase and return error and deprecated certs (that are not on a trust path).
 	if (purge) {
 		for (Map< H384, SharedPtr< Entry > >::const_iterator c(m_bySerial.begin()); c != m_bySerial.end();) {
 			if ( (c->second->error() != ZT_CERTIFICATE_ERROR_NONE) || ((c->second->m_subjectDeprecated) && (!c->second->m_onTrustPath)) ) {
@@ -259,15 +267,15 @@ Vector< uint8_t > TrustStore::save() const
 
 	int compSize;
 	{
-		Vector< uint8_t > b;
-		b.reserve(65536);
-
 		RWMutex::RLock l(m_lock);
+
+		Vector< uint8_t > b;
+		b.reserve(4096);
 
 		// A version byte.
 		b.push_back(0);
 
-		// <size> <certificate> <trust> tuples terminated by a 0 size.
+		// <size[2]> <certificate[...]> <trust[2]> tuples terminated by a 0 size.
 		for (Map< H384, SharedPtr< Entry > >::const_iterator c(m_bySerial.begin()); c != m_bySerial.end(); ++c) {
 			const Vector< uint8_t > cdata(c->second->certificate().encode());
 			const unsigned long size = (uint32_t)cdata.size();
@@ -276,8 +284,6 @@ Vector< uint8_t > TrustStore::save() const
 				b.push_back((uint8_t)size);
 				b.insert(b.end(), cdata.begin(), cdata.end());
 				const uint32_t localTrust = (uint32_t)c->second->localTrust();
-				b.push_back((uint8_t)(localTrust >> 24U));
-				b.push_back((uint8_t)(localTrust >> 16U));
 				b.push_back((uint8_t)(localTrust >> 8U));
 				b.push_back((uint8_t)localTrust);
 			}
@@ -291,15 +297,8 @@ Vector< uint8_t > TrustStore::save() const
 			return Vector< uint8_t >();
 
 		const uint32_t uncompSize = (uint32_t)b.size();
-		const uint32_t cksum = Utils::fnv1a32(b.data(), (unsigned int)uncompSize);
-		comp[0] = (uint8_t)(uncompSize >> 24);
-		comp[1] = (uint8_t)(uncompSize >> 16);
-		comp[2] = (uint8_t)(uncompSize >> 8);
-		comp[3] = (uint8_t)uncompSize;
-		comp[4] = (uint8_t)(cksum >> 24);
-		comp[5] = (uint8_t)(cksum >> 16);
-		comp[6] = (uint8_t)(cksum >> 8);
-		comp[7] = (uint8_t)cksum;
+		Utils::storeBigEndian(comp.data(), uncompSize);
+		Utils::storeBigEndian(comp.data() + 4, Utils::fnv1a32(b.data(), (unsigned int)uncompSize));
 		compSize += 8;
 	}
 
@@ -314,8 +313,8 @@ int TrustStore::load(const Vector< uint8_t > &data)
 	if (data.size() < 8)
 		return -1;
 
-	const unsigned long uncompSize = Utils::loadBigEndian< uint32_t >(data.data());
-	if ((uncompSize == 0) || (uncompSize > (data.size() * 128)))
+	const unsigned int uncompSize = Utils::loadBigEndian< uint32_t >(data.data());
+	if ((uncompSize == 0) || (uncompSize > (unsigned int)(data.size() * 128)))
 		return -1;
 
 	Vector< uint8_t > uncomp;
@@ -336,20 +335,20 @@ int TrustStore::load(const Vector< uint8_t > &data)
 	for (;;) {
 		if ((b + 2) > eof)
 			break;
-		const uint32_t cdataSize = Utils::loadBigEndian< uint16_t >(b);
+		const uint32_t certDataSize = Utils::loadBigEndian< uint16_t >(b);
 		b += 2;
 
-		if (cdataSize == 0)
+		if (certDataSize == 0)
 			break;
 
-		if ((b + cdataSize + 4) > eof)
+		if ((b + certDataSize + 2) > eof) // certificate length + 2 bytes for trust flags
 			break;
 		Certificate c;
-		if (c.decode(b, (unsigned int)cdataSize)) {
-			b += cdataSize;
-			const uint32_t localTrust = Utils::loadBigEndian< uint32_t >(b);
-			b += 4;
-			this->add(c, (unsigned int)localTrust);
+		if (c.decode(b, (unsigned int)certDataSize)) {
+			b += certDataSize;
+			this->add(c, Utils::loadBigEndian< uint16_t >(b));
+			b += 2;
+
 			++readCount;
 		}
 	}

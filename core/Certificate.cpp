@@ -40,7 +40,7 @@ Certificate &Certificate::operator=(const ZT_Certificate &cert)
 	m_clear();
 
 	Utils::copy< sizeof(this->serialNo) >(this->serialNo, cert.serialNo);
-	this->flags = cert.flags;
+	this->usageFlags = cert.usageFlags;
 	this->timestamp = cert.timestamp;
 	this->validity[0] = cert.validity[0];
 	this->validity[1] = cert.validity[1];
@@ -180,8 +180,8 @@ Vector< uint8_t > Certificate::encode(const bool omitSignature) const
 	 * purposes the keys must be always be in order.
 	 */
 
-	if (this->flags != 0)
-		d.add("f", this->flags);
+	if (this->usageFlags != 0)
+		d.add("f", this->usageFlags);
 	if (this->timestamp > 0)
 		d.add("t", (uint64_t)this->timestamp);
 	if (this->validity[0] > 0)
@@ -223,7 +223,7 @@ bool Certificate::decode(const void *const data, const unsigned int len)
 
 	m_clear();
 
-	this->flags = d.getUI("f");
+	this->usageFlags = d.getUI("f");
 	this->timestamp = (int64_t)d.getUI("t");
 	this->validity[0] = (int64_t)d.getUI("v#0");
 	this->validity[1] = (int64_t)d.getUI("v#1");
