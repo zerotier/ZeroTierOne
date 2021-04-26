@@ -12,59 +12,130 @@
 /****/
 
 #include "VL2.hpp"
+
 #include "Context.hpp"
-#include "VL1.hpp"
-#include "Topology.hpp"
-#include "Peer.hpp"
-#include "Path.hpp"
-#include "Network.hpp"
 #include "MAC.hpp"
+#include "Network.hpp"
+#include "Path.hpp"
+#include "Peer.hpp"
+#include "Topology.hpp"
+#include "VL1.hpp"
 
 namespace ZeroTier {
 
-VL2::VL2(const Context &ctx):
-	m_ctx(ctx)
+VL2::VL2(const Context& ctx) : m_ctx(ctx)
 {
 }
 
-void VL2::onLocalEthernet(CallContext &cc, const SharedPtr< Network > &network, const MAC &from, const MAC &to, const unsigned int etherType, unsigned int vlanId, SharedPtr< Buf > &data, unsigned int len)
+void VL2::onLocalEthernet(
+    CallContext& cc,
+    const SharedPtr<Network>& network,
+    const MAC& from,
+    const MAC& to,
+    const unsigned int etherType,
+    unsigned int vlanId,
+    SharedPtr<Buf>& data,
+    unsigned int len)
 {
 }
 
-bool VL2::m_FRAME(CallContext &cc, const uint64_t packetId, const unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize)
+bool VL2::m_FRAME(
+    CallContext& cc,
+    const uint64_t packetId,
+    const unsigned int auth,
+    const SharedPtr<Path>& path,
+    SharedPtr<Peer>& peer,
+    Buf& pkt,
+    int packetSize)
 {
 }
 
-bool VL2::m_EXT_FRAME(CallContext &cc, const uint64_t packetId, const unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize)
+bool VL2::m_EXT_FRAME(
+    CallContext& cc,
+    const uint64_t packetId,
+    const unsigned int auth,
+    const SharedPtr<Path>& path,
+    SharedPtr<Peer>& peer,
+    Buf& pkt,
+    int packetSize)
 {
 }
 
-bool VL2::m_MULTICAST_LIKE(CallContext &cc, const uint64_t packetId, const unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize)
+bool VL2::m_MULTICAST_LIKE(
+    CallContext& cc,
+    const uint64_t packetId,
+    const unsigned int auth,
+    const SharedPtr<Path>& path,
+    SharedPtr<Peer>& peer,
+    Buf& pkt,
+    int packetSize)
 {
 }
 
-bool VL2::m_NETWORK_CREDENTIALS(CallContext &cc, const uint64_t packetId, const unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize)
+bool VL2::m_NETWORK_CREDENTIALS(
+    CallContext& cc,
+    const uint64_t packetId,
+    const unsigned int auth,
+    const SharedPtr<Path>& path,
+    SharedPtr<Peer>& peer,
+    Buf& pkt,
+    int packetSize)
 {
 }
 
-bool VL2::m_NETWORK_CONFIG_REQUEST(CallContext &cc, const uint64_t packetId, const unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize)
+bool VL2::m_NETWORK_CONFIG_REQUEST(
+    CallContext& cc,
+    const uint64_t packetId,
+    const unsigned int auth,
+    const SharedPtr<Path>& path,
+    SharedPtr<Peer>& peer,
+    Buf& pkt,
+    int packetSize)
 {
 }
 
-bool VL2::m_NETWORK_CONFIG(CallContext &cc, const uint64_t packetId, const unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize)
+bool VL2::m_NETWORK_CONFIG(
+    CallContext& cc,
+    const uint64_t packetId,
+    const unsigned int auth,
+    const SharedPtr<Path>& path,
+    SharedPtr<Peer>& peer,
+    Buf& pkt,
+    int packetSize)
 {
 }
 
-bool VL2::m_MULTICAST_GATHER(CallContext &cc, const uint64_t packetId, const unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize)
+bool VL2::m_MULTICAST_GATHER(
+    CallContext& cc,
+    const uint64_t packetId,
+    const unsigned int auth,
+    const SharedPtr<Path>& path,
+    SharedPtr<Peer>& peer,
+    Buf& pkt,
+    int packetSize)
 {
 }
 
-bool VL2::m_MULTICAST_FRAME_deprecated(CallContext &cc, const uint64_t packetId, const unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize)
+bool VL2::m_MULTICAST_FRAME_deprecated(
+    CallContext& cc,
+    const uint64_t packetId,
+    const unsigned int auth,
+    const SharedPtr<Path>& path,
+    SharedPtr<Peer>& peer,
+    Buf& pkt,
+    int packetSize)
 {
 }
 
-bool VL2::m_MULTICAST(CallContext &cc, const uint64_t packetId, const unsigned int auth, const SharedPtr< Path > &path, SharedPtr< Peer > &peer, Buf &pkt, int packetSize)
+bool VL2::m_MULTICAST(
+    CallContext& cc,
+    const uint64_t packetId,
+    const unsigned int auth,
+    const SharedPtr<Path>& path,
+    SharedPtr<Peer>& peer,
+    Buf& pkt,
+    int packetSize)
 {
 }
 
-} // namespace ZeroTier
+}   // namespace ZeroTier

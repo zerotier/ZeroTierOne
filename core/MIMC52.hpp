@@ -56,7 +56,7 @@ uint64_t delay(const uint8_t challenge[32], unsigned long rounds);
  */
 bool verify(const uint8_t challenge[32], unsigned long rounds, uint64_t proof);
 
-} // namespace MIMC52
-} // namespcae ZeroTier
+}   // namespace MIMC52
+}   // namespace ZeroTier
 
 #endif

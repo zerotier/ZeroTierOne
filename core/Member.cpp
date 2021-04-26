@@ -11,27 +11,32 @@
  */
 /****/
 
-#include <algorithm>
-
 #include "Member.hpp"
+
 #include "Context.hpp"
 #include "Peer.hpp"
 #include "Topology.hpp"
 
+#include <algorithm>
+
 namespace ZeroTier {
 
-Member::Member() :
-	m_comRevocationThreshold(0),
-	m_lastPushedCredentials(0),
-	m_comAgreementLocalTimestamp(0),
-	m_comAgreementRemoteTimestamp(0)
+Member::Member()
+    : m_comRevocationThreshold(0)
+    , m_lastPushedCredentials(0)
+    , m_comAgreementLocalTimestamp(0)
+    , m_comAgreementRemoteTimestamp(0)
 {
 }
 
-void Member::pushCredentials(const Context &ctx, const CallContext &cc, const SharedPtr< Peer > &to, const NetworkConfig &nconf)
+void Member::pushCredentials(
+    const Context& ctx,
+    const CallContext& cc,
+    const SharedPtr<Peer>& to,
+    const NetworkConfig& nconf)
 {
-	if (!nconf.com) // sanity check
-		return;
+    if (! nconf.com)   // sanity check
+        return;
 
 #if 0
 	SharedPtr<Buf> outp(new Buf());
@@ -112,147 +117,242 @@ void Member::pushCredentials(const Context &ctx, const CallContext &cc, const Sh
 	}
 #endif
 
-	m_lastPushedCredentials = cc.ticks;
+    m_lastPushedCredentials = cc.ticks;
 }
 
-void Member::clean(const NetworkConfig &nconf)
+void Member::clean(const NetworkConfig& nconf)
 {
-	m_cleanCredImpl< TagCredential >(nconf, m_remoteTags);
-	m_cleanCredImpl< CapabilityCredential >(nconf, m_remoteCaps);
-	m_cleanCredImpl< OwnershipCredential >(nconf, m_remoteCoos);
+    m_cleanCredImpl<TagCredential>(nconf, m_remoteTags);
+    m_cleanCredImpl<CapabilityCredential>(nconf, m_remoteCaps);
+    m_cleanCredImpl<OwnershipCredential>(nconf, m_remoteCoos);
 }
 
 Member::AddCredentialResult Member::addCredential(
-	const Context &ctx,
-	const CallContext &cc,
-	const Identity &sourcePeerIdentity,
-	const NetworkConfig &nconf,
-	const MembershipCredential &com)
+    const Context& ctx,
+    const CallContext& cc,
+    const Identity& sourcePeerIdentity,
+    const NetworkConfig& nconf,
+    const MembershipCredential& com)
 {
-	const int64_t newts = com.timestamp();
-	if (newts <= m_comRevocationThreshold) {
-		ctx.t->credentialRejected(cc, 0xd9992121, com.networkId(), sourcePeerIdentity, com.id(), com.timestamp(), ZT_CREDENTIAL_TYPE_COM, ZT_TRACE_CREDENTIAL_REJECTION_REASON_REVOKED);
-		return ADD_REJECTED;
-	}
+    const int64_t newts = com.timestamp();
+    if (newts <= m_comRevocationThreshold) {
+        ctx.t->credentialRejected(
+            cc,
+            0xd9992121,
+            com.networkId(),
+            sourcePeerIdentity,
+            com.id(),
+            com.timestamp(),
+            ZT_CREDENTIAL_TYPE_COM,
+            ZT_TRACE_CREDENTIAL_REJECTION_REASON_REVOKED);
+        return ADD_REJECTED;
+    }
 
-	const int64_t oldts = m_com.timestamp();
-	if (newts < oldts) {
-		ctx.t->credentialRejected(cc, 0xd9928192, com.networkId(), sourcePeerIdentity, com.id(), com.timestamp(), ZT_CREDENTIAL_TYPE_COM, ZT_TRACE_CREDENTIAL_REJECTION_REASON_OLDER_THAN_LATEST);
-		return ADD_REJECTED;
-	}
-	if ((newts == oldts) && (m_com == com))
-		return ADD_ACCEPTED_REDUNDANT;
+    const int64_t oldts = m_com.timestamp();
+    if (newts < oldts) {
+        ctx.t->credentialRejected(
+            cc,
+            0xd9928192,
+            com.networkId(),
+            sourcePeerIdentity,
+            com.id(),
+            com.timestamp(),
+            ZT_CREDENTIAL_TYPE_COM,
+            ZT_TRACE_CREDENTIAL_REJECTION_REASON_OLDER_THAN_LATEST);
+        return ADD_REJECTED;
+    }
+    if ((newts == oldts) && (m_com == com))
+        return ADD_ACCEPTED_REDUNDANT;
 
-	switch (com.verify(ctx, cc)) {
-		default:
-			ctx.t->credentialRejected(cc, 0x0f198241, com.networkId(), sourcePeerIdentity, com.id(), com.timestamp(), ZT_CREDENTIAL_TYPE_COM, ZT_TRACE_CREDENTIAL_REJECTION_REASON_INVALID);
-			return Member::ADD_REJECTED;
-		case Credential::VERIFY_OK:
-			m_com = com;
-			return ADD_ACCEPTED_NEW;
-		case Credential::VERIFY_BAD_SIGNATURE:
-			ctx.t->credentialRejected(cc, 0xbaf0aaaa, com.networkId(), sourcePeerIdentity, com.id(), com.timestamp(), ZT_CREDENTIAL_TYPE_COM, ZT_TRACE_CREDENTIAL_REJECTION_REASON_SIGNATURE_VERIFICATION_FAILED);
-			return ADD_REJECTED;
-		case Credential::VERIFY_NEED_IDENTITY:
-			return ADD_DEFERRED_FOR_WHOIS;
-	}
+    switch (com.verify(ctx, cc)) {
+        default:
+            ctx.t->credentialRejected(
+                cc,
+                0x0f198241,
+                com.networkId(),
+                sourcePeerIdentity,
+                com.id(),
+                com.timestamp(),
+                ZT_CREDENTIAL_TYPE_COM,
+                ZT_TRACE_CREDENTIAL_REJECTION_REASON_INVALID);
+            return Member::ADD_REJECTED;
+        case Credential::VERIFY_OK:
+            m_com = com;
+            return ADD_ACCEPTED_NEW;
+        case Credential::VERIFY_BAD_SIGNATURE:
+            ctx.t->credentialRejected(
+                cc,
+                0xbaf0aaaa,
+                com.networkId(),
+                sourcePeerIdentity,
+                com.id(),
+                com.timestamp(),
+                ZT_CREDENTIAL_TYPE_COM,
+                ZT_TRACE_CREDENTIAL_REJECTION_REASON_SIGNATURE_VERIFICATION_FAILED);
+            return ADD_REJECTED;
+        case Credential::VERIFY_NEED_IDENTITY:
+            return ADD_DEFERRED_FOR_WHOIS;
+    }
 }
 
 // 3/5 of the credential types have identical addCredential() code
-template< typename C >
+template <typename C>
 static ZT_INLINE Member::AddCredentialResult _addCredImpl(
-	Map< uint32_t, C > &remoteCreds,
-	const Map< uint64_t, int64_t > &revocations,
-	const Context &ctx,
-	const CallContext &cc,
-	const Identity &sourcePeerIdentity,
-	const NetworkConfig &nconf,
-	const C &cred)
+    Map<uint32_t, C>& remoteCreds,
+    const Map<uint64_t, int64_t>& revocations,
+    const Context& ctx,
+    const CallContext& cc,
+    const Identity& sourcePeerIdentity,
+    const NetworkConfig& nconf,
+    const C& cred)
 {
-	typename Map< uint32_t, C >::const_iterator rc(remoteCreds.find(cred.id()));
-	if (rc != remoteCreds.end()) {
-		if (rc->second.revision() > cred.revision()) {
-			ctx.t->credentialRejected(cc, 0x40000001, nconf.networkId, sourcePeerIdentity, cred.id(), cred.revision(), C::credentialType(), ZT_TRACE_CREDENTIAL_REJECTION_REASON_OLDER_THAN_LATEST);
-			return Member::ADD_REJECTED;
-		}
-		if (rc->second == cred)
-			return Member::ADD_ACCEPTED_REDUNDANT;
-	}
+    typename Map<uint32_t, C>::const_iterator rc(remoteCreds.find(cred.id()));
+    if (rc != remoteCreds.end()) {
+        if (rc->second.revision() > cred.revision()) {
+            ctx.t->credentialRejected(
+                cc,
+                0x40000001,
+                nconf.networkId,
+                sourcePeerIdentity,
+                cred.id(),
+                cred.revision(),
+                C::credentialType(),
+                ZT_TRACE_CREDENTIAL_REJECTION_REASON_OLDER_THAN_LATEST);
+            return Member::ADD_REJECTED;
+        }
+        if (rc->second == cred)
+            return Member::ADD_ACCEPTED_REDUNDANT;
+    }
 
-	typename Map< uint64_t, int64_t >::const_iterator rt(revocations.find(Member::credentialKey(C::credentialType(), cred.id())));
-	if ((rt != revocations.end()) && (rt->second >= cred.revision())) {
-		ctx.t->credentialRejected(cc, 0x24248124, nconf.networkId, sourcePeerIdentity, cred.id(), cred.revision(), C::credentialType(), ZT_TRACE_CREDENTIAL_REJECTION_REASON_REVOKED);
-		return Member::ADD_REJECTED;
-	}
+    typename Map<uint64_t, int64_t>::const_iterator rt(
+        revocations.find(Member::credentialKey(C::credentialType(), cred.id())));
+    if ((rt != revocations.end()) && (rt->second >= cred.revision())) {
+        ctx.t->credentialRejected(
+            cc,
+            0x24248124,
+            nconf.networkId,
+            sourcePeerIdentity,
+            cred.id(),
+            cred.revision(),
+            C::credentialType(),
+            ZT_TRACE_CREDENTIAL_REJECTION_REASON_REVOKED);
+        return Member::ADD_REJECTED;
+    }
 
-	switch (cred.verify(ctx, cc)) {
-		default:
-			ctx.t->credentialRejected(cc, 0x01feba012, nconf.networkId, sourcePeerIdentity, cred.id(), cred.revision(), C::credentialType(), ZT_TRACE_CREDENTIAL_REJECTION_REASON_INVALID);
-			return Member::ADD_REJECTED;
-		case 0:
-			if (rc == remoteCreds.end())
-				remoteCreds[cred.id()] = cred;
-			return Member::ADD_ACCEPTED_NEW;
-		case 1:
-			return Member::ADD_DEFERRED_FOR_WHOIS;
-	}
+    switch (cred.verify(ctx, cc)) {
+        default:
+            ctx.t->credentialRejected(
+                cc,
+                0x01feba012,
+                nconf.networkId,
+                sourcePeerIdentity,
+                cred.id(),
+                cred.revision(),
+                C::credentialType(),
+                ZT_TRACE_CREDENTIAL_REJECTION_REASON_INVALID);
+            return Member::ADD_REJECTED;
+        case 0:
+            if (rc == remoteCreds.end())
+                remoteCreds[cred.id()] = cred;
+            return Member::ADD_ACCEPTED_NEW;
+        case 1:
+            return Member::ADD_DEFERRED_FOR_WHOIS;
+    }
 }
 
-Member::AddCredentialResult Member::addCredential(const Context &ctx, const CallContext &cc, const Identity &sourcePeerIdentity, const NetworkConfig &nconf, const TagCredential &tag)
-{ return _addCredImpl< TagCredential >(m_remoteTags, m_revocations, ctx, cc, sourcePeerIdentity, nconf, tag); }
-
-Member::AddCredentialResult Member::addCredential(const Context &ctx, const CallContext &cc, const Identity &sourcePeerIdentity, const NetworkConfig &nconf, const CapabilityCredential &cap)
-{ return _addCredImpl< CapabilityCredential >(m_remoteCaps, m_revocations, ctx, cc, sourcePeerIdentity, nconf, cap); }
-
-Member::AddCredentialResult Member::addCredential(const Context &ctx, const CallContext &cc, const Identity &sourcePeerIdentity, const NetworkConfig &nconf, const OwnershipCredential &coo)
-{ return _addCredImpl< OwnershipCredential >(m_remoteCoos, m_revocations, ctx, cc, sourcePeerIdentity, nconf, coo); }
-
-Member::AddCredentialResult Member::addCredential(const Context &ctx, const CallContext &cc, const Identity &sourcePeerIdentity, const NetworkConfig &nconf, const RevocationCredential &rev)
+Member::AddCredentialResult Member::addCredential(
+    const Context& ctx,
+    const CallContext& cc,
+    const Identity& sourcePeerIdentity,
+    const NetworkConfig& nconf,
+    const TagCredential& tag)
 {
-	int64_t *rt;
-	switch (rev.verify(ctx, cc)) {
-		default:
-			ctx.t->credentialRejected(cc, 0x938ff009, nconf.networkId, sourcePeerIdentity, rev.id(), 0, ZT_CREDENTIAL_TYPE_REVOCATION, ZT_TRACE_CREDENTIAL_REJECTION_REASON_INVALID);
-			return ADD_REJECTED;
-		case 0: {
-			const ZT_CredentialType ct = rev.typeBeingRevoked();
-			switch (ct) {
-				case ZT_CREDENTIAL_TYPE_COM:
-					if (rev.threshold() > m_comRevocationThreshold) {
-						m_comRevocationThreshold = rev.threshold();
-						return ADD_ACCEPTED_NEW;
-					}
-					return ADD_ACCEPTED_REDUNDANT;
-				case ZT_CREDENTIAL_TYPE_CAPABILITY:
-				case ZT_CREDENTIAL_TYPE_TAG:
-				case ZT_CREDENTIAL_TYPE_COO:
-					rt = &(m_revocations[credentialKey(ct, rev.credentialId())]);
-					if (*rt < rev.threshold()) {
-						*rt = rev.threshold();
-						m_comRevocationThreshold = rev.threshold();
-						return ADD_ACCEPTED_NEW;
-					}
-					return ADD_ACCEPTED_REDUNDANT;
-				default:
-					ctx.t->credentialRejected(cc, 0x0bbbb1a4, nconf.networkId, sourcePeerIdentity, rev.id(), 0, ZT_CREDENTIAL_TYPE_REVOCATION, ZT_TRACE_CREDENTIAL_REJECTION_REASON_INVALID);
-					return ADD_REJECTED;
-			}
-		}
-		case 1:
-			return ADD_DEFERRED_FOR_WHOIS;
-	}
+    return _addCredImpl<TagCredential>(m_remoteTags, m_revocations, ctx, cc, sourcePeerIdentity, nconf, tag);
 }
 
-bool Member::m_isUnspoofableAddress(const NetworkConfig &nconf, const InetAddress &ip) const noexcept
+Member::AddCredentialResult Member::addCredential(
+    const Context& ctx,
+    const CallContext& cc,
+    const Identity& sourcePeerIdentity,
+    const NetworkConfig& nconf,
+    const CapabilityCredential& cap)
 {
-	return (
-		ip.isV6() &&
-		nconf.ndpEmulation() &&
-		(
-			(ip == InetAddress::makeIpv66plane(nconf.networkId, m_com.issuedTo().address)) ||
-			(ip == InetAddress::makeIpv6rfc4193(nconf.networkId, m_com.issuedTo().address))
-		)
-	);
+    return _addCredImpl<CapabilityCredential>(m_remoteCaps, m_revocations, ctx, cc, sourcePeerIdentity, nconf, cap);
 }
 
-} // namespace ZeroTier
+Member::AddCredentialResult Member::addCredential(
+    const Context& ctx,
+    const CallContext& cc,
+    const Identity& sourcePeerIdentity,
+    const NetworkConfig& nconf,
+    const OwnershipCredential& coo)
+{
+    return _addCredImpl<OwnershipCredential>(m_remoteCoos, m_revocations, ctx, cc, sourcePeerIdentity, nconf, coo);
+}
+
+Member::AddCredentialResult Member::addCredential(
+    const Context& ctx,
+    const CallContext& cc,
+    const Identity& sourcePeerIdentity,
+    const NetworkConfig& nconf,
+    const RevocationCredential& rev)
+{
+    int64_t* rt;
+    switch (rev.verify(ctx, cc)) {
+        default:
+            ctx.t->credentialRejected(
+                cc,
+                0x938ff009,
+                nconf.networkId,
+                sourcePeerIdentity,
+                rev.id(),
+                0,
+                ZT_CREDENTIAL_TYPE_REVOCATION,
+                ZT_TRACE_CREDENTIAL_REJECTION_REASON_INVALID);
+            return ADD_REJECTED;
+        case 0: {
+            const ZT_CredentialType ct = rev.typeBeingRevoked();
+            switch (ct) {
+                case ZT_CREDENTIAL_TYPE_COM:
+                    if (rev.threshold() > m_comRevocationThreshold) {
+                        m_comRevocationThreshold = rev.threshold();
+                        return ADD_ACCEPTED_NEW;
+                    }
+                    return ADD_ACCEPTED_REDUNDANT;
+                case ZT_CREDENTIAL_TYPE_CAPABILITY:
+                case ZT_CREDENTIAL_TYPE_TAG:
+                case ZT_CREDENTIAL_TYPE_COO:
+                    rt = &(m_revocations[credentialKey(ct, rev.credentialId())]);
+                    if (*rt < rev.threshold()) {
+                        *rt = rev.threshold();
+                        m_comRevocationThreshold = rev.threshold();
+                        return ADD_ACCEPTED_NEW;
+                    }
+                    return ADD_ACCEPTED_REDUNDANT;
+                default:
+                    ctx.t->credentialRejected(
+                        cc,
+                        0x0bbbb1a4,
+                        nconf.networkId,
+                        sourcePeerIdentity,
+                        rev.id(),
+                        0,
+                        ZT_CREDENTIAL_TYPE_REVOCATION,
+                        ZT_TRACE_CREDENTIAL_REJECTION_REASON_INVALID);
+                    return ADD_REJECTED;
+            }
+        }
+        case 1:
+            return ADD_DEFERRED_FOR_WHOIS;
+    }
+}
+
+bool Member::m_isUnspoofableAddress(const NetworkConfig& nconf, const InetAddress& ip) const noexcept
+{
+    return (
+        ip.isV6() && nconf.ndpEmulation()
+        && ((ip == InetAddress::makeIpv66plane(nconf.networkId, m_com.issuedTo().address))
+            || (ip == InetAddress::makeIpv6rfc4193(nconf.networkId, m_com.issuedTo().address))));
+}
+
+}   // namespace ZeroTier

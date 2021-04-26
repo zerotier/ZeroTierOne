@@ -14,23 +14,24 @@
 #ifndef ZT_CERTIFICATEOFMEMBERSHIP_HPP
 #define ZT_CERTIFICATEOFMEMBERSHIP_HPP
 
-#include <string>
-#include <stdexcept>
-#include <algorithm>
-
-#include "Constants.hpp"
-#include "Credential.hpp"
 #include "Address.hpp"
 #include "C25519.hpp"
+#include "Constants.hpp"
+#include "Credential.hpp"
+#include "FCV.hpp"
 #include "Identity.hpp"
 #include "Utils.hpp"
-#include "FCV.hpp"
+
+#include <algorithm>
+#include <stdexcept>
+#include <string>
 
 // Maximum number of additional tuples beyond the standard always-present three.
 #define ZT_MEMBERSHIP_CREDENTIAL_MAX_ADDITIONAL_QUALIFIERS 8
 
 // version + qualifier count + three required qualifiers + additional qualifiers +
-#define ZT_MEMBERSHIP_CREDENTIAL_MARSHAL_SIZE_MAX (1 + 2 + (3 * 3 * 8) + (ZT_MEMBERSHIP_CREDENTIAL_MAX_ADDITIONAL_QUALIFIERS * 3 * 8) + 144 + 5 + 2 + 96)
+#define ZT_MEMBERSHIP_CREDENTIAL_MARSHAL_SIZE_MAX                                                                      \
+    (1 + 2 + (3 * 3 * 8) + (ZT_MEMBERSHIP_CREDENTIAL_MAX_ADDITIONAL_QUALIFIERS * 3 * 8) + 144 + 5 + 2 + 96)
 
 namespace ZeroTier {
 
@@ -96,135 +97,166 @@ class Context;
  * order with the fingerprint hash being packed into tuple IDs 3-8 and this buffer is
  * then signed.
  */
-class MembershipCredential : public Credential
-{
-	friend class Credential;
+class MembershipCredential : public Credential {
+    friend class Credential;
 
-public:
-	static constexpr ZT_CredentialType credentialType() noexcept
-	{ return ZT_CREDENTIAL_TYPE_COM; }
+  public:
+    static constexpr ZT_CredentialType credentialType() noexcept
+    {
+        return ZT_CREDENTIAL_TYPE_COM;
+    }
 
-	/**
-	 * Create an empty certificate of membership
-	 */
-	ZT_INLINE MembershipCredential() noexcept
-	{ memoryZero(this); }
+    /**
+     * Create an empty certificate of membership
+     */
+    ZT_INLINE MembershipCredential() noexcept
+    {
+        memoryZero(this);
+    }
 
-	/**
-	 * Create from required fields common to all networks
-	 *
-	 * @param timestamp Timestamp of certificate
-	 * @param timestampMaxDelta Maximum variation between timestamps on this net
-	 * @param nwid Network ID
-	 * @param issuedTo Certificate recipient
-	 */
-	MembershipCredential(int64_t timestamp, int64_t timestampMaxDelta, uint64_t nwid, const Identity &issuedTo) noexcept;
+    /**
+     * Create from required fields common to all networks
+     *
+     * @param timestamp Timestamp of certificate
+     * @param timestampMaxDelta Maximum variation between timestamps on this net
+     * @param nwid Network ID
+     * @param issuedTo Certificate recipient
+     */
+    MembershipCredential(int64_t timestamp, int64_t timestampMaxDelta, uint64_t nwid, const Identity& issuedTo)
+        noexcept;
 
-	/**
-	 * @return True if there's something here
-	 */
-	ZT_INLINE operator bool() const noexcept
-	{ return (m_networkId != 0); }
+    /**
+     * @return True if there's something here
+     */
+    ZT_INLINE operator bool() const noexcept
+    {
+        return (m_networkId != 0);
+    }
 
-	/**
-	 * @return Credential ID, always 0 for COMs
-	 */
-	ZT_INLINE uint32_t id() const noexcept
-	{ return 0; }
+    /**
+     * @return Credential ID, always 0 for COMs
+     */
+    ZT_INLINE uint32_t id() const noexcept
+    {
+        return 0;
+    }
 
-	/**
-	 * @return Timestamp for this cert and maximum delta for timestamp
-	 */
-	ZT_INLINE int64_t timestamp() const noexcept
-	{ return m_timestamp; }
+    /**
+     * @return Timestamp for this cert and maximum delta for timestamp
+     */
+    ZT_INLINE int64_t timestamp() const noexcept
+    {
+        return m_timestamp;
+    }
 
-	ZT_INLINE int64_t revision() const noexcept
-	{ return m_timestamp; }
+    ZT_INLINE int64_t revision() const noexcept
+    {
+        return m_timestamp;
+    }
 
-	/**
-	 * @return Maximum allowed difference between timestamps
-	 */
-	ZT_INLINE int64_t timestampMaxDelta() const noexcept
-	{ return m_timestampMaxDelta; }
+    /**
+     * @return Maximum allowed difference between timestamps
+     */
+    ZT_INLINE int64_t timestampMaxDelta() const noexcept
+    {
+        return m_timestampMaxDelta;
+    }
 
-	/**
-	 * @return Fingerprint of identity to which this cert was issued
-	 */
-	ZT_INLINE const Fingerprint &issuedTo() const noexcept
-	{ return m_issuedTo; }
+    /**
+     * @return Fingerprint of identity to which this cert was issued
+     */
+    ZT_INLINE const Fingerprint& issuedTo() const noexcept
+    {
+        return m_issuedTo;
+    }
 
-	/**
-	 * @return Network ID for which this cert was issued
-	 */
-	ZT_INLINE uint64_t networkId() const noexcept
-	{ return m_networkId; }
+    /**
+     * @return Network ID for which this cert was issued
+     */
+    ZT_INLINE uint64_t networkId() const noexcept
+    {
+        return m_networkId;
+    }
 
-	/**
-	 * Compare two certificates for parameter agreement
-	 *
-	 * This compares this certificate with the other and returns true if all
-	 * parameters in this cert are present in the other and if they agree to
-	 * within this cert's max delta value for each given parameter.
-	 *
-	 * Tuples present in other but not in this cert are ignored, but any
-	 * tuples present in this cert but not in other result in 'false'.
-	 *
-	 * @param other Cert to compare with
-	 * @return True if certs agree and 'other' may be communicated with
-	 */
-	bool agreesWith(const MembershipCredential &other) const noexcept;
+    /**
+     * Compare two certificates for parameter agreement
+     *
+     * This compares this certificate with the other and returns true if all
+     * parameters in this cert are present in the other and if they agree to
+     * within this cert's max delta value for each given parameter.
+     *
+     * Tuples present in other but not in this cert are ignored, but any
+     * tuples present in this cert but not in other result in 'false'.
+     *
+     * @param other Cert to compare with
+     * @return True if certs agree and 'other' may be communicated with
+     */
+    bool agreesWith(const MembershipCredential& other) const noexcept;
 
-	/**
-	 * Sign this certificate
-	 *
-	 * @param with Identity to sign with, must include private key
-	 * @return True if signature was successful
-	 */
-	bool sign(const Identity &with) noexcept;
+    /**
+     * Sign this certificate
+     *
+     * @param with Identity to sign with, must include private key
+     * @return True if signature was successful
+     */
+    bool sign(const Identity& with) noexcept;
 
-	/**
-	 * Verify this COM and its signature
-	 *
-	 * @param RR Runtime environment for looking up peers
-	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
-	 */
-	ZT_INLINE Credential::VerifyResult verify(const Context &ctx, const CallContext &cc) const
-	{ return s_verify(ctx, cc, *this); }
+    /**
+     * Verify this COM and its signature
+     *
+     * @param RR Runtime environment for looking up peers
+     * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
+     */
+    ZT_INLINE Credential::VerifyResult verify(const Context& ctx, const CallContext& cc) const
+    {
+        return s_verify(ctx, cc, *this);
+    }
 
-	static constexpr int marshalSizeMax() noexcept
-	{ return ZT_MEMBERSHIP_CREDENTIAL_MARSHAL_SIZE_MAX; }
+    static constexpr int marshalSizeMax() noexcept
+    {
+        return ZT_MEMBERSHIP_CREDENTIAL_MARSHAL_SIZE_MAX;
+    }
 
-	int marshal(uint8_t data[ZT_MEMBERSHIP_CREDENTIAL_MARSHAL_SIZE_MAX], bool v2 = false) const noexcept;
-	int unmarshal(const uint8_t *data, int len) noexcept;
+    int marshal(uint8_t data[ZT_MEMBERSHIP_CREDENTIAL_MARSHAL_SIZE_MAX], bool v2 = false) const noexcept;
+    int unmarshal(const uint8_t* data, int len) noexcept;
 
-private:
-	unsigned int m_fillSigningBuf(uint64_t *buf) const noexcept;
+  private:
+    unsigned int m_fillSigningBuf(uint64_t* buf) const noexcept;
 
-	struct p_Qualifier
-	{
-		ZT_INLINE p_Qualifier() noexcept: id(0), value(0), delta(0)
-		{}
+    struct p_Qualifier {
+        ZT_INLINE p_Qualifier() noexcept
+            : id(0)
+            , value(0)
+            , delta(0)
+        {
+        }
 
-		ZT_INLINE p_Qualifier(const uint64_t id_, const uint64_t value_, const uint64_t delta_) noexcept: id(id_), value(value_), delta(delta_)
-		{}
+        ZT_INLINE p_Qualifier(const uint64_t id_, const uint64_t value_, const uint64_t delta_) noexcept
+            : id(id_)
+            , value(value_)
+            , delta(delta_)
+        {
+        }
 
-		uint64_t id;
-		uint64_t value;
-		uint64_t delta;
-		ZT_INLINE bool operator<(const p_Qualifier &q) const noexcept
-		{ return (id < q.id); } // sort order
-	};
+        uint64_t id;
+        uint64_t value;
+        uint64_t delta;
+        ZT_INLINE bool operator<(const p_Qualifier& q) const noexcept
+        {
+            return (id < q.id);
+        }   // sort order
+    };
 
-	FCV< p_Qualifier, ZT_MEMBERSHIP_CREDENTIAL_MAX_ADDITIONAL_QUALIFIERS > m_additionalQualifiers;
-	int64_t m_timestamp;
-	int64_t m_timestampMaxDelta;
-	uint64_t m_networkId;
-	Fingerprint m_issuedTo;
-	Address m_signedBy;
-	unsigned int m_signatureLength;
-	uint8_t m_signature[ZT_SIGNATURE_BUFFER_SIZE];
+    FCV<p_Qualifier, ZT_MEMBERSHIP_CREDENTIAL_MAX_ADDITIONAL_QUALIFIERS> m_additionalQualifiers;
+    int64_t m_timestamp;
+    int64_t m_timestampMaxDelta;
+    uint64_t m_networkId;
+    Fingerprint m_issuedTo;
+    Address m_signedBy;
+    unsigned int m_signatureLength;
+    uint8_t m_signature[ZT_SIGNATURE_BUFFER_SIZE];
 };
 
-} // namespace ZeroTier
+}   // namespace ZeroTier
 
 #endif

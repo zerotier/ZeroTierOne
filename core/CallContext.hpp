@@ -25,40 +25,37 @@ namespace ZeroTier {
  * graph around from function to function as needed. It's cleaner and probably
  * faster than passing clock, ticks, and tPtr around everywhere.
  */
-class CallContext
-{
-public:
-	ZT_INLINE CallContext(const int64_t c, const int64_t t, void *const p) :
-		clock(c),
-		ticks(t),
-		tPtr(p)
-	{}
+class CallContext {
+  public:
+    ZT_INLINE CallContext(const int64_t c, const int64_t t, void* const p) : clock(c), ticks(t), tPtr(p)
+    {
+    }
 
-	/**
-	 * Real world time in milliseconds since Unix epoch or -1 if unknown.
-	 *
-	 * This is used for things like checking certificate expiration. If it's
-	 * not known then the value may be inferred from peers/roots or some
-	 * features may be disabled.
-	 */
-	const int64_t clock;
+    /**
+     * Real world time in milliseconds since Unix epoch or -1 if unknown.
+     *
+     * This is used for things like checking certificate expiration. If it's
+     * not known then the value may be inferred from peers/roots or some
+     * features may be disabled.
+     */
+    const int64_t clock;
 
-	/**
-	 * Monotonic process or system clock in milliseconds since an arbitrary point.
-	 *
-	 * This is never -1 or undefined and is used for most timings.
-	 */
-	const int64_t ticks;
+    /**
+     * Monotonic process or system clock in milliseconds since an arbitrary point.
+     *
+     * This is never -1 or undefined and is used for most timings.
+     */
+    const int64_t ticks;
 
-	/**
-	 * An arbitrary pointer users pass into calls that follows the call chain
-	 *
-	 * By passing this back to callbacks state can be kept by the caller using
-	 * a mechanism that is faster (on most platforms) than thread-local storage.
-	 */
-	void *const tPtr;
+    /**
+     * An arbitrary pointer users pass into calls that follows the call chain
+     *
+     * By passing this back to callbacks state can be kept by the caller using
+     * a mechanism that is faster (on most platforms) than thread-local storage.
+     */
+    void* const tPtr;
 };
 
-} // namespace ZeroTier
+}   // namespace ZeroTier
 
 #endif

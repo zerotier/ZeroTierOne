@@ -47,7 +47,7 @@
 #include <stdio.h>
 
 #ifndef ZT_T_PRINTF
-#define ZT_T_PRINTF(fmt,...) printf((fmt),##__VA_ARGS__),fflush(stdout)
+#define ZT_T_PRINTF(fmt, ...) printf((fmt), ##__VA_ARGS__), fflush(stdout)
 #endif
 
 #ifdef __cplusplus
@@ -57,7 +57,7 @@ extern "C" {
 /**
  * Test platform, compiler behavior, utility functions, and core classes
  */
-const char *ZTT_general();
+const char* ZTT_general();
 
 /**
  * Test crypto using test vectors and simple scenarios
@@ -65,17 +65,17 @@ const char *ZTT_general();
  * This is not an absolutely exhaustive test, just a sanity check to make sure
  * crypto routines are basically working.
  */
-const char *ZTT_crypto();
+const char* ZTT_crypto();
 
 /**
  * Run benchmarks of cryptographic routines and common constructions
  */
-const char *ZTT_benchmarkCrypto();
+const char* ZTT_benchmarkCrypto();
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // ZT_ENABLE_TESTS
+#endif   // ZT_ENABLE_TESTS
 
 #endif

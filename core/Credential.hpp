@@ -14,9 +14,9 @@
 #ifndef ZT_CREDENTIAL_HPP
 #define ZT_CREDENTIAL_HPP
 
+#include "CallContext.hpp"
 #include "Constants.hpp"
 #include "TriviallyCopyable.hpp"
-#include "CallContext.hpp"
 
 namespace ZeroTier {
 
@@ -35,27 +35,21 @@ class Context;
  * All credential verification methods are implemented in Credential.cpp as they share a lot
  * of common code and logic and grouping them makes auditing easier.
  */
-class Credential : public TriviallyCopyable
-{
-public:
-	/**
-	 * Result of verify() operations
-	 */
-	enum VerifyResult
-	{
-		VERIFY_OK = 0,
-		VERIFY_BAD_SIGNATURE = 1,
-		VERIFY_NEED_IDENTITY = 2
-	};
+class Credential : public TriviallyCopyable {
+  public:
+    /**
+     * Result of verify() operations
+     */
+    enum VerifyResult { VERIFY_OK = 0, VERIFY_BAD_SIGNATURE = 1, VERIFY_NEED_IDENTITY = 2 };
 
-protected:
-	static VerifyResult s_verify(const Context &ctx, const CallContext &cc, const MembershipCredential &credential);
-	static VerifyResult s_verify(const Context &ctx, const CallContext &cc, const RevocationCredential &credential);
-	static VerifyResult s_verify(const Context &ctx, const CallContext &cc, const TagCredential &credential);
-	static VerifyResult s_verify(const Context &ctx, const CallContext &cc, const OwnershipCredential &credential);
-	static VerifyResult s_verify(const Context &ctx, const CallContext &cc, const CapabilityCredential &credential);
+  protected:
+    static VerifyResult s_verify(const Context& ctx, const CallContext& cc, const MembershipCredential& credential);
+    static VerifyResult s_verify(const Context& ctx, const CallContext& cc, const RevocationCredential& credential);
+    static VerifyResult s_verify(const Context& ctx, const CallContext& cc, const TagCredential& credential);
+    static VerifyResult s_verify(const Context& ctx, const CallContext& cc, const OwnershipCredential& credential);
+    static VerifyResult s_verify(const Context& ctx, const CallContext& cc, const CapabilityCredential& credential);
 };
 
-} // namespace ZeroTier
+}   // namespace ZeroTier
 
 #endif

@@ -34,59 +34,61 @@ namespace ZeroTier {
  * @tparam TUNIT Unit of time in milliseconds (default: 1000 for one second)
  * @tparam LSIZE Log size in units of time (default: 10 for 10s worth of data)
  */
-template<int64_t TUNIT = 1000, unsigned long LSIZE = 10>
-class Meter
-{
-public:
-	/**
-	 * Create and initialize a new meter
-	 *
-	 * @param now Start time
-	 */
-	ZT_INLINE Meter() noexcept
-	{}
+template <int64_t TUNIT = 1000, unsigned long LSIZE = 10> class Meter {
+  public:
+    /**
+     * Create and initialize a new meter
+     *
+     * @param now Start time
+     */
+    ZT_INLINE Meter() noexcept
+    {
+    }
 
-	/**
-	 * Add a measurement
-	 *
-	 * @param ts Timestamp for measurement
-	 * @param count Count of items (usually bytes)
-	 */
-	ZT_INLINE void log(const int64_t ts, const uint64_t count) noexcept
-	{
-		// We log by choosing a log bucket based on the current time in units modulo
-		// the log size and then if it's a new bucket setting it or otherwise adding
-		// to it.
-		const unsigned long bucket = ((unsigned long)(ts / TUNIT)) % LSIZE;
-		if (unlikely(m_bucket.exchange(bucket, std::memory_order_relaxed) != bucket)) {
-			m_totalExclCounts.fetch_add(m_counts[bucket].exchange(count, std::memory_order_relaxed), std::memory_order_relaxed);
-		} else {
-			m_counts[bucket].fetch_add(count, std::memory_order_relaxed);
-		}
-	}
+    /**
+     * Add a measurement
+     *
+     * @param ts Timestamp for measurement
+     * @param count Count of items (usually bytes)
+     */
+    ZT_INLINE void log(const int64_t ts, const uint64_t count) noexcept
+    {
+        // We log by choosing a log bucket based on the current time in units modulo
+        // the log size and then if it's a new bucket setting it or otherwise adding
+        // to it.
+        const unsigned long bucket = ((unsigned long)(ts / TUNIT)) % LSIZE;
+        if (unlikely(m_bucket.exchange(bucket, std::memory_order_relaxed) != bucket)) {
+            m_totalExclCounts.fetch_add(
+                m_counts[bucket].exchange(count, std::memory_order_relaxed),
+                std::memory_order_relaxed);
+        }
+        else {
+            m_counts[bucket].fetch_add(count, std::memory_order_relaxed);
+        }
+    }
 
-	/**
-	 * Get rate per TUNIT time
-	 *
-	 * @param now Current time
-	 * @param rate Result parameter: rate in count/TUNIT
-	 * @param total Total count for life of object
-	 */
-	ZT_INLINE void rate(double &rate, uint64_t &total) const noexcept
-	{
-		total = 0;
-		for (unsigned long i = 0;i < LSIZE;++i)
-			total += m_counts[i].load(std::memory_order_relaxed);
-		rate = (double) total / (double) LSIZE;
-		total += m_totalExclCounts.load(std::memory_order_relaxed);
-	}
+    /**
+     * Get rate per TUNIT time
+     *
+     * @param now Current time
+     * @param rate Result parameter: rate in count/TUNIT
+     * @param total Total count for life of object
+     */
+    ZT_INLINE void rate(double& rate, uint64_t& total) const noexcept
+    {
+        total = 0;
+        for (unsigned long i = 0; i < LSIZE; ++i)
+            total += m_counts[i].load(std::memory_order_relaxed);
+        rate = (double)total / (double)LSIZE;
+        total += m_totalExclCounts.load(std::memory_order_relaxed);
+    }
 
-private:
-	std::atomic<uint64_t> m_counts[LSIZE];
-	std::atomic<uint64_t> m_totalExclCounts;
-	std::atomic<unsigned long> m_bucket;
+  private:
+    std::atomic<uint64_t> m_counts[LSIZE];
+    std::atomic<uint64_t> m_totalExclCounts;
+    std::atomic<unsigned long> m_bucket;
 };
 
-} // namespace ZeroTier
+}   // namespace ZeroTier
 
 #endif

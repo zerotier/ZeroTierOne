@@ -20,8 +20,8 @@
 #define ZT_CORE 1
 
 #include "OS.hpp"
-#include "zerotier.h"
 #include "version.h"
+#include "zerotier.h"
 
 /**
  * Length of a ZeroTier address in bytes
@@ -190,7 +190,8 @@
 #define ZT_PEER_WHOIS_RATE_LIMIT 100
 
 /**
- * General rate limit for other kinds of rate-limited packets (HELLO, credential request, etc.) both inbound and outbound
+ * General rate limit for other kinds of rate-limited packets (HELLO, credential request, etc.) both inbound and
+ * outbound
  */
 #define ZT_PEER_GENERAL_RATE_LIMIT 500
 
@@ -209,7 +210,7 @@
 
 /* Ethernet frame types that might be relevant to us */
 #define ZT_ETHERTYPE_IPV4 0x0800
-#define ZT_ETHERTYPE_ARP 0x0806
+#define ZT_ETHERTYPE_ARP  0x0806
 #define ZT_ETHERTYPE_IPV6 0x86dd
 
 #endif

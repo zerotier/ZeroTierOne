@@ -14,23 +14,23 @@
 #ifndef ZT_NETWORKCONFIG_HPP
 #define ZT_NETWORKCONFIG_HPP
 
-#include "Constants.hpp"
-#include "InetAddress.hpp"
-#include "MulticastGroup.hpp"
 #include "Address.hpp"
-#include "MembershipCredential.hpp"
-#include "OwnershipCredential.hpp"
 #include "CapabilityCredential.hpp"
-#include "TagCredential.hpp"
+#include "Constants.hpp"
+#include "Containers.hpp"
 #include "Dictionary.hpp"
 #include "Identity.hpp"
-#include "Utils.hpp"
+#include "InetAddress.hpp"
+#include "MembershipCredential.hpp"
+#include "MulticastGroup.hpp"
+#include "OwnershipCredential.hpp"
+#include "TagCredential.hpp"
 #include "Trace.hpp"
 #include "TriviallyCopyable.hpp"
-#include "Containers.hpp"
+#include "Utils.hpp"
 
-#include <stdexcept>
 #include <algorithm>
+#include <stdexcept>
 
 namespace ZeroTier {
 
@@ -144,239 +144,255 @@ namespace ZeroTier {
 /**
  * Network configuration received from network controller nodes
  */
-struct NetworkConfig : TriviallyCopyable
-{
-	ZT_INLINE NetworkConfig() noexcept
-	{ memoryZero(this); } // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+struct NetworkConfig : TriviallyCopyable {
+    ZT_INLINE NetworkConfig() noexcept
+    {
+        memoryZero(this);
+    }   // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 
-	/**
-	 * Write this network config to a dictionary for transport
-	 *
-	 * @param d Dictionary
-	 * @return True if dictionary was successfully created, false if e.g. overflow
-	 */
-	bool toDictionary(Dictionary &d) const;
+    /**
+     * Write this network config to a dictionary for transport
+     *
+     * @param d Dictionary
+     * @return True if dictionary was successfully created, false if e.g. overflow
+     */
+    bool toDictionary(Dictionary& d) const;
 
-	/**
-	 * Read this network config from a dictionary
-	 *
-	 * @param d Dictionary (non-const since it might be modified during parse, should not be used after call)
-	 * @return True if dictionary was valid and network config successfully initialized
-	 */
-	bool fromDictionary(const Dictionary &d);
+    /**
+     * Read this network config from a dictionary
+     *
+     * @param d Dictionary (non-const since it might be modified during parse, should not be used after call)
+     * @return True if dictionary was valid and network config successfully initialized
+     */
+    bool fromDictionary(const Dictionary& d);
 
-	/**
-	 * @return True if broadcast (ff:ff:ff:ff:ff:ff) address should work on this network
-	 */
-	ZT_INLINE bool enableBroadcast() const noexcept
-	{ return ((this->flags & ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST) != 0); }
+    /**
+     * @return True if broadcast (ff:ff:ff:ff:ff:ff) address should work on this network
+     */
+    ZT_INLINE bool enableBroadcast() const noexcept
+    {
+        return ((this->flags & ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST) != 0);
+    }
 
-	/**
-	 * @return True if IPv6 NDP emulation should be allowed for certain "magic" IPv6 address patterns
-	 */
-	ZT_INLINE bool ndpEmulation() const noexcept
-	{ return ((this->flags & ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION) != 0); }
+    /**
+     * @return True if IPv6 NDP emulation should be allowed for certain "magic" IPv6 address patterns
+     */
+    ZT_INLINE bool ndpEmulation() const noexcept
+    {
+        return ((this->flags & ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION) != 0);
+    }
 
-	/**
-	 * @return Network type is public (no access control)
-	 */
-	ZT_INLINE bool isPublic() const noexcept
-	{ return (this->type == ZT_NETWORK_TYPE_PUBLIC); }
+    /**
+     * @return Network type is public (no access control)
+     */
+    ZT_INLINE bool isPublic() const noexcept
+    {
+        return (this->type == ZT_NETWORK_TYPE_PUBLIC);
+    }
 
-	/**
-	 * @return Network type is private (certificate access control)
-	 */
-	ZT_INLINE bool isPrivate() const noexcept
-	{ return (this->type == ZT_NETWORK_TYPE_PRIVATE); }
+    /**
+     * @return Network type is private (certificate access control)
+     */
+    ZT_INLINE bool isPrivate() const noexcept
+    {
+        return (this->type == ZT_NETWORK_TYPE_PRIVATE);
+    }
 
-	/**
-	 * @param fromPeer Peer attempting to bridge other Ethernet peers onto network
-	 * @return True if this network allows bridging
-	 */
-	ZT_INLINE bool permitsBridging(const Address &fromPeer) const noexcept
-	{
-		for (unsigned int i = 0;i < specialistCount;++i) {
-			if ((fromPeer.toInt() == (specialists[i] & ZT_ADDRESS_MASK)) && ((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE) != 0))
-				return true;
-		}
-		return false;
-	}
+    /**
+     * @param fromPeer Peer attempting to bridge other Ethernet peers onto network
+     * @return True if this network allows bridging
+     */
+    ZT_INLINE bool permitsBridging(const Address& fromPeer) const noexcept
+    {
+        for (unsigned int i = 0; i < specialistCount; ++i) {
+            if ((fromPeer.toInt() == (specialists[i] & ZT_ADDRESS_MASK))
+                && ((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE) != 0))
+                return true;
+        }
+        return false;
+    }
 
-	ZT_INLINE operator bool() const noexcept
-	{ return (networkId != 0); } // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
-	ZT_INLINE bool operator==(const NetworkConfig &nc) const noexcept
-	{ return (memcmp(this, &nc, sizeof(NetworkConfig)) == 0); }
+    ZT_INLINE operator bool() const noexcept
+    {
+        return (networkId != 0);
+    }   // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
+    ZT_INLINE bool operator==(const NetworkConfig& nc) const noexcept
+    {
+        return (memcmp(this, &nc, sizeof(NetworkConfig)) == 0);
+    }
 
-	ZT_INLINE bool operator!=(const NetworkConfig &nc) const noexcept
-	{ return (!(*this == nc)); }
+    ZT_INLINE bool operator!=(const NetworkConfig& nc) const noexcept
+    {
+        return (! (*this == nc));
+    }
 
-	/**
-	 * Add a specialist or mask flags if already present
-	 *
-	 * This masks the existing flags if the specialist is already here or adds
-	 * it otherwise.
-	 *
-	 * @param a Address of specialist
-	 * @param f Flags (OR of specialist role/type flags)
-	 * @return True if successfully masked or added
-	 */
-	bool addSpecialist(const Address &a, uint64_t f) noexcept;
+    /**
+     * Add a specialist or mask flags if already present
+     *
+     * This masks the existing flags if the specialist is already here or adds
+     * it otherwise.
+     *
+     * @param a Address of specialist
+     * @param f Flags (OR of specialist role/type flags)
+     * @return True if successfully masked or added
+     */
+    bool addSpecialist(const Address& a, uint64_t f) noexcept;
 
-	ZT_INLINE const CapabilityCredential *capability(const uint32_t id) const
-	{
-		for (unsigned int i = 0;i < capabilityCount;++i) {
-			if (capabilities[i].id() == id)
-				return &(capabilities[i]);
-		}
-		return nullptr;
-	}
+    ZT_INLINE const CapabilityCredential* capability(const uint32_t id) const
+    {
+        for (unsigned int i = 0; i < capabilityCount; ++i) {
+            if (capabilities[i].id() == id)
+                return &(capabilities[i]);
+        }
+        return nullptr;
+    }
 
-	ZT_INLINE const TagCredential *tag(const uint32_t id) const
-	{
-		for (unsigned int i = 0;i < tagCount;++i) {
-			if (tags[i].id() == id)
-				return &(tags[i]);
-		}
-		return nullptr;
-	}
+    ZT_INLINE const TagCredential* tag(const uint32_t id) const
+    {
+        for (unsigned int i = 0; i < tagCount; ++i) {
+            if (tags[i].id() == id)
+                return &(tags[i]);
+        }
+        return nullptr;
+    }
 
-	/**
-	 * Network ID that this configuration applies to
-	 */
-	uint64_t networkId;
+    /**
+     * Network ID that this configuration applies to
+     */
+    uint64_t networkId;
 
-	/**
-	 * Controller-side time of config generation/issue
-	 */
-	int64_t timestamp;
+    /**
+     * Controller-side time of config generation/issue
+     */
+    int64_t timestamp;
 
-	/**
-	 * Max difference between timestamp and tag/capability timestamp
-	 */
-	int64_t credentialTimeMaxDelta;
+    /**
+     * Max difference between timestamp and tag/capability timestamp
+     */
+    int64_t credentialTimeMaxDelta;
 
-	/**
-	 * Controller-side revision counter for this configuration
-	 */
-	uint64_t revision;
+    /**
+     * Controller-side revision counter for this configuration
+     */
+    uint64_t revision;
 
-	/**
-	 * Address of device to which this config is issued
-	 */
-	Address issuedTo;
+    /**
+     * Address of device to which this config is issued
+     */
+    Address issuedTo;
 
-	/**
-	 * Hash of identity public key(s) of node to whom this is issued
-	 *
-	 * If this field is all zero it is treated as undefined since old controllers
-	 * do not set it.
-	 */
-	uint8_t issuedToFingerprintHash[ZT_FINGERPRINT_HASH_SIZE];
+    /**
+     * Hash of identity public key(s) of node to whom this is issued
+     *
+     * If this field is all zero it is treated as undefined since old controllers
+     * do not set it.
+     */
+    uint8_t issuedToFingerprintHash[ZT_FINGERPRINT_HASH_SIZE];
 
-	/**
-	 * Flags (64-bit)
-	 */
-	uint64_t flags;
+    /**
+     * Flags (64-bit)
+     */
+    uint64_t flags;
 
-	/**
-	 * Network MTU
-	 */
-	unsigned int mtu;
+    /**
+     * Network MTU
+     */
+    unsigned int mtu;
 
-	/**
-	 * Maximum number of recipients per multicast (not including active bridges)
-	 */
-	unsigned int multicastLimit;
+    /**
+     * Maximum number of recipients per multicast (not including active bridges)
+     */
+    unsigned int multicastLimit;
 
-	/**
-	 * Number of specialists
-	 */
-	unsigned int specialistCount;
+    /**
+     * Number of specialists
+     */
+    unsigned int specialistCount;
 
-	/**
-	 * Number of routes
-	 */
-	unsigned int routeCount;
+    /**
+     * Number of routes
+     */
+    unsigned int routeCount;
 
-	/**
-	 * Number of ZT-managed static IP assignments
-	 */
-	unsigned int staticIpCount;
+    /**
+     * Number of ZT-managed static IP assignments
+     */
+    unsigned int staticIpCount;
 
-	/**
-	 * Number of rule table entries
-	 */
-	unsigned int ruleCount;
+    /**
+     * Number of rule table entries
+     */
+    unsigned int ruleCount;
 
-	/**
-	 * Number of capabilities
-	 */
-	unsigned int capabilityCount;
+    /**
+     * Number of capabilities
+     */
+    unsigned int capabilityCount;
 
-	/**
-	 * Number of tags
-	 */
-	unsigned int tagCount;
+    /**
+     * Number of tags
+     */
+    unsigned int tagCount;
 
-	/**
-	 * Number of certificates of ownership
-	 */
-	unsigned int certificateOfOwnershipCount;
+    /**
+     * Number of certificates of ownership
+     */
+    unsigned int certificateOfOwnershipCount;
 
-	/**
-	 * Specialist devices
-	 *
-	 * For each entry the least significant 40 bits are the device's ZeroTier
-	 * address and the most significant 24 bits are flags indicating its role.
-	 */
-	uint64_t specialists[ZT_MAX_NETWORK_SPECIALISTS];
+    /**
+     * Specialist devices
+     *
+     * For each entry the least significant 40 bits are the device's ZeroTier
+     * address and the most significant 24 bits are flags indicating its role.
+     */
+    uint64_t specialists[ZT_MAX_NETWORK_SPECIALISTS];
 
-	/**
-	 * Statically defined "pushed" routes (including default gateways)
-	 */
-	ZT_VirtualNetworkRoute routes[ZT_MAX_NETWORK_ROUTES];
+    /**
+     * Statically defined "pushed" routes (including default gateways)
+     */
+    ZT_VirtualNetworkRoute routes[ZT_MAX_NETWORK_ROUTES];
 
-	/**
-	 * Static IP assignments
-	 */
-	InetAddress staticIps[ZT_MAX_ZT_ASSIGNED_ADDRESSES];
+    /**
+     * Static IP assignments
+     */
+    InetAddress staticIps[ZT_MAX_ZT_ASSIGNED_ADDRESSES];
 
-	/**
-	 * Base network rules
-	 */
-	ZT_VirtualNetworkRule rules[ZT_MAX_NETWORK_RULES];
+    /**
+     * Base network rules
+     */
+    ZT_VirtualNetworkRule rules[ZT_MAX_NETWORK_RULES];
 
-	/**
-	 * Capabilities for this node on this network, in ascending order of capability ID
-	 */
-	CapabilityCredential capabilities[ZT_MAX_NETWORK_CAPABILITIES];
+    /**
+     * Capabilities for this node on this network, in ascending order of capability ID
+     */
+    CapabilityCredential capabilities[ZT_MAX_NETWORK_CAPABILITIES];
 
-	/**
-	 * Tags for this node on this network, in ascending order of tag ID
-	 */
-	TagCredential tags[ZT_MAX_NETWORK_TAGS];
+    /**
+     * Tags for this node on this network, in ascending order of tag ID
+     */
+    TagCredential tags[ZT_MAX_NETWORK_TAGS];
 
-	/**
-	 * Certificates of ownership for this network member
-	 */
-	OwnershipCredential certificatesOfOwnership[ZT_MAX_CERTIFICATES_OF_OWNERSHIP];
+    /**
+     * Certificates of ownership for this network member
+     */
+    OwnershipCredential certificatesOfOwnership[ZT_MAX_CERTIFICATES_OF_OWNERSHIP];
 
-	/**
-	 * Network type (currently just public or private)
-	 */
-	ZT_VirtualNetworkType type;
+    /**
+     * Network type (currently just public or private)
+     */
+    ZT_VirtualNetworkType type;
 
-	/**
-	 * Network short name or empty string if not defined
-	 */
-	char name[ZT_MAX_NETWORK_SHORT_NAME_LENGTH + 1];
+    /**
+     * Network short name or empty string if not defined
+     */
+    char name[ZT_MAX_NETWORK_SHORT_NAME_LENGTH + 1];
 
-	/**
-	 * Certificate of membership (for private networks)
-	 */
-	MembershipCredential com;
+    /**
+     * Certificate of membership (for private networks)
+     */
+    MembershipCredential com;
 };
 
-} // namespace ZeroTier
+}   // namespace ZeroTier
 
 #endif

@@ -7,7 +7,7 @@ Give it wire packets and it gives you Ethernet packets, and vice versa. The core
 
 Code in here follows these guidelines:
 
- - Keep it minimal, especially in terms of code footprint and memory use.
- - There should be no OS-dependent code here unless absolutely necessary (e.g. getSecureRandom).
- - If it's not part of the core virtual Ethernet switch it does not belong here.
- - Minimize the use of complex C++ features since at some point we might end up "minus-minus'ing" this code if doing so proves necessary to port to tiny embedded systems.
+- Keep it minimal, especially in terms of code footprint and memory use.
+- There should be no OS-dependent code here unless absolutely necessary (e.g. getSecureRandom).
+- If it's not part of the core virtual Ethernet switch it does not belong here.
+- Minimize the use of complex C++ features since at some point we might end up "minus-minus'ing" this code if doing so proves necessary to port to tiny embedded systems.
