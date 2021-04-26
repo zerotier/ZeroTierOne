@@ -15,6 +15,7 @@
 #define ZT_FCV_HPP
 
 #include "Constants.hpp"
+#include "Utils.hpp"
 
 #include <algorithm>
 #include <iterator>

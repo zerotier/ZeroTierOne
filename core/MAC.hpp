@@ -32,7 +32,8 @@ class MAC : public TriviallyCopyable {
     }
 
     ZT_INLINE
-    MAC(const uint8_t a, const uint8_t b, const uint8_t c, const uint8_t d, const uint8_t e, const uint8_t f) noexcept
+    MAC(const uint8_t a, const uint8_t b, const uint8_t c, const uint8_t d, const uint8_t e, const uint8_t f)
+    noexcept
         : m_mac(
               (((uint64_t)a) << 40U) | (((uint64_t)b) << 32U) | (((uint64_t)c) << 24U) | (((uint64_t)d) << 16U)
               | (((uint64_t)e) << 8U) | ((uint64_t)f))

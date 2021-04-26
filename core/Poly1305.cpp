@@ -6,12 +6,9 @@ Public domain.
 
 // Small modifications have been made for ZeroTier, but this code remains in the public domain.
 
-#include "Poly1305.hpp"
-
 #include "Constants.hpp"
+#include "Poly1305.hpp"
 #include "Utils.hpp"
-
-#include <cstring>
 
 #ifdef __WINDOWS__
 #pragma warning(disable : 4146)

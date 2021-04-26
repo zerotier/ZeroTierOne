@@ -17,17 +17,17 @@
 /**
  * Major version
  */
-#define ZEROTIER_VERSION_MAJOR @ZEROTIER_VERSION_MAJOR @
+#define ZEROTIER_VERSION_MAJOR @ZEROTIER_VERSION_MAJOR@
 
 /**
  * Minor version
  */
-#define ZEROTIER_VERSION_MINOR @ZEROTIER_VERSION_MINOR @
+#define ZEROTIER_VERSION_MINOR @ZEROTIER_VERSION_MINOR@
 
 /**
  * Revision
  */
-#define ZEROTIER_VERSION_REVISION @ZEROTIER_VERSION_REVISION @
+#define ZEROTIER_VERSION_REVISION @ZEROTIER_VERSION_REVISION@
 
 /**
  * Build version
@@ -36,6 +36,6 @@
  * to force a minor update without an actual version number change. It's
  * not part of the actual release version number.
  */
-#define ZEROTIER_VERSION_BUILD @ZEROTIER_VERSION_BUILD @
+#define ZEROTIER_VERSION_BUILD @ZEROTIER_VERSION_BUILD@
 
 #endif

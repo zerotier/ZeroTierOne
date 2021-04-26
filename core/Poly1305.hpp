@@ -14,6 +14,8 @@
 #ifndef ZT_POLY1305_HPP
 #define ZT_POLY1305_HPP
 
+#include "Constants.hpp"
+
 namespace ZeroTier {
 
 #define ZT_POLY1305_KEY_SIZE 32
