@@ -40,7 +40,6 @@ InetAddress::IpScope InetAddress::ipScope() const noexcept
 					return ZT_IP_SCOPE_PSEUDOPRIVATE;                                   // 6.0.0.0/8 (US Army)
 				case 0x0a:
 					return ZT_IP_SCOPE_PRIVATE;                                         // 10.0.0.0/8
-				case 0x0b: //return IP_SCOPE_PSEUDOPRIVATE;                           // 11.0.0.0/8 (US DoD)
 				case 0x15: //return IP_SCOPE_PSEUDOPRIVATE;                           // 21.0.0.0/8 (US DDN-RVN)
 				case 0x16: //return IP_SCOPE_PSEUDOPRIVATE;                           // 22.0.0.0/8 (US DISA)
 				case 0x19: //return IP_SCOPE_PSEUDOPRIVATE;                           // 25.0.0.0/8 (UK Ministry of Defense)
