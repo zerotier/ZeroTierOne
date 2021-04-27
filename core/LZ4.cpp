@@ -564,8 +564,7 @@ FORCE_INLINE int LZ4_compress_generic(
                 forwardH = LZ4_hashPosition(forwardIp, tableType);
                 LZ4_putPositionOnHash(ip, h, cctx->hashTable, tableType, base);
 
-            } while (((dictIssue == dictSmall) ? (match < lowRefLimit) : 0) || ((tableType == byU16) ? 0 : (match + MAX_DISTANCE < ip))
-                     || (LZ4_read32(match + refDelta) != LZ4_read32(ip)));
+            } while (((dictIssue == dictSmall) ? (match < lowRefLimit) : 0) || ((tableType == byU16) ? 0 : (match + MAX_DISTANCE < ip)) || (LZ4_read32(match + refDelta) != LZ4_read32(ip)));
         }
 
         /* Catch up */
@@ -713,17 +712,7 @@ ZT_INLINE int LZ4_compress_fast_extState(void* state, const char* source, char* 
         if (inputSize < LZ4_64Klimit)
             return LZ4_compress_generic(ctx, source, dest, inputSize, maxOutputSize, limitedOutput, byU16, noDict, noDictIssue, acceleration);
         else
-            return LZ4_compress_generic(
-                ctx,
-                source,
-                dest,
-                inputSize,
-                maxOutputSize,
-                limitedOutput,
-                (sizeof(void*) == 8) ? byU32 : byPtr,
-                noDict,
-                noDictIssue,
-                acceleration);
+            return LZ4_compress_generic(ctx, source, dest, inputSize, maxOutputSize, limitedOutput, (sizeof(void*) == 8) ? byU32 : byPtr, noDict, noDictIssue, acceleration);
     }
 }
 
@@ -794,8 +783,7 @@ FORCE_INLINE int LZ4_decompress_generic(
 
         /* copy literals */
         cpy = op + length;
-        if (((endOnInput) && ((cpy > (partialDecoding ? oexit : oend - MFLIMIT)) || (ip + length > iend - (2 + 1 + LASTLITERALS))))
-            || ((! endOnInput) && (cpy > oend - WILDCOPYLENGTH))) {
+        if (((endOnInput) && ((cpy > (partialDecoding ? oexit : oend - MFLIMIT)) || (ip + length > iend - (2 + 1 + LASTLITERALS)))) || ((! endOnInput) && (cpy > oend - WILDCOPYLENGTH))) {
             if (partialDecoding) {
                 if (cpy > oend)
                     goto _output_error; /* Error : write attempt beyond end of output buffer */

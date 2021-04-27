@@ -35,9 +35,7 @@
  */
 #define ZT_LOCATOR_MAX_ENDPOINTS 16
 
-#define ZT_LOCATOR_MARSHAL_SIZE_MAX                                                                                                                            \
-    (8 + ZT_ADDRESS_LENGTH + 2 + (ZT_LOCATOR_MAX_ENDPOINTS * (ZT_ENDPOINT_MARSHAL_SIZE_MAX + ZT_LOCATOR_MAX_ENDPOINT_ATTRIBUTES_SIZE)) + 2 + 2                 \
-     + ZT_SIGNATURE_BUFFER_SIZE)
+#define ZT_LOCATOR_MARSHAL_SIZE_MAX (8 + ZT_ADDRESS_LENGTH + 2 + (ZT_LOCATOR_MAX_ENDPOINTS * (ZT_ENDPOINT_MARSHAL_SIZE_MAX + ZT_LOCATOR_MAX_ENDPOINT_ATTRIBUTES_SIZE)) + 2 + 2 + ZT_SIGNATURE_BUFFER_SIZE)
 
 /**
  * Maximum size of a string format Locator (this is way larger than needed)

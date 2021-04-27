@@ -142,16 +142,11 @@ class Member {
         return false;
     }
 
-    AddCredentialResult
-    addCredential(const Context& ctx, const CallContext& cc, const Identity& sourcePeerIdentity, const NetworkConfig& nconf, const MembershipCredential& com);
-    AddCredentialResult
-    addCredential(const Context& ctx, const CallContext& cc, const Identity& sourcePeerIdentity, const NetworkConfig& nconf, const TagCredential& tag);
-    AddCredentialResult
-    addCredential(const Context& ctx, const CallContext& cc, const Identity& sourcePeerIdentity, const NetworkConfig& nconf, const CapabilityCredential& cap);
-    AddCredentialResult
-    addCredential(const Context& ctx, const CallContext& cc, const Identity& sourcePeerIdentity, const NetworkConfig& nconf, const OwnershipCredential& coo);
-    AddCredentialResult
-    addCredential(const Context& ctx, const CallContext& cc, const Identity& sourcePeerIdentity, const NetworkConfig& nconf, const RevocationCredential& rev);
+    AddCredentialResult addCredential(const Context& ctx, const CallContext& cc, const Identity& sourcePeerIdentity, const NetworkConfig& nconf, const MembershipCredential& com);
+    AddCredentialResult addCredential(const Context& ctx, const CallContext& cc, const Identity& sourcePeerIdentity, const NetworkConfig& nconf, const TagCredential& tag);
+    AddCredentialResult addCredential(const Context& ctx, const CallContext& cc, const Identity& sourcePeerIdentity, const NetworkConfig& nconf, const CapabilityCredential& cap);
+    AddCredentialResult addCredential(const Context& ctx, const CallContext& cc, const Identity& sourcePeerIdentity, const NetworkConfig& nconf, const OwnershipCredential& coo);
+    AddCredentialResult addCredential(const Context& ctx, const CallContext& cc, const Identity& sourcePeerIdentity, const NetworkConfig& nconf, const RevocationCredential& rev);
 
   private:
     // This returns true if a resource is an IPv6 NDP-emulated address. These embed the ZT

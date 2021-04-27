@@ -28,9 +28,7 @@
 // Maximum size of a thing's value field in bytes
 #define ZT_CERTIFICATEOFOWNERSHIP_MAX_THING_VALUE_SIZE 16
 
-#define ZT_CERTIFICATEOFOWNERSHIP_MARSHAL_SIZE_MAX                                                                                                             \
-    (8 + 8 + 8 + 4 + 2 + ((1 + ZT_CERTIFICATEOFOWNERSHIP_MAX_THING_VALUE_SIZE) * ZT_CERTIFICATEOFOWNERSHIP_MAX_THINGS) + 5 + 5 + 1 + 2                         \
-     + ZT_SIGNATURE_BUFFER_SIZE + 2)
+#define ZT_CERTIFICATEOFOWNERSHIP_MARSHAL_SIZE_MAX (8 + 8 + 8 + 4 + 2 + ((1 + ZT_CERTIFICATEOFOWNERSHIP_MAX_THING_VALUE_SIZE) * ZT_CERTIFICATEOFOWNERSHIP_MAX_THINGS) + 5 + 5 + 1 + 2 + ZT_SIGNATURE_BUFFER_SIZE + 2)
 
 namespace ZeroTier {
 

@@ -176,12 +176,7 @@ class Certificate : public ZT_Certificate {
      * @param privateKeySize Result parameter: set to size of private key
      * @return True on success
      */
-    static bool newKeyPair(
-        const ZT_CertificatePublicKeyAlgorithm type,
-        uint8_t publicKey[ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE],
-        int* const publicKeySize,
-        uint8_t privateKey[ZT_CERTIFICATE_MAX_PRIVATE_KEY_SIZE],
-        int* const privateKeySize);
+    static bool newKeyPair(const ZT_CertificatePublicKeyAlgorithm type, uint8_t publicKey[ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE], int* const publicKeySize, uint8_t privateKey[ZT_CERTIFICATE_MAX_PRIVATE_KEY_SIZE], int* const privateKeySize);
 
     /**
      * Create a CSR that encodes the subject of this certificate
@@ -193,12 +188,7 @@ class Certificate : public ZT_Certificate {
      * @param uniqueIdPrivateSize Size of unique ID private key
      * @return Encoded subject (without any unique ID fields) or empty vector on error
      */
-    static Vector<uint8_t> createCSR(
-        const ZT_Certificate_Subject& s,
-        const void* certificatePublicKey,
-        unsigned int certificatePublicKeySize,
-        const void* uniqueIdPrivate,
-        unsigned int uniqueIdPrivateSize);
+    static Vector<uint8_t> createCSR(const ZT_Certificate_Subject& s, const void* certificatePublicKey, unsigned int certificatePublicKeySize, const void* uniqueIdPrivate, unsigned int uniqueIdPrivateSize);
 
     ZT_INLINE unsigned long hashCode() const noexcept
     {

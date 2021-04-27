@@ -159,9 +159,7 @@ struct H384 {
 
     ZT_INLINE bool operator==(const H384& b) const noexcept
     {
-        return (
-            (data[0] == b.data[0]) && (data[1] == b.data[1]) && (data[2] == b.data[2]) && (data[3] == b.data[3]) && (data[4] == b.data[4])
-            && (data[5] == b.data[5]));
+        return ((data[0] == b.data[0]) && (data[1] == b.data[1]) && (data[2] == b.data[2]) && (data[3] == b.data[3]) && (data[4] == b.data[4]) && (data[5] == b.data[5]));
     }
 
     ZT_INLINE bool operator!=(const H384& b) const noexcept

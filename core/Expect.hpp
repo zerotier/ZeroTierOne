@@ -66,9 +66,7 @@ class Expect {
      */
     ZT_INLINE bool expecting(const uint64_t inRePacketId, const int64_t now) noexcept
     {
-        return (
-            ((now / ZT_EXPECT_TTL) - (int64_t)m_packetIdSent[(unsigned long)Utils::hash64(inRePacketId ^ Utils::s_mapNonce) % ZT_EXPECT_BUCKETS].exchange(0))
-            <= 1);
+        return (((now / ZT_EXPECT_TTL) - (int64_t)m_packetIdSent[(unsigned long)Utils::hash64(inRePacketId ^ Utils::s_mapNonce) % ZT_EXPECT_BUCKETS].exchange(0)) <= 1);
     }
 
   private:

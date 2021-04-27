@@ -17,9 +17,7 @@
 /* Uncomment this to force a whole lot of debug output. */
 #define ZT_DEBUG_SPEW
 
-#if ! defined(__GNUC__)                                                                                                                                        \
-    && (defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1) || defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2) || defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4)              \
-        || defined(__INTEL_COMPILER) || defined(__clang__))
+#if ! defined(__GNUC__) && (defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1) || defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2) || defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4) || defined(__INTEL_COMPILER) || defined(__clang__))
 #define __GNUC__ 3
 #endif
 
@@ -78,8 +76,8 @@
 #include <immintrin.h>
 #include <xmmintrin.h>
 #endif
-#if defined(ZT_ARCH_X64) || defined(i386) || defined(__i386) || defined(__i386__) || defined(__i486__) || defined(__i586__) || defined(__i686__)               \
-    || defined(_M_IX86) || defined(__X86__) || defined(_X86_) || defined(__I86__) || defined(__INTEL__) || defined(__386)
+#if defined(ZT_ARCH_X64) || defined(i386) || defined(__i386) || defined(__i386__) || defined(__i486__) || defined(__i586__) || defined(__i686__) || defined(_M_IX86) || defined(__X86__) || defined(_X86_) || defined(__I86__)                 \
+    || defined(__INTEL__) || defined(__386)
 #define ZT_ARCH_X86 1
 #endif
 

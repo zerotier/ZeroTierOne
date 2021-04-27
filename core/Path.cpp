@@ -20,17 +20,7 @@ namespace ZeroTier {
 
 bool Path::send(const Context& ctx, const CallContext& cc, const void* const data, const unsigned int len) noexcept
 {
-    if (likely(
-            ctx.cb.wirePacketSendFunction(
-                reinterpret_cast<ZT_Node*>(ctx.node),
-                ctx.uPtr,
-                cc.tPtr,
-                m_localSocket,
-                reinterpret_cast<const ZT_InetAddress*>(&m_addr),
-                data,
-                len,
-                0)
-            == 0)) {
+    if (likely(ctx.cb.wirePacketSendFunction(reinterpret_cast<ZT_Node*>(ctx.node), ctx.uPtr, cc.tPtr, m_localSocket, reinterpret_cast<const ZT_InetAddress*>(&m_addr), data, len, 0) == 0)) {
         m_lastOut = cc.ticks;
         m_outMeter.log(cc.ticks, len);
         return true;

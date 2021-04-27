@@ -135,24 +135,9 @@ class Node : public NetworkController::Sender {
     }
 
     // Implementation of NetworkController::Sender interface
-    virtual void ncSendConfig(
-        void* tPtr,
-        int64_t clock,
-        int64_t ticks,
-        uint64_t nwid,
-        uint64_t requestPacketId,
-        const Address& destination,
-        const NetworkConfig& nc,
-        bool sendLegacyFormatConfig);
+    virtual void ncSendConfig(void* tPtr, int64_t clock, int64_t ticks, uint64_t nwid, uint64_t requestPacketId, const Address& destination, const NetworkConfig& nc, bool sendLegacyFormatConfig);
     virtual void ncSendRevocation(void* tPtr, int64_t clock, int64_t ticks, const Address& destination, const RevocationCredential& rev);
-    virtual void ncSendError(
-        void* tPtr,
-        int64_t clock,
-        int64_t ticks,
-        uint64_t nwid,
-        uint64_t requestPacketId,
-        const Address& destination,
-        NetworkController::ErrorCode errorCode);
+    virtual void ncSendError(void* tPtr, int64_t clock, int64_t ticks, uint64_t nwid, uint64_t requestPacketId, const Address& destination, NetworkController::ErrorCode errorCode);
 
   private:
     Context m_ctx;

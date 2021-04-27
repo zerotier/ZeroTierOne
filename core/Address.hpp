@@ -38,8 +38,7 @@ class Address : public TriviallyCopyable {
     {
     }
 
-    explicit ZT_INLINE Address(const uint8_t b[5]) noexcept
-        : _a(((uint64_t)b[0] << 32U) | ((uint64_t)b[1] << 24U) | ((uint64_t)b[2] << 16U) | ((uint64_t)b[3] << 8U) | (uint64_t)b[4])
+    explicit ZT_INLINE Address(const uint8_t b[5]) noexcept : _a(((uint64_t)b[0] << 32U) | ((uint64_t)b[1] << 24U) | ((uint64_t)b[2] << 16U) | ((uint64_t)b[3] << 8U) | (uint64_t)b[4])
     {
     }
 

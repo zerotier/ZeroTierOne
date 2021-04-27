@@ -60,9 +60,7 @@ class Store {
      * @param data Data to store
      * @param len Length of data
      */
-    ZT_INLINE void
-    put(const CallContext& cc, ZT_StateObjectType type, const uint64_t* const id, const unsigned int idSize, const void* const data, const unsigned int len)
-        noexcept
+    ZT_INLINE void put(const CallContext& cc, ZT_StateObjectType type, const uint64_t* const id, const unsigned int idSize, const void* const data, const unsigned int len) noexcept
     {
         m_ctx.cb.statePutFunction(reinterpret_cast<ZT_Node*>(this), m_ctx.uPtr, cc.tPtr, type, id, idSize, data, (int)len);
     }

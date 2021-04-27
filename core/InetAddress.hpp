@@ -450,10 +450,7 @@ struct InetAddress : public TriviallyCopyable {
             return (unsigned long)Utils::hash32(((uint32_t)as.sa_in.sin_addr.s_addr + (uint32_t)as.sa_in.sin_port) ^ (uint32_t)Utils::s_mapNonce);
         }
         else if (as.ss.ss_family == AF_INET6) {
-            return (unsigned long)Utils::hash64(
-                (Utils::loadMachineEndian<uint64_t>(as.sa_in6.sin6_addr.s6_addr) + Utils::loadMachineEndian<uint64_t>(as.sa_in6.sin6_addr.s6_addr + 8)
-                 + (uint64_t)as.sa_in6.sin6_port)
-                ^ Utils::s_mapNonce);
+            return (unsigned long)Utils::hash64((Utils::loadMachineEndian<uint64_t>(as.sa_in6.sin6_addr.s6_addr) + Utils::loadMachineEndian<uint64_t>(as.sa_in6.sin6_addr.s6_addr + 8) + (uint64_t)as.sa_in6.sin6_port) ^ Utils::s_mapNonce);
         }
         return Utils::fnv1a32(this, sizeof(InetAddress));
     }

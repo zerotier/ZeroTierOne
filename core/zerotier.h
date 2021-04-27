@@ -778,14 +778,7 @@ typedef struct {
 /**
  * Credential type IDs
  */
-enum ZT_CredentialType {
-    ZT_CREDENTIAL_TYPE_NULL = 0,
-    ZT_CREDENTIAL_TYPE_COM = 1,
-    ZT_CREDENTIAL_TYPE_CAPABILITY = 2,
-    ZT_CREDENTIAL_TYPE_TAG = 3,
-    ZT_CREDENTIAL_TYPE_COO = 4,
-    ZT_CREDENTIAL_TYPE_REVOCATION = 6
-};
+enum ZT_CredentialType { ZT_CREDENTIAL_TYPE_NULL = 0, ZT_CREDENTIAL_TYPE_COM = 1, ZT_CREDENTIAL_TYPE_CAPABILITY = 2, ZT_CREDENTIAL_TYPE_TAG = 3, ZT_CREDENTIAL_TYPE_COO = 4, ZT_CREDENTIAL_TYPE_REVOCATION = 6 };
 
 /**
  * Endpoint address and protocol types
@@ -2200,8 +2193,7 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_processVirtualNetworkFrame(
  * @param nextBackgroundTaskDeadline Value/result: set to deadline for next call to processBackgroundTasks()
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-ZT_SDK_API enum ZT_ResultCode
-ZT_Node_processBackgroundTasks(ZT_Node* node, int64_t clock, int64_t ticks, void* tptr, volatile int64_t* nextBackgroundTaskDeadline);
+ZT_SDK_API enum ZT_ResultCode ZT_Node_processBackgroundTasks(ZT_Node* node, int64_t clock, int64_t ticks, void* tptr, volatile int64_t* nextBackgroundTaskDeadline);
 
 /**
  * Join a network
@@ -2216,8 +2208,7 @@ ZT_Node_processBackgroundTasks(ZT_Node* node, int64_t clock, int64_t ticks, void
  * @param fingerprintHash If non-NULL this is the full fingerprint of the controller
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-ZT_SDK_API enum ZT_ResultCode
-ZT_Node_join(ZT_Node* node, int64_t clock, int64_t ticks, void* tptr, void* uptr, uint64_t nwid, const ZT_Fingerprint* controllerFingerprint);
+ZT_SDK_API enum ZT_ResultCode ZT_Node_join(ZT_Node* node, int64_t clock, int64_t ticks, void* tptr, void* uptr, uint64_t nwid, const ZT_Fingerprint* controllerFingerprint);
 
 /**
  * Leave a network
@@ -2257,8 +2248,7 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_leave(ZT_Node* node, int64_t clock, int64_
  * @param multicastAdi Multicast ADI (least significant 32 bits only, use 0 if not needed)
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-ZT_SDK_API enum ZT_ResultCode
-ZT_Node_multicastSubscribe(ZT_Node* node, int64_t clock, int64_t ticks, void* tptr, uint64_t nwid, uint64_t multicastGroup, unsigned long multicastAdi);
+ZT_SDK_API enum ZT_ResultCode ZT_Node_multicastSubscribe(ZT_Node* node, int64_t clock, int64_t ticks, void* tptr, uint64_t nwid, uint64_t multicastGroup, unsigned long multicastAdi);
 
 /**
  * Unsubscribe from an Ethernet multicast group (or all groups)
@@ -2273,8 +2263,7 @@ ZT_Node_multicastSubscribe(ZT_Node* node, int64_t clock, int64_t ticks, void* tp
  * @param multicastAdi Multicast ADI (least significant 32 bits only, use 0 if not needed)
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-ZT_SDK_API enum ZT_ResultCode
-ZT_Node_multicastUnsubscribe(ZT_Node* node, int64_t clock, int64_t ticks, void* tptr, uint64_t nwid, uint64_t multicastGroup, unsigned long multicastAdi);
+ZT_SDK_API enum ZT_ResultCode ZT_Node_multicastUnsubscribe(ZT_Node* node, int64_t clock, int64_t ticks, void* tptr, uint64_t nwid, uint64_t multicastGroup, unsigned long multicastAdi);
 
 /**
  * Get this node's 40-bit ZeroTier address
@@ -2347,8 +2336,7 @@ ZT_SDK_API void ZT_Node_setNetworkUserPtr(ZT_Node* node, uint64_t nwid, void* pt
  * @param addrs Addresses
  * @param addrCount Number of items in addrs[]
  */
-ZT_SDK_API void
-ZT_Node_setInterfaceAddresses(ZT_Node* node, int64_t clock, int64_t ticks, void* tptr, const ZT_InterfaceAddress* addrs, unsigned int addrCount);
+ZT_SDK_API void ZT_Node_setInterfaceAddresses(ZT_Node* node, int64_t clock, int64_t ticks, void* tptr, const ZT_InterfaceAddress* addrs, unsigned int addrCount);
 
 /**
  * Add a certificate to this node's certificate store
@@ -2362,15 +2350,7 @@ ZT_Node_setInterfaceAddresses(ZT_Node* node, int64_t clock, int64_t ticks, void*
  * @param certSize Size of certificate binary data, 0 if none
  * @return Certificate error or ZT_CERTIFICATE_ERROR_NONE on success
  */
-ZT_SDK_API enum ZT_CertificateError ZT_Node_addCertificate(
-    ZT_Node* node,
-    int64_t clock,
-    int64_t ticks,
-    void* tptr,
-    unsigned int localTrust,
-    const ZT_Certificate* cert,
-    const void* certData,
-    unsigned int certSize);
+ZT_SDK_API enum ZT_CertificateError ZT_Node_addCertificate(ZT_Node* node, int64_t clock, int64_t ticks, void* tptr, unsigned int localTrust, const ZT_Certificate* cert, const void* certData, unsigned int certSize);
 
 /**
  * Delete a certificate from this node's certificate store
@@ -2407,8 +2387,7 @@ ZT_SDK_API ZT_CertificateList* ZT_Node_listCertificates(ZT_Node* node, int64_t c
  * @param len Length of data in bytes
  * @return Boolean: non-zero on success, zero on failure
  */
-ZT_SDK_API int
-ZT_Node_sendUserMessage(ZT_Node* node, int64_t clock, int64_t ticks, void* tptr, uint64_t dest, uint64_t typeId, const void* data, unsigned int len);
+ZT_SDK_API int ZT_Node_sendUserMessage(ZT_Node* node, int64_t clock, int64_t ticks, void* tptr, uint64_t dest, uint64_t typeId, const void* data, unsigned int len);
 
 /**
  * Set a network controller instance for this node
@@ -2604,12 +2583,7 @@ ZT_SDK_API int ZT_Endpoint_fromBytes(ZT_Endpoint* ep, const void* bytes, unsigne
  * @param signer Identity to sign locator (must include private key)
  * @return Locator or NULL on error (too many endpoints or identity does not have private key)
  */
-ZT_SDK_API ZT_Locator* ZT_Locator_create(
-    int64_t rev,
-    const ZT_Endpoint* endpoints,
-    const ZT_EndpointAttributes* endpointAttributes,
-    unsigned int endpointCount,
-    const ZT_Identity* signer);
+ZT_SDK_API ZT_Locator* ZT_Locator_create(int64_t rev, const ZT_Endpoint* endpoints, const ZT_EndpointAttributes* endpointAttributes, unsigned int endpointCount, const ZT_Identity* signer);
 
 /**
  * Decode a serialized locator
@@ -2733,12 +2707,8 @@ ZT_SDK_API void ZT_version(int* major, int* minor, int* revision, int* build);
  * @param privateKeySize Result parameter: set to size of private key
  * @return OK (0) or error
  */
-ZT_SDK_API int ZT_Certificate_newKeyPair(
-    enum ZT_CertificatePublicKeyAlgorithm type,
-    uint8_t publicKey[ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE],
-    int* const publicKeySize,
-    uint8_t privateKey[ZT_CERTIFICATE_MAX_PRIVATE_KEY_SIZE],
-    int* const privateKeySize);
+ZT_SDK_API int
+ZT_Certificate_newKeyPair(enum ZT_CertificatePublicKeyAlgorithm type, uint8_t publicKey[ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE], int* const publicKeySize, uint8_t privateKey[ZT_CERTIFICATE_MAX_PRIVATE_KEY_SIZE], int* const privateKeySize);
 
 /**
  * Create a new certificate signing request (CSR)
@@ -2758,14 +2728,7 @@ ZT_SDK_API int ZT_Certificate_newKeyPair(
  * @param csrSize Value/result: size of buffer
  * @return OK (0) or error
  */
-ZT_SDK_API int ZT_Certificate_newCSR(
-    const ZT_Certificate_Subject* subject,
-    const void* certificatePublicKey,
-    int certificatePublicKeySize,
-    const void* uniqueIdPrivateKey,
-    int uniqueIdPrivateKeySize,
-    void* csr,
-    int* csrSize);
+ZT_SDK_API int ZT_Certificate_newCSR(const ZT_Certificate_Subject* subject, const void* certificatePublicKey, int certificatePublicKeySize, const void* uniqueIdPrivateKey, int uniqueIdPrivateKeySize, void* csr, int* csrSize);
 
 /**
  * Sign a CSR to generate a complete certificate.
@@ -2782,8 +2745,7 @@ ZT_SDK_API int ZT_Certificate_newCSR(
  * @param issuerPrivateKeySize Size of private key in bytes
  * @return Signed certificate or NULL on error
  */
-ZT_SDK_API ZT_Certificate*
-ZT_Certificate_sign(const ZT_Certificate* cert, const uint8_t issuer[ZT_CERTIFICATE_HASH_SIZE], const void* issuerPrivateKey, int issuerPrivateKeySize);
+ZT_SDK_API ZT_Certificate* ZT_Certificate_sign(const ZT_Certificate* cert, const uint8_t issuer[ZT_CERTIFICATE_HASH_SIZE], const void* issuerPrivateKey, int issuerPrivateKeySize);
 
 /**
  * Decode a certificate or CSR

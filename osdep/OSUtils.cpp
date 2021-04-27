@@ -108,9 +108,7 @@ Vector<String> OSUtils::listDirectory(const char* path, bool includeDirectories)
     WIN32_FIND_DATAA ffd;
     if ((hFind = FindFirstFileA((String(path) + "\\*").c_str(), &ffd)) != INVALID_HANDLE_VALUE) {
         do {
-            if ((strcmp(ffd.cFileName, ".")) && (strcmp(ffd.cFileName, ".."))
-                && (((ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0)
-                    || (((ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0) && (includeDirectories))))
+            if ((strcmp(ffd.cFileName, ".")) && (strcmp(ffd.cFileName, "..")) && (((ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0) || (((ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0) && (includeDirectories))))
                 r.push_back(String(ffd.cFileName));
         } while (FindNextFileA(hFind, &ffd));
         FindClose(hFind);
@@ -126,8 +124,7 @@ Vector<String> OSUtils::listDirectory(const char* path, bool includeDirectories)
         if (readdir_r(d, &de, &dptr))
             break;
         if (dptr) {
-            if ((strcmp(dptr->d_name, ".") != 0) && (strcmp(dptr->d_name, "..") != 0)
-                && ((dptr->d_type != DT_DIR) || (includeDirectories)))
+            if ((strcmp(dptr->d_name, ".") != 0) && (strcmp(dptr->d_name, "..") != 0) && ((dptr->d_type != DT_DIR) || (includeDirectories)))
                 r.push_back(String(dptr->d_name));
         }
         else
@@ -200,17 +197,7 @@ void OSUtils::lockDownFile(const char* path, bool isDir)
         startupInfo.cb = sizeof(startupInfo);
         memset(&startupInfo, 0, sizeof(STARTUPINFOA));
         memset(&processInfo, 0, sizeof(PROCESS_INFORMATION));
-        if (CreateProcessA(
-                NULL,
-                (LPSTR)(String("C:\\Windows\\System32\\icacls.exe \"") + path + "\" /inheritance:d /Q").c_str(),
-                NULL,
-                NULL,
-                FALSE,
-                CREATE_NO_WINDOW,
-                NULL,
-                NULL,
-                &startupInfo,
-                &processInfo)) {
+        if (CreateProcessA(NULL, (LPSTR)(String("C:\\Windows\\System32\\icacls.exe \"") + path + "\" /inheritance:d /Q").c_str(), NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &startupInfo, &processInfo)) {
             WaitForSingleObject(processInfo.hProcess, INFINITE);
             CloseHandle(processInfo.hProcess);
             CloseHandle(processInfo.hThread);
@@ -219,17 +206,7 @@ void OSUtils::lockDownFile(const char* path, bool isDir)
         startupInfo.cb = sizeof(startupInfo);
         memset(&startupInfo, 0, sizeof(STARTUPINFOA));
         memset(&processInfo, 0, sizeof(PROCESS_INFORMATION));
-        if (CreateProcessA(
-                NULL,
-                (LPSTR)(String("C:\\Windows\\System32\\icacls.exe \"") + path + "\" /remove *S-1-5-32-545 /Q").c_str(),
-                NULL,
-                NULL,
-                FALSE,
-                CREATE_NO_WINDOW,
-                NULL,
-                NULL,
-                &startupInfo,
-                &processInfo)) {
+        if (CreateProcessA(NULL, (LPSTR)(String("C:\\Windows\\System32\\icacls.exe \"") + path + "\" /remove *S-1-5-32-545 /Q").c_str(), NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &startupInfo, &processInfo)) {
             WaitForSingleObject(processInfo.hProcess, INFINITE);
             CloseHandle(processInfo.hProcess);
             CloseHandle(processInfo.hThread);

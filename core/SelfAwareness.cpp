@@ -29,13 +29,7 @@ SelfAwareness::SelfAwareness(const Context& ctx) : m_ctx(ctx)
 {
 }
 
-void SelfAwareness::iam(
-    const CallContext& cc,
-    const Identity& reporter,
-    const int64_t receivedOnLocalSocket,
-    const InetAddress& reporterPhysicalAddress,
-    const InetAddress& myPhysicalAddress,
-    bool trusted)
+void SelfAwareness::iam(const CallContext& cc, const Identity& reporter, const int64_t receivedOnLocalSocket, const InetAddress& reporterPhysicalAddress, const InetAddress& myPhysicalAddress, bool trusted)
 {
     const InetAddress::IpScope scope = myPhysicalAddress.ipScope();
 

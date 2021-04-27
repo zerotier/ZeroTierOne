@@ -278,14 +278,7 @@ ZT_ResultCode Node::leave(uint64_t nwid, void** uptr, const CallContext& cc)
         if (uptr)
             *uptr = *network->userPtr();
         network->externalConfig(&ctmp);
-        m_ctx.cb.virtualNetworkConfigFunction(
-            reinterpret_cast<ZT_Node*>(this),
-            m_ctx.uPtr,
-            cc.tPtr,
-            nwid,
-            network->userPtr(),
-            ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY,
-            &ctmp);
+        m_ctx.cb.virtualNetworkConfigFunction(reinterpret_cast<ZT_Node*>(this), m_ctx.uPtr, cc.tPtr, nwid, network->userPtr(), ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY, &ctmp);
         network->destroy();
         return ZT_RESULT_OK;
     }
@@ -496,8 +489,7 @@ void Node::setInterfaceAddresses(const ZT_InterfaceAddress* addrs, unsigned int 
     }
 }
 
-ZT_CertificateError
-Node::addCertificate(const CallContext& cc, unsigned int localTrust, const ZT_Certificate* cert, const void* certData, unsigned int certSize)
+ZT_CertificateError Node::addCertificate(const CallContext& cc, unsigned int localTrust, const ZT_Certificate* cert, const void* certData, unsigned int certSize)
 {
     Certificate c;
     if (cert) {
@@ -603,16 +595,7 @@ bool Node::filterPotentialPath(void* tPtr, const Identity& id, int64_t localSock
     }
 
     if (m_ctx.cb.pathCheckFunction) {
-        return (
-            m_ctx.cb.pathCheckFunction(
-                reinterpret_cast<ZT_Node*>(this),
-                m_ctx.uPtr,
-                tPtr,
-                id.address().toInt(),
-                (const ZT_Identity*)&id,
-                localSocket,
-                reinterpret_cast<const ZT_InetAddress*>(&remoteAddress))
-            != 0);
+        return (m_ctx.cb.pathCheckFunction(reinterpret_cast<ZT_Node*>(this), m_ctx.uPtr, tPtr, id.address().toInt(), (const ZT_Identity*)&id, localSocket, reinterpret_cast<const ZT_InetAddress*>(&remoteAddress)) != 0);
     }
 
     return true;
@@ -621,31 +604,14 @@ bool Node::filterPotentialPath(void* tPtr, const Identity& id, int64_t localSock
 bool Node::externalPathLookup(void* tPtr, const Identity& id, int family, InetAddress& addr)
 {
     if (m_ctx.cb.pathLookupFunction) {
-        return (
-            m_ctx.cb.pathLookupFunction(
-                reinterpret_cast<ZT_Node*>(this),
-                m_ctx.uPtr,
-                tPtr,
-                id.address().toInt(),
-                reinterpret_cast<const ZT_Identity*>(&id),
-                family,
-                reinterpret_cast<ZT_InetAddress*>(&addr))
-            == ZT_RESULT_OK);
+        return (m_ctx.cb.pathLookupFunction(reinterpret_cast<ZT_Node*>(this), m_ctx.uPtr, tPtr, id.address().toInt(), reinterpret_cast<const ZT_Identity*>(&id), family, reinterpret_cast<ZT_InetAddress*>(&addr)) == ZT_RESULT_OK);
     }
     return false;
 }
 
 // Implementation of NetworkController::Sender ------------------------------------------------------------------------
 
-void Node::ncSendConfig(
-    void* tPtr,
-    int64_t clock,
-    int64_t ticks,
-    uint64_t nwid,
-    uint64_t requestPacketId,
-    const Address& destination,
-    const NetworkConfig& nc,
-    bool sendLegacyFormatConfig)
+void Node::ncSendConfig(void* tPtr, int64_t clock, int64_t ticks, uint64_t nwid, uint64_t requestPacketId, const Address& destination, const NetworkConfig& nc, bool sendLegacyFormatConfig)
 {
     if (destination == m_ctx.identity.address()) {
         SharedPtr<Network> n(m_ctx.networks->get(nwid));
@@ -721,14 +687,7 @@ void Node::ncSendRevocation(void* tPtr, int64_t clock, int64_t ticks, const Addr
     }
 }
 
-void Node::ncSendError(
-    void* tPtr,
-    int64_t clock,
-    int64_t ticks,
-    uint64_t nwid,
-    uint64_t requestPacketId,
-    const Address& destination,
-    NetworkController::ErrorCode errorCode)
+void Node::ncSendError(void* tPtr, int64_t clock, int64_t ticks, uint64_t nwid, uint64_t requestPacketId, const Address& destination, NetworkController::ErrorCode errorCode)
 {
     if (destination == m_ctx.identity.address()) {
         SharedPtr<Network> n(m_ctx.networks->get(nwid));

@@ -36,10 +36,9 @@ namespace Utils {
 // Macros to convert endian-ness at compile time for constants.
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 #define ZT_CONST_TO_BE_UINT16(x) ((uint16_t)((uint16_t)((uint16_t)(x) << 8U) | (uint16_t)((uint16_t)(x) >> 8U)))
-#define ZT_CONST_TO_BE_UINT64(x)                                                                                                                               \
-    ((((uint64_t)(x)&0x00000000000000ffULL) << 56U) | (((uint64_t)(x)&0x000000000000ff00ULL) << 40U) | (((uint64_t)(x)&0x0000000000ff0000ULL) << 24U)          \
-     | (((uint64_t)(x)&0x00000000ff000000ULL) << 8U) | (((uint64_t)(x)&0x000000ff00000000ULL) >> 8U) | (((uint64_t)(x)&0x0000ff0000000000ULL) >> 24U)          \
-     | (((uint64_t)(x)&0x00ff000000000000ULL) >> 40U) | (((uint64_t)(x)&0xff00000000000000ULL) >> 56U))
+#define ZT_CONST_TO_BE_UINT64(x)                                                                                                                                                                                                               \
+    ((((uint64_t)(x)&0x00000000000000ffULL) << 56U) | (((uint64_t)(x)&0x000000000000ff00ULL) << 40U) | (((uint64_t)(x)&0x0000000000ff0000ULL) << 24U) | (((uint64_t)(x)&0x00000000ff000000ULL) << 8U)                                          \
+     | (((uint64_t)(x)&0x000000ff00000000ULL) >> 8U) | (((uint64_t)(x)&0x0000ff0000000000ULL) >> 24U) | (((uint64_t)(x)&0x00ff000000000000ULL) >> 40U) | (((uint64_t)(x)&0xff00000000000000ULL) >> 56U))
 #else
 #define ZT_CONST_TO_BE_UINT16(x) ((uint16_t)(x))
 #define ZT_CONST_TO_BE_UINT64(x) ((uint64_t)(x))
@@ -301,8 +300,8 @@ static ZT_INLINE uint64_t swapBytes(const uint64_t n) noexcept
     return (uint64_t)_byteswap_uint64((unsigned __int64)n);
 #else
     return (
-        ((n & 0x00000000000000ffULL) << 56) | ((n & 0x000000000000ff00ULL) << 40) | ((n & 0x0000000000ff0000ULL) << 24) | ((n & 0x00000000ff000000ULL) << 8)
-        | ((n & 0x000000ff00000000ULL) >> 8) | ((n & 0x0000ff0000000000ULL) >> 24) | ((n & 0x00ff000000000000ULL) >> 40) | ((n & 0xff00000000000000ULL) >> 56));
+        ((n & 0x00000000000000ffULL) << 56) | ((n & 0x000000000000ff00ULL) << 40) | ((n & 0x0000000000ff0000ULL) << 24) | ((n & 0x00000000ff000000ULL) << 8) | ((n & 0x000000ff00000000ULL) >> 8) | ((n & 0x0000ff0000000000ULL) >> 24)
+        | ((n & 0x00ff000000000000ULL) >> 40) | ((n & 0xff00000000000000ULL) >> 56));
 #endif
 #endif
 }
@@ -411,8 +410,7 @@ template <typename I> class _load_be_bysize<I, 8> {
   public:
     static ZT_INLINE I l(const uint8_t* const p) noexcept
     {
-        return (
-            I)(((uint64_t)p[0] << 56U) | ((uint64_t)p[1] << 48U) | ((uint64_t)p[2] << 40U) | ((uint64_t)p[3] << 32U) | ((uint64_t)p[4] << 24U) | ((uint64_t)p[5] << 16U) | ((uint64_t)p[6] << 8U) | (uint64_t)p[7]);
+        return (I)(((uint64_t)p[0] << 56U) | ((uint64_t)p[1] << 48U) | ((uint64_t)p[2] << 40U) | ((uint64_t)p[3] << 32U) | ((uint64_t)p[4] << 24U) | ((uint64_t)p[5] << 16U) | ((uint64_t)p[6] << 8U) | (uint64_t)p[7]);
     }
 };
 
@@ -446,8 +444,7 @@ template <typename I> class _load_le_bysize<I, 8> {
   public:
     static ZT_INLINE I l(const uint8_t* const p) noexcept
     {
-        return (
-            I)((uint64_t)p[0] | ((uint64_t)p[1] << 8U) | ((uint64_t)p[2] << 16U) | ((uint64_t)p[3] << 24U) | ((uint64_t)p[4] << 32U) | ((uint64_t)p[5] << 40U) | ((uint64_t)p[6] << 48U) | ((uint64_t)p[7]) << 56U);
+        return (I)((uint64_t)p[0] | ((uint64_t)p[1] << 8U) | ((uint64_t)p[2] << 16U) | ((uint64_t)p[3] << 24U) | ((uint64_t)p[4] << 32U) | ((uint64_t)p[5] << 40U) | ((uint64_t)p[6] << 48U) | ((uint64_t)p[7]) << 56U);
     }
 };
 

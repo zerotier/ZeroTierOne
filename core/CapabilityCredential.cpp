@@ -19,12 +19,7 @@
 
 namespace ZeroTier {
 
-CapabilityCredential::CapabilityCredential(
-    const uint32_t id,
-    const uint64_t nwid,
-    const int64_t timestamp,
-    const ZT_VirtualNetworkRule* const rules,
-    const unsigned int ruleCount) noexcept
+CapabilityCredential::CapabilityCredential(const uint32_t id, const uint64_t nwid, const int64_t timestamp, const ZT_VirtualNetworkRule* const rules, const unsigned int ruleCount) noexcept
     : m_nwid(nwid)
     , m_timestamp(timestamp)
     , m_id(id)
@@ -289,12 +284,7 @@ int CapabilityCredential::marshalVirtualNetworkRules(uint8_t* data, const ZT_Vir
     return p;
 }
 
-int CapabilityCredential::unmarshalVirtualNetworkRules(
-    const uint8_t* const data,
-    const int len,
-    ZT_VirtualNetworkRule* const rules,
-    unsigned int& ruleCount,
-    const unsigned int maxRuleCount) noexcept
+int CapabilityCredential::unmarshalVirtualNetworkRules(const uint8_t* const data, const int len, ZT_VirtualNetworkRule* const rules, unsigned int& ruleCount, const unsigned int maxRuleCount) noexcept
 {
     int p = 0;
     unsigned int rc = 0;

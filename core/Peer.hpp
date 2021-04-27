@@ -125,15 +125,7 @@ class Peer {
      * @param verb Packet verb
      * @param inReVerb In-reply verb for OK or ERROR verbs
      */
-    void received(
-        const Context& ctx,
-        const CallContext& cc,
-        const SharedPtr<Path>& path,
-        unsigned int hops,
-        uint64_t packetId,
-        unsigned int payloadLength,
-        Protocol::Verb verb,
-        Protocol::Verb inReVerb);
+    void received(const Context& ctx, const CallContext& cc, const SharedPtr<Path>& path, unsigned int hops, uint64_t packetId, unsigned int payloadLength, Protocol::Verb verb, Protocol::Verb inReVerb);
 
     /**
      * Log sent data
@@ -489,8 +481,7 @@ class Peer {
     };
 
     void m_prioritizePaths(const CallContext& cc);
-    unsigned int
-    m_sendProbe(const Context& ctx, const CallContext& cc, int64_t localSocket, const InetAddress& atAddress, const uint16_t* ports, unsigned int numPorts);
+    unsigned int m_sendProbe(const Context& ctx, const CallContext& cc, int64_t localSocket, const InetAddress& atAddress, const uint16_t* ports, unsigned int numPorts);
     void m_deriveSecondaryIdentityKeys() noexcept;
     unsigned int m_hello(const Context& ctx, const CallContext& cc, int64_t localSocket, const InetAddress& atAddress, bool forceNewKey);
 

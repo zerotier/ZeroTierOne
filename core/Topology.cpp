@@ -74,8 +74,7 @@ void Topology::doPeriodicTasks(const CallContext& cc)
             for (Map<Address, SharedPtr<Peer> >::iterator i(m_peers.begin()); i != m_peers.end(); ++i) {
                 // TODO: also delete if the peer has not exchanged meaningful communication in a while, such as a
                 // network frame or non-trivial control packet.
-                if (((cc.ticks - i->second->lastReceive()) > ZT_PEER_ALIVE_TIMEOUT)
-                    && (! std::binary_search(rootLookup.begin(), rootLookup.end(), reinterpret_cast<uintptr_t>(i->second.ptr()))))
+                if (((cc.ticks - i->second->lastReceive()) > ZT_PEER_ALIVE_TIMEOUT) && (! std::binary_search(rootLookup.begin(), rootLookup.end(), reinterpret_cast<uintptr_t>(i->second.ptr()))))
                     toDelete.push_back(i->first);
             }
         }

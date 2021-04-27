@@ -55,9 +55,7 @@ Certificate& Certificate::operator=(const ZT_Certificate& cert)
         for (unsigned int i = 0; i < cert.subject.identityCount; ++i) {
             if (cert.subject.identities[i].identity) {
                 if (cert.subject.identities[i].locator) {
-                    addSubjectIdentity(
-                        *reinterpret_cast<const Identity*>(cert.subject.identities[i].identity),
-                        *reinterpret_cast<const Locator*>(cert.subject.identities[i].locator));
+                    addSubjectIdentity(*reinterpret_cast<const Identity*>(cert.subject.identities[i].identity), *reinterpret_cast<const Locator*>(cert.subject.identities[i].locator));
                 }
                 else {
                     addSubjectIdentity(*reinterpret_cast<const Identity*>(cert.subject.identities[i].identity));
@@ -380,9 +378,7 @@ ZT_CertificateError Certificate::verify(const int64_t clock, const bool checkSig
                         if (! reinterpret_cast<const Identity*>(this->subject.identities[i].identity)->locallyValidate()) {
                             return ZT_CERTIFICATE_ERROR_INVALID_IDENTITY;
                         }
-                        if ((this->subject.identities[i].locator)
-                            && (! reinterpret_cast<const Locator*>(this->subject.identities[i].locator)
-                                      ->verify(*reinterpret_cast<const Identity*>(this->subject.identities[i].identity)))) {
+                        if ((this->subject.identities[i].locator) && (! reinterpret_cast<const Locator*>(this->subject.identities[i].locator)->verify(*reinterpret_cast<const Identity*>(this->subject.identities[i].identity)))) {
                             return ZT_CERTIFICATE_ERROR_INVALID_COMPONENT_SIGNATURE;
                         }
                     }
@@ -467,8 +463,7 @@ ZT_CertificateError Certificate::verify(const int64_t clock, const bool checkSig
                         case ZT_CERTIFICATE_PUBLIC_KEY_ALGORITHM_NONE:
                             break;
                         case ZT_CERTIFICATE_PUBLIC_KEY_ALGORITHM_ECDSA_NIST_P_384:
-                            if ((this->subject.uniqueIdSize == (ZT_ECC384_PUBLIC_KEY_SIZE + 1))
-                                && (this->subject.uniqueIdSignatureSize == ZT_ECC384_SIGNATURE_SIZE)) {
+                            if ((this->subject.uniqueIdSize == (ZT_ECC384_PUBLIC_KEY_SIZE + 1)) && (this->subject.uniqueIdSignatureSize == ZT_ECC384_SIGNATURE_SIZE)) {
                                 Dictionary d;
                                 m_encodeSubject(this->subject, d, true);
 
@@ -510,12 +505,7 @@ ZT_CertificateError Certificate::verify(const int64_t clock, const bool checkSig
     return ZT_CERTIFICATE_ERROR_NONE;
 }
 
-bool Certificate::newKeyPair(
-    const ZT_CertificatePublicKeyAlgorithm type,
-    uint8_t publicKey[ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE],
-    int* const publicKeySize,
-    uint8_t privateKey[ZT_CERTIFICATE_MAX_PRIVATE_KEY_SIZE],
-    int* const privateKeySize)
+bool Certificate::newKeyPair(const ZT_CertificatePublicKeyAlgorithm type, uint8_t publicKey[ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE], int* const publicKeySize, uint8_t privateKey[ZT_CERTIFICATE_MAX_PRIVATE_KEY_SIZE], int* const privateKeySize)
 {
     switch (type) {
         case ZT_CERTIFICATE_PUBLIC_KEY_ALGORITHM_ECDSA_NIST_P_384:
@@ -531,12 +521,7 @@ bool Certificate::newKeyPair(
     return false;
 }
 
-Vector<uint8_t> Certificate::createCSR(
-    const ZT_Certificate_Subject& s,
-    const void* const certificatePublicKey,
-    const unsigned int certificatePublicKeySize,
-    const void* uniqueIdPrivate,
-    unsigned int uniqueIdPrivateSize)
+Vector<uint8_t> Certificate::createCSR(const ZT_Certificate_Subject& s, const void* const certificatePublicKey, const unsigned int certificatePublicKeySize, const void* uniqueIdPrivate, unsigned int uniqueIdPrivateSize)
 {
     Vector<uint8_t> enc;
 

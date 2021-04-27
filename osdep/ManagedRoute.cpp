@@ -130,8 +130,7 @@ static std::vector<_RTE> _getRTEs(const InetAddress& target, bool contains)
                     InetAddress sa_t, sa_v;
                     int deviceIndex = -9999;
 
-                    if (((rtm->rtm_flags & RTF_LLINFO) == 0) && ((rtm->rtm_flags & RTF_HOST) == 0)
-                        && ((rtm->rtm_flags & RTF_UP) != 0) && ((rtm->rtm_flags & RTF_MULTICAST) == 0)) {
+                    if (((rtm->rtm_flags & RTF_LLINFO) == 0) && ((rtm->rtm_flags & RTF_HOST) == 0) && ((rtm->rtm_flags & RTF_UP) != 0) && ((rtm->rtm_flags & RTF_MULTICAST) == 0)) {
                         int which = 0;
                         while (saptr < saend) {
                             struct sockaddr* sa = (struct sockaddr*)saptr;
@@ -155,14 +154,11 @@ static std::vector<_RTE> _getRTEs(const InetAddress& target, bool contains)
                                     // printf("RTA_DST\n");
                                     if (sa->sa_family == AF_INET6) {
                                         struct sockaddr_in6* sin6 = (struct sockaddr_in6*)sa;
-                                        if ((sin6->sin6_addr.s6_addr[0] == 0xfe)
-                                            && ((sin6->sin6_addr.s6_addr[1] & 0xc0) == 0x80)) {
+                                        if ((sin6->sin6_addr.s6_addr[0] == 0xfe) && ((sin6->sin6_addr.s6_addr[1] & 0xc0) == 0x80)) {
                                             // BSD uses this fucking strange in-band signaling method to encode device
                                             // scope IDs for IPv6 addresses... probably a holdover from very early
                                             // versions of the spec.
-                                            unsigned int interfaceIndex =
-                                                ((((unsigned int)sin6->sin6_addr.s6_addr[2]) << 8) & 0xff)
-                                                | (((unsigned int)sin6->sin6_addr.s6_addr[3]) & 0xff);
+                                            unsigned int interfaceIndex = ((((unsigned int)sin6->sin6_addr.s6_addr[2]) << 8) & 0xff) | (((unsigned int)sin6->sin6_addr.s6_addr[3]) & 0xff);
                                             sin6->sin6_addr.s6_addr[2] = 0;
                                             sin6->sin6_addr.s6_addr[3] = 0;
                                             if (! sin6->sin6_scope_id)
@@ -189,8 +185,7 @@ static std::vector<_RTE> _getRTEs(const InetAddress& target, bool contains)
                                         salen = sizeof(struct sockaddr_in6);
                                         unsigned int bits = 0;
                                         for (int i = 0; i < 16; ++i) {
-                                            unsigned char c =
-                                                (unsigned char)((const struct sockaddr_in6*)sa)->sin6_addr.s6_addr[i];
+                                            unsigned char c = (unsigned char)((const struct sockaddr_in6*)sa)->sin6_addr.s6_addr[i];
                                             if (c == 0xff)
                                                 bits += 8;
                                             else
@@ -200,8 +195,7 @@ static std::vector<_RTE> _getRTEs(const InetAddress& target, bool contains)
                                     }
                                     else if (sa_t.ss_family == AF_INET) {
                                         salen = sizeof(struct sockaddr_in);
-                                        sa_t.setPort((unsigned int)Utils::countBits(
-                                            (uint32_t)((const struct sockaddr_in*)sa)->sin_addr.s_addr));
+                                        sa_t.setPort((unsigned int)Utils::countBits((uint32_t)((const struct sockaddr_in*)sa)->sin_addr.s_addr));
                                     }
                                 } break;
                                     /*
@@ -233,8 +227,7 @@ static std::vector<_RTE> _getRTEs(const InetAddress& target, bool contains)
                             else {
                                 rtes.back().device[0] = (char)0;
                             }
-                            rtes.back().metric =
-                                ((int)rtm->rtm_rmx.rmx_hopcount < 0) ? 0 : (int)rtm->rtm_rmx.rmx_hopcount;
+                            rtes.back().metric = ((int)rtm->rtm_rmx.rmx_hopcount < 0) ? 0 : (int)rtm->rtm_rmx.rmx_hopcount;
                         }
                     }
 
@@ -250,12 +243,7 @@ static std::vector<_RTE> _getRTEs(const InetAddress& target, bool contains)
 }
 #endif
 
-static void _routeCmd(
-    const char* op,
-    const InetAddress& target,
-    const InetAddress& via,
-    const char* ifscope,
-    const char* localInterface)
+static void _routeCmd(const char* op, const InetAddress& target, const InetAddress& via, const char* ifscope, const char* localInterface)
 {
     // char f1[1024],f2[1024]; printf("%s %s %s %s
     // %s\n",op,target.toString(f1),via.toString(f2),ifscope,localInterface);
@@ -271,52 +259,18 @@ static void _routeCmd(
         char iptmp[64];
         if (via) {
             if ((ifscope) && (ifscope[0])) {
-                ::execl(
-                    ZT_BSD_ROUTE_CMD,
-                    ZT_BSD_ROUTE_CMD,
-                    op,
-                    "-ifscope",
-                    ifscope,
-                    ((target.ss_family == AF_INET6) ? "-inet6" : "-inet"),
-                    target.toString(ttmp),
-                    via.toIpString(iptmp),
-                    (const char*)0);
+                ::execl(ZT_BSD_ROUTE_CMD, ZT_BSD_ROUTE_CMD, op, "-ifscope", ifscope, ((target.ss_family == AF_INET6) ? "-inet6" : "-inet"), target.toString(ttmp), via.toIpString(iptmp), (const char*)0);
             }
             else {
-                ::execl(
-                    ZT_BSD_ROUTE_CMD,
-                    ZT_BSD_ROUTE_CMD,
-                    op,
-                    ((target.ss_family == AF_INET6) ? "-inet6" : "-inet"),
-                    target.toString(ttmp),
-                    via.toIpString(iptmp),
-                    (const char*)0);
+                ::execl(ZT_BSD_ROUTE_CMD, ZT_BSD_ROUTE_CMD, op, ((target.ss_family == AF_INET6) ? "-inet6" : "-inet"), target.toString(ttmp), via.toIpString(iptmp), (const char*)0);
             }
         }
         else if ((localInterface) && (localInterface[0])) {
             if ((ifscope) && (ifscope[0])) {
-                ::execl(
-                    ZT_BSD_ROUTE_CMD,
-                    ZT_BSD_ROUTE_CMD,
-                    op,
-                    "-ifscope",
-                    ifscope,
-                    ((target.ss_family == AF_INET6) ? "-inet6" : "-inet"),
-                    target.toString(ttmp),
-                    "-interface",
-                    localInterface,
-                    (const char*)0);
+                ::execl(ZT_BSD_ROUTE_CMD, ZT_BSD_ROUTE_CMD, op, "-ifscope", ifscope, ((target.ss_family == AF_INET6) ? "-inet6" : "-inet"), target.toString(ttmp), "-interface", localInterface, (const char*)0);
             }
             else {
-                ::execl(
-                    ZT_BSD_ROUTE_CMD,
-                    ZT_BSD_ROUTE_CMD,
-                    op,
-                    ((target.ss_family == AF_INET6) ? "-inet6" : "-inet"),
-                    target.toString(ttmp),
-                    "-interface",
-                    localInterface,
-                    (const char*)0);
+                ::execl(ZT_BSD_ROUTE_CMD, ZT_BSD_ROUTE_CMD, op, ((target.ss_family == AF_INET6) ? "-inet6" : "-inet"), target.toString(ttmp), "-interface", localInterface, (const char*)0);
             }
         }
         ::_exit(-1);
@@ -335,12 +289,7 @@ static void _routeCmd(
 #ifdef __WINDOWS__   // --------------------------------------------------------
 #define ZT_ROUTING_SUPPORT_FOUND 1
 
-static bool _winRoute(
-    bool del,
-    const NET_LUID& interfaceLuid,
-    const NET_IFINDEX& interfaceIndex,
-    const InetAddress& target,
-    const InetAddress& via)
+static bool _winRoute(bool del, const NET_LUID& interfaceLuid, const NET_IFINDEX& interfaceIndex, const InetAddress& target, const InetAddress& via)
 {
     MIB_IPFORWARD_ROW2 rtrow;
     InitializeIpForwardEntry(&rtrow);
@@ -349,29 +298,21 @@ static bool _winRoute(
     if (target.ss_family == AF_INET) {
         rtrow.DestinationPrefix.Prefix.si_family = AF_INET;
         rtrow.DestinationPrefix.Prefix.Ipv4.sin_family = AF_INET;
-        rtrow.DestinationPrefix.Prefix.Ipv4.sin_addr.S_un.S_addr =
-            reinterpret_cast<const struct sockaddr_in*>(&target)->sin_addr.S_un.S_addr;
+        rtrow.DestinationPrefix.Prefix.Ipv4.sin_addr.S_un.S_addr = reinterpret_cast<const struct sockaddr_in*>(&target)->sin_addr.S_un.S_addr;
         if (via.ss_family == AF_INET) {
             rtrow.NextHop.si_family = AF_INET;
             rtrow.NextHop.Ipv4.sin_family = AF_INET;
-            rtrow.NextHop.Ipv4.sin_addr.S_un.S_addr =
-                reinterpret_cast<const struct sockaddr_in*>(&via)->sin_addr.S_un.S_addr;
+            rtrow.NextHop.Ipv4.sin_addr.S_un.S_addr = reinterpret_cast<const struct sockaddr_in*>(&via)->sin_addr.S_un.S_addr;
         }
     }
     else if (target.ss_family == AF_INET6) {
         rtrow.DestinationPrefix.Prefix.si_family = AF_INET6;
         rtrow.DestinationPrefix.Prefix.Ipv6.sin6_family = AF_INET6;
-        memcpy(
-            rtrow.DestinationPrefix.Prefix.Ipv6.sin6_addr.u.Byte,
-            reinterpret_cast<const struct sockaddr_in6*>(&target)->sin6_addr.u.Byte,
-            16);
+        memcpy(rtrow.DestinationPrefix.Prefix.Ipv6.sin6_addr.u.Byte, reinterpret_cast<const struct sockaddr_in6*>(&target)->sin6_addr.u.Byte, 16);
         if (via.ss_family == AF_INET6) {
             rtrow.NextHop.si_family = AF_INET6;
             rtrow.NextHop.Ipv6.sin6_family = AF_INET6;
-            memcpy(
-                rtrow.NextHop.Ipv6.sin6_addr.u.Byte,
-                reinterpret_cast<const struct sockaddr_in6*>(&via)->sin6_addr.u.Byte,
-                16);
+            memcpy(rtrow.NextHop.Ipv6.sin6_addr.u.Byte, reinterpret_cast<const struct sockaddr_in6*>(&via)->sin6_addr.u.Byte, 16);
         }
     }
     else {
@@ -406,11 +347,7 @@ static bool _winRoute(
     }
 }
 
-static bool _winHasRoute(
-    const NET_LUID& interfaceLuid,
-    const NET_IFINDEX& interfaceIndex,
-    const InetAddress& target,
-    const InetAddress& via)
+static bool _winHasRoute(const NET_LUID& interfaceLuid, const NET_IFINDEX& interfaceIndex, const InetAddress& target, const InetAddress& via)
 {
     MIB_IPFORWARD_ROW2 rtrow;
     InitializeIpForwardEntry(&rtrow);
@@ -419,29 +356,21 @@ static bool _winHasRoute(
     if (target.ss_family == AF_INET) {
         rtrow.DestinationPrefix.Prefix.si_family = AF_INET;
         rtrow.DestinationPrefix.Prefix.Ipv4.sin_family = AF_INET;
-        rtrow.DestinationPrefix.Prefix.Ipv4.sin_addr.S_un.S_addr =
-            reinterpret_cast<const struct sockaddr_in*>(&target)->sin_addr.S_un.S_addr;
+        rtrow.DestinationPrefix.Prefix.Ipv4.sin_addr.S_un.S_addr = reinterpret_cast<const struct sockaddr_in*>(&target)->sin_addr.S_un.S_addr;
         if (via.ss_family == AF_INET) {
             rtrow.NextHop.si_family = AF_INET;
             rtrow.NextHop.Ipv4.sin_family = AF_INET;
-            rtrow.NextHop.Ipv4.sin_addr.S_un.S_addr =
-                reinterpret_cast<const struct sockaddr_in*>(&via)->sin_addr.S_un.S_addr;
+            rtrow.NextHop.Ipv4.sin_addr.S_un.S_addr = reinterpret_cast<const struct sockaddr_in*>(&via)->sin_addr.S_un.S_addr;
         }
     }
     else if (target.ss_family == AF_INET6) {
         rtrow.DestinationPrefix.Prefix.si_family = AF_INET6;
         rtrow.DestinationPrefix.Prefix.Ipv6.sin6_family = AF_INET6;
-        memcpy(
-            rtrow.DestinationPrefix.Prefix.Ipv6.sin6_addr.u.Byte,
-            reinterpret_cast<const struct sockaddr_in6*>(&target)->sin6_addr.u.Byte,
-            16);
+        memcpy(rtrow.DestinationPrefix.Prefix.Ipv6.sin6_addr.u.Byte, reinterpret_cast<const struct sockaddr_in6*>(&target)->sin6_addr.u.Byte, 16);
         if (via.ss_family == AF_INET6) {
             rtrow.NextHop.si_family = AF_INET6;
             rtrow.NextHop.Ipv6.sin6_family = AF_INET6;
-            memcpy(
-                rtrow.NextHop.Ipv6.sin6_addr.u.Byte,
-                reinterpret_cast<const struct sockaddr_in6*>(&via)->sin6_addr.u.Byte,
-                16);
+            memcpy(rtrow.NextHop.Ipv6.sin6_addr.u.Byte, reinterpret_cast<const struct sockaddr_in6*>(&via)->sin6_addr.u.Byte, 16);
         }
     }
     else {
@@ -455,17 +384,13 @@ static bool _winHasRoute(
 #endif   // __WINDOWS__ --------------------------------------------------------
 
 #ifndef ZT_ROUTING_SUPPORT_FOUND
-#error                                                                                                                 \
+#error                                                                                                                                                                                                                                         \
     "ManagedRoute.cpp has no support for managing routes on this platform! You'll need to check and see if one of the existing ones will work and make sure proper defines are set, or write one. Please do a GitHub pull request if you do this for a new OS."
 #endif
 
 }   // anonymous namespace
 
-ManagedRoute::ManagedRoute(
-    const InetAddress& target,
-    const InetAddress& via,
-    const InetAddress& src,
-    const char* device)
+ManagedRoute::ManagedRoute(const InetAddress& target, const InetAddress& via, const InetAddress& src, const char* device)
 {
     _target = target;
     _via = via;
@@ -511,8 +436,7 @@ bool ManagedRoute::sync()
 {
 #ifdef __WINDOWS__
     NET_LUID interfaceLuid;
-    interfaceLuid.Value = (ULONG64)Utils::hexStrToU64(
-        _device);   // on Windows we use the hex LUID as the "interface name" for ManagedRoute
+    interfaceLuid.Value = (ULONG64)Utils::hexStrToU64(_device);   // on Windows we use the hex LUID as the "interface name" for ManagedRoute
     NET_IFINDEX interfaceIndex = -1;
     if (ConvertInterfaceLuidToIndex(&interfaceLuid, &interfaceIndex) != NO_ERROR)
         return false;
@@ -626,8 +550,7 @@ void ManagedRoute::remove()
 {
 #ifdef __WINDOWS__
     NET_LUID interfaceLuid;
-    interfaceLuid.Value = (ULONG64)Utils::hexStrToU64(
-        _device);   // on Windows we use the hex LUID as the "interface name" for ManagedRoute
+    interfaceLuid.Value = (ULONG64)Utils::hexStrToU64(_device);   // on Windows we use the hex LUID as the "interface name" for ManagedRoute
     NET_IFINDEX interfaceIndex = -1;
     if (ConvertInterfaceLuidToIndex(&interfaceLuid, &interfaceIndex) != NO_ERROR)
         return;

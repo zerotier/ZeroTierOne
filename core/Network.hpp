@@ -334,8 +334,7 @@ class Network {
     template <typename F> ZT_INLINE void eachMember(F f)
     {
         Mutex::Lock ml(m_memberships_l);
-        for (Map<Address, Member>::iterator i(m_memberships.begin()); i != m_memberships.end();
-             ++i) {   // NOLINT(modernize-loop-convert,hicpp-use-auto,modernize-use-auto)
+        for (Map<Address, Member>::iterator i(m_memberships.begin()); i != m_memberships.end(); ++i) {   // NOLINT(modernize-loop-convert,hicpp-use-auto,modernize-use-auto)
             if (! f(i->first, i->second))
                 break;
         }

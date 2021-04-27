@@ -42,8 +42,7 @@ Map<Identity, SharedPtr<const Locator> > TrustStore::roots()
     for (Map<Fingerprint, Vector<SharedPtr<Entry> > >::const_iterator cv(m_bySubjectIdentity.begin()); cv != m_bySubjectIdentity.end(); ++cv) {
         for (Vector<SharedPtr<Entry> >::const_iterator c(cv->second.begin()); c != cv->second.end(); ++c) {
             // A root set cert must be marked for this use and authorized to influence this node's config.
-            if ((((*c)->m_certificate.usageFlags & ZT_CERTIFICATE_USAGE_ZEROTIER_ROOT_SET) != 0)
-                && (((*c)->m_localTrust & ZT_CERTIFICATE_LOCAL_TRUST_FLAG_CONFIG) != 0)) {
+            if ((((*c)->m_certificate.usageFlags & ZT_CERTIFICATE_USAGE_ZEROTIER_ROOT_SET) != 0) && (((*c)->m_localTrust & ZT_CERTIFICATE_LOCAL_TRUST_FLAG_CONFIG) != 0)) {
                 // Add all identities to the root set, and for each entry in the set make sure we have the latest
                 // locator if there's more than one cert with one.
                 for (unsigned int j = 0; j < (*c)->certificate().subject.identityCount; ++j) {
@@ -150,8 +149,7 @@ bool TrustStore::update(const int64_t clock, Vector<SharedPtr<Entry> >* const pu
         Vector<Entry*> visited;
         visited.reserve(8);
         for (Map<H384, SharedPtr<Entry> >::iterator c(m_bySerial.begin()); c != m_bySerial.end(); ++c) {
-            if ((c->second->m_error == ZT_CERTIFICATE_ERROR_NONE) && (! c->second->m_onTrustPath)
-                && ((c->second->m_localTrust & ZT_CERTIFICATE_LOCAL_TRUST_FLAG_ROOT_CA) == 0)) {
+            if ((c->second->m_error == ZT_CERTIFICATE_ERROR_NONE) && (! c->second->m_onTrustPath) && ((c->second->m_localTrust & ZT_CERTIFICATE_LOCAL_TRUST_FLAG_ROOT_CA) == 0)) {
                 // Trace the path of each certificate all the way back to a trusted CA.
                 unsigned int pathLength = 0;
                 Map<H384, SharedPtr<Entry> >::const_iterator current(c);
@@ -167,14 +165,9 @@ bool TrustStore::update(const int64_t clock, Vector<SharedPtr<Entry> >* const pu
                             visited.push_back(current->second.ptr());
                             const Map<H384, SharedPtr<Entry> >::const_iterator prevChild(current);
                             current = m_bySerial.find(H384(current->second->m_certificate.issuer));
-                            if ((current != m_bySerial.end()) && (std::find(visited.begin(), visited.end(), current->second.ptr()) == visited.end())
-                                && (current->second->m_error == ZT_CERTIFICATE_ERROR_NONE)
+                            if ((current != m_bySerial.end()) && (std::find(visited.begin(), visited.end(), current->second.ptr()) == visited.end()) && (current->second->m_error == ZT_CERTIFICATE_ERROR_NONE)
                                 && (current->second->m_certificate.publicKeySize == prevChild->second->m_certificate.issuerPublicKeySize)
-                                && (memcmp(
-                                        current->second->m_certificate.publicKey,
-                                        prevChild->second->m_certificate.issuerPublicKey,
-                                        current->second->m_certificate.publicKeySize)
-                                    == 0)) {
+                                && (memcmp(current->second->m_certificate.publicKey, prevChild->second->m_certificate.issuerPublicKey, current->second->m_certificate.publicKeySize) == 0)) {
                                 ++pathLength;
                                 continue;
                             }
@@ -208,8 +201,7 @@ bool TrustStore::update(const int64_t clock, Vector<SharedPtr<Entry> >* const pu
         if (c->second->m_error == ZT_CERTIFICATE_ERROR_NONE) {
             const unsigned int uniqueIdSize = c->second->m_certificate.subject.uniqueIdSize;
             if ((uniqueIdSize > 0) && (uniqueIdSize <= ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE)) {
-                SharedPtr<Entry>& entry =
-                    m_bySubjectUniqueId[Blob<ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE>(c->second->m_certificate.subject.uniqueId, uniqueIdSize)];
+                SharedPtr<Entry>& entry = m_bySubjectUniqueId[Blob<ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE>(c->second->m_certificate.subject.uniqueId, uniqueIdSize)];
                 if (entry) {
                     // If there's already an entry, see if there's a newer certificate for this subject.
                     if (c->second->m_certificate.subject.timestamp > entry->m_certificate.subject.timestamp) {
@@ -325,8 +317,7 @@ int TrustStore::load(const Vector<uint8_t>& data)
     Vector<uint8_t> uncomp;
     uncomp.resize(uncompSize);
 
-    if (LZ4_decompress_safe(reinterpret_cast<const char*>(data.data() + 8), reinterpret_cast<char*>(uncomp.data()), (int)(data.size() - 8), (int)uncompSize)
-        != (int)uncompSize)
+    if (LZ4_decompress_safe(reinterpret_cast<const char*>(data.data() + 8), reinterpret_cast<char*>(uncomp.data()), (int)(data.size() - 8), (int)uncompSize) != (int)uncompSize)
         return -1;
     const uint8_t* b = uncomp.data();
     if (Utils::fnv1a32(b, (unsigned int)uncompSize) != Utils::loadBigEndian<uint32_t>(data.data() + 4))

@@ -180,8 +180,7 @@ bool Identity::locallyValidate() const noexcept
                         return MIMC52::verify(
                             reinterpret_cast<const uint8_t*>(challenge),
                             ZT_IDENTITY_TYPE1_MIMC52_ROUNDS,
-                            ((uint64_t)m_pub[0] << 48U) | ((uint64_t)m_pub[1] << 40U) | ((uint64_t)m_pub[2] << 32U) | ((uint64_t)m_pub[3] << 24U)
-                                | ((uint64_t)m_pub[4] << 16U) | ((uint64_t)m_pub[5] << 8U) | (uint64_t)m_pub[6]);
+                            ((uint64_t)m_pub[0] << 48U) | ((uint64_t)m_pub[1] << 40U) | ((uint64_t)m_pub[2] << 32U) | ((uint64_t)m_pub[3] << 24U) | ((uint64_t)m_pub[4] << 16U) | ((uint64_t)m_pub[5] << 8U) | (uint64_t)m_pub[6]);
                     }
                     return false;
             }
@@ -269,10 +268,7 @@ bool Identity::agree(const Identity& id, uint8_t key[ZT_SYMMETRIC_KEY_SIZE]) con
             // or something. For those who don't trust P384 this means the privacy of
             // your traffic is also protected by C25519.
             C25519::agree(m_priv, id.m_pub, rawkey);
-            ECC384ECDH(
-                id.m_pub + 7 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE,
-                m_priv + ZT_C25519_COMBINED_PRIVATE_KEY_SIZE,
-                rawkey + ZT_C25519_ECDH_SHARED_SECRET_SIZE);
+            ECC384ECDH(id.m_pub + 7 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE, m_priv + ZT_C25519_COMBINED_PRIVATE_KEY_SIZE, rawkey + ZT_C25519_ECDH_SHARED_SECRET_SIZE);
             SHA384(key, rawkey, ZT_C25519_ECDH_SHARED_SECRET_SIZE + ZT_ECC384_SHARED_SECRET_SIZE);
             return true;
         }

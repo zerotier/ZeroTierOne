@@ -60,9 +60,7 @@ template <typename CRED> static ZT_INLINE Credential::VerifyResult p_credVerify(
         int l = credential.marshal(tmp, true);
         if (l <= 0)
             return Credential::VERIFY_BAD_SIGNATURE;
-        return (
-            peer->identity().verify(tmp, (unsigned int)l, credential.signature(), credential.signatureLength()) ? Credential::VERIFY_OK
-                                                                                                                : Credential::VERIFY_BAD_SIGNATURE);
+        return (peer->identity().verify(tmp, (unsigned int)l, credential.signature(), credential.signatureLength()) ? Credential::VERIFY_OK : Credential::VERIFY_BAD_SIGNATURE);
     }
     catch (...) {
     }
@@ -104,8 +102,7 @@ Credential::VerifyResult Credential::s_verify(const Context& ctx, const CallCont
     // Now verify the controller's signature.
     uint64_t buf[ZT_MEMBERSHIP_CREDENTIAL_MARSHAL_SIZE_MAX / 8];
     const unsigned int bufSize = credential.m_fillSigningBuf(buf);
-    return peer->identity().verify(buf, bufSize, credential.m_signature, credential.m_signatureLength) ? Credential::VERIFY_OK
-                                                                                                       : Credential::VERIFY_BAD_SIGNATURE;
+    return peer->identity().verify(buf, bufSize, credential.m_signature, credential.m_signatureLength) ? Credential::VERIFY_OK : Credential::VERIFY_BAD_SIGNATURE;
 }
 
 }   // namespace ZeroTier

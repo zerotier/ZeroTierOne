@@ -47,15 +47,7 @@ class NetworkController {
          * @param nc Network configuration to send
          * @param sendLegacyFormatConfig If true, send an old-format network config
          */
-        virtual void ncSendConfig(
-            void* tPtr,
-            int64_t clock,
-            int64_t ticks,
-            uint64_t nwid,
-            uint64_t requestPacketId,
-            const Address& destination,
-            const NetworkConfig& nc,
-            bool sendLegacyFormatConfig) = 0;
+        virtual void ncSendConfig(void* tPtr, int64_t clock, int64_t ticks, uint64_t nwid, uint64_t requestPacketId, const Address& destination, const NetworkConfig& nc, bool sendLegacyFormatConfig) = 0;
 
         /**
          * Send revocation to a node
@@ -73,14 +65,7 @@ class NetworkController {
          * @param destination Destination peer Address
          * @param errorCode Error code
          */
-        virtual void ncSendError(
-            void* tPtr,
-            int64_t clock,
-            int64_t ticks,
-            uint64_t nwid,
-            uint64_t requestPacketId,
-            const Address& destination,
-            NetworkController::ErrorCode errorCode) = 0;
+        virtual void ncSendError(void* tPtr, int64_t clock, int64_t ticks, uint64_t nwid, uint64_t requestPacketId, const Address& destination, NetworkController::ErrorCode errorCode) = 0;
     };
 
     NetworkController()

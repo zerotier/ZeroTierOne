@@ -206,15 +206,9 @@ template <unsigned int R> static ZT_INLINE void p_salsaCrypt(p_SalsaState* const
         k13 = _mm_shuffle_epi32(k13, _MM_SHUFFLE(0, 1, 2, 3));
 
         _mm_storeu_si128(reinterpret_cast<__m128i*>(c), _mm_xor_si128(_mm_unpackhi_epi64(k02, k20), _mm_loadu_si128(reinterpret_cast<const __m128i*>(m))));
-        _mm_storeu_si128(
-            reinterpret_cast<__m128i*>(c) + 1,
-            _mm_xor_si128(_mm_unpackhi_epi64(k13, k31), _mm_loadu_si128(reinterpret_cast<const __m128i*>(m) + 1)));
-        _mm_storeu_si128(
-            reinterpret_cast<__m128i*>(c) + 2,
-            _mm_xor_si128(_mm_unpacklo_epi64(k20, k02), _mm_loadu_si128(reinterpret_cast<const __m128i*>(m) + 2)));
-        _mm_storeu_si128(
-            reinterpret_cast<__m128i*>(c) + 3,
-            _mm_xor_si128(_mm_unpacklo_epi64(k31, k13), _mm_loadu_si128(reinterpret_cast<const __m128i*>(m) + 3)));
+        _mm_storeu_si128(reinterpret_cast<__m128i*>(c) + 1, _mm_xor_si128(_mm_unpackhi_epi64(k13, k31), _mm_loadu_si128(reinterpret_cast<const __m128i*>(m) + 1)));
+        _mm_storeu_si128(reinterpret_cast<__m128i*>(c) + 2, _mm_xor_si128(_mm_unpacklo_epi64(k20, k02), _mm_loadu_si128(reinterpret_cast<const __m128i*>(m) + 2)));
+        _mm_storeu_si128(reinterpret_cast<__m128i*>(c) + 3, _mm_xor_si128(_mm_unpacklo_epi64(k31, k13), _mm_loadu_si128(reinterpret_cast<const __m128i*>(m) + 3)));
 
         X0 = X0s;
         X1 = X1s;

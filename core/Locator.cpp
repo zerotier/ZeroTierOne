@@ -198,9 +198,7 @@ int Locator::unmarshal(const uint8_t* data, const int len) noexcept
 struct p_SortByEndpoint {
     // There can't be more than one of the same endpoint, so only need to sort
     // by endpoint.
-    ZT_INLINE bool operator()(
-        const std::pair<Endpoint, SharedPtr<const Locator::EndpointAttributes> >& a,
-        const std::pair<Endpoint, SharedPtr<const Locator::EndpointAttributes> >& b) const noexcept
+    ZT_INLINE bool operator()(const std::pair<Endpoint, SharedPtr<const Locator::EndpointAttributes> >& a, const std::pair<Endpoint, SharedPtr<const Locator::EndpointAttributes> >& b) const noexcept
     {
         return a.first < b.first;
     }

@@ -44,13 +44,7 @@ class SelfAwareness {
      * @param myPhysicalAddress Physical address that peer says we have
      * @param trusted True if this peer is trusted as an authority to inform us of external address changes
      */
-    void
-    iam(const CallContext& cc,
-        const Identity& reporter,
-        int64_t receivedOnLocalSocket,
-        const InetAddress& reporterPhysicalAddress,
-        const InetAddress& myPhysicalAddress,
-        bool trusted);
+    void iam(const CallContext& cc, const Identity& reporter, int64_t receivedOnLocalSocket, const InetAddress& reporterPhysicalAddress, const InetAddress& myPhysicalAddress, bool trusted);
 
     /**
      * Clean up database periodically
@@ -91,9 +85,7 @@ class SelfAwareness {
 
         ZT_INLINE bool operator==(const p_PhySurfaceKey& k) const noexcept
         {
-            return (
-                (reporter == k.reporter) && (receivedOnLocalSocket == k.receivedOnLocalSocket) && (reporterPhysicalAddress == k.reporterPhysicalAddress)
-                && (scope == k.scope));
+            return ((reporter == k.reporter) && (receivedOnLocalSocket == k.receivedOnLocalSocket) && (reporterPhysicalAddress == k.reporterPhysicalAddress) && (scope == k.scope));
         }
 
         ZT_INLINE bool operator!=(const p_PhySurfaceKey& k) const noexcept

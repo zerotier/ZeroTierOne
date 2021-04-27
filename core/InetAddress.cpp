@@ -21,12 +21,8 @@
 namespace ZeroTier {
 
 static_assert(ZT_SOCKADDR_STORAGE_SIZE == sizeof(sockaddr_storage), "ZT_SOCKADDR_STORAGE_SIZE is incorrect on this platform, must be size of sockaddr_storage");
-static_assert(
-    ZT_SOCKADDR_STORAGE_SIZE == sizeof(InetAddress),
-    "ZT_SOCKADDR_STORAGE_SIZE should equal InetAddress, which should equal size of sockaddr_storage");
-static_assert(
-    ZT_SOCKADDR_STORAGE_SIZE == sizeof(ZT_InetAddress),
-    "ZT_SOCKADDR_STORAGE_SIZE should equal ZT_InetAddress, which should equal size of sockaddr_storage");
+static_assert(ZT_SOCKADDR_STORAGE_SIZE == sizeof(InetAddress), "ZT_SOCKADDR_STORAGE_SIZE should equal InetAddress, which should equal size of sockaddr_storage");
+static_assert(ZT_SOCKADDR_STORAGE_SIZE == sizeof(ZT_InetAddress), "ZT_SOCKADDR_STORAGE_SIZE should equal ZT_InetAddress, which should equal size of sockaddr_storage");
 
 const InetAddress InetAddress::LO4((const void*)("\x7f\x00\x00\x01"), 4, 0);
 const InetAddress InetAddress::LO6((const void*)("\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"), 16, 0);
@@ -310,8 +306,7 @@ bool InetAddress::containsAddress(const InetAddress& addr) const noexcept
                 const unsigned int bits = netmaskBits();
                 if (bits == 0)
                     return true;
-                return (
-                    (Utils::ntoh((uint32_t)addr.as.sa_in.sin_addr.s_addr) >> (32 - bits)) == (Utils::ntoh((uint32_t)as.sa_in.sin_addr.s_addr) >> (32 - bits)));
+                return ((Utils::ntoh((uint32_t)addr.as.sa_in.sin_addr.s_addr) >> (32 - bits)) == (Utils::ntoh((uint32_t)as.sa_in.sin_addr.s_addr) >> (32 - bits)));
             }
             case AF_INET6: {
                 const InetAddress mask(netmask());

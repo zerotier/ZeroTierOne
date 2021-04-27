@@ -253,9 +253,7 @@
 #define ZT_PROTO_HELLO_NODE_META_EPHEMERAL_ACK    "E"
 
 static_assert(ZT_PROTO_MAX_PACKET_LENGTH < ZT_BUF_MEM_SIZE, "maximum packet length won't fit in Buf");
-static_assert(
-    ZT_PROTO_PACKET_ENCRYPTED_SECTION_START == (ZT_PROTO_MIN_PACKET_LENGTH - 1),
-    "encrypted packet section must start right before protocol verb at one less than minimum packet size");
+static_assert(ZT_PROTO_PACKET_ENCRYPTED_SECTION_START == (ZT_PROTO_MIN_PACKET_LENGTH - 1), "encrypted packet section must start right before protocol verb at one less than minimum packet size");
 
 namespace ZeroTier {
 namespace Protocol {

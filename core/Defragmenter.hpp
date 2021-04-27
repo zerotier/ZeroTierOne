@@ -46,12 +46,7 @@ namespace ZeroTier {
  * @tparam GCT Garbage collection trigger threshold, usually 2X GCS (default: ZT_MAX_PACKET_FRAGMENTS * 4)
  * @tparam P Type for pointer to a path object (default: SharedPtr<Path>)
  */
-template <
-    unsigned int MF = ZT_MAX_PACKET_FRAGMENTS,
-    unsigned int MFP = ZT_MAX_INCOMING_FRAGMENTS_PER_PATH,
-    unsigned int GCS = (ZT_MAX_PACKET_FRAGMENTS * 2),
-    unsigned int GCT = (ZT_MAX_PACKET_FRAGMENTS * 4),
-    typename P = SharedPtr<Path> >
+template <unsigned int MF = ZT_MAX_PACKET_FRAGMENTS, unsigned int MFP = ZT_MAX_INCOMING_FRAGMENTS_PER_PATH, unsigned int GCS = (ZT_MAX_PACKET_FRAGMENTS * 2), unsigned int GCT = (ZT_MAX_PACKET_FRAGMENTS * 4), typename P = SharedPtr<Path> >
 class Defragmenter {
   public:
     /**

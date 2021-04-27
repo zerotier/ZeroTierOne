@@ -62,14 +62,14 @@ UseTab: 'false'
 ---
 Language: Cpp
 Standard: Cpp03
-ColumnLimit: '160'
+ColumnLimit: '240'
 ---
 Language: ObjC
-ColumnLimit: '160'
+ColumnLimit: '240'
 ---
 Language: Java
-ColumnLimit: '160'
+ColumnLimit: '240'
 ---
 Language: CSharp
-ColumnLimit: '160'
+ColumnLimit: '240'
 ...
