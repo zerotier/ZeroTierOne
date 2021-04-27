@@ -56,7 +56,8 @@ Global Options:
 Common Operations:
 
   help                                     Show this help
-  version                                  Print version
+  oldhelp                                  Show v1.x legacy commands
+  version                                  Print version (of this binary)
 
 · status                                   Show node status and configuration
 
@@ -118,9 +119,9 @@ Advanced Operations:
   cert <command> [args]
 ·   list                                   List certificates at local node
     show <@cert|·serial>                   Show certificate details
-    newsuid [@secret]                      Create a subject unique ID secret
-    newcsr <@csr> <@secret>                Create a CSR (interactive)
-    sign <@csr> <@secret> <@cert>          Sign a CSR to create a certificate
+    newsuid [@secret out]                  Create a subject unique ID secret
+    newcsr <@csr> <@secret out>            Create a CSR (interactive)
+    sign <@csr> <@secret> <@cert out>      Sign a CSR to create a certificate
     verify <@cert>                         Internally verify certificate
 ·   import <@cert> [trust,trust,...]       Import certificate into this node
       trust flag: rootca                     Root (or self-signed) CA
@@ -130,8 +131,8 @@ Advanced Operations:
 ·   factoryreset                           Re-import compiled-in default certs
 
     · Command (or command with argument type) requires a running node.
-    @ Argument is a path to an object, not the object itself.
-    ? Argument can be either an inline value or a path to it.
+    @ Argument is the path to a file containing the object.
+    ? Argument can be either the object or a path to it (auto-detected).
 "###, ver.0, ver.1, ver.2)
 }
 
@@ -313,34 +314,40 @@ fn main() {
         args
     };
 
-    std::process::exit(match cli_args.subcommand() {
-        ("help", _) => {
-            print_help();
-            0
-        }
-        ("version", _) => {
-            let ver = zerotier_core::version();
-            println!("{}.{}.{}", ver.0, ver.1, ver.2);
-            0
-        }
-        ("status", _) => crate::httpclient::run_command(make_store(&cli_args), get_global_flags(&cli_args), crate::commands::status::run),
-        ("set", Some(sub_cli_args)) => { 0 }
-        ("peer", Some(sub_cli_args)) => { 0 }
-        ("network", Some(sub_cli_args)) => { 0 }
-        ("join", Some(sub_cli_args)) => { 0 }
-        ("leave", Some(sub_cli_args)) => { 0 }
-        ("service", _) => {
-            let store = make_store(&cli_args);
-            drop(cli_args); // free no longer needed memory before entering service
-            service::run(store)
-        },
-        ("controller", Some(sub_cli_args)) => { 0 }
-        ("identity", Some(sub_cli_args)) => crate::commands::identity::run(sub_cli_args),
-        ("locator", Some(sub_cli_args)) => crate::commands::locator::run(sub_cli_args),
-        ("cert", Some(sub_cli_args)) => crate::commands::cert::run(make_store(&cli_args), get_global_flags(&cli_args), sub_cli_args),
-        _ => {
-            print_help();
-            1
+    std::process::exit({
+        match cli_args.subcommand() {
+            ("help", _) => {
+                print_help();
+                0
+            }
+            ("oldhelp", _) => {
+                // TODO
+                0
+            }
+            ("version", _) => {
+                let ver = zerotier_core::version();
+                println!("{}.{}.{}", ver.0, ver.1, ver.2);
+                0
+            }
+            ("status", _) => crate::httpclient::run_command(make_store(&cli_args), get_global_flags(&cli_args), crate::commands::status::run),
+            ("set", Some(sub_cli_args)) => { 0 }
+            ("peer", Some(sub_cli_args)) => { 0 }
+            ("network", Some(sub_cli_args)) => { 0 }
+            ("join", Some(sub_cli_args)) => { 0 }
+            ("leave", Some(sub_cli_args)) => { 0 }
+            ("service", _) => {
+                let store = make_store(&cli_args);
+                drop(cli_args); // free no longer needed memory before entering service
+                service::run(store)
+            },
+            ("controller", Some(sub_cli_args)) => { 0 }
+            ("identity", Some(sub_cli_args)) => crate::commands::identity::run(sub_cli_args),
+            ("locator", Some(sub_cli_args)) => crate::commands::locator::run(sub_cli_args),
+            ("cert", Some(sub_cli_args)) => crate::commands::cert::run(make_store(&cli_args), get_global_flags(&cli_args), sub_cli_args),
+            _ => {
+                print_help();
+                1
+            }
         }
     });
 }

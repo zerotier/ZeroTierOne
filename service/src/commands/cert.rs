@@ -22,8 +22,49 @@ use crate::store::Store;
 use crate::utils::{read_limit, ms_since_epoch, to_json_pretty};
 use crate::GlobalFlags;
 
-/// Dump a certificate in human-readable format to stdout.
-fn dump_cert(certificate: &Certificate) {
+fn cert_usage_flags_to_string(flags: u64) -> String {
+    let mut flags_str = String::new();
+    for f in [
+        (CERTIFICATE_USAGE_DIGITAL_SIGNATURE, "s"),
+        (CERTIFICATE_USAGE_NON_REPUDIATION, "n"),
+        (CERTIFICATE_USAGE_KEY_ENCIPHERMENT, "e"),
+        (CERTIFICATE_USAGE_DATA_ENCIPHERMENT, "d"),
+        (CERTIFICATE_USAGE_KEY_AGREEMENT, "a"),
+        (CERTIFICATE_USAGE_CERTIFICATE_SIGNING, "c"),
+        (CERTIFICATE_USAGE_CRL_SIGNING, "r"),
+        (CERTIFICATE_USAGE_EXECUTABLE_SIGNATURE, "x"),
+        (CERTIFICATE_USAGE_TIMESTAMPING, "t"),
+    ].iter() {
+        if (flags & (*f).0) != 0 {
+            if !flags_str.is_empty() {
+                flags_str.push(',');
+            }
+            flags_str.push_str((*f).1);
+        }
+    }
+    flags_str
+}
+
+fn cert_string_to_usage_flags(flags_str: &str) -> u64 {
+    let mut flags: u64 = 0;
+    for c in flags_str.chars().into_iter() {
+        flags |= match c {
+            's' => CERTIFICATE_USAGE_DIGITAL_SIGNATURE,
+            'n' => CERTIFICATE_USAGE_NON_REPUDIATION,
+            'e' => CERTIFICATE_USAGE_KEY_ENCIPHERMENT,
+            'd' => CERTIFICATE_USAGE_DATA_ENCIPHERMENT,
+            'a' => CERTIFICATE_USAGE_KEY_AGREEMENT,
+            'c' => CERTIFICATE_USAGE_CERTIFICATE_SIGNING,
+            'r' => CERTIFICATE_USAGE_CRL_SIGNING,
+            'x' => CERTIFICATE_USAGE_EXECUTABLE_SIGNATURE,
+            't' => CERTIFICATE_USAGE_TIMESTAMPING,
+            _ => 0,
+        }
+    }
+    flags
+}
+
+fn cert_print(certificate: &Certificate) {
     let mut subject_identities = String::new();
     let mut subject_networks = String::new();
     let mut subject_update_urls = String::new();
@@ -74,14 +115,7 @@ fn dump_cert(certificate: &Certificate) {
 
     if certificate.usage_flags != 0 {
         usage_flags.push_str(" (");
-        for f in ALL_CERTIFICATE_USAGE_FLAGS.iter() {
-            if (certificate.usage_flags & (*f).0) != 0 {
-                if !usage_flags.is_empty() {
-                    usage_flags.push(',');
-                }
-                usage_flags.push_str((*f).1);
-            }
-        }
+        usage_flags.push_str(cert_usage_flags_to_string(certificate.usage_flags).as_str());
         usage_flags.push(')');
     }
 
@@ -163,7 +197,7 @@ fn show<'a>(store: &Arc<Store>, global_flags: &GlobalFlags, cli_args: &ArgMatche
                 if global_flags.json_output {
                     println!("{}", to_json_pretty(&certificate));
                 } else {
-                    dump_cert(&certificate);
+                    cert_print(&certificate);
                 }
                 let cv = certificate.verify(ms_since_epoch());
                 if cv != CertificateError::None {
@@ -347,7 +381,7 @@ fn newcsr(cli_args: &ArgMatches) -> i32 {
 
     println!("Certificate name information (all fields are optional)");
     let name = CertificateName {
-        serial_no: Input::with_theme(theme).with_prompt("  Serial").allow_empty(true).interact_text().unwrap_or_default(),
+        serial_no: Input::with_theme(theme).with_prompt("  Serial (user-defined)").allow_empty(true).interact_text().unwrap_or_default(),
         common_name: Input::with_theme(theme).with_prompt("  Common Name").allow_empty(true).interact_text().unwrap_or_default(),
         organization: Input::with_theme(theme).with_prompt("  Organization").allow_empty(true).interact_text().unwrap_or_default(),
         unit: Input::with_theme(theme).with_prompt("  Organizational Unit").allow_empty(true).interact_text().unwrap_or_default(),
@@ -370,8 +404,9 @@ fn newcsr(cli_args: &ArgMatches) -> i32 {
         unique_id: Vec::new(),
         unique_id_signature: Vec::new(),
     };
-    let (pubk, privk) = Certificate::new_key_pair(CertificatePublicKeyAlgorithm::ECDSANistP384).ok().unwrap();
-    subject.new_csr(pubk.as_ref(), subject_unique_id_private_key.as_ref().map(|k| k.as_ref())).map_or_else(|e| {
+
+    let (_, privk) = Certificate::new_key_pair(CertificatePublicKeyAlgorithm::ECDSANistP384).ok().unwrap();
+    subject.new_csr(privk.as_ref(), subject_unique_id_private_key.as_ref().map(|k| k.as_ref())).map_or_else(|e| {
         println!("ERROR: error creating CRL: {}", e.to_str());
         1
     }, |csr| {
@@ -394,6 +429,8 @@ fn newcsr(cli_args: &ArgMatches) -> i32 {
 }
 
 fn sign<'a>(store: &Arc<Store>, cli_args: &ArgMatches<'a>) -> i32 {
+    let theme = &dialoguer::theme::SimpleTheme;
+
     0
 }
 

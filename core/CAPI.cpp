@@ -627,17 +627,17 @@ ZT_Certificate_newKeyPair(const enum ZT_CertificatePublicKeyAlgorithm type, uint
 
 ZT_MAYBE_UNUSED int ZT_Certificate_newCSR(
     const ZT_Certificate_Subject* subject,
-    const void* const certificatePublicKey,
-    const int certificatePublicKeySize,
+    const void* const certificatePrivateKey,
+    const int certificatePrivateKeySize,
     const void* const uniqueIdPrivateKey,
     const int uniqueIdPrivateKeySize,
     void* const csr,
     int* const csrSize)
 {
     try {
-        if ((! subject) || (! certificatePublicKey) || (certificatePublicKeySize <= 0) || (certificatePublicKeySize > ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE))
+        if ((! subject) || (! certificatePrivateKey) || (certificatePrivateKeySize <= 0))
             return ZT_RESULT_ERROR_BAD_PARAMETER;
-        const ZeroTier::Vector<uint8_t> csrV(ZeroTier::Certificate::createCSR(*subject, certificatePublicKey, (unsigned int)certificatePublicKeySize, uniqueIdPrivateKey, (unsigned int)uniqueIdPrivateKeySize));
+        const ZeroTier::Vector<uint8_t> csrV(ZeroTier::Certificate::createCSR(*subject, certificatePrivateKey, (unsigned int)certificatePrivateKeySize, uniqueIdPrivateKey, (unsigned int)uniqueIdPrivateKeySize));
         if (csrV.empty() || ((int)csrV.size() > *csrSize))
             return ZT_RESULT_ERROR_BAD_PARAMETER;
         ZeroTier::Utils::copy(csr, csrV.data(), (unsigned int)csrV.size());

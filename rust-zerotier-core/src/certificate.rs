@@ -13,10 +13,10 @@
 
 use std::ffi::CString;
 use std::hash::{Hash, Hasher};
-use std::mem::{zeroed, MaybeUninit};
+use std::mem::zeroed;
 use std::os::raw::{c_char, c_uint, c_void};
 use std::pin::Pin;
-use std::ptr::{copy_nonoverlapping, null, null_mut, read_unaligned, write_bytes};
+use std::ptr::{copy_nonoverlapping, null, null_mut, read_unaligned};
 
 use num_derive::{FromPrimitive, ToPrimitive};
 #[allow(unused_imports)]
@@ -41,19 +41,6 @@ pub const CERTIFICATE_USAGE_CERTIFICATE_SIGNING: u64 = ztcore::ZT_CERTIFICATE_US
 pub const CERTIFICATE_USAGE_CRL_SIGNING: u64 = ztcore::ZT_CERTIFICATE_USAGE_CRL_SIGNING as u64;
 pub const CERTIFICATE_USAGE_EXECUTABLE_SIGNATURE: u64 = ztcore::ZT_CERTIFICATE_USAGE_EXECUTABLE_SIGNATURE as u64;
 pub const CERTIFICATE_USAGE_TIMESTAMPING: u64 = ztcore::ZT_CERTIFICATE_USAGE_TIMESTAMPING as u64;
-
-/// All certificate usage flags and their corresponding canonical abbreviations.
-pub const ALL_CERTIFICATE_USAGE_FLAGS: [(u64, &'static str); 9] = [
-    (CERTIFICATE_USAGE_DIGITAL_SIGNATURE, "ds"),
-    (CERTIFICATE_USAGE_NON_REPUDIATION, "nr"),
-    (CERTIFICATE_USAGE_KEY_ENCIPHERMENT, "ke"),
-    (CERTIFICATE_USAGE_DATA_ENCIPHERMENT, "de"),
-    (CERTIFICATE_USAGE_KEY_AGREEMENT, "ka"),
-    (CERTIFICATE_USAGE_CERTIFICATE_SIGNING, "cs"),
-    (CERTIFICATE_USAGE_CRL_SIGNING, "crl"),
-    (CERTIFICATE_USAGE_EXECUTABLE_SIGNATURE, "es"),
-    (CERTIFICATE_USAGE_TIMESTAMPING, "ts"),
-];
 
 #[inline(always)]
 fn vec_to_array<const L: usize>(v: &Vec<u8>) -> [u8; L] {
@@ -532,7 +519,7 @@ impl CertificateSubject {
     /// Create a new certificate signing request.
     /// A CSR is a Certificate containing only the subject (with optional unique ID and signature)
     /// and its private key. Other fields must be filled in by the owner of the signing certificate.
-    pub fn new_csr(&self, certificate_public_key: &[u8], subject_unique_id_private_key: Option<&[u8]>) -> Result<Vec<u8>, ResultCode> {
+    pub fn new_csr(&self, certifcate_private_key: &[u8], subject_unique_id_private_key: Option<&[u8]>) -> Result<Vec<u8>, ResultCode> {
         let mut csr: Vec<u8> = Vec::new();
         csr.resize(65536, 0);
         let mut csr_size: c_int = 65536;
@@ -540,7 +527,7 @@ impl CertificateSubject {
         let (uid, uid_size) = subject_unique_id_private_key.map_or((null::<u8>(), 0 as c_int), |b| (b.as_ptr(), b.len() as c_int));
         let r = unsafe {
             let s = self.to_capi();
-            ztcore::ZT_Certificate_newCSR(&s.subject, certificate_public_key.as_ptr().cast(), certificate_public_key.len() as c_int, uid.cast(), uid_size, csr.as_mut_ptr().cast(), &mut csr_size)
+            ztcore::ZT_Certificate_newCSR(&s.subject, certifcate_private_key.as_ptr().cast(), certifcate_private_key.len() as c_int, uid.cast(), uid_size, csr.as_mut_ptr().cast(), &mut csr_size)
         };
 
         if r == 0 {
@@ -569,6 +556,8 @@ pub struct Certificate {
     pub issuer_public_key: Vec<u8>,
     #[serde(rename = "publicKey")]
     pub public_key: Vec<u8>,
+    #[serde(rename = "subjectSignature")]
+    pub subject_signature: Vec<u8>,
     #[serde(rename = "extendedAttributes")]
     pub extended_attributes: Vec<u8>,
     #[serde(with = "Base64URLSafeNoPad")]
@@ -615,6 +604,7 @@ impl Certificate {
             issuer: CertificateSerialNo::new(),
             issuer_public_key: Vec::new(),
             public_key: Vec::new(),
+            subject_signature: Vec::new(),
             extended_attributes: Vec::new(),
             max_path_length: 0,
             signature: Vec::new(),
@@ -631,6 +621,7 @@ impl Certificate {
             issuer: CertificateSerialNo(c.issuer),
             issuer_public_key: c.issuerPublicKey[0..(c.issuerPublicKeySize as usize)].to_vec(),
             public_key: c.publicKey[0..(c.publicKeySize as usize)].to_vec(),
+            subject_signature: c.subjectSignature[0..(c.subjectSignatureSize as usize)].to_vec(),
             extended_attributes: Vec::from(std::slice::from_raw_parts(c.extendedAttributes, c.extendedAttributesSize as usize)),
             max_path_length: c.maxPathLength as u32,
             signature: c.signature[0..(c.signatureSize as usize)].to_vec(),
@@ -649,8 +640,10 @@ impl Certificate {
                 issuer: self.issuer.0,
                 issuerPublicKey: vec_to_array(&self.issuer_public_key),
                 publicKey: vec_to_array(&self.public_key),
+                subjectSignature: vec_to_array(&self.subject_signature),
                 issuerPublicKeySize: self.issuer_public_key.len() as c_uint,
                 publicKeySize: self.public_key.len() as c_uint,
+                subjectSignatureSize: self.subject_signature.len() as c_uint,
                 extendedAttributes: self.extended_attributes.as_ptr(),
                 extendedAttributesSize: self.extended_attributes.len() as c_uint,
                 maxPathLength: self.max_path_length as c_uint,
@@ -747,6 +740,7 @@ mod tests {
             issuer: CertificateSerialNo::new(),
             issuer_public_key: issuer_pubk,
             public_key: pubk.clone(),
+            subject_signature: Vec::new(),
             extended_attributes: Vec::new(),
             max_path_length: 123,
             signature: Vec::new()

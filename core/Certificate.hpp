@@ -182,13 +182,13 @@ class Certificate : public ZT_Certificate {
      * Create a CSR that encodes the subject of this certificate
      *
      * @param s Subject to encode
-     * @param certificatePublicKey Public key for certificate
-     * @param certificatePublicKeySize Size of public key
+     * @param certificatePrivateKey Private key for certificate (includes public)
+     * @param certificatePrivateKeySize Size of private
      * @param uniqueIdPrivate Unique ID private key for proof signature or NULL if none
      * @param uniqueIdPrivateSize Size of unique ID private key
      * @return Encoded subject (without any unique ID fields) or empty vector on error
      */
-    static Vector<uint8_t> createCSR(const ZT_Certificate_Subject& s, const void* certificatePublicKey, unsigned int certificatePublicKeySize, const void* uniqueIdPrivate, unsigned int uniqueIdPrivateSize);
+    static Vector<uint8_t> createCSR(const ZT_Certificate_Subject& s, const void* certificatePrivateKey, unsigned int certificatePrivateKeySize, const void* uniqueIdPrivate, unsigned int uniqueIdPrivateSize);
 
     ZT_INLINE unsigned long hashCode() const noexcept
     {

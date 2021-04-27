@@ -671,6 +671,14 @@ typedef struct {
     uint8_t publicKey[ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE];
 
     /**
+     * Signature of subject with public key.
+     *
+     * This couples the subject to the public key, ensuring that the CRL was
+     * not modified in transit or by the signer.
+     */
+    uint8_t subjectSignature[ZT_CERTIFICATE_MAX_SIGNATURE_SIZE];
+
+    /**
      * Size of issuer public key.
      */
     unsigned int issuerPublicKeySize;
@@ -679,6 +687,11 @@ typedef struct {
      * Size of public key in bytes
      */
     unsigned int publicKeySize;
+
+    /**
+     * Size of subject signature in bytes
+     */
+    unsigned int subjectSignatureSize;
 
     /**
      * Extended attributes set by issuer (in Dictionary format, NULL if none)
@@ -2720,15 +2733,15 @@ ZT_Certificate_newKeyPair(enum ZT_CertificatePublicKeyAlgorithm type, uint8_t pu
  * supplied subject, these will be ignored.
  *
  * @param subject Subject filled in with fields for CSR
- * @param certificatePublicKey Public key for new certificate
- * @param certificatePublicKeySize Public key size in bytes
+ * @param certificatePrivateKey Private key for new certificate
+ * @param certificatePrivateKeySize Private key size in bytes
  * @param uniqueIdPrivateKey Unique ID private key or NULL if none
  * @param uniqueIdPrivateKeySize Size of unique ID private key
  * @param csr Buffer to hold CSR (recommended size: 16384 bytes)
  * @param csrSize Value/result: size of buffer
  * @return OK (0) or error
  */
-ZT_SDK_API int ZT_Certificate_newCSR(const ZT_Certificate_Subject* subject, const void* certificatePublicKey, int certificatePublicKeySize, const void* uniqueIdPrivateKey, int uniqueIdPrivateKeySize, void* csr, int* csrSize);
+ZT_SDK_API int ZT_Certificate_newCSR(const ZT_Certificate_Subject* subject, const void* certificatePrivateKey, int certificatePrivateKeySize, const void* uniqueIdPrivateKey, int uniqueIdPrivateKeySize, void* csr, int* csrSize);
 
 /**
  * Sign a CSR to generate a complete certificate.
