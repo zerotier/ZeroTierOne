@@ -28,9 +28,9 @@
 // Maximum size of a thing's value field in bytes
 #define ZT_CERTIFICATEOFOWNERSHIP_MAX_THING_VALUE_SIZE 16
 
-#define ZT_CERTIFICATEOFOWNERSHIP_MARSHAL_SIZE_MAX                                                                     \
-    (8 + 8 + 8 + 4 + 2 + ((1 + ZT_CERTIFICATEOFOWNERSHIP_MAX_THING_VALUE_SIZE) * ZT_CERTIFICATEOFOWNERSHIP_MAX_THINGS) \
-     + 5 + 5 + 1 + 2 + ZT_SIGNATURE_BUFFER_SIZE + 2)
+#define ZT_CERTIFICATEOFOWNERSHIP_MARSHAL_SIZE_MAX                                                                                                             \
+    (8 + 8 + 8 + 4 + 2 + ((1 + ZT_CERTIFICATEOFOWNERSHIP_MAX_THING_VALUE_SIZE) * ZT_CERTIFICATEOFOWNERSHIP_MAX_THINGS) + 5 + 5 + 1 + 2                         \
+     + ZT_SIGNATURE_BUFFER_SIZE + 2)
 
 namespace ZeroTier {
 
@@ -126,15 +126,9 @@ class OwnershipCredential : public Credential {
     ZT_INLINE bool owns(const InetAddress& ip) const noexcept
     {
         if (ip.as.sa.sa_family == AF_INET)
-            return this->_owns(
-                THING_IPV4_ADDRESS,
-                &(reinterpret_cast<const struct sockaddr_in*>(&ip)->sin_addr.s_addr),
-                4);
+            return this->_owns(THING_IPV4_ADDRESS, &(reinterpret_cast<const struct sockaddr_in*>(&ip)->sin_addr.s_addr), 4);
         else if (ip.as.sa.sa_family == AF_INET6)
-            return this->_owns(
-                THING_IPV6_ADDRESS,
-                reinterpret_cast<const struct sockaddr_in6*>(&ip)->sin6_addr.s6_addr,
-                16);
+            return this->_owns(THING_IPV6_ADDRESS, reinterpret_cast<const struct sockaddr_in6*>(&ip)->sin6_addr.s6_addr, 16);
         else
             return false;
     }

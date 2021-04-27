@@ -205,8 +205,7 @@ struct NetworkConfig : TriviallyCopyable {
     ZT_INLINE bool permitsBridging(const Address& fromPeer) const noexcept
     {
         for (unsigned int i = 0; i < specialistCount; ++i) {
-            if ((fromPeer.toInt() == (specialists[i] & ZT_ADDRESS_MASK))
-                && ((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE) != 0))
+            if ((fromPeer.toInt() == (specialists[i] & ZT_ADDRESS_MASK)) && ((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE) != 0))
                 return true;
         }
         return false;

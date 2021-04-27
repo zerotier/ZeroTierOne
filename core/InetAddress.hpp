@@ -447,13 +447,12 @@ struct InetAddress : public TriviallyCopyable {
     ZT_INLINE unsigned long hashCode() const noexcept
     {
         if (as.ss.ss_family == AF_INET) {
-            return (unsigned long)Utils::hash32(
-                ((uint32_t)as.sa_in.sin_addr.s_addr + (uint32_t)as.sa_in.sin_port) ^ (uint32_t)Utils::s_mapNonce);
+            return (unsigned long)Utils::hash32(((uint32_t)as.sa_in.sin_addr.s_addr + (uint32_t)as.sa_in.sin_port) ^ (uint32_t)Utils::s_mapNonce);
         }
         else if (as.ss.ss_family == AF_INET6) {
             return (unsigned long)Utils::hash64(
-                (Utils::loadMachineEndian<uint64_t>(as.sa_in6.sin6_addr.s6_addr)
-                 + Utils::loadMachineEndian<uint64_t>(as.sa_in6.sin6_addr.s6_addr + 8) + (uint64_t)as.sa_in6.sin6_port)
+                (Utils::loadMachineEndian<uint64_t>(as.sa_in6.sin6_addr.s6_addr) + Utils::loadMachineEndian<uint64_t>(as.sa_in6.sin6_addr.s6_addr + 8)
+                 + (uint64_t)as.sa_in6.sin6_port)
                 ^ Utils::s_mapNonce);
         }
         return Utils::fnv1a32(this, sizeof(InetAddress));
@@ -490,13 +489,9 @@ struct InetAddress : public TriviallyCopyable {
     {
         if (as.ss.ss_family == a.as.ss.ss_family) {
             if (as.ss.ss_family == AF_INET)
-                return (
-                    (as.sa_in.sin_port == a.as.sa_in.sin_port)
-                    && (as.sa_in.sin_addr.s_addr == a.as.sa_in.sin_addr.s_addr));
+                return ((as.sa_in.sin_port == a.as.sa_in.sin_port) && (as.sa_in.sin_addr.s_addr == a.as.sa_in.sin_addr.s_addr));
             if (as.ss.ss_family == AF_INET6)
-                return (
-                    (as.sa_in6.sin6_port == a.as.sa_in6.sin6_port)
-                    && (memcmp(as.sa_in6.sin6_addr.s6_addr, a.as.sa_in6.sin6_addr.s6_addr, 16) == 0));
+                return ((as.sa_in6.sin6_port == a.as.sa_in6.sin6_port) && (memcmp(as.sa_in6.sin6_addr.s6_addr, a.as.sa_in6.sin6_addr.s6_addr, 16) == 0));
             return memcmp(this, &a, sizeof(InetAddress)) == 0;
         }
         return false;
@@ -509,8 +504,7 @@ struct InetAddress : public TriviallyCopyable {
                 const uint16_t p0 = Utils::ntoh((uint16_t)as.sa_in.sin_port);
                 const uint16_t p1 = Utils::ntoh((uint16_t)a.as.sa_in.sin_port);
                 if (p0 == p1)
-                    return Utils::ntoh((uint32_t)as.sa_in.sin_addr.s_addr)
-                           < Utils::ntoh((uint32_t)a.as.sa_in.sin_addr.s_addr);
+                    return Utils::ntoh((uint32_t)as.sa_in.sin_addr.s_addr) < Utils::ntoh((uint32_t)a.as.sa_in.sin_addr.s_addr);
                 return p0 < p1;
             }
             if (as.ss.ss_family == AF_INET6) {

@@ -62,62 +62,49 @@ void fproduct(limb* output, const limb* in2, const limb* in)
 {
     output[0] = ((limb)((s32)in2[0])) * ((s32)in[0]);
     output[1] = ((limb)((s32)in2[0])) * ((s32)in[1]) + ((limb)((s32)in2[1])) * ((s32)in[0]);
-    output[2] = 2 * ((limb)((s32)in2[1])) * ((s32)in[1]) + ((limb)((s32)in2[0])) * ((s32)in[2])
-                + ((limb)((s32)in2[2])) * ((s32)in[0]);
-    output[3] = ((limb)((s32)in2[1])) * ((s32)in[2]) + ((limb)((s32)in2[2])) * ((s32)in[1])
-                + ((limb)((s32)in2[0])) * ((s32)in[3]) + ((limb)((s32)in2[3])) * ((s32)in[0]);
-    output[4] = ((limb)((s32)in2[2])) * ((s32)in[2])
-                + 2 * (((limb)((s32)in2[1])) * ((s32)in[3]) + ((limb)((s32)in2[3])) * ((s32)in[1]))
+    output[2] = 2 * ((limb)((s32)in2[1])) * ((s32)in[1]) + ((limb)((s32)in2[0])) * ((s32)in[2]) + ((limb)((s32)in2[2])) * ((s32)in[0]);
+    output[3] = ((limb)((s32)in2[1])) * ((s32)in[2]) + ((limb)((s32)in2[2])) * ((s32)in[1]) + ((limb)((s32)in2[0])) * ((s32)in[3])
+                + ((limb)((s32)in2[3])) * ((s32)in[0]);
+    output[4] = ((limb)((s32)in2[2])) * ((s32)in[2]) + 2 * (((limb)((s32)in2[1])) * ((s32)in[3]) + ((limb)((s32)in2[3])) * ((s32)in[1]))
                 + ((limb)((s32)in2[0])) * ((s32)in[4]) + ((limb)((s32)in2[4])) * ((s32)in[0]);
-    output[5] = ((limb)((s32)in2[2])) * ((s32)in[3]) + ((limb)((s32)in2[3])) * ((s32)in[2])
-                + ((limb)((s32)in2[1])) * ((s32)in[4]) + ((limb)((s32)in2[4])) * ((s32)in[1])
-                + ((limb)((s32)in2[0])) * ((s32)in[5]) + ((limb)((s32)in2[5])) * ((s32)in[0]);
-    output[6] = 2
-                    * (((limb)((s32)in2[3])) * ((s32)in[3]) + ((limb)((s32)in2[1])) * ((s32)in[5])
-                       + ((limb)((s32)in2[5])) * ((s32)in[1]))
-                + ((limb)((s32)in2[2])) * ((s32)in[4]) + ((limb)((s32)in2[4])) * ((s32)in[2])
-                + ((limb)((s32)in2[0])) * ((s32)in[6]) + ((limb)((s32)in2[6])) * ((s32)in[0]);
-    output[7] = ((limb)((s32)in2[3])) * ((s32)in[4]) + ((limb)((s32)in2[4])) * ((s32)in[3])
-                + ((limb)((s32)in2[2])) * ((s32)in[5]) + ((limb)((s32)in2[5])) * ((s32)in[2])
-                + ((limb)((s32)in2[1])) * ((s32)in[6]) + ((limb)((s32)in2[6])) * ((s32)in[1])
+    output[5] = ((limb)((s32)in2[2])) * ((s32)in[3]) + ((limb)((s32)in2[3])) * ((s32)in[2]) + ((limb)((s32)in2[1])) * ((s32)in[4])
+                + ((limb)((s32)in2[4])) * ((s32)in[1]) + ((limb)((s32)in2[0])) * ((s32)in[5]) + ((limb)((s32)in2[5])) * ((s32)in[0]);
+    output[6] = 2 * (((limb)((s32)in2[3])) * ((s32)in[3]) + ((limb)((s32)in2[1])) * ((s32)in[5]) + ((limb)((s32)in2[5])) * ((s32)in[1]))
+                + ((limb)((s32)in2[2])) * ((s32)in[4]) + ((limb)((s32)in2[4])) * ((s32)in[2]) + ((limb)((s32)in2[0])) * ((s32)in[6])
+                + ((limb)((s32)in2[6])) * ((s32)in[0]);
+    output[7] = ((limb)((s32)in2[3])) * ((s32)in[4]) + ((limb)((s32)in2[4])) * ((s32)in[3]) + ((limb)((s32)in2[2])) * ((s32)in[5])
+                + ((limb)((s32)in2[5])) * ((s32)in[2]) + ((limb)((s32)in2[1])) * ((s32)in[6]) + ((limb)((s32)in2[6])) * ((s32)in[1])
                 + ((limb)((s32)in2[0])) * ((s32)in[7]) + ((limb)((s32)in2[7])) * ((s32)in[0]);
     output[8] = ((limb)((s32)in2[4])) * ((s32)in[4])
                 + 2
-                      * (((limb)((s32)in2[3])) * ((s32)in[5]) + ((limb)((s32)in2[5])) * ((s32)in[3])
-                         + ((limb)((s32)in2[1])) * ((s32)in[7]) + ((limb)((s32)in2[7])) * ((s32)in[1]))
-                + ((limb)((s32)in2[2])) * ((s32)in[6]) + ((limb)((s32)in2[6])) * ((s32)in[2])
-                + ((limb)((s32)in2[0])) * ((s32)in[8]) + ((limb)((s32)in2[8])) * ((s32)in[0]);
-    output[9] = ((limb)((s32)in2[4])) * ((s32)in[5]) + ((limb)((s32)in2[5])) * ((s32)in[4])
-                + ((limb)((s32)in2[3])) * ((s32)in[6]) + ((limb)((s32)in2[6])) * ((s32)in[3])
-                + ((limb)((s32)in2[2])) * ((s32)in[7]) + ((limb)((s32)in2[7])) * ((s32)in[2])
-                + ((limb)((s32)in2[1])) * ((s32)in[8]) + ((limb)((s32)in2[8])) * ((s32)in[1])
-                + ((limb)((s32)in2[0])) * ((s32)in[9]) + ((limb)((s32)in2[9])) * ((s32)in[0]);
+                      * (((limb)((s32)in2[3])) * ((s32)in[5]) + ((limb)((s32)in2[5])) * ((s32)in[3]) + ((limb)((s32)in2[1])) * ((s32)in[7])
+                         + ((limb)((s32)in2[7])) * ((s32)in[1]))
+                + ((limb)((s32)in2[2])) * ((s32)in[6]) + ((limb)((s32)in2[6])) * ((s32)in[2]) + ((limb)((s32)in2[0])) * ((s32)in[8])
+                + ((limb)((s32)in2[8])) * ((s32)in[0]);
+    output[9] = ((limb)((s32)in2[4])) * ((s32)in[5]) + ((limb)((s32)in2[5])) * ((s32)in[4]) + ((limb)((s32)in2[3])) * ((s32)in[6])
+                + ((limb)((s32)in2[6])) * ((s32)in[3]) + ((limb)((s32)in2[2])) * ((s32)in[7]) + ((limb)((s32)in2[7])) * ((s32)in[2])
+                + ((limb)((s32)in2[1])) * ((s32)in[8]) + ((limb)((s32)in2[8])) * ((s32)in[1]) + ((limb)((s32)in2[0])) * ((s32)in[9])
+                + ((limb)((s32)in2[9])) * ((s32)in[0]);
     output[10] = 2
-                     * (((limb)((s32)in2[5])) * ((s32)in[5]) + ((limb)((s32)in2[3])) * ((s32)in[7])
-                        + ((limb)((s32)in2[7])) * ((s32)in[3]) + ((limb)((s32)in2[1])) * ((s32)in[9])
-                        + ((limb)((s32)in2[9])) * ((s32)in[1]))
-                 + ((limb)((s32)in2[4])) * ((s32)in[6]) + ((limb)((s32)in2[6])) * ((s32)in[4])
-                 + ((limb)((s32)in2[2])) * ((s32)in[8]) + ((limb)((s32)in2[8])) * ((s32)in[2]);
-    output[11] = ((limb)((s32)in2[5])) * ((s32)in[6]) + ((limb)((s32)in2[6])) * ((s32)in[5])
-                 + ((limb)((s32)in2[4])) * ((s32)in[7]) + ((limb)((s32)in2[7])) * ((s32)in[4])
-                 + ((limb)((s32)in2[3])) * ((s32)in[8]) + ((limb)((s32)in2[8])) * ((s32)in[3])
+                     * (((limb)((s32)in2[5])) * ((s32)in[5]) + ((limb)((s32)in2[3])) * ((s32)in[7]) + ((limb)((s32)in2[7])) * ((s32)in[3])
+                        + ((limb)((s32)in2[1])) * ((s32)in[9]) + ((limb)((s32)in2[9])) * ((s32)in[1]))
+                 + ((limb)((s32)in2[4])) * ((s32)in[6]) + ((limb)((s32)in2[6])) * ((s32)in[4]) + ((limb)((s32)in2[2])) * ((s32)in[8])
+                 + ((limb)((s32)in2[8])) * ((s32)in[2]);
+    output[11] = ((limb)((s32)in2[5])) * ((s32)in[6]) + ((limb)((s32)in2[6])) * ((s32)in[5]) + ((limb)((s32)in2[4])) * ((s32)in[7])
+                 + ((limb)((s32)in2[7])) * ((s32)in[4]) + ((limb)((s32)in2[3])) * ((s32)in[8]) + ((limb)((s32)in2[8])) * ((s32)in[3])
                  + ((limb)((s32)in2[2])) * ((s32)in[9]) + ((limb)((s32)in2[9])) * ((s32)in[2]);
     output[12] = ((limb)((s32)in2[6])) * ((s32)in[6])
                  + 2
-                       * (((limb)((s32)in2[5])) * ((s32)in[7]) + ((limb)((s32)in2[7])) * ((s32)in[5])
-                          + ((limb)((s32)in2[3])) * ((s32)in[9]) + ((limb)((s32)in2[9])) * ((s32)in[3]))
+                       * (((limb)((s32)in2[5])) * ((s32)in[7]) + ((limb)((s32)in2[7])) * ((s32)in[5]) + ((limb)((s32)in2[3])) * ((s32)in[9])
+                          + ((limb)((s32)in2[9])) * ((s32)in[3]))
                  + ((limb)((s32)in2[4])) * ((s32)in[8]) + ((limb)((s32)in2[8])) * ((s32)in[4]);
-    output[13] = ((limb)((s32)in2[6])) * ((s32)in[7]) + ((limb)((s32)in2[7])) * ((s32)in[6])
-                 + ((limb)((s32)in2[5])) * ((s32)in[8]) + ((limb)((s32)in2[8])) * ((s32)in[5])
-                 + ((limb)((s32)in2[4])) * ((s32)in[9]) + ((limb)((s32)in2[9])) * ((s32)in[4]);
-    output[14] = 2
-                     * (((limb)((s32)in2[7])) * ((s32)in[7]) + ((limb)((s32)in2[5])) * ((s32)in[9])
-                        + ((limb)((s32)in2[9])) * ((s32)in[5]))
+    output[13] = ((limb)((s32)in2[6])) * ((s32)in[7]) + ((limb)((s32)in2[7])) * ((s32)in[6]) + ((limb)((s32)in2[5])) * ((s32)in[8])
+                 + ((limb)((s32)in2[8])) * ((s32)in[5]) + ((limb)((s32)in2[4])) * ((s32)in[9]) + ((limb)((s32)in2[9])) * ((s32)in[4]);
+    output[14] = 2 * (((limb)((s32)in2[7])) * ((s32)in[7]) + ((limb)((s32)in2[5])) * ((s32)in[9]) + ((limb)((s32)in2[9])) * ((s32)in[5]))
                  + ((limb)((s32)in2[6])) * ((s32)in[8]) + ((limb)((s32)in2[8])) * ((s32)in[6]);
-    output[15] = ((limb)((s32)in2[7])) * ((s32)in[8]) + ((limb)((s32)in2[8])) * ((s32)in[7])
-                 + ((limb)((s32)in2[6])) * ((s32)in[9]) + ((limb)((s32)in2[9])) * ((s32)in[6]);
-    output[16] = ((limb)((s32)in2[8])) * ((s32)in[8])
-                 + 2 * (((limb)((s32)in2[7])) * ((s32)in[9]) + ((limb)((s32)in2[9])) * ((s32)in[7]));
+    output[15] = ((limb)((s32)in2[7])) * ((s32)in[8]) + ((limb)((s32)in2[8])) * ((s32)in[7]) + ((limb)((s32)in2[6])) * ((s32)in[9])
+                 + ((limb)((s32)in2[9])) * ((s32)in[6]);
+    output[16] = ((limb)((s32)in2[8])) * ((s32)in[8]) + 2 * (((limb)((s32)in2[7])) * ((s32)in[9]) + ((limb)((s32)in2[9])) * ((s32)in[7]));
     output[17] = ((limb)((s32)in2[8])) * ((s32)in[9]) + ((limb)((s32)in2[9])) * ((s32)in[8]);
     output[18] = 2 * ((limb)((s32)in2[9])) * ((s32)in[9]);
 }
@@ -242,42 +229,31 @@ void fsquare_inner(limb* output, const limb* in)
     output[1] = 2 * ((limb)((s32)in[0])) * ((s32)in[1]);
     output[2] = 2 * (((limb)((s32)in[1])) * ((s32)in[1]) + ((limb)((s32)in[0])) * ((s32)in[2]));
     output[3] = 2 * (((limb)((s32)in[1])) * ((s32)in[2]) + ((limb)((s32)in[0])) * ((s32)in[3]));
-    output[4] = ((limb)((s32)in[2])) * ((s32)in[2]) + 4 * ((limb)((s32)in[1])) * ((s32)in[3])
-                + 2 * ((limb)((s32)in[0])) * ((s32)in[4]);
-    output[5] = 2
-                * (((limb)((s32)in[2])) * ((s32)in[3]) + ((limb)((s32)in[1])) * ((s32)in[4])
-                   + ((limb)((s32)in[0])) * ((s32)in[5]));
+    output[4] = ((limb)((s32)in[2])) * ((s32)in[2]) + 4 * ((limb)((s32)in[1])) * ((s32)in[3]) + 2 * ((limb)((s32)in[0])) * ((s32)in[4]);
+    output[5] = 2 * (((limb)((s32)in[2])) * ((s32)in[3]) + ((limb)((s32)in[1])) * ((s32)in[4]) + ((limb)((s32)in[0])) * ((s32)in[5]));
     output[6] = 2
-                * (((limb)((s32)in[3])) * ((s32)in[3]) + ((limb)((s32)in[2])) * ((s32)in[4])
-                   + ((limb)((s32)in[0])) * ((s32)in[6]) + 2 * ((limb)((s32)in[1])) * ((s32)in[5]));
+                * (((limb)((s32)in[3])) * ((s32)in[3]) + ((limb)((s32)in[2])) * ((s32)in[4]) + ((limb)((s32)in[0])) * ((s32)in[6])
+                   + 2 * ((limb)((s32)in[1])) * ((s32)in[5]));
     output[7] = 2
-                * (((limb)((s32)in[3])) * ((s32)in[4]) + ((limb)((s32)in[2])) * ((s32)in[5])
-                   + ((limb)((s32)in[1])) * ((s32)in[6]) + ((limb)((s32)in[0])) * ((s32)in[7]));
+                * (((limb)((s32)in[3])) * ((s32)in[4]) + ((limb)((s32)in[2])) * ((s32)in[5]) + ((limb)((s32)in[1])) * ((s32)in[6])
+                   + ((limb)((s32)in[0])) * ((s32)in[7]));
     output[8] = ((limb)((s32)in[4])) * ((s32)in[4])
                 + 2
                       * (((limb)((s32)in[2])) * ((s32)in[6]) + ((limb)((s32)in[0])) * ((s32)in[8])
                          + 2 * (((limb)((s32)in[1])) * ((s32)in[7]) + ((limb)((s32)in[3])) * ((s32)in[5])));
     output[9] = 2
-                * (((limb)((s32)in[4])) * ((s32)in[5]) + ((limb)((s32)in[3])) * ((s32)in[6])
-                   + ((limb)((s32)in[2])) * ((s32)in[7]) + ((limb)((s32)in[1])) * ((s32)in[8])
-                   + ((limb)((s32)in[0])) * ((s32)in[9]));
+                * (((limb)((s32)in[4])) * ((s32)in[5]) + ((limb)((s32)in[3])) * ((s32)in[6]) + ((limb)((s32)in[2])) * ((s32)in[7])
+                   + ((limb)((s32)in[1])) * ((s32)in[8]) + ((limb)((s32)in[0])) * ((s32)in[9]));
     output[10] = 2
-                 * (((limb)((s32)in[5])) * ((s32)in[5]) + ((limb)((s32)in[4])) * ((s32)in[6])
-                    + ((limb)((s32)in[2])) * ((s32)in[8])
+                 * (((limb)((s32)in[5])) * ((s32)in[5]) + ((limb)((s32)in[4])) * ((s32)in[6]) + ((limb)((s32)in[2])) * ((s32)in[8])
                     + 2 * (((limb)((s32)in[3])) * ((s32)in[7]) + ((limb)((s32)in[1])) * ((s32)in[9])));
     output[11] = 2
-                 * (((limb)((s32)in[5])) * ((s32)in[6]) + ((limb)((s32)in[4])) * ((s32)in[7])
-                    + ((limb)((s32)in[3])) * ((s32)in[8]) + ((limb)((s32)in[2])) * ((s32)in[9]));
+                 * (((limb)((s32)in[5])) * ((s32)in[6]) + ((limb)((s32)in[4])) * ((s32)in[7]) + ((limb)((s32)in[3])) * ((s32)in[8])
+                    + ((limb)((s32)in[2])) * ((s32)in[9]));
     output[12] = ((limb)((s32)in[6])) * ((s32)in[6])
-                 + 2
-                       * (((limb)((s32)in[4])) * ((s32)in[8])
-                          + 2 * (((limb)((s32)in[5])) * ((s32)in[7]) + ((limb)((s32)in[3])) * ((s32)in[9])));
-    output[13] = 2
-                 * (((limb)((s32)in[6])) * ((s32)in[7]) + ((limb)((s32)in[5])) * ((s32)in[8])
-                    + ((limb)((s32)in[4])) * ((s32)in[9]));
-    output[14] = 2
-                 * (((limb)((s32)in[7])) * ((s32)in[7]) + ((limb)((s32)in[6])) * ((s32)in[8])
-                    + 2 * ((limb)((s32)in[5])) * ((s32)in[9]));
+                 + 2 * (((limb)((s32)in[4])) * ((s32)in[8]) + 2 * (((limb)((s32)in[5])) * ((s32)in[7]) + ((limb)((s32)in[3])) * ((s32)in[9])));
+    output[13] = 2 * (((limb)((s32)in[6])) * ((s32)in[7]) + ((limb)((s32)in[5])) * ((s32)in[8]) + ((limb)((s32)in[4])) * ((s32)in[9]));
+    output[14] = 2 * (((limb)((s32)in[7])) * ((s32)in[7]) + ((limb)((s32)in[6])) * ((s32)in[8]) + 2 * ((limb)((s32)in[5])) * ((s32)in[9]));
     output[15] = 2 * (((limb)((s32)in[7])) * ((s32)in[8]) + ((limb)((s32)in[6])) * ((s32)in[9]));
     output[16] = ((limb)((s32)in[8])) * ((s32)in[8]) + 4 * ((limb)((s32)in[7])) * ((s32)in[9]);
     output[17] = 2 * ((limb)((s32)in[8])) * ((s32)in[9]);
@@ -299,11 +275,8 @@ ZT_INLINE void fsquare(limb* output, const limb* in)
 
 ZT_INLINE void fexpand(limb* output, const u8* input)
 {
-#define F(n, start, shift, mask)                                                                                       \
-    output[n] = ((((limb)input[start + 0]) | ((limb)input[start + 1]) << 8 | ((limb)input[start + 2]) << 16            \
-                  | ((limb)input[start + 3]) << 24)                                                                    \
-                 >> shift)                                                                                             \
-                & mask;
+#define F(n, start, shift, mask)                                                                                                                               \
+    output[n] = ((((limb)input[start + 0]) | ((limb)input[start + 1]) << 8 | ((limb)input[start + 2]) << 16 | ((limb)input[start + 3]) << 24) >> shift) & mask;
     F(0, 0, 0, 0x3ffffff);
     F(1, 3, 2, 0x1ffffff);
     F(2, 6, 3, 0x3ffffff);
@@ -423,10 +396,10 @@ void fcontract(u8* output, limb* input_limbs)
     input[7] <<= 3;
     input[8] <<= 4;
     input[9] <<= 6;
-#define F(i, s)                                                                                                        \
-    output[s + 0] |= input[i] & 0xff;                                                                                  \
-    output[s + 1] = (input[i] >> 8) & 0xff;                                                                            \
-    output[s + 2] = (input[i] >> 16) & 0xff;                                                                           \
+#define F(i, s)                                                                                                                                                \
+    output[s + 0] |= input[i] & 0xff;                                                                                                                          \
+    output[s + 1] = (input[i] >> 8) & 0xff;                                                                                                                    \
+    output[s + 2] = (input[i] >> 16) & 0xff;                                                                                                                   \
     output[s + 3] = (input[i] >> 24) & 0xff;
     output[0] = 0;
     output[16] = 0;
@@ -1075,12 +1048,10 @@ ZT_INLINE void fe25519_pow2523(fe25519* r, const fe25519* x)
     /* 2^252 - 3 */ fe25519_mul(r, &t, x);
 }
 
-const crypto_uint32 m[32] = { 0xED, 0xD3, 0xF5, 0x5C, 0x1A, 0x63, 0x12, 0x58, 0xD6, 0x9C, 0xF7,
-                              0xA2, 0xDE, 0xF9, 0xDE, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                              0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10 };
-const crypto_uint32 mu[33] = { 0x1B, 0x13, 0x2C, 0x0A, 0xA3, 0xE5, 0x9C, 0xED, 0xA7, 0x29, 0x63,
-                               0x08, 0x5D, 0x21, 0x06, 0x21, 0xEB, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-                               0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x0F };
+const crypto_uint32 m[32] = { 0xED, 0xD3, 0xF5, 0x5C, 0x1A, 0x63, 0x12, 0x58, 0xD6, 0x9C, 0xF7, 0xA2, 0xDE, 0xF9, 0xDE, 0x14,
+                              0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10 };
+const crypto_uint32 mu[33] = { 0x1B, 0x13, 0x2C, 0x0A, 0xA3, 0xE5, 0x9C, 0xED, 0xA7, 0x29, 0x63, 0x08, 0x5D, 0x21, 0x06, 0x21, 0xEB,
+                               0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x0F };
 
 ZT_INLINE crypto_uint32 lt(crypto_uint32 a, crypto_uint32 b) /* 16-bit inputs */
 {
@@ -1262,29 +1233,24 @@ ZT_INLINE void sc25519_2interleave2(unsigned char r[127], const sc25519* s1, con
 }
 
 /* d */
-static const fe25519 ge25519_ecd = { { 0xA3, 0x78, 0x59, 0x13, 0xCA, 0x4D, 0xEB, 0x75, 0xAB, 0xD8, 0x41,
-                                       0x41, 0x4D, 0x0A, 0x70, 0x00, 0x98, 0xE8, 0x79, 0x77, 0x79, 0x40,
-                                       0xC7, 0x8C, 0x73, 0xFE, 0x6F, 0x2B, 0xEE, 0x6C, 0x03, 0x52 } };
+static const fe25519 ge25519_ecd = { { 0xA3, 0x78, 0x59, 0x13, 0xCA, 0x4D, 0xEB, 0x75, 0xAB, 0xD8, 0x41, 0x41, 0x4D, 0x0A, 0x70, 0x00,
+                                       0x98, 0xE8, 0x79, 0x77, 0x79, 0x40, 0xC7, 0x8C, 0x73, 0xFE, 0x6F, 0x2B, 0xEE, 0x6C, 0x03, 0x52 } };
 /* 2*d */
-static const fe25519 ge25519_ec2d = { { 0x59, 0xF1, 0xB2, 0x26, 0x94, 0x9B, 0xD6, 0xEB, 0x56, 0xB1, 0x83,
-                                        0x82, 0x9A, 0x14, 0xE0, 0x00, 0x30, 0xD1, 0xF3, 0xEE, 0xF2, 0x80,
-                                        0x8E, 0x19, 0xE7, 0xFC, 0xDF, 0x56, 0xDC, 0xD9, 0x06, 0x24 } };
+static const fe25519 ge25519_ec2d = { { 0x59, 0xF1, 0xB2, 0x26, 0x94, 0x9B, 0xD6, 0xEB, 0x56, 0xB1, 0x83, 0x82, 0x9A, 0x14, 0xE0, 0x00,
+                                        0x30, 0xD1, 0xF3, 0xEE, 0xF2, 0x80, 0x8E, 0x19, 0xE7, 0xFC, 0xDF, 0x56, 0xDC, 0xD9, 0x06, 0x24 } };
 /* sqrt(-1) */
-static const fe25519 ge25519_sqrtm1 = { { 0xB0, 0xA0, 0x0E, 0x4A, 0x27, 0x1B, 0xEE, 0xC4, 0x78, 0xE4, 0x2F,
-                                          0xAD, 0x06, 0x18, 0x43, 0x2F, 0xA7, 0xD7, 0xFB, 0x3D, 0x99, 0x00,
-                                          0x4D, 0x2B, 0x0B, 0xDF, 0xC1, 0x4F, 0x80, 0x24, 0x83, 0x2B } };
+static const fe25519 ge25519_sqrtm1 = { { 0xB0, 0xA0, 0x0E, 0x4A, 0x27, 0x1B, 0xEE, 0xC4, 0x78, 0xE4, 0x2F, 0xAD, 0x06, 0x18, 0x43, 0x2F,
+                                          0xA7, 0xD7, 0xFB, 0x3D, 0x99, 0x00, 0x4D, 0x2B, 0x0B, 0xDF, 0xC1, 0x4F, 0x80, 0x24, 0x83, 0x2B } };
 
 /* Packed coordinates of the base point */
-static const ge25519 ge25519_base = {
-    { { 0x1A, 0xD5, 0x25, 0x8F, 0x60, 0x2D, 0x56, 0xC9, 0xB2, 0xA7, 0x25, 0x95, 0x60, 0xC7, 0x2C, 0x69,
-        0x5C, 0xDC, 0xD6, 0xFD, 0x31, 0xE2, 0xA4, 0xC0, 0xFE, 0x53, 0x6E, 0xCD, 0xD3, 0x36, 0x69, 0x21 } },
-    { { 0x58, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66,
-        0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66 } },
-    { { 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } },
-    { { 0xA3, 0xDD, 0xB7, 0xA5, 0xB3, 0x8A, 0xDE, 0x6D, 0xF5, 0x52, 0x51, 0x77, 0x80, 0x9F, 0xF0, 0x20,
-        0x7D, 0xE3, 0xAB, 0x64, 0x8E, 0x4E, 0xEA, 0x66, 0x65, 0x76, 0x8B, 0xD7, 0x0F, 0x5F, 0x87, 0x67 } }
-};
+static const ge25519 ge25519_base = { { { 0x1A, 0xD5, 0x25, 0x8F, 0x60, 0x2D, 0x56, 0xC9, 0xB2, 0xA7, 0x25, 0x95, 0x60, 0xC7, 0x2C, 0x69,
+                                          0x5C, 0xDC, 0xD6, 0xFD, 0x31, 0xE2, 0xA4, 0xC0, 0xFE, 0x53, 0x6E, 0xCD, 0xD3, 0x36, 0x69, 0x21 } },
+                                      { { 0x58, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66,
+                                          0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66 } },
+                                      { { 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                          0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } },
+                                      { { 0xA3, 0xDD, 0xB7, 0xA5, 0xB3, 0x8A, 0xDE, 0x6D, 0xF5, 0x52, 0x51, 0x77, 0x80, 0x9F, 0xF0, 0x20,
+                                          0x7D, 0xE3, 0xAB, 0x64, 0x8E, 0x4E, 0xEA, 0x66, 0x65, 0x76, 0x8B, 0xD7, 0x0F, 0x5F, 0x87, 0x67 } } };
 
 /* Multiples of the base point in affine representation */
 static const ge25519_aff ge25519_base_multiples_affine[425] = {
@@ -3177,12 +3143,7 @@ void ge25519_pack(unsigned char r[32], const ge25519_p3* p)
 }
 
 /* computes [s1]p1 + [s2]p2 */
-ZT_INLINE void ge25519_double_scalarmult_vartime(
-    ge25519_p3* r,
-    const ge25519_p3* p1,
-    const sc25519* s1,
-    const ge25519_p3* p2,
-    const sc25519* s2)
+ZT_INLINE void ge25519_double_scalarmult_vartime(ge25519_p3* r, const ge25519_p3* p1, const sc25519* s1, const ge25519_p3* p2, const sc25519* s2)
 {
     ge25519_p1p1 tp1p1;
     ge25519_p3 pre[16];
@@ -3256,12 +3217,7 @@ void ge25519_scalarmult_base(ge25519_p3* r, const sc25519* s)
     }
 }
 
-ZT_INLINE void get_hram(
-    unsigned char* hram,
-    const unsigned char* sm,
-    const unsigned char* pk,
-    unsigned char* playground,
-    unsigned long long smlen)
+ZT_INLINE void get_hram(unsigned char* hram, const unsigned char* sm, const unsigned char* pk, unsigned char* playground, unsigned long long smlen)
 {
     unsigned long long i;
 

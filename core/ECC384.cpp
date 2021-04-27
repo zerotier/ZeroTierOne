@@ -35,29 +35,24 @@ typedef struct EccPoint {
 
 #define CONCAT1(a, b) a##b
 #define CONCAT(a, b)  CONCAT1(a, b)
-#define Curve_P_48                                                                                                     \
-    {                                                                                                                  \
-        0x00000000FFFFFFFF, 0xFFFFFFFF00000000, 0xFFFFFFFFFFFFFFFE, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF,            \
-            0xFFFFFFFFFFFFFFFF                                                                                         \
+#define Curve_P_48                                                                                                                                             \
+    {                                                                                                                                                          \
+        0x00000000FFFFFFFF, 0xFFFFFFFF00000000, 0xFFFFFFFFFFFFFFFE, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF                                 \
     }
-#define Curve_B_48                                                                                                     \
-    {                                                                                                                  \
-        0x2A85C8EDD3EC2AEF, 0xC656398D8A2ED19D, 0x0314088F5013875A, 0x181D9C6EFE814112, 0x988E056BE3F82D19,            \
-            0xB3312FA7E23EE7E4                                                                                         \
+#define Curve_B_48                                                                                                                                             \
+    {                                                                                                                                                          \
+        0x2A85C8EDD3EC2AEF, 0xC656398D8A2ED19D, 0x0314088F5013875A, 0x181D9C6EFE814112, 0x988E056BE3F82D19, 0xB3312FA7E23EE7E4                                 \
     }
-#define Curve_G_48                                                                                                     \
-    {                                                                                                                  \
-        { 0x3A545E3872760AB7, 0x5502F25DBF55296C, 0x59F741E082542A38,                                                  \
-          0x6E1D3B628BA79B98, 0x8EB1C71EF320AD74, 0xAA87CA22BE8B0537 },                                                \
-        {                                                                                                              \
-            0x7A431D7C90EA0E5F, 0x0A60B1CE1D7E819D, 0xE9DA3113B5F0B8C0, 0xF8F41DBD289A147C, 0x5D9E98BF9292DC29,        \
-                0x3617DE4A96262C6F                                                                                     \
-        }                                                                                                              \
+#define Curve_G_48                                                                                                                                             \
+    {                                                                                                                                                          \
+        { 0x3A545E3872760AB7, 0x5502F25DBF55296C, 0x59F741E082542A38, 0x6E1D3B628BA79B98, 0x8EB1C71EF320AD74, 0xAA87CA22BE8B0537 },                            \
+        {                                                                                                                                                      \
+            0x7A431D7C90EA0E5F, 0x0A60B1CE1D7E819D, 0xE9DA3113B5F0B8C0, 0xF8F41DBD289A147C, 0x5D9E98BF9292DC29, 0x3617DE4A96262C6F                             \
+        }                                                                                                                                                      \
     }
-#define Curve_N_48                                                                                                     \
-    {                                                                                                                  \
-        0xECEC196ACCC52973, 0x581A0DB248B0A77A, 0xC7634D81F4372DDF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF,            \
-            0xFFFFFFFFFFFFFFFF                                                                                         \
+#define Curve_N_48                                                                                                                                             \
+    {                                                                                                                                                          \
+        0xECEC196ACCC52973, 0x581A0DB248B0A77A, 0xC7634D81F4372DDF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF                                 \
     }
 const uint64_t curve_p[NUM_ECC_DIGITS] = CONCAT(Curve_P_, ECC_CURVE);
 const uint64_t curve_b[NUM_ECC_DIGITS] = CONCAT(Curve_B_, ECC_CURVE);
@@ -661,9 +656,8 @@ ZT_INLINE void ecc_bytes2native(uint64_t p_native[NUM_ECC_DIGITS], const uint8_t
 {
     for (uint i = 0; i < NUM_ECC_DIGITS; ++i) {
         const uint8_t* p_digit = p_bytes + 8 * (NUM_ECC_DIGITS - 1 - i);
-        p_native[i] = ((uint64_t)p_digit[0] << 56) | ((uint64_t)p_digit[1] << 48) | ((uint64_t)p_digit[2] << 40)
-                      | ((uint64_t)p_digit[3] << 32) | ((uint64_t)p_digit[4] << 24) | ((uint64_t)p_digit[5] << 16)
-                      | ((uint64_t)p_digit[6] << 8) | (uint64_t)p_digit[7];
+        p_native[i] = ((uint64_t)p_digit[0] << 56) | ((uint64_t)p_digit[1] << 48) | ((uint64_t)p_digit[2] << 40) | ((uint64_t)p_digit[3] << 32)
+                      | ((uint64_t)p_digit[4] << 24) | ((uint64_t)p_digit[5] << 16) | ((uint64_t)p_digit[6] << 8) | (uint64_t)p_digit[7];
     }
 }
 
@@ -741,10 +735,7 @@ ZT_INLINE int ecc_make_key(uint8_t p_publicKey[ECC_BYTES + 1], uint8_t p_private
     return 1;
 }
 
-ZT_INLINE int ecdh_shared_secret(
-    const uint8_t p_publicKey[ECC_BYTES + 1],
-    const uint8_t p_privateKey[ECC_BYTES],
-    uint8_t p_secret[ECC_BYTES])
+ZT_INLINE int ecdh_shared_secret(const uint8_t p_publicKey[ECC_BYTES + 1], const uint8_t p_privateKey[ECC_BYTES], uint8_t p_secret[ECC_BYTES])
 {
     EccPoint l_public;
     uint64_t l_private[NUM_ECC_DIGITS];
@@ -827,8 +818,7 @@ ZT_INLINE uint umax(uint a, uint b)
     return (a > b ? a : b);
 }
 
-ZT_INLINE int
-ecdsa_sign(const uint8_t p_privateKey[ECC_BYTES], const uint8_t p_hash[ECC_BYTES], uint8_t p_signature[ECC_BYTES * 2])
+ZT_INLINE int ecdsa_sign(const uint8_t p_privateKey[ECC_BYTES], const uint8_t p_hash[ECC_BYTES], uint8_t p_signature[ECC_BYTES * 2])
 {
     uint64_t k[NUM_ECC_DIGITS];
     uint64_t l_tmp[NUM_ECC_DIGITS];
@@ -870,10 +860,7 @@ ecdsa_sign(const uint8_t p_privateKey[ECC_BYTES], const uint8_t p_hash[ECC_BYTES
     return 1;
 }
 
-ZT_INLINE int ecdsa_verify(
-    const uint8_t p_publicKey[ECC_BYTES + 1],
-    const uint8_t p_hash[ECC_BYTES],
-    const uint8_t p_signature[ECC_BYTES * 2])
+ZT_INLINE int ecdsa_verify(const uint8_t p_publicKey[ECC_BYTES + 1], const uint8_t p_hash[ECC_BYTES], const uint8_t p_signature[ECC_BYTES * 2])
 {
     uint64_t u1[NUM_ECC_DIGITS], u2[NUM_ECC_DIGITS];
     uint64_t z[NUM_ECC_DIGITS];
@@ -918,8 +905,7 @@ ZT_INLINE int ecdsa_verify(
     const EccPoint* l_points[4] = { NULL, &curve_G, &l_public, &l_sum };
     uint l_numBits = umax(vli_numBits(u1), vli_numBits(u2));
 
-    const EccPoint* l_point =
-        l_points[(! ! vli_testBit(u1, l_numBits - 1)) | ((! ! vli_testBit(u2, l_numBits - 1)) << 1)];
+    const EccPoint* l_point = l_points[(! ! vli_testBit(u1, l_numBits - 1)) | ((! ! vli_testBit(u2, l_numBits - 1)) << 1)];
     vli_set(rx, l_point->x);
     vli_set(ry, l_point->y);
     vli_clear(z);
@@ -963,10 +949,7 @@ void ECC384GenerateKey(uint8_t pub[ZT_ECC384_PUBLIC_KEY_SIZE], uint8_t priv[ZT_E
     }
 }
 
-void ECC384ECDSASign(
-    const uint8_t priv[ZT_ECC384_PRIVATE_KEY_SIZE],
-    const uint8_t hash[ZT_ECC384_SIGNATURE_HASH_SIZE],
-    uint8_t sig[ZT_ECC384_SIGNATURE_SIZE])
+void ECC384ECDSASign(const uint8_t priv[ZT_ECC384_PRIVATE_KEY_SIZE], const uint8_t hash[ZT_ECC384_SIGNATURE_HASH_SIZE], uint8_t sig[ZT_ECC384_SIGNATURE_SIZE])
 {
     if (! ecdsa_sign(priv, hash, sig)) {
         fprintf(stderr, "FATAL: ecdsa_sign() failed!" ZT_EOL_S);

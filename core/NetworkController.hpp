@@ -30,12 +30,7 @@ struct InetAddress;
  */
 class NetworkController {
   public:
-    enum ErrorCode {
-        NC_ERROR_NONE = 0,
-        NC_ERROR_OBJECT_NOT_FOUND = 1,
-        NC_ERROR_ACCESS_DENIED = 2,
-        NC_ERROR_INTERNAL_SERVER_ERROR = 3
-    };
+    enum ErrorCode { NC_ERROR_NONE = 0, NC_ERROR_OBJECT_NOT_FOUND = 1, NC_ERROR_ACCESS_DENIED = 2, NC_ERROR_INTERNAL_SERVER_ERROR = 3 };
 
     /**
      * Interface for sender used to send pushes and replies
@@ -68,12 +63,7 @@ class NetworkController {
          * @param destination Destination node address
          * @param rev Revocation to send
          */
-        virtual void ncSendRevocation(
-            void* tPtr,
-            int64_t clock,
-            int64_t ticks,
-            const Address& destination,
-            const RevocationCredential& rev) = 0;
+        virtual void ncSendRevocation(void* tPtr, int64_t clock, int64_t ticks, const Address& destination, const RevocationCredential& rev) = 0;
 
         /**
          * Send a network configuration request error
@@ -118,12 +108,7 @@ class NetworkController {
      * @param metaData Meta-data bundled with request (if any)
      * @return Returns NETCONF_QUERY_OK if result 'nc' is valid, or an error code on error
      */
-    virtual void request(
-        uint64_t nwid,
-        const InetAddress& fromAddr,
-        uint64_t requestPacketId,
-        const Identity& identity,
-        const Dictionary& metaData) = 0;
+    virtual void request(uint64_t nwid, const InetAddress& fromAddr, uint64_t requestPacketId, const Identity& identity, const Dictionary& metaData) = 0;
 };
 
 }   // namespace ZeroTier

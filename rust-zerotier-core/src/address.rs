@@ -84,9 +84,9 @@ struct AddressVisitor;
 impl<'de> serde::de::Visitor<'de> for AddressVisitor {
     type Value = Address;
     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result { formatter.write_str("ZeroTier Address") }
+    fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E> where E: serde::de::Error { Ok(Address::from(v)) }
     fn visit_str<E>(self, s: &str) -> Result<Self::Value, E> where E: serde::de::Error { Ok(Address::from(s)) }
     fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E> where E: serde::de::Error { Ok(Address::from(v)) }
-    fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E> where E: serde::de::Error { Ok(Address::from(v)) }
 }
 
 impl<'de> serde::Deserialize<'de> for Address {

@@ -11,6 +11,8 @@
  */
 /****/
 
+use std::hash::{Hash, Hasher};
+
 #[derive(PartialEq, Eq, Clone, Copy, PartialOrd, Ord)]
 pub struct MAC(pub u64);
 
@@ -25,6 +27,13 @@ impl MAC {
     #[inline(always)]
     fn to_bytes(&self) -> [u8; 6] {
         [(self.0 >> 40) as u8, (self.0 >> 32) as u8, (self.0 >> 24) as u8, (self.0 >> 16) as u8, (self.0 >> 8) as u8, self.0 as u8]
+    }
+}
+
+impl Hash for MAC {
+    #[inline(always)]
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.0.hash(state);
     }
 }
 

@@ -25,20 +25,18 @@ pub struct Dictionary {
 
 // Callback called by ZeroTier core to parse a Dictionary, populates a Rust Dictionary object.
 extern "C" fn populate_dict_callback(arg: *mut c_void, c_key: *const c_char, key_len: c_uint, c_value: *const c_void, value_len: c_uint) {
-    unsafe {
-        let d = &mut *(arg.cast::<Dictionary>());
-        let k = cstr_to_string(c_key, key_len as isize);
-        if !k.is_empty() {
-            let mut v: Vec<u8> = Vec::new();
-            if value_len > 0 {
-                let vp = c_value.cast::<u8>();
-                v.reserve(value_len as usize);
-                for i in 0..(value_len as isize) {
-                    v.push(*(vp.offset(i)));
-                }
+    let d = unsafe { &mut *(arg.cast::<Dictionary>()) };
+    let k = unsafe { cstr_to_string(c_key, key_len as isize) };
+    if !k.is_empty() {
+        let mut v: Vec<u8> = Vec::new();
+        if value_len > 0 {
+            let vp = c_value.cast::<u8>();
+            v.reserve(value_len as usize);
+            for i in 0..(value_len as isize) {
+                unsafe { v.push(*(vp.offset(i))) };
             }
-            let _ = d.data.insert(k, v);
         }
+        let _ = d.data.insert(k, v);
     }
 }
 

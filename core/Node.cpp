@@ -35,15 +35,7 @@ namespace ZeroTier {
 namespace {
 
 struct _NodeObjects {
-    ZT_INLINE _NodeObjects(Context& ctx, const CallContext& cc)
-        : networks()
-        , t(ctx)
-        , expect()
-        , vl2(ctx)
-        , vl1(ctx)
-        , topology(ctx, cc)
-        , sa(ctx)
-        , ts()
+    ZT_INLINE _NodeObjects(Context& ctx, const CallContext& cc) : networks(), t(ctx), expect(), vl2(ctx), vl1(ctx), topology(ctx, cc), sa(ctx), ts()
     {
         ctx.networks = &networks;
         ctx.t = &t;
@@ -99,32 +91,14 @@ Node::Node(void* uPtr, const struct ZT_Node_Callbacks* callbacks, const CallCont
         m_ctx.identity.generate(Identity::C25519);
         m_ctx.identity.toString(false, m_ctx.publicIdentityStr);
         m_ctx.identity.toString(true, m_ctx.secretIdentityStr);
-        m_store.put(
-            cc,
-            ZT_STATE_OBJECT_IDENTITY_SECRET,
-            Utils::ZERO256,
-            0,
-            m_ctx.secretIdentityStr,
-            (unsigned int)strlen(m_ctx.secretIdentityStr));
-        m_store.put(
-            cc,
-            ZT_STATE_OBJECT_IDENTITY_PUBLIC,
-            Utils::ZERO256,
-            0,
-            m_ctx.publicIdentityStr,
-            (unsigned int)strlen(m_ctx.publicIdentityStr));
+        m_store.put(cc, ZT_STATE_OBJECT_IDENTITY_SECRET, Utils::ZERO256, 0, m_ctx.secretIdentityStr, (unsigned int)strlen(m_ctx.secretIdentityStr));
+        m_store.put(cc, ZT_STATE_OBJECT_IDENTITY_PUBLIC, Utils::ZERO256, 0, m_ctx.publicIdentityStr, (unsigned int)strlen(m_ctx.publicIdentityStr));
         ZT_SPEW("no pre-existing identity found, created %s", m_ctx.identity.toString().c_str());
     }
     else {
         data = m_store.get(cc, ZT_STATE_OBJECT_IDENTITY_PUBLIC, Utils::ZERO256, 0);
         if ((data.empty()) || (memcmp(data.data(), m_ctx.publicIdentityStr, strlen(m_ctx.publicIdentityStr)) != 0))
-            m_store.put(
-                cc,
-                ZT_STATE_OBJECT_IDENTITY_PUBLIC,
-                Utils::ZERO256,
-                0,
-                m_ctx.publicIdentityStr,
-                (unsigned int)strlen(m_ctx.publicIdentityStr));
+            m_store.put(cc, ZT_STATE_OBJECT_IDENTITY_PUBLIC, Utils::ZERO256, 0, m_ctx.publicIdentityStr, (unsigned int)strlen(m_ctx.publicIdentityStr));
     }
 
     uint8_t localSecretCipherKey[ZT_FINGERPRINT_HASH_SIZE];
@@ -230,9 +204,7 @@ ZT_ResultCode Node::processBackgroundTasks(const CallContext& cc, volatile int64
                 for (Vector<SharedPtr<Peer> >::iterator p(allPeers.begin()); p != allPeers.end(); ++p) {
                     (*p)->pulse(m_ctx, cc);
                     if (! online) {
-                        online =
-                            ((std::binary_search(rootPeers.begin(), rootPeers.end(), *p) || rootPeers.empty())
-                             && (*p)->directlyConnected());
+                        online = ((std::binary_search(rootPeers.begin(), rootPeers.end(), *p) || rootPeers.empty()) && (*p)->directlyConnected());
                     }
                 }
 
@@ -322,8 +294,7 @@ ZT_ResultCode Node::leave(uint64_t nwid, void** uptr, const CallContext& cc)
     }
 }
 
-ZT_ResultCode
-Node::multicastSubscribe(const CallContext& cc, uint64_t nwid, uint64_t multicastGroup, unsigned long multicastAdi)
+ZT_ResultCode Node::multicastSubscribe(const CallContext& cc, uint64_t nwid, uint64_t multicastGroup, unsigned long multicastAdi)
 {
     ZT_SPEW("multicast subscribe to %s:%lu", MAC(multicastGroup).toString().c_str(), multicastAdi);
     const SharedPtr<Network> nw(m_ctx.networks->get(nwid));
@@ -336,8 +307,7 @@ Node::multicastSubscribe(const CallContext& cc, uint64_t nwid, uint64_t multicas
     }
 }
 
-ZT_ResultCode
-Node::multicastUnsubscribe(const CallContext& cc, uint64_t nwid, uint64_t multicastGroup, unsigned long multicastAdi)
+ZT_ResultCode Node::multicastUnsubscribe(const CallContext& cc, uint64_t nwid, uint64_t multicastGroup, unsigned long multicastAdi)
 {
     ZT_SPEW("multicast unsubscribe from %s:%lu", MAC(multicastGroup).toString().c_str(), multicastAdi);
     const SharedPtr<Network> nw(m_ctx.networks->get(nwid));
@@ -485,8 +455,7 @@ ZT_VirtualNetworkList* Node::networks() const
 {
     Mutex::Lock l(m_allNetworks_l);
 
-    char* const buf =
-        (char*)::malloc(sizeof(ZT_VirtualNetworkList) + (sizeof(ZT_VirtualNetworkConfig) * m_allNetworks.size()));
+    char* const buf = (char*)::malloc(sizeof(ZT_VirtualNetworkList) + (sizeof(ZT_VirtualNetworkConfig) * m_allNetworks.size()));
     if (! buf)
         return nullptr;
     ZT_VirtualNetworkList* nl = (ZT_VirtualNetworkList*)buf;
@@ -517,8 +486,7 @@ void Node::setInterfaceAddresses(const ZT_InterfaceAddress* addrs, unsigned int 
     for (unsigned int i = 0; i < addrCount; ++i) {
         bool dupe = false;
         for (unsigned int j = 0; j < i; ++j) {
-            if (*(reinterpret_cast<const InetAddress*>(&addrs[j].address))
-                == *(reinterpret_cast<const InetAddress*>(&addrs[i].address))) {
+            if (*(reinterpret_cast<const InetAddress*>(&addrs[j].address)) == *(reinterpret_cast<const InetAddress*>(&addrs[i].address))) {
                 dupe = true;
                 break;
             }
@@ -528,12 +496,8 @@ void Node::setInterfaceAddresses(const ZT_InterfaceAddress* addrs, unsigned int 
     }
 }
 
-ZT_CertificateError Node::addCertificate(
-    const CallContext& cc,
-    unsigned int localTrust,
-    const ZT_Certificate* cert,
-    const void* certData,
-    unsigned int certSize)
+ZT_CertificateError
+Node::addCertificate(const CallContext& cc, unsigned int localTrust, const ZT_Certificate* cert, const void* certData, unsigned int certSize)
 {
     Certificate c;
     if (cert) {
@@ -548,8 +512,7 @@ ZT_CertificateError Node::addCertificate(
     m_ctx.ts->add(c, localTrust);
     m_ctx.ts->update(cc.clock, nullptr);
     SharedPtr<TrustStore::Entry> ent(m_ctx.ts->get(c.getSerialNo()));
-    return (ent) ? ent->error()
-                 : ZT_CERTIFICATE_ERROR_INVALID_FORMAT;   // should never be null, but if so it means invalid
+    return (ent) ? ent->error() : ZT_CERTIFICATE_ERROR_INVALID_FORMAT;   // should never be null, but if so it means invalid
 }
 
 ZT_ResultCode Node::deleteCertificate(const CallContext& cc, const void* serialNo)
@@ -570,29 +533,24 @@ struct p_certificateListInternal {
 static void p_freeCertificateList(const void* cl)
 {
     if (cl) {
-        reinterpret_cast<const p_certificateListInternal*>(
-            reinterpret_cast<const uint8_t*>(cl) + sizeof(ZT_CertificateList))
-            ->~p_certificateListInternal();
+        reinterpret_cast<const p_certificateListInternal*>(reinterpret_cast<const uint8_t*>(cl) + sizeof(ZT_CertificateList))->~p_certificateListInternal();
         free(const_cast<void*>(cl));
     }
 }
 
 ZT_CertificateList* Node::listCertificates()
 {
-    ZT_CertificateList* const cl =
-        (ZT_CertificateList*)malloc(sizeof(ZT_CertificateList) + sizeof(p_certificateListInternal));
+    ZT_CertificateList* const cl = (ZT_CertificateList*)malloc(sizeof(ZT_CertificateList) + sizeof(p_certificateListInternal));
     if (! cl)
         return nullptr;
 
-    p_certificateListInternal* const clint =
-        reinterpret_cast<p_certificateListInternal*>(reinterpret_cast<uint8_t*>(cl) + sizeof(ZT_CertificateList));
+    p_certificateListInternal* const clint = reinterpret_cast<p_certificateListInternal*>(reinterpret_cast<uint8_t*>(cl) + sizeof(ZT_CertificateList));
     new (clint) p_certificateListInternal;
 
     clint->entries = m_ctx.ts->all(false);
     clint->c.reserve(clint->entries.size());
     clint->t.reserve(clint->entries.size());
-    for (Vector<SharedPtr<TrustStore::Entry> >::const_iterator i(clint->entries.begin()); i != clint->entries.end();
-         ++i) {
+    for (Vector<SharedPtr<TrustStore::Entry> >::const_iterator i(clint->entries.begin()); i != clint->entries.end(); ++i) {
         clint->c.push_back(&((*i)->certificate()));
         clint->t.push_back((*i)->localTrust());
     }
@@ -605,12 +563,7 @@ ZT_CertificateList* Node::listCertificates()
     return cl;
 }
 
-int Node::sendUserMessage(
-    const CallContext& cc,
-    uint64_t dest,
-    uint64_t /*typeId*/,
-    const void* /*data*/,
-    unsigned int /*len*/)
+int Node::sendUserMessage(const CallContext& cc, uint64_t dest, uint64_t /*typeId*/, const void* /*data*/, unsigned int /*len*/)
 {
     try {
         if (m_ctx.identity.address().toInt() != dest) {
@@ -744,12 +697,7 @@ void Node::ncSendConfig(
     }
 }
 
-void Node::ncSendRevocation(
-    void* tPtr,
-    int64_t clock,
-    int64_t ticks,
-    const Address& destination,
-    const RevocationCredential& rev)
+void Node::ncSendRevocation(void* tPtr, int64_t clock, int64_t ticks, const Address& destination, const RevocationCredential& rev)
 {
     if (destination == m_ctx.identity.address()) {
         SharedPtr<Network> n(m_ctx.networks->get(rev.networkId()));

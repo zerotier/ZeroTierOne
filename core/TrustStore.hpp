@@ -209,10 +209,9 @@ class TrustStore {
     int load(const Vector<uint8_t>& data);
 
   private:
-    Map<H384, SharedPtr<Entry> > m_bySerial;   // all certificates
-    Map<Blob<ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE>, SharedPtr<Entry> >
-        m_bySubjectUniqueId;                                            // non-rejected certificates only
-    Map<Fingerprint, Vector<SharedPtr<Entry> > > m_bySubjectIdentity;   // non-rejected certificates only
+    Map<H384, SharedPtr<Entry> > m_bySerial;                                                // all certificates
+    Map<Blob<ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE>, SharedPtr<Entry> > m_bySubjectUniqueId;   // non-rejected certificates only
+    Map<Fingerprint, Vector<SharedPtr<Entry> > > m_bySubjectIdentity;                       // non-rejected certificates only
     ForwardList<SharedPtr<Entry> > m_addQueue;
     ForwardList<H384> m_deleteQueue;
     RWMutex m_lock;

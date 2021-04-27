@@ -35,9 +35,8 @@
  */
 #define ZT_LOCATOR_MAX_ENDPOINTS 16
 
-#define ZT_LOCATOR_MARSHAL_SIZE_MAX                                                                                    \
-    (8 + ZT_ADDRESS_LENGTH + 2                                                                                         \
-     + (ZT_LOCATOR_MAX_ENDPOINTS * (ZT_ENDPOINT_MARSHAL_SIZE_MAX + ZT_LOCATOR_MAX_ENDPOINT_ATTRIBUTES_SIZE)) + 2 + 2   \
+#define ZT_LOCATOR_MARSHAL_SIZE_MAX                                                                                                                            \
+    (8 + ZT_ADDRESS_LENGTH + 2 + (ZT_LOCATOR_MAX_ENDPOINTS * (ZT_ENDPOINT_MARSHAL_SIZE_MAX + ZT_LOCATOR_MAX_ENDPOINT_ATTRIBUTES_SIZE)) + 2 + 2                 \
      + ZT_SIGNATURE_BUFFER_SIZE)
 
 /**
@@ -236,8 +235,7 @@ class Locator {
     ZT_INLINE bool operator==(const Locator& l) const noexcept
     {
         const unsigned long es = (unsigned long)m_endpoints.size();
-        if ((m_revision == l.m_revision) && (m_signer == l.m_signer) && (es == (unsigned long)l.m_endpoints.size())
-            && (m_signature == l.m_signature)) {
+        if ((m_revision == l.m_revision) && (m_signer == l.m_signer) && (es == (unsigned long)l.m_endpoints.size()) && (m_signature == l.m_signature)) {
             for (unsigned long i = 0; i < es; ++i) {
                 if (m_endpoints[i].first != l.m_endpoints[i].first)
                     return false;

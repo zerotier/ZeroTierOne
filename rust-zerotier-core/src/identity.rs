@@ -162,7 +162,7 @@ impl Identity {
 impl Hash for Identity {
     #[inline(always)]
     fn hash<H: Hasher>(&self, state: &mut H) {
-        (self.address.0 | (self.type_.to_u64().unwrap_or(0) << 40)).hash(state);
+        self.address.0.hash(state)
     }
 }
 

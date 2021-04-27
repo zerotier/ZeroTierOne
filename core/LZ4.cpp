@@ -282,9 +282,8 @@ FORCE_INLINE unsigned LZ4_NbCommonBytes(reg_t val)
 #elif (defined(__clang__) || (defined(__GNUC__) && (__GNUC__ >= 3))) && ! defined(LZ4_FORCE_SW_BITCOUNT)
             return (__builtin_ctzll((U64)val) >> 3);
 #else
-            static const int DeBruijnBytePos[64] = { 0, 0, 0, 0, 0, 1, 1, 2, 0, 3, 1, 3, 1, 4, 2, 7, 0, 2, 3, 6, 1, 5,
-                                                     3, 5, 1, 3, 4, 4, 2, 5, 6, 7, 7, 0, 1, 2, 3, 3, 4, 6, 2, 6, 5, 5,
-                                                     3, 4, 5, 6, 7, 1, 2, 4, 6, 4, 4, 5, 7, 2, 6, 5, 7, 6, 7, 7 };
+            static const int DeBruijnBytePos[64] = { 0, 0, 0, 0, 0, 1, 1, 2, 0, 3, 1, 3, 1, 4, 2, 7, 0, 2, 3, 6, 1, 5, 3, 5, 1, 3, 4, 4, 2, 5, 6, 7,
+                                                     7, 0, 1, 2, 3, 3, 4, 6, 2, 6, 5, 5, 3, 4, 5, 6, 7, 1, 2, 4, 6, 4, 4, 5, 7, 2, 6, 5, 7, 6, 7, 7 };
             return DeBruijnBytePos[((U64)((val & -(long long)val) * 0x0218A392CDABBD3FULL)) >> 58];
 #endif
         }
@@ -296,8 +295,7 @@ FORCE_INLINE unsigned LZ4_NbCommonBytes(reg_t val)
 #elif (defined(__clang__) || (defined(__GNUC__) && (__GNUC__ >= 3))) && ! defined(LZ4_FORCE_SW_BITCOUNT)
             return (__builtin_ctz((U32)val) >> 3);
 #else
-            static const int DeBruijnBytePos[32] = { 0, 0, 3, 0, 3, 1, 3, 0, 3, 2, 2, 1, 3, 2, 0, 1,
-                                                     3, 3, 1, 2, 2, 2, 2, 0, 3, 1, 2, 0, 1, 0, 1, 1 };
+            static const int DeBruijnBytePos[32] = { 0, 0, 3, 0, 3, 1, 3, 0, 3, 2, 2, 1, 3, 2, 0, 1, 3, 3, 1, 2, 2, 2, 2, 0, 3, 1, 2, 0, 1, 0, 1, 1 };
             return DeBruijnBytePos[((U32)((val & -(S32)val) * 0x077CB531U)) >> 27];
 #endif
         }
@@ -426,8 +424,7 @@ FORCE_INLINE U32 LZ4_hashPosition(const void* const p, tableType_t const tableTy
     return LZ4_hash4(LZ4_read32(p), tableType);
 }
 
-FORCE_INLINE void
-LZ4_putPositionOnHash(const BYTE* p, U32 h, void* tableBase, tableType_t const tableType, const BYTE* srcBase)
+FORCE_INLINE void LZ4_putPositionOnHash(const BYTE* p, U32 h, void* tableBase, tableType_t const tableType, const BYTE* srcBase)
 {
     switch (tableType) {
         case byPtr: {
@@ -567,8 +564,7 @@ FORCE_INLINE int LZ4_compress_generic(
                 forwardH = LZ4_hashPosition(forwardIp, tableType);
                 LZ4_putPositionOnHash(ip, h, cctx->hashTable, tableType, base);
 
-            } while (((dictIssue == dictSmall) ? (match < lowRefLimit) : 0)
-                     || ((tableType == byU16) ? 0 : (match + MAX_DISTANCE < ip))
+            } while (((dictIssue == dictSmall) ? (match < lowRefLimit) : 0) || ((tableType == byU16) ? 0 : (match + MAX_DISTANCE < ip))
                      || (LZ4_read32(match + refDelta) != LZ4_read32(ip)));
         }
 
@@ -666,8 +662,7 @@ FORCE_INLINE int LZ4_compress_generic(
             }
         }
         LZ4_putPosition(ip, cctx->hashTable, tableType, base);
-        if (((dictIssue == dictSmall) ? (match >= lowRefLimit) : 1) && (match + MAX_DISTANCE >= ip)
-            && (LZ4_read32(match + refDelta) == LZ4_read32(ip))) {
+        if (((dictIssue == dictSmall) ? (match >= lowRefLimit) : 1) && (match + MAX_DISTANCE >= ip) && (LZ4_read32(match + refDelta) == LZ4_read32(ip))) {
             token = op++;
             *token = 0;
             goto _next_match;
@@ -702,13 +697,7 @@ _last_literals:
     return (int)(((char*)op) - dest);
 }
 
-ZT_INLINE int LZ4_compress_fast_extState(
-    void* state,
-    const char* source,
-    char* dest,
-    int inputSize,
-    int maxOutputSize,
-    int acceleration)
+ZT_INLINE int LZ4_compress_fast_extState(void* state, const char* source, char* dest, int inputSize, int maxOutputSize, int acceleration)
 {
     LZ4_stream_t_internal* ctx = &((LZ4_stream_t*)state)->internal_donotuse;
     LZ4_resetStream((LZ4_stream_t*)state);
@@ -716,43 +705,13 @@ ZT_INLINE int LZ4_compress_fast_extState(
 
     if (maxOutputSize >= LZ4_compressBound(inputSize)) {
         if (inputSize < LZ4_64Klimit)
-            return LZ4_compress_generic(
-                ctx,
-                source,
-                dest,
-                inputSize,
-                0,
-                notLimited,
-                byU16,
-                noDict,
-                noDictIssue,
-                acceleration);
+            return LZ4_compress_generic(ctx, source, dest, inputSize, 0, notLimited, byU16, noDict, noDictIssue, acceleration);
         else
-            return LZ4_compress_generic(
-                ctx,
-                source,
-                dest,
-                inputSize,
-                0,
-                notLimited,
-                (sizeof(void*) == 8) ? byU32 : byPtr,
-                noDict,
-                noDictIssue,
-                acceleration);
+            return LZ4_compress_generic(ctx, source, dest, inputSize, 0, notLimited, (sizeof(void*) == 8) ? byU32 : byPtr, noDict, noDictIssue, acceleration);
     }
     else {
         if (inputSize < LZ4_64Klimit)
-            return LZ4_compress_generic(
-                ctx,
-                source,
-                dest,
-                inputSize,
-                maxOutputSize,
-                limitedOutput,
-                byU16,
-                noDict,
-                noDictIssue,
-                acceleration);
+            return LZ4_compress_generic(ctx, source, dest, inputSize, maxOutputSize, limitedOutput, byU16, noDict, noDictIssue, acceleration);
         else
             return LZ4_compress_generic(
                 ctx,
@@ -835,8 +794,7 @@ FORCE_INLINE int LZ4_decompress_generic(
 
         /* copy literals */
         cpy = op + length;
-        if (((endOnInput)
-             && ((cpy > (partialDecoding ? oexit : oend - MFLIMIT)) || (ip + length > iend - (2 + 1 + LASTLITERALS))))
+        if (((endOnInput) && ((cpy > (partialDecoding ? oexit : oend - MFLIMIT)) || (ip + length > iend - (2 + 1 + LASTLITERALS))))
             || ((! endOnInput) && (cpy > oend - WILDCOPYLENGTH))) {
             if (partialDecoding) {
                 if (cpy > oend)
@@ -982,18 +940,7 @@ int LZ4_compress_fast(const char* source, char* dest, int inputSize, int maxOutp
 
 int LZ4_decompress_safe(const char* source, char* dest, int compressedSize, int maxDecompressedSize) noexcept
 {
-    return LZ4_decompress_generic(
-        source,
-        dest,
-        compressedSize,
-        maxDecompressedSize,
-        endOnInputSize,
-        full,
-        0,
-        noDict,
-        (BYTE*)dest,
-        NULL,
-        0);
+    return LZ4_decompress_generic(source, dest, compressedSize, maxDecompressedSize, endOnInputSize, full, 0, noDict, (BYTE*)dest, NULL, 0);
 }
 
 }   // namespace ZeroTier

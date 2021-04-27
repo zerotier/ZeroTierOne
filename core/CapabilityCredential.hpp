@@ -22,9 +22,8 @@
 #include "Utils.hpp"
 
 #define ZT_VIRTUALNETWORKRULE_MARSHAL_SIZE_MAX 21
-#define ZT_CAPABILITY_MARSHAL_SIZE_MAX                                                                                 \
-    (8 + 8 + 4 + 1 + 2 + (ZT_VIRTUALNETWORKRULE_MARSHAL_SIZE_MAX * ZT_MAX_CAPABILITY_RULES) + 2                        \
-     + (5 + 5 + 1 + 2 + ZT_SIGNATURE_BUFFER_SIZE))
+#define ZT_CAPABILITY_MARSHAL_SIZE_MAX                                                                                                                         \
+    (8 + 8 + 4 + 1 + 2 + (ZT_VIRTUALNETWORKRULE_MARSHAL_SIZE_MAX * ZT_MAX_CAPABILITY_RULES) + 2 + (5 + 5 + 1 + 2 + ZT_SIGNATURE_BUFFER_SIZE))
 
 namespace ZeroTier {
 
@@ -174,8 +173,7 @@ class CapabilityCredential : public Credential {
      * @param ruleCount Number of rules
      * @return Number of bytes written or -1 on error
      */
-    static int
-    marshalVirtualNetworkRules(uint8_t* data, const ZT_VirtualNetworkRule* rules, unsigned int ruleCount) noexcept;
+    static int marshalVirtualNetworkRules(uint8_t* data, const ZT_VirtualNetworkRule* rules, unsigned int ruleCount) noexcept;
 
     /**
      * Unmarshal a set of virtual network rules
@@ -187,12 +185,8 @@ class CapabilityCredential : public Credential {
      * @param maxRuleCount Capacity of rules buffer
      * @return Number of bytes unmarshaled or -1 on error
      */
-    static int unmarshalVirtualNetworkRules(
-        const uint8_t* data,
-        int len,
-        ZT_VirtualNetworkRule* rules,
-        unsigned int& ruleCount,
-        unsigned int maxRuleCount) noexcept;
+    static int
+    unmarshalVirtualNetworkRules(const uint8_t* data, int len, ZT_VirtualNetworkRule* rules, unsigned int& ruleCount, unsigned int maxRuleCount) noexcept;
 
     // Provides natural sort order by ID
     ZT_INLINE bool operator<(const CapabilityCredential& c) const noexcept

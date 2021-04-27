@@ -31,12 +31,8 @@ class MAC : public TriviallyCopyable {
     {
     }
 
-    ZT_INLINE
-    MAC(const uint8_t a, const uint8_t b, const uint8_t c, const uint8_t d, const uint8_t e, const uint8_t f)
-    noexcept
-        : m_mac(
-              (((uint64_t)a) << 40U) | (((uint64_t)b) << 32U) | (((uint64_t)c) << 24U) | (((uint64_t)d) << 16U)
-              | (((uint64_t)e) << 8U) | ((uint64_t)f))
+    ZT_INLINE MAC(const uint8_t a, const uint8_t b, const uint8_t c, const uint8_t d, const uint8_t e, const uint8_t f) noexcept
+        : m_mac((((uint64_t)a) << 40U) | (((uint64_t)b) << 32U) | (((uint64_t)c) << 24U) | (((uint64_t)d) << 16U) | (((uint64_t)e) << 8U) | ((uint64_t)f))
     {
     }
 
@@ -76,8 +72,7 @@ class MAC : public TriviallyCopyable {
      */
     ZT_INLINE void setTo(const uint8_t b[6]) noexcept
     {
-        m_mac = ((uint64_t)b[0] << 40U) | ((uint64_t)b[1] << 32U) | ((uint64_t)b[2] << 24U) | ((uint64_t)b[3] << 16U)
-                | ((uint64_t)b[4] << 8U) | (uint64_t)b[5];
+        m_mac = ((uint64_t)b[0] << 40U) | ((uint64_t)b[1] << 32U) | ((uint64_t)b[2] << 24U) | ((uint64_t)b[3] << 16U) | ((uint64_t)b[4] << 8U) | (uint64_t)b[5];
     }
 
     /**
@@ -138,8 +133,7 @@ class MAC : public TriviallyCopyable {
     ZT_INLINE Address toAddress(uint64_t nwid) const noexcept
     {
         uint64_t a = m_mac & 0xffffffffffULL;   // least significant 40 bits of MAC are formed from address
-        a ^= ((nwid >> 8U) & 0xffU)
-             << 32U;   // ... XORed with bits 8-48 of the nwid in little-endian byte order, so unmask it
+        a ^= ((nwid >> 8U) & 0xffU) << 32U;     // ... XORed with bits 8-48 of the nwid in little-endian byte order, so unmask it
         a ^= ((nwid >> 16U) & 0xffU) << 24U;
         a ^= ((nwid >> 24U) & 0xffU) << 16U;
         a ^= ((nwid >> 32U) & 0xffU) << 8U;
@@ -153,10 +147,9 @@ class MAC : public TriviallyCopyable {
      */
     static ZT_INLINE unsigned char firstOctetForNetwork(uint64_t nwid) noexcept
     {
-        const uint8_t a =
-            ((uint8_t)(nwid & 0xfeU) | 0x02U);   // locally administered, not multicast, from LSB of network ID
-        return ((a == 0x52) ? 0x32 : a);         // blacklist 0x52 since it's used by KVM, libvirt, and other popular
-                                                 // virtualization engines... seems de-facto standard on Linux
+        const uint8_t a = ((uint8_t)(nwid & 0xfeU) | 0x02U);   // locally administered, not multicast, from LSB of network ID
+        return ((a == 0x52) ? 0x32 : a);                       // blacklist 0x52 since it's used by KVM, libvirt, and other popular
+                                                               // virtualization engines... seems de-facto standard on Linux
     }
 
     /**

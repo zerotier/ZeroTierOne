@@ -92,8 +92,8 @@ class SelfAwareness {
         ZT_INLINE bool operator==(const p_PhySurfaceKey& k) const noexcept
         {
             return (
-                (reporter == k.reporter) && (receivedOnLocalSocket == k.receivedOnLocalSocket)
-                && (reporterPhysicalAddress == k.reporterPhysicalAddress) && (scope == k.scope));
+                (reporter == k.reporter) && (receivedOnLocalSocket == k.receivedOnLocalSocket) && (reporterPhysicalAddress == k.reporterPhysicalAddress)
+                && (scope == k.scope));
         }
 
         ZT_INLINE bool operator!=(const p_PhySurfaceKey& k) const noexcept

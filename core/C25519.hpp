@@ -40,15 +40,12 @@ class C25519 {
     /**
      * Generate a set of two 25519 keys: a C25519 ECDH key pair and an Ed25519 EDDSA key pair.
      */
-    static void generateCombined(
-        uint8_t pub[ZT_C25519_COMBINED_PUBLIC_KEY_SIZE],
-        uint8_t priv[ZT_C25519_COMBINED_PRIVATE_KEY_SIZE]);
+    static void generateCombined(uint8_t pub[ZT_C25519_COMBINED_PUBLIC_KEY_SIZE], uint8_t priv[ZT_C25519_COMBINED_PRIVATE_KEY_SIZE]);
 
     /**
      * Generate a C25519 ECDH key pair only.
      */
-    static void
-    generateC25519(uint8_t pub[ZT_C25519_ECDH_PUBLIC_KEY_SIZE], uint8_t priv[ZT_C25519_ECDH_PRIVATE_KEY_SIZE]);
+    static void generateC25519(uint8_t pub[ZT_C25519_ECDH_PUBLIC_KEY_SIZE], uint8_t priv[ZT_C25519_ECDH_PRIVATE_KEY_SIZE]);
 
     /**
      * Generate a key pair satisfying a condition
@@ -64,10 +61,7 @@ class C25519 {
      * @tparam F Type of 'cond'
      */
     template <typename F>
-    static ZT_INLINE void generateSatisfying(
-        F cond,
-        uint8_t pub[ZT_C25519_COMBINED_PUBLIC_KEY_SIZE],
-        uint8_t priv[ZT_C25519_COMBINED_PRIVATE_KEY_SIZE])
+    static ZT_INLINE void generateSatisfying(F cond, uint8_t pub[ZT_C25519_COMBINED_PUBLIC_KEY_SIZE], uint8_t priv[ZT_C25519_COMBINED_PRIVATE_KEY_SIZE])
     {
         Utils::getSecureRandom(priv, ZT_C25519_COMBINED_PRIVATE_KEY_SIZE);
         s_calcPubED(pub, priv);   // do Ed25519 key -- bytes 32-63 of pub and priv
@@ -127,12 +121,7 @@ class C25519 {
      * @param siglen Length of signature in bytes
      * @return True if signature is valid and the message is authentic and unmodified
      */
-    static bool verify(
-        const uint8_t their[ZT_C25519_COMBINED_PUBLIC_KEY_SIZE],
-        const void* msg,
-        unsigned int len,
-        const void* signature,
-        unsigned int siglen);
+    static bool verify(const uint8_t their[ZT_C25519_COMBINED_PUBLIC_KEY_SIZE], const void* msg, unsigned int len, const void* signature, unsigned int siglen);
 
   private:
     // derive first 32 bytes of kp.pub from first 32 bytes of kp.priv

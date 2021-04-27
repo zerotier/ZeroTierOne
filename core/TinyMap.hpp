@@ -76,9 +76,7 @@ template <typename V> class TinyMap {
             const uintptr_t vptr = bucket.exchange(ZT_TINYMAP_LOCKED_POINTER, std::memory_order_acquire);
             if (likely(vptr != ZT_TINYMAP_LOCKED_POINTER)) {
                 if (likely(vptr != 0)) {
-                    for (typename EV::const_iterator n(reinterpret_cast<const EV*>(vptr)->begin());
-                         n != reinterpret_cast<const EV*>(vptr)->end();
-                         ++n) {
+                    for (typename EV::const_iterator n(reinterpret_cast<const EV*>(vptr)->begin()); n != reinterpret_cast<const EV*>(vptr)->end(); ++n) {
                         if (likely(n->first == key)) {
                             tmp = n->second;
                             break;
@@ -104,9 +102,7 @@ template <typename V> class TinyMap {
                     vptr = reinterpret_cast<uintptr_t>(new EV());
                 }
                 else {
-                    for (typename EV::iterator n(reinterpret_cast<EV*>(vptr)->begin());
-                         n != reinterpret_cast<EV*>(vptr)->end();
-                         ++n) {
+                    for (typename EV::iterator n(reinterpret_cast<EV*>(vptr)->begin()); n != reinterpret_cast<EV*>(vptr)->end(); ++n) {
                         if (n->first == key) {
                             n->second = value;
                             bucket.store(vptr, std::memory_order_release);
@@ -131,9 +127,7 @@ template <typename V> class TinyMap {
             uintptr_t vptr = bucket.exchange(ZT_TINYMAP_LOCKED_POINTER, std::memory_order_acquire);
             if (likely(vptr != ZT_TINYMAP_LOCKED_POINTER)) {
                 if (likely(vptr != 0)) {
-                    for (typename EV::iterator n(reinterpret_cast<EV*>(vptr)->begin());
-                         n != reinterpret_cast<EV*>(vptr)->end();
-                         ++n) {
+                    for (typename EV::iterator n(reinterpret_cast<EV*>(vptr)->begin()); n != reinterpret_cast<EV*>(vptr)->end(); ++n) {
                         if (n->first == key) {
                             reinterpret_cast<EV*>(vptr)->erase(n);
                             break;

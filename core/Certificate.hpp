@@ -141,10 +141,7 @@ class Certificate : public ZT_Certificate {
      *
      * @return True on success
      */
-    bool sign(
-        const uint8_t issuer[ZT_CERTIFICATE_HASH_SIZE],
-        const void* issuerPrivateKey,
-        unsigned int issuerPrivateKeySize);
+    bool sign(const uint8_t issuer[ZT_CERTIFICATE_HASH_SIZE], const void* issuerPrivateKey, unsigned int issuerPrivateKeySize);
 
     /**
      * Verify self-contained signatures and validity of certificate structure
@@ -166,8 +163,7 @@ class Certificate : public ZT_Certificate {
      */
     ZT_INLINE bool verifyTimeWindow(int64_t clock) const noexcept
     {
-        return (
-            (clock >= this->validity[0]) && (clock <= this->validity[1]) && (this->validity[0] <= this->validity[1]));
+        return ((clock >= this->validity[0]) && (clock <= this->validity[1]) && (this->validity[0] <= this->validity[1]));
     }
 
     /**
@@ -241,8 +237,7 @@ class Certificate : public ZT_Certificate {
 
   private:
     void m_clear();
-    static bool
-    m_setSubjectUniqueId(ZT_Certificate_Subject& s, const void* uniqueIdPrivate, unsigned int uniqueIdPrivateSize);
+    static bool m_setSubjectUniqueId(ZT_Certificate_Subject& s, const void* uniqueIdPrivate, unsigned int uniqueIdPrivateSize);
     static void m_encodeSubject(const ZT_Certificate_Subject& s, Dictionary& d, bool omitUniqueIdProofSignature);
 
     // These hold any identity or locator objects that are owned by and should

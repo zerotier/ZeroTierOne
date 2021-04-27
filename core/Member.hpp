@@ -48,8 +48,7 @@ class Member {
      * @param to Peer identity
      * @param nconf My network config
      */
-    void
-    pushCredentials(const Context& ctx, const CallContext& cc, const SharedPtr<Peer>& to, const NetworkConfig& nconf);
+    void pushCredentials(const Context& ctx, const CallContext& cc, const SharedPtr<Peer>& to, const NetworkConfig& nconf);
 
     /**
      * @return Time we last pushed credentials to this member
@@ -69,9 +68,7 @@ class Member {
     ZT_INLINE const TagCredential* getTag(const NetworkConfig& nconf, const uint32_t id) const noexcept
     {
         Map<uint32_t, TagCredential>::const_iterator t(m_remoteTags.find(id));
-        return (
-            ((t != m_remoteTags.end()) && (m_isCredentialTimestampValid(nconf, t->second))) ? &(t->second)
-                                                                                            : (TagCredential*)0);
+        return (((t != m_remoteTags.end()) && (m_isCredentialTimestampValid(nconf, t->second))) ? &(t->second) : (TagCredential*)0);
     }
 
     /**
@@ -115,8 +112,7 @@ class Member {
      */
     ZT_INLINE bool certificateOfMembershipAgress(const MembershipCredential& localCom, const Identity& remoteIdentity)
     {
-        if ((m_comAgreementLocalTimestamp == localCom.timestamp())
-            && (m_comAgreementRemoteTimestamp == m_com.timestamp()))
+        if ((m_comAgreementLocalTimestamp == localCom.timestamp()) && (m_comAgreementRemoteTimestamp == m_com.timestamp()))
             return true;
         if (m_com.agreesWith(localCom)) {
             // SECURITY: newer network controllers embed the full fingerprint into the COM. If we are
@@ -146,36 +142,16 @@ class Member {
         return false;
     }
 
-    AddCredentialResult addCredential(
-        const Context& ctx,
-        const CallContext& cc,
-        const Identity& sourcePeerIdentity,
-        const NetworkConfig& nconf,
-        const MembershipCredential& com);
-    AddCredentialResult addCredential(
-        const Context& ctx,
-        const CallContext& cc,
-        const Identity& sourcePeerIdentity,
-        const NetworkConfig& nconf,
-        const TagCredential& tag);
-    AddCredentialResult addCredential(
-        const Context& ctx,
-        const CallContext& cc,
-        const Identity& sourcePeerIdentity,
-        const NetworkConfig& nconf,
-        const CapabilityCredential& cap);
-    AddCredentialResult addCredential(
-        const Context& ctx,
-        const CallContext& cc,
-        const Identity& sourcePeerIdentity,
-        const NetworkConfig& nconf,
-        const OwnershipCredential& coo);
-    AddCredentialResult addCredential(
-        const Context& ctx,
-        const CallContext& cc,
-        const Identity& sourcePeerIdentity,
-        const NetworkConfig& nconf,
-        const RevocationCredential& rev);
+    AddCredentialResult
+    addCredential(const Context& ctx, const CallContext& cc, const Identity& sourcePeerIdentity, const NetworkConfig& nconf, const MembershipCredential& com);
+    AddCredentialResult
+    addCredential(const Context& ctx, const CallContext& cc, const Identity& sourcePeerIdentity, const NetworkConfig& nconf, const TagCredential& tag);
+    AddCredentialResult
+    addCredential(const Context& ctx, const CallContext& cc, const Identity& sourcePeerIdentity, const NetworkConfig& nconf, const CapabilityCredential& cap);
+    AddCredentialResult
+    addCredential(const Context& ctx, const CallContext& cc, const Identity& sourcePeerIdentity, const NetworkConfig& nconf, const OwnershipCredential& coo);
+    AddCredentialResult
+    addCredential(const Context& ctx, const CallContext& cc, const Identity& sourcePeerIdentity, const NetworkConfig& nconf, const RevocationCredential& rev);
 
   private:
     // This returns true if a resource is an IPv6 NDP-emulated address. These embed the ZT
@@ -190,14 +166,11 @@ class Member {
 
     // This compares the remote credential's timestamp to the timestamp in our network config
     // plus or minus the permitted maximum timestamp delta.
-    template <typename C>
-    ZT_INLINE bool m_isCredentialTimestampValid(const NetworkConfig& nconf, const C& remoteCredential) const noexcept
+    template <typename C> ZT_INLINE bool m_isCredentialTimestampValid(const NetworkConfig& nconf, const C& remoteCredential) const noexcept
     {
         const int64_t ts = remoteCredential.revision();
-        if (((ts >= nconf.timestamp) ? (ts - nconf.timestamp) : (nconf.timestamp - ts))
-            <= nconf.credentialTimeMaxDelta) {
-            Map<uint64_t, int64_t>::const_iterator threshold(
-                m_revocations.find(credentialKey(C::credentialType(), remoteCredential.id())));
+        if (((ts >= nconf.timestamp) ? (ts - nconf.timestamp) : (nconf.timestamp - ts)) <= nconf.credentialTimeMaxDelta) {
+            Map<uint64_t, int64_t>::const_iterator threshold(m_revocations.find(credentialKey(C::credentialType(), remoteCredential.id())));
             return ((threshold == m_revocations.end()) || (ts > threshold->second));
         }
         return false;

@@ -38,21 +38,12 @@ class Store {
      * @param idSize Size of object ID in qwords
      * @return Data or empty vector if not found
      */
-    ZT_INLINE Vector<uint8_t>
-    get(const CallContext& cc, ZT_StateObjectType type, const uint64_t* const id, unsigned int idSize) const
+    ZT_INLINE Vector<uint8_t> get(const CallContext& cc, ZT_StateObjectType type, const uint64_t* const id, unsigned int idSize) const
     {
         Vector<uint8_t> dv;
         void* data = nullptr;
         void (*freeFunc)(void*) = nullptr;
-        const int r = m_ctx.cb.stateGetFunction(
-            reinterpret_cast<ZT_Node*>(m_ctx.node),
-            m_ctx.uPtr,
-            cc.tPtr,
-            type,
-            id,
-            idSize,
-            &data,
-            &freeFunc);
+        const int r = m_ctx.cb.stateGetFunction(reinterpret_cast<ZT_Node*>(m_ctx.node), m_ctx.uPtr, cc.tPtr, type, id, idSize, &data, &freeFunc);
         if (r > 0)
             dv.assign(reinterpret_cast<const uint8_t*>(data), reinterpret_cast<const uint8_t*>(data) + r);
         if ((data) && (freeFunc))
@@ -70,15 +61,10 @@ class Store {
      * @param len Length of data
      */
     ZT_INLINE void
-    put(const CallContext& cc,
-        ZT_StateObjectType type,
-        const uint64_t* const id,
-        const unsigned int idSize,
-        const void* const data,
-        const unsigned int len) noexcept
+    put(const CallContext& cc, ZT_StateObjectType type, const uint64_t* const id, const unsigned int idSize, const void* const data, const unsigned int len)
+        noexcept
     {
-        m_ctx.cb
-            .statePutFunction(reinterpret_cast<ZT_Node*>(this), m_ctx.uPtr, cc.tPtr, type, id, idSize, data, (int)len);
+        m_ctx.cb.statePutFunction(reinterpret_cast<ZT_Node*>(this), m_ctx.uPtr, cc.tPtr, type, id, idSize, data, (int)len);
     }
 
     /**
@@ -88,8 +74,7 @@ class Store {
      * @param id Object ID
      * @param idSize Size of object ID in qwords
      */
-    ZT_INLINE void
-    erase(const CallContext& cc, ZT_StateObjectType type, const uint64_t* const id, const unsigned int idSize) noexcept
+    ZT_INLINE void erase(const CallContext& cc, ZT_StateObjectType type, const uint64_t* const id, const unsigned int idSize) noexcept
     {
         m_ctx.cb.statePutFunction(reinterpret_cast<ZT_Node*>(this), m_ctx.uPtr, cc.tPtr, type, id, idSize, nullptr, -1);
     }

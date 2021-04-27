@@ -57,14 +57,14 @@ pub const ALL_CERTIFICATE_USAGE_FLAGS: [(u64, &'static str); 9] = [
 
 #[inline(always)]
 fn vec_to_array<const L: usize>(v: &Vec<u8>) -> [u8; L] {
-    unsafe {
-        let mut a: MaybeUninit<[u8; L]> = MaybeUninit::uninit();
-        copy_nonoverlapping(v.as_ptr(), a.as_mut_ptr().cast::<u8>(), v.len().min(L));
-        if v.len() < L {
-            write_bytes(a.as_mut_ptr().cast::<u8>(), 0, L - v.len());
-        }
-        a.assume_init()
+    let mut a = [0_u8; L];
+    let vl = v.len();
+    if vl >= L {
+        a.copy_from_slice(&v.as_slice()[0..L]);
+    } else {
+        a.copy_from_slice(v.as_slice());
     }
+    a
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

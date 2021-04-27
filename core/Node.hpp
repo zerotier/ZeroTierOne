@@ -61,11 +61,9 @@ class Node : public NetworkController::Sender {
 
     ZT_ResultCode leave(uint64_t nwid, void** uptr, const CallContext& cc);
 
-    ZT_ResultCode
-    multicastSubscribe(const CallContext& cc, uint64_t nwid, uint64_t multicastGroup, unsigned long multicastAdi);
+    ZT_ResultCode multicastSubscribe(const CallContext& cc, uint64_t nwid, uint64_t multicastGroup, unsigned long multicastAdi);
 
-    ZT_ResultCode
-    multicastUnsubscribe(const CallContext& cc, uint64_t nwid, uint64_t multicastGroup, unsigned long multicastAdi);
+    ZT_ResultCode multicastUnsubscribe(const CallContext& cc, uint64_t nwid, uint64_t multicastGroup, unsigned long multicastAdi);
 
     void status(ZT_NodeStatus* status) const;
 
@@ -79,12 +77,7 @@ class Node : public NetworkController::Sender {
 
     void setInterfaceAddresses(const ZT_InterfaceAddress* addrs, unsigned int addrCount);
 
-    ZT_CertificateError addCertificate(
-        const CallContext& cc,
-        unsigned int localTrust,
-        const ZT_Certificate* cert,
-        const void* certData,
-        unsigned int certSize);
+    ZT_CertificateError addCertificate(const CallContext& cc, unsigned int localTrust, const ZT_Certificate* cert, const void* certData, unsigned int certSize);
 
     ZT_ResultCode deleteCertificate(const CallContext& cc, const void* serialNo);
 
@@ -102,9 +95,7 @@ class Node : public NetworkController::Sender {
      * @param md Event data or NULL if none
      * @param mdSize Size of event data
      */
-    ZT_INLINE void
-    postEvent(void* const tPtr, const ZT_Event ev, const void* const md = nullptr, const unsigned int mdSize = 0)
-        noexcept
+    ZT_INLINE void postEvent(void* const tPtr, const ZT_Event ev, const void* const md = nullptr, const unsigned int mdSize = 0) noexcept
     {
         m_ctx.cb.eventCallback(reinterpret_cast<ZT_Node*>(this), m_ctx.uPtr, tPtr, ev, md, mdSize);
     }
@@ -153,12 +144,7 @@ class Node : public NetworkController::Sender {
         const Address& destination,
         const NetworkConfig& nc,
         bool sendLegacyFormatConfig);
-    virtual void ncSendRevocation(
-        void* tPtr,
-        int64_t clock,
-        int64_t ticks,
-        const Address& destination,
-        const RevocationCredential& rev);
+    virtual void ncSendRevocation(void* tPtr, int64_t clock, int64_t ticks, const Address& destination, const RevocationCredential& rev);
     virtual void ncSendError(
         void* tPtr,
         int64_t clock,

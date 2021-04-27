@@ -30,8 +30,7 @@
 #define ZT_MEMBERSHIP_CREDENTIAL_MAX_ADDITIONAL_QUALIFIERS 8
 
 // version + qualifier count + three required qualifiers + additional qualifiers +
-#define ZT_MEMBERSHIP_CREDENTIAL_MARSHAL_SIZE_MAX                                                                      \
-    (1 + 2 + (3 * 3 * 8) + (ZT_MEMBERSHIP_CREDENTIAL_MAX_ADDITIONAL_QUALIFIERS * 3 * 8) + 144 + 5 + 2 + 96)
+#define ZT_MEMBERSHIP_CREDENTIAL_MARSHAL_SIZE_MAX (1 + 2 + (3 * 3 * 8) + (ZT_MEMBERSHIP_CREDENTIAL_MAX_ADDITIONAL_QUALIFIERS * 3 * 8) + 144 + 5 + 2 + 96)
 
 namespace ZeroTier {
 
@@ -122,8 +121,7 @@ class MembershipCredential : public Credential {
      * @param nwid Network ID
      * @param issuedTo Certificate recipient
      */
-    MembershipCredential(int64_t timestamp, int64_t timestampMaxDelta, uint64_t nwid, const Identity& issuedTo)
-        noexcept;
+    MembershipCredential(int64_t timestamp, int64_t timestampMaxDelta, uint64_t nwid, const Identity& issuedTo) noexcept;
 
     /**
      * @return True if there's something here

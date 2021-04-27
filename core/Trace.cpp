@@ -159,11 +159,7 @@ void Trace::m_outgoingNetworkFrameDropped(
     Dictionary::append(buf, ZT_TRACE_FIELD_ETHERTYPE, etherType);
     Dictionary::append(buf, ZT_TRACE_FIELD_FRAME_LENGTH, frameLength);
     if (frameData)
-        Dictionary::append(
-            buf,
-            ZT_TRACE_FIELD_FRAME_DATA,
-            frameData,
-            std::min((unsigned int)64, (unsigned int)frameLength));
+        Dictionary::append(buf, ZT_TRACE_FIELD_FRAME_DATA, frameData, std::min((unsigned int)64, (unsigned int)frameLength));
     Dictionary::append(buf, ZT_TRACE_FIELD_REASON, reason);
     buf.push_back(0);
     m_ctx.node->postEvent(tPtr, ZT_EVENT_TRACE, buf.data());
@@ -199,11 +195,7 @@ void Trace::m_incomingNetworkFrameDropped(
     Dictionary::append(buf, ZT_TRACE_FIELD_PACKET_VERB, verb);
     Dictionary::append(buf, ZT_TRACE_FIELD_FRAME_LENGTH, frameLength);
     if (frameData)
-        Dictionary::append(
-            buf,
-            ZT_TRACE_FIELD_FRAME_DATA,
-            frameData,
-            std::min((unsigned int)64, (unsigned int)frameLength));
+        Dictionary::append(buf, ZT_TRACE_FIELD_FRAME_DATA, frameData, std::min((unsigned int)64, (unsigned int)frameLength));
     Dictionary::append(buf, ZT_TRACE_FIELD_FLAG_CREDENTIAL_REQUEST_SENT, credentialRequestSent);
     Dictionary::append(buf, ZT_TRACE_FIELD_REASON, reason);
     buf.push_back(0);
@@ -256,11 +248,7 @@ void Trace::m_networkFilter(
     Dictionary::append(buf, ZT_TRACE_FIELD_DEST_MAC, destMac.toInt());
     Dictionary::append(buf, ZT_TRACE_FIELD_FRAME_LENGTH, frameLength);
     if (frameData)
-        Dictionary::append(
-            buf,
-            ZT_TRACE_FIELD_FRAME_DATA,
-            frameData,
-            std::min((unsigned int)64, (unsigned int)frameLength));
+        Dictionary::append(buf, ZT_TRACE_FIELD_FRAME_DATA, frameData, std::min((unsigned int)64, (unsigned int)frameLength));
     Dictionary::append(buf, ZT_TRACE_FIELD_ETHERTYPE, etherType);
     Dictionary::append(buf, ZT_TRACE_FIELD_VLAN_ID, vlanId);
     Dictionary::append(buf, ZT_TRACE_FIELD_RULE_FLAG_NOTEE, noTee);

@@ -87,8 +87,7 @@ struct intl_MapHasher {
 template <typename K, typename V> class Map : public std::unordered_map<K, V, intl_MapHasher> {
 };
 
-template <typename K, typename V>
-class MultiMap : public std::unordered_multimap<K, V, intl_MapHasher, std::equal_to<K> > {
+template <typename K, typename V> class MultiMap : public std::unordered_multimap<K, V, intl_MapHasher, std::equal_to<K> > {
 };
 
 #else
@@ -155,15 +154,14 @@ struct H384 {
 
     ZT_INLINE operator bool() const noexcept
     {
-        return (
-            (data[0] != 0) && (data[1] != 0) && (data[2] != 0) && (data[3] != 0) && (data[4] != 0) && (data[5] != 0));
+        return ((data[0] != 0) && (data[1] != 0) && (data[2] != 0) && (data[3] != 0) && (data[4] != 0) && (data[5] != 0));
     }
 
     ZT_INLINE bool operator==(const H384& b) const noexcept
     {
         return (
-            (data[0] == b.data[0]) && (data[1] == b.data[1]) && (data[2] == b.data[2]) && (data[3] == b.data[3])
-            && (data[4] == b.data[4]) && (data[5] == b.data[5]));
+            (data[0] == b.data[0]) && (data[1] == b.data[1]) && (data[2] == b.data[2]) && (data[3] == b.data[3]) && (data[4] == b.data[4])
+            && (data[5] == b.data[5]));
     }
 
     ZT_INLINE bool operator!=(const H384& b) const noexcept

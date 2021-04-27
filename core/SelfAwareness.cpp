@@ -39,16 +39,13 @@ void SelfAwareness::iam(
 {
     const InetAddress::IpScope scope = myPhysicalAddress.ipScope();
 
-    if ((scope != reporterPhysicalAddress.ipScope()) || (scope == ZT_IP_SCOPE_NONE) || (scope == ZT_IP_SCOPE_LOOPBACK)
-        || (scope == ZT_IP_SCOPE_MULTICAST))
+    if ((scope != reporterPhysicalAddress.ipScope()) || (scope == ZT_IP_SCOPE_NONE) || (scope == ZT_IP_SCOPE_LOOPBACK) || (scope == ZT_IP_SCOPE_MULTICAST))
         return;
 
     Mutex::Lock l(m_phy_l);
-    p_PhySurfaceEntry& entry =
-        m_phy[p_PhySurfaceKey(reporter.address(), receivedOnLocalSocket, reporterPhysicalAddress, scope)];
+    p_PhySurfaceEntry& entry = m_phy[p_PhySurfaceKey(reporter.address(), receivedOnLocalSocket, reporterPhysicalAddress, scope)];
 
-    if ((trusted) && ((cc.ticks - entry.timestampTicks) < ZT_SELFAWARENESS_ENTRY_TIMEOUT)
-        && (! entry.mySurface.ipsEqual(myPhysicalAddress))) {
+    if ((trusted) && ((cc.ticks - entry.timestampTicks) < ZT_SELFAWARENESS_ENTRY_TIMEOUT) && (! entry.mySurface.ipsEqual(myPhysicalAddress))) {
         // Changes to external surface reported by trusted peers causes path reset in this scope
         entry.mySurface = myPhysicalAddress;
         entry.timestampTicks = cc.ticks;
@@ -70,14 +67,7 @@ void SelfAwareness::iam(
         for (Vector<SharedPtr<Peer> >::const_iterator p(peers.begin()); p != peers.end(); ++p)
             (*p)->resetWithinScope(m_ctx, cc, (InetAddress::IpScope)scope, myPhysicalAddress.as.sa.sa_family);
 
-        m_ctx.t->resettingPathsInScope(
-            cc,
-            0x9afff100,
-            reporter,
-            reporterPhysicalAddress,
-            entry.mySurface,
-            myPhysicalAddress,
-            scope);
+        m_ctx.t->resettingPathsInScope(cc, 0x9afff100, reporter, reporterPhysicalAddress, entry.mySurface, myPhysicalAddress, scope);
     }
     else {
         // Otherwise just update DB to use to determine external surface info

@@ -105,15 +105,7 @@ class Trace {
         const Identity& triggeringPeer)
     {
         if (unlikely((m_traceFlags & ZT_TRACE_F_VL1) != 0))
-            m_tryingNewPath(
-                cc.tPtr,
-                codeLocation,
-                trying,
-                physicalAddress,
-                triggerAddress,
-                triggeringPacketId,
-                triggeringPacketVerb,
-                triggeringPeer);
+            m_tryingNewPath(cc.tPtr, codeLocation, trying, physicalAddress, triggerAddress, triggeringPacketId, triggeringPacketVerb, triggeringPeer);
     }
 
     ZT_INLINE void learnedNewPath(
@@ -140,16 +132,7 @@ class Trace {
         const ZT_TracePacketDropReason reason)
     {
         if (unlikely((m_traceFlags & ZT_TRACE_F_VL1) != 0))
-            m_incomingPacketDropped(
-                cc.tPtr,
-                codeLocation,
-                packetId,
-                networkId,
-                peerIdentity,
-                physicalAddress,
-                hops,
-                verb,
-                reason);
+            m_incomingPacketDropped(cc.tPtr, codeLocation, packetId, networkId, peerIdentity, physicalAddress, hops, verb, reason);
     }
 
     ZT_INLINE void outgoingNetworkFrameDropped(
@@ -164,16 +147,7 @@ class Trace {
         ZT_TraceFrameDropReason reason)
     {
         if (unlikely((m_traceFlags & ZT_TRACE_F_VL2) != 0))
-            m_outgoingNetworkFrameDropped(
-                cc.tPtr,
-                codeLocation,
-                networkId,
-                sourceMac,
-                destMac,
-                etherType,
-                frameLength,
-                frameData,
-                reason);
+            m_outgoingNetworkFrameDropped(cc.tPtr, codeLocation, networkId, sourceMac, destMac, etherType, frameLength, frameData, reason);
     }
 
     ZT_INLINE void incomingNetworkFrameDropped(
@@ -270,15 +244,7 @@ class Trace {
         ZT_TraceCredentialRejectionReason reason)
     {
         if (unlikely((m_traceFlags & ZT_TRACE_F_VL2) != 0))
-            m_credentialRejected(
-                cc.tPtr,
-                codeLocation,
-                networkId,
-                identity,
-                credentialId,
-                credentialTimestamp,
-                credentialType,
-                reason);
+            m_credentialRejected(cc.tPtr, codeLocation, networkId, identity, credentialId, credentialTimestamp, credentialType, reason);
     }
 
   private:

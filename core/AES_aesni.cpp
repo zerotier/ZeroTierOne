@@ -47,15 +47,11 @@ p_gmacPCLMUL128(const __m128i h, __m128i y) noexcept
     t4 = _mm_xor_si128(t4, t2);
     __m128i t5 = _mm_srli_epi32(t1, 31);
     t1 = _mm_or_si128(_mm_slli_epi32(t1, 1), _mm_slli_si128(t5, 4));
-    t4 = _mm_or_si128(
-        _mm_or_si128(_mm_slli_epi32(t4, 1), _mm_slli_si128(_mm_srli_epi32(t4, 31), 4)),
-        _mm_srli_si128(t5, 12));
+    t4 = _mm_or_si128(_mm_or_si128(_mm_slli_epi32(t4, 1), _mm_slli_si128(_mm_srli_epi32(t4, 31), 4)), _mm_srli_si128(t5, 12));
     t5 = _mm_xor_si128(_mm_xor_si128(_mm_slli_epi32(t1, 31), _mm_slli_epi32(t1, 30)), _mm_slli_epi32(t1, 25));
     t1 = _mm_xor_si128(t1, _mm_slli_si128(t5, 12));
     t4 = _mm_xor_si128(
-        _mm_xor_si128(
-            _mm_xor_si128(_mm_xor_si128(_mm_xor_si128(t4, _mm_srli_si128(t5, 4)), t1), _mm_srli_epi32(t1, 2)),
-            _mm_srli_epi32(t1, 7)),
+        _mm_xor_si128(_mm_xor_si128(_mm_xor_si128(_mm_xor_si128(t4, _mm_srli_si128(t5, 4)), t1), _mm_srli_epi32(t1, 2)), _mm_srli_epi32(t1, 7)),
         _mm_srli_epi32(t1, 1));
     return _mm_shuffle_epi8(t4, s_sseSwapBytes);
 }
@@ -148,16 +144,8 @@ void p_aesCtrInnerVAES256(unsigned int &len, const uint64_t c0, uint64_t &c1, co
     do {
         __m256i p0 = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(in));
         __m256i p1 = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(in + 32));
-        __m256i d0 = _mm256_set_epi64x(
-            (long long)Utils::hton(c1 + 1ULL),
-            (long long)c0,
-            (long long)Utils::hton(c1),
-            (long long)c0);
-        __m256i d1 = _mm256_set_epi64x(
-            (long long)Utils::hton(c1 + 3ULL),
-            (long long)c0,
-            (long long)Utils::hton(c1 + 2ULL),
-            (long long)c0);
+        __m256i d0 = _mm256_set_epi64x((long long)Utils::hton(c1 + 1ULL), (long long)c0, (long long)Utils::hton(c1), (long long)c0);
+        __m256i d1 = _mm256_set_epi64x((long long)Utils::hton(c1 + 3ULL), (long long)c0, (long long)Utils::hton(c1 + 2ULL), (long long)c0);
         c1 += 4;
         in += 64;
         len -= 64;
@@ -253,9 +241,7 @@ void AES::GMAC::p_aesNIUpdate(const uint8_t *in, unsigned int len) noexcept
             --len;
             _r[_rp++] = *(in++);
             if (_rp == 16) {
-                y = p_gmacPCLMUL128(
-                    _aes.p_k.ni.h[0],
-                    _mm_xor_si128(y, _mm_loadu_si128(reinterpret_cast<__m128i*>(_r))));
+                y = p_gmacPCLMUL128(_aes.p_k.ni.h[0], _mm_xor_si128(y, _mm_loadu_si128(reinterpret_cast<__m128i*>(_r))));
                 break;
             }
         }
@@ -298,18 +284,14 @@ void AES::GMAC::p_aesNIUpdate(const uint8_t *in, unsigned int len) noexcept
             b = _mm_xor_si128(_mm_srli_si128(c, 8), b);
             c = _mm_srli_epi32(a, 31);
             a = _mm_or_si128(_mm_slli_epi32(a, 1), _mm_slli_si128(c, 4));
-            b = _mm_or_si128(
-                _mm_or_si128(_mm_slli_epi32(b, 1), _mm_slli_si128(_mm_srli_epi32(b, 31), 4)),
-                _mm_srli_si128(c, 12));
+            b = _mm_or_si128(_mm_or_si128(_mm_slli_epi32(b, 1), _mm_slli_si128(_mm_srli_epi32(b, 31), 4)), _mm_srli_si128(c, 12));
             c = _mm_xor_si128(_mm_slli_epi32(a, 31), _mm_xor_si128(_mm_slli_epi32(a, 30), _mm_slli_epi32(a, 25)));
             a = _mm_xor_si128(a, _mm_slli_si128(c, 12));
             b = _mm_xor_si128(
                 b,
                 _mm_xor_si128(
                     a,
-                    _mm_xor_si128(
-                        _mm_xor_si128(_mm_srli_epi32(a, 1), _mm_srli_si128(c, 4)),
-                        _mm_xor_si128(_mm_srli_epi32(a, 2), _mm_srli_epi32(a, 7)))));
+                    _mm_xor_si128(_mm_xor_si128(_mm_srli_epi32(a, 1), _mm_srli_si128(c, 4)), _mm_xor_si128(_mm_srli_epi32(a, 2), _mm_srli_epi32(a, 7)))));
             y = _mm_shuffle_epi8(b, sb);
         } while (likely(in != end64));
     }
@@ -555,15 +537,9 @@ void AES::CTR::p_aesNICrypt(const uint8_t *in, uint8_t *out, unsigned int len) n
             d2 = _mm_aesenc_si128(d2, k13);
             d3 = _mm_aesenc_si128(d3, k13);
             d0 = _mm_xor_si128(_mm_aesenclast_si128(d0, k14), _mm_loadu_si128(reinterpret_cast<const __m128i*>(in)));
-            d1 = _mm_xor_si128(
-                _mm_aesenclast_si128(d1, k14),
-                _mm_loadu_si128(reinterpret_cast<const __m128i*>(in + 16)));
-            d2 = _mm_xor_si128(
-                _mm_aesenclast_si128(d2, k14),
-                _mm_loadu_si128(reinterpret_cast<const __m128i*>(in + 32)));
-            d3 = _mm_xor_si128(
-                _mm_aesenclast_si128(d3, k14),
-                _mm_loadu_si128(reinterpret_cast<const __m128i*>(in + 48)));
+            d1 = _mm_xor_si128(_mm_aesenclast_si128(d1, k14), _mm_loadu_si128(reinterpret_cast<const __m128i*>(in + 16)));
+            d2 = _mm_xor_si128(_mm_aesenclast_si128(d2, k14), _mm_loadu_si128(reinterpret_cast<const __m128i*>(in + 32)));
+            d3 = _mm_xor_si128(_mm_aesenclast_si128(d3, k14), _mm_loadu_si128(reinterpret_cast<const __m128i*>(in + 48)));
             in += 64;
             _mm_storeu_si128(reinterpret_cast<__m128i*>(out), d0);
             _mm_storeu_si128(reinterpret_cast<__m128i*>(out + 16), d1);
@@ -590,9 +566,7 @@ skip_conventional_aesni_64:
         d0 = _mm_aesenc_si128(d0, k11);
         d0 = _mm_aesenc_si128(d0, k12);
         d0 = _mm_aesenc_si128(d0, k13);
-        _mm_storeu_si128(
-            reinterpret_cast<__m128i*>(out),
-            _mm_xor_si128(_mm_aesenclast_si128(d0, k14), _mm_loadu_si128(reinterpret_cast<const __m128i*>(in))));
+        _mm_storeu_si128(reinterpret_cast<__m128i*>(out), _mm_xor_si128(_mm_aesenclast_si128(d0, k14), _mm_loadu_si128(reinterpret_cast<const __m128i*>(in))));
         in += 16;
         len -= 16;
         out += 16;

@@ -50,18 +50,16 @@ impl Locator {
     }
 
     pub fn new_from_string(s: &str) -> Result<Locator, ResultCode> {
-        unsafe {
-            let cs = CString::new(s);
-            if cs.is_err() {
-                return Err(ResultCode::ErrorBadParameter);
-            }
-            let cs = cs.unwrap();
-            let l = ztcore::ZT_Locator_fromString(cs.as_ptr());
-            if l.is_null() {
-                return Err(ResultCode::ErrorBadParameter);
-            }
-            return Ok(Locator::new_from_capi(l, true));
+        let cs = CString::new(s);
+        if cs.is_err() {
+            return Err(ResultCode::ErrorBadParameter);
         }
+        let cs = cs.unwrap();
+        let l = unsafe { ztcore::ZT_Locator_fromString(cs.as_ptr()) };
+        if l.is_null() {
+            return Err(ResultCode::ErrorBadParameter);
+        }
+        return Ok(Locator::new_from_capi(l, true));
     }
 
     #[inline(always)]
@@ -76,15 +74,10 @@ impl Locator {
 
     pub fn endpoints(&self) -> Vec<Endpoint> {
         let mut eps: Vec<Endpoint> = Vec::new();
-        unsafe {
-            let ep_count = ztcore::ZT_Locator_endpointCount(self.capi) as usize;
-            eps.reserve(ep_count as usize);
-            for i in 0..ep_count {
-                let ep = ztcore::ZT_Locator_endpoint(self.capi, i as c_uint);
-                if !ep.is_null() {
-                    eps.push(Endpoint::new_from_capi(&(*ep)));
-                }
-            }
+        let ep_count = unsafe { ztcore::ZT_Locator_endpointCount(self.capi) as usize };
+        eps.reserve(ep_count as usize);
+        for i in 0..ep_count {
+            eps.push(Endpoint::new_from_capi(unsafe { &*ztcore::ZT_Locator_endpoint(self.capi, i as c_uint) }));
         }
         eps
     }

@@ -36,10 +36,9 @@ namespace Utils {
 // Macros to convert endian-ness at compile time for constants.
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 #define ZT_CONST_TO_BE_UINT16(x) ((uint16_t)((uint16_t)((uint16_t)(x) << 8U) | (uint16_t)((uint16_t)(x) >> 8U)))
-#define ZT_CONST_TO_BE_UINT64(x)                                                                                       \
-    ((((uint64_t)(x)&0x00000000000000ffULL) << 56U) | (((uint64_t)(x)&0x000000000000ff00ULL) << 40U)                   \
-     | (((uint64_t)(x)&0x0000000000ff0000ULL) << 24U) | (((uint64_t)(x)&0x00000000ff000000ULL) << 8U)                  \
-     | (((uint64_t)(x)&0x000000ff00000000ULL) >> 8U) | (((uint64_t)(x)&0x0000ff0000000000ULL) >> 24U)                  \
+#define ZT_CONST_TO_BE_UINT64(x)                                                                                                                               \
+    ((((uint64_t)(x)&0x00000000000000ffULL) << 56U) | (((uint64_t)(x)&0x000000000000ff00ULL) << 40U) | (((uint64_t)(x)&0x0000000000ff0000ULL) << 24U)          \
+     | (((uint64_t)(x)&0x00000000ff000000ULL) << 8U) | (((uint64_t)(x)&0x000000ff00000000ULL) >> 8U) | (((uint64_t)(x)&0x0000ff0000000000ULL) >> 24U)          \
      | (((uint64_t)(x)&0x00ff000000000000ULL) >> 40U) | (((uint64_t)(x)&0xff00000000000000ULL) >> 56U))
 #else
 #define ZT_CONST_TO_BE_UINT16(x) ((uint16_t)(x))
@@ -302,9 +301,8 @@ static ZT_INLINE uint64_t swapBytes(const uint64_t n) noexcept
     return (uint64_t)_byteswap_uint64((unsigned __int64)n);
 #else
     return (
-        ((n & 0x00000000000000ffULL) << 56) | ((n & 0x000000000000ff00ULL) << 40) | ((n & 0x0000000000ff0000ULL) << 24)
-        | ((n & 0x00000000ff000000ULL) << 8) | ((n & 0x000000ff00000000ULL) >> 8) | ((n & 0x0000ff0000000000ULL) >> 24)
-        | ((n & 0x00ff000000000000ULL) >> 40) | ((n & 0xff00000000000000ULL) >> 56));
+        ((n & 0x00000000000000ffULL) << 56) | ((n & 0x000000000000ff00ULL) << 40) | ((n & 0x0000000000ff0000ULL) << 24) | ((n & 0x00000000ff000000ULL) << 8)
+        | ((n & 0x000000ff00000000ULL) >> 8) | ((n & 0x0000ff0000000000ULL) >> 24) | ((n & 0x00ff000000000000ULL) >> 40) | ((n & 0xff00000000000000ULL) >> 56));
 #endif
 #endif
 }

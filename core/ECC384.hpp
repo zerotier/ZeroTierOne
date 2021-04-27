@@ -77,10 +77,7 @@ void ECC384GenerateKey(uint8_t pub[ZT_ECC384_PUBLIC_KEY_SIZE], uint8_t priv[ZT_E
  * @param hash 48-byte hash
  * @param sig Buffer to receive signature
  */
-void ECC384ECDSASign(
-    const uint8_t priv[ZT_ECC384_PRIVATE_KEY_SIZE],
-    const uint8_t hash[ZT_ECC384_SIGNATURE_HASH_SIZE],
-    uint8_t sig[ZT_ECC384_SIGNATURE_SIZE]);
+void ECC384ECDSASign(const uint8_t priv[ZT_ECC384_PRIVATE_KEY_SIZE], const uint8_t hash[ZT_ECC384_SIGNATURE_HASH_SIZE], uint8_t sig[ZT_ECC384_SIGNATURE_SIZE]);
 
 /**
  * Verify a signature

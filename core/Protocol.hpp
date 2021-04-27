@@ -813,9 +813,7 @@ enum NetworkConfigFlag {
  * @param in Input key (32 bytes)
  * @param out Output buffer (32 bytes)
  */
-static ZT_INLINE void
-salsa2012DeriveKey(const uint8_t* const in, uint8_t* const out, const Buf& packet, const unsigned int packetSize)
-    noexcept
+static ZT_INLINE void salsa2012DeriveKey(const uint8_t* const in, uint8_t* const out, const Buf& packet, const unsigned int packetSize) noexcept
 {
     // IV and source/destination addresses. Using the addresses divides the
     // key space into two halves-- A->B and B->A (since order will change).
@@ -823,12 +821,9 @@ salsa2012DeriveKey(const uint8_t* const in, uint8_t* const out, const Buf& packe
     for (int i = 0; i < 18; ++i)
         out[i] = in[i] ^ packet.unsafeData[i];
 #else
-    *reinterpret_cast<uint64_t*>(out) =
-        *reinterpret_cast<const uint64_t*>(in) ^ *reinterpret_cast<const uint64_t*>(packet.unsafeData);
-    *reinterpret_cast<uint64_t*>(out + 8) =
-        *reinterpret_cast<const uint64_t*>(in + 8) ^ *reinterpret_cast<const uint64_t*>(packet.unsafeData + 8);
-    *reinterpret_cast<uint16_t*>(out + 16) =
-        *reinterpret_cast<const uint16_t*>(in + 16) ^ *reinterpret_cast<const uint16_t*>(packet.unsafeData + 16);
+    *reinterpret_cast<uint64_t*>(out) = *reinterpret_cast<const uint64_t*>(in) ^ *reinterpret_cast<const uint64_t*>(packet.unsafeData);
+    *reinterpret_cast<uint64_t*>(out + 8) = *reinterpret_cast<const uint64_t*>(in + 8) ^ *reinterpret_cast<const uint64_t*>(packet.unsafeData + 8);
+    *reinterpret_cast<uint16_t*>(out + 16) = *reinterpret_cast<const uint16_t*>(in + 16) ^ *reinterpret_cast<const uint16_t*>(packet.unsafeData + 16);
 #endif
 
     // Flags, but with hop count masked off. Hop count is altered by forwarding
@@ -861,9 +856,7 @@ salsa2012DeriveKey(const uint8_t* const in, uint8_t* const out, const Buf& packe
  * @param verb Protocol verb
  * @return Index of packet start
  */
-static ZT_INLINE int
-newPacket(uint8_t pkt[28], const uint64_t packetId, const Address destination, const Address source, const Verb verb)
-    noexcept
+static ZT_INLINE int newPacket(uint8_t pkt[28], const uint64_t packetId, const Address destination, const Address source, const Verb verb) noexcept
 {
     Utils::storeMachineEndian<uint64_t>(pkt + ZT_PROTO_PACKET_ID_INDEX, packetId);
     destination.copyTo(pkt + ZT_PROTO_PACKET_DESTINATION_INDEX);
@@ -874,8 +867,7 @@ newPacket(uint8_t pkt[28], const uint64_t packetId, const Address destination, c
     return ZT_PROTO_PACKET_VERB_INDEX + 1;
 }
 
-static ZT_INLINE int
-newPacket(Buf& pkt, const uint64_t packetId, const Address destination, const Address source, const Verb verb) noexcept
+static ZT_INLINE int newPacket(Buf& pkt, const uint64_t packetId, const Address destination, const Address source, const Verb verb) noexcept
 {
     return newPacket(pkt.unsafeData, packetId, destination, source, verb);
 }
@@ -889,8 +881,7 @@ newPacket(Buf& pkt, const uint64_t packetId, const Address destination, const Ad
  * @param cipherSuite Cipher suite to use for AEAD encryption or just MAC
  * @return Packet ID of packet (which may change!)
  */
-static ZT_INLINE uint64_t
-armor(uint8_t* const pkt, const int packetSize, const SymmetricKey& key, const uint8_t cipherSuite) noexcept
+static ZT_INLINE uint64_t armor(uint8_t* const pkt, const int packetSize, const SymmetricKey& key, const uint8_t cipherSuite) noexcept
 {
     // TODO
 #if 0

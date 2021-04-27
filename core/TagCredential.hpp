@@ -64,12 +64,7 @@ class TagCredential : public Credential {
      * @param id Tag ID
      * @param value Tag value
      */
-    ZT_INLINE TagCredential(
-        const uint64_t nwid,
-        const int64_t ts,
-        const Address& issuedTo,
-        const uint32_t id,
-        const uint32_t value) noexcept
+    ZT_INLINE TagCredential(const uint64_t nwid, const int64_t ts, const Address& issuedTo, const uint32_t id, const uint32_t value) noexcept
         : m_id(id)
         , m_value(value)
         , m_networkId(nwid)

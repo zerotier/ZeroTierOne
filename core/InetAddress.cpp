@@ -20,9 +20,7 @@
 
 namespace ZeroTier {
 
-static_assert(
-    ZT_SOCKADDR_STORAGE_SIZE == sizeof(sockaddr_storage),
-    "ZT_SOCKADDR_STORAGE_SIZE is incorrect on this platform, must be size of sockaddr_storage");
+static_assert(ZT_SOCKADDR_STORAGE_SIZE == sizeof(sockaddr_storage), "ZT_SOCKADDR_STORAGE_SIZE is incorrect on this platform, must be size of sockaddr_storage");
 static_assert(
     ZT_SOCKADDR_STORAGE_SIZE == sizeof(InetAddress),
     "ZT_SOCKADDR_STORAGE_SIZE should equal InetAddress, which should equal size of sockaddr_storage");
@@ -31,8 +29,7 @@ static_assert(
     "ZT_SOCKADDR_STORAGE_SIZE should equal ZT_InetAddress, which should equal size of sockaddr_storage");
 
 const InetAddress InetAddress::LO4((const void*)("\x7f\x00\x00\x01"), 4, 0);
-const InetAddress
-    InetAddress::LO6((const void*)("\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"), 16, 0);
+const InetAddress InetAddress::LO6((const void*)("\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"), 16, 0);
 const InetAddress InetAddress::NIL;
 
 InetAddress::IpScope InetAddress::ipScope() const noexcept
@@ -47,18 +44,18 @@ InetAddress::IpScope InetAddress::ipScope() const noexcept
                     return ZT_IP_SCOPE_PSEUDOPRIVATE;   // 6.0.0.0/8 (US Army)
                 case 0x0a:
                     return ZT_IP_SCOPE_PRIVATE;   // 10.0.0.0/8
-                case 0x15:   // return IP_SCOPE_PSEUDOPRIVATE;                           // 21.0.0.0/8 (US DDN-RVN)
-                case 0x16:   // return IP_SCOPE_PSEUDOPRIVATE;                           // 22.0.0.0/8 (US DISA)
-                case 0x19:   // return IP_SCOPE_PSEUDOPRIVATE;                           // 25.0.0.0/8 (UK Ministry of
-                             // Defense)
-                case 0x1a:   // return IP_SCOPE_PSEUDOPRIVATE;                           // 26.0.0.0/8 (US DISA)
-                case 0x1c:   // return IP_SCOPE_PSEUDOPRIVATE;                           // 28.0.0.0/8 (US DSI-North)
-                case 0x1d:   // return IP_SCOPE_PSEUDOPRIVATE;                           // 29.0.0.0/8 (US DISA)
-                case 0x1e:   // return IP_SCOPE_PSEUDOPRIVATE;                           // 30.0.0.0/8 (US DISA)
-                case 0x33:   // return IP_SCOPE_PSEUDOPRIVATE;                           // 51.0.0.0/8 (UK Department of
-                             // Social Security)
-                case 0x37:   // return IP_SCOPE_PSEUDOPRIVATE;                           // 55.0.0.0/8 (US DoD)
-                case 0x38:   // 56.0.0.0/8 (US Postal Service)
+                case 0x15:                        // return IP_SCOPE_PSEUDOPRIVATE;                           // 21.0.0.0/8 (US DDN-RVN)
+                case 0x16:                        // return IP_SCOPE_PSEUDOPRIVATE;                           // 22.0.0.0/8 (US DISA)
+                case 0x19:                        // return IP_SCOPE_PSEUDOPRIVATE;                           // 25.0.0.0/8 (UK Ministry of
+                                                  // Defense)
+                case 0x1a:                        // return IP_SCOPE_PSEUDOPRIVATE;                           // 26.0.0.0/8 (US DISA)
+                case 0x1c:                        // return IP_SCOPE_PSEUDOPRIVATE;                           // 28.0.0.0/8 (US DSI-North)
+                case 0x1d:                        // return IP_SCOPE_PSEUDOPRIVATE;                           // 29.0.0.0/8 (US DISA)
+                case 0x1e:                        // return IP_SCOPE_PSEUDOPRIVATE;                           // 30.0.0.0/8 (US DISA)
+                case 0x33:                        // return IP_SCOPE_PSEUDOPRIVATE;                           // 51.0.0.0/8 (UK Department of
+                                                  // Social Security)
+                case 0x37:                        // return IP_SCOPE_PSEUDOPRIVATE;                           // 55.0.0.0/8 (US DoD)
+                case 0x38:                        // 56.0.0.0/8 (US Postal Service)
                     return ZT_IP_SCOPE_PSEUDOPRIVATE;
                 case 0x64:
                     if ((ip & 0xffc00000) == 0x64400000)
@@ -241,8 +238,7 @@ InetAddress InetAddress::netmask() const noexcept
             uint64_t nm[2];
             const unsigned int bits = netmaskBits();
             if (bits) {
-                nm[0] = Utils::hton(
-                    (uint64_t)((bits >= 64) ? 0xffffffffffffffffULL : (0xffffffffffffffffULL << (64 - bits))));
+                nm[0] = Utils::hton((uint64_t)((bits >= 64) ? 0xffffffffffffffffULL : (0xffffffffffffffffULL << (64 - bits))));
                 nm[1] = Utils::hton((uint64_t)((bits <= 64) ? 0ULL : (0xffffffffffffffffULL << (128 - bits))));
             }
             else {
@@ -276,8 +272,7 @@ InetAddress InetAddress::network() const noexcept
             uint64_t nm[2];
             const unsigned int bits = netmaskBits();
             Utils::copy<16>(nm, reinterpret_cast<sockaddr_in6*>(&r)->sin6_addr.s6_addr);
-            nm[0] &=
-                Utils::hton((uint64_t)((bits >= 64) ? 0xffffffffffffffffULL : (0xffffffffffffffffULL << (64 - bits))));
+            nm[0] &= Utils::hton((uint64_t)((bits >= 64) ? 0xffffffffffffffffULL : (0xffffffffffffffffULL << (64 - bits))));
             nm[1] &= Utils::hton((uint64_t)((bits <= 64) ? 0ULL : (0xffffffffffffffffULL << (128 - bits))));
             Utils::copy<16>(r.as.sa_in6.sin6_addr.s6_addr, nm);
         } break;
@@ -316,8 +311,7 @@ bool InetAddress::containsAddress(const InetAddress& addr) const noexcept
                 if (bits == 0)
                     return true;
                 return (
-                    (Utils::ntoh((uint32_t)addr.as.sa_in.sin_addr.s_addr) >> (32 - bits))
-                    == (Utils::ntoh((uint32_t)as.sa_in.sin_addr.s_addr) >> (32 - bits)));
+                    (Utils::ntoh((uint32_t)addr.as.sa_in.sin_addr.s_addr) >> (32 - bits)) == (Utils::ntoh((uint32_t)as.sa_in.sin_addr.s_addr) >> (32 - bits)));
             }
             case AF_INET6: {
                 const InetAddress mask(netmask());
@@ -449,8 +443,7 @@ InetAddress InetAddress::makeIpv6rfc4193(uint64_t nwid, uint64_t zeroTierAddress
 {
     InetAddress r;
     r.as.sa_in6.sin6_family = AF_INET6;
-    r.as.sa_in6.sin6_port =
-        ZT_CONST_TO_BE_UINT16(88);   // /88 includes 0xfd + network ID, discriminating by device ID below that
+    r.as.sa_in6.sin6_port = ZT_CONST_TO_BE_UINT16(88);   // /88 includes 0xfd + network ID, discriminating by device ID below that
     r.as.sa_in6.sin6_addr.s6_addr[0] = 0xfd;
     r.as.sa_in6.sin6_addr.s6_addr[1] = (uint8_t)(nwid >> 56U);
     r.as.sa_in6.sin6_addr.s6_addr[2] = (uint8_t)(nwid >> 48U);

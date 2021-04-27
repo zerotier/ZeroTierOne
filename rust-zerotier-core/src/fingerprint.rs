@@ -12,6 +12,7 @@
 /****/
 
 use std::ffi::CString;
+use std::hash::{Hash, Hasher};
 use std::mem::MaybeUninit;
 use std::os::raw::{c_char, c_int};
 use std::ptr::copy_nonoverlapping;
@@ -68,6 +69,13 @@ impl Fingerprint {
         } else {
             Err(ResultCode::ErrorBadParameter)
         }
+    }
+}
+
+impl Hash for Fingerprint {
+    #[inline(always)]
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.address.0.hash(state)
     }
 }
 

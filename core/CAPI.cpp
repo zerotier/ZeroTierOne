@@ -77,13 +77,7 @@ ZT_MAYBE_UNUSED void ZT_version(int* major, int* minor, int* revision, int* buil
 
 /********************************************************************************************************************/
 
-ZT_MAYBE_UNUSED enum ZT_ResultCode ZT_Node_new(
-    ZT_Node** node,
-    int64_t clock,
-    int64_t ticks,
-    void* tptr,
-    void* uptr,
-    const struct ZT_Node_Callbacks* callbacks)
+ZT_MAYBE_UNUSED enum ZT_ResultCode ZT_Node_new(ZT_Node** node, int64_t clock, int64_t ticks, void* tptr, void* uptr, const struct ZT_Node_Callbacks* callbacks)
 {
     *node = nullptr;
     try {
@@ -127,11 +121,8 @@ ZT_MAYBE_UNUSED enum ZT_ResultCode ZT_Node_processWirePacket(
 {
     try {
         ZeroTier::CallContext cc(clock, ticks, tptr);
-        ZeroTier::SharedPtr<ZeroTier::Buf> buf(
-            (isZtBuffer) ? ZT_PTRTOBUF(packetData) : new ZeroTier::Buf(packetData, packetLength & ZT_BUF_MEM_MASK));
-        reinterpret_cast<ZeroTier::Node*>(node)
-            ->context()
-            .vl1->onRemotePacket(cc, localSocket, *ZeroTier::asInetAddress(remoteAddress), buf, packetLength);
+        ZeroTier::SharedPtr<ZeroTier::Buf> buf((isZtBuffer) ? ZT_PTRTOBUF(packetData) : new ZeroTier::Buf(packetData, packetLength & ZT_BUF_MEM_MASK));
+        reinterpret_cast<ZeroTier::Node*>(node)->context().vl1->onRemotePacket(cc, localSocket, *ZeroTier::asInetAddress(remoteAddress), buf, packetLength);
     }
     catch (std::bad_alloc& exc) {
         return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
@@ -163,17 +154,8 @@ ZT_MAYBE_UNUSED enum ZT_ResultCode ZT_Node_processVirtualNetworkFrame(
         const ZeroTier::Context& ctx = reinterpret_cast<ZeroTier::Node*>(node)->context();
         ZeroTier::SharedPtr<ZeroTier::Network> network(ctx.networks->get(nwid));
         if (likely(network)) {
-            ZeroTier::SharedPtr<ZeroTier::Buf> buf(
-                (isZtBuffer) ? ZT_PTRTOBUF(frameData) : new ZeroTier::Buf(frameData, frameLength & ZT_BUF_MEM_MASK));
-            ctx.vl2->onLocalEthernet(
-                cc,
-                network,
-                ZeroTier::MAC(sourceMac),
-                ZeroTier::MAC(destMac),
-                etherType,
-                vlanId,
-                buf,
-                frameLength);
+            ZeroTier::SharedPtr<ZeroTier::Buf> buf((isZtBuffer) ? ZT_PTRTOBUF(frameData) : new ZeroTier::Buf(frameData, frameLength & ZT_BUF_MEM_MASK));
+            ctx.vl2->onLocalEthernet(cc, network, ZeroTier::MAC(sourceMac), ZeroTier::MAC(destMac), etherType, vlanId, buf, frameLength);
             return ZT_RESULT_OK;
         }
         else {
@@ -188,12 +170,8 @@ ZT_MAYBE_UNUSED enum ZT_ResultCode ZT_Node_processVirtualNetworkFrame(
     }
 }
 
-ZT_MAYBE_UNUSED enum ZT_ResultCode ZT_Node_processBackgroundTasks(
-    ZT_Node* node,
-    int64_t clock,
-    int64_t ticks,
-    void* tptr,
-    volatile int64_t* nextBackgroundTaskDeadline)
+ZT_MAYBE_UNUSED enum ZT_ResultCode
+ZT_Node_processBackgroundTasks(ZT_Node* node, int64_t clock, int64_t ticks, void* tptr, volatile int64_t* nextBackgroundTaskDeadline)
 {
     try {
         ZeroTier::CallContext cc(clock, ticks, tptr);
@@ -207,14 +185,8 @@ ZT_MAYBE_UNUSED enum ZT_ResultCode ZT_Node_processBackgroundTasks(
     }
 }
 
-ZT_MAYBE_UNUSED enum ZT_ResultCode ZT_Node_join(
-    ZT_Node* node,
-    int64_t clock,
-    int64_t ticks,
-    void* tptr,
-    void* uptr,
-    uint64_t nwid,
-    const ZT_Fingerprint* controllerFingerprint)
+ZT_MAYBE_UNUSED enum ZT_ResultCode
+ZT_Node_join(ZT_Node* node, int64_t clock, int64_t ticks, void* tptr, void* uptr, uint64_t nwid, const ZT_Fingerprint* controllerFingerprint)
 {
     try {
         ZeroTier::CallContext cc(clock, ticks, tptr);
@@ -228,8 +200,7 @@ ZT_MAYBE_UNUSED enum ZT_ResultCode ZT_Node_join(
     }
 }
 
-ZT_MAYBE_UNUSED enum ZT_ResultCode
-ZT_Node_leave(ZT_Node* node, int64_t clock, int64_t ticks, void* tptr, void** uptr, uint64_t nwid)
+ZT_MAYBE_UNUSED enum ZT_ResultCode ZT_Node_leave(ZT_Node* node, int64_t clock, int64_t ticks, void* tptr, void** uptr, uint64_t nwid)
 {
     try {
         ZeroTier::CallContext cc(clock, ticks, tptr);
@@ -243,14 +214,8 @@ ZT_Node_leave(ZT_Node* node, int64_t clock, int64_t ticks, void* tptr, void** up
     }
 }
 
-ZT_MAYBE_UNUSED enum ZT_ResultCode ZT_Node_multicastSubscribe(
-    ZT_Node* node,
-    int64_t clock,
-    int64_t ticks,
-    void* tptr,
-    uint64_t nwid,
-    uint64_t multicastGroup,
-    unsigned long multicastAdi)
+ZT_MAYBE_UNUSED enum ZT_ResultCode
+ZT_Node_multicastSubscribe(ZT_Node* node, int64_t clock, int64_t ticks, void* tptr, uint64_t nwid, uint64_t multicastGroup, unsigned long multicastAdi)
 {
     try {
         ZeroTier::CallContext cc(clock, ticks, tptr);
@@ -264,14 +229,8 @@ ZT_MAYBE_UNUSED enum ZT_ResultCode ZT_Node_multicastSubscribe(
     }
 }
 
-ZT_MAYBE_UNUSED enum ZT_ResultCode ZT_Node_multicastUnsubscribe(
-    ZT_Node* node,
-    int64_t clock,
-    int64_t ticks,
-    void* tptr,
-    uint64_t nwid,
-    uint64_t multicastGroup,
-    unsigned long multicastAdi)
+ZT_MAYBE_UNUSED enum ZT_ResultCode
+ZT_Node_multicastUnsubscribe(ZT_Node* node, int64_t clock, int64_t ticks, void* tptr, uint64_t nwid, uint64_t multicastGroup, unsigned long multicastAdi)
 {
     try {
         ZeroTier::CallContext cc(clock, ticks, tptr);
@@ -344,13 +303,7 @@ ZT_MAYBE_UNUSED void ZT_Node_setNetworkUserPtr(ZT_Node* node, uint64_t nwid, voi
     }
 }
 
-ZT_MAYBE_UNUSED void ZT_Node_setInterfaceAddresses(
-    ZT_Node* node,
-    int64_t,
-    int64_t,
-    void*,
-    const ZT_InterfaceAddress* addrs,
-    unsigned int addrCount)
+ZT_MAYBE_UNUSED void ZT_Node_setInterfaceAddresses(ZT_Node* node, int64_t, int64_t, void*, const ZT_InterfaceAddress* addrs, unsigned int addrCount)
 {
     try {
         reinterpret_cast<ZeroTier::Node*>(node)->setInterfaceAddresses(addrs, addrCount);
@@ -378,8 +331,7 @@ ZT_MAYBE_UNUSED enum ZT_CertificateError ZT_Node_addCertificate(
     }
 }
 
-ZT_MAYBE_UNUSED enum ZT_ResultCode
-ZT_Node_deleteCertificate(ZT_Node* node, int64_t clock, int64_t ticks, void* tptr, const void* serialNo)
+ZT_MAYBE_UNUSED enum ZT_ResultCode ZT_Node_deleteCertificate(ZT_Node* node, int64_t clock, int64_t ticks, void* tptr, const void* serialNo)
 {
     try {
         ZeroTier::CallContext cc(clock, ticks, tptr);
@@ -400,15 +352,8 @@ ZT_MAYBE_UNUSED ZT_CertificateList* ZT_Node_listCertificates(ZT_Node* node, int6
     }
 }
 
-ZT_MAYBE_UNUSED int ZT_Node_sendUserMessage(
-    ZT_Node* node,
-    int64_t clock,
-    int64_t ticks,
-    void* tptr,
-    uint64_t dest,
-    uint64_t typeId,
-    const void* data,
-    unsigned int len)
+ZT_MAYBE_UNUSED int
+ZT_Node_sendUserMessage(ZT_Node* node, int64_t clock, int64_t ticks, void* tptr, uint64_t dest, uint64_t typeId, const void* data, unsigned int len)
 {
     try {
         ZeroTier::CallContext cc(clock, ticks, tptr);
@@ -430,21 +375,15 @@ ZT_MAYBE_UNUSED void ZT_Node_setController(ZT_Node* node, void* networkControlle
 
 /********************************************************************************************************************/
 
-ZT_MAYBE_UNUSED ZT_Locator* ZT_Locator_create(
-    int64_t rev,
-    const ZT_Endpoint* endpoints,
-    const ZT_EndpointAttributes*,
-    unsigned int endpointCount,
-    const ZT_Identity* signer)
+ZT_MAYBE_UNUSED ZT_Locator*
+ZT_Locator_create(int64_t rev, const ZT_Endpoint* endpoints, const ZT_EndpointAttributes*, unsigned int endpointCount, const ZT_Identity* signer)
 {
     try {
         if ((! endpoints) || (endpointCount == 0) || (! signer))
             return nullptr;
         ZeroTier::Locator* loc = new ZeroTier::Locator();
         for (unsigned int i = 0; i < endpointCount; ++i)
-            loc->add(
-                reinterpret_cast<const ZeroTier::Endpoint*>(endpoints)[i],
-                ZeroTier::Locator::EndpointAttributes::DEFAULT);
+            loc->add(reinterpret_cast<const ZeroTier::Endpoint*>(endpoints)[i], ZeroTier::Locator::EndpointAttributes::DEFAULT);
         if (! loc->sign(rev, *reinterpret_cast<const ZeroTier::Identity*>(signer))) {
             delete loc;
             return nullptr;
@@ -550,9 +489,7 @@ ZT_MAYBE_UNUSED int ZT_Locator_verify(const ZT_Locator* loc, const ZT_Identity* 
 {
     if ((! loc) || (! signer))
         return 0;
-    return reinterpret_cast<const ZeroTier::Locator*>(loc)->verify(*reinterpret_cast<const ZeroTier::Identity*>(signer))
-               ? 1
-               : 0;
+    return reinterpret_cast<const ZeroTier::Locator*>(loc)->verify(*reinterpret_cast<const ZeroTier::Identity*>(signer)) ? 1 : 0;
 }
 
 ZT_MAYBE_UNUSED void ZT_Locator_delete(const ZT_Locator* loc)
@@ -581,8 +518,7 @@ ZT_MAYBE_UNUSED ZT_Identity* ZT_Identity_clone(const ZT_Identity* id)
 {
     if (id) {
         try {
-            return reinterpret_cast<ZT_Identity*>(
-                new ZeroTier::Identity(*reinterpret_cast<const ZeroTier::Identity*>(id)));
+            return reinterpret_cast<ZT_Identity*>(new ZeroTier::Identity(*reinterpret_cast<const ZeroTier::Identity*>(id)));
         }
         catch (...) {
             return nullptr;
@@ -615,12 +551,7 @@ ZT_MAYBE_UNUSED int ZT_Identity_validate(const ZT_Identity* id)
     return reinterpret_cast<const ZeroTier::Identity*>(id)->locallyValidate() ? 1 : 0;
 }
 
-ZT_MAYBE_UNUSED unsigned int ZT_Identity_sign(
-    const ZT_Identity* id,
-    const void* data,
-    unsigned int len,
-    void* signature,
-    unsigned int signatureBufferLength)
+ZT_MAYBE_UNUSED unsigned int ZT_Identity_sign(const ZT_Identity* id, const void* data, unsigned int len, void* signature, unsigned int signatureBufferLength)
 {
     if (! id)
         return 0;
@@ -629,12 +560,7 @@ ZT_MAYBE_UNUSED unsigned int ZT_Identity_sign(
     return reinterpret_cast<const ZeroTier::Identity*>(id)->sign(data, len, signature, signatureBufferLength);
 }
 
-ZT_MAYBE_UNUSED int ZT_Identity_verify(
-    const ZT_Identity* id,
-    const void* data,
-    unsigned int len,
-    const void* signature,
-    unsigned int sigLen)
+ZT_MAYBE_UNUSED int ZT_Identity_verify(const ZT_Identity* id, const void* data, unsigned int len, const void* signature, unsigned int sigLen)
 {
     if ((! id) || (! signature) || (! sigLen))
         return 0;
@@ -684,8 +610,7 @@ ZT_MAYBE_UNUSED int ZT_Identity_compare(const ZT_Identity* a, const ZT_Identity*
             if (*reinterpret_cast<const ZeroTier::Identity*>(a) < *reinterpret_cast<const ZeroTier::Identity*>(b)) {
                 return -1;
             }
-            else if (
-                *reinterpret_cast<const ZeroTier::Identity*>(b) < *reinterpret_cast<const ZeroTier::Identity*>(a)) {
+            else if (*reinterpret_cast<const ZeroTier::Identity*>(b) < *reinterpret_cast<const ZeroTier::Identity*>(a)) {
                 return 1;
             }
             else {
@@ -720,9 +645,7 @@ ZT_MAYBE_UNUSED int ZT_Certificate_newKeyPair(
     int* const privateKeySize)
 {
     try {
-        return ZeroTier::Certificate::newKeyPair(type, publicKey, publicKeySize, privateKey, privateKeySize)
-                   ? ZT_RESULT_OK
-                   : ZT_RESULT_ERROR_BAD_PARAMETER;
+        return ZeroTier::Certificate::newKeyPair(type, publicKey, publicKeySize, privateKey, privateKeySize) ? ZT_RESULT_OK : ZT_RESULT_ERROR_BAD_PARAMETER;
     }
     catch (...) {
         return ZT_RESULT_FATAL_ERROR_INTERNAL;
@@ -739,8 +662,7 @@ ZT_MAYBE_UNUSED int ZT_Certificate_newCSR(
     int* const csrSize)
 {
     try {
-        if ((! subject) || (! certificatePublicKey) || (certificatePublicKeySize <= 0)
-            || (certificatePublicKeySize > ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE))
+        if ((! subject) || (! certificatePublicKey) || (certificatePublicKeySize <= 0) || (certificatePublicKeySize > ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE))
             return ZT_RESULT_ERROR_BAD_PARAMETER;
         const ZeroTier::Vector<uint8_t> csrV(ZeroTier::Certificate::createCSR(
             *subject,
@@ -759,11 +681,8 @@ ZT_MAYBE_UNUSED int ZT_Certificate_newCSR(
     }
 }
 
-ZT_MAYBE_UNUSED ZT_Certificate* ZT_Certificate_sign(
-    const ZT_Certificate* cert,
-    const uint8_t issuer[ZT_CERTIFICATE_HASH_SIZE],
-    const void* issuerPrivateKey,
-    int issuerPrivateKeySize)
+ZT_MAYBE_UNUSED ZT_Certificate*
+ZT_Certificate_sign(const ZT_Certificate* cert, const uint8_t issuer[ZT_CERTIFICATE_HASH_SIZE], const void* issuerPrivateKey, int issuerPrivateKeySize)
 {
     try {
         ZeroTier::Certificate* const c = new ZeroTier::Certificate(*cert);
@@ -779,8 +698,7 @@ ZT_MAYBE_UNUSED ZT_Certificate* ZT_Certificate_sign(
     return nullptr;
 }
 
-ZT_MAYBE_UNUSED enum ZT_CertificateError
-ZT_Certificate_decode(const ZT_Certificate** decodedCert, const void* cert, int certSize, int verify)
+ZT_MAYBE_UNUSED enum ZT_CertificateError ZT_Certificate_decode(const ZT_Certificate** decodedCert, const void* cert, int certSize, int verify)
 {
     try {
         if ((! decodedCert) || (! cert) || (certSize <= 0))
@@ -878,9 +796,7 @@ ZT_MAYBE_UNUSED int ZT_Endpoint_fromBytes(ZT_Endpoint* ep, const void* bytes, un
 {
     if ((! ep) || (! bytes) || (! len))
         return ZT_RESULT_ERROR_BAD_PARAMETER;
-    return (reinterpret_cast<ZeroTier::Endpoint*>(ep)->unmarshal(reinterpret_cast<const uint8_t*>(bytes), (int)len) > 0)
-               ? 0
-               : ZT_RESULT_ERROR_BAD_PARAMETER;
+    return (reinterpret_cast<ZeroTier::Endpoint*>(ep)->unmarshal(reinterpret_cast<const uint8_t*>(bytes), (int)len) > 0) ? 0 : ZT_RESULT_ERROR_BAD_PARAMETER;
 }
 
 /********************************************************************************************************************/
@@ -939,8 +855,7 @@ ZT_MAYBE_UNUSED void ZT_InetAddress_set(ZT_InetAddress* ia, const void* saddr)
         (*reinterpret_cast<ZeroTier::InetAddress*>(ia)) = reinterpret_cast<const struct sockaddr*>(saddr);
 }
 
-ZT_MAYBE_UNUSED void
-ZT_InetAddress_setIpBytes(ZT_InetAddress* ia, const void* ipBytes, unsigned int ipLen, unsigned int port)
+ZT_MAYBE_UNUSED void ZT_InetAddress_setIpBytes(ZT_InetAddress* ia, const void* ipBytes, unsigned int ipLen, unsigned int port)
 {
     if (likely(ia != nullptr))
         reinterpret_cast<ZeroTier::InetAddress*>(ia)->set(ipBytes, ipLen, port);
@@ -985,14 +900,10 @@ ZT_MAYBE_UNUSED unsigned int ZT_InetAddress_ipBytes(const ZT_InetAddress* ia, vo
     if (ia) {
         switch (reinterpret_cast<const ZeroTier::InetAddress*>(ia)->as.sa.sa_family) {
             case AF_INET:
-                ZeroTier::Utils::copy<4>(
-                    buf,
-                    &(reinterpret_cast<const ZeroTier::InetAddress*>(ia)->as.sa_in.sin_addr.s_addr));
+                ZeroTier::Utils::copy<4>(buf, &(reinterpret_cast<const ZeroTier::InetAddress*>(ia)->as.sa_in.sin_addr.s_addr));
                 return 4;
             case AF_INET6:
-                ZeroTier::Utils::copy<16>(
-                    buf,
-                    reinterpret_cast<const ZeroTier::InetAddress*>(ia)->as.sa_in6.sin6_addr.s6_addr);
+                ZeroTier::Utils::copy<16>(buf, reinterpret_cast<const ZeroTier::InetAddress*>(ia)->as.sa_in6.sin6_addr.s6_addr);
                 return 16;
         }
     }
@@ -1010,13 +921,10 @@ ZT_MAYBE_UNUSED int ZT_InetAddress_compare(const ZT_InetAddress* a, const ZT_Ine
 {
     if (a) {
         if (b) {
-            if (*reinterpret_cast<const ZeroTier::InetAddress*>(a)
-                < *reinterpret_cast<const ZeroTier::InetAddress*>(b)) {
+            if (*reinterpret_cast<const ZeroTier::InetAddress*>(a) < *reinterpret_cast<const ZeroTier::InetAddress*>(b)) {
                 return -1;
             }
-            else if (
-                *reinterpret_cast<const ZeroTier::InetAddress*>(b)
-                < *reinterpret_cast<const ZeroTier::InetAddress*>(a)) {
+            else if (*reinterpret_cast<const ZeroTier::InetAddress*>(b) < *reinterpret_cast<const ZeroTier::InetAddress*>(a)) {
                 return 1;
             }
             else {
@@ -1037,11 +945,8 @@ ZT_MAYBE_UNUSED int ZT_InetAddress_compare(const ZT_InetAddress* a, const ZT_Ine
 
 /********************************************************************************************************************/
 
-ZT_MAYBE_UNUSED int ZT_Dictionary_parse(
-    const void* const dict,
-    const unsigned int len,
-    void* const arg,
-    void (*f)(void*, const char*, unsigned int, const void*, unsigned int))
+ZT_MAYBE_UNUSED int
+ZT_Dictionary_parse(const void* const dict, const unsigned int len, void* const arg, void (*f)(void*, const char*, unsigned int, const void*, unsigned int))
 {
     ZeroTier::Dictionary d;
     if (d.decode(dict, len)) {

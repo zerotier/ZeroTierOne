@@ -21,19 +21,11 @@
 
 namespace ZeroTier {
 
-Member::Member()
-    : m_comRevocationThreshold(0)
-    , m_lastPushedCredentials(0)
-    , m_comAgreementLocalTimestamp(0)
-    , m_comAgreementRemoteTimestamp(0)
+Member::Member() : m_comRevocationThreshold(0), m_lastPushedCredentials(0), m_comAgreementLocalTimestamp(0), m_comAgreementRemoteTimestamp(0)
 {
 }
 
-void Member::pushCredentials(
-    const Context& ctx,
-    const CallContext& cc,
-    const SharedPtr<Peer>& to,
-    const NetworkConfig& nconf)
+void Member::pushCredentials(const Context& ctx, const CallContext& cc, const SharedPtr<Peer>& to, const NetworkConfig& nconf)
 {
     if (! nconf.com)   // sanity check
         return;
@@ -224,8 +216,7 @@ static ZT_INLINE Member::AddCredentialResult _addCredImpl(
             return Member::ADD_ACCEPTED_REDUNDANT;
     }
 
-    typename Map<uint64_t, int64_t>::const_iterator rt(
-        revocations.find(Member::credentialKey(C::credentialType(), cred.id())));
+    typename Map<uint64_t, int64_t>::const_iterator rt(revocations.find(Member::credentialKey(C::credentialType(), cred.id())));
     if ((rt != revocations.end()) && (rt->second >= cred.revision())) {
         ctx.t->credentialRejected(
             cc,
@@ -260,12 +251,8 @@ static ZT_INLINE Member::AddCredentialResult _addCredImpl(
     }
 }
 
-Member::AddCredentialResult Member::addCredential(
-    const Context& ctx,
-    const CallContext& cc,
-    const Identity& sourcePeerIdentity,
-    const NetworkConfig& nconf,
-    const TagCredential& tag)
+Member::AddCredentialResult
+Member::addCredential(const Context& ctx, const CallContext& cc, const Identity& sourcePeerIdentity, const NetworkConfig& nconf, const TagCredential& tag)
 {
     return _addCredImpl<TagCredential>(m_remoteTags, m_revocations, ctx, cc, sourcePeerIdentity, nconf, tag);
 }
@@ -280,12 +267,8 @@ Member::AddCredentialResult Member::addCredential(
     return _addCredImpl<CapabilityCredential>(m_remoteCaps, m_revocations, ctx, cc, sourcePeerIdentity, nconf, cap);
 }
 
-Member::AddCredentialResult Member::addCredential(
-    const Context& ctx,
-    const CallContext& cc,
-    const Identity& sourcePeerIdentity,
-    const NetworkConfig& nconf,
-    const OwnershipCredential& coo)
+Member::AddCredentialResult
+Member::addCredential(const Context& ctx, const CallContext& cc, const Identity& sourcePeerIdentity, const NetworkConfig& nconf, const OwnershipCredential& coo)
 {
     return _addCredImpl<OwnershipCredential>(m_remoteCoos, m_revocations, ctx, cc, sourcePeerIdentity, nconf, coo);
 }

@@ -362,8 +362,7 @@ class Dictionary {
      * @param v Value
      * @param vlen Value length in bytes
      */
-    template <typename V>
-    ZT_INLINE static void append(V& out, const char* const k, const void* const v, const unsigned int vlen)
+    template <typename V> ZT_INLINE static void append(V& out, const char* const k, const void* const v, const unsigned int vlen)
     {
         s_appendKey(out, k);
         for (unsigned int i = 0; i < vlen; ++i)

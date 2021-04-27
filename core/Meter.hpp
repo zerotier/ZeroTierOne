@@ -58,9 +58,7 @@ template <int64_t TUNIT = 1000, unsigned long LSIZE = 10> class Meter {
         // to it.
         const unsigned long bucket = ((unsigned long)(ts / TUNIT)) % LSIZE;
         if (unlikely(m_bucket.exchange(bucket, std::memory_order_relaxed) != bucket)) {
-            m_totalExclCounts.fetch_add(
-                m_counts[bucket].exchange(count, std::memory_order_relaxed),
-                std::memory_order_relaxed);
+            m_totalExclCounts.fetch_add(m_counts[bucket].exchange(count, std::memory_order_relaxed), std::memory_order_relaxed);
         }
         else {
             m_counts[bucket].fetch_add(count, std::memory_order_relaxed);

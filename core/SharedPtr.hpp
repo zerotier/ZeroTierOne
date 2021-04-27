@@ -200,8 +200,7 @@ template <typename T> class SharedPtr : public TriviallyCopyable {
     ZT_INLINE void m_release() const noexcept
     {
         if (likely(m_ptr != nullptr)) {
-            if (unlikely(
-                    const_cast<std::atomic<int>*>(&(m_ptr->__refCount))->fetch_sub(1, std::memory_order_release) <= 1))
+            if (unlikely(const_cast<std::atomic<int>*>(&(m_ptr->__refCount))->fetch_sub(1, std::memory_order_release) <= 1))
                 delete m_ptr;
         }
     }

@@ -30,10 +30,7 @@ namespace {
 // This is the memory-intensive hash function used to compute v0 identities from v0 public keys.
 #define ZT_V0_IDENTITY_GEN_MEMORY 2097152
 
-void identityV0ProofOfWorkFrankenhash(
-    const void* const restrict c25519CombinedPublicKey,
-    void* const restrict digest,
-    void* const restrict genmem) noexcept
+void identityV0ProofOfWorkFrankenhash(const void* const restrict c25519CombinedPublicKey, void* const restrict digest, void* const restrict genmem) noexcept
 {
     // Digest publicKey[] to obtain initial digest
     SHA512(digest, c25519CombinedPublicKey, ZT_C25519_COMBINED_PUBLIC_KEY_SIZE);
@@ -60,8 +57,7 @@ void identityV0ProofOfWorkFrankenhash(
     // Render final digest using genmem as a lookup table
     for (unsigned long i = 0; i < (ZT_V0_IDENTITY_GEN_MEMORY / sizeof(uint64_t));) {
         unsigned long idx1 = (unsigned long)(Utils::ntoh(((uint64_t*)genmem)[i++]) % (64 / sizeof(uint64_t)));
-        unsigned long idx2 =
-            (unsigned long)(Utils::ntoh(((uint64_t*)genmem)[i++]) % (ZT_V0_IDENTITY_GEN_MEMORY / sizeof(uint64_t)));
+        unsigned long idx2 = (unsigned long)(Utils::ntoh(((uint64_t*)genmem)[i++]) % (ZT_V0_IDENTITY_GEN_MEMORY / sizeof(uint64_t)));
         uint64_t tmp = ((uint64_t*)genmem)[idx2];
         ((uint64_t*)genmem)[idx2] = ((uint64_t*)digest)[idx1];
         ((uint64_t*)digest)[idx1] = tmp;
@@ -133,14 +129,11 @@ bool Identity::generate(const Type t)
         case P384:
             for (;;) {
                 C25519::generateCombined(m_pub + 7, m_priv);
-                ECC384GenerateKey(
-                    m_pub + 7 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE,
-                    m_priv + ZT_C25519_COMBINED_PRIVATE_KEY_SIZE);
+                ECC384GenerateKey(m_pub + 7 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE, m_priv + ZT_C25519_COMBINED_PRIVATE_KEY_SIZE);
 
                 uint64_t challenge[4];
                 v1ChallengeFromPub(m_pub, challenge);
-                const uint64_t proof =
-                    MIMC52::delay(reinterpret_cast<const uint8_t*>(challenge), ZT_IDENTITY_TYPE1_MIMC52_ROUNDS);
+                const uint64_t proof = MIMC52::delay(reinterpret_cast<const uint8_t*>(challenge), ZT_IDENTITY_TYPE1_MIMC52_ROUNDS);
                 m_pub[0] = (uint8_t)(proof >> 48U);
                 m_pub[1] = (uint8_t)(proof >> 40U);
                 m_pub[2] = (uint8_t)(proof >> 32U);
@@ -187,9 +180,8 @@ bool Identity::locallyValidate() const noexcept
                         return MIMC52::verify(
                             reinterpret_cast<const uint8_t*>(challenge),
                             ZT_IDENTITY_TYPE1_MIMC52_ROUNDS,
-                            ((uint64_t)m_pub[0] << 48U) | ((uint64_t)m_pub[1] << 40U) | ((uint64_t)m_pub[2] << 32U)
-                                | ((uint64_t)m_pub[3] << 24U) | ((uint64_t)m_pub[4] << 16U) | ((uint64_t)m_pub[5] << 8U)
-                                | (uint64_t)m_pub[6]);
+                            ((uint64_t)m_pub[0] << 48U) | ((uint64_t)m_pub[1] << 40U) | ((uint64_t)m_pub[2] << 32U) | ((uint64_t)m_pub[3] << 24U)
+                                | ((uint64_t)m_pub[4] << 16U) | ((uint64_t)m_pub[5] << 8U) | (uint64_t)m_pub[6]);
                     }
                     return false;
             }
@@ -312,18 +304,13 @@ char* Identity::toString(bool includePrivate, char buf[ZT_IDENTITY_STRING_BUFFER
         case P384: {
             *(p++) = '1';
             *(p++) = ':';
-            int el =
-                Utils::b32e(m_pub, sizeof(m_pub), p, (int)(ZT_IDENTITY_STRING_BUFFER_LENGTH - (uintptr_t)(p - buf)));
+            int el = Utils::b32e(m_pub, sizeof(m_pub), p, (int)(ZT_IDENTITY_STRING_BUFFER_LENGTH - (uintptr_t)(p - buf)));
             if (el <= 0)
                 return nullptr;
             p += el;
             if ((m_hasPrivate) && (includePrivate)) {
                 *(p++) = ':';
-                el = Utils::b32e(
-                    m_priv,
-                    sizeof(m_priv),
-                    p,
-                    (int)(ZT_IDENTITY_STRING_BUFFER_LENGTH - (uintptr_t)(p - buf)));
+                el = Utils::b32e(m_priv, sizeof(m_priv), p, (int)(ZT_IDENTITY_STRING_BUFFER_LENGTH - (uintptr_t)(p - buf)));
                 if (el <= 0)
                     return nullptr;
                 p += el;
@@ -370,8 +357,7 @@ bool Identity::fromString(const char* str)
             case 2:
                 switch (m_type) {
                     case C25519:
-                        if (Utils::unhex(f, strlen(f), m_pub, ZT_C25519_COMBINED_PUBLIC_KEY_SIZE)
-                            != ZT_C25519_COMBINED_PUBLIC_KEY_SIZE)
+                        if (Utils::unhex(f, strlen(f), m_pub, ZT_C25519_COMBINED_PUBLIC_KEY_SIZE) != ZT_C25519_COMBINED_PUBLIC_KEY_SIZE)
                             return false;
                         break;
 
@@ -386,8 +372,7 @@ bool Identity::fromString(const char* str)
                 if (strlen(f) > 1) {
                     switch (m_type) {
                         case C25519:
-                            if (Utils::unhex(f, strlen(f), m_priv, ZT_C25519_COMBINED_PRIVATE_KEY_SIZE)
-                                != ZT_C25519_COMBINED_PRIVATE_KEY_SIZE) {
+                            if (Utils::unhex(f, strlen(f), m_priv, ZT_C25519_COMBINED_PRIVATE_KEY_SIZE) != ZT_C25519_COMBINED_PRIVATE_KEY_SIZE) {
                                 return false;
                             }
                             else {
@@ -425,11 +410,8 @@ int Identity::marshal(uint8_t data[ZT_IDENTITY_MARSHAL_SIZE_MAX], const bool inc
             Utils::copy<ZT_C25519_COMBINED_PUBLIC_KEY_SIZE>(data + ZT_ADDRESS_LENGTH + 1, m_pub);
             if ((includePrivate) && (m_hasPrivate)) {
                 data[ZT_ADDRESS_LENGTH + 1 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE] = ZT_C25519_COMBINED_PRIVATE_KEY_SIZE;
-                Utils::copy<ZT_C25519_COMBINED_PRIVATE_KEY_SIZE>(
-                    data + ZT_ADDRESS_LENGTH + 1 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE + 1,
-                    m_priv);
-                return ZT_ADDRESS_LENGTH + 1 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE + 1
-                       + ZT_C25519_COMBINED_PRIVATE_KEY_SIZE;
+                Utils::copy<ZT_C25519_COMBINED_PRIVATE_KEY_SIZE>(data + ZT_ADDRESS_LENGTH + 1 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE + 1, m_priv);
+                return ZT_ADDRESS_LENGTH + 1 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE + 1 + ZT_C25519_COMBINED_PRIVATE_KEY_SIZE;
             }
             data[ZT_ADDRESS_LENGTH + 1 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE] = 0;
             return ZT_ADDRESS_LENGTH + 1 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE + 1;
@@ -438,13 +420,9 @@ int Identity::marshal(uint8_t data[ZT_IDENTITY_MARSHAL_SIZE_MAX], const bool inc
             data[ZT_ADDRESS_LENGTH] = (uint8_t)P384;
             Utils::copy<ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE>(data + ZT_ADDRESS_LENGTH + 1, m_pub);
             if ((includePrivate) && (m_hasPrivate)) {
-                data[ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE] =
-                    ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE;
-                Utils::copy<ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE>(
-                    data + ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1,
-                    m_priv);
-                return ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1
-                       + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE;
+                data[ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE] = ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE;
+                Utils::copy<ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE>(data + ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1, m_priv);
+                return ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1 + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE;
             }
             data[ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE] = 0;
             return ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1;
@@ -471,16 +449,11 @@ int Identity::unmarshal(const uint8_t* data, const int len) noexcept
 
             privlen = data[ZT_ADDRESS_LENGTH + 1 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE];
             if (privlen == ZT_C25519_COMBINED_PRIVATE_KEY_SIZE) {
-                if (len
-                    < (ZT_ADDRESS_LENGTH + 1 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE + 1
-                       + ZT_C25519_COMBINED_PRIVATE_KEY_SIZE))
+                if (len < (ZT_ADDRESS_LENGTH + 1 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE + 1 + ZT_C25519_COMBINED_PRIVATE_KEY_SIZE))
                     return -1;
                 m_hasPrivate = true;
-                Utils::copy<ZT_C25519_COMBINED_PRIVATE_KEY_SIZE>(
-                    m_priv,
-                    data + ZT_ADDRESS_LENGTH + 1 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE + 1);
-                return ZT_ADDRESS_LENGTH + 1 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE + 1
-                       + ZT_C25519_COMBINED_PRIVATE_KEY_SIZE;
+                Utils::copy<ZT_C25519_COMBINED_PRIVATE_KEY_SIZE>(m_priv, data + ZT_ADDRESS_LENGTH + 1 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE + 1);
+                return ZT_ADDRESS_LENGTH + 1 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE + 1 + ZT_C25519_COMBINED_PRIVATE_KEY_SIZE;
             }
             else if (privlen == 0) {
                 m_hasPrivate = false;
@@ -503,16 +476,11 @@ int Identity::unmarshal(const uint8_t* data, const int len) noexcept
                 return ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1;
             }
             else if (privlen == ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE) {
-                if (len
-                    < (ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1
-                       + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE))
+                if (len < (ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1 + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE))
                     return -1;
                 m_hasPrivate = true;
-                Utils::copy<ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE>(
-                    &m_priv,
-                    data + ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1);
-                return ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1
-                       + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE;
+                Utils::copy<ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE>(&m_priv, data + ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1);
+                return ZT_ADDRESS_LENGTH + 1 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + 1 + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE;
             }
             break;
     }

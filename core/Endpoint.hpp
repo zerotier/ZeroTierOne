@@ -27,19 +27,11 @@
 
 namespace ZeroTier {
 
-static_assert(
-    (ZT_ENDPOINT_MARSHAL_SIZE_MAX - 1) > ZT_INETADDRESS_MARSHAL_SIZE_MAX,
-    "ZT_ENDPOINT_MARSHAL_SIZE_MAX not large enough");
-static_assert(
-    (ZT_ENDPOINT_MARSHAL_SIZE_MAX - 1) > sizeof(ZT_Fingerprint),
-    "ZT_ENDPOINT_MARSHAL_SIZE_MAX not large enough");
-static_assert(
-    (ZT_ENDPOINT_MARSHAL_SIZE_MAX - 1) > sizeof(InetAddress),
-    "ZT_ENDPOINT_MARSHAL_SIZE_MAX not large enough");
+static_assert((ZT_ENDPOINT_MARSHAL_SIZE_MAX - 1) > ZT_INETADDRESS_MARSHAL_SIZE_MAX, "ZT_ENDPOINT_MARSHAL_SIZE_MAX not large enough");
+static_assert((ZT_ENDPOINT_MARSHAL_SIZE_MAX - 1) > sizeof(ZT_Fingerprint), "ZT_ENDPOINT_MARSHAL_SIZE_MAX not large enough");
+static_assert((ZT_ENDPOINT_MARSHAL_SIZE_MAX - 1) > sizeof(InetAddress), "ZT_ENDPOINT_MARSHAL_SIZE_MAX not large enough");
 static_assert((ZT_ENDPOINT_MARSHAL_SIZE_MAX - 1) > sizeof(MAC), "ZT_ENDPOINT_MARSHAL_SIZE_MAX not large enough");
-static_assert(
-    (ZT_ENDPOINT_MARSHAL_SIZE_MAX - 1) > sizeof(Fingerprint),
-    "ZT_ENDPOINT_MARSHAL_SIZE_MAX not large enough");
+static_assert((ZT_ENDPOINT_MARSHAL_SIZE_MAX - 1) > sizeof(Fingerprint), "ZT_ENDPOINT_MARSHAL_SIZE_MAX not large enough");
 
 /**
  * Endpoint variant specifying some form of network endpoint.

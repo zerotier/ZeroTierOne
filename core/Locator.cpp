@@ -19,8 +19,7 @@
 
 namespace ZeroTier {
 
-const SharedPtr<const Locator::EndpointAttributes>
-    Locator::EndpointAttributes::DEFAULT(new Locator::EndpointAttributes());
+const SharedPtr<const Locator::EndpointAttributes> Locator::EndpointAttributes::DEFAULT(new Locator::EndpointAttributes());
 
 Locator::Locator(const char* const str) noexcept : __refCount(0)
 {
@@ -34,18 +33,14 @@ Locator::Locator(const char* const str) noexcept : __refCount(0)
 
 bool Locator::add(const Endpoint& ep, const SharedPtr<const EndpointAttributes>& a)
 {
-    for (Vector<std::pair<Endpoint, SharedPtr<const EndpointAttributes> > >::iterator i(m_endpoints.begin());
-         i != m_endpoints.end();
-         ++i) {
+    for (Vector<std::pair<Endpoint, SharedPtr<const EndpointAttributes> > >::iterator i(m_endpoints.begin()); i != m_endpoints.end(); ++i) {
         if (i->first == ep) {
             i->second = ((a) && (a->data[0] != 0)) ? a : EndpointAttributes::DEFAULT;
             return true;
         }
     }
     if (m_endpoints.size() < ZT_LOCATOR_MAX_ENDPOINTS) {
-        m_endpoints.push_back(std::pair<Endpoint, SharedPtr<const EndpointAttributes> >(
-            ep,
-            ((a) && (a->data[0] != 0)) ? a : EndpointAttributes::DEFAULT));
+        m_endpoints.push_back(std::pair<Endpoint, SharedPtr<const EndpointAttributes> >(ep, ((a) && (a->data[0] != 0)) ? a : EndpointAttributes::DEFAULT));
         return true;
     }
     return false;
@@ -85,17 +80,11 @@ bool Locator::verify(const Identity& id) const noexcept
 
 char* Locator::toString(char s[ZT_LOCATOR_STRING_SIZE_MAX]) const noexcept
 {
-    static_assert(
-        ZT_LOCATOR_STRING_SIZE_MAX > ((((ZT_LOCATOR_MARSHAL_SIZE_MAX / 5) + 1) * 8) + ZT_ADDRESS_LENGTH_HEX + 1),
-        "overflow");
+    static_assert(ZT_LOCATOR_STRING_SIZE_MAX > ((((ZT_LOCATOR_MARSHAL_SIZE_MAX / 5) + 1) * 8) + ZT_ADDRESS_LENGTH_HEX + 1), "overflow");
     uint8_t bin[ZT_LOCATOR_MARSHAL_SIZE_MAX];
     m_signer.toString(s);
     s[ZT_ADDRESS_LENGTH_HEX] = '@';
-    Utils::b32e(
-        bin,
-        marshal(bin, false),
-        s + (ZT_ADDRESS_LENGTH_HEX + 1),
-        ZT_LOCATOR_STRING_SIZE_MAX - (ZT_ADDRESS_LENGTH_HEX + 1));
+    Utils::b32e(bin, marshal(bin, false), s + (ZT_ADDRESS_LENGTH_HEX + 1), ZT_LOCATOR_STRING_SIZE_MAX - (ZT_ADDRESS_LENGTH_HEX + 1));
     return s;
 }
 
@@ -120,9 +109,7 @@ int Locator::marshal(uint8_t data[ZT_LOCATOR_MARSHAL_SIZE_MAX], const bool exclu
 
     Utils::storeBigEndian<uint16_t>(data + p, (uint16_t)m_endpoints.size());
     p += 2;
-    for (Vector<std::pair<Endpoint, SharedPtr<const EndpointAttributes> > >::const_iterator e(m_endpoints.begin());
-         e != m_endpoints.end();
-         ++e) {
+    for (Vector<std::pair<Endpoint, SharedPtr<const EndpointAttributes> > >::const_iterator e(m_endpoints.begin()); e != m_endpoints.end(); ++e) {
         int l = e->first.marshal(data + p);
         if (l <= 0)
             return -1;

@@ -154,10 +154,7 @@ int CapabilityCredential::unmarshal(const uint8_t* data, int len) noexcept
     return p;
 }
 
-int CapabilityCredential::marshalVirtualNetworkRules(
-    uint8_t* data,
-    const ZT_VirtualNetworkRule* const rules,
-    const unsigned int ruleCount) noexcept
+int CapabilityCredential::marshalVirtualNetworkRules(uint8_t* data, const ZT_VirtualNetworkRule* const rules, const unsigned int ruleCount) noexcept
 {
     int p = 0;
     for (unsigned int i = 0; i < ruleCount; ++i) {
@@ -281,9 +278,7 @@ int CapabilityCredential::marshalVirtualNetworkRules(
                 data[p++] = 19;
                 Utils::storeBigEndian<uint64_t>(data + p, rules[i].v.intRange.start);
                 p += 8;
-                Utils::storeBigEndian<uint64_t>(
-                    data + p,
-                    rules[i].v.intRange.start + (uint64_t)rules[i].v.intRange.end);
+                Utils::storeBigEndian<uint64_t>(data + p, rules[i].v.intRange.start + (uint64_t)rules[i].v.intRange.end);
                 p += 8;
                 Utils::storeBigEndian<uint16_t>(data + p, rules[i].v.intRange.idx);
                 p += 2;
@@ -444,8 +439,7 @@ int CapabilityCredential::unmarshalVirtualNetworkRules(
                     return -1;
                 rules[ruleCount].v.intRange.start = Utils::loadBigEndian<uint64_t>(data + p);
                 p += 8;
-                rules[ruleCount].v.intRange.end =
-                    (uint32_t)(Utils::loadBigEndian<uint64_t>(data + p) - rules[ruleCount].v.intRange.start);
+                rules[ruleCount].v.intRange.end = (uint32_t)(Utils::loadBigEndian<uint64_t>(data + p) - rules[ruleCount].v.intRange.start);
                 p += 8;
                 rules[ruleCount].v.intRange.idx = Utils::loadBigEndian<uint16_t>(data + p);
                 p += 2;
