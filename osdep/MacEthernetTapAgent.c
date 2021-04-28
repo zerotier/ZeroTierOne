@@ -64,6 +64,7 @@
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/sysctl.h>
+#include <sys/resource.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <net/bpf.h>
@@ -181,6 +182,14 @@ static void die()
 		run("/sbin/ifconfig",s_peerDeviceName,"destroy",(char *)0);
 }
 
+static inline void close_inherited_fds()
+{
+	struct rlimit lim;
+	getrlimit(RLIMIT_NOFILE, &lim);
+	for (int i=3,j=(int)lim.rlim_cur;i<j;++i)
+		close(i);
+}
+
 int main(int argc,char **argv)
 {
 	char buf[128];
@@ -205,6 +214,8 @@ int main(int argc,char **argv)
 	signal(SIGKILL,&exit);
 	signal(SIGINT,&exit);
 	signal(SIGPIPE,&exit);
+
+	close_inherited_fds();
 
 	if (getuid() != 0) {
 		if (setuid(0) != 0) {
