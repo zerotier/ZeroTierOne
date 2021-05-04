@@ -25,10 +25,6 @@ class Link {
 	friend class SharedPtr<Link>;
 
   public:
-	Link()
-	{
-	}
-
 	/**
 	 *
 	 * @param ifnameStr

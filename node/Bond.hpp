@@ -15,9 +15,9 @@
 #define ZT_BOND_HPP
 
 #include "Flow.hpp"
+#include "Packet.hpp"
 #include "Path.hpp"
 #include "Peer.hpp"
-#include "Packet.hpp"
 
 #include <list>
 #include <map>
@@ -351,7 +351,7 @@ class Bond {
 	 */
 	void setMinAcceptableAllocation(float minAlloc)
 	{
-		_minAcceptableAllocation = minAlloc * 255;
+		_minAcceptableAllocation = (uint8_t)(minAlloc * 255);
 	}
 
 	/**
