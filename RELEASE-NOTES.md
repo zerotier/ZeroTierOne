@@ -1,6 +1,12 @@
 ZeroTier Release Notes
 ======
 
+# 2021-04-13 -- Version 1.6.5
+
+ * Fix a bug in potential network path filtering that could in some circumstances lead to "software laser" effects.
+ * Fix a printf overflow in zerotier-cli (not exploitable or a security risk)
+ * Windows now looks up the name of ZeroTier devices instead of relying on them having "ZeroTier" in them.
+
 # 2021-02-15 -- Version 1.6.4
 
  * The groundhog saw his shadow, which meant that the "connection coma" bug still wasn't gone. We think we found it this time.

@@ -5,6 +5,31 @@ grepzt() {
   return $?
 }
 
+mkztfile() {
+  file=$1
+  mode=$2
+  content=$3
+
+  mkdir -p /var/lib/zerotier-one
+  echo "$content" > "/var/lib/zerotier-one/$file"
+  chmod "$mode" "/var/lib/zerotier-one/$file"
+}
+
+if [ "x$ZEROTIER_API_SECRET" != "x" ]
+then
+  mkztfile authtoken.secret 0600 "$ZEROTIER_API_SECRET"
+fi
+
+if [ "x$ZEROTIER_IDENTITY_PUBLIC" != "x" ]
+then
+  mkztfile identity.public 0644 "$ZEROTIER_IDENTITY_PUBLIC"
+fi
+
+if [ "x$ZEROTIER_IDENTITY_SECRET" != "x" ]
+then
+  mkztfile identity.secret 0600 "$ZEROTIER_IDENTITY_SECRET"
+fi
+
 echo "starting zerotier"
 setsid /usr/sbin/zerotier-one &
 
@@ -14,7 +39,7 @@ do
   sleep 1
 done
 
-echo "joining networks"
+echo "joining networks: $@"
 
 for i in "$@"
 do
