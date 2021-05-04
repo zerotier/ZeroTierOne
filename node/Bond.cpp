@@ -89,7 +89,7 @@ void Bond::nominatePath(const SharedPtr<Path>& path, int64_t now)
 		for (int i = 0; i < ZT_MAX_PEER_NETWORK_PATHS; ++i) {
 			if (! _paths[i]) {
 				_paths[i] = path;
-				sprintf(traceMsg, "%s (bond) Nominating link %s/%s to peer %llx. It has now entered its trial period", OSUtils::humanReadableTimestamp().c_str(), getLink(path)->ifname().c_str(), pathStr, _peer->_id.address().toInt());
+				sprintf(traceMsg, "%s (bond) Nominating link %s/%s to peer %llx. It has now entered its trial period", OSUtils::humanReadableTimestamp().c_str(), getLink(path)->ifname().c_str(), pathStr, (unsigned long long)(_peer->_id.address().toInt()));
 				RR->t->bondStateMessage(NULL, traceMsg);
 				_paths[i]->startTrial(now);
 				break;
@@ -189,7 +189,7 @@ void Bond::recordIncomingInvalidPacket(const SharedPtr<Path>& path)
 {
 	// char traceMsg[256]; char pathStr[128]; path->address().toString(pathStr);
 	// sprintf(traceMsg, "%s (qos) Invalid packet on link %s/%s from peer %llx",
-	//	OSUtils::humanReadableTimestamp().c_str(), getLink(path)->ifname().c_str(), pathStr, _peer->_id.address().toInt());
+	//	OSUtils::humanReadableTimestamp().c_str(), getLink(path)->ifname().c_str(), pathStr, (unsigned long long)(_peer->_id.address().toInt()));
 	// RR->t->bondStateMessage(NULL, traceMsg);
 	Mutex::Lock _l(_paths_m);
 	for (int i = 0; i < ZT_MAX_PEER_NETWORK_PATHS; ++i) {
@@ -203,7 +203,7 @@ void Bond::recordOutgoingPacket(const SharedPtr<Path>& path, const uint64_t pack
 {
 	// char traceMsg[256]; char pathStr[128]; path->address().toString(pathStr);
 	// sprintf(traceMsg, "%s (bond) Outgoing packet on link %s/%s to peer %llx",
-	//	OSUtils::humanReadableTimestamp().c_str(), getLink(path)->ifname().c_str(), pathStr, _peer->_id.address().toInt());
+	//	OSUtils::humanReadableTimestamp().c_str(), getLink(path)->ifname().c_str(), pathStr, (unsigned long long)(_peer->_id.address().toInt()));
 	// RR->t->bondStateMessage(NULL, traceMsg);
 	_freeRandomByte += (unsigned char)(packetId >> 8);	 // Grab entropy to use in path selection logic
 	if (! _shouldCollectPathStatistics) {
@@ -237,7 +237,7 @@ void Bond::recordIncomingPacket(const SharedPtr<Path>& path, uint64_t packetId, 
 {
 	// char traceMsg[256]; char pathStr[128]; path->address().toString(pathStr);
 	// sprintf(traceMsg, "%s (bond) Incoming packet on link %s/%s from peer %llx [id=%llx, len=%d, verb=%d, flowId=%x]",
-	//	OSUtils::humanReadableTimestamp().c_str(), getLink(path)->ifname().c_str(), pathStr, _peer->_id.address().toInt(), packetId, payloadLength, verb, flowId);
+	//	OSUtils::humanReadableTimestamp().c_str(), getLink(path)->ifname().c_str(), pathStr, (unsigned long long)(_peer->_id.address().toInt()), packetId, payloadLength, verb, flowId);
 	// RR->t->bondStateMessage(NULL, traceMsg);
 	bool isFrame = (verb == Packet::VERB_FRAME || verb == Packet::VERB_EXT_FRAME);
 	bool shouldRecord = (packetId & (ZT_QOS_ACK_DIVISOR - 1) && (verb != Packet::VERB_ACK) && (verb != Packet::VERB_QOS_MEASUREMENT));
@@ -280,7 +280,7 @@ void Bond::receivedQoS(const SharedPtr<Path>& path, int64_t now, int count, uint
 	Mutex::Lock _l(_paths_m);
 	// char traceMsg[256]; char pathStr[128]; path->address().toString(pathStr);
 	// sprintf(traceMsg, "%s (qos) Received QoS packet sampling %d frames from peer %llx via %s/%s",
-	//	OSUtils::humanReadableTimestamp().c_str(), count, _peer->_id.address().toInt(), getLink(path)->ifname().c_str(), pathStr);
+	//	OSUtils::humanReadableTimestamp().c_str(), count, (unsigned long long)(_peer->_id.address().toInt()), getLink(path)->ifname().c_str(), pathStr);
 	// RR->t->bondStateMessage(NULL, traceMsg);
 	// Look up egress times and compute latency values for each record
 	std::map<uint64_t, uint64_t>::iterator it;
@@ -299,7 +299,7 @@ void Bond::receivedAck(const SharedPtr<Path>& path, int64_t now, int32_t ackedBy
 	Mutex::Lock _l(_paths_m);
 	// char traceMsg[256]; char pathStr[128]; path->address().toString(pathStr);
 	// sprintf(traceMsg, "%s (qos) Received ACK packet for %d bytes from peer %llx via %s/%s",
-	//	OSUtils::humanReadableTimestamp().c_str(), ackedBytes, _peer->_id.address().toInt(), getLink(path)->ifname().c_str(), pathStr);
+	//	OSUtils::humanReadableTimestamp().c_str(), ackedBytes, (unsigned long long)(_peer->_id.address().toInt()), getLink(path)->ifname().c_str(), pathStr);
 	// RR->t->bondStateMessage(NULL, traceMsg);
 	path->_lastAckReceived = now;
 	path->_unackedBytes = (ackedBytes > path->_unackedBytes) ? 0 : path->_unackedBytes - ackedBytes;
@@ -354,7 +354,7 @@ bool Bond::assignFlowToBondedPath(SharedPtr<Flow>& flow, int64_t now)
 			"%s (balance-xor) Assigned outgoing flow %x to peer %llx to link %s/%s, %lu active flow(s)",
 			OSUtils::humanReadableTimestamp().c_str(),
 			flow->id(),
-			_peer->_id.address().toInt(),
+			(unsigned long long)(_peer->_id.address().toInt()),
 			link->ifname().c_str(),
 			curPathStr,
 			_flows.size());
@@ -414,7 +414,7 @@ bool Bond::assignFlowToBondedPath(SharedPtr<Flow>& flow, int64_t now)
 			flow->assignPath(_abPath, now);
 		}
 		else {
-			sprintf(traceMsg, "%s (bond) Unable to assign outgoing flow %x to peer %llx, no active overflow link", OSUtils::humanReadableTimestamp().c_str(), flow->id(), _peer->_id.address().toInt());
+			sprintf(traceMsg, "%s (bond) Unable to assign outgoing flow %x to peer %llx, no active overflow link", OSUtils::humanReadableTimestamp().c_str(), flow->id(), (unsigned long long)(_peer->_id.address().toInt()));
 			RR->t->bondStateMessage(NULL, traceMsg);
 			return false;
 		}
@@ -426,7 +426,7 @@ bool Bond::assignFlowToBondedPath(SharedPtr<Flow>& flow, int64_t now)
 		"%s (bond) Assigned outgoing flow %x to peer %llx to link %s/%s, %lu active flow(s)",
 		OSUtils::humanReadableTimestamp().c_str(),
 		flow->id(),
-		_peer->_id.address().toInt(),
+		(unsigned long long)(_peer->_id.address().toInt()),
 		link->ifname().c_str(),
 		curPathStr,
 		_flows.size());
@@ -440,12 +440,12 @@ SharedPtr<Flow> Bond::createFlow(const SharedPtr<Path>& path, int32_t flowId, un
 	char curPathStr[128];
 	// ---
 	if (! _numBondedPaths) {
-		sprintf(traceMsg, "%s (bond) There are no bonded paths to peer %llx, cannot assign flow %x\n", OSUtils::humanReadableTimestamp().c_str(), _peer->_id.address().toInt(), flowId);
+		sprintf(traceMsg, "%s (bond) There are no bonded paths to peer %llx, cannot assign flow %x\n", OSUtils::humanReadableTimestamp().c_str(), (unsigned long long)(_peer->_id.address().toInt()), flowId);
 		RR->t->bondStateMessage(NULL, traceMsg);
 		return SharedPtr<Flow>();
 	}
 	if (_flows.size() >= ZT_FLOW_MAX_COUNT) {
-		sprintf(traceMsg, "%s (bond) Maximum number of flows on bond to peer %llx reached (%d), forcibly forgetting oldest flow\n", OSUtils::humanReadableTimestamp().c_str(), _peer->_id.address().toInt(), ZT_FLOW_MAX_COUNT);
+		sprintf(traceMsg, "%s (bond) Maximum number of flows on bond to peer %llx reached (%d), forcibly forgetting oldest flow\n", OSUtils::humanReadableTimestamp().c_str(), (unsigned long long)(_peer->_id.address().toInt()), ZT_FLOW_MAX_COUNT);
 		RR->t->bondStateMessage(NULL, traceMsg);
 		forgetFlowsWhenNecessary(0, true, now);
 	}
@@ -466,7 +466,7 @@ SharedPtr<Flow> Bond::createFlow(const SharedPtr<Path>& path, int32_t flowId, un
 			"%s (bond) Assigned incoming flow %x from peer %llx to link %s/%s, %lu active flow(s)",
 			OSUtils::humanReadableTimestamp().c_str(),
 			flow->id(),
-			_peer->_id.address().toInt(),
+			(unsigned long long)(_peer->_id.address().toInt()),
 			link->ifname().c_str(),
 			curPathStr,
 			_flows.size());
@@ -491,7 +491,7 @@ void Bond::forgetFlowsWhenNecessary(uint64_t age, bool oldest, int64_t now)
 	if (age) {	 // Remove by specific age
 		while (it != _flows.end()) {
 			if (it->second->age(now) > age) {
-				sprintf(traceMsg, "%s (bond) Forgetting flow %x between this node and peer %llx, %lu active flow(s)", OSUtils::humanReadableTimestamp().c_str(), it->first, _peer->_id.address().toInt(), (_flows.size() - 1));
+				sprintf(traceMsg, "%s (bond) Forgetting flow %x between this node and peer %llx, %lu active flow(s)", OSUtils::humanReadableTimestamp().c_str(), it->first, (unsigned long long)(_peer->_id.address().toInt()), (_flows.size() - 1));
 				RR->t->bondStateMessage(NULL, traceMsg);
 				it->second->assignedPath()->_assignedFlowCount--;
 				it = _flows.erase(it);
@@ -517,7 +517,7 @@ void Bond::forgetFlowsWhenNecessary(uint64_t age, bool oldest, int64_t now)
 				OSUtils::humanReadableTimestamp().c_str(),
 				oldestFlow->first,
 				oldestFlow->second->age(now),
-				_peer->_id.address().toInt(),
+				 (unsigned long long)(_peer->_id.address().toInt()),
 				(_flows.size() - 1));
 			RR->t->bondStateMessage(NULL, traceMsg);
 			oldestFlow->second->assignedPath()->_assignedFlowCount--;
@@ -546,7 +546,7 @@ void Bond::processIncomingPathNegotiationRequest(uint64_t now, SharedPtr<Path>& 
 			traceMsg,
 			"%s (bond) Peer %llx suggests using alternate link %s/%s. Remote utility (%d) is GREATER than local utility (%d), switching to said link\n",
 			OSUtils::humanReadableTimestamp().c_str(),
-			_peer->_id.address().toInt(),
+			 (unsigned long long)(_peer->_id.address().toInt()),
 			link->ifname().c_str(),
 			pathStr,
 			remoteUtility,
@@ -559,7 +559,7 @@ void Bond::processIncomingPathNegotiationRequest(uint64_t now, SharedPtr<Path>& 
 			traceMsg,
 			"%s (bond) Peer %llx suggests using alternate link %s/%s. Remote utility (%d) is LESS than local utility (%d), not switching\n",
 			OSUtils::humanReadableTimestamp().c_str(),
-			_peer->_id.address().toInt(),
+			 (unsigned long long)(_peer->_id.address().toInt()),
 			link->ifname().c_str(),
 			pathStr,
 			remoteUtility,
@@ -578,12 +578,12 @@ void Bond::processIncomingPathNegotiationRequest(uint64_t now, SharedPtr<Path>& 
 			_localUtility);
 		RR->t->bondStateMessage(NULL, traceMsg);
 		if (_peer->_id.address().toInt() > RR->node->identity().address().toInt()) {
-			sprintf(traceMsg, "%s (bond) Agreeing with peer %llx to use alternate link %s/%s\n", OSUtils::humanReadableTimestamp().c_str(), _peer->_id.address().toInt(), link->ifname().c_str(), pathStr);
+			sprintf(traceMsg, "%s (bond) Agreeing with peer %llx to use alternate link %s/%s\n", OSUtils::humanReadableTimestamp().c_str(), (unsigned long long)(_peer->_id.address().toInt()), link->ifname().c_str(), pathStr);
 			RR->t->bondStateMessage(NULL, traceMsg);
 			negotiatedPath = path;
 		}
 		else {
-			sprintf(traceMsg, "%s (bond) Ignoring petition from peer %llx to use alternate link %s/%s\n", OSUtils::humanReadableTimestamp().c_str(), _peer->_id.address().toInt(), link->ifname().c_str(), pathStr);
+			sprintf(traceMsg, "%s (bond) Ignoring petition from peer %llx to use alternate link %s/%s\n", OSUtils::humanReadableTimestamp().c_str(), (unsigned long long)(_peer->_id.address().toInt()), link->ifname().c_str(), pathStr);
 			RR->t->bondStateMessage(NULL, traceMsg);
 		}
 	}
@@ -656,7 +656,7 @@ void Bond::sendPATH_NEGOTIATION_REQUEST(void* tPtr, const SharedPtr<Path>& path)
 		traceMsg,
 		"%s (bond) Sending link negotiation request to peer %llx via link %s/%s, local utility is %d",
 		OSUtils::humanReadableTimestamp().c_str(),
-		_peer->_id.address().toInt(),
+		 (unsigned long long)(_peer->_id.address().toInt()),
 		getLink(path)->ifname().c_str(),
 		pathStr,
 		_localUtility);
@@ -683,7 +683,7 @@ void Bond::sendACK(void* tPtr, const SharedPtr<Path>& path, const int64_t localS
 	}
 	// char traceMsg[256]; char pathStr[128]; path->address().toString(pathStr);
 	// sprintf(traceMsg, "%s (qos) Sending ACK packet for %d bytes to peer %llx via link %s/%s",
-	//	OSUtils::humanReadableTimestamp().c_str(), bytesToAck, _peer->_id.address().toInt(), getLink(path)->ifname().c_str(), pathStr);
+	//	OSUtils::humanReadableTimestamp().c_str(), bytesToAck, (unsigned long long)(_peer->_id.address().toInt()), getLink(path)->ifname().c_str(), pathStr);
 	// RR->t->bondStateMessage(NULL, traceMsg);
 	outp.append<uint32_t>(bytesToAck);
 	if (atAddress) {
@@ -702,7 +702,7 @@ void Bond::sendQOS_MEASUREMENT(void* tPtr, const SharedPtr<Path>& path, const in
 {
 	// char traceMsg[256]; char pathStr[128]; path->address().toString(pathStr);
 	// sprintf(traceMsg, "%s (qos) Sending QoS packet to peer %llx via link %s/%s",
-	//	OSUtils::humanReadableTimestamp().c_str(), _peer->_id.address().toInt(), getLink(path)->ifname().c_str(), pathStr);
+	//	OSUtils::humanReadableTimestamp().c_str(), (unsigned long long)(_peer->_id.address().toInt()), getLink(path)->ifname().c_str(), pathStr);
 	// RR->t->bondStateMessage(NULL, traceMsg);
 	const int64_t _now = RR->node->now();
 	Packet outp(_peer->_id.address(), RR->identity.address(), Packet::VERB_QOS_MEASUREMENT);
@@ -865,7 +865,7 @@ void Bond::curateBond(const int64_t now, bool rebuildBond)
 				OSUtils::humanReadableTimestamp().c_str(),
 				getLink(_paths[i])->ifname().c_str(),
 				pathStr,
-				_peer->_id.address().toInt(),
+				 (unsigned long long)(_peer->_id.address().toInt()),
 				_paths[i]->_lastEligibilityState,
 				currEligibility);
 			RR->t->bondStateMessage(NULL, traceMsg);
@@ -890,7 +890,7 @@ void Bond::curateBond(const int64_t now, bool rebuildBond)
 					_paths[i]->setBonded(false);
 				}
 				else {
-					sprintf(traceMsg, "%s (bond) Link %s/%s to peer %llx was not bonded, no allocation consequences", OSUtils::humanReadableTimestamp().c_str(), getLink(_paths[i])->ifname().c_str(), pathStr, _peer->_id.address().toInt());
+					sprintf(traceMsg, "%s (bond) Link %s/%s to peer %llx was not bonded, no allocation consequences", OSUtils::humanReadableTimestamp().c_str(), getLink(_paths[i])->ifname().c_str(), pathStr, (unsigned long long)(_peer->_id.address().toInt()));
 					RR->t->bondStateMessage(NULL, traceMsg);
 				}
 			}
@@ -945,7 +945,7 @@ void Bond::curateBond(const int64_t now, bool rebuildBond)
 		else {
 			healthStatusStr = "DEGRADED";
 		}
-		sprintf(traceMsg, "%s (bond) Bond to peer %llx is in a %s state (%d/%d links)", OSUtils::humanReadableTimestamp().c_str(), _peer->_id.address().toInt(), healthStatusStr.c_str(), _numAliveLinks, _numTotalLinks);
+		sprintf(traceMsg, "%s (bond) Bond to peer %llx is in a %s state (%d/%d links)", OSUtils::humanReadableTimestamp().c_str(), (unsigned long long)(_peer->_id.address().toInt()), healthStatusStr.c_str(), _numAliveLinks, _numTotalLinks);
 		RR->t->bondStateMessage(NULL, traceMsg);
 	}
 
@@ -1369,11 +1369,11 @@ void Bond::processActiveBackupTasks(void* tPtr, const int64_t now)
 			RR->t->bondStateMessage(NULL, traceMsg);
 		}
 		else {
-			sprintf(traceMsg, "%s (active-backup) No active link to peer %llx", OSUtils::humanReadableTimestamp().c_str(), _peer->_id.address().toInt());
+			sprintf(traceMsg, "%s (active-backup) No active link to peer %llx", OSUtils::humanReadableTimestamp().c_str(), (unsigned long long)(_peer->_id.address().toInt()));
 			RR->t->bondStateMessage(NULL, traceMsg);
 		}
 		if (_abFailoverQueue.empty()) {
-			sprintf(traceMsg, "%s (active-backup) Failover queue is empty, bond to peer %llx is NOT currently fault-tolerant", OSUtils::humanReadableTimestamp().c_str(), _peer->_id.address().toInt());
+			sprintf(traceMsg, "%s (active-backup) Failover queue is empty, bond to peer %llx is NOT currently fault-tolerant", OSUtils::humanReadableTimestamp().c_str(), (unsigned long long)(_peer->_id.address().toInt()));
 			RR->t->bondStateMessage(NULL, traceMsg);
 		}
 	}
@@ -1390,14 +1390,14 @@ void Bond::processActiveBackupTasks(void* tPtr, const int64_t now)
 		 * simply find the next eligible path.
 		 */
 		if (! userHasSpecifiedLinks()) {
-			sprintf(traceMsg, "%s (active-backup) No links to peer %llx specified. Searching...", OSUtils::humanReadableTimestamp().c_str(), _peer->_id.address().toInt());
+			sprintf(traceMsg, "%s (active-backup) No links to peer %llx specified. Searching...", OSUtils::humanReadableTimestamp().c_str(), (unsigned long long)(_peer->_id.address().toInt()));
 			RR->t->bondStateMessage(NULL, traceMsg);
 			for (int i = 0; i < ZT_MAX_PEER_NETWORK_PATHS; ++i) {
 				if (_paths[i] && _paths[i]->eligible(now, _ackSendInterval)) {
 					_paths[i]->address().toString(curPathStr);
 					SharedPtr<Link> link = RR->bc->getLinkBySocket(_policyAlias, _paths[i]->localSocket());
 					if (link) {
-						sprintf(traceMsg, "%s (active-backup) Found eligible link %s/%s to peer %llx", OSUtils::humanReadableTimestamp().c_str(), getLink(_paths[i])->ifname().c_str(), curPathStr, _peer->_id.address().toInt());
+						sprintf(traceMsg, "%s (active-backup) Found eligible link %s/%s to peer %llx", OSUtils::humanReadableTimestamp().c_str(), getLink(_paths[i])->ifname().c_str(), curPathStr, (unsigned long long)(_peer->_id.address().toInt()));
 						RR->t->bondStateMessage(NULL, traceMsg);
 					}
 					_abPath = _paths[i];
@@ -1437,26 +1437,26 @@ void Bond::processActiveBackupTasks(void* tPtr, const int64_t now)
 					_abPath->address().toString(curPathStr);
 					SharedPtr<Link> link = RR->bc->getLinkBySocket(_policyAlias, _abPath->localSocket());
 					if (link) {
-						sprintf(traceMsg, "%s (active-backup) Found preferred primary link %s/%s to peer %llx", OSUtils::humanReadableTimestamp().c_str(), getLink(_abPath)->ifname().c_str(), curPathStr, _peer->_id.address().toInt());
+						sprintf(traceMsg, "%s (active-backup) Found preferred primary link %s/%s to peer %llx", OSUtils::humanReadableTimestamp().c_str(), getLink(_abPath)->ifname().c_str(), curPathStr, (unsigned long long)(_peer->_id.address().toInt()));
 						RR->t->bondStateMessage(NULL, traceMsg);
 					}
 				}
 				else {
 					if (bFoundPrimaryLink && nonPreferredPath) {
-						sprintf(traceMsg, "%s (active-backup) Found non-preferred primary link to peer %llx", OSUtils::humanReadableTimestamp().c_str(), _peer->_id.address().toInt());
+						sprintf(traceMsg, "%s (active-backup) Found non-preferred primary link to peer %llx", OSUtils::humanReadableTimestamp().c_str(), (unsigned long long)(_peer->_id.address().toInt()));
 						RR->t->bondStateMessage(NULL, traceMsg);
 						_abPath = nonPreferredPath;
 					}
 				}
 				if (! _abPath) {
-					sprintf(traceMsg, "%s (active-backup) Designated primary link to peer %llx is not yet ready", OSUtils::humanReadableTimestamp().c_str(), _peer->_id.address().toInt());
+					sprintf(traceMsg, "%s (active-backup) Designated primary link to peer %llx is not yet ready", OSUtils::humanReadableTimestamp().c_str(), (unsigned long long)(_peer->_id.address().toInt()));
 					RR->t->bondStateMessage(NULL, traceMsg);
 					// TODO: Should wait for some time (failover interval?) and then switch to spare link
 				}
 			}
 			else if (! userHasSpecifiedPrimaryLink()) {
 				int _abIdx = ZT_MAX_PEER_NETWORK_PATHS;
-				sprintf(traceMsg, "%s (active-backup) User did not specify a primary link to peer %llx, selecting first available link", OSUtils::humanReadableTimestamp().c_str(), _peer->_id.address().toInt());
+				sprintf(traceMsg, "%s (active-backup) User did not specify a primary link to peer %llx, selecting first available link", OSUtils::humanReadableTimestamp().c_str(), (unsigned long long)(_peer->_id.address().toInt()));
 				RR->t->bondStateMessage(NULL, traceMsg);
 				for (int i = 0; i < ZT_MAX_PEER_NETWORK_PATHS; ++i) {
 					if (_paths[i] && _paths[i]->eligible(now, _ackSendInterval)) {
@@ -1472,7 +1472,7 @@ void Bond::processActiveBackupTasks(void* tPtr, const int64_t now)
 					SharedPtr<Link> link = RR->bc->getLinkBySocket(_policyAlias, _abPath->localSocket());
 					if (link) {
 						_abPath->address().toString(curPathStr);
-						sprintf(traceMsg, "%s (active-backup) Selected non-primary link %s/%s to peer %llx", OSUtils::humanReadableTimestamp().c_str(), getLink(_abPath)->ifname().c_str(), curPathStr, _peer->_id.address().toInt());
+						sprintf(traceMsg, "%s (active-backup) Selected non-primary link %s/%s to peer %llx", OSUtils::humanReadableTimestamp().c_str(), getLink(_abPath)->ifname().c_str(), curPathStr, (unsigned long long)(_peer->_id.address().toInt()));
 						RR->t->bondStateMessage(NULL, traceMsg);
 					}
 				}
@@ -1497,7 +1497,7 @@ void Bond::processActiveBackupTasks(void* tPtr, const int64_t now)
 						OSUtils::humanReadableTimestamp().c_str(),
 						getLink(_abPath)->ifname().c_str(),
 						curPathStr,
-						_peer->_id.address().toInt(),
+						 (unsigned long long)(_peer->_id.address().toInt()),
 						_abFailoverQueue.size());
 					RR->t->bondStateMessage(NULL, traceMsg);
 				}
@@ -1573,7 +1573,7 @@ void Bond::processActiveBackupTasks(void* tPtr, const int64_t now)
 							OSUtils::humanReadableTimestamp().c_str(),
 							getLink(_abPath)->ifname().c_str(),
 							curPathStr,
-							_peer->_id.address().toInt(),
+							 (unsigned long long)(_peer->_id.address().toInt()),
 							_abFailoverQueue.size());
 						RR->t->bondStateMessage(NULL, traceMsg);
 					}
@@ -1625,7 +1625,7 @@ void Bond::processActiveBackupTasks(void* tPtr, const int64_t now)
 							OSUtils::humanReadableTimestamp().c_str(),
 							getLink(_paths[i])->ifname().c_str(),
 							curPathStr,
-							_peer->_id.address().toInt(),
+							 (unsigned long long)(_peer->_id.address().toInt()),
 							_abFailoverQueue.size());
 						RR->t->bondStateMessage(NULL, traceMsg);
 					}
@@ -1651,17 +1651,17 @@ void Bond::processActiveBackupTasks(void* tPtr, const int64_t now)
 			OSUtils::humanReadableTimestamp().c_str(),
 			getLink(_abPath)->ifname().c_str(),
 			curPathStr,
-			_peer->_id.address().toInt(),
+			 (unsigned long long)(_peer->_id.address().toInt()),
 			_abFailoverQueue.size());
 		RR->t->bondStateMessage(NULL, traceMsg);
 		if (! _abFailoverQueue.empty()) {
 			dequeueNextActiveBackupPath(now);
 			_abPath->address().toString(curPathStr);
-			sprintf(traceMsg, "%s (active-backup) Active link to peer %llx has been switched to %s/%s", OSUtils::humanReadableTimestamp().c_str(), _peer->_id.address().toInt(), getLink(_abPath)->ifname().c_str(), curPathStr);
+			sprintf(traceMsg, "%s (active-backup) Active link to peer %llx has been switched to %s/%s", OSUtils::humanReadableTimestamp().c_str(), (unsigned long long)(_peer->_id.address().toInt()), getLink(_abPath)->ifname().c_str(), curPathStr);
 			RR->t->bondStateMessage(NULL, traceMsg);
 		}
 		else {
-			sprintf(traceMsg, "%s (active-backup) Failover queue is empty. No links to peer %llx to choose from", OSUtils::humanReadableTimestamp().c_str(), _peer->_id.address().toInt());
+			sprintf(traceMsg, "%s (active-backup) Failover queue is empty. No links to peer %llx to choose from", OSUtils::humanReadableTimestamp().c_str(), (unsigned long long)(_peer->_id.address().toInt()));
 			RR->t->bondStateMessage(NULL, traceMsg);
 		}
 	}
@@ -1681,7 +1681,7 @@ void Bond::processActiveBackupTasks(void* tPtr, const int64_t now)
 				OSUtils::humanReadableTimestamp().c_str(),
 				getLink(_abPath)->ifname().c_str(),
 				curPathStr,
-				_peer->_id.address().toInt());
+				(unsigned long long)(_peer->_id.address().toInt()));
 			RR->t->bondStateMessage(NULL, traceMsg);
 		}
 	}
@@ -1697,7 +1697,7 @@ void Bond::processActiveBackupTasks(void* tPtr, const int64_t now)
 					OSUtils::humanReadableTimestamp().c_str(),
 					getLink(_abPath)->ifname().c_str(),
 					curPathStr,
-					_peer->_id.address().toInt());
+					(unsigned long long)(_peer->_id.address().toInt()));
 				RR->t->bondStateMessage(NULL, traceMsg);
 			}
 		}
@@ -1717,7 +1717,7 @@ void Bond::processActiveBackupTasks(void* tPtr, const int64_t now)
 				OSUtils::humanReadableTimestamp().c_str(),
 				getLink(_abPath)->ifname().c_str(),
 				curPathStr,
-				_peer->_id.address().toInt());
+				(unsigned long long)(_peer->_id.address().toInt()));
 			RR->t->bondStateMessage(NULL, traceMsg);
 		}
 		else {
@@ -1744,7 +1744,7 @@ void Bond::processActiveBackupTasks(void* tPtr, const int64_t now)
 							getLink(_abPath)->ifname().c_str(),
 							curPathStr,
 							newFScore,
-							_peer->_id.address().toInt());
+							(unsigned long long)(_peer->_id.address().toInt()));
 						RR->t->bondStateMessage(NULL, traceMsg);
 					}
 				}

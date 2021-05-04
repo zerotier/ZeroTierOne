@@ -618,7 +618,6 @@ static int cli(int argc,char **argv)
 					if (json) {
 						printf("%s" ZT_EOL_S,OSUtils::jsonDump(j).c_str());
 					} else {
-						bool bFoundBond = false;
 						std::string healthStr;
 						if (OSUtils::jsonInt(j["isHealthy"],0)) {
 							healthStr = "Healthy";
@@ -630,14 +629,14 @@ static int cli(int argc,char **argv)
 						printf("Peer               : %s\n", arg1.c_str());
 						printf("Bond               : %s\n", OSUtils::jsonString(j["bondingPolicy"],"-").c_str());
 						//if (bondingPolicy == ZT_BONDING_POLICY_ACTIVE_BACKUP) {
-						printf("Link Select Method : %d\n", OSUtils::jsonInt(j["linkSelectMethod"],0));
+						printf("Link Select Method : %d\n", (int)OSUtils::jsonInt(j["linkSelectMethod"],0));
 						//}
 						printf("Status             : %s\n", healthStr.c_str());
 						printf("Links              : %d/%d\n", numAliveLinks, numTotalLinks);
-						printf("Failover Interval  : %d (ms)\n", OSUtils::jsonInt(j["failoverInterval"],0));
-						printf("Up Delay           : %d (ms)\n", OSUtils::jsonInt(j["upDelay"],0));
-						printf("Down Delay         : %d (ms)\n", OSUtils::jsonInt(j["downDelay"],0));
-						printf("Packets Per Link   : %d (ms)\n", OSUtils::jsonInt(j["packetsPerLink"],0));
+						printf("Failover Interval  : %d (ms)\n", (int)OSUtils::jsonInt(j["failoverInterval"],0));
+						printf("Up Delay           : %d (ms)\n", (int)OSUtils::jsonInt(j["upDelay"],0));
+						printf("Down Delay         : %d (ms)\n", (int)OSUtils::jsonInt(j["downDelay"],0));
+						printf("Packets Per Link   : %d (ms)\n", (int)OSUtils::jsonInt(j["packetsPerLink"],0));
 						nlohmann::json &p = j["links"];
 						if (p.is_array()) {
 							printf("\n     Interface Name\t\t\t\t\t     Path\t Alive\n");
@@ -649,7 +648,7 @@ static int cli(int argc,char **argv)
 									i,
 									OSUtils::jsonString(p[i]["ifname"],"-").c_str(),
 									OSUtils::jsonString(p[i]["path"],"-").c_str(),
-									OSUtils::jsonInt(p[i]["alive"],0));
+									(int)OSUtils::jsonInt(p[i]["alive"],0));
 							}
 							printf("\n        Latency     Jitter     Loss     Error        Speed   Alloc\n");
 							for(int i=0; i<80; i++) { printf("-"); }
@@ -662,8 +661,8 @@ static int cli(int argc,char **argv)
 									OSUtils::jsonDouble(p[i]["latencyVariance"], 0),
 									OSUtils::jsonDouble(p[i]["packetLossRatio"], 0),
 									OSUtils::jsonDouble(p[i]["packetErrorRatio"], 0),
-									OSUtils::jsonInt(p[i]["givenLinkSpeed"], 0),
-									OSUtils::jsonInt(p[i]["allocation"], 0));
+									(int)OSUtils::jsonInt(p[i]["givenLinkSpeed"], 0),
+									(int)OSUtils::jsonInt(p[i]["allocation"], 0));
 							}
 						}
 					}
@@ -1311,7 +1310,6 @@ static int cli(int argc,char **argv)
 		struct ifconf ifc;
 		char buf[1024];
 		char stringBuffer[128];
-		int success = 0;
 
 		int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
 

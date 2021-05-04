@@ -300,7 +300,6 @@ static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer)
 
 static void _bondToJson(nlohmann::json &pj, SharedPtr<Bond> &bond)
 {
-	char tmp[256];
 	uint64_t now = OSUtils::now();
 
 	int bondingPolicy = bond->getPolicy();
@@ -1259,7 +1258,7 @@ public:
 										_bondToJson(res,bond);
 										scode = 200;
 									} else {
-										fprintf(stderr, "unable to find bond to peer %llx\n", id);
+										fprintf(stderr, "unable to find bond to peer %llx\n", (unsigned long long)id);
 										scode = 400;
 									}
 								}
@@ -1466,7 +1465,7 @@ public:
 									if (bond) {
 										scode = bond->abForciblyRotateLink() ? 200 : 400;
 									} else {
-										fprintf(stderr, "unable to find bond to peer %llx\n", id);
+										fprintf(stderr, "unable to find bond to peer %llx\n", (unsigned long long)id);
 										scode = 400;
 									}
 								}
@@ -2391,7 +2390,7 @@ public:
 							Dictionary<4096> nc;
 							nc.load(nlcbuf.c_str());
 							Buffer<1024> allowManaged;
-							if (nc.get("allowManaged", allowManaged) && !allowManaged.size() == 0) {
+							if (nc.get("allowManaged", allowManaged) && allowManaged.size() > 0) {
 								std::string addresses (allowManaged.begin(), allowManaged.size());
 								if (allowManaged.size() <= 5) { // untidy parsing for backward compatibility
 									if (allowManaged[0] == '1' || allowManaged[0] == 't' || allowManaged[0] == 'T') {
