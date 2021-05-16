@@ -39,18 +39,27 @@ void MacDNSHelper::setDNS(uint64_t nwid, const char *domain, const std::vector<I
     sprintf(buf, "State:/Network/Service/%.16llx/DNS", nwid);
     CFStringRef key = CFStringCreateWithCString(NULL, buf, kCFStringEncodingUTF8);
     CFArrayRef list = SCDynamicStoreCopyKeyList(ds, key);
-
     CFIndex i = 0, j = CFArrayGetCount(list);
-    bool ret = TRUE;
-    if (j <= 0) {
-        ret &= SCDynamicStoreAddValue(ds, key, dict);
-    } else {
-        ret &= SCDynamicStoreSetValue(ds, (CFStringRef)CFArrayGetValueAtIndex(list, i), dict);
+    bool dnsServersChanged = true;
+    CFPropertyListRef oldDNSServers = NULL;
+    if (j > 0) {
+        oldDNSServers = SCDynamicStoreCopyValue(ds, (CFStringRef)CFArrayGetValueAtIndex(list, i));
+        dnsServersChanged = !CFEqual(oldDNSServers,dict);
     }
-    if (!ret) {
-        fprintf(stderr, "Error writing DNS configuration\n");
+    if (dnsServersChanged) {
+        bool ret = TRUE;
+        if (j <= 0) {
+            ret &= SCDynamicStoreAddValue(ds, key, dict);
+        } else {
+            ret &= SCDynamicStoreSetValue(ds, (CFStringRef)CFArrayGetValueAtIndex(list, i), dict);
+        }
+        if (!ret) {
+            fprintf(stderr, "Error writing DNS configuration\n");
+        }
     }
-
+    if (oldDNSServers != NULL) {
+        CFRelease(oldDNSServers);
+    }
     CFRelease(list);
     CFRelease(key);
     CFRelease(dict);
@@ -63,8 +72,8 @@ void MacDNSHelper::setDNS(uint64_t nwid, const char *domain, const std::vector<I
     delete[] s;
     CFRelease(ds);
 }
-    
-void MacDNSHelper::removeDNS(uint64_t nwid) 
+
+void MacDNSHelper::removeDNS(uint64_t nwid)
 {
     SCDynamicStoreRef ds = SCDynamicStoreCreate(NULL, CFSTR("zerotier"), NULL, NULL);
 

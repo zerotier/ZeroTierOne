@@ -22,20 +22,14 @@ namespace ZeroTier {
 /**
  * A protocol flow that is identified by the origin and destination port.
  */
-struct Flow
-{
+struct Flow {
 	/**
 	 * @param flowId Given flow ID
 	 * @param now Current time
 	 */
-	Flow(int32_t flowId, int64_t now) :
-		_flowId(flowId),
-		_bytesInPerUnitTime(0),
-		_bytesOutPerUnitTime(0),
-		_lastActivity(now),
-		_lastPathReassignment(0),
-		_assignedPath(SharedPtr<Path>())
-	{}
+	Flow(int32_t flowId, int64_t now) : _flowId(flowId), _bytesInPerUnitTime(0), _bytesOutPerUnitTime(0), _lastActivity(now), _lastPathReassignment(0), _assignedPath(SharedPtr<Path>())
+	{
+	}
 
 	/**
 	 * Reset flow statistics
@@ -49,36 +43,54 @@ struct Flow
 	/**
 	 * @return The Flow's ID
 	 */
-	int32_t id() { return _flowId; }
+	int32_t id()
+	{
+		return _flowId;
+	}
 
 	/**
 	 * @return Number of incoming bytes processed on this flow per unit time
 	 */
-	int64_t bytesInPerUnitTime() { return _bytesInPerUnitTime; }
+	int64_t bytesInPerUnitTime()
+	{
+		return _bytesInPerUnitTime;
+	}
 
 	/**
 	 * Record number of incoming bytes on this flow
 	 *
 	 * @param bytes Number of incoming bytes
 	 */
-	void recordIncomingBytes(uint64_t bytes) { _bytesInPerUnitTime += bytes; }
+	void recordIncomingBytes(uint64_t bytes)
+	{
+		_bytesInPerUnitTime += bytes;
+	}
 
 	/**
 	 * @return Number of outgoing bytes processed on this flow per unit time
 	 */
-	int64_t bytesOutPerUnitTime() { return _bytesOutPerUnitTime; }
+	int64_t bytesOutPerUnitTime()
+	{
+		return _bytesOutPerUnitTime;
+	}
 
 	/**
 	 * Record number of outgoing bytes on this flow
 	 *
 	 * @param bytes
 	 */
-	void recordOutgoingBytes(uint64_t bytes) { _bytesOutPerUnitTime += bytes; }
+	void recordOutgoingBytes(uint64_t bytes)
+	{
+		_bytesOutPerUnitTime += bytes;
+	}
 
 	/**
 	 * @return The total number of bytes processed on this flow
 	 */
-	uint64_t totalBytes() { return _bytesInPerUnitTime + _bytesOutPerUnitTime; }
+	uint64_t totalBytes()
+	{
+		return _bytesInPerUnitTime + _bytesOutPerUnitTime;
+	}
 
 	/**
 	 * How long since a packet was sent or received in this flow
@@ -86,24 +98,34 @@ struct Flow
 	 * @param now Current time
 	 * @return The age of the flow in terms of last recorded activity
 	 */
-	int64_t age(int64_t now) { return now - _lastActivity; }
+	int64_t age(int64_t now)
+	{
+		return now - _lastActivity;
+	}
 
 	/**
 	 * Record that traffic was processed on this flow at the given time.
 	 *
 	 * @param now Current time
 	 */
-	void updateActivity(int64_t now) { _lastActivity = now; }
+	void updateActivity(int64_t now)
+	{
+		_lastActivity = now;
+	}
 
 	/**
 	 * @return Path assigned to this flow
 	 */
-	SharedPtr<Path> assignedPath() { return _assignedPath; }
+	SharedPtr<Path> assignedPath()
+	{
+		return _assignedPath;
+	}
 
 	/**
 	 * @param path Assigned path over which this flow should be handled
 	 */
-	void assignPath(const SharedPtr<Path> &path, int64_t now) {
+	void assignPath(const SharedPtr<Path>& path, int64_t now)
+	{
 		_assignedPath = path;
 		_lastPathReassignment = now;
 	}
@@ -119,6 +141,6 @@ struct Flow
 	SharedPtr<Path> _previouslyAssignedPath;
 };
 
-} // namespace ZeroTier
+}	// namespace ZeroTier
 
 #endif
