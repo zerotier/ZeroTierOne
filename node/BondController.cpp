@@ -126,9 +126,7 @@ SharedPtr<Bond> BondController::createTransportTriggeredBond(const RuntimeEnviro
 		/**
 		 * Determine if user has specified anything that could affect the bonding policy's decisions
 		 */
-		if (_interfaceToLinkMap.count(bond->
-                                  
-                                  ())) {
+		if (_interfaceToLinkMap.count(bond->policyAlias())) {
 			std::map<std::string, SharedPtr<Link> >::iterator it = _interfaceToLinkMap[bond->policyAlias()].begin();
 			while (it != _interfaceToLinkMap[bond->policyAlias()].end()) {
 				if (it->second->isUserSpecified()) {
