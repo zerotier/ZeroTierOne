@@ -499,7 +499,6 @@ static int cli(int argc,char **argv)
 		}
 		/* zerotier-cli bond list */
 		if (arg1 == "list") {
-			fprintf(stderr, "zerotier-cli bond list\n");
 			const unsigned int scode = Http::GET(1024 * 1024 * 16,60000,(const struct sockaddr *)&addr,"/bonds",requestHeaders,responseHeaders,responseBody);
 			if (scode == 0) {
 				printf("Error connecting to the ZeroTier service: %s\n\nPlease check that the service is running and that TCP port 9993 can be contacted via 127.0.0.1." ZT_EOL_S, responseBody.c_str());
@@ -525,11 +524,11 @@ static int cli(int argc,char **argv)
 						for(unsigned long k=0;k<j.size();++k) {
 							nlohmann::json &p = j[k];
 							bool isBonded = p["isBonded"];
-							int8_t bondingPolicy = p["bondingPolicy"];
-							bool isHealthy = p["isHealthy"];
-							int8_t numAliveLinks = p["numAliveLinks"];
-							int8_t numTotalLinks = p["numTotalLinks"];
 							if (isBonded) {
+								int8_t bondingPolicy = p["bondingPolicy"];
+								bool isHealthy = p["isHealthy"];
+								int8_t numAliveLinks = p["numAliveLinks"];
+								int8_t numTotalLinks = p["numTotalLinks"];
 								bFoundBond = true;
 								std::string healthStr;
 								if (isHealthy) {
@@ -710,9 +709,7 @@ static int cli(int argc,char **argv)
 				if (j.is_array()) {
 					for(unsigned long k=0;k<j.size();++k) {
 						nlohmann::json &p = j[k];
-
 						bool isBonded = p["isBonded"];
-
 						if (isBonded) {
 							int8_t bondingPolicy = p["bondingPolicy"];
 							bool isHealthy = p["isHealthy"];
