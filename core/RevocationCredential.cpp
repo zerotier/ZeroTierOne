@@ -15,11 +15,11 @@
 
 namespace ZeroTier {
 
-bool RevocationCredential::sign(const Identity& signer) noexcept
+bool RevocationCredential::sign(const Identity &signer) noexcept
 {
     uint8_t buf[ZT_REVOCATION_MARSHAL_SIZE_MAX + 32];
     if (signer.hasPrivate()) {
-        m_signedBy = signer.address();
+        m_signedBy        = signer.address();
         m_signatureLength = signer.sign(buf, (unsigned int)marshal(buf, true), m_signature, sizeof(m_signature));
         return true;
     }
@@ -46,7 +46,7 @@ int RevocationCredential::marshal(uint8_t data[ZT_REVOCATION_MARSHAL_SIZE_MAX], 
     m_signedBy.copyTo(data + p);
     p += ZT_ADDRESS_LENGTH;
     data[p++] = (uint8_t)m_type;
-    if (! forSign) {
+    if (!forSign) {
         data[p++] = 1;
         Utils::storeBigEndian<uint16_t>(data + p, (uint16_t)m_signatureLength);
         Utils::copy(data + p, m_signature, m_signatureLength);
@@ -61,23 +61,23 @@ int RevocationCredential::marshal(uint8_t data[ZT_REVOCATION_MARSHAL_SIZE_MAX], 
     return p;
 }
 
-int RevocationCredential::unmarshal(const uint8_t* restrict data, const int len) noexcept
+int RevocationCredential::unmarshal(const uint8_t *restrict data, const int len) noexcept
 {
     if (len < 54)
         return -1;
     // 4 bytes reserved
-    m_id = Utils::loadBigEndian<uint32_t>(data + 4);
+    m_id        = Utils::loadBigEndian<uint32_t>(data + 4);
     m_networkId = Utils::loadBigEndian<uint64_t>(data + 8);
     // 4 bytes reserved
     m_credentialId = Utils::loadBigEndian<uint32_t>(data + 20);
-    m_threshold = (int64_t)Utils::loadBigEndian<uint64_t>(data + 24);
-    m_flags = Utils::loadBigEndian<uint64_t>(data + 32);
+    m_threshold    = (int64_t)Utils::loadBigEndian<uint64_t>(data + 24);
+    m_flags        = Utils::loadBigEndian<uint64_t>(data + 32);
     m_target.setTo(data + 40);
     m_signedBy.setTo(data + 45);
     m_type = (ZT_CredentialType)data[50];
     // 1 byte reserved
     m_signatureLength = Utils::loadBigEndian<uint16_t>(data + 52);
-    int p = 54 + (int)m_signatureLength;
+    int p             = 54 + (int)m_signatureLength;
     if ((m_signatureLength > ZT_SIGNATURE_BUFFER_SIZE) || (p > len))
         return -1;
     Utils::copy(m_signature, data + 54, m_signatureLength);

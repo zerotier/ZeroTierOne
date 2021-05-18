@@ -19,7 +19,9 @@
 
 namespace ZeroTier {
 
-CapabilityCredential::CapabilityCredential(const uint32_t id, const uint64_t nwid, const int64_t timestamp, const ZT_VirtualNetworkRule* const rules, const unsigned int ruleCount) noexcept
+CapabilityCredential::CapabilityCredential(
+    const uint32_t id, const uint64_t nwid, const int64_t timestamp, const ZT_VirtualNetworkRule *const rules,
+    const unsigned int ruleCount) noexcept
     : m_nwid(nwid)
     , m_timestamp(timestamp)
     , m_id(id)
@@ -32,11 +34,11 @@ CapabilityCredential::CapabilityCredential(const uint32_t id, const uint64_t nwi
     Utils::zero<sizeof(m_signature)>(m_signature);
 }
 
-bool CapabilityCredential::sign(const Identity& from, const Address& to) noexcept
+bool CapabilityCredential::sign(const Identity &from, const Address &to) noexcept
 {
     uint8_t buf[ZT_CAPABILITY_MARSHAL_SIZE_MAX + 16];
-    m_issuedTo = to;
-    m_signedBy = from.address();
+    m_issuedTo        = to;
+    m_signedBy        = from.address();
     m_signatureLength = from.sign(buf, (unsigned int)marshal(buf, true), m_signature, sizeof(m_signature));
     return m_signatureLength > 0;
 }
@@ -63,7 +65,7 @@ int CapabilityCredential::marshal(uint8_t data[ZT_CAPABILITY_MARSHAL_SIZE_MAX], 
     // chain length. This is deprecated so set the max chain length to one.
     data[p++] = (uint8_t)1;
 
-    if (! forSign) {
+    if (!forSign) {
         m_issuedTo.copyTo(data + p);
         m_signedBy.copyTo(data + p + ZT_ADDRESS_LENGTH);
         p += ZT_ADDRESS_LENGTH + ZT_ADDRESS_LENGTH;
@@ -89,14 +91,14 @@ int CapabilityCredential::marshal(uint8_t data[ZT_CAPABILITY_MARSHAL_SIZE_MAX], 
     return p;
 }
 
-int CapabilityCredential::unmarshal(const uint8_t* data, int len) noexcept
+int CapabilityCredential::unmarshal(const uint8_t *data, int len) noexcept
 {
     if (len < 22)
         return -1;
 
-    m_nwid = Utils::loadBigEndian<uint64_t>(data);
+    m_nwid      = Utils::loadBigEndian<uint64_t>(data);
     m_timestamp = (int64_t)Utils::loadBigEndian<uint64_t>(data + 8);
-    m_id = Utils::loadBigEndian<uint32_t>(data + 16);
+    m_id        = Utils::loadBigEndian<uint32_t>(data + 16);
 
     const unsigned int rc = Utils::loadBigEndian<uint16_t>(data + 20);
     if (rc > ZT_MAX_CAPABILITY_RULES)
@@ -120,7 +122,7 @@ int CapabilityCredential::unmarshal(const uint8_t* data, int len) noexcept
         const Address to(data + p);
         p += ZT_ADDRESS_LENGTH;
 
-        if (! to)
+        if (!to)
             break;
 
         m_issuedTo = to;
@@ -149,15 +151,14 @@ int CapabilityCredential::unmarshal(const uint8_t* data, int len) noexcept
     return p;
 }
 
-int CapabilityCredential::marshalVirtualNetworkRules(uint8_t* data, const ZT_VirtualNetworkRule* const rules, const unsigned int ruleCount) noexcept
+int CapabilityCredential::marshalVirtualNetworkRules(
+    uint8_t *data, const ZT_VirtualNetworkRule *const rules, const unsigned int ruleCount) noexcept
 {
     int p = 0;
     for (unsigned int i = 0; i < ruleCount; ++i) {
         data[p++] = rules[i].t;
         switch ((ZT_VirtualNetworkRuleType)(rules[i].t & 0x3fU)) {
-            default:
-                data[p++] = 0;
-                break;
+            default: data[p++] = 0; break;
             case ZT_NETWORK_RULE_ACTION_TEE:
             case ZT_NETWORK_RULE_ACTION_WATCH:
             case ZT_NETWORK_RULE_ACTION_REDIRECT:
@@ -197,10 +198,10 @@ int CapabilityCredential::marshalVirtualNetworkRules(uint8_t* data, const ZT_Vir
             case ZT_NETWORK_RULE_MATCH_IPV4_SOURCE:
             case ZT_NETWORK_RULE_MATCH_IPV4_DEST:
                 data[p++] = 5;
-                data[p++] = reinterpret_cast<const uint8_t*>(&(rules[i].v.ipv4.ip))[0];
-                data[p++] = reinterpret_cast<const uint8_t*>(&(rules[i].v.ipv4.ip))[1];
-                data[p++] = reinterpret_cast<const uint8_t*>(&(rules[i].v.ipv4.ip))[2];
-                data[p++] = reinterpret_cast<const uint8_t*>(&(rules[i].v.ipv4.ip))[3];
+                data[p++] = reinterpret_cast<const uint8_t *>(&(rules[i].v.ipv4.ip))[0];
+                data[p++] = reinterpret_cast<const uint8_t *>(&(rules[i].v.ipv4.ip))[1];
+                data[p++] = reinterpret_cast<const uint8_t *>(&(rules[i].v.ipv4.ip))[2];
+                data[p++] = reinterpret_cast<const uint8_t *>(&(rules[i].v.ipv4.ip))[3];
                 data[p++] = rules[i].v.ipv4.mask;
                 break;
             case ZT_NETWORK_RULE_MATCH_IPV6_SOURCE:
@@ -273,7 +274,8 @@ int CapabilityCredential::marshalVirtualNetworkRules(uint8_t* data, const ZT_Vir
                 data[p++] = 19;
                 Utils::storeBigEndian<uint64_t>(data + p, rules[i].v.intRange.start);
                 p += 8;
-                Utils::storeBigEndian<uint64_t>(data + p, rules[i].v.intRange.start + (uint64_t)rules[i].v.intRange.end);
+                Utils::storeBigEndian<uint64_t>(
+                    data + p, rules[i].v.intRange.start + (uint64_t)rules[i].v.intRange.end);
                 p += 8;
                 Utils::storeBigEndian<uint16_t>(data + p, rules[i].v.intRange.idx);
                 p += 2;
@@ -284,9 +286,11 @@ int CapabilityCredential::marshalVirtualNetworkRules(uint8_t* data, const ZT_Vir
     return p;
 }
 
-int CapabilityCredential::unmarshalVirtualNetworkRules(const uint8_t* const data, const int len, ZT_VirtualNetworkRule* const rules, unsigned int& ruleCount, const unsigned int maxRuleCount) noexcept
+int CapabilityCredential::unmarshalVirtualNetworkRules(
+    const uint8_t *const data, const int len, ZT_VirtualNetworkRule *const rules, unsigned int &ruleCount,
+    const unsigned int maxRuleCount) noexcept
 {
-    int p = 0;
+    int p           = 0;
     unsigned int rc = 0;
     while (rc < maxRuleCount) {
         if (p >= len)
@@ -296,8 +300,7 @@ int CapabilityCredential::unmarshalVirtualNetworkRules(const uint8_t* const data
         if ((p + fieldLen) > len)
             return -1;
         switch ((ZT_VirtualNetworkRuleType)(rules[ruleCount].t & 0x3fU)) {
-            default:
-                break;
+            default: break;
             case ZT_NETWORK_RULE_ACTION_TEE:
             case ZT_NETWORK_RULE_ACTION_WATCH:
             case ZT_NETWORK_RULE_ACTION_REDIRECT:
@@ -359,7 +362,7 @@ int CapabilityCredential::unmarshalVirtualNetworkRules(const uint8_t* const data
             case ZT_NETWORK_RULE_MATCH_IP_TOS:
                 if ((p + 3) > len)
                     return -1;
-                rules[ruleCount].v.ipTos.mask = data[p++];
+                rules[ruleCount].v.ipTos.mask     = data[p++];
                 rules[ruleCount].v.ipTos.value[0] = data[p++];
                 rules[ruleCount].v.ipTos.value[1] = data[p++];
                 break;
@@ -377,8 +380,8 @@ int CapabilityCredential::unmarshalVirtualNetworkRules(const uint8_t* const data
             case ZT_NETWORK_RULE_MATCH_ICMP:
                 if ((p + 3) > len)
                     return -1;
-                rules[ruleCount].v.icmp.type = data[p++];
-                rules[ruleCount].v.icmp.code = data[p++];
+                rules[ruleCount].v.icmp.type  = data[p++];
+                rules[ruleCount].v.icmp.code  = data[p++];
                 rules[ruleCount].v.icmp.flags = data[p++];
                 break;
             case ZT_NETWORK_RULE_MATCH_IP_SOURCE_PORT_RANGE:
@@ -429,7 +432,8 @@ int CapabilityCredential::unmarshalVirtualNetworkRules(const uint8_t* const data
                     return -1;
                 rules[ruleCount].v.intRange.start = Utils::loadBigEndian<uint64_t>(data + p);
                 p += 8;
-                rules[ruleCount].v.intRange.end = (uint32_t)(Utils::loadBigEndian<uint64_t>(data + p) - rules[ruleCount].v.intRange.start);
+                rules[ruleCount].v.intRange.end =
+                    (uint32_t)(Utils::loadBigEndian<uint64_t>(data + p) - rules[ruleCount].v.intRange.start);
                 p += 8;
                 rules[ruleCount].v.intRange.idx = Utils::loadBigEndian<uint16_t>(data + p);
                 p += 2;

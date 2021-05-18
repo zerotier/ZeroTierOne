@@ -76,32 +76,32 @@ ARMCapabilities::ARMCapabilities() noexcept
 {
 #ifdef __APPLE__
 
-    this->aes = true;
+    this->aes   = true;
     this->crc32 = true;
     this->pmull = true;
-    this->sha1 = true;
-    this->sha2 = true;
+    this->sha1  = true;
+    this->sha2  = true;
 
 #else
 
 #ifdef __LINUX__
 #ifdef HWCAP2_AES
-    if (sizeof(void*) == 4) {
+    if (sizeof(void *) == 4) {
         const long hwcaps2 = getauxval(AT_HWCAP2);
-        this->aes = (hwcaps2 & HWCAP2_AES) != 0;
-        this->crc32 = (hwcaps2 & HWCAP2_CRC32) != 0;
-        this->pmull = (hwcaps2 & HWCAP2_PMULL) != 0;
-        this->sha1 = (hwcaps2 & HWCAP2_SHA1) != 0;
-        this->sha2 = (hwcaps2 & HWCAP2_SHA2) != 0;
+        this->aes          = (hwcaps2 & HWCAP2_AES) != 0;
+        this->crc32        = (hwcaps2 & HWCAP2_CRC32) != 0;
+        this->pmull        = (hwcaps2 & HWCAP2_PMULL) != 0;
+        this->sha1         = (hwcaps2 & HWCAP2_SHA1) != 0;
+        this->sha2         = (hwcaps2 & HWCAP2_SHA2) != 0;
     }
     else {
 #endif
         const long hwcaps = getauxval(AT_HWCAP);
-        this->aes = (hwcaps & HWCAP_AES) != 0;
-        this->crc32 = (hwcaps & HWCAP_CRC32) != 0;
-        this->pmull = (hwcaps & HWCAP_PMULL) != 0;
-        this->sha1 = (hwcaps & HWCAP_SHA1) != 0;
-        this->sha2 = (hwcaps & HWCAP_SHA2) != 0;
+        this->aes         = (hwcaps & HWCAP_AES) != 0;
+        this->crc32       = (hwcaps & HWCAP_CRC32) != 0;
+        this->pmull       = (hwcaps & HWCAP_PMULL) != 0;
+        this->sha1        = (hwcaps & HWCAP_SHA1) != 0;
+        this->sha2        = (hwcaps & HWCAP_SHA2) != 0;
 #ifdef HWCAP2_AES
     }
 #endif
@@ -130,8 +130,8 @@ CPUIDRegisters::CPUIDRegisters() noexcept
 #endif
 
     rdrand = ((ecx & (1U << 30U)) != 0);
-    aes = (((ecx & (1U << 25U)) != 0) && ((ecx & (1U << 19U)) != 0) && ((ecx & (1U << 1U)) != 0));
-    avx = ((ecx & (1U << 25U)) != 0);
+    aes    = (((ecx & (1U << 25U)) != 0) && ((ecx & (1U << 19U)) != 0) && ((ecx & (1U << 1U)) != 0));
+    avx    = ((ecx & (1U << 25U)) != 0);
 
 #ifdef __WINDOWS__
     __cpuid(regs, 7);
@@ -143,12 +143,12 @@ CPUIDRegisters::CPUIDRegisters() noexcept
     __asm__ __volatile__("cpuid" : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx) : "a"(7), "c"(0));
 #endif
 
-    vaes = aes && avx && ((ecx & (1U << 9U)) != 0);
+    vaes       = aes && avx && ((ecx & (1U << 9U)) != 0);
     vpclmulqdq = aes && avx && ((ecx & (1U << 10U)) != 0);
-    avx2 = avx && ((ebx & (1U << 5U)) != 0);
-    avx512f = avx && ((ebx & (1U << 16U)) != 0);
-    sha = ((ebx & (1U << 29U)) != 0);
-    fsrm = ((edx & (1U << 4U)) != 0);
+    avx2       = avx && ((ebx & (1U << 5U)) != 0);
+    avx512f    = avx && ((ebx & (1U << 16U)) != 0);
+    sha        = ((ebx & (1U << 29U)) != 0);
+    fsrm       = ((edx & (1U << 4U)) != 0);
 }
 
 const CPUIDRegisters CPUID;
@@ -157,27 +157,27 @@ const CPUIDRegisters CPUID;
 const std::bad_alloc BadAllocException;
 const std::out_of_range OutOfRangeException("access out of range");
 const uint64_t ZERO256[4] = { 0, 0, 0, 0 };
-const char HEXCHARS[16] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
+const char HEXCHARS[16]   = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
 const uint64_t s_mapNonce = getSecureRandomU64();
 
-bool secureEq(const void* const a, const void* const b, const unsigned int len) noexcept
+bool secureEq(const void *const a, const void *const b, const unsigned int len) noexcept
 {
     uint8_t diff = 0;
     for (unsigned int i = 0; i < len; ++i)
-        diff |= ((reinterpret_cast<const uint8_t*>(a))[i] ^ (reinterpret_cast<const uint8_t*>(b))[i]);
+        diff |= ((reinterpret_cast<const uint8_t *>(a))[i] ^ (reinterpret_cast<const uint8_t *>(b))[i]);
     return (diff == 0);
 }
 
-void burn(volatile void* const ptr, const unsigned int len)
+void burn(volatile void *const ptr, const unsigned int len)
 {
     static volatile uintptr_t foo = 0;
-    Utils::zero((void*)ptr, len);
+    Utils::zero((void *)ptr, len);
     // Force compiler not to optimize this function out by taking a volatile
     // parameter and also updating a volatile variable.
-    foo += (uintptr_t)len ^ (uintptr_t) reinterpret_cast<volatile uint8_t*>(ptr)[0];
+    foo += (uintptr_t)len ^ (uintptr_t) reinterpret_cast<volatile uint8_t *>(ptr)[0];
 }
 
-static unsigned long s_decimalRecursive(unsigned long n, char* s)
+static unsigned long s_decimalRecursive(unsigned long n, char *s)
 {
     if (n == 0)
         return 0;
@@ -188,7 +188,7 @@ static unsigned long s_decimalRecursive(unsigned long n, char* s)
     return pos + 1;
 }
 
-char* decimal(unsigned long n, char s[24]) noexcept
+char *decimal(unsigned long n, char s[24]) noexcept
 {
     if (n == 0) {
         s[0] = '0';
@@ -199,17 +199,17 @@ char* decimal(unsigned long n, char s[24]) noexcept
     return s;
 }
 
-char* hex(uint64_t i, char buf[17]) noexcept
+char *hex(uint64_t i, char buf[17]) noexcept
 {
     if (i != 0) {
-        char* p = nullptr;
+        char *p = nullptr;
         for (int b = 60; b >= 0; b -= 4) {
             const unsigned int nyb = (unsigned int)(i >> (unsigned int)b) & 0xfU;
             if (p) {
                 *(p++) = HEXCHARS[nyb];
             }
             else if (nyb != 0) {
-                p = buf;
+                p      = buf;
                 *(p++) = HEXCHARS[nyb];
             }
         }
@@ -223,14 +223,14 @@ char* hex(uint64_t i, char buf[17]) noexcept
     }
 }
 
-uint64_t unhex(const char* s) noexcept
+uint64_t unhex(const char *s) noexcept
 {
     uint64_t n = 0;
     if (s) {
         int k = 0;
         while (k < 16) {
             char hc = *(s++);
-            if (! hc)
+            if (!hc)
                 break;
 
             uint8_t c = 0;
@@ -249,27 +249,27 @@ uint64_t unhex(const char* s) noexcept
     return n;
 }
 
-char* hex(const void* d, unsigned int l, char* s) noexcept
+char *hex(const void *d, unsigned int l, char *s) noexcept
 {
-    char* const save = s;
+    char *const save = s;
     for (unsigned int i = 0; i < l; ++i) {
-        const unsigned int b = reinterpret_cast<const uint8_t*>(d)[i];
-        *(s++) = HEXCHARS[b >> 4U];
-        *(s++) = HEXCHARS[b & 0xfU];
+        const unsigned int b = reinterpret_cast<const uint8_t *>(d)[i];
+        *(s++)               = HEXCHARS[b >> 4U];
+        *(s++)               = HEXCHARS[b & 0xfU];
     }
     *s = (char)0;
     return save;
 }
 
-unsigned int unhex(const char* h, unsigned int hlen, void* buf, unsigned int buflen) noexcept
+unsigned int unhex(const char *h, unsigned int hlen, void *buf, unsigned int buflen) noexcept
 {
-    unsigned int l = 0;
-    const char* hend = h + hlen;
+    unsigned int l   = 0;
+    const char *hend = h + hlen;
     while (l < buflen) {
         if (h == hend)
             break;
-        uint8_t hc = *(reinterpret_cast<const uint8_t*>(h++));
-        if (! hc)
+        uint8_t hc = *(reinterpret_cast<const uint8_t *>(h++));
+        if (!hc)
             break;
 
         uint8_t c = 0;
@@ -282,8 +282,8 @@ unsigned int unhex(const char* h, unsigned int hlen, void* buf, unsigned int buf
 
         if (h == hend)
             break;
-        hc = *(reinterpret_cast<const uint8_t*>(h++));
-        if (! hc)
+        hc = *(reinterpret_cast<const uint8_t *>(h++));
+        if (!hc)
             break;
 
         c <<= 4U;
@@ -294,7 +294,7 @@ unsigned int unhex(const char* h, unsigned int hlen, void* buf, unsigned int buf
         else if ((hc >= 65) && (hc <= 70))
             c |= hc - 55;
 
-        reinterpret_cast<uint8_t*>(buf)[l++] = c;
+        reinterpret_cast<uint8_t *>(buf)[l++] = c;
     }
     return l;
 }
@@ -302,7 +302,7 @@ unsigned int unhex(const char* h, unsigned int hlen, void* buf, unsigned int buf
 #define ZT_GETSECURERANDOM_STATE_SIZE               64
 #define ZT_GETSECURERANDOM_ITERATIONS_PER_GENERATOR 1048576
 
-void getSecureRandom(void* const buf, unsigned int bytes) noexcept
+void getSecureRandom(void *const buf, unsigned int bytes) noexcept
 {
     static Mutex globalLock;
     static bool initialized = false;
@@ -320,16 +320,16 @@ void getSecureRandom(void* const buf, unsigned int bytes) noexcept
     if (unlikely(randomByteCounter >= ZT_GETSECURERANDOM_ITERATIONS_PER_GENERATOR)) {
         randomByteCounter = 0;
 
-        if (unlikely(! initialized)) {
+        if (unlikely(!initialized)) {
             initialized = true;
             Utils::zero<sizeof(randomState)>(randomState);
 #ifdef __WINDOWS__
             HCRYPTPROV cryptProvider = NULL;
-            if (! CryptAcquireContextA(&cryptProvider, NULL, NULL, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT | CRYPT_SILENT)) {
+            if (!CryptAcquireContextA(&cryptProvider, NULL, NULL, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT | CRYPT_SILENT)) {
                 fprintf(stderr, "FATAL: Utils::getSecureRandom() unable to obtain WinCrypt context!\r\n");
                 exit(1);
             }
-            if (! CryptGenRandom(cryptProvider, (DWORD)sizeof(randomState), (BYTE*)randomState)) {
+            if (!CryptGenRandom(cryptProvider, (DWORD)sizeof(randomState), (BYTE *)randomState)) {
                 fprintf(stderr, "FATAL: Utils::getSecureRandom() CryptGenRandom failed!\r\n");
                 exit(1);
             }
@@ -355,7 +355,7 @@ void getSecureRandom(void* const buf, unsigned int bytes) noexcept
             if (CPUID.rdrand) {
                 uint64_t tmp = 0;
                 for (unsigned long i = 0; i < ZT_GETSECURERANDOM_STATE_SIZE; ++i) {
-                    _rdrand64_step((unsigned long long*)&tmp);
+                    _rdrand64_step((unsigned long long *)&tmp);
                     randomState[i] ^= tmp;
                 }
             }
@@ -373,8 +373,8 @@ void getSecureRandom(void* const buf, unsigned int bytes) noexcept
     // Generate random bytes using AES and bytes 32-48 of randomState as an in-place
     // AES-CTR counter. Counter can be machine endian; we don't care about portability
     // for a random generator.
-    uint64_t* const ctr = randomState + 4;
-    uint8_t* out = reinterpret_cast<uint8_t*>(buf);
+    uint64_t *const ctr = randomState + 4;
+    uint8_t *out        = reinterpret_cast<uint8_t *>(buf);
 
     while (bytes >= 16) {
         ++*ctr;
@@ -400,7 +400,7 @@ uint64_t getSecureRandomU64() noexcept
     return tmp;
 }
 
-int b32e(const uint8_t* data, int length, char* result, int bufSize) noexcept
+int b32e(const uint8_t *data, int length, char *result, int bufSize) noexcept
 {
     if (length < 0 || length > (1 << 28U)) {
         result[0] = (char)0;
@@ -408,8 +408,8 @@ int b32e(const uint8_t* data, int length, char* result, int bufSize) noexcept
     }
     int count = 0;
     if (length > 0) {
-        int buffer = data[0];
-        int next = 1;
+        int buffer   = data[0];
+        int next     = 1;
         int bitsLeft = 8;
         while (count < bufSize && (bitsLeft > 0 || next < length)) {
             if (bitsLeft < 5) {
@@ -437,12 +437,12 @@ int b32e(const uint8_t* data, int length, char* result, int bufSize) noexcept
     return -1;
 }
 
-int b32d(const char* encoded, uint8_t* result, int bufSize) noexcept
+int b32d(const char *encoded, uint8_t *result, int bufSize) noexcept
 {
-    int buffer = 0;
+    int buffer   = 0;
     int bitsLeft = 0;
-    int count = 0;
-    for (const uint8_t* ptr = (const uint8_t*)encoded; count < bufSize && *ptr; ++ptr) {
+    int count    = 0;
+    for (const uint8_t *ptr = (const uint8_t *)encoded; count < bufSize && *ptr; ++ptr) {
         uint8_t ch = *ptr;
         if (ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n' || ch == '-' || ch == '.') {
             continue;
@@ -489,19 +489,19 @@ uint64_t random() noexcept
     static volatile uint64_t s_s3 = getSecureRandomU64();
 
     // https://en.wikipedia.org/wiki/Xorshift#xoshiro256**
-    uint64_t s0 = s_s0;
-    uint64_t s1 = s_s1;
-    uint64_t s2 = s_s2;
-    uint64_t s3 = s_s3;
-    const uint64_t s1x5 = s1 * 5ULL;
+    uint64_t s0           = s_s0;
+    uint64_t s1           = s_s1;
+    uint64_t s2           = s_s2;
+    uint64_t s3           = s_s3;
+    const uint64_t s1x5   = s1 * 5ULL;
     const uint64_t result = ((s1x5 << 7U) | (s1x5 >> 57U)) * 9ULL;
-    const uint64_t t = s1 << 17U;
+    const uint64_t t      = s1 << 17U;
     s2 ^= s0;
     s3 ^= s1;
     s1 ^= s2;
     s0 ^= s3;
     s2 ^= t;
-    s3 = ((s3 << 45U) | (s3 >> 19U));
+    s3   = ((s3 << 45U) | (s3 >> 19U));
     s_s0 = s0;
     s_s1 = s1;
     s_s2 = s2;
@@ -510,7 +510,7 @@ uint64_t random() noexcept
     return result;
 }
 
-bool scopy(char* const dest, const unsigned int len, const char* const src) noexcept
+bool scopy(char *const dest, const unsigned int len, const char *const src) noexcept
 {
     if (unlikely((len == 0) || (dest == nullptr))) {
         return false;
@@ -532,12 +532,12 @@ bool scopy(char* const dest, const unsigned int len, const char* const src) noex
     }
 }
 
-uint32_t fnv1a32(const void* const restrict data, const unsigned int len) noexcept
+uint32_t fnv1a32(const void *const restrict data, const unsigned int len) noexcept
 {
-    uint32_t h = 0x811c9dc5;
+    uint32_t h       = 0x811c9dc5;
     const uint32_t p = 0x01000193;
     for (unsigned int i = 0; i < len; ++i)
-        h = (h ^ (uint32_t) reinterpret_cast<const uint8_t*>(data)[i]) * p;
+        h = (h ^ (uint32_t) reinterpret_cast<const uint8_t *>(data)[i]) * p;
     return h;
 }
 

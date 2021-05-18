@@ -156,7 +156,7 @@ struct NetworkConfig : TriviallyCopyable {
      * @param d Dictionary
      * @return True if dictionary was successfully created, false if e.g. overflow
      */
-    bool toDictionary(Dictionary& d) const;
+    bool toDictionary(Dictionary &d) const;
 
     /**
      * Read this network config from a dictionary
@@ -164,7 +164,7 @@ struct NetworkConfig : TriviallyCopyable {
      * @param d Dictionary (non-const since it might be modified during parse, should not be used after call)
      * @return True if dictionary was valid and network config successfully initialized
      */
-    bool fromDictionary(const Dictionary& d);
+    bool fromDictionary(const Dictionary &d);
 
     /**
      * @return True if broadcast (ff:ff:ff:ff:ff:ff) address should work on this network
@@ -185,27 +185,22 @@ struct NetworkConfig : TriviallyCopyable {
     /**
      * @return Network type is public (no access control)
      */
-    ZT_INLINE bool isPublic() const noexcept
-    {
-        return (this->type == ZT_NETWORK_TYPE_PUBLIC);
-    }
+    ZT_INLINE bool isPublic() const noexcept { return (this->type == ZT_NETWORK_TYPE_PUBLIC); }
 
     /**
      * @return Network type is private (certificate access control)
      */
-    ZT_INLINE bool isPrivate() const noexcept
-    {
-        return (this->type == ZT_NETWORK_TYPE_PRIVATE);
-    }
+    ZT_INLINE bool isPrivate() const noexcept { return (this->type == ZT_NETWORK_TYPE_PRIVATE); }
 
     /**
      * @param fromPeer Peer attempting to bridge other Ethernet peers onto network
      * @return True if this network allows bridging
      */
-    ZT_INLINE bool permitsBridging(const Address& fromPeer) const noexcept
+    ZT_INLINE bool permitsBridging(const Address &fromPeer) const noexcept
     {
         for (unsigned int i = 0; i < specialistCount; ++i) {
-            if ((fromPeer.toInt() == (specialists[i] & ZT_ADDRESS_MASK)) && ((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE) != 0))
+            if ((fromPeer.toInt() == (specialists[i] & ZT_ADDRESS_MASK))
+                && ((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE) != 0))
                 return true;
         }
         return false;
@@ -215,15 +210,12 @@ struct NetworkConfig : TriviallyCopyable {
     {
         return (networkId != 0);
     }   // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
-    ZT_INLINE bool operator==(const NetworkConfig& nc) const noexcept
+    ZT_INLINE bool operator==(const NetworkConfig &nc) const noexcept
     {
         return (memcmp(this, &nc, sizeof(NetworkConfig)) == 0);
     }
 
-    ZT_INLINE bool operator!=(const NetworkConfig& nc) const noexcept
-    {
-        return (! (*this == nc));
-    }
+    ZT_INLINE bool operator!=(const NetworkConfig &nc) const noexcept { return (!(*this == nc)); }
 
     /**
      * Add a specialist or mask flags if already present
@@ -235,9 +227,9 @@ struct NetworkConfig : TriviallyCopyable {
      * @param f Flags (OR of specialist role/type flags)
      * @return True if successfully masked or added
      */
-    bool addSpecialist(const Address& a, uint64_t f) noexcept;
+    bool addSpecialist(const Address &a, uint64_t f) noexcept;
 
-    ZT_INLINE const CapabilityCredential* capability(const uint32_t id) const
+    ZT_INLINE const CapabilityCredential *capability(const uint32_t id) const
     {
         for (unsigned int i = 0; i < capabilityCount; ++i) {
             if (capabilities[i].id() == id)
@@ -246,7 +238,7 @@ struct NetworkConfig : TriviallyCopyable {
         return nullptr;
     }
 
-    ZT_INLINE const TagCredential* tag(const uint32_t id) const
+    ZT_INLINE const TagCredential *tag(const uint32_t id) const
     {
         for (unsigned int i = 0; i < tagCount; ++i) {
             if (tags[i].id() == id)

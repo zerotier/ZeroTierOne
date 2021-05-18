@@ -30,7 +30,12 @@ struct InetAddress;
  */
 class NetworkController {
   public:
-    enum ErrorCode { NC_ERROR_NONE = 0, NC_ERROR_OBJECT_NOT_FOUND = 1, NC_ERROR_ACCESS_DENIED = 2, NC_ERROR_INTERNAL_SERVER_ERROR = 3 };
+    enum ErrorCode {
+        NC_ERROR_NONE                  = 0,
+        NC_ERROR_OBJECT_NOT_FOUND      = 1,
+        NC_ERROR_ACCESS_DENIED         = 2,
+        NC_ERROR_INTERNAL_SERVER_ERROR = 3
+    };
 
     /**
      * Interface for sender used to send pushes and replies
@@ -47,7 +52,9 @@ class NetworkController {
          * @param nc Network configuration to send
          * @param sendLegacyFormatConfig If true, send an old-format network config
          */
-        virtual void ncSendConfig(void* tPtr, int64_t clock, int64_t ticks, uint64_t nwid, uint64_t requestPacketId, const Address& destination, const NetworkConfig& nc, bool sendLegacyFormatConfig) = 0;
+        virtual void ncSendConfig(
+            void *tPtr, int64_t clock, int64_t ticks, uint64_t nwid, uint64_t requestPacketId,
+            const Address &destination, const NetworkConfig &nc, bool sendLegacyFormatConfig) = 0;
 
         /**
          * Send revocation to a node
@@ -55,7 +62,8 @@ class NetworkController {
          * @param destination Destination node address
          * @param rev Revocation to send
          */
-        virtual void ncSendRevocation(void* tPtr, int64_t clock, int64_t ticks, const Address& destination, const RevocationCredential& rev) = 0;
+        virtual void ncSendRevocation(
+            void *tPtr, int64_t clock, int64_t ticks, const Address &destination, const RevocationCredential &rev) = 0;
 
         /**
          * Send a network configuration request error
@@ -65,15 +73,13 @@ class NetworkController {
          * @param destination Destination peer Address
          * @param errorCode Error code
          */
-        virtual void ncSendError(void* tPtr, int64_t clock, int64_t ticks, uint64_t nwid, uint64_t requestPacketId, const Address& destination, NetworkController::ErrorCode errorCode) = 0;
+        virtual void ncSendError(
+            void *tPtr, int64_t clock, int64_t ticks, uint64_t nwid, uint64_t requestPacketId,
+            const Address &destination, NetworkController::ErrorCode errorCode) = 0;
     };
 
-    NetworkController()
-    {
-    }
-    virtual ~NetworkController()
-    {
-    }
+    NetworkController() {}
+    virtual ~NetworkController() {}
 
     /**
      * Called when this is added to a Node to initialize and supply info
@@ -81,7 +87,7 @@ class NetworkController {
      * @param signingId Identity for signing of network configurations, certs, etc.
      * @param sender Sender implementation for sending replies or config pushes
      */
-    virtual void init(const Identity& signingId, Sender* sender) = 0;
+    virtual void init(const Identity &signingId, Sender *sender) = 0;
 
     /**
      * Handle a network configuration request
@@ -93,7 +99,9 @@ class NetworkController {
      * @param metaData Meta-data bundled with request (if any)
      * @return Returns NETCONF_QUERY_OK if result 'nc' is valid, or an error code on error
      */
-    virtual void request(uint64_t nwid, const InetAddress& fromAddr, uint64_t requestPacketId, const Identity& identity, const Dictionary& metaData) = 0;
+    virtual void request(
+        uint64_t nwid, const InetAddress &fromAddr, uint64_t requestPacketId, const Identity &identity,
+        const Dictionary &metaData) = 0;
 };
 
 }   // namespace ZeroTier

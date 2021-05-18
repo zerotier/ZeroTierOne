@@ -27,8 +27,9 @@
 #define ZT_IDENTITY_STRING_BUFFER_LENGTH           1024
 #define ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE  (7 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE + ZT_ECC384_PUBLIC_KEY_SIZE)
 #define ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE (ZT_C25519_COMBINED_PRIVATE_KEY_SIZE + ZT_ECC384_PRIVATE_KEY_SIZE)
-#define ZT_IDENTITY_MARSHAL_SIZE_MAX               (ZT_ADDRESS_LENGTH + 4 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE)
-#define ZT_IDENTITY_TYPE1_MIMC52_ROUNDS            262144
+#define ZT_IDENTITY_MARSHAL_SIZE_MAX                                                                                   \
+    (ZT_ADDRESS_LENGTH + 4 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE)
+#define ZT_IDENTITY_TYPE1_MIMC52_ROUNDS 262144
 
 namespace ZeroTier {
 
@@ -51,7 +52,7 @@ class Identity : public TriviallyCopyable {
      */
     enum Type {
         C25519 = ZT_IDENTITY_TYPE_C25519,   // Type 0 -- Curve25519 and Ed25519 (1.x and 2.x, default)
-        P384 = ZT_IDENTITY_TYPE_P384        // Type 1 -- NIST P-384 with linked Curve25519/Ed25519 secondaries (2.x+)
+        P384   = ZT_IDENTITY_TYPE_P384      // Type 1 -- NIST P-384 with linked Curve25519/Ed25519 secondaries (2.x+)
     };
 
     /**
@@ -59,15 +60,9 @@ class Identity : public TriviallyCopyable {
      */
     static const Identity NIL;
 
-    ZT_INLINE Identity() noexcept
-    {
-        memoryZero(this);
-    }
+    ZT_INLINE Identity() noexcept { memoryZero(this); }
 
-    ZT_INLINE Identity(const Identity& id) noexcept
-    {
-        Utils::copy<sizeof(Identity)>(this, &id);
-    }
+    ZT_INLINE Identity(const Identity &id) noexcept { Utils::copy<sizeof(Identity)>(this, &id); }
 
     /**
      * Construct identity from string
@@ -77,17 +72,11 @@ class Identity : public TriviallyCopyable {
      *
      * @param str Identity in canonical string format
      */
-    explicit ZT_INLINE Identity(const char* str)
-    {
-        fromString(str);
-    }
+    explicit ZT_INLINE Identity(const char *str) { fromString(str); }
 
-    ZT_INLINE ~Identity()
-    {
-        Utils::burn(reinterpret_cast<void*>(&this->m_priv), sizeof(this->m_priv));
-    }
+    ZT_INLINE ~Identity() { Utils::burn(reinterpret_cast<void *>(&this->m_priv), sizeof(this->m_priv)); }
 
-    ZT_INLINE Identity& operator=(const Identity& id) noexcept
+    ZT_INLINE Identity &operator=(const Identity &id) noexcept
     {
         if (likely(this != &id))
             Utils::copy<sizeof(Identity)>(this, &id);
@@ -97,18 +86,12 @@ class Identity : public TriviallyCopyable {
     /**
      * Set identity to NIL value (all zero)
      */
-    ZT_INLINE void zero() noexcept
-    {
-        memoryZero(this);
-    }
+    ZT_INLINE void zero() noexcept { memoryZero(this); }
 
     /**
      * @return Identity type (undefined if identity is null or invalid)
      */
-    ZT_INLINE Type type() const noexcept
-    {
-        return m_type;
-    }
+    ZT_INLINE Type type() const noexcept { return m_type; }
 
     /**
      * Generate a new identity (address, key pair)
@@ -134,26 +117,17 @@ class Identity : public TriviallyCopyable {
     /**
      * @return True if this identity contains a private key
      */
-    ZT_INLINE bool hasPrivate() const noexcept
-    {
-        return m_hasPrivate;
-    }
+    ZT_INLINE bool hasPrivate() const noexcept { return m_hasPrivate; }
 
     /**
      * @return This identity's address
      */
-    ZT_INLINE Address address() const noexcept
-    {
-        return Address(m_fp.address);
-    }
+    ZT_INLINE Address address() const noexcept { return Address(m_fp.address); }
 
     /**
      * @return Full fingerprint of this identity (address plus SHA384 of keys)
      */
-    ZT_INLINE const Fingerprint& fingerprint() const noexcept
-    {
-        return m_fp;
-    }
+    ZT_INLINE const Fingerprint &fingerprint() const noexcept { return m_fp; }
 
     /**
      * Compute a hash of this identity's public and private keys.
@@ -176,7 +150,7 @@ class Identity : public TriviallyCopyable {
      * @param siglen Length of buffer
      * @return Number of bytes actually written to sig or 0 on error
      */
-    unsigned int sign(const void* data, unsigned int len, void* sig, unsigned int siglen) const;
+    unsigned int sign(const void *data, unsigned int len, void *sig, unsigned int siglen) const;
 
     /**
      * Verify a message signature against this identity
@@ -187,7 +161,7 @@ class Identity : public TriviallyCopyable {
      * @param siglen Length of signature in bytes
      * @return True if signature validates and data integrity checks
      */
-    bool verify(const void* data, unsigned int len, const void* sig, unsigned int siglen) const;
+    bool verify(const void *data, unsigned int len, const void *sig, unsigned int siglen) const;
 
     /**
      * Shortcut method to perform key agreement with another identity
@@ -198,7 +172,7 @@ class Identity : public TriviallyCopyable {
      * @param key Result parameter to fill with key bytes
      * @return Was agreement successful?
      */
-    bool agree(const Identity& id, uint8_t key[ZT_SYMMETRIC_KEY_SIZE]) const;
+    bool agree(const Identity &id, uint8_t key[ZT_SYMMETRIC_KEY_SIZE]) const;
 
     /**
      * Serialize to a more human-friendly string
@@ -207,7 +181,7 @@ class Identity : public TriviallyCopyable {
      * @param buf Buffer to store string
      * @return ASCII string representation of identity (pointer to buf)
      */
-    char* toString(bool includePrivate, char buf[ZT_IDENTITY_STRING_BUFFER_LENGTH]) const;
+    char *toString(bool includePrivate, char buf[ZT_IDENTITY_STRING_BUFFER_LENGTH]) const;
 
     ZT_INLINE String toString(const bool includePrivate = false) const
     {
@@ -225,7 +199,7 @@ class Identity : public TriviallyCopyable {
      * @param str String to deserialize
      * @return True if deserialization appears successful
      */
-    bool fromString(const char* str);
+    bool fromString(const char *str);
 
     /**
      * Erase any private key in this identity object
@@ -239,53 +213,26 @@ class Identity : public TriviallyCopyable {
     /**
      * @return True if this identity contains something
      */
-    explicit ZT_INLINE operator bool() const noexcept
-    {
-        return (m_fp);
-    }
+    explicit ZT_INLINE operator bool() const noexcept { return (m_fp); }
 
-    ZT_INLINE unsigned long hashCode() const noexcept
-    {
-        return m_fp.hashCode();
-    }
+    ZT_INLINE unsigned long hashCode() const noexcept { return m_fp.hashCode(); }
 
-    ZT_INLINE bool operator==(const Identity& id) const noexcept
-    {
-        return (m_fp == id.m_fp);
-    }
+    ZT_INLINE bool operator==(const Identity &id) const noexcept { return (m_fp == id.m_fp); }
 
-    ZT_INLINE bool operator!=(const Identity& id) const noexcept
-    {
-        return ! (*this == id);
-    }
+    ZT_INLINE bool operator!=(const Identity &id) const noexcept { return !(*this == id); }
 
-    ZT_INLINE bool operator<(const Identity& id) const noexcept
-    {
-        return (m_fp < id.m_fp);
-    }
+    ZT_INLINE bool operator<(const Identity &id) const noexcept { return (m_fp < id.m_fp); }
 
-    ZT_INLINE bool operator>(const Identity& id) const noexcept
-    {
-        return (id < *this);
-    }
+    ZT_INLINE bool operator>(const Identity &id) const noexcept { return (id < *this); }
 
-    ZT_INLINE bool operator<=(const Identity& id) const noexcept
-    {
-        return ! (id < *this);
-    }
+    ZT_INLINE bool operator<=(const Identity &id) const noexcept { return !(id < *this); }
 
-    ZT_INLINE bool operator>=(const Identity& id) const noexcept
-    {
-        return ! (*this < id);
-    }
+    ZT_INLINE bool operator>=(const Identity &id) const noexcept { return !(*this < id); }
 
-    static constexpr int marshalSizeMax() noexcept
-    {
-        return ZT_IDENTITY_MARSHAL_SIZE_MAX;
-    }
+    static constexpr int marshalSizeMax() noexcept { return ZT_IDENTITY_MARSHAL_SIZE_MAX; }
 
     int marshal(uint8_t data[ZT_IDENTITY_MARSHAL_SIZE_MAX], bool includePrivate = false) const noexcept;
-    int unmarshal(const uint8_t* data, int len) noexcept;
+    int unmarshal(const uint8_t *data, int len) noexcept;
 
   private:
     void m_computeHash();

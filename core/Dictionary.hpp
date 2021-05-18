@@ -39,15 +39,11 @@ class Identity;
  */
 class Dictionary {
   public:
-    typedef SortedMap<String, Vector<uint8_t> >::const_iterator const_iterator;
+    typedef SortedMap<String, Vector<uint8_t>>::const_iterator const_iterator;
 
-    ZT_INLINE Dictionary()
-    {
-    }
+    ZT_INLINE Dictionary() {}
 
-    ZT_INLINE ~Dictionary()
-    {
-    }
+    ZT_INLINE ~Dictionary() {}
 
     /*
     ZT_INLINE void dump() const
@@ -82,7 +78,7 @@ class Dictionary {
      * @param k Key to look up
      * @return Reference to value
      */
-    Vector<uint8_t>& operator[](const char* k);
+    Vector<uint8_t> &operator[](const char *k);
 
     /**
      * Get a const reference to a value
@@ -90,23 +86,17 @@ class Dictionary {
      * @param k Key to look up
      * @return Reference to value or to empty vector if not found
      */
-    const Vector<uint8_t>& operator[](const char* k) const;
+    const Vector<uint8_t> &operator[](const char *k) const;
 
     /**
      * @return Start of key->value pairs
      */
-    ZT_INLINE const_iterator begin() const noexcept
-    {
-        return m_entries.begin();
-    }
+    ZT_INLINE const_iterator begin() const noexcept { return m_entries.begin(); }
 
     /**
      * @return End of key->value pairs
      */
-    ZT_INLINE const_iterator end() const noexcept
-    {
-        return m_entries.end();
-    }
+    ZT_INLINE const_iterator end() const noexcept { return m_entries.end(); }
 
     /**
      * Add an integer as a hexadecimal string value
@@ -114,7 +104,7 @@ class Dictionary {
      * @param k Key to set
      * @param v Integer to set, will be cast to uint64_t and stored as hex
      */
-    ZT_INLINE void add(const char* const k, const uint64_t v)
+    ZT_INLINE void add(const char *const k, const uint64_t v)
     {
         char buf[24];
         add(k, Utils::hex((uint64_t)(v), buf));
@@ -126,7 +116,7 @@ class Dictionary {
      * @param k Key to set
      * @param v Integer to set, will be cast to uint64_t and stored as hex
      */
-    ZT_INLINE void add(const char* const k, const int64_t v)
+    ZT_INLINE void add(const char *const k, const int64_t v)
     {
         char buf[24];
         add(k, Utils::hex((uint64_t)(v), buf));
@@ -135,17 +125,17 @@ class Dictionary {
     /**
      * Add an address in 10-digit hex string format
      */
-    void add(const char* k, const Address& v);
+    void add(const char *k, const Address &v);
 
     /**
      * Add a C string as a value
      */
-    void add(const char* k, const char* v);
+    void add(const char *k, const char *v);
 
     /**
      * Add a binary blob as a value
      */
-    void add(const char* k, const void* data, unsigned int len);
+    void add(const char *k, const void *data, unsigned int len);
 
     /**
      * Get an integer
@@ -154,7 +144,7 @@ class Dictionary {
      * @param dfl Default value (default: 0)
      * @return Value of key or default if not found
      */
-    uint64_t getUI(const char* k, uint64_t dfl = 0) const;
+    uint64_t getUI(const char *k, uint64_t dfl = 0) const;
 
     /**
      * Get a C string
@@ -166,7 +156,7 @@ class Dictionary {
      * @param v Buffer to hold string
      * @param cap Maximum size of string (including terminating null)
      */
-    char* getS(const char* k, char* v, unsigned int cap) const;
+    char *getS(const char *k, char *v, unsigned int cap) const;
 
     /**
      * Get an object supporting the marshal/unmarshal interface pattern
@@ -176,9 +166,9 @@ class Dictionary {
      * @param obj Object to unmarshal() into
      * @return True if unmarshal was successful
      */
-    template <typename T> ZT_INLINE bool getO(const char* k, T& obj) const
+    template <typename T> ZT_INLINE bool getO(const char *k, T &obj) const
     {
-        const Vector<uint8_t>& d = (*this)[k];
+        const Vector<uint8_t> &d = (*this)[k];
         if (d.empty())
             return false;
         return (obj.unmarshal(d.data(), (unsigned int)d.size()) > 0);
@@ -192,9 +182,9 @@ class Dictionary {
      * @param obj Object to marshal() into vector
      * @return True if successful
      */
-    template <typename T> ZT_INLINE bool addO(const char* k, T& obj)
+    template <typename T> ZT_INLINE bool addO(const char *k, T &obj)
     {
-        Vector<uint8_t>& d = (*this)[k];
+        Vector<uint8_t> &d = (*this)[k];
         d.resize(T::marshalSizeMax());
         const int l = obj.marshal(d.data());
         if (l > 0) {
@@ -213,25 +203,19 @@ class Dictionary {
     /**
      * @return Number of entries
      */
-    ZT_INLINE unsigned int size() const noexcept
-    {
-        return (unsigned int)m_entries.size();
-    }
+    ZT_INLINE unsigned int size() const noexcept { return (unsigned int)m_entries.size(); }
 
     /**
      * @return True if dictionary is not empty
      */
-    ZT_INLINE bool empty() const noexcept
-    {
-        return m_entries.empty();
-    }
+    ZT_INLINE bool empty() const noexcept { return m_entries.empty(); }
 
     /**
      * Encode to a string in the supplied vector
      *
      * @param out String encoded dictionary
      */
-    void encode(Vector<uint8_t>& out) const;
+    void encode(Vector<uint8_t> &out) const;
 
     /**
      * Decode a string encoded dictionary
@@ -243,7 +227,7 @@ class Dictionary {
      * @param len Length of data
      * @return True if dictionary was formatted correctly and valid, false on error
      */
-    bool decode(const void* data, unsigned int len);
+    bool decode(const void *data, unsigned int len);
 
     /**
      * Append a key=value pair to a buffer (vector or FCV)
@@ -252,7 +236,7 @@ class Dictionary {
      * @param k Key (must be <= 8 characters)
      * @param v Value
      */
-    template <typename V> ZT_INLINE static void append(V& out, const char* const k, const bool v)
+    template <typename V> ZT_INLINE static void append(V &out, const char *const k, const bool v)
     {
         s_appendKey(out, k);
         out.push_back((uint8_t)(v ? '1' : '0'));
@@ -266,7 +250,7 @@ class Dictionary {
      * @param k Key (must be <= 8 characters)
      * @param v Value
      */
-    template <typename V> ZT_INLINE static void append(V& out, const char* const k, const Address v)
+    template <typename V> ZT_INLINE static void append(V &out, const char *const k, const Address v)
     {
         s_appendKey(out, k);
         const uint64_t a = v.toInt();
@@ -291,7 +275,7 @@ class Dictionary {
      * @param k Key (must be <= 8 characters)
      * @param v Value
      */
-    template <typename V> ZT_INLINE static void append(V& out, const char* const k, const uint64_t v)
+    template <typename V> ZT_INLINE static void append(V &out, const char *const k, const uint64_t v)
     {
         s_appendKey(out, k);
         char buf[17];
@@ -302,37 +286,37 @@ class Dictionary {
         out.push_back((uint8_t)'\n');
     }
 
-    template <typename V> ZT_INLINE static void append(V& out, const char* const k, const int64_t v)
+    template <typename V> ZT_INLINE static void append(V &out, const char *const k, const int64_t v)
     {
         append(out, k, (uint64_t)v);
     }
 
-    template <typename V> ZT_INLINE static void append(V& out, const char* const k, const uint32_t v)
+    template <typename V> ZT_INLINE static void append(V &out, const char *const k, const uint32_t v)
     {
         append(out, k, (uint64_t)v);
     }
 
-    template <typename V> ZT_INLINE static void append(V& out, const char* const k, const int32_t v)
+    template <typename V> ZT_INLINE static void append(V &out, const char *const k, const int32_t v)
     {
         append(out, k, (uint64_t)v);
     }
 
-    template <typename V> ZT_INLINE static void append(V& out, const char* const k, const uint16_t v)
+    template <typename V> ZT_INLINE static void append(V &out, const char *const k, const uint16_t v)
     {
         append(out, k, (uint64_t)v);
     }
 
-    template <typename V> ZT_INLINE static void append(V& out, const char* const k, const int16_t v)
+    template <typename V> ZT_INLINE static void append(V &out, const char *const k, const int16_t v)
     {
         append(out, k, (uint64_t)v);
     }
 
-    template <typename V> ZT_INLINE static void append(V& out, const char* const k, const uint8_t v)
+    template <typename V> ZT_INLINE static void append(V &out, const char *const k, const uint8_t v)
     {
         append(out, k, (uint64_t)v);
     }
 
-    template <typename V> ZT_INLINE static void append(V& out, const char* const k, const int8_t v)
+    template <typename V> ZT_INLINE static void append(V &out, const char *const k, const int8_t v)
     {
         append(out, k, (uint64_t)v);
     }
@@ -344,7 +328,7 @@ class Dictionary {
      * @param k Key (must be <= 8 characters)
      * @param v Value
      */
-    template <typename V> ZT_INLINE static void append(V& out, const char* const k, const char* v)
+    template <typename V> ZT_INLINE static void append(V &out, const char *const k, const char *v)
     {
         if ((v) && (*v)) {
             s_appendKey(out, k);
@@ -362,11 +346,12 @@ class Dictionary {
      * @param v Value
      * @param vlen Value length in bytes
      */
-    template <typename V> ZT_INLINE static void append(V& out, const char* const k, const void* const v, const unsigned int vlen)
+    template <typename V>
+    ZT_INLINE static void append(V &out, const char *const k, const void *const v, const unsigned int vlen)
     {
         s_appendKey(out, k);
         for (unsigned int i = 0; i < vlen; ++i)
-            s_appendValueByte(out, reinterpret_cast<const uint8_t*>(v)[i]);
+            s_appendValueByte(out, reinterpret_cast<const uint8_t *>(v)[i]);
         out.push_back((uint8_t)'\n');
     }
 
@@ -377,7 +362,7 @@ class Dictionary {
      * @param k Key (must be <= 8 characters)
      * @param pid Packet ID
      */
-    template <typename V> static ZT_INLINE void appendPacketId(V& out, const char* const k, const uint64_t pid)
+    template <typename V> static ZT_INLINE void appendPacketId(V &out, const char *const k, const uint64_t pid)
     {
         append(out, k, &pid, 8);
     }
@@ -390,7 +375,7 @@ class Dictionary {
      * @param v Marshal-able object
      * @return Bytes appended or negative on error (return value of marshal())
      */
-    template <typename V, typename T> static ZT_INLINE int appendObject(V& out, const char* const k, const T& v)
+    template <typename V, typename T> static ZT_INLINE int appendObject(V &out, const char *const k, const T &v)
     {
         uint8_t tmp[2048];   // large enough for any current object
         if (T::marshalSizeMax() > sizeof(tmp))
@@ -409,10 +394,10 @@ class Dictionary {
      * @param sub Subscript index
      * @return Pointer to 'buf'
      */
-    static char* arraySubscript(char* buf, unsigned int bufSize, const char* name, const unsigned long sub) noexcept;
+    static char *arraySubscript(char *buf, unsigned int bufSize, const char *name, const unsigned long sub) noexcept;
 
   private:
-    template <typename V> ZT_INLINE static void s_appendValueByte(V& out, const uint8_t c)
+    template <typename V> ZT_INLINE static void s_appendValueByte(V &out, const uint8_t c)
     {
         switch (c) {
             case 0:
@@ -435,13 +420,11 @@ class Dictionary {
                 out.push_back(92);
                 out.push_back(92);
                 break;
-            default:
-                out.push_back(c);
-                break;
+            default: out.push_back(c); break;
         }
     }
 
-    template <typename V> ZT_INLINE static void s_appendKey(V& out, const char* k)
+    template <typename V> ZT_INLINE static void s_appendKey(V &out, const char *k)
     {
         for (;;) {
             const char c = *(k++);
@@ -455,7 +438,7 @@ class Dictionary {
     // Dictionary maps need to be sorted so that they always encode in the same order
     // to yield blobs that can be hashed and signed reproducibly. Other than for areas
     // where dictionaries are signed and verified the order doesn't matter.
-    SortedMap<String, Vector<uint8_t> > m_entries;
+    SortedMap<String, Vector<uint8_t>> m_entries;
 };
 
 }   // namespace ZeroTier

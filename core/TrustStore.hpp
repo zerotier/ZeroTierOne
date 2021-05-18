@@ -57,10 +57,7 @@ class TrustStore {
         /**
          * @return Reference to held certificate
          */
-        ZT_INLINE const Certificate& certificate() const noexcept
-        {
-            return m_certificate;
-        }
+        ZT_INLINE const Certificate &certificate() const noexcept { return m_certificate; }
 
         /**
          * Get the local trust for this certificate
@@ -98,12 +95,9 @@ class TrustStore {
         }
 
       private:
-        Entry& operator=(const Entry&)
-        {
-            return *this;
-        }
+        Entry &operator=(const Entry &) { return *this; }
 
-        ZT_INLINE Entry(RWMutex& l, const Certificate& cert, const unsigned int lt) noexcept
+        ZT_INLINE Entry(RWMutex &l, const Certificate &cert, const unsigned int lt) noexcept
             : __refCount(0)
             , m_lock(l)
             , m_certificate(cert)
@@ -116,7 +110,7 @@ class TrustStore {
 
         std::atomic<int> __refCount;
 
-        RWMutex& m_lock;
+        RWMutex &m_lock;
         const Certificate m_certificate;
         unsigned int m_localTrust;
         ZT_CertificateError m_error;
@@ -137,7 +131,7 @@ class TrustStore {
      * @param serial SHA384 hash of certificate
      * @return Entry or empty/nil if not found
      */
-    SharedPtr<Entry> get(const H384& serial) const;
+    SharedPtr<Entry> get(const H384 &serial) const;
 
     /**
      * Get roots specified by root set certificates in the local store.
@@ -148,13 +142,13 @@ class TrustStore {
      *
      * @return Roots and the latest locator specified for each (if any)
      */
-    Map<Identity, SharedPtr<const Locator> > roots();
+    Map<Identity, SharedPtr<const Locator>> roots();
 
     /**
      * @param includeRejectedCertificates If true, also include certificates with error codes
      * @return All certificates in asecending sort order by serial
      */
-    Vector<SharedPtr<Entry> > all(bool includeRejectedCertificates) const;
+    Vector<SharedPtr<Entry>> all(bool includeRejectedCertificates) const;
 
     /**
      * Add a certificate
@@ -168,7 +162,7 @@ class TrustStore {
      *
      * @param cert Certificate to add
      */
-    void add(const Certificate& cert, unsigned int localTrust);
+    void add(const Certificate &cert, unsigned int localTrust);
 
     /**
      * Queue a certificate to be deleted
@@ -177,7 +171,7 @@ class TrustStore {
      *
      * @param serial Serial of certificate to delete
      */
-    void erase(const H384& serial);
+    void erase(const H384 &serial);
 
     /**
      * Validate all certificates and their certificate chains
@@ -188,7 +182,7 @@ class TrustStore {
      * @param purge If non-NULL, purge rejected certificates and return them in this vector (vector should be empty)
      * @return True if there were changes
      */
-    bool update(int64_t clock, Vector<SharedPtr<Entry> >* purge);
+    bool update(int64_t clock, Vector<SharedPtr<Entry>> *purge);
 
     /**
      * Create a compressed binary version of certificates and their local trust
@@ -206,13 +200,14 @@ class TrustStore {
      * @param data Data to decode
      * @return Number of certificates or -1 if input is invalid
      */
-    int load(const Vector<uint8_t>& data);
+    int load(const Vector<uint8_t> &data);
 
   private:
-    Map<H384, SharedPtr<Entry> > m_bySerial;                                                // all certificates
-    Map<Blob<ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE>, SharedPtr<Entry> > m_bySubjectUniqueId;   // non-rejected certificates only
-    Map<Fingerprint, Vector<SharedPtr<Entry> > > m_bySubjectIdentity;                       // non-rejected certificates only
-    ForwardList<SharedPtr<Entry> > m_addQueue;
+    Map<H384, SharedPtr<Entry>> m_bySerial;   // all certificates
+    Map<Blob<ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE>, SharedPtr<Entry>>
+        m_bySubjectUniqueId;                                          // non-rejected certificates only
+    Map<Fingerprint, Vector<SharedPtr<Entry>>> m_bySubjectIdentity;   // non-rejected certificates only
+    ForwardList<SharedPtr<Entry>> m_addQueue;
     ForwardList<H384> m_deleteQueue;
     RWMutex m_lock;
 };

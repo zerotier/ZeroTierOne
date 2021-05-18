@@ -2378,7 +2378,8 @@ extern "C" const char *ZTT_crypto()
                 ZT_CERTIFICATE_PUBLIC_KEY_ALGORITHM_ECDSA_NIST_P_384, cert->publicKey, (int *)&cert->publicKeySize,
                 certPrivateKey, &certPrivateKeySize);
 
-            auto csr = Certificate::createCSR(cert->subject, certPrivateKey, certPrivateKeySize, uniqueIdPrivate, uniqueIdPrivateKeySize);
+            auto csr = Certificate::createCSR(
+                cert->subject, certPrivateKey, certPrivateKeySize, uniqueIdPrivate, uniqueIdPrivateKeySize);
             if (csr.empty()) {
                 ZT_T_PRINTF("FAILED (create CSR failed)" ZT_EOL_S);
                 return "Create CSR";

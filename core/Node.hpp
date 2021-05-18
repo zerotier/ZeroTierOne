@@ -39,53 +39,51 @@ class Node : public NetworkController::Sender {
   public:
     // Get rid of alignment warnings on 32-bit Windows
 #ifdef __WINDOWS__
-    void* operator new(size_t i)
-    {
-        return _mm_malloc(i, 16);
-    }
-    void operator delete(void* p)
-    {
-        _mm_free(p);
-    }
+    void *operator new(size_t i) { return _mm_malloc(i, 16); }
+    void operator delete(void *p) { _mm_free(p); }
 #endif
 
-    Node(void* uPtr, const struct ZT_Node_Callbacks* callbacks, const CallContext& cc);
+    Node(void *uPtr, const struct ZT_Node_Callbacks *callbacks, const CallContext &cc);
 
     virtual ~Node();
 
-    void shutdown(const CallContext& cc);
+    void shutdown(const CallContext &cc);
 
-    ZT_ResultCode processBackgroundTasks(const CallContext& cc, volatile int64_t* nextBackgroundTaskDeadline);
+    ZT_ResultCode processBackgroundTasks(const CallContext &cc, volatile int64_t *nextBackgroundTaskDeadline);
 
-    ZT_ResultCode join(uint64_t nwid, const ZT_Fingerprint* controllerFingerprint, void* uptr, const CallContext& cc);
+    ZT_ResultCode join(uint64_t nwid, const ZT_Fingerprint *controllerFingerprint, void *uptr, const CallContext &cc);
 
-    ZT_ResultCode leave(uint64_t nwid, void** uptr, const CallContext& cc);
+    ZT_ResultCode leave(uint64_t nwid, void **uptr, const CallContext &cc);
 
-    ZT_ResultCode multicastSubscribe(const CallContext& cc, uint64_t nwid, uint64_t multicastGroup, unsigned long multicastAdi);
+    ZT_ResultCode
+    multicastSubscribe(const CallContext &cc, uint64_t nwid, uint64_t multicastGroup, unsigned long multicastAdi);
 
-    ZT_ResultCode multicastUnsubscribe(const CallContext& cc, uint64_t nwid, uint64_t multicastGroup, unsigned long multicastAdi);
+    ZT_ResultCode
+    multicastUnsubscribe(const CallContext &cc, uint64_t nwid, uint64_t multicastGroup, unsigned long multicastAdi);
 
-    void status(ZT_NodeStatus* status) const;
+    void status(ZT_NodeStatus *status) const;
 
-    ZT_PeerList* peers(const CallContext& cc) const;
+    ZT_PeerList *peers(const CallContext &cc) const;
 
-    ZT_VirtualNetworkConfig* networkConfig(uint64_t nwid) const;
+    ZT_VirtualNetworkConfig *networkConfig(uint64_t nwid) const;
 
-    ZT_VirtualNetworkList* networks() const;
+    ZT_VirtualNetworkList *networks() const;
 
-    void setNetworkUserPtr(uint64_t nwid, void* ptr);
+    void setNetworkUserPtr(uint64_t nwid, void *ptr);
 
-    void setInterfaceAddresses(const ZT_InterfaceAddress* addrs, unsigned int addrCount);
+    void setInterfaceAddresses(const ZT_InterfaceAddress *addrs, unsigned int addrCount);
 
-    ZT_CertificateError addCertificate(const CallContext& cc, unsigned int localTrust, const ZT_Certificate* cert, const void* certData, unsigned int certSize);
+    ZT_CertificateError addCertificate(
+        const CallContext &cc, unsigned int localTrust, const ZT_Certificate *cert, const void *certData,
+        unsigned int certSize);
 
-    ZT_ResultCode deleteCertificate(const CallContext& cc, const void* serialNo);
+    ZT_ResultCode deleteCertificate(const CallContext &cc, const void *serialNo);
 
-    ZT_CertificateList* listCertificates();
+    ZT_CertificateList *listCertificates();
 
-    int sendUserMessage(const CallContext& cc, uint64_t dest, uint64_t typeId, const void* data, unsigned int len);
+    int sendUserMessage(const CallContext &cc, uint64_t dest, uint64_t typeId, const void *data, unsigned int len);
 
-    void setController(void* networkControllerInstance);
+    void setController(void *networkControllerInstance);
 
     /**
      * Post an event via external callback
@@ -95,9 +93,10 @@ class Node : public NetworkController::Sender {
      * @param md Event data or NULL if none
      * @param mdSize Size of event data
      */
-    ZT_INLINE void postEvent(void* const tPtr, const ZT_Event ev, const void* const md = nullptr, const unsigned int mdSize = 0) noexcept
+    ZT_INLINE void postEvent(
+        void *const tPtr, const ZT_Event ev, const void *const md = nullptr, const unsigned int mdSize = 0) noexcept
     {
-        m_ctx.cb.eventCallback(reinterpret_cast<ZT_Node*>(this), m_ctx.uPtr, tPtr, ev, md, mdSize);
+        m_ctx.cb.eventCallback(reinterpret_cast<ZT_Node *>(this), m_ctx.uPtr, tPtr, ev, md, mdSize);
     }
 
     /**
@@ -111,7 +110,7 @@ class Node : public NetworkController::Sender {
      * @param remoteAddress Remote address
      * @return True if path should be used
      */
-    bool filterPotentialPath(void* tPtr, const Identity& id, int64_t localSocket, const InetAddress& remoteAddress);
+    bool filterPotentialPath(void *tPtr, const Identity &id, int64_t localSocket, const InetAddress &remoteAddress);
 
     /**
      * Query callback for a physical address for a peer
@@ -122,22 +121,21 @@ class Node : public NetworkController::Sender {
      * @param addr Buffer to store address (result paramter)
      * @return True if addr was filled with something
      */
-    bool externalPathLookup(void* tPtr, const Identity& id, int family, InetAddress& addr);
+    bool externalPathLookup(void *tPtr, const Identity &id, int family, InetAddress &addr);
 
-    ZT_INLINE const Identity& identity() const noexcept
-    {
-        return m_ctx.identity;
-    }
+    ZT_INLINE const Identity &identity() const noexcept { return m_ctx.identity; }
 
-    ZT_INLINE const Context& context() const noexcept
-    {
-        return m_ctx;
-    }
+    ZT_INLINE const Context &context() const noexcept { return m_ctx; }
 
     // Implementation of NetworkController::Sender interface
-    virtual void ncSendConfig(void* tPtr, int64_t clock, int64_t ticks, uint64_t nwid, uint64_t requestPacketId, const Address& destination, const NetworkConfig& nc, bool sendLegacyFormatConfig);
-    virtual void ncSendRevocation(void* tPtr, int64_t clock, int64_t ticks, const Address& destination, const RevocationCredential& rev);
-    virtual void ncSendError(void* tPtr, int64_t clock, int64_t ticks, uint64_t nwid, uint64_t requestPacketId, const Address& destination, NetworkController::ErrorCode errorCode);
+    virtual void ncSendConfig(
+        void *tPtr, int64_t clock, int64_t ticks, uint64_t nwid, uint64_t requestPacketId, const Address &destination,
+        const NetworkConfig &nc, bool sendLegacyFormatConfig);
+    virtual void ncSendRevocation(
+        void *tPtr, int64_t clock, int64_t ticks, const Address &destination, const RevocationCredential &rev);
+    virtual void ncSendError(
+        void *tPtr, int64_t clock, int64_t ticks, uint64_t nwid, uint64_t requestPacketId, const Address &destination,
+        NetworkController::ErrorCode errorCode);
 
   private:
     Context m_ctx;
@@ -146,10 +144,10 @@ class Node : public NetworkController::Sender {
     Store m_store;
 
     // Pointer to a struct defined in Node that holds instances of core objects.
-    void* m_objects;
+    void *m_objects;
 
     // This stores networks for rapid iteration, while RR->networks is the primary lookup.
-    Vector<SharedPtr<Network> > m_allNetworks;
+    Vector<SharedPtr<Network>> m_allNetworks;
     Mutex m_allNetworks_l;
 
     // These are local interface addresses that have been configured via the API

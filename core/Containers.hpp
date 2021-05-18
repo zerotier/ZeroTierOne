@@ -38,13 +38,9 @@ namespace ZeroTier {
 
 template <typename V> class Vector : public std::vector<V> {
   public:
-    ZT_INLINE Vector() : std::vector<V>()
-    {
-    }
+    ZT_INLINE Vector() : std::vector<V>() {}
 
-    template <typename I> ZT_INLINE Vector(I begin, I end) : std::vector<V>(begin, end)
-    {
-    }
+    template <typename I> ZT_INLINE Vector(I begin, I end) : std::vector<V>(begin, end) {}
 };
 
 template <typename V> class List : public std::list<V> {
@@ -53,12 +49,9 @@ template <typename V> class List : public std::list<V> {
 #ifdef __CPP11__
 
 struct intl_MapHasher {
-    template <typename O> std::size_t operator()(const O& obj) const noexcept
-    {
-        return (std::size_t)obj.hashCode();
-    }
+    template <typename O> std::size_t operator()(const O &obj) const noexcept { return (std::size_t)obj.hashCode(); }
 
-    std::size_t operator()(const Vector<uint8_t>& bytes) const noexcept
+    std::size_t operator()(const Vector<uint8_t> &bytes) const noexcept
     {
         return (std::size_t)Utils::fnv1a32(bytes.data(), (unsigned int)bytes.size());
     }
@@ -87,7 +80,8 @@ struct intl_MapHasher {
 template <typename K, typename V> class Map : public std::unordered_map<K, V, intl_MapHasher> {
 };
 
-template <typename K, typename V> class MultiMap : public std::unordered_multimap<K, V, intl_MapHasher, std::equal_to<K> > {
+template <typename K, typename V>
+class MultiMap : public std::unordered_multimap<K, V, intl_MapHasher, std::equal_to<K>> {
 };
 
 #else
@@ -115,7 +109,7 @@ template <typename V> class ForwardList : public std::list<V> {
 
 #endif
 
-template <typename V> class Set : public std::set<V, std::less<V> > {
+template <typename V> class Set : public std::set<V, std::less<V>> {
 };
 
 typedef std::string String;
@@ -126,66 +120,45 @@ typedef std::string String;
 struct H384 {
     uint64_t data[6];
 
-    ZT_INLINE H384() noexcept
-    {
-        Utils::zero<sizeof(data)>(data);
-    }
+    ZT_INLINE H384() noexcept { Utils::zero<sizeof(data)>(data); }
 
-    ZT_INLINE H384(const H384& b) noexcept
-    {
-        Utils::copy<48>(data, b.data);
-    }
+    ZT_INLINE H384(const H384 &b) noexcept { Utils::copy<48>(data, b.data); }
 
-    explicit ZT_INLINE H384(const void* const d) noexcept
-    {
-        Utils::copy<48>(data, d);
-    }
+    explicit ZT_INLINE H384(const void *const d) noexcept { Utils::copy<48>(data, d); }
 
-    ZT_INLINE H384& operator=(const H384& b) noexcept
+    ZT_INLINE H384 &operator=(const H384 &b) noexcept
     {
         Utils::copy<48>(data, b.data);
         return *this;
     }
 
-    ZT_INLINE unsigned long hashCode() const noexcept
-    {
-        return (unsigned long)data[0];
-    }
+    ZT_INLINE unsigned long hashCode() const noexcept { return (unsigned long)data[0]; }
 
     ZT_INLINE operator bool() const noexcept
     {
-        return ((data[0] != 0) && (data[1] != 0) && (data[2] != 0) && (data[3] != 0) && (data[4] != 0) && (data[5] != 0));
+        return (
+            (data[0] != 0) && (data[1] != 0) && (data[2] != 0) && (data[3] != 0) && (data[4] != 0) && (data[5] != 0));
     }
 
-    ZT_INLINE bool operator==(const H384& b) const noexcept
+    ZT_INLINE bool operator==(const H384 &b) const noexcept
     {
-        return ((data[0] == b.data[0]) && (data[1] == b.data[1]) && (data[2] == b.data[2]) && (data[3] == b.data[3]) && (data[4] == b.data[4]) && (data[5] == b.data[5]));
+        return (
+            (data[0] == b.data[0]) && (data[1] == b.data[1]) && (data[2] == b.data[2]) && (data[3] == b.data[3])
+            && (data[4] == b.data[4]) && (data[5] == b.data[5]));
     }
 
-    ZT_INLINE bool operator!=(const H384& b) const noexcept
-    {
-        return ! (*this == b);
-    }
+    ZT_INLINE bool operator!=(const H384 &b) const noexcept { return !(*this == b); }
 
-    ZT_INLINE bool operator<(const H384& b) const noexcept
+    ZT_INLINE bool operator<(const H384 &b) const noexcept
     {
         return std::lexicographical_compare(data, data + 6, b.data, b.data + 6);
     }
 
-    ZT_INLINE bool operator<=(const H384& b) const noexcept
-    {
-        return ! (b < *this);
-    }
+    ZT_INLINE bool operator<=(const H384 &b) const noexcept { return !(b < *this); }
 
-    ZT_INLINE bool operator>(const H384& b) const noexcept
-    {
-        return (b < *this);
-    }
+    ZT_INLINE bool operator>(const H384 &b) const noexcept { return (b < *this); }
 
-    ZT_INLINE bool operator>=(const H384& b) const noexcept
-    {
-        return ! (*this < b);
-    }
+    ZT_INLINE bool operator>=(const H384 &b) const noexcept { return !(*this < b); }
 };
 
 static_assert(sizeof(H384) == 48, "H384 contains unnecessary padding");
@@ -198,22 +171,13 @@ static_assert(sizeof(H384) == 48, "H384 contains unnecessary padding");
 template <unsigned long S> struct Blob {
     uint8_t data[S];
 
-    ZT_INLINE Blob() noexcept
-    {
-        Utils::zero<S>(data);
-    }
+    ZT_INLINE Blob() noexcept { Utils::zero<S>(data); }
 
-    ZT_INLINE Blob(const Blob& b) noexcept
-    {
-        Utils::copy<S>(data, b.data);
-    }
+    ZT_INLINE Blob(const Blob &b) noexcept { Utils::copy<S>(data, b.data); }
 
-    explicit ZT_INLINE Blob(const void* const d) noexcept
-    {
-        Utils::copy<S>(data, d);
-    }
+    explicit ZT_INLINE Blob(const void *const d) noexcept { Utils::copy<S>(data, d); }
 
-    explicit ZT_INLINE Blob(const void* const d, const unsigned int l) noexcept
+    explicit ZT_INLINE Blob(const void *const d, const unsigned int l) noexcept
     {
         Utils::copy(data, d, (l > (unsigned int)S) ? (unsigned int)S : l);
         if (l < S) {
@@ -221,51 +185,27 @@ template <unsigned long S> struct Blob {
         }
     }
 
-    ZT_INLINE Blob& operator=(const Blob& b) noexcept
+    ZT_INLINE Blob &operator=(const Blob &b) noexcept
     {
         Utils::copy<S>(data, b.data);
         return *this;
     }
 
-    ZT_INLINE unsigned long hashCode() const noexcept
-    {
-        return Utils::fnv1a32(data, (unsigned int)S);
-    }
+    ZT_INLINE unsigned long hashCode() const noexcept { return Utils::fnv1a32(data, (unsigned int)S); }
 
-    ZT_INLINE operator bool() const noexcept
-    {
-        return Utils::allZero(data, (unsigned int)S);
-    }
+    ZT_INLINE operator bool() const noexcept { return Utils::allZero(data, (unsigned int)S); }
 
-    ZT_INLINE bool operator==(const Blob& b) const noexcept
-    {
-        return (memcmp(data, b.data, S) == 0);
-    }
+    ZT_INLINE bool operator==(const Blob &b) const noexcept { return (memcmp(data, b.data, S) == 0); }
 
-    ZT_INLINE bool operator!=(const Blob& b) const noexcept
-    {
-        return (memcmp(data, b.data, S) != 0);
-    }
+    ZT_INLINE bool operator!=(const Blob &b) const noexcept { return (memcmp(data, b.data, S) != 0); }
 
-    ZT_INLINE bool operator<(const Blob& b) const noexcept
-    {
-        return (memcmp(data, b.data, S) < 0);
-    }
+    ZT_INLINE bool operator<(const Blob &b) const noexcept { return (memcmp(data, b.data, S) < 0); }
 
-    ZT_INLINE bool operator<=(const Blob& b) const noexcept
-    {
-        return (memcmp(data, b.data, S) <= 0);
-    }
+    ZT_INLINE bool operator<=(const Blob &b) const noexcept { return (memcmp(data, b.data, S) <= 0); }
 
-    ZT_INLINE bool operator>(const Blob& b) const noexcept
-    {
-        return (memcmp(data, b.data, S) > 0);
-    }
+    ZT_INLINE bool operator>(const Blob &b) const noexcept { return (memcmp(data, b.data, S) > 0); }
 
-    ZT_INLINE bool operator>=(const Blob& b) const noexcept
-    {
-        return (memcmp(data, b.data, S) >= 0);
-    }
+    ZT_INLINE bool operator>=(const Blob &b) const noexcept { return (memcmp(data, b.data, S) >= 0); }
 };
 
 }   // namespace ZeroTier

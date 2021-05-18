@@ -46,17 +46,17 @@ namespace ZeroTier {
 class Certificate : public ZT_Certificate {
   public:
     Certificate() noexcept;
-    explicit Certificate(const ZT_Certificate& apiCert);
-    Certificate(const Certificate& cert);
+    explicit Certificate(const ZT_Certificate &apiCert);
+    Certificate(const Certificate &cert);
     ~Certificate();
 
-    Certificate& operator=(const ZT_Certificate& cert);
+    Certificate &operator=(const ZT_Certificate &cert);
 
-    ZT_INLINE Certificate& operator=(const Certificate& cert) noexcept
+    ZT_INLINE Certificate &operator=(const Certificate &cert) noexcept
     {
         if (likely(&cert != this)) {
-            const ZT_Certificate* const sup = &cert;
-            *this = *sup;
+            const ZT_Certificate *const sup = &cert;
+            *this                           = *sup;
         }
         return *this;
     }
@@ -64,17 +64,14 @@ class Certificate : public ZT_Certificate {
     /**
      * @return Serial number in a H384 object
      */
-    ZT_INLINE H384 getSerialNo() const noexcept
-    {
-        return H384(this->serialNo);
-    }
+    ZT_INLINE H384 getSerialNo() const noexcept { return H384(this->serialNo); }
 
     /**
      * @return True if this is a self-signed certificate
      */
     ZT_INLINE bool isSelfSigned() const noexcept
     {
-        for(unsigned int i=0;i<ZT_CERTIFICATE_HASH_SIZE;++i) {
+        for (unsigned int i = 0; i < ZT_CERTIFICATE_HASH_SIZE; ++i) {
             if (this->issuer[i] != 0xff)
                 return false;
         }
@@ -87,7 +84,7 @@ class Certificate : public ZT_Certificate {
      * @param id Identity
      * @return Pointer to C struct
      */
-    ZT_Certificate_Identity* addSubjectIdentity(const Identity& id);
+    ZT_Certificate_Identity *addSubjectIdentity(const Identity &id);
 
     /**
      * Add a subject node/identity with a locator
@@ -96,7 +93,7 @@ class Certificate : public ZT_Certificate {
      * @param loc Locator signed by identity (signature is NOT checked here)
      * @return Pointer to C struct
      */
-    ZT_Certificate_Identity* addSubjectIdentity(const Identity& id, const Locator& loc);
+    ZT_Certificate_Identity *addSubjectIdentity(const Identity &id, const Locator &loc);
 
     /**
      * Add a subject network
@@ -105,14 +102,14 @@ class Certificate : public ZT_Certificate {
      * @param controller Network controller's full fingerprint
      * @return Pointer to C struct
      */
-    ZT_Certificate_Network* addSubjectNetwork(uint64_t id, const ZT_Fingerprint& controller);
+    ZT_Certificate_Network *addSubjectNetwork(uint64_t id, const ZT_Fingerprint &controller);
 
     /**
      * Add an update URL to the updateUrls list
      *
      * @param url Update URL
      */
-    void addSubjectUpdateUrl(const char* url);
+    void addSubjectUpdateUrl(const char *url);
 
     /**
      * Sign subject with unique ID private key and set.
@@ -124,7 +121,7 @@ class Certificate : public ZT_Certificate {
      * @param uniqueIdPrivateSize Size of private key
      * @return True on success
      */
-    ZT_INLINE bool setSubjectUniqueId(const void* uniqueIdPrivate, unsigned int uniqueIdPrivateSize)
+    ZT_INLINE bool setSubjectUniqueId(const void *uniqueIdPrivate, unsigned int uniqueIdPrivateSize)
     {
         return m_setSubjectUniqueId(this->subject, uniqueIdPrivate, uniqueIdPrivateSize);
     }
@@ -147,7 +144,7 @@ class Certificate : public ZT_Certificate {
      * @param len Length of marshalled certificate
      * @return True if input is valid and was unmarshalled (signature is NOT checked)
      */
-    bool decode(const void* data, unsigned int len);
+    bool decode(const void *data, unsigned int len);
 
     /**
      * Sign this certificate.
@@ -156,7 +153,9 @@ class Certificate : public ZT_Certificate {
      *
      * @return True on success
      */
-    bool sign(const uint8_t issuer[ZT_CERTIFICATE_HASH_SIZE], const void* issuerPrivateKey, unsigned int issuerPrivateKeySize);
+    bool sign(
+        const uint8_t issuer[ZT_CERTIFICATE_HASH_SIZE], const void *issuerPrivateKey,
+        unsigned int issuerPrivateKeySize);
 
     /**
      * Verify self-contained signatures and validity of certificate structure
@@ -178,7 +177,8 @@ class Certificate : public ZT_Certificate {
      */
     ZT_INLINE bool verifyTimeWindow(int64_t clock) const noexcept
     {
-        return ((clock >= this->validity[0]) && (clock <= this->validity[1]) && (this->validity[0] <= this->validity[1]));
+        return (
+            (clock >= this->validity[0]) && (clock <= this->validity[1]) && (this->validity[0] <= this->validity[1]));
     }
 
     /**
@@ -191,7 +191,9 @@ class Certificate : public ZT_Certificate {
      * @param privateKeySize Result parameter: set to size of private key
      * @return True on success
      */
-    static bool newKeyPair(const ZT_CertificatePublicKeyAlgorithm type, uint8_t publicKey[ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE], int* const publicKeySize, uint8_t privateKey[ZT_CERTIFICATE_MAX_PRIVATE_KEY_SIZE], int* const privateKeySize);
+    static bool newKeyPair(
+        const ZT_CertificatePublicKeyAlgorithm type, uint8_t publicKey[ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE],
+        int *const publicKeySize, uint8_t privateKey[ZT_CERTIFICATE_MAX_PRIVATE_KEY_SIZE], int *const privateKeySize);
 
     /**
      * Create a CSR that encodes the subject of this certificate
@@ -203,47 +205,50 @@ class Certificate : public ZT_Certificate {
      * @param uniqueIdPrivateSize Size of unique ID private key
      * @return Encoded subject (without any unique ID fields) or empty vector on error
      */
-    static Vector<uint8_t> createCSR(const ZT_Certificate_Subject& s, const void* certificatePrivateKey, unsigned int certificatePrivateKeySize, const void* uniqueIdPrivate, unsigned int uniqueIdPrivateSize);
+    static Vector<uint8_t> createCSR(
+        const ZT_Certificate_Subject &s, const void *certificatePrivateKey, unsigned int certificatePrivateKeySize,
+        const void *uniqueIdPrivate, unsigned int uniqueIdPrivateSize);
 
     ZT_INLINE unsigned long hashCode() const noexcept
     {
         return (unsigned long)Utils::loadMachineEndian<uint32_t>(this->serialNo);
     }
 
-    ZT_INLINE bool operator==(const ZT_Certificate& c) const noexcept
+    ZT_INLINE bool operator==(const ZT_Certificate &c) const noexcept
     {
         return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) == 0;
     }
 
-    ZT_INLINE bool operator!=(const ZT_Certificate& c) const noexcept
+    ZT_INLINE bool operator!=(const ZT_Certificate &c) const noexcept
     {
         return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) != 0;
     }
 
-    ZT_INLINE bool operator<(const ZT_Certificate& c) const noexcept
+    ZT_INLINE bool operator<(const ZT_Certificate &c) const noexcept
     {
         return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) < 0;
     }
 
-    ZT_INLINE bool operator<=(const ZT_Certificate& c) const noexcept
+    ZT_INLINE bool operator<=(const ZT_Certificate &c) const noexcept
     {
         return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) <= 0;
     }
 
-    ZT_INLINE bool operator>(const ZT_Certificate& c) const noexcept
+    ZT_INLINE bool operator>(const ZT_Certificate &c) const noexcept
     {
         return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) > 0;
     }
 
-    ZT_INLINE bool operator>=(const ZT_Certificate& c) const noexcept
+    ZT_INLINE bool operator>=(const ZT_Certificate &c) const noexcept
     {
         return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) >= 0;
     }
 
   private:
     void m_clear();
-    static bool m_setSubjectUniqueId(ZT_Certificate_Subject& s, const void* uniqueIdPrivate, unsigned int uniqueIdPrivateSize);
-    static void m_encodeSubject(const ZT_Certificate_Subject& s, Dictionary& d, bool omitUniqueIdProofSignature);
+    static bool
+    m_setSubjectUniqueId(ZT_Certificate_Subject &s, const void *uniqueIdPrivate, unsigned int uniqueIdPrivateSize);
+    static void m_encodeSubject(const ZT_Certificate_Subject &s, Dictionary &d, bool omitUniqueIdProofSignature);
 
     // These hold any identity or locator objects that are owned by and should
     // be deleted with this certificate. Lists are used so the pointers never
@@ -255,7 +260,7 @@ class Certificate : public ZT_Certificate {
     // These are stored in a vector because the memory needs to be contiguous.
     Vector<ZT_Certificate_Identity> m_subjectIdentities;
     Vector<ZT_Certificate_Network> m_subjectNetworks;
-    Vector<const char*> m_updateUrls;
+    Vector<const char *> m_updateUrls;
     Vector<uint8_t> m_extendedAttributes;
 };
 

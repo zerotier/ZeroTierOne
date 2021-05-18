@@ -253,7 +253,9 @@
 #define ZT_PROTO_HELLO_NODE_META_EPHEMERAL_ACK    "E"
 
 static_assert(ZT_PROTO_MAX_PACKET_LENGTH < ZT_BUF_MEM_SIZE, "maximum packet length won't fit in Buf");
-static_assert(ZT_PROTO_PACKET_ENCRYPTED_SECTION_START == (ZT_PROTO_MIN_PACKET_LENGTH - 1), "encrypted packet section must start right before protocol verb at one less than minimum packet size");
+static_assert(
+    ZT_PROTO_PACKET_ENCRYPTED_SECTION_START == (ZT_PROTO_MIN_PACKET_LENGTH - 1),
+    "encrypted packet section must start right before protocol verb at one less than minimum packet size");
 
 namespace ZeroTier {
 namespace Protocol {
@@ -684,49 +686,29 @@ enum Verb {
 
 #ifdef ZT_DEBUG_SPEW
 
-static ZT_INLINE const char* verbName(const Verb v) noexcept
+static ZT_INLINE const char *verbName(const Verb v) noexcept
 {
     switch (v) {
-        case VERB_NOP:
-            return "NOP";
-        case VERB_HELLO:
-            return "HELLO";
-        case VERB_ERROR:
-            return "ERROR";
-        case VERB_OK:
-            return "OK";
-        case VERB_WHOIS:
-            return "WHOIS";
-        case VERB_RENDEZVOUS:
-            return "RENDEZVOUS";
-        case VERB_FRAME:
-            return "FRAME";
-        case VERB_EXT_FRAME:
-            return "EXT_FRAME";
-        case VERB_ECHO:
-            return "ECHO";
-        case VERB_MULTICAST_LIKE:
-            return "MULTICAST_LIKE";
-        case VERB_NETWORK_CREDENTIALS:
-            return "NETWORK_CREDENTIALS";
-        case VERB_NETWORK_CONFIG_REQUEST:
-            return "NETWORK_CONFIG_REQUEST";
-        case VERB_NETWORK_CONFIG:
-            return "NETWORK_CONFIG";
-        case VERB_MULTICAST_GATHER:
-            return "MULTICAST_GATHER";
-        case VERB_MULTICAST_FRAME_deprecated:
-            return "MULTICAST_FRAME_deprecated";
-        case VERB_PUSH_DIRECT_PATHS:
-            return "PUSH_DIRECT_PATHS";
-        case VERB_USER_MESSAGE:
-            return "USER_MESSAGE";
-        case VERB_MULTICAST:
-            return "MULTICAST";
-        case VERB_ENCAP:
-            return "ENCAP";
-        default:
-            return "(unknown)";
+        case VERB_NOP: return "NOP";
+        case VERB_HELLO: return "HELLO";
+        case VERB_ERROR: return "ERROR";
+        case VERB_OK: return "OK";
+        case VERB_WHOIS: return "WHOIS";
+        case VERB_RENDEZVOUS: return "RENDEZVOUS";
+        case VERB_FRAME: return "FRAME";
+        case VERB_EXT_FRAME: return "EXT_FRAME";
+        case VERB_ECHO: return "ECHO";
+        case VERB_MULTICAST_LIKE: return "MULTICAST_LIKE";
+        case VERB_NETWORK_CREDENTIALS: return "NETWORK_CREDENTIALS";
+        case VERB_NETWORK_CONFIG_REQUEST: return "NETWORK_CONFIG_REQUEST";
+        case VERB_NETWORK_CONFIG: return "NETWORK_CONFIG";
+        case VERB_MULTICAST_GATHER: return "MULTICAST_GATHER";
+        case VERB_MULTICAST_FRAME_deprecated: return "MULTICAST_FRAME_deprecated";
+        case VERB_PUSH_DIRECT_PATHS: return "PUSH_DIRECT_PATHS";
+        case VERB_USER_MESSAGE: return "USER_MESSAGE";
+        case VERB_MULTICAST: return "MULTICAST";
+        case VERB_ENCAP: return "ENCAP";
+        default: return "(unknown)";
     }
 }
 
@@ -765,13 +747,13 @@ enum ErrorCode {
  * by a special tee or redirect type flow rule.
  */
 enum ExtFrameSubtype {
-    EXT_FRAME_SUBTYPE_NORMAL = 0x0,
-    EXT_FRAME_SUBTYPE_TEE_OUTBOUND = 0x1,
+    EXT_FRAME_SUBTYPE_NORMAL            = 0x0,
+    EXT_FRAME_SUBTYPE_TEE_OUTBOUND      = 0x1,
     EXT_FRAME_SUBTYPE_REDIRECT_OUTBOUND = 0x2,
-    EXT_FRAME_SUBTYPE_WATCH_OUTBOUND = 0x3,
-    EXT_FRAME_SUBTYPE_TEE_INBOUND = 0x4,
-    EXT_FRAME_SUBTYPE_REDIRECT_INBOUND = 0x5,
-    EXT_FRAME_SUBTYPE_WATCH_INBOUND = 0x6
+    EXT_FRAME_SUBTYPE_WATCH_OUTBOUND    = 0x3,
+    EXT_FRAME_SUBTYPE_TEE_INBOUND       = 0x4,
+    EXT_FRAME_SUBTYPE_REDIRECT_INBOUND  = 0x5,
+    EXT_FRAME_SUBTYPE_WATCH_INBOUND     = 0x6
 };
 
 /**
@@ -811,7 +793,8 @@ enum NetworkConfigFlag {
  * @param in Input key (32 bytes)
  * @param out Output buffer (32 bytes)
  */
-static ZT_INLINE void salsa2012DeriveKey(const uint8_t* const in, uint8_t* const out, const Buf& packet, const unsigned int packetSize) noexcept
+static ZT_INLINE void salsa2012DeriveKey(
+    const uint8_t *const in, uint8_t *const out, const Buf &packet, const unsigned int packetSize) noexcept
 {
     // IV and source/destination addresses. Using the addresses divides the
     // key space into two halves-- A->B and B->A (since order will change).
@@ -819,9 +802,12 @@ static ZT_INLINE void salsa2012DeriveKey(const uint8_t* const in, uint8_t* const
     for (int i = 0; i < 18; ++i)
         out[i] = in[i] ^ packet.unsafeData[i];
 #else
-    *reinterpret_cast<uint64_t*>(out) = *reinterpret_cast<const uint64_t*>(in) ^ *reinterpret_cast<const uint64_t*>(packet.unsafeData);
-    *reinterpret_cast<uint64_t*>(out + 8) = *reinterpret_cast<const uint64_t*>(in + 8) ^ *reinterpret_cast<const uint64_t*>(packet.unsafeData + 8);
-    *reinterpret_cast<uint16_t*>(out + 16) = *reinterpret_cast<const uint16_t*>(in + 16) ^ *reinterpret_cast<const uint16_t*>(packet.unsafeData + 16);
+    *reinterpret_cast<uint64_t *>(out) =
+        *reinterpret_cast<const uint64_t *>(in) ^ *reinterpret_cast<const uint64_t *>(packet.unsafeData);
+    *reinterpret_cast<uint64_t *>(out + 8) =
+        *reinterpret_cast<const uint64_t *>(in + 8) ^ *reinterpret_cast<const uint64_t *>(packet.unsafeData + 8);
+    *reinterpret_cast<uint16_t *>(out + 16) =
+        *reinterpret_cast<const uint16_t *>(in + 16) ^ *reinterpret_cast<const uint16_t *>(packet.unsafeData + 16);
 #endif
 
     // Flags, but with hop count masked off. Hop count is altered by forwarding
@@ -837,10 +823,10 @@ static ZT_INLINE void salsa2012DeriveKey(const uint8_t* const in, uint8_t* const
     for (int i = 21; i < 32; ++i)
         out[i] = in[i];
 #else
-    out[21] = in[21];
-    out[22] = in[22];
-    out[23] = in[23];
-    *reinterpret_cast<uint64_t*>(out + 24) = *reinterpret_cast<const uint64_t*>(in + 24);
+    out[21]                                 = in[21];
+    out[22]                                 = in[22];
+    out[23]                                 = in[23];
+    *reinterpret_cast<uint64_t *>(out + 24) = *reinterpret_cast<const uint64_t *>(in + 24);
 #endif
 }
 
@@ -854,7 +840,8 @@ static ZT_INLINE void salsa2012DeriveKey(const uint8_t* const in, uint8_t* const
  * @param verb Protocol verb
  * @return Index of packet start
  */
-static ZT_INLINE int newPacket(uint8_t pkt[28], const uint64_t packetId, const Address destination, const Address source, const Verb verb) noexcept
+static ZT_INLINE int newPacket(
+    uint8_t pkt[28], const uint64_t packetId, const Address destination, const Address source, const Verb verb) noexcept
 {
     Utils::storeMachineEndian<uint64_t>(pkt + ZT_PROTO_PACKET_ID_INDEX, packetId);
     destination.copyTo(pkt + ZT_PROTO_PACKET_DESTINATION_INDEX);
@@ -865,7 +852,8 @@ static ZT_INLINE int newPacket(uint8_t pkt[28], const uint64_t packetId, const A
     return ZT_PROTO_PACKET_VERB_INDEX + 1;
 }
 
-static ZT_INLINE int newPacket(Buf& pkt, const uint64_t packetId, const Address destination, const Address source, const Verb verb) noexcept
+static ZT_INLINE int
+newPacket(Buf &pkt, const uint64_t packetId, const Address destination, const Address source, const Verb verb) noexcept
 {
     return newPacket(pkt.unsafeData, packetId, destination, source, verb);
 }
@@ -879,7 +867,8 @@ static ZT_INLINE int newPacket(Buf& pkt, const uint64_t packetId, const Address 
  * @param cipherSuite Cipher suite to use for AEAD encryption or just MAC
  * @return Packet ID of packet (which may change!)
  */
-static ZT_INLINE uint64_t armor(uint8_t* const pkt, const int packetSize, const SymmetricKey& key, const uint8_t cipherSuite) noexcept
+static ZT_INLINE uint64_t
+armor(uint8_t *const pkt, const int packetSize, const SymmetricKey &key, const uint8_t cipherSuite) noexcept
 {
     // TODO
 #if 0
@@ -937,7 +926,7 @@ static ZT_INLINE uint64_t armor(uint8_t* const pkt, const int packetSize, const 
  * @param packetSize Total size of packet in bytes (including headers)
  * @return New size of packet after compression or original size of compression wasn't helpful
  */
-static ZT_INLINE int compress(Buf& pkt, int packetSize) noexcept
+static ZT_INLINE int compress(Buf &pkt, int packetSize) noexcept
 {
     // TODO
     return packetSize;

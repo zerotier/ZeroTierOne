@@ -35,23 +35,18 @@ namespace ZeroTier {
  */
 template <typename T, unsigned int C> class FCV {
   public:
-    typedef T* iterator;
-    typedef const T* const_iterator;
+    typedef T *iterator;
+    typedef const T *const_iterator;
 
-    ZT_INLINE FCV() noexcept : _s(0)
-    {
-    }
+    ZT_INLINE FCV() noexcept : _s(0) {}
 
-    ZT_INLINE FCV(const FCV& v) : _s(0)
-    {
-        *this = v;
-    }
+    ZT_INLINE FCV(const FCV &v) : _s(0) { *this = v; }
 
-    ZT_INLINE FCV(const T* const contents, const unsigned int len) : _s(len)
+    ZT_INLINE FCV(const T *const contents, const unsigned int len) : _s(len)
     {
         const unsigned int l = std::min(len, C);
         for (unsigned int i = 0; i < l; ++i)
-            new (reinterpret_cast<T*>(_m) + i) T(contents[i]);
+            new (reinterpret_cast<T *>(_m) + i) T(contents[i]);
     }
 
     template <typename I> ZT_INLINE FCV(I i, I end) : _s(0)
@@ -62,19 +57,16 @@ template <typename T, unsigned int C> class FCV {
         }
     }
 
-    ZT_INLINE ~FCV()
-    {
-        this->clear();
-    }
+    ZT_INLINE ~FCV() { this->clear(); }
 
-    ZT_INLINE FCV& operator=(const FCV& v)
+    ZT_INLINE FCV &operator=(const FCV &v)
     {
         if (likely(&v != this)) {
             this->clear();
             const unsigned int s = v._s;
-            _s = s;
+            _s                   = s;
             for (unsigned int i = 0; i < s; ++i)
-                new (reinterpret_cast<T*>(_m) + i) T(*(reinterpret_cast<const T*>(v._m) + i));
+                new (reinterpret_cast<T *>(_m) + i) T(*(reinterpret_cast<const T *>(v._m) + i));
         }
         return *this;
     }
@@ -85,9 +77,9 @@ template <typename T, unsigned int C> class FCV {
     ZT_INLINE void clear()
     {
         const unsigned int s = _s;
-        _s = 0;
+        _s                   = 0;
         for (unsigned int i = 0; i < s; ++i)
-            (reinterpret_cast<T*>(_m) + i)->~T();
+            (reinterpret_cast<T *>(_m) + i)->~T();
     }
 
     /**
@@ -95,70 +87,43 @@ template <typename T, unsigned int C> class FCV {
      *
      * @param v Target vector
      */
-    ZT_INLINE void unsafeMoveTo(FCV& v) noexcept
+    ZT_INLINE void unsafeMoveTo(FCV &v) noexcept
     {
         Utils::copy(v._m, _m, (v._s = _s) * sizeof(T));
         _s = 0;
     }
 
-    ZT_INLINE iterator begin() noexcept
-    {
-        return reinterpret_cast<T*>(_m);
-    }
+    ZT_INLINE iterator begin() noexcept { return reinterpret_cast<T *>(_m); }
 
-    ZT_INLINE iterator end() noexcept
-    {
-        return reinterpret_cast<T*>(_m) + _s;
-    }
+    ZT_INLINE iterator end() noexcept { return reinterpret_cast<T *>(_m) + _s; }
 
-    ZT_INLINE const_iterator begin() const noexcept
-    {
-        return reinterpret_cast<const T*>(_m);
-    }
+    ZT_INLINE const_iterator begin() const noexcept { return reinterpret_cast<const T *>(_m); }
 
-    ZT_INLINE const_iterator end() const noexcept
-    {
-        return reinterpret_cast<const T*>(_m) + _s;
-    }
+    ZT_INLINE const_iterator end() const noexcept { return reinterpret_cast<const T *>(_m) + _s; }
 
-    ZT_INLINE T& operator[](const unsigned int i)
+    ZT_INLINE T &operator[](const unsigned int i)
     {
         if (likely(i < _s))
-            return reinterpret_cast<T*>(_m)[i];
+            return reinterpret_cast<T *>(_m)[i];
         throw Utils::OutOfRangeException;
     }
 
-    ZT_INLINE const T& operator[](const unsigned int i) const
+    ZT_INLINE const T &operator[](const unsigned int i) const
     {
         if (likely(i < _s))
-            return reinterpret_cast<const T*>(_m)[i];
+            return reinterpret_cast<const T *>(_m)[i];
         throw Utils::OutOfRangeException;
     }
 
-    static constexpr unsigned int capacity() noexcept
-    {
-        return C;
-    }
+    static constexpr unsigned int capacity() noexcept { return C; }
 
-    ZT_INLINE unsigned int size() const noexcept
-    {
-        return _s;
-    }
+    ZT_INLINE unsigned int size() const noexcept { return _s; }
 
-    ZT_INLINE bool empty() const noexcept
-    {
-        return (_s == 0);
-    }
+    ZT_INLINE bool empty() const noexcept { return (_s == 0); }
 
-    ZT_INLINE T* data() noexcept
-    {
-        return reinterpret_cast<T*>(_m);
-    }
+    ZT_INLINE T *data() noexcept { return reinterpret_cast<T *>(_m); }
 
-    ZT_INLINE const T* data() const noexcept
-    {
-        return reinterpret_cast<const T*>(_m);
-    }
+    ZT_INLINE const T *data() const noexcept { return reinterpret_cast<const T *>(_m); }
 
     /**
      * Push a value onto the back of this vector
@@ -167,10 +132,10 @@ template <typename T, unsigned int C> class FCV {
      *
      * @param v Value to push
      */
-    ZT_INLINE void push_back(const T& v)
+    ZT_INLINE void push_back(const T &v)
     {
         if (likely(_s < C))
-            new (reinterpret_cast<T*>(_m) + _s++) T(v);
+            new (reinterpret_cast<T *>(_m) + _s++) T(v);
         else
             throw Utils::OutOfRangeException;
     }
@@ -180,13 +145,13 @@ template <typename T, unsigned int C> class FCV {
      *
      * @return Reference to new item
      */
-    ZT_INLINE T& push()
+    ZT_INLINE T &push()
     {
         if (likely(_s < C)) {
-            return *(new (reinterpret_cast<T*>(_m) + _s++) T());
+            return *(new (reinterpret_cast<T *>(_m) + _s++) T());
         }
         else {
-            return *(reinterpret_cast<T*>(_m) + (C - 1));
+            return *(reinterpret_cast<T *>(_m) + (C - 1));
         }
     }
 
@@ -195,14 +160,14 @@ template <typename T, unsigned int C> class FCV {
      *
      * @return Reference to new item
      */
-    ZT_INLINE T& push(const T& v)
+    ZT_INLINE T &push(const T &v)
     {
         if (likely(_s < C)) {
-            return *(new (reinterpret_cast<T*>(_m) + _s++) T(v));
+            return *(new (reinterpret_cast<T *>(_m) + _s++) T(v));
         }
         else {
-            T& tmp = *(reinterpret_cast<T*>(_m) + (C - 1));
-            tmp = v;
+            T &tmp = *(reinterpret_cast<T *>(_m) + (C - 1));
+            tmp    = v;
             return tmp;
         }
     }
@@ -213,7 +178,7 @@ template <typename T, unsigned int C> class FCV {
     ZT_INLINE void pop_back()
     {
         if (likely(_s != 0))
-            (reinterpret_cast<T*>(_m) + --_s)->~T();
+            (reinterpret_cast<T *>(_m) + --_s)->~T();
     }
 
     /**
@@ -227,9 +192,9 @@ template <typename T, unsigned int C> class FCV {
             throw Utils::OutOfRangeException;
         unsigned int s = _s;
         while (s < ns)
-            new (reinterpret_cast<T*>(_m) + s++) T();
+            new (reinterpret_cast<T *>(_m) + s++) T();
         while (s > ns)
-            (reinterpret_cast<T*>(_m) + --s)->~T();
+            (reinterpret_cast<T *>(_m) + --s)->~T();
         _s = s;
     }
 
@@ -238,10 +203,7 @@ template <typename T, unsigned int C> class FCV {
      *
      * @param ns New size
      */
-    ZT_INLINE void unsafeSetSize(unsigned int ns)
-    {
-        _s = ns;
-    }
+    ZT_INLINE void unsafeSetSize(unsigned int ns) { _s = ns; }
 
     /**
      * This is a bounds checked auto-resizing variant of the [] operator
@@ -252,16 +214,16 @@ template <typename T, unsigned int C> class FCV {
      * @param i Index to obtain as a reference, resizing if needed
      * @return Reference to value at this index
      */
-    ZT_INLINE T& at(unsigned int i)
+    ZT_INLINE T &at(unsigned int i)
     {
         if (i >= _s) {
             if (unlikely(i >= C))
                 i = C - 1;
             do {
-                new (reinterpret_cast<T*>(_m) + _s++) T();
+                new (reinterpret_cast<T *>(_m) + _s++) T();
             } while (i >= _s);
         }
-        return *(reinterpret_cast<T*>(_m) + i);
+        return *(reinterpret_cast<T *>(_m) + i);
     }
 
     /**
@@ -273,24 +235,24 @@ template <typename T, unsigned int C> class FCV {
      * @param start Starting iterator
      * @param end Ending iterator (must be greater than start)
      */
-    template <typename X> ZT_INLINE void assign(X start, const X& end)
+    template <typename X> ZT_INLINE void assign(X start, const X &end)
     {
         const int l = std::min((int)std::distance(start, end), (int)C);
         if (l > 0) {
             this->resize((unsigned int)l);
             for (int i = 0; i < l; ++i)
-                reinterpret_cast<T*>(_m)[i] = *(start++);
+                reinterpret_cast<T *>(_m)[i] = *(start++);
         }
         else {
             this->clear();
         }
     }
 
-    ZT_INLINE bool operator==(const FCV& v) const noexcept
+    ZT_INLINE bool operator==(const FCV &v) const noexcept
     {
         if (_s == v._s) {
             for (unsigned int i = 0; i < _s; ++i) {
-                if (! (*(reinterpret_cast<const T*>(_m) + i) == *(reinterpret_cast<const T*>(v._m) + i)))
+                if (!(*(reinterpret_cast<const T *>(_m) + i) == *(reinterpret_cast<const T *>(v._m) + i)))
                     return false;
             }
             return true;
@@ -298,30 +260,18 @@ template <typename T, unsigned int C> class FCV {
         return false;
     }
 
-    ZT_INLINE bool operator!=(const FCV& v) const noexcept
-    {
-        return *this != v;
-    }
+    ZT_INLINE bool operator!=(const FCV &v) const noexcept { return *this != v; }
 
-    ZT_INLINE bool operator<(const FCV& v) const noexcept
+    ZT_INLINE bool operator<(const FCV &v) const noexcept
     {
         return std::lexicographical_compare(begin(), end(), v.begin(), v.end());
     }
 
-    ZT_INLINE bool operator>(const FCV& v) const noexcept
-    {
-        return (v < *this);
-    }
+    ZT_INLINE bool operator>(const FCV &v) const noexcept { return (v < *this); }
 
-    ZT_INLINE bool operator<=(const FCV& v) const noexcept
-    {
-        return v >= *this;
-    }
+    ZT_INLINE bool operator<=(const FCV &v) const noexcept { return v >= *this; }
 
-    ZT_INLINE bool operator>=(const FCV& v) const noexcept
-    {
-        return *this >= v;
-    }
+    ZT_INLINE bool operator>=(const FCV &v) const noexcept { return *this >= v; }
 
   private:
 #ifdef _MSC_VER

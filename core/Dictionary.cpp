@@ -15,28 +15,25 @@
 
 namespace ZeroTier {
 
-Vector<uint8_t>& Dictionary::operator[](const char* const k)
-{
-    return m_entries[k];
-}
+Vector<uint8_t> &Dictionary::operator[](const char *const k) { return m_entries[k]; }
 
-const Vector<uint8_t>& Dictionary::operator[](const char* const k) const
+const Vector<uint8_t> &Dictionary::operator[](const char *const k) const
 {
     static const Vector<uint8_t> s_emptyEntry;
-    const SortedMap<String, Vector<uint8_t> >::const_iterator e(m_entries.find(k));
+    const SortedMap<String, Vector<uint8_t>>::const_iterator e(m_entries.find(k));
     return (e == m_entries.end()) ? s_emptyEntry : e->second;
 }
 
-void Dictionary::add(const char* k, const Address& v)
+void Dictionary::add(const char *k, const Address &v)
 {
     char tmp[ZT_ADDRESS_STRING_SIZE_MAX];
     v.toString(tmp);
     add(k, tmp);
 }
 
-void Dictionary::add(const char* k, const char* v)
+void Dictionary::add(const char *k, const char *v)
 {
-    Vector<uint8_t>& e = (*this)[k];
+    Vector<uint8_t> &e = (*this)[k];
     e.clear();
     if (v) {
         while (*v)
@@ -44,18 +41,18 @@ void Dictionary::add(const char* k, const char* v)
     }
 }
 
-void Dictionary::add(const char* k, const void* data, unsigned int len)
+void Dictionary::add(const char *k, const void *data, unsigned int len)
 {
-    Vector<uint8_t>& e = (*this)[k];
+    Vector<uint8_t> &e = (*this)[k];
     if (likely(len != 0)) {
-        e.assign((const uint8_t*)data, (const uint8_t*)data + len);
+        e.assign((const uint8_t *)data, (const uint8_t *)data + len);
     }
     else {
         e.clear();
     }
 }
 
-uint64_t Dictionary::getUI(const char* k, uint64_t dfl) const
+uint64_t Dictionary::getUI(const char *k, uint64_t dfl) const
 {
     char tmp[32];
     getS(k, tmp, sizeof(tmp));
@@ -64,12 +61,12 @@ uint64_t Dictionary::getUI(const char* k, uint64_t dfl) const
     return dfl;
 }
 
-char* Dictionary::getS(const char* k, char* v, const unsigned int cap) const
+char *Dictionary::getS(const char *k, char *v, const unsigned int cap) const
 {
     if (cap == 0)   // sanity check
         return v;
 
-    const Vector<uint8_t>& e = (*this)[k];
+    const Vector<uint8_t> &e = (*this)[k];
     if (e.empty()) {
         v[0] = 0;
         return v;
@@ -87,15 +84,12 @@ char* Dictionary::getS(const char* k, char* v, const unsigned int cap) const
     return v;
 }
 
-void Dictionary::clear()
-{
-    m_entries.clear();
-}
+void Dictionary::clear() { m_entries.clear(); }
 
-void Dictionary::encode(Vector<uint8_t>& out) const
+void Dictionary::encode(Vector<uint8_t> &out) const
 {
     out.clear();
-    for (SortedMap<String, Vector<uint8_t> >::const_iterator ti(m_entries.begin()); ti != m_entries.end(); ++ti) {
+    for (SortedMap<String, Vector<uint8_t>>::const_iterator ti(m_entries.begin()); ti != m_entries.end(); ++ti) {
         s_appendKey(out, ti->first.data());
         for (Vector<uint8_t>::const_iterator i(ti->second.begin()); i != ti->second.end(); ++i)
             s_appendValueByte(out, *i);
@@ -103,34 +97,24 @@ void Dictionary::encode(Vector<uint8_t>& out) const
     }
 }
 
-bool Dictionary::decode(const void* data, unsigned int len)
+bool Dictionary::decode(const void *data, unsigned int len)
 {
     clear();
     String k;
-    Vector<uint8_t>* v = nullptr;
-    bool escape = false;
+    Vector<uint8_t> *v = nullptr;
+    bool escape        = false;
     for (unsigned int di = 0; di < len; ++di) {
-        const uint8_t c = reinterpret_cast<const uint8_t*>(data)[di];
+        const uint8_t c = reinterpret_cast<const uint8_t *>(data)[di];
         if (c) {
             if (v) {
                 if (escape) {
                     escape = false;
                     switch (c) {
-                        case 48:
-                            v->push_back(0);
-                            break;
-                        case 101:
-                            v->push_back(61);
-                            break;
-                        case 110:
-                            v->push_back(10);
-                            break;
-                        case 114:
-                            v->push_back(13);
-                            break;
-                        default:
-                            v->push_back(c);
-                            break;
+                        case 48: v->push_back(0); break;
+                        case 101: v->push_back(61); break;
+                        case 110: v->push_back(10); break;
+                        case 114: v->push_back(13); break;
+                        default: v->push_back(c); break;
                     }
                 }
                 else {
@@ -162,7 +146,7 @@ bool Dictionary::decode(const void* data, unsigned int len)
     return true;
 }
 
-char* Dictionary::arraySubscript(char* buf, unsigned int bufSize, const char* name, const unsigned long sub) noexcept
+char *Dictionary::arraySubscript(char *buf, unsigned int bufSize, const char *name, const unsigned long sub) noexcept
 {
     if (bufSize < 17) {   // sanity check
         buf[0] = 0;

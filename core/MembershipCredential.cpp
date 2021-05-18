@@ -16,12 +16,10 @@
 namespace ZeroTier {
 
 MembershipCredential::MembershipCredential(
-    const int64_t timestamp,
-    const int64_t timestampMaxDelta,
-    const uint64_t nwid,
-    const Identity& issuedTo) noexcept
+    const int64_t timestamp, const int64_t timestampMaxDelta, const uint64_t nwid,
+    const Identity &issuedTo) noexcept
     :   // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
-        m_timestamp(timestamp)
+    m_timestamp(timestamp)
     , m_timestampMaxDelta(timestampMaxDelta)
     , m_networkId(nwid)
     , m_issuedTo(issuedTo.fingerprint())
@@ -29,7 +27,7 @@ MembershipCredential::MembershipCredential(
 {
 }
 
-bool MembershipCredential::agreesWith(const MembershipCredential& other) const noexcept
+bool MembershipCredential::agreesWith(const MembershipCredential &other) const noexcept
 {
     // NOTE: we always do explicit absolute value with an if() since llabs() can have overflow
     // conditions that could introduce a vulnerability.
@@ -44,16 +42,20 @@ bool MembershipCredential::agreesWith(const MembershipCredential& other) const n
     }
 
     // us <> them
-    for (FCV<p_Qualifier, ZT_MEMBERSHIP_CREDENTIAL_MAX_ADDITIONAL_QUALIFIERS>::const_iterator i(m_additionalQualifiers.begin()); i != m_additionalQualifiers.end(); ++i) {
+    for (FCV<p_Qualifier, ZT_MEMBERSHIP_CREDENTIAL_MAX_ADDITIONAL_QUALIFIERS>::const_iterator i(
+             m_additionalQualifiers.begin());
+         i != m_additionalQualifiers.end(); ++i) {
         if (i->delta != 0xffffffffffffffffULL) {
-            const uint64_t* v2 = nullptr;
-            for (FCV<p_Qualifier, ZT_MEMBERSHIP_CREDENTIAL_MAX_ADDITIONAL_QUALIFIERS>::const_iterator j(other.m_additionalQualifiers.begin()); j != other.m_additionalQualifiers.end(); ++i) {
+            const uint64_t *v2 = nullptr;
+            for (FCV<p_Qualifier, ZT_MEMBERSHIP_CREDENTIAL_MAX_ADDITIONAL_QUALIFIERS>::const_iterator j(
+                     other.m_additionalQualifiers.begin());
+                 j != other.m_additionalQualifiers.end(); ++i) {
                 if (j->id == i->id) {
                     v2 = &(j->value);
                     break;
                 }
             }
-            if (! v2)
+            if (!v2)
                 return false;
             if (*v2 > i->value) {
                 if ((*v2 - i->value) > i->delta)
@@ -67,16 +69,20 @@ bool MembershipCredential::agreesWith(const MembershipCredential& other) const n
     }
 
     // them <> us (we need a second pass in case they have qualifiers we don't or vice versa)
-    for (FCV<p_Qualifier, ZT_MEMBERSHIP_CREDENTIAL_MAX_ADDITIONAL_QUALIFIERS>::const_iterator i(other.m_additionalQualifiers.begin()); i != other.m_additionalQualifiers.end(); ++i) {
+    for (FCV<p_Qualifier, ZT_MEMBERSHIP_CREDENTIAL_MAX_ADDITIONAL_QUALIFIERS>::const_iterator i(
+             other.m_additionalQualifiers.begin());
+         i != other.m_additionalQualifiers.end(); ++i) {
         if (i->delta != 0xffffffffffffffffULL) {
-            const uint64_t* v2 = nullptr;
-            for (FCV<p_Qualifier, ZT_MEMBERSHIP_CREDENTIAL_MAX_ADDITIONAL_QUALIFIERS>::const_iterator j(m_additionalQualifiers.begin()); j != m_additionalQualifiers.end(); ++i) {
+            const uint64_t *v2 = nullptr;
+            for (FCV<p_Qualifier, ZT_MEMBERSHIP_CREDENTIAL_MAX_ADDITIONAL_QUALIFIERS>::const_iterator j(
+                     m_additionalQualifiers.begin());
+                 j != m_additionalQualifiers.end(); ++i) {
                 if (j->id == i->id) {
                     v2 = &(j->value);
                     break;
                 }
             }
-            if (! v2)
+            if (!v2)
                 return false;
             if (*v2 > i->value) {
                 if ((*v2 - i->value) > i->delta)
@@ -94,12 +100,12 @@ bool MembershipCredential::agreesWith(const MembershipCredential& other) const n
     return (other.m_networkId == m_networkId) && (m_networkId != 0) && (other.m_issuedTo.address != m_issuedTo.address);
 }
 
-bool MembershipCredential::sign(const Identity& with) noexcept
+bool MembershipCredential::sign(const Identity &with) noexcept
 {
     m_signedBy = with.address();
     uint64_t buf[ZT_MEMBERSHIP_CREDENTIAL_MARSHAL_SIZE_MAX / 8];
     const unsigned int bufSize = m_fillSigningBuf(buf);
-    m_signatureLength = with.sign(buf, bufSize, m_signature, sizeof(m_signature));
+    m_signatureLength          = with.sign(buf, bufSize, m_signature, sizeof(m_signature));
     return m_signatureLength > 0;
 }
 
@@ -132,7 +138,8 @@ int MembershipCredential::marshal(uint8_t data[ZT_MEMBERSHIP_CREDENTIAL_MARSHAL_
         Utils::storeBigEndian<uint16_t>(data + 1, 9);
         for (int k = 0; k < 6; ++k) {
             Utils::storeBigEndian<uint64_t>(data + p, (uint64_t)k + 3);
-            Utils::storeMachineEndian<uint64_t>(data + p + 8, Utils::loadMachineEndian<uint64_t>(m_issuedTo.hash + (k * 8)));
+            Utils::storeMachineEndian<uint64_t>(
+                data + p + 8, Utils::loadMachineEndian<uint64_t>(m_issuedTo.hash + (k * 8)));
             Utils::storeMachineEndian<uint64_t>(data + p + 16, 0xffffffffffffffffULL);
             p += 24;
         }
@@ -157,7 +164,7 @@ int MembershipCredential::marshal(uint8_t data[ZT_MEMBERSHIP_CREDENTIAL_MARSHAL_
     return p;
 }
 
-int MembershipCredential::unmarshal(const uint8_t* data, int len) noexcept
+int MembershipCredential::unmarshal(const uint8_t *data, int len) noexcept
 {
     if (len < (1 + 2 + 72))
         return -1;
@@ -179,35 +186,21 @@ int MembershipCredential::unmarshal(const uint8_t* data, int len) noexcept
         p += 8;   // NOLINT(hicpp-use-auto,modernize-use-auto)
         switch (id) {
             case 0:
-                m_timestamp = (int64_t)value;
+                m_timestamp         = (int64_t)value;
                 m_timestampMaxDelta = (int64_t)delta;
                 break;
-            case 1:
-                m_networkId = value;
-                break;
+            case 1: m_networkId = value; break;
             case 2:
                 m_issuedTo.address = value;
                 break;
 
                 // V1 nodes will pack the hash into qualifier tuples.
-            case 3:
-                Utils::storeBigEndian<uint64_t>(m_issuedTo.hash, value);
-                break;
-            case 4:
-                Utils::storeBigEndian<uint64_t>(m_issuedTo.hash + 8, value);
-                break;
-            case 5:
-                Utils::storeBigEndian<uint64_t>(m_issuedTo.hash + 16, value);
-                break;
-            case 6:
-                Utils::storeBigEndian<uint64_t>(m_issuedTo.hash + 24, value);
-                break;
-            case 7:
-                Utils::storeBigEndian<uint64_t>(m_issuedTo.hash + 32, value);
-                break;
-            case 8:
-                Utils::storeBigEndian<uint64_t>(m_issuedTo.hash + 40, value);
-                break;
+            case 3: Utils::storeBigEndian<uint64_t>(m_issuedTo.hash, value); break;
+            case 4: Utils::storeBigEndian<uint64_t>(m_issuedTo.hash + 8, value); break;
+            case 5: Utils::storeBigEndian<uint64_t>(m_issuedTo.hash + 16, value); break;
+            case 6: Utils::storeBigEndian<uint64_t>(m_issuedTo.hash + 24, value); break;
+            case 7: Utils::storeBigEndian<uint64_t>(m_issuedTo.hash + 32, value); break;
+            case 8: Utils::storeBigEndian<uint64_t>(m_issuedTo.hash + 40, value); break;
 
             default:
                 if (m_additionalQualifiers.size() >= ZT_MEMBERSHIP_CREDENTIAL_MAX_ADDITIONAL_QUALIFIERS)
@@ -243,7 +236,7 @@ int MembershipCredential::unmarshal(const uint8_t* data, int len) noexcept
     return -1;
 }
 
-unsigned int MembershipCredential::m_fillSigningBuf(uint64_t* buf) const noexcept
+unsigned int MembershipCredential::m_fillSigningBuf(uint64_t *buf) const noexcept
 {
     const uint64_t informational = 0xffffffffffffffffULL;
 
@@ -289,7 +282,9 @@ unsigned int MembershipCredential::m_fillSigningBuf(uint64_t* buf) const noexcep
         buf[p++] = informational;
     }
 
-    for (FCV<p_Qualifier, ZT_MEMBERSHIP_CREDENTIAL_MAX_ADDITIONAL_QUALIFIERS>::const_iterator i(m_additionalQualifiers.begin()); i != m_additionalQualifiers.end(); ++i) {   // NOLINT(modernize-loop-convert)
+    for (FCV<p_Qualifier, ZT_MEMBERSHIP_CREDENTIAL_MAX_ADDITIONAL_QUALIFIERS>::const_iterator i(
+             m_additionalQualifiers.begin());
+         i != m_additionalQualifiers.end(); ++i) {   // NOLINT(modernize-loop-convert)
         buf[p++] = Utils::hton(i->id);
         buf[p++] = Utils::hton(i->value);
         buf[p++] = Utils::hton(i->delta);

@@ -49,9 +49,7 @@ class Spinlock {
 #endif
     }
 
-    ZT_INLINE Spinlock() noexcept : m_locked(false)
-    {
-    }
+    ZT_INLINE Spinlock() noexcept : m_locked(false) {}
 
     ZT_INLINE void lock() noexcept
     {
@@ -62,19 +60,11 @@ class Spinlock {
         }
     }
 
-    ZT_INLINE void unlock() noexcept
-    {
-        m_locked.clear(std::memory_order_release);
-    }
+    ZT_INLINE void unlock() noexcept { m_locked.clear(std::memory_order_release); }
 
   private:
-    ZT_INLINE Spinlock(const Spinlock&) noexcept
-    {
-    }
-    ZT_INLINE const Spinlock& operator=(const Spinlock&) noexcept
-    {
-        return *this;
-    }
+    ZT_INLINE Spinlock(const Spinlock &) noexcept {}
+    ZT_INLINE const Spinlock &operator=(const Spinlock &) noexcept { return *this; }
 
     std::atomic_flag m_locked;
 };

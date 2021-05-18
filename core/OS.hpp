@@ -17,7 +17,9 @@
 /* Uncomment this to force a whole lot of debug output. */
 #define ZT_DEBUG_SPEW
 
-#if ! defined(__GNUC__) && (defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1) || defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2) || defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4) || defined(__INTEL_COMPILER) || defined(__clang__))
+#if !defined(__GNUC__)                                                                                                 \
+    && (defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1) || defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2)                     \
+        || defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4) || defined(__INTEL_COMPILER) || defined(__clang__))
 #define __GNUC__ 3
 #endif
 
@@ -70,25 +72,28 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64))
+#if (                                                                                                                  \
+    defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64)             \
+    || defined(__AMD64__) || defined(_M_X64))
 #define ZT_ARCH_X64 1
 #include <emmintrin.h>
 #include <immintrin.h>
 #include <xmmintrin.h>
 #endif
-#if defined(ZT_ARCH_X64) || defined(i386) || defined(__i386) || defined(__i386__) || defined(__i486__) || defined(__i586__) || defined(__i686__) || defined(_M_IX86) || defined(__X86__) || defined(_X86_) || defined(__I86__)                 \
-    || defined(__INTEL__) || defined(__386)
+#if defined(ZT_ARCH_X64) || defined(i386) || defined(__i386) || defined(__i386__) || defined(__i486__)                 \
+    || defined(__i586__) || defined(__i686__) || defined(_M_IX86) || defined(__X86__) || defined(_X86_)                \
+    || defined(__I86__) || defined(__INTEL__) || defined(__386)
 #define ZT_ARCH_X86 1
 #endif
 
-#if ! defined(ZT_ARCH_X86)
+#if !defined(ZT_ARCH_X86)
 #ifndef ZT_NO_UNALIGNED_ACCESS
 #define ZT_NO_UNALIGNED_ACCESS 1
 #endif
 #endif
 
 #if defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(ZT_ARCH_ARM_HAS_NEON)
-#if (defined(__APPLE__) && ! defined(__LP64__)) || (defined(__ANDROID__) && defined(__arm__))
+#if (defined(__APPLE__) && !defined(__LP64__)) || (defined(__ANDROID__) && defined(__arm__))
 #ifdef ZT_ARCH_ARM_HAS_NEON
 #undef ZT_ARCH_ARM_HAS_NEON
 #endif
@@ -209,9 +214,9 @@
  * if a shim for <atomic> were included. */
 #ifndef __CPP11__
 #error TODO: to build on pre-c++11 compilers we will need to make a subset of std::atomic for integers
-#define nullptr   (0)
+#define nullptr (0)
 #define constexpr ZT_INLINE
-#define noexcept  throw()
+#define noexcept throw()
 #define explicit
 #endif
 #endif
@@ -250,17 +255,17 @@ typedef unsigned uint128_t __attribute__((mode(TI)));
 #endif
 #endif
 
-#if ! defined(__BYTE_ORDER) && defined(__BYTE_ORDER__)
+#if !defined(__BYTE_ORDER) && defined(__BYTE_ORDER__)
 #define __BYTE_ORDER    __BYTE_ORDER__
 #define __LITTLE_ENDIAN __ORDER_LITTLE_ENDIAN__
 #define __BIG_ENDIAN    __ORDER_BIG_ENDIAN__
 #endif
-#if ! defined(__BYTE_ORDER) && defined(BYTE_ORDER)
+#if !defined(__BYTE_ORDER) && defined(BYTE_ORDER)
 #define __BYTE_ORDER    BYTE_ORDER
 #define __LITTLE_ENDIAN LITTLE_ENDIAN
 #define __BIG_ENDIAN    BIG_ENDIAN
 #endif
-#if ! defined(__BYTE_ORDER) && defined(_BYTE_ORDER)
+#if !defined(__BYTE_ORDER) && defined(_BYTE_ORDER)
 #define __BYTE_ORDER    _BYTE_ORDER
 #define __LITTLE_ENDIAN _LITTLE_ENDIAN
 #define __BIG_ENDIAN    _BIG_ENDIAN
@@ -269,7 +274,8 @@ typedef unsigned uint128_t __attribute__((mode(TI)));
 #define ZT_VA_ARGS(...) , ##__VA_ARGS__
 
 #ifdef ZT_DEBUG_SPEW
-#define ZT_SPEW(f, ...) fprintf(stderr, "%s:%d(%s): " f ZT_EOL_S, __FILE__, __LINE__, __FUNCTION__ ZT_VA_ARGS(__VA_ARGS__))
+#define ZT_SPEW(f, ...)                                                                                                \
+    fprintf(stderr, "%s:%d(%s): " f ZT_EOL_S, __FILE__, __LINE__, __FUNCTION__ ZT_VA_ARGS(__VA_ARGS__))
 #else
 #define ZT_SPEW(f, ...)
 #endif

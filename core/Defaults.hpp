@@ -21,7 +21,7 @@ namespace Defaults {
 
 #define DEFAULT_CERTIFICATE_COUNT 0
 
-extern const uint8_t* CERTIFICATE[DEFAULT_CERTIFICATE_COUNT];
+extern const uint8_t *CERTIFICATE[DEFAULT_CERTIFICATE_COUNT];
 extern unsigned int CERTIFICATE_SIZE[DEFAULT_CERTIFICATE_COUNT];
 
 }   // namespace Defaults

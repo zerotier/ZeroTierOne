@@ -39,35 +39,21 @@ class Salsa20 : public TriviallyCopyable {
   public:
 #ifdef ZT_SALSA20_SSE
 
-    static constexpr bool accelerated() noexcept
-    {
-        return true;
-    }
+    static constexpr bool accelerated() noexcept { return true; }
 
 #else
-    static constexpr bool accelerated() noexcept
-    {
-        return false;
-    }
+    static constexpr bool accelerated() noexcept { return false; }
 #endif
 
-    ZT_INLINE Salsa20() noexcept
-    {
-    }
+    ZT_INLINE Salsa20() noexcept {}
 
-    ZT_INLINE ~Salsa20() noexcept
-    {
-        Utils::burn(&_state, sizeof(_state));
-    }
+    ZT_INLINE ~Salsa20() noexcept { Utils::burn(&_state, sizeof(_state)); }
 
     /**
      * @param key 256-bit (32 byte) key
      * @param iv 64-bit initialization vector
      */
-    ZT_INLINE Salsa20(const void* key, const void* iv) noexcept
-    {
-        init(key, iv);
-    }
+    ZT_INLINE Salsa20(const void *key, const void *iv) noexcept { init(key, iv); }
 
     /**
      * Initialize cipher
@@ -75,7 +61,7 @@ class Salsa20 : public TriviallyCopyable {
      * @param key Key bits
      * @param iv 64-bit initialization vector
      */
-    void init(const void* key, const void* iv) noexcept;
+    void init(const void *key, const void *iv) noexcept;
 
     /**
      * Encrypt/decrypt data using Salsa20/12
@@ -84,7 +70,7 @@ class Salsa20 : public TriviallyCopyable {
      * @param out Output buffer
      * @param bytes Length of data
      */
-    void crypt12(const void* in, void* out, unsigned int bytes) noexcept;
+    void crypt12(const void *in, void *out, unsigned int bytes) noexcept;
 
     /**
      * Encrypt/decrypt data using Salsa20/20
@@ -93,7 +79,7 @@ class Salsa20 : public TriviallyCopyable {
      * @param out Output buffer
      * @param bytes Length of data
      */
-    void crypt20(const void* in, void* out, unsigned int bytes) noexcept;
+    void crypt20(const void *in, void *out, unsigned int bytes) noexcept;
 
   private:
     union {

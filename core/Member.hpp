@@ -48,15 +48,13 @@ class Member {
      * @param to Peer identity
      * @param nconf My network config
      */
-    void pushCredentials(const Context& ctx, const CallContext& cc, const SharedPtr<Peer>& to, const NetworkConfig& nconf);
+    void
+    pushCredentials(const Context &ctx, const CallContext &cc, const SharedPtr<Peer> &to, const NetworkConfig &nconf);
 
     /**
      * @return Time we last pushed credentials to this member
      */
-    ZT_INLINE int64_t lastPushedCredentials() const noexcept
-    {
-        return m_lastPushedCredentials;
-    }
+    ZT_INLINE int64_t lastPushedCredentials() const noexcept { return m_lastPushedCredentials; }
 
     /**
      * Get a remote member's tag (if we have it)
@@ -65,10 +63,12 @@ class Member {
      * @param id Tag ID
      * @return Pointer to tag or NULL if not found
      */
-    ZT_INLINE const TagCredential* getTag(const NetworkConfig& nconf, const uint32_t id) const noexcept
+    ZT_INLINE const TagCredential *getTag(const NetworkConfig &nconf, const uint32_t id) const noexcept
     {
         Map<uint32_t, TagCredential>::const_iterator t(m_remoteTags.find(id));
-        return (((t != m_remoteTags.end()) && (m_isCredentialTimestampValid(nconf, t->second))) ? &(t->second) : (TagCredential*)0);
+        return (
+            ((t != m_remoteTags.end()) && (m_isCredentialTimestampValid(nconf, t->second))) ? &(t->second)
+                                                                                            : (TagCredential *)0);
     }
 
     /**
@@ -76,12 +76,12 @@ class Member {
      *
      * @param nconf Current network configuration
      */
-    void clean(const NetworkConfig& nconf);
+    void clean(const NetworkConfig &nconf);
 
     /**
      * Generates a key for internal use in indexing credentials by type and credential ID
      */
-    static ZT_INLINE uint64_t credentialKey(const ZT_CredentialType& t, const uint32_t i) noexcept
+    static ZT_INLINE uint64_t credentialKey(const ZT_CredentialType &t, const uint32_t i) noexcept
     {
         return (((uint64_t)t << 32U) | (uint64_t)i);
     }
@@ -94,7 +94,7 @@ class Member {
      * @param r Resource to check
      * @return True if this peer has a certificate of ownership for the given resource
      */
-    template <typename T> ZT_INLINE bool peerOwnsAddress(const NetworkConfig& nconf, const T& r) const noexcept
+    template <typename T> ZT_INLINE bool peerOwnsAddress(const NetworkConfig &nconf, const T &r) const noexcept
     {
         if (m_isUnspoofableAddress(nconf, r))
             return true;
@@ -110,9 +110,10 @@ class Member {
      *
      * @param localCom
      */
-    ZT_INLINE bool certificateOfMembershipAgress(const MembershipCredential& localCom, const Identity& remoteIdentity)
+    ZT_INLINE bool certificateOfMembershipAgress(const MembershipCredential &localCom, const Identity &remoteIdentity)
     {
-        if ((m_comAgreementLocalTimestamp == localCom.timestamp()) && (m_comAgreementRemoteTimestamp == m_com.timestamp()))
+        if ((m_comAgreementLocalTimestamp == localCom.timestamp())
+            && (m_comAgreementRemoteTimestamp == m_com.timestamp()))
             return true;
         if (m_com.agreesWith(localCom)) {
             // SECURITY: newer network controllers embed the full fingerprint into the COM. If we are
@@ -134,7 +135,7 @@ class Member {
 
             // Remember that these two COMs agreed. If any are updated this is invalidated and a full
             // agreement check will be done again.
-            m_comAgreementLocalTimestamp = localCom.timestamp();
+            m_comAgreementLocalTimestamp  = localCom.timestamp();
             m_comAgreementRemoteTimestamp = m_com.timestamp();
 
             return true;
@@ -142,39 +143,49 @@ class Member {
         return false;
     }
 
-    AddCredentialResult addCredential(const Context& ctx, const CallContext& cc, const Identity& sourcePeerIdentity, const NetworkConfig& nconf, const MembershipCredential& com);
-    AddCredentialResult addCredential(const Context& ctx, const CallContext& cc, const Identity& sourcePeerIdentity, const NetworkConfig& nconf, const TagCredential& tag);
-    AddCredentialResult addCredential(const Context& ctx, const CallContext& cc, const Identity& sourcePeerIdentity, const NetworkConfig& nconf, const CapabilityCredential& cap);
-    AddCredentialResult addCredential(const Context& ctx, const CallContext& cc, const Identity& sourcePeerIdentity, const NetworkConfig& nconf, const OwnershipCredential& coo);
-    AddCredentialResult addCredential(const Context& ctx, const CallContext& cc, const Identity& sourcePeerIdentity, const NetworkConfig& nconf, const RevocationCredential& rev);
+    AddCredentialResult addCredential(
+        const Context &ctx, const CallContext &cc, const Identity &sourcePeerIdentity, const NetworkConfig &nconf,
+        const MembershipCredential &com);
+    AddCredentialResult addCredential(
+        const Context &ctx, const CallContext &cc, const Identity &sourcePeerIdentity, const NetworkConfig &nconf,
+        const TagCredential &tag);
+    AddCredentialResult addCredential(
+        const Context &ctx, const CallContext &cc, const Identity &sourcePeerIdentity, const NetworkConfig &nconf,
+        const CapabilityCredential &cap);
+    AddCredentialResult addCredential(
+        const Context &ctx, const CallContext &cc, const Identity &sourcePeerIdentity, const NetworkConfig &nconf,
+        const OwnershipCredential &coo);
+    AddCredentialResult addCredential(
+        const Context &ctx, const CallContext &cc, const Identity &sourcePeerIdentity, const NetworkConfig &nconf,
+        const RevocationCredential &rev);
 
   private:
     // This returns true if a resource is an IPv6 NDP-emulated address. These embed the ZT
     // address of the peer and therefore cannot be spoofed, causing peerOwnsAddress() to
     // always return true for them. A certificate is not required for these.
-    ZT_INLINE bool m_isUnspoofableAddress(const NetworkConfig& nconf, const MAC& m) const noexcept
-    {
-        return false;
-    }
+    ZT_INLINE bool m_isUnspoofableAddress(const NetworkConfig &nconf, const MAC &m) const noexcept { return false; }
 
-    bool m_isUnspoofableAddress(const NetworkConfig& nconf, const InetAddress& ip) const noexcept;
+    bool m_isUnspoofableAddress(const NetworkConfig &nconf, const InetAddress &ip) const noexcept;
 
     // This compares the remote credential's timestamp to the timestamp in our network config
     // plus or minus the permitted maximum timestamp delta.
-    template <typename C> ZT_INLINE bool m_isCredentialTimestampValid(const NetworkConfig& nconf, const C& remoteCredential) const noexcept
+    template <typename C>
+    ZT_INLINE bool m_isCredentialTimestampValid(const NetworkConfig &nconf, const C &remoteCredential) const noexcept
     {
         const int64_t ts = remoteCredential.revision();
-        if (((ts >= nconf.timestamp) ? (ts - nconf.timestamp) : (nconf.timestamp - ts)) <= nconf.credentialTimeMaxDelta) {
-            Map<uint64_t, int64_t>::const_iterator threshold(m_revocations.find(credentialKey(C::credentialType(), remoteCredential.id())));
+        if (((ts >= nconf.timestamp) ? (ts - nconf.timestamp) : (nconf.timestamp - ts))
+            <= nconf.credentialTimeMaxDelta) {
+            Map<uint64_t, int64_t>::const_iterator threshold(
+                m_revocations.find(credentialKey(C::credentialType(), remoteCredential.id())));
             return ((threshold == m_revocations.end()) || (ts > threshold->second));
         }
         return false;
     }
 
-    template <typename C> ZT_INLINE void m_cleanCredImpl(const NetworkConfig& nconf, Map<uint32_t, C>& remoteCreds)
+    template <typename C> ZT_INLINE void m_cleanCredImpl(const NetworkConfig &nconf, Map<uint32_t, C> &remoteCreds)
     {
         for (typename Map<uint32_t, C>::iterator i(remoteCreds.begin()); i != remoteCreds.end();) {
-            if (! m_isCredentialTimestampValid(nconf, i->second))
+            if (!m_isCredentialTimestampValid(nconf, i->second))
                 remoteCreds.erase(i++);
             else
                 ++i;
@@ -204,14 +215,14 @@ class Member {
   public:
     class CapabilityIterator {
       public:
-        ZT_INLINE CapabilityIterator(Member& m, const NetworkConfig& nconf) noexcept
+        ZT_INLINE CapabilityIterator(Member &m, const NetworkConfig &nconf) noexcept
             : m_hti(m.m_remoteCaps.begin())
             , m_parent(m)
             , m_nconf(nconf)
         {
         }
 
-        ZT_INLINE CapabilityCredential* next() noexcept
+        ZT_INLINE CapabilityCredential *next() noexcept
         {
             while (m_hti != m_parent.m_remoteCaps.end()) {
                 Map<uint32_t, CapabilityCredential>::iterator i(m_hti++);
@@ -223,8 +234,8 @@ class Member {
 
       private:
         Map<uint32_t, CapabilityCredential>::iterator m_hti;
-        Member& m_parent;
-        const NetworkConfig& m_nconf;
+        Member &m_parent;
+        const NetworkConfig &m_nconf;
     };
 };
 

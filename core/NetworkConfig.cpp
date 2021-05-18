@@ -21,7 +21,7 @@
 
 namespace ZeroTier {
 
-bool NetworkConfig::toDictionary(Dictionary& d) const
+bool NetworkConfig::toDictionary(Dictionary &d) const
 {
     uint8_t tmp[ZT_BUF_MEM_SIZE];
     try {
@@ -31,8 +31,9 @@ bool NetworkConfig::toDictionary(Dictionary& d) const
         d.add(ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP, this->timestamp);
         d.add(ZT_NETWORKCONFIG_DICT_KEY_CREDENTIAL_TIME_MAX_DELTA, this->credentialTimeMaxDelta);
         d.add(ZT_NETWORKCONFIG_DICT_KEY_REVISION, this->revision);
-        d.add(ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO, this->issuedTo.toString((char*)tmp));
-        d.add(ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO_IDENTITY_HASH, this->issuedToFingerprintHash, ZT_FINGERPRINT_HASH_SIZE);
+        d.add(ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO, this->issuedTo.toString((char *)tmp));
+        d.add(
+            ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO_IDENTITY_HASH, this->issuedToFingerprintHash, ZT_FINGERPRINT_HASH_SIZE);
         d.add(ZT_NETWORKCONFIG_DICT_KEY_FLAGS, this->flags);
         d.add(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT, (uint64_t)this->multicastLimit);
         d.add(ZT_NETWORKCONFIG_DICT_KEY_TYPE, (uint64_t)this->type);
@@ -43,7 +44,7 @@ bool NetworkConfig::toDictionary(Dictionary& d) const
             d.add(ZT_NETWORKCONFIG_DICT_KEY_COM, tmp, this->com.marshal(tmp));
         }
 
-        Vector<uint8_t>* blob = &(d[ZT_NETWORKCONFIG_DICT_KEY_CAPABILITIES]);
+        Vector<uint8_t> *blob = &(d[ZT_NETWORKCONFIG_DICT_KEY_CAPABILITIES]);
         for (unsigned int i = 0; i < this->capabilityCount; ++i) {
             int l = this->capabilities[i].marshal(tmp);
             if (l < 0)
@@ -108,29 +109,29 @@ bool NetworkConfig::toDictionary(Dictionary& d) const
     return false;
 }
 
-bool NetworkConfig::fromDictionary(const Dictionary& d)
+bool NetworkConfig::fromDictionary(const Dictionary &d)
 {
     static const NetworkConfig NIL_NC;
     try {
         *this = NIL_NC;
 
         this->networkId = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_NETWORK_ID, 0);
-        if (! this->networkId)
+        if (!this->networkId)
             return false;
         this->timestamp = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP, 0);
         if (this->timestamp <= 0)
             return false;
         this->credentialTimeMaxDelta = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_CREDENTIAL_TIME_MAX_DELTA, 0);
-        this->revision = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_REVISION, 0);
-        this->issuedTo = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO, 0);
-        const Vector<uint8_t>* blob = &(d[ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO_IDENTITY_HASH]);
+        this->revision               = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_REVISION, 0);
+        this->issuedTo               = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO, 0);
+        const Vector<uint8_t> *blob  = &(d[ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO_IDENTITY_HASH]);
         if (blob->size() == ZT_FINGERPRINT_HASH_SIZE) {
             Utils::copy<ZT_FINGERPRINT_HASH_SIZE>(this->issuedToFingerprintHash, blob->data());
         }
         else {
             Utils::zero<ZT_FINGERPRINT_HASH_SIZE>(this->issuedToFingerprintHash);
         }
-        if (! this->issuedTo)
+        if (!this->issuedTo)
             return false;
         this->multicastLimit = (unsigned int)d.getUI(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT, 0);
         d.getS(ZT_NETWORKCONFIG_DICT_KEY_NAME, this->name, sizeof(this->name));
@@ -145,16 +146,17 @@ bool NetworkConfig::fromDictionary(const Dictionary& d)
         }
         else {
             this->flags = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_FLAGS, 0);
-            this->type = (ZT_VirtualNetworkType)d.getUI(ZT_NETWORKCONFIG_DICT_KEY_TYPE, (uint64_t)ZT_NETWORK_TYPE_PRIVATE);
+            this->type =
+                (ZT_VirtualNetworkType)d.getUI(ZT_NETWORKCONFIG_DICT_KEY_TYPE, (uint64_t)ZT_NETWORK_TYPE_PRIVATE);
 
             blob = &(d[ZT_NETWORKCONFIG_DICT_KEY_COM]);
-            if (! blob->empty()) {
+            if (!blob->empty()) {
                 if (this->com.unmarshal(blob->data(), (int)(blob->size()) < 0))
                     return false;
             }
 
             blob = &(d[ZT_NETWORKCONFIG_DICT_KEY_CAPABILITIES]);
-            if (! blob->empty()) {
+            if (!blob->empty()) {
                 try {
                     unsigned int p = 0;
                     while (p < blob->size()) {
@@ -173,7 +175,7 @@ bool NetworkConfig::fromDictionary(const Dictionary& d)
             }
 
             blob = &(d[ZT_NETWORKCONFIG_DICT_KEY_TAGS]);
-            if (! blob->empty()) {
+            if (!blob->empty()) {
                 try {
                     unsigned int p = 0;
                     while (p < blob->size()) {
@@ -192,7 +194,7 @@ bool NetworkConfig::fromDictionary(const Dictionary& d)
             }
 
             blob = &(d[ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATES_OF_OWNERSHIP]);
-            if (! blob->empty()) {
+            if (!blob->empty()) {
                 try {
                     unsigned int p = 0;
                     while (p < blob->size()) {
@@ -207,11 +209,13 @@ bool NetworkConfig::fromDictionary(const Dictionary& d)
                 }
                 catch (...) {
                 }
-                std::sort(&(this->certificatesOfOwnership[0]), &(this->certificatesOfOwnership[this->certificateOfOwnershipCount]));
+                std::sort(
+                    &(this->certificatesOfOwnership[0]),
+                    &(this->certificatesOfOwnership[this->certificateOfOwnershipCount]));
             }
 
             blob = &(d[ZT_NETWORKCONFIG_DICT_KEY_SPECIALISTS]);
-            if (! blob->empty()) {
+            if (!blob->empty()) {
                 unsigned int p = 0;
                 while (((p + 8) <= blob->size()) && (specialistCount < ZT_MAX_NETWORK_SPECIALISTS)) {
                     this->specialists[this->specialistCount++] = Utils::loadBigEndian<uint64_t>(blob->data() + p);
@@ -220,16 +224,18 @@ bool NetworkConfig::fromDictionary(const Dictionary& d)
             }
 
             blob = &(d[ZT_NETWORKCONFIG_DICT_KEY_ROUTES]);
-            if (! blob->empty()) {
+            if (!blob->empty()) {
                 unsigned int p = 0;
                 while ((p < blob->size()) && (routeCount < ZT_MAX_NETWORK_ROUTES)) {
-                    int l = asInetAddress(this->routes[this->routeCount].target).unmarshal(blob->data(), (int)(blob->size() - p));
+                    int l = asInetAddress(this->routes[this->routeCount].target)
+                                .unmarshal(blob->data(), (int)(blob->size() - p));
                     if (l < 0)
                         return false;
                     p += l;
                     if (p >= blob->size())
                         return false;
-                    l = asInetAddress(this->routes[this->routeCount].via).unmarshal(blob->data(), (int)(blob->size() - p));
+                    l = asInetAddress(this->routes[this->routeCount].via)
+                            .unmarshal(blob->data(), (int)(blob->size() - p));
                     if (l < 0)
                         return false;
                     p += l;
@@ -244,7 +250,7 @@ bool NetworkConfig::fromDictionary(const Dictionary& d)
             }
 
             blob = &(d[ZT_NETWORKCONFIG_DICT_KEY_STATIC_IPS]);
-            if (! blob->empty()) {
+            if (!blob->empty()) {
                 unsigned int p = 0;
                 while ((p < blob->size()) && (staticIpCount < ZT_MAX_ZT_ASSIGNED_ADDRESSES)) {
                     int l = this->staticIps[this->staticIpCount].unmarshal(blob->data() + p, (int)(blob->size() - p));
@@ -256,9 +262,11 @@ bool NetworkConfig::fromDictionary(const Dictionary& d)
             }
 
             blob = &(d[ZT_NETWORKCONFIG_DICT_KEY_RULES]);
-            if (! blob->empty()) {
+            if (!blob->empty()) {
                 this->ruleCount = 0;
-                if (CapabilityCredential::unmarshalVirtualNetworkRules(blob->data(), (int)blob->size(), this->rules, this->ruleCount, ZT_MAX_NETWORK_RULES) < 0)
+                if (CapabilityCredential::unmarshalVirtualNetworkRules(
+                        blob->data(), (int)blob->size(), this->rules, this->ruleCount, ZT_MAX_NETWORK_RULES)
+                    < 0)
                     return false;
             }
         }
@@ -270,7 +278,7 @@ bool NetworkConfig::fromDictionary(const Dictionary& d)
     return false;
 }
 
-bool NetworkConfig::addSpecialist(const Address& a, const uint64_t f) noexcept
+bool NetworkConfig::addSpecialist(const Address &a, const uint64_t f) noexcept
 {
     const uint64_t aint = a.toInt();
     for (unsigned int i = 0; i < specialistCount; ++i) {

@@ -46,19 +46,16 @@ Peer::Peer()
 {
 }
 
-Peer::~Peer()
-{
-    Utils::burn(m_helloMacKey, sizeof(m_helloMacKey));
-}
+Peer::~Peer() { Utils::burn(m_helloMacKey, sizeof(m_helloMacKey)); }
 
-bool Peer::init(const Context& ctx, const CallContext& cc, const Identity& peerIdentity)
+bool Peer::init(const Context &ctx, const CallContext &cc, const Identity &peerIdentity)
 {
     RWMutex::Lock l(m_lock);
 
     m_id = peerIdentity;
 
     uint8_t k[ZT_SYMMETRIC_KEY_SIZE];
-    if (unlikely(! ctx.identity.agree(peerIdentity, k)))
+    if (unlikely(!ctx.identity.agree(peerIdentity, k)))
         return false;
     m_identityKey.init(cc.ticks, k);
     Utils::burn(k, sizeof(k));
@@ -68,7 +65,10 @@ bool Peer::init(const Context& ctx, const CallContext& cc, const Identity& peerI
     return true;
 }
 
-void Peer::received(const Context& ctx, const CallContext& cc, const SharedPtr<Path>& path, const unsigned int hops, const uint64_t packetId, const unsigned int payloadLength, const Protocol::Verb verb, const Protocol::Verb /*inReVerb*/)
+void Peer::received(
+    const Context &ctx, const CallContext &cc, const SharedPtr<Path> &path, const unsigned int hops,
+    const uint64_t packetId, const unsigned int payloadLength, const Protocol::Verb verb,
+    const Protocol::Verb /*inReVerb*/)
 {
     m_lastReceive.store(cc.ticks, std::memory_order_relaxed);
     m_inMeter.log(cc.ticks, payloadLength);
@@ -110,7 +110,7 @@ void Peer::received(const Context& ctx, const CallContext& cc, const SharedPtr<P
 
                 // Save a reference to the current path in case we replace it. This
                 // should technically never happen, but this ensures safety if it does.
-                const SharedPtr<Path> currentBest(reinterpret_cast<Path*>(m_bestPath.load(std::memory_order_acquire)));
+                const SharedPtr<Path> currentBest(reinterpret_cast<Path *>(m_bestPath.load(std::memory_order_acquire)));
 
                 SharedPtr<Path> old;
                 old.move(m_paths[newPathIdx]);
@@ -118,23 +118,25 @@ void Peer::received(const Context& ctx, const CallContext& cc, const SharedPtr<P
 
                 m_prioritizePaths(cc);
 
-                ctx.t->learnedNewPath(cc, 0x582fabdd, packetId, m_id, path->address(), (old) ? old->address() : InetAddress());
+                ctx.t->learnedNewPath(
+                    cc, 0x582fabdd, packetId, m_id, path->address(), (old) ? old->address() : InetAddress());
             }
             else {
-                int64_t& lt = m_lastTried[Endpoint(path->address())];
+                int64_t &lt = m_lastTried[Endpoint(path->address())];
                 if ((cc.ticks - lt) < ZT_PATH_MIN_TRY_INTERVAL) {
                     lt = cc.ticks;
                     path->sent(cc, m_hello(ctx, cc, path->localSocket(), path->address(), false));
-                    ctx.t->tryingNewPath(cc, 0xb7747ddd, m_id, path->address(), path->address(), packetId, (uint8_t)verb, m_id);
+                    ctx.t->tryingNewPath(
+                        cc, 0xb7747ddd, m_id, path->address(), path->address(), packetId, (uint8_t)verb, m_id);
                 }
             }
         }
     }
 }
 
-void Peer::send(const Context& ctx, const CallContext& cc, const void* data, unsigned int len) noexcept
+void Peer::send(const Context &ctx, const CallContext &cc, const void *data, unsigned int len) noexcept
 {
-    SharedPtr<Path> via(reinterpret_cast<Path*>(m_bestPath.load(std::memory_order_acquire)));
+    SharedPtr<Path> via(reinterpret_cast<Path *>(m_bestPath.load(std::memory_order_acquire)));
     if (likely(via)) {
         if (likely(via->send(ctx, cc, data, len)))
             this->sent(cc, len);
@@ -153,18 +155,21 @@ void Peer::send(const Context& ctx, const CallContext& cc, const void* data, uns
     }
 }
 
-void Peer::pulse(const Context& ctx, const CallContext& cc)
+void Peer::pulse(const Context &ctx, const CallContext &cc)
 {
     RWMutex::Lock l(m_lock);
 
     // Grab current key (this is never NULL).
-    SymmetricKey* const key = reinterpret_cast<SymmetricKey*>(m_key.load(std::memory_order_relaxed));
+    SymmetricKey *const key = reinterpret_cast<SymmetricKey *>(m_key.load(std::memory_order_relaxed));
 
     // Determine if we need a new ephemeral key pair and if a new HELLO needs
     // to be sent. The latter happens every ZT_PEER_HELLO_INTERVAL or if a new
     // ephemeral key pair is generated.
     bool needHello =
-        (((m_vProto >= 20) && (m_keyRenegotiationNeeded || (key == &m_identityKey) || ((cc.ticks - key->timestamp()) >= (ZT_SYMMETRIC_KEY_TTL / 2)) || (key->odometer() > (ZT_SYMMETRIC_KEY_TTL_MESSAGES / 2))))
+        (((m_vProto >= 20)
+          && (m_keyRenegotiationNeeded || (key == &m_identityKey)
+              || ((cc.ticks - key->timestamp()) >= (ZT_SYMMETRIC_KEY_TTL / 2))
+              || (key->odometer() > (ZT_SYMMETRIC_KEY_TTL_MESSAGES / 2))))
          || ((cc.ticks - m_lastSentHello) >= ZT_PEER_HELLO_INTERVAL));
 
     // Prioritize paths and more importantly for here forget dead ones.
@@ -177,13 +182,16 @@ void Peer::pulse(const Context& ctx, const CallContext& cc)
             // callback (if one was supplied).
 
             if (m_locator) {
-                for (Vector<std::pair<Endpoint, SharedPtr<const Locator::EndpointAttributes> > >::const_iterator ep(m_locator->endpoints().begin()); ep != m_locator->endpoints().end(); ++ep) {
+                for (Vector<std::pair<Endpoint, SharedPtr<const Locator::EndpointAttributes>>>::const_iterator ep(
+                         m_locator->endpoints().begin());
+                     ep != m_locator->endpoints().end(); ++ep) {
                     if (ep->first.type == ZT_ENDPOINT_TYPE_IP_UDP) {
                         if (ctx.node->filterPotentialPath(cc.tPtr, m_id, -1, ep->first.ip())) {
-                            int64_t& lt = m_lastTried[ep->first];
+                            int64_t &lt = m_lastTried[ep->first];
                             if ((cc.ticks - lt) > ZT_PATH_MIN_TRY_INTERVAL) {
                                 lt = cc.ticks;
-                                ctx.t->tryingNewPath(cc, 0x84b22322, m_id, ep->first.ip(), InetAddress::NIL, 0, 0, Identity::NIL);
+                                ctx.t->tryingNewPath(
+                                    cc, 0x84b22322, m_id, ep->first.ip(), InetAddress::NIL, 0, 0, Identity::NIL);
                                 sent(cc, m_sendProbe(ctx, cc, -1, ep->first.ip(), nullptr, 0));
                             }
                         }
@@ -194,7 +202,7 @@ void Peer::pulse(const Context& ctx, const CallContext& cc)
             InetAddress addr;
             if (ctx.node->externalPathLookup(cc.tPtr, m_id, -1, addr)) {
                 if ((addr) && ctx.node->filterPotentialPath(cc.tPtr, m_id, -1, addr)) {
-                    int64_t& lt = m_lastTried[Endpoint(addr)];
+                    int64_t &lt = m_lastTried[Endpoint(addr)];
                     if ((cc.ticks - lt) > ZT_PATH_MIN_TRY_INTERVAL) {
                         lt = cc.ticks;
                         ctx.t->tryingNewPath(cc, 0x84a10000, m_id, addr, InetAddress::NIL, 0, 0, Identity::NIL);
@@ -207,7 +215,7 @@ void Peer::pulse(const Context& ctx, const CallContext& cc)
     else {
         unsigned int attempts = 0;
         for (;;) {
-            p_TryQueueItem& qi = m_tryQueue.front();
+            p_TryQueueItem &qi = m_tryQueue.front();
 
             if (qi.target.isInetAddr()) {
                 // Skip entry if it overlaps with any currently active IP.
@@ -290,11 +298,12 @@ void Peer::pulse(const Context& ctx, const CallContext& cc)
     for (unsigned int i = 0; i < m_alivePathCount; ++i) {
         if (needHello) {
             needHello = false;
-            const unsigned int bytes = m_hello(ctx, cc, m_paths[i]->localSocket(), m_paths[i]->address(), m_keyRenegotiationNeeded);
+            const unsigned int bytes =
+                m_hello(ctx, cc, m_paths[i]->localSocket(), m_paths[i]->address(), m_keyRenegotiationNeeded);
             if (bytes) {
                 m_paths[i]->sent(cc, bytes);
                 sent(cc, bytes);
-                m_lastSentHello = cc.ticks;
+                m_lastSentHello          = cc.ticks;
                 m_keyRenegotiationNeeded = false;
             }
         }
@@ -311,12 +320,13 @@ void Peer::pulse(const Context& ctx, const CallContext& cc)
         if (root) {
             const SharedPtr<Path> via(root->path(cc));
             if (via) {
-                const unsigned int bytes = m_hello(ctx, cc, via->localSocket(), via->address(), m_keyRenegotiationNeeded);
+                const unsigned int bytes =
+                    m_hello(ctx, cc, via->localSocket(), via->address(), m_keyRenegotiationNeeded);
                 if (bytes) {
                     via->sent(cc, bytes);
                     root->relayed(cc, bytes);
                     sent(cc, bytes);
-                    m_lastSentHello = cc.ticks;
+                    m_lastSentHello          = cc.ticks;
                     m_keyRenegotiationNeeded = false;
                 }
             }
@@ -332,7 +342,7 @@ void Peer::pulse(const Context& ctx, const CallContext& cc)
     }
 }
 
-void Peer::contact(const Context& ctx, const CallContext& cc, const Endpoint& ep, int tries)
+void Peer::contact(const Context &ctx, const CallContext &cc, const Endpoint &ep, int tries)
 {
     RWMutex::Lock l(m_lock);
 
@@ -345,7 +355,7 @@ void Peer::contact(const Context& ctx, const CallContext& cc, const Endpoint& ep
     }
 
     // Check underlying path attempt rate limit.
-    int64_t& lt = m_lastTried[ep];
+    int64_t &lt = m_lastTried[ep];
     if ((cc.ticks - lt) < ZT_PATH_MIN_TRY_INTERVAL)
         return;
     lt = cc.ticks;
@@ -353,14 +363,16 @@ void Peer::contact(const Context& ctx, const CallContext& cc, const Endpoint& ep
     // For IPv4 addresses we send a tiny packet with a low TTL, which helps to
     // traverse some NAT types. It has no effect otherwise.
     if (ep.isInetAddr() && ep.ip().isV4()) {
-        ctx.cb.wirePacketSendFunction(reinterpret_cast<ZT_Node*>(ctx.node), ctx.uPtr, cc.tPtr, -1, reinterpret_cast<const ZT_InetAddress*>(&ep.ip()), &s_arbitraryByte, 1, 2);
+        ctx.cb.wirePacketSendFunction(
+            reinterpret_cast<ZT_Node *>(ctx.node), ctx.uPtr, cc.tPtr, -1,
+            reinterpret_cast<const ZT_InetAddress *>(&ep.ip()), &s_arbitraryByte, 1, 2);
         ++s_arbitraryByte;
     }
 
     // Make sure address is not already in the try queue. If so just update it.
     for (List<p_TryQueueItem>::iterator i(m_tryQueue.begin()); i != m_tryQueue.end(); ++i) {
         if (i->target.isSameAddress(ep)) {
-            i->target = ep;
+            i->target    = ep;
             i->iteration = -tries;
             return;
         }
@@ -369,13 +381,17 @@ void Peer::contact(const Context& ctx, const CallContext& cc, const Endpoint& ep
     m_tryQueue.push_back(p_TryQueueItem(ep, -tries));
 }
 
-void Peer::resetWithinScope(const Context& ctx, const CallContext& cc, InetAddress::IpScope scope, int inetAddressFamily)
+void Peer::resetWithinScope(
+    const Context &ctx, const CallContext &cc, InetAddress::IpScope scope, int inetAddressFamily)
 {
     RWMutex::Lock l(m_lock);
     unsigned int pc = 0;
     for (unsigned int i = 0; i < m_alivePathCount; ++i) {
-        if ((m_paths[i]) && (((int)m_paths[i]->address().as.sa.sa_family == inetAddressFamily) && (m_paths[i]->address().ipScope() == scope))) {
-            const unsigned int bytes = m_sendProbe(ctx, cc, m_paths[i]->localSocket(), m_paths[i]->address(), nullptr, 0);
+        if ((m_paths[i])
+            && (((int)m_paths[i]->address().as.sa.sa_family == inetAddressFamily)
+                && (m_paths[i]->address().ipScope() == scope))) {
+            const unsigned int bytes =
+                m_sendProbe(ctx, cc, m_paths[i]->localSocket(), m_paths[i]->address(), nullptr, 0);
             m_paths[i]->sent(cc, bytes);
             sent(cc, bytes);
         }
@@ -388,7 +404,7 @@ void Peer::resetWithinScope(const Context& ctx, const CallContext& cc, InetAddre
         m_paths[pc++].zero();
 }
 
-void Peer::save(const Context& ctx, const CallContext& cc) const
+void Peer::save(const Context &ctx, const CallContext &cc) const
 {
     uint8_t buf[8 + ZT_PEER_MARSHAL_SIZE_MAX];
 
@@ -404,7 +420,7 @@ void Peer::save(const Context& ctx, const CallContext& cc) const
     }
 }
 
-int Peer::marshal(const Context& ctx, uint8_t data[ZT_PEER_MARSHAL_SIZE_MAX]) const noexcept
+int Peer::marshal(const Context &ctx, uint8_t data[ZT_PEER_MARSHAL_SIZE_MAX]) const noexcept
 {
     RWMutex::RLock l(m_lock);
 
@@ -430,7 +446,7 @@ int Peer::marshal(const Context& ctx, uint8_t data[ZT_PEER_MARSHAL_SIZE_MAX]) co
 
     if (m_locator) {
         data[p++] = 1;
-        s = m_locator->marshal(data + p);
+        s         = m_locator->marshal(data + p);
         if (s <= 0)
             return s;
         p += s;
@@ -454,7 +470,7 @@ int Peer::marshal(const Context& ctx, uint8_t data[ZT_PEER_MARSHAL_SIZE_MAX]) co
     return p;
 }
 
-int Peer::unmarshal(const Context& ctx, const int64_t ticks, const uint8_t* restrict data, const int len) noexcept
+int Peer::unmarshal(const Context &ctx, const int64_t ticks, const uint8_t *restrict data, const int len) noexcept
 {
     RWMutex::Lock l(m_lock);
 
@@ -463,14 +479,16 @@ int Peer::unmarshal(const Context& ctx, const int64_t ticks, const uint8_t* rest
 
     for (unsigned int i = 0; i < ZT_PEER_EPHEMERAL_KEY_BUFFER_SIZE; ++i) {
         m_ephemeralKeysSent[i].creationTime = -1;
-        m_ephemeralSessions[i].established = false;
+        m_ephemeralSessions[i].established  = false;
     }
     m_key.store((uintptr_t)&m_identityKey, std::memory_order_relaxed);
 
     bool identityKeyRestored = false;
     if (Address(data + 1) == ctx.identity.address()) {
         uint8_t k[ZT_SYMMETRIC_KEY_SIZE];
-        static_assert(ZT_SYMMETRIC_KEY_SIZE == 48, "marshal() and unmarshal() must be revisited if ZT_SYMMETRIC_KEY_SIZE is changed");
+        static_assert(
+            ZT_SYMMETRIC_KEY_SIZE == 48,
+            "marshal() and unmarshal() must be revisited if ZT_SYMMETRIC_KEY_SIZE is changed");
         ctx.localSecretCipher.decrypt(data + 1 + ZT_ADDRESS_LENGTH, k);
         ctx.localSecretCipher.decrypt(data + 1 + ZT_ADDRESS_LENGTH + 16, k + 16);
         ctx.localSecretCipher.decrypt(data + 1 + ZT_ADDRESS_LENGTH + 32, k + 32);
@@ -486,9 +504,9 @@ int Peer::unmarshal(const Context& ctx, const int64_t ticks, const uint8_t* rest
         return s;
     p += s;
 
-    if (! identityKeyRestored) {
+    if (!identityKeyRestored) {
         uint8_t k[ZT_SYMMETRIC_KEY_SIZE];
-        if (! ctx.identity.agree(m_id, k))
+        if (!ctx.identity.agree(m_id, k))
             return -1;
         m_identityKey.init(ticks, k);
         Utils::burn(k, sizeof(k));
@@ -502,8 +520,8 @@ int Peer::unmarshal(const Context& ctx, const int64_t ticks, const uint8_t* rest
     }
     else if (data[p] == 1) {
         ++p;
-        Locator* const loc = new Locator();
-        s = loc->unmarshal(data + p, len - p);
+        Locator *const loc = new Locator();
+        s                  = loc->unmarshal(data + p, len - p);
         m_locator.set(loc);
         if (s < 0)
             return s;
@@ -531,7 +549,7 @@ int Peer::unmarshal(const Context& ctx, const int64_t ticks, const uint8_t* rest
 }
 
 struct _PathPriorityComparisonOperator {
-    ZT_INLINE bool operator()(const SharedPtr<Path>& a, const SharedPtr<Path>& b) const noexcept
+    ZT_INLINE bool operator()(const SharedPtr<Path> &a, const SharedPtr<Path> &b) const noexcept
     {
         if (a) {
             if (b)
@@ -545,12 +563,12 @@ struct _PathPriorityComparisonOperator {
     }
 };
 
-void Peer::m_prioritizePaths(const CallContext& cc)
+void Peer::m_prioritizePaths(const CallContext &cc)
 {
     // assumes m_lock is locked
 
     // Need to hold the current best just in case we drop it before changing the atomic.
-    const SharedPtr<Path> oldBest(reinterpret_cast<Path*>(m_bestPath.load(std::memory_order_acquire)));
+    const SharedPtr<Path> oldBest(reinterpret_cast<Path *>(m_bestPath.load(std::memory_order_acquire)));
 
     // Clean and reprioritize paths.
     if (m_alivePathCount != 0) {
@@ -573,7 +591,9 @@ void Peer::m_prioritizePaths(const CallContext& cc)
     m_bestPath.store((m_alivePathCount != 0) ? (uintptr_t)m_paths[0].ptr() : (uintptr_t)0, std::memory_order_release);
 }
 
-unsigned int Peer::m_sendProbe(const Context& ctx, const CallContext& cc, int64_t localSocket, const InetAddress& atAddress, const uint16_t* ports, const unsigned int numPorts)
+unsigned int Peer::m_sendProbe(
+    const Context &ctx, const CallContext &cc, int64_t localSocket, const InetAddress &atAddress, const uint16_t *ports,
+    const unsigned int numPorts)
 {
     // Assumes m_lock is locked
 
@@ -582,11 +602,12 @@ unsigned int Peer::m_sendProbe(const Context& ctx, const CallContext& cc, int64_
     // some future attacker compromises it.
 
     uint8_t p[ZT_PROTO_MIN_PACKET_LENGTH];
-    Utils::storeMachineEndian<uint64_t>(p + ZT_PROTO_PACKET_ID_INDEX, m_identityKey.nextMessage(ctx.identity.address(), m_id.address()));
+    Utils::storeMachineEndian<uint64_t>(
+        p + ZT_PROTO_PACKET_ID_INDEX, m_identityKey.nextMessage(ctx.identity.address(), m_id.address()));
     m_id.address().copyTo(p + ZT_PROTO_PACKET_DESTINATION_INDEX);
     ctx.identity.address().copyTo(p + ZT_PROTO_PACKET_SOURCE_INDEX);
     p[ZT_PROTO_PACKET_FLAGS_INDEX] = 0;
-    p[ZT_PROTO_PACKET_VERB_INDEX] = Protocol::VERB_NOP;
+    p[ZT_PROTO_PACKET_VERB_INDEX]  = Protocol::VERB_NOP;
 
     ctx.expect->sending(Protocol::armor(p, ZT_PROTO_MIN_PACKET_LENGTH, m_identityKey, cipher()), cc.ticks);
 
@@ -594,12 +615,16 @@ unsigned int Peer::m_sendProbe(const Context& ctx, const CallContext& cc, int64_
         InetAddress tmp(atAddress);
         for (unsigned int i = 0; i < numPorts; ++i) {
             tmp.setPort(ports[i]);
-            ctx.cb.wirePacketSendFunction(reinterpret_cast<ZT_Node*>(ctx.node), ctx.uPtr, cc.tPtr, -1, reinterpret_cast<const ZT_InetAddress*>(&tmp), p, ZT_PROTO_MIN_PACKET_LENGTH, 0);
+            ctx.cb.wirePacketSendFunction(
+                reinterpret_cast<ZT_Node *>(ctx.node), ctx.uPtr, cc.tPtr, -1,
+                reinterpret_cast<const ZT_InetAddress *>(&tmp), p, ZT_PROTO_MIN_PACKET_LENGTH, 0);
         }
         return ZT_PROTO_MIN_PACKET_LENGTH * numPorts;
     }
     else {
-        ctx.cb.wirePacketSendFunction(reinterpret_cast<ZT_Node*>(ctx.node), ctx.uPtr, cc.tPtr, -1, reinterpret_cast<const ZT_InetAddress*>(&atAddress), p, ZT_PROTO_MIN_PACKET_LENGTH, 0);
+        ctx.cb.wirePacketSendFunction(
+            reinterpret_cast<ZT_Node *>(ctx.node), ctx.uPtr, cc.tPtr, -1,
+            reinterpret_cast<const ZT_InetAddress *>(&atAddress), p, ZT_PROTO_MIN_PACKET_LENGTH, 0);
         return ZT_PROTO_MIN_PACKET_LENGTH;
     }
 }
@@ -618,7 +643,9 @@ void Peer::m_deriveSecondaryIdentityKeys() noexcept
     KBKDFHMACSHA384(m_identityKey.key(), ZT_KBKDF_LABEL_PACKET_HMAC, 0, 0, m_helloMacKey);
 }
 
-unsigned int Peer::m_hello(const Context& ctx, const CallContext& cc, int64_t localSocket, const InetAddress& atAddress, const bool forceNewKey)
+unsigned int Peer::m_hello(
+    const Context &ctx, const CallContext &cc, int64_t localSocket, const InetAddress &atAddress,
+    const bool forceNewKey)
 {
     // assumes m_lock is at least locked for reading
 
@@ -633,30 +660,30 @@ unsigned int Peer::m_hello(const Context& ctx, const CallContext& cc, int64_t lo
      * here is also needed to satisfy some FIPS/NIST type requirements. */
 
     // Pick or generate an ephemeral key to send with this HELLO.
-    p_EphemeralPrivate* ephemeral;
+    p_EphemeralPrivate *ephemeral;
     {
-        p_EphemeralPrivate* earliest = m_ephemeralKeysSent;
-        p_EphemeralPrivate* latest = nullptr;
+        p_EphemeralPrivate *earliest     = m_ephemeralKeysSent;
+        p_EphemeralPrivate *latest       = nullptr;
         int64_t earliestEphemeralPrivate = 9223372036854775807LL;
-        int64_t latestEphemeralPrivate = 0;
+        int64_t latestEphemeralPrivate   = 0;
         for (unsigned int k = 0; k < ZT_PEER_EPHEMERAL_KEY_BUFFER_SIZE; ++k) {
             const int64_t ct = m_ephemeralKeysSent[k].creationTime;
             if (ct <= earliestEphemeralPrivate) {
                 earliestEphemeralPrivate = ct;
-                earliest = m_ephemeralKeysSent + k;
+                earliest                 = m_ephemeralKeysSent + k;
             }
             else if (ct >= latestEphemeralPrivate) {   // creationTime will be -1 if not initialized
                 latestEphemeralPrivate = ct;
-                latest = m_ephemeralKeysSent + k;
+                latest                 = m_ephemeralKeysSent + k;
             }
         }
 
-        if ((latest != nullptr) && (! forceNewKey) && ((cc.ticks - latest->creationTime) < (ZT_SYMMETRIC_KEY_TTL / 2))) {
+        if ((latest != nullptr) && (!forceNewKey) && ((cc.ticks - latest->creationTime) < (ZT_SYMMETRIC_KEY_TTL / 2))) {
             ephemeral = latest;
         }
         else {
             earliest->creationTime = cc.ticks;
-            earliest->pub.type = ZT_PROTO_EPHEMERAL_KEY_TYPE_C25519_P384;
+            earliest->pub.type     = ZT_PROTO_EPHEMERAL_KEY_TYPE_C25519_P384;
             C25519::generateC25519(earliest->pub.c25519Public, earliest->c25519Private);
             ECC384GenerateKey(earliest->pub.p384Public, earliest->p384Private);
             SHA384(earliest->sha384OfPublic, &earliest->pub, sizeof(earliest->pub));
@@ -683,7 +710,7 @@ unsigned int Peer::m_hello(const Context& ctx, const CallContext& cc, int64_t lo
     // LEGACY: the six reserved bytes after the IV exist for legacy compatibility with v1.x nodes.
     // Once those are dead they'll become just reserved bytes for future use as flags etc.
     outp.wI32(ii, 0);   // reserved bytes
-    void* const legacyMoonCountStart = outp.unsafeData + ii;
+    void *const legacyMoonCountStart = outp.unsafeData + ii;
     outp.wI16(ii, 0);
     const uint64_t legacySalsaIv = packetId & ZT_CONST_TO_BE_UINT64(0xfffffffffffffff8ULL);
     Salsa20(m_identityKey.key(), &legacySalsaIv).crypt12(legacyMoonCountStart, legacyMoonCountStart, 2);
@@ -705,7 +732,7 @@ unsigned int Peer::m_hello(const Context& ctx, const CallContext& cc, int64_t lo
     // particular this means that the public keys exchanged for ephemeral keying
     // are concealed from any observer.
     AES::CTR ctr(m_helloCipher);
-    void* const cryptSection = outp.unsafeData + ii;
+    void *const cryptSection = outp.unsafeData + ii;
     ctr.init(outp.unsafeData + ivStart, 0, cryptSection);
     ctr.crypt(cryptSection, ii - cryptSectionStart);
     ctr.finish();
@@ -719,12 +746,19 @@ unsigned int Peer::m_hello(const Context& ctx, const CallContext& cc, int64_t lo
     Protocol::salsa2012DeriveKey(m_identityKey.key(), perPacketKey, outp, ii);
     Salsa20(perPacketKey, &packetId).crypt12(Utils::ZERO256, polyKey, sizeof(polyKey));
     Poly1305 p1305(polyKey);
-    p1305.update(outp.unsafeData + ZT_PROTO_PACKET_ENCRYPTED_SECTION_START, ii - ZT_PROTO_PACKET_ENCRYPTED_SECTION_START);
+    p1305.update(
+        outp.unsafeData + ZT_PROTO_PACKET_ENCRYPTED_SECTION_START, ii - ZT_PROTO_PACKET_ENCRYPTED_SECTION_START);
     uint64_t polyMac[2];
     p1305.finish(polyMac);
     Utils::storeMachineEndian<uint64_t>(outp.unsafeData + ZT_PROTO_PACKET_MAC_INDEX, polyMac[0]);
 
-    return (likely(ctx.cb.wirePacketSendFunction(reinterpret_cast<ZT_Node*>(ctx.node), ctx.uPtr, cc.tPtr, localSocket, reinterpret_cast<const ZT_InetAddress*>(&atAddress), outp.unsafeData, ii, 0) == 0)) ? (unsigned int)ii : 0U;
+    return (likely(
+               ctx.cb.wirePacketSendFunction(
+                   reinterpret_cast<ZT_Node *>(ctx.node), ctx.uPtr, cc.tPtr, localSocket,
+                   reinterpret_cast<const ZT_InetAddress *>(&atAddress), outp.unsafeData, ii, 0)
+               == 0))
+               ? (unsigned int)ii
+               : 0U;
 }
 
 }   // namespace ZeroTier

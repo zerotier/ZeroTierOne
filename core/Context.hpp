@@ -40,7 +40,7 @@ class Network;
  */
 class Context {
   public:
-    ZT_INLINE Context(Node* const n) noexcept
+    ZT_INLINE Context(Node *const n) noexcept
         : instanceId(Utils::getSecureRandomU64())
         , node(n)
         , uPtr(nullptr)
@@ -59,35 +59,32 @@ class Context {
         secretIdentityStr[0] = 0;
     }
 
-    ZT_INLINE ~Context() noexcept
-    {
-        Utils::burn(secretIdentityStr, sizeof(secretIdentityStr));
-    }
+    ZT_INLINE ~Context() noexcept { Utils::burn(secretIdentityStr, sizeof(secretIdentityStr)); }
 
     // Unique ID generated on startup
     const uint64_t instanceId;
 
     // Node instance that owns this RuntimeEnvironment
-    Node* const restrict node;
+    Node *const restrict node;
 
     // Callbacks specified by caller who created node
     ZT_Node_Callbacks cb;
 
     // User pointer specified by external code via API
-    void* restrict uPtr;
+    void *restrict uPtr;
 
     // This is set externally to an instance of this base class
-    NetworkController* restrict localNetworkController;
+    NetworkController *restrict localNetworkController;
 
-    Store* restrict store;
-    TinyMap<SharedPtr<Network> >* restrict networks;
-    Trace* restrict t;
-    Expect* restrict expect;
-    VL2* restrict vl2;
-    VL1* restrict vl1;
-    Topology* restrict topology;
-    SelfAwareness* restrict sa;
-    TrustStore* restrict ts;
+    Store *restrict store;
+    TinyMap<SharedPtr<Network>> *restrict networks;
+    Trace *restrict t;
+    Expect *restrict expect;
+    VL2 *restrict vl2;
+    VL1 *restrict vl1;
+    Topology *restrict topology;
+    SelfAwareness *restrict sa;
+    TrustStore *restrict ts;
 
     // This node's identity and string representations thereof
     Identity identity;

@@ -39,15 +39,9 @@ class RevocationCredential : public Credential {
     friend class Credential;
 
   public:
-    static constexpr ZT_CredentialType credentialType() noexcept
-    {
-        return ZT_CREDENTIAL_TYPE_REVOCATION;
-    }
+    static constexpr ZT_CredentialType credentialType() noexcept { return ZT_CREDENTIAL_TYPE_REVOCATION; }
 
-    ZT_INLINE RevocationCredential() noexcept
-    {
-        memoryZero(this);
-    }
+    ZT_INLINE RevocationCredential() noexcept { memoryZero(this); }
 
     /**
      * @param i ID (arbitrary for revocations, currently random)
@@ -59,15 +53,11 @@ class RevocationCredential : public Credential {
      * @param ct Credential type being revoked
      */
     ZT_INLINE RevocationCredential(
-        const uint32_t i,
-        const uint64_t nwid,
-        const uint32_t cid,
-        const uint64_t thr,
-        const uint64_t fl,
-        const Address& tgt,
+        const uint32_t i, const uint64_t nwid, const uint32_t cid, const uint64_t thr, const uint64_t fl,
+        const Address &tgt,
         const ZT_CredentialType ct) noexcept
         :   // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
-            m_id(i)
+        m_id(i)
         , m_credentialId(cid)
         , m_networkId(nwid)
         , m_threshold(thr)
@@ -79,61 +69,31 @@ class RevocationCredential : public Credential {
     {
     }
 
-    ZT_INLINE uint32_t id() const noexcept
-    {
-        return m_id;
-    }
+    ZT_INLINE uint32_t id() const noexcept { return m_id; }
 
-    ZT_INLINE uint32_t credentialId() const noexcept
-    {
-        return m_credentialId;
-    }
+    ZT_INLINE uint32_t credentialId() const noexcept { return m_credentialId; }
 
-    ZT_INLINE uint64_t networkId() const noexcept
-    {
-        return m_networkId;
-    }
+    ZT_INLINE uint64_t networkId() const noexcept { return m_networkId; }
 
-    ZT_INLINE int64_t threshold() const noexcept
-    {
-        return m_threshold;
-    }
+    ZT_INLINE int64_t threshold() const noexcept { return m_threshold; }
 
-    ZT_INLINE const Address& target() const noexcept
-    {
-        return m_target;
-    }
+    ZT_INLINE const Address &target() const noexcept { return m_target; }
 
-    ZT_INLINE const Address& signer() const noexcept
-    {
-        return m_signedBy;
-    }
+    ZT_INLINE const Address &signer() const noexcept { return m_signedBy; }
 
-    ZT_INLINE ZT_CredentialType typeBeingRevoked() const noexcept
-    {
-        return m_type;
-    }
+    ZT_INLINE ZT_CredentialType typeBeingRevoked() const noexcept { return m_type; }
 
-    ZT_INLINE const uint8_t* signature() const noexcept
-    {
-        return m_signature;
-    }
+    ZT_INLINE const uint8_t *signature() const noexcept { return m_signature; }
 
-    ZT_INLINE unsigned int signatureLength() const noexcept
-    {
-        return m_signatureLength;
-    }
+    ZT_INLINE unsigned int signatureLength() const noexcept { return m_signatureLength; }
 
-    ZT_INLINE bool fastPropagate() const noexcept
-    {
-        return ((m_flags & ZT_REVOCATION_FLAG_FAST_PROPAGATE) != 0);
-    }
+    ZT_INLINE bool fastPropagate() const noexcept { return ((m_flags & ZT_REVOCATION_FLAG_FAST_PROPAGATE) != 0); }
 
     /**
      * @param signer Signing identity, must have private key
      * @return True if signature was successful
      */
-    bool sign(const Identity& signer) noexcept;
+    bool sign(const Identity &signer) noexcept;
 
     /**
      * Verify this revocation's signature
@@ -141,18 +101,15 @@ class RevocationCredential : public Credential {
      * @param RR Runtime environment to provide for peer lookup, etc.
      * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
      */
-    ZT_INLINE Credential::VerifyResult verify(const Context& ctx, const CallContext& cc) const noexcept
+    ZT_INLINE Credential::VerifyResult verify(const Context &ctx, const CallContext &cc) const noexcept
     {
         return s_verify(ctx, cc, *this);
     }
 
-    static constexpr int marshalSizeMax() noexcept
-    {
-        return ZT_REVOCATION_MARSHAL_SIZE_MAX;
-    }
+    static constexpr int marshalSizeMax() noexcept { return ZT_REVOCATION_MARSHAL_SIZE_MAX; }
 
     int marshal(uint8_t data[ZT_REVOCATION_MARSHAL_SIZE_MAX], bool forSign = false) const noexcept;
-    int unmarshal(const uint8_t* restrict data, int len) noexcept;
+    int unmarshal(const uint8_t *restrict data, int len) noexcept;
 
   private:
     uint32_t m_id;

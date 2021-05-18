@@ -29,9 +29,7 @@ class SymmetricKey {
     /**
      * Construct an uninitialized key (init() must be called)
      */
-    ZT_INLINE SymmetricKey() : m_secret(), m_ts(-1), m_initialNonce(0), m_cipher(), m_nonce(0)
-    {
-    }
+    ZT_INLINE SymmetricKey() : m_secret(), m_ts(-1), m_initialNonce(0), m_cipher(), m_nonce(0) {}
 
     /**
      * Construct a new symmetric key
@@ -42,7 +40,7 @@ class SymmetricKey {
      * @param ts Key timestamp
      * @param key Key (must be 48 bytes / 384 bits)
      */
-    ZT_INLINE SymmetricKey(const int64_t ts, const void* const key) noexcept
+    ZT_INLINE SymmetricKey(const int64_t ts, const void *const key) noexcept
         : m_secret(key)
         , m_ts(ts)
         , m_initialNonce(Utils::getSecureRandomU64() >> 1U)
@@ -51,7 +49,7 @@ class SymmetricKey {
     {
     }
 
-    ZT_INLINE SymmetricKey(const SymmetricKey& k) noexcept
+    ZT_INLINE SymmetricKey(const SymmetricKey &k) noexcept
         : m_secret(k.m_secret)
         , m_ts(k.m_ts)
         , m_initialNonce(k.m_initialNonce)
@@ -60,15 +58,12 @@ class SymmetricKey {
     {
     }
 
-    ZT_INLINE ~SymmetricKey() noexcept
-    {
-        Utils::burn(m_secret.data, ZT_SYMMETRIC_KEY_SIZE);
-    }
+    ZT_INLINE ~SymmetricKey() noexcept { Utils::burn(m_secret.data, ZT_SYMMETRIC_KEY_SIZE); }
 
-    ZT_INLINE SymmetricKey& operator=(const SymmetricKey& k) noexcept
+    ZT_INLINE SymmetricKey &operator=(const SymmetricKey &k) noexcept
     {
-        m_secret = k.m_secret;
-        m_ts = k.m_ts;
+        m_secret       = k.m_secret;
+        m_ts           = k.m_ts;
         m_initialNonce = k.m_initialNonce;
         m_cipher.init(k.m_secret.data);
         m_nonce.store(k.m_nonce.load(std::memory_order_relaxed), std::memory_order_relaxed);
@@ -81,10 +76,10 @@ class SymmetricKey {
      * @param ts Key timestamp
      * @param key Key (must be 48 bytes / 384 bits)
      */
-    ZT_INLINE void init(const int64_t ts, const void* const key) noexcept
+    ZT_INLINE void init(const int64_t ts, const void *const key) noexcept
     {
         Utils::copy<ZT_SYMMETRIC_KEY_SIZE>(m_secret.data, key);
-        m_ts = ts;
+        m_ts           = ts;
         m_initialNonce = Utils::getSecureRandomU64() >> 1U;
         m_cipher.init(key);
         m_nonce.store(m_initialNonce, std::memory_order_relaxed);
@@ -110,34 +105,22 @@ class SymmetricKey {
      *
      * @return Number of times nextMessage() has been called since object creation
      */
-    ZT_INLINE uint64_t odometer() const noexcept
-    {
-        return m_nonce.load(std::memory_order_relaxed) - m_initialNonce;
-    }
+    ZT_INLINE uint64_t odometer() const noexcept { return m_nonce.load(std::memory_order_relaxed) - m_initialNonce; }
 
     /**
      * @return Key creation timestamp or -1 if this is a long-lived key
      */
-    ZT_INLINE int64_t timestamp() const noexcept
-    {
-        return m_ts;
-    }
+    ZT_INLINE int64_t timestamp() const noexcept { return m_ts; }
 
     /**
      * @return 48-byte / 384-bit secret key
      */
-    ZT_INLINE const uint8_t* key() const noexcept
-    {
-        return m_secret.data;
-    }
+    ZT_INLINE const uint8_t *key() const noexcept { return m_secret.data; }
 
     /**
      * @return AES cipher (already initialized with secret key)
      */
-    ZT_INLINE const AES& aes() const noexcept
-    {
-        return m_cipher;
-    }
+    ZT_INLINE const AES &aes() const noexcept { return m_cipher; }
 
   private:
     Blob<ZT_SYMMETRIC_KEY_SIZE> m_secret;

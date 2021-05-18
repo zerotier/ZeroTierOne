@@ -27,7 +27,6 @@ namespace {
 
 // --------------------------------------------------------------------------------------------------------------------
 
-#define crypto_uint32            uint32_t
 #define crypto_hash_sha512_BYTES 64
 typedef uint8_t u8;
 typedef int32_t s32;
@@ -168,7 +167,7 @@ ZT_INLINE limb div_by_2_25(const limb v)
     return (v + roundoff) >> 25;
 }
 
-void freduce_coefficients(limb *output)
+ZT_INLINE void freduce_coefficients(limb *output)
 {
     output[10] = 0;
     for (int i = 0; i < 10; i += 2) {
@@ -183,11 +182,9 @@ void freduce_coefficients(limb *output)
     output[0] += output[10] << 1;
     output[0] += output[10];
     output[10] = 0;
-    {
-        limb over = div_by_2_26(output[0]);
-        output[0] -= over << 26;
-        output[1] += over;
-    }
+    limb over  = div_by_2_26(output[0]);
+    output[0] -= over << 26;
+    output[1] += over;
 }
 
 ZT_INLINE void fmul(limb *output, const limb *in, const limb *in2)
@@ -591,11 +588,11 @@ ZT_INLINE void crypto_scalarmult_base(unsigned char *q, const unsigned char *n) 
 // Ed25519 ref from: http://bench.cr.yp.to/supercop.html
 
 typedef struct {
-    crypto_uint32 v[32];
+    uint32_t v[32];
 } fe25519;
 
 typedef struct {
-    crypto_uint32 v[32];
+    uint32_t v[32];
 } sc25519;
 
 typedef struct {
@@ -618,15 +615,15 @@ typedef struct {
 
 void fe25519_sub(fe25519 *r, const fe25519 *x, const fe25519 *y);
 
-ZT_INLINE crypto_uint32 equal(crypto_uint32 a, crypto_uint32 b)
+ZT_INLINE uint32_t equal(uint32_t a, uint32_t b)
 {
-    crypto_uint32 x = a ^ b;
+    uint32_t x = a ^ b;
     x -= 1;
     x >>= 31;
     return x;
 }
 
-ZT_INLINE crypto_uint32 ge(crypto_uint32 a, crypto_uint32 b)
+ZT_INLINE uint32_t ge(uint32_t a, uint32_t b)
 {
     unsigned int x = a;
     x -= (unsigned int)b;
@@ -635,13 +632,13 @@ ZT_INLINE crypto_uint32 ge(crypto_uint32 a, crypto_uint32 b)
     return x;
 }
 
-ZT_INLINE crypto_uint32 times19(crypto_uint32 a) { return (a << 4) + (a << 1) + a; }
-ZT_INLINE crypto_uint32 times38(crypto_uint32 a) { return (a << 5) + (a << 2) + (a << 1); }
+ZT_INLINE uint32_t times19(uint32_t a) { return (a << 4) + (a << 1) + a; }
+ZT_INLINE uint32_t times38(uint32_t a) { return (a << 5) + (a << 2) + (a << 1); }
 
 void reduce_add_sub(fe25519 *r)
 {
     for (int rep = 0; rep < 4; rep++) {
-        crypto_uint32 t = r->v[31] >> 7;
+        uint32_t t = r->v[31] >> 7;
         r->v[31] &= 127;
         t = times19(t);
         r->v[0] += t;
@@ -656,7 +653,7 @@ void reduce_add_sub(fe25519 *r)
 ZT_INLINE void reduce_mul(fe25519 *r)
 {
     for (int rep = 0; rep < 2; rep++) {
-        crypto_uint32 t = r->v[31] >> 7;
+        uint32_t t = r->v[31] >> 7;
         r->v[31] &= 127;
         t = times19(t);
         r->v[0] += t;
@@ -670,7 +667,7 @@ ZT_INLINE void reduce_mul(fe25519 *r)
 
 void fe25519_freeze(fe25519 *r)
 {
-    crypto_uint32 mm = equal(r->v[31], 127);
+    uint32_t mm = equal(r->v[31], 127);
     for (int i = 30; i > 0; i--)
         mm &= equal(r->v[i], 255);
     mm &= ge(r->v[0], 237);
@@ -711,8 +708,8 @@ ZT_INLINE int fe25519_iseq_vartime(const fe25519 *x, const fe25519 *y)
 
 ZT_INLINE void fe25519_cmov(fe25519 *r, const fe25519 *x, unsigned char b)
 {
-    crypto_uint32 mask = b;
-    mask               = -mask;
+    uint32_t mask = b;
+    mask          = -mask;
     for (int i = 0; i < 32; i++)
         r->v[i] ^= mask & (x->v[i] ^ r->v[i]);
 }
@@ -755,7 +752,7 @@ ZT_INLINE void fe25519_add(fe25519 *r, const fe25519 *x, const fe25519 *y)
 
 void fe25519_sub(fe25519 *r, const fe25519 *x, const fe25519 *y)
 {
-    crypto_uint32 t[32];
+    uint32_t t[32];
     t[0]  = x->v[0] + 0x1da;
     t[31] = x->v[31] + 0xfe;
     for (int i = 1; i < 31; i++)
@@ -767,7 +764,7 @@ void fe25519_sub(fe25519 *r, const fe25519 *x, const fe25519 *y)
 
 void fe25519_mul(fe25519 *r, const fe25519 *x, const fe25519 *y)
 {
-    crypto_uint32 t[63];
+    uint32_t t[63];
     for (int i = 0; i < 63; i++)
         t[i] = 0;
     for (int i = 0; i < 32; i++) {
@@ -891,14 +888,15 @@ ZT_INLINE void fe25519_pow2523(fe25519 *r, const fe25519 *x)
     fe25519_mul(r, &t, x);
 }
 
-const crypto_uint32 m[32]  = { 0xED, 0xD3, 0xF5, 0x5C, 0x1A, 0x63, 0x12, 0x58, 0xD6, 0x9C, 0xF7,
-                              0xA2, 0xDE, 0xF9, 0xDE, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                              0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10 };
-const crypto_uint32 mu[33] = { 0x1B, 0x13, 0x2C, 0x0A, 0xA3, 0xE5, 0x9C, 0xED, 0xA7, 0x29, 0x63,
-                               0x08, 0x5D, 0x21, 0x06, 0x21, 0xEB, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-                               0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x0F };
+const uint32_t m[32] = {
+    0xED, 0xD3, 0xF5, 0x5C, 0x1A, 0x63, 0x12, 0x58, 0xD6, 0x9C, 0xF7, 0xA2, 0xDE, 0xF9, 0xDE, 0x14,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10
+};
+const uint32_t mu[33] = { 0x1B, 0x13, 0x2C, 0x0A, 0xA3, 0xE5, 0x9C, 0xED, 0xA7, 0x29, 0x63,
+                          0x08, 0x5D, 0x21, 0x06, 0x21, 0xEB, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+                          0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x0F };
 
-ZT_INLINE crypto_uint32 lt(crypto_uint32 a, crypto_uint32 b) /* 16-bit inputs */
+ZT_INLINE uint32_t lt(uint32_t a, uint32_t b) /* 16-bit inputs */
 {
     unsigned int x = a;
     x -= (unsigned int)b; /* 0..65535: no; 4294901761..4294967295: yes */
@@ -908,9 +906,9 @@ ZT_INLINE crypto_uint32 lt(crypto_uint32 a, crypto_uint32 b) /* 16-bit inputs */
 
 void reduce_add_sub(sc25519 *r)
 {
-    crypto_uint32 pb = 0;
-    crypto_uint32 b;
-    crypto_uint32 mask;
+    uint32_t pb = 0;
+    uint32_t b;
+    uint32_t mask;
     int i;
     unsigned char t[32];
 
@@ -925,15 +923,15 @@ void reduce_add_sub(sc25519 *r)
         r->v[i] ^= mask & (r->v[i] ^ t[i]);
 }
 
-void barrett_reduce(sc25519 *r, const crypto_uint32 x[64])
+void barrett_reduce(sc25519 *r, const uint32_t x[64])
 {
     /* See HAC, Alg. 14.42 */
     int i, j;
-    crypto_uint32 q2[66];
-    crypto_uint32 *q3 = q2 + 33;
-    crypto_uint32 r1[33];
-    crypto_uint32 r2[33];
-    crypto_uint32 pb = 0;
+    uint32_t q2[66];
+    uint32_t *q3 = q2 + 33;
+    uint32_t r1[33];
+    uint32_t r2[33];
+    uint32_t pb = 0;
 
     Utils::zero<sizeof(q2)>(q2);
     // for (i = 0;i < 66;++i) q2[i] = 0;
@@ -961,9 +959,9 @@ void barrett_reduce(sc25519 *r, const crypto_uint32 x[64])
 
     for (i = 0; i < 32; i++) {
         pb += r2[i];
-        crypto_uint32 b = lt(r1[i], pb);
-        r->v[i]         = r1[i] - pb + (b << 8);
-        pb              = b;
+        uint32_t b = lt(r1[i], pb);
+        r->v[i]    = r1[i] - pb + (b << 8);
+        pb         = b;
     }
 
     reduce_add_sub(r);
@@ -973,7 +971,7 @@ void barrett_reduce(sc25519 *r, const crypto_uint32 x[64])
 ZT_INLINE void sc25519_from32bytes(sc25519 *r, const unsigned char x[32])
 {
     int i;
-    crypto_uint32 t[64];
+    uint32_t t[64];
     for (i = 0; i < 32; i++)
         t[i] = x[i];
     for (i = 32; i < 64; ++i)
@@ -984,7 +982,7 @@ ZT_INLINE void sc25519_from32bytes(sc25519 *r, const unsigned char x[32])
 ZT_INLINE void sc25519_from64bytes(sc25519 *r, const unsigned char x[64])
 {
     int i;
-    crypto_uint32 t[64];
+    uint32_t t[64];
     for (i = 0; i < 64; i++)
         t[i] = x[i];
     barrett_reduce(r, t);
@@ -1012,7 +1010,7 @@ ZT_INLINE void sc25519_add(sc25519 *r, const sc25519 *x, const sc25519 *y)
 ZT_INLINE void sc25519_mul(sc25519 *r, const sc25519 *x, const sc25519 *y)
 {
     int i, j;
-    crypto_uint32 t[64];
+    uint32_t t[64];
     for (i = 0; i < 64; i++)
         t[i] = 0;
 
@@ -1077,16 +1075,16 @@ ZT_INLINE void sc25519_2interleave2(unsigned char r[127], const sc25519 *s1, con
     r[126] = ((s1->v[31] >> 4) & 3) ^ (((s2->v[31] >> 4) & 3) << 2);
 }
 
-static const fe25519 ge25519_ecd = { { 0xA3, 0x78, 0x59, 0x13, 0xCA, 0x4D, 0xEB, 0x75, 0xAB, 0xD8, 0x41,
+static const fe25519 ge25519_ecd    = { { 0xA3, 0x78, 0x59, 0x13, 0xCA, 0x4D, 0xEB, 0x75, 0xAB, 0xD8, 0x41,
                                        0x41, 0x4D, 0x0A, 0x70, 0x00, 0x98, 0xE8, 0x79, 0x77, 0x79, 0x40,
                                        0xC7, 0x8C, 0x73, 0xFE, 0x6F, 0x2B, 0xEE, 0x6C, 0x03, 0x52 } };
-static const fe25519 ge25519_ec2d = { { 0x59, 0xF1, 0xB2, 0x26, 0x94, 0x9B, 0xD6, 0xEB, 0x56, 0xB1, 0x83,
+static const fe25519 ge25519_ec2d   = { { 0x59, 0xF1, 0xB2, 0x26, 0x94, 0x9B, 0xD6, 0xEB, 0x56, 0xB1, 0x83,
                                         0x82, 0x9A, 0x14, 0xE0, 0x00, 0x30, 0xD1, 0xF3, 0xEE, 0xF2, 0x80,
                                         0x8E, 0x19, 0xE7, 0xFC, 0xDF, 0x56, 0xDC, 0xD9, 0x06, 0x24 } };
 static const fe25519 ge25519_sqrtm1 = { { 0xB0, 0xA0, 0x0E, 0x4A, 0x27, 0x1B, 0xEE, 0xC4, 0x78, 0xE4, 0x2F,
                                           0xAD, 0x06, 0x18, 0x43, 0x2F, 0xA7, 0xD7, 0xFB, 0x3D, 0x99, 0x00,
                                           0x4D, 0x2B, 0x0B, 0xDF, 0xC1, 0x4F, 0x80, 0x24, 0x83, 0x2B } };
-static const ge25519 ge25519_base = {
+static const ge25519 ge25519_base   = {
     { { 0x1A, 0xD5, 0x25, 0x8F, 0x60, 0x2D, 0x56, 0xC9, 0xB2, 0xA7, 0x25, 0x95, 0x60, 0xC7, 0x2C, 0x69,
         0x5C, 0xDC, 0xD6, 0xFD, 0x31, 0xE2, 0xA4, 0xC0, 0xFE, 0x53, 0x6E, 0xCD, 0xD3, 0x36, 0x69, 0x21 } },
     { { 0x58, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66,
@@ -1094,7 +1092,8 @@ static const ge25519 ge25519_base = {
     { { 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } },
     { { 0xA3, 0xDD, 0xB7, 0xA5, 0xB3, 0x8A, 0xDE, 0x6D, 0xF5, 0x52, 0x51, 0x77, 0x80, 0x9F, 0xF0, 0x20,
-        0x7D, 0xE3, 0xAB, 0x64, 0x8E, 0x4E, 0xEA, 0x66, 0x65, 0x76, 0x8B, 0xD7, 0x0F, 0x5F, 0x87, 0x67 } } };
+        0x7D, 0xE3, 0xAB, 0x64, 0x8E, 0x4E, 0xEA, 0x66, 0x65, 0x76, 0x8B, 0xD7, 0x0F, 0x5F, 0x87, 0x67 } }
+};
 static const ge25519_aff ge25519_base_multiples_affine[425] = {
     { { { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
           0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } },
@@ -2886,7 +2885,7 @@ ZT_INLINE void cmov_aff(ge25519_aff *r, const ge25519_aff *p, unsigned char b)
 ZT_INLINE unsigned char equal(signed char b, signed char c)
 {
     unsigned char ub = b, uc = c, x = ub ^ uc;
-    crypto_uint32 y  = x;
+    uint32_t y = x;
     y -= 1;
     y >>= 31;
     return (unsigned char)y;

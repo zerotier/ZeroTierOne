@@ -27,9 +27,7 @@ namespace ZeroTier {
  */
 class CallContext {
   public:
-    ZT_INLINE CallContext(const int64_t c, const int64_t t, void* const p) : clock(c), ticks(t), tPtr(p)
-    {
-    }
+    ZT_INLINE CallContext(const int64_t c, const int64_t t, void *const p) : clock(c), ticks(t), tPtr(p) {}
 
     /**
      * Real world time in milliseconds since Unix epoch or -1 if unknown.
@@ -53,7 +51,7 @@ class CallContext {
      * By passing this back to callbacks state can be kept by the caller using
      * a mechanism that is faster (on most platforms) than thread-local storage.
      */
-    void* const tPtr;
+    void *const tPtr;
 };
 
 }   // namespace ZeroTier

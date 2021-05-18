@@ -15,23 +15,25 @@
 
 namespace ZeroTier {
 
-void OwnershipCredential::addThing(const InetAddress& ip)
+void OwnershipCredential::addThing(const InetAddress &ip)
 {
     if (m_thingCount >= ZT_CERTIFICATEOFOWNERSHIP_MAX_THINGS)
         return;
     if (ip.as.sa.sa_family == AF_INET) {
         m_thingTypes[m_thingCount] = THING_IPV4_ADDRESS;
-        Utils::copy<4>(m_thingValues[m_thingCount], &(reinterpret_cast<const struct sockaddr_in*>(&ip)->sin_addr.s_addr));
+        Utils::copy<4>(
+            m_thingValues[m_thingCount], &(reinterpret_cast<const struct sockaddr_in *>(&ip)->sin_addr.s_addr));
         ++m_thingCount;
     }
     else if (ip.as.sa.sa_family == AF_INET6) {
         m_thingTypes[m_thingCount] = THING_IPV6_ADDRESS;
-        Utils::copy<16>(m_thingValues[m_thingCount], reinterpret_cast<const struct sockaddr_in6*>(&ip)->sin6_addr.s6_addr);
+        Utils::copy<16>(
+            m_thingValues[m_thingCount], reinterpret_cast<const struct sockaddr_in6 *>(&ip)->sin6_addr.s6_addr);
         ++m_thingCount;
     }
 }
 
-void OwnershipCredential::addThing(const MAC& mac)
+void OwnershipCredential::addThing(const MAC &mac)
 {
     if (m_thingCount >= ZT_CERTIFICATEOFOWNERSHIP_MAX_THINGS)
         return;
@@ -40,11 +42,11 @@ void OwnershipCredential::addThing(const MAC& mac)
     ++m_thingCount;
 }
 
-bool OwnershipCredential::sign(const Identity& signer)
+bool OwnershipCredential::sign(const Identity &signer)
 {
     uint8_t buf[ZT_CERTIFICATEOFOWNERSHIP_MARSHAL_SIZE_MAX + 16];
     if (signer.hasPrivate()) {
-        m_signedBy = signer.address();
+        m_signedBy        = signer.address();
         m_signatureLength = signer.sign(buf, (unsigned int)marshal(buf, true), m_signature, sizeof(m_signature));
         return true;
     }
@@ -73,7 +75,7 @@ int OwnershipCredential::marshal(uint8_t data[ZT_CERTIFICATEOFOWNERSHIP_MARSHAL_
     p += ZT_ADDRESS_LENGTH;
     m_signedBy.copyTo(data + p);
     p += ZT_ADDRESS_LENGTH;
-    if (! forSign) {
+    if (!forSign) {
         data[p++] = 1;
         Utils::storeBigEndian<uint16_t>(data + p, (uint16_t)m_signatureLength);
         p += 2;
@@ -89,15 +91,15 @@ int OwnershipCredential::marshal(uint8_t data[ZT_CERTIFICATEOFOWNERSHIP_MARSHAL_
     return p;
 }
 
-int OwnershipCredential::unmarshal(const uint8_t* data, int len) noexcept
+int OwnershipCredential::unmarshal(const uint8_t *data, int len) noexcept
 {
     if (len < 30)
         return -1;
 
-    m_networkId = Utils::loadBigEndian<uint64_t>(data);
-    m_ts = (int64_t)Utils::loadBigEndian<uint64_t>(data + 8);
-    m_flags = Utils::loadBigEndian<uint64_t>(data + 16);
-    m_id = Utils::loadBigEndian<uint32_t>(data + 24);
+    m_networkId  = Utils::loadBigEndian<uint64_t>(data);
+    m_ts         = (int64_t)Utils::loadBigEndian<uint64_t>(data + 8);
+    m_flags      = Utils::loadBigEndian<uint64_t>(data + 16);
+    m_id         = Utils::loadBigEndian<uint32_t>(data + 24);
     m_thingCount = Utils::loadBigEndian<uint16_t>(data + 28);
     if (m_thingCount > ZT_CERTIFICATEOFOWNERSHIP_MAX_THINGS)
         return -1;

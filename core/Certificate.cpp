@@ -345,12 +345,15 @@ bool Certificate::sign(
         default: return false;
         case ZT_CERTIFICATE_PUBLIC_KEY_ALGORITHM_ECDSA_NIST_P_384:
             if (issuerPrivateKeySize == (1 + ZT_ECC384_PUBLIC_KEY_SIZE + ZT_ECC384_PRIVATE_KEY_SIZE)) {
-                if ((!issuer)||((this->publicKeySize == (ZT_ECC384_PUBLIC_KEY_SIZE + 1))&&(memcmp(issuerPrivateKey, this->publicKey, ZT_ECC384_PUBLIC_KEY_SIZE + 1) == 0))) {
+                if ((!issuer)
+                    || ((this->publicKeySize == (ZT_ECC384_PUBLIC_KEY_SIZE + 1))
+                        && (memcmp(issuerPrivateKey, this->publicKey, ZT_ECC384_PUBLIC_KEY_SIZE + 1) == 0))) {
                     // If public key and issuer public key match, this is a self-signed certificate.
                     // This can also be specified by signing with issuer set to NULL.
                     Utils::fill<sizeof(this->issuer), 0xff>(this->issuer);
                     this->issuerPublicKeySize = 0;
-                } else {
+                }
+                else {
                     // Otherwise set the issuer and issuer public key.
                     Utils::copy<sizeof(this->issuer)>(this->issuer, issuer);
                     Utils::copy<1 + ZT_ECC384_PUBLIC_KEY_SIZE>(

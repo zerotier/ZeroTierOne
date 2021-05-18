@@ -259,7 +259,7 @@ extern "C" {
  */
 enum ZT_IdentityType {
     ZT_IDENTITY_TYPE_C25519 = 0, /* C25519/Ed25519 */
-    ZT_IDENTITY_TYPE_P384 = 1    /* Combined C25519/NIST-P-384 key */
+    ZT_IDENTITY_TYPE_P384   = 1  /* Combined C25519/NIST-P-384 key */
 };
 
 /**
@@ -291,14 +291,14 @@ typedef struct {
  * IP scope types as identified by InetAddress.
  */
 enum ZT_InetAddress_IpScope {
-    ZT_IP_SCOPE_NONE = 0,            // NULL or not an IP address
-    ZT_IP_SCOPE_MULTICAST = 1,       // 224.0.0.0 and other V4/V6 multicast IPs
-    ZT_IP_SCOPE_LOOPBACK = 2,        // 127.0.0.1, ::1, etc.
+    ZT_IP_SCOPE_NONE          = 0,   // NULL or not an IP address
+    ZT_IP_SCOPE_MULTICAST     = 1,   // 224.0.0.0 and other V4/V6 multicast IPs
+    ZT_IP_SCOPE_LOOPBACK      = 2,   // 127.0.0.1, ::1, etc.
     ZT_IP_SCOPE_PSEUDOPRIVATE = 3,   // 28.x.x.x, etc. -- unofficially unrouted IPv4 blocks often "bogarted"
-    ZT_IP_SCOPE_GLOBAL = 4,          // globally routable IP address (all others)
-    ZT_IP_SCOPE_LINK_LOCAL = 5,      // 169.254.x.x, IPv6 LL
-    ZT_IP_SCOPE_SHARED = 6,          // currently unused, formerly used for carrier-grade NAT ranges
-    ZT_IP_SCOPE_PRIVATE = 7          // 10.x.x.x, 192.168.x.x, etc.
+    ZT_IP_SCOPE_GLOBAL        = 4,   // globally routable IP address (all others)
+    ZT_IP_SCOPE_LINK_LOCAL    = 5,   // 169.254.x.x, IPv6 LL
+    ZT_IP_SCOPE_SHARED        = 6,   // currently unused, formerly used for carrier-grade NAT ranges
+    ZT_IP_SCOPE_PRIVATE       = 7    // 10.x.x.x, 192.168.x.x, etc.
 };
 
 /**
@@ -528,12 +528,12 @@ typedef struct {
     /**
      * Identity (never NULL)
      */
-    const ZT_Identity* identity;
+    const ZT_Identity *identity;
 
     /**
      * Locator (NULL if no locator included)
      */
-    const ZT_Locator* locator;
+    const ZT_Locator *locator;
 } ZT_Certificate_Identity;
 
 /**
@@ -563,17 +563,17 @@ typedef struct {
     /**
      * Identities and optional locators of nodes
      */
-    ZT_Certificate_Identity* identities;
+    ZT_Certificate_Identity *identities;
 
     /**
      * Networks owned by this entity
      */
-    ZT_Certificate_Network* networks;
+    ZT_Certificate_Network *networks;
 
     /**
      * URLs that can be consulted for updates to this certificate.
      */
-    const char** updateURLs;
+    const char **updateURLs;
 
     /**
      * Number of identities
@@ -701,7 +701,7 @@ typedef struct {
     /**
      * Extended attributes set by issuer (in Dictionary format, NULL if none)
      */
-    const uint8_t* extendedAttributes;
+    const uint8_t *extendedAttributes;
 
     /**
      * Size of extended attributes field in bytes
@@ -775,17 +775,17 @@ typedef struct {
     /**
      * Function that is called to free this list (called by ZT_freeQueryResult)
      */
-    void (*freeFunction)(const void*);
+    void (*freeFunction)(const void *);
 
     /**
      * Array of pointers to certificates
      */
-    const ZT_Certificate* const* certs;
+    const ZT_Certificate *const *certs;
 
     /**
      * Array of local trust flags for each certificate
      */
-    const unsigned int* localTrust;
+    const unsigned int *localTrust;
 
     /**
      * Number of certificates
@@ -796,7 +796,14 @@ typedef struct {
 /**
  * Credential type IDs
  */
-enum ZT_CredentialType { ZT_CREDENTIAL_TYPE_NULL = 0, ZT_CREDENTIAL_TYPE_COM = 1, ZT_CREDENTIAL_TYPE_CAPABILITY = 2, ZT_CREDENTIAL_TYPE_TAG = 3, ZT_CREDENTIAL_TYPE_COO = 4, ZT_CREDENTIAL_TYPE_REVOCATION = 6 };
+enum ZT_CredentialType {
+    ZT_CREDENTIAL_TYPE_NULL       = 0,
+    ZT_CREDENTIAL_TYPE_COM        = 1,
+    ZT_CREDENTIAL_TYPE_CAPABILITY = 2,
+    ZT_CREDENTIAL_TYPE_TAG        = 3,
+    ZT_CREDENTIAL_TYPE_COO        = 4,
+    ZT_CREDENTIAL_TYPE_REVOCATION = 6
+};
 
 /**
  * Endpoint address and protocol types
@@ -808,15 +815,15 @@ enum ZT_CredentialType { ZT_CREDENTIAL_TYPE_NULL = 0, ZT_CREDENTIAL_TYPE_COM = 1
  * for future use.
  */
 enum ZT_EndpointType {
-    ZT_ENDPOINT_TYPE_NIL = 0,         /* Nil/empty endpoint */
-    ZT_ENDPOINT_TYPE_ZEROTIER = 1,    /* ZeroTier relaying (address+fingerprint) */
-    ZT_ENDPOINT_TYPE_ETHERNET = 2,    /* Ethernet with ethertype 0x9993 */
+    ZT_ENDPOINT_TYPE_NIL         = 0, /* Nil/empty endpoint */
+    ZT_ENDPOINT_TYPE_ZEROTIER    = 1, /* ZeroTier relaying (address+fingerprint) */
+    ZT_ENDPOINT_TYPE_ETHERNET    = 2, /* Ethernet with ethertype 0x9993 */
     ZT_ENDPOINT_TYPE_WIFI_DIRECT = 3, /* Ethernet using WiFi direct */
-    ZT_ENDPOINT_TYPE_BLUETOOTH = 4,   /* Bluetooth (same address type as Ethernet) */
-    ZT_ENDPOINT_TYPE_IP = 5,          /* Naked IP (protocol 193) */
-    ZT_ENDPOINT_TYPE_IP_UDP = 6,      /* IP/UDP (the default and original) */
-    ZT_ENDPOINT_TYPE_IP_TCP = 7,      /* IP/TCP */
-    ZT_ENDPOINT_TYPE_IP_TCP_WS = 8    /* IP/TCP web sockets */
+    ZT_ENDPOINT_TYPE_BLUETOOTH   = 4, /* Bluetooth (same address type as Ethernet) */
+    ZT_ENDPOINT_TYPE_IP          = 5, /* Naked IP (protocol 193) */
+    ZT_ENDPOINT_TYPE_IP_UDP      = 6, /* IP/UDP (the default and original) */
+    ZT_ENDPOINT_TYPE_IP_TCP      = 7, /* IP/TCP */
+    ZT_ENDPOINT_TYPE_IP_TCP_WS   = 8  /* IP/TCP web sockets */
 };
 
 /**
@@ -850,15 +857,15 @@ enum ZT_EndpointType {
  * All trace event structures start with a size and type.
  */
 enum ZT_TraceEventType {
-    ZT_TRACE_UNEXPECTED_ERROR = 0,
-    ZT_TRACE_VL1_RESETTING_PATHS_IN_SCOPE = 1,
-    ZT_TRACE_VL1_TRYING_NEW_PATH = 2,
-    ZT_TRACE_VL1_LEARNED_NEW_PATH = 3,
-    ZT_TRACE_VL1_INCOMING_PACKET_DROPPED = 4,
-    ZT_TRACE_VL2_OUTGOING_FRAME_DROPPED = 100,
-    ZT_TRACE_VL2_INCOMING_FRAME_DROPPED = 101,
-    ZT_TRACE_VL2_NETWORK_CONFIG_REQUESTED = 102,
-    ZT_TRACE_VL2_NETWORK_FILTER = 103,
+    ZT_TRACE_UNEXPECTED_ERROR                = 0,
+    ZT_TRACE_VL1_RESETTING_PATHS_IN_SCOPE    = 1,
+    ZT_TRACE_VL1_TRYING_NEW_PATH             = 2,
+    ZT_TRACE_VL1_LEARNED_NEW_PATH            = 3,
+    ZT_TRACE_VL1_INCOMING_PACKET_DROPPED     = 4,
+    ZT_TRACE_VL2_OUTGOING_FRAME_DROPPED      = 100,
+    ZT_TRACE_VL2_INCOMING_FRAME_DROPPED      = 101,
+    ZT_TRACE_VL2_NETWORK_CONFIG_REQUESTED    = 102,
+    ZT_TRACE_VL2_NETWORK_FILTER              = 103,
     ZT_TRACE_VL2_NETWORK_CREDENTIAL_REJECTED = 104,
 };
 
@@ -866,29 +873,29 @@ enum ZT_TraceEventType {
  * Trace VL1 packet drop reasons
  */
 enum ZT_TracePacketDropReason {
-    ZT_TRACE_PACKET_DROP_REASON_UNSPECIFIED = 0,
-    ZT_TRACE_PACKET_DROP_REASON_PEER_TOO_OLD = 1,
-    ZT_TRACE_PACKET_DROP_REASON_MALFORMED_PACKET = 2,
-    ZT_TRACE_PACKET_DROP_REASON_MAC_FAILED = 3,
-    ZT_TRACE_PACKET_DROP_REASON_RATE_LIMIT_EXCEEDED = 4,
-    ZT_TRACE_PACKET_DROP_REASON_INVALID_OBJECT = 5,
+    ZT_TRACE_PACKET_DROP_REASON_UNSPECIFIED             = 0,
+    ZT_TRACE_PACKET_DROP_REASON_PEER_TOO_OLD            = 1,
+    ZT_TRACE_PACKET_DROP_REASON_MALFORMED_PACKET        = 2,
+    ZT_TRACE_PACKET_DROP_REASON_MAC_FAILED              = 3,
+    ZT_TRACE_PACKET_DROP_REASON_RATE_LIMIT_EXCEEDED     = 4,
+    ZT_TRACE_PACKET_DROP_REASON_INVALID_OBJECT          = 5,
     ZT_TRACE_PACKET_DROP_REASON_INVALID_COMPRESSED_DATA = 6,
-    ZT_TRACE_PACKET_DROP_REASON_UNRECOGNIZED_VERB = 7,
-    ZT_TRACE_PACKET_DROP_REASON_REPLY_NOT_EXPECTED = 8
+    ZT_TRACE_PACKET_DROP_REASON_UNRECOGNIZED_VERB       = 7,
+    ZT_TRACE_PACKET_DROP_REASON_REPLY_NOT_EXPECTED      = 8
 };
 
 /**
  * Trace VL2 frame drop reasons
  */
 enum ZT_TraceFrameDropReason {
-    ZT_TRACE_FRAME_DROP_REASON_UNSPECIFIED = 0,
-    ZT_TRACE_FRAME_DROP_REASON_BRIDGING_NOT_ALLOWED_REMOTE = 1,
-    ZT_TRACE_FRAME_DROP_REASON_BRIDGING_NOT_ALLOWED_LOCAL = 2,
-    ZT_TRACE_FRAME_DROP_REASON_MULTICAST_DISABLED = 3,
-    ZT_TRACE_FRAME_DROP_REASON_BROADCAST_DISABLED = 4,
-    ZT_TRACE_FRAME_DROP_REASON_FILTER_BLOCKED = 5,
+    ZT_TRACE_FRAME_DROP_REASON_UNSPECIFIED                          = 0,
+    ZT_TRACE_FRAME_DROP_REASON_BRIDGING_NOT_ALLOWED_REMOTE          = 1,
+    ZT_TRACE_FRAME_DROP_REASON_BRIDGING_NOT_ALLOWED_LOCAL           = 2,
+    ZT_TRACE_FRAME_DROP_REASON_MULTICAST_DISABLED                   = 3,
+    ZT_TRACE_FRAME_DROP_REASON_BROADCAST_DISABLED                   = 4,
+    ZT_TRACE_FRAME_DROP_REASON_FILTER_BLOCKED                       = 5,
     ZT_TRACE_FRAME_DROP_REASON_FILTER_BLOCKED_AT_BRIDGE_REPLICATION = 6,
-    ZT_TRACE_FRAME_DROP_REASON_PERMISSION_DENIED = 7
+    ZT_TRACE_FRAME_DROP_REASON_PERMISSION_DENIED                    = 7
 };
 
 /**
@@ -896,9 +903,9 @@ enum ZT_TraceFrameDropReason {
  */
 enum ZT_TraceCredentialRejectionReason {
     ZT_TRACE_CREDENTIAL_REJECTION_REASON_SIGNATURE_VERIFICATION_FAILED = 1,
-    ZT_TRACE_CREDENTIAL_REJECTION_REASON_REVOKED = 2,
-    ZT_TRACE_CREDENTIAL_REJECTION_REASON_OLDER_THAN_LATEST = 3,
-    ZT_TRACE_CREDENTIAL_REJECTION_REASON_INVALID = 4
+    ZT_TRACE_CREDENTIAL_REJECTION_REASON_REVOKED                       = 2,
+    ZT_TRACE_CREDENTIAL_REJECTION_REASON_OLDER_THAN_LATEST             = 3,
+    ZT_TRACE_CREDENTIAL_REJECTION_REASON_INVALID                       = 4
 };
 
 #define ZT_TRACE_FIELD_TYPE                             "t"
@@ -1103,7 +1110,7 @@ typedef struct {
     /**
      * Identity of sender
      */
-    const ZT_Identity* id;
+    const ZT_Identity *id;
 
     /**
      * User message type ID
@@ -1113,7 +1120,7 @@ typedef struct {
     /**
      * User message data
      */
-    const void* data;
+    const void *data;
 
     /**
      * Length of data in bytes
@@ -1133,21 +1140,21 @@ typedef struct {
     /**
      * Actual identity object for this node
      */
-    const ZT_Identity* identity;
+    const ZT_Identity *identity;
 
     /**
      * Public identity in string-serialized form (safe to send to others)
      *
      * This pointer will remain valid as long as the node exists.
      */
-    const char* publicIdentity;
+    const char *publicIdentity;
 
     /**
      * Full identity including secret key in string-serialized form
      *
      * This pointer will remain valid as long as the node exists.
      */
-    const char* secretIdentity;
+    const char *secretIdentity;
 
     /**
      * True if some kind of connectivity appears available
@@ -1250,33 +1257,33 @@ enum ZT_VirtualNetworkRuleType {
     // 16 to 63 reserved for match criteria
 
     ZT_NETWORK_RULE_MATCH_SOURCE_ZEROTIER_ADDRESS = 24,
-    ZT_NETWORK_RULE_MATCH_DEST_ZEROTIER_ADDRESS = 25,
-    ZT_NETWORK_RULE_MATCH_VLAN_ID = 26,
-    ZT_NETWORK_RULE_MATCH_VLAN_PCP = 27,
-    ZT_NETWORK_RULE_MATCH_VLAN_DEI = 28,
-    ZT_NETWORK_RULE_MATCH_MAC_SOURCE = 29,
-    ZT_NETWORK_RULE_MATCH_MAC_DEST = 30,
-    ZT_NETWORK_RULE_MATCH_IPV4_SOURCE = 31,
-    ZT_NETWORK_RULE_MATCH_IPV4_DEST = 32,
-    ZT_NETWORK_RULE_MATCH_IPV6_SOURCE = 33,
-    ZT_NETWORK_RULE_MATCH_IPV6_DEST = 34,
-    ZT_NETWORK_RULE_MATCH_IP_TOS = 35,
-    ZT_NETWORK_RULE_MATCH_IP_PROTOCOL = 36,
-    ZT_NETWORK_RULE_MATCH_ETHERTYPE = 37,
-    ZT_NETWORK_RULE_MATCH_ICMP = 38,
-    ZT_NETWORK_RULE_MATCH_IP_SOURCE_PORT_RANGE = 39,
-    ZT_NETWORK_RULE_MATCH_IP_DEST_PORT_RANGE = 40,
-    ZT_NETWORK_RULE_MATCH_CHARACTERISTICS = 41,
-    ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE = 42,
-    ZT_NETWORK_RULE_MATCH_RANDOM = 43,
-    ZT_NETWORK_RULE_MATCH_TAGS_DIFFERENCE = 44,
-    ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_AND = 45,
-    ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_OR = 46,
-    ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_XOR = 47,
-    ZT_NETWORK_RULE_MATCH_TAGS_EQUAL = 48,
-    ZT_NETWORK_RULE_MATCH_TAG_SENDER = 49,
-    ZT_NETWORK_RULE_MATCH_TAG_RECEIVER = 50,
-    ZT_NETWORK_RULE_MATCH_INTEGER_RANGE = 51,
+    ZT_NETWORK_RULE_MATCH_DEST_ZEROTIER_ADDRESS   = 25,
+    ZT_NETWORK_RULE_MATCH_VLAN_ID                 = 26,
+    ZT_NETWORK_RULE_MATCH_VLAN_PCP                = 27,
+    ZT_NETWORK_RULE_MATCH_VLAN_DEI                = 28,
+    ZT_NETWORK_RULE_MATCH_MAC_SOURCE              = 29,
+    ZT_NETWORK_RULE_MATCH_MAC_DEST                = 30,
+    ZT_NETWORK_RULE_MATCH_IPV4_SOURCE             = 31,
+    ZT_NETWORK_RULE_MATCH_IPV4_DEST               = 32,
+    ZT_NETWORK_RULE_MATCH_IPV6_SOURCE             = 33,
+    ZT_NETWORK_RULE_MATCH_IPV6_DEST               = 34,
+    ZT_NETWORK_RULE_MATCH_IP_TOS                  = 35,
+    ZT_NETWORK_RULE_MATCH_IP_PROTOCOL             = 36,
+    ZT_NETWORK_RULE_MATCH_ETHERTYPE               = 37,
+    ZT_NETWORK_RULE_MATCH_ICMP                    = 38,
+    ZT_NETWORK_RULE_MATCH_IP_SOURCE_PORT_RANGE    = 39,
+    ZT_NETWORK_RULE_MATCH_IP_DEST_PORT_RANGE      = 40,
+    ZT_NETWORK_RULE_MATCH_CHARACTERISTICS         = 41,
+    ZT_NETWORK_RULE_MATCH_FRAME_SIZE_RANGE        = 42,
+    ZT_NETWORK_RULE_MATCH_RANDOM                  = 43,
+    ZT_NETWORK_RULE_MATCH_TAGS_DIFFERENCE         = 44,
+    ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_AND        = 45,
+    ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_OR         = 46,
+    ZT_NETWORK_RULE_MATCH_TAGS_BITWISE_XOR        = 47,
+    ZT_NETWORK_RULE_MATCH_TAGS_EQUAL              = 48,
+    ZT_NETWORK_RULE_MATCH_TAG_SENDER              = 49,
+    ZT_NETWORK_RULE_MATCH_TAG_RECEIVER            = 50,
+    ZT_NETWORK_RULE_MATCH_INTEGER_RANGE           = 51,
 
     /**
      * Maximum ID allowed for a MATCH entry in the rules table
@@ -1340,7 +1347,8 @@ typedef struct {
             uint64_t start; /* integer range start */
             uint32_t end;   /* end of integer range (relative to start, inclusive, 0 for equality w/start) */
             uint16_t idx;   /* index in packet of integer */
-            uint8_t format; /* bits in integer (range 1-64, ((format&63)+1)) and endianness (MSB 1 for little, 0 for big) */
+            uint8_t
+                format; /* bits in integer (range 1-64, ((format&63)+1)) and endianness (MSB 1 for little, 0 for big) */
         } intRange;
 
         /**
@@ -1588,9 +1596,9 @@ typedef struct {
  * A list of networks
  */
 typedef struct {
-    void (*freeFunction)(const void*);
+    void (*freeFunction)(const void *);
 
-    ZT_VirtualNetworkConfig* networks;
+    ZT_VirtualNetworkConfig *networks;
     unsigned long networkCount;
 } ZT_VirtualNetworkList;
 
@@ -1699,12 +1707,12 @@ typedef struct {
     /**
      * Peer identity
      */
-    const ZT_Identity* identity;
+    const ZT_Identity *identity;
 
     /**
      * SHA-384 of identity public key(s)
      */
-    const ZT_Fingerprint* fingerprint;
+    const ZT_Fingerprint *fingerprint;
 
     /**
      * Remote major version or -1 if not known
@@ -1739,7 +1747,7 @@ typedef struct {
     /**
      * Network IDs for networks (array size: networkCount)
      */
-    uint64_t* networks;
+    uint64_t *networks;
 
     /**
      * Number of networks in which this peer is authenticated
@@ -1753,7 +1761,7 @@ typedef struct {
      * but those would not appear here. Right now those can only be relaying via
      * a root.
      */
-    ZT_Path* paths;
+    ZT_Path *paths;
 
     /**
      * Number of paths (size of paths[])
@@ -1768,16 +1776,16 @@ typedef struct {
     /**
      * Serialized locator or NULL if none
      */
-    const void* locator;
+    const void *locator;
 } ZT_Peer;
 
 /**
  * List of peers
  */
 typedef struct {
-    void (*freeFunction)(const void*);
+    void (*freeFunction)(const void *);
 
-    ZT_Peer* peers;
+    ZT_Peer *peers;
     unsigned long peerCount;
 } ZT_PeerList;
 
@@ -1885,13 +1893,13 @@ typedef void ZT_Node;
  * driven environments.
  */
 typedef void (*ZT_VirtualNetworkConfigFunction)(
-    ZT_Node*,                              /* Node */
-    void*,                                 /* User ptr */
-    void*,                                 /* Thread ptr */
+    ZT_Node *,                             /* Node */
+    void *,                                /* User ptr */
+    void *,                                /* Thread ptr */
     uint64_t,                              /* Network ID */
-    void**,                                /* Modifiable network user PTR */
+    void **,                               /* Modifiable network user PTR */
     enum ZT_VirtualNetworkConfigOperation, /* Config operation */
-    const ZT_VirtualNetworkConfig*);       /* Network configuration */
+    const ZT_VirtualNetworkConfig *);      /* Network configuration */
 
 /**
  * Function to send a frame out to a virtual network port
@@ -1901,16 +1909,16 @@ typedef void (*ZT_VirtualNetworkConfigFunction)(
  * (9) frame length.
  */
 typedef void (*ZT_VirtualNetworkFrameFunction)(
-    ZT_Node*,      /* Node */
-    void*,         /* User ptr */
-    void*,         /* Thread ptr */
+    ZT_Node *,     /* Node */
+    void *,        /* User ptr */
+    void *,        /* Thread ptr */
     uint64_t,      /* Network ID */
-    void**,        /* Modifiable network user PTR */
+    void **,       /* Modifiable network user PTR */
     uint64_t,      /* Source MAC */
     uint64_t,      /* Destination MAC */
     unsigned int,  /* Ethernet type */
     unsigned int,  /* VLAN ID (0 for none) */
-    const void*,   /* Frame data */
+    const void *,  /* Frame data */
     unsigned int); /* Frame length */
 
 /**
@@ -1923,11 +1931,11 @@ typedef void (*ZT_VirtualNetworkFrameFunction)(
  * in the definition of ZT_Event.
  */
 typedef void (*ZT_EventCallback)(
-    ZT_Node*,      /* Node */
-    void*,         /* User ptr */
-    void*,         /* Thread ptr */
+    ZT_Node *,     /* Node */
+    void *,        /* User ptr */
+    void *,        /* Thread ptr */
     enum ZT_Event, /* Event type */
-    const void*,   /* Event payload (if applicable) */
+    const void *,  /* Event payload (if applicable) */
     unsigned int); /* Size of event payload */
 
 /**
@@ -1940,13 +1948,13 @@ typedef void (*ZT_EventCallback)(
  * deleted.
  */
 typedef void (*ZT_StatePutFunction)(
-    ZT_Node*,                /* Node */
-    void*,                   /* User ptr */
-    void*,                   /* Thread ptr */
+    ZT_Node *,               /* Node */
+    void *,                  /* User ptr */
+    void *,                  /* Thread ptr */
     enum ZT_StateObjectType, /* State object type */
-    const uint64_t*,         /* State object ID (if applicable) */
+    const uint64_t *,        /* State object ID (if applicable) */
     unsigned int,            /* Length of state object ID in quads */
-    const void*,             /* State object data */
+    const void *,            /* State object data */
     int);                    /* Length of data or -1 to delete */
 
 /**
@@ -1959,14 +1967,14 @@ typedef void (*ZT_StatePutFunction)(
  * with it. This is very often just a pointer to free().
  */
 typedef int (*ZT_StateGetFunction)(
-    ZT_Node*,                /* Node */
-    void*,                   /* User ptr */
-    void*,                   /* Thread ptr */
+    ZT_Node *,               /* Node */
+    void *,                  /* User ptr */
+    void *,                  /* Thread ptr */
     enum ZT_StateObjectType, /* State object type */
-    const uint64_t*,         /* State object ID (if applicable) */
+    const uint64_t *,        /* State object ID (if applicable) */
     unsigned int,            /* Length of object ID in quads */
-    void**,                  /* Result parameter: data */
-    void (**)(void*));       /* Result parameter: data free function */
+    void **,                 /* Result parameter: data */
+    void (**)(void *));      /* Result parameter: data free function */
 
 /**
  * Function to send a ZeroTier packet out over the physical wire (L2/L3)
@@ -1984,14 +1992,14 @@ typedef int (*ZT_StateGetFunction)(
  * delivery. It only means that the packet appears to have been sent.
  */
 typedef int (*ZT_WirePacketSendFunction)(
-    ZT_Node*,              /* Node */
-    void*,                 /* User ptr */
-    void*,                 /* Thread ptr */
-    int64_t,               /* Local socket */
-    const ZT_InetAddress*, /* Remote address */
-    const void*,           /* Packet data */
-    unsigned int,          /* Packet length */
-    unsigned int);         /* TTL or 0 to use default */
+    ZT_Node *,              /* Node */
+    void *,                 /* User ptr */
+    void *,                 /* Thread ptr */
+    int64_t,                /* Local socket */
+    const ZT_InetAddress *, /* Remote address */
+    const void *,           /* Packet data */
+    unsigned int,           /* Packet length */
+    unsigned int);          /* TTL or 0 to use default */
 
 /**
  * Function to check whether a path should be used for ZeroTier traffic
@@ -2016,13 +2024,13 @@ typedef int (*ZT_WirePacketSendFunction)(
  * interface (recursion).
  */
 typedef int (*ZT_PathCheckFunction)(
-    ZT_Node*,               /* Node */
-    void*,                  /* User ptr */
-    void*,                  /* Thread ptr */
-    uint64_t,               /* ZeroTier address */
-    const ZT_Identity*,     /* Full identity of node */
-    int64_t,                /* Local socket or -1 if unknown */
-    const ZT_InetAddress*); /* Remote address */
+    ZT_Node *,               /* Node */
+    void *,                  /* User ptr */
+    void *,                  /* Thread ptr */
+    uint64_t,                /* ZeroTier address */
+    const ZT_Identity *,     /* Full identity of node */
+    int64_t,                 /* Local socket or -1 if unknown */
+    const ZT_InetAddress *); /* Remote address */
 
 /**
  * Function to get physical addresses for ZeroTier peers
@@ -2041,13 +2049,13 @@ typedef int (*ZT_PathCheckFunction)(
  * with an address.
  */
 typedef int (*ZT_PathLookupFunction)(
-    ZT_Node*,           /* Node */
-    void*,              /* User ptr */
-    void*,              /* Thread ptr */
-    uint64_t,           /* ZeroTier address (40 bits) */
-    const ZT_Identity*, /* Full identity of node */
-    int,                /* Desired ss_family or -1 for any */
-    ZT_InetAddress*);   /* Result buffer */
+    ZT_Node *,           /* Node */
+    void *,              /* User ptr */
+    void *,              /* Thread ptr */
+    uint64_t,            /* ZeroTier address (40 bits) */
+    const ZT_Identity *, /* Full identity of node */
+    int,                 /* Desired ss_family or -1 for any */
+    ZT_InetAddress *);   /* Result buffer */
 
 /* ---------------------------------------------------------------------------------------------------------------- */
 
@@ -2108,14 +2116,14 @@ struct ZT_Node_Callbacks {
  *
  * @return Pointer to I/O buffer
  */
-ZT_SDK_API void* ZT_getBuffer();
+ZT_SDK_API void *ZT_getBuffer();
 
 /**
  * Free an unused buffer obtained via getBuffer
  *
  * @param b Buffer to free
  */
-ZT_SDK_API void ZT_freeBuffer(void* b);
+ZT_SDK_API void ZT_freeBuffer(void *b);
 
 /**
  * Free a query result buffer
@@ -2125,7 +2133,7 @@ ZT_SDK_API void ZT_freeBuffer(void* b);
  *
  * @param qr Query result buffer
  */
-ZT_SDK_API void ZT_freeQueryResult(const void* qr);
+ZT_SDK_API void ZT_freeQueryResult(const void *qr);
 
 /* ---------------------------------------------------------------------------------------------------------------- */
 
@@ -2142,7 +2150,8 @@ ZT_SDK_API void ZT_freeQueryResult(const void* qr);
  * @param callbacks Callback function configuration
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-ZT_SDK_API enum ZT_ResultCode ZT_Node_new(ZT_Node** node, int64_t clock, int64_t ticks, void* tptr, void* uptr, const struct ZT_Node_Callbacks* callbacks);
+ZT_SDK_API enum ZT_ResultCode ZT_Node_new(
+    ZT_Node **node, int64_t clock, int64_t ticks, void *tptr, void *uptr, const struct ZT_Node_Callbacks *callbacks);
 
 /**
  * Delete a node and free all resources it consumes
@@ -2150,7 +2159,7 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_new(ZT_Node** node, int64_t clock, int64_t
  * If you are using multiple threads, all other threads must be shut down
  * first. This can crash if processXXX() methods are in progress.
  */
-ZT_SDK_API void ZT_Node_delete(ZT_Node* node, int64_t clock, int64_t ticks, void* tptr);
+ZT_SDK_API void ZT_Node_delete(ZT_Node *node, int64_t clock, int64_t ticks, void *tptr);
 
 /**
  * Process a packet received from the physical wire
@@ -2164,16 +2173,8 @@ ZT_SDK_API void ZT_Node_delete(ZT_Node* node, int64_t clock, int64_t ticks, void
  * @return OK (0) or error code if a fatal error condition has occurred
  */
 ZT_SDK_API enum ZT_ResultCode ZT_Node_processWirePacket(
-    ZT_Node* node,
-    int64_t clock,
-    int64_t ticks,
-    void* tptr,
-    int64_t localSocket,
-    const ZT_InetAddress* remoteAddress,
-    const void* packetData,
-    unsigned int packetLength,
-    int isZtBuffer,
-    volatile int64_t* nextBackgroundTaskDeadline);
+    ZT_Node *node, int64_t clock, int64_t ticks, void *tptr, int64_t localSocket, const ZT_InetAddress *remoteAddress,
+    const void *packetData, unsigned int packetLength, int isZtBuffer, volatile int64_t *nextBackgroundTaskDeadline);
 
 /**
  * Process a frame from a virtual network port (tap)
@@ -2190,19 +2191,9 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_processWirePacket(
  * @return OK (0) or error code if a fatal error condition has occurred
  */
 ZT_SDK_API enum ZT_ResultCode ZT_Node_processVirtualNetworkFrame(
-    ZT_Node* node,
-    int64_t clock,
-    int64_t ticks,
-    void* tptr,
-    uint64_t nwid,
-    uint64_t sourceMac,
-    uint64_t destMac,
-    unsigned int etherType,
-    unsigned int vlanId,
-    const void* frameData,
-    unsigned int frameLength,
-    int isZtBuffer,
-    volatile int64_t* nextBackgroundTaskDeadline);
+    ZT_Node *node, int64_t clock, int64_t ticks, void *tptr, uint64_t nwid, uint64_t sourceMac, uint64_t destMac,
+    unsigned int etherType, unsigned int vlanId, const void *frameData, unsigned int frameLength, int isZtBuffer,
+    volatile int64_t *nextBackgroundTaskDeadline);
 
 /**
  * Perform periodic background operations
@@ -2211,7 +2202,8 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_processVirtualNetworkFrame(
  * @param nextBackgroundTaskDeadline Value/result: set to deadline for next call to processBackgroundTasks()
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-ZT_SDK_API enum ZT_ResultCode ZT_Node_processBackgroundTasks(ZT_Node* node, int64_t clock, int64_t ticks, void* tptr, volatile int64_t* nextBackgroundTaskDeadline);
+ZT_SDK_API enum ZT_ResultCode ZT_Node_processBackgroundTasks(
+    ZT_Node *node, int64_t clock, int64_t ticks, void *tptr, volatile int64_t *nextBackgroundTaskDeadline);
 
 /**
  * Join a network
@@ -2226,7 +2218,9 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_processBackgroundTasks(ZT_Node* node, int6
  * @param fingerprintHash If non-NULL this is the full fingerprint of the controller
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-ZT_SDK_API enum ZT_ResultCode ZT_Node_join(ZT_Node* node, int64_t clock, int64_t ticks, void* tptr, void* uptr, uint64_t nwid, const ZT_Fingerprint* controllerFingerprint);
+ZT_SDK_API enum ZT_ResultCode ZT_Node_join(
+    ZT_Node *node, int64_t clock, int64_t ticks, void *tptr, void *uptr, uint64_t nwid,
+    const ZT_Fingerprint *controllerFingerprint);
 
 /**
  * Leave a network
@@ -2240,7 +2234,8 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_join(ZT_Node* node, int64_t clock, int64_t
  *
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-ZT_SDK_API enum ZT_ResultCode ZT_Node_leave(ZT_Node* node, int64_t clock, int64_t ticks, void* tptr, void** uptr, uint64_t nwid);
+ZT_SDK_API enum ZT_ResultCode
+ZT_Node_leave(ZT_Node *node, int64_t clock, int64_t ticks, void *tptr, void **uptr, uint64_t nwid);
 
 /**
  * Subscribe to an Ethernet multicast group
@@ -2266,7 +2261,9 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_leave(ZT_Node* node, int64_t clock, int64_
  * @param multicastAdi Multicast ADI (least significant 32 bits only, use 0 if not needed)
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-ZT_SDK_API enum ZT_ResultCode ZT_Node_multicastSubscribe(ZT_Node* node, int64_t clock, int64_t ticks, void* tptr, uint64_t nwid, uint64_t multicastGroup, unsigned long multicastAdi);
+ZT_SDK_API enum ZT_ResultCode ZT_Node_multicastSubscribe(
+    ZT_Node *node, int64_t clock, int64_t ticks, void *tptr, uint64_t nwid, uint64_t multicastGroup,
+    unsigned long multicastAdi);
 
 /**
  * Unsubscribe from an Ethernet multicast group (or all groups)
@@ -2281,14 +2278,16 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_multicastSubscribe(ZT_Node* node, int64_t 
  * @param multicastAdi Multicast ADI (least significant 32 bits only, use 0 if not needed)
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-ZT_SDK_API enum ZT_ResultCode ZT_Node_multicastUnsubscribe(ZT_Node* node, int64_t clock, int64_t ticks, void* tptr, uint64_t nwid, uint64_t multicastGroup, unsigned long multicastAdi);
+ZT_SDK_API enum ZT_ResultCode ZT_Node_multicastUnsubscribe(
+    ZT_Node *node, int64_t clock, int64_t ticks, void *tptr, uint64_t nwid, uint64_t multicastGroup,
+    unsigned long multicastAdi);
 
 /**
  * Get this node's 40-bit ZeroTier address
  *
  * @return ZeroTier address (least significant 40 bits of 64-bit int)
  */
-ZT_SDK_API uint64_t ZT_Node_address(ZT_Node* node);
+ZT_SDK_API uint64_t ZT_Node_address(ZT_Node *node);
 
 /**
  * Get this node's identity
@@ -2298,14 +2297,14 @@ ZT_SDK_API uint64_t ZT_Node_address(ZT_Node* node);
  *
  * @return Identity
  */
-ZT_SDK_API const ZT_Identity* ZT_Node_identity(ZT_Node* node);
+ZT_SDK_API const ZT_Identity *ZT_Node_identity(ZT_Node *node);
 
 /**
  * Get the status of this node
  *
  * @param status Buffer to fill with current node status
  */
-ZT_SDK_API void ZT_Node_status(ZT_Node* node, int64_t clock, int64_t ticks, void* tptr, ZT_NodeStatus* status);
+ZT_SDK_API void ZT_Node_status(ZT_Node *node, int64_t clock, int64_t ticks, void *tptr, ZT_NodeStatus *status);
 
 /**
  * Get a list of known peer nodes
@@ -2315,7 +2314,7 @@ ZT_SDK_API void ZT_Node_status(ZT_Node* node, int64_t clock, int64_t ticks, void
  *
  * @return List of known peers or NULL on failure
  */
-ZT_SDK_API ZT_PeerList* ZT_Node_peers(ZT_Node* node, int64_t clock, int64_t ticks, void* tptr);
+ZT_SDK_API ZT_PeerList *ZT_Node_peers(ZT_Node *node, int64_t clock, int64_t ticks, void *tptr);
 
 /**
  * Get the status of a virtual network
@@ -2326,7 +2325,8 @@ ZT_SDK_API ZT_PeerList* ZT_Node_peers(ZT_Node* node, int64_t clock, int64_t tick
  * @param nwid 64-bit network ID
  * @return Network configuration or NULL if we are not a member of this network
  */
-ZT_SDK_API ZT_VirtualNetworkConfig* ZT_Node_networkConfig(ZT_Node* node, int64_t clock, int64_t ticks, void* tptr, uint64_t nwid);
+ZT_SDK_API ZT_VirtualNetworkConfig *
+ZT_Node_networkConfig(ZT_Node *node, int64_t clock, int64_t ticks, void *tptr, uint64_t nwid);
 
 /**
  * Enumerate and get status of all networks
@@ -2334,7 +2334,7 @@ ZT_SDK_API ZT_VirtualNetworkConfig* ZT_Node_networkConfig(ZT_Node* node, int64_t
  * @param node Node instance
  * @return List of networks or NULL on failure
  */
-ZT_SDK_API ZT_VirtualNetworkList* ZT_Node_networks(ZT_Node* node);
+ZT_SDK_API ZT_VirtualNetworkList *ZT_Node_networks(ZT_Node *node);
 
 /**
  * Set the network-associated user-defined pointer for a given network
@@ -2345,7 +2345,7 @@ ZT_SDK_API ZT_VirtualNetworkList* ZT_Node_networks(ZT_Node* node);
  * @param nwid Network ID
  * @param ptr New network-associated pointer
  */
-ZT_SDK_API void ZT_Node_setNetworkUserPtr(ZT_Node* node, uint64_t nwid, void* ptr);
+ZT_SDK_API void ZT_Node_setNetworkUserPtr(ZT_Node *node, uint64_t nwid, void *ptr);
 
 /**
  * Set external interface addresses where this node could be reached
@@ -2354,7 +2354,8 @@ ZT_SDK_API void ZT_Node_setNetworkUserPtr(ZT_Node* node, uint64_t nwid, void* pt
  * @param addrs Addresses
  * @param addrCount Number of items in addrs[]
  */
-ZT_SDK_API void ZT_Node_setInterfaceAddresses(ZT_Node* node, int64_t clock, int64_t ticks, void* tptr, const ZT_InterfaceAddress* addrs, unsigned int addrCount);
+ZT_SDK_API void ZT_Node_setInterfaceAddresses(
+    ZT_Node *node, int64_t clock, int64_t ticks, void *tptr, const ZT_InterfaceAddress *addrs, unsigned int addrCount);
 
 /**
  * Add a certificate to this node's certificate store
@@ -2368,7 +2369,9 @@ ZT_SDK_API void ZT_Node_setInterfaceAddresses(ZT_Node* node, int64_t clock, int6
  * @param certSize Size of certificate binary data, 0 if none
  * @return Certificate error or ZT_CERTIFICATE_ERROR_NONE on success
  */
-ZT_SDK_API enum ZT_CertificateError ZT_Node_addCertificate(ZT_Node* node, int64_t clock, int64_t ticks, void* tptr, unsigned int localTrust, const ZT_Certificate* cert, const void* certData, unsigned int certSize);
+ZT_SDK_API enum ZT_CertificateError ZT_Node_addCertificate(
+    ZT_Node *node, int64_t clock, int64_t ticks, void *tptr, unsigned int localTrust, const ZT_Certificate *cert,
+    const void *certData, unsigned int certSize);
 
 /**
  * Delete a certificate from this node's certificate store
@@ -2381,7 +2384,8 @@ ZT_SDK_API enum ZT_CertificateError ZT_Node_addCertificate(ZT_Node* node, int64_
  * @param serialNo 48-byte / 384-bit serial number of certificate to delete
  * @return OK (0) or error code
  */
-ZT_SDK_API enum ZT_ResultCode ZT_Node_deleteCertificate(ZT_Node* node, int64_t clock, int64_t ticks, void* tptr, const void* serialNo);
+ZT_SDK_API enum ZT_ResultCode
+ZT_Node_deleteCertificate(ZT_Node *node, int64_t clock, int64_t ticks, void *tptr, const void *serialNo);
 
 /**
  * List certificates installed in this node's trust store
@@ -2389,7 +2393,7 @@ ZT_SDK_API enum ZT_ResultCode ZT_Node_deleteCertificate(ZT_Node* node, int64_t c
  * @param node Node instance
  * @return List of certificates or NULL on error
  */
-ZT_SDK_API ZT_CertificateList* ZT_Node_listCertificates(ZT_Node* node, int64_t clock, int64_t ticks, void* tptr);
+ZT_SDK_API ZT_CertificateList *ZT_Node_listCertificates(ZT_Node *node, int64_t clock, int64_t ticks, void *tptr);
 
 /**
  * Send a VERB_USER_MESSAGE to another ZeroTier node
@@ -2405,7 +2409,9 @@ ZT_SDK_API ZT_CertificateList* ZT_Node_listCertificates(ZT_Node* node, int64_t c
  * @param len Length of data in bytes
  * @return Boolean: non-zero on success, zero on failure
  */
-ZT_SDK_API int ZT_Node_sendUserMessage(ZT_Node* node, int64_t clock, int64_t ticks, void* tptr, uint64_t dest, uint64_t typeId, const void* data, unsigned int len);
+ZT_SDK_API int ZT_Node_sendUserMessage(
+    ZT_Node *node, int64_t clock, int64_t ticks, void *tptr, uint64_t dest, uint64_t typeId, const void *data,
+    unsigned int len);
 
 /**
  * Set a network controller instance for this node
@@ -2422,7 +2428,7 @@ ZT_SDK_API int ZT_Node_sendUserMessage(ZT_Node* node, int64_t clock, int64_t tic
  * @param networkConfigMasterInstance Instance of NetworkConfigMaster C++ class or NULL to disable
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-ZT_SDK_API void ZT_Node_setController(ZT_Node* node, void* networkConfigMasterInstance);
+ZT_SDK_API void ZT_Node_setController(ZT_Node *node, void *networkConfigMasterInstance);
 
 /* ---------------------------------------------------------------------------------------------------------------- */
 
@@ -2436,7 +2442,7 @@ ZT_SDK_API void ZT_Node_setController(ZT_Node* node, void* networkConfigMasterIn
  * @param type Type of identity to generate
  * @return New identity or NULL on error
  */
-ZT_SDK_API ZT_Identity* ZT_Identity_new(enum ZT_IdentityType type);
+ZT_SDK_API ZT_Identity *ZT_Identity_new(enum ZT_IdentityType type);
 
 /**
  * Make a copy of an identity
@@ -2444,7 +2450,7 @@ ZT_SDK_API ZT_Identity* ZT_Identity_new(enum ZT_IdentityType type);
  * @param id Identity to copy
  * @return Copy, must be freed with ZT_Identity_delete.
  */
-ZT_SDK_API ZT_Identity* ZT_Identity_clone(const ZT_Identity* id);
+ZT_SDK_API ZT_Identity *ZT_Identity_clone(const ZT_Identity *id);
 
 /**
  * Create a new identity object from a string-serialized identity
@@ -2452,7 +2458,7 @@ ZT_SDK_API ZT_Identity* ZT_Identity_clone(const ZT_Identity* id);
  * @param idStr Identity in string format
  * @return Identity object or NULL if the supplied identity string was not valid
  */
-ZT_SDK_API ZT_Identity* ZT_Identity_fromString(const char* idStr);
+ZT_SDK_API ZT_Identity *ZT_Identity_fromString(const char *idStr);
 
 /**
  * Validate this identity
@@ -2461,7 +2467,7 @@ ZT_SDK_API ZT_Identity* ZT_Identity_fromString(const char* idStr);
  *
  * @return Non-zero if identity is valid
  */
-ZT_SDK_API int ZT_Identity_validate(const ZT_Identity* id);
+ZT_SDK_API int ZT_Identity_validate(const ZT_Identity *id);
 
 /**
  * Sign a data object with this identity
@@ -2475,7 +2481,8 @@ ZT_SDK_API int ZT_Identity_validate(const ZT_Identity* id);
  * @param signatureBufferLength Length of buffer (must be at least 96 bytes)
  * @return Length of signature in bytes or 0 on failure.
  */
-ZT_SDK_API unsigned int ZT_Identity_sign(const ZT_Identity* id, const void* data, unsigned int len, void* signature, unsigned int signatureBufferLength);
+ZT_SDK_API unsigned int ZT_Identity_sign(
+    const ZT_Identity *id, const void *data, unsigned int len, void *signature, unsigned int signatureBufferLength);
 
 /**
  * Verify a signature
@@ -2487,7 +2494,8 @@ ZT_SDK_API unsigned int ZT_Identity_sign(const ZT_Identity* id, const void* data
  * @param sigLen Length of signature in bytes
  * @return Non-zero if signature is valid
  */
-ZT_SDK_API int ZT_Identity_verify(const ZT_Identity* id, const void* data, unsigned int len, const void* signature, unsigned int sigLen);
+ZT_SDK_API int ZT_Identity_verify(
+    const ZT_Identity *id, const void *data, unsigned int len, const void *signature, unsigned int sigLen);
 
 /**
  * Get identity type
@@ -2495,7 +2503,7 @@ ZT_SDK_API int ZT_Identity_verify(const ZT_Identity* id, const void* data, unsig
  * @param id Identity to query
  * @return Identity type code
  */
-ZT_SDK_API enum ZT_IdentityType ZT_Identity_type(const ZT_Identity* id);
+ZT_SDK_API enum ZT_IdentityType ZT_Identity_type(const ZT_Identity *id);
 
 /**
  * Convert an identity to its string representation
@@ -2506,7 +2514,7 @@ ZT_SDK_API enum ZT_IdentityType ZT_Identity_type(const ZT_Identity* id);
  * @param includePrivate If true include the private key if present
  * @return Pointer to buf or NULL on overflow or other error
  */
-ZT_SDK_API char* ZT_Identity_toString(const ZT_Identity* id, char* buf, int capacity, int includePrivate);
+ZT_SDK_API char *ZT_Identity_toString(const ZT_Identity *id, char *buf, int capacity, int includePrivate);
 
 /**
  * Check whether this identity object also holds a private key
@@ -2514,7 +2522,7 @@ ZT_SDK_API char* ZT_Identity_toString(const ZT_Identity* id, char* buf, int capa
  * @param id Identity to query
  * @return Non-zero if a private key is held
  */
-ZT_SDK_API int ZT_Identity_hasPrivate(const ZT_Identity* id);
+ZT_SDK_API int ZT_Identity_hasPrivate(const ZT_Identity *id);
 
 /**
  * Get the ZeroTier address associated with this identity
@@ -2522,7 +2530,7 @@ ZT_SDK_API int ZT_Identity_hasPrivate(const ZT_Identity* id);
  * @param id Identity to query
  * @return ZeroTier address (only least significant 40 bits are meaningful, rest will be 0)
  */
-ZT_SDK_API uint64_t ZT_Identity_address(const ZT_Identity* id);
+ZT_SDK_API uint64_t ZT_Identity_address(const ZT_Identity *id);
 
 /**
  * Get this identity's full fingerprint
@@ -2530,7 +2538,7 @@ ZT_SDK_API uint64_t ZT_Identity_address(const ZT_Identity* id);
  * @param id Identity to query
  * @return Pointer to fingerprint (remains valid as long as identity itself is valid)
  */
-ZT_SDK_API const ZT_Fingerprint* ZT_Identity_fingerprint(const ZT_Identity* id);
+ZT_SDK_API const ZT_Fingerprint *ZT_Identity_fingerprint(const ZT_Identity *id);
 
 /**
  * Compare two identities
@@ -2539,7 +2547,7 @@ ZT_SDK_API const ZT_Fingerprint* ZT_Identity_fingerprint(const ZT_Identity* id);
  * @param b Second identity
  * @return -1, 0, or 1 if a is less than, equal to, or greater than b
  */
-ZT_SDK_API int ZT_Identity_compare(const ZT_Identity* a, const ZT_Identity* b);
+ZT_SDK_API int ZT_Identity_compare(const ZT_Identity *a, const ZT_Identity *b);
 
 /**
  * Delete an identity and free associated memory
@@ -2549,7 +2557,7 @@ ZT_SDK_API int ZT_Identity_compare(const ZT_Identity* a, const ZT_Identity* b);
  *
  * @param id Identity to delete
  */
-ZT_SDK_API void ZT_Identity_delete(const ZT_Identity* id);
+ZT_SDK_API void ZT_Identity_delete(const ZT_Identity *id);
 
 /* ---------------------------------------------------------------------------------------------------------------- */
 
@@ -2561,7 +2569,7 @@ ZT_SDK_API void ZT_Identity_delete(const ZT_Identity* id);
  * @param capacity Capacity of buffer
  * @return String or NULL on error
  */
-ZT_SDK_API char* ZT_Endpoint_toString(const ZT_Endpoint* ep, char* buf, int capacity);
+ZT_SDK_API char *ZT_Endpoint_toString(const ZT_Endpoint *ep, char *buf, int capacity);
 
 /**
  * Parse an endpoint as a string
@@ -2574,7 +2582,7 @@ ZT_SDK_API char* ZT_Endpoint_toString(const ZT_Endpoint* ep, char* buf, int capa
  * @param str String representation of endpoint
  * @return OK (0) or error code
  */
-ZT_SDK_API int ZT_Endpoint_fromString(ZT_Endpoint* ep, const char* str);
+ZT_SDK_API int ZT_Endpoint_fromString(ZT_Endpoint *ep, const char *str);
 
 /**
  * Decode a binary serialized endpoint
@@ -2584,7 +2592,7 @@ ZT_SDK_API int ZT_Endpoint_fromString(ZT_Endpoint* ep, const char* str);
  * @param len Length of bytes
  * @return OK (0) or error code
  */
-ZT_SDK_API int ZT_Endpoint_fromBytes(ZT_Endpoint* ep, const void* bytes, unsigned int len);
+ZT_SDK_API int ZT_Endpoint_fromBytes(ZT_Endpoint *ep, const void *bytes, unsigned int len);
 
 /* ---------------------------------------------------------------------------------------------------------------- */
 
@@ -2601,7 +2609,9 @@ ZT_SDK_API int ZT_Endpoint_fromBytes(ZT_Endpoint* ep, const void* bytes, unsigne
  * @param signer Identity to sign locator (must include private key)
  * @return Locator or NULL on error (too many endpoints or identity does not have private key)
  */
-ZT_SDK_API ZT_Locator* ZT_Locator_create(int64_t rev, const ZT_Endpoint* endpoints, const ZT_EndpointAttributes* endpointAttributes, unsigned int endpointCount, const ZT_Identity* signer);
+ZT_SDK_API ZT_Locator *ZT_Locator_create(
+    int64_t rev, const ZT_Endpoint *endpoints, const ZT_EndpointAttributes *endpointAttributes,
+    unsigned int endpointCount, const ZT_Identity *signer);
 
 /**
  * Decode a serialized locator
@@ -2610,7 +2620,7 @@ ZT_SDK_API ZT_Locator* ZT_Locator_create(int64_t rev, const ZT_Endpoint* endpoin
  * @param len Length of data
  * @return Locator or NULL if data is not valid
  */
-ZT_SDK_API ZT_Locator* ZT_Locator_unmarshal(const void* data, unsigned int len);
+ZT_SDK_API ZT_Locator *ZT_Locator_unmarshal(const void *data, unsigned int len);
 
 /**
  * Decode a locator from string format
@@ -2618,7 +2628,7 @@ ZT_SDK_API ZT_Locator* ZT_Locator_unmarshal(const void* data, unsigned int len);
  * @param str String format locator
  * @return Locator or NULL if string is not valid
  */
-ZT_SDK_API ZT_Locator* ZT_Locator_fromString(const char* str);
+ZT_SDK_API ZT_Locator *ZT_Locator_fromString(const char *str);
 
 /**
  * Serialize this locator into a buffer
@@ -2628,7 +2638,7 @@ ZT_SDK_API ZT_Locator* ZT_Locator_fromString(const char* str);
  * @param bufSize Size of buffer in bytes (needs to be at least 2048 bytes in size)
  * @return Number of bytes stored to buf or -1 on error such as buffer too small
  */
-ZT_SDK_API int ZT_Locator_marshal(const ZT_Locator* loc, void* buf, unsigned int bufSize);
+ZT_SDK_API int ZT_Locator_marshal(const ZT_Locator *loc, void *buf, unsigned int bufSize);
 
 /**
  * Get this locator in string format
@@ -2638,7 +2648,7 @@ ZT_SDK_API int ZT_Locator_marshal(const ZT_Locator* loc, void* buf, unsigned int
  * @param capacity Capacity of buffer in bytes (recommended size: 4096)
  * @return Pointer to buffer or NULL if an error occurs
  */
-ZT_SDK_API char* ZT_Locator_toString(const ZT_Locator* loc, char* buf, int capacity);
+ZT_SDK_API char *ZT_Locator_toString(const ZT_Locator *loc, char *buf, int capacity);
 
 /**
  * Get a locator's revision
@@ -2646,7 +2656,7 @@ ZT_SDK_API char* ZT_Locator_toString(const ZT_Locator* loc, char* buf, int capac
  * @param loc Locator to query
  * @return Locator revision
  */
-ZT_SDK_API int64_t ZT_Locator_revision(const ZT_Locator* loc);
+ZT_SDK_API int64_t ZT_Locator_revision(const ZT_Locator *loc);
 
 /**
  * Get a locator's signer
@@ -2654,7 +2664,7 @@ ZT_SDK_API int64_t ZT_Locator_revision(const ZT_Locator* loc);
  * @param loc Locator to query
  * @return 40-bit ZeroTier address of signer
  */
-ZT_SDK_API uint64_t ZT_Locator_signer(const ZT_Locator* loc);
+ZT_SDK_API uint64_t ZT_Locator_signer(const ZT_Locator *loc);
 
 /**
  * Compare two locators
@@ -2663,7 +2673,7 @@ ZT_SDK_API uint64_t ZT_Locator_signer(const ZT_Locator* loc);
  * @param b Second locator
  * @return Non-zero if a equals b
  */
-ZT_SDK_API int ZT_Locator_equals(const ZT_Locator* a, const ZT_Locator* b);
+ZT_SDK_API int ZT_Locator_equals(const ZT_Locator *a, const ZT_Locator *b);
 
 /**
  * Get the number of endpoints in this locator
@@ -2671,7 +2681,7 @@ ZT_SDK_API int ZT_Locator_equals(const ZT_Locator* a, const ZT_Locator* b);
  * @param loc Locator to query
  * @return Number of endpoints
  */
-ZT_SDK_API unsigned int ZT_Locator_endpointCount(const ZT_Locator* loc);
+ZT_SDK_API unsigned int ZT_Locator_endpointCount(const ZT_Locator *loc);
 
 /**
  * Get a pointer to an endpoint in a locator
@@ -2681,7 +2691,7 @@ ZT_SDK_API unsigned int ZT_Locator_endpointCount(const ZT_Locator* loc);
  * @param ep Endpoint number from 0 to 1 - endpointCount()
  * @return Endpoint or NULL if out of bounds
  */
-ZT_SDK_API const ZT_Endpoint* ZT_Locator_endpoint(const ZT_Locator* loc, unsigned int ep);
+ZT_SDK_API const ZT_Endpoint *ZT_Locator_endpoint(const ZT_Locator *loc, unsigned int ep);
 
 /**
  * Verify this locator's signature
@@ -2689,14 +2699,14 @@ ZT_SDK_API const ZT_Endpoint* ZT_Locator_endpoint(const ZT_Locator* loc, unsigne
  * @param signer Signing identity
  * @return Non-zero if locator is valid
  */
-ZT_SDK_API int ZT_Locator_verify(const ZT_Locator* loc, const ZT_Identity* signer);
+ZT_SDK_API int ZT_Locator_verify(const ZT_Locator *loc, const ZT_Identity *signer);
 
 /**
  * Delete a locator
  *
  * @param loc Locator to delete
  */
-ZT_SDK_API void ZT_Locator_delete(const ZT_Locator* loc);
+ZT_SDK_API void ZT_Locator_delete(const ZT_Locator *loc);
 
 /* ---------------------------------------------------------------------------------------------------------------- */
 
@@ -2708,7 +2718,7 @@ ZT_SDK_API void ZT_Locator_delete(const ZT_Locator* loc);
  * @param revision Result: revision
  * @param build Result: build number
  */
-ZT_SDK_API void ZT_version(int* major, int* minor, int* revision, int* build);
+ZT_SDK_API void ZT_version(int *major, int *minor, int *revision, int *build);
 
 /* ---------------------------------------------------------------------------------------------------------------- */
 
@@ -2725,8 +2735,9 @@ ZT_SDK_API void ZT_version(int* major, int* minor, int* revision, int* build);
  * @param privateKeySize Result parameter: set to size of private key
  * @return OK (0) or error
  */
-ZT_SDK_API int
-ZT_Certificate_newKeyPair(enum ZT_CertificatePublicKeyAlgorithm type, uint8_t publicKey[ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE], int* const publicKeySize, uint8_t privateKey[ZT_CERTIFICATE_MAX_PRIVATE_KEY_SIZE], int* const privateKeySize);
+ZT_SDK_API int ZT_Certificate_newKeyPair(
+    enum ZT_CertificatePublicKeyAlgorithm type, uint8_t publicKey[ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE],
+    int *const publicKeySize, uint8_t privateKey[ZT_CERTIFICATE_MAX_PRIVATE_KEY_SIZE], int *const privateKeySize);
 
 /**
  * Create a new certificate signing request (CSR)
@@ -2746,7 +2757,9 @@ ZT_Certificate_newKeyPair(enum ZT_CertificatePublicKeyAlgorithm type, uint8_t pu
  * @param csrSize Value/result: size of buffer
  * @return OK (0) or error
  */
-ZT_SDK_API int ZT_Certificate_newCSR(const ZT_Certificate_Subject* subject, const void* certificatePrivateKey, int certificatePrivateKeySize, const void* uniqueIdPrivateKey, int uniqueIdPrivateKeySize, void* csr, int* csrSize);
+ZT_SDK_API int ZT_Certificate_newCSR(
+    const ZT_Certificate_Subject *subject, const void *certificatePrivateKey, int certificatePrivateKeySize,
+    const void *uniqueIdPrivateKey, int uniqueIdPrivateKeySize, void *csr, int *csrSize);
 
 /**
  * Sign a CSR to generate a complete certificate.
@@ -2763,7 +2776,9 @@ ZT_SDK_API int ZT_Certificate_newCSR(const ZT_Certificate_Subject* subject, cons
  * @param issuerPrivateKeySize Size of private key in bytes
  * @return Signed certificate or NULL on error
  */
-ZT_SDK_API ZT_Certificate* ZT_Certificate_sign(const ZT_Certificate* cert, const uint8_t issuer[ZT_CERTIFICATE_HASH_SIZE], const void* issuerPrivateKey, int issuerPrivateKeySize);
+ZT_SDK_API ZT_Certificate *ZT_Certificate_sign(
+    const ZT_Certificate *cert, const uint8_t issuer[ZT_CERTIFICATE_HASH_SIZE], const void *issuerPrivateKey,
+    int issuerPrivateKeySize);
 
 /**
  * Decode a certificate or CSR
@@ -2780,7 +2795,8 @@ ZT_SDK_API ZT_Certificate* ZT_Certificate_sign(const ZT_Certificate* cert, const
  * @param verify If non-zero, verify signatures and structure
  * @return Certificate error, if any
  */
-ZT_SDK_API enum ZT_CertificateError ZT_Certificate_decode(const ZT_Certificate** decodedCert, const void* cert, int certSize, int verify);
+ZT_SDK_API enum ZT_CertificateError
+ZT_Certificate_decode(const ZT_Certificate **decodedCert, const void *cert, int certSize, int verify);
 
 /**
  * Encode a certificate
@@ -2790,7 +2806,7 @@ ZT_SDK_API enum ZT_CertificateError ZT_Certificate_decode(const ZT_Certificate**
  * @param encodedSize Value/result: size of certificate encoding buffer
  * @return OK (0) or error
  */
-ZT_SDK_API int ZT_Certificate_encode(const ZT_Certificate* cert, void* encoded, int* encodedSize);
+ZT_SDK_API int ZT_Certificate_encode(const ZT_Certificate *cert, void *encoded, int *encodedSize);
 
 /**
  * Verify certificate signatures and internal structure.
@@ -2799,7 +2815,7 @@ ZT_SDK_API int ZT_Certificate_encode(const ZT_Certificate* cert, void* encoded, 
  * @param clock Clock to check timestamp or -1 to skip this check
  * @return Certificate error or ZT_CERTIFICATE_ERROR_NONE if no errors found.
  */
-ZT_SDK_API enum ZT_CertificateError ZT_Certificate_verify(const ZT_Certificate* cert, int64_t clock);
+ZT_SDK_API enum ZT_CertificateError ZT_Certificate_verify(const ZT_Certificate *cert, int64_t clock);
 
 /**
  * Deep clone a certificate, returning one allocated C-side.
@@ -2811,14 +2827,14 @@ ZT_SDK_API enum ZT_CertificateError ZT_Certificate_verify(const ZT_Certificate* 
  * @param cert Certificate to deep clone
  * @return New certificate with copies of all objects
  */
-ZT_SDK_API const ZT_Certificate* ZT_Certificate_clone(const ZT_Certificate* cert);
+ZT_SDK_API const ZT_Certificate *ZT_Certificate_clone(const ZT_Certificate *cert);
 
 /**
  * Free a certificate created with ZT_Certificate_decode() or ZT_Certificate_clone()
  *
  * @param cert Certificate to free
  */
-ZT_SDK_API void ZT_Certificate_delete(const ZT_Certificate* cert);
+ZT_SDK_API void ZT_Certificate_delete(const ZT_Certificate *cert);
 
 /* ---------------------------------------------------------------------------------------------------------------- */
 
@@ -2830,7 +2846,7 @@ ZT_SDK_API void ZT_Certificate_delete(const ZT_Certificate* cert);
  * @param capacity Capacity, must be at least 128 bytes
  * @return Pointer to 'buf' now filled with a string
  */
-ZT_SDK_API char* ZT_Fingerprint_toString(const ZT_Fingerprint* fp, char* buf, int capacity);
+ZT_SDK_API char *ZT_Fingerprint_toString(const ZT_Fingerprint *fp, char *buf, int capacity);
 
 /**
  * Decode a fingerprint from a string
@@ -2839,7 +2855,7 @@ ZT_SDK_API char* ZT_Fingerprint_toString(const ZT_Fingerprint* fp, char* buf, in
  * @param s String representation of fingerprint
  * @return Non-zero on success
  */
-ZT_SDK_API int ZT_Fingerprint_fromString(ZT_Fingerprint* fp, const char* s);
+ZT_SDK_API int ZT_Fingerprint_fromString(ZT_Fingerprint *fp, const char *s);
 
 /* ---------------------------------------------------------------------------------------------------------------- */
 
@@ -2849,30 +2865,30 @@ ZT_SDK_API int ZT_Fingerprint_fromString(ZT_Fingerprint* fp, const char* s);
  * included.
  */
 
-#define ZT_InetAddress_ptr_cast_sockaddr_ptr(a)         ((struct sockaddr*)(a))
-#define ZT_InetAddress_ptr_cast_sockaddr_in_ptr(a)      ((struct sockaddr_in*)(a))
-#define ZT_InetAddress_ptr_cast_sockaddr_in6_ptr(a)     ((struct sockaddr_in6*)(a))
-#define ZT_InetAddress_ptr_cast_sockaddr_storage_ptr(a) ((struct sockaddr_storage*)(a))
+#define ZT_InetAddress_ptr_cast_sockaddr_ptr(a)         ((struct sockaddr *)(a))
+#define ZT_InetAddress_ptr_cast_sockaddr_in_ptr(a)      ((struct sockaddr_in *)(a))
+#define ZT_InetAddress_ptr_cast_sockaddr_in6_ptr(a)     ((struct sockaddr_in6 *)(a))
+#define ZT_InetAddress_ptr_cast_sockaddr_storage_ptr(a) ((struct sockaddr_storage *)(a))
 
-#define ZT_InetAddress_ptr_cast_const_sockaddr_ptr(a)         ((const struct sockaddr*)(a))
-#define ZT_InetAddress_ptr_cast_const_sockaddr_in_ptr(a)      ((const struct sockaddr_in*)(a))
-#define ZT_InetAddress_ptr_cast_const_sockaddr_in6_ptr(a)     ((const struct sockaddr_in6*)(a))
-#define ZT_InetAddress_ptr_cast_const_sockaddr_storage_ptr(a) ((const struct sockaddr_storage*)(a))
+#define ZT_InetAddress_ptr_cast_const_sockaddr_ptr(a)         ((const struct sockaddr *)(a))
+#define ZT_InetAddress_ptr_cast_const_sockaddr_in_ptr(a)      ((const struct sockaddr_in *)(a))
+#define ZT_InetAddress_ptr_cast_const_sockaddr_in6_ptr(a)     ((const struct sockaddr_in6 *)(a))
+#define ZT_InetAddress_ptr_cast_const_sockaddr_storage_ptr(a) ((const struct sockaddr_storage *)(a))
 
-#define ZT_InetAddress_cast_sockaddr_ptr(a)         ((struct sockaddr*)(&(a)))
-#define ZT_InetAddress_cast_sockaddr_in_ptr(a)      ((struct sockaddr_in*)(&(a)))
-#define ZT_InetAddress_cast_sockaddr_in6_ptr(a)     ((struct sockaddr_in6*)(&(a)))
-#define ZT_InetAddress_cast_sockaddr_storage_ptr(a) ((struct sockaddr_storage*)(&(a)))
+#define ZT_InetAddress_cast_sockaddr_ptr(a)         ((struct sockaddr *)(&(a)))
+#define ZT_InetAddress_cast_sockaddr_in_ptr(a)      ((struct sockaddr_in *)(&(a)))
+#define ZT_InetAddress_cast_sockaddr_in6_ptr(a)     ((struct sockaddr_in6 *)(&(a)))
+#define ZT_InetAddress_cast_sockaddr_storage_ptr(a) ((struct sockaddr_storage *)(&(a)))
 
-#define ZT_InetAddress_cast_const_sockaddr_ptr(a)         ((const struct sockaddr*)(&(a)))
-#define ZT_InetAddress_cast_const_sockaddr_in_ptr(a)      ((const struct sockaddr_in*)(&(a)))
-#define ZT_InetAddress_cast_const_sockaddr_in6_ptr(a)     ((const struct sockaddr_in6*)(&(a)))
-#define ZT_InetAddress_cast_const_sockaddr_storage_ptr(a) ((const struct sockaddr_storage*)(&(a)))
+#define ZT_InetAddress_cast_const_sockaddr_ptr(a)         ((const struct sockaddr *)(&(a)))
+#define ZT_InetAddress_cast_const_sockaddr_in_ptr(a)      ((const struct sockaddr_in *)(&(a)))
+#define ZT_InetAddress_cast_const_sockaddr_in6_ptr(a)     ((const struct sockaddr_in6 *)(&(a)))
+#define ZT_InetAddress_cast_const_sockaddr_storage_ptr(a) ((const struct sockaddr_storage *)(&(a)))
 
 /**
  * Zero the contents of an InetAddress
  */
-ZT_SDK_API void ZT_InetAddress_clear(ZT_InetAddress* ia);
+ZT_SDK_API void ZT_InetAddress_clear(ZT_InetAddress *ia);
 
 /**
  * Convert an IP/port pair to a string
@@ -2882,7 +2898,7 @@ ZT_SDK_API void ZT_InetAddress_clear(ZT_InetAddress* ia);
  * @param cap Size of buffer, must be at least 64 bytes
  * @return 'buf' is returned
  */
-ZT_SDK_API char* ZT_InetAddress_toString(const ZT_InetAddress* ia, char* buf, unsigned int cap);
+ZT_SDK_API char *ZT_InetAddress_toString(const ZT_InetAddress *ia, char *buf, unsigned int cap);
 
 /**
  * Parse an InetAddress in IP/port format
@@ -2891,7 +2907,7 @@ ZT_SDK_API char* ZT_InetAddress_toString(const ZT_InetAddress* ia, char* buf, un
  * @param str String to parse
  * @return Non-zero on success, zero if IP/port is invalid
  */
-ZT_SDK_API int ZT_InetAddress_fromString(ZT_InetAddress* ia, const char* str);
+ZT_SDK_API int ZT_InetAddress_fromString(ZT_InetAddress *ia, const char *str);
 
 /**
  * Set to the value of a sockaddr such as sockaddr_in or sockaddr_in6.
@@ -2903,7 +2919,7 @@ ZT_SDK_API int ZT_InetAddress_fromString(ZT_InetAddress* ia, const char* str);
  * @param ia InetAddress to fill
  * @param saddr A pointer to a sockaddr
  */
-ZT_SDK_API void ZT_InetAddress_set(ZT_InetAddress* ia, const void* saddr);
+ZT_SDK_API void ZT_InetAddress_set(ZT_InetAddress *ia, const void *saddr);
 
 /**
  * Set raw IP bytes
@@ -2913,32 +2929,33 @@ ZT_SDK_API void ZT_InetAddress_set(ZT_InetAddress* ia, const void* saddr);
  * @param ipLen Length of IP: 4 or 16 for IPv4 or IPv6
  * @param port IP port
  */
-ZT_SDK_API void ZT_InetAddress_setIpBytes(ZT_InetAddress* ia, const void* ipBytes, unsigned int ipLen, unsigned int port);
+ZT_SDK_API void
+ZT_InetAddress_setIpBytes(ZT_InetAddress *ia, const void *ipBytes, unsigned int ipLen, unsigned int port);
 
 /**
  * Set IP port
  */
-ZT_SDK_API void ZT_InetAddress_setPort(ZT_InetAddress* ia, unsigned int port);
+ZT_SDK_API void ZT_InetAddress_setPort(ZT_InetAddress *ia, unsigned int port);
 
 /**
  * Get IP port, which can also be used as a CIDR in some use cases.
  */
-ZT_SDK_API unsigned int ZT_InetAddress_port(const ZT_InetAddress* ia);
+ZT_SDK_API unsigned int ZT_InetAddress_port(const ZT_InetAddress *ia);
 
 /**
  * Returns non-zero if this InetAddress is nil/zero.
  */
-ZT_SDK_API int ZT_InetAddress_isNil(const ZT_InetAddress* ia);
+ZT_SDK_API int ZT_InetAddress_isNil(const ZT_InetAddress *ia);
 
 /**
  * Returns non-zero if this is an IPv4 address.
  */
-ZT_SDK_API int ZT_InetAddress_isV4(const ZT_InetAddress* ia);
+ZT_SDK_API int ZT_InetAddress_isV4(const ZT_InetAddress *ia);
 
 /**
  * Returns non-zero if this is an IPv6 address.
  */
-ZT_SDK_API int ZT_InetAddress_isV6(const ZT_InetAddress* ia);
+ZT_SDK_API int ZT_InetAddress_isV6(const ZT_InetAddress *ia);
 
 /**
  * Fill buffer with IP address bytes, return length in bytes
@@ -2947,12 +2964,12 @@ ZT_SDK_API int ZT_InetAddress_isV6(const ZT_InetAddress* ia);
  * @param buf Buffer with at least 16 bytes of space (to hold IPv6)
  * @return 0 on failure or nil, 4 if buf contains IPv4 IP, 16 if buf contains IPv6 IP
  */
-ZT_SDK_API unsigned int ZT_InetAddress_ipBytes(const ZT_InetAddress* ia, void* buf);
+ZT_SDK_API unsigned int ZT_InetAddress_ipBytes(const ZT_InetAddress *ia, void *buf);
 
 /**
  * Classify the network scope of this IP address (local net, global, etc.)
  */
-ZT_SDK_API enum ZT_InetAddress_IpScope ZT_InetAddress_ipScope(const ZT_InetAddress* ia);
+ZT_SDK_API enum ZT_InetAddress_IpScope ZT_InetAddress_ipScope(const ZT_InetAddress *ia);
 
 /**
  * Compare a and b
@@ -2961,7 +2978,7 @@ ZT_SDK_API enum ZT_InetAddress_IpScope ZT_InetAddress_ipScope(const ZT_InetAddre
  * @param b Second InetAddress
  * @return -1, 0, or 1 if a is less than, equal to, or greater than b
  */
-ZT_SDK_API int ZT_InetAddress_compare(const ZT_InetAddress* a, const ZT_InetAddress* b);
+ZT_SDK_API int ZT_InetAddress_compare(const ZT_InetAddress *a, const ZT_InetAddress *b);
 
 /* These mirror the values of AF_INET and AF_INET6 for use by Rust and other things that need it. */
 ZT_SDK_API const int ZT_AF_INET, ZT_AF_INET6;
@@ -2982,7 +2999,9 @@ ZT_SDK_API const int ZT_AF_INET, ZT_AF_INET6;
  * @param f Function to invoke with each key and (binary) value
  * @return Non-zero if dictionary was valid
  */
-ZT_SDK_API int ZT_Dictionary_parse(const void* dict, unsigned int len, void* arg, void (*f)(void*, const char*, unsigned int, const void*, unsigned int));
+ZT_SDK_API int ZT_Dictionary_parse(
+    const void *dict, unsigned int len, void *arg,
+    void (*f)(void *, const char *, unsigned int, const void *, unsigned int));
 
 /* ---------------------------------------------------------------------------------------------------------------- */
 

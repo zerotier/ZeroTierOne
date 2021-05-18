@@ -32,7 +32,7 @@ struct TriviallyCopyable {
      * @tparam T Automatically inferred type of object
      * @param obj Any TriviallyCopyable object
      */
-    template <typename T> static ZT_INLINE void memoryZero(T* obj) noexcept
+    template <typename T> static ZT_INLINE void memoryZero(T *obj) noexcept
     {
         mustBeTriviallyCopyable(obj);
         Utils::zero<sizeof(T)>(obj);
@@ -44,19 +44,15 @@ struct TriviallyCopyable {
      * @tparam T Automatically inferred type of object
      * @param obj Any TriviallyCopyable object
      */
-    template <typename T> static ZT_INLINE void memoryZero(T& obj) noexcept
+    template <typename T> static ZT_INLINE void memoryZero(T &obj) noexcept
     {
         mustBeTriviallyCopyable(obj);
         Utils::zero<sizeof(T)>(&obj);
     }
 
   private:
-    static ZT_INLINE void mustBeTriviallyCopyable(const TriviallyCopyable&) noexcept
-    {
-    }
-    static ZT_INLINE void mustBeTriviallyCopyable(const TriviallyCopyable*) noexcept
-    {
-    }
+    static ZT_INLINE void mustBeTriviallyCopyable(const TriviallyCopyable &) noexcept {}
+    static ZT_INLINE void mustBeTriviallyCopyable(const TriviallyCopyable *) noexcept {}
 };
 
 }   // namespace ZeroTier

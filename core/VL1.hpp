@@ -45,7 +45,7 @@ class VL2;
  */
 class VL1 {
   public:
-    explicit VL1(const Context& ctx);
+    explicit VL1(const Context &ctx);
 
     /**
      * Called when a packet is received from the real network
@@ -61,31 +61,47 @@ class VL1 {
      * @param data Packet data
      * @param len Packet length
      */
-    void onRemotePacket(CallContext& cc, int64_t localSocket, const InetAddress& fromAddr, SharedPtr<Buf>& data, unsigned int len) noexcept;
+    void onRemotePacket(
+        CallContext &cc, int64_t localSocket, const InetAddress &fromAddr, SharedPtr<Buf> &data,
+        unsigned int len) noexcept;
 
   private:
-    void m_relay(CallContext& cc, const SharedPtr<Path>& path, Address destination, SharedPtr<Buf>& pkt, int pktSize);
-    void m_sendPendingWhois(CallContext& cc);
-    SharedPtr<Peer> m_HELLO(CallContext& cc, const SharedPtr<Path>& path, Buf& pkt, int packetSize);
-    bool m_ERROR(CallContext& cc, uint64_t packetId, unsigned int auth, const SharedPtr<Path>& path, const SharedPtr<Peer>& peer, Buf& pkt, int packetSize, Protocol::Verb& inReVerb);
-    bool m_OK(CallContext& cc, uint64_t packetId, unsigned int auth, const SharedPtr<Path>& path, const SharedPtr<Peer>& peer, Buf& pkt, int packetSize, Protocol::Verb& inReVerb);
-    bool m_WHOIS(CallContext& cc, uint64_t packetId, unsigned int auth, const SharedPtr<Path>& path, const SharedPtr<Peer>& peer, Buf& pkt, int packetSize);
-    bool m_RENDEZVOUS(CallContext& cc, uint64_t packetId, unsigned int auth, const SharedPtr<Path>& path, const SharedPtr<Peer>& peer, Buf& pkt, int packetSize);
-    bool m_ECHO(CallContext& cc, uint64_t packetId, unsigned int auth, const SharedPtr<Path>& path, const SharedPtr<Peer>& peer, Buf& pkt, int packetSize);
-    bool m_PUSH_DIRECT_PATHS(CallContext& cc, uint64_t packetId, unsigned int auth, const SharedPtr<Path>& path, const SharedPtr<Peer>& peer, Buf& pkt, int packetSize);
-    bool m_USER_MESSAGE(CallContext& cc, uint64_t packetId, unsigned int auth, const SharedPtr<Path>& path, const SharedPtr<Peer>& peer, Buf& pkt, int packetSize);
-    bool m_ENCAP(CallContext& cc, uint64_t packetId, unsigned int auth, const SharedPtr<Path>& path, const SharedPtr<Peer>& peer, Buf& pkt, int packetSize);
+    void m_relay(CallContext &cc, const SharedPtr<Path> &path, Address destination, SharedPtr<Buf> &pkt, int pktSize);
+    void m_sendPendingWhois(CallContext &cc);
+    SharedPtr<Peer> m_HELLO(CallContext &cc, const SharedPtr<Path> &path, Buf &pkt, int packetSize);
+    bool m_ERROR(
+        CallContext &cc, uint64_t packetId, unsigned int auth, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer,
+        Buf &pkt, int packetSize, Protocol::Verb &inReVerb);
+    bool m_OK(
+        CallContext &cc, uint64_t packetId, unsigned int auth, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer,
+        Buf &pkt, int packetSize, Protocol::Verb &inReVerb);
+    bool m_WHOIS(
+        CallContext &cc, uint64_t packetId, unsigned int auth, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer,
+        Buf &pkt, int packetSize);
+    bool m_RENDEZVOUS(
+        CallContext &cc, uint64_t packetId, unsigned int auth, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer,
+        Buf &pkt, int packetSize);
+    bool m_ECHO(
+        CallContext &cc, uint64_t packetId, unsigned int auth, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer,
+        Buf &pkt, int packetSize);
+    bool m_PUSH_DIRECT_PATHS(
+        CallContext &cc, uint64_t packetId, unsigned int auth, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer,
+        Buf &pkt, int packetSize);
+    bool m_USER_MESSAGE(
+        CallContext &cc, uint64_t packetId, unsigned int auth, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer,
+        Buf &pkt, int packetSize);
+    bool m_ENCAP(
+        CallContext &cc, uint64_t packetId, unsigned int auth, const SharedPtr<Path> &path, const SharedPtr<Peer> &peer,
+        Buf &pkt, int packetSize);
 
-    const Context& m_ctx;
+    const Context &m_ctx;
 
     // Defragmentation engine for handling inbound packets with more than one fragment.
     Defragmenter<ZT_MAX_PACKET_FRAGMENTS> m_inputPacketAssembler;
 
     // Queue of outbound WHOIS reqeusts and packets waiting on them.
     struct p_WhoisQueueItem {
-        ZT_INLINE p_WhoisQueueItem() : lastRetry(0), retries(0), waitingPacketCount(0)
-        {
-        }
+        ZT_INLINE p_WhoisQueueItem() : lastRetry(0), retries(0), waitingPacketCount(0) {}
 
         int64_t lastRetry;
         unsigned int retries;

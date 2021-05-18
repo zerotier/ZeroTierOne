@@ -27,40 +27,33 @@ namespace ZeroTier {
  */
 template <typename T> class SharedPtr : public TriviallyCopyable {
   public:
-    ZT_INLINE SharedPtr() noexcept : m_ptr(nullptr)
-    {
-    }
+    ZT_INLINE SharedPtr() noexcept : m_ptr(nullptr) {}
 
-    explicit ZT_INLINE SharedPtr(T* obj) noexcept : m_ptr(obj)
+    explicit ZT_INLINE SharedPtr(T *obj) noexcept : m_ptr(obj)
     {
         if (likely(obj != nullptr))
-            const_cast<std::atomic<int>*>(&(obj->__refCount))->fetch_add(1, std::memory_order_acquire);
+            const_cast<std::atomic<int> *>(&(obj->__refCount))->fetch_add(1, std::memory_order_acquire);
     }
 
-    ZT_INLINE SharedPtr(const SharedPtr& sp) noexcept : m_ptr(sp.m_acquire())
-    {
-    }
+    ZT_INLINE SharedPtr(const SharedPtr &sp) noexcept : m_ptr(sp.m_acquire()) {}
 
-    ZT_INLINE ~SharedPtr()
-    {
-        m_release();
-    }
+    ZT_INLINE ~SharedPtr() { m_release(); }
 
-    ZT_INLINE SharedPtr& operator=(const SharedPtr& sp)
+    ZT_INLINE SharedPtr &operator=(const SharedPtr &sp)
     {
         if (likely(m_ptr != sp.m_ptr)) {
-            T* const p = sp.m_acquire();
+            T *const p = sp.m_acquire();
             m_release();
             m_ptr = p;
         }
         return *this;
     }
 
-    ZT_INLINE void set(T* ptr) noexcept
+    ZT_INLINE void set(T *ptr) noexcept
     {
         m_release();
         m_ptr = ptr;
-        const_cast<std::atomic<int>*>(&(ptr->__refCount))->fetch_add(1, std::memory_order_acquire);
+        const_cast<std::atomic<int> *>(&(ptr->__refCount))->fetch_add(1, std::memory_order_acquire);
     }
 
     /**
@@ -71,11 +64,11 @@ template <typename T> class SharedPtr : public TriviallyCopyable {
      *
      * @param with Pointer to swap with
      */
-    ZT_INLINE void swap(SharedPtr& with) noexcept
+    ZT_INLINE void swap(SharedPtr &with) noexcept
     {
-        T* const tmp = m_ptr;
-        m_ptr = with.m_ptr;
-        with.m_ptr = tmp;
+        T *const tmp = m_ptr;
+        m_ptr        = with.m_ptr;
+        with.m_ptr   = tmp;
     }
 
     /**
@@ -87,35 +80,23 @@ template <typename T> class SharedPtr : public TriviallyCopyable {
      *
      * @param from Source pointer; will be changed to NULL
      */
-    ZT_INLINE void move(SharedPtr& from)
+    ZT_INLINE void move(SharedPtr &from)
     {
         m_release();
-        m_ptr = from.m_ptr;
+        m_ptr      = from.m_ptr;
         from.m_ptr = nullptr;
     }
 
-    ZT_INLINE operator bool() const noexcept
-    {
-        return (m_ptr != nullptr);
-    }
+    ZT_INLINE operator bool() const noexcept { return (m_ptr != nullptr); }
 
-    ZT_INLINE T& operator*() const noexcept
-    {
-        return *m_ptr;
-    }
+    ZT_INLINE T &operator*() const noexcept { return *m_ptr; }
 
-    ZT_INLINE T* operator->() const noexcept
-    {
-        return m_ptr;
-    }
+    ZT_INLINE T *operator->() const noexcept { return m_ptr; }
 
     /**
      * @return Raw pointer to held object
      */
-    ZT_INLINE T* ptr() const noexcept
-    {
-        return m_ptr;
-    }
+    ZT_INLINE T *ptr() const noexcept { return m_ptr; }
 
     /**
      * Set this pointer to NULL
@@ -136,13 +117,13 @@ template <typename T> class SharedPtr : public TriviallyCopyable {
      *
      * @return Pointer or NULL if more than one reference
      */
-    ZT_INLINE T* weakGC()
+    ZT_INLINE T *weakGC()
     {
         if (likely(m_ptr != nullptr)) {
             int one = 1;
-            if (const_cast<std::atomic<int>*>(&(m_ptr->__refCount))->compare_exchange_strong(one, (int)0)) {
-                T* const ptr = m_ptr;
-                m_ptr = nullptr;
+            if (const_cast<std::atomic<int> *>(&(m_ptr->__refCount))->compare_exchange_strong(one, (int)0)) {
+                T *const ptr = m_ptr;
+                m_ptr        = nullptr;
                 return ptr;
             }
             else {
@@ -159,53 +140,48 @@ template <typename T> class SharedPtr : public TriviallyCopyable {
         return (unsigned long)((uintptr_t)m_ptr + (uintptr_t)Utils::hash32((uint32_t)m_ptr));
     }
 
-    ZT_INLINE bool operator==(const SharedPtr& sp) const noexcept
+    ZT_INLINE bool operator==(const SharedPtr &sp) const noexcept { return (m_ptr == sp.m_ptr); }
+
+    ZT_INLINE bool operator!=(const SharedPtr &sp) const noexcept { return (m_ptr != sp.m_ptr); }
+
+    ZT_INLINE bool operator>(const SharedPtr &sp) const noexcept
     {
-        return (m_ptr == sp.m_ptr);
+        return (reinterpret_cast<const uint8_t *>(m_ptr) > reinterpret_cast<const uint8_t *>(sp.m_ptr));
     }
 
-    ZT_INLINE bool operator!=(const SharedPtr& sp) const noexcept
+    ZT_INLINE bool operator<(const SharedPtr &sp) const noexcept
     {
-        return (m_ptr != sp.m_ptr);
+        return (reinterpret_cast<const uint8_t *>(m_ptr) < reinterpret_cast<const uint8_t *>(sp.m_ptr));
     }
 
-    ZT_INLINE bool operator>(const SharedPtr& sp) const noexcept
+    ZT_INLINE bool operator>=(const SharedPtr &sp) const noexcept
     {
-        return (reinterpret_cast<const uint8_t*>(m_ptr) > reinterpret_cast<const uint8_t*>(sp.m_ptr));
+        return (reinterpret_cast<const uint8_t *>(m_ptr) >= reinterpret_cast<const uint8_t *>(sp.m_ptr));
     }
 
-    ZT_INLINE bool operator<(const SharedPtr& sp) const noexcept
+    ZT_INLINE bool operator<=(const SharedPtr &sp) const noexcept
     {
-        return (reinterpret_cast<const uint8_t*>(m_ptr) < reinterpret_cast<const uint8_t*>(sp.m_ptr));
-    }
-
-    ZT_INLINE bool operator>=(const SharedPtr& sp) const noexcept
-    {
-        return (reinterpret_cast<const uint8_t*>(m_ptr) >= reinterpret_cast<const uint8_t*>(sp.m_ptr));
-    }
-
-    ZT_INLINE bool operator<=(const SharedPtr& sp) const noexcept
-    {
-        return (reinterpret_cast<const uint8_t*>(m_ptr) <= reinterpret_cast<const uint8_t*>(sp.m_ptr));
+        return (reinterpret_cast<const uint8_t *>(m_ptr) <= reinterpret_cast<const uint8_t *>(sp.m_ptr));
     }
 
   private:
-    ZT_INLINE T* m_acquire() const noexcept
+    ZT_INLINE T *m_acquire() const noexcept
     {
         if (likely(m_ptr != nullptr))
-            const_cast<std::atomic<int>*>(&(m_ptr->__refCount))->fetch_add(1, std::memory_order_acquire);
+            const_cast<std::atomic<int> *>(&(m_ptr->__refCount))->fetch_add(1, std::memory_order_acquire);
         return m_ptr;
     }
 
     ZT_INLINE void m_release() const noexcept
     {
         if (likely(m_ptr != nullptr)) {
-            if (unlikely(const_cast<std::atomic<int>*>(&(m_ptr->__refCount))->fetch_sub(1, std::memory_order_release) <= 1))
+            if (unlikely(
+                    const_cast<std::atomic<int> *>(&(m_ptr->__refCount))->fetch_sub(1, std::memory_order_release) <= 1))
                 delete m_ptr;
         }
     }
 
-    T* m_ptr;
+    T *m_ptr;
 };
 
 }   // namespace ZeroTier
@@ -213,12 +189,12 @@ template <typename T> class SharedPtr : public TriviallyCopyable {
 // Augment std::swap to speed up some operations with SharedPtr.
 namespace std {
 
-template <typename T> ZT_MAYBE_UNUSED ZT_INLINE void swap(ZeroTier::SharedPtr<T>& a, ZeroTier::SharedPtr<T>& b) noexcept
+template <typename T> ZT_MAYBE_UNUSED ZT_INLINE void swap(ZeroTier::SharedPtr<T> &a, ZeroTier::SharedPtr<T> &b) noexcept
 {
     a.swap(b);
 }
 
-template <typename T> ZT_MAYBE_UNUSED ZT_INLINE void move(ZeroTier::SharedPtr<T>& a, ZeroTier::SharedPtr<T>& b) noexcept
+template <typename T> ZT_MAYBE_UNUSED ZT_INLINE void move(ZeroTier::SharedPtr<T> &a, ZeroTier::SharedPtr<T> &b) noexcept
 {
     a.move(b);
 }

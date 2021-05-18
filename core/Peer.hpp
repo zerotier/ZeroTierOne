@@ -31,7 +31,9 @@
 #include "SymmetricKey.hpp"
 #include "Utils.hpp"
 
-#define ZT_PEER_MARSHAL_SIZE_MAX (1 + ZT_ADDRESS_LENGTH + ZT_SYMMETRIC_KEY_SIZE + ZT_IDENTITY_MARSHAL_SIZE_MAX + 1 + ZT_LOCATOR_MARSHAL_SIZE_MAX + (2 * 4) + 2)
+#define ZT_PEER_MARSHAL_SIZE_MAX                                                                                       \
+    (1 + ZT_ADDRESS_LENGTH + ZT_SYMMETRIC_KEY_SIZE + ZT_IDENTITY_MARSHAL_SIZE_MAX + 1 + ZT_LOCATOR_MARSHAL_SIZE_MAX    \
+     + (2 * 4) + 2)
 
 #define ZT_PEER_DEDUP_BUFFER_SIZE         1024
 #define ZT_PEER_DEDUP_BUFFER_MASK         1023U
@@ -66,23 +68,17 @@ class Peer {
      * @param peerIdentity The peer's identity
      * @return True if initialization was succcesful
      */
-    bool init(const Context& ctx, const CallContext& cc, const Identity& peerIdentity);
+    bool init(const Context &ctx, const CallContext &cc, const Identity &peerIdentity);
 
     /**
      * @return This peer's ZT address (short for identity().address())
      */
-    ZT_INLINE Address address() const noexcept
-    {
-        return m_id.address();
-    }
+    ZT_INLINE Address address() const noexcept { return m_id.address(); }
 
     /**
      * @return This peer's identity
      */
-    ZT_INLINE const Identity& identity() const noexcept
-    {
-        return m_id;
-    }
+    ZT_INLINE const Identity &identity() const noexcept { return m_id; }
 
     /**
      * @return Current locator or NULL if no locator is known
@@ -103,11 +99,11 @@ class Peer {
      * @param verify If true, verify locator's signature and structure
      * @return New locator or previous if it was not replaced.
      */
-    ZT_INLINE SharedPtr<const Locator> setLocator(const SharedPtr<const Locator>& loc, const bool verify) noexcept
+    ZT_INLINE SharedPtr<const Locator> setLocator(const SharedPtr<const Locator> &loc, const bool verify) noexcept
     {
         RWMutex::Lock l(m_lock);
-        if ((loc) && ((! m_locator) || (m_locator->revision() < loc->revision()))) {
-            if ((! verify) || loc->verify(m_id))
+        if ((loc) && ((!m_locator) || (m_locator->revision() < loc->revision()))) {
+            if ((!verify) || loc->verify(m_id))
                 m_locator = loc;
         }
         return m_locator;
@@ -125,14 +121,16 @@ class Peer {
      * @param verb Packet verb
      * @param inReVerb In-reply verb for OK or ERROR verbs
      */
-    void received(const Context& ctx, const CallContext& cc, const SharedPtr<Path>& path, unsigned int hops, uint64_t packetId, unsigned int payloadLength, Protocol::Verb verb, Protocol::Verb inReVerb);
+    void received(
+        const Context &ctx, const CallContext &cc, const SharedPtr<Path> &path, unsigned int hops, uint64_t packetId,
+        unsigned int payloadLength, Protocol::Verb verb, Protocol::Verb inReVerb);
 
     /**
      * Log sent data
      *
      * @param bytes Number of bytes written
      */
-    ZT_INLINE void sent(const CallContext& cc, const unsigned int bytes) noexcept
+    ZT_INLINE void sent(const CallContext &cc, const unsigned int bytes) noexcept
     {
         m_lastSend.store(cc.ticks, std::memory_order_relaxed);
         m_outMeter.log(cc.ticks, bytes);
@@ -143,7 +141,7 @@ class Peer {
      *
      * @param bytes Number of bytes relayed
      */
-    ZT_INLINE void relayed(const CallContext& cc, const unsigned int bytes) noexcept
+    ZT_INLINE void relayed(const CallContext &cc, const unsigned int bytes) noexcept
     {
         m_relayedMeter.log(cc.ticks, bytes);
     }
@@ -153,9 +151,9 @@ class Peer {
      *
      * @return Current best path or NULL if there is no direct path
      */
-    ZT_INLINE SharedPtr<Path> path(const CallContext& cc) noexcept
+    ZT_INLINE SharedPtr<Path> path(const CallContext &cc) noexcept
     {
-        return SharedPtr<Path>(reinterpret_cast<Path*>(m_bestPath.load(std::memory_order_acquire)));
+        return SharedPtr<Path>(reinterpret_cast<Path *>(m_bestPath.load(std::memory_order_acquire)));
     }
 
     /**
@@ -165,7 +163,9 @@ class Peer {
      * @param len Length in bytes
      * @param via Path over which to send data (may or may not be an already-learned path for this peer)
      */
-    ZT_INLINE void send(const Context& ctx, const CallContext& cc, const void* data, unsigned int len, const SharedPtr<Path>& via) noexcept
+    ZT_INLINE void send(
+        const Context &ctx, const CallContext &cc, const void *data, unsigned int len,
+        const SharedPtr<Path> &via) noexcept
     {
         via->send(ctx, cc, data, len);
         sent(cc, len);
@@ -180,12 +180,12 @@ class Peer {
      * @param data Data to send
      * @param len Length in bytes
      */
-    void send(const Context& ctx, const CallContext& cc, const void* data, unsigned int len) noexcept;
+    void send(const Context &ctx, const CallContext &cc, const void *data, unsigned int len) noexcept;
 
     /**
      * Do ping, probes, re-keying, and keepalive with this peer, as needed.
      */
-    void pulse(const Context& ctx, const CallContext& cc);
+    void pulse(const Context &ctx, const CallContext &cc);
 
     /**
      * Attempt to contact this peer at a given endpoint.
@@ -196,7 +196,7 @@ class Peer {
      * @param ep Endpoint to attempt to contact
      * @param tries Number of times to try (default: 1)
      */
-    void contact(const Context& ctx, const CallContext& cc, const Endpoint& ep, int tries = 1);
+    void contact(const Context &ctx, const CallContext &cc, const Endpoint &ep, int tries = 1);
 
     /**
      * Reset paths within a given IP scope and address family
@@ -209,15 +209,12 @@ class Peer {
      * @param scope IP scope
      * @param inetAddressFamily Family e.g. AF_INET
      */
-    void resetWithinScope(const Context& ctx, const CallContext& cc, InetAddress::IpScope scope, int inetAddressFamily);
+    void resetWithinScope(const Context &ctx, const CallContext &cc, InetAddress::IpScope scope, int inetAddressFamily);
 
     /**
      * @return Time of last receive of anything, whether direct or relayed
      */
-    ZT_INLINE int64_t lastReceive() const noexcept
-    {
-        return m_lastReceive.load(std::memory_order_relaxed);
-    }
+    ZT_INLINE int64_t lastReceive() const noexcept { return m_lastReceive.load(std::memory_order_relaxed); }
 
     /**
      * @return Average latency of all direct paths or -1 if no direct paths or unknown
@@ -250,41 +247,29 @@ class Peer {
     /**
      * @return The permanent shared key for this peer computed by simple identity agreement
      */
-    ZT_INLINE SymmetricKey& identityKey() noexcept
-    {
-        return m_identityKey;
-    }
+    ZT_INLINE SymmetricKey &identityKey() noexcept { return m_identityKey; }
 
     /**
      * @return AES instance for HELLO dictionary / encrypted section encryption/decryption
      */
-    ZT_INLINE const AES& identityHelloDictionaryEncryptionCipher() const noexcept
-    {
-        return m_helloCipher;
-    }
+    ZT_INLINE const AES &identityHelloDictionaryEncryptionCipher() const noexcept { return m_helloCipher; }
 
     /**
      * @return Key for HMAC on HELLOs
      */
-    ZT_INLINE const uint8_t* identityHelloHmacKey() const noexcept
-    {
-        return m_helloMacKey;
-    }
+    ZT_INLINE const uint8_t *identityHelloHmacKey() const noexcept { return m_helloMacKey; }
 
     /**
      * @return Raw identity key bytes
      */
-    ZT_INLINE const uint8_t* rawIdentityKey() const noexcept
-    {
-        return m_identityKey.key();
-    }
+    ZT_INLINE const uint8_t *rawIdentityKey() const noexcept { return m_identityKey.key(); }
 
     /**
      * @return Current best key: either the latest ephemeral or the identity key
      */
-    ZT_INLINE SymmetricKey& key() noexcept
+    ZT_INLINE SymmetricKey &key() noexcept
     {
-        return *reinterpret_cast<SymmetricKey*>(m_key.load(std::memory_order_relaxed));
+        return *reinterpret_cast<SymmetricKey *>(m_key.load(std::memory_order_relaxed));
     }
 
     /**
@@ -298,14 +283,15 @@ class Peer {
      * @param notYetTried All keys known (long lived or session) other than alreadyTried
      * @return Number of pointers written to notYetTried[]
      */
-    ZT_INLINE int getOtherKeys(const SymmetricKey* const alreadyTried, SymmetricKey* notYetTried[ZT_PEER_EPHEMERAL_KEY_COUNT_MAX]) noexcept
+    ZT_INLINE int getOtherKeys(
+        const SymmetricKey *const alreadyTried, SymmetricKey *notYetTried[ZT_PEER_EPHEMERAL_KEY_COUNT_MAX]) noexcept
     {
         RWMutex::RLock l(m_lock);
         int cnt = 0;
         if (alreadyTried != &m_identityKey)
             notYetTried[cnt++] = &m_identityKey;
         for (unsigned int k = 0; k < ZT_PEER_EPHEMERAL_KEY_BUFFER_SIZE; ++k) {
-            SymmetricKey* const kk = &m_ephemeralSessions[k].key;
+            SymmetricKey *const kk = &m_ephemeralSessions[k].key;
             if (m_ephemeralSessions[k].established && (alreadyTried != kk))
                 notYetTried[cnt++] = kk;
         }
@@ -334,12 +320,13 @@ class Peer {
      * @param vmin Minor version
      * @param vrev Revision
      */
-    ZT_INLINE void setRemoteVersion(unsigned int vproto, unsigned int vmaj, unsigned int vmin, unsigned int vrev) noexcept
+    ZT_INLINE void
+    setRemoteVersion(unsigned int vproto, unsigned int vmaj, unsigned int vmin, unsigned int vrev) noexcept
     {
         RWMutex::Lock l(m_lock);
-        m_vProto = (uint16_t)vproto;
-        m_vMajor = (uint16_t)vmaj;
-        m_vMinor = (uint16_t)vmin;
+        m_vProto    = (uint16_t)vproto;
+        m_vMajor    = (uint16_t)vmaj;
+        m_vMinor    = (uint16_t)vmin;
         m_vRevision = (uint16_t)vrev;
     }
 
@@ -355,7 +342,7 @@ class Peer {
      * @param vRevision Set to revision
      * @return True if remote version is known
      */
-    ZT_INLINE bool remoteVersion(uint16_t& vProto, uint16_t& vMajor, uint16_t& vMinor, uint16_t& vRevision)
+    ZT_INLINE bool remoteVersion(uint16_t &vProto, uint16_t &vMajor, uint16_t &vMinor, uint16_t &vRevision)
     {
         RWMutex::RLock l(m_lock);
         return (((vProto = m_vProto) | (vMajor = m_vMajor) | (vMinor = m_vMinor) | (vRevision = m_vRevision)) != 0);
@@ -375,7 +362,7 @@ class Peer {
      *
      * @param paths Vector of paths with the first path being the current preferred path
      */
-    ZT_INLINE void getAllPaths(Vector<SharedPtr<Path> >& paths) const
+    ZT_INLINE void getAllPaths(Vector<SharedPtr<Path>> &paths) const
     {
         RWMutex::RLock l(m_lock);
         paths.assign(m_paths, m_paths + m_alivePathCount);
@@ -384,20 +371,17 @@ class Peer {
     /**
      * Save the latest version of this peer to the data store
      */
-    void save(const Context& ctx, const CallContext& cc) const;
+    void save(const Context &ctx, const CallContext &cc) const;
 
-    static constexpr int marshalSizeMax() noexcept
-    {
-        return ZT_PEER_MARSHAL_SIZE_MAX;
-    }
+    static constexpr int marshalSizeMax() noexcept { return ZT_PEER_MARSHAL_SIZE_MAX; }
 
-    int marshal(const Context& ctx, uint8_t data[ZT_PEER_MARSHAL_SIZE_MAX]) const noexcept;
-    int unmarshal(const Context& ctx, int64_t ticks, const uint8_t* restrict data, int len) noexcept;
+    int marshal(const Context &ctx, uint8_t data[ZT_PEER_MARSHAL_SIZE_MAX]) const noexcept;
+    int unmarshal(const Context &ctx, int64_t ticks, const uint8_t *restrict data, int len) noexcept;
 
     /**
      * Rate limit gate for inbound WHOIS requests
      */
-    ZT_INLINE bool rateGateInboundWhoisRequest(CallContext& cc) noexcept
+    ZT_INLINE bool rateGateInboundWhoisRequest(CallContext &cc) noexcept
     {
         if ((cc.ticks - m_lastWhoisRequestReceived.load(std::memory_order_relaxed)) >= ZT_PEER_WHOIS_RATE_LIMIT) {
             m_lastWhoisRequestReceived.store(cc.ticks, std::memory_order_relaxed);
@@ -409,7 +393,7 @@ class Peer {
     /**
      * Rate limit gate for inbound ECHO requests
      */
-    ZT_INLINE bool rateGateEchoRequest(CallContext& cc) noexcept
+    ZT_INLINE bool rateGateEchoRequest(CallContext &cc) noexcept
     {
         if ((cc.ticks - m_lastEchoRequestReceived.load(std::memory_order_relaxed)) >= ZT_PEER_GENERAL_RATE_LIMIT) {
             m_lastEchoRequestReceived.store(cc.ticks, std::memory_order_relaxed);
@@ -421,7 +405,7 @@ class Peer {
     /**
      * Rate limit gate for inbound probes
      */
-    ZT_INLINE bool rateGateProbeRequest(CallContext& cc) noexcept
+    ZT_INLINE bool rateGateProbeRequest(CallContext &cc) noexcept
     {
         if ((cc.ticks - m_lastProbeReceived.load(std::memory_order_relaxed)) > ZT_PEER_PROBE_RESPONSE_RATE_LIMIT) {
             m_lastProbeReceived.store(cc.ticks, std::memory_order_relaxed);
@@ -441,7 +425,9 @@ class Peer {
      */
     ZT_INLINE bool deduplicateIncomingPacket(const uint64_t packetId) noexcept
     {
-        return m_dedup[Utils::hash32((uint32_t)packetId) & ZT_PEER_DEDUP_BUFFER_MASK].exchange(packetId, std::memory_order_relaxed) == packetId;
+        return m_dedup[Utils::hash32((uint32_t)packetId) & ZT_PEER_DEDUP_BUFFER_MASK].exchange(
+                   packetId, std::memory_order_relaxed)
+               == packetId;
     }
 
   private:
@@ -451,17 +437,14 @@ class Peer {
         uint8_t p384Public[ZT_ECC384_PUBLIC_KEY_SIZE];
     };
 
-    static_assert(sizeof(p_EphemeralPublic) == (1 + ZT_C25519_ECDH_PUBLIC_KEY_SIZE + ZT_ECC384_PUBLIC_KEY_SIZE), "p_EphemeralPublic has extra padding");
+    static_assert(
+        sizeof(p_EphemeralPublic) == (1 + ZT_C25519_ECDH_PUBLIC_KEY_SIZE + ZT_ECC384_PUBLIC_KEY_SIZE),
+        "p_EphemeralPublic has extra padding");
 
     struct p_EphemeralPrivate {
-        ZT_INLINE p_EphemeralPrivate() noexcept : creationTime(-1)
-        {
-        }
+        ZT_INLINE p_EphemeralPrivate() noexcept : creationTime(-1) {}
 
-        ZT_INLINE ~p_EphemeralPrivate()
-        {
-            Utils::burn(this, sizeof(p_EphemeralPublic));
-        }
+        ZT_INLINE ~p_EphemeralPrivate() { Utils::burn(this, sizeof(p_EphemeralPublic)); }
 
         int64_t creationTime;
         uint64_t sha384OfPublic[6];
@@ -471,19 +454,20 @@ class Peer {
     };
 
     struct p_EphemeralSession {
-        ZT_INLINE p_EphemeralSession() noexcept : established(false)
-        {
-        }
+        ZT_INLINE p_EphemeralSession() noexcept : established(false) {}
 
         uint64_t sha384OfPeerPublic[6];
         SymmetricKey key;
         bool established;
     };
 
-    void m_prioritizePaths(const CallContext& cc);
-    unsigned int m_sendProbe(const Context& ctx, const CallContext& cc, int64_t localSocket, const InetAddress& atAddress, const uint16_t* ports, unsigned int numPorts);
+    void m_prioritizePaths(const CallContext &cc);
+    unsigned int m_sendProbe(
+        const Context &ctx, const CallContext &cc, int64_t localSocket, const InetAddress &atAddress,
+        const uint16_t *ports, unsigned int numPorts);
     void m_deriveSecondaryIdentityKeys() noexcept;
-    unsigned int m_hello(const Context& ctx, const CallContext& cc, int64_t localSocket, const InetAddress& atAddress, bool forceNewKey);
+    unsigned int m_hello(
+        const Context &ctx, const CallContext &cc, int64_t localSocket, const InetAddress &atAddress, bool forceNewKey);
 
     // Guards all fields except those otherwise indicated (and atomics of course).
     RWMutex m_lock;
@@ -552,13 +536,9 @@ class Peer {
     std::atomic<int> __refCount;
 
     struct p_TryQueueItem {
-        ZT_INLINE p_TryQueueItem() : target(), iteration(0)
-        {
-        }
+        ZT_INLINE p_TryQueueItem() : target(), iteration(0) {}
 
-        ZT_INLINE p_TryQueueItem(const Endpoint& t, int iter) : target(t), iteration(iter)
-        {
-        }
+        ZT_INLINE p_TryQueueItem(const Endpoint &t, int iter) : target(t), iteration(iter) {}
 
         Endpoint target;
         int iteration;

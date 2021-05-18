@@ -19,11 +19,12 @@
 
 namespace ZeroTier {
 
-const SharedPtr<const Locator::EndpointAttributes> Locator::EndpointAttributes::DEFAULT(new Locator::EndpointAttributes());
+const SharedPtr<const Locator::EndpointAttributes>
+    Locator::EndpointAttributes::DEFAULT(new Locator::EndpointAttributes());
 
-Locator::Locator(const char* const str) noexcept : __refCount(0)
+Locator::Locator(const char *const str) noexcept : __refCount(0)
 {
-    if (! fromString(str)) {
+    if (!fromString(str)) {
         m_revision = 0;
         m_signer.zero();
         m_endpoints.clear();
@@ -31,25 +32,27 @@ Locator::Locator(const char* const str) noexcept : __refCount(0)
     }
 }
 
-bool Locator::add(const Endpoint& ep, const SharedPtr<const EndpointAttributes>& a)
+bool Locator::add(const Endpoint &ep, const SharedPtr<const EndpointAttributes> &a)
 {
-    for (Vector<std::pair<Endpoint, SharedPtr<const EndpointAttributes> > >::iterator i(m_endpoints.begin()); i != m_endpoints.end(); ++i) {
+    for (Vector<std::pair<Endpoint, SharedPtr<const EndpointAttributes>>>::iterator i(m_endpoints.begin());
+         i != m_endpoints.end(); ++i) {
         if (i->first == ep) {
             i->second = ((a) && (a->data[0] != 0)) ? a : EndpointAttributes::DEFAULT;
             return true;
         }
     }
     if (m_endpoints.size() < ZT_LOCATOR_MAX_ENDPOINTS) {
-        m_endpoints.push_back(std::pair<Endpoint, SharedPtr<const EndpointAttributes> >(ep, ((a) && (a->data[0] != 0)) ? a : EndpointAttributes::DEFAULT));
+        m_endpoints.push_back(std::pair<Endpoint, SharedPtr<const EndpointAttributes>>(
+            ep, ((a) && (a->data[0] != 0)) ? a : EndpointAttributes::DEFAULT));
         return true;
     }
     return false;
 }
 
-bool Locator::sign(const int64_t rev, const Identity& id) noexcept
+bool Locator::sign(const int64_t rev, const Identity &id) noexcept
 {
     m_revision = rev;
-    m_signer = id.address();
+    m_signer   = id.address();
 
     m_sortEndpoints();
 
@@ -64,7 +67,7 @@ bool Locator::sign(const int64_t rev, const Identity& id) noexcept
     return true;
 }
 
-bool Locator::verify(const Identity& id) const noexcept
+bool Locator::verify(const Identity &id) const noexcept
 {
     try {
         if ((m_revision > 0) && (m_signer == id.address())) {
@@ -78,19 +81,23 @@ bool Locator::verify(const Identity& id) const noexcept
     return false;
 }
 
-char* Locator::toString(char s[ZT_LOCATOR_STRING_SIZE_MAX]) const noexcept
+char *Locator::toString(char s[ZT_LOCATOR_STRING_SIZE_MAX]) const noexcept
 {
-    static_assert(ZT_LOCATOR_STRING_SIZE_MAX > ((((ZT_LOCATOR_MARSHAL_SIZE_MAX / 5) + 1) * 8) + ZT_ADDRESS_LENGTH_HEX + 1), "overflow");
+    static_assert(
+        ZT_LOCATOR_STRING_SIZE_MAX > ((((ZT_LOCATOR_MARSHAL_SIZE_MAX / 5) + 1) * 8) + ZT_ADDRESS_LENGTH_HEX + 1),
+        "overflow");
     uint8_t bin[ZT_LOCATOR_MARSHAL_SIZE_MAX];
     m_signer.toString(s);
     s[ZT_ADDRESS_LENGTH_HEX] = '@';
-    Utils::b32e(bin, marshal(bin, false), s + (ZT_ADDRESS_LENGTH_HEX + 1), ZT_LOCATOR_STRING_SIZE_MAX - (ZT_ADDRESS_LENGTH_HEX + 1));
+    Utils::b32e(
+        bin, marshal(bin, false), s + (ZT_ADDRESS_LENGTH_HEX + 1),
+        ZT_LOCATOR_STRING_SIZE_MAX - (ZT_ADDRESS_LENGTH_HEX + 1));
     return s;
 }
 
-bool Locator::fromString(const char* s) noexcept
+bool Locator::fromString(const char *s) noexcept
 {
-    if (! s)
+    if (!s)
         return false;
     if (strlen(s) < (ZT_ADDRESS_LENGTH_HEX + 1))
         return false;
@@ -109,7 +116,8 @@ int Locator::marshal(uint8_t data[ZT_LOCATOR_MARSHAL_SIZE_MAX], const bool exclu
 
     Utils::storeBigEndian<uint16_t>(data + p, (uint16_t)m_endpoints.size());
     p += 2;
-    for (Vector<std::pair<Endpoint, SharedPtr<const EndpointAttributes> > >::const_iterator e(m_endpoints.begin()); e != m_endpoints.end(); ++e) {
+    for (Vector<std::pair<Endpoint, SharedPtr<const EndpointAttributes>>>::const_iterator e(m_endpoints.begin());
+         e != m_endpoints.end(); ++e) {
         int l = e->first.marshal(data + p);
         if (l <= 0)
             return -1;
@@ -128,7 +136,7 @@ int Locator::marshal(uint8_t data[ZT_LOCATOR_MARSHAL_SIZE_MAX], const bool exclu
     Utils::storeMachineEndian<uint16_t>(data + p, 0);   // length of meta-data, currently always 0
     p += 2;
 
-    if (! excludeSignature) {
+    if (!excludeSignature) {
         Utils::storeBigEndian<uint16_t>(data + p, (uint16_t)m_signature.size());
         p += 2;
         Utils::copy(data + p, m_signature.data(), m_signature.size());
@@ -138,7 +146,7 @@ int Locator::marshal(uint8_t data[ZT_LOCATOR_MARSHAL_SIZE_MAX], const bool exclu
     return p;
 }
 
-int Locator::unmarshal(const uint8_t* data, const int len) noexcept
+int Locator::unmarshal(const uint8_t *data, const int len) noexcept
 {
     if (unlikely(len < (8 + ZT_ADDRESS_LENGTH)))
         return -1;
@@ -169,7 +177,7 @@ int Locator::unmarshal(const uint8_t* data, const int len) noexcept
         }
         else {
             m_endpoints[i].second.set(new EndpointAttributes());
-            Utils::copy(const_cast<uint8_t*>(m_endpoints[i].second->data), data + p, (unsigned int)l);
+            Utils::copy(const_cast<uint8_t *>(m_endpoints[i].second->data), data + p, (unsigned int)l);
             p += l;
         }
     }
@@ -198,15 +206,14 @@ int Locator::unmarshal(const uint8_t* data, const int len) noexcept
 struct p_SortByEndpoint {
     // There can't be more than one of the same endpoint, so only need to sort
     // by endpoint.
-    ZT_INLINE bool operator()(const std::pair<Endpoint, SharedPtr<const Locator::EndpointAttributes> >& a, const std::pair<Endpoint, SharedPtr<const Locator::EndpointAttributes> >& b) const noexcept
+    ZT_INLINE bool operator()(
+        const std::pair<Endpoint, SharedPtr<const Locator::EndpointAttributes>> &a,
+        const std::pair<Endpoint, SharedPtr<const Locator::EndpointAttributes>> &b) const noexcept
     {
         return a.first < b.first;
     }
 };
 
-void Locator::m_sortEndpoints() noexcept
-{
-    std::sort(m_endpoints.begin(), m_endpoints.end(), p_SortByEndpoint());
-}
+void Locator::m_sortEndpoints() noexcept { std::sort(m_endpoints.begin(), m_endpoints.end(), p_SortByEndpoint()); }
 
 }   // namespace ZeroTier

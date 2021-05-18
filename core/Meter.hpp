@@ -41,9 +41,7 @@ template <int64_t TUNIT = 1000, unsigned long LSIZE = 10> class Meter {
      *
      * @param now Start time
      */
-    ZT_INLINE Meter() noexcept
-    {
-    }
+    ZT_INLINE Meter() noexcept {}
 
     /**
      * Add a measurement
@@ -58,7 +56,8 @@ template <int64_t TUNIT = 1000, unsigned long LSIZE = 10> class Meter {
         // to it.
         const unsigned long bucket = ((unsigned long)(ts / TUNIT)) % LSIZE;
         if (unlikely(m_bucket.exchange(bucket, std::memory_order_relaxed) != bucket)) {
-            m_totalExclCounts.fetch_add(m_counts[bucket].exchange(count, std::memory_order_relaxed), std::memory_order_relaxed);
+            m_totalExclCounts.fetch_add(
+                m_counts[bucket].exchange(count, std::memory_order_relaxed), std::memory_order_relaxed);
         }
         else {
             m_counts[bucket].fetch_add(count, std::memory_order_relaxed);
@@ -72,7 +71,7 @@ template <int64_t TUNIT = 1000, unsigned long LSIZE = 10> class Meter {
      * @param rate Result parameter: rate in count/TUNIT
      * @param total Total count for life of object
      */
-    ZT_INLINE void rate(double& rate, uint64_t& total) const noexcept
+    ZT_INLINE void rate(double &rate, uint64_t &total) const noexcept
     {
         total = 0;
         for (unsigned long i = 0; i < LSIZE; ++i)

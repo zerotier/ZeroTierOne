@@ -46,7 +46,10 @@ namespace ZeroTier {
  * @tparam GCT Garbage collection trigger threshold, usually 2X GCS (default: ZT_MAX_PACKET_FRAGMENTS * 4)
  * @tparam P Type for pointer to a path object (default: SharedPtr<Path>)
  */
-template <unsigned int MF = ZT_MAX_PACKET_FRAGMENTS, unsigned int MFP = ZT_MAX_INCOMING_FRAGMENTS_PER_PATH, unsigned int GCS = (ZT_MAX_PACKET_FRAGMENTS * 2), unsigned int GCT = (ZT_MAX_PACKET_FRAGMENTS * 4), typename P = SharedPtr<Path> >
+template <
+    unsigned int MF = ZT_MAX_PACKET_FRAGMENTS, unsigned int MFP = ZT_MAX_INCOMING_FRAGMENTS_PER_PATH,
+    unsigned int GCS = (ZT_MAX_PACKET_FRAGMENTS * 2), unsigned int GCT = (ZT_MAX_PACKET_FRAGMENTS * 4),
+    typename P = SharedPtr<Path>>
 class Defragmenter {
   public:
     /**
@@ -90,9 +93,7 @@ class Defragmenter {
         ERR_OUT_OF_MEMORY
     };
 
-    ZT_INLINE Defragmenter()
-    {
-    }
+    ZT_INLINE Defragmenter() {}
 
     /**
      * Process a fragment of a multi-part message
@@ -136,15 +137,9 @@ class Defragmenter {
      * @return Result code
      */
     ZT_INLINE ResultCode assemble(
-        const uint64_t messageId,
-        FCV<Buf::Slice, MF>& message,
-        SharedPtr<Buf>& fragment,
-        const unsigned int fragmentDataIndex,
-        const unsigned int fragmentDataSize,
-        const unsigned int fragmentNo,
-        const unsigned int totalFragmentsExpected,
-        const int64_t ts,
-        const P& via)
+        const uint64_t messageId, FCV<Buf::Slice, MF> &message, SharedPtr<Buf> &fragment,
+        const unsigned int fragmentDataIndex, const unsigned int fragmentDataSize, const unsigned int fragmentNo,
+        const unsigned int totalFragmentsExpected, const int64_t ts, const P &via)
     {
         // Sanity checks for malformed fragments or invalid input parameters.
         if ((fragmentNo >= totalFragmentsExpected) || (totalFragmentsExpected > MF) || (totalFragmentsExpected == 0))
@@ -162,7 +157,7 @@ class Defragmenter {
                 // under the target size. This tries to minimize the amount of time the write
                 // lock is held since many threads can hold the read lock but all threads must
                 // wait if someone holds the write lock.
-                std::vector<std::pair<int64_t, uint64_t> > messagesByLastUsedTime;
+                std::vector<std::pair<int64_t, uint64_t>> messagesByLastUsedTime;
                 messagesByLastUsedTime.reserve(m_messages.size());
 
                 for (typename Map<uint64_t, p_E>::const_iterator i(m_messages.begin()); i != m_messages.end(); ++i)
@@ -179,7 +174,7 @@ class Defragmenter {
         }
 
         // Get or create message fragment.
-        Defragmenter<MF, MFP, GCS, GCT, P>::p_E* e;
+        Defragmenter<MF, MFP, GCS, GCT, P>::p_E *e;
         {
             typename Map<uint64_t, Defragmenter<MF, MFP, GCS, GCT, P>::p_E>::iterator ee(m_messages.find(messageId));
             if (ee == m_messages.end()) {
@@ -218,8 +213,8 @@ class Defragmenter {
 
         // If there is a path associated with this fragment make sure we've registered
         // ourselves as in flight, check the limit, and abort if exceeded.
-        if ((via) && (! e->via)) {
-            e->via = via;
+        if ((via) && (!e->via)) {
+            e->via              = via;
             bool tooManyPerPath = false;
             via->m_inboundFragmentedMessages_l.lock();
             try {
@@ -245,7 +240,7 @@ class Defragmenter {
         // data would just mean the transfer is corrupt and would be detected
         // later e.g. by packet MAC check. Other use cases of this code like
         // network configs check each fragment so this basically can't happen.
-        Buf::Slice& s = e->message.at(fragmentNo);
+        Buf::Slice &s = e->message.at(fragmentNo);
         if (s.b)
             return ERR_DUPLICATE_FRAGMENT;
 
@@ -299,15 +294,9 @@ class Defragmenter {
   private:
     // p_E is an entry in the message queue.
     struct p_E {
-        ZT_INLINE p_E() noexcept
-            : id(0)
-            , lastUsed(0)
-            , totalFragmentsExpected(0)
-            , fragmentsReceived(0)
-        {
-        }
+        ZT_INLINE p_E() noexcept : id(0), lastUsed(0), totalFragmentsExpected(0), fragmentsReceived(0) {}
 
-        ZT_INLINE p_E(const p_E& e) noexcept
+        ZT_INLINE p_E(const p_E &e) noexcept
             : id(e.id)
             , lastUsed(e.lastUsed)
             , totalFragmentsExpected(e.totalFragmentsExpected)
@@ -327,15 +316,15 @@ class Defragmenter {
             }
         }
 
-        ZT_INLINE p_E& operator=(const p_E& e)
+        ZT_INLINE p_E &operator=(const p_E &e)
         {
             if (this != &e) {
-                id = e.id;
-                lastUsed = e.lastUsed;
+                id                     = e.id;
+                lastUsed               = e.lastUsed;
                 totalFragmentsExpected = e.totalFragmentsExpected;
-                fragmentsReceived = e.fragmentsReceived;
-                via = e.via;
-                message = e.message;
+                fragmentsReceived      = e.fragmentsReceived;
+                via                    = e.via;
+                message                = e.message;
             }
             return *this;
         }
