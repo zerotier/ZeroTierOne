@@ -657,6 +657,11 @@ typedef struct {
 
     /**
      * Issuer certificate serial number.
+     *
+     * If this is a self-signed certificate this will be all 0xff (all 1s).
+     * The issuerPublicKey and subjectSignature fields will be empty and
+     * are not used. The signature will be a signature of this certificate
+     * with its own public key.
      */
     uint8_t issuer[ZT_CERTIFICATE_HASH_SIZE];
 
@@ -673,7 +678,7 @@ typedef struct {
     /**
      * Signature of subject with public key.
      *
-     * This couples the subject to the public key, ensuring that the CRL was
+     * This couples the subject to the public key, ensuring that the CSR was
      * not modified in transit or by the signer.
      */
     uint8_t subjectSignature[ZT_CERTIFICATE_MAX_SIGNATURE_SIZE];

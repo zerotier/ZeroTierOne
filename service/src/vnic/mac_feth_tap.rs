@@ -36,7 +36,7 @@
  */
 
 use std::cell::Cell;
-use std::collections::BTreeSet;
+use std::collections::HashSet;
 use std::error::Error;
 use std::ffi::CString;
 use std::ptr::{null_mut, copy_nonoverlapping};
@@ -53,7 +53,7 @@ use zerotier_core::{InetAddress, MAC, MulticastGroup, NetworkId};
 
 use crate::osdep as osdep;
 use crate::getifaddrs;
-use crate::vnic::VNIC;
+use crate::vnic::vnic::VNIC;
 use crate::osdep::getifmaddrs;
 
 const BPF_BUFFER_SIZE: usize = 131072;
@@ -423,7 +423,7 @@ impl VNIC for MacFethTap {
     }
 
     #[inline(always)]
-    fn get_multicast_groups(&self) -> BTreeSet<MulticastGroup> {
+    fn get_multicast_groups(&self) -> HashSet<MulticastGroup> {
         crate::vnic::common::get_l2_multicast_subscriptions(self.device.name.as_str())
     }
 

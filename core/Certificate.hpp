@@ -61,9 +61,24 @@ class Certificate : public ZT_Certificate {
         return *this;
     }
 
+    /**
+     * @return Serial number in a H384 object
+     */
     ZT_INLINE H384 getSerialNo() const noexcept
     {
         return H384(this->serialNo);
+    }
+
+    /**
+     * @return True if this is a self-signed certificate
+     */
+    ZT_INLINE bool isSelfSigned() const noexcept
+    {
+        for(unsigned int i=0;i<ZT_CERTIFICATE_HASH_SIZE;++i) {
+            if (this->issuer[i] != 0xff)
+                return false;
+        }
+        return true;
     }
 
     /**

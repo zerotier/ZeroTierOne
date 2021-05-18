@@ -16,7 +16,8 @@ mod commands;
 mod fastudpsocket;
 mod localconfig;
 mod getifaddrs;
-#[macro_use] mod log;
+#[macro_use]
+mod log;
 mod store;
 mod network;
 mod vnic;
@@ -38,7 +39,7 @@ use crate::store::Store;
 
 pub const HTTP_API_OBJECT_SIZE_LIMIT: usize = 131072;
 
-fn make_help() -> String {
+fn make_help(long_help: bool) -> String {
     let ver = zerotier_core::version();
     format!(r###"ZeroTier Network Hypervisor Service Version {}.{}.{}
 (c)2013-2021 ZeroTier, Inc.
@@ -56,6 +57,7 @@ Global Options:
 Common Operations:
 
   help                                     Show this help
+  longhelp                                 Show help with advanced commands
   oldhelp                                  Show v1.x legacy commands
   version                                  Print version (of this binary)
 
@@ -85,10 +87,11 @@ Common Operations:
 ·     globalroutes <boolean>                 Can global IP routes be set?
 ·     defaultroute <boolean>                 Can default route be overridden?
 
-· join [-...] <network>                    Join a virtual network
-    -c <?identity | fingerprint>             Controller identity / fingerprint
+· join <network>                           Join a virtual network
 · leave <network>                          Leave a virtual network
-
+{}"###,
+            ver.0, ver.1, ver.2, if long_help {
+            r###"
 Advanced Operations:
 
   service                                  Start node
@@ -120,12 +123,27 @@ Advanced Operations:
 ·   list                                   List certificates at local node
     show <@cert|·serial>                   Show certificate details
     newsuid [@secret out]                  Create a subject unique ID secret
-    newcsr <@csr> <@secret out>            Create a CSR (interactive)
-    sign <@csr> <@secret> <@cert out>      Sign a CSR to create a certificate
+    newcsr <@csr out> <@secret out>        Create a CSR (interactive)
+    sign <@csr> <@cert out>                Sign a CSR to create a certificate
+      -u <usage flags (ex: sedacr)>          Set usage flags (recommended)
+         s                                     Usage: digital signature
+         n                                     Usage: non-repudiation
+         e                                     Usage: key encipherment
+         d                                     Usage: key decipherment
+         a                                     Usage: key agreement
+         c                                     Usage: certificate signing (CA)
+         r                                     Usage: CRL signing (CA)
+         x                                     Usage: executable signing
+         t                                     Usage: timestamping
+      -t <timestamp, seconds since epoch>    Timestamp (default: current time)
+      -s <validity start time, seconds>      Start time (default: timestamp)
+      -l <#y|d|h|m|s... (ex: 1y, 3d12h)>     Time to live (default: forever)
+      -i <@issuer | self>                    Issuer or self-sign (required)
+      -k <@issuer secret>                    Secret key for issuer (required)
     verify <@cert>                         Internally verify certificate
 ·   import <@cert> [trust,trust,...]       Import certificate into this node
-      trust flag: rootca                     Root (or self-signed) CA
-      trust flag: config                     Can influence node configuration
+      ca                                     Trust: root CA or self-signed
+      config                                 Trust: node configuration
 ·   export <serial> [@cert]                Export a certificate from this node
 ·   delete <serial|ALL>                    Delete certificate from this node
 ·   factoryreset                           Re-import compiled-in default certs
@@ -133,11 +151,12 @@ Advanced Operations:
     · Command (or command with argument type) requires a running node.
     @ Argument is the path to a file containing the object.
     ? Argument can be either the object or a path to it (auto-detected).
-"###, ver.0, ver.1, ver.2)
+"###
+        } else { "" })
 }
 
-pub(crate) fn print_help() {
-    let h = make_help();
+pub(crate) fn print_help(long_help: bool) {
+    let h = make_help(long_help);
     let _ = std::io::stdout().write_all(h.as_bytes());
 }
 
@@ -152,6 +171,7 @@ pub(crate) fn parse_bool(v: &str) -> Result<bool, String> {
     Err(format!("invalid boolean value: '{}'", v))
 }
 
+#[inline(always)]
 fn is_valid_bool(v: String) -> Result<(), String> {
     parse_bool(v.as_str()).map(|_| ())
 }
@@ -188,7 +208,7 @@ fn get_global_flags(cli_args: &ArgMatches) -> GlobalFlags {
 
 fn main() {
     let cli_args = {
-        let help = make_help();
+        let help = make_help(false);
         let args = App::new("zerotier")
             .arg(Arg::with_name("json").short("j"))
             .arg(Arg::with_name("path").short("p").takes_value(true))
@@ -226,7 +246,6 @@ fn main() {
                     .arg(Arg::with_name("setting").index(2).required(false))
                     .arg(Arg::with_name("value").index(3).required(false))))
             .subcommand(App::new("join")
-                .arg(Arg::with_name("controller").short("c").takes_value(true))
                 .arg(Arg::with_name("nwid").index(1).required(true)))
             .subcommand(App::new("leave")
                 .arg(Arg::with_name("nwid").index(1).required(true)))
@@ -282,8 +301,13 @@ fn main() {
                     .arg(Arg::with_name("secretpath").index(2).required(true)))
                 .subcommand(App::new("sign")
                     .arg(Arg::with_name("csr").index(1).required(true))
-                    .arg(Arg::with_name("secretpath").index(2).required(true))
-                    .arg(Arg::with_name("output").index(3).required(false)))
+                    .arg(Arg::with_name("certout").index(2).required(true))
+                    .arg(Arg::with_name("usage").short("u").required(false))
+                    .arg(Arg::with_name("timestamp").short("t").required(false))
+                    .arg(Arg::with_name("start").short("s").required(false))
+                    .arg(Arg::with_name("ttl").short("l").required(false))
+                    .arg(Arg::with_name("issuer").short("i").required(true))
+                    .arg(Arg::with_name("issuersecret").short("k").required(true)))
                 .subcommand(App::new("verify")
                     .arg(Arg::with_name("cert").index(1).required(true)))
                 .subcommand(App::new("dump")
@@ -302,13 +326,13 @@ fn main() {
         if args.is_err() {
             let e = args.err().unwrap();
             if e.kind != ErrorKind::HelpDisplayed {
-                print_help();
+                print_help(false);
             }
             std::process::exit(1);
         }
         let args = args.unwrap();
         if args.subcommand_name().is_none() {
-            print_help();
+            print_help(false);
             std::process::exit(1);
         }
         args
@@ -316,36 +340,40 @@ fn main() {
 
     std::process::exit({
         match cli_args.subcommand() {
-            ("help", _) => {
-                print_help();
+            ("help", None) => {
+                print_help(false);
                 0
             }
-            ("oldhelp", _) => {
+            ("longhelp", None) => {
+                print_help(true);
+                0
+            }
+            ("oldhelp", None) => {
                 // TODO
                 0
             }
-            ("version", _) => {
+            ("version", None) => {
                 let ver = zerotier_core::version();
                 println!("{}.{}.{}", ver.0, ver.1, ver.2);
                 0
             }
-            ("status", _) => crate::httpclient::run_command(make_store(&cli_args), get_global_flags(&cli_args), crate::commands::status::run),
+            ("status", None) => crate::httpclient::run_command(make_store(&cli_args), get_global_flags(&cli_args), crate::commands::status::run),
             ("set", Some(sub_cli_args)) => { 0 }
             ("peer", Some(sub_cli_args)) => { 0 }
             ("network", Some(sub_cli_args)) => { 0 }
             ("join", Some(sub_cli_args)) => { 0 }
             ("leave", Some(sub_cli_args)) => { 0 }
-            ("service", _) => {
+            ("service", None) => {
                 let store = make_store(&cli_args);
                 drop(cli_args); // free no longer needed memory before entering service
                 service::run(store)
-            },
+            }
             ("controller", Some(sub_cli_args)) => { 0 }
             ("identity", Some(sub_cli_args)) => crate::commands::identity::run(sub_cli_args),
             ("locator", Some(sub_cli_args)) => crate::commands::locator::run(sub_cli_args),
             ("cert", Some(sub_cli_args)) => crate::commands::cert::run(make_store(&cli_args), get_global_flags(&cli_args), sub_cli_args),
             _ => {
-                print_help();
+                print_help(false);
                 1
             }
         }

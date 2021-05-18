@@ -98,7 +98,7 @@ pub(crate) fn read_locator(input: &str) -> Result<Locator, String> {
 /// each execution of the process. By decrypting this nonce when it is returned,
 /// the client and server may check the age of a digest auth exchange.
 pub(crate) fn create_http_auth_nonce(timestamp: i64) -> String {
-    let mut nonce_plaintext: [u64; 2] = [timestamp as u64, 12345]; // the second u64 is arbitrary and unused
+    let mut nonce_plaintext: [u64; 2] = [timestamp as u64, timestamp as u64];
     unsafe {
         osdep::encryptHttpAuthNonce(nonce_plaintext.as_mut_ptr().cast());
         hex::encode(*nonce_plaintext.as_ptr().cast::<[u8; 16]>())
@@ -109,18 +109,19 @@ pub(crate) fn create_http_auth_nonce(timestamp: i64) -> String {
 /// This returns zero if the input was not valid.
 pub(crate) fn decrypt_http_auth_nonce(nonce: &str) -> i64 {
     let nonce = hex::decode(nonce.trim());
-    if nonce.is_err() {
-        return 0;
+    if !nonce.is_err() {
+        let mut nonce = nonce.unwrap();
+        if nonce.len() == 16 {
+            unsafe {
+                osdep::decryptHttpAuthNonce(nonce.as_mut_ptr().cast());
+                let nonce = *nonce.as_ptr().cast::<[u64; 2]>();
+                if nonce[0] == nonce[1] {
+                    return nonce[0] as i64;
+                }
+            }
+        }
     }
-    let mut nonce = nonce.unwrap();
-    if nonce.len() != 16 {
-        return 0;
-    }
-    unsafe {
-        osdep::decryptHttpAuthNonce(nonce.as_mut_ptr().cast());
-        let nonce = *nonce.as_ptr().cast::<[u64; 2]>();
-        nonce[0] as i64
-    }
+    return 0;
 }
 
 /// Shortcut to use serde_json to serialize an object, returns "null" on error.

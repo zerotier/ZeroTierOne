@@ -11,7 +11,7 @@
  */
 /****/
 
-use std::collections::BTreeSet;
+use std::collections::HashSet;
 
 #[allow(unused_imports)]
 use zerotier_core::{MAC, MulticastGroup};
@@ -21,8 +21,8 @@ use num_traits::AsPrimitive;
 
 /// BSD based OSes support getifmaddrs().
 #[cfg(any(target_os = "macos", target_os = "ios", target_os = "netbsd", target_os = "openbsd", target_os = "dragonfly", target_os = "freebsd", target_os = "darwin"))]
-pub(crate) fn get_l2_multicast_subscriptions(dev: &str) -> BTreeSet<MulticastGroup> {
-    let mut groups: BTreeSet<MulticastGroup> = BTreeSet::new();
+pub(crate) fn get_l2_multicast_subscriptions(dev: &str) -> HashSet<MulticastGroup> {
+    let mut groups: HashSet<MulticastGroup> = HashSet::new();
     let dev = dev.as_bytes();
     unsafe {
         let mut maddrs: *mut osdep::ifmaddrs = std::ptr::null_mut();
@@ -50,7 +50,7 @@ pub(crate) fn get_l2_multicast_subscriptions(dev: &str) -> BTreeSet<MulticastGro
 
 /// Linux stores this stuff in /proc and it needs to be fetched from there.
 #[cfg(target_os = "linux")]
-pub(crate) fn get_l2_multicast_subscriptions(dev: &str) -> BTreeSet<MulticastGroup> {
-    let mut groups: BTreeSet<MulticastGroup> = BTreeSet::new();
+pub(crate) fn get_l2_multicast_subscriptions(dev: &str) -> HashSet<MulticastGroup> {
+    let mut groups: HashSet<MulticastGroup> = HashSet::new();
     groups
 }

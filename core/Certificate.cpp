@@ -21,31 +21,23 @@ namespace ZeroTier {
 
 Certificate::Certificate() noexcept
 {
-    ZT_Certificate* const sup = this;
+    ZT_Certificate *const sup = this;
     Utils::zero<sizeof(ZT_Certificate)>(sup);
 }
 
-Certificate::Certificate(const ZT_Certificate& apiCert) : Certificate()
-{
-    *this = apiCert;
-}
+Certificate::Certificate(const ZT_Certificate &apiCert) : Certificate() { *this = apiCert; }
 
-Certificate::Certificate(const Certificate& cert) : Certificate()
-{
-    *this = cert;
-}
+Certificate::Certificate(const Certificate &cert) : Certificate() { *this = cert; }
 
-Certificate::~Certificate()
-{
-}
+Certificate::~Certificate() {}
 
-Certificate& Certificate::operator=(const ZT_Certificate& cert)
+Certificate &Certificate::operator=(const ZT_Certificate &cert)
 {
     m_clear();
 
     Utils::copy<sizeof(this->serialNo)>(this->serialNo, cert.serialNo);
-    this->usageFlags = cert.usageFlags;
-    this->timestamp = cert.timestamp;
+    this->usageFlags  = cert.usageFlags;
+    this->timestamp   = cert.timestamp;
     this->validity[0] = cert.validity[0];
     this->validity[1] = cert.validity[1];
 
@@ -55,10 +47,12 @@ Certificate& Certificate::operator=(const ZT_Certificate& cert)
         for (unsigned int i = 0; i < cert.subject.identityCount; ++i) {
             if (cert.subject.identities[i].identity) {
                 if (cert.subject.identities[i].locator) {
-                    addSubjectIdentity(*reinterpret_cast<const Identity*>(cert.subject.identities[i].identity), *reinterpret_cast<const Locator*>(cert.subject.identities[i].locator));
+                    addSubjectIdentity(
+                        *reinterpret_cast<const Identity *>(cert.subject.identities[i].identity),
+                        *reinterpret_cast<const Locator *>(cert.subject.identities[i].locator));
                 }
                 else {
-                    addSubjectIdentity(*reinterpret_cast<const Identity*>(cert.subject.identities[i].identity));
+                    addSubjectIdentity(*reinterpret_cast<const Identity *>(cert.subject.identities[i].identity));
                 }
             }
         }
@@ -80,15 +74,16 @@ Certificate& Certificate::operator=(const ZT_Certificate& cert)
         }
     }
 
-    this->subject.identityCount = cert.subject.identityCount;
-    this->subject.networkCount = cert.subject.networkCount;
+    this->subject.identityCount  = cert.subject.identityCount;
+    this->subject.networkCount   = cert.subject.networkCount;
     this->subject.updateURLCount = cert.subject.updateURLCount;
 
     Utils::copy<sizeof(ZT_Certificate_Name)>(&(this->subject.name), &(cert.subject.name));
 
     Utils::copy<sizeof(this->subject.uniqueId)>(this->subject.uniqueId, cert.subject.uniqueId);
-    Utils::copy<sizeof(this->subject.uniqueIdSignature)>(this->subject.uniqueIdSignature, cert.subject.uniqueIdSignature);
-    this->subject.uniqueIdSize = cert.subject.uniqueIdSize;
+    Utils::copy<sizeof(this->subject.uniqueIdSignature)>(
+        this->subject.uniqueIdSignature, cert.subject.uniqueIdSignature);
+    this->subject.uniqueIdSize          = cert.subject.uniqueIdSize;
     this->subject.uniqueIdSignatureSize = cert.subject.uniqueIdSignatureSize;
 
     Utils::copy<sizeof(this->issuer)>(this->issuer, cert.issuer);
@@ -96,11 +91,11 @@ Certificate& Certificate::operator=(const ZT_Certificate& cert)
     Utils::copy<sizeof(this->issuerPublicKey)>(this->issuerPublicKey, cert.issuerPublicKey);
     Utils::copy<sizeof(this->publicKey)>(this->publicKey, cert.publicKey);
     this->issuerPublicKeySize = cert.issuerPublicKeySize;
-    this->publicKeySize = cert.publicKeySize;
+    this->publicKeySize       = cert.publicKeySize;
 
     if ((cert.extendedAttributes != nullptr) && (cert.extendedAttributesSize > 0)) {
         m_extendedAttributes.assign(cert.extendedAttributes, cert.extendedAttributes + cert.extendedAttributesSize);
-        this->extendedAttributes = m_extendedAttributes.data();
+        this->extendedAttributes     = m_extendedAttributes.data();
         this->extendedAttributesSize = (unsigned int)m_extendedAttributes.size();
     }
 
@@ -112,7 +107,7 @@ Certificate& Certificate::operator=(const ZT_Certificate& cert)
     return *this;
 }
 
-ZT_Certificate_Identity* Certificate::addSubjectIdentity(const Identity& id)
+ZT_Certificate_Identity *Certificate::addSubjectIdentity(const Identity &id)
 {
     // Store a local copy of the actual identity.
     m_identities.push_front(id);
@@ -121,18 +116,18 @@ ZT_Certificate_Identity* Certificate::addSubjectIdentity(const Identity& id)
     // Enlarge array of ZT_Certificate_Identity structs and set pointer to potentially reallocated array.
     m_subjectIdentities.push_back(ZT_Certificate_Identity());
     m_subjectIdentities.back().identity = &(m_identities.front());
-    m_subjectIdentities.back().locator = nullptr;
+    m_subjectIdentities.back().locator  = nullptr;
 
-    this->subject.identities = m_subjectIdentities.data();
+    this->subject.identities    = m_subjectIdentities.data();
     this->subject.identityCount = (unsigned int)m_subjectIdentities.size();
 
     return &(m_subjectIdentities.back());
 }
 
-ZT_Certificate_Identity* Certificate::addSubjectIdentity(const Identity& id, const Locator& loc)
+ZT_Certificate_Identity *Certificate::addSubjectIdentity(const Identity &id, const Locator &loc)
 {
     // Add identity as above.
-    ZT_Certificate_Identity* const n = addSubjectIdentity(id);
+    ZT_Certificate_Identity *const n = addSubjectIdentity(id);
 
     // Store local copy of locator.
     m_locators.push_front(loc);
@@ -143,7 +138,7 @@ ZT_Certificate_Identity* Certificate::addSubjectIdentity(const Identity& id, con
     return n;
 }
 
-ZT_Certificate_Network* Certificate::addSubjectNetwork(const uint64_t id, const ZT_Fingerprint& controller)
+ZT_Certificate_Network *Certificate::addSubjectNetwork(const uint64_t id, const ZT_Fingerprint &controller)
 {
     // Enlarge array of ZT_Certificate_Network and set pointer to potentially reallocated array.
     m_subjectNetworks.resize(++this->subject.networkCount);
@@ -156,7 +151,7 @@ ZT_Certificate_Network* Certificate::addSubjectNetwork(const uint64_t id, const 
     return &(m_subjectNetworks.back());
 }
 
-void Certificate::addSubjectUpdateUrl(const char* url)
+void Certificate::addSubjectUpdateUrl(const char *url)
 {
     if ((url != nullptr) && (url[0] != 0)) {
         // Store local copy of URL.
@@ -165,7 +160,7 @@ void Certificate::addSubjectUpdateUrl(const char* url)
         // Add pointer to local copy to pointer array and update C structure to point to
         // potentially reallocated array.
         m_updateUrls.push_back(m_strings.front().c_str());
-        this->subject.updateURLs = m_updateUrls.data();
+        this->subject.updateURLs     = m_updateUrls.data();
         this->subject.updateURLCount = (unsigned int)m_updateUrls.size();
     }
 }
@@ -196,7 +191,7 @@ Vector<uint8_t> Certificate::encode(const bool omitSignature) const
 
     m_encodeSubject(this->subject, d, false);
 
-    if (! Utils::allZero(this->issuer, sizeof(this->issuer)))
+    if (!Utils::allZero(this->issuer, sizeof(this->issuer)))
         d.add("i", this->issuer, sizeof(this->issuer));
 
     if (this->issuerPublicKeySize > 0)
@@ -210,7 +205,7 @@ Vector<uint8_t> Certificate::encode(const bool omitSignature) const
     if ((this->extendedAttributes != nullptr) && (this->extendedAttributesSize > 0))
         d["x"].assign(this->extendedAttributes, this->extendedAttributes + this->extendedAttributesSize);
 
-    if ((! omitSignature) && (this->signatureSize > 0))
+    if ((!omitSignature) && (this->signatureSize > 0))
         d["si"].assign(this->signature, this->signature + this->signatureSize);
 
     if (this->maxPathLength > 0)
@@ -220,18 +215,18 @@ Vector<uint8_t> Certificate::encode(const bool omitSignature) const
     return enc;
 }
 
-bool Certificate::decode(const void* const data, const unsigned int len)
+bool Certificate::decode(const void *const data, const unsigned int len)
 {
     char tmp[32], tmp2[ZT_CERTIFICATE_MAX_STRING_LENGTH + 1];
 
     Dictionary d;
-    if (! d.decode(data, len))
+    if (!d.decode(data, len))
         return false;
 
     m_clear();
 
-    this->usageFlags = d.getUI("f");
-    this->timestamp = (int64_t)d.getUI("t");
+    this->usageFlags  = d.getUI("f");
+    this->timestamp   = (int64_t)d.getUI("t");
     this->validity[0] = (int64_t)d.getUI("v#0");
     this->validity[1] = (int64_t)d.getUI("v#1");
 
@@ -239,8 +234,8 @@ bool Certificate::decode(const void* const data, const unsigned int len)
 
     unsigned int cnt = (unsigned int)d.getUI("s.i$");
     for (unsigned int i = 0; i < cnt; ++i) {
-        const Vector<uint8_t>& identityData = d[Dictionary::arraySubscript(tmp, sizeof(tmp), "s.i$.i", i)];
-        const Vector<uint8_t>& locatorData = d[Dictionary::arraySubscript(tmp, sizeof(tmp), "s.i$.l", i)];
+        const Vector<uint8_t> &identityData = d[Dictionary::arraySubscript(tmp, sizeof(tmp), "s.i$.i", i)];
+        const Vector<uint8_t> &locatorData  = d[Dictionary::arraySubscript(tmp, sizeof(tmp), "s.i$.l", i)];
         if (identityData.empty())
             return false;
         Identity id;
@@ -259,8 +254,8 @@ bool Certificate::decode(const void* const data, const unsigned int len)
 
     cnt = (unsigned int)d.getUI("s.nw$");
     for (unsigned int i = 0; i < cnt; ++i) {
-        const uint64_t nwid = d.getUI(Dictionary::arraySubscript(tmp, sizeof(tmp), "s.nw$.i", i));
-        const Vector<uint8_t>& fingerprintData = d[Dictionary::arraySubscript(tmp, sizeof(tmp), "s.nw$.c", i)];
+        const uint64_t nwid                    = d.getUI(Dictionary::arraySubscript(tmp, sizeof(tmp), "s.nw$.i", i));
+        const Vector<uint8_t> &fingerprintData = d[Dictionary::arraySubscript(tmp, sizeof(tmp), "s.nw$.c", i)];
         if ((nwid == 0) || (fingerprintData.empty()))
             return false;
         Fingerprint fp;
@@ -286,47 +281,47 @@ bool Certificate::decode(const void* const data, const unsigned int len)
     d.getS("s.n.ur", this->subject.name.url, sizeof(this->subject.name.url));
     d.getS("s.n.h", this->subject.name.host, sizeof(this->subject.name.host));
 
-    const Vector<uint8_t>& uniqueId = d["s.uI"];
-    if ((! uniqueId.empty()) && (uniqueId.size() <= sizeof(this->subject.uniqueId))) {
+    const Vector<uint8_t> &uniqueId = d["s.uI"];
+    if ((!uniqueId.empty()) && (uniqueId.size() <= sizeof(this->subject.uniqueId))) {
         Utils::copy(this->subject.uniqueId, uniqueId.data(), uniqueId.size());
         this->subject.uniqueIdSize = (unsigned int)uniqueId.size();
     }
-    const Vector<uint8_t>& uniqueIdSignature = d["s.uS"];
-    if ((! uniqueIdSignature.empty()) && (uniqueIdSignature.size() <= sizeof(this->subject.uniqueIdSignature))) {
+    const Vector<uint8_t> &uniqueIdSignature = d["s.uS"];
+    if ((!uniqueIdSignature.empty()) && (uniqueIdSignature.size() <= sizeof(this->subject.uniqueIdSignature))) {
         Utils::copy(this->subject.uniqueIdSignature, uniqueIdSignature.data(), uniqueIdSignature.size());
         this->subject.uniqueIdSignatureSize = (unsigned int)uniqueIdSignature.size();
     }
 
-    const Vector<uint8_t>& issuerData = d["i"];
+    const Vector<uint8_t> &issuerData = d["i"];
     if (issuerData.size() == sizeof(this->issuer)) {
         Utils::copy<sizeof(this->issuer)>(this->issuer, issuerData.data());
     }
 
-    const Vector<uint8_t>& issuerPublicKey = d["iPK"];
-    if ((! issuerPublicKey.empty()) && (issuerPublicKey.size() <= sizeof(this->issuerPublicKey))) {
+    const Vector<uint8_t> &issuerPublicKey = d["iPK"];
+    if ((!issuerPublicKey.empty()) && (issuerPublicKey.size() <= sizeof(this->issuerPublicKey))) {
         Utils::copy(this->issuerPublicKey, issuerPublicKey.data(), issuerPublicKey.size());
         this->issuerPublicKeySize = (unsigned int)issuerPublicKey.size();
     }
 
-    const Vector<uint8_t>& publicKey = d["pK"];
-    if ((! publicKey.empty()) && (publicKey.size() <= sizeof(this->publicKey))) {
+    const Vector<uint8_t> &publicKey = d["pK"];
+    if ((!publicKey.empty()) && (publicKey.size() <= sizeof(this->publicKey))) {
         Utils::copy(this->publicKey, publicKey.data(), publicKey.size());
         this->publicKeySize = (unsigned int)publicKey.size();
     }
-    const Vector<uint8_t>& subjectSignature = d["sS"];
-    if ((! subjectSignature.empty()) && (subjectSignature.size() <= sizeof(this->subjectSignature))) {
+    const Vector<uint8_t> &subjectSignature = d["sS"];
+    if ((!subjectSignature.empty()) && (subjectSignature.size() <= sizeof(this->subjectSignature))) {
         Utils::copy(this->subjectSignature, subjectSignature.data(), subjectSignature.size());
         this->subjectSignatureSize = (unsigned int)subjectSignature.size();
     }
 
     m_extendedAttributes = d["x"];
-    if (! m_extendedAttributes.empty()) {
-        this->extendedAttributes = m_extendedAttributes.data();
+    if (!m_extendedAttributes.empty()) {
+        this->extendedAttributes     = m_extendedAttributes.data();
         this->extendedAttributesSize = (unsigned int)m_extendedAttributes.size();
     }
 
-    const Vector<uint8_t>& signature = d["si"];
-    if ((! signature.empty()) && (signature.size() <= sizeof(this->signature))) {
+    const Vector<uint8_t> &signature = d["si"];
+    if ((!signature.empty()) && (signature.size() <= sizeof(this->signature))) {
         Utils::copy(this->signature, signature.data(), signature.size());
         this->signatureSize = (unsigned int)signature.size();
     }
@@ -339,25 +334,37 @@ bool Certificate::decode(const void* const data, const unsigned int len)
     return true;
 }
 
-bool Certificate::sign(const uint8_t issuer[ZT_CERTIFICATE_HASH_SIZE], const void* const issuerPrivateKey, const unsigned int issuerPrivateKeySize)
+bool Certificate::sign(
+    const uint8_t issuer[ZT_CERTIFICATE_HASH_SIZE], const void *const issuerPrivateKey,
+    const unsigned int issuerPrivateKeySize)
 {
-    if ((! issuerPrivateKey) || (issuerPrivateKeySize == 0))
+    if ((!issuerPrivateKey) || (issuerPrivateKeySize == 0))
         return false;
 
-    switch (reinterpret_cast<const uint8_t*>(issuerPrivateKey)[0]) {
-        default:
-            return false;
+    switch (reinterpret_cast<const uint8_t *>(issuerPrivateKey)[0]) {
+        default: return false;
         case ZT_CERTIFICATE_PUBLIC_KEY_ALGORITHM_ECDSA_NIST_P_384:
             if (issuerPrivateKeySize == (1 + ZT_ECC384_PUBLIC_KEY_SIZE + ZT_ECC384_PRIVATE_KEY_SIZE)) {
-                Utils::copy<sizeof(this->issuer)>(this->issuer, issuer);
-                Utils::copy<1 + ZT_ECC384_PUBLIC_KEY_SIZE>(this->issuerPublicKey,
-                                                           issuerPrivateKey);   // private is prefixed with public
-                this->issuerPublicKeySize = 1 + ZT_ECC384_PUBLIC_KEY_SIZE;
+                if ((!issuer)||((this->publicKeySize == (ZT_ECC384_PUBLIC_KEY_SIZE + 1))&&(memcmp(issuerPrivateKey, this->publicKey, ZT_ECC384_PUBLIC_KEY_SIZE + 1) == 0))) {
+                    // If public key and issuer public key match, this is a self-signed certificate.
+                    // This can also be specified by signing with issuer set to NULL.
+                    Utils::fill<sizeof(this->issuer), 0xff>(this->issuer);
+                    this->issuerPublicKeySize = 0;
+                } else {
+                    // Otherwise set the issuer and issuer public key.
+                    Utils::copy<sizeof(this->issuer)>(this->issuer, issuer);
+                    Utils::copy<1 + ZT_ECC384_PUBLIC_KEY_SIZE>(
+                        this->issuerPublicKey,
+                        issuerPrivateKey);   // private is prefixed with public
+                    this->issuerPublicKeySize = 1 + ZT_ECC384_PUBLIC_KEY_SIZE;
+                }
 
                 const Vector<uint8_t> enc(encode(true));
                 SHA384(this->serialNo, enc.data(), (unsigned int)enc.size());
 
-                ECC384ECDSASign(reinterpret_cast<const uint8_t*>(issuerPrivateKey) + 1 + ZT_ECC384_PUBLIC_KEY_SIZE, this->serialNo, this->signature);
+                ECC384ECDSASign(
+                    reinterpret_cast<const uint8_t *>(issuerPrivateKey) + 1 + ZT_ECC384_PUBLIC_KEY_SIZE, this->serialNo,
+                    this->signature);
                 this->signatureSize = ZT_ECC384_SIGNATURE_SIZE;
 
                 return true;
@@ -378,14 +385,18 @@ ZT_CertificateError Certificate::verify(const int64_t clock, const bool checkSig
         if (this->subject.identityCount > 0) {
             if (this->subject.identities) {
                 for (unsigned int i = 0; i < this->subject.identityCount; ++i) {
-                    if (! this->subject.identities[i].identity) {
+                    if (!this->subject.identities[i].identity) {
                         return ZT_CERTIFICATE_ERROR_INVALID_FORMAT;
                     }
                     if (checkSignatures) {
-                        if (! reinterpret_cast<const Identity*>(this->subject.identities[i].identity)->locallyValidate()) {
+                        if (!reinterpret_cast<const Identity *>(this->subject.identities[i].identity)
+                                 ->locallyValidate()) {
                             return ZT_CERTIFICATE_ERROR_INVALID_IDENTITY;
                         }
-                        if ((this->subject.identities[i].locator) && (! reinterpret_cast<const Locator*>(this->subject.identities[i].locator)->verify(*reinterpret_cast<const Identity*>(this->subject.identities[i].identity)))) {
+                        if ((this->subject.identities[i].locator)
+                            && (!reinterpret_cast<const Locator *>(this->subject.identities[i].locator)
+                                     ->verify(
+                                         *reinterpret_cast<const Identity *>(this->subject.identities[i].identity)))) {
                             return ZT_CERTIFICATE_ERROR_INVALID_COMPONENT_SIGNATURE;
                         }
                     }
@@ -399,7 +410,7 @@ ZT_CertificateError Certificate::verify(const int64_t clock, const bool checkSig
         if (this->subject.networkCount > 0) {
             if (this->subject.networks) {
                 for (unsigned int i = 0; i < this->subject.networkCount; ++i) {
-                    if (! this->subject.networks[i].id) {
+                    if (!this->subject.networks[i].id) {
                         return ZT_CERTIFICATE_ERROR_MISSING_REQUIRED_FIELDS;
                     }
                 }
@@ -412,7 +423,7 @@ ZT_CertificateError Certificate::verify(const int64_t clock, const bool checkSig
         if (this->subject.updateURLCount > 0) {
             if (this->subject.updateURLs) {
                 for (unsigned int i = 0; i < this->subject.updateURLCount; ++i) {
-                    if (! this->subject.updateURLs[i])
+                    if (!this->subject.updateURLs[i])
                         return ZT_CERTIFICATE_ERROR_MISSING_REQUIRED_FIELDS;
                 }
             }
@@ -421,10 +432,14 @@ ZT_CertificateError Certificate::verify(const int64_t clock, const bool checkSig
             }
         }
 
-        if ((this->subject.uniqueIdSize > sizeof(this->subject.uniqueId)) || (this->subject.uniqueIdSignatureSize > sizeof(this->subject.uniqueIdSignature)) || (this->issuerPublicKeySize > sizeof(this->issuerPublicKey)) || (this->publicKeySize > sizeof(this->publicKey)) || (this->subjectSignatureSize > sizeof(this->subjectSignature))) {
+        if ((this->subject.uniqueIdSize > sizeof(this->subject.uniqueId))
+            || (this->subject.uniqueIdSignatureSize > sizeof(this->subject.uniqueIdSignature))
+            || (this->issuerPublicKeySize > sizeof(this->issuerPublicKey))
+            || (this->publicKeySize > sizeof(this->publicKey))
+            || (this->subjectSignatureSize > sizeof(this->subjectSignature))) {
             return ZT_CERTIFICATE_ERROR_INVALID_FORMAT;
         }
-        if ((this->extendedAttributesSize > 0) && (! this->extendedAttributes)) {
+        if ((this->extendedAttributesSize > 0) && (!this->extendedAttributes)) {
             return ZT_CERTIFICATE_ERROR_INVALID_FORMAT;
         }
         if (this->signatureSize > sizeof(this->signature)) {
@@ -432,58 +447,92 @@ ZT_CertificateError Certificate::verify(const int64_t clock, const bool checkSig
         }
 
         if (checkSignatures) {
-            // Signature check fails if main signature is not present or invalid.
-            // Note that the serial number / SHA384 hash is computed on decode(), so
-            // this value is not something we blindly trust from input.
-            if (this->issuerPublicKeySize > 0) {
-                switch (this->issuerPublicKey[0]) {
-                    case ZT_CERTIFICATE_PUBLIC_KEY_ALGORITHM_ECDSA_NIST_P_384:
-                        if ((this->issuerPublicKeySize == (ZT_ECC384_PUBLIC_KEY_SIZE + 1)) && (this->signatureSize == ZT_ECC384_SIGNATURE_SIZE)) {
-                            if (! ECC384ECDSAVerify(this->issuerPublicKey + 1, this->serialNo, this->signature)) {
-                                return ZT_CERTIFICATE_ERROR_INVALID_PRIMARY_SIGNATURE;
-                            }
-                        }
-                        else {
-                            return ZT_CERTIFICATE_ERROR_INVALID_PRIMARY_SIGNATURE;
-                        }
-                        break;
-                    default:
-                        return ZT_CERTIFICATE_ERROR_INVALID_PRIMARY_SIGNATURE;
-                }
-            }
-            else {
-                return ZT_CERTIFICATE_ERROR_INVALID_PRIMARY_SIGNATURE;
-            }
-
             Dictionary d;
             Vector<uint8_t> enc;
 
-            // Check subject signature to verify that CRL was intact and the
-            // public key was the one intended by the CRL creator.
-            if (this->publicKeySize > 0) {
-                d.clear();
-                m_encodeSubject(this->subject, d, false);
-                d.encode(enc);
+            // If the issuer is all 1's (0xffffff...) then this cert is self-signed.
+            bool selfSigned = true;
+            for (unsigned int i = 0; i < ZT_CERTIFICATE_HASH_SIZE; ++i) {
+                if (this->issuer[i] != 0xff) {
+                    selfSigned = false;
+                    break;
+                }
+            }
 
-                switch (this->publicKey[0]) {
-                    case ZT_CERTIFICATE_PUBLIC_KEY_ALGORITHM_ECDSA_NIST_P_384:
-                        if ((this->publicKeySize == (ZT_ECC384_PUBLIC_KEY_SIZE + 1)) && (this->subjectSignatureSize == ZT_ECC384_SIGNATURE_SIZE)) {
-                            uint8_t h[ZT_SHA384_DIGEST_SIZE];
-                            SHA384(h, enc.data(), (unsigned int)enc.size());
-                            if (! ECC384ECDSAVerify(this->publicKey + 1, h, this->subjectSignature)) {
+            if (!selfSigned) {
+                // Regular certs have an issuer signature and a self-signature
+                // of their subject to ensure CSR integrity.
+
+                if (this->issuerPublicKeySize > 0) {
+                    switch (this->issuerPublicKey[0]) {
+                        case ZT_CERTIFICATE_PUBLIC_KEY_ALGORITHM_ECDSA_NIST_P_384:
+                            if ((this->issuerPublicKeySize == (ZT_ECC384_PUBLIC_KEY_SIZE + 1))
+                                && (this->signatureSize == ZT_ECC384_SIGNATURE_SIZE)) {
+                                if (!ECC384ECDSAVerify(this->issuerPublicKey + 1, this->serialNo, this->signature)) {
+                                    return ZT_CERTIFICATE_ERROR_INVALID_PRIMARY_SIGNATURE;
+                                }
+                            }
+                            else {
+                                return ZT_CERTIFICATE_ERROR_INVALID_PRIMARY_SIGNATURE;
+                            }
+                            break;
+                        default: return ZT_CERTIFICATE_ERROR_INVALID_PRIMARY_SIGNATURE;
+                    }
+                }
+                else {
+                    return ZT_CERTIFICATE_ERROR_INVALID_PRIMARY_SIGNATURE;
+                }
+
+                if (this->publicKeySize > 0) {
+                    d.clear();
+                    m_encodeSubject(this->subject, d, false);
+                    d.encode(enc);
+
+                    switch (this->publicKey[0]) {
+                        case ZT_CERTIFICATE_PUBLIC_KEY_ALGORITHM_ECDSA_NIST_P_384:
+                            if ((this->publicKeySize == (ZT_ECC384_PUBLIC_KEY_SIZE + 1))
+                                && (this->subjectSignatureSize == ZT_ECC384_SIGNATURE_SIZE)) {
+                                uint8_t h[ZT_SHA384_DIGEST_SIZE];
+                                SHA384(h, enc.data(), (unsigned int)enc.size());
+                                if (!ECC384ECDSAVerify(this->publicKey + 1, h, this->subjectSignature)) {
+                                    return ZT_CERTIFICATE_ERROR_INVALID_COMPONENT_SIGNATURE;
+                                }
+                            }
+                            else {
                                 return ZT_CERTIFICATE_ERROR_INVALID_COMPONENT_SIGNATURE;
                             }
-                        }
-                        else {
-                            return ZT_CERTIFICATE_ERROR_INVALID_COMPONENT_SIGNATURE;
-                        }
-                        break;
-                    default:
-                        return ZT_CERTIFICATE_ERROR_INVALID_COMPONENT_SIGNATURE;
+                            break;
+                        default: return ZT_CERTIFICATE_ERROR_INVALID_COMPONENT_SIGNATURE;
+                    }
+                }
+                else {
+                    return ZT_CERTIFICATE_ERROR_INVALID_COMPONENT_SIGNATURE;
                 }
             }
             else {
-                return ZT_CERTIFICATE_ERROR_INVALID_COMPONENT_SIGNATURE;
+                // Self-signed certs are just signed by their own public keys.
+                // The issuer public key and subject self-signature are ignored
+                // and can be empty.
+
+                if (this->publicKeySize > 0) {
+                    switch (this->publicKey[0]) {
+                        case ZT_CERTIFICATE_PUBLIC_KEY_ALGORITHM_ECDSA_NIST_P_384:
+                            if ((this->publicKeySize == (ZT_ECC384_PUBLIC_KEY_SIZE + 1))
+                                && (this->signatureSize == ZT_ECC384_SIGNATURE_SIZE)) {
+                                if (!ECC384ECDSAVerify(this->publicKey + 1, this->serialNo, this->signature)) {
+                                    return ZT_CERTIFICATE_ERROR_INVALID_PRIMARY_SIGNATURE;
+                                }
+                            }
+                            else {
+                                return ZT_CERTIFICATE_ERROR_INVALID_PRIMARY_SIGNATURE;
+                            }
+                            break;
+                        default: return ZT_CERTIFICATE_ERROR_INVALID_PRIMARY_SIGNATURE;
+                    }
+                }
+                else {
+                    return ZT_CERTIFICATE_ERROR_INVALID_PRIMARY_SIGNATURE;
+                }
             }
 
             // Subject unique ID signatures are optional, so this only fails if it
@@ -492,19 +541,22 @@ ZT_CertificateError Certificate::verify(const int64_t clock, const bool checkSig
             if (this->subject.uniqueIdSize > 0) {
                 if (this->subject.uniqueIdSize <= (unsigned int)sizeof(this->subject.uniqueId)) {
                     switch (this->subject.uniqueId[0]) {
-                        case ZT_CERTIFICATE_PUBLIC_KEY_ALGORITHM_NONE:
-                            break;
+                        case ZT_CERTIFICATE_PUBLIC_KEY_ALGORITHM_NONE: break;
                         case ZT_CERTIFICATE_PUBLIC_KEY_ALGORITHM_ECDSA_NIST_P_384:
-                            if ((this->subject.uniqueIdSize == (ZT_ECC384_PUBLIC_KEY_SIZE + 1)) && (this->subject.uniqueIdSignatureSize == ZT_ECC384_SIGNATURE_SIZE)) {
+                            if ((this->subject.uniqueIdSize == (ZT_ECC384_PUBLIC_KEY_SIZE + 1))
+                                && (this->subject.uniqueIdSignatureSize == ZT_ECC384_SIGNATURE_SIZE)) {
                                 d.clear();
                                 m_encodeSubject(this->subject, d, true);
                                 d.encode(enc);
 
-                                static_assert(ZT_ECC384_SIGNATURE_HASH_SIZE == ZT_SHA384_DIGEST_SIZE, "ECC384 should take 384-bit hash");
+                                static_assert(
+                                    ZT_ECC384_SIGNATURE_HASH_SIZE == ZT_SHA384_DIGEST_SIZE,
+                                    "ECC384 should take 384-bit hash");
                                 uint8_t h[ZT_SHA384_DIGEST_SIZE];
                                 SHA384(h, enc.data(), (unsigned int)enc.size());
 
-                                if (! ECC384ECDSAVerify(this->subject.uniqueId + 1, h, this->subject.uniqueIdSignature)) {
+                                if (!ECC384ECDSAVerify(
+                                        this->subject.uniqueId + 1, h, this->subject.uniqueIdSignature)) {
                                     return ZT_CERTIFICATE_ERROR_INVALID_UNIQUE_ID_PROOF;
                                 }
                             }
@@ -512,8 +564,7 @@ ZT_CertificateError Certificate::verify(const int64_t clock, const bool checkSig
                                 return ZT_CERTIFICATE_ERROR_INVALID_UNIQUE_ID_PROOF;
                             }
                             break;
-                        default:
-                            return ZT_CERTIFICATE_ERROR_INVALID_UNIQUE_ID_PROOF;
+                        default: return ZT_CERTIFICATE_ERROR_INVALID_UNIQUE_ID_PROOF;
                     }
                 }
                 else {
@@ -523,7 +574,7 @@ ZT_CertificateError Certificate::verify(const int64_t clock, const bool checkSig
         }
 
         if (clock >= 0) {
-            if (! this->verifyTimeWindow(clock))
+            if (!this->verifyTimeWindow(clock))
                 return ZT_CERTIFICATE_ERROR_OUT_OF_VALID_TIME_WINDOW;
         }
     }
@@ -534,31 +585,36 @@ ZT_CertificateError Certificate::verify(const int64_t clock, const bool checkSig
     return ZT_CERTIFICATE_ERROR_NONE;
 }
 
-bool Certificate::newKeyPair(const ZT_CertificatePublicKeyAlgorithm type, uint8_t publicKey[ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE], int* const publicKeySize, uint8_t privateKey[ZT_CERTIFICATE_MAX_PRIVATE_KEY_SIZE], int* const privateKeySize)
+bool Certificate::newKeyPair(
+    const ZT_CertificatePublicKeyAlgorithm type, uint8_t publicKey[ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE],
+    int *const publicKeySize, uint8_t privateKey[ZT_CERTIFICATE_MAX_PRIVATE_KEY_SIZE], int *const privateKeySize)
 {
     switch (type) {
         case ZT_CERTIFICATE_PUBLIC_KEY_ALGORITHM_ECDSA_NIST_P_384:
             publicKey[0] = (uint8_t)ZT_CERTIFICATE_PUBLIC_KEY_ALGORITHM_ECDSA_NIST_P_384;
             ZeroTier::ECC384GenerateKey(publicKey + 1, privateKey + ZT_ECC384_PUBLIC_KEY_SIZE + 1);
             ZeroTier::Utils::copy<ZT_ECC384_PUBLIC_KEY_SIZE + 1>(privateKey, publicKey);
-            *publicKeySize = ZT_ECC384_PUBLIC_KEY_SIZE + 1;
+            *publicKeySize  = ZT_ECC384_PUBLIC_KEY_SIZE + 1;
             *privateKeySize = 1 + ZT_ECC384_PUBLIC_KEY_SIZE + ZT_ECC384_PRIVATE_KEY_SIZE;
             return true;
-        default:
-            break;
+        default: break;
     }
     return false;
 }
 
-Vector<uint8_t> Certificate::createCSR(const ZT_Certificate_Subject& s, const void* const certificatePrivateKey, const unsigned int certificatePrivateKeySize, const void* uniqueIdPrivate, unsigned int uniqueIdPrivateSize)
+Vector<uint8_t> Certificate::createCSR(
+    const ZT_Certificate_Subject &s, const void *const certificatePrivateKey,
+    const unsigned int certificatePrivateKeySize, const void *uniqueIdPrivate, unsigned int uniqueIdPrivateSize)
 {
     Vector<uint8_t> enc;
 
     ZT_Certificate_Subject sc;
     Utils::copy<sizeof(ZT_Certificate_Subject)>(&sc, &s);
 
-    if ((! certificatePrivateKey) || (certificatePrivateKeySize != (1 + ZT_ECC384_PUBLIC_KEY_SIZE + ZT_ECC384_PRIVATE_KEY_SIZE))
-        || (reinterpret_cast<const uint8_t*>(certificatePrivateKey)[0] != ZT_CERTIFICATE_PUBLIC_KEY_ALGORITHM_ECDSA_NIST_P_384))
+    if ((!certificatePrivateKey)
+        || (certificatePrivateKeySize != (1 + ZT_ECC384_PUBLIC_KEY_SIZE + ZT_ECC384_PRIVATE_KEY_SIZE))
+        || (reinterpret_cast<const uint8_t *>(certificatePrivateKey)[0]
+            != ZT_CERTIFICATE_PUBLIC_KEY_ALGORITHM_ECDSA_NIST_P_384))
         return enc;
 
     if (m_setSubjectUniqueId(sc, uniqueIdPrivate, uniqueIdPrivateSize)) {
@@ -568,9 +624,11 @@ Vector<uint8_t> Certificate::createCSR(const ZT_Certificate_Subject& s, const vo
 
         uint8_t subjectHash[ZT_SHA384_DIGEST_SIZE], subjectSig[ZT_ECC384_SIGNATURE_SIZE];
         SHA384(subjectHash, enc.data(), (unsigned int)enc.size());
-        ECC384ECDSASign(reinterpret_cast<const uint8_t*>(certificatePrivateKey) + 1 + ZT_ECC384_PUBLIC_KEY_SIZE, subjectHash, subjectSig);
+        ECC384ECDSASign(
+            reinterpret_cast<const uint8_t *>(certificatePrivateKey) + 1 + ZT_ECC384_PUBLIC_KEY_SIZE, subjectHash,
+            subjectSig);
 
-        d.add("pK", reinterpret_cast<const uint8_t*>(certificatePrivateKey), (1 + ZT_ECC384_PUBLIC_KEY_SIZE));
+        d.add("pK", reinterpret_cast<const uint8_t *>(certificatePrivateKey), (1 + ZT_ECC384_PUBLIC_KEY_SIZE));
         d.add("sS", subjectSig, ZT_ECC384_SIGNATURE_SIZE);
 
         d.encode(enc);
@@ -581,7 +639,7 @@ Vector<uint8_t> Certificate::createCSR(const ZT_Certificate_Subject& s, const vo
 
 void Certificate::m_clear()
 {
-    ZT_Certificate* const sup = this;
+    ZT_Certificate *const sup = this;
     Utils::zero<sizeof(ZT_Certificate)>(sup);
 
     m_identities.clear();
@@ -594,11 +652,14 @@ void Certificate::m_clear()
     m_extendedAttributes.clear();
 }
 
-bool Certificate::m_setSubjectUniqueId(ZT_Certificate_Subject& s, const void* uniqueIdPrivate, unsigned int uniqueIdPrivateSize)
+bool Certificate::m_setSubjectUniqueId(
+    ZT_Certificate_Subject &s, const void *uniqueIdPrivate, unsigned int uniqueIdPrivateSize)
 {
     if (uniqueIdPrivateSize > 0) {
-        if ((uniqueIdPrivate != nullptr) && (uniqueIdPrivateSize == (1 + ZT_ECC384_PUBLIC_KEY_SIZE + ZT_ECC384_PRIVATE_KEY_SIZE))
-            && (reinterpret_cast<const uint8_t*>(uniqueIdPrivate)[0] == (uint8_t)ZT_CERTIFICATE_PUBLIC_KEY_ALGORITHM_ECDSA_NIST_P_384)) {
+        if ((uniqueIdPrivate != nullptr)
+            && (uniqueIdPrivateSize == (1 + ZT_ECC384_PUBLIC_KEY_SIZE + ZT_ECC384_PRIVATE_KEY_SIZE))
+            && (reinterpret_cast<const uint8_t *>(uniqueIdPrivate)[0]
+                == (uint8_t)ZT_CERTIFICATE_PUBLIC_KEY_ALGORITHM_ECDSA_NIST_P_384)) {
             Utils::copy<1 + ZT_ECC384_PUBLIC_KEY_SIZE>(s.uniqueId, uniqueIdPrivate);
             s.uniqueIdSize = 1 + ZT_ECC384_PUBLIC_KEY_SIZE;   // private is prefixed with public
 
@@ -610,7 +671,9 @@ bool Certificate::m_setSubjectUniqueId(ZT_Certificate_Subject& s, const void* un
             uint8_t h[ZT_SHA384_DIGEST_SIZE];
             SHA384(h, enc.data(), (unsigned int)enc.size());
 
-            ECC384ECDSASign(reinterpret_cast<const uint8_t*>(uniqueIdPrivate) + 1 + ZT_ECC384_PUBLIC_KEY_SIZE, h, s.uniqueIdSignature);
+            ECC384ECDSASign(
+                reinterpret_cast<const uint8_t *>(uniqueIdPrivate) + 1 + ZT_ECC384_PUBLIC_KEY_SIZE, h,
+                s.uniqueIdSignature);
             s.uniqueIdSignatureSize = ZT_ECC384_SIGNATURE_SIZE;
         }
         else {
@@ -626,7 +689,7 @@ bool Certificate::m_setSubjectUniqueId(ZT_Certificate_Subject& s, const void* un
     return true;
 }
 
-void Certificate::m_encodeSubject(const ZT_Certificate_Subject& s, Dictionary& d, bool omitUniqueIdProofSignature)
+void Certificate::m_encodeSubject(const ZT_Certificate_Subject &s, Dictionary &d, bool omitUniqueIdProofSignature)
 {
     char tmp[32];
 
@@ -636,9 +699,13 @@ void Certificate::m_encodeSubject(const ZT_Certificate_Subject& s, Dictionary& d
         d.add("s.i$", (uint64_t)s.identityCount);
         for (unsigned int i = 0; i < s.identityCount; ++i) {
             if (s.identities[i].identity)
-                d.addO(Dictionary::arraySubscript(tmp, sizeof(tmp), "s.i$.i", i), *reinterpret_cast<const Identity*>(s.identities[i].identity));
+                d.addO(
+                    Dictionary::arraySubscript(tmp, sizeof(tmp), "s.i$.i", i),
+                    *reinterpret_cast<const Identity *>(s.identities[i].identity));
             if (s.identities[i].locator)
-                d.addO(Dictionary::arraySubscript(tmp, sizeof(tmp), "s.i$.l", i), *reinterpret_cast<const Locator*>(s.identities[i].locator));
+                d.addO(
+                    Dictionary::arraySubscript(tmp, sizeof(tmp), "s.i$.l", i),
+                    *reinterpret_cast<const Locator *>(s.identities[i].locator));
         }
     }
 
@@ -684,7 +751,7 @@ void Certificate::m_encodeSubject(const ZT_Certificate_Subject& s, Dictionary& d
 
     if (s.uniqueIdSize > 0)
         d["s.uI"].assign(s.uniqueId, s.uniqueId + s.uniqueIdSize);
-    if ((! omitUniqueIdProofSignature) && (s.uniqueIdSignatureSize > 0))
+    if ((!omitUniqueIdProofSignature) && (s.uniqueIdSignatureSize > 0))
         d["s.uS"].assign(s.uniqueIdSignature, s.uniqueIdSignature + s.uniqueIdSignatureSize);
 }
 

@@ -55,50 +55,6 @@ clock_serv_t OSUtils::s_machMonotonicClock = _machGetMonotonicClock();
 
 #endif
 
-unsigned int OSUtils::ztsnprintf(char* buf, unsigned int len, const char* fmt, ...)
-{
-    va_list ap;
-
-    va_start(ap, fmt);
-    int n = (int)vsnprintf(buf, len, fmt, ap);
-    va_end(ap);
-
-    if ((n >= (int)len) || (n < 0)) {
-        if (len)
-            buf[len - 1] = (char)0;
-        throw std::length_error("buf[] overflow");
-    }
-
-    return (unsigned int)n;
-}
-
-#ifdef __UNIX_LIKE__
-
-bool OSUtils::redirectUnixOutputs(const char* stdoutPath, const char* stderrPath)
-{
-    int fdout = open(stdoutPath, O_WRONLY | O_CREAT, 0600);
-    if (fdout > 0) {
-        int fderr;
-        if (stderrPath) {
-            fderr = open(stderrPath, O_WRONLY | O_CREAT, 0600);
-            if (fderr <= 0) {
-                ::close(fdout);
-                return false;
-            }
-        }
-        else
-            fderr = fdout;
-        ::close(STDOUT_FILENO);
-        ::close(STDERR_FILENO);
-        ::dup2(fdout, STDOUT_FILENO);
-        ::dup2(fderr, STDERR_FILENO);
-        return true;
-    }
-    return false;
-}
-
-#endif   // __UNIX_LIKE__
-
 Vector<String> OSUtils::listDirectory(const char* path, bool includeDirectories)
 {
     Vector<String> r;

@@ -98,6 +98,25 @@ impl CertificateSerialNo {
     pub fn is_nil(&self) -> bool {
         is_all_zeroes(self.0)
     }
+
+    /// Returns true if this serial indicates a self-signed certificate.
+    /// This is meaningful for the serial in the issuer field of Certificate,
+    /// which will be all 0xff in self-signed certificates.
+    #[inline(always)]
+    pub fn is_self_signed(&self) -> bool {
+        for x in self.0.iter() {
+            if *x != 0xff {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /// Set this to all 0xff which in the issuer field means self-signed.
+    #[inline(always)]
+    pub fn set_self_signed(&mut self) {
+        self.0.fill(0xff);
+    }
 }
 
 impl Hash for CertificateSerialNo {
@@ -671,7 +690,7 @@ impl Certificate {
         }
     }
 
-    pub fn to_bytes(&self) -> Result<Box<[u8]>, ResultCode> {
+    pub fn to_bytes(&self) -> Result<Vec<u8>, ResultCode> {
         let mut cert: Vec<u8> = Vec::new();
         cert.resize(16384, 0);
         let mut cert_size: c_int = 16384;
@@ -682,7 +701,7 @@ impl Certificate {
             }
         }
         cert.resize(cert_size as usize, 0);
-        return Ok(cert.into_boxed_slice());
+        return Ok(cert);
     }
 
     /// Sign this certificate, returning new signed certificate.
@@ -708,6 +727,16 @@ impl Certificate {
             let capi = self.to_capi();
             return CertificateError::from_i32(ztcore::ZT_Certificate_verify(&capi.certificate as *const ztcore::ZT_Certificate, clock) as i32).unwrap_or(CertificateError::InvalidFormat);
         }
+    }
+
+    /// Returns true if this is a self-signed certificate.
+    pub fn is_self_signed(&self) -> bool {
+        for b in self.issuer.0.iter() {
+            if *b != 0xff {
+                return false;
+            }
+        }
+        return true;
     }
 }
 

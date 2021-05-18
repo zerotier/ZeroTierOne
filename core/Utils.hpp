@@ -649,6 +649,37 @@ static ZT_INLINE void zero(void* dest, unsigned long len) noexcept
 }
 
 /**
+ * Zero memory block whose size is known at compile time
+ *
+ * @tparam L Size in bytes
+ * @param dest Memory to zero
+ */
+template <unsigned long L, uint8_t B> static ZT_INLINE void fill(void* dest) noexcept
+{
+#if defined(ZT_ARCH_X64) && defined(__GNUC__)
+    uintptr_t l = L;
+    __asm__ __volatile__("cld ; rep stosb" : "+c"(l), "+D"(dest) : "a"(B) : "memory");
+#else
+    memset(dest, B, L);
+#endif
+}
+
+/**
+ * Zero memory block whose size is known at run time
+ *
+ * @param dest Memory to zero
+ * @param len Size in bytes
+ */
+template <uint8_t B> static ZT_INLINE void fill(void* dest, unsigned long len) noexcept
+{
+#if defined(ZT_ARCH_X64) && defined(__GNUC__)
+    __asm__ __volatile__("cld ; rep stosb" : "+c"(len), "+D"(dest) : "a"(B) : "memory");
+#else
+    memset(dest, B, len);
+#endif
+}
+
+/**
  * Compute 32-bit FNV-1a checksum
  *
  * See: http://www.isthe.com/chongo/tech/comp/fnv/

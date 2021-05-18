@@ -58,21 +58,19 @@ class OSUtils {
      * @param ... Format arguments
      * @throws std::length_error buf[] too short (buf[] will still be left null-terminated)
      */
-    static unsigned int ztsnprintf(char* buf, unsigned int len, const char* fmt, ...);
-
-#ifdef __UNIX_LIKE__
-    /**
-     * Close STDOUT_FILENO and STDERR_FILENO and replace them with output to given path
-     *
-     * This can be called after fork() and prior to exec() to suppress output
-     * from a subprocess, such as auto-update.
-     *
-     * @param stdoutPath Path to file to use for stdout
-     * @param stderrPath Path to file to use for stderr, or NULL for same as stdout (default)
-     * @return True on success
-     */
-    static bool redirectUnixOutputs(const char* stdoutPath, const char* stderrPath = nullptr);
-#endif   // __UNIX_LIKE__
+    static ZT_INLINE unsigned int ztsnprintf(char* buf, unsigned int len, const char* fmt, ...)
+    {
+        va_list ap;
+        va_start(ap, fmt);
+        int n = (int)vsnprintf(buf, len, fmt, ap);
+        va_end(ap);
+        if ((n >= (int)len) || (n < 0)) {
+            if (len)
+                buf[len - 1] = (char)0;
+            throw std::length_error("buf[] overflow");
+        }
+        return (unsigned int)n;
+    }
 
     /**
      * Delete a file

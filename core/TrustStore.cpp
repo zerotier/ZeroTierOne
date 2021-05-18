@@ -149,45 +149,55 @@ bool TrustStore::update(const int64_t clock, Vector<SharedPtr<Entry> >* const pu
         Vector<Entry*> visited;
         visited.reserve(8);
         for (Map<H384, SharedPtr<Entry> >::iterator c(m_bySerial.begin()); c != m_bySerial.end(); ++c) {
-            if ((c->second->m_error == ZT_CERTIFICATE_ERROR_NONE) && (! c->second->m_onTrustPath) && ((c->second->m_localTrust & ZT_CERTIFICATE_LOCAL_TRUST_FLAG_ROOT_CA) == 0)) {
-                // Trace the path of each certificate all the way back to a trusted CA.
-                unsigned int pathLength = 0;
-                Map<H384, SharedPtr<Entry> >::const_iterator current(c);
-                visited.clear();
-                for (;;) {
-                    if (pathLength <= current->second->m_certificate.maxPathLength) {
-                        // Check if this cert isn't a CA or already part of a valid trust path. If so then step upward
-                        // toward CA.
-                        if (((current->second->m_localTrust & ZT_CERTIFICATE_LOCAL_TRUST_FLAG_ROOT_CA) == 0) && (! current->second->m_onTrustPath)) {
-                            // If the issuer (parent) certificiate is (1) valid, (2) not already visited (to prevent
-                            // loops), and (3) has a public key that matches this cert's issuer public key (sanity
-                            // check), proceed up the certificate graph toward a potential CA.
-                            visited.push_back(current->second.ptr());
-                            const Map<H384, SharedPtr<Entry> >::const_iterator prevChild(current);
-                            current = m_bySerial.find(H384(current->second->m_certificate.issuer));
-                            if ((current != m_bySerial.end()) && (std::find(visited.begin(), visited.end(), current->second.ptr()) == visited.end()) && (current->second->m_error == ZT_CERTIFICATE_ERROR_NONE)
-                                && (current->second->m_certificate.publicKeySize == prevChild->second->m_certificate.issuerPublicKeySize)
-                                && (memcmp(current->second->m_certificate.publicKey, prevChild->second->m_certificate.issuerPublicKey, current->second->m_certificate.publicKeySize) == 0)) {
-                                ++pathLength;
-                                continue;
+            if (c->second->m_error == ZT_CERTIFICATE_ERROR_NONE) {
+                if (c->second->m_certificate.isSelfSigned()) {
+                    // If this is a self-signed certificate it's only valid if it's trusted as a CA.
+                    if ((c->second->m_localTrust & ZT_CERTIFICATE_LOCAL_TRUST_FLAG_ROOT_CA) == 0) {
+                        c->second->m_error = ZT_CERTIFICATE_ERROR_INVALID_CHAIN;
+                    }
+                }
+                else {
+                    if ((! c->second->m_onTrustPath) && ((c->second->m_localTrust & ZT_CERTIFICATE_LOCAL_TRUST_FLAG_ROOT_CA) == 0)) {
+                        // Trace the path of each certificate all the way back to a trusted CA.
+                        unsigned int pathLength = 0;
+                        Map<H384, SharedPtr<Entry> >::const_iterator current(c);
+                        visited.clear();
+                        for (;;) {
+                            if (pathLength <= current->second->m_certificate.maxPathLength) {
+                                // Check if this cert isn't a CA or already part of a valid trust path. If so then step upward
+                                // toward CA.
+                                if (((current->second->m_localTrust & ZT_CERTIFICATE_LOCAL_TRUST_FLAG_ROOT_CA) == 0) && (! current->second->m_onTrustPath)) {
+                                    // If the issuer (parent) certificiate is (1) valid, (2) not already visited (to prevent
+                                    // loops), and (3) has a public key that matches this cert's issuer public key (sanity
+                                    // check), proceed up the certificate graph toward a potential CA.
+                                    visited.push_back(current->second.ptr());
+                                    const Map<H384, SharedPtr<Entry> >::const_iterator prevChild(current);
+                                    current = m_bySerial.find(H384(current->second->m_certificate.issuer));
+                                    if ((current != m_bySerial.end()) && (std::find(visited.begin(), visited.end(), current->second.ptr()) == visited.end()) && (current->second->m_error == ZT_CERTIFICATE_ERROR_NONE)
+                                        && (current->second->m_certificate.publicKeySize == prevChild->second->m_certificate.issuerPublicKeySize)
+                                        && (memcmp(current->second->m_certificate.publicKey, prevChild->second->m_certificate.issuerPublicKey, current->second->m_certificate.publicKeySize) == 0)) {
+                                        ++pathLength;
+                                        continue;
+                                    }
+                                }
+                                else {
+                                    // If we've traced this to a root CA, flag its parents as also being on a trust path. Then
+                                    // break the loop without setting an error. We don't flag the current cert as being on a
+                                    // trust path since no other certificates depend on it.
+                                    for (Vector<Entry*>::const_iterator v(visited.begin()); v != visited.end(); ++v) {
+                                        if (*v != c->second.ptr())
+                                            (*v)->m_onTrustPath = true;
+                                    }
+                                    break;
+                                }
                             }
-                        }
-                        else {
-                            // If we've traced this to a root CA, flag its parents as also being on a trust path. Then
-                            // break the loop without setting an error. We don't flag the current cert as being on a
-                            // trust path since no other certificates depend on it.
-                            for (Vector<Entry*>::const_iterator v(visited.begin()); v != visited.end(); ++v) {
-                                if (*v != c->second.ptr())
-                                    (*v)->m_onTrustPath = true;
-                            }
+
+                            // If we made it here without breaking or continuing, no path to a
+                            // CA was found and the certificate's chain is invalid.
+                            c->second->m_error = ZT_CERTIFICATE_ERROR_INVALID_CHAIN;
                             break;
                         }
                     }
-
-                    // If we made it here without breaking or continuing, no path to a
-                    // CA was found and the certificate's chain is invalid.
-                    c->second->m_error = ZT_CERTIFICATE_ERROR_INVALID_CHAIN;
-                    break;
                 }
             }
         }

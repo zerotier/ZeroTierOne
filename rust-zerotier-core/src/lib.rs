@@ -84,12 +84,12 @@ pub const DEFAULT_UDP_MTU: u32 = ztcore::ZT_DEFAULT_UDP_MTU;
 /// Maximum UDP MTU (we never actually get this high).
 pub const MAX_UDP_MTU: u32 = ztcore::ZT_MAX_UDP_MTU;
 
-/// Base64 encode using the URL-safe with no padding configuration.
+/// Base64 encode using the URL-safe alphabet with no padding.
 pub fn base64_encode<T: AsRef<[u8]>>(t: &T) -> String {
     base64::encode_config(t, base64::URL_SAFE_NO_PAD)
 }
 
-/// Base64 decode using the URL-safe with no padding configuration.
+/// Base64 decode using the URL-safe alphabet with no padding.
 pub fn base64_decode<T: AsRef<[u8]>>(t: &T) -> Result<Vec<u8>, base64::DecodeError> {
     base64::decode_config(t, base64::URL_SAFE_NO_PAD)
 }

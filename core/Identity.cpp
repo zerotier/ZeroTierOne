@@ -65,7 +65,8 @@ void identityV0ProofOfWorkFrankenhash(const void* const restrict c25519CombinedP
     }
 }
 
-struct identityV0ProofOfWorkCriteria {
+struct identityV0ProofOfWorkCriteria
+{
     ZT_INLINE identityV0ProofOfWorkCriteria(unsigned char* restrict sb, char* restrict gm) noexcept
         : digest(sb)
         , genmem(gm)
