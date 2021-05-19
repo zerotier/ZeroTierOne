@@ -30,7 +30,7 @@ namespace {
 const __m128i s_sseSwapBytes = _mm_set_epi8(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
 
 #ifdef __GNUC__
-__attribute__((__target__("sse,sse2,pclmul")))
+__attribute__((__target__("sse,sse2,ssse3,aes,pclmul")))
 #endif
 __m128i
 p_gmacPCLMUL128(const __m128i h, __m128i y) noexcept
@@ -245,7 +245,7 @@ p_init256_2_aesni(__m128i a, __m128i b) noexcept
 }   // anonymous namespace
 
 #ifdef __GNUC__
-__attribute__((__target__("sse,sse2,pclmul,aes")))
+__attribute__((__target__("sse,sse2,ssse3,pclmul,aes")))
 #endif
 void AES::GMAC::p_aesNIUpdate(const uint8_t *in, unsigned int len) noexcept
 {
@@ -333,7 +333,7 @@ void AES::GMAC::p_aesNIUpdate(const uint8_t *in, unsigned int len) noexcept
 }
 
 #ifdef __GNUC__
-__attribute__((__target__("sse,sse2,pclmul,aes")))
+__attribute__((__target__("sse,sse2,ssse3,pclmul,aes")))
 #endif
 void AES::GMAC::p_aesNIFinish(uint8_t tag[16]) noexcept
 {
@@ -607,7 +607,7 @@ void AES::CTR::p_aesNICrypt(const uint8_t *in, uint8_t *out, unsigned int len) n
 }
 
 #ifdef __GNUC__
-__attribute__((__target__("sse,sse2,aes,pclmul")))
+__attribute__((__target__("sse,sse2,ssse3,aes,pclmul")))
 #endif
 void AES::p_init_aesni(const uint8_t *key) noexcept
 {

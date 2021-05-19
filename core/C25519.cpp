@@ -3038,7 +3038,7 @@ ZT_INLINE void get_hram(
         playground[i] = sm[i];
     for (int i = 32; i < 64; ++i)
         playground[i] = pk[i - 32];
-    for (int i = 64; i < smlen; ++i)
+    for (unsigned long long i = 64; i < smlen; ++i)
         playground[i] = sm[i];
     ZeroTier::SHA512(hram, playground, (unsigned int)smlen);
 }

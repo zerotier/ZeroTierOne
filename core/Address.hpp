@@ -87,8 +87,8 @@ class Address : public TriviallyCopyable {
      */
     ZT_INLINE char *toString(char s[ZT_ADDRESS_STRING_SIZE_MAX]) const noexcept
     {
-        for (unsigned int i = 0; i < 10;) {
-            s[i++] = Utils::HEXCHARS[(uintptr_t)(_a >> (36U - (i * 4U))) & 0xfU];
+        for (unsigned int i = 0; i < 10; ++i) {
+            s[i] = Utils::HEXCHARS[(uintptr_t)(_a >> (36U - (i * 4U))) & 0xfU];
         }
         return s;
     }
