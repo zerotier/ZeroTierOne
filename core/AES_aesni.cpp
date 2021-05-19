@@ -30,7 +30,7 @@ namespace {
 const __m128i s_sseSwapBytes = _mm_set_epi8(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
 
 #ifdef __GNUC__
-__attribute__((__target__("ssse3,sse4,sse4.1,sse4.2,pclmul")))
+__attribute__((__target__("sse,sse2,pclmul")))
 #endif
 __m128i
 p_gmacPCLMUL128(const __m128i h, __m128i y) noexcept
@@ -69,10 +69,13 @@ p_gmacPCLMUL128(const __m128i h, __m128i y) noexcept
 #define ZT_AES_VAES512 1
 
 #ifdef __GNUC__
-__attribute__((__target__("sse4,aes,avx,avx2,vaes,avx512f,avx512bw")))
+__attribute__((__target__("sse,sse2,sse3,ssse3,sse4,sse4.1,sse4.2,aes,avx,avx2,vaes,avx512f,avx512bw")))
 #endif
-void p_aesCtrInnerVAES512(unsigned int &len, const uint64_t c0, uint64_t &c1, const uint8_t *&in, uint8_t *&out, const __m128i *const k) noexcept
+void p_aesCtrInnerVAES512(unsigned int &len, const uint64_t c0, uint64_t &_c1, const uint8_t *&_in, uint8_t *&_out, const __m128i *const k) noexcept
 {
+    uint64_t c1        = _c1;
+    const uint8_t *in  = _in;
+    uint8_t *out       = _out;
     const __m512i kk0  = _mm512_broadcast_i32x4(k[0]);
     const __m512i kk1  = _mm512_broadcast_i32x4(k[1]);
     const __m512i kk2  = _mm512_broadcast_i32x4(k[2]);
@@ -88,14 +91,12 @@ void p_aesCtrInnerVAES512(unsigned int &len, const uint64_t c0, uint64_t &c1, co
     const __m512i kk12 = _mm512_broadcast_i32x4(k[12]);
     const __m512i kk13 = _mm512_broadcast_i32x4(k[13]);
     const __m512i kk14 = _mm512_broadcast_i32x4(k[14]);
-    do {
-        __m512i p0 = _mm512_loadu_si512(reinterpret_cast<const __m512i *>(in));
+    _mm_prefetch(in, _MM_HINT_T0);
+    for (unsigned int i = 0, c = (len >> 6U); i < c; ++i) {
         __m512i d0 = _mm512_set_epi64(
             (long long)Utils::hton(c1 + 3ULL), (long long)c0, (long long)Utils::hton(c1 + 2ULL), (long long)c0,
             (long long)Utils::hton(c1 + 1ULL), (long long)c0, (long long)Utils::hton(c1), (long long)c0);
         c1 += 4;
-        in += 64;
-        len -= 64;
         d0 = _mm512_xor_si512(d0, kk0);
         d0 = _mm512_aesenc_epi128(d0, kk1);
         d0 = _mm512_aesenc_epi128(d0, kk2);
@@ -111,18 +112,29 @@ void p_aesCtrInnerVAES512(unsigned int &len, const uint64_t c0, uint64_t &c1, co
         d0 = _mm512_aesenc_epi128(d0, kk12);
         d0 = _mm512_aesenc_epi128(d0, kk13);
         d0 = _mm512_aesenclast_epi128(d0, kk14);
-        _mm512_storeu_si512(reinterpret_cast<__m512i *>(out), _mm512_xor_si512(p0, d0));
+        _mm512_storeu_si512(
+            reinterpret_cast<__m512i *>(out),
+            _mm512_xor_si512(_mm512_loadu_si512(reinterpret_cast<const __m512i *>(in)), d0));
+        in += 64;
         out += 64;
-    } while (likely(len >= 64));
+        _mm_prefetch(in, _MM_HINT_T0);
+    }
+    _c1  = c1;
+    _in  = in;
+    _out = out;
+    len &= 63U;
 }
 
 #define ZT_AES_VAES256 1
 
 #ifdef __GNUC__
-__attribute__((__target__("sse4,aes,avx,avx2,vaes")))
+__attribute__((__target__("sse,sse2,sse3,ssse3,sse4,sse4.1,sse4.2,aes,avx,avx2,vaes")))
 #endif
-void p_aesCtrInnerVAES256(unsigned int &len, const uint64_t c0, uint64_t &c1, const uint8_t *&in, uint8_t *&out, const __m128i *const k) noexcept
+void p_aesCtrInnerVAES256(unsigned int &len, const uint64_t c0, uint64_t &_c1, const uint8_t *&_in, uint8_t *&_out, const __m128i *const k) noexcept
 {
+    uint64_t c1        = _c1;
+    const uint8_t *in  = _in;
+    uint8_t *out       = _out;
     const __m256i kk0  = _mm256_broadcastsi128_si256(k[0]);
     const __m256i kk1  = _mm256_broadcastsi128_si256(k[1]);
     const __m256i kk2  = _mm256_broadcastsi128_si256(k[2]);
@@ -138,16 +150,13 @@ void p_aesCtrInnerVAES256(unsigned int &len, const uint64_t c0, uint64_t &c1, co
     const __m256i kk12 = _mm256_broadcastsi128_si256(k[12]);
     const __m256i kk13 = _mm256_broadcastsi128_si256(k[13]);
     const __m256i kk14 = _mm256_broadcastsi128_si256(k[14]);
-    do {
-        __m256i p0 = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(in));
-        __m256i p1 = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(in + 32));
+    _mm_prefetch(in, _MM_HINT_T0);
+    for (unsigned int i = 0, c = (len >> 6U); i < c; ++i) {
         __m256i d0 = _mm256_set_epi64x(
             (long long)Utils::hton(c1 + 1ULL), (long long)c0, (long long)Utils::hton(c1), (long long)c0);
         __m256i d1 = _mm256_set_epi64x(
             (long long)Utils::hton(c1 + 3ULL), (long long)c0, (long long)Utils::hton(c1 + 2ULL), (long long)c0);
         c1 += 4;
-        in += 64;
-        len -= 64;
         d0 = _mm256_xor_si256(d0, kk0);
         d1 = _mm256_xor_si256(d1, kk0);
         d0 = _mm256_aesenc_epi128(d0, kk1);
@@ -178,16 +187,26 @@ void p_aesCtrInnerVAES256(unsigned int &len, const uint64_t c0, uint64_t &c1, co
         d1 = _mm256_aesenc_epi128(d1, kk13);
         d0 = _mm256_aesenclast_epi128(d0, kk14);
         d1 = _mm256_aesenclast_epi128(d1, kk14);
-        _mm256_storeu_si256(reinterpret_cast<__m256i *>(out), _mm256_xor_si256(d0, p0));
-        _mm256_storeu_si256(reinterpret_cast<__m256i *>(out + 32), _mm256_xor_si256(d1, p1));
+        _mm256_storeu_si256(
+            reinterpret_cast<__m256i *>(out),
+            _mm256_xor_si256(d0, _mm256_loadu_si256(reinterpret_cast<const __m256i *>(in))));
+        _mm256_storeu_si256(
+            reinterpret_cast<__m256i *>(out + 32),
+            _mm256_xor_si256(d1, _mm256_loadu_si256(reinterpret_cast<const __m256i *>(in + 32))));
+        in += 64;
         out += 64;
-    } while (likely(len >= 64));
+        _mm_prefetch(in, _MM_HINT_T0);
+    }
+    _c1  = c1;
+    _in  = in;
+    _out = out;
+    len &= 63U;
 }
 
 #endif   // does compiler support AVX2 and AVX512 AES intrinsics?
 
 #ifdef __GNUC__
-__attribute__((__target__("ssse3,sse4,sse4.1,sse4.2,aes,pclmul")))
+__attribute__((__target__("sse,sse2")))
 #endif
 __m128i
 p_init256_1_aesni(__m128i a, __m128i b) noexcept
@@ -205,7 +224,7 @@ p_init256_1_aesni(__m128i a, __m128i b) noexcept
 }
 
 #ifdef __GNUC__
-__attribute__((__target__("ssse3,sse4,sse4.1,sse4.2,aes,pclmul")))
+__attribute__((__target__("sse,sse2,aes")))
 #endif
 __m128i
 p_init256_2_aesni(__m128i a, __m128i b) noexcept
@@ -226,7 +245,7 @@ p_init256_2_aesni(__m128i a, __m128i b) noexcept
 }   // anonymous namespace
 
 #ifdef __GNUC__
-__attribute__((__target__("ssse3,sse4,sse4.1,sse4.2,pclmul")))
+__attribute__((__target__("sse,sse2,pclmul,aes")))
 #endif
 void AES::GMAC::p_aesNIUpdate(const uint8_t *in, unsigned int len) noexcept
 {
@@ -259,6 +278,7 @@ void AES::GMAC::p_aesNIUpdate(const uint8_t *in, unsigned int len) noexcept
         const __m128i hhhh2        = _aes.p_k.ni.h2[3];
         const uint8_t *const end64 = in + (len & ~((unsigned int)63));
         len &= 63U;
+        _mm_prefetch(in, _MM_HINT_T0);
         do {
             __m128i d1 = _mm_shuffle_epi8(_mm_xor_si128(y, _mm_loadu_si128(reinterpret_cast<const __m128i *>(in))), sb);
             __m128i d2 = _mm_shuffle_epi8(_mm_loadu_si128(reinterpret_cast<const __m128i *>(in + 16)), sb);
@@ -294,6 +314,7 @@ void AES::GMAC::p_aesNIUpdate(const uint8_t *in, unsigned int len) noexcept
                               _mm_xor_si128(_mm_srli_epi32(a, 1), _mm_srli_si128(c, 4)),
                               _mm_xor_si128(_mm_srli_epi32(a, 2), _mm_srli_epi32(a, 7)))));
             y = _mm_shuffle_epi8(b, sb);
+            _mm_prefetch(in, _MM_HINT_T0);
         } while (likely(in != end64));
     }
 
@@ -312,7 +333,7 @@ void AES::GMAC::p_aesNIUpdate(const uint8_t *in, unsigned int len) noexcept
 }
 
 #ifdef __GNUC__
-__attribute__((__target__("ssse3,sse4,sse4.1,sse4.2,pclmul,aes")))
+__attribute__((__target__("sse,sse2,pclmul,aes")))
 #endif
 void AES::GMAC::p_aesNIFinish(uint8_t tag[16]) noexcept
 {
@@ -385,29 +406,27 @@ void AES::GMAC::p_aesNIFinish(uint8_t tag[16]) noexcept
 }
 
 #ifdef __GNUC__
-__attribute__((__target__("ssse3,sse4,sse4.1,sse4.2,aes")))
+__attribute__((__target__("sse,sse2,aes,pclmul")))
+__attribute__((optimize("unroll-all-loops")))
 #endif
 void AES::CTR::p_aesNICrypt(const uint8_t *in, uint8_t *out, unsigned int len) noexcept
 {
-    const __m128i dd = _mm_set_epi64x(0, (long long)_ctr[0]);
-    uint64_t c1      = Utils::ntoh(_ctr[1]);
-
-    const __m128i *const k = _aes.p_k.ni.k;
-    const __m128i k0       = k[0];
-    const __m128i k1       = k[1];
-    const __m128i k2       = k[2];
-    const __m128i k3       = k[3];
-    const __m128i k4       = k[4];
-    const __m128i k5       = k[5];
-    const __m128i k6       = k[6];
-    const __m128i k7       = k[7];
-    const __m128i k8       = k[8];
-    const __m128i k9       = k[9];
-    const __m128i k10      = k[10];
-    const __m128i k11      = k[11];
-    const __m128i k12      = k[12];
-    const __m128i k13      = k[13];
-    const __m128i k14      = k[14];
+    uint64_t c0 = _ctr[0], c1 = Utils::ntoh(_ctr[1]);
+    const __m128i k0  = _aes.p_k.ni.k[0];
+    const __m128i k1  = _aes.p_k.ni.k[1];
+    const __m128i k2  = _aes.p_k.ni.k[2];
+    const __m128i k3  = _aes.p_k.ni.k[3];
+    const __m128i k4  = _aes.p_k.ni.k[4];
+    const __m128i k5  = _aes.p_k.ni.k[5];
+    const __m128i k6  = _aes.p_k.ni.k[6];
+    const __m128i k7  = _aes.p_k.ni.k[7];
+    const __m128i k8  = _aes.p_k.ni.k[8];
+    const __m128i k9  = _aes.p_k.ni.k[9];
+    const __m128i k10 = _aes.p_k.ni.k[10];
+    const __m128i k11 = _aes.p_k.ni.k[11];
+    const __m128i k12 = _aes.p_k.ni.k[12];
+    const __m128i k13 = _aes.p_k.ni.k[13];
+    const __m128i k14 = _aes.p_k.ni.k[14];
 
     // Complete any unfinished blocks from previous calls to crypt().
     unsigned int totalLen = _len;
@@ -421,7 +440,7 @@ void AES::CTR::p_aesNICrypt(const uint8_t *in, uint8_t *out, unsigned int len) n
             --len;
             out[totalLen++] = *(in++);
             if (!(totalLen & 15U)) {
-                __m128i d0            = _mm_insert_epi64(dd, (long long)Utils::hton(c1++), 1);
+                __m128i d0            = _mm_set_epi64x((long long)Utils::hton(c1++), (long long)c0);
                 d0                    = _mm_xor_si128(d0, k0);
                 d0                    = _mm_aesenc_si128(d0, k1);
                 d0                    = _mm_aesenc_si128(d0, k2);
@@ -450,36 +469,31 @@ void AES::CTR::p_aesNICrypt(const uint8_t *in, uint8_t *out, unsigned int len) n
 
     if (likely(len >= 64)) {
 #if defined(ZT_AES_VAES512) && defined(ZT_AES_VAES256)
-        if (Utils::CPUID.vaes) {
-            if (Utils::CPUID.avx512f) {
-                p_aesCtrInnerVAES512(len, _ctr[0], c1, in, out, k);
-            }
-            else {
-                p_aesCtrInnerVAES256(len, _ctr[0], c1, in, out, k);
-            }
-            goto skip_conventional_aesni_64;
+        if (Utils::CPUID.avx512f) {
+            p_aesCtrInnerVAES512(len, _ctr[0], c1, in, out, _aes.p_k.ni.k);
         }
+        else if (Utils::CPUID.vaes) {
+            p_aesCtrInnerVAES256(len, _ctr[0], c1, in, out, _aes.p_k.ni.k);
+        }
+        else {
 #endif
 
 #if !defined(ZT_AES_VAES512) && defined(ZT_AES_VAES256)
-        if (Utils::CPUID.vaes && (len >= 256)) {
+        if (Utils::CPUID.vaes) {
             p_aesCtrInnerVAES256(len, _ctr[0], c1, in, out, k);
             goto skip_conventional_aesni_64;
         }
+        else {
 #endif
 
         const uint8_t *const eof64 = in + (len & ~((unsigned int)63));
         len &= 63;
-        __m128i d0, d1, d2, d3;
+        _mm_prefetch(in, _MM_HINT_T0);
         do {
-            const uint64_t c10 = Utils::hton(c1);
-            const uint64_t c11 = Utils::hton(c1 + 1ULL);
-            const uint64_t c12 = Utils::hton(c1 + 2ULL);
-            const uint64_t c13 = Utils::hton(c1 + 3ULL);
-            d0                 = _mm_insert_epi64(dd, (long long)c10, 1);
-            d1                 = _mm_insert_epi64(dd, (long long)c11, 1);
-            d2                 = _mm_insert_epi64(dd, (long long)c12, 1);
-            d3                 = _mm_insert_epi64(dd, (long long)c13, 1);
+            __m128i d0 = _mm_set_epi64x((long long)Utils::hton(c1), (long long)c0);
+            __m128i d1 = _mm_set_epi64x((long long)Utils::hton(c1 + 1ULL), (long long)c0);
+            __m128i d2 = _mm_set_epi64x((long long)Utils::hton(c1 + 2ULL), (long long)c0);
+            __m128i d3 = _mm_set_epi64x((long long)Utils::hton(c1 + 3ULL), (long long)c0);
             c1 += 4;
             d0 = _mm_xor_si128(d0, k0);
             d1 = _mm_xor_si128(d1, k0);
@@ -537,25 +551,30 @@ void AES::CTR::p_aesNICrypt(const uint8_t *in, uint8_t *out, unsigned int len) n
             d1 = _mm_aesenc_si128(d1, k13);
             d2 = _mm_aesenc_si128(d2, k13);
             d3 = _mm_aesenc_si128(d3, k13);
-            d0 = _mm_xor_si128(_mm_aesenclast_si128(d0, k14), _mm_loadu_si128(reinterpret_cast<const __m128i *>(in)));
+            d0 = _mm_xor_si128(
+                _mm_aesenclast_si128(d0, k14), _mm_loadu_si128(reinterpret_cast<const __m128i *>(in)));
             d1 = _mm_xor_si128(
                 _mm_aesenclast_si128(d1, k14), _mm_loadu_si128(reinterpret_cast<const __m128i *>(in + 16)));
             d2 = _mm_xor_si128(
                 _mm_aesenclast_si128(d2, k14), _mm_loadu_si128(reinterpret_cast<const __m128i *>(in + 32)));
             d3 = _mm_xor_si128(
                 _mm_aesenclast_si128(d3, k14), _mm_loadu_si128(reinterpret_cast<const __m128i *>(in + 48)));
-            in += 64;
             _mm_storeu_si128(reinterpret_cast<__m128i *>(out), d0);
             _mm_storeu_si128(reinterpret_cast<__m128i *>(out + 16), d1);
             _mm_storeu_si128(reinterpret_cast<__m128i *>(out + 32), d2);
             _mm_storeu_si128(reinterpret_cast<__m128i *>(out + 48), d3);
+            in += 64;
             out += 64;
+            _mm_prefetch(in, _MM_HINT_T0);
         } while (likely(in != eof64));
+
+#if defined(ZT_AES_VAES512) || defined(ZT_AES_VAES256)
+        }
+#endif
     }
 
-skip_conventional_aesni_64:
     while (len >= 16) {
-        __m128i d0 = _mm_insert_epi64(dd, (long long)Utils::hton(c1++), 1);
+        __m128i d0 = _mm_set_epi64x((long long)Utils::hton(c1++), (long long)c0);
         d0         = _mm_xor_si128(d0, k0);
         d0         = _mm_aesenc_si128(d0, k1);
         d0         = _mm_aesenc_si128(d0, k2);
@@ -588,7 +607,7 @@ skip_conventional_aesni_64:
 }
 
 #ifdef __GNUC__
-__attribute__((__target__("ssse3,sse4,sse4.1,sse4.2,aes,pclmul")))
+__attribute__((__target__("sse,sse2,aes,pclmul")))
 #endif
 void AES::p_init_aesni(const uint8_t *key) noexcept
 {
@@ -652,7 +671,7 @@ void AES::p_init_aesni(const uint8_t *key) noexcept
 }
 
 #ifdef __GNUC__
-__attribute__((__target__("ssse3,sse4,sse4.1,sse4.2,aes,pclmul")))
+__attribute__((__target__("sse,sse2,aes")))
 #endif
 void AES::p_encrypt_aesni(const void *const in, void *const out) const noexcept
 {
@@ -675,7 +694,7 @@ void AES::p_encrypt_aesni(const void *const in, void *const out) const noexcept
 }
 
 #ifdef __GNUC__
-__attribute__((__target__("ssse3,sse4,sse4.1,sse4.2,aes,pclmul")))
+__attribute__((__target__("sse,sse2,aes")))
 #endif
 void AES::p_decrypt_aesni(const void *in, void *out) const noexcept
 {

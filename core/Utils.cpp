@@ -302,6 +302,9 @@ unsigned int unhex(const char *h, unsigned int hlen, void *buf, unsigned int buf
 #define ZT_GETSECURERANDOM_STATE_SIZE               64
 #define ZT_GETSECURERANDOM_ITERATIONS_PER_GENERATOR 1048576
 
+#ifdef __GNUC__
+__attribute__((__target__("sse,sse2,rdrnd")))
+#endif
 void getSecureRandom(void *const buf, unsigned int bytes) noexcept
 {
     static Mutex globalLock;

@@ -87,19 +87,9 @@ class Address : public TriviallyCopyable {
      */
     ZT_INLINE char *toString(char s[ZT_ADDRESS_STRING_SIZE_MAX]) const noexcept
     {
-        const uint64_t a     = _a;
-        const unsigned int m = 0xf;
-        s[0]                 = Utils::HEXCHARS[(unsigned int)(a >> 36U) & m];
-        s[1]                 = Utils::HEXCHARS[(unsigned int)(a >> 32U) & m];
-        s[2]                 = Utils::HEXCHARS[(unsigned int)(a >> 28U) & m];
-        s[3]                 = Utils::HEXCHARS[(unsigned int)(a >> 24U) & m];
-        s[4]                 = Utils::HEXCHARS[(unsigned int)(a >> 20U) & m];
-        s[5]                 = Utils::HEXCHARS[(unsigned int)(a >> 16U) & m];
-        s[6]                 = Utils::HEXCHARS[(unsigned int)(a >> 12U) & m];
-        s[7]                 = Utils::HEXCHARS[(unsigned int)(a >> 8U) & m];
-        s[8]                 = Utils::HEXCHARS[(unsigned int)(a >> 4U) & m];
-        s[9]                 = Utils::HEXCHARS[(unsigned int)a & m];
-        s[10]                = 0;
+        for (unsigned int i = 0; i < 10;) {
+            s[i++] = Utils::HEXCHARS[(uintptr_t)(_a >> (36U - (i * 4U))) & 0xfU];
+        }
         return s;
     }
 

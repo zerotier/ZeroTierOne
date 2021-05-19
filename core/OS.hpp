@@ -76,6 +76,7 @@
     defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64)             \
     || defined(__AMD64__) || defined(_M_X64))
 #define ZT_ARCH_X64 1
+#include <smmintrin.h>
 #include <emmintrin.h>
 #include <immintrin.h>
 #include <xmmintrin.h>
@@ -203,7 +204,7 @@
 #define ZT_INLINE
 #else
 #if defined(__GNUC__) || defined(__clang__)
-#define ZT_INLINE __attribute__((always_inline)) inline
+#define ZT_INLINE inline __attribute__((always_inline))
 #else
 #define ZT_INLINE inline
 #endif
