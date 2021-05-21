@@ -112,7 +112,7 @@ one:	$(CORE_OBJS) $(ONE_OBJS) one.o mac-agent
 zerotier-one: one
 
 central-controller:
-	make ZT_CONTROLLER=1 one
+	make ARCH_FLAGS="-arch x86_64" ZT_CONTROLLER=1 one
 
 zerotier-idtool: one
 
