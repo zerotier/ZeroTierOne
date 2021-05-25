@@ -227,7 +227,7 @@ public:
 	{
 		Mutex::Lock _l(_lock);
 		_netconfFailure = NETCONF_FAILURE_AUTHENTICATION_REQUIRED;
-		_authorizationURL = (url) ? url : "";
+		_authenticationURL = (url) ? url : "";
 	}
 
 	/**
@@ -449,7 +449,7 @@ private:
 		NETCONF_FAILURE_AUTHENTICATION_REQUIRED
 	} _netconfFailure;
 	int _portError; // return value from port config callback
-	std::string _authorizationURL;
+	std::string _authenticationURL;
 
 	Hashtable<Address,Membership> _memberships;
 

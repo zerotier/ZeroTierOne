@@ -1022,6 +1022,7 @@ int Network::setConfiguration(void *tPtr,const NetworkConfig &nconf,bool saveToD
 		}
 
 		_portError = RR->node->configureVirtualNetworkPort(tPtr,_id,&_uPtr,(oldPortInitialized) ? ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE : ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP,&ctmp);
+		_authenticationURL = nconf.authenticationURL;
 
 		if (saveToDisk) {
 			Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> *const d = new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>();
@@ -1432,7 +1433,7 @@ void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const
 
 	memcpy(&ec->dns, &_config.dns, sizeof(ZT_VirtualNetworkDNS));
 
-	Utils::scopy(ec->authenticationURL, sizeof(ec->authenticationURL), _config.authenticationURL);
+	Utils::scopy(ec->authenticationURL, sizeof(ec->authenticationURL), _authenticationURL.c_str());
 	ec->authenticationExpiryTime = _config.authenticationExpiryTime;
 }
 
