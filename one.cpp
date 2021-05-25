@@ -494,12 +494,11 @@ static int cli(int argc,char **argv)
 	} else if (command == "bond") {
 		/* zerotier-cli bond */
 		if (arg1.empty()) {
-			printf("(bond) command is missing required arugments" ZT_EOL_S);
+			printf("(bond) command is missing required arguments" ZT_EOL_S);
 			return 2;
 		}
 		/* zerotier-cli bond list */
 		if (arg1 == "list") {
-			fprintf(stderr, "zerotier-cli bond list\n");
 			const unsigned int scode = Http::GET(1024 * 1024 * 16,60000,(const struct sockaddr *)&addr,"/bonds",requestHeaders,responseHeaders,responseBody);
 			if (scode == 0) {
 				printf("Error connecting to the ZeroTier service: %s\n\nPlease check that the service is running and that TCP port 9993 can be contacted via 127.0.0.1." ZT_EOL_S, responseBody.c_str());
@@ -525,11 +524,11 @@ static int cli(int argc,char **argv)
 						for(unsigned long k=0;k<j.size();++k) {
 							nlohmann::json &p = j[k];
 							bool isBonded = p["isBonded"];
-							int8_t bondingPolicy = p["bondingPolicy"];
-							bool isHealthy = p["isHealthy"];
-							int8_t numAliveLinks = p["numAliveLinks"];
-							int8_t numTotalLinks = p["numTotalLinks"];
 							if (isBonded) {
+								int8_t bondingPolicy = p["bondingPolicy"];
+								bool isHealthy = p["isHealthy"];
+								int8_t numAliveLinks = p["numAliveLinks"];
+								int8_t numTotalLinks = p["numTotalLinks"];
 								bFoundBond = true;
 								std::string healthStr;
 								if (isHealthy) {
@@ -618,7 +617,6 @@ static int cli(int argc,char **argv)
 					if (json) {
 						printf("%s" ZT_EOL_S,OSUtils::jsonDump(j).c_str());
 					} else {
-						bool bFoundBond = false;
 						std::string healthStr;
 						if (OSUtils::jsonInt(j["isHealthy"],0)) {
 							healthStr = "Healthy";
@@ -630,14 +628,14 @@ static int cli(int argc,char **argv)
 						printf("Peer               : %s\n", arg1.c_str());
 						printf("Bond               : %s\n", OSUtils::jsonString(j["bondingPolicy"],"-").c_str());
 						//if (bondingPolicy == ZT_BONDING_POLICY_ACTIVE_BACKUP) {
-						printf("Link Select Method : %d\n", OSUtils::jsonInt(j["linkSelectMethod"],0));
+						printf("Link Select Method : %d\n", (int)OSUtils::jsonInt(j["linkSelectMethod"],0));
 						//}
 						printf("Status             : %s\n", healthStr.c_str());
 						printf("Links              : %d/%d\n", numAliveLinks, numTotalLinks);
-						printf("Failover Interval  : %d (ms)\n", OSUtils::jsonInt(j["failoverInterval"],0));
-						printf("Up Delay           : %d (ms)\n", OSUtils::jsonInt(j["upDelay"],0));
-						printf("Down Delay         : %d (ms)\n", OSUtils::jsonInt(j["downDelay"],0));
-						printf("Packets Per Link   : %d (ms)\n", OSUtils::jsonInt(j["packetsPerLink"],0));
+						printf("Failover Interval  : %d (ms)\n", (int)OSUtils::jsonInt(j["failoverInterval"],0));
+						printf("Up Delay           : %d (ms)\n", (int)OSUtils::jsonInt(j["upDelay"],0));
+						printf("Down Delay         : %d (ms)\n", (int)OSUtils::jsonInt(j["downDelay"],0));
+						printf("Packets Per Link   : %d (ms)\n", (int)OSUtils::jsonInt(j["packetsPerLink"],0));
 						nlohmann::json &p = j["links"];
 						if (p.is_array()) {
 							printf("\n     Interface Name\t\t\t\t\t     Path\t Alive\n");
@@ -649,7 +647,7 @@ static int cli(int argc,char **argv)
 									i,
 									OSUtils::jsonString(p[i]["ifname"],"-").c_str(),
 									OSUtils::jsonString(p[i]["path"],"-").c_str(),
-									OSUtils::jsonInt(p[i]["alive"],0));
+									(int)OSUtils::jsonInt(p[i]["alive"],0));
 							}
 							printf("\n        Latency     Jitter     Loss     Error        Speed   Alloc\n");
 							for(int i=0; i<80; i++) { printf("-"); }
@@ -662,8 +660,8 @@ static int cli(int argc,char **argv)
 									OSUtils::jsonDouble(p[i]["latencyVariance"], 0),
 									OSUtils::jsonDouble(p[i]["packetLossRatio"], 0),
 									OSUtils::jsonDouble(p[i]["packetErrorRatio"], 0),
-									OSUtils::jsonInt(p[i]["givenLinkSpeed"], 0),
-									OSUtils::jsonInt(p[i]["allocation"], 0));
+									(int)OSUtils::jsonInt(p[i]["givenLinkSpeed"], 0),
+									(int)OSUtils::jsonInt(p[i]["allocation"], 0));
 							}
 						}
 					}
@@ -676,7 +674,7 @@ static int cli(int argc,char **argv)
 			}
 		}
 		/* zerotier-cli bond command was malformed in some way */
-		printf("(bond) command is missing required arugments" ZT_EOL_S);
+		printf("(bond) command is missing required arguments" ZT_EOL_S);
 		return 2;
 		const unsigned int scode = Http::GET(1024 * 1024 * 16,60000,(const struct sockaddr *)&addr,"/bonds",requestHeaders,responseHeaders,responseBody);
 		if (scode == 0) {
@@ -711,14 +709,13 @@ static int cli(int argc,char **argv)
 				if (j.is_array()) {
 					for(unsigned long k=0;k<j.size();++k) {
 						nlohmann::json &p = j[k];
-
 						bool isBonded = p["isBonded"];
-						int8_t bondingPolicy = p["bondingPolicy"];
-						bool isHealthy = p["isHealthy"];
-						int8_t numAliveLinks = p["numAliveLinks"];
-						int8_t numTotalLinks = p["numTotalLinks"];
-
 						if (isBonded) {
+							int8_t bondingPolicy = p["bondingPolicy"];
+							bool isHealthy = p["isHealthy"];
+							int8_t numAliveLinks = p["numAliveLinks"];
+							int8_t numTotalLinks = p["numTotalLinks"];
+
 							bFoundBond = true;
 							std::string healthStr;
 							if (isHealthy) {
@@ -1310,7 +1307,6 @@ static int cli(int argc,char **argv)
 		struct ifconf ifc;
 		char buf[1024];
 		char stringBuffer[128];
-		int success = 0;
 
 		int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
 

@@ -14,37 +14,36 @@
 #ifndef ZT_BOND_HPP
 #define ZT_BOND_HPP
 
-#include <map>
-
+#include "Flow.hpp"
+#include "Packet.hpp"
 #include "Path.hpp"
 #include "Peer.hpp"
-#include "../osdep/Link.hpp"
-#include "Flow.hpp"
+
+#include <list>
+#include <map>
 
 namespace ZeroTier {
 
 class RuntimeEnvironment;
 class Link;
+class Peer;
 
-class Bond
-{
+class Bond {
 	friend class SharedPtr<Bond>;
 	friend class Peer;
 	friend class BondController;
 
-	struct PathQualityComparator
-	{
-		bool operator ()(const SharedPtr<Path> & a, const SharedPtr<Path> & b)
+	struct PathQualityComparator {
+		bool operator()(const SharedPtr<Path>& a, const SharedPtr<Path>& b)
 		{
-			if(a->_failoverScore == b->_failoverScore) {
+			if (a->_failoverScore == b->_failoverScore) {
 				return a < b;
 			}
 			return a->_failoverScore > b->_failoverScore;
 		}
 	};
 
-public:
-
+  public:
 	// TODO: Remove
 	bool _header;
 	int64_t _lastLogTS;
@@ -61,7 +60,7 @@ public:
 	 * @param policy Bonding policy
 	 * @param peer
 	 */
-	Bond(const RuntimeEnvironment *renv, int policy, const SharedPtr<Peer>& peer);
+	Bond(const RuntimeEnvironment* renv, int policy, const SharedPtr<Peer>& peer);
 
 	/**
 	 * Constructor. For use when user intends to manually specify parameters
@@ -70,7 +69,7 @@ public:
 	 * @param policyAlias
 	 * @param peer
 	 */
-	Bond(const RuntimeEnvironment *renv, std::string& basePolicy, std::string& policyAlias, const SharedPtr<Peer>& peer);
+	Bond(const RuntimeEnvironment* renv, std::string& basePolicy, std::string& policyAlias, const SharedPtr<Peer>& peer);
 
 	/**
 	 * Constructor. Creates a bond based off of a user-defined bond template
@@ -79,12 +78,15 @@ public:
 	 * @param original
 	 * @param peer
 	 */
-	Bond(const RuntimeEnvironment *renv, SharedPtr<Bond> originalBond, const SharedPtr<Peer>& peer);
+	Bond(const RuntimeEnvironment* renv, SharedPtr<Bond> originalBond, const SharedPtr<Peer>& peer);
 
 	/**
 	 * @return The human-readable name of the bonding policy
 	 */
-	std::string policyAlias() { return _policyAlias; }
+	std::string policyAlias()
+	{
+		return _policyAlias;
+	}
 
 	/**
 	 * Inform the bond about the path that its peer (owning object) just learned about.
@@ -135,8 +137,7 @@ public:
 	 * @param flowId Flow ID
 	 * @param now Current time
 	 */
-	void recordOutgoingPacket(const SharedPtr<Path> &path, uint64_t packetId,
-		uint16_t payloadLength, Packet::Verb verb, int32_t flowId, int64_t now);
+	void recordOutgoingPacket(const SharedPtr<Path>& path, uint64_t packetId, uint16_t payloadLength, Packet::Verb verb, int32_t flowId, int64_t now);
 
 	/**
 	 * Process the contents of an inbound VERB_QOS_MEASUREMENT to gather path quality observations.
@@ -146,7 +147,7 @@ public:
 	 * @param rx_id table of packet IDs
 	 * @param rx_ts table of holding times
 	 */
-	void receivedQoS(const SharedPtr<Path>& path, int64_t now, int count, uint64_t *rx_id, uint16_t *rx_ts);
+	void receivedQoS(const SharedPtr<Path>& path, int64_t now, int count, uint64_t* rx_id, uint16_t* rx_ts);
 
 	/**
 	 * Process the contents of an inbound VERB_ACK to gather path quality observations.
@@ -164,7 +165,7 @@ public:
 	 * @param qosBuffer destination buffer
 	 * @return Size of payload
 	 */
-	int32_t generateQoSPacket(const SharedPtr<Path>& path, int64_t now, char *qosBuffer);
+	int32_t generateQoSPacket(const SharedPtr<Path>& path, int64_t now, char* qosBuffer);
 
 	/**
 	 * Record statistics for an inbound packet.
@@ -176,8 +177,7 @@ public:
 	 * @param flowId Flow ID
 	 * @param now Current time
 	 */
-	void recordIncomingPacket(const SharedPtr<Path>& path, uint64_t packetId, uint16_t payloadLength,
-			Packet::Verb verb, int32_t flowId, int64_t now);
+	void recordIncomingPacket(const SharedPtr<Path>& path, uint64_t packetId, uint16_t payloadLength, Packet::Verb verb, int32_t flowId, int64_t now);
 
 	/**
 	 * Determines the most appropriate path for packet and flow egress. This decision is made by
@@ -198,7 +198,7 @@ public:
 	 * @param now Current time
 	 * @return Pointer to newly-created Flow
 	 */
-	SharedPtr<Flow> createFlow(const SharedPtr<Path> &path, int32_t flowId, unsigned char entropy, int64_t now);
+	SharedPtr<Flow> createFlow(const SharedPtr<Path>& path, int32_t flowId, unsigned char entropy, int64_t now);
 
 	/**
 	 * Removes flow records that are past a certain age limit.
@@ -215,7 +215,7 @@ public:
 	 * @param flow Flow to be assigned
 	 * @param now Current time
 	 */
-	bool assignFlowToBondedPath(SharedPtr<Flow> &flow, int64_t now);
+	bool assignFlowToBondedPath(SharedPtr<Flow>& flow, int64_t now);
 
 	/**
 	 * Determine whether a path change should occur given the remote peer's reported utility and our
@@ -226,7 +226,7 @@ public:
 	 * @param path Path over which the negotiation request was received
 	 * @param remoteUtility How much utility the remote peer claims to gain by using the declared path
 	 */
-	void processIncomingPathNegotiationRequest(uint64_t now, SharedPtr<Path> &path, int16_t remoteUtility);
+	void processIncomingPathNegotiationRequest(uint64_t now, SharedPtr<Path>& path, int16_t remoteUtility);
 
 	/**
 	 * Determine state of path synchronization and whether a negotiation request
@@ -235,7 +235,7 @@ public:
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param now Current time
 	 */
-	void pathNegotiationCheck(void *tPtr, const int64_t now);
+	void pathNegotiationCheck(void* tPtr, const int64_t now);
 
 	/**
 	 * Sends a VERB_ACK to the remote peer.
@@ -246,8 +246,7 @@ public:
 	 * @param atAddress
 	 * @param now Current time
 	 */
-	void sendACK(void *tPtr, const SharedPtr<Path> &path,int64_t localSocket,
-			const InetAddress &atAddress,int64_t now);
+	void sendACK(void* tPtr, const SharedPtr<Path>& path, int64_t localSocket, const InetAddress& atAddress, int64_t now);
 
 	/**
 	 * Sends a VERB_QOS_MEASUREMENT to the remote peer.
@@ -258,8 +257,7 @@ public:
 	 * @param atAddress
 	 * @param now Current time
 	 */
-	void sendQOS_MEASUREMENT(void *tPtr,const SharedPtr<Path> &path,int64_t localSocket,
-			const InetAddress &atAddress,int64_t now);
+	void sendQOS_MEASUREMENT(void* tPtr, const SharedPtr<Path>& path, int64_t localSocket, const InetAddress& atAddress, int64_t now);
 
 	/**
 	 * Sends a VERB_PATH_NEGOTIATION_REQUEST to the remote peer.
@@ -267,7 +265,7 @@ public:
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param path Path over which packet should be sent
 	 */
-	void sendPATH_NEGOTIATION_REQUEST(void *tPtr, const SharedPtr<Path> &path);
+	void sendPATH_NEGOTIATION_REQUEST(void* tPtr, const SharedPtr<Path>& path);
 
 	/**
 	 *
@@ -281,7 +279,7 @@ public:
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param now Current time
 	 */
-	void processActiveBackupTasks(void *tPtr, int64_t now);
+	void processActiveBackupTasks(void* tPtr, int64_t now);
 
 	/**
 	 * Switches the active link in an active-backup scenario to the next best during
@@ -311,64 +309,82 @@ public:
 	/**
 	 * @param latencyInMilliseconds Maximum acceptable latency.
 	 */
-	void setMaxAcceptableLatency(int16_t latencyInMilliseconds) {
+	void setMaxAcceptableLatency(int16_t latencyInMilliseconds)
+	{
 		_maxAcceptableLatency = latencyInMilliseconds;
 	}
 
 	/**
 	 * @param latencyInMilliseconds Maximum acceptable (mean) latency.
 	 */
-	void setMaxAcceptableMeanLatency(int16_t latencyInMilliseconds) {
+	void setMaxAcceptableMeanLatency(int16_t latencyInMilliseconds)
+	{
 		_maxAcceptableMeanLatency = latencyInMilliseconds;
 	}
 
 	/**
 	 * @param latencyVarianceInMilliseconds Maximum acceptable packet delay variance (jitter).
 	 */
-	void setMaxAcceptablePacketDelayVariance(int16_t latencyVarianceInMilliseconds) {
+	void setMaxAcceptablePacketDelayVariance(int16_t latencyVarianceInMilliseconds)
+	{
 		_maxAcceptablePacketDelayVariance = latencyVarianceInMilliseconds;
 	}
 
 	/**
 	 * @param lossRatio Maximum acceptable packet loss ratio (PLR).
 	 */
-	void setMaxAcceptablePacketLossRatio(float lossRatio) {
+	void setMaxAcceptablePacketLossRatio(float lossRatio)
+	{
 		_maxAcceptablePacketLossRatio = lossRatio;
 	}
 
 	/**
 	 * @param errorRatio Maximum acceptable packet error ratio (PER).
 	 */
-	void setMaxAcceptablePacketErrorRatio(float errorRatio) {
+	void setMaxAcceptablePacketErrorRatio(float errorRatio)
+	{
 		_maxAcceptablePacketErrorRatio = errorRatio;
 	}
 
 	/**
 	 * @param errorRatio Maximum acceptable packet error ratio (PER).
 	 */
-	void setMinAcceptableAllocation(float minAlloc) {
-		_minAcceptableAllocation = minAlloc * 255;
+	void setMinAcceptableAllocation(float minAlloc)
+	{
+		_minAcceptableAllocation = (uint8_t)(minAlloc * 255);
 	}
 
 	/**
 	 * @return Whether the user has defined links for use on this bond
 	 */
-	inline bool userHasSpecifiedLinks() { return _userHasSpecifiedLinks; }
+	inline bool userHasSpecifiedLinks()
+	{
+		return _userHasSpecifiedLinks;
+	}
 
 	/**
 	 * @return Whether the user has defined a set of failover link(s) for this bond
 	 */
-	inline bool userHasSpecifiedFailoverInstructions() { return _userHasSpecifiedFailoverInstructions; };
+	inline bool userHasSpecifiedFailoverInstructions()
+	{
+		return _userHasSpecifiedFailoverInstructions;
+	};
 
 	/**
 	 * @return Whether the user has specified a primary link
 	 */
-	inline bool userHasSpecifiedPrimaryLink() { return _userHasSpecifiedPrimaryLink; }
+	inline bool userHasSpecifiedPrimaryLink()
+	{
+		return _userHasSpecifiedPrimaryLink;
+	}
 
 	/**
 	 * @return Whether the user has specified link speeds
 	 */
-	inline bool userHasSpecifiedLinkSpeeds() { return _userHasSpecifiedLinkSpeeds; }
+	inline bool userHasSpecifiedLinkSpeeds()
+	{
+		return _userHasSpecifiedLinkSpeeds;
+	}
 
 	/**
 	 * Periodically perform maintenance tasks for each active bond.
@@ -376,7 +392,7 @@ public:
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param now Current time
 	 */
-	void processBackgroundTasks(void *tPtr, int64_t now);
+	void processBackgroundTasks(void* tPtr, int64_t now);
 
 	/**
 	 * Rate limit gate for VERB_ACK
@@ -387,11 +403,12 @@ public:
 	inline bool rateGateACK(const int64_t now)
 	{
 		_ackCutoffCount++;
-		int numToDrain = _lastAckRateCheck ? (now - _lastAckRateCheck) / ZT_ACK_DRAINAGE_DIVISOR  : _ackCutoffCount;
+		int numToDrain = _lastAckRateCheck ? (now - _lastAckRateCheck) / ZT_ACK_DRAINAGE_DIVISOR : _ackCutoffCount;
 		_lastAckRateCheck = now;
 		if (_ackCutoffCount > numToDrain) {
-			_ackCutoffCount-=numToDrain;
-		} else {
+			_ackCutoffCount -= numToDrain;
+		}
+		else {
 			_ackCutoffCount = 0;
 		}
 		return (_ackCutoffCount < ZT_ACK_CUTOFF_LIMIT);
@@ -409,8 +426,9 @@ public:
 		int numToDrain = (now - _lastQoSRateCheck) / ZT_QOS_DRAINAGE_DIVISOR;
 		_lastQoSRateCheck = now;
 		if (_qosCutoffCount > numToDrain) {
-			_qosCutoffCount-=numToDrain;
-		} else {
+			_qosCutoffCount -= numToDrain;
+		}
+		else {
 			_qosCutoffCount = 0;
 		}
 		return (_qosCutoffCount < ZT_QOS_CUTOFF_LIMIT);
@@ -426,7 +444,8 @@ public:
 	{
 		if ((now - _lastPathNegotiationReceived) <= ZT_PATH_NEGOTIATION_CUTOFF_TIME)
 			++_pathNegotiationCutoffCount;
-		else _pathNegotiationCutoffCount = 0;
+		else
+			_pathNegotiationCutoffCount = 0;
 		_lastPathNegotiationReceived = now;
 		return (_pathNegotiationCutoffCount < ZT_PATH_NEGOTIATION_CUTOFF_LIMIT);
 	}
@@ -434,130 +453,206 @@ public:
 	/**
 	 * @param interval Maximum amount of time user expects a failover to take on this bond.
 	 */
-	inline void setFailoverInterval(uint32_t interval) { _failoverInterval = interval; }
+	inline void setFailoverInterval(uint32_t interval)
+	{
+		_failoverInterval = interval;
+	}
 
 	/**
 	 * @param interval Maximum amount of time user expects a failover to take on this bond.
 	 */
-	inline uint32_t getFailoverInterval() { return _failoverInterval; }
+	inline uint32_t getFailoverInterval()
+	{
+		return _failoverInterval;
+	}
 
 	/**
 	 * @param strategy Strategy that the bond uses to re-assign protocol flows.
 	 */
-	inline void setFlowRebalanceStrategy(uint32_t strategy) { _flowRebalanceStrategy = strategy; }
+	inline void setFlowRebalanceStrategy(uint32_t strategy)
+	{
+		_flowRebalanceStrategy = strategy;
+	}
 
 	/**
 	 * @param strategy Strategy that the bond uses to prob for path aliveness and quality
 	 */
-	inline void setLinkMonitorStrategy(uint8_t strategy) { _linkMonitorStrategy = strategy; }
+	inline void setLinkMonitorStrategy(uint8_t strategy)
+	{
+		_linkMonitorStrategy = strategy;
+	}
 
 	/**
 	 * @param abOverflowEnabled Whether "overflow" mode is enabled for this active-backup bond
 	 */
-	inline void setOverflowMode(bool abOverflowEnabled) { _abOverflowEnabled = abOverflowEnabled; }
+	inline void setOverflowMode(bool abOverflowEnabled)
+	{
+		_abOverflowEnabled = abOverflowEnabled;
+	}
 
 	/**
 	 * @return the current up delay parameter
 	 */
-	inline uint16_t getUpDelay() { return _upDelay; }
+	inline uint16_t getUpDelay()
+	{
+		return _upDelay;
+	}
 
 	/**
 	 * @param upDelay Length of time before a newly-discovered path is admitted to the bond
 	 */
-	inline void setUpDelay(int upDelay) { if (upDelay >= 0) { _upDelay = upDelay; } }
+	inline void setUpDelay(int upDelay)
+	{
+		if (upDelay >= 0) {
+			_upDelay = upDelay;
+		}
+	}
 
 	/**
 	 * @return Length of time before a newly-failed path is removed from the bond
 	 */
-	inline uint16_t getDownDelay() { return _downDelay; }
+	inline uint16_t getDownDelay()
+	{
+		return _downDelay;
+	}
 
 	/**
 	 * @param downDelay Length of time before a newly-failed path is removed from the bond
 	 */
-	inline void setDownDelay(int downDelay) { if (downDelay >= 0) { _downDelay = downDelay; } }
+	inline void setDownDelay(int downDelay)
+	{
+		if (downDelay >= 0) {
+			_downDelay = downDelay;
+		}
+	}
 
 	/**
 	 * @return the current monitoring interval for the bond (can be overridden with intervals specific to certain links.)
 	 */
-	inline uint16_t getBondMonitorInterval() { return _bondMonitorInterval; }
+	inline uint16_t getBondMonitorInterval()
+	{
+		return _bondMonitorInterval;
+	}
 
 	/**
 	 * Set the current monitoring interval for the bond (can be overridden with intervals specific to certain links.)
 	 *
 	 * @param monitorInterval How often gratuitous VERB_HELLO(s) are sent to remote peer.
 	 */
-	inline void setBondMonitorInterval(uint16_t interval) { _bondMonitorInterval = interval; }
+	inline void setBondMonitorInterval(uint16_t interval)
+	{
+		_bondMonitorInterval = interval;
+	}
 
 	/**
 	 * @param policy Bonding policy for this bond
 	 */
-	inline void setPolicy(uint8_t policy) { _bondingPolicy = policy; }
+	inline void setPolicy(uint8_t policy)
+	{
+		_bondingPolicy = policy;
+	}
 
 	/**
 	 * @return the current bonding policy
 	 */
-	inline uint8_t getPolicy() { return _bondingPolicy; }
+	inline uint8_t getPolicy()
+	{
+		return _bondingPolicy;
+	}
 
 	/**
 	 * @return the health status of the bond
 	 */
-	inline bool isHealthy() { return _isHealthy; }
+	inline bool isHealthy()
+	{
+		return _isHealthy;
+	}
 
 	/**
 	 * @return the number of links comprising this bond which are considered alive
 	 */
-	inline uint8_t getNumAliveLinks() { return _numAliveLinks; };
+	inline uint8_t getNumAliveLinks()
+	{
+		return _numAliveLinks;
+	};
 
 	/**
 	 * @return the number of links comprising this bond
 	 */
-	inline uint8_t getNumTotalLinks() { return _numTotalLinks; }
+	inline uint8_t getNumTotalLinks()
+	{
+		return _numTotalLinks;
+	}
 
 	/**
 	 *
 	 * @param allowFlowHashing
 	 */
-	inline void setFlowHashing(bool allowFlowHashing) { _allowFlowHashing = allowFlowHashing; }
+	inline void setFlowHashing(bool allowFlowHashing)
+	{
+		_allowFlowHashing = allowFlowHashing;
+	}
 
 	/**
 	 * @return Whether flow-hashing is currently enabled for this bond.
 	 */
-	bool flowHashingEnabled() { return _allowFlowHashing; }
+	bool flowHashingEnabled()
+	{
+		return _allowFlowHashing;
+	}
 
 	/**
 	 *
 	 * @param packetsPerLink
 	 */
-	inline void setPacketsPerLink(int packetsPerLink) { _packetsPerLink = packetsPerLink; }
+	inline void setPacketsPerLink(int packetsPerLink)
+	{
+		_packetsPerLink = packetsPerLink;
+	}
 
 	/**
 	 * @return Number of packets to be sent on each interface in a balance-rr bond
 	 */
-	inline int getPacketsPerLink() { return _packetsPerLink; }
+	inline int getPacketsPerLink()
+	{
+		return _packetsPerLink;
+	}
 
 	/**
 	 *
 	 * @param linkSelectMethod
 	 */
-	inline void setLinkSelectMethod(uint8_t method) { _abLinkSelectMethod = method; }
+	inline void setLinkSelectMethod(uint8_t method)
+	{
+		_abLinkSelectMethod = method;
+	}
 
 	/**
 	 *
 	 * @return
 	 */
-	inline uint8_t getLinkSelectMethod() { return _abLinkSelectMethod; }
+	inline uint8_t getLinkSelectMethod()
+	{
+		return _abLinkSelectMethod;
+	}
 
 	/**
 	 *
 	 * @param allowPathNegotiation
 	 */
-	inline void setAllowPathNegotiation(bool allowPathNegotiation) { _allowPathNegotiation = allowPathNegotiation; }
+	inline void setAllowPathNegotiation(bool allowPathNegotiation)
+	{
+		_allowPathNegotiation = allowPathNegotiation;
+	}
 
 	/**
 	 *
 	 * @return
 	 */
-	inline bool allowPathNegotiation() { return _allowPathNegotiation; }
+	inline bool allowPathNegotiation()
+	{
+		return _allowPathNegotiation;
+	}
 
 	/**
 	 * Forcibly rotates the currently active link used in an active-backup bond to the next link in the failover queue
@@ -566,11 +661,13 @@ public:
 	 */
 	bool abForciblyRotateLink();
 
-	SharedPtr<Peer> getPeer() { return _peer; }
+	SharedPtr<Peer> getPeer()
+	{
+		return _peer;
+	}
 
-private:
-
-	const RuntimeEnvironment *RR;
+  private:
+	const RuntimeEnvironment* RR;
 	AtomicCounter __refCount;
 
 	/**
@@ -599,23 +696,23 @@ private:
 	/**
 	 * Flows hashed according to port and protocol
 	 */
-	std::map<int32_t,SharedPtr<Flow> > _flows;
+	std::map<int32_t, SharedPtr<Flow> > _flows;
 
-	float _qualityWeights[ZT_QOS_WEIGHT_SIZE]; // How much each factor contributes to the "quality" score of a path.
+	float _qualityWeights[ZT_QOS_WEIGHT_SIZE];	 // How much each factor contributes to the "quality" score of a path.
 
 	uint8_t _bondingPolicy;
 	uint32_t _upDelay;
 	uint32_t _downDelay;
 
 	// active-backup
-	SharedPtr<Path> _abPath; // current active path
+	SharedPtr<Path> _abPath;   // current active path
 	std::list<SharedPtr<Path> > _abFailoverQueue;
-	uint8_t _abLinkSelectMethod; // link re-selection policy for the primary link in active-backup
+	uint8_t _abLinkSelectMethod;   // link re-selection policy for the primary link in active-backup
 	bool _abOverflowEnabled;
 
 	// balance-rr
-	uint8_t _rrIdx; // index to path currently in use during Round Robin operation
-	uint16_t _rrPacketsSentOnCurrLink; // number of packets sent on this link since the most recent path switch.
+	uint8_t _rrIdx;						 // index to path currently in use during Round Robin operation
+	uint16_t _rrPacketsSentOnCurrLink;	 // number of packets sent on this link since the most recent path switch.
 	/**
 	 * How many packets will be sent on a path before moving to the next path
 	 * in the round-robin sequence. A value of zero will cause a random path
@@ -745,6 +842,6 @@ private:
 	bool _allowFlowHashing;
 };
 
-} // namespace ZeroTier
+}	// namespace ZeroTier
 
 #endif

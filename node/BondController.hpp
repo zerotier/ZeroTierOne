@@ -14,46 +14,54 @@
 #ifndef ZT_BONDCONTROLLER_HPP
 #define ZT_BONDCONTROLLER_HPP
 
+#include "../osdep/Link.hpp"
+#include "../osdep/Phy.hpp"
+#include "SharedPtr.hpp"
+
 #include <map>
 #include <vector>
-
-#include "SharedPtr.hpp"
-#include "../osdep/Phy.hpp"
-#include "../osdep/Link.hpp"
 
 namespace ZeroTier {
 
 class RuntimeEnvironment;
 class Bond;
 class Peer;
+class Mutex;
 
-class BondController
-{
+class BondController {
 	friend class Bond;
 
-public:
-
-	BondController(const RuntimeEnvironment *renv);
+  public:
+	BondController(const RuntimeEnvironment* renv);
 
 	/**
 	 * @return Whether this link is permitted to become a member of a bond.
 	 */
-	bool linkAllowed(std::string &policyAlias, SharedPtr<Link> link);
+	bool linkAllowed(std::string& policyAlias, SharedPtr<Link> link);
 
 	/**
 	 * @return The minimum interval required to poll the active bonds to fulfill all active monitoring timing requirements.
 	 */
-	int minReqPathMonitorInterval() { return _minReqPathMonitorInterval; }
+	int minReqPathMonitorInterval()
+	{
+		return _minReqPathMonitorInterval;
+	}
 
 	/**
 	 * @param minReqPathMonitorInterval The minimum interval required to poll the active bonds to fulfill all active monitoring timing requirements.
 	 */
-	static void setMinReqPathMonitorInterval(int minReqPathMonitorInterval) { _minReqPathMonitorInterval = minReqPathMonitorInterval; }
+	static void setMinReqPathMonitorInterval(int minReqPathMonitorInterval)
+	{
+		_minReqPathMonitorInterval = minReqPathMonitorInterval;
+	}
 
 	/**
 	 * @return Whether the bonding layer is currently set up to be used.
 	 */
-	bool inUse() { return !_bondPolicyTemplates.empty() || _defaultBondingPolicy; }
+	bool inUse()
+	{
+		return ! _bondPolicyTemplates.empty() || _defaultBondingPolicy;
+	}
 
 	/**
 	 * @param basePolicyName Bonding policy name (See ZeroTierOne.h)
@@ -61,12 +69,22 @@ public:
 	 */
 	static int getPolicyCodeByStr(const std::string& basePolicyName)
 	{
-		if (basePolicyName == "active-backup") { return 1; }
-		if (basePolicyName == "broadcast") { return 2; }
-		if (basePolicyName == "balance-rr") { return 3; }
-		if (basePolicyName == "balance-xor") { return 4; }
-		if (basePolicyName == "balance-aware") { return 5; }
-		return 0; // "none"
+		if (basePolicyName == "active-backup") {
+			return 1;
+		}
+		if (basePolicyName == "broadcast") {
+			return 2;
+		}
+		if (basePolicyName == "balance-rr") {
+			return 3;
+		}
+		if (basePolicyName == "balance-xor") {
+			return 4;
+		}
+		if (basePolicyName == "balance-aware") {
+			return 5;
+		}
+		return 0;	// "none"
 	}
 
 	/**
@@ -75,11 +93,21 @@ public:
 	 */
 	static std::string getPolicyStrByCode(int policy)
 	{
-		if (policy == 1) { return "active-backup"; }
-		if (policy == 2) { return "broadcast"; }
-		if (policy == 3) { return "balance-rr"; }
-		if (policy == 4) { return "balance-xor"; }
-		if (policy == 5) { return "balance-aware"; }
+		if (policy == 1) {
+			return "active-backup";
+		}
+		if (policy == 2) {
+			return "broadcast";
+		}
+		if (policy == 3) {
+			return "balance-rr";
+		}
+		if (policy == 4) {
+			return "balance-xor";
+		}
+		if (policy == 5) {
+			return "balance-aware";
+		}
 		return "none";
 	}
 
@@ -88,19 +116,28 @@ public:
 	 *
 	 * @param bp Bonding policy
 	 */
-	void setBondingLayerDefaultPolicy(uint8_t bp) { _defaultBondingPolicy = bp; }
+	void setBondingLayerDefaultPolicy(uint8_t bp)
+	{
+		_defaultBondingPolicy = bp;
+	}
 
 	/**
 	 * Sets the default (custom) bonding policy for new or undefined bonds.
 	 *
 	 * @param alias Human-readable string alias for bonding policy
 	 */
-	void setBondingLayerDefaultPolicyStr(std::string alias) { _defaultBondingPolicyStr = alias; }
+	void setBondingLayerDefaultPolicyStr(std::string alias)
+	{
+		_defaultBondingPolicyStr = alias;
+	}
 
 	/**
 	 * @return The default bonding policy
 	 */
-	static int defaultBondingPolicy() { return _defaultBondingPolicy; }
+	static int defaultBondingPolicy()
+	{
+		return _defaultBondingPolicy;
+	}
 
 	/**
 	 * Add a user-defined link to a given bonding policy.
@@ -142,7 +179,7 @@ public:
 	 * @param peer Remote peer that this bond services
 	 * @return A pointer to the newly created Bond
 	 */
-	SharedPtr<Bond> createTransportTriggeredBond(const RuntimeEnvironment *renv, const SharedPtr<Peer>& peer);
+	SharedPtr<Bond> createTransportTriggeredBond(const RuntimeEnvironment* renv, const SharedPtr<Peer>& peer);
 
 	/**
 	 * Periodically perform maintenance tasks for the bonding layer.
@@ -150,7 +187,7 @@ public:
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
 	 * @param now Current time
 	 */
-	void processBackgroundTasks(void *tPtr, int64_t now);
+	void processBackgroundTasks(void* tPtr, int64_t now);
 
 	/**
 	 * Gets a reference to a physical link definition given a policy alias and a local socket.
@@ -175,12 +212,14 @@ public:
 	 */
 	bool allowedToBind(const std::string& ifname);
 
-	uint64_t getBondStartTime() { return bondStartTime; }
+	uint64_t getBondStartTime()
+	{
+		return bondStartTime;
+	}
 
-private:
-
-	Phy<BondController *> *_phy;
-	const RuntimeEnvironment *RR;
+  private:
+	Phy<BondController*>* _phy;
+	const RuntimeEnvironment* RR;
 
 	Mutex _bonds_m;
 	Mutex _links_m;
@@ -208,22 +247,22 @@ private:
 	/**
 	 * All currently active bonds.
 	 */
-	std::map<int64_t,SharedPtr<Bond> > _bonds;
+	std::map<int64_t, SharedPtr<Bond> > _bonds;
 
 	/**
 	 * Map of peers to custom bonding policies
 	 */
-	std::map<int64_t,std::string> _policyTemplateAssignments;
+	std::map<int64_t, std::string> _policyTemplateAssignments;
 
 	/**
 	 * User-defined bonding policies (can be assigned to a peer)
 	 */
-	std::map<std::string,SharedPtr<Bond> > _bondPolicyTemplates;
+	std::map<std::string, SharedPtr<Bond> > _bondPolicyTemplates;
 
 	/**
 	 * Set of links defined for a given bonding policy
 	 */
-	std::map<std::string,std::vector<SharedPtr<Link> > > _linkDefinitions;
+	std::map<std::string, std::vector<SharedPtr<Link> > > _linkDefinitions;
 
 	/**
 	 * Set of link objects mapped to their physical interfaces
@@ -234,6 +273,6 @@ private:
 	uint64_t bondStartTime;
 };
 
-} // namespace ZeroTier
+}	// namespace ZeroTier
 
 #endif
