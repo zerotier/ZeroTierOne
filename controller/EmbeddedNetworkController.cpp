@@ -1331,6 +1331,9 @@ void EmbeddedNetworkController::_request(
 		member["lastAuthorizedCredential"] = autoAuthCredential;
 	}
 
+	const int64_t authenticationExpiryTime = member["authenticationExpiryTime"];
+	const std::string authenticationURL = member["authenticationURL"];
+
 	if (authorized) {
 		// Update version info and meta-data if authorized and if this is a genuine request
 		if (requestPacketId) {
@@ -1357,18 +1360,12 @@ void EmbeddedNetworkController::_request(
 			}
 		}
 
-		const int64_t authenticationExpiryTime = member["authenticationExpiryTime"];
 		if ((authenticationExpiryTime >= 0)&&(authenticationExpiryTime < now)) {
-			const std::string authenticationURL = member["authenticationURL"];
-			if (authenticationURL.empty()) {
-				_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_AUTHENTICATION_REQUIRED, nullptr, 0);
-				return;
-			} else {
-				Dictionary<1024> authInfo;
+			Dictionary<1024> authInfo;
+			if (!authenticationURL.empty())
 				authInfo.add("aU", authenticationURL.c_str());
-				_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_AUTHENTICATION_REQUIRED, authInfo.data(), authInfo.sizeBytes());
-				return;
-			}
+			_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_AUTHENTICATION_REQUIRED, authInfo.data(), authInfo.sizeBytes());
+			return;
 		}
 	} else {
 		// If they are not authorized, STOP!

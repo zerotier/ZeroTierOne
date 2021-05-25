@@ -794,6 +794,14 @@ static int cli(int argc,char **argv)
 								OSUtils::jsonString(n["type"],"-").c_str(),
 								OSUtils::jsonString(n["portDeviceName"],"-").c_str(),
 								aa.c_str());
+							int64_t authenticationExpiryTime = n["authenticationExpiryTime"];
+							if (authenticationExpiryTime >= 0) {
+								if (n["status"] == "AUTHENTICATION_REQUIRED") {
+									printf("    SSO authentication required, URL: %s" ZT_EOL_S, OSUtils::jsonString(n["authenticationURL"], "(null)").c_str());
+								} else {
+									printf("    SSO authentication expires in %lld" ZT_EOL_S, (authenticationExpiryTime - OSUtils::now()) / 1000LL);
+								}
+							}
 						}
 					}
 				}
