@@ -466,6 +466,14 @@ EmbeddedNetworkController::EmbeddedNetworkController(Node *node,const char *ztPa
 	_db(this),
 	_rc(rc)
 {
+	memset(_ssoPsk, 0, sizeof(_ssoPsk));
+	char *const ssoPskHex = getenv("ZT_SSO_PSK");
+	if (ssoPskHex) {
+		// SECURITY: note that ssoPskHex will always be null-terminated if libc acatually
+		// returns something non-NULL. If the hex encodes something shorter than 48 bytes,
+		// it will be padded at the end with zeroes. If longer, it'll be truncated.
+		Utils::unhex(ssoPskHex, _ssoPsk, sizeof(_ssoPsk));
+	}
 }
 
 EmbeddedNetworkController::~EmbeddedNetworkController()
@@ -1248,7 +1256,7 @@ void EmbeddedNetworkController::_request(
 	Utils::hex(nwid,nwids);
 	_db.get(nwid,network,identity.address().toInt(),member,ns);
 	if ((!network.is_object())||(network.empty())) {
-		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_OBJECT_NOT_FOUND);
+		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_OBJECT_NOT_FOUND, nullptr, 0);
 		return;
 	}
 	const bool newMember = ((!member.is_object())||(member.empty()));
@@ -1262,11 +1270,11 @@ void EmbeddedNetworkController::_request(
 			// known member.
 			try {
 				if (Identity(haveIdStr.c_str()) != identity) {
-					_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_ACCESS_DENIED);
+					_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_ACCESS_DENIED, nullptr, 0);
 					return;
 				}
 			} catch ( ... ) {
-				_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_ACCESS_DENIED);
+				_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_ACCESS_DENIED, nullptr, 0);
 				return;
 			}
 		} else {
@@ -1348,16 +1356,30 @@ void EmbeddedNetworkController::_request(
 				ms.identity = identity;
 			}
 		}
+
+		const int64_t authenticationExpiryTime = member["authenticationExpiryTime"];
+		if ((authenticationExpiryTime >= 0)&&(authenticationExpiryTime < now)) {
+			const std::string authenticationURL = member["authenticationURL"];
+			if (authenticationURL.empty()) {
+				_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_AUTHENTICATION_REQUIRED, nullptr, 0);
+				return;
+			} else {
+				Dictionary<1024> authInfo;
+				authInfo.add("aU", authenticationURL.c_str());
+				_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_AUTHENTICATION_REQUIRED, authInfo.data(), authInfo.sizeBytes());
+				return;
+			}
+		}
 	} else {
 		// If they are not authorized, STOP!
 		DB::cleanMember(member);
 		_db.save(member,true);
-		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_ACCESS_DENIED);
+		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_ACCESS_DENIED, nullptr, 0);
 		return;
 	}
 
 	// -------------------------------------------------------------------------
-	// If we made it this far, they are authorized.
+	// If we made it this far, they are authorized (and authenticated).
 	// -------------------------------------------------------------------------
 
 	int64_t credentialtmd = ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MAX_MAX_DELTA;
@@ -1734,7 +1756,7 @@ void EmbeddedNetworkController::_request(
 	if (com.sign(_signingId)) {
 		nc->com = com;
 	} else {
-		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_INTERNAL_SERVER_ERROR);
+		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_INTERNAL_SERVER_ERROR, nullptr, 0);
 		return;
 	}
 

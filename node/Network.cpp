@@ -1429,6 +1429,9 @@ void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const
 	}
 
 	memcpy(&ec->dns, &_config.dns, sizeof(ZT_VirtualNetworkDNS));
+
+	Utils::scopy(ec->authenticationURL, sizeof(ec->authenticationURL), _config.authenticationURL);
+	ec->authenticationExpiryTime = _config.authenticationExpiryTime;
 }
 
 void Network::_sendUpdatesToMembers(void *tPtr,const MulticastGroup *const newMulticastGroup)

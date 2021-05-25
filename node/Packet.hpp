@@ -792,6 +792,12 @@ public:
 		 *
 		 * ERROR response payload:
 		 *   <[8] 64-bit network ID>
+     *   <[2] 16-bit length of error-related data (optional)>
+     *   <[...] error-related data (optional)>
+     * 
+     * Error related data is a Dictionary containing things like a URL
+     * for authentication or a human-readable error message, and is
+     * optional and may be absent or empty.
 		 */
 		VERB_NETWORK_CONFIG_REQUEST = 0x0b,
 
@@ -1076,7 +1082,10 @@ public:
 		ERROR_NETWORK_ACCESS_DENIED_ = 0x07, /* extra _ at end to avoid Windows name conflict */
 
 		/* Multicasts to this group are not wanted */
-		ERROR_UNWANTED_MULTICAST = 0x08
+		ERROR_UNWANTED_MULTICAST = 0x08,
+
+    /* Network requires external or 2FA authentication (e.g. SSO). */
+    ERROR_NETWORK_AUTHENTICATION_REQUIRED = 0x09
 	};
 
 	template<unsigned int C2>

@@ -182,6 +182,13 @@ bool NetworkConfig::toDictionary(Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d,b
 			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_DNS,*tmp)) return false;
 		}
 
+		if (this->authenticationURL[0]) {
+			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_AUTHENTICATION_URL, this->authenticationURL)) return false;
+		}
+		if (this->authenticationExpiryTime >= 0) {
+			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_AUTHENTICATION_EXPIRY_TIME, this->authenticationExpiryTime)) return false;
+		}
+
 		delete tmp;
 	} catch ( ... ) {
 		delete tmp;
@@ -365,6 +372,13 @@ bool NetworkConfig::fromDictionary(const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACI
 				unsigned int p = 0;
 				DNS::deserializeDNS(*tmp, p, &dns);
 			}
+
+			if (d.get(ZT_NETWORKCONFIG_DICT_KEY_AUTHENTICATION_URL, this->authenticationURL, (unsigned int)sizeof(this->authenticationURL)) > 0) {
+				this->authenticationURL[sizeof(this->authenticationURL) - 1] = 0; // ensure null terminated
+			} else {
+				this->authenticationURL[0] = 0;
+			}
+			this->authenticationExpiryTime = d.getI(ZT_NETWORKCONFIG_DICT_KEY_AUTHENTICATION_EXPIRY_TIME, -1);
 		}
 
 		//printf("~~~\n%s\n~~~\n",d.data());

@@ -731,7 +731,7 @@ void Node::ncSendRevocation(const Address &destination,const Revocation &rev)
 	}
 }
 
-void Node::ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &destination,NetworkController::ErrorCode errorCode)
+void Node::ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &destination,NetworkController::ErrorCode errorCode, const void *errorData, unsigned int errorDataSize)
 {
 	if (destination == RR->identity.address()) {
 		SharedPtr<Network> n(network(nwid));
@@ -743,6 +743,9 @@ void Node::ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &des
 				break;
 			case NetworkController::NC_ERROR_ACCESS_DENIED:
 				n->setAccessDenied();
+				break;
+			case NetworkController::NC_ERROR_AUTHENTICATION_REQUIRED: {
+			}
 				break;
 
 			default: break;
@@ -760,8 +763,16 @@ void Node::ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &des
 			case NetworkController::NC_ERROR_ACCESS_DENIED:
 				outp.append((unsigned char)Packet::ERROR_NETWORK_ACCESS_DENIED_);
 				break;
+			case NetworkController::NC_ERROR_AUTHENTICATION_REQUIRED:
+				outp.append((unsigned char)Packet::ERROR_NETWORK_AUTHENTICATION_REQUIRED);
+				break;
 		}
+
 		outp.append(nwid);
+
+		if ((errorData)&&(errorDataSize > 0))
+			outp.append(errorData, errorDataSize);
+
 		RR->sw->send((void *)0,outp,true);
 	} // else we can't send an ERROR() in response to nothing, so discard
 }

@@ -221,6 +221,16 @@ public:
 	}
 
 	/**
+	 * Set netconf failure to 'authentication required' possibly with an authorization URL
+	 */
+	inline void setAuthenticationRequired(const char *url)
+	{
+		Mutex::Lock _l(_lock);
+		_netconfFailure = NETCONF_FAILURE_AUTHENTICATION_REQUIRED;
+		_authorizationURL = (url) ? url : "";
+	}
+
+	/**
 	 * Causes this network to request an updated configuration from its master node now
 	 *
 	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
@@ -435,9 +445,11 @@ private:
 		NETCONF_FAILURE_NONE,
 		NETCONF_FAILURE_ACCESS_DENIED,
 		NETCONF_FAILURE_NOT_FOUND,
-		NETCONF_FAILURE_INIT_FAILED
+		NETCONF_FAILURE_INIT_FAILED,
+		NETCONF_FAILURE_AUTHENTICATION_REQUIRED
 	} _netconfFailure;
 	int _portError; // return value from port config callback
+	std::string _authorizationURL;
 
 	Hashtable<Address,Membership> _memberships;
 
