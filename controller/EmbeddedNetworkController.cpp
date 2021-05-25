@@ -1379,6 +1379,9 @@ void EmbeddedNetworkController::_request(
 	// If we made it this far, they are authorized (and authenticated).
 	// -------------------------------------------------------------------------
 
+	nc->authenticationURL = authenticationURL;
+	nc->authenticationExpiryTime = authenticationExpiryTime;
+
 	int64_t credentialtmd = ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MAX_MAX_DELTA;
 	if (now > ns.mostRecentDeauthTime) {
 		// If we recently de-authorized a member, shrink credential TTL/max delta to
