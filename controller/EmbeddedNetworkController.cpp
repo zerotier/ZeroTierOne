@@ -1404,9 +1404,9 @@ void EmbeddedNetworkController::_request(
 	Utils::scopy(nc->name,sizeof(nc->name),OSUtils::jsonString(network["name"],"").c_str());
 	nc->mtu = std::max(std::min((unsigned int)OSUtils::jsonInt(network["mtu"],ZT_DEFAULT_MTU),(unsigned int)ZT_MAX_MTU),(unsigned int)ZT_MIN_MTU);
 	nc->multicastLimit = (unsigned int)OSUtils::jsonInt(network["multicastLimit"],32ULL);
-	nc->authenticationURL = authenticationURL;
+	Utils::scopy(nc->authenticationURL, sizeof(nc->authenticationExpiryTime), authenticationURL.c_str());
 	nc->authenticationExpiryTime = authenticationExpiryTime;
-	
+
 	std::string rtt(OSUtils::jsonString(member["remoteTraceTarget"],""));
 	if (rtt.length() == 10) {
 		nc->remoteTraceTarget = Address(Utils::hexStrToU64(rtt.c_str()));
