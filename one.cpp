@@ -786,20 +786,21 @@ static int cli(int argc,char **argv)
 								}
 							}
 							if (aa.length() == 0) aa = "-";
+							const std::string status = OSUtils::jsonString(n["status"],"-");
 							printf("200 listnetworks %s %s %s %s %s %s %s" ZT_EOL_S,
 								OSUtils::jsonString(n["nwid"],"-").c_str(),
 								OSUtils::jsonString(n["name"],"-").c_str(),
 								OSUtils::jsonString(n["mac"],"-").c_str(),
-								OSUtils::jsonString(n["status"],"-").c_str(),
+								status.c_str(),
 								OSUtils::jsonString(n["type"],"-").c_str(),
 								OSUtils::jsonString(n["portDeviceName"],"-").c_str(),
 								aa.c_str());
 							int64_t authenticationExpiryTime = n["authenticationExpiryTime"];
 							if (authenticationExpiryTime >= 0) {
-								if (n["status"] == "AUTHENTICATION_REQUIRED") {
-									printf("    SSO authentication required, URL: %s" ZT_EOL_S, OSUtils::jsonString(n["authenticationURL"], "(null)").c_str());
-								} else {
-									printf("    SSO authentication expires in %lld" ZT_EOL_S, (authenticationExpiryTime - OSUtils::now()) / 1000LL);
+								if (status == "AUTHENTICATION_REQUIRED") {
+									printf("    AUTH EXPIRED, URL: %s" ZT_EOL_S, OSUtils::jsonString(n["authenticationURL"], "(null)").c_str());
+								} else if (status == "OK") {
+									printf("    AUTH OK, expires in: %lld seconds" ZT_EOL_S, (authenticationExpiryTime - OSUtils::now()) / 1000LL);
 								}
 							}
 						}

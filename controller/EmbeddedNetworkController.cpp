@@ -696,8 +696,10 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 					DB::initMember(member);
 
 					try {
-						if (b.count("activeBridge")) member["activeBridge"] = OSUtils::jsonBool(b["activeBridge"],false);
-						if (b.count("noAutoAssignIps")) member["noAutoAssignIps"] = OSUtils::jsonBool(b["noAutoAssignIps"],false);
+						if (b.count("activeBridge")) member["activeBridge"] = OSUtils::jsonBool(b["activeBridge"], false);
+						if (b.count("noAutoAssignIps")) member["noAutoAssignIps"] = OSUtils::jsonBool(b["noAutoAssignIps"], false);
+						if (b.count("authenticationExpiryTime")) member["authenticationExpiryTime"] = (int64_t)OSUtils::jsonInt(b["authenticationExpiryTime"], -1LL);
+						if (b.count("authenticationURL")) member["authenticationURL"] = OSUtils::jsonString(b["authenticationURL"], "");
 
 						if (b.count("remoteTraceTarget")) {
 							const std::string rtt(OSUtils::jsonString(b["remoteTraceTarget"],""));
@@ -1404,7 +1406,7 @@ void EmbeddedNetworkController::_request(
 	Utils::scopy(nc->name,sizeof(nc->name),OSUtils::jsonString(network["name"],"").c_str());
 	nc->mtu = std::max(std::min((unsigned int)OSUtils::jsonInt(network["mtu"],ZT_DEFAULT_MTU),(unsigned int)ZT_MAX_MTU),(unsigned int)ZT_MIN_MTU);
 	nc->multicastLimit = (unsigned int)OSUtils::jsonInt(network["multicastLimit"],32ULL);
-	Utils::scopy(nc->authenticationURL, sizeof(nc->authenticationExpiryTime), authenticationURL.c_str());
+	Utils::scopy(nc->authenticationURL, sizeof(nc->authenticationURL), authenticationURL.c_str());
 	nc->authenticationExpiryTime = authenticationExpiryTime;
 
 	std::string rtt(OSUtils::jsonString(member["remoteTraceTarget"],""));

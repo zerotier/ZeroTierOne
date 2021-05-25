@@ -770,8 +770,10 @@ void Node::ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &des
 
 		outp.append(nwid);
 
-		if ((errorData)&&(errorDataSize > 0))
+		if ((errorData)&&(errorDataSize > 0)&&(errorDataSize <= 0xffff)) {
+			outp.append((uint16_t)errorDataSize);
 			outp.append(errorData, errorDataSize);
+		}
 
 		RR->sw->send((void *)0,outp,true);
 	} // else we can't send an ERROR() in response to nothing, so discard
