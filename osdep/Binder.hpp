@@ -135,21 +135,25 @@ public:
 				while (a) {
 					PIP_ADAPTER_UNICAST_ADDRESS ua = a->FirstUnicastAddress;
 					while (ua) {
-						InetAddress ip(ua->Address.lpSockaddr);
-						char strBuf[128] = { 0 };
-						wcstombs(strBuf, a->FriendlyName, sizeof(strBuf));
-						if (ifChecker.shouldBindInterface(strBuf,ip)) {
-							switch(ip.ipScope()) {
-								default: break;
-								case InetAddress::IP_SCOPE_PSEUDOPRIVATE:
-								case InetAddress::IP_SCOPE_GLOBAL:
-								case InetAddress::IP_SCOPE_SHARED:
-								case InetAddress::IP_SCOPE_PRIVATE:
-									for(int x=0;x<(int)portCount;++x) {
-										ip.setPort(ports[x]);
-										localIfAddrs.insert(std::pair<InetAddress,std::string>(ip,std::string()));
-									}
-									break;
+						// Don't bind temporary/random IPv6 addresses
+						if (ua->SuffixOrigin != IpSuffixOriginRandom) {
+							InetAddress ip(ua->Address.lpSockaddr);
+							char strBuf[128] = { 0 };
+							wcstombs(strBuf, a->FriendlyName, sizeof(strBuf));
+							if (ifChecker.shouldBindInterface(strBuf, ip)) {
+								switch (ip.ipScope()) {
+									default:
+										break;
+									case InetAddress::IP_SCOPE_PSEUDOPRIVATE:
+									case InetAddress::IP_SCOPE_GLOBAL:
+									case InetAddress::IP_SCOPE_SHARED:
+									case InetAddress::IP_SCOPE_PRIVATE:
+										for (int x = 0; x < (int)portCount; ++x) {
+											ip.setPort(ports[x]);
+											localIfAddrs.insert(std::pair<InetAddress, std::string>(ip, std::string()));
+										}
+										break;
+								}
 							}
 						}
 						ua = ua->Next;
