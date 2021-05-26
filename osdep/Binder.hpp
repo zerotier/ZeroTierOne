@@ -36,6 +36,7 @@
 #ifdef __LINUX__
 #include <net/if.h>
 #include <sys/ioctl.h>
+#include <linux/if_addr.h>
 #endif
 #endif
 
@@ -211,16 +212,24 @@ class Binder {
 					unsigned char ipbits[16];
 					memset(ipbits, 0, sizeof(ipbits));
 					char* devname = (char*)0;
+					int flags = 0;
 					int n = 0;
 					for (char* f = Utils::stok(tmp, " \t\r\n", &saveptr); (f); f = Utils::stok((char*)0, " \t\r\n", &saveptr)) {
 						switch (n++) {
 							case 0:	  // IP in hex
 								Utils::unhex(f, 32, ipbits, 16);
 								break;
+							case 4:
+								flags = atoi(f);
+								break;
 							case 5:	  // device name
 								devname = f;
 								break;
 						}
+					}
+
+					if ( (flags & IFA_F_TEMPORARY) != 0) {
+						continue;
 					}
 					if (devname) {
 						ifnames.insert(devname);
