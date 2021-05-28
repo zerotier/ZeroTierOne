@@ -140,7 +140,6 @@ private:
 	Identity _signingId;
 	std::string _signingIdAddressString;
 	NetworkController::Sender *_sender;
-	uint8_t _ssoPsk[48];
 
 	DBMirrorSet _db;
 	BlockingQueue< _RQEntry * > _queue;

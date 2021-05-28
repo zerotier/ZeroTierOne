@@ -68,7 +68,6 @@ void DB::initMember(nlohmann::json &member)
 	if (!member.count("lastAuthorizedCredentialType")) member["lastAuthorizedCredentialType"] = nlohmann::json();
 	if (!member.count("lastAuthorizedCredential")) member["lastAuthorizedCredential"] = nlohmann::json();
 	if (!member.count("authenticationExpiryTime")) member["authenticationExpiryTime"] = -1LL;
-	if (!member.count("authenticationURL")) member["authenticationURL"] = nlohmann::json();
 	if (!member.count("vMajor")) member["vMajor"] = -1;
 	if (!member.count("vMinor")) member["vMinor"] = -1;
 	if (!member.count("vRev")) member["vRev"] = -1;
@@ -94,6 +93,8 @@ void DB::cleanMember(nlohmann::json &member)
 	member.erase("recentLog");
 	member.erase("lastModified");
 	member.erase("lastRequestMetaData");
+	member.erase("authenticationURL"); // computed
+	member.erase("authenticationClientID"); // computed
 }
 
 DB::DB() {}
@@ -135,6 +136,7 @@ bool DB::get(const uint64_t networkId,nlohmann::json &network,const uint64_t mem
 		if (m == nw->members.end())
 			return false;
 		member = m->second;
+		updateMemberOnLoad(networkId, memberId, member);
 	}
 	return true;
 }
@@ -158,6 +160,7 @@ bool DB::get(const uint64_t networkId,nlohmann::json &network,const uint64_t mem
 		if (m == nw->members.end())
 			return false;
 		member = m->second;
+		updateMemberOnLoad(networkId, memberId, member);
 	}
 	return true;
 }
@@ -176,8 +179,10 @@ bool DB::get(const uint64_t networkId,nlohmann::json &network,std::vector<nlohma
 	{
 		std::lock_guard<std::mutex> l2(nw->lock);
 		network = nw->config;
-		for(auto m=nw->members.begin();m!=nw->members.end();++m)
+		for(auto m=nw->members.begin();m!=nw->members.end();++m) {
 			members.push_back(m->second);
+			updateMemberOnLoad(networkId, m->first, members.back());
+		}
 	}
 	return true;
 }

@@ -466,14 +466,6 @@ EmbeddedNetworkController::EmbeddedNetworkController(Node *node,const char *ztPa
 	_db(this),
 	_rc(rc)
 {
-	memset(_ssoPsk, 0, sizeof(_ssoPsk));
-	char *const ssoPskHex = getenv("ZT_SSO_PSK");
-	if (ssoPskHex) {
-		// SECURITY: note that ssoPskHex will always be null-terminated if libc acatually
-		// returns something non-NULL. If the hex encodes something shorter than 48 bytes,
-		// it will be padded at the end with zeroes. If longer, it'll be truncated.
-		Utils::unhex(ssoPskHex, _ssoPsk, sizeof(_ssoPsk));
-	}
 }
 
 EmbeddedNetworkController::~EmbeddedNetworkController()

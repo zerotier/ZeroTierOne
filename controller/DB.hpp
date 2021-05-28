@@ -101,11 +101,10 @@ public:
 	}
 
 	virtual bool save(nlohmann::json &record,bool notifyListeners) = 0;
-
 	virtual void eraseNetwork(const uint64_t networkId) = 0;
 	virtual void eraseMember(const uint64_t networkId,const uint64_t memberId) = 0;
-
 	virtual void nodeIsOnline(const uint64_t networkId,const uint64_t memberId,const InetAddress &physicalAddress) = 0;
+	virtual void updateMemberOnLoad(const uint64_t networkId, const uint64_t memberId, nlohmann::json &member) {}
 
 	inline void addListener(DB::ChangeListener *const listener)
 	{

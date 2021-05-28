@@ -16,6 +16,7 @@
 #ifdef ZT_CONTROLLER_USE_LIBPQ
 
 #include "../node/Constants.hpp"
+#include "../node/SHA512.hpp"
 #include "EmbeddedNetworkController.hpp"
 #include "../version.h"
 #include "Redis.hpp"
@@ -89,6 +90,15 @@ PostgreSQL::PostgreSQL(const Identity &myId, const char *path, int listenPort, R
 	char myAddress[64];
 	_myAddressStr = myId.address().toString(myAddress);
 	_connString = std::string(path) + " application_name=controller_" + _myAddressStr;
+
+	memset(_ssoPsk, 0, sizeof(_ssoPsk));
+	char *const ssoPskHex = getenv("ZT_SSO_PSK");
+	if (ssoPskHex) {
+		// SECURITY: note that ssoPskHex will always be null-terminated if libc acatually
+		// returns something non-NULL. If the hex encodes something shorter than 48 bytes,
+		// it will be padded at the end with zeroes. If longer, it'll be truncated.
+		Utils::unhex(ssoPskHex, _ssoPsk, sizeof(_ssoPsk));
+	}
 
 	// Database Schema Version Check
 	PGconn *conn = getPgConn();
@@ -260,6 +270,88 @@ void PostgreSQL::nodeIsOnline(const uint64_t networkId, const uint64_t memberId,
 	i.first = OSUtils::now();
 	if (physicalAddress) {
 		i.second = physicalAddress;
+	}
+}
+
+void PostgreSQL::updateMemberOnLoad(const uint64_t networkId, const uint64_t memberId, nlohmann::json &member)
+{
+	const uint64_t nwid = OSUtils::jsonIntHex(member["nwid"],0ULL);
+	const uint64_t id = OSUtils::jsonIntHex(member["id"],0ULL);
+	char nwids[24],ids[24];
+	OSUtils::ztsnprintf(nwids, sizeof(nwids), "%.16llx", nwid);
+	OSUtils::ztsnprintf(ids, sizeof(ids), "%.10llx", id);
+
+	bool have_auth = false;
+	try {
+		PGconn *conn = getPgConn();
+		if (PQstatus(conn) != CONNECTION_OK) {
+			fprintf(stderr, "Bad Database Connection: %s", PQerrorMessage(conn));
+			exit(1);
+		}
+
+		const char *params[1] = { nwids };
+		PGresult *res = PQexecParams(conn, "SELECT org.client_id, org.authorization_endpoint FROM ztc_network AS nw, ztc_org AS org WHERE nw.id = $1 AND nw.sso_enabled = true AND org.owner_id = nw.owner_id",
+			1,
+			NULL,
+			params,
+			NULL,
+			NULL,
+			0);
+		if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+			fprintf(stderr, "Org client_id and authorization_endpoint lookup failed: %s", PQerrorMessage(conn));
+			PQclear(res);
+			exit(1);
+		}
+
+		if (PQntuples(res) >= 1) {
+			std::string client_id = PQgetvalue(res, 0, 0);
+			std::string authorization_endpoint = PQgetvalue(res, 0, 1);
+			PQclear(res);
+			if ((!client_id.empty())&&(!authorization_endpoint.empty())) {
+				const char *params2[2] = { nwids, ids };
+				res = PQexecParams(conn, "SELECT e.nonce, e.authentication_expiry_time FROM ztc_sso_expiry AS e WHERE e.network_id = $1 AND e.member_id = $2 ORDER BY n.authentication_expiry_time DESC LIMIT 1",
+					1,
+					NULL,
+					params2,
+					NULL,
+					NULL,
+					0);
+				if (PQntuples(res) >= 1) {
+					std::string nonce = PQgetvalue(res, 0, 0);
+					int64_t authentication_expiry_time = std::stoll(PQgetvalue(res, 0, 1));
+					if ((authentication_expiry_time >= 0)&&(!nonce.empty())) {
+						have_auth = true;
+
+						uint8_t state[48];
+						HMACSHA384(_ssoPsk, nonce.data(), (unsigned int)nonce.length(), state);
+						char state_hex[256];
+						Utils::hex(state, 48, state_hex);
+						char authenticationURL[4096];
+						const char *redirect_url = "redirect_uri=http%3A%2F%2Fmy.zerotier.com%2Fapi%2Fnetwork%2Fsso-auth"; // TODO: this should be configurable
+						Utils::ztsnprintf(authenticationURL, sizeof(authenticationURL),
+							"%s?response_type=id_token&response_mode=form_post&scope=openid+email+profile&redriect_uri=%s&nonce=%s&state=%s&client_id=%s",
+							authorization_endpoint.c_str(),
+							redirect_url,
+							nonce.c_str(),
+							state_hex, // NOTE: should these be URL escaped? Don't think there's a risk as they are not user definable.
+							client_id.c_str());
+
+						member["authenticationExpiryTime"] = authentication_expiry_time;
+						member["authenticationURL"] = authenticationURL;
+					}
+				}
+				PQclear(res);
+			}
+		} else {
+			PQclear(res);
+		}
+
+	} catch (sw::redis::Error &e) {
+		fprintf(stderr, "ERROR: Error updating member on load, in Redis: %s\n", e.what());
+		exit(-1);
+	} catch (std::exception &e) {
+		fprintf(stderr, "ERROR: Error updating member on load: %s\n", e.what());
+		exit(-1);
 	}
 }
 
