@@ -5,7 +5,8 @@ MAINTAINER Adam Ierymekno <adam.ierymenko@zerotier.com>, Grant Limberg <grant.li
 ARG git_branch=master
 
 RUN yum update -y
-RUN yum install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-8-x86_64/pgdg-redhat-repo-latest.noarch.rpm && dnf -qy module disable postgresql
+RUN yum install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-8-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+RUN dnf -qy module disable postgresql
 RUN yum -y install epel-release && yum -y update && yum clean all
 RUN yum groupinstall -y "Development Tools"
 RUN yum install -y bash postgresql10 postgresql10-devel libpqxx-devel clang jemalloc jemalloc-devel
@@ -16,7 +17,9 @@ ADD . /ZeroTierOne
 RUN cd ZeroTierOne && make clean && make central-controller
 
 FROM centos:8
-RUN yum install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-8-x86_64/pgdg-redhat-repo-latest.noarch.rpm && dnf -qy module disable postgresql && yum -y install epel-release && yum -y update && yum clean all
+RUN yum install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-8-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+RUN dnf -qy module disable postgresql 
+RUN yum -y install epel-release && yum -y update && yum clean all
 RUN yum install -y jemalloc jemalloc-devel postgresql10
 
 COPY --from=builder /ZeroTierOne/zerotier-one /usr/local/bin/zerotier-one
