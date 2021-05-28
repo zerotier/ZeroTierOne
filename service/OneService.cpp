@@ -725,15 +725,24 @@ public:
 			OSUtils::ztsnprintf(portstr,sizeof(portstr),"%u",_ports[0]);
 			OSUtils::writeFile((_homePath + ZT_PATH_SEPARATOR_S "zerotier-one.port").c_str(),std::string(portstr));
 
-			// Attempt to bind to a secondary port chosen from our ZeroTier address.
+			// Attempt to bind to a secondary port.
 			// This exists because there are buggy NATs out there that fail if more
 			// than one device behind the same NAT tries to use the same internal
 			// private address port number. Buggy NATs are a running theme.
+			//
+			// This used to pick the secondary port based on the node ID until we
+			// discovered another problem: buggy routers and malicious traffic 
+			// "detection".  A lot of routers have such things built in these days
+			// and mis-detect ZeroTier traffic as malicious and block it resulting
+			// in a node that appears to be in a coma.  Secondary ports are now 
+			// randomized on startup.
 			if (_allowSecondaryPort) {
 				if (_secondaryPort) {
 					_ports[1] = _secondaryPort;
 				} else {
-					_ports[1] = 20000 + ((unsigned int)_node->address() % 45500);
+					unsigned int randp = 0;
+					Utils::getSecureRandom(&randp,sizeof(randp));
+					_ports[1] = 20000 + (randp % 45500);
 					for(int i=0;;++i) {
 						if (i > 1000) {
 							_ports[1] = 0;

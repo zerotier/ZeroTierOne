@@ -40,7 +40,7 @@
 #endif
 #endif
 
-#if defined(__APPLE__) && defined(TARGET_OS_MAC)
+#if defined(__unix__) && !defined(__LINUX__)
 #include <net/if.h>
 #include <netinet6/in6_var.h>
 #include <sys/ioctl.h>
@@ -311,8 +311,7 @@ class Binder {
 			if (! gotViaProc) {
 				struct ifaddrs* ifatbl = (struct ifaddrs*)0;
 				struct ifaddrs* ifa;
-
-#if defined(__APPLE__)
+#if defined(__unix__) && !defined(__LINUX__)
 				// set up an IPv6 socket so we can check the state of interfaces via SIOCGIFAFLAG_IN6
 				int infoSock = socket(AF_INET6, SOCK_DGRAM, 0);
 #endif
@@ -321,8 +320,8 @@ class Binder {
 					while (ifa) {
 						if ((ifa->ifa_name) && (ifa->ifa_addr)) {
 							InetAddress ip = *(ifa->ifa_addr);
-#if defined(__APPLE__) && defined(TARGET_OS_MAC)
-							// Check if the address is an IPv6 Temporary Address, macOS version
+#if defined(__unix__) && !defined(__LINUX__)
+							// Check if the address is an IPv6 Temporary Address, macOS/BSD version
 							if (ifa->ifa_addr->sa_family == AF_INET6) {
 								struct sockaddr_in6* sa6 = (struct sockaddr_in6*)ifa->ifa_addr;
 								struct in6_ifreq ifr6;
@@ -369,7 +368,7 @@ class Binder {
 				else {
 					interfacesEnumerated = false;
 				}
-#if defined(__APPLE__)
+#if defined(__unix__) && !defined(__LINUX__)
 				close(infoSock);
 #endif
 			}
