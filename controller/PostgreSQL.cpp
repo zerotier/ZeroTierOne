@@ -290,7 +290,9 @@ void PostgreSQL::updateMemberOnLoad(const uint64_t networkId, const uint64_t mem
 		}
 
 		const char *params[1] = { nwids };
-		PGresult *res = PQexecParams(conn, "SELECT org.client_id, org.authorization_endpoint FROM ztc_network AS nw, ztc_org AS org WHERE nw.id = $1 AND nw.sso_enabled = true AND org.owner_id = nw.owner_id",
+		PGresult *res = PQexecParams(conn, "SELECT org.client_id, org.authorization_endpoint "
+			"FROM ztc_network AS nw, ztc_org AS org "
+			"WHERE nw.id = $1 AND nw.sso_enabled = true AND org.owner_id = nw.owner_id",
 			1,
 			NULL,
 			params,
@@ -309,7 +311,10 @@ void PostgreSQL::updateMemberOnLoad(const uint64_t networkId, const uint64_t mem
 			PQclear(res);
 			if ((!client_id.empty())&&(!authorization_endpoint.empty())) {
 				const char *params2[2] = { nwids, ids };
-				res = PQexecParams(conn, "SELECT e.nonce, e.authentication_expiry_time FROM ztc_sso_expiry AS e WHERE e.network_id = $1 AND e.member_id = $2 ORDER BY n.authentication_expiry_time DESC LIMIT 1",
+				res = PQexecParams(conn, "SELECT e.nonce, e.authentication_expiry_time "
+					"FROM ztc_sso_expiry AS e "
+					"WHERE e.network_id = $1 AND e.member_id = $2 "
+					"ORDER BY n.authentication_expiry_time DESC LIMIT 1",
 					1,
 					NULL,
 					params2,
