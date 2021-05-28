@@ -333,7 +333,7 @@ void PostgreSQL::updateMemberOnLoad(const uint64_t networkId, const uint64_t mem
 						Utils::hex(state, 48, state_hex);
 						char authenticationURL[4096];
 						const char *redirect_url = "redirect_uri=http%3A%2F%2Fmy.zerotier.com%2Fapi%2Fnetwork%2Fsso-auth"; // TODO: this should be configurable
-						Utils::ztsnprintf(authenticationURL, sizeof(authenticationURL),
+						OSUtils::ztsnprintf(authenticationURL, sizeof(authenticationURL),
 							"%s?response_type=id_token&response_mode=form_post&scope=openid+email+profile&redriect_uri=%s&nonce=%s&state=%s&client_id=%s",
 							authorization_endpoint.c_str(),
 							redirect_url,
