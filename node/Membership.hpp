@@ -181,38 +181,21 @@ private:
 	inline bool _isV6NDPEmulated(const NetworkConfig &nconf,const MAC &m) const { return false; }
 	inline bool _isV6NDPEmulated(const NetworkConfig &nconf,const InetAddress &ip) const
 	{
-		if ((ip.isV6())&&(nconf.ndpEmulation())) {
-			const InetAddress sixpl(InetAddress::makeIpv66plane(nconf.networkId,nconf.issuedTo.toInt()));
-			for(unsigned int i=0;i<nconf.staticIpCount;++i) {
-				if (nconf.staticIps[i].ipsEqual(sixpl)) {
-					bool prefixMatches = true;
-					for(unsigned int j=0;j<5;++j) { // check for match on /40
-						if ((((const struct sockaddr_in6 *)&ip)->sin6_addr.s6_addr)[j] != (((const struct sockaddr_in6 *)&sixpl)->sin6_addr.s6_addr)[j]) {
-							prefixMatches = false;
-							break;
-						}
-					}
-					if (prefixMatches)
-						return true;
-					break;
+		if (!(ip.isV6() && nconf.ndpEmulation())) return false;
+		const InetAddress sixplane(InetAddress::makeIpv66plane(nconf.networkId, nconf.issuedTo.toInt()));
+		const InetAddress rfc4193(InetAddress::makeIpv6rfc4193(nconf.networkId, nconf.issuedTo.toInt()));
+		for (unsigned int i = 0; i < nconf.staticIpCount; ++i) {
+			bool prefixMatches = false;
+			// For 6plane addresses we only need to check the first 80 bits, since 6plane is mainly
+			// designed to delegate that address space to docker containers running on that node
+			if (nconf.staticIps[i].ipsEqual(sixplane)) {
+				if (sixplane.ipsEqual(ip)) return true;
+				for (unsigned int j = 0; j < 10; ++j) {	// check for match on /80
+					if (prefixMatches = (((const struct sockaddr_in6 *)&ip)->sin6_addr.s6_addr)[i] !=
+						(((const struct sockaddr_in6 *)&sixplane)->sin6_addr.s6_addr)[i]) break;
 				}
 			}
-
-			const InetAddress rfc4193(InetAddress::makeIpv6rfc4193(nconf.networkId,nconf.issuedTo.toInt()));
-			for(unsigned int i=0;i<nconf.staticIpCount;++i) {
-				if (nconf.staticIps[i].ipsEqual(rfc4193)) {
-					bool prefixMatches = true;
-					for(unsigned int j=0;j<11;++j) { // check for match on /88
-						if ((((const struct sockaddr_in6 *)&ip)->sin6_addr.s6_addr)[j] != (((const struct sockaddr_in6 *)&rfc4193)->sin6_addr.s6_addr)[j]) {
-							prefixMatches = false;
-							break;
-						}
-					}
-					if (prefixMatches)
-						return true;
-					break;
-				}
-			}
+			if (prefixMatches || nconf.staticIps[i].ipsEqual(rfc4193)) return true;
 		}
 		return false;
 	}
