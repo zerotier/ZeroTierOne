@@ -30,6 +30,16 @@ then
   mkztfile identity.secret 0600 "$ZEROTIER_IDENTITY_SECRET"
 fi
 
+mkztfile zerotier-one.port 0600 "9993"
+
+killzerotier() {
+  echo "Killing zerotier"
+  kill $(cat /var/lib/zerotier-one/zerotier-one.pid)  
+  exit 0
+}
+
+trap killzerotier INT TERM
+
 echo "starting zerotier"
 setsid /usr/sbin/zerotier-one &
 
