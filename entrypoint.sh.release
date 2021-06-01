@@ -1,7 +1,7 @@
 #!/bin/sh
 
 grepzt() {
-  (find /proc -name exe | xargs -I{} readlink {}) 2>/dev/null | grep -q zerotier-one
+  [ ! -n "$(cat /var/lib/zerotier-one/zerotier-one.pid)" -a -d "/proc/$(cat /var/lib/zerotier-one/zerotier-one.pid)" ]
   return $?
 }
 
@@ -41,7 +41,7 @@ killzerotier() {
 trap killzerotier INT TERM
 
 echo "starting zerotier"
-setsid /usr/sbin/zerotier-one &
+nohup /usr/sbin/zerotier-one &
 
 while ! grepzt
 do
