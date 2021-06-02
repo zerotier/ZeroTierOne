@@ -147,8 +147,8 @@ protected:
 		std::mutex lock;
 	};
 
-	void _memberChanged(nlohmann::json &old,nlohmann::json &memberConfig,bool notifyListeners);
-	void _networkChanged(nlohmann::json &old,nlohmann::json &networkConfig,bool notifyListeners);
+	virtual void _memberChanged(nlohmann::json &old,nlohmann::json &memberConfig,bool notifyListeners);
+	virtual void _networkChanged(nlohmann::json &old,nlohmann::json &networkConfig,bool notifyListeners);
 	void _fillSummaryInfo(const std::shared_ptr<_Network> &nw,NetworkSummaryInfo &info);
 
 	std::vector<DB::ChangeListener *> _changeListeners;
