@@ -66,7 +66,9 @@ class PostgreSQL;
 class MemberNotificationReceiver : public pqxx::notification_receiver {
 public: 
 	MemberNotificationReceiver(PostgreSQL *p, pqxx::connection &c, const std::string &channel);
-	virtual ~MemberNotificationReceiver() {}
+	virtual ~MemberNotificationReceiver() {
+		fprintf(stderr, "MemberNotificationReceiver destroyed\n");
+	}
 
 	virtual void operator() (const std::string &payload, int backendPid);
 private:
@@ -76,7 +78,9 @@ private:
 class NetworkNotificationReceiver : public pqxx::notification_receiver {
 public:
 	NetworkNotificationReceiver(PostgreSQL *p, pqxx::connection &c, const std::string &channel);
-	virtual ~NetworkNotificationReceiver() {};
+	virtual ~NetworkNotificationReceiver() {
+		fprintf(stderr, "NetworkNotificationReceiver destroyed\n");
+	};
 
 	virtual void operator() (const std::string &payload, int packend_pid);
 private:
