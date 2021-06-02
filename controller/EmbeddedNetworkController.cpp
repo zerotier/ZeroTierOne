@@ -1326,7 +1326,7 @@ void EmbeddedNetworkController::_request(
 	}
 
 	
-	int64_t authenticationExpiryTime = 0;
+	int64_t authenticationExpiryTime = -1;
 	if (!member["authenticationExpiryTime"].is_null()) {
 		authenticationExpiryTime = member["authenticationExpiryTime"];
 	}
