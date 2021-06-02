@@ -643,7 +643,7 @@ void PostgreSQL::initializeMembers()
 			}
 
 			_memberChanged(empty, config, false);
-			fprintf(stderr, "Initiialzed member %s-%s", networkId.c_str(), memberId.c_str());
+			fprintf(stderr, "Initialzed member %s-%s\n", networkId.c_str(), memberId.c_str());
 		}
 
 		w.commit();
