@@ -1325,8 +1325,16 @@ void EmbeddedNetworkController::_request(
 		member["lastAuthorizedCredential"] = autoAuthCredential;
 	}
 
-	const int64_t authenticationExpiryTime = member["authenticationExpiryTime"];
-	const std::string authenticationURL = member["authenticationURL"];
+	
+	int64_t authenticationExpiryTime = 0;
+	if (!member["authenticationExpiryTime"].is_null()) {
+		authenticationExpiryTime = member["authenticationExpiryTime"];
+	}
+
+	std::string authenticationURL = "";
+	if (!member["authenticationURL"].is_null()) {
+		authenticationURL = member["authenticationURL"];
+	}
 
 	if (authorized) {
 		// Update version info and meta-data if authorized and if this is a genuine request
