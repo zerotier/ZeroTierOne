@@ -369,10 +369,12 @@ void PostgreSQL::updateMemberOnLoad(const uint64_t networkId, const uint64_t mem
 
 				member["authenticationExpiryTime"] = authentication_expiry_time;
 				member["authenticationURL"] = authenticationURL;
-			}
+			} 
+		} else {
+			member["authenticationExpiryTime"] = -1LL;
+			member["authenticationURL"] = "";
 		}
 
-		w.commit();
 		_pool->unborrow(c);
 
 	} catch (sw::redis::Error &e) {
