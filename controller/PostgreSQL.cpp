@@ -1224,7 +1224,9 @@ void PostgreSQL::onlineNotification_Postgres()
 			memberUpdate << "INSERT INTO ztc_member_status (network_id, member_id, address, last_updated) VALUES ";
 			bool firstRun = true;
 			bool memberAdded = false;
+			int updateCount = 0;
 			for (auto i=lastOnline.begin(); i != lastOnline.end(); ++i) {
+				updateCount += 1;
 				uint64_t nwid_i = i->first.first;
 				char nwidTmp[64];
 				char memTmp[64];
@@ -1275,8 +1277,12 @@ void PostgreSQL::onlineNotification_Postgres()
 			memberUpdate << " ON CONFLICT (network_id, member_id) DO UPDATE SET address = EXCLUDED.address, last_updated = EXCLUDED.last_updated;";
 
 			if (memberAdded) {
+				fprintf(stderr, "%s\n", memberUpdate.str().c_str());
 				pqxx::result res = w.exec0(memberUpdate.str());
+				w.commit();
 			}
+			fprintf(stderr, "Updated online status of %d members\n", updateCount);
+			_pool->unborrow(c);
 		} catch (std::exception &e) {
 			fprintf(stderr, "%s: error in onlinenotification thread: %s\n", _myAddressStr.c_str(), e.what());
 		}
