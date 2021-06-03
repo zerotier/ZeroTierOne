@@ -125,6 +125,18 @@ bool DBMirrorSet::get(const uint64_t networkId,nlohmann::json &network,std::vect
 	return false;
 }
 
+std::string DBMirrorSet::getSSOAuthURL(const nlohmann::json &member) 
+{
+	std::lock_guard<std::mutex> l(_dbs_l);
+	for(auto d=_dbs.begin();d!=_dbs.end();++d) { 
+		std::string url = (*d)->getSSOAuthURL(member);
+		if (!url.empty()) {
+			return url;
+		}
+	}
+	return "";
+}
+
 void DBMirrorSet::networks(std::set<uint64_t> &networks)
 {
 	std::lock_guard<std::mutex> l(_dbs_l);

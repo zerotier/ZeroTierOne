@@ -1325,17 +1325,12 @@ void EmbeddedNetworkController::_request(
 		member["lastAuthorizedCredential"] = autoAuthCredential;
 	}
 
-	
-	int64_t authenticationExpiryTime = -1;
-	if (!member["authenticationExpiryTime"].is_null()) {
-		authenticationExpiryTime = member["authenticationExpiryTime"];
-	}
 
-	std::string authenticationURL = "";
-	if (!member["authenticationURL"].is_null()) {
-		authenticationURL = member["authenticationURL"];
-	}
-
+	// Should we check SSO Stuff?
+	// If network is configured with SSO, and the member is not marked exempt: yes
+	// Otherwise no, we use standard auth logic.
+	bool networkSSOEnabled = OSUtils::jsonBool(network["ssoEnabled"], false);
+	bool memberSSOExempt = OSUtils::jsonBool(member["ssoExempt"], false);
 	if (authorized) {
 		// Update version info and meta-data if authorized and if this is a genuine request
 		if (requestPacketId) {
@@ -1361,14 +1356,20 @@ void EmbeddedNetworkController::_request(
 				ms.identity = identity;
 			}
 		}
-
-		if ((authenticationExpiryTime >= 0)&&(authenticationExpiryTime < now)) {
-			Dictionary<1024> authInfo;
-			if (!authenticationURL.empty())
-				authInfo.add("aU", authenticationURL.c_str());
-			_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_AUTHENTICATION_REQUIRED, authInfo.data(), authInfo.sizeBytes());
-			return;
+		
+		if (networkSSOEnabled && !memberSSOExempt) {
+			int64_t authenticationExpiryTime = (int64_t)OSUtils::jsonInt(member["authenticationExpiryTime"], 0);
+			if ((authenticationExpiryTime == 0) || (authenticationExpiryTime < now)) {
+				Dictionary<1024> authInfo;
+				std::string authenticationURL = _db.getSSOAuthURL(member);
+				if (!authenticationURL.empty()) {
+					authInfo.add("aU", authenticationURL.c_str());
+				}
+				_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_AUTHENTICATION_REQUIRED, authInfo.data(), authInfo.sizeBytes());
+				return;
+			}
 		}
+		
 	} else {
 		// If they are not authorized, STOP!
 		DB::cleanMember(member);
@@ -1406,8 +1407,11 @@ void EmbeddedNetworkController::_request(
 	Utils::scopy(nc->name,sizeof(nc->name),OSUtils::jsonString(network["name"],"").c_str());
 	nc->mtu = std::max(std::min((unsigned int)OSUtils::jsonInt(network["mtu"],ZT_DEFAULT_MTU),(unsigned int)ZT_MAX_MTU),(unsigned int)ZT_MIN_MTU);
 	nc->multicastLimit = (unsigned int)OSUtils::jsonInt(network["multicastLimit"],32ULL);
-	Utils::scopy(nc->authenticationURL, sizeof(nc->authenticationURL), authenticationURL.c_str());
-	nc->authenticationExpiryTime = authenticationExpiryTime;
+
+	// TODO:  Decide what to do with these, or if to remove them
+	// they don't make sense here as is.
+	// Utils::scopy(nc->authenticationURL, sizeof(nc->authenticationURL), authenticationURL.c_str());
+	// nc->authenticationExpiryTime = authenticationExpiryTime;
 
 	std::string rtt(OSUtils::jsonString(member["remoteTraceTarget"],""));
 	if (rtt.length() == 10) {

@@ -49,6 +49,9 @@ void DB::initNetwork(nlohmann::json &network)
 		}};
 	}
 	if (!network.count("dns")) network["dns"] = nlohmann::json::array();
+	if (!network.count("ssoEnabled")) network["ssoEnabled"] = false;
+	if (!network.count("clientId")) network["clientId"] = "";
+	if (!network.count("authorizationEndpoint")) network["authorizationEndpoint"] = "";
 
 	network["objtype"] = "network";
 }
@@ -136,7 +139,6 @@ bool DB::get(const uint64_t networkId,nlohmann::json &network,const uint64_t mem
 		if (m == nw->members.end())
 			return false;
 		member = m->second;
-		updateMemberOnLoad(networkId, memberId, member);
 	}
 	return true;
 }
@@ -160,7 +162,6 @@ bool DB::get(const uint64_t networkId,nlohmann::json &network,const uint64_t mem
 		if (m == nw->members.end())
 			return false;
 		member = m->second;
-		updateMemberOnLoad(networkId, memberId, member);
 	}
 	return true;
 }
@@ -181,7 +182,6 @@ bool DB::get(const uint64_t networkId,nlohmann::json &network,std::vector<nlohma
 		network = nw->config;
 		for(auto m=nw->members.begin();m!=nw->members.end();++m) {
 			members.push_back(m->second);
-			updateMemberOnLoad(networkId, m->first, members.back());
 		}
 	}
 	return true;
