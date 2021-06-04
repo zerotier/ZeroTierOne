@@ -418,8 +418,8 @@ void PostgreSQL::initializeNetworks()
 		fprintf(stderr, "Initializing Networks...\n");
 		auto c = _pool->borrow();
 		pqxx::work w{*c->c};
-		pqxx::result r = w.exec_params("SELECT id, EXTRACT(EPOCH FROM creation_time AT TIME ZONE 'UTC')*1000 as creation_time, capabilities, "
-			"enable_broadcast, EXTRACT(EPOCH FROM last_modified AT TIME ZONE 'UTC')*1000 AS last_modified, mtu, multicast_limit, name, private, remote_trace_level, "
+		pqxx::result r = w.exec_params("SELECT id, (EXTRACT(EPOCH FROM creation_time AT TIME ZONE 'UTC')*1000)::bigint as creation_time, capabilities, "
+			"enable_broadcast, (EXTRACT(EPOCH FROM last_modified AT TIME ZONE 'UTC')*1000)::bigint AS last_modified, mtu, multicast_limit, name, private, remote_trace_level, "
 			"remote_trace_target, revision, rules, tags, v4_assign_mode, v6_assign_mode, sso_enabled FROM ztc_network "
 			"WHERE deleted = false AND controller_id = $1", _myAddressStr);
 
