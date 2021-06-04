@@ -34,6 +34,7 @@ COPY --from=builder /usr/local/lib64/libpqxx.so /usr/local/lib64/libpqxx.so
 COPY --from=builder /usr/local/lib64/libpqxx.a /usr/local/lib64/libpqxx.a
 COPY --from=builder /ZeroTierOne/zerotier-one /usr/local/bin/zerotier-one
 RUN chmod a+x /usr/local/bin/zerotier-one
+RUN echo "/usr/local/lib64" > /etc/ld.so.conf.d/usr-local-lib64.conf && ldconfig
 
 ADD ext/central-controller-docker/main.sh /
 RUN chmod a+x /main.sh
