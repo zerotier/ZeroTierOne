@@ -1336,7 +1336,7 @@ void EmbeddedNetworkController::_request(
 		std::string memberId = member["id"];
 		fprintf(stderr, "ssoEnabled && !ssoExempt %s-%s\n", nwids, memberId.c_str());
 		int64_t authenticationExpiryTime = (int64_t)OSUtils::jsonInt(member["authenticationExpiryTime"], 0);
-		fprintf(stder, "authExpiryTime: %l\n", authenticationExpiryTime);
+		fprintf(stderr, "authExpiryTime: %l\n", authenticationExpiryTime);
 		if ((authenticationExpiryTime == 0) || (authenticationExpiryTime < now)) {
 
 			Dictionary<1024> authInfo;

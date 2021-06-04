@@ -197,7 +197,6 @@ void DB::networks(std::set<uint64_t> &networks)
 
 void DB::_memberChanged(nlohmann::json &old,nlohmann::json &memberConfig,bool notifyListeners)
 {
-	fprintf(stderr, "DB::_memberChanged\n");
 	uint64_t memberId = 0;
 	uint64_t networkId = 0;
 	bool isAuth = false;
@@ -313,7 +312,6 @@ void DB::_memberChanged(nlohmann::json &old,nlohmann::json &memberConfig,bool no
 
 void DB::_networkChanged(nlohmann::json &old,nlohmann::json &networkConfig,bool notifyListeners)
 {
-	fprintf(stderr, "DB::_networkChanged\n");
 	if (networkConfig.is_object()) {
 		const std::string ids = networkConfig["id"];
 		const uint64_t networkId = Utils::hexStrToU64(ids.c_str());

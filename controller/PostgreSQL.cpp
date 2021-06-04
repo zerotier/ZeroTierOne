@@ -332,7 +332,7 @@ std::string PostgreSQL::getSSOAuthURL(const nlohmann::json &member)
 
 		// find an unused nonce, if one exists.
 		pqxx::result r = w.exec_params("SELECT nonce FROM ztc_sso_expiry "
-			"WHERE network_id = $1 AND member_id = $2 AND "
+			"WHERE network_id = $1 AND member_id = $2 "
 			"AND authentication_expiry_time IS NULL AND ((NOW() AT TIME ZONE 'UTC') <= nonce_expiry",
 			networkId, memberId);
 
@@ -544,7 +544,6 @@ void PostgreSQL::initializeNetworks()
 			}
 
 			_networkChanged(empty, config, false);
-			fprintf(stderr, "Initialized Network: %s\n", nwid.c_str());
 		}
 
 		w.commit();
@@ -706,7 +705,6 @@ void PostgreSQL::initializeMembers()
 			}
 
 			_memberChanged(empty, config, false);
-			fprintf(stderr, "Initialzed member %s-%s\n", networkId.c_str(), memberId.c_str());
 		}
 
 		w.commit();
