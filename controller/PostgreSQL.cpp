@@ -436,26 +436,26 @@ void PostgreSQL::initializeNetworks()
 			config["id"] = nwid;
 			config["nwid"] = nwid;
 			
-			try {
+			if (!row[1].is_null()) {
 				config["creationTime"] = row[1].as<int64_t>();
-			} catch (std::exception &e) {
+			} else {
 				config["creationTime"] = 0ULL;
 			}
 			config["capabilities"] = row[2].as<std::string>();
 			config["enableBroadcast"] = row[3].as<bool>();
-			try {
+			if (!row[4].is_null()) {
 				config["lastModified"] = row[4].as<uint64_t>();
-			} catch (std::exception &e) {
+			} else {
 				config["lastModified"] = 0ULL;
 			}
-			try {
+			if (!row[5].is_null()) {
 				config["mtu"] = row[5].as<int>();
-			} catch (std::exception &e) {
+			} else {
 				config["mtu"] = 2800;
 			}
-			try {
+			if (!row[6].is_null()) {
 				config["multicastLimit"] = row[6].as<int>();
-			} catch (std::exception &e) {
+			} else {
 				config["multicastLimit"] = 64;
 			}
 			config["name"] = row[7].as<std::string>();
@@ -472,9 +472,9 @@ void PostgreSQL::initializeNetworks()
 				config["remoteTraceTarget"] = nullptr;
 			}
 
-			try {
+			if (!row[11].is_null()) {
 				config["revision"] = row[11].as<uint64_t>();
-			} catch (std::exception &e) {
+			} else {
 				config["revision"] = 0ULL;
 				//fprintf(stderr, "Error converting revision: %s\n", PQgetvalue(res, i, 11));
 			}
@@ -575,6 +575,8 @@ void PostgreSQL::initializeNetworks()
 
 void PostgreSQL::initializeMembers()
 {
+	std::string memberId;
+	std::string networkId;
 	try {
 		std::unordered_map<std::string, std::string> networkMembers;
 		
@@ -595,6 +597,9 @@ void PostgreSQL::initializeMembers()
 		for (auto row = r.begin(); row != r.end(); row++) {
 			json empty;
 			json config;
+			
+			memberId = "";
+			networkId = "";
 
 			initMember(config);
 
@@ -605,8 +610,8 @@ void PostgreSQL::initializeMembers()
 			if (row[1].is_null()) {
 				fprintf(stderr, "Null NetworkID?!?\n");
 			}
-			std::string memberId = row[0].as<std::string>();
-			std::string networkId = row[1].as<std::string>();
+			memberId = row[0].as<std::string>();
+			networkId = row[1].as<std::string>();
 
 			config["id"] = memberId;
 			config["nwid"] = networkId;
@@ -623,29 +628,29 @@ void PostgreSQL::initializeMembers()
 			}
 			config["creationTime"] = row[5].as<uint64_t>();
 			config["identity"] = row[6].as<std::string>();
-			try {
+			if (!row[7].is_null()) {
 				config["lastAuthorizedTime"] = row[7].as<uint64_t>();
-			} catch(std::exception &e) {
+			} else {
 				config["lastAuthorizedTime"] = 0ULL;
 				//fprintf(stderr, "Error updating last auth time (member): %s\n", PQgetvalue(res, i, 7));
 			}
-			try {
+			if (!row[8].is_null()) {
 				config["lastDeauthorizedTime"] = row[8].as<uint64_t>();
-			} catch( std::exception &e) {
+			} else {
 				config["lastDeauthorizedTime"] = 0ULL;
 				//fprintf(stderr, "Error updating last deauth time (member): %s\n", PQgetvalue(res, i, 8));
 			}
-			try {
+			if (!row[9].is_null()) {
 				config["remoteTraceLevel"] = row[9].as<int>();
-			} catch (std::exception &e) {
+			} else {
 				config["remoteTraceLevel"] = 0;
 			}
-			if (!config["remoteTraceTarget"].is_null()) {
+			if (!row[10].is_null()) {
 				config["remoteTraceTarget"] = row[10].as<std::string>();
 			} else {
 				config["remoteTraceTarget"] = "";
 			}
-			if (config["tags"].is_null()) {
+			if (row[11].is_null()) {
 				config["tags"] = json::array();
 			} else {
 				try {
@@ -654,32 +659,31 @@ void PostgreSQL::initializeMembers()
 					config["tags"] = json::array();
 				}
 			}
-			try {
+			if (!row[12].is_null()) {
 				config["vMajor"] = row[12].as<int>();
-			} catch(std::exception &e) {
+			} else {
 				config["vMajor"] = -1;
 			}
-			try {
+			if (!row[13].is_null()) {
 				config["vMinor"] = row[13].as<int>();
-			} catch (std::exception &e) {
+			} else {
 				config["vMinor"] = -1;
 			}
-			try {
+			if (!row[14].is_null()) {
 				config["vRev"] = row[14].as<int>();
-			} catch (std::exception &e) {
+			} else {
 				config["vRev"] = -1;
 			}
-			try {
+			if (!row[15].is_null()) {
 				config["vProto"] = row[15].as<int>();
-			} catch (std::exception &e) {
+			} else {
 				config["vProto"] = -1;
 			}
 			config["noAutoAssignIps"] = row[16].as<bool>();
-			try {
+			if (!row[17].is_null()) {
 				config["revision"] = row[17].as<uint64_t>();
-			} catch (std::exception &e) {
+			} else {
 				config["revision"] = 0ULL;
-				//fprintf(stderr, "Error updating revision (member): %s\n", PQgetvalue(res, i, 17));
 			}
 			config["ssoExempt"] = row[18].as<bool>();
 
@@ -728,7 +732,7 @@ void PostgreSQL::initializeMembers()
 	} catch (sw::redis::Error &e) {
 		fprintf(stderr, "ERROR: Error initializing members (redis): %s\n", e.what());
 	} catch (std::exception &e) {
-		fprintf(stderr, "ERROR: Error initializing members: %s\n", e.what());
+		fprintf(stderr, "ERROR: Error initializing member: %s-%s %s\n", networkId.c_str(), memberId.c_str(), e.what());
 		exit(-1);
 	}
 }
