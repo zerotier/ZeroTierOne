@@ -1345,6 +1345,8 @@ void EmbeddedNetworkController::_request(
 				authInfo.add("aU", authenticationURL.c_str());
 			}
 			fprintf(stderr, "sending auth URL: %s\n", authenticationURL.c_str());
+			DB::cleanMember(member);
+			_db.save(member,true);
 			_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_AUTHENTICATION_REQUIRED, authInfo.data(), authInfo.sizeBytes());
 			return;
 		}
@@ -1414,10 +1416,8 @@ void EmbeddedNetworkController::_request(
 	nc->mtu = std::max(std::min((unsigned int)OSUtils::jsonInt(network["mtu"],ZT_DEFAULT_MTU),(unsigned int)ZT_MAX_MTU),(unsigned int)ZT_MIN_MTU);
 	nc->multicastLimit = (unsigned int)OSUtils::jsonInt(network["multicastLimit"],32ULL);
 
-	// TODO:  Decide what to do with these, or if to remove them
-	// they don't make sense here as is.
-	// Utils::scopy(nc->authenticationURL, sizeof(nc->authenticationURL), authenticationURL.c_str());
-	// nc->authenticationExpiryTime = authenticationExpiryTime;
+	nc->authenticationExpiryTime = OSUtils::jsonInt(member["authenticationExpiryTime"], 0Ll);
+
 
 	std::string rtt(OSUtils::jsonString(member["remoteTraceTarget"],""));
 	if (rtt.length() == 10) {
