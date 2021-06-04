@@ -699,6 +699,8 @@ void PostgreSQL::initializeMembers()
 			if (authRes.size() == 1 && !authRes.at(0)[0].is_null()) {
 				// there is an expiry time record
 				config["authenticationExpiryTime"] = authRes.at(0)[0].as<int64_t>();
+			} else {
+				config["authenticationExpiryTime"] = 0;
 			}
 
 			config["objtype"] = "member";
