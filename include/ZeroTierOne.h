@@ -1348,7 +1348,7 @@ typedef struct
 	/**
 	 * If the status us AUTHENTICATION_REQUIRED, this may contain a URL for authentication.
 	 */
-	char authenticationURL[256];
+	char authenticationURL[2048];
 
 	/**
 	 * Time that current authentication expires or -1 if external authentication is not required.
