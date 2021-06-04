@@ -354,6 +354,8 @@ std::string PostgreSQL::getSSOAuthURL(const nlohmann::json &member)
 					"(nonce, nonce_expiration, network_id, member_id) VALUES "
 					"($1, TO_TIMESTAMP($2::double precision/1000), $3, $4)",
 					nonce, OSUtils::now() + 300000, networkId, memberId);
+
+				w.commit();
 			}  else {
 				// > 1 ?!?  Thats an error!
 				fprintf(stderr, "> 1 unused nonce!\n");
@@ -372,9 +374,11 @@ std::string PostgreSQL::getSSOAuthURL(const nlohmann::json &member)
 				authorization_endpoint = r.at(0)[1].as<std::string>();
 			} else if (r.size() > 1) {
 				fprintf(stderr, "ERROR: More than one auth endpoint for an organization?!?!? NetworkID: %s\n", networkId.c_str());
+			} else {
+				fprintf(stderr, "No client or auth endpoint?!?\n");
 			}
-			// no catch all else because we don't actually care if no records exist here. just continue as normal.
 
+			// no catch all else because we don't actually care if no records exist here. just continue as normal.
 			if ((!client_id.empty())&&(!authorization_endpoint.empty())) {
 				have_auth = true;
 
@@ -391,7 +395,9 @@ std::string PostgreSQL::getSSOAuthURL(const nlohmann::json &member)
 					nonce.c_str(),
 					state_hex,
 					client_id.c_str());
-			} 
+			}  else {
+				fprintf(stderr, "client_id: %s\nauthorization_endpoint: %s\n", client_id.c_str(), authorization_endpoint.c_str());
+			}
 		}
 
 		_pool->unborrow(c);
