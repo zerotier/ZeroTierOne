@@ -696,7 +696,7 @@ void PostgreSQL::initializeMembers()
 				"WHERE e.network_id = $1 AND e.member_id = $2 AND n.sso_enabled = TRUE "
 				"ORDER BY e.authentication_expiry_time LIMIT 1", networkId, memberId);
 			
-			if (authRes.size() == 1) {
+			if (authRes.size() == 1 && !authRes.at(0)[0].is_null()) {
 				// there is an expiry time record
 				config["authenticationExpiryTime"] = authRes.at(0)[0].as<int64_t>();
 			}
