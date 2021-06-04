@@ -1333,13 +1333,18 @@ void EmbeddedNetworkController::_request(
 	bool memberSSOExempt = OSUtils::jsonBool(member["ssoExempt"], false);
 
 	if (networkSSOEnabled && !memberSSOExempt) {
+		std::string memberId = member["id"];
+		fprintf(stderr, "ssoEnabled && !ssoExempt %s-%s\n", nwids, memberId.c_str());
 		int64_t authenticationExpiryTime = (int64_t)OSUtils::jsonInt(member["authenticationExpiryTime"], 0);
+		fprintf(stder, "authExpiryTime: %l\n", authenticationExpiryTime);
 		if ((authenticationExpiryTime == 0) || (authenticationExpiryTime < now)) {
+
 			Dictionary<1024> authInfo;
 			std::string authenticationURL = _db.getSSOAuthURL(member);
 			if (!authenticationURL.empty()) {
 				authInfo.add("aU", authenticationURL.c_str());
 			}
+			fprintf(stderr, "sending auth URL: %s\n", authenticationURL.c_str());
 			_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_AUTHENTICATION_REQUIRED, authInfo.data(), authInfo.sizeBytes());
 			return;
 		}
