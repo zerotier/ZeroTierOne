@@ -590,6 +590,13 @@ void PostgreSQL::initializeMembers()
 
 			initMember(config);
 
+			if (row[0].is_null()) {
+				fprintf(stderr, "Null memberID?!?\n");
+				continue;
+			}			
+			if (row[1].is_null()) {
+				fprintf(stderr, "Null NetworkID?!?\n");
+			}
 			std::string memberId = row[0].as<std::string>();
 			std::string networkId = row[1].as<std::string>();
 
@@ -625,11 +632,19 @@ void PostgreSQL::initializeMembers()
 			} catch (std::exception &e) {
 				config["remoteTraceLevel"] = 0;
 			}
-			config["remoteTraceTarget"] = row[10].as<std::string>();
-			try {
-				config["tags"] = json::parse(row[11].as<std::string>());
-			} catch (std::exception &e) {
+			if (!config["remoteTraceTarget"].is_null()) {
+				config["remoteTraceTarget"] = row[10].as<std::string>();
+			} else {
+				config["remoteTraceTarget"] = "";
+			}
+			if (config["tags"].is_null()) {
 				config["tags"] = json::array();
+			} else {
+				try {
+					config["tags"] = json::parse(row[11].as<std::string>());
+				} catch (std::exception &e) {
+					config["tags"] = json::array();
+				}
 			}
 			try {
 				config["vMajor"] = row[12].as<int>();
