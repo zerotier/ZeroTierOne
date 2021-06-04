@@ -70,7 +70,7 @@ void DB::initMember(nlohmann::json &member)
 	if (!member.count("lastAuthorizedTime")) member["lastAuthorizedTime"] = 0ULL;
 	if (!member.count("lastAuthorizedCredentialType")) member["lastAuthorizedCredentialType"] = nlohmann::json();
 	if (!member.count("lastAuthorizedCredential")) member["lastAuthorizedCredential"] = nlohmann::json();
-	if (!member.count("authenticationExpiryTime")) member["authenticationExpiryTime"] = -1LL;
+	if (!member.count("authenticationExpiryTime")) member["authenticationExpiryTime"] = 0LL;
 	if (!member.count("vMajor")) member["vMajor"] = -1;
 	if (!member.count("vMinor")) member["vMinor"] = -1;
 	if (!member.count("vRev")) member["vRev"] = -1;
