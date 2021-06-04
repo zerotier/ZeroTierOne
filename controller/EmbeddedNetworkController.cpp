@@ -1340,7 +1340,7 @@ void EmbeddedNetworkController::_request(
 		if ((authenticationExpiryTime == 0) || (authenticationExpiryTime < now)) {
 			std::string authenticationURL = _db.getSSOAuthURL(member);
 			if (!authenticationURL.empty()) {
-				Dictionary<1024> authInfo;
+				Dictionary<3072> authInfo;
 				authInfo.add("aU", authenticationURL.c_str());
 				fprintf(stderr, "sending auth URL: %s\n", authenticationURL.c_str());
 				DB::cleanMember(member);

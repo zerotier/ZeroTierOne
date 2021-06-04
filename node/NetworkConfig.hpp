@@ -612,7 +612,7 @@ public:
 	/**
 	 * Authentication URL if authentication is required
 	 */
-	char authenticationURL[256];
+	char authenticationURL[2048];
 
 	/**
 	 * Time current authentication expires or -1 if external authentication is disabled
