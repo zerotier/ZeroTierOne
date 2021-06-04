@@ -388,7 +388,7 @@ std::string PostgreSQL::getSSOAuthURL(const nlohmann::json &member, const std::s
 				Utils::hex(state, 48, state_hex);
 				
 				OSUtils::ztsnprintf(authenticationURL, sizeof(authenticationURL),
-					"%s?response_type=id_token&response_mode=form_post&scope=openid+email+profile&redriect_uri=%s&nonce=%s&state=%s&client_id=%s",
+					"%s?response_type=id_token&response_mode=form_post&scope=openid+email+profile&redirect_uri=%s&nonce=%s&state=%s&client_id=%s",
 					authorization_endpoint.c_str(),
 					redirectURL.c_str(),
 					nonce.c_str(),
