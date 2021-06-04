@@ -1338,17 +1338,16 @@ void EmbeddedNetworkController::_request(
 		int64_t authenticationExpiryTime = (int64_t)OSUtils::jsonInt(member["authenticationExpiryTime"], 0);
 		fprintf(stderr, "authExpiryTime: %lld\n", authenticationExpiryTime);
 		if ((authenticationExpiryTime == 0) || (authenticationExpiryTime < now)) {
-
-			Dictionary<1024> authInfo;
 			std::string authenticationURL = _db.getSSOAuthURL(member);
 			if (!authenticationURL.empty()) {
+				Dictionary<1024> authInfo;
 				authInfo.add("aU", authenticationURL.c_str());
+				fprintf(stderr, "sending auth URL: %s\n", authenticationURL.c_str());
+				DB::cleanMember(member);
+				_db.save(member,true);
+				_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_AUTHENTICATION_REQUIRED, authInfo.data(), authInfo.sizeBytes());
+				return;
 			}
-			fprintf(stderr, "sending auth URL: %s\n", authenticationURL.c_str());
-			DB::cleanMember(member);
-			_db.save(member,true);
-			_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_AUTHENTICATION_REQUIRED, authInfo.data(), authInfo.sizeBytes());
-			return;
 		}
 	}
 
