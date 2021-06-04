@@ -309,7 +309,7 @@ void PostgreSQL::nodeIsOnline(const uint64_t networkId, const uint64_t memberId,
 	}
 }
 
-std::string PostgreSQL::getSSOAuthURL(const nlohmann::json &member)
+std::string PostgreSQL::getSSOAuthURL(const nlohmann::json &member, const std::string &redirectURL)
 {
 	// NONCE is just a random character string.  no semantic meaning
 	// state = HMAC SHA384 of Nonce based on shared sso key
@@ -387,11 +387,10 @@ std::string PostgreSQL::getSSOAuthURL(const nlohmann::json &member)
 				char state_hex[256];
 				Utils::hex(state, 48, state_hex);
 				
-				const char *redirect_url = "https%3A%2F%2Fmy.zerotier.com%2Fapi%2Fnetwork%2Fsso-auth"; // TODO: this should be configurable
 				OSUtils::ztsnprintf(authenticationURL, sizeof(authenticationURL),
 					"%s?response_type=id_token&response_mode=form_post&scope=openid+email+profile&redriect_uri=%s&nonce=%s&state=%s&client_id=%s",
 					authorization_endpoint.c_str(),
-					redirect_url,
+					redirectURL.c_str(),
 					nonce.c_str(),
 					state_hex,
 					client_id.c_str());

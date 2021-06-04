@@ -28,6 +28,9 @@
 #include <map>
 #include <thread>
 #include <memory>
+#include <iomanip>
+#include <sstream>
+#include <cctype>
 
 #include "../include/ZeroTierOne.h"
 #include "../version.h"
@@ -59,6 +62,29 @@ using json = nlohmann::json;
 namespace ZeroTier {
 
 namespace {
+
+std::string url_encode(const std::string &value) {
+    std::ostringstream escaped;
+    escaped.fill('0');
+    escaped << std::hex;
+
+    for (std::string::const_iterator i = value.begin(), n = value.end(); i != n; ++i) {
+        std::string::value_type c = (*i);
+
+        // Keep alphanumeric and other accepted characters intact
+        if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
+            escaped << c;
+            continue;
+        }
+
+        // Any other characters are percent-encoded
+        escaped << std::uppercase;
+        escaped << '%' << std::setw(2) << int((unsigned char) c);
+        escaped << std::nouppercase;
+    }
+
+    return escaped.str();
+}
 
 static json _renderRule(ZT_VirtualNetworkRule &rule)
 {
@@ -474,6 +500,10 @@ EmbeddedNetworkController::~EmbeddedNetworkController()
 	_queue.stop();
 	for(auto t=_threads.begin();t!=_threads.end();++t)
 		t->join();
+}
+
+void EmbeddedNetworkController::setSSORedirectURL(const std::string &url) {
+	_ssoRedirectURL = url_encode(url);
 }
 
 void EmbeddedNetworkController::init(const Identity &signingId,Sender *sender)
@@ -1338,7 +1368,7 @@ void EmbeddedNetworkController::_request(
 		int64_t authenticationExpiryTime = (int64_t)OSUtils::jsonInt(member["authenticationExpiryTime"], 0);
 		fprintf(stderr, "authExpiryTime: %lld\n", authenticationExpiryTime);
 		if ((authenticationExpiryTime == 0) || (authenticationExpiryTime < now)) {
-			std::string authenticationURL = _db.getSSOAuthURL(member);
+			std::string authenticationURL = _db.getSSOAuthURL(member, _ssoRedirectURL);
 			if (!authenticationURL.empty()) {
 				Dictionary<3072> authInfo;
 				authInfo.add("aU", authenticationURL.c_str());

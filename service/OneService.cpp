@@ -575,6 +575,7 @@ public:
 	Mutex _run_m;
 
 	RedisConfig *_rc;
+	std::string _ssoRedirectURL;
 
 	// end member variables ----------------------------------------------------
 
@@ -612,6 +613,7 @@ public:
 #endif
 		,_run(true)
 		,_rc(NULL)
+		,_ssoRedirectURL()
 	{
 		_ports[0] = 0;
 		_ports[1] = 0;
@@ -790,6 +792,9 @@ public:
 
 			// Network controller is now enabled by default for desktop and server
 			_controller = new EmbeddedNetworkController(_node,_homePath.c_str(),_controllerDbPath.c_str(),_ports[0], _rc);
+			if (!_ssoRedirectURL.empty()) {
+				_controller->setSSORedirectURL(_ssoRedirectURL);
+			}
 			_node->setNetconfMaster((void *)_controller);
 
 			// Join existing networks in networks.d
@@ -1047,6 +1052,8 @@ public:
 			const std::string cdbp(OSUtils::jsonString(settings["controllerDbPath"],""));
 			if (cdbp.length() > 0)
 				_controllerDbPath = cdbp;
+
+			_ssoRedirectURL = OSUtils::jsonString(settings["ssoRedirectURL"], "");
 
 #ifdef ZT_CONTROLLER_USE_LIBPQ
 			// TODO:  Redis config

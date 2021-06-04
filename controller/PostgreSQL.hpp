@@ -107,7 +107,7 @@ public:
 	virtual void eraseNetwork(const uint64_t networkId);
 	virtual void eraseMember(const uint64_t networkId, const uint64_t memberId);
 	virtual void nodeIsOnline(const uint64_t networkId, const uint64_t memberId, const InetAddress &physicalAddress);
-	virtual std::string getSSOAuthURL(const nlohmann::json &member);
+	virtual std::string getSSOAuthURL(const nlohmann::json &member, const std::string &redirectURL);
 
 protected:
 	struct _PairHasher

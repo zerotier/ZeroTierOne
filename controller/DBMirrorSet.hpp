@@ -51,7 +51,7 @@ public:
 	virtual void onNetworkMemberUpdate(const void *db,uint64_t networkId,uint64_t memberId,const nlohmann::json &member);
 	virtual void onNetworkMemberDeauthorize(const void *db,uint64_t networkId,uint64_t memberId);
 
-	std::string getSSOAuthURL(const nlohmann::json &member);
+	std::string getSSOAuthURL(const nlohmann::json &member, const std::string &redirectURL);
 
 	inline void addDB(const std::shared_ptr<DB> &db)
 	{
