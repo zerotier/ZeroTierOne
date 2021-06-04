@@ -348,7 +348,7 @@ std::string PostgreSQL::getSSOAuthURL(const nlohmann::json &member)
 			nonce = std::string(nonceBuf);
 
 			pqxx::result ir = w.exec_params0("INSERT INTO ztc_sso_expiry "
-				"(nonce, nonce_expiry, network_id, member_id) VALUES "
+				"(nonce, nonce_expiration, network_id, member_id) VALUES "
 				"($1, TO_TIMESTAMP($2::double precision/1000) $3, $4)",
 				nonce, OSUtils::now() + 300000, networkId, memberId);
 		}  else {
