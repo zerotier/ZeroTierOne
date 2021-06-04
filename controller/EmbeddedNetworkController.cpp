@@ -1336,7 +1336,7 @@ void EmbeddedNetworkController::_request(
 		std::string memberId = member["id"];
 		fprintf(stderr, "ssoEnabled && !ssoExempt %s-%s\n", nwids, memberId.c_str());
 		int64_t authenticationExpiryTime = (int64_t)OSUtils::jsonInt(member["authenticationExpiryTime"], 0);
-		fprintf(stderr, "authExpiryTime: %l\n", authenticationExpiryTime);
+		fprintf(stderr, "authExpiryTime: %lld\n", authenticationExpiryTime);
 		if ((authenticationExpiryTime == 0) || (authenticationExpiryTime < now)) {
 
 			Dictionary<1024> authInfo;
@@ -1416,7 +1416,7 @@ void EmbeddedNetworkController::_request(
 	nc->mtu = std::max(std::min((unsigned int)OSUtils::jsonInt(network["mtu"],ZT_DEFAULT_MTU),(unsigned int)ZT_MAX_MTU),(unsigned int)ZT_MIN_MTU);
 	nc->multicastLimit = (unsigned int)OSUtils::jsonInt(network["multicastLimit"],32ULL);
 
-	nc->authenticationExpiryTime = OSUtils::jsonInt(member["authenticationExpiryTime"], 0Ll);
+	nc->authenticationExpiryTime = OSUtils::jsonInt(member["authenticationExpiryTime"], 0LL);
 
 
 	std::string rtt(OSUtils::jsonString(member["remoteTraceTarget"],""));
