@@ -1331,6 +1331,20 @@ void EmbeddedNetworkController::_request(
 	// Otherwise no, we use standard auth logic.
 	bool networkSSOEnabled = OSUtils::jsonBool(network["ssoEnabled"], false);
 	bool memberSSOExempt = OSUtils::jsonBool(member["ssoExempt"], false);
+
+	if (networkSSOEnabled && !memberSSOExempt) {
+		int64_t authenticationExpiryTime = (int64_t)OSUtils::jsonInt(member["authenticationExpiryTime"], 0);
+		if ((authenticationExpiryTime == 0) || (authenticationExpiryTime < now)) {
+			Dictionary<1024> authInfo;
+			std::string authenticationURL = _db.getSSOAuthURL(member);
+			if (!authenticationURL.empty()) {
+				authInfo.add("aU", authenticationURL.c_str());
+			}
+			_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_AUTHENTICATION_REQUIRED, authInfo.data(), authInfo.sizeBytes());
+			return;
+		}
+	}
+
 	if (authorized) {
 		// Update version info and meta-data if authorized and if this is a genuine request
 		if (requestPacketId) {
@@ -1355,22 +1369,9 @@ void EmbeddedNetworkController::_request(
 				ms.lastRequestMetaData = metaData;
 				ms.identity = identity;
 			}
-		}
-		
-		if (networkSSOEnabled && !memberSSOExempt) {
-			int64_t authenticationExpiryTime = (int64_t)OSUtils::jsonInt(member["authenticationExpiryTime"], 0);
-			if ((authenticationExpiryTime == 0) || (authenticationExpiryTime < now)) {
-				Dictionary<1024> authInfo;
-				std::string authenticationURL = _db.getSSOAuthURL(member);
-				if (!authenticationURL.empty()) {
-					authInfo.add("aU", authenticationURL.c_str());
-				}
-				_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_AUTHENTICATION_REQUIRED, authInfo.data(), authInfo.sizeBytes());
-				return;
-			}
-		}
-		
+		}		
 	} else {
+		
 		// If they are not authorized, STOP!
 		DB::cleanMember(member);
 		_db.save(member,true);
