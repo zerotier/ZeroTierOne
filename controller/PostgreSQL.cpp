@@ -694,8 +694,8 @@ void PostgreSQL::initializeMembers()
 				"FROM ztc_sso_expiry e "
 				"INNER JOIN ztc_network n "
 				"	ON n.id = e.network_id "
-				"WHERE e.network_id = $1 AND e.member_id = $2 AND n.sso_enabled = TRUE "
-				"ORDER BY e.authentication_expiry_time LIMIT 1", networkId, memberId);
+				"WHERE e.network_id = $1 AND e.member_id = $2 AND n.sso_enabled = TRUE AND e.authentication_expiry_time IS NOT NULL "
+				"ORDER BY e.authentication_expiry_time DESC LIMIT 1", networkId, memberId);
 			
 			if (authRes.size() == 1 && !authRes.at(0)[0].is_null()) {
 				// there is an expiry time record
