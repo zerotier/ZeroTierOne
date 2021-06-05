@@ -228,7 +228,8 @@ public:
 		Mutex::Lock _l(_lock);
 		_netconfFailure = NETCONF_FAILURE_AUTHENTICATION_REQUIRED;
 		_authenticationURL = (url) ? url : "";
-	}
+		_config.ssoEnabled = true;
+	}	
 
 	/**
 	 * Causes this network to request an updated configuration from its master node now
