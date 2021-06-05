@@ -178,6 +178,8 @@ namespace ZeroTier {
 #define ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATES_OF_OWNERSHIP "COO"
 // dns (binary blobs)
 #define ZT_NETWORKCONFIG_DICT_KEY_DNS "DNS"
+// sso enabld
+#define ZT_NETWORKCONFIG_DICT_KEY_SSO_ENABLED "ssoe"
 // authentication URL
 #define ZT_NETWORKCONFIG_DICT_KEY_AUTHENTICATION_URL "aurl"
 // authentication expiry
@@ -237,7 +239,10 @@ public:
 		tags(),
 		certificatesOfOwnership(),
 		type(ZT_NETWORK_TYPE_PRIVATE),
-		dnsCount(0)
+		dnsCount(0),
+		ssoEnabled(false),
+		authenticationURL(),
+		authenticationExpiryTime(0)
 	{
 		name[0] = 0;
 		memset(specialists, 0, sizeof(uint64_t)*ZT_MAX_NETWORK_SPECIALISTS);
@@ -610,14 +615,19 @@ public:
 	ZT_VirtualNetworkDNS dns;
 
 	/**
+	 * SSO enabled flag.
+	 */
+	bool ssoEnabled;
+
+	/**
 	 * Authentication URL if authentication is required
 	 */
 	char authenticationURL[2048];
 
 	/**
-	 * Time current authentication expires or -1 if external authentication is disabled
+	 * Time current authentication expires or 0 if external authentication is disabled
 	 */
-	int64_t authenticationExpiryTime;
+	uint64_t authenticationExpiryTime;
 };
 
 } // namespace ZeroTier

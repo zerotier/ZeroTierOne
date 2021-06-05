@@ -26,6 +26,8 @@
 #include <climits>
 
 
+#define ZT_TRACE 1
+
 using json = nlohmann::json;
 
 namespace {
@@ -233,10 +235,13 @@ bool PostgreSQL::save(nlohmann::json &record,bool notifyListeners)
 	fprintf(stderr, "PostgreSQL::save\n");
 	bool modified = false;
 	try {
-		if (!record.is_object())
+		if (!record.is_object()) {
+			fprintf(stderr, "record is not an object?!?\n");
 			return false;
+		}
 		const std::string objtype = record["objtype"];
 		if (objtype == "network") {
+			fprintf(stderr, "network save\n");
 			const uint64_t nwid = OSUtils::jsonIntHex(record["id"],0ULL);
 			if (nwid) {
 				nlohmann::json old;
@@ -1114,11 +1119,11 @@ void PostgreSQL::commitThread()
 						"INSERT INTO ztc_network (id, creation_time, owner_id, controller_id, capabilities, enable_broadcast, "
 						"last_modified, mtu, multicast_limit, name, private, "
 						"remote_trace_level, remote_trace_target, rules, rules_source, "
-						"tags, v4_assign_mode, v6_assign_mode) VALUES ("
+						"tags, v4_assign_mode, v6_assign_mode, sso_enabled) VALUES ("
 						"$1, TO_TIMESTAMP($5::double precision/1000), "
 						"(SELECT user_id AS owner_id FROM ztc_global_permissions WHERE authorize = true AND del = true AND modify = true AND read = true LIMIT 1),"
 						"$2, $3, $4, TO_TIMESTAMP($5::double precision/1000), "
-						"$6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) "
+						"$6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, 17) "
 						"ON CONFLICT (id) DO UPDATE set controller_id = EXCLUDED.controller_id, "
 						"capabilities = EXCLUDED.capabilities, enable_broadcast = EXCLUDED.enable_broadcast, "
 						"last_modified = EXCLUDED.last_modified, mtu = EXCLUDED.mtu, "
@@ -1126,7 +1131,8 @@ void PostgreSQL::commitThread()
 						"private = EXCLUDED.private, remote_trace_level = EXCLUDED.remote_trace_level, "
 						"remote_trace_target = EXCLUDED.remote_trace_target, rules = EXCLUDED.rules, "
 						"rules_source = EXCLUDED.rules_source, tags = EXCLUDED.tags, "
-						"v4_assign_mode = EXCLUDED.v4_assign_mode, v6_assign_mode = EXCLUDED.v6_assign_mode",
+						"v4_assign_mode = EXCLUDED.v4_assign_mode, v6_assign_mode = EXCLUDED.v6_assign_mode, "
+						"sso_enabled = EXCLUDED.sso_enabled",
 						id,
 						_myAddressStr,
 						OSUtils::jsonDump((*config)["capabilitles"], -1),
@@ -1142,7 +1148,8 @@ void PostgreSQL::commitThread()
 						rulesSource,
 						OSUtils::jsonDump((*config)["tags"], -1),
 						OSUtils::jsonDump((*config)["v4AssignMode"],-1),
-						OSUtils::jsonDump((*config)["v6AssignMode"], -1));
+						OSUtils::jsonDump((*config)["v6AssignMode"], -1),
+						OSUtils::jsonBool((*config)["ssoEnabled"], false));
 
 					res = w.exec_params0("DELETE FROM ztc_network_assignment_pool WHERE network_id = $1", 0);
 

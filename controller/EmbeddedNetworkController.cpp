@@ -720,7 +720,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 					try {
 						if (b.count("activeBridge")) member["activeBridge"] = OSUtils::jsonBool(b["activeBridge"], false);
 						if (b.count("noAutoAssignIps")) member["noAutoAssignIps"] = OSUtils::jsonBool(b["noAutoAssignIps"], false);
-						if (b.count("authenticationExpiryTime")) member["authenticationExpiryTime"] = (int64_t)OSUtils::jsonInt(b["authenticationExpiryTime"], -1LL);
+						if (b.count("authenticationExpiryTime")) member["authenticationExpiryTime"] = (uint64_t)OSUtils::jsonInt(b["authenticationExpiryTime"], 0ULL);
 						if (b.count("authenticationURL")) member["authenticationURL"] = OSUtils::jsonString(b["authenticationURL"], "");
 
 						if (b.count("remoteTraceTarget")) {
@@ -1365,9 +1365,9 @@ void EmbeddedNetworkController::_request(
 	if (networkSSOEnabled && !memberSSOExempt) {
 		std::string memberId = member["id"];
 		fprintf(stderr, "ssoEnabled && !ssoExempt %s-%s\n", nwids, memberId.c_str());
-		int64_t authenticationExpiryTime = (int64_t)OSUtils::jsonInt(member["authenticationExpiryTime"], 0);
+		uint64_t authenticationExpiryTime = (int64_t)OSUtils::jsonInt(member["authenticationExpiryTime"], 0);
 		fprintf(stderr, "authExpiryTime: %lld\n", authenticationExpiryTime);
-		if ((authenticationExpiryTime == 0) || (authenticationExpiryTime < now)) {
+		if (authenticationExpiryTime < now) {
 			std::string authenticationURL = _db.getSSOAuthURL(member, _ssoRedirectURL);
 			if (!authenticationURL.empty()) {
 				Dictionary<3072> authInfo;
@@ -1445,6 +1445,7 @@ void EmbeddedNetworkController::_request(
 	nc->mtu = std::max(std::min((unsigned int)OSUtils::jsonInt(network["mtu"],ZT_DEFAULT_MTU),(unsigned int)ZT_MAX_MTU),(unsigned int)ZT_MIN_MTU);
 	nc->multicastLimit = (unsigned int)OSUtils::jsonInt(network["multicastLimit"],32ULL);
 
+	nc->ssoEnabled = OSUtils::jsonBool(network["ssoEnabled"], false);
 	nc->authenticationExpiryTime = OSUtils::jsonInt(member["authenticationExpiryTime"], 0LL);
 
 

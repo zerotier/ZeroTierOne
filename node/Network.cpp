@@ -1435,6 +1435,7 @@ void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const
 
 	Utils::scopy(ec->authenticationURL, sizeof(ec->authenticationURL), _authenticationURL.c_str());
 	ec->authenticationExpiryTime = _config.authenticationExpiryTime;
+	ec->ssoEnabled = _config.ssoEnabled;
 }
 
 void Network::_sendUpdatesToMembers(void *tPtr,const MulticastGroup *const newMulticastGroup)

@@ -254,6 +254,7 @@ static void _networkToJson(nlohmann::json &nj,const ZT_VirtualNetworkConfig *nc,
 
 	nj["authenticationURL"] = nc->authenticationURL;
 	nj["authenticationExpiryTime"] = nc->authenticationExpiryTime;
+	nj["ssoEnabled"] = nc->ssoEnabled;
 }
 
 static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer)
