@@ -143,6 +143,7 @@ PostgreSQL::PostgreSQL(const Identity &myId, const char *path, int listenPort, R
 	
 	memset(_ssoPsk, 0, sizeof(_ssoPsk));
 	char *const ssoPskHex = getenv("ZT_SSO_PSK");
+	fprintf(stderr, "ZT_SSO_PSK: %s\n", ssoPskHex);
 	if (ssoPskHex) {
 		// SECURITY: note that ssoPskHex will always be null-terminated if libc acatually
 		// returns something non-NULL. If the hex encodes something shorter than 48 bytes,
@@ -328,6 +329,7 @@ std::string PostgreSQL::getSSOAuthURL(const nlohmann::json &member, const std::s
 		auto c = _pool->borrow();
 		pqxx::work w(*c->c);
 
+		char nonceBytes[16] = {0};
 		std::string nonce = "";
 
 		// check if the member exists first.
@@ -342,12 +344,12 @@ std::string PostgreSQL::getSSOAuthURL(const nlohmann::json &member, const std::s
 			if (r.size() == 1) {
 				// we have an existing nonce.  Use it
 				nonce = r.at(0)[0].as<std::string>();
+				Utils::unhex(nonce.c_str(), nonceBytes, sizeof(nonceBytes));
 			} else if (r.empty()) {
 				// create a nonce
-				char randBuf[16] = {0};
-				Utils::getSecureRandom(randBuf, 16);
-				char nonceBuf[256] = {0};
-				Utils::hex(randBuf, sizeof(randBuf), nonceBuf);
+				Utils::getSecureRandom(nonceBytes, 16);
+				char nonceBuf[64] = {0};
+				Utils::hex(nonceBytes, sizeof(nonceBytes), nonceBuf);
 				nonce = std::string(nonceBuf);
 
 				pqxx::result ir = w.exec_params0("INSERT INTO ztc_sso_expiry "
@@ -383,7 +385,7 @@ std::string PostgreSQL::getSSOAuthURL(const nlohmann::json &member, const std::s
 				have_auth = true;
 
 				uint8_t state[48];
-				HMACSHA384(_ssoPsk, nonce.data(), (unsigned int)nonce.length(), state);
+				HMACSHA384(_ssoPsk, nonceBytes, sizeof(nonceBytes), state);
 				char state_hex[256];
 				Utils::hex(state, 48, state_hex);
 				

@@ -15,14 +15,14 @@ RUN tar -xzf libpqxx.tar.gz && \
     pushd libpqxx-6.4.5/ && \
     mkdir build && pushd build/ && \
     cmake .. && \
-    make install && \
+    make install -j8 && \
     popd && popd
 
 
 # RUN git clone http://git.int.zerotier.com/zerotier/ZeroTierOne.git
 # RUN if [ "$git_branch" != "master" ]; then cd ZeroTierOne && git checkout -b $git_branch origin/$git_branch; fi
 ADD . /ZeroTierOne
-RUN cd ZeroTierOne && make clean && make central-controller
+RUN cd ZeroTierOne && make clean && make central-controller -j8
 
 FROM centos:8
 RUN yum install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-8-x86_64/pgdg-redhat-repo-latest.noarch.rpm
