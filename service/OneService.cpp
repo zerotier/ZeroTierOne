@@ -797,38 +797,38 @@ public:
 				for(std::vector<std::string>::iterator f(moonsDotD.begin());f!=moonsDotD.end();++f) {
 					std::size_t dot = f->find_last_of('.');
 					if ((dot == 16)&&(f->substr(16) == ".moon")){
-					    // First try to decode as ASCII configuration
-					    bool successParsedAsASCII = true;
-                        std::string root_list_raw;
-                        std::vector<std::string> root_list;
-                        std::vector<std::string> root_list_filterd;
-                        if(OSUtils::readFile((_homePath + ZT_PATH_SEPARATOR_S "moons.d" ZT_PATH_SEPARATOR_S + *f).c_str(), root_list_raw)){
-                            root_list = OSUtils::split(root_list_raw.c_str(),ZT_EOL_S, nullptr, nullptr);
-                            // Verify each line
-                            for(auto & root_it : root_list){
-                                if (root_it.length() == 0)
-                                    continue;   // Skip empty line
-                                if (root_it.length() <= 16){
-                                    if (std::all_of(root_it.begin(), root_it.end(), [](char c){return std::isxdigit(c);})){
-                                        root_list_filterd.push_back(root_it);
-                                        continue;   // Accept valid line
-                                    }
-                                }
-                                // Once invalid line appears, break
-                                successParsedAsASCII = false;
-                                break;
-                            }
-                        }
-                        if (!successParsedAsASCII){
-                            // Feed to deserializer
-                            _node->orbit((void *)0,Utils::hexStrToU64(f->substr(0,dot).c_str()),0);
-					    }else{
-                            // Remove ASCII configuration
-                            OSUtils::rm((_homePath + ZT_PATH_SEPARATOR_S "moons.d" ZT_PATH_SEPARATOR_S + *f).c_str());
-                            for(auto & root_it : root_list_filterd){
-                                _node->orbit((void *)0,Utils::hexStrToU64(f->substr(0,dot).c_str()),Utils::hexStrToU64(root_it.c_str()));
-                            }
-                        }
+						// First try to decode as ASCII configuration
+						bool successParsedAsASCII = true;
+						std::string root_list_raw;
+						std::vector<std::string> root_list;
+						std::vector<std::string> root_list_filterd;
+						if(OSUtils::readFile((_homePath + ZT_PATH_SEPARATOR_S "moons.d" ZT_PATH_SEPARATOR_S + *f).c_str(), root_list_raw)){
+							root_list = OSUtils::split(root_list_raw.c_str(),ZT_EOL_S, nullptr, nullptr);
+							// Verify each line
+							for(auto & root_it : root_list){
+								if (root_it.length() == 0)
+									continue;   // Skip empty line
+								if (root_it.length() <= 16){
+									if (std::all_of(root_it.begin(), root_it.end(), [](char c){return std::isxdigit(c);})){
+										root_list_filterd.push_back(root_it);
+										continue;   // Accept valid line
+									}
+								}
+								// Once invalid line appears, break
+								successParsedAsASCII = false;
+								break;
+							}
+						}
+						if (!successParsedAsASCII){
+							// Feed to deserializer
+							_node->orbit((void *)0,Utils::hexStrToU64(f->substr(0,dot).c_str()),0);
+						}else{
+							// Remove ASCII configuration
+							OSUtils::rm((_homePath + ZT_PATH_SEPARATOR_S "moons.d" ZT_PATH_SEPARATOR_S + *f).c_str());
+							for(auto & root_it : root_list_filterd){
+								_node->orbit((void *)0,Utils::hexStrToU64(f->substr(0,dot).c_str()),Utils::hexStrToU64(root_it.c_str()));
+							}
+						}
 					}
 				}
 			}
