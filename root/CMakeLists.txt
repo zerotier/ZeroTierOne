@@ -7,7 +7,7 @@ endif(WIN32)
 
 add_executable(${PROJECT_NAME} root.cpp)
 
-target_link_libraries(${PROJECT_NAME} zt_core zt_osdep pthread resolv)
+target_link_libraries(${PROJECT_NAME} zt_core zt_osdep pthread resolv jemalloc)
 
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_11)
 
