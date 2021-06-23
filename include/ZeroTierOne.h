@@ -820,7 +820,12 @@ enum ZT_VirtualNetworkStatus
 	/**
 	 * ZeroTier core version too old
 	 */
-	ZT_NETWORK_STATUS_CLIENT_TOO_OLD = 5
+	ZT_NETWORK_STATUS_CLIENT_TOO_OLD = 5,
+
+	/**
+	 * External authentication is required (e.g. SSO)
+	 */
+	ZT_NETWORK_STATUS_AUTHENTICATION_REQUIRED = 6
 };
 
 /**
@@ -1339,6 +1344,21 @@ typedef struct
 	 * Network specific DNS configuration
 	 */
 	ZT_VirtualNetworkDNS dns;
+
+	/**
+	 * sso enabled
+	 */
+	bool ssoEnabled;
+
+	/**
+	 * If the status us AUTHENTICATION_REQUIRED, this may contain a URL for authentication.
+	 */
+	char authenticationURL[2048];
+
+	/**
+	 * Time that current authentication expires. only valid if ssoEnabled is true
+	 */
+	uint64_t authenticationExpiryTime;
 } ZT_VirtualNetworkConfig;
 
 /**

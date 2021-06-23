@@ -71,6 +71,7 @@ echo "{
             \"inot\",
             \"nat64\"
         ],
+        \"ssoRedirectURL\": \"${ZT_SSO_REDIRECT_URL}\",
         ${REDIS}
     }
 }    

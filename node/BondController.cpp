@@ -11,25 +11,25 @@
  */
 /****/
 
-#include "../osdep/OSUtils.hpp"
-
-#include "Constants.hpp"
 #include "BondController.hpp"
-#include "Peer.hpp"
+
+#include "../osdep/OSUtils.hpp"
+#include "Bond.hpp"
+#include "Node.hpp"
+#include "RuntimeEnvironment.hpp"
 
 namespace ZeroTier {
 
 int BondController::_minReqPathMonitorInterval;
 uint8_t BondController::_defaultBondingPolicy;
 
-BondController::BondController(const RuntimeEnvironment *renv) :
-	RR(renv)
+BondController::BondController(const RuntimeEnvironment* renv) : RR(renv)
 {
 	bondStartTime = RR->node->now();
 	_defaultBondingPolicy = ZT_BONDING_POLICY_NONE;
 }
 
-bool BondController::linkAllowed(std::string &policyAlias, SharedPtr<Link> link)
+bool BondController::linkAllowed(std::string& policyAlias, SharedPtr<Link> link)
 {
 	bool foundInDefinitions = false;
 	if (_linkDefinitions.count(policyAlias)) {
@@ -52,14 +52,14 @@ void BondController::addCustomLink(std::string& policyAlias, SharedPtr<Link> lin
 	auto search = _interfaceToLinkMap[policyAlias].find(link->ifname());
 	if (search == _interfaceToLinkMap[policyAlias].end()) {
 		link->setAsUserSpecified(true);
-		_interfaceToLinkMap[policyAlias].insert(std::pair<std::string, SharedPtr<Link>>(link->ifname(), link));
+		_interfaceToLinkMap[policyAlias].insert(std::pair<std::string, SharedPtr<Link> >(link->ifname(), link));
 	}
 }
 
 bool BondController::addCustomPolicy(const SharedPtr<Bond>& newBond)
 {
 	Mutex::Lock _l(_bonds_m);
-	if (!_bondPolicyTemplates.count(newBond->policyAlias())) {
+	if (! _bondPolicyTemplates.count(newBond->policyAlias())) {
 		_bondPolicyTemplates[newBond->policyAlias()] = newBond;
 		return true;
 	}
@@ -69,7 +69,7 @@ bool BondController::addCustomPolicy(const SharedPtr<Bond>& newBond)
 bool BondController::assignBondingPolicyToPeer(int64_t identity, const std::string& policyAlias)
 {
 	Mutex::Lock _l(_bonds_m);
-	if (!_policyTemplateAssignments.count(identity)) {
+	if (! _policyTemplateAssignments.count(identity)) {
 		_policyTemplateAssignments[identity] = policyAlias;
 		return true;
 	}
@@ -82,37 +82,40 @@ SharedPtr<Bond> BondController::getBondByPeerId(int64_t identity)
 	return _bonds.count(identity) ? _bonds[identity] : SharedPtr<Bond>();
 }
 
-SharedPtr<Bond> BondController::createTransportTriggeredBond(const RuntimeEnvironment *renv, const SharedPtr<Peer>& peer)
+SharedPtr<Bond> BondController::createTransportTriggeredBond(const RuntimeEnvironment* renv, const SharedPtr<Peer>& peer)
 {
 	Mutex::Lock _l(_bonds_m);
 	int64_t identity = peer->identity().address().toInt();
-	Bond *bond = nullptr;
+	Bond* bond = nullptr;
 	char traceMsg[128];
-	if (!_bonds.count(identity)) {
+	if (! _bonds.count(identity)) {
 		std::string policyAlias;
-		if (!_policyTemplateAssignments.count(identity)) {
+		if (! _policyTemplateAssignments.count(identity)) {
 			if (_defaultBondingPolicy) {
-				sprintf(traceMsg, "%s (bond) Creating new default %s bond to peer %llx",
-					OSUtils::humanReadableTimestamp().c_str(), getPolicyStrByCode(_defaultBondingPolicy).c_str(), identity); RR->t->bondStateMessage(NULL, traceMsg);
+				sprintf(traceMsg, "%s (bond) Creating new default %s bond to peer %llx", OSUtils::humanReadableTimestamp().c_str(), getPolicyStrByCode(_defaultBondingPolicy).c_str(), (unsigned long long)identity);
+				RR->t->bondStateMessage(NULL, traceMsg);
 				bond = new Bond(renv, _defaultBondingPolicy, peer);
 			}
-			if (!_defaultBondingPolicy && _defaultBondingPolicyStr.length()) {
-				sprintf(traceMsg, "%s (bond) Creating new default custom %s bond to peer %llx",
-					OSUtils::humanReadableTimestamp().c_str(), _defaultBondingPolicyStr.c_str(), identity);
+			if (! _defaultBondingPolicy && _defaultBondingPolicyStr.length()) {
+				sprintf(traceMsg, "%s (bond) Creating new default custom %s bond to peer %llx", OSUtils::humanReadableTimestamp().c_str(), _defaultBondingPolicyStr.c_str(), (unsigned long long)identity);
 				RR->t->bondStateMessage(NULL, traceMsg);
 				bond = new Bond(renv, _bondPolicyTemplates[_defaultBondingPolicyStr].ptr(), peer);
 			}
 		}
 		else {
-			if (!_bondPolicyTemplates[_policyTemplateAssignments[identity]]) {
-				sprintf(traceMsg, "%s (bond) Creating new bond. Assignment for peer %llx was specified as %s but the bond definition was not found. Using default %s",
-					OSUtils::humanReadableTimestamp().c_str(), identity, _policyTemplateAssignments[identity].c_str(), getPolicyStrByCode(_defaultBondingPolicy).c_str());
+			if (! _bondPolicyTemplates[_policyTemplateAssignments[identity]]) {
+				sprintf(
+					traceMsg,
+					"%s (bond) Creating new bond. Assignment for peer %llx was specified as %s but the bond definition was not found. Using default %s",
+					OSUtils::humanReadableTimestamp().c_str(),
+					(unsigned long long)identity,
+					_policyTemplateAssignments[identity].c_str(),
+					getPolicyStrByCode(_defaultBondingPolicy).c_str());
 				RR->t->bondStateMessage(NULL, traceMsg);
 				bond = new Bond(renv, _defaultBondingPolicy, peer);
 			}
 			else {
-				sprintf(traceMsg, "%s (bond) Creating new default bond %s to peer %llx",
-					OSUtils::humanReadableTimestamp().c_str(), _defaultBondingPolicyStr.c_str(), identity);
+				sprintf(traceMsg, "%s (bond) Creating new default bond %s to peer %llx", OSUtils::humanReadableTimestamp().c_str(), _defaultBondingPolicyStr.c_str(), (unsigned long long)identity);
 				RR->t->bondStateMessage(NULL, traceMsg);
 				bond = new Bond(renv, _bondPolicyTemplates[_policyTemplateAssignments[identity]].ptr(), peer);
 			}
@@ -150,12 +153,12 @@ SharedPtr<Link> BondController::getLinkBySocket(const std::string& policyAlias, 
 {
 	Mutex::Lock _l(_links_m);
 	char ifname[16];
-	_phy->getIfName((PhySocket *) ((uintptr_t)localSocket), ifname, 16);
+	_phy->getIfName((PhySocket*)((uintptr_t)localSocket), ifname, 16);
 	std::string ifnameStr(ifname);
 	auto search = _interfaceToLinkMap[policyAlias].find(ifnameStr);
 	if (search == _interfaceToLinkMap[policyAlias].end()) {
 		SharedPtr<Link> s = new Link(ifnameStr, 0, 0, 0, 0, 0, true, ZT_MULTIPATH_SLAVE_MODE_SPARE, "", 0.0);
-		_interfaceToLinkMap[policyAlias].insert(std::pair<std::string,SharedPtr<Link> >(ifnameStr, s));
+		_interfaceToLinkMap[policyAlias].insert(std::pair<std::string, SharedPtr<Link> >(ifnameStr, s));
 		return s;
 	}
 	else {
@@ -199,14 +202,14 @@ bool BondController::allowedToBind(const std::string& ifname)
 	*/
 }
 
-void BondController::processBackgroundTasks(void *tPtr, const int64_t now)
+void BondController::processBackgroundTasks(void* tPtr, const int64_t now)
 {
 	Mutex::Lock _l(_bonds_m);
-	std::map<int64_t,SharedPtr<Bond> >::iterator bondItr = _bonds.begin();
+	std::map<int64_t, SharedPtr<Bond> >::iterator bondItr = _bonds.begin();
 	while (bondItr != _bonds.end()) {
 		bondItr->second->processBackgroundTasks(tPtr, now);
 		++bondItr;
 	}
 }
 
-} // namespace ZeroTier
+}	// namespace ZeroTier

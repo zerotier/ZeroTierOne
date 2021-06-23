@@ -49,6 +49,9 @@ void DB::initNetwork(nlohmann::json &network)
 		}};
 	}
 	if (!network.count("dns")) network["dns"] = nlohmann::json::array();
+	if (!network.count("ssoEnabled")) network["ssoEnabled"] = false;
+	if (!network.count("clientId")) network["clientId"] = "";
+	if (!network.count("authorizationEndpoint")) network["authorizationEndpoint"] = "";
 
 	network["objtype"] = "network";
 }
@@ -67,6 +70,7 @@ void DB::initMember(nlohmann::json &member)
 	if (!member.count("lastAuthorizedTime")) member["lastAuthorizedTime"] = 0ULL;
 	if (!member.count("lastAuthorizedCredentialType")) member["lastAuthorizedCredentialType"] = nlohmann::json();
 	if (!member.count("lastAuthorizedCredential")) member["lastAuthorizedCredential"] = nlohmann::json();
+	if (!member.count("authenticationExpiryTime")) member["authenticationExpiryTime"] = 0LL;
 	if (!member.count("vMajor")) member["vMajor"] = -1;
 	if (!member.count("vMinor")) member["vMinor"] = -1;
 	if (!member.count("vRev")) member["vRev"] = -1;
@@ -92,6 +96,8 @@ void DB::cleanMember(nlohmann::json &member)
 	member.erase("recentLog");
 	member.erase("lastModified");
 	member.erase("lastRequestMetaData");
+	member.erase("authenticationURL"); // computed
+	member.erase("authenticationClientID"); // computed
 }
 
 DB::DB() {}
@@ -174,8 +180,9 @@ bool DB::get(const uint64_t networkId,nlohmann::json &network,std::vector<nlohma
 	{
 		std::lock_guard<std::mutex> l2(nw->lock);
 		network = nw->config;
-		for(auto m=nw->members.begin();m!=nw->members.end();++m)
+		for(auto m=nw->members.begin();m!=nw->members.end();++m) {
 			members.push_back(m->second);
+		}
 	}
 	return true;
 }

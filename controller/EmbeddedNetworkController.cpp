@@ -28,6 +28,9 @@
 #include <map>
 #include <thread>
 #include <memory>
+#include <iomanip>
+#include <sstream>
+#include <cctype>
 
 #include "../include/ZeroTierOne.h"
 #include "../version.h"
@@ -59,6 +62,29 @@ using json = nlohmann::json;
 namespace ZeroTier {
 
 namespace {
+
+std::string url_encode(const std::string &value) {
+    std::ostringstream escaped;
+    escaped.fill('0');
+    escaped << std::hex;
+
+    for (std::string::const_iterator i = value.begin(), n = value.end(); i != n; ++i) {
+        std::string::value_type c = (*i);
+
+        // Keep alphanumeric and other accepted characters intact
+        if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
+            escaped << c;
+            continue;
+        }
+
+        // Any other characters are percent-encoded
+        escaped << std::uppercase;
+        escaped << '%' << std::setw(2) << int((unsigned char) c);
+        escaped << std::nouppercase;
+    }
+
+    return escaped.str();
+}
 
 static json _renderRule(ZT_VirtualNetworkRule &rule)
 {
@@ -476,6 +502,10 @@ EmbeddedNetworkController::~EmbeddedNetworkController()
 		t->join();
 }
 
+void EmbeddedNetworkController::setSSORedirectURL(const std::string &url) {
+	_ssoRedirectURL = url_encode(url);
+}
+
 void EmbeddedNetworkController::init(const Identity &signingId,Sender *sender)
 {
 	char tmp[64];
@@ -688,8 +718,10 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 					DB::initMember(member);
 
 					try {
-						if (b.count("activeBridge")) member["activeBridge"] = OSUtils::jsonBool(b["activeBridge"],false);
-						if (b.count("noAutoAssignIps")) member["noAutoAssignIps"] = OSUtils::jsonBool(b["noAutoAssignIps"],false);
+						if (b.count("activeBridge")) member["activeBridge"] = OSUtils::jsonBool(b["activeBridge"], false);
+						if (b.count("noAutoAssignIps")) member["noAutoAssignIps"] = OSUtils::jsonBool(b["noAutoAssignIps"], false);
+						if (b.count("authenticationExpiryTime")) member["authenticationExpiryTime"] = (uint64_t)OSUtils::jsonInt(b["authenticationExpiryTime"], 0ULL);
+						if (b.count("authenticationURL")) member["authenticationURL"] = OSUtils::jsonString(b["authenticationURL"], "");
 
 						if (b.count("remoteTraceTarget")) {
 							const std::string rtt(OSUtils::jsonString(b["remoteTraceTarget"],""));
@@ -1248,7 +1280,7 @@ void EmbeddedNetworkController::_request(
 	Utils::hex(nwid,nwids);
 	_db.get(nwid,network,identity.address().toInt(),member,ns);
 	if ((!network.is_object())||(network.empty())) {
-		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_OBJECT_NOT_FOUND);
+		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_OBJECT_NOT_FOUND, nullptr, 0);
 		return;
 	}
 	const bool newMember = ((!member.is_object())||(member.empty()));
@@ -1262,11 +1294,11 @@ void EmbeddedNetworkController::_request(
 			// known member.
 			try {
 				if (Identity(haveIdStr.c_str()) != identity) {
-					_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_ACCESS_DENIED);
+					_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_ACCESS_DENIED, nullptr, 0);
 					return;
 				}
 			} catch ( ... ) {
-				_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_ACCESS_DENIED);
+				_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_ACCESS_DENIED, nullptr, 0);
 				return;
 			}
 		} else {
@@ -1323,6 +1355,32 @@ void EmbeddedNetworkController::_request(
 		member["lastAuthorizedCredential"] = autoAuthCredential;
 	}
 
+
+	// Should we check SSO Stuff?
+	// If network is configured with SSO, and the member is not marked exempt: yes
+	// Otherwise no, we use standard auth logic.
+	bool networkSSOEnabled = OSUtils::jsonBool(network["ssoEnabled"], false);
+	bool memberSSOExempt = OSUtils::jsonBool(member["ssoExempt"], false);
+
+	if (networkSSOEnabled && !memberSSOExempt) {
+		std::string memberId = member["id"];
+		fprintf(stderr, "ssoEnabled && !ssoExempt %s-%s\n", nwids, memberId.c_str());
+		uint64_t authenticationExpiryTime = (int64_t)OSUtils::jsonInt(member["authenticationExpiryTime"], 0);
+		fprintf(stderr, "authExpiryTime: %lld\n", authenticationExpiryTime);
+		if (authenticationExpiryTime < now) {
+			std::string authenticationURL = _db.getSSOAuthURL(member, _ssoRedirectURL);
+			if (!authenticationURL.empty()) {
+				Dictionary<3072> authInfo;
+				authInfo.add("aU", authenticationURL.c_str());
+				fprintf(stderr, "sending auth URL: %s\n", authenticationURL.c_str());
+				DB::cleanMember(member);
+				_db.save(member,true);
+				_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_AUTHENTICATION_REQUIRED, authInfo.data(), authInfo.sizeBytes());
+				return;
+			}
+		}
+	}
+
 	if (authorized) {
 		// Update version info and meta-data if authorized and if this is a genuine request
 		if (requestPacketId) {
@@ -1347,17 +1405,18 @@ void EmbeddedNetworkController::_request(
 				ms.lastRequestMetaData = metaData;
 				ms.identity = identity;
 			}
-		}
+		}		
 	} else {
+		
 		// If they are not authorized, STOP!
 		DB::cleanMember(member);
 		_db.save(member,true);
-		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_ACCESS_DENIED);
+		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_ACCESS_DENIED, nullptr, 0);
 		return;
 	}
 
 	// -------------------------------------------------------------------------
-	// If we made it this far, they are authorized.
+	// If we made it this far, they are authorized (and authenticated).
 	// -------------------------------------------------------------------------
 
 	int64_t credentialtmd = ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MAX_MAX_DELTA;
@@ -1386,7 +1445,10 @@ void EmbeddedNetworkController::_request(
 	nc->mtu = std::max(std::min((unsigned int)OSUtils::jsonInt(network["mtu"],ZT_DEFAULT_MTU),(unsigned int)ZT_MAX_MTU),(unsigned int)ZT_MIN_MTU);
 	nc->multicastLimit = (unsigned int)OSUtils::jsonInt(network["multicastLimit"],32ULL);
 
-	
+	nc->ssoEnabled = OSUtils::jsonBool(network["ssoEnabled"], false);
+	nc->authenticationExpiryTime = OSUtils::jsonInt(member["authenticationExpiryTime"], 0LL);
+
+
 	std::string rtt(OSUtils::jsonString(member["remoteTraceTarget"],""));
 	if (rtt.length() == 10) {
 		nc->remoteTraceTarget = Address(Utils::hexStrToU64(rtt.c_str()));
@@ -1734,7 +1796,7 @@ void EmbeddedNetworkController::_request(
 	if (com.sign(_signingId)) {
 		nc->com = com;
 	} else {
-		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_INTERNAL_SERVER_ERROR);
+		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_INTERNAL_SERVER_ERROR, nullptr, 0);
 		return;
 	}
 

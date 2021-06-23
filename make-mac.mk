@@ -28,9 +28,9 @@ include objects.mk
 ONE_OBJS+=osdep/MacEthernetTap.o osdep/MacKextEthernetTap.o osdep/MacDNSHelper.o ext/http-parser/http_parser.o
 
 ifeq ($(ZT_CONTROLLER),1)
-	LIBS+=-L/usr/local/opt/libpq/lib -lpq ext/redis-plus-plus-1.1.1/install/macos/lib/libredis++.a ext/hiredis-0.14.1/lib/macos/libhiredis.a
+	LIBS+=-L/usr/local/opt/libpqxx@6/lib -L/usr/local/opt/libpq/lib -L/usr/local/opt/openssl/lib/ -lpqxx -lpq -lssl -lcrypto -lgssapi_krb5 ext/redis-plus-plus-1.1.1/install/macos/lib/libredis++.a ext/hiredis-0.14.1/lib/macos/libhiredis.a
 	DEFS+=-DZT_CONTROLLER_USE_LIBPQ -DZT_CONTROLLER_USE_REDIS -DZT_CONTROLLER 
-	INCLUDES+=-I/usr/local/opt/libpq/include -Iext/hiredis-0.14.1/include/ -Iext/redis-plus-plus-1.1.1/install/macos/include/sw/
+	INCLUDES+=-I/usr/local/opt/libpq/include -I/usr/local/opt/libpqxx@6/include -Iext/hiredis-0.14.1/include/ -Iext/redis-plus-plus-1.1.1/install/macos/include/sw/
 endif
 
 LIBS+=-framework CoreServices -framework SystemConfiguration -framework CoreFoundation
@@ -112,7 +112,7 @@ one:	$(CORE_OBJS) $(ONE_OBJS) one.o mac-agent
 zerotier-one: one
 
 central-controller:
-	make ZT_CONTROLLER=1 one
+	make ARCH_FLAGS="-arch x86_64" ZT_CONTROLLER=1 one
 
 zerotier-idtool: one
 

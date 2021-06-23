@@ -207,6 +207,15 @@ LinuxEthernetTap::LinuxEthernetTap(
 					printf("WARNING: ioctl() failed setting up Linux tap device (bring interface up)\n");
 					return;
 				}
+
+				ifr.ifr_ifru.ifru_hwaddr.sa_family = ARPHRD_ETHER;
+				_mac.copyTo(ifr.ifr_ifru.ifru_hwaddr.sa_data,6);
+				if (ioctl(sock,SIOCSIFHWADDR,(void *)&ifr) < 0) {
+					::close(sock);
+					printf("WARNING: ioctl() failed setting up Linux tap device (set MAC)\n");
+					return;
+				}
+
 				ifr.ifr_flags |= IFF_UP;
 				if (ioctl(sock,SIOCSIFFLAGS,(void *)&ifr) < 0) {
 					::close(sock);
@@ -219,14 +228,6 @@ LinuxEthernetTap::LinuxEthernetTap(
 				// harmless. This was moved to the worker thread though so as not to block the
 				// main ZeroTier loop.
 				usleep(500000);
-
-				ifr.ifr_ifru.ifru_hwaddr.sa_family = ARPHRD_ETHER;
-				_mac.copyTo(ifr.ifr_ifru.ifru_hwaddr.sa_data,6);
-				if (ioctl(sock,SIOCSIFHWADDR,(void *)&ifr) < 0) {
-					::close(sock);
-					printf("WARNING: ioctl() failed setting up Linux tap device (set MAC)\n");
-					return;
-				}
 
 				ifr.ifr_ifru.ifru_mtu = (int)_mtu;
 				if (ioctl(sock,SIOCSIFMTU,(void *)&ifr) < 0) {

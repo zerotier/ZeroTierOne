@@ -34,7 +34,7 @@ DriverVer=08/13/2015,6.2.9200.20557
 
 [Strings]
 DeviceDescription = "ZeroTier One Virtual Port"
-Provider = "ZeroTier Networks LLC"
+Provider = "ZeroTier Networks LLC" ; We're ZeroTier, Inc. now but kernel mode certs are $300+ so fuqdat.
 
 ; To build for x86, take NTamd64 off this and off the named section manually, build, then put it back!
 [Manufacturer]
@@ -70,7 +70,7 @@ AddService = zttap300,        2, zttap300.service
 
 [zttap300.reg]
 HKR, Ndi,            Service,      0, "zttap300"
-HKR, Ndi\Interfaces, UpperRange,   0, "ndis5" ; 'ndis5' is correct
+HKR, Ndi\Interfaces, UpperRange,   0, "ndis5" ; yes, 'ndis5' is correct... yup, Windows.
 HKR, Ndi\Interfaces, LowerRange,   0, "ethernet"
 HKR, ,               Manufacturer, 0, "%Provider%"
 HKR, ,               ProductName,  0, "%DeviceDescription%"

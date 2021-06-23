@@ -184,6 +184,7 @@ static void _networkToJson(nlohmann::json &nj,const ZT_VirtualNetworkConfig *nc,
 		case ZT_NETWORK_STATUS_NOT_FOUND:                nstatus = "NOT_FOUND"; break;
 		case ZT_NETWORK_STATUS_PORT_ERROR:               nstatus = "PORT_ERROR"; break;
 		case ZT_NETWORK_STATUS_CLIENT_TOO_OLD:           nstatus = "CLIENT_TOO_OLD"; break;
+		case ZT_NETWORK_STATUS_AUTHENTICATION_REQUIRED:  nstatus = "AUTHENTICATION_REQUIRED"; break;
 	}
 	switch(nc->type) {
 		case ZT_NETWORK_TYPE_PRIVATE:                    ntype = "PRIVATE"; break;
@@ -251,6 +252,9 @@ static void _networkToJson(nlohmann::json &nj,const ZT_VirtualNetworkConfig *nc,
 	}
 	nj["dns"] = m;
 
+	nj["authenticationURL"] = nc->authenticationURL;
+	nj["authenticationExpiryTime"] = nc->authenticationExpiryTime;
+	nj["ssoEnabled"] = nc->ssoEnabled;
 }
 
 static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer)
@@ -300,7 +304,6 @@ static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer)
 
 static void _bondToJson(nlohmann::json &pj, SharedPtr<Bond> &bond)
 {
-	char tmp[256];
 	uint64_t now = OSUtils::now();
 
 	int bondingPolicy = bond->getPolicy();
@@ -573,6 +576,7 @@ public:
 	Mutex _run_m;
 
 	RedisConfig *_rc;
+	std::string _ssoRedirectURL;
 
 	// end member variables ----------------------------------------------------
 
@@ -610,6 +614,7 @@ public:
 #endif
 		,_run(true)
 		,_rc(NULL)
+		,_ssoRedirectURL()
 	{
 		_ports[0] = 0;
 		_ports[1] = 0;
@@ -723,15 +728,24 @@ public:
 			OSUtils::ztsnprintf(portstr,sizeof(portstr),"%u",_ports[0]);
 			OSUtils::writeFile((_homePath + ZT_PATH_SEPARATOR_S "zerotier-one.port").c_str(),std::string(portstr));
 
-			// Attempt to bind to a secondary port chosen from our ZeroTier address.
+			// Attempt to bind to a secondary port.
 			// This exists because there are buggy NATs out there that fail if more
 			// than one device behind the same NAT tries to use the same internal
 			// private address port number. Buggy NATs are a running theme.
+			//
+			// This used to pick the secondary port based on the node ID until we
+			// discovered another problem: buggy routers and malicious traffic 
+			// "detection".  A lot of routers have such things built in these days
+			// and mis-detect ZeroTier traffic as malicious and block it resulting
+			// in a node that appears to be in a coma.  Secondary ports are now 
+			// randomized on startup.
 			if (_allowSecondaryPort) {
 				if (_secondaryPort) {
 					_ports[1] = _secondaryPort;
 				} else {
-					_ports[1] = 20000 + ((unsigned int)_node->address() % 45500);
+					unsigned int randp = 0;
+					Utils::getSecureRandom(&randp,sizeof(randp));
+					_ports[1] = 20000 + (randp % 45500);
 					for(int i=0;;++i) {
 						if (i > 1000) {
 							_ports[1] = 0;
@@ -779,6 +793,9 @@ public:
 
 			// Network controller is now enabled by default for desktop and server
 			_controller = new EmbeddedNetworkController(_node,_homePath.c_str(),_controllerDbPath.c_str(),_ports[0], _rc);
+			if (!_ssoRedirectURL.empty()) {
+				_controller->setSSORedirectURL(_ssoRedirectURL);
+			}
 			_node->setNetconfMaster((void *)_controller);
 
 			// Join existing networks in networks.d
@@ -1037,6 +1054,8 @@ public:
 			if (cdbp.length() > 0)
 				_controllerDbPath = cdbp;
 
+			_ssoRedirectURL = OSUtils::jsonString(settings["ssoRedirectURL"], "");
+
 #ifdef ZT_CONTROLLER_USE_LIBPQ
 			// TODO:  Redis config
 			json &redis = settings["redis"];
@@ -1259,7 +1278,7 @@ public:
 										_bondToJson(res,bond);
 										scode = 200;
 									} else {
-										fprintf(stderr, "unable to find bond to peer %llx\n", id);
+										fprintf(stderr, "unable to find bond to peer %llx\n", (unsigned long long)id);
 										scode = 400;
 									}
 								}
@@ -1466,7 +1485,7 @@ public:
 									if (bond) {
 										scode = bond->abForciblyRotateLink() ? 200 : 400;
 									} else {
-										fprintf(stderr, "unable to find bond to peer %llx\n", id);
+										fprintf(stderr, "unable to find bond to peer %llx\n", (unsigned long long)id);
 										scode = 400;
 									}
 								}
@@ -2391,7 +2410,7 @@ public:
 							Dictionary<4096> nc;
 							nc.load(nlcbuf.c_str());
 							Buffer<1024> allowManaged;
-							if (nc.get("allowManaged", allowManaged) && !allowManaged.size() == 0) {
+							if (nc.get("allowManaged", allowManaged) && allowManaged.size() > 0) {
 								std::string addresses (allowManaged.begin(), allowManaged.size());
 								if (allowManaged.size() <= 5) { // untidy parsing for backward compatibility
 									if (allowManaged[0] == '1' || allowManaged[0] == 't' || allowManaged[0] == 'T') {

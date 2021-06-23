@@ -182,6 +182,14 @@ bool NetworkConfig::toDictionary(Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d,b
 			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_DNS,*tmp)) return false;
 		}
 
+		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_SSO_ENABLED, this->ssoEnabled)) return false;
+		if (this->ssoEnabled) {
+			if (this->authenticationURL[0]) {
+				if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_AUTHENTICATION_URL, this->authenticationURL)) return false;
+			}
+			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_AUTHENTICATION_EXPIRY_TIME, this->authenticationExpiryTime)) return false;
+		}
+
 		delete tmp;
 	} catch ( ... ) {
 		delete tmp;
@@ -364,6 +372,20 @@ bool NetworkConfig::fromDictionary(const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACI
 			if (d.get(ZT_NETWORKCONFIG_DICT_KEY_DNS, *tmp)) {
 				unsigned int p = 0;
 				DNS::deserializeDNS(*tmp, p, &dns);
+			}
+
+
+			this->ssoEnabled = d.getB(ZT_NETWORKCONFIG_DICT_KEY_SSO_ENABLED, false);
+			if (this->ssoEnabled) {
+				if (d.get(ZT_NETWORKCONFIG_DICT_KEY_AUTHENTICATION_URL, this->authenticationURL, (unsigned int)sizeof(this->authenticationURL)) > 0) {
+					this->authenticationURL[sizeof(this->authenticationURL) - 1] = 0; // ensure null terminated
+				} else {
+					this->authenticationURL[0] = 0;
+				}
+				this->authenticationExpiryTime = d.getI(ZT_NETWORKCONFIG_DICT_KEY_AUTHENTICATION_EXPIRY_TIME, 0);
+			} else {
+				this->authenticationURL[0] = 0;
+				this->authenticationExpiryTime = 0;
 			}
 		}
 

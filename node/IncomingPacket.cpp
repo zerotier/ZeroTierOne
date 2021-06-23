@@ -191,6 +191,29 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,void *tPtr,const Shar
 			}
 		}	break;
 
+		case Packet::ERROR_NETWORK_AUTHENTICATION_REQUIRED: {
+			const SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
+			if ((network)&&(network->controller() == peer->address())) {
+				bool noUrl = true;
+				int s = (int)size() - (ZT_PROTO_VERB_ERROR_IDX_PAYLOAD + 8);
+				if (s > 2) {
+					const uint16_t errorDataSize = at<uint16_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD + 8);
+					s -= 2;
+					if (s >= (int)errorDataSize) {
+						Dictionary<3072> authInfo(((const char *)this->data()) + (ZT_PROTO_VERB_ERROR_IDX_PAYLOAD + 10), errorDataSize);
+						char authenticationURL[2048];
+						if (authInfo.get("aU", authenticationURL, sizeof(authenticationURL)) > 0) {
+							authenticationURL[sizeof(authenticationURL) - 1] = 0; // ensure always zero terminated
+							network->setAuthenticationRequired(authenticationURL);
+							noUrl = false;
+						}
+					}
+				}
+				if (noUrl)
+					network->setAuthenticationRequired("");
+			}
+		}	break;
+
 		default: break;
 	}
 

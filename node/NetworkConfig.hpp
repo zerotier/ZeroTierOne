@@ -94,7 +94,7 @@
 namespace ZeroTier {
 
 // Dictionary capacity needed for max size network config
-#define ZT_NETWORKCONFIG_DICT_CAPACITY (1024 + (sizeof(ZT_VirtualNetworkRule) * ZT_MAX_NETWORK_RULES) + (sizeof(Capability) * ZT_MAX_NETWORK_CAPABILITIES) + (sizeof(Tag) * ZT_MAX_NETWORK_TAGS) + (sizeof(CertificateOfOwnership) * ZT_MAX_CERTIFICATES_OF_OWNERSHIP))
+#define ZT_NETWORKCONFIG_DICT_CAPACITY (4096 + (sizeof(ZT_VirtualNetworkRule) * ZT_MAX_NETWORK_RULES) + (sizeof(Capability) * ZT_MAX_NETWORK_CAPABILITIES) + (sizeof(Tag) * ZT_MAX_NETWORK_TAGS) + (sizeof(CertificateOfOwnership) * ZT_MAX_CERTIFICATES_OF_OWNERSHIP))
 
 // Dictionary capacity needed for max size network meta-data
 #define ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY 1024
@@ -178,6 +178,12 @@ namespace ZeroTier {
 #define ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATES_OF_OWNERSHIP "COO"
 // dns (binary blobs)
 #define ZT_NETWORKCONFIG_DICT_KEY_DNS "DNS"
+// sso enabld
+#define ZT_NETWORKCONFIG_DICT_KEY_SSO_ENABLED "ssoe"
+// authentication URL
+#define ZT_NETWORKCONFIG_DICT_KEY_AUTHENTICATION_URL "aurl"
+// authentication expiry
+#define ZT_NETWORKCONFIG_DICT_KEY_AUTHENTICATION_EXPIRY_TIME "aexpt"
 
 // Legacy fields -- these are obsoleted but are included when older clients query
 
@@ -233,7 +239,10 @@ public:
 		tags(),
 		certificatesOfOwnership(),
 		type(ZT_NETWORK_TYPE_PRIVATE),
-		dnsCount(0)
+		dnsCount(0),
+		ssoEnabled(false),
+		authenticationURL(),
+		authenticationExpiryTime(0)
 	{
 		name[0] = 0;
 		memset(specialists, 0, sizeof(uint64_t)*ZT_MAX_NETWORK_SPECIALISTS);
@@ -604,6 +613,21 @@ public:
 	 * ZT pushed DNS configuration
 	 */
 	ZT_VirtualNetworkDNS dns;
+
+	/**
+	 * SSO enabled flag.
+	 */
+	bool ssoEnabled;
+
+	/**
+	 * Authentication URL if authentication is required
+	 */
+	char authenticationURL[2048];
+
+	/**
+	 * Time current authentication expires or 0 if external authentication is disabled
+	 */
+	uint64_t authenticationExpiryTime;
 };
 
 } // namespace ZeroTier
