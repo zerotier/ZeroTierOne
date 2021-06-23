@@ -1,7 +1,12 @@
 #!/bin/sh
 
+derp() {
+  [ ! -n "$(cat /var/lib/zerotier-one/zerotier-one.pid)" ]
+  return $?
+}
+
 grepzt() {
-  [ ! -n "$(cat /var/lib/zerotier-one/zerotier-one.pid)" -a -d "/proc/$(cat /var/lib/zerotier-one/zerotier-one.pid)" ]
+  [ -n "$(cat /var/lib/zerotier-one/zerotier-one.pid)" ] && [ -d "/proc/$(cat /var/lib/zerotier-one/zerotier-one.pid)" ]
   return $?
 }
 
