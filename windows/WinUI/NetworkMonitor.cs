@@ -102,10 +102,10 @@ namespace WinUI
 
         private void apiNetworkCallback(List<ZeroTierNetwork> networks)
         {
-						if (networks == null)
-						{
-								return;
-						}
+            if (networks == null)
+            {
+                return;
+            }
 
             lock (_knownNetworks)
             {
@@ -132,7 +132,10 @@ namespace WinUI
 
         private void apiStatusCallback(ZeroTierStatus status)
         {
-            _stCb(status);
+            if (_stCb != null)
+            {
+                _stCb(status);
+            }
         }
 
         private void run()
