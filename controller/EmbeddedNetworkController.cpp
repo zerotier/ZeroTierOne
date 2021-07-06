@@ -1477,7 +1477,7 @@ void EmbeddedNetworkController::_request(
 	json &memberTags = member["tags"];
 	json &dns = network["dns"];
 
-	fprintf(stderr, "IP Assignment Pools for Network %s: %s\n", nwids, OSUtils::jsonDump(ipAssignmentPools, 2));
+	fprintf(stderr, "IP Assignment Pools for Network %s: %s\n", nwids, OSUtils::jsonDump(ipAssignmentPools, 2).c_str());
 
 	if (metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_RULES_ENGINE_REV,0) <= 0) {
 		// Old versions with no rules engine support get an allow everything rule.
