@@ -1231,7 +1231,7 @@ void PostgreSQL::commitThread()
 					}
 
 				} catch (std::exception &e) {
-					fprintf(stderr, "ERROR: Error updating member: %s\n", e.what());
+					fprintf(stderr, "ERROR: Error updating network: %s\n", e.what());
 				}
 			} else if (objtype == "_delete_network") {
 				fprintf(stderr, "commitThread: delete network\n");
