@@ -25,10 +25,10 @@ static_assert(
     "ZT_SOCKADDR_STORAGE_SIZE is incorrect on this platform, must be size of sockaddr_storage");
 static_assert(
     ZT_SOCKADDR_STORAGE_SIZE == sizeof(InetAddress),
-    "ZT_SOCKADDR_STORAGE_SIZE should equal InetAddress, which should equal size of sockaddr_storage");
+    "ZT_SOCKADDR_STORAGE_SIZE should equal InetAddress, which must equal size of sockaddr_storage");
 static_assert(
     ZT_SOCKADDR_STORAGE_SIZE == sizeof(ZT_InetAddress),
-    "ZT_SOCKADDR_STORAGE_SIZE should equal ZT_InetAddress, which should equal size of sockaddr_storage");
+    "ZT_SOCKADDR_STORAGE_SIZE should equal ZT_InetAddress, which must equal size of sockaddr_storage");
 
 const InetAddress InetAddress::LO4((const void *)("\x7f\x00\x00\x01"), 4, 0);
 const InetAddress

@@ -272,6 +272,13 @@ typedef void ZT_Identity;
  */
 typedef void ZT_Locator;
 
+/**
+ * Size of sockaddr_storage.
+ *
+ * This is defined here to avoid having to import system header files
+ * unnecessarily. It's checked during compile with a static_assert to ensure
+ * that it is correct for the target. Checks are in InetAddress.cpp.
+ */
 #define ZT_SOCKADDR_STORAGE_SIZE 128
 
 /**

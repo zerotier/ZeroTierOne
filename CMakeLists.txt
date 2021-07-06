@@ -20,16 +20,6 @@ project(zerotier
 
 if(NOT PACKAGE_STATIC)
 
-	#find_program(
-	#	GO go
-	#	HINTS "/usr/local/go/bin" "/usr/bin" "/usr/local/bin" "C:/go/bin"
-	#)
-	#if(NOT GO)
-	#	message(FATAL_ERROR "Golang not found")
-	#else(NOT GO)
-	#	message(STATUS "Found Golang at ${GO}")
-	#endif(NOT GO)
-
 	set(default_build_type "Release")
 
 	if(WIN32)
@@ -111,11 +101,6 @@ if(NOT PACKAGE_STATIC)
 
 	else(WIN32)
 
-		#set(GOFLAGS
-		#	-trimpath
-		#	-buildmode=pie
-		#)
-
 		if(APPLE)
 
 			message("++ Setting MacOS Compiler Flags ${CMAKE_BUILD_TYPE}")
@@ -144,12 +129,6 @@ if(NOT PACKAGE_STATIC)
 				$<$<CONFIG:RELEASE>:-flto>
 			)
 
-			#set(GOFLAGS
-			#	${GOFLAGS}
-			#	-a
-			#	-ldflags '-w -extldflags \"-Wl,-undefined -Wl,dynamic_lookup\"'
-			#)
-
 		else(APPLE)
 
 			message("++ Setting Linux/BSD/Posix Compiler Flags (${CMAKE_BUILD_TYPE})")
@@ -172,18 +151,11 @@ if(NOT PACKAGE_STATIC)
 
 			option(BUILD_32BIT "Force building as 32-bit binary" OFF)
 			option(BUILD_STATIC "Build statically linked executable" OFF)
-			option(BUILD_ARM_V5 "Build ARMv5" OFF)
-			option(BUILD_ARM_V6 "Build ARMv6" OFF)
-
-			if(BUILD_ARM_V5 AND BUILD_ARM_V6)
-				message(FATAL_ERROR "BUILD_ARM_V5 and BUILD_ARM_V6 are mutually exclusive!")
-			endif(BUILD_ARM_V5 AND BUILD_ARM_V6)
 
 			if(BUILD_32BIT)
 				set(CMAKE_SYSTEM_PROCESSOR "x86" CACHE STRING "system processor")
 				set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32" CACHE STRING "c++ flags")
 				set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m32" CACHE STRING "c flags")
-				set(GOARCH "GOARCH=386" CACHE STRING "go architecture")
 				add_compile_options(
 					-m32
 				)
@@ -194,27 +166,7 @@ if(NOT PACKAGE_STATIC)
 					-static
 				)
 				set(CMAKE_EXE_LINKER_FLAGS "-static ${CMAKE_EXE_LINKER_FLAGS}")
-				#set(GOFLAGS
-				#	${GOFLAGS}
-				#	-a
-				#	-tags osusergo,netgo
-				#	-ldflags '-w -extldflags \"-static -Wl,-unresolved-symbols=ignore-all\"'
-				#)
-			else(BUILD_STATIC)
-				#set(GOFLAGS
-				#	${GOFLAGS}
-				#	-a
-				#	-ldflags '-w -extldflags \"-Wl,-unresolved-symbols=ignore-all\"'
-				#)
 			endif(BUILD_STATIC)
-
-			if(BUILD_ARM_V5)
-				set(GOARM "GOARM=5")
-			endif(BUILD_ARM_V5)
-
-			if(BUILD_ARM_V6)
-				set(GOARM "GOARM=6")
-			endif(BUILD_ARM_V6)
 
 		endif(APPLE)
 	endif(WIN32)
@@ -229,11 +181,8 @@ if(NOT PACKAGE_STATIC)
 		add_compile_options(-march=armv8-a+aes+crypto -mtune=generic -mstrict-align)
 	endif()
 
-	set(GO_BUILD_TAGS)
-
 	if(BUILD_CENTRAL_CONTROLLER)
 		add_definitions(-DZT_CONTROLLER_USE_LIBPQ=1)
-		set(GO_BUILD_TAGS -tags central)
 	endif(BUILD_CENTRAL_CONTROLLER)
 
 	add_subdirectory(core)

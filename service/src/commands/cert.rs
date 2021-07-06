@@ -34,6 +34,7 @@ fn cert_usage_flags_to_string(flags: u64) -> String {
         (CERTIFICATE_USAGE_CRL_SIGNING, "r"),
         (CERTIFICATE_USAGE_EXECUTABLE_SIGNATURE, "x"),
         (CERTIFICATE_USAGE_TIMESTAMPING, "t"),
+        (CERTIFICATE_USAGE_ZEROTIER_ROOT_SET, "z"),
     ].iter() {
         if (flags & (*f).0) != 0 {
             if !flags_str.is_empty() {
@@ -58,6 +59,7 @@ fn cert_string_to_usage_flags(flags_str: &str) -> u64 {
             'r' => CERTIFICATE_USAGE_CRL_SIGNING,
             'x' => CERTIFICATE_USAGE_EXECUTABLE_SIGNATURE,
             't' => CERTIFICATE_USAGE_TIMESTAMPING,
+            'z' => CERTIFICATE_USAGE_ZEROTIER_ROOT_SET,
             _ => 0,
         }
     }

@@ -31,6 +31,7 @@ pub const CERTIFICATE_MAX_STRING_LENGTH: isize = ztcore::ZT_CERTIFICATE_MAX_STRI
 
 /// Certificate local trust bit field flag: this certificate self-signs a root CA.
 pub const CERTIFICATE_LOCAL_TRUST_FLAG_ROOT_CA: u32 = ztcore::ZT_CERTIFICATE_LOCAL_TRUST_FLAG_ROOT_CA;
+pub const CERTIFICATE_LOCAL_TRUST_FLAG_CONFIG: u32 = ztcore::ZT_CERTIFICATE_LOCAL_TRUST_FLAG_CONFIG;
 
 pub const CERTIFICATE_USAGE_DIGITAL_SIGNATURE: u64 = ztcore::ZT_CERTIFICATE_USAGE_DIGITAL_SIGNATURE as u64;
 pub const CERTIFICATE_USAGE_NON_REPUDIATION: u64 = ztcore::ZT_CERTIFICATE_USAGE_NON_REPUDIATION as u64;
@@ -41,6 +42,7 @@ pub const CERTIFICATE_USAGE_CERTIFICATE_SIGNING: u64 = ztcore::ZT_CERTIFICATE_US
 pub const CERTIFICATE_USAGE_CRL_SIGNING: u64 = ztcore::ZT_CERTIFICATE_USAGE_CRL_SIGNING as u64;
 pub const CERTIFICATE_USAGE_EXECUTABLE_SIGNATURE: u64 = ztcore::ZT_CERTIFICATE_USAGE_EXECUTABLE_SIGNATURE as u64;
 pub const CERTIFICATE_USAGE_TIMESTAMPING: u64 = ztcore::ZT_CERTIFICATE_USAGE_TIMESTAMPING as u64;
+pub const CERTIFICATE_USAGE_ZEROTIER_ROOT_SET: u64 = ztcore::ZT_CERTIFICATE_USAGE_ZEROTIER_ROOT_SET as u64;
 
 #[inline(always)]
 fn vec_to_array<const L: usize>(v: &Vec<u8>) -> [u8; L] {
@@ -54,8 +56,6 @@ fn vec_to_array<const L: usize>(v: &Vec<u8>) -> [u8; L] {
     a
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 #[derive(FromPrimitive, ToPrimitive, PartialEq, Eq, Clone, Copy)]
 pub enum CertificatePublicKeyAlgorithm {
     None = ztcore::ZT_CertificatePublicKeyAlgorithm_ZT_CERTIFICATE_PUBLIC_KEY_ALGORITHM_NONE as isize,
@@ -68,8 +68,6 @@ impl From<i32> for CertificatePublicKeyAlgorithm {
         CertificatePublicKeyAlgorithm::from_i32(n).unwrap_or(CertificatePublicKeyAlgorithm::None)
     }
 }
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct CertificateSerialNo(pub [u8; 48]);
@@ -142,17 +140,18 @@ impl ToString for CertificateSerialNo {
 impl serde::Serialize for CertificateSerialNo {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer { serializer.serialize_str(self.to_string().as_str()) }
 }
+
 struct CertificateSerialNoVisitor;
+
 impl<'de> serde::de::Visitor<'de> for CertificateSerialNoVisitor {
     type Value = CertificateSerialNo;
     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result { formatter.write_str("object") }
-    fn visit_str<E>(self, s: &str) -> Result<Self::Value, E> where E: serde::de::Error { Self::Value::new_from_string(s).map_or_else(|| { Err(serde::de::Error::invalid_value(serde::de::Unexpected::Str(s), &self)) },|serial| { Ok(serial as Self::Value) }) }
+    fn visit_str<E>(self, s: &str) -> Result<Self::Value, E> where E: serde::de::Error { Self::Value::new_from_string(s).map_or_else(|| { Err(serde::de::Error::invalid_value(serde::de::Unexpected::Str(s), &self)) }, |serial| { Ok(serial as Self::Value) }) }
 }
+
 impl<'de> serde::Deserialize<'de> for CertificateSerialNo {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'de> { deserializer.deserialize_str(CertificateSerialNoVisitor) }
 }
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[derive(FromPrimitive, ToPrimitive, PartialEq, Eq, Clone, Copy)]
 pub enum CertificateError {
@@ -212,17 +211,18 @@ impl<S: AsRef<str>> From<S> for CertificateError {
 impl serde::Serialize for CertificateError {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer { serializer.serialize_str(self.to_string().as_str()) }
 }
+
 struct CertificateErrorVisitor;
+
 impl<'de> serde::de::Visitor<'de> for CertificateErrorVisitor {
     type Value = CertificateError;
     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result { formatter.write_str("object") }
     fn visit_str<E>(self, s: &str) -> Result<Self::Value, E> where E: serde::de::Error { return Ok(CertificateError::from(s)); }
 }
+
 impl<'de> serde::Deserialize<'de> for CertificateError {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'de> { deserializer.deserialize_str(CertificateErrorVisitor) }
 }
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct CertificateName {
@@ -310,8 +310,6 @@ impl CertificateName {
     }
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 #[derive(Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct CertificateNetwork {
     pub id: NetworkId,
@@ -343,7 +341,7 @@ impl CertificateNetwork {
                 controller: ztcore::ZT_Fingerprint {
                     address: 0,
                     hash: [0_u8; 48],
-                }
+                },
             }
         }, |controller| {
             ztcore::ZT_Certificate_Network {
@@ -356,8 +354,6 @@ impl CertificateNetwork {
         })
     }
 }
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct CertificateIdentity {
@@ -383,8 +379,6 @@ impl CertificateIdentity {
         }
     }
 }
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct CertificateSubject {
@@ -558,8 +552,6 @@ impl CertificateSubject {
         }
     }
 }
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct Certificate {
@@ -740,8 +732,6 @@ impl Certificate {
     }
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 #[cfg(test)]
 mod tests {
     use crate::*;
@@ -760,11 +750,11 @@ mod tests {
         let (_, unique_id_private) = Certificate::new_key_pair(CertificatePublicKeyAlgorithm::ECDSANistP384).ok().unwrap();
         let id0 = Identity::new_generate(IdentityType::Curve25519).ok().unwrap();
 
-        let mut cert = Certificate{
+        let mut cert = Certificate {
             serial_no: CertificateSerialNo::new(),
             usage_flags: 1,
             timestamp: 2,
-            validity: [ 1,10 ],
+            validity: [1, 10],
             subject: CertificateSubject::new(),
             issuer: CertificateSerialNo::new(),
             issuer_public_key: issuer_pubk,
@@ -772,21 +762,21 @@ mod tests {
             subject_signature: Vec::new(),
             extended_attributes: Vec::new(),
             max_path_length: 123,
-            signature: Vec::new()
+            signature: Vec::new(),
         };
         cert.serial_no.0[1] = 99;
         cert.issuer.0[1] = 199;
         cert.subject.timestamp = 5;
-        cert.subject.identities.push(CertificateIdentity{
+        cert.subject.identities.push(CertificateIdentity {
             identity: id0.clone(),
-            locator: None
+            locator: None,
         });
-        cert.subject.networks.push(CertificateNetwork{
+        cert.subject.networks.push(CertificateNetwork {
             id: NetworkId(0xdeadbeef),
-            controller: Some(id0.fingerprint())
+            controller: Some(id0.fingerprint()),
         });
         cert.subject.update_urls.push(String::from("http://foo.bar"));
-        cert.subject.name = CertificateName{
+        cert.subject.name = CertificateName {
             serial_no: String::from("12345"),
             common_name: String::from("foo"),
             country: String::from("bar"),
@@ -798,7 +788,7 @@ mod tests {
             postal_code: String::from("postal code"),
             email: String::from("nobody@nowhere.org"),
             url: String::from("https://www.zerotier.com/"),
-            host: String::from("zerotier.com")
+            host: String::from("zerotier.com"),
         };
 
         unsafe {

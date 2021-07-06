@@ -163,10 +163,7 @@ static uint64_t mulmod64(uint64_t a, uint64_t b, const uint64_t m)
  * performs fairly equally across CPUs. */
 ZT_INLINE uint64_t mulmod52(uint64_t a, const uint64_t b, const uint64_t m, const double mf)
 {
-    a = ((a * b) - (((uint64_t)(((double)a * (double)b) / mf) - 1) * m));
-    // a -= m * (uint64_t)(a > m); // faster on some systems, but slower on newer cores
-    a %= m;
-    return a;
+    return ((a * b) - (((uint64_t)(((double)a * (double)b) / mf) - 1ULL) * m)) % m;
 }
 
 #endif

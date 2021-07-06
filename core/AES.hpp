@@ -47,15 +47,20 @@ class AES {
      */
     static ZT_INLINE bool accelerated()
     {
-#ifdef ZT_AES_NO_ACCEL
-        return false;
-#else
+#ifndef ZT_AES_NO_ACCEL
 #ifdef ZT_AES_AESNI
+#define ZT_HAVE_HW_AES_IMPL 1
         return Utils::CPUID.aes;
 #endif
 #ifdef ZT_AES_NEON
+#define ZT_HAVE_HW_AES_IMPL 1
         return Utils::ARMCAP.aes;
 #endif
+#ifndef ZT_HAVE_HW_AES_IMPL
+        return false;
+#endif
+#else
+        return false;
 #endif
     }
 

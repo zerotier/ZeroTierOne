@@ -65,15 +65,12 @@ ZT_INLINE unsigned int vli_numBits(const uint64_t *const p_vli)
 
 ZT_INLINE int vli_cmp(const uint64_t *const p_left, const uint64_t *const p_right)
 {
+    int comp = 0;
     for (int i = ECC_CURVE_DIGITS - 1; i >= 0; --i) {
-        if (p_left[i] > p_right[i]) {
-            return 1;
-        }
-        else if (p_left[i] < p_right[i]) {
-            return -1;
-        }
+        comp += (int)((p_left[i] > p_right[i])&&(comp == 0)); // should be constant time
+        comp -= (int)((p_left[i] < p_right[i])&&(comp == 0));
     }
-    return 0;
+    return comp;
 }
 
 ZT_INLINE uint64_t vli_lshift(uint64_t *const p_result, const uint64_t *const p_in, const unsigned int p_shift)
@@ -150,8 +147,8 @@ ZT_INLINE void vli_square(uint64_t *const p_result, const uint64_t *const p_left
     for (int k = 0; k < ECC_CURVE_DIGITS * 2 - 1; ++k) {
         for (int i = (k < ECC_CURVE_DIGITS ? 0 : (k + 1) - ECC_CURVE_DIGITS); i <= k && i <= k - i; ++i) {
             uint128_t l_product = (uint128_t)p_left[i] * p_left[k - i];
-            if (i < k - i) {
-                r2 += l_product >> 127U;
+            if (i < (k - i)) {
+                r2 += (uint64_t)(l_product >> 127U);
                 l_product *= 2;
             }
             r01 += l_product;

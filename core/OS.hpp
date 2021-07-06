@@ -87,12 +87,6 @@
 #define ZT_ARCH_X86 1
 #endif
 
-#if !defined(ZT_ARCH_X86)
-#ifndef ZT_NO_UNALIGNED_ACCESS
-#define ZT_NO_UNALIGNED_ACCESS 1
-#endif
-#endif
-
 #if defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(ZT_ARCH_ARM_HAS_NEON)
 #if (defined(__APPLE__) && !defined(__LP64__)) || (defined(__ANDROID__) && defined(__arm__))
 #ifdef ZT_ARCH_ARM_HAS_NEON
@@ -105,6 +99,12 @@
 #endif
 #include <arm_neon.h>
 /*#include <arm_acle.h>*/
+#endif
+
+#if !defined(ZT_ARCH_X86) && !defined(__aarch64__)
+#ifndef ZT_NO_UNALIGNED_ACCESS
+#define ZT_NO_UNALIGNED_ACCESS 1
+#endif
 #endif
 
 #ifdef __APPLE__

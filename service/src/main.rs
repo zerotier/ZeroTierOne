@@ -135,6 +135,7 @@ Advanced Operations:
          r                                     Usage: CRL signing (CA)
          x                                     Usage: executable signing
          t                                     Usage: timestamping
+         z                                     Usage: ZeroTier root set
       -t <timestamp, seconds since epoch>    Timestamp (default: current time)
       -s <validity start time, seconds>      Start time (default: timestamp)
       -l <#y|d|h|m|s... (ex: 1y, 3d12h)>     Time to live (default: forever)
