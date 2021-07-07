@@ -14,9 +14,11 @@
 #ifndef ZT_INETADDRESS_HPP
 #define ZT_INETADDRESS_HPP
 
+#include <cstdint>
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <sys/socket.h>
 
 #include "Constants.hpp"
 #include "../include/ZeroTierOne.h"
@@ -644,6 +646,7 @@ struct InetAddress : public sockaddr_storage
 	 * Compute a private IPv6 "6plane" unicast address from network ID and ZeroTier address
 	 */
 	static InetAddress makeIpv66plane(uint64_t nwid,uint64_t zeroTierAddress);
+  std::string makePTR();
 };
 
 } // namespace ZeroTier

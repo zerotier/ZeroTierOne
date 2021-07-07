@@ -1050,6 +1050,55 @@ static int testPhy()
 	return 0;
 }
 
+static int testPTR()
+{
+  InetAddress ip6ip("feed:dead:beef:cafe::babe/80");
+  InetAddress ip6ip72("feed:dead:beef:cafe::babe/72");
+  InetAddress ip6ip68("feed:dead:beef:cafe::babe/68");
+  InetAddress ip6ip60("feed:dead:beef:cafe::babe/60");
+  InetAddress ip4ip("172.16.42.0/24");
+  InetAddress ip4ip16("172.16.42.0/16");
+  InetAddress ip4ip8("172.16.42.0/8");
+
+  if (ip6ip.makePTR().compare("0.0.0.0.e.f.a.c.f.e.e.b.d.a.e.d.d.e.e.f.ip6.arpa")) {
+    std::cout << "80" << ip6ip.makePTR() << std::endl;
+    return 1;
+  }
+
+  if (ip6ip72.makePTR().compare("0.0.e.f.a.c.f.e.e.b.d.a.e.d.d.e.e.f.ip6.arpa")) {
+    std::cout << "72" << ip6ip72.makePTR() << std::endl;
+    return 1;
+  }
+
+  if (ip6ip68.makePTR().compare("e.f.a.c.f.e.e.b.d.a.e.d.d.e.e.f.ip6.arpa")) {
+    std::cout << "68" << ip6ip68.makePTR() << std::endl;
+    return 1;
+  }
+
+  if (ip6ip60.makePTR().compare("a.c.f.e.e.b.d.a.e.d.d.e.e.f.ip6.arpa")) {
+    std::cout << "60" << ip6ip60.makePTR() << std::endl;
+    return 1;
+  }
+
+  if (ip4ip.makePTR().compare("42.16.172.in-addr.arpa")) {
+    std::cout << ip4ip.makePTR() << std::endl;
+    return 1;
+  }
+
+  if (ip4ip16.makePTR().compare("16.172.in-addr.arpa")) {
+    std::cout << ip4ip16.makePTR() << std::endl;
+    return 1;
+  }
+
+  if (ip4ip8.makePTR().compare("172.in-addr.arpa")) {
+    std::cout << ip4ip8.makePTR() << std::endl;
+    return 1;
+  }
+
+  return 0;
+}
+
+
 #ifdef __WINDOWS__
 int __cdecl _tmain(int argc, _TCHAR* argv[])
 #else
@@ -1108,6 +1157,7 @@ int main(int argc,char **argv)
 	srand((unsigned int)time(0));
 
 	///*
+	r |= testPTR();
 	r |= testOther();
 	r |= testCrypto();
 	r |= testPacket();
