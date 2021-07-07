@@ -126,9 +126,9 @@ class BondController {
 	 *
 	 * @param alias Human-readable string alias for bonding policy
 	 */
-	void setBondingLayerDefaultPolicyStr(std::string alias)
+	void setBondingLayerDefaultPolicyStr(const std::string& alias)
 	{
-		_defaultBondingPolicyStr = alias;
+		_defaultBondingPolicyStr = std::move(alias);
 	}
 
 	/**

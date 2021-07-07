@@ -113,7 +113,10 @@ void CertificateOfMembership::fromString(const char *s)
 				}
 				bufactual -= 24;
 			}
-		} catch ( ... ) {}
+		} catch ( ... ) {
+			delete [] buf;
+			return;
+		}
 		delete [] buf;
 	}
 
