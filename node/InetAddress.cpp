@@ -11,11 +11,16 @@
  */
 /****/
 
+#include <cmath>
+#include <cstdint>
+#include <cstdio>
+#include <netinet/in.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
 
 #include <string>
+#include <sys/socket.h>
 
 #include "Constants.hpp"
 #include "InetAddress.hpp"
@@ -453,4 +458,52 @@ InetAddress InetAddress::makeIpv66plane(uint64_t nwid,uint64_t zeroTierAddress)
 	return r;
 }
 
+// PTR6 can be max 73 characters with null; PTRs are much shorter
+#define PTR_MAXLEN 73
+
+#define PTR_PREFIX "in-addr.arpa"
+#define PTR6_PREFIX "ip6.arpa"
+
+std::string InetAddress::makePTR()
+{
+  std::string ret = "";
+  InetAddress ip = this;
+
+  const unsigned int bits = netmaskBits();
+
+  if (bits == 0) {
+    return ret;
+  }
+
+  if (!isNetwork()) {
+    ip = ip.network();
+  }
+
+  bool v4 = ip.isV4();
+
+  char tmp[PTR_MAXLEN];
+  char *t = &tmp[0];
+
+  for (int i = (bits/8)-1; i >= 0; i -= 1) {
+    if (v4) { 
+      t += std::snprintf(t, 5, "%d.", (uint8_t)((reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr>>i*8)&0xff));
+    } else {
+      t += std::snprintf(t, 3, "%x.", (uint8_t)(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr[i]&0xf));
+      t += std::snprintf(t, 3, "%x.", (uint8_t)((reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr[i]>>4)&0xf));
+    }
+  }
+
+  if (v4) {
+    if (!(strcpy(t, PTR_PREFIX))) {
+      return ret;
+    }
+  } else {
+    if (!(strcpy(t, PTR6_PREFIX))) {
+      return ret;
+    }
+  }
+
+  return ret.append(tmp);
+}
+ 
 } // namespace ZeroTier
