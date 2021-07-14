@@ -32,8 +32,7 @@ bool NetworkConfig::toDictionary(Dictionary &d) const
         d.add(ZT_NETWORKCONFIG_DICT_KEY_CREDENTIAL_TIME_MAX_DELTA, this->credentialTimeMaxDelta);
         d.add(ZT_NETWORKCONFIG_DICT_KEY_REVISION, this->revision);
         d.add(ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO, this->issuedTo.toString((char *)tmp));
-        d.add(
-            ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO_IDENTITY_HASH, this->issuedToFingerprintHash, ZT_FINGERPRINT_HASH_SIZE);
+        d.add(ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO_IDENTITY_HASH, this->issuedToFingerprintHash, ZT_FINGERPRINT_HASH_SIZE);
         d.add(ZT_NETWORKCONFIG_DICT_KEY_FLAGS, this->flags);
         d.add(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT, (uint64_t)this->multicastLimit);
         d.add(ZT_NETWORKCONFIG_DICT_KEY_TYPE, (uint64_t)this->type);
@@ -146,8 +145,7 @@ bool NetworkConfig::fromDictionary(const Dictionary &d)
         }
         else {
             this->flags = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_FLAGS, 0);
-            this->type =
-                (ZT_VirtualNetworkType)d.getUI(ZT_NETWORKCONFIG_DICT_KEY_TYPE, (uint64_t)ZT_NETWORK_TYPE_PRIVATE);
+            this->type  = (ZT_VirtualNetworkType)d.getUI(ZT_NETWORKCONFIG_DICT_KEY_TYPE, (uint64_t)ZT_NETWORK_TYPE_PRIVATE);
 
             blob = &(d[ZT_NETWORKCONFIG_DICT_KEY_COM]);
             if (!blob->empty()) {
@@ -209,9 +207,7 @@ bool NetworkConfig::fromDictionary(const Dictionary &d)
                 }
                 catch (...) {
                 }
-                std::sort(
-                    &(this->certificatesOfOwnership[0]),
-                    &(this->certificatesOfOwnership[this->certificateOfOwnershipCount]));
+                std::sort(&(this->certificatesOfOwnership[0]), &(this->certificatesOfOwnership[this->certificateOfOwnershipCount]));
             }
 
             blob = &(d[ZT_NETWORKCONFIG_DICT_KEY_SPECIALISTS]);
@@ -227,15 +223,13 @@ bool NetworkConfig::fromDictionary(const Dictionary &d)
             if (!blob->empty()) {
                 unsigned int p = 0;
                 while ((p < blob->size()) && (routeCount < ZT_MAX_NETWORK_ROUTES)) {
-                    int l = asInetAddress(this->routes[this->routeCount].target)
-                                .unmarshal(blob->data(), (int)(blob->size() - p));
+                    int l = asInetAddress(this->routes[this->routeCount].target).unmarshal(blob->data(), (int)(blob->size() - p));
                     if (l < 0)
                         return false;
                     p += l;
                     if (p >= blob->size())
                         return false;
-                    l = asInetAddress(this->routes[this->routeCount].via)
-                            .unmarshal(blob->data(), (int)(blob->size() - p));
+                    l = asInetAddress(this->routes[this->routeCount].via).unmarshal(blob->data(), (int)(blob->size() - p));
                     if (l < 0)
                         return false;
                     p += l;
@@ -264,9 +258,7 @@ bool NetworkConfig::fromDictionary(const Dictionary &d)
             blob = &(d[ZT_NETWORKCONFIG_DICT_KEY_RULES]);
             if (!blob->empty()) {
                 this->ruleCount = 0;
-                if (CapabilityCredential::unmarshalVirtualNetworkRules(
-                        blob->data(), (int)blob->size(), this->rules, this->ruleCount, ZT_MAX_NETWORK_RULES)
-                    < 0)
+                if (CapabilityCredential::unmarshalVirtualNetworkRules(blob->data(), (int)blob->size(), this->rules, this->ruleCount, ZT_MAX_NETWORK_RULES) < 0)
                     return false;
             }
         }

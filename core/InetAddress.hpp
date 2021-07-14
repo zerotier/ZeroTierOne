@@ -77,10 +77,7 @@ struct InetAddress : public TriviallyCopyable {
 
     explicit ZT_INLINE InetAddress(const sockaddr_in6 *const sa) noexcept { *this = sa; }
 
-    ZT_INLINE InetAddress(const void *const ipBytes, const unsigned int ipLen, const unsigned int port) noexcept
-    {
-        this->set(ipBytes, ipLen, port);
-    }
+    ZT_INLINE InetAddress(const void *const ipBytes, const unsigned int ipLen, const unsigned int port) noexcept { this->set(ipBytes, ipLen, port); }
 
     ZT_INLINE InetAddress(const uint32_t ipv4, const unsigned int port) noexcept { this->set(&ipv4, 4, port); }
 
@@ -387,14 +384,10 @@ struct InetAddress : public TriviallyCopyable {
     ZT_INLINE unsigned long hashCode() const noexcept
     {
         if (as.ss.ss_family == AF_INET) {
-            return (unsigned long)Utils::hash32(
-                ((uint32_t)as.sa_in.sin_addr.s_addr + (uint32_t)as.sa_in.sin_port) ^ (uint32_t)Utils::s_mapNonce);
+            return (unsigned long)Utils::hash32(((uint32_t)as.sa_in.sin_addr.s_addr + (uint32_t)as.sa_in.sin_port) ^ (uint32_t)Utils::s_mapNonce);
         }
         else if (as.ss.ss_family == AF_INET6) {
-            return (unsigned long)Utils::hash64(
-                (Utils::loadMachineEndian<uint64_t>(as.sa_in6.sin6_addr.s6_addr)
-                 + Utils::loadMachineEndian<uint64_t>(as.sa_in6.sin6_addr.s6_addr + 8) + (uint64_t)as.sa_in6.sin6_port)
-                ^ Utils::s_mapNonce);
+            return (unsigned long)Utils::hash64((Utils::loadMachineEndian<uint64_t>(as.sa_in6.sin6_addr.s6_addr) + Utils::loadMachineEndian<uint64_t>(as.sa_in6.sin6_addr.s6_addr + 8) + (uint64_t)as.sa_in6.sin6_port) ^ Utils::s_mapNonce);
         }
         return Utils::fnv1a32(this, sizeof(InetAddress));
     }
@@ -424,13 +417,9 @@ struct InetAddress : public TriviallyCopyable {
     {
         if (as.ss.ss_family == a.as.ss.ss_family) {
             if (as.ss.ss_family == AF_INET)
-                return (
-                    (as.sa_in.sin_port == a.as.sa_in.sin_port)
-                    && (as.sa_in.sin_addr.s_addr == a.as.sa_in.sin_addr.s_addr));
+                return ((as.sa_in.sin_port == a.as.sa_in.sin_port) && (as.sa_in.sin_addr.s_addr == a.as.sa_in.sin_addr.s_addr));
             if (as.ss.ss_family == AF_INET6)
-                return (
-                    (as.sa_in6.sin6_port == a.as.sa_in6.sin6_port)
-                    && (memcmp(as.sa_in6.sin6_addr.s6_addr, a.as.sa_in6.sin6_addr.s6_addr, 16) == 0));
+                return ((as.sa_in6.sin6_port == a.as.sa_in6.sin6_port) && (memcmp(as.sa_in6.sin6_addr.s6_addr, a.as.sa_in6.sin6_addr.s6_addr, 16) == 0));
             return memcmp(this, &a, sizeof(InetAddress)) == 0;
         }
         return false;
@@ -443,8 +432,7 @@ struct InetAddress : public TriviallyCopyable {
                 const uint16_t p0 = Utils::ntoh((uint16_t)as.sa_in.sin_port);
                 const uint16_t p1 = Utils::ntoh((uint16_t)a.as.sa_in.sin_port);
                 if (p0 == p1)
-                    return Utils::ntoh((uint32_t)as.sa_in.sin_addr.s_addr)
-                           < Utils::ntoh((uint32_t)a.as.sa_in.sin_addr.s_addr);
+                    return Utils::ntoh((uint32_t)as.sa_in.sin_addr.s_addr) < Utils::ntoh((uint32_t)a.as.sa_in.sin_addr.s_addr);
                 return p0 < p1;
             }
             if (as.ss.ss_family == AF_INET6) {
@@ -534,52 +522,25 @@ struct InetAddress : public TriviallyCopyable {
     } as;
 };
 
-static ZT_INLINE InetAddress *asInetAddress(sockaddr_in *const p) noexcept
-{
-    return reinterpret_cast<InetAddress *>(p);
-}
+static ZT_INLINE InetAddress *asInetAddress(sockaddr_in *const p) noexcept { return reinterpret_cast<InetAddress *>(p); }
 
-static ZT_INLINE InetAddress *asInetAddress(sockaddr_in6 *const p) noexcept
-{
-    return reinterpret_cast<InetAddress *>(p);
-}
+static ZT_INLINE InetAddress *asInetAddress(sockaddr_in6 *const p) noexcept { return reinterpret_cast<InetAddress *>(p); }
 
 static ZT_INLINE InetAddress *asInetAddress(sockaddr *const p) noexcept { return reinterpret_cast<InetAddress *>(p); }
 
-static ZT_INLINE InetAddress *asInetAddress(sockaddr_storage *const p) noexcept
-{
-    return reinterpret_cast<InetAddress *>(p);
-}
+static ZT_INLINE InetAddress *asInetAddress(sockaddr_storage *const p) noexcept { return reinterpret_cast<InetAddress *>(p); }
 
-static ZT_INLINE InetAddress *asInetAddress(ZT_InetAddress *const p) noexcept
-{
-    return reinterpret_cast<InetAddress *>(p);
-}
+static ZT_INLINE InetAddress *asInetAddress(ZT_InetAddress *const p) noexcept { return reinterpret_cast<InetAddress *>(p); }
 
-static ZT_INLINE const InetAddress *asInetAddress(const sockaddr_in *const p) noexcept
-{
-    return reinterpret_cast<const InetAddress *>(p);
-}
+static ZT_INLINE const InetAddress *asInetAddress(const sockaddr_in *const p) noexcept { return reinterpret_cast<const InetAddress *>(p); }
 
-static ZT_INLINE const InetAddress *asInetAddress(const sockaddr_in6 *const p) noexcept
-{
-    return reinterpret_cast<const InetAddress *>(p);
-}
+static ZT_INLINE const InetAddress *asInetAddress(const sockaddr_in6 *const p) noexcept { return reinterpret_cast<const InetAddress *>(p); }
 
-static ZT_INLINE const InetAddress *asInetAddress(const sockaddr *const p) noexcept
-{
-    return reinterpret_cast<const InetAddress *>(p);
-}
+static ZT_INLINE const InetAddress *asInetAddress(const sockaddr *const p) noexcept { return reinterpret_cast<const InetAddress *>(p); }
 
-static ZT_INLINE const InetAddress *asInetAddress(const sockaddr_storage *const p) noexcept
-{
-    return reinterpret_cast<const InetAddress *>(p);
-}
+static ZT_INLINE const InetAddress *asInetAddress(const sockaddr_storage *const p) noexcept { return reinterpret_cast<const InetAddress *>(p); }
 
-static ZT_INLINE const InetAddress *asInetAddress(const ZT_InetAddress *const p) noexcept
-{
-    return reinterpret_cast<const InetAddress *>(p);
-}
+static ZT_INLINE const InetAddress *asInetAddress(const ZT_InetAddress *const p) noexcept { return reinterpret_cast<const InetAddress *>(p); }
 
 static ZT_INLINE InetAddress &asInetAddress(sockaddr_in &p) noexcept { return *reinterpret_cast<InetAddress *>(&p); }
 
@@ -587,37 +548,19 @@ static ZT_INLINE InetAddress &asInetAddress(sockaddr_in6 &p) noexcept { return *
 
 static ZT_INLINE InetAddress &asInetAddress(sockaddr &p) noexcept { return *reinterpret_cast<InetAddress *>(&p); }
 
-static ZT_INLINE InetAddress &asInetAddress(sockaddr_storage &p) noexcept
-{
-    return *reinterpret_cast<InetAddress *>(&p);
-}
+static ZT_INLINE InetAddress &asInetAddress(sockaddr_storage &p) noexcept { return *reinterpret_cast<InetAddress *>(&p); }
 
 static ZT_INLINE InetAddress &asInetAddress(ZT_InetAddress &p) noexcept { return *reinterpret_cast<InetAddress *>(&p); }
 
-static ZT_INLINE const InetAddress &asInetAddress(const sockaddr_in &p) noexcept
-{
-    return *reinterpret_cast<const InetAddress *>(&p);
-}
+static ZT_INLINE const InetAddress &asInetAddress(const sockaddr_in &p) noexcept { return *reinterpret_cast<const InetAddress *>(&p); }
 
-static ZT_INLINE const InetAddress &asInetAddress(const sockaddr_in6 &p) noexcept
-{
-    return *reinterpret_cast<const InetAddress *>(&p);
-}
+static ZT_INLINE const InetAddress &asInetAddress(const sockaddr_in6 &p) noexcept { return *reinterpret_cast<const InetAddress *>(&p); }
 
-static ZT_INLINE const InetAddress &asInetAddress(const sockaddr &p) noexcept
-{
-    return *reinterpret_cast<const InetAddress *>(&p);
-}
+static ZT_INLINE const InetAddress &asInetAddress(const sockaddr &p) noexcept { return *reinterpret_cast<const InetAddress *>(&p); }
 
-static ZT_INLINE const InetAddress &asInetAddress(const sockaddr_storage &p) noexcept
-{
-    return *reinterpret_cast<const InetAddress *>(&p);
-}
+static ZT_INLINE const InetAddress &asInetAddress(const sockaddr_storage &p) noexcept { return *reinterpret_cast<const InetAddress *>(&p); }
 
-static ZT_INLINE const InetAddress &asInetAddress(const ZT_InetAddress &p) noexcept
-{
-    return *reinterpret_cast<const InetAddress *>(&p);
-}
+static ZT_INLINE const InetAddress &asInetAddress(const ZT_InetAddress &p) noexcept { return *reinterpret_cast<const InetAddress *>(&p); }
 
 }   // namespace ZeroTier
 

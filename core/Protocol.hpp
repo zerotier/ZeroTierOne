@@ -253,9 +253,7 @@
 #define ZT_PROTO_HELLO_NODE_META_EPHEMERAL_ACK    "E"
 
 static_assert(ZT_PROTO_MAX_PACKET_LENGTH < ZT_BUF_MEM_SIZE, "maximum packet length won't fit in Buf");
-static_assert(
-    ZT_PROTO_PACKET_ENCRYPTED_SECTION_START == (ZT_PROTO_MIN_PACKET_LENGTH - 1),
-    "encrypted packet section must start right before protocol verb at one less than minimum packet size");
+static_assert(ZT_PROTO_PACKET_ENCRYPTED_SECTION_START == (ZT_PROTO_MIN_PACKET_LENGTH - 1), "encrypted packet section must start right before protocol verb at one less than minimum packet size");
 
 namespace ZeroTier {
 namespace Protocol {
@@ -746,15 +744,7 @@ enum ErrorCode {
  * This allows the node to know whether this is a normal frame or one generated
  * by a special tee or redirect type flow rule.
  */
-enum ExtFrameSubtype {
-    EXT_FRAME_SUBTYPE_NORMAL            = 0x0,
-    EXT_FRAME_SUBTYPE_TEE_OUTBOUND      = 0x1,
-    EXT_FRAME_SUBTYPE_REDIRECT_OUTBOUND = 0x2,
-    EXT_FRAME_SUBTYPE_WATCH_OUTBOUND    = 0x3,
-    EXT_FRAME_SUBTYPE_TEE_INBOUND       = 0x4,
-    EXT_FRAME_SUBTYPE_REDIRECT_INBOUND  = 0x5,
-    EXT_FRAME_SUBTYPE_WATCH_INBOUND     = 0x6
-};
+enum ExtFrameSubtype { EXT_FRAME_SUBTYPE_NORMAL = 0x0, EXT_FRAME_SUBTYPE_TEE_OUTBOUND = 0x1, EXT_FRAME_SUBTYPE_REDIRECT_OUTBOUND = 0x2, EXT_FRAME_SUBTYPE_WATCH_OUTBOUND = 0x3, EXT_FRAME_SUBTYPE_TEE_INBOUND = 0x4, EXT_FRAME_SUBTYPE_REDIRECT_INBOUND = 0x5, EXT_FRAME_SUBTYPE_WATCH_INBOUND = 0x6 };
 
 /**
  * EXT_FRAME flags
@@ -793,8 +783,7 @@ enum NetworkConfigFlag {
  * @param in Input key (32 bytes)
  * @param out Output buffer (32 bytes)
  */
-static ZT_INLINE void salsa2012DeriveKey(
-    const uint8_t *const in, uint8_t *const out, const Buf &packet, const unsigned int packetSize) noexcept
+static ZT_INLINE void salsa2012DeriveKey(const uint8_t *const in, uint8_t *const out, const Buf &packet, const unsigned int packetSize) noexcept
 {
     // IV and source/destination addresses. Using the addresses divides the
     // key space into two halves-- A->B and B->A (since order will change).
@@ -802,12 +791,9 @@ static ZT_INLINE void salsa2012DeriveKey(
     for (int i = 0; i < 18; ++i)
         out[i] = in[i] ^ packet.unsafeData[i];
 #else
-    *reinterpret_cast<uint64_t *>(out) =
-        *reinterpret_cast<const uint64_t *>(in) ^ *reinterpret_cast<const uint64_t *>(packet.unsafeData);
-    *reinterpret_cast<uint64_t *>(out + 8) =
-        *reinterpret_cast<const uint64_t *>(in + 8) ^ *reinterpret_cast<const uint64_t *>(packet.unsafeData + 8);
-    *reinterpret_cast<uint16_t *>(out + 16) =
-        *reinterpret_cast<const uint16_t *>(in + 16) ^ *reinterpret_cast<const uint16_t *>(packet.unsafeData + 16);
+    *reinterpret_cast<uint64_t *>(out)      = *reinterpret_cast<const uint64_t *>(in) ^ *reinterpret_cast<const uint64_t *>(packet.unsafeData);
+    *reinterpret_cast<uint64_t *>(out + 8)  = *reinterpret_cast<const uint64_t *>(in + 8) ^ *reinterpret_cast<const uint64_t *>(packet.unsafeData + 8);
+    *reinterpret_cast<uint16_t *>(out + 16) = *reinterpret_cast<const uint16_t *>(in + 16) ^ *reinterpret_cast<const uint16_t *>(packet.unsafeData + 16);
 #endif
 
     // Flags, but with hop count masked off. Hop count is altered by forwarding
@@ -840,8 +826,7 @@ static ZT_INLINE void salsa2012DeriveKey(
  * @param verb Protocol verb
  * @return Index of packet start
  */
-static ZT_INLINE int newPacket(
-    uint8_t pkt[28], const uint64_t packetId, const Address destination, const Address source, const Verb verb) noexcept
+static ZT_INLINE int newPacket(uint8_t pkt[28], const uint64_t packetId, const Address destination, const Address source, const Verb verb) noexcept
 {
     Utils::storeMachineEndian<uint64_t>(pkt + ZT_PROTO_PACKET_ID_INDEX, packetId);
     destination.copyTo(pkt + ZT_PROTO_PACKET_DESTINATION_INDEX);
@@ -852,11 +837,7 @@ static ZT_INLINE int newPacket(
     return ZT_PROTO_PACKET_VERB_INDEX + 1;
 }
 
-static ZT_INLINE int
-newPacket(Buf &pkt, const uint64_t packetId, const Address destination, const Address source, const Verb verb) noexcept
-{
-    return newPacket(pkt.unsafeData, packetId, destination, source, verb);
-}
+static ZT_INLINE int newPacket(Buf &pkt, const uint64_t packetId, const Address destination, const Address source, const Verb verb) noexcept { return newPacket(pkt.unsafeData, packetId, destination, source, verb); }
 
 /**
  * Encrypt and compute packet MAC
@@ -867,8 +848,7 @@ newPacket(Buf &pkt, const uint64_t packetId, const Address destination, const Ad
  * @param cipherSuite Cipher suite to use for AEAD encryption or just MAC
  * @return Packet ID of packet (which may change!)
  */
-static ZT_INLINE uint64_t
-armor(uint8_t *const pkt, const int packetSize, const SymmetricKey &key, const uint8_t cipherSuite) noexcept
+static ZT_INLINE uint64_t armor(uint8_t *const pkt, const int packetSize, const SymmetricKey &key, const uint8_t cipherSuite) noexcept
 {
     // TODO
 #if 0

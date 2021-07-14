@@ -1,0 +1,1 @@
+cargo:rustc-cfg=bitflags_const_fn

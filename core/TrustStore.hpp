@@ -97,16 +97,7 @@ class TrustStore {
       private:
         Entry &operator=(const Entry &) { return *this; }
 
-        ZT_INLINE Entry(RWMutex &l, const Certificate &cert, const unsigned int lt) noexcept
-            : __refCount(0)
-            , m_lock(l)
-            , m_certificate(cert)
-            , m_localTrust(lt)
-            , m_error(ZT_CERTIFICATE_ERROR_NONE)
-            , m_subjectDeprecated(false)
-            , m_onTrustPath(false)
-        {
-        }
+        ZT_INLINE Entry(RWMutex &l, const Certificate &cert, const unsigned int lt) noexcept : __refCount(0), m_lock(l), m_certificate(cert), m_localTrust(lt), m_error(ZT_CERTIFICATE_ERROR_NONE), m_subjectDeprecated(false), m_onTrustPath(false) {}
 
         std::atomic<int> __refCount;
 
@@ -203,10 +194,9 @@ class TrustStore {
     int load(const Vector<uint8_t> &data);
 
   private:
-    Map<H384, SharedPtr<Entry>> m_bySerial;   // all certificates
-    Map<Blob<ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE>, SharedPtr<Entry>>
-        m_bySubjectUniqueId;                                          // non-rejected certificates only
-    Map<Fingerprint, Vector<SharedPtr<Entry>>> m_bySubjectIdentity;   // non-rejected certificates only
+    Map<H384, SharedPtr<Entry>> m_bySerial;                                                // all certificates
+    Map<Blob<ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE>, SharedPtr<Entry>> m_bySubjectUniqueId;   // non-rejected certificates only
+    Map<Fingerprint, Vector<SharedPtr<Entry>>> m_bySubjectIdentity;                        // non-rejected certificates only
     ForwardList<SharedPtr<Entry>> m_addQueue;
     ForwardList<H384> m_deleteQueue;
     RWMutex m_lock;

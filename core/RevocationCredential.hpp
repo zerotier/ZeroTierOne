@@ -53,8 +53,7 @@ class RevocationCredential : public Credential {
      * @param ct Credential type being revoked
      */
     ZT_INLINE RevocationCredential(
-        const uint32_t i, const uint64_t nwid, const uint32_t cid, const uint64_t thr, const uint64_t fl,
-        const Address &tgt,
+        const uint32_t i, const uint64_t nwid, const uint32_t cid, const uint64_t thr, const uint64_t fl, const Address &tgt,
         const ZT_CredentialType ct) noexcept
         :   // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
         m_id(i)
@@ -101,10 +100,7 @@ class RevocationCredential : public Credential {
      * @param RR Runtime environment to provide for peer lookup, etc.
      * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
      */
-    ZT_INLINE Credential::VerifyResult verify(const Context &ctx, const CallContext &cc) const noexcept
-    {
-        return s_verify(ctx, cc, *this);
-    }
+    ZT_INLINE Credential::VerifyResult verify(const Context &ctx, const CallContext &cc) const noexcept { return s_verify(ctx, cc, *this); }
 
     static constexpr int marshalSizeMax() noexcept { return ZT_REVOCATION_MARSHAL_SIZE_MAX; }
 

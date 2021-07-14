@@ -51,37 +51,21 @@ template <typename V> class List : public std::list<V> {
 struct intl_MapHasher {
     template <typename O> std::size_t operator()(const O &obj) const noexcept { return (std::size_t)obj.hashCode(); }
 
-    std::size_t operator()(const Vector<uint8_t> &bytes) const noexcept
-    {
-        return (std::size_t)Utils::fnv1a32(bytes.data(), (unsigned int)bytes.size());
-    }
+    std::size_t operator()(const Vector<uint8_t> &bytes) const noexcept { return (std::size_t)Utils::fnv1a32(bytes.data(), (unsigned int)bytes.size()); }
 
-    std::size_t operator()(const uint64_t i) const noexcept
-    {
-        return (std::size_t)Utils::hash64(i ^ Utils::s_mapNonce);
-    }
+    std::size_t operator()(const uint64_t i) const noexcept { return (std::size_t)Utils::hash64(i ^ Utils::s_mapNonce); }
 
-    std::size_t operator()(const int64_t i) const noexcept
-    {
-        return (std::size_t)Utils::hash64((uint64_t)i ^ Utils::s_mapNonce);
-    }
+    std::size_t operator()(const int64_t i) const noexcept { return (std::size_t)Utils::hash64((uint64_t)i ^ Utils::s_mapNonce); }
 
-    std::size_t operator()(const uint32_t i) const noexcept
-    {
-        return (std::size_t)Utils::hash32(i ^ (uint32_t)Utils::s_mapNonce);
-    }
+    std::size_t operator()(const uint32_t i) const noexcept { return (std::size_t)Utils::hash32(i ^ (uint32_t)Utils::s_mapNonce); }
 
-    std::size_t operator()(const int32_t i) const noexcept
-    {
-        return (std::size_t)Utils::hash32((uint32_t)i ^ (uint32_t)Utils::s_mapNonce);
-    }
+    std::size_t operator()(const int32_t i) const noexcept { return (std::size_t)Utils::hash32((uint32_t)i ^ (uint32_t)Utils::s_mapNonce); }
 };
 
 template <typename K, typename V> class Map : public std::unordered_map<K, V, intl_MapHasher> {
 };
 
-template <typename K, typename V>
-class MultiMap : public std::unordered_multimap<K, V, intl_MapHasher, std::equal_to<K>> {
+template <typename K, typename V> class MultiMap : public std::unordered_multimap<K, V, intl_MapHasher, std::equal_to<K>> {
 };
 
 #else
@@ -134,25 +118,13 @@ struct H384 {
 
     ZT_INLINE unsigned long hashCode() const noexcept { return (unsigned long)data[0]; }
 
-    ZT_INLINE operator bool() const noexcept
-    {
-        return (
-            (data[0] != 0) && (data[1] != 0) && (data[2] != 0) && (data[3] != 0) && (data[4] != 0) && (data[5] != 0));
-    }
+    ZT_INLINE operator bool() const noexcept { return ((data[0] != 0) && (data[1] != 0) && (data[2] != 0) && (data[3] != 0) && (data[4] != 0) && (data[5] != 0)); }
 
-    ZT_INLINE bool operator==(const H384 &b) const noexcept
-    {
-        return (
-            (data[0] == b.data[0]) && (data[1] == b.data[1]) && (data[2] == b.data[2]) && (data[3] == b.data[3])
-            && (data[4] == b.data[4]) && (data[5] == b.data[5]));
-    }
+    ZT_INLINE bool operator==(const H384 &b) const noexcept { return ((data[0] == b.data[0]) && (data[1] == b.data[1]) && (data[2] == b.data[2]) && (data[3] == b.data[3]) && (data[4] == b.data[4]) && (data[5] == b.data[5])); }
 
     ZT_INLINE bool operator!=(const H384 &b) const noexcept { return !(*this == b); }
 
-    ZT_INLINE bool operator<(const H384 &b) const noexcept
-    {
-        return std::lexicographical_compare(data, data + 6, b.data, b.data + 6);
-    }
+    ZT_INLINE bool operator<(const H384 &b) const noexcept { return std::lexicographical_compare(data, data + 6, b.data, b.data + 6); }
 
     ZT_INLINE bool operator<=(const H384 &b) const noexcept { return !(b < *this); }
 

@@ -37,16 +37,10 @@ struct EccPoint {
 };
 
 // ECC curve NIST P-384
-const uint64_t curve_p[ECC_CURVE_DIGITS] = { 0x00000000FFFFFFFF, 0xFFFFFFFF00000000, 0xFFFFFFFFFFFFFFFE,
-                                             0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF };
-const uint64_t curve_b[ECC_CURVE_DIGITS] = { 0x2A85C8EDD3EC2AEF, 0xC656398D8A2ED19D, 0x0314088F5013875A,
-                                             0x181D9C6EFE814112, 0x988E056BE3F82D19, 0xB3312FA7E23EE7E4 };
-const EccPoint curve_G = { { 0x3A545E3872760AB7, 0x5502F25DBF55296C, 0x59F741E082542A38, 0x6E1D3B628BA79B98,
-                             0x8EB1C71EF320AD74, 0xAA87CA22BE8B0537 },
-                           { 0x7A431D7C90EA0E5F, 0x0A60B1CE1D7E819D, 0xE9DA3113B5F0B8C0, 0xF8F41DBD289A147C,
-                             0x5D9E98BF9292DC29, 0x3617DE4A96262C6F } };
-const uint64_t curve_n[ECC_CURVE_DIGITS] = { 0xECEC196ACCC52973, 0x581A0DB248B0A77A, 0xC7634D81F4372DDF,
-                                             0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF };
+const uint64_t curve_p[ECC_CURVE_DIGITS] = { 0x00000000FFFFFFFF, 0xFFFFFFFF00000000, 0xFFFFFFFFFFFFFFFE, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF };
+const uint64_t curve_b[ECC_CURVE_DIGITS] = { 0x2A85C8EDD3EC2AEF, 0xC656398D8A2ED19D, 0x0314088F5013875A, 0x181D9C6EFE814112, 0x988E056BE3F82D19, 0xB3312FA7E23EE7E4 };
+const EccPoint curve_G                   = { { 0x3A545E3872760AB7, 0x5502F25DBF55296C, 0x59F741E082542A38, 0x6E1D3B628BA79B98, 0x8EB1C71EF320AD74, 0xAA87CA22BE8B0537 }, { 0x7A431D7C90EA0E5F, 0x0A60B1CE1D7E819D, 0xE9DA3113B5F0B8C0, 0xF8F41DBD289A147C, 0x5D9E98BF9292DC29, 0x3617DE4A96262C6F } };
+const uint64_t curve_n[ECC_CURVE_DIGITS] = { 0xECEC196ACCC52973, 0x581A0DB248B0A77A, 0xC7634D81F4372DDF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF };
 
 ZT_INLINE unsigned int vli_numBits(const uint64_t *const p_vli)
 {
@@ -67,8 +61,8 @@ ZT_INLINE int vli_cmp(const uint64_t *const p_left, const uint64_t *const p_righ
 {
     int comp = 0;
     for (int i = ECC_CURVE_DIGITS - 1; i >= 0; --i) {
-        comp += (int)((p_left[i] > p_right[i])&&(comp == 0)); // should be constant time
-        comp -= (int)((p_left[i] < p_right[i])&&(comp == 0));
+        comp += (int)((p_left[i] > p_right[i]) && (comp == 0));   // should be constant time
+        comp -= (int)((p_left[i] < p_right[i]) && (comp == 0));
     }
     return comp;
 }
@@ -165,8 +159,7 @@ ZT_INLINE void vli_square(uint64_t *const p_result, const uint64_t *const p_left
 
 uint128_t mul_64_64(uint64_t p_left, uint64_t p_right)
 {
-    uint64_t a0 = p_left & 0xffffffffull, a1 = p_left >> 32, b0 = p_right & 0xffffffffull, b1 = p_right >> 32,
-             m0 = a0 * b0, m1 = a0 * b1, m2 = a1 * b0, m3 = a1 * b1;
+    uint64_t a0 = p_left & 0xffffffffull, a1 = p_left >> 32, b0 = p_right & 0xffffffffull, b1 = p_right >> 32, m0 = a0 * b0, m1 = a0 * b1, m2 = a1 * b0, m3 = a1 * b1;
     uint128_t l_result;
     m2 += (m0 >> 32);
     m2 += m1;
@@ -230,16 +223,14 @@ ZT_INLINE void vli_square(uint64_t *const p_result, uint64_t *const p_left)
 
 #endif /* ZT_HAVE_UINT128 */
 
-void vli_modAdd(
-    uint64_t *const p_result, uint64_t *const p_left, const uint64_t *const p_right, const uint64_t *const p_mod)
+void vli_modAdd(uint64_t *const p_result, uint64_t *const p_left, const uint64_t *const p_right, const uint64_t *const p_mod)
 {
     if ((vli_add(p_result, p_left, p_right) != 0ULL) || vli_cmp(p_result, p_mod) >= 0) {
         vli_sub(p_result, p_result, p_mod);
     }
 }
 
-void vli_modSub(
-    uint64_t *const p_result, uint64_t *const p_left, const uint64_t *const p_right, const uint64_t *const p_mod)
+void vli_modSub(uint64_t *const p_result, uint64_t *const p_left, const uint64_t *const p_right, const uint64_t *const p_mod)
 {
     if (vli_sub(p_result, p_left, p_right) != 0ULL) {
         vli_add(p_result, p_result, p_mod);
@@ -373,10 +364,7 @@ void vli_modInv(uint64_t *const p_result, uint64_t *const p_input, const uint64_
     }
 }
 
-ZT_INLINE bool EccPoint_isZero(const EccPoint *const p_point)
-{
-    return (vli_isZero(p_point->x) && vli_isZero(p_point->y));
-}
+ZT_INLINE bool EccPoint_isZero(const EccPoint *const p_point) { return (vli_isZero(p_point->x) && vli_isZero(p_point->y)); }
 
 void EccPoint_double_jacobian(uint64_t *const X1, uint64_t *const Y1, uint64_t *const Z1)
 {
@@ -422,8 +410,7 @@ ZT_INLINE void apply_z(uint64_t *const X1, uint64_t *const Y1, uint64_t *const Z
     vli_modMult_fast(Y1, Y1, t1);
 }
 
-void XYcZ_initial_double(
-    uint64_t *const X1, uint64_t *const Y1, uint64_t *const X2, uint64_t *const Y2, uint64_t *const p_initialZ)
+void XYcZ_initial_double(uint64_t *const X1, uint64_t *const Y1, uint64_t *const X2, uint64_t *const Y2, uint64_t *const p_initialZ)
 {
     uint64_t z[ECC_CURVE_DIGITS];
     vli_set(X2, X1);
@@ -483,8 +470,7 @@ void XYcZ_addC(uint64_t *const X1, uint64_t *const Y1, uint64_t *const X2, uint6
     vli_set(X1, t7);
 }
 
-void EccPoint_mult(
-    EccPoint *const p_result, const EccPoint *const p_point, uint64_t *const p_scalar, uint64_t *const p_initialZ)
+void EccPoint_mult(EccPoint *const p_result, const EccPoint *const p_point, uint64_t *const p_scalar, uint64_t *const p_initialZ)
 {
     uint64_t Rx[2][ECC_CURVE_DIGITS], Ry[2][ECC_CURVE_DIGITS], z[ECC_CURVE_DIGITS];
     vli_set(Rx[1], p_point->x);
@@ -513,9 +499,7 @@ ZT_INLINE void ECC_CURVE_BYTES2native(uint64_t p_native[ECC_CURVE_DIGITS], const
 {
     for (unsigned int i = 0; i < ECC_CURVE_DIGITS; ++i) {
         const uint8_t *const p_digit = p_bytes + 8 * (ECC_CURVE_DIGITS - 1 - i);
-        p_native[i] = ((uint64_t)p_digit[0] << 56) | ((uint64_t)p_digit[1] << 48) | ((uint64_t)p_digit[2] << 40)
-                      | ((uint64_t)p_digit[3] << 32) | ((uint64_t)p_digit[4] << 24) | ((uint64_t)p_digit[5] << 16)
-                      | ((uint64_t)p_digit[6] << 8) | (uint64_t)p_digit[7];
+        p_native[i]                  = ((uint64_t)p_digit[0] << 56) | ((uint64_t)p_digit[1] << 48) | ((uint64_t)p_digit[2] << 40) | ((uint64_t)p_digit[3] << 32) | ((uint64_t)p_digit[4] << 24) | ((uint64_t)p_digit[5] << 16) | ((uint64_t)p_digit[6] << 8) | (uint64_t)p_digit[7];
     }
 }
 
@@ -582,9 +566,7 @@ ZT_INLINE bool ecc_make_key(uint8_t p_publicKey[ECC_CURVE_BYTES + 1], uint8_t p_
     return true;
 }
 
-ZT_INLINE bool ecdh_shared_secret(
-    const uint8_t p_publicKey[ECC_CURVE_BYTES + 1], const uint8_t p_privateKey[ECC_CURVE_BYTES],
-    uint8_t p_secret[ECC_CURVE_BYTES])
+ZT_INLINE bool ecdh_shared_secret(const uint8_t p_publicKey[ECC_CURVE_BYTES + 1], const uint8_t p_privateKey[ECC_CURVE_BYTES], uint8_t p_secret[ECC_CURVE_BYTES])
 {
     EccPoint l_public;
     uint64_t l_private[ECC_CURVE_DIGITS];
@@ -644,9 +626,7 @@ void vli_modMult(uint64_t *const p_result, uint64_t *const p_left, uint64_t *con
     vli_set(p_result, l_product);
 }
 
-ZT_INLINE bool ecdsa_sign(
-    const uint8_t p_privateKey[ECC_CURVE_BYTES], const uint8_t p_hash[ECC_CURVE_BYTES],
-    uint8_t p_signature[ECC_CURVE_BYTES * 2])
+ZT_INLINE bool ecdsa_sign(const uint8_t p_privateKey[ECC_CURVE_BYTES], const uint8_t p_hash[ECC_CURVE_BYTES], uint8_t p_signature[ECC_CURVE_BYTES * 2])
 {
     uint64_t k[ECC_CURVE_DIGITS], l_tmp[ECC_CURVE_DIGITS], l_s[ECC_CURVE_DIGITS];
     EccPoint p;
@@ -677,13 +657,9 @@ ZT_INLINE bool ecdsa_sign(
     return true;
 }
 
-ZT_INLINE bool ecdsa_verify(
-    const uint8_t p_publicKey[ECC_CURVE_BYTES + 1], const uint8_t p_hash[ECC_CURVE_BYTES],
-    const uint8_t p_signature[ECC_CURVE_BYTES * 2])
+ZT_INLINE bool ecdsa_verify(const uint8_t p_publicKey[ECC_CURVE_BYTES + 1], const uint8_t p_hash[ECC_CURVE_BYTES], const uint8_t p_signature[ECC_CURVE_BYTES * 2])
 {
-    uint64_t u1[ECC_CURVE_DIGITS], u2[ECC_CURVE_DIGITS], z[ECC_CURVE_DIGITS], rx[ECC_CURVE_DIGITS],
-        ry[ECC_CURVE_DIGITS], tx[ECC_CURVE_DIGITS], ty[ECC_CURVE_DIGITS], tz[ECC_CURVE_DIGITS], l_r[ECC_CURVE_DIGITS],
-        l_s[ECC_CURVE_DIGITS];
+    uint64_t u1[ECC_CURVE_DIGITS], u2[ECC_CURVE_DIGITS], z[ECC_CURVE_DIGITS], rx[ECC_CURVE_DIGITS], ry[ECC_CURVE_DIGITS], tx[ECC_CURVE_DIGITS], ty[ECC_CURVE_DIGITS], tz[ECC_CURVE_DIGITS], l_r[ECC_CURVE_DIGITS], l_s[ECC_CURVE_DIGITS];
     EccPoint l_public, l_sum;
 
     ecc_point_decompress(&l_public, p_publicKey);
@@ -708,8 +684,7 @@ ZT_INLINE bool ecdsa_verify(
     apply_z(l_sum.x, l_sum.y, z);
     const EccPoint *const l_points[4] = { NULL, &curve_G, &l_public, &l_sum };
     unsigned int l_numBits            = std::max(vli_numBits(u1), vli_numBits(u2));
-    const EccPoint *const l_point =
-        l_points[(!!vli_testBit(u1, l_numBits - 1)) | ((!!vli_testBit(u2, l_numBits - 1)) << 1)];
+    const EccPoint *const l_point     = l_points[(!!vli_testBit(u1, l_numBits - 1)) | ((!!vli_testBit(u2, l_numBits - 1)) << 1)];
     vli_set(rx, l_point->x);
     vli_set(ry, l_point->y);
     vli_clear(z);
@@ -749,9 +724,7 @@ void ECC384GenerateKey(uint8_t pub[ZT_ECC384_PUBLIC_KEY_SIZE], uint8_t priv[ZT_E
     }
 }
 
-void ECC384ECDSASign(
-    const uint8_t priv[ZT_ECC384_PRIVATE_KEY_SIZE], const uint8_t hash[ZT_ECC384_SIGNATURE_HASH_SIZE],
-    uint8_t sig[ZT_ECC384_SIGNATURE_SIZE])
+void ECC384ECDSASign(const uint8_t priv[ZT_ECC384_PRIVATE_KEY_SIZE], const uint8_t hash[ZT_ECC384_SIGNATURE_HASH_SIZE], uint8_t sig[ZT_ECC384_SIGNATURE_SIZE])
 {
     if (unlikely(!ecdsa_sign(priv, hash, sig))) {
         fprintf(stderr, "FATAL: ecdsa_sign() failed!" ZT_EOL_S);
@@ -759,18 +732,8 @@ void ECC384ECDSASign(
     }
 }
 
-bool ECC384ECDSAVerify(
-    const uint8_t pub[ZT_ECC384_PUBLIC_KEY_SIZE], const uint8_t hash[ZT_ECC384_SIGNATURE_HASH_SIZE],
-    const uint8_t sig[ZT_ECC384_SIGNATURE_SIZE])
-{
-    return (ecdsa_verify(pub, hash, sig) != 0);
-}
+bool ECC384ECDSAVerify(const uint8_t pub[ZT_ECC384_PUBLIC_KEY_SIZE], const uint8_t hash[ZT_ECC384_SIGNATURE_HASH_SIZE], const uint8_t sig[ZT_ECC384_SIGNATURE_SIZE]) { return (ecdsa_verify(pub, hash, sig) != 0); }
 
-bool ECC384ECDH(
-    const uint8_t theirPub[ZT_ECC384_PUBLIC_KEY_SIZE], const uint8_t ourPriv[ZT_ECC384_PRIVATE_KEY_SIZE],
-    uint8_t secret[ZT_ECC384_SHARED_SECRET_SIZE])
-{
-    return (ecdh_shared_secret(theirPub, ourPriv, secret) != 0);
-}
+bool ECC384ECDH(const uint8_t theirPub[ZT_ECC384_PUBLIC_KEY_SIZE], const uint8_t ourPriv[ZT_ECC384_PRIVATE_KEY_SIZE], uint8_t secret[ZT_ECC384_SHARED_SECRET_SIZE]) { return (ecdh_shared_secret(theirPub, ourPriv, secret) != 0); }
 
 }   // namespace ZeroTier

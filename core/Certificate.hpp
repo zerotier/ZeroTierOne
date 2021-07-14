@@ -121,10 +121,7 @@ class Certificate : public ZT_Certificate {
      * @param uniqueIdPrivateSize Size of private key
      * @return True on success
      */
-    ZT_INLINE bool setSubjectUniqueId(const void *uniqueIdPrivate, unsigned int uniqueIdPrivateSize)
-    {
-        return m_setSubjectUniqueId(this->subject, uniqueIdPrivate, uniqueIdPrivateSize);
-    }
+    ZT_INLINE bool setSubjectUniqueId(const void *uniqueIdPrivate, unsigned int uniqueIdPrivateSize) { return m_setSubjectUniqueId(this->subject, uniqueIdPrivate, uniqueIdPrivateSize); }
 
     /**
      * Marshal this certificate in binary form
@@ -153,9 +150,7 @@ class Certificate : public ZT_Certificate {
      *
      * @return True on success
      */
-    bool sign(
-        const uint8_t issuer[ZT_CERTIFICATE_HASH_SIZE], const void *issuerPrivateKey,
-        unsigned int issuerPrivateKeySize);
+    bool sign(const uint8_t issuer[ZT_CERTIFICATE_HASH_SIZE], const void *issuerPrivateKey, unsigned int issuerPrivateKeySize);
 
     /**
      * Verify self-contained signatures and validity of certificate structure
@@ -175,11 +170,7 @@ class Certificate : public ZT_Certificate {
      * @param clock Current real world time in milliseconds since epoch
      * @return True if certificate is not expired or outside window
      */
-    ZT_INLINE bool verifyTimeWindow(int64_t clock) const noexcept
-    {
-        return (
-            (clock >= this->validity[0]) && (clock <= this->validity[1]) && (this->validity[0] <= this->validity[1]));
-    }
+    ZT_INLINE bool verifyTimeWindow(int64_t clock) const noexcept { return ((clock >= this->validity[0]) && (clock <= this->validity[1]) && (this->validity[0] <= this->validity[1])); }
 
     /**
      * Create a new certificate public/private key pair
@@ -191,9 +182,7 @@ class Certificate : public ZT_Certificate {
      * @param privateKeySize Result parameter: set to size of private key
      * @return True on success
      */
-    static bool newKeyPair(
-        const ZT_CertificatePublicKeyAlgorithm type, uint8_t publicKey[ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE],
-        int *const publicKeySize, uint8_t privateKey[ZT_CERTIFICATE_MAX_PRIVATE_KEY_SIZE], int *const privateKeySize);
+    static bool newKeyPair(const ZT_CertificatePublicKeyAlgorithm type, uint8_t publicKey[ZT_CERTIFICATE_MAX_PUBLIC_KEY_SIZE], int *const publicKeySize, uint8_t privateKey[ZT_CERTIFICATE_MAX_PRIVATE_KEY_SIZE], int *const privateKeySize);
 
     /**
      * Create a CSR that encodes the subject of this certificate
@@ -205,49 +194,25 @@ class Certificate : public ZT_Certificate {
      * @param uniqueIdPrivateSize Size of unique ID private key
      * @return Encoded subject (without any unique ID fields) or empty vector on error
      */
-    static Vector<uint8_t> createCSR(
-        const ZT_Certificate_Subject &s, const void *certificatePrivateKey, unsigned int certificatePrivateKeySize,
-        const void *uniqueIdPrivate, unsigned int uniqueIdPrivateSize);
+    static Vector<uint8_t> createCSR(const ZT_Certificate_Subject &s, const void *certificatePrivateKey, unsigned int certificatePrivateKeySize, const void *uniqueIdPrivate, unsigned int uniqueIdPrivateSize);
 
-    ZT_INLINE unsigned long hashCode() const noexcept
-    {
-        return (unsigned long)Utils::loadMachineEndian<uint32_t>(this->serialNo);
-    }
+    ZT_INLINE unsigned long hashCode() const noexcept { return (unsigned long)Utils::loadMachineEndian<uint32_t>(this->serialNo); }
 
-    ZT_INLINE bool operator==(const ZT_Certificate &c) const noexcept
-    {
-        return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) == 0;
-    }
+    ZT_INLINE bool operator==(const ZT_Certificate &c) const noexcept { return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) == 0; }
 
-    ZT_INLINE bool operator!=(const ZT_Certificate &c) const noexcept
-    {
-        return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) != 0;
-    }
+    ZT_INLINE bool operator!=(const ZT_Certificate &c) const noexcept { return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) != 0; }
 
-    ZT_INLINE bool operator<(const ZT_Certificate &c) const noexcept
-    {
-        return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) < 0;
-    }
+    ZT_INLINE bool operator<(const ZT_Certificate &c) const noexcept { return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) < 0; }
 
-    ZT_INLINE bool operator<=(const ZT_Certificate &c) const noexcept
-    {
-        return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) <= 0;
-    }
+    ZT_INLINE bool operator<=(const ZT_Certificate &c) const noexcept { return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) <= 0; }
 
-    ZT_INLINE bool operator>(const ZT_Certificate &c) const noexcept
-    {
-        return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) > 0;
-    }
+    ZT_INLINE bool operator>(const ZT_Certificate &c) const noexcept { return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) > 0; }
 
-    ZT_INLINE bool operator>=(const ZT_Certificate &c) const noexcept
-    {
-        return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) >= 0;
-    }
+    ZT_INLINE bool operator>=(const ZT_Certificate &c) const noexcept { return memcmp(this->serialNo, c.serialNo, ZT_SHA384_DIGEST_SIZE) >= 0; }
 
   private:
     void m_clear();
-    static bool
-    m_setSubjectUniqueId(ZT_Certificate_Subject &s, const void *uniqueIdPrivate, unsigned int uniqueIdPrivateSize);
+    static bool m_setSubjectUniqueId(ZT_Certificate_Subject &s, const void *uniqueIdPrivate, unsigned int uniqueIdPrivateSize);
     static void m_encodeSubject(const ZT_Certificate_Subject &s, Dictionary &d, bool omitUniqueIdProofSignature);
 
     // These hold any identity or locator objects that are owned by and should

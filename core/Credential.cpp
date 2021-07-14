@@ -43,8 +43,7 @@
 
 namespace ZeroTier {
 
-template <typename CRED>
-static ZT_INLINE Credential::VerifyResult p_credVerify(const Context &ctx, const CallContext &cc, CRED credential)
+template <typename CRED> static ZT_INLINE Credential::VerifyResult p_credVerify(const Context &ctx, const CallContext &cc, CRED credential)
 {
     uint8_t tmp[ZT_BUF_MEM_SIZE + 16];
 
@@ -61,10 +60,7 @@ static ZT_INLINE Credential::VerifyResult p_credVerify(const Context &ctx, const
         int l = credential.marshal(tmp, true);
         if (l <= 0)
             return Credential::VERIFY_BAD_SIGNATURE;
-        return (
-            peer->identity().verify(tmp, (unsigned int)l, credential.signature(), credential.signatureLength())
-                ? Credential::VERIFY_OK
-                : Credential::VERIFY_BAD_SIGNATURE);
+        return (peer->identity().verify(tmp, (unsigned int)l, credential.signature(), credential.signatureLength()) ? Credential::VERIFY_OK : Credential::VERIFY_BAD_SIGNATURE);
     }
     catch (...) {
     }
@@ -72,32 +68,15 @@ static ZT_INLINE Credential::VerifyResult p_credVerify(const Context &ctx, const
     return Credential::VERIFY_BAD_SIGNATURE;
 }
 
-Credential::VerifyResult
-Credential::s_verify(const Context &ctx, const CallContext &cc, const RevocationCredential &credential)
-{
-    return p_credVerify(ctx, cc, credential);
-}
+Credential::VerifyResult Credential::s_verify(const Context &ctx, const CallContext &cc, const RevocationCredential &credential) { return p_credVerify(ctx, cc, credential); }
 
-Credential::VerifyResult
-Credential::s_verify(const Context &ctx, const CallContext &cc, const TagCredential &credential)
-{
-    return p_credVerify(ctx, cc, credential);
-}
+Credential::VerifyResult Credential::s_verify(const Context &ctx, const CallContext &cc, const TagCredential &credential) { return p_credVerify(ctx, cc, credential); }
 
-Credential::VerifyResult
-Credential::s_verify(const Context &ctx, const CallContext &cc, const CapabilityCredential &credential)
-{
-    return p_credVerify(ctx, cc, credential);
-}
+Credential::VerifyResult Credential::s_verify(const Context &ctx, const CallContext &cc, const CapabilityCredential &credential) { return p_credVerify(ctx, cc, credential); }
 
-Credential::VerifyResult
-Credential::s_verify(const Context &ctx, const CallContext &cc, const OwnershipCredential &credential)
-{
-    return p_credVerify(ctx, cc, credential);
-}
+Credential::VerifyResult Credential::s_verify(const Context &ctx, const CallContext &cc, const OwnershipCredential &credential) { return p_credVerify(ctx, cc, credential); }
 
-Credential::VerifyResult
-Credential::s_verify(const Context &ctx, const CallContext &cc, const MembershipCredential &credential)
+Credential::VerifyResult Credential::s_verify(const Context &ctx, const CallContext &cc, const MembershipCredential &credential)
 {
     // Sanity check network ID.
     if ((!credential.m_signedBy) || (credential.m_signedBy != Network::controllerFor(credential.m_networkId)))
@@ -111,9 +90,7 @@ Credential::s_verify(const Context &ctx, const CallContext &cc, const Membership
     // Now verify the controller's signature.
     uint64_t buf[ZT_MEMBERSHIP_CREDENTIAL_MARSHAL_SIZE_MAX / 8];
     const unsigned int bufSize = credential.m_fillSigningBuf(buf);
-    return peer->identity().verify(buf, bufSize, credential.m_signature, credential.m_signatureLength)
-               ? Credential::VERIFY_OK
-               : Credential::VERIFY_BAD_SIGNATURE;
+    return peer->identity().verify(buf, bufSize, credential.m_signature, credential.m_signatureLength) ? Credential::VERIFY_OK : Credential::VERIFY_BAD_SIGNATURE;
 }
 
 }   // namespace ZeroTier

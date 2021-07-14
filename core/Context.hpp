@@ -40,20 +40,7 @@ class Network;
  */
 class Context {
   public:
-    ZT_INLINE Context(Node *const n) noexcept
-        : instanceId(Utils::getSecureRandomU64())
-        , node(n)
-        , uPtr(nullptr)
-        , localNetworkController(nullptr)
-        , store(nullptr)
-        , networks(nullptr)
-        , t(nullptr)
-        , expect(nullptr)
-        , vl2(nullptr)
-        , vl1(nullptr)
-        , topology(nullptr)
-        , sa(nullptr)
-        , ts(nullptr)
+    ZT_INLINE Context(Node *const n) noexcept : instanceId(Utils::getSecureRandomU64()), node(n), uPtr(nullptr), localNetworkController(nullptr), store(nullptr), networks(nullptr), t(nullptr), expect(nullptr), vl2(nullptr), vl1(nullptr), topology(nullptr), sa(nullptr), ts(nullptr)
     {
         publicIdentityStr[0] = 0;
         secretIdentityStr[0] = 0;

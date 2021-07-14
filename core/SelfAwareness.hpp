@@ -44,9 +44,7 @@ class SelfAwareness {
      * @param myPhysicalAddress Physical address that peer says we have
      * @param trusted True if this peer is trusted as an authority to inform us of external address changes
      */
-    void
-    iam(const CallContext &cc, const Identity &reporter, int64_t receivedOnLocalSocket,
-        const InetAddress &reporterPhysicalAddress, const InetAddress &myPhysicalAddress, bool trusted);
+    void iam(const CallContext &cc, const Identity &reporter, int64_t receivedOnLocalSocket, const InetAddress &reporterPhysicalAddress, const InetAddress &myPhysicalAddress, bool trusted);
 
     /**
      * Clean up database periodically
@@ -70,25 +68,11 @@ class SelfAwareness {
         ZT_INLINE p_PhySurfaceKey() noexcept {}
 
         ZT_INLINE
-        p_PhySurfaceKey(const Address &r, const int64_t rol, const InetAddress &ra, InetAddress::IpScope s) noexcept
-            : reporter(r)
-            , receivedOnLocalSocket(rol)
-            , reporterPhysicalAddress(ra)
-            , scope(s)
-        {
-        }
+        p_PhySurfaceKey(const Address &r, const int64_t rol, const InetAddress &ra, InetAddress::IpScope s) noexcept : reporter(r), receivedOnLocalSocket(rol), reporterPhysicalAddress(ra), scope(s) {}
 
-        ZT_INLINE unsigned long hashCode() const noexcept
-        {
-            return ((unsigned long)reporter.toInt() + (unsigned long)receivedOnLocalSocket + (unsigned long)scope);
-        }
+        ZT_INLINE unsigned long hashCode() const noexcept { return ((unsigned long)reporter.toInt() + (unsigned long)receivedOnLocalSocket + (unsigned long)scope); }
 
-        ZT_INLINE bool operator==(const p_PhySurfaceKey &k) const noexcept
-        {
-            return (
-                (reporter == k.reporter) && (receivedOnLocalSocket == k.receivedOnLocalSocket)
-                && (reporterPhysicalAddress == k.reporterPhysicalAddress) && (scope == k.scope));
-        }
+        ZT_INLINE bool operator==(const p_PhySurfaceKey &k) const noexcept { return ((reporter == k.reporter) && (receivedOnLocalSocket == k.receivedOnLocalSocket) && (reporterPhysicalAddress == k.reporterPhysicalAddress) && (scope == k.scope)); }
 
         ZT_INLINE bool operator!=(const p_PhySurfaceKey &k) const noexcept { return (!(*this == k)); }
 
@@ -121,12 +105,7 @@ class SelfAwareness {
 
         ZT_INLINE p_PhySurfaceEntry() noexcept : mySurface(), timestampTicks(0), trusted(false) {}
 
-        ZT_INLINE p_PhySurfaceEntry(const InetAddress &a, const int64_t t) noexcept
-            : mySurface(a)
-            , timestampTicks(t)
-            , trusted(false)
-        {
-        }
+        ZT_INLINE p_PhySurfaceEntry(const InetAddress &a, const int64_t t) noexcept : mySurface(a), timestampTicks(t), trusted(false) {}
     };
 
     const Context &m_ctx;

@@ -19,8 +19,7 @@
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 #ifdef ZT_NO_UNALIGNED_ACCESS
 // Slower version that does not use type punning
-#define U8TO32_LITTLE(p)                                                                                               \
-    (((uint32_t)(p)[0]) | ((uint32_t)(p)[1] << 8) | ((uint32_t)(p)[2] << 16) | ((uint32_t)(p)[3] << 24))
+#define U8TO32_LITTLE(p) (((uint32_t)(p)[0]) | ((uint32_t)(p)[1] << 8) | ((uint32_t)(p)[2] << 16) | ((uint32_t)(p)[3] << 24))
 static ZT_INLINE void U32TO8_LITTLE(uint8_t *const c, const uint32_t v)
 {
     c[0] = (uint8_t)v;
@@ -40,8 +39,7 @@ static ZT_INLINE void U32TO8_LITTLE(uint8_t *const c, const uint32_t v)
 #define U32TO8_LITTLE(c, v) *((uint32_t *)((void *)(c))) = __builtin_bswap32((v))
 #else   // no __GNUC__
 // Otherwise do it the slow, manual way on BE machines
-#define U8TO32_LITTLE(p)                                                                                               \
-    (((uint32_t)(p)[0]) | ((uint32_t)(p)[1] << 8) | ((uint32_t)(p)[2] << 16) | ((uint32_t)(p)[3] << 24))
+#define U8TO32_LITTLE(p) (((uint32_t)(p)[0]) | ((uint32_t)(p)[1] << 8) | ((uint32_t)(p)[2] << 16) | ((uint32_t)(p)[3] << 24))
 static ZT_INLINE void U32TO8_LITTLE(uint8_t *const c, const uint32_t v)
 {
     c[0] = (uint8_t)v;
@@ -117,8 +115,7 @@ union p_SalsaState {
     uint32_t i[16];
 };
 
-template <unsigned int R>
-static ZT_INLINE void p_salsaCrypt(p_SalsaState *const state, const uint8_t *m, uint8_t *c, unsigned int bytes) noexcept
+template <unsigned int R> static ZT_INLINE void p_salsaCrypt(p_SalsaState *const state, const uint8_t *m, uint8_t *c, unsigned int bytes) noexcept
 {
     if (unlikely(bytes == 0))
         return;
@@ -208,18 +205,10 @@ static ZT_INLINE void p_salsaCrypt(p_SalsaState *const state, const uint8_t *m, 
         k02         = _mm_shuffle_epi32(k02, _MM_SHUFFLE(0, 1, 2, 3));
         k13         = _mm_shuffle_epi32(k13, _MM_SHUFFLE(0, 1, 2, 3));
 
-        _mm_storeu_si128(
-            reinterpret_cast<__m128i *>(c),
-            _mm_xor_si128(_mm_unpackhi_epi64(k02, k20), _mm_loadu_si128(reinterpret_cast<const __m128i *>(m))));
-        _mm_storeu_si128(
-            reinterpret_cast<__m128i *>(c) + 1,
-            _mm_xor_si128(_mm_unpackhi_epi64(k13, k31), _mm_loadu_si128(reinterpret_cast<const __m128i *>(m) + 1)));
-        _mm_storeu_si128(
-            reinterpret_cast<__m128i *>(c) + 2,
-            _mm_xor_si128(_mm_unpacklo_epi64(k20, k02), _mm_loadu_si128(reinterpret_cast<const __m128i *>(m) + 2)));
-        _mm_storeu_si128(
-            reinterpret_cast<__m128i *>(c) + 3,
-            _mm_xor_si128(_mm_unpacklo_epi64(k31, k13), _mm_loadu_si128(reinterpret_cast<const __m128i *>(m) + 3)));
+        _mm_storeu_si128(reinterpret_cast<__m128i *>(c), _mm_xor_si128(_mm_unpackhi_epi64(k02, k20), _mm_loadu_si128(reinterpret_cast<const __m128i *>(m))));
+        _mm_storeu_si128(reinterpret_cast<__m128i *>(c) + 1, _mm_xor_si128(_mm_unpackhi_epi64(k13, k31), _mm_loadu_si128(reinterpret_cast<const __m128i *>(m) + 1)));
+        _mm_storeu_si128(reinterpret_cast<__m128i *>(c) + 2, _mm_xor_si128(_mm_unpacklo_epi64(k20, k02), _mm_loadu_si128(reinterpret_cast<const __m128i *>(m) + 2)));
+        _mm_storeu_si128(reinterpret_cast<__m128i *>(c) + 3, _mm_xor_si128(_mm_unpacklo_epi64(k31, k13), _mm_loadu_si128(reinterpret_cast<const __m128i *>(m) + 3)));
 
         X0 = X0s;
         X1 = X1s;
@@ -338,18 +327,8 @@ static ZT_INLINE void p_salsaCrypt(p_SalsaState *const state, const uint8_t *m, 
     }
 }
 
-void Salsa20::crypt12(const void *in, void *out, unsigned int bytes) noexcept
-{
-    p_salsaCrypt<12>(
-        reinterpret_cast<p_SalsaState *>(&_state), reinterpret_cast<const uint8_t *>(in),
-        reinterpret_cast<uint8_t *>(out), bytes);
-}
+void Salsa20::crypt12(const void *in, void *out, unsigned int bytes) noexcept { p_salsaCrypt<12>(reinterpret_cast<p_SalsaState *>(&_state), reinterpret_cast<const uint8_t *>(in), reinterpret_cast<uint8_t *>(out), bytes); }
 
-void Salsa20::crypt20(const void *in, void *out, unsigned int bytes) noexcept
-{
-    p_salsaCrypt<20>(
-        reinterpret_cast<p_SalsaState *>(&_state), reinterpret_cast<const uint8_t *>(in),
-        reinterpret_cast<uint8_t *>(out), bytes);
-}
+void Salsa20::crypt20(const void *in, void *out, unsigned int bytes) noexcept { p_salsaCrypt<20>(reinterpret_cast<p_SalsaState *>(&_state), reinterpret_cast<const uint8_t *>(in), reinterpret_cast<uint8_t *>(out), bytes); }
 
 }   // namespace ZeroTier

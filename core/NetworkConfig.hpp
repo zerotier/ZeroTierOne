@@ -145,10 +145,7 @@ namespace ZeroTier {
  * Network configuration received from network controller nodes
  */
 struct NetworkConfig : TriviallyCopyable {
-    ZT_INLINE NetworkConfig() noexcept
-    {
-        memoryZero(this);
-    }   // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+    ZT_INLINE NetworkConfig() noexcept { memoryZero(this); }   // NOLINT(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
 
     /**
      * Write this network config to a dictionary for transport
@@ -169,18 +166,12 @@ struct NetworkConfig : TriviallyCopyable {
     /**
      * @return True if broadcast (ff:ff:ff:ff:ff:ff) address should work on this network
      */
-    ZT_INLINE bool enableBroadcast() const noexcept
-    {
-        return ((this->flags & ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST) != 0);
-    }
+    ZT_INLINE bool enableBroadcast() const noexcept { return ((this->flags & ZT_NETWORKCONFIG_FLAG_ENABLE_BROADCAST) != 0); }
 
     /**
      * @return True if IPv6 NDP emulation should be allowed for certain "magic" IPv6 address patterns
      */
-    ZT_INLINE bool ndpEmulation() const noexcept
-    {
-        return ((this->flags & ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION) != 0);
-    }
+    ZT_INLINE bool ndpEmulation() const noexcept { return ((this->flags & ZT_NETWORKCONFIG_FLAG_ENABLE_IPV6_NDP_EMULATION) != 0); }
 
     /**
      * @return Network type is public (no access control)
@@ -199,21 +190,14 @@ struct NetworkConfig : TriviallyCopyable {
     ZT_INLINE bool permitsBridging(const Address &fromPeer) const noexcept
     {
         for (unsigned int i = 0; i < specialistCount; ++i) {
-            if ((fromPeer.toInt() == (specialists[i] & ZT_ADDRESS_MASK))
-                && ((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE) != 0))
+            if ((fromPeer.toInt() == (specialists[i] & ZT_ADDRESS_MASK)) && ((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE) != 0))
                 return true;
         }
         return false;
     }
 
-    ZT_INLINE operator bool() const noexcept
-    {
-        return (networkId != 0);
-    }   // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
-    ZT_INLINE bool operator==(const NetworkConfig &nc) const noexcept
-    {
-        return (memcmp(this, &nc, sizeof(NetworkConfig)) == 0);
-    }
+    ZT_INLINE operator bool() const noexcept { return (networkId != 0); }   // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
+    ZT_INLINE bool operator==(const NetworkConfig &nc) const noexcept { return (memcmp(this, &nc, sizeof(NetworkConfig)) == 0); }
 
     ZT_INLINE bool operator!=(const NetworkConfig &nc) const noexcept { return (!(*this == nc)); }
 

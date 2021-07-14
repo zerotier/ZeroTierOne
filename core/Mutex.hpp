@@ -128,10 +128,7 @@ class RWMutex {
     class RMaybeWLock {
       public:
         explicit ZT_INLINE RMaybeWLock(RWMutex &m) noexcept : _m(&m), _w(false) { m.rlock(); }
-        explicit ZT_INLINE RMaybeWLock(const RWMutex &m) noexcept : _m(const_cast<RWMutex *>(&m)), _w(false)
-        {
-            _m->rlock();
-        }
+        explicit ZT_INLINE RMaybeWLock(const RWMutex &m) noexcept : _m(const_cast<RWMutex *>(&m)), _w(false) { _m->rlock(); }
         ZT_INLINE void writing() noexcept
         {
             if (!_w) {

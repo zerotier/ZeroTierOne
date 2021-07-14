@@ -1,0 +1,16 @@
+scanning file: /Users/api/.cargo/registry/src/github.com-1ecc6299db9ec823/libgpg-error-sys-0.5.2/err-sources.h.in
+scanning file: /Users/api/.cargo/registry/src/github.com-1ecc6299db9ec823/libgpg-error-sys-0.5.2/err-codes.h.in
+scanning file: /Users/api/.cargo/registry/src/github.com-1ecc6299db9ec823/libgpg-error-sys-0.5.2/errnos.in
+cargo:generated=/Users/api/Code/ZeroTier/ZeroTier/aes-gmac-siv/target/debug/build/libgpg-error-sys-e3a8693364d4f0a2/out
+cargo:rerun-if-env-changed=LIBGPG_ERROR_PREFIX
+cargo:rerun-if-env-changed=LIBGPG_ERROR_INCLUDE
+cargo:rerun-if-env-changed=LIBGPG_ERROR_LIB_DIR
+cargo:rerun-if-env-changed=LIBGPG_ERROR_LIBS
+cargo:rerun-if-env-changed=LIBGPG_ERROR_CONFIG
+cargo:version=1.42
+cargo:include=/opt/homebrew/opt/libgpg-error/include
+cargo:lib_dir=/opt/homebrew/opt/libgpg-error/lib
+cargo:rustc-link-search=native=/opt/homebrew/opt/libgpg-error/lib
+cargo:libs=gpg-error:pthread
+cargo:rustc-link-lib=gpg-error
+cargo:rustc-link-lib=pthread

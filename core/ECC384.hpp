@@ -77,9 +77,7 @@ void ECC384GenerateKey(uint8_t pub[ZT_ECC384_PUBLIC_KEY_SIZE], uint8_t priv[ZT_E
  * @param hash 48-byte hash
  * @param sig Buffer to receive signature
  */
-void ECC384ECDSASign(
-    const uint8_t priv[ZT_ECC384_PRIVATE_KEY_SIZE], const uint8_t hash[ZT_ECC384_SIGNATURE_HASH_SIZE],
-    uint8_t sig[ZT_ECC384_SIGNATURE_SIZE]);
+void ECC384ECDSASign(const uint8_t priv[ZT_ECC384_PRIVATE_KEY_SIZE], const uint8_t hash[ZT_ECC384_SIGNATURE_HASH_SIZE], uint8_t sig[ZT_ECC384_SIGNATURE_SIZE]);
 
 /**
  * Verify a signature
@@ -89,9 +87,7 @@ void ECC384ECDSASign(
  * @param sig Signature to check
  * @return True if signature is valid
  */
-bool ECC384ECDSAVerify(
-    const uint8_t pub[ZT_ECC384_PUBLIC_KEY_SIZE], const uint8_t hash[ZT_ECC384_SIGNATURE_HASH_SIZE],
-    const uint8_t sig[ZT_ECC384_SIGNATURE_SIZE]);
+bool ECC384ECDSAVerify(const uint8_t pub[ZT_ECC384_PUBLIC_KEY_SIZE], const uint8_t hash[ZT_ECC384_SIGNATURE_HASH_SIZE], const uint8_t sig[ZT_ECC384_SIGNATURE_SIZE]);
 
 /**
  * Perform ECDH key agreement
@@ -103,9 +99,7 @@ bool ECC384ECDSAVerify(
  * @param ourPriv Local private key
  * @param secret Buffer to receive 48-byte secret
  */
-bool ECC384ECDH(
-    const uint8_t theirPub[ZT_ECC384_PUBLIC_KEY_SIZE], const uint8_t ourPriv[ZT_ECC384_PRIVATE_KEY_SIZE],
-    uint8_t secret[ZT_ECC384_SHARED_SECRET_SIZE]);
+bool ECC384ECDH(const uint8_t theirPub[ZT_ECC384_PUBLIC_KEY_SIZE], const uint8_t ourPriv[ZT_ECC384_PRIVATE_KEY_SIZE], uint8_t secret[ZT_ECC384_SHARED_SECRET_SIZE]);
 
 }   // namespace ZeroTier
 

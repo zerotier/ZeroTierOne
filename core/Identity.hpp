@@ -27,9 +27,8 @@
 #define ZT_IDENTITY_STRING_BUFFER_LENGTH           1024
 #define ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE  (7 + ZT_C25519_COMBINED_PUBLIC_KEY_SIZE + ZT_ECC384_PUBLIC_KEY_SIZE)
 #define ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE (ZT_C25519_COMBINED_PRIVATE_KEY_SIZE + ZT_ECC384_PRIVATE_KEY_SIZE)
-#define ZT_IDENTITY_MARSHAL_SIZE_MAX                                                                                   \
-    (ZT_ADDRESS_LENGTH + 4 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE)
-#define ZT_IDENTITY_TYPE1_MIMC52_ROUNDS 262144
+#define ZT_IDENTITY_MARSHAL_SIZE_MAX               (ZT_ADDRESS_LENGTH + 4 + ZT_IDENTITY_P384_COMPOUND_PUBLIC_KEY_SIZE + ZT_IDENTITY_P384_COMPOUND_PRIVATE_KEY_SIZE)
+#define ZT_IDENTITY_TYPE1_MIMC52_ROUNDS            262144
 
 namespace ZeroTier {
 
@@ -82,6 +81,9 @@ class Identity : public TriviallyCopyable {
             Utils::copy<sizeof(Identity)>(this, &id);
         return *this;
     }
+
+    static ZT_INLINE Identity *from(ZT_Identity *const id) noexcept { return reinterpret_cast<Identity *>(id); }
+    static ZT_INLINE const Identity *from(const ZT_Identity *const id) noexcept { return reinterpret_cast<const Identity *>(id); }
 
     /**
      * Set identity to NIL value (all zero)

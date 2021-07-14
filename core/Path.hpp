@@ -36,8 +36,7 @@ class Path {
     friend class SharedPtr<Path>;
 
     // Allow defragmenter to access fragment-in-flight info stored in Path for performance reasons.
-    template <unsigned int MF, unsigned int MFP, unsigned int GCT, unsigned int GCS, typename P>
-    friend class Defragmenter;
+    template <unsigned int MF, unsigned int MFP, unsigned int GCT, unsigned int GCS, typename P> friend class Defragmenter;
 
   public:
     /**
@@ -52,17 +51,14 @@ class Path {
             const unsigned int family = ip.as.sa.sa_family;
             if (family == AF_INET) {
                 const uint16_t p = (uint16_t)ip.as.sa_in.sin_port;
-                m_hashCode =
-                    Utils::hash64((((uint64_t)ip.as.sa_in.sin_addr.s_addr) << 16U) ^ ((uint64_t)p) ^ Utils::s_mapNonce);
-                m_ipv6Net64 = 0;   // 0 for IPv4, never 0 for IPv6
-                m_port      = p;
+                m_hashCode       = Utils::hash64((((uint64_t)ip.as.sa_in.sin_addr.s_addr) << 16U) ^ ((uint64_t)p) ^ Utils::s_mapNonce);
+                m_ipv6Net64      = 0;   // 0 for IPv4, never 0 for IPv6
+                m_port           = p;
             }
             else {
                 if (likely(family == AF_INET6)) {
-                    const uint64_t a = Utils::loadMachineEndian<uint64_t>(
-                        reinterpret_cast<const uint8_t *>(ip.as.sa_in6.sin6_addr.s6_addr));
-                    const uint64_t b = Utils::loadMachineEndian<uint64_t>(
-                        reinterpret_cast<const uint8_t *>(ip.as.sa_in6.sin6_addr.s6_addr) + 8);
+                    const uint64_t a = Utils::loadMachineEndian<uint64_t>(reinterpret_cast<const uint8_t *>(ip.as.sa_in6.sin6_addr.s6_addr));
+                    const uint64_t b = Utils::loadMachineEndian<uint64_t>(reinterpret_cast<const uint8_t *>(ip.as.sa_in6.sin6_addr.s6_addr) + 8);
                     const uint16_t p = ip.as.sa_in6.sin6_port;
                     m_hashCode       = Utils::hash64(a ^ b ^ ((uint64_t)p) ^ Utils::s_mapNonce);
                     m_ipv6Net64      = a;   // IPv6 /64
@@ -79,10 +75,7 @@ class Path {
 
         ZT_INLINE unsigned long hashCode() const noexcept { return (unsigned long)m_hashCode; }
 
-        ZT_INLINE bool operator==(const Key &k) const noexcept
-        {
-            return (m_hashCode == k.m_hashCode) && (m_ipv6Net64 == k.m_ipv6Net64) && (m_port == k.m_port);
-        }
+        ZT_INLINE bool operator==(const Key &k) const noexcept { return (m_hashCode == k.m_hashCode) && (m_ipv6Net64 == k.m_ipv6Net64) && (m_port == k.m_port); }
 
         ZT_INLINE bool operator!=(const Key &k) const noexcept { return (!(*this == k)); }
 
@@ -114,14 +107,7 @@ class Path {
         uint16_t m_port;
     };
 
-    ZT_INLINE Path(const int64_t l, const InetAddress &r) noexcept
-        : m_localSocket(l)
-        , m_lastIn(0)
-        , m_lastOut(0)
-        , m_latency(-1)
-        , m_addr(r)
-    {
-    }
+    ZT_INLINE Path(const int64_t l, const InetAddress &r) noexcept : m_localSocket(l), m_lastIn(0), m_lastOut(0), m_latency(-1), m_addr(r) {}
 
     /**
      * Send a packet via this path (last out time is also updated)
@@ -182,10 +168,7 @@ class Path {
      *
      * @param now Current time
      */
-    ZT_INLINE bool alive(const CallContext &cc) const noexcept
-    {
-        return ((cc.ticks - m_lastIn.load(std::memory_order_relaxed)) < ZT_PATH_ALIVE_TIMEOUT);
-    }
+    ZT_INLINE bool alive(const CallContext &cc) const noexcept { return ((cc.ticks - m_lastIn.load(std::memory_order_relaxed)) < ZT_PATH_ALIVE_TIMEOUT); }
 
     /**
      * @return Physical address

@@ -1,0 +1,483 @@
+# err-codes.h.in - List of error codes and their description input file.
+/* err-codes.h - List of error codes and their description.
+   Copyright (C) 2003, 2004 g10 Code GmbH
+
+   This file is part of libgpg-error.
+
+   libgpg-error is free software; you can redistribute it and/or
+   modify it under the terms of the GNU Lesser General Public License
+   as published by the Free Software Foundation; either version 2.1 of
+   the License, or (at your option) any later version.
+
+   libgpg-error is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+   Lesser General Public License for more details.
+
+   You should have received a copy of the GNU Lesser General Public
+   License along with libgpg-error; if not, write to the Free
+   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+   02111-1307, USA.  */
+
+# Everything up to the first line that starts with a number in the
+# first column is copied into the output verbatim.  Then, empty lines
+# are ignored.  Other lines must have an error code number, followed
+# by one or more <tab> characters, followed by the error code symbol,
+# followed by one or more <tab> characters, followed by the error
+# message.  Trailing whitespace is removed.  The error codes should be
+# sorted.  The last line should not have a number, but only a <tab>,
+# followed by a dummy field, followed by a <tab>, followed by a
+# description for error codes that are not in the list.
+
+0	GPG_ERR_NO_ERROR		Success
+1	GPG_ERR_GENERAL			General error
+2	GPG_ERR_UNKNOWN_PACKET		Unknown packet
+3	GPG_ERR_UNKNOWN_VERSION		Unknown version in packet
+4	GPG_ERR_PUBKEY_ALGO		Invalid public key algorithm
+5	GPG_ERR_DIGEST_ALGO		Invalid digest algorithm
+6	GPG_ERR_BAD_PUBKEY		Bad public key
+7	GPG_ERR_BAD_SECKEY		Bad secret key
+8	GPG_ERR_BAD_SIGNATURE		Bad signature
+9	GPG_ERR_NO_PUBKEY		No public key
+10	GPG_ERR_CHECKSUM		Checksum error
+11	GPG_ERR_BAD_PASSPHRASE		Bad passphrase
+12	GPG_ERR_CIPHER_ALGO		Invalid cipher algorithm
+13	GPG_ERR_KEYRING_OPEN		Cannot open keyring
+14	GPG_ERR_INV_PACKET		Invalid packet
+15	GPG_ERR_INV_ARMOR		Invalid armor
+16	GPG_ERR_NO_USER_ID		No user ID
+17	GPG_ERR_NO_SECKEY		No secret key
+18	GPG_ERR_WRONG_SECKEY		Wrong secret key used
+19	GPG_ERR_BAD_KEY			Bad session key
+20	GPG_ERR_COMPR_ALGO		Unknown compression algorithm
+21	GPG_ERR_NO_PRIME		Number is not prime
+22	GPG_ERR_NO_ENCODING_METHOD	Invalid encoding method
+23	GPG_ERR_NO_ENCRYPTION_SCHEME	Invalid encryption scheme
+24	GPG_ERR_NO_SIGNATURE_SCHEME	Invalid signature scheme
+25	GPG_ERR_INV_ATTR		Invalid attribute
+26	GPG_ERR_NO_VALUE		No value
+27	GPG_ERR_NOT_FOUND		Not found
+28	GPG_ERR_VALUE_NOT_FOUND		Value not found
+29	GPG_ERR_SYNTAX			Syntax error
+30	GPG_ERR_BAD_MPI			Bad MPI value
+31	GPG_ERR_INV_PASSPHRASE		Invalid passphrase
+32	GPG_ERR_SIG_CLASS		Invalid signature class
+33	GPG_ERR_RESOURCE_LIMIT		Resources exhausted
+34	GPG_ERR_INV_KEYRING		Invalid keyring
+35	GPG_ERR_TRUSTDB			Trust DB error
+36	GPG_ERR_BAD_CERT		Bad certificate
+37	GPG_ERR_INV_USER_ID		Invalid user ID
+38	GPG_ERR_UNEXPECTED		Unexpected error
+39	GPG_ERR_TIME_CONFLICT		Time conflict
+40	GPG_ERR_KEYSERVER		Keyserver error
+41	GPG_ERR_WRONG_PUBKEY_ALGO	Wrong public key algorithm
+42	GPG_ERR_TRIBUTE_TO_D_A		Tribute to D. A.
+43	GPG_ERR_WEAK_KEY		Weak encryption key
+44	GPG_ERR_INV_KEYLEN		Invalid key length
+45	GPG_ERR_INV_ARG			Invalid argument
+46	GPG_ERR_BAD_URI			Syntax error in URI
+47	GPG_ERR_INV_URI			Invalid URI
+48	GPG_ERR_NETWORK			Network error
+49	GPG_ERR_UNKNOWN_HOST		Unknown host
+50	GPG_ERR_SELFTEST_FAILED		Selftest failed
+51	GPG_ERR_NOT_ENCRYPTED		Data not encrypted
+52	GPG_ERR_NOT_PROCESSED		Data not processed
+53	GPG_ERR_UNUSABLE_PUBKEY		Unusable public key
+54	GPG_ERR_UNUSABLE_SECKEY		Unusable secret key
+55	GPG_ERR_INV_VALUE		Invalid value
+56	GPG_ERR_BAD_CERT_CHAIN		Bad certificate chain
+57	GPG_ERR_MISSING_CERT		Missing certificate
+58	GPG_ERR_NO_DATA			No data
+59	GPG_ERR_BUG			Bug
+60	GPG_ERR_NOT_SUPPORTED		Not supported
+61	GPG_ERR_INV_OP			Invalid operation code
+62	GPG_ERR_TIMEOUT			Timeout
+63	GPG_ERR_INTERNAL		Internal error
+64	GPG_ERR_EOF_GCRYPT		EOF (gcrypt)
+65	GPG_ERR_INV_OBJ			Invalid object
+66	GPG_ERR_TOO_SHORT		Provided object is too short
+67	GPG_ERR_TOO_LARGE		Provided object is too large
+68	GPG_ERR_NO_OBJ			Missing item in object
+69	GPG_ERR_NOT_IMPLEMENTED		Not implemented
+70	GPG_ERR_CONFLICT		Conflicting use
+71	GPG_ERR_INV_CIPHER_MODE		Invalid cipher mode
+72	GPG_ERR_INV_FLAG		Invalid flag
+73	GPG_ERR_INV_HANDLE		Invalid handle
+74	GPG_ERR_TRUNCATED		Result truncated
+75	GPG_ERR_INCOMPLETE_LINE		Incomplete line
+76	GPG_ERR_INV_RESPONSE		Invalid response
+77	GPG_ERR_NO_AGENT		No agent running
+78	GPG_ERR_AGENT			Agent error
+79	GPG_ERR_INV_DATA		Invalid data
+80	GPG_ERR_ASSUAN_SERVER_FAULT	Unspecific Assuan server fault
+81	GPG_ERR_ASSUAN			General Assuan error
+82	GPG_ERR_INV_SESSION_KEY		Invalid session key
+83	GPG_ERR_INV_SEXP		Invalid S-expression
+84	GPG_ERR_UNSUPPORTED_ALGORITHM	Unsupported algorithm
+85	GPG_ERR_NO_PIN_ENTRY		No pinentry
+86	GPG_ERR_PIN_ENTRY		pinentry error
+87	GPG_ERR_BAD_PIN			Bad PIN
+88	GPG_ERR_INV_NAME		Invalid name
+89	GPG_ERR_BAD_DATA		Bad data
+90	GPG_ERR_INV_PARAMETER		Invalid parameter
+91	GPG_ERR_WRONG_CARD		Wrong card
+92	GPG_ERR_NO_DIRMNGR		No dirmngr
+93	GPG_ERR_DIRMNGR			dirmngr error
+94	GPG_ERR_CERT_REVOKED		Certificate revoked
+95	GPG_ERR_NO_CRL_KNOWN		No CRL known
+96	GPG_ERR_CRL_TOO_OLD		CRL too old
+97	GPG_ERR_LINE_TOO_LONG		Line too long
+98	GPG_ERR_NOT_TRUSTED		Not trusted
+99	GPG_ERR_CANCELED		Operation cancelled
+100	GPG_ERR_BAD_CA_CERT		Bad CA certificate
+101	GPG_ERR_CERT_EXPIRED		Certificate expired
+102	GPG_ERR_CERT_TOO_YOUNG		Certificate too young
+103	GPG_ERR_UNSUPPORTED_CERT	Unsupported certificate
+104	GPG_ERR_UNKNOWN_SEXP		Unknown S-expression
+105	GPG_ERR_UNSUPPORTED_PROTECTION	Unsupported protection
+106	GPG_ERR_CORRUPTED_PROTECTION	Corrupted protection
+107	GPG_ERR_AMBIGUOUS_NAME		Ambiguous name
+108	GPG_ERR_CARD			Card error
+109	GPG_ERR_CARD_RESET		Card reset required
+110	GPG_ERR_CARD_REMOVED		Card removed
+111	GPG_ERR_INV_CARD		Invalid card
+112	GPG_ERR_CARD_NOT_PRESENT	Card not present
+113	GPG_ERR_NO_PKCS15_APP		No PKCS15 application
+114	GPG_ERR_NOT_CONFIRMED		Not confirmed
+115	GPG_ERR_CONFIGURATION		Configuration error
+116	GPG_ERR_NO_POLICY_MATCH		No policy match
+117	GPG_ERR_INV_INDEX		Invalid index
+118	GPG_ERR_INV_ID			Invalid ID
+119	GPG_ERR_NO_SCDAEMON		No SmartCard daemon
+120	GPG_ERR_SCDAEMON		SmartCard daemon error
+121	GPG_ERR_UNSUPPORTED_PROTOCOL	Unsupported protocol
+122	GPG_ERR_BAD_PIN_METHOD		Bad PIN method
+123	GPG_ERR_CARD_NOT_INITIALIZED	Card not initialized
+124	GPG_ERR_UNSUPPORTED_OPERATION	Unsupported operation
+125	GPG_ERR_WRONG_KEY_USAGE		Wrong key usage
+126	GPG_ERR_NOTHING_FOUND		Nothing found
+127	GPG_ERR_WRONG_BLOB_TYPE		Wrong blob type
+128	GPG_ERR_MISSING_VALUE		Missing value
+129	GPG_ERR_HARDWARE		Hardware problem
+130	GPG_ERR_PIN_BLOCKED		PIN blocked
+131	GPG_ERR_USE_CONDITIONS		Conditions of use not satisfied
+132	GPG_ERR_PIN_NOT_SYNCED		PINs are not synced
+133	GPG_ERR_INV_CRL			Invalid CRL
+134	GPG_ERR_BAD_BER			BER error
+135	GPG_ERR_INV_BER			Invalid BER
+136	GPG_ERR_ELEMENT_NOT_FOUND	Element not found
+137	GPG_ERR_IDENTIFIER_NOT_FOUND	Identifier not found
+138	GPG_ERR_INV_TAG			Invalid tag
+139	GPG_ERR_INV_LENGTH		Invalid length
+140	GPG_ERR_INV_KEYINFO		Invalid key info
+141	GPG_ERR_UNEXPECTED_TAG		Unexpected tag
+142	GPG_ERR_NOT_DER_ENCODED		Not DER encoded
+143	GPG_ERR_NO_CMS_OBJ		No CMS object
+144	GPG_ERR_INV_CMS_OBJ		Invalid CMS object
+145	GPG_ERR_UNKNOWN_CMS_OBJ		Unknown CMS object
+146	GPG_ERR_UNSUPPORTED_CMS_OBJ	Unsupported CMS object
+147	GPG_ERR_UNSUPPORTED_ENCODING	Unsupported encoding
+148	GPG_ERR_UNSUPPORTED_CMS_VERSION	Unsupported CMS version
+149	GPG_ERR_UNKNOWN_ALGORITHM	Unknown algorithm
+150	GPG_ERR_INV_ENGINE		Invalid crypto engine
+151	GPG_ERR_PUBKEY_NOT_TRUSTED	Public key not trusted
+152	GPG_ERR_DECRYPT_FAILED		Decryption failed
+153	GPG_ERR_KEY_EXPIRED		Key expired
+154	GPG_ERR_SIG_EXPIRED		Signature expired
+155	GPG_ERR_ENCODING_PROBLEM	Encoding problem
+156	GPG_ERR_INV_STATE		Invalid state
+157	GPG_ERR_DUP_VALUE		Duplicated value
+158	GPG_ERR_MISSING_ACTION		Missing action
+159	GPG_ERR_MODULE_NOT_FOUND	ASN.1 module not found
+160	GPG_ERR_INV_OID_STRING		Invalid OID string
+161	GPG_ERR_INV_TIME		Invalid time
+162	GPG_ERR_INV_CRL_OBJ		Invalid CRL object
+163	GPG_ERR_UNSUPPORTED_CRL_VERSION	Unsupported CRL version
+164	GPG_ERR_INV_CERT_OBJ		Invalid certificate object
+165	GPG_ERR_UNKNOWN_NAME		Unknown name
+166	GPG_ERR_LOCALE_PROBLEM		A locale function failed
+167	GPG_ERR_NOT_LOCKED		Not locked
+168	GPG_ERR_PROTOCOL_VIOLATION	Protocol violation
+169	GPG_ERR_INV_MAC			Invalid MAC
+170	GPG_ERR_INV_REQUEST		Invalid request
+171	GPG_ERR_UNKNOWN_EXTN		Unknown extension
+172	GPG_ERR_UNKNOWN_CRIT_EXTN	Unknown critical extension
+173	GPG_ERR_LOCKED			Locked
+174	GPG_ERR_UNKNOWN_OPTION		Unknown option
+175	GPG_ERR_UNKNOWN_COMMAND		Unknown command
+176	GPG_ERR_NOT_OPERATIONAL		Not operational
+177	GPG_ERR_NO_PASSPHRASE		No passphrase given
+178	GPG_ERR_NO_PIN			No PIN given
+179	GPG_ERR_NOT_ENABLED		Not enabled
+180	GPG_ERR_NO_ENGINE		No crypto engine
+181	GPG_ERR_MISSING_KEY		Missing key
+182	GPG_ERR_TOO_MANY		Too many objects
+183	GPG_ERR_LIMIT_REACHED		Limit reached
+184	GPG_ERR_NOT_INITIALIZED		Not initialized
+185	GPG_ERR_MISSING_ISSUER_CERT	Missing issuer certificate
+186	GPG_ERR_NO_KEYSERVER		No keyserver available
+187	GPG_ERR_INV_CURVE		Invalid elliptic curve
+188	GPG_ERR_UNKNOWN_CURVE		Unknown elliptic curve
+189	GPG_ERR_DUP_KEY			Duplicated key
+190	GPG_ERR_AMBIGUOUS		Ambiguous result
+191	GPG_ERR_NO_CRYPT_CTX		No crypto context
+192	GPG_ERR_WRONG_CRYPT_CTX		Wrong crypto context
+193	GPG_ERR_BAD_CRYPT_CTX		Bad crypto context
+194	GPG_ERR_CRYPT_CTX_CONFLICT	Conflict in the crypto context
+195	GPG_ERR_BROKEN_PUBKEY		Broken public key
+196	GPG_ERR_BROKEN_SECKEY		Broken secret key
+197	GPG_ERR_MAC_ALGO		Invalid MAC algorithm
+198	GPG_ERR_FULLY_CANCELED		Operation fully cancelled
+199	GPG_ERR_UNFINISHED		Operation not yet finished
+200	GPG_ERR_BUFFER_TOO_SHORT	Buffer too short
+
+# Error codes pertaining to S-expressions.
+
+201	GPG_ERR_SEXP_INV_LEN_SPEC	Invalid length specifier in S-expression
+202	GPG_ERR_SEXP_STRING_TOO_LONG	String too long in S-expression
+203	GPG_ERR_SEXP_UNMATCHED_PAREN	Unmatched parentheses in S-expression
+204	GPG_ERR_SEXP_NOT_CANONICAL	S-expression not canonical
+205	GPG_ERR_SEXP_BAD_CHARACTER	Bad character in S-expression
+206	GPG_ERR_SEXP_BAD_QUOTATION	Bad quotation in S-expression
+207	GPG_ERR_SEXP_ZERO_PREFIX	Zero prefix in S-expression
+208	GPG_ERR_SEXP_NESTED_DH		Nested display hints in S-expression
+209	GPG_ERR_SEXP_UNMATCHED_DH	Unmatched display hints
+210	GPG_ERR_SEXP_UNEXPECTED_PUNC	Unexpected reserved punctuation in S-expression
+211	GPG_ERR_SEXP_BAD_HEX_CHAR	Bad hexadecimal character in S-expression
+212	GPG_ERR_SEXP_ODD_HEX_NUMBERS	Odd hexadecimal numbers in S-expression
+213	GPG_ERR_SEXP_BAD_OCT_CHAR	Bad octal character in S-expression
+
+# 214 to 216 are free to be used.
+217	GPG_ERR_SUBKEYS_EXP_OR_REV	All subkeys are expired or revoked
+218	GPG_ERR_DB_CORRUPTED		Database is corrupted
+219	GPG_ERR_SERVER_FAILED		Server indicated a failure
+220	GPG_ERR_NO_NAME			No name
+221	GPG_ERR_NO_KEY			No key
+222	GPG_ERR_LEGACY_KEY		Legacy key
+223	GPG_ERR_REQUEST_TOO_SHORT	Request too short
+224	GPG_ERR_REQUEST_TOO_LONG	Request too long
+225	GPG_ERR_OBJ_TERM_STATE		Object is in termination state
+226	GPG_ERR_NO_CERT_CHAIN		No certificate chain
+227	GPG_ERR_CERT_TOO_LARGE		Certificate is too large
+228	GPG_ERR_INV_RECORD		Invalid record
+229	GPG_ERR_BAD_MAC			The MAC does not verify
+230	GPG_ERR_UNEXPECTED_MSG		Unexpected message
+231	GPG_ERR_COMPR_FAILED		Compression or decompression failed
+232	GPG_ERR_WOULD_WRAP		A counter would wrap
+233	GPG_ERR_FATAL_ALERT		Fatal alert message received
+234	GPG_ERR_NO_CIPHER		No cipher algorithm
+235	GPG_ERR_MISSING_CLIENT_CERT	Missing client certificate
+236	GPG_ERR_CLOSE_NOTIFY		Close notification received
+237	GPG_ERR_TICKET_EXPIRED		Ticket expired
+238	GPG_ERR_BAD_TICKET		Bad ticket
+239	GPG_ERR_UNKNOWN_IDENTITY	Unknown identity
+240	GPG_ERR_BAD_HS_CERT		Bad certificate message in handshake
+241	GPG_ERR_BAD_HS_CERT_REQ		Bad certificate request message in handshake
+242	GPG_ERR_BAD_HS_CERT_VER		Bad certificate verify message in handshake
+243	GPG_ERR_BAD_HS_CHANGE_CIPHER	Bad change cipher message in handshake
+244	GPG_ERR_BAD_HS_CLIENT_HELLO	Bad client hello message in handshake
+245	GPG_ERR_BAD_HS_SERVER_HELLO	Bad server hello message in handshake
+246	GPG_ERR_BAD_HS_SERVER_HELLO_DONE	Bad server hello done message in handshake
+247	GPG_ERR_BAD_HS_FINISHED		Bad finished message in handshake
+248	GPG_ERR_BAD_HS_SERVER_KEX	Bad server key exchange message in handshake
+249	GPG_ERR_BAD_HS_CLIENT_KEX	Bad client key exchange message in handshake
+250	GPG_ERR_BOGUS_STRING		Bogus string
+251	GPG_ERR_FORBIDDEN		Forbidden
+252	GPG_ERR_KEY_DISABLED		Key disabled
+253	GPG_ERR_KEY_ON_CARD		Not possible with a card based key
+254	GPG_ERR_INV_LOCK_OBJ		Invalid lock object
+
+255	GPG_ERR_TRUE			True
+256	GPG_ERR_FALSE			False
+
+# Error codes pertaining to the Assuan IPC interface
+257	GPG_ERR_ASS_GENERAL		General IPC error
+258	GPG_ERR_ASS_ACCEPT_FAILED	IPC accept call failed
+259	GPG_ERR_ASS_CONNECT_FAILED	IPC connect call failed
+260	GPG_ERR_ASS_INV_RESPONSE	Invalid IPC response
+261	GPG_ERR_ASS_INV_VALUE		Invalid value passed to IPC
+262	GPG_ERR_ASS_INCOMPLETE_LINE	Incomplete line passed to IPC
+263	GPG_ERR_ASS_LINE_TOO_LONG	Line passed to IPC too long
+264	GPG_ERR_ASS_NESTED_COMMANDS	Nested IPC commands
+265	GPG_ERR_ASS_NO_DATA_CB		No data callback in IPC
+266	GPG_ERR_ASS_NO_INQUIRE_CB	No inquire callback in IPC
+267	GPG_ERR_ASS_NOT_A_SERVER	Not an IPC server
+268	GPG_ERR_ASS_NOT_A_CLIENT	Not an IPC client
+269	GPG_ERR_ASS_SERVER_START	Problem starting IPC server
+270	GPG_ERR_ASS_READ_ERROR		IPC read error
+271	GPG_ERR_ASS_WRITE_ERROR		IPC write error
+# reserved
+273	GPG_ERR_ASS_TOO_MUCH_DATA	Too much data for IPC layer
+274	GPG_ERR_ASS_UNEXPECTED_CMD	Unexpected IPC command
+275	GPG_ERR_ASS_UNKNOWN_CMD		Unknown IPC command
+276	GPG_ERR_ASS_SYNTAX		IPC syntax error
+277	GPG_ERR_ASS_CANCELED		IPC call has been cancelled
+278	GPG_ERR_ASS_NO_INPUT		No input source for IPC
+279	GPG_ERR_ASS_NO_OUTPUT		No output source for IPC
+280	GPG_ERR_ASS_PARAMETER		IPC parameter error
+281	GPG_ERR_ASS_UNKNOWN_INQUIRE	Unknown IPC inquire
+
+# 282 to 299 are reserved for future assuan codes.
+
+300	GPG_ERR_ENGINE_TOO_OLD		Crypto engine too old
+301	GPG_ERR_WINDOW_TOO_SMALL	Screen or window too small
+302	GPG_ERR_WINDOW_TOO_LARGE	Screen or window too large
+303	GPG_ERR_MISSING_ENVVAR		Required environment variable not set
+304	GPG_ERR_USER_ID_EXISTS		User ID already exists
+305	GPG_ERR_NAME_EXISTS		Name already exists
+306	GPG_ERR_DUP_NAME		Duplicated name
+307	GPG_ERR_TOO_YOUNG		Object is too young
+308	GPG_ERR_TOO_OLD			Object is too old
+309	GPG_ERR_UNKNOWN_FLAG		Unknown flag
+310	GPG_ERR_INV_ORDER		Invalid execution order
+311	GPG_ERR_ALREADY_FETCHED		Already fetched
+312	GPG_ERR_TRY_LATER		Try again later
+313	GPG_ERR_WRONG_NAME		Wrong name
+314	GPG_ERR_NO_AUTH			Not authenticated
+315	GPG_ERR_BAD_AUTH		Bad authentication
+# This range is free for use.
+
+666	GPG_ERR_SYSTEM_BUG		System bug detected
+
+#
+# Mapping of some error codes from libdns and other DNS specific error codes
+#
+711	GPG_ERR_DNS_UNKNOWN		Unknown DNS error
+712	GPG_ERR_DNS_SECTION		Invalid DNS section
+713	GPG_ERR_DNS_ADDRESS		Invalid textual address form
+714	GPG_ERR_DNS_NO_QUERY		Missing DNS query packet
+715	GPG_ERR_DNS_NO_ANSWER		Missing DNS answer packet
+716	GPG_ERR_DNS_CLOSED		Connection closed in DNS
+717	GPG_ERR_DNS_VERIFY		Verification failed in DNS
+718	GPG_ERR_DNS_TIMEOUT		DNS Timeout
+
+#
+# Mapping of LDAP error codes
+#
+# The numbers reflect the OpenLDAP code with an offset of 768.
+# Some error names are shortened
+#
+721	GPG_ERR_LDAP_GENERAL		General LDAP error
+722	GPG_ERR_LDAP_ATTR_GENERAL	General LDAP attribute error
+723	GPG_ERR_LDAP_NAME_GENERAL	General LDAP name error
+724	GPG_ERR_LDAP_SECURITY_GENERAL	General LDAP security error
+725	GPG_ERR_LDAP_SERVICE_GENERAL	General LDAP service error
+726	GPG_ERR_LDAP_UPDATE_GENERAL	General LDAP update error
+727	GPG_ERR_LDAP_E_GENERAL		Experimental LDAP error code
+728	GPG_ERR_LDAP_X_GENERAL		Private LDAP error code
+729	GPG_ERR_LDAP_OTHER_GENERAL	Other general LDAP error
+# 730 to 749 not used
+750	GPG_ERR_LDAP_X_CONNECTING	LDAP connecting failed (X)
+751	GPG_ERR_LDAP_REFERRAL_LIMIT	LDAP referral limit exceeded
+752	GPG_ERR_LDAP_CLIENT_LOOP	LDAP client loop
+# 753 is an obsolete error code
+754	GPG_ERR_LDAP_NO_RESULTS		No LDAP results returned
+755	GPG_ERR_LDAP_CONTROL_NOT_FOUND	LDAP control not found
+756	GPG_ERR_LDAP_NOT_SUPPORTED	Not supported by LDAP
+757	GPG_ERR_LDAP_CONNECT		LDAP connect error
+758	GPG_ERR_LDAP_NO_MEMORY		Out of memory in LDAP
+759	GPG_ERR_LDAP_PARAM		Bad parameter to an LDAP routine
+760	GPG_ERR_LDAP_USER_CANCELLED	User cancelled LDAP operation
+761	GPG_ERR_LDAP_FILTER		Bad LDAP search filter
+762	GPG_ERR_LDAP_AUTH_UNKNOWN	Unknown LDAP authentication method
+763	GPG_ERR_LDAP_TIMEOUT		Timeout in LDAP
+764	GPG_ERR_LDAP_DECODING		LDAP decoding error
+765	GPG_ERR_LDAP_ENCODING		LDAP encoding error
+766	GPG_ERR_LDAP_LOCAL		LDAP local error
+767	GPG_ERR_LDAP_SERVER_DOWN	Cannot contact LDAP server
+768	GPG_ERR_LDAP_SUCCESS		LDAP success
+769	GPG_ERR_LDAP_OPERATIONS		LDAP operations error
+770	GPG_ERR_LDAP_PROTOCOL		LDAP protocol error
+771	GPG_ERR_LDAP_TIMELIMIT		Time limit exceeded in LDAP
+772	GPG_ERR_LDAP_SIZELIMIT		Size limit exceeded in LDAP
+773	GPG_ERR_LDAP_COMPARE_FALSE	LDAP compare false
+774	GPG_ERR_LDAP_COMPARE_TRUE	LDAP compare true
+775	GPG_ERR_LDAP_UNSUPPORTED_AUTH	LDAP authentication method not supported
+776	GPG_ERR_LDAP_STRONG_AUTH_RQRD	Strong(er) LDAP authentication required
+777	GPG_ERR_LDAP_PARTIAL_RESULTS	Partial LDAP results+referral received
+778	GPG_ERR_LDAP_REFERRAL		LDAP referral
+779	GPG_ERR_LDAP_ADMINLIMIT		Administrative LDAP limit exceeded
+780	GPG_ERR_LDAP_UNAVAIL_CRIT_EXTN	Critical LDAP extension is unavailable
+781	GPG_ERR_LDAP_CONFIDENT_RQRD	Confidentiality required by LDAP
+782	GPG_ERR_LDAP_SASL_BIND_INPROG	LDAP SASL bind in progress
+# 783 not used
+784	GPG_ERR_LDAP_NO_SUCH_ATTRIBUTE	No such LDAP attribute
+785	GPG_ERR_LDAP_UNDEFINED_TYPE	Undefined LDAP attribute type
+786	GPG_ERR_LDAP_BAD_MATCHING	Inappropriate matching in LDAP
+787	GPG_ERR_LDAP_CONST_VIOLATION	Constraint violation in LDAP
+788	GPG_ERR_LDAP_TYPE_VALUE_EXISTS	LDAP type or value exists
+789	GPG_ERR_LDAP_INV_SYNTAX		Invalid syntax in LDAP
+# 790 to 799 not used
+800	GPG_ERR_LDAP_NO_SUCH_OBJ	No such LDAP object
+801	GPG_ERR_LDAP_ALIAS_PROBLEM	LDAP alias problem
+802	GPG_ERR_LDAP_INV_DN_SYNTAX	Invalid DN syntax in LDAP
+803	GPG_ERR_LDAP_IS_LEAF		LDAP entry is a leaf
+804	GPG_ERR_LDAP_ALIAS_DEREF	LDAP alias dereferencing problem
+# 805 to 814 not used
+815	GPG_ERR_LDAP_X_PROXY_AUTH_FAIL	LDAP proxy authorization failure (X)
+816	GPG_ERR_LDAP_BAD_AUTH		Inappropriate LDAP authentication
+817	GPG_ERR_LDAP_INV_CREDENTIALS	Invalid LDAP credentials
+818	GPG_ERR_LDAP_INSUFFICIENT_ACC	Insufficient access for LDAP
+819	GPG_ERR_LDAP_BUSY		LDAP server is busy
+820	GPG_ERR_LDAP_UNAVAILABLE	LDAP server is unavailable
+821	GPG_ERR_LDAP_UNWILL_TO_PERFORM	LDAP server is unwilling to perform
+822	GPG_ERR_LDAP_LOOP_DETECT	Loop detected by LDAP
+# 823 to 831 not used
+832	GPG_ERR_LDAP_NAMING_VIOLATION	LDAP naming violation
+833	GPG_ERR_LDAP_OBJ_CLS_VIOLATION	LDAP object class violation
+834	GPG_ERR_LDAP_NOT_ALLOW_NONLEAF	LDAP operation not allowed on non-leaf
+835	GPG_ERR_LDAP_NOT_ALLOW_ON_RDN	LDAP operation not allowed on RDN
+836	GPG_ERR_LDAP_ALREADY_EXISTS	Already exists (LDAP)
+837	GPG_ERR_LDAP_NO_OBJ_CLASS_MODS	Cannot modify LDAP object class
+838	GPG_ERR_LDAP_RESULTS_TOO_LARGE	LDAP results too large
+839	GPG_ERR_LDAP_AFFECTS_MULT_DSAS	LDAP operation affects multiple DSAs
+# 840 to 843 not used
+844	GPG_ERR_LDAP_VLV		Virtual LDAP list view error
+# 845 to 847 not used
+848	GPG_ERR_LDAP_OTHER		Other LDAP error
+# 849 to 880 not used
+881	GPG_ERR_LDAP_CUP_RESOURCE_LIMIT	Resources exhausted in LCUP
+882	GPG_ERR_LDAP_CUP_SEC_VIOLATION	Security violation in LCUP
+883	GPG_ERR_LDAP_CUP_INV_DATA	Invalid data in LCUP
+884	GPG_ERR_LDAP_CUP_UNSUP_SCHEME	Unsupported scheme in LCUP
+885	GPG_ERR_LDAP_CUP_RELOAD		Reload required in LCUP
+886	GPG_ERR_LDAP_CANCELLED		LDAP cancelled
+887	GPG_ERR_LDAP_NO_SUCH_OPERATION	No LDAP operation to cancel
+888	GPG_ERR_LDAP_TOO_LATE		Too late to cancel LDAP
+889	GPG_ERR_LDAP_CANNOT_CANCEL	Cannot cancel LDAP
+890	GPG_ERR_LDAP_ASSERTION_FAILED	LDAP assertion failed
+891	GPG_ERR_LDAP_PROX_AUTH_DENIED	Proxied authorization denied by LDAP
+
+# 892 to 950 are reserved for future LDAP codes.
+
+# 951 to 1023 are free to be used.
+
+# For free use by non-GnuPG components:
+1024	GPG_ERR_USER_1			User defined error code 1
+1025	GPG_ERR_USER_2			User defined error code 2
+1026	GPG_ERR_USER_3			User defined error code 3
+1027	GPG_ERR_USER_4			User defined error code 4
+1028	GPG_ERR_USER_5			User defined error code 5
+1029	GPG_ERR_USER_6			User defined error code 6
+1030	GPG_ERR_USER_7			User defined error code 7
+1031	GPG_ERR_USER_8			User defined error code 8
+1032	GPG_ERR_USER_9			User defined error code 9
+1033	GPG_ERR_USER_10			User defined error code 10
+1034	GPG_ERR_USER_11			User defined error code 11
+1035	GPG_ERR_USER_12			User defined error code 12
+1036	GPG_ERR_USER_13			User defined error code 13
+1037	GPG_ERR_USER_14			User defined error code 14
+1038	GPG_ERR_USER_15			User defined error code 15
+1039	GPG_ERR_USER_16			User defined error code 16
+
+# 1040 to 16380 are free to be used.
+
+16381	GPG_ERR_MISSING_ERRNO		System error w/o errno
+16382	GPG_ERR_UNKNOWN_ERRNO		Unknown system error
+16383	GPG_ERR_EOF			End of file
+
+# 16384 - 32767 are reserved for future extensions.
+
+# GPG_SYSTEM_ERROR | (141 to 32767) are to be used for system errors.
+
+	GPG_ERR_CODE_DIM		Unknown error code

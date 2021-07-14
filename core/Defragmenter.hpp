@@ -40,17 +40,12 @@ namespace ZeroTier {
  * the ones used throughout the ZeroTier core.
  *
  * @tparam MF Maximum number of fragments that each message can possess (default: ZT_MAX_PACKET_FRAGMENTS)
- * @tparam MFP Maximum number of incoming fragments per path (if paths are specified) (default:
- * ZT_MAX_INCOMING_FRAGMENTS_PER_PATH)
+ * @tparam MFP Maximum number of incoming fragments per path (if paths are specified) (default: ZT_MAX_INCOMING_FRAGMENTS_PER_PATH)
  * @tparam GCS Garbage collection target size for the incoming message queue (default: ZT_MAX_PACKET_FRAGMENTS * 2)
  * @tparam GCT Garbage collection trigger threshold, usually 2X GCS (default: ZT_MAX_PACKET_FRAGMENTS * 4)
  * @tparam P Type for pointer to a path object (default: SharedPtr<Path>)
  */
-template <
-    unsigned int MF = ZT_MAX_PACKET_FRAGMENTS, unsigned int MFP = ZT_MAX_INCOMING_FRAGMENTS_PER_PATH,
-    unsigned int GCS = (ZT_MAX_PACKET_FRAGMENTS * 2), unsigned int GCT = (ZT_MAX_PACKET_FRAGMENTS * 4),
-    typename P = SharedPtr<Path>>
-class Defragmenter {
+template <unsigned int MF = ZT_MAX_PACKET_FRAGMENTS, unsigned int MFP = ZT_MAX_INCOMING_FRAGMENTS_PER_PATH, unsigned int GCS = (ZT_MAX_PACKET_FRAGMENTS * 2), unsigned int GCT = (ZT_MAX_PACKET_FRAGMENTS * 4), typename P = SharedPtr<Path>> class Defragmenter {
   public:
     /**
      * Return values from assemble()
@@ -136,10 +131,7 @@ class Defragmenter {
      * @param via If non-NULL this is the path on which this message fragment was received
      * @return Result code
      */
-    ZT_INLINE ResultCode assemble(
-        const uint64_t messageId, FCV<Buf::Slice, MF> &message, SharedPtr<Buf> &fragment,
-        const unsigned int fragmentDataIndex, const unsigned int fragmentDataSize, const unsigned int fragmentNo,
-        const unsigned int totalFragmentsExpected, const int64_t ts, const P &via)
+    ZT_INLINE ResultCode assemble(const uint64_t messageId, FCV<Buf::Slice, MF> &message, SharedPtr<Buf> &fragment, const unsigned int fragmentDataIndex, const unsigned int fragmentDataSize, const unsigned int fragmentNo, const unsigned int totalFragmentsExpected, const int64_t ts, const P &via)
     {
         // Sanity checks for malformed fragments or invalid input parameters.
         if ((fragmentNo >= totalFragmentsExpected) || (totalFragmentsExpected > MF) || (totalFragmentsExpected == 0))
@@ -296,16 +288,7 @@ class Defragmenter {
     struct p_E {
         ZT_INLINE p_E() noexcept : id(0), lastUsed(0), totalFragmentsExpected(0), fragmentsReceived(0) {}
 
-        ZT_INLINE p_E(const p_E &e) noexcept
-            : id(e.id)
-            , lastUsed(e.lastUsed)
-            , totalFragmentsExpected(e.totalFragmentsExpected)
-            , fragmentsReceived(e.fragmentsReceived)
-            , via(e.via)
-            , message(e.message)
-            , lock()
-        {
-        }
+        ZT_INLINE p_E(const p_E &e) noexcept : id(e.id), lastUsed(e.lastUsed), totalFragmentsExpected(e.totalFragmentsExpected), fragmentsReceived(e.fragmentsReceived), via(e.via), message(e.message), lock() {}
 
         ZT_INLINE ~p_E()
         {

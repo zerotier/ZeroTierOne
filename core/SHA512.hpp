@@ -81,9 +81,7 @@ void HMACSHA384(const uint8_t key[ZT_SYMMETRIC_KEY_SIZE], const void *msg, unsig
  * @param iter Key iteration for generation of multiple keys for the same label/context
  * @param out Output to receive derived key
  */
-void KBKDFHMACSHA384(
-    const uint8_t key[ZT_SYMMETRIC_KEY_SIZE], char label, char context, uint32_t iter,
-    uint8_t out[ZT_SYMMETRIC_KEY_SIZE]);
+void KBKDFHMACSHA384(const uint8_t key[ZT_SYMMETRIC_KEY_SIZE], char label, char context, uint32_t iter, uint8_t out[ZT_SYMMETRIC_KEY_SIZE]);
 
 }   // namespace ZeroTier
 

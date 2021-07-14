@@ -286,40 +286,19 @@ class Dictionary {
         out.push_back((uint8_t)'\n');
     }
 
-    template <typename V> ZT_INLINE static void append(V &out, const char *const k, const int64_t v)
-    {
-        append(out, k, (uint64_t)v);
-    }
+    template <typename V> ZT_INLINE static void append(V &out, const char *const k, const int64_t v) { append(out, k, (uint64_t)v); }
 
-    template <typename V> ZT_INLINE static void append(V &out, const char *const k, const uint32_t v)
-    {
-        append(out, k, (uint64_t)v);
-    }
+    template <typename V> ZT_INLINE static void append(V &out, const char *const k, const uint32_t v) { append(out, k, (uint64_t)v); }
 
-    template <typename V> ZT_INLINE static void append(V &out, const char *const k, const int32_t v)
-    {
-        append(out, k, (uint64_t)v);
-    }
+    template <typename V> ZT_INLINE static void append(V &out, const char *const k, const int32_t v) { append(out, k, (uint64_t)v); }
 
-    template <typename V> ZT_INLINE static void append(V &out, const char *const k, const uint16_t v)
-    {
-        append(out, k, (uint64_t)v);
-    }
+    template <typename V> ZT_INLINE static void append(V &out, const char *const k, const uint16_t v) { append(out, k, (uint64_t)v); }
 
-    template <typename V> ZT_INLINE static void append(V &out, const char *const k, const int16_t v)
-    {
-        append(out, k, (uint64_t)v);
-    }
+    template <typename V> ZT_INLINE static void append(V &out, const char *const k, const int16_t v) { append(out, k, (uint64_t)v); }
 
-    template <typename V> ZT_INLINE static void append(V &out, const char *const k, const uint8_t v)
-    {
-        append(out, k, (uint64_t)v);
-    }
+    template <typename V> ZT_INLINE static void append(V &out, const char *const k, const uint8_t v) { append(out, k, (uint64_t)v); }
 
-    template <typename V> ZT_INLINE static void append(V &out, const char *const k, const int8_t v)
-    {
-        append(out, k, (uint64_t)v);
-    }
+    template <typename V> ZT_INLINE static void append(V &out, const char *const k, const int8_t v) { append(out, k, (uint64_t)v); }
 
     /**
      * Append a key=value pair to a buffer (vector or FCV)
@@ -346,8 +325,7 @@ class Dictionary {
      * @param v Value
      * @param vlen Value length in bytes
      */
-    template <typename V>
-    ZT_INLINE static void append(V &out, const char *const k, const void *const v, const unsigned int vlen)
+    template <typename V> ZT_INLINE static void append(V &out, const char *const k, const void *const v, const unsigned int vlen)
     {
         s_appendKey(out, k);
         for (unsigned int i = 0; i < vlen; ++i)
@@ -362,10 +340,7 @@ class Dictionary {
      * @param k Key (must be <= 8 characters)
      * @param pid Packet ID
      */
-    template <typename V> static ZT_INLINE void appendPacketId(V &out, const char *const k, const uint64_t pid)
-    {
-        append(out, k, &pid, 8);
-    }
+    template <typename V> static ZT_INLINE void appendPacketId(V &out, const char *const k, const uint64_t pid) { append(out, k, &pid, 8); }
 
     /**
      * Append key=value with any object implementing the correct marshal interface

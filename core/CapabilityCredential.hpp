@@ -22,9 +22,7 @@
 #include "Utils.hpp"
 
 #define ZT_VIRTUALNETWORKRULE_MARSHAL_SIZE_MAX 21
-#define ZT_CAPABILITY_MARSHAL_SIZE_MAX                                                                                 \
-    (8 + 8 + 4 + 1 + 2 + (ZT_VIRTUALNETWORKRULE_MARSHAL_SIZE_MAX * ZT_MAX_CAPABILITY_RULES) + 2                        \
-     + (5 + 5 + 1 + 2 + ZT_SIGNATURE_BUFFER_SIZE))
+#define ZT_CAPABILITY_MARSHAL_SIZE_MAX         (8 + 8 + 4 + 1 + 2 + (ZT_VIRTUALNETWORKRULE_MARSHAL_SIZE_MAX * ZT_MAX_CAPABILITY_RULES) + 2 + (5 + 5 + 1 + 2 + ZT_SIGNATURE_BUFFER_SIZE))
 
 namespace ZeroTier {
 
@@ -64,9 +62,7 @@ class CapabilityCredential : public Credential {
      * @param rules Network flow rules for this capability
      * @param ruleCount Number of flow rules
      */
-    CapabilityCredential(
-        const uint32_t id, const uint64_t nwid, const int64_t timestamp, const ZT_VirtualNetworkRule *const rules,
-        const unsigned int ruleCount) noexcept;
+    CapabilityCredential(const uint32_t id, const uint64_t nwid, const int64_t timestamp, const ZT_VirtualNetworkRule *const rules, const unsigned int ruleCount) noexcept;
 
     /**
      * @return Rules -- see ruleCount() for size of array
@@ -114,10 +110,7 @@ class CapabilityCredential : public Credential {
      *
      * @param RR Runtime environment to provide for peer lookup, etc.
      */
-    ZT_INLINE Credential::VerifyResult verify(const Context &ctx, const CallContext &cc) const noexcept
-    {
-        return s_verify(ctx, cc, *this);
-    }
+    ZT_INLINE Credential::VerifyResult verify(const Context &ctx, const CallContext &cc) const noexcept { return s_verify(ctx, cc, *this); }
 
     static constexpr int marshalSizeMax() noexcept { return ZT_CAPABILITY_MARSHAL_SIZE_MAX; }
 
@@ -132,8 +125,7 @@ class CapabilityCredential : public Credential {
      * @param ruleCount Number of rules
      * @return Number of bytes written or -1 on error
      */
-    static int
-    marshalVirtualNetworkRules(uint8_t *data, const ZT_VirtualNetworkRule *rules, unsigned int ruleCount) noexcept;
+    static int marshalVirtualNetworkRules(uint8_t *data, const ZT_VirtualNetworkRule *rules, unsigned int ruleCount) noexcept;
 
     /**
      * Unmarshal a set of virtual network rules
@@ -145,22 +137,14 @@ class CapabilityCredential : public Credential {
      * @param maxRuleCount Capacity of rules buffer
      * @return Number of bytes unmarshaled or -1 on error
      */
-    static int unmarshalVirtualNetworkRules(
-        const uint8_t *data, int len, ZT_VirtualNetworkRule *rules, unsigned int &ruleCount,
-        unsigned int maxRuleCount) noexcept;
+    static int unmarshalVirtualNetworkRules(const uint8_t *data, int len, ZT_VirtualNetworkRule *rules, unsigned int &ruleCount, unsigned int maxRuleCount) noexcept;
 
     // Provides natural sort order by ID
     ZT_INLINE bool operator<(const CapabilityCredential &c) const noexcept { return (m_id < c.m_id); }
 
-    ZT_INLINE bool operator==(const CapabilityCredential &c) const noexcept
-    {
-        return (memcmp(this, &c, sizeof(CapabilityCredential)) == 0);
-    }
+    ZT_INLINE bool operator==(const CapabilityCredential &c) const noexcept { return (memcmp(this, &c, sizeof(CapabilityCredential)) == 0); }
 
-    ZT_INLINE bool operator!=(const CapabilityCredential &c) const noexcept
-    {
-        return (memcmp(this, &c, sizeof(CapabilityCredential)) != 0);
-    }
+    ZT_INLINE bool operator!=(const CapabilityCredential &c) const noexcept { return (memcmp(this, &c, sizeof(CapabilityCredential)) != 0); }
 
   private:
     uint64_t m_nwid;

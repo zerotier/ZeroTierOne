@@ -262,10 +262,7 @@ template <typename T, unsigned int C> class FCV {
 
     ZT_INLINE bool operator!=(const FCV &v) const noexcept { return *this != v; }
 
-    ZT_INLINE bool operator<(const FCV &v) const noexcept
-    {
-        return std::lexicographical_compare(begin(), end(), v.begin(), v.end());
-    }
+    ZT_INLINE bool operator<(const FCV &v) const noexcept { return std::lexicographical_compare(begin(), end(), v.begin(), v.end()); }
 
     ZT_INLINE bool operator>(const FCV &v) const noexcept { return (v < *this); }
 

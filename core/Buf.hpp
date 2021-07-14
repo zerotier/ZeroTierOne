@@ -113,12 +113,7 @@ class Buf {
      * Slice is almost exactly like the built-in slice data structure in Go
      */
     struct Slice : TriviallyCopyable {
-        ZT_INLINE Slice(const SharedPtr<Buf> &b_, const unsigned int s_, const unsigned int e_) noexcept
-            : b(b_)
-            , s(s_)
-            , e(e_)
-        {
-        }
+        ZT_INLINE Slice(const SharedPtr<Buf> &b_, const unsigned int s_, const unsigned int e_) noexcept : b(b_), s(s_), e(e_) {}
 
         ZT_INLINE Slice() noexcept : b(), s(0), e(0) {}
 
@@ -198,8 +193,7 @@ class Buf {
          * @tparam F Type of copyFunction (typically inferred)
          * @return Size of data in destination or -1 on error
          */
-        template <typename F>
-        ZT_INLINE int mergeMap(Buf &b, const unsigned int simpleCopyBefore, F copyFunction) const noexcept
+        template <typename F> ZT_INLINE int mergeMap(Buf &b, const unsigned int simpleCopyBefore, F copyFunction) const noexcept
         {
             unsigned int size = 0;
             for (PacketVector::const_iterator s(begin()); s != end(); ++s) {
@@ -236,15 +230,9 @@ class Buf {
     /**
      * Create a new buffer and copy data into it
      */
-    ZT_INLINE Buf(const void *const data, const unsigned int len) noexcept : __refCount(0)
-    {
-        Utils::copy(unsafeData, data, len);
-    }
+    ZT_INLINE Buf(const void *const data, const unsigned int len) noexcept : __refCount(0) { Utils::copy(unsafeData, data, len); }
 
-    ZT_INLINE Buf(const Buf &b2) noexcept : __nextInPool(0), __refCount(0)
-    {
-        Utils::copy<ZT_BUF_MEM_SIZE>(unsafeData, b2.unsafeData);
-    }
+    ZT_INLINE Buf(const Buf &b2) noexcept : __nextInPool(0), __refCount(0) { Utils::copy<ZT_BUF_MEM_SIZE>(unsafeData, b2.unsafeData); }
 
     ZT_INLINE Buf &operator=(const Buf &b2) noexcept
     {
@@ -274,10 +262,7 @@ class Buf {
      * @param size Size of data that should be in buffer
      * @return True if iterator has read past the size of the data
      */
-    static ZT_INLINE bool readOverflow(const int &ii, const unsigned int size) noexcept
-    {
-        return ((ii - (int)size) > 0);
-    }
+    static ZT_INLINE bool readOverflow(const int &ii, const unsigned int size) noexcept { return ((ii - (int)size) > 0); }
 
     /**
      * Set all memory to zero
@@ -324,9 +309,7 @@ class Buf {
         const unsigned int s = (unsigned int)ii & ZT_BUF_MEM_MASK;
         ii += 4;
 #ifdef ZT_NO_UNALIGNED_ACCESS
-        return (
-            ((uint32_t)unsafeData[s] << 24U) | ((uint32_t)unsafeData[s + 1] << 16U)
-            | ((uint32_t)unsafeData[s + 2] << 8U) | (uint32_t)unsafeData[s + 3]);
+        return (((uint32_t)unsafeData[s] << 24U) | ((uint32_t)unsafeData[s + 1] << 16U) | ((uint32_t)unsafeData[s + 2] << 8U) | (uint32_t)unsafeData[s + 3]);
 #else
         return Utils::ntoh(*reinterpret_cast<const uint32_t *>(unsafeData + s));
 #endif
@@ -343,11 +326,7 @@ class Buf {
         const unsigned int s = (unsigned int)ii & ZT_BUF_MEM_MASK;
         ii += 8;
 #ifdef ZT_NO_UNALIGNED_ACCESS
-        return (
-            ((uint64_t)unsafeData[s] << 56U) | ((uint64_t)unsafeData[s + 1] << 48U)
-            | ((uint64_t)unsafeData[s + 2] << 40U) | ((uint64_t)unsafeData[s + 3] << 32U)
-            | ((uint64_t)unsafeData[s + 4] << 24U) | ((uint64_t)unsafeData[s + 5] << 16U)
-            | ((uint64_t)unsafeData[s + 6] << 8U) | (uint64_t)unsafeData[s + 7]);
+        return (((uint64_t)unsafeData[s] << 56U) | ((uint64_t)unsafeData[s + 1] << 48U) | ((uint64_t)unsafeData[s + 2] << 40U) | ((uint64_t)unsafeData[s + 3] << 32U) | ((uint64_t)unsafeData[s + 4] << 24U) | ((uint64_t)unsafeData[s + 5] << 16U) | ((uint64_t)unsafeData[s + 6] << 8U) | (uint64_t)unsafeData[s + 7]);
 #else
         return Utils::ntoh(*reinterpret_cast<const uint64_t *>(unsafeData + s));
 #endif
@@ -506,9 +485,7 @@ class Buf {
     {
         static_assert((I + 3) < ZT_BUF_MEM_SIZE, "overflow");
 #ifdef ZT_NO_UNALIGNED_ACCESS
-        return (
-            ((uint32_t)unsafeData[I] << 24U) | ((uint32_t)unsafeData[I + 1] << 16U)
-            | ((uint32_t)unsafeData[I + 2] << 8U) | (uint32_t)unsafeData[I + 3]);
+        return (((uint32_t)unsafeData[I] << 24U) | ((uint32_t)unsafeData[I + 1] << 16U) | ((uint32_t)unsafeData[I + 2] << 8U) | (uint32_t)unsafeData[I + 3]);
 #else
         return Utils::ntoh(*reinterpret_cast<const uint32_t *>(unsafeData + I));
 #endif
@@ -524,11 +501,7 @@ class Buf {
     {
         static_assert((I + 7) < ZT_BUF_MEM_SIZE, "overflow");
 #ifdef ZT_NO_UNALIGNED_ACCESS
-        return (
-            ((uint64_t)unsafeData[I] << 56U) | ((uint64_t)unsafeData[I + 1] << 48U)
-            | ((uint64_t)unsafeData[I + 2] << 40U) | ((uint64_t)unsafeData[I + 3] << 32U)
-            | ((uint64_t)unsafeData[I + 4] << 24U) | ((uint64_t)unsafeData[I + 5] << 16U)
-            | ((uint64_t)unsafeData[I + 6] << 8U) | (uint64_t)unsafeData[I + 7]);
+        return (((uint64_t)unsafeData[I] << 56U) | ((uint64_t)unsafeData[I + 1] << 48U) | ((uint64_t)unsafeData[I + 2] << 40U) | ((uint64_t)unsafeData[I + 3] << 32U) | ((uint64_t)unsafeData[I + 4] << 24U) | ((uint64_t)unsafeData[I + 5] << 16U) | ((uint64_t)unsafeData[I + 6] << 8U) | (uint64_t)unsafeData[I + 7]);
 #else
         return Utils::ntoh(*reinterpret_cast<const uint64_t *>(unsafeData + I));
 #endif
@@ -571,9 +544,7 @@ class Buf {
     {
         const unsigned int s = (unsigned int)ii & ZT_BUF_MEM_MASK;
 #ifdef ZT_NO_UNALIGNED_ACCESS
-        return (
-            ((uint32_t)unsafeData[s] << 24U) | ((uint32_t)unsafeData[s + 1] << 16U)
-            | ((uint32_t)unsafeData[s + 2] << 8U) | (uint32_t)unsafeData[s + 3]);
+        return (((uint32_t)unsafeData[s] << 24U) | ((uint32_t)unsafeData[s + 1] << 16U) | ((uint32_t)unsafeData[s + 2] << 8U) | (uint32_t)unsafeData[s + 3]);
 #else
         return Utils::ntoh(*reinterpret_cast<const uint32_t *>(unsafeData + s));
 #endif
@@ -590,11 +561,7 @@ class Buf {
     {
         const unsigned int s = (unsigned int)ii & ZT_BUF_MEM_MASK;
 #ifdef ZT_NO_UNALIGNED_ACCESS
-        return (
-            ((uint64_t)unsafeData[s] << 56U) | ((uint64_t)unsafeData[s + 1] << 48U)
-            | ((uint64_t)unsafeData[s + 2] << 40U) | ((uint64_t)unsafeData[s + 3] << 32U)
-            | ((uint64_t)unsafeData[s + 4] << 24U) | ((uint64_t)unsafeData[s + 5] << 16U)
-            | ((uint64_t)unsafeData[s + 6] << 8U) | (uint64_t)unsafeData[s + 7]);
+        return (((uint64_t)unsafeData[s] << 56U) | ((uint64_t)unsafeData[s + 1] << 48U) | ((uint64_t)unsafeData[s + 2] << 40U) | ((uint64_t)unsafeData[s + 3] << 32U) | ((uint64_t)unsafeData[s + 4] << 24U) | ((uint64_t)unsafeData[s + 5] << 16U) | ((uint64_t)unsafeData[s + 6] << 8U) | (uint64_t)unsafeData[s + 7]);
 #else
         return Utils::ntoh(*reinterpret_cast<const uint64_t *>(unsafeData + s));
 #endif

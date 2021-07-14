@@ -302,7 +302,7 @@ unsigned int unhex(const char *h, unsigned int hlen, void *buf, unsigned int buf
 #define ZT_GETSECURERANDOM_STATE_SIZE               64
 #define ZT_GETSECURERANDOM_ITERATIONS_PER_GENERATOR 1048576
 
-#ifdef __GNUC__
+#if defined(__GNUC__) && defined(ZT_ARCH_X64)
 __attribute__((__target__("sse,sse2,rdrnd")))
 #endif
 void getSecureRandom(void *const buf, unsigned int bytes) noexcept

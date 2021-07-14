@@ -53,9 +53,7 @@ class Fingerprint
         Address(this->address).toString(s);
         if (haveHash()) {
             s[ZT_ADDRESS_LENGTH_HEX] = '-';
-            Utils::b32e(
-                this->hash, ZT_FINGERPRINT_HASH_SIZE, s + (ZT_ADDRESS_LENGTH_HEX + 1),
-                ZT_FINGERPRINT_STRING_SIZE_MAX - (ZT_ADDRESS_LENGTH_HEX + 1));
+            Utils::b32e(this->hash, ZT_FINGERPRINT_HASH_SIZE, s + (ZT_ADDRESS_LENGTH_HEX + 1), ZT_FINGERPRINT_STRING_SIZE_MAX - (ZT_ADDRESS_LENGTH_HEX + 1));
         }
         return s;
     }
@@ -84,8 +82,7 @@ class Fingerprint
         a[ZT_ADDRESS_LENGTH_HEX] = 0;
         this->address            = Utils::hexStrToU64(a) & ZT_ADDRESS_MASK;
         if (l > (ZT_ADDRESS_LENGTH_HEX + 1)) {
-            if (Utils::b32d(s + (ZT_ADDRESS_LENGTH_HEX + 1), this->hash, ZT_FINGERPRINT_HASH_SIZE)
-                != ZT_FINGERPRINT_HASH_SIZE)
+            if (Utils::b32d(s + (ZT_ADDRESS_LENGTH_HEX + 1), this->hash, ZT_FINGERPRINT_HASH_SIZE) != ZT_FINGERPRINT_HASH_SIZE)
                 return false;
         }
         else {
@@ -118,29 +115,15 @@ class Fingerprint
         return ZT_FINGERPRINT_MARSHAL_SIZE;
     }
 
-    ZT_INLINE bool operator==(const ZT_Fingerprint &h) const noexcept
-    {
-        return ((this->address == h.address) && (memcmp(this->hash, h.hash, ZT_FINGERPRINT_HASH_SIZE) == 0));
-    }
+    ZT_INLINE bool operator==(const ZT_Fingerprint &h) const noexcept { return ((this->address == h.address) && (memcmp(this->hash, h.hash, ZT_FINGERPRINT_HASH_SIZE) == 0)); }
 
     ZT_INLINE bool operator!=(const ZT_Fingerprint &h) const noexcept { return !(*this == h); }
 
-    ZT_INLINE bool operator<(const ZT_Fingerprint &h) const noexcept
-    {
-        return (
-            (this->address < h.address)
-            || ((this->address == h.address) && (memcmp(this->hash, h.hash, ZT_FINGERPRINT_HASH_SIZE) < 0)));
-    }
+    ZT_INLINE bool operator<(const ZT_Fingerprint &h) const noexcept { return ((this->address < h.address) || ((this->address == h.address) && (memcmp(this->hash, h.hash, ZT_FINGERPRINT_HASH_SIZE) < 0))); }
 
-    ZT_INLINE bool operator>(const ZT_Fingerprint &h) const noexcept
-    {
-        return (*reinterpret_cast<const Fingerprint *>(&h) < *this);
-    }
+    ZT_INLINE bool operator>(const ZT_Fingerprint &h) const noexcept { return (*reinterpret_cast<const Fingerprint *>(&h) < *this); }
 
-    ZT_INLINE bool operator<=(const ZT_Fingerprint &h) const noexcept
-    {
-        return !(*reinterpret_cast<const Fingerprint *>(&h) < *this);
-    }
+    ZT_INLINE bool operator<=(const ZT_Fingerprint &h) const noexcept { return !(*reinterpret_cast<const Fingerprint *>(&h) < *this); }
 
     ZT_INLINE bool operator>=(const ZT_Fingerprint &h) const noexcept { return !(*this < h); }
 };

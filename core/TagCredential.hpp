@@ -58,18 +58,7 @@ class TagCredential : public Credential {
      * @param id Tag ID
      * @param value Tag value
      */
-    ZT_INLINE TagCredential(
-        const uint64_t nwid, const int64_t ts, const Address &issuedTo, const uint32_t id,
-        const uint32_t value) noexcept
-        : m_id(id)
-        , m_value(value)
-        , m_networkId(nwid)
-        , m_ts(ts)
-        , m_issuedTo(issuedTo)
-        , m_signedBy()
-        , m_signatureLength(0)
-    {
-    }
+    ZT_INLINE TagCredential(const uint64_t nwid, const int64_t ts, const Address &issuedTo, const uint32_t id, const uint32_t value) noexcept : m_id(id), m_value(value), m_networkId(nwid), m_ts(ts), m_issuedTo(issuedTo), m_signedBy(), m_signatureLength(0) {}
 
     ZT_INLINE uint32_t id() const noexcept { return m_id; }
 
@@ -103,10 +92,7 @@ class TagCredential : public Credential {
      * @param RR Runtime environment to allow identity lookup for signedBy
      * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
      */
-    ZT_INLINE Credential::VerifyResult verify(const Context &ctx, const CallContext &cc) const noexcept
-    {
-        return s_verify(ctx, cc, *this);
-    }
+    ZT_INLINE Credential::VerifyResult verify(const Context &ctx, const CallContext &cc) const noexcept { return s_verify(ctx, cc, *this); }
 
     static constexpr int marshalSizeMax() noexcept { return ZT_TAG_MARSHAL_SIZE_MAX; }
 
@@ -117,41 +103,23 @@ class TagCredential : public Credential {
     // Provides natural sort order by ID
     ZT_INLINE bool operator<(const TagCredential &t) const noexcept { return (m_id < t.m_id); }
 
-    ZT_INLINE bool operator==(const TagCredential &t) const noexcept
-    {
-        return (memcmp(this, &t, sizeof(TagCredential)) == 0);
-    }
+    ZT_INLINE bool operator==(const TagCredential &t) const noexcept { return (memcmp(this, &t, sizeof(TagCredential)) == 0); }
 
-    ZT_INLINE bool operator!=(const TagCredential &t) const noexcept
-    {
-        return (memcmp(this, &t, sizeof(TagCredential)) != 0);
-    }
+    ZT_INLINE bool operator!=(const TagCredential &t) const noexcept { return (memcmp(this, &t, sizeof(TagCredential)) != 0); }
 
     // For searching sorted arrays or lists of Tags by ID
     struct IdComparePredicate {
-        ZT_INLINE bool operator()(const TagCredential &a, const TagCredential &b) const noexcept
-        {
-            return (a.id() < b.id());
-        }
+        ZT_INLINE bool operator()(const TagCredential &a, const TagCredential &b) const noexcept { return (a.id() < b.id()); }
 
         ZT_INLINE bool operator()(const uint32_t a, const TagCredential &b) const noexcept { return (a < b.id()); }
 
         ZT_INLINE bool operator()(const TagCredential &a, const uint32_t b) const noexcept { return (a.id() < b); }
 
-        ZT_INLINE bool operator()(const TagCredential *a, const TagCredential *b) const noexcept
-        {
-            return (a->id() < b->id());
-        }
+        ZT_INLINE bool operator()(const TagCredential *a, const TagCredential *b) const noexcept { return (a->id() < b->id()); }
 
-        ZT_INLINE bool operator()(const TagCredential *a, const TagCredential &b) const noexcept
-        {
-            return (a->id() < b.id());
-        }
+        ZT_INLINE bool operator()(const TagCredential *a, const TagCredential &b) const noexcept { return (a->id() < b.id()); }
 
-        ZT_INLINE bool operator()(const TagCredential &a, const TagCredential *b) const noexcept
-        {
-            return (a.id() < b->id());
-        }
+        ZT_INLINE bool operator()(const TagCredential &a, const TagCredential *b) const noexcept { return (a.id() < b->id()); }
 
         ZT_INLINE bool operator()(const uint32_t a, const TagCredential *b) const noexcept { return (a < b->id()); }
 

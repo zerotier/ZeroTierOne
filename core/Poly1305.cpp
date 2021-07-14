@@ -309,21 +309,11 @@ void poly1305_blocks(poly1305_state_internal_t *st, const unsigned char *m, size
         h4 += (U8TO32(m + 12) >> 8) | hibit;
 
         /* h *= r */
-        unsigned long long d0 = ((unsigned long long)h0 * r0) + ((unsigned long long)h1 * s4)
-                                + ((unsigned long long)h2 * s3) + ((unsigned long long)h3 * s2)
-                                + ((unsigned long long)h4 * s1);
-        unsigned long long d1 = ((unsigned long long)h0 * r1) + ((unsigned long long)h1 * r0)
-                                + ((unsigned long long)h2 * s4) + ((unsigned long long)h3 * s3)
-                                + ((unsigned long long)h4 * s2);
-        unsigned long long d2 = ((unsigned long long)h0 * r2) + ((unsigned long long)h1 * r1)
-                                + ((unsigned long long)h2 * r0) + ((unsigned long long)h3 * s4)
-                                + ((unsigned long long)h4 * s3);
-        unsigned long long d3 = ((unsigned long long)h0 * r3) + ((unsigned long long)h1 * r2)
-                                + ((unsigned long long)h2 * r1) + ((unsigned long long)h3 * r0)
-                                + ((unsigned long long)h4 * s4);
-        unsigned long long d4 = ((unsigned long long)h0 * r4) + ((unsigned long long)h1 * r3)
-                                + ((unsigned long long)h2 * r2) + ((unsigned long long)h3 * r1)
-                                + ((unsigned long long)h4 * r0);
+        unsigned long long d0 = ((unsigned long long)h0 * r0) + ((unsigned long long)h1 * s4) + ((unsigned long long)h2 * s3) + ((unsigned long long)h3 * s2) + ((unsigned long long)h4 * s1);
+        unsigned long long d1 = ((unsigned long long)h0 * r1) + ((unsigned long long)h1 * r0) + ((unsigned long long)h2 * s4) + ((unsigned long long)h3 * s3) + ((unsigned long long)h4 * s2);
+        unsigned long long d2 = ((unsigned long long)h0 * r2) + ((unsigned long long)h1 * r1) + ((unsigned long long)h2 * r0) + ((unsigned long long)h3 * s4) + ((unsigned long long)h4 * s3);
+        unsigned long long d3 = ((unsigned long long)h0 * r3) + ((unsigned long long)h1 * r2) + ((unsigned long long)h2 * r1) + ((unsigned long long)h3 * r0) + ((unsigned long long)h4 * s4);
+        unsigned long long d4 = ((unsigned long long)h0 * r4) + ((unsigned long long)h1 * r3) + ((unsigned long long)h2 * r2) + ((unsigned long long)h3 * r1) + ((unsigned long long)h4 * r0);
 
         /* (partial) h %= p */
         unsigned long c = (unsigned long)(d0 >> 26);
@@ -511,15 +501,8 @@ void Poly1305::init(const void *key) noexcept
     poly1305_init(reinterpret_cast<poly1305_context *>(&ctx), reinterpret_cast<const unsigned char *>(key));
 }
 
-void Poly1305::update(const void *data, unsigned int len) noexcept
-{
-    poly1305_update(
-        reinterpret_cast<poly1305_context *>(&ctx), reinterpret_cast<const unsigned char *>(data), (size_t)len);
-}
+void Poly1305::update(const void *data, unsigned int len) noexcept { poly1305_update(reinterpret_cast<poly1305_context *>(&ctx), reinterpret_cast<const unsigned char *>(data), (size_t)len); }
 
-void Poly1305::finish(void *auth) noexcept
-{
-    poly1305_finish(reinterpret_cast<poly1305_context *>(&ctx), reinterpret_cast<unsigned char *>(auth));
-}
+void Poly1305::finish(void *auth) noexcept { poly1305_finish(reinterpret_cast<poly1305_context *>(&ctx), reinterpret_cast<unsigned char *>(auth)); }
 
 }   // namespace ZeroTier

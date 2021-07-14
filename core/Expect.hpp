@@ -46,11 +46,7 @@ class Expect {
      * @param packetId Packet ID of packet being sent (be sure it's post-armor())
      * @param now Current time
      */
-    ZT_INLINE void sending(const uint64_t packetId, const int64_t now) noexcept
-    {
-        m_packetIdSent[Utils::hash64(packetId ^ Utils::s_mapNonce) % ZT_EXPECT_BUCKETS] =
-            (uint32_t)(now / ZT_EXPECT_TTL);
-    }
+    ZT_INLINE void sending(const uint64_t packetId, const int64_t now) noexcept { m_packetIdSent[Utils::hash64(packetId ^ Utils::s_mapNonce) % ZT_EXPECT_BUCKETS] = (uint32_t)(now / ZT_EXPECT_TTL); }
 
     /**
      * Check if an OK is expected and if so reset the corresponding bucket.
@@ -63,15 +59,7 @@ class Expect {
      * @param now Current time
      * @return True if we're expecting a reply (and a reset occurred)
      */
-    ZT_INLINE bool expecting(const uint64_t inRePacketId, const int64_t now) noexcept
-    {
-        return (
-            ((now / ZT_EXPECT_TTL)
-             - (int64_t)
-                   m_packetIdSent[(unsigned long)Utils::hash64(inRePacketId ^ Utils::s_mapNonce) % ZT_EXPECT_BUCKETS]
-                       .exchange(0))
-            <= 1);
-    }
+    ZT_INLINE bool expecting(const uint64_t inRePacketId, const int64_t now) noexcept { return (((now / ZT_EXPECT_TTL) - (int64_t)m_packetIdSent[(unsigned long)Utils::hash64(inRePacketId ^ Utils::s_mapNonce) % ZT_EXPECT_BUCKETS].exchange(0)) <= 1); }
 
   private:
     // Each bucket contains a timestamp in units of the max expect duration.

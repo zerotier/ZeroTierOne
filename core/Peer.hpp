@@ -31,9 +31,7 @@
 #include "SymmetricKey.hpp"
 #include "Utils.hpp"
 
-#define ZT_PEER_MARSHAL_SIZE_MAX                                                                                       \
-    (1 + ZT_ADDRESS_LENGTH + ZT_SYMMETRIC_KEY_SIZE + ZT_IDENTITY_MARSHAL_SIZE_MAX + 1 + ZT_LOCATOR_MARSHAL_SIZE_MAX    \
-     + (2 * 4) + 2)
+#define ZT_PEER_MARSHAL_SIZE_MAX (1 + ZT_ADDRESS_LENGTH + ZT_SYMMETRIC_KEY_SIZE + ZT_IDENTITY_MARSHAL_SIZE_MAX + 1 + ZT_LOCATOR_MARSHAL_SIZE_MAX + (2 * 4) + 2)
 
 #define ZT_PEER_DEDUP_BUFFER_SIZE         1024
 #define ZT_PEER_DEDUP_BUFFER_MASK         1023U
@@ -121,9 +119,7 @@ class Peer {
      * @param verb Packet verb
      * @param inReVerb In-reply verb for OK or ERROR verbs
      */
-    void received(
-        const Context &ctx, const CallContext &cc, const SharedPtr<Path> &path, unsigned int hops, uint64_t packetId,
-        unsigned int payloadLength, Protocol::Verb verb, Protocol::Verb inReVerb);
+    void received(const Context &ctx, const CallContext &cc, const SharedPtr<Path> &path, unsigned int hops, uint64_t packetId, unsigned int payloadLength, Protocol::Verb verb, Protocol::Verb inReVerb);
 
     /**
      * Log sent data
@@ -141,20 +137,14 @@ class Peer {
      *
      * @param bytes Number of bytes relayed
      */
-    ZT_INLINE void relayed(const CallContext &cc, const unsigned int bytes) noexcept
-    {
-        m_relayedMeter.log(cc.ticks, bytes);
-    }
+    ZT_INLINE void relayed(const CallContext &cc, const unsigned int bytes) noexcept { m_relayedMeter.log(cc.ticks, bytes); }
 
     /**
      * Get the current best direct path or NULL if none
      *
      * @return Current best path or NULL if there is no direct path
      */
-    ZT_INLINE SharedPtr<Path> path(const CallContext &cc) noexcept
-    {
-        return SharedPtr<Path>(reinterpret_cast<Path *>(m_bestPath.load(std::memory_order_acquire)));
-    }
+    ZT_INLINE SharedPtr<Path> path(const CallContext &cc) noexcept { return SharedPtr<Path>(reinterpret_cast<Path *>(m_bestPath.load(std::memory_order_acquire))); }
 
     /**
      * Send data to this peer over a specific path only
@@ -163,9 +153,7 @@ class Peer {
      * @param len Length in bytes
      * @param via Path over which to send data (may or may not be an already-learned path for this peer)
      */
-    ZT_INLINE void send(
-        const Context &ctx, const CallContext &cc, const void *data, unsigned int len,
-        const SharedPtr<Path> &via) noexcept
+    ZT_INLINE void send(const Context &ctx, const CallContext &cc, const void *data, unsigned int len, const SharedPtr<Path> &via) noexcept
     {
         via->send(ctx, cc, data, len);
         sent(cc, len);
@@ -267,10 +255,7 @@ class Peer {
     /**
      * @return Current best key: either the latest ephemeral or the identity key
      */
-    ZT_INLINE SymmetricKey &key() noexcept
-    {
-        return *reinterpret_cast<SymmetricKey *>(m_key.load(std::memory_order_relaxed));
-    }
+    ZT_INLINE SymmetricKey &key() noexcept { return *reinterpret_cast<SymmetricKey *>(m_key.load(std::memory_order_relaxed)); }
 
     /**
      * Get keys other than a key we have already tried.
@@ -283,8 +268,7 @@ class Peer {
      * @param notYetTried All keys known (long lived or session) other than alreadyTried
      * @return Number of pointers written to notYetTried[]
      */
-    ZT_INLINE int getOtherKeys(
-        const SymmetricKey *const alreadyTried, SymmetricKey *notYetTried[ZT_PEER_EPHEMERAL_KEY_COUNT_MAX]) noexcept
+    ZT_INLINE int getOtherKeys(const SymmetricKey *const alreadyTried, SymmetricKey *notYetTried[ZT_PEER_EPHEMERAL_KEY_COUNT_MAX]) noexcept
     {
         RWMutex::RLock l(m_lock);
         int cnt = 0;
@@ -320,8 +304,7 @@ class Peer {
      * @param vmin Minor version
      * @param vrev Revision
      */
-    ZT_INLINE void
-    setRemoteVersion(unsigned int vproto, unsigned int vmaj, unsigned int vmin, unsigned int vrev) noexcept
+    ZT_INLINE void setRemoteVersion(unsigned int vproto, unsigned int vmaj, unsigned int vmin, unsigned int vrev) noexcept
     {
         RWMutex::Lock l(m_lock);
         m_vProto    = (uint16_t)vproto;
@@ -423,12 +406,7 @@ class Peer {
      * @param packetId Packet ID to check/flag
      * @return True if this is a duplicate
      */
-    ZT_INLINE bool deduplicateIncomingPacket(const uint64_t packetId) noexcept
-    {
-        return m_dedup[Utils::hash32((uint32_t)packetId) & ZT_PEER_DEDUP_BUFFER_MASK].exchange(
-                   packetId, std::memory_order_relaxed)
-               == packetId;
-    }
+    ZT_INLINE bool deduplicateIncomingPacket(const uint64_t packetId) noexcept { return m_dedup[Utils::hash32((uint32_t)packetId) & ZT_PEER_DEDUP_BUFFER_MASK].exchange(packetId, std::memory_order_relaxed) == packetId; }
 
   private:
     struct p_EphemeralPublic {
@@ -437,9 +415,7 @@ class Peer {
         uint8_t p384Public[ZT_ECC384_PUBLIC_KEY_SIZE];
     };
 
-    static_assert(
-        sizeof(p_EphemeralPublic) == (1 + ZT_C25519_ECDH_PUBLIC_KEY_SIZE + ZT_ECC384_PUBLIC_KEY_SIZE),
-        "p_EphemeralPublic has extra padding");
+    static_assert(sizeof(p_EphemeralPublic) == (1 + ZT_C25519_ECDH_PUBLIC_KEY_SIZE + ZT_ECC384_PUBLIC_KEY_SIZE), "p_EphemeralPublic has extra padding");
 
     struct p_EphemeralPrivate {
         ZT_INLINE p_EphemeralPrivate() noexcept : creationTime(-1) {}
@@ -462,12 +438,9 @@ class Peer {
     };
 
     void m_prioritizePaths(const CallContext &cc);
-    unsigned int m_sendProbe(
-        const Context &ctx, const CallContext &cc, int64_t localSocket, const InetAddress &atAddress,
-        const uint16_t *ports, unsigned int numPorts);
+    unsigned int m_sendProbe(const Context &ctx, const CallContext &cc, int64_t localSocket, const InetAddress &atAddress, const uint16_t *ports, unsigned int numPorts);
     void m_deriveSecondaryIdentityKeys() noexcept;
-    unsigned int m_hello(
-        const Context &ctx, const CallContext &cc, int64_t localSocket, const InetAddress &atAddress, bool forceNewKey);
+    unsigned int m_hello(const Context &ctx, const CallContext &cc, int64_t localSocket, const InetAddress &atAddress, bool forceNewKey);
 
     // Guards all fields except those otherwise indicated (and atomics of course).
     RWMutex m_lock;

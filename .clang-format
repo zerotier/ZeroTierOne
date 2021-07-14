@@ -62,14 +62,14 @@ UseTab: Never
 ---
 Language: Cpp
 Standard: c++11
-ColumnLimit: 120
+ColumnLimit: 360
 ---
 Language: ObjC
-ColumnLimit: 120
+ColumnLimit: 360
 ---
 Language: Java
-ColumnLimit: 120
+ColumnLimit: 360
 ---
 Language: CSharp
-ColumnLimit: 120
+ColumnLimit: 360
 ...

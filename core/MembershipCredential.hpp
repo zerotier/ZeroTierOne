@@ -30,8 +30,7 @@
 #define ZT_MEMBERSHIP_CREDENTIAL_MAX_ADDITIONAL_QUALIFIERS 8
 
 // version + qualifier count + three required qualifiers + additional qualifiers +
-#define ZT_MEMBERSHIP_CREDENTIAL_MARSHAL_SIZE_MAX                                                                      \
-    (1 + 2 + (3 * 3 * 8) + (ZT_MEMBERSHIP_CREDENTIAL_MAX_ADDITIONAL_QUALIFIERS * 3 * 8) + 144 + 5 + 2 + 96)
+#define ZT_MEMBERSHIP_CREDENTIAL_MARSHAL_SIZE_MAX (1 + 2 + (3 * 3 * 8) + (ZT_MEMBERSHIP_CREDENTIAL_MAX_ADDITIONAL_QUALIFIERS * 3 * 8) + 144 + 5 + 2 + 96)
 
 namespace ZeroTier {
 
@@ -116,8 +115,7 @@ class MembershipCredential : public Credential {
      * @param nwid Network ID
      * @param issuedTo Certificate recipient
      */
-    MembershipCredential(
-        int64_t timestamp, int64_t timestampMaxDelta, uint64_t nwid, const Identity &issuedTo) noexcept;
+    MembershipCredential(int64_t timestamp, int64_t timestampMaxDelta, uint64_t nwid, const Identity &issuedTo) noexcept;
 
     /**
      * @return True if there's something here
@@ -180,10 +178,7 @@ class MembershipCredential : public Credential {
      * @param RR Runtime environment for looking up peers
      * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
      */
-    ZT_INLINE Credential::VerifyResult verify(const Context &ctx, const CallContext &cc) const
-    {
-        return s_verify(ctx, cc, *this);
-    }
+    ZT_INLINE Credential::VerifyResult verify(const Context &ctx, const CallContext &cc) const { return s_verify(ctx, cc, *this); }
 
     static constexpr int marshalSizeMax() noexcept { return ZT_MEMBERSHIP_CREDENTIAL_MARSHAL_SIZE_MAX; }
 
@@ -196,12 +191,7 @@ class MembershipCredential : public Credential {
     struct p_Qualifier {
         ZT_INLINE p_Qualifier() noexcept : id(0), value(0), delta(0) {}
 
-        ZT_INLINE p_Qualifier(const uint64_t id_, const uint64_t value_, const uint64_t delta_) noexcept
-            : id(id_)
-            , value(value_)
-            , delta(delta_)
-        {
-        }
+        ZT_INLINE p_Qualifier(const uint64_t id_, const uint64_t value_, const uint64_t delta_) noexcept : id(id_), value(value_), delta(delta_) {}
 
         uint64_t id;
         uint64_t value;

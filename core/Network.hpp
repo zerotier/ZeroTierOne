@@ -64,9 +64,7 @@ class Network {
      * @param uptr Arbitrary pointer used by externally-facing API (for user use)
      * @param nconf Network config, if known
      */
-    Network(
-        const Context &ctx, const CallContext &cc, uint64_t nwid, const Fingerprint &controllerFingerprint, void *uptr,
-        const NetworkConfig *nconf);
+    Network(const Context &ctx, const CallContext &cc, uint64_t nwid, const Fingerprint &controllerFingerprint, void *uptr, const NetworkConfig *nconf);
 
     ~Network();
 
@@ -105,10 +103,7 @@ class Network {
      * @param vlanId 16-bit VLAN ID
      * @return True if packet should be sent, false if dropped or redirected
      */
-    bool filterOutgoingPacket(
-        const CallContext &cc, bool noTee, const Address &ztSource, const Address &ztDest, const MAC &macSource,
-        const MAC &macDest, const uint8_t *frameData, unsigned int frameLen, unsigned int etherType,
-        unsigned int vlanId, uint8_t &qosBucket);
+    bool filterOutgoingPacket(const CallContext &cc, bool noTee, const Address &ztSource, const Address &ztDest, const MAC &macSource, const MAC &macDest, const uint8_t *frameData, unsigned int frameLen, unsigned int etherType, unsigned int vlanId, uint8_t &qosBucket);
 
     /**
      * Apply filters to an incoming packet
@@ -128,10 +123,7 @@ class Network {
      * @param vlanId 16-bit VLAN ID
      * @return 0 == drop, 1 == accept, 2 == accept even if bridged
      */
-    int filterIncomingPacket(
-        const CallContext &cc, const SharedPtr<Peer> &sourcePeer, const Address &ztDest, const MAC &macSource,
-        const MAC &macDest, const uint8_t *frameData, unsigned int frameLen, unsigned int etherType,
-        unsigned int vlanId);
+    int filterIncomingPacket(const CallContext &cc, const SharedPtr<Peer> &sourcePeer, const Address &ztDest, const MAC &macSource, const MAC &macDest, const uint8_t *frameData, unsigned int frameLen, unsigned int etherType, unsigned int vlanId);
 
     /**
      * Subscribe to a multicast group
@@ -162,8 +154,7 @@ class Network {
      * @param size Size of data in chunk buffer (total, not relative to ptr)
      * @return Update ID if update was fully assembled and accepted or 0 otherwise
      */
-    uint64_t handleConfigChunk(
-        const CallContext &cc, uint64_t packetId, const SharedPtr<Peer> &source, const Buf &chunk, int ptr, int size);
+    uint64_t handleConfigChunk(const CallContext &cc, uint64_t packetId, const SharedPtr<Peer> &source, const Buf &chunk, int ptr, int size);
 
     /**
      * Set network configuration
@@ -238,32 +229,27 @@ class Network {
     /**
      * Validate a credential and learn it if it passes certificate and other checks
      */
-    Member::AddCredentialResult
-    addCredential(const CallContext &cc, const Identity &sourcePeerIdentity, const MembershipCredential &com);
+    Member::AddCredentialResult addCredential(const CallContext &cc, const Identity &sourcePeerIdentity, const MembershipCredential &com);
 
     /**
      * Validate a credential and learn it if it passes certificate and other checks
      */
-    Member::AddCredentialResult
-    addCredential(const CallContext &cc, const Identity &sourcePeerIdentity, const CapabilityCredential &cap);
+    Member::AddCredentialResult addCredential(const CallContext &cc, const Identity &sourcePeerIdentity, const CapabilityCredential &cap);
 
     /**
      * Validate a credential and learn it if it passes certificate and other checks
      */
-    Member::AddCredentialResult
-    addCredential(const CallContext &cc, const Identity &sourcePeerIdentity, const TagCredential &tag);
+    Member::AddCredentialResult addCredential(const CallContext &cc, const Identity &sourcePeerIdentity, const TagCredential &tag);
 
     /**
      * Validate a credential and learn it if it passes certificate and other checks
      */
-    Member::AddCredentialResult
-    addCredential(const CallContext &cc, const Identity &sourcePeerIdentity, const RevocationCredential &rev);
+    Member::AddCredentialResult addCredential(const CallContext &cc, const Identity &sourcePeerIdentity, const RevocationCredential &rev);
 
     /**
      * Validate a credential and learn it if it passes certificate and other checks
      */
-    Member::AddCredentialResult
-    addCredential(const CallContext &cc, const Identity &sourcePeerIdentity, const OwnershipCredential &coo);
+    Member::AddCredentialResult addCredential(const CallContext &cc, const Identity &sourcePeerIdentity, const OwnershipCredential &coo);
 
     /**
      * Push credentials to a peer if timeouts indicate that we should do so
@@ -295,8 +281,7 @@ class Network {
     template <typename F> ZT_INLINE void eachMember(F f)
     {
         Mutex::Lock ml(m_memberships_l);
-        for (Map<Address, Member>::iterator i(m_memberships.begin()); i != m_memberships.end();
-             ++i) {   // NOLINT(modernize-loop-convert,hicpp-use-auto,modernize-use-auto)
+        for (Map<Address, Member>::iterator i(m_memberships.begin()); i != m_memberships.end(); ++i) {   // NOLINT(modernize-loop-convert,hicpp-use-auto,modernize-use-auto)
             if (!f(i->first, i->second))
                 break;
         }
@@ -326,18 +311,13 @@ class Network {
     Vector<MulticastGroup> m_myMulticastGroups;               // multicast groups that we belong to (according to tap)
     Map<MulticastGroup, int64_t> m_multicastGroupsBehindMe;   // multicast groups that seem to be behind us and when we
                                                               // last saw them (if we are a bridge)
-    Map<MAC, Address> m_remoteBridgeRoutes;   // remote addresses where given MACs are reachable (for tracking devices
-                                              // behind remote bridges)
+    Map<MAC, Address> m_remoteBridgeRoutes;                   // remote addresses where given MACs are reachable (for tracking devices
+                                                              // behind remote bridges)
 
     NetworkConfig m_config;
     std::atomic<int64_t> m_lastConfigUpdate;
 
-    volatile enum {
-        NETCONF_FAILURE_NONE,
-        NETCONF_FAILURE_ACCESS_DENIED,
-        NETCONF_FAILURE_NOT_FOUND,
-        NETCONF_FAILURE_INIT_FAILED
-    } _netconfFailure;
+    volatile enum { NETCONF_FAILURE_NONE, NETCONF_FAILURE_ACCESS_DENIED, NETCONF_FAILURE_NOT_FOUND, NETCONF_FAILURE_INIT_FAILED } _netconfFailure;
 
     Map<Address, Member> m_memberships;
 

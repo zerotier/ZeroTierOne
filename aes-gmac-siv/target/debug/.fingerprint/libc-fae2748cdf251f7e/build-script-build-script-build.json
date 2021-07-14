@@ -1,0 +1,1 @@
+{"rustc":522493025710894270,"features":"[\"default\", \"std\"]","target":10088282520713642473,"profile":15155709024791400979,"path":5280289430304404351,"deps":[],"local":[{"CheckDepInfo":{"dep_info":"debug/.fingerprint/libc-fae2748cdf251f7e/dep-build-script-build-script-build"}}],"rustflags":["-L","/opt/homebrew/lib"],"metadata":14998826085014762512,"config":0,"compile_kind":0}

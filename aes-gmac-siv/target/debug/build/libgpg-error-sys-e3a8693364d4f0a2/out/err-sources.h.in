@@ -1,0 +1,61 @@
+# err-sources.h.in - List of error sources and their description input file.
+/* err-sources.h - List of error sources and their description.
+   Copyright (C) 2003, 2004 g10 Code GmbH
+
+   This file is part of libgpg-error.
+
+   libgpg-error is free software; you can redistribute it and/or
+   modify it under the terms of the GNU Lesser General Public License
+   as published by the Free Software Foundation; either version 2.1 of
+   the License, or (at your option) any later version.
+
+   libgpg-error is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+   Lesser General Public License for more details.
+
+   You should have received a copy of the GNU Lesser General Public
+   License along with libgpg-error; if not, write to the Free
+   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+   02111-1307, USA.  */
+
+# Everything up to the first line that starts with a number in the
+# first column is copied into the output verbatim.  Then, empty lines
+# are ignored.  Other lines must have an error source number, followed
+# by one or more <tab> characters, followed by the error source
+# symbol, followed by one or more <tab> characters, followed by the
+# error source name.  Trailing whitespace is removed.  The error
+# sources should be sorted.  The last line should not have a number,
+# but only a <tab>, followed by a description for error sources that
+# are not in the list.
+
+0	GPG_ERR_SOURCE_UNKNOWN		Unspecified source
+1	GPG_ERR_SOURCE_GCRYPT		gcrypt
+2	GPG_ERR_SOURCE_GPG		GnuPG
+3	GPG_ERR_SOURCE_GPGSM		GpgSM
+4	GPG_ERR_SOURCE_GPGAGENT		GPG Agent
+5	GPG_ERR_SOURCE_PINENTRY		Pinentry
+6	GPG_ERR_SOURCE_SCD		SCD
+7	GPG_ERR_SOURCE_GPGME		GPGME
+8	GPG_ERR_SOURCE_KEYBOX		Keybox
+9	GPG_ERR_SOURCE_KSBA		KSBA
+10	GPG_ERR_SOURCE_DIRMNGR		Dirmngr
+11	GPG_ERR_SOURCE_GSTI		GSTI
+12	GPG_ERR_SOURCE_GPA		GPA
+13	GPG_ERR_SOURCE_KLEO		Kleopatra
+14	GPG_ERR_SOURCE_G13		G13
+15	GPG_ERR_SOURCE_ASSUAN		Assuan
+
+17	GPG_ERR_SOURCE_TLS		TLS
+
+# 15 to 30 are free to be used.
+
+31	GPG_ERR_SOURCE_ANY		Any source
+32	GPG_ERR_SOURCE_USER_1		User defined source 1
+33	GPG_ERR_SOURCE_USER_2		User defined source 2
+34	GPG_ERR_SOURCE_USER_3		User defined source 3
+35	GPG_ERR_SOURCE_USER_4		User defined source 4
+
+# 36 to 255 are free to be used.
+
+	GPG_ERR_SOURCE_DIM		Unknown source

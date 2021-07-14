@@ -1,0 +1,172 @@
+# errnos.in - List of system error values input file.
+/* errnos.in - List of system error values.
+   Copyright (C) 2003, 2004 g10 Code GmbH
+
+   This file is part of libgpg-error.
+
+   libgpg-error is free software; you can redistribute it and/or
+   modify it under the terms of the GNU Lesser General Public License
+   as published by the Free Software Foundation; either version 2.1 of
+   the License, or (at your option) any later version.
+
+   libgpg-error is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+   Lesser General Public License for more details.
+
+   You should have received a copy of the GNU Lesser General Public
+   License along with libgpg-error; if not, write to the Free
+   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+   02111-1307, USA.  */
+
+# Everything up to the first line that starts with a number in the
+# first column is copied into the output verbatim.  Then, empty lines
+# are ignored.  Other lines must have an error code number, followed
+# by one or more <tab> characters, followed by the error name.
+#
+# IMPORTANT: For now, the numbering must be consecutive.  Some of the
+# scripts (notably mkerrnos.h) do not deal correctly with a numbering
+# that is out of order or has gaps.
+
+
+0	E2BIG
+1	EACCES
+2	EADDRINUSE
+3	EADDRNOTAVAIL
+4	EADV
+5	EAFNOSUPPORT
+6	EAGAIN
+7	EALREADY
+8	EAUTH
+9	EBACKGROUND
+10	EBADE
+11	EBADF
+12	EBADFD
+13	EBADMSG
+14	EBADR
+15	EBADRPC
+16	EBADRQC
+17	EBADSLT
+18	EBFONT
+19	EBUSY
+20	ECANCELED
+21	ECHILD
+22	ECHRNG
+23	ECOMM
+24	ECONNABORTED
+25	ECONNREFUSED
+26	ECONNRESET
+27	ED
+28	EDEADLK
+29	EDEADLOCK
+30	EDESTADDRREQ
+31	EDIED
+32	EDOM
+33	EDOTDOT
+34	EDQUOT
+35	EEXIST
+36	EFAULT
+37	EFBIG
+38	EFTYPE
+39	EGRATUITOUS
+40	EGREGIOUS
+41	EHOSTDOWN
+42	EHOSTUNREACH
+43	EIDRM
+44	EIEIO
+45	EILSEQ
+46	EINPROGRESS
+47	EINTR
+48	EINVAL
+49	EIO
+50	EISCONN
+51	EISDIR
+52	EISNAM
+53	EL2HLT
+54	EL2NSYNC
+55	EL3HLT
+56	EL3RST
+57	ELIBACC
+58	ELIBBAD
+59	ELIBEXEC
+60	ELIBMAX
+61	ELIBSCN
+62	ELNRNG
+63	ELOOP
+64	EMEDIUMTYPE
+65	EMFILE
+66	EMLINK
+67	EMSGSIZE
+68	EMULTIHOP
+69	ENAMETOOLONG
+70	ENAVAIL
+71	ENEEDAUTH
+72	ENETDOWN
+73	ENETRESET
+74	ENETUNREACH
+75	ENFILE
+76	ENOANO
+77	ENOBUFS
+78	ENOCSI
+79	ENODATA
+80	ENODEV
+81	ENOENT
+82	ENOEXEC
+83	ENOLCK
+84	ENOLINK
+85	ENOMEDIUM
+86	ENOMEM
+87	ENOMSG
+88	ENONET
+89	ENOPKG
+90	ENOPROTOOPT
+91	ENOSPC
+92	ENOSR
+93	ENOSTR
+94	ENOSYS
+95	ENOTBLK
+96	ENOTCONN
+97	ENOTDIR
+98	ENOTEMPTY
+99	ENOTNAM
+100	ENOTSOCK
+101	ENOTSUP
+102	ENOTTY
+103	ENOTUNIQ
+104	ENXIO
+105	EOPNOTSUPP
+106	EOVERFLOW
+107	EPERM
+108	EPFNOSUPPORT
+109	EPIPE
+110	EPROCLIM
+111	EPROCUNAVAIL
+112	EPROGMISMATCH
+113	EPROGUNAVAIL
+114	EPROTO
+115	EPROTONOSUPPORT
+116	EPROTOTYPE
+117	ERANGE
+118	EREMCHG
+119	EREMOTE
+120	EREMOTEIO
+121	ERESTART
+122	EROFS
+123	ERPCMISMATCH
+124	ESHUTDOWN
+125	ESOCKTNOSUPPORT
+126	ESPIPE
+127	ESRCH
+128	ESRMNT
+129	ESTALE
+130	ESTRPIPE
+131	ETIME
+132	ETIMEDOUT
+133	ETOOMANYREFS
+134	ETXTBSY
+135	EUCLEAN
+136	EUNATCH
+137	EUSERS
+138	EWOULDBLOCK
+139	EXDEV
+140	EXFULL

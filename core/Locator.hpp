@@ -35,10 +35,7 @@
  */
 #define ZT_LOCATOR_MAX_ENDPOINTS 16
 
-#define ZT_LOCATOR_MARSHAL_SIZE_MAX                                                                                    \
-    (8 + ZT_ADDRESS_LENGTH + 2                                                                                         \
-     + (ZT_LOCATOR_MAX_ENDPOINTS * (ZT_ENDPOINT_MARSHAL_SIZE_MAX + ZT_LOCATOR_MAX_ENDPOINT_ATTRIBUTES_SIZE)) + 2 + 2   \
-     + ZT_SIGNATURE_BUFFER_SIZE)
+#define ZT_LOCATOR_MARSHAL_SIZE_MAX (8 + ZT_ADDRESS_LENGTH + 2 + (ZT_LOCATOR_MAX_ENDPOINTS * (ZT_ENDPOINT_MARSHAL_SIZE_MAX + ZT_LOCATOR_MAX_ENDPOINT_ATTRIBUTES_SIZE)) + 2 + 2 + ZT_SIGNATURE_BUFFER_SIZE)
 
 /**
  * Maximum size of a string format Locator (this is way larger than needed)
@@ -83,15 +80,9 @@ class Locator {
 
         ZT_INLINE EndpointAttributes() noexcept { Utils::zero<ZT_LOCATOR_MAX_ENDPOINT_ATTRIBUTES_SIZE>(data); }
 
-        ZT_INLINE bool operator==(const EndpointAttributes &a) const noexcept
-        {
-            return ((data[0] == a.data[0]) && (memcmp(data, a.data, data[0]) == 0));
-        }
+        ZT_INLINE bool operator==(const EndpointAttributes &a) const noexcept { return ((data[0] == a.data[0]) && (memcmp(data, a.data, data[0]) == 0)); }
 
-        ZT_INLINE bool operator<(const EndpointAttributes &a) const noexcept
-        {
-            return ((data[0] < a.data[0]) || ((data[0] == a.data[0]) && (memcmp(data, a.data, data[0]) < 0)));
-        }
+        ZT_INLINE bool operator<(const EndpointAttributes &a) const noexcept { return ((data[0] < a.data[0]) || ((data[0] == a.data[0]) && (memcmp(data, a.data, data[0]) < 0))); }
 
         ZT_INLINE bool operator!=(const EndpointAttributes &a) const noexcept { return !(*this == a); }
 
@@ -107,16 +98,12 @@ class Locator {
 
     ZT_INLINE Locator() noexcept : m_revision(0) {}
 
-    ZT_INLINE Locator(const Locator &l) noexcept
-        : m_revision(l.m_revision)
-        , m_signer(l.m_signer)
-        , m_endpoints(l.m_endpoints)
-        , m_signature(l.m_signature)
-        , __refCount(0)
-    {
-    }
+    ZT_INLINE Locator(const Locator &l) noexcept : m_revision(l.m_revision), m_signer(l.m_signer), m_endpoints(l.m_endpoints), m_signature(l.m_signature), __refCount(0) {}
 
     explicit Locator(const char *const str) noexcept;
+
+    static ZT_INLINE Locator *from(ZT_Locator *const loc) noexcept { return reinterpret_cast<Locator *>(loc); }
+    static ZT_INLINE const Locator *from(const ZT_Locator *const loc) noexcept { return reinterpret_cast<const Locator *>(loc); }
 
     /**
      * @return Timestamp (a.k.a. revision number) set by Location signer
@@ -131,10 +118,7 @@ class Locator {
     /**
      * @return Endpoints specified in locator
      */
-    ZT_INLINE const Vector<std::pair<Endpoint, SharedPtr<const EndpointAttributes>>> &endpoints() const noexcept
-    {
-        return m_endpoints;
-    }
+    ZT_INLINE const Vector<std::pair<Endpoint, SharedPtr<const EndpointAttributes>>> &endpoints() const noexcept { return m_endpoints; }
 
     /**
      * @return Signature data
@@ -204,8 +188,7 @@ class Locator {
     ZT_INLINE bool operator==(const Locator &l) const noexcept
     {
         const unsigned long es = (unsigned long)m_endpoints.size();
-        if ((m_revision == l.m_revision) && (m_signer == l.m_signer) && (es == (unsigned long)l.m_endpoints.size())
-            && (m_signature == l.m_signature)) {
+        if ((m_revision == l.m_revision) && (m_signer == l.m_signer) && (es == (unsigned long)l.m_endpoints.size()) && (m_signature == l.m_signature)) {
             for (unsigned long i = 0; i < es; ++i) {
                 if (m_endpoints[i].first != l.m_endpoints[i].first)
                     return false;

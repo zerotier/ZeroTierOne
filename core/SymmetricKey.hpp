@@ -40,23 +40,9 @@ class SymmetricKey {
      * @param ts Key timestamp
      * @param key Key (must be 48 bytes / 384 bits)
      */
-    ZT_INLINE SymmetricKey(const int64_t ts, const void *const key) noexcept
-        : m_secret(key)
-        , m_ts(ts)
-        , m_initialNonce(Utils::getSecureRandomU64() >> 1U)
-        , m_cipher(key)
-        , m_nonce(m_initialNonce)
-    {
-    }
+    ZT_INLINE SymmetricKey(const int64_t ts, const void *const key) noexcept : m_secret(key), m_ts(ts), m_initialNonce(Utils::getSecureRandomU64() >> 1U), m_cipher(key), m_nonce(m_initialNonce) {}
 
-    ZT_INLINE SymmetricKey(const SymmetricKey &k) noexcept
-        : m_secret(k.m_secret)
-        , m_ts(k.m_ts)
-        , m_initialNonce(k.m_initialNonce)
-        , m_cipher(k.m_secret.data)
-        , m_nonce(k.m_nonce.load(std::memory_order_relaxed))
-    {
-    }
+    ZT_INLINE SymmetricKey(const SymmetricKey &k) noexcept : m_secret(k.m_secret), m_ts(k.m_ts), m_initialNonce(k.m_initialNonce), m_cipher(k.m_secret.data), m_nonce(k.m_nonce.load(std::memory_order_relaxed)) {}
 
     ZT_INLINE ~SymmetricKey() noexcept { Utils::burn(m_secret.data, ZT_SYMMETRIC_KEY_SIZE); }
 
@@ -92,10 +78,7 @@ class SymmetricKey {
      * @param receiver Receiving ZeroTier address
      * @return Next unique IV for next message
      */
-    ZT_INLINE uint64_t nextMessage(const Address sender, const Address receiver) noexcept
-    {
-        return m_nonce.fetch_add(1, std::memory_order_relaxed) ^ (((uint64_t)(sender > receiver)) << 63U);
-    }
+    ZT_INLINE uint64_t nextMessage(const Address sender, const Address receiver) noexcept { return m_nonce.fetch_add(1, std::memory_order_relaxed) ^ (((uint64_t)(sender > receiver)) << 63U); }
 
     /**
      * Get the number of times this key has been used.

@@ -55,11 +55,9 @@ class Node : public NetworkController::Sender {
 
     ZT_ResultCode leave(uint64_t nwid, void **uptr, const CallContext &cc);
 
-    ZT_ResultCode
-    multicastSubscribe(const CallContext &cc, uint64_t nwid, uint64_t multicastGroup, unsigned long multicastAdi);
+    ZT_ResultCode multicastSubscribe(const CallContext &cc, uint64_t nwid, uint64_t multicastGroup, unsigned long multicastAdi);
 
-    ZT_ResultCode
-    multicastUnsubscribe(const CallContext &cc, uint64_t nwid, uint64_t multicastGroup, unsigned long multicastAdi);
+    ZT_ResultCode multicastUnsubscribe(const CallContext &cc, uint64_t nwid, uint64_t multicastGroup, unsigned long multicastAdi);
 
     void status(ZT_NodeStatus *status) const;
 
@@ -73,9 +71,7 @@ class Node : public NetworkController::Sender {
 
     void setInterfaceAddresses(const ZT_InterfaceAddress *addrs, unsigned int addrCount);
 
-    ZT_CertificateError addCertificate(
-        const CallContext &cc, unsigned int localTrust, const ZT_Certificate *cert, const void *certData,
-        unsigned int certSize);
+    ZT_CertificateError addCertificate(const CallContext &cc, unsigned int localTrust, const ZT_Certificate *cert, const void *certData, unsigned int certSize);
 
     ZT_ResultCode deleteCertificate(const CallContext &cc, const void *serialNo);
 
@@ -93,11 +89,7 @@ class Node : public NetworkController::Sender {
      * @param md Event data or NULL if none
      * @param mdSize Size of event data
      */
-    ZT_INLINE void postEvent(
-        void *const tPtr, const ZT_Event ev, const void *const md = nullptr, const unsigned int mdSize = 0) noexcept
-    {
-        m_ctx.cb.eventCallback(reinterpret_cast<ZT_Node *>(this), m_ctx.uPtr, tPtr, ev, md, mdSize);
-    }
+    ZT_INLINE void postEvent(void *const tPtr, const ZT_Event ev, const void *const md = nullptr, const unsigned int mdSize = 0) noexcept { m_ctx.cb.eventCallback(reinterpret_cast<ZT_Node *>(this), m_ctx.uPtr, tPtr, ev, md, mdSize); }
 
     /**
      * Check whether a path should be used for ZeroTier traffic
@@ -128,14 +120,9 @@ class Node : public NetworkController::Sender {
     ZT_INLINE const Context &context() const noexcept { return m_ctx; }
 
     // Implementation of NetworkController::Sender interface
-    virtual void ncSendConfig(
-        void *tPtr, int64_t clock, int64_t ticks, uint64_t nwid, uint64_t requestPacketId, const Address &destination,
-        const NetworkConfig &nc, bool sendLegacyFormatConfig);
-    virtual void ncSendRevocation(
-        void *tPtr, int64_t clock, int64_t ticks, const Address &destination, const RevocationCredential &rev);
-    virtual void ncSendError(
-        void *tPtr, int64_t clock, int64_t ticks, uint64_t nwid, uint64_t requestPacketId, const Address &destination,
-        NetworkController::ErrorCode errorCode);
+    virtual void ncSendConfig(void *tPtr, int64_t clock, int64_t ticks, uint64_t nwid, uint64_t requestPacketId, const Address &destination, const NetworkConfig &nc, bool sendLegacyFormatConfig);
+    virtual void ncSendRevocation(void *tPtr, int64_t clock, int64_t ticks, const Address &destination, const RevocationCredential &rev);
+    virtual void ncSendError(void *tPtr, int64_t clock, int64_t ticks, uint64_t nwid, uint64_t requestPacketId, const Address &destination, NetworkController::ErrorCode errorCode);
 
   private:
     Context m_ctx;
