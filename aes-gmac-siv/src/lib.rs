@@ -1,11 +1,11 @@
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "ios"))]
 mod impl_macos;
-#[cfg(not(target_os = "macos"))]
+#[cfg(not(any(target_os = "macos", target_os = "ios")))]
 mod impl_gcrypt;
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "ios"))]
 pub use impl_macos::AesGmacSiv;
-#[cfg(not(target_os = "macos"))]
+#[cfg(not(any(target_os = "macos", target_os = "ios")))]
 pub use impl_gcrypt::AesGmacSiv;
 
 pub(crate) const ZEROES: [u8; 16] = [0_u8; 16];
@@ -14,6 +14,7 @@ pub(crate) const ZEROES: [u8; 16] = [0_u8; 16];
 mod tests {
     use crate::AesGmacSiv;
     use std::time::SystemTime;
+    use sha2::Digest;
 
     fn to_hex(b: &[u8]) -> String {
         let mut s = String::new();
@@ -35,20 +36,19 @@ mod tests {
 
         let mut c = AesGmacSiv::new(&aes_key);
 
-        for _ in 1..4 {
+        for _ in 0..256 {
             c.reset();
             c.encrypt_init(&iv);
             c.encrypt_first_pass(&buf);
             c.encrypt_first_pass_finish();
             c.encrypt_second_pass_in_place(&mut buf);
             let tag = c.encrypt_second_pass_finish().clone();
-            let mut sha = [0_u8; 48];
-            gcrypt::digest::hash(gcrypt::digest::Algorithm::Sha384, &buf, &mut sha);
-            let sha = to_hex(&sha);
+            let sha = sha2::Sha384::digest(&buf).to_vec();
+            let sha = to_hex(sha.as_slice());
             if sha != "f455fa8a1a6badaeccdefe573a10d5d79eb7f4009b84dff3d37f9f1e95ee2b0ba6149737c0701d5ef75f58f793174d3d" {
                 panic!("encrypt result hash check failed!");
             }
-            println!("Encrypt OK, tag: {}, hash: {}", to_hex(&tag), sha);
+            //println!("Encrypt OK, tag: {}, hash: {}", to_hex(&tag), sha);
 
             c.reset();
             c.decrypt_init(&tag);
@@ -61,10 +61,11 @@ mod tests {
                     panic!("decrypt data check failed!");
                 }
             }
-            println!("Decrypt OK");
+            //println!("Decrypt OK");
         }
+        println!("Encrypt/decrypt test OK");
 
-        let benchmark_iterations: usize = 100000;
+        let benchmark_iterations: usize = 50000;
         let start = SystemTime::now();
         for _ in 0..benchmark_iterations {
             c.reset();

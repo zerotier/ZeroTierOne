@@ -1,3 +1,5 @@
+// AES-GMAC-SIV implemented using libgcrypt.
+
 use std::io::Write;
 
 /// AES-GMAC-SIV encryptor/decryptor.
@@ -105,7 +107,6 @@ impl AesGmacSiv {
     fn decrypt_init_internal(&mut self) {
         self.tmp[12] &= 0x7f;
         let _ = self.ctr.set_ctr(&self.tmp);
-
         let _ = self.ecb.decrypt_inplace(&mut self.tag);
         unsafe { // tmp[0..8] = tag[0..8], tmp[8..16] = 0
             let tmp = self.tmp.as_mut_ptr().cast::<u64>();
@@ -121,17 +122,6 @@ impl AesGmacSiv {
     pub fn decrypt_init(&mut self, tag: &[u8]) {
         self.tmp.copy_from_slice(tag);
         self.tag.copy_from_slice(tag);
-        self.decrypt_init_internal();
-    }
-
-    /// Initialize this cipher for decryption from tag split into two 8-byte chunks (for ZeroTier use).
-    /// The supplied tag chunks must be 8 bytes in length. Any other length will panic.
-    #[inline(always)]
-    pub fn decrypt_init2(&mut self, tag_0_8: &[u8], tag_8_16: &[u8]) {
-        self.tmp[0..8].copy_from_slice(tag_0_8);
-        self.tmp[8..16].copy_from_slice(tag_8_16);
-        self.tag[0..8].copy_from_slice(tag_0_8);
-        self.tag[8..16].copy_from_slice(tag_8_16);
         self.decrypt_init_internal();
     }
 

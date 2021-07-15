@@ -1,0 +1,10 @@
+[package]
+name = "zerotier-network-hypervisor"
+version = "2.0.0"
+edition = "2018"
+
+[dependencies]
+rand_core = "^0"
+aes-gmac-siv = { path = "../aes-gmac-siv" }
+x25519-dalek = "^1"
+ed25519-dalek = "^1"

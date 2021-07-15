@@ -1,2 +1,0 @@
-running: "sh" "-c" "libgcrypt-config --version"
-running: "sh" "-c" "libgcrypt-config --cflags --libs"

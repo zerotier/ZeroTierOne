@@ -1,3 +1,5 @@
+// AES-GMAC-SIV implemented using MacOS/iOS CommonCrypto (MacOS 10.13 or newer required).
+
 use std::os::raw::{c_void, c_int};
 use std::ptr::{null_mut, null};
 
@@ -75,7 +77,7 @@ impl AesGmacSiv {
         unsafe {
             let result = CCCryptorCreateWithMode(kCCEncrypt, kCCModeCTR, kCCAlgorithmAES, 0, crate::ZEROES.as_ptr().cast(), key.as_ptr().cast(), key.len(), null(), 0, 0, 0, &mut c.ctr);
             if result != 0 {
-                panic!("CCCryptorCreateWithMode for ECB encrypt mode returned {}", result);
+                panic!("CCCryptorCreateWithMode for CTR mode returned {}", result);
             }
             let result = CCCryptorCreateWithMode(kCCEncrypt, kCCModeECB, kCCAlgorithmAES, 0, crate::ZEROES.as_ptr().cast(), key.as_ptr().cast(), key.len(), null(), 0, 0, kCCOptionECBMode, &mut c.ecb_enc);
             if result != 0 {
@@ -87,7 +89,7 @@ impl AesGmacSiv {
             }
             let result = CCCryptorCreateWithMode(kCCEncrypt, kCCModeGCM, kCCAlgorithmAES, 0, crate::ZEROES.as_ptr().cast(), key.as_ptr().cast(), key.len(), null(), 0, 0, 0, &mut c.gmac);
             if result != 0 {
-                panic!("CCCryptorCreateWithMode for ECB decrypt mode returned {}", result);
+                panic!("CCCryptorCreateWithMode for GCM (GMAC) mode returned {}", result);
             }
         }
         c
@@ -149,7 +151,7 @@ impl AesGmacSiv {
         self.tmp[12] &= 0x7f;
         unsafe {
             if CCCryptorReset(self.ctr, self.tmp.as_ptr().cast()) != 0 {
-                panic!("CCryptorReset for CTR mode failed (old MacOS bug)");
+                panic!("CCCryptorReset for CTR mode failed (old MacOS bug)");
             }
         }
     }
@@ -186,7 +188,7 @@ impl AesGmacSiv {
         self.tmp[12] &= 0x7f;
         unsafe {
             if CCCryptorReset(self.ctr, self.tmp.as_ptr().cast()) != 0 {
-                panic!("CCryptorReset for CTR mode failed (old MacOS bug)");
+                panic!("CCCryptorReset for CTR mode failed (old MacOS bug)");
             }
             let mut data_out_written: usize = 0;
             CCCryptorUpdate(self.ecb_dec, self.tag.as_ptr().cast(), 16, self.tag.as_mut_ptr().cast(), 16, &mut data_out_written);
@@ -203,17 +205,6 @@ impl AesGmacSiv {
     pub fn decrypt_init(&mut self, tag: &[u8]) {
         self.tmp.copy_from_slice(tag);
         self.tag.copy_from_slice(tag);
-        self.decrypt_init_internal();
-    }
-
-    /// Initialize this cipher for decryption from tag split into two 8-byte chunks (for ZeroTier use).
-    /// The supplied tag chunks must be 8 bytes in length. Any other length will panic.
-    #[inline(always)]
-    pub fn decrypt_init2(&mut self, tag_0_8: &[u8], tag_8_16: &[u8]) {
-        self.tmp[0..8].copy_from_slice(tag_0_8);
-        self.tmp[8..16].copy_from_slice(tag_8_16);
-        self.tag[0..8].copy_from_slice(tag_0_8);
-        self.tag[8..16].copy_from_slice(tag_8_16);
         self.decrypt_init_internal();
     }
 

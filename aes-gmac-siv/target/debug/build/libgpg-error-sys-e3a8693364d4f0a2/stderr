@@ -1,2 +1,0 @@
-running: "sh" "-c" "gpg-error-config --version"
-running: "sh" "-c" "gpg-error-config --cflags --mt --libs"
