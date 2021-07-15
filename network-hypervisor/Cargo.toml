@@ -8,3 +8,4 @@ rand_core = "^0"
 aes-gmac-siv = { path = "../aes-gmac-siv" }
 x25519-dalek = "^1"
 ed25519-dalek = "^1"
+gcrypt = "^0"

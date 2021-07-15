@@ -414,6 +414,7 @@ version = "2.0.0"
 dependencies = [
  "aes-gmac-siv",
  "ed25519-dalek",
+ "gcrypt",
  "rand_core",
  "x25519-dalek",
 ]
