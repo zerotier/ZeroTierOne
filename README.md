@@ -81,12 +81,6 @@ Here's where home folders live (by default) on each OS:
  * **Mac**: `/Library/Application Support/ZeroTier/One`
  * **Windows**: `\ProgramData\ZeroTier\One` (That's for Windows 7. The base 'shared app data' folder might be different on different Windows versions.)
 
-Running ZeroTier One on a Mac is the same, but OSX requires a kernel extension. We ship a signed binary build of the ZeroTier tap device driver, which can be installed on Mac with:
-
-    sudo make install-mac-tap
-
-This will create the home folder for Mac, place *tap.kext* there, and set its modes correctly to enable ZeroTier One to manage it with *kextload* and *kextunload*.
-
 ### Basic Troubleshooting
 
 For most users, it just works.
