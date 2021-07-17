@@ -1,6 +1,5 @@
 use std::str::FromStr;
 use std::convert::TryInto;
-use std::io::Write;
 
 use gcrypt::sexp::SExpression;
 
