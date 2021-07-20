@@ -3,7 +3,7 @@ use std::convert::TryInto;
 use std::io::Write;
 
 pub const SHA512_HASH_SIZE: usize = 64;
-pub const SHA384_HASH_SIZE: usize = 64;
+pub const SHA384_HASH_SIZE: usize = 48;
 
 pub struct SHA512(gcrypt::digest::MessageDigest);
 

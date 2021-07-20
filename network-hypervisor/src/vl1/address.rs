@@ -13,7 +13,7 @@ impl Address {
     #[inline(always)]
     pub fn from_bytes(b: &[u8]) -> Result<Address, InvalidFormatError> {
         if b.len() >= 5 {
-            Ok(Address((b[0] as u64) << 32 | (b[1] as u64) << 24 | (b[2] as u64) << 16 | (b[3] as u64) << 8 as u64 | b[4] as u64))
+            Ok(Address((b[0] as u64) << 32 | (b[1] as u64) << 24 | (b[2] as u64) << 16 | (b[3] as u64) << 8 | b[4] as u64))
         } else {
             Err(InvalidFormatError("invalid ZeroTier address"))
         }
@@ -25,13 +25,13 @@ impl Address {
     }
 
     #[inline(always)]
-    pub fn is_valid(&self) -> bool {
-        self.0 != 0 && !self.is_reserved()
+    pub fn is_nil(&self) -> bool {
+        self.0 == 0
     }
 
     #[inline(always)]
-    pub fn is_nil(&self) -> bool {
-        self.0 == 0
+    pub fn is_valid(&self) -> bool {
+        !self.is_nil() && !self.is_reserved()
     }
 
     #[inline(always)]
@@ -46,7 +46,6 @@ impl Address {
 }
 
 impl ToString for Address {
-    #[inline(always)]
     fn to_string(&self) -> String {
         let mut v = self.0 << 24;
         let mut s = String::new();
@@ -62,7 +61,6 @@ impl ToString for Address {
 impl FromStr for Address {
     type Err = InvalidFormatError;
 
-    #[inline(always)]
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Address::from_bytes(crate::util::hex::from_string(s).as_slice())
     }
@@ -85,7 +83,7 @@ impl Hash for Address {
 impl From<&[u8; 5]> for Address {
     #[inline(always)]
     fn from(b: &[u8; 5]) -> Address {
-        Address((b[0] as u64) << 32 | (b[1] as u64) << 24 | (b[2] as u64) << 16 | (b[3] as u64) << 8 as u64 | b[4] as u64)
+        Address((b[0] as u64) << 32 | (b[1] as u64) << 24 | (b[2] as u64) << 16 | (b[3] as u64) << 8 | b[4] as u64)
     }
 }
 

@@ -1,8 +1,6 @@
 use std::mem::size_of;
 use std::marker::PhantomData;
-
-const FAULT_BIT: usize = 1_usize << ((size_of::<usize>() * 8) - 1);
-const FAULT_CLEAR_MASK: usize = !FAULT_BIT;
+use std::io::Write;
 
 /// Annotates a type as containing only primitive types like integers and arrays.
 /// This means it's safe to abuse with raw copy, raw zero, or "type punning."
@@ -19,13 +17,6 @@ unsafe impl RawObject for NoHeader {}
 /// This also supports a generic header that must be a RawObject and will always be
 /// placed at the beginning of the buffer. When you construct or clear() a buffer
 /// space will be maintained for the header. Use NoHeader if you don't want a header.
-///
-/// If a write overflow occurs during append operations, the operations fail silently
-/// without increasing the buffer's size and an internal fault bit is set. The
-/// check_overflow() method must be used before the buffer is actually complete to
-/// ensure that no write overflows occurred. If this check isn't performed a buffer
-/// could be used with incomplete or corrupt data, but no crash or memory errors will
-/// occur.
 #[derive(Clone)]
 pub struct Buffer<H: RawObject, const L: usize>(usize, [u8; L], PhantomData<H>);
 
@@ -34,7 +25,6 @@ unsafe impl<H: RawObject, const L: usize> RawObject for Buffer<H, L> {}
 impl<H: RawObject, const L: usize> Default for Buffer<H, L> {
     #[inline(always)]
     fn default() -> Self {
-        assert!(size_of::<H>() <= L);
         Buffer(size_of::<H>(), [0_u8; L], PhantomData::default())
     }
 }
@@ -45,124 +35,284 @@ impl<H: RawObject, const L: usize> Buffer<H, L> {
         Self::default()
     }
 
-    /// Returns true if there has been a write overflow.
-    #[inline(always)]
-    pub fn check_overflow(&self) -> bool {
-        (self.0 & FAULT_BIT) != 0
-    }
-
     /// Get a slice containing the entire buffer in raw form including the header.
     #[inline(always)]
     pub fn as_bytes(&self) -> &[u8] {
-        &self.1[0..(self.0 & FAULT_CLEAR_MASK)]
+        &self.1[0..self.0]
     }
 
     /// Erase contents and reset size to the size of the header.
     #[inline(always)]
     pub fn clear(&mut self) {
+        self.1[0..self.0].fill(0);
         self.0 = size_of::<H>();
-        self.1.fill(0);
     }
 
     /// Get the length of this buffer (including header, if any).
     #[inline(always)]
     pub fn len(&self) -> usize {
-        self.0 & FAULT_CLEAR_MASK
+        self.0
     }
 
     /// Get a reference to the header (in place).
     #[inline(always)]
     pub fn header(&self) -> &H {
+        debug_assert!(size_of::<H>() <= L);
         unsafe { &*self.1.as_ptr().cast::<H>() }
     }
 
     /// Get a mutable reference to the header (in place).
     #[inline(always)]
     pub fn header_mut(&mut self) -> &mut H {
+        debug_assert!(size_of::<H>() <= L);
         unsafe { &mut *self.1.as_mut_ptr().cast::<H>() }
     }
 
-    /// Append a packed structure and initializing it in place via the supplied function.
-    ///
-    /// If an overflow occurs the overflow fault bit is set internally (see check_overflow())
-    /// and the supplied function will never be called.
+    /// Append a packed structure and call a function to initialize it in place.
+    /// Anything not initialized will be zero.
     #[inline(always)]
-    pub fn append_and_init_struct<T: RawObject, F: FnOnce(&mut T)>(&mut self, initializer: F) {
-        let bl = self.0;
-        let s = bl + size_of::<T>();
-        if s <= L {
+    pub fn append_and_init_struct<T: RawObject, R, F: FnOnce(&mut T) -> R>(&mut self, initializer: F) -> std::io::Result<R> {
+        let ptr = self.0;
+        let end = ptr + size_of::<T>();
+        if end <= L {
+            self.0 = end;
             unsafe {
-                self.0 = s;
-                initializer(&mut *self.1.as_mut_ptr().cast::<u8>().offset(bl as isize).cast::<T>());
+                Ok(initializer(&mut *self.1.as_mut_ptr().cast::<u8>().offset(ptr as isize).cast::<T>()))
             }
         } else {
-            self.0 = bl | FAULT_BIT;
+            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "overflow"))
         }
     }
 
     /// Append and initialize a byte array with a fixed size set at compile time.
-    ///
     /// This is more efficient than setting a size at runtime as it may allow the compiler to
-    /// skip some bounds checking.
-    ///
-    /// If an overflow occurs the overflow fault bit is set internally (see check_overflow())
-    /// and the supplied function will never be called.
+    /// skip some bounds checking. Any bytes not initialized will be zero.
     #[inline(always)]
-    pub fn append_and_init_bytes_fixed<F: FnOnce(&mut [u8; N]), const N: usize>(&mut self, initializer: F) {
-        let bl = self.0;
-        let s = bl + N;
-        if s <= L {
+    pub fn append_and_init_bytes_fixed<R, F: FnOnce(&mut [u8; N]) -> R, const N: usize>(&mut self, initializer: F) -> std::io::Result<R> {
+        let ptr = self.0;
+        let end = ptr + N;
+        if end <= L {
+            self.0 = end;
             unsafe {
-                let ptr = self.1.as_mut_ptr().cast::<u8>().offset(bl as isize);
-                self.0 = s;
-                initializer(&mut *ptr.cast::<[u8; N]>());
+                Ok(initializer(&mut *self.1.as_mut_ptr().cast::<u8>().offset(ptr as isize).cast::<[u8; N]>()))
             }
         } else {
-            self.0 = bl | FAULT_BIT;
+            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "overflow"))
         }
     }
 
     /// Append and initialize a slice with a size that is set at runtime.
-    ///
-    /// If an overflow occurs the overflow fault bit is set internally (see check_overflow())
-    /// and the supplied function will never be called.
+    /// Any bytes not initialized will be zero.
     #[inline(always)]
-    pub fn append_and_init_bytes<F: FnOnce(&mut [u8])>(&mut self, l: usize, initializer: F) {
-        let bl = self.0;
-        let s = bl + l;
-        if s <= L {
-            self.0 = s;
-            initializer(&mut self.1[bl..s]);
+    pub fn append_and_init_bytes<R, F: FnOnce(&mut [u8]) -> R>(&mut self, l: usize, initializer: F) -> std::io::Result<R> {
+        let ptr = self.0;
+        let end = ptr + l;
+        if end <= L {
+            self.0 = end;
+            Ok(initializer(&mut self.1[ptr..end]))
         } else {
-            self.0 = bl | FAULT_BIT;
+            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "overflow"))
         }
     }
 
-    pub fn read_payload(&self) -> Reader<H, L> {
-        Reader {
-            buffer: self,
-            ptr: size_of::<H>(),
+    /// Append a dynamic byte slice (copy into buffer).
+    /// Use append_and_init_ functions if possible as these avoid extra copies.
+    #[inline(always)]
+    fn append_bytes(&mut self, buf: &[u8]) -> std::io::Result<()> {
+        let ptr = self.0;
+        let end = ptr + buf.len();
+        if end <= L {
+            self.0 = end;
+            self.1[ptr..end].copy_from_slice(buf);
+            Ok(())
+        } else {
+            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "overflow"))
         }
     }
-}
 
-pub struct Reader<'a, H: RawObject, const L: usize> {
-    ptr: usize,
-    buffer: &'a Buffer<H, L>,
-}
+    /// Append a fixed length byte array (copy into buffer).
+    /// Use append_and_init_ functions if possible as these avoid extra copies.
+    #[inline(always)]
+    fn append_bytes_fixed<const S: usize>(&mut self, buf: &[u8; S]) -> std::io::Result<()> {
+        let ptr = self.0;
+        let end = ptr + S;
+        if end <= L {
+            self.0 = end;
+            self.1[ptr..end].copy_from_slice(buf);
+            Ok(())
+        } else {
+            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "overflow"))
+        }
+    }
 
-impl<'a, H: RawObject, const L: usize> Reader<'a, H, L> {
-    pub fn read_struct<T: RawObject, R, F: FnOnce(&T, &mut Self) -> bool>(&mut self, visitor: F) -> bool {
-        let rl = self.ptr;
-        let s = rl + size_of::<T>();
-        if s <= L {
+    /// Append a byte
+    #[inline(always)]
+    fn append_u8(&mut self, i: u8) -> std::io::Result<()> {
+        let ptr = self.0;
+        if ptr < L {
+            self.0 = ptr + 1;
+            self.1[ptr] = i;
+            Ok(())
+        } else {
+            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "overflow"))
+        }
+    }
+
+    /// Append a 16-bit integer (in big-endian form)
+    #[inline(always)]
+    fn append_u16(&mut self, i: u16) -> std::io::Result<()> {
+        let ptr = self.0;
+        let end = ptr + 2;
+        if end <= L {
+            self.0 = end;
+            crate::util::integer_store_be_u16(i, &mut self.1[ptr..end]);
+            Ok(())
+        } else {
+            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "overflow"))
+        }
+    }
+
+    /// Append a 32-bit integer (in big-endian form)
+    #[inline(always)]
+    fn append_u32(&mut self, i: u32) -> std::io::Result<()> {
+        let ptr = self.0;
+        let end = ptr + 4;
+        if end <= L {
+            self.0 = end;
+            crate::util::integer_store_be_u32(i, &mut self.1[ptr..end]);
+            Ok(())
+        } else {
+            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "overflow"))
+        }
+    }
+
+    /// Append a 64-bit integer (in big-endian form)
+    #[inline(always)]
+    fn append_u64(&mut self, i: u64) -> std::io::Result<()> {
+        let ptr = self.0;
+        let end = ptr + 8;
+        if end <= L {
+            self.0 = end;
+            crate::util::integer_store_be_u64(i, &mut self.1[ptr..end]);
+            Ok(())
+        } else {
+            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "overflow"))
+        }
+    }
+
+    /// Get a structure at a given position in the buffer and advance the cursor.
+    #[inline(always)]
+    pub fn get_struct<T: RawObject>(&self, cursor: &mut usize) -> std::io::Result<&T> {
+        let ptr = *cursor;
+        let end = ptr + size_of::<T>();
+        if end <= self.0 {
+            *cursor = end;
             unsafe {
-                self.ptr = s;
-                visitor(&*self.buffer.1.as_ptr().cast::<u8>().offset(rl as isize).cast::<T>(), self)
+                Ok(&*self.1.as_ptr().cast::<u8>().offset(ptr as isize).cast::<T>())
             }
         } else {
-            false
+            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "overflow"))
         }
+    }
+
+    /// Get a fixed length byte array and advance the cursor.
+    /// This is slightly more efficient than reading a runtime sized byte slice.
+    #[inline(always)]
+    pub fn get_bytes_fixed<const S: usize>(&self, cursor: &mut usize) -> std::io::Result<&[u8; S]> {
+        let ptr = *cursor;
+        let end = ptr + S;
+        if end <= self.0 {
+            *cursor = end;
+            unsafe {
+                Ok(&*self.1.as_ptr().cast::<u8>().offset(ptr as isize).cast::<[u8; S]>())
+            }
+        } else {
+            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "overflow"))
+        }
+    }
+
+    /// Get a runtime specified length byte slice and advance the cursor.
+    #[inline(always)]
+    pub fn get_bytes(&self, l: usize, cursor: &mut usize) -> std::io::Result<&[u8]> {
+        let ptr = *cursor;
+        let end = ptr + l;
+        if end <= self.0 {
+            *cursor = end;
+            Ok(&self.1[ptr..end])
+        } else {
+            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "overflow"))
+        }
+    }
+
+    /// Get the next u8 and advance the cursor.
+    #[inline(always)]
+    pub fn get_u8(&self, cursor: &mut usize) -> std::io::Result<u8> {
+        let ptr = *cursor;
+        if ptr < self.0 {
+            *cursor = ptr + 1;
+            Ok(self.1[ptr])
+        } else {
+            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "overflow"))
+        }
+    }
+
+    /// Get the next u16 and advance the cursor.
+    #[inline(always)]
+    pub fn get_u16(&self, cursor: &mut usize) -> std::io::Result<u16> {
+        let ptr = *cursor;
+        let end = ptr + 2;
+        if end <= self.0 {
+            *cursor = end;
+            Ok(crate::util::integer_load_be_u16(&self.1[ptr..end]))
+        } else {
+            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "overflow"))
+        }
+    }
+
+    /// Get the next u32 and advance the cursor.
+    #[inline(always)]
+    pub fn get_u32(&self, cursor: &mut usize) -> std::io::Result<u32> {
+        let ptr = *cursor;
+        let end = ptr + 4;
+        if end <= self.0 {
+            *cursor = end;
+            Ok(crate::util::integer_load_be_u32(&self.1[ptr..end]))
+        } else {
+            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "overflow"))
+        }
+    }
+
+    /// Get the next u64 and advance the cursor.
+    #[inline(always)]
+    pub fn get_u64(&self, cursor: &mut usize) -> std::io::Result<u64> {
+        let ptr = *cursor;
+        let end = ptr + 8;
+        if end <= self.0 {
+            *cursor = end;
+            Ok(crate::util::integer_load_be_u64(&self.1[ptr..end]))
+        } else {
+            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "overflow"))
+        }
+    }
+}
+
+impl<H: RawObject, const L: usize> Write for Buffer<H, L> {
+    #[inline(always)]
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        let ptr = self.0;
+        let end = ptr + buf.len();
+        if end <= L {
+            self.0 = end;
+            self.1[ptr..end].copy_from_slice(buf);
+            Ok(buf.len())
+        } else {
+            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "overflow"))
+        }
+    }
+
+    #[inline(always)]
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
     }
 }
 

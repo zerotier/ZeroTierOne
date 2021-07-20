@@ -9,3 +9,4 @@ aes-gmac-siv = { path = "../aes-gmac-siv" }
 x25519-dalek = "^1"
 ed25519-dalek = "^1"
 gcrypt = "^0"
+base64 = "^0"

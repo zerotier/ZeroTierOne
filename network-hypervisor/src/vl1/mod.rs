@@ -1,8 +1,8 @@
 pub mod protocol;
 pub mod packet;
 pub mod buffer;
+pub mod node;
 mod address;
-mod mac;
+mod identity;
 
 pub use address::Address;
-pub use mac::MAC;

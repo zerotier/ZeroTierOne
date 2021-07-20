@@ -131,6 +131,7 @@ impl P521KeyPair {
     }
 
     /// Create an ECDSA signature of the input message.
+    /// Message data does not need to be pre-hashed.
     pub fn sign(&self, msg: &[u8]) -> Option<[u8; P521_ECDSA_SIGNATURE_SIZE]> {
         let data = SExpression::from_str(unsafe { std::str::from_utf8_unchecked(&hash_to_data_sexp(msg)) }).unwrap();
         gcrypt::pkey::sign(&self.secret_key_for_ecdsa, &data).map_or(None, |sig| {
@@ -171,6 +172,8 @@ impl P521PublicKey {
         }
     }
 
+    /// Verify a signature.
+    /// Message data does not need to be pre-hashed.
     pub fn verify(&self, msg: &[u8], signature: &[u8]) -> bool {
         if signature.len() == P521_ECDSA_SIGNATURE_SIZE {
             let data = SExpression::from_str(unsafe { std::str::from_utf8_unchecked(&hash_to_data_sexp(msg)) }).unwrap();

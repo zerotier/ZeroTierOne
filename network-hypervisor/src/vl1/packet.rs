@@ -51,7 +51,6 @@ impl Header {
     }
 }
 
-/// Packet is a Buffer with the packet Header and the packet max payload size.
 pub type Packet = Buffer<Header, { crate::vl1::protocol::PACKET_SIZE_MAX }>;
 
 #[derive(Clone)]
@@ -82,6 +81,8 @@ impl FragmentHeader {
         self.hops & HEADER_FLAGS_FIELD_MASK_HOPS
     }
 }
+
+type Fragment = Buffer<FragmentHeader, { crate::vl1::protocol::PACKET_SIZE_MAX }>;
 
 #[cfg(test)]
 mod tests {
