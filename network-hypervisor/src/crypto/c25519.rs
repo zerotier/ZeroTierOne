@@ -15,14 +15,14 @@ pub struct C25519KeyPair(x25519_dalek::StaticSecret, x25519_dalek::PublicKey);
 
 impl C25519KeyPair {
     #[inline(always)]
-    pub fn new() -> C25519KeyPair {
+    pub fn generate() -> C25519KeyPair {
         let sk = x25519_dalek::StaticSecret::new(rand_core::OsRng);
         let pk = x25519_dalek::PublicKey::from(&sk);
         C25519KeyPair(sk, pk)
     }
 
     #[inline(always)]
-    pub fn from_keys(public_key: &[u8], secret_key: &[u8]) -> Option<C25519KeyPair> {
+    pub fn from_bytes(public_key: &[u8], secret_key: &[u8]) -> Option<C25519KeyPair> {
         if public_key.len() == 32 && secret_key.len() == 32 {
             let pk: [u8; 32] = public_key.try_into().unwrap();
             let sk: [u8; 32] = secret_key.try_into().unwrap();
@@ -59,7 +59,7 @@ pub struct Ed25519KeyPair(ed25519_dalek::Keypair);
 
 impl Ed25519KeyPair {
     #[inline(always)]
-    pub fn new() -> Ed25519KeyPair {
+    pub fn generate() -> Ed25519KeyPair {
         let mut rng = rand_core::OsRng::default();
         Ed25519KeyPair(ed25519_dalek::Keypair::generate(&mut rng))
     }
@@ -70,6 +70,18 @@ impl Ed25519KeyPair {
         tmp[0..32].copy_from_slice(secret_key);
         tmp[32..64].copy_from_slice(public_key);
         Ed25519KeyPair(ed25519_dalek::Keypair::from_bytes(&tmp).unwrap())
+    }
+
+    #[inline(always)]
+    pub fn from_bytes(public_bytes: &[u8], secret_bytes: &[u8]) -> Option<Ed25519KeyPair> {
+        if public_bytes.len() == ED25519_PUBLIC_KEY_SIZE && secret_bytes.len() == ED25519_SECRET_KEY_SIZE {
+            let mut tmp = [0_u8; 64];
+            tmp[0..32].copy_from_slice(public_bytes);
+            tmp[32..64].copy_from_slice(secret_bytes);
+            Some(Ed25519KeyPair(ed25519_dalek::Keypair::from_bytes(&tmp).unwrap()))
+        } else {
+            None
+        }
     }
 
     #[inline(always)]

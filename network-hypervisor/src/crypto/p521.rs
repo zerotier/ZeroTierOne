@@ -66,7 +66,7 @@ pub struct P521PublicKey {
 pub struct P521KeyPair {
     public_key: P521PublicKey,
     secret_key_for_ecdsa: SExpression, // secret key as a private-key S-expression
-    secret_key_for_ecdh: SExpression,  // secret key as a "data" S-expression for the weird gcrypt ECDH interface
+    secret_key_for_ecdh: SExpression,  // the same secret key as a "data" S-expression for the weird gcrypt ECDH interface
     secret_key_bytes: [u8; P521_SECRET_KEY_SIZE],
 }
 
@@ -97,7 +97,7 @@ impl P521KeyPair {
                                 public_key: pk_exp,
                                 public_key_bytes: [0_u8; P521_PUBLIC_KEY_SIZE],
                             },
-                            secret_key_for_ecdsa: sk_exp,
+                            secret_key_for_ecdsa: SExpression::from_str(format!("(private-key(ecc(curve nistp521)(q #{}#)(d #{}#)))", crate::util::hex::to_string(pk), crate::util::hex::to_string(sk)).as_str()).unwrap(),
                             secret_key_for_ecdh: SExpression::from_str(format!("(data(flags raw)(value #{}#))", crate::util::hex::to_string(sk)).as_str()).unwrap(),
                             secret_key_bytes: [0_u8; P521_SECRET_KEY_SIZE],
                         };
@@ -108,6 +108,23 @@ impl P521KeyPair {
                 }
             }
             return None;
+        })
+    }
+
+    /// Construct this key pair from both a public and a private key.
+    pub fn from_bytes(public_bytes: &[u8], secret_bytes: &[u8]) -> Option<P521KeyPair> {
+        if secret_bytes.len() != P521_SECRET_KEY_SIZE {
+            return None;
+        }
+        let public_key = P521PublicKey::from_bytes(public_bytes);
+        if public_key.is_none() {
+            return None;
+        }
+        Some(P521KeyPair {
+            public_key: public_key.unwrap(),
+            secret_key_for_ecdsa: SExpression::from_str(format!("(private-key(ecc(curve nistp521)(q #04{}#)(d #{}#)))", crate::util::hex::to_string(public_bytes), crate::util::hex::to_string(secret_bytes)).as_str()).unwrap(),
+            secret_key_for_ecdh: SExpression::from_str(format!("(data(flags raw)(value #{}#))", crate::util::hex::to_string(secret_bytes)).as_str()).unwrap(),
+            secret_key_bytes: secret_bytes.try_into().unwrap(),
         })
     }
 
@@ -161,6 +178,9 @@ impl P521KeyPair {
 }
 
 impl P521PublicKey {
+    /// Construct a public key from a byte serialized representation.
+    /// None is returned if the input is not valid. No advanced checking such as
+    /// determining if this is a point on the curve is performed.
     pub fn from_bytes(b: &[u8]) -> Option<P521PublicKey> {
         if b.len() == P521_PUBLIC_KEY_SIZE {
             Some(P521PublicKey {
@@ -188,10 +208,11 @@ impl P521PublicKey {
     pub fn public_key_bytes(&self) -> &[u8; P521_PUBLIC_KEY_SIZE] {
         &self.public_key_bytes
     }
+}
 
-    #[inline(always)]
-    pub fn as_bytes(&self) -> [u8; P521_PUBLIC_KEY_SIZE] {
-        self.public_key_bytes.clone()
+impl Clone for P521PublicKey {
+    fn clone(&self) -> Self {
+        P521PublicKey::from_bytes(&self.public_key_bytes).unwrap()
     }
 }
 
@@ -216,6 +237,12 @@ mod tests {
         let sec1 = kp2.agree(kp.public_key()).unwrap();
         if !sec0.eq(&sec1) {
             panic!("ECDH secrets do not match");
+        }
+
+        let kp3 = P521KeyPair::from_bytes(kp.public_key_bytes(), kp.secret_key_bytes()).unwrap();
+        let sig = kp3.sign(&[3_u8]).unwrap();
+        if !kp.public_key().verify(&[3_u8], &sig) {
+            panic!("ECDSA verify failed (from key reconstructed from bytes)");
         }
     }
 }

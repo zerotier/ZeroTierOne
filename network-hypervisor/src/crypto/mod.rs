@@ -3,3 +3,4 @@ pub mod hash;
 pub mod p521;
 pub mod salsa;
 pub mod poly1305;
+pub mod balloon;

@@ -118,7 +118,7 @@ impl<H: RawObject, const L: usize> Buffer<H, L> {
     /// Append a dynamic byte slice (copy into buffer).
     /// Use append_and_init_ functions if possible as these avoid extra copies.
     #[inline(always)]
-    fn append_bytes(&mut self, buf: &[u8]) -> std::io::Result<()> {
+    pub fn append_bytes(&mut self, buf: &[u8]) -> std::io::Result<()> {
         let ptr = self.0;
         let end = ptr + buf.len();
         if end <= L {
@@ -133,7 +133,7 @@ impl<H: RawObject, const L: usize> Buffer<H, L> {
     /// Append a fixed length byte array (copy into buffer).
     /// Use append_and_init_ functions if possible as these avoid extra copies.
     #[inline(always)]
-    fn append_bytes_fixed<const S: usize>(&mut self, buf: &[u8; S]) -> std::io::Result<()> {
+    pub fn append_bytes_fixed<const S: usize>(&mut self, buf: &[u8; S]) -> std::io::Result<()> {
         let ptr = self.0;
         let end = ptr + S;
         if end <= L {
@@ -147,7 +147,7 @@ impl<H: RawObject, const L: usize> Buffer<H, L> {
 
     /// Append a byte
     #[inline(always)]
-    fn append_u8(&mut self, i: u8) -> std::io::Result<()> {
+    pub fn append_u8(&mut self, i: u8) -> std::io::Result<()> {
         let ptr = self.0;
         if ptr < L {
             self.0 = ptr + 1;
@@ -160,7 +160,7 @@ impl<H: RawObject, const L: usize> Buffer<H, L> {
 
     /// Append a 16-bit integer (in big-endian form)
     #[inline(always)]
-    fn append_u16(&mut self, i: u16) -> std::io::Result<()> {
+    pub fn append_u16(&mut self, i: u16) -> std::io::Result<()> {
         let ptr = self.0;
         let end = ptr + 2;
         if end <= L {
@@ -174,7 +174,7 @@ impl<H: RawObject, const L: usize> Buffer<H, L> {
 
     /// Append a 32-bit integer (in big-endian form)
     #[inline(always)]
-    fn append_u32(&mut self, i: u32) -> std::io::Result<()> {
+    pub fn append_u32(&mut self, i: u32) -> std::io::Result<()> {
         let ptr = self.0;
         let end = ptr + 4;
         if end <= L {
@@ -188,7 +188,7 @@ impl<H: RawObject, const L: usize> Buffer<H, L> {
 
     /// Append a 64-bit integer (in big-endian form)
     #[inline(always)]
-    fn append_u64(&mut self, i: u64) -> std::io::Result<()> {
+    pub fn append_u64(&mut self, i: u64) -> std::io::Result<()> {
         let ptr = self.0;
         let end = ptr + 8;
         if end <= L {
@@ -198,6 +198,12 @@ impl<H: RawObject, const L: usize> Buffer<H, L> {
         } else {
             std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "overflow"))
         }
+    }
+
+    /// Get the index of the start of the payload after the header.
+    #[inline(always)]
+    pub fn cursor_after_header(&self) -> usize {
+        size_of::<usize>()
     }
 
     /// Get a structure at a given position in the buffer and advance the cursor.

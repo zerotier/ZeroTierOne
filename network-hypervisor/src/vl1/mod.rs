@@ -2,7 +2,9 @@ pub mod protocol;
 pub mod packet;
 pub mod buffer;
 pub mod node;
+pub mod identity;
+
 mod address;
-mod identity;
 
 pub use address::Address;
+pub use identity::Identity;

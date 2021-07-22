@@ -3,6 +3,17 @@ name = "zerotier-network-hypervisor"
 version = "2.0.0"
 edition = "2018"
 
+# [profile.test]
+# opt-level = 3
+# lto = true
+# codegen-units = 1
+
+[profile.release]
+lto = true
+opt-level = 'z'
+codegen-units = 1
+panic = 'abort'
+
 [dependencies]
 rand_core = "^0"
 aes-gmac-siv = { path = "../aes-gmac-siv" }
