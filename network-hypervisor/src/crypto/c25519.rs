@@ -2,6 +2,7 @@ use std::convert::TryInto;
 use std::io::Write;
 
 use ed25519_dalek::Digest;
+use std::error::Error;
 
 pub const C25519_PUBLIC_KEY_SIZE: usize = 32;
 pub const C25519_SECRET_KEY_SIZE: usize = 32;
@@ -65,20 +66,18 @@ impl Ed25519KeyPair {
     }
 
     #[inline(always)]
-    pub fn from_keys(public_key: &[u8], secret_key: &[u8]) -> Ed25519KeyPair {
-        let mut tmp = [0_u8; 64];
-        tmp[0..32].copy_from_slice(secret_key);
-        tmp[32..64].copy_from_slice(public_key);
-        Ed25519KeyPair(ed25519_dalek::Keypair::from_bytes(&tmp).unwrap())
-    }
-
-    #[inline(always)]
     pub fn from_bytes(public_bytes: &[u8], secret_bytes: &[u8]) -> Option<Ed25519KeyPair> {
         if public_bytes.len() == ED25519_PUBLIC_KEY_SIZE && secret_bytes.len() == ED25519_SECRET_KEY_SIZE {
-            let mut tmp = [0_u8; 64];
-            tmp[0..32].copy_from_slice(public_bytes);
-            tmp[32..64].copy_from_slice(secret_bytes);
-            Some(Ed25519KeyPair(ed25519_dalek::Keypair::from_bytes(&tmp).unwrap()))
+            let pk = ed25519_dalek::PublicKey::from_bytes(public_bytes);
+            let sk = ed25519_dalek::SecretKey::from_bytes(secret_bytes);
+            if pk.is_ok() && sk.is_ok() {
+                Some(Ed25519KeyPair(ed25519_dalek::Keypair {
+                    public: pk.unwrap(),
+                    secret: sk.unwrap(),
+                }))
+            } else {
+                None
+            }
         } else {
             None
         }

@@ -1,6 +1,8 @@
-use std::mem::size_of;
+use std::mem::{size_of, MaybeUninit};
 use std::marker::PhantomData;
 use std::io::Write;
+
+const OVERFLOW_ERR_MSG: &'static str = "overflow";
 
 /// Annotates a type as containing only primitive types like integers and arrays.
 /// This means it's safe to abuse with raw copy, raw zero, or "type punning."
@@ -33,6 +35,21 @@ impl<H: RawObject, const L: usize> Buffer<H, L> {
     #[inline(always)]
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Create a buffer that contains a copy of a slice.
+    /// If the slice is larger than the maximum size L of the buffer, only the first L bytes
+    /// are copied and the rest is ignored.
+    #[inline(always)]
+    pub fn from_bytes_truncate(b: &[u8]) -> Self {
+        let l = b.len().min(L);
+        unsafe {
+            let mut tmp = MaybeUninit::<Self>::uninit().assume_init();
+            tmp.0 = l;
+            tmp.1[0..l].copy_from_slice(b);
+            tmp.1[l..L].fill(0);
+            tmp
+        }
     }
 
     /// Get a slice containing the entire buffer in raw form including the header.
@@ -80,7 +97,7 @@ impl<H: RawObject, const L: usize> Buffer<H, L> {
                 Ok(initializer(&mut *self.1.as_mut_ptr().cast::<u8>().offset(ptr as isize).cast::<T>()))
             }
         } else {
-            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "overflow"))
+            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
         }
     }
 
@@ -97,7 +114,7 @@ impl<H: RawObject, const L: usize> Buffer<H, L> {
                 Ok(initializer(&mut *self.1.as_mut_ptr().cast::<u8>().offset(ptr as isize).cast::<[u8; N]>()))
             }
         } else {
-            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "overflow"))
+            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
         }
     }
 
@@ -111,7 +128,7 @@ impl<H: RawObject, const L: usize> Buffer<H, L> {
             self.0 = end;
             Ok(initializer(&mut self.1[ptr..end]))
         } else {
-            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "overflow"))
+            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
         }
     }
 
@@ -126,7 +143,7 @@ impl<H: RawObject, const L: usize> Buffer<H, L> {
             self.1[ptr..end].copy_from_slice(buf);
             Ok(())
         } else {
-            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "overflow"))
+            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
         }
     }
 
@@ -141,7 +158,7 @@ impl<H: RawObject, const L: usize> Buffer<H, L> {
             self.1[ptr..end].copy_from_slice(buf);
             Ok(())
         } else {
-            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "overflow"))
+            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
         }
     }
 
@@ -154,7 +171,7 @@ impl<H: RawObject, const L: usize> Buffer<H, L> {
             self.1[ptr] = i;
             Ok(())
         } else {
-            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "overflow"))
+            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
         }
     }
 
@@ -168,7 +185,7 @@ impl<H: RawObject, const L: usize> Buffer<H, L> {
             crate::util::integer_store_be_u16(i, &mut self.1[ptr..end]);
             Ok(())
         } else {
-            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "overflow"))
+            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
         }
     }
 
@@ -182,7 +199,7 @@ impl<H: RawObject, const L: usize> Buffer<H, L> {
             crate::util::integer_store_be_u32(i, &mut self.1[ptr..end]);
             Ok(())
         } else {
-            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "overflow"))
+            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
         }
     }
 
@@ -196,7 +213,7 @@ impl<H: RawObject, const L: usize> Buffer<H, L> {
             crate::util::integer_store_be_u64(i, &mut self.1[ptr..end]);
             Ok(())
         } else {
-            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "overflow"))
+            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
         }
     }
 
@@ -217,7 +234,7 @@ impl<H: RawObject, const L: usize> Buffer<H, L> {
                 Ok(&*self.1.as_ptr().cast::<u8>().offset(ptr as isize).cast::<T>())
             }
         } else {
-            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "overflow"))
+            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
         }
     }
 
@@ -233,7 +250,7 @@ impl<H: RawObject, const L: usize> Buffer<H, L> {
                 Ok(&*self.1.as_ptr().cast::<u8>().offset(ptr as isize).cast::<[u8; S]>())
             }
         } else {
-            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "overflow"))
+            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
         }
     }
 
@@ -246,7 +263,7 @@ impl<H: RawObject, const L: usize> Buffer<H, L> {
             *cursor = end;
             Ok(&self.1[ptr..end])
         } else {
-            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "overflow"))
+            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
         }
     }
 
@@ -258,7 +275,7 @@ impl<H: RawObject, const L: usize> Buffer<H, L> {
             *cursor = ptr + 1;
             Ok(self.1[ptr])
         } else {
-            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "overflow"))
+            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
         }
     }
 
@@ -271,7 +288,7 @@ impl<H: RawObject, const L: usize> Buffer<H, L> {
             *cursor = end;
             Ok(crate::util::integer_load_be_u16(&self.1[ptr..end]))
         } else {
-            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "overflow"))
+            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
         }
     }
 
@@ -284,7 +301,7 @@ impl<H: RawObject, const L: usize> Buffer<H, L> {
             *cursor = end;
             Ok(crate::util::integer_load_be_u32(&self.1[ptr..end]))
         } else {
-            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "overflow"))
+            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
         }
     }
 
@@ -297,7 +314,7 @@ impl<H: RawObject, const L: usize> Buffer<H, L> {
             *cursor = end;
             Ok(crate::util::integer_load_be_u64(&self.1[ptr..end]))
         } else {
-            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "overflow"))
+            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
         }
     }
 }
@@ -312,7 +329,7 @@ impl<H: RawObject, const L: usize> Write for Buffer<H, L> {
             self.1[ptr..end].copy_from_slice(buf);
             Ok(buf.len())
         } else {
-            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "overflow"))
+            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
         }
     }
 

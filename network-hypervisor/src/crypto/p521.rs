@@ -210,6 +210,15 @@ impl P521PublicKey {
     }
 }
 
+impl PartialEq for P521PublicKey {
+    #[inline(always)]
+    fn eq(&self, other: &Self) -> bool {
+        self.public_key_bytes.eq(&other.public_key_bytes)
+    }
+}
+
+impl Eq for P521PublicKey {}
+
 impl Clone for P521PublicKey {
     fn clone(&self) -> Self {
         P521PublicKey::from_bytes(&self.public_key_bytes).unwrap()

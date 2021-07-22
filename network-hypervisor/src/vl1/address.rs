@@ -15,7 +15,7 @@ impl Address {
         if b.len() >= 5 {
             Ok(Address((b[0] as u64) << 32 | (b[1] as u64) << 24 | (b[2] as u64) << 16 | (b[3] as u64) << 8 | b[4] as u64))
         } else {
-            Err(InvalidFormatError("invalid ZeroTier address"))
+            Err(InvalidFormatError)
         }
     }
 

@@ -13,7 +13,7 @@ impl MAC {
         if b.len() >= 6 {
             Ok(MAC((b[0] as u64) << 40 | (b[1] as u64) << 32 | (b[2] as u64) << 24 | (b[3] as u64) << 16 as u64 | (b[4] as u64) << 8 | b[5] as u64))
         } else {
-            Err(InvalidFormatError("invalid MAC address"))
+            Err(InvalidFormatError)
         }
     }
 

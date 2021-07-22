@@ -5,6 +5,4 @@ pub mod node;
 pub mod identity;
 
 mod address;
-
 pub use address::Address;
-pub use identity::Identity;
