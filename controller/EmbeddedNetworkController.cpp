@@ -1355,21 +1355,21 @@ void EmbeddedNetworkController::_request(
 		member["lastAuthorizedCredential"] = autoAuthCredential;
 	}
 
-
 	// Should we check SSO Stuff?
 	// If network is configured with SSO, and the member is not marked exempt: yes
 	// Otherwise no, we use standard auth logic.
 	bool networkSSOEnabled = OSUtils::jsonBool(network["ssoEnabled"], false);
 	bool memberSSOExempt = OSUtils::jsonBool(member["ssoExempt"], false);
+	std::string authenticationURL;
 
 	if (networkSSOEnabled && !memberSSOExempt) {
+		authenticationURL = _db.getSSOAuthURL(member, _ssoRedirectURL);
 		std::string memberId = member["id"];
 		fprintf(stderr, "ssoEnabled && !ssoExempt %s-%s\n", nwids, memberId.c_str());
 		uint64_t authenticationExpiryTime = (int64_t)OSUtils::jsonInt(member["authenticationExpiryTime"], 0);
 		if (authenticationExpiryTime > 0) {
 			fprintf(stderr, "authExpiryTime: %lld\n", authenticationExpiryTime);
 			if (authenticationExpiryTime < now) {
-				std::string authenticationURL = _db.getSSOAuthURL(member, _ssoRedirectURL);
 				if (!authenticationURL.empty()) {
 					Dictionary<3072> authInfo;
 					authInfo.add("aU", authenticationURL.c_str());
@@ -1377,9 +1377,9 @@ void EmbeddedNetworkController::_request(
 					DB::cleanMember(member);
 					_db.save(member,true);
 					_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_AUTHENTICATION_REQUIRED, authInfo.data(), authInfo.sizeBytes());
-					return;
 				}
-			} else {
+				return;
+			} else if (authorized) {
 				_db.memberExpiring(authenticationExpiryTime, nwid, identity.address().toInt());
 			}
 		}
@@ -1451,7 +1451,8 @@ void EmbeddedNetworkController::_request(
 
 	nc->ssoEnabled = OSUtils::jsonBool(network["ssoEnabled"], false);
 	nc->authenticationExpiryTime = OSUtils::jsonInt(member["authenticationExpiryTime"], 0LL);
-
+	if (!authenticationURL.empty())
+		Utils::scopy(nc->authenticationURL, sizeof(nc->authenticationURL), authenticationURL.c_str());
 
 	std::string rtt(OSUtils::jsonString(member["remoteTraceTarget"],""));
 	if (rtt.length() == 10) {
