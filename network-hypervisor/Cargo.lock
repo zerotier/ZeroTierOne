@@ -422,6 +422,8 @@ dependencies = [
  "base64",
  "ed25519-dalek",
  "gcrypt",
+ "libc",
  "rand_core",
+ "winapi",
  "x25519-dalek",
 ]

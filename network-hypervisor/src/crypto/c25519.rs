@@ -2,7 +2,6 @@ use std::convert::TryInto;
 use std::io::Write;
 
 use ed25519_dalek::Digest;
-use std::error::Error;
 
 pub const C25519_PUBLIC_KEY_SIZE: usize = 32;
 pub const C25519_SECRET_KEY_SIZE: usize = 32;

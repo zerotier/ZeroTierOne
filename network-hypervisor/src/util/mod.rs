@@ -1,5 +1,14 @@
 pub mod hex;
 
+pub(crate) unsafe fn equal_bytes(a: *const u8, b: *const u8, l: usize) -> bool {
+    for i in 0..l {
+        if *a.offset(i as isize) != *b.offset(i as isize) {
+            return false;
+        }
+    }
+    true
+}
+
 #[inline(always)]
 pub(crate) fn integer_store_be_u16(i: u16, d: &mut [u8]) {
     d[0] = (i >> 8) as u8;

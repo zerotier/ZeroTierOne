@@ -82,7 +82,7 @@ impl FragmentHeader {
     }
 }
 
-type Fragment = Buffer<FragmentHeader, { crate::vl1::protocol::PACKET_SIZE_MAX }>;
+pub type Fragment = Buffer<FragmentHeader, { crate::vl1::protocol::PACKET_SIZE_MAX }>;
 
 #[cfg(test)]
 mod tests {

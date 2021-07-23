@@ -21,3 +21,9 @@ x25519-dalek = "^1"
 ed25519-dalek = "^1"
 gcrypt = "^0"
 base64 = "^0"
+
+[target."cfg(not(windows))".dependencies]
+libc = "^0"
+
+[target."cfg(windows)".dependencies]
+winapi = { version = "0.3.9", features = ["handleapi", "ws2ipdef", "ws2tcpip"] }

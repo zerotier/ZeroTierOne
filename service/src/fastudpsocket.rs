@@ -27,10 +27,14 @@ use crate::osdep as osdep;
  * for each thread using options like SO_REUSEPORT and concurrent packet listening.
  */
 
-#[cfg(windows)] use winapi::um::winsock2 as winsock2;
+#[cfg(windows)]
+use winapi::um::winsock2 as winsock2;
 
-#[cfg(windows)] pub(crate) type FastUDPRawOsSocket = winsock2::SOCKET;
-#[cfg(unix)] pub(crate) type FastUDPRawOsSocket = c_int;
+#[cfg(windows)]
+pub(crate) type FastUDPRawOsSocket = winsock2::SOCKET;
+
+#[cfg(unix)]
+pub(crate) type FastUDPRawOsSocket = c_int;
 
 #[cfg(unix)]
 fn bind_udp_socket(_device_name: &str, address: &InetAddress) -> Result<FastUDPRawOsSocket, &'static str> {
