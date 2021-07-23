@@ -246,10 +246,7 @@ std::set< std::pair<uint64_t, uint64_t> > DBMirrorSet::membersExpiringSoon()
 	std::unique_lock<std::mutex> l(_membersExpiringSoon_l);
 	int64_t now = OSUtils::now();
 	for(auto next=_membersExpiringSoon.begin();next!=_membersExpiringSoon.end();) {
-		if (next->first <= now) {
-			// Already expired, so the node will need to re-auth.
-			_membersExpiringSoon.erase(next++);
-		} else {
+		if (next->first > now) {
 			const uint64_t nwid = next->second.first;
 			const uint64_t memberId = next->second.second;
 			nlohmann::json network, member;
@@ -267,17 +264,15 @@ std::set< std::pair<uint64_t, uint64_t> > DBMirrorSet::membersExpiringSoon()
 						}
 					} else {
 						// Obsolete entry, no longer authorized, or SSO exempt.
-						_membersExpiringSoon.erase(next++);
 					}
 				} catch ( ... ) {
 					// Invalid member object, erase.
-					_membersExpiringSoon.erase(next++);
 				}
 			} else {
-				// Not found, so erase.
-				_membersExpiringSoon.erase(next++);
+				// Not found.
 			}
 		}
+		_membersExpiringSoon.erase(next++);
 	}
 	return soon;
 }
