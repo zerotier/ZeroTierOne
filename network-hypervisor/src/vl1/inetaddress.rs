@@ -5,11 +5,11 @@ use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 use std::net::{IpAddr, Ipv6Addr};
 
-#[cfg(windows)]
-use winapi::um::winsock2 as winsock2;
-
 use crate::error::InvalidFormatError;
 use crate::util::equal_bytes;
+
+#[cfg(windows)]
+use winapi::um::winsock2 as winsock2;
 
 #[allow(non_camel_case_types)]
 #[cfg(not(windows))]
@@ -47,6 +47,9 @@ pub enum IpScope {
     Private = 7
 }
 
+/// An IPv4 or IPv6 socket address that directly encapsulates C sockaddr types.
+/// The ZeroTier core uses this in preference to std::net stuff so this can be
+/// directly used via the C API or with C socket I/O functions.
 #[repr(C)]
 pub union InetAddress {
     sa: sockaddr,
@@ -71,7 +74,41 @@ impl InetAddress {
     /// Zero the contents of this InetAddress.
     #[inline(always)]
     pub fn zero(&mut self) {
-        unsafe { write_bytes((self as *mut InetAddress).cast::<u8>(), 0, size_of::<Self>()) };
+        unsafe { write_bytes((self as *mut Self).cast::<u8>(), 0, size_of::<Self>()) };
+    }
+
+    /// Get an instance of 127.0.0.1/port
+    pub fn ipv4_loopback(port: u16) -> InetAddress {
+        let mut addr = Self::new();
+        addr.sin.sin_family = AF_INET.into();
+        addr.sin.sin_port = port.to_be().into();
+        addr.sin.sin_addr.s_addr = (0x7f000001 as u32).to_be();
+        addr
+    }
+
+    /// Get an instance of 0.0.0.0/0
+    pub fn ipv4_any() -> InetAddress {
+        let mut addr = Self::new();
+        addr.sin.sin_family = AF_INET.into();
+        addr
+    }
+
+    /// Get an instance of ::1/port
+    pub fn ipv6_loopback(port: u16) -> InetAddress {
+        let mut addr = Self::new();
+        addr.sin6.sin6_family = AF_INET6.into();
+        addr.sin6.sin6_port = port.to_be().into();
+        unsafe {
+            *((&mut (addr.sin6.sin6_addr) as *mut in6_addr).cast::<u8>().offset(15)) = 1;
+        }
+        addr
+    }
+
+    /// Get an instance of ::0/0
+    pub fn ipv6_any() -> InetAddress {
+        let mut addr = Self::new();
+        addr.sin6.sin6_family = AF_INET6.into();
+        addr
     }
 
     /// Returns true if this InetAddress is the nil value (zero).
