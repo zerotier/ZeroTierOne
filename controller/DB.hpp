@@ -31,6 +31,7 @@
 #include <atomic>
 #include <mutex>
 #include <set>
+#include <map>
 
 #include "../ext/json/json.hpp"
 

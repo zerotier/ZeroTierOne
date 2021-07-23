@@ -60,12 +60,17 @@ public:
 		_dbs.push_back(db);
 	}
 
+	std::vector<std::pair<uint64_t, uint64_t>> membersExpiringSoon();
+	void memberExpiring(int64_t expTime, uint64_t nwid, uint64_t memberId);
+
 private:
 	DB::ChangeListener *const _listener;
 	std::atomic_bool _running;
 	std::thread _syncCheckerThread;
 	std::vector< std::shared_ptr< DB > > _dbs;
 	mutable std::mutex _dbs_l;
+	std::multimap< int64_t, std::pair<uint64_t, uint64_t> > _membersExpiringSoon;
+	mutable std::mutex _membersExpiringSoon_l;
 };
 
 } // namespace ZeroTier

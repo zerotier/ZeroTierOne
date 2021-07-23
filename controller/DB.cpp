@@ -59,6 +59,7 @@ void DB::initNetwork(nlohmann::json &network)
 void DB::initMember(nlohmann::json &member)
 {
 	if (!member.count("authorized")) member["authorized"] = false;
+	if (!member.count("ssoExempt")) member["ssoExempt"] = false;
 	if (!member.count("ipAssignments")) member["ipAssignments"] = nlohmann::json::array();
 	if (!member.count("activeBridge")) member["activeBridge"] = false;
 	if (!member.count("tags")) member["tags"] = nlohmann::json::array();

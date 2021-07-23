@@ -1815,17 +1815,37 @@ void EmbeddedNetworkController::_startThreads()
 		_threads.emplace_back([this]() {
 			for(;;) {
 				_RQEntry *qe = (_RQEntry *)0;
-				if (!_queue.get(qe))
+				auto timedWaitResult = _queue.get(qe, 1000);
+				if (timedWaitResult == BlockingQueue<_RQEntry *>::STOP) {
 					break;
-				try {
+				} else if (timedWaitResult == BlockingQueue<_RQEntry *>::OK) {
 					if (qe) {
-						_request(qe->nwid,qe->fromAddr,qe->requestPacketId,qe->identity,qe->metaData);
+						try {
+							_request(qe->nwid,qe->fromAddr,qe->requestPacketId,qe->identity,qe->metaData);
+						} catch (std::exception &e) {
+							fprintf(stderr,"ERROR: exception in controller request handling thread: %s" ZT_EOL_S,e.what());
+						} catch ( ... ) {
+							fprintf(stderr,"ERROR: exception in controller request handling thread: unknown exception" ZT_EOL_S);
+						}
 						delete qe;
 					}
-				} catch (std::exception &e) {
-					fprintf(stderr,"ERROR: exception in controller request handling thread: %s" ZT_EOL_S,e.what());
-				} catch ( ... ) {
-					fprintf(stderr,"ERROR: exception in controller request handling thread: unknown exception" ZT_EOL_S);
+				}
+
+				auto expiringSoon = _db.membersExpiringSoon();
+				for(auto soon=expiringSoon.begin();soon!=expiringSoon.end();++soon) {
+					Identity identity;
+					Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> lastMetaData;
+					{
+						std::unique_lock<std::mutex> ll(_memberStatus_l);
+						auto ms = _memberStatus.find(_MemberStatusKey(soon->first, soon->second));
+						if (ms != _memberStatus.end()) {
+							lastMetaData = ms->second.lastRequestMetaData;
+							identity = ms->second.identity;
+						}
+					}
+					if (identity) {
+						request(soon->first,InetAddress(),0,identity,lastMetaData);
+					}
 				}
 			}
 		});

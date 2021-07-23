@@ -36,7 +36,7 @@ DBMirrorSet::DBMirrorSet(DB::ChangeListener *listener) :
 			}
 
 			for(auto db=dbs.begin();db!=dbs.end();++db) {
-				(*db)->each([this,&dbs,&db](uint64_t networkId,const nlohmann::json &network,uint64_t memberId,const nlohmann::json &member) {
+				(*db)->each([&dbs,&db](uint64_t networkId,const nlohmann::json &network,uint64_t memberId,const nlohmann::json &member) {
 					try {
 						if (network.is_object()) {
 							if (memberId == 0) {
@@ -238,6 +238,54 @@ void DBMirrorSet::onNetworkMemberUpdate(const void *db,uint64_t networkId,uint64
 void DBMirrorSet::onNetworkMemberDeauthorize(const void *db,uint64_t networkId,uint64_t memberId)
 {
 	_listener->onNetworkMemberDeauthorize(this,networkId,memberId);
+}
+
+std::vector<std::pair<uint64_t, uint64_t>> DBMirrorSet::membersExpiringSoon()
+{
+	std::vector<std::pair<uint64_t, uint64_t>> soon;
+	std::unique_lock<std::mutex> l(_membersExpiringSoon_l);
+	int64_t now = OSUtils::now();
+	for(auto next=_membersExpiringSoon.begin();next!=_membersExpiringSoon.end();) {
+		if (next->first <= now) {
+			// Already expired, so the node will need to re-auth.
+			_membersExpiringSoon.erase(next++);
+		} else {
+			const uint64_t nwid = next->second.first;
+			const uint64_t memberId = next->second.second;
+			nlohmann::json network, member;
+			if (this->get(nwid, network, memberId, member)) {
+				try {
+					const bool authorized = member["authorized"];
+					const bool ssoExempt = member["ssoExempt"];
+					const int64_t authenticationExpiryTime = member["authenticationExpiryTime"];
+					if ((authenticationExpiryTime == next->first)&&(authorized)&&(!ssoExempt)) {
+						if ((authenticationExpiryTime - now) > 10000) {
+							// Stop when we get to entries more than 10s in the future.
+							break;
+						} else {
+							soon.push_back(std::pair<uint64_t, uint64_t>(nwid, memberId));
+						}
+					} else {
+						// Obsolete entry, no longer authorized, or SSO exempt.
+						_membersExpiringSoon.erase(next++);
+					}
+				} catch ( ... ) {
+					// Invalid member object, erase.
+					_membersExpiringSoon.erase(next++);
+				}
+			} else {
+				// Not found, so erase.
+				_membersExpiringSoon.erase(next++);
+			}
+		}
+	}
+	return soon;
+}
+
+void DBMirrorSet::memberExpiring(int64_t expTime, uint64_t nwid, uint64_t memberId)
+{
+	std::unique_lock<std::mutex> l(_membersExpiringSoon_l);
+	_membersExpiringSoon.insert(std::pair< int64_t, std::pair< uint64_t, uint64_t > >(expTime, std::pair< uint64_t, uint64_t >(nwid, memberId)));
 }
 
 } // namespace ZeroTier
