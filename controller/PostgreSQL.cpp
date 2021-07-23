@@ -502,7 +502,7 @@ void PostgreSQL::initializeNetworks()
 			config["routes"] = json::array();
 
 
-			pqxx::result r2 = w.exec_params("SELECT host(ip_range_start), host(ip_range_end) FROM ztc_network_assignment_pool WHERE network_id = $1", _myAddressStr);
+			pqxx::result r2 = w.exec_params("SELECT host(ip_range_start), host(ip_range_end) FROM ztc_network_assignment_pool WHERE network_id = $1", nwid);
 			
 			for (auto row2 = r2.begin(); row2 != r2.end(); row2++) {
 				json ip;
@@ -512,24 +512,27 @@ void PostgreSQL::initializeNetworks()
 				config["ipAssignmentPools"].push_back(ip);
 			}
 
-			r2 = w.exec_params("SELECT host(address), bits, host(via) FROM ztc_network_route WHERE network_id = $1", _myAddressStr);
+
+
+			r2 = w.exec_params("SELECT host(address), bits, host(via) FROM ztc_network_route WHERE network_id = $1", nwid);
 
 			for (auto row2 = r2.begin(); row2 != r2.end(); row2++) {
 				std::string addr = row2[0].as<std::string>();
 				std::string bits = row2[1].as<std::string>();
-				std::string via = row2[2].as<std::string>();
+
 				json route;
 				route["target"] = addr + "/" + bits;
 
-				if (via == "NULL") {
+				if (row[2].is_null()) {
 					route["via"] = nullptr;
 				} else {
-					route["via"] = via;
+					route["via"] = row[2].as<std::string>();
 				}
+				
 				config["routes"].push_back(route);
 			}
 
-			r2 = w.exec_params("SELECT domain, servers FROM ztc_network_dns WHERE network_id = $1", _myAddressStr);
+			r2 = w.exec_params("SELECT domain, servers FROM ztc_network_dns WHERE network_id = $1", nwid);
 			
 			if (r2.size() > 1) {
 				fprintf(stderr, "ERROR: invalid number of DNS configurations for network %s.  Must be 0 or 1\n", nwid.c_str());
@@ -1231,7 +1234,7 @@ void PostgreSQL::commitThread()
 					}
 
 				} catch (std::exception &e) {
-					fprintf(stderr, "ERROR: Error updating member: %s\n", e.what());
+					fprintf(stderr, "ERROR: Error updating network: %s\n", e.what());
 				}
 			} else if (objtype == "_delete_network") {
 				fprintf(stderr, "commitThread: delete network\n");
