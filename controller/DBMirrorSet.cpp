@@ -240,9 +240,9 @@ void DBMirrorSet::onNetworkMemberDeauthorize(const void *db,uint64_t networkId,u
 	_listener->onNetworkMemberDeauthorize(this,networkId,memberId);
 }
 
-std::vector<std::pair<uint64_t, uint64_t>> DBMirrorSet::membersExpiringSoon()
+std::set< std::pair<uint64_t, uint64_t> > DBMirrorSet::membersExpiringSoon()
 {
-	std::vector<std::pair<uint64_t, uint64_t>> soon;
+	std::set< std::pair<uint64_t, uint64_t> > soon;
 	std::unique_lock<std::mutex> l(_membersExpiringSoon_l);
 	int64_t now = OSUtils::now();
 	for(auto next=_membersExpiringSoon.begin();next!=_membersExpiringSoon.end();) {
@@ -259,11 +259,11 @@ std::vector<std::pair<uint64_t, uint64_t>> DBMirrorSet::membersExpiringSoon()
 					const bool ssoExempt = member["ssoExempt"];
 					const int64_t authenticationExpiryTime = member["authenticationExpiryTime"];
 					if ((authenticationExpiryTime == next->first)&&(authorized)&&(!ssoExempt)) {
-						if ((authenticationExpiryTime - now) > 10000) {
-							// Stop when we get to entries more than 10s in the future.
+						if ((authenticationExpiryTime - now) > ZT_MEMBER_AUTH_TIMEOUT_NOTIFY_BEFORE) {
+							// Stop when we get to entries too far in the future.
 							break;
 						} else {
-							soon.push_back(std::pair<uint64_t, uint64_t>(nwid, memberId));
+							soon.insert(std::pair<uint64_t, uint64_t>(nwid, memberId));
 						}
 					} else {
 						// Obsolete entry, no longer authorized, or SSO exempt.

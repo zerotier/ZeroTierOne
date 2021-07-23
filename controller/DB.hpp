@@ -35,6 +35,8 @@
 
 #include "../ext/json/json.hpp"
 
+#define ZT_MEMBER_AUTH_TIMEOUT_NOTIFY_BEFORE 10000
+
 namespace ZeroTier
 {
 

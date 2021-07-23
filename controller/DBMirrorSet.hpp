@@ -60,7 +60,7 @@ public:
 		_dbs.push_back(db);
 	}
 
-	std::vector<std::pair<uint64_t, uint64_t>> membersExpiringSoon();
+	std::set< std::pair<uint64_t, uint64_t> > membersExpiringSoon();
 	void memberExpiring(int64_t expTime, uint64_t nwid, uint64_t memberId);
 
 private:
@@ -69,7 +69,7 @@ private:
 	std::thread _syncCheckerThread;
 	std::vector< std::shared_ptr< DB > > _dbs;
 	mutable std::mutex _dbs_l;
-	std::multimap< int64_t, std::pair<uint64_t, uint64_t> > _membersExpiringSoon;
+	std::set< std::pair< int64_t, std::pair<uint64_t, uint64_t> > > _membersExpiringSoon;
 	mutable std::mutex _membersExpiringSoon_l;
 };
 
