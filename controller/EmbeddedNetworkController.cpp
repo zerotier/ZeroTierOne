@@ -1367,21 +1367,19 @@ void EmbeddedNetworkController::_request(
 		std::string memberId = member["id"];
 		fprintf(stderr, "ssoEnabled && !ssoExempt %s-%s\n", nwids, memberId.c_str());
 		uint64_t authenticationExpiryTime = (int64_t)OSUtils::jsonInt(member["authenticationExpiryTime"], 0);
-		if (authenticationExpiryTime > 0) {
-			fprintf(stderr, "authExpiryTime: %lld\n", authenticationExpiryTime);
-			if (authenticationExpiryTime < now) {
-				if (!authenticationURL.empty()) {
-					Dictionary<3072> authInfo;
-					authInfo.add("aU", authenticationURL.c_str());
-					fprintf(stderr, "sending auth URL: %s\n", authenticationURL.c_str());
-					DB::cleanMember(member);
-					_db.save(member,true);
-					_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_AUTHENTICATION_REQUIRED, authInfo.data(), authInfo.sizeBytes());
-				}
-				return;
-			} else if (authorized) {
-				_db.memberExpiring(authenticationExpiryTime, nwid, identity.address().toInt());
+		fprintf(stderr, "authExpiryTime: %lld\n", authenticationExpiryTime);
+		if (authenticationExpiryTime < now) {
+			if (!authenticationURL.empty()) {
+				Dictionary<3072> authInfo;
+				authInfo.add("aU", authenticationURL.c_str());
+				fprintf(stderr, "sending auth URL: %s\n", authenticationURL.c_str());
+				DB::cleanMember(member);
+				_db.save(member,true);
+				_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_AUTHENTICATION_REQUIRED, authInfo.data(), authInfo.sizeBytes());
 			}
+			return;
+		} else if (authorized) {
+			_db.memberExpiring(authenticationExpiryTime, nwid, identity.address().toInt());
 		}
 	}
 
