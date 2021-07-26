@@ -260,7 +260,9 @@ std::set< std::pair<uint64_t, uint64_t> > DBMirrorSet::membersExpiringSoon()
 							// Stop when we get to entries too far in the future.
 							break;
 						} else {
-							soon.insert(std::pair<uint64_t, uint64_t>(nwid, memberId));
+							const bool ssoEnabled = network["ssoEnabled"];
+							if (ssoEnabled)
+								soon.insert(std::pair<uint64_t, uint64_t>(nwid, memberId));
 						}
 					} else {
 						// Obsolete entry, no longer authorized, or SSO exempt.
