@@ -4,7 +4,6 @@ use std::hash::{Hash, Hasher};
 use crate::error::InvalidFormatError;
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-#[repr(transparent)]
 pub struct MAC(u64);
 
 impl MAC {

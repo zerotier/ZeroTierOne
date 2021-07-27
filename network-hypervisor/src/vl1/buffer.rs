@@ -1,7 +1,6 @@
 use std::mem::{size_of, MaybeUninit, transmute};
 use std::marker::PhantomData;
 use std::io::Write;
-use std::hash::{Hash, Hasher};
 
 const OVERFLOW_ERR_MSG: &'static str = "overflow";
 
@@ -30,7 +29,7 @@ unsafe impl<H: RawObject, const L: usize> RawObject for Buffer<H, L> {}
 impl<H: RawObject, const L: usize> Default for Buffer<H, L> {
     #[inline(always)]
     fn default() -> Self {
-        assert!(size_of::<H>() <= L);
+        debug_assert!(size_of::<H>() <= L);
         Buffer(size_of::<H>(), [0_u8; L], PhantomData::default())
     }
 }
@@ -38,31 +37,30 @@ impl<H: RawObject, const L: usize> Default for Buffer<H, L> {
 impl<H: RawObject, const L: usize> Buffer<H, L> {
     #[inline(always)]
     pub fn new() -> Self {
-        assert!(size_of::<H>() <= L);
+        debug_assert!(size_of::<H>() <= L);
         Self::default()
     }
 
     /// Change the header "personality" of this buffer.
-    /// Note that the new buffer must be of the same size and both the old and
-    /// new headers must be RawObjects with size less than or equal to this size.
-    pub fn change_header_type<NH: RawObject>(self) -> Buffer<NH, L> {
-        assert!(size_of::<NH>() <= L);
-        unsafe { transmute(self) }
+    /// This is a free operation, but the returned reference obviously only lives as long as the source.
+    #[inline(always)]
+    pub fn transmute_header<NH: RawObject>(&self) -> &Buffer<NH, L> {
+        debug_assert!(size_of::<H>() <= L);
+        debug_assert!(size_of::<NH>() <= L);
+        unsafe {
+            &*(self as *const Self).cast::<Buffer<NH, L>>()
+        }
     }
 
-    /// Create a buffer that contains a copy of a slice.
-    /// If the slice is larger than the maximum size L of the buffer, only the first L bytes
-    /// are copied and the rest is ignored.
+    /// Create a buffer that contains a copy of a slice, truncating if the slice is too long.
     #[inline(always)]
-    pub fn from_bytes_truncate(b: &[u8]) -> Self {
+    pub fn from_bytes_lossy(b: &[u8]) -> Self {
         let l = b.len().min(L);
-        unsafe {
-            let mut tmp = MaybeUninit::<Self>::uninit().assume_init();
-            tmp.0 = l;
-            tmp.1[0..l].copy_from_slice(b);
-            tmp.1[l..L].fill(0);
-            tmp
-        }
+        let mut tmp = unsafe { MaybeUninit::<Self>::uninit().assume_init() };
+        tmp.0 = l;
+        tmp.1[0..l].copy_from_slice(b);
+        tmp.1[l..L].fill(0);
+        tmp
     }
 
     /// Get a slice containing the entire buffer in raw form including the header.
@@ -239,7 +237,7 @@ impl<H: RawObject, const L: usize> Buffer<H, L> {
     /// Get the index of the start of the payload after the header.
     #[inline(always)]
     pub fn cursor_after_header(&self) -> usize {
-        size_of::<usize>()
+        size_of::<H>()
     }
 
     /// Get a structure at a given position in the buffer and advance the cursor.
@@ -383,14 +381,6 @@ impl<H: RawObject, const L: usize> AsMut<H> for Buffer<H, L> {
     #[inline(always)]
     fn as_mut(&mut self) -> &mut H {
         self.header_mut()
-    }
-}
-
-impl<H: RawObject, const L: usize> Hash for Buffer<H, L> {
-    #[inline(always)]
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        state.write_u32(self.0 as u32);
-        state.write(&self.1[0..self.0]);
     }
 }
 

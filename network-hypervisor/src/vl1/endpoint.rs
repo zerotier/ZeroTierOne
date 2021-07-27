@@ -1,6 +1,18 @@
 use crate::vl1::{Address, MAC};
 use crate::vl1::inetaddress::InetAddress;
 use crate::vl1::buffer::{RawObject, Buffer};
+use std::hash::{Hash, Hasher};
+
+const TYPE_NIL: u8 = 0;
+const TYPE_ZEROTIER: u8 = 1;
+const TYPE_ETHERNET: u8 = 2;
+const TYPE_WIFIDIRECT: u8 = 3;
+const TYPE_BLUETOOTH: u8 = 4;
+const TYPE_IP: u8 = 5;
+const TYPE_IPUDP: u8 = 6;
+const TYPE_IPTCP: u8 = 7;
+const TYPE_HTTP: u8 = 8;
+const TYPE_WEBRTC: u8 = 9;
 
 #[repr(u8)]
 pub enum Type {
@@ -16,7 +28,7 @@ pub enum Type {
     WebRTC = 9,
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Endpoint {
     Nil,
     ZeroTier(Address),
@@ -120,23 +132,70 @@ impl Endpoint {
                 Ok(Endpoint::IpUdp(ip))
             }
         } else {
-            match (type_byte - 16) as Type {
-                Type::Nil => Ok(Endpoint::Nil),
-                Type::ZeroTier => Ok(Endpoint::ZeroTier(Address::from(buf.get_bytes_fixed(cursor)?))),
-                Type::Ethernet => Ok(Endpoint::Ethernet(MAC::from(buf.get_bytes_fixed(cursor)?))),
-                Type::WifiDirect => Ok(Endpoint::WifiDirect(MAC::from(buf.get_bytes_fixed(cursor)?))),
-                Type::Bluetooth => Ok(Endpoint::Bluetooth(MAC::from(buf.get_bytes_fixed(cursor)?))),
-                Type::Ip => Ok(Endpoint::Ip(InetAddress::unmarshal(buf, cursor)?)),
-                Type::IpUdp => Ok(Endpoint::IpUdp(InetAddress::unmarshal(buf, cursor)?)),
-                Type::IpTcp => Ok(Endpoint::IpTcp(InetAddress::unmarshal(buf, cursor)?)),
-                Type::Http => {
+            match type_byte - 16 {
+                TYPE_NIL => Ok(Endpoint::Nil),
+                TYPE_ZEROTIER => Ok(Endpoint::ZeroTier(Address::from(buf.get_bytes_fixed(cursor)?))),
+                TYPE_ETHERNET => Ok(Endpoint::Ethernet(MAC::from(buf.get_bytes_fixed(cursor)?))),
+                TYPE_WIFIDIRECT => Ok(Endpoint::WifiDirect(MAC::from(buf.get_bytes_fixed(cursor)?))),
+                TYPE_BLUETOOTH => Ok(Endpoint::Bluetooth(MAC::from(buf.get_bytes_fixed(cursor)?))),
+                TYPE_IP => Ok(Endpoint::Ip(InetAddress::unmarshal(buf, cursor)?)),
+                TYPE_IPUDP => Ok(Endpoint::IpUdp(InetAddress::unmarshal(buf, cursor)?)),
+                TYPE_IPTCP => Ok(Endpoint::IpTcp(InetAddress::unmarshal(buf, cursor)?)),
+                TYPE_HTTP => {
                     let l = buf.get_u16(cursor)?;
                     Ok(Endpoint::Http(String::from_utf8_lossy(buf.get_bytes(l as usize, cursor)?).to_string()))
                 }
-                Type::WebRTC => {
+                TYPE_WEBRTC => {
                     let l = buf.get_u16(cursor)?;
                     Ok(Endpoint::WebRTC(String::from_utf8_lossy(buf.get_bytes(l as usize, cursor)?).to_string()))
                 }
+                _ => std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "unrecognized endpoint type in stream"))
+            }
+        }
+    }
+}
+
+impl Hash for Endpoint {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        match self {
+            Endpoint::Nil => {
+                state.write_u8(Type::Nil as u8);
+            },
+            Endpoint::ZeroTier(a) => {
+                state.write_u8(Type::ZeroTier as u8);
+                state.write_u64(a.to_u64())
+            },
+            Endpoint::Ethernet(m) => {
+                state.write_u8(Type::Ethernet as u8);
+                state.write_u64(m.to_u64())
+            },
+            Endpoint::WifiDirect(m) => {
+                state.write_u8(Type::WifiDirect as u8);
+                state.write_u64(m.to_u64())
+            },
+            Endpoint::Bluetooth(m) => {
+                state.write_u8(Type::Bluetooth as u8);
+                state.write_u64(m.to_u64())
+            },
+            Endpoint::Ip(ip) => {
+                state.write_u8(Type::Ip as u8);
+                ip.hash(state);
+            },
+            Endpoint::IpUdp(ip) => {
+                state.write_u8(Type::IpUdp as u8);
+                ip.hash(state);
+            },
+            Endpoint::IpTcp(ip) => {
+                state.write_u8(Type::IpTcp as u8);
+                ip.hash(state);
+            },
+            Endpoint::Http(url) => {
+                state.write_u8(Type::Http as u8);
+                url.hash(state);
+            },
+            Endpoint::WebRTC(offer) => {
+                state.write_u8(Type::WebRTC as u8);
+                offer.hash(state);
             }
         }
     }
@@ -148,13 +207,13 @@ impl ToString for Endpoint {
             Endpoint::Nil => format!("nil"),
             Endpoint::ZeroTier(a) => format!("zt:{}", a.to_string()),
             Endpoint::Ethernet(m) => format!("eth:{}", m.to_string()),
-            Endpoint::WifiDirect(m) => format!("wifid:{}", m.to_string()),
+            Endpoint::WifiDirect(m) => format!("wifip2p:{}", m.to_string()),
             Endpoint::Bluetooth(m) => format!("bt:{}", m.to_string()),
             Endpoint::Ip(ip) => format!("ip:{}", ip.to_ip_string()),
             Endpoint::IpUdp(ip) => format!("udp:{}", ip.to_string()),
             Endpoint::IpTcp(ip) => format!("tcp:{}", ip.to_string()),
-            Endpoint::Http(url) => url,
-            Endpoint::WebRTC(offer) => format!("webrtc:offer:{}", urlencoding::encode(offer.as_str())),
+            Endpoint::Http(url) => url.clone(),
+            Endpoint::WebRTC(offer) => format!("webrtc:{}", urlencoding::encode(offer.as_str())),
         }
     }
 }

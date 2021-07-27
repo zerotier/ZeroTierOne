@@ -422,7 +422,7 @@ impl Identity {
     /// On success the identity and the number of bytes actually read from the slice are
     /// returned.
     pub fn unmarshal_from_bytes(bytes: &[u8]) -> std::io::Result<(Identity, usize)> {
-        let buf = Buffer::<NoHeader, 2048>::from_bytes_truncate(bytes);
+        let buf = Buffer::<NoHeader, 2048>::from_bytes_lossy(bytes);
         let mut cursor: usize = 0;
         let id = Self::unmarshal(&buf, &mut cursor)?;
         Ok((id, cursor))

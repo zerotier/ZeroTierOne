@@ -3,9 +3,6 @@ use std::ops::Not;
 
 type PacketID = u64;
 
-/// A packet buffer, but with no header "personality."
-pub type Buffer = crate::vl1::buffer::Buffer<crate::vl1::buffer::NoHeader, { crate::vl1::protocol::PACKET_SIZE_MAX }>;
-
 #[derive(Clone)]
 #[repr(packed)]
 pub struct Header {

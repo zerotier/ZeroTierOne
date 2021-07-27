@@ -1,5 +1,8 @@
 pub mod hex;
 
+pub(crate) const ZEROES: [u8; 64] = [0_u8; 64];
+
+#[inline(always)]
 pub(crate) unsafe fn equal_bytes(a: *const u8, b: *const u8, l: usize) -> bool {
     for i in 0..l {
         if *a.offset(i as isize) != *b.offset(i as isize) {
@@ -49,5 +52,3 @@ pub(crate) fn integer_load_be_u32(d: &[u8]) -> u32 {
 pub(crate) fn integer_load_be_u64(d: &[u8]) -> u64 {
     (d[0] as u64) << 56 | (d[1] as u64) << 48 | (d[2] as u64) << 40 | (d[3] as u64) << 32 | (d[4] as u64) << 24 | (d[5] as u64) << 16 | (d[6] as u64) << 8 | (d[7] as u64)
 }
-
-pub(crate) const ZEROES: [u8; 64] = [0_u8; 64];

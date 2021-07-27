@@ -1,10 +1,12 @@
 pub(crate) mod protocol;
 pub(crate) mod packet;
 pub(crate) mod buffer;
+pub(crate) mod node;
+
+pub mod dictionary;
 pub mod identity;
 pub mod inetaddress;
 pub mod endpoint;
-pub(crate) mod node;
 
 mod address;
 mod mac;

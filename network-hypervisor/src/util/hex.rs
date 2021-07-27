@@ -12,37 +12,59 @@ pub fn to_string(b: &[u8]) -> String {
     s
 }
 
+/// Encode an unsigned 64-bit value as a string.
+pub fn to_string_u64(mut i: u64, skip_leading_zeroes: bool) -> String {
+    let mut s = String::new();
+    s.reserve(16);
+    for _ in 0..16 {
+        let ii = i >> 60;
+        if ii != 0 || !s.is_empty() || !skip_leading_zeroes {
+            s.push(HEX_CHARS[ii as usize] as char);
+        }
+        i = i.wrapping_shl(4);
+    }
+    s
+}
+
+/// Encode an unsigned 64-bit value as a string.
+pub fn to_vec_u64(mut i: u64, skip_leading_zeroes: bool) -> Vec<u8> {
+    let mut s = Vec::new();
+    s.reserve(16);
+    for _ in 0..16 {
+        let ii = i >> 60;
+        if ii != 0 || !s.is_empty() || !skip_leading_zeroes {
+            s.push(HEX_CHARS[ii as usize]);
+        }
+        i = i.wrapping_shl(4);
+    }
+    s
+}
+
 /// Decode a hex string, ignoring non-hexadecimal characters.
 pub fn from_string(s: &str) -> Vec<u8> {
     let mut b: Vec<u8> = Vec::new();
     b.reserve((s.len() / 2) + 1);
 
-    let mut byte = 0;
+    let mut byte = 0_u8;
     let mut have_8: bool = false;
     for cc in s.as_bytes() {
         let c = *cc;
         if c >= 48 && c <= 57 {
-            byte <<= 4;
-            byte |= c - 48;
+            byte = (byte.wrapping_shl(4)) | (c - 48);
             if have_8 {
                 b.push(byte);
-                byte = 0;
             }
             have_8 = !have_8;
         } else if c >= 65 && c <= 70 {
-            byte <<= 4;
-            byte |= c - 55;
+            byte = (byte.wrapping_shl(4)) | (c - 55);
             if have_8 {
                 b.push(byte);
-                byte = 0;
             }
             have_8 = !have_8;
         } else if c >= 97 && c <= 102 {
-            byte <<= 4;
-            byte |= c - 87;
+            byte = (byte.wrapping_shl(4)) | (c - 87);
             if have_8 {
                 b.push(byte);
-                byte = 0;
             }
             have_8 = !have_8;
         }

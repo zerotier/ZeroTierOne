@@ -6,7 +6,6 @@ use crate::error::InvalidFormatError;
 use crate::util::hex::HEX_CHARS;
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-#[repr(transparent)]
 pub struct Address(u64);
 
 impl Address {
