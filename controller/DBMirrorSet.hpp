@@ -60,8 +60,8 @@ public:
 		_dbs.push_back(db);
 	}
 
-	std::set< std::pair<uint64_t, uint64_t> > membersExpiringSoon();
-	void memberExpiring(int64_t expTime, uint64_t nwid, uint64_t memberId);
+	void membersExpiring(std::set< std::pair<uint64_t, uint64_t> > &soon, std::set< std::pair<uint64_t, uint64_t> > &expired);
+	void memberWillExpire(int64_t expTime, uint64_t nwid, uint64_t memberId);
 
 private:
 	DB::ChangeListener *const _listener;

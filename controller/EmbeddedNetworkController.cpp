@@ -1379,7 +1379,7 @@ void EmbeddedNetworkController::_request(
 			}
 			return;
 		} else if (authorized) {
-			_db.memberExpiring(authenticationExpiryTime, nwid, identity.address().toInt());
+			_db.memberWillExpire(authenticationExpiryTime, nwid, identity.address().toInt());
 		}
 	}
 
@@ -1836,21 +1836,28 @@ void EmbeddedNetworkController::_startThreads()
 					}
 				}
 
-				auto expiringSoon = _db.membersExpiringSoon();
-				for(auto soon=expiringSoon.begin();soon!=expiringSoon.end();++soon) {
+				std::set< std::pair<uint64_t, uint64_t> > soon;
+				std::set< std::pair<uint64_t, uint64_t> > expired;
+				_db.membersExpiring(soon, expired);
+
+				for(auto s=soon.begin();s!=soon.end();++s) {
 					Identity identity;
 					Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> lastMetaData;
 					{
 						std::unique_lock<std::mutex> ll(_memberStatus_l);
-						auto ms = _memberStatus.find(_MemberStatusKey(soon->first, soon->second));
+						auto ms = _memberStatus.find(_MemberStatusKey(s->first, s->second));
 						if (ms != _memberStatus.end()) {
 							lastMetaData = ms->second.lastRequestMetaData;
 							identity = ms->second.identity;
 						}
 					}
 					if (identity) {
-						request(soon->first,InetAddress(),0,identity,lastMetaData);
+						request(s->first,InetAddress(),0,identity,lastMetaData);
 					}
+				}
+
+				for(auto e=expired.begin();e!=expired.end();++e) {
+					onNetworkMemberDeauthorize(nullptr, e->first, e->second);
 				}
 			}
 		});
