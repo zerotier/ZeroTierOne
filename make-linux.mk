@@ -349,7 +349,7 @@ central-controller:	FORCE
 	make -j4 ZT_CONTROLLER=1 ZT_USE_X64_ASM_ED25519=1 one
 
 central-controller-docker: FORCE
-	docker build --no-cache -t docker.zerotier.com/zerotier-central/ztcentral-controller:${TIMESTAMP} -f ext/central-controller-docker/Dockerfile --build-arg git_branch=`git name-rev --name-only HEAD` .
+	docker build --no-cache -t registry.zerotier.com/zerotier-central/ztcentral-controller:${TIMESTAMP} -f ext/central-controller-docker/Dockerfile --build-arg git_branch=`git name-rev --name-only HEAD` .
 
 debug:	FORCE
 	make ZT_DEBUG=1 one
