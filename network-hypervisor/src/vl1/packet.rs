@@ -1,8 +1,10 @@
-use crate::vl1::buffer::{Buffer, RawObject};
 use crate::vl1::protocol::{HEADER_FLAGS_FIELD_MASK_CIPHER, HEADER_FLAGS_FIELD_MASK_HOPS, HEADER_FLAG_FRAGMENTED};
 use std::ops::Not;
 
 type PacketID = u64;
+
+/// A packet buffer, but with no header "personality."
+pub type Buffer = crate::vl1::buffer::Buffer<crate::vl1::buffer::NoHeader, { crate::vl1::protocol::PACKET_SIZE_MAX }>;
 
 #[derive(Clone)]
 #[repr(packed)]
@@ -14,7 +16,7 @@ pub struct Header {
     pub message_auth: [u8; 8],
 }
 
-unsafe impl RawObject for Header {}
+unsafe impl crate::vl1::buffer::RawObject for Header {}
 
 impl Header {
     /// Get this packet's ID as a u64.
@@ -51,7 +53,7 @@ impl Header {
     }
 }
 
-pub type Packet = Buffer<Header, { crate::vl1::protocol::PACKET_SIZE_MAX }>;
+pub type Packet = crate::vl1::buffer::Buffer<Header, { crate::vl1::protocol::PACKET_SIZE_MAX }>;
 
 #[derive(Clone)]
 #[repr(packed)]
@@ -63,7 +65,7 @@ pub struct FragmentHeader {
     pub hops: u8,
 }
 
-unsafe impl RawObject for FragmentHeader {}
+unsafe impl crate::vl1::buffer::RawObject for FragmentHeader {}
 
 impl FragmentHeader {
     #[inline(always)]
@@ -82,7 +84,7 @@ impl FragmentHeader {
     }
 }
 
-pub type Fragment = Buffer<FragmentHeader, { crate::vl1::protocol::PACKET_SIZE_MAX }>;
+pub type Fragment = crate::vl1::buffer::Buffer<FragmentHeader, { crate::vl1::protocol::PACKET_SIZE_MAX }>;
 
 #[cfg(test)]
 mod tests {

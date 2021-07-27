@@ -61,10 +61,14 @@ impl Drop for AesGmacSiv {
 impl AesGmacSiv {
     /// Create a new keyed instance of AES-GMAC-SIV
     /// The key may be of size 16, 24, or 32 bytes (128, 192, or 256 bits). Any other size will panic.
+    /// Two keys are required: one for GMAC and one for AES-CTR.
     #[inline(always)]
-    pub fn new(key: &[u8]) -> Self {
-        if key.len() != 32 && key.len() != 24 && key.len() != 16 {
+    pub fn new(k0: &[u8], k1: &[u8]) -> Self {
+        if k0.len() != 32 && k0.len() != 24 && k0.len() != 16 {
             panic!("AES supports 128, 192, or 256 bits keys");
+        }
+        if k1.len() != k0.len() {
+            panic!("k0 and k1 must be of the same size");
         }
         let mut c: AesGmacSiv = AesGmacSiv {
             tag: [0_u8; 16],
@@ -75,19 +79,19 @@ impl AesGmacSiv {
             gmac: null_mut(),
         };
         unsafe {
-            let result = CCCryptorCreateWithMode(kCCEncrypt, kCCModeCTR, kCCAlgorithmAES, 0, crate::ZEROES.as_ptr().cast(), key.as_ptr().cast(), key.len(), null(), 0, 0, 0, &mut c.ctr);
+            let result = CCCryptorCreateWithMode(kCCEncrypt, kCCModeCTR, kCCAlgorithmAES, 0, crate::ZEROES.as_ptr().cast(), k1.as_ptr().cast(), k1.len(), null(), 0, 0, 0, &mut c.ctr);
             if result != 0 {
                 panic!("CCCryptorCreateWithMode for CTR mode returned {}", result);
             }
-            let result = CCCryptorCreateWithMode(kCCEncrypt, kCCModeECB, kCCAlgorithmAES, 0, crate::ZEROES.as_ptr().cast(), key.as_ptr().cast(), key.len(), null(), 0, 0, kCCOptionECBMode, &mut c.ecb_enc);
+            let result = CCCryptorCreateWithMode(kCCEncrypt, kCCModeECB, kCCAlgorithmAES, 0, crate::ZEROES.as_ptr().cast(), k1.as_ptr().cast(), k1.len(), null(), 0, 0, kCCOptionECBMode, &mut c.ecb_enc);
             if result != 0 {
                 panic!("CCCryptorCreateWithMode for ECB encrypt mode returned {}", result);
             }
-            let result = CCCryptorCreateWithMode(kCCDecrypt, kCCModeECB, kCCAlgorithmAES, 0, crate::ZEROES.as_ptr().cast(), key.as_ptr().cast(), key.len(), null(), 0, 0, kCCOptionECBMode, &mut c.ecb_dec);
+            let result = CCCryptorCreateWithMode(kCCDecrypt, kCCModeECB, kCCAlgorithmAES, 0, crate::ZEROES.as_ptr().cast(), k1.as_ptr().cast(), k1.len(), null(), 0, 0, kCCOptionECBMode, &mut c.ecb_dec);
             if result != 0 {
                 panic!("CCCryptorCreateWithMode for ECB decrypt mode returned {}", result);
             }
-            let result = CCCryptorCreateWithMode(kCCEncrypt, kCCModeGCM, kCCAlgorithmAES, 0, crate::ZEROES.as_ptr().cast(), key.as_ptr().cast(), key.len(), null(), 0, 0, 0, &mut c.gmac);
+            let result = CCCryptorCreateWithMode(kCCEncrypt, kCCModeGCM, kCCAlgorithmAES, 0, crate::ZEROES.as_ptr().cast(), k0.as_ptr().cast(), k0.len(), null(), 0, 0, 0, &mut c.gmac);
             if result != 0 {
                 panic!("CCCryptorCreateWithMode for GCM (GMAC) mode returned {}", result);
             }

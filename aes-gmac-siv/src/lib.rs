@@ -26,7 +26,8 @@ mod tests {
 
     #[test]
     fn encrypt_decrypt() {
-        let aes_key: [u8; 32] = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32];
+        let aes_key_0: [u8; 32] = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32];
+        let aes_key_1: [u8; 32] = [2,3,4,5,6,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32];
         let iv: [u8; 8] = [0,1,2,3,4,5,6,7];
 
         let mut buf = [0_u8; 12345];
@@ -34,7 +35,7 @@ mod tests {
             buf[i] = i as u8;
         }
 
-        let mut c = AesGmacSiv::new(&aes_key);
+        let mut c = AesGmacSiv::new(&aes_key_0, &aes_key_1);
 
         for _ in 0..256 {
             c.reset();
@@ -45,8 +46,8 @@ mod tests {
             let tag = c.encrypt_second_pass_finish().clone();
             let sha = sha2::Sha384::digest(&buf).to_vec();
             let sha = to_hex(sha.as_slice());
-            if sha != "f455fa8a1a6badaeccdefe573a10d5d79eb7f4009b84dff3d37f9f1e95ee2b0ba6149737c0701d5ef75f58f793174d3d" {
-                panic!("encrypt result hash check failed!");
+            if sha != "b5c0997f5a0e31748dfd3a22baa4bf257b1ebf2c2ecb78a68360fa5a5f0763aa5b8fde8be502255c82d937d8adba11eb" {
+                panic!("encrypt result hash check failed! {}", sha);
             }
             //println!("Encrypt OK, tag: {}, hash: {}", to_hex(&tag), sha);
 

@@ -1,4 +1,4 @@
-use std::mem::{zeroed, size_of};
+use std::mem::{zeroed, size_of, MaybeUninit};
 use std::ptr::{write_bytes, copy_nonoverlapping, null};
 use std::str::FromStr;
 use std::cmp::Ordering;
@@ -10,6 +10,7 @@ use crate::util::equal_bytes;
 
 #[cfg(windows)]
 use winapi::um::winsock2 as winsock2;
+use crate::vl1::buffer::{RawObject, Buffer};
 
 #[allow(non_camel_case_types)]
 #[cfg(not(windows))]
@@ -22,6 +23,10 @@ type sockaddr_in = libc::sockaddr_in;
 #[allow(non_camel_case_types)]
 #[cfg(not(windows))]
 type sockaddr_in6 = libc::sockaddr_in6;
+
+#[allow(non_camel_case_types)]
+#[cfg(not(windows))]
+type sockaddr_storage = libc::sockaddr_storage;
 
 #[allow(non_camel_case_types)]
 #[cfg(not(windows))]
@@ -44,7 +49,7 @@ pub enum IpScope {
     Global = 4,
     LinkLocal = 5,
     Shared = 6,
-    Private = 7
+    Private = 7,
 }
 
 /// An IPv4 or IPv6 socket address that directly encapsulates C sockaddr types.
@@ -54,7 +59,19 @@ pub enum IpScope {
 pub union InetAddress {
     sa: sockaddr,
     sin: sockaddr_in,
-    sin6: sockaddr_in6
+    sin6: sockaddr_in6,
+    ss: sockaddr_storage, // some external code may expect the struct to be this full length
+}
+
+impl Clone for InetAddress {
+    #[inline(always)]
+    fn clone(&self) -> Self {
+        unsafe {
+            let mut c = MaybeUninit::<InetAddress>::uninit().assume_init();
+            copy_nonoverlapping((self as *const Self).cast::<u8>(), (&mut c as *mut Self).cast::<u8>(), size_of::<Self>());
+            c
+        }
+    }
 }
 
 impl Default for InetAddress {
@@ -69,6 +86,17 @@ impl InetAddress {
     #[inline(always)]
     pub fn new() -> InetAddress {
         unsafe { zeroed() }
+    }
+
+    /// Construct from IP and port.
+    /// If the IP is not either 4 or 16 bytes in length, a nil/0 InetAddress is returned.
+    #[inline(always)]
+    pub fn from_ip_port(ip: &[u8], port: u16) -> InetAddress {
+        unsafe {
+            let mut c = MaybeUninit::<InetAddress>::uninit().assume_init();
+            c.set(ip, port);
+            c
+        }
     }
 
     /// Zero the contents of this InetAddress.
@@ -127,6 +155,12 @@ impl InetAddress {
     #[inline(always)]
     pub fn is_ipv6(&self) -> bool {
         unsafe { self.sa.sa_family as u8 == AF_INET6 }
+    }
+
+    /// Get the address family of this InetAddress: AF_INET, AF_INET6, or 0 if nil.
+    #[inline(always)]
+    pub fn family(&self) -> u8 {
+        unsafe { self.sa.sa_family }
     }
 
     /// Get a pointer to the C "sockaddr" structure and the size of the returned structure in bytes.
@@ -221,42 +255,42 @@ impl InetAddress {
                             } else {
                                 IpScope::Global
                             }
-                        },
+                        }
                         0xa9 => {
                             if (ip & 0xffff0000) == 0xa9fe0000 { // 169.254.0.0/16
                                 IpScope::LinkLocal
                             } else {
                                 IpScope::Global
                             }
-                        },
+                        }
                         0xac => {
                             if (ip & 0xfff00000) == 0xac100000 { // 172.16.0.0/12
                                 IpScope::Private
                             } else {
                                 IpScope::Global
                             }
-                        },
+                        }
                         0xc0 => {
                             if (ip & 0xffff0000) == 0xc0a80000 || (ip & 0xffffff00) == 0xc0000200 { // 192.168.0.0/16 and 192.0.2.0/24
                                 IpScope::Private
                             } else {
                                 IpScope::Global
                             }
-                        },
+                        }
                         0xc6 => {
                             if (ip & 0xfffe0000) == 0xc6120000 || (ip & 0xffffff00) == 0xc6336400 { // 198.18.0.0/15 and 198.51.100.0/24
                                 IpScope::Private
                             } else {
                                 IpScope::Global
                             }
-                        },
+                        }
                         0xcb => {
                             if (ip & 0xffffff00) == 0xcb007100 { // 203.0.113.0/24
                                 IpScope::Private
                             } else {
                                 IpScope::Global
                             }
-                        },
+                        }
                         _ => {
                             if [
                                 0x06_u8, // 6.0.0.0/8 (US Army)
@@ -281,7 +315,7 @@ impl InetAddress {
                             }
                         }
                     }
-                },
+                }
                 AF_INET6 => {
                     let ip = &*(&(self.sin6.sin6_addr) as *const in6_addr).cast::<[u8; 16]>();
                     if (ip[0] & 0xf0) == 0xf0 {
@@ -293,11 +327,11 @@ impl InetAddress {
                             while ip[k] == 0 && k < 15 {
                                 k += 1;
                             }
-                            if k == 15 && ip[15] == 0x01 {
-                                return IpScope::Loopback; // fe80::1/128
+                            return if k == 15 && ip[15] == 0x01 {
+                                IpScope::Loopback // fe80::1/128
                             } else {
-                                return IpScope::LinkLocal; // fe80::/10
-                            }
+                                IpScope::LinkLocal // fe80::/10
+                            };
                         }
                         if (ip[0] & 0xfe) == 0xfc {
                             return IpScope::Private; // fc00::/7
@@ -315,7 +349,7 @@ impl InetAddress {
                         }
                     }
                     IpScope::Global
-                },
+                }
                 _ => IpScope::None
             }
         }
@@ -326,37 +360,77 @@ impl InetAddress {
         unsafe {
             match self.sa.sa_family as u8 {
                 AF_INET => {
-                    let ip = self.sin.sin_addr.s_addr as u32;
-                    format!("{}.{}.{}.{}", (ip >> 24) & 0xff, (ip >> 16) & 0xff, (ip >> 8) & 0xff, ip & 0xff)
-                },
+                    let ip = &*(&self.sin.sin_addr.s_addr as *const u32).cast::<[u8; 4]>();
+                    format!("{}.{}.{}.{}", ip[0], ip[1], ip[2], ip[3])
+                }
                 AF_INET6 => {
                     Ipv6Addr::from(*(&(self.sin6.sin6_addr) as *const in6_addr).cast::<[u8; 16]>()).to_string()
-                },
+                }
                 _ => {
                     String::from("(null)")
                 }
             }
         }
     }
+
+    pub fn marshal<BH: RawObject, const BL: usize>(&self, buf: &mut Buffer<BH, BL>) -> std::io::Result<()> {
+        unsafe {
+            match self.sa.sa_family as u8 {
+                AF_INET => {
+                    buf.append_and_init_bytes_fixed(|b: &mut [u8; 7]| {
+                        b[0] = 4;
+                        copy_nonoverlapping((&self.sin.sin_addr.s_addr as *const u32).cast::<u8>(), b.as_mut_ptr().offset(1), 4);
+                        b[5] = *(&self.sin.sin_port as *const u16).cast::<u8>();
+                        b[6] = *(&self.sin.sin_port as *const u16).cast::<u8>().offset(1);
+                    })
+                }
+                AF_INET6 => {
+                    buf.append_and_init_bytes_fixed(|b: &mut [u8; 19]| {
+                        b[0] = 6;
+                        copy_nonoverlapping((&(self.sin6.sin6_addr) as *const in6_addr).cast::<u8>(), b.as_mut_ptr().offset(1), 16);
+                        b[17] = *(&self.sin6.sin6_port as *const u16).cast::<u8>();
+                        b[18] = *(&self.sin6.sin6_port as *const u16).cast::<u8>().offset(1);
+                    })
+                }
+                _ => {
+                    buf.append_u8(0)
+                }
+            }
+        }
+    }
+
+    pub fn unmarshal<BH: RawObject, const BL: usize>(buf: &Buffer<BH, BL>, cursor: &mut usize) -> std::io::Result<InetAddress> {
+        match buf.get_u8(cursor)? {
+            4 => {
+                let b: &[u8; 6] = buf.get_bytes_fixed(cursor)?;
+                Ok(InetAddress::from_ip_port(&b[0..4], crate::util::integer_load_be_u16(&b[4..6])))
+            }
+            6 => {
+                let b: &[u8; 18] = buf.get_bytes_fixed(cursor)?;
+                Ok(InetAddress::from_ip_port(&b[0..16], crate::util::integer_load_be_u16(&b[16..18])))
+            }
+            _ => Ok(InetAddress::new())
+        }
+    }
 }
 
 impl ToString for InetAddress {
     fn to_string(&self) -> String {
-        let mut s = self.to_ip_string();
         unsafe {
+            let mut s = self.to_ip_string();
             match self.sa.sa_family as u8 {
                 AF_INET => {
                     s.push('/');
                     s.push_str(u16::from_be(self.sin.sin_port as u16).to_string().as_str())
-                },
+                }
                 AF_INET6 => {
                     s.push('/');
                     s.push_str(u16::from_be(self.sin6.sin6_port as u16).to_string().as_str())
-                },
+                }
                 _ => {}
             }
+            s
         }
-        s
     }
 }
 
@@ -369,7 +443,11 @@ impl FromStr for InetAddress {
             (s, 0)
         }, |pos| {
             let ss = s.split_at(pos);
-            (ss.0, u16::from_str_radix(ss.1, 10).unwrap_or(0).to_be())
+            let mut port_str = ss.1;
+            if port_str.starts_with('/') {
+                port_str = &port_str[1..];
+            }
+            (ss.0, u16::from_str_radix(port_str, 10).unwrap_or(0).to_be())
         });
         IpAddr::from_str(ip_str).map_or_else(|_| Err(InvalidFormatError), |ip| {
             unsafe {
@@ -378,7 +456,7 @@ impl FromStr for InetAddress {
                         addr.sin.sin_family = AF_INET.into();
                         addr.sin.sin_port = port.into();
                         copy_nonoverlapping(v4.octets().as_ptr(), (&mut (addr.sin.sin_addr.s_addr) as *mut u32).cast(), 4);
-                    },
+                    }
                     IpAddr::V6(v6) => {
                         addr.sin6.sin6_family = AF_INET6.into();
                         addr.sin6.sin6_port = port.into();
@@ -396,14 +474,14 @@ impl PartialEq for InetAddress {
         unsafe {
             if self.sa.sa_family == other.sa.sa_family {
                 match self.sa.sa_family as u8 {
-                    AF_INET => { self.sin.sin_port == other.sin.sin_port && self.sin.sin_addr.s_addr == other.sin.sin_addr.s_addr },
+                    AF_INET => { self.sin.sin_port == other.sin.sin_port && self.sin.sin_addr.s_addr == other.sin.sin_addr.s_addr }
                     AF_INET6 => {
                         if self.sin6.sin6_port == other.sin6.sin6_port {
                             equal_bytes((&(self.sin6.sin6_addr) as *const in6_addr).cast(), (&(other.sin6.sin6_addr) as *const in6_addr).cast(), 16)
                         } else {
                             false
                         }
-                    },
+                    }
                     _ => true
                 }
             } else {
@@ -433,7 +511,7 @@ impl Ord for InetAddress {
                         } else {
                             u16::from_be(self.sin.sin_port as u16).cmp(&u16::from_be(other.sin.sin_port as u16))
                         }
-                    },
+                    }
                     AF_INET6 => {
                         if self.sin6.sin6_port == other.sin6.sin6_port {
                             let a = &*(&(self.sin6.sin6_addr) as *const in6_addr).cast::<[u8; 16]>();
@@ -442,7 +520,7 @@ impl Ord for InetAddress {
                         } else {
                             u16::from_be(self.sin6.sin6_port as u16).cmp(&u16::from_be(other.sin6.sin6_port as u16))
                         }
-                    },
+                    }
                     _ => {
                         Ordering::Equal
                     }
@@ -464,11 +542,11 @@ impl Hash for InetAddress {
                 AF_INET => {
                     state.write_u16(self.sin.sin_port as u16);
                     state.write_u32(self.sin.sin_addr.s_addr as u32);
-                },
+                }
                 AF_INET6 => {
                     state.write_u16(self.sin6.sin6_port as u16);
                     state.write(&*(&(self.sin6.sin6_addr) as *const in6_addr).cast::<[u8; 16]>());
-                },
+                }
                 _ => {}
             }
         }
@@ -477,19 +555,38 @@ impl Hash for InetAddress {
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
     use crate::vl1::inetaddress::InetAddress;
 
     #[test]
-    fn struct_layout() {
-        let mut tmp = InetAddress::new();
+    fn layout() {
         unsafe {
-            tmp.sa.sa_family = 0xf7;
-            if tmp.sin.sin_family != 0xf7 {
+            // Make sure union is laid out such that all the sockaddr structures overlap.
+            let mut tmp = InetAddress::new();
+            tmp.sa.sa_family = 0xab;
+            if tmp.sin.sin_family != 0xab {
                 panic!("sin_family misaligned in union");
             }
-            if tmp.sin6.sin6_family != 0xf7 {
+            if tmp.sin6.sin6_family != 0xab {
                 panic!("sin6_family misaligned in union");
             }
+            if tmp.ss.ss_family != 0xab {
+                panic!("ss_family misaligned in union");
+            }
         }
+    }
+
+    #[test]
+    fn ipv6_string() {
+        let ip = InetAddress::from_str("2603:6010:6e00:1118:d92a:ab88:4dfb:670a/1234").unwrap();
+        assert_eq!("2603:6010:6e00:1118:d92a:ab88:4dfb:670a/1234", ip.to_string());
+        let ip = InetAddress::from_str("fd80::1/1234").unwrap();
+        assert_eq!("fd80::1/1234", ip.to_string());
+    }
+
+    #[test]
+    fn ipv4_string() {
+        let ip = InetAddress::from_str("1.2.3.4/1234").unwrap();
+        assert_eq!("1.2.3.4/1234", ip.to_string());
     }
 }

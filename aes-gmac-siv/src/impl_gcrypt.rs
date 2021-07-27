@@ -16,9 +16,12 @@ impl AesGmacSiv {
     /// Create a new keyed instance of AES-GMAC-SIV
     /// The key may be of size 16, 24, or 32 bytes (128, 192, or 256 bits). Any other size will panic.
     #[inline(always)]
-    pub fn new(key: &[u8]) -> Self {
-        if key.len() != 32 && key.len() != 24 && key.len() != 16 {
+    pub fn new(k0: &[u8], k1: &[u8]) -> Self {
+        if k0.len() != 32 && k0.len() != 24 && k0.len() != 16 {
             panic!("AES supports 128, 192, or 256 bits keys");
+        }
+        if k1.len() != k0.len() {
+            panic!("k0 and k1 must be of the same size");
         }
         let mut c = AesGmacSiv {
             tag: [0_u8; 16],
@@ -27,9 +30,9 @@ impl AesGmacSiv {
             ecb: gcrypt::cipher::Cipher::new(gcrypt::cipher::Algorithm::Aes, gcrypt::cipher::Mode::Ecb).unwrap(),
             gmac: gcrypt::mac::Mac::new(gcrypt::mac::Algorithm::GmacAes).unwrap(),
         };
-        c.ctr.set_key(key).expect("AES-CTR init failed");
-        c.ecb.set_key(key).expect("AES-ECB init failed");
-        c.gmac.set_key(key).expect("AES-GMAC init failed");
+        c.ctr.set_key(k1).expect("AES-CTR init failed");
+        c.ecb.set_key(k1).expect("AES-ECB init failed");
+        c.gmac.set_key(k0).expect("AES-GMAC init failed");
         c
     }
 

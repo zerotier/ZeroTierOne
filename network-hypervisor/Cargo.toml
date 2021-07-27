@@ -21,6 +21,7 @@ x25519-dalek = "^1"
 ed25519-dalek = "^1"
 gcrypt = "^0"
 base64 = "^0"
+urlencoding = "^2"
 
 [target."cfg(not(windows))".dependencies]
 libc = "^0"

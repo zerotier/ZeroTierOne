@@ -1,6 +1,7 @@
-use std::mem::{size_of, MaybeUninit};
+use std::mem::{size_of, MaybeUninit, transmute};
 use std::marker::PhantomData;
 use std::io::Write;
+use std::hash::{Hash, Hasher};
 
 const OVERFLOW_ERR_MSG: &'static str = "overflow";
 
@@ -18,8 +19,10 @@ unsafe impl RawObject for NoHeader {}
 ///
 /// This also supports a generic header that must be a RawObject and will always be
 /// placed at the beginning of the buffer. When you construct or clear() a buffer
-/// space will be maintained for the header. Use NoHeader if you don't want a header.
-#[derive(Clone)]
+/// space will be maintained for the header by setting the buffer's size to the
+/// header size. The header must have a size less than or equal to L. Use NoHeader
+/// if you don't want a header.
+#[derive(Clone, PartialEq, Eq)]
 pub struct Buffer<H: RawObject, const L: usize>(usize, [u8; L], PhantomData<H>);
 
 unsafe impl<H: RawObject, const L: usize> RawObject for Buffer<H, L> {}
@@ -27,6 +30,7 @@ unsafe impl<H: RawObject, const L: usize> RawObject for Buffer<H, L> {}
 impl<H: RawObject, const L: usize> Default for Buffer<H, L> {
     #[inline(always)]
     fn default() -> Self {
+        assert!(size_of::<H>() <= L);
         Buffer(size_of::<H>(), [0_u8; L], PhantomData::default())
     }
 }
@@ -34,7 +38,16 @@ impl<H: RawObject, const L: usize> Default for Buffer<H, L> {
 impl<H: RawObject, const L: usize> Buffer<H, L> {
     #[inline(always)]
     pub fn new() -> Self {
+        assert!(size_of::<H>() <= L);
         Self::default()
+    }
+
+    /// Change the header "personality" of this buffer.
+    /// Note that the new buffer must be of the same size and both the old and
+    /// new headers must be RawObjects with size less than or equal to this size.
+    pub fn change_header_type<NH: RawObject>(self) -> Buffer<NH, L> {
+        assert!(size_of::<NH>() <= L);
+        unsafe { transmute(self) }
     }
 
     /// Create a buffer that contains a copy of a slice.
@@ -56,6 +69,12 @@ impl<H: RawObject, const L: usize> Buffer<H, L> {
     #[inline(always)]
     pub fn as_bytes(&self) -> &[u8] {
         &self.1[0..self.0]
+    }
+
+    /// Get a slice containing the entire buffer in raw form including the header.
+    #[inline(always)]
+    pub fn as_bytes_mut(&mut self) -> &mut [u8] {
+        &mut self.1[0..self.0]
     }
 
     /// Erase contents and reset size to the size of the header.
@@ -336,6 +355,42 @@ impl<H: RawObject, const L: usize> Write for Buffer<H, L> {
     #[inline(always)]
     fn flush(&mut self) -> std::io::Result<()> {
         Ok(())
+    }
+}
+
+impl<H: RawObject, const L: usize> AsRef<[u8]> for Buffer<H, L> {
+    #[inline(always)]
+    fn as_ref(&self) -> &[u8] {
+        self.as_bytes()
+    }
+}
+
+impl<H: RawObject, const L: usize> AsMut<[u8]> for Buffer<H, L> {
+    #[inline(always)]
+    fn as_mut(&mut self) -> &mut [u8] {
+        self.as_bytes_mut()
+    }
+}
+
+impl<H: RawObject, const L: usize> AsRef<H> for Buffer<H, L> {
+    #[inline(always)]
+    fn as_ref(&self) -> &H {
+        self.header()
+    }
+}
+
+impl<H: RawObject, const L: usize> AsMut<H> for Buffer<H, L> {
+    #[inline(always)]
+    fn as_mut(&mut self) -> &mut H {
+        self.header_mut()
+    }
+}
+
+impl<H: RawObject, const L: usize> Hash for Buffer<H, L> {
+    #[inline(always)]
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        state.write_u32(self.0 as u32);
+        state.write(&self.1[0..self.0]);
     }
 }
 
