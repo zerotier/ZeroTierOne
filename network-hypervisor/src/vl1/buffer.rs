@@ -1,5 +1,5 @@
-use std::mem::{size_of, MaybeUninit, transmute};
-use std::marker::PhantomData;
+use std::mem::{size_of, MaybeUninit, zeroed};
+use std::ptr::write_bytes;
 use std::io::Write;
 
 const OVERFLOW_ERR_MSG: &'static str = "overflow";
@@ -9,47 +9,23 @@ const OVERFLOW_ERR_MSG: &'static str = "overflow";
 /// This is ONLY used for packed protocol header or segment objects.
 pub unsafe trait RawObject: Sized {}
 
-/// A zero length RawObject for using a Buffer when you don't want a header.
-pub struct NoHeader;
-
-unsafe impl RawObject for NoHeader {}
-
 /// A byte array that supports safe appending of data or raw objects.
-///
-/// This also supports a generic header that must be a RawObject and will always be
-/// placed at the beginning of the buffer. When you construct or clear() a buffer
-/// space will be maintained for the header by setting the buffer's size to the
-/// header size. The header must have a size less than or equal to L. Use NoHeader
-/// if you don't want a header.
 #[derive(Clone, PartialEq, Eq)]
-pub struct Buffer<H: RawObject, const L: usize>(usize, [u8; L], PhantomData<H>);
+pub struct Buffer<const L: usize>(usize, [u8; L]);
 
-unsafe impl<H: RawObject, const L: usize> RawObject for Buffer<H, L> {}
+unsafe impl<const L: usize> RawObject for Buffer<L> {}
 
-impl<H: RawObject, const L: usize> Default for Buffer<H, L> {
+impl<const L: usize> Default for Buffer<L> {
     #[inline(always)]
     fn default() -> Self {
-        debug_assert!(size_of::<H>() <= L);
-        Buffer(size_of::<H>(), [0_u8; L], PhantomData::default())
+        unsafe { zeroed() }
     }
 }
 
-impl<H: RawObject, const L: usize> Buffer<H, L> {
+impl<const L: usize> Buffer<L> {
     #[inline(always)]
     pub fn new() -> Self {
-        debug_assert!(size_of::<H>() <= L);
-        Self::default()
-    }
-
-    /// Change the header "personality" of this buffer.
-    /// This is a free operation, but the returned reference obviously only lives as long as the source.
-    #[inline(always)]
-    pub fn transmute_header<NH: RawObject>(&self) -> &Buffer<NH, L> {
-        debug_assert!(size_of::<H>() <= L);
-        debug_assert!(size_of::<NH>() <= L);
-        unsafe {
-            &*(self as *const Self).cast::<Buffer<NH, L>>()
-        }
+        unsafe { zeroed() }
     }
 
     /// Create a buffer that contains a copy of a slice, truncating if the slice is too long.
@@ -78,28 +54,13 @@ impl<H: RawObject, const L: usize> Buffer<H, L> {
     /// Erase contents and reset size to the size of the header.
     #[inline(always)]
     pub fn clear(&mut self) {
-        self.1[0..self.0].fill(0);
-        self.0 = size_of::<H>();
+        unsafe { write_bytes((self as *mut Self).cast::<u8>(), 0, size_of::<Self>()) }
     }
 
     /// Get the length of this buffer (including header, if any).
     #[inline(always)]
     pub fn len(&self) -> usize {
         self.0
-    }
-
-    /// Get a reference to the header (in place).
-    #[inline(always)]
-    pub fn header(&self) -> &H {
-        debug_assert!(size_of::<H>() <= L);
-        unsafe { &*self.1.as_ptr().cast::<H>() }
-    }
-
-    /// Get a mutable reference to the header (in place).
-    #[inline(always)]
-    pub fn header_mut(&mut self) -> &mut H {
-        debug_assert!(size_of::<H>() <= L);
-        unsafe { &mut *self.1.as_mut_ptr().cast::<H>() }
     }
 
     /// Append a packed structure and call a function to initialize it in place.
@@ -234,12 +195,6 @@ impl<H: RawObject, const L: usize> Buffer<H, L> {
         }
     }
 
-    /// Get the index of the start of the payload after the header.
-    #[inline(always)]
-    pub fn cursor_after_header(&self) -> usize {
-        size_of::<H>()
-    }
-
     /// Get a structure at a given position in the buffer and advance the cursor.
     #[inline(always)]
     pub fn get_struct<T: RawObject>(&self, cursor: &mut usize) -> std::io::Result<&T> {
@@ -336,7 +291,7 @@ impl<H: RawObject, const L: usize> Buffer<H, L> {
     }
 }
 
-impl<H: RawObject, const L: usize> Write for Buffer<H, L> {
+impl<const L: usize> Write for Buffer<L> {
     #[inline(always)]
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         let ptr = self.0;
@@ -356,41 +311,16 @@ impl<H: RawObject, const L: usize> Write for Buffer<H, L> {
     }
 }
 
-impl<H: RawObject, const L: usize> AsRef<[u8]> for Buffer<H, L> {
+impl<const L: usize> AsRef<[u8]> for Buffer<L> {
     #[inline(always)]
     fn as_ref(&self) -> &[u8] {
         self.as_bytes()
     }
 }
 
-impl<H: RawObject, const L: usize> AsMut<[u8]> for Buffer<H, L> {
+impl<const L: usize> AsMut<[u8]> for Buffer<L> {
     #[inline(always)]
     fn as_mut(&mut self) -> &mut [u8] {
         self.as_bytes_mut()
-    }
-}
-
-impl<H: RawObject, const L: usize> AsRef<H> for Buffer<H, L> {
-    #[inline(always)]
-    fn as_ref(&self) -> &H {
-        self.header()
-    }
-}
-
-impl<H: RawObject, const L: usize> AsMut<H> for Buffer<H, L> {
-    #[inline(always)]
-    fn as_mut(&mut self) -> &mut H {
-        self.header_mut()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use std::mem::size_of;
-    use crate::vl1::buffer::NoHeader;
-
-    #[test]
-    fn object_sizing() {
-        assert_eq!(size_of::<NoHeader>(), 0);
     }
 }

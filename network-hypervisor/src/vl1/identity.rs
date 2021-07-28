@@ -2,17 +2,17 @@ use std::alloc::{Layout, dealloc, alloc};
 use std::ptr::{slice_from_raw_parts_mut, slice_from_raw_parts};
 use std::io::Write;
 use std::str::FromStr;
+use std::convert::TryInto;
+use std::cmp::Ordering;
 
 use crate::vl1::Address;
-use crate::vl1::buffer::{Buffer, RawObject, NoHeader};
-use crate::crypto::c25519::{C25519_PUBLIC_KEY_SIZE, ED25519_PUBLIC_KEY_SIZE, C25519_SECRET_KEY_SIZE, ED25519_SECRET_KEY_SIZE, C25519KeyPair, Ed25519KeyPair};
+use crate::vl1::buffer::Buffer;
+use crate::crypto::c25519::{C25519_PUBLIC_KEY_SIZE, ED25519_PUBLIC_KEY_SIZE, C25519_SECRET_KEY_SIZE, ED25519_SECRET_KEY_SIZE, C25519KeyPair, Ed25519KeyPair, ED25519_SIGNATURE_SIZE};
 use crate::crypto::p521::{P521KeyPair, P521PublicKey, P521_ECDSA_SIGNATURE_SIZE, P521_PUBLIC_KEY_SIZE, P521_SECRET_KEY_SIZE};
 use crate::crypto::hash::{SHA384, SHA512, SHA512_HASH_SIZE};
 use crate::crypto::balloon;
 use crate::crypto::salsa::Salsa;
 use crate::error::InvalidFormatError;
-use std::convert::TryInto;
-use std::cmp::Ordering;
 
 // Memory parameter for V0 address derivation work function.
 const V0_IDENTITY_GEN_MEMORY: usize = 2097152;
@@ -21,6 +21,9 @@ const V0_IDENTITY_GEN_MEMORY: usize = 2097152;
 const V1_BALLOON_SPACE_COST: usize = 16384;
 const V1_BALLOON_TIME_COST: usize = 3;
 const V1_BALLOON_DELTA: usize = 3;
+
+pub const IDENTITY_TYPE_0_SIGNATURE_SIZE: usize = ED25519_SIGNATURE_SIZE + 32;
+pub const IDENTITY_TYPE_1_SIGNATURE_SIZE: usize = P521_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE;
 
 #[derive(Copy, Clone)]
 #[repr(u8)]
@@ -241,13 +244,33 @@ impl Identity {
     /// its secrets or a key being invalid.
     pub fn agree(&self, other_identity: &Identity) -> Option<[u8; 48]> {
         self.secrets.as_ref().map_or(None, |secrets| {
+            let c25519_secret = SHA384::hash(&secrets.c25519.agree(&other_identity.c25519));
             secrets.v1.as_ref().map_or_else(|| {
-                Some(SHA384::hash(&secrets.c25519.agree(&other_identity.c25519)))
+                Some(c25519_secret)
             }, |p521_secret| {
                 other_identity.v1.as_ref().map_or_else(|| {
-                    Some(SHA384::hash(&secrets.c25519.agree(&other_identity.c25519)))
+                    Some(c25519_secret)
                 }, |other_p521_public| {
-                    p521_secret.0.agree(&other_p521_public.0).map_or(None, |secret| Some(SHA384::hash(&secret)))
+                    p521_secret.0.agree(&other_p521_public.0).map_or(None, |p521_secret| {
+                        //
+                        // For NIST P-521 key agreement, we use a single step key derivation function to derive
+                        // the final shared secret using the C25519 shared secret as a "salt." This should be
+                        // FIPS140-compliant as per section 8.2 of:
+                        //
+                        // https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-56Cr2.pdf
+                        //
+                        // This is also stated in the following FAQ, which though it pertains to post-quantum
+                        // algorithms states that non-FIPS derived shared secrets can be used as salts in key
+                        // derivation from a FIPS-compliant algorithm derived shared secret:
+                        //
+                        // https://csrc.nist.gov/Projects/post-quantum-cryptography/faqs
+                        //
+                        // Hashing the C25519 secret with the P521 secret results in a secret that is as strong
+                        // as the stronger of the two algorithms. This should make the FIPS people happy and the
+                        // people who are paranoid about NIST curves happy.
+                        //
+                        Some(SHA384::hmac(&c25519_secret, &p521_secret))
+                    })
                 })
             })
         })
@@ -258,10 +281,25 @@ impl Identity {
     /// type. None is returned if this identity lacks secret keys or another error occurs.
     pub fn sign(&self, msg: &[u8]) -> Option<Vec<u8>> {
         self.secrets.as_ref().map_or(None, |secrets| {
+            let c25519_sig = secrets.ed25519.sign_zt(msg);
             secrets.v1.as_ref().map_or_else(|| {
-                Some(secrets.ed25519.sign(msg).to_vec())
+                Some(c25519_sig.to_vec())
             }, |p521_secret| {
-                p521_secret.1.sign(msg).map_or(None, |sig| Some(sig.to_vec()))
+                p521_secret.1.sign(msg).map_or(None, |p521_sig| {
+                    //
+                    // For type 1 identity signatures we sign with both algorithms and append the Ed25519
+                    // signature to the NIST P-521 signature. The Ed25519 signature is only checked if the
+                    // P-521 signature validates. Note that we only append the first 64 bytes of sign_zt()
+                    // output. For legacy reasons type 0 signatures include the first 32 bytes of the message
+                    // hash after the signature, but this is not required and isn't included here.
+                    //
+                    // This should once again make both the FIPS people and the people paranoid about NIST
+                    // curves happy.
+                    //
+                    let mut p521_sig = p521_sig.to_vec();
+                    let _ = p521_sig.write_all(&c25519_sig[0..64]);
+                    Some(p521_sig)
+                })
             })
         })
     }
@@ -271,7 +309,11 @@ impl Identity {
         self.v1.as_ref().map_or_else(|| {
             crate::crypto::c25519::ed25519_verify(&self.ed25519, signature, msg)
         }, |p521| {
-            (*p521).1.verify(msg, signature)
+            if signature.len() == IDENTITY_TYPE_1_SIGNATURE_SIZE {
+                (*p521).1.verify(msg, &signature[0..P521_ECDSA_SIGNATURE_SIZE]) && crate::crypto::c25519::ed25519_verify(&self.ed25519, &signature[P521_ECDSA_SIGNATURE_SIZE..], msg)
+            } else {
+                false
+            }
         })
     }
 
@@ -297,7 +339,7 @@ impl Identity {
     }
 
     /// Append this in binary format to a buffer.
-    pub fn marshal<BH: RawObject, const BL: usize>(&self, buf: &mut Buffer<BH, BL>, include_private: bool) -> std::io::Result<()> {
+    pub fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>, include_private: bool) -> std::io::Result<()> {
         buf.append_bytes_fixed(&self.address.to_bytes())?;
         if self.v1.is_some() {
             let p521 = self.v1.as_ref().unwrap();
@@ -339,7 +381,7 @@ impl Identity {
 
     /// Deserialize an Identity from a buffer.
     /// The supplied cursor is advanced.
-    pub fn unmarshal<BH: RawObject, const BL: usize>(buf: &Buffer<BH, BL>, cursor: &mut usize) -> std::io::Result<Identity> {
+    pub fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> std::io::Result<Identity> {
         let addr = Address::from_bytes(buf.get_bytes_fixed::<5>(cursor)?).unwrap();
         let id_type = buf.get_u8(cursor)?;
         if id_type == Type::C25519 as u8 {
@@ -413,7 +455,7 @@ impl Identity {
 
     /// Get this identity in byte array format.
     pub fn marshal_to_bytes(&self, include_private: bool) -> Vec<u8> {
-        let mut buf: Buffer<NoHeader, 2048> = Buffer::new();
+        let mut buf: Buffer<2048> = Buffer::new();
         self.marshal(&mut buf, include_private).expect("overflow");
         buf.as_bytes().to_vec()
     }
@@ -422,7 +464,7 @@ impl Identity {
     /// On success the identity and the number of bytes actually read from the slice are
     /// returned.
     pub fn unmarshal_from_bytes(bytes: &[u8]) -> std::io::Result<(Identity, usize)> {
-        let buf = Buffer::<NoHeader, 2048>::from_bytes_lossy(bytes);
+        let buf = Buffer::<2048>::from_bytes_lossy(bytes);
         let mut cursor: usize = 0;
         let id = Self::unmarshal(&buf, &mut cursor)?;
         Ok((id, cursor))

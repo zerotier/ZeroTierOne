@@ -7,10 +7,10 @@ use std::net::{IpAddr, Ipv6Addr};
 
 use crate::error::InvalidFormatError;
 use crate::util::equal_bytes;
+use crate::vl1::buffer::Buffer;
 
 #[cfg(windows)]
 use winapi::um::winsock2 as winsock2;
-use crate::vl1::buffer::{RawObject, Buffer};
 
 #[allow(non_camel_case_types)]
 #[cfg(not(windows))]
@@ -203,7 +203,7 @@ impl InetAddress {
 
     /// Get raw IP bytes, with length dependent on address family.
     #[inline(always)]
-    pub fn ip(&self) -> &[u8] {
+    pub fn ip_bytes(&self) -> &[u8] {
         unsafe {
             match self.sa.sa_family as u8 {
                 AF_INET => &*(&self.sin.sin_addr.s_addr as *const u32).cast::<[u8; 4]>(),
@@ -373,7 +373,7 @@ impl InetAddress {
         }
     }
 
-    pub fn marshal<BH: RawObject, const BL: usize>(&self, buf: &mut Buffer<BH, BL>) -> std::io::Result<()> {
+    pub fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> std::io::Result<()> {
         unsafe {
             match self.sa.sa_family as u8 {
                 AF_INET => {
@@ -399,7 +399,7 @@ impl InetAddress {
         }
     }
 
-    pub fn unmarshal<BH: RawObject, const BL: usize>(buf: &Buffer<BH, BL>, cursor: &mut usize) -> std::io::Result<InetAddress> {
+    pub fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> std::io::Result<InetAddress> {
         match buf.get_u8(cursor)? {
             4 => {
                 let b: &[u8; 6] = buf.get_bytes_fixed(cursor)?;

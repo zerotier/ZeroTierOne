@@ -1,7 +1,7 @@
 use std::str::FromStr;
 use std::hash::{Hash, Hasher};
 
-use crate::vl1::protocol::ADDRESS_RESERVED_PREFIX;
+use crate::vl1::constants::ADDRESS_RESERVED_PREFIX;
 use crate::error::InvalidFormatError;
 use crate::util::hex::HEX_CHARS;
 

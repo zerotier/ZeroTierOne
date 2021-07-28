@@ -1,6 +1,6 @@
 use crate::vl1::{Address, MAC};
 use crate::vl1::inetaddress::InetAddress;
-use crate::vl1::buffer::{RawObject, Buffer};
+use crate::vl1::buffer::Buffer;
 use std::hash::{Hash, Hasher};
 
 const TYPE_NIL: u8 = 0;
@@ -75,7 +75,7 @@ impl Endpoint {
         }
     }
 
-    pub fn marshal<BH: RawObject, const BL: usize>(&self, buf: &mut Buffer<BH, BL>) -> std::io::Result<()> {
+    pub fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> std::io::Result<()> {
         match self {
             Endpoint::Nil => {
                 buf.append_u8(Type::Nil as u8)
@@ -101,6 +101,9 @@ impl Endpoint {
                 ip.marshal(buf)
             }
             Endpoint::IpUdp(ip) => {
+                // IP/UDP endpoints are marshaled as naked InetAddress objects for backward
+                // compatibility. This is why 16 is added to all the other type IDs. Naked
+                // InetAddress objects always start with either 4 or 6.
                 ip.marshal(buf)
             }
             Endpoint::IpTcp(ip) => {
@@ -122,7 +125,7 @@ impl Endpoint {
         }
     }
 
-    pub fn unmarshal<BH: RawObject, const BL: usize>(buf: &Buffer<BH, BL>, cursor: &mut usize) -> std::io::Result<Endpoint> {
+    pub fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> std::io::Result<Endpoint> {
         let type_byte = buf.get_u8(cursor)?;
         if type_byte < 16 {
             let ip = InetAddress::unmarshal(buf, cursor)?;

@@ -1,58 +1,82 @@
-/// Length of an address in bytes.
-pub const ADDRESS_SIZE: usize = 5;
+use crate::vl1::constants::{HEADER_FLAGS_FIELD_MASK_CIPHER, HEADER_FLAGS_FIELD_MASK_HOPS, HEADER_FLAG_FRAGMENTED};
+use std::ops::Not;
+use crate::vl1::buffer::RawObject;
 
-/// Size of packet header that lies outside the encryption envelope.
-pub const PACKET_HEADER_SIZE: usize = 27;
+type PacketID = u64;
 
-/// Maximum packet payload size including the verb/flags field.
-/// This is large enough to carry "jumbo MTU" packets. The size is
-/// odd because 10005+27 == 10032 which is divisible by 16. This
-/// improves memory layout and alignment when buffers are allocated.
-/// This value could technically be increased but it would require a
-/// protocol version bump and only new nodes would be able to accept
-/// the new size.
-pub const PACKET_PAYLOAD_SIZE_MAX: usize = 10005;
+#[derive(Clone)]
+#[repr(packed)]
+pub struct PacketHeader {
+    pub id: PacketID,
+    pub dest: [u8; 5],
+    pub src: [u8; 5],
+    pub flags_cipher_hops: u8,
+    pub message_auth: [u8; 8],
+}
 
-/// Minimum packet, which is the header plus a verb.
-pub const PACKET_SIZE_MIN: usize = PACKET_HEADER_SIZE + 1;
+unsafe impl RawObject for PacketHeader {}
 
-/// Maximum size of an entire packet.
-pub const PACKET_SIZE_MAX: usize = PACKET_HEADER_SIZE + PACKET_PAYLOAD_SIZE_MAX;
+impl PacketHeader {
+    #[inline(always)]
+    pub fn cipher(&self) -> u8 {
+        self.flags_cipher_hops & HEADER_FLAGS_FIELD_MASK_CIPHER
+    }
 
-/// Mask to select cipher from header flags field.
-pub const HEADER_FLAGS_FIELD_MASK_CIPHER: u8 = 0x30;
+    #[inline(always)]
+    pub fn hops(&self) -> u8 {
+        self.flags_cipher_hops & HEADER_FLAGS_FIELD_MASK_HOPS
+    }
 
-/// Mask to select packet hops from header flags field.
-pub const HEADER_FLAGS_FIELD_MASK_HOPS: u8 = 0x07;
+    #[inline(always)]
+    pub fn increment_hops(&mut self) {
+        let f = self.flags_cipher_hops;
+        self.flags_cipher_hops = (f & HEADER_FLAGS_FIELD_MASK_HOPS.not()) | ((f + 1) & HEADER_FLAGS_FIELD_MASK_HOPS);
+    }
 
-/// Packet is not encrypted but contains a Poly1305 MAC of the plaintext.
-/// Poly1305 is initialized with Salsa20/12 in the same manner as SALSA2012_POLY1305.
-pub const CIPHER_NOCRYPT_POLY1305: u8 = 0;
+    #[inline(always)]
+    pub fn is_fragmented(&self) -> bool {
+        (self.flags_cipher_hops & HEADER_FLAG_FRAGMENTED) != 0
+    }
+}
 
-/// Packet is encrypted and authenticated with Salsa20/12 and Poly1305.
-/// Construction is the same as that which is used in the NaCl secret box functions.
-pub const CIPHER_SALSA2012_POLY1305: u8 = 0x10;
+#[derive(Clone)]
+#[repr(packed)]
+pub struct FragmentHeader {
+    pub id: PacketID,
+    pub dest: [u8; 5],
+    pub fragment_indicator: u8,
+    pub total_and_fragment_no: u8,
+    pub hops: u8,
+}
 
-/// Packet is encrypted and authenticated with AES-GMAC-SIV.
-pub const CIPHER_AES_GMAC_SIV: u8 = 0x30;
+unsafe impl crate::vl1::buffer::RawObject for FragmentHeader {}
 
-/// Header (outer) flag indicating that this packet has additional fragments.
-pub const HEADER_FLAG_FRAGMENTED: u8 = 0x40;
+impl FragmentHeader {
+    #[inline(always)]
+    pub fn total_fragments(&self) -> u8 {
+        self.total_and_fragment_no >> 4
+    }
 
-/// Minimum size of a fragment.
-pub const FRAGMENT_SIZE_MIN: usize = 16;
+    #[inline(always)]
+    pub fn fragment_no(&self) -> u8 {
+        self.total_and_fragment_no & 0x0f
+    }
 
-/// Verb (inner) flag indicating that the packet's payload (after the verb) is LZ4 compressed.
-pub const VERB_FLAG_COMPRESSED: u8 = 0x80;
+    #[inline(always)]
+    pub fn hops(&self) -> u8 {
+        self.hops & HEADER_FLAGS_FIELD_MASK_HOPS
+    }
+}
 
-/// Maximum number of packet hops allowed by the protocol.
-pub const PROTOCOL_MAX_HOPS: usize = 7;
+#[cfg(test)]
+mod tests {
+    use std::mem::size_of;
+    use crate::vl1::protocol::{PacketHeader, FragmentHeader};
+    use crate::vl1::constants::{PACKET_HEADER_SIZE, FRAGMENT_SIZE_MIN};
 
-/// Index of packet fragment indicator byte to detect fragments.
-pub const FRAGMENT_INDICATOR_INDEX: usize = 13;
-
-/// Byte found at FRAGMENT_INDICATOR_INDEX to indicate a fragment.
-pub const FRAGMENT_INDICATOR: u8 = 0xff;
-
-/// Prefix indicating reserved addresses (that can't actually be addresses).
-pub const ADDRESS_RESERVED_PREFIX: u8 = 0xff;
+    #[test]
+    fn object_sizing() {
+        assert_eq!(size_of::<PacketHeader>(), PACKET_HEADER_SIZE);
+        assert_eq!(size_of::<FragmentHeader>(), FRAGMENT_SIZE_MIN);
+    }
+}
