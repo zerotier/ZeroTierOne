@@ -190,7 +190,7 @@ mod tests {
         }
         loop {
             std::thread::sleep(Duration::from_millis(100));
-            if ctr.load(Ordering::Relaxed) >= 16384 * 8 {
+            if ctr.load(Ordering::Relaxed) >= 16384 * 64 {
                 break;
             }
         }
