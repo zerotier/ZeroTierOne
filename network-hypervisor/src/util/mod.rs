@@ -1,4 +1,5 @@
 pub mod hex;
+pub(crate) mod pool;
 
 pub(crate) const ZEROES: [u8; 64] = [0_u8; 64];
 

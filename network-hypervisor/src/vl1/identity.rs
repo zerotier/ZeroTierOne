@@ -51,8 +51,7 @@ pub struct Identity {
 /// Compute result from the bespoke "frankenhash" from the old V0 work function.
 /// The supplied genmem_ptr must be of size V0_IDENTITY_GEN_MEMORY and aligned to an 8-byte boundary.
 fn v0_frankenhash(digest: &mut [u8; 64], genmem_ptr: *mut u8) {
-    let genmem = unsafe { &mut *slice_from_raw_parts_mut(genmem_ptr, V0_IDENTITY_GEN_MEMORY) };
-    let genmem_alias_hack = unsafe { &*slice_from_raw_parts(genmem_ptr, V0_IDENTITY_GEN_MEMORY) };
+    let (genmem, genmem_alias_hack) = unsafe { (&mut *slice_from_raw_parts_mut(genmem_ptr, V0_IDENTITY_GEN_MEMORY), &*slice_from_raw_parts(genmem_ptr, V0_IDENTITY_GEN_MEMORY)) };
     let genmem_u64_ptr = genmem_ptr.cast::<u64>();
 
     let mut s20 = Salsa::new(&digest[0..32], &digest[32..40], false).unwrap();
@@ -67,13 +66,15 @@ fn v0_frankenhash(digest: &mut [u8; 64], genmem_ptr: *mut u8) {
 
     i = 0;
     while i < (V0_IDENTITY_GEN_MEMORY / 8) {
-        let idx1 = ((unsafe { *genmem_u64_ptr.offset(i as isize) }.to_be() % 8) * 8) as usize;
-        let idx2 = (unsafe { *genmem_u64_ptr.offset((i + 1) as isize) }.to_be() % (V0_IDENTITY_GEN_MEMORY as u64 / 8)) as usize;
-        let genmem_u64_at_idx2_ptr = unsafe { genmem_u64_ptr.offset(idx2 as isize) };
-        let tmp = unsafe { *genmem_u64_at_idx2_ptr };
-        let digest_u64_ptr = unsafe { digest.as_mut_ptr().offset(idx1 as isize).cast::<u64>() };
-        unsafe { *genmem_u64_at_idx2_ptr = *digest_u64_ptr };
-        unsafe { *digest_u64_ptr = tmp };
+        unsafe {
+            let idx1 = (((*genmem_u64_ptr.offset(i as isize)).to_be() % 8) * 8) as usize;
+            let idx2 = ((*genmem_u64_ptr.offset((i + 1) as isize)).to_be() % (V0_IDENTITY_GEN_MEMORY as u64 / 8)) as usize;
+            let genmem_u64_at_idx2_ptr = genmem_u64_ptr.offset(idx2 as isize);
+            let tmp = *genmem_u64_at_idx2_ptr;
+            let digest_u64_ptr = digest.as_mut_ptr().offset(idx1 as isize).cast::<u64>();
+            *genmem_u64_at_idx2_ptr = *digest_u64_ptr;
+            *digest_u64_ptr = tmp;
+        }
         s20.crypt_in_place(digest);
         i += 2;
     }
@@ -255,7 +256,7 @@ impl Identity {
                         //
                         // For NIST P-521 key agreement, we use a single step key derivation function to derive
                         // the final shared secret using the C25519 shared secret as a "salt." This should be
-                        // FIPS140-compliant as per section 8.2 of:
+                        // FIPS-compliant as per section 8.2 of:
                         //
                         // https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-56Cr2.pdf
                         //
@@ -382,15 +383,15 @@ impl Identity {
     /// Deserialize an Identity from a buffer.
     /// The supplied cursor is advanced.
     pub fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> std::io::Result<Identity> {
-        let addr = Address::from_bytes(buf.get_bytes_fixed::<5>(cursor)?).unwrap();
-        let id_type = buf.get_u8(cursor)?;
+        let addr = Address::from_bytes(buf.read_bytes_fixed::<5>(cursor)?).unwrap();
+        let id_type = buf.read_u8(cursor)?;
         if id_type == Type::C25519 as u8 {
-            let c25519_public_bytes = buf.get_bytes_fixed::<{ C25519_PUBLIC_KEY_SIZE }>(cursor)?;
-            let ed25519_public_bytes = buf.get_bytes_fixed::<{ ED25519_PUBLIC_KEY_SIZE }>(cursor)?;
-            let secrets_len = buf.get_u8(cursor)?;
+            let c25519_public_bytes = buf.read_bytes_fixed::<{ C25519_PUBLIC_KEY_SIZE }>(cursor)?;
+            let ed25519_public_bytes = buf.read_bytes_fixed::<{ ED25519_PUBLIC_KEY_SIZE }>(cursor)?;
+            let secrets_len = buf.read_u8(cursor)?;
             if secrets_len == (C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE) as u8 {
-                let c25519_secret_bytes = buf.get_bytes_fixed::<{ C25519_SECRET_KEY_SIZE }>(cursor)?;
-                let ed25519_secret_bytes = buf.get_bytes_fixed::<{ ED25519_SECRET_KEY_SIZE }>(cursor)?;
+                let c25519_secret_bytes = buf.read_bytes_fixed::<{ C25519_SECRET_KEY_SIZE }>(cursor)?;
+                let ed25519_secret_bytes = buf.read_bytes_fixed::<{ ED25519_SECRET_KEY_SIZE }>(cursor)?;
                 Ok(Identity {
                     address: addr,
                     c25519: c25519_public_bytes.clone(),
@@ -414,18 +415,18 @@ impl Identity {
                 std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "unrecognized scret key length (type 0)"))
             }
         } else if id_type == Type::P521 as u8 {
-            let c25519_public_bytes = buf.get_bytes_fixed::<{ C25519_PUBLIC_KEY_SIZE }>(cursor)?;
-            let ed25519_public_bytes = buf.get_bytes_fixed::<{ ED25519_PUBLIC_KEY_SIZE }>(cursor)?;
-            let p521_ecdh_public_bytes = buf.get_bytes_fixed::<{ P521_PUBLIC_KEY_SIZE }>(cursor)?;
-            let p521_ecdsa_public_bytes = buf.get_bytes_fixed::<{ P521_PUBLIC_KEY_SIZE }>(cursor)?;
-            let p521_signature = buf.get_bytes_fixed::<{ P521_ECDSA_SIGNATURE_SIZE }>(cursor)?;
-            let bh_digest = buf.get_bytes_fixed::<{ SHA512_HASH_SIZE }>(cursor)?;
-            let secrets_len = buf.get_u8(cursor)?;
+            let c25519_public_bytes = buf.read_bytes_fixed::<{ C25519_PUBLIC_KEY_SIZE }>(cursor)?;
+            let ed25519_public_bytes = buf.read_bytes_fixed::<{ ED25519_PUBLIC_KEY_SIZE }>(cursor)?;
+            let p521_ecdh_public_bytes = buf.read_bytes_fixed::<{ P521_PUBLIC_KEY_SIZE }>(cursor)?;
+            let p521_ecdsa_public_bytes = buf.read_bytes_fixed::<{ P521_PUBLIC_KEY_SIZE }>(cursor)?;
+            let p521_signature = buf.read_bytes_fixed::<{ P521_ECDSA_SIGNATURE_SIZE }>(cursor)?;
+            let bh_digest = buf.read_bytes_fixed::<{ SHA512_HASH_SIZE }>(cursor)?;
+            let secrets_len = buf.read_u8(cursor)?;
             if secrets_len == (C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE + P521_SECRET_KEY_SIZE + P521_SECRET_KEY_SIZE) as u8 {
-                let c25519_secret_bytes = buf.get_bytes_fixed::<{ C25519_SECRET_KEY_SIZE }>(cursor)?;
-                let ed25519_secret_bytes = buf.get_bytes_fixed::<{ ED25519_SECRET_KEY_SIZE }>(cursor)?;
-                let p521_ecdh_secret_bytes = buf.get_bytes_fixed::<{ P521_SECRET_KEY_SIZE }>(cursor)?;
-                let p521_ecdsa_secret_bytes = buf.get_bytes_fixed::<{ P521_SECRET_KEY_SIZE }>(cursor)?;
+                let c25519_secret_bytes = buf.read_bytes_fixed::<{ C25519_SECRET_KEY_SIZE }>(cursor)?;
+                let ed25519_secret_bytes = buf.read_bytes_fixed::<{ ED25519_SECRET_KEY_SIZE }>(cursor)?;
+                let p521_ecdh_secret_bytes = buf.read_bytes_fixed::<{ P521_SECRET_KEY_SIZE }>(cursor)?;
+                let p521_ecdsa_secret_bytes = buf.read_bytes_fixed::<{ P521_SECRET_KEY_SIZE }>(cursor)?;
                 Ok(Identity {
                     address: addr,
                     c25519: c25519_public_bytes.clone(),
@@ -464,10 +465,14 @@ impl Identity {
     /// On success the identity and the number of bytes actually read from the slice are
     /// returned.
     pub fn unmarshal_from_bytes(bytes: &[u8]) -> std::io::Result<(Identity, usize)> {
-        let buf = Buffer::<2048>::from_bytes_lossy(bytes);
-        let mut cursor: usize = 0;
-        let id = Self::unmarshal(&buf, &mut cursor)?;
-        Ok((id, cursor))
+        let buf = Buffer::<2048>::from_bytes(bytes);
+        if buf.is_none() {
+            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "data object too large"))
+        } else {
+            let mut cursor: usize = 0;
+            let id = Self::unmarshal(buf.as_ref().unwrap(), &mut cursor)?;
+            Ok((id, cursor))
+        }
     }
 
     /// Get this identity in string format, including its secret keys.

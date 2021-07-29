@@ -225,6 +225,24 @@ impl InetAddress {
         }
     }
 
+    /// Fills in the InetAddress specific parts of a path lookup key.
+    /// This assumes that the key's default contents are zero bits and does not clear unused regions.
+    pub(crate) fn fill_path_lookup_key(&self, k: &mut [u64; 4]) {
+        unsafe {
+            match self.sa.sa_family as u8 {
+                AF_INET => {
+                    k[1] |= self.sin.sin_port as u64 | 0x40000; // OR because most significant 32 bits contain endpoint info
+                    k[2] = self.sin.sin_addr.s_addr as u64;
+                }
+                AF_INET6 => {
+                    k[1] |= self.sin6.sin6_port as u64 | 0x60000; // OR because most significant 32 bits contain endpoint info
+                    copy_nonoverlapping((&(self.sin6.sin6_addr) as *const in6_addr).cast::<u8>(), k.as_mut_ptr().cast::<u8>().offset(16), 16);
+                }
+                _ => {}
+            }
+        }
+    }
+
     /// Set the IP port.
     #[inline(always)]
     pub fn set_port(&mut self, port: u16) {
@@ -400,13 +418,13 @@ impl InetAddress {
     }
 
     pub fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> std::io::Result<InetAddress> {
-        match buf.get_u8(cursor)? {
+        match buf.read_u8(cursor)? {
             4 => {
-                let b: &[u8; 6] = buf.get_bytes_fixed(cursor)?;
+                let b: &[u8; 6] = buf.read_bytes_fixed(cursor)?;
                 Ok(InetAddress::from_ip_port(&b[0..4], crate::util::integer_load_be_u16(&b[4..6])))
             }
             6 => {
-                let b: &[u8; 18] = buf.get_bytes_fixed(cursor)?;
+                let b: &[u8; 18] = buf.read_bytes_fixed(cursor)?;
                 Ok(InetAddress::from_ip_port(&b[0..16], crate::util::integer_load_be_u16(&b[16..18])))
             }
             _ => Ok(InetAddress::new())

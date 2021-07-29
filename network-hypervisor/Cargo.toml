@@ -3,11 +3,6 @@ name = "zerotier-network-hypervisor"
 version = "2.0.0"
 edition = "2018"
 
-# [profile.test]
-# opt-level = 3
-# lto = true
-# codegen-units = 1
-
 [profile.release]
 lto = true
 opt-level = 'z'
@@ -22,9 +17,12 @@ ed25519-dalek = "^1"
 gcrypt = "^0"
 base64 = "^0"
 urlencoding = "^2"
+lz4_flex = { version = "^0", features = ["safe-encode", "safe-decode", "checked-decode"] }
+dashmap = "^4"
+parking_lot = "^0"
 
 [target."cfg(not(windows))".dependencies]
 libc = "^0"
 
 [target."cfg(windows)".dependencies]
-winapi = { version = "0.3.9", features = ["handleapi", "ws2ipdef", "ws2tcpip"] }
+winapi = { version = "0.3.9", features = ["ws2tcpip"] }

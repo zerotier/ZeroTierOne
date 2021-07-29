@@ -4,7 +4,7 @@ use std::mem::MaybeUninit;
 #[inline(always)]
 fn hash_int_le(sha: &mut crate::crypto::hash::SHA512, i: u64) {
     #[cfg(target_endian = "big")] {
-        sha.update(i.to_le_bytes());
+        sha.update(&i.to_le_bytes());
     }
     #[cfg(target_endian = "little")] {
         sha.update(unsafe { &*(&i as *const u64).cast::<[u8; 8]>() });

@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 use std::io::Write;
+
 use crate::util::hex::HEX_CHARS;
 
 /// Dictionary is an extremely simple key=value serialization format.
@@ -22,7 +23,7 @@ fn write_escaped<W: Write>(b: &[u8], w: &mut W) -> std::io::Result<()> {
     let l = b.len();
     while i < l {
         let ii = i + 1;
-        match unsafe { b.get_unchecked(i) } {
+        match b[i] {
             0 => { w.write_all(&[b'\\', b'0'])?; }
             b'\n' => { w.write_all(&[b'\\', b'n'])?; }
             b'\r' => { w.write_all(&[b'\\', b'r'])?; }
@@ -86,7 +87,7 @@ impl Dictionary {
             if v.is_empty() {
                 Some(false)
             } else {
-                Some(match unsafe { v.get_unchecked(0) } {
+                Some(match v[0] {
                     b'1' | b't' | b'T' | b'y' | b'Y' => true,
                     _ => false
                 })

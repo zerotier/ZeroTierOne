@@ -126,7 +126,7 @@ impl Endpoint {
     }
 
     pub fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> std::io::Result<Endpoint> {
-        let type_byte = buf.get_u8(cursor)?;
+        let type_byte = buf.read_u8(cursor)?;
         if type_byte < 16 {
             let ip = InetAddress::unmarshal(buf, cursor)?;
             if ip.is_nil() {
@@ -137,20 +137,20 @@ impl Endpoint {
         } else {
             match type_byte - 16 {
                 TYPE_NIL => Ok(Endpoint::Nil),
-                TYPE_ZEROTIER => Ok(Endpoint::ZeroTier(Address::from(buf.get_bytes_fixed(cursor)?))),
-                TYPE_ETHERNET => Ok(Endpoint::Ethernet(MAC::from(buf.get_bytes_fixed(cursor)?))),
-                TYPE_WIFIDIRECT => Ok(Endpoint::WifiDirect(MAC::from(buf.get_bytes_fixed(cursor)?))),
-                TYPE_BLUETOOTH => Ok(Endpoint::Bluetooth(MAC::from(buf.get_bytes_fixed(cursor)?))),
+                TYPE_ZEROTIER => Ok(Endpoint::ZeroTier(Address::from(buf.read_bytes_fixed(cursor)?))),
+                TYPE_ETHERNET => Ok(Endpoint::Ethernet(MAC::from(buf.read_bytes_fixed(cursor)?))),
+                TYPE_WIFIDIRECT => Ok(Endpoint::WifiDirect(MAC::from(buf.read_bytes_fixed(cursor)?))),
+                TYPE_BLUETOOTH => Ok(Endpoint::Bluetooth(MAC::from(buf.read_bytes_fixed(cursor)?))),
                 TYPE_IP => Ok(Endpoint::Ip(InetAddress::unmarshal(buf, cursor)?)),
                 TYPE_IPUDP => Ok(Endpoint::IpUdp(InetAddress::unmarshal(buf, cursor)?)),
                 TYPE_IPTCP => Ok(Endpoint::IpTcp(InetAddress::unmarshal(buf, cursor)?)),
                 TYPE_HTTP => {
-                    let l = buf.get_u16(cursor)?;
-                    Ok(Endpoint::Http(String::from_utf8_lossy(buf.get_bytes(l as usize, cursor)?).to_string()))
+                    let l = buf.read_u16(cursor)?;
+                    Ok(Endpoint::Http(String::from_utf8_lossy(buf.read_bytes(l as usize, cursor)?).to_string()))
                 }
                 TYPE_WEBRTC => {
-                    let l = buf.get_u16(cursor)?;
-                    Ok(Endpoint::WebRTC(String::from_utf8_lossy(buf.get_bytes(l as usize, cursor)?).to_string()))
+                    let l = buf.read_u16(cursor)?;
+                    Ok(Endpoint::WebRTC(String::from_utf8_lossy(buf.read_bytes(l as usize, cursor)?).to_string()))
                 }
                 _ => std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "unrecognized endpoint type in stream"))
             }

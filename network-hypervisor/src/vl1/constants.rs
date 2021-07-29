@@ -27,13 +27,16 @@ pub const HEADER_FLAGS_FIELD_MASK_HOPS: u8 = 0x07;
 
 /// Packet is not encrypted but contains a Poly1305 MAC of the plaintext.
 /// Poly1305 is initialized with Salsa20/12 in the same manner as SALSA2012_POLY1305.
-pub const CIPHER_NOCRYPT_POLY1305: u8 = 0;
+pub const CIPHER_NOCRYPT_POLY1305: u8 = 0x00;
 
 /// Packet is encrypted and authenticated with Salsa20/12 and Poly1305.
 /// Construction is the same as that which is used in the NaCl secret box functions.
 pub const CIPHER_SALSA2012_POLY1305: u8 = 0x10;
 
-/// Packet is encrypted and authenticated with AES-GMAC-SIV.
+/// Formerly 'NONE' which is deprecated; reserved for future use.
+pub const CIPHER_RESERVED: u8 = 0x20;
+
+/// Packet is encrypted and authenticated with AES-GMAC-SIV (AES-256).
 pub const CIPHER_AES_GMAC_SIV: u8 = 0x30;
 
 /// Header (outer) flag indicating that this packet has additional fragments.
