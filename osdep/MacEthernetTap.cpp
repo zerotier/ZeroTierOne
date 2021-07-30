@@ -59,10 +59,13 @@
 
 static const ZeroTier::MulticastGroup _blindWildcardMulticastGroup(ZeroTier::MAC(0xff),0);
 
+#define MACOS_FETH_MAX_MTU_SYSCTL "net.link.fake.max_mtu"
+
 namespace ZeroTier {
 
 static Mutex globalTapCreateLock;
 static bool globalTapInitialized = false;
+static bool fethMaxMtuAdjusted = false;
 
 MacEthernetTap::MacEthernetTap(
 	const char *homePath,
@@ -101,6 +104,14 @@ MacEthernetTap::MacEthernetTap(
 		throw std::runtime_error("MacEthernetTapAgent not present in ZeroTier home");
 
 	Mutex::Lock _gl(globalTapCreateLock); // only make one at a time
+
+	if (!fethMaxMtuAdjusted) {
+		fethMaxMtuAdjusted = true;
+		int old_mtu = 0;
+		size_t old_mtu_len = sizeof(old_mtu);
+		int mtu = 10000;
+		sysctlbyname(MACOS_FETH_MAX_MTU_SYSCTL, &old_mtu, &old_mtu_len, &mtu, sizeof(mtu));
+	}
 
 	// Destroy all feth devices on first tap start in case ZeroTier did not exit cleanly last time.
 	// We leave interfaces less than feth100 alone in case something else is messing with feth devices.
