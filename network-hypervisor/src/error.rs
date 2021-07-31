@@ -16,3 +16,19 @@ impl Debug for InvalidFormatError {
 }
 
 impl Error for InvalidFormatError {}
+
+pub struct InvalidParameterError(pub(crate) &'static str);
+
+impl Display for InvalidParameterError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "InvalidParameterError: {}", self.0)
+    }
+}
+
+impl Debug for InvalidParameterError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "InvalidParameterError: {}", self.0)
+    }
+}
+
+impl Error for InvalidParameterError {}

@@ -45,6 +45,13 @@ pub const HEADER_FLAG_FRAGMENTED: u8 = 0x40;
 /// Minimum size of a fragment.
 pub const FRAGMENT_SIZE_MIN: usize = 16;
 
+/// Maximum allowed number of fragments.
+pub const FRAGMENT_COUNT_MAX: usize = 16;
+
+/// Maximum number of fragmented packets in flight from a peer.
+/// Usually there should only be one at a time, so this is overkill.
+pub const PEER_DEFRAGMENT_MAX_PACKETS_IN_FLIGHT: usize = 4;
+
 /// Verb (inner) flag indicating that the packet's payload (after the verb) is LZ4 compressed.
 pub const VERB_FLAG_COMPRESSED: u8 = 0x80;
 

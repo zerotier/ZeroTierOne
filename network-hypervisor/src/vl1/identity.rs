@@ -9,9 +9,10 @@ use crate::vl1::Address;
 use crate::vl1::buffer::Buffer;
 use crate::crypto::c25519::{C25519_PUBLIC_KEY_SIZE, ED25519_PUBLIC_KEY_SIZE, C25519_SECRET_KEY_SIZE, ED25519_SECRET_KEY_SIZE, C25519KeyPair, Ed25519KeyPair, ED25519_SIGNATURE_SIZE};
 use crate::crypto::p521::{P521KeyPair, P521PublicKey, P521_ECDSA_SIGNATURE_SIZE, P521_PUBLIC_KEY_SIZE, P521_SECRET_KEY_SIZE};
-use crate::crypto::hash::{SHA384, SHA512, SHA512_HASH_SIZE};
+use crate::crypto::hash::{SHA384, SHA512, SHA512_HASH_SIZE, SHA384_HASH_SIZE};
 use crate::crypto::balloon;
 use crate::crypto::salsa::Salsa;
+use crate::crypto::secret::Secret;
 use crate::error::InvalidFormatError;
 
 // Memory parameter for V0 address derivation work function.
@@ -88,11 +89,11 @@ impl Identity {
             panic!("unable to allocate memory for V0 identity generation");
         }
 
-        let ed25519 = Ed25519KeyPair::generate();
+        let ed25519 = Ed25519KeyPair::generate(false);
         let ed25519_pub_bytes = ed25519.public_bytes();
         let mut sha = SHA512::new();
         loop {
-            let c25519 = C25519KeyPair::generate();
+            let c25519 = C25519KeyPair::generate(false);
             let c25519_pub_bytes = c25519.public_bytes();
 
             sha.update(&c25519_pub_bytes);
@@ -123,8 +124,8 @@ impl Identity {
     }
 
     fn generate_p521() -> Identity {
-        let c25519 = C25519KeyPair::generate();
-        let ed25519 = Ed25519KeyPair::generate();
+        let c25519 = C25519KeyPair::generate(false);
+        let ed25519 = Ed25519KeyPair::generate(false);
         let p521_ecdh = P521KeyPair::generate(false).unwrap();
         let p521_ecdsa = P521KeyPair::generate(false).unwrap();
 
@@ -191,11 +192,11 @@ impl Identity {
             sha.update((*p521).1.public_key_bytes());
         });
         self.secrets.as_ref().map(|secrets| {
-            sha.update(&secrets.c25519.secret_bytes());
-            sha.update(&secrets.ed25519.secret_bytes());
+            sha.update(&secrets.c25519.secret_bytes().as_ref());
+            sha.update(&secrets.ed25519.secret_bytes().as_ref());
             secrets.v1.as_ref().map(|p521_secrets| {
-                sha.update((*p521_secrets).0.secret_key_bytes());
-                sha.update((*p521_secrets).1.secret_key_bytes());
+                sha.update((*p521_secrets).0.secret_key_bytes().as_ref());
+                sha.update((*p521_secrets).1.secret_key_bytes().as_ref());
             });
         });
         sha.finish()
@@ -243,14 +244,14 @@ impl Identity {
     /// If both keys are type 1, key agreement is done with NIST P-521. Otherwise it's done
     /// with Curve25519. None is returned if there is an error such as this identity missing
     /// its secrets or a key being invalid.
-    pub fn agree(&self, other_identity: &Identity) -> Option<[u8; 48]> {
+    pub fn agree(&self, other_identity: &Identity) -> Option<Secret<48>> {
         self.secrets.as_ref().map_or(None, |secrets| {
-            let c25519_secret = SHA384::hash(&secrets.c25519.agree(&other_identity.c25519));
+            let c25519_secret = || Secret::<48>(SHA384::hash(&secrets.c25519.agree(&other_identity.c25519).as_ref()));
             secrets.v1.as_ref().map_or_else(|| {
-                Some(c25519_secret)
+                Some(c25519_secret())
             }, |p521_secret| {
                 other_identity.v1.as_ref().map_or_else(|| {
-                    Some(c25519_secret)
+                    Some(c25519_secret())
                 }, |other_p521_public| {
                     p521_secret.0.agree(&other_p521_public.0).map_or(None, |p521_secret| {
                         //
@@ -270,7 +271,7 @@ impl Identity {
                         // as the stronger of the two algorithms. This should make the FIPS people happy and the
                         // people who are paranoid about NIST curves happy.
                         //
-                        Some(SHA384::hmac(&c25519_secret, &p521_secret))
+                        Some(Secret(SHA384::hmac(c25519_secret().as_ref(), p521_secret.as_ref())))
                     })
                 })
             })
@@ -356,10 +357,10 @@ impl Identity {
                 if secrets.v1.is_some() {
                     let p521_secrets = secrets.v1.as_ref().unwrap();
                     buf.append_u8((C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE + P521_SECRET_KEY_SIZE + P521_SECRET_KEY_SIZE) as u8)?;
-                    buf.append_bytes_fixed(&secrets.c25519.secret_bytes())?;
-                    buf.append_bytes_fixed(&secrets.ed25519.secret_bytes())?;
-                    buf.append_bytes_fixed((*p521_secrets).0.secret_key_bytes())?;
-                    buf.append_bytes_fixed((*p521_secrets).1.secret_key_bytes())?;
+                    buf.append_bytes_fixed(&secrets.c25519.secret_bytes().as_ref())?;
+                    buf.append_bytes_fixed(&secrets.ed25519.secret_bytes().as_ref())?;
+                    buf.append_bytes_fixed((*p521_secrets).0.secret_key_bytes().as_ref())?;
+                    buf.append_bytes_fixed((*p521_secrets).1.secret_key_bytes().as_ref())?;
                 }
             } else {
                 buf.append_u8(0)?; // 0 secret bytes if not adding any
@@ -371,8 +372,8 @@ impl Identity {
             if include_private && self.secrets.is_some() {
                 let secrets = self.secrets.as_ref().unwrap();
                 buf.append_u8((C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE) as u8)?;
-                buf.append_bytes_fixed(&secrets.c25519.secret_bytes())?;
-                buf.append_bytes_fixed(&secrets.ed25519.secret_bytes())?;
+                buf.append_bytes_fixed(&secrets.c25519.secret_bytes().as_ref())?;
+                buf.append_bytes_fixed(&secrets.ed25519.secret_bytes().as_ref())?;
             } else {
                 buf.append_u8(0)?; // 0 secret bytes if not adding any
             }
@@ -479,14 +480,14 @@ impl Identity {
     pub fn to_secret_string(&self) -> String {
         self.secrets.as_ref().map_or_else(|| self.to_string(), |secrets| {
             secrets.v1.as_ref().map_or_else(|| {
-                format!("{}:{}{}", self.to_string(), crate::util::hex::to_string(&secrets.c25519.secret_bytes()), crate::util::hex::to_string(&secrets.ed25519.secret_bytes()))
+                format!("{}:{}{}", self.to_string(), crate::util::hex::to_string(secrets.c25519.secret_bytes().as_ref()), crate::util::hex::to_string(secrets.ed25519.secret_bytes().as_ref()))
             }, |p521_secret| {
                 let mut secret_key_blob: Vec<u8> = Vec::new();
                 secret_key_blob.reserve(C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE + P521_SECRET_KEY_SIZE + P521_SECRET_KEY_SIZE);
-                let _ = secret_key_blob.write_all(&secrets.c25519.secret_bytes());
-                let _ = secret_key_blob.write_all(&secrets.ed25519.secret_bytes());
-                let _ = secret_key_blob.write_all(p521_secret.0.secret_key_bytes());
-                let _ = secret_key_blob.write_all(p521_secret.1.secret_key_bytes());
+                let _ = secret_key_blob.write_all(&secrets.c25519.secret_bytes().as_ref());
+                let _ = secret_key_blob.write_all(&secrets.ed25519.secret_bytes().as_ref());
+                let _ = secret_key_blob.write_all(p521_secret.0.secret_key_bytes().as_ref());
+                let _ = secret_key_blob.write_all(p521_secret.1.secret_key_bytes().as_ref());
                 format!("{}:{}", self.to_string(), base64::encode_config(secret_key_blob.as_slice(), base64::URL_SAFE_NO_PAD))
             })
         })

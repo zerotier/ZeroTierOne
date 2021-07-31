@@ -27,4 +27,10 @@ impl Poly1305 {
         let _ = self.0.get_mac(&mut mac);
         mac
     }
+
+    #[inline(always)]
+    pub fn finish_into(&mut self, mac: &mut [u8]) {
+        debug_assert_eq!(mac.len(), 16);
+        let _ = self.0.get_mac(mac);
+    }
 }

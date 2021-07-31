@@ -95,22 +95,18 @@ impl Dictionary {
         })
     }
 
-    #[inline(always)]
     pub fn set_str(&mut self, k: &str, v: &str) {
         let _ = self.0.insert(String::from(k), v.as_bytes().to_vec());
     }
 
-    #[inline(always)]
     pub fn set_u64(&mut self, k: &str, v: u64) {
         let _ = self.0.insert(String::from(k), crate::util::hex::to_vec_u64(v, true));
     }
 
-    #[inline(always)]
     pub fn set_bytes(&mut self, k: &str, v: Vec<u8>) {
         let _ = self.0.insert(String::from(k), v);
     }
 
-    #[inline(always)]
     pub fn set_bool(&mut self, k: &str, v: bool) {
         let _ = self.0.insert(String::from(k), (if v { [b'1'] } else { [b'0'] }).to_vec());
     }

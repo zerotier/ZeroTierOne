@@ -1,6 +1,8 @@
 use std::mem::size_of;
 use std::io::Write;
 
+use crate::util::pool::Reusable;
+
 const OVERFLOW_ERR_MSG: &'static str = "overflow";
 
 /// Annotates a type as containing only primitive types like integers and arrays.
@@ -18,6 +20,13 @@ impl<const L: usize> Default for Buffer<L> {
     #[inline(always)]
     fn default() -> Self {
        Self(0, [0_u8; L])
+    }
+}
+
+impl<const L: usize> Reusable for Buffer<L> {
+    #[inline(always)]
+    fn reset(&mut self) {
+        self.clear();
     }
 }
 
@@ -55,7 +64,7 @@ impl<const L: usize> Buffer<L> {
 
     /// Erase contents and zero size.
     #[inline(always)]
-    pub fn reset(&mut self) {
+    pub fn clear(&mut self) {
         self.0 = 0;
         self.1.fill(0);
     }

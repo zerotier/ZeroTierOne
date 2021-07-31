@@ -2,6 +2,7 @@ use std::str::FromStr;
 use std::convert::TryInto;
 
 use gcrypt::sexp::SExpression;
+use crate::crypto::secret::Secret;
 
 pub const P521_PUBLIC_KEY_SIZE: usize = 132;
 pub const P521_SECRET_KEY_SIZE: usize = 66;
@@ -67,7 +68,7 @@ pub struct P521KeyPair {
     public_key: P521PublicKey,
     secret_key_for_ecdsa: SExpression, // secret key as a private-key S-expression
     secret_key_for_ecdh: SExpression,  // the same secret key as a "data" S-expression for the weird gcrypt ECDH interface
-    secret_key_bytes: [u8; P521_SECRET_KEY_SIZE],
+    secret_key_bytes: Secret<{ P521_SECRET_KEY_SIZE }>,
 }
 
 impl P521KeyPair {
@@ -99,10 +100,10 @@ impl P521KeyPair {
                             },
                             secret_key_for_ecdsa: SExpression::from_str(format!("(private-key(ecc(curve nistp521)(q #{}#)(d #{}#)))", crate::util::hex::to_string(pk), crate::util::hex::to_string(sk)).as_str()).unwrap(),
                             secret_key_for_ecdh: SExpression::from_str(format!("(data(flags raw)(value #{}#))", crate::util::hex::to_string(sk)).as_str()).unwrap(),
-                            secret_key_bytes: [0_u8; P521_SECRET_KEY_SIZE],
+                            secret_key_bytes: Secret::default(),
                         };
                         kp.public_key.public_key_bytes[((P521_PUBLIC_KEY_SIZE + 1) - pk.len())..P521_PUBLIC_KEY_SIZE].copy_from_slice(&pk[1..]);
-                        kp.secret_key_bytes[(P521_SECRET_KEY_SIZE - sk.len())..P521_SECRET_KEY_SIZE].copy_from_slice(sk);
+                        kp.secret_key_bytes.0[(P521_SECRET_KEY_SIZE - sk.len())..P521_SECRET_KEY_SIZE].copy_from_slice(sk);
                         return Some(kp);
                     }
                 }
@@ -124,7 +125,7 @@ impl P521KeyPair {
             public_key: public_key.unwrap(),
             secret_key_for_ecdsa: SExpression::from_str(format!("(private-key(ecc(curve nistp521)(q #04{}#)(d #{}#)))", crate::util::hex::to_string(public_bytes), crate::util::hex::to_string(secret_bytes)).as_str()).unwrap(),
             secret_key_for_ecdh: SExpression::from_str(format!("(data(flags raw)(value #{}#))", crate::util::hex::to_string(secret_bytes)).as_str()).unwrap(),
-            secret_key_bytes: secret_bytes.try_into().unwrap(),
+            secret_key_bytes: Secret::from_bytes(secret_bytes),
         })
     }
 
@@ -143,7 +144,7 @@ impl P521KeyPair {
     }
 
     #[inline(always)]
-    pub fn secret_key_bytes(&self) -> &[u8; P521_SECRET_KEY_SIZE] {
+    pub fn secret_key_bytes(&self) -> &Secret<{ P521_SECRET_KEY_SIZE }> {
         &self.secret_key_bytes
     }
 
@@ -168,10 +169,10 @@ impl P521KeyPair {
     }
 
     /// Execute ECDH key agreement, returning a raw (un-hashed) shared secret.
-    pub fn agree(&self, other_public: &P521PublicKey) -> Option<[u8; P521_ECDH_SHARED_SECRET_SIZE]> {
+    pub fn agree(&self, other_public: &P521PublicKey) -> Option<Secret<{ P521_ECDH_SHARED_SECRET_SIZE }>> {
         gcrypt::pkey::encrypt(&other_public.public_key, &self.secret_key_for_ecdh).map_or(None, |k| {
             k.find_token("s").map_or(None, |s| s.get_bytes(1).map_or(None, |sb| {
-                Some(sb[1..].try_into().unwrap())
+                Some(Secret(sb[1..].try_into().unwrap()))
             }))
         })
     }
@@ -248,7 +249,7 @@ mod tests {
             panic!("ECDH secrets do not match");
         }
 
-        let kp3 = P521KeyPair::from_bytes(kp.public_key_bytes(), kp.secret_key_bytes()).unwrap();
+        let kp3 = P521KeyPair::from_bytes(kp.public_key_bytes(), kp.secret_key_bytes().as_ref()).unwrap();
         let sig = kp3.sign(&[3_u8]).unwrap();
         if !kp.public_key().verify(&[3_u8], &sig) {
             panic!("ECDSA verify failed (from key reconstructed from bytes)");

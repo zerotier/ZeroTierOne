@@ -1,7 +1,8 @@
+use std::hash::{Hash, Hasher};
+
 use crate::vl1::{Address, MAC};
 use crate::vl1::inetaddress::InetAddress;
 use crate::vl1::buffer::Buffer;
-use std::hash::{Hash, Hasher};
 
 const TYPE_NIL: u8 = 0;
 const TYPE_ZEROTIER: u8 = 1;
@@ -50,6 +51,7 @@ impl Default for Endpoint {
 }
 
 impl Endpoint {
+    #[inline(always)]
     pub fn ep_type(&self) -> Type {
         match self {
             Endpoint::Nil => Type::Nil,

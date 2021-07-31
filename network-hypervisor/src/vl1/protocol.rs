@@ -9,7 +9,7 @@ use crate::vl1::Address;
 /// [u8; 8] fields in that their endianness is "wire" endian. If for some reason
 /// packet IDs need to be portably compared or shared across systems they should
 /// be treated as bytes not integers.
-type PacketID = u64;
+pub type PacketID = u64;
 
 /// ZeroTier unencrypted outer header
 /// This is the header for a complete packet. If the fragmented flag is set, it will
@@ -113,7 +113,7 @@ impl FragmentHeader {
 #[cfg(test)]
 mod tests {
     use std::mem::size_of;
-    use crate::vl1::headers::{PacketHeader, FragmentHeader};
+    use crate::vl1::protocol::{PacketHeader, FragmentHeader};
     use crate::vl1::constants::{PACKET_HEADER_SIZE, FRAGMENT_SIZE_MIN};
 
     #[test]

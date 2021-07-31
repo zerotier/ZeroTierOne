@@ -15,8 +15,10 @@ fn hash_int_le(sha: &mut crate::crypto::hash::SHA512, i: u64) {
 /// SPACE_COST must be a multiple of 64. This is checked with an assertion.
 /// DELTA is usually 3.
 pub fn hash<const SPACE_COST: usize, const TIME_COST: usize, const DELTA: usize>(password: &[u8], salt: &[u8]) -> [u8; crate::crypto::hash::SHA512_HASH_SIZE] {
-    assert_ne!(SPACE_COST, 0);
-    assert_eq!((SPACE_COST % 64), 0);
+    debug_assert_ne!(SPACE_COST, 0);
+    debug_assert_ne!(TIME_COST, 0);
+    debug_assert_ne!(DELTA, 0);
+    debug_assert_eq!((SPACE_COST % 64), 0);
 
     let mut buf: [u8; SPACE_COST] = unsafe { MaybeUninit::uninit().assume_init() };
     let zero64 = [0_u8; 8];

@@ -1,8 +1,8 @@
+use std::mem::size_of;
 use std::ops::{Deref, DerefMut};
 use std::sync::{Arc, Weak};
 
 use parking_lot::Mutex;
-use std::mem::size_of;
 
 /// Trait for objects that can be used with Pool.
 pub trait Reusable: Default + Sized {
@@ -17,12 +17,15 @@ struct PoolEntry<O: Reusable> {
 type PoolInner<O> = Mutex<Vec<*mut PoolEntry<O>>>;
 
 /// Container for pooled objects that have been checked out of the pool.
+///
 /// When this is dropped the object is returned to the pool or if the pool or is
 /// dropped if the pool has been dropped. There is also an into_raw() and from_raw()
 /// functionality that allows conversion to/from naked pointers to O for
 /// interoperation with C/C++ APIs.
+///
+/// Note that pooled objects are not clonable. If you want to share them use Rc<>
+/// or Arc<>.
 #[repr(transparent)]
-#[derive(Clone)]
 pub struct Pooled<O: Reusable>(*mut PoolEntry<O>);
 
 impl<O: Reusable> Pooled<O> {

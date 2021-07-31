@@ -188,7 +188,7 @@ impl MacFethTap {
         // Set sysctl for max if_fake MTU. This is allowed to fail since this sysctl doesn't
         // exist on older versions of MacOS (and isn't required there). 16000 is larger than
         // anything ZeroTier supports. OS max is 16384 - some overhead.
-        let _ = Command::new(SYSCTL).arg("net.link.fake.max_mtu").arg("16000").spawn().map(|mut c| { let _ = c.wait(); });
+        let _ = Command::new(SYSCTL).arg("net.link.fake.max_mtu").arg("10000").spawn().map(|mut c| { let _ = c.wait(); });
 
         // Create pair of feth interfaces and create MacFethDevice struct.
         let cmd = Command::new(IFCONFIG).arg(&device_name).arg("create").spawn();

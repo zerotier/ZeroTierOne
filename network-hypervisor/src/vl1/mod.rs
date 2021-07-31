@@ -1,15 +1,14 @@
-pub(crate) mod concurrentmap;
-pub(crate) mod constants;
-pub(crate) mod headers;
+pub(crate) mod protocol;
 pub(crate) mod buffer;
 pub(crate) mod node;
 pub(crate) mod path;
 pub(crate) mod peer;
-pub(crate) mod state;
 
+pub mod constants;
 pub mod identity;
 pub mod inetaddress;
 pub mod endpoint;
+pub mod locator;
 
 mod dictionary;
 mod address;
@@ -20,3 +19,7 @@ pub use mac::MAC;
 pub use identity::Identity;
 pub use endpoint::Endpoint;
 pub use dictionary::Dictionary;
+pub use inetaddress::InetAddress;
+pub use locator::Locator;
+pub use peer::Peer;
+pub use path::Path;

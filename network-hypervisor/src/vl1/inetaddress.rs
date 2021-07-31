@@ -225,24 +225,6 @@ impl InetAddress {
         }
     }
 
-    /// Fills in the InetAddress specific parts of a path lookup key.
-    /// This assumes that the key's default contents are zero bits and does not clear unused regions.
-    pub(crate) fn fill_path_lookup_key(&self, k: &mut [u64; 4]) {
-        unsafe {
-            match self.sa.sa_family as u8 {
-                AF_INET => {
-                    k[1] |= self.sin.sin_port as u64 | 0x40000; // OR because most significant 32 bits contain endpoint info
-                    k[2] = self.sin.sin_addr.s_addr as u64;
-                }
-                AF_INET6 => {
-                    k[1] |= self.sin6.sin6_port as u64 | 0x60000; // OR because most significant 32 bits contain endpoint info
-                    copy_nonoverlapping((&(self.sin6.sin6_addr) as *const in6_addr).cast::<u8>(), k.as_mut_ptr().cast::<u8>().offset(16), 16);
-                }
-                _ => {}
-            }
-        }
-    }
-
     /// Set the IP port.
     #[inline(always)]
     pub fn set_port(&mut self, port: u16) {
@@ -252,6 +234,24 @@ impl InetAddress {
                 AF_INET => self.sin.sin_port = port,
                 AF_INET6 => self.sin6.sin6_port = port,
                 _ => {}
+            }
+        }
+    }
+
+    #[inline(always)]
+    pub(crate) fn local_lookup_key(&self) -> u128 {
+        unsafe {
+            match self.sa.sa_family as u8 {
+                AF_INET => {
+                    ((self.sin.sin_addr.s_addr as u64).wrapping_shl(16) | self.sin.sin_port as u64) as u128
+                }
+                AF_INET6 => {
+                    let mut tmp: [u64; 2] = MaybeUninit::uninit().assume_init();
+                    copy_nonoverlapping((&self.sin6.sin6_addr as *const in6_addr).cast::<u8>(), tmp.as_mut_ptr().cast::<u8>(), 16);
+                    tmp[1] = tmp[1].wrapping_add((self.sin6.sin6_port as u64) ^ crate::crypto::salt64());
+                    (*tmp.as_ptr().cast::<u128>()).wrapping_mul(0x0fc94e3bf4e9ab32866458cd56f5e605)
+                }
+                _ => 0
             }
         }
     }

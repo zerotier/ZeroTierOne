@@ -20,6 +20,8 @@ urlencoding = "^2"
 lz4_flex = { version = "^0", features = ["safe-encode", "safe-decode", "checked-decode"] }
 dashmap = "^4"
 parking_lot = "^0"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 
 [target."cfg(not(windows))".dependencies]
 libc = "^0"

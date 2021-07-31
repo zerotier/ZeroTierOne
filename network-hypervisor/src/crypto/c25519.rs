@@ -3,6 +3,9 @@ use std::io::Write;
 
 use ed25519_dalek::Digest;
 
+use crate::crypto::random::SecureRandom;
+use crate::crypto::secret::Secret;
+
 pub const C25519_PUBLIC_KEY_SIZE: usize = 32;
 pub const C25519_SECRET_KEY_SIZE: usize = 32;
 pub const C25519_SHARED_SECRET_SIZE: usize = 32;
@@ -15,8 +18,8 @@ pub struct C25519KeyPair(x25519_dalek::StaticSecret, x25519_dalek::PublicKey);
 
 impl C25519KeyPair {
     #[inline(always)]
-    pub fn generate() -> C25519KeyPair {
-        let sk = x25519_dalek::StaticSecret::new(rand_core::OsRng);
+    pub fn generate(_transient: bool) -> C25519KeyPair {
+        let sk = x25519_dalek::StaticSecret::new(SecureRandom::get());
         let pk = x25519_dalek::PublicKey::from(&sk);
         C25519KeyPair(sk, pk)
     }
@@ -40,17 +43,17 @@ impl C25519KeyPair {
     }
 
     #[inline(always)]
-    pub fn secret_bytes(&self) -> [u8; C25519_SECRET_KEY_SIZE] {
-        self.0.to_bytes()
+    pub fn secret_bytes(&self) -> Secret<{ C25519_SECRET_KEY_SIZE }> {
+        Secret(self.0.to_bytes())
     }
 
     /// Execute ECDH agreement and return a raw (un-hashed) shared secret key.
     #[inline(always)]
-    pub fn agree(&self, their_public: &[u8]) -> [u8; C25519_SHARED_SECRET_SIZE] {
+    pub fn agree(&self, their_public: &[u8]) -> Secret<{ C25519_SHARED_SECRET_SIZE }> {
         let pk: [u8; 32] = their_public.try_into().unwrap();
         let pk = x25519_dalek::PublicKey::from(pk);
         let sec = self.0.diffie_hellman(&pk);
-        sec.to_bytes()
+        Secret(sec.to_bytes())
     }
 }
 
@@ -59,8 +62,8 @@ pub struct Ed25519KeyPair(ed25519_dalek::Keypair);
 
 impl Ed25519KeyPair {
     #[inline(always)]
-    pub fn generate() -> Ed25519KeyPair {
-        let mut rng = rand_core::OsRng::default();
+    pub fn generate(_transient: bool) -> Ed25519KeyPair {
+        let mut rng = SecureRandom::get();
         Ed25519KeyPair(ed25519_dalek::Keypair::generate(&mut rng))
     }
 
@@ -88,8 +91,8 @@ impl Ed25519KeyPair {
     }
 
     #[inline(always)]
-    pub fn secret_bytes(&self) -> [u8; ED25519_SECRET_KEY_SIZE] {
-        self.0.secret.to_bytes()
+    pub fn secret_bytes(&self) -> Secret<{ ED25519_SECRET_KEY_SIZE }> {
+        Secret(self.0.secret.to_bytes())
     }
 
     #[inline(always)]
