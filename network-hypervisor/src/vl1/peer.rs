@@ -1,41 +1,47 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, AtomicU64, AtomicU8};
 
-use crate::vl1::protocol::PacketID;
-use crate::vl1::node::PacketBuffer;
-use crate::vl1::constants::{FRAGMENT_COUNT_MAX, PEER_DEFRAGMENT_MAX_PACKETS_IN_FLIGHT};
 use crate::vl1::{Identity, Path};
+use crate::vl1::fragmentedpacket::FragmentedPacket;
+use crate::vl1::protocol::{PacketID, PacketHeader};
+use crate::vl1::node::{VL1CallerInterface, PacketBuffer, Node};
 
 use parking_lot::Mutex;
 
-struct FragmentedPacket {
-    pub id: PacketID,
-    pub frag: [Option<PacketBuffer>; FRAGMENT_COUNT_MAX],
+const MAX_PATHS: usize = 16;
+
+struct TxState {
+    packet_iv_counter: u64,
+    last_send_time_ticks: i64,
+    paths: [Arc<Path>; MAX_PATHS],
 }
 
+struct RxState {
+    last_receive_time_ticks: i64,
+    remote_version: [u8; 4],
+    remote_protocol_version: u8,
+}
+
+/// A remote peer known to this node.
+/// Sending-related and receiving-related fields are locked separately since concurrent
+/// send/receive is not uncommon.
 pub struct Peer {
-    // This peer's identity.
     identity: Identity,
 
-    // Primary static secret resulting from key agreement with identity.
+    // Static shared secret computed from agreement with identity.
     identity_static_secret: [u8; 48],
 
-    // Outgoing packet IV counter used to generate packet IDs to this peer.
-    packet_iv_counter: AtomicU64,
+    // State used primarily when sending to this peer.
+    txs: Mutex<TxState>,
 
-    // Paths sorted in ascending order of quality / preference.
-    paths: Mutex<Vec<Arc<Path>>>,
+    // State used primarily when receiving from this peer.
+    rxs: Mutex<RxState>,
+}
 
-    // Incoming fragmented packet defragment buffer.
-    fragmented_packets: Mutex<[FragmentedPacket; PEER_DEFRAGMENT_MAX_PACKETS_IN_FLIGHT]>,
+impl Peer {
+    pub(crate) fn receive_from_singular<CI: VL1CallerInterface>(&self, node: &Node, ci: &CI, header: &PacketHeader, packet: &PacketBuffer) {
+    }
 
-    // Last send and receive time in millisecond ticks (not wall clock).
-    last_send_time_ticks: AtomicI64,
-    last_receive_time_ticks: AtomicI64,
-
-    // Most recent remote version (most to least significant bytes: major, minor, revision, build)
-    remote_version: AtomicU64,
-
-    // Most recent remote protocol version
-    remote_protocol_version: AtomicU8,
+    pub(crate) fn receive_from_fragmented<CI: VL1CallerInterface>(&self, node: &Node, ci: CI, header: &PacketHeader, packet: &FragmentedPacket) {
+    }
 }

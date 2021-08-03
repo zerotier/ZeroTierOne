@@ -1,6 +1,9 @@
 /// Length of an address in bytes.
 pub const ADDRESS_SIZE: usize = 5;
 
+/// Prefix indicating reserved addresses (that can't actually be addresses).
+pub const ADDRESS_RESERVED_PREFIX: u8 = 0xff;
+
 /// Size of packet header that lies outside the encryption envelope.
 pub const PACKET_HEADER_SIZE: usize = 27;
 
@@ -18,6 +21,9 @@ pub const PACKET_SIZE_MIN: usize = PACKET_HEADER_SIZE + 1;
 
 /// Maximum size of an entire packet.
 pub const PACKET_SIZE_MAX: usize = PACKET_HEADER_SIZE + PACKET_PAYLOAD_SIZE_MAX;
+
+/// Index of destination in both fragment and full packet headers.
+pub const PACKET_DESTINATION_INDEX: usize = 8;
 
 /// Mask to select cipher from header flags field.
 pub const HEADER_FLAGS_FIELD_MASK_CIPHER: u8 = 0x30;
@@ -48,9 +54,14 @@ pub const FRAGMENT_SIZE_MIN: usize = 16;
 /// Maximum allowed number of fragments.
 pub const FRAGMENT_COUNT_MAX: usize = 16;
 
-/// Maximum number of fragmented packets in flight from a peer.
-/// Usually there should only be one at a time, so this is overkill.
-pub const PEER_DEFRAGMENT_MAX_PACKETS_IN_FLIGHT: usize = 4;
+/// Index of packet fragment indicator byte to detect fragments.
+pub const FRAGMENT_INDICATOR_INDEX: usize = 13;
+
+/// Byte found at FRAGMENT_INDICATOR_INDEX to indicate a fragment.
+pub const FRAGMENT_INDICATOR: u8 = 0xff;
+
+/// Maximum number of inbound fragments to handle at once per path.
+pub const FRAGMENT_MAX_PER_PATH: usize = 64;
 
 /// Verb (inner) flag indicating that the packet's payload (after the verb) is LZ4 compressed.
 pub const VERB_FLAG_COMPRESSED: u8 = 0x80;
@@ -58,11 +69,8 @@ pub const VERB_FLAG_COMPRESSED: u8 = 0x80;
 /// Maximum number of packet hops allowed by the protocol.
 pub const PROTOCOL_MAX_HOPS: usize = 7;
 
-/// Index of packet fragment indicator byte to detect fragments.
-pub const FRAGMENT_INDICATOR_INDEX: usize = 13;
+/// Frequency for WHOIS retries
+pub const WHOIS_RETRY_INTERVAL: i64 = 1000;
 
-/// Byte found at FRAGMENT_INDICATOR_INDEX to indicate a fragment.
-pub const FRAGMENT_INDICATOR: u8 = 0xff;
-
-/// Prefix indicating reserved addresses (that can't actually be addresses).
-pub const ADDRESS_RESERVED_PREFIX: u8 = 0xff;
+/// Maximum number of WHOIS retries
+pub const WHOIS_RETRY_MAX: u16 = 3;

@@ -23,6 +23,8 @@ const V1_BALLOON_SPACE_COST: usize = 16384;
 const V1_BALLOON_TIME_COST: usize = 3;
 const V1_BALLOON_DELTA: usize = 3;
 
+const V1_BALLOON_SALT: &'static [u8] = b"zt_id_v1";
+
 pub const IDENTITY_TYPE_0_SIGNATURE_SIZE: usize = ED25519_SIGNATURE_SIZE + 32;
 pub const IDENTITY_TYPE_1_SIGNATURE_SIZE: usize = P521_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE;
 
@@ -141,7 +143,7 @@ impl Identity {
         loop {
             // ECDSA is a randomized signature algorithm, so each signature will be different.
             let sig = p521_ecdsa.sign(&signing_buf).unwrap();
-            let bh = balloon::hash::<{ V1_BALLOON_SPACE_COST }, { V1_BALLOON_TIME_COST }, { V1_BALLOON_DELTA }>(&sig, b"zt_id_v1");
+            let bh = balloon::hash::<{ V1_BALLOON_SPACE_COST }, { V1_BALLOON_TIME_COST }, { V1_BALLOON_DELTA }>(&sig, V1_BALLOON_SALT);
             if bh[0] < 7 {
                 let addr = Address::from_bytes(&bh[59..64]).unwrap();
                 if addr.is_valid() {
@@ -229,7 +231,7 @@ impl Identity {
                 signing_buf[(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE)..(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE)].copy_from_slice((*p521).0.public_key_bytes());
                 signing_buf[(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE)..(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE)].copy_from_slice((*p521).1.public_key_bytes());
                 if (*p521).1.verify(&signing_buf, &(*p521).2) {
-                    let bh = balloon::hash::<{ V1_BALLOON_SPACE_COST }, { V1_BALLOON_TIME_COST }, { V1_BALLOON_DELTA }>(&(*p521).2, b"zt_id_v1");
+                    let bh = balloon::hash::<{ V1_BALLOON_SPACE_COST }, { V1_BALLOON_TIME_COST }, { V1_BALLOON_DELTA }>(&(*p521).2, V1_BALLOON_SALT);
                     (bh[0] < 7) && bh.eq(&(*p521).3) && Address::from_bytes(&bh[59..64]).unwrap().eq(&self.address)
                 } else {
                     false

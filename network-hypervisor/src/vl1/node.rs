@@ -1,20 +1,23 @@
-use std::sync::Arc;
-use std::str::FromStr;
-use std::time::Duration;
-use std::marker::PhantomData;
 use std::hash::Hash;
+use std::marker::PhantomData;
+use std::str::FromStr;
+use std::sync::Arc;
+use std::time::Duration;
+
+use dashmap::DashMap;
+use parking_lot::Mutex;
 
 use crate::crypto::random::SecureRandom;
 use crate::error::InvalidParameterError;
+use crate::util::gate::IntervalGate;
 use crate::util::pool::{Pool, Pooled};
-use crate::vl1::{Address, Identity, Endpoint, Locator};
+use crate::vl1::{Address, Endpoint, Identity, Locator};
 use crate::vl1::buffer::Buffer;
-use crate::vl1::constants::{PACKET_SIZE_MAX, FRAGMENT_COUNT_MAX};
+use crate::vl1::constants::PACKET_SIZE_MAX;
 use crate::vl1::path::Path;
 use crate::vl1::peer::Peer;
-
-use parking_lot::Mutex;
-use dashmap::DashMap;
+use crate::vl1::protocol::{FragmentHeader, is_fragment, PacketHeader, PacketID};
+use crate::vl1::whois::Whois;
 
 /// Standard packet buffer type including pool container.
 pub type PacketBuffer = Pooled<Buffer<{ PACKET_SIZE_MAX }>>;
@@ -96,12 +99,18 @@ pub trait VL1CallerInterface {
     fn time_clock(&self) -> i64;
 }
 
+#[derive(Default)]
+struct BackgroundTaskIntervals {
+    whois: IntervalGate<{ Whois::INTERVAL }>,
+}
+
 pub struct Node {
     identity: Identity,
+    intervals: Mutex<BackgroundTaskIntervals>,
     locator: Mutex<Option<Locator>>,
-    paths_by_inaddr: DashMap<u128, Arc<Path>>,
+    paths: DashMap<Endpoint, Arc<Path>>,
     peers: DashMap<Address, Arc<Peer>>,
-    peer_vec: Mutex<Vec<Arc<Peer>>>, // for rapid iteration through all peers
+    whois: Whois,
     buffer_pool: Pool<Buffer<{ PACKET_SIZE_MAX }>>,
     secure_prng: SecureRandom,
 }
@@ -136,10 +145,11 @@ impl Node {
 
         Ok(Self {
             identity: id,
+            intervals: Mutex::new(BackgroundTaskIntervals::default()),
             locator: Mutex::new(None),
-            paths_by_inaddr: DashMap::new(),
+            paths: DashMap::new(),
             peers: DashMap::new(),
-            peer_vec: Mutex::new(Vec::new()),
+            whois: Whois::new(),
             buffer_pool: Pool::new(64),
             secure_prng: SecureRandom::get(),
         })
@@ -164,15 +174,73 @@ impl Node {
         self.buffer_pool.get()
     }
 
+    /// Get a peer by address.
+    #[inline(always)]
+    pub fn peer(&self, a: Address) -> Option<Arc<Peer>> {
+        self.peers.get(&a).map(|peer| peer.clone() )
+    }
+
+    /// Get all peers currently in the peer cache.
+    pub fn peers(&self) -> Vec<Arc<Peer>> {
+        let mut v: Vec<Arc<Peer>> = Vec::new();
+        v.reserve(self.peers.len());
+        for p in self.peers.iter() {
+            v.push(p.value().clone());
+        }
+        v
+    }
+
     /// Run background tasks and return desired delay until next call in milliseconds.
     /// This should only be called once at a time. It technically won't hurt anything to
     /// call concurrently but it will waste CPU cycles.
     pub fn do_background_tasks<CI: VL1CallerInterface>(&self, ci: &CI) -> Duration {
+        let intervals = self.intervals.lock();
+        let tt = ci.time_ticks();
+
+        if intervals.whois.gate(tt) {
+            self.whois.on_interval(self, ci, tt);
+        }
+
         Duration::from_millis(1000)
     }
 
     /// Called when a packet is received on the physical wire.
-    pub fn wire_receive<CI: VL1CallerInterface>(&self, ci: &CI, endpoint: &Endpoint, local_socket: i64, local_interface: i64, data: PacketBuffer) {
+    pub fn wire_receive<CI: VL1CallerInterface>(&self, ci: &CI, source_endpoint: &Endpoint, source_local_socket: i64, source_local_interface: i64, mut data: PacketBuffer) {
+        let _ = data.struct_mut_at::<FragmentHeader>(0).map(|fragment_header| {
+            // NOTE: destination address is located at the same index in both the fragment
+            // header and the full packet header, allowing us to make this decision once.
+            let dest = Address::from(&fragment_header.dest);
+            if dest == self.identity.address() {
+                // Packet or fragment is addressed to this node.
+
+                let path = self.path(source_endpoint, source_local_socket, source_local_interface);
+                if fragment_header.is_fragment() {
+                } else {
+                    data.struct_mut_at::<PacketHeader>(0).map(|header| {
+                        let source = Address::from(&header.src);
+
+                        if header.is_fragmented() {
+                        } else {
+                        }
+                    });
+                }
+
+            } else {
+                // Packet or fragment is addressed to another node.
+            }
+        });
+    }
+
+    /// Get the canonical Path object for a given endpoint and local socket information.
+    /// This is a canonicalizing function that returns a unique path object for every tuple
+    /// of endpoint, local socket, and local interface.
+    pub(crate) fn path(&self, ep: &Endpoint, local_socket: i64, local_interface: i64) -> Arc<Path> {
+        self.paths.get(ep).map_or_else(|| {
+            let p = Arc::new(Path::new(ep.clone(), local_socket, local_interface));
+            self.paths.insert(ep.clone(), p.clone()).unwrap_or(p) // if another thread added one, return that instead
+        }, |path| {
+            path.clone()
+        })
     }
 }
 

@@ -1,7 +1,7 @@
 use std::str::FromStr;
 use std::hash::{Hash, Hasher};
 
-use crate::vl1::constants::ADDRESS_RESERVED_PREFIX;
+use crate::vl1::constants::{ADDRESS_RESERVED_PREFIX, ADDRESS_SIZE};
 use crate::error::InvalidFormatError;
 use crate::util::hex::HEX_CHARS;
 
@@ -11,7 +11,7 @@ pub struct Address(u64);
 impl Address {
     #[inline(always)]
     pub fn from_bytes(b: &[u8]) -> Result<Address, InvalidFormatError> {
-        if b.len() >= 5 {
+        if b.len() >= ADDRESS_SIZE {
             Ok(Address((b[0] as u64) << 32 | (b[1] as u64) << 24 | (b[2] as u64) << 16 | (b[3] as u64) << 8 | b[4] as u64))
         } else {
             Err(InvalidFormatError)
@@ -34,7 +34,7 @@ impl Address {
     }
 
     #[inline(always)]
-    pub fn to_bytes(&self) -> [u8; 5] {
+    pub fn to_bytes(&self) -> [u8; ADDRESS_SIZE] {
         [(self.0 >> 32) as u8, (self.0 >> 24) as u8, (self.0 >> 16) as u8, (self.0 >> 8) as u8, self.0 as u8]
     }
 
@@ -48,8 +48,8 @@ impl ToString for Address {
     fn to_string(&self) -> String {
         let mut v = self.0 << 24;
         let mut s = String::new();
-        s.reserve(10);
-        for _ in 0..10 {
+        s.reserve(ADDRESS_SIZE * 2);
+        for _ in 0..(ADDRESS_SIZE * 2) {
             s.push(HEX_CHARS[(v >> 60) as usize] as char);
             v <<= 4;
         }
@@ -79,14 +79,14 @@ impl Hash for Address {
     }
 }
 
-impl From<&[u8; 5]> for Address {
+impl From<&[u8; ADDRESS_SIZE]> for Address {
     #[inline(always)]
     fn from(b: &[u8; 5]) -> Address {
         Address((b[0] as u64) << 32 | (b[1] as u64) << 24 | (b[2] as u64) << 16 | (b[3] as u64) << 8 | b[4] as u64)
     }
 }
 
-impl From<[u8; 5]> for Address {
+impl From<[u8; ADDRESS_SIZE]> for Address {
     #[inline(always)]
     fn from(b: [u8; 5]) -> Address {
         Self::from(&b)

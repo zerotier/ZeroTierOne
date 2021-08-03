@@ -207,20 +207,28 @@ impl<const L: usize> Buffer<L> {
         }
     }
 
-    /// Get a structure at position 0.
+    /// Get a structure at a given position in the buffer.
     #[inline(always)]
-    pub fn header<H: RawObject>(&self) -> &H {
-        debug_assert!(size_of::<H>() <= L);
-        debug_assert!(size_of::<H>() <= self.0);
-        unsafe { &*self.1.as_ptr().cast::<H>() }
+    pub fn struct_at<T: RawObject>(&self, ptr: usize) -> std::io::Result<&T> {
+        if (i + size_of::<T>()) <= self.0 {
+            unsafe {
+                Ok(&*self.1.as_ptr().cast::<u8>().offset(ptr as isize).cast::<T>())
+            }
+        } else {
+            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
+        }
     }
 
-    /// Get a structure at position 0 (mutable).
+    /// Get a structure at a given position in the buffer.
     #[inline(always)]
-    pub fn header_mut<H: RawObject>(&mut self) -> &mut H {
-        debug_assert!(size_of::<H>() <= L);
-        debug_assert!(size_of::<H>() <= self.0);
-        unsafe { &mut *self.1.as_mut_ptr().cast::<H>() }
+    pub fn struct_mut_at<T: RawObject>(&mut self, ptr: usize) -> std::io::Result<&mut T> {
+        if (i + size_of::<T>()) <= self.0 {
+            unsafe {
+                Ok(&mut *self.1.as_mut_ptr().cast::<u8>().offset(ptr as isize).cast::<T>())
+            }
+        } else {
+            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
+        }
     }
 
     /// Get a structure at a given position in the buffer and advance the cursor.

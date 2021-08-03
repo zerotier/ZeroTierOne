@@ -238,24 +238,6 @@ impl InetAddress {
         }
     }
 
-    #[inline(always)]
-    pub(crate) fn local_lookup_key(&self) -> u128 {
-        unsafe {
-            match self.sa.sa_family as u8 {
-                AF_INET => {
-                    ((self.sin.sin_addr.s_addr as u64).wrapping_shl(16) | self.sin.sin_port as u64) as u128
-                }
-                AF_INET6 => {
-                    let mut tmp: [u64; 2] = MaybeUninit::uninit().assume_init();
-                    copy_nonoverlapping((&self.sin6.sin6_addr as *const in6_addr).cast::<u8>(), tmp.as_mut_ptr().cast::<u8>(), 16);
-                    tmp[1] = tmp[1].wrapping_add((self.sin6.sin6_port as u64) ^ crate::crypto::salt64());
-                    (*tmp.as_ptr().cast::<u128>()).wrapping_mul(0x0fc94e3bf4e9ab32866458cd56f5e605)
-                }
-                _ => 0
-            }
-        }
-    }
-
     /// Get this IP address's scope as per RFC documents and what is advertised via BGP.
     pub fn scope(&self) -> IpScope {
         unsafe {
@@ -488,6 +470,7 @@ impl FromStr for InetAddress {
 }
 
 impl PartialEq for InetAddress {
+    #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
         unsafe {
             if self.sa.sa_family == other.sa.sa_family {

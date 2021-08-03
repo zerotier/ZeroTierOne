@@ -54,12 +54,6 @@ impl PacketHeader {
         (self.flags_cipher_hops & HEADER_FLAG_FRAGMENTED) != 0
     }
 
-    /// If true, this packet is actually a fragment and its header should be interpreted as a FragmentHeader instead.
-    #[inline(always)]
-    pub fn is_fragment(&self) -> bool {
-        self.src[0] == FRAGMENT_INDICATOR
-    }
-
     #[inline(always)]
     pub fn destination(&self) -> Address {
         Address::from(&self.dest)
@@ -90,6 +84,11 @@ unsafe impl crate::vl1::buffer::RawObject for FragmentHeader {}
 
 impl FragmentHeader {
     #[inline(always)]
+    pub fn is_fragment(&self) -> bool {
+        self.fragment_indicator == FRAGMENT_INDICATOR
+    }
+
+    #[inline(always)]
     pub fn total_fragments(&self) -> u8 {
         self.total_and_fragment_no >> 4
     }
@@ -102,6 +101,12 @@ impl FragmentHeader {
     #[inline(always)]
     pub fn hops(&self) -> u8 {
         self.reserved_hops & HEADER_FLAGS_FIELD_MASK_HOPS
+    }
+
+    #[inline(always)]
+    pub fn increment_hops(&mut self) {
+        let f = self.reserved_hops;
+        self.reserved_hops = (f & HEADER_FLAGS_FIELD_MASK_HOPS.not()) | ((f + 1) & HEADER_FLAGS_FIELD_MASK_HOPS);
     }
 
     #[inline(always)]

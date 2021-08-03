@@ -12,7 +12,7 @@ pub fn to_string(b: &[u8]) -> String {
     s
 }
 
-/// Encode an unsigned 64-bit value as a string.
+/// Encode an unsigned 64-bit value as a hexadecimal string.
 pub fn to_string_u64(mut i: u64, skip_leading_zeroes: bool) -> String {
     let mut s = String::new();
     s.reserve(16);
@@ -26,7 +26,7 @@ pub fn to_string_u64(mut i: u64, skip_leading_zeroes: bool) -> String {
     s
 }
 
-/// Encode an unsigned 64-bit value as a string.
+/// Encode an unsigned 64-bit value as a hexadecimal ASCII string.
 pub fn to_vec_u64(mut i: u64, skip_leading_zeroes: bool) -> Vec<u8> {
     let mut s = Vec::new();
     s.reserve(16);
@@ -40,7 +40,7 @@ pub fn to_vec_u64(mut i: u64, skip_leading_zeroes: bool) -> Vec<u8> {
     s
 }
 
-/// Decode a hex string, ignoring non-hexadecimal characters.
+/// Decode a hex string, ignoring all non-hexadecimal characters.
 pub fn from_string(s: &str) -> Vec<u8> {
     let mut b: Vec<u8> = Vec::new();
     b.reserve((s.len() / 2) + 1);

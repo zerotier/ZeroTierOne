@@ -3,16 +3,17 @@ pub(crate) mod buffer;
 pub(crate) mod node;
 pub(crate) mod path;
 pub(crate) mod peer;
+pub(crate) mod dictionary;
+pub(crate) mod address;
+pub(crate) mod mac;
+pub(crate) mod fragmentedpacket;
+mod(crate) mod whois;
 
 pub mod constants;
 pub mod identity;
 pub mod inetaddress;
 pub mod endpoint;
 pub mod locator;
-
-mod dictionary;
-mod address;
-mod mac;
 
 pub use address::Address;
 pub use mac::MAC;
