@@ -2047,7 +2047,7 @@ public:
 				unsigned int mostMatchingPrefixBits = 0;
 				for(std::set<InetAddress>::const_iterator i(myIps.begin());i!=myIps.end();++i) {
 					const unsigned int matchingPrefixBits = i->matchingPrefixBits(*target);
-					if (matchingPrefixBits >= mostMatchingPrefixBits) {
+					if (matchingPrefixBits >= mostMatchingPrefixBits && ((target->isV4() && i->isV4()) || (target->isV6() && i->isV6()))) {
 						mostMatchingPrefixBits = matchingPrefixBits;
 						src = &(*i);
 					}
