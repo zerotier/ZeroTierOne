@@ -42,7 +42,7 @@ pub enum Endpoint {
     IpUdp(InetAddress),
     IpTcp(InetAddress),
     Http(String),
-    WebRTC(String),
+    WebRTC(Vec<u8>),
 }
 
 impl Default for Endpoint {
@@ -122,7 +122,7 @@ impl Endpoint {
             }
             Endpoint::WebRTC(offer) => {
                 buf.append_u8(16 + (Type::WebRTC as u8))?;
-                let b = offer.as_bytes();
+                let b = offer.as_slice();
                 buf.append_u16(b.len() as u16)?;
                 buf.append_bytes(b)
             }
@@ -154,7 +154,7 @@ impl Endpoint {
                 }
                 TYPE_WEBRTC => {
                     let l = buf.read_u16(cursor)?;
-                    Ok(Endpoint::WebRTC(String::from_utf8_lossy(buf.read_bytes(l as usize, cursor)?).to_string()))
+                    Ok(Endpoint::WebRTC(buf.read_bytes(l as usize, cursor)?.to_vec()))
                 }
                 _ => std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "unrecognized endpoint type in stream"))
             }
@@ -217,7 +217,7 @@ impl PartialOrd for Endpoint {
 
 impl Ord for Endpoint {
     fn cmp(&self, other: &Self) -> Ordering {
-        // This ordering is done explicitly instead of using derive() so it will be certain
+        // This ordering is done explicitly instead of using derive(Ord) so it will be certain
         // to be consistent with the integer order in the Type enum. Make sure it stays this
         // way if new types are added in future revisions.
         match self {
