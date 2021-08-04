@@ -195,7 +195,7 @@ impl Peer {
             // fails we fall back to the static secret. If decryption with an ephemeral secret succeeds
             // the forward secrecy flag in the receive path is set.
             let forward_secrecy = {
-                let mut secret = &mut rx.static_secret;
+                let mut secret = if rx.ephemeral_secret.is_some() { rx.ephemeral_secret.as_mut().unwrap() } else { &mut rx.static_secret };
                 loop {
                     match header.cipher() {
                         CIPHER_NOCRYPT_POLY1305 => {
