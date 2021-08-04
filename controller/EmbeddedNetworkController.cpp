@@ -1368,7 +1368,7 @@ void EmbeddedNetworkController::_request(
 		fprintf(stderr, "ssoEnabled && !ssoExempt %s-%s\n", nwids, memberId.c_str());
 		uint64_t authenticationExpiryTime = (int64_t)OSUtils::jsonInt(member["authenticationExpiryTime"], 0);
 		fprintf(stderr, "authExpiryTime: %lld\n", authenticationExpiryTime);
-		if (authenticationExpiryTime < now) {
+		if (authenticationExpiryTime >= now) {
 			if (!authenticationURL.empty()) {
 				Dictionary<3072> authInfo;
 				authInfo.add("aU", authenticationURL.c_str());
