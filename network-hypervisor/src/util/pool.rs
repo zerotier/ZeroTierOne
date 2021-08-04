@@ -36,8 +36,9 @@ impl<O: Reusable> Pooled<O> {
     pub unsafe fn into_raw(self) -> *mut O {
         debug_assert!(!self.0.is_null());
         debug_assert_eq!(self.0.cast::<u8>(), (&mut (*self.0).obj as *mut O).cast::<u8>());
+        let ptr = self.0.cast::<O>();
         std::mem::forget(self);
-        self.0.cast()
+        ptr
     }
 
     /// Restore a raw pointer from into_raw() into a Pooled object.

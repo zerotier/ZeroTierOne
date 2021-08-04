@@ -75,7 +75,7 @@ impl Default for Address {
 impl Hash for Address {
     #[inline(always)]
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.0.hash(state)
+        state.write_u64(self.0);
     }
 }
 

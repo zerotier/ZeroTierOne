@@ -9,7 +9,7 @@ use crate::vl1::Address;
 use crate::vl1::buffer::Buffer;
 use crate::crypto::c25519::{C25519_PUBLIC_KEY_SIZE, ED25519_PUBLIC_KEY_SIZE, C25519_SECRET_KEY_SIZE, ED25519_SECRET_KEY_SIZE, C25519KeyPair, Ed25519KeyPair, ED25519_SIGNATURE_SIZE};
 use crate::crypto::p521::{P521KeyPair, P521PublicKey, P521_ECDSA_SIGNATURE_SIZE, P521_PUBLIC_KEY_SIZE, P521_SECRET_KEY_SIZE};
-use crate::crypto::hash::{SHA384, SHA512, SHA512_HASH_SIZE, SHA384_HASH_SIZE};
+use crate::crypto::hash::{SHA384, SHA512, SHA512_HASH_SIZE};
 use crate::crypto::balloon;
 use crate::crypto::salsa::Salsa;
 use crate::crypto::secret::Secret;

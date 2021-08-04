@@ -1,5 +1,3 @@
-use std::hash::Hash;
-use std::marker::PhantomData;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
@@ -16,7 +14,7 @@ use crate::vl1::buffer::Buffer;
 use crate::vl1::constants::PACKET_SIZE_MAX;
 use crate::vl1::path::Path;
 use crate::vl1::peer::Peer;
-use crate::vl1::protocol::{FragmentHeader, is_fragment, PacketHeader, PacketID};
+use crate::vl1::protocol::*;
 use crate::vl1::whois::WhoisQueue;
 
 /// Standard packet buffer type including pool container.
@@ -100,7 +98,7 @@ pub trait VL1CallerInterface {
 }
 
 /// Trait implemented by VL2 to handle messages after they are unwrapped by VL1.
-pub(crate) trait VL1PacketHandler {
+pub trait VL1PacketHandler {
     /// Handle a packet, returning true if the verb was recognized.
     /// True should be returned even if the packet is not valid, since the return value is used
     /// to determine if this is a VL2 or VL1 packet. ERROR and OK should not be handled here but
@@ -135,8 +133,6 @@ impl Node {
     /// If the auto-generate identity type is not None, a new identity will be generated if
     /// no identity is currently stored in the data store.
     pub fn new<CI: VL1CallerInterface>(ci: &CI, auto_generate_identity_type: Option<crate::vl1::identity::Type>) -> Result<Self, InvalidParameterError> {
-        crate::crypto::init(); // make sure this is initialized, okay to call more than once
-
         let id = {
             let id_str = ci.load_identity();
             if id_str.is_none() {
@@ -209,7 +205,7 @@ impl Node {
     /// This should only be called once at a time. It technically won't hurt anything to
     /// call concurrently but it will waste CPU cycles.
     pub fn do_background_tasks<CI: VL1CallerInterface>(&self, ci: &CI) -> Duration {
-        let intervals = self.intervals.lock();
+        let mut intervals = self.intervals.lock();
         let tt = ci.time_ticks();
 
         if intervals.whois.gate(tt) {
@@ -249,7 +245,7 @@ impl Node {
             let p = Arc::new(Path::new(ep.clone(), local_socket, local_interface));
             self.paths.insert(ep.clone(), p.clone()).unwrap_or(p) // if another thread added one, return that instead
         }, |path| {
-            path.clone()
+            path.value().clone()
         })
     }
 }

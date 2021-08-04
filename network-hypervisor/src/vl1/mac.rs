@@ -54,7 +54,7 @@ impl Default for MAC {
 impl Hash for MAC {
     #[inline(always)]
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.0.hash(state)
+        state.write_u64(self.0);
     }
 }
 

@@ -38,8 +38,6 @@ pub const AF_INET: u8 = libc::AF_INET as u8;
 #[cfg(not(windows))]
 pub const AF_INET6: u8 = libc::AF_INET6 as u8;
 
-const NO_IP: [u8; 0] = [];
-
 #[repr(u8)]
 pub enum IpScope {
     None = 0,
@@ -53,8 +51,12 @@ pub enum IpScope {
 }
 
 /// An IPv4 or IPv6 socket address that directly encapsulates C sockaddr types.
+///
 /// The ZeroTier core uses this in preference to std::net stuff so this can be
 /// directly used via the C API or with C socket I/O functions.
+///
+/// Unfortunately this is full of unsafe because it's a union, but the code is
+/// not complex and doesn't allocate anything.
 #[repr(C)]
 pub union InetAddress {
     sa: sockaddr,
@@ -208,7 +210,7 @@ impl InetAddress {
             match self.sa.sa_family as u8 {
                 AF_INET => &*(&self.sin.sin_addr.s_addr as *const u32).cast::<[u8; 4]>(),
                 AF_INET6 => &*(&(self.sin6.sin6_addr) as *const in6_addr).cast::<[u8; 16]>(),
-                _ => &NO_IP
+                _ => &[]
             }
         }
     }
@@ -557,12 +559,14 @@ impl Hash for InetAddress {
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
-    use crate::vl1::inetaddress::InetAddress;
+    use crate::vl1::inetaddress::{InetAddress, sockaddr_storage};
+    use std::mem::size_of;
 
     #[test]
     fn layout() {
         unsafe {
-            // Make sure union is laid out such that all the sockaddr structures overlap.
+            assert_eq!(size_of::<sockaddr_storage>(), size_of::<InetAddress>());
+
             let mut tmp = InetAddress::new();
             tmp.sa.sa_family = 0xab;
             if tmp.sin.sin_family != 0xab {

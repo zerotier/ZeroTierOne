@@ -1,8 +1,7 @@
-use std::intrinsics::size_of;
 use std::mem::MaybeUninit;
 
 use crate::vl1::Address;
-use crate::vl1::buffer::{Buffer, RawObject};
+use crate::vl1::buffer::RawObject;
 use crate::vl1::constants::*;
 
 pub const VERB_VL1_NOP: u8 = 0x00;
@@ -174,6 +173,6 @@ mod tests {
             flags_cipher_hops: 0,
             message_auth: [0_u8; 8],
         };
-        assert_eq!(bar.id_bytes(), [1_u8, 2, 3, 4, 5, 6, 7, 8]);
+        assert_eq!(bar.id_bytes().clone(), [1_u8, 2, 3, 4, 5, 6, 7, 8]);
     }
 }

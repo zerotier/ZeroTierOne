@@ -75,3 +75,48 @@ pub(crate) fn hash32(mut x: u32) -> u32 {
     x = x.wrapping_mul(0x846ca68b);
     x ^ x.wrapping_shr(16)
 }
+
+/// A hasher for maps that just returns u64 values as-is.
+///
+/// This should be used only for things like ZeroTier addresses that are already random
+/// and that aren't vulnerable to malicious crafting of identifiers.
+#[derive(Copy, Clone)]
+pub(crate) struct U64PassThroughHasher(u64);
+
+impl U64PassThroughHasher {
+    #[inline(always)]
+    pub fn new() -> Self {
+        Self(0)
+    }
+}
+
+impl std::hash::Hasher for U64PassThroughHasher {
+    #[inline(always)]
+    fn finish(&self) -> u64 {
+        self.0
+    }
+
+    #[inline(always)]
+    fn write(&mut self, _: &[u8]) {
+        panic!("U64PassThroughHasher can only be used with u64 and i64");
+    }
+
+    #[inline(always)]
+    fn write_u64(&mut self, i: u64) {
+        self.0 += i;
+    }
+
+    #[inline(always)]
+    fn write_i64(&mut self, i: i64) {
+        self.0 += i as u64;
+    }
+}
+
+impl std::hash::BuildHasher for U64PassThroughHasher {
+    type Hasher = Self;
+
+    #[inline(always)]
+    fn build_hasher(&self) -> Self::Hasher {
+        Self(0)
+    }
+}

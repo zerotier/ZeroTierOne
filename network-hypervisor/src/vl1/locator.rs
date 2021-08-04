@@ -1,4 +1,3 @@
-use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 
 use crate::vl1::{Address, Endpoint, Identity};
@@ -123,7 +122,7 @@ impl Locator {
 
     #[inline(always)]
     pub fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> std::io::Result<()> {
-        marshal_internal(buf, false)
+        self.marshal_internal(buf, false)
     }
 
     pub fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> std::io::Result<Self> {

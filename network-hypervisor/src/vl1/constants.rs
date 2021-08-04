@@ -40,9 +40,6 @@ pub const PACKET_VERB_INDEX: usize = 27;
 /// Index of destination in both fragment and full packet headers.
 pub const PACKET_DESTINATION_INDEX: usize = 8;
 
-/// Maximum number of paths to a remote peer.
-pub const PEER_MAX_PATHS: usize = 16;
-
 /// Mask to select cipher from header flags field.
 pub const HEADER_FLAGS_FIELD_MASK_CIPHER: u8 = 0x30;
 
@@ -79,7 +76,7 @@ pub const FRAGMENT_SIZE_MIN: usize = 16;
 pub const FRAGMENT_HEADER_SIZE: usize = 16;
 
 /// Maximum allowed number of fragments.
-pub const FRAGMENT_COUNT_MAX: usize = 16;
+pub const FRAGMENT_COUNT_MAX: usize = 8;
 
 /// Index of packet fragment indicator byte to detect fragments.
 pub const FRAGMENT_INDICATOR_INDEX: usize = 13;
@@ -87,8 +84,9 @@ pub const FRAGMENT_INDICATOR_INDEX: usize = 13;
 /// Byte found at FRAGMENT_INDICATOR_INDEX to indicate a fragment.
 pub const FRAGMENT_INDICATOR: u8 = 0xff;
 
-/// Maximum number of inbound fragments to handle at once per path.
-pub const FRAGMENT_MAX_PER_PATH: usize = 64;
+/// Maximum number of inbound fragmented packets to handle at once per path.
+/// This is a sanity limit to prevent memory exhaustion due to DOS attacks or broken peers.
+pub const FRAGMENT_MAX_INBOUND_PACKETS_PER_PATH: usize = 256;
 
 /// Time after which an incomplete fragmented packet expires.
 pub const FRAGMENT_EXPIRATION: i64 = 1500;

@@ -221,7 +221,7 @@ impl<const L: usize> Buffer<L> {
     /// Get a structure at a given position in the buffer.
     #[inline(always)]
     pub fn struct_at<T: RawObject>(&self, ptr: usize) -> std::io::Result<&T> {
-        if (i + size_of::<T>()) <= self.0 {
+        if (ptr + size_of::<T>()) <= self.0 {
             unsafe {
                 Ok(&*self.1.as_ptr().cast::<u8>().offset(ptr as isize).cast::<T>())
             }
@@ -233,7 +233,7 @@ impl<const L: usize> Buffer<L> {
     /// Get a structure at a given position in the buffer.
     #[inline(always)]
     pub fn struct_mut_at<T: RawObject>(&mut self, ptr: usize) -> std::io::Result<&mut T> {
-        if (i + size_of::<T>()) <= self.0 {
+        if (ptr + size_of::<T>()) <= self.0 {
             unsafe {
                 Ok(&mut *self.1.as_mut_ptr().cast::<u8>().offset(ptr as isize).cast::<T>())
             }

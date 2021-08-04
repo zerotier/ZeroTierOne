@@ -14,9 +14,9 @@ pub(crate) enum QueuedPacket {
 }
 
 struct WhoisQueueItem {
+    packet_queue: Vec<QueuedPacket>,
     retry_gate: IntervalGate<{ WHOIS_RETRY_INTERVAL }>,
     retry_count: u16,
-    packet_queue: Vec<QueuedPacket>
 }
 
 pub(crate) struct WhoisQueue {
@@ -34,19 +34,18 @@ impl WhoisQueue {
 
     pub fn query<CI: VL1CallerInterface>(&self, node: &Node, ci: &CI, target: Address, packet: Option<QueuedPacket>) {
         let mut q = self.queue.lock();
-        if q.get_mut(&target).map_or_else(|| {
-            q.insert(target, WhoisQueueItem {
-                retry_gate: IntervalGate::new(ci.time_ticks()),
-                retry_count: 1,
-                packet_queue: packet.map_or_else(|| Vec::new(), |p| vec![p]),
-            });
-            true
-        }, |qi| {
-            let g = qi.retry_gate(ci.time_ticks());
-            qi.retry_count += g as u16;
-            let _ = packet.map(|p| qi.packet_queue.push(p));
-            g
-        }) {
+
+        let qi = q.entry(target).or_insert_with(|| WhoisQueueItem {
+            packet_queue: Vec::new(),
+            retry_gate: IntervalGate::new(0),
+            retry_count: 0,
+        });
+
+        if qi.retry_gate.gate(ci.time_ticks()) {
+            qi.retry_count += 1;
+            if packet.is_some() {
+                qi.packet_queue.push(packet.unwrap());
+            }
             self.send_whois(node, ci, &[target]);
         }
     }

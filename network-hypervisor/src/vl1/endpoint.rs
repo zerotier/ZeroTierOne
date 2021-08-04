@@ -333,7 +333,7 @@ impl ToString for Endpoint {
             Endpoint::IpUdp(ip) => format!("udp:{}", ip.to_string()),
             Endpoint::IpTcp(ip) => format!("tcp:{}", ip.to_string()),
             Endpoint::Http(url) => url.clone(),
-            Endpoint::WebRTC(offer) => format!("webrtc:{}", urlencoding::encode(offer.as_str())),
+            Endpoint::WebRTC(offer) => format!("webrtc:{}", urlencoding::encode(String::from_utf8_lossy(offer.as_slice()).as_ref())),
         }
     }
 }
