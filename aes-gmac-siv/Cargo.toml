@@ -7,6 +7,13 @@ edition = "2018"
 opt-level = 3
 lto = true
 codegen-units = 1
+panic = 'abort'
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = 'abort'
 
 [target."cfg(not(any(target_os = \"macos\", target_os = \"ios\")))".dependencies]
 gcrypt = "^0"

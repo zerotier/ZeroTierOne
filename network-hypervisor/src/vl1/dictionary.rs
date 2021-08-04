@@ -66,6 +66,11 @@ impl Dictionary {
         self.0.len()
     }
 
+    #[inline(always)]
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
     pub fn get_str(&self, k: &str) -> Option<&str> {
         self.0.get(k).map_or(None, |v| std::str::from_utf8(v.as_slice()).map_or(None, |s| Some(s)))
     }

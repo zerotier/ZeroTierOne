@@ -36,6 +36,7 @@ impl<O: Reusable> Pooled<O> {
     pub unsafe fn into_raw(self) -> *mut O {
         debug_assert!(!self.0.is_null());
         debug_assert_eq!(self.0.cast::<u8>(), (&mut (*self.0).obj as *mut O).cast::<u8>());
+        std::mem::forget(self);
         self.0.cast()
     }
 

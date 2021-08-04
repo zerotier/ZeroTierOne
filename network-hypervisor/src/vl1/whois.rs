@@ -1,14 +1,14 @@
 use std::collections::HashMap;
 
-use crate::vl1::Address;
-use crate::vl1::fragmentedpacket::FragmentedPacket;
-use crate::vl1::node::{VL1CallerInterface, Node, PacketBuffer};
-use crate::util::gate::IntervalGate;
-
 use parking_lot::Mutex;
-use crate::vl1::constants::{WHOIS_RETRY_INTERVAL, WHOIS_RETRY_MAX};
 
-pub enum QueuedPacket {
+use crate::util::gate::IntervalGate;
+use crate::vl1::Address;
+use crate::vl1::constants::*;
+use crate::vl1::fragmentedpacket::FragmentedPacket;
+use crate::vl1::node::{Node, PacketBuffer, VL1CallerInterface};
+
+pub(crate) enum QueuedPacket {
     Singular(PacketBuffer),
     Fragmented(FragmentedPacket)
 }
@@ -19,11 +19,11 @@ struct WhoisQueueItem {
     packet_queue: Vec<QueuedPacket>
 }
 
-pub struct Whois {
+pub(crate) struct WhoisQueue {
     queue: Mutex<HashMap<Address, WhoisQueueItem>>
 }
 
-impl Whois {
+impl WhoisQueue {
     pub const INTERVAL: i64 = WHOIS_RETRY_INTERVAL;
 
     pub fn new() -> Self {

@@ -15,7 +15,6 @@ impl SHA512 {
         h
     }
 
-    /// Compute HMAC-SHA512(key, msg)
     #[inline(always)]
     pub fn hmac(key: &[u8], msg: &[u8]) -> [u8; SHA512_HASH_SIZE] {
         let mut m = gcrypt::mac::Mac::new(gcrypt::mac::Algorithm::HmacSha512).unwrap();
@@ -47,8 +46,6 @@ impl SHA512 {
         self.0.get_only_digest().unwrap().try_into().unwrap()
     }
 
-    /// Return a reference to an internally stored result.
-    /// This saves a copy, but the returned result is only valid so long as no other methods are called.
     #[inline(always)]
     pub fn finish_get_ref(&mut self) -> &[u8] {
         self.0.finish();
@@ -79,7 +76,6 @@ impl SHA384 {
         h
     }
 
-    /// Compute HMAC-SHA384(key, msg)
     #[inline(always)]
     pub fn hmac(key: &[u8], msg: &[u8]) -> [u8; SHA384_HASH_SIZE] {
         let mut m = gcrypt::mac::Mac::new(gcrypt::mac::Algorithm::HmacSha384).unwrap();
@@ -111,8 +107,6 @@ impl SHA384 {
         self.0.get_only_digest().unwrap().try_into().unwrap()
     }
 
-    /// Return a reference to an internally stored result.
-    /// This saves a copy, but the returned result is only valid so long as no other methods are called.
     #[inline(always)]
     pub fn finish_get_ref(&mut self) -> &[u8] {
         self.0.finish();

@@ -1,9 +1,9 @@
-use std::str::FromStr;
 use std::hash::{Hash, Hasher};
+use std::str::FromStr;
 
-use crate::vl1::constants::{ADDRESS_RESERVED_PREFIX, ADDRESS_SIZE};
 use crate::error::InvalidFormatError;
 use crate::util::hex::HEX_CHARS;
+use crate::vl1::constants::{ADDRESS_RESERVED_PREFIX, ADDRESS_SIZE};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Address(u64);

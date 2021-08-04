@@ -17,7 +17,7 @@ use crate::vl1::constants::PACKET_SIZE_MAX;
 use crate::vl1::path::Path;
 use crate::vl1::peer::Peer;
 use crate::vl1::protocol::{FragmentHeader, is_fragment, PacketHeader, PacketID};
-use crate::vl1::whois::Whois;
+use crate::vl1::whois::WhoisQueue;
 
 /// Standard packet buffer type including pool container.
 pub type PacketBuffer = Pooled<Buffer<{ PACKET_SIZE_MAX }>>;
@@ -99,9 +99,24 @@ pub trait VL1CallerInterface {
     fn time_clock(&self) -> i64;
 }
 
+/// Trait implemented by VL2 to handle messages after they are unwrapped by VL1.
+pub(crate) trait VL1PacketHandler {
+    /// Handle a packet, returning true if the verb was recognized.
+    /// True should be returned even if the packet is not valid, since the return value is used
+    /// to determine if this is a VL2 or VL1 packet. ERROR and OK should not be handled here but
+    /// in handle_error() and handle_ok() instead.
+    fn handle_packet(&self, peer: &Peer, source_path: &Arc<Path>, forward_secrecy: bool, verb: u8, payload: &Buffer<{ PACKET_SIZE_MAX }>) -> bool;
+
+    /// Handle errors, returning true if the error was recognized.
+    fn handle_error(&self, peer: &Peer, source_path: &Arc<Path>, forward_secrecy: bool, in_re_verb: u8, in_re_packet_id: PacketID, error_code: u8, payload: &Buffer<{ PACKET_SIZE_MAX }>) -> bool;
+
+    /// Handle an OK, returing true if the OK was recognized.
+    fn handle_ok(&self, peer: &Peer, source_path: &Arc<Path>, forward_secrecy: bool, in_re_verb: u8, in_re_packet_id: PacketID, payload: &Buffer<{ PACKET_SIZE_MAX }>) -> bool;
+}
+
 #[derive(Default)]
 struct BackgroundTaskIntervals {
-    whois: IntervalGate<{ Whois::INTERVAL }>,
+    whois: IntervalGate<{ WhoisQueue::INTERVAL }>,
 }
 
 pub struct Node {
@@ -110,7 +125,7 @@ pub struct Node {
     locator: Mutex<Option<Locator>>,
     paths: DashMap<Endpoint, Arc<Path>>,
     peers: DashMap<Address, Arc<Peer>>,
-    whois: Whois,
+    whois: WhoisQueue,
     buffer_pool: Pool<Buffer<{ PACKET_SIZE_MAX }>>,
     secure_prng: SecureRandom,
 }
@@ -149,7 +164,7 @@ impl Node {
             locator: Mutex::new(None),
             paths: DashMap::new(),
             peers: DashMap::new(),
-            whois: Whois::new(),
+            whois: WhoisQueue::new(),
             buffer_pool: Pool::new(64),
             secure_prng: SecureRandom::get(),
         })
@@ -205,7 +220,8 @@ impl Node {
     }
 
     /// Called when a packet is received on the physical wire.
-    pub fn wire_receive<CI: VL1CallerInterface>(&self, ci: &CI, source_endpoint: &Endpoint, source_local_socket: i64, source_local_interface: i64, mut data: PacketBuffer) {
+    pub fn wire_receive<CI: VL1CallerInterface, PH: VL1PacketHandler>(&self, ci: &CI, ph: &PH, source_endpoint: &Endpoint, source_local_socket: i64, source_local_interface: i64, mut data: PacketBuffer) {
+        /*
         let _ = data.struct_mut_at::<FragmentHeader>(0).map(|fragment_header| {
             // NOTE: destination address is located at the same index in both the fragment
             // header and the full packet header, allowing us to make this decision once.
@@ -216,19 +232,13 @@ impl Node {
                 let path = self.path(source_endpoint, source_local_socket, source_local_interface);
                 if fragment_header.is_fragment() {
                 } else {
-                    data.struct_mut_at::<PacketHeader>(0).map(|header| {
-                        let source = Address::from(&header.src);
-
-                        if header.is_fragmented() {
-                        } else {
-                        }
-                    });
                 }
 
             } else {
                 // Packet or fragment is addressed to another node.
             }
         });
+        */
     }
 
     /// Get the canonical Path object for a given endpoint and local socket information.

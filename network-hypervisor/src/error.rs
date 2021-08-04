@@ -10,8 +10,9 @@ impl Display for InvalidFormatError {
 }
 
 impl Debug for InvalidFormatError {
+    #[inline(always)]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("InvalidFormatError")
+        <Self as Display>::fmt(self, f)
     }
 }
 
@@ -26,8 +27,9 @@ impl Display for InvalidParameterError {
 }
 
 impl Debug for InvalidParameterError {
+    #[inline(always)]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "InvalidParameterError: {}", self.0)
+        <Self as Display>::fmt(self, f)
     }
 }
 

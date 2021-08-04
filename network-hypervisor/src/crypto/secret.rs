@@ -3,7 +3,7 @@ use std::ptr::write_volatile;
 
 /// Container for secrets that clears them on drop.
 #[derive(Clone, PartialEq, Eq)]
-pub struct Secret<const L: usize>(pub [u8; L]);
+pub struct Secret<const L: usize>(pub(crate) [u8; L]);
 
 impl<const L: usize> Secret<L> {
     #[inline(always)]

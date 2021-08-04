@@ -17,16 +17,16 @@ const TYPE_WEBRTC: u8 = 9;
 
 #[repr(u8)]
 pub enum Type {
-    Nil = 0,
-    ZeroTier = 1,
-    Ethernet = 2,
-    WifiDirect = 3,
-    Bluetooth = 4,
-    Ip = 5,
-    IpUdp = 6,
-    IpTcp = 7,
-    Http = 8,
-    WebRTC = 9,
+    Nil = TYPE_NIL,
+    ZeroTier = TYPE_ZEROTIER,
+    Ethernet = TYPE_ETHERNET,
+    WifiDirect = TYPE_WIFIDIRECT,
+    Bluetooth = TYPE_BLUETOOTH,
+    Ip = TYPE_IP,
+    IpUdp = TYPE_IPUDP,
+    IpTcp = TYPE_IPTCP,
+    Http = TYPE_HTTP,
+    WebRTC = TYPE_WEBRTC,
 }
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -165,39 +165,39 @@ impl Hash for Endpoint {
         match self {
             Endpoint::Nil => {
                 state.write_u8(Type::Nil as u8);
-            },
+            }
             Endpoint::ZeroTier(a) => {
                 state.write_u8(Type::ZeroTier as u8);
                 state.write_u64(a.to_u64())
-            },
+            }
             Endpoint::Ethernet(m) => {
                 state.write_u8(Type::Ethernet as u8);
                 state.write_u64(m.to_u64())
-            },
+            }
             Endpoint::WifiDirect(m) => {
                 state.write_u8(Type::WifiDirect as u8);
                 state.write_u64(m.to_u64())
-            },
+            }
             Endpoint::Bluetooth(m) => {
                 state.write_u8(Type::Bluetooth as u8);
                 state.write_u64(m.to_u64())
-            },
+            }
             Endpoint::Ip(ip) => {
                 state.write_u8(Type::Ip as u8);
                 ip.hash(state);
-            },
+            }
             Endpoint::IpUdp(ip) => {
                 state.write_u8(Type::IpUdp as u8);
                 ip.hash(state);
-            },
+            }
             Endpoint::IpTcp(ip) => {
                 state.write_u8(Type::IpTcp as u8);
                 ip.hash(state);
-            },
+            }
             Endpoint::Http(url) => {
                 state.write_u8(Type::Http as u8);
                 url.hash(state);
-            },
+            }
             Endpoint::WebRTC(offer) => {
                 state.write_u8(Type::WebRTC as u8);
                 offer.hash(state);

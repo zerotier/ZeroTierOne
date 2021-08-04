@@ -7,7 +7,7 @@ pub(crate) mod dictionary;
 pub(crate) mod address;
 pub(crate) mod mac;
 pub(crate) mod fragmentedpacket;
-mod(crate) mod whois;
+pub(crate) mod whois;
 
 pub mod constants;
 pub mod identity;
