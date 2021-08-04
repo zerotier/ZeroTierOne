@@ -3,6 +3,7 @@ use std::hash::{Hash, Hasher};
 use crate::vl1::{Address, MAC};
 use crate::vl1::inetaddress::InetAddress;
 use crate::vl1::buffer::Buffer;
+use std::cmp::Ordering;
 
 const TYPE_NIL: u8 = 0;
 const TYPE_ZEROTIER: u8 = 1;
@@ -15,6 +16,7 @@ const TYPE_IPTCP: u8 = 7;
 const TYPE_HTTP: u8 = 8;
 const TYPE_WEBRTC: u8 = 9;
 
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(u8)]
 pub enum Type {
     Nil = TYPE_NIL,
@@ -29,7 +31,7 @@ pub enum Type {
     WebRTC = TYPE_WEBRTC,
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum Endpoint {
     Nil,
     ZeroTier(Address),
@@ -201,6 +203,119 @@ impl Hash for Endpoint {
             Endpoint::WebRTC(offer) => {
                 state.write_u8(Type::WebRTC as u8);
                 offer.hash(state);
+            }
+        }
+    }
+}
+
+impl PartialOrd for Endpoint {
+    #[inline(always)]
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Endpoint {
+    fn cmp(&self, other: &Self) -> Ordering {
+        // This ordering is done explicitly instead of using derive() so it will be certain
+        // to be consistent with the integer order in the Type enum. Make sure it stays this
+        // way if new types are added in future revisions.
+        match self {
+            Endpoint::Nil => {
+                match other {
+                    Endpoint::Nil => Ordering::Equal,
+                    _ => Ordering::Greater,
+                }
+            }
+            Endpoint::ZeroTier(a) => {
+                match other {
+                    Endpoint::Nil => Ordering::Less,
+                    Endpoint::ZeroTier(b) => a.cmp(b),
+                    _ => Ordering::Greater,
+                }
+            }
+            Endpoint::Ethernet(a) => {
+                match other {
+                    Endpoint::Nil => Ordering::Less,
+                    Endpoint::ZeroTier(_) => Ordering::Less,
+                    Endpoint::Ethernet(b) => a.cmp(b),
+                    _ => Ordering::Greater,
+                }
+            }
+            Endpoint::WifiDirect(a) => {
+                match other {
+                    Endpoint::Nil => Ordering::Less,
+                    Endpoint::ZeroTier(_) => Ordering::Less,
+                    Endpoint::Ethernet(_) => Ordering::Less,
+                    Endpoint::WifiDirect(b) => a.cmp(b),
+                    _ => Ordering::Greater,
+                }
+            }
+            Endpoint::Bluetooth(a) => {
+                match other {
+                    Endpoint::Nil => Ordering::Less,
+                    Endpoint::ZeroTier(_) => Ordering::Less,
+                    Endpoint::Ethernet(_) => Ordering::Less,
+                    Endpoint::WifiDirect(_) => Ordering::Less,
+                    Endpoint::Bluetooth(b) => a.cmp(b),
+                    _ => Ordering::Greater,
+                }
+            }
+            Endpoint::Ip(a) => {
+                match other {
+                    Endpoint::Nil => Ordering::Less,
+                    Endpoint::ZeroTier(_) => Ordering::Less,
+                    Endpoint::Ethernet(_) => Ordering::Less,
+                    Endpoint::WifiDirect(_) => Ordering::Less,
+                    Endpoint::Bluetooth(_) => Ordering::Less,
+                    Endpoint::Ip(b) => a.cmp(b),
+                    _ => Ordering::Greater,
+                }
+            }
+            Endpoint::IpUdp(a) => {
+                match other {
+                    Endpoint::Nil => Ordering::Less,
+                    Endpoint::ZeroTier(_) => Ordering::Less,
+                    Endpoint::Ethernet(_) => Ordering::Less,
+                    Endpoint::WifiDirect(_) => Ordering::Less,
+                    Endpoint::Bluetooth(_) => Ordering::Less,
+                    Endpoint::Ip(_) => Ordering::Less,
+                    Endpoint::IpUdp(b) => a.cmp(b),
+                    _ => Ordering::Greater,
+                }
+            }
+            Endpoint::IpTcp(a) => {
+                match other {
+                    Endpoint::Nil => Ordering::Less,
+                    Endpoint::ZeroTier(_) => Ordering::Less,
+                    Endpoint::Ethernet(_) => Ordering::Less,
+                    Endpoint::WifiDirect(_) => Ordering::Less,
+                    Endpoint::Bluetooth(_) => Ordering::Less,
+                    Endpoint::Ip(_) => Ordering::Less,
+                    Endpoint::IpUdp(_) => Ordering::Less,
+                    Endpoint::IpTcp(b) => a.cmp(b),
+                    _ => Ordering::Greater,
+                }
+            }
+            Endpoint::Http(a) => {
+                match other {
+                    Endpoint::Nil => Ordering::Less,
+                    Endpoint::ZeroTier(_) => Ordering::Less,
+                    Endpoint::Ethernet(_) => Ordering::Less,
+                    Endpoint::WifiDirect(_) => Ordering::Less,
+                    Endpoint::Bluetooth(_) => Ordering::Less,
+                    Endpoint::Ip(_) => Ordering::Less,
+                    Endpoint::IpUdp(_) => Ordering::Less,
+                    Endpoint::IpTcp(_) => Ordering::Less,
+                    Endpoint::Http(b) => a.cmp(b),
+                    _ => Ordering::Greater,
+                }
+            }
+            Endpoint::WebRTC(a) => {
+                match other {
+                    Endpoint::WebRTC(b) => a.cmp(b),
+                    _ => Ordering::Less,
+                }
             }
         }
     }
