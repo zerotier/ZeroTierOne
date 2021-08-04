@@ -393,7 +393,9 @@ static int cli(int argc,char **argv)
 									char tmp[256];
 									std::string addr = path["address"];
 									const int64_t now = OSUtils::now();
-									OSUtils::ztsnprintf(tmp,sizeof(tmp),"%s;%lld;%lld",addr.c_str(),now - (int64_t)path["lastSend"],now - (int64_t)path["lastReceive"]);
+									int64_t lastSendDiff = (uint64_t)path["lastSend"] ? now - (uint64_t)path["lastSend"] : -1;
+									int64_t lastReceiveDiff = (uint64_t)path["lastReceive"] ? now - (uint64_t)path["lastReceive"] : -1;
+									OSUtils::ztsnprintf(tmp,sizeof(tmp),"%s;%lld;%lld",addr.c_str(),lastSendDiff,lastReceiveDiff);
 									bestPath = tmp;
 									break;
 								}
@@ -460,7 +462,9 @@ static int cli(int argc,char **argv)
 									char tmp[256];
 									std::string addr = path["address"];
 									const int64_t now = OSUtils::now();
-									OSUtils::ztsnprintf(tmp,sizeof(tmp),"%-8lld %-8lld %s",now - (int64_t)path["lastSend"],now - (int64_t)path["lastReceive"],addr.c_str());
+									int64_t lastSendDiff = (uint64_t)path["lastSend"] ? now - (uint64_t)path["lastSend"] : -1;
+									int64_t lastReceiveDiff = (uint64_t)path["lastReceive"] ? now - (uint64_t)path["lastReceive"] : -1;
+									OSUtils::ztsnprintf(tmp,sizeof(tmp),"%-8lld %-8lld %s",lastSendDiff,lastReceiveDiff,addr.c_str());
 									bestPath = std::string("DIRECT ") + tmp;
 									break;
 								}
