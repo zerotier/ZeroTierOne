@@ -157,12 +157,12 @@ unsafe impl<O, F: PoolFactory<O>> Send for Pool<O, F> {}
 
 #[cfg(test)]
 mod tests {
-    use std::sync::atomic::{AtomicUsize, Ordering};
     use std::ops::DerefMut;
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
     use std::time::Duration;
 
     use crate::util::pool::*;
-    use std::sync::Arc;
 
     struct TestPoolFactory;
 

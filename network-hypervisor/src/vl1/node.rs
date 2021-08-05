@@ -116,6 +116,7 @@ pub trait VL1PacketHandler {
 #[derive(Default)]
 struct BackgroundTaskIntervals {
     whois: IntervalGate<{ WhoisQueue::INTERVAL }>,
+    paths: IntervalGate<{ Path::INTERVAL }>,
 }
 
 pub struct Node {
@@ -211,6 +212,12 @@ impl Node {
 
         if intervals.whois.gate(tt) {
             self.whois.on_interval(self, ci, tt);
+        }
+        if intervals.paths.gate(tt) {
+            self.paths.retain(|_, path| {
+                path.on_interval(ci, tt);
+                true
+            });
         }
 
         Duration::from_millis(1000)

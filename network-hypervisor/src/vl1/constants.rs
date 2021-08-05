@@ -108,3 +108,6 @@ pub const WHOIS_RETRY_MAX: u16 = 3;
 
 /// Maximum number of endpoints allowed in a Locator.
 pub const LOCATOR_MAX_ENDPOINTS: usize = 32;
+
+/// Keepalive interval for paths in milliseconds.
+pub const PATH_KEEPALIVE_INTERVAL: i64 = 20000;

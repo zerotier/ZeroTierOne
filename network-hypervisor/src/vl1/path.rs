@@ -10,6 +10,10 @@ use crate::vl1::fragmentedpacket::FragmentedPacket;
 use crate::vl1::node::{PacketBuffer, VL1CallerInterface};
 use crate::vl1::protocol::PacketID;
 
+/// A remote endpoint paired with a local socket and a local interface.
+/// These are maintained in Node and canonicalized so that all unique paths have
+/// one and only one unique path object. That enables statistics to be tracked
+/// for them and uniform application of things like keepalives.
 pub struct Path {
     pub(crate) endpoint: Endpoint,
     pub(crate) local_socket: i64,
@@ -20,6 +24,8 @@ pub struct Path {
 }
 
 impl Path {
+    pub(crate) const INTERVAL: i64 = PATH_KEEPALIVE_INTERVAL;
+
     #[inline(always)]
     pub fn new(endpoint: Endpoint, local_socket: i64, local_interface: i64) -> Self {
         Self {
@@ -42,7 +48,8 @@ impl Path {
         self.last_receive_time_ticks.load(Ordering::Relaxed)
     }
 
-    /// Receive a fragment and return a FragmentedPacket if the entire packet is assembled.
+    /// Receive a fragment and return a FragmentedPacket if the entire packet was assembled.
+    /// This returns None if more fragments are needed to assemble the packet.
     #[inline(always)]
     pub(crate) fn receive_fragment(&self, packet_id: PacketID, fragment_no: u8, fragment_expecting_count: u8, packet: PacketBuffer, time_ticks: i64) -> Option<FragmentedPacket> {
         self.last_receive_time_ticks.store(time_ticks, Ordering::Relaxed);
@@ -85,8 +92,7 @@ impl Path {
     }
 
     #[inline(always)]
-    pub fn do_background_tasks<CI: VL1CallerInterface>(&self, ct: &CI) {
-        let time_ticks = ct.time_ticks();
+    pub fn on_interval<CI: VL1CallerInterface>(&self, ct: &CI, time_ticks: i64) {
         self.fragmented_packets.lock().retain(|packet_id, frag| (time_ticks - frag.ts_ticks) < FRAGMENT_EXPIRATION);
     }
 }

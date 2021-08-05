@@ -12,7 +12,6 @@ codegen-units = 1
 panic = 'abort'
 
 [dependencies]
-zerotier-core = { path = "../rust-zerotier-core" }
 num_cpus = "*"
 tokio = { version = "1", features = ["rt", "net", "time", "signal", "macros"] }
 serde = { version = "1", features = ["derive"] }
@@ -29,6 +28,7 @@ socket2 = { version = "0", features = ["reuseport", "unix", "pair"] }
 dialoguer = "0"
 digest_auth = "0.2.4"
 colored = "2"
+#zerotier-core = { path = "../rust-zerotier-core" }
 
 [target."cfg(windows)".dependencies]
 winapi = { version = "0.3.9", features = ["handleapi", "ws2ipdef", "ws2tcpip"] }
