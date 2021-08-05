@@ -1,12 +1,20 @@
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 mod impl_macos;
-#[cfg(not(any(target_os = "macos", target_os = "ios")))]
+
+#[cfg(not(any(target_os = "macos", target_os = "ios", target_arch = "s390x")))]
 mod impl_gcrypt;
+
+#[cfg(all(not(any(target_os = "macos", target_os = "ios")), target_arch = "s390x"))]
+mod impl_openssl;
 
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 pub use impl_macos::AesGmacSiv;
-#[cfg(not(any(target_os = "macos", target_os = "ios")))]
+
+#[cfg(not(any(target_os = "macos", target_os = "ios", target_arch = "s390x")))]
 pub use impl_gcrypt::AesGmacSiv;
+
+#[cfg(all(not(any(target_os = "macos", target_os = "ios")), target_arch = "s390x"))]
+pub use impl_openssl::AesGmacSiv;
 
 pub(crate) const ZEROES: [u8; 16] = [0_u8; 16];
 
