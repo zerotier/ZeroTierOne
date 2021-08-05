@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::sync::atomic::{AtomicI64, AtomicU64, AtomicU8, Ordering};
 
 use parking_lot::Mutex;
 use aes_gmac_siv::AesGmacSiv;
@@ -10,24 +11,40 @@ use crate::crypto::poly1305::Poly1305;
 use crate::crypto::random::next_u64_secure;
 use crate::crypto::salsa::Salsa;
 use crate::crypto::secret::Secret;
+use crate::util::pool::{Pool, PoolFactory};
 use crate::vl1::{Identity, Path};
 use crate::vl1::buffer::Buffer;
 use crate::vl1::constants::*;
 use crate::vl1::node::*;
 use crate::vl1::protocol::*;
 
-struct PeerSecrets {
-    // Time secret was created in ticks or -1 for static secrets.
+struct AesGmacSivPoolFactory(Secret<48>, Secret<48>);
+
+impl PoolFactory<AesGmacSiv> for AesGmacSivPoolFactory {
+    #[inline(always)]
+    fn create(&self) -> AesGmacSiv {
+        AesGmacSiv::new(self.0.as_ref(), self.1.as_ref())
+    }
+
+    #[inline(always)]
+    fn reset(&self, obj: &mut AesGmacSiv) {
+        obj.reset();
+    }
+}
+
+struct PeerSecret {
+    // Time secret was created in ticks for ephemeral secrets, or -1 for static secrets.
     create_time_ticks: i64,
 
-    // Number of time secret has been used to encrypt something during this session.
-    encrypt_count: u64,
+    // Number of times secret has been used to encrypt something during this session.
+    encrypt_count: AtomicU64,
 
     // Raw secret itself.
     secret: Secret<48>,
 
-    // Reusable AES-GMAC-SIV initialized with secret.
-    aes: AesGmacSiv,
+    // Reusable AES-GMAC-SIV ciphers initialized with secret.
+    // These can't be used concurrently so they're pooled to allow multithreaded use.
+    aes: Pool<AesGmacSiv, AesGmacSivPoolFactory>,
 }
 
 struct EphemeralKeyPair {
@@ -44,50 +61,6 @@ struct EphemeralKeyPair {
     p521: P521KeyPair,
 }
 
-struct TxState {
-    // Time we last sent something to this peer.
-    last_send_time_ticks: i64,
-
-    // Outgoing packet IV counter, starts at a random position.
-    packet_iv_counter: u64,
-
-    // Total bytes sent to this peer during this session.
-    total_bytes: u64,
-
-    // "Eternal" static secret created via identity agreement.
-    static_secret: PeerSecrets,
-
-    // The most recently negotiated ephemeral secret.
-    ephemeral_secret: Option<PeerSecrets>,
-
-    // The current ephemeral key pair we will share with HELLO.
-    ephemeral_pair: Option<EphemeralKeyPair>,
-
-    // Paths to this peer sorted in ascending order of path quality.
-    paths: Vec<Arc<Path>>,
-}
-
-struct RxState {
-    // Time we last received something (authenticated) from this peer.
-    last_receive_time_ticks: i64,
-
-    // Total bytes received from this peer during this session.
-    total_bytes: u64,
-
-    // "Eternal" static secret created via identity agreement.
-    static_secret: PeerSecrets,
-
-    // The most recently negotiated ephemeral secret.
-    ephemeral_secret: Option<PeerSecrets>,
-
-    // Remote version as major, minor, revision, build in most-to-least-significant 16-bit chunks.
-    // This is the user-facing software version and is zero if not yet known.
-    remote_version: u64,
-
-    // Remote protocol version or zero if not yet known.
-    remote_protocol_version: u8,
-}
-
 /// A remote peer known to this node.
 /// Sending-related and receiving-related fields are locked separately since concurrent
 /// send/receive is not uncommon.
@@ -96,7 +69,7 @@ pub struct Peer {
     identity: Identity,
 
     // Static shared secret computed from agreement with identity.
-    static_secret: Secret<48>,
+    static_secret: PeerSecret,
 
     // Derived static secret used to encrypt the dictionary part of HELLO.
     static_secret_hello_dictionary_encrypt: Secret<48>,
@@ -104,11 +77,27 @@ pub struct Peer {
     // Derived static secret used to add full HMAC-SHA384 to packets, currently just HELLO.
     static_secret_packet_hmac: Secret<48>,
 
-    // State used primarily when sending to this peer.
-    tx: Mutex<TxState>,
+    // Latest ephemeral secret acknowledged with OK(HELLO).
+    ephemeral_secret: Mutex<Option<Arc<PeerSecret>>>,
 
-    // State used primarily when receiving from this peer.
-    rx: Mutex<RxState>,
+    // Either None or the current ephemeral key pair whose public keys are on offer.
+    ephemeral_pair: Mutex<Option<EphemeralKeyPair>>,
+
+    // Statistics
+    last_send_time_ticks: AtomicI64,
+    last_receive_time_ticks: AtomicI64,
+    total_bytes_sent: AtomicU64,
+    total_bytes_received: AtomicU64,
+
+    // Counter for assigning packet IV's a.k.a. PacketIDs.
+    packet_iv_counter: AtomicU64,
+
+    // Remote peer version information.
+    remote_version: AtomicU64,
+    remote_protocol_version: AtomicU8,
+
+    // Paths sorted in ascending order of quality / preference.
+    paths: Mutex<Vec<Arc<Path>>>,
 }
 
 /// Derive per-packet key for Sals20/12 encryption (and Poly1305 authentication).
@@ -142,42 +131,31 @@ impl Peer {
     /// fatal error occurs performing key agreement between the two identities.
     pub(crate) fn new(this_node_identity: &Identity, id: Identity) -> Option<Peer> {
         this_node_identity.agree(&id).map(|static_secret| {
-            let aes_k0 = zt_kbkdf_hmac_sha384(&static_secret.0, KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K0, 0, 0);
-            let aes_k1 = zt_kbkdf_hmac_sha384(&static_secret.0, KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K1, 0, 0);
+            let aes_factory = AesGmacSivPoolFactory(
+                zt_kbkdf_hmac_sha384(&static_secret.0, KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K0, 0, 0),
+                zt_kbkdf_hmac_sha384(&static_secret.0, KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K1, 0, 0));
             let static_secret_hello_dictionary_encrypt = zt_kbkdf_hmac_sha384(&static_secret.0, KBKDF_KEY_USAGE_LABEL_HELLO_DICTIONARY_ENCRYPT, 0, 0);
             let static_secret_packet_hmac = zt_kbkdf_hmac_sha384(&static_secret.0, KBKDF_KEY_USAGE_LABEL_PACKET_HMAC, 0, 0);
             Peer {
                 identity: id,
-                static_secret: static_secret.clone(),
+                static_secret: PeerSecret {
+                    create_time_ticks: -1,
+                    encrypt_count: AtomicU64::new(0),
+                    secret: static_secret,
+                    aes: Pool::new(4, aes_factory),
+                },
                 static_secret_hello_dictionary_encrypt,
                 static_secret_packet_hmac,
-                tx: Mutex::new(TxState {
-                    last_send_time_ticks: 0,
-                    packet_iv_counter: next_u64_secure(),
-                    total_bytes: 0,
-                    static_secret: PeerSecrets {
-                        create_time_ticks: -1,
-                        encrypt_count: 0,
-                        secret: static_secret.clone(),
-                        aes: AesGmacSiv::new(&aes_k0.0, &aes_k1.0),
-                    },
-                    ephemeral_secret: None,
-                    paths: Vec::with_capacity(4),
-                    ephemeral_pair: None,
-                }),
-                rx: Mutex::new(RxState {
-                    last_receive_time_ticks: 0,
-                    total_bytes: 0,
-                    static_secret: PeerSecrets {
-                        create_time_ticks: -1,
-                        encrypt_count: 0,
-                        secret: static_secret,
-                        aes: AesGmacSiv::new(&aes_k0.0, &aes_k1.0),
-                    },
-                    ephemeral_secret: None,
-                    remote_version: 0,
-                    remote_protocol_version: 0,
-                }),
+                ephemeral_secret: Mutex::new(None),
+                ephemeral_pair: Mutex::new(None),
+                last_send_time_ticks: AtomicI64::new(0),
+                last_receive_time_ticks: AtomicI64::new(0),
+                total_bytes_sent: AtomicU64::new(0),
+                total_bytes_received: AtomicU64::new(0),
+                packet_iv_counter: AtomicU64::new(next_u64_secure()),
+                remote_version: AtomicU64::new(0),
+                remote_protocol_version: AtomicU8::new(0),
+                paths: Mutex::new(Vec::new()),
             }
         })
     }
@@ -185,116 +163,101 @@ impl Peer {
     /// Receive, decrypt, authenticate, and process an incoming packet from this peer.
     /// If the packet comes in multiple fragments, the fragments slice should contain all
     /// those fragments after the main packet header and first chunk.
+    #[inline(always)]
     pub(crate) fn receive<CI: VL1CallerInterface, PH: VL1PacketHandler>(&self, node: &Node, ci: &CI, ph: &PH, time_ticks: i64, source_path: &Arc<Path>, header: &PacketHeader, packet: &Buffer<{ PACKET_SIZE_MAX }>, fragments: &[Option<PacketBuffer>]) {
-        let packet_frag0_payload_bytes = packet.as_bytes_after(PACKET_VERB_INDEX).unwrap_or(&[]);
-        if !packet_frag0_payload_bytes.is_empty() {
+        let _ = packet.as_bytes_starting_at(PACKET_VERB_INDEX).map(|packet_frag0_payload_bytes| {
             let mut payload: Buffer<{ PACKET_SIZE_MAX }> = Buffer::new();
-            let mut rx = self.rx.lock();
+            let mut forward_secrecy = true;
+            let cipher = header.cipher();
 
-            // When handling incoming packets we try any current ephemeral secret first, and if that
-            // fails we fall back to the static secret. If decryption with an ephemeral secret succeeds
-            // the forward secrecy flag in the receive path is set.
-            let forward_secrecy = {
-                let mut secret = if rx.ephemeral_secret.is_some() { rx.ephemeral_secret.as_mut().unwrap() } else { &mut rx.static_secret };
-                loop {
-                    match header.cipher() {
-                        CIPHER_NOCRYPT_POLY1305 => {
-                            // Only HELLO is allowed in the clear (but still authenticated).
-                            if (packet_frag0_payload_bytes[0] & VERB_MASK) == VERB_VL1_HELLO {
-                                let _ = payload.append_bytes(packet_frag0_payload_bytes);
-
-                                for f in fragments.iter() {
-                                    let _ = f.as_ref().map(|f| {
-                                        let _ = f.as_bytes_after(FRAGMENT_HEADER_SIZE).map(|f| {
-                                            let _ = payload.append_bytes(f);
-                                        });
-                                    });
-                                }
-
-                                // FIPS note: for FIPS purposes the HMAC-SHA384 tag at the end of V2 HELLOs
-                                // will be considered the "real" handshake authentication.
-                                let key = salsa_derive_per_packet_key(&secret.secret, header, payload.len());
-                                let mut salsa = Salsa::new(&key.0[0..32], header.id_bytes(), true).unwrap();
-                                let mut poly1305_key = [0_u8; 32];
-                                salsa.crypt_in_place(&mut poly1305_key);
-                                let mut poly = Poly1305::new(&poly1305_key).unwrap();
-                                poly.update(packet_frag0_payload_bytes);
-
-                                if poly.finish()[0..8].eq(&header.message_auth) {
-                                    break;
-                                }
+            let ephemeral_secret = self.ephemeral_secret.lock().clone();
+            for secret in [ephemeral_secret.as_ref().map_or(&self.static_secret, |s| s.as_ref()), &self.static_secret] {
+                match cipher {
+                    CIPHER_NOCRYPT_POLY1305 => {
+                        if (packet_frag0_payload_bytes[0] & VERB_MASK) == VERB_VL1_HELLO {
+                            let _ = payload.append_bytes(packet_frag0_payload_bytes);
+                            for f in fragments.iter() {
+                                let _ = f.as_ref().map(|f| f.as_bytes_starting_at(FRAGMENT_HEADER_SIZE).map(|f| payload.append_bytes(f)));
                             }
-                        }
 
-                        CIPHER_SALSA2012_POLY1305 => {
-                            // FIPS note: support for this mode would have to be disabled in FIPS compliant
-                            // modes of operation.
+                            // FIPS note: for FIPS purposes the HMAC-SHA384 tag at the end of V2 HELLOs
+                            // will be considered the "real" handshake authentication.
                             let key = salsa_derive_per_packet_key(&secret.secret, header, payload.len());
                             let mut salsa = Salsa::new(&key.0[0..32], header.id_bytes(), true).unwrap();
                             let mut poly1305_key = [0_u8; 32];
                             salsa.crypt_in_place(&mut poly1305_key);
                             let mut poly = Poly1305::new(&poly1305_key).unwrap();
-
-                            poly.update(packet_frag0_payload_bytes);
-                            let _ = payload.append_and_init_bytes(packet_frag0_payload_bytes.len(), |b| salsa.crypt(packet_frag0_payload_bytes, b));
-                            for f in fragments.iter() {
-                                let _ = f.as_ref().map(|f| {
-                                    let _ = f.as_bytes_after(FRAGMENT_HEADER_SIZE).map(|f| {
-                                        poly.update(f);
-                                        let _ = payload.append_and_init_bytes(f.len(), |b| salsa.crypt(f, b));
-                                    });
-                                });
-                            }
+                            poly.update(payload.as_bytes());
 
                             if poly.finish()[0..8].eq(&header.message_auth) {
                                 break;
                             }
+                        } else {
+                            // Only HELLO is permitted without payload encryption. Drop other packet types if sent this way.
+                            return;
                         }
-
-                        CIPHER_AES_GMAC_SIV => {
-                            secret.aes.reset();
-                            secret.aes.decrypt_init(&header.aes_gmac_siv_tag());
-                            secret.aes.decrypt_set_aad(&header.aad_bytes());
-
-                            let _ = payload.append_and_init_bytes(packet_frag0_payload_bytes.len(), |b| secret.aes.decrypt(packet_frag0_payload_bytes, b));
-                            for f in fragments.iter() {
-                                let _ = f.as_ref().map(|f| {
-                                    let _ = f.as_bytes_after(FRAGMENT_HEADER_SIZE).map(|f| {
-                                        let _ = payload.append_and_init_bytes(f.len(), |b| secret.aes.decrypt(f, b));
-                                    });
-                                });
-                            }
-
-                            if secret.aes.decrypt_finish() {
-                                break;
-                            }
-                        }
-
-                        _ => {}
                     }
 
-                    if (secret as *const PeerSecrets) != (&rx.static_secret as *const PeerSecrets) {
-                        payload.clear();
-                        secret = &mut rx.static_secret;
-                    } else {
-                        // Both ephemeral (if any) and static secret have failed, drop packet.
-                        return;
+                    CIPHER_SALSA2012_POLY1305 => {
+                        let key = salsa_derive_per_packet_key(&secret.secret, header, payload.len());
+                        let mut salsa = Salsa::new(&key.0[0..32], header.id_bytes(), true).unwrap();
+                        let mut poly1305_key = [0_u8; 32];
+                        salsa.crypt_in_place(&mut poly1305_key);
+                        let mut poly = Poly1305::new(&poly1305_key).unwrap();
+
+                        poly.update(packet_frag0_payload_bytes);
+                        let _ = payload.append_and_init_bytes(packet_frag0_payload_bytes.len(), |b| salsa.crypt(packet_frag0_payload_bytes, b));
+                        for f in fragments.iter() {
+                            let _ = f.as_ref().map(|f| f.as_bytes_starting_at(FRAGMENT_HEADER_SIZE).map(|f| {
+                                poly.update(f);
+                                let _ = payload.append_and_init_bytes(f.len(), |b| salsa.crypt(f, b));
+                            }));
+                        }
+
+                        if poly.finish()[0..8].eq(&header.message_auth) {
+                            break;
+                        }
                     }
+
+                    CIPHER_AES_GMAC_SIV => {
+                        let mut aes = secret.aes.get();
+                        aes.decrypt_init(&header.aes_gmac_siv_tag());
+                        aes.decrypt_set_aad(&header.aad_bytes());
+
+                        let _ = payload.append_and_init_bytes(packet_frag0_payload_bytes.len(), |b| aes.decrypt(packet_frag0_payload_bytes, b));
+                        for f in fragments.iter() {
+                            let _ = f.as_ref().map(|f| f.as_bytes_starting_at(FRAGMENT_HEADER_SIZE).map(|f| payload.append_and_init_bytes(f.len(), |b| aes.decrypt(f, b))));
+                        }
+
+                        if aes.decrypt_finish() {
+                            break;
+                        }
+                    }
+
+                    _ => {}
                 }
-                (secret as *const PeerSecrets) != (&(rx.static_secret) as *const PeerSecrets)
-            };
 
-            // If we make it here we've successfully decrypted and authenticated the packet.
+                if (secret as *const PeerSecret) == (&self.static_secret as *const PeerSecret) {
+                    // If the static secret failed to authenticate it means we either didn't have an
+                    // ephemeral key or the ephemeral also failed (as it's tried first).
+                    return;
+                } else {
+                    // If ephemeral failed, static secret will be tried. Set forward secrecy to false.
+                    forward_secrecy = false;
+                    payload.clear();
+                }
+            }
+            drop(ephemeral_secret);
 
-            rx.last_receive_time_ticks = time_ticks;
-            rx.total_bytes += payload.len() as u64;
+            // If decryption and authentication succeeded, the code above will break out of the
+            // for loop and end up here. Otherwise it returns from the whole function.
 
-            // Unlock rx state mutex.
-            drop(rx);
+            self.last_receive_time_ticks.store(time_ticks, Ordering::Relaxed);
+            let _ = self.total_bytes_received.fetch_add((payload.len() + PACKET_HEADER_SIZE) as u64, Ordering::Relaxed);
 
             let _ = payload.u8_at(0).map(|verb| {
                 // For performance reasons we let VL2 handle packets first. It returns false
-                // if it didn't pick up anything.
+                // if it didn't handle the packet, in which case it's handled at VL1.
                 if !ph.handle_packet(self, source_path, forward_secrecy, verb, &payload) {
                     match verb {
                         VERB_VL1_NOP => {}
@@ -311,13 +274,13 @@ impl Peer {
                     }
                 }
             });
-        }
+        });
     }
 
     /// Get the remote version of this peer: major, minor, revision, and build.
     /// Returns None if it's not yet known.
     pub fn version(&self) -> Option<[u16; 4]> {
-        let rv = self.rx.lock().remote_version;
+        let rv = self.remote_version.load(Ordering::Relaxed);
         if rv != 0 {
             Some([(rv >> 48) as u16, (rv >> 32) as u16, (rv >> 16) as u16, rv as u16])
         } else {
@@ -327,7 +290,7 @@ impl Peer {
 
     /// Get the remote protocol version of this peer or None if not yet known.
     pub fn protocol_version(&self) -> Option<u8> {
-        let pv = self.rx.lock().remote_protocol_version;
+        let pv = self.remote_protocol_version.load(Ordering::Relaxed);
         if pv != 0 {
             Some(pv)
         } else {

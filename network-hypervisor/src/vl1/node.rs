@@ -10,7 +10,7 @@ use crate::error::InvalidParameterError;
 use crate::util::gate::IntervalGate;
 use crate::util::pool::{Pool, Pooled};
 use crate::vl1::{Address, Endpoint, Identity, Locator};
-use crate::vl1::buffer::Buffer;
+use crate::vl1::buffer::{Buffer, PooledBufferFactory};
 use crate::vl1::constants::PACKET_SIZE_MAX;
 use crate::vl1::path::Path;
 use crate::vl1::peer::Peer;
@@ -18,9 +18,10 @@ use crate::vl1::protocol::*;
 use crate::vl1::whois::WhoisQueue;
 
 /// Standard packet buffer type including pool container.
-pub type PacketBuffer = Pooled<Buffer<{ PACKET_SIZE_MAX }>>;
+pub type PacketBuffer = Pooled<Buffer<{ PACKET_SIZE_MAX }>, PooledBufferFactory<{ PACKET_SIZE_MAX }>>;
 
 /// Callback interface and call context for calls to the node (for VL1).
+///
 /// Every non-trivial call takes a reference to this, which it passes all the way through
 /// the call stack. This can be used to call back into the caller to send packets, get or
 /// store data, report events, etc.
@@ -124,7 +125,7 @@ pub struct Node {
     paths: DashMap<Endpoint, Arc<Path>>,
     peers: DashMap<Address, Arc<Peer>>,
     whois: WhoisQueue,
-    buffer_pool: Pool<Buffer<{ PACKET_SIZE_MAX }>>,
+    buffer_pool: Pool<Buffer<{ PACKET_SIZE_MAX }>, PooledBufferFactory<{ PACKET_SIZE_MAX }>>,
     secure_prng: SecureRandom,
 }
 
@@ -161,7 +162,7 @@ impl Node {
             paths: DashMap::new(),
             peers: DashMap::new(),
             whois: WhoisQueue::new(),
-            buffer_pool: Pool::new(64),
+            buffer_pool: Pool::new(64, PooledBufferFactory),
             secure_prng: SecureRandom::get(),
         })
     }

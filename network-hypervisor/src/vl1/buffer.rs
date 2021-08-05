@@ -1,7 +1,6 @@
 use std::mem::size_of;
 use std::io::Write;
-
-use crate::util::pool::Reusable;
+use crate::util::pool::PoolFactory;
 
 const OVERFLOW_ERR_MSG: &'static str = "overflow";
 
@@ -20,13 +19,6 @@ impl<const L: usize> Default for Buffer<L> {
     #[inline(always)]
     fn default() -> Self {
        Self(0, [0_u8; L])
-    }
-}
-
-impl<const L: usize> Reusable for Buffer<L> {
-    #[inline(always)]
-    fn reset(&mut self) {
-        self.clear();
     }
 }
 
@@ -62,7 +54,7 @@ impl<const L: usize> Buffer<L> {
 
     /// Get all bytes after a given position.
     #[inline(always)]
-    pub fn as_bytes_after(&self, start: usize) -> std::io::Result<&[u8]> {
+    pub fn as_bytes_starting_at(&self, start: usize) -> std::io::Result<&[u8]> {
         if start <= self.0 {
             Ok(&self.1[start..])
         } else {
@@ -386,5 +378,19 @@ impl<const L: usize> AsMut<[u8]> for Buffer<L> {
     #[inline(always)]
     fn as_mut(&mut self) -> &mut [u8] {
         self.as_bytes_mut()
+    }
+}
+
+pub struct PooledBufferFactory<const L: usize>;
+
+impl<const L: usize> PoolFactory<Buffer<L>> for PooledBufferFactory<L> {
+    #[inline(always)]
+    fn create(&self) -> Buffer<L> {
+        Buffer::new()
+    }
+
+    #[inline(always)]
+    fn reset(&self, obj: &mut Buffer<L>) {
+        obj.clear();
     }
 }

@@ -4,17 +4,18 @@ use std::sync::{Arc, Weak};
 
 use parking_lot::Mutex;
 
-/// Trait for objects that can be used with Pool.
-pub trait Reusable: Default + Sized {
-    fn reset(&mut self);
+/// Trait for objects that create and reset poolable objects.
+pub trait PoolFactory<O> {
+    fn create(&self) -> O;
+    fn reset(&self, obj: &mut O);
 }
 
-struct PoolEntry<O: Reusable> {
+struct PoolEntry<O, F: PoolFactory<O>> {
     obj: O,
-    return_pool: Weak<PoolInner<O>>,
+    return_pool: Weak<PoolInner<O, F>>,
 }
 
-type PoolInner<O> = Mutex<Vec<*mut PoolEntry<O>>>;
+struct PoolInner<O, F: PoolFactory<O>>(F, Mutex<Vec<*mut PoolEntry<O, F>>>);
 
 /// Container for pooled objects that have been checked out of the pool.
 ///
@@ -26,9 +27,9 @@ type PoolInner<O> = Mutex<Vec<*mut PoolEntry<O>>>;
 /// Note that pooled objects are not clonable. If you want to share them use Rc<>
 /// or Arc<>.
 #[repr(transparent)]
-pub struct Pooled<O: Reusable>(*mut PoolEntry<O>);
+pub struct Pooled<O, F: PoolFactory<O>>(*mut PoolEntry<O, F>);
 
-impl<O: Reusable> Pooled<O> {
+impl<O, F: PoolFactory<O>> Pooled<O, F> {
     /// Get a raw pointer to the object wrapped by this pooled object container.
     /// The returned raw pointer MUST be restored into a Pooled instance with
     /// from_raw() or memory will leak.
@@ -55,7 +56,7 @@ impl<O: Reusable> Pooled<O> {
     }
 }
 
-impl<O: Reusable> Deref for Pooled<O> {
+impl<O, F: PoolFactory<O>> Deref for Pooled<O, F> {
     type Target = O;
 
     #[inline(always)]
@@ -65,7 +66,7 @@ impl<O: Reusable> Deref for Pooled<O> {
     }
 }
 
-impl<O: Reusable> AsRef<O> for Pooled<O> {
+impl<O, F: PoolFactory<O>> AsRef<O> for Pooled<O, F> {
     #[inline(always)]
     fn as_ref(&self) -> &O {
         debug_assert!(!self.0.is_null());
@@ -73,7 +74,7 @@ impl<O: Reusable> AsRef<O> for Pooled<O> {
     }
 }
 
-impl<O: Reusable> DerefMut for Pooled<O> {
+impl<O, F: PoolFactory<O>> DerefMut for Pooled<O, F> {
     #[inline(always)]
     fn deref_mut(&mut self) -> &mut Self::Target {
         debug_assert!(!self.0.is_null());
@@ -81,7 +82,7 @@ impl<O: Reusable> DerefMut for Pooled<O> {
     }
 }
 
-impl<O: Reusable> AsMut<O> for Pooled<O> {
+impl<O, F: PoolFactory<O>> AsMut<O> for Pooled<O, F> {
     #[inline(always)]
     fn as_mut(&mut self) -> &mut O {
         debug_assert!(!self.0.is_null());
@@ -89,34 +90,34 @@ impl<O: Reusable> AsMut<O> for Pooled<O> {
     }
 }
 
-impl<O: Reusable> Drop for Pooled<O> {
+impl<O, F: PoolFactory<O>> Drop for Pooled<O, F> {
     fn drop(&mut self) {
         unsafe {
             Weak::upgrade(&(*self.0).return_pool).map_or_else(|| {
                 drop(Box::from_raw(self.0))
             }, |p| {
-                (*self.0).obj.reset();
-                p.lock().push(self.0)
+                p.0.reset(&mut (*self.0).obj);
+                p.1.lock().push(self.0)
             })
         }
     }
 }
 
 /// An object pool for Reusable objects.
-/// The pool is safe in that checked out objects return automatically when their Pooled
-/// transparent container is dropped, or deallocate if the pool has been dropped.
-pub struct Pool<O: Reusable>(Arc<PoolInner<O>>);
+/// Checked out objects are held by a guard object that returns them when dropped if
+/// the pool still exists or drops them if the pool has itself been dropped.
+pub struct Pool<O, F: PoolFactory<O>>(Arc<PoolInner<O, F>>);
 
-impl<O: Reusable> Pool<O> {
-    pub fn new(initial_stack_capacity: usize) -> Self {
-        Self(Arc::new(Mutex::new(Vec::with_capacity(initial_stack_capacity))))
+impl<O, F: PoolFactory<O>> Pool<O, F> {
+    pub fn new(initial_stack_capacity: usize, factory: F) -> Self {
+        Self(Arc::new(PoolInner::<O, F>(factory, Mutex::new(Vec::with_capacity(initial_stack_capacity)))))
     }
 
     /// Get a pooled object, or allocate one if the pool is empty.
-    pub fn get(&self) -> Pooled<O> {
-        Pooled::<O>(self.0.lock().pop().map_or_else(|| {
-            Box::into_raw(Box::new(PoolEntry::<O> {
-                obj: O::default(),
+    pub fn get(&self) -> Pooled<O, F> {
+        Pooled::<O, F>(self.0.1.lock().pop().map_or_else(|| {
+            Box::into_raw(Box::new(PoolEntry::<O, F> {
+                obj: self.0.0.create(),
                 return_pool: Arc::downgrade(&self.0),
             }))
         }, |obj| {
@@ -128,7 +129,7 @@ impl<O: Reusable> Pool<O> {
     /// Get approximate memory use in bytes (does not include checked out objects).
     #[inline(always)]
     pub fn pool_memory_bytes(&self) -> usize {
-        self.0.lock().len() * (size_of::<PoolEntry<O>>() + size_of::<usize>())
+        self.0.1.lock().len() * (size_of::<PoolEntry<O, F>>() + size_of::<usize>())
     }
 
     /// Dispose of all pooled objects, freeing any memory they use.
@@ -136,7 +137,7 @@ impl<O: Reusable> Pool<O> {
     /// objects will still be returned on drop unless the pool itself is dropped. This can
     /// be done to free some memory if there has been a spike in memory use.
     pub fn purge(&self) {
-        let mut p = self.0.lock();
+        let mut p = self.0.1.lock();
         for obj in p.iter() {
             drop(unsafe { Box::from_raw(*obj) });
         }
@@ -144,15 +145,15 @@ impl<O: Reusable> Pool<O> {
     }
 }
 
-impl<O: Reusable> Drop for Pool<O> {
+impl<O, F: PoolFactory<O>> Drop for Pool<O, F> {
     fn drop(&mut self) {
         self.purge();
     }
 }
 
-unsafe impl<O: Reusable> Sync for Pool<O> {}
+unsafe impl<O, F: PoolFactory<O>> Sync for Pool<O, F> {}
 
-unsafe impl<O: Reusable> Send for Pool<O> {}
+unsafe impl<O, F: PoolFactory<O>> Send for Pool<O, F> {}
 
 #[cfg(test)]
 mod tests {
@@ -160,24 +161,24 @@ mod tests {
     use std::ops::DerefMut;
     use std::time::Duration;
 
-    use crate::util::pool::{Reusable, Pool};
+    use crate::util::pool::*;
     use std::sync::Arc;
 
-    struct ReusableTestObject(usize);
+    struct TestPoolFactory;
 
-    impl Default for ReusableTestObject {
-        fn default() -> Self {
-            Self(0)
+    impl PoolFactory<String> for TestPoolFactory {
+        fn create(&self) -> String {
+            String::new()
         }
-    }
 
-    impl Reusable for ReusableTestObject {
-        fn reset(&mut self) {}
+        fn reset(&self, obj: &mut String) {
+            obj.clear();
+        }
     }
 
     #[test]
     fn threaded_pool_use() {
-        let p: Arc<Pool<ReusableTestObject>> = Arc::new(Pool::new(2));
+        let p: Arc<Pool<String, TestPoolFactory>> = Arc::new(Pool::new(2, TestPoolFactory{}));
         let ctr = Arc::new(AtomicUsize::new(0));
         for _ in 0..64 {
             let p2 = p.clone();
@@ -185,10 +186,10 @@ mod tests {
             let _ = std::thread::spawn(move || {
                 for _ in 0..16384 {
                     let mut o1 = p2.get();
-                    o1.deref_mut().0 += 1;
+                    o1.push('a');
                     let mut o2 = p2.get();
                     drop(o1);
-                    o2.deref_mut().0 += 1;
+                    o2.push('b');
                     ctr2.fetch_add(1, Ordering::Relaxed);
                 }
             });
