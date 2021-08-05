@@ -210,7 +210,7 @@ impl InetAddress {
             match self.sa.sa_family as u8 {
                 AF_INET => &*(&self.sin.sin_addr.s_addr as *const u32).cast::<[u8; 4]>(),
                 AF_INET6 => &*(&(self.sin6.sin6_addr) as *const in6_addr).cast::<[u8; 16]>(),
-                _ => &[]
+                _ => &[],
             }
         }
     }

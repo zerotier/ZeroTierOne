@@ -1,9 +1,9 @@
+use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 
 use crate::vl1::{Address, MAC};
-use crate::vl1::inetaddress::InetAddress;
 use crate::vl1::buffer::Buffer;
-use std::cmp::Ordering;
+use crate::vl1::inetaddress::InetAddress;
 
 const TYPE_NIL: u8 = 0;
 const TYPE_ZEROTIER: u8 = 1;
@@ -82,26 +82,26 @@ impl Endpoint {
     pub fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> std::io::Result<()> {
         match self {
             Endpoint::Nil => {
-                buf.append_u8(Type::Nil as u8)
+                buf.append_u8(TYPE_NIL)
             }
             Endpoint::ZeroTier(a) => {
-                buf.append_u8(16 + (Type::ZeroTier as u8))?;
+                buf.append_u8(16 + TYPE_ZEROTIER)?;
                 buf.append_bytes_fixed(&a.to_bytes())
             }
             Endpoint::Ethernet(m) => {
-                buf.append_u8(16 + (Type::Ethernet as u8))?;
+                buf.append_u8(16 + TYPE_ETHERNET)?;
                 buf.append_bytes_fixed(&m.to_bytes())
             }
             Endpoint::WifiDirect(m) => {
-                buf.append_u8(16 + (Type::WifiDirect as u8))?;
+                buf.append_u8(16 + TYPE_WIFIDIRECT)?;
                 buf.append_bytes_fixed(&m.to_bytes())
             }
             Endpoint::Bluetooth(m) => {
-                buf.append_u8(16 + (Type::Bluetooth as u8))?;
+                buf.append_u8(16 + TYPE_BLUETOOTH)?;
                 buf.append_bytes_fixed(&m.to_bytes())
             }
             Endpoint::Ip(ip) => {
-                buf.append_u8(16 + (Type::Ip as u8))?;
+                buf.append_u8(16 + TYPE_IP)?;
                 ip.marshal(buf)
             }
             Endpoint::IpUdp(ip) => {
@@ -111,17 +111,17 @@ impl Endpoint {
                 ip.marshal(buf)
             }
             Endpoint::IpTcp(ip) => {
-                buf.append_u8(16 + (Type::IpTcp as u8))?;
+                buf.append_u8(16 + TYPE_IPTCP)?;
                 ip.marshal(buf)
             }
             Endpoint::Http(url) => {
-                buf.append_u8(16 + (Type::Http as u8))?;
+                buf.append_u8(16 + TYPE_HTTP)?;
                 let b = url.as_bytes();
                 buf.append_u16(b.len() as u16)?;
                 buf.append_bytes(b)
             }
             Endpoint::WebRTC(offer) => {
-                buf.append_u8(16 + (Type::WebRTC as u8))?;
+                buf.append_u8(16 + TYPE_WEBRTC)?;
                 let b = offer.as_slice();
                 buf.append_u16(b.len() as u16)?;
                 buf.append_bytes(b)
@@ -166,42 +166,42 @@ impl Hash for Endpoint {
     fn hash<H: Hasher>(&self, state: &mut H) {
         match self {
             Endpoint::Nil => {
-                state.write_u8(Type::Nil as u8);
+                state.write_u8(TYPE_NIL);
             }
             Endpoint::ZeroTier(a) => {
-                state.write_u8(Type::ZeroTier as u8);
+                state.write_u8(TYPE_ZEROTIER);
                 state.write_u64(a.to_u64())
             }
             Endpoint::Ethernet(m) => {
-                state.write_u8(Type::Ethernet as u8);
+                state.write_u8(TYPE_ETHERNET);
                 state.write_u64(m.to_u64())
             }
             Endpoint::WifiDirect(m) => {
-                state.write_u8(Type::WifiDirect as u8);
+                state.write_u8(TYPE_WIFIDIRECT);
                 state.write_u64(m.to_u64())
             }
             Endpoint::Bluetooth(m) => {
-                state.write_u8(Type::Bluetooth as u8);
+                state.write_u8(TYPE_BLUETOOTH);
                 state.write_u64(m.to_u64())
             }
             Endpoint::Ip(ip) => {
-                state.write_u8(Type::Ip as u8);
+                state.write_u8(TYPE_IP);
                 ip.hash(state);
             }
             Endpoint::IpUdp(ip) => {
-                state.write_u8(Type::IpUdp as u8);
+                state.write_u8(TYPE_IPUDP);
                 ip.hash(state);
             }
             Endpoint::IpTcp(ip) => {
-                state.write_u8(Type::IpTcp as u8);
+                state.write_u8(TYPE_IPTCP);
                 ip.hash(state);
             }
             Endpoint::Http(url) => {
-                state.write_u8(Type::Http as u8);
+                state.write_u8(TYPE_HTTP);
                 url.hash(state);
             }
             Endpoint::WebRTC(offer) => {
-                state.write_u8(Type::WebRTC as u8);
+                state.write_u8(TYPE_WEBRTC);
                 offer.hash(state);
             }
         }

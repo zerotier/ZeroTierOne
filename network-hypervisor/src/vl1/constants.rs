@@ -106,6 +106,9 @@ pub const WHOIS_RETRY_INTERVAL: i64 = 1000;
 /// Maximum number of WHOIS retries
 pub const WHOIS_RETRY_MAX: u16 = 3;
 
+/// Maximum number of packets to queue up behind a WHOIS.
+pub const WHOIS_MAX_WAITING_PACKETS: usize = 64;
+
 /// Maximum number of endpoints allowed in a Locator.
 pub const LOCATOR_MAX_ENDPOINTS: usize = 32;
 

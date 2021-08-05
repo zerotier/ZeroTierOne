@@ -9,7 +9,7 @@ lto = true
 codegen-units = 1
 panic = 'abort'
 
-[dependencies]
+[target."cfg(all(not(any(target_os = \"macos\", target_os = \"ios\")), target_arch = \"s390x\"))".dependencies]
 openssl = "^0"
 
 [target."cfg(not(any(target_os = \"macos\", target_os = \"ios\")))".dependencies]

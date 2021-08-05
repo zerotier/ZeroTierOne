@@ -183,6 +183,7 @@ impl Dictionary {
 
 impl ToString for Dictionary {
     /// Get the dictionary in an always readable format with non-printable characters replaced by '\xXX'.
+    /// This is not a serializable output that can be re-imported. Use write_to() for that.
     fn to_string(&self) -> String {
         let mut s = String::new();
         for kv in self.0.iter() {

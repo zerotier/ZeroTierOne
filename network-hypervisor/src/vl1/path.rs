@@ -91,6 +91,7 @@ impl Path {
         self.last_receive_time_ticks.store(time_ticks, Ordering::Relaxed);
     }
 
+    /// Called every INTERVAL during background tasks.
     #[inline(always)]
     pub fn on_interval<CI: VL1CallerInterface>(&self, ct: &CI, time_ticks: i64) {
         self.fragmented_packets.lock().retain(|packet_id, frag| (time_ticks - frag.ts_ticks) < FRAGMENT_EXPIRATION);

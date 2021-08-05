@@ -12,7 +12,7 @@ use crate::crypto::random::next_u64_secure;
 use crate::crypto::salsa::Salsa;
 use crate::crypto::secret::Secret;
 use crate::util::pool::{Pool, PoolFactory};
-use crate::vl1::{Identity, Path};
+use crate::vl1::{Identity, Path, Endpoint};
 use crate::vl1::buffer::Buffer;
 use crate::vl1::constants::*;
 use crate::vl1::node::*;
@@ -167,9 +167,8 @@ impl Peer {
     pub(crate) fn receive<CI: VL1CallerInterface, PH: VL1PacketHandler>(&self, node: &Node, ci: &CI, ph: &PH, time_ticks: i64, source_path: &Arc<Path>, header: &PacketHeader, packet: &Buffer<{ PACKET_SIZE_MAX }>, fragments: &[Option<PacketBuffer>]) {
         let _ = packet.as_bytes_starting_at(PACKET_VERB_INDEX).map(|packet_frag0_payload_bytes| {
             let mut payload: Buffer<{ PACKET_SIZE_MAX }> = Buffer::new();
-            let mut forward_secrecy = true;
             let cipher = header.cipher();
-
+            let mut forward_secrecy = true;
             let ephemeral_secret = self.ephemeral_secret.lock().clone();
             for secret in [ephemeral_secret.as_ref().map_or(&self.static_secret, |s| s.as_ref()), &self.static_secret] {
                 match cipher {
@@ -234,7 +233,10 @@ impl Peer {
                         }
                     }
 
-                    _ => {}
+                    _ => {
+                        // Unrecognized or unsupported cipher type.
+                        return;
+                    }
                 }
 
                 if (secret as *const PeerSecret) == (&self.static_secret as *const PeerSecret) {
@@ -247,7 +249,6 @@ impl Peer {
                     payload.clear();
                 }
             }
-            drop(ephemeral_secret);
 
             // If decryption and authentication succeeded, the code above will break out of the
             // for loop and end up here. Otherwise it returns from the whole function.
@@ -275,6 +276,9 @@ impl Peer {
                 }
             });
         });
+    }
+
+    pub(crate) fn send_hello<CI: VL1CallerInterface>(&self, ci: &CI, to_endpoint: &Endpoint) {
     }
 
     /// Get the remote version of this peer: major, minor, revision, and build.

@@ -125,6 +125,7 @@ pub struct Node {
     locator: Mutex<Option<Locator>>,
     paths: DashMap<Endpoint, Arc<Path>>,
     peers: DashMap<Address, Arc<Peer>>,
+    root: Mutex<Option<Arc<Peer>>>,
     whois: WhoisQueue,
     buffer_pool: Pool<Buffer<{ PACKET_SIZE_MAX }>, PooledBufferFactory<{ PACKET_SIZE_MAX }>>,
     secure_prng: SecureRandom,
@@ -162,6 +163,7 @@ impl Node {
             locator: Mutex::new(None),
             paths: DashMap::new(),
             peers: DashMap::new(),
+            root: Mutex::new(None),
             whois: WhoisQueue::new(),
             buffer_pool: Pool::new(64, PooledBufferFactory),
             secure_prng: SecureRandom::get(),
@@ -243,6 +245,12 @@ impl Node {
             }
         });
         */
+    }
+
+    /// Get the current best root peer that we should use for WHOIS, relaying, etc.
+    #[inline(always)]
+    pub(crate) fn root(&self) -> Option<Arc<Peer>> {
+        self.root.lock().clone()
     }
 
     /// Get the canonical Path object for a given endpoint and local socket information.

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, LinkedList};
 
 use parking_lot::Mutex;
 
@@ -14,7 +14,7 @@ pub(crate) enum QueuedPacket {
 }
 
 struct WhoisQueueItem {
-    packet_queue: Vec<QueuedPacket>,
+    packet_queue: LinkedList<QueuedPacket>,
     retry_gate: IntervalGate<{ WHOIS_RETRY_INTERVAL }>,
     retry_count: u16,
 }
@@ -24,7 +24,7 @@ pub(crate) struct WhoisQueue {
 }
 
 impl WhoisQueue {
-    pub const INTERVAL: i64 = WHOIS_RETRY_INTERVAL;
+    pub(crate) const INTERVAL: i64 = WHOIS_RETRY_INTERVAL;
 
     pub fn new() -> Self {
         Self {
@@ -36,7 +36,7 @@ impl WhoisQueue {
         let mut q = self.queue.lock();
 
         let qi = q.entry(target).or_insert_with(|| WhoisQueueItem {
-            packet_queue: Vec::new(),
+            packet_queue: LinkedList::new(),
             retry_gate: IntervalGate::new(0),
             retry_count: 0,
         });
@@ -44,12 +44,22 @@ impl WhoisQueue {
         if qi.retry_gate.gate(ci.time_ticks()) {
             qi.retry_count += 1;
             if packet.is_some() {
-                qi.packet_queue.push(packet.unwrap());
+                while qi.packet_queue.len() >= WHOIS_MAX_WAITING_PACKETS {
+                    let _ = qi.packet_queue.pop_front();
+                }
+                qi.packet_queue.push_back(packet.unwrap());
             }
             self.send_whois(node, ci, &[target]);
         }
     }
 
+    /// Remove a WHOIS request from the queue and call the supplied function for all queued packets.
+    pub fn response_received_get_packets<F: FnMut(&mut QueuedPacket)>(&self, address: Address, packet_handler: F) {
+        let mut qi = self.queue.lock().remove(&address);
+        let _ = qi.map(|mut qi| qi.packet_queue.iter_mut().for_each(packet_handler));
+    }
+
+    /// Called every INTERVAL during background tasks.
     pub fn on_interval<CI: VL1CallerInterface>(&self, node: &Node, ci: &CI, time_ticks: i64) {
         let mut targets: Vec<Address> = Vec::new();
         self.queue.lock().retain(|target, qi| {
