@@ -509,29 +509,47 @@ impl Ord for InetAddress {
             if self.sa.sa_family == other.sa.sa_family {
                 match self.sa.sa_family as u8 {
                     AF_INET => {
-                        if self.sin.sin_port == other.sin.sin_port {
-                            u32::from_be(self.sin.sin_addr.s_addr as u32).cmp(&u32::from_be(other.sin.sin_addr.s_addr as u32))
-                        } else {
+                        let ip_ordering = u32::from_be(self.sin.sin_addr.s_addr as u32).cmp(&u32::from_be(other.sin.sin_addr.s_addr as u32));
+                        if ip_ordering == Ordering::Equal {
                             u16::from_be(self.sin.sin_port as u16).cmp(&u16::from_be(other.sin.sin_port as u16))
+                        } else {
+                            ip_ordering
                         }
                     }
                     AF_INET6 => {
-                        if self.sin6.sin6_port == other.sin6.sin6_port {
-                            let a = &*(&(self.sin6.sin6_addr) as *const in6_addr).cast::<[u8; 16]>();
-                            let b = &*(&(other.sin6.sin6_addr) as *const in6_addr).cast::<[u8; 16]>();
-                            a.cmp(b)
-                        } else {
+                        let a = &*(&(self.sin6.sin6_addr) as *const in6_addr).cast::<[u8; 16]>();
+                        let b = &*(&(other.sin6.sin6_addr) as *const in6_addr).cast::<[u8; 16]>();
+                        let ip_ordering = a.cmp(b);
+                        if ip_ordering == Ordering::Equal {
                             u16::from_be(self.sin6.sin6_port as u16).cmp(&u16::from_be(other.sin6.sin6_port as u16))
+                        } else {
+                            ip_ordering
                         }
                     }
                     _ => {
                         Ordering::Equal
                     }
                 }
-            } else if self.sa.sa_family < other.sa.sa_family {
-                Ordering::Less
             } else {
-                Ordering::Greater
+                match self.sa.sa_family as u8 {
+                    AF_INET => {
+                        if other.sa.sa_family as u8 == AF_INET6 {
+                            Ordering::Less
+                        } else {
+                            self.sa.sa_family.cmp(&other.sa.sa_family)
+                        }
+                    }
+                    AF_INET6 => {
+                        if other.sa.sa_family as u8 == AF_INET {
+                            Ordering::Greater
+                        } else {
+                            self.sa.sa_family.cmp(&other.sa.sa_family)
+                        }
+                    }
+                    _ => {
+                        self.sa.sa_family.cmp(&other.sa.sa_family)
+                    }
+                }
             }
         }
     }

@@ -1,19 +1,19 @@
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 mod impl_macos;
 
-#[cfg(not(any(target_os = "macos", target_os = "ios", target_arch = "s390x")))]
+#[cfg(not(any(target_os = "macos", target_os = "ios", target_arch = "s390x", target_arch = "powerpc64le", target_arch = "powerpc64")))]
 mod impl_gcrypt;
 
-#[cfg(all(not(any(target_os = "macos", target_os = "ios")), target_arch = "s390x"))]
+#[cfg(all(not(any(target_os = "macos", target_os = "ios")), any(target_arch = "s390x", target_arch = "powerpc64le", target_arch = "powerpc64")))]
 mod impl_openssl;
 
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 pub use impl_macos::AesGmacSiv;
 
-#[cfg(not(any(target_os = "macos", target_os = "ios", target_arch = "s390x")))]
+#[cfg(not(any(target_os = "macos", target_os = "ios", target_arch = "s390x", target_arch = "powerpc64le", target_arch = "powerpc64")))]
 pub use impl_gcrypt::AesGmacSiv;
 
-#[cfg(all(not(any(target_os = "macos", target_os = "ios")), target_arch = "s390x"))]
+#[cfg(all(not(any(target_os = "macos", target_os = "ios")), any(target_arch = "s390x", target_arch = "powerpc64le", target_arch = "powerpc64")))]
 pub use impl_openssl::AesGmacSiv;
 
 pub(crate) const ZEROES: [u8; 16] = [0_u8; 16];

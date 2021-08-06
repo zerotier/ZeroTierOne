@@ -97,7 +97,3 @@ impl Path {
         self.fragmented_packets.lock().retain(|packet_id, frag| (time_ticks - frag.ts_ticks) < FRAGMENT_EXPIRATION);
     }
 }
-
-unsafe impl Send for Path {}
-
-unsafe impl Sync for Path {}

@@ -1,5 +1,4 @@
 use std::mem::size_of;
-use std::ops::{Deref, DerefMut};
 use std::sync::{Arc, Weak};
 
 use parking_lot::Mutex;
@@ -56,7 +55,7 @@ impl<O, F: PoolFactory<O>> Pooled<O, F> {
     }
 }
 
-impl<O, F: PoolFactory<O>> Deref for Pooled<O, F> {
+impl<O, F: PoolFactory<O>> std::ops::Deref for Pooled<O, F> {
     type Target = O;
 
     #[inline(always)]
@@ -74,7 +73,7 @@ impl<O, F: PoolFactory<O>> AsRef<O> for Pooled<O, F> {
     }
 }
 
-impl<O, F: PoolFactory<O>> DerefMut for Pooled<O, F> {
+impl<O, F: PoolFactory<O>> std::ops::DerefMut for Pooled<O, F> {
     #[inline(always)]
     fn deref_mut(&mut self) -> &mut Self::Target {
         debug_assert!(!self.0.is_null());
@@ -157,7 +156,6 @@ unsafe impl<O, F: PoolFactory<O>> Send for Pool<O, F> {}
 
 #[cfg(test)]
 mod tests {
-    use std::ops::DerefMut;
     use std::sync::Arc;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::time::Duration;

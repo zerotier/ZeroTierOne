@@ -15,7 +15,7 @@ use crate::vl1::constants::PACKET_SIZE_MAX;
 use crate::vl1::path::Path;
 use crate::vl1::peer::Peer;
 use crate::vl1::protocol::*;
-use crate::vl1::whois::WhoisQueue;
+use crate::vl1::whois::{WhoisQueue, QueuedPacket};
 
 /// Standard packet buffer type including pool container.
 pub type PacketBuffer = Pooled<Buffer<{ PACKET_SIZE_MAX }>, PooledBufferFactory<{ PACKET_SIZE_MAX }>>;
@@ -184,15 +184,13 @@ impl Node {
 
     /// Get a reusable packet buffer.
     /// The buffer will automatically be returned to the pool if it is dropped.
-    #[inline(always)]
     pub fn get_packet_buffer(&self) -> PacketBuffer {
         self.buffer_pool.get()
     }
 
     /// Get a peer by address.
-    #[inline(always)]
     pub fn peer(&self, a: Address) -> Option<Arc<Peer>> {
-        self.peers.get(&a).map(|peer| peer.clone() )
+        self.peers.get(&a).map(|peer| peer.value().clone())
     }
 
     /// Get all peers currently in the peer cache.
@@ -227,24 +225,47 @@ impl Node {
 
     /// Called when a packet is received on the physical wire.
     pub fn wire_receive<CI: VL1CallerInterface, PH: VL1PacketHandler>(&self, ci: &CI, ph: &PH, source_endpoint: &Endpoint, source_local_socket: i64, source_local_interface: i64, mut data: PacketBuffer) {
-        /*
-        let _ = data.struct_mut_at::<FragmentHeader>(0).map(|fragment_header| {
-            // NOTE: destination address is located at the same index in both the fragment
-            // header and the full packet header, allowing us to make this decision once.
+        let fragment_header = data.struct_mut_at::<FragmentHeader>(0);
+        if fragment_header.is_ok() {
+            let fragment_header = fragment_header.unwrap();
+            let time_ticks = ci.time_ticks();
             let dest = Address::from(&fragment_header.dest);
             if dest == self.identity.address() {
-                // Packet or fragment is addressed to this node.
-
                 let path = self.path(source_endpoint, source_local_socket, source_local_interface);
                 if fragment_header.is_fragment() {
+                    let _ = path.receive_fragment(fragment_header.id, fragment_header.fragment_no(), fragment_header.total_fragments(), data, time_ticks).map(|assembled_packet| {
+                        if assembled_packet.frags[0].is_some() {
+                            let frag0 = assembled_packet.frags[0].as_ref().unwrap();
+                            let packet_header = frag0.struct_at::<PacketHeader>(0);
+                            if packet_header.is_ok() {
+                                let packet_header = packet_header.unwrap();
+                                let source = Address::from(&packet_header.src);
+                                let peer = self.peer(source);
+                                if peer.is_some() {
+                                    peer.unwrap().receive(self, ci, ph, time_ticks, &path, &packet_header, frag0.as_ref(), &assembled_packet.frags[1..(assembled_packet.have as usize)]);
+                                } else {
+                                    self.whois.query(self, ci, source, Some(QueuedPacket::Fragmented(assembled_packet)));
+                                }
+                            }
+                        }
+                    });
                 } else {
+                    path.receive_other(time_ticks);
+                    let packet_header = data.struct_at::<PacketHeader>(0);
+                    if packet_header.is_ok() {
+                        let packet_header = packet_header.unwrap();
+                        let source = Address::from(&packet_header.src);
+                        let peer = self.peer(source);
+                        if peer.is_some() {
+                            peer.unwrap().receive(self, ci, ph, time_ticks, &path, &packet_header, data.as_ref(), &[]);
+                        } else {
+                            self.whois.query(self, ci, source, Some(QueuedPacket::Singular(data)));
+                        }
+                    }
                 }
-
             } else {
-                // Packet or fragment is addressed to another node.
             }
-        });
-        */
+        }
     }
 
     /// Get the current best root peer that we should use for WHOIS, relaying, etc.
