@@ -1,7 +1,16 @@
 use std::convert::TryInto;
+use std::mem::size_of;
 use std::ptr::write_volatile;
 
 /// Container for secrets that clears them on drop.
+///
+/// We can't be totally sure that things like libraries are doing this and it's
+/// hard to get every use of a secret anywhere, but using this in our code at
+/// least reduces the number of secrets that are left lying around in memory.
+///
+/// This is generally a low-risk thing since it's process memory that's protected,
+/// but it's still not a bad idea due to things like swap or obscure side channel
+/// attacks that allow memory to be read.
 #[derive(Clone, PartialEq, Eq)]
 pub struct Secret<const L: usize>(pub(crate) [u8; L]);
 
@@ -20,9 +29,17 @@ impl<const L: usize> Secret<L> {
 
 impl<const L: usize> Drop for Secret<L> {
     fn drop(&mut self) {
-        let p = self.0.as_mut_ptr();
-        for i in 0..L {
-            unsafe { write_volatile(p.offset(i as isize), 0_u8) };
+        unsafe {
+            let p = self.0.as_mut_ptr();
+            if (L % size_of::<usize>()) == 0 {
+                for i in 0..(L / size_of::<usize>()) {
+                    write_volatile(p.cast::<usize>().offset(i as isize), 0_usize);
+                }
+            } else {
+                for i in 0..L {
+                    write_volatile(p.offset(i as isize), 0_u8);
+                }
+            }
         }
     }
 }

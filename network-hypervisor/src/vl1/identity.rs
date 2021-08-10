@@ -468,14 +468,9 @@ impl Identity {
     /// On success the identity and the number of bytes actually read from the slice are
     /// returned.
     pub fn unmarshal_from_bytes(bytes: &[u8]) -> std::io::Result<(Identity, usize)> {
-        let buf = Buffer::<2048>::from_bytes(bytes);
-        if buf.is_none() {
-            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "data object too large"))
-        } else {
-            let mut cursor: usize = 0;
-            let id = Self::unmarshal(buf.as_ref().unwrap(), &mut cursor)?;
-            Ok((id, cursor))
-        }
+        let mut cursor: usize = 0;
+        let id = Self::unmarshal(&Buffer::<2048>::from_bytes(bytes)?, &mut cursor)?;
+        Ok((id, cursor))
     }
 
     /// Get this identity in string format, including its secret keys.

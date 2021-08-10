@@ -1,4 +1,5 @@
 use std::mem::size_of;
+use std::ptr::NonNull;
 use std::sync::{Arc, Weak};
 
 use parking_lot::Mutex;
@@ -14,7 +15,7 @@ struct PoolEntry<O, F: PoolFactory<O>> {
     return_pool: Weak<PoolInner<O, F>>,
 }
 
-struct PoolInner<O, F: PoolFactory<O>>(F, Mutex<Vec<*mut PoolEntry<O, F>>>);
+struct PoolInner<O, F: PoolFactory<O>>(F, Mutex<Vec<NonNull<PoolEntry<O, F>>>>);
 
 /// Container for pooled objects that have been checked out of the pool.
 ///
@@ -26,7 +27,7 @@ struct PoolInner<O, F: PoolFactory<O>>(F, Mutex<Vec<*mut PoolEntry<O, F>>>);
 /// Note that pooled objects are not clonable. If you want to share them use Rc<>
 /// or Arc<>.
 #[repr(transparent)]
-pub struct Pooled<O, F: PoolFactory<O>>(*mut PoolEntry<O, F>);
+pub struct Pooled<O, F: PoolFactory<O>>(NonNull<PoolEntry<O, F>>);
 
 impl<O, F: PoolFactory<O>> Pooled<O, F> {
     /// Get a raw pointer to the object wrapped by this pooled object container.
@@ -34,9 +35,8 @@ impl<O, F: PoolFactory<O>> Pooled<O, F> {
     /// from_raw() or memory will leak.
     #[inline(always)]
     pub unsafe fn into_raw(self) -> *mut O {
-        debug_assert!(!self.0.is_null());
-        debug_assert_eq!(self.0.cast::<u8>(), (&mut (*self.0).obj as *mut O).cast::<u8>());
-        let ptr = self.0.cast::<O>();
+        debug_assert_eq!((&self.0.as_ref().obj as *const O).cast::<u8>(), (self.0.as_ref() as *const PoolEntry<O, F>).cast::<u8>());
+        let ptr = self.0.as_ptr().cast::<O>();
         std::mem::forget(self);
         ptr
     }
@@ -48,7 +48,7 @@ impl<O, F: PoolFactory<O>> Pooled<O, F> {
     #[inline(always)]
     pub unsafe fn from_raw(raw: *mut O) -> Option<Self> {
         if !raw.is_null() {
-            Some(Self(raw.cast()))
+            Some(Self(NonNull::new_unchecked(raw.cast())))
         } else {
             None
         }
@@ -60,44 +60,43 @@ impl<O, F: PoolFactory<O>> std::ops::Deref for Pooled<O, F> {
 
     #[inline(always)]
     fn deref(&self) -> &Self::Target {
-        debug_assert!(!self.0.is_null());
-        unsafe { &(*self.0).obj }
+        unsafe { &self.0.as_ref().obj }
     }
 }
 
 impl<O, F: PoolFactory<O>> AsRef<O> for Pooled<O, F> {
     #[inline(always)]
     fn as_ref(&self) -> &O {
-        debug_assert!(!self.0.is_null());
-        unsafe { &(*self.0).obj }
+        unsafe { &self.0.as_ref().obj }
     }
 }
 
 impl<O, F: PoolFactory<O>> std::ops::DerefMut for Pooled<O, F> {
     #[inline(always)]
     fn deref_mut(&mut self) -> &mut Self::Target {
-        debug_assert!(!self.0.is_null());
-        unsafe { &mut (*self.0).obj }
+        unsafe { &mut self.0.as_mut().obj }
     }
 }
 
 impl<O, F: PoolFactory<O>> AsMut<O> for Pooled<O, F> {
     #[inline(always)]
     fn as_mut(&mut self) -> &mut O {
-        debug_assert!(!self.0.is_null());
-        unsafe { &mut (*self.0).obj }
+        unsafe { &mut self.0.as_mut().obj }
     }
 }
 
 impl<O, F: PoolFactory<O>> Drop for Pooled<O, F> {
     fn drop(&mut self) {
         unsafe {
-            Weak::upgrade(&(*self.0).return_pool).map_or_else(|| {
-                drop(Box::from_raw(self.0))
-            }, |p| {
-                p.0.reset(&mut (*self.0).obj);
-                p.1.lock().push(self.0)
-            })
+            let p = Weak::upgrade(&self.0.as_ref().return_pool);
+            if p.is_some() {
+                let p = p.unwrap();
+                p.0.reset(&mut self.0.as_mut().obj);
+                let mut q = p.1.lock();
+                q.push(self.0.clone())
+            } else {
+                drop(Box::from_raw(self.0.as_ptr()))
+            }
         }
     }
 }
@@ -114,33 +113,31 @@ impl<O, F: PoolFactory<O>> Pool<O, F> {
 
     /// Get a pooled object, or allocate one if the pool is empty.
     pub fn get(&self) -> Pooled<O, F> {
-        Pooled::<O, F>(self.0.1.lock().pop().map_or_else(|| {
-            Box::into_raw(Box::new(PoolEntry::<O, F> {
-                obj: self.0.0.create(),
-                return_pool: Arc::downgrade(&self.0),
+        unsafe {
+            Pooled::<O, F>(self.0.1.lock().pop().unwrap_or_else(|| {
+                NonNull::new_unchecked(Box::into_raw(Box::new(PoolEntry::<O, F> {
+                    obj: self.0.0.create(),
+                    return_pool: Arc::downgrade(&self.0),
+                })))
             }))
-        }, |obj| {
-            debug_assert!(!obj.is_null());
-            obj
-        }))
-    }
-
-    /// Get approximate memory use in bytes (does not include checked out objects).
-    #[inline(always)]
-    pub fn pool_memory_bytes(&self) -> usize {
-        self.0.1.lock().len() * (size_of::<PoolEntry<O, F>>() + size_of::<usize>())
+        }
     }
 
     /// Dispose of all pooled objects, freeing any memory they use.
+    ///
     /// If get() is called after this new objects will be allocated, and any outstanding
     /// objects will still be returned on drop unless the pool itself is dropped. This can
     /// be done to free some memory if there has been a spike in memory use.
     pub fn purge(&self) {
         let mut p = self.0.1.lock();
-        for obj in p.iter() {
-            drop(unsafe { Box::from_raw(*obj) });
+        loop {
+            let o = p.pop();
+            if o.is_some() {
+                drop(unsafe { Box::from_raw(o.unwrap().as_ptr()) })
+            } else {
+                break;
+            }
         }
-        p.clear();
     }
 }
 
@@ -185,8 +182,9 @@ mod tests {
                 for _ in 0..16384 {
                     let mut o1 = p2.get();
                     o1.push('a');
-                    let mut o2 = p2.get();
+                    let o2 = p2.get();
                     drop(o1);
+                    let mut o2 = unsafe { Pooled::<String, TestPoolFactory>::from_raw(o2.into_raw()).unwrap() };
                     o2.push('b');
                     ctr2.fetch_add(1, Ordering::Relaxed);
                 }
@@ -198,6 +196,5 @@ mod tests {
                 break;
             }
         }
-        //println!("pool memory size: {}", p.pool_memory_bytes());
     }
 }

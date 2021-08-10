@@ -2,7 +2,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, AtomicU64, AtomicU8, Ordering};
 
 use parking_lot::Mutex;
-use aes_gmac_siv::AesGmacSiv;
+use aes_gmac_siv::{AesGmacSiv, AesCtr};
 
 use crate::crypto::c25519::C25519KeyPair;
 use crate::crypto::kbkdf::zt_kbkdf_hmac_sha384;
@@ -23,7 +23,7 @@ struct AesGmacSivPoolFactory(Secret<48>, Secret<48>);
 impl PoolFactory<AesGmacSiv> for AesGmacSivPoolFactory {
     #[inline(always)]
     fn create(&self) -> AesGmacSiv {
-        AesGmacSiv::new(self.0.as_ref(), self.1.as_ref())
+        AesGmacSiv::new(&self.0.0[0..32], &self.1.0[0..32])
     }
 
     #[inline(always)]
@@ -43,7 +43,7 @@ struct PeerSecret {
     secret: Secret<48>,
 
     // Reusable AES-GMAC-SIV ciphers initialized with secret.
-    // These can't be used concurrently so they're pooled to allow multithreaded use.
+    // These can't be used concurrently so they're pooled to allow low-contention concurrency.
     aes: Pool<AesGmacSiv, AesGmacSivPoolFactory>,
 }
 
@@ -71,8 +71,8 @@ pub struct Peer {
     // Static shared secret computed from agreement with identity.
     static_secret: PeerSecret,
 
-    // Derived static secret used to encrypt the dictionary part of HELLO.
-    static_secret_hello_dictionary_encrypt: Secret<48>,
+    // Derived static secret (in initialized cipher) used to encrypt the dictionary part of HELLO.
+    static_secret_hello_dictionary: Mutex<AesCtr>,
 
     // Derived static secret used to add full HMAC-SHA384 to packets, currently just HELLO.
     static_secret_packet_hmac: Secret<48>,
@@ -83,11 +83,18 @@ pub struct Peer {
     // Either None or the current ephemeral key pair whose public keys are on offer.
     ephemeral_pair: Mutex<Option<EphemeralKeyPair>>,
 
-    // Statistics
+    // Paths sorted in ascending order of quality / preference.
+    paths: Mutex<Vec<Arc<Path>>>,
+
+    // Statistics and times of events.
     last_send_time_ticks: AtomicI64,
     last_receive_time_ticks: AtomicI64,
+    last_forward_time_ticks: AtomicI64,
     total_bytes_sent: AtomicU64,
+    total_bytes_sent_indirect: AtomicU64,
     total_bytes_received: AtomicU64,
+    total_bytes_received_indirect: AtomicU64,
+    total_bytes_forwarded: AtomicU64,
 
     // Counter for assigning packet IV's a.k.a. PacketIDs.
     packet_iv_counter: AtomicU64,
@@ -95,9 +102,6 @@ pub struct Peer {
     // Remote peer version information.
     remote_version: AtomicU64,
     remote_protocol_version: AtomicU8,
-
-    // Paths sorted in ascending order of quality / preference.
-    paths: Mutex<Vec<Arc<Path>>>,
 }
 
 /// Derive per-packet key for Sals20/12 encryption (and Poly1305 authentication).
@@ -108,24 +112,21 @@ pub struct Peer {
 /// is different the key will be wrong and MAC will fail.
 ///
 /// This is only used for Salsa/Poly modes.
-#[inline(always)]
 fn salsa_derive_per_packet_key(key: &Secret<48>, header: &PacketHeader, packet_size: usize) -> Secret<48> {
     let hb = header.as_bytes();
     let mut k = key.clone();
-
     for i in 0..18 {
         k.0[i] ^= hb[i];
     }
-
     k.0[18] ^= hb[HEADER_FLAGS_FIELD_INDEX] & HEADER_FLAGS_FIELD_MASK_HIDE_HOPS;
-
     k.0[19] ^= (packet_size >> 8) as u8;
     k.0[20] ^= packet_size as u8;
-
     k
 }
 
 impl Peer {
+    pub(crate) const INTERVAL: i64 = PEER_SERVICE_INTERVAL;
+
     /// Create a new peer.
     /// This only returns None if this_node_identity does not have its secrets or if some
     /// fatal error occurs performing key agreement between the two identities.
@@ -134,7 +135,7 @@ impl Peer {
             let aes_factory = AesGmacSivPoolFactory(
                 zt_kbkdf_hmac_sha384(&static_secret.0, KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K0, 0, 0),
                 zt_kbkdf_hmac_sha384(&static_secret.0, KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K1, 0, 0));
-            let static_secret_hello_dictionary_encrypt = zt_kbkdf_hmac_sha384(&static_secret.0, KBKDF_KEY_USAGE_LABEL_HELLO_DICTIONARY_ENCRYPT, 0, 0);
+            let static_secret_hello_dictionary = zt_kbkdf_hmac_sha384(&static_secret.0, KBKDF_KEY_USAGE_LABEL_HELLO_DICTIONARY_ENCRYPT, 0, 0);
             let static_secret_packet_hmac = zt_kbkdf_hmac_sha384(&static_secret.0, KBKDF_KEY_USAGE_LABEL_PACKET_HMAC, 0, 0);
             Peer {
                 identity: id,
@@ -144,18 +145,22 @@ impl Peer {
                     secret: static_secret,
                     aes: Pool::new(4, aes_factory),
                 },
-                static_secret_hello_dictionary_encrypt,
+                static_secret_hello_dictionary: Mutex::new(AesCtr::new(&static_secret_hello_dictionary.0[0..32])),
                 static_secret_packet_hmac,
                 ephemeral_secret: Mutex::new(None),
                 ephemeral_pair: Mutex::new(None),
+                paths: Mutex::new(Vec::new()),
                 last_send_time_ticks: AtomicI64::new(0),
                 last_receive_time_ticks: AtomicI64::new(0),
+                last_forward_time_ticks: AtomicI64::new(0),
                 total_bytes_sent: AtomicU64::new(0),
+                total_bytes_sent_indirect: AtomicU64::new(0),
                 total_bytes_received: AtomicU64::new(0),
+                total_bytes_received_indirect: AtomicU64::new(0),
+                total_bytes_forwarded: AtomicU64::new(0),
                 packet_iv_counter: AtomicU64::new(next_u64_secure()),
                 remote_version: AtomicU64::new(0),
                 remote_protocol_version: AtomicU8::new(0),
-                paths: Mutex::new(Vec::new()),
             }
         })
     }
@@ -166,6 +171,7 @@ impl Peer {
     pub(crate) fn receive<CI: VL1CallerInterface, PH: VL1PacketHandler>(&self, node: &Node, ci: &CI, ph: &PH, time_ticks: i64, source_path: &Arc<Path>, header: &PacketHeader, packet: &Buffer<{ PACKET_SIZE_MAX }>, fragments: &[Option<PacketBuffer>]) {
         let _ = packet.as_bytes_starting_at(PACKET_VERB_INDEX).map(|packet_frag0_payload_bytes| {
             let mut payload: Buffer<{ PACKET_SIZE_MAX }> = Buffer::new();
+
             let cipher = header.cipher();
             let mut forward_secrecy = true;
             let ephemeral_secret = self.ephemeral_secret.lock().clone();
@@ -245,9 +251,10 @@ impl Peer {
                 } else {
                     // If ephemeral failed, static secret will be tried. Set forward secrecy to false.
                     forward_secrecy = false;
-                    payload.clear();
+                    let _ = payload.set_size(0);
                 }
             }
+            drop(ephemeral_secret);
 
             // If decryption and authentication succeeded, the code above will break out of the
             // for loop and end up here. Otherwise it returns from the whole function.
@@ -260,16 +267,15 @@ impl Peer {
                 // if it didn't handle the packet, in which case it's handled at VL1.
                 if !ph.handle_packet(self, source_path, forward_secrecy, verb, &payload) {
                     match verb {
-                        VERB_VL1_NOP => {}
-                        VERB_VL1_HELLO => {}
-                        VERB_VL1_ERROR => {}
-                        VERB_VL1_OK => {}
-                        VERB_VL1_WHOIS => {}
-                        VERB_VL1_RENDEZVOUS => {}
-                        VERB_VL1_ECHO => {}
-                        VERB_VL1_PUSH_DIRECT_PATHS => {}
-                        VERB_VL1_USER_MESSAGE => {}
-                        VERB_VL1_REMOTE_TRACE => {}
+                        //VERB_VL1_NOP => {}
+                        VERB_VL1_HELLO => self.receive_hello(ci, node, time_ticks, source_path, &payload),
+                        VERB_VL1_ERROR => self.receive_error(ci, node, time_ticks, source_path, &payload),
+                        VERB_VL1_OK => self.receive_ok(ci, node, time_ticks, source_path, &payload),
+                        VERB_VL1_WHOIS => self.receive_whois(ci, node, time_ticks, source_path, &payload),
+                        VERB_VL1_RENDEZVOUS => self.receive_rendezvous(ci, node, time_ticks, source_path, &payload),
+                        VERB_VL1_ECHO => self.receive_echo(ci, node, time_ticks, source_path, &payload),
+                        VERB_VL1_PUSH_DIRECT_PATHS => self.receive_push_direct_paths(ci, node, time_ticks, source_path, &payload),
+                        VERB_VL1_USER_MESSAGE => self.receive_user_message(ci, node, time_ticks, source_path, &payload),
                         _ => {}
                     }
                 }
@@ -277,7 +283,26 @@ impl Peer {
         });
     }
 
-    pub(crate) fn send_hello<CI: VL1CallerInterface>(&self, ci: &CI, to_endpoint: &Endpoint) {
+    /// Send a packet to this peer.
+    ///
+    /// This will go directly if there is an active path, or otherwise indirectly
+    /// via a root or some other route.
+    pub(crate) fn send<CI: VL1CallerInterface>(&self, ci: &CI, time_ticks: i64, data: PacketBuffer) {
+        self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
+        let _ = self.total_bytes_sent.fetch_add(data.len() as u64, Ordering::Relaxed);
+    }
+
+    /// Forward a packet to this peer.
+    ///
+    /// This is called when we receive a packet not addressed to this node and
+    /// want to pass it along.
+    ///
+    /// This doesn't support fragmenting since fragments are forwarded individually.
+    /// Intermediates don't need to adjust fragmentation.
+    pub(crate) fn forward<CI: VL1CallerInterface>(&self, ci: &CI, time_ticks: i64, data: PacketBuffer) {
+        self.last_forward_time_ticks.store(time_ticks, Ordering::Relaxed);
+        let _ = self.total_bytes_forwarded.fetch_add(data.len() as u64, Ordering::Relaxed);
+        todo!()
     }
 
     /// Get the remote version of this peer: major, minor, revision, and build.
@@ -299,5 +324,42 @@ impl Peer {
         } else {
             None
         }
+    }
+
+    /// Called every INTERVAL during background tasks.
+    #[inline(always)]
+    pub fn on_interval<CI: VL1CallerInterface>(&self, ct: &CI, time_ticks: i64) {
+    }
+
+    #[inline(always)]
+    fn receive_hello<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, packet: &Buffer<{ PACKET_SIZE_MAX }>) {
+    }
+
+    #[inline(always)]
+    fn receive_error<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, packet: &Buffer<{ PACKET_SIZE_MAX }>) {
+    }
+
+    #[inline(always)]
+    fn receive_ok<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, packet: &Buffer<{ PACKET_SIZE_MAX }>) {
+    }
+
+    #[inline(always)]
+    fn receive_whois<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, packet: &Buffer<{ PACKET_SIZE_MAX }>) {
+    }
+
+    #[inline(always)]
+    fn receive_rendezvous<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, packet: &Buffer<{ PACKET_SIZE_MAX }>) {
+    }
+
+    #[inline(always)]
+    fn receive_echo<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, packet: &Buffer<{ PACKET_SIZE_MAX }>) {
+    }
+
+    #[inline(always)]
+    fn receive_push_direct_paths<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, packet: &Buffer<{ PACKET_SIZE_MAX }>) {
+    }
+
+    #[inline(always)]
+    fn receive_user_message<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, packet: &Buffer<{ PACKET_SIZE_MAX }>) {
     }
 }

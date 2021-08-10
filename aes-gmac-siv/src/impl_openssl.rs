@@ -1,15 +1,80 @@
 // AES-GMAC-SIV implemented using OpenSSL.
 
-use std::convert::TryInto;
 use openssl::symm::{Crypter, Cipher, Mode};
+
+fn aes_ctr_by_key_size(ks: usize) -> Cipher {
+    match ks {
+        16 => Cipher::aes_128_ctr(),
+        24 => Cipher::aes_192_ctr(),
+        32 => Cipher::aes_256_ctr(),
+        _ => {
+            panic!("AES supports 128, 192, or 256 bits keys");
+        }
+    }
+}
+
+fn aes_gcm_by_key_size(ks: usize) -> Cipher {
+    match ks {
+        16 => Cipher::aes_128_gcm(),
+        24 => Cipher::aes_192_gcm(),
+        32 => Cipher::aes_256_gcm(),
+        _ => {
+            panic!("AES supports 128, 192, or 256 bits keys");
+        }
+    }
+}
+
+fn aes_ecb_by_key_size(ks: usize) -> Cipher {
+    match ks {
+        16 => Cipher::aes_128_ecb(),
+        24 => Cipher::aes_192_ecb(),
+        32 => Cipher::aes_256_ecb(),
+        _ => {
+            panic!("AES supports 128, 192, or 256 bits keys");
+        }
+    }
+}
+
+pub struct AesCtr(Vec<u8>, Option<Crypter>);
+
+impl AesCtr {
+    /// Construct a new AES-CTR cipher.
+    /// Key must be 16, 24, or 32 bytes in length or a panic will occur.
+    #[inline(always)]
+    pub fn new(k: &[u8]) -> Self {
+        if k.len() != 32 && k.len() != 24 && k.len() != 16 {
+            panic!("AES supports 128, 192, or 256 bits keys");
+        }
+        AesCtr(k.to_vec(), None)
+    }
+
+    /// Initialize AES-CTR for encryption or decryption with the given IV.
+    /// If it's already been used, this also resets the cipher. There is no separate reset.
+    #[inline(always)]
+    pub fn init(&mut self, iv: &[u8]) {
+        let _ = self.1.replace(Crypter::new(aes_ctr_by_key_size(self.0.len()), Mode::Encrypt, self.0.as_slice(), Some(iv)).unwrap());
+    }
+
+    /// Encrypt or decrypt (same operation with CTR mode)
+    #[inline(always)]
+    pub fn crypt(&mut self, input: &[u8], output: &mut [u8]) {
+        let _ = self.1.as_mut().unwrap().update(input, output);
+    }
+
+    /// Encrypt or decrypt in place (same operation with CTR mode)
+    #[inline(always)]
+    pub fn crypt_in_place(&mut self, data: &mut [u8]) {
+        let _ = self.1.as_mut().unwrap().update(unsafe { &*std::slice::from_raw_parts(data.as_ptr(), data.len()) }, data);
+    }
+}
 
 /// AES-GMAC-SIV encryptor/decryptor.
 #[repr(align(8))] // allow tag and tmp to be accessed as u64 arrays as well
 pub struct AesGmacSiv {
     tag: [u8; 16],
     tmp: [u8; 16],
-    k0: [u8; 32],
-    k1: [u8; 32],
+    k0: Vec<u8>,
+    k1: Vec<u8>,
     ctr: Option<Crypter>,
     gmac: Option<Crypter>,
 }
@@ -28,8 +93,8 @@ impl AesGmacSiv {
         AesGmacSiv {
             tag: [0_u8; 16],
             tmp: [0_u8; 16],
-            k0: k0.try_into().unwrap(),
-            k1: k1.try_into().unwrap(),
+            k0: k0.to_vec(),
+            k1: k1.to_vec(),
             ctr: None,
             gmac: None,
         }
@@ -47,7 +112,7 @@ impl AesGmacSiv {
     pub fn encrypt_init(&mut self, iv: &[u8]) {
         self.tag[0..8].copy_from_slice(iv);
         self.tag[8..16].fill(0);
-        let _ = self.gmac.replace(Crypter::new(Cipher::aes_256_gcm(), Mode::Encrypt, &self.k0, Some(&self.tag)).unwrap());
+        let _ = self.gmac.replace(Crypter::new(aes_gcm_by_key_size(self.k0.len()), Mode::Encrypt, self.k0.as_slice(), Some(&self.tag)).unwrap());
     }
 
     /// Set additional authenticated data (data to be authenticated but not encrypted).
@@ -79,11 +144,11 @@ impl AesGmacSiv {
             *self.tag.as_mut_ptr().cast::<u64>().offset(1) = *tmp ^ *tmp.offset(1);
         }
         let mut tag_tmp = [0_u8; 32];
-        let _ = Crypter::new(Cipher::aes_256_ecb(), Mode::Encrypt, &self.k1, None).unwrap().update(&self.tag, &mut tag_tmp);
+        let _ = Crypter::new(aes_ecb_by_key_size(self.k1.len()), Mode::Encrypt, self.k1.as_slice(), None).unwrap().update(&self.tag, &mut tag_tmp);
         self.tag.copy_from_slice(&tag_tmp[0..16]);
         self.tmp.copy_from_slice(&self.tag);
         self.tmp[12] &= 0x7f;
-        let _ = self.ctr.replace(Crypter::new(Cipher::aes_256_ctr(), Mode::Encrypt, &self.k1, Some(&self.tmp)).unwrap());
+        let _ = self.ctr.replace(Crypter::new(aes_ctr_by_key_size(self.k1.len()), Mode::Encrypt, self.k1.as_slice(), Some(&self.tmp)).unwrap());
     }
 
     /// Feed plaintext for second pass and write ciphertext to supplied buffer.
@@ -110,16 +175,16 @@ impl AesGmacSiv {
     #[inline(always)]
     fn decrypt_init_internal(&mut self) {
         self.tmp[12] &= 0x7f;
-        let _ = self.ctr.replace(Crypter::new(Cipher::aes_256_ctr(), Mode::Decrypt, &self.k1, Some(&self.tmp)).unwrap());
+        let _ = self.ctr.replace(Crypter::new(aes_ctr_by_key_size(self.k1.len()), Mode::Decrypt, self.k1.as_slice(), Some(&self.tmp)).unwrap());
         let mut tag_tmp = [0_u8; 32];
-        let _ = Crypter::new(Cipher::aes_256_ecb(), Mode::Decrypt, &self.k1, None).unwrap().update(&self.tag, &mut tag_tmp);
+        let _ = Crypter::new(aes_ecb_by_key_size(self.k1.len()), Mode::Decrypt, self.k1.as_slice(), None).unwrap().update(&self.tag, &mut tag_tmp);
         self.tag.copy_from_slice(&tag_tmp[0..16]);
         unsafe { // tmp[0..8] = tag[0..8], tmp[8..16] = 0
             let tmp = self.tmp.as_mut_ptr().cast::<u64>();
             *tmp = *self.tag.as_mut_ptr().cast::<u64>();
             *tmp.offset(1) = 0;
         }
-        let _ = self.gmac.replace(Crypter::new(Cipher::aes_256_gcm(), Mode::Encrypt, &self.k0, Some(&self.tmp)).unwrap());
+        let _ = self.gmac.replace(Crypter::new(aes_gcm_by_key_size(self.k0.len()), Mode::Encrypt, self.k0.as_slice(), Some(&self.tmp)).unwrap());
     }
 
     /// Initialize this cipher for decryption.

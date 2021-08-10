@@ -16,12 +16,16 @@ pub const KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K0: u8 = b'0';
 /// KBKDF usage label for the second AES-GMAC-SIV key.
 pub const KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K1: u8 = b'1';
 
+/// KBKDF usage label for acknowledgement of a shared secret.
+pub const KBKDF_KEY_USAGE_LABEL_EPHEMERAL_ACK: u8 = b'A';
+
 /// Size of packet header that lies outside the encryption envelope.
 pub const PACKET_HEADER_SIZE: usize = 27;
 
 /// Maximum packet payload size including the verb/flags field.
-/// This is large enough to carry "jumbo MTU" packets. The size is
-/// odd because 10005+27 == 10032 which is divisible by 16. This
+///
+/// This is large enough to carry "jumbo MTU" packets. The exact
+/// value is because 10005+27 == 10032 which is divisible by 16. This
 /// improves memory layout and alignment when buffers are allocated.
 /// This value could technically be increased but it would require a
 /// protocol version bump and only new nodes would be able to accept
@@ -97,8 +101,14 @@ pub const VERB_FLAG_COMPRESSED: u8 = 0x80;
 /// Mask to get only the verb from the verb + verb flags byte.
 pub const VERB_MASK: u8 = 0x1f;
 
+/// Maximum number of verbs that the protocol can support.
+pub const VERB_MAX_COUNT: usize = 32;
+
 /// Maximum number of packet hops allowed by the protocol.
-pub const PROTOCOL_MAX_HOPS: usize = 7;
+pub const PROTOCOL_MAX_HOPS: u8 = 7;
+
+/// Maximum number of hops to allow.
+pub const FORWARD_MAX_HOPS: u8 = 3;
 
 /// Frequency for WHOIS retries
 pub const WHOIS_RETRY_INTERVAL: i64 = 1000;
@@ -114,3 +124,6 @@ pub const LOCATOR_MAX_ENDPOINTS: usize = 32;
 
 /// Keepalive interval for paths in milliseconds.
 pub const PATH_KEEPALIVE_INTERVAL: i64 = 20000;
+
+/// Interval for servicing and background operations on peers.
+pub const PEER_SERVICE_INTERVAL: i64 = 30000;

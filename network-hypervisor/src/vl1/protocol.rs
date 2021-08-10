@@ -13,7 +13,6 @@ pub const VERB_VL1_RENDEZVOUS: u8 = 0x05;
 pub const VERB_VL1_ECHO: u8 = 0x08;
 pub const VERB_VL1_PUSH_DIRECT_PATHS: u8 = 0x10;
 pub const VERB_VL1_USER_MESSAGE: u8 = 0x14;
-pub const VERB_VL1_REMOTE_TRACE: u8 = 0x15;
 
 /// A unique packet identifier, also the cryptographic nonce.
 ///
@@ -50,9 +49,11 @@ impl PacketHeader {
     }
 
     #[inline(always)]
-    pub fn increment_hops(&mut self) {
+    pub fn increment_hops(&mut self) -> u8 {
         let f = self.flags_cipher_hops;
-        self.flags_cipher_hops = (f & HEADER_FLAGS_FIELD_MASK_HIDE_HOPS) | ((f + 1) & HEADER_FLAGS_FIELD_MASK_HOPS);
+        let h = (f + 1) & HEADER_FLAGS_FIELD_MASK_HOPS;
+        self.flags_cipher_hops = (f & HEADER_FLAGS_FIELD_MASK_HIDE_HOPS) | h;
+        h
     }
 
     #[inline(always)]
@@ -137,9 +138,11 @@ impl FragmentHeader {
     }
 
     #[inline(always)]
-    pub fn increment_hops(&mut self) {
+    pub fn increment_hops(&mut self) -> u8 {
         let f = self.reserved_hops;
-        self.reserved_hops = (f & HEADER_FLAGS_FIELD_MASK_HIDE_HOPS) | ((f + 1) & HEADER_FLAGS_FIELD_MASK_HOPS);
+        let h = (f + 1) & HEADER_FLAGS_FIELD_MASK_HOPS;
+        self.reserved_hops = (f & HEADER_FLAGS_FIELD_MASK_HIDE_HOPS) | h;
+        h
     }
 
     #[inline(always)]

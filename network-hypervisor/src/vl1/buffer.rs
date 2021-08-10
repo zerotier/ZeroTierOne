@@ -1,16 +1,18 @@
-use std::mem::size_of;
 use std::io::Write;
+use std::mem::{size_of, MaybeUninit};
+use std::ptr::write_bytes;
+
 use crate::util::pool::PoolFactory;
 
-const OVERFLOW_ERR_MSG: &'static str = "overflow";
-
-/// Annotates a type as containing only primitive types like integers and arrays.
-/// This means it's safe to abuse with raw copy, raw zero, or "type punning."
-/// This is ONLY used for packed protocol header or segment objects.
+/// Annotates a structure as containing only primitive types.
+///
+/// This indicates structs that are safe to abuse like raw memory by casting from
+/// byte arrays of the same size, etc. It also generally implies packed representation
+/// and alignment should not be assumed since these can be fetched using struct
+/// extracting methods of Buffer that do not check alignment.
 pub unsafe trait RawObject: Sized {}
 
-/// A byte array that supports safe and efficient appending of data or raw objects.
-#[derive(Clone, PartialEq, Eq)]
+/// A safe bounds checked I/O buffer with extensions for convenient appending of RawObject types.
 pub struct Buffer<const L: usize>(usize, [u8; L]);
 
 unsafe impl<const L: usize> RawObject for Buffer<L> {}
@@ -22,23 +24,25 @@ impl<const L: usize> Default for Buffer<L> {
     }
 }
 
+const OVERFLOW_ERR_MSG: &'static str = "overflow";
+
 impl<const L: usize> Buffer<L> {
     #[inline(always)]
     pub fn new() -> Self {
         Self(0, [0_u8; L])
     }
 
-    /// Get a Buffer that is a copy of a byte slice, or return None if the slice doesn't fit.
+    /// Get a Buffer initialized with a copy of a byte slice.
     #[inline(always)]
-    pub fn from_bytes(b: &[u8]) -> Option<Self> {
+    pub fn from_bytes(b: &[u8]) -> std::io::Result<Self> {
         let l = b.len();
         if l <= L {
             let mut tmp = Self::new();
             tmp.0 = l;
             tmp.1[0..l].copy_from_slice(b);
-            Some(tmp)
+            Ok(tmp)
         } else {
-            None
+            Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
         }
     }
 
@@ -64,8 +68,7 @@ impl<const L: usize> Buffer<L> {
 
     #[inline(always)]
     pub fn clear(&mut self) {
-        self.0 = 0;
-        self.1.fill(0);
+        unsafe { write_bytes((self as *mut Self).cast::<u8>(), 0, L); }
     }
 
     #[inline(always)]
@@ -76,6 +79,22 @@ impl<const L: usize> Buffer<L> {
     #[inline(always)]
     pub fn is_empty(&self) -> bool {
         self.0 == 0
+    }
+
+    /// Explicitly set the size of the data in this buffer, returning an error on overflow.
+    /// If the new size is larger than the old size, the new space is zeroed.
+    #[inline(always)]
+    pub fn set_size(&mut self, new_size: usize) -> std::io::Result<()> {
+        if new_size <= L {
+            let old_size = self.0;
+            self.0 = new_size;
+            if old_size < new_size {
+                self.1[old_size..new_size].fill(0);
+            }
+            Ok(())
+        } else {
+            Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
+        }
     }
 
     /// Append a packed structure and call a function to initialize it in place.
@@ -126,7 +145,6 @@ impl<const L: usize> Buffer<L> {
     }
 
     /// Append a dynamic byte slice (copy into buffer).
-    /// Use append_and_init_ functions if possible as these avoid extra copies.
     #[inline(always)]
     pub fn append_bytes(&mut self, buf: &[u8]) -> std::io::Result<()> {
         let ptr = self.0;

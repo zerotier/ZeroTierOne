@@ -11,6 +11,8 @@ AES-GMAC-SIV is a "synthetic IV" (SIV) cipher construction implemented using onl
 
 AES-GMAC-SIV is almost identical to [AES-GCM-SIV](https://en.wikipedia.org/wiki/AES-GCM-SIV), but that mode uses a non-standard MAC called POLYVAL in place of GMAC. POLYVAL is basically little-endian GMAC but the fact that it is not standard GMAC means it's not found in most cryptographic libraries and is not approved by FIPS140 and many other sets of compliance guidelines.
 
+This also contains a simple AES-CTR wrapper for convenience.
+
 ## Why SIV? Why not just GCM?
 
 Stream ciphers like AES-CTR, ChaCha20, and others require a number called an initialization vector (IV) for each use. The IV is sometimes called a nonce, or *number used once*, because using the same value for different messages with the same key is a major no-no.

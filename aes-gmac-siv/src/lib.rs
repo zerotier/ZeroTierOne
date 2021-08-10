@@ -8,7 +8,7 @@ mod impl_gcrypt;
 mod impl_openssl;
 
 #[cfg(any(target_os = "macos", target_os = "ios"))]
-pub use impl_macos::AesGmacSiv;
+pub use impl_macos::{AesCtr, AesGmacSiv};
 
 #[cfg(not(any(target_os = "macos", target_os = "ios", target_arch = "s390x", target_arch = "powerpc64le", target_arch = "powerpc64")))]
 pub use impl_gcrypt::AesGmacSiv;

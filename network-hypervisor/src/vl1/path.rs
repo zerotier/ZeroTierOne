@@ -71,14 +71,7 @@ impl Path {
             }
         }
 
-        let frag = fp.entry(packet_id).or_insert_with(|| FragmentedPacket {
-            ts_ticks: time_ticks,
-            frags: [None, None, None, None, None, None, None, None],
-            have: 0,
-            expecting: 0,
-        });
-
-        if frag.add_fragment(packet, fragment_no, fragment_expecting_count) {
+        if fp.entry(packet_id).or_insert_with(|| FragmentedPacket::new(time_ticks)).add_fragment(packet, fragment_no, fragment_expecting_count) {
             fp.remove(&packet_id)
         } else {
             None

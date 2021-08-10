@@ -5,13 +5,13 @@ use std::time::Duration;
 use dashmap::DashMap;
 use parking_lot::Mutex;
 
-use crate::crypto::random::SecureRandom;
+use crate::crypto::random::{SecureRandom, next_u64_secure};
 use crate::error::InvalidParameterError;
 use crate::util::gate::IntervalGate;
 use crate::util::pool::{Pool, Pooled};
 use crate::vl1::{Address, Endpoint, Identity, Locator};
 use crate::vl1::buffer::{Buffer, PooledBufferFactory};
-use crate::vl1::constants::PACKET_SIZE_MAX;
+use crate::vl1::constants::{PACKET_SIZE_MAX, FORWARD_MAX_HOPS};
 use crate::vl1::path::Path;
 use crate::vl1::peer::Peer;
 use crate::vl1::protocol::*;
@@ -117,15 +117,17 @@ pub trait VL1PacketHandler {
 struct BackgroundTaskIntervals {
     whois: IntervalGate<{ WhoisQueue::INTERVAL }>,
     paths: IntervalGate<{ Path::INTERVAL }>,
+    peers: IntervalGate<{ Peer::INTERVAL }>,
 }
 
 pub struct Node {
+    instance_id: u64,
     identity: Identity,
     intervals: Mutex<BackgroundTaskIntervals>,
     locator: Mutex<Option<Locator>>,
     paths: DashMap<Endpoint, Arc<Path>>,
     peers: DashMap<Address, Arc<Peer>>,
-    root: Mutex<Option<Arc<Peer>>>,
+    roots: Mutex<Vec<Arc<Peer>>>,
     whois: WhoisQueue,
     buffer_pool: Pool<Buffer<{ PACKET_SIZE_MAX }>, PooledBufferFactory<{ PACKET_SIZE_MAX }>>,
     secure_prng: SecureRandom,
@@ -158,12 +160,13 @@ impl Node {
         };
 
         Ok(Self {
+            instance_id: next_u64_secure(),
             identity: id,
             intervals: Mutex::new(BackgroundTaskIntervals::default()),
             locator: Mutex::new(None),
             paths: DashMap::new(),
             peers: DashMap::new(),
-            root: Mutex::new(None),
+            roots: Mutex::new(Vec::new()),
             whois: WhoisQueue::new(),
             buffer_pool: Pool::new(64, PooledBufferFactory),
             secure_prng: SecureRandom::get(),
@@ -213,9 +216,19 @@ impl Node {
         if intervals.whois.gate(tt) {
             self.whois.on_interval(self, ci, tt);
         }
+
         if intervals.paths.gate(tt) {
             self.paths.retain(|_, path| {
                 path.on_interval(ci, tt);
+                todo!();
+                true
+            });
+        }
+
+        if intervals.peers.gate(tt) {
+            self.peers.retain(|_, peer| {
+                peer.on_interval(ci, tt);
+                todo!();
                 true
             });
         }
@@ -231,8 +244,10 @@ impl Node {
             let time_ticks = ci.time_ticks();
             let dest = Address::from(&fragment_header.dest);
             if dest == self.identity.address() {
+
                 let path = self.path(source_endpoint, source_local_socket, source_local_interface);
                 if fragment_header.is_fragment() {
+
                     let _ = path.receive_fragment(fragment_header.id, fragment_header.fragment_no(), fragment_header.total_fragments(), data, time_ticks).map(|assembled_packet| {
                         if assembled_packet.frags[0].is_some() {
                             let frag0 = assembled_packet.frags[0].as_ref().unwrap();
@@ -249,7 +264,9 @@ impl Node {
                             }
                         }
                     });
+
                 } else {
+
                     path.receive_other(time_ticks);
                     let packet_header = data.struct_at::<PacketHeader>(0);
                     if packet_header.is_ok() {
@@ -262,16 +279,34 @@ impl Node {
                             self.whois.query(self, ci, source, Some(QueuedPacket::Singular(data)));
                         }
                     }
+
                 }
+
             } else {
+
+                if fragment_header.is_fragment() {
+                    if fragment_header.increment_hops() > FORWARD_MAX_HOPS {
+                        return;
+                    }
+                } else {
+                    let packet_header = data.struct_mut_at::<PacketHeader>(0);
+                    if packet_header.is_ok() {
+                        if packet_header.unwrap().increment_hops() > FORWARD_MAX_HOPS {
+                            return;
+                        }
+                    } else {
+                        return;
+                    }
+                }
+                let _ = self.peer(dest).map(|peer| peer.forward(ci, time_ticks, data));
+
             }
         }
     }
 
     /// Get the current best root peer that we should use for WHOIS, relaying, etc.
-    #[inline(always)]
     pub(crate) fn root(&self) -> Option<Arc<Peer>> {
-        self.root.lock().clone()
+        self.roots.lock().first().map(|p| p.clone())
     }
 
     /// Get the canonical Path object for a given endpoint and local socket information.

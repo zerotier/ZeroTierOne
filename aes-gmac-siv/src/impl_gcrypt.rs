@@ -2,7 +2,48 @@
 
 use std::io::Write;
 
-/// AES-GMAC-SIV encryptor/decryptor.
+pub struct AesCtr(gcrypt::cipher::Cipher);
+
+impl AesCtr {
+    /// Construct a new AES-CTR cipher.
+    /// Key must be 16, 24, or 32 bytes in length or a panic will occur.
+    #[inline(always)]
+    pub fn new(k: &[u8]) -> Self {
+        if k.len() != 32 && k.len() != 24 && k.len() != 16 {
+            panic!("AES supports 128, 192, or 256 bits keys");
+        }
+        AesCtr(gcrypt::cipher::Cipher::new(gcrypt::cipher::Algorithm::Aes, gcrypt::cipher::Mode::Ctr).unwrap())
+    }
+
+    /// Initialize AES-CTR for encryption or decryption with the given IV.
+    /// If it's already been used, this also resets the cipher. There is no separate reset.
+    #[inline(always)]
+    pub fn init(&mut self, iv: &[u8]) {
+        let _ = self.0.reset();
+        if iv.len() == 16 {
+            let _ = self.0.set_iv(iv);
+        } else if iv.len() < 16 {
+            let mut iv2 = [0_u8; 16];
+            iv2[0..iv.len()].copy_from_slice(iv);
+            let _ = self.0.set_iv(iv2);
+        } else {
+            panic!("CTR IV must be less than or equal to 16 bytes in length");
+        }
+    }
+
+    /// Encrypt or decrypt (same operation with CTR mode)
+    #[inline(always)]
+    pub fn crypt(&mut self, input: &[u8], output: &mut [u8]) {
+        let _ = self.0.encrypt(input, output);
+    }
+
+    /// Encrypt or decrypt in place (same operation with CTR mode)
+    #[inline(always)]
+    pub fn crypt_in_place(&mut self, data: &mut [u8]) {
+        let _ = self.0.encrypt_inplace(data);
+    }
+}
+
 #[repr(align(8))] // allow tag and tmp to be accessed as u64 arrays as well
 pub struct AesGmacSiv {
     tag: [u8; 16],
