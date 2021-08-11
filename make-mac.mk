@@ -90,7 +90,7 @@ endif
 
 CXXFLAGS=$(CFLAGS) -std=c++11 -stdlib=libc++
 
-all: one macui
+all: one
 
 ext/x64-salsa2012-asm/salsa2012.o:
 	as -arch x86_64 -mmacosx-version-min=10.7 -o ext/x64-salsa2012-asm/salsa2012.o ext/x64-salsa2012-asm/salsa2012.s
@@ -124,10 +124,6 @@ libzerotiercore.a:	$(CORE_OBJS)
 
 core: libzerotiercore.a
 
-macui:	FORCE
-	cd macui && xcodebuild -target "ZeroTier One" -configuration Release
-	$(CODESIGN) -f --options=runtime -s $(CODESIGN_APP_CERT) "macui/build/Release/ZeroTier One.app"
-
 #cli:	FORCE
 #	$(CXX) $(CXXFLAGS) -o zerotier cli/zerotier.cpp osdep/OSUtils.cpp node/InetAddress.cpp node/Utils.cpp node/Salsa20.cpp node/Identity.cpp node/SHA512.cpp node/C25519.cpp -lcurl
 #	$(STRIP) zerotier
@@ -153,14 +149,13 @@ mac-dist-pkg: FORCE
 official: FORCE
 	make clean
 	make ZT_OFFICIAL_RELEASE=1 -j 8 one
-	make ZT_OFFICIAL_RELEASE=1 macui
 	make ZT_OFFICIAL_RELEASE=1 mac-dist-pkg
 
 central-controller-docker: FORCE
 	docker build --no-cache -t registry.zerotier.com/zerotier-central/ztcentral-controller:${TIMESTAMP} -f ext/central-controller-docker/Dockerfile --build-arg git_branch=$(shell git name-rev --name-only HEAD) .
 
 clean:
-	rm -rf MacEthernetTapAgent *.dSYM build-* *.a *.pkg *.dmg *.o node/*.o controller/*.o service/*.o osdep/*.o ext/http-parser/*.o $(CORE_OBJS) $(ONE_OBJS) zerotier-one zerotier-idtool zerotier-selftest zerotier-cli zerotier doc/node_modules macui/build zt1_update_$(ZT_BUILD_PLATFORM)_$(ZT_BUILD_ARCHITECTURE)_*
+	rm -rf MacEthernetTapAgent *.dSYM build-* *.a *.pkg *.dmg *.o node/*.o controller/*.o service/*.o osdep/*.o ext/http-parser/*.o $(CORE_OBJS) $(ONE_OBJS) zerotier-one zerotier-idtool zerotier-selftest zerotier-cli zerotier doc/node_modules zt1_update_$(ZT_BUILD_PLATFORM)_$(ZT_BUILD_ARCHITECTURE)_*
 
 distclean:	clean
 
