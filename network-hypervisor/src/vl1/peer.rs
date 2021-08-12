@@ -12,11 +12,13 @@ use crate::crypto::random::next_u64_secure;
 use crate::crypto::salsa::Salsa;
 use crate::crypto::secret::Secret;
 use crate::util::pool::{Pool, PoolFactory};
-use crate::vl1::{Identity, Path, Endpoint};
+use crate::vl1::{Identity, Path, Endpoint, InetAddress, Dictionary};
 use crate::vl1::buffer::Buffer;
 use crate::vl1::constants::*;
 use crate::vl1::node::*;
 use crate::vl1::protocol::*;
+use crate::{VERSION_PROTO, VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION};
+use crate::crypto::hash::SHA384;
 
 struct AesGmacSivPoolFactory(Secret<48>, Secret<48>);
 
@@ -86,6 +88,9 @@ pub struct Peer {
     // Paths sorted in ascending order of quality / preference.
     paths: Mutex<Vec<Arc<Path>>>,
 
+    // Local external address most recently reported by this peer (IP transport only).
+    reported_local_ip: Mutex<Option<InetAddress>>,
+
     // Statistics and times of events.
     last_send_time_ticks: AtomicI64,
     last_receive_time_ticks: AtomicI64,
@@ -124,6 +129,16 @@ fn salsa_derive_per_packet_key(key: &Secret<48>, header: &PacketHeader, packet_s
     k
 }
 
+/// Create initialized instances of Salsa20/12 and Poly1305 for a packet.
+fn salsa_poly_create(secret: &PeerSecret, header: &PacketHeader, packet_size: usize) -> (Salsa, Poly1305) {
+    let key = salsa_derive_per_packet_key(&secret.secret, header, payload.len());
+    let mut salsa = Salsa::new(&key.0[0..32], header.id_bytes(), true).unwrap();
+    let mut poly1305_key = [0_u8; 32];
+    salsa.crypt_in_place(&mut poly1305_key);
+    let mut poly = Poly1305::new(&poly1305_key).unwrap();
+    (salsa, poly)
+}
+
 impl Peer {
     pub(crate) const INTERVAL: i64 = PEER_SERVICE_INTERVAL;
 
@@ -150,6 +165,7 @@ impl Peer {
                 ephemeral_secret: Mutex::new(None),
                 ephemeral_pair: Mutex::new(None),
                 paths: Mutex::new(Vec::new()),
+                reported_local_ip: Mutex::new(None),
                 last_send_time_ticks: AtomicI64::new(0),
                 last_receive_time_ticks: AtomicI64::new(0),
                 last_forward_time_ticks: AtomicI64::new(0),
@@ -163,6 +179,16 @@ impl Peer {
                 remote_protocol_version: AtomicU8::new(0),
             }
         })
+    }
+
+    /// Get the next packet initialization vector.
+    ///
+    /// For Salsa20/12 with Poly1305 this is the packet ID. For AES-GMAC-SIV the packet ID is
+    /// not known until the packet is encrypted, since it's the first 64 bits of the GMAC-SIV
+    /// tag.
+    #[inline(always)]
+    pub(crate) fn next_packet_iv(&self) -> PacketID {
+        self.packet_iv_counter.fetch_add(1, Ordering::Relaxed)
     }
 
     /// Receive, decrypt, authenticate, and process an incoming packet from this peer.
@@ -185,12 +211,9 @@ impl Peer {
                             }
 
                             // FIPS note: for FIPS purposes the HMAC-SHA384 tag at the end of V2 HELLOs
-                            // will be considered the "real" handshake authentication.
-                            let key = salsa_derive_per_packet_key(&secret.secret, header, payload.len());
-                            let mut salsa = Salsa::new(&key.0[0..32], header.id_bytes(), true).unwrap();
-                            let mut poly1305_key = [0_u8; 32];
-                            salsa.crypt_in_place(&mut poly1305_key);
-                            let mut poly = Poly1305::new(&poly1305_key).unwrap();
+                            // will be considered the "real" handshake authentication. This authentication
+                            // is technically deprecated in V2.
+                            let (_, mut poly) = salsa_poly_create(secret, header, packet.len());
                             poly.update(payload.as_bytes());
 
                             if poly.finish()[0..8].eq(&header.message_auth) {
@@ -203,12 +226,7 @@ impl Peer {
                     }
 
                     CIPHER_SALSA2012_POLY1305 => {
-                        let key = salsa_derive_per_packet_key(&secret.secret, header, payload.len());
-                        let mut salsa = Salsa::new(&key.0[0..32], header.id_bytes(), true).unwrap();
-                        let mut poly1305_key = [0_u8; 32];
-                        salsa.crypt_in_place(&mut poly1305_key);
-                        let mut poly = Poly1305::new(&poly1305_key).unwrap();
-
+                        let (mut salsa, mut poly) = salsa_poly_create(secret, header, packet.len());
                         poly.update(packet_frag0_payload_bytes);
                         let _ = payload.append_and_init_bytes(packet_frag0_payload_bytes.len(), |b| salsa.crypt(packet_frag0_payload_bytes, b));
                         for f in fragments.iter() {
@@ -217,7 +235,6 @@ impl Peer {
                                 let _ = payload.append_and_init_bytes(f.len(), |b| salsa.crypt(f, b));
                             }));
                         }
-
                         if poly.finish()[0..8].eq(&header.message_auth) {
                             break;
                         }
@@ -227,12 +244,10 @@ impl Peer {
                         let mut aes = secret.aes.get();
                         aes.decrypt_init(&header.aes_gmac_siv_tag());
                         aes.decrypt_set_aad(&header.aad_bytes());
-
                         let _ = payload.append_and_init_bytes(packet_frag0_payload_bytes.len(), |b| aes.decrypt(packet_frag0_payload_bytes, b));
                         for f in fragments.iter() {
                             let _ = f.as_ref().map(|f| f.as_bytes_starting_at(FRAGMENT_HEADER_SIZE).map(|f| payload.append_and_init_bytes(f.len(), |b| aes.decrypt(f, b))));
                         }
-
                         if aes.decrypt_finish() {
                             break;
                         }
@@ -283,6 +298,12 @@ impl Peer {
         });
     }
 
+    /// Get current best path or None if there are no direct paths to this peer.
+    #[inline(always)]
+    pub(crate) fn best_path(&self) -> Option<Arc<Path>> {
+        self.paths.lock().last().map(|p| p.clone())
+    }
+
     /// Send a packet to this peer.
     ///
     /// This will go directly if there is an active path, or otherwise indirectly
@@ -290,6 +311,7 @@ impl Peer {
     pub(crate) fn send<CI: VL1CallerInterface>(&self, ci: &CI, time_ticks: i64, data: PacketBuffer) {
         self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
         let _ = self.total_bytes_sent.fetch_add(data.len() as u64, Ordering::Relaxed);
+        todo!()
     }
 
     /// Forward a packet to this peer.
@@ -303,6 +325,123 @@ impl Peer {
         self.last_forward_time_ticks.store(time_ticks, Ordering::Relaxed);
         let _ = self.total_bytes_forwarded.fetch_add(data.len() as u64, Ordering::Relaxed);
         todo!()
+    }
+
+    /// Send a HELLO to this peer.
+    ///
+    /// If try_new_endpoint is not None the packet will be sent directly to this endpoint.
+    /// Otherwise it will be sent via the best direct or indirect path.
+    pub(crate) fn send_hello<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, try_new_endpoint: Option<Endpoint>) {
+        let (endpoint, path) = try_new_endpoint.as_ref().map_or_else(|| {
+            self.best_path().map_or_else(|| {
+                node.root().map_or_else(|| (None, None), |root| {
+                    root.best_path().map_or_else(|| (None, None), |bp| (Some(&bp.endpoint), Some(bp)))
+                })
+            }, |bp| (Some(&bp.endpoint), Some(bp)))
+        }, |ep| (Some(ep), None));
+        let _ = endpoint.map(|endpoint| {
+            let mut buf = node.get_packet_buffer();
+            let this_peer_is_root = node.is_root(self);
+
+            debug_assert!(buf.append_and_init_struct(|header: &mut PacketHeader| {
+                header.id = self.next_packet_iv();
+                header.dest = self.identity.address().to_bytes();
+                header.src = node.address().to_bytes();
+                header.flags_cipher_hops = CIPHER_NOCRYPT_POLY1305;
+            }).is_ok());
+            debug_assert!(buf.append_and_init_struct(|header: &mut message_component_structs::HelloFixedHeaderFields| {
+                header.verb = VERB_VL1_HELLO | VERB_FLAG_HMAC;
+                header.version_proto = VERSION_PROTO;
+                header.version_major = VERSION_MAJOR;
+                header.version_minor = VERSION_MINOR;
+                header.version_revision = (VERSION_REVISION as u16).to_be();
+                header.timestamp = (ci.time_ticks() as u64).to_be();
+            }).is_ok());
+
+            debug_assert!(self.identity.marshal(&mut buf, false).is_ok());
+            debug_assert!(endpoint.marshal(&mut buf).is_ok());
+
+            let aes_ctr_iv_position = buf.len();
+            debug_assert!(buf.append_and_init_bytes_fixed(|iv: &mut [u8; 18]| {
+                crate::crypto::random::fill_bytes_secure(&mut buf[0..12]);
+                todo!()
+            }));
+            let dictionary_position = buf.len();
+            let mut dict = Dictionary::new();
+            dict.set_u64(HELLO_DICT_KEY_INSTANCE_ID, node.instance_id);
+            dict.set_u64(HELLO_DICT_KEY_CLOCK, ci.time_clock() as u64);
+            let _ = node.locator().map(|loc| loc.to_bytes().map(|loc| dict.set_bytes(HELLO_DICT_KEY_LOCATOR, loc)));
+            let _ = self.ephemeral_pair.lock().map(|ephemeral_pair| {
+                dict.set_bytes(HELLO_DICT_KEY_EPHEMERAL_C25519, ephemeral_pair.c25519.public_bytes().to_vec());
+                dict.set_bytes(HELLO_DICT_KEY_EPHEMERAL_P521, ephemeral_pair.p521.public_key_bytes().to_vec());
+            });
+            if this_peer_is_root {
+                // If the peer is a root we include some extra information for diagnostic and statistics
+                // purposes such as the CPU type, bits, and OS info. This is not sent to other peers.
+                dict.set_str(HELLO_DICT_KEY_SYS_ARCH, std::env::consts::ARCH);
+                dict.set_u64(HELLO_DICT_KEY_SYS_BITS, (std::mem::size_of::<*const ()>() * 8) as u64);
+                dict.set_str(HELLO_DICT_KEY_OS_NAME, std::env::consts::OS);
+            }
+            let mut flags = String::new();
+            if node.fips_mode {
+                flags.push('F');
+            }
+            if node.wimp {
+                flags.push('w');
+            }
+            dict.set_str(HELLO_DICT_KEY_FLAGS, flags.as_str());
+            assert!(dict.write_to(&mut buf).is_ok());
+
+            let mut dict_aes = self.static_secret_hello_dictionary.lock();
+            dict_aes.init(&buf.as_bytes()[aes_ctr_iv_position..aes_ctr_iv_position + 12]);
+            dict_aes.crypt_in_place(&mut buf.as_bytes_mut()[dictionary_position..]);
+            drop(dict_aes);
+
+            assert!(buf.append_bytes_fixed(&SHA384::hmac(self.static_secret_packet_hmac.as_ref(), &buf.as_bytes()[PACKET_HEADER_SIZE + 1..])).is_ok());
+
+            let (_, mut poly) = salsa_poly_create(secret, header, packet.len());
+            poly.update(buf.as_bytes_starting_at(PACKET_HEADER_SIZE).unwrap());
+            buf.as_bytes_mut()[HEADER_MAC_FIELD_INDEX..HEADER_MAC_FIELD_INDEX + 8].copy_from_slice(&poly.finish()[0..8]);
+
+            ci.wire_send(endpoint, path.map(|p| p.local_socket), path.map(|p| p.local_interface), buf, 0);
+        });
+    }
+
+    /// Called every INTERVAL during background tasks.
+    #[inline(always)]
+    pub(crate) fn on_interval<CI: VL1CallerInterface>(&self, ct: &CI, time_ticks: i64) {
+    }
+
+    #[inline(always)]
+    fn receive_hello<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {
+    }
+
+    #[inline(always)]
+    fn receive_error<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {
+    }
+
+    #[inline(always)]
+    fn receive_ok<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {
+    }
+
+    #[inline(always)]
+    fn receive_whois<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {
+    }
+
+    #[inline(always)]
+    fn receive_rendezvous<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {
+    }
+
+    #[inline(always)]
+    fn receive_echo<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {
+    }
+
+    #[inline(always)]
+    fn receive_push_direct_paths<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {
+    }
+
+    #[inline(always)]
+    fn receive_user_message<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {
     }
 
     /// Get the remote version of this peer: major, minor, revision, and build.
@@ -324,42 +463,5 @@ impl Peer {
         } else {
             None
         }
-    }
-
-    /// Called every INTERVAL during background tasks.
-    #[inline(always)]
-    pub fn on_interval<CI: VL1CallerInterface>(&self, ct: &CI, time_ticks: i64) {
-    }
-
-    #[inline(always)]
-    fn receive_hello<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, packet: &Buffer<{ PACKET_SIZE_MAX }>) {
-    }
-
-    #[inline(always)]
-    fn receive_error<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, packet: &Buffer<{ PACKET_SIZE_MAX }>) {
-    }
-
-    #[inline(always)]
-    fn receive_ok<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, packet: &Buffer<{ PACKET_SIZE_MAX }>) {
-    }
-
-    #[inline(always)]
-    fn receive_whois<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, packet: &Buffer<{ PACKET_SIZE_MAX }>) {
-    }
-
-    #[inline(always)]
-    fn receive_rendezvous<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, packet: &Buffer<{ PACKET_SIZE_MAX }>) {
-    }
-
-    #[inline(always)]
-    fn receive_echo<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, packet: &Buffer<{ PACKET_SIZE_MAX }>) {
-    }
-
-    #[inline(always)]
-    fn receive_push_direct_paths<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, packet: &Buffer<{ PACKET_SIZE_MAX }>) {
-    }
-
-    #[inline(always)]
-    fn receive_user_message<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, packet: &Buffer<{ PACKET_SIZE_MAX }>) {
     }
 }

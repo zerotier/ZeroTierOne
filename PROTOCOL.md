@@ -66,7 +66,6 @@ NOP, as the name suggests, does nothing. Any payload is ignored.
 | [2] u16       | Length of encrypted Dictionary in bytes           |
 | Dictionary    | Key/value dictionary containing additional fields |
 | --            | -- END of AES-256-CTR encrypted section --        |
-| [48] [u8; 48] | HMAC-SHA384 extended strength MAC                 |
 
 HELLO establishes a full session with another peer and carries information such as protocol and software versions, the full identity of the peer, and ephemeral keys for forward secrecy. Without a HELLO exchange only limited communication with the most conservative assumptions is possible, and communication without a session may be completely removed in the future. (It's only allowed now for backward compatibility with ZeroTier 1.x, and must be disabled in FIPS mode.)
 
@@ -91,9 +90,6 @@ OK(HELLO) response payload, which must be sent if the HELLO receipient wishes to
 | [2] u16       | *(reserved)* (set to zero for legacy reasons)     |
 | [2] u16       | Length of encrypted Dictionary in bytes           |
 | Dictionary    | Key/value dictionary containing additional fields |
-| [48] [u8; 48] | HMAC-SHA384 extended strength MAC                 |
-
-HMAC-SHA384 authentication is computed over the payload of HELLO and OK(HELLO). For HELLO it is computed after AES-256-CTR encryption is applied to the dictionary section. and is checked before anything is done with a payload. For OK(HELLO) it is computed prior to normal packet armoring and is itself included in the encrypted payload.
 
 Recommended dictionary fields in both HELLO and OK(HELLO):
 
@@ -118,12 +114,15 @@ Optional dictionary fields that can be included in either HELLO or OK(HELLO):
 | -------------------- | ---  | ------------ | ------------------------------------------------------------ |
 | SYS_ARCH             | `Sa` | string       | Host architecture (e.g. x86_64, aarch64)                     |
 | SYS_BITS             | `Sb` | u64          | sizeof(pointer), e.g. 32 or 64                               |
-| OS_NAME              | `On` | string       | Name of host operating system                                |
-| OS_VERSION           | `Ov` | string       | Operating system version                                     |
+| OS_NAME              | `So` | string       | Name of host operating system                                |
+| OS_VERSION           | `Sv` | string       | Operating system version                                     |
+| OS_VARIANT           | `St` | string       | Operating system variant (e.g. Linux distribution)           |
 | VENDOR               | `V`  | string       | Node software vendor if not ZeroTier, Inc.                   |
 | FLAGS                | `+`  | string       | Flags (see below)                                            |
 
 FLAGS is a string that can contain the following boolean flags: `F` to indicate that the node is running in FIPS compliant mode, and `w` to indicate that the node is a "wimp." "Wimpy" nodes are things like mobile phones, and this flag can be used to exempt these devices from selection for any intensive role (such as use in VL2 to propagate multicasts).
+
+System information such as OS_NAME is currently only sent to roots and not to any other node. This allows roots to collect a bit of very generic statistical and diagnostic telemtry about the nodes using them.
 
 #### 0x02 / ERROR
 

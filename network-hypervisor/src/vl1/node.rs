@@ -43,32 +43,17 @@ pub trait VL1CallerInterface {
     fn event_user_message(&self, source: &Identity, message_type: u64, message: &[u8]);
 
     /// Load this node's identity from the data store.
-    fn load_identity(&self) -> Option<&[u8]>;
+    fn load_node_identity(&self) -> Option<&[u8]>;
 
     /// Save this node's identity.
     /// Note that this is only called on first startup (after up) and after identity_changed.
-    fn save_identity(&self, id: &Identity, public: &[u8], secret: &[u8]);
+    fn save_node_identity(&self, id: &Identity, public: &[u8], secret: &[u8]);
 
     /// Load this node's latest locator.
     fn load_locator(&self) -> Option<&[u8]>;
 
     /// Save this node's latest locator.
     fn save_locator(&self, locator: &[u8]);
-
-    /// Load a peer's latest saved state. (A remote peer, not this one.)
-    fn load_peer(&self, address: Address) -> Option<&[u8]>;
-
-    /// Save a peer's state.
-    ///
-    /// The state contains the identity, so there's no need to save that separately.
-    /// It's just supplied for the address and if the external code wants it.
-    fn save_peer(&self, id: &Identity, peer: &[u8]);
-
-    /// Load network configuration.
-    fn load_network_config(&self, id: u64) -> Option<&[u8]>;
-
-    /// Save network configuration.
-    fn save_network_config(&self, id: u64, config: &[u8]);
 
     /// Called to send a packet over the physical network (virtual -> physical).
     ///
@@ -124,16 +109,18 @@ struct BackgroundTaskIntervals {
 }
 
 pub struct Node {
-    instance_id: u64,
+    pub(crate) instance_id: u64,
     identity: Identity,
     intervals: Mutex<BackgroundTaskIntervals>,
-    locator: Mutex<Option<Locator>>,
+    locator: Mutex<Option<Arc<Locator>>>,
     paths: DashMap<Endpoint, Arc<Path>>,
     peers: DashMap<Address, Arc<Peer>>,
     roots: Mutex<Vec<Arc<Peer>>>,
     whois: WhoisQueue,
     buffer_pool: Pool<Buffer<{ PACKET_SIZE_MAX }>, PooledBufferFactory<{ PACKET_SIZE_MAX }>>,
     secure_prng: SecureRandom,
+    pub(crate) fips_mode: bool,
+    pub(crate) wimp: bool,
 }
 
 impl Node {
@@ -143,13 +130,13 @@ impl Node {
     /// no identity is currently stored in the data store.
     pub fn new<CI: VL1CallerInterface>(ci: &CI, auto_generate_identity_type: Option<crate::vl1::identity::Type>) -> Result<Self, InvalidParameterError> {
         let id = {
-            let id_str = ci.load_identity();
+            let id_str = ci.load_node_identity();
             if id_str.is_none() {
                 if auto_generate_identity_type.is_none() {
-                    return Err(InvalidParameterError("no identity found and auto-generate not specified"));
+                    return Err(InvalidParameterError("no identity found and auto-generate not enabled"));
                 } else {
                     let id = Identity::generate(auto_generate_identity_type.unwrap());
-                    ci.save_identity(&id, id.to_string().as_bytes(), id.to_secret_string().as_bytes());
+                    ci.save_node_identity(&id, id.to_string().as_bytes(), id.to_secret_string().as_bytes());
                     id
                 }
             } else {
@@ -174,6 +161,8 @@ impl Node {
             whois: WhoisQueue::new(),
             buffer_pool: Pool::new(64, PooledBufferFactory),
             secure_prng: SecureRandom::get(),
+            fips_mode: false,
+            wimp: false,
         })
     }
 
@@ -187,6 +176,12 @@ impl Node {
     #[inline(always)]
     pub fn identity(&self) -> &Identity {
         &self.identity
+    }
+
+    /// Get this node's current locator or None if no locator created.
+    #[inline(always)]
+    pub fn locator(&self) -> Option<Arc<Locator>> {
+        self.locator.lock().clone()
     }
 
     /// Get a reusable packet buffer.
@@ -208,6 +203,17 @@ impl Node {
             v.push(p.value().clone());
         }
         v
+    }
+
+    /// Get the current best root peer that we should use for WHOIS, relaying, etc.
+    pub(crate) fn root(&self) -> Option<Arc<Peer>> {
+        self.roots.lock().first().map(|p| p.clone())
+    }
+
+    /// Determine if a given peer is a root.
+    pub(crate) fn is_root(&self, peer: &Peer) -> bool {
+        let pptr = peer as *const Peer;
+        self.roots.lock().iter().any(|p| Arc::as_ptr(p) == pptr)
     }
 
     /// Run background tasks and return desired delay until next call in milliseconds.
@@ -307,11 +313,6 @@ impl Node {
 
             }
         }
-    }
-
-    /// Get the current best root peer that we should use for WHOIS, relaying, etc.
-    pub(crate) fn root(&self) -> Option<Arc<Peer>> {
-        self.roots.lock().first().map(|p| p.clone())
     }
 
     /// Get the canonical Path object for a given endpoint and local socket information.

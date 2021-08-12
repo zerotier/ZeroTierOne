@@ -68,7 +68,9 @@ impl<const L: usize> Buffer<L> {
 
     #[inline(always)]
     pub fn clear(&mut self) {
-        unsafe { write_bytes((self as *mut Self).cast::<u8>(), 0, L); }
+        let prev_len = self.0;
+        self.0 = 0;
+        self.1[0..prev_len].fill(0);
     }
 
     #[inline(always)]

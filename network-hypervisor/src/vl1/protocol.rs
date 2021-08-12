@@ -14,6 +14,92 @@ pub const VERB_VL1_ECHO: u8 = 0x08;
 pub const VERB_VL1_PUSH_DIRECT_PATHS: u8 = 0x10;
 pub const VERB_VL1_USER_MESSAGE: u8 = 0x14;
 
+pub(crate) const HELLO_DICT_KEY_INSTANCE_ID: &'static str = "I";
+pub(crate) const HELLO_DICT_KEY_CLOCK: &'static str = "C";
+pub(crate) const HELLO_DICT_KEY_LOCATOR: &'static str = "L";
+pub(crate) const HELLO_DICT_KEY_EPHEMERAL_C25519: &'static str = "E0";
+pub(crate) const HELLO_DICT_KEY_EPHEMERAL_P521: &'static str = "E1";
+pub(crate) const HELLO_DICT_KEY_EPHEMERAL_ACK: &'static str = "e";
+pub(crate) const HELLO_DICT_KEY_HELLO_ORIGIN: &'static str = "@";
+pub(crate) const HELLO_DICT_KEY_SYS_ARCH: &'static str = "Sa";
+pub(crate) const HELLO_DICT_KEY_SYS_BITS: &'static str = "Sb";
+pub(crate) const HELLO_DICT_KEY_OS_NAME: &'static str = "So";
+pub(crate) const HELLO_DICT_KEY_OS_VERSION: &'static str = "Sv";
+pub(crate) const HELLO_DICT_KEY_OS_VARIANT: &'static str = "St";
+pub(crate) const HELLO_DICT_KEY_VENDOR: &'static str = "V";
+pub(crate) const HELLO_DICT_KEY_FLAGS: &'static str = "+";
+
+/// Index of packet verb after header.
+pub const PACKET_VERB_INDEX: usize = 27;
+
+/// Index of destination in both fragment and full packet headers.
+pub const PACKET_DESTINATION_INDEX: usize = 8;
+
+/// Index of 8-byte MAC field in packet header.
+pub const HEADER_MAC_FIELD_INDEX: usize = 19;
+
+/// Mask to select cipher from header flags field.
+pub const HEADER_FLAGS_FIELD_MASK_CIPHER: u8 = 0x30;
+
+/// Mask to select packet hops from header flags field.
+pub const HEADER_FLAGS_FIELD_MASK_HOPS: u8 = 0x07;
+
+/// Mask to select packet hops from header flags field.
+pub const HEADER_FLAGS_FIELD_MASK_HIDE_HOPS: u8 = 0xf8;
+
+/// Index of hops/flags field
+pub const HEADER_FLAGS_FIELD_INDEX: usize = 18;
+
+/// Packet is not encrypted but contains a Poly1305 MAC of the plaintext.
+/// Poly1305 is initialized with Salsa20/12 in the same manner as SALSA2012_POLY1305.
+pub const CIPHER_NOCRYPT_POLY1305: u8 = 0x00;
+
+/// Packet is encrypted and authenticated with Salsa20/12 and Poly1305.
+/// Construction is the same as that which is used in the NaCl secret box functions.
+pub const CIPHER_SALSA2012_POLY1305: u8 = 0x10;
+
+/// Formerly 'NONE' which is deprecated; reserved for future use.
+pub const CIPHER_RESERVED: u8 = 0x20;
+
+/// Packet is encrypted and authenticated with AES-GMAC-SIV (AES-256).
+pub const CIPHER_AES_GMAC_SIV: u8 = 0x30;
+
+/// Header (outer) flag indicating that this packet has additional fragments.
+pub const HEADER_FLAG_FRAGMENTED: u8 = 0x40;
+
+/// Minimum size of a fragment.
+pub const FRAGMENT_SIZE_MIN: usize = 16;
+
+/// Size of fragment header after which data begins.
+pub const FRAGMENT_HEADER_SIZE: usize = 16;
+
+/// Maximum allowed number of fragments.
+pub const FRAGMENT_COUNT_MAX: usize = 8;
+
+/// Index of packet fragment indicator byte to detect fragments.
+pub const FRAGMENT_INDICATOR_INDEX: usize = 13;
+
+/// Byte found at FRAGMENT_INDICATOR_INDEX to indicate a fragment.
+pub const FRAGMENT_INDICATOR: u8 = 0xff;
+
+/// Verb (inner) flag indicating that the packet's payload (after the verb) is LZ4 compressed.
+pub const VERB_FLAG_COMPRESSED: u8 = 0x80;
+
+/// Verb (inner) flag indicating that payload after verb is authenticated with HMAC-SHA384.
+pub const VERB_FLAG_HMAC: u8 = 0x40;
+
+/// Mask to get only the verb from the verb + verb flags byte.
+pub const VERB_MASK: u8 = 0x1f;
+
+/// Maximum number of verbs that the protocol can support.
+pub const VERB_MAX_COUNT: usize = 32;
+
+/// Maximum number of packet hops allowed by the protocol.
+pub const PROTOCOL_MAX_HOPS: u8 = 7;
+
+/// Maximum number of hops to allow.
+pub const FORWARD_MAX_HOPS: u8 = 3;
+
 /// A unique packet identifier, also the cryptographic nonce.
 ///
 /// Packet IDs are stored as u64s for efficiency but they should be treated as
@@ -148,6 +234,27 @@ impl FragmentHeader {
     #[inline(always)]
     pub fn destination(&self) -> Address {
         Address::from(&self.dest)
+    }
+}
+
+pub(crate) mod message_component_structs {
+    #[repr(packed)]
+    pub struct HelloFixedHeaderFields {
+        pub verb: u8,
+        pub version_proto: u8,
+        pub version_major: u8,
+        pub version_minor: u8,
+        pub version_revision: u16,
+        pub timestamp: u64,
+    }
+
+    #[repr(packed)]
+    pub struct OkHelloFixedHeaderFields {
+        pub timestamp_echo: u64,
+        pub version_proto: u8,
+        pub version_major: u8,
+        pub version_minor: u8,
+        pub version_revision: u16,
     }
 }
 
