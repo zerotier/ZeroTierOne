@@ -14,6 +14,7 @@ pub mod identity;
 pub mod inetaddress;
 pub mod endpoint;
 pub mod locator;
+pub mod rootset;
 
 pub use address::Address;
 pub use mac::MAC;

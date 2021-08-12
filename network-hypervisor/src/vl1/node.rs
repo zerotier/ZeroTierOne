@@ -59,6 +59,7 @@ pub trait VL1CallerInterface {
     fn load_peer(&self, address: Address) -> Option<&[u8]>;
 
     /// Save a peer's state.
+    ///
     /// The state contains the identity, so there's no need to save that separately.
     /// It's just supplied for the address and if the external code wants it.
     fn save_peer(&self, id: &Identity, peer: &[u8]);
@@ -87,6 +88,7 @@ pub trait VL1CallerInterface {
     fn check_path(&self, id: &Identity, endpoint: &Endpoint, local_socket: Option<i64>, local_interface: Option<i64>) -> bool;
 
     /// Called to look up a path to a known node.
+    ///
     /// If a path is found, this returns a tuple of an endpoint and optional local socket and local
     /// interface IDs. If these are None they will be None when this is sent with wire_send.
     fn get_path_hints(&self, id: &Identity) -> Option<&[(&Endpoint, Option<i64>, Option<i64>)]>;
@@ -101,6 +103,7 @@ pub trait VL1CallerInterface {
 /// Trait implemented by VL2 to handle messages after they are unwrapped by VL1.
 pub trait VL1PacketHandler {
     /// Handle a packet, returning true if the verb was recognized.
+    ///
     /// True should be returned even if the packet is not valid, since the return value is used
     /// to determine if this is a VL2 or VL1 packet. ERROR and OK should not be handled here but
     /// in handle_error() and handle_ok() instead.
@@ -135,6 +138,7 @@ pub struct Node {
 
 impl Node {
     /// Create a new Node.
+    ///
     /// If the auto-generate identity type is not None, a new identity will be generated if
     /// no identity is currently stored in the data store.
     pub fn new<CI: VL1CallerInterface>(ci: &CI, auto_generate_identity_type: Option<crate::vl1::identity::Type>) -> Result<Self, InvalidParameterError> {
@@ -207,6 +211,7 @@ impl Node {
     }
 
     /// Run background tasks and return desired delay until next call in milliseconds.
+    ///
     /// This should only be called once at a time. It technically won't hurt anything to
     /// call concurrently but it will waste CPU cycles.
     pub fn do_background_tasks<CI: VL1CallerInterface>(&self, ci: &CI) -> Duration {
@@ -310,6 +315,7 @@ impl Node {
     }
 
     /// Get the canonical Path object for a given endpoint and local socket information.
+    ///
     /// This is a canonicalizing function that returns a unique path object for every tuple
     /// of endpoint, local socket, and local interface.
     pub(crate) fn path(&self, ep: &Endpoint, local_socket: i64, local_interface: i64) -> Arc<Path> {

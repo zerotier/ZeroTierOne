@@ -25,6 +25,11 @@ impl<const L: usize> Secret<L> {
     pub fn from_bytes(b: &[u8]) -> Self {
         Self(b.try_into().unwrap())
     }
+
+    #[inline(always)]
+    pub fn as_bytes(&self) -> &[u8; L] {
+        return &self.0
+    }
 }
 
 impl<const L: usize> Drop for Secret<L> {

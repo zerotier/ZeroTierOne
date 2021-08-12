@@ -5,7 +5,7 @@ pub mod gate;
 pub(crate) const ZEROES: [u8; 64] = [0_u8; 64];
 
 #[inline(always)]
-pub(crate) unsafe fn equal_bytes(a: *const u8, b: *const u8, l: usize) -> bool {
+pub(crate) unsafe fn equal_ptr(a: *const u8, b: *const u8, l: usize) -> bool {
     for i in 0..l {
         if *a.offset(i as isize) != *b.offset(i as isize) {
             return false;
@@ -14,22 +14,43 @@ pub(crate) unsafe fn equal_bytes(a: *const u8, b: *const u8, l: usize) -> bool {
     true
 }
 
+#[cfg(any(target_arch = "x86_64", target_arch = "x86", target_arch = "aarch64"))]
 #[inline(always)]
-pub(crate) fn integer_store_be_u16(i: u16, d: &mut [u8]) {
+pub(crate) fn store_u16_be(i: u16, d: &mut [u8]) {
+    unsafe { *d.as_mut_ptr().cast::<u16>() = i.to_be() };
+}
+
+#[cfg(not(any(target_arch = "x86_64", target_arch = "x86", target_arch = "aarch64")))]
+#[inline(always)]
+pub(crate) fn store_u16_be(i: u16, d: &mut [u8]) {
     d[0] = (i >> 8) as u8;
     d[1] = i as u8;
 }
 
+#[cfg(any(target_arch = "x86_64", target_arch = "x86", target_arch = "aarch64"))]
 #[inline(always)]
-pub(crate) fn integer_store_be_u32(i: u32, d: &mut [u8]) {
+pub(crate) fn store_u32_be(i: u32, d: &mut [u8]) {
+    unsafe { *d.as_mut_ptr().cast::<u32>() = i.to_be() };
+}
+
+#[cfg(not(any(target_arch = "x86_64", target_arch = "x86", target_arch = "aarch64")))]
+#[inline(always)]
+pub(crate) fn store_u32_be(i: u32, d: &mut [u8]) {
     d[0] = (i >> 24) as u8;
     d[1] = (i >> 16) as u8;
     d[2] = (i >> 8) as u8;
     d[3] = i as u8;
 }
 
+#[cfg(any(target_arch = "x86_64", target_arch = "x86", target_arch = "aarch64"))]
 #[inline(always)]
-pub(crate) fn integer_store_be_u64(i: u64, d: &mut [u8]) {
+pub(crate) fn store_u64_be(i: u64, d: &mut [u8]) {
+    unsafe { *d.as_mut_ptr().cast::<u64>() = i.to_be() };
+}
+
+#[cfg(not(any(target_arch = "x86_64", target_arch = "x86", target_arch = "aarch64")))]
+#[inline(always)]
+pub(crate) fn store_u64_be(i: u64, d: &mut [u8]) {
     d[0] = (i >> 56) as u8;
     d[1] = (i >> 48) as u8;
     d[2] = (i >> 40) as u8;
@@ -40,18 +61,39 @@ pub(crate) fn integer_store_be_u64(i: u64, d: &mut [u8]) {
     d[7] = i as u8;
 }
 
+#[cfg(any(target_arch = "x86_64", target_arch = "x86", target_arch = "aarch64"))]
 #[inline(always)]
-pub(crate) fn integer_load_be_u16(d: &[u8]) -> u16 {
+pub(crate) fn load_u16_be(d: &[u8]) -> u16 {
+    unsafe { *d.as_ptr().cast::<u16>() }
+}
+
+#[cfg(not(any(target_arch = "x86_64", target_arch = "x86", target_arch = "aarch64")))]
+#[inline(always)]
+pub(crate) fn load_u16_be(d: &[u8]) -> u16 {
     (d[0] as u16) << 8 | (d[1] as u16)
 }
 
+#[cfg(any(target_arch = "x86_64", target_arch = "x86", target_arch = "aarch64"))]
 #[inline(always)]
-pub(crate) fn integer_load_be_u32(d: &[u8]) -> u32 {
+pub(crate) fn load_u32_be(d: &[u8]) -> u32 {
+    unsafe { *d.as_ptr().cast::<u32>() }
+}
+
+#[cfg(not(any(target_arch = "x86_64", target_arch = "x86", target_arch = "aarch64")))]
+#[inline(always)]
+pub(crate) fn load_u32_be(d: &[u8]) -> u32 {
     (d[0] as u32) << 24 | (d[1] as u32) << 16 | (d[2] as u32) << 8 | (d[3] as u32)
 }
 
+#[cfg(any(target_arch = "x86_64", target_arch = "x86", target_arch = "aarch64"))]
 #[inline(always)]
-pub(crate) fn integer_load_be_u64(d: &[u8]) -> u64 {
+pub(crate) fn load_u64_be(d: &[u8]) -> u64 {
+    unsafe { *d.as_ptr().cast::<u64>() }
+}
+
+#[cfg(not(any(target_arch = "x86_64", target_arch = "x86", target_arch = "aarch64")))]
+#[inline(always)]
+pub(crate) fn load_u64_be(d: &[u8]) -> u64 {
     (d[0] as u64) << 56 | (d[1] as u64) << 48 | (d[2] as u64) << 40 | (d[3] as u64) << 32 | (d[4] as u64) << 24 | (d[5] as u64) << 16 | (d[6] as u64) << 8 | (d[7] as u64)
 }
 

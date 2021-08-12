@@ -3,6 +3,10 @@ use crate::vl1::constants::FRAGMENT_COUNT_MAX;
 
 /// Packet fragment re-assembler and container.
 /// This is only used in the receive path.
+///
+/// Performance note: PacketBuffer is Pooled<Buffer> which is NotNull<*mut Buffer>.
+/// That means Option<PacketBuffer> is just a pointer, since NotNull permits the
+/// compiler to optimize out any additional state in Option.
 pub(crate) struct FragmentedPacket {
     pub ts_ticks: i64,
     pub frags: [Option<PacketBuffer>; FRAGMENT_COUNT_MAX],

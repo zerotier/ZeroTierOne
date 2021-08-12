@@ -6,7 +6,7 @@ use std::hash::{Hash, Hasher};
 use std::net::{IpAddr, Ipv6Addr};
 
 use crate::error::InvalidFormatError;
-use crate::util::equal_bytes;
+use crate::util::equal_ptr;
 use crate::vl1::buffer::Buffer;
 
 #[cfg(windows)]
@@ -405,11 +405,11 @@ impl InetAddress {
         match buf.read_u8(cursor)? {
             4 => {
                 let b: &[u8; 6] = buf.read_bytes_fixed(cursor)?;
-                Ok(InetAddress::from_ip_port(&b[0..4], crate::util::integer_load_be_u16(&b[4..6])))
+                Ok(InetAddress::from_ip_port(&b[0..4], crate::util::load_u16_be(&b[4..6])))
             }
             6 => {
                 let b: &[u8; 18] = buf.read_bytes_fixed(cursor)?;
-                Ok(InetAddress::from_ip_port(&b[0..16], crate::util::integer_load_be_u16(&b[16..18])))
+                Ok(InetAddress::from_ip_port(&b[0..16], crate::util::load_u16_be(&b[16..18])))
             }
             _ => Ok(InetAddress::new())
         }
@@ -480,7 +480,7 @@ impl PartialEq for InetAddress {
                     AF_INET => { self.sin.sin_port == other.sin.sin_port && self.sin.sin_addr.s_addr == other.sin.sin_addr.s_addr }
                     AF_INET6 => {
                         if self.sin6.sin6_port == other.sin6.sin6_port {
-                            equal_bytes((&(self.sin6.sin6_addr) as *const in6_addr).cast(), (&(other.sin6.sin6_addr) as *const in6_addr).cast(), 16)
+                            equal_ptr((&(self.sin6.sin6_addr) as *const in6_addr).cast(), (&(other.sin6.sin6_addr) as *const in6_addr).cast(), 16)
                         } else {
                             false
                         }

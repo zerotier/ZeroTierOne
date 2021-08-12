@@ -11,13 +11,6 @@ use crate::util::hex::HEX_CHARS;
 #[derive(Clone, PartialEq, Eq)]
 pub struct Dictionary(BTreeMap<String, Vec<u8>>);
 
-impl Default for Dictionary {
-    #[inline(always)]
-    fn default() -> Self {
-        Self(BTreeMap::new())
-    }
-}
-
 fn write_escaped<W: Write>(b: &[u8], w: &mut W) -> std::io::Result<()> {
     let mut i = 0_usize;
     let l = b.len();

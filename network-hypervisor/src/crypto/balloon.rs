@@ -1,6 +1,8 @@
 use std::convert::TryInto;
 use std::mem::MaybeUninit;
 
+use crate::crypto::hash::{SHA384, SHA512};
+
 #[inline(always)]
 fn hash_int_le(sha: &mut crate::crypto::hash::SHA512, i: u64) {
     #[cfg(target_endian = "big")] {
@@ -11,10 +13,10 @@ fn hash_int_le(sha: &mut crate::crypto::hash::SHA512, i: u64) {
     }
 }
 
-/// Compute balloon memory-hard hash using SHA-512.
+/// Compute balloon memory-hard hash using SHA-512 and SHA-384 for the final.
 /// SPACE_COST must be a multiple of 64. This is checked with an assertion.
 /// DELTA is usually 3.
-pub fn hash<const SPACE_COST: usize, const TIME_COST: usize, const DELTA: usize>(password: &[u8], salt: &[u8]) -> [u8; crate::crypto::hash::SHA512_HASH_SIZE] {
+pub fn hash<const SPACE_COST: usize, const TIME_COST: usize, const DELTA: usize>(password: &[u8], salt: &[u8]) -> [u8; crate::crypto::hash::SHA384_HASH_SIZE] {
     debug_assert_ne!(SPACE_COST, 0);
     debug_assert_ne!(TIME_COST, 0);
     debug_assert_ne!(DELTA, 0);
@@ -24,7 +26,7 @@ pub fn hash<const SPACE_COST: usize, const TIME_COST: usize, const DELTA: usize>
     let zero64 = [0_u8; 8];
 
     /* Initial hash */
-    let mut sha = crate::crypto::hash::SHA512::new();
+    let mut sha = SHA512::new();
     sha.update(&zero64); // 0 cnt
     sha.update(password);
     sha.update(salt);
@@ -106,8 +108,9 @@ pub fn hash<const SPACE_COST: usize, const TIME_COST: usize, const DELTA: usize>
         }
     }
 
-    /* Extract */
-    buf[(SPACE_COST - 64)..SPACE_COST].try_into().unwrap()
+    // Standard balloon hashing just returns the last hash, but we want a 384-bit
+    // result. This just hashes the whole buffer including the last hash.
+    SHA384::hash(&buf)
 }
 
 /*

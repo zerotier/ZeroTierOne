@@ -193,7 +193,7 @@ impl<const L: usize> Buffer<L> {
         let end = ptr + 2;
         if end <= L {
             self.0 = end;
-            crate::util::integer_store_be_u16(i, &mut self.1[ptr..end]);
+            crate::util::store_u16_be(i, &mut self.1[ptr..end]);
             Ok(())
         } else {
             Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
@@ -207,7 +207,7 @@ impl<const L: usize> Buffer<L> {
         let end = ptr + 4;
         if end <= L {
             self.0 = end;
-            crate::util::integer_store_be_u32(i, &mut self.1[ptr..end]);
+            crate::util::store_u32_be(i, &mut self.1[ptr..end]);
             Ok(())
         } else {
             Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
@@ -221,7 +221,7 @@ impl<const L: usize> Buffer<L> {
         let end = ptr + 8;
         if end <= L {
             self.0 = end;
-            crate::util::integer_store_be_u64(i, &mut self.1[ptr..end]);
+            crate::util::store_u64_be(i, &mut self.1[ptr..end]);
             Ok(())
         } else {
             Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
@@ -330,7 +330,7 @@ impl<const L: usize> Buffer<L> {
         debug_assert!(end <= L);
         if end <= self.0 {
             *cursor = end;
-            Ok(crate::util::integer_load_be_u16(&self.1[ptr..end]))
+            Ok(crate::util::load_u16_be(&self.1[ptr..end]))
         } else {
             Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
         }
@@ -344,7 +344,7 @@ impl<const L: usize> Buffer<L> {
         debug_assert!(end <= L);
         if end <= self.0 {
             *cursor = end;
-            Ok(crate::util::integer_load_be_u32(&self.1[ptr..end]))
+            Ok(crate::util::load_u32_be(&self.1[ptr..end]))
         } else {
             Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
         }
@@ -358,7 +358,7 @@ impl<const L: usize> Buffer<L> {
         debug_assert!(end <= L);
         if end <= self.0 {
             *cursor = end;
-            Ok(crate::util::integer_load_be_u64(&self.1[ptr..end]))
+            Ok(crate::util::load_u64_be(&self.1[ptr..end]))
         } else {
             Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
         }
