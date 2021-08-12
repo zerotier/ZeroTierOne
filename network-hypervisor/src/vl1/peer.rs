@@ -1,24 +1,28 @@
+use std::convert::TryInto;
+use std::mem::MaybeUninit;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, AtomicU64, AtomicU8, Ordering};
 
 use parking_lot::Mutex;
-use aes_gmac_siv::{AesGmacSiv, AesCtr};
 
+use aes_gmac_siv::{AesCtr, AesGmacSiv};
+
+use crate::{VERSION_MAJOR, VERSION_MINOR, VERSION_PROTO, VERSION_REVISION};
 use crate::crypto::c25519::C25519KeyPair;
+use crate::crypto::hash::SHA384;
 use crate::crypto::kbkdf::zt_kbkdf_hmac_sha384;
 use crate::crypto::p521::P521KeyPair;
 use crate::crypto::poly1305::Poly1305;
 use crate::crypto::random::next_u64_secure;
 use crate::crypto::salsa::Salsa;
 use crate::crypto::secret::Secret;
+use crate::defaults::UDP_DEFAULT_MTU;
 use crate::util::pool::{Pool, PoolFactory};
-use crate::vl1::{Identity, Path, Endpoint, InetAddress, Dictionary};
+use crate::vl1::{Dictionary, Endpoint, Identity, InetAddress, Path};
 use crate::vl1::buffer::Buffer;
 use crate::vl1::constants::*;
 use crate::vl1::node::*;
 use crate::vl1::protocol::*;
-use crate::{VERSION_PROTO, VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION};
-use crate::crypto::hash::SHA384;
 
 struct AesGmacSivPoolFactory(Secret<48>, Secret<48>);
 
@@ -117,6 +121,7 @@ pub struct Peer {
 /// is different the key will be wrong and MAC will fail.
 ///
 /// This is only used for Salsa/Poly modes.
+#[inline(always)]
 fn salsa_derive_per_packet_key(key: &Secret<48>, header: &PacketHeader, packet_size: usize) -> Secret<48> {
     let hb = header.as_bytes();
     let mut k = key.clone();
@@ -130,8 +135,9 @@ fn salsa_derive_per_packet_key(key: &Secret<48>, header: &PacketHeader, packet_s
 }
 
 /// Create initialized instances of Salsa20/12 and Poly1305 for a packet.
+#[inline(always)]
 fn salsa_poly_create(secret: &PeerSecret, header: &PacketHeader, packet_size: usize) -> (Salsa, Poly1305) {
-    let key = salsa_derive_per_packet_key(&secret.secret, header, payload.len());
+    let key = salsa_derive_per_packet_key(&secret.secret, header, packet_size);
     let mut salsa = Salsa::new(&key.0[0..32], header.id_bytes(), true).unwrap();
     let mut poly1305_key = [0_u8; 32];
     salsa.crypt_in_place(&mut poly1305_key);
@@ -304,6 +310,54 @@ impl Peer {
         self.paths.lock().last().map(|p| p.clone())
     }
 
+    /// Send a packet as one or more UDP fragments.
+    ///
+    /// Calling this with anything other than a UDP endpoint is invalid.
+    fn send_udp<CI: VL1CallerInterface>(&self, ci: &CI, endpoint: &Endpoint, local_socket: Option<i64>, local_interface: Option<i64>, packet_id: PacketID, data: &Buffer<{ PACKET_SIZE_MAX }>) -> bool {
+        debug_assert!(matches!(endpoint, Endpoint::IpUdp(_)));
+        debug_assert!(data.len() <= PACKET_SIZE_MAX);
+
+        let packet_size = data.len();
+        if packet_size > UDP_DEFAULT_MTU {
+            let bytes = data.as_bytes();
+            if !ci.wire_send(endpoint, local_socket, local_interface, &[&bytes[0..UDP_DEFAULT_MTU]], 0) {
+                return false;
+            }
+
+            let mut pos = UDP_DEFAULT_MTU;
+
+            let fragment_count = (((packet_size - UDP_DEFAULT_MTU) as u32) / ((UDP_DEFAULT_MTU - FRAGMENT_HEADER_SIZE) as u32)) + ((((packet_size - UDP_DEFAULT_MTU) as u32) % ((UDP_DEFAULT_MTU - FRAGMENT_HEADER_SIZE) as u32)) != 0) as u32;
+            debug_assert!(fragment_count <= FRAGMENT_COUNT_MAX as u32);
+
+            let mut header = FragmentHeader {
+                id: packet_id,
+                dest: bytes[PACKET_DESTINATION_INDEX..PACKET_DESTINATION_INDEX + ADDRESS_SIZE].try_into().unwrap(),
+                fragment_indicator: FRAGMENT_INDICATOR,
+                total_and_fragment_no: ((fragment_count + 1) << 4) as u8,
+                reserved_hops: 0,
+            };
+
+            let mut chunk_size = (packet_size - pos).min(UDP_DEFAULT_MTU - FRAGMENT_HEADER_SIZE);
+            loop {
+                header.total_and_fragment_no += 1;
+                let next_pos = pos + chunk_size;
+                if !ci.wire_send(endpoint, local_socket, local_interface, &[header.as_bytes(), &bytes[pos..next_pos]], 0) {
+                    return false;
+                }
+                pos = next_pos;
+                if pos < packet_size {
+                    chunk_size = (packet_size - pos).min(UDP_DEFAULT_MTU - FRAGMENT_HEADER_SIZE);
+                } else {
+                    break;
+                }
+            }
+
+            return true;
+        }
+
+        return ci.wire_send(endpoint, local_socket, local_interface, &[data.as_bytes()], 0);
+    }
+
     /// Send a packet to this peer.
     ///
     /// This will go directly if there is an active path, or otherwise indirectly
@@ -332,24 +386,28 @@ impl Peer {
     /// If try_new_endpoint is not None the packet will be sent directly to this endpoint.
     /// Otherwise it will be sent via the best direct or indirect path.
     pub(crate) fn send_hello<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, try_new_endpoint: Option<Endpoint>) {
-        let (endpoint, path) = try_new_endpoint.as_ref().map_or_else(|| {
+        let path = if try_new_endpoint.is_none() {
             self.best_path().map_or_else(|| {
-                node.root().map_or_else(|| (None, None), |root| {
-                    root.best_path().map_or_else(|| (None, None), |bp| (Some(&bp.endpoint), Some(bp)))
+                node.root().map_or(None, |root| {
+                    root.best_path().map_or(None, |bp| Some(bp))
                 })
-            }, |bp| (Some(&bp.endpoint), Some(bp)))
-        }, |ep| (Some(ep), None));
-        let _ = endpoint.map(|endpoint| {
-            let mut buf = node.get_packet_buffer();
+            }, |bp| Some(bp))
+        } else {
+            None
+        };
+
+        let _ = try_new_endpoint.as_ref().map_or_else(|| Some(&path.as_ref().unwrap().endpoint), |ep| Some(ep)).map(|endpoint| {
+            let mut packet: Buffer<{ PACKET_SIZE_MAX }> = Buffer::new();
             let this_peer_is_root = node.is_root(self);
 
-            debug_assert!(buf.append_and_init_struct(|header: &mut PacketHeader| {
-                header.id = self.next_packet_iv();
+            let packet_id = self.next_packet_iv();
+            debug_assert!(packet.append_and_init_struct(|header: &mut PacketHeader| {
+                header.id = packet_id;
                 header.dest = self.identity.address().to_bytes();
                 header.src = node.address().to_bytes();
                 header.flags_cipher_hops = CIPHER_NOCRYPT_POLY1305;
             }).is_ok());
-            debug_assert!(buf.append_and_init_struct(|header: &mut message_component_structs::HelloFixedHeaderFields| {
+            debug_assert!(packet.append_and_init_struct(|header: &mut message_component_structs::HelloFixedHeaderFields| {
                 header.verb = VERB_VL1_HELLO | VERB_FLAG_HMAC;
                 header.version_proto = VERSION_PROTO;
                 header.version_major = VERSION_MAJOR;
@@ -358,20 +416,24 @@ impl Peer {
                 header.timestamp = (ci.time_ticks() as u64).to_be();
             }).is_ok());
 
-            debug_assert!(self.identity.marshal(&mut buf, false).is_ok());
-            debug_assert!(endpoint.marshal(&mut buf).is_ok());
+            debug_assert!(self.identity.marshal(&mut packet, false).is_ok());
+            debug_assert!(endpoint.marshal(&mut packet).is_ok());
 
-            let aes_ctr_iv_position = buf.len();
-            debug_assert!(buf.append_and_init_bytes_fixed(|iv: &mut [u8; 18]| {
-                crate::crypto::random::fill_bytes_secure(&mut buf[0..12]);
+            let aes_ctr_iv_position = packet.len();
+            debug_assert!(packet.append_and_init_bytes_fixed(|iv: &mut [u8; 18]| {
+                crate::crypto::random::fill_bytes_secure(&mut iv[0..12]);
                 todo!()
-            }));
-            let dictionary_position = buf.len();
+            }).is_ok());
+            let dictionary_position = packet.len();
             let mut dict = Dictionary::new();
             dict.set_u64(HELLO_DICT_KEY_INSTANCE_ID, node.instance_id);
             dict.set_u64(HELLO_DICT_KEY_CLOCK, ci.time_clock() as u64);
-            let _ = node.locator().map(|loc| loc.to_bytes().map(|loc| dict.set_bytes(HELLO_DICT_KEY_LOCATOR, loc)));
-            let _ = self.ephemeral_pair.lock().map(|ephemeral_pair| {
+            let _ = node.locator().map(|loc| {
+                let mut tmp: Buffer<{ PACKET_SIZE_MAX }> = Buffer::new();
+                debug_assert!(loc.marshal(&mut tmp).is_ok());
+                dict.set_bytes(HELLO_DICT_KEY_LOCATOR, tmp.as_bytes().to_vec());
+            });
+            let _ = self.ephemeral_pair.lock().as_ref().map(|ephemeral_pair| {
                 dict.set_bytes(HELLO_DICT_KEY_EPHEMERAL_C25519, ephemeral_pair.c25519.public_bytes().to_vec());
                 dict.set_bytes(HELLO_DICT_KEY_EPHEMERAL_P521, ephemeral_pair.p521.public_key_bytes().to_vec());
             });
@@ -379,7 +441,12 @@ impl Peer {
                 // If the peer is a root we include some extra information for diagnostic and statistics
                 // purposes such as the CPU type, bits, and OS info. This is not sent to other peers.
                 dict.set_str(HELLO_DICT_KEY_SYS_ARCH, std::env::consts::ARCH);
-                dict.set_u64(HELLO_DICT_KEY_SYS_BITS, (std::mem::size_of::<*const ()>() * 8) as u64);
+                #[cfg(target_pointer_width = "32")] {
+                    dict.set_u64(HELLO_DICT_KEY_SYS_BITS, 32);
+                }
+                #[cfg(target_pointer_width = "64")] {
+                    dict.set_u64(HELLO_DICT_KEY_SYS_BITS, 64);
+                }
                 dict.set_str(HELLO_DICT_KEY_OS_NAME, std::env::consts::OS);
             }
             let mut flags = String::new();
@@ -390,20 +457,20 @@ impl Peer {
                 flags.push('w');
             }
             dict.set_str(HELLO_DICT_KEY_FLAGS, flags.as_str());
-            assert!(dict.write_to(&mut buf).is_ok());
+            debug_assert!(dict.write_to(&mut packet).is_ok());
 
             let mut dict_aes = self.static_secret_hello_dictionary.lock();
-            dict_aes.init(&buf.as_bytes()[aes_ctr_iv_position..aes_ctr_iv_position + 12]);
-            dict_aes.crypt_in_place(&mut buf.as_bytes_mut()[dictionary_position..]);
+            dict_aes.init(&packet.as_bytes()[aes_ctr_iv_position..aes_ctr_iv_position + 12]);
+            dict_aes.crypt_in_place(&mut packet.as_bytes_mut()[dictionary_position..]);
             drop(dict_aes);
 
-            assert!(buf.append_bytes_fixed(&SHA384::hmac(self.static_secret_packet_hmac.as_ref(), &buf.as_bytes()[PACKET_HEADER_SIZE + 1..])).is_ok());
+            debug_assert!(packet.append_bytes_fixed(&SHA384::hmac(self.static_secret_packet_hmac.as_ref(), &packet.as_bytes()[PACKET_HEADER_SIZE + 1..])).is_ok());
 
-            let (_, mut poly) = salsa_poly_create(secret, header, packet.len());
-            poly.update(buf.as_bytes_starting_at(PACKET_HEADER_SIZE).unwrap());
-            buf.as_bytes_mut()[HEADER_MAC_FIELD_INDEX..HEADER_MAC_FIELD_INDEX + 8].copy_from_slice(&poly.finish()[0..8]);
+            let (_, mut poly) = salsa_poly_create(&self.static_secret, packet.struct_at::<PacketHeader>(0).unwrap(), packet.len());
+            poly.update(packet.as_bytes_starting_at(PACKET_HEADER_SIZE).unwrap());
+            packet.as_bytes_mut()[HEADER_MAC_FIELD_INDEX..HEADER_MAC_FIELD_INDEX + 8].copy_from_slice(&poly.finish()[0..8]);
 
-            ci.wire_send(endpoint, path.map(|p| p.local_socket), path.map(|p| p.local_interface), buf, 0);
+            self.send_udp(ci, endpoint, path.as_ref().map(|p| p.local_socket), path.as_ref().map(|p| p.local_interface), packet_id, &packet);
         });
     }
 

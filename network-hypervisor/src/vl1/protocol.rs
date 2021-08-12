@@ -232,12 +232,19 @@ impl FragmentHeader {
     }
 
     #[inline(always)]
+    pub fn as_bytes(&self) -> &[u8; FRAGMENT_HEADER_SIZE] {
+        unsafe { &*(self as *const Self).cast::<[u8; FRAGMENT_HEADER_SIZE]>() }
+    }
+
+    #[inline(always)]
     pub fn destination(&self) -> Address {
         Address::from(&self.dest)
     }
 }
 
 pub(crate) mod message_component_structs {
+    use crate::vl1::buffer::RawObject;
+
     #[repr(packed)]
     pub struct HelloFixedHeaderFields {
         pub verb: u8,
@@ -248,6 +255,8 @@ pub(crate) mod message_component_structs {
         pub timestamp: u64,
     }
 
+    unsafe impl RawObject for HelloFixedHeaderFields {}
+
     #[repr(packed)]
     pub struct OkHelloFixedHeaderFields {
         pub timestamp_echo: u64,
@@ -256,14 +265,16 @@ pub(crate) mod message_component_structs {
         pub version_minor: u8,
         pub version_revision: u16,
     }
+
+    unsafe impl RawObject for OkHelloFixedHeaderFields {}
 }
 
 #[cfg(test)]
 mod tests {
     use std::mem::size_of;
 
-    use crate::vl1::constants::{FRAGMENT_HEADER_SIZE, PACKET_HEADER_SIZE};
-    use crate::vl1::protocol::{FragmentHeader, PacketHeader};
+    use crate::vl1::constants::*;
+    use crate::vl1::protocol::*;
 
     #[test]
     fn representation() {

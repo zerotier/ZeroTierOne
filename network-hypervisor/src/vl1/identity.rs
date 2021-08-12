@@ -594,10 +594,7 @@ impl FromStr for Identity {
 
 impl PartialEq for Identity {
     fn eq(&self, other: &Self) -> bool {
-        self.address.eq(&other.address) &&
-            self.c25519.eq(&other.c25519) &&
-            self.ed25519.eq(&other.ed25519) &&
-            self.v1.as_ref().map_or_else(|| other.v1.is_none(), |v1| other.v1.as_ref().map_or(false, |other_v1| (*v1).0.eq(&(*other_v1).0) && (*v1).1.eq(&(*other_v1).1)))
+        self.address.eq(&other.address) && self.c25519.eq(&other.c25519) && self.ed25519.eq(&other.ed25519) && self.v1.as_ref().map_or_else(|| other.v1.is_none(), |v1| other.v1.as_ref().map_or(false, |other_v1| (*v1).0.eq(&(*other_v1).0) && (*v1).1.eq(&(*other_v1).1)))
     }
 }
 

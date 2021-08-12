@@ -11,7 +11,7 @@ use crate::util::gate::IntervalGate;
 use crate::util::pool::{Pool, Pooled};
 use crate::vl1::{Address, Endpoint, Identity, Locator};
 use crate::vl1::buffer::{Buffer, PooledBufferFactory};
-use crate::vl1::constants::{PACKET_SIZE_MAX, FORWARD_MAX_HOPS};
+use crate::vl1::constants::*;
 use crate::vl1::path::Path;
 use crate::vl1::peer::Peer;
 use crate::vl1::protocol::*;
@@ -67,7 +67,7 @@ pub trait VL1CallerInterface {
     /// If packet TTL is non-zero it should be used to set the packet TTL for outgoing packets
     /// for supported protocols such as UDP, but otherwise it can be ignored. It can also be
     /// ignored if the platform does not support setting the TTL.
-    fn wire_send(&self, endpoint: &Endpoint, local_socket: Option<i64>, local_interface: Option<i64>, data: PacketBuffer, packet_ttl: u8) -> bool;
+    fn wire_send(&self, endpoint: &Endpoint, local_socket: Option<i64>, local_interface: Option<i64>, data: &[&[u8]], packet_ttl: u8) -> bool;
 
     /// Called to check and see if a physical address should be used for ZeroTier traffic to a node.
     fn check_path(&self, id: &Identity, endpoint: &Endpoint, local_socket: Option<i64>, local_interface: Option<i64>) -> bool;
@@ -268,7 +268,7 @@ impl Node {
                                 let source = Address::from(&packet_header.src);
                                 let peer = self.peer(source);
                                 if peer.is_some() {
-                                    peer.unwrap().receive(self, ci, ph, time_ticks, &path, &packet_header, frag0.as_ref(), &assembled_packet.frags[1..(assembled_packet.have as usize)]);
+                                    peer.unwrap().receive(self, ci, ph, time_ticks, &path, &packet_header, frag0, &assembled_packet.frags[1..(assembled_packet.have as usize)]);
                                 } else {
                                     self.whois.query(self, ci, source, Some(QueuedPacket::Fragmented(assembled_packet)));
                                 }

@@ -1,5 +1,5 @@
 use crate::vl1::node::PacketBuffer;
-use crate::vl1::constants::FRAGMENT_COUNT_MAX;
+use crate::vl1::protocol::FRAGMENT_COUNT_MAX;
 
 /// Packet fragment re-assembler and container.
 /// This is only used in the receive path.

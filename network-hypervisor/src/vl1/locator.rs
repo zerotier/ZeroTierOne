@@ -149,15 +149,6 @@ impl Locator {
             signature: signature.to_vec(),
         })
     }
-
-    pub fn to_bytes(&self) -> Option<Vec<u8>> {
-        let mut buf: Buffer<{ PACKET_SIZE_MAX }> = Buffer::new();
-        if self.marshal_internal(&mut buf, false).is_ok() {
-            Some(buf.as_bytes().to_vec())
-        } else {
-            None
-        }
-    }
 }
 
 impl Hash for Locator {

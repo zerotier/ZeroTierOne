@@ -3,6 +3,7 @@ pub mod util;
 pub mod error;
 pub mod vl1;
 pub mod vl2;
+pub mod defaults;
 
 pub const VERSION_MAJOR: u8 = 1;
 pub const VERSION_MINOR: u8 = 99;
