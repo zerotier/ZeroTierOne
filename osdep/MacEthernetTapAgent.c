@@ -258,7 +258,7 @@ int main(int argc,char **argv)
 	usleep(10);
 	run(P_IFCONFIG,s_peerDeviceName,"peer",s_deviceName,(char *)0);
 	usleep(10);
-	run(P_IFCONFIG,s_peerDeviceName,"mtu","16370","up",(char *)0); /* 16370 is the largest MTU MacOS/Darwin seems to allow */
+	run(P_IFCONFIG,s_peerDeviceName,"mtu",mtu,"up",(char *)0);
 	usleep(10);
 	run(P_IFCONFIG,s_deviceName,"mtu",mtu,"metric",metric,"up",(char *)0);
 	usleep(10);
