@@ -147,6 +147,7 @@ mac-dist-pkg: FORCE
 
 # For ZeroTier, Inc. to build official signed packages
 official: FORCE
+	cd ../DesktopUI ; make ZT_OFFICIAL_RELEASE=1
 	make clean
 	make ZT_OFFICIAL_RELEASE=1 -j 8 one
 	make ZT_OFFICIAL_RELEASE=1 mac-dist-pkg
