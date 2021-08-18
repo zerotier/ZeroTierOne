@@ -1369,11 +1369,16 @@ void EmbeddedNetworkController::_request(
 		fprintf(stderr, "authExpiryTime: %lld\n", authenticationExpiryTime);
 		if (authenticationExpiryTime < now) {
 			if (!authenticationURL.empty()) {
+				_db.networkMemberSSOHasExpired(nwid, now);
+				onNetworkMemberDeauthorize(&_db, nwid, identity.address().toInt());
+
 				Dictionary<3072> authInfo;
 				authInfo.add("aU", authenticationURL.c_str());
 				fprintf(stderr, "sending auth URL: %s\n", authenticationURL.c_str());
+
 				DB::cleanMember(member);
 				_db.save(member,true);
+
 				_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_AUTHENTICATION_REQUIRED, authInfo.data(), authInfo.sizeBytes());
 				return;
 			}

@@ -75,7 +75,7 @@ ifeq ($(ZT_DEBUG),1)
 node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CFLAGS = -Wall -O2 -g $(INCLUDES) $(DEFS)
 else
 	CFLAGS?=-Ofast -fstack-protector-strong
-	CFLAGS+=$(ARCH_FLAGS) -Wall -flto -fPIE -mmacosx-version-min=10.7 -DNDEBUG -Wno-unused-private-field $(INCLUDES) $(DEFS)
+	CFLAGS+=$(ARCH_FLAGS) -Wall -flto -fPIE -mmacosx-version-min=10.13 -DNDEBUG -Wno-unused-private-field $(INCLUDES) $(DEFS)
 	STRIP=strip
 endif
 
@@ -93,10 +93,10 @@ CXXFLAGS=$(CFLAGS) -std=c++11 -stdlib=libc++
 all: one
 
 ext/x64-salsa2012-asm/salsa2012.o:
-	as -arch x86_64 -mmacosx-version-min=10.7 -o ext/x64-salsa2012-asm/salsa2012.o ext/x64-salsa2012-asm/salsa2012.s
+	as -arch x86_64 -mmacosx-version-min=10.13 -o ext/x64-salsa2012-asm/salsa2012.o ext/x64-salsa2012-asm/salsa2012.s
 
 mac-agent: FORCE
-	$(CC) -Ofast $(ARCH_FLAGS) -mmacosx-version-min=10.7 -o MacEthernetTapAgent osdep/MacEthernetTapAgent.c
+	$(CC) -Ofast $(ARCH_FLAGS) -mmacosx-version-min=10.13 -o MacEthernetTapAgent osdep/MacEthernetTapAgent.c
 	$(CODESIGN) -f --options=runtime -s $(CODESIGN_APP_CERT) MacEthernetTapAgent
 
 osdep/MacDNSHelper.o: osdep/MacDNSHelper.mm
