@@ -232,7 +232,6 @@ bool PostgreSQL::isReady()
 
 bool PostgreSQL::save(nlohmann::json &record,bool notifyListeners)
 {
-	fprintf(stderr, "PostgreSQL::save\n");
 	bool modified = false;
 	try {
 		if (!record.is_object()) {
@@ -241,7 +240,7 @@ bool PostgreSQL::save(nlohmann::json &record,bool notifyListeners)
 		}
 		const std::string objtype = record["objtype"];
 		if (objtype == "network") {
-			fprintf(stderr, "network save\n");
+			//fprintf(stderr, "network save\n");
 			const uint64_t nwid = OSUtils::jsonIntHex(record["id"],0ULL);
 			if (nwid) {
 				nlohmann::json old;
@@ -257,17 +256,17 @@ bool PostgreSQL::save(nlohmann::json &record,bool notifyListeners)
 			std::string memberId = record["id"];
 			const uint64_t nwid = OSUtils::jsonIntHex(record["nwid"],0ULL);
 			const uint64_t id = OSUtils::jsonIntHex(record["id"],0ULL);
-			fprintf(stderr, "member save %s-%s\n", networkId.c_str(), memberId.c_str());
+			//fprintf(stderr, "member save %s-%s\n", networkId.c_str(), memberId.c_str());
 			if ((id)&&(nwid)) {
 				nlohmann::json network,old;
 				get(nwid,network,id,old);
 				if ((!old.is_object())||(!_compareRecords(old,record))) {
-					fprintf(stderr, "commit queue post\n");
+					//fprintf(stderr, "commit queue post\n");
 					record["revision"] = OSUtils::jsonInt(record["revision"],0ULL) + 1ULL;
 					_commitQueue.post(std::pair<nlohmann::json,bool>(record,notifyListeners));
 					modified = true;
 				} else {
-					fprintf(stderr, "no change\n");
+					//fprintf(stderr, "no change\n");
 				}
 			}
 		} else {
