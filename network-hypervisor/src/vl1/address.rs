@@ -3,7 +3,7 @@ use std::str::FromStr;
 
 use crate::error::InvalidFormatError;
 use crate::util::hex::HEX_CHARS;
-use crate::vl1::constants::{ADDRESS_RESERVED_PREFIX, ADDRESS_SIZE};
+use crate::vl1::protocol::{ADDRESS_RESERVED_PREFIX, ADDRESS_SIZE};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Address(u64);
@@ -96,6 +96,7 @@ impl From<[u8; ADDRESS_SIZE]> for Address {
 impl From<u64> for Address {
     #[inline(always)]
     fn from(i: u64) -> Address {
+        debug_assert!((i >> 24) == 0);
         Address(i)
     }
 }

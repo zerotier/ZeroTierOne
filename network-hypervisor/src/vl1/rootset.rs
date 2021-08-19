@@ -11,7 +11,7 @@ use crate::crypto::secret::Secret;
 use crate::error::InvalidFormatError;
 use crate::vl1::{Endpoint, Identity};
 use crate::vl1::buffer::Buffer;
-use crate::vl1::constants::PACKET_SIZE_MAX;
+use crate::vl1::protocol::PACKET_SIZE_MAX;
 
 const ROOT_SET_TYPE_LEGACY_PLANET: u8 = 1;
 const ROOT_SET_TYPE_LEGACY_MOON: u8 = 127;

@@ -1,5 +1,6 @@
 use std::convert::TryInto;
 use std::mem::MaybeUninit;
+use std::ptr::copy_nonoverlapping;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, AtomicU64, AtomicU8, Ordering};
 
@@ -20,9 +21,11 @@ use crate::defaults::UDP_DEFAULT_MTU;
 use crate::util::pool::{Pool, PoolFactory};
 use crate::vl1::{Dictionary, Endpoint, Identity, InetAddress, Path};
 use crate::vl1::buffer::Buffer;
-use crate::vl1::constants::*;
 use crate::vl1::node::*;
 use crate::vl1::protocol::*;
+
+/// Interval for servicing and background operations on peers.
+pub(crate) const PEER_SERVICE_INTERVAL: i64 = 30000;
 
 struct AesGmacSivPoolFactory(Secret<48>, Secret<48>);
 
@@ -106,7 +109,7 @@ pub struct Peer {
     total_bytes_forwarded: AtomicU64,
 
     // Counter for assigning packet IV's a.k.a. PacketIDs.
-    packet_iv_counter: AtomicU64,
+    packet_id_counter: AtomicU64,
 
     // Remote peer version information.
     remote_version: AtomicU64,
@@ -180,21 +183,17 @@ impl Peer {
                 total_bytes_received: AtomicU64::new(0),
                 total_bytes_received_indirect: AtomicU64::new(0),
                 total_bytes_forwarded: AtomicU64::new(0),
-                packet_iv_counter: AtomicU64::new(next_u64_secure()),
+                packet_id_counter: AtomicU64::new(next_u64_secure()),
                 remote_version: AtomicU64::new(0),
                 remote_protocol_version: AtomicU8::new(0),
             }
         })
     }
 
-    /// Get the next packet initialization vector.
-    ///
-    /// For Salsa20/12 with Poly1305 this is the packet ID. For AES-GMAC-SIV the packet ID is
-    /// not known until the packet is encrypted, since it's the first 64 bits of the GMAC-SIV
-    /// tag.
+    /// Get the next packet ID / IV.
     #[inline(always)]
-    pub(crate) fn next_packet_iv(&self) -> PacketID {
-        self.packet_iv_counter.fetch_add(1, Ordering::Relaxed)
+    pub(crate) fn next_packet_id(&self) -> PacketID {
+        self.packet_id_counter.fetch_add(1, Ordering::Relaxed)
     }
 
     /// Receive, decrypt, authenticate, and process an incoming packet from this peer.
@@ -204,8 +203,9 @@ impl Peer {
         let _ = packet.as_bytes_starting_at(PACKET_VERB_INDEX).map(|packet_frag0_payload_bytes| {
             let mut payload: Buffer<{ PACKET_SIZE_MAX }> = Buffer::new();
 
+            let mut forward_secrecy = true; // set to false below if ephemeral fails
+            let mut packet_id = header.id as u64;
             let cipher = header.cipher();
-            let mut forward_secrecy = true;
             let ephemeral_secret = self.ephemeral_secret.lock().clone();
             for secret in [ephemeral_secret.as_ref().map_or(&self.static_secret, |s| s.as_ref()), &self.static_secret] {
                 match cipher {
@@ -254,13 +254,16 @@ impl Peer {
                         for f in fragments.iter() {
                             let _ = f.as_ref().map(|f| f.as_bytes_starting_at(FRAGMENT_HEADER_SIZE).map(|f| payload.append_and_init_bytes(f.len(), |b| aes.decrypt(f, b))));
                         }
-                        if aes.decrypt_finish() {
+                        let tag = aes.decrypt_finish();
+                        if tag.is_some() {
+                            // For AES-GMAC-SIV we need to grab the original packet ID from the decrypted tag.
+                            let tag = tag.unwrap();
+                            unsafe { copy_nonoverlapping(tag.as_ptr(), (&mut packet_id as *mut u64).cast(), 8) };
                             break;
                         }
                     }
 
                     _ => {
-                        // Unrecognized or unsupported cipher type.
                         return;
                     }
                 }
@@ -272,7 +275,7 @@ impl Peer {
                 } else {
                     // If ephemeral failed, static secret will be tried. Set forward secrecy to false.
                     forward_secrecy = false;
-                    let _ = payload.set_size(0);
+                    payload.clear();
                 }
             }
             drop(ephemeral_secret);
@@ -281,11 +284,12 @@ impl Peer {
             // for loop and end up here. Otherwise it returns from the whole function.
 
             self.last_receive_time_ticks.store(time_ticks, Ordering::Relaxed);
-            let _ = self.total_bytes_received.fetch_add((payload.len() + PACKET_HEADER_SIZE) as u64, Ordering::Relaxed);
+            self.total_bytes_received.fetch_add((payload.len() + PACKET_HEADER_SIZE) as u64, Ordering::Relaxed);
 
             let _ = payload.u8_at(0).map(|verb| {
                 // For performance reasons we let VL2 handle packets first. It returns false
                 // if it didn't handle the packet, in which case it's handled at VL1.
+                let verb = verb & VERB_MASK;
                 if !ph.handle_packet(self, source_path, forward_secrecy, verb, &payload) {
                     match verb {
                         //VERB_VL1_NOP => {}
@@ -304,68 +308,62 @@ impl Peer {
         });
     }
 
-    /// Get current best path or None if there are no direct paths to this peer.
-    #[inline(always)]
-    pub(crate) fn best_path(&self) -> Option<Arc<Path>> {
-        self.paths.lock().last().map(|p| p.clone())
-    }
-
-    /// Send a packet as one or more UDP fragments.
-    ///
-    /// Calling this with anything other than a UDP endpoint is invalid.
-    fn send_udp<CI: VL1CallerInterface>(&self, ci: &CI, endpoint: &Endpoint, local_socket: Option<i64>, local_interface: Option<i64>, packet_id: PacketID, data: &Buffer<{ PACKET_SIZE_MAX }>) -> bool {
-        debug_assert!(matches!(endpoint, Endpoint::IpUdp(_)));
-        debug_assert!(data.len() <= PACKET_SIZE_MAX);
-
-        let packet_size = data.len();
-        if packet_size > UDP_DEFAULT_MTU {
-            let bytes = data.as_bytes();
-            if !ci.wire_send(endpoint, local_socket, local_interface, &[&bytes[0..UDP_DEFAULT_MTU]], 0) {
-                return false;
-            }
-
-            let mut pos = UDP_DEFAULT_MTU;
-
-            let fragment_count = (((packet_size - UDP_DEFAULT_MTU) as u32) / ((UDP_DEFAULT_MTU - FRAGMENT_HEADER_SIZE) as u32)) + ((((packet_size - UDP_DEFAULT_MTU) as u32) % ((UDP_DEFAULT_MTU - FRAGMENT_HEADER_SIZE) as u32)) != 0) as u32;
-            debug_assert!(fragment_count <= FRAGMENT_COUNT_MAX as u32);
-
-            let mut header = FragmentHeader {
-                id: packet_id,
-                dest: bytes[PACKET_DESTINATION_INDEX..PACKET_DESTINATION_INDEX + ADDRESS_SIZE].try_into().unwrap(),
-                fragment_indicator: FRAGMENT_INDICATOR,
-                total_and_fragment_no: ((fragment_count + 1) << 4) as u8,
-                reserved_hops: 0,
-            };
-
-            let mut chunk_size = (packet_size - pos).min(UDP_DEFAULT_MTU - FRAGMENT_HEADER_SIZE);
-            loop {
-                header.total_and_fragment_no += 1;
-                let next_pos = pos + chunk_size;
-                if !ci.wire_send(endpoint, local_socket, local_interface, &[header.as_bytes(), &bytes[pos..next_pos]], 0) {
+    fn send_to_endpoint<CI: VL1CallerInterface>(&self, ci: &CI, endpoint: &Endpoint, local_socket: Option<i64>, local_interface: Option<i64>, packet_id: PacketID, packet: &Buffer<{ PACKET_SIZE_MAX }>) -> bool {
+        debug_assert!(packet.len() <= PACKET_SIZE_MAX);
+        if matches!(endpoint, Endpoint::IpUdp(_)) {
+            let packet_size = packet.len();
+            if packet_size > UDP_DEFAULT_MTU {
+                let bytes = packet.as_bytes();
+                if !ci.wire_send(endpoint, local_socket, local_interface, &[&bytes[0..UDP_DEFAULT_MTU]], 0) {
                     return false;
                 }
-                pos = next_pos;
-                if pos < packet_size {
-                    chunk_size = (packet_size - pos).min(UDP_DEFAULT_MTU - FRAGMENT_HEADER_SIZE);
-                } else {
-                    break;
+
+                let mut pos = UDP_DEFAULT_MTU;
+
+                let fragment_count = (((packet_size - UDP_DEFAULT_MTU) as u32) / ((UDP_DEFAULT_MTU - FRAGMENT_HEADER_SIZE) as u32)) + ((((packet_size - UDP_DEFAULT_MTU) as u32) % ((UDP_DEFAULT_MTU - FRAGMENT_HEADER_SIZE) as u32)) != 0) as u32;
+                debug_assert!(fragment_count <= FRAGMENT_COUNT_MAX as u32);
+
+                let mut header = FragmentHeader {
+                    id: packet_id,
+                    dest: bytes[PACKET_DESTINATION_INDEX..PACKET_DESTINATION_INDEX + ADDRESS_SIZE].try_into().unwrap(),
+                    fragment_indicator: FRAGMENT_INDICATOR,
+                    total_and_fragment_no: ((fragment_count + 1) << 4) as u8,
+                    reserved_hops: 0,
+                };
+
+                let mut chunk_size = (packet_size - pos).min(UDP_DEFAULT_MTU - FRAGMENT_HEADER_SIZE);
+                loop {
+                    header.total_and_fragment_no += 1;
+                    let next_pos = pos + chunk_size;
+                    if !ci.wire_send(endpoint, local_socket, local_interface, &[header.as_bytes(), &bytes[pos..next_pos]], 0) {
+                        return false;
+                    }
+                    pos = next_pos;
+                    if pos < packet_size {
+                        chunk_size = (packet_size - pos).min(UDP_DEFAULT_MTU - FRAGMENT_HEADER_SIZE);
+                    } else {
+                        return true;
+                    }
                 }
             }
-
-            return true;
         }
-
-        return ci.wire_send(endpoint, local_socket, local_interface, &[data.as_bytes()], 0);
+        return ci.wire_send(endpoint, local_socket, local_interface, &[packet.as_bytes()], 0);
     }
 
     /// Send a packet to this peer.
     ///
     /// This will go directly if there is an active path, or otherwise indirectly
     /// via a root or some other route.
-    pub(crate) fn send<CI: VL1CallerInterface>(&self, ci: &CI, time_ticks: i64, data: PacketBuffer) {
-        self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
-        let _ = self.total_bytes_sent.fetch_add(data.len() as u64, Ordering::Relaxed);
-        todo!()
+    pub(crate) fn send<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, packet_id: PacketID, packet: &Buffer<{ PACKET_SIZE_MAX }>) -> bool {
+        self.path(node).map_or(false, |path| {
+            if self.send_to_endpoint(ci, &path.endpoint, Some(path.local_socket), Some(path.local_interface), packet_id, packet) {
+                self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
+                self.total_bytes_sent.fetch_add(packet.len() as u64, Ordering::Relaxed);
+                true
+            } else {
+                false
+            }
+        })
     }
 
     /// Forward a packet to this peer.
@@ -373,34 +371,34 @@ impl Peer {
     /// This is called when we receive a packet not addressed to this node and
     /// want to pass it along.
     ///
-    /// This doesn't support fragmenting since fragments are forwarded individually.
+    /// This doesn't fragment large packets since fragments are forwarded individually.
     /// Intermediates don't need to adjust fragmentation.
-    pub(crate) fn forward<CI: VL1CallerInterface>(&self, ci: &CI, time_ticks: i64, data: PacketBuffer) {
-        self.last_forward_time_ticks.store(time_ticks, Ordering::Relaxed);
-        let _ = self.total_bytes_forwarded.fetch_add(data.len() as u64, Ordering::Relaxed);
-        todo!()
+    pub(crate) fn forward<CI: VL1CallerInterface>(&self, ci: &CI, time_ticks: i64, packet: &Buffer<{ PACKET_SIZE_MAX }>) -> bool {
+        self.direct_path().map_or(false, |path| {
+            if ci.wire_send(&path.endpoint, Some(path.local_socket), Some(path.local_interface), &[packet.as_bytes()], 0) {
+                self.last_forward_time_ticks.store(time_ticks, Ordering::Relaxed);
+                self.total_bytes_forwarded.fetch_add(packet.len() as u64, Ordering::Relaxed);
+                true
+            } else {
+                false
+            }
+        })
     }
 
     /// Send a HELLO to this peer.
     ///
     /// If try_new_endpoint is not None the packet will be sent directly to this endpoint.
     /// Otherwise it will be sent via the best direct or indirect path.
-    pub(crate) fn send_hello<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, try_new_endpoint: Option<Endpoint>) {
-        let path = if try_new_endpoint.is_none() {
-            self.best_path().map_or_else(|| {
-                node.root().map_or(None, |root| {
-                    root.best_path().map_or(None, |bp| Some(bp))
-                })
-            }, |bp| Some(bp))
-        } else {
-            None
-        };
-
-        let _ = try_new_endpoint.as_ref().map_or_else(|| Some(&path.as_ref().unwrap().endpoint), |ep| Some(ep)).map(|endpoint| {
+    ///
+    /// This has its own send logic so it can handle either an explicit endpoint or a
+    /// known one.
+    pub(crate) fn send_hello<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, explicit_endpoint: Option<Endpoint>) -> bool {
+        let path = if explicit_endpoint.is_none() { self.path(node) } else { None };
+        explicit_endpoint.as_ref().map_or_else(|| Some(&path.as_ref().unwrap().endpoint), |ep| Some(ep)).map_or(false, |endpoint| {
             let mut packet: Buffer<{ PACKET_SIZE_MAX }> = Buffer::new();
-            let this_peer_is_root = node.is_root(self);
+            let time_ticks = ci.time_ticks();
 
-            let packet_id = self.next_packet_iv();
+            let packet_id = self.next_packet_id();
             debug_assert!(packet.append_and_init_struct(|header: &mut PacketHeader| {
                 header.id = packet_id;
                 header.dest = self.identity.address().to_bytes();
@@ -413,7 +411,7 @@ impl Peer {
                 header.version_major = VERSION_MAJOR;
                 header.version_minor = VERSION_MINOR;
                 header.version_revision = (VERSION_REVISION as u16).to_be();
-                header.timestamp = (ci.time_ticks() as u64).to_be();
+                header.timestamp = (time_ticks as u64).to_be();
             }).is_ok());
 
             debug_assert!(self.identity.marshal(&mut packet, false).is_ok());
@@ -421,10 +419,18 @@ impl Peer {
 
             let aes_ctr_iv_position = packet.len();
             debug_assert!(packet.append_and_init_bytes_fixed(|iv: &mut [u8; 18]| {
-                crate::crypto::random::fill_bytes_secure(&mut iv[0..12]);
-                todo!()
+                crate::crypto::random::fill_bytes_secure(&mut iv[0..16]);
+                iv[12] &= 0x7f; // mask off MSB of counter in iv to play nice with some AES-CTR implementations
+
+                // LEGACY: create a 16-bit encrypted field that specifies zero moons. This is ignored by v2
+                // but causes v1 nodes to be able to parse this packet properly. This is not significant in
+                // terms of encryption or authentication.
+                let mut salsa_iv = packet_id.to_ne_bytes();
+                salsa_iv[7] &= 0xf8;
+                Salsa::new(&self.static_secret.secret.0[0..32], &salsa_iv, true).unwrap().crypt(&[0_u8, 0_u8], &mut salsa_iv[16..18]);
             }).is_ok());
-            let dictionary_position = packet.len();
+
+            let dict_start_position = packet.len();
             let mut dict = Dictionary::new();
             dict.set_u64(HELLO_DICT_KEY_INSTANCE_ID, node.instance_id);
             dict.set_u64(HELLO_DICT_KEY_CLOCK, ci.time_clock() as u64);
@@ -437,7 +443,7 @@ impl Peer {
                 dict.set_bytes(HELLO_DICT_KEY_EPHEMERAL_C25519, ephemeral_pair.c25519.public_bytes().to_vec());
                 dict.set_bytes(HELLO_DICT_KEY_EPHEMERAL_P521, ephemeral_pair.p521.public_key_bytes().to_vec());
             });
-            if this_peer_is_root {
+            if node.is_root(self) {
                 // If the peer is a root we include some extra information for diagnostic and statistics
                 // purposes such as the CPU type, bits, and OS info. This is not sent to other peers.
                 dict.set_str(HELLO_DICT_KEY_SYS_ARCH, std::env::consts::ARCH);
@@ -460,8 +466,8 @@ impl Peer {
             debug_assert!(dict.write_to(&mut packet).is_ok());
 
             let mut dict_aes = self.static_secret_hello_dictionary.lock();
-            dict_aes.init(&packet.as_bytes()[aes_ctr_iv_position..aes_ctr_iv_position + 12]);
-            dict_aes.crypt_in_place(&mut packet.as_bytes_mut()[dictionary_position..]);
+            dict_aes.init(&packet.as_bytes()[aes_ctr_iv_position..aes_ctr_iv_position + 16]);
+            dict_aes.crypt_in_place(&mut packet.as_bytes_mut()[dict_start_position..]);
             drop(dict_aes);
 
             debug_assert!(packet.append_bytes_fixed(&SHA384::hmac(self.static_secret_packet_hmac.as_ref(), &packet.as_bytes()[PACKET_HEADER_SIZE + 1..])).is_ok());
@@ -470,45 +476,55 @@ impl Peer {
             poly.update(packet.as_bytes_starting_at(PACKET_HEADER_SIZE).unwrap());
             packet.as_bytes_mut()[HEADER_MAC_FIELD_INDEX..HEADER_MAC_FIELD_INDEX + 8].copy_from_slice(&poly.finish()[0..8]);
 
-            self.send_udp(ci, endpoint, path.as_ref().map(|p| p.local_socket), path.as_ref().map(|p| p.local_interface), packet_id, &packet);
-        });
+            self.static_secret.encrypt_count.fetch_add(1, Ordering::Relaxed);
+            self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
+            self.total_bytes_sent.fetch_add(packet.len() as u64, Ordering::Relaxed);
+
+            path.map_or_else(|| {
+                self.send_to_endpoint(ci, endpoint, None, None, packet_id, &packet)
+            }, |path| {
+                path.log_send(time_ticks);
+                self.send_to_endpoint(ci, endpoint, Some(path.local_socket), Some(path.local_interface), packet_id, &packet)
+            })
+        })
     }
 
     /// Called every INTERVAL during background tasks.
     #[inline(always)]
-    pub(crate) fn on_interval<CI: VL1CallerInterface>(&self, ct: &CI, time_ticks: i64) {
-    }
+    pub(crate) fn on_interval<CI: VL1CallerInterface>(&self, ct: &CI, time_ticks: i64) {}
 
     #[inline(always)]
-    fn receive_hello<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {
-    }
+    fn receive_hello<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
 
     #[inline(always)]
-    fn receive_error<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {
-    }
+    fn receive_error<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
 
     #[inline(always)]
-    fn receive_ok<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {
-    }
+    fn receive_ok<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
 
     #[inline(always)]
-    fn receive_whois<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {
-    }
+    fn receive_whois<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
 
     #[inline(always)]
-    fn receive_rendezvous<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {
-    }
+    fn receive_rendezvous<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
 
     #[inline(always)]
-    fn receive_echo<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {
-    }
+    fn receive_echo<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
 
     #[inline(always)]
-    fn receive_push_direct_paths<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {
-    }
+    fn receive_push_direct_paths<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
 
     #[inline(always)]
-    fn receive_user_message<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {
+    fn receive_user_message<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
+
+    /// Get current best path or None if there are no direct paths to this peer.
+    pub fn direct_path(&self) -> Option<Arc<Path>> {
+        self.paths.lock().last().map(|p| p.clone())
+    }
+
+    /// Get either the current best direct path or an indirect path.
+    pub fn path(&self, node: &Node) -> Option<Arc<Path>> {
+        self.direct_path().map_or_else(|| node.root().map_or(None, |root| root.direct_path().map_or(None, |bp| Some(bp))), |bp| Some(bp))
     }
 
     /// Get the remote version of this peer: major, minor, revision, and build.

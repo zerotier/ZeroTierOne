@@ -4,11 +4,13 @@ use std::sync::atomic::{AtomicI64, Ordering};
 use parking_lot::Mutex;
 
 use crate::util::U64PassThroughHasher;
-use crate::vl1::constants::*;
 use crate::vl1::Endpoint;
-use crate::vl1::fragmentedpacket::FragmentedPacket;
+use crate::vl1::fragmentedpacket::{FragmentedPacket, FRAGMENT_EXPIRATION, FRAGMENT_MAX_INBOUND_PACKETS_PER_PATH};
 use crate::vl1::node::{PacketBuffer, VL1CallerInterface};
 use crate::vl1::protocol::PacketID;
+
+/// Keepalive interval for paths in milliseconds.
+pub(crate) const PATH_KEEPALIVE_INTERVAL: i64 = 20000;
 
 /// A remote endpoint paired with a local socket and a local interface.
 /// These are maintained in Node and canonicalized so that all unique paths have
@@ -39,12 +41,27 @@ impl Path {
     }
 
     #[inline(always)]
+    pub fn endpoint(&self) -> &Endpoint {
+        &self.endpoint
+    }
+
+    #[inline(always)]
+    pub fn local_socket(&self) -> i64 {
+        self.local_socket
+    }
+
+    #[inline(always)]
+    pub fn local_interface(&self) -> i64 {
+        self.local_interface
+    }
+
+    #[inline(always)]
     pub fn last_send_time_ticks(&self) -> i64 {
         self.last_send_time_ticks.load(Ordering::Relaxed)
     }
 
     #[inline(always)]
-    pub fn send_receive_time_ticks(&self) -> i64 {
+    pub fn last_receive_time_ticks(&self) -> i64 {
         self.last_receive_time_ticks.load(Ordering::Relaxed)
     }
 
@@ -52,8 +69,6 @@ impl Path {
     /// This returns None if more fragments are needed to assemble the packet.
     #[inline(always)]
     pub(crate) fn receive_fragment(&self, packet_id: PacketID, fragment_no: u8, fragment_expecting_count: u8, packet: PacketBuffer, time_ticks: i64) -> Option<FragmentedPacket> {
-        self.last_receive_time_ticks.store(time_ticks, Ordering::Relaxed);
-
         let mut fp = self.fragmented_packets.lock();
 
         // This is mostly a defense against denial of service attacks or broken peers. It will
@@ -78,15 +93,19 @@ impl Path {
         }
     }
 
-    /// Register receipt of "anything" else which right now includes unfragmented packets and keepalives.
     #[inline(always)]
-    pub(crate) fn receive_other(&self, time_ticks: i64) {
+    pub(crate) fn log_receive(&self, time_ticks: i64) {
         self.last_receive_time_ticks.store(time_ticks, Ordering::Relaxed);
+    }
+
+    #[inline(always)]
+    pub(crate) fn log_send(&self, time_ticks: i64) {
+        self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
     }
 
     /// Called every INTERVAL during background tasks.
     #[inline(always)]
-    pub fn on_interval<CI: VL1CallerInterface>(&self, ct: &CI, time_ticks: i64) {
+    pub(crate) fn on_interval<CI: VL1CallerInterface>(&self, ct: &CI, time_ticks: i64) {
         self.fragmented_packets.lock().retain(|packet_id, frag| (time_ticks - frag.ts_ticks) < FRAGMENT_EXPIRATION);
     }
 }

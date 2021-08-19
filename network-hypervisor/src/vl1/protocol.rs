@@ -2,7 +2,6 @@ use std::mem::MaybeUninit;
 
 use crate::vl1::Address;
 use crate::vl1::buffer::RawObject;
-use crate::vl1::constants::*;
 
 pub const VERB_VL1_NOP: u8 = 0x00;
 pub const VERB_VL1_HELLO: u8 = 0x01;
@@ -14,20 +13,60 @@ pub const VERB_VL1_ECHO: u8 = 0x08;
 pub const VERB_VL1_PUSH_DIRECT_PATHS: u8 = 0x10;
 pub const VERB_VL1_USER_MESSAGE: u8 = 0x14;
 
-pub(crate) const HELLO_DICT_KEY_INSTANCE_ID: &'static str = "I";
-pub(crate) const HELLO_DICT_KEY_CLOCK: &'static str = "C";
-pub(crate) const HELLO_DICT_KEY_LOCATOR: &'static str = "L";
-pub(crate) const HELLO_DICT_KEY_EPHEMERAL_C25519: &'static str = "E0";
-pub(crate) const HELLO_DICT_KEY_EPHEMERAL_P521: &'static str = "E1";
-pub(crate) const HELLO_DICT_KEY_EPHEMERAL_ACK: &'static str = "e";
-pub(crate) const HELLO_DICT_KEY_HELLO_ORIGIN: &'static str = "@";
-pub(crate) const HELLO_DICT_KEY_SYS_ARCH: &'static str = "Sa";
-pub(crate) const HELLO_DICT_KEY_SYS_BITS: &'static str = "Sb";
-pub(crate) const HELLO_DICT_KEY_OS_NAME: &'static str = "So";
-pub(crate) const HELLO_DICT_KEY_OS_VERSION: &'static str = "Sv";
-pub(crate) const HELLO_DICT_KEY_OS_VARIANT: &'static str = "St";
-pub(crate) const HELLO_DICT_KEY_VENDOR: &'static str = "V";
-pub(crate) const HELLO_DICT_KEY_FLAGS: &'static str = "+";
+pub const HELLO_DICT_KEY_INSTANCE_ID: &'static str = "I";
+pub const HELLO_DICT_KEY_CLOCK: &'static str = "C";
+pub const HELLO_DICT_KEY_LOCATOR: &'static str = "L";
+pub const HELLO_DICT_KEY_EPHEMERAL_C25519: &'static str = "E0";
+pub const HELLO_DICT_KEY_EPHEMERAL_P521: &'static str = "E1";
+pub const HELLO_DICT_KEY_EPHEMERAL_ACK: &'static str = "e";
+pub const HELLO_DICT_KEY_HELLO_ORIGIN: &'static str = "@";
+pub const HELLO_DICT_KEY_SYS_ARCH: &'static str = "Sa";
+pub const HELLO_DICT_KEY_SYS_BITS: &'static str = "Sb";
+pub const HELLO_DICT_KEY_OS_NAME: &'static str = "So";
+pub const HELLO_DICT_KEY_OS_VERSION: &'static str = "Sv";
+pub const HELLO_DICT_KEY_OS_VARIANT: &'static str = "St";
+pub const HELLO_DICT_KEY_VENDOR: &'static str = "V";
+pub const HELLO_DICT_KEY_FLAGS: &'static str = "+";
+
+/// KBKDF usage label indicating a key used to encrypt the dictionary inside HELLO.
+pub const KBKDF_KEY_USAGE_LABEL_HELLO_DICTIONARY_ENCRYPT: u8 = b'H';
+
+/// KBKDF usage label indicating a key used to HMAC packets, which is currently only used for HELLO.
+pub const KBKDF_KEY_USAGE_LABEL_PACKET_HMAC: u8 = b'M';
+
+/// KBKDF usage label for the first AES-GMAC-SIV key.
+pub const KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K0: u8 = b'0';
+
+/// KBKDF usage label for the second AES-GMAC-SIV key.
+pub const KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K1: u8 = b'1';
+
+/// KBKDF usage label for acknowledgement of a shared secret.
+pub const KBKDF_KEY_USAGE_LABEL_EPHEMERAL_ACK: u8 = b'A';
+
+/// Length of an address in bytes.
+pub const ADDRESS_SIZE: usize = 5;
+
+/// Prefix indicating reserved addresses (that can't actually be addresses).
+pub const ADDRESS_RESERVED_PREFIX: u8 = 0xff;
+
+/// Size of packet header that lies outside the encryption envelope.
+pub const PACKET_HEADER_SIZE: usize = 27;
+
+/// Minimum packet, which is the header plus a verb.
+pub const PACKET_SIZE_MIN: usize = PACKET_HEADER_SIZE + 1;
+
+/// Maximum size of an entire packet.
+pub const PACKET_SIZE_MAX: usize = PACKET_HEADER_SIZE + PACKET_PAYLOAD_SIZE_MAX;
+
+/// Maximum packet payload size including the verb/flags field.
+///
+/// This is large enough to carry "jumbo MTU" packets. The exact
+/// value is because 10005+27 == 10032 which is divisible by 16. This
+/// improves memory layout and alignment when buffers are allocated.
+/// This value could technically be increased but it would require a
+/// protocol version bump and only new nodes would be able to accept
+/// the new size.
+pub const PACKET_PAYLOAD_SIZE_MAX: usize = 10005;
 
 /// Index of packet verb after header.
 pub const PACKET_VERB_INDEX: usize = 27;
@@ -76,6 +115,13 @@ pub const FRAGMENT_HEADER_SIZE: usize = 16;
 /// Maximum allowed number of fragments.
 pub const FRAGMENT_COUNT_MAX: usize = 8;
 
+/// Time after which an incomplete fragmented packet expires.
+pub const FRAGMENT_EXPIRATION: i64 = 1500;
+
+/// Maximum number of inbound fragmented packets to handle at once per path.
+/// This is a sanity limit to prevent memory exhaustion due to DOS attacks or broken peers.
+pub const FRAGMENT_MAX_INBOUND_PACKETS_PER_PATH: usize = 256;
+
 /// Index of packet fragment indicator byte to detect fragments.
 pub const FRAGMENT_INDICATOR_INDEX: usize = 13;
 
@@ -99,6 +145,9 @@ pub const PROTOCOL_MAX_HOPS: u8 = 7;
 
 /// Maximum number of hops to allow.
 pub const FORWARD_MAX_HOPS: u8 = 3;
+
+/// Maximum difference between an OK in-re packet ID and the current packet ID counter.
+pub const OK_PACKET_SEQUENCE_CUTOFF: u64 = 1000;
 
 /// A unique packet identifier, also the cryptographic nonce.
 ///
@@ -273,7 +322,6 @@ pub(crate) mod message_component_structs {
 mod tests {
     use std::mem::size_of;
 
-    use crate::vl1::constants::*;
     use crate::vl1::protocol::*;
 
     #[test]

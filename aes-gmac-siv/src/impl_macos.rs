@@ -312,14 +312,17 @@ impl AesGmacSiv {
         }
     }
 
-    /// Finish decryption and return true if authentication appears valid.
-    /// If this returns false the message should be dropped.
+    /// Finish decryption and returns the decrypted tag if the message appears valid.
     #[inline(always)]
-    pub fn decrypt_finish(&mut self) -> bool {
+    pub fn decrypt_finish(&mut self) -> Option<&[u8; 16]> {
         unsafe {
             CCCryptorGCMFinalize(self.gmac, self.tmp.as_mut_ptr().cast(), 16);
             let tmp = self.tmp.as_mut_ptr().cast::<u64>();
-            *self.tag.as_mut_ptr().cast::<u64>().offset(1) == *tmp ^ *tmp.offset(1)
+            if *self.tag.as_mut_ptr().cast::<u64>().offset(1) == *tmp ^ *tmp.offset(1) {
+                Some(&self.tag)
+            } else {
+                None
+            }
         }
     }
 }

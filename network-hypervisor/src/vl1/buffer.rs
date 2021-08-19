@@ -83,22 +83,6 @@ impl<const L: usize> Buffer<L> {
         self.0 == 0
     }
 
-    /// Explicitly set the size of the data in this buffer, returning an error on overflow.
-    /// If the new size is larger than the old size, the new space is zeroed.
-    #[inline(always)]
-    pub fn set_size(&mut self, new_size: usize) -> std::io::Result<()> {
-        if new_size <= L {
-            let old_size = self.0;
-            self.0 = new_size;
-            if old_size < new_size {
-                self.1[old_size..new_size].fill(0);
-            }
-            Ok(())
-        } else {
-            Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
-        }
-    }
-
     /// Append a packed structure and call a function to initialize it in place.
     /// Anything not initialized will be zero.
     #[inline(always)]

@@ -9,7 +9,6 @@ pub(crate) mod mac;
 pub(crate) mod fragmentedpacket;
 pub(crate) mod whois;
 
-pub mod constants;
 pub mod identity;
 pub mod inetaddress;
 pub mod endpoint;

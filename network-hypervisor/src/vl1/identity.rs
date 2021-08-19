@@ -15,7 +15,7 @@ use crate::crypto::secret::Secret;
 use crate::error::InvalidFormatError;
 use crate::vl1::Address;
 use crate::vl1::buffer::Buffer;
-use crate::vl1::constants::PACKET_SIZE_MAX;
+use crate::vl1::protocol::PACKET_SIZE_MAX;
 
 use concat_arrays::concat_arrays;
 
