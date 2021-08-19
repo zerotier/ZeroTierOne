@@ -429,149 +429,168 @@ void PostgreSQL::initializeNetworks()
 		std::unordered_set<std::string> networkSet;
 
 		fprintf(stderr, "Initializing Networks...\n");
-		auto c = _pool->borrow();
-		pqxx::work w{*c->c};
-		pqxx::result r = w.exec_params("SELECT id, (EXTRACT(EPOCH FROM creation_time AT TIME ZONE 'UTC')*1000)::bigint as creation_time, capabilities, "
+
+		char qbuf[2048] = {0};
+		sprintf(qbuf, "SELECT id, (EXTRACT(EPOCH FROM creation_time AT TIME ZONE 'UTC')*1000)::bigint as creation_time, capabilities, "
 			"enable_broadcast, (EXTRACT(EPOCH FROM last_modified AT TIME ZONE 'UTC')*1000)::bigint AS last_modified, mtu, multicast_limit, name, private, remote_trace_level, "
 			"remote_trace_target, revision, rules, tags, v4_assign_mode, v6_assign_mode, sso_enabled FROM ztc_network "
-			"WHERE deleted = false AND controller_id = $1", _myAddressStr);
+			"WHERE deleted = false AND controller_id = '%s'", _myAddressStr.c_str());
+		auto c = _pool->borrow();
+		auto c2 = _pool->borrow();
+		pqxx::work w{*c->c};
+		
+		auto stream = pqxx::stream_from::query(w, qbuf);
 
-		for (auto row = r.begin(); row != r.end(); row++) {
+		std::tuple<
+		      std::string 					// network ID
+			, std::optional<int64_t> 		// creationTime
+			, std::optional<std::string>	// capabilities
+			, std::optional<bool>			// enableBroadcast
+			, std::optional<uint64_t>		// lastModified
+			, std::optional<int>			// mtu
+			, std::optional<int>			// multicastLimit
+			, std::optional<std::string>	// name
+			, bool							// private
+			, std::optional<int>			// remoteTraceLevel
+			, std::optional<std::string>	// remoteTraceTarget
+			, std::optional<uint64_t>		// revision
+			, std::optional<std::string>	// rules
+			, std::optional<std::string>	// tags
+			, std::optional<std::string>	// v4AssignMode
+			, std::optional<std::string>	// v6AssignMode
+			, std::optional<bool>			// ssoEnabled
+		> row;
+
+		while (stream >> row) {
 			json empty;
 			json config;
 
 			initNetwork(config);
 
-			std::string nwid = row[0].as<std::string>();
+			std::string nwid = std::get<0>(row);
+			std::optional<int64_t> creationTime = std::get<1>(row);
+			std::optional<std::string> capabilities = std::get<2>(row);
+			std::optional<bool> enableBroadcast = std::get<3>(row);
+			std::optional<uint64_t> lastModified = std::get<4>(row);
+			std::optional<int> mtu = std::get<5>(row);
+			std::optional<int> multicastLimit = std::get<6>(row);
+			std::optional<std::string> name = std::get<7>(row);
+			bool isPrivate = std::get<8>(row);
+			std::optional<int> remoteTraceLevel = std::get<9>(row);
+			std::optional<std::string> remoteTraceTarget = std::get<10>(row);
+			std::optional<uint64_t> revision = std::get<11>(row);
+			std::optional<std::string> rules = std::get<12>(row);
+			std::optional<std::string> tags = std::get<13>(row);
+			std::optional<std::string> v4AssignMode = std::get<14>(row);
+			std::optional<std::string> v6AssignMode = std::get<15>(row);
+			std::optional<bool> ssoEnabled = std::get<16>(row);
 			
-			networkSet.insert(nwid);
+		 	networkSet.insert(nwid);
 
-			config["id"] = nwid;
-			config["nwid"] = nwid;
-			
-			if (!row[1].is_null()) {
-				config["creationTime"] = row[1].as<int64_t>();
-			} else {
-				config["creationTime"] = 0ULL;
-			}
-			config["capabilities"] = row[2].as<std::string>();
-			config["enableBroadcast"] = row[3].as<bool>();
-			if (!row[4].is_null()) {
-				config["lastModified"] = row[4].as<uint64_t>();
-			} else {
-				config["lastModified"] = 0ULL;
-			}
-			if (!row[5].is_null()) {
-				config["mtu"] = row[5].as<int>();
-			} else {
-				config["mtu"] = 2800;
-			}
-			if (!row[6].is_null()) {
-				config["multicastLimit"] = row[6].as<int>();
-			} else {
-				config["multicastLimit"] = 64;
-			}
-			config["name"] = row[7].as<std::string>();
-			config["private"] = row[8].as<bool>();
-			if (!row[9].is_null()) {
-				config["remoteTraceLevel"] = row[9].as<int>();
-			} else {
-				config["remoteTraceLevel"] = 0;
-			}
+		 	config["id"] = nwid;
+		 	config["nwid"] = nwid;
+			config["creationTime"] = creationTime.value_or(0);
+			config["capabilities"] = json::parse(capabilities.value_or("[]"));
+			config["enableBroadcast"] = enableBroadcast.value_or(false);
+			config["lastModified"] = lastModified.value_or(0);
+			config["mtu"] = mtu.value_or(2800);
+			config["multicastLimit"] = multicastLimit.value_or(64);
+		 	config["name"] = name.value_or(""); 
+		 	config["private"] = isPrivate;
+	 		config["remoteTraceLevel"] = remoteTraceLevel.value_or(0);
+			config["remoteTraceTarget"] = remoteTraceTarget.value_or("");
+			config["revision"] = revision.value_or(0);
+		 	config["rules"] = json::parse(rules.value_or("[]"));
+		 	config["tags"] = json::parse(tags.value_or("[]"));
+		 	config["v4AssignMode"] = json::parse(v4AssignMode.value_or("{}"));
+		 	config["v6AssignMode"] = json::parse(v6AssignMode.value_or("{}"));
+		 	config["ssoEnabled"] = ssoEnabled.value_or(false);
+		 	config["objtype"] = "network";
+		 	config["ipAssignmentPools"] = json::array();
+		 	config["routes"] = json::array();
 
-			if (!row[10].is_null()) {
-				config["remoteTraceTarget"] = row[10].as<std::string>();
-			} else {
-				config["remoteTraceTarget"] = nullptr;
-			}
+			{
+				pqxx::work w2{*c2->c};
+				pqxx::result r2 = w2.exec_params("SELECT host(ip_range_start), host(ip_range_end) FROM ztc_network_assignment_pool WHERE network_id = $1", nwid);
+				for (auto row2 = r2.begin(); row2 != r2.end(); row2++) {
+					json ip;
+					ip["ipRangeStart"] = row2[0].as<std::string>();
+					ip["ipRangeEnd"] = row2[1].as<std::string>();
 
-			if (!row[11].is_null()) {
-				config["revision"] = row[11].as<uint64_t>();
-			} else {
-				config["revision"] = 0ULL;
-				//fprintf(stderr, "Error converting revision: %s\n", PQgetvalue(res, i, 11));
-			}
-			config["rules"] = json::parse(row[12].as<std::string>());
-			config["tags"] = json::parse(row[13].as<std::string>());
-			config["v4AssignMode"] = json::parse(row[14].as<std::string>());
-			config["v6AssignMode"] = json::parse(row[15].as<std::string>());
-			config["ssoEnabled"] = row[16].as<bool>();
-			config["objtype"] = "network";
-			config["ipAssignmentPools"] = json::array();
-			config["routes"] = json::array();
-
-
-			pqxx::result r2 = w.exec_params("SELECT host(ip_range_start), host(ip_range_end) FROM ztc_network_assignment_pool WHERE network_id = $1", nwid);
-			
-			for (auto row2 = r2.begin(); row2 != r2.end(); row2++) {
-				json ip;
-				ip["ipRangeStart"] = row2[0].as<std::string>();
-				ip["ipRangeEnd"] = row2[1].as<std::string>();
-
-				config["ipAssignmentPools"].push_back(ip);
-			}
-
-
-
-			r2 = w.exec_params("SELECT host(address), bits, host(via) FROM ztc_network_route WHERE network_id = $1", nwid);
-
-			for (auto row2 = r2.begin(); row2 != r2.end(); row2++) {
-				std::string addr = row2[0].as<std::string>();
-				std::string bits = row2[1].as<std::string>();
-
-				json route;
-				route["target"] = addr + "/" + bits;
-
-				if (row[2].is_null()) {
-					route["via"] = nullptr;
-				} else {
-					route["via"] = row[2].as<std::string>();
+					config["ipAssignmentPools"].push_back(ip);
 				}
-				
-				config["routes"].push_back(route);
+				w2.commit();
 			}
 
-			r2 = w.exec_params("SELECT domain, servers FROM ztc_network_dns WHERE network_id = $1", nwid);
-			
-			if (r2.size() > 1) {
-				fprintf(stderr, "ERROR: invalid number of DNS configurations for network %s.  Must be 0 or 1\n", nwid.c_str());
-			} else if (r2.size() == 1) {
-				auto dnsRow = r2.begin();
-				json obj;
-				std::string domain = dnsRow[0].as<std::string>();
-				std::string serverList = dnsRow[1].as<std::string>();
-				auto servers = json::array();
-				if (serverList.rfind("{",0) != std::string::npos) {
-					serverList = serverList.substr(1, serverList.size()-2);
-					std::stringstream ss(serverList);
-					while(ss.good()) {
-						std::string server;
-						std::getline(ss, server, ',');
-						servers.push_back(server);
+			{
+				pqxx::work w2{*c2->c};
+				pqxx::result r2 = w2.exec_params("SELECT host(address), bits, host(via) FROM ztc_network_route WHERE network_id = $1", nwid);
+				for (auto row2 = r2.begin(); row2 != r2.end(); row2++) {
+					std::string addr = row2[0].as<std::string>();
+					std::string bits = row2[1].as<std::string>();
+					json route;
+					route["target"] = addr + "/" + bits;
+					if (row2[2].is_null()) {
+						route["via"] = nullptr;
+					} else {
+						route["via"] = row2[2].as<std::string>();
 					}
+					config["routes"].push_back(route);
 				}
-				obj["domain"] = domain;
-				obj["servers"] = servers;
-				config["dns"] = obj;
+				w2.commit();
 			}
 
-			r2 = w.exec_params("SELECT org.client_id, org.authorization_endpoint "
-				"FROM ztc_network nw "
-				"INNER JOIN ztc_org org "
-				"	ON org.owner_id = nw.owner_id "
-				"WHERE nw.id = $1 AND nw.sso_enabled = true", nwid);
-
-			if (r2.size() == 1) {
-				// only one should exist
-				pqxx::row row = r.at(0);
-				config["clientId"] = row[0].as<std::string>();
-				config["authorizationEndpoint"] = row[1].as<std::string>();
+			{
+				pqxx::work w2{*c2->c};
+				pqxx::result r2 = w2.exec_params("SELECT domain, servers FROM ztc_network_dns WHERE network_id = $1", nwid);
+				
+				if (r2.size() > 1) {
+					fprintf(stderr, "ERROR: invalid number of DNS configurations for network %s.  Must be 0 or 1\n", nwid.c_str());
+				} else if (r2.size() == 1) {
+					auto dnsRow = r2.begin();
+					json obj;
+					std::string domain = dnsRow[0].as<std::string>();
+					std::string serverList = dnsRow[1].as<std::string>();
+					auto servers = json::array();
+					if (serverList.rfind("{",0) != std::string::npos) {
+						serverList = serverList.substr(1, serverList.size()-2);
+						std::stringstream ss(serverList);
+						while(ss.good()) {
+							std::string server;
+							std::getline(ss, server, ',');
+							servers.push_back(server);
+						}
+					}
+					obj["domain"] = domain;
+					obj["servers"] = servers;
+					config["dns"] = obj;
+				}
+				w2.commit();
 			}
 
-			_networkChanged(empty, config, false);
+			{
+				pqxx::work w2{*c2->c};
+				pqxx::result r2 = w2.exec_params("SELECT org.client_id, org.authorization_endpoint "
+					"FROM ztc_network nw "
+					"INNER JOIN ztc_org org "
+					"	ON org.owner_id = nw.owner_id "
+					"WHERE nw.id = $1 AND nw.sso_enabled = true", nwid);
+
+				if (r2.size() == 1) {
+					// only one should exist
+					pqxx::row row2 = r2.at(0);
+					config["clientId"] = row2[0].as<std::string>();
+					config["authorizationEndpoint"] = row2[1].as<std::string>();
+				}
+				w2.commit();
+			}
+
+		 	_networkChanged(empty, config, false);
 		}
 
+
 		w.commit();
+		_pool->unborrow(c2);
 		_pool->unborrow(c);
 
 		if (++this->_ready == 2) {
@@ -595,12 +614,10 @@ void PostgreSQL::initializeMembers()
 	std::string networkId;
 	try {
 		std::unordered_map<std::string, std::string> networkMembers;
-		
 		fprintf(stderr, "Initializing Members...\n");
-		auto c = _pool->borrow();
-		pqxx::work w{*c->c};
-		pqxx::result r = w.exec_params(
-			"SELECT m.id, m.network_id, m.active_bridge, m.authorized, m.capabilities, (EXTRACT(EPOCH FROM m.creation_time AT TIME ZONE 'UTC')*1000)::bigint, m.identity, "
+
+		char qbuf[2048];
+		sprintf(qbuf, "SELECT m.id, m.network_id, m.active_bridge, m.authorized, m.capabilities, (EXTRACT(EPOCH FROM m.creation_time AT TIME ZONE 'UTC')*1000)::bigint, m.identity, "
 			"	(EXTRACT(EPOCH FROM m.last_authorized_time AT TIME ZONE 'UTC')*1000)::bigint, "
 			"	(EXTRACT(EPOCH FROM m.last_deauthorized_time AT TIME ZONE 'UTC')*1000)::bigint, "
 			"	m.remote_trace_level, m.remote_trace_target, m.tags, m.v_major, m.v_minor, m.v_rev, m.v_proto, "
@@ -608,137 +625,132 @@ void PostgreSQL::initializeMembers()
 			"FROM ztc_member m "
 			"INNER JOIN ztc_network n "
 			"	ON n.id = m.network_id "
-			"WHERE n.controller_id = $1 AND m.deleted = false", _myAddressStr);
+			"WHERE n.controller_id = '%s' AND m.deleted = false", _myAddressStr.c_str());
+		auto c = _pool->borrow();
+		auto c2 = _pool->borrow();
+		pqxx::work w{*c->c};
+	
+		auto stream = pqxx::stream_from::query(w, qbuf);
 
-		for (auto row = r.begin(); row != r.end(); row++) {
+		std::tuple<
+			  std::string					// memberId
+			, std::string					// memberId
+			, std::optional<bool>			// activeBridge
+			, std::optional<bool>			// authorized
+			, std::optional<std::string>	// capabilities
+			, std::optional<uint64_t>		// creationTime
+			, std::optional<std::string>	// identity
+			, std::optional<uint64_t>		// lastAuthorizedTime
+			, std::optional<uint64_t>		// lastDeauthorizedTime
+			, std::optional<int>			// remoteTraceLevel
+			, std::optional<std::string>	// remoteTraceTarget
+			, std::optional<std::string>	// tags
+			, std::optional<int>			// vMajor
+			, std::optional<int>			// vMinor
+			, std::optional<int>			// vRev
+			, std::optional<int>			// vProto
+			, std::optional<bool>			// noAutoAssignIps
+			, std::optional<uint64_t>		// revision
+			, std::optional<bool>			// ssoExempt
+		> row;
+
+		while (stream >> row) {
 			json empty;
 			json config;
 			
-			memberId = "";
-			networkId = "";
-
 			initMember(config);
 
-			if (row[0].is_null()) {
-				fprintf(stderr, "Null memberID?!?\n");
-				continue;
-			}			
-			if (row[1].is_null()) {
-				fprintf(stderr, "Null NetworkID?!?\n");
-			}
-			memberId = row[0].as<std::string>();
-			networkId = row[1].as<std::string>();
+			memberId = std::get<0>(row);
+			networkId = std::get<1>(row);
+			std::optional<bool> activeBridge = std::get<2>(row);
+			std::optional<bool> authorized = std::get<3>(row);
+			std::optional<std::string> capabilities = std::get<4>(row);
+			std::optional<uint64_t> creationTime = std::get<5>(row);
+			std::optional<std::string> identity = std::get<6>(row);
+			std::optional<uint64_t> lastAuthorizedTime = std::get<7>(row);
+			std::optional<uint64_t> lastDeauthorizedTime = std::get<8>(row);
+			std::optional<int> remoteTraceLevel = std::get<9>(row);
+			std::optional<std::string> remoteTraceTarget = std::get<10>(row);
+			std::optional<std::string> tags = std::get<11>(row);
+			std::optional<int> vMajor = std::get<12>(row);
+			std::optional<int> vMinor = std::get<13>(row);
+			std::optional<int> vRev = std::get<14>(row);
+			std::optional<int> vProto = std::get<15>(row);
+			std::optional<bool> noAutoAssignIps = std::get<16>(row);
+			std::optional<uint64_t> revision = std::get<17>(row);
+			std::optional<bool> ssoExempt = std::get<18>(row);
+
 
 			config["id"] = memberId;
 			config["nwid"] = networkId;
-			config["activeBridge"] = row[2].as<bool>();
-			config["authorized"] = row[3].as<bool>();
-			if (row[4].is_null()) {
-				config["capabilities"] = json::array();
-			} else {
-				try {
-					config["capabilities"] = json::parse(row[4].as<std::string>());
-				} catch (std::exception &e) {
-					config["capabilities"] = json::array();
-				}
-			}
-			config["creationTime"] = row[5].as<uint64_t>();
-			config["identity"] = row[6].as<std::string>();
-			if (!row[7].is_null()) {
-				config["lastAuthorizedTime"] = row[7].as<uint64_t>();
-			} else {
-				config["lastAuthorizedTime"] = 0ULL;
-				//fprintf(stderr, "Error updating last auth time (member): %s\n", PQgetvalue(res, i, 7));
-			}
-			if (!row[8].is_null()) {
-				config["lastDeauthorizedTime"] = row[8].as<uint64_t>();
-			} else {
-				config["lastDeauthorizedTime"] = 0ULL;
-				//fprintf(stderr, "Error updating last deauth time (member): %s\n", PQgetvalue(res, i, 8));
-			}
-			if (!row[9].is_null()) {
-				config["remoteTraceLevel"] = row[9].as<int>();
-			} else {
-				config["remoteTraceLevel"] = 0;
-			}
-			if (!row[10].is_null()) {
-				config["remoteTraceTarget"] = row[10].as<std::string>();
-			} else {
-				config["remoteTraceTarget"] = "";
-			}
-			if (row[11].is_null()) {
-				config["tags"] = json::array();
-			} else {
-				try {
-					config["tags"] = json::parse(row[11].as<std::string>());
-				} catch (std::exception &e) {
-					config["tags"] = json::array();
-				}
-			}
-			if (!row[12].is_null()) {
-				config["vMajor"] = row[12].as<int>();
-			} else {
-				config["vMajor"] = -1;
-			}
-			if (!row[13].is_null()) {
-				config["vMinor"] = row[13].as<int>();
-			} else {
-				config["vMinor"] = -1;
-			}
-			if (!row[14].is_null()) {
-				config["vRev"] = row[14].as<int>();
-			} else {
-				config["vRev"] = -1;
-			}
-			if (!row[15].is_null()) {
-				config["vProto"] = row[15].as<int>();
-			} else {
-				config["vProto"] = -1;
-			}
-			config["noAutoAssignIps"] = row[16].as<bool>();
-			if (!row[17].is_null()) {
-				config["revision"] = row[17].as<uint64_t>();
-			} else {
-				config["revision"] = 0ULL;
-			}
-			config["ssoExempt"] = row[18].as<bool>();
+			config["activeBridge"] = activeBridge.value_or(false);
+			config["authorized"] = authorized.value_or(false);
+			config["capabilities"] = json::parse(capabilities.value_or("[]"));
+			config["creationTime"] = creationTime.value_or(0);
+			config["identity"] = identity.value_or("");
+			config["lastAuthorizedTime"] = lastAuthorizedTime.value_or(0);
+			config["lastDeauthorizedTime"] = lastDeauthorizedTime.value_or(0);
+			config["remoteTraceLevel"] = remoteTraceLevel.value_or(0);
+		 	config["remoteTraceTarget"] = remoteTraceTarget.value_or("");
+			config["tags"] = json::parse(tags.value_or("[]"));
+			config["vMajor"] = vMajor.value_or(-1);
+			config["vMinor"] = vMinor.value_or(-1);
+			config["vRev"] = vRev.value_or(-1);
+			config["vProto"] = vProto.value_or(-1);
+			config["noAutoAssignIps"] = noAutoAssignIps.value_or(false);
+			config["revision"] = revision.value_or(0);
+			config["ssoExempt"] = ssoExempt.value_or(false);
 
-			config["authenticationExpiryTime"] = 0LL;
-			pqxx::result authRes = w.exec_params(
-				"SELECT (EXTRACT(EPOCH FROM e.authentication_expiry_time)*1000)::bigint "
-				"FROM ztc_sso_expiry e "
-				"INNER JOIN ztc_network n "
-				"	ON n.id = e.network_id "
-				"WHERE e.network_id = $1 AND e.member_id = $2 AND n.sso_enabled = TRUE AND e.authentication_expiry_time IS NOT NULL "
-				"ORDER BY e.authentication_expiry_time DESC LIMIT 1", networkId, memberId);
-			
-			if (authRes.size() == 1 && !authRes.at(0)[0].is_null()) {
-				// there is an expiry time record
-				config["authenticationExpiryTime"] = authRes.at(0)[0].as<int64_t>();
-			} else {
-				config["authenticationExpiryTime"] = 0;
+			{
+				config["authenticationExpiryTime"] = 0LL;
+
+				pqxx::work w2{*c2->c};
+				pqxx::result authRes = w2.exec_params(
+					"SELECT (EXTRACT(EPOCH FROM e.authentication_expiry_time)*1000)::bigint "
+					"FROM ztc_sso_expiry e "
+					"INNER JOIN ztc_network n "
+					"	ON n.id = e.network_id "
+					"WHERE e.network_id = $1 AND e.member_id = $2 AND n.sso_enabled = TRUE AND e.authentication_expiry_time IS NOT NULL "
+					"ORDER BY e.authentication_expiry_time DESC LIMIT 1", networkId, memberId);
+				
+				if (authRes.size() == 1 && !authRes.at(0)[0].is_null()) {
+					// there is an expiry time record
+					config["authenticationExpiryTime"] = authRes.at(0)[0].as<int64_t>();
+				} else {
+					config["authenticationExpiryTime"] = 0;
+				}
+				w2.commit();
 			}
 
 			config["objtype"] = "member";
-			config["ipAssignments"] = json::array();
 
-			pqxx::result r2 = w.exec_params("SELECT DISTINCT address "
-				"FROM ztc_member_ip_assignment "
-				"WHERE member_id = $1 AND network_id = $2", memberId, networkId);
+			{
+				config["ipAssignments"] = json::array();
 
-			for (auto row2 = r2.begin(); row2 != r2.end(); row2++) {
-				std::string ipaddr = row2[0].as<std::string>();
-				std::size_t pos = ipaddr.find('/');
-				if (pos != std::string::npos) {
-					ipaddr = ipaddr.substr(0, pos);
+				pqxx::work w2{*c2->c};
+				pqxx::result r2 = w2.exec_params("SELECT DISTINCT address "
+					"FROM ztc_member_ip_assignment "
+					"WHERE member_id = $1 AND network_id = $2", memberId, networkId);
+
+				for (auto row2 = r2.begin(); row2 != r2.end(); row2++) {
+					std::string ipaddr = row2[0].as<std::string>();
+					std::size_t pos = ipaddr.find('/');
+					if (pos != std::string::npos) {
+						ipaddr = ipaddr.substr(0, pos);
+					}
+					config["ipAssignments"].push_back(ipaddr);
 				}
-				config["ipAssignments"].push_back(ipaddr);
+				w2.commit();
 			}
 
 			_memberChanged(empty, config, false);
+
+			memberId = "";
+			networkId = "";
 		}
 
 		w.commit();
+		_pool->unborrow(c2);
 		_pool->unborrow(c);
 
 		if (++this->_ready == 2) {
@@ -1313,7 +1325,7 @@ void PostgreSQL::onlineNotification_Postgres()
 
 			// using pqxx::stream_to would be a really nice alternative here, but
 			// unfortunately it doesn't support upserts.
-			fprintf(stderr, "online notification tick\n");
+			// fprintf(stderr, "online notification tick\n");
 			std::stringstream memberUpdate;
 			memberUpdate << "INSERT INTO ztc_member_status (network_id, member_id, address, last_updated) VALUES ";
 			bool firstRun = true;
@@ -1375,7 +1387,7 @@ void PostgreSQL::onlineNotification_Postgres()
 				pqxx::result res = w.exec0(memberUpdate.str());
 				w.commit();
 			}
-			fprintf(stderr, "Updated online status of %d members\n", updateCount);
+			// fprintf(stderr, "Updated online status of %d members\n", updateCount);
 			_pool->unborrow(c);
 		} catch (std::exception &e) {
 			fprintf(stderr, "%s: error in onlinenotification thread: %s\n", _myAddressStr.c_str(), e.what());
