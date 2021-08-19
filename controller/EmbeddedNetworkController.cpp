@@ -1364,9 +1364,9 @@ void EmbeddedNetworkController::_request(
 	if (networkSSOEnabled && !memberSSOExempt) {
 		authenticationURL = _db.getSSOAuthURL(member, _ssoRedirectURL);
 		std::string memberId = member["id"];
-		fprintf(stderr, "ssoEnabled && !ssoExempt %s-%s\n", nwids, memberId.c_str());
+		//fprintf(stderr, "ssoEnabled && !ssoExempt %s-%s\n", nwids, memberId.c_str());
 		uint64_t authenticationExpiryTime = (int64_t)OSUtils::jsonInt(member["authenticationExpiryTime"], 0);
-		fprintf(stderr, "authExpiryTime: %lld\n", authenticationExpiryTime);
+		//fprintf(stderr, "authExpiryTime: %lld\n", authenticationExpiryTime);
 		if (authenticationExpiryTime < now) {
 			if (!authenticationURL.empty()) {
 				_db.networkMemberSSOHasExpired(nwid, now);
@@ -1374,7 +1374,7 @@ void EmbeddedNetworkController::_request(
 
 				Dictionary<3072> authInfo;
 				authInfo.add("aU", authenticationURL.c_str());
-				fprintf(stderr, "sending auth URL: %s\n", authenticationURL.c_str());
+				//fprintf(stderr, "sending auth URL: %s\n", authenticationURL.c_str());
 
 				DB::cleanMember(member);
 				_db.save(member,true);

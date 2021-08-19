@@ -335,7 +335,7 @@ std::string PostgreSQL::getSSOAuthURL(const nlohmann::json &member, const std::s
 	std::string memberId = member["id"];
 	char authenticationURL[4096] = {0};
 
-	fprintf(stderr, "PostgreSQL::updateMemberOnLoad: %s-%s\n", networkId.c_str(), memberId.c_str());
+	//fprintf(stderr, "PostgreSQL::updateMemberOnLoad: %s-%s\n", networkId.c_str(), memberId.c_str());
 	bool have_auth = false;
 	try {
 		auto c = _pool->borrow();
