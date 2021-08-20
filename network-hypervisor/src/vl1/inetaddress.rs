@@ -1,16 +1,16 @@
-use std::mem::{zeroed, size_of, MaybeUninit};
-use std::ptr::{write_bytes, copy_nonoverlapping, null};
-use std::str::FromStr;
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
+use std::mem::{MaybeUninit, size_of, transmute_copy, zeroed};
 use std::net::{IpAddr, Ipv6Addr};
+use std::ptr::{copy_nonoverlapping, null, slice_from_raw_parts, write_bytes};
+use std::str::FromStr;
+
+#[cfg(windows)]
+use winapi::um::winsock2 as winsock2;
 
 use crate::error::InvalidFormatError;
 use crate::util::equal_ptr;
 use crate::vl1::buffer::Buffer;
-
-#[cfg(windows)]
-use winapi::um::winsock2 as winsock2;
 
 #[allow(non_camel_case_types)]
 #[cfg(not(windows))]
@@ -67,28 +67,18 @@ pub union InetAddress {
 
 impl Clone for InetAddress {
     #[inline(always)]
-    fn clone(&self) -> Self {
-        unsafe {
-            let mut c = MaybeUninit::<InetAddress>::uninit().assume_init();
-            copy_nonoverlapping((self as *const Self).cast::<u8>(), (&mut c as *mut Self).cast::<u8>(), size_of::<Self>());
-            c
-        }
-    }
+    fn clone(&self) -> Self { unsafe { transmute_copy(self) } }
 }
 
 impl Default for InetAddress {
     #[inline(always)]
-    fn default() -> InetAddress {
-        unsafe { zeroed() }
-    }
+    fn default() -> InetAddress { unsafe { zeroed() } }
 }
 
 impl InetAddress {
     /// Get a new zero/nil InetAddress.
     #[inline(always)]
-    pub fn new() -> InetAddress {
-        unsafe { zeroed() }
-    }
+    pub fn new() -> InetAddress { unsafe { zeroed() } }
 
     /// Construct from IP and port.
     /// If the IP is not either 4 or 16 bytes in length, a nil/0 InetAddress is returned.
@@ -103,9 +93,7 @@ impl InetAddress {
 
     /// Zero the contents of this InetAddress.
     #[inline(always)]
-    pub fn zero(&mut self) {
-        unsafe { write_bytes((self as *mut Self).cast::<u8>(), 0, size_of::<Self>()) };
-    }
+    pub fn zero(&mut self) { unsafe { write_bytes((self as *mut Self).cast::<u8>(), 0, size_of::<Self>()) }; }
 
     /// Get an instance of 127.0.0.1/port
     pub fn ipv4_loopback(port: u16) -> InetAddress {
@@ -143,31 +131,23 @@ impl InetAddress {
 
     /// Returns true if this InetAddress is the nil value (zero).
     #[inline(always)]
-    pub fn is_nil(&self) -> bool {
-        unsafe { self.sa.sa_family == 0 }
-    }
+    pub fn is_nil(&self) -> bool { unsafe { self.sa.sa_family == 0 } }
 
     /// Check if this is an IPv4 address.
     #[inline(always)]
-    pub fn is_ipv4(&self) -> bool {
-        unsafe { self.sa.sa_family as u8 == AF_INET }
-    }
+    pub fn is_ipv4(&self) -> bool { unsafe { self.sa.sa_family as u8 == AF_INET } }
 
     /// Check if this is an IPv6 address.
     #[inline(always)]
-    pub fn is_ipv6(&self) -> bool {
-        unsafe { self.sa.sa_family as u8 == AF_INET6 }
-    }
+    pub fn is_ipv6(&self) -> bool { unsafe { self.sa.sa_family as u8 == AF_INET6 } }
 
-    /// Get the address family of this InetAddress: AF_INET, AF_INET6, or 0 if nil.
+    /// Get the address family of this InetAddress: AF_INET, AF_INET6, or 0 if uninitialized.
     #[inline(always)]
-    pub fn family(&self) -> u8 {
-        unsafe { self.sa.sa_family }
-    }
+    pub fn family(&self) -> u8 { unsafe { self.sa.sa_family } }
 
     /// Get a pointer to the C "sockaddr" structure and the size of the returned structure in bytes.
-    /// This is useful for interacting with C-level socket APIs. If this is a nil InetAddress this
-    /// returns a null pointer and 0 for the size.
+    /// This is useful for interacting with C-level socket APIs. This returns a null pointer if
+    /// the address is not initialized.
     #[inline(always)]
     pub fn c_sockaddr(&self) -> (*const (), usize) {
         unsafe {
@@ -203,7 +183,7 @@ impl InetAddress {
         }
     }
 
-    /// Get raw IP bytes, with length dependent on address family.
+    /// Get raw IP bytes, with length dependent on address family (4 or 16).
     #[inline(always)]
     pub fn ip_bytes(&self) -> &[u8] {
         unsafe {
@@ -219,15 +199,18 @@ impl InetAddress {
     #[inline(always)]
     pub fn port(&self) -> u16 {
         unsafe {
-            match self.sa.sa_family as u8 {
-                AF_INET => u16::from_be(self.sin.sin_port as u16),
-                AF_INET6 => u16::from_be(self.sin6.sin6_port as u16),
+            u16::from_be(match self.sa.sa_family as u8 {
+                AF_INET => self.sin.sin_port as u16,
+                AF_INET6 => self.sin6.sin6_port as u16,
                 _ => 0
-            }
+            })
         }
     }
 
     /// Set the IP port.
+    ///
+    /// This does nothing on uninitialized InetAddress objects. An address must first
+    /// be initialized with an IP to select the correct address type.
     #[inline(always)]
     pub fn set_port(&mut self, port: u16) {
         let port = port.to_be();
@@ -498,16 +481,19 @@ impl Eq for InetAddress {}
 
 impl PartialOrd for InetAddress {
     #[inline(always)]
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
 }
 
+// Manually implement Ord to ensure consistent sort order across platforms, since we don't know exactly
+// how sockaddr structs will be laid out.
 impl Ord for InetAddress {
     fn cmp(&self, other: &Self) -> Ordering {
         unsafe {
             if self.sa.sa_family == other.sa.sa_family {
                 match self.sa.sa_family as u8 {
+                    0 => {
+                        Ordering::Equal
+                    }
                     AF_INET => {
                         let ip_ordering = u32::from_be(self.sin.sin_addr.s_addr as u32).cmp(&u32::from_be(other.sin.sin_addr.s_addr as u32));
                         if ip_ordering == Ordering::Equal {
@@ -527,11 +513,15 @@ impl Ord for InetAddress {
                         }
                     }
                     _ => {
-                        Ordering::Equal
+                        // This shouldn't be possible, but handle it for correctness.
+                        (*slice_from_raw_parts((self as *const Self).cast::<u8>(), size_of::<Self>())).cmp(&*slice_from_raw_parts((other as *const Self).cast::<u8>(), size_of::<Self>()))
                     }
                 }
             } else {
                 match self.sa.sa_family as u8 {
+                    0 => {
+                        Ordering::Less
+                    }
                     AF_INET => {
                         if other.sa.sa_family as u8 == AF_INET6 {
                             Ordering::Less
@@ -547,6 +537,7 @@ impl Ord for InetAddress {
                         }
                     }
                     _ => {
+                        // This likewise should not be possible.
                         self.sa.sa_family.cmp(&other.sa.sa_family)
                     }
                 }
@@ -576,9 +567,17 @@ impl Hash for InetAddress {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
-    use crate::vl1::inetaddress::{InetAddress, sockaddr_storage};
     use std::mem::size_of;
+    use std::str::FromStr;
+
+    use crate::vl1::inetaddress::*;
+
+    #[test]
+    fn values() {
+        assert_ne!(AF_INET, 0);
+        assert_ne!(AF_INET6, 0);
+        assert_ne!(AF_INET, AF_INET6);
+    }
 
     #[test]
     fn layout() {

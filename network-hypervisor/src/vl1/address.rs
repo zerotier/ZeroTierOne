@@ -1,54 +1,73 @@
 use std::hash::{Hash, Hasher};
+use std::num::NonZeroU64;
 use std::str::FromStr;
 
 use crate::error::InvalidFormatError;
 use crate::util::hex::HEX_CHARS;
 use crate::vl1::protocol::{ADDRESS_RESERVED_PREFIX, ADDRESS_SIZE};
+use crate::vl1::buffer::Buffer;
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Address(u64);
+#[repr(transparent)]
+pub struct Address(NonZeroU64);
 
 impl Address {
+    /// Get an address from a 64-bit integer or return None if it is zero or reserved.
     #[inline(always)]
-    pub fn from_bytes(b: &[u8]) -> Result<Address, InvalidFormatError> {
-        if b.len() >= ADDRESS_SIZE {
-            Ok(Address((b[0] as u64) << 32 | (b[1] as u64) << 24 | (b[2] as u64) << 16 | (b[3] as u64) << 8 | b[4] as u64))
+    pub fn from_u64(i: u64) -> Option<Address> {
+        if i != 0 && (i >> 32) != ADDRESS_RESERVED_PREFIX as u64 {
+            Some(Address(unsafe { NonZeroU64::new_unchecked(i & 0xffffffffff) }))
         } else {
-            Err(InvalidFormatError)
+            None
+        }
+    }
+
+    /// Get an address from a byte slice or return None if it is zero or reserved.
+    #[inline(always)]
+    pub fn from_bytes(b: &[u8]) -> Option<Address> {
+        if b.len() >= ADDRESS_SIZE {
+            let i = (b[0] as u64) << 32 | (b[1] as u64) << 24 | (b[2] as u64) << 16 | (b[3] as u64) << 8 | b[4] as u64;
+            if i != 0 && (i >> 32) != ADDRESS_RESERVED_PREFIX as u64 {
+                Some(Address(unsafe { NonZeroU64::new_unchecked(i) }))
+            } else {
+                None
+            }
+        } else {
+            None
         }
     }
 
     #[inline(always)]
-    pub fn is_reserved(&self) -> bool {
-        (self.0 >> 32) as usize == ADDRESS_RESERVED_PREFIX as usize
-    }
-
-    #[inline(always)]
-    pub fn is_nil(&self) -> bool {
-        self.0 == 0
-    }
-
-    #[inline(always)]
-    pub fn is_valid(&self) -> bool {
-        !self.is_nil() && !self.is_reserved()
-    }
-
-    #[inline(always)]
     pub fn to_bytes(&self) -> [u8; ADDRESS_SIZE] {
-        [(self.0 >> 32) as u8, (self.0 >> 24) as u8, (self.0 >> 16) as u8, (self.0 >> 8) as u8, self.0 as u8]
+        let i = self.0.get();
+        [(i >> 32) as u8, (i >> 24) as u8, (i >> 16) as u8, (i >> 8) as u8, i as u8]
     }
 
     #[inline(always)]
-    pub fn to_u64(&self) -> u64 {
-        self.0
+    pub fn to_u64(&self) -> u64 { self.0.get() }
+
+    #[inline(always)]
+    pub(crate) fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> std::io::Result<()> {
+        buf.append_and_init_bytes_fixed(|b: &mut [u8; ADDRESS_SIZE]| {
+            let i = self.0.get();
+            b[0] = (i >> 32) as u8;
+            b[1] = (i >> 24) as u8;
+            b[2] = (i >> 16) as u8;
+            b[3] = (i >> 8) as u8;
+            b[4] = i as u8;
+        })
+    }
+
+    #[inline(always)]
+    pub(crate) fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> std::io::Result<Option<Self>> {
+        buf.read_bytes_fixed::<{ ADDRESS_SIZE }>(cursor).map(|b| Self::from_bytes(b))
     }
 }
 
 impl ToString for Address {
     fn to_string(&self) -> String {
-        let mut v = self.0 << 24;
-        let mut s = String::new();
-        s.reserve(ADDRESS_SIZE * 2);
+        let mut v = self.0.get() << 24;
+        let mut s = String::with_capacity(ADDRESS_SIZE * 2);
         for _ in 0..(ADDRESS_SIZE * 2) {
             s.push(HEX_CHARS[(v >> 60) as usize] as char);
             v <<= 4;
@@ -61,42 +80,13 @@ impl FromStr for Address {
     type Err = InvalidFormatError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Address::from_bytes(crate::util::hex::from_string(s).as_slice())
-    }
-}
-
-impl Default for Address {
-    #[inline(always)]
-    fn default() -> Address {
-        Address(0)
+        Address::from_bytes(crate::util::hex::from_string(s).as_slice()).map_or_else(|| Err(InvalidFormatError), |a| Ok(a))
     }
 }
 
 impl Hash for Address {
     #[inline(always)]
     fn hash<H: Hasher>(&self, state: &mut H) {
-        state.write_u64(self.0);
-    }
-}
-
-impl From<&[u8; ADDRESS_SIZE]> for Address {
-    #[inline(always)]
-    fn from(b: &[u8; 5]) -> Address {
-        Address((b[0] as u64) << 32 | (b[1] as u64) << 24 | (b[2] as u64) << 16 | (b[3] as u64) << 8 | b[4] as u64)
-    }
-}
-
-impl From<[u8; ADDRESS_SIZE]> for Address {
-    #[inline(always)]
-    fn from(b: [u8; 5]) -> Address {
-        Self::from(&b)
-    }
-}
-
-impl From<u64> for Address {
-    #[inline(always)]
-    fn from(i: u64) -> Address {
-        debug_assert!((i >> 24) == 0);
-        Address(i)
+        state.write_u64(self.0.get());
     }
 }

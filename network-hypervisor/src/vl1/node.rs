@@ -170,32 +170,22 @@ impl Node {
 
     /// Get address, short for .identity().address()
     #[inline(always)]
-    pub fn address(&self) -> Address {
-        self.identity.address()
-    }
+    pub fn address(&self) -> Address { self.identity.address() }
 
     /// Get identity, which includes secret keys.
     #[inline(always)]
-    pub fn identity(&self) -> &Identity {
-        &self.identity
-    }
+    pub fn identity(&self) -> &Identity { &self.identity }
 
     /// Get this node's current locator or None if no locator created.
     #[inline(always)]
-    pub fn locator(&self) -> Option<Arc<Locator>> {
-        self.locator.lock().clone()
-    }
+    pub fn locator(&self) -> Option<Arc<Locator>> { self.locator.lock().clone() }
 
     /// Get a reusable packet buffer.
     /// The buffer will automatically be returned to the pool if it is dropped.
-    pub fn get_packet_buffer(&self) -> PacketBuffer {
-        self.buffer_pool.get()
-    }
+    pub fn get_packet_buffer(&self) -> PacketBuffer { self.buffer_pool.get() }
 
     /// Get a peer by address.
-    pub fn peer(&self, a: Address) -> Option<Arc<Peer>> {
-        self.peers.get(&a).map(|peer| peer.value().clone())
-    }
+    pub fn peer(&self, a: Address) -> Option<Arc<Peer>> { self.peers.get(&a).map(|peer| peer.value().clone()) }
 
     /// Get all peers currently in the peer cache.
     pub fn peers(&self) -> Vec<Arc<Peer>> {
@@ -205,14 +195,6 @@ impl Node {
             v.push(p.value().clone());
         }
         v
-    }
-
-    /// Get the current best root peer that we should use for WHOIS, relaying, etc.
-    pub(crate) fn root(&self) -> Option<Arc<Peer>> {
-        self.roots.lock().first().map(|p| p.clone())
-    }
-
-    pub(crate) fn for_each_root_set(&self) {
     }
 
     /// Run background tasks and return desired delay until next call in milliseconds.
@@ -252,67 +234,82 @@ impl Node {
         if fragment_header.is_ok() {
             let fragment_header = fragment_header.unwrap();
             let time_ticks = ci.time_ticks();
-            let dest = Address::from(&fragment_header.dest);
-            if dest == self.identity.address() {
+            let dest = Address::from_bytes(&fragment_header.dest);
+            if dest.is_some() {
+                let dest = dest.unwrap();
+                if dest == self.identity.address() {
 
-                let path = self.path(source_endpoint, source_local_socket, source_local_interface);
-                path.log_receive(time_ticks);
-                if fragment_header.is_fragment() {
+                    let path = self.path(source_endpoint, source_local_socket, source_local_interface);
+                    path.log_receive(time_ticks);
+                    if fragment_header.is_fragment() {
 
-                    let _ = path.receive_fragment(fragment_header.id, fragment_header.fragment_no(), fragment_header.total_fragments(), data, time_ticks).map(|assembled_packet| {
-                        if assembled_packet.frags[0].is_some() {
-                            let frag0 = assembled_packet.frags[0].as_ref().unwrap();
-                            let packet_header = frag0.struct_at::<PacketHeader>(0);
-                            if packet_header.is_ok() {
-                                let packet_header = packet_header.unwrap();
-                                let source = Address::from(&packet_header.src);
+                        let _ = path.receive_fragment(fragment_header.id, fragment_header.fragment_no(), fragment_header.total_fragments(), data, time_ticks).map(|assembled_packet| {
+                            if assembled_packet.frags[0].is_some() {
+                                let frag0 = assembled_packet.frags[0].as_ref().unwrap();
+                                let packet_header = frag0.struct_at::<PacketHeader>(0);
+                                if packet_header.is_ok() {
+                                    let packet_header = packet_header.unwrap();
+                                    let source = Address::from_bytes(&packet_header.src);
+                                    if source.is_some() {
+                                        let source = source.unwrap();
+                                        let peer = self.peer(source);
+                                        if peer.is_some() {
+                                            peer.unwrap().receive(self, ci, ph, time_ticks, &path, &packet_header, frag0, &assembled_packet.frags[1..(assembled_packet.have as usize)]);
+                                        } else {
+                                            self.whois.query(self, ci, source, Some(QueuedPacket::Fragmented(assembled_packet)));
+                                        }
+                                    }
+                                }
+                            }
+                        });
+
+                    } else {
+
+                        let packet_header = data.struct_at::<PacketHeader>(0);
+                        if packet_header.is_ok() {
+                            let packet_header = packet_header.unwrap();
+                            let source = Address::from_bytes(&packet_header.src);
+                            if source.is_some() {
+                                let source = source.unwrap();
                                 let peer = self.peer(source);
                                 if peer.is_some() {
-                                    peer.unwrap().receive(self, ci, ph, time_ticks, &path, &packet_header, frag0, &assembled_packet.frags[1..(assembled_packet.have as usize)]);
+                                    peer.unwrap().receive(self, ci, ph, time_ticks, &path, &packet_header, data.as_ref(), &[]);
                                 } else {
-                                    self.whois.query(self, ci, source, Some(QueuedPacket::Fragmented(assembled_packet)));
+                                    self.whois.query(self, ci, source, Some(QueuedPacket::Singular(data)));
                                 }
                             }
                         }
-                    });
+
+                    }
 
                 } else {
 
-                    let packet_header = data.struct_at::<PacketHeader>(0);
-                    if packet_header.is_ok() {
-                        let packet_header = packet_header.unwrap();
-                        let source = Address::from(&packet_header.src);
-                        let peer = self.peer(source);
-                        if peer.is_some() {
-                            peer.unwrap().receive(self, ci, ph, time_ticks, &path, &packet_header, data.as_ref(), &[]);
-                        } else {
-                            self.whois.query(self, ci, source, Some(QueuedPacket::Singular(data)));
-                        }
-                    }
-
-                }
-
-            } else {
-
-                if fragment_header.is_fragment() {
-                    if fragment_header.increment_hops() > FORWARD_MAX_HOPS {
-                        return;
-                    }
-                } else {
-                    let packet_header = data.struct_mut_at::<PacketHeader>(0);
-                    if packet_header.is_ok() {
-                        if packet_header.unwrap().increment_hops() > FORWARD_MAX_HOPS {
+                    if fragment_header.is_fragment() {
+                        if fragment_header.increment_hops() > FORWARD_MAX_HOPS {
                             return;
                         }
                     } else {
-                        return;
+                        let packet_header = data.struct_mut_at::<PacketHeader>(0);
+                        if packet_header.is_ok() {
+                            if packet_header.unwrap().increment_hops() > FORWARD_MAX_HOPS {
+                                return;
+                            }
+                        } else {
+                            return;
+                        }
                     }
-                }
-                let _ = self.peer(dest).map(|peer| peer.forward(ci, time_ticks, data.as_ref()));
+                    let _ = self.peer(dest).map(|peer| peer.forward(ci, time_ticks, data.as_ref()));
 
-            }
+                }
+            };
         }
     }
+
+    /// Get the current best root peer that we should use for WHOIS, relaying, etc.
+    pub(crate) fn root(&self) -> Option<Arc<Peer>> { self.roots.lock().first().map(|p| p.clone()) }
+
+    /// Return true if a peer is a root.
+    pub(crate) fn is_peer_root(&self, peer: &Peer) -> bool { self.roots.lock().iter().any(|p| Arc::as_ptr(p) == (peer as *const Peer)) }
 
     /// Get the canonical Path object for a given endpoint and local socket information.
     ///

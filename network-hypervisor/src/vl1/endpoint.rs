@@ -117,13 +117,13 @@ impl Endpoint {
             Endpoint::Http(url) => {
                 buf.append_u8(16 + TYPE_HTTP)?;
                 let b = url.as_bytes();
-                buf.append_u16(b.len() as u16)?;
+                buf.append_varint(b.len() as u64)?;
                 buf.append_bytes(b)
             }
             Endpoint::WebRTC(offer) => {
                 buf.append_u8(16 + TYPE_WEBRTC)?;
                 let b = offer.as_slice();
-                buf.append_u16(b.len() as u16)?;
+                buf.append_varint(b.len() as u64)?;
                 buf.append_bytes(b)
             }
         }
@@ -139,24 +139,33 @@ impl Endpoint {
                 Ok(Endpoint::IpUdp(ip))
             }
         } else {
+            let read_mac = |buf: &Buffer<BL>, cursor: &mut usize| {
+                let m = MAC::unmarshal(buf, cursor)?;
+                if m.is_some() {
+                    Ok(m.unwrap())
+                } else {
+                    Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid MAC address"))
+                }
+            };
             match type_byte - 16 {
                 TYPE_NIL => Ok(Endpoint::Nil),
-                TYPE_ZEROTIER => Ok(Endpoint::ZeroTier(Address::from(buf.read_bytes_fixed(cursor)?))),
-                TYPE_ETHERNET => Ok(Endpoint::Ethernet(MAC::from(buf.read_bytes_fixed(cursor)?))),
-                TYPE_WIFIDIRECT => Ok(Endpoint::WifiDirect(MAC::from(buf.read_bytes_fixed(cursor)?))),
-                TYPE_BLUETOOTH => Ok(Endpoint::Bluetooth(MAC::from(buf.read_bytes_fixed(cursor)?))),
+                TYPE_ZEROTIER => {
+                    let zt = Address::unmarshal(buf, cursor)?;
+                    if zt.is_some() {
+                        Ok(Endpoint::ZeroTier(zt.unwrap()))
+                    } else {
+                        Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid ZeroTier address"))
+                    }
+                },
+                TYPE_ETHERNET => Ok(Endpoint::Ethernet(read_mac(buf, cursor)?)),
+                TYPE_WIFIDIRECT => Ok(Endpoint::WifiDirect(read_mac(buf, cursor)?)),
+                TYPE_BLUETOOTH => Ok(Endpoint::Bluetooth(read_mac(buf, cursor)?)),
                 TYPE_IP => Ok(Endpoint::Ip(InetAddress::unmarshal(buf, cursor)?)),
                 TYPE_IPUDP => Ok(Endpoint::IpUdp(InetAddress::unmarshal(buf, cursor)?)),
                 TYPE_IPTCP => Ok(Endpoint::IpTcp(InetAddress::unmarshal(buf, cursor)?)),
-                TYPE_HTTP => {
-                    let l = buf.read_u16(cursor)?;
-                    Ok(Endpoint::Http(String::from_utf8_lossy(buf.read_bytes(l as usize, cursor)?).to_string()))
-                }
-                TYPE_WEBRTC => {
-                    let l = buf.read_u16(cursor)?;
-                    Ok(Endpoint::WebRTC(buf.read_bytes(l as usize, cursor)?.to_vec()))
-                }
-                _ => std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "unrecognized endpoint type in stream"))
+                TYPE_HTTP => Ok(Endpoint::Http(String::from_utf8_lossy(buf.read_bytes(buf.read_varint(cursor)? as usize, cursor)?).to_string())),
+                TYPE_WEBRTC => Ok(Endpoint::WebRTC(buf.read_bytes(buf.read_varint(cursor)? as usize, cursor)?.to_vec())),
+                _ => Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "unrecognized endpoint type in stream"))
             }
         }
     }
@@ -210,16 +219,14 @@ impl Hash for Endpoint {
 
 impl PartialOrd for Endpoint {
     #[inline(always)]
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
 }
 
+// We manually implement Ord and PartialOrd to ensure that ordering is always the same, since I'm not
+// sure if Rust's derivations for this are guaranteed to remain constant forever. Endpoint ordering
+// is important in the reproducibility of digital signatures any time one is signing a vector of them.
 impl Ord for Endpoint {
     fn cmp(&self, other: &Self) -> Ordering {
-        // This ordering is done explicitly instead of using derive(Ord) so it will be certain
-        // to be consistent with the integer order in the Type enum. Make sure it stays this
-        // way if new types are added in future revisions.
         match self {
             Endpoint::Nil => {
                 match other {

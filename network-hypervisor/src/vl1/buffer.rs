@@ -1,6 +1,5 @@
 use std::io::Write;
-use std::mem::{size_of, MaybeUninit};
-use std::ptr::write_bytes;
+use std::mem::size_of;
 
 use crate::util::pool::PoolFactory;
 
@@ -19,18 +18,14 @@ unsafe impl<const L: usize> RawObject for Buffer<L> {}
 
 impl<const L: usize> Default for Buffer<L> {
     #[inline(always)]
-    fn default() -> Self {
-       Self(0, [0_u8; L])
-    }
+    fn default() -> Self { Self(0, [0_u8; L]) }
 }
 
 const OVERFLOW_ERR_MSG: &'static str = "overflow";
 
 impl<const L: usize> Buffer<L> {
     #[inline(always)]
-    pub fn new() -> Self {
-        Self(0, [0_u8; L])
-    }
+    pub fn new() -> Self { Self(0, [0_u8; L]) }
 
     /// Get a Buffer initialized with a copy of a byte slice.
     #[inline(always)]
@@ -47,14 +42,10 @@ impl<const L: usize> Buffer<L> {
     }
 
     #[inline(always)]
-    pub fn as_bytes(&self) -> &[u8] {
-        &self.1[0..self.0]
-    }
+    pub fn as_bytes(&self) -> &[u8] { &self.1[0..self.0] }
 
     #[inline(always)]
-    pub fn as_bytes_mut(&mut self) -> &mut [u8] {
-        &mut self.1[0..self.0]
-    }
+    pub fn as_bytes_mut(&mut self) -> &mut [u8] { &mut self.1[0..self.0] }
 
     /// Get all bytes after a given position.
     #[inline(always)]
@@ -74,14 +65,10 @@ impl<const L: usize> Buffer<L> {
     }
 
     #[inline(always)]
-    pub fn len(&self) -> usize {
-        self.0
-    }
+    pub fn len(&self) -> usize { self.0 }
 
     #[inline(always)]
-    pub fn is_empty(&self) -> bool {
-        self.0 == 0
-    }
+    pub fn is_empty(&self) -> bool { self.0 == 0 }
 
     /// Append a packed structure and call a function to initialize it in place.
     /// Anything not initialized will be zero.
@@ -157,6 +144,22 @@ impl<const L: usize> Buffer<L> {
         } else {
             Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
         }
+    }
+
+    /// Append a variable length integer to this buffer.
+    ///
+    /// Varints are encoded as a series of 7-bit bytes terminated by a final 7-bit byte whose
+    /// most significant bit is set. Unlike fixed size integers varints are written in little
+    /// endian order (in 7-bit chunks).
+    ///
+    /// They are slower than fixed size values so they should not be used in formats that are
+    /// created or parsed in very speed-critical paths.
+    pub fn append_varint(&mut self, mut i: u64) -> std::io::Result<()> {
+        while i >= 0x80 {
+            self.append_u8((i as u8) & 0x7f)?;
+            i >>= 7;
+        }
+        self.append_u8((i as u8) | 0x80)
     }
 
     /// Append a byte
@@ -295,6 +298,23 @@ impl<const L: usize> Buffer<L> {
         }
     }
 
+    /// Get the next variable length integer and advance the cursor by its length in bytes.
+    pub fn read_varint(&self, cursor: &mut usize) -> std::io::Result<u64> {
+        let mut i = 0_u64;
+        let mut p = 0;
+        loop {
+            let b = self.read_u8(cursor)?;
+            if (b & 0x80) == 0 {
+                i |= (b as u64) << p;
+                p += 7;
+            } else {
+                i |= ((b & 0x7f) as u64) << p;
+                break;
+            }
+        }
+        Ok(i)
+    }
+
     /// Get the next u8 and advance the cursor.
     #[inline(always)]
     pub fn read_u8(&self, cursor: &mut usize) -> std::io::Result<u8> {
@@ -366,35 +386,25 @@ impl<const L: usize> Write for Buffer<L> {
     }
 
     #[inline(always)]
-    fn flush(&mut self) -> std::io::Result<()> {
-        Ok(())
-    }
+    fn flush(&mut self) -> std::io::Result<()> { Ok(()) }
 }
 
 impl<const L: usize> AsRef<[u8]> for Buffer<L> {
     #[inline(always)]
-    fn as_ref(&self) -> &[u8] {
-        self.as_bytes()
-    }
+    fn as_ref(&self) -> &[u8] { self.as_bytes() }
 }
 
 impl<const L: usize> AsMut<[u8]> for Buffer<L> {
     #[inline(always)]
-    fn as_mut(&mut self) -> &mut [u8] {
-        self.as_bytes_mut()
-    }
+    fn as_mut(&mut self) -> &mut [u8] { self.as_bytes_mut() }
 }
 
 pub struct PooledBufferFactory<const L: usize>;
 
 impl<const L: usize> PoolFactory<Buffer<L>> for PooledBufferFactory<L> {
     #[inline(always)]
-    fn create(&self) -> Buffer<L> {
-        Buffer::new()
-    }
+    fn create(&self) -> Buffer<L> { Buffer::new() }
 
     #[inline(always)]
-    fn reset(&self, obj: &mut Buffer<L>) {
-        obj.clear();
-    }
+    fn reset(&self, obj: &mut Buffer<L>) { obj.clear(); }
 }

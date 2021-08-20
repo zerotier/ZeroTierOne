@@ -149,6 +149,15 @@ pub const FORWARD_MAX_HOPS: u8 = 3;
 /// Maximum difference between an OK in-re packet ID and the current packet ID counter.
 pub const OK_PACKET_SEQUENCE_CUTOFF: u64 = 1000;
 
+/// Frequency for WHOIS retries
+pub const WHOIS_RETRY_INTERVAL: i64 = 1000;
+
+/// Maximum number of WHOIS retries
+pub const WHOIS_RETRY_MAX: u16 = 3;
+
+/// Maximum number of packets to queue up behind a WHOIS.
+pub const WHOIS_MAX_WAITING_PACKETS: usize = 64;
+
 /// A unique packet identifier, also the cryptographic nonce.
 ///
 /// Packet IDs are stored as u64s for efficiency but they should be treated as
@@ -174,14 +183,10 @@ unsafe impl RawObject for PacketHeader {}
 
 impl PacketHeader {
     #[inline(always)]
-    pub fn cipher(&self) -> u8 {
-        self.flags_cipher_hops & HEADER_FLAGS_FIELD_MASK_CIPHER
-    }
+    pub fn cipher(&self) -> u8 { self.flags_cipher_hops & HEADER_FLAGS_FIELD_MASK_CIPHER }
 
     #[inline(always)]
-    pub fn hops(&self) -> u8 {
-        self.flags_cipher_hops & HEADER_FLAGS_FIELD_MASK_HOPS
-    }
+    pub fn hops(&self) -> u8 { self.flags_cipher_hops & HEADER_FLAGS_FIELD_MASK_HOPS }
 
     #[inline(always)]
     pub fn increment_hops(&mut self) -> u8 {
@@ -192,29 +197,13 @@ impl PacketHeader {
     }
 
     #[inline(always)]
-    pub fn is_fragmented(&self) -> bool {
-        (self.flags_cipher_hops & HEADER_FLAG_FRAGMENTED) != 0
-    }
+    pub fn is_fragmented(&self) -> bool { (self.flags_cipher_hops & HEADER_FLAG_FRAGMENTED) != 0 }
 
     #[inline(always)]
-    pub fn destination(&self) -> Address {
-        Address::from(&self.dest)
-    }
+    pub fn id_bytes(&self) -> &[u8; 8] { unsafe { &*(self as *const Self).cast::<[u8; 8]>() } }
 
     #[inline(always)]
-    pub fn source(&self) -> Address {
-        Address::from(&self.src)
-    }
-
-    #[inline(always)]
-    pub fn id_bytes(&self) -> &[u8; 8] {
-        unsafe { &*(self as *const Self).cast::<[u8; 8]>() }
-    }
-
-    #[inline(always)]
-    pub fn as_bytes(&self) -> &[u8; PACKET_HEADER_SIZE] {
-        unsafe { &*(self as *const Self).cast::<[u8; PACKET_HEADER_SIZE]>() }
-    }
+    pub fn as_bytes(&self) -> &[u8; PACKET_HEADER_SIZE] { unsafe { &*(self as *const Self).cast::<[u8; PACKET_HEADER_SIZE]>() } }
 
     #[inline(always)]
     pub fn aad_bytes(&self) -> [u8; 11] {
@@ -253,24 +242,16 @@ unsafe impl RawObject for FragmentHeader {}
 
 impl FragmentHeader {
     #[inline(always)]
-    pub fn is_fragment(&self) -> bool {
-        self.fragment_indicator == FRAGMENT_INDICATOR
-    }
+    pub fn is_fragment(&self) -> bool { self.fragment_indicator == FRAGMENT_INDICATOR }
 
     #[inline(always)]
-    pub fn total_fragments(&self) -> u8 {
-        self.total_and_fragment_no >> 4
-    }
+    pub fn total_fragments(&self) -> u8 { self.total_and_fragment_no >> 4 }
 
     #[inline(always)]
-    pub fn fragment_no(&self) -> u8 {
-        self.total_and_fragment_no & 0x0f
-    }
+    pub fn fragment_no(&self) -> u8 { self.total_and_fragment_no & 0x0f }
 
     #[inline(always)]
-    pub fn hops(&self) -> u8 {
-        self.reserved_hops & HEADER_FLAGS_FIELD_MASK_HOPS
-    }
+    pub fn hops(&self) -> u8 { self.reserved_hops & HEADER_FLAGS_FIELD_MASK_HOPS }
 
     #[inline(always)]
     pub fn increment_hops(&mut self) -> u8 {
@@ -281,14 +262,7 @@ impl FragmentHeader {
     }
 
     #[inline(always)]
-    pub fn as_bytes(&self) -> &[u8; FRAGMENT_HEADER_SIZE] {
-        unsafe { &*(self as *const Self).cast::<[u8; FRAGMENT_HEADER_SIZE]>() }
-    }
-
-    #[inline(always)]
-    pub fn destination(&self) -> Address {
-        Address::from(&self.dest)
-    }
+    pub fn as_bytes(&self) -> &[u8; FRAGMENT_HEADER_SIZE] { unsafe { &*(self as *const Self).cast::<[u8; FRAGMENT_HEADER_SIZE]>() } }
 }
 
 pub(crate) mod message_component_structs {

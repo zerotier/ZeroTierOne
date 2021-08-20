@@ -109,11 +109,11 @@ impl Identity {
 
             v0_frankenhash(&mut digest, genmem_ptr);
             if digest[0] < 17 {
-                let addr = Address::from_bytes(&digest[59..64]).unwrap();
-                if addr.is_valid() {
+                let addr = Address::from_bytes(&digest[59..64]);
+                if addr.is_some() {
                     unsafe { dealloc(genmem_ptr, genmem_layout) };
                     return Identity {
-                        address: addr,
+                        address: addr.unwrap(),
                         c25519: c25519_pub_bytes,
                         ed25519: ed25519_pub_bytes,
                         v1: None,
@@ -143,12 +143,12 @@ impl Identity {
             let sig = p521_ecdsa.sign(&sign_buf).unwrap();
             let bh = balloon::hash::<{ V1_BALLOON_SPACE_COST }, { V1_BALLOON_TIME_COST }, { V1_BALLOON_DELTA }>(&sig, V1_BALLOON_SALT);
             if bh[0] < 7 {
-                let addr = Address::from_bytes(&bh[43..48]).unwrap();
-                if addr.is_valid() {
+                let addr = Address::from_bytes(&bh[43..48]);
+                if addr.is_some() {
                     let p521_ecdh_pub = p521_ecdh.public_key().clone();
                     let p521_ecdsa_pub = p521_ecdsa.public_key().clone();
                     return Identity {
-                        address: addr,
+                        address: addr.unwrap(),
                         c25519: c25519_pub_bytes,
                         ed25519: ed25519_pub_bytes,
                         v1: Some((p521_ecdh_pub, p521_ecdsa_pub, sig, bh)),
@@ -179,9 +179,7 @@ impl Identity {
 
     /// Get this identity's 40-bit address.
     #[inline(always)]
-    pub fn address(&self) -> Address {
-        self.address
-    }
+    pub fn address(&self) -> Address { self.address }
 
     /// Compute a SHA384 hash of this identity's keys, including private keys if present.
     pub fn hash_all_keys(&self) -> [u8; 48] {
@@ -208,37 +206,33 @@ impl Identity {
     /// This can take a few milliseconds, especially on slower systems. V0 identities are slower
     /// to fully validate than V1 identities.
     pub fn locally_validate(&self) -> bool {
-        if self.address.is_valid() {
-            if self.v1.is_none() {
-                let genmem_layout = Layout::from_size_align(V0_IDENTITY_GEN_MEMORY, 8).unwrap();
-                let genmem_ptr = unsafe { alloc(genmem_layout) };
-                if !genmem_ptr.is_null() {
-                    let mut sha = SHA512::new();
-                    sha.update(&self.c25519);
-                    sha.update(&self.ed25519);
-                    let mut digest = sha.finish();
-                    v0_frankenhash(&mut digest, genmem_ptr);
-                    unsafe { dealloc(genmem_ptr, genmem_layout) };
-                    (digest[0] < 17) && Address::from_bytes(&digest[59..64]).unwrap().eq(&self.address)
-                } else {
-                    false
-                }
+        if self.v1.is_none() {
+            let genmem_layout = Layout::from_size_align(V0_IDENTITY_GEN_MEMORY, 8).unwrap();
+            let genmem_ptr = unsafe { alloc(genmem_layout) };
+            if !genmem_ptr.is_null() {
+                let mut sha = SHA512::new();
+                sha.update(&self.c25519);
+                sha.update(&self.ed25519);
+                let mut digest = sha.finish();
+                v0_frankenhash(&mut digest, genmem_ptr);
+                unsafe { dealloc(genmem_ptr, genmem_layout) };
+                (digest[0] < 17) && Address::from_bytes(&digest[59..64]).unwrap().eq(&self.address)
             } else {
-                let p521 = self.v1.as_ref().unwrap();
-                let mut signing_buf = [0_u8; C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE];
-                signing_buf[0..C25519_PUBLIC_KEY_SIZE].copy_from_slice(&self.c25519);
-                signing_buf[C25519_PUBLIC_KEY_SIZE..(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE)].copy_from_slice(&self.ed25519);
-                signing_buf[(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE)..(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE)].copy_from_slice((*p521).0.public_key_bytes());
-                signing_buf[(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE)..(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE)].copy_from_slice((*p521).1.public_key_bytes());
-                if (*p521).1.verify(&signing_buf, &(*p521).2) {
-                    let bh = balloon::hash::<{ V1_BALLOON_SPACE_COST }, { V1_BALLOON_TIME_COST }, { V1_BALLOON_DELTA }>(&(*p521).2, V1_BALLOON_SALT);
-                    (bh[0] < 7) && bh.eq(&(*p521).3) && Address::from_bytes(&bh[43..48]).unwrap().eq(&self.address)
-                } else {
-                    false
-                }
+                false
             }
         } else {
-            false
+            let p521 = self.v1.as_ref().unwrap();
+            let mut signing_buf = [0_u8; C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE];
+            signing_buf[0..C25519_PUBLIC_KEY_SIZE].copy_from_slice(&self.c25519);
+            signing_buf[C25519_PUBLIC_KEY_SIZE..(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE)].copy_from_slice(&self.ed25519);
+            signing_buf[(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE)..(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE)].copy_from_slice((*p521).0.public_key_bytes());
+            signing_buf[(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE)..(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE)].copy_from_slice((*p521).1.public_key_bytes());
+            if (*p521).1.verify(&signing_buf, &(*p521).2) {
+                let bh = balloon::hash::<{ V1_BALLOON_SPACE_COST }, { V1_BALLOON_TIME_COST }, { V1_BALLOON_DELTA }>(&(*p521).2, V1_BALLOON_SALT);
+                (bh[0] < 7) && bh.eq(&(*p521).3) && Address::from_bytes(&bh[43..48]).unwrap().eq(&self.address)
+            } else {
+                false
+            }
         }
     }
 
@@ -564,7 +558,6 @@ impl FromStr for Identity {
                                             return Err(InvalidFormatError);
                                         }
                                     } else {
-                                        println!("foo");
                                         return Err(InvalidFormatError);
                                     }
                                 } else {

@@ -1,80 +1,84 @@
+use std::num::NonZeroU64;
 use std::str::FromStr;
 use std::hash::{Hash, Hasher};
 
 use crate::error::InvalidFormatError;
+use crate::vl1::buffer::Buffer;
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct MAC(u64);
+#[repr(transparent)]
+pub struct MAC(NonZeroU64);
 
 impl MAC {
     #[inline(always)]
-    pub fn from_bytes(b: &[u8]) -> Result<MAC, InvalidFormatError> {
-        if b.len() >= 6 {
-            Ok(MAC((b[0] as u64) << 40 | (b[1] as u64) << 32 | (b[2] as u64) << 24 | (b[3] as u64) << 16 as u64 | (b[4] as u64) << 8 | b[5] as u64))
+    pub fn from_u64(i: u64) -> Option<MAC> {
+        if i != 0 {
+            Some(MAC(unsafe { NonZeroU64::new_unchecked(i & 0xffffffffffff) }))
         } else {
-            Err(InvalidFormatError)
+            None
+        }
+    }
+
+    #[inline(always)]
+    pub fn from_bytes(b: &[u8]) -> Option<MAC> {
+        if b.len() >= 6 {
+            let i = (b[0] as u64) << 40 | (b[1] as u64) << 32 | (b[2] as u64) << 24 | (b[3] as u64) << 16 as u64 | (b[4] as u64) << 8 | b[5] as u64;
+            if i != 0 {
+                Some(MAC(unsafe { NonZeroU64::new_unchecked(i) }))
+            } else {
+                None
+            }
+        } else {
+            None
         }
     }
 
     #[inline(always)]
     pub fn to_bytes(&self) -> [u8; 6] {
-        [(self.0 >> 40) as u8, (self.0 >> 32) as u8, (self.0 >> 24) as u8, (self.0 >> 16) as u8, (self.0 >> 8) as u8, self.0 as u8]
+        let i = self.0.get();
+        [(i >> 40) as u8, (i >> 32) as u8, (i >> 24) as u8, (i >> 16) as u8, (i >> 8) as u8, i as u8]
     }
 
     #[inline(always)]
-    pub fn to_u64(&self) -> u64 {
-        self.0
+    pub fn to_u64(&self) -> u64 { self.0.get() }
+
+    #[inline(always)]
+    pub(crate) fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> std::io::Result<()> {
+        buf.append_and_init_bytes_fixed(|b: &mut [u8; 6]| {
+            let i = self.0.get();
+            b[0] = (i >> 40) as u8;
+            b[1] = (i >> 32) as u8;
+            b[2] = (i >> 24) as u8;
+            b[3] = (i >> 16) as u8;
+            b[4] = (i >> 8) as u8;
+            b[5] = i as u8;
+        })
+    }
+
+    #[inline(always)]
+    pub(crate) fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> std::io::Result<Option<Self>> {
+        buf.read_bytes_fixed::<6>(cursor).map(|b| Self::from_bytes(b))
     }
 }
 
 impl ToString for MAC {
-    #[inline(always)]
     fn to_string(&self) -> String {
         let b: [u8; 6] = self.to_bytes();
-        format!("{}:{}:{}:{}:{}:{}", b[0], b[1], b[2], b[3], b[4], b[5])
+        format!("{:0>2x}:{:0>2x}:{:0>2x}:{:0>2x}:{:0>2x}:{:0>2x}", b[0], b[1], b[2], b[3], b[4], b[5])
     }
 }
 
 impl FromStr for MAC {
     type Err = InvalidFormatError;
 
-    #[inline(always)]
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        MAC::from_bytes(crate::util::hex::from_string(s).as_slice())
-    }
-}
-
-impl Default for MAC {
-    #[inline(always)]
-    fn default() -> MAC {
-        MAC(0)
+        MAC::from_bytes(crate::util::hex::from_string(s).as_slice()).map_or_else(|| Err(InvalidFormatError), |m| Ok(m))
     }
 }
 
 impl Hash for MAC {
     #[inline(always)]
     fn hash<H: Hasher>(&self, state: &mut H) {
-        state.write_u64(self.0);
-    }
-}
-
-impl From<&[u8; 6]> for MAC {
-    #[inline(always)]
-    fn from(b: &[u8; 6]) -> MAC {
-        MAC((b[0] as u64) << 40 | (b[1] as u64) << 32 | (b[2] as u64) << 24 | (b[3] as u64) << 16 as u64 | (b[4] as u64) << 8 | b[5] as u64)
-    }
-}
-
-impl From<[u8; 6]> for MAC {
-    #[inline(always)]
-    fn from(b: [u8; 6]) -> MAC {
-        Self::from(&b)
-    }
-}
-
-impl From<u64> for MAC {
-    #[inline(always)]
-    fn from(i: u64) -> MAC {
-        MAC(i)
+        state.write_u64(self.0.get());
     }
 }

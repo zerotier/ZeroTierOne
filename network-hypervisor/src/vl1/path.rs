@@ -5,9 +5,9 @@ use parking_lot::Mutex;
 
 use crate::util::U64PassThroughHasher;
 use crate::vl1::Endpoint;
-use crate::vl1::fragmentedpacket::{FragmentedPacket, FRAGMENT_EXPIRATION, FRAGMENT_MAX_INBOUND_PACKETS_PER_PATH};
+use crate::vl1::fragmentedpacket::FragmentedPacket;
 use crate::vl1::node::{PacketBuffer, VL1CallerInterface};
-use crate::vl1::protocol::PacketID;
+use crate::vl1::protocol::*;
 
 /// Keepalive interval for paths in milliseconds.
 pub(crate) const PATH_KEEPALIVE_INTERVAL: i64 = 20000;
@@ -41,29 +41,19 @@ impl Path {
     }
 
     #[inline(always)]
-    pub fn endpoint(&self) -> &Endpoint {
-        &self.endpoint
-    }
+    pub fn endpoint(&self) -> &Endpoint { &self.endpoint }
 
     #[inline(always)]
-    pub fn local_socket(&self) -> i64 {
-        self.local_socket
-    }
+    pub fn local_socket(&self) -> i64 { self.local_socket }
 
     #[inline(always)]
-    pub fn local_interface(&self) -> i64 {
-        self.local_interface
-    }
+    pub fn local_interface(&self) -> i64 { self.local_interface }
 
     #[inline(always)]
-    pub fn last_send_time_ticks(&self) -> i64 {
-        self.last_send_time_ticks.load(Ordering::Relaxed)
-    }
+    pub fn last_send_time_ticks(&self) -> i64 { self.last_send_time_ticks.load(Ordering::Relaxed) }
 
     #[inline(always)]
-    pub fn last_receive_time_ticks(&self) -> i64 {
-        self.last_receive_time_ticks.load(Ordering::Relaxed)
-    }
+    pub fn last_receive_time_ticks(&self) -> i64 { self.last_receive_time_ticks.load(Ordering::Relaxed) }
 
     /// Receive a fragment and return a FragmentedPacket if the entire packet was assembled.
     /// This returns None if more fragments are needed to assemble the packet.

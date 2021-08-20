@@ -44,25 +44,15 @@ fn append_printable(s: &mut String, b: &[u8]) {
 }
 
 impl Dictionary {
-    #[inline(always)]
-    pub fn new() -> Self {
-        Self(BTreeMap::new())
-    }
+    pub fn new() -> Self { Self(BTreeMap::new()) }
+
+    pub fn clear(&mut self) { self.0.clear() }
 
     #[inline(always)]
-    pub fn clear(&mut self) {
-        self.0.clear()
-    }
+    pub fn len(&self) -> usize { self.0.len() }
 
     #[inline(always)]
-    pub fn len(&self) -> usize {
-        self.0.len()
-    }
-
-    #[inline(always)]
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
+    pub fn is_empty(&self) -> bool { self.0.is_empty() }
 
     pub fn get_str(&self, k: &str) -> Option<&str> {
         self.0.get(k).map_or(None, |v| std::str::from_utf8(v.as_slice()).map_or(None, |s| Some(s)))

@@ -4,18 +4,9 @@ use parking_lot::Mutex;
 
 use crate::util::gate::IntervalGate;
 use crate::vl1::Address;
-use crate::vl1::constants::*;
 use crate::vl1::fragmentedpacket::FragmentedPacket;
 use crate::vl1::node::{Node, PacketBuffer, VL1CallerInterface};
-
-/// Frequency for WHOIS retries
-pub const WHOIS_RETRY_INTERVAL: i64 = 1000;
-
-/// Maximum number of WHOIS retries
-pub const WHOIS_RETRY_MAX: u16 = 3;
-
-/// Maximum number of packets to queue up behind a WHOIS.
-pub const WHOIS_MAX_WAITING_PACKETS: usize = 64;
+use crate::vl1::protocol::{WHOIS_RETRY_INTERVAL, WHOIS_MAX_WAITING_PACKETS, WHOIS_RETRY_MAX};
 
 pub(crate) enum QueuedPacket {
     Singular(PacketBuffer),

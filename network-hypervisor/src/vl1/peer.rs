@@ -443,7 +443,7 @@ impl Peer {
                 dict.set_bytes(HELLO_DICT_KEY_EPHEMERAL_C25519, ephemeral_pair.c25519.public_bytes().to_vec());
                 dict.set_bytes(HELLO_DICT_KEY_EPHEMERAL_P521, ephemeral_pair.p521.public_key_bytes().to_vec());
             });
-            if node.is_root(self) {
+            if node.is_peer_root(self) {
                 // If the peer is a root we include some extra information for diagnostic and statistics
                 // purposes such as the CPU type, bits, and OS info. This is not sent to other peers.
                 dict.set_str(HELLO_DICT_KEY_SYS_ARCH, std::env::consts::ARCH);
@@ -480,7 +480,7 @@ impl Peer {
             self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
             self.total_bytes_sent.fetch_add(packet.len() as u64, Ordering::Relaxed);
 
-            path.map_or_else(|| {
+            path.as_ref().map_or_else(|| {
                 self.send_to_endpoint(ci, endpoint, None, None, packet_id, &packet)
             }, |path| {
                 path.log_send(time_ticks);

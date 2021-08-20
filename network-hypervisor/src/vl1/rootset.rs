@@ -4,9 +4,9 @@ use std::io::Write;
 
 use concat_arrays::concat_arrays;
 
-use crate::crypto::c25519::{ED25519_PUBLIC_KEY_SIZE, ED25519_SECRET_KEY_SIZE, ED25519_SIGNATURE_SIZE, ed25519_verify, Ed25519KeyPair};
+use crate::crypto::c25519::*;
 use crate::crypto::hash::SHA384;
-use crate::crypto::p521::{P521_ECDSA_SIGNATURE_SIZE, P521_PUBLIC_KEY_SIZE, P521_SECRET_KEY_SIZE, P521KeyPair};
+use crate::crypto::p521::*;
 use crate::crypto::secret::Secret;
 use crate::error::InvalidFormatError;
 use crate::vl1::{Endpoint, Identity};
@@ -253,11 +253,8 @@ impl RootSet {
         let type_id = buf.read_u8(cursor)?;
         match type_id {
             ROOT_SET_TYPE_LEGACY_PLANET | ROOT_SET_TYPE_LEGACY_MOON => {
-                let root_set_type = if type_id == ROOT_SET_TYPE_LEGACY_PLANET {
-                    Type::LegacyPlanet(buf.read_u64(cursor)?)
-                } else {
-                    Type::LegacyMoon(buf.read_u64(cursor)?)
-                };
+                let root_set_type = buf.read_u64(cursor)?;
+                let root_set_type = if type_id == ROOT_SET_TYPE_LEGACY_PLANET { Type::LegacyPlanet(root_set_type) } else { Type::LegacyMoon(root_set_type) };
                 let timestamp = buf.read_u64(cursor)?;
                 let signer = buf.read_bytes(64, cursor)?.to_vec();
                 let signature = buf.read_bytes(96, cursor)?.to_vec();
