@@ -70,6 +70,17 @@ std::string join(const std::vector<std::string> &elements, const char * const se
 }
 */
 
+std::vector<std::string> split(std::string str, char delim){
+	std::istringstream iss(str);
+	std::vector<std::string> tokens;
+	std::string item;
+	while(std::getline(iss, item, delim)) {
+		tokens.push_back(item);
+	}
+	return tokens;
+}
+
+
 } // anonymous namespace
 
 using namespace ZeroTier;
@@ -433,7 +444,9 @@ void PostgreSQL::initializeNetworks()
 		sprintf(qbuf, "SELECT n.id, (EXTRACT(EPOCH FROM n.creation_time AT TIME ZONE 'UTC')*1000)::bigint as creation_time, n.capabilities, "
 			"n.enable_broadcast, (EXTRACT(EPOCH FROM n.last_modified AT TIME ZONE 'UTC')*1000)::bigint AS last_modified, n.mtu, n.multicast_limit, n.name, n.private, n.remote_trace_level, "
 			"n.remote_trace_target, n.revision, n.rules, n.tags, n.v4_assign_mode, n.v6_assign_mode, n.sso_enabled, (CASE WHEN n.sso_enabled THEN o.client_id ELSE NULL END) as client_id, "
-			"(CASE WHEN n.sso_enabled THEN o.authorization_endpoint ELSE NULL END) as authorization_endpoint, d.domain, d.servers "
+			"(CASE WHEN n.sso_enabled THEN o.authorization_endpoint ELSE NULL END) as authorization_endpoint, d.domain, d.servers, "
+			"ARRAY(SELECT CONCAT(host(ip_range_start),'|', host(ip_range_end)) FROM ztc_network_assignment_pool WHERE network_id = n.id) AS assignment_pool, "
+			"ARRAY(SELECT CONCAT(host(address),'/',bits::text,'|',COALESCE(host(via), 'NULL'))FROM ztc_network_route WHERE network_id = n.id) AS routes "
 			"FROM ztc_network n "
 			"LEFT OUTER JOIN ztc_org o "
 			"	ON o.owner_id = n.owner_id "
@@ -468,6 +481,8 @@ void PostgreSQL::initializeNetworks()
 			, std::optional<std::string>	// authorizationEndpoint
 			, std::optional<std::string>	// domain
 			, std::optional<std::string>	// servers
+			, std::string					// assignmentPoolString
+			, std::string					// routeString
 		> row;
 
 		uint64_t count = 0;
@@ -502,6 +517,8 @@ void PostgreSQL::initializeNetworks()
 			std::optional<std::string> authorizationEndpoint = std::get<18>(row);
 			std::optional<std::string> dnsDomain = std::get<19>(row);
 			std::optional<std::string> dnsServers = std::get<20>(row);
+			std::string assignmentPoolString = std::get<21>(row);
+			std::string routesString = std::get<22>(row);
 			
 		 	config["id"] = nwid;
 		 	config["nwid"] = nwid;
@@ -545,29 +562,28 @@ void PostgreSQL::initializeNetworks()
 				config["dns"] = obj;
 			}
 
-			{
-				pqxx::work w2{*c2->c};
-				pqxx::result r2 = w2.exec_params("SELECT host(ip_range_start), host(ip_range_end) FROM ztc_network_assignment_pool WHERE network_id = $1", nwid);
-				for (auto row2 = r2.begin(); row2 != r2.end(); row2++) {
+			config["ipAssignmentPools"] = json::array();	
+			if (assignmentPoolString != "{}") {
+				std::string tmp = assignmentPoolString.substr(1, assignmentPoolString.size()-2);
+				std::vector<std::string> assignmentPools = split(tmp, ',');
+				for (auto it = assignmentPools.begin(); it != assignmentPools.end(); ++it) {
+					std::vector<std::string> r = split(*it, '|');
 					json ip;
-					ip["ipRangeStart"] = row2[0].as<std::string>();
-					ip["ipRangeEnd"] = row2[1].as<std::string>();
-
+					ip["ipRangeStart"] = r[0];
+					ip["ipRangeEnd"] = r[1];
 					config["ipAssignmentPools"].push_back(ip);
 				}
-				w2.commit();
+			}
 
-				r2 = w2.exec_params("SELECT host(address), bits, host(via) FROM ztc_network_route WHERE network_id = $1", nwid);
-				for (auto row2 = r2.begin(); row2 != r2.end(); row2++) {
-					std::string addr = row2[0].as<std::string>();
-					std::string bits = row2[1].as<std::string>();
+			config["routes"] = json::array();
+			if (routesString != "{}") {
+				std::string tmp = routesString.substr(1, routesString.size()-2);
+				std::vector<std::string> routes = split(tmp, ',');
+				for (auto it = routes.begin(); it != routes.end(); ++it) {
+					std::vector<std::string> r = split(*it, '|');
 					json route;
-					route["target"] = addr + "/" + bits;
-					if (row2[2].is_null()) {
-						route["via"] = nullptr;
-					} else {
-						route["via"] = row2[2].as<std::string>();
-					}
+					route["target"] = r[0];
+					route["via"] = ((route["via"] == "NULL")? nullptr : r[1]);
 					config["routes"].push_back(route);
 				}
 			}
@@ -618,7 +634,13 @@ void PostgreSQL::initializeMembers()
 			"	(EXTRACT(EPOCH FROM m.last_authorized_time AT TIME ZONE 'UTC')*1000)::bigint, "
 			"	(EXTRACT(EPOCH FROM m.last_deauthorized_time AT TIME ZONE 'UTC')*1000)::bigint, "
 			"	m.remote_trace_level, m.remote_trace_target, m.tags, m.v_major, m.v_minor, m.v_rev, m.v_proto, "
-			"	m.no_auto_assign_ips, m.revision, sso_exempt "
+			"	m.no_auto_assign_ips, m.revision, sso_exempt, "
+			"	(SELECT (EXTRACT(EPOCH FROM e.authentication_expiry_time)*1000)::bigint "
+	 		"		FROM ztc_sso_expiry e "
+			"		INNER JOIN ztc_network n1 "
+			"			ON n.id = e.network_id "
+			"		WHERE e.network_id = m.network_id AND e.member_id = m.id AND n.sso_enabled = TRUE AND e.authentication_expiry_time IS NOT NULL "
+			"		ORDER BY e.authentication_expiry_time DESC LIMIT 1) AS authentication_expiry_time "
 			"FROM ztc_member m "
 			"INNER JOIN ztc_network n "
 			"	ON n.id = m.network_id "
@@ -649,6 +671,8 @@ void PostgreSQL::initializeMembers()
 			, std::optional<bool>			// noAutoAssignIps
 			, std::optional<uint64_t>		// revision
 			, std::optional<bool>			// ssoExempt
+			, std::optional<uint64_t>		// authenticationExpiryTime
+			, std::string					// assignedAddresses
 		> row;
 
 		uint64_t count = 0;
@@ -680,7 +704,8 @@ void PostgreSQL::initializeMembers()
 			std::optional<bool> noAutoAssignIps = std::get<16>(row);
 			std::optional<uint64_t> revision = std::get<17>(row);
 			std::optional<bool> ssoExempt = std::get<18>(row);
-
+			std::optional<uint64_t> authenticationExpiryTime = std::get<19>(row);
+			std::string assignedAddresses = std::get<20>(row);
 
 			config["id"] = memberId;
 			config["nwid"] = networkId;
@@ -701,38 +726,15 @@ void PostgreSQL::initializeMembers()
 			config["noAutoAssignIps"] = noAutoAssignIps.value_or(false);
 			config["revision"] = revision.value_or(0);
 			config["ssoExempt"] = ssoExempt.value_or(false);
+			config["authenticationExpiryTime"] = authenticationExpiryTime.value_or(0);
 			config["objtype"] = "member";
-			{
-				config["authenticationExpiryTime"] = 0LL;
+			config["ipAssignments"] = json::array();
 
-				pqxx::work w2{*c2->c};
-				pqxx::result authRes = w2.exec_params(
-					"SELECT (EXTRACT(EPOCH FROM e.authentication_expiry_time)*1000)::bigint "
-					"FROM ztc_sso_expiry e "
-					"INNER JOIN ztc_network n "
-					"	ON n.id = e.network_id "
-					"WHERE e.network_id = $1 AND e.member_id = $2 AND n.sso_enabled = TRUE AND e.authentication_expiry_time IS NOT NULL "
-					"ORDER BY e.authentication_expiry_time DESC LIMIT 1", networkId, memberId);
-				
-				if (authRes.size() == 1 && !authRes.at(0)[0].is_null()) {
-					// there is an expiry time record
-					config["authenticationExpiryTime"] = authRes.at(0)[0].as<int64_t>();
-				} else {
-					config["authenticationExpiryTime"] = 0;
-				}
-
-				config["ipAssignments"] = json::array();
-				pqxx::result r2 = w2.exec_params("SELECT DISTINCT address "
-					"FROM ztc_member_ip_assignment "
-					"WHERE member_id = $1 AND network_id = $2", memberId, networkId);
-
-				for (auto row2 = r2.begin(); row2 != r2.end(); row2++) {
-					std::string ipaddr = row2[0].as<std::string>();
-					std::size_t pos = ipaddr.find('/');
-					if (pos != std::string::npos) {
-						ipaddr = ipaddr.substr(0, pos);
-					}
-					config["ipAssignments"].push_back(ipaddr);
+			if (assignedAddresses != "{}") {
+				std::string tmp = assignedAddresses.substr(1, assignedAddresses.size()-2);
+				std::vector<std::string> addrs = split(tmp, ',');
+				for (auto it = addrs.begin(); it != addrs.end(); ++it) {
+					config["ipAssignments"].push_back(*it);
 				}
 			}
 
