@@ -16,7 +16,7 @@ const TYPE_IPTCP: u8 = 7;
 const TYPE_HTTP: u8 = 8;
 const TYPE_WEBRTC: u8 = 9;
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum Type {
     Nil = TYPE_NIL,

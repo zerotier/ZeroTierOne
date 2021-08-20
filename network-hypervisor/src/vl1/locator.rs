@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 
 use crate::vl1::{Address, Endpoint, Identity};
@@ -9,13 +10,13 @@ use crate::vl1::protocol::PACKET_SIZE_MAX;
 /// By default this will just enumerate the roots used by this node, but nodes with
 /// static IPs can also list physical IP/port addresses where they can be reached with
 /// no involvement from a root at all.
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct Locator {
-    pub(crate) subject: Address,
-    pub(crate) signer: Address,
-    pub(crate) timestamp: i64,
-    pub(crate) endpoints: Vec<Endpoint>,
-    pub(crate) signature: Vec<u8>,
+    subject: Address,
+    signer: Address,
+    timestamp: i64,
+    endpoints: Vec<Endpoint>,
+    signature: Vec<u8>,
 }
 
 impl Locator {
@@ -50,13 +51,14 @@ impl Locator {
     }
 
     /// Check if this locator should replace one that is already known.
+    ///
+    /// Self-signed locators always replace proxy-signed locators. Otherwise locators
+    /// with later timestamps replace locators with earlier timestamps.
     pub fn should_replace(&self, other: &Self) -> bool {
-        if self.subject == self.signer && other.subject != other.signer {
-            true
-        } else if self.subject != self.signer && other.subject == other.signer {
-            false
-        } else {
+        if self.is_proxy_signed() == other.is_proxy_signed() {
             self.timestamp > other.timestamp
+        } else {
+            other.is_proxy_signed()
         }
     }
 
@@ -130,6 +132,33 @@ impl Locator {
             signature: signature.to_vec(),
         })
     }
+}
+
+impl Ord for Locator {
+    /// Natural sort order is in order of subject, then ascending order of timestamp, then signer, then endpoints.
+    fn cmp(&self, other: &Self) -> Ordering {
+        let a = self.subject.cmp(&other.subject);
+        if a == Ordering::Equal {
+            let b = self.timestamp.cmp(&other.timestamp);
+            if b == Ordering::Equal {
+                let c = self.signer.cmp(&other.signer);
+                if c == Ordering::Equal {
+                    self.endpoints.cmp(&other.endpoints)
+                } else {
+                    c
+                }
+            } else {
+                b
+            }
+        } else {
+            a
+        }
+    }
+}
+
+impl PartialOrd for Locator {
+    #[inline(always)]
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
 }
 
 impl Hash for Locator {

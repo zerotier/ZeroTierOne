@@ -17,9 +17,9 @@ pub(crate) const PATH_KEEPALIVE_INTERVAL: i64 = 20000;
 /// one and only one unique path object. That enables statistics to be tracked
 /// for them and uniform application of things like keepalives.
 pub struct Path {
-    pub(crate) endpoint: Endpoint,
-    pub(crate) local_socket: i64,
-    pub(crate) local_interface: i64,
+    endpoint: Endpoint,
+    local_socket: i64,
+    local_interface: i64,
     last_send_time_ticks: AtomicI64,
     last_receive_time_ticks: AtomicI64,
     fragmented_packets: Mutex<HashMap<u64, FragmentedPacket, U64PassThroughHasher>>,

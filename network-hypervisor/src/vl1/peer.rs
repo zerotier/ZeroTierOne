@@ -356,7 +356,7 @@ impl Peer {
     /// via a root or some other route.
     pub(crate) fn send<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, packet_id: PacketID, packet: &Buffer<{ PACKET_SIZE_MAX }>) -> bool {
         self.path(node).map_or(false, |path| {
-            if self.send_to_endpoint(ci, &path.endpoint, Some(path.local_socket), Some(path.local_interface), packet_id, packet) {
+            if self.send_to_endpoint(ci, path.endpoint(), Some(path.local_socket()), Some(path.local_interface()), packet_id, packet) {
                 self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
                 self.total_bytes_sent.fetch_add(packet.len() as u64, Ordering::Relaxed);
                 true
@@ -375,7 +375,7 @@ impl Peer {
     /// Intermediates don't need to adjust fragmentation.
     pub(crate) fn forward<CI: VL1CallerInterface>(&self, ci: &CI, time_ticks: i64, packet: &Buffer<{ PACKET_SIZE_MAX }>) -> bool {
         self.direct_path().map_or(false, |path| {
-            if ci.wire_send(&path.endpoint, Some(path.local_socket), Some(path.local_interface), &[packet.as_bytes()], 0) {
+            if ci.wire_send(path.endpoint(), Some(path.local_socket()), Some(path.local_interface()), &[packet.as_bytes()], 0) {
                 self.last_forward_time_ticks.store(time_ticks, Ordering::Relaxed);
                 self.total_bytes_forwarded.fetch_add(packet.len() as u64, Ordering::Relaxed);
                 true
@@ -394,7 +394,7 @@ impl Peer {
     /// known one.
     pub(crate) fn send_hello<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, explicit_endpoint: Option<Endpoint>) -> bool {
         let path = if explicit_endpoint.is_none() { self.path(node) } else { None };
-        explicit_endpoint.as_ref().map_or_else(|| Some(&path.as_ref().unwrap().endpoint), |ep| Some(ep)).map_or(false, |endpoint| {
+        explicit_endpoint.as_ref().map_or_else(|| Some(path.as_ref().unwrap().endpoint()), |ep| Some(ep)).map_or(false, |endpoint| {
             let mut packet: Buffer<{ PACKET_SIZE_MAX }> = Buffer::new();
             let time_ticks = ci.time_ticks();
 
@@ -484,7 +484,7 @@ impl Peer {
                 self.send_to_endpoint(ci, endpoint, None, None, packet_id, &packet)
             }, |path| {
                 path.log_send(time_ticks);
-                self.send_to_endpoint(ci, endpoint, Some(path.local_socket), Some(path.local_interface), packet_id, &packet)
+                self.send_to_endpoint(ci, endpoint, Some(path.local_socket()), Some(path.local_interface()), packet_id, &packet)
             })
         })
     }

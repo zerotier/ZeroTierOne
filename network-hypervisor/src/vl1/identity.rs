@@ -33,12 +33,15 @@ const V1_PUBLIC_KEYS_SIGNATURE_AND_POW_SIZE: usize = C25519_PUBLIC_KEY_SIZE + ED
 pub const IDENTITY_TYPE_0_SIGNATURE_SIZE: usize = 96;
 pub const IDENTITY_TYPE_1_SIGNATURE_SIZE: usize = P521_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE;
 
+const IDENTITY_V0_POW_THRESHOLD: u8 = 17;
+const IDENTITY_V1_POW_THRESHOLD: u8 = 5;
+
 #[derive(Copy, Clone)]
 #[repr(u8)]
 pub enum Type {
     /// Curve25519 / Ed25519 identity (type 0)
     C25519 = 0,
-    /// NIST P-521 ECDH / ECDSA identity (also has c25519/ed25519 keys for backward compability) (type 1)
+    /// Dual NIST P-521 ECDH / ECDSA + Curve25519 / Ed25519 (type 1)
     P521 = 1,
 }
 
@@ -108,7 +111,7 @@ impl Identity {
             let mut digest = sha.finish();
 
             v0_frankenhash(&mut digest, genmem_ptr);
-            if digest[0] < 17 {
+            if digest[0] < IDENTITY_V0_POW_THRESHOLD {
                 let addr = Address::from_bytes(&digest[59..64]);
                 if addr.is_some() {
                     unsafe { dealloc(genmem_ptr, genmem_layout) };
@@ -142,7 +145,7 @@ impl Identity {
             // ECDSA is a randomized signature algorithm, so each signature will be different.
             let sig = p521_ecdsa.sign(&sign_buf).unwrap();
             let bh = balloon::hash::<{ V1_BALLOON_SPACE_COST }, { V1_BALLOON_TIME_COST }, { V1_BALLOON_DELTA }>(&sig, V1_BALLOON_SALT);
-            if bh[0] < 7 {
+            if bh[0] < IDENTITY_V1_POW_THRESHOLD {
                 let addr = Address::from_bytes(&bh[43..48]);
                 if addr.is_some() {
                     let p521_ecdh_pub = p521_ecdh.public_key().clone();
@@ -216,7 +219,7 @@ impl Identity {
                 let mut digest = sha.finish();
                 v0_frankenhash(&mut digest, genmem_ptr);
                 unsafe { dealloc(genmem_ptr, genmem_layout) };
-                (digest[0] < 17) && Address::from_bytes(&digest[59..64]).unwrap().eq(&self.address)
+                (digest[0] < IDENTITY_V0_POW_THRESHOLD) && Address::from_bytes(&digest[59..64]).unwrap().eq(&self.address)
             } else {
                 false
             }
@@ -229,7 +232,7 @@ impl Identity {
             signing_buf[(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE)..(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE)].copy_from_slice((*p521).1.public_key_bytes());
             if (*p521).1.verify(&signing_buf, &(*p521).2) {
                 let bh = balloon::hash::<{ V1_BALLOON_SPACE_COST }, { V1_BALLOON_TIME_COST }, { V1_BALLOON_DELTA }>(&(*p521).2, V1_BALLOON_SALT);
-                (bh[0] < 7) && bh.eq(&(*p521).3) && Address::from_bytes(&bh[43..48]).unwrap().eq(&self.address)
+                (bh[0] < IDENTITY_V1_POW_THRESHOLD) && bh.eq(&(*p521).3) && Address::from_bytes(&bh[43..48]).unwrap().eq(&self.address)
             } else {
                 false
             }
@@ -642,8 +645,6 @@ mod tests {
         }
         for good_id in [
             "7f3a8e50db:0:936b698c68f51508e9184f7510323a01da0e5778158244c83520614822e2352855ff4d82443823b866cdb553d02d8fa5da833fbee62472e666a60605b76194b9:0d46684e30d561c859bf7d530d2de0452605d8cf392db4beb2768ceda55e63673f11d84a9f31ce7504f0e3ce5dc9ab7ecf9662e555846d130422916482be5fbb",
-            "f529e17b64:0:56676b36b94212cc479825cbf685527a097287950cf9642ae336d57bf17fdd6e4c96ac65e2cf9f757151bbb65e63abbd90b655df0934394906176cc07e81ff64:99e5f483dedf4b26b72524cfe1385e5b44d1eb9c8435316a551c6b4674ab484f6d72c2fdbb3d5b1f01ff1c092fc05d97734d6410c21acf8640cd1fa8e03a110a",
-            "cbdb6f47e9:0:ec7f3ffd9c139b31eb6f5903f4a2d069ec77c51fea228ab80d679dd0ce79fe12f531046634f1f94c51ce806910de3ad73df1940fe466bb65d247b3e492d75183:26e7c8473514205186704d5cf9ee3f82a6f45dc719b91f54e7f31f982071003100a86689de8abd82817f607e192d0e84cc344defe3bb3795f2bdcfcbff41c8cb",
             "8bd225d6a9:0:08e7fc755ee0aa2e10bf37c0b8dd6f33b3164de04cf3f716584ee44df1fe9506ce1f3f2874c6d1450fc8fab339a95092ec7e628cddd26af93c4392e6564d9ee7:431bb44d22734d925538cbcdc7c2a80c0f71968041949f76ccb6f690f01b6cf45976071c86fcf2ddda2d463c8cfe6444b36c8ee0d057d665350acdcb86dff06f"
         ] {
             let id = Identity::from_str(good_id).unwrap();
@@ -658,8 +659,6 @@ mod tests {
         }
         for bad_id in [
             "7f3b8e50db:0:936b698c68f51508e9184f7510323a01da0e5778158244c83520614822e2352855ff4d82443823b866cdb553d02d8fa5da833fbee62472e666a60605b76194b9:0d46684e30d561c859bf7d530d2de0452605d8cf392db4beb2768ceda55e63673f11d84a9f31ce7504f0e3ce5dc9ab7ecf9662e555846d130422916482be5fbb",
-            "f529e17b64:0:56676b36b94212cc479825cbf685527a097287951cf9642ae336d57bf17fdd6e4c96ac65e2cf9f757151bbb65e63abbd90b655df0934394906176cc07e81ff64:99e5f483dedf4b26b72524cfe1385e5b44d1eb9c8435316a551c6b4674ab484f6d72c2fdbb3d5b1f01ff1c092fc05d97734d6410c21acf8640cd1fa8e03a110a",
-            "cbdb6f47e9:0:ec7f3ffd9c139b31eb6f5903f4a2d069ec77c51fea228ab80d679dd0ce79fe12f531046634f1f94c51ce806910de3ad73df1940fe466cb65d247b3e492d75183:26e7c8473514205186704d5cf9ee3f82a6f45dc719b91f54e7f31f982071003100a86689de8abd82817f607e192d0e84cc344defe3bb3795f2bdcfcbff41c8cb",
             "8bd225d6a9:0:98e7fc755ee0aa2e10bf37c0b8dd6f33b3164de04cf3f716584ee44df1fe9506ce1f3f2874c6d1450fc8fab339a95092ec7e628cddd26af93c4392e6564d9ee7:431bb44d22734d925538cbcdc7c2a80c0f71968041949f76ccb6f690f01b6cf45976071c86fcf2ddda2d463c8cfe6444b36c8ee0d057d665350acdcb86dff06f"
         ] {
             let id = Identity::from_str(bad_id).unwrap();
@@ -671,8 +670,10 @@ mod tests {
 
     #[test]
     fn type1() {
+        //let start = std::time::SystemTime::now();
         let id = Identity::generate(Type::P521);
-        //println!("V1: {}", id.to_string());
+        //let end = std::time::SystemTime::now();
+        //println!("V1: {}ms {}", end.duration_since(start).unwrap().as_millis(), id.to_string());
         if !id.locally_validate() {
             panic!("new V1 identity validation failed");
         }
@@ -685,10 +686,8 @@ mod tests {
             panic!("invalid signature verification succeeded");
         }
         for good_id in [
-            "55ecc4bb1d:1:EEefUe82UfSkeHGroZhgZKp_V3asFzcTct8faJOIiFk16MB6nXNEAk1xjbI9Otjtvudq49JOWR9IRSZuom0VugHW0TDg9z14_8F1L39M9y_6rxhO4oKdpcmN_0dUxOtL8t7dw4PfSS3sKh-rrwWut01hoewy6-J42nJ_hbe7q_nWFABt4BHfWp3qqwYvMosYLquwUD1BJRnF_rIOEX82YhN84eFnntQTqnMMS1M8ILxe5-A7naowp1IxsccD7WW1a3f_BQAmgZmRfWAJqaTERQ2qJtCR6cixGid4raka_YgySFcx6BDi43Okm3rwO3prLjbr_J4d97BXbINKOAEms6AAxO75pwABxMmJVO1VRnXP10Y22XWMWZiN39sDVGzXCD3uzGptr5B5dBJPTEwyK1abxbwiv30hZE9bzLNgsuX12KsHb-yvMQEYQ_NBwGgMtV0fWcc3vPadEqdO7PRofOiAft9CPTrtLsO9AI88PMNId72plYHzYkCvtnnttgHLNqJwOIoOxd0xxQHLz8BMfcTm7t9fPHl6zPOtmakAmHaSQdlMpTqrpR7NL0awixRBFauFkrpD7v0zWkjP5JpUUDK1smCxAxan7oTlkwQou_kY6Ac65-cROf24xyUit1k1IzS1OiwSmWuGplEJxUCGORBAytS9WXFV7MS7HQ",
-            "8b04dcccc5:1:G3esWdhJPDfE4yq9N_oilC_Der7S_iz0ytCA1uvO1RGjp_EDnqHfTO48rYhR2jZ7x3ibNyv_ySHyXvyqqmBvtABS5KdLn-fBCY2YrhH4o-3sAWffqTTMHthlFC8iIwtIh3uWDSbPAZLxRnsKQQSx5ndid31MDIdCTo4hEa-bjtXodQCoMDqOhEQHVb-abI9ljT7rOs1aWyYHI7l6lrvuR9IEV7xt2S0Z1Kdky9jnJXjBDq8H8HipLyFPc_FsURMlT5l1YgDwAFmmEAE43teNv8jZBSBYlQ4fokG-2OLXBtuKQBZ6Sd8Els3YEgXhn2TJXQIK0lPH5lKnEjH5IaDJ8uAxvKrs4ABYmd4OYRCHohHDYOzlzoRFTT-57SsWSfVdtGioRFVwTcB8sAUIKumWCpVsD18zaFXDNwn4nfkvhvBoKlbCGYiERgErKF7_t0YF5nXy2V5LdPPLPVq1KsVR2kMmQyILxCl5PWyKv9dgdos_69MmTSuCA28CZ6lcJJ8ZmCC-v1lUZSqmrwHrYzf9BX4YBBrH2ZjtoYtHzgETagH-_7Tll04Ug9KFUlQgerDMWhhPiMsILg4JDpGM0XHvPMqL8TU4KIiNGet9dga3ONkbrZaUpn-dEJ_3yL1D6BDbgoLex8fW3ejm5SOkNhtqH0QPSFJDKyyLBNzMxQ",
-            "f1544578e8:1:fOBzH-NWHagNRi9qXKCPifYuQoACy4jzB89Nhntxcgtz3ovvrmMSa7hPrSrZlX7iIfDefO2IVZSKKswDsOoRigBp-ZqIPLg_2MbBaFfYoK6K01s7eDvE1VuTLen0phB-hq6OAefSvdg4qlZL8Ti9h0oFTZP_-6L4vtKulo32aShVYwDHsO9qa0Ven_Ha6BO4Ef6UyZW2fWIXRx43QclV7I9Frzdeoi5i_x78DN_O7CIbWt3s2LLIfcxP-UXgpdSZEXKBggECzikEtf9mx5Wmaz5D_C6erXD9AT5eijkD7xBFW1cFYQwiyHwJYJgGF76g4WnSz5Fs_3klR8iOeHDAPaRNAxxfjgAanMzOPVNEa20wtB40kp5o1xYebr312KoT19p7A-7KvmR42_Wseyai2q0tbm0h7ugUk9oOOAmS91g1jiGL_PFdQgHNmGH93GyhSozgkaTAkmCPXVMBWFBkFLDgf5dF7r5pRzxBou4OaWmmxBHGON1BBKwNiojOrAPrtOmvD1d7FLEV3ADrMA6B4nBAco0_LeC43GBIXqMMEJKm7xH-JPDg3HsKOgQUYSIyTquGNT3egZTvb9bTh421XvQJnQ6kazSrsTF9tgS2Fxryllj-QcfbWpyN_Cohrlf3GPMXTQsalFlSmnmAhcWt2YFrHjKdhvbxVEV46A",
-            "ebcc1dfe97:1:6l1EtROT-jp-bSse6vajfbi3EDaWJWjBt97Fp5KETjQNhsla79wLFbaSR5ccjqt9tT5lqlpdqLyoeaI8HIP2XgEQbUMmk5GgLNCwLSyTVkAui9HO01lghRxQll7AhptPOD5CjYQC8qnhSfNaUkLkzqjeEjgclDx7oMclrVDkWTvyegBK6Q_rUkfseWRRfe6zA7wwrOHQ2jeXOY8QbeyAqCRWtXKr16zisNhyuYbeP00kzUAkZvrWey4mvzp7ruJgARsBVAF5FRcq8JRqkF5E99MNe-T4mSPbQZKF40saK4N2p_zzp3vr-Wq8IkevPFn_5gbk8cwINC30Bz_qz45xRAhLX6emigA8EUWzeAW4091wU2wQoXrzmhil9b3weBSEfeLvlycnmwfGMDWo8jaW29aqz5Ix6U7V3hu_kiA4FgzJEIxUYu3L4wBsPI2zYUMZqXBpcPvh8GGzIzgOGLRoi_3FhNtGEDTn8ajCMWUmfpIMiwOw7-iWjUwEZH42Ch-0c6j4RiezD-FphACiwtDZBs5llcBPqmRo8cHJ1DwjFHQCXn5Y0mAE4WgfkSUPDE5h9uXO02ic843qUnd0m-HLVmwhxW9RDP4-FSBPCAA-3K37hyZw3mtGBfKll4NJmQb-gMBRWG_C89grkTJr-QYbekVbtHm8lG7rzB3-lw"
+            "c24a2cd3a1:1:9X3OSJ3lnss_mc1q2RBW8fVI3OFHdYVVgoFVSkXep3XTiyiq-B41qgo7SqcdAvOh49QqqZV3CJIXlBUaJB5logGdo6_VyCqRkTMKpnn5JGpt8QAp71G22o1tinQ_TepeqWBShfW6ZB5GIM5iyQdf4IHqPKxLNKbxwulBektAe6iHhwBRK0iUAlEkB7H1gq1P4qTnWodc-KfaYPcz6BUJA9nW6NUF0WVRRfrPHqiWPPm3268bX_sKMq5ap5i5yQnvlkJmdAD1bh4SlF9kmgqVcixtffk4AKNYD3zcP0o8yQ8UUsQ036JbpS1huWXE8BnFLC93jUFwVbibki6okDAsPDB57gJmhwA72h9KMbPw2L4zoI53e0lrsWoNgGJGczTCTwS-Z3-Dd9yBwf-sSkEbMhgR_OtbRyrtiUvsmwKQUT-tEKFoF0NTRgAwsv6KQCv_LDm1XStRWpbRbQz-1Wof3LpKjTsKrNhWML50mOlgNV766bYbIUekcBS0OgzU14Pew7Fffap3qG7JngG7_CWcMrszpJwD3YtttgUVSBdzFiL1xKVm8dnO1XzZL1jXPnme-dMHX3wISPznKK-zgsqMkyPoaCovkoZ1KuzqFwILfIyXMweP70ZkGl7ep288-DjDsprHNfMr9lvMtRC-ZsuAwbwJrzW8-9TCSizToQ",
+            "4f0ab394d1:1:kT54oJ0eViPr73BB_VQWxOlqFkwCJgsPOeLrEcElNFSXVBPqAMMe6aWTdB_HvmFEfa_PExjXHdJJVlADyR3gTAE98hJ8sXOHoVLAoPK-3FE1P8BPAiX8aRWW_eTyDgWzJBOZclxM3gAlqK4e1ceRYdMvHL2NfUk1ro3sAyj0PRowWACgVRCIOeQwfVYrc_G4hods__qEsrnWXZYarGKlM8V4xkfErCUl1MhMHNSmRS7WvSBO71LHaUSr66EK2QQKEUEpwwEVF9YNonUPqzkQNntYSkOHBLaghZtEvvje31UbnqV0GmkMjv3pIf4YIsUNVKvezf95lF7QdLI8v1dWDefrJHkYlwCU92hjDUpiwiE7XxA4-MUnv6XeYseHRn5GQRS3cQCsMbd9XpToJXA08OCHkMRo1IR9UEDWUubw78SefRZPjxojPQFtpMuL7r8Alo8HK3VOrGw4Am2gvFic53TVWQNX0XfX5pixDTQaEkLQqieeWYCGSSXasLAggqecXMytcOdHa8TeqgBCHPGl-tXIYUotzMPQzEjRPRWeYe3_UQcrR75lvYlb43DQfHBLMrZ0gEJeJqc0u2rMS_gxS1ZJriBy9PDzXoF4HACnywkra4JkoP_CGpxAHVaCFuYDfNTTEr2LYCxkc8jUx36KD3sQaA8UQXxPCrOU0Q"
         ] {
             let id = Identity::from_str(good_id).unwrap();
             if !id.locally_validate() {
@@ -703,8 +702,6 @@ mod tests {
         for bad_id in [
             "65ecc4bb1d:1:EEefUe82UfSkeHGroZhgZKp_V3asFzcTct8faJOIiFk16MB6nXNEAk1xjbI9Otjtvudq49JOWR9IRSZuom0VugHW0TDg9z14_8F1L39M9y_6rxhO4oKdpcmN_0dUxOtL8t7dw4PfSS3sKh-rrwWut01hoewy6-J42nJ_hbe7q_nWFABt4BHfWp3qqwYvMosYLquwUD1BJRnF_rIOEX82YhN84eFnntQTqnMMS1M8ILxe5-A7naowp1IxsccD7WW1a3f_BQAmgZmRfWAJqaTERQ2qJtCR6cixGid4raka_YgySFcx6BDi43Okm3rwO3prLjbr_J4d97BXbINKOAEms6AAxO75pwABxMmJVO1VRnXP10Y22XWMWZiN39sDVGzXCD3uzGptr5B5dBJPTEwyK1abxbwiv30hZE9bzLNgsuX12KsHb-yvMQEYQ_NBwGgMtV0fWcc3vPadEqdO7PRofOiAft9CPTrtLsO9AI88PMNId72plYHzYkCvtnnttgHLNqJwOIoOxd0xxQHLz8BMfcTm7t9fPHl6zPOtmakAmHaSQdlMpTqrpR7NL0awixRBFauFkrpD7v0zWkjP5JpUUDK1smCxAxan7oTlkwQou_kY6Ac65-cROf24xyUit1k1IzS1OiwSmWuGplEJxUCGORBAytS9WXFV7MS7HQ",
             "8b04dcccc5:1:G3esWdhJPDff4yq9N_oilC_Der7S_iz0ytCA1uvO1RGjp_EDnqHfTO48rYhR2jZ7x3ibNyv_ySHyXvyqqmBvtABS5KdLn-fBCY2YrhH4o-3sAWffqTTMHthlFC8iIwtIh3uWDSbPAZLxRnsKQQSx5ndid31MDIdCTo4hEa-bjtXodQCoMDqOhEQHVb-abI9ljT7rOs1aWyYHI7l6lrvuR9IEV7xt2S0Z1Kdky9jnJXjBDq8H8HipLyFPc_FsURMlT5l1YgDwAFmmEAE43teNv8jZBSBYlQ4fokG-2OLXBtuKQBZ6Sd8Els3YEgXhn2TJXQIK0lPH5lKnEjH5IaDJ8uAxvKrs4ABYmd4OYRCHohHDYOzlzoRFTT-57SsWSfVdtGioRFVwTcB8sAUIKumWCpVsD18zaFXDNwn4nfkvhvBoKlbCGYiERgErKF7_t0YF5nXy2V5LdPPLPVq1KsVR2kMmQyILxCl5PWyKv9dgdos_69MmTSuCA28CZ6lcJJ8ZmCC-v1lUZSqmrwHrYzf9BX4YBBrH2ZjtoYtHzgETagH-_7Tll04Ug9KFUlQgerDMWhhPiMsILg4JDpGM0XHvPMqL8TU4KIiNGet9dga3ONkbrZaUpn-dEJ_3yL1D6BDbgoLex8fW3ejm5SOkNhtqH0QPSFJDKyyLBNzMxQ",
-            "f1544578e8:1:fOBzH-NWHagNRi9qXKCPifYuQoACy4jzB89Nhntxcgtz3ovvrmMSa7hPrSrZlX7iIfDefO2IVZSKKswDsOoRigBp-ZqIPLg_2MbBaFfYoK6K01s7eDvE1VuTLen0phB-hq6OAefSvdg4qlZL8Ti9h0oFTZP_-6L4vtKulo32aShVYwDHsO9qa0Ven_Ha6BO4Ef6UyZW2fWIXRx43QclV7I9Frzdeoi5i_x78DN_O7CIbWt3s2LLIfcxP-UXgpdSZEXKBggECzikEtf9mx5Wmaz5D_C6erXD9AT5eijkD7xBFW1cFYQwiyHwJYJgGF76g4WnSz5Fs_3klR8iOeHDAPaRNAxxfjgAanMzOPVNEa20wtB40kp5o1xYebr312KoT19p7A-7KvmR42_Wseyai2q0tbm0h7ugUk9oOOAmS91g1jiGL_PFdQgHNmGH93GyhSozgkaTAkmCPXVMBWFBkFLDgf5dF7r5pRzxBou4OaWmmxBHGON1BBKwNiojOrAPrtOmvD1d7FLEV3ADrMA6B4nBAco0_LeC43GBIXqMMEJKm7xH-JPDg3HsKOgQUYSIyTquGNT3egZTvb9bTh421XvQJnQ6kazSrsTF9tgS2Fxryllj-QcfbWpyN_Cohrlf3GPMXTQsalFlSmnmAhcWt2YFrHjKdhvbx3EV46A",
-            "ebcc1dfe97:1:6l1EtROT-jp-bSse6vajfbi3EDaWJWjBt97Fp5KETjQNhsla79wLFbaSR5ccjqt9tT5lqlpdqLyoeaI8HIP2XgEQbUMmk5GgLNCwLSyTVkAui9HO01lghRxQll7AhptPOD5CjYQC8qnhSfNaUkLkzqjeEjgclDx7oMclrVDkWTvyegBK6Q_rUkfseWRRfe6zA7wwrOHQ2jeXOY8QbeyAqCRWtXKr16zisNhyuYbeP00kzUAkZvrWey4mvzp7ruJgARsBVAF5FRcq8JRqkF5E99MNe-T4mSPbQZKF40saK4N2p_zzp3vr-Wq8IkevPFn_5gbk8cwINC30Bz_qz45xRAhLX6emigA8EUWzeAW4091wU2wQoXrzmhil9b3weBSEfeLvlycnmwfGMDWo8jaW29aqz5Ix6U7V3hu_kiA4FgzJEIxUYu3L4wBsPI2zYUMZqXBpcPvh8GGzIzgOGLRoi_3FhNtGEDTn8ajCMWUmfpIMiwOw7-iWjUwEZH42Ch-0c6j4RiezD-FphACiwtDZBs5llcBPqmRo8cHJ1DwjFHQCXn5Y0mAE4WWfkSUPDE5h9uXO02ic843qUnd0m-HLVmwhxW9RDP4-FSBPCAA-3K37hyZw3mtGBfKll4NJmQb-gMBRWG_C89grkTJr-QYbekVbtHm8lG7rzB3-lw"
         ] {
             let id = Identity::from_str(bad_id).unwrap();
             if id.locally_validate() {
