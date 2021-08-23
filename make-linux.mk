@@ -266,6 +266,7 @@ ifeq ($(ZT_OFFICIAL),1)
 endif
 
 ifeq ($(ZT_CONTROLLER),1)
+	override CXXFLAGS+=-Wall -Wno-deprecated -std=c++17 -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 	override LDLIBS+=-L/usr/pgsql-10/lib/ -lpqxx -lpq ext/hiredis-0.14.1/lib/centos8/libhiredis.a ext/redis-plus-plus-1.1.1/install/centos8/lib/libredis++.a
 	override DEFS+=-DZT_CONTROLLER_USE_LIBPQ
 	override INCLUDES+=-I/usr/pgsql-10/include -Iext/hiredis-0.14.1/include/ -Iext/redis-plus-plus-1.1.1/install/centos8/include/sw/

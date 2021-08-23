@@ -137,6 +137,14 @@ std::string DBMirrorSet::getSSOAuthURL(const nlohmann::json &member, const std::
 	return "";
 }
 
+void DBMirrorSet::networkMemberSSOHasExpired(uint64_t nwid, int64_t ts)
+{
+	std::lock_guard<std::mutex> l(_dbs_l);
+	for(auto d=_dbs.begin();d!=_dbs.end();++d) { 
+		(*d)->networkMemberSSOHasExpired(nwid, ts);
+	}
+}
+
 void DBMirrorSet::networks(std::set<uint64_t> &networks)
 {
 	std::lock_guard<std::mutex> l(_dbs_l);

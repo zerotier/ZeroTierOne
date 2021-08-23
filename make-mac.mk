@@ -26,13 +26,6 @@ DEFS+=-DZT_BUILD_PLATFORM=$(ZT_BUILD_PLATFORM) -DZT_BUILD_ARCHITECTURE=$(ZT_BUIL
 
 include objects.mk
 ONE_OBJS+=osdep/MacEthernetTap.o osdep/MacKextEthernetTap.o osdep/MacDNSHelper.o ext/http-parser/http_parser.o
-
-ifeq ($(ZT_CONTROLLER),1)
-	LIBS+=-L/usr/local/opt/libpqxx@6/lib -L/usr/local/opt/libpq/lib -L/usr/local/opt/openssl/lib/ -lpqxx -lpq -lssl -lcrypto -lgssapi_krb5 ext/redis-plus-plus-1.1.1/install/macos/lib/libredis++.a ext/hiredis-0.14.1/lib/macos/libhiredis.a
-	DEFS+=-DZT_CONTROLLER_USE_LIBPQ -DZT_CONTROLLER_USE_REDIS -DZT_CONTROLLER 
-	INCLUDES+=-I/usr/local/opt/libpq/include -I/usr/local/opt/libpqxx@6/include -Iext/hiredis-0.14.1/include/ -Iext/redis-plus-plus-1.1.1/install/macos/include/sw/
-endif
-
 LIBS+=-framework CoreServices -framework SystemConfiguration -framework CoreFoundation
 
 # Official releases are signed with our Apple cert and apply software updates by default
@@ -52,10 +45,20 @@ endif
 # Use fast ASM Salsa20/12 for x64 processors
 DEFS+=-DZT_USE_X64_ASM_SALSA2012
 CORE_OBJS+=ext/x64-salsa2012-asm/salsa2012.o
+CXXFLAGS=$(CFLAGS) -std=c++11 -stdlib=libc++
 
 # Build miniupnpc and nat-pmp as included libraries -- extra defs are required for these sources
 DEFS+=-DMACOSX -DZT_USE_MINIUPNPC -DMINIUPNP_STATICLIB -D_DARWIN_C_SOURCE -DMINIUPNPC_SET_SOCKET_TIMEOUT -DMINIUPNPC_GET_SRC_ADDR -D_BSD_SOURCE -D_DEFAULT_SOURCE -DOS_STRING=\"Darwin/15.0.0\" -DMINIUPNPC_VERSION_STRING=\"2.0\" -DUPNP_VERSION_STRING=\"UPnP/1.1\" -DENABLE_STRNATPMPERR
 ONE_OBJS+=ext/libnatpmp/natpmp.o ext/libnatpmp/getgateway.o ext/miniupnpc/connecthostport.o ext/miniupnpc/igd_desc_parse.o ext/miniupnpc/minisoap.o ext/miniupnpc/minissdpc.o ext/miniupnpc/miniupnpc.o ext/miniupnpc/miniwget.o ext/miniupnpc/minixml.o ext/miniupnpc/portlistingparse.o ext/miniupnpc/receivedata.o ext/miniupnpc/upnpcommands.o ext/miniupnpc/upnpdev.o ext/miniupnpc/upnperrors.o ext/miniupnpc/upnpreplyparse.o osdep/PortMapper.o
+ifeq ($(ZT_CONTROLLER),1)
+	MACOS_VERSION_MIN=10.15
+	override CXXFLAGS=$(CFLAGS) -std=c++17 -stdlib=libc++
+	LIBS+=-L/usr/local/opt/libpqxx/lib -L/usr/local/opt/libpq/lib -L/usr/local/opt/openssl/lib/ -lpqxx -lpq -lssl -lcrypto -lgssapi_krb5 ext/redis-plus-plus-1.1.1/install/macos/lib/libredis++.a ext/hiredis-0.14.1/lib/macos/libhiredis.a
+	DEFS+=-DZT_CONTROLLER_USE_LIBPQ -DZT_CONTROLLER_USE_REDIS -DZT_CONTROLLER 
+	INCLUDES+=-I/usr/local/opt/libpq/include -I/usr/local/opt/libpqxx/include -Iext/hiredis-0.14.1/include/ -Iext/redis-plus-plus-1.1.1/install/macos/include/sw/
+else
+	MACOS_VERSION_MIN=10.13
+endif
 
 # Build with address sanitization library for advanced debugging (clang)
 ifeq ($(ZT_SANITIZE),1)
@@ -75,7 +78,7 @@ ifeq ($(ZT_DEBUG),1)
 node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CFLAGS = -Wall -O2 -g $(INCLUDES) $(DEFS)
 else
 	CFLAGS?=-Ofast -fstack-protector-strong
-	CFLAGS+=$(ARCH_FLAGS) -Wall -flto -fPIE -mmacosx-version-min=10.7 -DNDEBUG -Wno-unused-private-field $(INCLUDES) $(DEFS)
+	CFLAGS+=$(ARCH_FLAGS) -Wall -flto -fPIE -mmacosx-version-min=$(MACOS_VERSION_MIN) -DNDEBUG -Wno-unused-private-field $(INCLUDES) $(DEFS)
 	STRIP=strip
 endif
 
@@ -88,15 +91,13 @@ ifeq ($(ZT_VAULT_SUPPORT),1)
 	LIBS+=-lcurl
 endif
 
-CXXFLAGS=$(CFLAGS) -std=c++11 -stdlib=libc++
-
 all: one
 
 ext/x64-salsa2012-asm/salsa2012.o:
-	as -arch x86_64 -mmacosx-version-min=10.7 -o ext/x64-salsa2012-asm/salsa2012.o ext/x64-salsa2012-asm/salsa2012.s
+	as -arch x86_64 -mmacosx-version-min=$(MACOS_VERSION_MIN) -o ext/x64-salsa2012-asm/salsa2012.o ext/x64-salsa2012-asm/salsa2012.s
 
 mac-agent: FORCE
-	$(CC) -Ofast $(ARCH_FLAGS) -mmacosx-version-min=10.7 -o MacEthernetTapAgent osdep/MacEthernetTapAgent.c
+	$(CC) -Ofast $(ARCH_FLAGS) -mmacosx-version-min=$(MACOS_VERSION_MIN) -o MacEthernetTapAgent osdep/MacEthernetTapAgent.c
 	$(CODESIGN) -f --options=runtime -s $(CODESIGN_APP_CERT) MacEthernetTapAgent
 
 osdep/MacDNSHelper.o: osdep/MacDNSHelper.mm

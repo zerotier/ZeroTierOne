@@ -196,6 +196,14 @@ void DB::networks(std::set<uint64_t> &networks)
 		networks.insert(n->first);
 }
 
+void DB::networkMemberSSOHasExpired(uint64_t nwid, int64_t now) {
+	std::lock_guard<std::mutex> l(_networks_l);
+	auto nw = _networks.find(nwid);
+	if (nw != _networks.end()) {
+		nw->second->mostRecentDeauthTime = now;
+	}
+}
+
 void DB::_memberChanged(nlohmann::json &old,nlohmann::json &memberConfig,bool notifyListeners)
 {
 	uint64_t memberId = 0;

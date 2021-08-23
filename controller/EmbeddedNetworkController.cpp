@@ -1364,16 +1364,21 @@ void EmbeddedNetworkController::_request(
 	if (networkSSOEnabled && !memberSSOExempt) {
 		authenticationURL = _db.getSSOAuthURL(member, _ssoRedirectURL);
 		std::string memberId = member["id"];
-		fprintf(stderr, "ssoEnabled && !ssoExempt %s-%s\n", nwids, memberId.c_str());
+		//fprintf(stderr, "ssoEnabled && !ssoExempt %s-%s\n", nwids, memberId.c_str());
 		uint64_t authenticationExpiryTime = (int64_t)OSUtils::jsonInt(member["authenticationExpiryTime"], 0);
-		fprintf(stderr, "authExpiryTime: %lld\n", authenticationExpiryTime);
+		//fprintf(stderr, "authExpiryTime: %lld\n", authenticationExpiryTime);
 		if (authenticationExpiryTime < now) {
 			if (!authenticationURL.empty()) {
+				_db.networkMemberSSOHasExpired(nwid, now);
+				onNetworkMemberDeauthorize(&_db, nwid, identity.address().toInt());
+
 				Dictionary<3072> authInfo;
 				authInfo.add("aU", authenticationURL.c_str());
-				fprintf(stderr, "sending auth URL: %s\n", authenticationURL.c_str());
+				//fprintf(stderr, "sending auth URL: %s\n", authenticationURL.c_str());
+
 				DB::cleanMember(member);
 				_db.save(member,true);
+
 				_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_AUTHENTICATION_REQUIRED, authInfo.data(), authInfo.sizeBytes());
 				return;
 			}
@@ -1479,7 +1484,7 @@ void EmbeddedNetworkController::_request(
 	json &memberTags = member["tags"];
 	json &dns = network["dns"];
 
-	fprintf(stderr, "IP Assignment Pools for Network %s: %s\n", nwids, OSUtils::jsonDump(ipAssignmentPools, 2).c_str());
+	//fprintf(stderr, "IP Assignment Pools for Network %s: %s\n", nwids, OSUtils::jsonDump(ipAssignmentPools, 2).c_str());
 
 	if (metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_RULES_ENGINE_REV,0) <= 0) {
 		// Old versions with no rules engine support get an allow everything rule.
