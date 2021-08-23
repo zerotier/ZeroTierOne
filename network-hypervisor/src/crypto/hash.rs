@@ -26,19 +26,13 @@ impl SHA512 {
     }
 
     #[inline(always)]
-    pub fn new() -> Self {
-        Self(gcrypt::digest::MessageDigest::new(gcrypt::digest::Algorithm::Sha512).unwrap())
-    }
+    pub fn new() -> Self { Self(gcrypt::digest::MessageDigest::new(gcrypt::digest::Algorithm::Sha512).unwrap()) }
 
     #[inline(always)]
-    pub fn reset(&mut self) {
-        self.0.reset();
-    }
+    pub fn reset(&mut self) { self.0.reset(); }
 
     #[inline(always)]
-    pub fn update(&mut self, b: &[u8]) {
-        self.0.update(b);
-    }
+    pub fn update(&mut self, b: &[u8]) { self.0.update(b); }
 
     #[inline(always)]
     pub fn finish(&mut self) -> [u8; SHA512_HASH_SIZE] {
@@ -87,19 +81,13 @@ impl SHA384 {
     }
 
     #[inline(always)]
-    pub fn new() -> Self {
-        Self(gcrypt::digest::MessageDigest::new(gcrypt::digest::Algorithm::Sha384).unwrap())
-    }
+    pub fn new() -> Self { Self(gcrypt::digest::MessageDigest::new(gcrypt::digest::Algorithm::Sha384).unwrap()) }
 
     #[inline(always)]
-    pub fn reset(&mut self) {
-        self.0.reset();
-    }
+    pub fn reset(&mut self) { self.0.reset(); }
 
     #[inline(always)]
-    pub fn update(&mut self, b: &[u8]) {
-        self.0.update(b);
-    }
+    pub fn update(&mut self, b: &[u8]) { self.0.update(b); }
 
     #[inline(always)]
     pub fn finish(&mut self) -> [u8; SHA384_HASH_SIZE] {

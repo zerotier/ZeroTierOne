@@ -86,6 +86,9 @@ pub trait VL1CallerInterface {
 }
 
 /// Trait implemented by VL2 to handle messages after they are unwrapped by VL1.
+///
+/// This normally isn't used from outside this crate except for testing or if you want to harness VL1
+/// for some entirely unrelated purpose.
 pub trait VL1PacketHandler {
     /// Handle a packet, returning true if the verb was recognized.
     ///
@@ -95,10 +98,10 @@ pub trait VL1PacketHandler {
     fn handle_packet(&self, peer: &Peer, source_path: &Arc<Path>, forward_secrecy: bool, verb: u8, payload: &Buffer<{ PACKET_SIZE_MAX }>) -> bool;
 
     /// Handle errors, returning true if the error was recognized.
-    fn handle_error(&self, peer: &Peer, source_path: &Arc<Path>, forward_secrecy: bool, in_re_verb: u8, in_re_packet_id: PacketID, error_code: u8, payload: &Buffer<{ PACKET_SIZE_MAX }>) -> bool;
+    fn handle_error(&self, peer: &Peer, source_path: &Arc<Path>, forward_secrecy: bool, in_re_verb: u8, in_re_packet_id: PacketID, error_code: u8, payload: &Buffer<{ PACKET_SIZE_MAX }>, cursor: &mut usize) -> bool;
 
     /// Handle an OK, returing true if the OK was recognized.
-    fn handle_ok(&self, peer: &Peer, source_path: &Arc<Path>, forward_secrecy: bool, in_re_verb: u8, in_re_packet_id: PacketID, payload: &Buffer<{ PACKET_SIZE_MAX }>) -> bool;
+    fn handle_ok(&self, peer: &Peer, source_path: &Arc<Path>, forward_secrecy: bool, in_re_verb: u8, in_re_packet_id: PacketID, payload: &Buffer<{ PACKET_SIZE_MAX }>, cursor: &mut usize) -> bool;
 }
 
 #[derive(Default)]
@@ -120,8 +123,7 @@ pub struct Node {
     whois: WhoisQueue,
     buffer_pool: Pool<Buffer<{ PACKET_SIZE_MAX }>, PooledBufferFactory<{ PACKET_SIZE_MAX }>>,
     secure_prng: SecureRandom,
-    pub(crate) fips_mode: bool,
-    pub(crate) wimp: bool,
+    fips_mode: bool,
 }
 
 impl Node {
@@ -164,19 +166,15 @@ impl Node {
             buffer_pool: Pool::new(64, PooledBufferFactory),
             secure_prng: SecureRandom::get(),
             fips_mode: false,
-            wimp: false,
         })
     }
 
-    /// Get address, short for .identity().address()
     #[inline(always)]
     pub fn address(&self) -> Address { self.identity.address() }
 
-    /// Get identity, which includes secret keys.
     #[inline(always)]
     pub fn identity(&self) -> &Identity { &self.identity }
 
-    /// Get this node's current locator or None if no locator created.
     #[inline(always)]
     pub fn locator(&self) -> Option<Arc<Locator>> { self.locator.lock().clone() }
 
@@ -186,6 +184,9 @@ impl Node {
 
     /// Get a peer by address.
     pub fn peer(&self, a: Address) -> Option<Arc<Peer>> { self.peers.get(&a).map(|peer| peer.value().clone()) }
+
+    #[inline(always)]
+    pub fn fips_mode(&self) -> bool { self.fips_mode }
 
     /// Get all peers currently in the peer cache.
     pub fn peers(&self) -> Vec<Arc<Peer>> {
@@ -319,9 +320,7 @@ impl Node {
         self.paths.get(ep).map_or_else(|| {
             let p = Arc::new(Path::new(ep.clone(), local_socket, local_interface));
             self.paths.insert(ep.clone(), p.clone()).unwrap_or(p) // if another thread added one, return that instead
-        }, |path| {
-            path.value().clone()
-        })
+        }, |path| path.value().clone())
     }
 }
 

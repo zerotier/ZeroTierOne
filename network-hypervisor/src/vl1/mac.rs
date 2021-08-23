@@ -11,23 +11,12 @@ pub struct MAC(NonZeroU64);
 
 impl MAC {
     #[inline(always)]
-    pub fn from_u64(i: u64) -> Option<MAC> {
-        if i != 0 {
-            Some(MAC(unsafe { NonZeroU64::new_unchecked(i & 0xffffffffffff) }))
-        } else {
-            None
-        }
-    }
+    pub fn from_u64(i: u64) -> Option<MAC> { NonZeroU64::new(i & 0xffffffffffff).map_or(None, |i| Some(MAC(i))) }
 
     #[inline(always)]
     pub fn from_bytes(b: &[u8]) -> Option<MAC> {
         if b.len() >= 6 {
-            let i = (b[0] as u64) << 40 | (b[1] as u64) << 32 | (b[2] as u64) << 24 | (b[3] as u64) << 16 as u64 | (b[4] as u64) << 8 | b[5] as u64;
-            if i != 0 {
-                Some(MAC(unsafe { NonZeroU64::new_unchecked(i) }))
-            } else {
-                None
-            }
+            NonZeroU64::new((b[0] as u64) << 40 | (b[1] as u64) << 32 | (b[2] as u64) << 24 | (b[3] as u64) << 16 as u64 | (b[4] as u64) << 8 | b[5] as u64).map_or(None, |i| Some(MAC(i)))
         } else {
             None
         }

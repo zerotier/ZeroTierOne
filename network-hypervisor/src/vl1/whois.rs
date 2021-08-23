@@ -19,21 +19,15 @@ struct WhoisQueueItem {
     retry_count: u16,
 }
 
-pub(crate) struct WhoisQueue {
-    queue: Mutex<HashMap<Address, WhoisQueueItem>>
-}
+pub(crate) struct WhoisQueue(Mutex<HashMap<Address, WhoisQueueItem>>);
 
 impl WhoisQueue {
     pub(crate) const INTERVAL: i64 = WHOIS_RETRY_INTERVAL;
 
-    pub fn new() -> Self {
-        Self {
-            queue: Mutex::new(HashMap::new())
-        }
-    }
+    pub fn new() -> Self { Self(Mutex::new(HashMap::new())) }
 
     pub fn query<CI: VL1CallerInterface>(&self, node: &Node, ci: &CI, target: Address, packet: Option<QueuedPacket>) {
-        let mut q = self.queue.lock();
+        let mut q = self.0.lock();
 
         let qi = q.entry(target).or_insert_with(|| WhoisQueueItem {
             packet_queue: LinkedList::new(),
@@ -55,14 +49,14 @@ impl WhoisQueue {
 
     /// Remove a WHOIS request from the queue and call the supplied function for all queued packets.
     pub fn response_received_get_packets<F: FnMut(&mut QueuedPacket)>(&self, address: Address, packet_handler: F) {
-        let mut qi = self.queue.lock().remove(&address);
+        let mut qi = self.0.lock().remove(&address);
         let _ = qi.map(|mut qi| qi.packet_queue.iter_mut().for_each(packet_handler));
     }
 
     /// Called every INTERVAL during background tasks.
     pub fn on_interval<CI: VL1CallerInterface>(&self, node: &Node, ci: &CI, time_ticks: i64) {
         let mut targets: Vec<Address> = Vec::new();
-        self.queue.lock().retain(|target, qi| {
+        self.0.lock().retain(|target, qi| {
             if qi.retry_count < WHOIS_RETRY_MAX {
                 if qi.retry_gate.gate(time_ticks) {
                     qi.retry_count += 1;

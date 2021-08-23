@@ -14,9 +14,10 @@ pub struct Address(NonZeroU64);
 impl Address {
     /// Get an address from a 64-bit integer or return None if it is zero or reserved.
     #[inline(always)]
-    pub fn from_u64(i: u64) -> Option<Address> {
+    pub fn from_u64(mut i: u64) -> Option<Address> {
+        i &= 0xffffffffff;
         if i != 0 && (i >> 32) != ADDRESS_RESERVED_PREFIX as u64 {
-            Some(Address(unsafe { NonZeroU64::new_unchecked(i & 0xffffffffff) }))
+            Some(Address(unsafe { NonZeroU64::new_unchecked(i) }))
         } else {
             None
         }

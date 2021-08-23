@@ -66,6 +66,8 @@ NOP, as the name suggests, does nothing. Any payload is ignored.
 | [2] u16       | Length of encrypted Dictionary in bytes           |
 | Dictionary    | Key/value dictionary containing additional fields |
 | --            | -- END of AES-256-CTR encrypted section --        |
+| [2] u16       | Length of unencrypted Dictionary in bytes         |
+| Dictionary    | Unencrypted dictionary (not currently used)       |
 
 HELLO establishes a full session with another peer and carries information such as protocol and software versions, the full identity of the peer, and ephemeral keys for forward secrecy. Without a HELLO exchange only limited communication with the most conservative assumptions is possible, and communication without a session may be completely removed in the future. (It's only allowed now for backward compatibility with ZeroTier 1.x, and must be disabled in FIPS mode.)
 
@@ -91,7 +93,7 @@ OK(HELLO) response payload, which must be sent if the HELLO receipient wishes to
 | [2] u16       | Length of encrypted Dictionary in bytes           |
 | Dictionary    | Key/value dictionary containing additional fields |
 
-Recommended dictionary fields in both HELLO and OK(HELLO):
+The unencrypted dictionary is not currently used. The encrypted dictionary can contain the following fields in both HELLO and OK(HELLO):
 
 | Name                 | Key  | Type         | Description                                      |
 | -------------------- | ---  | ------------ | ------------------------------------------------ |
@@ -120,7 +122,7 @@ Optional dictionary fields that can be included in either HELLO or OK(HELLO):
 | VENDOR               | `V`  | string       | Node software vendor if not ZeroTier, Inc.                   |
 | FLAGS                | `+`  | string       | Flags (see below)                                            |
 
-FLAGS is a string that can contain the following boolean flags: `F` to indicate that the node is running in FIPS compliant mode, and `w` to indicate that the node is a "wimp." "Wimpy" nodes are things like mobile phones, and this flag can be used to exempt these devices from selection for any intensive role (such as use in VL2 to propagate multicasts).
+FLAGS is a string that can contain the following boolean flags: `F` to indicate that the node is running in FIPS compliant mode.
 
 System information such as OS_NAME is currently only sent to roots and not to any other node. This allows roots to collect a bit of very generic statistical and diagnostic telemtry about the nodes using them.
 

@@ -94,13 +94,13 @@ impl Locator {
         self.subject.marshal(buf)?;
         self.signer.marshal(buf)?;
         buf.append_u64(self.timestamp as u64)?;
-        buf.append_varint(self.endpoints.len() as u64);
+        buf.append_varint(self.endpoints.len() as u64)?;
         for e in self.endpoints.iter() {
             e.marshal(buf)?;
         }
-        buf.append_varint(0); // length of any additional fields
+        buf.append_varint(0)?; // length of any additional fields
         if !exclude_signature {
-            buf.append_varint(self.signature.len() as u64);
+            buf.append_varint(self.signature.len() as u64)?;
             buf.append_bytes(self.signature.as_slice())?;
         }
         Ok(())

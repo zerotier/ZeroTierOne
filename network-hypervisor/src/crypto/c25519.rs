@@ -38,14 +38,10 @@ impl C25519KeyPair {
     }
 
     #[inline(always)]
-    pub fn public_bytes(&self) -> [u8; C25519_PUBLIC_KEY_SIZE] {
-        self.1.to_bytes()
-    }
+    pub fn public_bytes(&self) -> [u8; C25519_PUBLIC_KEY_SIZE] { self.1.to_bytes() }
 
     #[inline(always)]
-    pub fn secret_bytes(&self) -> Secret<{ C25519_SECRET_KEY_SIZE }> {
-        Secret(self.0.to_bytes())
-    }
+    pub fn secret_bytes(&self) -> Secret<{ C25519_SECRET_KEY_SIZE }> { Secret(self.0.to_bytes()) }
 
     /// Execute ECDH agreement and return a raw (un-hashed) shared secret key.
     #[inline(always)]
@@ -86,14 +82,10 @@ impl Ed25519KeyPair {
     }
 
     #[inline(always)]
-    pub fn public_bytes(&self) -> [u8; ED25519_PUBLIC_KEY_SIZE] {
-        self.0.public.to_bytes()
-    }
+    pub fn public_bytes(&self) -> [u8; ED25519_PUBLIC_KEY_SIZE] { self.0.public.to_bytes() }
 
     #[inline(always)]
-    pub fn secret_bytes(&self) -> Secret<{ ED25519_SECRET_KEY_SIZE }> {
-        Secret(self.0.secret.to_bytes())
-    }
+    pub fn secret_bytes(&self) -> Secret<{ ED25519_SECRET_KEY_SIZE }> { Secret(self.0.secret.to_bytes()) }
 
     #[inline(always)]
     pub fn sign(&self, msg: &[u8]) -> [u8; ED25519_SIGNATURE_SIZE] {

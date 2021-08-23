@@ -47,9 +47,7 @@ pub enum Endpoint {
 
 impl Default for Endpoint {
     #[inline(always)]
-    fn default() -> Endpoint {
-        Endpoint::Nil
-    }
+    fn default() -> Endpoint { Endpoint::Nil }
 }
 
 impl Endpoint {

@@ -10,7 +10,7 @@ use aes_gmac_siv::{AesCtr, AesGmacSiv};
 
 use crate::{VERSION_MAJOR, VERSION_MINOR, VERSION_PROTO, VERSION_REVISION};
 use crate::crypto::c25519::C25519KeyPair;
-use crate::crypto::hash::SHA384;
+use crate::crypto::hash::{SHA384, SHA384_HASH_SIZE};
 use crate::crypto::kbkdf::zt_kbkdf_hmac_sha384;
 use crate::crypto::p521::P521KeyPair;
 use crate::crypto::poly1305::Poly1305;
@@ -31,14 +31,10 @@ struct AesGmacSivPoolFactory(Secret<48>, Secret<48>);
 
 impl PoolFactory<AesGmacSiv> for AesGmacSivPoolFactory {
     #[inline(always)]
-    fn create(&self) -> AesGmacSiv {
-        AesGmacSiv::new(&self.0.0[0..32], &self.1.0[0..32])
-    }
+    fn create(&self) -> AesGmacSiv { AesGmacSiv::new(&self.0.0[0..32], &self.1.0[0..32]) }
 
     #[inline(always)]
-    fn reset(&self, obj: &mut AesGmacSiv) {
-        obj.reset();
-    }
+    fn reset(&self, obj: &mut AesGmacSiv) { obj.reset(); }
 }
 
 struct PeerSecret {
@@ -92,7 +88,7 @@ pub struct Peer {
     // Either None or the current ephemeral key pair whose public keys are on offer.
     ephemeral_pair: Mutex<Option<EphemeralKeyPair>>,
 
-    // Paths sorted in ascending order of quality / preference.
+    // Paths sorted in descending order of quality / preference.
     paths: Mutex<Vec<Arc<Path>>>,
 
     // Local external address most recently reported by this peer (IP transport only).
@@ -144,8 +140,7 @@ fn salsa_poly_create(secret: &PeerSecret, header: &PacketHeader, packet_size: us
     let mut salsa = Salsa::new(&key.0[0..32], header.id_bytes(), true).unwrap();
     let mut poly1305_key = [0_u8; 32];
     salsa.crypt_in_place(&mut poly1305_key);
-    let mut poly = Poly1305::new(&poly1305_key).unwrap();
-    (salsa, poly)
+    (salsa, Poly1305::new(&poly1305_key).unwrap())
 }
 
 impl Peer {
@@ -192,9 +187,7 @@ impl Peer {
 
     /// Get the next packet ID / IV.
     #[inline(always)]
-    pub(crate) fn next_packet_id(&self) -> PacketID {
-        self.packet_id_counter.fetch_add(1, Ordering::Relaxed)
-    }
+    pub(crate) fn next_packet_id(&self) -> PacketID { self.packet_id_counter.fetch_add(1, Ordering::Relaxed) }
 
     /// Receive, decrypt, authenticate, and process an incoming packet from this peer.
     /// If the packet comes in multiple fragments, the fragments slice should contain all
@@ -287,15 +280,34 @@ impl Peer {
             self.total_bytes_received.fetch_add((payload.len() + PACKET_HEADER_SIZE) as u64, Ordering::Relaxed);
 
             let _ = payload.u8_at(0).map(|verb| {
+                let mut extended_authentication = false;
+                if (verb & VERB_FLAG_EXTENDED_AUTHENTICATION) != 0 {
+                    let auth_bytes = payload.as_bytes();
+                    if auth_bytes.len() >= (1 + SHA384_HASH_SIZE) {
+                        let packet_hmac_start = auth_bytes.len() - SHA384_HASH_SIZE;
+                        if !SHA384::hmac(self.static_secret_packet_hmac.as_ref(), &auth_bytes[1..packet_hmac_start]).eq(&auth_bytes[packet_hmac_start..]) {
+                            return;
+                        }
+                        extended_authentication = true;
+                        unsafe { payload.set_size(payload.len() - SHA384_HASH_SIZE) };
+                    } else {
+                        return;
+                    }
+                }
+
+                if (verb & VERB_FLAG_COMPRESSED) != 0 {
+                }
+
+                let verb = verb & VERB_MASK;
+
                 // For performance reasons we let VL2 handle packets first. It returns false
                 // if it didn't handle the packet, in which case it's handled at VL1.
-                let verb = verb & VERB_MASK;
                 if !ph.handle_packet(self, source_path, forward_secrecy, verb, &payload) {
                     match verb {
                         //VERB_VL1_NOP => {}
                         VERB_VL1_HELLO => self.receive_hello(ci, node, time_ticks, source_path, &payload),
-                        VERB_VL1_ERROR => self.receive_error(ci, node, time_ticks, source_path, &payload),
-                        VERB_VL1_OK => self.receive_ok(ci, node, time_ticks, source_path, &payload),
+                        VERB_VL1_ERROR => self.receive_error(ci, ph, node, time_ticks, source_path, forward_secrecy, &payload),
+                        VERB_VL1_OK => self.receive_ok(ci, ph, node, time_ticks, source_path, forward_secrecy, &payload),
                         VERB_VL1_WHOIS => self.receive_whois(ci, node, time_ticks, source_path, &payload),
                         VERB_VL1_RENDEZVOUS => self.receive_rendezvous(ci, node, time_ticks, source_path, &payload),
                         VERB_VL1_ECHO => self.receive_echo(ci, node, time_ticks, source_path, &payload),
@@ -406,7 +418,7 @@ impl Peer {
                 header.flags_cipher_hops = CIPHER_NOCRYPT_POLY1305;
             }).is_ok());
             debug_assert!(packet.append_and_init_struct(|header: &mut message_component_structs::HelloFixedHeaderFields| {
-                header.verb = VERB_VL1_HELLO | VERB_FLAG_HMAC;
+                header.verb = VERB_VL1_HELLO | VERB_FLAG_EXTENDED_AUTHENTICATION;
                 header.version_proto = VERSION_PROTO;
                 header.version_major = VERSION_MAJOR;
                 header.version_minor = VERSION_MINOR;
@@ -456,11 +468,8 @@ impl Peer {
                 dict.set_str(HELLO_DICT_KEY_OS_NAME, std::env::consts::OS);
             }
             let mut flags = String::new();
-            if node.fips_mode {
+            if node.fips_mode() {
                 flags.push('F');
-            }
-            if node.wimp {
-                flags.push('w');
             }
             dict.set_str(HELLO_DICT_KEY_FLAGS, flags.as_str());
             debug_assert!(dict.write_to(&mut packet).is_ok());
@@ -470,7 +479,9 @@ impl Peer {
             dict_aes.crypt_in_place(&mut packet.as_bytes_mut()[dict_start_position..]);
             drop(dict_aes);
 
-            debug_assert!(packet.append_bytes_fixed(&SHA384::hmac(self.static_secret_packet_hmac.as_ref(), &packet.as_bytes()[PACKET_HEADER_SIZE + 1..])).is_ok());
+            debug_assert!(packet.append_u16(0).is_ok());
+
+            debug_assert!(packet.append_bytes_fixed(&SHA384::hmac(self.static_secret_packet_hmac.as_ref(), packet.as_bytes_starting_at(PACKET_HEADER_SIZE).unwrap())).is_ok());
 
             let (_, mut poly) = salsa_poly_create(&self.static_secret, packet.struct_at::<PacketHeader>(0).unwrap(), packet.len());
             poly.update(packet.as_bytes_starting_at(PACKET_HEADER_SIZE).unwrap());
@@ -497,10 +508,48 @@ impl Peer {
     fn receive_hello<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
 
     #[inline(always)]
-    fn receive_error<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
+    fn receive_error<CI: VL1CallerInterface, PH: VL1PacketHandler>(&self, ci: &CI, ph: &PH, node: &Node, time_ticks: i64, source_path: &Arc<Path>, forward_secrecy: bool, payload: &Buffer<{ PACKET_SIZE_MAX }>) {
+        let mut cursor: usize = 0;
+        let _ = payload.read_struct::<message_component_structs::ErrorHeader>(&mut cursor).map(|error_header| {
+            let in_re_packet_id = error_header.in_re_packet_id;
+            let current_packet_id_counter = self.packet_id_counter.load(Ordering::Relaxed);
+            if current_packet_id_counter.checked_sub(in_re_packet_id).map_or_else(|| {
+                (!in_re_packet_id).wrapping_add(current_packet_id_counter) < PACKET_RESPONSE_COUNTER_DELTA_MAX
+            }, |packets_ago| {
+                packets_ago <= PACKET_RESPONSE_COUNTER_DELTA_MAX
+            }) {
+                match error_header.in_re_verb {
+                    _ => {
+                        ph.handle_error(self, source_path, forward_secrecy, error_header.in_re_verb, in_re_packet_id, error_header.error_code, payload, &mut cursor);
+                    }
+                }
+            }
+        });
+    }
 
     #[inline(always)]
-    fn receive_ok<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
+    fn receive_ok<CI: VL1CallerInterface, PH: VL1PacketHandler>(&self, ci: &CI, ph: &PH, node: &Node, time_ticks: i64, source_path: &Arc<Path>, forward_secrecy: bool, payload: &Buffer<{ PACKET_SIZE_MAX }>) {
+        let mut cursor: usize = 0;
+        let _ = payload.read_struct::<message_component_structs::OkHeader>(&mut cursor).map(|ok_header| {
+            let in_re_packet_id = ok_header.in_re_packet_id;
+            let current_packet_id_counter = self.packet_id_counter.load(Ordering::Relaxed);
+            if current_packet_id_counter.checked_sub(in_re_packet_id).map_or_else(|| {
+                (!in_re_packet_id).wrapping_add(current_packet_id_counter) < PACKET_RESPONSE_COUNTER_DELTA_MAX
+            }, |packets_ago| {
+                packets_ago <= PACKET_RESPONSE_COUNTER_DELTA_MAX
+            }) {
+                match ok_header.in_re_verb {
+                    VERB_VL1_HELLO => {
+                    }
+                    VERB_VL1_WHOIS => {
+                    }
+                    _ => {
+                        ph.handle_ok(self, source_path, forward_secrecy, ok_header.in_re_verb, in_re_packet_id, payload, &mut cursor);
+                    }
+                }
+            }
+        });
+    }
 
     #[inline(always)]
     fn receive_whois<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
@@ -518,9 +567,7 @@ impl Peer {
     fn receive_user_message<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
 
     /// Get current best path or None if there are no direct paths to this peer.
-    pub fn direct_path(&self) -> Option<Arc<Path>> {
-        self.paths.lock().last().map(|p| p.clone())
-    }
+    pub fn direct_path(&self) -> Option<Arc<Path>> { self.paths.lock().first().map(|p| p.clone()) }
 
     /// Get either the current best direct path or an indirect path.
     pub fn path(&self, node: &Node) -> Option<Arc<Path>> {

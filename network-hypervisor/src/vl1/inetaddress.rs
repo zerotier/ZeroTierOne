@@ -348,12 +348,8 @@ impl InetAddress {
                     let ip = &*(&self.sin.sin_addr.s_addr as *const u32).cast::<[u8; 4]>();
                     format!("{}.{}.{}.{}", ip[0], ip[1], ip[2], ip[3])
                 }
-                AF_INET6 => {
-                    Ipv6Addr::from(*(&(self.sin6.sin6_addr) as *const in6_addr).cast::<[u8; 16]>()).to_string()
-                }
-                _ => {
-                    String::from("(null)")
-                }
+                AF_INET6 => Ipv6Addr::from(*(&(self.sin6.sin6_addr) as *const in6_addr).cast::<[u8; 16]>()).to_string(),
+                _ => String::from("(null)")
             }
         }
     }
@@ -377,9 +373,7 @@ impl InetAddress {
                         b[18] = *(&self.sin6.sin6_port as *const u16).cast::<u8>().offset(1);
                     })
                 }
-                _ => {
-                    buf.append_u8(0)
-                }
+                _ => buf.append_u8(0)
             }
         }
     }
@@ -455,7 +449,6 @@ impl FromStr for InetAddress {
 }
 
 impl PartialEq for InetAddress {
-    #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
         unsafe {
             if self.sa.sa_family == other.sa.sa_family {

@@ -103,10 +103,10 @@ pub struct Root {
 /// as at least one of the old roots is up to distribute the new ones.
 #[derive(PartialEq, Eq)]
 pub struct RootSet {
-    pub timestamp: i64,
-    pub name: String,
-    pub contact: String,
-    pub roots: BTreeSet<Root>,
+    timestamp: i64,
+    name: String,
+    contact: String,
+    roots: BTreeSet<Root>,
     signer: Vec<u8>,
     signature: Vec<u8>,
     root_set_type: Type,
@@ -185,9 +185,9 @@ impl RootSet {
                 buf.append_u8(ROOT_SET_TYPE_ED25519_P521)?;
                 buf.append_u64(self.timestamp as u64)?;
                 buf.append_u8(name.len() as u8)?;
-                buf.append_bytes(name);
+                buf.append_bytes(name)?;
                 buf.append_u8(contact.len() as u8)?;
-                buf.append_bytes(contact);
+                buf.append_bytes(contact)?;
                 if self.signer.len() != (ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE) {
                     return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "signer can only be 164 bytes"));
                 }

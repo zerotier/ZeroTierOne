@@ -6,6 +6,7 @@ pub mod locator;
 pub mod rootset;
 
 // These are either only used inside network-hypervisor or are selectively exported below.
+#[allow(unused)]
 pub(crate) mod protocol;
 pub(crate) mod buffer;
 pub(crate) mod node;

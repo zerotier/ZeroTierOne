@@ -70,6 +70,14 @@ impl<const L: usize> Buffer<L> {
     #[inline(always)]
     pub fn is_empty(&self) -> bool { self.0 == 0 }
 
+    /// Set the size of this buffer's data.
+    ///
+    /// This is marked unsafe because no bounds checking is done here and because it
+    /// technically violates the assurance that all data in the buffer is valid. Use
+    /// with care.
+    #[inline(always)]
+    pub unsafe fn set_size(&mut self, s: usize) { self.0 = s; }
+
     /// Append a packed structure and call a function to initialize it in place.
     /// Anything not initialized will be zero.
     #[inline(always)]
@@ -305,7 +313,7 @@ impl<const L: usize> Buffer<L> {
         loop {
             let b = self.read_u8(cursor)?;
             if (b & 0x80) == 0 {
-                i |= (b as u64) << p;
+                i |= (b as u64).wrapping_shl(p);
                 p += 7;
             } else {
                 i |= ((b & 0x7f) as u64) << p;

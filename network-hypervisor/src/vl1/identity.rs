@@ -6,6 +6,8 @@ use std::io::Write;
 use std::ptr::{slice_from_raw_parts, slice_from_raw_parts_mut};
 use std::str::FromStr;
 
+use concat_arrays::concat_arrays;
+
 use crate::crypto::balloon;
 use crate::crypto::c25519::*;
 use crate::crypto::hash::*;
@@ -17,24 +19,18 @@ use crate::vl1::Address;
 use crate::vl1::buffer::Buffer;
 use crate::vl1::protocol::PACKET_SIZE_MAX;
 
-use concat_arrays::concat_arrays;
+pub const IDENTITY_TYPE_0_SIGNATURE_SIZE: usize = 96;
+pub const IDENTITY_TYPE_1_SIGNATURE_SIZE: usize = P521_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE;
 
-// Memory parameter for V0 address derivation work function.
-const V0_IDENTITY_GEN_MEMORY: usize = 2097152;
-
-// Balloon hash parameters for V1 address derivation work function.
+const V0_POW_MEMORY: usize = 2097152;
+const V0_POW_THRESHOLD: u8 = 17;
+const V1_POW_THRESHOLD: u8 = 5;
 const V1_BALLOON_SPACE_COST: usize = 16384;
 const V1_BALLOON_TIME_COST: usize = 3;
 const V1_BALLOON_DELTA: usize = 3;
 const V1_BALLOON_SALT: &'static [u8] = b"zt_id_v1";
 
 const V1_PUBLIC_KEYS_SIGNATURE_AND_POW_SIZE: usize = C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_ECDSA_SIGNATURE_SIZE + SHA384_HASH_SIZE;
-
-pub const IDENTITY_TYPE_0_SIGNATURE_SIZE: usize = 96;
-pub const IDENTITY_TYPE_1_SIGNATURE_SIZE: usize = P521_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE;
-
-const IDENTITY_V0_POW_THRESHOLD: u8 = 17;
-const IDENTITY_V1_POW_THRESHOLD: u8 = 5;
 
 #[derive(Copy, Clone)]
 #[repr(u8)]
@@ -62,24 +58,24 @@ pub struct Identity {
 /// Compute result from the bespoke "frankenhash" from the old V0 work function.
 /// The supplied genmem_ptr must be of size V0_IDENTITY_GEN_MEMORY and aligned to an 8-byte boundary.
 fn v0_frankenhash(digest: &mut [u8; 64], genmem_ptr: *mut u8) {
-    let (genmem, genmem_alias_hack) = unsafe { (&mut *slice_from_raw_parts_mut(genmem_ptr, V0_IDENTITY_GEN_MEMORY), &*slice_from_raw_parts(genmem_ptr, V0_IDENTITY_GEN_MEMORY)) };
+    let (genmem, genmem_alias_hack) = unsafe { (&mut *slice_from_raw_parts_mut(genmem_ptr, V0_POW_MEMORY), &*slice_from_raw_parts(genmem_ptr, V0_POW_MEMORY)) };
     let genmem_u64_ptr = genmem_ptr.cast::<u64>();
 
     let mut s20 = Salsa::new(&digest[0..32], &digest[32..40], false).unwrap();
 
     s20.crypt(&crate::util::ZEROES[0..64], &mut genmem[0..64]);
     let mut i: usize = 64;
-    while i < V0_IDENTITY_GEN_MEMORY {
+    while i < V0_POW_MEMORY {
         let ii = i + 64;
         s20.crypt(&genmem_alias_hack[(i - 64)..i], &mut genmem[i..ii]);
         i = ii;
     }
 
     i = 0;
-    while i < (V0_IDENTITY_GEN_MEMORY / 8) {
+    while i < (V0_POW_MEMORY / 8) {
         unsafe {
             let idx1 = (((*genmem_u64_ptr.offset(i as isize)).to_be() % 8) * 8) as usize;
-            let idx2 = ((*genmem_u64_ptr.offset((i + 1) as isize)).to_be() % (V0_IDENTITY_GEN_MEMORY as u64 / 8)) as usize;
+            let idx2 = ((*genmem_u64_ptr.offset((i + 1) as isize)).to_be() % (V0_POW_MEMORY as u64 / 8)) as usize;
             let genmem_u64_at_idx2_ptr = genmem_u64_ptr.offset(idx2 as isize);
             let tmp = *genmem_u64_at_idx2_ptr;
             let digest_u64_ptr = digest.as_mut_ptr().offset(idx1 as isize).cast::<u64>();
@@ -93,7 +89,7 @@ fn v0_frankenhash(digest: &mut [u8; 64], genmem_ptr: *mut u8) {
 
 impl Identity {
     fn generate_c25519() -> Identity {
-        let genmem_layout = Layout::from_size_align(V0_IDENTITY_GEN_MEMORY, 8).unwrap();
+        let genmem_layout = Layout::from_size_align(V0_POW_MEMORY, 8).unwrap();
         let genmem_ptr = unsafe { alloc(genmem_layout) };
         if genmem_ptr.is_null() {
             panic!("unable to allocate memory for V0 identity generation");
@@ -111,7 +107,7 @@ impl Identity {
             let mut digest = sha.finish();
 
             v0_frankenhash(&mut digest, genmem_ptr);
-            if digest[0] < IDENTITY_V0_POW_THRESHOLD {
+            if digest[0] < V0_POW_THRESHOLD {
                 let addr = Address::from_bytes(&digest[59..64]);
                 if addr.is_some() {
                     unsafe { dealloc(genmem_ptr, genmem_layout) };
@@ -145,7 +141,7 @@ impl Identity {
             // ECDSA is a randomized signature algorithm, so each signature will be different.
             let sig = p521_ecdsa.sign(&sign_buf).unwrap();
             let bh = balloon::hash::<{ V1_BALLOON_SPACE_COST }, { V1_BALLOON_TIME_COST }, { V1_BALLOON_DELTA }>(&sig, V1_BALLOON_SALT);
-            if bh[0] < IDENTITY_V1_POW_THRESHOLD {
+            if bh[0] < V1_POW_THRESHOLD {
                 let addr = Address::from_bytes(&bh[43..48]);
                 if addr.is_some() {
                     let p521_ecdh_pub = p521_ecdh.public_key().clone();
@@ -210,7 +206,7 @@ impl Identity {
     /// to fully validate than V1 identities.
     pub fn locally_validate(&self) -> bool {
         if self.v1.is_none() {
-            let genmem_layout = Layout::from_size_align(V0_IDENTITY_GEN_MEMORY, 8).unwrap();
+            let genmem_layout = Layout::from_size_align(V0_POW_MEMORY, 8).unwrap();
             let genmem_ptr = unsafe { alloc(genmem_layout) };
             if !genmem_ptr.is_null() {
                 let mut sha = SHA512::new();
@@ -219,7 +215,7 @@ impl Identity {
                 let mut digest = sha.finish();
                 v0_frankenhash(&mut digest, genmem_ptr);
                 unsafe { dealloc(genmem_ptr, genmem_layout) };
-                (digest[0] < IDENTITY_V0_POW_THRESHOLD) && Address::from_bytes(&digest[59..64]).unwrap().eq(&self.address)
+                (digest[0] < V0_POW_THRESHOLD) && Address::from_bytes(&digest[59..64]).unwrap().eq(&self.address)
             } else {
                 false
             }
@@ -232,7 +228,7 @@ impl Identity {
             signing_buf[(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE)..(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE)].copy_from_slice((*p521).1.public_key_bytes());
             if (*p521).1.verify(&signing_buf, &(*p521).2) {
                 let bh = balloon::hash::<{ V1_BALLOON_SPACE_COST }, { V1_BALLOON_TIME_COST }, { V1_BALLOON_DELTA }>(&(*p521).2, V1_BALLOON_SALT);
-                (bh[0] < IDENTITY_V1_POW_THRESHOLD) && bh.eq(&(*p521).3) && Address::from_bytes(&bh[43..48]).unwrap().eq(&self.address)
+                (bh[0] < V1_POW_THRESHOLD) && bh.eq(&(*p521).3) && Address::from_bytes(&bh[43..48]).unwrap().eq(&self.address)
             } else {
                 false
             }
@@ -247,12 +243,8 @@ impl Identity {
     pub fn agree(&self, other_identity: &Identity) -> Option<Secret<48>> {
         self.secrets.as_ref().map_or(None, |secrets| {
             let c25519_secret = || Secret::<48>(SHA384::hash(&secrets.c25519.agree(&other_identity.c25519).as_ref()));
-            secrets.v1.as_ref().map_or_else(|| {
-                Some(c25519_secret())
-            }, |p521_secret| {
-                other_identity.v1.as_ref().map_or_else(|| {
-                    Some(c25519_secret())
-                }, |other_p521_public| {
+            secrets.v1.as_ref().map_or_else(|| Some(c25519_secret()), |p521_secret| {
+                other_identity.v1.as_ref().map_or_else(|| Some(c25519_secret()), |other_p521_public| {
                     p521_secret.0.agree(&other_p521_public.0).map_or(None, |p521_secret| {
                         //
                         // For NIST P-521 key agreement, we use a single step key derivation function to derive
@@ -285,25 +277,21 @@ impl Identity {
     pub fn sign(&self, msg: &[u8]) -> Option<Vec<u8>> {
         self.secrets.as_ref().map_or(None, |secrets| {
             let c25519_sig = secrets.ed25519.sign_zt(msg);
-            secrets.v1.as_ref().map_or_else(|| {
-                Some(c25519_sig.to_vec())
-            }, |p521_secret| {
-                p521_secret.1.sign(msg).map_or(None, |p521_sig| {
-                    //
-                    // For type 1 identity signatures we sign with both algorithms and append the Ed25519
-                    // signature to the NIST P-521 signature. The Ed25519 signature is only checked if the
-                    // P-521 signature validates. Note that we only append the first 64 bytes of sign_zt()
-                    // output. For legacy reasons type 0 signatures include the first 32 bytes of the message
-                    // hash after the signature, but this is not required and isn't included here.
-                    //
-                    // This should once again make both the FIPS people and the people paranoid about NIST
-                    // curves happy.
-                    //
-                    let mut p521_sig = p521_sig.to_vec();
-                    let _ = p521_sig.write_all(&c25519_sig[0..64]);
-                    Some(p521_sig)
-                })
-            })
+            secrets.v1.as_ref().map_or_else(|| Some(c25519_sig.to_vec()), |p521_secret| p521_secret.1.sign(msg).map_or(None, |p521_sig| {
+                //
+                // For type 1 identity signatures we sign with both algorithms and append the Ed25519
+                // signature to the NIST P-521 signature. The Ed25519 signature is only checked if the
+                // P-521 signature validates. Note that we only append the first 64 bytes of sign_zt()
+                // output. For legacy reasons type 0 signatures include the first 32 bytes of the message
+                // hash after the signature, but this is not required and isn't included here.
+                //
+                // This should once again make both the FIPS people and the people paranoid about NIST
+                // curves happy.
+                //
+                let mut p521_sig = p521_sig.to_vec();
+                let _ = p521_sig.write_all(&c25519_sig[0..64]);
+                Some(p521_sig)
+            }))
         })
     }
 
@@ -312,34 +300,20 @@ impl Identity {
         self.v1.as_ref().map_or_else(|| {
             crate::crypto::c25519::ed25519_verify(&self.ed25519, signature, msg)
         }, |p521| {
-            if signature.len() == IDENTITY_TYPE_1_SIGNATURE_SIZE {
-                (*p521).1.verify(msg, &signature[0..P521_ECDSA_SIGNATURE_SIZE]) && crate::crypto::c25519::ed25519_verify(&self.ed25519, &signature[P521_ECDSA_SIGNATURE_SIZE..], msg)
-            } else {
-                false
-            }
+            signature.len() == IDENTITY_TYPE_1_SIGNATURE_SIZE && (*p521).1.verify(msg, &signature[0..P521_ECDSA_SIGNATURE_SIZE]) && crate::crypto::c25519::ed25519_verify(&self.ed25519, &signature[P521_ECDSA_SIGNATURE_SIZE..], msg)
         })
     }
 
     /// Get this identity's type.
     #[inline(always)]
-    pub fn id_type(&self) -> Type {
-        if self.v1.is_some() {
-            Type::P521
-        } else {
-            Type::C25519
-        }
-    }
+    pub fn id_type(&self) -> Type { if self.v1.is_some() { Type::P521 } else { Type::C25519 } }
 
     /// Returns true if this identity also holds its secret keys.
     #[inline(always)]
-    pub fn has_secrets(&self) -> bool {
-        self.secrets.is_some()
-    }
+    pub fn has_secrets(&self) -> bool { self.secrets.is_some() }
 
     /// Erase secrets from this identity object, if present.
-    pub fn forget_secrets(&mut self) {
-        let _ = self.secrets.take();
-    }
+    pub fn forget_secrets(&mut self) { let _ = self.secrets.take(); }
 
     /// Append this in binary format to a buffer.
     pub fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>, include_private: bool) -> std::io::Result<()> {
@@ -598,9 +572,7 @@ impl Eq for Identity {}
 
 impl PartialOrd for Identity {
     #[inline(always)]
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
 }
 
 impl Ord for Identity {

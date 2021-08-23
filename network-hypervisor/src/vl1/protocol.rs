@@ -131,8 +131,8 @@ pub const FRAGMENT_INDICATOR: u8 = 0xff;
 /// Verb (inner) flag indicating that the packet's payload (after the verb) is LZ4 compressed.
 pub const VERB_FLAG_COMPRESSED: u8 = 0x80;
 
-/// Verb (inner) flag indicating that payload after verb is authenticated with HMAC-SHA384.
-pub const VERB_FLAG_HMAC: u8 = 0x40;
+/// Verb (inner) flag indicating that payload is authenticated with HMAC-SHA384.
+pub const VERB_FLAG_EXTENDED_AUTHENTICATION: u8 = 0x40;
 
 /// Mask to get only the verb from the verb + verb flags byte.
 pub const VERB_MASK: u8 = 0x1f;
@@ -146,8 +146,8 @@ pub const PROTOCOL_MAX_HOPS: u8 = 7;
 /// Maximum number of hops to allow.
 pub const FORWARD_MAX_HOPS: u8 = 3;
 
-/// Maximum difference between an OK in-re packet ID and the current packet ID counter.
-pub const OK_PACKET_SEQUENCE_CUTOFF: u64 = 1000;
+/// Maximum difference between current packet ID counter and OK/ERROR in-re packet ID.
+pub const PACKET_RESPONSE_COUNTER_DELTA_MAX: u64 = 1024;
 
 /// Frequency for WHOIS retries
 pub const WHOIS_RETRY_INTERVAL: i64 = 1000;
@@ -267,6 +267,24 @@ impl FragmentHeader {
 
 pub(crate) mod message_component_structs {
     use crate::vl1::buffer::RawObject;
+    use crate::vl1::protocol::PacketID;
+
+    #[repr(packed)]
+    pub struct OkHeader {
+        pub in_re_verb: u8,
+        pub in_re_packet_id: PacketID,
+    }
+
+    unsafe impl RawObject for OkHeader {}
+
+    #[repr(packed)]
+    pub struct ErrorHeader {
+        pub in_re_verb: u8,
+        pub in_re_packet_id: PacketID,
+        pub error_code: u8,
+    }
+
+    unsafe impl RawObject for ErrorHeader {}
 
     #[repr(packed)]
     pub struct HelloFixedHeaderFields {
@@ -300,6 +318,8 @@ mod tests {
 
     #[test]
     fn representation() {
+        assert_eq!(size_of::<message_component_structs::OkHeader>(), 9);
+        assert_eq!(size_of::<message_component_structs::ErrorHeader>(), 10);
         assert_eq!(size_of::<PacketHeader>(), PACKET_HEADER_SIZE);
         assert_eq!(size_of::<FragmentHeader>(), FRAGMENT_HEADER_SIZE);
 

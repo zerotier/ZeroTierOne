@@ -16,34 +16,21 @@ pub struct Secret<const L: usize>(pub(crate) [u8; L]);
 
 impl<const L: usize> Secret<L> {
     #[inline(always)]
-    pub fn new() -> Self {
-        Self([0_u8; L])
-    }
+    pub fn new() -> Self { Self([0_u8; L]) }
 
     /// Copy bytes into secret, will panic if size does not match.
     #[inline(always)]
-    pub fn from_bytes(b: &[u8]) -> Self {
-        Self(b.try_into().unwrap())
-    }
+    pub fn from_bytes(b: &[u8]) -> Self { Self(b.try_into().unwrap()) }
 
     #[inline(always)]
-    pub fn as_bytes(&self) -> &[u8; L] {
-        return &self.0
-    }
+    pub fn as_bytes(&self) -> &[u8; L] { return &self.0 }
 }
 
 impl<const L: usize> Drop for Secret<L> {
     fn drop(&mut self) {
         unsafe {
-            let p = self.0.as_mut_ptr();
-            if (L % size_of::<usize>()) == 0 {
-                for i in 0..(L / size_of::<usize>()) {
-                    write_volatile(p.cast::<usize>().offset(i as isize), 0_usize);
-                }
-            } else {
-                for i in 0..L {
-                    write_volatile(p.offset(i as isize), 0_u8);
-                }
+            for i in 0..L {
+                write_volatile(self.0.as_mut_ptr().offset(i as isize), 0_u8);
             }
         }
     }
@@ -51,35 +38,25 @@ impl<const L: usize> Drop for Secret<L> {
 
 impl<const L: usize> Default for Secret<L> {
     #[inline(always)]
-    fn default() -> Self {
-        Self([0_u8; L])
-    }
+    fn default() -> Self { Self([0_u8; L]) }
 }
 
 impl<const L: usize> AsRef<[u8]> for Secret<L> {
     #[inline(always)]
-    fn as_ref(&self) -> &[u8] {
-        &self.0
-    }
+    fn as_ref(&self) -> &[u8] { &self.0 }
 }
 
 impl<const L: usize> AsRef<[u8; L]> for Secret<L> {
     #[inline(always)]
-    fn as_ref(&self) -> &[u8; L] {
-        &self.0
-    }
+    fn as_ref(&self) -> &[u8; L] { &self.0 }
 }
 
 impl<const L: usize> AsMut<[u8]> for Secret<L> {
     #[inline(always)]
-    fn as_mut(&mut self) -> &mut [u8] {
-        &mut self.0
-    }
+    fn as_mut(&mut self) -> &mut [u8] { &mut self.0 }
 }
 
 impl<const L: usize> AsMut<[u8; L]> for Secret<L> {
     #[inline(always)]
-    fn as_mut(&mut self) -> &mut [u8; L] {
-        &mut self.0
-    }
+    fn as_mut(&mut self) -> &mut [u8; L] { &mut self.0 }
 }

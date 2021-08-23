@@ -36,7 +36,7 @@ impl Path {
             local_interface,
             last_send_time_ticks: AtomicI64::new(0),
             last_receive_time_ticks: AtomicI64::new(0),
-            fragmented_packets: Mutex::new(HashMap::with_capacity_and_hasher(8, U64PassThroughHasher::new())),
+            fragmented_packets: Mutex::new(HashMap::with_capacity_and_hasher(4, U64PassThroughHasher::new())),
         }
     }
 

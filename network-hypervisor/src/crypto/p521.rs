@@ -130,23 +130,17 @@ impl P521KeyPair {
     }
 
     #[inline(always)]
-    pub fn public_key(&self) -> &P521PublicKey {
-        &self.public_key
-    }
+    pub fn public_key(&self) -> &P521PublicKey { &self.public_key }
 
     /// Get the raw ECC public "q" point for this key pair.
     /// The returned point is not compressed. To use this with other interfaces that expect a format
     /// prefix, prepend 0x04 to the beginning of this public key. This prefix is always the same in
     /// our system and so is omitted.
     #[inline(always)]
-    pub fn public_key_bytes(&self) -> &[u8; P521_PUBLIC_KEY_SIZE] {
-        &self.public_key.public_key_bytes
-    }
+    pub fn public_key_bytes(&self) -> &[u8; P521_PUBLIC_KEY_SIZE] { &self.public_key.public_key_bytes }
 
     #[inline(always)]
-    pub fn secret_key_bytes(&self) -> &Secret<{ P521_SECRET_KEY_SIZE }> {
-        &self.secret_key_bytes
-    }
+    pub fn secret_key_bytes(&self) -> &Secret<{ P521_SECRET_KEY_SIZE }> { &self.secret_key_bytes }
 
     /// Create an ECDSA signature of the input message.
     /// Message data does not need to be pre-hashed.
@@ -213,17 +207,13 @@ impl P521PublicKey {
 
 impl PartialEq for P521PublicKey {
     #[inline(always)]
-    fn eq(&self, other: &Self) -> bool {
-        self.public_key_bytes.eq(&other.public_key_bytes)
-    }
+    fn eq(&self, other: &Self) -> bool { self.public_key_bytes.eq(&other.public_key_bytes) }
 }
 
 impl Eq for P521PublicKey {}
 
 impl Clone for P521PublicKey {
-    fn clone(&self) -> Self {
-        P521PublicKey::from_bytes(&self.public_key_bytes).unwrap()
-    }
+    fn clone(&self) -> Self { P521PublicKey::from_bytes(&self.public_key_bytes).unwrap() }
 }
 
 #[cfg(test)]
