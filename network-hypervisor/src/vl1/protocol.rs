@@ -1,7 +1,8 @@
 use std::mem::MaybeUninit;
 
 use crate::vl1::Address;
-use crate::vl1::buffer::RawObject;
+use crate::vl1::buffer::{RawObject, Buffer};
+use crate::crypto::hash::SHA384;
 
 pub const VERB_VL1_NOP: u8 = 0x00;
 pub const VERB_VL1_HELLO: u8 = 0x01;
@@ -157,6 +158,38 @@ pub const WHOIS_RETRY_MAX: u16 = 3;
 
 /// Maximum number of packets to queue up behind a WHOIS.
 pub const WHOIS_MAX_WAITING_PACKETS: usize = 64;
+
+/// Compress a packet and return true if compressed.
+/// The 'dest' buffer must be empty (will panic otherwise). A return value of false indicates an error or
+/// that the data was not compressible. The state of the destination buffer is undefined on a return
+/// value of false.
+pub fn compress_packet(src: &[u8], dest: &mut Buffer<{ PACKET_SIZE_MAX }>) -> bool {
+    if src.len() > PACKET_VERB_INDEX {
+        debug_assert!(dest.is_empty());
+        let cs = {
+            let d = dest.as_bytes_mut();
+            d[0..PACKET_VERB_INDEX].copy_from_slice(&src[0..PACKET_VERB_INDEX]);
+            d[PACKET_VERB_INDEX] = src[PACKET_VERB_INDEX] | VERB_FLAG_COMPRESSED;
+            lz4_flex::block::compress_into(&src[PACKET_VERB_INDEX + 1..], d, PACKET_VERB_INDEX + 1)
+        };
+        if cs.is_ok() {
+            let cs = cs.unwrap();
+            if cs > 0 && cs < (src.len() - PACKET_VERB_INDEX) {
+                unsafe { dest.set_size_unchecked(PACKET_VERB_INDEX + 1 + cs) };
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+/// Add HMAC-SHA384 to the end of a packet and set verb flag.
+#[inline(always)]
+pub fn add_extended_auth(pkt: &mut Buffer<{ PACKET_SIZE_MAX }>, hmac_secret_key: &[u8]) -> std::io::Result<()> {
+    pkt.append_bytes_fixed(&SHA384::hmac(hmac_secret_key, pkt.as_bytes_starting_at(PACKET_VERB_INDEX + 1)?))?;
+    pkt.as_bytes_mut()[PACKET_VERB_INDEX] |= VERB_FLAG_EXTENDED_AUTHENTICATION;
+    Ok(())
+}
 
 /// A unique packet identifier, also the cryptographic nonce.
 ///

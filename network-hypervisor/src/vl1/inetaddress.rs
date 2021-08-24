@@ -379,16 +379,15 @@ impl InetAddress {
     }
 
     pub fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> std::io::Result<InetAddress> {
-        match buf.read_u8(cursor)? {
-            4 => {
-                let b: &[u8; 6] = buf.read_bytes_fixed(cursor)?;
-                Ok(InetAddress::from_ip_port(&b[0..4], crate::util::load_u16_be(&b[4..6])))
-            }
-            6 => {
-                let b: &[u8; 18] = buf.read_bytes_fixed(cursor)?;
-                Ok(InetAddress::from_ip_port(&b[0..16], crate::util::load_u16_be(&b[16..18])))
-            }
-            _ => Ok(InetAddress::new())
+        let t = buf.read_u8(cursor)?;
+        if t == 4 {
+            let b: &[u8; 6] = buf.read_bytes_fixed(cursor)?;
+            Ok(InetAddress::from_ip_port(&b[0..4], crate::util::load_u16_be(&b[4..6])))
+        } else if t == 6 {
+            let b: &[u8; 18] = buf.read_bytes_fixed(cursor)?;
+            Ok(InetAddress::from_ip_port(&b[0..16], crate::util::load_u16_be(&b[16..18])))
+        } else {
+            Ok(InetAddress::new())
         }
     }
 }

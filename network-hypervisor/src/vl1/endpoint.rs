@@ -130,11 +130,14 @@ impl Endpoint {
     pub fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> std::io::Result<Endpoint> {
         let type_byte = buf.read_u8(cursor)?;
         if type_byte < 16 {
-            let ip = InetAddress::unmarshal(buf, cursor)?;
-            if ip.is_nil() {
-                Ok(Endpoint::Nil)
+            if type_byte == 4 {
+                let b: &[u8; 6] = buf.read_bytes_fixed(cursor)?;
+                Ok(Endpoint::IpUdp(InetAddress::from_ip_port(&b[0..4], crate::util::load_u16_be(&b[4..6]))))
+            } else if type_byte == 6 {
+                let b: &[u8; 18] = buf.read_bytes_fixed(cursor)?;
+                Ok(Endpoint::IpUdp(InetAddress::from_ip_port(&b[0..16], crate::util::load_u16_be(&b[16..18]))))
             } else {
-                Ok(Endpoint::IpUdp(ip))
+                Ok(Endpoint::Nil)
             }
         } else {
             let read_mac = |buf: &Buffer<BL>, cursor: &mut usize| {

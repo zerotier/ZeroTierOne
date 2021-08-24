@@ -95,13 +95,13 @@ pub trait VL1PacketHandler {
     /// True should be returned even if the packet is not valid, since the return value is used
     /// to determine if this is a VL2 or VL1 packet. ERROR and OK should not be handled here but
     /// in handle_error() and handle_ok() instead.
-    fn handle_packet(&self, peer: &Peer, source_path: &Arc<Path>, forward_secrecy: bool, verb: u8, payload: &Buffer<{ PACKET_SIZE_MAX }>) -> bool;
+    fn handle_packet(&self, peer: &Peer, source_path: &Arc<Path>, forward_secrecy: bool, extended_authentication: bool, verb: u8, payload: &Buffer<{ PACKET_SIZE_MAX }>) -> bool;
 
     /// Handle errors, returning true if the error was recognized.
-    fn handle_error(&self, peer: &Peer, source_path: &Arc<Path>, forward_secrecy: bool, in_re_verb: u8, in_re_packet_id: PacketID, error_code: u8, payload: &Buffer<{ PACKET_SIZE_MAX }>, cursor: &mut usize) -> bool;
+    fn handle_error(&self, peer: &Peer, source_path: &Arc<Path>, forward_secrecy: bool, extended_authentication: bool, in_re_verb: u8, in_re_packet_id: PacketID, error_code: u8, payload: &Buffer<{ PACKET_SIZE_MAX }>, cursor: &mut usize) -> bool;
 
     /// Handle an OK, returing true if the OK was recognized.
-    fn handle_ok(&self, peer: &Peer, source_path: &Arc<Path>, forward_secrecy: bool, in_re_verb: u8, in_re_packet_id: PacketID, payload: &Buffer<{ PACKET_SIZE_MAX }>, cursor: &mut usize) -> bool;
+    fn handle_ok(&self, peer: &Peer, source_path: &Arc<Path>, forward_secrecy: bool, extended_authentication: bool, in_re_verb: u8, in_re_packet_id: PacketID, payload: &Buffer<{ PACKET_SIZE_MAX }>, cursor: &mut usize) -> bool;
 }
 
 #[derive(Default)]

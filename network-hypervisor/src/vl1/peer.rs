@@ -194,7 +194,7 @@ impl Peer {
     /// those fragments after the main packet header and first chunk.
     pub(crate) fn receive<CI: VL1CallerInterface, PH: VL1PacketHandler>(&self, node: &Node, ci: &CI, ph: &PH, time_ticks: i64, source_path: &Arc<Path>, header: &PacketHeader, packet: &Buffer<{ PACKET_SIZE_MAX }>, fragments: &[Option<PacketBuffer>]) {
         let _ = packet.as_bytes_starting_at(PACKET_VERB_INDEX).map(|packet_frag0_payload_bytes| {
-            let mut payload: Buffer<{ PACKET_SIZE_MAX }> = Buffer::new();
+            let mut payload = node.get_packet_buffer();
 
             let mut forward_secrecy = true; // set to false below if ephemeral fails
             let mut packet_id = header.id as u64;
@@ -279,40 +279,50 @@ impl Peer {
             self.last_receive_time_ticks.store(time_ticks, Ordering::Relaxed);
             self.total_bytes_received.fetch_add((payload.len() + PACKET_HEADER_SIZE) as u64, Ordering::Relaxed);
 
-            let _ = payload.u8_at(0).map(|verb| {
-                let mut extended_authentication = false;
-                if (verb & VERB_FLAG_EXTENDED_AUTHENTICATION) != 0 {
+            let _ = payload.u8_at(0).map(|mut verb| {
+                let extended_authentication = (verb & VERB_FLAG_EXTENDED_AUTHENTICATION) != 0;
+                if extended_authentication {
                     let auth_bytes = payload.as_bytes();
                     if auth_bytes.len() >= (1 + SHA384_HASH_SIZE) {
                         let packet_hmac_start = auth_bytes.len() - SHA384_HASH_SIZE;
                         if !SHA384::hmac(self.static_secret_packet_hmac.as_ref(), &auth_bytes[1..packet_hmac_start]).eq(&auth_bytes[packet_hmac_start..]) {
                             return;
                         }
-                        extended_authentication = true;
-                        unsafe { payload.set_size(payload.len() - SHA384_HASH_SIZE) };
+                        let new_len = payload.len() - SHA384_HASH_SIZE;
+                        payload.set_size(new_len);
                     } else {
                         return;
                     }
                 }
 
                 if (verb & VERB_FLAG_COMPRESSED) != 0 {
+                    let mut decompressed_payload = node.get_packet_buffer();
+                    let _ = decompressed_payload.append_u8(verb);
+                    let dlen = lz4_flex::block::decompress_into(&payload.as_bytes()[1..], &mut decompressed_payload.as_bytes_mut(), 1);
+                    if dlen.is_ok() {
+                        decompressed_payload.set_size(dlen.unwrap());
+                        payload = decompressed_payload;
+                    } else {
+                        return;
+                    }
                 }
 
-                let verb = verb & VERB_MASK;
-
                 // For performance reasons we let VL2 handle packets first. It returns false
-                // if it didn't handle the packet, in which case it's handled at VL1.
-                if !ph.handle_packet(self, source_path, forward_secrecy, verb, &payload) {
+                // if it didn't handle the packet, in which case it's handled at VL1. This is
+                // because the most performance critical path is the handling of the ???_FRAME
+                // verbs, which are in VL2.
+                verb &= VERB_MASK;
+                if !ph.handle_packet(self, source_path, forward_secrecy, extended_authentication, verb, payload.as_ref()) {
                     match verb {
                         //VERB_VL1_NOP => {}
-                        VERB_VL1_HELLO => self.receive_hello(ci, node, time_ticks, source_path, &payload),
-                        VERB_VL1_ERROR => self.receive_error(ci, ph, node, time_ticks, source_path, forward_secrecy, &payload),
-                        VERB_VL1_OK => self.receive_ok(ci, ph, node, time_ticks, source_path, forward_secrecy, &payload),
-                        VERB_VL1_WHOIS => self.receive_whois(ci, node, time_ticks, source_path, &payload),
-                        VERB_VL1_RENDEZVOUS => self.receive_rendezvous(ci, node, time_ticks, source_path, &payload),
-                        VERB_VL1_ECHO => self.receive_echo(ci, node, time_ticks, source_path, &payload),
-                        VERB_VL1_PUSH_DIRECT_PATHS => self.receive_push_direct_paths(ci, node, time_ticks, source_path, &payload),
-                        VERB_VL1_USER_MESSAGE => self.receive_user_message(ci, node, time_ticks, source_path, &payload),
+                        VERB_VL1_HELLO => self.receive_hello(ci, node, time_ticks, source_path, payload.as_ref()),
+                        VERB_VL1_ERROR => self.receive_error(ci, ph, node, time_ticks, source_path, forward_secrecy, extended_authentication, payload.as_ref()),
+                        VERB_VL1_OK => self.receive_ok(ci, ph, node, time_ticks, source_path, forward_secrecy, extended_authentication, payload.as_ref()),
+                        VERB_VL1_WHOIS => self.receive_whois(ci, node, time_ticks, source_path, payload.as_ref()),
+                        VERB_VL1_RENDEZVOUS => self.receive_rendezvous(ci, node, time_ticks, source_path, payload.as_ref()),
+                        VERB_VL1_ECHO => self.receive_echo(ci, node, time_ticks, source_path, payload.as_ref()),
+                        VERB_VL1_PUSH_DIRECT_PATHS => self.receive_push_direct_paths(ci, node, time_ticks, source_path, payload.as_ref()),
+                        VERB_VL1_USER_MESSAGE => self.receive_user_message(ci, node, time_ticks, source_path, payload.as_ref()),
                         _ => {}
                     }
                 }
@@ -508,7 +518,7 @@ impl Peer {
     fn receive_hello<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
 
     #[inline(always)]
-    fn receive_error<CI: VL1CallerInterface, PH: VL1PacketHandler>(&self, ci: &CI, ph: &PH, node: &Node, time_ticks: i64, source_path: &Arc<Path>, forward_secrecy: bool, payload: &Buffer<{ PACKET_SIZE_MAX }>) {
+    fn receive_error<CI: VL1CallerInterface, PH: VL1PacketHandler>(&self, ci: &CI, ph: &PH, node: &Node, time_ticks: i64, source_path: &Arc<Path>, forward_secrecy: bool, extended_authentication: bool, payload: &Buffer<{ PACKET_SIZE_MAX }>) {
         let mut cursor: usize = 0;
         let _ = payload.read_struct::<message_component_structs::ErrorHeader>(&mut cursor).map(|error_header| {
             let in_re_packet_id = error_header.in_re_packet_id;
@@ -520,7 +530,7 @@ impl Peer {
             }) {
                 match error_header.in_re_verb {
                     _ => {
-                        ph.handle_error(self, source_path, forward_secrecy, error_header.in_re_verb, in_re_packet_id, error_header.error_code, payload, &mut cursor);
+                        ph.handle_error(self, source_path, forward_secrecy, extended_authentication, error_header.in_re_verb, in_re_packet_id, error_header.error_code, payload, &mut cursor);
                     }
                 }
             }
@@ -528,7 +538,7 @@ impl Peer {
     }
 
     #[inline(always)]
-    fn receive_ok<CI: VL1CallerInterface, PH: VL1PacketHandler>(&self, ci: &CI, ph: &PH, node: &Node, time_ticks: i64, source_path: &Arc<Path>, forward_secrecy: bool, payload: &Buffer<{ PACKET_SIZE_MAX }>) {
+    fn receive_ok<CI: VL1CallerInterface, PH: VL1PacketHandler>(&self, ci: &CI, ph: &PH, node: &Node, time_ticks: i64, source_path: &Arc<Path>, forward_secrecy: bool, extended_authentication: bool, payload: &Buffer<{ PACKET_SIZE_MAX }>) {
         let mut cursor: usize = 0;
         let _ = payload.read_struct::<message_component_structs::OkHeader>(&mut cursor).map(|ok_header| {
             let in_re_packet_id = ok_header.in_re_packet_id;
@@ -544,7 +554,7 @@ impl Peer {
                     VERB_VL1_WHOIS => {
                     }
                     _ => {
-                        ph.handle_ok(self, source_path, forward_secrecy, ok_header.in_re_verb, in_re_packet_id, payload, &mut cursor);
+                        ph.handle_ok(self, source_path, forward_secrecy, extended_authentication, ok_header.in_re_verb, in_re_packet_id, payload, &mut cursor);
                     }
                 }
             }

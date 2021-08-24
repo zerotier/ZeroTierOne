@@ -64,7 +64,7 @@ pub(crate) fn store_u64_be(i: u64, d: &mut [u8]) {
 #[cfg(any(target_arch = "x86_64", target_arch = "x86", target_arch = "aarch64"))]
 #[inline(always)]
 pub(crate) fn load_u16_be(d: &[u8]) -> u16 {
-    unsafe { *d.as_ptr().cast::<u16>() }
+    u16::from_be(unsafe { *d.as_ptr().cast::<u16>() })
 }
 
 #[cfg(not(any(target_arch = "x86_64", target_arch = "x86", target_arch = "aarch64")))]
@@ -76,7 +76,7 @@ pub(crate) fn load_u16_be(d: &[u8]) -> u16 {
 #[cfg(any(target_arch = "x86_64", target_arch = "x86", target_arch = "aarch64"))]
 #[inline(always)]
 pub(crate) fn load_u32_be(d: &[u8]) -> u32 {
-    unsafe { *d.as_ptr().cast::<u32>() }
+    u32::from_be(unsafe { *d.as_ptr().cast::<u32>() })
 }
 
 #[cfg(not(any(target_arch = "x86_64", target_arch = "x86", target_arch = "aarch64")))]
@@ -88,7 +88,7 @@ pub(crate) fn load_u32_be(d: &[u8]) -> u32 {
 #[cfg(any(target_arch = "x86_64", target_arch = "x86", target_arch = "aarch64"))]
 #[inline(always)]
 pub(crate) fn load_u64_be(d: &[u8]) -> u64 {
-    unsafe { *d.as_ptr().cast::<u64>() }
+    u64::from_be(unsafe { *d.as_ptr().cast::<u64>() })
 }
 
 #[cfg(not(any(target_arch = "x86_64", target_arch = "x86", target_arch = "aarch64")))]

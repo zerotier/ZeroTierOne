@@ -72,11 +72,21 @@ impl<const L: usize> Buffer<L> {
 
     /// Set the size of this buffer's data.
     ///
-    /// This is marked unsafe because no bounds checking is done here and because it
-    /// technically violates the assurance that all data in the buffer is valid. Use
-    /// with care.
+    /// If the new size is larger than L (the capacity) it will be limited to L. Any new
+    /// space will be filled with zeroes.
     #[inline(always)]
-    pub unsafe fn set_size(&mut self, s: usize) { self.0 = s; }
+    pub fn set_size(&mut self, s: usize) {
+        let prev_len = self.0;
+        if s < prev_len {
+            self.0 = s;
+            self.1[s..prev_len].fill(0);
+        } else {
+            self.0 = s.min(L);
+        }
+    }
+
+    #[inline(always)]
+    pub unsafe fn set_size_unchecked(&mut self, s: usize) { self.0 = s; }
 
     /// Append a packed structure and call a function to initialize it in place.
     /// Anything not initialized will be zero.

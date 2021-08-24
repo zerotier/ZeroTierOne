@@ -17,7 +17,7 @@ use crate::crypto::secret::Secret;
 use crate::error::InvalidFormatError;
 use crate::vl1::Address;
 use crate::vl1::buffer::Buffer;
-use crate::vl1::protocol::PACKET_SIZE_MAX;
+use crate::vl1::protocol::{PACKET_SIZE_MAX, ADDRESS_SIZE};
 
 pub const IDENTITY_TYPE_0_SIGNATURE_SIZE: usize = 96;
 pub const IDENTITY_TYPE_1_SIGNATURE_SIZE: usize = P521_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE;
@@ -359,9 +359,15 @@ impl Identity {
     /// Deserialize an Identity from a buffer.
     /// The supplied cursor is advanced.
     pub fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> std::io::Result<Identity> {
-        let addr = Address::from_bytes(buf.read_bytes_fixed::<5>(cursor)?).unwrap();
+        let addr = Address::from_bytes(buf.read_bytes_fixed::<{ ADDRESS_SIZE }>(cursor)?);
+        if addr.is_none() {
+            return std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid address"));
+        }
+        let addr = addr.unwrap();
+
         let id_type = buf.read_u8(cursor)?;
         if id_type == Type::C25519 as u8 {
+
             let c25519_public_bytes = buf.read_bytes_fixed::<{ C25519_PUBLIC_KEY_SIZE }>(cursor)?;
             let ed25519_public_bytes = buf.read_bytes_fixed::<{ ED25519_PUBLIC_KEY_SIZE }>(cursor)?;
             let secrets_len = buf.read_u8(cursor)?;
@@ -388,9 +394,11 @@ impl Identity {
                     secrets: None,
                 })
             } else {
-                std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "unrecognized scret key length (type 0)"))
+                std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "unrecognized secret key length (type 0)"))
             }
+
         } else if id_type == Type::P521 as u8 {
+
             let c25519_public_bytes = buf.read_bytes_fixed::<{ C25519_PUBLIC_KEY_SIZE }>(cursor)?;
             let ed25519_public_bytes = buf.read_bytes_fixed::<{ ED25519_PUBLIC_KEY_SIZE }>(cursor)?;
             let p521_ecdh_public_bytes = buf.read_bytes_fixed::<{ P521_PUBLIC_KEY_SIZE }>(cursor)?;
@@ -425,6 +433,7 @@ impl Identity {
             } else {
                 std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid secret key length (type 1)"))
             }
+
         } else {
             std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "unrecognized identity type"))
         }

@@ -1,4 +1,3 @@
-use std::collections::BTreeSet;
 use std::hash::{Hash, Hasher};
 use std::io::Write;
 
@@ -22,17 +21,16 @@ const ROOT_SET_TYPE_ED25519_P521: u8 = 128;
 /// Two of these are legacy from ZeroTier V1. The third is a root set signed by both
 /// an Ed25519 key and a NIST P-521 key with these keys being bundled together.
 #[derive(Clone, PartialEq, Eq)]
-pub enum Type {
+pub enum TypeAndID {
     LegacyPlanet(u64),
     LegacyMoon(u64),
     Ed25519P521RootSet([u8; 48]),
 }
 
-impl Hash for Type {
+impl Hash for TypeAndID {
     fn hash<H: Hasher>(&self, state: &mut H) {
         match self {
-            Self::LegacyPlanet(id) => state.write_u64(*id),
-            Self::LegacyMoon(id) => state.write_u64(*id),
+            Self::LegacyPlanet(id) | Self::LegacyMoon(id) => state.write_u64(*id),
             Self::Ed25519P521RootSet(id) => state.write(id),
         }
     }
@@ -92,7 +90,7 @@ pub struct Root {
     pub identity: Identity,
 
     /// Static endpoints at which this root node may be reached.
-    pub endpoints: BTreeSet<Endpoint>,
+    pub endpoints: Vec<Endpoint>,
 }
 
 /// A signed bundle of root nodes.
@@ -103,26 +101,30 @@ pub struct Root {
 /// as at least one of the old roots is up to distribute the new ones.
 #[derive(PartialEq, Eq)]
 pub struct RootSet {
-    timestamp: i64,
-    name: String,
-    contact: String,
-    roots: BTreeSet<Root>,
-    signer: Vec<u8>,
-    signature: Vec<u8>,
-    root_set_type: Type,
+    pub id: TypeAndID,
+    pub timestamp: i64,
+    pub url: String,
+    pub roots: Vec<Root>,
+    pub signer: Vec<u8>,
+    pub signature: Vec<u8>,
 }
 
 impl RootSet {
     pub const MAX_ROOTS: usize = u8::MAX as usize;
     pub const MAX_ENDPOINTS_PER_ROOT: usize = u8::MAX as usize;
 
+    /// Shortcut to copy a byte array to a Buffer and unmarshal().
+    pub fn from_bytes(bytes: &[u8]) -> std::io::Result<RootSet> {
+        let mut tmp: Buffer<{ PACKET_SIZE_MAX }> = Buffer::new();
+        tmp.append_bytes(bytes)?;
+        let mut c: usize = 0;
+        RootSet::unmarshal(&tmp, &mut c)
+    }
+
     /// Sign this root set and return true on success.
-    /// The fields timestamp, name, contact, and roots must have been set. The signer, signature, and type will be set.
-    /// This can only sign new format root sets. Legacy "planet" and "moon" root sets can be used by V2 but
-    /// cannot be created by this code.
     pub fn sign(&mut self, keys: &RootSetSecretKeys) -> bool {
         self.signer = keys.to_public_bytes().to_vec();
-        self.root_set_type = Type::Ed25519P521RootSet(SHA384::hash(self.signer.as_slice()));
+        self.id = TypeAndID::Ed25519P521RootSet(SHA384::hash(self.signer.as_slice()));
 
         let mut buf: Buffer<{ PACKET_SIZE_MAX }> = Buffer::new();
         if self.marshal_internal(&mut buf, true).is_err() {
@@ -147,22 +149,13 @@ impl RootSet {
             return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "maximum roots per root set: 255"));
         }
 
-        let name = self.name.as_bytes();
-        let contact = self.contact.as_bytes();
-        if name.len() > u8::MAX as usize {
-            return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "maximum roots per root set: 255"));
-        }
-        if contact.len() > u8::MAX as usize {
-            return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "maximum roots per root set: 255"));
-        }
-
         if for_signing {
             buf.append_u64(0x7f7f7f7f7f7f7f7f)?;
         }
 
-        match &self.root_set_type {
-            Type::LegacyPlanet(id) | Type::LegacyMoon(id) => {
-                buf.append_u8(if matches!(self.root_set_type, Type::LegacyPlanet(_)) {
+        match &self.id {
+            TypeAndID::LegacyPlanet(id) | TypeAndID::LegacyMoon(id) => {
+                buf.append_u8(if matches!(self.id, TypeAndID::LegacyPlanet(_)) {
                     ROOT_SET_TYPE_LEGACY_PLANET
                 } else {
                     ROOT_SET_TYPE_LEGACY_MOON
@@ -181,23 +174,20 @@ impl RootSet {
                 }
             }
 
-            Type::Ed25519P521RootSet(_) => {
+            TypeAndID::Ed25519P521RootSet(_) => {
                 buf.append_u8(ROOT_SET_TYPE_ED25519_P521)?;
-                buf.append_u64(self.timestamp as u64)?;
-                buf.append_u8(name.len() as u8)?;
-                buf.append_bytes(name)?;
-                buf.append_u8(contact.len() as u8)?;
-                buf.append_bytes(contact)?;
+                buf.append_varint(self.timestamp as u64)?;
+                let url = self.url.as_bytes();
+                buf.append_varint(url.len() as u64)?;
+                buf.append_bytes(url)?;
                 if self.signer.len() != (ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE) {
                     return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "signer can only be 164 bytes"));
                 }
-                buf.append_u8(self.signer.len() as u8)?;
                 buf.append_bytes(self.signer.as_slice())?;
                 if !for_signing {
                     if self.signature.len() != (ED25519_SIGNATURE_SIZE + P521_ECDSA_SIGNATURE_SIZE) {
                         return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "signature can only be 192 bytes"));
                     }
-                    buf.append_u8(self.signature.len() as u8)?;
                     buf.append_bytes(self.signature.as_slice())?;
                 }
             }
@@ -215,7 +205,7 @@ impl RootSet {
             }
         }
 
-        if matches!(self.root_set_type, Type::LegacyMoon(_)) {
+        if matches!(self.id, TypeAndID::LegacyMoon(_)) {
             buf.append_u8(0)?;
         }
 
@@ -232,20 +222,17 @@ impl RootSet {
     }
 
     pub fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> std::io::Result<Self> {
-        let read_roots = |buf: &Buffer<BL>, cursor: &mut usize| -> std::io::Result<BTreeSet<Root>> {
-            let mut roots = BTreeSet::<Root>::new();
+        let read_roots = |buf: &Buffer<BL>, cursor: &mut usize| -> std::io::Result<Vec<Root>> {
             let root_count = buf.read_u8(cursor)? as usize;
+            let mut roots = Vec::<Root>::with_capacity(root_count);
             for _ in 0..root_count {
                 let identity = Identity::unmarshal(buf, cursor)?;
-                let mut endpoints = BTreeSet::<Endpoint>::new();
                 let endpoint_count = buf.read_u8(cursor)? as usize;
+                let mut endpoints = Vec::<Endpoint>::with_capacity(endpoint_count);
                 for _ in 0..endpoint_count {
-                    endpoints.insert(Endpoint::unmarshal(buf, cursor)?);
+                    endpoints.push(Endpoint::unmarshal(buf, cursor)?);
                 }
-                roots.insert(Root {
-                    identity,
-                    endpoints
-                });
+                roots.push(Root { identity, endpoints });
             }
             Ok(roots)
         };
@@ -253,8 +240,8 @@ impl RootSet {
         let type_id = buf.read_u8(cursor)?;
         match type_id {
             ROOT_SET_TYPE_LEGACY_PLANET | ROOT_SET_TYPE_LEGACY_MOON => {
-                let root_set_type = buf.read_u64(cursor)?;
-                let root_set_type = if type_id == ROOT_SET_TYPE_LEGACY_PLANET { Type::LegacyPlanet(root_set_type) } else { Type::LegacyMoon(root_set_type) };
+                let id = buf.read_u64(cursor)?;
+                let id = if type_id == ROOT_SET_TYPE_LEGACY_PLANET { TypeAndID::LegacyPlanet(id) } else { TypeAndID::LegacyMoon(id) };
                 let timestamp = buf.read_u64(cursor)?;
                 let signer = buf.read_bytes(64, cursor)?.to_vec();
                 let signature = buf.read_bytes(96, cursor)?.to_vec();
@@ -263,49 +250,32 @@ impl RootSet {
                     *cursor += buf.read_u8(cursor)? as usize;
                 }
                 Ok(Self {
+                    id,
                     timestamp: timestamp as i64,
-                    name: String::new(),
-                    contact: String::new(),
+                    url: String::new(),
                     roots,
                     signer,
                     signature,
-                    root_set_type,
                 })
             }
 
             ROOT_SET_TYPE_ED25519_P521 => {
-                let timestamp = buf.read_u64(cursor)?;
-                let name = String::from_utf8_lossy(buf.read_bytes(buf.read_u8(cursor)? as usize, cursor)?).to_string();
-                let contact = String::from_utf8_lossy(buf.read_bytes(buf.read_u8(cursor)? as usize, cursor)?).to_string();
-                let signer = buf.read_bytes(buf.read_u8(cursor)? as usize, cursor)?.to_vec();
-                let signature = buf.read_bytes(buf.read_u8(cursor)? as usize, cursor)?.to_vec();
-                let root_set_type = Type::Ed25519P521RootSet(SHA384::hash(signer.as_slice()));
+                let timestamp = buf.read_varint(cursor)? as i64;
+                let url = String::from_utf8_lossy(buf.read_bytes(buf.read_varint(cursor)? as usize, cursor)?).to_string();
+                let signer = buf.read_bytes(ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE, cursor)?.to_vec();
+                let signature = buf.read_bytes(ED25519_SIGNATURE_SIZE + P521_ECDSA_SIGNATURE_SIZE, cursor)?.to_vec();
+                let id = TypeAndID::Ed25519P521RootSet(SHA384::hash(signer.as_slice()));
                 Ok(Self {
-                    timestamp: timestamp as i64,
-                    name,
-                    contact,
+                    id,
+                    timestamp,
+                    url,
                     roots: read_roots(buf, cursor)?,
                     signer,
                     signature,
-                    root_set_type,
                 })
             }
 
-            _ => {
-                Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "unrecognized type"))
-            }
-        }
-    }
-
-    /// Get this root set's globally unique ID.
-    ///
-    /// For new root set format this is a hash of its public keys. For old style planet/moon
-    /// this is a user assigned 64-bit ID. The latter is deprecated but still supported.
-    pub fn id(&self) -> Vec<u8> {
-        match self.root_set_type {
-            Type::LegacyPlanet(id) => id.to_be_bytes().to_vec(),
-            Type::LegacyMoon(id) => id.to_be_bytes().to_vec(),
-            Type::Ed25519P521RootSet(id) => id.to_vec(),
+            _ => Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "unrecognized type"))
         }
     }
 }
@@ -313,6 +283,24 @@ impl RootSet {
 impl Hash for RootSet {
     fn hash<H: Hasher>(&self, state: &mut H) {
         state.write_u64(self.timestamp as u64);
-        self.root_set_type.hash(state);
+        self.id.hash(state);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::vl1::rootset::RootSet;
+
+    #[test]
+    fn default_root_set() {
+        let rs = RootSet::from_bytes(&crate::defaults::ROOT_SET).unwrap();
+        /*
+        rs.roots.iter().for_each(|r| {
+            println!("{}", r.identity.to_string());
+            r.endpoints.iter().for_each(|ep| {
+                println!("  {}", ep.to_string());
+            });
+        });
+        */
     }
 }
