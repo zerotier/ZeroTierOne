@@ -743,19 +743,7 @@ public:
 				if (_secondaryPort) {
 					_ports[1] = _secondaryPort;
 				} else {
-					unsigned int randp = 0;
-					Utils::getSecureRandom(&randp,sizeof(randp));
-					_ports[1] = 20000 + (randp % 45500);
-					for(int i=0;;++i) {
-						if (i > 1000) {
-							_ports[1] = 0;
-							break;
-						} else if (++_ports[1] >= 65536) {
-							_ports[1] = 20000;
-						}
-						if (_trialBind(_ports[1]))
-							break;
-					}
+					_ports[1] = _getRandomPort();
 				}
 			}
 #ifdef ZT_USE_MINIUPNPC
@@ -767,7 +755,7 @@ public:
 					if (_tertiaryPort) {
 						_ports[2] = _tertiaryPort;
 					} else {
-						_ports[2] = _ports[1];
+						_ports[2] = 20000 + (_ports[0] % 40000);
 						for(int i=0;;++i) {
 							if (i > 1000) {
 								_ports[2] = 0;
@@ -828,6 +816,7 @@ public:
 			int64_t lastCleanedPeersDb = 0;
 			int64_t lastLocalInterfaceAddressCheck = (clockShouldBe - ZT_LOCAL_INTERFACE_CHECK_INTERVAL) + 15000; // do this in 15s to give portmapper time to configure and other things time to settle
 			int64_t lastLocalConfFileCheck = OSUtils::now();
+			int64_t lastOnline = lastLocalConfFileCheck;
 			for(;;) {
 				_run_m.lock();
 				if (!_run) {
@@ -867,6 +856,16 @@ public:
 							applyLocalConfig();
 						}
 					}
+				}
+
+				// If secondary port is not configured to a constant value and we've been offline for a while,
+				// bind a new secondary port. This is a workaround for a "coma" issue caused by buggy NATs that stop
+				// working on one port after a while.
+				if (_node->online()) {
+					lastOnline = now;
+				} else if ((_secondaryPort == 0)&&((now - lastOnline) > ZT_PATH_HEARTBEAT_PERIOD)) {
+					_secondaryPort = _getRandomPort();
+					lastBindRefresh = 0;
 				}
 
 				// Refresh bindings in case device's interfaces have changed, and also sync routes to update any shadow routes (e.g. shadow default)
@@ -1858,7 +1857,7 @@ public:
 		_secondaryPort = (unsigned int)OSUtils::jsonInt(settings["secondaryPort"],0);
 		_tertiaryPort = (unsigned int)OSUtils::jsonInt(settings["tertiaryPort"],0);
 		if (_secondaryPort != 0 || _tertiaryPort != 0) {
-			fprintf(stderr,"WARNING: using manually-specified ports. This can cause NAT issues." ZT_EOL_S);
+			fprintf(stderr,"WARNING: using manually-specified secondary and/or tertiary ports. This can cause NAT issues." ZT_EOL_S);
 		}
 		_portMappingEnabled = OSUtils::jsonBool(settings["portMappingEnabled"],true);
 
@@ -3100,6 +3099,22 @@ public:
 		}
 
 		return true;
+	}
+
+	unsigned int _getRandomPort()
+	{
+		unsigned int randp = 0;
+		Utils::getSecureRandom(&randp,sizeof(randp));
+		randp = 20000 + (randp % 45500);
+		for(int i=0;;++i) {
+			if (i > 1000) {
+				return 0;
+			} else if (++randp >= 65536) {
+				randp = 20000;
+			}
+			if (_trialBind(randp))
+				break;
+		}
 	}
 
 	bool _trialBind(unsigned int port)
