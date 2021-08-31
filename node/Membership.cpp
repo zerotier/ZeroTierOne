@@ -189,8 +189,7 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 				case Credential::CREDENTIAL_TYPE_COO:
 					rt = &(_revocations[credentialKey(ct,rev.credentialId())]);
 					if (*rt < rev.threshold()) {
-						*rt = rev.threshold();
-						_comRevocationThreshold = rev.threshold();
+						*rt = _comRevocationThreshold = rev.threshold();
 						return ADD_ACCEPTED_NEW;
 					}
 					return ADD_ACCEPTED_REDUNDANT;

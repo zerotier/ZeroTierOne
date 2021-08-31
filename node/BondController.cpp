@@ -88,8 +88,8 @@ SharedPtr<Bond> BondController::createTransportTriggeredBond(const RuntimeEnviro
 	int64_t identity = peer->identity().address().toInt();
 	Bond* bond = nullptr;
 	char traceMsg[128];
+
 	if (! _bonds.count(identity)) {
-		std::string policyAlias;
 		if (! _policyTemplateAssignments.count(identity)) {
 			if (_defaultBondingPolicy) {
 				sprintf(traceMsg, "%s (bond) Creating new default %s bond to peer %llx", OSUtils::humanReadableTimestamp().c_str(), getPolicyStrByCode(_defaultBondingPolicy).c_str(), (unsigned long long)identity);
@@ -146,6 +146,7 @@ SharedPtr<Bond> BondController::createTransportTriggeredBond(const RuntimeEnviro
 		}
 		return bond;
 	}
+	delete bond;
 	return SharedPtr<Bond>();
 }
 

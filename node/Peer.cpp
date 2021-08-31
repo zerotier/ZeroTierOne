@@ -561,7 +561,7 @@ void Peer::clusterRedirect(void *tPtr,const SharedPtr<Path> &originatingPath,con
 		}
 		if (j < ZT_MAX_PEER_NETWORK_PATHS) {
 			_paths[j].lr = now;
-			_paths[j].p = np;
+			_paths[j].p = std::move(np);
 			_paths[j].priority = newPriority;
 			++j;
 			while (j < ZT_MAX_PEER_NETWORK_PATHS) {

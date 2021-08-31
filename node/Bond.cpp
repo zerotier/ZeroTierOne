@@ -1053,15 +1053,16 @@ void Bond::estimatePathQuality(const int64_t now)
 	uint32_t totUserSpecifiedLinkSpeed = 0;
 	if (_numBondedPaths) {	 // Compute relative user-specified speeds of links
 		for (unsigned int i = 0; i < _numBondedPaths; ++i) {
-			SharedPtr<Link> link = RR->bc->getLinkBySocket(_policyAlias, _paths[i]->localSocket());
 			if (_paths[i] && _paths[i]->allowed()) {
+				SharedPtr<Link> link = RR->bc->getLinkBySocket(_policyAlias, _paths[i]->localSocket());
 				totUserSpecifiedLinkSpeed += link->speed();
 			}
 		}
-		for (unsigned int i = 0; i < _numBondedPaths; ++i) {
-			SharedPtr<Link> link = RR->bc->getLinkBySocket(_policyAlias, _paths[i]->localSocket());
+
+		for (unsigned int i = 0;i < _numBondedPaths; ++i) {
 			if (_paths[i] && _paths[i]->allowed()) {
-				link->setRelativeSpeed((uint8_t)round(((float)link->speed() / (float)totUserSpecifiedLinkSpeed) * 255));
+				SharedPtr<Link> link = RR->bc->getLinkBySocket(_policyAlias, _paths[i]->localSocket());
+				link->setRelativeSpeed(round( ((float)link->speed() / (float)totUserSpecifiedLinkSpeed) * 255));
 			}
 		}
 	}
@@ -1479,7 +1480,7 @@ void Bond::processActiveBackupTasks(void* tPtr, const int64_t now)
 					if (bFoundPrimaryLink && nonPreferredPath) {
 						sprintf(traceMsg, "%s (active-backup) Found non-preferred primary link to peer %llx", OSUtils::humanReadableTimestamp().c_str(), (unsigned long long)(_peer->_id.address().toInt()));
 						RR->t->bondStateMessage(NULL, traceMsg);
-						_abPath = nonPreferredPath;
+						_abPath = std::move(nonPreferredPath);
 					}
 				}
 				if (! _abPath) {
