@@ -357,7 +357,7 @@ std::string PostgreSQL::getSSOAuthURL(const nlohmann::json &member, const std::s
 		std::string nonce = "";
 
 		// check if the member exists first.
-		pqxx::row count = w.exec_params1("SELECT count(id) FROM ztc_member WHERE id = $1 AND network_id = $2", memberId, networkId);
+		pqxx::row count = w.exec_params1("SELECT count(id) FROM ztc_member WHERE id = $1 AND network_id = $2 AND deleted = false", memberId, networkId);
 		if (count[0].as<int>() == 1) {
 			// find an unused nonce, if one exists.
 			pqxx::result r = w.exec_params("SELECT nonce FROM ztc_sso_expiry "
