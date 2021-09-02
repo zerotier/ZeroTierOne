@@ -1388,7 +1388,7 @@ void PostgreSQL::onlineNotification_Postgres()
 				pqxx::result res = w.exec0(memberUpdate.str());
 				w.commit();
 			}
-			// fprintf(stderr, "Updated online status of %d members\n", updateCount);
+			fprintf(stderr, "%s: Updated online status of %d members\n", _myAddressStr.c_str(), updateCount);
 		} catch (std::exception &e) {
 			fprintf(stderr, "%s: error in onlinenotification thread: %s\n", _myAddressStr.c_str(), e.what());
 		} 
