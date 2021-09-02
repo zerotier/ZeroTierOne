@@ -145,7 +145,7 @@ private:
 		ZT_PHY_SOCKFD_TYPE sock;
 		void *uptr; // user-settable pointer
 		ZT_PHY_SOCKADDR_STORAGE_TYPE saddr; // remote for TCP_OUT and TCP_IN, local for TCP_LISTEN, RAW, and UDP
-		char ifname[16];
+		char ifname[32];
 	};
 
 	std::list<PhySocketImpl> _socks;

@@ -88,7 +88,6 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,void *tPtr,int32_t f
 					peer->received(tPtr,_path,hops(),packetId(),payloadLength(),v,0,Packet::VERB_NOP,false,0,ZT_QOS_NO_FLOW);
 					break;
 				case Packet::VERB_HELLO:                      r = _doHELLO(RR,tPtr,true); break;
-				case Packet::VERB_ACK:                        r = _doACK(RR,tPtr,peer); break;
 				case Packet::VERB_QOS_MEASUREMENT:            r = _doQOS_MEASUREMENT(RR,tPtr,peer); break;
 				case Packet::VERB_ERROR:                      r = _doERROR(RR,tPtr,peer); break;
 				case Packet::VERB_OK:                         r = _doOK(RR,tPtr,peer); break;
@@ -222,35 +221,12 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,void *tPtr,const Shar
 	return true;
 }
 
-bool IncomingPacket::_doACK(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
-{
-	SharedPtr<Bond> bond = peer->bond();
-	if (!bond || !bond->rateGateACK(RR->node->now())) {
-		return true;
-	}
-	/* Dissect incoming ACK packet. From this we can estimate current throughput of the path, establish known
-	 * maximums and detect packet loss. */
-	int32_t ackedBytes;
-	if (payloadLength() != sizeof(ackedBytes)) {
-		return true; // ignore
-	}
-	memcpy(&ackedBytes, payload(), sizeof(ackedBytes));
-	if (bond) {
-		bond->receivedAck(_path, RR->node->now(), Utils::ntoh(ackedBytes));
-	}
-	return true;
-}
-
 bool IncomingPacket::_doQOS_MEASUREMENT(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
 	SharedPtr<Bond> bond = peer->bond();
-	/* TODO: Fix rate gate issue
-	if (!bond || !bond->rateGateQoS(RR->node->now())) {
+	if (!bond || !bond->rateGateQoS(RR->node->now(), _path)) {
 		return true;
 	}
-	*/
-	/* Dissect incoming QoS packet. From this we can compute latency values and their variance.
-	 * The latency variance is used as a measure of "jitter". */
 	if (payloadLength() > ZT_QOS_MAX_PACKET_SIZE || payloadLength() < ZT_QOS_MIN_PACKET_SIZE) {
 		return true; // ignore
 	}
@@ -1329,7 +1305,7 @@ bool IncomingPacket::_doPATH_NEGOTIATION_REQUEST(const RuntimeEnvironment *RR,vo
 {
 	uint64_t now = RR->node->now();
 	SharedPtr<Bond> bond = peer->bond();
-	if (!bond || !bond->rateGatePathNegotiation(now)) {
+	if (!bond || !bond->rateGatePathNegotiation(now, _path)) {
 		return true;
 	}
 	if (payloadLength() != sizeof(int16_t)) {

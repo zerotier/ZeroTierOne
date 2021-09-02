@@ -361,7 +361,7 @@
 /**
  * Maximum number of outgoing packets we monitor for QoS information
  */
-#define ZT_QOS_MAX_OUTSTANDING_RECORDS (1024*16)
+#define ZT_QOS_MAX_OUTSTANDING_RECORDS (1024 * 16)
 
 /**
  * Interval used for rate-limiting the computation of path quality estimates.
@@ -403,116 +403,10 @@
 
 /**
  * All unspecified traffic is put in this bucket. Anything in a bucket with a
- * smaller value is deprioritized. Anything in a bucket with a higher value is
+ * smaller value is de-prioritized. Anything in a bucket with a higher value is
  prioritized over other traffic.
  */
 #define ZT_AQM_DEFAULT_BUCKET 0
-
-/**
- * How often we emit a one-liner bond summary for each peer
- */
-#define ZT_MULTIPATH_BOND_STATUS_INTERVAL 60000
-
-/**
- * How long before we consider a path to be dead in the general sense. This is
- * used while searching for default or alternative paths to try in the absence
- * of direct guidance from the user or a selection policy.
- */
-#define ZT_MULTIPATH_DEFAULT_FAILOVER_INTERVAL 10000
-
-/**
- * How often flows are evaluated
- */
-#define ZT_MULTIPATH_FLOW_CHECK_INTERVAL 10000
-
-/**
- * How long before we consider a flow to be dead and remove it from the
- * policy's list.
- */
-#define ZT_MULTIPATH_FLOW_EXPIRATION_INTERVAL (60000 * 5)
-
-/**
- * How often a flow's statistical counters are reset
- */
-#define ZT_FLOW_STATS_RESET_INTERVAL ZT_MULTIPATH_FLOW_EXPIRATION_INTERVAL
-
-/**
- * Maximum number of flows allowed before we start forcibly forgetting old ones
- */
-#define ZT_FLOW_MAX_COUNT (1024*64)
-
-/**
- * How often flows are rebalanced across link (if at all)
- */
-#define ZT_FLOW_MIN_REBALANCE_INTERVAL 5000
-
-/**
- * How often flows are rebalanced across link (if at all)
- */
-#define ZT_FLOW_REBALANCE_INTERVAL 5000
-
-/**
- * A defensive timer to prevent path quality metrics from being
- * processed too often.
- */
-#define ZT_BOND_BACKGROUND_TASK_MIN_INTERVAL ZT_CORE_TIMER_TASK_GRANULARITY
-
-/**
- * How often a bonding policy's background tasks are processed,
- * some need more frequent attention than others.
- */
-#define ZT_MULTIPATH_ACTIVE_BACKUP_CHECK_INTERVAL ZT_CORE_TIMER_TASK_GRANULARITY
-
-/**
- * Minimum amount of time (since a previous transition) before the active-backup bonding
- * policy is allowed to transition to a different link. Only valid for active-backup.
- */
-#define ZT_MULTIPATH_MIN_ACTIVE_BACKUP_AUTOFLOP_INTERVAL 10000
-
-/**
- * How often a peer checks that incoming (and outgoing) traffic on a bonded link is
- * appropriately paired.
- */
-#define ZT_PATH_NEGOTIATION_CHECK_INTERVAL 15000
-
-/**
- * Time horizon for path negotiation paths cutoff
- */
-#define ZT_PATH_NEGOTIATION_CUTOFF_TIME 60000
-
-/**
- * Maximum number of path negotiations within cutoff time
- *
- * This limits response to PATH_NEGOTIATION to CUTOFF_LIMIT responses
- * per CUTOFF_TIME milliseconds per peer to prevent this from being
- * useful for DOS amplification attacks.
- */
-#define ZT_PATH_NEGOTIATION_CUTOFF_LIMIT 8
-
-/**
- * How many times a peer will attempt to petition another peer to synchronize its
- * traffic to the same path before giving up and surrendering to the other peer's preference.
- */
-#define ZT_PATH_NEGOTIATION_TRY_COUNT 3
-
-/**
- * How much greater the quality of a path should be before an
- * optimization procedure triggers a switch.
- */
-#define ZT_MULTIPATH_ACTIVE_BACKUP_OPTIMIZE_MIN_THRESHOLD 0.10
-
-/**
- * Artificially inflates the failover score for paths which meet
- * certain non-performance-related policy ranking criteria.
- */
-#define ZT_MULTIPATH_FAILOVER_HANDICAP_PREFERRED 500
-#define ZT_MULTIPATH_FAILOVER_HANDICAP_PRIMARY 1000
-#define ZT_MULTIPATH_FAILOVER_HANDICAP_NEGOTIATED 5000
-
-/**
- * An indicator that no flow is to be associated with the given packet
- */
-#define ZT_QOS_NO_FLOW -1
 
 /**
  * Timeout for overall peer activity (measured from last receive)
@@ -604,8 +498,8 @@
 #define ZT_ACK_CUTOFF_LIMIT 128
 #define ZT_ACK_DRAINAGE_DIVISOR (1000 / ZT_ACK_CUTOFF_LIMIT)
 
-#define ZT_MULTIPATH_DEFAULT_REFRCTORY_PERIOD 8000
-#define ZT_MULTIPATH_MAX_REFRACTORY_PERIOD 600000
+#define ZT_BOND_DEFAULT_REFRCTORY_PERIOD 8000
+#define ZT_BOND_MAX_REFRACTORY_PERIOD 600000
 
 /**
  * Maximum number of direct path pushes within cutoff time
@@ -640,6 +534,92 @@
  * General rate limit for other kinds of rate-limited packets (HELLO, credential request, etc.) both inbound and outbound
  */
 #define ZT_PEER_GENERAL_RATE_LIMIT 1000
+
+
+/**
+ * Minimum allowed amount of time between flow/path optimizations (anti-flapping)
+ */
+#define ZT_BOND_OPTIMIZE_INTERVAL 15000
+
+/**
+ * Maximum number of flows allowed before we start forcibly forgetting old ones
+ */
+#define ZT_FLOW_MAX_COUNT (1024 * 64)
+
+/**
+ * How often we emit a bond summary for each bond
+ */
+#define ZT_BOND_STATUS_INTERVAL 3000
+
+/**
+ * How long before we consider a path to be dead in the general sense. This is
+ * used while searching for default or alternative paths to try in the absence
+ * of direct guidance from the user or a selection policy.
+ */
+#define ZT_BOND_FAILOVER_DEFAULT_INTERVAL 5000
+
+/**
+ * Anything below this value gets into thrashing territory since we divide
+ * this value by ZT_BOND_ECHOS_PER_FAILOVER_INTERVAL to send ECHOs often.
+ */
+#define ZT_BOND_FAILOVER_MIN_INTERVAL 250
+
+/**
+ * How many times per failover interval that an ECHO is sent. This should be
+ * at least 2. Anything more then 4 starts to increase overhead significantly.
+ */
+#define ZT_BOND_ECHOS_PER_FAILOVER_INTERVAL 4
+
+/**
+ * A defensive timer to prevent path quality metrics from being
+ * processed too often.
+ */
+#define ZT_BOND_BACKGROUND_TASK_MIN_INTERVAL ZT_CORE_TIMER_TASK_GRANULARITY
+
+/**
+ * How often a bonding policy's background tasks are processed,
+ * some need more frequent attention than others.
+ */
+#define ZT_BOND_ACTIVE_BACKUP_CHECK_INTERVAL ZT_CORE_TIMER_TASK_GRANULARITY
+
+/**
+ * Time horizon for path negotiation paths cutoff
+ */
+#define ZT_PATH_NEGOTIATION_CUTOFF_TIME 60000
+
+/**
+ * Maximum number of path negotiations within cutoff time
+ *
+ * This limits response to PATH_NEGOTIATION to CUTOFF_LIMIT responses
+ * per CUTOFF_TIME milliseconds per peer to prevent this from being
+ * useful for DOS amplification attacks.
+ */
+#define ZT_PATH_NEGOTIATION_CUTOFF_LIMIT 8
+
+/**
+ * How many times a peer will attempt to petition another peer to synchronize its
+ * traffic to the same path before giving up and surrendering to the other peer's preference.
+ */
+#define ZT_PATH_NEGOTIATION_TRY_COUNT 3
+
+/**
+ * How much greater the quality of a path should be before an
+ * optimization procedure triggers a switch.
+ */
+#define ZT_BOND_ACTIVE_BACKUP_OPTIMIZE_MIN_THRESHOLD 0.10
+
+/**
+ * Artificially inflates the failover score for paths which meet
+ * certain non-performance-related policy ranking criteria.
+ */
+#define ZT_BOND_FAILOVER_HANDICAP_PREFERRED  500
+#define ZT_BOND_FAILOVER_HANDICAP_PRIMARY    1000
+#define ZT_BOND_FAILOVER_HANDICAP_NEGOTIATED 5000
+
+/**
+ * An indicator that no flow is to be associated with the given packet
+ */
+#define ZT_QOS_NO_FLOW -1
 
 /**
  * Don't do expensive identity validation more often than this
