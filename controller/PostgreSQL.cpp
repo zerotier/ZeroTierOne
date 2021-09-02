@@ -1393,8 +1393,8 @@ void PostgreSQL::onlineNotification_Postgres()
 		_pool->unborrow(c);
 
 		ConnectionPoolStats stats = _pool->get_stats();
-		fprintf(stderr, "pool stats: in use size: %llu, available size: %llu, total: %llu\n",
-			stats.borrowed_size, stats.pool_size, (stats.borrowed_size + stats.pool_size));
+		fprintf(stderr, "%s pool stats: in use size: %llu, available size: %llu, total: %llu\n",
+			_myAddressStr.c_str(), stats.borrowed_size, stats.pool_size, (stats.borrowed_size + stats.pool_size));
 
 		std::this_thread::sleep_for(std::chrono::seconds(10));
 	}
