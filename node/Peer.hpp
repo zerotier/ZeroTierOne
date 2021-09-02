@@ -33,7 +33,6 @@
 #include "Hashtable.hpp"
 #include "Mutex.hpp"
 #include "Bond.hpp"
-#include "BondController.hpp"
 #include "AES.hpp"
 
 #define ZT_PEER_MAX_SERIALIZED_STATE_SIZE (sizeof(Peer) + 32 + (sizeof(Path) * 2))
@@ -305,12 +304,13 @@ public:
 	 */
 	inline unsigned int latency(const int64_t now)
 	{
-		if (_canUseMultipath) {
+		if (_localMultipathSupported) {
 			return (int)_lastComputedAggregateMeanLatency;
 		} else {
 			SharedPtr<Path> bp(getAppropriatePath(now,false));
-			if (bp)
+			if (bp) {
 				return bp->latency();
+			}
 			return 0xffff;
 		}
 	}
@@ -503,16 +503,20 @@ public:
 	}
 
 	/**
-	 *
-	 * @return
+	 * @return The bonding policy used to reach this peer
 	 */
-	SharedPtr<Bond> bond() { return _bondToPeer; }
+	SharedPtr<Bond> bond() { return _bond; }
 
 	/**
-	 *
-	 * @return
+	 * @return The bonding policy used to reach this peer
 	 */
-	inline int8_t bondingPolicy() { return _bondingPolicy; }
+	inline int8_t bondingPolicy() {
+		Mutex::Lock _l(_paths_m);
+		if (_bond) {
+			return _bond->policy();
+		}
+		return ZT_BOND_POLICY_NONE;
+	}
 
 	//inline const AES *aesKeysIfSupported() const
 	//{ return (const AES *)0; }
@@ -562,6 +566,7 @@ private:
 
 	_PeerPath _paths[ZT_MAX_PEER_NETWORK_PATHS];
 	Mutex _paths_m;
+	Mutex _bond_m;
 
 	Identity _id;
 
@@ -571,18 +576,13 @@ private:
 
 	AtomicCounter __refCount;
 
-	bool _remotePeerMultipathEnabled;
-	int _uniqueAlivePathCount;
 	bool _localMultipathSupported;
-	bool _remoteMultipathSupported;
-	bool _canUseMultipath;
 
 	volatile bool _shouldCollectPathStatistics;
-	volatile int8_t _bondingPolicy;
 
 	int32_t _lastComputedAggregateMeanLatency;
 
-	SharedPtr<Bond> _bondToPeer;
+	SharedPtr<Bond> _bond;
 };
 
 } // namespace ZeroTier

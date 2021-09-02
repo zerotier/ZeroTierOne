@@ -34,7 +34,7 @@
 #include "Salsa20.hpp"
 #include "NetworkController.hpp"
 #include "Hashtable.hpp"
-#include "BondController.hpp"
+#include "Bond.hpp"
 
 // Bit mask for "expecting reply" hash
 #define ZT_EXPECTING_REPLIES_BUCKET_MASK1 255
@@ -187,7 +187,7 @@ public:
 
 	inline const Identity &identity() const { return _RR.identity; }
 
-	inline BondController *bondController() const { return _RR.bc; }
+	inline Bond *bondController() const { return _RR.bc; }
 
 	/**
 	 * Register that we are expecting a reply to a packet ID

@@ -49,7 +49,6 @@
 #include "../osdep/Binder.hpp"
 #include "../osdep/ManagedRoute.hpp"
 #include "../osdep/BlockingQueue.hpp"
-#include "../osdep/Link.hpp"
 
 #include "OneService.hpp"
 #include "SoftwareUpdater.hpp"
@@ -306,9 +305,9 @@ static void _bondToJson(nlohmann::json &pj, SharedPtr<Bond> &bond)
 {
 	uint64_t now = OSUtils::now();
 
-	int bondingPolicy = bond->getPolicy();
-	pj["bondingPolicy"] = BondController::getPolicyStrByCode(bondingPolicy);
-	if (bondingPolicy == ZT_BONDING_POLICY_NONE) {
+	int bondingPolicy = bond->policy();
+	pj["bondingPolicy"] = Bond::getPolicyStrByCode(bondingPolicy);
+	if (bondingPolicy == ZT_BOND_POLICY_NONE) {
 		return;
 	}
 
@@ -318,15 +317,15 @@ static void _bondToJson(nlohmann::json &pj, SharedPtr<Bond> &bond)
 	pj["failoverInterval"] = bond->getFailoverInterval();
 	pj["downDelay"] = bond->getDownDelay();
 	pj["upDelay"] = bond->getUpDelay();
-	if (bondingPolicy == ZT_BONDING_POLICY_BALANCE_RR) {
+	if (bondingPolicy == ZT_BOND_POLICY_BALANCE_RR) {
 		pj["packetsPerLink"] = bond->getPacketsPerLink();
 	}
-	if (bondingPolicy == ZT_BONDING_POLICY_ACTIVE_BACKUP) {
+	if (bondingPolicy == ZT_BOND_POLICY_ACTIVE_BACKUP) {
 		pj["linkSelectMethod"] = bond->getLinkSelectMethod();
 	}
 
 	nlohmann::json pa = nlohmann::json::array();
-	std::vector< SharedPtr<Path> > paths = bond->getPeer()->paths(now);
+	std::vector< SharedPtr<Path> > paths = bond->paths(now);
 
 	for(unsigned int i=0;i<paths.size();++i) {
 		char pathStr[128];
@@ -335,6 +334,7 @@ static void _bondToJson(nlohmann::json &pj, SharedPtr<Bond> &bond)
 		nlohmann::json j;
 		j["ifname"] = bond->getLink(paths[i])->ifname();
 		j["path"] = pathStr;
+		/*
 		j["alive"] = paths[i]->alive(now,true);
 		j["bonded"] = paths[i]->bonded();
 		j["latencyMean"] = paths[i]->latencyMean();
@@ -343,6 +343,7 @@ static void _bondToJson(nlohmann::json &pj, SharedPtr<Bond> &bond)
 		j["packetErrorRatio"] = paths[i]->packetErrorRatio();
 		j["givenLinkSpeed"] = 1000;
 		j["allocation"] = paths[i]->allocation();
+		*/
 		pa.push_back(j);
 	}
 	pj["links"] = pa;
@@ -1762,11 +1763,11 @@ public:
 				if (basePolicyStr.empty()) {
 					fprintf(stderr, "error: no base policy was specified for custom policy (%s)\n", customPolicyStr.c_str());
 				}
-				if (_node->bondController()->getPolicyCodeByStr(basePolicyStr) == ZT_BONDING_POLICY_NONE) {
+				if (_node->bondController()->getPolicyCodeByStr(basePolicyStr) == ZT_BOND_POLICY_NONE) {
 					fprintf(stderr, "error: custom policy (%s) is invalid, unknown base policy (%s).\n",
 						customPolicyStr.c_str(), basePolicyStr.c_str());
 					continue;
-				} if (_node->bondController()->getPolicyCodeByStr(customPolicyStr) != ZT_BONDING_POLICY_NONE) {
+				} if (_node->bondController()->getPolicyCodeByStr(customPolicyStr) != ZT_BOND_POLICY_NONE) {
 					fprintf(stderr, "error: custom policy (%s) will be ignored, cannot use standard policy names for custom policies.\n",
 						customPolicyStr.c_str());
 					continue;
@@ -1795,19 +1796,11 @@ public:
 					newTemplateBond->setUserQualityWeights(weights,ZT_QOS_WEIGHT_SIZE);
 				}
 				// Bond-specific properties
-				newTemplateBond->setOverflowMode(OSUtils::jsonInt(customPolicy["overflow"],false));
 				newTemplateBond->setUpDelay(OSUtils::jsonInt(customPolicy["upDelay"],-1));
 				newTemplateBond->setDownDelay(OSUtils::jsonInt(customPolicy["downDelay"],-1));
 				newTemplateBond->setFlowRebalanceStrategy(OSUtils::jsonInt(customPolicy["flowRebalanceStrategy"],(uint64_t)0));
 				newTemplateBond->setFailoverInterval(OSUtils::jsonInt(customPolicy["failoverInterval"],(uint64_t)0));
 				newTemplateBond->setPacketsPerLink(OSUtils::jsonInt(customPolicy["packetsPerLink"],-1));
-
-				std::string linkMonitorStrategyStr(OSUtils::jsonString(customPolicy["linkMonitorStrategy"],""));
-				uint8_t linkMonitorStrategy = ZT_MULTIPATH_SLAVE_MONITOR_STRATEGY_DEFAULT;
-				if (linkMonitorStrategyStr == "passive") { linkMonitorStrategy = ZT_MULTIPATH_SLAVE_MONITOR_STRATEGY_PASSIVE; }
-				if (linkMonitorStrategyStr == "active") { linkMonitorStrategy = ZT_MULTIPATH_SLAVE_MONITOR_STRATEGY_ACTIVE; }
-				if (linkMonitorStrategyStr == "dynamic") { linkMonitorStrategy = ZT_MULTIPATH_SLAVE_MONITOR_STRATEGY_DYNAMIC; }
-				newTemplateBond->setLinkMonitorStrategy(linkMonitorStrategy);
 
 				// Policy-Specific link set
 				json &links = customPolicy["links"];
@@ -1824,40 +1817,40 @@ public:
 							speed, alloc, linkNameStr.c_str());
 						enabled = false;
 					}
-					uint32_t upDelay = OSUtils::jsonInt(link["upDelay"],-1);
-					uint32_t downDelay = OSUtils::jsonInt(link["downDelay"],-1);
+					//uint32_t upDelay = OSUtils::jsonInt(link["upDelay"],-1);
+					//uint32_t downDelay = OSUtils::jsonInt(link["downDelay"],-1);
 					uint8_t ipvPref = OSUtils::jsonInt(link["ipvPref"],0);
-					uint32_t linkMonitorInterval = OSUtils::jsonInt(link["monitorInterval"],(uint64_t)0);
+					//uint32_t linkMonitorInterval = OSUtils::jsonInt(link["monitorInterval"],(uint64_t)0);
 					std::string failoverToStr(OSUtils::jsonString(link["failoverTo"],""));
 					// Mode
 					std::string linkModeStr(OSUtils::jsonString(link["mode"],"spare"));
-					uint8_t linkMode = ZT_MULTIPATH_SLAVE_MODE_SPARE;
-					if (linkModeStr == "primary") { linkMode = ZT_MULTIPATH_SLAVE_MODE_PRIMARY; }
-					if (linkModeStr == "spare") { linkMode = ZT_MULTIPATH_SLAVE_MODE_SPARE; }
+					uint8_t linkMode = ZT_BOND_SLAVE_MODE_SPARE;
+					if (linkModeStr == "primary") { linkMode = ZT_BOND_SLAVE_MODE_PRIMARY; }
+					if (linkModeStr == "spare") { linkMode = ZT_BOND_SLAVE_MODE_SPARE; }
 					// ipvPref
 					if ((ipvPref != 0) && (ipvPref != 4) && (ipvPref != 6) && (ipvPref != 46) && (ipvPref != 64)) {
 						fprintf(stderr, "error: invalid ipvPref value (%d), link disabled.\n", ipvPref);
 						enabled = false;
 					}
-					if (linkMode == ZT_MULTIPATH_SLAVE_MODE_SPARE && failoverToStr.length()) {
+					if (linkMode == ZT_BOND_SLAVE_MODE_SPARE && failoverToStr.length()) {
 						fprintf(stderr, "error: cannot specify failover links for spares, link disabled.\n");
 						failoverToStr = "";
 						enabled = false;
 					}
-					_node->bondController()->addCustomLink(customPolicyStr, new Link(linkNameStr,ipvPref,speed,linkMonitorInterval,upDelay,downDelay,enabled,linkMode,failoverToStr,alloc));
+					_node->bondController()->addCustomLink(customPolicyStr, new Link(linkNameStr,ipvPref,speed,enabled,linkMode,failoverToStr,alloc));
 				}
 				std::string linkSelectMethodStr(OSUtils::jsonString(customPolicy["activeReselect"],"optimize"));
 				if (linkSelectMethodStr == "always") {
-					newTemplateBond->setLinkSelectMethod(ZT_MULTIPATH_RESELECTION_POLICY_ALWAYS);
+					newTemplateBond->setLinkSelectMethod(ZT_BOND_RESELECTION_POLICY_ALWAYS);
 				}
 				if (linkSelectMethodStr == "better") {
-					newTemplateBond->setLinkSelectMethod(ZT_MULTIPATH_RESELECTION_POLICY_BETTER);
+					newTemplateBond->setLinkSelectMethod(ZT_BOND_RESELECTION_POLICY_BETTER);
 				}
 				if (linkSelectMethodStr == "failure") {
-					newTemplateBond->setLinkSelectMethod(ZT_MULTIPATH_RESELECTION_POLICY_FAILURE);
+					newTemplateBond->setLinkSelectMethod(ZT_BOND_RESELECTION_POLICY_FAILURE);
 				}
 				if (linkSelectMethodStr == "optimize") {
-					newTemplateBond->setLinkSelectMethod(ZT_MULTIPATH_RESELECTION_POLICY_OPTIMIZE);
+					newTemplateBond->setLinkSelectMethod(ZT_BOND_RESELECTION_POLICY_OPTIMIZE);
 				}
 				if (newTemplateBond->getLinkSelectMethod() < 0 || newTemplateBond->getLinkSelectMethod() > 3) {
 					fprintf(stderr, "warning: invalid value (%s) for linkSelectMethod, assuming mode: always\n", linkSelectMethodStr.c_str());
@@ -3093,9 +3086,6 @@ public:
 			for(std::vector<std::string>::const_iterator p(_interfacePrefixBlacklist.begin());p!=_interfacePrefixBlacklist.end();++p) {
 				if (!strncmp(p->c_str(),ifname,p->length()))
 					return false;
-			}
-			if (!_node->bondController()->allowedToBind(std::string(ifname))) {
-				return false;
 			}
 		}
 		{

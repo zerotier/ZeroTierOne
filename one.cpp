@@ -84,7 +84,7 @@
 #include "osdep/Http.hpp"
 #include "osdep/Thread.hpp"
 
-#include "node/BondController.hpp"
+#include "node/Bond.hpp"
 
 #include "service/OneService.hpp"
 
@@ -496,7 +496,7 @@ static int cli(int argc,char **argv)
 			return 1;
 		}
 	} else if (command == "bond") {
-		/* zerotier-cli bond */
+		/* zerotier-cli bond <cmd> */
 		if (arg1.empty()) {
 			printf("(bond) command is missing required arguments" ZT_EOL_S);
 			return 2;
@@ -541,8 +541,8 @@ static int cli(int argc,char **argv)
 									healthStr = "DEGRADED";
 								}
 								std::string policyStr = "none";
-								if (bondingPolicy >= ZT_BONDING_POLICY_NONE && bondingPolicy <= ZT_BONDING_POLICY_BALANCE_AWARE) {
-									policyStr = BondController::getPolicyStrByCode(bondingPolicy);
+								if (bondingPolicy >= ZT_BOND_POLICY_NONE && bondingPolicy <= ZT_BOND_POLICY_BALANCE_AWARE) {
+									policyStr = Bond::getPolicyStrByCode(bondingPolicy);
 								}
 								printf("%10s  %32s    %8s        %d/%d" ZT_EOL_S,
 									OSUtils::jsonString(p ["address"],"-").c_str(),
@@ -563,11 +563,7 @@ static int cli(int argc,char **argv)
 				return 1;
 			}
 		}
-		else if (arg1.length() == 10) { /* zerotier-cli bond <peerId> enable */
-			if (arg2 == "enable") {
-				fprintf(stderr, "zerotier-cli bond <peerId> enable\n");
-				return 0;
-			}
+		else if (arg1.length() == 10) {
 			if (arg2 == "rotate") { /* zerotier-cli bond <peerId> rotate */
 				fprintf(stderr, "zerotier-cli bond <peerId> rotate\n");
 				requestHeaders["Content-Type"] = "application/json";
@@ -631,7 +627,7 @@ static int cli(int argc,char **argv)
 						int numTotalLinks = OSUtils::jsonInt(j["numTotalLinks"],0);
 						printf("Peer               : %s\n", arg1.c_str());
 						printf("Bond               : %s\n", OSUtils::jsonString(j["bondingPolicy"],"-").c_str());
-						//if (bondingPolicy == ZT_BONDING_POLICY_ACTIVE_BACKUP) {
+						//if (bondingPolicy == ZT_BOND_POLICY_ACTIVE_BACKUP) {
 						printf("Link Select Method : %d\n", (int)OSUtils::jsonInt(j["linkSelectMethod"],0));
 						//}
 						printf("Status             : %s\n", healthStr.c_str());
@@ -728,8 +724,8 @@ static int cli(int argc,char **argv)
 								healthStr = "Degraded";
 							}
 							std::string policyStr = "none";
-							if (bondingPolicy >= ZT_BONDING_POLICY_NONE && bondingPolicy <= ZT_BONDING_POLICY_BALANCE_AWARE) {
-								policyStr = BondController::getPolicyStrByCode(bondingPolicy);
+							if (bondingPolicy >= ZT_BOND_POLICY_NONE && bondingPolicy <= ZT_BOND_POLICY_BALANCE_AWARE) {
+								policyStr = Bond::getPolicyStrByCode(bondingPolicy);
 							}
 
 							printf("%10s  %32s    %8s        %d/%d" ZT_EOL_S,

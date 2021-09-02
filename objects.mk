@@ -28,8 +28,7 @@ CORE_OBJS=\
 	node/Topology.o \
 	node/Trace.o \
 	node/Utils.o \
-	node/Bond.o \
-	node/BondController.o
+	node/Bond.o
 
 ONE_OBJS=\
 	controller/EmbeddedNetworkController.o \
