@@ -806,7 +806,7 @@ void PostgreSQL::heartbeat()
 			std::string build = std::to_string(ZEROTIER_ONE_VERSION_BUILD);
 			std::string now = std::to_string(ts);
 			std::string host_port = std::to_string(_listenPort);
-			std::string use_redis = "false"; // (_rc != NULL) ? "true" : "false";
+			std::string use_redis = (_rc != NULL) ? "true" : "false";
 			
 			try {
 			pqxx::result res = w.exec0("INSERT INTO ztc_controller (id, cluster_host, last_alive, public_identity, v_major, v_minor, v_rev, v_build, host_port, use_redis) "
@@ -1309,25 +1309,18 @@ void PostgreSQL::onlineNotificationThread()
 
 void PostgreSQL::onlineNotification_Postgres()
 {
-	try {
-		auto c = _pool->borrow();
-		_pool->unborrow(c);
-	} catch(std::exception &e) {
-		fprintf(stderr, "error getting connection in onlineNotification thread\n");
-		exit(5);
-	}
 	_connected = 1;
 
 	nlohmann::json jtmp1, jtmp2;
 	while (_run == 1) {
+		auto c = _pool->borrow();
 		try {
 			std::unordered_map< std::pair<uint64_t,uint64_t>,std::pair<int64_t,InetAddress>,_PairHasher > lastOnline;
 			{
 				std::lock_guard<std::mutex> l(_lastOnline_l);
 				lastOnline.swap(_lastOnline);
 			}
-
-			auto c = _pool->borrow();
+			
 			pqxx::work w(*c->c);
 
 			// using pqxx::stream_to would be a really nice alternative here, but
@@ -1361,10 +1354,9 @@ void PostgreSQL::onlineNotification_Postgres()
 
 				try {
 					pqxx::row r = w.exec_params1("SELECT id, network_id FROM ztc_member WHERE network_id = $1 AND id = $2",
-						networkId, memberId);
-					
+						networkId, memberId);		
 				} catch (pqxx::unexpected_rows &e) {
-					fprintf(stderr, "Member count failed: %s\n", e.what());
+					// fprintf(stderr, "Member count failed: %s\n", e.what());
 					continue;
 				}
 
@@ -1395,10 +1387,14 @@ void PostgreSQL::onlineNotification_Postgres()
 				w.commit();
 			}
 			// fprintf(stderr, "Updated online status of %d members\n", updateCount);
-			_pool->unborrow(c);
 		} catch (std::exception &e) {
 			fprintf(stderr, "%s: error in onlinenotification thread: %s\n", _myAddressStr.c_str(), e.what());
-		}
+		} 
+		_pool->unborrow(c);
+
+		ConnectionPoolStats stats = _pool->get_stats();
+		fprintf(stderr, "pool stats: in use size: %llu, available size: %llu, total: %llu\n",
+			stats.borrowed_size, stats.pool_size, (stats.borrowed_size, stats.pool_size));
 
 		std::this_thread::sleep_for(std::chrono::seconds(10));
 	}
