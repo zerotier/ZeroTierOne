@@ -21,12 +21,10 @@ killall -TERM zerotier-one >>/dev/null 2>&1
 sleep 1
 killall -KILL zerotier-one >>/dev/null 2>&1
 
-echo "Making sure kext is unloaded..."
-kextunload '/Library/Application Support/ZeroTier/One/tap.kext' >>/dev/null 2>&1
-
 echo "Removing ZeroTier One files..."
 
 rm -rf '/Applications/ZeroTier One.app'
+rm -rf '/Applications/ZeroTier.app'
 rm -f '/usr/local/bin/zerotier-one' '/usr/local/bin/zerotier-idtool' '/usr/local/bin/zerotier-cli' '/Library/LaunchDaemons/com.zerotier.one.plist'
 
 cd '/Library/Application Support/ZeroTier/One'

@@ -1028,8 +1028,11 @@ public:
 			}
 		}
 
+		// Make a copy so lookups don't modify in place;
+		json lc(_localConfig);
+
 		// Get any trusted paths in local.conf (we'll parse the rest of physical[] elsewhere)
-		json &physical = _localConfig["physical"];
+		json &physical = lc["physical"];
 		if (physical.is_object()) {
 			for(json::iterator phy(physical.begin());phy!=physical.end();++phy) {
 				InetAddress net(OSUtils::jsonString(phy.key(),"").c_str());
@@ -1046,7 +1049,7 @@ public:
 			}
 		}
 
-		json &settings = _localConfig["settings"];
+		json &settings = lc["settings"];
 		if (settings.is_object()) {
 			// Allow controller DB path to be put somewhere else
 			const std::string cdbp(OSUtils::jsonString(settings["controllerDbPath"],""));
@@ -1289,8 +1292,11 @@ public:
 					} else {
 						scode = 400; /* bond controller is not enabled */
 					}
-				}
-				if (ps[0] == "status") {
+				} else if (ps[0] == "config") {
+					Mutex::Lock lc(_localConfig_m);
+					res = _localConfig;
+					scode = 200;
+				} else if (ps[0] == "status") {
 					ZT_NodeStatus status;
 					_node->status(&status);
 
@@ -1496,8 +1502,35 @@ public:
 					} else {
 						scode = 400; /* bond controller is not enabled */
 					}
-				}
-				if (ps[0] == "moon") {
+				} else if (ps[0] == "config") {
+					// Right now we only support writing the things the UI supports changing.
+					if (ps.size() == 2) {
+						if (ps[1] == "settings") {
+							try {
+								json j(OSUtils::jsonParse(body));
+								if (j.is_object()) {
+									Mutex::Lock lcl(_localConfig_m);
+									json lc(_localConfig);
+									for(json::const_iterator s(j.begin());s!=j.end();++s) {
+										lc["settings"][s.key()] = s.value();
+									}
+									std::string lcStr = OSUtils::jsonDump(lc, 4);
+									if (OSUtils::writeFile((_homePath + ZT_PATH_SEPARATOR_S "local.conf").c_str(), lcStr)) {
+										_localConfig = lc;
+									}
+								} else {
+									scode = 400;
+								}
+							} catch ( ... ) {
+								scode = 400;
+							}
+						} else {
+							scode = 404;
+						}
+					} else {
+						scode = 404;
+					}
+				} else if (ps[0] == "moon") {
 					if (ps.size() == 2) {
 
 						uint64_t seed = 0;
@@ -3115,6 +3148,7 @@ public:
 			if (_trialBind(randp))
 				break;
 		}
+		return randp;
 	}
 
 	bool _trialBind(unsigned int port)

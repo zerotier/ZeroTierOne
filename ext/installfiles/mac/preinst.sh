@@ -25,16 +25,15 @@ for i in `ps axuwww | tr -s ' ' ',' | grep -F '/Applications/ZeroTier.app' | gre
 done
 chmod 0600 /tmp/zt1-gui-restart.tmp
 
-if [ -f /Library/LaunchDaemons/com.zerotier.one.plist ]; then
-	launchctl unload /Library/LaunchDaemons/com.zerotier.one.plist >>/dev/null 2>&1
-	sleep 5
-fi
-if [ -f '/Library/Application Support/ZeroTier/One/zerotier-one.pid' ]; then
-	kill -9 `cat /Library/Application Support/ZeroTier/One/zerotier-one.pid`
-fi
-
 cd "/Applications"
 rm -rf "ZeroTier One.app"
 rm -rf "ZeroTier.app"
+
+if [ -d '/Library/Application Support/ZeroTier/One' ]; then
+	cd '/Library/Application Support/ZeroTier/One'
+	# ensure that file locking doesn't cause issues with replacing the binary
+	rm -f zerotier-one
+	rm -f MacEthernetTapAgent
+fi
 
 exit 0

@@ -11,6 +11,21 @@ if [ ! -f authtoken.secret ]; then
 	chmod 0600 authtoken.secret
 fi
 
+if [ -f zerotier-one.pid ]; then
+	kill `cat zerotier-one.pid`
+	sleep 1
+	killall MacEthernetTapAgent
+	sleep 1
+	killall -9 MacEthernetTapAgent
+	sleep 1
+	if [ -f zerotier-one.pid ]; then
+		kill -9 `cat zerotier-one.pid`
+		rm -f zerotier-one.pid
+	fi
+fi
+launchctl load /Library/LaunchDaemons/com.zerotier.one.plist >>/dev/null 2>&1
+sleep 1
+
 rm -f zerotier-cli zerotier-idtool
 ln -sf zerotier-one zerotier-cli
 ln -sf zerotier-one zerotier-idtool
@@ -21,9 +36,6 @@ cd /usr/local/bin
 rm -f zerotier-cli zerotier-idtool
 ln -sf "/Library/Application Support/ZeroTier/One/zerotier-one" zerotier-cli
 ln -sf "/Library/Application Support/ZeroTier/One/zerotier-one" zerotier-idtool
-
-launchctl load /Library/LaunchDaemons/com.zerotier.one.plist >>/dev/null 2>&1
-sleep 2
 
 if [ -f /tmp/zt1-gui-restart.tmp ]; then
 	for u in `cat /tmp/zt1-gui-restart.tmp`; do

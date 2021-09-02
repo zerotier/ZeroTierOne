@@ -1,6 +1,12 @@
 ZeroTier Release Notes
 ======
 
+# 2021-08-31 -- Version 1.8.0
+
+ * A *completely* rewritten desktop UI for Mac and Windows!
+ * Implement a workaround for one potential source of a "coma" bug, which can occur if buggy NATs/routers stop allowing the service to communicate on a given port. ZeroTier now reassigns a new secondary port if it's offline for a while unless a secondary port is manually specified in local.conf.
+ * Fix for MacOS MTU issue on feth devices.
+
 # 2021-04-13 -- Version 1.6.5
 
  * Fix a bug in potential network path filtering that could in some circumstances lead to "software laser" effects.
