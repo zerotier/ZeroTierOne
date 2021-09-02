@@ -794,7 +794,7 @@ void PostgreSQL::heartbeat()
 	const char *hostname = hostnameTmp;
 
 	while (_run == 1) {
-		fprintf(stderr, "%s: heartbeat\n", controllerId);
+		// fprintf(stderr, "%s: heartbeat\n", controllerId);
 		auto c = _pool->borrow();
 		int64_t ts = OSUtils::now();
 
