@@ -150,7 +150,7 @@ PostgreSQL::PostgreSQL(const Identity &myId, const char *path, int listenPort, R
 {
 	char myAddress[64];
 	_myAddressStr = myId.address().toString(myAddress);
-	_connString = std::string(path) + " application_name=controller_" + _myAddressStr;
+	_connString = std::string(path);
 	auto f = std::make_shared<PostgresConnFactory>(_connString);
 	_pool = std::make_shared<ConnectionPool<PostgresConnection> >(
 		15, 5, std::static_pointer_cast<ConnectionFactory>(f));
