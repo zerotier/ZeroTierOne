@@ -539,6 +539,15 @@ public:
 			memset(&config, 0, sizeof(ZT_VirtualNetworkConfig));
 		}
 
+		~NetworkState()
+		{
+			this->managedRoutes.clear();
+#ifdef __APPLE__
+			Thread::sleep(10);
+			this->tap.reset();
+#endif
+		}
+
 		std::shared_ptr<EthernetTap> tap;
 		ZT_VirtualNetworkConfig config; // memcpy() of raw config from core
 		std::vector<InetAddress> managedIps;
