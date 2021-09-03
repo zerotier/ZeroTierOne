@@ -1533,7 +1533,7 @@ void PostgreSQL::commitThread()
 					}
 
 				} catch (std::exception &e) {
-					fprintf(stderr, "ERROR: Error updating member: %s\n", e.what());
+					fprintf(stderr, "ERROR: Error updating network: %s\n", e.what());
 				}
 				// if (_rc != NULL) {
 				// 	try {
