@@ -1476,38 +1476,40 @@ void PostgreSQL::commitThread()
 						continue;
 					}
 					auto dns = (*config)["dns"];
-					std::string domain = dns["domain"];
-					std::stringstream servers;
-					servers << "{";
-					for (auto j = dns["servers"].begin(); j < dns["servers"].end(); ++j) {
-						servers << *j;
-						if ( (j+1) != dns["servers"].end()) {
-							servers << ",";
+					if (dns.is_object()) {
+						std::string domain = dns["domain"];
+						std::stringstream servers;
+						servers << "{";
+						for (auto j = dns["servers"].begin(); j < dns["servers"].end(); ++j) {
+							servers << *j;
+							if ( (j+1) != dns["servers"].end()) {
+								servers << ",";
+							}
 						}
-					}
-					servers << "}";
+						servers << "}";
 
-					const char *p[3] = {
-						id.c_str(),
-						domain.c_str(),
-						servers.str().c_str()
-					};
+						const char *p[3] = {
+							id.c_str(),
+							domain.c_str(),
+							servers.str().c_str()
+						};
 
-					res = PQexecParams(conn, "INSERT INTO ztc_network_dns (network_id, domain, servers) VALUES ($1, $2, $3) ON CONFLICT (network_id) DO UPDATE SET domain = EXCLUDED.domain, servers = EXCLUDED.servers",
-						3,
-						NULL,
-						p,
-						NULL,
-						NULL,
-						0);
-					if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-						fprintf(stderr, "ERROR: Error updating DNS: %s\n", PQresultErrorMessage(res));
+						res = PQexecParams(conn, "INSERT INTO ztc_network_dns (network_id, domain, servers) VALUES ($1, $2, $3) ON CONFLICT (network_id) DO UPDATE SET domain = EXCLUDED.domain, servers = EXCLUDED.servers",
+							3,
+							NULL,
+							p,
+							NULL,
+							NULL,
+							0);
+						if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+							fprintf(stderr, "ERROR: Error updating DNS: %s\n", PQresultErrorMessage(res));
+							PQclear(res);
+							PQclear(PQexec(conn, "ROLLBACK"));
+							err = true;
+							break;
+						}
 						PQclear(res);
-						PQclear(PQexec(conn, "ROLLBACK"));
-						err = true;
-						break;
 					}
-					PQclear(res);
 
 					res = PQexec(conn, "COMMIT");
 					if (PQresultStatus(res) != PGRES_COMMAND_OK) {
