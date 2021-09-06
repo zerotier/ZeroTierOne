@@ -146,6 +146,10 @@ void Peer::received(
 					_paths[replacePath].lr = now;
 					_paths[replacePath].p = path;
 					_paths[replacePath].priority = 1;
+					Mutex::Lock _l(_bond_m);
+					if(_bond) {
+						_bond->nominatePathToBond(_paths[replacePath].p, now);
+					}
 				}
 			} else {
 				Mutex::Lock ltl(_lastTriedPath_m);
