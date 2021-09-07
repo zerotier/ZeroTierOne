@@ -573,27 +573,24 @@ void Peer::resetWithinScope(void *tPtr,InetAddress::IpScope scope,int inetAddres
 void Peer::recordOutgoingPacket(const SharedPtr<Path> &path, const uint64_t packetId,
 	uint16_t payloadLength, const Packet::Verb verb, const int32_t flowId, int64_t now)
 {
-	if (!_shouldCollectPathStatistics || !_bond) {
-		return;
+	if (_localMultipathSupported && _bond) {
+		_bond->recordOutgoingPacket(path, packetId, payloadLength, verb, flowId, now);
 	}
-	_bond->recordOutgoingPacket(path, packetId, payloadLength, verb, flowId, now);
 }
 
 void Peer::recordIncomingInvalidPacket(const SharedPtr<Path>& path)
 {
-	if (!_shouldCollectPathStatistics || !_bond) {
-		return;
+	if (_localMultipathSupported && _bond) {
+		_bond->recordIncomingInvalidPacket(path);
 	}
-	_bond->recordIncomingInvalidPacket(path);
 }
 
 void Peer::recordIncomingPacket(const SharedPtr<Path> &path, const uint64_t packetId,
 	uint16_t payloadLength, const Packet::Verb verb, const int32_t flowId, int64_t now)
 {
-	if (!_shouldCollectPathStatistics || !_bond) {
-		return;
+	if (_localMultipathSupported && _bond) {
+		_bond->recordIncomingPacket(path, packetId, payloadLength, verb, flowId, now);
 	}
-	_bond->recordIncomingPacket(path, packetId, payloadLength, verb, flowId, now);
 }
 
 } // namespace ZeroTier

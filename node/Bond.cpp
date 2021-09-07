@@ -1784,7 +1784,6 @@ void Bond::dumpInfo(int64_t now, bool force)
 			dumpPathStatus(now, i);
 		}
 	}
-	fprintf(stderr, "\n\n\n");
 }
 
 }	// namespace ZeroTier

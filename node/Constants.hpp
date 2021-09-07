@@ -549,7 +549,7 @@
 /**
  * How often we emit a bond summary for each bond
  */
-#define ZT_BOND_STATUS_INTERVAL 3000
+#define ZT_BOND_STATUS_INTERVAL 30000
 
 /**
  * How long before we consider a path to be dead in the general sense. This is
