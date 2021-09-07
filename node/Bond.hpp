@@ -1138,10 +1138,6 @@ class Bond {
 	 */
 	void log(const char* fmt, ...)
 	{
-		// TODO: remove
-		if (_peerId != 0xe421efd4b9 && _peerId != 0xa03bcb43bb) {
-			return;
-		}
 		time_t rawtime;
 		struct tm* timeinfo;
 		char timestamp[80];
