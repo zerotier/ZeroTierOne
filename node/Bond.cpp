@@ -314,7 +314,7 @@ SharedPtr<Path> Bond::getAppropriatePath(int64_t now, int32_t flowId)
 			}
 			// Reset striping counter
 			_rrPacketsSentOnCurrLink = 0;
-			if (_numBondedPaths == 1) {
+			if (_numBondedPaths == 1 || _rrIdx >= (ZT_MAX_PEER_NETWORK_PATHS-1)) {
 				_rrIdx = 0;
 			}
 			else {
@@ -1654,7 +1654,7 @@ void Bond::setBondParameters(int policy, SharedPtr<Bond> templateBond, bool useT
 	// rr
 
 	_rrPacketsSentOnCurrLink = 0;
-	_rrIdx = ZT_MAX_PEER_NETWORK_PATHS;
+	_rrIdx = 0;
 
 	// General parameters
 
