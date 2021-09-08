@@ -273,9 +273,6 @@
     <ClCompile Include="..\..\node\Bond.cpp">
       <Filter>Source Files\node</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\node\BondController.cpp">
-      <Filter>Source Files\node</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\osdep\WinDNSHelper.cpp">
       <Filter>Source Files\osdep</Filter>
     </ClCompile>
