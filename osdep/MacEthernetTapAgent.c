@@ -176,10 +176,10 @@ static void die()
 		close(s_ndrvfd);
 	if (s_bpffd >= 0)
 		close(s_bpffd);
-	if (s_deviceName[0])
-		run("/sbin/ifconfig",s_deviceName,"destroy",(char *)0);
 	if (s_peerDeviceName[0])
 		run("/sbin/ifconfig",s_peerDeviceName,"destroy",(char *)0);
+	if (s_deviceName[0])
+		run("/sbin/ifconfig",s_deviceName,"destroy",(char *)0);
 }
 
 static inline void close_inherited_fds()
