@@ -445,11 +445,21 @@ void Peer::tryMemorizedPath(void *tPtr,int64_t now)
 void Peer::performMultipathStateCheck(void *tPtr, int64_t now)
 {
 	Mutex::Lock _l(_bond_m);
+	if (_bond) {
+		// Once enabled the Bond object persists, no need to update state
+		return;
+	}
 	/**
 	 * Check for conditions required for multipath bonding and create a bond
 	 * if allowed.
 	 */
-	_localMultipathSupported = ((RR->bc->inUse()) && (ZT_PROTO_VERSION > 9));
+	int numAlivePaths = 0;
+	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
+		if (_paths[i].p && _paths[i].p->alive(now)) {
+			numAlivePaths++;
+		}
+	}
+	_localMultipathSupported = ((numAlivePaths >= 1) && (RR->bc->inUse()) && (ZT_PROTO_VERSION > 9));
 	if (_localMultipathSupported && !_bond) {
 		if (RR->bc) {
 			_bond = RR->bc->createTransportTriggeredBond(RR, this);
