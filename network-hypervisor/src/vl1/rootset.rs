@@ -95,6 +95,8 @@ pub struct Root {
 
 /// A signed bundle of root nodes.
 ///
+/// In v1 this was the "World" object.
+///
 /// This is how roots are normally specified to nodes. The embedded signing key allows the
 /// root set to be updated automatically. Updates can add, remove, or change the endpoints
 /// of roots, allowing infrastructure updates with automatic client configuration as long

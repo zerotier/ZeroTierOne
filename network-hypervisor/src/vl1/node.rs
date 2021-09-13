@@ -276,7 +276,7 @@ impl Node {
                                 if peer.is_some() {
                                     peer.unwrap().receive(self, ci, ph, time_ticks, &path, &packet_header, data.as_ref(), &[]);
                                 } else {
-                                    self.whois.query(self, ci, source, Some(QueuedPacket::Singular(data)));
+                                    self.whois.query(self, ci, source, Some(QueuedPacket::Unfragmented(data)));
                                 }
                             }
                         }

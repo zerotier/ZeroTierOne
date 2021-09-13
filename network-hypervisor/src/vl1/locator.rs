@@ -12,11 +12,11 @@ use crate::vl1::protocol::PACKET_SIZE_MAX;
 /// no involvement from a root at all.
 #[derive(Clone, PartialEq, Eq)]
 pub struct Locator {
-    subject: Address,
-    signer: Address,
-    timestamp: i64,
-    endpoints: Vec<Endpoint>,
-    signature: Vec<u8>,
+    pub subject: Address,
+    pub signer: Address,
+    pub timestamp: i64,
+    pub endpoints: Vec<Endpoint>,
+    pub signature: Vec<u8>,
 }
 
 impl Locator {
@@ -63,19 +63,7 @@ impl Locator {
     }
 
     #[inline(always)]
-    pub fn subject(&self) -> Address { self.subject }
-
-    #[inline(always)]
-    pub fn signer(&self) -> Address { self.signer }
-
-    #[inline(always)]
     pub fn is_proxy_signed(&self) -> bool { self.subject != self.signer }
-
-    #[inline(always)]
-    pub fn timestamp(&self) -> i64 { self.timestamp }
-
-    #[inline(always)]
-    pub fn endpoints(&self) -> &[Endpoint] { self.endpoints.as_slice() }
 
     pub fn verify_signature(&self, signer_identity: &Identity) -> bool {
         let mut buf: Buffer<{ PACKET_SIZE_MAX }> = Buffer::new();

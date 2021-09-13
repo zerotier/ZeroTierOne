@@ -9,7 +9,7 @@ use crate::vl1::node::{Node, PacketBuffer, VL1CallerInterface};
 use crate::vl1::protocol::{WHOIS_RETRY_INTERVAL, WHOIS_MAX_WAITING_PACKETS, WHOIS_RETRY_MAX};
 
 pub(crate) enum QueuedPacket {
-    Singular(PacketBuffer),
+    Unfragmented(PacketBuffer),
     Fragmented(FragmentedPacket)
 }
 
@@ -26,6 +26,7 @@ impl WhoisQueue {
 
     pub fn new() -> Self { Self(Mutex::new(HashMap::new())) }
 
+    /// Launch or renew a WHOIS query and enqueue a packet to be processed when (if) it is received.
     pub fn query<CI: VL1CallerInterface>(&self, node: &Node, ci: &CI, target: Address, packet: Option<QueuedPacket>) {
         let mut q = self.0.lock();
 
