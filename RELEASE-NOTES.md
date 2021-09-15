@@ -1,17 +1,17 @@
 ZeroTier Release Notes
 ======
 
-# 2021-08-31 -- Version 1.8.0
+# 2021-09-15 -- Version 1.8.0
 
  * A *completely* rewritten desktop UI for Mac and Windows!
- * Implement a workaround for one potential source of a "coma" bug, which can occur if buggy NATs/routers stop allowing the service to communicate on a given port. ZeroTier now reassigns a new secondary port if it's offline for a while unless a secondary port is manually specified in local.conf.
- * Fix for MacOS MTU issue on feth devices.
- * Fix for using v6 source addresses for v4 routes
+ * Implement a workaround for one potential source of a "coma" bug, which can occur if buggy NATs/routers stop allowing the service to communicate on a given port. ZeroTier now reassigns a new secondary port if it's offline for a while unless a secondary port is manually specified in local.conf. Working around crummy buggy routers is an ongoing effort.
+ * Fix for MacOS MTU capping issue on feth devices
+ * Fix for mistakenly using v6 source addresses for v4 routes on some platforms
  * Stop binding to temporary IPv6 addresses
  * Set MAC address before bringing up Linux TAP link
- * Check if DNS servers need to be Applied on macOS
- * Using json.hpp version 3.10.2
- 
+ * Check if DNS servers need to be applied on macOS
+ * Upgrade json.hpp dependency to version 3.10.2
+
 # 2021-04-13 -- Version 1.6.5
 
  * Fix a bug in potential network path filtering that could in some circumstances lead to "software laser" effects.
