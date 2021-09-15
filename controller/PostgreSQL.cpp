@@ -157,7 +157,9 @@ PostgreSQL::PostgreSQL(const Identity &myId, const char *path, int listenPort, R
 	
 	memset(_ssoPsk, 0, sizeof(_ssoPsk));
 	char *const ssoPskHex = getenv("ZT_SSO_PSK");
+#ifdef ZT_TRACE
 	fprintf(stderr, "ZT_SSO_PSK: %s\n", ssoPskHex);
+#endif
 	if (ssoPskHex) {
 		// SECURITY: note that ssoPskHex will always be null-terminated if libc acatually
 		// returns something non-NULL. If the hex encodes something shorter than 48 bytes,
