@@ -594,12 +594,14 @@ void PostgreSQL::initializeNetworks()
 			auto dur = std::chrono::duration_cast<std::chrono::microseconds>(end - start);;
 			total += dur.count();
 			++count;
-			if (count % 10000 == 0) {
+			if (count > 0 && count % 10000 == 0) {
 				fprintf(stderr, "Averaging %llu us per network\n", (total/count));
 			}
 		}
 
-		fprintf(stderr, "Took %llu us per network to load\n", (total/count));
+		if (count > 0) {
+			fprintf(stderr, "Took %llu us per network to load\n", (total/count));
+		}
 		stream.complete();
 
 		w.commit();
@@ -748,11 +750,13 @@ void PostgreSQL::initializeMembers()
 			auto dur = std::chrono::duration_cast<std::chrono::microseconds>(end - start);;
 			total += dur.count();
 			++count;
-			if (count % 10000 == 0) {
+			if (count > 0 && count % 10000 == 0) {
 				fprintf(stderr, "Averaging %llu us per member\n", (total/count));
 			}
 		}
-		fprintf(stderr, "Took %llu us per member to load\n", (total/count));
+		if (count > 0) {
+			fprintf(stderr, "Took %llu us per member to load\n", (total/count));
+		}
 
 		stream.complete();
 
