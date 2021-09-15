@@ -437,6 +437,24 @@ bool ManagedRoute::sync()
 
 #ifdef __BSD__ // ------------------------------------------------------------
 
+	if (_device[0]) {
+		bool haveDevice = false;
+		struct ifaddrs *ifa = (struct ifaddrs *)0;
+		if (!getifaddrs(&ifa)) {
+			struct ifaddrs *p = ifa;
+			while (p) {
+				if ((p->ifa_name)&&(!strcmp(_device, p->ifa_name))) {
+					haveDevice = true;
+					break;
+				}
+				p = p->ifa_next;
+			}
+			freeifaddrs(ifa);
+		}
+		if (!haveDevice)
+			return false;
+	}
+
 	// Find lowest metric system route that this route should override (if any)
 	InetAddress newSystemVia;
 	char newSystemDevice[128];
