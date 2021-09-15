@@ -499,23 +499,25 @@ bool ManagedRoute::sync()
 
 		if (_systemVia) {
 			_routeCmd("add",leftt,_systemVia,_systemDevice,(const char *)0);
-			_routeCmd("change",leftt,_systemVia,_systemDevice,(const char *)0);
+			//_routeCmd("change",leftt,_systemVia,_systemDevice,(const char *)0);
 			if (rightt) {
 				_routeCmd("add",rightt,_systemVia,_systemDevice,(const char *)0);
-				_routeCmd("change",rightt,_systemVia,_systemDevice,(const char *)0);
+				//_routeCmd("change",rightt,_systemVia,_systemDevice,(const char *)0);
 			}
 		}
 	}
 
 	if (!_applied.count(leftt)) {
 		_applied[leftt] = !_via;
+		_routeCmd("delete",leftt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
 		_routeCmd("add",leftt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
-		_routeCmd("change",leftt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
+		//_routeCmd("change",leftt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
 	}
 	if ((rightt)&&(!_applied.count(rightt))) {
 		_applied[rightt] = !_via;
+		_routeCmd("delete",rightt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
 		_routeCmd("add",rightt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
-		_routeCmd("change",rightt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
+		//_routeCmd("change",rightt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
 	}
 
 #endif // __BSD__ ------------------------------------------------------------
