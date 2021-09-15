@@ -1074,7 +1074,7 @@ public:
 			if (redis.is_object() && _rc == NULL) {
 				_rc = new RedisConfig;
 				_rc->hostname = OSUtils::jsonString(redis["hostname"],"");
-				_rc->port = redis["port"];
+				_rc->port = OSUtils::jsonInt(redis["port"],0);
 				_rc->password = OSUtils::jsonString(redis["password"],"");
 				_rc->clusterMode = OSUtils::jsonBool(redis["clusterMode"], false);
 			}
