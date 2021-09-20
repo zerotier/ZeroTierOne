@@ -275,6 +275,7 @@ static void handlePacket(const int sock,const InetAddress *const ip,Packet &pkt)
 								return;
 							}
 						}
+						peer.zero();
 					}
 				}
 
