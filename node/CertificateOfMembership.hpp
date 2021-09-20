@@ -94,6 +94,8 @@ public:
 		 * ZeroTier address to whom certificate was issued
 		 */
 		COM_RESERVED_ID_ISSUED_TO = 2
+
+		// IDs 3-6 reserved for full hash of identity to which this COM was issued.
 	};
 
 	/**
@@ -110,7 +112,7 @@ public:
 	 * @param nwid Network ID
 	 * @param issuedTo Certificate recipient
 	 */
-	CertificateOfMembership(uint64_t timestamp,uint64_t timestampMaxDelta,uint64_t nwid,const Address &issuedTo)
+	CertificateOfMembership(uint64_t timestamp,uint64_t timestampMaxDelta,uint64_t nwid,const Identity &issuedTo)
 	{
 		_qualifiers[0].id = COM_RESERVED_ID_TIMESTAMP;
 		_qualifiers[0].value = timestamp;
@@ -119,9 +121,20 @@ public:
 		_qualifiers[1].value = nwid;
 		_qualifiers[1].maxDelta = 0;
 		_qualifiers[2].id = COM_RESERVED_ID_ISSUED_TO;
-		_qualifiers[2].value = issuedTo.toInt();
+		_qualifiers[2].value = issuedTo.address().toInt();
 		_qualifiers[2].maxDelta = 0xffffffffffffffffULL;
-		_qualifierCount = 3;
+
+		// Include hash of full identity public key in COM for hardening purposes. Pack it in
+		// using the original COM format. Format may be revised in the future to make this cleaner.
+		uint64_t idHash[6];
+		issuedTo.publicKeyHash(idHash);
+		for(unsigned long i=0;i<4;++i) {
+			_qualifiers[i + 3].id = (uint64_t)(i + 3);
+			_qualifiers[i + 3].value = Utils::ntoh(idHash[i]);
+			_qualifiers[i + 3].maxDelta = 0xffffffffffffffffULL;
+		}
+
+		_qualifierCount = 7;
 		memset(_signature.data,0,ZT_C25519_SIGNATURE_LEN);
 	}
 
@@ -224,9 +237,10 @@ public:
 	 * tuples present in this cert but not in other result in 'false'.
 	 *
 	 * @param other Cert to compare with
+	 * @param otherIdentity Identity of other node
 	 * @return True if certs agree and 'other' may be communicated with
 	 */
-	bool agreesWith(const CertificateOfMembership &other) const;
+	bool agreesWith(const CertificateOfMembership &other, const Identity &otherIdentity) const;
 
 	/**
 	 * Sign this certificate

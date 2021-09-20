@@ -148,37 +148,43 @@ void CertificateOfMembership::fromString(const char *s)
 
 #endif // ZT_SUPPORT_OLD_STYLE_NETCONF
 
-bool CertificateOfMembership::agreesWith(const CertificateOfMembership &other) const
+bool CertificateOfMembership::agreesWith(const CertificateOfMembership &other, const Identity &otherIdentity) const
 {
-	unsigned int myidx = 0;
-	unsigned int otheridx = 0;
-
 	if ((_qualifierCount == 0)||(other._qualifierCount == 0))
 		return false;
 
-	while (myidx < _qualifierCount) {
-		// Fail if we're at the end of other, since this means the field is
-		// missing.
-		if (otheridx >= other._qualifierCount)
-			return false;
+	std::map< uint64_t, uint64_t > otherFields;
+	for(unsigned int i=0;i<other._qualifierCount;++i)
+		otherFields[other._qualifiers[i].id] = other._qualifiers[i].value;
 
-		// Seek to corresponding tuple in other, ignoring tuples that
-		// we may not have. If we run off the end of other, the tuple is
-		// missing. This works because tuples are sorted by ID.
-		while (other._qualifiers[otheridx].id != _qualifiers[myidx].id) {
-			++otheridx;
-			if (otheridx >= other._qualifierCount)
+	bool fullIdentityVerification = false;
+	for(unsigned int i=0;i<_qualifierCount;++i) {
+		const uint64_t qid = _qualifiers[i].id;
+		if ((qid >= 3)&&(qid <= 6)) {
+			fullIdentityVerification = true;
+		} else {
+			std::map< uint64_t, uint64_t >::iterator otherQ(otherFields.find(qid));
+			if (otherQ == otherFields.end())
+				return false;
+			const uint64_t a = _qualifiers[i].value;
+			const uint64_t b = otherQ->second;
+			if (((a >= b) ? (a - b) : (b - a)) > _qualifiers[i].maxDelta)
 				return false;
 		}
+	}
 
-		// Compare to determine if the absolute value of the difference
-		// between these two parameters is within our maxDelta.
-		const uint64_t a = _qualifiers[myidx].value;
-		const uint64_t b = other._qualifiers[myidx].value;
-		if (((a >= b) ? (a - b) : (b - a)) > _qualifiers[myidx].maxDelta)
-			return false;
-
-		++myidx;
+	// If this COM has a full hash of its identity, assume the other must have this as well.
+	// Otherwise we are on a controller that does not incorporate these.
+	if (fullIdentityVerification) {
+		uint64_t idHash[6];
+		otherIdentity.publicKeyHash(idHash);
+		for(unsigned long i=0;i<4;++i) {
+			std::map< uint64_t, uint64_t >::iterator otherQ(otherFields.find((uint64_t)(i + 3)));
+			if (otherQ == otherFields.end())
+				return false;
+			if (otherQ->second != Utils::ntoh(idHash[i]))
+				return false;
+		}
 	}
 
 	return true;
