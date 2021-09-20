@@ -546,26 +546,16 @@ static void handlePacket(const int sock,const InetAddress *const ip,Packet &pkt)
 		}
 	}
 
-	std::pair< InetAddress,SharedPtr<RootPeer> > forwardTo;
+	SharedPtr<RootPeer> forwardTo;
 	{
 		std::lock_guard<std::mutex> pbv_l(s_peersByVirtAddr_l);
 		auto p = s_peersByVirtAddr.find(dest);
 		if (p != s_peersByVirtAddr.end()) {
-			if ((p->second->v4s >= 0)&&(p->second->v6s >= 0)) {
-				if (p->second->lastReceiveV4 > p->second->lastReceiveV6) {
-					forwardTo = std::pair< InetAddress,SharedPtr<RootPeer> >(p->second->ip4,p->second);
-				} else {
-					forwardTo = std::pair< InetAddress,SharedPtr<RootPeer> >(p->second->ip6,p->second);
-				}
-			} else if (p->second->v4s >= 0) {
-				forwardTo = std::pair< InetAddress,SharedPtr<RootPeer> >(p->second->ip4,p->second);
-			} else if (p->second->v6s >= 0) {
-				forwardTo = std::pair< InetAddress,SharedPtr<RootPeer> >(p->second->ip6,p->second);
-			}
+			forwardTo = p->second;
 		}
 	}
 
-	if (unlikely(!forwardTo.second)) {
+	if (unlikely(!forwardTo)) {
 		s_discardedForwardRate.log(now,pkt.size());
 		return;
 	}
@@ -574,25 +564,25 @@ static void handlePacket(const int sock,const InetAddress *const ip,Packet &pkt)
 		std::lock_guard<std::mutex> l(s_peersByVirtAddr_l);
 		auto sp = s_peersByVirtAddr.find(source);
 
-		if ((sp->second->v6s >= 0)&&(forwardTo.second->v6s >= 0)) {
+		if ((sp->second->v6s >= 0)&&(forwardTo->v6s >= 0)) {
 			Packet outp(source,s_self.address(),Packet::VERB_RENDEZVOUS);
 			outp.append((uint8_t)0);
 			dest.appendTo(outp);
 			outp.append((uint16_t)sp->second->ip6.port());
 			outp.append((uint8_t)16);
 			outp.append((const uint8_t *)(sp->second->ip6.rawIpData()),16);
-			outp.armor(forwardTo.second->key,true);
-			sendto(forwardTo.second->v6s,outp.data(),outp.size(),SENDTO_FLAGS,(const struct sockaddr *)&forwardTo.first,(socklen_t)sizeof(struct sockaddr_in6));
+			outp.armor(forwardTo->key,true);
+			sendto(forwardTo->v6s,outp.data(),outp.size(),SENDTO_FLAGS,(const struct sockaddr *)&(forwardTo->ip6),(socklen_t)sizeof(struct sockaddr_in6));
 
 			s_outputRate.log(now,outp.size());
-			forwardTo.second->lastSend = now;
+			forwardTo->lastSend = now;
 
 			outp.reset(dest,s_self.address(),Packet::VERB_RENDEZVOUS);
 			outp.append((uint8_t)0);
 			source.appendTo(outp);
-			outp.append((uint16_t)forwardTo.first.port());
+			outp.append((uint16_t)forwardTo->ip6.port());
 			outp.append((uint8_t)16);
-			outp.append((const uint8_t *)(forwardTo.first.rawIpData()),16);
+			outp.append((const uint8_t *)(forwardTo->ip6.rawIpData()),16);
 			outp.armor(sp->second->key,true);
 			sendto(sp->second->v6s,outp.data(),outp.size(),SENDTO_FLAGS,(const struct sockaddr *)&(sp->second->ip6),(socklen_t)sizeof(struct sockaddr_in6));
 
@@ -600,25 +590,25 @@ static void handlePacket(const int sock,const InetAddress *const ip,Packet &pkt)
 			sp->second->lastSend = now;
 		}
 
-		if ((sp->second->v4s >= 0)&&(forwardTo.second->v4s >= 0)) {
+		if ((sp->second->v4s >= 0)&&(forwardTo->v4s >= 0)) {
 			Packet outp(source,s_self.address(),Packet::VERB_RENDEZVOUS);
 			outp.append((uint8_t)0);
 			dest.appendTo(outp);
 			outp.append((uint16_t)sp->second->ip4.port());
 			outp.append((uint8_t)4);
 			outp.append((const uint8_t *)sp->second->ip4.rawIpData(),4);
-			outp.armor(forwardTo.second->key,true);
-			sendto(forwardTo.second->v4s,outp.data(),outp.size(),SENDTO_FLAGS,(const struct sockaddr *)&forwardTo.first,(socklen_t)sizeof(struct sockaddr_in));
+			outp.armor(forwardTo->key,true);
+			sendto(forwardTo->v4s,outp.data(),outp.size(),SENDTO_FLAGS,(const struct sockaddr *)&(forwardTo->ip4),(socklen_t)sizeof(struct sockaddr_in));
 
 			s_outputRate.log(now,outp.size());
-			forwardTo.second->lastSend = now;
+			forwardTo->lastSend = now;
 
 			outp.reset(dest,s_self.address(),Packet::VERB_RENDEZVOUS);
 			outp.append((uint8_t)0);
 			source.appendTo(outp);
-			outp.append((uint16_t)forwardTo.first.port());
+			outp.append((uint16_t)forwardTo->ip4.port());
 			outp.append((uint8_t)4);
-			outp.append((const uint8_t *)(forwardTo.first.rawIpData()),4);
+			outp.append((const uint8_t *)(forwardTo->ip4.rawIpData()),4);
 			outp.armor(sp->second->key,true);
 			sendto(sp->second->v6s,outp.data(),outp.size(),SENDTO_FLAGS,(const struct sockaddr *)&(sp->second->ip4),(socklen_t)sizeof(struct sockaddr_in));
 
@@ -627,10 +617,18 @@ static void handlePacket(const int sock,const InetAddress *const ip,Packet &pkt)
 		}
 	}
 
-	if (sendto(forwardTo.first.isV4() ? forwardTo.second->v4s : forwardTo.second->v6s,pkt.data(),pkt.size(),SENDTO_FLAGS,(const struct sockaddr *)&forwardTo.first,(socklen_t)(forwardTo.first.isV4() ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6))) > 0) {
-		s_outputRate.log(now,pkt.size());
-		s_forwardRate.log(now,pkt.size());
-		forwardTo.second->lastSend = now;
+	if (forwardTo->v6s >= 0) {
+		if (sendto(forwardTo->v6s,pkt.data(),pkt.size(),SENDTO_FLAGS,(const struct sockaddr *)&(forwardTo->ip6),(socklen_t)sizeof(struct sockaddr_in6)) > 0) {
+			s_outputRate.log(now,pkt.size());
+			s_forwardRate.log(now,pkt.size());
+			forwardTo->lastSend = now;
+		}
+	} else if (forwardTo->v4s >= 0) {
+		if (sendto(forwardTo->v4s,pkt.data(),pkt.size(),SENDTO_FLAGS,(const struct sockaddr *)&(forwardTo->ip4),(socklen_t)sizeof(struct sockaddr_in)) > 0) {
+			s_outputRate.log(now,pkt.size());
+			s_forwardRate.log(now,pkt.size());
+			forwardTo->lastSend = now;
+		}
 	}
 }
 
