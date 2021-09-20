@@ -129,7 +129,7 @@ using json = nlohmann::json;
  */
 struct RootPeer
 {
-	ZT_ALWAYS_INLINE RootPeer() : v4s(-1),v6s(-1),lastSend(0),lastReceive(0),lastReceiveV4(0),lastReceiveV6(0),lastEcho(0),lastHello(0),vProto(-1),vMajor(-1),vMinor(-1),vRev(-1),identityValidated(false),identityInvalid(false) {}
+	ZT_ALWAYS_INLINE RootPeer() : v4s(-1),v6s(-1),lastSend(0),lastReceive(0),lastReceiveV4(0),lastReceiveV6(0),lastEcho(0),lastHello(0),vProto(-1),vMajor(-1),vMinor(-1),vRev(-1),identityValidated(false) {}
 	ZT_ALWAYS_INLINE ~RootPeer() { Utils::burn(key,sizeof(key)); }
 
 	Identity id;            // Identity
@@ -145,7 +145,6 @@ struct RootPeer
 	int vProto;             // Protocol version or -1 if unknown
 	int vMajor,vMinor,vRev; // Peer version or -1,-1,-1 if unknown
 	bool identityValidated; // Identity has been fully verified
-	bool identityInvalid;   // Identity validation failed, to be deleted
 
 	AtomicCounter __refCount;
 };
@@ -886,16 +885,38 @@ int main(int argc,char **argv)
 	s_run = true;
 
 	threads.push_back(std::thread([]() {
+		std::vector< SharedPtr<RootPeer> > toValidate;
 		while (s_run) {
-			std::vector< SharedPtr<RootPeer> > toValidate;
 			{
 				std::lock_guard<std::mutex> l(s_peersToValidate_l);
 				toValidate.swap(s_peersToValidate);
 			}
 			for(auto p=toValidate.begin();p!=toValidate.end();++p) {
-				if (!(*p)->identityValidated)
-					(*p)->identityInvalid = !(*p)->id.locallyValidate();
+				if (likely(!(*p)->identityValidated)) {
+					if (likely((*p)->id.locallyValidate())) {
+						(*p)->identityValidated = true;
+					} else {
+						{
+							std::lock_guard<std::mutex> p_l(s_peersByVirtAddr_l);
+							auto pp = s_peersByVirtAddr.find((*p)->id.address());
+							if ((pp != s_peersByVirtAddr.end())&&(pp->second == *p)) {
+								s_peersByVirtAddr.erase(pp);
+							}
+						}
+						{
+							std::lock_guard<std::mutex> p_l(s_peers_l);
+							for(auto pp=s_peers.begin();pp!=s_peers.end();++pp) {
+								if (*p == *pp) {
+									s_peers.erase(pp);
+									break;
+								}
+							}
+						}
+					}
+				}
 			}
+			toValidate.clear();
+			usleep(1000);
 		}
 	}));
 
@@ -1038,43 +1059,41 @@ int main(int argc,char **argv)
 				bool first = true;
 				std::lock_guard<std::mutex> l(s_peers_l);
 				for(auto p=s_peers.begin();p!=s_peers.end();++p) {
-					if (likely(!(*p)->identityInvalid)) {
-						if (first)
-							first = false;
-						else o << ',';
+					if (first)
+						first = false;
+					else o << ',';
+					o <<
+					"{\"address\":\"" << (*p)->id.address().toString(tmp) << "\""
+					",\"latency\":-1"
+					",\"paths\":[";
+					if ((*p)->v4s >= 0) {
 						o <<
-						"{\"address\":\"" << (*p)->id.address().toString(tmp) << "\""
-						",\"latency\":-1"
-						",\"paths\":[";
-						if ((*p)->v4s >= 0) {
-							o <<
-							"{\"active\":true"
-							",\"address\":\"" << (*p)->ip4.toIpString(tmp) << "\\/" << (*p)->ip4.port() << "\""
-							",\"expired\":false"
-							",\"lastReceive\":" << (*p)->lastReceive <<
-							",\"lastSend\":" << (*p)->lastSend <<
-							",\"preferred\":true"
-							",\"trustedPathId\":0}";
-						}
-						if ((*p)->v6s >= 0) {
-							if ((*p)->v4s >= 0)
-								o << ',';
-							o <<
-							"{\"active\":true"
-							",\"address\":\"" << (*p)->ip6.toIpString(tmp) << "\\/" << (*p)->ip6.port() << "\""
-							",\"expired\":false"
-							",\"lastReceive\":" << (*p)->lastReceive <<
-							",\"lastSend\":" << (*p)->lastSend <<
-							",\"preferred\":" << (((*p)->ip4) ? "false" : "true") <<
-							",\"trustedPathId\":0}";
-						}
-						o << "]"
-						",\"role\":\"LEAF\""
-						",\"version\":\"" << (*p)->vMajor << '.' << (*p)->vMinor << '.' << (*p)->vRev << "\""
-						",\"versionMajor\":" << (*p)->vMajor <<
-						",\"versionMinor\":" << (*p)->vMinor <<
-						",\"versionRev\":" << (*p)->vRev << "}";
+						"{\"active\":true"
+						",\"address\":\"" << (*p)->ip4.toIpString(tmp) << "\\/" << (*p)->ip4.port() << "\""
+						",\"expired\":false"
+						",\"lastReceive\":" << (*p)->lastReceive <<
+						",\"lastSend\":" << (*p)->lastSend <<
+						",\"preferred\":true"
+						",\"trustedPathId\":0}";
 					}
+					if ((*p)->v6s >= 0) {
+						if ((*p)->v4s >= 0)
+							o << ',';
+						o <<
+						"{\"active\":true"
+						",\"address\":\"" << (*p)->ip6.toIpString(tmp) << "\\/" << (*p)->ip6.port() << "\""
+						",\"expired\":false"
+						",\"lastReceive\":" << (*p)->lastReceive <<
+						",\"lastSend\":" << (*p)->lastSend <<
+						",\"preferred\":" << (((*p)->ip4) ? "false" : "true") <<
+						",\"trustedPathId\":0}";
+					}
+					o << "]"
+					",\"role\":\"LEAF\""
+					",\"version\":\"" << (*p)->vMajor << '.' << (*p)->vMinor << '.' << (*p)->vRev << "\""
+					",\"versionMajor\":" << (*p)->vMajor <<
+					",\"versionMinor\":" << (*p)->vMinor <<
+					",\"versionRev\":" << (*p)->vRev << "}";
 				}
 			} catch ( ... ) {}
 			o << ']';
@@ -1100,12 +1119,10 @@ int main(int argc,char **argv)
 				{
 					std::lock_guard<std::mutex> l(s_peers_l);
 					for(auto p=s_peers.begin();p!=s_peers.end();++p) {
-						if (likely(!(*p)->identityInvalid)) {
-							if ((*p)->v4s >= 0)
-								ips[(*p)->ip4].insert((*p)->id.address());
-							if ((*p)->v6s >= 0)
-								ips[(*p)->ip6].insert((*p)->id.address());
-						}
+						if ((*p)->v4s >= 0)
+							ips[(*p)->ip4].insert((*p)->id.address());
+						if ((*p)->v6s >= 0)
+							ips[(*p)->ip6].insert((*p)->id.address());
 					}
 				}
 
@@ -1209,7 +1226,6 @@ int main(int argc,char **argv)
 				}
 			}
 
-			// Remove expired or otherwise invalid peers
 			try {
 				std::vector< SharedPtr<RootPeer> > toRemove;
 				toRemove.reserve(1024);
@@ -1218,7 +1234,7 @@ int main(int argc,char **argv)
 					std::vector< SharedPtr<RootPeer> > newPeers;
 					newPeers.reserve(s_peers.size());
 					for(auto p=s_peers.begin();p!=s_peers.end();++p) {
-						if (((now - (*p)->lastReceive) > ZT_PEER_ACTIVITY_TIMEOUT)||((*p)->identityInvalid)) {
+						if ((now - (*p)->lastReceive) > ZT_PEER_ACTIVITY_TIMEOUT) {
 							toRemove.emplace_back();
 							p->swap(toRemove.back());
 						} else {
