@@ -20,133 +20,31 @@
 
 namespace ZeroTier {
 
-void CertificateOfMembership::setQualifier(uint64_t id,uint64_t value,uint64_t maxDelta)
+CertificateOfMembership::CertificateOfMembership(uint64_t timestamp,uint64_t timestampMaxDelta,uint64_t nwid,const Identity &issuedTo)
 {
-	_signedBy.zero();
+	_qualifiers[0].id = COM_RESERVED_ID_TIMESTAMP;
+	_qualifiers[0].value = timestamp;
+	_qualifiers[0].maxDelta = timestampMaxDelta;
+	_qualifiers[1].id = COM_RESERVED_ID_NETWORK_ID;
+	_qualifiers[1].value = nwid;
+	_qualifiers[1].maxDelta = 0;
+	_qualifiers[2].id = COM_RESERVED_ID_ISSUED_TO;
+	_qualifiers[2].value = issuedTo.address().toInt();
+	_qualifiers[2].maxDelta = 0xffffffffffffffffULL;
 
-	for(unsigned int i=0;i<_qualifierCount;++i) {
-		if (_qualifiers[i].id == id) {
-			_qualifiers[i].value = value;
-			_qualifiers[i].maxDelta = maxDelta;
-			return;
-		}
+	// Include hash of full identity public key in COM for hardening purposes. Pack it in
+	// using the original COM format. Format may be revised in the future to make this cleaner.
+	uint64_t idHash[6];
+	issuedTo.publicKeyHash(idHash);
+	for(unsigned long i=0;i<4;++i) {
+		_qualifiers[i + 3].id = (uint64_t)(i + 3);
+		_qualifiers[i + 3].value = Utils::ntoh(idHash[i]);
+		_qualifiers[i + 3].maxDelta = 0xffffffffffffffffULL;
 	}
 
-	if (_qualifierCount < ZT_NETWORK_COM_MAX_QUALIFIERS) {
-		_qualifiers[_qualifierCount].id = id;
-		_qualifiers[_qualifierCount].value = value;
-		_qualifiers[_qualifierCount].maxDelta = maxDelta;
-		++_qualifierCount;
-		std::sort(&(_qualifiers[0]),&(_qualifiers[_qualifierCount]));
-	}
-}
-
-#ifdef ZT_SUPPORT_OLD_STYLE_NETCONF
-
-std::string CertificateOfMembership::toString() const
-{
-	char tmp[ZT_NETWORK_COM_MAX_QUALIFIERS * 32];
-	std::string s;
-
-	s.append("1:"); // COM_UINT64_ED25519
-
-	uint64_t *const buf = new uint64_t[_qualifierCount * 3];
-	try {
-		unsigned int ptr = 0;
-		for(unsigned int i=0;i<_qualifierCount;++i) {
-			buf[ptr++] = Utils::hton(_qualifiers[i].id);
-			buf[ptr++] = Utils::hton(_qualifiers[i].value);
-			buf[ptr++] = Utils::hton(_qualifiers[i].maxDelta);
-		}
-		s.append(Utils::hex(buf,ptr * sizeof(uint64_t),tmp));
-		delete [] buf;
-	} catch ( ... ) {
-		delete [] buf;
-		throw;
-	}
-
-	s.push_back(':');
-
-	s.append(_signedBy.toString(tmp));
-
-	if (_signedBy) {
-		s.push_back(':');
-		s.append(Utils::hex(_signature.data,ZT_C25519_SIGNATURE_LEN,tmp));
-	}
-
-	return s;
-}
-
-void CertificateOfMembership::fromString(const char *s)
-{
-	_qualifierCount = 0;
-	_signedBy.zero();
+	_qualifierCount = 7;
 	memset(_signature.data,0,ZT_C25519_SIGNATURE_LEN);
-
-	if (!*s)
-		return;
-
-	unsigned int colonAt = 0;
-	while ((s[colonAt])&&(s[colonAt] != ':')) ++colonAt;
-
-	if (!((colonAt == 1)&&(s[0] == '1'))) // COM_UINT64_ED25519?
-		return;
-
-	s += colonAt + 1;
-	colonAt = 0;
-	while ((s[colonAt])&&(s[colonAt] != ':')) ++colonAt;
-
-	if (colonAt) {
-		const unsigned int buflen = colonAt / 2;
-		char *const buf = new char[buflen];
-		unsigned int bufactual = Utils::unhex(s,colonAt,buf,buflen);
-		char *bufptr = buf;
-		try {
-			while (bufactual >= 24) {
-				if (_qualifierCount < ZT_NETWORK_COM_MAX_QUALIFIERS) {
-					_qualifiers[_qualifierCount].id = Utils::ntoh(*((uint64_t *)bufptr)); bufptr += 8;
-					_qualifiers[_qualifierCount].value = Utils::ntoh(*((uint64_t *)bufptr)); bufptr += 8;
-					_qualifiers[_qualifierCount].maxDelta = Utils::ntoh(*((uint64_t *)bufptr)); bufptr += 8;
-					++_qualifierCount;
-				} else {
-					bufptr += 24;
-				}
-				bufactual -= 24;
-			}
-		} catch ( ... ) {}
-		delete [] buf;
-	}
-
-	if (s[colonAt]) {
-		s += colonAt + 1;
-		colonAt = 0;
-		while ((s[colonAt])&&(s[colonAt] != ':')) ++colonAt;
-
-		if (colonAt) {
-			char addrbuf[ZT_ADDRESS_LENGTH];
-			if (Utils::unhex(s,colonAt,addrbuf,sizeof(addrbuf)) == ZT_ADDRESS_LENGTH)
-				_signedBy.setTo(addrbuf,ZT_ADDRESS_LENGTH);
-
-			if ((_signedBy)&&(s[colonAt])) {
-				s += colonAt + 1;
-				colonAt = 0;
-				while ((s[colonAt])&&(s[colonAt] != ':')) ++colonAt;
-				if (colonAt) {
-					if (Utils::unhex(s,colonAt,_signature.data,ZT_C25519_SIGNATURE_LEN) != ZT_C25519_SIGNATURE_LEN)
-						_signedBy.zero();
-				} else {
-					_signedBy.zero();
-				}
-			} else {
-				_signedBy.zero();
-			}
-		}
-	}
-
-	std::sort(&(_qualifiers[0]),&(_qualifiers[_qualifierCount]));
 }
-
-#endif // ZT_SUPPORT_OLD_STYLE_NETCONF
 
 bool CertificateOfMembership::agreesWith(const CertificateOfMembership &other, const Identity &otherIdentity) const
 {
@@ -160,17 +58,15 @@ bool CertificateOfMembership::agreesWith(const CertificateOfMembership &other, c
 	bool fullIdentityVerification = false;
 	for(unsigned int i=0;i<_qualifierCount;++i) {
 		const uint64_t qid = _qualifiers[i].id;
-		if ((qid >= 3)&&(qid <= 6)) {
+		if ((qid >= 3)&&(qid <= 6))
 			fullIdentityVerification = true;
-		} else {
-			std::map< uint64_t, uint64_t >::iterator otherQ(otherFields.find(qid));
-			if (otherQ == otherFields.end())
-				return false;
-			const uint64_t a = _qualifiers[i].value;
-			const uint64_t b = otherQ->second;
-			if (((a >= b) ? (a - b) : (b - a)) > _qualifiers[i].maxDelta)
-				return false;
-		}
+		std::map< uint64_t, uint64_t >::iterator otherQ(otherFields.find(qid));
+		if (otherQ == otherFields.end())
+			return false;
+		const uint64_t a = _qualifiers[i].value;
+		const uint64_t b = otherQ->second;
+		if (((a >= b) ? (a - b) : (b - a)) > _qualifiers[i].maxDelta)
+			return false;
 	}
 
 	// If this COM has a full hash of its identity, assume the other must have this as well.

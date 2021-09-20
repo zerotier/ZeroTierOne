@@ -1,6 +1,14 @@
 ZeroTier Release Notes
 ======
 
+# -- Version 1.8.1
+
+ * Fix UI issues on MacOS Mojave
+ * Fix icon not showing on Windows
+ * Re-eneable installation on Windows 7, 8, etc., but without any guarantee that it will work there! (7 is not supported)
+ * Add an extended hash verification to certificates of network membership to further harden against impersonation attacks
+ * Remove support for REALLY ancient 1.1.6 or earlier network controllers
+
 # 2021-09-15 -- Version 1.8.0
 
  * A *completely* rewritten desktop UI for Mac and Windows!
