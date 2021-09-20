@@ -267,19 +267,22 @@ static void handlePacket(const int sock,const InetAddress *const ip,Packet &pkt)
 
 				if (peer) {
 					if (unlikely(peer->id != id)) {
-						if (!peer->identityValidated) {
-							peer->identityValidated = peer->id.locallyValidate();
-							if (peer->identityValidated) {
-								printf("%s HELLO rejected: identity address collision!" ZT_EOL_S,ip->toString(ipstr));
-								// TODO: send error
-								return;
-							}
-						}
-						peer.zero();
-					}
-				}
+						printf("%s HELLO rejected: identity address collision!" ZT_EOL_S,ip->toString(ipstr));
 
-				if (!peer) {
+						uint8_t key[48];
+						if (s_self.agree(id, key)) {
+							const uint64_t origId = pkt.packetId();
+							pkt.reset(source,s_self.address(),Packet::VERB_ERROR);
+							pkt.append((uint8_t)Packet::VERB_HELLO);
+							pkt.append(origId);;
+							pkt.append((uint8_t)Packet::ERROR_IDENTITY_COLLISION);
+							pkt.armor(key,true);
+							sendto(sock,pkt.data(),pkt.size(),SENDTO_FLAGS,(const struct sockaddr *)ip,(socklen_t)((ip->ss_family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)));
+						}
+
+						return;
+					}
+				} else {
 					peer.set(new RootPeer);
 					peer->identityValidated = false;
 
