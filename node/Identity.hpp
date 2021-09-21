@@ -23,7 +23,6 @@
 #include "C25519.hpp"
 #include "Buffer.hpp"
 #include "SHA512.hpp"
-#include "AES.hpp"
 
 #define ZT_IDENTITY_STRING_BUFFER_LENGTH 384
 
@@ -111,6 +110,18 @@ public:
 	inline bool hasPrivate() const { return (_privateKey != (C25519::Private *)0); }
 
 	/**
+	 * Compute a SHA384 hash of this identity's address and public key(s).
+	 * 
+	 * @param sha384buf Buffer with 48 bytes of space to receive hash
+	 */
+	inline void publicKeyHash(void *sha384buf) const
+	{
+		uint8_t address[ZT_ADDRESS_LENGTH];
+		_address.copyTo(address, ZT_ADDRESS_LENGTH);
+		SHA384(sha384buf, address, ZT_ADDRESS_LENGTH, _publicKey.data, ZT_C25519_PUBLIC_KEY_LEN);
+	}
+
+	/**
 	 * Compute the SHA512 hash of our private key (if we have one)
 	 *
 	 * @param sha Buffer to receive SHA512 (MUST be ZT_SHA512_DIGEST_LEN (64) bytes in length)
@@ -123,19 +134,6 @@ public:
 			return true;
 		}
 		return false;
-	}
-
-	/**
-	 * Get a 256-bit hash of this identity's public key(s)
-	 * 
-	 * @param buf 256-bit (32-byte) buffer
-	 */
-	inline void keyFingerprint(void *buf) const
-	{
-		// This is much faster than SHA384, which matters on heavily loaded controllers.
-		AES c(_publicKey.data);
-		c.encrypt(_publicKey.data + 32, buf);
-		c.encrypt(_publicKey.data + 48, reinterpret_cast<uint8_t *>(buf) + 16);
 	}
 
 	/**
