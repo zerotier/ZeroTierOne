@@ -619,7 +619,7 @@ static void handlePacket(const int sock,const InetAddress *const ip,Packet &pkt)
 				outp.append((uint8_t)4);
 				outp.append((const uint8_t *)(forwardTo->ip4.rawIpData()),4);
 				outp.armor(sourcePeer->key,true);
-				sendto(sourcePeer->v6s,outp.data(),outp.size(),SENDTO_FLAGS,(const struct sockaddr *)&(sourcePeer->ip4),(socklen_t)sizeof(struct sockaddr_in));
+				sendto(sourcePeer->v4s,outp.data(),outp.size(),SENDTO_FLAGS,(const struct sockaddr *)&(sourcePeer->ip4),(socklen_t)sizeof(struct sockaddr_in));
 
 				s_outputRate.log(now,outp.size());
 				sourcePeer->lastSend = now;
