@@ -51,6 +51,9 @@ public:
 	virtual void onNetworkMemberUpdate(const void *db,uint64_t networkId,uint64_t memberId,const nlohmann::json &member);
 	virtual void onNetworkMemberDeauthorize(const void *db,uint64_t networkId,uint64_t memberId);
 
+	std::string getSSOAuthURL(const nlohmann::json &member, const std::string &redirectURL);
+	void networkMemberSSOHasExpired(uint64_t nwid, int64_t ts);
+
 	inline void addDB(const std::shared_ptr<DB> &db)
 	{
 		db->addListener(this);
@@ -58,12 +61,17 @@ public:
 		_dbs.push_back(db);
 	}
 
+	void membersExpiring(std::set< std::pair<uint64_t, uint64_t> > &soon, std::set< std::pair<uint64_t, uint64_t> > &expired);
+	void memberWillExpire(int64_t expTime, uint64_t nwid, uint64_t memberId);
+
 private:
 	DB::ChangeListener *const _listener;
 	std::atomic_bool _running;
 	std::thread _syncCheckerThread;
 	std::vector< std::shared_ptr< DB > > _dbs;
 	mutable std::mutex _dbs_l;
+	std::set< std::pair< int64_t, std::pair<uint64_t, uint64_t> > > _membersExpiringSoon;
+	mutable std::mutex _membersExpiringSoon_l;
 };
 
 } // namespace ZeroTier

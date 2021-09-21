@@ -49,7 +49,6 @@
 #include "../osdep/Binder.hpp"
 #include "../osdep/ManagedRoute.hpp"
 #include "../osdep/BlockingQueue.hpp"
-#include "../osdep/Link.hpp"
 
 #include "OneService.hpp"
 #include "SoftwareUpdater.hpp"
@@ -184,6 +183,7 @@ static void _networkToJson(nlohmann::json &nj,const ZT_VirtualNetworkConfig *nc,
 		case ZT_NETWORK_STATUS_NOT_FOUND:                nstatus = "NOT_FOUND"; break;
 		case ZT_NETWORK_STATUS_PORT_ERROR:               nstatus = "PORT_ERROR"; break;
 		case ZT_NETWORK_STATUS_CLIENT_TOO_OLD:           nstatus = "CLIENT_TOO_OLD"; break;
+		case ZT_NETWORK_STATUS_AUTHENTICATION_REQUIRED:  nstatus = "AUTHENTICATION_REQUIRED"; break;
 	}
 	switch(nc->type) {
 		case ZT_NETWORK_TYPE_PRIVATE:                    ntype = "PRIVATE"; break;
@@ -251,6 +251,9 @@ static void _networkToJson(nlohmann::json &nj,const ZT_VirtualNetworkConfig *nc,
 	}
 	nj["dns"] = m;
 
+	nj["authenticationURL"] = nc->authenticationURL;
+	nj["authenticationExpiryTime"] = nc->authenticationExpiryTime;
+	nj["ssoEnabled"] = nc->ssoEnabled;
 }
 
 static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer)
@@ -300,12 +303,11 @@ static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer)
 
 static void _bondToJson(nlohmann::json &pj, SharedPtr<Bond> &bond)
 {
-	char tmp[256];
 	uint64_t now = OSUtils::now();
 
-	int bondingPolicy = bond->getPolicy();
-	pj["bondingPolicy"] = BondController::getPolicyStrByCode(bondingPolicy);
-	if (bondingPolicy == ZT_BONDING_POLICY_NONE) {
+	int bondingPolicy = bond->policy();
+	pj["bondingPolicy"] = Bond::getPolicyStrByCode(bondingPolicy);
+	if (bondingPolicy == ZT_BOND_POLICY_NONE) {
 		return;
 	}
 
@@ -315,15 +317,15 @@ static void _bondToJson(nlohmann::json &pj, SharedPtr<Bond> &bond)
 	pj["failoverInterval"] = bond->getFailoverInterval();
 	pj["downDelay"] = bond->getDownDelay();
 	pj["upDelay"] = bond->getUpDelay();
-	if (bondingPolicy == ZT_BONDING_POLICY_BALANCE_RR) {
+	if (bondingPolicy == ZT_BOND_POLICY_BALANCE_RR) {
 		pj["packetsPerLink"] = bond->getPacketsPerLink();
 	}
-	if (bondingPolicy == ZT_BONDING_POLICY_ACTIVE_BACKUP) {
+	if (bondingPolicy == ZT_BOND_POLICY_ACTIVE_BACKUP) {
 		pj["linkSelectMethod"] = bond->getLinkSelectMethod();
 	}
 
 	nlohmann::json pa = nlohmann::json::array();
-	std::vector< SharedPtr<Path> > paths = bond->getPeer()->paths(now);
+	std::vector< SharedPtr<Path> > paths = bond->paths(now);
 
 	for(unsigned int i=0;i<paths.size();++i) {
 		char pathStr[128];
@@ -332,6 +334,7 @@ static void _bondToJson(nlohmann::json &pj, SharedPtr<Bond> &bond)
 		nlohmann::json j;
 		j["ifname"] = bond->getLink(paths[i])->ifname();
 		j["path"] = pathStr;
+		/*
 		j["alive"] = paths[i]->alive(now,true);
 		j["bonded"] = paths[i]->bonded();
 		j["latencyMean"] = paths[i]->latencyMean();
@@ -340,6 +343,7 @@ static void _bondToJson(nlohmann::json &pj, SharedPtr<Bond> &bond)
 		j["packetErrorRatio"] = paths[i]->packetErrorRatio();
 		j["givenLinkSpeed"] = 1000;
 		j["allocation"] = paths[i]->allocation();
+		*/
 		pa.push_back(j);
 	}
 	pj["links"] = pa;
@@ -535,6 +539,12 @@ public:
 			memset(&config, 0, sizeof(ZT_VirtualNetworkConfig));
 		}
 
+		~NetworkState()
+		{
+			this->managedRoutes.clear();
+			this->tap.reset();
+		}
+
 		std::shared_ptr<EthernetTap> tap;
 		ZT_VirtualNetworkConfig config; // memcpy() of raw config from core
 		std::vector<InetAddress> managedIps;
@@ -573,6 +583,7 @@ public:
 	Mutex _run_m;
 
 	RedisConfig *_rc;
+	std::string _ssoRedirectURL;
 
 	// end member variables ----------------------------------------------------
 
@@ -610,6 +621,7 @@ public:
 #endif
 		,_run(true)
 		,_rc(NULL)
+		,_ssoRedirectURL()
 	{
 		_ports[0] = 0;
 		_ports[1] = 0;
@@ -723,25 +735,22 @@ public:
 			OSUtils::ztsnprintf(portstr,sizeof(portstr),"%u",_ports[0]);
 			OSUtils::writeFile((_homePath + ZT_PATH_SEPARATOR_S "zerotier-one.port").c_str(),std::string(portstr));
 
-			// Attempt to bind to a secondary port chosen from our ZeroTier address.
+			// Attempt to bind to a secondary port.
 			// This exists because there are buggy NATs out there that fail if more
 			// than one device behind the same NAT tries to use the same internal
 			// private address port number. Buggy NATs are a running theme.
+			//
+			// This used to pick the secondary port based on the node ID until we
+			// discovered another problem: buggy routers and malicious traffic 
+			// "detection".  A lot of routers have such things built in these days
+			// and mis-detect ZeroTier traffic as malicious and block it resulting
+			// in a node that appears to be in a coma.  Secondary ports are now 
+			// randomized on startup.
 			if (_allowSecondaryPort) {
 				if (_secondaryPort) {
 					_ports[1] = _secondaryPort;
 				} else {
-					_ports[1] = 20000 + ((unsigned int)_node->address() % 45500);
-					for(int i=0;;++i) {
-						if (i > 1000) {
-							_ports[1] = 0;
-							break;
-						} else if (++_ports[1] >= 65536) {
-							_ports[1] = 20000;
-						}
-						if (_trialBind(_ports[1]))
-							break;
-					}
+					_ports[1] = _getRandomPort();
 				}
 			}
 #ifdef ZT_USE_MINIUPNPC
@@ -753,7 +762,7 @@ public:
 					if (_tertiaryPort) {
 						_ports[2] = _tertiaryPort;
 					} else {
-						_ports[2] = _ports[1];
+						_ports[2] = 20000 + (_ports[0] % 40000);
 						for(int i=0;;++i) {
 							if (i > 1000) {
 								_ports[2] = 0;
@@ -779,6 +788,9 @@ public:
 
 			// Network controller is now enabled by default for desktop and server
 			_controller = new EmbeddedNetworkController(_node,_homePath.c_str(),_controllerDbPath.c_str(),_ports[0], _rc);
+			if (!_ssoRedirectURL.empty()) {
+				_controller->setSSORedirectURL(_ssoRedirectURL);
+			}
 			_node->setNetconfMaster((void *)_controller);
 
 			// Join existing networks in networks.d
@@ -811,6 +823,7 @@ public:
 			int64_t lastCleanedPeersDb = 0;
 			int64_t lastLocalInterfaceAddressCheck = (clockShouldBe - ZT_LOCAL_INTERFACE_CHECK_INTERVAL) + 15000; // do this in 15s to give portmapper time to configure and other things time to settle
 			int64_t lastLocalConfFileCheck = OSUtils::now();
+			int64_t lastOnline = lastLocalConfFileCheck;
 			for(;;) {
 				_run_m.lock();
 				if (!_run) {
@@ -850,6 +863,16 @@ public:
 							applyLocalConfig();
 						}
 					}
+				}
+
+				// If secondary port is not configured to a constant value and we've been offline for a while,
+				// bind a new secondary port. This is a workaround for a "coma" issue caused by buggy NATs that stop
+				// working on one port after a while.
+				if (_node->online()) {
+					lastOnline = now;
+				} else if ((_secondaryPort == 0)&&((now - lastOnline) > ZT_PATH_HEARTBEAT_PERIOD)) {
+					_secondaryPort = _getRandomPort();
+					lastBindRefresh = 0;
 				}
 
 				// Refresh bindings in case device's interfaces have changed, and also sync routes to update any shadow routes (e.g. shadow default)
@@ -1012,8 +1035,11 @@ public:
 			}
 		}
 
+		// Make a copy so lookups don't modify in place;
+		json lc(_localConfig);
+
 		// Get any trusted paths in local.conf (we'll parse the rest of physical[] elsewhere)
-		json &physical = _localConfig["physical"];
+		json &physical = lc["physical"];
 		if (physical.is_object()) {
 			for(json::iterator phy(physical.begin());phy!=physical.end();++phy) {
 				InetAddress net(OSUtils::jsonString(phy.key(),"").c_str());
@@ -1030,12 +1056,14 @@ public:
 			}
 		}
 
-		json &settings = _localConfig["settings"];
+		json &settings = lc["settings"];
 		if (settings.is_object()) {
 			// Allow controller DB path to be put somewhere else
 			const std::string cdbp(OSUtils::jsonString(settings["controllerDbPath"],""));
 			if (cdbp.length() > 0)
 				_controllerDbPath = cdbp;
+
+			_ssoRedirectURL = OSUtils::jsonString(settings["ssoRedirectURL"], "");
 
 #ifdef ZT_CONTROLLER_USE_LIBPQ
 			// TODO:  Redis config
@@ -1043,7 +1071,7 @@ public:
 			if (redis.is_object() && _rc == NULL) {
 				_rc = new RedisConfig;
 				_rc->hostname = OSUtils::jsonString(redis["hostname"],"");
-				_rc->port = redis["port"];
+				_rc->port = OSUtils::jsonInt(redis["port"],0);
 				_rc->password = OSUtils::jsonString(redis["password"],"");
 				_rc->clusterMode = OSUtils::jsonBool(redis["clusterMode"], false);
 			}
@@ -1259,7 +1287,7 @@ public:
 										_bondToJson(res,bond);
 										scode = 200;
 									} else {
-										fprintf(stderr, "unable to find bond to peer %llx\n", id);
+										fprintf(stderr, "unable to find bond to peer %llx\n", (unsigned long long)id);
 										scode = 400;
 									}
 								}
@@ -1271,8 +1299,11 @@ public:
 					} else {
 						scode = 400; /* bond controller is not enabled */
 					}
-				}
-				if (ps[0] == "status") {
+				} else if (ps[0] == "config") {
+					Mutex::Lock lc(_localConfig_m);
+					res = _localConfig;
+					scode = 200;
+				} else if (ps[0] == "status") {
 					ZT_NodeStatus status;
 					_node->status(&status);
 
@@ -1466,7 +1497,7 @@ public:
 									if (bond) {
 										scode = bond->abForciblyRotateLink() ? 200 : 400;
 									} else {
-										fprintf(stderr, "unable to find bond to peer %llx\n", id);
+										fprintf(stderr, "unable to find bond to peer %llx\n", (unsigned long long)id);
 										scode = 400;
 									}
 								}
@@ -1478,8 +1509,35 @@ public:
 					} else {
 						scode = 400; /* bond controller is not enabled */
 					}
-				}
-				if (ps[0] == "moon") {
+				} else if (ps[0] == "config") {
+					// Right now we only support writing the things the UI supports changing.
+					if (ps.size() == 2) {
+						if (ps[1] == "settings") {
+							try {
+								json j(OSUtils::jsonParse(body));
+								if (j.is_object()) {
+									Mutex::Lock lcl(_localConfig_m);
+									json lc(_localConfig);
+									for(json::const_iterator s(j.begin());s!=j.end();++s) {
+										lc["settings"][s.key()] = s.value();
+									}
+									std::string lcStr = OSUtils::jsonDump(lc, 4);
+									if (OSUtils::writeFile((_homePath + ZT_PATH_SEPARATOR_S "local.conf").c_str(), lcStr)) {
+										_localConfig = lc;
+									}
+								} else {
+									scode = 400;
+								}
+							} catch ( ... ) {
+								scode = 400;
+							}
+						} else {
+							scode = 404;
+						}
+					} else {
+						scode = 404;
+					}
+				} else if (ps[0] == "moon") {
 					if (ps.size() == 2) {
 
 						uint64_t seed = 0;
@@ -1711,11 +1769,11 @@ public:
 				if (basePolicyStr.empty()) {
 					fprintf(stderr, "error: no base policy was specified for custom policy (%s)\n", customPolicyStr.c_str());
 				}
-				if (_node->bondController()->getPolicyCodeByStr(basePolicyStr) == ZT_BONDING_POLICY_NONE) {
+				if (_node->bondController()->getPolicyCodeByStr(basePolicyStr) == ZT_BOND_POLICY_NONE) {
 					fprintf(stderr, "error: custom policy (%s) is invalid, unknown base policy (%s).\n",
 						customPolicyStr.c_str(), basePolicyStr.c_str());
 					continue;
-				} if (_node->bondController()->getPolicyCodeByStr(customPolicyStr) != ZT_BONDING_POLICY_NONE) {
+				} if (_node->bondController()->getPolicyCodeByStr(customPolicyStr) != ZT_BOND_POLICY_NONE) {
 					fprintf(stderr, "error: custom policy (%s) will be ignored, cannot use standard policy names for custom policies.\n",
 						customPolicyStr.c_str());
 					continue;
@@ -1744,19 +1802,11 @@ public:
 					newTemplateBond->setUserQualityWeights(weights,ZT_QOS_WEIGHT_SIZE);
 				}
 				// Bond-specific properties
-				newTemplateBond->setOverflowMode(OSUtils::jsonInt(customPolicy["overflow"],false));
 				newTemplateBond->setUpDelay(OSUtils::jsonInt(customPolicy["upDelay"],-1));
 				newTemplateBond->setDownDelay(OSUtils::jsonInt(customPolicy["downDelay"],-1));
 				newTemplateBond->setFlowRebalanceStrategy(OSUtils::jsonInt(customPolicy["flowRebalanceStrategy"],(uint64_t)0));
 				newTemplateBond->setFailoverInterval(OSUtils::jsonInt(customPolicy["failoverInterval"],(uint64_t)0));
 				newTemplateBond->setPacketsPerLink(OSUtils::jsonInt(customPolicy["packetsPerLink"],-1));
-
-				std::string linkMonitorStrategyStr(OSUtils::jsonString(customPolicy["linkMonitorStrategy"],""));
-				uint8_t linkMonitorStrategy = ZT_MULTIPATH_SLAVE_MONITOR_STRATEGY_DEFAULT;
-				if (linkMonitorStrategyStr == "passive") { linkMonitorStrategy = ZT_MULTIPATH_SLAVE_MONITOR_STRATEGY_PASSIVE; }
-				if (linkMonitorStrategyStr == "active") { linkMonitorStrategy = ZT_MULTIPATH_SLAVE_MONITOR_STRATEGY_ACTIVE; }
-				if (linkMonitorStrategyStr == "dynamic") { linkMonitorStrategy = ZT_MULTIPATH_SLAVE_MONITOR_STRATEGY_DYNAMIC; }
-				newTemplateBond->setLinkMonitorStrategy(linkMonitorStrategy);
 
 				// Policy-Specific link set
 				json &links = customPolicy["links"];
@@ -1773,40 +1823,40 @@ public:
 							speed, alloc, linkNameStr.c_str());
 						enabled = false;
 					}
-					uint32_t upDelay = OSUtils::jsonInt(link["upDelay"],-1);
-					uint32_t downDelay = OSUtils::jsonInt(link["downDelay"],-1);
+					//uint32_t upDelay = OSUtils::jsonInt(link["upDelay"],-1);
+					//uint32_t downDelay = OSUtils::jsonInt(link["downDelay"],-1);
 					uint8_t ipvPref = OSUtils::jsonInt(link["ipvPref"],0);
-					uint32_t linkMonitorInterval = OSUtils::jsonInt(link["monitorInterval"],(uint64_t)0);
+					//uint32_t linkMonitorInterval = OSUtils::jsonInt(link["monitorInterval"],(uint64_t)0);
 					std::string failoverToStr(OSUtils::jsonString(link["failoverTo"],""));
 					// Mode
 					std::string linkModeStr(OSUtils::jsonString(link["mode"],"spare"));
-					uint8_t linkMode = ZT_MULTIPATH_SLAVE_MODE_SPARE;
-					if (linkModeStr == "primary") { linkMode = ZT_MULTIPATH_SLAVE_MODE_PRIMARY; }
-					if (linkModeStr == "spare") { linkMode = ZT_MULTIPATH_SLAVE_MODE_SPARE; }
+					uint8_t linkMode = ZT_BOND_SLAVE_MODE_SPARE;
+					if (linkModeStr == "primary") { linkMode = ZT_BOND_SLAVE_MODE_PRIMARY; }
+					if (linkModeStr == "spare") { linkMode = ZT_BOND_SLAVE_MODE_SPARE; }
 					// ipvPref
 					if ((ipvPref != 0) && (ipvPref != 4) && (ipvPref != 6) && (ipvPref != 46) && (ipvPref != 64)) {
 						fprintf(stderr, "error: invalid ipvPref value (%d), link disabled.\n", ipvPref);
 						enabled = false;
 					}
-					if (linkMode == ZT_MULTIPATH_SLAVE_MODE_SPARE && failoverToStr.length()) {
+					if (linkMode == ZT_BOND_SLAVE_MODE_SPARE && failoverToStr.length()) {
 						fprintf(stderr, "error: cannot specify failover links for spares, link disabled.\n");
 						failoverToStr = "";
 						enabled = false;
 					}
-					_node->bondController()->addCustomLink(customPolicyStr, new Link(linkNameStr,ipvPref,speed,linkMonitorInterval,upDelay,downDelay,enabled,linkMode,failoverToStr,alloc));
+					_node->bondController()->addCustomLink(customPolicyStr, new Link(linkNameStr,ipvPref,speed,enabled,linkMode,failoverToStr,alloc));
 				}
 				std::string linkSelectMethodStr(OSUtils::jsonString(customPolicy["activeReselect"],"optimize"));
 				if (linkSelectMethodStr == "always") {
-					newTemplateBond->setLinkSelectMethod(ZT_MULTIPATH_RESELECTION_POLICY_ALWAYS);
+					newTemplateBond->setLinkSelectMethod(ZT_BOND_RESELECTION_POLICY_ALWAYS);
 				}
 				if (linkSelectMethodStr == "better") {
-					newTemplateBond->setLinkSelectMethod(ZT_MULTIPATH_RESELECTION_POLICY_BETTER);
+					newTemplateBond->setLinkSelectMethod(ZT_BOND_RESELECTION_POLICY_BETTER);
 				}
 				if (linkSelectMethodStr == "failure") {
-					newTemplateBond->setLinkSelectMethod(ZT_MULTIPATH_RESELECTION_POLICY_FAILURE);
+					newTemplateBond->setLinkSelectMethod(ZT_BOND_RESELECTION_POLICY_FAILURE);
 				}
 				if (linkSelectMethodStr == "optimize") {
-					newTemplateBond->setLinkSelectMethod(ZT_MULTIPATH_RESELECTION_POLICY_OPTIMIZE);
+					newTemplateBond->setLinkSelectMethod(ZT_BOND_RESELECTION_POLICY_OPTIMIZE);
 				}
 				if (newTemplateBond->getLinkSelectMethod() < 0 || newTemplateBond->getLinkSelectMethod() > 3) {
 					fprintf(stderr, "warning: invalid value (%s) for linkSelectMethod, assuming mode: always\n", linkSelectMethodStr.c_str());
@@ -1839,7 +1889,7 @@ public:
 		_secondaryPort = (unsigned int)OSUtils::jsonInt(settings["secondaryPort"],0);
 		_tertiaryPort = (unsigned int)OSUtils::jsonInt(settings["tertiaryPort"],0);
 		if (_secondaryPort != 0 || _tertiaryPort != 0) {
-			fprintf(stderr,"WARNING: using manually-specified ports. This can cause NAT issues." ZT_EOL_S);
+			fprintf(stderr,"WARNING: using manually-specified secondary and/or tertiary ports. This can cause NAT issues." ZT_EOL_S);
 		}
 		_portMappingEnabled = OSUtils::jsonBool(settings["portMappingEnabled"],true);
 
@@ -2028,7 +2078,7 @@ public:
 				unsigned int mostMatchingPrefixBits = 0;
 				for(std::set<InetAddress>::const_iterator i(myIps.begin());i!=myIps.end();++i) {
 					const unsigned int matchingPrefixBits = i->matchingPrefixBits(*target);
-					if (matchingPrefixBits >= mostMatchingPrefixBits) {
+					if (matchingPrefixBits >= mostMatchingPrefixBits && ((target->isV4() && i->isV4()) || (target->isV6() && i->isV6()))) {
 						mostMatchingPrefixBits = matchingPrefixBits;
 						src = &(*i);
 					}
@@ -2391,7 +2441,7 @@ public:
 							Dictionary<4096> nc;
 							nc.load(nlcbuf.c_str());
 							Buffer<1024> allowManaged;
-							if (nc.get("allowManaged", allowManaged) && !allowManaged.size() == 0) {
+							if (nc.get("allowManaged", allowManaged) && allowManaged.size() > 0) {
 								std::string addresses (allowManaged.begin(), allowManaged.size());
 								if (allowManaged.size() <= 5) { // untidy parsing for backward compatibility
 									if (allowManaged[0] == '1' || allowManaged[0] == 't' || allowManaged[0] == 'T') {
@@ -2625,7 +2675,6 @@ public:
 			case ZT_STATE_OBJECT_NETWORK_CONFIG:
 				OSUtils::ztsnprintf(dirname,sizeof(dirname),"%s" ZT_PATH_SEPARATOR_S "networks.d",_homePath.c_str());
 				OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "%.16llx.conf",dirname,(unsigned long long)id[0]);
-				secure = true;
 				break;
 			case ZT_STATE_OBJECT_PEER:
 				OSUtils::ztsnprintf(dirname,sizeof(dirname),"%s" ZT_PATH_SEPARATOR_S "peers.d",_homePath.c_str());
@@ -3044,9 +3093,6 @@ public:
 				if (!strncmp(p->c_str(),ifname,p->length()))
 					return false;
 			}
-			if (!_node->bondController()->allowedToBind(std::string(ifname))) {
-				return false;
-			}
 		}
 		{
 			// Check global blacklists
@@ -3082,6 +3128,23 @@ public:
 		}
 
 		return true;
+	}
+
+	unsigned int _getRandomPort()
+	{
+		unsigned int randp = 0;
+		Utils::getSecureRandom(&randp,sizeof(randp));
+		randp = 20000 + (randp % 45500);
+		for(int i=0;;++i) {
+			if (i > 1000) {
+				return 0;
+			} else if (++randp >= 65536) {
+				randp = 20000;
+			}
+			if (_trialBind(randp))
+				break;
+		}
+		return randp;
 	}
 
 	bool _trialBind(unsigned int port)

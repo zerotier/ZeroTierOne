@@ -36,7 +36,7 @@ DBMirrorSet::DBMirrorSet(DB::ChangeListener *listener) :
 			}
 
 			for(auto db=dbs.begin();db!=dbs.end();++db) {
-				(*db)->each([this,&dbs,&db](uint64_t networkId,const nlohmann::json &network,uint64_t memberId,const nlohmann::json &member) {
+				(*db)->each([&dbs,&db](uint64_t networkId,const nlohmann::json &network,uint64_t memberId,const nlohmann::json &member) {
 					try {
 						if (network.is_object()) {
 							if (memberId == 0) {
@@ -123,6 +123,26 @@ bool DBMirrorSet::get(const uint64_t networkId,nlohmann::json &network,std::vect
 			return true;
 	}
 	return false;
+}
+
+std::string DBMirrorSet::getSSOAuthURL(const nlohmann::json &member, const std::string &redirectURL) 
+{
+	std::lock_guard<std::mutex> l(_dbs_l);
+	for(auto d=_dbs.begin();d!=_dbs.end();++d) { 
+		std::string url = (*d)->getSSOAuthURL(member, redirectURL);
+		if (!url.empty()) {
+			return url;
+		}
+	}
+	return "";
+}
+
+void DBMirrorSet::networkMemberSSOHasExpired(uint64_t nwid, int64_t ts)
+{
+	std::lock_guard<std::mutex> l(_dbs_l);
+	for(auto d=_dbs.begin();d!=_dbs.end();++d) { 
+		(*d)->networkMemberSSOHasExpired(nwid, ts);
+	}
 }
 
 void DBMirrorSet::networks(std::set<uint64_t> &networks)
@@ -226,6 +246,49 @@ void DBMirrorSet::onNetworkMemberUpdate(const void *db,uint64_t networkId,uint64
 void DBMirrorSet::onNetworkMemberDeauthorize(const void *db,uint64_t networkId,uint64_t memberId)
 {
 	_listener->onNetworkMemberDeauthorize(this,networkId,memberId);
+}
+
+void DBMirrorSet::membersExpiring(std::set< std::pair<uint64_t, uint64_t> > &soon, std::set< std::pair<uint64_t, uint64_t> > &expired)
+{
+	std::unique_lock<std::mutex> l(_membersExpiringSoon_l);
+	int64_t now = OSUtils::now();
+	for(auto next=_membersExpiringSoon.begin();next!=_membersExpiringSoon.end();) {
+		if (next->first > now) {
+			const uint64_t nwid = next->second.first;
+			const uint64_t memberId = next->second.second;
+			nlohmann::json network, member;
+			if (this->get(nwid, network, memberId, member)) {
+				try {
+					const bool authorized = member["authorized"];
+					const bool ssoExempt = member["ssoExempt"];
+					const int64_t authenticationExpiryTime = member["authenticationExpiryTime"];
+					if ((authenticationExpiryTime == next->first)&&(authorized)&&(!ssoExempt)) {
+						if ((authenticationExpiryTime - now) > ZT_MEMBER_AUTH_TIMEOUT_NOTIFY_BEFORE) {
+							// Stop when we get to entries too far in the future.
+							break;
+						} else {
+							const bool ssoEnabled = network["ssoEnabled"];
+							if (ssoEnabled)
+								soon.insert(std::pair<uint64_t, uint64_t>(nwid, memberId));
+						}
+					} else {
+						// Obsolete entry, no longer authorized, or SSO exempt.
+					}
+				} catch ( ... ) {
+					// Invalid member object, erase.
+				}
+			} else {
+				// Not found.
+			}
+		}
+		_membersExpiringSoon.erase(next++);
+	}
+}
+
+void DBMirrorSet::memberWillExpire(int64_t expTime, uint64_t nwid, uint64_t memberId)
+{
+	std::unique_lock<std::mutex> l(_membersExpiringSoon_l);
+	_membersExpiringSoon.insert(std::pair< int64_t, std::pair< uint64_t, uint64_t > >(expTime, std::pair< uint64_t, uint64_t >(nwid, memberId)));
 }
 
 } // namespace ZeroTier

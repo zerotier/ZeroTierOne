@@ -49,6 +49,9 @@ void DB::initNetwork(nlohmann::json &network)
 		}};
 	}
 	if (!network.count("dns")) network["dns"] = nlohmann::json::array();
+	if (!network.count("ssoEnabled")) network["ssoEnabled"] = false;
+	if (!network.count("clientId")) network["clientId"] = "";
+	if (!network.count("authorizationEndpoint")) network["authorizationEndpoint"] = "";
 
 	network["objtype"] = "network";
 }
@@ -56,6 +59,7 @@ void DB::initNetwork(nlohmann::json &network)
 void DB::initMember(nlohmann::json &member)
 {
 	if (!member.count("authorized")) member["authorized"] = false;
+	if (!member.count("ssoExempt")) member["ssoExempt"] = false;
 	if (!member.count("ipAssignments")) member["ipAssignments"] = nlohmann::json::array();
 	if (!member.count("activeBridge")) member["activeBridge"] = false;
 	if (!member.count("tags")) member["tags"] = nlohmann::json::array();
@@ -67,6 +71,7 @@ void DB::initMember(nlohmann::json &member)
 	if (!member.count("lastAuthorizedTime")) member["lastAuthorizedTime"] = 0ULL;
 	if (!member.count("lastAuthorizedCredentialType")) member["lastAuthorizedCredentialType"] = nlohmann::json();
 	if (!member.count("lastAuthorizedCredential")) member["lastAuthorizedCredential"] = nlohmann::json();
+	if (!member.count("authenticationExpiryTime")) member["authenticationExpiryTime"] = 0LL;
 	if (!member.count("vMajor")) member["vMajor"] = -1;
 	if (!member.count("vMinor")) member["vMinor"] = -1;
 	if (!member.count("vRev")) member["vRev"] = -1;
@@ -92,6 +97,8 @@ void DB::cleanMember(nlohmann::json &member)
 	member.erase("recentLog");
 	member.erase("lastModified");
 	member.erase("lastRequestMetaData");
+	member.erase("authenticationURL"); // computed
+	member.erase("authenticationClientID"); // computed
 }
 
 DB::DB() {}
@@ -174,8 +181,9 @@ bool DB::get(const uint64_t networkId,nlohmann::json &network,std::vector<nlohma
 	{
 		std::lock_guard<std::mutex> l2(nw->lock);
 		network = nw->config;
-		for(auto m=nw->members.begin();m!=nw->members.end();++m)
+		for(auto m=nw->members.begin();m!=nw->members.end();++m) {
 			members.push_back(m->second);
+		}
 	}
 	return true;
 }
@@ -186,6 +194,14 @@ void DB::networks(std::set<uint64_t> &networks)
 	std::lock_guard<std::mutex> l(_networks_l);
 	for(auto n=_networks.begin();n!=_networks.end();++n)
 		networks.insert(n->first);
+}
+
+void DB::networkMemberSSOHasExpired(uint64_t nwid, int64_t now) {
+	std::lock_guard<std::mutex> l(_networks_l);
+	auto nw = _networks.find(nwid);
+	if (nw != _networks.end()) {
+		nw->second->mostRecentDeauthTime = now;
+	}
 }
 
 void DB::_memberChanged(nlohmann::json &old,nlohmann::json &memberConfig,bool notifyListeners)
