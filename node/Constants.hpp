@@ -667,11 +667,6 @@
 #define ZT_TRUST_EXPIRATION 600000
 
 /**
- * Enable support for older network configurations from older (pre-1.1.6) controllers
- */
-#define ZT_SUPPORT_OLD_STYLE_NETCONF 1
-
-/**
  * Desired buffer size for UDP sockets (used in service and osdep but defined here)
  */
 #define ZT_UDP_DESIRED_BUF_SIZE 1048576

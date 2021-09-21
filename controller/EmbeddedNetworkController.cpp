@@ -1730,7 +1730,7 @@ void EmbeddedNetworkController::_request(
 		nc->certificateOfOwnershipCount = 1;
 	}
 
-	CertificateOfMembership com(now,credentialtmd,nwid,identity.address());
+	CertificateOfMembership com(now,credentialtmd,nwid,identity);
 	if (com.sign(_signingId)) {
 		nc->com = com;
 	} else {

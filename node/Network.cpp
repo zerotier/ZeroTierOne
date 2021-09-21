@@ -1226,7 +1226,7 @@ bool Network::gate(void *tPtr,const SharedPtr<Peer> &peer)
 	try {
 		if (_config) {
 			Membership *m = _memberships.get(peer->address());
-			if ( (_config.isPublic()) || ((m)&&(m->isAllowedOnNetwork(_config))) ) {
+			if ( (_config.isPublic()) || ((m)&&(m->isAllowedOnNetwork(_config, peer->identity()))) ) {
 				if (!m)
 					m = &(_membership(peer->address()));
 				if (m->multicastLikeGate(now)) {
@@ -1480,8 +1480,11 @@ void Network::_sendUpdatesToMembers(void *tPtr,const MulticastGroup *const newMu
 		Membership *m = (Membership *)0;
 		Hashtable<Address,Membership>::Iterator i(_memberships);
 		while (i.next(a,m)) {
-			if ( ( m->multicastLikeGate(now) || (newMulticastGroup) ) && (m->isAllowedOnNetwork(_config)) && (!std::binary_search(alwaysAnnounceTo.begin(),alwaysAnnounceTo.end(),*a)) )
-				_announceMulticastGroupsTo(tPtr,*a,groups);
+			Identity aid(RR->topology->getIdentity(tPtr, *a));
+			if (aid) {
+				if ( ( m->multicastLikeGate(now) || (newMulticastGroup) ) && (m->isAllowedOnNetwork(_config, aid)) && (!std::binary_search(alwaysAnnounceTo.begin(),alwaysAnnounceTo.end(),*a)) )
+					_announceMulticastGroupsTo(tPtr,*a,groups);
+			}
 		}
 	}
 }

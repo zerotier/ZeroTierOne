@@ -94,6 +94,8 @@ public:
 		 * ZeroTier address to whom certificate was issued
 		 */
 		COM_RESERVED_ID_ISSUED_TO = 2
+
+		// IDs 3-6 reserved for full hash of identity to which this COM was issued.
 	};
 
 	/**
@@ -110,20 +112,7 @@ public:
 	 * @param nwid Network ID
 	 * @param issuedTo Certificate recipient
 	 */
-	CertificateOfMembership(uint64_t timestamp,uint64_t timestampMaxDelta,uint64_t nwid,const Address &issuedTo)
-	{
-		_qualifiers[0].id = COM_RESERVED_ID_TIMESTAMP;
-		_qualifiers[0].value = timestamp;
-		_qualifiers[0].maxDelta = timestampMaxDelta;
-		_qualifiers[1].id = COM_RESERVED_ID_NETWORK_ID;
-		_qualifiers[1].value = nwid;
-		_qualifiers[1].maxDelta = 0;
-		_qualifiers[2].id = COM_RESERVED_ID_ISSUED_TO;
-		_qualifiers[2].value = issuedTo.toInt();
-		_qualifiers[2].maxDelta = 0xffffffffffffffffULL;
-		_qualifierCount = 3;
-		memset(_signature.data,0,ZT_C25519_SIGNATURE_LEN);
-	}
+	CertificateOfMembership(uint64_t timestamp,uint64_t timestampMaxDelta,uint64_t nwid,const Identity &issuedTo);
 
 	/**
 	 * Create from binary-serialized COM in buffer
@@ -184,36 +173,6 @@ public:
 	}
 
 	/**
-	 * Add or update a qualifier in this certificate
-	 *
-	 * Any signature is invalidated and signedBy is set to null.
-	 *
-	 * @param id Qualifier ID
-	 * @param value Qualifier value
-	 * @param maxDelta Qualifier maximum allowed difference (absolute value of difference)
-	 */
-	void setQualifier(uint64_t id,uint64_t value,uint64_t maxDelta);
-	inline void setQualifier(ReservedId id,uint64_t value,uint64_t maxDelta) { setQualifier((uint64_t)id,value,maxDelta); }
-
-#ifdef ZT_SUPPORT_OLD_STYLE_NETCONF
-	/**
-	 * @return String-serialized representation of this certificate
-	 */
-	std::string toString() const;
-
-	/**
-	 * Set this certificate equal to the hex-serialized string
-	 *
-	 * Invalid strings will result in invalid or undefined certificate
-	 * contents. These will subsequently fail validation and comparison.
-	 * Empty strings will result in an empty certificate.
-	 *
-	 * @param s String to deserialize
-	 */
-	void fromString(const char *s);
-#endif // ZT_SUPPORT_OLD_STYLE_NETCONF
-
-	/**
 	 * Compare two certificates for parameter agreement
 	 *
 	 * This compares this certificate with the other and returns true if all
@@ -224,9 +183,10 @@ public:
 	 * tuples present in this cert but not in other result in 'false'.
 	 *
 	 * @param other Cert to compare with
+	 * @param otherIdentity Identity of other node
 	 * @return True if certs agree and 'other' may be communicated with
 	 */
-	bool agreesWith(const CertificateOfMembership &other) const;
+	bool agreesWith(const CertificateOfMembership &other, const Identity &otherIdentity) const;
 
 	/**
 	 * Sign this certificate
