@@ -69,7 +69,7 @@ void Trace::peerConfirmingUnknownPath(void *const tPtr,const uint64_t networkId,
 	char tmp[128];
 	if (!path) return; // sanity check
 
-	ZT_LOCAL_TRACE(tPtr,RR,"trying unknown path %s to %.10llx (packet %.16llx verb %d local socket %lld network %.16llx)",path->address().toString(tmp),peer.address().toInt(),packetId,verb,path->localSocket(),networkId);
+	ZT_LOCAL_TRACE(tPtr,RR,"trying unknown path %s to %.10llx (packet %.16llx verb %d local socket %lld network %.16llx)",path->address().toString(tmp),peer.address().toInt(),packetId,(double)verb,path->localSocket(),networkId);
 
 	std::pair<Address,Trace::Level> byn;
 	if (networkId) { Mutex::Lock l(_byNet_m); _byNet.get(networkId,byn); }

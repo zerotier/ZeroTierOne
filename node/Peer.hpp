@@ -33,6 +33,7 @@
 #include "Hashtable.hpp"
 #include "Mutex.hpp"
 #include "Bond.hpp"
+#include "BondController.hpp"
 #include "AES.hpp"
 
 #define ZT_PEER_MAX_SERIALIZED_STATE_SIZE (sizeof(Peer) + 32 + (sizeof(Path) * 2))
@@ -304,13 +305,12 @@ public:
 	 */
 	inline unsigned int latency(const int64_t now)
 	{
-		if (_localMultipathSupported) {
+		if (_canUseMultipath) {
 			return (int)_lastComputedAggregateMeanLatency;
 		} else {
 			SharedPtr<Path> bp(getAppropriatePath(now,false));
-			if (bp) {
+			if (bp)
 				return bp->latency();
-			}
 			return 0xffff;
 		}
 	}
@@ -419,15 +419,35 @@ public:
 	}
 
 	/**
-	 * Rate limit gate for inbound ECHO requests
+	 * Rate limit gate for inbound ECHO requests. This rate limiter works
+	 * by draining a certain number of requests per unit time. Each peer may
+	 * theoretically receive up to ZT_ECHO_CUTOFF_LIMIT requests per second.
 	 */
 	inline bool rateGateEchoRequest(const int64_t now)
 	{
-		if ((now - _lastEchoRequestReceived) >= ZT_PEER_GENERAL_RATE_LIMIT) {
-			_lastEchoRequestReceived = now;
-			return true;
+		/*
+		// TODO: Rethink this
+		if (_canUseMultipath) {
+			_echoRequestCutoffCount++;
+			int numToDrain = (now - _lastEchoCheck) / ZT_ECHO_DRAINAGE_DIVISOR;
+			_lastEchoCheck = now;
+			fprintf(stderr, "ZT_ECHO_CUTOFF_LIMIT=%d, (now - _lastEchoCheck)=%d, numToDrain=%d, ZT_ECHO_DRAINAGE_DIVISOR=%d\n", ZT_ECHO_CUTOFF_LIMIT, (now - _lastEchoCheck), numToDrain, ZT_ECHO_DRAINAGE_DIVISOR);
+			if (_echoRequestCutoffCount > numToDrain) {
+				_echoRequestCutoffCount-=numToDrain;
+			}
+			else {
+				_echoRequestCutoffCount = 0;
+			}
+			return (_echoRequestCutoffCount < ZT_ECHO_CUTOFF_LIMIT);
+		} else {
+			if ((now - _lastEchoRequestReceived) >= (ZT_PEER_GENERAL_RATE_LIMIT)) {
+				_lastEchoRequestReceived = now;
+				return true;
+			}
+			return false;
 		}
-		return false;
+		*/
+		return true;
 	}
 
 	/**
@@ -503,20 +523,16 @@ public:
 	}
 
 	/**
-	 * @return The bonding policy used to reach this peer
+	 *
+	 * @return
 	 */
-	SharedPtr<Bond> bond() { return _bond; }
+	SharedPtr<Bond> bond() { return _bondToPeer; }
 
 	/**
-	 * @return The bonding policy used to reach this peer
+	 *
+	 * @return
 	 */
-	inline int8_t bondingPolicy() {
-		Mutex::Lock _l(_paths_m);
-		if (_bond) {
-			return _bond->policy();
-		}
-		return ZT_BOND_POLICY_NONE;
-	}
+	inline int8_t bondingPolicy() { return _bondingPolicy; }
 
 	//inline const AES *aesKeysIfSupported() const
 	//{ return (const AES *)0; }
@@ -566,7 +582,6 @@ private:
 
 	_PeerPath _paths[ZT_MAX_PEER_NETWORK_PATHS];
 	Mutex _paths_m;
-	Mutex _bond_m;
 
 	Identity _id;
 
@@ -576,13 +591,18 @@ private:
 
 	AtomicCounter __refCount;
 
+	bool _remotePeerMultipathEnabled;
+	int _uniqueAlivePathCount;
 	bool _localMultipathSupported;
+	bool _remoteMultipathSupported;
+	bool _canUseMultipath;
 
 	volatile bool _shouldCollectPathStatistics;
+	volatile int8_t _bondingPolicy;
 
 	int32_t _lastComputedAggregateMeanLatency;
 
-	SharedPtr<Bond> _bond;
+	SharedPtr<Bond> _bondToPeer;
 };
 
 } // namespace ZeroTier

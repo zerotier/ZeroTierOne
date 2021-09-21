@@ -38,8 +38,7 @@ public:
 		NC_ERROR_NONE = 0,
 		NC_ERROR_OBJECT_NOT_FOUND = 1,
 		NC_ERROR_ACCESS_DENIED = 2,
-		NC_ERROR_INTERNAL_SERVER_ERROR = 3,
-		NC_ERROR_AUTHENTICATION_REQUIRED = 4
+		NC_ERROR_INTERNAL_SERVER_ERROR = 3
 	};
 
 	/**
@@ -70,17 +69,12 @@ public:
 		/**
 		 * Send a network configuration request error
 		 *
-		 * If errorData/errorDataSize are provided they must point to a valid serialized
-		 * Dictionary containing error data. They can be null/zero if not specified.
-		 * 
 		 * @param nwid Network ID
 		 * @param requestPacketId Request packet ID or 0 if none
 		 * @param destination Destination peer Address
 		 * @param errorCode Error code
-		 * @param errorData Data associated with error or NULL if none
-		 * @param errorDataSize Size of errorData in bytes
 		 */
-		virtual void ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &destination,NetworkController::ErrorCode errorCode, const void *errorData, unsigned int errorDataSize) = 0;
+		virtual void ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &destination,NetworkController::ErrorCode errorCode) = 0;
 	};
 
 	NetworkController() {}

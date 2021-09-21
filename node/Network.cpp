@@ -1022,7 +1022,6 @@ int Network::setConfiguration(void *tPtr,const NetworkConfig &nconf,bool saveToD
 		}
 
 		_portError = RR->node->configureVirtualNetworkPort(tPtr,_id,&_uPtr,(oldPortInitialized) ? ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE : ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP,&ctmp);
-		_authenticationURL = nconf.authenticationURL;
 
 		if (saveToDisk) {
 			Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> *const d = new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>();
@@ -1227,7 +1226,7 @@ bool Network::gate(void *tPtr,const SharedPtr<Peer> &peer)
 	try {
 		if (_config) {
 			Membership *m = _memberships.get(peer->address());
-			if ( (_config.isPublic()) || ((m)&&(m->isAllowedOnNetwork(_config, peer->identity()))) ) {
+			if ( (_config.isPublic()) || ((m)&&(m->isAllowedOnNetwork(_config))) ) {
 				if (!m)
 					m = &(_membership(peer->address()));
 				if (m->multicastLikeGate(now)) {
@@ -1380,8 +1379,6 @@ ZT_VirtualNetworkStatus Network::_status() const
 			return ZT_NETWORK_STATUS_NOT_FOUND;
 		case NETCONF_FAILURE_NONE:
 			return ((_config) ? ZT_NETWORK_STATUS_OK : ZT_NETWORK_STATUS_REQUESTING_CONFIGURATION);
-		case NETCONF_FAILURE_AUTHENTICATION_REQUIRED:
-			return ZT_NETWORK_STATUS_AUTHENTICATION_REQUIRED;
 		default:
 			return ZT_NETWORK_STATUS_PORT_ERROR;
 	}
@@ -1432,10 +1429,6 @@ void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const
 	}
 
 	memcpy(&ec->dns, &_config.dns, sizeof(ZT_VirtualNetworkDNS));
-
-	Utils::scopy(ec->authenticationURL, sizeof(ec->authenticationURL), _authenticationURL.c_str());
-	ec->authenticationExpiryTime = _config.authenticationExpiryTime;
-	ec->ssoEnabled = _config.ssoEnabled;
 }
 
 void Network::_sendUpdatesToMembers(void *tPtr,const MulticastGroup *const newMulticastGroup)
@@ -1487,11 +1480,8 @@ void Network::_sendUpdatesToMembers(void *tPtr,const MulticastGroup *const newMu
 		Membership *m = (Membership *)0;
 		Hashtable<Address,Membership>::Iterator i(_memberships);
 		while (i.next(a,m)) {
-			const Identity remoteIdentity(RR->topology->getIdentity(tPtr, *a));
-			if (remoteIdentity) {
-				if ( ( m->multicastLikeGate(now) || (newMulticastGroup) ) && (m->isAllowedOnNetwork(_config, remoteIdentity)) && (!std::binary_search(alwaysAnnounceTo.begin(),alwaysAnnounceTo.end(),*a)) )
-					_announceMulticastGroupsTo(tPtr,*a,groups);
-			}
+			if ( ( m->multicastLikeGate(now) || (newMulticastGroup) ) && (m->isAllowedOnNetwork(_config)) && (!std::binary_search(alwaysAnnounceTo.begin(),alwaysAnnounceTo.end(),*a)) )
+				_announceMulticastGroupsTo(tPtr,*a,groups);
 		}
 	}
 }

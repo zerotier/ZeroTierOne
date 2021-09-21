@@ -34,7 +34,7 @@
 #include "Salsa20.hpp"
 #include "NetworkController.hpp"
 #include "Hashtable.hpp"
-#include "Bond.hpp"
+#include "BondController.hpp"
 
 // Bit mask for "expecting reply" hash
 #define ZT_EXPECTING_REPLIES_BUCKET_MASK1 255
@@ -187,7 +187,7 @@ public:
 
 	inline const Identity &identity() const { return _RR.identity; }
 
-	inline Bond *bondController() const { return _RR.bc; }
+	inline BondController *bondController() const { return _RR.bc; }
 
 	/**
 	 * Register that we are expecting a reply to a packet ID
@@ -245,7 +245,7 @@ public:
 
 	virtual void ncSendConfig(uint64_t nwid,uint64_t requestPacketId,const Address &destination,const NetworkConfig &nc,bool sendLegacyFormatConfig);
 	virtual void ncSendRevocation(const Address &destination,const Revocation &rev);
-	virtual void ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &destination,NetworkController::ErrorCode errorCode, const void *errorData, unsigned int errorDataSize);
+	virtual void ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &destination,NetworkController::ErrorCode errorCode);
 
 	inline const Address &remoteTraceTarget() const { return _remoteTraceTarget; }
 	inline Trace::Level remoteTraceLevel() const { return _remoteTraceLevel; }

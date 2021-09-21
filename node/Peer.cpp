@@ -50,7 +50,12 @@ Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Ident
 	_directPathPushCutoffCount(0),
 	_credentialsCutoffCount(0),
 	_echoRequestCutoffCount(0),
+	_uniqueAlivePathCount(0),
 	_localMultipathSupported(false),
+	_remoteMultipathSupported(false),
+	_canUseMultipath(false),
+	_shouldCollectPathStatistics(0),
+	_bondingPolicy(0),
 	_lastComputedAggregateMeanLatency(0)
 {
 	if (!myIdentity.agree(peerIdentity,_key))
@@ -146,10 +151,6 @@ void Peer::received(
 					_paths[replacePath].lr = now;
 					_paths[replacePath].p = path;
 					_paths[replacePath].priority = 1;
-					Mutex::Lock _l(_bond_m);
-					if(_bond) {
-						_bond->nominatePathToBond(_paths[replacePath].p, now);
-					}
 				}
 			} else {
 				Mutex::Lock ltl(_lastTriedPath_m);
@@ -228,8 +229,7 @@ void Peer::received(
 
 SharedPtr<Path> Peer::getAppropriatePath(int64_t now, bool includeExpired, int32_t flowId)
 {
-	Mutex::Lock _l(_bond_m);
-	if (!_bond) {
+	if (!_bondToPeer) {
 		Mutex::Lock _l(_paths_m);
 		unsigned int bestPath = ZT_MAX_PEER_NETWORK_PATHS;
 		/**
@@ -253,7 +253,7 @@ SharedPtr<Path> Peer::getAppropriatePath(int64_t now, bool includeExpired, int32
 		}
 		return SharedPtr<Path>();
 	}
-	return _bond->getAppropriatePath(now, flowId);
+	return _bondToPeer->getAppropriatePath(now, flowId);
 }
 
 void Peer::introduce(void *const tPtr,const int64_t now,const SharedPtr<Peer> &other) const
@@ -444,32 +444,39 @@ void Peer::tryMemorizedPath(void *tPtr,int64_t now)
 
 void Peer::performMultipathStateCheck(void *tPtr, int64_t now)
 {
-	Mutex::Lock _l(_bond_m);
-	if (_bond) {
-		// Once enabled the Bond object persists, no need to update state
-		return;
-	}
 	/**
 	 * Check for conditions required for multipath bonding and create a bond
 	 * if allowed.
 	 */
-	int numAlivePaths = 0;
-	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-		if (_paths[i].p && _paths[i].p->alive(now)) {
-			numAlivePaths++;
+	_localMultipathSupported = ((RR->bc->inUse()) && (ZT_PROTO_VERSION > 9));
+	if (_localMultipathSupported) {
+		int currAlivePathCount = 0;
+		int duplicatePathsFound = 0;
+		for (unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
+			if (_paths[i].p) {
+				currAlivePathCount++;
+				for (unsigned int j=0;j<ZT_MAX_PEER_NETWORK_PATHS;++j) {
+					if (_paths[i].p && _paths[j].p && _paths[i].p->address().ipsEqual2(_paths[j].p->address()) && i != j) {
+						duplicatePathsFound+=1;
+						break;
+					}
+				}
+			}
 		}
+		_uniqueAlivePathCount = (currAlivePathCount - (duplicatePathsFound / 2));
+		_remoteMultipathSupported = _vProto > 9;
+		_canUseMultipath = _localMultipathSupported && _remoteMultipathSupported && (_uniqueAlivePathCount > 1);
 	}
-	_localMultipathSupported = ((numAlivePaths >= 1) && (RR->bc->inUse()) && (ZT_PROTO_VERSION > 9));
-	if (_localMultipathSupported && !_bond) {
+	if (_canUseMultipath && !_bondToPeer) {
 		if (RR->bc) {
-			_bond = RR->bc->createTransportTriggeredBond(RR, this);
+			_bondToPeer = RR->bc->createTransportTriggeredBond(RR, this);
 			/**
 			 * Allow new bond to retroactively learn all paths known to this peer
 			 */
-			if (_bond) {
+			if (_bondToPeer) {
 				for (unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
 					if (_paths[i].p) {
-						_bond->nominatePathToBond(_paths[i].p, now);
+						_bondToPeer->nominatePath(_paths[i].p, now);
 					}
 				}
 			}
@@ -503,7 +510,8 @@ unsigned int Peer::doPingAndKeepalive(void *tPtr,int64_t now)
 		if (_paths[i].p) {
 			// Clean expired and reduced priority paths
 			if ( ((now - _paths[i].lr) < ZT_PEER_PATH_EXPIRATION) && (_paths[i].priority == maxPriority) ) {
-				if ((sendFullHello)||(_paths[i].p->needsHeartbeat(now))) {
+				if ((sendFullHello)||(_paths[i].p->needsHeartbeat(now))
+					|| (_canUseMultipath && _paths[i].p->needsGratuitousHeartbeat(now))) {
 					attemptToContactAt(tPtr,_paths[i].p->localSocket(),_paths[i].p->address(),now,sendFullHello);
 					_paths[i].p->sent(now);
 					sent |= (_paths[i].p->address().ss_family == AF_INET) ? 0x1 : 0x2;
@@ -583,24 +591,27 @@ void Peer::resetWithinScope(void *tPtr,InetAddress::IpScope scope,int inetAddres
 void Peer::recordOutgoingPacket(const SharedPtr<Path> &path, const uint64_t packetId,
 	uint16_t payloadLength, const Packet::Verb verb, const int32_t flowId, int64_t now)
 {
-	if (_localMultipathSupported && _bond) {
-		_bond->recordOutgoingPacket(path, packetId, payloadLength, verb, flowId, now);
+	if (!_shouldCollectPathStatistics || !_bondToPeer) {
+		return;
 	}
+	_bondToPeer->recordOutgoingPacket(path, packetId, payloadLength, verb, flowId, now);
 }
 
 void Peer::recordIncomingInvalidPacket(const SharedPtr<Path>& path)
 {
-	if (_localMultipathSupported && _bond) {
-		_bond->recordIncomingInvalidPacket(path);
+	if (!_shouldCollectPathStatistics || !_bondToPeer) {
+		return;
 	}
+	_bondToPeer->recordIncomingInvalidPacket(path);
 }
 
 void Peer::recordIncomingPacket(const SharedPtr<Path> &path, const uint64_t packetId,
 	uint16_t payloadLength, const Packet::Verb verb, const int32_t flowId, int64_t now)
 {
-	if (_localMultipathSupported && _bond) {
-		_bond->recordIncomingPacket(path, packetId, payloadLength, verb, flowId, now);
+	if (!_shouldCollectPathStatistics || !_bondToPeer) {
+		return;
 	}
+	_bondToPeer->recordIncomingPacket(path, packetId, payloadLength, verb, flowId, now);
 }
 
 } // namespace ZeroTier

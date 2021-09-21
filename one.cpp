@@ -84,7 +84,7 @@
 #include "osdep/Http.hpp"
 #include "osdep/Thread.hpp"
 
-#include "node/Bond.hpp"
+#include "node/BondController.hpp"
 
 #include "service/OneService.hpp"
 
@@ -393,9 +393,7 @@ static int cli(int argc,char **argv)
 									char tmp[256];
 									std::string addr = path["address"];
 									const int64_t now = OSUtils::now();
-									int64_t lastSendDiff = (uint64_t)path["lastSend"] ? now - (uint64_t)path["lastSend"] : -1;
-									int64_t lastReceiveDiff = (uint64_t)path["lastReceive"] ? now - (uint64_t)path["lastReceive"] : -1;
-									OSUtils::ztsnprintf(tmp,sizeof(tmp),"%s;%lld;%lld",addr.c_str(),lastSendDiff,lastReceiveDiff);
+									OSUtils::ztsnprintf(tmp,sizeof(tmp),"%s;%lld;%lld",addr.c_str(),now - (int64_t)path["lastSend"],now - (int64_t)path["lastReceive"]);
 									bestPath = tmp;
 									break;
 								}
@@ -462,9 +460,7 @@ static int cli(int argc,char **argv)
 									char tmp[256];
 									std::string addr = path["address"];
 									const int64_t now = OSUtils::now();
-									int64_t lastSendDiff = (uint64_t)path["lastSend"] ? now - (uint64_t)path["lastSend"] : -1;
-									int64_t lastReceiveDiff = (uint64_t)path["lastReceive"] ? now - (uint64_t)path["lastReceive"] : -1;
-									OSUtils::ztsnprintf(tmp,sizeof(tmp),"%-8lld %-8lld %s",lastSendDiff,lastReceiveDiff,addr.c_str());
+									OSUtils::ztsnprintf(tmp,sizeof(tmp),"%-8lld %-8lld %s",now - (int64_t)path["lastSend"],now - (int64_t)path["lastReceive"],addr.c_str());
 									bestPath = std::string("DIRECT ") + tmp;
 									break;
 								}
@@ -496,13 +492,14 @@ static int cli(int argc,char **argv)
 			return 1;
 		}
 	} else if (command == "bond") {
-		/* zerotier-cli bond <cmd> */
+		/* zerotier-cli bond */
 		if (arg1.empty()) {
-			printf("(bond) command is missing required arguments" ZT_EOL_S);
+			printf("(bond) command is missing required arugments" ZT_EOL_S);
 			return 2;
 		}
 		/* zerotier-cli bond list */
 		if (arg1 == "list") {
+			fprintf(stderr, "zerotier-cli bond list\n");
 			const unsigned int scode = Http::GET(1024 * 1024 * 16,60000,(const struct sockaddr *)&addr,"/bonds",requestHeaders,responseHeaders,responseBody);
 			if (scode == 0) {
 				printf("Error connecting to the ZeroTier service: %s\n\nPlease check that the service is running and that TCP port 9993 can be contacted via 127.0.0.1." ZT_EOL_S, responseBody.c_str());
@@ -528,11 +525,11 @@ static int cli(int argc,char **argv)
 						for(unsigned long k=0;k<j.size();++k) {
 							nlohmann::json &p = j[k];
 							bool isBonded = p["isBonded"];
+							int8_t bondingPolicy = p["bondingPolicy"];
+							bool isHealthy = p["isHealthy"];
+							int8_t numAliveLinks = p["numAliveLinks"];
+							int8_t numTotalLinks = p["numTotalLinks"];
 							if (isBonded) {
-								int8_t bondingPolicy = p["bondingPolicy"];
-								bool isHealthy = p["isHealthy"];
-								int8_t numAliveLinks = p["numAliveLinks"];
-								int8_t numTotalLinks = p["numTotalLinks"];
 								bFoundBond = true;
 								std::string healthStr;
 								if (isHealthy) {
@@ -541,8 +538,8 @@ static int cli(int argc,char **argv)
 									healthStr = "DEGRADED";
 								}
 								std::string policyStr = "none";
-								if (bondingPolicy >= ZT_BOND_POLICY_NONE && bondingPolicy <= ZT_BOND_POLICY_BALANCE_AWARE) {
-									policyStr = Bond::getPolicyStrByCode(bondingPolicy);
+								if (bondingPolicy >= ZT_BONDING_POLICY_NONE && bondingPolicy <= ZT_BONDING_POLICY_BALANCE_AWARE) {
+									policyStr = BondController::getPolicyStrByCode(bondingPolicy);
 								}
 								printf("%10s  %32s    %8s        %d/%d" ZT_EOL_S,
 									OSUtils::jsonString(p ["address"],"-").c_str(),
@@ -563,7 +560,11 @@ static int cli(int argc,char **argv)
 				return 1;
 			}
 		}
-		else if (arg1.length() == 10) {
+		else if (arg1.length() == 10) { /* zerotier-cli bond <peerId> enable */
+			if (arg2 == "enable") {
+				fprintf(stderr, "zerotier-cli bond <peerId> enable\n");
+				return 0;
+			}
 			if (arg2 == "rotate") { /* zerotier-cli bond <peerId> rotate */
 				fprintf(stderr, "zerotier-cli bond <peerId> rotate\n");
 				requestHeaders["Content-Type"] = "application/json";
@@ -617,6 +618,7 @@ static int cli(int argc,char **argv)
 					if (json) {
 						printf("%s" ZT_EOL_S,OSUtils::jsonDump(j).c_str());
 					} else {
+						bool bFoundBond = false;
 						std::string healthStr;
 						if (OSUtils::jsonInt(j["isHealthy"],0)) {
 							healthStr = "Healthy";
@@ -627,15 +629,15 @@ static int cli(int argc,char **argv)
 						int numTotalLinks = OSUtils::jsonInt(j["numTotalLinks"],0);
 						printf("Peer               : %s\n", arg1.c_str());
 						printf("Bond               : %s\n", OSUtils::jsonString(j["bondingPolicy"],"-").c_str());
-						//if (bondingPolicy == ZT_BOND_POLICY_ACTIVE_BACKUP) {
-						printf("Link Select Method : %d\n", (int)OSUtils::jsonInt(j["linkSelectMethod"],0));
+						//if (bondingPolicy == ZT_BONDING_POLICY_ACTIVE_BACKUP) {
+						printf("Link Select Method : %d\n", OSUtils::jsonInt(j["linkSelectMethod"],0));
 						//}
 						printf("Status             : %s\n", healthStr.c_str());
 						printf("Links              : %d/%d\n", numAliveLinks, numTotalLinks);
-						printf("Failover Interval  : %d (ms)\n", (int)OSUtils::jsonInt(j["failoverInterval"],0));
-						printf("Up Delay           : %d (ms)\n", (int)OSUtils::jsonInt(j["upDelay"],0));
-						printf("Down Delay         : %d (ms)\n", (int)OSUtils::jsonInt(j["downDelay"],0));
-						printf("Packets Per Link   : %d (ms)\n", (int)OSUtils::jsonInt(j["packetsPerLink"],0));
+						printf("Failover Interval  : %d (ms)\n", OSUtils::jsonInt(j["failoverInterval"],0));
+						printf("Up Delay           : %d (ms)\n", OSUtils::jsonInt(j["upDelay"],0));
+						printf("Down Delay         : %d (ms)\n", OSUtils::jsonInt(j["downDelay"],0));
+						printf("Packets Per Link   : %d (ms)\n", OSUtils::jsonInt(j["packetsPerLink"],0));
 						nlohmann::json &p = j["links"];
 						if (p.is_array()) {
 							printf("\n     Interface Name\t\t\t\t\t     Path\t Alive\n");
@@ -647,7 +649,7 @@ static int cli(int argc,char **argv)
 									i,
 									OSUtils::jsonString(p[i]["ifname"],"-").c_str(),
 									OSUtils::jsonString(p[i]["path"],"-").c_str(),
-									(int)OSUtils::jsonInt(p[i]["alive"],0));
+									OSUtils::jsonInt(p[i]["alive"],0));
 							}
 							printf("\n        Latency     Jitter     Loss     Error        Speed   Alloc\n");
 							for(int i=0; i<80; i++) { printf("-"); }
@@ -660,8 +662,8 @@ static int cli(int argc,char **argv)
 									OSUtils::jsonDouble(p[i]["latencyVariance"], 0),
 									OSUtils::jsonDouble(p[i]["packetLossRatio"], 0),
 									OSUtils::jsonDouble(p[i]["packetErrorRatio"], 0),
-									(int)OSUtils::jsonInt(p[i]["givenLinkSpeed"], 0),
-									(int)OSUtils::jsonInt(p[i]["allocation"], 0));
+									OSUtils::jsonInt(p[i]["givenLinkSpeed"], 0),
+									OSUtils::jsonInt(p[i]["allocation"], 0));
 							}
 						}
 					}
@@ -674,7 +676,7 @@ static int cli(int argc,char **argv)
 			}
 		}
 		/* zerotier-cli bond command was malformed in some way */
-		printf("(bond) command is missing required arguments" ZT_EOL_S);
+		printf("(bond) command is missing required arugments" ZT_EOL_S);
 		return 2;
 		const unsigned int scode = Http::GET(1024 * 1024 * 16,60000,(const struct sockaddr *)&addr,"/bonds",requestHeaders,responseHeaders,responseBody);
 		if (scode == 0) {
@@ -709,13 +711,14 @@ static int cli(int argc,char **argv)
 				if (j.is_array()) {
 					for(unsigned long k=0;k<j.size();++k) {
 						nlohmann::json &p = j[k];
-						bool isBonded = p["isBonded"];
-						if (isBonded) {
-							int8_t bondingPolicy = p["bondingPolicy"];
-							bool isHealthy = p["isHealthy"];
-							int8_t numAliveLinks = p["numAliveLinks"];
-							int8_t numTotalLinks = p["numTotalLinks"];
 
+						bool isBonded = p["isBonded"];
+						int8_t bondingPolicy = p["bondingPolicy"];
+						bool isHealthy = p["isHealthy"];
+						int8_t numAliveLinks = p["numAliveLinks"];
+						int8_t numTotalLinks = p["numTotalLinks"];
+
+						if (isBonded) {
 							bFoundBond = true;
 							std::string healthStr;
 							if (isHealthy) {
@@ -724,8 +727,8 @@ static int cli(int argc,char **argv)
 								healthStr = "Degraded";
 							}
 							std::string policyStr = "none";
-							if (bondingPolicy >= ZT_BOND_POLICY_NONE && bondingPolicy <= ZT_BOND_POLICY_BALANCE_AWARE) {
-								policyStr = Bond::getPolicyStrByCode(bondingPolicy);
+							if (bondingPolicy >= ZT_BONDING_POLICY_NONE && bondingPolicy <= ZT_BONDING_POLICY_BALANCE_AWARE) {
+								policyStr = BondController::getPolicyStrByCode(bondingPolicy);
 							}
 
 							printf("%10s  %32s    %8s        %d/%d" ZT_EOL_S,
@@ -786,23 +789,14 @@ static int cli(int argc,char **argv)
 								}
 							}
 							if (aa.length() == 0) aa = "-";
-							const std::string status = OSUtils::jsonString(n["status"],"-");
 							printf("200 listnetworks %s %s %s %s %s %s %s" ZT_EOL_S,
 								OSUtils::jsonString(n["nwid"],"-").c_str(),
 								OSUtils::jsonString(n["name"],"-").c_str(),
 								OSUtils::jsonString(n["mac"],"-").c_str(),
-								status.c_str(),
+								OSUtils::jsonString(n["status"],"-").c_str(),
 								OSUtils::jsonString(n["type"],"-").c_str(),
 								OSUtils::jsonString(n["portDeviceName"],"-").c_str(),
 								aa.c_str());
-							if (OSUtils::jsonBool(n["ssoEnabled"], false)) {
-								uint64_t authenticationExpiryTime = n["authenticationExpiryTime"];
-								if (status == "AUTHENTICATION_REQUIRED") {
-									printf("    AUTH EXPIRED, URL: %s" ZT_EOL_S, OSUtils::jsonString(n["authenticationURL"], "(null)").c_str());
-								} else if (status == "OK") {
-									printf("    AUTH OK, expires in: %lld seconds" ZT_EOL_S, ((int64_t)authenticationExpiryTime - OSUtils::now()) / 1000LL);
-								}
-							}
 						}
 					}
 				}
@@ -1316,6 +1310,7 @@ static int cli(int argc,char **argv)
 		struct ifconf ifc;
 		char buf[1024];
 		char stringBuffer[128];
+		int success = 0;
 
 		int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
 

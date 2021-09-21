@@ -103,7 +103,7 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,int64
 		const unsigned long mcs = sizeof(Multicaster) + (((sizeof(Multicaster) & 0xf) != 0) ? (16 - (sizeof(Multicaster) & 0xf)) : 0);
 		const unsigned long topologys = sizeof(Topology) + (((sizeof(Topology) & 0xf) != 0) ? (16 - (sizeof(Topology) & 0xf)) : 0);
 		const unsigned long sas = sizeof(SelfAwareness) + (((sizeof(SelfAwareness) & 0xf) != 0) ? (16 - (sizeof(SelfAwareness) & 0xf)) : 0);
-		const unsigned long bc = sizeof(Bond) + (((sizeof(Bond) & 0xf) != 0) ? (16 - (sizeof(Bond) & 0xf)) : 0);
+		const unsigned long bc = sizeof(BondController) + (((sizeof(BondController) & 0xf) != 0) ? (16 - (sizeof(BondController) & 0xf)) : 0);
 
 		m = reinterpret_cast<char *>(::malloc(16 + ts + sws + mcs + topologys + sas + bc));
 		if (!m)
@@ -121,14 +121,14 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,int64
 		m += topologys;
 		RR->sa = new (m) SelfAwareness(RR);
 		m += sas;
-		RR->bc = new (m) Bond(RR);
+		RR->bc = new (m) BondController(RR);
 	} catch ( ... ) {
 		if (RR->sa) RR->sa->~SelfAwareness();
 		if (RR->topology) RR->topology->~Topology();
 		if (RR->mc) RR->mc->~Multicaster();
 		if (RR->sw) RR->sw->~Switch();
 		if (RR->t) RR->t->~Trace();
-		if (RR->bc) RR->bc->~Bond();
+		if (RR->bc) RR->bc->~BondController();
 		::free(m);
 		throw;
 	}
@@ -147,7 +147,7 @@ Node::~Node()
 	if (RR->mc) RR->mc->~Multicaster();
 	if (RR->sw) RR->sw->~Switch();
 	if (RR->t) RR->t->~Trace();
-	if (RR->bc) RR->bc->~Bond();
+	if (RR->bc) RR->bc->~BondController();
 	::free(RR->rtmem);
 }
 
@@ -252,14 +252,18 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,int64_t now,volatile int64
 	_now = now;
 	Mutex::Lock bl(_backgroundTasksLock);
 
-	// Process background bond tasks
-	unsigned long bondCheckInterval = ZT_PING_CHECK_INVERVAL;
+
+	unsigned long bondCheckInterval = ZT_CORE_TIMER_TASK_GRANULARITY;
 	if (RR->bc->inUse()) {
-		bondCheckInterval = std::max(RR->bc->minReqMonitorInterval(), ZT_CORE_TIMER_TASK_GRANULARITY);
-		if ((now - _lastGratuitousPingCheck) >= ZT_CORE_TIMER_TASK_GRANULARITY) {
+		// Gratuitously ping active peers so that QoS metrics have enough data to work with (if active path monitoring is enabled)
+		bondCheckInterval = std::min(std::max(RR->bc->minReqPathMonitorInterval(), ZT_CORE_TIMER_TASK_GRANULARITY), ZT_PING_CHECK_INVERVAL);
+		if ((now - _lastGratuitousPingCheck) >= bondCheckInterval) {
+			Hashtable< Address,std::vector<InetAddress> > alwaysContact;
+			_PingPeersThatNeedPing pfunc(RR,tptr,alwaysContact,now);
+			RR->topology->eachPeer<_PingPeersThatNeedPing &>(pfunc);
 			_lastGratuitousPingCheck = now;
-			RR->bc->processBackgroundTasks(tptr, now);
 		}
+		RR->bc->processBackgroundTasks(tptr, now);
 	}
 
 	unsigned long timeUntilNextPingCheck = ZT_PING_CHECK_INVERVAL;
@@ -508,7 +512,7 @@ ZT_PeerList *Node::peers() const
 		}
 		if (pi->second->bond()) {
 			p->isBonded = pi->second->bond();
-			p->bondingPolicy = pi->second->bond()->policy();
+			p->bondingPolicy = pi->second->bond()->getPolicy();
 			p->isHealthy = pi->second->bond()->isHealthy();
 			p->numAliveLinks = pi->second->bond()->getNumAliveLinks();
 			p->numTotalLinks = pi->second->bond()->getNumTotalLinks();
@@ -727,7 +731,7 @@ void Node::ncSendRevocation(const Address &destination,const Revocation &rev)
 	}
 }
 
-void Node::ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &destination,NetworkController::ErrorCode errorCode, const void *errorData, unsigned int errorDataSize)
+void Node::ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &destination,NetworkController::ErrorCode errorCode)
 {
 	if (destination == RR->identity.address()) {
 		SharedPtr<Network> n(network(nwid));
@@ -739,9 +743,6 @@ void Node::ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &des
 				break;
 			case NetworkController::NC_ERROR_ACCESS_DENIED:
 				n->setAccessDenied();
-				break;
-			case NetworkController::NC_ERROR_AUTHENTICATION_REQUIRED: {
-			}
 				break;
 
 			default: break;
@@ -759,18 +760,8 @@ void Node::ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &des
 			case NetworkController::NC_ERROR_ACCESS_DENIED:
 				outp.append((unsigned char)Packet::ERROR_NETWORK_ACCESS_DENIED_);
 				break;
-			case NetworkController::NC_ERROR_AUTHENTICATION_REQUIRED:
-				outp.append((unsigned char)Packet::ERROR_NETWORK_AUTHENTICATION_REQUIRED);
-				break;
 		}
-
 		outp.append(nwid);
-
-		if ((errorData)&&(errorDataSize > 0)&&(errorDataSize <= 0xffff)) {
-			outp.append((uint16_t)errorDataSize);
-			outp.append(errorData, errorDataSize);
-		}
-
 		RR->sw->send((void *)0,outp,true);
 	} // else we can't send an ERROR() in response to nothing, so discard
 }

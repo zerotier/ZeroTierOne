@@ -140,7 +140,8 @@ void FileDB::eraseNetwork(const uint64_t networkId)
 void FileDB::eraseMember(const uint64_t networkId,const uint64_t memberId)
 {
 	nlohmann::json network,member,nullJson;
-	get(networkId,network,memberId,member);
+	get(networkId,network);
+	get(memberId,member);
 	char p[4096];
 	OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "%.16llx" ZT_PATH_SEPARATOR_S "member" ZT_PATH_SEPARATOR_S "%.10llx.json",_networksPath.c_str(),networkId,memberId);
 	OSUtils::rm(p);

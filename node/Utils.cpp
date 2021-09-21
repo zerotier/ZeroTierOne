@@ -28,10 +28,8 @@
 #include <sys/stat.h>
 #include <sys/uio.h>
 #include <dirent.h>
-#ifdef ZT_ARCH_ARM_HAS_NEON
 #ifdef __LINUX__
 #include <sys/auxv.h>
-#endif
 #endif
 #endif
 

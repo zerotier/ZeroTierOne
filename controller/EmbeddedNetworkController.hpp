@@ -57,8 +57,6 @@ public:
 
 	virtual void init(const Identity &signingId,Sender *sender);
 
-	void setSSORedirectURL(const std::string &url);
-
 	virtual void request(
 		uint64_t nwid,
 		const InetAddress &fromAddr,
@@ -153,7 +151,6 @@ private:
 	std::mutex _memberStatus_l;
 
 	RedisConfig *_rc;
-	std::string _ssoRedirectURL;
 };
 
 } // namespace ZeroTier

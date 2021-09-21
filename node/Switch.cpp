@@ -1003,12 +1003,14 @@ bool Switch::_trySend(void *tPtr,Packet &packet,bool encrypt,int32_t flowId)
 
 	const SharedPtr<Peer> peer(RR->topology->getPeer(tPtr,destination));
 	if (peer) {
-		if ((peer->bondingPolicy() == ZT_BOND_POLICY_BROADCAST)
+		if ((peer->bondingPolicy() == ZT_BONDING_POLICY_BROADCAST)
 			&& (packet.verb() == Packet::VERB_FRAME || packet.verb() == Packet::VERB_EXT_FRAME)) {
 			const SharedPtr<Peer> relay(RR->topology->getUpstreamPeer());
 			Mutex::Lock _l(peer->_paths_m);
 			for(int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
 				if (peer->_paths[i].p && peer->_paths[i].p->alive(now)) {
+					char pathStr[128];
+					peer->_paths[i].p->address().toString(pathStr);
 					_sendViaSpecificPath(tPtr,peer,peer->_paths[i].p,now,packet,encrypt,flowId);
 				}
 			}
@@ -1045,6 +1047,7 @@ void Switch::_sendViaSpecificPath(void *tPtr,SharedPtr<Peer> peer,SharedPtr<Path
 	if (trustedPathId) {
 		packet.setTrusted(trustedPathId);
 	} else {
+		Packet::Verb v = packet.verb();
 		packet.armor(peer->key(),encrypt,peer->aesKeysIfSupported());
 		RR->node->expectReplyTo(packet.packetId());
 	}
