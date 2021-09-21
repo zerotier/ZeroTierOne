@@ -511,10 +511,7 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,void *tPtr,const SharedP
 		case Packet::VERB_WHOIS:
 			if (RR->topology->isUpstream(peer->identity())) {
 				const Identity id(*this,ZT_PROTO_VERB_WHOIS__OK__IDX_IDENTITY);
-				// Good idea to locally validate here even if roots are doing so. In a truly distributed
-				// system there should not be single points of failure for global trust assertions.
-				if (id.locallyValidate())
-					RR->sw->doAnythingWaitingForPeer(tPtr,RR->topology->addPeer(tPtr,SharedPtr<Peer>(new Peer(RR,RR->identity,id))));
+				RR->sw->doAnythingWaitingForPeer(tPtr,RR->topology->addPeer(tPtr,SharedPtr<Peer>(new Peer(RR,RR->identity,id))));
 			}
 			break;
 
