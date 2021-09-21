@@ -1,6 +1,10 @@
 ZeroTier Release Notes
 ======
 
+# 2021-09-21 -- Version 1.6.6
+
+ * Point release to back-port additional endpoint-side mitigations against vulnerability announced by Pulse Security.
+
 # 2021-04-13 -- Version 1.6.5
 
  * Fix a bug in potential network path filtering that could in some circumstances lead to "software laser" effects.
