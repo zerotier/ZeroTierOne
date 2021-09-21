@@ -34,8 +34,8 @@ CertificateOfMembership::CertificateOfMembership(uint64_t timestamp,uint64_t tim
 
 	// Include hash of full identity public key in COM for hardening purposes. Pack it in
 	// using the original COM format. Format may be revised in the future to make this cleaner.
-	uint64_t idHash[4];
-	issuedTo.keyFingerprint(idHash);
+	uint64_t idHash[6];
+	issuedTo.publicKeyHash(idHash);
 	for(unsigned long i=0;i<4;++i) {
 		_qualifiers[i + 3].id = (uint64_t)(i + 3);
 		_qualifiers[i + 3].value = Utils::ntoh(idHash[i]);
@@ -73,7 +73,7 @@ bool CertificateOfMembership::agreesWith(const CertificateOfMembership &other, c
 	// Otherwise we are on a controller that does not incorporate these.
 	if (fullIdentityVerification) {
 		uint64_t idHash[6];
-		otherIdentity.keyFingerprint(idHash);
+		otherIdentity.publicKeyHash(idHash);
 		for(unsigned long i=0;i<4;++i) {
 			std::map< uint64_t, uint64_t >::iterator otherQ(otherFields.find((uint64_t)(i + 3)));
 			if (otherQ == otherFields.end())
