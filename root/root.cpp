@@ -574,7 +574,7 @@ static void handlePacket(const int sock,const InetAddress *const ip,Packet &pkt)
 		}
 		if (likely(sourcePeer)) {
 			if ((sourcePeer->v6s >= 0)&&(forwardTo->v6s >= 0)) {
-				Packet outp(source,s_self.address(),Packet::VERB_RENDEZVOUS);
+				Packet outp(dest,s_self.address(),Packet::VERB_RENDEZVOUS);
 				outp.append((uint8_t)0);
 				dest.appendTo(outp);
 				outp.append((uint16_t)sourcePeer->ip6.port());
@@ -586,7 +586,7 @@ static void handlePacket(const int sock,const InetAddress *const ip,Packet &pkt)
 				s_outputRate.log(now,outp.size());
 				forwardTo->lastSend = now;
 
-				outp.reset(dest,s_self.address(),Packet::VERB_RENDEZVOUS);
+				outp.reset(source,s_self.address(),Packet::VERB_RENDEZVOUS);
 				outp.append((uint8_t)0);
 				source.appendTo(outp);
 				outp.append((uint16_t)forwardTo->ip6.port());
@@ -600,7 +600,7 @@ static void handlePacket(const int sock,const InetAddress *const ip,Packet &pkt)
 			}
 
 			if ((sourcePeer->v4s >= 0)&&(forwardTo->v4s >= 0)) {
-				Packet outp(source,s_self.address(),Packet::VERB_RENDEZVOUS);
+				Packet outp(dest,s_self.address(),Packet::VERB_RENDEZVOUS);
 				outp.append((uint8_t)0);
 				dest.appendTo(outp);
 				outp.append((uint16_t)sourcePeer->ip4.port());
@@ -612,7 +612,7 @@ static void handlePacket(const int sock,const InetAddress *const ip,Packet &pkt)
 				s_outputRate.log(now,outp.size());
 				forwardTo->lastSend = now;
 
-				outp.reset(dest,s_self.address(),Packet::VERB_RENDEZVOUS);
+				outp.reset(source,s_self.address(),Packet::VERB_RENDEZVOUS);
 				outp.append((uint8_t)0);
 				source.appendTo(outp);
 				outp.append((uint16_t)forwardTo->ip4.port());
