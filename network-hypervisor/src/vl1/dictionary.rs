@@ -8,7 +8,7 @@ use crate::util::hex::HEX_CHARS;
 /// It also supports binary keys and values which will be minimally escaped but render the result not
 /// entirely human readable. Keys are serialized in natural sort order so the result can be consistently
 /// checksummed or hashed.
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone)]
 pub struct Dictionary(BTreeMap<String, Vec<u8>>);
 
 fn write_escaped<W: Write>(b: &[u8], w: &mut W) -> std::io::Result<()> {

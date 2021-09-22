@@ -16,7 +16,7 @@ pub(crate) mod dictionary;
 pub(crate) mod address;
 pub(crate) mod mac;
 pub(crate) mod fragmentedpacket;
-pub(crate) mod whois;
+pub(crate) mod whoisqueue;
 
 // Export some core objects into the root namespace, since these are what other code will driectly deal with.
 pub use address::Address;

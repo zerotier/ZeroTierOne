@@ -14,7 +14,7 @@ use crate::vl1::buffer::{Buffer, PooledBufferFactory};
 use crate::vl1::path::Path;
 use crate::vl1::peer::Peer;
 use crate::vl1::protocol::*;
-use crate::vl1::whois::{WhoisQueue, QueuedPacket};
+use crate::vl1::whoisqueue::{WhoisQueue, QueuedPacket};
 use crate::vl1::rootset::RootSet;
 
 /// Standard packet buffer type including pool container.
