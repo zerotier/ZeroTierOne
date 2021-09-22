@@ -1121,6 +1121,9 @@ static int cli(int argc,char **argv)
 		}
 		dump << responseBody << ZT_EOL_S;
 
+		responseHeaders.clear();
+		responseBody = "";
+
 		// get bonds
 		dump << ZT_EOL_S << "bonds" << ZT_EOL_S << "-----" << ZT_EOL_S;
 		scode = Http::GET(1024 * 1024 * 16,60000,(const struct sockaddr *)&addr,"/bonds",requestHeaders,responseHeaders,responseBody);
