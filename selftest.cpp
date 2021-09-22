@@ -561,8 +561,8 @@ static int testCertificate()
 	std::cout << idA.address().toString(buf) << ", " << idB.address().toString(buf) << std::endl;
 
 	std::cout << "[certificate] Generating certificates A and B...";
-	CertificateOfMembership cA(10000,100,1,idA.address());
-	CertificateOfMembership cB(10099,100,1,idB.address());
+	CertificateOfMembership cA(10000,100,1,idA);
+	CertificateOfMembership cB(10099,100,1,idB);
 	std::cout << std::endl;
 
 	std::cout << "[certificate] Signing certificates A and B with authority...";
@@ -574,13 +574,13 @@ static int testCertificate()
 	//std::cout << "[certificate] B: " << cB.toString() << std::endl;
 
 	std::cout << "[certificate] A agrees with B and B with A... ";
-	if (cA.agreesWith(cB))
+	if (cA.agreesWith(cB, idB))
 		std::cout << "yes, ";
 	else {
 		std::cout << "FAIL" << std::endl;
 		return -1;
 	}
-	if (cB.agreesWith(cA))
+	if (cB.agreesWith(cA, idA))
 		std::cout << "yes." << std::endl;
 	else {
 		std::cout << "FAIL" << std::endl;
@@ -588,18 +588,18 @@ static int testCertificate()
 	}
 
 	std::cout << "[certificate] Generating two certificates that should not agree...";
-	cA = CertificateOfMembership(10000,100,1,idA.address());
-	cB = CertificateOfMembership(10101,100,1,idB.address());
+	cA = CertificateOfMembership(10000,100,1,idA);
+	cB = CertificateOfMembership(10101,100,1,idB);
 	std::cout << std::endl;
 
 	std::cout << "[certificate] A agrees with B and B with A... ";
-	if (!cA.agreesWith(cB))
+	if (!cA.agreesWith(cB, idB))
 		std::cout << "no, ";
 	else {
 		std::cout << "FAIL" << std::endl;
 		return -1;
 	}
-	if (!cB.agreesWith(cA))
+	if (!cB.agreesWith(cA, idA))
 		std::cout << "no." << std::endl;
 	else {
 		std::cout << "FAIL" << std::endl;

@@ -157,7 +157,9 @@ PostgreSQL::PostgreSQL(const Identity &myId, const char *path, int listenPort, R
 	
 	memset(_ssoPsk, 0, sizeof(_ssoPsk));
 	char *const ssoPskHex = getenv("ZT_SSO_PSK");
+#ifdef ZT_TRACE
 	fprintf(stderr, "ZT_SSO_PSK: %s\n", ssoPskHex);
+#endif
 	if (ssoPskHex) {
 		// SECURITY: note that ssoPskHex will always be null-terminated if libc acatually
 		// returns something non-NULL. If the hex encodes something shorter than 48 bytes,
@@ -594,12 +596,14 @@ void PostgreSQL::initializeNetworks()
 			auto dur = std::chrono::duration_cast<std::chrono::microseconds>(end - start);;
 			total += dur.count();
 			++count;
-			if (count % 10000 == 0) {
+			if (count > 0 && count % 10000 == 0) {
 				fprintf(stderr, "Averaging %llu us per network\n", (total/count));
 			}
 		}
 
-		fprintf(stderr, "Took %llu us per network to load\n", (total/count));
+		if (count > 0) {
+			fprintf(stderr, "Took %llu us per network to load\n", (total/count));
+		}
 		stream.complete();
 
 		w.commit();
@@ -748,11 +752,13 @@ void PostgreSQL::initializeMembers()
 			auto dur = std::chrono::duration_cast<std::chrono::microseconds>(end - start);;
 			total += dur.count();
 			++count;
-			if (count % 10000 == 0) {
+			if (count > 0 && count % 10000 == 0) {
 				fprintf(stderr, "Averaging %llu us per member\n", (total/count));
 			}
 		}
-		fprintf(stderr, "Took %llu us per member to load\n", (total/count));
+		if (count > 0) {
+			fprintf(stderr, "Took %llu us per member to load\n", (total/count));
+		}
 
 		stream.complete();
 
