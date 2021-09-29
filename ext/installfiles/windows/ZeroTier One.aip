@@ -1,10 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<DOCUMENT Type="Advanced Installer" CreateVersion="10.9" version="14.5.2" Modules="enterprise" RootPath="." Language="en" Id="{DC564647-6BF0-4550-87F4-89C938D0159C}">
-  <COMPONENT cid="caphyon.advinst.msicomp.ProjectOptionsComponent">
-    <ROW Name="HiddenItems" Value="UpdaterComponent;SerValComponent;AutorunComponent;MultipleInstancesComponent;AppXProductDetailsComponent;AppXDependenciesComponent;AppXAppDetailsComponent;AppXVisualAssetsComponent;AppXCapabilitiesComponent;AppXAppDeclarationsComponent;AppXUriRulesComponent;MsiJavaComponent;MsiRegsComponent;MsiExtComponent;MsiAssemblyComponent;AnalyticsComponent;ActSyncAppComponent;MsiMergeModsComponent;MsiThemeComponent;BackgroundImagesComponent;DictionaryComponent;ScheduledTasksComponent;CPLAppletComponent;GameUxComponent;UserAccountsComponent;MsiClassComponent;WebApplicationsComponent;MsiOdbcDataSrcComponent;SqlConnectionComponent;SharePointSlnComponent;SilverlightSlnComponent"/>
-  </COMPONENT>
+<DOCUMENT Type="Advanced Installer" CreateVersion="10.9" version="18.7" Modules="enterprise" RootPath="." Language="en" Id="{DC564647-6BF0-4550-87F4-89C938D0159C}">
   <COMPONENT cid="caphyon.advinst.msicomp.MsiPropsComponent">
     <ROW Property="AI_BITMAP_DISPLAY_MODE" Value="0"/>
+    <ROW Property="AI_CURRENT_YEAR" Value="2021" ValueLocId="-"/>
     <ROW Property="AI_EMBD_MSI_EXTR_PATH" Value="[TempFolder]" ValueLocId="-"/>
     <ROW Property="AI_EXTERNALUIUNINSTALLERNAME" MultiBuildValue="DefaultBuild:aiui"/>
     <ROW Property="AI_FINDEXE_TITLE" Value="Select the installation package for [|ProductName]" ValueLocId="AI.Property.FindExeTitle"/>
@@ -17,6 +15,7 @@
     <ROW Property="ARPCOMMENTS" Value="This installer database contains the logic and data required to install [|ProductName]."/>
     <ROW Property="ARPCONTACT" Value="contact@zerotier.com"/>
     <ROW Property="ARPHELPLINK" Value="https://www.zerotier.com/"/>
+    <ROW Property="ARPHELPTELEPHONE" Value="949-505-9993"/>
     <ROW Property="ARPNOMODIFY" MultiBuildValue="DefaultBuild:1"/>
     <ROW Property="ARPNOREPAIR" Value="1" MultiBuildValue="ExeBuild:1"/>
     <ROW Property="ARPPRODUCTICON" Value="ZeroTierIcon.exe" Type="8"/>
@@ -25,28 +24,26 @@
     <ROW Property="ARPURLUPDATEINFO" Value="https://www.zerotier.com/"/>
     <ROW Property="AiFeatIcoZeroTierOne" Value="ZeroTierIcon.exe" Type="8"/>
     <ROW Property="CTRLS" Value="2"/>
+    <ROW Property="LIMITUI" MultiBuildValue="DefaultBuild:1"/>
     <ROW Property="MSIFASTINSTALL" MultiBuildValue="DefaultBuild:2"/>
     <ROW Property="Manufacturer" Value="ZeroTier, Inc."/>
-    <ROW Property="ProductCode" Value="1033:{80CEE5C9-4DF0-43F5-B232-484D6455978E} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{931ECFD4-EC5B-4247-AAFD-EE0B6272B4CA} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="ZeroTier One"/>
-    <ROW Property="ProductVersion" Value="1.4.6" Type="32"/>
+    <ROW Property="ProductVersion" Value="1.6.6" Type="32"/>
     <ROW Property="REBOOT" MultiBuildValue="DefaultBuild:ReallySuppress"/>
     <ROW Property="RUNAPPLICATION" Value="1" Type="4"/>
     <ROW Property="SecureCustomProperties" Value="OLDPRODUCTS;AI_NEWERPRODUCTFOUND;AI_SETUPEXEPATH;SETUPEXEDIR"/>
     <ROW Property="UpgradeCode" Value="{B0E2A5F3-88B6-4E77-B922-CB4739B4C4C8}"/>
     <ROW Property="WindowsType9X" MultiBuildValue="DefaultBuild:Windows 9x/ME#ExeBuild:Windows 9x/ME" ValueLocId="-"/>
     <ROW Property="WindowsType9XDisplay" MultiBuildValue="DefaultBuild:Windows 9x/ME#ExeBuild:Windows 9x/ME" ValueLocId="-"/>
-    <ROW Property="WindowsTypeNT" MultiBuildValue="DefaultBuild:Windows XP SP3 x86, Windows Server 2003 SP2 x86" ValueLocId="-"/>
     <ROW Property="WindowsTypeNT40" MultiBuildValue="DefaultBuild:Windows NT 4.0#ExeBuild:Windows NT 4.0" ValueLocId="-"/>
     <ROW Property="WindowsTypeNT40Display" MultiBuildValue="DefaultBuild:Windows NT 4.0#ExeBuild:Windows NT 4.0" ValueLocId="-"/>
     <ROW Property="WindowsTypeNT50" MultiBuildValue="DefaultBuild:Windows 2000#ExeBuild:Windows 2000" ValueLocId="-"/>
     <ROW Property="WindowsTypeNT50Display" MultiBuildValue="DefaultBuild:Windows 2000#ExeBuild:Windows 2000" ValueLocId="-"/>
-    <ROW Property="WindowsTypeNT5X" MultiBuildValue="DefaultBuild:Windows XP/2003 RTM, Windows XP/2003 SP1, Windows XP SP2 x86#ExeBuild:Windows XP/2003 RTM, Windows XP/2003 SP1, Windows XP SP2 x86" ValueLocId="-"/>
-    <ROW Property="WindowsTypeNT5XDisplay" MultiBuildValue="DefaultBuild:Windows XP/2003 RTM, Windows XP/2003 SP1, Windows XP SP2 x86#ExeBuild:Windows XP/2003 RTM, Windows XP/2003 SP1, Windows XP SP2 x86" ValueLocId="-"/>
-    <ROW Property="WindowsTypeNT64" MultiBuildValue="DefaultBuild:Windows XP SP2 x64, Windows Server 2003 SP2 x64" ValueLocId="-"/>
-    <ROW Property="WindowsTypeNT64Display" MultiBuildValue="DefaultBuild:Windows XP SP2 x64, Windows Server 2003 SP2 x64" ValueLocId="-"/>
-    <ROW Property="WindowsTypeNTDisplay" MultiBuildValue="DefaultBuild:Windows XP SP3 x86, Windows Server 2003 SP2 x86" ValueLocId="-"/>
+    <ROW Property="WindowsTypeNT5X" MultiBuildValue="DefaultBuild:Windows XP/2003#ExeBuild:Windows XP/2003" ValueLocId="-"/>
+    <ROW Property="WindowsTypeNT5XDisplay" MultiBuildValue="DefaultBuild:Windows XP/2003#ExeBuild:Windows XP/2003" ValueLocId="-"/>
+    <ROW Property="ZTHEADLESS" Value="No"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiDirsComponent">
     <ROW Directory="APPDIR" Directory_Parent="TARGETDIR" DefaultDir="APPDIR:." IsPseudoRoot="1" DirectoryOptions="2"/>
@@ -61,47 +58,61 @@
     <ROW Directory="regid.201001.com.zerotier_Dir" Directory_Parent="CommonAppDataFolder" DefaultDir="REGID2~1.ZER|regid.2010-01.com.zerotier"/>
     <ROW Directory="tapwindows_Dir" Directory_Parent="One_Dir" DefaultDir="TAP-WI~1|tap-windows"/>
     <ROW Directory="x64_Dir" Directory_Parent="tapwindows_Dir" DefaultDir="x64"/>
+    <ROW Directory="x64_pre_win10_Dir" Directory_Parent="x64_Dir" DefaultDir=".:X64_PR~1|x64_pre_win10"/>
     <ROW Directory="x86_Dir" Directory_Parent="tapwindows_Dir" DefaultDir="x86"/>
+    <ROW Directory="x86_pre_win10_Dir" Directory_Parent="x86_Dir" DefaultDir=".:X86_PR~1|x86_pre_win10"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiCompsComponent">
-    <ROW Component="AI_CustomARPName" ComponentId="{717E3B00-472C-4E07-BC45-AF83F5442898}" Directory_="APPDIR" Attributes="4" KeyPath="DisplayName" Options="1"/>
-    <ROW Component="AI_DisableModify" ComponentId="{020DCABD-5D56-49B9-AF48-F07F0B55E590}" Directory_="APPDIR" Attributes="4" KeyPath="NoModify" Options="1"/>
+    <ROW Component="AI_CustomARPName" ComponentId="{8D13FF2C-48CB-4B8A-899D-DDFFA5D72905}" Directory_="APPDIR" Attributes="4" KeyPath="DisplayName" Options="1"/>
+    <ROW Component="AI_DisableModify" ComponentId="{46FFA8C5-A0CB-4E05-9AD3-911D543DE8CA}" Directory_="APPDIR" Attributes="4" KeyPath="NoModify" Options="1"/>
     <ROW Component="AI_ExePath" ComponentId="{8E02B36C-7A19-429B-A93E-77A9261AC918}" Directory_="APPDIR" Attributes="4" KeyPath="AI_ExePath"/>
-    <ROW Component="Hardcodet.Wpf.TaskbarNotification.dll" ComponentId="{BEA825AF-2555-44AF-BE40-47FFC16DCBA6}" Directory_="APPDIR" Attributes="0" KeyPath="Hardcodet.Wpf.TaskbarNotification.dll"/>
-    <ROW Component="Newtonsoft.Json.dll" ComponentId="{0B2F229D-5425-42FB-9E28-F6D25AB2B4B5}" Directory_="APPDIR" Attributes="0" KeyPath="Newtonsoft.Json.dll"/>
+    <ROW Component="APPDIR" ComponentId="{4DD7907D-D7FE-4CD6-B1A0-B5C1625F5133}" Directory_="APPDIR" Attributes="0"/>
+    <ROW Component="Hardcodet.Wpf.TaskbarNotification.dll" ComponentId="{BEA825AF-2555-44AF-BE40-47FFC16DCBA6}" Directory_="APPDIR" Attributes="0" Condition="ZTHEADLESS = &quot;No&quot;" KeyPath="Hardcodet.Wpf.TaskbarNotification.dll"/>
+    <ROW Component="Newtonsoft.Json.dll" ComponentId="{0B2F229D-5425-42FB-9E28-F6D25AB2B4B5}" Directory_="APPDIR" Attributes="0" Condition="ZTHEADLESS = &quot;No&quot;" KeyPath="Newtonsoft.Json.dll"/>
     <ROW Component="ProductInformation" ComponentId="{DB078D04-EA8E-4A7C-9001-89BAD932F9D9}" Directory_="APPDIR" Attributes="4" KeyPath="Version"/>
-    <ROW Component="ZeroTierOne.exe" ComponentId="{18B51525-77BF-4FD9-9C18-A10D4CFC25BA}" Directory_="APPDIR" Attributes="0" KeyPath="ZeroTierOne.exe"/>
-    <ROW Component="copyutil.exe" ComponentId="{9B9E89FB-81CB-4500-978B-11E2FA81B5B4}" Directory_="APPDIR" Attributes="0" KeyPath="copyutil.exe"/>
+    <ROW Component="UI_fonts" ComponentId="{9F415308-A118-419F-AD8A-678DEA856B78}" Directory_="FontsFolder" Attributes="144" Condition="ZTHEADLESS = &quot;No&quot;" Type="0"/>
+    <ROW Component="ZeroTierOne.exe" ComponentId="{18B51525-77BF-4FD9-9C18-A10D4CFC25BA}" Directory_="APPDIR" Attributes="0" Condition="ZTHEADLESS = &quot;No&quot;" KeyPath="ZeroTierOne.exe"/>
+    <ROW Component="copyutil.exe" ComponentId="{9B9E89FB-81CB-4500-978B-11E2FA81B5B4}" Directory_="APPDIR" Attributes="0" Condition="ZTHEADLESS = &quot;No&quot;" KeyPath="copyutil.exe"/>
     <ROW Component="networks.d" ComponentId="{EF54D0DF-889F-41DC-AF5C-4E7F96AB1C8B}" Directory_="networks.d_Dir" Attributes="0"/>
     <ROW Component="regid.201001.com.zerotier" ComponentId="{A39C80FC-6A8F-454F-9052-10DAC3C3B139}" Directory_="regid.201001.com.zerotier_Dir" Attributes="0"/>
-    <ROW Component="segoeui.ttf" ComponentId="{9F415308-A118-419F-AD8A-678DEA856B78}" Directory_="FontsFolder" Attributes="144" Type="0"/>
     <ROW Component="zerotierone_x64.exe" ComponentId="{DFCFB72D-B055-4E60-B6D8-81FF585C2183}" Directory_="One_Dir" Attributes="256" Condition="VersionNT64" KeyPath="zerotierone_x64.exe"/>
     <ROW Component="zerotierone_x86.exe" ComponentId="{5D2F3366-4FE1-40A4-A81A-66C49FA11F1C}" Directory_="One_Dir" Attributes="0" Condition="NOT VersionNT64" KeyPath="zerotierone_x86.exe"/>
-    <ROW Component="zttap300.cat_1" ComponentId="{9F913E48-095B-4EA3-98DA-EDAB1593F3E3}" Directory_="x86_Dir" Attributes="0" Condition="NOT VersionNT64" KeyPath="zttap300.cat_3" Type="0"/>
-    <ROW Component="zttap300.inf" ComponentId="{D4839F5E-FB94-41CB-9B1B-177A97ADC904}" Directory_="x64_Dir" Attributes="256" Condition="VersionNT64" KeyPath="zttap300.inf"/>
+    <ROW Component="zttap300_x64_pre_win10" ComponentId="{B520DF93-641A-4450-8960-397880EF7432}" Directory_="x64_pre_win10_Dir" Attributes="256" Condition="VersionNT64 AND VersionNT &lt; 1000" KeyPath="zttap300.cat"/>
+    <ROW Component="zttap300_x64_win10" ComponentId="{D4839F5E-FB94-41CB-9B1B-177A97ADC904}" Directory_="x64_Dir" Attributes="256" Condition="VersionNT64 AND VersionNT &gt;= 1000" KeyPath="zttap300.inf"/>
+    <ROW Component="zttap300_x86_pre_win10" ComponentId="{144AC4E8-C08C-4132-A90E-234EEB3BC1DF}" Directory_="x86_pre_win10_Dir" Attributes="0" Condition="(NOT VersionNT64) And VersionNT &lt; 1000" KeyPath="zttap300.cat_1" Type="0"/>
+    <ROW Component="zttap300_x86_win10" ComponentId="{9F913E48-095B-4EA3-98DA-EDAB1593F3E3}" Directory_="x86_Dir" Attributes="0" Condition="(NOT VersionNT64) And VersionNT &gt;= 1000" KeyPath="zttap300.cat_3" Type="0"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiFeatsComponent">
-    <ROW Feature="ZeroTierOne" Title="MainFeature" Description="ZeroTier One" Display="1" Level="1" Directory_="APPDIR" Attributes="0" Components="AI_CustomARPName AI_DisableModify AI_ExePath Hardcodet.Wpf.TaskbarNotification.dll Newtonsoft.Json.dll ProductInformation ZeroTierOne.exe copyutil.exe networks.d regid.201001.com.zerotier segoeui.ttf zerotierone_x64.exe zerotierone_x86.exe zttap300.cat_1"/>
-    <ROW Feature="zttap300" Feature_Parent="ZeroTierOne" Title="zttap300" Description="ZeroTier Virtual Network Port Driver" Display="1" Level="1" Directory_="APPDIR" Attributes="16" Components="zttap300.inf"/>
+    <ROW Feature="MainFeature" Title="MainFeature" Description="Description" Display="1" Level="1" Directory_="APPDIR" Attributes="0"/>
+    <ROW Feature="ZeroTierOne" Title="MainFeature" Description="ZeroTier One" Display="1" Level="1" Directory_="APPDIR" Attributes="0"/>
     <ATTRIBUTE name="CurrentFeature" value="ZeroTierOne"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiFilesComponent">
-    <ROW File="Hardcodet.Wpf.TaskbarNotification.dll" Component_="Hardcodet.Wpf.TaskbarNotification.dll" FileName="HARDCO~1.DLL|Hardcodet.Wpf.TaskbarNotification.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\..\..\windows\WinUI\bin\Release\Hardcodet.Wpf.TaskbarNotification.dll" SelfReg="false" NextFile="segoeui.ttf" DigSign="true"/>
-    <ROW File="Newtonsoft.Json.dll" Component_="Newtonsoft.Json.dll" FileName="NEWTON~1.DLL|Newtonsoft.Json.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\..\..\windows\WinUI\bin\Release\Newtonsoft.Json.dll" SelfReg="false" NextFile="copyutil.exe" DigSign="true"/>
-    <ROW File="ZeroTierOne.exe" Component_="ZeroTierOne.exe" FileName="ZEROTI~1.EXE|ZeroTier One.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\..\..\windows\WinUI\bin\Release\ZeroTier One.exe" SelfReg="false" NextFile="zttap300.cat_2" DigSign="true"/>
-    <ROW File="copyutil.exe" Component_="copyutil.exe" FileName="copyutil.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\..\..\windows\copyutil\bin\Release\copyutil.exe" SelfReg="false" NextFile="Hardcodet.Wpf.TaskbarNotification.dll" DigSign="true"/>
-    <ROW File="segoeui.ttf" Component_="segoeui.ttf" FileName="segoeui.ttf" Attributes="0" SourcePath="..\..\..\windows\WinUI\Fonts\segoeui.ttf" SelfReg="false" NextFile="segoeuib.ttf"/>
-    <ROW File="segoeuib.ttf" Component_="segoeui.ttf" FileName="segoeuib.ttf" Attributes="0" SourcePath="..\..\..\windows\WinUI\Fonts\segoeuib.ttf" SelfReg="false" NextFile="segoeuii.ttf"/>
-    <ROW File="segoeuii.ttf" Component_="segoeui.ttf" FileName="segoeuii.ttf" Attributes="0" SourcePath="..\..\..\windows\WinUI\Fonts\segoeuii.ttf" SelfReg="false" NextFile="segoeuiz.ttf"/>
-    <ROW File="segoeuiz.ttf" Component_="segoeui.ttf" FileName="segoeuiz.ttf" Attributes="0" SourcePath="..\..\..\windows\WinUI\Fonts\segoeuiz.ttf" SelfReg="false"/>
-    <ROW File="zerotierone_x64.exe" Component_="zerotierone_x64.exe" FileName="ZEROTI~2.EXE|zerotier-one_x64.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\..\..\windows\Build\x64\Release\zerotier-one_x64.exe" SelfReg="false" NextFile="ZeroTierOne.exe" DigSign="true"/>
-    <ROW File="zerotierone_x86.exe" Component_="zerotierone_x86.exe" FileName="ZEROTI~1.EXE|zerotier-one_x86.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\..\..\windows\Build\Win32\Release\zerotier-one_x86.exe" SelfReg="false" NextFile="zerotierone_x64.exe" DigSign="true"/>
-    <ROW File="zttap300.cat_2" Component_="zttap300.inf" FileName="zttap300.cat" Attributes="0" SourcePath="..\..\bin\tap-windows-ndis6\x64\zttap300.cat" SelfReg="false" NextFile="zttap300.sys_2"/>
-    <ROW File="zttap300.cat_3" Component_="zttap300.cat_1" FileName="zttap300.cat" Attributes="0" SourcePath="..\..\bin\tap-windows-ndis6\x86\zttap300.cat" SelfReg="false" NextFile="zttap300.sys_3"/>
-    <ROW File="zttap300.inf" Component_="zttap300.inf" FileName="zttap300.inf" Attributes="0" SourcePath="..\..\bin\tap-windows-ndis6\x64\zttap300.inf" SelfReg="false" NextFile="zttap300.cat_3"/>
-    <ROW File="zttap300.inf_1" Component_="zttap300.cat_1" FileName="zttap300.inf" Attributes="0" SourcePath="..\..\bin\tap-windows-ndis6\x86\zttap300.inf" SelfReg="false" NextFile="Newtonsoft.Json.dll"/>
-    <ROW File="zttap300.sys_2" Component_="zttap300.inf" FileName="zttap300.sys" Attributes="0" SourcePath="..\..\bin\tap-windows-ndis6\x64\zttap300.sys" SelfReg="false" NextFile="zttap300.inf"/>
-    <ROW File="zttap300.sys_3" Component_="zttap300.cat_1" FileName="zttap300.sys" Attributes="0" SourcePath="..\..\bin\tap-windows-ndis6\x86\zttap300.sys" SelfReg="false" NextFile="zttap300.inf_1"/>
+    <ROW File="zerotierone_x86.exe" Component_="zerotierone_x86.exe" FileName="ZEROTI~1.EXE|zerotier-one_x86.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\..\..\windows\Build\Win32\Release\zerotier-one_x86.exe" SelfReg="false" DigSign="true"/>
+    <ROW File="zerotierone_x64.exe" Component_="zerotierone_x64.exe" FileName="ZEROTI~2.EXE|zerotier-one_x64.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\..\..\windows\Build\x64\Release\zerotier-one_x64.exe" SelfReg="false" DigSign="true"/>
+    <ROW File="ZeroTierOne.exe" Component_="ZeroTierOne.exe" FileName="ZEROTI~1.EXE|ZeroTier One.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\..\..\windows\WinUI\bin\Release\ZeroTier One.exe" SelfReg="false" DigSign="true"/>
+    <ROW File="zttap300.cat_2" Component_="zttap300_x64_win10" FileName="zttap300.cat" Attributes="0" SourcePath="..\..\bin\tap-windows-ndis6\x64\zttap300.cat" SelfReg="false"/>
+    <ROW File="zttap300.sys_2" Component_="zttap300_x64_win10" FileName="zttap300.sys" Attributes="0" SourcePath="..\..\bin\tap-windows-ndis6\x64\zttap300.sys" SelfReg="false"/>
+    <ROW File="zttap300.inf" Component_="zttap300_x64_win10" FileName="zttap300.inf" Attributes="0" SourcePath="..\..\bin\tap-windows-ndis6\x64\zttap300.inf" SelfReg="false"/>
+    <ROW File="zttap300.cat_3" Component_="zttap300_x86_win10" FileName="zttap300.cat" Attributes="0" SourcePath="..\..\bin\tap-windows-ndis6\x86\zttap300.cat" SelfReg="false"/>
+    <ROW File="zttap300.sys_3" Component_="zttap300_x86_win10" FileName="zttap300.sys" Attributes="0" SourcePath="..\..\bin\tap-windows-ndis6\x86\zttap300.sys" SelfReg="false"/>
+    <ROW File="zttap300.inf_1" Component_="zttap300_x86_win10" FileName="zttap300.inf" Attributes="0" SourcePath="..\..\bin\tap-windows-ndis6\x86\zttap300.inf" SelfReg="false"/>
+    <ROW File="Newtonsoft.Json.dll" Component_="Newtonsoft.Json.dll" FileName="NEWTON~1.DLL|Newtonsoft.Json.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\..\..\windows\WinUI\bin\Release\Newtonsoft.Json.dll" SelfReg="false" DigSign="true"/>
+    <ROW File="copyutil.exe" Component_="copyutil.exe" FileName="copyutil.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\..\..\windows\copyutil\bin\Release\copyutil.exe" SelfReg="false" DigSign="true"/>
+    <ROW File="Hardcodet.Wpf.TaskbarNotification.dll" Component_="Hardcodet.Wpf.TaskbarNotification.dll" FileName="HARDCO~1.DLL|Hardcodet.Wpf.TaskbarNotification.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\..\..\windows\WinUI\bin\Release\Hardcodet.Wpf.TaskbarNotification.dll" SelfReg="false" DigSign="true"/>
+    <ROW File="segoeui.ttf" Component_="UI_fonts" FileName="segoeui.ttf" Attributes="0" SourcePath="..\..\..\windows\WinUI\Fonts\segoeui.ttf" SelfReg="false"/>
+    <ROW File="segoeuib.ttf" Component_="UI_fonts" FileName="segoeuib.ttf" Attributes="0" SourcePath="..\..\..\windows\WinUI\Fonts\segoeuib.ttf" SelfReg="false"/>
+    <ROW File="segoeuii.ttf" Component_="UI_fonts" FileName="segoeuii.ttf" Attributes="0" SourcePath="..\..\..\windows\WinUI\Fonts\segoeuii.ttf" SelfReg="false"/>
+    <ROW File="segoeuiz.ttf" Component_="UI_fonts" FileName="segoeuiz.ttf" Attributes="0" SourcePath="..\..\..\windows\WinUI\Fonts\segoeuiz.ttf" SelfReg="false"/>
+    <ROW File="zttap300.cat" Component_="zttap300_x64_pre_win10" FileName="zttap300.cat" Attributes="0" SourcePath="..\..\bin\tap-windows-ndis6\x64.old\zttap300.cat" SelfReg="false"/>
+    <ROW File="zttap300.inf_2" Component_="zttap300_x64_pre_win10" FileName="zttap300.inf" Attributes="0" SourcePath="..\..\bin\tap-windows-ndis6\x64.old\zttap300.inf" SelfReg="false"/>
+    <ROW File="zttap300.sys" Component_="zttap300_x64_pre_win10" FileName="zttap300.sys" Attributes="0" SourcePath="..\..\bin\tap-windows-ndis6\x64.old\zttap300.sys" SelfReg="false"/>
+    <ROW File="zttap300.cat_1" Component_="zttap300_x86_pre_win10" FileName="zttap300.cat" Attributes="0" SourcePath="..\..\bin\tap-windows-ndis6\x86.old\zttap300.cat" SelfReg="false"/>
+    <ROW File="zttap300.inf_3" Component_="zttap300_x86_pre_win10" FileName="zttap300.inf" Attributes="0" SourcePath="..\..\bin\tap-windows-ndis6\x86.old\zttap300.inf" SelfReg="false"/>
+    <ROW File="zttap300.sys_1" Component_="zttap300_x86_pre_win10" FileName="zttap300.sys" Attributes="0" SourcePath="..\..\bin\tap-windows-ndis6\x86.old\zttap300.sys" SelfReg="false"/>
+  </COMPONENT>
+  <COMPONENT cid="caphyon.advinst.custcomp.AiComponentAliasComponent">
+    <ROW AliasRowId="AI_CustomARPName" AliasRowOperation="2" Condition="#DefaultBuild:ZTHEADLESS=&quot;No&quot;"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.AiPersistentDataComponent">
     <ROW PersistentRow="segoeui.ttf" Type="0" Condition="1"/>
@@ -116,32 +127,36 @@
     <ROW Action="AI_DetectSoftware" Sequence="101"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.BuildComponent">
-    <ROW BuildKey="DefaultBuild" BuildName="MSI" BuildOrder="1" BuildType="1" PackageFolder="..\..\.." PackageFileName="ZeroTier One" Languages="en" InstallationType="4" ExtUI="true" UseLargeSchema="true"/>
-    <ROW BuildKey="ExeBuild" BuildName="update" BuildOrder="2" BuildType="1" PackageFolder="..\..\.." PackageFileName="ZeroTier One" Languages="en" InstallationType="2" CabsLocation="1" CompressCabs="false" UseLzma="true" LzmaMethod="2" LzmaCompressionLevel="4" PackageType="1" FilesInsideExe="true" ExeIconPath="..\..\..\artwork\ZeroTierIcon.ico" ExtractionFolder="[AppDataFolder][|Manufacturer]\[|ProductName] [|ProductVersion]\install" MsiCmdLine="/qn" ExtUI="true" UseLargeSchema="true" ExeName="zt1_update_2_1,2_[|ProductVersion]_0"/>
+    <ROW BuildKey="DefaultBuild" BuildName="MSI" BuildOrder="1" BuildType="0" PackageFolder="..\..\.." PackageFileName="ZeroTier One" Languages="en" InstallationType="4" ExtUI="true" UseLargeSchema="true"/>
+    <ROW BuildKey="ExeBuild" BuildName="update" BuildOrder="2" BuildType="0" PackageFolder="..\..\.." PackageFileName="ZeroTier One" Languages="en" InstallationType="2" CabsLocation="1" CompressCabs="false" UseLzma="true" LzmaMethod="2" LzmaCompressionLevel="4" PackageType="1" FilesInsideExe="true" ExeIconPath="..\..\..\artwork\ZeroTierIcon.ico" ExtractionFolder="[AppDataFolder][|Manufacturer]\[|ProductName] [|ProductVersion]\install" MsiCmdLine="/qn" ExtUI="true" UseLargeSchema="true" ExeName="zt1_update_2_1,2_[|ProductVersion]_0"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.CacheComponent">
     <ATTRIBUTE name="Enable" value="false"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.ChainedPackageComponent">
-    <ROW ChainedPackage="ZeroTierOne_NDIS6_x64.msi" Order="1" Options="110" InstallCondition="(NOT Installed) AND VersionNT64" MaintenanceCondition="FALSE" RemoveCondition="REMOVE=&quot;ALL&quot; AND VersionNT64"/>
-    <ROW ChainedPackage="ZeroTierOne_NDIS6_x86.msi" Order="2" Options="110" InstallCondition="(NOT Installed) AND (NOT VersionNT64)" MaintenanceCondition="FALSE" RemoveCondition="REMOVE=&quot;ALL&quot; AND (NOT VersionNT64)"/>
+    <ROW ChainedPackage="ZeroTierOne_NDIS6_x64.msi" Order="1" Options="110" InstallCondition="VersionNT64 AND VersionNT &gt;= 1000" MaintenanceCondition="FALSE" RemoveCondition="REMOVE=&quot;ALL&quot; AND VersionNT64"/>
+    <ROW ChainedPackage="ZeroTierOne_NDIS6_x64.msi_1" Order="3" Options="110" InstallCondition="VersionNT64 AND VersionNT &lt; 1000" MaintenanceCondition="FALSE" RemoveCondition="REMOVE=&quot;ALL&quot; AND VersionNT64"/>
+    <ROW ChainedPackage="ZeroTierOne_NDIS6_x86.msi" Order="2" Options="110" InstallCondition="(NOT VersionNT64) And VersionNT &gt;= 1000" MaintenanceCondition="FALSE" RemoveCondition="REMOVE=&quot;ALL&quot; AND (NOT VersionNT64)"/>
+    <ROW ChainedPackage="ZeroTierOne_NDIS6_x86.msi_1" Order="4" Options="110" InstallCondition="(NOT VersionNT64) And VersionNT &lt; 1000" MaintenanceCondition="FALSE" RemoveCondition="REMOVE=&quot;ALL&quot; AND (NOT VersionNT64)"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.ChainedPackageFileComponent">
     <ROW FileId="ZeroTierOne_NDIS6_x64.msi" ChainedPackage="ZeroTierOne_NDIS6_x64.msi" Options="1" TargetPath="ZeroTierOne_NDIS6_x64.msi" Content="..\..\bin\tap-windows-ndis6\x64\ZeroTierOne_NDIS6_x64.msi"/>
+    <ROW FileId="ZeroTierOne_NDIS6_x64.msi_1" ChainedPackage="ZeroTierOne_NDIS6_x64.msi_1" Options="1" TargetPath="ZeroTierOne_NDIS6_x64.msi" Content="..\..\bin\tap-windows-ndis6\x64.old\ZeroTierOne_NDIS6_x64.msi"/>
     <ROW FileId="ZeroTierOne_NDIS6_x86.msi" ChainedPackage="ZeroTierOne_NDIS6_x86.msi" Options="1" TargetPath="ZeroTierOne_NDIS6_x86.msi" Content="..\..\bin\tap-windows-ndis6\x86\ZeroTierOne_NDIS6_x86.msi"/>
+    <ROW FileId="ZeroTierOne_NDIS6_x86.msi_1" ChainedPackage="ZeroTierOne_NDIS6_x86.msi_1" Options="1" TargetPath="ZeroTierOne_NDIS6_x86.msi" Content="..\..\bin\tap-windows-ndis6\x86.old\ZeroTierOne_NDIS6_x86.msi"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.DictionaryComponent">
     <ROW Path="&lt;AI_DICTS&gt;ui.ail"/>
     <ROW Path="&lt;AI_DICTS&gt;ui_en.ail"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.DigCertStoreComponent">
-    <ROW TimeStampUrl="http://timestamp.verisign.com/scripts/timstamp.dll" SignerDescription="ZeroTier One" DescriptionUrl="https://www.zerotier.com/" SignOptions="7" SignTool="0" UseSha256="1" Thumbprint="7f01c3746df9e6c8235ea2ae38d3cdfeb185728b Subject: ZeroTier, Inc.&#10;Issuer: DigiCert EV Code Signing CA (SHA2)&#10;Valid from 11/30/2016 to 12/05/2019"/>
+    <ROW TimeStampUrl="http://timestamp.digicert.com" SignerDescription="ZeroTier One" DescriptionUrl="https://www.zerotier.com/" SignOptions="7" SignTool="5" UseSha256="1" KVTenantId="5300bf3b-0eff-4a5f-a63f-821e22ed1730" KVAppId="5f94d77e-b795-41fd-afe7-ec913b03c1d3" KVName="ZeroTier-CS" KVCertName="ZT-EV-CS" KVCertVersion="442c2d6f77874ff99eed4b36f5cb401c"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.FirewallExceptionComponent">
-    <ROW FirewallException="ZeroTierOneControl" DisplayName="ZeroTier One TCP/9993" GroupName="ZeroTierOne" Enabled="1" Scope="*" Condition="1" Profiles="7" Port="9993" Protocol="TCP"/>
-    <ROW FirewallException="ZeroTierOneUDP9993" DisplayName="ZeroTier One UDP/9993" GroupName="ZeroTierOne" Enabled="1" Scope="*" Condition="1" Profiles="7" Port="9993" Protocol="UDP"/>
-    <ROW FirewallException="ZeroTierOnex64Binary" DisplayName="ZeroTier One x64 Binary" Enabled="1" Scope="*" Condition="((?zerotierone_x64.exe=2) AND ($zerotierone_x64.exe=3))" Profiles="0" AppPath="[#zerotierone_x64.exe]" Port="*" Protocol="ANY"/>
-    <ROW FirewallException="ZeroTierOnex86Binary" DisplayName="ZeroTier One x86 Binary" Enabled="1" Scope="*" Condition="((?zerotierone_x86.exe=2) AND ($zerotierone_x86.exe=3))" Profiles="0" AppPath="[#zerotierone_x86.exe]" Port="*" Protocol="ANY"/>
+    <ROW FirewallException="ZeroTierOneControl" Direction="1" DisplayName="ZeroTier One TCP/9993" GroupName="ZeroTierOne" Enabled="1" Scope="*" Condition="1" Profiles="7" Port="9993" Protocol="TCP"/>
+    <ROW FirewallException="ZeroTierOneUDP9993" Direction="1" DisplayName="ZeroTier One UDP/9993" GroupName="ZeroTierOne" Enabled="1" Scope="*" Condition="1" Profiles="7" Port="9993" Protocol="UDP"/>
+    <ROW FirewallException="ZeroTierOnex64Binary" Direction="1" DisplayName="ZeroTier One x64 Binary" Enabled="1" Scope="*" Condition="((?zerotierone_x64.exe=2) AND ($zerotierone_x64.exe=3))" Profiles="0" AppPath="[#zerotierone_x64.exe]" Port="*" Protocol="ANY"/>
+    <ROW FirewallException="ZeroTierOnex86Binary" Direction="1" DisplayName="ZeroTier One x86 Binary" Enabled="1" Scope="*" Condition="((?zerotierone_x86.exe=2) AND ($zerotierone_x86.exe=3))" Profiles="0" AppPath="[#zerotierone_x86.exe]" Port="*" Protocol="ANY"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.FragmentComponent">
     <ROW Fragment="CommonUI.aip" Path="&lt;AI_FRAGS&gt;CommonUI.aip"/>
@@ -159,6 +174,7 @@
   <COMPONENT cid="caphyon.advinst.msicomp.MsiActionTextComponent">
     <ROW Action="AI_AiBackupImmediate" Description="Preparing backup operation" DescriptionLocId="ActionText.Description.AI_AiBackupImmediate" Template="Path: [1]" TemplateLocId="ActionText.Template.AI_AiBackupImmediate"/>
     <ROW Action="AI_AiBackupRollback" Description="Rollback backup" DescriptionLocId="ActionText.Description.AI_AiBackupRollback" Template="Path: [1]" TemplateLocId="ActionText.Template.AI_AiBackupRollback"/>
+    <ROW Action="AI_AiBackupRollbackImpersonate" Description="Rollback backup" DescriptionLocId="ActionText.Description.AI_AiBackupRollback" Template="Path: [1]" TemplateLocId="ActionText.Template.AI_AiBackupRollback"/>
     <ROW Action="AI_AiRestoreDeferred" Description="Executing restore operation" DescriptionLocId="ActionText.Description.AI_AiRestoreDeferred" Template="Path: [1]" TemplateLocId="ActionText.Template.AI_AiRestoreDeferred"/>
     <ROW Action="AI_AiRestoreDeferredImpersonate" Description="Executing restore operation" DescriptionLocId="ActionText.Description.AI_AiRestoreDeferred" Template="Path: [1]" TemplateLocId="ActionText.Template.AI_AiRestoreDeferred"/>
     <ROW Action="AI_AiRestoreRollback" Description="Rollback restore" DescriptionLocId="ActionText.Description.AI_AiRestoreRollback" Template="Path: [1]" TemplateLocId="ActionText.Template.AI_AiRestoreRollback"/>
@@ -199,9 +215,6 @@
     <ROW Name="msichainer.exe" SourcePath="&lt;AI_CUSTACTS&gt;msichainer.exe"/>
     <ROW Name="xmlCfg.dll" SourcePath="&lt;AI_CUSTACTS&gt;xmlCfg.dll"/>
   </COMPONENT>
-  <COMPONENT cid="caphyon.advinst.msicomp.MsiConditionComponent">
-    <ROW Feature_="zttap300" Level="0" Condition="((VersionNT &lt; 500) OR (NOT VersionNT))"/>
-  </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiControlComponent">
     <ROW Dialog_="WelcomeDlg" Control="WelcomeDlgDialogInitializer" Type="DialogInitializer" X="0" Y="0" Width="0" Height="0" Attributes="0" Order="-1" TextLocId="-" HelpLocId="-" ExtDataLocId="-"/>
   </COMPONENT>
@@ -239,11 +252,13 @@
   <COMPONENT cid="caphyon.advinst.msicomp.MsiCreateFolderComponent">
     <ROW Directory_="networks.d_Dir" Component_="networks.d" ManualDelete="false"/>
     <ROW Directory_="regid.201001.com.zerotier_Dir" Component_="regid.201001.com.zerotier" ManualDelete="false"/>
+    <ROW Directory_="APPDIR" Component_="APPDIR" ManualDelete="true"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiCustActComponent">
     <ROW Action="AI_AiBackupCleanup" Type="1" Source="ResourceCleaner.dll" Target="OnAiBackupCleanup" WithoutSeq="true"/>
     <ROW Action="AI_AiBackupImmediate" Type="1" Source="ResourceCleaner.dll" Target="OnAiBackupImmediate"/>
     <ROW Action="AI_AiBackupRollback" Type="11521" Source="ResourceCleaner.dll" Target="OnAiBackupRollback"/>
+    <ROW Action="AI_AiBackupRollbackImpersonate" Type="9473" Source="ResourceCleaner.dll" Target="OnAiBackupRollbackImpersonate"/>
     <ROW Action="AI_AiRestoreDeferred" Type="11265" Source="ResourceCleaner.dll" Target="OnAiRestoreDeferred"/>
     <ROW Action="AI_AiRestoreDeferredImpersonate" Type="9217" Source="ResourceCleaner.dll" Target="OnAiRestoreDeferredImpersonate"/>
     <ROW Action="AI_AiRestoreRollback" Type="11521" Source="ResourceCleaner.dll" Target="OnAiRestoreRollback" WithoutSeq="true"/>
@@ -254,7 +269,7 @@
     <ROW Action="AI_DATA_SETTER_1" Type="51" Source="CustomActionData" Target="[~]"/>
     <ROW Action="AI_DATA_SETTER_2" Type="51" Source="CustomActionData" Target="[~]"/>
     <ROW Action="AI_DATA_SETTER_3" Type="51" Source="CustomActionData" Target="[~]"/>
-    <ROW Action="AI_DATA_SETTER_4" Type="51" Source="AI_ExtractFiles" Target="[AI_SETUPEXEPATH]"/>
+    <ROW Action="AI_DATA_SETTER_4" Type="51" Source="CustomActionData" Target="[AI_SETUPEXEPATH]"/>
     <ROW Action="AI_DATA_SETTER_6" Type="51" Source="CustomActionData" Target="ZeroTier One.exe"/>
     <ROW Action="AI_DOWNGRADE" Type="19" Target="4010"/>
     <ROW Action="AI_DeleteCadLzma" Type="51" Source="AI_DeleteLzma" Target="[AI_SETUPEXEPATH]"/>
@@ -265,9 +280,8 @@
     <ROW Action="AI_DoRemoveExternalUIStub" Type="3585" Source="ExternalUICleaner.dll" Target="DoRemoveExternalUIStub" WithoutSeq="true"/>
     <ROW Action="AI_DpiContentScale" Type="1" Source="aicustact.dll" Target="DpiContentScale"/>
     <ROW Action="AI_EnableDebugLog" Type="321" Source="aicustact.dll" Target="EnableDebugLog"/>
-    <ROW Action="AI_EstimateExtractFiles" Type="1" Source="Prereq.dll" Target="EstimateExtractFiles"/>
     <ROW Action="AI_ExtractCadLzma" Type="51" Source="AI_ExtractLzma" Target="[AI_SETUPEXEPATH]"/>
-    <ROW Action="AI_ExtractFiles" Type="1025" Source="Prereq.dll" Target="ExtractSourceFiles" AdditionalSeq="AI_DATA_SETTER_4"/>
+    <ROW Action="AI_ExtractFiles" Type="1" Source="Prereq.dll" Target="ExtractSourceFiles" AdditionalSeq="AI_DATA_SETTER_4"/>
     <ROW Action="AI_ExtractLzma" Type="1025" Source="lzmaextractor.dll" Target="ExtractLZMAFiles"/>
     <ROW Action="AI_FindExeLzma" Type="1" Source="lzmaextractor.dll" Target="FindEXE"/>
     <ROW Action="AI_FwConfig" Type="11265" Source="NetFirewall.dll" Target="OnFwConfig" WithoutSeq="true"/>
@@ -298,7 +312,7 @@
     <ROW Action="AI_XmlRollback" Type="11521" Source="xmlCfg.dll" Target="OnXmlRollback" WithoutSeq="true"/>
     <ROW Action="AI_XmlUninstall" Type="1" Source="xmlCfg.dll" Target="OnXmlUninstall" AdditionalSeq="AI_DATA_SETTER_1"/>
     <ROW Action="SET_APPDIR" Type="307" Source="APPDIR" Target="[ProgramFilesFolder][Manufacturer]\[ProductName]" MultiBuildTarget="DefaultBuild:[ProgramFilesFolder]ZeroTier\One"/>
-    <ROW Action="SET_SHORTCUTDIR" Type="307" Source="SHORTCUTDIR" Target="[ProgramMenuFolder][ProductName]" MultiBuildTarget="DefaultBuild:[ProgramMenuFolder]"/>
+    <ROW Action="SET_SHORTCUTDIR" Type="307" Source="SHORTCUTDIR" Target="[ProgramMenuFolder][ProductName]"/>
     <ROW Action="SET_TARGETDIR_TO_APPDIR" Type="51" Source="TARGETDIR" Target="[APPDIR]"/>
     <ROW Action="TapDeviceRemove32" Type="3154" Source="zerotierone_x86.exe" Target="-D"/>
     <ROW Action="TapDeviceRemove64" Type="3154" Source="zerotierone_x64.exe" Target="-D"/>
@@ -309,6 +323,26 @@
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiEnvComponent">
     <ROW Environment="Path" Name="=-*Path" Value="[~];[APPDIR]" Component_="ZeroTierOne.exe"/>
+  </COMPONENT>
+  <COMPONENT cid="caphyon.advinst.msicomp.MsiFeatCompsComponent">
+    <ROW Feature_="ZeroTierOne" Component_="Hardcodet.Wpf.TaskbarNotification.dll"/>
+    <ROW Feature_="ZeroTierOne" Component_="Newtonsoft.Json.dll"/>
+    <ROW Feature_="ZeroTierOne" Component_="ProductInformation"/>
+    <ROW Feature_="ZeroTierOne" Component_="ZeroTierOne.exe"/>
+    <ROW Feature_="ZeroTierOne" Component_="copyutil.exe"/>
+    <ROW Feature_="ZeroTierOne" Component_="networks.d"/>
+    <ROW Feature_="ZeroTierOne" Component_="regid.201001.com.zerotier"/>
+    <ROW Feature_="ZeroTierOne" Component_="UI_fonts"/>
+    <ROW Feature_="ZeroTierOne" Component_="zerotierone_x64.exe"/>
+    <ROW Feature_="ZeroTierOne" Component_="zerotierone_x86.exe"/>
+    <ROW Feature_="ZeroTierOne" Component_="zttap300_x86_win10"/>
+    <ROW Feature_="MainFeature" Component_="APPDIR"/>
+    <ROW Feature_="ZeroTierOne" Component_="zttap300_x64_win10"/>
+    <ROW Feature_="ZeroTierOne" Component_="zttap300_x64_pre_win10"/>
+    <ROW Feature_="ZeroTierOne" Component_="zttap300_x86_pre_win10"/>
+    <ROW Feature_="ZeroTierOne" Component_="AI_CustomARPName"/>
+    <ROW Feature_="ZeroTierOne" Component_="AI_DisableModify"/>
+    <ROW Feature_="ZeroTierOne" Component_="AI_ExePath"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiFontsComponent">
     <ROW File_="segoeui.ttf"/>
@@ -322,16 +356,15 @@
   <COMPONENT cid="caphyon.advinst.msicomp.MsiInstExSeqComponent">
     <ROW Action="AI_DOWNGRADE" Condition="AI_NEWERPRODUCTFOUND AND (UILevel &lt;&gt; 5)" Sequence="210"/>
     <ROW Action="AI_RESTORE_LOCATION" Condition="APPDIR=&quot;&quot;" Sequence="749"/>
-    <ROW Action="AI_STORE_LOCATION" Condition="(Not Installed) OR REINSTALL" Sequence="1503"/>
-    <ROW Action="AI_PREPARE_UPGRADE" Condition="AI_UPGRADE=&quot;No&quot; AND (Not Installed)" Sequence="1399"/>
+    <ROW Action="AI_STORE_LOCATION" Condition="(Not Installed) OR REINSTALL" Sequence="1504"/>
+    <ROW Action="AI_PREPARE_UPGRADE" Condition="AI_UPGRADE=&quot;No&quot; AND (Not Installed)" Sequence="1397"/>
     <ROW Action="AI_ResolveKnownFolders" Sequence="52"/>
     <ROW Action="AI_XmlInstall" Condition="(REMOVE &lt;&gt; &quot;ALL&quot;)" Sequence="5103"/>
     <ROW Action="AI_DATA_SETTER" Condition="(REMOVE &lt;&gt; &quot;ALL&quot;)" Sequence="5102"/>
     <ROW Action="AI_XmlUninstall" Condition="(REMOVE)" Sequence="3102"/>
     <ROW Action="AI_DATA_SETTER_1" Condition="(REMOVE)" Sequence="3101"/>
     <ROW Action="InstallFinalize" Sequence="6600" SeqType="0" MsiKey="InstallFinalize"/>
-    <ROW Action="AI_RemoveExternalUIStub" Condition="(REMOVE=&quot;ALL&quot;) AND ((VersionNT &gt; 500) OR((VersionNT = 500) AND (ServicePackLevel &gt;= 4)))" Sequence="1502"/>
-    <ROW Action="AI_GetArpIconPath" Sequence="1402"/>
+    <ROW Action="AI_RemoveExternalUIStub" Condition="(REMOVE=&quot;ALL&quot;) AND ((VersionNT &gt; 500) OR((VersionNT = 500) AND (ServicePackLevel &gt;= 4)))" Sequence="1503"/>
     <ROW Action="TapDeviceRemove32" Condition="( Installed AND ( REMOVE = &quot;ALL&quot; OR AI_INSTALL_MODE = &quot;Remove&quot; ) AND NOT UPGRADINGPRODUCTCODE ) AND ( NOT VersionNT64 )" Sequence="1603"/>
     <ROW Action="TapDeviceRemove64" Condition="( Installed AND ( REMOVE = &quot;ALL&quot; OR AI_INSTALL_MODE = &quot;Remove&quot; ) AND NOT UPGRADINGPRODUCTCODE ) AND ( VersionNT64 )" Sequence="1604"/>
     <ROW Action="AI_FwInstall" Condition="(VersionNT &gt;= 501) AND (REMOVE &lt;&gt; &quot;ALL&quot;)" Sequence="5802"/>
@@ -349,18 +382,19 @@
     <ROW Action="AI_ExtractLzma" Condition="SETUPEXEDIR=&quot;&quot; AND Installed AND (REMOVE&lt;&gt;&quot;ALL&quot;) AND (AI_INSTALL_MODE&lt;&gt;&quot;Remove&quot;) AND (NOT PATCH)" Sequence="1549" Builds="ExeBuild"/>
     <ROW Action="AI_DeleteRLzma" Condition="SETUPEXEDIR=&quot;&quot; AND Installed AND (REMOVE&lt;&gt;&quot;ALL&quot;) AND (AI_INSTALL_MODE&lt;&gt;&quot;Remove&quot;) AND (NOT PATCH)" Sequence="1548" Builds="ExeBuild"/>
     <ROW Action="AI_DeleteLzma" Condition="SETUPEXEDIR=&quot;&quot; AND Installed AND (REMOVE&lt;&gt;&quot;ALL&quot;) AND (AI_INSTALL_MODE&lt;&gt;&quot;Remove&quot;) AND (NOT PATCH)" Sequence="6594" Builds="ExeBuild"/>
-    <ROW Action="AI_ExtractFiles" Sequence="3998" Builds="ExeBuild"/>
-    <ROW Action="AI_DATA_SETTER_4" Sequence="3997"/>
-    <ROW Action="AI_EstimateExtractFiles" Sequence="3999" Builds="ExeBuild"/>
     <ROW Action="TerminateUI" Sequence="1602"/>
     <ROW Action="AI_DATA_SETTER_6" Sequence="1601"/>
-    <ROW Action="AI_AiBackupImmediate" Sequence="1401"/>
-    <ROW Action="AI_AiBackupRollback" Sequence="1501"/>
+    <ROW Action="AI_AiBackupImmediate" Sequence="1402"/>
+    <ROW Action="AI_AiBackupRollback" Sequence="1502"/>
     <ROW Action="AI_AiRestoreDeferred" Sequence="6595"/>
     <ROW Action="AI_EnableDebugLog" Sequence="51"/>
     <ROW Action="AI_AiRestoreDeferredImpersonate" Sequence="6596"/>
     <ROW Action="AI_AppSearchEx" Sequence="101"/>
     <ROW Action="AI_PrepareChainers" Condition="VersionMsi &gt;= &quot;4.05&quot;" Sequence="5851"/>
+    <ROW Action="AI_ExtractFiles" Sequence="1399" Builds="ExeBuild"/>
+    <ROW Action="AI_DATA_SETTER_4" Sequence="1398"/>
+    <ROW Action="AI_GetArpIconPath" Sequence="1401"/>
+    <ROW Action="AI_AiBackupRollbackImpersonate" Sequence="1501"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiInstallUISequenceComponent">
     <ROW Action="AI_RESTORE_LOCATION" Condition="APPDIR=&quot;&quot;" Sequence="749"/>
@@ -374,11 +408,9 @@
     <ROW Action="AI_AppSearchEx" Sequence="101"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiLaunchConditionsComponent">
-    <ROW Condition="( Version9X OR ( NOT VersionNT64 ) OR ( VersionNT64 AND ((VersionNT64 &lt;&gt; 502) OR (ServicePackLevel &lt;&gt; 2) OR (MsiNTProductType &lt;&gt; 1)) AND ((VersionNT64 &lt;&gt; 502) OR (ServicePackLevel &lt;&gt; 2) OR (MsiNTProductType = 1)) ) )" Description="[ProductName] cannot be installed on the following Windows versions: [WindowsTypeNT64Display]." DescriptionLocId="AI.LaunchCondition.NoSpecificNT64" IsPredefined="true" Builds="DefaultBuild"/>
-    <ROW Condition="( Version9X OR VersionNT64 OR ( VersionNT AND ((VersionNT &lt;&gt; 501) OR (ServicePackLevel &lt;&gt; 3)) AND ((VersionNT &lt;&gt; 502) OR (ServicePackLevel &lt;&gt; 2)) ) )" Description="[ProductName] cannot be installed on the following Windows versions: [WindowsTypeNTDisplay]." DescriptionLocId="AI.LaunchCondition.NoSpecificNT" IsPredefined="true" Builds="DefaultBuild"/>
+    <ROW Condition="((VersionNT &lt;&gt; 501) AND (VersionNT &lt;&gt; 502))" Description="[ProductName] cannot be installed on [WindowsTypeNT5XDisplay]." DescriptionLocId="AI.LaunchCondition.NoNT5X" IsPredefined="true" Builds="DefaultBuild;ExeBuild"/>
     <ROW Condition="(VersionNT &lt;&gt; 400)" Description="[ProductName] cannot be installed on [WindowsTypeNT40Display]." DescriptionLocId="AI.LaunchCondition.NoNT40" IsPredefined="true" Builds="DefaultBuild;ExeBuild"/>
     <ROW Condition="(VersionNT &lt;&gt; 500)" Description="[ProductName] cannot be installed on [WindowsTypeNT50Display]." DescriptionLocId="AI.LaunchCondition.NoNT50" IsPredefined="true" Builds="DefaultBuild;ExeBuild"/>
-    <ROW Condition="(VersionNT64 OR ((VersionNT &lt;&gt; 501) OR (ServicePackLevel = 3))) AND ((VersionNT &lt;&gt; 502) OR (ServicePackLevel = 2))" Description="[ProductName] cannot be installed on [WindowsTypeNT5XDisplay]." DescriptionLocId="AI.LaunchCondition.NoNT5X" IsPredefined="true" Builds="DefaultBuild;ExeBuild"/>
     <ROW Condition="AI_DETECTED_DOTNET_VERSION &gt;= AI_REQUIRED_DOTNET_VERSION" Description="[ProductName] cannot be installed on systems with .NET Framework version lower than [AI_REQUIRED_DOTNET_DISPLAY]." DescriptionLocId="AI.LaunchCondition.DotNET" IsPredefined="true" Builds="DefaultBuild"/>
     <ROW Condition="Privileged" Description="[ProductName] requires administrative privileges to install." DescriptionLocId="AI.LaunchCondition.Privileged" IsPredefined="true" Builds="DefaultBuild"/>
     <ROW Condition="SETUPEXEDIR OR (REMOVE=&quot;ALL&quot;)" Description="This package can only be run from a bootstrapper." DescriptionLocId="AI.LaunchCondition.RequireBootstrapper" IsPredefined="true" Builds="ExeBuild"/>
@@ -395,21 +427,23 @@
     <ROW Registry="DisplayIcon" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="DisplayIcon" Value="[ARP_ICON_PATH]" Component_="AI_CustomARPName"/>
     <ROW Registry="DisplayName" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="DisplayName" Value="[AI_PRODUCTNAME_ARP]" Component_="AI_CustomARPName"/>
     <ROW Registry="DisplayVersion" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="DisplayVersion" Value="[ProductVersion]" Component_="AI_CustomARPName"/>
+    <ROW Registry="EstimatedSize" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="EstimatedSize" Value="#[AI_ARP_SIZE]" Component_="AI_CustomARPName" VirtualValue="#"/>
     <ROW Registry="HelpLink" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="HelpLink" Value="[ARPHELPLINK]" Component_="AI_CustomARPName"/>
     <ROW Registry="HelpTelephone" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="HelpTelephone" Value="[ARPHELPTELEPHONE]" Component_="AI_CustomARPName"/>
     <ROW Registry="InstallLocation" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="InstallLocation" Value="[APPDIR]" Component_="AI_CustomARPName"/>
-    <ROW Registry="ModifyPath" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="ModifyPath" Value="[AI_UNINSTALLER] /I [ProductCode]" Component_="AI_CustomARPName"/>
-    <ROW Registry="NoModify" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="NoModify" Value="#1" Component_="AI_DisableModify"/>
-    <ROW Registry="NoRepair" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="NoRepair" Value="#1" Component_="AI_CustomARPName"/>
+    <ROW Registry="ModifyPath" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="ModifyPath" Value="[AI_UNINSTALLER] /i [ProductCode] AI_UNINSTALLER_CTP=1" Component_="AI_CustomARPName"/>
+    <ROW Registry="NoModify" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="NoModify" Value="#1" Component_="AI_DisableModify" VirtualValue="#"/>
+    <ROW Registry="NoRepair" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="NoRepair" Value="#1" Component_="AI_CustomARPName" VirtualValue="#"/>
     <ROW Registry="Path" Root="-1" Key="Software\[Manufacturer]\[ProductName]" Name="Path" Value="[APPDIR]" Component_="ProductInformation"/>
     <ROW Registry="Publisher" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="Publisher" Value="[Manufacturer]" Component_="AI_CustomARPName"/>
+    <ROW Registry="Readme" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="Readme" Value="[ARPREADME]" Component_="AI_CustomARPName"/>
     <ROW Registry="URLInfoAbout" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="URLInfoAbout" Value="[ARPURLINFOABOUT]" Component_="AI_CustomARPName"/>
     <ROW Registry="URLUpdateInfo" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="URLUpdateInfo" Value="[ARPURLUPDATEINFO]" Component_="AI_CustomARPName"/>
     <ROW Registry="UninstallPath" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="UninstallPath" Value="[AI_UNINSTALLER] /x [ProductCode] AI_UNINSTALLER_CTP=1" Component_="AI_CustomARPName"/>
     <ROW Registry="UninstallString" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="UninstallString" Value="[AI_UNINSTALLER] /x [ProductCode] AI_UNINSTALLER_CTP=1" Component_="AI_CustomARPName"/>
     <ROW Registry="Version" Root="-1" Key="Software\[Manufacturer]\[ProductName]" Name="Version" Value="[ProductVersion]" Component_="ProductInformation"/>
-    <ROW Registry="VersionMajor" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="VersionMajor" Value="#0" Component_="AI_CustomARPName"/>
-    <ROW Registry="VersionMinor" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="VersionMinor" Value="#7" Component_="AI_CustomARPName"/>
+    <ROW Registry="VersionMajor" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="VersionMajor" Value="#1" Component_="AI_CustomARPName" VirtualValue="#"/>
+    <ROW Registry="VersionMinor" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="VersionMinor" Value="#6" Component_="AI_CustomARPName" VirtualValue="#"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiServCtrlComponent">
     <ROW ServiceControl="zerotierone_x64.exe" Name="ZeroTierOneService" Event="163" Wait="1" Component_="zerotierone_x64.exe"/>
@@ -454,28 +488,28 @@
     <ROW XmlAttribute="xsischemaLocation" XmlElement="swidsoftware_identification_tag" Name="xsi:schemaLocation" Flags="14" Order="3" Value="http://standards.iso.org/iso/19770/-2/2008/schema.xsd software_identification_tag.xsd"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.XmlElementComponent">
-    <ROW XmlElement="swidbuild" ParentElement="swidnumeric" Name="swid:build" Condition="1" Order="2" Flags="14" Text="6"/>
-    <ROW XmlElement="swidentitlement_required_indicator" ParentElement="swidsoftware_identification_tag" Name="swid:entitlement_required_indicator" Condition="1" Order="0" Flags="14" Text="false"/>
-    <ROW XmlElement="swidmajor" ParentElement="swidnumeric" Name="swid:major" Condition="1" Order="0" Flags="14" Text="1"/>
-    <ROW XmlElement="swidminor" ParentElement="swidnumeric" Name="swid:minor" Condition="1" Order="1" Flags="14" Text="4"/>
-    <ROW XmlElement="swidname" ParentElement="swidproduct_version" Name="swid:name" Condition="1" Order="0" Flags="14" Text="[ProductVersion]"/>
-    <ROW XmlElement="swidname_1" ParentElement="swidsoftware_creator" Name="swid:name" Condition="1" Order="0" Flags="14" Text="ZeroTier, Inc."/>
-    <ROW XmlElement="swidname_2" ParentElement="swidsoftware_licensor" Name="swid:name" Condition="1" Order="0" Flags="14" Text="ZeroTier, Inc."/>
-    <ROW XmlElement="swidname_3" ParentElement="swidtag_creator" Name="swid:name" Condition="1" Order="0" Flags="14" Text="ZeroTier, Inc."/>
-    <ROW XmlElement="swidnumeric" ParentElement="swidproduct_version" Name="swid:numeric" Condition="1" Order="1" Flags="14"/>
-    <ROW XmlElement="swidproduct_title" ParentElement="swidsoftware_identification_tag" Name="swid:product_title" Condition="1" Order="1" Flags="14" Text="[ProductName]"/>
-    <ROW XmlElement="swidproduct_version" ParentElement="swidsoftware_identification_tag" Name="swid:product_version" Condition="1" Order="2" Flags="14"/>
-    <ROW XmlElement="swidregid" ParentElement="swidsoftware_creator" Name="swid:regid" Condition="1" Order="1" Flags="14" Text="regid.2010-01.com.zerotier"/>
-    <ROW XmlElement="swidregid_1" ParentElement="swidsoftware_licensor" Name="swid:regid" Condition="1" Order="1" Flags="14" Text="regid.2010-01.com.zerotier"/>
-    <ROW XmlElement="swidregid_2" ParentElement="swidtag_creator" Name="swid:regid" Condition="1" Order="1" Flags="14" Text="regid.2010-01.com.zerotier"/>
-    <ROW XmlElement="swidreview" ParentElement="swidnumeric" Name="swid:review" Condition="1" Order="3" Flags="14" Text="0"/>
-    <ROW XmlElement="swidsoftware_creator" ParentElement="swidsoftware_identification_tag" Name="swid:software_creator" Condition="1" Order="3" Flags="14"/>
-    <ROW XmlElement="swidsoftware_id" ParentElement="swidsoftware_identification_tag" Name="swid:software_id" Condition="1" Order="5" Flags="14"/>
-    <ROW XmlElement="swidsoftware_identification_tag" Name="swid:software_identification_tag" Condition="1" Order="0" Flags="14"/>
-    <ROW XmlElement="swidsoftware_licensor" ParentElement="swidsoftware_identification_tag" Name="swid:software_licensor" Condition="1" Order="4" Flags="14"/>
-    <ROW XmlElement="swidtag_creator" ParentElement="swidsoftware_identification_tag" Name="swid:tag_creator" Condition="1" Order="6" Flags="14"/>
-    <ROW XmlElement="swidtag_creator_regid" ParentElement="swidsoftware_id" Name="swid:tag_creator_regid" Condition="1" Order="1" Flags="14" Text="regid.2010-01.com.zerotier"/>
-    <ROW XmlElement="swidunique_id" ParentElement="swidsoftware_id" Name="swid:unique_id" Condition="1" Order="0" Flags="14" Text="ZeroTierOne"/>
+    <ROW XmlElement="swidbuild" ParentElement="swidnumeric" Name="swid:build" Condition="1" Order="2" Flags="14" Text="6" UpdateIndexInParent="0"/>
+    <ROW XmlElement="swidentitlement_required_indicator" ParentElement="swidsoftware_identification_tag" Name="swid:entitlement_required_indicator" Condition="1" Order="0" Flags="14" Text="false" UpdateIndexInParent="0"/>
+    <ROW XmlElement="swidmajor" ParentElement="swidnumeric" Name="swid:major" Condition="1" Order="0" Flags="14" Text="1" UpdateIndexInParent="0"/>
+    <ROW XmlElement="swidminor" ParentElement="swidnumeric" Name="swid:minor" Condition="1" Order="1" Flags="14" Text="6" UpdateIndexInParent="0"/>
+    <ROW XmlElement="swidname" ParentElement="swidproduct_version" Name="swid:name" Condition="1" Order="0" Flags="14" Text="[ProductVersion]" UpdateIndexInParent="0"/>
+    <ROW XmlElement="swidname_1" ParentElement="swidsoftware_creator" Name="swid:name" Condition="1" Order="0" Flags="14" Text="ZeroTier, Inc." UpdateIndexInParent="0"/>
+    <ROW XmlElement="swidname_2" ParentElement="swidsoftware_licensor" Name="swid:name" Condition="1" Order="0" Flags="14" Text="ZeroTier, Inc." UpdateIndexInParent="0"/>
+    <ROW XmlElement="swidname_3" ParentElement="swidtag_creator" Name="swid:name" Condition="1" Order="0" Flags="14" Text="ZeroTier, Inc." UpdateIndexInParent="0"/>
+    <ROW XmlElement="swidnumeric" ParentElement="swidproduct_version" Name="swid:numeric" Condition="1" Order="1" Flags="14" UpdateIndexInParent="0"/>
+    <ROW XmlElement="swidproduct_title" ParentElement="swidsoftware_identification_tag" Name="swid:product_title" Condition="1" Order="1" Flags="14" Text="[ProductName]" UpdateIndexInParent="0"/>
+    <ROW XmlElement="swidproduct_version" ParentElement="swidsoftware_identification_tag" Name="swid:product_version" Condition="1" Order="2" Flags="14" UpdateIndexInParent="0"/>
+    <ROW XmlElement="swidregid" ParentElement="swidsoftware_creator" Name="swid:regid" Condition="1" Order="1" Flags="14" Text="regid.2010-01.com.zerotier" UpdateIndexInParent="0"/>
+    <ROW XmlElement="swidregid_1" ParentElement="swidsoftware_licensor" Name="swid:regid" Condition="1" Order="1" Flags="14" Text="regid.2010-01.com.zerotier" UpdateIndexInParent="0"/>
+    <ROW XmlElement="swidregid_2" ParentElement="swidtag_creator" Name="swid:regid" Condition="1" Order="1" Flags="14" Text="regid.2010-01.com.zerotier" UpdateIndexInParent="0"/>
+    <ROW XmlElement="swidreview" ParentElement="swidnumeric" Name="swid:review" Condition="1" Order="3" Flags="14" Text="0" UpdateIndexInParent="0"/>
+    <ROW XmlElement="swidsoftware_creator" ParentElement="swidsoftware_identification_tag" Name="swid:software_creator" Condition="1" Order="3" Flags="14" UpdateIndexInParent="0"/>
+    <ROW XmlElement="swidsoftware_id" ParentElement="swidsoftware_identification_tag" Name="swid:software_id" Condition="1" Order="5" Flags="14" UpdateIndexInParent="0"/>
+    <ROW XmlElement="swidsoftware_identification_tag" Name="swid:software_identification_tag" Condition="1" Order="0" Flags="14" UpdateIndexInParent="0"/>
+    <ROW XmlElement="swidsoftware_licensor" ParentElement="swidsoftware_identification_tag" Name="swid:software_licensor" Condition="1" Order="4" Flags="14" UpdateIndexInParent="0"/>
+    <ROW XmlElement="swidtag_creator" ParentElement="swidsoftware_identification_tag" Name="swid:tag_creator" Condition="1" Order="6" Flags="14" UpdateIndexInParent="0"/>
+    <ROW XmlElement="swidtag_creator_regid" ParentElement="swidsoftware_id" Name="swid:tag_creator_regid" Condition="1" Order="1" Flags="14" Text="regid.2010-01.com.zerotier" UpdateIndexInParent="0"/>
+    <ROW XmlElement="swidunique_id" ParentElement="swidsoftware_id" Name="swid:unique_id" Condition="1" Order="0" Flags="14" Text="ZeroTierOne" UpdateIndexInParent="0"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.XmlFileComponent">
     <ROW XmlFile="regid.199509.com.example_ProductName.swidtag" FileName="REGID2~1.SWI|regid.2010-01.com.zerotier_ZeroTierOne.swidtag" DirProperty="APPDIR" Component="ProductInformation" RootElement="swidsoftware_identification_tag" Flags="25" Version="1.0" Encoding="UTF-8" IndentUnits="2"/>

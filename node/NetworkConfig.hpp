@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2023-01-01
+ * Change Date: 2025-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -26,6 +26,7 @@
 
 #include "Constants.hpp"
 #include "Buffer.hpp"
+#include "DNS.hpp"
 #include "InetAddress.hpp"
 #include "MulticastGroup.hpp"
 #include "Address.hpp"
@@ -175,6 +176,8 @@ namespace ZeroTier {
 #define ZT_NETWORKCONFIG_DICT_KEY_TAGS "TAG"
 // tags (binary blobs)
 #define ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATES_OF_OWNERSHIP "COO"
+// dns (binary blobs)
+#define ZT_NETWORKCONFIG_DICT_KEY_DNS "DNS"
 
 // Legacy fields -- these are obsoleted but are included when older clients query
 
@@ -226,9 +229,18 @@ public:
 		capabilityCount(0),
 		tagCount(0),
 		certificateOfOwnershipCount(0),
-		type(ZT_NETWORK_TYPE_PRIVATE)
+		capabilities(),
+		tags(),
+		certificatesOfOwnership(),
+		type(ZT_NETWORK_TYPE_PRIVATE),
+		dnsCount(0)
 	{
 		name[0] = 0;
+		memset(specialists, 0, sizeof(uint64_t)*ZT_MAX_NETWORK_SPECIALISTS);
+		memset(routes, 0, sizeof(ZT_VirtualNetworkRoute)*ZT_MAX_NETWORK_ROUTES);
+		memset(staticIps, 0, sizeof(InetAddress)*ZT_MAX_ZT_ASSIGNED_ADDRESSES);
+		memset(rules, 0, sizeof(ZT_VirtualNetworkRule)*ZT_MAX_NETWORK_RULES);
+		memset(&dns, 0, sizeof(ZT_VirtualNetworkDNS));
 	}
 
 	/**
@@ -582,6 +594,16 @@ public:
 	 * Certificate of membership (for private networks)
 	 */
 	CertificateOfMembership com;
+
+	/**
+	 * Number of ZT-pushed DNS configurations
+	 */
+	unsigned int dnsCount;
+
+	/**
+	 * ZT pushed DNS configuration
+	 */
+	ZT_VirtualNetworkDNS dns;
 };
 
 } // namespace ZeroTier

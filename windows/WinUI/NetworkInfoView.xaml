@@ -29,6 +29,7 @@
                 <RowDefinition Height="auto"/>
                 <RowDefinition Height="auto"/>
                 <RowDefinition Height="auto"/>
+                <RowDefinition Height="auto"/>
             </Grid.RowDefinitions>
 
             <Grid Grid.Column="0" Grid.Row="0" Grid.ColumnSpan="3">
@@ -54,8 +55,9 @@
             <TextBlock TextWrapping="Wrap" Text="Allow Global IP" HorizontalAlignment="Right" Grid.Column="0" Grid.Row="10" Foreground="#FF000000"/>
             <TextBlock TextWrapping="Wrap" Text="Allow Managed IP" HorizontalAlignment="Right" Grid.Column="0" Grid.Row="11" Foreground="#FF000000"/>
             <TextBlock TextWrapping="Wrap" Text="Allow Default Route" HorizontalAlignment="Right" Grid.Column="0" Grid.Row="12" Foreground="#FF000000"/>
-            
-            <Rectangle Grid.Column="2" Grid.Row="2" Grid.RowSpan="11" Fill="#FFEEEEEE"/>
+            <TextBlock TextWrapping="Wrap" Text="Allow DNS" HorizontalAlignment="Right" Grid.Column="0" Grid.Row="13" Foreground="#FF000000"/>
+
+            <Rectangle Grid.Column="2" Grid.Row="2" Grid.RowSpan="12" Fill="#FFEEEEEE"/>
 
             <TextBlock x:Name="networkStatus" FontFamily="Lucida Console" TextWrapping="Wrap" HorizontalAlignment="Right" Text="OK" TextAlignment="Right"  Grid.Column="2" Grid.Row="2" Foreground="#FF000000"/>
             <TextBlock x:Name="networkType" FontFamily="Lucida Console" TextWrapping="Wrap" Text="PUBLIC" HorizontalAlignment="Right"  Grid.Column="2" Grid.Row="3" Foreground="#FF000000"/>
@@ -68,10 +70,11 @@
             <CheckBox x:Name="allowGlobal" HorizontalAlignment="Right" Grid.Column="2" Grid.Row="10" />
             <CheckBox x:Name="allowManaged" HorizontalAlignment="Right" Grid.Column="2" Grid.Row="11" />
             <CheckBox x:Name="allowDefault" HorizontalAlignment="Right" Grid.Column="2" Grid.Row="12" />
+            <CheckBox x:Name="allowDNS" HorizontalAlignment="Right" Grid.Column="2" Grid.Row="13"/>
+
+            <Separator Grid.Column="0" Grid.Row="14" Grid.ColumnSpan="3"/>
             
-            <Separator Grid.Column="0" Grid.Row="13" Grid.ColumnSpan="3"/>
-            
-            <Grid Grid.Column="0" Grid.Row="14" Grid.ColumnSpan="3" Background="GhostWhite">
+            <Grid Grid.Column="0" Grid.Row="15" Grid.ColumnSpan="3" Background="GhostWhite">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="auto"/>
                     <ColumnDefinition Width="*"/>

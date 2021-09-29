@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2023-01-01
+ * Change Date: 2025-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -20,13 +20,16 @@
 
 #define ZT_CENTRAL_CONTROLLER_COMMIT_THREADS 4
 
+#include <memory>
+#include <redis++/redis++.h>
+
 extern "C" {
 typedef struct pg_conn PGconn;
 }
 
 namespace ZeroTier {
 
-struct MQConfig;
+struct RedisConfig;
 
 /**
  * A controller database driver that talks to PostgreSQL
@@ -37,7 +40,7 @@ struct MQConfig;
 class PostgreSQL : public DB
 {
 public:
-	PostgreSQL(const Identity &myId, const char *path, int listenPort, MQConfig *mqc = NULL);
+	PostgreSQL(const Identity &myId, const char *path, int listenPort, RedisConfig *rc);
 	virtual ~PostgreSQL();
 
 	virtual bool waitForReady();
@@ -59,13 +62,18 @@ private:
 	void heartbeat();
 	void membersDbWatcher();
 	void _membersWatcher_Postgres(PGconn *conn);
-	void _membersWatcher_RabbitMQ();
 	void networksDbWatcher();
 	void _networksWatcher_Postgres(PGconn *conn);
-	void _networksWatcher_RabbitMQ();
+
+	void _membersWatcher_Redis();
+	void _networksWatcher_Redis();
 
 	void commitThread();
 	void onlineNotificationThread();
+	void onlineNotification_Postgres();
+	void onlineNotification_Redis();
+	void _doRedisUpdate(sw::redis::Transaction &tx, std::string &controllerId, 
+		std::unordered_map< std::pair<uint64_t,uint64_t>,std::pair<int64_t,InetAddress>,_PairHasher > &lastOnline);
 
 	enum OverrideMode {
 		ALLOW_PGBOUNCER_OVERRIDE = 0,
@@ -96,7 +104,9 @@ private:
 
 	int _listenPort;
 
-	MQConfig *_mqc;
+	RedisConfig *_rc;
+	std::shared_ptr<sw::redis::Redis> _redis;
+	std::shared_ptr<sw::redis::RedisCluster> _cluster;
 };
 
 } // namespace ZeroTier

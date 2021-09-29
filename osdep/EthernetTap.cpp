@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2023-01-01
+ * Change Date: 2025-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -96,6 +96,36 @@ std::shared_ptr<EthernetTap> EthernetTap::newInstance(
 #endif // __LINUX__
 
 #ifdef __WINDOWS__
+	HRESULT hres = CoInitializeEx(0, COINIT_MULTITHREADED);
+	if (FAILED(hres)) {
+		throw std::runtime_error("WinEthernetTap: COM initialization failed");
+	}
+
+	static bool _comInit = false;
+	static Mutex _comInit_m;
+
+	{
+		Mutex::Lock l(_comInit_m);
+		if (!_comInit) {
+			hres = CoInitializeSecurity(
+				NULL,
+				-1,
+				NULL,
+				NULL,
+				RPC_C_AUTHN_LEVEL_PKT,
+				RPC_C_IMP_LEVEL_IMPERSONATE,
+				NULL,
+				EOAC_NONE,
+				NULL
+			);
+			if (FAILED(hres)) {
+				CoUninitialize();
+				fprintf(stderr, "WinEthernetTap: Failed to initialize security");
+				throw std::runtime_error("WinEthernetTap: Failed to initialize security");
+			}
+			_comInit = true;
+		}
+	}
 	return std::shared_ptr<EthernetTap>(new WindowsEthernetTap(homePath,mac,mtu,metric,nwid,friendlyName,handler,arg));
 #endif // __WINDOWS__
 
@@ -126,6 +156,12 @@ bool EthernetTap::addIps(std::vector<InetAddress> ips)
 			return false;
 	}
 	return true;
+}
+
+std::string EthernetTap::friendlyName() const
+{
+	// Most platforms do not have this.
+	return std::string();
 }
 
 } // namespace ZeroTier

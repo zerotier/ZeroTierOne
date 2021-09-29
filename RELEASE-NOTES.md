@@ -1,6 +1,82 @@
 ZeroTier Release Notes
 ======
 
+# 2021-09-21 -- Version 1.6.6
+
+ * Backport COM hash check mitigation against network member impersonation.
+
+# 2021-04-13 -- Version 1.6.5
+
+ * Fix a bug in potential network path filtering that could in some circumstances lead to "software laser" effects.
+ * Fix a printf overflow in zerotier-cli (not exploitable or a security risk)
+ * Windows now looks up the name of ZeroTier devices instead of relying on them having "ZeroTier" in them.
+
+# 2021-02-15 -- Version 1.6.4
+
+ * The groundhog saw his shadow, which meant that the "connection coma" bug still wasn't gone. We think we found it this time.
+
+# 2021-02-02 -- Version 1.6.3
+
+ * Likely fix for GitHub issue #1334, an issue that could cause ZeroTier to
+   go into a "coma" on some networks.
+ * Also groundhog day
+
+# 2020-11-30 -- Version 1.6.2
+
+ * Fix an ARM hardware AES crypto issue (not an exploitable vulnerability).
+ * Fix a Linux network leave hang due to a mutex deadlock.
+
+# 2020-11-24 -- Version 1.6.1
+
+This release fixes some minor bugs and other issues in 1.6.0.
+
+ * Fixed a bug that caused IP addresses in the 203.0.0.0/8 block to be miscategorized as not being in global scope.
+ * Changed Linux builds to (hopefully) fix LXC and SELinux issues.
+ * Fixed unaligned memory access that caused crash on FreeBSD systems on the ARM architecture.
+ * Merged CLI options for controlling bonded devices into the beta multipath code.
+ * Updated Windows driver with Microsoft cross-signing to fix issues on some Windows systems.
+
+# 2020-11-19 -- Version 1.6.0
+
+Version 1.6.0 is a major release that incorporates back-ported features from the 2.0 branch, which is still under development. It also fixes a number of issues.
+
+New features and improvements (including those listed under 1.5.0):
+
+ * **Apple Silicon** (MacOS ARM64) native support via universal binary. ZeroTier now requires the very latest Xcode to build.
+ * **Linux performance improvements** for up to 25% faster tun/tap I/O performance on multi-core systems.
+ * **Multipath support** with modes modeled after the Linux kernel's bonding driver. This includes active-passive and active-active modes with fast failover and load balancing. See section 2.1.5 of the manual.
+ * **DNS configuration** push from network controllers to end nodes, with locally configurable permissions for whether or not push is allowed.
+ * **AES-GMAC-SIV** encryption mode, which is both somewhat more secure and significantly faster than the old Salsa20/12-Poly1305 mode on hardware that supports AES acceleration. This includes virtually all X86-64 chips and most ARM64. This mode is based on AES-SIV and has been audited by Trail of Bits to ensure that it is equivalent security-wise.
+
+Bug fixes:
+
+ * **Managed route assignment fixes** to eliminate missing routes on Linux and what we believe to be the source of sporadic high CPU usage on MacOS.
+ * **Hang on shutdown** issues should be fixed.
+ * **Sporadic multicast outages** should be fixed.
+
+Known remaining issues:
+
+ * AES hardware acceleration is not yet supported on 32-bit ARM, PowerPC (32 or 64), or MIPS (32 or 64) systems. Currently supported are X86-64 and ARM64/AARCH64 with crypto extensions.
+
+# 2020-10-05 -- Version 1.5.0 (actually 1.6.0-beta1)
+
+Version 1.6.0 (1.5.0 is a beta!) is a significant release that incorporates a number of back-ported fixes and features from the ZeroTier 2.0 tree.
+
+Major new features are:
+
+ * **Multipath support** with modes modeled after the Linux kernel's bonding driver. This includes active-passive and active-active modes with fast failover and load balancing. See section 2.1.5 of the manual.
+ * **DNS configuration** push from network controllers to end nodes, with locally configurable permissions for whether or not push is allowed.
+ * **AES-GMAC-SIV** encryption mode, which is both somewhat more secure and significantly faster than the old Salsa20/12-Poly1305 mode on hardware that supports AES acceleration. This includes virtually all X86-64 chips and most ARM64. This mode is based on AES-SIV and has been audited by Trail of Bits to ensure that it is equivalent security-wise.
+
+Known issues that are not yet fixed in this beta:
+
+ * Some Mac users have reported periods of 100% CPU in kernel_task and connection instability after leaving networks that have been joined for a period of time, or needing to kill ZeroTier and restart it to finish leaving a network. This doesn't appear to affect all users and we haven't diagnosed the root cause yet.
+ * The service sometimes hangs on shutdown requiring a kill -9. This also does not affect all systems or users.
+ * AES hardware acceleration is not yet supported on 32-bit ARM, PowerPC (32 or 64), or MIPS (32 or 64) systems. Currently supported are X86-64 and ARM64/AARCH64 with crypto extensions.
+ * Some users have reported multicast/broadcast outages on networks lasting up to 30 seconds. Still investigating.
+
+We're trying to fix all these issues before the 1.6.0 release. Stay tuned.
+
 # 2019-08-30 -- Version 1.4.6
 
  * Update default root list to latest

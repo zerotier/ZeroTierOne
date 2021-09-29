@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2023-01-01
+ * Change Date: 2025-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -30,6 +30,7 @@ class Multicaster;
 class NetworkController;
 class SelfAwareness;
 class Trace;
+class BondController;
 
 /**
  * Holds global state for an instance of ZeroTier::Node
@@ -75,6 +76,7 @@ public:
 	Multicaster *mc;
 	Topology *topology;
 	SelfAwareness *sa;
+	BondController *bc;
 
 	// This node's identity and string representations thereof
 	Identity identity;

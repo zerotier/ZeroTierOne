@@ -45,10 +45,6 @@ endif
 # Trying to use dynamically linked libhttp-parser causes tons of compatibility problems.
 ONE_OBJS+=ext/http-parser/http_parser.o
 
-# Build with address sanitization library for advanced debugging (clang)
-ifeq ($(ZT_SANITIZE),1)
-	DEFS+=-fsanitize=address -DASAN_OPTIONS=symbolize=1
-endif
 ifeq ($(ZT_DEBUG_TRACE),1)
 	DEFS+=-DZT_DEBUG_TRACE
 endif
@@ -62,11 +58,11 @@ endif
 
 # Build with address sanitization library for advanced debugging (clang)
 ifeq ($(ZT_SANITIZE),1)
-	SANFLAGS+=-fsanitize=address -DASAN_OPTIONS=symbolize=1
+	override DEFS+=-fsanitize=address -DASAN_OPTIONS=symbolize=1
 endif
 ifeq ($(ZT_DEBUG),1)
-	override CFLAGS+=-Wall -Wno-deprecated -g -pthread $(INCLUDES) $(DEFS)
-	override CXXFLAGS+=-Wall -Wno-deprecated -g -std=c++11 -pthread $(INCLUDES) $(DEFS)
+	override CFLAGS+=-Wall -Wno-deprecated -g -O -pthread $(INCLUDES) $(DEFS)
+	override CXXFLAGS+=-Wall -Wno-deprecated -g -O -std=c++11 -pthread $(INCLUDES) $(DEFS)
 	ZT_TRACE=1
 	STRIP?=echo
 	# The following line enables optimization for the crypto code, since
@@ -84,6 +80,9 @@ endif
 
 ifeq ($(ZT_QNAP), 1)
         override DEFS+=-D__QNAP__
+endif
+ifeq ($(ZT_UBIQUITI), 1)
+        override DEFS+=-D__UBIQUITI__
 endif
 
 ifeq ($(ZT_SYNOLOGY), 1)
@@ -109,12 +108,6 @@ ifeq ($(ZT_VAULT_SUPPORT),1)
 	override LDLIBS+=-lcurl
 endif
 
-# Uncomment for gprof profile build
-#CFLAGS=-Wall -g -pg -pthread $(INCLUDES) $(DEFS)
-#CXXFLAGS=-Wall -g -pg -pthread $(INCLUDES) $(DEFS)
-#LDFLAGS=
-#STRIP=echo
-
 # Determine system build architecture from compiler target
 CC_MACH=$(shell $(CC) -dumpmachine | cut -d '-' -f 1)
 ZT_ARCHITECTURE=999
@@ -122,11 +115,15 @@ ifeq ($(CC_MACH),x86_64)
 	ZT_ARCHITECTURE=2
 	ZT_USE_X64_ASM_SALSA=1
 	ZT_USE_X64_ASM_ED25519=1
+	override CFLAGS+=-msse -msse2
+	override CXXFLAGS+=-msse -msse2
 endif
 ifeq ($(CC_MACH),amd64)
 	ZT_ARCHITECTURE=2
 	ZT_USE_X64_ASM_SALSA=1
 	ZT_USE_X64_ASM_ED25519=1
+	override CFLAGS+=-msse -msse2
+	override CXXFLAGS+=-msse -msse2
 endif
 ifeq ($(CC_MACH),powerpc64le)
 	ZT_ARCHITECTURE=8
@@ -142,6 +139,9 @@ ifeq ($(CC_MACH),ppc64le)
 endif
 ifeq ($(CC_MACH),ppc64el)
 	ZT_ARCHITECTURE=8
+endif
+ifeq ($(CC_MACH),e2k)
+	ZT_ARCHITECTURE=2
 endif
 ifeq ($(CC_MACH),i386)
 	ZT_ARCHITECTURE=1
@@ -205,13 +205,18 @@ ifeq ($(CC_MACH),armv7hl)
 	override DEFS+=-DZT_NO_TYPE_PUNNING
 	ZT_USE_ARM32_NEON_ASM_CRYPTO=1
 endif
+ifeq ($(CC_MACH),armv7ve)
+        ZT_ARCHITECTURE=3
+        override DEFS+=-DZT_NO_TYPE_PUNNING
+        ZT_USE_ARM32_NEON_ASM_CRYPTO=1
+endif
 ifeq ($(CC_MACH),arm64)
 	ZT_ARCHITECTURE=4
-	override DEFS+=-DZT_NO_TYPE_PUNNING
+	override DEFS+=-DZT_NO_TYPE_PUNNING -DZT_ARCH_ARM_HAS_NEON -march=armv8-a+crypto -mtune=generic -mstrict-align
 endif
 ifeq ($(CC_MACH),aarch64)
 	ZT_ARCHITECTURE=4
-	override DEFS+=-DZT_NO_TYPE_PUNNING
+	override DEFS+=-DZT_NO_TYPE_PUNNING -DZT_ARCH_ARM_HAS_NEON -march=armv8-a+crypto -mtune=generic -mstrict-align
 endif
 ifeq ($(CC_MACH),mipsel)
 	ZT_ARCHITECTURE=5
@@ -231,6 +236,9 @@ ifeq ($(CC_MACH),mips64el)
 endif
 ifeq ($(CC_MACH),s390x)
 	ZT_ARCHITECTURE=16
+endif
+ifeq ($(CC_MACH),riscv64)
+	ZT_ARCHITECTURE=0
 endif
 
 # Fail if system architecture could not be determined
@@ -257,15 +265,21 @@ ifeq ($(ZT_OFFICIAL),1)
 	override LDFLAGS+=-Wl,--wrap=memcpy -static-libstdc++
 endif
 
+ifeq ($(ZT_CONTROLLER),1)
+	override LDLIBS+=-L/usr/pgsql-10/lib/ -lpq ext/hiredis-0.14.1/lib/centos8/libhiredis.a ext/redis-plus-plus-1.1.1/install/centos8/lib/libredis++.a
+	override DEFS+=-DZT_CONTROLLER_USE_LIBPQ
+	override INCLUDES+=-I/usr/pgsql-10/include -Iext/hiredis-0.14.1/include/ -Iext/redis-plus-plus-1.1.1/install/centos8/include/sw/
+endif
+
 # ARM32 hell -- use conservative CFLAGS
 ifeq ($(ZT_ARCHITECTURE),3)
 	ifeq ($(shell if [ -e /usr/bin/dpkg ]; then dpkg --print-architecture; fi),armel)
-		override CFLAGS+=-march=armv5 -mfloat-abi=soft -msoft-float -mno-unaligned-access -marm
-		override CXXFLAGS+=-march=armv5 -mfloat-abi=soft -msoft-float -mno-unaligned-access -marm
+		override CFLAGS+=-march=armv5t -mfloat-abi=soft -msoft-float -mno-unaligned-access -marm
+		override CXXFLAGS+=-march=armv5t -mfloat-abi=soft -msoft-float -mno-unaligned-access -marm
 		ZT_USE_ARM32_NEON_ASM_CRYPTO=0
 	else
-		override CFLAGS+=-march=armv5 -mno-unaligned-access -marm -fexceptions
-		override CXXFLAGS+=-march=armv5 -mno-unaligned-access -marm -fexceptions
+		override CFLAGS+=-mfloat-abi=hard -mfpu=vfp -mcpu=arm1176jzf-s -marm -mno-unaligned-access
+		override CXXFLAGS+=-mfloat-abi=hard -mfpu=vfp -mcpu=arm1176jzf-s -fexceptions -marm -mno-unaligned-access
 		ZT_USE_ARM32_NEON_ASM_CRYPTO=0
 	endif
 endif
@@ -329,13 +343,13 @@ official:	FORCE
 	make -j4 ZT_OFFICIAL=1 all
 
 docker:	FORCE
-	docker build -f ext/installfiles/linux/zerotier-containerized/Dockerfile -t zerotier-containerized .
+	docker build --no-cache -f ext/installfiles/linux/zerotier-containerized/Dockerfile -t zerotier-containerized .
 
 central-controller:	FORCE
-	make -j4 LDLIBS="-L/usr/pgsql-10/lib/ -lpq -Lext/librabbitmq/centos_x64/lib/ -lrabbitmq" CXXFLAGS="-I/usr/pgsql-10/include -I./ext/librabbitmq/centos_x64/include -fPIC" DEFS="-DZT_CONTROLLER_USE_LIBPQ -DZT_CONTROLLER" ZT_OFFICIAL=1 ZT_USE_X64_ASM_ED25519=1 one
+	make -j4 ZT_CONTROLLER=1 ZT_USE_X64_ASM_ED25519=1 one
 
-central-controller-docker:	central-controller
-	docker build -t docker.zerotier.com/zerotier-central/ztcentral-controller:${TIMESTAMP} -f ext/central-controller-docker/Dockerfile .
+central-controller-docker: FORCE
+	docker build --no-cache -t docker.zerotier.com/zerotier-central/ztcentral-controller:${TIMESTAMP} -f ext/central-controller-docker/Dockerfile --build-arg git_branch=`git name-rev --name-only HEAD` .
 
 debug:	FORCE
 	make ZT_DEBUG=1 one
@@ -390,7 +404,7 @@ uninstall:	FORCE
 # These are just for convenience for building Linux packages
 
 debian:	FORCE
-	debuild -I -i -us -uc -nc -b
+	debuild --no-lintian -I -i -us -uc -nc -b
 
 debian-clean: FORCE
 	rm -rf debian/files debian/zerotier-one*.debhelper debian/zerotier-one.substvars debian/*.log debian/zerotier-one debian/.debhelper debian/debhelper-build-stamp

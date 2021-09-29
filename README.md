@@ -1,5 +1,6 @@
 ZeroTier - Global Area Networking
 ======
+This document is written for a software developer audience. For information on using ZeroTier, see the: [Website](https://www.zerotier.com), [Documentation Site](https://docs.zerotier.com), and [Discussion Forum](https://discuss.zerotier.com)
 
 ZeroTier is a smart programmable Ethernet switch for planet Earth. It allows all networked devices, VMs, containers, and applications to communicate as if they all reside in the same physical data center or cloud region.
 
@@ -13,7 +14,7 @@ Visit [ZeroTier's site](https://www.zerotier.com/) for more information and [pre
 
 ZeroTier is licensed under the [BSL version 1.1](https://mariadb.com/bsl11/). See [LICENSE.txt](LICENSE.txt) and the [ZeroTier pricing page](https://www.zerotier.com/pricing) for details. ZeroTier is free to use internally in businesses and academic institutions and for non-commercial purposes. Certain types of commercial use such as building closed-source apps and devices based on ZeroTier or offering ZeroTier network controllers and network management as a SaaS service require a commercial license.
 
-A small amount of third party code is also included in ZeroTier and is not subject to our BSL license. See [AUTHORS.md] for a list of third party code, where it is included, and the licenses that apply to it. All of the third party code in ZeroTier is liberally licensed (MIT, BSD, Apache, public domain, etc.).
+A small amount of third party code is also included in ZeroTier and is not subject to our BSL license. See [AUTHORS.md](AUTHORS.md) for a list of third party code, where it is included, and the licenses that apply to it. All of the third party code in ZeroTier is liberally licensed (MIT, BSD, Apache, public domain, etc.).
 
 ### Getting Started
 
@@ -44,7 +45,7 @@ The base path contains the ZeroTier One service main entry point (`one.cpp`), se
 
 ### Build and Platform Notes
 
-To build on Mac and Linux just type `make`. On FreeBSD and OpenBSD `gmake` (GNU make) is required and can be installed from packages or ports. For Windows there is a Visual Studio solution in `windows/'.
+To build on Mac and Linux just type `make`. On FreeBSD and OpenBSD `gmake` (GNU make) is required and can be installed from packages or ports. For Windows there is a Visual Studio solution in `windows/`.
 
  - **Mac**
    - Xcode command line tools for OSX 10.8 or newer are required.
@@ -64,15 +65,17 @@ Typing `make selftest` will build a *zerotier-selftest* binary which unit tests 
 
 ### Running
 
-Running *zerotier-one* with -h will show help.
+Running *zerotier-one* with `-h` option will show help.
 
-On Linux and BSD you can start the service with:
+On Linux and BSD, if you built from source, you can start the service with:
 
     sudo ./zerotier-one -d
 
+On most distributions, macOS, and Windows, the installer will start the service and set it up to start on boot.
+
 A home folder for your system will automatically be created.
 
-The service is controlled via the JSON API, which by default is available at 127.0.0.1 port 9993. We include a *zerotier-cli* command line utility to make API calls for standard things like joining and leaving networks. The *authtoken.secret* file in the home folder contains the secret token for accessing this API. See README.md in [service/](service/) for API documentation.
+The service is controlled via the JSON API, which by default is available at 127.0.0.1 port 9993. We include a *zerotier-cli* command line utility to make API calls for standard things like joining and leaving networks. The *authtoken.secret* file in the home folder contains the secret token for accessing this API. See [service/README.md](service/README.md) for API documentation.
 
 Here's where home folders live (by default) on each OS:
 
@@ -81,21 +84,15 @@ Here's where home folders live (by default) on each OS:
  * **Mac**: `/Library/Application Support/ZeroTier/One`
  * **Windows**: `\ProgramData\ZeroTier\One` (That's for Windows 7. The base 'shared app data' folder might be different on different Windows versions.)
 
-Running ZeroTier One on a Mac is the same, but OSX requires a kernel extension. We ship a signed binary build of the ZeroTier tap device driver, which can be installed on Mac with:
-
-    sudo make install-mac-tap
-
-This will create the home folder for Mac, place *tap.kext* there, and set its modes correctly to enable ZeroTier One to manage it with *kextload* and *kextunload*.
-
 ### Basic Troubleshooting
 
 For most users, it just works.
 
-If you are running a local system firewall, we recommend adding a rule permitting UDP port 9993 inbound and outbound. If you installed binaries for Windows this should be done automatically. Other platforms might require manual editing of local firewall rules depending on your configuration.
+If you are running a local system firewall, we recommend adding a rules permitting zerotier. If you installed binaries for Windows this should be done automatically. Other platforms might require manual editing of local firewall rules depending on your configuration.
 
-The Mac firewall can be found under "Security" in System Preferences. Linux has a variety of firewall configuration systems and tools. If you're using Ubuntu's *ufw*, you can do this:
+See the [documentation site](https://docs.zerotier.com/zerotier/troubleshooting) for more information.
 
-    sudo ufw allow 9993/udp
+The Mac firewall can be found under "Security" in System Preferences. Linux has a variety of firewall configuration systems and tools.
 
 On CentOS check `/etc/sysconfig/iptables` for IPTables rules. For other distributions consult your distribution's documentation. You'll also have to check the UIs or documentation for commercial third party firewall applications like Little Snitch (Mac), McAfee Firewall Enterprise (Windows), etc. if you are running any of those. Some corporate environments might have centrally managed firewall software, so you might also have to contact IT.
 
@@ -105,4 +102,4 @@ Users behind certain types of firewalls and "symmetric" NAT devices may not able
 
 If a firewall between you and the Internet blocks ZeroTier's UDP traffic, you will fall back to last-resort TCP tunneling to rootservers over port 443 (https impersonation). This will work almost anywhere but is *very slow* compared to UDP or direct peer to peer connectivity.
 
-Additional help [can be found in our knowledge base](https://zerotier.atlassian.net/wiki/spaces/SD/overview).
+Additional help can be found in our [knowledge base](https://zerotier.atlassian.net/wiki/spaces/SD/overview).

@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2023-01-01
+ * Change Date: 2025-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -91,13 +91,14 @@ public:
 	 * Check whether the peer represented by this Membership should be allowed on this network at all
 	 *
 	 * @param nconf Our network config
+	 * @param otherNodeIdentity Identity of remote node
 	 * @return True if this peer is allowed on this network at all
 	 */
-	inline bool isAllowedOnNetwork(const NetworkConfig &nconf) const
+	inline bool isAllowedOnNetwork(const NetworkConfig &thisNodeNetworkConfig, const Identity &otherNodeIdentity) const
 	{
-		if (nconf.isPublic()) return true;
+		if (thisNodeNetworkConfig.isPublic()) return true;
 		if (_com.timestamp() <= _comRevocationThreshold) return false;
-		return nconf.com.agreesWith(_com);
+		return thisNodeNetworkConfig.com.agreesWith(_com, otherNodeIdentity);
 	}
 
 	inline bool recentlyAssociated(const int64_t now) const

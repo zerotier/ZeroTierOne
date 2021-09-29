@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2023-01-01
+ * Change Date: 2025-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -29,13 +29,13 @@
  * is limited to 2048. AF_NDRV packet injection is required to inject
  * ZeroTier's large MTU frames.
  *
- * Benchmarks show that this performs similarly to the old tap.kext driver,
- * and a kext is no longer required. Splitting it off into an agent will
- * also make it easier to have zerotier-one itself drop permissions.
- *
  * All this stuff is basically undocumented. A lot of tracing through
  * the Darwin/XNU kernel source was required to figure out how to make
  * this actually work.
+ * 
+ * We hope to develop a DriverKit-based driver in the near-mid future to
+ * replace this weird hack, but it works for now through Big Sur in our
+ * testing.
  *
  * See also:
  *

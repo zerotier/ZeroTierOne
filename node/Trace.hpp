@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2023-01-01
+ * Change Date: 2025-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -109,10 +109,7 @@ public:
 
 	void peerConfirmingUnknownPath(void *const tPtr,const uint64_t networkId,Peer &peer,const SharedPtr<Path> &path,const uint64_t packetId,const Packet::Verb verb);
 
-	void peerLinkNowRedundant(void *const tPtr,Peer &peer);
-	void peerLinkNoLongerRedundant(void *const tPtr,Peer &peer);
-
-	void peerLinkAggregateStatistics(void *const tPtr,Peer &peer);
+	void bondStateMessage(void *const tPtr,char *msg);
 
 	void peerLearnedNewPath(void *const tPtr,const uint64_t networkId,Peer &peer,const SharedPtr<Path> &newPath,const uint64_t packetId);
 	void peerRedirected(void *const tPtr,const uint64_t networkId,Peer &peer,const SharedPtr<Path> &newPath);

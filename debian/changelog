@@ -1,3 +1,61 @@
+zerotier-one (1.6.6) unstable; urgency=medium
+
+  * Backport endpoint mitigation against address collision attack.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Tue, 21 Sep 2021 01:00:00 -0700
+
+zerotier-one (1.6.5) unstable; urgency=medium
+
+  * Fix path filtering bug that could cause "software laser" effect.
+  * Fix printf overflow in CLI (not exploitable or security related)
+  * Fix Windows device enumeration issue.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Tue, 13 Apr 2021 01:00:00 -0700
+
+zerotier-one (1.6.4) unstable; urgency=medium
+
+  * REALLY fix a problem causing nodes to go into a "coma" with some network configurations.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Tue, 15 Feb 2021 01:00:00 -0700
+
+zerotier-one (1.6.3-1) unstable; urgency=medium
+
+  * Fix a problem causing nodes to go into a "coma" with some network configurations.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Tue, 02 Feb 2021 01:00:00 -0700
+
+zerotier-one (1.6.2-2) unstable; urgency=medium
+
+  * This is a minor update to the 1.6.2 package to address issues with
+    running on ARMv6 CPUs like the Raspberry Pi Zero and original v1 Pi.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Tue, 31 Nov 2020 01:00:00 -0700
+
+zerotier-one (1.6.2) unstable; urgency=medium
+
+  * See RELEASE-NOTES.md for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Mon, 30 Nov 2020 01:00:00 -0700
+
+zerotier-one (1.6.1) unstable; urgency=medium
+
+  * See RELEASE-NOTES.md for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Tue, 24 Nov 2020 01:00:00 -0700
+
+zerotier-one (1.6.0) unstable; urgency=medium
+
+  * See RELEASE-NOTES.md for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Thu, 19 Nov 2020 01:00:00 -0700
+
+zerotier-one (1.5.0) unstable; urgency=medium
+
+  * Version 1.5.0 is actually 1.6.0-beta1
+  * See RELEASE-NOTES.md for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Mon, 05 Aug 2020 01:00:00 -0700
+
 zerotier-one (1.4.6) unstable; urgency=medium
 
   * Update default root server list

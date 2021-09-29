@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2023-01-01
+ * Change Date: 2025-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -42,6 +42,8 @@
 #include <netinet6/in6_var.h>
 #include <netinet/in_var.h>
 #include <netinet/icmp6.h>
+
+#include "MacDNSHelper.hpp"
 
 // OSX compile fix... in6_var defines this in a struct which namespaces it for C++ ... why?!?
 struct prf_ra {
@@ -441,6 +443,8 @@ MacKextEthernetTap::MacKextEthernetTap(
 
 MacKextEthernetTap::~MacKextEthernetTap()
 {
+	MacDNSHelper::removeDNS(_nwid);
+
 	::write(_shutdownSignalPipe[1],"\0",1); // causes thread to exit
 	Thread::join(_thread);
 
@@ -685,6 +689,11 @@ void MacKextEthernetTap::threadMain()
 			}
 		}
 	}
+}
+
+void MacKextEthernetTap::setDns(const char *domain, const std::vector<InetAddress> &servers)
+{
+	MacDNSHelper::setDNS(_nwid, domain, servers);
 }
 
 } // namespace ZeroTier

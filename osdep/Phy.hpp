@@ -1,10 +1,10 @@
 /*
- * Copyright (c)2019 ZeroTier, Inc.
+ * Copyright (c)2013-2020 ZeroTier, Inc.
  *
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2023-01-01
+ * Change Date: 2025-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -262,46 +262,6 @@ public:
 	}
 
 	/**
-	 * Whether or not the socket object is in a closed state
-	 *
-	 * @param s Socket object
-	 * @return true if socket is closed, false if otherwise
-	 */
-	inline bool isClosed(PhySocket *s)
-	{
-		PhySocketImpl *sws = (reinterpret_cast<PhySocketImpl *>(s));
-		return sws->type == ZT_PHY_SOCKET_CLOSED;
-	}
-
-	/**
-	 * Get state of socket object
-	 *
-	 * @param s Socket object
-	 * @return State of socket
-	 */
-	inline int getState(PhySocket *s)
-	{
-		PhySocketImpl *sws = (reinterpret_cast<PhySocketImpl *>(s));
-		return sws->type;
-	}
-
-	/**
-	 * In the event that this socket is erased, we need a way to convey to the multipath logic
-	 * that this path is no longer valid.
-	 *
-	 * @param s Socket object
-	 * @return Whether the state of this socket is within an acceptable range of values
-	 */
-	inline bool isValidState(PhySocket *s)
-	{
-		if (s) {
-			PhySocketImpl *sws = (reinterpret_cast<PhySocketImpl *>(s));
-			return sws->type >= ZT_PHY_SOCKET_CLOSED && sws->type <= ZT_PHY_SOCKET_UNIX_LISTEN;
-		}
-		return false;
-	}
-
-	/**
 	 * Cause poll() to stop waiting immediately
 	 *
 	 * This can be used to reset the polling loop after changes that require
@@ -391,14 +351,14 @@ public:
 				int tmpbs = bs;
 				if (setsockopt(s,SOL_SOCKET,SO_RCVBUF,(const char *)&tmpbs,sizeof(tmpbs)) == 0)
 					break;
-				bs -= 16384;
+				bs -= 4096;
 			}
 			bs = bufferSize;
 			while (bs >= 65536) {
 				int tmpbs = bs;
 				if (setsockopt(s,SOL_SOCKET,SO_SNDBUF,(const char *)&tmpbs,sizeof(tmpbs)) == 0)
 					break;
-				bs -= 16384;
+				bs -= 4096;
 			}
 		}
 

@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2023-01-01
+ * Change Date: 2025-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -40,7 +40,7 @@ namespace ZeroTier {
 namespace {
 
 // Returns true if packet appears valid; pos and proto will be set
-static bool _ipv6GetPayload(const uint8_t *frameData,unsigned int frameLen,unsigned int &pos,unsigned int &proto)
+static inline bool _ipv6GetPayload(const uint8_t *frameData,unsigned int frameLen,unsigned int &pos,unsigned int &proto)
 {
 	if (frameLen < 40)
 		return false;
@@ -586,6 +586,7 @@ Network::Network(const RuntimeEnvironment *renv,void *tPtr,uint64_t nwid,void *u
 
 	if (!_portInitialized) {
 		ZT_VirtualNetworkConfig ctmp;
+		memset(&ctmp, 0, sizeof(ZT_VirtualNetworkConfig));
 		_externalConfig(&ctmp);
 		_portError = RR->node->configureVirtualNetworkPort(tPtr,_id,&_uPtr,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP,&ctmp);
 		_portInitialized = true;
@@ -1225,7 +1226,7 @@ bool Network::gate(void *tPtr,const SharedPtr<Peer> &peer)
 	try {
 		if (_config) {
 			Membership *m = _memberships.get(peer->address());
-			if ( (_config.isPublic()) || ((m)&&(m->isAllowedOnNetwork(_config))) ) {
+			if ( (_config.isPublic()) || ((m)&&(m->isAllowedOnNetwork(_config, peer->identity()))) ) {
 				if (!m)
 					m = &(_membership(peer->address()));
 				if (m->multicastLikeGate(now)) {
@@ -1426,6 +1427,8 @@ void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const
 		ec->multicastSubscriptions[i].mac = _myMulticastGroups[i].mac().toInt();
 		ec->multicastSubscriptions[i].adi = _myMulticastGroups[i].adi();
 	}
+
+	memcpy(&ec->dns, &_config.dns, sizeof(ZT_VirtualNetworkDNS));
 }
 
 void Network::_sendUpdatesToMembers(void *tPtr,const MulticastGroup *const newMulticastGroup)
@@ -1477,8 +1480,11 @@ void Network::_sendUpdatesToMembers(void *tPtr,const MulticastGroup *const newMu
 		Membership *m = (Membership *)0;
 		Hashtable<Address,Membership>::Iterator i(_memberships);
 		while (i.next(a,m)) {
-			if ( ( m->multicastLikeGate(now) || (newMulticastGroup) ) && (m->isAllowedOnNetwork(_config)) && (!std::binary_search(alwaysAnnounceTo.begin(),alwaysAnnounceTo.end(),*a)) )
-				_announceMulticastGroupsTo(tPtr,*a,groups);
+			Identity aid(RR->topology->getIdentity(tPtr, *a));
+			if (aid) {
+				if ( ( m->multicastLikeGate(now) || (newMulticastGroup) ) && (m->isAllowedOnNetwork(_config, aid)) && (!std::binary_search(alwaysAnnounceTo.begin(),alwaysAnnounceTo.end(),*a)) )
+					_announceMulticastGroupsTo(tPtr,*a,groups);
+			}
 		}
 	}
 }

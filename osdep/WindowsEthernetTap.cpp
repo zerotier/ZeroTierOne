@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2023-01-01
+ * Change Date: 2025-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -44,6 +44,7 @@
 #include "OSUtils.hpp"
 
 #include "..\windows\TapDriver6\tap-windows.h"
+#include "WinDNSHelper.hpp"
 
 #include <netcon.h>
 
@@ -646,6 +647,7 @@ WindowsEthernetTap::WindowsEthernetTap(
 
 WindowsEthernetTap::~WindowsEthernetTap()
 {
+	WinDNSHelper::removeDNS(_nwid);
 	_run = false;
 	ReleaseSemaphore(_injectSemaphore,1,NULL);
 	Thread::join(_thread);
@@ -808,19 +810,14 @@ void WindowsEthernetTap::setFriendlyName(const char *dn)
 {
 	if (!_initialized)
 		return;
+
 	HKEY ifp;
 	if (RegOpenKeyExA(HKEY_LOCAL_MACHINE,(std::string("SYSTEM\\CurrentControlSet\\Control\\Network\\{4D36E972-E325-11CE-BFC1-08002BE10318}\\") + _netCfgInstanceId).c_str(),0,KEY_READ|KEY_WRITE,&ifp) == ERROR_SUCCESS) {
 		RegSetKeyValueA(ifp,"Connection","Name",REG_SZ,(LPCVOID)dn,(DWORD)(strlen(dn)+1));
 		RegCloseKey(ifp);
 	}
 
-	HRESULT hr = CoInitialize(nullptr);
-	if (hr != S_OK) return;
-	CoInitializeSecurity(NULL, -1, NULL, NULL,
-		RPC_C_AUTHN_LEVEL_PKT,
-		RPC_C_IMP_LEVEL_IMPERSONATE,
-		NULL, EOAC_NONE, NULL);
-	if (hr != S_OK) return;
+	HRESULT hr = S_OK;
 
 	INetSharingManager *nsm;
 	hr = CoCreateInstance(__uuidof(NetSharingManager), NULL, CLSCTX_ALL, __uuidof(INetSharingManager), (void**)&nsm);
@@ -868,6 +865,16 @@ void WindowsEthernetTap::setFriendlyName(const char *dn)
 		ev->Release();
 	}
 	nsecc->Release();
+
+	_friendlyName_m.lock();
+	_friendlyName = dn;
+	_friendlyName_m.unlock();
+}
+
+std::string WindowsEthernetTap::friendlyName() const
+{
+	Mutex::Lock l(_friendlyName_m);
+	return _friendlyName;
 }
 
 void WindowsEthernetTap::scanMulticastGroups(std::vector<MulticastGroup> &added,std::vector<MulticastGroup> &removed)
@@ -944,6 +951,12 @@ NET_IFINDEX WindowsEthernetTap::interfaceIndex() const
 void WindowsEthernetTap::threadMain()
 	throw()
 {
+	HRESULT hres = CoInitializeEx(0, COINIT_MULTITHREADED);
+	if (FAILED(hres)) {
+		fprintf(stderr, "WinEthernetTap: COM initialization failed");
+		return;
+	}
+
 	char tapReadBuf[ZT_MAX_MTU + 32];
 	char tapPath[128];
 	HANDLE wait4[3];
@@ -1162,6 +1175,7 @@ void WindowsEthernetTap::threadMain()
 			// We will restart and re-open the tap unless _run == false
 		}
 	} catch ( ... ) {} // catch unexpected exceptions -- this should not happen but would prevent program crash or other weird issues since threads should not throw
+	CoUninitialize();
 }
 
 NET_IFINDEX WindowsEthernetTap::_getDeviceIndex()
@@ -1288,6 +1302,11 @@ void WindowsEthernetTap::_syncIps()
 			}
 		}
 	}
+}
+
+void WindowsEthernetTap::setDns(const char* domain, const std::vector<InetAddress>& servers)
+{
+	WinDNSHelper::setDNS(_nwid, domain, servers);
 }
 
 } // namespace ZeroTier

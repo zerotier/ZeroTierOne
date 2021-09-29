@@ -1,0 +1,4 @@
+ext/bin/tap-windows-ndis6/x64/zttap300.inf eol=crlf
+ext/bin/tap-windows-ndis6/x64.old/zttap300.inf eol=crlf
+ext/bin/tap-windows-ndis6/x86/zttap300.inf eol=crlf
+windows/TapDriver6/zttap300.inf eol=crlf

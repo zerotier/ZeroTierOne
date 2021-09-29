@@ -54,6 +54,7 @@ NSString * const JoinedNetworksKey = @"com.zerotier.one.joined-networks";
     self.allowManagedCheckBox.state = NSOnState;
     self.allowGlobalCheckBox.state = NSOffState;
     self.allowDefaultCheckBox.state = NSOffState;
+    self.allowDNSCheckBox.state = NSOffState;
 
     self.network.stringValue = @"";
 
@@ -82,6 +83,7 @@ NSString * const JoinedNetworksKey = @"com.zerotier.one.joined-networks";
                                 allowManaged:(self.allowManagedCheckBox.state == NSOnState)
                                  allowGlobal:(self.allowGlobalCheckBox.state == NSOnState)
                                 allowDefault:(self.allowDefaultCheckBox.state == NSOnState)
+                                    allowDNS:(self.allowDNSCheckBox.state == NSOnState)
                                        error:&error];
 
     if(error) {

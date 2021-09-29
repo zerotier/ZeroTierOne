@@ -57,6 +57,7 @@
                                 allowManaged:(self.allowManaged.state == NSOnState)
                                  allowGlobal:(self.allowGlobal.state  == NSOnState)
                                 allowDefault:![Network defaultRouteExists:_parent.networkList] && (self.allowDefault.state == NSOnState)
+                                    allowDNS:(self.allowDNS.state == NSOnState)
                                        error:&error];
 
     if (error) {

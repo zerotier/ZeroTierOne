@@ -2439,7 +2439,7 @@ static inline void get_hram(unsigned char *hram, const unsigned char *sm, const 
 	for (i = 32;i < 64;++i)    playground[i] = pk[i-32];
 	for (i = 64;i < smlen;++i) playground[i] = sm[i];
 
-	ZeroTier::SHA512::hash(hram,playground,(unsigned int)smlen);
+	ZeroTier::SHA512(hram,playground,(unsigned int)smlen);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -2459,11 +2459,11 @@ void C25519::agree(const C25519::Private &mine,const C25519::Public &their,void 
 	unsigned char digest[64];
 
 	crypto_scalarmult(rawkey,mine.data,their.data);
-	SHA512::hash(digest,rawkey,32);
+	SHA512(digest,rawkey,32);
 	for(unsigned int i=0,k=0;i<keylen;) {
 		if (k == 64) {
 			k = 0;
-			SHA512::hash(digest,digest,64);
+			SHA512(digest,digest,64);
 		}
 		((unsigned char *)keybuf)[i++] = digest[k++];
 	}
@@ -2472,7 +2472,7 @@ void C25519::agree(const C25519::Private &mine,const C25519::Public &their,void 
 void C25519::sign(const C25519::Private &myPrivate,const C25519::Public &myPublic,const void *msg,unsigned int len,void *signature)
 {
 	unsigned char digest[64]; // we sign the first 32 bytes of SHA-512(msg)
-	SHA512::hash(digest,msg,len);
+	SHA512(digest,msg,len);
 
 #ifdef ZT_USE_FAST_X64_ED25519
 	ed25519_amd64_asm_sign(myPrivate.data + 32,myPublic.data + 32,digest,(unsigned char *)signature);
@@ -2486,7 +2486,7 @@ void C25519::sign(const C25519::Private &myPrivate,const C25519::Public &myPubli
 	unsigned char hram[crypto_hash_sha512_BYTES];
 	unsigned char *sig = (unsigned char *)signature;
 
-	SHA512::hash(extsk,myPrivate.data + 32,32);
+	SHA512(extsk,myPrivate.data + 32,32);
 	extsk[0] &= 248;
 	extsk[31] &= 127;
 	extsk[31] |= 64;
@@ -2496,7 +2496,7 @@ void C25519::sign(const C25519::Private &myPrivate,const C25519::Public &myPubli
 	for(unsigned int i=0;i<32;i++)
 		sig[64 + i] = digest[i];
 
-	SHA512::hash(hmg,sig + 32,64);
+	SHA512(hmg,sig + 32,64);
 
 	/* Computation of R */
 	sc25519_from64bytes(&sck, hmg);
@@ -2525,7 +2525,7 @@ bool C25519::verify(const C25519::Public &their,const void *msg,unsigned int len
 {
 	const unsigned char *const sig = (const unsigned char *)signature;
 	unsigned char digest[64]; // we sign the first 32 bytes of SHA-512(msg)
-	SHA512::hash(digest,msg,len);
+	SHA512(digest,msg,len);
 	if (!Utils::secureEq(sig + 64,digest,32))
 		return false;
 
@@ -2565,7 +2565,7 @@ void C25519::_calcPubED(C25519::Pair &kp)
 
 	// Second 32 bytes of pub and priv are the keys for ed25519
 	// signing and verification.
-	SHA512::hash(extsk,kp.priv.data + 32,32);
+	SHA512(extsk,kp.priv.data + 32,32);
 	extsk[0] &= 248;
 	extsk[31] &= 127;
 	extsk[31] |= 64;

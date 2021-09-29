@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2023-01-01
+ * Change Date: 2025-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -138,7 +138,7 @@ public:
 		unsigned int len);
 
 	/**
-	 * Clean up and resort database
+	 * Clean database
 	 *
 	 * @param RR Runtime environment
 	 * @param now Current time
@@ -172,14 +172,14 @@ private:
 		inline bool operator!=(const Address &a) const { return (address != a); }
 
 		Address address;
-		uint64_t timestamp; // time of last notification
+		int64_t timestamp; // time of last notification
 	};
 
 	struct MulticastGroupStatus
 	{
 		MulticastGroupStatus() : lastExplicitGather(0) {}
 
-		uint64_t lastExplicitGather;
+		int64_t lastExplicitGather;
 		std::list<OutboundMulticast> txQueue; // pending outbound multicasts
 		std::vector<MulticastGroupMember> members; // members of this group
 	};

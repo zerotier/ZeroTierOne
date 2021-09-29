@@ -65,8 +65,8 @@ jclass JniLookup::findClass(const std::string &name)
         LOGE("Error retreiving JNI Environment");
         return NULL;
     }
-
-    jclass cls = env->FindClass(name.c_str());
+    const char *c = name.c_str();
+    jclass cls = env->FindClass(c);
     if(env->ExceptionCheck())
     {
         LOGE("Error finding class: %s", name.c_str());

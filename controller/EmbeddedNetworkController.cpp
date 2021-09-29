@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2023-01-01
+ * Change Date: 2025-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -97,7 +97,7 @@ static json _renderRule(ZT_VirtualNetworkRule &rule)
 			break;
 	}
 
-	if (r.size() == 0) {
+	if (r.empty()) {
 		switch(rt) {
 			case ZT_NETWORK_RULE_MATCH_SOURCE_ZEROTIER_ADDRESS:
 				r["type"] = "MATCH_SOURCE_ZEROTIER_ADDRESS";
@@ -239,7 +239,7 @@ static json _renderRule(ZT_VirtualNetworkRule &rule)
 				break;
 		}
 
-		if (r.size() > 0) {
+		if (!r.empty()) {
 			r["not"] = ((rule.t & 0x80) != 0);
 			r["or"] = ((rule.t & 0x40) != 0);
 		}
@@ -456,7 +456,7 @@ static bool _parseRule(json &r,ZT_VirtualNetworkRule &rule)
 
 } // anonymous namespace
 
-EmbeddedNetworkController::EmbeddedNetworkController(Node *node,const char *ztPath,const char *dbPath, int listenPort, MQConfig *mqc) :
+EmbeddedNetworkController::EmbeddedNetworkController(Node *node,const char *ztPath,const char *dbPath, int listenPort, RedisConfig *rc) :
 	_startTime(OSUtils::now()),
 	_listenPort(listenPort),
 	_node(node),
@@ -464,7 +464,7 @@ EmbeddedNetworkController::EmbeddedNetworkController(Node *node,const char *ztPa
 	_path(dbPath),
 	_sender((NetworkController::Sender *)0),
 	_db(this),
-	_mqc(mqc)
+	_rc(rc)
 {
 }
 
@@ -485,7 +485,7 @@ void EmbeddedNetworkController::init(const Identity &signingId,Sender *sender)
 
 #ifdef ZT_CONTROLLER_USE_LIBPQ
 	if ((_path.length() > 9)&&(_path.substr(0,9) == "postgres:")) {
-		_db.addDB(std::shared_ptr<DB>(new PostgreSQL(_signingId,_path.substr(9).c_str(), _listenPort, _mqc)));
+		_db.addDB(std::shared_ptr<DB>(new PostgreSQL(_signingId,_path.substr(9).c_str(), _listenPort, _rc)));
 	} else {
 #endif
 		_db.addDB(std::shared_ptr<DB>(new FileDB(_path.c_str())));
@@ -554,7 +554,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 	std::string &responseBody,
 	std::string &responseContentType)
 {
-	if ((path.size() > 0)&&(path[0] == "network")) {
+	if ((!path.empty())&&(path[0] == "network")) {
 
 		if ((path.size() >= 2)&&(path[1].length() == 16)) {
 			const uint64_t nwid = Utils::hexStrToU64(path[1].c_str());
@@ -585,7 +585,7 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpGET(
 							responseBody.reserve((members.size() + 2) * 32);
 							std::string mid;
 							for(auto member=members.begin();member!=members.end();++member) {
-								mid = (*member)["id"];
+								mid = OSUtils::jsonString((*member)["id"], "");
 								char tmp[128];
 								OSUtils::ztsnprintf(tmp,sizeof(tmp),"%s\"%s\":%llu",(responseBody.length() > 1) ? "," : "",mid.c_str(),(unsigned long long)OSUtils::jsonInt((*member)["revision"],0));
 								responseBody.append(tmp);
@@ -1029,6 +1029,26 @@ unsigned int EmbeddedNetworkController::handleControlPlaneHttpPOST(
 						}
 					}
 
+					if (b.count("dns")) {
+						json &dns = b["dns"];
+						if (dns.is_object()) {
+							json nd;
+
+							nd["domain"] = dns["domain"];
+
+							json &srv = dns["servers"];
+							if (srv.is_array()) {
+								json ns = json::array();
+								for(unsigned int i=0;i<srv.size();++i) {
+									ns.push_back(srv[i]);
+								}
+								nd["servers"] = ns;
+							}
+
+							network["dns"] = nd;
+						}
+					}
+
 				} catch ( ... ) {
 					responseBody = "{ \"message\": \"exception occurred while parsing body variables\" }";
 					responseContentType = "application/json";
@@ -1227,11 +1247,11 @@ void EmbeddedNetworkController::_request(
 
 	Utils::hex(nwid,nwids);
 	_db.get(nwid,network,identity.address().toInt(),member,ns);
-	if ((!network.is_object())||(network.size() == 0)) {
+	if ((!network.is_object())||(network.empty())) {
 		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_OBJECT_NOT_FOUND);
 		return;
 	}
-	const bool newMember = ((!member.is_object())||(member.size() == 0));
+	const bool newMember = ((!member.is_object())||(member.empty()));
 	DB::initMember(member);
 
 	{
@@ -1366,6 +1386,7 @@ void EmbeddedNetworkController::_request(
 	nc->mtu = std::max(std::min((unsigned int)OSUtils::jsonInt(network["mtu"],ZT_DEFAULT_MTU),(unsigned int)ZT_MAX_MTU),(unsigned int)ZT_MIN_MTU);
 	nc->multicastLimit = (unsigned int)OSUtils::jsonInt(network["multicastLimit"],32ULL);
 
+	
 	std::string rtt(OSUtils::jsonString(member["remoteTraceTarget"],""));
 	if (rtt.length() == 10) {
 		nc->remoteTraceTarget = Address(Utils::hexStrToU64(rtt.c_str()));
@@ -1392,6 +1413,7 @@ void EmbeddedNetworkController::_request(
 	json &tags = network["tags"];
 	json &memberCapabilities = member["capabilities"];
 	json &memberTags = member["tags"];
+	json &dns = network["dns"];
 
 	if (metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_RULES_ENGINE_REV,0) <= 0) {
 		// Old versions with no rules engine support get an allow everything rule.
@@ -1437,11 +1459,11 @@ void EmbeddedNetworkController::_request(
 			std::map< uint64_t,json * >::const_iterator ctmp = capsById.find(capId);
 			if (ctmp != capsById.end()) {
 				json *cap = ctmp->second;
-				if ((cap)&&(cap->is_object())&&(cap->size() > 0)) {
+				if ((cap)&&(cap->is_object())&&(!cap->empty())) {
 					ZT_VirtualNetworkRule capr[ZT_MAX_CAPABILITY_RULES];
 					unsigned int caprc = 0;
 					json &caprj = (*cap)["rules"];
-					if ((caprj.is_array())&&(caprj.size() > 0)) {
+					if ((caprj.is_array())&&(!caprj.empty())) {
 						for(unsigned long j=0;j<caprj.size();++j) {
 							if (caprc >= ZT_MAX_CAPABILITY_RULES)
 								break;
@@ -1684,6 +1706,20 @@ void EmbeddedNetworkController::_request(
 			}
 		}
 	}
+	
+	if(dns.is_object()) {
+		std::string domain = OSUtils::jsonString(dns["domain"],"");
+		memcpy(nc->dns.domain, domain.c_str(), domain.size());
+		json &addrArray = dns["servers"];
+		if (addrArray.is_array()) {
+			for(unsigned int j = 0; j < addrArray.size() && j < ZT_MAX_DNS_SERVERS; ++j) {
+				json &addr = addrArray[j];
+				nc->dns.server_addr[j] = InetAddress(OSUtils::jsonString(addr,"").c_str());
+			}
+		}
+	} else {
+		dns = json::object();
+	}
 
 	// Issue a certificate of ownership for all static IPs
 	if (nc->staticIpCount) {
@@ -1694,7 +1730,7 @@ void EmbeddedNetworkController::_request(
 		nc->certificateOfOwnershipCount = 1;
 	}
 
-	CertificateOfMembership com(now,credentialtmd,nwid,identity.address());
+	CertificateOfMembership com(now,credentialtmd,nwid,identity);
 	if (com.sign(_signingId)) {
 		nc->com = com;
 	} else {

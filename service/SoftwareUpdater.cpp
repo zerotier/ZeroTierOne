@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2023-01-01
+ * Change Date: 2025-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -112,10 +112,10 @@ void SoftwareUpdater::setUpdateDistribution(bool distribute)
 						// If update meta is called e.g. foo.exe.json, then foo.exe is the update itself
 						const std::string binPath(udd + ZT_PATH_SEPARATOR_S + u->substr(0,u->length() - 5));
 						const std::string metaHash(OSUtils::jsonBinFromHex(d.meta[ZT_SOFTWARE_UPDATE_JSON_UPDATE_HASH]));
-						if ((metaHash.length() == ZT_SHA512_DIGEST_LEN)&&(OSUtils::readFile(binPath.c_str(),d.bin))) {
-							std::array<uint8_t,ZT_SHA512_DIGEST_LEN> sha512;
-							SHA512::hash(sha512.data(),d.bin.data(),(unsigned int)d.bin.length());
-							if (!memcmp(sha512.data(),metaHash.data(),ZT_SHA512_DIGEST_LEN)) { // double check that hash in JSON is correct
+						if ((metaHash.length() == 64)&&(OSUtils::readFile(binPath.c_str(),d.bin))) {
+							std::array<uint8_t,64> sha512;
+							SHA512(sha512.data(),d.bin.data(),(unsigned int)d.bin.length());
+							if (!memcmp(sha512.data(),metaHash.data(),64)) { // double check that hash in JSON is correct
 								d.meta[ZT_SOFTWARE_UPDATE_JSON_UPDATE_SIZE] = d.bin.length(); // override with correct value -- setting this in meta json is optional
 								std::array<uint8_t,16> shakey;
 								memcpy(shakey.data(),sha512.data(),16);
@@ -161,7 +161,7 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 
 					if (v == VERB_GET_LATEST) {
 
-						if (_dist.size() > 0) {
+						if (!_dist.empty()) {
 							const nlohmann::json *latest = (const nlohmann::json *)0;
 							const std::string expectedSigner = OSUtils::jsonString(req[ZT_SOFTWARE_UPDATE_JSON_EXPECT_SIGNED_BY],"");
 							unsigned int bestVMaj = rvMaj;
@@ -241,7 +241,7 @@ void SoftwareUpdater::handleSoftwareUpdateUserMessage(uint64_t origin,const void
 			}	break;
 
 			case VERB_GET_DATA:
-				if ((len >= 21)&&(_dist.size() > 0)) {
+				if ((len >= 21)&&(!_dist.empty())) {
 					unsigned long idx = (unsigned long)*(reinterpret_cast<const uint8_t *>(data) + 17) << 24;
 					idx |= (unsigned long)*(reinterpret_cast<const uint8_t *>(data) + 18) << 16;
 					idx |= (unsigned long)*(reinterpret_cast<const uint8_t *>(data) + 19) << 8;
@@ -333,10 +333,10 @@ bool SoftwareUpdater::check(const int64_t now)
 			const std::string binPath(_homePath + ZT_PATH_SEPARATOR_S ZT_SOFTWARE_UPDATE_BIN_FILENAME);
 			try {
 				// (1) Check the hash itself to make sure the image is basically okay
-				uint8_t sha512[ZT_SHA512_DIGEST_LEN];
-				SHA512::hash(sha512,_download.data(),(unsigned int)_download.length());
-				char hexbuf[(ZT_SHA512_DIGEST_LEN * 2) + 2];
-				if (OSUtils::jsonString(_latestMeta[ZT_SOFTWARE_UPDATE_JSON_UPDATE_HASH],"") == Utils::hex(sha512,ZT_SHA512_DIGEST_LEN,hexbuf)) {
+				uint8_t sha512[64];
+				SHA512(sha512,_download.data(),(unsigned int)_download.length());
+				char hexbuf[(64 * 2) + 2];
+				if (OSUtils::jsonString(_latestMeta[ZT_SOFTWARE_UPDATE_JSON_UPDATE_HASH],"") == Utils::hex(sha512,64,hexbuf)) {
 					// (2) Check signature by signing authority
 					const std::string sig(OSUtils::jsonBinFromHex(_latestMeta[ZT_SOFTWARE_UPDATE_JSON_UPDATE_SIGNATURE]));
 					if (Identity(ZT_SOFTWARE_UPDATE_SIGNING_AUTHORITY).verify(_download.data(),(unsigned int)_download.length(),sig.data(),(unsigned int)sig.length())) {

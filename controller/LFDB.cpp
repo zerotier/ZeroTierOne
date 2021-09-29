@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2023-01-01
+ * Change Date: 2025-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -48,7 +48,7 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 		char maskingKey [128];
 		Utils::hex(sha512pk,32,maskingKey);
 
-		httplib::Client htcli(_lfNodeHost.c_str(),_lfNodePort,600);
+		httplib::Client htcli(_lfNodeHost.c_str(),_lfNodePort);
 		int64_t timeRangeStart = 0;
 		while (_running.load()) {
 			{
@@ -190,10 +190,10 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 				if (resp) {
 					if (resp->status == 200) {
 						nlohmann::json results(OSUtils::jsonParse(resp->body));
-						if ((results.is_array())&&(results.size() > 0)) {
+						if ((results.is_array())&&(!results.empty())) {
 							for(std::size_t ri=0;ri<results.size();++ri) {
 								nlohmann::json &rset = results[ri];
-								if ((rset.is_array())&&(rset.size() > 0)) {
+								if ((rset.is_array())&&(!rset.empty())) {
 
 									nlohmann::json &result = rset[0];
 									if (result.is_object()) {
@@ -258,10 +258,10 @@ LFDB::LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,cons
 				if (resp) {
 					if (resp->status == 200) {
 						nlohmann::json results(OSUtils::jsonParse(resp->body));
-						if ((results.is_array())&&(results.size() > 0)) {
+						if ((results.is_array())&&(!results.empty())) {
 							for(std::size_t ri=0;ri<results.size();++ri) {
 								nlohmann::json &rset = results[ri];
-								if ((rset.is_array())&&(rset.size() > 0)) {
+								if ((rset.is_array())&&(!rset.empty())) {
 
 									nlohmann::json &result = rset[0];
 									if (result.is_object()) {

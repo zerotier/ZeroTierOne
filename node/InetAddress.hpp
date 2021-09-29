@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2023-01-01
+ * Change Date: 2025-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -452,6 +452,52 @@ struct InetAddress : public sockaddr_storage
 	 * @return True if everything after netmask bits is zero
 	 */
 	bool isNetwork() const;
+
+	/**
+	 * Find the total number of prefix bits that match between this IP and another
+	 * 
+	 * @param b Second IP to compare with
+	 * @return Number of matching prefix bits or 0 if none match or IPs are of different families (e.g. v4 and v6)
+	 */
+	inline unsigned int matchingPrefixBits(const InetAddress &b) const
+	{
+		unsigned int c = 0;
+		if (ss_family == b.ss_family) {
+			switch(ss_family) {
+				case AF_INET: {
+					uint32_t ip0 = Utils::ntoh((uint32_t)reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr);
+					uint32_t ip1 = Utils::ntoh((uint32_t)reinterpret_cast<const struct sockaddr_in *>(&b)->sin_addr.s_addr);
+					while ((ip0 >> 31) == (ip1 >> 31)) {
+						ip0 <<= 1;
+						ip1 <<= 1;
+						if (++c == 32)
+							break;
+					}
+				}	break;
+				case AF_INET6: {
+					const uint8_t *ip0 = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr);
+					const uint8_t *ip1 = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&b)->sin6_addr.s6_addr);
+					for(unsigned int i=0;i<16;++i) {
+						if (ip0[i] == ip1[i]) {
+							c += 8;
+						} else {
+							uint8_t ip0b = ip0[i];
+							uint8_t ip1b = ip1[i];
+							uint8_t bit = 0x80;
+							while (bit != 0) {
+								if ((ip0b & bit) != (ip1b & bit))
+									break;
+								++c;
+								bit >>= 1;
+							}
+							break;
+						}
+					}
+				}	break;
+			}
+		}
+		return c;
+	}
 
 	/**
 	 * @return 14-bit (0-16383) hash of this IP's first 24 or 48 bits (for V4 or V6) for rate limiting code, or 0 if non-IP

@@ -30,6 +30,7 @@ namespace WinUI
         private bool allowManaged;
         private bool allowGlobal;
         private bool allowDefault;
+        private bool allowDNS;
         private bool isConnected;
 
         protected ZeroTierNetwork(SerializationInfo info, StreamingContext ctx)
@@ -53,6 +54,7 @@ namespace WinUI
                 AllowManaged = info.GetBoolean("allowManaged");
                 AllowGlobal = info.GetBoolean("allowGlobal");
                 AllowDefault = info.GetBoolean("allowDefault");
+                AllowDNS = info.GetBoolean("allowDNS");
             }
             catch { }
             IsConnected = false;
@@ -79,6 +81,7 @@ namespace WinUI
             info.AddValue("allowManaged", AllowManaged);
             info.AddValue("allowGlobal", AllowGlobal);
             info.AddValue("allowDefault", AllowDefault);
+            info.AddValue("allowDNS", AllowDNS);
         }
 
         public void UpdateNetwork(ZeroTierNetwork network)
@@ -163,6 +166,11 @@ namespace WinUI
             if (AllowDefault != network.AllowDefault)
             {
                 AllowDefault = network.AllowDefault;
+            }
+
+            if (AllowDNS != network.AllowDNS)
+            {
+                AllowDNS = network.AllowDNS;
             }
 
             if (IsConnected != network.IsConnected)
@@ -410,6 +418,20 @@ namespace WinUI
             set
             {
                 allowDefault = value;
+                NotifyPropertyChanged();
+            }
+        }
+
+        [JsonProperty("allowDNS")]
+        public bool AllowDNS
+        {
+            get
+            {
+                return allowDNS;
+            }
+            set
+            {
+                allowDNS = value;
                 NotifyPropertyChanged();
             }
         }

@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2023-01-01
+ * Change Date: 2025-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -31,6 +31,27 @@
 
 #include "Constants.hpp"
 
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+#define ZT_CONST_TO_BE_UINT16(x) ((uint16_t)((uint16_t)((uint16_t)(x) << 8U) | (uint16_t)((uint16_t)(x) >> 8U)))
+#define ZT_CONST_TO_BE_UINT64(x) ( \
+  (((uint64_t)(x) & 0x00000000000000ffULL) << 56U) | \
+  (((uint64_t)(x) & 0x000000000000ff00ULL) << 40U) | \
+  (((uint64_t)(x) & 0x0000000000ff0000ULL) << 24U) | \
+  (((uint64_t)(x) & 0x00000000ff000000ULL) <<  8U) | \
+  (((uint64_t)(x) & 0x000000ff00000000ULL) >>  8U) | \
+  (((uint64_t)(x) & 0x0000ff0000000000ULL) >> 24U) | \
+  (((uint64_t)(x) & 0x00ff000000000000ULL) >> 40U) | \
+  (((uint64_t)(x) & 0xff00000000000000ULL) >> 56U))
+#else
+#define ZT_CONST_TO_BE_UINT16(x) ((uint16_t)(x))
+#define ZT_CONST_TO_BE_UINT64(x) ((uint64_t)(x))
+#endif
+
+#define ZT_ROR64(x, r) (((x) >> (r)) | ((x) << (64 - (r))))
+#define ZT_ROL64(x, r) (((x) << (r)) | ((x) >> (64 - (r))))
+#define ZT_ROR32(x, r) (((x) >> (r)) | ((x) << (32 - (r))))
+#define ZT_ROL32(x, r) (((x) << (r)) | ((x) >> (32 - (r))))
+
 namespace ZeroTier {
 
 /**
@@ -39,6 +60,56 @@ namespace ZeroTier {
 class Utils
 {
 public:
+	static const uint64_t ZERO256[4];
+
+#ifdef ZT_ARCH_ARM_HAS_NEON
+	struct ARMCapabilities
+	{
+		ARMCapabilities() noexcept;
+
+		bool aes;
+		bool crc32;
+		bool pmull;
+		bool sha1;
+		bool sha2;
+	};
+	static const ARMCapabilities ARMCAP;
+#endif
+
+#ifdef ZT_ARCH_X64
+	struct CPUIDRegisters
+	{
+		CPUIDRegisters() noexcept;
+
+		bool rdrand;
+		bool aes;
+		bool avx;
+		bool vaes; // implies AVX
+		bool vpclmulqdq; // implies AVX
+		bool avx2;
+		bool avx512f;
+		bool sha;
+		bool fsrm;
+	};
+	static const CPUIDRegisters CPUID;
+#endif
+
+	/**
+	 * Compute the log2 (most significant bit set) of a 32-bit integer
+	 * 
+	 * @param v Integer to compute
+	 * @return log2 or 0 if v is 0
+	 */
+	static inline unsigned int log2(uint32_t v)
+	{
+		uint32_t r = (v > 0xffff) << 4; v >>= r;
+		uint32_t shift = (v > 0xff) << 3; v >>= shift; r |= shift;
+		shift = (v > 0xf) << 2; v >>= shift; r |= shift;
+		shift = (v > 0x3) << 1; v >>= shift; r |= shift;
+		r |= (v >> 1);
+		return (unsigned int)r;
+	}
+
 	/**
 	 * Perform a time-invariant binary comparison
 	 *
@@ -214,12 +285,12 @@ public:
 		return l;
 	}
 
-	static inline float normalize(float value, int64_t bigMin, int64_t bigMax, int32_t targetMin, int32_t targetMax)
+	static inline float normalize(float value, float bigMin, float bigMax, float targetMin, float targetMax)
 	{
-		int64_t bigSpan = bigMax - bigMin;
-		int64_t smallSpan = targetMax - targetMin;
-		float valueScaled = (value - (float)bigMin) / (float)bigSpan;
-		return (float)targetMin + valueScaled * (float)smallSpan;
+		float bigSpan = bigMax - bigMin;
+		float smallSpan = targetMax - targetMin;
+		float valueScaled = (value - bigMin) / bigSpan;
+		return targetMin + valueScaled * smallSpan;
 	}
 
 	/**
@@ -253,6 +324,7 @@ public:
 	static inline int strToInt(const char *s) { return (int)strtol(s,(char **)0,10); }
 	static inline unsigned long strToULong(const char *s) { return strtoul(s,(char **)0,10); }
 	static inline long strToLong(const char *s) { return strtol(s,(char **)0,10); }
+	static inline double strToDouble(const char *s) { return strtod(s,NULL); }
 	static inline unsigned long long strToU64(const char *s)
 	{
 #ifdef __WINDOWS__
@@ -362,72 +434,388 @@ public:
 		return true;
 	}
 
-	// Byte swappers for big/little endian conversion
-	static inline uint8_t hton(uint8_t n) { return n; }
-	static inline int8_t hton(int8_t n) { return n; }
-	static inline uint16_t hton(uint16_t n) { return htons(n); }
-	static inline int16_t hton(int16_t n) { return (int16_t)htons((uint16_t)n); }
-	static inline uint32_t hton(uint32_t n) { return htonl(n); }
-	static inline int32_t hton(int32_t n) { return (int32_t)htonl((uint32_t)n); }
-	static inline uint64_t hton(uint64_t n)
+	/**
+	 * Unconditionally swap bytes regardless of host byte order
+	 *
+	 * @param n Integer to swap
+	 * @return Integer with bytes reversed
+	 */
+	static ZT_INLINE uint64_t swapBytes(const uint64_t n) noexcept
 	{
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-#if defined(__GNUC__)
-#if defined(__FreeBSD__)
-		return bswap64(n);
-#elif (!defined(__OpenBSD__))
+	#ifdef __GNUC__
 		return __builtin_bswap64(n);
-#endif
-#else
+	#else
+	#ifdef _MSC_VER
+		return (uint64_t)_byteswap_uint64((unsigned __int64)n);
+	#else
 		return (
-			((n & 0x00000000000000FFULL) << 56) |
-			((n & 0x000000000000FF00ULL) << 40) |
-			((n & 0x0000000000FF0000ULL) << 24) |
-			((n & 0x00000000FF000000ULL) <<  8) |
-			((n & 0x000000FF00000000ULL) >>  8) |
-			((n & 0x0000FF0000000000ULL) >> 24) |
-			((n & 0x00FF000000000000ULL) >> 40) |
-			((n & 0xFF00000000000000ULL) >> 56)
+			((n & 0x00000000000000ffULL) << 56) |
+			((n & 0x000000000000ff00ULL) << 40) |
+			((n & 0x0000000000ff0000ULL) << 24) |
+			((n & 0x00000000ff000000ULL) <<  8) |
+			((n & 0x000000ff00000000ULL) >>  8) |
+			((n & 0x0000ff0000000000ULL) >> 24) |
+			((n & 0x00ff000000000000ULL) >> 40) |
+			((n & 0xff00000000000000ULL) >> 56)
 		);
-#endif
-#else
-		return n;
-#endif
+	#endif
+	#endif
 	}
-	static inline int64_t hton(int64_t n) { return (int64_t)hton((uint64_t)n); }
 
-	static inline uint8_t ntoh(uint8_t n) { return n; }
-	static inline int8_t ntoh(int8_t n) { return n; }
-	static inline uint16_t ntoh(uint16_t n) { return ntohs(n); }
-	static inline int16_t ntoh(int16_t n) { return (int16_t)ntohs((uint16_t)n); }
-	static inline uint32_t ntoh(uint32_t n) { return ntohl(n); }
-	static inline int32_t ntoh(int32_t n) { return (int32_t)ntohl((uint32_t)n); }
-	static inline uint64_t ntoh(uint64_t n)
+	/**
+	 * Unconditionally swap bytes regardless of host byte order
+	 *
+	 * @param n Integer to swap
+	 * @return Integer with bytes reversed
+	 */
+	static ZT_INLINE uint32_t swapBytes(const uint32_t n) noexcept
 	{
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-#if defined(__GNUC__)
-#if defined(__FreeBSD__)
-		return bswap64(n);
-#elif (!defined(__OpenBSD__))
-		return __builtin_bswap64(n);
-#endif
-#else
-		return (
-			((n & 0x00000000000000FFULL) << 56) |
-			((n & 0x000000000000FF00ULL) << 40) |
-			((n & 0x0000000000FF0000ULL) << 24) |
-			((n & 0x00000000FF000000ULL) <<  8) |
-			((n & 0x000000FF00000000ULL) >>  8) |
-			((n & 0x0000FF0000000000ULL) >> 24) |
-			((n & 0x00FF000000000000ULL) >> 40) |
-			((n & 0xFF00000000000000ULL) >> 56)
-		);
-#endif
-#else
-		return n;
-#endif
+	#if defined(__GNUC__)
+		return __builtin_bswap32(n);
+	#else
+	#ifdef _MSC_VER
+		return (uint32_t)_byteswap_ulong((unsigned long)n);
+	#else
+		return htonl(n);
+	#endif
+	#endif
 	}
-	static inline int64_t ntoh(int64_t n) { return (int64_t)ntoh((uint64_t)n); }
+
+	/**
+	 * Unconditionally swap bytes regardless of host byte order
+	 *
+	 * @param n Integer to swap
+	 * @return Integer with bytes reversed
+	 */
+	static ZT_INLINE uint16_t swapBytes(const uint16_t n) noexcept
+	{
+	#if defined(__GNUC__)
+		return __builtin_bswap16(n);
+	#else
+	#ifdef _MSC_VER
+		return (uint16_t)_byteswap_ushort((unsigned short)n);
+	#else
+		return htons(n);
+	#endif
+	#endif
+	}
+
+	// These are helper adapters to load and swap integer types special cased by size
+	// to work with all typedef'd variants, signed/unsigned, etc.
+	template< typename I, unsigned int S >
+	class _swap_bytes_bysize;
+
+	template< typename I >
+	class _swap_bytes_bysize< I, 1 >
+	{
+	public:
+		static ZT_INLINE I s(const I n) noexcept
+		{ return n; }
+	};
+
+	template< typename I >
+	class _swap_bytes_bysize< I, 2 >
+	{
+	public:
+		static ZT_INLINE I s(const I n) noexcept
+		{ return (I)swapBytes((uint16_t)n); }
+	};
+
+	template< typename I >
+	class _swap_bytes_bysize< I, 4 >
+	{
+	public:
+		static ZT_INLINE I s(const I n) noexcept
+		{ return (I)swapBytes((uint32_t)n); }
+	};
+
+	template< typename I >
+	class _swap_bytes_bysize< I, 8 >
+	{
+	public:
+		static ZT_INLINE I s(const I n) noexcept
+		{ return (I)swapBytes((uint64_t)n); }
+	};
+
+	template< typename I, unsigned int S >
+	class _load_be_bysize;
+
+	template< typename I >
+	class _load_be_bysize< I, 1 >
+	{
+	public:
+		static ZT_INLINE I l(const uint8_t *const p) noexcept
+		{ return p[0]; }
+	};
+
+	template< typename I >
+	class _load_be_bysize< I, 2 >
+	{
+	public:
+		static ZT_INLINE I l(const uint8_t *const p) noexcept
+		{ return (I)(((unsigned int)p[0] << 8U) | (unsigned int)p[1]); }
+	};
+
+	template< typename I >
+	class _load_be_bysize< I, 4 >
+	{
+	public:
+		static ZT_INLINE I l(const uint8_t *const p) noexcept
+		{ return (I)(((uint32_t)p[0] << 24U) | ((uint32_t)p[1] << 16U) | ((uint32_t)p[2] << 8U) | (uint32_t)p[3]); }
+	};
+
+	template< typename I >
+	class _load_be_bysize< I, 8 >
+	{
+	public:
+		static ZT_INLINE I l(const uint8_t *const p) noexcept
+		{ return (I)(((uint64_t)p[0] << 56U) | ((uint64_t)p[1] << 48U) | ((uint64_t)p[2] << 40U) | ((uint64_t)p[3] << 32U) | ((uint64_t)p[4] << 24U) | ((uint64_t)p[5] << 16U) | ((uint64_t)p[6] << 8U) | (uint64_t)p[7]); }
+	};
+
+	template< typename I, unsigned int S >
+	class _load_le_bysize;
+
+	template< typename I >
+	class _load_le_bysize< I, 1 >
+	{
+	public:
+		static ZT_INLINE I l(const uint8_t *const p) noexcept
+		{ return p[0]; }
+	};
+
+	template< typename I >
+	class _load_le_bysize< I, 2 >
+	{
+	public:
+		static ZT_INLINE I l(const uint8_t *const p) noexcept
+		{ return (I)((unsigned int)p[0] | ((unsigned int)p[1] << 8U)); }
+	};
+
+	template< typename I >
+	class _load_le_bysize< I, 4 >
+	{
+	public:
+		static ZT_INLINE I l(const uint8_t *const p) noexcept
+		{ return (I)((uint32_t)p[0] | ((uint32_t)p[1] << 8U) | ((uint32_t)p[2] << 16U) | ((uint32_t)p[3] << 24U)); }
+	};
+
+	template< typename I >
+	class _load_le_bysize< I, 8 >
+	{
+	public:
+		static ZT_INLINE I l(const uint8_t *const p) noexcept
+		{ return (I)((uint64_t)p[0] | ((uint64_t)p[1] << 8U) | ((uint64_t)p[2] << 16U) | ((uint64_t)p[3] << 24U) | ((uint64_t)p[4] << 32U) | ((uint64_t)p[5] << 40U) | ((uint64_t)p[6] << 48U) | ((uint64_t)p[7]) << 56U); }
+	};
+
+	/**
+	 * Convert any signed or unsigned integer type to big-endian ("network") byte order
+	 *
+	 * @tparam I Integer type (usually inferred)
+	 * @param n Value to convert
+	 * @return Value in big-endian order
+	 */
+	template< typename I >
+	static ZT_INLINE I hton(const I n) noexcept
+	{
+	#if __BYTE_ORDER == __LITTLE_ENDIAN
+		return _swap_bytes_bysize< I, sizeof(I) >::s(n);
+	#else
+		return n;
+	#endif
+	}
+
+	/**
+	 * Convert any signed or unsigned integer type to host byte order from big-endian ("network") byte order
+	 *
+	 * @tparam I Integer type (usually inferred)
+	 * @param n Value to convert
+	 * @return Value in host byte order
+	 */
+	template< typename I >
+	static ZT_INLINE I ntoh(const I n) noexcept
+	{
+	#if __BYTE_ORDER == __LITTLE_ENDIAN
+		return _swap_bytes_bysize< I, sizeof(I) >::s(n);
+	#else
+		return n;
+	#endif
+	}
+
+	/**
+	 * Copy bits from memory into an integer type without modifying their order
+	 *
+	 * @tparam I Type to load
+	 * @param p Byte stream, must be at least sizeof(I) in size
+	 * @return Loaded raw integer
+	 */
+	template< typename I >
+	static ZT_INLINE I loadMachineEndian(const void *const p) noexcept
+	{
+	#ifdef ZT_NO_UNALIGNED_ACCESS
+		I tmp;
+		for(int i=0;i<(int)sizeof(I);++i)
+			reinterpret_cast<uint8_t *>(&tmp)[i] = reinterpret_cast<const uint8_t *>(p)[i];
+		return tmp;
+	#else
+		return *reinterpret_cast<const I *>(p);
+	#endif
+	}
+
+	/**
+	 * Copy bits from memory into an integer type without modifying their order
+	 *
+	 * @tparam I Type to store
+	 * @param p Byte array (must be at least sizeof(I))
+	 * @param i Integer to store
+	 */
+	template< typename I >
+	static ZT_INLINE void storeMachineEndian(void *const p, const I i) noexcept
+	{
+	#ifdef ZT_NO_UNALIGNED_ACCESS
+		for(unsigned int k=0;k<sizeof(I);++k)
+			reinterpret_cast<uint8_t *>(p)[k] = reinterpret_cast<const uint8_t *>(&i)[k];
+	#else
+		*reinterpret_cast<I *>(p) = i;
+	#endif
+	}
+
+	/**
+	 * Decode a big-endian value from a byte stream
+	 *
+	 * @tparam I Type to decode (should be unsigned e.g. uint32_t or uint64_t)
+	 * @param p Byte stream, must be at least sizeof(I) in size
+	 * @return Decoded integer
+	 */
+	template< typename I >
+	static ZT_INLINE I loadBigEndian(const void *const p) noexcept
+	{
+	#ifdef ZT_NO_UNALIGNED_ACCESS
+		return _load_be_bysize<I,sizeof(I)>::l(reinterpret_cast<const uint8_t *>(p));
+	#else
+		return ntoh(*reinterpret_cast<const I *>(p));
+	#endif
+	}
+
+	/**
+	 * Save an integer in big-endian format
+	 *
+	 * @tparam I Integer type to store (usually inferred)
+	 * @param p Byte stream to write (must be at least sizeof(I))
+	 * #param i Integer to write
+	 */
+	template< typename I >
+	static ZT_INLINE void storeBigEndian(void *const p, I i) noexcept
+	{
+	#ifdef ZT_NO_UNALIGNED_ACCESS
+		storeMachineEndian(p,hton(i));
+	#else
+		*reinterpret_cast<I *>(p) = hton(i);
+	#endif
+	}
+
+	/**
+	 * Decode a little-endian value from a byte stream
+	 *
+	 * @tparam I Type to decode
+	 * @param p Byte stream, must be at least sizeof(I) in size
+	 * @return Decoded integer
+	 */
+	template< typename I >
+	static ZT_INLINE I loadLittleEndian(const void *const p) noexcept
+	{
+	#if __BYTE_ORDER == __BIG_ENDIAN || defined(ZT_NO_UNALIGNED_ACCESS)
+		return _load_le_bysize<I,sizeof(I)>::l(reinterpret_cast<const uint8_t *>(p));
+	#else
+		return *reinterpret_cast<const I *>(p);
+	#endif
+	}
+
+	/**
+	 * Save an integer in little-endian format
+	 *
+	 * @tparam I Integer type to store (usually inferred)
+	 * @param p Byte stream to write (must be at least sizeof(I))
+	 * #param i Integer to write
+	 */
+	template< typename I >
+	static ZT_INLINE void storeLittleEndian(void *const p, const I i) noexcept
+	{
+	#if __BYTE_ORDER == __BIG_ENDIAN
+		storeMachineEndian(p,_swap_bytes_bysize<I,sizeof(I)>::s(i));
+	#else
+	#ifdef ZT_NO_UNALIGNED_ACCESS
+		storeMachineEndian(p,i);
+	#else
+		*reinterpret_cast<I *>(p) = i;
+	#endif
+	#endif
+	}
+
+	/**
+	 * Copy memory block whose size is known at compile time.
+	 *
+	 * @tparam L Size of memory
+	 * @param dest Destination memory
+	 * @param src Source memory
+	 */
+	template< unsigned long L >
+	static ZT_INLINE void copy(void *dest, const void *src) noexcept
+	{
+	#if defined(ZT_ARCH_X64) && defined(__GNUC__)
+		uintptr_t l = L;
+		__asm__ __volatile__ ("cld ; rep movsb" : "+c"(l), "+S"(src), "+D"(dest) :: "memory");
+	#else
+		memcpy(dest, src, L);
+	#endif
+	}
+
+	/**
+	 * Copy memory block whose size is known at run time
+	 *
+	 * @param dest Destination memory
+	 * @param src Source memory
+	 * @param len Bytes to copy
+	 */
+	static ZT_INLINE void copy(void *dest, const void *src, unsigned long len) noexcept
+	{
+	#if defined(ZT_ARCH_X64) && defined(__GNUC__)
+		__asm__ __volatile__ ("cld ; rep movsb" : "+c"(len), "+S"(src), "+D"(dest) :: "memory");
+	#else
+		memcpy(dest, src, len);
+	#endif
+	}
+
+	/**
+	 * Zero memory block whose size is known at compile time
+	 *
+	 * @tparam L Size in bytes
+	 * @param dest Memory to zero
+	 */
+	template< unsigned long L >
+	static ZT_INLINE void zero(void *dest) noexcept
+	{
+	#if defined(ZT_ARCH_X64) && defined(__GNUC__)
+		uintptr_t l = L;
+		__asm__ __volatile__ ("cld ; rep stosb" :"+c" (l), "+D" (dest) : "a" (0) : "memory");
+	#else
+		memset(dest, 0, L);
+	#endif
+	}
+
+	/**
+	 * Zero memory block whose size is known at run time
+	 *
+	 * @param dest Memory to zero
+	 * @param len Size in bytes
+	 */
+	static ZT_INLINE void zero(void *dest, unsigned long len) noexcept
+	{
+	#if defined(ZT_ARCH_X64) && defined(__GNUC__)
+		__asm__ __volatile__ ("cld ; rep stosb" :"+c" (len), "+D" (dest) : "a" (0) : "memory");
+	#else
+		memset(dest, 0, len);
+	#endif
+	}
 
 	/**
 	 * Hexadecimal characters 0-f

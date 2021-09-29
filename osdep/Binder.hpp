@@ -1,10 +1,10 @@
 /*
- * Copyright (c)2019 ZeroTier, Inc.
+ * Copyright (c)2013-2020 ZeroTier, Inc.
  *
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2023-01-01
+ * Change Date: 2025-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -136,7 +136,9 @@ public:
 					PIP_ADAPTER_UNICAST_ADDRESS ua = a->FirstUnicastAddress;
 					while (ua) {
 						InetAddress ip(ua->Address.lpSockaddr);
-						if (ifChecker.shouldBindInterface("",ip)) {
+						char strBuf[128] = { 0 };
+						wcstombs(strBuf, a->FriendlyName, sizeof(strBuf));
+						if (ifChecker.shouldBindInterface(strBuf,ip)) {
 							switch(ip.ipScope()) {
 								default: break;
 								case InetAddress::IP_SCOPE_PSEUDOPRIVATE:
@@ -234,7 +236,7 @@ public:
 			}
 
 			// Get IPv4 addresses for each device
-			if (ifnames.size() > 0) {
+			if (!ifnames.empty()) {
 				const int controlfd = (int)socket(AF_INET,SOCK_DGRAM,0);
 				struct ifconf configuration;
 				configuration.ifc_len = 0;
@@ -276,7 +278,7 @@ public:
 				if (controlfd > 0) close(controlfd);
 			}
 
-			const bool gotViaProc = (localIfAddrs.size() > 0);
+			const bool gotViaProc = (!localIfAddrs.empty());
 #else
 			const bool gotViaProc = false;
 #endif
@@ -344,6 +346,27 @@ public:
 				_bindings[b].tcpListenSock = (PhySocket *)0;
 				phy.close(udps,false);
 				phy.close(tcps,false);
+			}
+		}
+
+		// Generate set of unique interface names (used for formation of logical link set in multipath code)
+		// TODO: Could be gated not to run if multipath is not enabled.
+		for(std::map<InetAddress,std::string>::const_iterator ii(localIfAddrs.begin());ii!=localIfAddrs.end();++ii) {
+			linkIfNames.insert(ii->second);
+		}
+		for (std::set<std::string>::iterator si(linkIfNames.begin());si!=linkIfNames.end();) {
+			bool bFoundMatch = false;
+			for(std::map<InetAddress,std::string>::const_iterator ii(localIfAddrs.begin());ii!=localIfAddrs.end();++ii) {
+				if (ii->second == *si) {
+					bFoundMatch = true;
+					break;
+				}
+			}
+			if (!bFoundMatch) {
+				linkIfNames.erase(si++);
+			}
+			else {
+				++si;
 			}
 		}
 
@@ -444,7 +467,15 @@ public:
 		return false;
 	}
 
+	inline std::set<std::string> getLinkInterfaceNames()
+	{
+		Mutex::Lock _l(_lock);
+		return linkIfNames;
+	}
+
 private:
+
+	std::set<std::string> linkIfNames;
 	_Binding _bindings[ZT_BINDER_MAX_BINDINGS];
 	std::atomic<unsigned int> _bindingCount;
 	Mutex _lock;

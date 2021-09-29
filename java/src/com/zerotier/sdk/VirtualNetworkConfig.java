@@ -27,13 +27,18 @@
 
 package com.zerotier.sdk;
 
+import android.util.Log;
+
 import java.lang.Comparable;
 import java.lang.Override;
 import java.lang.String;
 import java.util.ArrayList;
 import java.net.InetSocketAddress;
+import java.util.Collections;
 
 public final class VirtualNetworkConfig implements Comparable<VirtualNetworkConfig> {
+    private final static String TAG = "VirtualNetworkConfig";
+
     public static final int MAX_MULTICAST_SUBSCRIPTIONS = 4096;
     public static final int ZT_MAX_ZT_ASSIGNED_ADDRESSES = 16;
 
@@ -51,45 +56,120 @@ public final class VirtualNetworkConfig implements Comparable<VirtualNetworkConf
     private long netconfRevision;
     private InetSocketAddress[] assignedAddresses;
     private VirtualNetworkRoute[] routes;
+    private VirtualNetworkDNS dns;
 
     private VirtualNetworkConfig() {
 
     }
 
     public boolean equals(VirtualNetworkConfig cfg) {
-        boolean aaEqual = true;
-        if(assignedAddresses.length == cfg.assignedAddresses.length) {
-            for(int i = 0; i < assignedAddresses.length; ++i) {
-                if(!assignedAddresses[i].equals(cfg.assignedAddresses[i])) {
-                    aaEqual = false;
-                }
-            }
-        } else {
-            aaEqual = false;
+        ArrayList<String> aaCurrent = new ArrayList<>();
+        ArrayList<String> aaNew = new ArrayList<>();
+        for (InetSocketAddress s : assignedAddresses) {
+            aaCurrent.add(s.toString());
+        }
+        for (InetSocketAddress s : cfg.assignedAddresses) {
+            aaNew.add(s.toString());
+        }
+        Collections.sort(aaCurrent);
+        Collections.sort(aaNew);
+        boolean aaEqual = aaCurrent.equals(aaNew);
+
+        ArrayList<String> rCurrent = new ArrayList<>();
+        ArrayList<String> rNew = new ArrayList<>();
+        for (VirtualNetworkRoute r : routes) {
+            rCurrent.add(r.toString());
+        }
+        for (VirtualNetworkRoute r : cfg.routes) {
+            rNew.add(r.toString());
+        }
+        Collections.sort(rCurrent);
+        Collections.sort(rNew);
+        boolean routesEqual = rCurrent.equals(rNew);
+
+        if (this.nwid != cfg.nwid) {
+            Log.i(TAG, "nwid Changed. Old: " + Long.toHexString(this.nwid) + " (" + Long.toString(this.nwid) + "), " +
+                    "New: " + Long.toHexString(cfg.nwid) + " (" + Long.toString(cfg.nwid) + ")");
+        }
+        if (this.mac != cfg.mac) {
+            Log.i(TAG, "MAC Changed. Old: " + Long.toHexString(this.mac) + ", New: " + Long.toHexString(cfg.mac));
         }
 
-        boolean routesEqual = true;
-        if(routes.length == cfg.routes.length) {
-            for (int i = 0; i < routes.length; ++i) {
-                if (!routes[i].equals(cfg.routes[i])) {
-                    routesEqual = false;
-                }
-            }
-        } else {
-            routesEqual = false;
+        if (!this.name.equals(cfg.name)) {
+            Log.i(TAG, "Name Changed.  Old: " + this.name + " New: "+ cfg.name);
         }
 
-        return nwid == cfg.nwid &&
-               mac == cfg.mac &&
-               name.equals(cfg.name) &&
-               status.equals(cfg.status) &&
-               type.equals(cfg.type) &&
-               mtu == cfg.mtu &&
-               dhcp == cfg.dhcp &&
-               bridge == cfg.bridge &&
-               broadcastEnabled == cfg.broadcastEnabled &&
-               portError == cfg.portError &&
-               enabled == cfg.enabled &&
+        if (!this.type.equals(cfg.type)) {
+            Log.i(TAG, "TYPE changed.  Old " + this.type + ", New: " + cfg.type);
+        }
+
+        if (this.mtu != cfg.mtu) {
+            Log.i(TAG, "MTU Changed.  Old: " + this.mtu + ", New: " + cfg.mtu);
+        }
+
+        if (this.dhcp != cfg.dhcp) {
+            Log.i(TAG, "DHCP Flag Changed. Old: " + this.dhcp + ", New: " + cfg.dhcp);
+        }
+
+        if (this.bridge != cfg.bridge) {
+            Log.i(TAG, "Bridge Flag Changed. Old: " + this.bridge + ", New: " + cfg.bridge);
+        }
+
+        if (this.broadcastEnabled != cfg.broadcastEnabled) {
+            Log.i(TAG, "Broadcast Flag Changed. Old: "+ this.broadcastEnabled +", New: " + this.broadcastEnabled);
+        }
+
+        if (this.portError != cfg.portError) {
+            Log.i(TAG, "Port Error Changed. Old: " + this.portError + ", New: " + this.portError);
+        }
+
+        if (this.enabled != cfg.enabled) {
+            Log.i(TAG, "Enabled Changed. Old: " + this.enabled + ", New: " + this.enabled);
+        }
+
+        if (!aaEqual) {
+            Log.i(TAG, "Assigned Addresses Changed");
+            Log.i(TAG, "Old:");
+            for (String s : aaCurrent) {
+                Log.i(TAG, "    " + s);
+            }
+            Log.i(TAG, "New:");
+            for (String s : aaNew) {
+                Log.i(TAG, "    " +s);
+            }
+        }
+
+        if (!routesEqual) {
+            Log.i(TAG, "Managed Routes Changed");
+            Log.i(TAG, "Old:");
+            for (String s : rCurrent) {
+                Log.i(TAG, "    " + s);
+            }
+            Log.i(TAG, "New:");
+            for (String s : rNew) {
+                Log.i(TAG, "    " + s);
+            }
+        }
+
+        boolean dnsEquals = false;
+        if (this.dns == null || cfg.dns == null) {
+            dnsEquals = true;
+        } else if (this.dns != null) {
+            dnsEquals = this.dns.equals(cfg.dns);
+        }
+
+        return this.nwid == cfg.nwid &&
+               this.mac == cfg.mac &&
+               this.name.equals(cfg.name) &&
+               this.status.equals(cfg.status) &&
+               this.type.equals(cfg.type) &&
+               this.mtu == cfg.mtu &&
+               this.dhcp == cfg.dhcp &&
+               this.bridge == cfg.bridge &&
+               this.broadcastEnabled == cfg.broadcastEnabled &&
+               this.portError == cfg.portError &&
+               this.enabled == cfg.enabled &&
+               dnsEquals &&
                aaEqual && routesEqual;
     }
 
@@ -207,4 +287,6 @@ public final class VirtualNetworkConfig implements Comparable<VirtualNetworkConf
      * @return
      */
     public final VirtualNetworkRoute[] routes() { return routes; }
+
+    public final VirtualNetworkDNS dns() { return dns; }
 }

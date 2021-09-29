@@ -37,6 +37,7 @@
 @property (weak, nonatomic) IBOutlet NSButton *allowManaged;
 @property (weak, nonatomic) IBOutlet NSButton *allowGlobal;
 @property (weak, nonatomic) IBOutlet NSButton *allowDefault;
+@property (weak, nonatomic) IBOutlet NSButton *allowDNS;
 @property (weak, nonatomic) IBOutlet NSButton *connectedCheckbox;
 @property (weak, nonatomic) IBOutlet NSButton *deleteButton;
 

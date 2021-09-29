@@ -1,10 +1,10 @@
 /*
- * Copyright (c)2019 ZeroTier, Inc.
+ * Copyright (c)2013-2020 ZeroTier, Inc.
  *
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2023-01-01
+ * Change Date: 2025-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -239,6 +239,21 @@ public:
 	}
 
 	/**
+	 * @return The sum of the contents of the buffer
+	 */
+	inline float sum()
+	{
+		size_t iterator = begin;
+		float total = 0;
+		size_t curr_cnt = count();
+		for (size_t i=0; i<curr_cnt; i++) {
+			iterator = (iterator + S - 1) % curr_cnt;
+			total += (float)*(buf + iterator);
+		}
+		return total;
+	}
+
+	/**
 	 * @return The sample standard deviation of element values
 	 */
 	inline float stddev() { return sqrt(variance()); }
@@ -306,10 +321,10 @@ public:
 		for (size_t i=0; i<S; i++) {
 			iterator = (iterator + S - 1) % S;
 			if (typeid(T) == typeid(int)) {
-				 //DEBUG_INFO("buf[%2zu]=%2d", iterator, (int)*(buf + iterator));
+				fprintf(stderr, "buf[%2zu]=%2d\n", iterator, (int)*(buf + iterator));
 			}
 			else {
-				 //DEBUG_INFO("buf[%2zu]=%2f", iterator, (float)*(buf + iterator));
+				fprintf(stderr, "buf[%2zu]=%2f\n", iterator, (float)*(buf + iterator));
 			}
 		}
 	}

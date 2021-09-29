@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2023-01-01
+ * Change Date: 2025-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -51,8 +51,10 @@ public:
 	virtual void put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len) = 0;
 	virtual std::string deviceName() const = 0;
 	virtual void setFriendlyName(const char *friendlyName) = 0;
+	virtual std::string friendlyName() const;
 	virtual void scanMulticastGroups(std::vector<MulticastGroup> &added,std::vector<MulticastGroup> &removed) = 0;
 	virtual void setMtu(unsigned int mtu) = 0;
+	virtual void setDns(const char *domain, const std::vector<InetAddress> &servers) = 0;
 };
 
 } // namespace ZeroTier

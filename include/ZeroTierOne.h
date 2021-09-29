@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2023-01-01
+ * Change Date: 2025-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -194,6 +194,11 @@ extern "C" {
  * Maximum value for link quality (min is 0)
  */
 #define ZT_PATH_LINK_QUALITY_MAX 0xff
+
+/**
+ * Maximum number of DNS servers per domain
+ */
+#define ZT_MAX_DNS_SERVERS 4
 
 /**
  * Packet characteristics flag: packet direction, 1 if inbound 0 if outbound
@@ -415,33 +420,155 @@ enum ZT_ResultCode
  */
 #define ZT_ResultCode_isFatal(x) ((((int)(x)) >= 100)&&(((int)(x)) < 1000))
 
+
 /**
- * The multipath algorithm in use by this node.
+ *  Multipath bonding policy
  */
-enum ZT_MultipathMode
+enum ZT_MultipathBondingPolicy
 {
 	/**
-	 * No active multipath.
-	 *
-	 * Traffic is merely sent over the strongest path. That being
-	 * said, this mode will automatically failover in the event that a link goes down.
+	 * Normal operation. No fault tolerance, no load balancing
 	 */
-	ZT_MULTIPATH_NONE = 0,
+	ZT_BONDING_POLICY_NONE = 0,
 
 	/**
-	 * Traffic is randomly distributed among all active paths.
-	 *
-	 * Will cease sending traffic over links that appear to be stale.
+	 * Sends traffic out on only one path at a time. Configurable immediate
+	 * fail-over.
 	 */
-	ZT_MULTIPATH_RANDOM = 1,
+	ZT_BONDING_POLICY_ACTIVE_BACKUP = 1,
 
 	/**
-	 * Traffic is allocated across all active paths in proportion to their strength and
-	 * reliability.
-	 *
-	 * Will cease sending traffic over links that appear to be stale.
+	 * Sends traffic out on all paths
 	 */
-	ZT_MULTIPATH_PROPORTIONALLY_BALANCED = 2,
+	ZT_BONDING_POLICY_BROADCAST = 2,
+
+	/**
+	 * Stripes packets across all paths
+	 */
+	ZT_BONDING_POLICY_BALANCE_RR = 3,
+
+	/**
+	 * Packets destined for specific peers will always be sent over the same
+	 * path.
+	 */
+	ZT_BONDING_POLICY_BALANCE_XOR = 4,
+
+	/**
+	 * Balances flows among all paths according to path performance
+	 */
+	ZT_BONDING_POLICY_BALANCE_AWARE = 5
+};
+
+/**
+ * Multipath active re-selection policy (linkSelectMethod)
+ */
+enum ZT_MultipathLinkSelectMethod
+{
+	/**
+	 * Primary link regains status as active link whenever it comes back up
+	 * (default when links are explicitly specified)
+	 */
+	ZT_MULTIPATH_RESELECTION_POLICY_ALWAYS = 0,
+
+	/**
+	 * Primary link regains status as active link when it comes back up and
+	 * (if) it is better than the currently-active link.
+	 */
+	ZT_MULTIPATH_RESELECTION_POLICY_BETTER = 1,
+
+	/**
+	 * Primary link regains status as active link only if the currently-active
+	 * link fails.
+	 */
+	ZT_MULTIPATH_RESELECTION_POLICY_FAILURE = 2,
+
+	/**
+	 * The primary link can change if a superior path is detected.
+	 * (default if user provides no fail-over guidance)
+	 */
+	ZT_MULTIPATH_RESELECTION_POLICY_OPTIMIZE = 3
+};
+
+/**
+ * Mode of multipath link interface
+ */
+enum ZT_MultipathLinkMode
+{
+	ZT_MULTIPATH_SLAVE_MODE_PRIMARY = 0,
+	ZT_MULTIPATH_SLAVE_MODE_SPARE = 1
+};
+
+/**
+ * Strategy for path monitoring
+ */
+enum ZT_MultipathMonitorStrategy
+{
+	/**
+	 * Use bonding policy's default strategy
+	 */
+	ZT_MULTIPATH_SLAVE_MONITOR_STRATEGY_DEFAULT = 0,
+
+	/**
+	 * Does not actively send probes to judge aliveness, will rely
+	 * on conventional traffic and summary statistics.
+	 */
+	ZT_MULTIPATH_SLAVE_MONITOR_STRATEGY_PASSIVE = 1,
+
+	/**
+	 * Sends probes at a constant rate to judge aliveness.
+	 */
+	ZT_MULTIPATH_SLAVE_MONITOR_STRATEGY_ACTIVE = 2,
+
+	/**
+	 * Sends probes at varying rates which correlate to native
+	 * traffic loads to judge aliveness.
+	 */
+	ZT_MULTIPATH_SLAVE_MONITOR_STRATEGY_DYNAMIC = 3
+};
+
+/**
+ * Strategy for re-balancing protocol flows
+ */
+enum ZT_MultipathFlowRebalanceStrategy
+{
+	/**
+	 * Flows will only be re-balanced among links during
+	 * assignment or failover. This minimizes the possibility
+	 * of sequence reordering and is thus the default setting.
+	 */
+	ZT_MULTIPATH_FLOW_REBALANCE_STRATEGY_PASSIVE = 0,
+
+	/**
+	 * Flows that are active may be re-assigned to a new more
+	 * suitable link if it can be done without disrupting the flow.
+	 * This setting can sometimes cause sequence re-ordering.
+	 */
+	ZT_MULTIPATH_FLOW_REBALANCE_STRATEGY_OPPORTUNISTIC = 0,
+
+	/**
+	 * Flows will be continuously re-assigned the most suitable link
+	 * in order to maximize "balance". This can often cause sequence
+	 * reordering and is thus only reccomended for protocols like UDP.
+	 */
+	ZT_MULTIPATH_FLOW_REBALANCE_STRATEGY_AGGRESSIVE = 2
+};
+
+/**
+ * Indices for the path quality weight vector
+ */
+enum ZT_MultipathQualityWeightIndex
+{
+	ZT_QOS_LAT_IDX,
+	ZT_QOS_LTM_IDX,
+	ZT_QOS_PDV_IDX,
+	ZT_QOS_PLR_IDX,
+	ZT_QOS_PER_IDX,
+	ZT_QOS_THR_IDX,
+	ZT_QOS_THM_IDX,
+	ZT_QOS_THV_IDX,
+	ZT_QOS_AGE_IDX,
+	ZT_QOS_SCP_IDX,
+	ZT_QOS_WEIGHT_SIZE
 };
 
 /**
@@ -985,6 +1112,15 @@ typedef struct
 } ZT_VirtualNetworkRoute;
 
 /**
+ * DNS configuration to be pushed on a virtual network
+ */
+typedef struct
+{
+	char domain[128];
+	struct sockaddr_storage server_addr[ZT_MAX_DNS_SERVERS];
+} ZT_VirtualNetworkDNS;
+
+/**
  * An Ethernet multicast group
  */
 typedef struct
@@ -1198,6 +1334,11 @@ typedef struct
 		uint64_t mac; /* MAC in lower 48 bits */
 		uint32_t adi; /* Additional distinguishing information, usually zero except for IPv4 ARP groups */
 	} multicastSubscriptions[ZT_MAX_MULTICAST_SUBSCRIPTIONS];
+	
+	/**
+	 * Network specific DNS configuration
+	 */
+	ZT_VirtualNetworkDNS dns;
 } ZT_VirtualNetworkConfig;
 
 /**
@@ -1250,44 +1391,49 @@ typedef struct
 	uint64_t trustedPathId;
 
 	/**
-	 * One-way latency
+	 * Mean latency
 	 */
-	float latency;
+	float latencyMean;
 
 	/**
-	 * How much latency varies over time
+	 * Maximum observed latency
 	 */
-	float packetDelayVariance;
+	float latencyMax;
 
 	/**
-	 * How much observed throughput varies over time
+	 * Variance of latency
 	 */
-	float throughputDisturbCoeff;
+	float latencyVariance;
 
 	/**
-	 * Packet Error Ratio (PER)
-	 */
-	float packetErrorRatio;
-
-	/**
-	 * Packet Loss Ratio (PLR)
+	 * Packet loss ratio
 	 */
 	float packetLossRatio;
 
 	/**
-	 * Stability of the path
+	 * Packet error ratio
 	 */
-	float stability;
+	float packetErrorRatio;
 
 	/**
-	 * Current throughput (moving average)
+	 * Mean throughput
 	 */
-	uint64_t throughput;
+	uint64_t throughputMean;
 
 	/**
-	 * Maximum observed throughput for this path
+	 * Maximum observed throughput
 	 */
-	uint64_t maxThroughput;
+	float throughputMax;
+
+	/**
+	 * Throughput variance
+	 */
+	float throughputVariance;
+
+	/**
+	 * Address scope
+	 */
+	uint8_t scope;
 
 	/**
 	 * Percentage of traffic allocated to this path
@@ -1297,7 +1443,9 @@ typedef struct
 	/**
 	 * Name of physical interface (for monitoring)
 	 */
-	char *ifname;
+	char ifname[32];
+
+	uint64_t localSocket;
 
 	/**
 	 * Is path expired?
@@ -1346,14 +1494,39 @@ typedef struct
 	enum ZT_PeerRole role;
 
 	/**
+	 * Whether a multi-link bond has formed
+	 */
+	bool isBonded;
+
+	/**
+	 * The bonding policy used to bond to this peer
+	 */
+	int bondingPolicy;
+
+	/**
+	 * The health status of the bond to this peer
+	 */
+	bool isHealthy;
+
+	/**
+	 * The number of links that comprise the bond to this peer that are considered alive
+	 */
+	int numAliveLinks;
+
+	/**
+	 * The number of links that comprise the bond to this peer
+	 */
+	int numTotalLinks;
+
+	/**
+	 * The user-specified bond template name
+	 */
+	char customBondName[32];
+
+	/**
 	 * Number of paths (size of paths[])
 	 */
 	unsigned int pathCount;
-
-	/**
-	 * Whether this peer was ever reachable via an aggregate link
-	 */
-	bool hadAggregateLink;
 
 	/**
 	 * Known network paths to peer

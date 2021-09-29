@@ -58,14 +58,23 @@ public final class VirtualNetworkRoute implements Comparable<VirtualNetworkRoute
 	 */
 	public int metric;
 
+	@Override
+    public String toString() {
+	    StringBuilder sb = new StringBuilder();
+	    sb.append(target.toString());
+        if (via != null) {
+            sb.append(via.toString());
+        }
+        return sb.toString();
+    }
 
     @Override
 	public int compareTo(VirtualNetworkRoute other) {
-        return target.toString().compareTo(other.target.toString());
+        return this.toString().compareTo(other.toString());
 	}
 
     public boolean equals(VirtualNetworkRoute other) {
-        boolean targetEquals;
+        boolean targetEquals = false;
         if (target == null && other.target == null) {
             targetEquals = true;
         }
@@ -76,7 +85,7 @@ public final class VirtualNetworkRoute implements Comparable<VirtualNetworkRoute
             targetEquals = false;
         }
         else {
-            targetEquals = target.equals(other.target);
+            targetEquals = target.toString().equals(other.target.toString());
         }
 
 
@@ -91,12 +100,9 @@ public final class VirtualNetworkRoute implements Comparable<VirtualNetworkRoute
             viaEquals = false;
         }
         else {
-            viaEquals = via.equals(other.via);
+            viaEquals = via.toString().equals(other.via.toString());
         }
 
-        return viaEquals &&
-                viaEquals &&
-                flags == other.flags &&
-                metric == other.metric;
+        return viaEquals && targetEquals;
     }
 }
