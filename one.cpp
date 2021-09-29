@@ -1999,6 +1999,7 @@ static void printHelp(const char *cn,FILE *out)
 	fprintf(out,"  -h                - Display this help" ZT_EOL_S);
 	fprintf(out,"  -v                - Show version" ZT_EOL_S);
 	fprintf(out,"  -U                - Skip privilege check and do not attempt to drop privileges" ZT_EOL_S);
+	fprintf(out,"  -m<route_metric>  - Route metric (default: 100000, set to 0 to disable metric change)" ZT_EOL_S);
 	fprintf(out,"  -p<port>          - Port for UDP and TCP/HTTP (default: 9993, 0 for random)" ZT_EOL_S);
 
 #ifdef __UNIX_LIKE__
@@ -2061,6 +2062,9 @@ public:
 	unsigned int port;
 	const std::string &homeDir;
 };
+
+// hack
+int route_metric=100000;
 
 #ifdef __WINDOWS__
 int __cdecl _tmain(int argc, _TCHAR* argv[])
@@ -2129,6 +2133,10 @@ int main(int argc,char **argv)
 	for(int i=1;i<argc;++i) {
 		if (argv[i][0] == '-') {
 			switch(argv[i][1]) {
+
+				case 'm': // port -- for both UDP and TCP, packets and control plane
+					route_metric = Utils::strToUInt(argv[i] + 2);
+					break;
 
 				case 'p': // port -- for both UDP and TCP, packets and control plane
 					port = Utils::strToUInt(argv[i] + 2);

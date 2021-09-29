@@ -26,6 +26,8 @@
 #define IFNAMSIZ 16
 #endif
 
+extern int route_metric;
+
 namespace ZeroTier {
 
 struct nl_route_req {
@@ -712,7 +714,7 @@ void LinuxNetLink::addRoute(const InetAddress &target, const InetAddress &via, c
 	char  tmp[64];
 	char tmp2[64];
 	char tmp3[64];
-	fprintf(stderr, "Adding Route. target: %s via: %s src: %s iface: %s\n", target.toString(tmp), via.toString(tmp2), src.toString(tmp3), ifaceName);
+	fprintf(stderr, "Adding Route. target: %s via: %s src: %s iface: %s metric: %d\n", target.toString(tmp), via.toString(tmp2), src.toString(tmp3), ifaceName,route_metric);
 #endif
 
 	int rtl = sizeof(struct rtmsg);
@@ -764,6 +766,14 @@ void LinuxNetLink::addRoute(const InetAddress &target, const InetAddress &via, c
 			memcpy(RTA_DATA(rtap), &interface_index, sizeof(int));
 			rtl += rtap->rta_len;
 		}
+	}
+
+	if(route_metric>0) {
+		rtap = (struct rtattr *) (((char*)rtap) + rtap->rta_len);
+		rtap->rta_type = RTA_PRIORITY;
+		rtap->rta_len = RTA_LENGTH(sizeof(int));
+		memcpy(RTA_DATA(rtap), &route_metric, sizeof(int));
+		rtl += rtap->rta_len;
 	}
 
 	req.nl.nlmsg_len = NLMSG_LENGTH(rtl);
