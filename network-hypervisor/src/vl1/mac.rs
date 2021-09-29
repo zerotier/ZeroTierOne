@@ -16,10 +16,15 @@ impl MAC {
     #[inline(always)]
     pub fn from_bytes(b: &[u8]) -> Option<MAC> {
         if b.len() >= 6 {
-            NonZeroU64::new((b[0] as u64) << 40 | (b[1] as u64) << 32 | (b[2] as u64) << 24 | (b[3] as u64) << 16 as u64 | (b[4] as u64) << 8 | b[5] as u64).map_or(None, |i| Some(MAC(i)))
+            NonZeroU64::new((b[0] as u64) << 40 | (b[1] as u64) << 32 | (b[2] as u64) << 24 | (b[3] as u64) << 16 as u64 | (b[4] as u64) << 8 | b[5] as u64).map(|i| MAC(i))
         } else {
             None
         }
+    }
+
+    #[inline(always)]
+    pub fn from_bytes_fixed(b: &[u8; 6]) -> Option<MAC> {
+        NonZeroU64::new((b[0] as u64) << 40 | (b[1] as u64) << 32 | (b[2] as u64) << 24 | (b[3] as u64) << 16 as u64 | (b[4] as u64) << 8 | b[5] as u64).map(|i| MAC(i))
     }
 
     #[inline(always)]
@@ -31,7 +36,6 @@ impl MAC {
     #[inline(always)]
     pub fn to_u64(&self) -> u64 { self.0.get() }
 
-    #[inline(always)]
     pub(crate) fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> std::io::Result<()> {
         buf.append_and_init_bytes_fixed(|b: &mut [u8; 6]| {
             let i = self.0.get();
@@ -46,7 +50,7 @@ impl MAC {
 
     #[inline(always)]
     pub(crate) fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> std::io::Result<Option<Self>> {
-        buf.read_bytes_fixed::<6>(cursor).map(|b| Self::from_bytes(b))
+        buf.read_bytes_fixed::<6>(cursor).map(|b| Self::from_bytes_fixed(b))
     }
 }
 

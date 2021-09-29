@@ -1,3 +1,4 @@
+/// The poly1305 message authentication function.
 pub struct Poly1305(gcrypt::mac::Mac);
 
 pub const POLY1305_ONE_TIME_KEY_SIZE: usize = 32;

@@ -71,16 +71,7 @@ impl Dictionary {
     }
 
     pub fn get_bool(&self, k: &str) -> Option<bool> {
-        self.0.get(k).map_or(None, |v| {
-            if v.is_empty() {
-                Some(false)
-            } else {
-                Some(match v[0] {
-                    b'1' | b't' | b'T' | b'y' | b'Y' => true,
-                    _ => false
-                })
-            }
-        })
+        self.0.get(k).map_or(None, |v| v.first().map_or(Some(false), |c| Some("1tTyY".contains(*c as char))))
     }
 
     pub fn set_str(&mut self, k: &str, v: &str) {
@@ -96,7 +87,7 @@ impl Dictionary {
     }
 
     pub fn set_bool(&mut self, k: &str, v: bool) {
-        let _ = self.0.insert(String::from(k), (if v { [b'1'] } else { [b'0'] }).to_vec());
+        let _ = self.0.insert(String::from(k), vec![if v { b'1' } else { b'0' }]);
     }
 
     /// Write a dictionary in transport format to a writer.

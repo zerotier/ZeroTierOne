@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 
-use crate::vl1::{Address, Endpoint, Identity};
+use crate::vl1::{Address, Endpoint, Identity, Dictionary};
 use crate::vl1::buffer::Buffer;
 use crate::vl1::protocol::PACKET_SIZE_MAX;
 
@@ -15,6 +15,7 @@ pub struct Locator {
     pub subject: Address,
     pub signer: Address,
     pub timestamp: i64,
+    pub metadata: Option<Dictionary>,
     pub endpoints: Vec<Endpoint>,
     pub signature: Vec<u8>,
 }
@@ -34,6 +35,7 @@ impl Locator {
             subject,
             signer: signer_identity.address(),
             timestamp: ts,
+            metadata: None,
             endpoints: endpoints.to_vec(),
             signature: Vec::new()
         };
@@ -81,12 +83,16 @@ impl Locator {
     fn marshal_internal<const BL: usize>(&self, buf: &mut Buffer<BL>, exclude_signature: bool) -> std::io::Result<()> {
         self.subject.marshal(buf)?;
         self.signer.marshal(buf)?;
-        buf.append_u64(self.timestamp as u64)?;
+        buf.append_varint(self.timestamp as u64)?;
+        self.metadata.map_or_else(|| buf.append_varint(0), |d| {
+            let db = d.to_bytes();
+            buf.append_varint(db.len() as u64)?;
+            buf.append_bytes(db.as_slice())
+        })?;
         buf.append_varint(self.endpoints.len() as u64)?;
         for e in self.endpoints.iter() {
             e.marshal(buf)?;
         }
-        buf.append_varint(0)?; // length of any additional fields
         if !exclude_signature {
             buf.append_varint(self.signature.len() as u64)?;
             buf.append_bytes(self.signature.as_slice())?;
@@ -104,18 +110,26 @@ impl Locator {
             return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid subject or signer address"));
         }
         let timestamp = buf.read_u64(cursor)? as i64;
+        let metadata_size = buf.read_varint(cursor)? as usize;
+        let metadata = if metadata_size > 0 {
+            let md = Dictionary::from_bytes(buf.read_bytes(metadata_size, cursor)?);
+            if md.is_none() {
+                return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid meta-data"));
+            }
+            md
+        } else { None };
         let endpoint_count = buf.read_varint(cursor)? as usize;
         let mut endpoints: Vec<Endpoint> = Vec::new();
         for _ in 0..endpoint_count {
             endpoints.push(Endpoint::unmarshal(buf, cursor)?);
         }
-        *cursor += buf.read_varint(cursor)? as usize;
         let signature_len = buf.read_varint(cursor)? as usize;
         let signature = buf.read_bytes(signature_len, cursor)?;
         Ok(Locator {
             subject: subject.unwrap(),
             signer: signer.unwrap(),
             timestamp,
+            metadata,
             endpoints,
             signature: signature.to_vec(),
         })

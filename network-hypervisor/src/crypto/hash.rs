@@ -55,9 +55,7 @@ impl Write for SHA512 {
     }
 
     #[inline(always)]
-    fn flush(&mut self) -> std::io::Result<()> {
-        self.0.flush()
-    }
+    fn flush(&mut self) -> std::io::Result<()> { self.0.flush() }
 }
 
 pub struct SHA384(gcrypt::digest::MessageDigest);
@@ -110,7 +108,5 @@ impl Write for SHA384 {
     }
 
     #[inline(always)]
-    fn flush(&mut self) -> std::io::Result<()> {
-        self.0.flush()
-    }
+    fn flush(&mut self) -> std::io::Result<()> { self.0.flush() }
 }

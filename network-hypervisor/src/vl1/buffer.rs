@@ -28,7 +28,6 @@ impl<const L: usize> Buffer<L> {
     pub fn new() -> Self { Self(0, [0_u8; L]) }
 
     /// Get a Buffer initialized with a copy of a byte slice.
-    #[inline(always)]
     pub fn from_bytes(b: &[u8]) -> std::io::Result<Self> {
         let l = b.len();
         if l <= L {
@@ -165,19 +164,9 @@ impl<const L: usize> Buffer<L> {
     }
 
     /// Append a variable length integer to this buffer.
-    ///
-    /// Varints are encoded as a series of 7-bit bytes terminated by a final 7-bit byte whose
-    /// most significant bit is set. Unlike fixed size integers varints are written in little
-    /// endian order (in 7-bit chunks).
-    ///
-    /// They are slower than fixed size values so they should not be used in formats that are
-    /// created or parsed in very speed-critical paths.
+    #[inline(always)]
     pub fn append_varint(&mut self, mut i: u64) -> std::io::Result<()> {
-        while i >= 0x80 {
-            self.append_u8((i as u8) & 0x7f)?;
-            i >>= 7;
-        }
-        self.append_u8((i as u8) | 0x80)
+        crate::util::varint::write(self, i)
     }
 
     /// Append a byte
@@ -317,20 +306,9 @@ impl<const L: usize> Buffer<L> {
     }
 
     /// Get the next variable length integer and advance the cursor by its length in bytes.
+    #[inline(always)]
     pub fn read_varint(&self, cursor: &mut usize) -> std::io::Result<u64> {
-        let mut i = 0_u64;
-        let mut p = 0;
-        loop {
-            let b = self.read_u8(cursor)?;
-            if (b & 0x80) == 0 {
-                i |= (b as u64).wrapping_shl(p);
-                p += 7;
-            } else {
-                i |= ((b & 0x7f) as u64) << p;
-                break;
-            }
-        }
-        Ok(i)
+        crate::util::varint::read_from_bytes(&(self.1[self.0..]), cursor)
     }
 
     /// Get the next u8 and advance the cursor.

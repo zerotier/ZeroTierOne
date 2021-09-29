@@ -296,13 +296,11 @@ mod tests {
     #[test]
     fn default_root_set() {
         let rs = RootSet::from_bytes(&crate::defaults::ROOT_SET).unwrap();
-        /*
         rs.roots.iter().for_each(|r| {
             println!("{}", r.identity.to_string());
             r.endpoints.iter().for_each(|ep| {
                 println!("  {}", ep.to_string());
             });
         });
-        */
     }
 }

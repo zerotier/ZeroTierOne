@@ -1,3 +1,4 @@
+/// The classic Salsa20 stream cipher supporting 20-round and 12-round variants.
 pub struct Salsa(gcrypt::cipher::Cipher);
 
 impl Salsa {
