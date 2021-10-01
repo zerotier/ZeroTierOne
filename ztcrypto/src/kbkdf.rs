@@ -1,5 +1,5 @@
-use crate::crypto::hash::{SHA384, SHA384_HASH_SIZE};
-use crate::crypto::secret::Secret;
+use crate::hash::{SHA384, SHA384_HASH_SIZE};
+use crate::secret::Secret;
 
 /// Derive a key using KBKDF prefaced by the bytes 'ZT' for use in ZeroTier.
 /// This is a fixed cost key derivation function used to derive sub-keys from a single original

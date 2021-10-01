@@ -10,11 +10,7 @@ codegen-units = 1
 panic = 'abort'
 
 [dependencies]
-rand_core = "^0"
-aes-gmac-siv = { path = "../aes-gmac-siv" }
-x25519-dalek = "^1"
-ed25519-dalek = "^1"
-gcrypt = "^0"
+ztcrypto = { path = "../ztcrypto" }
 base64 = "^0"
 urlencoding = "^2"
 lz4_flex = { version = "^0", features = ["safe-encode", "safe-decode", "checked-decode"] }

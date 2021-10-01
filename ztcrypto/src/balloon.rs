@@ -1,10 +1,10 @@
 use std::convert::TryInto;
 use std::mem::MaybeUninit;
 
-use crate::crypto::hash::{SHA384, SHA512};
+use crate::hash::{SHA384, SHA512};
 
 #[inline(always)]
-fn hash_int_le(sha: &mut crate::crypto::hash::SHA512, i: u64) {
+fn hash_int_le(sha: &mut SHA512, i: u64) {
     #[cfg(target_endian = "big")] {
         sha.update(&i.to_le_bytes());
     }

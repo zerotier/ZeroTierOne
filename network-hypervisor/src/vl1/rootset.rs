@@ -3,10 +3,11 @@ use std::io::Write;
 
 use concat_arrays::concat_arrays;
 
-use crate::crypto::c25519::*;
-use crate::crypto::hash::SHA384;
-use crate::crypto::p521::*;
-use crate::crypto::secret::Secret;
+use ztcrypto::c25519::*;
+use ztcrypto::hash::SHA384;
+use ztcrypto::p521::*;
+use ztcrypto::secret::Secret;
+
 use crate::error::InvalidFormatError;
 use crate::vl1::{Endpoint, Identity};
 use crate::vl1::buffer::Buffer;

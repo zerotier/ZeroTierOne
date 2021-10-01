@@ -6,17 +6,17 @@ use std::sync::atomic::{AtomicI64, AtomicU64, AtomicU8, Ordering};
 
 use parking_lot::Mutex;
 
-use aes_gmac_siv::{AesCtr, AesGmacSiv};
+use ztcrypto::aes_gmac_siv::{AesCtr, AesGmacSiv};
+use ztcrypto::c25519::C25519KeyPair;
+use ztcrypto::hash::{SHA384, SHA384_HASH_SIZE};
+use ztcrypto::kbkdf::zt_kbkdf_hmac_sha384;
+use ztcrypto::p521::P521KeyPair;
+use ztcrypto::poly1305::Poly1305;
+use ztcrypto::random::next_u64_secure;
+use ztcrypto::salsa::Salsa;
+use ztcrypto::secret::Secret;
 
 use crate::{VERSION_MAJOR, VERSION_MINOR, VERSION_PROTO, VERSION_REVISION};
-use crate::crypto::c25519::C25519KeyPair;
-use crate::crypto::hash::{SHA384, SHA384_HASH_SIZE};
-use crate::crypto::kbkdf::zt_kbkdf_hmac_sha384;
-use crate::crypto::p521::P521KeyPair;
-use crate::crypto::poly1305::Poly1305;
-use crate::crypto::random::next_u64_secure;
-use crate::crypto::salsa::Salsa;
-use crate::crypto::secret::Secret;
 use crate::defaults::UDP_DEFAULT_MTU;
 use crate::util::pool::{Pool, PoolFactory};
 use crate::vl1::{Dictionary, Endpoint, Identity, InetAddress, Path};

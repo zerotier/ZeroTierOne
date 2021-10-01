@@ -2,7 +2,6 @@ use std::mem::MaybeUninit;
 
 use crate::vl1::Address;
 use crate::vl1::buffer::{RawObject, Buffer};
-use crate::crypto::hash::SHA384;
 
 pub const VERB_VL1_NOP: u8 = 0x00;
 pub const VERB_VL1_HELLO: u8 = 0x01;
@@ -186,7 +185,7 @@ pub fn compress_packet(src: &[u8], dest: &mut Buffer<{ PACKET_SIZE_MAX }>) -> bo
 /// Add HMAC-SHA384 to the end of a packet and set verb flag.
 #[inline(always)]
 pub fn add_extended_auth(pkt: &mut Buffer<{ PACKET_SIZE_MAX }>, hmac_secret_key: &[u8]) -> std::io::Result<()> {
-    pkt.append_bytes_fixed(&SHA384::hmac(hmac_secret_key, pkt.as_bytes_starting_at(PACKET_VERB_INDEX + 1)?))?;
+    pkt.append_bytes_fixed(&ztcrypto::hash::SHA384::hmac(hmac_secret_key, pkt.as_bytes_starting_at(PACKET_VERB_INDEX + 1)?))?;
     pkt.as_bytes_mut()[PACKET_VERB_INDEX] |= VERB_FLAG_EXTENDED_AUTHENTICATION;
     Ok(())
 }

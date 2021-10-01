@@ -1,0 +1,11 @@
+[package]
+name = "ztcrypto"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+rand_core = "^0"
+aes-gmac-siv = { path = "../aes-gmac-siv" }
+gcrypt = "^0"
+x25519-dalek = "^1"
+ed25519-dalek = "^1"

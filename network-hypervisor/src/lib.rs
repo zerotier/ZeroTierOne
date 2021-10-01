@@ -1,4 +1,3 @@
-pub mod crypto;
 pub mod util;
 pub mod error;
 pub mod vl1;

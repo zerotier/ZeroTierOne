@@ -9,3 +9,4 @@ pub mod random;
 pub mod secret;
 
 pub use aes_gmac_siv;
+pub use rand_core;

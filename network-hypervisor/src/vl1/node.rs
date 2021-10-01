@@ -5,7 +5,7 @@ use std::time::Duration;
 use dashmap::DashMap;
 use parking_lot::Mutex;
 
-use crate::crypto::random::{SecureRandom, next_u64_secure};
+use ztcrypto::random::{SecureRandom, next_u64_secure};
 use crate::error::InvalidParameterError;
 use crate::util::gate::IntervalGate;
 use crate::util::pool::{Pool, Pooled};

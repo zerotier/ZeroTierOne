@@ -1,8 +1,9 @@
-use std::str::FromStr;
 use std::convert::TryInto;
+use std::str::FromStr;
 
 use gcrypt::sexp::SExpression;
-use crate::crypto::secret::Secret;
+
+use crate::secret::Secret;
 
 pub const P521_PUBLIC_KEY_SIZE: usize = 132;
 pub const P521_SECRET_KEY_SIZE: usize = 66;
@@ -218,7 +219,7 @@ impl Clone for P521PublicKey {
 
 #[cfg(test)]
 mod tests {
-    use crate::crypto::p521::P521KeyPair;
+    use crate::p521::P521KeyPair;
 
     #[test]
     fn generate_sign_verify_agree() {
