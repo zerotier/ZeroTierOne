@@ -228,9 +228,9 @@ void Peer::received(
 
 SharedPtr<Path> Peer::getAppropriatePath(int64_t now, bool includeExpired, int32_t flowId)
 {
+	Mutex::Lock _l(_paths_m);
 	Mutex::Lock _l(_bond_m);
 	if (!_bond) {
-		Mutex::Lock _l(_paths_m);
 		unsigned int bestPath = ZT_MAX_PEER_NETWORK_PATHS;
 		/**
 		 * Send traffic across the highest quality path only. This algorithm will still
