@@ -152,7 +152,7 @@ esac
 %endif
 
 %changelog
-* Tue Aug 23 2021 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.7.1
+* Tue Sep 15 2021 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.8.0
 - see https://github.com/zerotier/ZeroTierOne for release notes
 
 * Tue Apr 13 2021 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.6.5

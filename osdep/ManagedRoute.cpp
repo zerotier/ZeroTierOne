@@ -405,9 +405,7 @@ ManagedRoute::ManagedRoute(const InetAddress &target,const InetAddress &via,cons
 }
 
 ManagedRoute::~ManagedRoute()
-{
-	this->remove();
-}
+{}
 
 /* Linux NOTE: for default route override, some Linux distributions will
  * require a change to the rp_filter parameter. A value of '1' will prevent
@@ -438,6 +436,24 @@ bool ManagedRoute::sync()
 	else leftt = _target;
 
 #ifdef __BSD__ // ------------------------------------------------------------
+
+	if (_device[0]) {
+		bool haveDevice = false;
+		struct ifaddrs *ifa = (struct ifaddrs *)0;
+		if (!getifaddrs(&ifa)) {
+			struct ifaddrs *p = ifa;
+			while (p) {
+				if ((p->ifa_name)&&(!strcmp(_device, p->ifa_name))) {
+					haveDevice = true;
+					break;
+				}
+				p = p->ifa_next;
+			}
+			freeifaddrs(ifa);
+		}
+		if (!haveDevice)
+			return false;
+	}
 
 	// Find lowest metric system route that this route should override (if any)
 	InetAddress newSystemVia;
@@ -483,23 +499,25 @@ bool ManagedRoute::sync()
 
 		if (_systemVia) {
 			_routeCmd("add",leftt,_systemVia,_systemDevice,(const char *)0);
-			_routeCmd("change",leftt,_systemVia,_systemDevice,(const char *)0);
+			//_routeCmd("change",leftt,_systemVia,_systemDevice,(const char *)0);
 			if (rightt) {
 				_routeCmd("add",rightt,_systemVia,_systemDevice,(const char *)0);
-				_routeCmd("change",rightt,_systemVia,_systemDevice,(const char *)0);
+				//_routeCmd("change",rightt,_systemVia,_systemDevice,(const char *)0);
 			}
 		}
 	}
 
 	if (!_applied.count(leftt)) {
 		_applied[leftt] = !_via;
+		_routeCmd("delete",leftt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
 		_routeCmd("add",leftt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
-		_routeCmd("change",leftt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
+		//_routeCmd("change",leftt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
 	}
 	if ((rightt)&&(!_applied.count(rightt))) {
 		_applied[rightt] = !_via;
+		_routeCmd("delete",rightt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
 		_routeCmd("add",rightt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
-		_routeCmd("change",rightt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
+		//_routeCmd("change",rightt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
 	}
 
 #endif // __BSD__ ------------------------------------------------------------

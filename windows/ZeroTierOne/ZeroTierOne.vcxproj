@@ -54,7 +54,6 @@
     <ClCompile Include="..\..\node\AES_aesni.cpp" />
     <ClCompile Include="..\..\node\AES_armcrypto.cpp" />
     <ClCompile Include="..\..\node\Bond.cpp" />
-    <ClCompile Include="..\..\node\BondController.cpp" />
     <ClCompile Include="..\..\node\C25519.cpp">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MaxSpeed</Optimization>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MaxSpeed</Optimization>

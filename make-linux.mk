@@ -64,7 +64,6 @@ ifeq ($(ZT_DEBUG),1)
 	override CFLAGS+=-Wall -Wno-deprecated -g -O -pthread $(INCLUDES) $(DEFS)
 	override CXXFLAGS+=-Wall -Wno-deprecated -g -O -std=c++11 -pthread $(INCLUDES) $(DEFS)
 	ZT_TRACE=1
-	STRIP?=echo
 	# The following line enables optimization for the crypto code, since
 	# C25519 in particular is almost UNUSABLE in -O0 even on a 3ghz box!
 node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CXXFLAGS=-Wall -O2 -g -pthread $(INCLUDES) $(DEFS)
@@ -74,8 +73,6 @@ else
 	CXXFLAGS?=-O3 -fstack-protector -fPIE
 	override CXXFLAGS+=-Wall -Wno-deprecated -std=c++11 -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 	LDFLAGS=-pie -Wl,-z,relro,-z,now
-	STRIP?=strip
-	STRIP+=--strip-all
 endif
 
 ifeq ($(ZT_QNAP), 1)
@@ -307,7 +304,6 @@ one: zerotier-one zerotier-idtool zerotier-cli
 
 zerotier-one:	$(CORE_OBJS) $(ONE_OBJS) one.o
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-one $(CORE_OBJS) $(ONE_OBJS) one.o $(LDLIBS)
-	$(STRIP) zerotier-one
 
 zerotier-idtool: zerotier-one
 	ln -sf zerotier-one zerotier-idtool
@@ -324,7 +320,6 @@ core: libzerotiercore.a
 
 selftest:	$(CORE_OBJS) $(ONE_OBJS) selftest.o
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-selftest selftest.o $(CORE_OBJS) $(ONE_OBJS) $(LDLIBS)
-	$(STRIP) zerotier-selftest
 
 zerotier-selftest: selftest
 

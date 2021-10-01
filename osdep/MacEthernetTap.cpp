@@ -209,8 +209,30 @@ MacEthernetTap::MacEthernetTap(
 		::_exit(-1);
 	} else {
 		_agentPid = apid;
+
+		// Wait up to 10 seconds for the subprocess to actually create the device. This prevents
+		// things like routes from being created before the device exists.
+		for(int waitLoops=0;;++waitLoops) {
+			struct ifaddrs *ifa = (struct ifaddrs *)0;
+			if (!getifaddrs(&ifa)) {
+				struct ifaddrs *p = ifa;
+				while (p) {
+					if ((p->ifa_name)&&(!strcmp(devstr, p->ifa_name))) {
+						waitLoops = -1;
+						break;
+					}
+					p = p->ifa_next;
+				}
+				freeifaddrs(ifa);
+			}
+			if (waitLoops == -1) {
+				break;
+			} else if (waitLoops >= 100) { // 10 seconds
+				throw std::runtime_error("feth device creation timed out");
+			}
+			Thread::sleep(100);
+		}
 	}
-	Thread::sleep(100); // this causes them to come up in a more user-friendly order on launch
 
 	_thread = Thread::start(this);
 }

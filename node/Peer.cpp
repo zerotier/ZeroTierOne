@@ -146,6 +146,10 @@ void Peer::received(
 					_paths[replacePath].lr = now;
 					_paths[replacePath].p = path;
 					_paths[replacePath].priority = 1;
+					Mutex::Lock _l(_bond_m);
+					if(_bond) {
+						_bond->nominatePathToBond(_paths[replacePath].p, now);
+					}
 				}
 			} else {
 				Mutex::Lock ltl(_lastTriedPath_m);
@@ -224,9 +228,9 @@ void Peer::received(
 
 SharedPtr<Path> Peer::getAppropriatePath(int64_t now, bool includeExpired, int32_t flowId)
 {
-	Mutex::Lock _l(_bond_m);
+	Mutex::Lock _l(_paths_m);
+	Mutex::Lock _lb(_bond_m);
 	if (!_bond) {
-		Mutex::Lock _l(_paths_m);
 		unsigned int bestPath = ZT_MAX_PEER_NETWORK_PATHS;
 		/**
 		 * Send traffic across the highest quality path only. This algorithm will still
@@ -441,11 +445,21 @@ void Peer::tryMemorizedPath(void *tPtr,int64_t now)
 void Peer::performMultipathStateCheck(void *tPtr, int64_t now)
 {
 	Mutex::Lock _l(_bond_m);
+	if (_bond) {
+		// Once enabled the Bond object persists, no need to update state
+		return;
+	}
 	/**
 	 * Check for conditions required for multipath bonding and create a bond
 	 * if allowed.
 	 */
-	_localMultipathSupported = ((RR->bc->inUse()) && (ZT_PROTO_VERSION > 9));
+	int numAlivePaths = 0;
+	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
+		if (_paths[i].p && _paths[i].p->alive(now)) {
+			numAlivePaths++;
+		}
+	}
+	_localMultipathSupported = ((numAlivePaths >= 1) && (RR->bc->inUse()) && (ZT_PROTO_VERSION > 9));
 	if (_localMultipathSupported && !_bond) {
 		if (RR->bc) {
 			_bond = RR->bc->createTransportTriggeredBond(RR, this);
@@ -569,27 +583,24 @@ void Peer::resetWithinScope(void *tPtr,InetAddress::IpScope scope,int inetAddres
 void Peer::recordOutgoingPacket(const SharedPtr<Path> &path, const uint64_t packetId,
 	uint16_t payloadLength, const Packet::Verb verb, const int32_t flowId, int64_t now)
 {
-	if (!_shouldCollectPathStatistics || !_bond) {
-		return;
+	if (_localMultipathSupported && _bond) {
+		_bond->recordOutgoingPacket(path, packetId, payloadLength, verb, flowId, now);
 	}
-	_bond->recordOutgoingPacket(path, packetId, payloadLength, verb, flowId, now);
 }
 
 void Peer::recordIncomingInvalidPacket(const SharedPtr<Path>& path)
 {
-	if (!_shouldCollectPathStatistics || !_bond) {
-		return;
+	if (_localMultipathSupported && _bond) {
+		_bond->recordIncomingInvalidPacket(path);
 	}
-	_bond->recordIncomingInvalidPacket(path);
 }
 
 void Peer::recordIncomingPacket(const SharedPtr<Path> &path, const uint64_t packetId,
 	uint16_t payloadLength, const Packet::Verb verb, const int32_t flowId, int64_t now)
 {
-	if (!_shouldCollectPathStatistics || !_bond) {
-		return;
+	if (_localMultipathSupported && _bond) {
+		_bond->recordIncomingPacket(path, packetId, payloadLength, verb, flowId, now);
 	}
-	_bond->recordIncomingPacket(path, packetId, payloadLength, verb, flowId, now);
 }
 
 } // namespace ZeroTier

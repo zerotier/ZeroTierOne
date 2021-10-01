@@ -542,10 +542,7 @@ public:
 		~NetworkState()
 		{
 			this->managedRoutes.clear();
-#ifdef __APPLE__
-			Thread::sleep(10);
 			this->tap.reset();
-#endif
 		}
 
 		std::shared_ptr<EthernetTap> tap;
