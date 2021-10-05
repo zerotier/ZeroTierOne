@@ -1025,6 +1025,19 @@ void PostgreSQL::commitThread()
 			fprintf(stderr, "not an object\n");
 			continue;
 		}
+
+		std::shared_ptr<PostgresConnection> c;
+		try {
+			c = _pool->borrow();
+		} catch (std::exception &e) {
+			fprintf(stderr, "ERROR: %s\n", e.what());
+			continue;
+		}
+
+		if (!c) {
+			fprintf(stderr, "Error getting database connection\n");
+			continue;
+		}
 		
 		try {
 			nlohmann::json *config = &(qitem.first);
@@ -1032,7 +1045,6 @@ void PostgreSQL::commitThread()
 			if (objtype == "member") {
 				// fprintf(stderr, "%s: commitThread: member\n", _myAddressStr.c_str());
 				try {
-					auto c = _pool->borrow();
 					pqxx::work w(*c->c);
 
 					std::string memberId = (*config)["id"];
@@ -1097,11 +1109,13 @@ void PostgreSQL::commitThread()
 						fprintf(stderr, "%s: ipAssignError\n", _myAddressStr.c_str());
 						delete config;
 						config = nullptr;
+						w.abort();
+						_pool->unborrow(c);
+						c.reset();
 						continue;
 					}
 
 					w.commit();
-					_pool->unborrow(c);
 
 					const uint64_t nwidInt = OSUtils::jsonIntHex((*config)["nwid"], 0ULL);
 					const uint64_t memberidInt = OSUtils::jsonIntHex((*config)["id"], 0ULL);
@@ -1124,7 +1138,6 @@ void PostgreSQL::commitThread()
 			} else if (objtype == "network") {
 				try {
 					// fprintf(stderr, "%s: commitThread: network\n", _myAddressStr.c_str());
-					auto c = _pool->borrow();
 					pqxx::work w(*c->c);
 
 					std::string id = (*config)["id"];
@@ -1244,7 +1257,6 @@ void PostgreSQL::commitThread()
 						id, domain, s);
 
 					w.commit();
-					_pool->unborrow(c);
 
 					const uint64_t nwidInt = OSUtils::jsonIntHex((*config)["nwid"], 0ULL);
 					if (nwidInt) {
@@ -1264,7 +1276,6 @@ void PostgreSQL::commitThread()
 			} else if (objtype == "_delete_network") {
 				// fprintf(stderr, "%s: commitThread: delete network\n", _myAddressStr.c_str());
 				try {
-					auto c = _pool->borrow();
 					pqxx::work w(*c->c);
 
 					std::string networkId = (*config)["nwid"];
@@ -1273,7 +1284,6 @@ void PostgreSQL::commitThread()
 						networkId);
 
 					w.commit();
-					_pool->unborrow(c);
 				} catch (std::exception &e) {
 					fprintf(stderr, "%s ERROR: Error deleting network: %s\n", _myAddressStr.c_str(), e.what());
 				}
@@ -1281,7 +1291,6 @@ void PostgreSQL::commitThread()
 			} else if (objtype == "_delete_member") {
 				// fprintf(stderr, "%s commitThread: delete member\n", _myAddressStr.c_str());
 				try {
-					auto c = _pool->borrow();
 					pqxx::work w(*c->c);
 
 					std::string memberId = (*config)["id"];
@@ -1292,7 +1301,6 @@ void PostgreSQL::commitThread()
 						memberId, networkId);
 
 					w.commit();
-					_pool->unborrow(c);
 				} catch (std::exception &e) {
 					fprintf(stderr, "%s ERROR: Error deleting member: %s\n", _myAddressStr.c_str(), e.what());
 				}
@@ -1302,6 +1310,8 @@ void PostgreSQL::commitThread()
 		} catch (std::exception &e) {
 			fprintf(stderr, "%s ERROR: Error getting objtype: %s\n", _myAddressStr.c_str(), e.what());
 		}
+		_pool->unborrow(c);
+		c.reset();
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
 
