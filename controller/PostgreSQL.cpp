@@ -1040,20 +1040,32 @@ void PostgreSQL::commitThread()
 		}
 		
 		try {
-			nlohmann::json *config = &(qitem.first);
-			const std::string objtype = (*config)["objtype"];
+			nlohmann::json &config = (qitem.first);
+			const std::string objtype = config["objtype"];
 			if (objtype == "member") {
 				// fprintf(stderr, "%s: commitThread: member\n", _myAddressStr.c_str());
+				std::string memberId;
+				std::string networkId;
 				try {
 					pqxx::work w(*c->c);
 
-					std::string memberId = (*config)["id"];
-					std::string networkId = (*config)["nwid"];
+					memberId = config["id"];
+					networkId = config["nwid"];
+					
 					std::string target = "NULL";
-					if (!(*config)["remoteTraceTarget"].is_null()) {
-						target = (*config)["remoteTraceTarget"];
+					if (!config["remoteTraceTarget"].is_null()) {
+						target = config["remoteTraceTarget"];
 					}
 					
+					pqxx::row nwrow = w.exec_params1("SELECT COUNT(id) FROM ztc_network WHERE id = $1", networkId);
+					int nwcount = nwrow[0].as<int>();
+
+					if (nwcount != 1) {
+						fprintf(stderr, "network %s does not exist.  skipping member upsert\n", networkId.c_str());
+						w.abort();
+						_pool->unborrow(c);
+						continue;
+					}
 
 					pqxx::result res = w.exec_params0(
 						"INSERT INTO ztc_member (id, network_id, active_bridge, authorized, capabilities, "
@@ -1070,21 +1082,21 @@ void PostgreSQL::commitThread()
 						"v_minor = EXCLUDED.v_minor, v_rev = EXCLUDED.v_rev, v_proto = EXCLUDED.v_proto",
 						memberId,
 						networkId,
-						(bool)(*config)["activeBridge"],
-						(bool)(*config)["authorized"],
-						OSUtils::jsonDump((*config)["capabilities"], -1),
-						OSUtils::jsonString((*config)["identity"], ""),
-						(uint64_t)(*config)["lastAuthorizedTime"],
-						(uint64_t)(*config)["lastDeauthorizedTime"],
-						(bool)(*config)["noAutoAssignIps"],
-						(int)(*config)["remoteTraceLevel"],
+						(bool)config["activeBridge"],
+						(bool)config["authorized"],
+						OSUtils::jsonDump(config["capabilities"], -1),
+						OSUtils::jsonString(config["identity"], ""),
+						(uint64_t)config["lastAuthorizedTime"],
+						(uint64_t)config["lastDeauthorizedTime"],
+						(bool)config["noAutoAssignIps"],
+						(int)config["remoteTraceLevel"],
 						target,
-						(uint64_t)(*config)["revision"],
-						OSUtils::jsonDump((*config)["tags"], -1),
-						(int)(*config)["vMajor"],
-						(int)(*config)["vMinor"],
-						(int)(*config)["vRev"],
-						(int)(*config)["vProto"]);
+						(uint64_t)config["revision"],
+						OSUtils::jsonDump(config["tags"], -1),
+						(int)config["vMajor"],
+						(int)config["vMinor"],
+						(int)config["vRev"],
+						(int)config["vProto"]);
 
 
 					res = w.exec_params0("DELETE FROM ztc_member_ip_assignment WHERE member_id = $1 AND network_id = $2",
@@ -1092,7 +1104,7 @@ void PostgreSQL::commitThread()
 
 					std::vector<std::string> assignments;
 					bool ipAssignError = false;
-					for (auto i = (*config)["ipAssignments"].begin(); i != (*config)["ipAssignments"].end(); ++i) {
+					for (auto i = config["ipAssignments"].begin(); i != config["ipAssignments"].end(); ++i) {
 						std::string addr = *i;
 
 						if (std::find(assignments.begin(), assignments.end(), addr) != assignments.end()) {
@@ -1107,8 +1119,6 @@ void PostgreSQL::commitThread()
 					}
 					if (ipAssignError) {
 						fprintf(stderr, "%s: ipAssignError\n", _myAddressStr.c_str());
-						delete config;
-						config = nullptr;
 						w.abort();
 						_pool->unborrow(c);
 						c.reset();
@@ -1117,13 +1127,13 @@ void PostgreSQL::commitThread()
 
 					w.commit();
 
-					const uint64_t nwidInt = OSUtils::jsonIntHex((*config)["nwid"], 0ULL);
-					const uint64_t memberidInt = OSUtils::jsonIntHex((*config)["id"], 0ULL);
+					const uint64_t nwidInt = OSUtils::jsonIntHex(config["nwid"], 0ULL);
+					const uint64_t memberidInt = OSUtils::jsonIntHex(config["id"], 0ULL);
 					if (nwidInt && memberidInt) {
 						nlohmann::json nwOrig;
 						nlohmann::json memOrig;
 
-						nlohmann::json memNew(*config);
+						nlohmann::json memNew(config);
 
 						get(nwidInt, nwOrig, memberidInt, memOrig);
 
@@ -1131,23 +1141,22 @@ void PostgreSQL::commitThread()
 					} else {
 						fprintf(stderr, "%s: Can't notify of change.  Error parsing nwid or memberid: %llu-%llu\n", _myAddressStr.c_str(), (unsigned long long)nwidInt, (unsigned long long)memberidInt);
 					}
-
 				} catch (std::exception &e) {
-					fprintf(stderr, "%s ERROR: Error updating member: %s\n", _myAddressStr.c_str(), e.what());
+					fprintf(stderr, "%s ERROR: Error updating member %s-%s: %s\n", _myAddressStr.c_str(), networkId.c_str(), memberId.c_str(), e.what());
 				}
 			} else if (objtype == "network") {
 				try {
 					// fprintf(stderr, "%s: commitThread: network\n", _myAddressStr.c_str());
 					pqxx::work w(*c->c);
 
-					std::string id = (*config)["id"];
+					std::string id = config["id"];
 					std::string remoteTraceTarget = "";
-					if(!(*config)["remoteTraceTarget"].is_null()) {
-						remoteTraceTarget = (*config)["remoteTraceTarget"];
+					if(!config["remoteTraceTarget"].is_null()) {
+						remoteTraceTarget = config["remoteTraceTarget"];
 					}
 					std::string rulesSource = "";
-					if ((*config)["rulesSource"].is_string()) {
-						rulesSource = (*config)["rulesSource"];
+					if (config["rulesSource"].is_string()) {
+						rulesSource = config["rulesSource"];
 					}
 
 					// This ugly query exists because when we want to mirror networks to/from
@@ -1176,25 +1185,25 @@ void PostgreSQL::commitThread()
 						"sso_enabled = EXCLUDED.sso_enabled",
 						id,
 						_myAddressStr,
-						OSUtils::jsonDump((*config)["capabilitles"], -1),
-						(bool)(*config)["enableBroadcast"],
+						OSUtils::jsonDump(config["capabilitles"], -1),
+						(bool)config["enableBroadcast"],
 						OSUtils::now(),
-						(int)(*config)["mtu"],
-						(int)(*config)["multicastLimit"],
-						OSUtils::jsonString((*config)["name"],""),
-						(bool)(*config)["private"],
-						(int)(*config)["remoteTraceLevel"],
+						(int)config["mtu"],
+						(int)config["multicastLimit"],
+						OSUtils::jsonString(config["name"],""),
+						(bool)config["private"],
+						(int)config["remoteTraceLevel"],
 						remoteTraceTarget,
-						OSUtils::jsonDump((*config)["rules"], -1),
+						OSUtils::jsonDump(config["rules"], -1),
 						rulesSource,
-						OSUtils::jsonDump((*config)["tags"], -1),
-						OSUtils::jsonDump((*config)["v4AssignMode"],-1),
-						OSUtils::jsonDump((*config)["v6AssignMode"], -1),
-						OSUtils::jsonBool((*config)["ssoEnabled"], false));
+						OSUtils::jsonDump(config["tags"], -1),
+						OSUtils::jsonDump(config["v4AssignMode"],-1),
+						OSUtils::jsonDump(config["v6AssignMode"], -1),
+						OSUtils::jsonBool(config["ssoEnabled"], false));
 
 					res = w.exec_params0("DELETE FROM ztc_network_assignment_pool WHERE network_id = $1", 0);
 
-					auto pool = (*config)["ipAssignmentPools"];
+					auto pool = config["ipAssignmentPools"];
 					bool err = false;
 					for (auto i = pool.begin(); i != pool.end(); ++i) {
 						std::string start = (*i)["ipRangeStart"];
@@ -1207,7 +1216,7 @@ void PostgreSQL::commitThread()
 
 					res = w.exec_params0("DELETE FROM ztc_network_route WHERE network_id = $1", id);
 
-					auto routes = (*config)["routes"];
+					auto routes = config["routes"];
 					err = false;
 					for (auto i = routes.begin(); i != routes.end(); ++i) {
 						std::string t = (*i)["target"];
@@ -1234,12 +1243,10 @@ void PostgreSQL::commitThread()
 						fprintf(stderr, "%s: route add error\n", _myAddressStr.c_str());
 						w.abort();
 						_pool->unborrow(c);
-						delete config;
-						config = nullptr;
 						continue;
 					}
 
-					auto dns = (*config)["dns"];
+					auto dns = config["dns"];
 					std::string domain = dns["domain"];
 					std::stringstream servers;
 					servers << "{";
@@ -1258,10 +1265,10 @@ void PostgreSQL::commitThread()
 
 					w.commit();
 
-					const uint64_t nwidInt = OSUtils::jsonIntHex((*config)["nwid"], 0ULL);
+					const uint64_t nwidInt = OSUtils::jsonIntHex(config["nwid"], 0ULL);
 					if (nwidInt) {
 						nlohmann::json nwOrig;
-						nlohmann::json nwNew(*config);
+						nlohmann::json nwNew(config);
 
 						get(nwidInt, nwOrig);
 
@@ -1269,7 +1276,6 @@ void PostgreSQL::commitThread()
 					} else {
 						fprintf(stderr, "%s: Can't notify network changed: %llu\n", _myAddressStr.c_str(), (unsigned long long)nwidInt);
 					}
-
 				} catch (std::exception &e) {
 					fprintf(stderr, "%s ERROR: Error updating network: %s\n", _myAddressStr.c_str(), e.what());
 				}
@@ -1278,7 +1284,7 @@ void PostgreSQL::commitThread()
 				try {
 					pqxx::work w(*c->c);
 
-					std::string networkId = (*config)["nwid"];
+					std::string networkId = config["nwid"];
 
 					pqxx::result res = w.exec_params0("UPDATE ztc_network SET deleted = true WHERE id = $1",
 						networkId);
@@ -1293,8 +1299,8 @@ void PostgreSQL::commitThread()
 				try {
 					pqxx::work w(*c->c);
 
-					std::string memberId = (*config)["id"];
-					std::string networkId = (*config)["nwid"];
+					std::string memberId = config["id"];
+					std::string networkId = config["nwid"];
 
 					pqxx::result res = w.exec_params0(
 						"UPDATE ztc_member SET hidden = true, deleted = true WHERE id = $1 AND network_id = $2",
