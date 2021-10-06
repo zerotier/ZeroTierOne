@@ -36,6 +36,7 @@ impl MAC {
     #[inline(always)]
     pub fn to_u64(&self) -> u64 { self.0.get() }
 
+    #[inline(always)]
     pub(crate) fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> std::io::Result<()> {
         buf.append_and_init_bytes_fixed(|b: &mut [u8; 6]| {
             let i = self.0.get();

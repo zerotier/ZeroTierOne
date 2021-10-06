@@ -40,7 +40,6 @@ pub struct AesCtr(Vec<u8>, Option<Crypter>);
 impl AesCtr {
     /// Construct a new AES-CTR cipher.
     /// Key must be 16, 24, or 32 bytes in length or a panic will occur.
-    #[inline(always)]
     pub fn new(k: &[u8]) -> Self {
         if k.len() != 32 && k.len() != 24 && k.len() != 16 {
             panic!("AES supports 128, 192, or 256 bits keys");
@@ -82,7 +81,6 @@ pub struct AesGmacSiv {
 impl AesGmacSiv {
     /// Create a new keyed instance of AES-GMAC-SIV
     /// The key may be of size 16, 24, or 32 bytes (128, 192, or 256 bits). Any other size will panic.
-    #[inline(always)]
     pub fn new(k0: &[u8], k1: &[u8]) -> Self {
         if k0.len() != 32 && k0.len() != 24 && k0.len() != 16 {
             panic!("AES supports 128, 192, or 256 bits keys");

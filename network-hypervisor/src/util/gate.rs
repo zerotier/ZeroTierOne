@@ -4,9 +4,8 @@ use std::sync::atomic::{AtomicI64, Ordering};
 pub struct IntervalGate<const FREQ: i64>(i64);
 
 impl<const FREQ: i64> Default for IntervalGate<FREQ> {
-    fn default() -> Self {
-        Self(0)
-    }
+    #[inline(always)]
+    fn default() -> Self { Self(0) }
 }
 
 impl<const FREQ: i64> IntervalGate<FREQ> {
@@ -31,6 +30,7 @@ impl<const FREQ: i64> IntervalGate<FREQ> {
 pub struct AtomicIntervalGate<const FREQ: i64>(AtomicI64);
 
 impl<const FREQ: i64> Default for AtomicIntervalGate<FREQ> {
+    #[inline(always)]
     fn default() -> Self { Self(AtomicI64::new(0)) }
 }
 

@@ -15,6 +15,7 @@ pub(crate) struct FragmentedPacket {
 }
 
 impl FragmentedPacket {
+    #[inline(always)]
     pub fn new(ts: i64) -> Self {
         Self {
             ts_ticks: ts,

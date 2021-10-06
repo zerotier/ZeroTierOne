@@ -133,7 +133,6 @@ impl AesGmacSiv {
     /// Create a new keyed instance of AES-GMAC-SIV
     /// The key may be of size 16, 24, or 32 bytes (128, 192, or 256 bits). Any other size will panic.
     /// Two keys are required: one for GMAC and one for AES-CTR.
-    #[inline(always)]
     pub fn new(k0: &[u8], k1: &[u8]) -> Self {
         if k0.len() != 32 && k0.len() != 24 && k0.len() != 16 {
             panic!("AES supports 128, 192, or 256 bits keys");

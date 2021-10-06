@@ -28,6 +28,7 @@ impl<const L: usize> Buffer<L> {
     pub fn new() -> Self { Self(0, [0_u8; L]) }
 
     /// Get a Buffer initialized with a copy of a byte slice.
+    #[inline(always)]
     pub fn from_bytes(b: &[u8]) -> std::io::Result<Self> {
         let l = b.len();
         if l <= L {

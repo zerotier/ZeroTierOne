@@ -86,6 +86,7 @@ impl<O, F: PoolFactory<O>> AsMut<O> for Pooled<O, F> {
 }
 
 impl<O, F: PoolFactory<O>> Drop for Pooled<O, F> {
+    #[inline(always)]
     fn drop(&mut self) {
         unsafe {
             let p = Weak::upgrade(&self.0.as_ref().return_pool);
@@ -112,6 +113,7 @@ impl<O, F: PoolFactory<O>> Pool<O, F> {
     }
 
     /// Get a pooled object, or allocate one if the pool is empty.
+    #[inline(always)]
     pub fn get(&self) -> Pooled<O, F> {
         unsafe {
             Pooled::<O, F>(self.0.1.lock().pop().unwrap_or_else(|| {
