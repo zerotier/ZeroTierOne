@@ -8,12 +8,12 @@ use std::str::FromStr;
 
 use concat_arrays::concat_arrays;
 
-use ztcrypto::balloon;
-use ztcrypto::c25519::*;
-use ztcrypto::hash::*;
-use ztcrypto::p521::*;
-use ztcrypto::salsa::Salsa;
-use ztcrypto::secret::Secret;
+use zerotier_core_crypto::balloon;
+use zerotier_core_crypto::c25519::*;
+use zerotier_core_crypto::hash::*;
+use zerotier_core_crypto::p521::*;
+use zerotier_core_crypto::salsa::Salsa;
+use zerotier_core_crypto::secret::Secret;
 use crate::error::InvalidFormatError;
 use crate::vl1::Address;
 use crate::vl1::buffer::Buffer;

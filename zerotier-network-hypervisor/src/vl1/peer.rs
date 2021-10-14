@@ -6,15 +6,15 @@ use std::sync::atomic::{AtomicI64, AtomicU64, AtomicU8, Ordering};
 
 use parking_lot::Mutex;
 
-use ztcrypto::aes_gmac_siv::{AesCtr, AesGmacSiv};
-use ztcrypto::c25519::C25519KeyPair;
-use ztcrypto::hash::{SHA384, SHA384_HASH_SIZE};
-use ztcrypto::kbkdf::zt_kbkdf_hmac_sha384;
-use ztcrypto::p521::P521KeyPair;
-use ztcrypto::poly1305::Poly1305;
-use ztcrypto::random::next_u64_secure;
-use ztcrypto::salsa::Salsa;
-use ztcrypto::secret::Secret;
+use zerotier_core_crypto::aes_gmac_siv::{AesCtr, AesGmacSiv};
+use zerotier_core_crypto::c25519::C25519KeyPair;
+use zerotier_core_crypto::hash::{SHA384, SHA384_HASH_SIZE};
+use zerotier_core_crypto::kbkdf::zt_kbkdf_hmac_sha384;
+use zerotier_core_crypto::p521::P521KeyPair;
+use zerotier_core_crypto::poly1305::Poly1305;
+use zerotier_core_crypto::random::next_u64_secure;
+use zerotier_core_crypto::salsa::Salsa;
+use zerotier_core_crypto::secret::Secret;
 
 use crate::{VERSION_MAJOR, VERSION_MINOR, VERSION_PROTO, VERSION_REVISION};
 use crate::defaults::UDP_DEFAULT_MTU;

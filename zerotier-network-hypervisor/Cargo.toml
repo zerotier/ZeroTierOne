@@ -10,7 +10,7 @@ codegen-units = 1
 panic = 'abort'
 
 [dependencies]
-ztcrypto = { path = "../ztcrypto" }
+zerotier-core-crypto = { path = "../zerotier-core-crypto" }
 base64 = "^0"
 urlencoding = "^2"
 lz4_flex = { version = "^0", features = ["safe-encode", "safe-decode", "checked-decode"] }
