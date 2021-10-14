@@ -79,9 +79,11 @@ pub trait VL1CallerInterface {
     fn get_path_hints(&self, id: &Identity) -> Option<&[(&Endpoint, Option<i64>, Option<i64>)]>;
 
     /// Called to get the current time in milliseconds from the system monotonically increasing clock.
+    /// This needs to be accurate to about 250 milliseconds resolution or better.
     fn time_ticks(&self) -> i64;
 
     /// Called to get the current time in milliseconds since epoch from the real-time clock.
+    /// This needs to be accurate to about one second resolution or better.
     fn time_clock(&self) -> i64;
 }
 
@@ -90,11 +92,20 @@ pub trait VL1CallerInterface {
 /// This normally isn't used from outside this crate except for testing or if you want to harness VL1
 /// for some entirely unrelated purpose.
 pub trait VL1PacketHandler {
-    /// Handle a packet, returning true if the verb was recognized.
+    /// Handle a packet, returning true if it belonged to VL2.
     ///
-    /// True should be returned even if the packet is not valid, since the return value is used
-    /// to determine if this is a VL2 or VL1 packet. ERROR and OK should not be handled here but
-    /// in handle_error() and handle_ok() instead.
+    /// If this is a VL2 packet, this must return true. True must be returned even if subsequent
+    /// logic determines that the VL2 packet is not valid or if it is rejected due to lack of
+    /// security credentials.
+    ///
+    /// That's because VL1 calls this before matching the packet's verb against VL1 verbs. This
+    /// is done to reduce the number of CPU branches between packet receive and the performance
+    /// critical handling of virtual network frames. A return value of true here indicates that
+    /// the packet was handled, and false means it may be a VL1 packet.
+    ///
+    /// Do not attempt to handle OK or ERROR. Instead implement handle_ok() and handle_error().
+    /// The return values of these must follow the same semantic of returning true if the message
+    /// was handled.
     fn handle_packet(&self, peer: &Peer, source_path: &Arc<Path>, forward_secrecy: bool, extended_authentication: bool, verb: u8, payload: &Buffer<{ PACKET_SIZE_MAX }>) -> bool;
 
     /// Handle errors, returning true if the error was recognized.
