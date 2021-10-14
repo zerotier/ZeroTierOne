@@ -1,9 +1,14 @@
 /target
 /**/target
+/aes-gmac-siv/Cargo.lock
+/zerotier-core-crypto/Cargo.lock
+/zerotier-network-hypervisor/Cargo.lock
 .DS_*
 .Icon*
+._*
 *.o
 *.so
 *.dylib
+*.dSYM
 *.a
 /.idea
