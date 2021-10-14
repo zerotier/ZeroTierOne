@@ -188,6 +188,7 @@ bool NetworkConfig::toDictionary(Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d,b
 				if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_AUTHENTICATION_URL, this->authenticationURL)) return false;
 			}
 			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_AUTHENTICATION_EXPIRY_TIME, this->authenticationExpiryTime)) return false;
+			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_SSO_VERSION, this->ssoVersion)) return false;
 		}
 
 		delete tmp;
@@ -383,9 +384,11 @@ bool NetworkConfig::fromDictionary(const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACI
 					this->authenticationURL[0] = 0;
 				}
 				this->authenticationExpiryTime = d.getI(ZT_NETWORKCONFIG_DICT_KEY_AUTHENTICATION_EXPIRY_TIME, 0);
+				this->ssoVersion = d.getUI(ZT_NETWORKCONFIG_DICT_KEY_SSO_VERSION, 0);
 			} else {
 				this->authenticationURL[0] = 0;
 				this->authenticationExpiryTime = 0;
+				this->ssoVersion = 0;
 			}
 		}
 

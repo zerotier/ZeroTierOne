@@ -184,6 +184,8 @@ namespace ZeroTier {
 #define ZT_NETWORKCONFIG_DICT_KEY_AUTHENTICATION_URL "aurl"
 // authentication expiry
 #define ZT_NETWORKCONFIG_DICT_KEY_AUTHENTICATION_EXPIRY_TIME "aexpt"
+// sso impl. version
+#define ZT_NETWORKCONFIG_DICT_KEY_SSO_VERSION "ssov"
 
 // Legacy fields -- these are obsoleted but are included when older clients query
 
@@ -242,7 +244,8 @@ public:
 		dnsCount(0),
 		ssoEnabled(false),
 		authenticationURL(),
-		authenticationExpiryTime(0)
+		authenticationExpiryTime(0),
+		ssoVersion(0)
 	{
 		name[0] = 0;
 		memset(specialists, 0, sizeof(uint64_t)*ZT_MAX_NETWORK_SPECIALISTS);
@@ -628,6 +631,11 @@ public:
 	 * Time current authentication expires or 0 if external authentication is disabled
 	 */
 	uint64_t authenticationExpiryTime;
+
+	/**
+	 * SSO implementaiton version
+	 */
+	uint64_t ssoVersion;
 };
 
 } // namespace ZeroTier
