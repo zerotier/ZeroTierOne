@@ -3,7 +3,6 @@ name = "zerotier-system-service"
 version = "0.1.0"
 authors = ["Adam Ierymenko <adam.ierymenko@zerotier.com>"]
 edition = "2018"
-build = "build.rs"
 
 [profile.release]
 opt-level = 'z'
@@ -12,6 +11,7 @@ codegen-units = 1
 panic = 'abort'
 
 [dependencies]
+zerotier-network-hypervisor = { path = "../zerotier-network-hypervisor" }
 num_cpus = "^1"
 tokio = { version = "1", features = ["rt", "net", "time", "signal", "macros"] }
 serde = { version = "1", features = ["derive"] }
@@ -30,3 +30,6 @@ colored = "^2"
 
 [target."cfg(windows)".dependencies]
 winapi = { version = "^0", features = ["handleapi", "ws2ipdef", "ws2tcpip"] }
+
+[target."cfg(not(windows))".dependencies]
+libc = "^0"

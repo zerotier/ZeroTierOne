@@ -11,8 +11,10 @@
  */
 /****/
 
+use zerotier_network_hypervisor::vl2::MulticastGroup;
+
 /// Virtual network interface
-pub(crate) trait VNIC {
+pub trait VNIC {
     /// Add a new IPv4 or IPv6 address to this interface, returning true on success.
     fn add_ip(&self, ip: &zerotier_core::InetAddress) -> bool;
 
@@ -30,7 +32,7 @@ pub(crate) trait VNIC {
     /// This doesn't do any IGMP snooping. It just reports the groups the port
     /// knows about. On some OSes this may not be supported in which case it
     /// will return an empty set.
-    fn get_multicast_groups(&self) -> std::collections::BTreeSet<zerotier_core::MulticastGroup>;
+    fn get_multicast_groups(&self) -> std::collections::BTreeSet<MulticastGroup>;
 
     /// Inject an Ethernet frame into this port.
     fn put(&self, source_mac: &zerotier_core::MAC, dest_mac: &zerotier_core::MAC, ethertype: u16, vlan_id: u16, data: *const u8, len: usize) -> bool;

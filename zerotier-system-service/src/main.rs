@@ -92,7 +92,7 @@ Common Operations:
 Advanced Operations:
 
   service                                  Start node
-                                           (usually not invoked directly)
+                                           (usually run by service manager)
 
   controller <command> [option]
 ·   list                                   List networks on controller

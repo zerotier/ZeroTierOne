@@ -14,9 +14,7 @@
 use std::mem::size_of;
 use std::ptr::{copy_nonoverlapping, null_mut};
 
-use zerotier_core::InetAddress;
-
-use crate::osdep as osdep;
+use zerotier_network_hypervisor::vl1::InetAddress;
 
 fn s6_addr_as_ptr<A>(a: &A) -> *const A {
     a as *const A
@@ -26,19 +24,19 @@ fn s6_addr_as_ptr<A>(a: &A) -> *const A {
 #[cfg(unix)]
 pub(crate) fn for_each_address<F: FnMut(&InetAddress, &str)>(mut f: F) {
     unsafe {
-        let mut ifa_name = [0_u8; osdep::IFNAMSIZ as usize];
-        let mut ifap: *mut osdep::ifaddrs = null_mut();
-        if osdep::getifaddrs((&mut ifap as *mut *mut osdep::ifaddrs).cast()) == 0 {
+        let mut ifa_name = [0_u8; libc::IFNAMSIZ as usize];
+        let mut ifap: *mut libc::ifaddrs = null_mut();
+        if libc::getifaddrs((&mut ifap as *mut *mut libc::ifaddrs).cast()) == 0 {
             let mut i = ifap;
             while !i.is_null() {
                 if !(*i).ifa_addr.is_null() {
                     let mut a = InetAddress::new();
 
                     let sa_family = (*(*i).ifa_addr).sa_family as u8;
-                    if sa_family == osdep::AF_INET as u8 {
-                        copy_nonoverlapping((*i).ifa_addr.cast::<u8>(), (&mut a as *mut InetAddress).cast::<u8>(), size_of::<osdep::sockaddr_in>());
-                    } else if sa_family == osdep::AF_INET6 as u8 {
-                        copy_nonoverlapping((*i).ifa_addr.cast::<u8>(), (&mut a as *mut InetAddress).cast::<u8>(), size_of::<osdep::sockaddr_in6>());
+                    if sa_family == libc::AF_INET as u8 {
+                        copy_nonoverlapping((*i).ifa_addr.cast::<u8>(), (&mut a as *mut InetAddress).cast::<u8>(), size_of::<libc::sockaddr_in>());
+                    } else if sa_family == libc::AF_INET6 as u8 {
+                        copy_nonoverlapping((*i).ifa_addr.cast::<u8>(), (&mut a as *mut InetAddress).cast::<u8>(), size_of::<libc::sockaddr_in6>());
                     } else {
                         i = (*i).ifa_next;
                         continue;
@@ -46,11 +44,11 @@ pub(crate) fn for_each_address<F: FnMut(&InetAddress, &str)>(mut f: F) {
 
                     let mut netmask_bits: u16 = 0;
                     if !(*i).ifa_netmask.is_null() {
-                        if sa_family == osdep::AF_INET as u8 {
-                            let a = (*(*i).ifa_netmask.cast::<osdep::sockaddr_in>()).sin_addr.s_addr as u32;
+                        if sa_family == libc::AF_INET as u8 {
+                            let a = (*(*i).ifa_netmask.cast::<libc::sockaddr_in>()).sin_addr.s_addr as u32;
                             netmask_bits = a.leading_ones() as u16;
-                        } else if sa_family == osdep::AF_INET6 as u8 {
-                            let a = s6_addr_as_ptr(&((*(*i).ifa_netmask.cast::<osdep::sockaddr_in6>()).sin6_addr)).cast::<u8>();
+                        } else if sa_family == libc::AF_INET6 as u8 {
+                            let a = s6_addr_as_ptr(&((*(*i).ifa_netmask.cast::<libc::sockaddr_in6>()).sin6_addr)).cast::<u8>();
                             for i in 0..16 as isize {
                                 let b = *a.offset(i);
                                 if b == 0xff {
@@ -65,7 +63,7 @@ pub(crate) fn for_each_address<F: FnMut(&InetAddress, &str)>(mut f: F) {
                     a.set_port(netmask_bits);
 
                     let mut namlen: usize = 0;
-                    while namlen < (osdep::IFNAMSIZ as usize) {
+                    while namlen < (libc::IFNAMSIZ as usize) {
                         let c = *(*i).ifa_name.offset(namlen as isize);
                         if c != 0 {
                             ifa_name[namlen] = c as u8;
@@ -83,14 +81,14 @@ pub(crate) fn for_each_address<F: FnMut(&InetAddress, &str)>(mut f: F) {
                 }
                 i = (*i).ifa_next;
             }
-            osdep::freeifaddrs(ifap.cast());
+            libc::freeifaddrs(ifap.cast());
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use zerotier_core::InetAddress;
+    use zerotier_network_hypervisor::vl1::InetAddress;
 
     #[test]
     fn test_getifaddrs() {
