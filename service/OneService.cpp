@@ -1823,10 +1823,7 @@ public:
 							speed, alloc, linkNameStr.c_str());
 						enabled = false;
 					}
-					//uint32_t upDelay = OSUtils::jsonInt(link["upDelay"],-1);
-					//uint32_t downDelay = OSUtils::jsonInt(link["downDelay"],-1);
 					uint8_t ipvPref = OSUtils::jsonInt(link["ipvPref"],0);
-					//uint32_t linkMonitorInterval = OSUtils::jsonInt(link["monitorInterval"],(uint64_t)0);
 					std::string failoverToStr(OSUtils::jsonString(link["failoverTo"],""));
 					// Mode
 					std::string linkModeStr(OSUtils::jsonString(link["mode"],"spare"));
