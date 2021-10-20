@@ -1155,16 +1155,6 @@ void Bond::estimatePathQuality(int64_t now)
 void Bond::processBalanceTasks(int64_t now)
 {
 	char pathStr[64] = { 0 };
-	int totalAllocation = 0;
-	for (int i = 0; i < ZT_MAX_PEER_NETWORK_PATHS; ++i) {
-		if (! _paths[i].p) {
-			continue;
-		}
-		if (_paths[i].p && _paths[i].bonded && _paths[i].eligible) {
-			totalAllocation += _paths[i].allocation;
-		}
-	}
-	unsigned char minimumAllocationValue = (uint8_t)(0.33 * ((float)totalAllocation / (float)_numBondedPaths));
 
 	if (_allowFlowHashing) {
 		/**
@@ -1209,7 +1199,18 @@ void Bond::processBalanceTasks(int64_t now)
 		 * Re-allocate flows from under-performing
 		 * NOTE: This could be part of the above block but was kept separate for clarity.
 		 */
-		if (_policy == ZT_BOND_POLICY_BALANCE_XOR || _policy == ZT_BOND_POLICY_BALANCE_AWARE) {
+		if (_policy == ZT_BOND_POLICY_BALANCE_AWARE) {
+			int totalAllocation = 0;
+			for (int i = 0; i < ZT_MAX_PEER_NETWORK_PATHS; ++i) {
+				if (! _paths[i].p) {
+					continue;
+				}
+				if (_paths[i].p && _paths[i].bonded && _paths[i].eligible) {
+					totalAllocation += _paths[i].allocation;
+				}
+			}
+			unsigned char minimumAllocationValue = (uint8_t)(0.33 * ((float)totalAllocation / (float)_numBondedPaths));
+
 			Mutex::Lock _l(_flows_m);
 			for (int i = 0; i < ZT_MAX_PEER_NETWORK_PATHS; ++i) {
 				if (! _paths[i].p) {
@@ -1754,7 +1755,7 @@ void Bond::dumpPathStatus(int64_t now, int pathIdx)
 {
 	char pathStr[64] = { 0 };
 	_paths[pathIdx].p->address().toString(pathStr);
-	log("path status: [%2d] alive:%d, eli:%d, bonded:%d, flows:%6d, lat:%10.3f, jitter:%10.3f, error:%6.4f, loss:%6.4f, age:%6d --- (%s/%s)",
+	log("path status: [%2d] alive:%d, eli:%d, bonded:%d, flows:%6d, lat:%10.3f, jitter:%10.3f, error:%6.4f, loss:%6.4f, age:%6d alloc:%d--- (%s/%s)",
 		pathIdx,
 		_paths[pathIdx].alive,
 		_paths[pathIdx].eligible,
@@ -1765,6 +1766,7 @@ void Bond::dumpPathStatus(int64_t now, int pathIdx)
 		_paths[pathIdx].packetErrorRatio,
 		_paths[pathIdx].packetLossRatio,
 		_paths[pathIdx].p->age(now),
+		_paths[pathIdx].allocation,
 		getLink(_paths[pathIdx].p)->ifname().c_str(),
 		pathStr);
 }
