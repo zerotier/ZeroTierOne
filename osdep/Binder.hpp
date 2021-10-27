@@ -40,7 +40,7 @@
 #endif
 #endif
 
-#if defined(__unix__) && !defined(__LINUX__)
+#if (defined(__unix__) || defined(__APPLE__)) && !defined(__LINUX__)
 #include <net/if.h>
 #include <netinet6/in6_var.h>
 #include <sys/ioctl.h>
@@ -311,7 +311,7 @@ class Binder {
 			if (! gotViaProc) {
 				struct ifaddrs* ifatbl = (struct ifaddrs*)0;
 				struct ifaddrs* ifa;
-#if defined(__unix__) && !defined(__LINUX__)
+#if (defined(__unix__) || defined(__APPLE__)) && !defined(__LINUX__)
 				// set up an IPv6 socket so we can check the state of interfaces via SIOCGIFAFLAG_IN6
 				int infoSock = socket(AF_INET6, SOCK_DGRAM, 0);
 #endif
