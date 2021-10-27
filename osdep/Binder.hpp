@@ -320,7 +320,7 @@ class Binder {
 					while (ifa) {
 						if ((ifa->ifa_name) && (ifa->ifa_addr)) {
 							InetAddress ip = *(ifa->ifa_addr);
-#if defined(__unix__) && !defined(__LINUX__)
+#if (defined(__unix__) || defined(__APPLE__)) && !defined(__LINUX__)
 							// Check if the address is an IPv6 Temporary Address, macOS/BSD version
 							if (ifa->ifa_addr->sa_family == AF_INET6) {
 								struct sockaddr_in6* sa6 = (struct sockaddr_in6*)ifa->ifa_addr;
