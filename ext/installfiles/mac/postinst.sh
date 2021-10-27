@@ -40,9 +40,9 @@ ln -sf "/Library/Application Support/ZeroTier/One/zerotier-one" zerotier-idtool
 if [ -f /tmp/zt1-gui-restart.tmp ]; then
 	for u in `cat /tmp/zt1-gui-restart.tmp`; do
 		if [ -f '/Applications/ZeroTier One.app/Contents/MacOS/ZeroTier One' ]; then
-			su $u -c '/Applications/ZeroTier\ One.app/Contents/MacOS/ZeroTier\ One &' >>/dev/null 2>&1 &
+			su $u -c '/usr/bin/open /Applications/ZeroTier\ One.app &' >>/dev/null 2>&1 &
 		else
-			su $u -c '/Applications/ZeroTier.app/Contents/MacOS/ZeroTier &' >>/dev/null 2>&1 &
+			su $u -c '/usr/bin/open /Applications/ZeroTier.app &' >>/dev/null 2>&1 &
 		fi
 	done
 fi
