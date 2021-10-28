@@ -1,15 +1,17 @@
 ZeroTier Release Notes
 ======
 
-# -- Version 1.8.1
+# 2021-10-28 -- Version 1.8.1
 
- * Fix UI issues on MacOS Mojave
- * Fix icon not showing on Windows
- * Re-eneable installation on Windows 7, 8, etc., but without any guarantee that it will work there! (7 is not supported)
- * Add an extended hash verification to certificates of network membership to further harden against impersonation attacks
- * Remove support for REALLY ancient 1.1.6 or earlier network controllers
+ * Fix numerous UI issues from 1.8.0 (never fully released).
+ * Remove support for REALLY ancient 1.1.6 or earlier network controllers.
+ * MacOS IPv6 no longer binds to temporary addresses as these can cause interruptions if they expire.
+ * Added additional hardening against address impersonation on networks (also in 1.6.6).
+ * Fix an issue that could cause clobbering of MacOS IP route settings on restart.
 
-# 2021-09-15 -- Version 1.8.0
+ * NOTE: Windows 7 is no longer supported! Windows 7 users will have to use version 1.6.5 or earlier.
+
+# 2021-09-15 -- Version 1.8.0 (preview release only)
 
  * A *completely* rewritten desktop UI for Mac and Windows!
  * Implement a workaround for one potential source of a "coma" bug, which can occur if buggy NATs/routers stop allowing the service to communicate on a given port. ZeroTier now reassigns a new secondary port if it's offline for a while unless a secondary port is manually specified in local.conf. Working around crummy buggy routers is an ongoing effort.
