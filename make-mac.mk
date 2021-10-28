@@ -103,14 +103,21 @@ mac-agent: FORCE
 osdep/MacDNSHelper.o: osdep/MacDNSHelper.mm
 	$(CXX) $(CXXFLAGS) -c osdep/MacDNSHelper.mm -o osdep/MacDNSHelper.o 
 
-one:	$(CORE_OBJS) $(ONE_OBJS) one.o mac-agent
-	$(CXX) $(CXXFLAGS) -o zerotier-one $(CORE_OBJS) $(ONE_OBJS) one.o $(LIBS)
+one:	$(CORE_OBJS) $(ONE_OBJS) one.o mac-agent zeroidc
+	$(CXX) $(CXXFLAGS) -o zerotier-one $(CORE_OBJS) $(ONE_OBJS) one.o $(LIBS) zeroidc/target/libzeroidc.a
 	# $(STRIP) zerotier-one
 	ln -sf zerotier-one zerotier-idtool
 	ln -sf zerotier-one zerotier-cli
 	$(CODESIGN) -f --options=runtime -s $(CODESIGN_APP_CERT) zerotier-one
 
 zerotier-one: one
+
+zeroidc: zeroidc/target/libzeroidc.a
+
+zeroidc/target/libzeroidc.a:
+	cd zeroidc && cargo build --target=x86_64-apple-darwin --release
+	cd zeroidc && cargo build --target=aarch64-apple-darwin --release
+	cd zeroidc && lipo -create target/x86_64-apple-darwin/release/libzeroidc.a target/aarch64-apple-darwin/release/libzeroidc.a -output target/libzeroidc.a
 
 central-controller:
 	make ARCH_FLAGS="-arch x86_64" ZT_CONTROLLER=1 one
@@ -157,7 +164,7 @@ central-controller-docker: FORCE
 	docker build --no-cache -t registry.zerotier.com/zerotier-central/ztcentral-controller:${TIMESTAMP} -f ext/central-controller-docker/Dockerfile --build-arg git_branch=$(shell git name-rev --name-only HEAD) .
 
 clean:
-	rm -rf MacEthernetTapAgent *.dSYM build-* *.a *.pkg *.dmg *.o node/*.o controller/*.o service/*.o osdep/*.o ext/http-parser/*.o $(CORE_OBJS) $(ONE_OBJS) zerotier-one zerotier-idtool zerotier-selftest zerotier-cli zerotier doc/node_modules zt1_update_$(ZT_BUILD_PLATFORM)_$(ZT_BUILD_ARCHITECTURE)_*
+	rm -rf MacEthernetTapAgent *.dSYM build-* *.a *.pkg *.dmg *.o node/*.o controller/*.o service/*.o osdep/*.o ext/http-parser/*.o $(CORE_OBJS) $(ONE_OBJS) zerotier-one zerotier-idtool zerotier-selftest zerotier-cli zerotier doc/node_modules zt1_update_$(ZT_BUILD_PLATFORM)_$(ZT_BUILD_ARCHITECTURE)_* zeroidc/target/
 
 distclean:	clean
 
