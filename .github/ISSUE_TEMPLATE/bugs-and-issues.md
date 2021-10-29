@@ -46,3 +46,4 @@ _Using these will ensure you get quicker support, and make this space available 
 - Router Config: are you permitting port 9993, uPnP, and NAT-PMP?
 - Firewall Config: are you permitting port 9993 on your OS; setting it to "Private" on Windows?
 - Are you using this at home, in an office, college, etc?
+- Have you tried screaming into your router?

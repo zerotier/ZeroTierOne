@@ -5,7 +5,11 @@ This is the actual implementation of ZeroTier One, a service providing connectiv
 
 ### Local Configuration File
 
-A file called `local.conf` in the ZeroTier home folder contains configuration options that apply to the local node. (It does not exist unless you create it). It can be used to set up trusted paths, blacklist physical paths, set up physical path hints for certain nodes, and define trusted upstream devices (federated roots). In a large deployment it can be deployed using a tool like Puppet, Chef, SaltStack, etc. to set a uniform configuration across systems. It's a JSON format file that can also be edited and rewritten by ZeroTier One itself, so ensure that proper JSON formatting is used. 
+A file called `local.conf` in the ZeroTier [home](https://github.com/zerotier/ZeroTierOne/blob/6faca86bb424d0b9643b6efa50571f73310d8276/README.md) folder contains configuration options that apply to the local node. (It does not exist unless you create it). It can be used to set up trusted paths, blacklist physical paths, set up physical path hints for certain nodes, and define trusted upstream devices (federated roots). In a large deployment it can be deployed using a tool like Puppet, Chef, SaltStack, etc. to set a uniform configuration across systems.
+
+It's a JSON format file that can also be edited and rewritten by ZeroTier One itself, so ensure that proper JSON formatting is used. To validate your config, paste it into a website like [jsonlint.com](https://jsonlint.com), or use a tool like `jq`. 
+
+Check the output of `zerotier-cli info -j` to see if your configuration is being loaded.
 
 Settings available in `local.conf` (this is not valid JSON, and JSON does not allow comments):
 
