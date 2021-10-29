@@ -12,6 +12,8 @@ crate-type = ["staticlib"]
 
 [dependencies]
 openidconnect = "2.1.0"
+base64 = "0.13.0"
+url = "2.2.2"
 
 [build-dependencies]
 cbindgen = "0.20.0"
