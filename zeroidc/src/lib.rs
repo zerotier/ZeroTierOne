@@ -8,7 +8,7 @@ use std::time::Duration;
 
 use openidconnect::core::{CoreClient, CoreProviderMetadata, CoreResponseType};
 use openidconnect::reqwest::http_client;
-use openidconnect::AuthenticationFlow;
+use openidconnect::{AuthenticationFlow, PkceCodeVerifier};
 use openidconnect::{ClientId, CsrfToken, IssuerUrl, Nonce, PkceCodeChallenge, RedirectUrl, Scope};
 
 use url::Url;
@@ -39,6 +39,7 @@ struct authres {
     url: Url,
     csrf_token: CsrfToken,
     nonce: Nonce,
+    pkce_verifier: PkceCodeVerifier,
 }
 
 impl ZeroIDC {
@@ -117,15 +118,15 @@ impl ZeroIDC {
         }
     }
 
-    fn get_auth_url(&mut self) -> Option<authres> {
+    fn get_auth_url(&mut self, csrf_token: String, nonce: String) -> Option<authres> {
         let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
 
         let r = (*self.inner.lock().unwrap()).oidc_client.as_ref().map(|c| {
             let (auth_url, csrf_token, nonce) = c
                 .authorize_url(
                     AuthenticationFlow::<CoreResponseType>::AuthorizationCode,
-                    csrf_func("my-csrf".to_string()),
-                    nonce_func("my-nonce".to_string()),
+                    csrf_func(csrf_token),
+                    nonce_func(nonce),
                 )
                 .add_scope(Scope::new("read".to_string()))
                 .add_scope(Scope::new("read".to_string()))
@@ -137,6 +138,7 @@ impl ZeroIDC {
                 url: auth_url,
                 csrf_token,
                 nonce,
+                pkce_verifier,
             };
         });
 
