@@ -24,7 +24,6 @@ impl C25519KeyPair {
         C25519KeyPair(sk, pk)
     }
 
-    #[inline(always)]
     pub fn from_bytes(public_key: &[u8], secret_key: &[u8]) -> Option<C25519KeyPair> {
         if public_key.len() == 32 && secret_key.len() == 32 {
             let pk: [u8; 32] = public_key.try_into().unwrap();
@@ -44,7 +43,6 @@ impl C25519KeyPair {
     pub fn secret_bytes(&self) -> Secret<{ C25519_SECRET_KEY_SIZE }> { Secret(self.0.to_bytes()) }
 
     /// Execute ECDH agreement and return a raw (un-hashed) shared secret key.
-    #[inline(always)]
     pub fn agree(&self, their_public: &[u8]) -> Secret<{ C25519_SHARED_SECRET_SIZE }> {
         let pk: [u8; 32] = their_public.try_into().unwrap();
         let pk = x25519_dalek::PublicKey::from(pk);
@@ -63,7 +61,6 @@ impl Ed25519KeyPair {
         Ed25519KeyPair(ed25519_dalek::Keypair::generate(&mut rng))
     }
 
-    #[inline(always)]
     pub fn from_bytes(public_bytes: &[u8], secret_bytes: &[u8]) -> Option<Ed25519KeyPair> {
         if public_bytes.len() == ED25519_PUBLIC_KEY_SIZE && secret_bytes.len() == ED25519_SECRET_KEY_SIZE {
             let pk = ed25519_dalek::PublicKey::from_bytes(public_bytes);
@@ -87,7 +84,6 @@ impl Ed25519KeyPair {
     #[inline(always)]
     pub fn secret_bytes(&self) -> Secret<{ ED25519_SECRET_KEY_SIZE }> { Secret(self.0.secret.to_bytes()) }
 
-    #[inline(always)]
     pub fn sign(&self, msg: &[u8]) -> [u8; ED25519_SIGNATURE_SIZE] {
         let mut h = ed25519_dalek::Sha512::new();
         let _ = h.write_all(msg);
@@ -96,7 +92,6 @@ impl Ed25519KeyPair {
 
     /// Create a signature with the first 32 bytes of the SHA512 hash appended.
     /// ZeroTier does this for legacy reasons, but it's ignored in newer versions.
-    #[inline(always)]
     pub fn sign_zt(&self, msg: &[u8]) -> [u8; 96] {
         let mut h = ed25519_dalek::Sha512::new();
         let _ = h.write_all(msg);
@@ -110,7 +105,6 @@ impl Ed25519KeyPair {
     }
 }
 
-#[inline(always)]
 pub fn ed25519_verify(public_key: &[u8], signature: &[u8], msg: &[u8]) -> bool {
     if public_key.len() == 32 && signature.len() >= 64 {
         ed25519_dalek::PublicKey::from_bytes(public_key).map_or(false, |pk| {

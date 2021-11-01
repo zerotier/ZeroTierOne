@@ -12,8 +12,10 @@
 /****/
 
 use std::collections::BTreeMap;
-use zerotier_core::{InetAddress, Address, NetworkId};
+
 use serde::{Deserialize, Serialize};
+
+use zerotier_network_hypervisor::vl1::{Address, InetAddress};
 
 pub const UNASSIGNED_PRIVILEGED_PORTS: [u16; 299] = [
     4,

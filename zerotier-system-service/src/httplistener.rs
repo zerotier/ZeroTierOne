@@ -13,21 +13,20 @@
 
 use std::cell::Cell;
 use std::convert::Infallible;
-use std::sync::Arc;
 use std::net::SocketAddr;
+#[cfg(target_os = "linux")]
+use std::os::unix::io::AsRawFd;
+use std::sync::Arc;
 
-use hyper::{Body, Request, Response, StatusCode, Method};
+use digest_auth::{AuthContext, AuthorizationHeader, Charset, WwwAuthenticateHeader};
+use hyper::{Body, Method, Request, Response, StatusCode};
 use hyper::server::Server;
 use hyper::service::{make_service_fn, service_fn};
 use tokio::task::JoinHandle;
-use digest_auth::{AuthContext, AuthorizationHeader, Charset, WwwAuthenticateHeader};
 
-use crate::service::Service;
 use crate::api;
-use crate::utils::{decrypt_http_auth_nonce, ms_since_epoch, create_http_auth_nonce};
-
-#[cfg(target_os = "linux")]
-use std::os::unix::io::AsRawFd;
+use crate::service::Service;
+use crate::utils::{create_http_auth_nonce, decrypt_http_auth_nonce, ms_since_epoch};
 
 const HTTP_MAX_NONCE_AGE_MS: i64 = 30000;
 
@@ -158,7 +157,7 @@ impl HttpListener {
                 unsafe {
                     let _ = std::ffi::CString::new(_device_name).map(|dn| {
                         let dnb = dn.as_bytes_with_nul();
-                        let _ = crate::osdep::setsockopt(sock as std::os::raw::c_int, crate::osdep::SOL_SOCKET as std::os::raw::c_int, crate::osdep::SO_BINDTODEVICE as std::os::raw::c_int, dnb.as_ptr().cast(), (dnb.len() - 1) as crate::osdep::socklen_t);
+                        let _ = libc::setsockopt(sock as std::os::raw::c_int, libc::SOL_SOCKET as std::os::raw::c_int, libc::SO_BINDTODEVICE as std::os::raw::c_int, dnb.as_ptr().cast(), (dnb.len() - 1) as libc::socklen_t);
                     });
                 }
             }

@@ -5,7 +5,8 @@ use std::time::Duration;
 use dashmap::DashMap;
 use parking_lot::Mutex;
 
-use zerotier_core_crypto::random::{SecureRandom, next_u64_secure};
+use zerotier_core_crypto::random::{next_u64_secure, SecureRandom};
+
 use crate::error::InvalidParameterError;
 use crate::util::gate::IntervalGate;
 use crate::util::pool::{Pool, Pooled};
@@ -14,11 +15,17 @@ use crate::vl1::buffer::{Buffer, PooledBufferFactory};
 use crate::vl1::path::Path;
 use crate::vl1::peer::Peer;
 use crate::vl1::protocol::*;
-use crate::vl1::whoisqueue::{WhoisQueue, QueuedPacket};
 use crate::vl1::rootset::RootSet;
+use crate::vl1::whoisqueue::{QueuedPacket, WhoisQueue};
 
 /// Standard packet buffer type including pool container.
 pub type PacketBuffer = Pooled<Buffer<{ PACKET_SIZE_MAX }>, PooledBufferFactory<{ PACKET_SIZE_MAX }>>;
+
+/// Factory type to supply to a new PacketBufferPool.
+pub type PacketBufferFactory = PooledBufferFactory<{ PACKET_SIZE_MAX }>;
+
+/// Source for instances of PacketBuffer
+pub type PacketBufferPool = Pool<Buffer<{ PACKET_SIZE_MAX }>, PacketBufferFactory>;
 
 /// Callback interface and call context for calls to the node (for VL1).
 ///
@@ -132,7 +139,7 @@ pub struct Node {
     roots: Mutex<Vec<Arc<Peer>>>,
     root_sets: Mutex<Vec<RootSet>>,
     whois: WhoisQueue,
-    buffer_pool: Pool<Buffer<{ PACKET_SIZE_MAX }>, PooledBufferFactory<{ PACKET_SIZE_MAX }>>,
+    buffer_pool: Arc<PacketBufferPool>,
     secure_prng: SecureRandom,
     fips_mode: bool,
 }
@@ -174,11 +181,17 @@ impl Node {
             roots: Mutex::new(Vec::new()),
             root_sets: Mutex::new(Vec::new()),
             whois: WhoisQueue::new(),
-            buffer_pool: Pool::new(64, PooledBufferFactory),
+            buffer_pool: Arc::new(PacketBufferPool::new(64, PooledBufferFactory)),
             secure_prng: SecureRandom::get(),
             fips_mode: false,
         })
     }
+
+    #[inline(always)]
+    pub fn get_packet_buffer(&self) -> PacketBuffer { self.buffer_pool.get() }
+
+    #[inline(always)]
+    pub fn packet_buffer_pool(&self) -> &Arc<PacketBufferPool> { &self.buffer_pool }
 
     #[inline(always)]
     pub fn address(&self) -> Address { self.identity.address() }
@@ -188,10 +201,6 @@ impl Node {
 
     #[inline(always)]
     pub fn locator(&self) -> Option<Arc<Locator>> { self.locator.lock().clone() }
-
-    /// Get a reusable packet buffer.
-    /// The buffer will automatically be returned to the pool if it is dropped.
-    pub fn get_packet_buffer(&self) -> PacketBuffer { self.buffer_pool.get() }
 
     /// Get a peer by address.
     pub fn peer(&self, a: Address) -> Option<Arc<Peer>> { self.peers.get(&a).map(|peer| peer.value().clone()) }

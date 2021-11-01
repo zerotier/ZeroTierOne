@@ -24,6 +24,10 @@ impl<const L: usize> Default for Buffer<L> {
 const OVERFLOW_ERR_MSG: &'static str = "overflow";
 
 impl<const L: usize> Buffer<L> {
+    pub const CAPACITY: usize = L;
+
+    pub const fn capacity(&self) -> usize { L }
+
     #[inline(always)]
     pub fn new() -> Self { Self(0, [0_u8; L]) }
 
@@ -46,6 +50,12 @@ impl<const L: usize> Buffer<L> {
 
     #[inline(always)]
     pub fn as_bytes_mut(&mut self) -> &mut [u8] { &mut self.1[0..self.0] }
+
+    #[inline(always)]
+    pub fn as_ptr(&self) -> *const u8 { self.1.as_ptr() }
+
+    #[inline(always)]
+    pub fn as_mut_ptr(&mut self) -> *mut u8 { self.1.as_mut_ptr() }
 
     /// Get all bytes after a given position.
     #[inline(always)]

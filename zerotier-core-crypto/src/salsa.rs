@@ -5,7 +5,6 @@ impl Salsa {
     /// Initialize Salsa cipher.
     /// Key must be 32 bytes and iv must be 8 bytes. If r12 is true the 12-round
     /// variant of Salsa will be used, otherwise 20 rounds are used.
-    #[inline(always)]
     pub fn new(key: &[u8], iv: &[u8], r12: bool) -> Option<Salsa> {
         if key.len() == 32 && iv.len() == 8 {
             gcrypt::cipher::Cipher::new(if r12 { gcrypt::cipher::Algorithm::Salsa20r12 } else { gcrypt::cipher::Algorithm::Salsa20 }, gcrypt::cipher::Mode::Stream).map_or(None, |mut salsa| {

@@ -7,5 +7,5 @@ edition = "2018"
 rand_core = "^0"
 aes-gmac-siv = { path = "../aes-gmac-siv" }
 gcrypt = "^0"
-x25519-dalek = "^1"
-ed25519-dalek = "^1"
+x25519-dalek = { version = "^1", features = ["u64_backend"] }
+ed25519-dalek = { version = "^1", features = ["u64_backend"] }

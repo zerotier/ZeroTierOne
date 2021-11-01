@@ -28,3 +28,4 @@ pub use inetaddress::InetAddress;
 pub use locator::Locator;
 pub use peer::Peer;
 pub use path::Path;
+pub use node::{PacketBuffer, PacketBufferPool, PacketBufferFactory};

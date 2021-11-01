@@ -5,7 +5,6 @@ pub const POLY1305_ONE_TIME_KEY_SIZE: usize = 32;
 pub const POLY1305_MAC_SIZE: usize = 16;
 
 impl Poly1305 {
-    #[inline(always)]
     pub fn new(key: &[u8]) -> Option<Poly1305> {
         if key.len() == 32 {
             gcrypt::mac::Mac::new(gcrypt::mac::Algorithm::Poly1305).map_or(None, |mut poly| {

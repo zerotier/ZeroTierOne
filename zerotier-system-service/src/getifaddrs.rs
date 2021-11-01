@@ -16,9 +16,9 @@ use std::ptr::{copy_nonoverlapping, null_mut};
 
 use zerotier_network_hypervisor::vl1::InetAddress;
 
-fn s6_addr_as_ptr<A>(a: &A) -> *const A {
-    a as *const A
-}
+#[allow(unused)]
+#[inline(always)]
+fn s6_addr_as_ptr<A>(a: &A) -> *const A { a as *const A }
 
 /// Call supplied function or closure for each physical IP address in the system.
 #[cfg(unix)]

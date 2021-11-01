@@ -15,7 +15,6 @@ impl SHA512 {
         h
     }
 
-    #[inline(always)]
     pub fn hmac(key: &[u8], msg: &[u8]) -> [u8; SHA512_HASH_SIZE] {
         let mut m = gcrypt::mac::Mac::new(gcrypt::mac::Algorithm::HmacSha512).unwrap();
         let _ = m.set_key(key);
@@ -68,7 +67,6 @@ impl SHA384 {
         h
     }
 
-    #[inline(always)]
     pub fn hmac(key: &[u8], msg: &[u8]) -> [u8; SHA384_HASH_SIZE] {
         let mut m = gcrypt::mac::Mac::new(gcrypt::mac::Algorithm::HmacSha384).unwrap();
         let _ = m.set_key(key);

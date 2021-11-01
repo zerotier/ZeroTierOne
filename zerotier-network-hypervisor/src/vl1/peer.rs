@@ -1,3 +1,11 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ *
+ * (c)2021 ZeroTier, Inc.
+ * https://www.zerotier.com/
+ */
+
 use std::convert::TryInto;
 use std::mem::MaybeUninit;
 use std::ptr::copy_nonoverlapping;
@@ -298,7 +306,7 @@ impl Peer {
                 if (verb & VERB_FLAG_COMPRESSED) != 0 {
                     let mut decompressed_payload = node.get_packet_buffer();
                     let _ = decompressed_payload.append_u8(verb);
-                    let dlen = lz4_flex::block::decompress_into(&payload.as_bytes()[1..], &mut decompressed_payload.as_bytes_mut(), 1);
+                    let dlen = lz4_flex::block::decompress_into(&payload.as_bytes()[1..], &mut decompressed_payload.as_bytes_mut());
                     if dlen.is_ok() {
                         decompressed_payload.set_size(dlen.unwrap());
                         payload = decompressed_payload;
