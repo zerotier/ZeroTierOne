@@ -1,11 +1,17 @@
-// Only things that should be used from outside network-hypervisor should be full "pub."
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ *
+ * (c)2021 ZeroTier, Inc.
+ * https://www.zerotier.com/
+ */
+
 pub mod identity;
 pub mod inetaddress;
 pub mod endpoint;
 pub mod locator;
 pub mod rootset;
 
-// These are either only used inside network-hypervisor or are selectively exported below.
 #[allow(unused)]
 pub(crate) mod protocol;
 pub(crate) mod buffer;
@@ -18,7 +24,6 @@ pub(crate) mod mac;
 pub(crate) mod fragmentedpacket;
 pub(crate) mod whoisqueue;
 
-// Export some core objects into the root namespace, since these are what other code will driectly deal with.
 pub use address::Address;
 pub use mac::MAC;
 pub use identity::Identity;
