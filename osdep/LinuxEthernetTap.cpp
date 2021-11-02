@@ -213,6 +213,7 @@ LinuxEthernetTap::LinuxEthernetTap(
 			return;
 		}
 
+		ifr.ifr_flags |= IFF_MULTICAST;
 		ifr.ifr_flags |= IFF_UP;
 		if (ioctl(sock,SIOCSIFFLAGS,(void *)&ifr) < 0) {
 			::close(sock);
