@@ -1,5 +1,7 @@
 ZeroTier Release Notes
 ======
+# 2021-11-00 -- Version 1.8.2
+ * Fix multicast on linux.
 
 # 2021-10-28 -- Version 1.8.1
 
