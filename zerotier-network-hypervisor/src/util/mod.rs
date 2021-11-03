@@ -6,10 +6,11 @@
  * https://www.zerotier.com/
  */
 
-pub mod hex;
 pub mod pool;
 pub mod gate;
 pub mod varint;
+
+pub use zerotier_core_crypto::hex;
 
 pub(crate) const ZEROES: [u8; 64] = [0_u8; 64];
 

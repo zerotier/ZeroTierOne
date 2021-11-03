@@ -7,7 +7,6 @@
  */
 
 use std::convert::TryInto;
-use std::mem::MaybeUninit;
 use std::ptr::copy_nonoverlapping;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, AtomicU64, AtomicU8, Ordering};
@@ -449,7 +448,7 @@ impl Peer {
 
             let aes_ctr_iv_position = packet.len();
             debug_assert!(packet.append_and_init_bytes_fixed(|iv: &mut [u8; 18]| {
-                crate::crypto::random::fill_bytes_secure(&mut iv[0..16]);
+                zerotier_core_crypto::random::fill_bytes_secure(&mut iv[0..16]);
                 iv[12] &= 0x7f; // mask off MSB of counter in iv to play nice with some AES-CTR implementations
 
                 // LEGACY: create a 16-bit encrypted field that specifies zero moons. This is ignored by v2

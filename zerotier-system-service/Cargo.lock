@@ -1298,7 +1298,7 @@ dependencies = [
  "aes-gmac-siv",
  "ed25519-dalek",
  "gcrypt",
- "rand_core 0.6.3",
+ "rand_core 0.5.1",
  "x25519-dalek",
 ]
 

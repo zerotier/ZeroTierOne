@@ -27,7 +27,7 @@ fn dump_sexp(exp: &SExpression) {
         } else {
             let b = exp.get_bytes(0);
             if b.is_some() {
-                print!("#{}#", crate::util::hex::to_string(b.unwrap()));
+                print!("#{}#", crate::hex::to_string(b.unwrap()));
             } else {
                 print!("()");
             }
@@ -51,14 +51,14 @@ fn dump_sexp(exp: &SExpression) {
 
 #[inline(always)]
 fn hash_to_data_sexp(msg: &[u8]) -> [u8; 155] {
-    let h = crate::crypto::hash::SHA512::hash(msg);
+    let h = crate::hash::SHA512::hash(msg);
     let mut d = [0_u8; 155];
     d[0..24].copy_from_slice(b"(data(flags raw)(value #");
     let mut j = 24;
     for i in 0..64 {
         let b = h[i] as usize;
-        d[j] = crate::util::hex::HEX_CHARS[b >> 4];
-        d[j + 1] = crate::util::hex::HEX_CHARS[b & 0xf];
+        d[j] = crate::hex::HEX_CHARS[b >> 4];
+        d[j + 1] = crate::hex::HEX_CHARS[b & 0xf];
         j += 2;
     }
     d[152..155].copy_from_slice(b"#))");
@@ -107,8 +107,8 @@ impl P521KeyPair {
                                 public_key: pk_exp,
                                 public_key_bytes: [0_u8; P521_PUBLIC_KEY_SIZE],
                             },
-                            secret_key_for_ecdsa: SExpression::from_str(format!("(private-key(ecc(curve nistp521)(q #{}#)(d #{}#)))", crate::util::hex::to_string(pk), crate::util::hex::to_string(sk)).as_str()).unwrap(),
-                            secret_key_for_ecdh: SExpression::from_str(format!("(data(flags raw)(value #{}#))", crate::util::hex::to_string(sk)).as_str()).unwrap(),
+                            secret_key_for_ecdsa: SExpression::from_str(format!("(private-key(ecc(curve nistp521)(q #{}#)(d #{}#)))", crate::hex::to_string(pk), crate::hex::to_string(sk)).as_str()).unwrap(),
+                            secret_key_for_ecdh: SExpression::from_str(format!("(data(flags raw)(value #{}#))", crate::hex::to_string(sk)).as_str()).unwrap(),
                             secret_key_bytes: Secret::default(),
                         };
                         kp.public_key.public_key_bytes[((P521_PUBLIC_KEY_SIZE + 1) - pk.len())..P521_PUBLIC_KEY_SIZE].copy_from_slice(&pk[1..]);
@@ -132,8 +132,8 @@ impl P521KeyPair {
         }
         Some(P521KeyPair {
             public_key: public_key.unwrap(),
-            secret_key_for_ecdsa: SExpression::from_str(format!("(private-key(ecc(curve nistp521)(q #04{}#)(d #{}#)))", crate::util::hex::to_string(public_bytes), crate::util::hex::to_string(secret_bytes)).as_str()).unwrap(),
-            secret_key_for_ecdh: SExpression::from_str(format!("(data(flags raw)(value #{}#))", crate::util::hex::to_string(secret_bytes)).as_str()).unwrap(),
+            secret_key_for_ecdsa: SExpression::from_str(format!("(private-key(ecc(curve nistp521)(q #04{}#)(d #{}#)))", crate::hex::to_string(public_bytes), crate::hex::to_string(secret_bytes)).as_str()).unwrap(),
+            secret_key_for_ecdh: SExpression::from_str(format!("(data(flags raw)(value #{}#))", crate::hex::to_string(secret_bytes)).as_str()).unwrap(),
             secret_key_bytes: Secret::from_bytes(secret_bytes),
         })
     }
@@ -188,7 +188,7 @@ impl P521PublicKey {
     pub fn from_bytes(b: &[u8]) -> Option<P521PublicKey> {
         if b.len() == P521_PUBLIC_KEY_SIZE {
             Some(P521PublicKey {
-                public_key: SExpression::from_str(format!("(public-key(ecc(curve nistp521)(q #04{}#)))", crate::util::hex::to_string(b)).as_str()).unwrap(),
+                public_key: SExpression::from_str(format!("(public-key(ecc(curve nistp521)(q #04{}#)))", crate::hex::to_string(b)).as_str()).unwrap(),
                 public_key_bytes: b.try_into().unwrap(),
             })
         } else {
@@ -201,7 +201,7 @@ impl P521PublicKey {
     pub fn verify(&self, msg: &[u8], signature: &[u8]) -> bool {
         if signature.len() == P521_ECDSA_SIGNATURE_SIZE {
             let data = SExpression::from_str(unsafe { std::str::from_utf8_unchecked(&hash_to_data_sexp(msg)) }).unwrap();
-            let sig = SExpression::from_str(format!("(sig-val(ecdsa(r #{}#)(s #{}#)))", crate::util::hex::to_string(&signature[0..66]), crate::util::hex::to_string(&signature[66..132])).as_str()).unwrap();
+            let sig = SExpression::from_str(format!("(sig-val(ecdsa(r #{}#)(s #{}#)))", crate::hex::to_string(&signature[0..66]), crate::hex::to_string(&signature[66..132])).as_str()).unwrap();
             gcrypt::pkey::verify(&self.public_key, &data, &sig).is_ok()
         } else {
             false

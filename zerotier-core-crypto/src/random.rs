@@ -6,8 +6,6 @@
  * https://www.zerotier.com/
  */
 
-use rand_core::{RngCore, Error};
-use rand_core::CryptoRng;
 use gcrypt::rand::{Level, randomize};
 
 /// Secure random source based on the desired third party library (gcrypt).
@@ -18,7 +16,7 @@ impl SecureRandom {
     pub fn get() -> Self { Self }
 }
 
-impl RngCore for SecureRandom {
+impl rand_core::RngCore for SecureRandom {
     #[inline(always)]
     fn next_u32(&mut self) -> u32 {
         let mut tmp = 0_u32;
@@ -37,13 +35,13 @@ impl RngCore for SecureRandom {
     fn fill_bytes(&mut self, dest: &mut [u8]) { randomize(Level::Strong, dest); }
 
     #[inline(always)]
-    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), Error> {
+    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), rand_core::Error> {
         randomize(Level::Strong, dest);
         Ok(())
     }
 }
 
-impl CryptoRng for SecureRandom {}
+impl rand_core::CryptoRng for SecureRandom {}
 
 #[inline(always)]
 pub fn next_u32_secure() -> u32 {

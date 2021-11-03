@@ -7,55 +7,59 @@
  */
 
 use std::io::{Read, Write};
+use crate::vl1::buffer::Buffer;
 
+/// Write a variable length integer, which can consume up to 10 bytes.
 pub fn write<W: Write>(w: &mut W, mut v: u64) -> std::io::Result<()> {
     let mut b = [0_u8; 10];
-    let mut i = 10;
+    let mut i = 0;
     loop {
         if v > 0x7f {
-            i -= 1;
             b[i] = (v as u8) & 0x7f;
-            v >>= 7;
+            i += 1;
+            v = v.wrapping_shr(7);
         } else {
-            i -= 1;
             b[i] = (v as u8) | 0x80;
+            i += 1;
             break;
         }
     }
-    w.write_all(&b[i..])
+    w.write_all(&b[0..i])
 }
 
-pub fn read<R: Read>(r: &mut R) -> std::io::Result<u64> {
+/// Read a variable length integer, returning the value and the number of bytes written.
+pub fn read<R: Read>(r: &mut R) -> std::io::Result<(u64, usize)> {
     let mut v = 0_u64;
     let mut buf = [0_u8; 1];
+    let mut pos = 0;
+    let mut i = 0_usize;
     loop {
-        v <<= 7;
         let _ = r.read_exact(&mut buf)?;
         let b = buf[0];
+        i += 1;
         if b <= 0x7f {
-            v |= b as u64;
+            v |= (b as u64).wrapping_shl(pos);
+            pos += 7;
         } else {
-            v |= (b & 0x7f) as u64;
-            return Ok(v);
+            v |= ((b & 0x7f) as u64).wrapping_shl(pos);
+            return Ok((v, i));
         }
     }
 }
 
-pub(crate) fn read_from_bytes(r: &[u8], cursor: &mut usize) -> std::io::Result<u64> {
-    let mut v = 0_u64;
-    let mut c = *cursor;
-    while c < r.len() {
-        v <<= 7;
-        let b = unsafe { *r.get_unchecked(c) };
-        c += 1;
-        if b <= 0x7f {
-            v |= b as u64;
-        } else {
-            v |= (b & 0x7f) as u64;
-            *cursor = c;
-            return Ok(v);
+#[cfg(test)]
+mod tests {
+    use crate::util::varint::*;
+
+    #[test]
+    fn varint() {
+        let mut t: Vec<u8> = Vec::new();
+        for i in 0..131072 {
+            t.clear();
+            let ii = (u64::MAX / 131072) * i;
+            assert!(write(&mut t, ii).is_ok());
+            let mut t2 = t.as_slice();
+            assert_eq!(read(&mut t2).unwrap().0, ii);
         }
     }
-    *cursor = c;
-    return Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "incomplete varint"));
 }

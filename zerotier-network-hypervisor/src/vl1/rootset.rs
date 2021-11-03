@@ -16,7 +16,6 @@ use zerotier_core_crypto::hash::SHA384;
 use zerotier_core_crypto::p521::*;
 use zerotier_core_crypto::secret::Secret;
 
-use crate::error::InvalidFormatError;
 use crate::vl1::{Endpoint, Identity};
 use crate::vl1::buffer::Buffer;
 use crate::vl1::protocol::PACKET_SIZE_MAX;

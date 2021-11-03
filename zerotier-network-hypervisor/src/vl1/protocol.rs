@@ -177,7 +177,7 @@ pub fn compress_packet(src: &[u8], dest: &mut Buffer<{ PACKET_SIZE_MAX }>) -> bo
             let d = dest.as_bytes_mut();
             d[0..PACKET_VERB_INDEX].copy_from_slice(&src[0..PACKET_VERB_INDEX]);
             d[PACKET_VERB_INDEX] = src[PACKET_VERB_INDEX] | VERB_FLAG_COMPRESSED;
-            lz4_flex::block::compress_into(&src[PACKET_VERB_INDEX + 1..], d, PACKET_VERB_INDEX + 1)
+            lz4_flex::block::compress_into(&src[PACKET_VERB_INDEX + 1..], &mut d[PACKET_VERB_INDEX + 1..])
         };
         if cs.is_ok() {
             let cs = cs.unwrap();
@@ -193,7 +193,7 @@ pub fn compress_packet(src: &[u8], dest: &mut Buffer<{ PACKET_SIZE_MAX }>) -> bo
 /// Add HMAC-SHA384 to the end of a packet and set verb flag.
 #[inline(always)]
 pub fn add_extended_auth(pkt: &mut Buffer<{ PACKET_SIZE_MAX }>, hmac_secret_key: &[u8]) -> std::io::Result<()> {
-    pkt.append_bytes_fixed(&ztcrypto::hash::SHA384::hmac(hmac_secret_key, pkt.as_bytes_starting_at(PACKET_VERB_INDEX + 1)?))?;
+    pkt.append_bytes_fixed(&zerotier_core_crypto::hash::SHA384::hmac(hmac_secret_key, pkt.as_bytes_starting_at(PACKET_VERB_INDEX + 1)?))?;
     pkt.as_bytes_mut()[PACKET_VERB_INDEX] |= VERB_FLAG_EXTENDED_AUTHENTICATION;
     Ok(())
 }

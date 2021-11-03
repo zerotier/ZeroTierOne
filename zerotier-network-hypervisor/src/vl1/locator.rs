@@ -92,11 +92,13 @@ impl Locator {
         self.subject.marshal(buf)?;
         self.signer.marshal(buf)?;
         buf.append_varint(self.timestamp as u64)?;
-        self.metadata.map_or_else(|| buf.append_varint(0), |d| {
-            let db = d.to_bytes();
+        if self.metadata.is_none() {
+            buf.append_varint(0)?;
+        } else {
+            let db = self.metadata.as_ref().unwrap().to_bytes();
             buf.append_varint(db.len() as u64)?;
-            buf.append_bytes(db.as_slice())
-        })?;
+            buf.append_bytes(db.as_slice())?;
+        }
         buf.append_varint(self.endpoints.len() as u64)?;
         for e in self.endpoints.iter() {
             e.marshal(buf)?;

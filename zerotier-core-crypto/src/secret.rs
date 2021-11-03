@@ -7,7 +7,6 @@
  */
 
 use std::convert::TryInto;
-use std::mem::size_of;
 use std::ptr::write_volatile;
 
 /// Container for secrets that clears them on drop.

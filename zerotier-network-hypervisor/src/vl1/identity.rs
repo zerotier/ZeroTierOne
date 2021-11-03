@@ -306,9 +306,9 @@ impl Identity {
     /// Verify a signature.
     pub fn verify(&self, msg: &[u8], signature: &[u8]) -> bool {
         self.v1.as_ref().map_or_else(|| {
-            crate::crypto::c25519::ed25519_verify(&self.ed25519, signature, msg)
+            zerotier_core_crypto::c25519::ed25519_verify(&self.ed25519, signature, msg)
         }, |p521| {
-            signature.len() == IDENTITY_TYPE_1_SIGNATURE_SIZE && (*p521).1.verify(msg, &signature[0..P521_ECDSA_SIGNATURE_SIZE]) && crate::crypto::c25519::ed25519_verify(&self.ed25519, &signature[P521_ECDSA_SIGNATURE_SIZE..], msg)
+            signature.len() == IDENTITY_TYPE_1_SIGNATURE_SIZE && (*p521).1.verify(msg, &signature[0..P521_ECDSA_SIGNATURE_SIZE]) && zerotier_core_crypto::c25519::ed25519_verify(&self.ed25519, &signature[P521_ECDSA_SIGNATURE_SIZE..], msg)
         })
     }
 

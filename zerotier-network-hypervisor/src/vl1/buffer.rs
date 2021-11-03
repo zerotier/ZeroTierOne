@@ -106,6 +106,9 @@ impl<const L: usize> Buffer<L> {
     #[inline(always)]
     pub unsafe fn set_size_unchecked(&mut self, s: usize) { self.0 = s; }
 
+    #[inline(always)]
+    pub unsafe fn get_unchecked(&self, i: usize) -> u8 { *self.1.get_unchecked(i) }
+
     /// Append a packed structure and call a function to initialize it in place.
     /// Anything not initialized will be zero.
     #[inline(always)]
@@ -327,7 +330,11 @@ impl<const L: usize> Buffer<L> {
     /// Get the next variable length integer and advance the cursor by its length in bytes.
     #[inline(always)]
     pub fn read_varint(&self, cursor: &mut usize) -> std::io::Result<u64> {
-        crate::util::varint::read_from_bytes(&(self.1[self.0..]), cursor)
+        let mut a = &self.1[*cursor..];
+        crate::util::varint::read(&mut a).map(|r| {
+            *cursor += r.1;
+            r.0
+        })
     }
 
     /// Get the next u8 and advance the cursor.

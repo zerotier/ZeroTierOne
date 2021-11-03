@@ -6,7 +6,6 @@
  * https://www.zerotier.com/
  */
 
-use std::mem::size_of;
 use std::ptr::NonNull;
 use std::sync::{Arc, Weak};
 

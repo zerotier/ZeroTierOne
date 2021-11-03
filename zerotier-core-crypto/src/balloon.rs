@@ -6,7 +6,6 @@
  * https://www.zerotier.com/
  */
 
-use std::convert::TryInto;
 use std::mem::MaybeUninit;
 
 use crate::hash::{SHA384, SHA512};
@@ -24,7 +23,7 @@ fn hash_int_le(sha: &mut SHA512, i: u64) {
 /// Compute balloon memory-hard hash using SHA-512 and SHA-384 for the final.
 /// SPACE_COST must be a multiple of 64. This is checked with an assertion.
 /// DELTA is usually 3.
-pub fn hash<const SPACE_COST: usize, const TIME_COST: usize, const DELTA: usize>(password: &[u8], salt: &[u8]) -> [u8; crate::crypto::hash::SHA384_HASH_SIZE] {
+pub fn hash<const SPACE_COST: usize, const TIME_COST: usize, const DELTA: usize>(password: &[u8], salt: &[u8]) -> [u8; crate::hash::SHA384_HASH_SIZE] {
     debug_assert_ne!(SPACE_COST, 0);
     debug_assert_ne!(TIME_COST, 0);
     debug_assert_ne!(DELTA, 0);
@@ -129,7 +128,7 @@ mod tests {
         let start = std::time::SystemTime::now();
         let mut tmp = 0_u8;
         for _ in 0..100 {
-            let foo = crate::crypto::balloon::hash::<16384, 3, 3>(&[1_u8], &[2_u8]);
+            let foo = crate::balloon::hash::<16384, 3, 3>(&[1_u8], &[2_u8]);
             tmp = tmp.wrapping_add(foo[0]);
         }
         let duration = std::time::SystemTime::now().duration_since(start).unwrap();
