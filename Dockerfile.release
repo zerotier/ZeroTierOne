@@ -1,20 +1,22 @@
 # vim: ft=dockerfile
 
-FROM debian:buster as stage
+FROM debian:buster as keyring
 
-ARG PACKAGE_BASEURL=https://download.zerotier.com/debian/buster/pool/main/z/zerotier-one/
-ARG ARCH=amd64
-ARG VERSION
-
-RUN apt-get update -qq && apt-get install curl -y
-RUN curl -sSL -o zerotier-one.deb "${PACKAGE_BASEURL}/zerotier-one_${VERSION}_${ARCH}.deb"
+COPY doc/contact@zerotier.com.gpg .
+RUN apt-get update && \
+    apt-get install -y gnupg && \
+    gpg --no-default-keyring --keyring /usr/share/keyrings/zerotier.gpg --import contact@zerotier.com.gpg
 
 FROM debian:buster
 
-COPY --from=stage zerotier-one.deb .
+ARG VERSION
 
-RUN dpkg -i zerotier-one.deb && rm -f zerotier-one.deb
-RUN echo "${VERSION}" >/etc/zerotier-version
+COPY --from=keyring /usr/share/keyrings/zerotier.gpg /usr/share/keyrings/zerotier.gpg
+RUN echo "deb [signed-by=/usr/share/keyrings/zerotier.gpg] http://download.zerotier.com/debian/buster buster main" > /etc/apt/sources.list.d/zerotier.list
+RUN apt-get update && \
+    apt-get install -y zerotier-one=${VERSION} && \
+    rm -rf /var/lib/apt/lists/*
+
 RUN rm -rf /var/lib/zerotier-one
 
 COPY entrypoint.sh.release /entrypoint.sh
