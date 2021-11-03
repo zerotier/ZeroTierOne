@@ -48,8 +48,13 @@ fn bind_udp_socket(_device_name: &str, address: &InetAddress) -> Result<FastUDPR
 
         fl = 1;
         setsockopt_results |= libc::setsockopt(s, libc::SOL_SOCKET.as_(), libc::SO_REUSEPORT.as_(), (&mut fl as *mut c_int).cast(), fl_size);
+
+        fl = 0;
+        setsockopt_results |= libc::setsockopt(s, libc::SOL_SOCKET.as_(), libc::SO_LINGER.as_(), (&mut fl as *mut c_int).cast(), fl_size);
+
         //fl = 1;
         //setsockopt_results |= libc::setsockopt(s, libc::SOL_SOCKET, libc::SO_REUSEADDR, (&mut fl as *mut c_int).cast(), fl_size);
+
         fl = 1;
         setsockopt_results |= libc::setsockopt(s, libc::SOL_SOCKET.as_(), libc::SO_BROADCAST.as_(), (&mut fl as *mut c_int).cast(), fl_size);
         if af == libc::AF_INET6 {

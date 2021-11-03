@@ -330,11 +330,17 @@ impl<const L: usize> Buffer<L> {
     /// Get the next variable length integer and advance the cursor by its length in bytes.
     #[inline(always)]
     pub fn read_varint(&self, cursor: &mut usize) -> std::io::Result<u64> {
-        let mut a = &self.1[*cursor..];
-        crate::util::varint::read(&mut a).map(|r| {
-            *cursor += r.1;
-            r.0
-        })
+        let c = *cursor;
+        if c < self.0 {
+            let mut a = &self.1[c..];
+            crate::util::varint::read(&mut a).map(|r| {
+                *cursor = c + r.1;
+                debug_assert!(*cursor < self.0);
+                r.0
+            })
+        } else {
+            Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
+        }
     }
 
     /// Get the next u8 and advance the cursor.

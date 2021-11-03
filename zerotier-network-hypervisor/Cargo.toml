@@ -2,6 +2,8 @@
 name = "zerotier-network-hypervisor"
 version = "2.0.0"
 edition = "2018"
+license = "MPL-2.0"
+authors = ["ZeroTier, Inc. <contact@zerotier.com>", "Adam Ierymenko <adam.ierymenko@zerotier.com>"]
 
 [profile.release]
 lto = true

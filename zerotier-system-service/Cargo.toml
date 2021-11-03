@@ -1,8 +1,9 @@
 [package]
 name = "zerotier-system-service"
 version = "0.1.0"
-authors = ["Adam Ierymenko <adam.ierymenko@zerotier.com>"]
+authors = ["ZeroTier, Inc. <contact@zerotier.com>", "Adam Ierymenko <adam.ierymenko@zerotier.com>"]
 edition = "2018"
+license = "MPL-2.0"
 
 [profile.release]
 opt-level = 'z'
@@ -13,16 +14,16 @@ panic = 'abort'
 [dependencies]
 zerotier-network-hypervisor = { path = "../zerotier-network-hypervisor" }
 num_cpus = "^1"
-tokio = { version = "1", features = ["rt", "net", "time", "signal", "macros"] }
-serde = { version = "1", features = ["derive"] }
+tokio = { version = "^1", features = ["rt", "net", "time", "signal", "macros"] }
+serde = { version = "^1", features = ["derive"] }
 serde_json = "^1"
-futures = "0"
-clap = { version = "2", features = ["suggestions", "wrap_help"] }
+futures = "^0"
+clap = { version = "^2", features = ["suggestions", "wrap_help"] }
 chrono = "^0"
 lazy_static = "^1"
 num-traits = "^0"
 num-derive = "^0"
-hyper = { version = "0", features = ["http1", "runtime", "server", "client", "tcp", "stream"] }
+hyper = { version = "^0", features = ["http1", "runtime", "server", "client", "tcp", "stream"] }
 socket2 = { version = "^0", features = ["reuseport", "unix", "pair"] }
 dialoguer = "^0"
 digest_auth = "^0"

@@ -2,6 +2,8 @@
 name = "zerotier-core-crypto"
 version = "0.1.0"
 edition = "2018"
+license = "MPL-2.0"
+authors = ["ZeroTier, Inc. <contact@zerotier.com>", "Adam Ierymenko <adam.ierymenko@zerotier.com>"]
 
 [dependencies]
 rand_core = "0.5"
