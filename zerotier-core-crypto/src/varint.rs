@@ -7,7 +7,6 @@
  */
 
 use std::io::{Read, Write};
-use crate::vl1::buffer::Buffer;
 
 /// Write a variable length integer, which can consume up to 10 bytes.
 pub fn write<W: Write>(w: &mut W, mut v: u64) -> std::io::Result<()> {
@@ -49,7 +48,7 @@ pub fn read<R: Read>(r: &mut R) -> std::io::Result<(u64, usize)> {
 
 #[cfg(test)]
 mod tests {
-    use crate::util::varint::*;
+    use crate::varint::*;
 
     #[test]
     fn varint() {

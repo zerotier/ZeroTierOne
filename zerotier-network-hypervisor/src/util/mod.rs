@@ -8,9 +8,9 @@
 
 pub mod pool;
 pub mod gate;
-pub mod varint;
 
 pub use zerotier_core_crypto::hex;
+pub use zerotier_core_crypto::varint;
 
 pub(crate) const ZEROES: [u8; 64] = [0_u8; 64];
 
@@ -109,6 +109,7 @@ pub(crate) fn load_u64_be(d: &[u8]) -> u64 {
 
 /// Mix bits in a 64-bit integer.
 /// https://nullprogram.com/blog/2018/07/31/
+#[inline(always)]
 pub(crate) fn hash64(mut x: u64) -> u64 {
     x ^= x.wrapping_shr(30);
     x = x.wrapping_mul(0xbf58476d1ce4e5b9);

@@ -16,6 +16,7 @@ pub mod kbkdf;
 pub mod random;
 pub mod secret;
 pub mod hex;
+pub mod varint;
 
 pub use aes_gmac_siv;
 pub use rand_core;
