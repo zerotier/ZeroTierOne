@@ -18,7 +18,7 @@ use zerotier_core_crypto::random::{next_u64_secure, SecureRandom};
 use crate::error::InvalidParameterError;
 use crate::util::gate::IntervalGate;
 use crate::util::pool::{Pool, Pooled};
-use crate::vl1::{Address, Endpoint, Identity, Locator};
+use crate::vl1::{Address, Endpoint, Identity};
 use crate::vl1::buffer::{Buffer, PooledBufferFactory};
 use crate::vl1::path::Path;
 use crate::vl1::peer::Peer;
@@ -63,12 +63,6 @@ pub trait VL1CallerInterface {
     /// Save this node's identity.
     /// Note that this is only called on first startup (after up) and after identity_changed.
     fn save_node_identity(&self, id: &Identity, public: &[u8], secret: &[u8]);
-
-    /// Load this node's latest locator.
-    fn load_locator(&self) -> Option<&[u8]>;
-
-    /// Save this node's latest locator.
-    fn save_locator(&self, locator: &[u8]);
 
     /// Called to send a packet over the physical network (virtual -> physical).
     ///
@@ -141,7 +135,6 @@ pub struct Node {
     pub(crate) instance_id: u64,
     identity: Identity,
     intervals: Mutex<BackgroundTaskIntervals>,
-    locator: Mutex<Option<Arc<Locator>>>,
     paths: DashMap<Endpoint, Arc<Path>>,
     peers: DashMap<Address, Arc<Peer>>,
     roots: Mutex<Vec<Arc<Peer>>>,
@@ -183,7 +176,6 @@ impl Node {
             instance_id: next_u64_secure(),
             identity: id,
             intervals: Mutex::new(BackgroundTaskIntervals::default()),
-            locator: Mutex::new(None),
             paths: DashMap::new(),
             peers: DashMap::new(),
             roots: Mutex::new(Vec::new()),
@@ -206,9 +198,6 @@ impl Node {
 
     #[inline(always)]
     pub fn identity(&self) -> &Identity { &self.identity }
-
-    #[inline(always)]
-    pub fn locator(&self) -> Option<Arc<Locator>> { self.locator.lock().clone() }
 
     /// Get a peer by address.
     pub fn peer(&self, a: Address) -> Option<Arc<Peer>> { self.peers.get(&a).map(|peer| peer.value().clone()) }

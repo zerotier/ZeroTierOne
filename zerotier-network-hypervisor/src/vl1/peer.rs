@@ -463,11 +463,6 @@ impl Peer {
             let mut dict = Dictionary::new();
             dict.set_u64(HELLO_DICT_KEY_INSTANCE_ID, node.instance_id);
             dict.set_u64(HELLO_DICT_KEY_CLOCK, ci.time_clock() as u64);
-            let _ = node.locator().map(|loc| {
-                let mut tmp: Buffer<{ PACKET_SIZE_MAX }> = Buffer::new();
-                debug_assert!(loc.marshal(&mut tmp).is_ok());
-                dict.set_bytes(HELLO_DICT_KEY_LOCATOR, tmp.as_bytes().to_vec());
-            });
             let _ = self.ephemeral_pair.lock().as_ref().map(|ephemeral_pair| {
                 dict.set_bytes(HELLO_DICT_KEY_EPHEMERAL_C25519, ephemeral_pair.c25519.public_bytes().to_vec());
                 dict.set_bytes(HELLO_DICT_KEY_EPHEMERAL_P521, ephemeral_pair.p521.public_key_bytes().to_vec());

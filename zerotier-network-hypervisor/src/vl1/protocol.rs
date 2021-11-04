@@ -23,9 +23,7 @@ pub const VERB_VL1_USER_MESSAGE: u8 = 0x14;
 
 pub const HELLO_DICT_KEY_INSTANCE_ID: &'static str = "I";
 pub const HELLO_DICT_KEY_CLOCK: &'static str = "C";
-pub const HELLO_DICT_KEY_LOCATOR: &'static str = "L";
-pub const HELLO_DICT_KEY_EPHEMERAL_C25519: &'static str = "E0";
-pub const HELLO_DICT_KEY_EPHEMERAL_P521: &'static str = "E1";
+pub const HELLO_DICT_KEY_EPHEMERAL_PUBLIC: &'static str = "E";
 pub const HELLO_DICT_KEY_EPHEMERAL_ACK: &'static str = "e";
 pub const HELLO_DICT_KEY_HELLO_ORIGIN: &'static str = "@";
 pub const HELLO_DICT_KEY_SYS_ARCH: &'static str = "Sa";

@@ -181,7 +181,7 @@ fn fast_udp_socket_recvfrom(socket: &FastUDPRawOsSocket, buf: &mut PacketBuffer,
 
 impl FastUDPSocket {
     pub fn new<F: Fn(&FastUDPRawOsSocket, &InetAddress, PacketBuffer) + Send + Sync + Clone + 'static>(device_name: &str, address: &InetAddress, packet_buffer_pool: &Arc<PacketBufferPool>, handler: F) -> Result<Self, String> {
-        let thread_count = num_cpus::get_physical().max(1);
+        let thread_count = num_cpus::get_physical().clamp(1, 4);
 
         let mut s = Self {
             thread_run: Arc::new(AtomicBool::new(true)),

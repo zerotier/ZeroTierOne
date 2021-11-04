@@ -9,7 +9,6 @@
 pub mod identity;
 pub mod inetaddress;
 pub mod endpoint;
-pub mod locator;
 pub mod rootset;
 
 #[allow(unused)]

@@ -99,9 +99,7 @@ The unencrypted dictionary is not currently used. The encrypted dictionary can c
 | -------------------- | ---  | ------------ | ------------------------------------------------ |
 | INSTANCE_ID          | `I`  | u64          | Random integer generated at node startup         |
 | CLOCK                | `C`  | u64          | Clock at sending node (milliseconds since epoch) |
-| LOCATOR              | `L`  | Locator      | Signed locator for sending node                  |
-| EPHEMERAL_C25519     | `E0` | [u8; 32]     | Curve25519 ECDH public key                       | 
-| EPHEMERAL_P521       | `E1` | [u8; 132]    | NIST P-521 ECDH public key                       |
+| EPHEMERAL_PUBLIC     | `E`  | [u8]         | Ephemeral public key set                         | 
 
 Dictionary fields that are only meaningful in OK(HELLO):
 
@@ -156,9 +154,6 @@ OK(WHOIS) response payload:
 | [Size] Type   | Description                                       |
 | ------------- | ------------------------------------------------- |
 | Identity      | Identity of address                               |
-| [1] bool      | If non-zero, a locator is included                |
-| Locator       | Locator associated with node (if any)             |
-| ...           | Additional tuples of identity, [locator]          |
 
 #### 0x05 / RENDEZVOUS
 
