@@ -1194,10 +1194,17 @@ typedef struct
 	 */
 	ZT_VirtualNetworkDNS dns;
 
+
+
 	/**
 	 * sso enabled
 	 */
 	bool ssoEnabled;
+
+	/**
+	 * SSO verison
+	 */
+	uint64_t ssoVersion;
 
 	/**
 	 * If the status us AUTHENTICATION_REQUIRED, this may contain a URL for authentication.
@@ -1208,6 +1215,26 @@ typedef struct
 	 * Time that current authentication expires. only valid if ssoEnabled is true
 	 */
 	uint64_t authenticationExpiryTime;
+
+	/**
+	 * central base URL.
+	 */
+	char centralAuthURL[2048];
+
+	/**
+	 * sso nonce
+	 */
+	char ssoNonce[64];
+
+	/**
+	 * sso state
+	 */
+	char ssoState[128];
+
+	/**
+	 * oidc client id
+	 */
+	char ssoClientID[256];
 } ZT_VirtualNetworkConfig;
 
 /**

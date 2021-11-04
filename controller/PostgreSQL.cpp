@@ -336,7 +336,7 @@ void PostgreSQL::nodeIsOnline(const uint64_t networkId, const uint64_t memberId,
 	}
 }
 
-std::string PostgreSQL::getSSOAuthURL(const nlohmann::json &member, const std::string &redirectURL)
+AuthInfo PostgreSQL::getSSOAuthInfo(const nlohmann::json &member, const std::string &redirectURL)
 {
 	// NONCE is just a random character string.  no semantic meaning
 	// state = HMAC SHA384 of Nonce based on shared sso key
@@ -347,10 +347,12 @@ std::string PostgreSQL::getSSOAuthURL(const nlohmann::json &member, const std::s
 	// how do we tell when a nonce is used? if auth_expiration_time is set
 	std::string networkId = member["nwid"];
 	std::string memberId = member["id"];
-	char authenticationURL[4096] = {0};
 
-	//fprintf(stderr, "PostgreSQL::updateMemberOnLoad: %s-%s\n", networkId.c_str(), memberId.c_str());
-	bool have_auth = false;
+
+	char authenticationURL[4096] = {0};
+	AuthInfo info;
+	info.enabled = true;
+	// fprintf(stderr, "PostgreSQL::updateMemberOnLoad: %s-%s\n", networkId.c_str(), memberId.c_str());
 	try {
 		auto c = _pool->borrow();
 		pqxx::work w(*c->c);
@@ -390,38 +392,51 @@ std::string PostgreSQL::getSSOAuthURL(const nlohmann::json &member, const std::s
 				exit(6);
 			}
 
-			r = w.exec_params("SELECT org.client_id, org.authorization_endpoint "
+			r = w.exec_params("SELECT org.client_id, org.authorization_endpoint, org.sso_version "
 				"FROM ztc_network AS nw, ztc_org AS org "
 				"WHERE nw.id = $1 AND nw.sso_enabled = true AND org.owner_id = nw.owner_id", networkId);
 		
 			std::string client_id = "";
 			std::string authorization_endpoint = "";
+			uint64_t sso_version = 0;
 
 			if (r.size() == 1) {
 				client_id = r.at(0)[0].as<std::string>();
 				authorization_endpoint = r.at(0)[1].as<std::string>();
+				sso_version = r.at(0)[2].as<uint64_t>();
 			} else if (r.size() > 1) {
 				fprintf(stderr, "ERROR: More than one auth endpoint for an organization?!?!? NetworkID: %s\n", networkId.c_str());
 			} else {
 				fprintf(stderr, "No client or auth endpoint?!?\n");
 			}
-
+		
+			info.version = sso_version;
+			
 			// no catch all else because we don't actually care if no records exist here. just continue as normal.
 			if ((!client_id.empty())&&(!authorization_endpoint.empty())) {
-				have_auth = true;
-
+				
 				uint8_t state[48];
 				HMACSHA384(_ssoPsk, nonceBytes, sizeof(nonceBytes), state);
 				char state_hex[256];
 				Utils::hex(state, 48, state_hex);
 				
-				OSUtils::ztsnprintf(authenticationURL, sizeof(authenticationURL),
-					"%s?response_type=id_token&response_mode=form_post&scope=openid+email+profile&redirect_uri=%s&nonce=%s&state=%s&client_id=%s",
-					authorization_endpoint.c_str(),
-					redirectURL.c_str(),
-					nonce.c_str(),
-					state_hex,
-					client_id.c_str());
+				if (info.version == 0) {
+					char url[2048] = {0};
+					OSUtils::ztsnprintf(url, sizeof(authenticationURL),
+						"%s?response_type=id_token&response_mode=form_post&scope=openid+email+profile&redirect_uri=%s&nonce=%s&state=%s&client_id=%s",
+						authorization_endpoint.c_str(),
+						redirectURL.c_str(),
+						nonce.c_str(),
+						state_hex,
+						client_id.c_str());
+					info.authenticationURL = std::string(url);
+				} else if (info.version == 1) {
+					info.ssoClientID = client_id;
+					info.authenticationURL = authorization_endpoint;
+					info.ssoNonce = nonce;
+					info.ssoState = std::string(state_hex);
+					info.centralAuthURL = redirectURL;
+				}
 			}  else {
 				fprintf(stderr, "client_id: %s\nauthorization_endpoint: %s\n", client_id.c_str(), authorization_endpoint.c_str());
 			}
@@ -432,7 +447,7 @@ std::string PostgreSQL::getSSOAuthURL(const nlohmann::json &member, const std::s
 		fprintf(stderr, "ERROR: Error updating member on load: %s\n", e.what());
 	}
 
-	return std::string(authenticationURL);
+	return info; //std::string(authenticationURL);
 }
 
 void PostgreSQL::initializeNetworks()

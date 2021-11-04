@@ -41,6 +41,10 @@
 #define ZT_NETWORK_MAX_INCOMING_UPDATES 3
 #define ZT_NETWORK_MAX_UPDATE_CHUNKS ((ZT_NETWORKCONFIG_DICT_CAPACITY / 1024) + 1)
 
+namespace zeroidc {
+typedef struct ZeroIDC ZeroIDC;
+}
+
 namespace ZeroTier {
 
 class RuntimeEnvironment;
@@ -229,7 +233,14 @@ public:
 		_netconfFailure = NETCONF_FAILURE_AUTHENTICATION_REQUIRED;
 		_authenticationURL = (url) ? url : "";
 		_config.ssoEnabled = true;
-	}	
+		_config.ssoVersion = 0;
+	}
+
+	/**
+	 * set netconf failure to 'authentication required' along with info needed
+	 * for sso full flow authentication.
+	 */
+	void setAuthenticationRequired(const char* authEndpoint, const char* centralEndpoint, const char* clientID, const char* nonce, const char* state);
 
 	/**
 	 * Causes this network to request an updated configuration from its master node now
@@ -457,8 +468,10 @@ private:
 	Mutex _lock;
 
 	AtomicCounter __refCount;
+
+	zeroidc::ZeroIDC *_idc;
 };
 
-} // namespace ZeroTier
+}	// namespace ZeroTier
 
 #endif

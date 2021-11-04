@@ -32,6 +32,7 @@
 #include "Node.hpp"
 #include "Peer.hpp"
 #include "Trace.hpp"
+#include "zeroidc.h"
 
 #include <set>
 
@@ -550,7 +551,8 @@ Network::Network(const RuntimeEnvironment *renv,void *tPtr,uint64_t nwid,void *u
 	_lastConfigUpdate(0),
 	_destroyed(false),
 	_netconfFailure(NETCONF_FAILURE_NONE),
-	_portError(0)
+	_portError(0),
+	_idc(nullptr)
 {
 	for(int i=0;i<ZT_NETWORK_MAX_INCOMING_UPDATES;++i)
 		_incomingConfigChunks[i].ts = 0;
@@ -591,12 +593,24 @@ Network::Network(const RuntimeEnvironment *renv,void *tPtr,uint64_t nwid,void *u
 		_portError = RR->node->configureVirtualNetworkPort(tPtr,_id,&_uPtr,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP,&ctmp);
 		_portInitialized = true;
 	}
+
+	if (nconf->ssoEnabled) {
+		if (_config.ssoVersion == 1) {
+			// start sso handling for network
+		}
+	}
 }
 
 Network::~Network()
 {
 	ZT_VirtualNetworkConfig ctmp;
 	_externalConfig(&ctmp);
+
+	if (_idc) {
+		zeroidc::zeroidc_stop(_idc);
+		zeroidc::zeroidc_delete(_idc);
+		_idc = nullptr;
+	}
 
 	if (_destroyed) {
 		// This is done in Node::leave() so we can pass tPtr properly
@@ -1434,8 +1448,13 @@ void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const
 	memcpy(&ec->dns, &_config.dns, sizeof(ZT_VirtualNetworkDNS));
 
 	Utils::scopy(ec->authenticationURL, sizeof(ec->authenticationURL), _authenticationURL.c_str());
+	ec->ssoVersion = _config.ssoVersion;
 	ec->authenticationExpiryTime = _config.authenticationExpiryTime;
 	ec->ssoEnabled = _config.ssoEnabled;
+	Utils::scopy(ec->centralAuthURL, sizeof(ec->centralAuthURL), _config.centralAuthURL);
+	Utils::scopy(ec->ssoNonce, sizeof(ec->ssoNonce), _config.ssoNonce);
+	Utils::scopy(ec->ssoState, sizeof(ec->ssoState), _config.ssoState);
+	Utils::scopy(ec->ssoClientID, sizeof(ec->ssoClientID), _config.ssoClientID);
 }
 
 void Network::_sendUpdatesToMembers(void *tPtr,const MulticastGroup *const newMulticastGroup)
@@ -1540,6 +1559,32 @@ Membership &Network::_membership(const Address &a)
 {
 	// assumes _lock is locked
 	return _memberships[a];
+}
+
+void Network::setAuthenticationRequired(const char* authEndpoint, const char* centralEndpoint, const char* clientID, const char* nonce, const char* state)
+{
+	Mutex::Lock _l(_lock);
+	_netconfFailure = NETCONF_FAILURE_AUTHENTICATION_REQUIRED;
+	_config.ssoEnabled = true;
+	_config.ssoVersion = 1;
+
+	Utils::scopy(_config.authenticationURL, sizeof(_config.authenticationURL), authEndpoint);
+	Utils::scopy(_config.centralAuthURL, sizeof(_config.centralAuthURL), centralEndpoint);
+	Utils::scopy(_config.ssoClientID, sizeof(_config.ssoClientID), clientID);
+	Utils::scopy(_config.ssoNonce, sizeof(_config.ssoNonce), nonce);
+	Utils::scopy(_config.ssoState, sizeof(_config.ssoState), state);
+
+	// TODO: propaagte to full flow module
+	if (!this->_idc) {
+		this->_idc = zeroidc::zeroidc_new(_config.authenticationURL, _config.ssoClientID, _config.centralAuthURL, 9993);
+		zeroidc::zeroidc_start(this->_idc);
+	}
+
+	zeroidc::AuthInfo *info = zeroidc::zeroidc_get_auth_info(this->_idc, _config.ssoState, _config.ssoNonce);
+	const char* url = zeroidc::zeroidc_get_auth_url(info);
+	if (url != NULL) {
+		fprintf(stderr, "full auth URL: %s\n", url);
+	}
 }
 
 } // namespace ZeroTier

@@ -199,17 +199,62 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,void *tPtr,const Shar
 					const uint16_t errorDataSize = at<uint16_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD + 8);
 					s -= 2;
 					if (s >= (int)errorDataSize) {
-						Dictionary<3072> authInfo(((const char *)this->data()) + (ZT_PROTO_VERB_ERROR_IDX_PAYLOAD + 10), errorDataSize);
-						char authenticationURL[2048];
-						if (authInfo.get("aU", authenticationURL, sizeof(authenticationURL)) > 0) {
-							authenticationURL[sizeof(authenticationURL) - 1] = 0; // ensure always zero terminated
-							network->setAuthenticationRequired(authenticationURL);
-							noUrl = false;
+						Dictionary<8192> authInfo(((const char *)this->data()) + (ZT_PROTO_VERB_ERROR_IDX_PAYLOAD + 10), errorDataSize);
+
+						uint64_t authVer = authInfo.getUI(ZT_AUTHINFO_DICT_KEY_VERSION, 0ULL);
+
+						if (authVer == 0) {
+							char authenticationURL[2048];
+							
+							if (authInfo.get(ZT_AUTHINFO_DICT_KEY_AUTHENTICATION_URL, authenticationURL, sizeof(authenticationURL)) > 0) {
+								authenticationURL[sizeof(authenticationURL) - 1] = 0; // ensure always zero terminated
+								network->setAuthenticationRequired(authenticationURL);
+								noUrl = false;
+							}
+						} else if (authVer == 1) {
+							bool haveAuthURL = false;
+							char authenticationURL[2048] = { 0 };
+							bool haveCentralURL = false;
+							char centralAuthURL[2048] = { 0 };
+							bool haveNonce = false;
+							char ssoNonce[64] = { 0 };
+							bool haveState = false;
+							char ssoState[128] = {0};
+							bool haveClientID = false;
+							char ssoClientID[256] = { 0 };
+
+							if (authInfo.get(ZT_AUTHINFO_DICT_KEY_AUTHENTICATION_URL, authenticationURL, sizeof(authenticationURL)) > 0) {
+								authenticationURL[sizeof(authenticationURL) - 1] = 0;
+								haveAuthURL = true;
+							}
+							if (authInfo.get(ZT_AUTHINFO_DICT_KEY_CENTRAL_ENDPOINT_URL, centralAuthURL, sizeof(centralAuthURL))>0) {
+								centralAuthURL[sizeof(centralAuthURL) - 1] = 0;
+								haveCentralURL = true;
+							}
+							if (authInfo.get(ZT_AUTHINFO_DICT_KEY_NONCE, ssoNonce, sizeof(ssoNonce)) > 0) {
+								ssoNonce[sizeof(ssoNonce) - 1] = 0;
+								haveNonce = true;
+							}
+							if (authInfo.get(ZT_AUTHINFO_DICT_KEY_STATE, ssoState, sizeof(ssoState)) > 0) {
+								ssoState[sizeof(ssoState) - 1] = 0;
+								haveState = true;
+							}
+							if (authInfo.get(ZT_AUTHINFO_DICT_KEY_CLIENT_ID, ssoClientID, sizeof(ssoClientID)) > 0) {
+								ssoClientID[sizeof(ssoClientID) - 1] = 0;
+								haveClientID = true;
+							}
+
+							noUrl = ! (haveAuthURL && haveCentralURL && haveNonce && haveState && haveClientID);
+
+							if (!noUrl) {
+								network->setAuthenticationRequired(authenticationURL, centralAuthURL, ssoClientID, ssoNonce, ssoState);
+							}
 						}
 					}
 				}
-				if (noUrl)
+				if (noUrl) {
 					network->setAuthenticationRequired("");
+				}
 			}
 		}	break;
 

@@ -1,6 +1,8 @@
 CC=clang
 CXX=clang++
-INCLUDES=
+TOPDIR=$(shell PWD)
+
+INCLUDES=-I$(shell PWD)/zeroidc/target
 DEFS=
 LIBS=
 ARCH_FLAGS=-arch x86_64 -arch arm64 
@@ -26,7 +28,7 @@ DEFS+=-DZT_BUILD_PLATFORM=$(ZT_BUILD_PLATFORM) -DZT_BUILD_ARCHITECTURE=$(ZT_BUIL
 
 include objects.mk
 ONE_OBJS+=osdep/MacEthernetTap.o osdep/MacKextEthernetTap.o osdep/MacDNSHelper.o ext/http-parser/http_parser.o
-LIBS+=-framework CoreServices -framework SystemConfiguration -framework CoreFoundation
+LIBS+=-framework CoreServices -framework SystemConfiguration -framework CoreFoundation -framework Security
 
 # Official releases are signed with our Apple cert and apply software updates by default
 ifeq ($(ZT_OFFICIAL_RELEASE),1)
@@ -103,7 +105,7 @@ mac-agent: FORCE
 osdep/MacDNSHelper.o: osdep/MacDNSHelper.mm
 	$(CXX) $(CXXFLAGS) -c osdep/MacDNSHelper.mm -o osdep/MacDNSHelper.o 
 
-one:	$(CORE_OBJS) $(ONE_OBJS) one.o mac-agent zeroidc
+one:	zeroidc $(CORE_OBJS) $(ONE_OBJS) one.o mac-agent 
 	$(CXX) $(CXXFLAGS) -o zerotier-one $(CORE_OBJS) $(ONE_OBJS) one.o $(LIBS) zeroidc/target/libzeroidc.a
 	# $(STRIP) zerotier-one
 	ln -sf zerotier-one zerotier-idtool
@@ -115,8 +117,8 @@ zerotier-one: one
 zeroidc: zeroidc/target/libzeroidc.a
 
 zeroidc/target/libzeroidc.a:
-	cd zeroidc && cargo build --target=x86_64-apple-darwin --release
-	cd zeroidc && cargo build --target=aarch64-apple-darwin --release
+	cd zeroidc && MACOSX_DEPLOYMENT_TARGET=$(MACOS_VERSION_MIN) cargo build --target=x86_64-apple-darwin --release
+	cd zeroidc && MACOSX_DEPLOYMENT_TARGET=$(MACOS_VERSION_MIN) cargo build --target=aarch64-apple-darwin --release
 	cd zeroidc && lipo -create target/x86_64-apple-darwin/release/libzeroidc.a target/aarch64-apple-darwin/release/libzeroidc.a -output target/libzeroidc.a
 
 central-controller:
@@ -125,6 +127,8 @@ central-controller:
 zerotier-idtool: one
 
 zerotier-cli: one
+
+$(CORE_OBJS): zeroidc
 
 libzerotiercore.a:	$(CORE_OBJS)
 	ar rcs libzerotiercore.a $(CORE_OBJS)

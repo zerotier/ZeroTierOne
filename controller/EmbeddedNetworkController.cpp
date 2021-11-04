@@ -1360,27 +1360,53 @@ void EmbeddedNetworkController::_request(
 	// Otherwise no, we use standard auth logic.
 	bool networkSSOEnabled = OSUtils::jsonBool(network["ssoEnabled"], false);
 	bool memberSSOExempt = OSUtils::jsonBool(member["ssoExempt"], false);
-	std::string authenticationURL;
-	if (networkSSOEnabled && !memberSSOExempt) {
-		authenticationURL = _db.getSSOAuthURL(member, _ssoRedirectURL);
+	AuthInfo info;
+	if (networkSSOEnabled && ! memberSSOExempt) {
+		info = _db.getSSOAuthInfo(member, _ssoRedirectURL);
+		assert(info.enabled == networkSSOEnabled);
+
 		std::string memberId = member["id"];
 		//fprintf(stderr, "ssoEnabled && !ssoExempt %s-%s\n", nwids, memberId.c_str());
 		uint64_t authenticationExpiryTime = (int64_t)OSUtils::jsonInt(member["authenticationExpiryTime"], 0);
 		//fprintf(stderr, "authExpiryTime: %lld\n", authenticationExpiryTime);
 		if (authenticationExpiryTime < now) {
-			if (!authenticationURL.empty()) {
-				_db.networkMemberSSOHasExpired(nwid, now);
-				onNetworkMemberDeauthorize(&_db, nwid, identity.address().toInt());
+			if (info.version == 0) {
+				if (!info.authenticationURL.empty()) {
+					_db.networkMemberSSOHasExpired(nwid, now);
+					onNetworkMemberDeauthorize(&_db, nwid, identity.address().toInt());
 
-				Dictionary<3072> authInfo;
-				authInfo.add("aU", authenticationURL.c_str());
-				//fprintf(stderr, "sending auth URL: %s\n", authenticationURL.c_str());
+					Dictionary<4096> authInfo;
+					authInfo.add(ZT_AUTHINFO_DICT_KEY_VERSION, 0ULL);
+					authInfo.add(ZT_AUTHINFO_DICT_KEY_AUTHENTICATION_URL, info.authenticationURL.c_str());
+					//fprintf(stderr, "sending auth URL: %s\n", authenticationURL.c_str());
 
-				DB::cleanMember(member);
-				_db.save(member,true);
+					DB::cleanMember(member);
+					_db.save(member,true);
 
-				_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_AUTHENTICATION_REQUIRED, authInfo.data(), authInfo.sizeBytes());
-				return;
+					_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_AUTHENTICATION_REQUIRED, authInfo.data(), authInfo.sizeBytes());
+					return;
+				}
+			} else if (info.version == 1) {
+				if (!info.authenticationURL.empty()) {
+					_db.networkMemberSSOHasExpired(nwid, now);
+					onNetworkMemberDeauthorize(&_db, nwid, identity.address().toInt());
+
+					Dictionary<8192> authInfo;
+					authInfo.add(ZT_AUTHINFO_DICT_KEY_VERSION, info.version);
+					authInfo.add(ZT_AUTHINFO_DICT_KEY_AUTHENTICATION_URL, info.authenticationURL.c_str());
+					authInfo.add(ZT_AUTHINFO_DICT_KEY_CENTRAL_ENDPOINT_URL, info.centralAuthURL.c_str());
+					authInfo.add(ZT_AUTHINFO_DICT_KEY_NONCE, info.ssoNonce.c_str());
+					authInfo.add(ZT_AUTHINFO_DICT_KEY_STATE, info.ssoState.c_str());
+					authInfo.add(ZT_AUTHINFO_DICT_KEY_CLIENT_ID, info.ssoClientID.c_str());
+
+					DB::cleanMember(member);
+					_db.save(member, true);
+
+					_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_AUTHENTICATION_REQUIRED, authInfo.data(), authInfo.sizeBytes());
+					return;
+				}
+			} else {
+				fprintf(stderr, "invalid sso info.version %llu\n", info.version);
 			}
 		} else if (authorized) {
 			_db.memberWillExpire(authenticationExpiryTime, nwid, identity.address().toInt());
@@ -1452,9 +1478,32 @@ void EmbeddedNetworkController::_request(
 	nc->multicastLimit = (unsigned int)OSUtils::jsonInt(network["multicastLimit"],32ULL);
 
 	nc->ssoEnabled = OSUtils::jsonBool(network["ssoEnabled"], false);
-	nc->authenticationExpiryTime = OSUtils::jsonInt(member["authenticationExpiryTime"], 0LL);
-	if (!authenticationURL.empty())
-		Utils::scopy(nc->authenticationURL, sizeof(nc->authenticationURL), authenticationURL.c_str());
+	nc->ssoVersion = info.version;
+
+	if (info.version == 0) {
+		nc->authenticationExpiryTime = OSUtils::jsonInt(member["authenticationExpiryTime"], 0LL);
+		if (!info.authenticationURL.empty()) {
+			Utils::scopy(nc->authenticationURL, sizeof(nc->authenticationURL), info.authenticationURL.c_str());
+		}
+	}
+	else if (info.version == 1) {
+		nc->authenticationExpiryTime = OSUtils::jsonInt(member["authenticationExpiryTime"], 0LL);
+		if (!info.authenticationURL.empty()) {
+			Utils::scopy(nc->authenticationURL, sizeof(nc->authenticationURL), info.authenticationURL.c_str());
+		}
+		if (!info.centralAuthURL.empty()) {
+			Utils::scopy(nc->centralAuthURL, sizeof(nc->centralAuthURL), info.centralAuthURL.c_str());
+		}
+		if (!info.ssoNonce.empty()) {
+			Utils::scopy(nc->ssoNonce, sizeof(nc->ssoNonce), info.ssoNonce.c_str());
+		}
+		if (!info.ssoState.empty()) {
+			Utils::scopy(nc->ssoState, sizeof(nc->ssoState), info.ssoState.c_str());
+		}
+		if (!info.ssoClientID.empty()) {
+			Utils::scopy(nc->ssoClientID, sizeof(nc->ssoClientID), info.ssoClientID.c_str());
+		}
+	}
 
 	std::string rtt(OSUtils::jsonString(member["remoteTraceTarget"],""));
 	if (rtt.length() == 10) {
