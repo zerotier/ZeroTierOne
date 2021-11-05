@@ -1376,7 +1376,7 @@ void EmbeddedNetworkController::_request(
 					onNetworkMemberDeauthorize(&_db, nwid, identity.address().toInt());
 
 					Dictionary<4096> authInfo;
-					authInfo.add(ZT_AUTHINFO_DICT_KEY_VERSION, 0ULL);
+					authInfo.add(ZT_AUTHINFO_DICT_KEY_VERSION, (uint64_t)0ULL);
 					authInfo.add(ZT_AUTHINFO_DICT_KEY_AUTHENTICATION_URL, info.authenticationURL.c_str());
 					//fprintf(stderr, "sending auth URL: %s\n", authenticationURL.c_str());
 
