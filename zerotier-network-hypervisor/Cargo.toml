@@ -18,7 +18,7 @@ urlencoding = "^2"
 lz4_flex = { version = "^0", features = ["safe-encode", "safe-decode", "checked-decode"] }
 dashmap = "^4"
 parking_lot = "^0"
-concat-arrays = "^0"
+simple-error = "^0"
 
 [target."cfg(not(windows))".dependencies]
 libc = "^0"

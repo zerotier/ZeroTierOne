@@ -14,8 +14,6 @@ use std::io::Write;
 use std::ptr::{slice_from_raw_parts, slice_from_raw_parts_mut};
 use std::str::FromStr;
 
-use concat_arrays::concat_arrays;
-
 use zerotier_core_crypto::balloon;
 use zerotier_core_crypto::c25519::*;
 use zerotier_core_crypto::hash::*;
@@ -33,12 +31,56 @@ pub const IDENTITY_TYPE_1_SIGNATURE_SIZE: usize = P521_ECDSA_SIGNATURE_SIZE + ED
 const V0_POW_MEMORY: usize = 2097152;
 const V0_POW_THRESHOLD: u8 = 17;
 const V1_POW_THRESHOLD: u8 = 5;
-const V1_BALLOON_SPACE_COST: usize = 16384;
+const V1_BALLOON_SPACE_COST: usize = 262144;
 const V1_BALLOON_TIME_COST: usize = 3;
 const V1_BALLOON_DELTA: usize = 3;
-const V1_BALLOON_SALT: &'static [u8] = b"zt_id_v1";
 
-const V1_PUBLIC_KEYS_SIGNATURE_AND_POW_SIZE: usize = C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_ECDSA_SIGNATURE_SIZE + SHA384_HASH_SIZE;
+const V1_PUBLIC_KEYS_SIZE: usize = C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE;
+const V1_PUBLIC_KEYS_SIGNATURE_AND_POW_SIZE: usize = V1_PUBLIC_KEYS_SIZE + P521_ECDSA_SIGNATURE_SIZE + SHA384_HASH_SIZE;
+const V1_SECRET_KEYS_SIZE: usize = C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE + P521_SECRET_KEY_SIZE + P521_SECRET_KEY_SIZE;
+
+fn concat_v1_public_keys(c25519: &[u8], ed25519: &[u8], p521_ecdh: &[u8], p521_ecdsa: &[u8]) -> [u8; V1_PUBLIC_KEYS_SIZE] {
+    let mut k = [0_u8; V1_PUBLIC_KEYS_SIZE];
+    debug_assert!(c25519.len() <= C25519_PUBLIC_KEY_SIZE);
+    debug_assert!(ed25519.len() <= ED25519_PUBLIC_KEY_SIZE);
+    debug_assert!(p521_ecdh.len() <= P521_PUBLIC_KEY_SIZE);
+    debug_assert!(p521_ecdsa.len() <= P521_PUBLIC_KEY_SIZE);
+    k[(C25519_PUBLIC_KEY_SIZE - c25519.len())..C25519_PUBLIC_KEY_SIZE].copy_from_slice(c25519);
+    k[(C25519_PUBLIC_KEY_SIZE + (ED25519_PUBLIC_KEY_SIZE - ed25519.len()))..(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE)].copy_from_slice(ed25519);
+    k[(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + (P521_PUBLIC_KEY_SIZE - p521_ecdh.len()))..(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE)].copy_from_slice(p521_ecdh);
+    k[(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + (P521_PUBLIC_KEY_SIZE - p521_ecdsa.len()))..(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE)].copy_from_slice(p521_ecdsa);
+    k
+}
+
+fn concat_v1_public_all(c25519: &[u8], ed25519: &[u8], p521_ecdh: &[u8], p521_ecdsa: &[u8], signature: &[u8], balloon_hash_digest: &[u8]) -> [u8; V1_PUBLIC_KEYS_SIGNATURE_AND_POW_SIZE] {
+    let mut k = [0_u8; V1_PUBLIC_KEYS_SIGNATURE_AND_POW_SIZE];
+    debug_assert!(c25519.len() <= C25519_PUBLIC_KEY_SIZE);
+    debug_assert!(ed25519.len() <= ED25519_PUBLIC_KEY_SIZE);
+    debug_assert!(p521_ecdh.len() <= P521_PUBLIC_KEY_SIZE);
+    debug_assert!(p521_ecdsa.len() <= P521_PUBLIC_KEY_SIZE);
+    debug_assert!(signature.len() <= P521_ECDSA_SIGNATURE_SIZE);
+    debug_assert_eq!(balloon_hash_digest.len(), SHA384_HASH_SIZE);
+    k[(C25519_PUBLIC_KEY_SIZE - c25519.len())..C25519_PUBLIC_KEY_SIZE].copy_from_slice(c25519);
+    k[(C25519_PUBLIC_KEY_SIZE + (ED25519_PUBLIC_KEY_SIZE - ed25519.len()))..(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE)].copy_from_slice(ed25519);
+    k[(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + (P521_PUBLIC_KEY_SIZE - p521_ecdh.len()))..(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE)].copy_from_slice(p521_ecdh);
+    k[(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + (P521_PUBLIC_KEY_SIZE - p521_ecdsa.len()))..(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE)].copy_from_slice(p521_ecdsa);
+    k[(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + (P521_ECDSA_SIGNATURE_SIZE - signature.len()))..(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_ECDSA_SIGNATURE_SIZE)].copy_from_slice(signature);
+    k[(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_ECDSA_SIGNATURE_SIZE)..].copy_from_slice(balloon_hash_digest);
+    k
+}
+
+fn concat_v1_secret_keys(c25519: &[u8], ed25519: &[u8], p521_ecdh: &[u8], p521_ecdsa: &[u8]) -> [u8; V1_SECRET_KEYS_SIZE] {
+    let mut k = [0_u8; V1_SECRET_KEYS_SIZE];
+    debug_assert!(c25519.len() <= C25519_SECRET_KEY_SIZE);
+    debug_assert!(ed25519.len() <= ED25519_SECRET_KEY_SIZE);
+    debug_assert!(p521_ecdh.len() <= P521_SECRET_KEY_SIZE);
+    debug_assert!(p521_ecdsa.len() <= P521_SECRET_KEY_SIZE);
+    k[(C25519_SECRET_KEY_SIZE - c25519.len())..C25519_SECRET_KEY_SIZE].copy_from_slice(c25519);
+    k[(C25519_SECRET_KEY_SIZE + (ED25519_SECRET_KEY_SIZE - ed25519.len()))..(C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE)].copy_from_slice(ed25519);
+    k[(C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE + (P521_SECRET_KEY_SIZE - p521_ecdh.len()))..(C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE + P521_SECRET_KEY_SIZE)].copy_from_slice(p521_ecdh);
+    k[(C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE + P521_SECRET_KEY_SIZE + (P521_SECRET_KEY_SIZE - p521_ecdsa.len()))..(C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE + P521_SECRET_KEY_SIZE + P521_SECRET_KEY_SIZE)].copy_from_slice(p521_ecdsa);
+    k
+}
 
 #[derive(Copy, Clone)]
 #[repr(u8)]
@@ -144,11 +186,11 @@ impl Identity {
         let p521_ecdsa = P521KeyPair::generate(false).unwrap();
         let c25519_pub_bytes = c25519.public_bytes();
         let ed25519_pub_bytes = ed25519.public_bytes();
-        let sign_buf: [u8; C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE] = concat_arrays!(c25519_pub_bytes, ed25519_pub_bytes, *p521_ecdh.public_key_bytes(), *p521_ecdsa.public_key_bytes());
+        let signing_buf = concat_v1_public_keys(&c25519_pub_bytes, &ed25519_pub_bytes, p521_ecdh.public_key_bytes(), p521_ecdsa.public_key_bytes());
         loop {
             // ECDSA is a randomized signature algorithm, so each signature will be different.
-            let sig = p521_ecdsa.sign(&sign_buf).unwrap();
-            let bh = balloon::hash::<{ V1_BALLOON_SPACE_COST }, { V1_BALLOON_TIME_COST }, { V1_BALLOON_DELTA }>(&sig, V1_BALLOON_SALT);
+            let sig = p521_ecdsa.sign(&signing_buf).unwrap();
+            let bh = balloon::hash::<{ V1_BALLOON_SPACE_COST }, { V1_BALLOON_TIME_COST }, { V1_BALLOON_DELTA }>(&sig);
             if bh[0] < V1_POW_THRESHOLD {
                 let addr = Address::from_bytes(&bh[43..48]);
                 if addr.is_some() {
@@ -188,26 +230,6 @@ impl Identity {
     #[inline(always)]
     pub fn address(&self) -> Address { self.address }
 
-    /// Compute a SHA384 hash of this identity's keys, including private keys if present.
-    pub fn hash_all_keys(&self) -> [u8; 48] {
-        let mut sha = SHA384::new();
-        sha.update(&self.c25519);
-        sha.update(&self.ed25519);
-        self.v1.as_ref().map(|p521| {
-            sha.update((*p521).0.public_key_bytes());
-            sha.update((*p521).1.public_key_bytes());
-        });
-        self.secrets.as_ref().map(|secrets| {
-            sha.update(&secrets.c25519.secret_bytes().as_ref());
-            sha.update(&secrets.ed25519.secret_bytes().as_ref());
-            secrets.v1.as_ref().map(|p521_secrets| {
-                sha.update((*p521_secrets).0.secret_key_bytes().as_ref());
-                sha.update((*p521_secrets).1.secret_key_bytes().as_ref());
-            });
-        });
-        sha.finish()
-    }
-
     /// Locally validate this identity.
     ///
     /// This can take a few milliseconds, especially on slower systems. V0 identities are slower
@@ -229,13 +251,9 @@ impl Identity {
             }
         } else {
             let p521 = self.v1.as_ref().unwrap();
-            let mut signing_buf = [0_u8; C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE];
-            signing_buf[0..C25519_PUBLIC_KEY_SIZE].copy_from_slice(&self.c25519);
-            signing_buf[C25519_PUBLIC_KEY_SIZE..(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE)].copy_from_slice(&self.ed25519);
-            signing_buf[(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE)..(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE)].copy_from_slice((*p521).0.public_key_bytes());
-            signing_buf[(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE)..(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE)].copy_from_slice((*p521).1.public_key_bytes());
+            let signing_buf = concat_v1_public_keys(&self.c25519, &self.ed25519, (*p521).0.public_key_bytes(), (*p521).1.public_key_bytes());
             if (*p521).1.verify(&signing_buf, &(*p521).2) {
-                let bh = balloon::hash::<{ V1_BALLOON_SPACE_COST }, { V1_BALLOON_TIME_COST }, { V1_BALLOON_DELTA }>(&(*p521).2, V1_BALLOON_SALT);
+                let bh = balloon::hash::<{ V1_BALLOON_SPACE_COST }, { V1_BALLOON_TIME_COST }, { V1_BALLOON_DELTA }>(&(*p521).2);
                 (bh[0] < V1_POW_THRESHOLD) && bh.eq(&(*p521).3) && Address::from_bytes(&bh[43..48]).unwrap().eq(&self.address)
             } else {
                 false
@@ -279,9 +297,6 @@ impl Identity {
     }
 
     /// Sign this message with this identity.
-    ///
-    /// Signature is performed using ed25519 EDDSA or NIST P-521 ECDSA depending on the identity
-    /// type. None is returned if this identity lacks secret keys or another error occurs.
     pub fn sign(&self, msg: &[u8]) -> Option<Vec<u8>> {
         self.secrets.as_ref().map_or(None, |secrets| {
             let c25519_sig = secrets.ed25519.sign_zt(msg);
@@ -339,7 +354,7 @@ impl Identity {
                 let secrets = self.secrets.as_ref().unwrap();
                 if secrets.v1.is_some() {
                     let p521_secrets = secrets.v1.as_ref().unwrap();
-                    buf.append_u8((C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE + P521_SECRET_KEY_SIZE + P521_SECRET_KEY_SIZE) as u8)?;
+                    buf.append_u8(V1_SECRET_KEYS_SIZE as u8)?;
                     buf.append_bytes_fixed(&secrets.c25519.secret_bytes().as_ref())?;
                     buf.append_bytes_fixed(&secrets.ed25519.secret_bytes().as_ref())?;
                     buf.append_bytes_fixed((*p521_secrets).0.secret_key_bytes().as_ref())?;
@@ -468,7 +483,7 @@ impl Identity {
             secrets.v1.as_ref().map_or_else(|| {
                 format!("{}:{}{}", self.to_string(), crate::util::hex::to_string(secrets.c25519.public_bytes().as_ref()), crate::util::hex::to_string(secrets.ed25519.secret_bytes().as_ref()))
             }, |p521_secret| {
-                let secrets_concat: [u8; C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE + P521_SECRET_KEY_SIZE + P521_SECRET_KEY_SIZE] = concat_arrays!(secrets.c25519.secret_bytes().0, secrets.ed25519.secret_bytes().0, p521_secret.0.secret_key_bytes().0, p521_secret.1.secret_key_bytes().0);
+                let secrets_concat = concat_v1_secret_keys(&secrets.c25519.secret_bytes().0, &secrets.ed25519.secret_bytes().0, &p521_secret.0.secret_key_bytes().0, &p521_secret.1.secret_key_bytes().0);
                 format!("{}:{}", self.to_string(), base64::encode_config(secrets_concat, base64::URL_SAFE_NO_PAD))
             })
         })
@@ -480,7 +495,7 @@ impl ToString for Identity {
         self.v1.as_ref().map_or_else(|| {
             format!("{:0>10x}:0:{}{}", self.address.to_u64(), crate::util::hex::to_string(&self.c25519), crate::util::hex::to_string(&self.ed25519))
         }, |p521_public| {
-            let public_concat: [u8; C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_ECDSA_SIGNATURE_SIZE + SHA384_HASH_SIZE] = concat_arrays!(self.c25519, self.ed25519, *((*p521_public).0.public_key_bytes()), *((*p521_public).1.public_key_bytes()), (*p521_public).2, (*p521_public).3);
+            let public_concat = concat_v1_public_all(&self.c25519, &self.ed25519, (*p521_public).0.public_key_bytes(), (*p521_public).1.public_key_bytes(), &(*p521_public).2, &(*p521_public).3);
             format!("{:0>10x}:1:{}", self.address.to_u64(), base64::encode_config(public_concat, base64::URL_SAFE_NO_PAD))
         })
     }
@@ -579,6 +594,13 @@ impl FromStr for Identity {
     }
 }
 
+impl Clone for Identity {
+    fn clone(&self) -> Self {
+        let bytes = self.marshal_to_bytes(true);
+        Identity::unmarshal_from_bytes(bytes.as_slice()).unwrap().0
+    }
+}
+
 impl PartialEq for Identity {
     fn eq(&self, other: &Self) -> bool {
         self.address.eq(&other.address) && self.c25519.eq(&other.c25519) && self.ed25519.eq(&other.ed25519) && self.v1.as_ref().map_or_else(|| other.v1.is_none(), |v1| other.v1.as_ref().map_or(false, |other_v1| (*v1).0.eq(&(*other_v1).0) && (*v1).1.eq(&(*other_v1).1)))
@@ -646,23 +668,14 @@ mod tests {
                 panic!("identity V0 marshal/unmarshal failed");
             }
         }
-        for bad_id in [
-            "7f3b8e50db:0:936b698c68f51508e9184f7510323a01da0e5778158244c83520614822e2352855ff4d82443823b866cdb553d02d8fa5da833fbee62472e666a60605b76194b9:0d46684e30d561c859bf7d530d2de0452605d8cf392db4beb2768ceda55e63673f11d84a9f31ce7504f0e3ce5dc9ab7ecf9662e555846d130422916482be5fbb",
-            "8bd225d6a9:0:98e7fc755ee0aa2e10bf37c0b8dd6f33b3164de04cf3f716584ee44df1fe9506ce1f3f2874c6d1450fc8fab339a95092ec7e628cddd26af93c4392e6564d9ee7:431bb44d22734d925538cbcdc7c2a80c0f71968041949f76ccb6f690f01b6cf45976071c86fcf2ddda2d463c8cfe6444b36c8ee0d057d665350acdcb86dff06f"
-        ] {
-            let id = Identity::from_str(bad_id).unwrap();
-            if id.locally_validate() {
-                panic!("known-bad V0 identity validated");
-            }
-        }
     }
 
     #[test]
     fn type1() {
-        //let start = std::time::SystemTime::now();
+        let start = std::time::SystemTime::now();
         let id = Identity::generate(Type::P521);
-        //let end = std::time::SystemTime::now();
-        //println!("V1: {}ms {}", end.duration_since(start).unwrap().as_millis(), id.to_string());
+        let end = std::time::SystemTime::now();
+        println!("V1 generate: {}ms {}", end.duration_since(start).unwrap().as_millis(), id.to_string());
         if !id.locally_validate() {
             panic!("new V1 identity validation failed");
         }
@@ -675,8 +688,8 @@ mod tests {
             panic!("invalid signature verification succeeded");
         }
         for good_id in [
-            "c24a2cd3a1:1:9X3OSJ3lnss_mc1q2RBW8fVI3OFHdYVVgoFVSkXep3XTiyiq-B41qgo7SqcdAvOh49QqqZV3CJIXlBUaJB5logGdo6_VyCqRkTMKpnn5JGpt8QAp71G22o1tinQ_TepeqWBShfW6ZB5GIM5iyQdf4IHqPKxLNKbxwulBektAe6iHhwBRK0iUAlEkB7H1gq1P4qTnWodc-KfaYPcz6BUJA9nW6NUF0WVRRfrPHqiWPPm3268bX_sKMq5ap5i5yQnvlkJmdAD1bh4SlF9kmgqVcixtffk4AKNYD3zcP0o8yQ8UUsQ036JbpS1huWXE8BnFLC93jUFwVbibki6okDAsPDB57gJmhwA72h9KMbPw2L4zoI53e0lrsWoNgGJGczTCTwS-Z3-Dd9yBwf-sSkEbMhgR_OtbRyrtiUvsmwKQUT-tEKFoF0NTRgAwsv6KQCv_LDm1XStRWpbRbQz-1Wof3LpKjTsKrNhWML50mOlgNV766bYbIUekcBS0OgzU14Pew7Fffap3qG7JngG7_CWcMrszpJwD3YtttgUVSBdzFiL1xKVm8dnO1XzZL1jXPnme-dMHX3wISPznKK-zgsqMkyPoaCovkoZ1KuzqFwILfIyXMweP70ZkGl7ep288-DjDsprHNfMr9lvMtRC-ZsuAwbwJrzW8-9TCSizToQ",
-            "4f0ab394d1:1:kT54oJ0eViPr73BB_VQWxOlqFkwCJgsPOeLrEcElNFSXVBPqAMMe6aWTdB_HvmFEfa_PExjXHdJJVlADyR3gTAE98hJ8sXOHoVLAoPK-3FE1P8BPAiX8aRWW_eTyDgWzJBOZclxM3gAlqK4e1ceRYdMvHL2NfUk1ro3sAyj0PRowWACgVRCIOeQwfVYrc_G4hods__qEsrnWXZYarGKlM8V4xkfErCUl1MhMHNSmRS7WvSBO71LHaUSr66EK2QQKEUEpwwEVF9YNonUPqzkQNntYSkOHBLaghZtEvvje31UbnqV0GmkMjv3pIf4YIsUNVKvezf95lF7QdLI8v1dWDefrJHkYlwCU92hjDUpiwiE7XxA4-MUnv6XeYseHRn5GQRS3cQCsMbd9XpToJXA08OCHkMRo1IR9UEDWUubw78SefRZPjxojPQFtpMuL7r8Alo8HK3VOrGw4Am2gvFic53TVWQNX0XfX5pixDTQaEkLQqieeWYCGSSXasLAggqecXMytcOdHa8TeqgBCHPGl-tXIYUotzMPQzEjRPRWeYe3_UQcrR75lvYlb43DQfHBLMrZ0gEJeJqc0u2rMS_gxS1ZJriBy9PDzXoF4HACnywkra4JkoP_CGpxAHVaCFuYDfNTTEr2LYCxkc8jUx36KD3sQaA8UQXxPCrOU0Q"
+            "39ac93e603:1:kbBpk8QuSmNuSJFMLLXLbXcQMLXTMQOfGB8phFansHwxFrXO0RLNJB4HX4bHwq1UScYv2gVlwqmluH1J9_zp2gDaXD1c4jS17Zfdwz672wvkEMIRLUMxxxS4Cc4G7Xfhwpeot2qsslOTVw6h0FTM5izdH6ddnMmJGEg-84a_eQwSQgCNAYvczolmQg9D_MRp6wPdJdBFsnUMmj4F73jro4EGSAhE39AE8hPSxnLNOdhyRHriV5kMkIMsukJrQ09ZxKTmrQCvPzrzUrugkSu6BAqrXSm-h8S9tJo1TVIG0cSbBOK1nJsAoYhOq-T-hBvyqvKsFi9Wkz5bnG6NiYN95Yd38d2VRQBm4Xx7MPQDH0Yk10A1hc_dgyHtFGKjyTrpkKIBHICx_ijg3iS8Uut0aZpIb6pnOs1mZyjSCDLkSKJoNkxE8btHOwHzDIY0utnmsh6sCZ8wWUzYyXKfA506o7z1x57U4qxSI8-_cqZg6DUEoLb0idYanObcN9YmXdUtacpRoLhJTMlowQHqJK3_i0xh5P4UoBHuK7xST1Yu411y9keyZAie771kJFttzR3AHP89IEn0rbfbUZmAL1icL2LxWIq6kIXF6vdfgAHngQ-C1kjC3pXoWyvglJ7B33AfejmktuytTdGxe0ve1MhsXk0J3WIgokQ5rJPmAw",
+            "953f45090f:1:Ghn8_lcEX4bovP90tjJQ4oTXoCf5muJYVaC599_5RW6BN7IgGCsxodiN9U1Pq1_IDYnuJ98KmlPXksE77kvGrQCWK1BnhUFVthtkk7CkEsLdtMu5NqNK_1SVuxnfVCNNELBBIZMIl22YVw8PLTwlPcWUn16m9sAD9jqptUrwAmGUcQANpUiED6k3heqszrR9IjGVVYAcIOOHYJrVz13dv0-Ty6iyoNYG12AuSPd-7suG1Ztgt2Zll8c80BGUAib0-dgJBwF8fV8Bn_Sji6kz7qyp8566U6NkbAA4znM5UvrUPIw6O5016RuO8YzDLE_LKI_erwB2CjZsC0TDOFEppkPLSxDBWgBe1PRwnKTUhP9Bq7vYVbpBs_mEd4b7a-ilce8dX-dxJJwIXIioCdL6fZzA5KqfjW1pG-M72ct6iLCmq1R4b26eiwDG9z-HwX-fRVEkzDeE1rQ2bAEnqTNtzMTItAdzF62LiPOZlZ8LQ-fNTbdThphx58uKczo8Dl44R89d1l81yTKFbgGrUU6lw5qByH6VuLuprOn96sQLv4w6M8DPVnS_5E5AOIoXJ7KmEltIUz_B45ZzgDgPrBjE3-E2ipSSxQe72ADAkQL-D2uCtZVa-UhRFbjUqzBMoTu2NqHYotUoxCsbTVI1d3duD5NefnkjjmqVP0UJDw"
         ] {
             let id = Identity::from_str(good_id).unwrap();
             if !id.locally_validate() {
@@ -686,15 +699,6 @@ mod tests {
             let id2 = Identity::unmarshal_from_bytes(id_bytes.as_slice()).unwrap().0;
             if !id.eq(&id2) {
                 panic!("identity V1 marshal/unmarshal failed");
-            }
-        }
-        for bad_id in [
-            "65ecc4bb1d:1:EEefUe82UfSkeHGroZhgZKp_V3asFzcTct8faJOIiFk16MB6nXNEAk1xjbI9Otjtvudq49JOWR9IRSZuom0VugHW0TDg9z14_8F1L39M9y_6rxhO4oKdpcmN_0dUxOtL8t7dw4PfSS3sKh-rrwWut01hoewy6-J42nJ_hbe7q_nWFABt4BHfWp3qqwYvMosYLquwUD1BJRnF_rIOEX82YhN84eFnntQTqnMMS1M8ILxe5-A7naowp1IxsccD7WW1a3f_BQAmgZmRfWAJqaTERQ2qJtCR6cixGid4raka_YgySFcx6BDi43Okm3rwO3prLjbr_J4d97BXbINKOAEms6AAxO75pwABxMmJVO1VRnXP10Y22XWMWZiN39sDVGzXCD3uzGptr5B5dBJPTEwyK1abxbwiv30hZE9bzLNgsuX12KsHb-yvMQEYQ_NBwGgMtV0fWcc3vPadEqdO7PRofOiAft9CPTrtLsO9AI88PMNId72plYHzYkCvtnnttgHLNqJwOIoOxd0xxQHLz8BMfcTm7t9fPHl6zPOtmakAmHaSQdlMpTqrpR7NL0awixRBFauFkrpD7v0zWkjP5JpUUDK1smCxAxan7oTlkwQou_kY6Ac65-cROf24xyUit1k1IzS1OiwSmWuGplEJxUCGORBAytS9WXFV7MS7HQ",
-            "8b04dcccc5:1:G3esWdhJPDff4yq9N_oilC_Der7S_iz0ytCA1uvO1RGjp_EDnqHfTO48rYhR2jZ7x3ibNyv_ySHyXvyqqmBvtABS5KdLn-fBCY2YrhH4o-3sAWffqTTMHthlFC8iIwtIh3uWDSbPAZLxRnsKQQSx5ndid31MDIdCTo4hEa-bjtXodQCoMDqOhEQHVb-abI9ljT7rOs1aWyYHI7l6lrvuR9IEV7xt2S0Z1Kdky9jnJXjBDq8H8HipLyFPc_FsURMlT5l1YgDwAFmmEAE43teNv8jZBSBYlQ4fokG-2OLXBtuKQBZ6Sd8Els3YEgXhn2TJXQIK0lPH5lKnEjH5IaDJ8uAxvKrs4ABYmd4OYRCHohHDYOzlzoRFTT-57SsWSfVdtGioRFVwTcB8sAUIKumWCpVsD18zaFXDNwn4nfkvhvBoKlbCGYiERgErKF7_t0YF5nXy2V5LdPPLPVq1KsVR2kMmQyILxCl5PWyKv9dgdos_69MmTSuCA28CZ6lcJJ8ZmCC-v1lUZSqmrwHrYzf9BX4YBBrH2ZjtoYtHzgETagH-_7Tll04Ug9KFUlQgerDMWhhPiMsILg4JDpGM0XHvPMqL8TU4KIiNGet9dga3ONkbrZaUpn-dEJ_3yL1D6BDbgoLex8fW3ejm5SOkNhtqH0QPSFJDKyyLBNzMxQ",
-        ] {
-            let id = Identity::from_str(bad_id).unwrap();
-            if id.locally_validate() {
-                panic!("known-bad V1 identity validated");
             }
         }
     }

@@ -29,7 +29,6 @@ pub use identity::Identity;
 pub use endpoint::Endpoint;
 pub use dictionary::Dictionary;
 pub use inetaddress::InetAddress;
-pub use locator::Locator;
 pub use peer::Peer;
 pub use path::Path;
 pub use node::{PacketBuffer, PacketBufferPool, PacketBufferFactory};

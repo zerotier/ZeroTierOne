@@ -20,10 +20,16 @@ fn hash_int_le(sha: &mut SHA512, i: u64) {
     }
 }
 
-/// Compute balloon memory-hard hash using SHA-512 and SHA-384 for the final.
+/// Compute balloon (variant) memory-hard hash.
+///
 /// SPACE_COST must be a multiple of 64. This is checked with an assertion.
 /// DELTA is usually 3.
-pub fn hash<const SPACE_COST: usize, const TIME_COST: usize, const DELTA: usize>(password: &[u8], salt: &[u8]) -> [u8; crate::hash::SHA384_HASH_SIZE] {
+///
+/// This differs slightly from "standard" balloon hash in that AES (CBC) is
+/// used for the expand step and the final hash hashes the entire buffer. It
+/// also takes no salt since it's only used for one purpose here and that's
+/// not password hashing.
+pub fn hash<const SPACE_COST: usize, const TIME_COST: usize, const DELTA: usize>(password: &[u8]) -> [u8; crate::hash::SHA384_HASH_SIZE] {
     debug_assert_ne!(SPACE_COST, 0);
     debug_assert_ne!(TIME_COST, 0);
     debug_assert_ne!(DELTA, 0);
@@ -36,23 +42,21 @@ pub fn hash<const SPACE_COST: usize, const TIME_COST: usize, const DELTA: usize>
     let mut sha = SHA512::new();
     sha.update(&zero64); // 0 cnt
     sha.update(password);
-    sha.update(salt);
     buf[0..64].copy_from_slice(sha.finish_get_ref());
 
-    /* Expand */
-    let mut cnt = 1_u64;
+    /* Expand (use AES as PRNG in this version as it's much faster on most hardware) */
+    let mut expand_aes = gcrypt::cipher::Cipher::new(gcrypt::cipher::Algorithm::Aes, gcrypt::cipher::Mode::Ecb).unwrap();
+    expand_aes.set_key(&buf[0..32]);
     let mut s: usize = 64;
     while s < SPACE_COST {
-        sha.reset();
-        hash_int_le(&mut sha, cnt);
-        sha.update(&buf[(s - 64)..s]);
-        let ss = s + 64;
-        buf[s..ss].copy_from_slice(sha.finish_get_ref());
+        let ss = s + 16;
+        let _ = expand_aes.encrypt(unsafe { &*buf.as_ptr().add(s - 16).cast::<[u8; 16]>() }, &mut buf[s..ss]);
         s = ss;
-        cnt += 1;
     }
+    drop(expand_aes);
 
     /* Mix */
+    let mut cnt = 1_u64 + ((SPACE_COST / 16) as u64);
     for t in 0..TIME_COST {
         sha.reset();
         hash_int_le(&mut sha, cnt);
@@ -64,7 +68,6 @@ pub fn hash<const SPACE_COST: usize, const TIME_COST: usize, const DELTA: usize>
         for i in 0..DELTA {
             sha.reset();
             hash_int_le(&mut sha, cnt);
-            sha.update(salt);
             hash_int_le(&mut sha, t as u64);
             sha.update(&zero64); // s == 0
             hash_int_le(&mut sha, i as u64);
@@ -94,7 +97,6 @@ pub fn hash<const SPACE_COST: usize, const TIME_COST: usize, const DELTA: usize>
             for i in 0..DELTA {
                 sha.reset();
                 hash_int_le(&mut sha, cnt);
-                sha.update(salt);
                 hash_int_le(&mut sha, t as u64);
                 hash_int_le(&mut sha, s as u64);
                 hash_int_le(&mut sha, i as u64);

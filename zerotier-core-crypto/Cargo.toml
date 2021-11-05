@@ -5,8 +5,10 @@ edition = "2018"
 license = "MPL-2.0"
 authors = ["ZeroTier, Inc. <contact@zerotier.com>", "Adam Ierymenko <adam.ierymenko@zerotier.com>"]
 
+[patch.crates-io]
+
 [dependencies]
-rand_core = "0.5"
+rand_core = "0.5.0"
 aes-gmac-siv = { path = "../aes-gmac-siv" }
 gcrypt = "0.7.0"
 x25519-dalek = { version = "1.2.0", features = ["u64_backend"] }

@@ -62,9 +62,7 @@ mod tests {
             c.reset();
             c.decrypt_init(&tag);
             c.decrypt_in_place(&mut buf);
-            if !c.decrypt_finish() {
-                panic!("decrypt tag check failed!");
-            }
+            let _ = c.decrypt_finish().expect("decrypt_finish() failed!");
             for i in 1..12345 {
                 if buf[i] != (i & 0xff) as u8 {
                     panic!("decrypt data check failed!");
@@ -74,7 +72,7 @@ mod tests {
         }
         println!("Encrypt/decrypt test OK");
 
-        let benchmark_iterations: usize = 50000;
+        let benchmark_iterations: usize = 80000;
         let start = SystemTime::now();
         for _ in 0..benchmark_iterations {
             c.reset();

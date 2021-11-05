@@ -128,17 +128,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "concat-arrays"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1df715824eb382e34b7afb7463b0247bf41538aeba731fba05241ecdb5dc3747"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "console"
 version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -968,6 +957,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c19772be3c4dd2ceaacf03cb41d5885f2a02c4d8804884918e3a258480803335"
 
 [[package]]
+name = "simple-error"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cc47a29ce97772ca5c927f75bac34866b16d64e07f330c3248e2d7226623901b"
+
+[[package]]
 name = "slab"
 version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1307,11 +1302,11 @@ name = "zerotier-network-hypervisor"
 version = "2.0.0"
 dependencies = [
  "base64",
- "concat-arrays",
  "dashmap",
  "libc",
  "lz4_flex",
  "parking_lot",
+ "simple-error",
  "urlencoding",
  "winapi",
  "zerotier-core-crypto",

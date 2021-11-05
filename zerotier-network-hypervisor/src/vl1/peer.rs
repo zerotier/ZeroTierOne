@@ -65,12 +65,6 @@ struct EphemeralKeyPair {
 
     // SHA384(c25519 public | p521 public)
     public_keys_hash: [u8; 48],
-
-    // Curve25519 ECDH key pair.
-    c25519: C25519KeyPair,
-
-    // NIST P-521 ECDH key pair.
-    p521: P521KeyPair,
 }
 
 /// A remote peer known to this node.
@@ -463,10 +457,6 @@ impl Peer {
             let mut dict = Dictionary::new();
             dict.set_u64(HELLO_DICT_KEY_INSTANCE_ID, node.instance_id);
             dict.set_u64(HELLO_DICT_KEY_CLOCK, ci.time_clock() as u64);
-            let _ = self.ephemeral_pair.lock().as_ref().map(|ephemeral_pair| {
-                dict.set_bytes(HELLO_DICT_KEY_EPHEMERAL_C25519, ephemeral_pair.c25519.public_bytes().to_vec());
-                dict.set_bytes(HELLO_DICT_KEY_EPHEMERAL_P521, ephemeral_pair.p521.public_key_bytes().to_vec());
-            });
             if node.is_peer_root(self) {
                 // If the peer is a root we include some extra information for diagnostic and statistics
                 // purposes such as the CPU type, bits, and OS info. This is not sent to other peers.
