@@ -103,7 +103,7 @@ impl Path {
 
     /// Called every INTERVAL during background tasks.
     #[inline(always)]
-    pub(crate) fn on_interval<CI: VL1CallerInterface>(&self, ct: &CI, time_ticks: i64) {
+    pub(crate) fn call_every_interval<CI: VL1CallerInterface>(&self, ct: &CI, time_ticks: i64) {
         self.fragmented_packets.lock().retain(|packet_id, frag| (time_ticks - frag.ts_ticks) < FRAGMENT_EXPIRATION);
     }
 }

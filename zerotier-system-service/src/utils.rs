@@ -11,10 +11,10 @@ use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 
-use zerotier_core::{Identity, Locator};
-
 use serde::Serialize;
 use serde::de::DeserializeOwned;
+
+use zerotier_network_hypervisor::vl1::Identity;
 
 use crate::osdep;
 

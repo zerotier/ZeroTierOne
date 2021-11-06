@@ -8,8 +8,6 @@
 
 use clap::ArgMatches;
 
-use zerotier_core::{Identity, IdentityType};
-
 fn new_(cli_args: &ArgMatches) -> i32 {
     let id_type = cli_args.value_of("type").map_or(IdentityType::Curve25519, |idt| {
         match idt {
@@ -53,7 +51,7 @@ fn validate(cli_args: &ArgMatches) -> i32 {
         println!("FAILED");
         1
     }, |id| {
-        if id.validate() {
+        if id.locally_validate() {
             println!("OK");
             0
         } else {

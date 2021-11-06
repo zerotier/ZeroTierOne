@@ -13,8 +13,8 @@ use std::sync::{Arc, Mutex, Weak};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
-use zerotier_core::*;
-use zerotier_core::trace::{TraceEvent, TraceEventLayer};
+use zerotier_network_hypervisor::vl1::{Address, Identity, InetAddress, MAC, PacketBuffer};
+
 use futures::StreamExt;
 use serde::{Serialize, Deserialize};
 
@@ -26,6 +26,7 @@ use crate::network::Network;
 use crate::store::Store;
 use crate::utils::{ms_since_epoch, ms_monotonic};
 use crate::httplistener::HttpListener;
+use zerotier_network_hypervisor::vl1::inetaddress::IpScope;
 
 /// How often to check for major configuration changes. This shouldn't happen
 /// too often since it uses a bit of CPU.
@@ -362,7 +363,7 @@ async fn run_async(store: Arc<Store>, local_config: Arc<LocalConfig>) -> i32 {
             }
             for a in system_addrs.iter() {
                 if !udp_sockets.contains_key(a.0) {
-                    let _ = FastUDPSocket::new(a.1.as_str(), a.0, |raw_socket: &FastUDPRawOsSocket, from_address: &InetAddress, data: Buffer| {
+                    let _ = FastUDPSocket::new(a.1.as_str(), a.0, |raw_socket: &FastUDPRawOsSocket, from_address: &InetAddress, data: PacketBuffer| {
                         // TODO: incoming packet handler
                     }).map_or_else(|e| {
                         l!(service.log, "error binding UDP socket to {}: {}", a.0.to_string(), e.to_string());

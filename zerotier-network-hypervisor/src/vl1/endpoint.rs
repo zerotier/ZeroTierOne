@@ -111,9 +111,11 @@ impl Endpoint {
                 ip.marshal(buf)
             }
             Endpoint::IpUdp(ip) => {
-                // IP/UDP endpoints are marshaled as naked InetAddress objects for backward
-                // compatibility. This is why 16 is added to all the other type IDs. Naked
-                // InetAddress objects always start with either 4 or 6.
+                // Wire encoding of IP/UDP type endpoints is the same as naked InetAddress
+                // objects for backward compatibility. That way a naked InetAddress unmarshals
+                // here as an IP/UDP Endpoint and vice versa. Supporting this is why 16 is added
+                // to all Endpoint type IDs for wire encoding so that values of 4 or 6 can be
+                // interpreted as IP/UDP InetAddress.
                 ip.marshal(buf)
             }
             Endpoint::IpTcp(ip) => {

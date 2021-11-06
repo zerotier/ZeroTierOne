@@ -6,6 +6,7 @@
  * https://www.zerotier.com/
  */
 
+pub mod switch;
 mod multicastgroup;
 
 pub use multicastgroup::MulticastGroup;

@@ -142,7 +142,6 @@ pub struct Node {
     whois: WhoisQueue,
     buffer_pool: Arc<PacketBufferPool>,
     secure_prng: SecureRandom,
-    fips_mode: bool,
 }
 
 impl Node {
@@ -183,7 +182,6 @@ impl Node {
             whois: WhoisQueue::new(),
             buffer_pool: Arc::new(PacketBufferPool::new(64, PooledBufferFactory)),
             secure_prng: SecureRandom::get(),
-            fips_mode: false,
         })
     }
 
@@ -202,9 +200,6 @@ impl Node {
     /// Get a peer by address.
     pub fn peer(&self, a: Address) -> Option<Arc<Peer>> { self.peers.get(&a).map(|peer| peer.value().clone()) }
 
-    #[inline(always)]
-    pub fn fips_mode(&self) -> bool { self.fips_mode }
-
     /// Get all peers currently in the peer cache.
     pub fn peers(&self) -> Vec<Arc<Peer>> {
         let mut v: Vec<Arc<Peer>> = Vec::new();
@@ -215,21 +210,20 @@ impl Node {
         v
     }
 
+    pub fn fips_mode(&self) -> bool { false }
+
     /// Run background tasks and return desired delay until next call in milliseconds.
-    ///
-    /// This should only be called once at a time. It technically won't hurt anything to
-    /// call concurrently but it will waste CPU cycles.
     pub fn do_background_tasks<CI: VL1CallerInterface>(&self, ci: &CI) -> Duration {
         let mut intervals = self.intervals.lock();
         let tt = ci.time_ticks();
 
         if intervals.whois.gate(tt) {
-            self.whois.on_interval(self, ci, tt);
+            self.whois.call_every_interval(self, ci, tt);
         }
 
         if intervals.paths.gate(tt) {
             self.paths.retain(|_, path| {
-                path.on_interval(ci, tt);
+                path.call_every_interval(ci, tt);
                 todo!();
                 true
             });
@@ -237,7 +231,7 @@ impl Node {
 
         if intervals.peers.gate(tt) {
             self.peers.retain(|_, peer| {
-                peer.on_interval(ci, tt);
+                peer.call_every_interval(ci, tt);
                 todo!();
                 true
             });
@@ -251,14 +245,16 @@ impl Node {
         let fragment_header = data.struct_mut_at::<FragmentHeader>(0);
         if fragment_header.is_ok() {
             let fragment_header = fragment_header.unwrap();
-            let time_ticks = ci.time_ticks();
             let dest = Address::from_bytes(&fragment_header.dest);
             if dest.is_some() {
+                let time_ticks = ci.time_ticks();
                 let dest = dest.unwrap();
                 if dest == self.identity.address() {
+                    // Handle packets addressed to this node.
 
                     let path = self.path(source_endpoint, source_local_socket, source_local_interface);
                     path.log_receive(time_ticks);
+
                     if fragment_header.is_fragment() {
 
                         let _ = path.receive_fragment(fragment_header.id, fragment_header.fragment_no(), fragment_header.total_fragments(), data, time_ticks).map(|assembled_packet| {
@@ -301,6 +297,8 @@ impl Node {
                     }
 
                 } else {
+                    // Forward packets not destined for this node.
+                    // TODO: need to add check for whether this node should forward. Regular nodes should only forward if a trust relationship exists.
 
                     if fragment_header.is_fragment() {
                         if fragment_header.increment_hops() > FORWARD_MAX_HOPS {

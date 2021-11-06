@@ -504,7 +504,7 @@ impl Peer {
 
     /// Called every INTERVAL during background tasks.
     #[inline(always)]
-    pub(crate) fn on_interval<CI: VL1CallerInterface>(&self, ct: &CI, time_ticks: i64) {}
+    pub(crate) fn call_every_interval<CI: VL1CallerInterface>(&self, ct: &CI, time_ticks: i64) {}
 
     #[inline(always)]
     fn receive_hello<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}

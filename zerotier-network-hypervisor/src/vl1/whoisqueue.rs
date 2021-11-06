@@ -63,7 +63,7 @@ impl WhoisQueue {
     }
 
     /// Called every INTERVAL during background tasks.
-    pub fn on_interval<CI: VL1CallerInterface>(&self, node: &Node, ci: &CI, time_ticks: i64) {
+    pub fn call_every_interval<CI: VL1CallerInterface>(&self, node: &Node, ci: &CI, time_ticks: i64) {
         let mut targets: Vec<Address> = Vec::new();
         self.0.lock().retain(|target, qi| {
             if qi.retry_count < WHOIS_RETRY_MAX {
