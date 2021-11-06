@@ -250,6 +250,9 @@ ifeq ($(ZT_IA32),1)
 	override LDFLAGS+=-m32
 	override CFLAGS+=-m32
 	override CXXFLAGS+=-m32
+	# Prevent the use of X64 crypto
+	ZT_USE_X64_ASM_SALSA=0
+	ZT_USE_X64_ASM_ED25519=0
 endif
 
 # Disable software updates by default on Linux since that is normally done with package management
