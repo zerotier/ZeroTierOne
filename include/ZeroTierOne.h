@@ -1224,12 +1224,12 @@ typedef struct
 	/**
 	 * sso nonce
 	 */
-	char ssoNonce[64];
+	char ssoNonce[128];
 
 	/**
 	 * sso state
 	 */
-	char ssoState[128];
+	char ssoState[256];
 
 	/**
 	 * oidc client id

@@ -663,7 +663,7 @@ public:
 	 */
 	char authenticationURL[2048];
 
-/**
+	/**
 	 * Time current authentication expires or 0 if external authentication is disabled
 	 * 
 	 * Not used if authVersion >= 1
@@ -678,12 +678,12 @@ public:
 	/**
 	 * sso nonce
 	 */
-	char ssoNonce[64];
+	char ssoNonce[128];
 
 	/**
 	 * sso state
 	 */
-	char ssoState[128];
+	char ssoState[256];
 
 	/**
 	 * oidc client id
