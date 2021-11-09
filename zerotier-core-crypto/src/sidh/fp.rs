@@ -90,6 +90,7 @@ fn digit_x_digit(a: &u32, b: &u32, c: &mut [u32]) {
     c[1] ^= (ahbh & mask_high) + carry;
 }
 
+#[inline(always)]
 fn mul(multiplier: &u32, multiplicant: &u32, uv: &mut [u32]) {
     digit_x_digit(multiplier, multiplicant, uv);
 }
@@ -235,7 +236,7 @@ pub fn rdc751(x: &Fp751X2, z: &mut Fp751Element) {
     z.0[FP751_NUM_WORDS-1] = v;
 }
 
-#[inline]
+#[inline(always)]
 pub fn srdc751(x: &mut Fp751Element) {
     let mut borrow: u32 = 0;
 
@@ -250,7 +251,7 @@ pub fn srdc751(x: &mut Fp751Element) {
     }
 }
 
-#[inline]
+#[inline(always)]
 pub fn mp_add751(x: &Fp751Element, y: &Fp751Element, z: &mut Fp751Element) {
     let mut carry: u32 = 0;
 
@@ -259,7 +260,7 @@ pub fn mp_add751(x: &Fp751Element, y: &Fp751Element, z: &mut Fp751Element) {
     }
 }
 
-#[inline]
+#[inline(always)]
 pub fn mp_add751x2(x: &Fp751X2, y: &Fp751X2, z: &mut Fp751X2) {
     let mut carry: u32 = 0;
 

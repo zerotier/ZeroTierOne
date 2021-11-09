@@ -39,6 +39,7 @@ pub struct ExtensionFieldElement {
 }
 
 impl<'b> AddAssign<&'b ExtensionFieldElement> for ExtensionFieldElement {
+    #[inline(always)]
     fn add_assign(&mut self, _rhs: &'b ExtensionFieldElement) {
         let result = (self as &ExtensionFieldElement) + _rhs;
         self.A = result.A;
@@ -48,6 +49,7 @@ impl<'b> AddAssign<&'b ExtensionFieldElement> for ExtensionFieldElement {
 
 impl<'a, 'b> Add<&'b ExtensionFieldElement> for &'a ExtensionFieldElement {
     type Output = ExtensionFieldElement;
+    #[inline(always)]
     fn add(self, _rhs: &'b ExtensionFieldElement) -> ExtensionFieldElement {
         let a = &self.A + &_rhs.A;
         let b = &self.B + &_rhs.B;
@@ -60,6 +62,7 @@ impl<'a, 'b> Add<&'b ExtensionFieldElement> for &'a ExtensionFieldElement {
 }
 
 impl <'b> SubAssign<&'b ExtensionFieldElement> for ExtensionFieldElement {
+    #[inline(always)]
     fn sub_assign(&mut self, _rhs: &'b ExtensionFieldElement) {
         let result = (self as &ExtensionFieldElement) - _rhs;
         self.A = result.A;
@@ -69,6 +72,7 @@ impl <'b> SubAssign<&'b ExtensionFieldElement> for ExtensionFieldElement {
 
 impl<'a, 'b> Sub<&'b ExtensionFieldElement> for &'a ExtensionFieldElement {
     type Output = ExtensionFieldElement;
+    #[inline(always)]
     fn sub(self, _rhs: &'b ExtensionFieldElement) -> ExtensionFieldElement {
         let a = &self.A - &_rhs.A;
         let b = &self.B - &_rhs.B;
@@ -81,6 +85,7 @@ impl<'a, 'b> Sub<&'b ExtensionFieldElement> for &'a ExtensionFieldElement {
 }
 
 impl<'b> MulAssign<&'b ExtensionFieldElement> for ExtensionFieldElement {
+    #[inline(always)]
     fn mul_assign(&mut self, _rhs: &'b ExtensionFieldElement) {
         let result = (self as &ExtensionFieldElement) * _rhs;
         self.A = result.A;
@@ -129,6 +134,7 @@ impl<'a, 'b> Mul<&'b ExtensionFieldElement> for &'a ExtensionFieldElement {
 
 impl <'a> Neg for &'a ExtensionFieldElement {
     type Output = ExtensionFieldElement;
+    #[inline(always)]
     fn neg(self) -> ExtensionFieldElement {
         let zero = ExtensionFieldElement::zero();
         let result = &zero - (self as &ExtensionFieldElement);
@@ -263,6 +269,7 @@ impl ExtensionFieldElement {
         }
     }
     /// Returns true if both sides are equal. Takes variable time.
+    #[inline(always)]
     pub fn vartime_eq(&self, _rhs: &ExtensionFieldElement) -> bool {
         (&self.A == &_rhs.A) && (&self.B == &_rhs.B)
     }
@@ -295,6 +302,7 @@ pub struct PrimeFieldElement {
 }
 
 impl<'b> AddAssign<&'b PrimeFieldElement> for PrimeFieldElement {
+    #[inline(always)]
     fn add_assign(&mut self, _rhs: &'b PrimeFieldElement) {
         let result = (self as &PrimeFieldElement) + _rhs;
         self.A = result.A;
@@ -303,6 +311,7 @@ impl<'b> AddAssign<&'b PrimeFieldElement> for PrimeFieldElement {
 
 impl<'a, 'b> Add<&'b PrimeFieldElement> for &'a PrimeFieldElement {
     type Output = PrimeFieldElement;
+    #[inline(always)]
     fn add(self, _rhs: &'b PrimeFieldElement) -> PrimeFieldElement {
         let a = &self.A + &_rhs.A;
         PrimeFieldElement{ A: a }
@@ -310,6 +319,7 @@ impl<'a, 'b> Add<&'b PrimeFieldElement> for &'a PrimeFieldElement {
 }
 
 impl <'b> SubAssign<&'b PrimeFieldElement> for PrimeFieldElement {
+    #[inline(always)]
     fn sub_assign(&mut self, _rhs: &'b PrimeFieldElement) {
         let result = (self as &PrimeFieldElement) - _rhs;
         self.A = result.A;
@@ -318,6 +328,7 @@ impl <'b> SubAssign<&'b PrimeFieldElement> for PrimeFieldElement {
 
 impl<'a, 'b> Sub<&'b PrimeFieldElement> for &'a PrimeFieldElement {
     type Output = PrimeFieldElement;
+    #[inline(always)]
     fn sub(self, _rhs: &'b PrimeFieldElement) -> PrimeFieldElement {
         let a = &self.A - &_rhs.A;
         PrimeFieldElement{ A: a }
@@ -325,6 +336,7 @@ impl<'a, 'b> Sub<&'b PrimeFieldElement> for &'a PrimeFieldElement {
 }
 
 impl<'b> MulAssign<&'b PrimeFieldElement> for PrimeFieldElement {
+    #[inline(always)]
     fn mul_assign(&mut self, _rhs: &'b PrimeFieldElement) {
         let result = (self as &PrimeFieldElement) * _rhs;
         self.A = result.A;
@@ -333,6 +345,7 @@ impl<'b> MulAssign<&'b PrimeFieldElement> for PrimeFieldElement {
 
 impl<'a, 'b> Mul<&'b PrimeFieldElement> for &'a PrimeFieldElement {
     type Output = PrimeFieldElement;
+    #[inline(always)]
     fn mul(self, _rhs: &'b PrimeFieldElement) -> PrimeFieldElement {
         // Alias self, _rhs for more readable formulas.
         let a = &self.A;      // = a*R
@@ -346,6 +359,7 @@ impl<'a, 'b> Mul<&'b PrimeFieldElement> for &'a PrimeFieldElement {
 
 impl <'a> Neg for &'a PrimeFieldElement {
     type Output = PrimeFieldElement;
+    #[inline(always)]
     fn neg(self) -> PrimeFieldElement {
         let zero = PrimeFieldElement::zero();
         let result = &zero - (self as &PrimeFieldElement);
@@ -393,6 +407,7 @@ impl PrimeFieldElement {
         }
     }
     /// Set the output to `x^2`.
+    #[inline(always)]
     pub fn square(&self) -> PrimeFieldElement {
         let a = &self.A;      // = a*R
         let b = &self.A;      // = b*R
@@ -466,6 +481,7 @@ impl PrimeFieldElement {
 //-----------------------------------------------------------------------------//
 
 impl<'b> AddAssign<&'b Fp751Element> for Fp751Element {
+    #[inline(always)]
     fn add_assign(&mut self, _rhs: &'b Fp751Element) {
         let result = (self as &Fp751Element) + _rhs;
         self.0 = result.0
@@ -474,6 +490,7 @@ impl<'b> AddAssign<&'b Fp751Element> for Fp751Element {
 
 impl<'a, 'b> Add<&'b Fp751Element> for &'a Fp751Element {
     type Output = Fp751Element;
+    #[inline(always)]
     fn add(self, _rhs: &'b Fp751Element) -> Fp751Element {
         let mut result = Fp751Element::zero();
         fpadd751(&self, _rhs, &mut result);
@@ -482,6 +499,7 @@ impl<'a, 'b> Add<&'b Fp751Element> for &'a Fp751Element {
 }
 
 impl <'b> SubAssign<&'b Fp751Element> for Fp751Element {
+    #[inline(always)]
     fn sub_assign(&mut self, _rhs: &'b Fp751Element) {
         let result = (self as &Fp751Element) - _rhs;
         self.0 = result.0
@@ -490,6 +508,7 @@ impl <'b> SubAssign<&'b Fp751Element> for Fp751Element {
 
 impl<'a, 'b> Sub<&'b Fp751Element> for &'a Fp751Element {
     type Output = Fp751Element;
+    #[inline(always)]
     fn sub(self, _rhs: &'b Fp751Element) -> Fp751Element {
         let mut result = Fp751Element::zero();
         fpsub751(&self, _rhs, &mut result);
@@ -499,6 +518,7 @@ impl<'a, 'b> Sub<&'b Fp751Element> for &'a Fp751Element {
 
 impl<'a, 'b> Mul<&'b Fp751Element> for &'a Fp751Element {
     type Output = Fp751X2;
+    #[inline(always)]
     fn mul(self, _rhs: &'b Fp751Element) -> Fp751X2 {
         let mut result = Fp751X2::zero();
         mul751(&self, _rhs, &mut result); // = a*c*R*R
@@ -508,6 +528,7 @@ impl<'a, 'b> Mul<&'b Fp751Element> for &'a Fp751Element {
 
 impl <'a> Neg for &'a Fp751Element {
     type Output = Fp751Element;
+    #[inline(always)]
     fn neg(self) -> Fp751Element {
         let zero = Fp751Element::zero();
         let result = &zero - (self as &Fp751Element);
@@ -575,6 +596,7 @@ impl ConstantTimeEq for Fp751Element {
 
 impl Fp751Element {
     /// Reduce a field element in `[0, 2*p)` to one in `[0,p)`.
+    #[inline(always)]
     pub fn strong_reduce(&self) -> Fp751Element {
         let mut _self = *self;
         srdc751(&mut _self);
@@ -583,6 +605,7 @@ impl Fp751Element {
 }
 
 impl<'b> AddAssign<&'b Fp751X2> for Fp751X2 {
+    #[inline(always)]
     fn add_assign(&mut self, _rhs: &'b Fp751X2) {
         let result = (self as &Fp751X2) + _rhs;
         self.0 = result.0
@@ -591,6 +614,7 @@ impl<'b> AddAssign<&'b Fp751X2> for Fp751X2 {
 
 impl<'a, 'b> Add<&'b Fp751X2> for &'a Fp751X2 {
     type Output = Fp751X2;
+    #[inline(always)]
     fn add(self, _rhs: &'b Fp751X2) -> Fp751X2 {
         let mut result = Fp751X2::zero();
         mp_add751x2(&self, _rhs, &mut result);
@@ -599,6 +623,7 @@ impl<'a, 'b> Add<&'b Fp751X2> for &'a Fp751X2 {
 }
 
 impl <'b> SubAssign<&'b Fp751X2> for Fp751X2 {
+    #[inline(always)]
     fn sub_assign(&mut self, _rhs: &'b Fp751X2) {
         let result = (self as &Fp751X2) - _rhs;
         self.0 = result.0
@@ -607,6 +632,7 @@ impl <'b> SubAssign<&'b Fp751X2> for Fp751X2 {
 
 impl<'a, 'b> Sub<&'b Fp751X2> for &'a Fp751X2 {
     type Output = Fp751X2;
+    #[inline(always)]
     fn sub(self, _rhs: &'b Fp751X2) -> Fp751X2 {
         let mut result = Fp751X2::zero();
         mp_sub751x2(&self, _rhs, &mut result);
@@ -616,6 +642,7 @@ impl<'a, 'b> Sub<&'b Fp751X2> for &'a Fp751X2 {
 
 impl Fp751X2 {
     /// Perform Montgomery reduction, `x R^{-1} (mod p)`.
+    #[inline(always)]
     pub fn reduce(&self) -> Fp751Element {
         let mut result = Fp751Element::zero();
         rdc751(self, &mut result);
