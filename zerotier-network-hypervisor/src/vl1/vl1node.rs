@@ -25,15 +25,7 @@ use crate::vl1::peer::Peer;
 use crate::vl1::protocol::*;
 use crate::vl1::rootset::RootSet;
 use crate::vl1::whoisqueue::{QueuedPacket, WhoisQueue};
-
-/// Standard packet buffer type including pool container.
-pub type PacketBuffer = Pooled<Buffer<{ PACKET_SIZE_MAX }>, PooledBufferFactory<{ PACKET_SIZE_MAX }>>;
-
-/// Factory type to supply to a new PacketBufferPool.
-pub type PacketBufferFactory = PooledBufferFactory<{ PACKET_SIZE_MAX }>;
-
-/// Source for instances of PacketBuffer
-pub type PacketBufferPool = Pool<Buffer<{ PACKET_SIZE_MAX }>, PacketBufferFactory>;
+use crate::{PacketBuffer, PacketBufferPool};
 
 /// Callback interface and call context for calls to the node (for VL1).
 ///
@@ -131,7 +123,7 @@ struct BackgroundTaskIntervals {
     peers: IntervalGate<{ Peer::INTERVAL }>,
 }
 
-pub struct Node {
+pub struct VL1Node {
     pub(crate) instance_id: u64,
     identity: Identity,
     intervals: Mutex<BackgroundTaskIntervals>,
@@ -144,7 +136,7 @@ pub struct Node {
     secure_prng: SecureRandom,
 }
 
-impl Node {
+impl VL1Node {
     /// Create a new Node.
     ///
     /// If the auto-generate identity type is not None, a new identity will be generated if
@@ -339,6 +331,6 @@ impl Node {
     }
 }
 
-unsafe impl Send for Node {}
+unsafe impl Send for VL1Node {}
 
-unsafe impl Sync for Node {}
+unsafe impl Sync for VL1Node {}

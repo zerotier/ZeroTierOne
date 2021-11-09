@@ -28,7 +28,7 @@ use crate::defaults::UDP_DEFAULT_MTU;
 use crate::util::pool::{Pool, PoolFactory};
 use crate::vl1::{Dictionary, Endpoint, Identity, InetAddress, Path};
 use crate::vl1::buffer::Buffer;
-use crate::vl1::node::*;
+use crate::vl1::vl1node::*;
 use crate::vl1::protocol::*;
 
 /// Interval for servicing and background operations on peers.
@@ -193,7 +193,7 @@ impl Peer {
     /// Receive, decrypt, authenticate, and process an incoming packet from this peer.
     /// If the packet comes in multiple fragments, the fragments slice should contain all
     /// those fragments after the main packet header and first chunk.
-    pub(crate) fn receive<CI: VL1CallerInterface, PH: VL1PacketHandler>(&self, node: &Node, ci: &CI, ph: &PH, time_ticks: i64, source_path: &Arc<Path>, header: &PacketHeader, packet: &Buffer<{ PACKET_SIZE_MAX }>, fragments: &[Option<PacketBuffer>]) {
+    pub(crate) fn receive<CI: VL1CallerInterface, PH: VL1PacketHandler>(&self, node: &VL1Node, ci: &CI, ph: &PH, time_ticks: i64, source_path: &Arc<Path>, header: &PacketHeader, packet: &Buffer<{ PACKET_SIZE_MAX }>, fragments: &[Option<PacketBuffer>]) {
         let _ = packet.as_bytes_starting_at(PACKET_VERB_INDEX).map(|packet_frag0_payload_bytes| {
             let mut payload = node.get_packet_buffer();
 
@@ -377,7 +377,7 @@ impl Peer {
     ///
     /// This will go directly if there is an active path, or otherwise indirectly
     /// via a root or some other route.
-    pub(crate) fn send<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, packet_id: PacketID, packet: &Buffer<{ PACKET_SIZE_MAX }>) -> bool {
+    pub(crate) fn send<CI: VL1CallerInterface>(&self, ci: &CI, node: &VL1Node, time_ticks: i64, packet_id: PacketID, packet: &Buffer<{ PACKET_SIZE_MAX }>) -> bool {
         self.path(node).map_or(false, |path| {
             if self.send_to_endpoint(ci, path.endpoint(), Some(path.local_socket()), Some(path.local_interface()), packet_id, packet) {
                 self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
@@ -415,7 +415,7 @@ impl Peer {
     ///
     /// This has its own send logic so it can handle either an explicit endpoint or a
     /// known one.
-    pub(crate) fn send_hello<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, explicit_endpoint: Option<Endpoint>) -> bool {
+    pub(crate) fn send_hello<CI: VL1CallerInterface>(&self, ci: &CI, node: &VL1Node, explicit_endpoint: Option<Endpoint>) -> bool {
         let path = if explicit_endpoint.is_none() { self.path(node) } else { None };
         explicit_endpoint.as_ref().map_or_else(|| Some(path.as_ref().unwrap().endpoint()), |ep| Some(ep)).map_or(false, |endpoint| {
             let mut packet: Buffer<{ PACKET_SIZE_MAX }> = Buffer::new();
@@ -507,10 +507,10 @@ impl Peer {
     pub(crate) fn call_every_interval<CI: VL1CallerInterface>(&self, ct: &CI, time_ticks: i64) {}
 
     #[inline(always)]
-    fn receive_hello<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
+    fn receive_hello<CI: VL1CallerInterface>(&self, ci: &CI, node: &VL1Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
 
     #[inline(always)]
-    fn receive_error<CI: VL1CallerInterface, PH: VL1PacketHandler>(&self, ci: &CI, ph: &PH, node: &Node, time_ticks: i64, source_path: &Arc<Path>, forward_secrecy: bool, extended_authentication: bool, payload: &Buffer<{ PACKET_SIZE_MAX }>) {
+    fn receive_error<CI: VL1CallerInterface, PH: VL1PacketHandler>(&self, ci: &CI, ph: &PH, node: &VL1Node, time_ticks: i64, source_path: &Arc<Path>, forward_secrecy: bool, extended_authentication: bool, payload: &Buffer<{ PACKET_SIZE_MAX }>) {
         let mut cursor: usize = 0;
         let _ = payload.read_struct::<message_component_structs::ErrorHeader>(&mut cursor).map(|error_header| {
             let in_re_packet_id = error_header.in_re_packet_id;
@@ -530,7 +530,7 @@ impl Peer {
     }
 
     #[inline(always)]
-    fn receive_ok<CI: VL1CallerInterface, PH: VL1PacketHandler>(&self, ci: &CI, ph: &PH, node: &Node, time_ticks: i64, source_path: &Arc<Path>, forward_secrecy: bool, extended_authentication: bool, payload: &Buffer<{ PACKET_SIZE_MAX }>) {
+    fn receive_ok<CI: VL1CallerInterface, PH: VL1PacketHandler>(&self, ci: &CI, ph: &PH, node: &VL1Node, time_ticks: i64, source_path: &Arc<Path>, forward_secrecy: bool, extended_authentication: bool, payload: &Buffer<{ PACKET_SIZE_MAX }>) {
         let mut cursor: usize = 0;
         let _ = payload.read_struct::<message_component_structs::OkHeader>(&mut cursor).map(|ok_header| {
             let in_re_packet_id = ok_header.in_re_packet_id;
@@ -554,25 +554,25 @@ impl Peer {
     }
 
     #[inline(always)]
-    fn receive_whois<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
+    fn receive_whois<CI: VL1CallerInterface>(&self, ci: &CI, node: &VL1Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
 
     #[inline(always)]
-    fn receive_rendezvous<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
+    fn receive_rendezvous<CI: VL1CallerInterface>(&self, ci: &CI, node: &VL1Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
 
     #[inline(always)]
-    fn receive_echo<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
+    fn receive_echo<CI: VL1CallerInterface>(&self, ci: &CI, node: &VL1Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
 
     #[inline(always)]
-    fn receive_push_direct_paths<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
+    fn receive_push_direct_paths<CI: VL1CallerInterface>(&self, ci: &CI, node: &VL1Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
 
     #[inline(always)]
-    fn receive_user_message<CI: VL1CallerInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
+    fn receive_user_message<CI: VL1CallerInterface>(&self, ci: &CI, node: &VL1Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
 
     /// Get current best path or None if there are no direct paths to this peer.
     pub fn direct_path(&self) -> Option<Arc<Path>> { self.paths.lock().first().map(|p| p.clone()) }
 
     /// Get either the current best direct path or an indirect path.
-    pub fn path(&self, node: &Node) -> Option<Arc<Path>> {
+    pub fn path(&self, node: &VL1Node) -> Option<Arc<Path>> {
         self.direct_path().map_or_else(|| node.root().map_or(None, |root| root.direct_path().map_or(None, |bp| Some(bp))), |bp| Some(bp))
     }
 

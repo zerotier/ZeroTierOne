@@ -88,7 +88,7 @@ pub struct RootSet {
 impl RootSet {
     /// Create and sign a new root set.
     /// This cannot create legacy "planet" or "moon" type root sets. For those the old mkworld code must be used.
-    pub fn create(roots: &[Root], timestamp: i64, oob_update_url: Option<&str>, name: Option<&str>, contact: Option<&str>, signing_key: &RootSetSecretSigningKey) -> Result<RootSet, InvalidParameterError> {
+    pub fn create(roots: &[Root], timestamp: i64, oob_update_url: Option<&str>, name: Option<&str>, contact: Option<&str>, signing_key: &RootSetSecretSigningKey) -> Result<Self, InvalidParameterError> {
         let mut sorted_roots = roots.to_vec();
         sorted_roots.sort();
         sorted_roots.dedup();

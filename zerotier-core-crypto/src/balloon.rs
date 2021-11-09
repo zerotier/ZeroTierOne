@@ -46,7 +46,7 @@ pub fn hash<const SPACE_COST: usize, const TIME_COST: usize, const DELTA: usize>
 
     /* Expand (use AES as PRNG in this version as it's much faster on most hardware) */
     let mut expand_aes = gcrypt::cipher::Cipher::new(gcrypt::cipher::Algorithm::Aes, gcrypt::cipher::Mode::Ecb).unwrap();
-    expand_aes.set_key(&buf[0..32]);
+    let _ = expand_aes.set_key(&buf[0..32]);
     let mut s: usize = 64;
     while s < SPACE_COST {
         let ss = s + 16;

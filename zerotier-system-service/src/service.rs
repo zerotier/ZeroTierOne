@@ -6,6 +6,72 @@
  * https://www.zerotier.com/
  */
 
+use std::sync::Arc;
+
+use parking_lot::Mutex;
+
+use zerotier_network_hypervisor::{CallerInterface, Node};
+use zerotier_network_hypervisor::vl1::{Endpoint, Identity, VL1CallerInterface};
+
+use crate::log::Log;
+use crate::utils::{ms_monotonic, ms_since_epoch};
+
+struct Service {
+    pub log: Arc<Mutex<Log>>,
+    node_ptr: Arc<Option<Node>>,
+}
+
+impl Service {
+    pub fn node(&self) -> &Node {
+        // The node_ref option is only None during initial service startup since there is a
+        // chicken or egg problem. Use of this accessor during startup will panic and is a bug.
+        (*self.node_ptr).as_ref().unwrap()
+    }
+}
+
+impl VL1CallerInterface for Service {
+    fn event_node_is_up(&self) {}
+
+    fn event_node_is_down(&self) {}
+
+    fn event_identity_collision(&self) {}
+
+    fn event_online_status_change(&self, online: bool) {}
+
+    fn event_user_message(&self, source: &Identity, message_type: u64, message: &[u8]) {}
+
+    fn load_node_identity(&self) -> Option<&[u8]> {
+        todo!()
+    }
+
+    fn save_node_identity(&self, id: &Identity, public: &[u8], secret: &[u8]) {}
+
+    fn wire_send(&self, endpoint: &Endpoint, local_socket: Option<i64>, local_interface: Option<i64>, data: &[&[u8]], packet_ttl: u8) -> bool {
+        todo!()
+    }
+
+    fn check_path(&self, id: &Identity, endpoint: &Endpoint, local_socket: Option<i64>, local_interface: Option<i64>) -> bool {
+        true
+    }
+
+    fn get_path_hints(&self, id: &Identity) -> Option<&[(&Endpoint, Option<i64>, Option<i64>)]> {
+        todo!()
+    }
+
+    #[inline(always)]
+    fn time_ticks(&self) -> i64 { ms_monotonic() }
+
+    #[inline(always)]
+    fn time_clock(&self) -> i64 { ms_since_epoch() }
+}
+
+impl CallerInterface for Service {}
+
+pub fn run() -> i32 {
+    0
+}
+
+/*
 use std::cell::Cell;
 use std::collections::BTreeMap;
 use std::net::{SocketAddr, Ipv4Addr, IpAddr, Ipv6Addr};
@@ -14,6 +80,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use zerotier_network_hypervisor::vl1::{Address, Identity, InetAddress, MAC, PacketBuffer};
+use zerotier_network_hypervisor::vl1::inetaddress::IpScope;
+use zerotier_network_hypervisor::{CallerInterface, Node};
 
 use futures::StreamExt;
 use serde::{Serialize, Deserialize};
@@ -26,10 +94,7 @@ use crate::network::Network;
 use crate::store::Store;
 use crate::utils::{ms_since_epoch, ms_monotonic};
 use crate::httplistener::HttpListener;
-use zerotier_network_hypervisor::vl1::inetaddress::IpScope;
 
-/// How often to check for major configuration changes. This shouldn't happen
-/// too often since it uses a bit of CPU.
 const CONFIG_CHECK_INTERVAL: i64 = 5000;
 
 /// ServiceStatus is the object returned by the API /status endpoint
@@ -64,7 +129,7 @@ pub struct ServiceStatus {
 /// Core ZeroTier service, which is sort of just a container for all the things.
 pub(crate) struct Service {
     pub(crate) log: Log,
-    _node: Cell<Weak<Node<Arc<Service>, Network, Service>>>, // never modified after node is created
+    node: Option<Node>,
     udp_local_endpoints: Mutex<Vec<InetAddress>>,
     http_local_endpoints: Mutex<Vec<InetAddress>>,
     interrupt: Mutex<futures::channel::mpsc::Sender<()>>,
@@ -76,101 +141,6 @@ pub(crate) struct Service {
     online: AtomicBool,
 }
 
-impl NodeEventHandler<Network> for Service {
-    #[inline(always)]
-    fn virtual_network_config(&self, network_id: NetworkId, network_obj: &Network, config_op: VirtualNetworkConfigOperation, config: Option<&VirtualNetworkConfig>) {}
-
-    #[inline(always)]
-    fn virtual_network_frame(&self, network_id: NetworkId, network_obj: &Network, source_mac: MAC, dest_mac: MAC, ethertype: u16, vlan_id: u16, data: &[u8]) {}
-
-    #[inline(always)]
-    fn event(&self, event: Event, event_data: &[u8]) {
-        match event {
-            Event::Up => {
-                d!(self.log, "node startup event received.");
-            }
-
-            Event::Down => {
-                d!(self.log, "node shutdown event received.");
-                self.online.store(false, Ordering::Relaxed);
-            }
-
-            Event::Online => {
-                d!(self.log, "node is online.");
-                self.online.store(true, Ordering::Relaxed);
-            }
-
-            Event::Offline => {
-                d!(self.log, "node is offline.");
-                self.online.store(false, Ordering::Relaxed);
-            }
-
-            Event::Trace => {
-                if !event_data.is_empty() {
-                    let _ = Dictionary::new_from_bytes(event_data).map(|tm| {
-                        let tm = TraceEvent::parse_message(&tm);
-                        let _ = tm.map(|tm: TraceEvent| {
-                            let local_config = self.local_config();
-                            if match tm.layer() {
-                                TraceEventLayer::VL1 => local_config.settings.log.vl1,
-                                TraceEventLayer::VL2 => local_config.settings.log.vl2,
-                                TraceEventLayer::VL2Filter => local_config.settings.log.vl2_trace_rules,
-                                TraceEventLayer::VL2Multicast => local_config.settings.log.vl2_trace_multicast,
-                                _ => true,
-                            } {
-                                self.log.log(tm.to_string());
-                            }
-                        });
-                    });
-                }
-            }
-
-            Event::UserMessage => {}
-        }
-    }
-
-    #[inline(always)]
-    fn state_put(&self, obj_type: StateObjectType, obj_id: &[u64], obj_data: &[u8]) -> std::io::Result<()> {
-        if !obj_data.is_empty() {
-            self.store.store_object(&obj_type, obj_id, obj_data)
-        } else {
-            self.store.erase_object(&obj_type, obj_id);
-            Ok(())
-        }
-    }
-
-    #[inline(always)]
-    fn state_get(&self, obj_type: StateObjectType, obj_id: &[u64]) -> std::io::Result<Vec<u8>> {
-        self.store.load_object(&obj_type, obj_id)
-    }
-
-    #[inline(always)]
-    fn wire_packet_send(&self, local_socket: i64, sock_addr: &InetAddress, data: &[u8], packet_ttl: u32) -> i32 {
-        0
-    }
-
-    #[inline(always)]
-    fn path_check(&self, _: Address, _: &Identity, _: i64, _: &InetAddress) -> bool {
-        true
-    }
-
-    #[inline(always)]
-    fn path_lookup(&self, address: Address, id: &Identity, desired_family: InetAddressFamily) -> Option<InetAddress> {
-        let lc = self.local_config();
-        lc.virtual_.get(&address).map_or(None, |c: &LocalConfigVirtualConfig| {
-            if c.try_.is_empty() {
-                None
-            } else {
-                let t = c.try_.get((zerotier_core::random() as usize) % c.try_.len());
-                t.map_or(None, |v: &InetAddress| {
-                    d!(self.log, "path lookup for {} returned {}", address.to_string(), v.to_string());
-                    Some(v.clone())
-                })
-            }
-        })
-    }
-}
-
 impl Service {
     pub fn local_config(&self) -> Arc<LocalConfig> {
         self.local_config.lock().unwrap().clone()
@@ -178,15 +148,6 @@ impl Service {
 
     pub fn set_local_config(&self, new_lc: LocalConfig) {
         *(self.local_config.lock().unwrap()) = Arc::new(new_lc);
-    }
-
-    /// Get the node running with this service.
-    /// This can return None during shutdown because Service holds a weak
-    /// reference to Node to avoid circular Arc<> pointers. This will only
-    /// return None during shutdown, in which case whatever is happening
-    /// should abort as quietly as possible.
-    pub fn node(&self) -> Option<Arc<Node<Arc<Service>, Network, Service>>> {
-        unsafe { &*self._node.as_ptr() }.upgrade()
     }
 
     #[inline(always)]
@@ -252,7 +213,7 @@ async fn run_async(store: Arc<Store>, local_config: Arc<LocalConfig>) -> i32 {
             local_config.settings.log.debug,
             "",
         ),
-        _node: Cell::new(Weak::new()),
+        node: None,
         udp_local_endpoints: Mutex::new(Vec::new()),
         http_local_endpoints: Mutex::new(Vec::new()),
         interrupt: Mutex::new(interrupt_tx),
@@ -509,3 +470,5 @@ pub(crate) fn run(store: Arc<Store>) -> i32 {
 
     process_exit_value
 }
+
+*/

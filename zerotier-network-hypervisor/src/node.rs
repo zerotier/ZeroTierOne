@@ -9,9 +9,11 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::vl1::node::VL1CallerInterface;
 use crate::error::InvalidParameterError;
-use crate::vl1::{PacketBuffer, PacketBufferPool, Address, Identity, Endpoint};
+use crate::vl1::{Address, Identity, Endpoint};
+use crate::vl1::vl1node::{VL1CallerInterface, VL1Node};
+use crate::vl2::switch::Switch;
+use crate::{PacketBuffer, PacketBufferPool};
 
 pub trait CallerInterface: VL1CallerInterface {
 }
@@ -20,15 +22,15 @@ pub trait CallerInterface: VL1CallerInterface {
 ///
 /// This is a composition of the VL1 node and the VL2 virtual switch.
 pub struct Node {
-    vl1: crate::vl1::node::Node,
-    vl2: crate::vl2::switch::Switch,
+    vl1: VL1Node,
+    vl2: Switch,
 }
 
 impl Node {
     pub fn new<CI: CallerInterface>(ci: &CI, auto_generate_identity_type: Option<crate::vl1::identity::Type>) -> Result<Node, InvalidParameterError> {
         Ok(Node {
-            vl1: crate::vl1::node::Node::new(ci, auto_generate_identity_type)?,
-            vl2: crate::vl2::switch::Switch::new(),
+            vl1: VL1Node::new(ci, auto_generate_identity_type)?,
+            vl2: Switch::new(),
         })
     }
 

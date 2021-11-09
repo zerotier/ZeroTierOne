@@ -7,10 +7,13 @@
  */
 
 use std::fs::{File, OpenOptions};
-use std::io::{Seek, SeekFrom, Write, stderr};
-use std::sync::Mutex;
+use std::io::{Seek, SeekFrom, stderr, Write};
+use std::sync::Arc;
 
-struct LogIntl {
+use parking_lot::Mutex;
+
+/// It's big it's heavy it's wood.
+pub struct Log {
     prefix: String,
     path: String,
     file: Option<File>,
@@ -20,53 +23,51 @@ struct LogIntl {
     debug: bool,
 }
 
-/// It's big it's heavy it's wood.
-pub(crate) struct Log {
-    inner: Mutex<LogIntl>,
-}
-
 impl Log {
+    /// Minimum "maximum size" parameter.
     const MIN_MAX_SIZE: usize = 1024;
 
     /// Construct a new logger.
+    ///
     /// If path is empty logs will not be written to files. If log_to_stderr is also
     /// false then no logs will be output at all.
-    pub fn new(path: &str, max_size: usize, log_to_stderr: bool, debug: bool, prefix: &str) -> Log {
+    ///
+    /// This returns an Arc<Mutex<Log>> suitable for use with the l! and d! macros, which
+    /// expect a mutex guarded instance.
+    pub fn new(path: &str, max_size: usize, log_to_stderr: bool, debug: bool, prefix: &str) -> Arc<Mutex<Log>> {
         let mut p = String::from(prefix);
         if !p.is_empty() {
             p.push(' ');
         }
-        Log{
-            inner: Mutex::new(LogIntl {
-                prefix: p,
-                path: String::from(path),
-                file: None,
-                cur_size: 0,
-                max_size: if max_size < Log::MIN_MAX_SIZE { Log::MIN_MAX_SIZE } else { max_size },
-                log_to_stderr,
-                debug,
-            }),
-        }
+        Arc::new(Mutex::new(Log{
+            prefix: p,
+            path: String::from(path),
+            file: None,
+            cur_size: 0,
+            max_size: max_size.max(Self::MIN_MAX_SIZE),
+            log_to_stderr,
+            debug,
+        }))
     }
 
-    pub fn set_max_size(&self, new_max_size: usize) {
-        self.inner.lock().unwrap().max_size = if new_max_size < Log::MIN_MAX_SIZE { Log::MIN_MAX_SIZE } else { new_max_size };
+    pub fn set_max_size(&mut self, new_max_size: usize) {
+        self.max_size = if new_max_size < Log::MIN_MAX_SIZE { Log::MIN_MAX_SIZE } else { new_max_size };
     }
 
-    pub fn set_log_to_stderr(&self, log_to_stderr: bool) {
-        self.inner.lock().unwrap().log_to_stderr = log_to_stderr;
+    pub fn set_log_to_stderr(&mut self, log_to_stderr: bool) {
+        self.log_to_stderr = log_to_stderr;
     }
 
-    pub fn set_debug(&self, debug: bool) {
-        self.inner.lock().unwrap().debug = debug;
+    pub fn set_debug(&mut self, debug: bool) {
+        self.debug = debug;
     }
 
-    fn log_internal(&self, l: &mut LogIntl, s: &str, pfx: &'static str) {
+    fn log_internal(&mut self, pfx: &str, s: &str) {
         if !s.is_empty() {
             let log_line = format!("{}[{}] {}{}\n", l.prefix.as_str(), chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string(), pfx, s);
-            if !l.path.is_empty() {
-                if l.file.is_none() {
-                    let f = OpenOptions::new().read(true).write(true).create(true).open(l.path.as_str());
+            if !self.path.is_empty() {
+                if self.file.is_none() {
+                    let f = OpenOptions::new().read(true).write(true).create(true).open(self.path.as_str());
                     if f.is_err() {
                         return;
                     }
@@ -75,60 +76,57 @@ impl Log {
                     if eof.is_err() {
                         return;
                     }
-                    l.cur_size = eof.unwrap();
-                    l.file = Some(f);
+                    self.cur_size = eof.unwrap();
+                    self.file = Some(f);
                 }
 
-                if l.max_size > 0 && l.cur_size > l.max_size as u64 {
-                    l.file = None;
-                    l.cur_size = 0;
+                if self.max_size > 0 && self.cur_size > self.max_size as u64 {
+                    self.file = None;
+                    self.cur_size = 0;
 
-                    let mut old_path = l.path.clone();
+                    let mut old_path = self.path.clone();
                     old_path.push_str(".old");
                     let _ = std::fs::remove_file(old_path.as_str());
-                    let _ = std::fs::rename(l.path.as_str(), old_path.as_str());
-                    let _ = std::fs::remove_file(l.path.as_str()); // should fail
+                    let _ = std::fs::rename(self.path.as_str(), old_path.as_str());
+                    let _ = std::fs::remove_file(self.path.as_str()); // should fail
 
-                    let f = OpenOptions::new().read(true).write(true).create(true).open(l.path.as_str());
+                    let f = OpenOptions::new().read(true).write(true).create(true).open(self.path.as_str());
                     if f.is_err() {
                         return;
                     }
-                    l.file = Some(f.unwrap());
+                    self.file = Some(f.unwrap());
                 }
 
-                let f = l.file.as_mut().unwrap();
+                let f = self.file.as_mut().unwrap();
                 let e = f.write_all(log_line.as_bytes());
                 if e.is_err() {
                     eprintln!("ERROR: I/O error writing to log: {}", e.err().unwrap().to_string());
-                    l.file = None;
+                    self.file = None;
                 } else {
                     let _ = f.flush();
-                    l.cur_size += log_line.len() as u64;
+                    self.cur_size += log_line.len() as u64;
                 }
             }
 
-            if l.log_to_stderr {
+            if self.log_to_stderr {
                 let _ = stderr().write_all(log_line.as_bytes());
             }
         }
     }
 
-    pub fn log<S: AsRef<str>>(&self, s: S) {
-        let mut l = self.inner.lock().unwrap();
-        self.log_internal(&mut (*l), s.as_ref(), "");
+    pub fn log<S: AsRef<str>>(&mut self, s: S) {
+        self.log_internal("", s.as_ref());
     }
 
-    pub fn debug<S: AsRef<str>>(&self, s: S) {
-        let mut l = self.inner.lock().unwrap();
-        if l.debug {
-            self.log_internal(&mut (*l), s.as_ref(), "DEBUG: ");
+    pub fn debug<S: AsRef<str>>(&mut self, s: S) {
+        if self.debug {
+            self.log_internal("DEBUG: ", s.as_ref());
         }
     }
 
-    pub fn fatal<S: AsRef<str>>(&self, s: S) {
-        let mut l = self.inner.lock().unwrap();
+    pub fn fatal<S: AsRef<str>>(&mut self, s: S) {
         let ss = s.as_ref();
-        self.log_internal(&mut (*l), ss, "FATAL: ");
+        self.log_internal("FATAL: ", ss);
         eprintln!("FATAL: {}", ss);
     }
 }
@@ -136,18 +134,16 @@ impl Log {
 #[macro_export]
 macro_rules! l(
     ($logger:expr, $($arg:tt)*) => {
-        $logger.log(format!($($arg)*))
+        $logger.lock().log(format!($($arg)*))
     }
 );
 
 #[macro_export]
 macro_rules! d(
     ($logger:expr, $($arg:tt)*) => {
-        $logger.debug(format!($($arg)*))
+        $logger.lock().debug(format!($($arg)*))
     }
 );
-
-unsafe impl Sync for Log {}
 
 /*
 #[cfg(test)]

@@ -6,33 +6,26 @@
  * https://www.zerotier.com/
  */
 
-mod api;
-mod commands;
 mod fastudpsocket;
 mod localconfig;
 mod getifaddrs;
 #[macro_use]
 mod log;
 mod store;
-mod network;
 mod vnic;
 mod service;
 mod utils;
-mod httplistener;
-mod httpclient;
 
 use std::io::Write;
-use std::sync::Arc;
 use std::str::FromStr;
 
 use clap::{App, Arg, ArgMatches, ErrorKind};
 
-use crate::store::Store;
+use zerotier_network_hypervisor::{VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION};
 
 pub const HTTP_API_OBJECT_SIZE_LIMIT: usize = 131072;
 
 fn make_help(long_help: bool) -> String {
-    let ver = zerotier_core::version();
     format!(r###"ZeroTier Network Hypervisor Service Version {}.{}.{}
 (c)2013-2021 ZeroTier, Inc.
 Licensed under the ZeroTier BSL (see LICENSE.txt)
@@ -82,12 +75,13 @@ Common Operations:
 · join <network>                           Join a virtual network
 · leave <network>                          Leave a virtual network
 {}"###,
-            ver.0, ver.1, ver.2, if long_help {
+            VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION,
+            if long_help {
             r###"
 Advanced Operations:
 
-  service                                  Start node
-                                           (usually run by service manager)
+  service                                  Start local service
+                                           (usually not invoked manually)
 
   controller <command> [option]
 ·   list                                   List networks on controller
@@ -112,59 +106,17 @@ Advanced Operations:
         } else { "" })
 }
 
-pub(crate) fn print_help(long_help: bool) {
+pub fn print_help(long_help: bool) {
     let h = make_help(long_help);
     let _ = std::io::stdout().write_all(h.as_bytes());
 }
 
-pub(crate) fn parse_bool(v: &str) -> Result<bool, String> {
-    if !v.is_empty() {
-        match v.chars().next().unwrap() {
-            'y' | 'Y' | '1' | 't' | 'T' => { return Ok(true); }
-            'n' | 'N' | '0' | 'f' | 'F' => { return Ok(false); }
-            _ => {}
-        }
-    }
-    Err(format!("invalid boolean value: '{}'", v))
-}
-
-#[inline(always)]
-fn is_valid_bool(v: String) -> Result<(), String> {
-    parse_bool(v.as_str()).map(|_| ())
-}
-
-fn is_valid_port(v: String) -> Result<(), String> {
-    let i = u16::from_str(v.as_str()).unwrap_or(0);
-    if i >= 1 {
-        return Ok(());
-    }
-    Err(format!("invalid TCP/IP port number: {}", v))
-}
-
-fn make_store(cli_args: &ArgMatches) -> Arc<Store> {
-    let zerotier_path = cli_args.value_of("path").map_or_else(|| unsafe { zerotier_core::cstr_to_string(osdep::platformDefaultHomePath(), -1) }, |ztp| ztp.to_string());
-    let store = Store::new(zerotier_path.as_str(), cli_args.value_of("token_path").map_or(None, |tp| Some(tp.to_string())), cli_args.value_of("token").map_or(None, |tok| Some(tok.trim().to_string())));
-    if store.is_err() {
-        eprintln!("FATAL: error accessing directory '{}': {}", zerotier_path, store.err().unwrap().to_string());
-        std::process::exit(1);
-    }
-    Arc::new(store.unwrap())
-}
-
-#[derive(Clone)]
-pub(crate) struct GlobalFlags {
+pub struct GlobalCommandLineFlags {
     pub json_output: bool,
 }
 
-#[inline(always)]
-fn get_global_flags(cli_args: &ArgMatches) -> GlobalFlags {
-    GlobalFlags {
-        json_output: cli_args.is_present("json")
-    }
-}
-
 fn main() {
-    let cli_args = {
+    let cli_args = Box::new({
         let help = make_help(false);
         let args = App::new("zerotier")
             .arg(Arg::with_name("json").short("j"))
@@ -176,18 +128,18 @@ fn main() {
             .subcommand(App::new("status"))
             .subcommand(App::new("set")
                 .subcommand(App::new("port")
-                    .arg(Arg::with_name("port#").index(1).validator(is_valid_port)))
+                    .arg(Arg::with_name("port#").index(1).validator(utils::is_valid_port)))
                 .subcommand(App::new("secondaryport")
-                    .arg(Arg::with_name("port#").index(1).validator(is_valid_port)))
+                    .arg(Arg::with_name("port#").index(1).validator(utils::is_valid_port)))
                 .subcommand(App::new("blacklist")
                     .subcommand(App::new("cidr")
                         .arg(Arg::with_name("ip_bits").index(1))
-                        .arg(Arg::with_name("boolean").index(2).validator(is_valid_bool)))
+                        .arg(Arg::with_name("boolean").index(2).validator(utils::is_valid_bool)))
                     .subcommand(App::new("if")
                         .arg(Arg::with_name("prefix").index(1))
-                        .arg(Arg::with_name("boolean").index(2).validator(is_valid_bool))))
+                        .arg(Arg::with_name("boolean").index(2).validator(utils::is_valid_bool))))
                 .subcommand(App::new("portmap")
-                    .arg(Arg::with_name("boolean").index(1).validator(is_valid_bool))))
+                    .arg(Arg::with_name("boolean").index(1).validator(utils::is_valid_bool))))
             .subcommand(App::new("peer")
                 .subcommand(App::new("show")
                     .arg(Arg::with_name("address").index(1).required(true)))
@@ -252,6 +204,10 @@ fn main() {
             std::process::exit(1);
         }
         args
+    });
+
+    let global_cli_flags = GlobalCommandLineFlags {
+        json_output: cli_args.is_present("json")
     };
 
     std::process::exit({
@@ -264,28 +220,23 @@ fn main() {
                 print_help(true);
                 0
             }
-            ("oldhelp", None) => {
-                // TODO
-                0
-            }
+            ("oldhelp", None) => todo!(),
             ("version", None) => {
-                let ver = zerotier_core::version();
-                println!("{}.{}.{}", ver.0, ver.1, ver.2);
+                println!("{}.{}.{}", VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION);
                 0
             }
-            ("status", None) => crate::httpclient::run_command(make_store(&cli_args), get_global_flags(&cli_args), crate::commands::status::run),
-            ("set", Some(sub_cli_args)) => { 0 }
-            ("peer", Some(sub_cli_args)) => { 0 }
-            ("network", Some(sub_cli_args)) => { 0 }
-            ("join", Some(sub_cli_args)) => { 0 }
-            ("leave", Some(sub_cli_args)) => { 0 }
+            ("status", None) => todo!(),
+            ("set", Some(sub_cli_args)) => todo!(),
+            ("peer", Some(sub_cli_args)) => todo!(),
+            ("network", Some(sub_cli_args)) => todo!(),
+            ("join", Some(sub_cli_args)) => todo!(),
+            ("leave", Some(sub_cli_args)) => todo!(),
             ("service", None) => {
-                let store = make_store(&cli_args);
                 drop(cli_args); // free no longer needed memory before entering service
-                service::run(store)
+                service::run()
             }
-            ("controller", Some(sub_cli_args)) => { 0 }
-            ("identity", Some(sub_cli_args)) => crate::commands::identity::run(sub_cli_args),
+            ("controller", Some(sub_cli_args)) => todo!(),
+            ("identity", Some(sub_cli_args)) => todo!(),
             _ => {
                 print_help(false);
                 1

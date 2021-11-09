@@ -14,7 +14,7 @@ pub mod rootset;
 #[allow(unused)]
 pub(crate) mod protocol;
 pub(crate) mod buffer;
-pub(crate) mod node;
+pub(crate) mod vl1node;
 pub(crate) mod path;
 pub(crate) mod peer;
 pub(crate) mod dictionary;
@@ -32,4 +32,4 @@ pub use dictionary::Dictionary;
 pub use inetaddress::InetAddress;
 pub use peer::Peer;
 pub use path::Path;
-pub use node::{PacketBuffer, PacketBufferPool, PacketBufferFactory};
+pub use vl1node::{PacketBuffer, PacketBufferPool, PacketBufferFactory, VL1CallerInterface};

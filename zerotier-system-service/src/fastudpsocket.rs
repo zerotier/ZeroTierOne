@@ -12,7 +12,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use num_traits::cast::AsPrimitive;
 
-use zerotier_network_hypervisor::vl1::{InetAddress, PacketBuffer, PacketBufferPool};
+use zerotier_network_hypervisor::vl1::InetAddress;
+use zerotier_network_hypervisor::{PacketBuffer, PacketBufferPool};
 
 /*
  * This is a threaded UDP socket listener for high performance. The fastest way to receive UDP
@@ -280,9 +281,8 @@ impl Drop for FastUDPSocket {
 mod tests {
     use std::sync::atomic::{AtomicU32, Ordering};
 
-    use zerotier_network_hypervisor::vl1::{PacketBuffer, PacketBufferPool, PacketBufferFactory};
-
     use crate::fastudpsocket::*;
+    use zerotier_network_hypervisor::{PacketBufferPool, PacketBufferFactory, PacketBuffer};
 
     #[test]
     fn test_udp_bind_and_transfer() {
