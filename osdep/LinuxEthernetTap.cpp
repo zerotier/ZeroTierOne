@@ -205,6 +205,16 @@ LinuxEthernetTap::LinuxEthernetTap(
 			return;
 		}
 
+		ifr.ifr_ifru.ifru_hwaddr.sa_family = ARPHRD_ETHER;
+		_mac.copyTo(ifr.ifr_ifru.ifru_hwaddr.sa_data,6);
+		if (ioctl(sock,SIOCSIFHWADDR,(void *)&ifr) < 0) {
+			::close(sock);
+			printf("WARNING: ioctl() failed setting up Linux tap device (set MAC)\n");
+			return;
+		}
+
+		usleep(100000);
+
 		ifr.ifr_flags |= IFF_MULTICAST;
 		ifr.ifr_flags |= IFF_UP;
 		if (ioctl(sock,SIOCSIFFLAGS,(void *)&ifr) < 0) {
@@ -213,11 +223,7 @@ LinuxEthernetTap::LinuxEthernetTap(
 			return;
 		}
 
-		// Some kernel versions seem to require you to yield while the device comes up
-		// before they will accept MTU and MAC. For others it doesn't matter, but is
-		// harmless. This was moved to the worker thread though so as not to block the
-		// main ZeroTier loop.
-		usleep(200000);
+		usleep(100000);
 
 		ifr.ifr_ifru.ifru_hwaddr.sa_family = ARPHRD_ETHER;
 		_mac.copyTo(ifr.ifr_ifru.ifru_hwaddr.sa_data,6);
