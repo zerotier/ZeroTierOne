@@ -1,7 +1,9 @@
 ZeroTier Release Notes
 ======
-# 2021-11-00 -- Version 1.8.2
+# 2021-11-08 -- Version 1.8.2
+
  * Fix multicast on linux.
+ * Update build flags to possibly support MacOS older than 10.14, but more work needs to be done.
 
 # 2021-10-28 -- Version 1.8.1
 
