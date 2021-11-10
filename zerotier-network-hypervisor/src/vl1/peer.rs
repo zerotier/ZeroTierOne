@@ -23,7 +23,7 @@ use zerotier_core_crypto::random::next_u64_secure;
 use zerotier_core_crypto::salsa::Salsa;
 use zerotier_core_crypto::secret::Secret;
 
-use crate::{VERSION_MAJOR, VERSION_MINOR, VERSION_PROTO, VERSION_REVISION};
+use crate::{VERSION_MAJOR, VERSION_MINOR, VERSION_PROTO, VERSION_REVISION, PacketBuffer};
 use crate::defaults::UDP_DEFAULT_MTU;
 use crate::util::pool::{Pool, PoolFactory};
 use crate::vl1::{Dictionary, Endpoint, Identity, InetAddress, Path};

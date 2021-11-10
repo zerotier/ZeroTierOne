@@ -29,7 +29,8 @@ struct PoolInner<O, F: PoolFactory<O>>(F, Mutex<Vec<NonNull<PoolEntry<O, F>>>>);
 /// When this is dropped the object is returned to the pool or if the pool or is
 /// dropped if the pool has been dropped. There is also an into_raw() and from_raw()
 /// functionality that allows conversion to/from naked pointers to O for
-/// interoperation with C/C++ APIs.
+/// interoperation with C/C++ APIs. This in addition to being as slim as possible is
+/// why we implemented our own pool.
 ///
 /// Note that pooled objects are not clonable. If you want to share them use Rc<>
 /// or Arc<>.
