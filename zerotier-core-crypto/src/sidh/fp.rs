@@ -95,6 +95,7 @@ fn mul(multiplier: &u32, multiplicant: &u32, uv: &mut [u32]) {
     digit_x_digit(multiplier, multiplicant, uv);
 }
 
+#[inline(always)]
 fn addc(carry_in: &u32, addend1: &u32, addend2: &u32) -> (u32, u32) {
     let temp = addend1.wrapping_add(*carry_in);
     let sum = addend2.wrapping_add(temp);
@@ -102,6 +103,7 @@ fn addc(carry_in: &u32, addend1: &u32, addend2: &u32) -> (u32, u32) {
     (carry_out, sum)
 }
 
+#[inline(always)]
 fn subc(borrow_in: &u32, minuend: &u32, subtrahend: &u32) -> (u32, u32) {
     let temp = minuend.wrapping_sub(*subtrahend);
     let borrow = (is_digit_lessthan_ct(minuend, subtrahend)) | (borrow_in & is_digit_zero_ct(&temp));
@@ -110,6 +112,7 @@ fn subc(borrow_in: &u32, minuend: &u32, subtrahend: &u32) -> (u32, u32) {
     (borrow_out, difference)
 }
 
+#[inline(always)]
 pub fn fpadd751(x: &Fp751Element, y: &Fp751Element, z: &mut Fp751Element) {
     let mut carry: u32 = 0;
 
@@ -129,6 +132,7 @@ pub fn fpadd751(x: &Fp751Element, y: &Fp751Element, z: &mut Fp751Element) {
     }
 }
 
+#[inline(always)]
 pub fn fpsub751(x: &Fp751Element, y: &Fp751Element, z: &mut Fp751Element) {
     let mut borrow: u32 = 0;
 
@@ -234,6 +238,7 @@ pub fn rdc751(x: &Fp751X2, z: &mut Fp751Element) {
     z.0[FP751_NUM_WORDS-1] = v;
 }
 
+#[inline(always)]
 pub fn srdc751(x: &mut Fp751Element) {
     let mut borrow: u32 = 0;
 
@@ -248,6 +253,7 @@ pub fn srdc751(x: &mut Fp751Element) {
     }
 }
 
+#[inline(always)]
 pub fn mp_add751(x: &Fp751Element, y: &Fp751Element, z: &mut Fp751Element) {
     let mut carry: u32 = 0;
 
@@ -256,6 +262,7 @@ pub fn mp_add751(x: &Fp751Element, y: &Fp751Element, z: &mut Fp751Element) {
     }
 }
 
+#[inline(always)]
 pub fn mp_add751x2(x: &Fp751X2, y: &Fp751X2, z: &mut Fp751X2) {
     let mut carry: u32 = 0;
 
@@ -264,6 +271,7 @@ pub fn mp_add751x2(x: &Fp751X2, y: &Fp751X2, z: &mut Fp751X2) {
     }
 }
 
+#[inline(always)]
 pub fn mp_sub751x2(x: &Fp751X2, y: &Fp751X2, z: &mut Fp751X2) {
     let mut borrow: u32 = 0;
 
@@ -278,6 +286,7 @@ pub fn mp_sub751x2(x: &Fp751X2, y: &Fp751X2, z: &mut Fp751X2) {
     }
 }
 
+#[inline(always)]
 pub fn checklt238(scalar: &[u8; 48], result: &mut u32) {
     let three238: [u32; 12] = [0x828384f8, 0xedcd718a, 0xd4427a14, 0x733b35bf, 0x94d7cf38, 0xf88229cf, 0xc7c2ad6, 0x63c56c99, 0x8f4222c7, 0xb858a87e, 0xb525eaf5, 0x254c9c6];
     let mut scalar_u32 = [0u32; 12];
@@ -300,6 +309,7 @@ pub fn checklt238(scalar: &[u8; 48], result: &mut u32) {
     *result = mask;
 }
 
+#[inline(always)]
 pub fn mulby3(scalar: &mut [u8; 48]) {
     let mut scalar_u32 = [0u32; 12];
 
@@ -334,6 +344,7 @@ pub struct Fp751Element(pub (crate) [u32; FP751_NUM_WORDS]);
 pub struct Fp751ElementDist;
 
 impl ConditionallySelectable for Fp751Element {
+    #[inline(always)]
     fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
         let mut bytes = [0_u32; FP751_NUM_WORDS];
         for i in 0..FP751_NUM_WORDS {
@@ -342,6 +353,7 @@ impl ConditionallySelectable for Fp751Element {
         Fp751Element(bytes)
     }
 
+    #[inline(always)]
     fn conditional_assign(&mut self, f: &Self, choice: Choice) {
         let mask = ((choice.unwrap_u8() as i32).neg()) as u32;
         for i in 0..FP751_NUM_WORDS {
@@ -389,6 +401,7 @@ impl Fp751Element {
     pub fn zero() -> Fp751Element {
         Fp751Element([0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0])
     }
+
     /// Given an `Fp751Element` in Montgomery form, convert to little-endian bytes.
     pub fn to_bytes(&self) -> [u8; 94] {
         let mut bytes = [0u8; 94];
@@ -412,6 +425,7 @@ impl Fp751Element {
         }
         bytes
     }
+
     /// Read an `Fp751Element` from little-endian bytes and convert to Montgomery form.
     pub fn from_bytes(bytes: &[u8]) -> Fp751Element {
         assert!(bytes.len() >= 94, "Too short input to Fp751Element from_bytes, expected 94 bytes");

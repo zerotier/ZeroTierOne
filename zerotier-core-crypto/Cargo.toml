@@ -5,6 +5,12 @@ edition = "2018"
 license = "MPL-2.0"
 authors = ["ZeroTier, Inc. <contact@zerotier.com>", "Adam Ierymenko <adam.ierymenko@zerotier.com>"]
 
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = 'abort'
+
 [dependencies]
 rand_core = "0.5.0"
 aes-gmac-siv = { path = "../aes-gmac-siv" }
