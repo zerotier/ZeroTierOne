@@ -410,6 +410,8 @@ pub fn generate_bob_keypair<R: RngCore + CryptoRng>(rng: &mut R) -> (SIDHPublicK
 #[cfg(test)]
 mod test {
     use super::*;
+    #[allow(unused_imports)]
+    use std::time::SystemTime;
 
     // Perform Alice's (2-isogeny) key generation, using the slow but simple multiplication-based strategy.
     //
@@ -572,11 +574,19 @@ mod test {
     #[test]
     fn ephemeral_shared_secret() {
         fn shared_secrets_match(alice_secret: SIDHSecretKeyAlice, bob_secret: SIDHSecretKeyBob) -> bool {
+            let start = SystemTime::now();
             let alice_public = alice_secret.public_key();
+            println!("test and bench: generate alice_public from alice_secret: {}ms", SystemTime::now().duration_since(start).unwrap().as_secs_f64() * 1000.0);
+            let start = SystemTime::now();
             let bob_public = bob_secret.public_key();
+            println!("test and bench: generate bob_public from bob_secret: {}ms", SystemTime::now().duration_since(start).unwrap().as_secs_f64() * 1000.0);
 
+            let start = SystemTime::now();
             let alice_shared_secret = alice_secret.shared_secret(&bob_public);
+            println!("test and bench: generate alice_shared_secret: {}ms", SystemTime::now().duration_since(start).unwrap().as_secs_f64() * 1000.0);
+            let start = SystemTime::now();
             let bob_shared_secret = bob_secret.shared_secret(&alice_public);
+            println!("test and bench: generate bob_shared_secret: {}ms", SystemTime::now().duration_since(start).unwrap().as_secs_f64() * 1000.0);
 
             alice_shared_secret.iter().zip(bob_shared_secret.iter()).all(|(a, b)| a == b)
         }
