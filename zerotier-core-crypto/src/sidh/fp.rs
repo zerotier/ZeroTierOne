@@ -110,7 +110,6 @@ fn subc(borrow_in: &u32, minuend: &u32, subtrahend: &u32) -> (u32, u32) {
     (borrow_out, difference)
 }
 
-#[inline]
 pub fn fpadd751(x: &Fp751Element, y: &Fp751Element, z: &mut Fp751Element) {
     let mut carry: u32 = 0;
 
@@ -130,7 +129,6 @@ pub fn fpadd751(x: &Fp751Element, y: &Fp751Element, z: &mut Fp751Element) {
     }
 }
 
-#[inline]
 pub fn fpsub751(x: &Fp751Element, y: &Fp751Element, z: &mut Fp751Element) {
     let mut borrow: u32 = 0;
 
@@ -236,7 +234,6 @@ pub fn rdc751(x: &Fp751X2, z: &mut Fp751Element) {
     z.0[FP751_NUM_WORDS-1] = v;
 }
 
-#[inline(always)]
 pub fn srdc751(x: &mut Fp751Element) {
     let mut borrow: u32 = 0;
 
@@ -251,7 +248,6 @@ pub fn srdc751(x: &mut Fp751Element) {
     }
 }
 
-#[inline(always)]
 pub fn mp_add751(x: &Fp751Element, y: &Fp751Element, z: &mut Fp751Element) {
     let mut carry: u32 = 0;
 
@@ -260,7 +256,6 @@ pub fn mp_add751(x: &Fp751Element, y: &Fp751Element, z: &mut Fp751Element) {
     }
 }
 
-#[inline(always)]
 pub fn mp_add751x2(x: &Fp751X2, y: &Fp751X2, z: &mut Fp751X2) {
     let mut carry: u32 = 0;
 
