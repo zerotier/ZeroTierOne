@@ -9,16 +9,18 @@
 //! This module contains internal isogeny representation and operations 
 //! for SIDH, which is not part of the public API.
 
-use crate::sidh::field::ExtensionFieldElement;
-use crate::sidh::curve::{ProjectiveCurveParameters, ProjectivePoint};
+use crate::sidhp751::field::ExtensionFieldElement;
+use crate::sidhp751::curve::{ProjectiveCurveParameters, ProjectivePoint};
 
 /// Represents a 3-isogeny phi, holding the data necessary to evaluate phi.
+#[allow(non_snake_case)]
 #[derive(Copy, Clone)]
 pub struct ThreeIsogeny {
     pub X: ExtensionFieldElement,
     pub Z: ExtensionFieldElement,
 }
 
+#[allow(non_snake_case)]
 impl ThreeIsogeny {
     /// Given a three-torsion point `x3 = x(P_3)` on the curve `E_(A:C)`, construct the
     /// three-isogeny `phi : E_(A:C) -> E_(A:C)/<P_3> = E_(A':C')`.
@@ -45,6 +47,7 @@ impl ThreeIsogeny {
 
         (codomain, isogeny)
     }
+
     /// Given a 3-isogeny phi and a point `xP = x(P)`, compute `x(Q)`, the x-coordinate
     /// of the image `Q = phi(P)` of `P` under `phi : E_(A:C) -> E_(A':C')`.
     ///
@@ -72,6 +75,7 @@ impl ThreeIsogeny {
 /// Represents a 4-isogeny phi, holding the data necessary to evaluate phi.
 //
 // See compute_four_isogeny for more details.
+#[allow(non_snake_case)]
 #[derive(Copy, Clone)]
 pub struct FourIsogeny {
     pub Xsq_plus_Zsq : ExtensionFieldElement,
@@ -81,6 +85,7 @@ pub struct FourIsogeny {
     pub Zpow4        : ExtensionFieldElement,
 }
 
+#[allow(non_snake_case)]
 impl FourIsogeny {
     /// Given a four-torsion point `x4 = x(P_4)` on the curve `E_(A:C)`, compute the
     /// coefficients of the codomain `E_(A':C')` of the four-isogeny `phi : E_(A:C) ->
@@ -118,6 +123,7 @@ impl FourIsogeny {
 
         (codomain, isogeny)
     }
+
     /// Given a 4-isogeny phi and a point `xP = x(P)`, compute `x(Q)`, the x-coordinate
     /// of the image `Q = phi(P)` of `P` under `phi : E_(A:C) -> E_(A':C')`.
     //
@@ -160,12 +166,14 @@ impl FourIsogeny {
 /// Represents a 4-isogeny phi. 
 //
 // See compute_four_isogeny for details.
+#[allow(non_snake_case)]
 #[derive(Copy, Clone)]
 pub struct FirstFourIsogeny {
     pub A: ExtensionFieldElement,
     pub C: ExtensionFieldElement,
 }
 
+#[allow(non_snake_case)]
 impl FirstFourIsogeny {
     /// Compute the "first" four-isogeny from the given curve. 
     //
@@ -183,6 +191,7 @@ impl FirstFourIsogeny {
 
         (codomain, isogeny)
     }
+
     /// Given a 4-isogeny phi and a point `xP = x(P)`, compute `x(Q)`, the x-coordinate
     /// of the image `Q = phi(P)` of `P` under `phi : E_(A:C) -> E_(A':C')`.
     //
@@ -210,10 +219,11 @@ impl FirstFourIsogeny {
     }
 }
 
+#[allow(non_snake_case)]
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::sidh::fp::Fp751Element;
+    use crate::sidhp751::fp::Fp751Element;
 
     // Test the first four-isogeny from the base curve E_0(F_{p^2}).
     #[test]

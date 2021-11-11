@@ -6,11 +6,11 @@
 // - Erkan Tairi <erkan.tairi@gmail.com>
 //
 
-use crate::sidh::field::ExtensionFieldElement;
-use crate::sidh::curve::{ProjectiveCurveParameters, ProjectivePoint};
-use crate::sidh::isogeny::*;
-use crate::sidh::constants::*;
-use crate::sidh::fp::*;
+use crate::sidhp751::field::ExtensionFieldElement;
+use crate::sidhp751::curve::{ProjectiveCurveParameters, ProjectivePoint};
+use crate::sidhp751::isogeny::*;
+use crate::sidhp751::constants::*;
+use crate::sidhp751::fp::*;
 #[allow(unused_imports)]
 use crate::random::SecureRandom;
 
@@ -33,7 +33,6 @@ pub const SHARED_SECRET_SIZE: usize = 188;
 
 const MAX_INT_POINTS_ALICE: usize = 8;
 const MAX_INT_POINTS_BOB: usize = 10;
-
 
 const MAX_ALICE: usize = 185;
 /// Alice's isogeny strategy.
@@ -66,6 +65,7 @@ pub const BOB_ISOGENY_STRATEGY: [u8; MAX_BOB] = [0, 1, 1, 2, 2, 2, 3, 3, 4, 4, 4
 	        97, 97];
 
 /// Alice's public key.
+#[allow(non_snake_case)]
 #[derive(Copy, Clone)]
 pub struct SIDHPublicKeyAlice {
     pub affine_xP  : ExtensionFieldElement,
@@ -75,6 +75,7 @@ pub struct SIDHPublicKeyAlice {
 
 impl SIDHPublicKeyAlice {
     /// Read a public key from a byte slice. The input must be at least 564 bytes long.
+    #[allow(non_snake_case)]
     pub fn from_bytes(bytes: &[u8]) -> SIDHPublicKeyAlice {
         assert!(bytes.len() >= 564, "Too short input to SIDH public key from_bytes, expected 564 bytes");
         let affine_xP = ExtensionFieldElement::from_bytes(&bytes[0..188]);
@@ -93,6 +94,7 @@ impl SIDHPublicKeyAlice {
 }
 
 /// Bob's public key.
+#[allow(non_snake_case)]
 #[derive(Copy, Clone)]
 pub struct SIDHPublicKeyBob {
     pub affine_xP  : ExtensionFieldElement,
@@ -102,6 +104,7 @@ pub struct SIDHPublicKeyBob {
 
 impl SIDHPublicKeyBob {
     /// Read a public key from a byte slice. The input must be at least 564 bytes long.
+    #[allow(non_snake_case)]
     pub fn from_bytes(bytes: &[u8]) -> SIDHPublicKeyBob {
         assert!(bytes.len() >= 564, "Too short input to SIDH public key from_bytes, expected 564 bytes");
         let affine_xP = ExtensionFieldElement::from_bytes(&bytes[0..188]);
@@ -142,6 +145,7 @@ impl Arbitrary for SIDHSecretKeyAlice {
 
 impl SIDHSecretKeyAlice {
     /// Compute the corresponding public key for the given secret key.
+    #[allow(non_snake_case)]
     pub fn public_key(&self) -> SIDHPublicKeyAlice {
         let mut xP = ProjectivePoint::from_affine_prime_field(&AFFINE_X_PB);  // = ( x_P : 1) = x(P_B)
         let mut xQ = ProjectivePoint::from_affine_prime_field(&AFFINE_X_PB);  //
@@ -199,7 +203,9 @@ impl SIDHSecretKeyAlice {
 
         SIDHPublicKeyAlice{ affine_xP, affine_xQ, affine_xQmP }
     }
+
     /// Compute (Alice's view of) a shared secret using Alice's secret key and Bob's public key.
+    #[allow(non_snake_case)]
     pub fn shared_secret(&self, bob_public: &SIDHPublicKeyBob) -> [u8; SHARED_SECRET_SIZE] {
         let current_curve = ProjectiveCurveParameters::recover_curve_parameters(&bob_public.affine_xP, &bob_public.affine_xQ, &bob_public.affine_xQmP);
         let xP = ProjectivePoint::from_affine(&bob_public.affine_xP);
@@ -264,6 +270,7 @@ impl Arbitrary for SIDHSecretKeyBob {
 
 impl SIDHSecretKeyBob {
     /// Compute the public key corresponding to the secret key.
+    #[allow(non_snake_case)]
     pub fn public_key(&self) -> SIDHPublicKeyBob {
         let mut xP = ProjectivePoint::from_affine_prime_field(&AFFINE_X_PA);  // = ( x_P : 1) = x(P_A)
         let mut xQ = ProjectivePoint::from_affine_prime_field(&AFFINE_X_PA);  //
@@ -315,7 +322,9 @@ impl SIDHSecretKeyBob {
 
         SIDHPublicKeyBob{ affine_xP, affine_xQ, affine_xQmP }
     }
+
     /// Compute (Bob's view of) a shared secret using Bob's secret key and Alice's public key.
+    #[allow(non_snake_case)]
     pub fn shared_secret(&self, alice_public: &SIDHPublicKeyAlice) -> [u8; SHARED_SECRET_SIZE] {
         let mut current_curve = ProjectiveCurveParameters::recover_curve_parameters(&alice_public.affine_xP, &alice_public.affine_xQ, &alice_public.affine_xQmP);
         let xP = ProjectivePoint::from_affine(&alice_public.affine_xP);
@@ -416,6 +425,7 @@ mod test {
     // Perform Alice's (2-isogeny) key generation, using the slow but simple multiplication-based strategy.
     //
     // This function just exists to ensure that the fast isogeny-tree strategy works correctly.
+    #[allow(non_snake_case)]
     pub fn alice_keygen_slow(secret_key: &SIDHSecretKeyAlice) -> SIDHPublicKeyAlice {
         let mut xP = ProjectivePoint::from_affine_prime_field(&AFFINE_X_PB);  // = ( x_P : 1) = x(P_B)
         let mut xQ = ProjectivePoint::from_affine_prime_field(&AFFINE_X_PB);  //
@@ -452,9 +462,11 @@ mod test {
 
         SIDHPublicKeyAlice{ affine_xP, affine_xQ, affine_xQmP }
     }
+
     // Perform Bob's (3-isogeny) key generation, using the slow but simple multiplication-based strategy.
     //
     // This function just exists to ensure that the fast isogeny-tree strategy works correctly.
+    #[allow(non_snake_case)]
     pub fn bob_keygen_slow(secret_key: &SIDHSecretKeyBob) -> SIDHPublicKeyBob {
         let mut xP = ProjectivePoint::from_affine_prime_field(&AFFINE_X_PA);  // = ( x_P : 1) = x(P_A)
         let mut xQ = ProjectivePoint::from_affine_prime_field(&AFFINE_X_PA);  //
@@ -484,9 +496,11 @@ mod test {
 
         SIDHPublicKeyBob{ affine_xP, affine_xQ, affine_xQmP }
     }
+
     // Perform Alice's key agreement, using the slow but simple multiplication-based strategy.
     //
     // This function just exists to ensure that the fast isogeny-tree strategy works correctly.
+    #[allow(non_snake_case)]
     pub fn alice_shared_secret_slow(bob_public: &SIDHPublicKeyBob, alice_secret: &SIDHSecretKeyAlice) -> [u8; SHARED_SECRET_SIZE] {
         let current_curve = ProjectiveCurveParameters::recover_curve_parameters(&bob_public.affine_xP, &bob_public.affine_xQ, &bob_public.affine_xQmP);
         let xP = ProjectivePoint::from_affine(&bob_public.affine_xP);
@@ -513,9 +527,11 @@ mod test {
         let shared_secret = j_inv.to_bytes();
         shared_secret
     }
+
     // Perform Bob's key agreement, using the slow but simple multiplication-based strategy.
     //
     // This function just exists to ensure that the fast isogeny-tree strategy works correctly.
+    #[allow(non_snake_case)]
     pub fn bob_shared_secret_slow(alice_public: &SIDHPublicKeyAlice, bob_secret: &SIDHSecretKeyBob) -> [u8; SHARED_SECRET_SIZE] {
         let mut current_curve = ProjectiveCurveParameters::recover_curve_parameters(&alice_public.affine_xP, &alice_public.affine_xQ, &alice_public.affine_xQmP);
         let xP = ProjectivePoint::from_affine(&alice_public.affine_xP);
@@ -593,6 +609,7 @@ mod test {
         QuickCheck::new().max_tests(8).quickcheck(shared_secrets_match as fn(SIDHSecretKeyAlice, SIDHSecretKeyBob) -> bool);
     }
 
+    #[allow(non_snake_case)]
     #[test]
     fn alice_keygen_fast_vs_slow() {
         // m_A = 2*randint(0,2^371)
@@ -610,6 +627,7 @@ mod test {
                 "\nExpected affine_xQmP = {:?}\nfound {:?}", fast_pubkey.affine_xQmP, slow_pubkey.affine_xQmP);
     }
 
+    #[allow(non_snake_case)]
     #[test]
     fn bob_keygen_fast_vs_slow() {
         // m_B = 3*randint(0,3^238)
@@ -627,6 +645,7 @@ mod test {
                 "\nExpected affine_xQmP = {:?}\nfound {:?}", fast_pubkey.affine_xQmP, slow_pubkey.affine_xQmP);
     }
 
+    #[allow(non_snake_case)]
     #[test]
     fn shared_secret() {
         // m_A = 2*randint(0,2^371)
@@ -653,6 +672,7 @@ mod test {
             "\nShared secret mismatch: Alice (slow) has {:?}\nBob (fast) has {:?}", &alice_shared_secret_slow[..], &bob_shared_secret_fast[..]);
     }
 
+    #[allow(non_snake_case)]
     #[test]
     fn secret_point() {
         // m_A = 2*randint(0,2^371)

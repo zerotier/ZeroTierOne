@@ -9,9 +9,9 @@
 //! This module contains internal curve representation and operations 
 //! for SIDH, which is not part of the public API.
 
-use crate::sidh::fp::Fp751Element;
-use crate::sidh::field::{PrimeFieldElement, ExtensionFieldElement};
-use crate::sidh::constants::*;
+use crate::sidhp751::fp::Fp751Element;
+use crate::sidhp751::field::{PrimeFieldElement, ExtensionFieldElement};
+use crate::sidhp751::constants::*;
 
 use std::fmt::Debug;
 use std::ops::Neg;
@@ -19,6 +19,7 @@ use subtle::{ConditionallySelectable, Choice};
 
 #[cfg(test)]
 use quickcheck::{Gen, Arbitrary};
+use std::mem::zeroed;
 
 // Macro to assign tuples, as Rust does not allow tuples as lvalue.
 macro_rules! assign{
@@ -41,17 +42,20 @@ const CONST_256: ExtensionFieldElement = ExtensionFieldElement {
 /// A point on the projective line `P^1(F_{p^2})`.
 ///
 /// This is used to work projectively with the curve coefficients.
+#[allow(non_snake_case)]
 #[derive(Copy, Clone, PartialEq)]
 pub struct ProjectiveCurveParameters {
     pub A: ExtensionFieldElement,
     pub C: ExtensionFieldElement,
 }
 
+#[allow(non_snake_case)]
 struct CachedCurveParameters {
     Aplus2C: ExtensionFieldElement,
     C4: ExtensionFieldElement,
 }
 
+#[allow(non_snake_case)]
 struct CachedTripleCurveParameters {
     Aminus2C: ExtensionFieldElement,
     C2: ExtensionFieldElement,
@@ -79,8 +83,10 @@ impl ProjectiveCurveParameters {
             C: ExtensionFieldElement::one()
         }
     }
+
     /// Recover the curve parameters from three points on the curve.
-    pub fn recover_curve_parameters(affine_xP: &ExtensionFieldElement, affine_xQ: &ExtensionFieldElement, affine_xQmP: &ExtensionFieldElement) -> 
+    #[allow(non_snake_case)]
+    pub fn recover_curve_parameters(affine_xP: &ExtensionFieldElement, affine_xQ: &ExtensionFieldElement, affine_xQmP: &ExtensionFieldElement) ->
                                 ProjectiveCurveParameters 
     {
         let mut t0 = ExtensionFieldElement::one(); // = 1
@@ -101,6 +107,7 @@ impl ProjectiveCurveParameters {
         
         ProjectiveCurveParameters{ A: a, C: c }
     }
+
     /// Compute the j-invariant of the given curve.
     pub fn j_invariant(&self) -> ExtensionFieldElement {
         let a = &self.A;
@@ -122,7 +129,9 @@ impl ProjectiveCurveParameters {
 
         v0
     }
+
     /// Compute cached parameters `A + 2C, 4C`.
+    #[allow(non_snake_case)]
     fn cached_params(&self) -> CachedCurveParameters {
         let mut Aplus2C = &self.C + &self.C; // = 2*C
         let C4 = &Aplus2C + &Aplus2C;        // = 4*C
@@ -130,7 +139,9 @@ impl ProjectiveCurveParameters {
 
         CachedCurveParameters{ Aplus2C, C4 }
     }
+
     /// Compute cached parameters `A - 2C, 2C`.
+    #[allow(non_snake_case)]
     fn cached_triple_params(&self) -> CachedTripleCurveParameters {
         let C2 = &self.C + &self.C;   // = 2*C
         let Aminus2C = &self.A - &C2; // = A -2*C
@@ -143,6 +154,7 @@ impl ProjectiveCurveParameters {
 ///
 /// This represents a point on the (Kummer line) of a Montgomery curve.  The
 /// curve is specified by a ProjectiveCurveParameters struct.
+#[allow(non_snake_case)]
 #[derive(Copy, Clone, PartialEq)]
 pub struct ProjectivePoint {
     pub X: ExtensionFieldElement,
@@ -181,9 +193,11 @@ impl Arbitrary for ProjectivePoint {
 impl ProjectivePoint {
     /// Creates a new zero `ProejctivePoint`.
     pub fn new() -> ProjectivePoint {
-        ProjectivePoint{ X: ExtensionFieldElement::zero(), Z: ExtensionFieldElement::zero() }
+        unsafe { zeroed() }
+        //ProjectivePoint{ X: ExtensionFieldElement::zero(), Z: ExtensionFieldElement::zero() }
     }
 
+    #[allow(non_snake_case)]
     pub fn from_affine_prime_field(x: &PrimeFieldElement) -> ProjectivePoint {
         let _X = ExtensionFieldElement{ A: x.A, B: ExtensionFieldElement::zero().B };
         ProjectivePoint{
@@ -203,13 +217,16 @@ impl ProjectivePoint {
         let affine_x = &self.Z.inv() * &self.X;
         affine_x
     }
+
     /// Returns true if both sides are equal. Takes variable time.
     pub fn vartime_eq(&self, _rhs: &ProjectivePoint) -> bool {
         let t0 = &self.X * &_rhs.Z;
         let t1 = &self.Z * &_rhs.X;
         t0.vartime_eq(&t1)
     }
+
     /// Given `xP = x(P), xQ = x(Q)`, and `xPmQ = x(P-Q)`, compute `xR = x(P+Q)`.
+    #[allow(non_snake_case)]
     fn add(&self, xQ: &ProjectivePoint, xPmQ: &ProjectivePoint) -> ProjectivePoint {
         let xP = *self;
         // Algorithm 1 of Costello-Smith.
@@ -225,7 +242,9 @@ impl ProjectivePoint {
 
         ProjectivePoint{ X: x, Z: z }
     }
+
     /// Given `xP = x(P)` and cached curve parameters `Aplus2C = A + 2*C, C4 = 4*C`, compute `xQ = x([2]P)`.
+    #[allow(non_snake_case)]
     fn double(&self, curve: &CachedCurveParameters) -> ProjectivePoint {
         let xP = *self;
         // Algorithm 2 of Costello-Smith, amended to work with projective curve coefficients.
@@ -243,9 +262,11 @@ impl ProjectivePoint {
         //   = ((X+Z)^2(X-Z)^2 : (4XZ((a + 2)/4) + (X-Z)^2)4XZ )
         ProjectivePoint{ X: x, Z: z }
     }
+
     /// Calculates the x-coordinate of `2P` and `P+Q` from the x-coordinate of `P, Q` and `P-Q`.
     // Params: `C4 = 4*C` and `Aplus2C = (A+2C)`
     // Cost: 8M+4S+8A in `Fp2`
+    #[allow(non_snake_case)]
     fn dbl_add(&self, xQ: &ProjectivePoint, xPmQ: &ProjectivePoint, params: &CachedCurveParameters) ->
               (ProjectivePoint, ProjectivePoint)
     {
@@ -281,17 +302,21 @@ impl ProjectivePoint {
 
         (x2P, xPaddQ)
     }
+
     /// Given the curve parameters, `xP = x(P)`, and `k >= 0`, compute `xQ = x([2^k]P)`.
+    #[allow(non_snake_case)]
     pub fn pow2k(&self, curve: &ProjectiveCurveParameters, k: u32) -> ProjectivePoint {
         let cached_params = curve.cached_params();
         let mut xQ = *self;
         for _ in 0..k { xQ = xQ.double(&cached_params); }
         xQ
     }
+
     // Uses the efficient Montgomery tripling formulas from FLOR-SIDH-x64
     // Reference: A faster SW implementation of SIDH (github.com/armfazh/flor-sidh-x64).
     /// Given `xP = x(P)` and cached tripling curve parameters `Aminus2C = A - 2*C, C2 = 2*C`, compute `xQ = x([3]P)`.
     /// Returns `xQ` to allow chaining.
+    #[allow(non_snake_case)]
     fn triple(&self, curve: &CachedTripleCurveParameters) -> ProjectivePoint {
         let xP = *self;
         let (x1, z1) = (&xP.X, &xP.Z);
@@ -319,19 +344,23 @@ impl ProjectivePoint {
 
         ProjectivePoint{ X: x, Z: z }
     }
+
     /// Given the curve parameters, `xP = x(P)`, and `k >= 0`, compute `xQ = x([3^k]P)`.
+    #[allow(non_snake_case)]
     pub fn pow3k(&self, curve: &ProjectiveCurveParameters, k: u32) -> ProjectivePoint {
         let cached_params = curve.cached_triple_params();
         let mut xQ = *self;
         for _ in 0..k { xQ = xQ.triple(&cached_params); }
         xQ
     }
+
     /// Given `x(P)` and a scalar `m` in little-endian bytes, compute `x([m]P)` using the
     /// Montgomery ladder. This is described in Algorithm 8 of Costello-Smith.
     ///
     /// This function's execution time is dependent only on the byte-length of the
     /// input scalar. All scalars of the same input length execute in uniform time.
     /// The scalar can be padded with zero bytes to ensure a uniform length.
+    #[allow(non_snake_case)]
     fn scalar_mul(&self, curve: &ProjectiveCurveParameters, scalar: &[u8]) -> ProjectivePoint {
         let xP = *self;
         let cached_params = curve.cached_params();
@@ -357,12 +386,14 @@ impl ProjectivePoint {
         let xQ = x0;
         xQ
     }
+
     /// Given `P = (x_P, y_P)` in affine coordinates, as well as projective points
     /// `x(Q), x(R) = x(P+Q)`, all in the prime-field subgroup of the starting curve
     /// `E_0(F_p)`, use the Okeya-Sakurai coordinate recovery strategy to recover `Q =
     /// (X_Q : Y_Q : Z_Q)`.
     ///
     /// This is Algorithm 5 of Costello-Smith, with the constants `a = 0, b = 1` hardcoded.
+    #[allow(non_snake_case)]
     fn okeya_sakurai_coordinate_recovery(affine_xP: &PrimeFieldElement, affine_yP: &PrimeFieldElement,
                                          xQ: &ProjectivePrimeFieldPoint, xR: &ProjectivePrimeFieldPoint) ->
                                         (PrimeFieldElement, PrimeFieldElement, PrimeFieldElement)
@@ -387,6 +418,7 @@ impl ProjectivePoint {
 
         (X_Q, Y_Q, Z_Q)
     }
+
     /// Given `x(P), x(Q), x(P-Q)`, as well as a scalar m in little-endian bytes,
     /// compute `x(P + [m]Q)` using the "three-point ladder" of de Feo, Jao, and Plut.
     ///
@@ -427,7 +459,8 @@ impl ProjectivePoint {
     //
     // return x2
     //
-    pub fn three_point_ladder(xP: &ProjectivePoint, xQ: &ProjectivePoint, xPmQ: &ProjectivePoint, 
+    #[allow(non_snake_case)]
+    pub fn three_point_ladder(xP: &ProjectivePoint, xQ: &ProjectivePoint, xPmQ: &ProjectivePoint,
                               curve: &ProjectiveCurveParameters, scalar: &[u8]) -> ProjectivePoint
     {
         let cached_params = curve.cached_params();
@@ -457,8 +490,10 @@ impl ProjectivePoint {
         let xR = x2;
         xR
     }
+
     /// Right-to-left point multiplication, which given the x-coordinate
     /// of `P, Q` and `P-Q` calculates the x-coordinate of `R=P+[k]Q`.
+    #[allow(non_snake_case)]
     pub fn right_to_left_ladder(xP: &ProjectivePoint, xQ: &ProjectivePoint, xPmQ: &ProjectivePoint,
                                 curve: &ProjectiveCurveParameters, scalar: &[u8]) -> ProjectivePoint
     {
@@ -482,8 +517,10 @@ impl ProjectivePoint {
         let xR = R1;
         xR
     }
+
     /// Given the affine x-coordinate `affine_xP` of `P`, compute the x-coordinate
     /// `x(\tau(P)-P) of \tau(P)-P`.
+    #[allow(non_snake_case)]
     pub fn distort_and_difference(affine_xP: &PrimeFieldElement) -> ProjectivePoint {
         let mut t0 = affine_xP.square();            // = x_P^2
         let t1 = &PrimeFieldElement::one() + &t0;   // = x_P^2 + 1
@@ -496,6 +533,7 @@ impl ProjectivePoint {
         let xR = ProjectivePoint{ X: x, Z: z };
         xR
     }
+
     /// Given an affine point `P = (x_P, y_P)` in the prime-field subgroup of the
     /// starting curve `E_0(F_p)`, together with a secret scalar `m`, compute `x(P+[m]Q)`,
     /// where `Q = \tau(P)` is the image of `P` under the distortion map.
@@ -589,6 +627,7 @@ impl ProjectivePoint {
     // These formulas could probably be combined with the formulas for y-recover
     // and computed more efficiently, but efficiency isn't the biggest concern
     // here, since the bulk of the cost is already in the ladder.
+    #[allow(non_snake_case)]
     pub fn secret_point(affine_xP: &PrimeFieldElement, affine_yP: &PrimeFieldElement, scalar: &[u8]) -> ProjectivePoint {
         let mut xQ = ProjectivePrimeFieldPoint::from_affine(affine_xP);
         xQ.X = (&xQ.X).neg();
@@ -653,6 +692,7 @@ impl ProjectivePoint {
 ///
 /// This represents a point on the (Kummer line) of the prime-field subgroup of
 /// the base curve `E_0(F_p)`, defined by `E_0 : y^2 = x^3 + x`.
+#[allow(non_snake_case)]
 #[derive(Copy, Clone, PartialEq)]
 struct ProjectivePrimeFieldPoint {
     X: PrimeFieldElement,
@@ -691,7 +731,8 @@ impl Arbitrary for ProjectivePrimeFieldPoint {
 impl ProjectivePrimeFieldPoint {
     /// Creates a new zero `ProjectivePrimeFieldPoint`.
     pub fn new() -> ProjectivePrimeFieldPoint {
-        ProjectivePrimeFieldPoint{ X: PrimeFieldElement::zero(), Z: PrimeFieldElement::zero() }
+        unsafe { zeroed() }
+        //ProjectivePrimeFieldPoint{ X: PrimeFieldElement::zero(), Z: PrimeFieldElement::zero() }
     }
 
     pub fn from_affine(x: &PrimeFieldElement) -> ProjectivePrimeFieldPoint {
@@ -702,17 +743,19 @@ impl ProjectivePrimeFieldPoint {
     }
 
     pub fn to_affine(&self) -> PrimeFieldElement {
-        let affine_x = &self.Z.inv() * &self.X;
-        affine_x
+        &self.Z.inv() * &self.X
     }
+
     /// Returns true if both sides are equal. Takes variable time.
     pub fn vartime_eq(&self, _rhs: &ProjectivePrimeFieldPoint) -> bool {
         let t0 = &self.X * &_rhs.Z;
         let t1 = &self.Z * &_rhs.X;
         t0.vartime_eq(&t1)
     }
+
     /// Given `xP = x(P), xQ = x(Q)`, and `xPmQ = x(P-Q)`, compute `xR = x(P+Q)`.
-    fn add(&self, xQ: &ProjectivePrimeFieldPoint, xPmQ: &ProjectivePrimeFieldPoint) -> 
+    #[allow(non_snake_case)]
+    fn add(&self, xQ: &ProjectivePrimeFieldPoint, xPmQ: &ProjectivePrimeFieldPoint) ->
            ProjectivePrimeFieldPoint
     {
         let xP = *self;
@@ -729,10 +772,12 @@ impl ProjectivePrimeFieldPoint {
 
         ProjectivePrimeFieldPoint{ X: x, Z: z }
     }
+
     /// Given `xP = x(P)` and cached curve parameter `aPlus2Over4 = (a+2)/4, compute xQ = x([2]P)`.
     //
     // Note that we don't use projective curve coefficients here because we only
     // ever use a fixed curve (in our case, the base curve E_0).
+    #[allow(non_snake_case)]
     fn double(&self, aPlus2Over4: &PrimeFieldElement) -> ProjectivePrimeFieldPoint {
         let xP = *self;
         // Algorithm 2 of Costello-Smith
@@ -747,11 +792,13 @@ impl ProjectivePrimeFieldPoint {
         //   = ((X+Z)^2(X-Z)^2 : (4XZ((a + 2)/4) + (X-Z)^2)4XZ )
         ProjectivePrimeFieldPoint{ X: x, Z: z }
     }
+
     /// Calculates the x-coordinate of `2P` and `P+Q` from the x-coordinate of `P, Q` and `P-Q`.
     // Assumptions:
     // 	  aPlus2Over2 = (A+2)/4.
     //    z(P-Q) = 1,  the Z-coordinate of P-Q is equal to 1.
     // Cost: 6M+4S+8A in Fp
+    #[allow(non_snake_case)]
     fn dbl_add(&self, xQ: &ProjectivePrimeFieldPoint, xPmQ: &ProjectivePrimeFieldPoint, aPlus2Over4: &PrimeFieldElement) ->
               (ProjectivePrimeFieldPoint, ProjectivePrimeFieldPoint)
     {
@@ -785,7 +832,8 @@ impl ProjectivePrimeFieldPoint {
 
         (x2P, xPaddQ)
     }
-    /// Given `x(P)` and a scalar m in little-endian bytes, compute `x([m]P), x([m+1]P)` 
+
+    /// Given `x(P)` and a scalar m in little-endian bytes, compute `x([m]P), x([m+1]P)`
     /// using the Montgomery ladder. This is described in Algorithm 8 of Costello-Smith.
     ///
     /// The extra value `x([m+1]P)` is returned to allow y-coordinate recovery, otherwise, 
@@ -794,6 +842,7 @@ impl ProjectivePrimeFieldPoint {
     /// This function's execution time is dependent only on the byte-length of the input
     /// scalar. All scalars of the same input length execute in uniform time.
     /// The scalar can be padded with zero bytes to ensure a uniform length.
+    #[allow(non_snake_case)]
     fn scalar_mul_prime_field(&self, aPlus2Over4: &PrimeFieldElement, scalar: &[u8]) -> (ProjectivePrimeFieldPoint, ProjectivePrimeFieldPoint)
     {
         let xP = *self;
@@ -831,6 +880,7 @@ impl ProjectivePrimeFieldPoint {
 // sage: X3, Y3, Z3 = 3*P
 // sage: m = 96550223052359874398280314003345143371473380422728857598463622014420884224892
 //
+#[allow(non_snake_case)]
 #[cfg(test)]
 mod test {
     use super::*;

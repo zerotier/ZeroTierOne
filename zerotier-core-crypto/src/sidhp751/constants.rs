@@ -6,8 +6,8 @@
 // - Erkan Tairi <erkan.tairi@gmail.com>
 //
 
-use crate::sidh::field::PrimeFieldElement;
-use crate::sidh::fp::Fp751Element;
+use crate::sidhp751::field::PrimeFieldElement;
+use crate::sidhp751::fp::Fp751Element;
 
 /// The x-coordinate of `P_A = [3^239](11, oddsqrt(11^3 + 11))` on `E_0(F_p)`.
 pub const AFFINE_X_PA: PrimeFieldElement = PrimeFieldElement{ A: Fp751Element([0x27914862, 0xd56fe526, 0x96b5baea, 0x1fad60dc, 0xbf07ab91, 0x1e137d0, 0x52161964, 0x404d3e92, 0xcd09a337, 0x3c5385e4, 0x69e4af73, 0x44764267, 0x989dfe33, 0x9790c6db, 0xd2aa8b5e, 0xe06e1c04, 0xedea73b9, 0x38c08185, 0xa4396ca6, 0xaa41f678, 0x2229e9a0, 0x92b9259b, 0x26818be0, 0x2f93]) };

@@ -8,7 +8,7 @@
 
 use crate::random::SecureRandom;
 
-use std::mem::size_of;
+use std::mem::{size_of, MaybeUninit, zeroed};
 use std::fmt::Debug;
 use std::ops::Neg;
 
@@ -40,28 +40,13 @@ const P751: [u32; FP751_NUM_WORDS] = [4294967295, 4294967295, 4294967295, 429496
 const P751P1: [u32; FP751_NUM_WORDS] = [0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 4004511744, 1241020584, 3823933061, 335006838, 3667237658, 3605784694, 139368551,	1555191624,	2237838596,	2545605734,	236097695, 3577870108, 28645];
 const P751X2: [u32; FP751_NUM_WORDS] = [4294967294,	4294967295,	4294967295,	4294967295,	4294967295,	4294967295,	4294967295,	4294967295,	4294967295,	4294967295,	4294967295,	3714056191,	2482041169,	3352898826,	670013677, 3039508020, 2916602093, 278737103, 3110383248, 180709896, 796244173,	472195391, 2860772920, 57291];
 
-// Return 1 if x != 0, and 0 otherwise.
-#[inline(always)]
-fn is_digit_nonzero_ct(x: &u32) -> u32 {
-    ((x | ((0 as u32).wrapping_sub(*x))) >> (RADIX-1)) as u32
-}
-
-// Return 1 if x = 0, and 0 otherwise.
-#[inline(always)]
-fn is_digit_zero_ct(x: &u32) -> u32 {
-    (1 ^ is_digit_nonzero_ct(x)) as u32
-}
-
-// Return 1 if x < y, and 0 otherwise.
-#[inline(always)]
-fn is_digit_lessthan_ct(x: &u32, y: &u32) -> u32 {
-    ((x ^ ((x ^ y) | ((x.wrapping_sub(*y)) ^ y))) >> (RADIX-1)) as u32
-}
-
-fn digit_x_digit(a: &u32, b: &u32, c: &mut [u32]) {
-    let sizeof_u32 = size_of::<u32>() as u32;
-    let mask_low  = <u32>::max_value() >> (sizeof_u32 * 4);
-    let mask_high = <u32>::max_value() << (sizeof_u32 * 4);
+fn digit_x_digit(a: u32, b: u32, c: &mut [u32; 2]) {
+    #[allow(non_upper_case_globals)]
+    const sizeof_u32: u32 = size_of::<u32>() as u32;
+    #[allow(non_upper_case_globals)]
+    const mask_low: u32 = <u32>::MAX >> (sizeof_u32 * 4);
+    #[allow(non_upper_case_globals)]
+    const mask_high: u32 = <u32>::MAX << (sizeof_u32 * 4);
 
     let al = a & mask_low;
     let ah = a >> (sizeof_u32 * 4);
@@ -72,78 +57,73 @@ fn digit_x_digit(a: &u32, b: &u32, c: &mut [u32]) {
     let albh = al * bh;
     let ahbl = ah * bl;
     let ahbh = ah * bh;
-    c[0] = albl & mask_low;
+    let c0 = albl & mask_low;
 
     let mut res1 = albl >> (sizeof_u32 * 4);
     let mut res2 = ahbl & mask_low;
     let mut res3 = albh & mask_low;
     let mut temp = res1 + res2 + res3;
     let mut carry = temp >> (sizeof_u32 * 4);
-    c[0] ^= temp << (sizeof_u32 * 4);
+    c[0] = c0 ^ (temp << (sizeof_u32 * 4));
 
     res1 = ahbl >> (sizeof_u32 * 4);
     res2 = albh >> (sizeof_u32 * 4);
     res3 = ahbh & mask_low;
     temp = res1 + res2 + res3 + carry;
-    c[1] = temp & mask_low;
+    let c1 = temp & mask_low;
     carry = temp & mask_high;
-    c[1] ^= (ahbh & mask_high) + carry;
+    c[1] = c1 ^ ((ahbh & mask_high) + carry);
 }
 
 #[inline(always)]
-fn mul(multiplier: &u32, multiplicant: &u32, uv: &mut [u32]) {
+fn mul(multiplier: u32, multiplicant: u32, uv: &mut [u32; 2]) {
     digit_x_digit(multiplier, multiplicant, uv);
 }
 
 #[inline(always)]
-fn addc(carry_in: &u32, addend1: &u32, addend2: &u32) -> (u32, u32) {
-    let temp = addend1.wrapping_add(*carry_in);
+fn addc(carry_in: u32, addend1: u32, addend2: u32) -> (u32, u32) {
+    //let sum = (addend1 as u64) + (addend2 as u64) + (carry_in as u64);
+    //((sum > u32::MAX as u64) as u32, sum as u32)
+    let temp = addend1.wrapping_add(carry_in);
     let sum = addend2.wrapping_add(temp);
-    let carry_out = (is_digit_lessthan_ct(&temp, carry_in)) | is_digit_lessthan_ct(&sum, &temp);
-    (carry_out, sum)
+    ((temp < carry_in) as u32 | (sum < temp) as u32, sum)
 }
 
 #[inline(always)]
-fn subc(borrow_in: &u32, minuend: &u32, subtrahend: &u32) -> (u32, u32) {
-    let temp = minuend.wrapping_sub(*subtrahend);
-    let borrow = (is_digit_lessthan_ct(minuend, subtrahend)) | (borrow_in & is_digit_zero_ct(&temp));
-    let difference = temp.wrapping_sub(*borrow_in);
-    let borrow_out = borrow;
-    (borrow_out, difference)
+fn subc(borrow_in: u32, minuend: u32, subtrahend: u32) -> (u32, u32) {
+    let temp = minuend.wrapping_sub(subtrahend);
+    let borrow = ((minuend < subtrahend) as u32) | (borrow_in & (temp == 0) as u32);
+    let difference = temp.wrapping_sub(borrow_in);
+    (borrow, difference)
 }
 
 #[inline(always)]
 pub fn fpadd751(x: &Fp751Element, y: &Fp751Element, z: &mut Fp751Element) {
     let mut carry: u32 = 0;
-
     for i in 0..FP751_NUM_WORDS {
-        assign!{(carry, z.0[i]) = addc(&carry, &x.0[i], &y.0[i])};
+        assign!{(carry, z.0[i]) = addc(carry, x.0[i], y.0[i])};
     }
-
     carry = 0;
     for i in 0..FP751_NUM_WORDS {
-        assign!{(carry, z.0[i]) = subc(&carry, &z.0[i], &P751X2[i])};
+        assign!{(carry, z.0[i]) = subc(carry, z.0[i], P751X2[i])};
     }
     let mask = (0 as u32).wrapping_sub(carry);
-
     carry = 0;
     for i in 0..FP751_NUM_WORDS {
-        assign!{(carry, z.0[i]) = addc(&carry, &z.0[i], &(P751X2[i] & mask))};
+        assign!{(carry, z.0[i]) = addc(carry, z.0[i], (P751X2[i] & mask))};
     }
 }
 
 #[inline(always)]
 pub fn fpsub751(x: &Fp751Element, y: &Fp751Element, z: &mut Fp751Element) {
     let mut borrow: u32 = 0;
-
     for i in 0..FP751_NUM_WORDS {
-        assign!{(borrow, z.0[i]) = subc(&borrow, &x.0[i], &y.0[i])};
+        assign!{(borrow, z.0[i]) = subc(borrow, x.0[i], y.0[i])};
     }
     let mask = (0 as u32).wrapping_sub(borrow);
-
     borrow = 0;
     for i in 0..FP751_NUM_WORDS {
-        assign!{(borrow, z.0[i]) = addc(&borrow, &z.0[i], &(P751X2[i] & mask))};
+        assign!{(borrow, z.0[i]) = addc(borrow, z.0[i], (P751X2[i] & mask))};
     }
 }
 
@@ -151,14 +131,15 @@ pub fn mul751(x: &Fp751Element, y: &Fp751Element, z: &mut Fp751X2) {
     let mut t: u32 = 0;
     let mut u: u32 = 0;
     let mut v: u32 = 0;
+    #[allow(non_snake_case)]
     let mut UV = [0u32; 2];
     let mut carry: u32 = 0;
 
     for i in 0..FP751_NUM_WORDS {
         for j in 0..(i+1) {
-            mul(&x.0[j], &y.0[i-j], &mut UV[..]);
-            assign!{(carry, v) = addc(&0, &UV[0], &v)};
-            assign!{(carry, u) = addc(&carry, &UV[1], &u)};
+            mul(x.0[j], y.0[i - j], &mut UV);
+            assign! {(carry, v) = addc(0, UV[0], v)};
+            assign! {(carry, u) = addc(carry, UV[1], u)};
             t += carry;
         }
         z.0[i] = v;
@@ -169,9 +150,9 @@ pub fn mul751(x: &Fp751Element, y: &Fp751Element, z: &mut Fp751X2) {
 
     for i in FP751_NUM_WORDS..(2*FP751_NUM_WORDS-1) {
         for j in (i-FP751_NUM_WORDS+1)..FP751_NUM_WORDS {
-            mul(&x.0[j], &y.0[i-j], &mut UV[..]);
-            assign!{(carry, v) = addc(&0, &UV[0], &v)};
-            assign!{(carry, u) = addc(&carry, &UV[1], &u)};
+            mul(x.0[j], y.0[i-j], &mut UV);
+            assign!{(carry, v) = addc(0, UV[0], v)};
+            assign!{(carry, u) = addc(carry, UV[1], u)};
             t += carry;
         }
         z.0[i] = v;
@@ -186,6 +167,7 @@ pub fn rdc751(x: &Fp751X2, z: &mut Fp751Element) {
     let mut t: u32 = 0;
     let mut u: u32 = 0;
     let mut v: u32 = 0;
+    #[allow(non_snake_case)]
     let mut UV = [0u32; 2];
     let mut carry: u32 = 0;
     let mut count = P751_ZERO_WORDS;
@@ -197,14 +179,14 @@ pub fn rdc751(x: &Fp751X2, z: &mut Fp751Element) {
     for i in 0..FP751_NUM_WORDS {
         for j in 0..i {
             if j < (((i+1) as u32).wrapping_sub(P751_ZERO_WORDS as u32) as usize) {
-                mul(&z.0[j], &P751P1[i-j], &mut UV[..]);
-                assign!{(carry, v) = addc(&0, &UV[0], &v)};
-                assign!{(carry, u) = addc(&carry, &UV[1], &u)};
+                mul(z.0[j], P751P1[i-j], &mut UV);
+                assign!{(carry, v) = addc(0, UV[0], v)};
+                assign!{(carry, u) = addc(carry, UV[1], u)};
                 t += carry;
             }
         }
-        assign!{(carry, v) = addc(&0, &v, &x.0[i])};
-        assign!{(carry, u) = addc(&carry, &u, &0)};
+        assign!{(carry, v) = addc(0, v, x.0[i])};
+        assign!{(carry, u) = addc(carry, u, 0)};
 
         t += carry;
         z.0[i] = v;
@@ -219,14 +201,14 @@ pub fn rdc751(x: &Fp751X2, z: &mut Fp751Element) {
         }
         for j in (i-FP751_NUM_WORDS+1)..FP751_NUM_WORDS {
             if j < (FP751_NUM_WORDS-count) {
-                mul(&z.0[j], &P751P1[i-j], &mut UV[..]);
-                assign!{(carry, v) = addc(&0, &UV[0], &v)};
-                assign!{(carry, u) = addc(&carry, &UV[1], &u)};
+                mul(z.0[j], P751P1[i-j], &mut UV);
+                assign!{(carry, v) = addc(0, UV[0], v)};
+                assign!{(carry, u) = addc(carry, UV[1], u)};
                 t += carry;
             }
         }
-        assign!{(carry, v) = addc(&0, &v, &x.0[i])};
-        assign!{(carry, u) = addc(&carry, &u, &0)};
+        assign!{(carry, v) = addc(0, v, x.0[i])};
+        assign!{(carry, u) = addc(carry, u, 0)};
 
         t += carry;
         z.0[i-FP751_NUM_WORDS] = v;
@@ -234,55 +216,49 @@ pub fn rdc751(x: &Fp751X2, z: &mut Fp751Element) {
         u = t;
         t = 0;
     }
-    assign!{(carry, v) = addc(&0, &v, &x.0[2*FP751_NUM_WORDS-1])};
+    assign!{(carry, v) = addc(0, v, x.0[2*FP751_NUM_WORDS-1])};
     z.0[FP751_NUM_WORDS-1] = v;
 }
 
 #[inline(always)]
 pub fn srdc751(x: &mut Fp751Element) {
     let mut borrow: u32 = 0;
-
     for i in 0..FP751_NUM_WORDS {
-        assign!{(borrow, x.0[i]) = subc(&borrow, &x.0[i], &P751[i])};
+        assign!{(borrow, x.0[i]) = subc(borrow, x.0[i], P751[i])};
     }
     let mask = (0 as u32).wrapping_sub(borrow);
-
     borrow = 0;
     for i in 0..FP751_NUM_WORDS {
-        assign!{(borrow, x.0[i]) = addc(&borrow, &x.0[i], &(P751[i] & mask))};
+        assign!{(borrow, x.0[i]) = addc(borrow, x.0[i], (P751[i] & mask))};
     }
 }
 
 #[inline(always)]
 pub fn mp_add751(x: &Fp751Element, y: &Fp751Element, z: &mut Fp751Element) {
     let mut carry: u32 = 0;
-
     for i in 0..FP751_NUM_WORDS {
-        assign!{(carry, z.0[i]) = addc(&carry, &x.0[i], &y.0[i])};
+        assign!{(carry, z.0[i]) = addc(carry, x.0[i], y.0[i])};
     }
 }
 
 #[inline(always)]
 pub fn mp_add751x2(x: &Fp751X2, y: &Fp751X2, z: &mut Fp751X2) {
     let mut carry: u32 = 0;
-
     for i in 0..(FP751_NUM_WORDS*2) {
-        assign!{(carry, z.0[i]) = addc(&carry, &x.0[i], &y.0[i])};
+        assign!{(carry, z.0[i]) = addc(carry, x.0[i], y.0[i])};
     }
 }
 
 #[inline(always)]
 pub fn mp_sub751x2(x: &Fp751X2, y: &Fp751X2, z: &mut Fp751X2) {
     let mut borrow: u32 = 0;
-
     for i in 0..(FP751_NUM_WORDS*2) {
-        assign!{(borrow, z.0[i]) = subc(&borrow, &x.0[i], &y.0[i])};
+        assign!{(borrow, z.0[i]) = subc(borrow, x.0[i], y.0[i])};
     }
     let mask = (0 as u32).wrapping_sub(borrow);
-
     borrow = 0;
     for i in FP751_NUM_WORDS..(FP751_NUM_WORDS*2) {
-        assign!{(borrow, z.0[i]) = addc(&borrow, &z.0[i], &(P751[i-FP751_NUM_WORDS] & mask))};
+        assign!{(borrow, z.0[i]) = addc(borrow, z.0[i], (P751[i-FP751_NUM_WORDS] & mask))};
     }
 }
 
@@ -303,7 +279,7 @@ pub fn checklt238(scalar: &[u8; 48], result: &mut u32) {
     let mut borrow: u32 = 0;
 
     for i in 0..12 {
-        assign!{(borrow, ignored) = subc(&borrow, &three238[i], &scalar_u32[i])};
+        assign!{(borrow, ignored) = subc(borrow, three238[i], scalar_u32[i])};
     }
     let mask = (0 as u32).wrapping_sub(borrow);
     *result = mask;
@@ -324,10 +300,10 @@ pub fn mulby3(scalar: &mut [u8; 48]) {
     let mut carry: u32 = 0;
     let temp = scalar_u32;
     for i in 0..12 {
-        assign!{(carry, scalar_u32[i]) = addc(&carry, &scalar_u32[i], &temp[i])};
+        assign!{(carry, scalar_u32[i]) = addc(carry, scalar_u32[i], temp[i])};
     }
     for i in 0..12 {
-        assign!{(carry, scalar_u32[i]) = addc(&carry, &scalar_u32[i], &temp[i])};
+        assign!{(carry, scalar_u32[i]) = addc(carry, scalar_u32[i], temp[i])};
     }
 
     for i in 0..48 {
@@ -346,11 +322,11 @@ pub struct Fp751ElementDist;
 impl ConditionallySelectable for Fp751Element {
     #[inline(always)]
     fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
-        let mut bytes = [0_u32; FP751_NUM_WORDS];
+        let mut bytes = unsafe { MaybeUninit::<Fp751Element>::uninit().assume_init() };
         for i in 0..FP751_NUM_WORDS {
-            bytes[i] = u32::conditional_select(&a.0[i], &b.0[i], choice);
+            bytes.0[i] = u32::conditional_select(&a.0[i], &b.0[i], choice);
         }
-        Fp751Element(bytes)
+        bytes
     }
 
     #[inline(always)]
@@ -398,14 +374,17 @@ impl Arbitrary for Fp751Element {
 
 impl Fp751Element {
     /// Construct a new zero `Fp751Element`.
+    #[inline(always)]
     pub fn zero() -> Fp751Element {
-        Fp751Element([0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0])
+        unsafe { zeroed() }
+        //Fp751Element([0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0])
     }
 
     /// Given an `Fp751Element` in Montgomery form, convert to little-endian bytes.
     pub fn to_bytes(&self) -> [u8; 94] {
         let mut bytes = [0u8; 94];
         let mut a = Fp751Element::zero();
+        #[allow(non_snake_case)]
         let mut aR = Fp751X2::zero();
         //let one = Fp751Element([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
 
@@ -440,6 +419,7 @@ impl Fp751Element {
             a.0[j as usize] |= (bytes[i as usize] as u32) << (8 * k);
         }
 
+        #[allow(non_snake_case)]
         let aRR = &a * &MONTGOMERY_RSQ; // = a*R*R
         let output = aRR.reduce();      // = a*R mod p
         output
@@ -457,9 +437,11 @@ impl Debug for Fp751X2 {
 
 impl Fp751X2 {
     // Construct a zero `Fp751X2`.
+    #[inline(always)]
     pub fn zero() -> Fp751X2 {
-        Fp751X2([0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0])
+        unsafe { zeroed() }
+        //Fp751X2([0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+        //    0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0])
     }
 }
 

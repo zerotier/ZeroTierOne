@@ -23,4 +23,6 @@ pub(crate) mod fp;
 pub mod constants;
 #[allow(unused_assignments)]
 #[allow(non_snake_case)]
-pub mod sidh;
+mod sidh;
+
+pub use sidh::*;

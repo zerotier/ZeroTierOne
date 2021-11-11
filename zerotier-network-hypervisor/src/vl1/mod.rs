@@ -23,6 +23,7 @@ pub(crate) mod mac;
 pub(crate) mod fragmentedpacket;
 pub(crate) mod whoisqueue;
 pub(crate) mod ephemeral;
+pub(crate) mod symmetricsecret;
 
 pub use address::Address;
 pub use mac::MAC;

@@ -9,11 +9,12 @@
 //! This module contains finite field arithmetic functionality for SIDH, 
 //! which is not part of the public API.
 
-use crate::sidh::fp::*;
+use crate::sidhp751::fp::*;
 
 use std::fmt::Debug;
 
 use std::cmp::{Eq, PartialEq};
+use std::mem::zeroed;
 use std::ops::*;
 
 use subtle::ConditionallySelectable;
@@ -28,6 +29,7 @@ use quickcheck::{Arbitrary, Gen};
 //-----------------------------------------------------------------------------//
 
 /// Represents an element of the extension field `F_{p^2}`.
+#[allow(non_snake_case)]
 #[derive(Copy, Clone, PartialEq)]
 pub struct ExtensionFieldElement {
     /// This field element is in Montgomery form, so that the value `A` is
@@ -177,11 +179,13 @@ impl Arbitrary for ExtensionFieldElement {
 impl ExtensionFieldElement {
     /// Construct a zero `ExtensionFieldElement`.
     pub fn zero() -> ExtensionFieldElement {
-        ExtensionFieldElement{
-            A: Fp751Element([0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0]),
-            B: Fp751Element([0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0]),
-        }
+        unsafe { zeroed() }
+        //ExtensionFieldElement{
+        //    A: Fp751Element([0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0]),
+        //    B: Fp751Element([0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0]),
+        //}
     }
+
     /// Construct a one `ExtensionFieldElement`.
     pub fn one() -> ExtensionFieldElement {
         ExtensionFieldElement{
@@ -189,6 +193,7 @@ impl ExtensionFieldElement {
             B: Fp751Element([0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0]),
         }
     }
+
     /// Set output to `1/x`.
     pub fn inv(&self) -> ExtensionFieldElement {
         let a = &self.A;
@@ -227,6 +232,7 @@ impl ExtensionFieldElement {
             B: _b
         }
     }
+
     // Set (y1, y2, y3)  = (1/x1, 1/x2, 1/x3).
     //
     // All xi, yi must be distinct.
@@ -244,6 +250,7 @@ impl ExtensionFieldElement {
 
         (_y1, _y2, _y3)
     }
+
     /// Set the output to `x^2`.
     pub fn square(&self) -> ExtensionFieldElement {
         let a = &self.A;
@@ -268,11 +275,13 @@ impl ExtensionFieldElement {
             B: _b
         }
     }
+
     /// Returns true if both sides are equal. Takes variable time.
     #[inline(always)]
     pub fn vartime_eq(&self, _rhs: &ExtensionFieldElement) -> bool {
         (&self.A == &_rhs.A) && (&self.B == &_rhs.B)
     }
+
     /// Convert the input to wire format.
     pub fn to_bytes(&self) -> [u8; 188] {
         let mut bytes = [0u8; 188];
@@ -280,6 +289,7 @@ impl ExtensionFieldElement {
         bytes[94..188].clone_from_slice(&self.B.to_bytes());
         bytes
     }
+
     /// Read 188 bytes into the given `ExtensionFieldElement`.
     pub fn from_bytes(bytes: &[u8]) -> ExtensionFieldElement {
         assert!(bytes.len() >= 188, "Too short input to ExtensionFieldElement from_bytes, expected 188 bytes");
@@ -294,6 +304,7 @@ impl ExtensionFieldElement {
 //-----------------------------------------------------------------------------//
 
 /// Represents an element of the prime field `F_p`.
+#[allow(non_snake_case)]
 #[derive(Copy, Clone, PartialEq)]
 pub struct PrimeFieldElement {
     /// This field element is in Montgomery form, so that the value `A` is
@@ -396,16 +407,19 @@ impl Arbitrary for PrimeFieldElement {
 impl PrimeFieldElement {
     /// Construct a zero `PrimeFieldElement`.
     pub fn zero() -> PrimeFieldElement {
-        PrimeFieldElement{
-            A: Fp751Element([0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0]),
-        }
+        unsafe { zeroed() }
+        //PrimeFieldElement{
+        //    A: Fp751Element([0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0]),
+        //}
     }
+
     /// Construct a one `PrimeFieldElement`.
     pub fn one() -> PrimeFieldElement {
         PrimeFieldElement{
             A: Fp751Element([0x249ad, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x83100000, 0x375c6c66, 0x5527b1e4, 0x3f4f24d0, 0x697797bf, 0xac5c4e2e, 0xc89db7b2, 0xd2076956, 0x4ca4b439, 0x7512c7e9, 0x10f7926c, 0x24bce5e2, 0x2d5b]),
         }
     }
+
     /// Set the output to `x^2`.
     #[inline(always)]
     pub fn square(&self) -> PrimeFieldElement {
@@ -416,12 +430,14 @@ impl PrimeFieldElement {
 
         PrimeFieldElement{ A: _a }
     }
+
     /// Raise self to `2^(2^k)`-th power, for `k >= 1`, by repeated squarings.
     fn pow2k(&self, k: u8) -> PrimeFieldElement {
         let mut result = self.square();
         for _ in 1..k { result = result.square(); }
         result
     }
+
     /// Set output to `x^((p-3)/4)`. If `x` is square, this is `1/sqrt(x)`.
     fn p34(&self) -> PrimeFieldElement {
         // Sliding-window strategy computed with Sage, awk, sed, and tr.
@@ -455,6 +471,7 @@ impl PrimeFieldElement {
         }
         result
     }
+
     /// Set output to `sqrt(x)`, if x is a square. If `x` is nonsquare output is undefined.
     fn sqrt(&self) -> PrimeFieldElement {
         let mut result = self.p34(); // result = (y^2)^((p-3)/4) = y^((p-3)/2)
@@ -462,6 +479,7 @@ impl PrimeFieldElement {
         // Now result^2 = y^(p+1) = y^2 = x, so result = sqrt(x).
         result
     }
+
     /// Set output to `1/x`.
     pub fn inv(&self) -> PrimeFieldElement {
         let mut result = self.square(); // result = x^2
@@ -470,7 +488,9 @@ impl PrimeFieldElement {
         result = &result * self;        // result = x^(p-2)
         result
     }
+
     /// Returns true if both sides are equal. Takes variable time.
+    #[inline(always)]
     pub fn vartime_eq(&self, _rhs: &PrimeFieldElement) -> bool {
         &self.A == &_rhs.A
     }
@@ -652,12 +672,12 @@ impl Fp751X2 {
 
 #[inline(always)]
 pub fn checklt238(scalar: &[u8; 48], result: &mut u32) {
-    crate::sidh::fp::checklt238(scalar, result);
+    crate::sidhp751::fp::checklt238(scalar, result);
 }
 
 #[inline(always)]
 pub fn mulby3(scalar: &mut [u8; 48]) {
-    crate::sidh::fp::mulby3(scalar);
+    crate::sidhp751::fp::mulby3(scalar);
 }
 
 #[cfg(test)]
