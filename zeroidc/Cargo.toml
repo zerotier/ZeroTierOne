@@ -5,7 +5,7 @@ edition = "2018"
 build = "build.rs"
 
 [lib]
-crate-type = ["staticlib"]
+crate-type = ["staticlib","rlib"]
 
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
