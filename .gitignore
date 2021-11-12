@@ -124,3 +124,16 @@ workspace/
 workspace2/
 zeroidc/target/
 tmp/
+
+#snapcraft specifics
+/parts/
+/stage/
+/prime/
+
+*.snap
+
+.snapcraft
+__pycache__
+*.pyc
+*_source.tar.bz2
+snap/.snapcraft

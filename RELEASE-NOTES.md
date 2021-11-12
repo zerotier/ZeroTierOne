@@ -1,6 +1,13 @@
 ZeroTier Release Notes
 ======
 
+# 2021-11-08 -- Version 1.8.2
+
+ * Fix multicast on linux.
+ * Fix a bug that could cause the tap adapter to have the wrong MAC on Linux.
+ * Update build flags to possibly support MacOS older than 10.14, but more work needs to be done. It may not work yet.
+ * Fix path variable setting on Windows.
+
 # 2021-10-28 -- Version 1.8.1
 
  * Fix numerous UI issues from 1.8.0 (never fully released).

@@ -28,7 +28,6 @@ LOCAL_SRC_FILES := \
     $(ZT1)/node/AES_aesni.cpp \
     $(ZT1)/node/AES_armcrypto.cpp \
     $(ZT1)/node/Bond.cpp \
-    $(ZT1)/node/BondController.cpp \
     $(ZT1)/node/C25519.cpp \
 	$(ZT1)/node/Capability.cpp \
 	$(ZT1)/node/CertificateOfMembership.cpp \

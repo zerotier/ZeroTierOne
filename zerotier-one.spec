@@ -1,5 +1,5 @@
 Name:           zerotier-one
-Version:        1.8.1
+Version:        1.8.2
 Release:        1%{?dist}
 Summary:        ZeroTier network virtualization service
 
@@ -152,6 +152,9 @@ esac
 %endif
 
 %changelog
+* Mon Nov 08 2021 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.8.2
+- see https://github.com/zerotier/ZeroTierOne for release notes
+
 * Wed Oct 20 2021 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.8.1
 - see https://github.com/zerotier/ZeroTierOne for release notes
 

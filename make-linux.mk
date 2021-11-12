@@ -245,6 +245,16 @@ ERR=$(error FATAL: architecture could not be determined from $(CC) -dumpmachine:
 err: ; $(ERR)
 endif
 
+# Flag for Intel 32-bit processors since some machine images are incorrectly marked as i386
+ifeq ($(ZT_IA32),1)
+	override LDFLAGS+=-m32
+	override CFLAGS+=-m32
+	override CXXFLAGS+=-m32
+	# Prevent the use of X64 crypto
+	ZT_USE_X64_ASM_SALSA=0
+	ZT_USE_X64_ASM_ED25519=0
+endif
+
 # Disable software updates by default on Linux since that is normally done with package management
 override DEFS+=-DZT_BUILD_PLATFORM=1 -DZT_BUILD_ARCHITECTURE=$(ZT_ARCHITECTURE) -DZT_SOFTWARE_UPDATE_DEFAULT="\"disable\""
 

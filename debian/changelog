@@ -1,3 +1,9 @@
+zerotier-one (1.8.2) unstable; urgency=medium
+
+  * See RELEASE-NOTES.md for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Mon, 08 Nov 2021 01:00:00 -0700
+
 zerotier-one (1.8.1) unstable; urgency=medium
 
   * See RELEASE-NOTES.md for release notes.
