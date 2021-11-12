@@ -212,8 +212,8 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,void *tPtr,const Shar
 								noUrl = false;
 							}
 						} else if (authVer == 1) {
-							bool haveAuthURL = false;
-							char authenticationURL[2048] = { 0 };
+							bool haveIssuerURL = false;
+							char issuerURL[2048] = { 0 };
 							bool haveCentralURL = false;
 							char centralAuthURL[2048] = { 0 };
 							bool haveNonce = false;
@@ -223,9 +223,9 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,void *tPtr,const Shar
 							bool haveClientID = false;
 							char ssoClientID[256] = { 0 };
 
-							if (authInfo.get(ZT_AUTHINFO_DICT_KEY_AUTHENTICATION_URL, authenticationURL, sizeof(authenticationURL)) > 0) {
-								authenticationURL[sizeof(authenticationURL) - 1] = 0;
-								haveAuthURL = true;
+							if (authInfo.get(ZT_AUTHINFO_DICT_KEY_ISSUER_URL, issuerURL, sizeof(issuerURL)) > 0) {
+								issuerURL[sizeof(issuerURL) - 1] = 0;
+								haveIssuerURL = true;
 							}
 							if (authInfo.get(ZT_AUTHINFO_DICT_KEY_CENTRAL_ENDPOINT_URL, centralAuthURL, sizeof(centralAuthURL))>0) {
 								centralAuthURL[sizeof(centralAuthURL) - 1] = 0;
@@ -244,10 +244,10 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,void *tPtr,const Shar
 								haveClientID = true;
 							}
 
-							noUrl = ! (haveAuthURL && haveCentralURL && haveNonce && haveState && haveClientID);
+							noUrl = ! (haveIssuerURL && haveCentralURL && haveNonce && haveState && haveClientID);
 
 							if (!noUrl) {
-								network->setAuthenticationRequired(authenticationURL, centralAuthURL, ssoClientID, ssoNonce, ssoState);
+								network->setAuthenticationRequired(issuerURL, centralAuthURL, ssoClientID, ssoNonce, ssoState);
 							}
 						}
 					}

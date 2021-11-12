@@ -48,6 +48,7 @@ public:
 	, version(0)
 	, authenticationURL()
 	, authenticationExpiryTime(0)
+	, issuerURL()
 	, centralAuthURL()
 	, ssoNonce()
 	, ssoState()
@@ -58,6 +59,7 @@ public:
 	uint64_t version;
 	std::string authenticationURL;
 	uint64_t authenticationExpiryTime;
+	std::string issuerURL;
 	std::string centralAuthURL;
 	std::string ssoNonce;
 	std::string ssoState;

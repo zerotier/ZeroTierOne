@@ -240,7 +240,7 @@ public:
 	 * set netconf failure to 'authentication required' along with info needed
 	 * for sso full flow authentication.
 	 */
-	void setAuthenticationRequired(const char* authEndpoint, const char* centralEndpoint, const char* clientID, const char* nonce, const char* state);
+	void setAuthenticationRequired(const char* issuerURL, const char* centralEndpoint, const char* clientID, const char* nonce, const char* state);
 
 	/**
 	 * Causes this network to request an updated configuration from its master node now

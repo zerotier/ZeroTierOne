@@ -1561,14 +1561,14 @@ Membership &Network::_membership(const Address &a)
 	return _memberships[a];
 }
 
-void Network::setAuthenticationRequired(const char* authEndpoint, const char* centralEndpoint, const char* clientID, const char* nonce, const char* state)
+void Network::setAuthenticationRequired(const char* issuerURL, const char* centralEndpoint, const char* clientID, const char* nonce, const char* state)
 {
 	Mutex::Lock _l(_lock);
 	_netconfFailure = NETCONF_FAILURE_AUTHENTICATION_REQUIRED;
 	_config.ssoEnabled = true;
 	_config.ssoVersion = 1;
 
-	Utils::scopy(_config.authenticationURL, sizeof(_config.authenticationURL), authEndpoint);
+	Utils::scopy(_config.issuerURL, sizeof(_config.issuerURL), issuerURL);
 	Utils::scopy(_config.centralAuthURL, sizeof(_config.centralAuthURL), centralEndpoint);
 	Utils::scopy(_config.ssoClientID, sizeof(_config.ssoClientID), clientID);
 	Utils::scopy(_config.ssoNonce, sizeof(_config.ssoNonce), nonce);

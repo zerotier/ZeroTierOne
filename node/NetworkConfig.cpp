@@ -196,7 +196,9 @@ bool NetworkConfig::toDictionary(Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d,b
 			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_SSO_VERSION, this->ssoVersion)) return false;
 			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_SSO_ENABLED, this->ssoEnabled)) return false;
 			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_AUTHENTICATION_URL, this->authenticationURL)) return false;
-			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_CENTRAL_ENDPOINT_URL, this->centralAuthURL)) return false;
+			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_ISSUER_URL, this->issuerURL)) return false;
+			if (! d.add(ZT_NETWORKCONFIG_DICT_KEY_CENTRAL_ENDPOINT_URL, this->centralAuthURL))
+				return false;
 			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_NONCE, this->ssoNonce)) return false;
 			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_STATE, this->ssoState)) return false;
 			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_CLIENT_ID, this->ssoClientID)) return false;
@@ -407,6 +409,9 @@ bool NetworkConfig::fromDictionary(const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACI
 				if (this->ssoEnabled) {
 					if (d.get(ZT_NETWORKCONFIG_DICT_KEY_AUTHENTICATION_URL, this->authenticationURL, (unsigned int)sizeof(this->authenticationURL)) > 0) {
 						this->authenticationURL[sizeof(this->authenticationURL) - 1] = 0;
+					}
+					if (d.get(ZT_NETWORKCONFIG_DICT_KEY_ISSUER_URL, this->issuerURL, (unsigned int)sizeof(this->issuerURL)) > 0) {
+						this->issuerURL[sizeof(this->issuerURL) - 1] = 0;
 					}
 					if (d.get(ZT_NETWORKCONFIG_DICT_KEY_CENTRAL_ENDPOINT_URL, this->centralAuthURL, (unsigned int)sizeof(this->centralAuthURL)) > 0) {
 						this->centralAuthURL[sizeof(this->centralAuthURL) - 1] = 0;

@@ -1393,7 +1393,7 @@ void EmbeddedNetworkController::_request(
 
 					Dictionary<8192> authInfo;
 					authInfo.add(ZT_AUTHINFO_DICT_KEY_VERSION, info.version);
-					authInfo.add(ZT_AUTHINFO_DICT_KEY_AUTHENTICATION_URL, info.authenticationURL.c_str());
+					authInfo.add(ZT_AUTHINFO_DICT_KEY_ISSUER_URL, info.issuerURL.c_str());
 					authInfo.add(ZT_AUTHINFO_DICT_KEY_CENTRAL_ENDPOINT_URL, info.centralAuthURL.c_str());
 					authInfo.add(ZT_AUTHINFO_DICT_KEY_NONCE, info.ssoNonce.c_str());
 					authInfo.add(ZT_AUTHINFO_DICT_KEY_STATE, info.ssoState.c_str());

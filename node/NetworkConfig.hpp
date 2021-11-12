@@ -186,6 +186,8 @@ namespace ZeroTier {
 #define ZT_NETWORKCONFIG_DICT_KEY_AUTHENTICATION_URL "aurl"
 // authentication expiry
 #define ZT_NETWORKCONFIG_DICT_KEY_AUTHENTICATION_EXPIRY_TIME "aexpt"
+// oidc issuer URL
+#define ZT_NETWORKCONFIG_DICT_KEY_ISSUER_URL "iurl"
 // central endpoint
 #define ZT_NETWORKCONFIG_DICT_KEY_CENTRAL_ENDPOINT_URL "ssoce"
 // nonce
@@ -201,6 +203,8 @@ namespace ZeroTier {
 #define ZT_AUTHINFO_DICT_KEY_VERSION "aV"
 // authenticaiton URL
 #define ZT_AUTHINFO_DICT_KEY_AUTHENTICATION_URL "aU"
+// issuer URL
+#define ZT_AUTHINFO_DICT_KEY_ISSUER_URL "iU"
 // Central endpoint URL
 #define ZT_AUTHINFO_DICT_KEY_CENTRAL_ENDPOINT_URL "aCU"
 // Nonce
@@ -268,6 +272,7 @@ public:
 		ssoEnabled(false),
 		authenticationURL(),
 		authenticationExpiryTime(0),
+		issuerURL(),
 		centralAuthURL(),
 		ssoNonce(),
 		ssoState(),
@@ -280,6 +285,7 @@ public:
 		memset(rules, 0, sizeof(ZT_VirtualNetworkRule)*ZT_MAX_NETWORK_RULES);
 		memset(&dns, 0, sizeof(ZT_VirtualNetworkDNS));
 		memset(authenticationURL, 0, sizeof(authenticationURL));
+		memset(issuerURL, 0, sizeof(issuerURL));
 		memset(centralAuthURL, 0, sizeof(centralAuthURL));
 		memset(ssoNonce, 0, sizeof(ssoNonce));
 		memset(ssoState, 0, sizeof(ssoState));
@@ -669,6 +675,11 @@ public:
 	 * Not used if authVersion >= 1
 	 */
 	uint64_t authenticationExpiryTime;
+
+	/**
+	 * OIDC issuer URL
+	 */
+	char issuerURL[2048];
 
 	/**
 	 * central base URL.

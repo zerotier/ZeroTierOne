@@ -1217,6 +1217,11 @@ typedef struct
 	uint64_t authenticationExpiryTime;
 
 	/**
+	 * OIDC issuer URL.
+	 */
+	char issuerURL[2048];
+
+	/**
 	 * central base URL.
 	 */
 	char centralAuthURL[2048];

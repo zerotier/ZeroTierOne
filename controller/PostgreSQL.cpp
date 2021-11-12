@@ -432,7 +432,7 @@ AuthInfo PostgreSQL::getSSOAuthInfo(const nlohmann::json &member, const std::str
 					info.authenticationURL = std::string(url);
 				} else if (info.version == 1) {
 					info.ssoClientID = client_id;
-					info.authenticationURL = authorization_endpoint;
+					info.issuerURL = authorization_endpoint;
 					info.ssoNonce = nonce;
 					info.ssoState = std::string(state_hex);
 					info.centralAuthURL = redirectURL;
