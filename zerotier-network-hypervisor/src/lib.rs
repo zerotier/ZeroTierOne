@@ -15,13 +15,13 @@ pub mod defaults;
 mod node;
 
 /// Standard packet buffer type including pool container.
-pub type PacketBuffer = crate::util::pool::Pooled<Buffer<{ crate::vl1::protocol::PACKET_SIZE_MAX }>, crate::vl1::buffer::PooledBufferFactory<{ crate::vl1::protocol::PACKET_SIZE_MAX }>>;
+pub type PacketBuffer = crate::util::pool::Pooled<crate::vl1::buffer::Buffer<{ crate::vl1::protocol::PACKET_SIZE_MAX }>, crate::PacketBufferFactory>;
 
 /// Factory type to supply to a new PacketBufferPool.
 pub type PacketBufferFactory = crate::vl1::buffer::PooledBufferFactory<{ crate::vl1::protocol::PACKET_SIZE_MAX }>;
 
 /// Source for instances of PacketBuffer
-pub type PacketBufferPool = crate::util::pool::Pool<Buffer<{ crate::vl1::protocol::PACKET_SIZE_MAX }>, crate::vl1::buffer::PacketBufferFactory>;
+pub type PacketBufferPool = crate::util::pool::Pool<crate::vl1::buffer::Buffer<{ crate::vl1::protocol::PACKET_SIZE_MAX }>, crate::PacketBufferFactory>;
 
 pub use node::{CallerInterface, Node};
 

@@ -32,6 +32,6 @@ impl VL1PacketHandler for Switch {
 
 impl Switch {
     pub fn new() -> Self {
-        Self
+        Self{}
     }
 }

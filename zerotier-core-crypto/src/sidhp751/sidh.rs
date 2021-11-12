@@ -25,11 +25,11 @@ use rand_core::{RngCore, CryptoRng};
 use quickcheck::{Arbitrary, Gen, QuickCheck};
 
 /// The secret key size, in bytes.
-pub const SECRET_KEY_SIZE: usize = 48;
+pub const SIDH_P751_SECRET_KEY_SIZE: usize = 48;
 /// The public key size, in bytes.
-pub const PUBLIC_KEY_SIZE: usize = 564;
+pub const SIDH_P751_PUBLIC_KEY_SIZE: usize = 564;
 /// The shared secret size, in bytes.
-pub const SHARED_SECRET_SIZE: usize = 188;
+pub const SIDH_P751_SHARED_SECRET_SIZE: usize = 188;
 
 const MAX_INT_POINTS_ALICE: usize = 8;
 const MAX_INT_POINTS_BOB: usize = 10;
@@ -125,7 +125,7 @@ impl SIDHPublicKeyBob {
 /// Alice's secret key.
 #[derive(Copy, Clone)]
 pub struct SIDHSecretKeyAlice {
-    pub scalar: [u8; SECRET_KEY_SIZE],
+    pub scalar: [u8; SIDH_P751_SECRET_KEY_SIZE],
 }
 
 impl Debug for SIDHSecretKeyAlice {
@@ -206,7 +206,7 @@ impl SIDHSecretKeyAlice {
 
     /// Compute (Alice's view of) a shared secret using Alice's secret key and Bob's public key.
     #[allow(non_snake_case)]
-    pub fn shared_secret(&self, bob_public: &SIDHPublicKeyBob) -> [u8; SHARED_SECRET_SIZE] {
+    pub fn shared_secret(&self, bob_public: &SIDHPublicKeyBob) -> [u8; SIDH_P751_SHARED_SECRET_SIZE] {
         let current_curve = ProjectiveCurveParameters::recover_curve_parameters(&bob_public.affine_xP, &bob_public.affine_xQ, &bob_public.affine_xQmP);
         let xP = ProjectivePoint::from_affine(&bob_public.affine_xP);
         let xQ = ProjectivePoint::from_affine(&bob_public.affine_xQ);
@@ -250,7 +250,7 @@ impl SIDHSecretKeyAlice {
 /// Bob's secret key.
 #[derive(Copy, Clone)]
 pub struct SIDHSecretKeyBob {
-    pub scalar: [u8; SECRET_KEY_SIZE],
+    pub scalar: [u8; SIDH_P751_SECRET_KEY_SIZE],
 }
 
 impl Debug for SIDHSecretKeyBob {
@@ -325,7 +325,7 @@ impl SIDHSecretKeyBob {
 
     /// Compute (Bob's view of) a shared secret using Bob's secret key and Alice's public key.
     #[allow(non_snake_case)]
-    pub fn shared_secret(&self, alice_public: &SIDHPublicKeyAlice) -> [u8; SHARED_SECRET_SIZE] {
+    pub fn shared_secret(&self, alice_public: &SIDHPublicKeyAlice) -> [u8; SIDH_P751_SHARED_SECRET_SIZE] {
         let mut current_curve = ProjectiveCurveParameters::recover_curve_parameters(&alice_public.affine_xP, &alice_public.affine_xQ, &alice_public.affine_xQmP);
         let xP = ProjectivePoint::from_affine(&alice_public.affine_xP);
         let xQ = ProjectivePoint::from_affine(&alice_public.affine_xQ);
@@ -367,7 +367,7 @@ impl SIDHSecretKeyBob {
 /// implement SIDH validation, each keypair should be used for at most one
 /// shared secret computation.
 pub fn generate_alice_keypair<R: RngCore + CryptoRng>(rng: &mut R) -> (SIDHPublicKeyAlice, SIDHSecretKeyAlice) {
-    let mut scalar = [0u8; SECRET_KEY_SIZE];
+    let mut scalar = [0u8; SIDH_P751_SECRET_KEY_SIZE];
     rng.fill_bytes(&mut scalar[..]);
 
     // Bit-twiddle to ensure scalar is in 2*[0,2^371):
@@ -388,7 +388,7 @@ pub fn generate_alice_keypair<R: RngCore + CryptoRng>(rng: &mut R) -> (SIDHPubli
 /// implement SIDH validation, each keypair should be used for at most one
 /// shared secret computation.
 pub fn generate_bob_keypair<R: RngCore + CryptoRng>(rng: &mut R) -> (SIDHPublicKeyBob, SIDHSecretKeyBob) {
-    let mut scalar = [0u8; SECRET_KEY_SIZE];
+    let mut scalar = [0u8; SIDH_P751_SECRET_KEY_SIZE];
     // Perform rejection sampling to obtain a random value in [0,3^238]:
     let mut ok: u32 = 1;
     for _ in 0..102 {
@@ -501,7 +501,7 @@ mod test {
     //
     // This function just exists to ensure that the fast isogeny-tree strategy works correctly.
     #[allow(non_snake_case)]
-    pub fn alice_shared_secret_slow(bob_public: &SIDHPublicKeyBob, alice_secret: &SIDHSecretKeyAlice) -> [u8; SHARED_SECRET_SIZE] {
+    pub fn alice_shared_secret_slow(bob_public: &SIDHPublicKeyBob, alice_secret: &SIDHSecretKeyAlice) -> [u8; SIDH_P751_SHARED_SECRET_SIZE] {
         let current_curve = ProjectiveCurveParameters::recover_curve_parameters(&bob_public.affine_xP, &bob_public.affine_xQ, &bob_public.affine_xQmP);
         let xP = ProjectivePoint::from_affine(&bob_public.affine_xP);
         let xQ = ProjectivePoint::from_affine(&bob_public.affine_xQ);
@@ -532,7 +532,7 @@ mod test {
     //
     // This function just exists to ensure that the fast isogeny-tree strategy works correctly.
     #[allow(non_snake_case)]
-    pub fn bob_shared_secret_slow(alice_public: &SIDHPublicKeyAlice, bob_secret: &SIDHSecretKeyBob) -> [u8; SHARED_SECRET_SIZE] {
+    pub fn bob_shared_secret_slow(alice_public: &SIDHPublicKeyAlice, bob_secret: &SIDHSecretKeyBob) -> [u8; SIDH_P751_SHARED_SECRET_SIZE] {
         let mut current_curve = ProjectiveCurveParameters::recover_curve_parameters(&alice_public.affine_xP, &alice_public.affine_xQ, &alice_public.affine_xQmP);
         let xP = ProjectivePoint::from_affine(&alice_public.affine_xP);
         let xQ = ProjectivePoint::from_affine(&alice_public.affine_xQ);

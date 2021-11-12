@@ -25,10 +25,10 @@ impl SHA512 {
 
     pub fn hmac(key: &[u8], msg: &[u8]) -> [u8; SHA512_HASH_SIZE] {
         let mut m = gcrypt::mac::Mac::new(gcrypt::mac::Algorithm::HmacSha512).unwrap();
-        let _ = m.set_key(key);
-        let _ = m.update(msg);
+        m.set_key(key).expect("FATAL: invalid HMAC-SHA512 key");;
+        m.update(msg).expect("FATAL: HMAC-SHA512 failed");
         let mut h = [0_u8; SHA512_HASH_SIZE];
-        let _ = m.get_mac(&mut h);
+        m.get_mac(&mut h).expect("FATAL: HMAC-SHA512 failed");
         h
     }
 
@@ -77,10 +77,10 @@ impl SHA384 {
 
     pub fn hmac(key: &[u8], msg: &[u8]) -> [u8; SHA384_HASH_SIZE] {
         let mut m = gcrypt::mac::Mac::new(gcrypt::mac::Algorithm::HmacSha384).unwrap();
-        let _ = m.set_key(key);
-        let _ = m.update(msg);
+        m.set_key(key).expect("FATAL: invalid HMAC-SHA384 key");
+        m.update(msg).expect("FATAL: HMAC-SHA384 failed");
         let mut h = [0_u8; SHA384_HASH_SIZE];
-        let _ = m.get_mac(&mut h);
+        m.get_mac(&mut h).expect("FATAL: HMAC-SHA384 failed");
         h
     }
 

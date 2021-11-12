@@ -10,6 +10,7 @@ use std::mem::MaybeUninit;
 
 use crate::vl1::Address;
 use crate::vl1::buffer::{RawObject, Buffer};
+use std::convert::TryFrom;
 
 pub const VERB_VL1_NOP: u8 = 0x00;
 pub const VERB_VL1_HELLO: u8 = 0x01;
@@ -47,7 +48,7 @@ pub const KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K0: u8 = b'0';
 pub const KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K1: u8 = b'1';
 
 /// KBKDF usage label for acknowledgement of a shared secret.
-pub const KBKDF_KEY_USAGE_LABEL_EPHEMERAL_ACK: u8 = b'A';
+pub const KBKDF_KEY_USAGE_LABEL_EPHEMERAL_RATCHET: u8 = b'E';
 
 /// Try to re-key ephemeral keys after this time.
 pub const EPHEMERAL_SECRET_REKEY_AFTER_TIME: i64 = 1000 * 60 * 60; // 1 hour
@@ -175,6 +176,37 @@ pub const WHOIS_RETRY_MAX: u16 = 3;
 
 /// Maximum number of packets to queue up behind a WHOIS.
 pub const WHOIS_MAX_WAITING_PACKETS: usize = 64;
+
+#[derive(Clone, Copy)]
+#[repr(u8)]
+pub enum EphemeralKeyAgreementAlgorithm {
+    C25519 = 1,
+    SIDHP751 = 2,
+    NistP521ECDH = 3
+}
+
+impl EphemeralKeyAgreementAlgorithm {
+    pub fn is_fips_compliant(&self) -> bool {
+        match self {
+            Self::NistP521ECDH => true,
+            _ => false
+        }
+    }
+}
+
+impl TryFrom<u8> for EphemeralKeyAgreementAlgorithm {
+    type Error = ();
+
+    #[inline(always)]
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            1 => Ok(Self::C25519),
+            2 => Ok(Self::SIDHP751),
+            3 => Ok(Self::NistP521ECDH),
+            _ => Err(())
+        }
+    }
+}
 
 /// Compress a packet and return true if compressed.
 /// The 'dest' buffer must be empty (will panic otherwise). A return value of false indicates an error or

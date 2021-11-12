@@ -33,4 +33,4 @@ pub use dictionary::Dictionary;
 pub use inetaddress::InetAddress;
 pub use peer::Peer;
 pub use path::Path;
-pub use vl1node::{PacketBuffer, PacketBufferPool, PacketBufferFactory, VL1CallerInterface};
+pub use vl1node::{VL1Node, VL1CallerInterface};

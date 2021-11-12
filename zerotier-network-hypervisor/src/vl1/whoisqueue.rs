@@ -13,8 +13,9 @@ use parking_lot::Mutex;
 use crate::util::gate::IntervalGate;
 use crate::vl1::Address;
 use crate::vl1::fragmentedpacket::FragmentedPacket;
-use crate::vl1::vl1node::{VL1Node, PacketBuffer, VL1CallerInterface};
+use crate::vl1::vl1node::{VL1Node, VL1CallerInterface};
 use crate::vl1::protocol::{WHOIS_RETRY_INTERVAL, WHOIS_MAX_WAITING_PACKETS, WHOIS_RETRY_MAX};
+use crate::PacketBuffer;
 
 pub(crate) enum QueuedPacket {
     Unfragmented(PacketBuffer),

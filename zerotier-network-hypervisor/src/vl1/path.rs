@@ -14,8 +14,9 @@ use parking_lot::Mutex;
 use crate::util::U64PassThroughHasher;
 use crate::vl1::Endpoint;
 use crate::vl1::fragmentedpacket::FragmentedPacket;
-use crate::vl1::vl1node::{PacketBuffer, VL1CallerInterface};
+use crate::vl1::vl1node::VL1CallerInterface;
 use crate::vl1::protocol::*;
+use crate::PacketBuffer;
 
 /// Keepalive interval for paths in milliseconds.
 pub(crate) const PATH_KEEPALIVE_INTERVAL: i64 = 20000;
