@@ -336,7 +336,6 @@ class Binder {
 
 								// if this is a temporary IPv6 address, skip to the next address
 								if (flags & IN6_IFF_TEMPORARY) {
-									close(infoSock);
 									char buf[64];
 #ifdef ZT_TRACE
 									fprintf(stderr, "skip binding to temporary IPv6 address: %s\n", ip.toIpString(buf));
@@ -369,7 +368,7 @@ class Binder {
 				else {
 					interfacesEnumerated = false;
 				}
-#if defined(__unix__) && !defined(__LINUX__)
+#if (defined(__unix__) || defined(__APPLE__)) && !defined(__LINUX__)
 				close(infoSock);
 #endif
 			}
