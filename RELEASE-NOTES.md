@@ -1,6 +1,10 @@
 ZeroTier Release Notes
 ======
 
+# -- -- Version 1.8.3
+
+ * Remove problematic spinlock, which was only used on x86_64 anyway. Just use pthread always.
+
 # 2021-11-08 -- Version 1.8.2
 
  * Fix multicast on linux.
