@@ -23,12 +23,12 @@ use crate::vl1::protocol::EphemeralKeyAgreementAlgorithm;
 use crate::vl1::symmetricsecret::SymmetricSecret;
 
 #[derive(Copy, Clone)]
-enum SIDHSecretKey {
+enum SIDHEphemeralKeyPair {
     Alice(SIDHPublicKeyAlice, SIDHSecretKeyAlice),
     Bob(SIDHPublicKeyBob, SIDHSecretKeyBob)
 }
 
-impl SIDHSecretKey {
+impl SIDHEphemeralKeyPair {
     /// Generate a SIDH key pair.
     ///
     /// SIDH is weird. A key exchange must involve one participant taking a role
@@ -39,14 +39,14 @@ impl SIDHSecretKey {
     ///
     /// Everything works as long as the two sides take opposite roles. There is no
     /// security implication in one side always taking one role.
-    pub fn generate(local_address: Address, remote_address: Address) -> SIDHSecretKey {
+    pub fn generate(local_address: Address, remote_address: Address) -> SIDHEphemeralKeyPair {
         let mut rng = SecureRandom::get();
         if local_address < remote_address {
             let (p, s) = zerotier_core_crypto::sidhp751::generate_alice_keypair(&mut rng);
-            SIDHSecretKey::Alice(p, s)
+            SIDHEphemeralKeyPair::Alice(p, s)
         } else {
             let (p, s) = zerotier_core_crypto::sidhp751::generate_bob_keypair(&mut rng);
-            SIDHSecretKey::Bob(p, s)
+            SIDHEphemeralKeyPair::Bob(p, s)
         }
     }
 
@@ -63,9 +63,10 @@ impl SIDHSecretKey {
 /// An ephemeral secret key negotiated to implement forward secrecy.
 pub struct EphemeralSecret {
     timestamp_ticks: i64,
+    ratchet_count: u64,
     c25519: C25519KeyPair,
     p521: P521KeyPair,
-    sidhp751: Option<SIDHSecretKey>,
+    sidhp751: Option<SIDHEphemeralKeyPair>,
 }
 
 impl EphemeralSecret {
@@ -73,12 +74,24 @@ impl EphemeralSecret {
     ///
     /// This contains key pairs for the asymmetric key agreement algorithms used and a
     /// timestamp used to enforce TTL.
-    pub fn new(time_ticks: i64, local_address: Address, remote_address: Address) -> Self {
+    ///
+    /// SIDH is much slower than Curve25519 and NIST P-521, so it's only included every
+    /// 256 clicks of the ratchet. The point of SIDH is forward secrecy out to the age
+    /// of quantum computing in case someone is warehousing traffic today to analyze
+    /// tomorrow. An attacker from 5-15 years from now will not be able to time travel
+    /// back in time and steal an ephemeral SIDH secret key with a side channel attack.
+    pub fn new(time_ticks: i64, local_address: Address, remote_address: Address, previous_ephemeral_secret: Option<&EphemeralSymmetricSecret>) -> Self {
+        let ratchet_count = previous_ephemeral_secret.map_or(0_u64, |previous_ephemeral_secret| previous_ephemeral_secret.next_ratchet_count);
         EphemeralSecret {
             timestamp_ticks: time_ticks,
+            ratchet_count,
             c25519: C25519KeyPair::generate(true),
             p521: P521KeyPair::generate(true).expect("NIST P-521 key pair generation failed"),
-            sidhp751: Some(SIDHSecretKey::generate(local_address, remote_address)),
+            sidhp751: if (ratchet_count % 256) == 0 {
+                Some(SIDHEphemeralKeyPair::generate(local_address, remote_address))
+            } else {
+                None
+            },
         }
     }
 
@@ -95,8 +108,8 @@ impl EphemeralSecret {
             let _ = varint::write(&mut b, (SIDH_P751_PUBLIC_KEY_SIZE + 1) as u64);
             b.push(sidhp751.role());
             let pk = match &sidhp751 {
-                SIDHSecretKey::Alice(a, _) => a.to_bytes(),
-                SIDHSecretKey::Bob(b, _) => b.to_bytes()
+                SIDHEphemeralKeyPair::Alice(a, _) => a.to_bytes(),
+                SIDHEphemeralKeyPair::Bob(b, _) => b.to_bytes()
             };
             let _ = b.write_all(&pk);
         });
@@ -122,10 +135,10 @@ impl EphemeralSecret {
     ///
     /// Since ephemeral secrets should only be used once, this consumes the object.
     pub fn agree(self, time_ticks: i64, static_secret: &SymmetricSecret, previous_ephemeral_secret: Option<&EphemeralSymmetricSecret>, other_public_bytes: &[u8]) -> Option<EphemeralSymmetricSecret> {
-        let (ratchet_count, mut key) = previous_ephemeral_secret.map_or_else(|| {
-            (0_u64, static_secret.next_ephemeral_ratchet_key.clone())
+        let mut key = previous_ephemeral_secret.map_or_else(|| {
+            static_secret.next_ephemeral_ratchet_key.clone()
         }, |previous_ephemeral_secret| {
-            (previous_ephemeral_secret.ratchet_count + 1, Secret(SHA384::hmac(&static_secret.next_ephemeral_ratchet_key.0, &previous_ephemeral_secret.secret.next_ephemeral_ratchet_key.0)))
+            Secret(SHA384::hmac(&static_secret.next_ephemeral_ratchet_key.0, &previous_ephemeral_secret.secret.next_ephemeral_ratchet_key.0))
         });
 
         let mut algs: Vec<EphemeralKeyAgreementAlgorithm> = Vec::with_capacity(3);
@@ -156,14 +169,14 @@ impl EphemeralSecret {
                         return None;
                     }
                     let _ = match self.sidhp751.as_ref() {
-                        Some(SIDHSecretKey::Alice(_, seck)) => {
+                        Some(SIDHEphemeralKeyPair::Alice(_, seck)) => {
                             if other_public_bytes[0] != 0 { // Alice can't agree with Alice
                                 None
                             } else {
                                 Some(Secret(seck.shared_secret(&SIDHPublicKeyBob::from_bytes(&other_public_bytes[1..(SIDH_P751_PUBLIC_KEY_SIZE + 1)]))))
                             }
                         },
-                        Some(SIDHSecretKey::Bob(_, seck)) => {
+                        Some(SIDHEphemeralKeyPair::Bob(_, seck)) => {
                             if other_public_bytes[0] != 1 { // Bob can't agree with Bob
                                 None
                             } else {
@@ -211,7 +224,7 @@ impl EphemeralSecret {
                 agreement_algorithms: algs,
                 agreement_timestamp_ticks: time_ticks,
                 local_secret_timestamp_ticks: self.timestamp_ticks,
-                ratchet_count,
+                next_ratchet_count: self.ratchet_count + 1,
                 encrypt_uses: AtomicU32::new(0),
                 decrypt_uses: AtomicU32::new(0)
             })
@@ -226,7 +239,7 @@ pub struct EphemeralSymmetricSecret {
     agreement_algorithms: Vec<EphemeralKeyAgreementAlgorithm>,
     agreement_timestamp_ticks: i64,
     local_secret_timestamp_ticks: i64,
-    ratchet_count: u64,
+    next_ratchet_count: u64,
     encrypt_uses: AtomicU32,
     decrypt_uses: AtomicU32,
 }
@@ -259,8 +272,8 @@ mod tests {
     #[test]
     fn ephemeral_agreement() {
         let static_secret = SymmetricSecret::new(Secret([1_u8; 48]));
-        let alice = EphemeralSecret::new(1, Address::from_u64(0xdeadbeef00).unwrap(), Address::from_u64(0xbeefdead00).unwrap());
-        let bob = EphemeralSecret::new(1, Address::from_u64(0xbeefdead00).unwrap(), Address::from_u64(0xdeadbeef00).unwrap());
+        let alice = EphemeralSecret::new(1, Address::from_u64(0xdeadbeef00).unwrap(), Address::from_u64(0xbeefdead00).unwrap(), None);
+        let bob = EphemeralSecret::new(1, Address::from_u64(0xbeefdead00).unwrap(), Address::from_u64(0xdeadbeef00).unwrap(), None);
         let alice_public_bytes = alice.public_bytes();
         let bob_public_bytes = bob.public_bytes();
         let alice_key = alice.agree(2, &static_secret, None, bob_public_bytes.as_slice()).unwrap();
