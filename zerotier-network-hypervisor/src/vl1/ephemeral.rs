@@ -22,44 +22,6 @@ use crate::vl1::Address;
 use crate::vl1::protocol::EphemeralKeyAgreementAlgorithm;
 use crate::vl1::symmetricsecret::SymmetricSecret;
 
-#[derive(Copy, Clone)]
-enum SIDHEphemeralKeyPair {
-    Alice(SIDHPublicKeyAlice, SIDHSecretKeyAlice),
-    Bob(SIDHPublicKeyBob, SIDHSecretKeyBob)
-}
-
-impl SIDHEphemeralKeyPair {
-    /// Generate a SIDH key pair.
-    ///
-    /// SIDH is weird. A key exchange must involve one participant taking a role
-    /// canonically called Alice and the other wearing the Bob hat, because math.
-    ///
-    /// If our local address is less than the remote address, we take the Alice role.
-    /// Otherwise if it's greater or equal we take the Bob role.
-    ///
-    /// Everything works as long as the two sides take opposite roles. There is no
-    /// security implication in one side always taking one role.
-    pub fn generate(local_address: Address, remote_address: Address) -> SIDHEphemeralKeyPair {
-        let mut rng = SecureRandom::get();
-        if local_address < remote_address {
-            let (p, s) = zerotier_core_crypto::sidhp751::generate_alice_keypair(&mut rng);
-            SIDHEphemeralKeyPair::Alice(p, s)
-        } else {
-            let (p, s) = zerotier_core_crypto::sidhp751::generate_bob_keypair(&mut rng);
-            SIDHEphemeralKeyPair::Bob(p, s)
-        }
-    }
-
-    /// Returns 0 if Alice, 1 if Bob.
-    #[inline(always)]
-    pub fn role(&self) -> u8 {
-        match self {
-            Self::Alice(_, _) => 0,
-            Self::Bob(_, _) => 1,
-        }
-    }
-}
-
 /// An ephemeral secret key negotiated to implement forward secrecy.
 pub struct EphemeralSecret {
     timestamp_ticks: i64,
@@ -259,6 +221,44 @@ impl EphemeralSymmetricSecret {
 
     pub fn is_fips_compliant(&self) -> bool {
         self.agreement_algorithms.last().map_or(false, |alg| alg.is_fips_compliant())
+    }
+}
+
+#[derive(Copy, Clone)]
+enum SIDHEphemeralKeyPair {
+    Alice(SIDHPublicKeyAlice, SIDHSecretKeyAlice),
+    Bob(SIDHPublicKeyBob, SIDHSecretKeyBob)
+}
+
+impl SIDHEphemeralKeyPair {
+    /// Generate a SIDH key pair.
+    ///
+    /// SIDH is weird. A key exchange must involve one participant taking a role
+    /// canonically called Alice and the other wearing the Bob hat, because math.
+    ///
+    /// If our local address is less than the remote address, we take the Alice role.
+    /// Otherwise if it's greater or equal we take the Bob role.
+    ///
+    /// Everything works as long as the two sides take opposite roles. There is no
+    /// security implication in one side always taking one role.
+    pub fn generate(local_address: Address, remote_address: Address) -> SIDHEphemeralKeyPair {
+        let mut rng = SecureRandom::get();
+        if local_address < remote_address {
+            let (p, s) = zerotier_core_crypto::sidhp751::generate_alice_keypair(&mut rng);
+            SIDHEphemeralKeyPair::Alice(p, s)
+        } else {
+            let (p, s) = zerotier_core_crypto::sidhp751::generate_bob_keypair(&mut rng);
+            SIDHEphemeralKeyPair::Bob(p, s)
+        }
+    }
+
+    /// Returns 0 if Alice, 1 if Bob.
+    #[inline(always)]
+    pub fn role(&self) -> u8 {
+        match self {
+            Self::Alice(_, _) => 0,
+            Self::Bob(_, _) => 1,
+        }
     }
 }
 
