@@ -18,7 +18,7 @@ gcrypt = "0.7.0"
 x25519-dalek = { version = "1.2.0", features = ["u64_backend"] }
 ed25519-dalek = { version = "1.0.1", features = ["u64_backend"] }
 heapless = "0.7.7"
-subtle = "^2"
+subtle = "2.4.1"
 
 [dev-dependencies]
 quickcheck = "^1"

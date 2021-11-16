@@ -13,7 +13,6 @@ use crate::secret::Secret;
 /// This is a fixed cost key derivation function used to derive sub-keys from a single original
 /// shared secret for different uses, such as the K0/K1 in AES-GMAC-SIV.
 /// Key must be 384 bits in length.
-#[inline(always)]
 pub fn zt_kbkdf_hmac_sha384(key: &[u8], label: u8, context: u8, iter: u32) -> Secret<{ SHA384_HASH_SIZE }> {
     debug_assert_eq!(key.len(), SHA384_HASH_SIZE);
 

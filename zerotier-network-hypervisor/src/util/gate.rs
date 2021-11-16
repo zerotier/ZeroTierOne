@@ -9,6 +9,7 @@
 use std::sync::atomic::{AtomicI64, Ordering};
 
 /// Boolean rate limiter with normal (non-atomic) semantics.
+#[repr(transparent)]
 pub struct IntervalGate<const FREQ: i64>(i64);
 
 impl<const FREQ: i64> Default for IntervalGate<FREQ> {
@@ -35,6 +36,7 @@ impl<const FREQ: i64> IntervalGate<FREQ> {
 }
 
 /// Boolean rate limiter with atomic semantics.
+#[repr(transparent)]
 pub struct AtomicIntervalGate<const FREQ: i64>(AtomicI64);
 
 impl<const FREQ: i64> Default for AtomicIntervalGate<FREQ> {
