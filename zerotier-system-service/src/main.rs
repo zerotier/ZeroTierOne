@@ -28,7 +28,7 @@ pub const HTTP_API_OBJECT_SIZE_LIMIT: usize = 131072;
 fn make_help(long_help: bool) -> String {
     format!(r###"ZeroTier Network Hypervisor Service Version {}.{}.{}
 (c)2013-2021 ZeroTier, Inc.
-Licensed under the ZeroTier BSL (see LICENSE.txt)
+Licensed under the Mozilla Public License (MPL) 2.0 (see LICENSE.txt)
 
 Usage: zerotier [-...] <command> [command args]
 
