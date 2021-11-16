@@ -7,6 +7,7 @@ ZeroTier Release Notes
  * Fix fd leak on MacOS that caused non-responsiveness after some time.
  * Fix Debian install scripts to set /usr/sbin/nologin as shell on service user.
  * Fix regression that could prevent managed routes from being deleted.
+ * DesktopUI: Remove NSDate:now() call, may help with older MacOS.
 
 # 2021-11-08 -- Version 1.8.2
 
