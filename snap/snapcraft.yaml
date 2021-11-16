@@ -46,7 +46,6 @@ parts:
   one:
     plugin: make
     source: .
-    source-type: git
     build-packages:
       - build-essential
       - libc++-dev
