@@ -405,7 +405,9 @@ ManagedRoute::ManagedRoute(const InetAddress &target,const InetAddress &via,cons
 }
 
 ManagedRoute::~ManagedRoute()
-{}
+{
+	this->remove();
+}
 
 /* Linux NOTE: for default route override, some Linux distributions will
  * require a change to the rp_filter parameter. A value of '1' will prevent
