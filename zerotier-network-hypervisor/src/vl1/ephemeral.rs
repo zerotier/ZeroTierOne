@@ -36,13 +36,19 @@ impl EphemeralKeyPairSet {
     /// This contains key pairs for the asymmetric key agreement algorithms used and a
     /// timestamp used to enforce TTL.
     ///
-    /// SIDH is only used the first time since it's slow and its only purpose is to
-    /// defend against further-future quantum computer attacks.
+    /// SIDH is only used the first time and then 1/255 of remaining ratchet clicks because
+    /// it's slower than the others.
     pub fn new(local_address: Address, remote_address: Address, previous_ephemeral_secret: Option<&EphemeralSymmetricSecret>) -> Self {
         let (sidhp751, previous_ratchet_state) = previous_ephemeral_secret.map_or_else(|| {
-            (Some(SIDHEphemeralKeyPair::generate(local_address, remote_address)), None)
+            (
+                Some(SIDHEphemeralKeyPair::generate(local_address, remote_address)),
+                None
+            )
         }, |previous_ephemeral_secret| {
-            (None, Some(previous_ephemeral_secret.ratchet_state.clone()))
+            (
+                if previous_ephemeral_secret.ratchet_state[0] == 0 { Some(SIDHEphemeralKeyPair::generate(local_address, remote_address)) } else { None },
+                Some(previous_ephemeral_secret.ratchet_state.clone())
+            )
         });
         EphemeralKeyPairSet {
             previous_ratchet_state,
@@ -103,7 +109,12 @@ impl EphemeralKeyPairSet {
     /// Since ephemeral secrets should only be used once, this consumes the object.
     pub fn agree(self, time_ticks: i64, static_secret: &SymmetricSecret, previous_ephemeral_secret: Option<&EphemeralSymmetricSecret>, other_public_bytes: &[u8]) -> Option<EphemeralSymmetricSecret> {
         let (mut key, mut c25519_ratchet_count, mut sidhp751_ratchet_count, mut nistp521_ratchet_count) = previous_ephemeral_secret.map_or_else(|| {
-            (static_secret.next_ephemeral_ratchet_key.clone(), 0, 0, 0)
+            (
+                static_secret.next_ephemeral_ratchet_key.clone(),
+                0,
+                0,
+                0
+            )
         }, |previous_ephemeral_secret| {
             (
                 Secret(SHA384::hmac(&static_secret.next_ephemeral_ratchet_key.0, &previous_ephemeral_secret.secret.next_ephemeral_ratchet_key.0)),
