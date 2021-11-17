@@ -19,7 +19,7 @@ use zerotier_core_crypto::sidhp751::{SIDHPublicKeyAlice, SIDHPublicKeyBob, SIDHS
 use zerotier_core_crypto::varint;
 
 use crate::vl1::Address;
-use crate::vl1::protocol::{EphemeralKeyAgreementAlgorithm, EPHEMERAL_SECRET_USE_SIDH_EVERY_N_RATCHETS, EPHEMERAL_SECRET_REKEY_AFTER_TIME, EPHEMERAL_SECRET_REKEY_AFTER_USES, EPHEMERAL_SECRET_REJECT_AFTER_TIME};
+use crate::vl1::protocol::*;
 use crate::vl1::symmetricsecret::SymmetricSecret;
 
 /// A set of ephemeral secret key pairs. Multiple algorithms are used.
@@ -124,7 +124,8 @@ impl EphemeralKeyPairSet {
             )
         });
 
-        let mut algs: Vec<EphemeralKeyAgreementAlgorithm> = Vec::with_capacity(3);
+        let mut ok = false;
+        let mut fips_compliant = false; // ends up true if last algorithm was FIPS compliant
         let mut other_public_bytes = other_public_bytes;
 
         // Make sure the state of the ratchet matches on both ends. Otherwise it must restart.
@@ -161,7 +162,8 @@ impl EphemeralKeyPairSet {
                     let c25519_secret = self.c25519.agree(&other_public_bytes[0..C25519_PUBLIC_KEY_SIZE]);
                     other_public_bytes = &other_public_bytes[C25519_PUBLIC_KEY_SIZE..];
                     key.0 = SHA384::hmac(&key.0, &c25519_secret.0);
-                    algs.push(EphemeralKeyAgreementAlgorithm::C25519);
+                    ok = true;
+                    fips_compliant = false;
                     c25519_ratchet_count += 1;
                 },
 
@@ -187,7 +189,8 @@ impl EphemeralKeyPairSet {
                         None => None,
                     }.map(|sidh_secret| {
                         key.0 = SHA384::hmac(&key.0, &sidh_secret.0);
-                        algs.push(EphemeralKeyAgreementAlgorithm::SIDHP751);
+                        ok = true;
+                        fips_compliant = false;
                         sidh_ratchet_count += 1;
                     });
                     other_public_bytes = &other_public_bytes[(SIDH_P751_PUBLIC_KEY_SIZE + 1)..];
@@ -207,7 +210,8 @@ impl EphemeralKeyPairSet {
                         return None;
                     }
                     key.0 = SHA384::hmac(&key.0, &p521_key.unwrap().0);
-                    algs.push(EphemeralKeyAgreementAlgorithm::NistP521ECDH);
+                    ok = true;
+                    fips_compliant = true;
                     nistp521_ratchet_count += 1;
                 },
 
@@ -225,14 +229,14 @@ impl EphemeralKeyPairSet {
             Some(EphemeralSymmetricSecret {
                 secret: SymmetricSecret::new(key),
                 ratchet_state: SHA384::hash(&key.0)[0..16].try_into().unwrap(),
-                agreement_algorithms: algs,
                 rekey_time: time_ticks + EPHEMERAL_SECRET_REKEY_AFTER_TIME,
                 expire_time: time_ticks + EPHEMERAL_SECRET_REJECT_AFTER_TIME,
                 c25519_ratchet_count,
                 sidhp751_ratchet_count,
                 nistp512_ratchet_count,
                 encrypt_uses: AtomicU32::new(0),
-                decrypt_uses: AtomicU32::new(0)
+                decrypt_uses: AtomicU32::new(0),
+                fips_compliant
             })
         } else {
             None
@@ -244,7 +248,6 @@ impl EphemeralKeyPairSet {
 pub struct EphemeralSymmetricSecret {
     secret: SymmetricSecret,
     ratchet_state: [u8; 16],
-    agreement_algorithms: Vec<EphemeralKeyAgreementAlgorithm>,
     rekey_time: i64,
     expire_time: i64,
     c25519_ratchet_count: u64,
@@ -252,6 +255,7 @@ pub struct EphemeralSymmetricSecret {
     nistp512_ratchet_count: u64,
     encrypt_uses: AtomicU32,
     decrypt_uses: AtomicU32,
+    fips_compliant: bool,
 }
 
 impl EphemeralSymmetricSecret {
@@ -267,16 +271,15 @@ impl EphemeralSymmetricSecret {
         &self.secret
     }
 
-    pub fn is_fips_compliant(&self) -> bool {
-        self.agreement_algorithms.last().map_or(false, |alg| alg.is_fips_compliant())
-    }
-
     pub fn should_rekey(&self, time_ticks: i64) -> bool {
         time_ticks >= self.rekey_time || self.encrypt_uses.load(Ordering::Relaxed).max(self.decrypt_uses.load(Ordering::Relaxed)) >= EPHEMERAL_SECRET_REKEY_AFTER_USES
     }
+
+    pub fn expired(&self, time_ticks: i64) -> bool {
+        time_ticks >= self.expire_time || self.encrypt_uses.load(Ordering::Relaxed).max(self.decrypt_uses.load(Ordering::Relaxed)) >= EPHEMERAL_SECRET_REJECT_AFTER_USES
+    }
 }
 
-#[derive(Copy, Clone)]
 enum SIDHEphemeralKeyPair {
     Alice(SIDHPublicKeyAlice, SIDHSecretKeyAlice),
     Bob(SIDHPublicKeyBob, SIDHSecretKeyBob)
