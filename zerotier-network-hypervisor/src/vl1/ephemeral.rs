@@ -6,7 +6,7 @@
  * https://www.zerotier.com/
  */
 
-use std::sync::atomic::AtomicU32;
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::io::Write;
 use std::convert::TryInto;
 
@@ -19,47 +19,52 @@ use zerotier_core_crypto::sidhp751::{SIDHPublicKeyAlice, SIDHPublicKeyBob, SIDHS
 use zerotier_core_crypto::varint;
 
 use crate::vl1::Address;
-use crate::vl1::protocol::EphemeralKeyAgreementAlgorithm;
+use crate::vl1::protocol::{EphemeralKeyAgreementAlgorithm, EPHEMERAL_SECRET_USE_SIDH_EVERY_N_RATCHETS, EPHEMERAL_SECRET_REKEY_AFTER_TIME, EPHEMERAL_SECRET_REKEY_AFTER_USES, EPHEMERAL_SECRET_REJECT_AFTER_TIME};
 use crate::vl1::symmetricsecret::SymmetricSecret;
 
-/// An ephemeral secret key negotiated to implement forward secrecy.
-pub struct EphemeralSecret {
-    timestamp_ticks: i64,
-    ratchet_count: u64,
+/// A set of ephemeral secret key pairs. Multiple algorithms are used.
+pub struct EphemeralKeyPairSet {
+    previous_ratchet_state: Option<[u8; 16]>,
     c25519: C25519KeyPair,
     p521: P521KeyPair,
     sidhp751: Option<SIDHEphemeralKeyPair>,
 }
 
-impl EphemeralSecret {
-    /// Create a new ephemeral secret key.
+impl EphemeralKeyPairSet {
+    /// Create a new ephemeral set of secret/public key pairs.
     ///
     /// This contains key pairs for the asymmetric key agreement algorithms used and a
     /// timestamp used to enforce TTL.
     ///
-    /// SIDH is much slower than Curve25519 and NIST P-521, so it's only included every
-    /// 256 clicks of the ratchet. The point of SIDH is forward secrecy out to the age
-    /// of quantum computing in case someone is warehousing traffic today to analyze
-    /// tomorrow. An attacker from 5-15 years from now will not be able to time travel
-    /// back in time and steal an ephemeral SIDH secret key with a side channel attack.
-    pub fn new(time_ticks: i64, local_address: Address, remote_address: Address, previous_ephemeral_secret: Option<&EphemeralSymmetricSecret>) -> Self {
-        let ratchet_count = previous_ephemeral_secret.map_or(0_u64, |previous_ephemeral_secret| previous_ephemeral_secret.next_ratchet_count);
-        EphemeralSecret {
-            timestamp_ticks: time_ticks,
-            ratchet_count,
+    /// SIDH is only used the first time since it's slow and its only purpose is to
+    /// defend against further-future quantum computer attacks.
+    pub fn new(local_address: Address, remote_address: Address, previous_ephemeral_secret: Option<&EphemeralSymmetricSecret>) -> Self {
+        let (sidhp751, previous_ratchet_state) = previous_ephemeral_secret.map_or_else(|| {
+            (Some(SIDHEphemeralKeyPair::generate(local_address, remote_address)), None)
+        }, |previous_ephemeral_secret| {
+            (None, Some(previous_ephemeral_secret.ratchet_state.clone()))
+        });
+        EphemeralKeyPairSet {
+            previous_ratchet_state,
             c25519: C25519KeyPair::generate(true),
             p521: P521KeyPair::generate(true).expect("NIST P-521 key pair generation failed"),
-            sidhp751: if (ratchet_count % 256) == 0 {
-                Some(SIDHEphemeralKeyPair::generate(local_address, remote_address))
-            } else {
-                None
-            },
+            sidhp751,
         }
     }
 
     /// Create a public version of this ephemeral secret to share with our counterparty.
+    ///
+    /// Note that the public key bundle is NOT self-signed or otherwise self-authenticating. It must
+    /// be transmitted over an authenticated channel.
     pub fn public_bytes(&self) -> Vec<u8> {
-        let mut b: Vec<u8> = Vec::with_capacity(8 + C25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + SIDH_P751_PUBLIC_KEY_SIZE);
+        let mut b: Vec<u8> = Vec::with_capacity(SHA384_HASH_SIZE + 8 + C25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + SIDH_P751_PUBLIC_KEY_SIZE);
+
+        self.previous_ratchet_state.as_ref().map_or_else(|| {
+            b.push(0); // no flags
+        }, |previous_ratchet_state| {
+            b.push(1); // flag: previous ephemeral secret hash included
+            let _ = b.write_all(previous_ratchet_state);
+        });
 
         b.push(EphemeralKeyAgreementAlgorithm::C25519 as u8);
         let _ = varint::write(&mut b, C25519_PUBLIC_KEY_SIZE as u64);
@@ -78,8 +83,8 @@ impl EphemeralSecret {
 
         // FIPS note: any FIPS compliant ciphers must be last or the exchange will not be FIPS compliant. That's
         // because we chain/ratchet using KHDF and non-FIPS ciphers are considered "salt" inputs for HKDF from a
-        // FIPS point of view. Final key must be HKDF(salt, FIPS-compliant algorithm secret). Order has no actual
-        // implication for security.
+        // FIPS point of view. Final key must be HKDF(salt, a FIPS-compliant algorithm secret). There is zero
+        // actual security implication to the order.
 
         b.push(EphemeralKeyAgreementAlgorithm::NistP521ECDH as u8);
         let _ = varint::write(&mut b, P521_PUBLIC_KEY_SIZE as u64);
@@ -97,14 +102,36 @@ impl EphemeralSecret {
     ///
     /// Since ephemeral secrets should only be used once, this consumes the object.
     pub fn agree(self, time_ticks: i64, static_secret: &SymmetricSecret, previous_ephemeral_secret: Option<&EphemeralSymmetricSecret>, other_public_bytes: &[u8]) -> Option<EphemeralSymmetricSecret> {
-        let mut key = previous_ephemeral_secret.map_or_else(|| {
-            static_secret.next_ephemeral_ratchet_key.clone()
+        let (mut key, mut c25519_ratchet_count, mut sidhp751_ratchet_count, mut nistp521_ratchet_count) = previous_ephemeral_secret.map_or_else(|| {
+            (static_secret.next_ephemeral_ratchet_key.clone(), 0, 0, 0)
         }, |previous_ephemeral_secret| {
-            Secret(SHA384::hmac(&static_secret.next_ephemeral_ratchet_key.0, &previous_ephemeral_secret.secret.next_ephemeral_ratchet_key.0))
+            (
+                Secret(SHA384::hmac(&static_secret.next_ephemeral_ratchet_key.0, &previous_ephemeral_secret.secret.next_ephemeral_ratchet_key.0)),
+                previous_ephemeral_secret.c25519_ratchet_count,
+                previous_ephemeral_secret.sidhp751_ratchet_count,
+                previous_ephemeral_secret.nistp512_ratchet_count
+            )
         });
 
         let mut algs: Vec<EphemeralKeyAgreementAlgorithm> = Vec::with_capacity(3);
         let mut other_public_bytes = other_public_bytes;
+
+        // Make sure the state of the ratchet matches on both ends. Otherwise it must restart.
+        if other_public_bytes.is_empty() {
+            return None;
+        }
+        if (other_public_bytes[0] & 1) == 0 {
+            if previous_ephemeral_secret.is_some() {
+                return None;
+            }
+            other_public_bytes = &other_public_bytes[1..];
+        } else {
+            if other_public_bytes.len() < 17 || previous_ephemeral_secret.map_or(false, |previous_ephemeral_secret| other_public_bytes[1..17].ne(&previous_ephemeral_secret.ratchet_state)) {
+                return None;
+            }
+            other_public_bytes = &other_public_bytes[17..];
+        }
+
         while !other_public_bytes.is_empty() {
             let cipher = other_public_bytes[0];
             other_public_bytes = &other_public_bytes[1..];
@@ -124,6 +151,7 @@ impl EphemeralSecret {
                     other_public_bytes = &other_public_bytes[C25519_PUBLIC_KEY_SIZE..];
                     key.0 = SHA384::hmac(&key.0, &c25519_secret.0);
                     algs.push(EphemeralKeyAgreementAlgorithm::C25519);
+                    c25519_ratchet_count += 1;
                 },
 
                 Ok(EphemeralKeyAgreementAlgorithm::SIDHP751) => {
@@ -149,6 +177,7 @@ impl EphemeralSecret {
                     }.map(|sidh_secret| {
                         key.0 = SHA384::hmac(&key.0, &sidh_secret.0);
                         algs.push(EphemeralKeyAgreementAlgorithm::SIDHP751);
+                        sidh_ratchet_count += 1;
                     });
                     other_public_bytes = &other_public_bytes[(SIDH_P751_PUBLIC_KEY_SIZE + 1)..];
                 },
@@ -168,6 +197,7 @@ impl EphemeralSecret {
                     }
                     key.0 = SHA384::hmac(&key.0, &p521_key.unwrap().0);
                     algs.push(EphemeralKeyAgreementAlgorithm::NistP521ECDH);
+                    nistp521_ratchet_count += 1;
                 },
 
                 Err(_) => {
@@ -183,10 +213,13 @@ impl EphemeralSecret {
         return if !algs.is_empty() {
             Some(EphemeralSymmetricSecret {
                 secret: SymmetricSecret::new(key),
+                ratchet_state: SHA384::hash(&key.0)[0..16].try_into().unwrap(),
                 agreement_algorithms: algs,
-                agreement_timestamp_ticks: time_ticks,
-                local_secret_timestamp_ticks: self.timestamp_ticks,
-                next_ratchet_count: self.ratchet_count + 1,
+                rekey_time: time_ticks + EPHEMERAL_SECRET_REKEY_AFTER_TIME,
+                expire_time: time_ticks + EPHEMERAL_SECRET_REJECT_AFTER_TIME,
+                c25519_ratchet_count,
+                sidhp751_ratchet_count,
+                nistp512_ratchet_count,
                 encrypt_uses: AtomicU32::new(0),
                 decrypt_uses: AtomicU32::new(0)
             })
@@ -196,12 +229,16 @@ impl EphemeralSecret {
     }
 }
 
+/// Symmetric secret representing a step in the ephemeral keying ratchet.
 pub struct EphemeralSymmetricSecret {
     secret: SymmetricSecret,
+    ratchet_state: [u8; 16],
     agreement_algorithms: Vec<EphemeralKeyAgreementAlgorithm>,
-    agreement_timestamp_ticks: i64,
-    local_secret_timestamp_ticks: i64,
-    next_ratchet_count: u64,
+    rekey_time: i64,
+    expire_time: i64,
+    c25519_ratchet_count: u64,
+    sidhp751_ratchet_count: u64,
+    nistp512_ratchet_count: u64,
     encrypt_uses: AtomicU32,
     decrypt_uses: AtomicU32,
 }
@@ -209,18 +246,22 @@ pub struct EphemeralSymmetricSecret {
 impl EphemeralSymmetricSecret {
     #[inline(always)]
     pub fn use_secret_to_encrypt(&self) -> &SymmetricSecret {
-        let _ = self.encrypt_uses.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let _ = self.encrypt_uses.fetch_add(1, Ordering::Relaxed);
         &self.secret
     }
 
     #[inline(always)]
     pub fn use_secret_to_decrypt(&self) -> &SymmetricSecret {
-        let _ = self.decrypt_uses.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let _ = self.decrypt_uses.fetch_add(1, Ordering::Relaxed);
         &self.secret
     }
 
     pub fn is_fips_compliant(&self) -> bool {
         self.agreement_algorithms.last().map_or(false, |alg| alg.is_fips_compliant())
+    }
+
+    pub fn should_rekey(&self, time_ticks: i64) -> bool {
+        time_ticks >= self.rekey_time || self.encrypt_uses.load(Ordering::Relaxed).max(self.decrypt_uses.load(Ordering::Relaxed)) >= EPHEMERAL_SECRET_REKEY_AFTER_USES
     }
 }
 
@@ -264,7 +305,7 @@ impl SIDHEphemeralKeyPair {
 
 #[cfg(test)]
 mod tests {
-    use crate::vl1::ephemeral::EphemeralSecret;
+    use crate::vl1::ephemeral::EphemeralKeyPairSet;
     use crate::vl1::Address;
     use crate::vl1::symmetricsecret::SymmetricSecret;
     use zerotier_core_crypto::secret::Secret;
@@ -272,8 +313,8 @@ mod tests {
     #[test]
     fn ephemeral_agreement() {
         let static_secret = SymmetricSecret::new(Secret([1_u8; 48]));
-        let alice = EphemeralSecret::new(1, Address::from_u64(0xdeadbeef00).unwrap(), Address::from_u64(0xbeefdead00).unwrap(), None);
-        let bob = EphemeralSecret::new(1, Address::from_u64(0xbeefdead00).unwrap(), Address::from_u64(0xdeadbeef00).unwrap(), None);
+        let alice = EphemeralKeyPairSet::new(Address::from_u64(0xdeadbeef00).unwrap(), Address::from_u64(0xbeefdead00).unwrap(), None);
+        let bob = EphemeralKeyPairSet::new(Address::from_u64(0xbeefdead00).unwrap(), Address::from_u64(0xdeadbeef00).unwrap(), None);
         let alice_public_bytes = alice.public_bytes();
         let bob_public_bytes = bob.public_bytes();
         let alice_key = alice.agree(2, &static_secret, None, bob_public_bytes.as_slice()).unwrap();

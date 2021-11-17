@@ -51,16 +51,16 @@ pub const KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K1: u8 = b'1';
 pub const KBKDF_KEY_USAGE_LABEL_EPHEMERAL_RATCHET: u8 = b'E';
 
 /// Try to re-key ephemeral keys after this time.
-pub const EPHEMERAL_SECRET_REKEY_AFTER_TIME: i64 = 1000 * 60 * 60; // 1 hour
+pub const EPHEMERAL_SECRET_REKEY_AFTER_TIME: i64 = 300000; // 5 minutes
 
 /// Maximum number of times to use an ephemeral secret before trying to replace it.
-pub const EPHEMERAL_SECRET_REKEY_AFTER_USES: u32 = 536870912; // 1/4 the NIST security limit
+pub const EPHEMERAL_SECRET_REKEY_AFTER_USES: u32 = 536870912; // 1/4 the NIST/FIPS security bound of 2^31
 
 /// Ephemeral secret reject after time.
 pub const EPHEMERAL_SECRET_REJECT_AFTER_TIME: i64 = EPHEMERAL_SECRET_REKEY_AFTER_TIME * 2;
 
 /// Ephemeral secret reject after uses.
-pub const EPHEMERAL_SECRET_REJECT_AFTER_USES: u32 = 2147483648; // NIST security limit
+pub const EPHEMERAL_SECRET_REJECT_AFTER_USES: u32 = 2147483648; // NIST/FIPS security bound
 
 /// Length of an address in bytes.
 pub const ADDRESS_SIZE: usize = 5;

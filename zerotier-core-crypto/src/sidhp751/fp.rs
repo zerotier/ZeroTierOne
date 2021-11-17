@@ -8,7 +8,7 @@
 
 use crate::random::SecureRandom;
 
-use std::mem::{size_of, MaybeUninit, zeroed};
+use std::mem::size_of;
 use std::fmt::Debug;
 use std::ops::Neg;
 
@@ -18,8 +18,6 @@ use quickcheck::{Arbitrary, Gen};
 use subtle::{ConditionallySelectable, Choice};
 use rand_core::RngCore;
 
-// Macro to assign tuples, as Rust does not allow tuples as lvalue.
-#[macro_export]
 macro_rules! assign{
     {($v1:ident, $v2:expr) = $e:expr} =>
     {
@@ -31,7 +29,6 @@ macro_rules! assign{
     };
 }
 
-// X86 finite field arithmetic
 const RADIX: u32 = 32;
 pub const FP751_NUM_WORDS: usize = 24;
 const P751_ZERO_WORDS: usize = 11;
@@ -40,44 +37,11 @@ const P751: [u32; FP751_NUM_WORDS] = [4294967295, 4294967295, 4294967295, 429496
 const P751P1: [u32; FP751_NUM_WORDS] = [0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 4004511744, 1241020584, 3823933061, 335006838, 3667237658, 3605784694, 139368551,	1555191624,	2237838596,	2545605734,	236097695, 3577870108, 28645];
 const P751X2: [u32; FP751_NUM_WORDS] = [4294967294,	4294967295,	4294967295,	4294967295,	4294967295,	4294967295,	4294967295,	4294967295,	4294967295,	4294967295,	4294967295,	3714056191,	2482041169,	3352898826,	670013677, 3039508020, 2916602093, 278737103, 3110383248, 180709896, 796244173,	472195391, 2860772920, 57291];
 
-fn digit_x_digit(a: u32, b: u32, c: &mut [u32; 2]) {
-    #[allow(non_upper_case_globals)]
-    const sizeof_u32: u32 = size_of::<u32>() as u32;
-    #[allow(non_upper_case_globals)]
-    const mask_low: u32 = <u32>::MAX >> (sizeof_u32 * 4);
-    #[allow(non_upper_case_globals)]
-    const mask_high: u32 = <u32>::MAX << (sizeof_u32 * 4);
-
-    let al = a & mask_low;
-    let ah = a >> (sizeof_u32 * 4);
-    let bl = b & mask_low;
-    let bh = b >> (sizeof_u32 * 4);
-
-    let albl = al * bl;
-    let albh = al * bh;
-    let ahbl = ah * bl;
-    let ahbh = ah * bh;
-    let c0 = albl & mask_low;
-
-    let mut res1 = albl >> (sizeof_u32 * 4);
-    let mut res2 = ahbl & mask_low;
-    let mut res3 = albh & mask_low;
-    let mut temp = res1 + res2 + res3;
-    let mut carry = temp >> (sizeof_u32 * 4);
-    c[0] = c0 ^ (temp << (sizeof_u32 * 4));
-
-    res1 = ahbl >> (sizeof_u32 * 4);
-    res2 = albh >> (sizeof_u32 * 4);
-    res3 = ahbh & mask_low;
-    temp = res1 + res2 + res3 + carry;
-    let c1 = temp & mask_low;
-    carry = temp & mask_high;
-    c[1] = c1 ^ ((ahbh & mask_high) + carry);
-}
-
 #[inline(always)]
 fn mul(multiplier: u32, multiplicant: u32, uv: &mut [u32; 2]) {
-    digit_x_digit(multiplier, multiplicant, uv);
+    let p = (multiplier as u64) * (multiplicant as u64);
+    uv[0] = p as u32;
+    uv[1] = (p >> 32) as u32;
 }
 
 #[inline(always)]
@@ -320,16 +284,14 @@ pub struct Fp751Element(pub (crate) [u32; FP751_NUM_WORDS]);
 pub struct Fp751ElementDist;
 
 impl ConditionallySelectable for Fp751Element {
-    #[inline(always)]
     fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
-        let mut bytes = unsafe { MaybeUninit::<Fp751Element>::uninit().assume_init() };
+        let mut bytes = Fp751Element::zero();
         for i in 0..FP751_NUM_WORDS {
             bytes.0[i] = u32::conditional_select(&a.0[i], &b.0[i], choice);
         }
         bytes
     }
 
-    #[inline(always)]
     fn conditional_assign(&mut self, f: &Self, choice: Choice) {
         let mask = ((choice.unwrap_u8() as i32).neg()) as u32;
         for i in 0..FP751_NUM_WORDS {
@@ -376,8 +338,7 @@ impl Fp751Element {
     /// Construct a new zero `Fp751Element`.
     #[inline(always)]
     pub fn zero() -> Fp751Element {
-        unsafe { zeroed() }
-        //Fp751Element([0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0])
+        Fp751Element([0_u32; FP751_NUM_WORDS])
     }
 
     /// Given an `Fp751Element` in Montgomery form, convert to little-endian bytes.
@@ -386,10 +347,8 @@ impl Fp751Element {
         let mut a = Fp751Element::zero();
         #[allow(non_snake_case)]
         let mut aR = Fp751X2::zero();
-        //let one = Fp751Element([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
 
         aR.0[..FP751_NUM_WORDS].clone_from_slice(&self.0);
-        //aR = self * &one;
         a = aR.reduce();       // = a mod p in [0, 2p)
         a = a.strong_reduce(); // = a mod p in [0, p)
 
@@ -399,7 +358,6 @@ impl Fp751Element {
         for i in 0..94 {
             j = i / 4;
             k = (i % 4) as u32;
-            // Rust indexes are of type usize.
             bytes[i as usize] = (a.0[j as usize] >> (8 * k)) as u8;
         }
         bytes
@@ -439,9 +397,7 @@ impl Fp751X2 {
     // Construct a zero `Fp751X2`.
     #[inline(always)]
     pub fn zero() -> Fp751X2 {
-        unsafe { zeroed() }
-        //Fp751X2([0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-        //    0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0])
+        Fp751X2([0_u32; { 2 * FP751_NUM_WORDS }])
     }
 }
 

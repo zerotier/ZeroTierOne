@@ -9,7 +9,7 @@
 //! This module contains internal curve representation and operations 
 //! for SIDH, which is not part of the public API.
 
-use crate::sidhp751::fp::Fp751Element;
+use crate::sidhp751::fp::{Fp751Element, FP751_NUM_WORDS};
 use crate::sidhp751::field::{PrimeFieldElement, ExtensionFieldElement};
 use crate::sidhp751::constants::*;
 
@@ -19,9 +19,7 @@ use subtle::{ConditionallySelectable, Choice};
 
 #[cfg(test)]
 use quickcheck::{Gen, Arbitrary};
-use std::mem::zeroed;
 
-// Macro to assign tuples, as Rust does not allow tuples as lvalue.
 macro_rules! assign{
     {($v1:ident, $v2:ident) = $e:expr} =>
     {
@@ -36,7 +34,7 @@ macro_rules! assign{
 // = 256
 const CONST_256: ExtensionFieldElement = ExtensionFieldElement {
     A: Fp751Element([0x249ad67, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x7300000, 0x9973da8b, 0x73815496, 0x46718c7f, 0x856657c1, 0xe363a697, 0x461860e4,0xbba838cd, 0xf9fd6510,0x06993c0c, 0x4e1a3c3f, 0xef5b75c7, 0x55ab]),
-    B: Fp751Element([0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0])
+    B: Fp751Element([0_u32; FP751_NUM_WORDS])
 };
 
 /// A point on the projective line `P^1(F_{p^2})`.
@@ -193,8 +191,7 @@ impl Arbitrary for ProjectivePoint {
 impl ProjectivePoint {
     /// Creates a new zero `ProejctivePoint`.
     pub fn new() -> ProjectivePoint {
-        unsafe { zeroed() }
-        //ProjectivePoint{ X: ExtensionFieldElement::zero(), Z: ExtensionFieldElement::zero() }
+        ProjectivePoint{ X: ExtensionFieldElement::zero(), Z: ExtensionFieldElement::zero() }
     }
 
     #[allow(non_snake_case)]
@@ -731,8 +728,7 @@ impl Arbitrary for ProjectivePrimeFieldPoint {
 impl ProjectivePrimeFieldPoint {
     /// Creates a new zero `ProjectivePrimeFieldPoint`.
     pub fn new() -> ProjectivePrimeFieldPoint {
-        unsafe { zeroed() }
-        //ProjectivePrimeFieldPoint{ X: PrimeFieldElement::zero(), Z: PrimeFieldElement::zero() }
+        ProjectivePrimeFieldPoint{ X: PrimeFieldElement::zero(), Z: PrimeFieldElement::zero() }
     }
 
     pub fn from_affine(x: &PrimeFieldElement) -> ProjectivePrimeFieldPoint {
