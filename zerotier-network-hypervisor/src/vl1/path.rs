@@ -7,16 +7,17 @@
  */
 
 use std::collections::HashMap;
+use std::num::NonZeroI64;
 use std::sync::atomic::{AtomicI64, Ordering};
 
 use parking_lot::Mutex;
 
+use crate::PacketBuffer;
 use crate::util::U64PassThroughHasher;
 use crate::vl1::Endpoint;
 use crate::vl1::fragmentedpacket::FragmentedPacket;
-use crate::vl1::vl1node::VL1CallerInterface;
+use crate::vl1::node::NodeInterface;
 use crate::vl1::protocol::*;
-use crate::PacketBuffer;
 
 /// Keepalive interval for paths in milliseconds.
 pub(crate) const PATH_KEEPALIVE_INTERVAL: i64 = 20000;
@@ -27,8 +28,8 @@ pub(crate) const PATH_KEEPALIVE_INTERVAL: i64 = 20000;
 /// for them and uniform application of things like keepalives.
 pub struct Path {
     endpoint: Endpoint,
-    local_socket: i64,
-    local_interface: i64,
+    local_socket: Option<NonZeroI64>,
+    local_interface: Option<NonZeroI64>,
     last_send_time_ticks: AtomicI64,
     last_receive_time_ticks: AtomicI64,
     fragmented_packets: Mutex<HashMap<u64, FragmentedPacket, U64PassThroughHasher>>,
@@ -38,7 +39,7 @@ impl Path {
     pub(crate) const INTERVAL: i64 = PATH_KEEPALIVE_INTERVAL;
 
     #[inline(always)]
-    pub fn new(endpoint: Endpoint, local_socket: i64, local_interface: i64) -> Self {
+    pub fn new(endpoint: Endpoint, local_socket: Option<NonZeroI64>, local_interface: Option<NonZeroI64>) -> Self {
         Self {
             endpoint,
             local_socket,
@@ -53,10 +54,10 @@ impl Path {
     pub fn endpoint(&self) -> &Endpoint { &self.endpoint }
 
     #[inline(always)]
-    pub fn local_socket(&self) -> i64 { self.local_socket }
+    pub fn local_socket(&self) -> Option<NonZeroI64> { self.local_socket }
 
     #[inline(always)]
-    pub fn local_interface(&self) -> i64 { self.local_interface }
+    pub fn local_interface(&self) -> Option<NonZeroI64> { self.local_interface }
 
     #[inline(always)]
     pub fn last_send_time_ticks(&self) -> i64 { self.last_send_time_ticks.load(Ordering::Relaxed) }
@@ -104,7 +105,7 @@ impl Path {
 
     /// Called every INTERVAL during background tasks.
     #[inline(always)]
-    pub(crate) fn call_every_interval<CI: VL1CallerInterface>(&self, ct: &CI, time_ticks: i64) {
+    pub(crate) fn call_every_interval<CI: NodeInterface>(&self, ct: &CI, time_ticks: i64) {
         self.fragmented_packets.lock().retain(|packet_id, frag| (time_ticks - frag.ts_ticks) < FRAGMENT_EXPIRATION);
     }
 }

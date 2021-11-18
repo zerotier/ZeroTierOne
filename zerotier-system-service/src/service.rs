@@ -6,30 +6,25 @@
  * https://www.zerotier.com/
  */
 
+use std::num::NonZeroI64;
 use std::sync::Arc;
 
 use parking_lot::Mutex;
 
-use zerotier_network_hypervisor::{CallerInterface, Node};
-use zerotier_network_hypervisor::vl1::{Endpoint, Identity, VL1CallerInterface};
+use zerotier_network_hypervisor::{Interface, NetworkHypervisor};
+use zerotier_network_hypervisor::vl1::{Endpoint, Identity, NodeInterface};
+use zerotier_network_hypervisor::vl2::SwitchInterface;
 
 use crate::log::Log;
 use crate::utils::{ms_monotonic, ms_since_epoch};
+use crate::localconfig::LocalConfig;
 
-struct Service {
+struct ServiceInterface {
     pub log: Arc<Mutex<Log>>,
-    node_ptr: Arc<Option<Node>>,
+    pub config: Mutex<LocalConfig>
 }
 
-impl Service {
-    pub fn node(&self) -> &Node {
-        // The node_ref option is only None during initial service startup since there is a
-        // chicken or egg problem. Use of this accessor during startup will panic and is a bug.
-        (*self.node_ptr).as_ref().unwrap()
-    }
-}
-
-impl VL1CallerInterface for Service {
+impl NodeInterface for ServiceInterface {
     fn event_node_is_up(&self) {}
 
     fn event_node_is_down(&self) {}
@@ -46,15 +41,16 @@ impl VL1CallerInterface for Service {
 
     fn save_node_identity(&self, id: &Identity, public: &[u8], secret: &[u8]) {}
 
-    fn wire_send(&self, endpoint: &Endpoint, local_socket: Option<i64>, local_interface: Option<i64>, data: &[&[u8]], packet_ttl: u8) -> bool {
+    #[inline(always)]
+    fn wire_send(&self, endpoint: &Endpoint, local_socket: Option<NonZeroI64>, local_interface: Option<NonZeroI64>, data: &[&[u8]], packet_ttl: u8) -> bool {
         todo!()
     }
 
-    fn check_path(&self, id: &Identity, endpoint: &Endpoint, local_socket: Option<i64>, local_interface: Option<i64>) -> bool {
+    fn check_path(&self, id: &Identity, endpoint: &Endpoint, local_socket: Option<NonZeroI64>, local_interface: Option<NonZeroI64>) -> bool {
         true
     }
 
-    fn get_path_hints(&self, id: &Identity) -> Option<&[(&Endpoint, Option<i64>, Option<i64>)]> {
+    fn get_path_hints(&self, id: &Identity) -> Option<&[(&Endpoint, Option<NonZeroI64>, Option<NonZeroI64>)]> {
         todo!()
     }
 
@@ -65,7 +61,9 @@ impl VL1CallerInterface for Service {
     fn time_clock(&self) -> i64 { ms_since_epoch() }
 }
 
-impl CallerInterface for Service {}
+impl SwitchInterface for ServiceInterface {}
+
+impl Interface for ServiceInterface {}
 
 pub fn run() -> i32 {
     0

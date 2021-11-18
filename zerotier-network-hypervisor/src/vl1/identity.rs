@@ -23,8 +23,8 @@ use zerotier_core_crypto::secret::Secret;
 
 use crate::error::InvalidFormatError;
 use crate::vl1::Address;
-use crate::vl1::buffer::Buffer;
 use crate::vl1::protocol::{PACKET_SIZE_MAX, ADDRESS_SIZE};
+use crate::util::buffer::Buffer;
 
 pub const IDENTITY_TYPE_0_SIGNATURE_SIZE: usize = 96;
 pub const IDENTITY_TYPE_1_SIGNATURE_SIZE: usize = P521_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE;

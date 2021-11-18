@@ -7,8 +7,8 @@
  */
 
 use crate::vl1::{Identity, Endpoint, Dictionary};
-use crate::vl1::buffer::Buffer;
 use crate::vl1::protocol::PACKET_SIZE_MAX;
+use crate::util::buffer::Buffer;
 use crate::error::InvalidParameterError;
 
 use zerotier_core_crypto::c25519::{ED25519_SECRET_KEY_SIZE, ED25519_PUBLIC_KEY_SIZE, ED25519_SIGNATURE_SIZE, Ed25519KeyPair, ed25519_verify};

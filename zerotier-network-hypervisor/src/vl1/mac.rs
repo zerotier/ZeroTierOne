@@ -11,7 +11,7 @@ use std::str::FromStr;
 use std::hash::{Hash, Hasher};
 
 use crate::error::InvalidFormatError;
-use crate::vl1::buffer::Buffer;
+use crate::util::buffer::Buffer;
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(transparent)]

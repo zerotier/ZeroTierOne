@@ -429,6 +429,11 @@ impl<const L: usize> AsMut<[u8]> for Buffer<L> {
 
 pub struct PooledBufferFactory<const L: usize>;
 
+impl<const L: usize> PooledBufferFactory<L> {
+    #[inline(always)]
+    pub fn new() -> Self { Self{} }
+}
+
 impl<const L: usize> PoolFactory<Buffer<L>> for PooledBufferFactory<L> {
     #[inline(always)]
     fn create(&self) -> Buffer<L> { Buffer::new() }

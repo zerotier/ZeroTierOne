@@ -10,7 +10,6 @@ use crate::PacketBuffer;
 use crate::vl1::protocol::*;
 
 /// Packet fragment re-assembler and container.
-/// This is only used in the receive path.
 ///
 /// Performance note: PacketBuffer is Pooled<Buffer> which is NotNull<*mut Buffer>.
 /// That means Option<PacketBuffer> is just a pointer, since NotNull permits the

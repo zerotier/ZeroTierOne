@@ -8,6 +8,7 @@
 
 pub mod pool;
 pub mod gate;
+pub mod buffer;
 
 pub use zerotier_core_crypto::hex;
 pub use zerotier_core_crypto::varint;

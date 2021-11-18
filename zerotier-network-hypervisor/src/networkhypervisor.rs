@@ -6,30 +6,26 @@
  * https://www.zerotier.com/
  */
 
+use std::num::NonZeroI64;
 use std::sync::Arc;
 use std::time::Duration;
 
 use crate::error::InvalidParameterError;
-use crate::vl1::{Address, Identity, Endpoint};
-use crate::vl1::vl1node::{VL1CallerInterface, VL1Node};
-use crate::vl2::switch::Switch;
+use crate::vl1::{Address, Identity, Endpoint, NodeInterface, Node};
+use crate::vl2::{Switch, SwitchInterface};
 use crate::{PacketBuffer, PacketBufferPool};
 
-pub trait CallerInterface: VL1CallerInterface {
-}
+pub trait Interface: NodeInterface + SwitchInterface {}
 
-/// A complete ZeroTier node.
-///
-/// This is a composition of the VL1 node and the VL2 virtual switch.
-pub struct Node {
-    vl1: VL1Node,
+pub struct NetworkHypervisor {
+    vl1: Node,
     vl2: Switch,
 }
 
-impl Node {
-    pub fn new<CI: CallerInterface>(ci: &CI, auto_generate_identity_type: Option<crate::vl1::identity::Type>) -> Result<Node, InvalidParameterError> {
-        Ok(Node {
-            vl1: VL1Node::new(ci, auto_generate_identity_type)?,
+impl NetworkHypervisor {
+    pub fn new<CI: Interface>(ci: &CI, auto_generate_identity_type: Option<crate::vl1::identity::Type>) -> Result<NetworkHypervisor, InvalidParameterError> {
+        Ok(NetworkHypervisor {
+            vl1: Node::new(ci, auto_generate_identity_type)?,
             vl2: Switch::new(),
         })
     }
@@ -50,15 +46,12 @@ impl Node {
     #[inline(always)]
     pub fn identity(&self) -> &Identity { self.vl1.identity() }
 
-    #[inline(always)]
-    pub fn fips_mode(&self) -> bool { self.vl1.fips_mode() }
-
-    pub fn do_background_tasks<CI: CallerInterface>(&self, ci: &CI) -> Duration {
+    pub fn do_background_tasks<CI: Interface>(&self, ci: &CI) -> Duration {
         self.vl1.do_background_tasks(ci)
     }
 
     #[inline(always)]
-    pub fn wire_receive<CI: VL1CallerInterface>(&self, ci: &CI, source_endpoint: &Endpoint, source_local_socket: i64, source_local_interface: i64, mut data: PacketBuffer) {
+    pub fn wire_receive<CI: NodeInterface>(&self, ci: &CI, source_endpoint: &Endpoint, source_local_socket: Option<NonZeroI64>, source_local_interface: Option<NonZeroI64>, mut data: PacketBuffer) {
         self.vl1.wire_receive(ci, &self.vl2, source_endpoint, source_local_socket, source_local_interface, data)
     }
 }

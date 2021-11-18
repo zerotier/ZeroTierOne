@@ -12,18 +12,17 @@ pub mod vl1;
 pub mod vl2;
 pub mod defaults;
 
-mod node;
+mod networkhypervisor;
+pub use networkhypervisor::{Interface, NetworkHypervisor};
 
 /// Standard packet buffer type including pool container.
-pub type PacketBuffer = crate::util::pool::Pooled<crate::vl1::buffer::Buffer<{ crate::vl1::protocol::PACKET_SIZE_MAX }>, crate::PacketBufferFactory>;
+pub type PacketBuffer = crate::util::pool::Pooled<crate::util::buffer::Buffer<{ crate::vl1::protocol::PACKET_SIZE_MAX }>, crate::PacketBufferFactory>;
 
 /// Factory type to supply to a new PacketBufferPool.
-pub type PacketBufferFactory = crate::vl1::buffer::PooledBufferFactory<{ crate::vl1::protocol::PACKET_SIZE_MAX }>;
+pub type PacketBufferFactory = crate::util::buffer::PooledBufferFactory<{ crate::vl1::protocol::PACKET_SIZE_MAX }>;
 
 /// Source for instances of PacketBuffer
-pub type PacketBufferPool = crate::util::pool::Pool<crate::vl1::buffer::Buffer<{ crate::vl1::protocol::PACKET_SIZE_MAX }>, crate::PacketBufferFactory>;
-
-pub use node::{CallerInterface, Node};
+pub type PacketBufferPool = crate::util::pool::Pool<crate::util::buffer::Buffer<{ crate::vl1::protocol::PACKET_SIZE_MAX }>, crate::PacketBufferFactory>;
 
 pub const VERSION_MAJOR: u8 = 1;
 pub const VERSION_MINOR: u8 = 99;

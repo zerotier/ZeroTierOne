@@ -18,7 +18,7 @@ use winapi::um::winsock2 as winsock2;
 
 use crate::error::InvalidFormatError;
 use crate::util::equal_ptr;
-use crate::vl1::buffer::Buffer;
+use crate::util::buffer::Buffer;
 
 #[allow(non_camel_case_types)]
 #[cfg(not(windows))]

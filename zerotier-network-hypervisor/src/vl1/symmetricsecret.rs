@@ -14,7 +14,7 @@ use zerotier_core_crypto::kbkdf::zt_kbkdf_hmac_sha384;
 use zerotier_core_crypto::secret::Secret;
 
 use crate::util::pool::{Pool, PoolFactory};
-use crate::vl1::protocol::{KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K0, KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K1, KBKDF_KEY_USAGE_LABEL_HELLO_DICTIONARY_ENCRYPT, KBKDF_KEY_USAGE_LABEL_PACKET_HMAC, KBKDF_KEY_USAGE_LABEL_EPHEMERAL_RATCHET};
+use crate::vl1::protocol::*;
 
 pub struct AesGmacSivPoolFactory(Secret<SHA384_HASH_SIZE>, Secret<SHA384_HASH_SIZE>);
 

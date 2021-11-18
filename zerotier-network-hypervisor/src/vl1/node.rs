@@ -6,6 +6,7 @@
  * https://www.zerotier.com/
  */
 
+use std::num::NonZeroI64;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
@@ -15,24 +16,19 @@ use parking_lot::Mutex;
 
 use zerotier_core_crypto::random::{next_u64_secure, SecureRandom};
 
+use crate::{PacketBuffer, PacketBufferFactory, PacketBufferPool};
 use crate::error::InvalidParameterError;
 use crate::util::gate::IntervalGate;
 use crate::util::pool::{Pool, Pooled};
+use crate::util::buffer::Buffer;
 use crate::vl1::{Address, Endpoint, Identity};
-use crate::vl1::buffer::{Buffer, PooledBufferFactory};
 use crate::vl1::path::Path;
 use crate::vl1::peer::Peer;
 use crate::vl1::protocol::*;
 use crate::vl1::rootset::RootSet;
 use crate::vl1::whoisqueue::{QueuedPacket, WhoisQueue};
-use crate::{PacketBuffer, PacketBufferPool};
 
-/// Callback interface and call context for calls to the node (for VL1).
-///
-/// Every non-trivial call takes a reference to this, which it passes all the way through
-/// the call stack. This can be used to call back into the caller to send packets, get or
-/// store data, report events, etc.
-pub trait VL1CallerInterface {
+pub trait NodeInterface {
     /// Node is up and ready for operation.
     fn event_node_is_up(&self);
 
@@ -68,16 +64,16 @@ pub trait VL1CallerInterface {
     /// If packet TTL is non-zero it should be used to set the packet TTL for outgoing packets
     /// for supported protocols such as UDP, but otherwise it can be ignored. It can also be
     /// ignored if the platform does not support setting the TTL.
-    fn wire_send(&self, endpoint: &Endpoint, local_socket: Option<i64>, local_interface: Option<i64>, data: &[&[u8]], packet_ttl: u8) -> bool;
+    fn wire_send(&self, endpoint: &Endpoint, local_socket: Option<NonZeroI64>, local_interface: Option<NonZeroI64>, data: &[&[u8]], packet_ttl: u8) -> bool;
 
     /// Called to check and see if a physical address should be used for ZeroTier traffic to a node.
-    fn check_path(&self, id: &Identity, endpoint: &Endpoint, local_socket: Option<i64>, local_interface: Option<i64>) -> bool;
+    fn check_path(&self, id: &Identity, endpoint: &Endpoint, local_socket: Option<NonZeroI64>, local_interface: Option<NonZeroI64>) -> bool;
 
     /// Called to look up a path to a known node.
     ///
     /// If a path is found, this returns a tuple of an endpoint and optional local socket and local
     /// interface IDs. If these are None they will be None when this is sent with wire_send.
-    fn get_path_hints(&self, id: &Identity) -> Option<&[(&Endpoint, Option<i64>, Option<i64>)]>;
+    fn get_path_hints(&self, id: &Identity) -> Option<&[(&Endpoint, Option<NonZeroI64>, Option<NonZeroI64>)]>;
 
     /// Called to get the current time in milliseconds from the system monotonically increasing clock.
     /// This needs to be accurate to about 250 milliseconds resolution or better.
@@ -123,7 +119,7 @@ struct BackgroundTaskIntervals {
     peers: IntervalGate<{ Peer::INTERVAL }>,
 }
 
-pub struct VL1Node {
+pub struct Node {
     pub(crate) instance_id: u64,
     identity: Identity,
     intervals: Mutex<BackgroundTaskIntervals>,
@@ -136,12 +132,12 @@ pub struct VL1Node {
     secure_prng: SecureRandom,
 }
 
-impl VL1Node {
+impl Node {
     /// Create a new Node.
     ///
     /// If the auto-generate identity type is not None, a new identity will be generated if
     /// no identity is currently stored in the data store.
-    pub fn new<CI: VL1CallerInterface>(ci: &CI, auto_generate_identity_type: Option<crate::vl1::identity::Type>) -> Result<Self, InvalidParameterError> {
+    pub fn new<I: NodeInterface>(ci: &I, auto_generate_identity_type: Option<crate::vl1::identity::Type>) -> Result<Self, InvalidParameterError> {
         let id = {
             let id_str = ci.load_node_identity();
             if id_str.is_none() {
@@ -172,7 +168,7 @@ impl VL1Node {
             roots: Mutex::new(Vec::new()),
             root_sets: Mutex::new(Vec::new()),
             whois: WhoisQueue::new(),
-            buffer_pool: Arc::new(PacketBufferPool::new(64, PooledBufferFactory)),
+            buffer_pool: Arc::new(PacketBufferPool::new(64, PacketBufferFactory::new())),
             secure_prng: SecureRandom::get(),
         })
     }
@@ -202,10 +198,8 @@ impl VL1Node {
         v
     }
 
-    pub fn fips_mode(&self) -> bool { false }
-
     /// Run background tasks and return desired delay until next call in milliseconds.
-    pub fn do_background_tasks<CI: VL1CallerInterface>(&self, ci: &CI) -> Duration {
+    pub fn do_background_tasks<I: NodeInterface>(&self, ci: &I) -> Duration {
         let mut intervals = self.intervals.lock();
         let tt = ci.time_ticks();
 
@@ -233,7 +227,7 @@ impl VL1Node {
     }
 
     /// Called when a packet is received on the physical wire.
-    pub fn wire_receive<CI: VL1CallerInterface, PH: VL1PacketHandler>(&self, ci: &CI, ph: &PH, source_endpoint: &Endpoint, source_local_socket: i64, source_local_interface: i64, mut data: PacketBuffer) {
+    pub fn wire_receive<I: NodeInterface, PH: VL1PacketHandler>(&self, ci: &I, ph: &PH, source_endpoint: &Endpoint, source_local_socket: Option<NonZeroI64>, source_local_interface: Option<NonZeroI64>, mut data: PacketBuffer) {
         let fragment_header = data.struct_mut_at::<FragmentHeader>(0);
         if fragment_header.is_ok() {
             let fragment_header = fragment_header.unwrap();
@@ -314,16 +308,16 @@ impl VL1Node {
     }
 
     /// Get the current best root peer that we should use for WHOIS, relaying, etc.
-    pub(crate) fn root(&self) -> Option<Arc<Peer>> { self.roots.lock().first().map(|p| p.clone()) }
+    pub fn root(&self) -> Option<Arc<Peer>> { self.roots.lock().first().map(|p| p.clone()) }
 
     /// Return true if a peer is a root.
-    pub(crate) fn is_peer_root(&self, peer: &Peer) -> bool { self.roots.lock().iter().any(|p| Arc::as_ptr(p) == (peer as *const Peer)) }
+    pub fn is_peer_root(&self, peer: &Peer) -> bool { self.roots.lock().iter().any(|p| Arc::as_ptr(p) == (peer as *const Peer)) }
 
     /// Get the canonical Path object for a given endpoint and local socket information.
     ///
     /// This is a canonicalizing function that returns a unique path object for every tuple
     /// of endpoint, local socket, and local interface.
-    pub(crate) fn path(&self, ep: &Endpoint, local_socket: i64, local_interface: i64) -> Arc<Path> {
+    pub fn path(&self, ep: &Endpoint, local_socket: Option<NonZeroI64>, local_interface: Option<NonZeroI64>) -> Arc<Path> {
         self.paths.get(ep).map_or_else(|| {
             let p = Arc::new(Path::new(ep.clone(), local_socket, local_interface));
             self.paths.insert(ep.clone(), p.clone()).unwrap_or(p) // if another thread added one, return that instead
@@ -331,6 +325,6 @@ impl VL1Node {
     }
 }
 
-unsafe impl Send for VL1Node {}
+unsafe impl Send for Node {}
 
-unsafe impl Sync for VL1Node {}
+unsafe impl Sync for Node {}

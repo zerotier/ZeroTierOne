@@ -10,8 +10,8 @@ use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 
 use crate::vl1::{Address, MAC};
-use crate::vl1::buffer::Buffer;
 use crate::vl1::inetaddress::InetAddress;
+use crate::util::buffer::Buffer;
 
 const TYPE_NIL: u8 = 0;
 const TYPE_ZEROTIER: u8 = 1;

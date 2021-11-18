@@ -24,10 +24,10 @@ use crate::vl1::symmetricsecret::SymmetricSecret;
 
 /// A set of ephemeral secret key pairs. Multiple algorithms are used.
 pub struct EphemeralKeyPairSet {
-    previous_ratchet_state: Option<[u8; 16]>,
-    c25519: C25519KeyPair,
-    p521: P521KeyPair,
-    sidhp751: Option<SIDHEphemeralKeyPair>,
+    previous_ratchet_state: Option<[u8; 16]>, // First 128 bits of SHA384(previous ratchet secret)
+    c25519: C25519KeyPair,                    // Hipster DJB cryptography
+    p521: P521KeyPair,                        // US federal government cryptography
+    sidhp751: Option<SIDHEphemeralKeyPair>,   // Post-quantum moon math cryptography
 }
 
 impl EphemeralKeyPairSet {
@@ -65,18 +65,18 @@ impl EphemeralKeyPairSet {
     pub fn public_bytes(&self) -> Vec<u8> {
         let mut b: Vec<u8> = Vec::with_capacity(SHA384_HASH_SIZE + 8 + C25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + SIDH_P751_PUBLIC_KEY_SIZE);
 
-        self.previous_ratchet_state.as_ref().map_or_else(|| {
+        if self.previous_ratchet_state.is_none() {
             b.push(0); // no flags
-        }, |previous_ratchet_state| {
-            b.push(1); // flag: previous ephemeral secret hash included
-            let _ = b.write_all(previous_ratchet_state);
-        });
+        } else {
+            b.push(1); // flag 0x01: previous ephemeral secret hash included
+            let _ = b.write_all(self.previous_ratchet_state.as_ref().unwrap());
+        }
 
         b.push(EphemeralKeyAgreementAlgorithm::C25519 as u8);
         let _ = varint::write(&mut b, C25519_PUBLIC_KEY_SIZE as u64);
         let _ = b.write_all(&self.c25519.public_bytes());
 
-        let _ = self.sidhp751.map(|sidhp751| {
+        let _ = self.sidhp751.as_ref().map(|sidhp751| {
             b.push(EphemeralKeyAgreementAlgorithm::SIDHP751 as u8);
             let _ = varint::write(&mut b, (SIDH_P751_PUBLIC_KEY_SIZE + 1) as u64);
             b.push(sidhp751.role());
@@ -120,12 +120,12 @@ impl EphemeralKeyPairSet {
                 Secret(SHA384::hmac(&static_secret.next_ephemeral_ratchet_key.0, &previous_ephemeral_secret.secret.next_ephemeral_ratchet_key.0)),
                 previous_ephemeral_secret.c25519_ratchet_count,
                 previous_ephemeral_secret.sidhp751_ratchet_count,
-                previous_ephemeral_secret.nistp512_ratchet_count
+                previous_ephemeral_secret.nistp521_ratchet_count
             )
         });
 
-        let mut ok = false;
-        let mut fips_compliant = false; // ends up true if last algorithm was FIPS compliant
+        let mut it_happened = false;
+        let mut fips_compliant_exchange = false; // ends up true if last algorithm was FIPS compliant
         let mut other_public_bytes = other_public_bytes;
 
         // Make sure the state of the ratchet matches on both ends. Otherwise it must restart.
@@ -162,8 +162,8 @@ impl EphemeralKeyPairSet {
                     let c25519_secret = self.c25519.agree(&other_public_bytes[0..C25519_PUBLIC_KEY_SIZE]);
                     other_public_bytes = &other_public_bytes[C25519_PUBLIC_KEY_SIZE..];
                     key.0 = SHA384::hmac(&key.0, &c25519_secret.0);
-                    ok = true;
-                    fips_compliant = false;
+                    it_happened = true;
+                    fips_compliant_exchange = false;
                     c25519_ratchet_count += 1;
                 },
 
@@ -189,9 +189,9 @@ impl EphemeralKeyPairSet {
                         None => None,
                     }.map(|sidh_secret| {
                         key.0 = SHA384::hmac(&key.0, &sidh_secret.0);
-                        ok = true;
-                        fips_compliant = false;
-                        sidh_ratchet_count += 1;
+                        it_happened = true;
+                        fips_compliant_exchange = false;
+                        sidhp751_ratchet_count += 1;
                     });
                     other_public_bytes = &other_public_bytes[(SIDH_P751_PUBLIC_KEY_SIZE + 1)..];
                 },
@@ -210,8 +210,8 @@ impl EphemeralKeyPairSet {
                         return None;
                     }
                     key.0 = SHA384::hmac(&key.0, &p521_key.unwrap().0);
-                    ok = true;
-                    fips_compliant = true;
+                    it_happened = true;
+                    fips_compliant_exchange = true;
                     nistp521_ratchet_count += 1;
                 },
 
@@ -225,18 +225,19 @@ impl EphemeralKeyPairSet {
             }
         }
 
-        return if !algs.is_empty() {
+        return if it_happened {
+            let ratchet_state = SHA384::hash(&key.0)[0..16].try_into().unwrap();
             Some(EphemeralSymmetricSecret {
                 secret: SymmetricSecret::new(key),
-                ratchet_state: SHA384::hash(&key.0)[0..16].try_into().unwrap(),
+                ratchet_state,
                 rekey_time: time_ticks + EPHEMERAL_SECRET_REKEY_AFTER_TIME,
                 expire_time: time_ticks + EPHEMERAL_SECRET_REJECT_AFTER_TIME,
                 c25519_ratchet_count,
                 sidhp751_ratchet_count,
-                nistp512_ratchet_count,
+                nistp521_ratchet_count,
                 encrypt_uses: AtomicU32::new(0),
                 decrypt_uses: AtomicU32::new(0),
-                fips_compliant
+                fips_compliant_exchange
             })
         } else {
             None
@@ -252,10 +253,10 @@ pub struct EphemeralSymmetricSecret {
     expire_time: i64,
     c25519_ratchet_count: u64,
     sidhp751_ratchet_count: u64,
-    nistp512_ratchet_count: u64,
+    nistp521_ratchet_count: u64,
     encrypt_uses: AtomicU32,
     decrypt_uses: AtomicU32,
-    fips_compliant: bool,
+    fips_compliant_exchange: bool,
 }
 
 impl EphemeralSymmetricSecret {

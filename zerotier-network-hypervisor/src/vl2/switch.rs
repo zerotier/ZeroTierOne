@@ -8,10 +8,13 @@
 
 use std::sync::Arc;
 
-use crate::vl1::vl1node::VL1PacketHandler;
+use crate::util::buffer::Buffer;
+use crate::vl1::node::VL1PacketHandler;
 use crate::vl1::{Peer, Path};
-use crate::vl1::buffer::Buffer;
 use crate::vl1::protocol::{PACKET_SIZE_MAX, PacketID};
+
+pub trait SwitchInterface {
+}
 
 pub struct Switch {
 }

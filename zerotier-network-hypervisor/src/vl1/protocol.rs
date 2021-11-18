@@ -6,11 +6,11 @@
  * https://www.zerotier.com/
  */
 
+use std::convert::TryFrom;
 use std::mem::MaybeUninit;
 
 use crate::vl1::Address;
-use crate::vl1::buffer::{RawObject, Buffer};
-use std::convert::TryFrom;
+use crate::util::buffer::{RawObject, Buffer};
 
 pub const VERB_VL1_NOP: u8 = 0x00;
 pub const VERB_VL1_HELLO: u8 = 0x01;
@@ -348,7 +348,7 @@ impl FragmentHeader {
 }
 
 pub(crate) mod message_component_structs {
-    use crate::vl1::buffer::RawObject;
+    use crate::util::buffer::RawObject;
     use crate::vl1::protocol::PacketID;
 
     #[repr(packed)]

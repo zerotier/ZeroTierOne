@@ -12,8 +12,8 @@ use std::str::FromStr;
 
 use crate::error::InvalidFormatError;
 use crate::util::hex::HEX_CHARS;
+use crate::util::buffer::Buffer;
 use crate::vl1::protocol::{ADDRESS_RESERVED_PREFIX, ADDRESS_SIZE};
-use crate::vl1::buffer::Buffer;
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(transparent)]
