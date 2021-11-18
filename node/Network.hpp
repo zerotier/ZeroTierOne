@@ -41,10 +41,6 @@
 #define ZT_NETWORK_MAX_INCOMING_UPDATES 3
 #define ZT_NETWORK_MAX_UPDATE_CHUNKS ((ZT_NETWORKCONFIG_DICT_CAPACITY / 1024) + 1)
 
-namespace zeroidc {
-typedef struct ZeroIDC ZeroIDC;
-}
-
 namespace ZeroTier {
 
 class RuntimeEnvironment;
@@ -468,8 +464,6 @@ private:
 	Mutex _lock;
 
 	AtomicCounter __refCount;
-
-	zeroidc::ZeroIDC *_idc;
 };
 
 }	// namespace ZeroTier

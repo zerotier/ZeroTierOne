@@ -128,7 +128,7 @@ zerotier-idtool: one
 
 zerotier-cli: one
 
-$(CORE_OBJS): zeroidc
+$(ONE_OBJS): zeroidc
 
 libzerotiercore.a:	$(CORE_OBJS)
 	ar rcs libzerotiercore.a $(CORE_OBJS)

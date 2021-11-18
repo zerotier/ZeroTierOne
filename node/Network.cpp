@@ -32,7 +32,6 @@
 #include "Node.hpp"
 #include "Peer.hpp"
 #include "Trace.hpp"
-#include "zeroidc.h"
 
 #include <set>
 
@@ -551,8 +550,7 @@ Network::Network(const RuntimeEnvironment *renv,void *tPtr,uint64_t nwid,void *u
 	_lastConfigUpdate(0),
 	_destroyed(false),
 	_netconfFailure(NETCONF_FAILURE_NONE),
-	_portError(0),
-	_idc(nullptr)
+	_portError(0)
 {
 	for(int i=0;i<ZT_NETWORK_MAX_INCOMING_UPDATES;++i)
 		_incomingConfigChunks[i].ts = 0;
@@ -593,24 +591,12 @@ Network::Network(const RuntimeEnvironment *renv,void *tPtr,uint64_t nwid,void *u
 		_portError = RR->node->configureVirtualNetworkPort(tPtr,_id,&_uPtr,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP,&ctmp);
 		_portInitialized = true;
 	}
-
-	if (nconf->ssoEnabled) {
-		if (_config.ssoVersion == 1) {
-			// start sso handling for network
-		}
-	}
 }
 
 Network::~Network()
 {
 	ZT_VirtualNetworkConfig ctmp;
 	_externalConfig(&ctmp);
-
-	if (_idc) {
-		zeroidc::zeroidc_stop(_idc);
-		zeroidc::zeroidc_delete(_idc);
-		_idc = nullptr;
-	}
 
 	if (_destroyed) {
 		// This is done in Node::leave() so we can pass tPtr properly
@@ -1573,18 +1559,6 @@ void Network::setAuthenticationRequired(const char* issuerURL, const char* centr
 	Utils::scopy(_config.ssoClientID, sizeof(_config.ssoClientID), clientID);
 	Utils::scopy(_config.ssoNonce, sizeof(_config.ssoNonce), nonce);
 	Utils::scopy(_config.ssoState, sizeof(_config.ssoState), state);
-
-	// TODO: propaagte to full flow module
-	if (!this->_idc) {
-		this->_idc = zeroidc::zeroidc_new(_config.authenticationURL, _config.ssoClientID, _config.centralAuthURL, 9993);
-		zeroidc::zeroidc_start(this->_idc);
-	}
-
-	zeroidc::AuthInfo *info = zeroidc::zeroidc_get_auth_info(this->_idc, _config.ssoState, _config.ssoNonce);
-	const char* url = zeroidc::zeroidc_get_auth_url(info);
-	if (url != NULL) {
-		fprintf(stderr, "full auth URL: %s\n", url);
-	}
 }
 
 } // namespace ZeroTier
