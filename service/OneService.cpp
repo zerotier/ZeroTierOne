@@ -1217,10 +1217,10 @@ public:
 	{
 		Mutex::Lock _l(_nets_m);
 		NetworkState &n = _nets[nwid];
-		*numRoutes = *numRoutes < n.config.routeCount ? *numRoutes : n.config.routeCount;
+		*numRoutes = *numRoutes < n.config().routeCount ? *numRoutes : n.config().routeCount;
 		for(unsigned int i=0; i<*numRoutes; i++) {
 			ZT_VirtualNetworkRoute *vnr = (ZT_VirtualNetworkRoute*)routeArray;
-			memcpy(&vnr[i], &(n.config.routes[i]), sizeof(ZT_VirtualNetworkRoute));
+			memcpy(&vnr[i], &(n.config().routes[i]), sizeof(ZT_VirtualNetworkRoute));
 		}
 	}
 
@@ -2137,7 +2137,7 @@ public:
 			// Get tap device name (use LUID in hex on Windows) and IP addresses.
 #if defined(__WINDOWS__) && !defined(ZT_SDK)
 			char tapdevbuf[64];
-			OSUtils::ztsnprintf(tapdevbuf,sizeof(tapdevbuf),"%.16llx",(unsigned long long)((WindowsEthernetTap *)(n.tap.get()))->luid().Value);
+			OSUtils::ztsnprintf(tapdevbuf,sizeof(tapdevbuf),"%.16llx",(unsigned long long)((WindowsEthernetTap *)(n.tap().get()))->luid().Value);
 			std::string tapdev(tapdevbuf);
 #else
 			std::string tapdev(n.tap()->deviceName());
@@ -2581,7 +2581,7 @@ public:
 					// without WindowsEthernetTap::isInitialized() returning true, the won't actually
 					// be online yet and setting managed routes on it will fail.
 					const int MAX_SLEEP_COUNT = 500;
-					for (int i = 0; !((WindowsEthernetTap *)(n.tap.get()))->isInitialized() && i < MAX_SLEEP_COUNT; i++) {
+					for (int i = 0; !((WindowsEthernetTap *)(n.tap().get()))->isInitialized() && i < MAX_SLEEP_COUNT; i++) {
 						Sleep(10);
 					}
 #endif
@@ -2597,7 +2597,7 @@ public:
 			case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY:
 				if (n.tap()) { // sanity check
 #if defined(__WINDOWS__) && !defined(ZT_SDK)
-					std::string winInstanceId(((WindowsEthernetTap *)(n.tap.get()))->instanceId());
+					std::string winInstanceId(((WindowsEthernetTap *)(n.tap().get()))->instanceId());
 #endif
 					*nuptr = (void *)0;
 					n.tap().reset();
