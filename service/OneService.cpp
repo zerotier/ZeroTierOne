@@ -53,6 +53,8 @@
 #include "OneService.hpp"
 #include "SoftwareUpdater.hpp"
 
+#include <zeroidc.h>
+
 #ifdef __WINDOWS__
 #include <WinSock2.h>
 #include <Windows.h>
@@ -526,31 +528,117 @@ public:
 	volatile int64_t _nextBackgroundTaskDeadline;
 
 	// Configured networks
-	struct NetworkState
+	class NetworkState
 	{
-		NetworkState() :
-			tap((EthernetTap *)0)
+	public:
+		NetworkState() 
+			: _tap((EthernetTap *)0)
+			, _idc(nullptr)
 		{
 			// Real defaults are in network 'up' code in network event handler
-			settings.allowManaged = true;
-			settings.allowGlobal = false;
-			settings.allowDefault = false;
-			settings.allowDNS = false;
-			memset(&config, 0, sizeof(ZT_VirtualNetworkConfig));
+			_settings.allowManaged = true;
+			_settings.allowGlobal = false;
+			_settings.allowDefault = false;
+			_settings.allowDNS = false;
+			memset(&_config, 0, sizeof(ZT_VirtualNetworkConfig));
 		}
 
 		~NetworkState()
 		{
-			this->managedRoutes.clear();
-			this->tap.reset();
+			this->_managedRoutes.clear();
+			this->_tap.reset();
+
+			if (_idc) {
+				zeroidc::zeroidc_delete(_idc);
+				_idc = nullptr;
+			}
 		}
 
-		std::shared_ptr<EthernetTap> tap;
-		ZT_VirtualNetworkConfig config; // memcpy() of raw config from core
-		std::vector<InetAddress> managedIps;
-		std::map< InetAddress, SharedPtr<ManagedRoute> > managedRoutes;
-		NetworkSettings settings;
+		void setTap(std::shared_ptr<EthernetTap> tap) {
+			this->_tap = tap;
+		}
+
+		std::shared_ptr<EthernetTap> tap() const {
+			return _tap;
+		}
+
+		NetworkSettings settings() const {
+			return _settings;
+		}
+
+		void setSettings(const NetworkSettings &settings) {
+			_settings = settings;
+		}
+
+		void setAllowManaged(bool allow) {
+			_settings.allowManaged = allow;
+		}
+
+		bool allowManaged() const {
+			return _settings.allowManaged;
+		}
+
+		void setAllowGlobal(bool allow) {
+			_settings.allowGlobal = allow;
+		}
+
+		bool allowGlobal() const {
+			return _settings.allowGlobal;
+		}
+
+		void setAllowDefault(bool allow) {
+			_settings.allowDefault = allow;
+		}
+
+		bool allowDefault() const {
+			return _settings.allowDefault;
+		}
+
+		void setAllowDNS(bool allow) {
+			_settings.allowDNS = allow;
+		}
+
+		bool allowDNS() const {
+			return _settings.allowDNS;
+		}
+		
+		std::vector<InetAddress> allowManagedWhitelist() const {
+			return _settings.allowManagedWhitelist;
+		}
+
+		void addToAllowManagedWhiteList(const InetAddress& addr) {
+			_settings.allowManagedWhitelist.push_back(addr);
+		}
+
+		const ZT_VirtualNetworkConfig& config() {
+			return _config;
+		}
+
+		void setConfig(const ZT_VirtualNetworkConfig *nwc) {
+			memcpy(&_config, nwc, sizeof(ZT_VirtualNetworkConfig));
+		}
+
+		std::vector<InetAddress>& managedIps()  {
+			return _managedIps;
+		}
+
+		void setManagedIps(const std::vector<InetAddress> &managedIps) {
+			_managedIps = managedIps;
+		}
+
+		std::map< InetAddress, SharedPtr<ManagedRoute> >& managedRoutes() {
+			return _managedRoutes;
+		}
+
+	private:
+		std::shared_ptr<EthernetTap> _tap;
+		ZT_VirtualNetworkConfig _config; // memcpy() of raw config from core
+		std::vector<InetAddress> _managedIps;
+		std::map< InetAddress, SharedPtr<ManagedRoute> > _managedRoutes;
+		NetworkSettings _settings;
+		zeroidc::ZeroIDC *_idc;
 	};
+
 	std::map<uint64_t,NetworkState> _nets;
 	Mutex _nets_m;
 
@@ -888,7 +976,7 @@ public:
 					{
 						Mutex::Lock _l(_nets_m);
 						for(std::map<uint64_t,NetworkState>::iterator n(_nets.begin());n!=_nets.end();++n) {
-							if (n->second.tap)
+							if (n->second.tap())
 								syncManagedStuff(n->second,false,true,false);
 						}
 					}
@@ -913,9 +1001,9 @@ public:
 						Mutex::Lock _l(_nets_m);
 						mgChanges.reserve(_nets.size() + 1);
 						for(std::map<uint64_t,NetworkState>::const_iterator n(_nets.begin());n!=_nets.end();++n) {
-							if (n->second.tap) {
+							if (n->second.tap()) {
 								mgChanges.push_back(std::pair< uint64_t,std::pair< std::vector<MulticastGroup>,std::vector<MulticastGroup> > >(n->first,std::pair< std::vector<MulticastGroup>,std::vector<MulticastGroup> >()));
-								n->second.tap->scanMulticastGroups(mgChanges.back().second.first,mgChanges.back().second.second);
+								n->second.tap()->scanMulticastGroups(mgChanges.back().second.first,mgChanges.back().second.second);
 							}
 						}
 					}
@@ -1114,8 +1202,8 @@ public:
 	{
 		Mutex::Lock _l(_nets_m);
 		std::map<uint64_t,NetworkState>::const_iterator n(_nets.find(nwid));
-		if ((n != _nets.end())&&(n->second.tap))
-			return n->second.tap->deviceName();
+		if ((n != _nets.end())&&(n->second.tap()))
+			return n->second.tap()->deviceName();
 		else return std::string();
 	}
 
@@ -1157,7 +1245,7 @@ public:
 		std::map<uint64_t,NetworkState>::const_iterator n(_nets.find(nwid));
 		if (n == _nets.end())
 			return false;
-		settings = n->second.settings;
+		settings = n->second.settings();
 		return true;
 	}
 
@@ -1168,20 +1256,20 @@ public:
 		std::map<uint64_t,NetworkState>::iterator n(_nets.find(nwid));
 		if (n == _nets.end())
 			return false;
-		n->second.settings = settings;
+		n->second.setSettings(settings);
 
 		char nlcpath[4096];
 		OSUtils::ztsnprintf(nlcpath,sizeof(nlcpath),"%s" ZT_PATH_SEPARATOR_S "%.16llx.local.conf",_networksPath.c_str(),nwid);
 		FILE *out = fopen(nlcpath,"w");
 		if (out) {
-			fprintf(out,"allowManaged=%d\n",(int)n->second.settings.allowManaged);
-			fprintf(out,"allowGlobal=%d\n",(int)n->second.settings.allowGlobal);
-			fprintf(out,"allowDefault=%d\n",(int)n->second.settings.allowDefault);
-			fprintf(out,"allowDNS=%d\n",(int)n->second.settings.allowDNS);
+			fprintf(out,"allowManaged=%d\n",(int)n->second.allowManaged());
+			fprintf(out,"allowGlobal=%d\n",(int)n->second.allowGlobal());
+			fprintf(out,"allowDefault=%d\n",(int)n->second.allowDefault());
+			fprintf(out,"allowDNS=%d\n",(int)n->second.allowDNS());
 			fclose(out);
 		}
 
-		if (n->second.tap)
+		if (n->second.tap())
 			syncManagedStuff(n->second,true,true,true);
 
 		return true;
@@ -1969,12 +2057,12 @@ public:
 	// Checks if a managed IP or route target is allowed
 	bool checkIfManagedIsAllowed(const NetworkState &n,const InetAddress &target)
 	{
-		if (!n.settings.allowManaged)
+		if (!n.allowManaged())
 			return false;
 
-		if (!n.settings.allowManagedWhitelist.empty()) {
+		if (!n.allowManagedWhitelist().empty()) {
 			bool allowed = false;
-			for (InetAddress addr : n.settings.allowManagedWhitelist) {
+			for (InetAddress addr : n.allowManagedWhitelist()) {
 				if (addr.containsAddress(target) && addr.netmaskBits() <= target.netmaskBits()) {
 					allowed = true;
 					break;
@@ -1984,7 +2072,7 @@ public:
 		}
 
 		if (target.isDefaultRoute())
-			return n.settings.allowDefault;
+			return n.allowDefault();
 		switch(target.ipScope()) {
 			case InetAddress::IP_SCOPE_NONE:
 			case InetAddress::IP_SCOPE_MULTICAST:
@@ -1992,7 +2080,7 @@ public:
 			case InetAddress::IP_SCOPE_LINK_LOCAL:
 				return false;
 			case InetAddress::IP_SCOPE_GLOBAL:
-				return n.settings.allowGlobal;
+				return n.allowGlobal();
 			default:
 				return true;
 		}
@@ -2016,18 +2104,18 @@ public:
 		// assumes _nets_m is locked
 		if (syncIps) {
 			std::vector<InetAddress> newManagedIps;
-			newManagedIps.reserve(n.config.assignedAddressCount);
-			for(unsigned int i=0;i<n.config.assignedAddressCount;++i) {
-				const InetAddress *ii = reinterpret_cast<const InetAddress *>(&(n.config.assignedAddresses[i]));
+			newManagedIps.reserve(n.config().assignedAddressCount);
+			for(unsigned int i=0;i<n.config().assignedAddressCount;++i) {
+				const InetAddress *ii = reinterpret_cast<const InetAddress *>(&(n.config().assignedAddresses[i]));
 				if (checkIfManagedIsAllowed(n,*ii))
 					newManagedIps.push_back(*ii);
 			}
 			std::sort(newManagedIps.begin(),newManagedIps.end());
 			newManagedIps.erase(std::unique(newManagedIps.begin(),newManagedIps.end()),newManagedIps.end());
 
-			for(std::vector<InetAddress>::iterator ip(n.managedIps.begin());ip!=n.managedIps.end();++ip) {
+			for(std::vector<InetAddress>::iterator ip(n.managedIps().begin());ip!=n.managedIps().end();++ip) {
 				if (std::find(newManagedIps.begin(),newManagedIps.end(),*ip) == newManagedIps.end()) {
-					if (!n.tap->removeIp(*ip))
+					if (!n.tap()->removeIp(*ip))
 						fprintf(stderr,"ERROR: unable to remove ip address %s" ZT_EOL_S, ip->toString(ipbuf));
 				}
 			}
@@ -2036,13 +2124,13 @@ public:
 				fprintf(stderr,"ERROR: unable to add ip addresses to ifcfg" ZT_EOL_S);
 #else
 			for(std::vector<InetAddress>::iterator ip(newManagedIps.begin());ip!=newManagedIps.end();++ip) {
-				if (std::find(n.managedIps.begin(),n.managedIps.end(),*ip) == n.managedIps.end()) {
-					if (!n.tap->addIp(*ip))
+				if (std::find(n.managedIps().begin(),n.managedIps().end(),*ip) == n.managedIps().end()) {
+					if (!n.tap()->addIp(*ip))
 						fprintf(stderr,"ERROR: unable to add ip address %s" ZT_EOL_S, ip->toString(ipbuf));
 				}
 			}
 #endif
-			n.managedIps.swap(newManagedIps);
+			n.setManagedIps(newManagedIps);
 		}
 
 		if (syncRoutes) {
@@ -2052,18 +2140,18 @@ public:
 			OSUtils::ztsnprintf(tapdevbuf,sizeof(tapdevbuf),"%.16llx",(unsigned long long)((WindowsEthernetTap *)(n.tap.get()))->luid().Value);
 			std::string tapdev(tapdevbuf);
 #else
-			std::string tapdev(n.tap->deviceName());
+			std::string tapdev(n.tap()->deviceName());
 #endif
 
-			std::vector<InetAddress> tapIps(n.tap->ips());
+			std::vector<InetAddress> tapIps(n.tap()->ips());
 			std::set<InetAddress> myIps(tapIps.begin(), tapIps.end());
-			for(unsigned int i=0;i<n.config.assignedAddressCount;++i)
-				myIps.insert(InetAddress(n.config.assignedAddresses[i]));
+			for(unsigned int i=0;i<n.config().assignedAddressCount;++i)
+				myIps.insert(InetAddress(n.config().assignedAddresses[i]));
 
 			std::set<InetAddress> haveRouteTargets;
-			for(unsigned int i=0;i<n.config.routeCount;++i) {
-				const InetAddress *const target = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].target));
-				const InetAddress *const via = reinterpret_cast<const InetAddress *>(&(n.config.routes[i].via));
+			for(unsigned int i=0;i<n.config().routeCount;++i) {
+				const InetAddress *const target = reinterpret_cast<const InetAddress *>(&(n.config().routes[i].target));
+				const InetAddress *const via = reinterpret_cast<const InetAddress *>(&(n.config().routes[i].via));
 
 				// Make sure we are allowed to set this managed route, and that 'via' is not our IP. The latter
 				// avoids setting routes via the router on the router.
@@ -2100,48 +2188,48 @@ public:
 				haveRouteTargets.insert(*target);
 
 #ifndef ZT_SDK
-				SharedPtr<ManagedRoute> &mr = n.managedRoutes[*target];
+				SharedPtr<ManagedRoute> &mr = n.managedRoutes()[*target];
 				if (!mr)
 					mr.set(new ManagedRoute(*target, *via, *src, tapdev.c_str()));
 #endif
 			}
 
-			for(std::map< InetAddress, SharedPtr<ManagedRoute> >::iterator r(n.managedRoutes.begin());r!=n.managedRoutes.end();) {
+			for(std::map< InetAddress, SharedPtr<ManagedRoute> >::iterator r(n.managedRoutes().begin());r!=n.managedRoutes().end();) {
 				if (haveRouteTargets.find(r->first) == haveRouteTargets.end())
-					n.managedRoutes.erase(r++);
+					n.managedRoutes().erase(r++);
 				else ++r;
 			}
 
 			// Sync device-local managed routes first, then indirect results. That way
 			// we don't get destination unreachable for routes that are via things
 			// that do not yet have routes in the system.
-			for(std::map< InetAddress, SharedPtr<ManagedRoute> >::iterator r(n.managedRoutes.begin());r!=n.managedRoutes.end();++r) {
+			for(std::map< InetAddress, SharedPtr<ManagedRoute> >::iterator r(n.managedRoutes().begin());r!=n.managedRoutes().end();++r) {
 				if (!r->second->via())
 					r->second->sync();
 			}
-			for(std::map< InetAddress, SharedPtr<ManagedRoute> >::iterator r(n.managedRoutes.begin());r!=n.managedRoutes.end();++r) {
+			for(std::map< InetAddress, SharedPtr<ManagedRoute> >::iterator r(n.managedRoutes().begin());r!=n.managedRoutes().end();++r) {
 				if (r->second->via())
 					r->second->sync();
 			}
 		}
 
 		if (syncDns) {
-			if (n.settings.allowDNS) {
-				if (strlen(n.config.dns.domain) != 0) {
+			if (n.allowDNS()) {
+				if (strlen(n.config().dns.domain) != 0) {
 					std::vector<InetAddress> servers;
 					for (int j = 0; j < ZT_MAX_DNS_SERVERS; ++j) {
-						InetAddress a(n.config.dns.server_addr[j]);
+						InetAddress a(n.config().dns.server_addr[j]);
 						if (a.isV4() || a.isV6()) {
 							servers.push_back(a);
 						}
 					}
-					n.tap->setDns(n.config.dns.domain, servers);
+					n.tap()->setDns(n.config().dns.domain, servers);
 				}
 			} else {
 #ifdef __APPLE__
-				MacDNSHelper::removeDNS(n.config.nwid);
+				MacDNSHelper::removeDNS(n.config().nwid);
 #elif defined(__WINDOWS__)
-				WinDNSHelper::removeDNS(n.config.nwid);
+				WinDNSHelper::removeDNS(n.config().nwid);
 #endif
 			}
 
@@ -2414,12 +2502,12 @@ public:
 		switch(op) {
 
 			case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP:
-				if (!n.tap) {
+				if (!n.tap()) {
 					try {
 						char friendlyName[128];
 						OSUtils::ztsnprintf(friendlyName,sizeof(friendlyName),"ZeroTier One [%.16llx]",nwid);
 
-						n.tap = EthernetTap::newInstance(
+						n.setTap(EthernetTap::newInstance(
 							nullptr,
 							_homePath.c_str(),
 							MAC(nwc->mac),
@@ -2428,7 +2516,7 @@ public:
 							nwid,
 							friendlyName,
 							StapFrameHandler,
-							(void *)this);
+							(void *)this));
 						*nuptr = (void *)&n;
 
 						char nlcpath[256];
@@ -2442,28 +2530,28 @@ public:
 								std::string addresses (allowManaged.begin(), allowManaged.size());
 								if (allowManaged.size() <= 5) { // untidy parsing for backward compatibility
 									if (allowManaged[0] == '1' || allowManaged[0] == 't' || allowManaged[0] == 'T') {
-										n.settings.allowManaged = true;
+										n.setAllowManaged(true);
 									} else {
-										n.settings.allowManaged = false;
+										n.setAllowManaged(false);
 									}
 								} else {
 									// this should be a list of IP addresses
-									n.settings.allowManaged = true;
+									n.setAllowManaged(true);
 									size_t pos = 0;
 									while (true) {
 										size_t nextPos = addresses.find(',', pos);
 										std::string address = addresses.substr(pos, (nextPos == std::string::npos ? addresses.size() : nextPos) - pos);
-										n.settings.allowManagedWhitelist.push_back(InetAddress(address.c_str()));
+										n.addToAllowManagedWhiteList(InetAddress(address.c_str()));
 										if (nextPos == std::string::npos) break;
 										pos = nextPos + 1;
 									}
 								}
 							} else {
-								n.settings.allowManaged = true;
+								n.setAllowManaged(true);
 							}
-							n.settings.allowGlobal = nc.getB("allowGlobal", false);
-							n.settings.allowDefault = nc.getB("allowDefault", false);
-							n.settings.allowDNS = nc.getB("allowDNS", false);
+							n.setAllowGlobal(nc.getB("allowGlobal", false));
+							n.setAllowDefault(nc.getB("allowDefault", false));
+							n.setAllowDNS(nc.getB("allowDNS", false));
 						}
 					} catch (std::exception &exc) {
 #ifdef __WINDOWS__
@@ -2484,8 +2572,9 @@ public:
 				// After setting up tap, fall through to CONFIG_UPDATE since we also want to do this...
 
 			case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE:
-				memcpy(&(n.config),nwc,sizeof(ZT_VirtualNetworkConfig));
-				if (n.tap) { // sanity check
+				n.setConfig(nwc);
+				
+				if (n.tap()) { // sanity check
 #if defined(__WINDOWS__) && !defined(ZT_SDK)
 					// wait for up to 5 seconds for the WindowsEthernetTap to actually be initialized
 					//
@@ -2497,7 +2586,7 @@ public:
 					}
 #endif
 					syncManagedStuff(n,true,true,true);
-					n.tap->setMtu(nwc->mtu);
+					n.tap()->setMtu(nwc->mtu);
 				} else {
 					_nets.erase(nwid);
 					return -999; // tap init failed
@@ -2506,12 +2595,12 @@ public:
 
 			case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN:
 			case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY:
-				if (n.tap) { // sanity check
+				if (n.tap()) { // sanity check
 #if defined(__WINDOWS__) && !defined(ZT_SDK)
 					std::string winInstanceId(((WindowsEthernetTap *)(n.tap.get()))->instanceId());
 #endif
 					*nuptr = (void *)0;
-					n.tap.reset();
+					n.tap().reset();
 					_nets.erase(nwid);
 #if defined(__WINDOWS__) && !defined(ZT_SDK)
 					if ((op == ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY)&&(winInstanceId.length() > 0))
@@ -2926,9 +3015,9 @@ public:
 	inline void nodeVirtualNetworkFrameFunction(uint64_t nwid,void **nuptr,uint64_t sourceMac,uint64_t destMac,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
 	{
 		NetworkState *n = reinterpret_cast<NetworkState *>(*nuptr);
-		if ((!n)||(!n->tap))
+		if ((!n)||(!n->tap()))
 			return;
-		n->tap->put(MAC(sourceMac),MAC(destMac),etherType,data,len);
+		n->tap()->put(MAC(sourceMac),MAC(destMac),etherType,data,len);
 	}
 
 	inline int nodePathCheckFunction(uint64_t ztaddr,const int64_t localSocket,const struct sockaddr_storage *remoteAddr)
@@ -2937,8 +3026,8 @@ public:
 		{
 			Mutex::Lock _l(_nets_m);
 			for(std::map<uint64_t,NetworkState>::const_iterator n(_nets.begin());n!=_nets.end();++n) {
-				if (n->second.tap) {
-					std::vector<InetAddress> ips(n->second.tap->ips());
+				if (n->second.tap()) {
+					std::vector<InetAddress> ips(n->second.tap()->ips());
 					for(std::vector<InetAddress>::const_iterator i(ips.begin());i!=ips.end();++i) {
 						if (i->containsAddress(*(reinterpret_cast<const InetAddress *>(remoteAddr)))) {
 							return 0;
@@ -3110,8 +3199,8 @@ public:
 		{
 			Mutex::Lock _l(_nets_m);
 			for(std::map<uint64_t,NetworkState>::const_iterator n(_nets.begin());n!=_nets.end();++n) {
-				if (n->second.tap) {
-					std::vector<InetAddress> ips(n->second.tap->ips());
+				if (n->second.tap()) {
+					std::vector<InetAddress> ips(n->second.tap()->ips());
 					for(std::vector<InetAddress>::const_iterator i(ips.begin());i!=ips.end();++i) {
 						if (i->ipsEqual(ifaddr))
 							return false;
