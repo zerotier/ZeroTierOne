@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<DOCUMENT Type="Advanced Installer" CreateVersion="10.9" version="18.8" Modules="enterprise" RootPath="." Language="en" Id="{DC564647-6BF0-4550-87F4-89C938D0159C}">
+<DOCUMENT Type="Advanced Installer" CreateVersion="10.9" version="18.8.1" Modules="enterprise" RootPath="." Language="en" Id="{DC564647-6BF0-4550-87F4-89C938D0159C}">
   <COMPONENT cid="caphyon.advinst.msicomp.MsiPropsComponent">
     <ROW Property="AI_BITMAP_DISPLAY_MODE" Value="0"/>
     <ROW Property="AI_CURRENT_YEAR" Value="2021" ValueLocId="-"/>
@@ -26,10 +26,10 @@
     <ROW Property="LIMITUI" MultiBuildValue="DefaultBuild:1"/>
     <ROW Property="MSIFASTINSTALL" MultiBuildValue="DefaultBuild:2"/>
     <ROW Property="Manufacturer" Value="ZeroTier, Inc."/>
-    <ROW Property="ProductCode" Value="1033:{1A2C3363-43B4-40BA-8614-027C94856419} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{3F647F12-3A58-40B2-8DE4-15E8D8D19950} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="ZeroTier One"/>
-    <ROW Property="ProductVersion" Value="1.8.3" Type="32"/>
+    <ROW Property="ProductVersion" Value="1.8.4" Type="32"/>
     <ROW Property="REBOOT" MultiBuildValue="DefaultBuild:ReallySuppress"/>
     <ROW Property="SecureCustomProperties" Value="OLDPRODUCTS;AI_NEWERPRODUCTFOUND;AI_SETUPEXEPATH;SETUPEXEDIR"/>
     <ROW Property="UpgradeCode" Value="{B0E2A5F3-88B6-4E77-B922-CB4739B4C4C8}"/>
@@ -55,6 +55,7 @@
     <ROW Directory="ProgramMenuFolder" Directory_Parent="TARGETDIR" DefaultDir="PROGRA~2|ProgramMenuFolder" IsPseudoRoot="1"/>
     <ROW Directory="TARGETDIR" DefaultDir="SourceDir"/>
     <ROW Directory="ZeroTier_Dir" Directory_Parent="CommonAppDataFolder" DefaultDir="ZeroTier"/>
+    <ROW Directory="i686_1_Dir" Directory_Parent="ProgramMenuFolder" DefaultDir=".:i686"/>
     <ROW Directory="i686_Dir" Directory_Parent="APPDIR" DefaultDir=".:i686" DirectoryOptions="3"/>
     <ROW Directory="networks.d_Dir" Directory_Parent="One_Dir" DefaultDir="networks.d"/>
     <ROW Directory="regid.201001.com.zerotier_Dir" Directory_Parent="CommonAppDataFolder" DefaultDir="REGID2~1.ZER|regid.2010-01.com.zerotier"/>
@@ -64,13 +65,14 @@
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiCompsComponent">
     <ROW Component="A918597FE054CCCB65ABDBA0AD8F63C" ComponentId="{458A5336-4527-4409-BB9D-D074790820A6}" Directory_="APPDIR" Attributes="4" KeyPath="A918597FE054CCCB65ABDBA0AD8F63C" Options="2"/>
-    <ROW Component="AI_CustomARPName" ComponentId="{006129D4-786F-4041-915C-EAB49D4EADAC}" Directory_="APPDIR" Attributes="4" KeyPath="DisplayName" Options="1"/>
+    <ROW Component="AI_CustomARPName" ComponentId="{E6686BFD-BF8A-49F4-A9D6-2DB3918E98E9}" Directory_="APPDIR" Attributes="4" KeyPath="DisplayName" Options="1"/>
     <ROW Component="AI_DisableModify" ComponentId="{46FFA8C5-A0CB-4E05-9AD3-911D543DE8CA}" Directory_="APPDIR" Attributes="4" KeyPath="NoModify" Options="1"/>
     <ROW Component="AI_ExePath" ComponentId="{8E02B36C-7A19-429B-A93E-77A9261AC918}" Directory_="APPDIR" Attributes="4" KeyPath="AI_ExePath"/>
     <ROW Component="APPDIR" ComponentId="{4DD7907D-D7FE-4CD6-B1A0-B5C1625F5133}" Directory_="APPDIR" Attributes="0"/>
     <ROW Component="C4FE6FD5B7C4D07B3A313E754A9A6A8" ComponentId="{7A501107-9EEE-45A6-9609-F5E1A7372448}" Directory_="APPDIR" Attributes="4" KeyPath="C4FE6FD5B7C4D07B3A313E754A9A6A8" Options="2"/>
     <ROW Component="ProductInformation" ComponentId="{DB078D04-EA8E-4A7C-9001-89BAD932F9D9}" Directory_="APPDIR" Attributes="4" KeyPath="Version"/>
     <ROW Component="RequiredApplication" ComponentId="{92E37C98-F8B3-4A85-AE77-3D8D9A223776}" Directory_="APPDIR" Attributes="4" Condition="VersionNT &gt;= 1000" KeyPath="RequiredApplication" Options="2"/>
+    <ROW Component="i686" ComponentId="{6EC46014-3BFD-4017-ACBC-C4417D1D6361}" Directory_="i686_1_Dir" Attributes="0"/>
     <ROW Component="networks.d" ComponentId="{EF54D0DF-889F-41DC-AF5C-4E7F96AB1C8B}" Directory_="networks.d_Dir" Attributes="0"/>
     <ROW Component="regid.201001.com.zerotier" ComponentId="{A39C80FC-6A8F-454F-9052-10DAC3C3B139}" Directory_="regid.201001.com.zerotier_Dir" Attributes="0"/>
     <ROW Component="zerotier_desktop_ui.exe" ComponentId="{61A7F53C-C6C3-418D-A652-2E4D9F8173AA}" Directory_="APPDIR" Attributes="256" Condition="ZTHEADLESS = &quot;No&quot; AND VersionNT64" KeyPath="zerotier_desktop_ui.exe"/>
@@ -255,6 +257,7 @@
     <ROW Directory_="networks.d_Dir" Component_="networks.d" ManualDelete="false"/>
     <ROW Directory_="regid.201001.com.zerotier_Dir" Component_="regid.201001.com.zerotier" ManualDelete="false"/>
     <ROW Directory_="APPDIR" Component_="APPDIR" ManualDelete="true"/>
+    <ROW Directory_="i686_1_Dir" Component_="i686" ManualDelete="false"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiCustActComponent">
     <ROW Action="AI_AppSearchEx" Type="1" Source="Prereq.dll" Target="DoAppSearchEx"/>
@@ -349,6 +352,7 @@
     <ROW Feature_="C4FE6FD5B7C4D07B3A313E754A9A6A8" Component_="C4FE6FD5B7C4D07B3A313E754A9A6A8"/>
     <ROW Feature_="RequiredApplication" Component_="RequiredApplication"/>
     <ROW Feature_="ZeroTierOne" Component_="AI_ExePath"/>
+    <ROW Feature_="ZeroTierOne" Component_="i686"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiIconsComponent">
     <ROW Name="ZeroTierIcon.exe" SourcePath="..\..\..\artwork\ZeroTierIcon.ico" Index="0"/>
@@ -465,7 +469,8 @@
     <ROW ServiceInstall="zerotierone_x86.exe" Name="ZeroTierOneService" DisplayName="ZeroTier One" ServiceType="16" StartType="2" ErrorControl="32769" Component_="zerotierone_x86.exe" Description="Ethernet Virtualization Service"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiShortsComponent">
-    <ROW Shortcut="ZeroTier" Directory_="ProgramMenuFolder" Name="ZeroTier" Component_="zerotier_desktop_ui.exe" Target="[#zerotier_desktop_ui.exe]" Description="ZeroTier Tray Application" Hotkey="0" Icon_="ZeroTierIcon.exe" IconIndex="0" ShowCmd="1" WkDir="APPDIR"/>
+    <ROW Shortcut="ZeroTier" Directory_="ProgramMenuFolder" Name="ZeroTier" Component_="zerotier_desktop_ui.exe" Target="[#zerotier_desktop_ui.exe]" Hotkey="0" Icon_="ZeroTierIcon.exe" IconIndex="0" ShowCmd="1" WkDir="APPDIR"/>
+    <ROW Shortcut="ZeroTier_1" Directory_="i686_1_Dir" Name="ZeroTier" Component_="zerotier_desktop_ui.exe_1" Target="[#zerotier_desktop_ui.exe_1]" Hotkey="0" Icon_="ZeroTierIcon.exe" IconIndex="0" ShowCmd="1" WkDir="i686_Dir"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiThemeComponent">
     <ATTRIBUTE name="UsedTheme" value="classic"/>
@@ -510,7 +515,7 @@
     <ROW XmlAttribute="xsischemaLocation" XmlElement="swidsoftware_identification_tag" Name="xsi:schemaLocation" Flags="14" Order="3" Value="http://standards.iso.org/iso/19770/-2/2008/schema.xsd software_identification_tag.xsd"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.XmlElementComponent">
-    <ROW XmlElement="swidbuild" ParentElement="swidnumeric" Name="swid:build" Condition="1" Order="2" Flags="14" Text="3" UpdateIndexInParent="0"/>
+    <ROW XmlElement="swidbuild" ParentElement="swidnumeric" Name="swid:build" Condition="1" Order="2" Flags="14" Text="4" UpdateIndexInParent="0"/>
     <ROW XmlElement="swidentitlement_required_indicator" ParentElement="swidsoftware_identification_tag" Name="swid:entitlement_required_indicator" Condition="1" Order="0" Flags="14" Text="false" UpdateIndexInParent="0"/>
     <ROW XmlElement="swidmajor" ParentElement="swidnumeric" Name="swid:major" Condition="1" Order="0" Flags="14" Text="1" UpdateIndexInParent="0"/>
     <ROW XmlElement="swidminor" ParentElement="swidnumeric" Name="swid:minor" Condition="1" Order="1" Flags="14" Text="8" UpdateIndexInParent="0"/>
