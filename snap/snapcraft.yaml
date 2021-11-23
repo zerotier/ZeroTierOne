@@ -7,10 +7,10 @@ description: |
   Install
     sudo snap install zerotier
   Join your network
-    sudo zerotier.cli join 8056c2e21c000001
-    sudo zerotier.cli status
+    sudo zerotier join <nwid>
+    sudo zerotier status
   Approve your new node in ZeroTier Central (https://my.zerotier.com)! Welcome online!
-  
+
 adopt-info: one
 confinement: strict
 grade: stable
@@ -28,7 +28,14 @@ apps:
       - network-bind
       - network-control
 
+  # For backwards compatibility with old package (e.g. zerotier.cli)
+  # Should be removed someday
   cli:
+    command: usr/sbin/zerotier-cli
+    plugs:
+      - network
+
+  zerotier:
     command: usr/sbin/zerotier-cli
     plugs:
       - network
