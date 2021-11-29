@@ -368,7 +368,7 @@ class Binder {
 				else {
 					interfacesEnumerated = false;
 				}
-#if defined(__unix__) && !defined(__LINUX__)
+#if (defined(__unix__) || defined(__APPLE__)) && !defined(__LINUX__)
 				close(infoSock);
 #endif
 			}

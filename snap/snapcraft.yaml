@@ -1,16 +1,29 @@
 name: zerotier
-summary: ZeroTier is a software-based managed Ethernet switch for planet Earth.
+summary: Securely connect any device, anywhere.
 description: |
-  It erases the LAN/WAN distinction and makes VPNs, tunnels, proxies, and other kludges arising from the inflexible nature of physical networks obsolete. Everything is encrypted end-to-end and traffic takes the most direct (peer to peer) path available.
-  This snap contains ZeroTier One, a service that provides ZeroTier network connectivity and makes joining virtual networks as easy as joining IRC or Slack channels.
-  Visit ZeroTier's site for more information and pre-built binary packages. Apps for Android and iOS are available for free in the Google Play and Apple app stores.
+
+  ZeroTier is a software-based managed Ethernet switch for planet Earth. Use it to connect your
+  desktop clients, servers, phones, NAS, or even individual applications (using our SDK).
+
+  This snap contains ZeroTier One, a service that provides ZeroTier network connectivity and
+  makes joining virtual networks as easy as joining IRC or Slack channels. Apps for Android
+  and iOS are available for free in the Google Play and Apple app stores.
+
+  ZeroTier eliminates the LAN/WAN distinction and makes VPNs, tunnels, proxies, and other kludges
+  arising from the inflexible nature of physical networks obsolete. Everything is encrypted
+  end-to-end and traffic takes the most direct (peer to peer) path available.
+
   Install
+
     sudo snap install zerotier
+
   Join your network
-    sudo zerotier.cli join 8056c2e21c000001
-    sudo zerotier.cli status
+
+    sudo zerotier join <nwid>
+    sudo zerotier status
+
   Approve your new node in ZeroTier Central (https://my.zerotier.com)! Welcome online!
-  
+
 adopt-info: one
 confinement: strict
 grade: stable
@@ -28,7 +41,14 @@ apps:
       - network-bind
       - network-control
 
+  # For backwards compatibility with old package (e.g. zerotier.cli)
+  # Should be removed someday
   cli:
+    command: usr/sbin/zerotier-cli
+    plugs:
+      - network
+
+  zerotier:
     command: usr/sbin/zerotier-cli
     plugs:
       - network
@@ -46,7 +66,6 @@ parts:
   one:
     plugin: make
     source: .
-    source-type: git
     build-packages:
       - build-essential
       - libc++-dev

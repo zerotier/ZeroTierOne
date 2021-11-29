@@ -1,6 +1,22 @@
 ZeroTier Release Notes
 ======
 
+# 2021-11-23 -- Version 1.8.4
+
+ * Happy 🦃 week to our USA users!
+ * This release is now less of a 🦃 on 32-bit Windows and actually installs.
+ * Fixed an ugly font problem on some older macOS versions.
+ * Fixed a bug that could cause the desktop tray app control panel to stop opening after a while on Windows.
+ * Fixed a possible double "release" in macOS tray app code that crashed on older macOS versions.
+
+# 2021-11-15 -- Version 1.8.3
+
+ * Remove problematic spinlock, which was only used on x86_64 anyway. Just use pthread always.
+ * Fix fd leak on MacOS that caused non-responsiveness after some time.
+ * Fix Debian install scripts to set /usr/sbin/nologin as shell on service user.
+ * Fix regression that could prevent managed routes from being deleted.
+ * DesktopUI: Remove NSDate:now() call, now works on MacOS 10.13 or newer!
+
 # 2021-11-08 -- Version 1.8.2
 
  * Fix multicast on linux.
