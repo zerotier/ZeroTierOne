@@ -117,6 +117,16 @@ impl ZeroIDC {
         }
     }
 
+    fn is_running(&mut self) -> bool {
+        let local = Arc::clone(&self.inner);
+
+        if (*local.lock().unwrap()).running {
+            true
+        } else {
+            false
+        }
+    }
+
     fn get_auth_info(&mut self, csrf_token: String, nonce: String) -> Option<AuthInfo> {
         let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
 

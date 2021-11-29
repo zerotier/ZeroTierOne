@@ -73,6 +73,16 @@ pub extern "C" fn zeroidc_stop(ptr: *mut ZeroIDC) {
 }
 
 #[no_mangle]
+pub extern "C" fn zeroidc_is_running(ptr: *mut ZeroIDC) -> bool {
+    let idc = unsafe {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
+
+    idc.is_running()
+}
+
+#[no_mangle]
 pub extern "C" fn zeroidc_get_auth_info(
     ptr: *mut ZeroIDC,
     csrf_token: *const c_char,

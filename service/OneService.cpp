@@ -147,6 +147,161 @@ size_t curlResponseWrite(void *ptr, size_t size, size_t nmemb, std::string *data
 
 namespace ZeroTier {
 
+// Configured networks
+class NetworkState
+{
+public:
+	NetworkState() 
+		: _webPort(9993)
+		, _tap((EthernetTap *)0)
+		, _idc(nullptr)
+		, _ainfo(nullptr)
+	{
+		// Real defaults are in network 'up' code in network event handler
+		_settings.allowManaged = true;
+		_settings.allowGlobal = false;
+		_settings.allowDefault = false;
+		_settings.allowDNS = false;
+		memset(&_config, 0, sizeof(ZT_VirtualNetworkConfig));
+	}
+
+	~NetworkState()
+	{
+		this->_managedRoutes.clear();
+		this->_tap.reset();
+
+		if (_ainfo) {
+			zeroidc::zeroidc_auth_info_delete(_ainfo);
+			_ainfo = nullptr;
+		}
+
+		if (_idc) {
+			zeroidc::zeroidc_stop(_idc);
+			zeroidc::zeroidc_delete(_idc);
+			_idc = nullptr;
+		}
+	}
+
+	void setWebPort(unsigned int port) {
+		_webPort = port;
+	}
+
+	void setTap(std::shared_ptr<EthernetTap> tap) {
+		this->_tap = tap;
+	}
+
+	std::shared_ptr<EthernetTap> tap() const {
+		return _tap;
+	}
+
+	OneService::NetworkSettings settings() const {
+		return _settings;
+	}
+
+	void setSettings(const OneService::NetworkSettings &settings) {
+		_settings = settings;
+	}
+
+	void setAllowManaged(bool allow) {
+		_settings.allowManaged = allow;
+	}
+
+	bool allowManaged() const {
+		return _settings.allowManaged;
+	}
+
+	void setAllowGlobal(bool allow) {
+		_settings.allowGlobal = allow;
+	}
+
+	bool allowGlobal() const {
+		return _settings.allowGlobal;
+	}
+
+	void setAllowDefault(bool allow) {
+		_settings.allowDefault = allow;
+	}
+
+	bool allowDefault() const {
+		return _settings.allowDefault;
+	}
+
+	void setAllowDNS(bool allow) {
+		_settings.allowDNS = allow;
+	}
+
+	bool allowDNS() const {
+		return _settings.allowDNS;
+	}
+	
+	std::vector<InetAddress> allowManagedWhitelist() const {
+		return _settings.allowManagedWhitelist;
+	}
+
+	void addToAllowManagedWhiteList(const InetAddress& addr) {
+		_settings.allowManagedWhitelist.push_back(addr);
+	}
+
+	const ZT_VirtualNetworkConfig& config() {
+		return _config;
+	}
+
+	void setConfig(const ZT_VirtualNetworkConfig *nwc) {
+		memcpy(&_config, nwc, sizeof(ZT_VirtualNetworkConfig));
+
+		if (_config.ssoEnabled && _config.ssoVersion == 1) {
+			if (_idc == nullptr) {
+				assert(_config.issuerURL[0] != nullptr);
+				assert(_config.ssoClientID != nullptr);
+				assert(_config.centralAuthURL != nullptr);
+				_idc = zeroidc::zeroidc_new(
+					_config.issuerURL,
+					_config.ssoClientID,
+					_config.centralAuthURL,
+					_webPort
+				);
+			}
+
+			if (_ainfo != nullptr) {
+				zeroidc::zeroidc_auth_info_delete(_ainfo);
+				_ainfo = nullptr;
+			}
+
+			_ainfo = zeroidc::zeroidc_get_auth_info(
+				_idc,
+				_config.ssoState,
+				_config.ssoNonce
+			);
+
+			const char* url = zeroidc::zeroidc_get_auth_url(_ainfo);
+			memcpy(_config.authenticationURL, url, strlen(url));
+			_config.authenticationURL[strlen(url)] = 0;
+		}
+	}
+
+	std::vector<InetAddress>& managedIps()  {
+		return _managedIps;
+	}
+
+	void setManagedIps(const std::vector<InetAddress> &managedIps) {
+		_managedIps = managedIps;
+	}
+
+	std::map< InetAddress, SharedPtr<ManagedRoute> >& managedRoutes() {
+		return _managedRoutes;
+	}
+
+private:
+	unsigned int _webPort;
+	std::shared_ptr<EthernetTap> _tap;
+	ZT_VirtualNetworkConfig _config; // memcpy() of raw config from core
+	std::vector<InetAddress> _managedIps;
+	std::map< InetAddress, SharedPtr<ManagedRoute> > _managedRoutes;
+	OneService::NetworkSettings _settings;
+	zeroidc::ZeroIDC *_idc;
+	zeroidc::AuthInfo *_ainfo;
+};
+
 namespace {
 
 static const InetAddress NULL_INET_ADDR;
@@ -173,12 +328,12 @@ static std::string _trimString(const std::string &s)
 	return s.substr(start,end - start);
 }
 
-static void _networkToJson(nlohmann::json &nj,const ZT_VirtualNetworkConfig *nc,const std::string &portDeviceName,const OneService::NetworkSettings &localSettings)
+static void _networkToJson(nlohmann::json &nj,NetworkState &ns)
 {
 	char tmp[256];
 
 	const char *nstatus = "",*ntype = "";
-	switch(nc->status) {
+	switch(ns.config().status) {
 		case ZT_NETWORK_STATUS_REQUESTING_CONFIGURATION: nstatus = "REQUESTING_CONFIGURATION"; break;
 		case ZT_NETWORK_STATUS_OK:                       nstatus = "OK"; break;
 		case ZT_NETWORK_STATUS_ACCESS_DENIED:            nstatus = "ACCESS_DENIED"; break;
@@ -187,65 +342,68 @@ static void _networkToJson(nlohmann::json &nj,const ZT_VirtualNetworkConfig *nc,
 		case ZT_NETWORK_STATUS_CLIENT_TOO_OLD:           nstatus = "CLIENT_TOO_OLD"; break;
 		case ZT_NETWORK_STATUS_AUTHENTICATION_REQUIRED:  nstatus = "AUTHENTICATION_REQUIRED"; break;
 	}
-	switch(nc->type) {
+	switch(ns.config().type) {
 		case ZT_NETWORK_TYPE_PRIVATE:                    ntype = "PRIVATE"; break;
 		case ZT_NETWORK_TYPE_PUBLIC:                     ntype = "PUBLIC"; break;
 	}
 
-	OSUtils::ztsnprintf(tmp,sizeof(tmp),"%.16llx",nc->nwid);
+	OSUtils::ztsnprintf(tmp,sizeof(tmp),"%.16llx",ns.config().nwid);
 	nj["id"] = tmp;
 	nj["nwid"] = tmp;
-	OSUtils::ztsnprintf(tmp,sizeof(tmp),"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",(unsigned int)((nc->mac >> 40) & 0xff),(unsigned int)((nc->mac >> 32) & 0xff),(unsigned int)((nc->mac >> 24) & 0xff),(unsigned int)((nc->mac >> 16) & 0xff),(unsigned int)((nc->mac >> 8) & 0xff),(unsigned int)(nc->mac & 0xff));
+	OSUtils::ztsnprintf(tmp,sizeof(tmp),"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",(unsigned int)((ns.config().mac >> 40) & 0xff),(unsigned int)((ns.config().mac >> 32) & 0xff),(unsigned int)((ns.config().mac >> 24) & 0xff),(unsigned int)((ns.config().mac >> 16) & 0xff),(unsigned int)((ns.config().mac >> 8) & 0xff),(unsigned int)(ns.config().mac & 0xff));
 	nj["mac"] = tmp;
-	nj["name"] = nc->name;
+	nj["name"] = ns.config().name;
 	nj["status"] = nstatus;
 	nj["type"] = ntype;
-	nj["mtu"] = nc->mtu;
-	nj["dhcp"] = (bool)(nc->dhcp != 0);
-	nj["bridge"] = (bool)(nc->bridge != 0);
-	nj["broadcastEnabled"] = (bool)(nc->broadcastEnabled != 0);
-	nj["portError"] = nc->portError;
-	nj["netconfRevision"] = nc->netconfRevision;
-	nj["portDeviceName"] = portDeviceName;
+	nj["mtu"] = ns.config().mtu;
+	nj["dhcp"] = (bool)(ns.config().dhcp != 0);
+	nj["bridge"] = (bool)(ns.config().bridge != 0);
+	nj["broadcastEnabled"] = (bool)(ns.config().broadcastEnabled != 0);
+	nj["portError"] = ns.config().portError;
+	nj["netconfRevision"] = ns.config().netconfRevision;
+	nj["portDeviceName"] = ns.tap()->deviceName();
+
+	OneService::NetworkSettings localSettings = ns.settings();
+
 	nj["allowManaged"] = localSettings.allowManaged;
 	nj["allowGlobal"] = localSettings.allowGlobal;
 	nj["allowDefault"] = localSettings.allowDefault;
 	nj["allowDNS"] = localSettings.allowDNS;
 
 	nlohmann::json aa = nlohmann::json::array();
-	for(unsigned int i=0;i<nc->assignedAddressCount;++i) {
-		aa.push_back(reinterpret_cast<const InetAddress *>(&(nc->assignedAddresses[i]))->toString(tmp));
+	for(unsigned int i=0;i<ns.config().assignedAddressCount;++i) {
+		aa.push_back(reinterpret_cast<const InetAddress *>(&(ns.config().assignedAddresses[i]))->toString(tmp));
 	}
 	nj["assignedAddresses"] = aa;
 
 	nlohmann::json ra = nlohmann::json::array();
-	for(unsigned int i=0;i<nc->routeCount;++i) {
+	for(unsigned int i=0;i<ns.config().routeCount;++i) {
 		nlohmann::json rj;
-		rj["target"] = reinterpret_cast<const InetAddress *>(&(nc->routes[i].target))->toString(tmp);
-		if (nc->routes[i].via.ss_family == nc->routes[i].target.ss_family)
-			rj["via"] = reinterpret_cast<const InetAddress *>(&(nc->routes[i].via))->toIpString(tmp);
+		rj["target"] = reinterpret_cast<const InetAddress *>(&(ns.config().routes[i].target))->toString(tmp);
+		if (ns.config().routes[i].via.ss_family == ns.config().routes[i].target.ss_family)
+			rj["via"] = reinterpret_cast<const InetAddress *>(&(ns.config().routes[i].via))->toIpString(tmp);
 		else rj["via"] = nlohmann::json();
-		rj["flags"] = (int)nc->routes[i].flags;
-		rj["metric"] = (int)nc->routes[i].metric;
+		rj["flags"] = (int)ns.config().routes[i].flags;
+		rj["metric"] = (int)ns.config().routes[i].metric;
 		ra.push_back(rj);
 	}
 	nj["routes"] = ra;
 
 	nlohmann::json mca = nlohmann::json::array();
-	for(unsigned int i=0;i<nc->multicastSubscriptionCount;++i) {
+	for(unsigned int i=0;i<ns.config().multicastSubscriptionCount;++i) {
 		nlohmann::json m;
-		m["mac"] = MAC(nc->multicastSubscriptions[i].mac).toString(tmp);
-		m["adi"] = nc->multicastSubscriptions[i].adi;
+		m["mac"] = MAC(ns.config().multicastSubscriptions[i].mac).toString(tmp);
+		m["adi"] = ns.config().multicastSubscriptions[i].adi;
 		mca.push_back(m);
 	}
 	nj["multicastSubscriptions"] = mca;
 
 	nlohmann::json m;
-	m["domain"] = nc->dns.domain;
+	m["domain"] = ns.config().dns.domain;
 	m["servers"] = nlohmann::json::array();
 	for(int j=0;j<ZT_MAX_DNS_SERVERS;++j) {
 
-		InetAddress a(nc->dns.server_addr[j]);
+		InetAddress a(ns.config().dns.server_addr[j]);
 		if (a.isV4() || a.isV6()) {
 			char buf[256];
 			m["servers"].push_back(a.toIpString(buf));
@@ -253,9 +411,9 @@ static void _networkToJson(nlohmann::json &nj,const ZT_VirtualNetworkConfig *nc,
 	}
 	nj["dns"] = m;
 
-	nj["authenticationURL"] = nc->authenticationURL;
-	nj["authenticationExpiryTime"] = nc->authenticationExpiryTime;
-	nj["ssoEnabled"] = nc->ssoEnabled;
+	nj["authenticationURL"] = ns.config().authenticationURL;
+	nj["authenticationExpiryTime"] = ns.config().authenticationExpiryTime;
+	nj["ssoEnabled"] = ns.config().ssoEnabled;
 }
 
 static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer)
@@ -527,117 +685,7 @@ public:
 	// Deadline for the next background task service function
 	volatile int64_t _nextBackgroundTaskDeadline;
 
-	// Configured networks
-	class NetworkState
-	{
-	public:
-		NetworkState() 
-			: _tap((EthernetTap *)0)
-			, _idc(nullptr)
-		{
-			// Real defaults are in network 'up' code in network event handler
-			_settings.allowManaged = true;
-			_settings.allowGlobal = false;
-			_settings.allowDefault = false;
-			_settings.allowDNS = false;
-			memset(&_config, 0, sizeof(ZT_VirtualNetworkConfig));
-		}
-
-		~NetworkState()
-		{
-			this->_managedRoutes.clear();
-			this->_tap.reset();
-
-			if (_idc) {
-				zeroidc::zeroidc_delete(_idc);
-				_idc = nullptr;
-			}
-		}
-
-		void setTap(std::shared_ptr<EthernetTap> tap) {
-			this->_tap = tap;
-		}
-
-		std::shared_ptr<EthernetTap> tap() const {
-			return _tap;
-		}
-
-		NetworkSettings settings() const {
-			return _settings;
-		}
-
-		void setSettings(const NetworkSettings &settings) {
-			_settings = settings;
-		}
-
-		void setAllowManaged(bool allow) {
-			_settings.allowManaged = allow;
-		}
-
-		bool allowManaged() const {
-			return _settings.allowManaged;
-		}
-
-		void setAllowGlobal(bool allow) {
-			_settings.allowGlobal = allow;
-		}
-
-		bool allowGlobal() const {
-			return _settings.allowGlobal;
-		}
-
-		void setAllowDefault(bool allow) {
-			_settings.allowDefault = allow;
-		}
-
-		bool allowDefault() const {
-			return _settings.allowDefault;
-		}
-
-		void setAllowDNS(bool allow) {
-			_settings.allowDNS = allow;
-		}
-
-		bool allowDNS() const {
-			return _settings.allowDNS;
-		}
-		
-		std::vector<InetAddress> allowManagedWhitelist() const {
-			return _settings.allowManagedWhitelist;
-		}
-
-		void addToAllowManagedWhiteList(const InetAddress& addr) {
-			_settings.allowManagedWhitelist.push_back(addr);
-		}
-
-		const ZT_VirtualNetworkConfig& config() {
-			return _config;
-		}
-
-		void setConfig(const ZT_VirtualNetworkConfig *nwc) {
-			memcpy(&_config, nwc, sizeof(ZT_VirtualNetworkConfig));
-		}
-
-		std::vector<InetAddress>& managedIps()  {
-			return _managedIps;
-		}
-
-		void setManagedIps(const std::vector<InetAddress> &managedIps) {
-			_managedIps = managedIps;
-		}
-
-		std::map< InetAddress, SharedPtr<ManagedRoute> >& managedRoutes() {
-			return _managedRoutes;
-		}
-
-	private:
-		std::shared_ptr<EthernetTap> _tap;
-		ZT_VirtualNetworkConfig _config; // memcpy() of raw config from core
-		std::vector<InetAddress> _managedIps;
-		std::map< InetAddress, SharedPtr<ManagedRoute> > _managedRoutes;
-		NetworkSettings _settings;
-		zeroidc::ZeroIDC *_idc;
-	};
+	
 
 	std::map<uint64_t,NetworkState> _nets;
 	Mutex _nets_m;
@@ -1251,26 +1299,17 @@ public:
 
 	virtual bool setNetworkSettings(const uint64_t nwid,const NetworkSettings &settings)
 	{
-		Mutex::Lock _l(_nets_m);
-
-		std::map<uint64_t,NetworkState>::iterator n(_nets.find(nwid));
-		if (n == _nets.end())
-			return false;
-		n->second.setSettings(settings);
-
 		char nlcpath[4096];
 		OSUtils::ztsnprintf(nlcpath,sizeof(nlcpath),"%s" ZT_PATH_SEPARATOR_S "%.16llx.local.conf",_networksPath.c_str(),nwid);
 		FILE *out = fopen(nlcpath,"w");
 		if (out) {
-			fprintf(out,"allowManaged=%d\n",(int)n->second.allowManaged());
-			fprintf(out,"allowGlobal=%d\n",(int)n->second.allowGlobal());
-			fprintf(out,"allowDefault=%d\n",(int)n->second.allowDefault());
-			fprintf(out,"allowDNS=%d\n",(int)n->second.allowDNS());
+			fprintf(out,"allowManaged=%d\n",(int)settings.allowManaged);
+			fprintf(out,"allowGlobal=%d\n",(int)settings.allowGlobal);
+			fprintf(out,"allowDefault=%d\n",(int)settings.allowDefault);
+			fprintf(out,"allowDNS=%d\n",(int)settings.allowDNS);
 			fclose(out);
 		}
 
-		if (n->second.tap())
-			syncManagedStuff(n->second,true,true,true);
 
 		return true;
 	}
@@ -1474,18 +1513,16 @@ public:
 
 					}
 				} else if (ps[0] == "network") {
-					ZT_VirtualNetworkList *nws = _node->networks();
-					if (nws) {
+					Mutex::Lock _l(_nets_m);
+					if (!_nets.empty()) {
 						if (ps.size() == 1) {
 							// Return [array] of all networks
 
 							res = nlohmann::json::array();
-							for(unsigned long i=0;i<nws->networkCount;++i) {
-								OneService::NetworkSettings localSettings;
-								getNetworkSettings(nws->networks[i].nwid,localSettings);
+							for (auto it = _nets.begin(); it != _nets.end(); ++it) {
+								NetworkState &ns = it->second;
 								nlohmann::json nj;
-								_networkToJson(nj,&(nws->networks[i]),portDeviceName(nws->networks[i].nwid),localSettings);
-								res.push_back(nj);
+								_networkToJson(res, ns);
 							}
 
 							scode = 200;
@@ -1493,18 +1530,13 @@ public:
 							// Return a single network by ID or 404 if not found
 
 							const uint64_t wantnw = Utils::hexStrToU64(ps[1].c_str());
-							for(unsigned long i=0;i<nws->networkCount;++i) {
-								if (nws->networks[i].nwid == wantnw) {
-									OneService::NetworkSettings localSettings;
-									getNetworkSettings(nws->networks[i].nwid,localSettings);
-									_networkToJson(res,&(nws->networks[i]),portDeviceName(nws->networks[i].nwid),localSettings);
-									scode = 200;
-									break;
-								}
+							if (_nets.find(wantnw) != _nets.end()) {
+								res = json::object();
+								NetworkState& ns = _nets[wantnw];
+								_networkToJson(res, ns);
+								scode = 200;
 							}
-
 						} else scode = 404;
-						_node->freeQueryResult((void *)nws);
 					} else scode = 500;
 				} else if (ps[0] == "peer") {
 					ZT_PeerList *pl = _node->peers();
@@ -1667,37 +1699,41 @@ public:
 
 						uint64_t wantnw = Utils::hexStrToU64(ps[1].c_str());
 						_node->join(wantnw,(void *)0,(void *)0); // does nothing if we are a member
-						ZT_VirtualNetworkList *nws = _node->networks();
-						if (nws) {
-							for(unsigned long i=0;i<nws->networkCount;++i) {
-								if (nws->networks[i].nwid == wantnw) {
-									OneService::NetworkSettings localSettings;
-									getNetworkSettings(nws->networks[i].nwid,localSettings);
-
-									try {
-										json j(OSUtils::jsonParse(body));
-										if (j.is_object()) {
-											json &allowManaged = j["allowManaged"];
-											if (allowManaged.is_boolean()) localSettings.allowManaged = (bool)allowManaged;
-											json &allowGlobal = j["allowGlobal"];
-											if (allowGlobal.is_boolean()) localSettings.allowGlobal = (bool)allowGlobal;
-											json &allowDefault = j["allowDefault"];
-											if (allowDefault.is_boolean()) localSettings.allowDefault = (bool)allowDefault;
-											json &allowDNS = j["allowDNS"];
-											if (allowDNS.is_boolean()) localSettings.allowDNS = (bool)allowDNS;
-										}
-									} catch ( ... ) {
-										// discard invalid JSON
+						Mutex::Lock l(_nets_m);
+						if (!_nets.empty()) {
+							if (_nets.find(wantnw) != _nets.end()) {
+								NetworkState& ns = _nets[wantnw];
+								try {
+									json j(OSUtils::jsonParse(body));
+								
+									json &allowManaged = j["allowManaged"];
+									if (allowManaged.is_boolean()) {
+										ns.setAllowManaged((bool)allowManaged);
 									}
-
-									setNetworkSettings(nws->networks[i].nwid,localSettings);
-									_networkToJson(res,&(nws->networks[i]),portDeviceName(nws->networks[i].nwid),localSettings);
-
-									scode = 200;
-									break;
+									json& allowGlobal = j["allowGlobal"];
+									if (allowGlobal.is_boolean()) {
+										ns.setAllowGlobal((bool)allowGlobal);
+									}
+									json& allowDefault = j["allowDefault"];
+									if (allowDefault.is_boolean()) {
+										ns.setAllowDefault((bool)allowDefault);
+									}
+									json& allowDNS = j["allowDNS"];
+									if (allowDNS.is_boolean()) {
+										ns.setAllowDNS((bool)allowDNS);
+									}
+								} catch (...) {
+									// discard invalid JSON
 								}
+								setNetworkSettings(wantnw, ns.settings());
+								if (ns.tap()) {
+									syncManagedStuff(ns,true,true,true);
+								}
+
+								_networkToJson(res, ns);
+
+								scode = 200;
 							}
-							_node->freeQueryResult((void *)nws);
 						} else scode = 500;
 
 					} else scode = 404;
@@ -2498,9 +2534,9 @@ public:
 	{
 		Mutex::Lock _l(_nets_m);
 		NetworkState &n = _nets[nwid];
+		n.setWebPort(_primaryPort);
 
-		switch(op) {
-
+		switch (op) {
 			case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP:
 				if (!n.tap()) {
 					try {
@@ -2615,7 +2651,6 @@ public:
 					_nets.erase(nwid);
 				}
 				break;
-
 		}
 		return 0;
 	}
