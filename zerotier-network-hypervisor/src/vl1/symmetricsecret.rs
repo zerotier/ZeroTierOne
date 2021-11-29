@@ -30,20 +30,31 @@ impl PoolFactory<AesGmacSiv> for AesGmacSivPoolFactory {
 ///
 /// This contains the key and several sub-keys and ciphers keyed with sub-keys.
 pub struct SymmetricSecret {
+    /// The root shared symmetric secret from which other keys are derived.
     pub key: Secret<SHA384_HASH_SIZE>,
+
+    /// Key for adding an HMAC to packets e.g. in v2+ HELLO.
     pub packet_hmac_key: Secret<SHA384_HASH_SIZE>,
+
+    /// A key used as input to the ephemeral key ratcheting mechanism.
     pub next_ephemeral_ratchet_key: Secret<SHA384_HASH_SIZE>,
+
+    /// A key used to encrypt the secret portion of a HELLO packet.
     pub hello_dictionary_keyed_cipher: Mutex<AesCtr>,
+
+    /// A pool of reusable keyed and initialized AES-GMAC-SIV ciphers.
     pub aes_gmac_siv: Pool<AesGmacSiv, AesGmacSivPoolFactory>,
 }
 
 impl PartialEq for SymmetricSecret {
+    #[inline(always)]
     fn eq(&self, other: &Self) -> bool { self.key.0.eq(&other.key.0) }
 }
 
 impl Eq for SymmetricSecret {}
 
 impl SymmetricSecret {
+    /// Create a new symmetric secret, deriving all sub-keys and such.
     pub fn new(base_key: Secret<SHA384_HASH_SIZE>) -> SymmetricSecret {
         let usage_packet_hmac = zt_kbkdf_hmac_sha384(&base_key.0, KBKDF_KEY_USAGE_LABEL_PACKET_HMAC, 0, 0);
         let usage_ephemeral_ratchet = zt_kbkdf_hmac_sha384(&base_key.0, KBKDF_KEY_USAGE_LABEL_EPHEMERAL_RATCHET, 0, 0);
