@@ -346,7 +346,7 @@ distclean:	clean
 realclean:	distclean
 
 official:	FORCE
-	make -j4 ZT_OFFICIAL=1 all
+	make -j`nproc` ZT_OFFICIAL=1 all
 
 docker:	FORCE
 	docker build --no-cache -f ext/installfiles/linux/zerotier-containerized/Dockerfile -t zerotier-containerized .
