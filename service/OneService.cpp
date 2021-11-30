@@ -247,19 +247,28 @@ public:
 	}
 
 	void setConfig(const ZT_VirtualNetworkConfig *nwc) {
+		char nwbuf[17] = {};
+		const char* nwid = Utils::hex(nwc->nwid, nwbuf);
+		fprintf(stderr, "NetworkState::setConfig(%s)\n", nwid);
 		memcpy(&_config, nwc, sizeof(ZT_VirtualNetworkConfig));
 
 		if (_config.ssoEnabled && _config.ssoVersion == 1) {
-			if (_idc == nullptr) {
-				assert(_config.issuerURL[0] != nullptr);
+			fprintf(stderr, "ssoEnabled for %s\n", nwid);
+			if (_idc == nullptr)
+			{
+				assert(_config.issuerURL != nullptr);
 				assert(_config.ssoClientID != nullptr);
 				assert(_config.centralAuthURL != nullptr);
+				char buf[17] = {};
 				_idc = zeroidc::zeroidc_new(
+					Utils::hex(_config.nwid, buf),
 					_config.issuerURL,
 					_config.ssoClientID,
 					_config.centralAuthURL,
 					_webPort
 				);
+
+				fprintf(stderr, "idc created (%s, %s, %s)\n", _config.issuerURL, _config.ssoClientID, _config.centralAuthURL);
 			}
 
 			if (_ainfo != nullptr) {
@@ -289,6 +298,14 @@ public:
 
 	std::map< InetAddress, SharedPtr<ManagedRoute> >& managedRoutes() {
 		return _managedRoutes;
+	}
+
+	const char* getAuthURL() {
+		if (_ainfo != nullptr) {
+			return zeroidc::zeroidc_get_auth_url(_ainfo);
+		}
+		fprintf(stderr, "_ainfo is null\n");
+		return "";
 	}
 
 private:
@@ -410,10 +427,11 @@ static void _networkToJson(nlohmann::json &nj,NetworkState &ns)
 		}
 	}
 	nj["dns"] = m;
-
-	nj["authenticationURL"] = ns.config().authenticationURL;
-	nj["authenticationExpiryTime"] = ns.config().authenticationExpiryTime;
-	nj["ssoEnabled"] = ns.config().ssoEnabled;
+	if (ns.config().ssoEnabled) {
+		nj["authenticationURL"] = ns.getAuthURL();
+		nj["authenticationExpiryTime"] = ns.config().authenticationExpiryTime;
+		nj["ssoEnabled"] = ns.config().ssoEnabled;
+	}
 }
 
 static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer)
@@ -1519,10 +1537,12 @@ public:
 							// Return [array] of all networks
 
 							res = nlohmann::json::array();
+							
 							for (auto it = _nets.begin(); it != _nets.end(); ++it) {
 								NetworkState &ns = it->second;
 								nlohmann::json nj;
-								_networkToJson(res, ns);
+								_networkToJson(nj, ns);
+								res.push_back(nj);
 							}
 
 							scode = 200;
@@ -1536,8 +1556,14 @@ public:
 								_networkToJson(res, ns);
 								scode = 200;
 							}
-						} else scode = 404;
-					} else scode = 500;
+						} else {
+							fprintf(stderr, "not found\n");
+							scode = 404;
+						}
+					} else {
+						fprintf(stderr, "_nets is empty??\n");
+						scode = 500;
+					}
 				} else if (ps[0] == "peer") {
 					ZT_PeerList *pl = _node->peers();
 					if (pl) {
@@ -1602,7 +1628,15 @@ public:
 					} else scode = 404;
 				}
 
-			} else scode = 401; // isAuth == false
+			} else if (ps[0] == "sso") {
+				// SSO redirect handling
+				fprintf(stderr, "sso get\n");
+				fprintf(stderr, "path: %s\n", path.c_str());
+				fprintf(stderr, "body: %s\n", body.c_str());
+				scode = 200;				scode = 200;
+			} else {
+				scode = 401; // isAuth == false && !sso
+			}
 		} else if ((httpMethod == HTTP_POST)||(httpMethod == HTTP_PUT)) {
  			if (isAuth) {
 				if (ps[0] == "bond") {
@@ -1743,7 +1777,16 @@ public:
 					else scode = 404;
 				}
 
-			} else scode = 401; // isAuth == false
+			} else if (ps[0] == "sso") {
+				// sso post handling
+				fprintf(stderr, "sso post\n");
+				fprintf(stderr, "path: %s\n", path.c_str());
+				fprintf(stderr, "body: %s\n", body.c_str());
+				scode = 200;
+			}
+			else {
+				scode = 401; // isAuth == false
+			}
 		} else if (httpMethod == HTTP_DELETE) {
 			if (isAuth) {
 
@@ -1774,7 +1817,6 @@ public:
 						scode = _controller->handleControlPlaneHttpDELETE(std::vector<std::string>(ps.begin()+1,ps.end()),urlArgs,headers,body,responseBody,responseContentType);
 					else scode = 404;
 				}
-
 			} else scode = 401; // isAuth = false
 		} else {
 			scode = 400;

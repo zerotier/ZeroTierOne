@@ -5,11 +5,17 @@ use crate::{AuthInfo, ZeroIDC};
 
 #[no_mangle]
 pub extern "C" fn zeroidc_new(
+    network_id: *const c_char,
     issuer: *const c_char,
     client_id: *const c_char,
     auth_endpoint: *const c_char,
     web_listen_port: u16,
 ) -> *mut ZeroIDC {
+    if network_id.is_null() {
+        println!("network_id is null");
+        return std::ptr::null_mut();
+
+    }
     if issuer.is_null() {
         println!("issuer is null");
         return std::ptr::null_mut();
@@ -25,12 +31,14 @@ pub extern "C" fn zeroidc_new(
         return std::ptr::null_mut();
     }
 
-    let iss = unsafe { CStr::from_ptr(issuer) };
-    let c_id = unsafe { CStr::from_ptr(client_id) };
+    let network_id = unsafe {CStr::from_ptr(network_id) };
+    let issuer = unsafe { CStr::from_ptr(issuer) };
+    let client_id = unsafe { CStr::from_ptr(client_id) };
     let auth_endpoint = unsafe { CStr::from_ptr(auth_endpoint) };
     match ZeroIDC::new(
-        iss.to_str().unwrap(),
-        c_id.to_str().unwrap(),
+        network_id.to_str().unwrap(),
+        issuer.to_str().unwrap(),
+        client_id.to_str().unwrap(),
         auth_endpoint.to_str().unwrap(),
         web_listen_port,
     ) {
@@ -80,6 +88,24 @@ pub extern "C" fn zeroidc_is_running(ptr: *mut ZeroIDC) -> bool {
     };
 
     idc.is_running()
+}
+
+#[no_mangle]
+pub extern "C" fn zeroidc_process_form_post(ptr: *mut ZeroIDC, body: *const c_char) -> bool {
+    let idc = unsafe {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
+
+    if body.is_null() {
+        println!("body is null");
+        return false
+    }
+
+    let body = unsafe { CStr::from_ptr(body) }
+        .to_str().unwrap().to_string();
+
+    false
 }
 
 #[no_mangle]

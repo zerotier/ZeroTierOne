@@ -21,6 +21,7 @@ pub struct ZeroIDC {
 
 struct Inner {
     running: bool,
+    network_id: String,
     auth_endpoint: String,
     oidc_thread: Option<JoinHandle<()>>,
     oidc_client: Option<openidconnect::core::CoreClient>,
@@ -43,6 +44,7 @@ pub struct AuthInfo {
 
 impl ZeroIDC {
     fn new(
+        network_id: &str,
         issuer: &str,
         client_id: &str,
         auth_ep: &str,
@@ -51,6 +53,7 @@ impl ZeroIDC {
         let idc = ZeroIDC {
             inner: Arc::new(Mutex::new(Inner {
                 running: false,
+                network_id: network_id.to_string(),
                 auth_endpoint: auth_ep.to_string(),
                 oidc_thread: None,
                 oidc_client: None,
