@@ -321,7 +321,7 @@ zerotier-idtool: zerotier-one
 zerotier-cli: zerotier-one
 	ln -sf zerotier-one zerotier-cli
 
-$(CORE_OBJS): zeroidc
+$(ONE_OBJS): zeroidc
 
 libzerotiercore.a:	FORCE
 	make CFLAGS="-O3 -fstack-protector -fPIC" CXXFLAGS="-O3 -std=c++11 -fstack-protector -fPIC" $(CORE_OBJS)

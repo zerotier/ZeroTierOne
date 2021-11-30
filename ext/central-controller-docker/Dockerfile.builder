@@ -10,3 +10,4 @@ RUN dnf -qy module disable postgresql
 RUN yum -y install epel-release && yum -y update && yum clean all
 RUN yum groupinstall -y "Development Tools" && yum clean all
 RUN yum install -y bash cmake postgresql10 postgresql10-devel clang jemalloc jemalloc-devel libpqxx libpqxx-devel && yum clean all
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
