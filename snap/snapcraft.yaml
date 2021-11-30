@@ -13,7 +13,7 @@ description: |
   arising from the inflexible nature of physical networks obsolete. Everything is encrypted
   end-to-end and traffic takes the most direct (peer to peer) path available.
 
-  Install
+  Install (be sure to use sudo)
 
     sudo snap install zerotier
 
