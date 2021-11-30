@@ -21,4 +21,4 @@ heapless = "0.7.7"
 subtle = "2.4.1"
 
 [dev-dependencies]
-quickcheck = "^1"
+quickcheck = "1.0.3"
