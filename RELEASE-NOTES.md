@@ -1,13 +1,13 @@
 ZeroTier Release Notes
 ======
 
-# 2021-11-23 -- Version 1.8.4
+# 2021-11-30 -- Version 1.8.4
 
- * Happy 🦃 week to our USA users!
- * This release is now less of a 🦃 on 32-bit Windows and actually installs.
  * Fixed an ugly font problem on some older macOS versions.
  * Fixed a bug that could cause the desktop tray app control panel to stop opening after a while on Windows.
  * Fixed a possible double "release" in macOS tray app code that crashed on older macOS versions.
+ * Fixed installation on 32-bit Windows 10.
+ * Fixed a build flags issue that could cause ZeroTier to crash on older ARM32 CPUs.
 
 # 2021-11-15 -- Version 1.8.3
 
