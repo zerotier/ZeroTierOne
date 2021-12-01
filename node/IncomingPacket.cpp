@@ -221,7 +221,6 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,void *tPtr,const Shar
 
 							if (authInfo.get(ZT_AUTHINFO_DICT_KEY_ISSUER_URL, issuerURL, sizeof(issuerURL)) > 0) {
 								issuerURL[sizeof(issuerURL) - 1] = 0;
-								fprintf(stderr, "Issuer URL from info: %s\n", issuerURL);
 							}
 							if (authInfo.get(ZT_AUTHINFO_DICT_KEY_CENTRAL_ENDPOINT_URL, centralAuthURL, sizeof(centralAuthURL))>0) {
 								centralAuthURL[sizeof(centralAuthURL) - 1] = 0;
@@ -236,7 +235,6 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,void *tPtr,const Shar
 								ssoClientID[sizeof(ssoClientID) - 1] = 0;
 							}
 
-							fprintf(stderr, "Setting auth required on network\n");
 							network->setAuthenticationRequired(tPtr, issuerURL, centralAuthURL, ssoClientID, ssoNonce, ssoState);
 						}
 					}

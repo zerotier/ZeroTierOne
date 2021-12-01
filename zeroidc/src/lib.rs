@@ -71,7 +71,10 @@ impl ZeroIDC {
 
         let provider_meta = match CoreProviderMetadata::discover(&iss, http_client) {
             Ok(m) => m,
-            Err(e) => return Err(e.to_string()),
+            Err(e) => {
+                println!("Error discovering provider metadata");
+                return Err(e.to_string());
+            },
         };
 
         let r = format!("http://localhost:{}/sso", local_web_port);
@@ -85,7 +88,10 @@ impl ZeroIDC {
 
         let redirect = match RedirectUrl::new(redir_url.to_string()) {
             Ok(s) => s,
-            Err(e) => return Err(e.to_string()),
+            Err(e) => {
+                println!("Error generating RedirectURL instance from string: {}", redir_url.to_string());
+                return Err(e.to_string());
+            }
         };
 
         (*idc.inner.lock().unwrap()).oidc_client = Some(
@@ -152,12 +158,15 @@ impl ZeroIDC {
                     csrf_func(csrf_token),
                     nonce_func(nonce),
                 )
-                .add_scope(Scope::new("read".to_string()))
+                .add_scope(Scope::new("profile".to_string()))
+                .add_scope(Scope::new("email".to_string()))
                 .add_scope(Scope::new("offline_access".to_string()))
                 .add_scope(Scope::new("openid".to_string()))
                 .set_pkce_challenge(pkce_challenge)
                 .add_extra_param("network_id", network_id)
                 .url();
+
+            println!("URL: {}", auth_url);
 
             return AuthInfo {
                 url: auth_url,

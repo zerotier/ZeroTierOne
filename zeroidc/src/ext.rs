@@ -156,10 +156,14 @@ pub extern "C" fn zeroidc_auth_info_delete(ptr: *mut AuthInfo) {
 
 #[no_mangle]
 pub extern "C" fn zeroidc_get_auth_url(ptr: *mut AuthInfo) -> *const c_char {
+    if ptr.is_null() {
+        println!("passed a null object");
+        return std::ptr::null_mut();
+    }
     let ai = unsafe {
-        assert!(!ptr.is_null());
         &mut *ptr
     };
+    
     let s = CString::new(ai.url.to_string()).unwrap();
-    return s.as_ptr();
+    return s.into_raw();
 }

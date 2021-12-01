@@ -1555,7 +1555,6 @@ void Network::setAuthenticationRequired(void *tPtr, const char* issuerURL, const
 	_config.ssoEnabled = true;
 	_config.ssoVersion = 1;
 
-	fprintf(stderr, "Network::setAuthenticationRequired issuerURL: %s\n", issuerURL);
 	Utils::scopy(_config.issuerURL, sizeof(_config.issuerURL), issuerURL);
 	Utils::scopy(_config.centralAuthURL, sizeof(_config.centralAuthURL), centralEndpoint);
 	Utils::scopy(_config.ssoClientID, sizeof(_config.ssoClientID), clientID);

@@ -251,9 +251,7 @@ public:
 		const char* nwid = Utils::hex(nwc->nwid, nwbuf);
 		fprintf(stderr, "NetworkState::setConfig(%s)\n", nwid);
 
-		fprintf(stderr, "issuerUrl before: %s\n", nwc->issuerURL);
 		memcpy(&_config, nwc, sizeof(ZT_VirtualNetworkConfig));
-		fprintf(stderr, "issuerUrl after: %s\n", _config.issuerURL);
 		fprintf(stderr, "ssoEnabled: %s, ssoVersion: %d\n", 
 			_config.ssoEnabled ? "true" : "false", _config.ssoVersion);
 
@@ -443,7 +441,9 @@ static void _networkToJson(nlohmann::json &nj,NetworkState &ns)
 	}
 	nj["dns"] = m;
 	if (ns.config().ssoEnabled) {
-		nj["authenticationURL"] = ns.getAuthURL();
+		const char* authURL = ns.getAuthURL();
+		fprintf(stderr, "Auth URL: %s\n", authURL);
+		nj["authenticationURL"] = authURL;
 		nj["authenticationExpiryTime"] = ns.config().authenticationExpiryTime;
 		nj["ssoEnabled"] = ns.config().ssoEnabled;
 	}
@@ -2665,7 +2665,6 @@ public:
 				// After setting up tap, fall through to CONFIG_UPDATE since we also want to do this...
 
 			case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE:
-				fprintf(stderr, "conf update issuerURL: %s\n", nwc->issuerURL);
 				n.setConfig(nwc);
 
 				if (n.tap()) { // sanity check

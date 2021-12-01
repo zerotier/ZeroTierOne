@@ -415,18 +415,20 @@ AuthInfo PostgreSQL::getSSOAuthInfo(const nlohmann::json &member, const std::str
 				exit(6);
 			}
 
-			r = w.exec_params("SELECT org.client_id, org.authorization_endpoint, org.sso_impl_version "
+			r = w.exec_params("SELECT org.client_id, org.authorization_endpoint, org.issuer, org.sso_impl_version "
 				"FROM ztc_network AS nw, ztc_org AS org "
 				"WHERE nw.id = $1 AND nw.sso_enabled = true AND org.owner_id = nw.owner_id", networkId);
 		
 			std::string client_id = "";
 			std::string authorization_endpoint = "";
+			std::string issuer = "";
 			uint64_t sso_version = 0;
 
 			if (r.size() == 1) {
 				client_id = r.at(0)[0].as<std::string>();
 				authorization_endpoint = r.at(0)[1].as<std::string>();
-				sso_version = r.at(0)[2].as<uint64_t>();
+				issuer = r.at(0)[2].as<std::string>();
+				sso_version = r.at(0)[3].as<uint64_t>();
 			} else if (r.size() > 1) {
 				fprintf(stderr, "ERROR: More than one auth endpoint for an organization?!?!? NetworkID: %s\n", networkId.c_str());
 			} else {
@@ -455,7 +457,7 @@ AuthInfo PostgreSQL::getSSOAuthInfo(const nlohmann::json &member, const std::str
 					info.authenticationURL = std::string(url);
 				} else if (info.version == 1) {
 					info.ssoClientID = client_id;
-					info.issuerURL = authorization_endpoint;
+					info.issuerURL = issuer;
 					info.ssoNonce = nonce;
 					info.ssoState = std::string(state_hex);
 					info.centralAuthURL = redirectURL;
