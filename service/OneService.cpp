@@ -253,7 +253,7 @@ public:
 		memcpy(&_config, nwc, sizeof(ZT_VirtualNetworkConfig));
 		fprintf(stderr, "ssoEnabled: %s, ssoVersion: %d\n", 
 			_config.ssoEnabled ? "true" : "false", _config.ssoVersion);
-			
+
 		if (_config.ssoEnabled && _config.ssoVersion == 1) {
 			fprintf(stderr, "ssoEnabled for %s\n", nwid);
 			if (_idc == nullptr)
@@ -261,6 +261,11 @@ public:
 				assert(_config.issuerURL != nullptr);
 				assert(_config.ssoClientID != nullptr);
 				assert(_config.centralAuthURL != nullptr);
+
+				fprintf(stderr, "Issuer URL: %s\n", _config.issuerURL);
+				fprintf(stderr, "Client ID: %s\n", _config.ssoClientID);
+				fprintf(stderr, "Central Auth URL: %s\n", _config.centralAuthURL);
+				
 				char buf[17] = {};
 				_idc = zeroidc::zeroidc_new(
 					Utils::hex(_config.nwid, buf),

@@ -63,29 +63,6 @@ namespace ZeroTier {
 
 namespace {
 
-std::string url_encode(const std::string &value) {
-    std::ostringstream escaped;
-    escaped.fill('0');
-    escaped << std::hex;
-
-    for (std::string::const_iterator i = value.begin(), n = value.end(); i != n; ++i) {
-        std::string::value_type c = (*i);
-
-        // Keep alphanumeric and other accepted characters intact
-        if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
-            escaped << c;
-            continue;
-        }
-
-        // Any other characters are percent-encoded
-        escaped << std::uppercase;
-        escaped << '%' << std::setw(2) << int((unsigned char) c);
-        escaped << std::nouppercase;
-    }
-
-    return escaped.str();
-}
-
 static json _renderRule(ZT_VirtualNetworkRule &rule)
 {
 	char tmp[128];
@@ -503,7 +480,7 @@ EmbeddedNetworkController::~EmbeddedNetworkController()
 }
 
 void EmbeddedNetworkController::setSSORedirectURL(const std::string &url) {
-	_ssoRedirectURL = url_encode(url);
+	_ssoRedirectURL = url;
 }
 
 void EmbeddedNetworkController::init(const Identity &signingId,Sender *sender)
@@ -1493,6 +1470,9 @@ void EmbeddedNetworkController::_request(
 		}
 		if (!info.centralAuthURL.empty()) {
 			Utils::scopy(nc->centralAuthURL, sizeof(nc->centralAuthURL), info.centralAuthURL.c_str());
+		}
+		if (!info.issuerURL.empty()) {
+			Utils::scopy(nc->issuerURL, sizeof(nc->issuerURL), info.issuerURL.c_str());
 		}
 		if (!info.ssoNonce.empty()) {
 			Utils::scopy(nc->ssoNonce, sizeof(nc->ssoNonce), info.ssoNonce.c_str());

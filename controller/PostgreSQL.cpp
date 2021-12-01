@@ -80,6 +80,28 @@ std::vector<std::string> split(std::string str, char delim){
 	return tokens;
 }
 
+std::string url_encode(const std::string &value) {
+    std::ostringstream escaped;
+    escaped.fill('0');
+    escaped << std::hex;
+
+    for (std::string::const_iterator i = value.begin(), n = value.end(); i != n; ++i) {
+        std::string::value_type c = (*i);
+
+        // Keep alphanumeric and other accepted characters intact
+        if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
+            escaped << c;
+            continue;
+        }
+
+        // Any other characters are percent-encoded
+        escaped << std::uppercase;
+        escaped << '%' << std::setw(2) << int((unsigned char) c);
+        escaped << std::nouppercase;
+    }
+
+    return escaped.str();
+}
 
 } // anonymous namespace
 
@@ -425,7 +447,7 @@ AuthInfo PostgreSQL::getSSOAuthInfo(const nlohmann::json &member, const std::str
 					OSUtils::ztsnprintf(url, sizeof(authenticationURL),
 						"%s?response_type=id_token&response_mode=form_post&scope=openid+email+profile&redirect_uri=%s&nonce=%s&state=%s&client_id=%s",
 						authorization_endpoint.c_str(),
-						redirectURL.c_str(),
+						url_encode(redirectURL).c_str(),
 						nonce.c_str(),
 						state_hex,
 						client_id.c_str());
@@ -436,6 +458,14 @@ AuthInfo PostgreSQL::getSSOAuthInfo(const nlohmann::json &member, const std::str
 					info.ssoNonce = nonce;
 					info.ssoState = std::string(state_hex);
 					info.centralAuthURL = redirectURL;
+					fprintf(
+						stderr,
+						"ssoClientID: %s\nissuerURL: %s\nssoNonce: %s\nssoState: %s\ncentralAuthURL: %s",
+						info.ssoClientID.c_str(),
+						info.issuerURL.c_str(),
+						info.ssoNonce.c_str(),
+						info.ssoState.c_str(),
+						info.centralAuthURL.c_str());
 				}
 			}  else {
 				fprintf(stderr, "client_id: %s\nauthorization_endpoint: %s\n", client_id.c_str(), authorization_endpoint.c_str());
