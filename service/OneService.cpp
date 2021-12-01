@@ -251,7 +251,9 @@ public:
 		const char* nwid = Utils::hex(nwc->nwid, nwbuf);
 		fprintf(stderr, "NetworkState::setConfig(%s)\n", nwid);
 		memcpy(&_config, nwc, sizeof(ZT_VirtualNetworkConfig));
-
+		fprintf(stderr, "ssoEnabled: %s, ssoVersion: %d\n", 
+			_config.ssoEnabled ? "true" : "false", _config.ssoVersion);
+			
 		if (_config.ssoEnabled && _config.ssoVersion == 1) {
 			fprintf(stderr, "ssoEnabled for %s\n", nwid);
 			if (_idc == nullptr)
