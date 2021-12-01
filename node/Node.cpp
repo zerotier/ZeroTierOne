@@ -741,8 +741,10 @@ void Node::ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &des
 				n->setAccessDenied();
 				break;
 			case NetworkController::NC_ERROR_AUTHENTICATION_REQUIRED: {
-			}
+				fprintf(stderr, "\n\nGot auth required\n\n");
+
 				break;
+			} 
 
 			default: break;
 		}

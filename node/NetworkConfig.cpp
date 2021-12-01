@@ -412,6 +412,7 @@ bool NetworkConfig::fromDictionary(const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACI
 					}
 					if (d.get(ZT_NETWORKCONFIG_DICT_KEY_ISSUER_URL, this->issuerURL, (unsigned int)sizeof(this->issuerURL)) > 0) {
 						this->issuerURL[sizeof(this->issuerURL) - 1] = 0;
+						fprintf(stderr, "Loaded issuer url: %s\n", this->issuerURL);
 					}
 					if (d.get(ZT_NETWORKCONFIG_DICT_KEY_CENTRAL_ENDPOINT_URL, this->centralAuthURL, (unsigned int)sizeof(this->centralAuthURL)) > 0) {
 						this->centralAuthURL[sizeof(this->centralAuthURL) - 1] = 0;
@@ -432,6 +433,7 @@ bool NetworkConfig::fromDictionary(const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACI
 					this->ssoNonce[0] = 0;
 					this->ssoState[0] = 0;
 					this->ssoClientID[0] = 0;
+					this->issuerURL[0] = 0;
 				}
 			}
 		}

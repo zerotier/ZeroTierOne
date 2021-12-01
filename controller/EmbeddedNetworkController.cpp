@@ -1338,7 +1338,7 @@ void EmbeddedNetworkController::_request(
 	bool networkSSOEnabled = OSUtils::jsonBool(network["ssoEnabled"], false);
 	bool memberSSOExempt = OSUtils::jsonBool(member["ssoExempt"], false);
 	AuthInfo info;
-	if (networkSSOEnabled && ! memberSSOExempt) {
+	if (networkSSOEnabled && !memberSSOExempt) {
 		info = _db.getSSOAuthInfo(member, _ssoRedirectURL);
 		assert(info.enabled == networkSSOEnabled);
 
@@ -1364,24 +1364,23 @@ void EmbeddedNetworkController::_request(
 					return;
 				}
 			} else if (info.version == 1) {
-				if (!info.authenticationURL.empty()) {
-					_db.networkMemberSSOHasExpired(nwid, now);
-					onNetworkMemberDeauthorize(&_db, nwid, identity.address().toInt());
+				_db.networkMemberSSOHasExpired(nwid, now);
+				onNetworkMemberDeauthorize(&_db, nwid, identity.address().toInt());
 
-					Dictionary<8192> authInfo;
-					authInfo.add(ZT_AUTHINFO_DICT_KEY_VERSION, info.version);
-					authInfo.add(ZT_AUTHINFO_DICT_KEY_ISSUER_URL, info.issuerURL.c_str());
-					authInfo.add(ZT_AUTHINFO_DICT_KEY_CENTRAL_ENDPOINT_URL, info.centralAuthURL.c_str());
-					authInfo.add(ZT_AUTHINFO_DICT_KEY_NONCE, info.ssoNonce.c_str());
-					authInfo.add(ZT_AUTHINFO_DICT_KEY_STATE, info.ssoState.c_str());
-					authInfo.add(ZT_AUTHINFO_DICT_KEY_CLIENT_ID, info.ssoClientID.c_str());
+				Dictionary<8192> authInfo;
+				authInfo.add(ZT_AUTHINFO_DICT_KEY_VERSION, info.version);
+				authInfo.add(ZT_AUTHINFO_DICT_KEY_ISSUER_URL, info.issuerURL.c_str());
+				authInfo.add(ZT_AUTHINFO_DICT_KEY_CENTRAL_ENDPOINT_URL, info.centralAuthURL.c_str());
+				authInfo.add(ZT_AUTHINFO_DICT_KEY_NONCE, info.ssoNonce.c_str());
+				authInfo.add(ZT_AUTHINFO_DICT_KEY_STATE, info.ssoState.c_str());
+				authInfo.add(ZT_AUTHINFO_DICT_KEY_CLIENT_ID, info.ssoClientID.c_str());
 
-					DB::cleanMember(member);
-					_db.save(member, true);
+				DB::cleanMember(member);
+				_db.save(member, true);
 
-					_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_AUTHENTICATION_REQUIRED, authInfo.data(), authInfo.sizeBytes());
-					return;
-				}
+				fprintf(stderr, "Sending NC_ERROR_AUTHENTICATION_REQUIRED\n");
+				_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_AUTHENTICATION_REQUIRED, authInfo.data(), authInfo.sizeBytes());
+				return;
 			} else {
 				fprintf(stderr, "invalid sso info.version %llu\n", info.version);
 			}
@@ -1472,6 +1471,7 @@ void EmbeddedNetworkController::_request(
 			Utils::scopy(nc->centralAuthURL, sizeof(nc->centralAuthURL), info.centralAuthURL.c_str());
 		}
 		if (!info.issuerURL.empty()) {
+			fprintf(stderr, "copying issuerURL to nc: %s\n", info.issuerURL.c_str());
 			Utils::scopy(nc->issuerURL, sizeof(nc->issuerURL), info.issuerURL.c_str());
 		}
 		if (!info.ssoNonce.empty()) {

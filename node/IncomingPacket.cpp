@@ -191,9 +191,9 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,void *tPtr,const Shar
 		}	break;
 
 		case Packet::ERROR_NETWORK_AUTHENTICATION_REQUIRED: {
+			fprintf(stderr, "\nPacket::ERROR_NETWORK_AUTHENTICATION_REQUIRED\n\n");
 			const SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
 			if ((network)&&(network->controller() == peer->address())) {
-				bool noUrl = true;
 				int s = (int)size() - (ZT_PROTO_VERB_ERROR_IDX_PAYLOAD + 8);
 				if (s > 2) {
 					const uint16_t errorDataSize = at<uint16_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD + 8);
@@ -204,55 +204,43 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,void *tPtr,const Shar
 						uint64_t authVer = authInfo.getUI(ZT_AUTHINFO_DICT_KEY_VERSION, 0ULL);
 
 						if (authVer == 0) {
+							fprintf(stderr, "authVer == 1\n");
 							char authenticationURL[2048];
-							
+
 							if (authInfo.get(ZT_AUTHINFO_DICT_KEY_AUTHENTICATION_URL, authenticationURL, sizeof(authenticationURL)) > 0) {
 								authenticationURL[sizeof(authenticationURL) - 1] = 0; // ensure always zero terminated
 								network->setAuthenticationRequired(authenticationURL);
-								noUrl = false;
 							}
 						} else if (authVer == 1) {
-							bool haveIssuerURL = false;
+							fprintf(stderr, "authVer == 2\n");
 							char issuerURL[2048] = { 0 };
-							bool haveCentralURL = false;
 							char centralAuthURL[2048] = { 0 };
-							bool haveNonce = false;
 							char ssoNonce[64] = { 0 };
-							bool haveState = false;
 							char ssoState[128] = {0};
-							bool haveClientID = false;
 							char ssoClientID[256] = { 0 };
 
 							if (authInfo.get(ZT_AUTHINFO_DICT_KEY_ISSUER_URL, issuerURL, sizeof(issuerURL)) > 0) {
 								issuerURL[sizeof(issuerURL) - 1] = 0;
-								haveIssuerURL = true;
 							}
 							if (authInfo.get(ZT_AUTHINFO_DICT_KEY_CENTRAL_ENDPOINT_URL, centralAuthURL, sizeof(centralAuthURL))>0) {
 								centralAuthURL[sizeof(centralAuthURL) - 1] = 0;
-								haveCentralURL = true;
 							}
 							if (authInfo.get(ZT_AUTHINFO_DICT_KEY_NONCE, ssoNonce, sizeof(ssoNonce)) > 0) {
 								ssoNonce[sizeof(ssoNonce) - 1] = 0;
-								haveNonce = true;
 							}
 							if (authInfo.get(ZT_AUTHINFO_DICT_KEY_STATE, ssoState, sizeof(ssoState)) > 0) {
 								ssoState[sizeof(ssoState) - 1] = 0;
-								haveState = true;
 							}
 							if (authInfo.get(ZT_AUTHINFO_DICT_KEY_CLIENT_ID, ssoClientID, sizeof(ssoClientID)) > 0) {
 								ssoClientID[sizeof(ssoClientID) - 1] = 0;
-								haveClientID = true;
 							}
 
-							noUrl = ! (haveIssuerURL && haveCentralURL && haveNonce && haveState && haveClientID);
-
-							if (!noUrl) {
-								network->setAuthenticationRequired(issuerURL, centralAuthURL, ssoClientID, ssoNonce, ssoState);
-							}
+							fprintf(stderr, "Setting auth required on network\n");
+							network->setAuthenticationRequired(issuerURL, centralAuthURL, ssoClientID, ssoNonce, ssoState);
 						}
 					}
-				}
-				if (noUrl) {
+				} else {
+					fprintf(stderr, "authinfo??????\n");
 					network->setAuthenticationRequired("");
 				}
 			}

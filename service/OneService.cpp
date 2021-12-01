@@ -275,6 +275,11 @@ public:
 					_webPort
 				);
 
+				if (_idc == nullptr) {
+					fprintf(stderr, "idc is null\n");
+					return;
+				}
+
 				fprintf(stderr, "idc created (%s, %s, %s)\n", _config.issuerURL, _config.ssoClientID, _config.centralAuthURL);
 			}
 
