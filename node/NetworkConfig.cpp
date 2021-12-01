@@ -195,10 +195,9 @@ bool NetworkConfig::toDictionary(Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d,b
 		} else if(this->ssoVersion == 1) {
 			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_SSO_VERSION, this->ssoVersion)) return false;
 			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_SSO_ENABLED, this->ssoEnabled)) return false;
-			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_AUTHENTICATION_URL, this->authenticationURL)) return false;
+			//if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_AUTHENTICATION_URL, this->authenticationURL)) return false;
 			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_ISSUER_URL, this->issuerURL)) return false;
-			if (! d.add(ZT_NETWORKCONFIG_DICT_KEY_CENTRAL_ENDPOINT_URL, this->centralAuthURL))
-				return false;
+			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_CENTRAL_ENDPOINT_URL, this->centralAuthURL)) return false;
 			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_NONCE, this->ssoNonce)) return false;
 			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_STATE, this->ssoState)) return false;
 			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_CLIENT_ID, this->ssoClientID)) return false;

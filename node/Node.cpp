@@ -735,10 +735,10 @@ void Node::ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &des
 		switch(errorCode) {
 			case NetworkController::NC_ERROR_OBJECT_NOT_FOUND:
 			case NetworkController::NC_ERROR_INTERNAL_SERVER_ERROR:
-				n->setNotFound();
+				n->setNotFound(nullptr);
 				break;
 			case NetworkController::NC_ERROR_ACCESS_DENIED:
-				n->setAccessDenied();
+				n->setAccessDenied(nullptr);
 				break;
 			case NetworkController::NC_ERROR_AUTHENTICATION_REQUIRED: {
 				fprintf(stderr, "\n\nGot auth required\n\n");

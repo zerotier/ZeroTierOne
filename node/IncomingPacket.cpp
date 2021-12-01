@@ -142,7 +142,7 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,void *tPtr,const Shar
 			if (inReVerb == Packet::VERB_NETWORK_CONFIG_REQUEST) {
 				const SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
 				if ((network)&&(network->controller() == peer->address()))
-					network->setNotFound();
+					network->setNotFound(tPtr);
 			}
 			break;
 
@@ -153,7 +153,7 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,void *tPtr,const Shar
 			if (inReVerb == Packet::VERB_NETWORK_CONFIG_REQUEST) {
 				const SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
 				if ((network)&&(network->controller() == peer->address()))
-					network->setNotFound();
+					network->setNotFound(tPtr);
 			}
 			break;
 
@@ -176,7 +176,7 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,void *tPtr,const Shar
 			// Network controller: network access denied.
 			const SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
 			if ((network)&&(network->controller() == peer->address()))
-				network->setAccessDenied();
+				network->setAccessDenied(tPtr);
 		}	break;
 
 		case Packet::ERROR_UNWANTED_MULTICAST: {
@@ -209,7 +209,7 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,void *tPtr,const Shar
 
 							if (authInfo.get(ZT_AUTHINFO_DICT_KEY_AUTHENTICATION_URL, authenticationURL, sizeof(authenticationURL)) > 0) {
 								authenticationURL[sizeof(authenticationURL) - 1] = 0; // ensure always zero terminated
-								network->setAuthenticationRequired(authenticationURL);
+								network->setAuthenticationRequired(tPtr, authenticationURL);
 							}
 						} else if (authVer == 1) {
 							fprintf(stderr, "authVer == 2\n");
@@ -221,6 +221,7 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,void *tPtr,const Shar
 
 							if (authInfo.get(ZT_AUTHINFO_DICT_KEY_ISSUER_URL, issuerURL, sizeof(issuerURL)) > 0) {
 								issuerURL[sizeof(issuerURL) - 1] = 0;
+								fprintf(stderr, "Issuer URL from info: %s\n", issuerURL);
 							}
 							if (authInfo.get(ZT_AUTHINFO_DICT_KEY_CENTRAL_ENDPOINT_URL, centralAuthURL, sizeof(centralAuthURL))>0) {
 								centralAuthURL[sizeof(centralAuthURL) - 1] = 0;
@@ -236,12 +237,12 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,void *tPtr,const Shar
 							}
 
 							fprintf(stderr, "Setting auth required on network\n");
-							network->setAuthenticationRequired(issuerURL, centralAuthURL, ssoClientID, ssoNonce, ssoState);
+							network->setAuthenticationRequired(tPtr, issuerURL, centralAuthURL, ssoClientID, ssoNonce, ssoState);
 						}
 					}
 				} else {
 					fprintf(stderr, "authinfo??????\n");
-					network->setAuthenticationRequired("");
+					network->setAuthenticationRequired(tPtr, "");
 				}
 			}
 		}	break;

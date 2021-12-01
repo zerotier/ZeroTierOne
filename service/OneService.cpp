@@ -250,7 +250,10 @@ public:
 		char nwbuf[17] = {};
 		const char* nwid = Utils::hex(nwc->nwid, nwbuf);
 		fprintf(stderr, "NetworkState::setConfig(%s)\n", nwid);
+
+		fprintf(stderr, "issuerUrl before: %s\n", nwc->issuerURL);
 		memcpy(&_config, nwc, sizeof(ZT_VirtualNetworkConfig));
+		fprintf(stderr, "issuerUrl after: %s\n", _config.issuerURL);
 		fprintf(stderr, "ssoEnabled: %s, ssoVersion: %d\n", 
 			_config.ssoEnabled ? "true" : "false", _config.ssoVersion);
 
@@ -2662,8 +2665,9 @@ public:
 				// After setting up tap, fall through to CONFIG_UPDATE since we also want to do this...
 
 			case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE:
+				fprintf(stderr, "conf update issuerURL: %s\n", nwc->issuerURL);
 				n.setConfig(nwc);
-				
+
 				if (n.tap()) { // sanity check
 #if defined(__WINDOWS__) && !defined(ZT_SDK)
 					// wait for up to 5 seconds for the WindowsEthernetTap to actually be initialized

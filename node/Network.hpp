@@ -205,38 +205,43 @@ public:
 	/**
 	 * Set netconf failure to 'access denied' -- called in IncomingPacket when controller reports this
 	 */
-	inline void setAccessDenied()
+	inline void setAccessDenied(void *tPtr)
 	{
 		Mutex::Lock _l(_lock);
 		_netconfFailure = NETCONF_FAILURE_ACCESS_DENIED;
+
+		_sendUpdateEvent(tPtr);
 	}
 
 	/**
 	 * Set netconf failure to 'not found' -- called by IncomingPacket when controller reports this
 	 */
-	inline void setNotFound()
+	inline void setNotFound(void *tPtr)
 	{
 		Mutex::Lock _l(_lock);
 		_netconfFailure = NETCONF_FAILURE_NOT_FOUND;
+
+		_sendUpdateEvent(tPtr);
 	}
 
 	/**
 	 * Set netconf failure to 'authentication required' possibly with an authorization URL
 	 */
-	inline void setAuthenticationRequired(const char *url)
+	inline void setAuthenticationRequired(void *tPtr, const char *url)
 	{
 		Mutex::Lock _l(_lock);
 		_netconfFailure = NETCONF_FAILURE_AUTHENTICATION_REQUIRED;
 		_authenticationURL = (url) ? url : "";
 		_config.ssoEnabled = true;
 		_config.ssoVersion = 0;
+		_sendUpdateEvent(tPtr);
 	}
 
 	/**
 	 * set netconf failure to 'authentication required' along with info needed
 	 * for sso full flow authentication.
 	 */
-	void setAuthenticationRequired(const char* issuerURL, const char* centralEndpoint, const char* clientID, const char* nonce, const char* state);
+	void setAuthenticationRequired(void *tPtr, const char* issuerURL, const char* centralEndpoint, const char* clientID, const char* nonce, const char* state);
 
 	/**
 	 * Causes this network to request an updated configuration from its master node now
@@ -420,6 +425,7 @@ private:
 	void _announceMulticastGroupsTo(void *tPtr,const Address &peer,const std::vector<MulticastGroup> &allMulticastGroups);
 	std::vector<MulticastGroup> _allMulticastGroups() const;
 	Membership &_membership(const Address &a);
+	void _sendUpdateEvent(void *tPtr);
 
 	const RuntimeEnvironment *const RR;
 	void *_uPtr;
