@@ -23,6 +23,7 @@
 
 #include <libpq-fe.h>
 #include <sstream>
+#include <iomanip>
 #include <climits>
 #include <chrono>
 
