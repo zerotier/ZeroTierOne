@@ -62,7 +62,11 @@ impl ZeroIDC {
 
         let iss = match IssuerUrl::new(issuer.to_string()) {
             Ok(i) => i,
-            Err(e) => return Err(e.to_string()),
+            Err(e) => {
+                println!("Error generating Issuer URL");
+                return Err(e.to_string());
+            }
+
         };
 
         let provider_meta = match CoreProviderMetadata::discover(&iss, http_client) {
@@ -73,7 +77,10 @@ impl ZeroIDC {
         let r = format!("http://localhost:{}/sso", local_web_port);
         let redir_url = match Url::parse(&r) {
             Ok(s) => s,
-            Err(e) => return Err(e.to_string()),
+            Err(e) => {
+                println!("Error generating redirect URL");
+                return Err(e.to_string());
+            }
         };
 
         let redirect = match RedirectUrl::new(redir_url.to_string()) {
@@ -130,8 +137,13 @@ impl ZeroIDC {
         }
     }
 
+    fn get_network_id(&mut self) -> String {
+        return (*self.inner.lock().unwrap()).network_id.clone()
+    }
+
     fn get_auth_info(&mut self, csrf_token: String, nonce: String) -> Option<AuthInfo> {
         let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
+        let network_id = self.get_network_id();
 
         let r = (*self.inner.lock().unwrap()).oidc_client.as_ref().map(|c| {
             let (auth_url, csrf_token, nonce) = c
@@ -141,9 +153,10 @@ impl ZeroIDC {
                     nonce_func(nonce),
                 )
                 .add_scope(Scope::new("read".to_string()))
-                .add_scope(Scope::new("read".to_string()))
+                .add_scope(Scope::new("offline_access".to_string()))
                 .add_scope(Scope::new("openid".to_string()))
                 .set_pkce_challenge(pkce_challenge)
+                .add_extra_param("network_id", network_id)
                 .url();
 
             return AuthInfo {
