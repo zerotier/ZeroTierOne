@@ -1648,7 +1648,12 @@ public:
 				fprintf(stderr, "sso get\n");
 				fprintf(stderr, "path: %s\n", path.c_str());
 				fprintf(stderr, "body: %s\n", body.c_str());
-				scode = 200;				scode = 200;
+
+				const char* state = zeroidc::zeroidc_get_state_param_value(path.c_str());
+				const char* nwid = zeroidc::zeroidc_network_id_from_state(state);
+				fprintf(stderr, "state: %s\n", state);
+				fprintf(stderr, "nwid: %s\n", nwid);
+				scode = 200;
 			} else {
 				scode = 401; // isAuth == false && !sso
 			}
@@ -1791,13 +1796,6 @@ public:
 						scode = _controller->handleControlPlaneHttpPOST(std::vector<std::string>(ps.begin()+1,ps.end()),urlArgs,headers,body,responseBody,responseContentType);
 					else scode = 404;
 				}
-
-			} else if (ps[0] == "sso") {
-				// sso post handling
-				fprintf(stderr, "sso post\n");
-				fprintf(stderr, "path: %s\n", path.c_str());
-				fprintf(stderr, "body: %s\n", body.c_str());
-				scode = 200;
 			}
 			else {
 				scode = 401; // isAuth == false

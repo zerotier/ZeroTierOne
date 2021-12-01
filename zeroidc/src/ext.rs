@@ -1,5 +1,6 @@
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
+use url::{Url, ParseError};
 
 use crate::{AuthInfo, ZeroIDC};
 
@@ -165,5 +166,67 @@ pub extern "C" fn zeroidc_get_auth_url(ptr: *mut AuthInfo) -> *const c_char {
     };
     
     let s = CString::new(ai.url.to_string()).unwrap();
+    return s.into_raw();
+}
+
+#[no_mangle]
+pub extern "C" fn zeroidc_token_exchange(idc: *mut ZeroIDC, ai: *mut AuthInfo, code: *const c_char ) {
+    if idc.is_null() {
+        println!("idc is null");
+        return
+    }
+    if ai.is_null() {
+        println!("ai is null");
+        return
+    }
+    let idc = unsafe {
+        &mut *idc
+    };
+    let ai = unsafe {
+        &mut *ai
+    };
+
+
+}
+
+#[no_mangle]
+pub extern "C" fn zeroidc_get_state_param_value(path: *const c_char) -> *const c_char {
+    if path.is_null() {
+        println!("path is null");
+        return std::ptr::null();
+    }
+
+    let path =  unsafe {CStr::from_ptr(path)}.to_str().unwrap();
+
+    let url = "http://localhost:9993".to_string() + path;
+    let url = Url::parse(&url).unwrap();
+
+    let mut pairs = url.query_pairs();  
+    for p in pairs {
+        if p.0 == "state" {
+            let s = CString::new(p.1.into_owned()).unwrap();
+            return s.into_raw()
+        }
+    }
+
+    return std::ptr::null();
+}
+
+#[no_mangle]
+pub extern "C" fn zeroidc_network_id_from_state(state: *const c_char) -> *const c_char {
+    if state.is_null() {
+        println!("state is null");
+        return std::ptr::null();
+    }
+
+    let state = unsafe{CStr::from_ptr(state)}.to_str().unwrap();
+
+    let split = state.split("_");
+    let split = split.collect::<Vec<&str>>();
+    if split.len() != 2 {
+        return std::ptr::null();
+    }
+
+    let s = CString::new(split[1]).unwrap();
     return s.into_raw();
 }
