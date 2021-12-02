@@ -425,10 +425,16 @@ centos-7-setup: FORCE
 	yum install -y centos-release-scl
 	yum install -y devtoolset-8-gcc devtoolset-8-gcc-c++
 
-snap: FORCE
+snap-build-local: FORCE
 	snapcraft
 
-snap-remote: FORCE
+snap-install: FORCE
+	snap install zerotier_`git describe --tags --abbrev=0`_${SNAP_ARCH}.snap --dangerous
+
+snap-uninstall: FORCE
+	snap remove zerotier
+
+snap-build-remote: FORCE
 	snapcraft remote-build --build-on=amd64,arm64,s390x,ppc64el,armhf,i386
 
 snap-upload-beta: FORCE
