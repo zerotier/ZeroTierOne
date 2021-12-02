@@ -321,6 +321,25 @@ public:
 		return "";
 	}
 
+	void doTokenExchange(const char *code) {
+		if (_ainfo == nullptr || _idc == nullptr) {
+			fprintf(stderr, "ainfo or idc null\n");
+			return;
+		}
+
+		zeroidc::zeroidc_token_exchange(_idc, _ainfo, code);
+		zeroidc::zeroidc_auth_info_delete(_ainfo);
+		_ainfo = zeroidc::zeroidc_get_auth_info(
+			_idc,
+			_config.ssoState,
+			_config.ssoNonce
+		);
+
+		const char* url = zeroidc::zeroidc_get_auth_url(_ainfo);
+		memcpy(_config.authenticationURL, url, strlen(url));
+		_config.authenticationURL[strlen(url)] = 0;
+	}
+
 private:
 	unsigned int _webPort;
 	std::shared_ptr<EthernetTap> _tap;
@@ -1649,11 +1668,21 @@ public:
 				fprintf(stderr, "path: %s\n", path.c_str());
 				fprintf(stderr, "body: %s\n", body.c_str());
 
-				const char* state = zeroidc::zeroidc_get_state_param_value(path.c_str());
+				const char* state = zeroidc::zeroidc_get_url_param_value("state", path.c_str());
 				const char* nwid = zeroidc::zeroidc_network_id_from_state(state);
 				fprintf(stderr, "state: %s\n", state);
 				fprintf(stderr, "nwid: %s\n", nwid);
-				scode = 200;
+
+				const uint64_t id = Utils::hexStrToU64(nwid);
+				Mutex::Lock l(_nets_m);
+				if (_nets.find(id) != _nets.end()) {
+					NetworkState& ns = _nets[id];
+					const char* code = zeroidc::zeroidc_get_url_param_value("code", path.c_str());
+					ns.doTokenExchange(code);
+					scode = 200;
+				} else {
+					scode = 404;
+				}
 			} else {
 				scode = 401; // isAuth == false && !sso
 			}

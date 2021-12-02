@@ -179,23 +179,32 @@ pub extern "C" fn zeroidc_token_exchange(idc: *mut ZeroIDC, ai: *mut AuthInfo, c
         println!("ai is null");
         return
     }
+    if code.is_null() {
+        println!("code is null");
+        return
+    }
     let idc = unsafe {
         &mut *idc
     };
     let ai = unsafe {
         &mut *ai
     };
+    let code = unsafe{CStr::from_ptr(code)}.to_str().unwrap();
 
-
+    idc.do_token_exchange(ai, code);
 }
 
 #[no_mangle]
-pub extern "C" fn zeroidc_get_state_param_value(path: *const c_char) -> *const c_char {
+pub extern "C" fn zeroidc_get_url_param_value(param: *const c_char, path: *const c_char) -> *const c_char {
+    if param.is_null() {
+        println!("param is null");
+        return std::ptr::null();
+    }
     if path.is_null() {
         println!("path is null");
         return std::ptr::null();
     }
-
+    let param = unsafe {CStr::from_ptr(param)}.to_str().unwrap();
     let path =  unsafe {CStr::from_ptr(path)}.to_str().unwrap();
 
     let url = "http://localhost:9993".to_string() + path;
@@ -203,7 +212,7 @@ pub extern "C" fn zeroidc_get_state_param_value(path: *const c_char) -> *const c
 
     let mut pairs = url.query_pairs();  
     for p in pairs {
-        if p.0 == "state" {
+        if p.0 == param {
             let s = CString::new(p.1.into_owned()).unwrap();
             return s.into_raw()
         }
