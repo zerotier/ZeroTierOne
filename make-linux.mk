@@ -425,4 +425,20 @@ centos-7-setup: FORCE
 	yum install -y centos-release-scl
 	yum install -y devtoolset-8-gcc devtoolset-8-gcc-c++
 
+snap: FORCE
+	snapcraft
+
+snap-remote: FORCE
+	snapcraft remote-build --build-on=amd64,arm64,s390x,ppc64el,armhf,i386
+
+snap-upload-beta: FORCE
+	for SNAPFILE in ./*.snap; do\
+		snapcraft upload --release=beta,edge,candidate $${SNAPFILE};\
+	done
+
+snap-upload-stable: FORCE
+	for SNAPFILE in ./*.snap; do\
+		snapcraft upload --release=stable $${SNAPFILE};\
+	done
+
 FORCE:
