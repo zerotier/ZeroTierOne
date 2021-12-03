@@ -210,7 +210,7 @@ pub extern "C" fn zeroidc_get_url_param_value(param: *const c_char, path: *const
     let url = "http://localhost:9993".to_string() + path;
     let url = Url::parse(&url).unwrap();
 
-    let mut pairs = url.query_pairs();  
+    let pairs = url.query_pairs();  
     for p in pairs {
         if p.0 == param {
             let s = CString::new(p.1.into_owned()).unwrap();

@@ -13,8 +13,10 @@ use openidconnect::reqwest::http_client;
 use openidconnect::{AuthenticationFlow, PkceCodeVerifier, TokenResponse, OAuth2TokenResponse};
 use openidconnect::{AuthorizationCode, ClientId, CsrfToken, IssuerUrl, Nonce, PkceCodeChallenge, RedirectUrl, RequestTokenError, Scope};
 
+use reqwest::blocking::Client;
+
 use url::Url;
-use std::borrow::BorrowMut;
+
 
 pub struct ZeroIDC {
     inner: Arc<Mutex<Inner>>,
@@ -159,7 +161,8 @@ impl ZeroIDC {
                          return Some(res);
                     },
                     Err(e) => {
-                        println!("token response error");
+                        println!("token response error: {}", e.to_string());
+                        
                         return None;
                     },
                 }
@@ -167,11 +170,37 @@ impl ZeroIDC {
             // TODO: do stuff with token response
             if let Some(Some(tok)) = token_response {
                 let id_token = tok.id_token().unwrap();
+                println!("ID token: {}", id_token.to_string());
+
+                let split = auth_info.csrf_token.secret().split("_");
+                let split = split.collect::<Vec<&str>>();
+                
+                let params = [("id_token", id_token.to_string()),("state", split[0].to_string())];
+                let client = reqwest::blocking::Client::new();
+                let res = client.post((*self.inner.lock().unwrap()).auth_endpoint.clone())
+                    .form(&params)
+                    .send();
+
+                match res {
+                    Ok(res) => {
+                        println!("hit url: {}", res.url().as_str());
+                        println!("Status: {}", res.status());
+                    },
+                    Err(res) => {
+                        println!("hit url: {}", res.url().unwrap().as_str());
+                        println!("Status: {}", res.status().unwrap());
+                        println!("Post error: {}", res.to_string());
+                    }
+                }
+
                 let claims = (*self.inner.lock().unwrap()).oidc_client.as_ref().map(|c| {
 
                 });
                 let access_token = tok.access_token();
+                println!("Access Token: {}", access_token.secret());
+
                 let refresh_token = tok.refresh_token();
+                println!("Refresh Token: {}", refresh_token.unwrap().secret());
             }
         } else {
             println!("No pkce verifier!  Can't exchange tokens!!!");
