@@ -92,6 +92,16 @@ pub extern "C" fn zeroidc_is_running(ptr: *mut ZeroIDC) -> bool {
 }
 
 #[no_mangle]
+pub extern "C" fn zeroidc_get_exp_time(ptr: *mut ZeroIDC) -> u64 {
+    let id = unsafe {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
+
+    id.get_exp_time()
+}
+
+#[no_mangle]
 pub extern "C" fn zeroidc_process_form_post(ptr: *mut ZeroIDC, body: *const c_char) -> bool {
     let idc = unsafe {
         assert!(!ptr.is_null());

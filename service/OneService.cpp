@@ -340,6 +340,15 @@ public:
 		_config.authenticationURL[strlen(url)] = 0;
 	}
 
+	uint64_t getExpiryTime() {
+		if (_idc == nullptr) {
+			fprintf(stderr, "idc is null\n");
+			return 0;
+		}
+
+		return zeroidc::zeroidc_get_exp_time(_idc);
+	}
+
 private:
 	unsigned int _webPort;
 	std::shared_ptr<EthernetTap> _tap;
@@ -463,7 +472,7 @@ static void _networkToJson(nlohmann::json &nj,NetworkState &ns)
 		const char* authURL = ns.getAuthURL();
 		fprintf(stderr, "Auth URL: %s\n", authURL);
 		nj["authenticationURL"] = authURL;
-		nj["authenticationExpiryTime"] = ns.config().authenticationExpiryTime;
+		nj["authenticationExpiryTime"] = (ns.getExpiryTime()*1000);
 		nj["ssoEnabled"] = ns.config().ssoEnabled;
 	}
 }

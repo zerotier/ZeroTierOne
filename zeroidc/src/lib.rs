@@ -7,16 +7,13 @@ extern crate url;
 use std::sync::{Arc, Mutex};
 use std::thread::{sleep, spawn, JoinHandle};
 use std::time::Duration;
-
+use serde::{Deserialize, Serialize};
 use openidconnect::core::{CoreClient, CoreProviderMetadata, CoreResponseType};
 use openidconnect::reqwest::http_client;
-use openidconnect::{AuthenticationFlow, PkceCodeVerifier, TokenResponse, OAuth2TokenResponse};
-use openidconnect::{AuthorizationCode, ClientId, CsrfToken, IssuerUrl, Nonce, PkceCodeChallenge, RedirectUrl, RequestTokenError, Scope};
-
-use reqwest::blocking::Client;
+use openidconnect::{AccessToken, AuthorizationCode, AuthenticationFlow, ClientId, CsrfToken, IssuerUrl, Nonce, OAuth2TokenResponse, PkceCodeChallenge, PkceCodeVerifier, RedirectUrl, RefreshToken, Scope, TokenResponse};
+use jsonwebtoken::{dangerous_insecure_decode};
 
 use url::Url;
-
 
 pub struct ZeroIDC {
     inner: Arc<Mutex<Inner>>,
@@ -28,6 +25,14 @@ struct Inner {
     auth_endpoint: String,
     oidc_thread: Option<JoinHandle<()>>,
     oidc_client: Option<openidconnect::core::CoreClient>,
+    access_token: Option<AccessToken>,
+    refresh_token: Option<RefreshToken>,
+    exp_time: u64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Exp {
+    exp: u64
 }
 
 fn csrf_func(csrf_token: String) -> Box<dyn Fn() -> CsrfToken> {
@@ -60,6 +65,9 @@ impl ZeroIDC {
                 auth_endpoint: auth_ep.to_string(),
                 oidc_thread: None,
                 oidc_client: None,
+                access_token: None,
+                refresh_token: None,
+                exp_time: 0,
             })),
         };
 
@@ -147,7 +155,11 @@ impl ZeroIDC {
     }
 
     fn get_network_id(&mut self) -> String {
-        return (*self.inner.lock().unwrap()).network_id.clone()
+        return (*self.inner.lock().unwrap()).network_id.clone();
+    }
+
+    fn get_exp_time(&mut self) -> u64 {
+        return (*self.inner.lock().unwrap()).exp_time;
     }
 
     fn do_token_exchange(&mut self, auth_info: &mut AuthInfo, code: &str) {
@@ -185,6 +197,17 @@ impl ZeroIDC {
                     Ok(res) => {
                         println!("hit url: {}", res.url().as_str());
                         println!("Status: {}", res.status());
+
+                        let at = tok.access_token().secret();
+                        let exp = dangerous_insecure_decode::<Exp>(&at);
+                        if let Ok(e) = exp {
+                            (*self.inner.lock().unwrap()).exp_time = e.claims.exp
+                        }
+
+                        (*self.inner.lock().unwrap()).access_token = Some(tok.access_token().clone());
+                        if let Some(t) = tok.refresh_token() {
+                            (*self.inner.lock().unwrap()).refresh_token = Some(t.clone());
+                        }
                     },
                     Err(res) => {
                         println!("hit url: {}", res.url().unwrap().as_str());
@@ -193,9 +216,6 @@ impl ZeroIDC {
                     }
                 }
 
-                let claims = (*self.inner.lock().unwrap()).oidc_client.as_ref().map(|c| {
-
-                });
                 let access_token = tok.access_token();
                 println!("Access Token: {}", access_token.secret());
 
