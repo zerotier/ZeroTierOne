@@ -1,6 +1,6 @@
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
-use url::{Url, ParseError};
+use url::{Url};
 
 use crate::{AuthInfo, ZeroIDC};
 
@@ -101,23 +101,23 @@ pub extern "C" fn zeroidc_get_exp_time(ptr: *mut ZeroIDC) -> u64 {
     id.get_exp_time()
 }
 
-#[no_mangle]
-pub extern "C" fn zeroidc_process_form_post(ptr: *mut ZeroIDC, body: *const c_char) -> bool {
-    let idc = unsafe {
-        assert!(!ptr.is_null());
-        &mut *ptr
-    };
+// #[no_mangle]
+// pub extern "C" fn zeroidc_process_form_post(ptr: *mut ZeroIDC, body: *const c_char) -> bool {
+//     let idc = unsafe {
+//         assert!(!ptr.is_null());
+//         &mut *ptr
+//     };
 
-    if body.is_null() {
-        println!("body is null");
-        return false
-    }
+//     if body.is_null() {
+//         println!("body is null");
+//         return false
+//     }
 
-    let body = unsafe { CStr::from_ptr(body) }
-        .to_str().unwrap().to_string();
+//     let body = unsafe { CStr::from_ptr(body) }
+//         .to_str().unwrap().to_string();
 
-    false
-}
+//     false
+// }
 
 #[no_mangle]
 pub extern "C" fn zeroidc_get_auth_info(

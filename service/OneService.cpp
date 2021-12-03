@@ -249,23 +249,23 @@ public:
 	void setConfig(const ZT_VirtualNetworkConfig *nwc) {
 		char nwbuf[17] = {};
 		const char* nwid = Utils::hex(nwc->nwid, nwbuf);
-		fprintf(stderr, "NetworkState::setConfig(%s)\n", nwid);
+		// fprintf(stderr, "NetworkState::setConfig(%s)\n", nwid);
 
 		memcpy(&_config, nwc, sizeof(ZT_VirtualNetworkConfig));
-		fprintf(stderr, "ssoEnabled: %s, ssoVersion: %d\n", 
-			_config.ssoEnabled ? "true" : "false", _config.ssoVersion);
+		// fprintf(stderr, "ssoEnabled: %s, ssoVersion: %d\n", 
+		// 	_config.ssoEnabled ? "true" : "false", _config.ssoVersion);
 
 		if (_config.ssoEnabled && _config.ssoVersion == 1) {
-			fprintf(stderr, "ssoEnabled for %s\n", nwid);
+			//  fprintf(stderr, "ssoEnabled for %s\n", nwid);
 			if (_idc == nullptr)
 			{
 				assert(_config.issuerURL != nullptr);
 				assert(_config.ssoClientID != nullptr);
 				assert(_config.centralAuthURL != nullptr);
 
-				fprintf(stderr, "Issuer URL: %s\n", _config.issuerURL);
-				fprintf(stderr, "Client ID: %s\n", _config.ssoClientID);
-				fprintf(stderr, "Central Auth URL: %s\n", _config.centralAuthURL);
+				// fprintf(stderr, "Issuer URL: %s\n", _config.issuerURL);
+				// fprintf(stderr, "Client ID: %s\n", _config.ssoClientID);
+				// fprintf(stderr, "Central Auth URL: %s\n", _config.centralAuthURL);
 				
 				char buf[17] = {};
 				_idc = zeroidc::zeroidc_new(
@@ -281,7 +281,7 @@ public:
 					return;
 				}
 
-				fprintf(stderr, "idc created (%s, %s, %s)\n", _config.issuerURL, _config.ssoClientID, _config.centralAuthURL);
+				// fprintf(stderr, "idc created (%s, %s, %s)\n", _config.issuerURL, _config.ssoClientID, _config.centralAuthURL);
 			}
 
 			if (_ainfo != nullptr) {

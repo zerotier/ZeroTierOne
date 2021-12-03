@@ -2,11 +2,13 @@ pub mod ext;
 
 extern crate base64;
 extern crate openidconnect;
+extern crate time;
 extern crate url;
 
+use std::time::{SystemTime, UNIX_EPOCH, Duration};
+use time::{OffsetDateTime, format_description};
 use std::sync::{Arc, Mutex};
 use std::thread::{sleep, spawn, JoinHandle};
-use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use openidconnect::core::{CoreClient, CoreProviderMetadata, CoreResponseType};
 use openidconnect::reqwest::http_client;
@@ -48,6 +50,23 @@ pub struct AuthInfo {
     csrf_token: CsrfToken,
     nonce: Nonce,
     pkce_verifier: Option<PkceCodeVerifier>,
+}
+
+fn systemtime_strftime<T>(dt: T, format: &str) -> String
+   where T: Into<OffsetDateTime>
+{
+    let f = format_description::parse(format);
+    match f {
+        Ok(f) => {
+            match dt.into().format(&f) {
+                Ok(s) => s,
+                Err(_e) => "".to_string(),
+            }
+        },
+        Err(_e) => {
+            "".to_string()
+        },
+    }
 }
 
 impl ZeroIDC {
@@ -124,10 +143,84 @@ impl ZeroIDC {
             let inner_local = Arc::clone(&self.inner);
             (*local.lock().unwrap()).oidc_thread = Some(spawn(move || {
                 (*inner_local.lock().unwrap()).running = true;
+                let mut running = true;
 
-                while (*inner_local.lock().unwrap()).running {
-                    println!("tick");
+                while running {
+                    let exp = UNIX_EPOCH + Duration::from_secs((*inner_local.lock().unwrap()).exp_time);
+                    let now = SystemTime::now();
+
+                    println!("refresh token thread tick, now: {}, exp: {}", systemtime_strftime(now, "[year]-[month]-[day] [hour]:[minute]:[second]"), systemtime_strftime(exp, "[year]-[month]-[day] [hour]:[minute]:[second]"));
+                    let refresh_token = (*inner_local.lock().unwrap()).refresh_token.clone();
+                    if let Some(refresh_token) =  refresh_token {
+                        if now >= (exp - Duration::from_secs(15)) {
+                            let token_response = (*inner_local.lock().unwrap()).oidc_client.as_ref().map(|c| {
+                                let res = c.exchange_refresh_token(&refresh_token)
+                                    .request(http_client);
+                                
+                                res
+     
+                            });
+
+                            if let Some(res) = token_response {
+                                if let Ok(res) = res {
+                                    let id_token = res.id_token();
+
+                                    if let Some(id_token) = id_token {
+                                        let params = [("id_token", id_token.to_string()),("state", "refresh".to_string())];
+                                        let client = reqwest::blocking::Client::new();
+                                        let r = client.post((*inner_local.lock().unwrap()).auth_endpoint.clone())
+                                            .form(&params)
+                                            .send();
+
+                                        match r {
+                                            Ok(r) => {
+                                                if r.status().is_success() {
+                                                    println!("hit url: {}", r.url().as_str());
+                                                    println!("status: {}", r.status());
+
+
+                                                    let access_token = res.access_token();
+                                                    let at = access_token.secret();
+                                                    let exp = dangerous_insecure_decode::<Exp>(&at);
+                                                    
+                                                    if let Ok(e) = exp {
+                                                        (*inner_local.lock().unwrap()).exp_time = e.claims.exp
+                                                    }
+
+                                                    (*inner_local.lock().unwrap()).access_token = Some(access_token.clone());
+                                                    if let Some(t) = res.refresh_token() {
+                                                        println!("New Refresh Token: {}", t.secret());
+                                                        (*inner_local.lock().unwrap()).refresh_token = Some(t.clone());
+                                                    }
+                                                    println!("Central post succeeded");
+                                                } else {
+                                                    println!("Central post failed: {}", r.status().to_string());
+                                                    println!("hit url: {}", r.url().as_str());
+                                                    println!("Status: {}", r.status());
+                                                    (*inner_local.lock().unwrap()).exp_time = 0;
+                                                    (*inner_local.lock().unwrap()).running = false;
+                                                }
+                                            },
+                                            Err(e) => {
+                                                println!("Central post failed: {}", e.to_string());
+                                                println!("hit url: {}", e.url().unwrap().as_str());
+                                                println!("Status: {}", e.status().unwrap());
+                                                // (*inner_local.lock().unwrap()).exp_time = 0;
+                                                (*inner_local.lock().unwrap()).running = false;
+                                            }
+                                        }
+                                    }
+                                }
+                            }  
+                        } else {
+                            println!("waiting to refresh");
+                        }
+                    } else {
+                        println!("no refresh token?");
+                    }
+
                     sleep(Duration::from_secs(1));
+                    running = (*inner_local.lock().unwrap()).running;
                 }
 
                 println!("thread done!")
@@ -207,12 +300,14 @@ impl ZeroIDC {
                         (*self.inner.lock().unwrap()).access_token = Some(tok.access_token().clone());
                         if let Some(t) = tok.refresh_token() {
                             (*self.inner.lock().unwrap()).refresh_token = Some(t.clone());
+                            self.start();
                         }
                     },
                     Err(res) => {
                         println!("hit url: {}", res.url().unwrap().as_str());
                         println!("Status: {}", res.status().unwrap());
                         println!("Post error: {}", res.to_string());
+                        (*self.inner.lock().unwrap()).exp_time = 0;
                     }
                 }
 
@@ -246,7 +341,7 @@ impl ZeroIDC {
                 .add_extra_param("network_id", network_id)
                 .url();
 
-            println!("URL: {}", auth_url);
+            // println!("URL: {}", auth_url);
 
             return AuthInfo {
                 url: auth_url,
