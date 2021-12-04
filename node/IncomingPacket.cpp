@@ -204,7 +204,6 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,void *tPtr,const Shar
 						uint64_t authVer = authInfo.getUI(ZT_AUTHINFO_DICT_KEY_VERSION, 0ULL);
 
 						if (authVer == 0) {
-							fprintf(stderr, "authVer == 1\n");
 							char authenticationURL[2048];
 
 							if (authInfo.get(ZT_AUTHINFO_DICT_KEY_AUTHENTICATION_URL, authenticationURL, sizeof(authenticationURL)) > 0) {
@@ -212,7 +211,6 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,void *tPtr,const Shar
 								network->setAuthenticationRequired(tPtr, authenticationURL);
 							}
 						} else if (authVer == 1) {
-							fprintf(stderr, "authVer == 2\n");
 							char issuerURL[2048] = { 0 };
 							char centralAuthURL[2048] = { 0 };
 							char ssoNonce[64] = { 0 };
