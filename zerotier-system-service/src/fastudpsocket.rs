@@ -6,7 +6,16 @@
  * https://www.zerotier.com/
  */
 
+/*
+ * This is a threaded UDP socket listener for high performance. The fastest way to receive UDP
+ * (without heroic efforts like kernel bypass) on most platforms is to create a separate socket
+ * for each thread using options like SO_REUSEPORT and concurrent packet listening.
+ */
+
+use std::mem::{MaybeUninit, transmute, zeroed};
+use std::num::NonZeroI64;
 use std::os::raw::c_int;
+use std::ptr::null_mut;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -14,18 +23,11 @@ use num_traits::cast::AsPrimitive;
 
 use zerotier_network_hypervisor::vl1::InetAddress;
 use zerotier_network_hypervisor::{PacketBuffer, PacketBufferPool};
+use crate::debug;
 
-/*
- * This is a threaded UDP socket listener for high performance. The fastest way to receive UDP
- * (without heroic efforts like kernel bypass) on most platforms is to create a separate socket
- * for each thread using options like SO_REUSEPORT and concurrent packet listening.
- */
+const FAST_UDP_SOCKET_MAX_THREADS: usize = 4;
 
-#[cfg(windows)]
-pub(crate) type FastUDPRawOsSocket = winsock2::SOCKET;
-
-#[cfg(unix)]
-pub(crate) type FastUDPRawOsSocket = c_int;
+pub(crate) type FastUDPRawOsSocket = NonZeroI64;
 
 #[cfg(unix)]
 fn bind_udp_socket(_device_name: &str, address: &InetAddress) -> Result<FastUDPRawOsSocket, &'static str> {
@@ -39,7 +41,7 @@ fn bind_udp_socket(_device_name: &str, address: &InetAddress) -> Result<FastUDPR
         };
 
         let s = libc::socket(af.as_(), libc::SOCK_DGRAM, 0);
-        if s < 0 {
+        if s <= 0 {
             return Err("unable to create socket");
         }
 
@@ -118,7 +120,7 @@ fn bind_udp_socket(_device_name: &str, address: &InetAddress) -> Result<FastUDPR
             return Err("bind to address failed");
         }
 
-        Ok(s)
+        Ok(NonZeroI64::new(s as i64).unwrap())
     }
 }
 
@@ -133,36 +135,47 @@ pub(crate) struct FastUDPSocket {
 #[cfg(unix)]
 #[inline(always)]
 fn fast_udp_socket_close(socket: &FastUDPRawOsSocket) {
-    unsafe { libc::close(*socket); }
-}
-
-#[inline(always)]
-pub(crate) fn fast_udp_socket_to_i64(socket: &FastUDPRawOsSocket) -> i64 { (*socket) as i64 }
-
-#[inline(always)]
-pub(crate) fn fast_udp_socket_from_i64(socket: i64) -> Option<FastUDPRawOsSocket> {
-    if socket >= 0 {
-        Some(socket as FastUDPRawOsSocket)
-    } else {
-        None
-    }
+    unsafe { libc::close(socket.get().as_()); }
 }
 
 /// Send to a raw UDP socket with optional packet TTL.
 /// If the packet_ttl option is <=0, packet is sent with the default TTL. TTL setting is only used
 /// in ZeroTier right now to do escalating TTL probes for IPv4 NAT traversal.
 #[cfg(unix)]
-#[inline(always)]
-pub(crate) fn fast_udp_socket_sendto(socket: &FastUDPRawOsSocket, to_address: &InetAddress, data: &[u8], packet_ttl: i32) {
+pub(crate) fn fast_udp_socket_sendto(socket: &FastUDPRawOsSocket, to_address: &InetAddress, data: &[&[u8]], packet_ttl: u8) {
     unsafe {
-        if packet_ttl <= 0 {
-            libc::sendto(*socket, data.as_ptr().cast(), data.len().as_(), 0, (to_address as *const InetAddress).cast(), std::mem::size_of::<InetAddress>().as_());
+        debug_assert!(zerotier_network_hypervisor::vl1::PACKET_FRAGMENT_COUNT_MAX < 16);
+        debug_assert!(data.len() <= 16);
+        let mut iov: [libc::iovec; 16] = MaybeUninit::uninit().assume_init();
+        let data_len = data.len() & 15;
+        let mut data_ptr = 0;
+        while data_ptr < data_len {
+            let v = iov.get_unchecked_mut(data_ptr);
+            let d = *data.get_unchecked(data_ptr);
+            data_ptr += 1;
+            v.iov_base = transmute(d.as_ptr()); // iov_base is mut even though data is not changed
+            debug_assert!(d.len() > 0);
+            v.iov_len = d.len();
+        }
+
+        let mhdr = libc::msghdr {
+            msg_name: transmute(to_address as *const InetAddress), // also mut even though it's not modified
+            msg_namelen: std::mem::size_of::<InetAddress>().as_(),
+            msg_iov: iov.as_mut_ptr(),
+            msg_iovlen: data_len.as_(),
+            msg_control: null_mut(),
+            msg_controllen: 0,
+            msg_flags: 0
+        };
+
+        if packet_ttl == 0 || to_address.is_ipv6() {
+            let _ = libc::sendmsg(socket.get().as_(), transmute(&mhdr as *const libc::msghdr), 0);
         } else {
             let mut ttl = packet_ttl as c_int;
-            libc::setsockopt(*socket, libc::IPPROTO_IP.as_(), libc::IP_TTL.as_(), (&mut ttl as *mut c_int).cast(), std::mem::size_of::<c_int>().as_());
-            libc::sendto(*socket, data.as_ptr().cast(), data.len().as_(), 0, (to_address as *const InetAddress).cast(), std::mem::size_of::<InetAddress>().as_());
+            libc::setsockopt(socket.get().as_(), libc::IPPROTO_IP.as_(), libc::IP_TTL.as_(), (&mut ttl as *mut c_int).cast(), std::mem::size_of::<c_int>().as_());
+            let _ = libc::sendmsg(socket.get().as_(), transmute(&mhdr as *const libc::msghdr), 0);
             ttl = 255;
-            libc::setsockopt(*socket, libc::IPPROTO_IP.as_(), libc::IP_TTL.as_(), (&mut ttl as *mut c_int).cast(), std::mem::size_of::<c_int>().as_());
+            libc::setsockopt(socket.get().as_(), libc::IPPROTO_IP.as_(), libc::IP_TTL.as_(), (&mut ttl as *mut c_int).cast(), std::mem::size_of::<c_int>().as_());
         }
     }
 }
@@ -172,7 +185,7 @@ pub(crate) fn fast_udp_socket_sendto(socket: &FastUDPRawOsSocket, to_address: &I
 fn fast_udp_socket_recvfrom(socket: &FastUDPRawOsSocket, buf: &mut PacketBuffer, from_address: &mut InetAddress) -> isize {
     unsafe {
         let mut addrlen = std::mem::size_of::<InetAddress>() as libc::socklen_t;
-        let s = libc::recvfrom(*socket, buf.as_mut_ptr().cast(), buf.capacity().as_(), 0, (from_address as *mut InetAddress).cast(), &mut addrlen) as isize;
+        let s = libc::recvfrom(socket.get().as_(), buf.as_mut_ptr().cast(), buf.capacity().as_(), 0, (from_address as *mut InetAddress).cast(), &mut addrlen) as isize;
         if s > 0 {
             buf.set_size_unchecked(s as usize);
         }
@@ -182,7 +195,7 @@ fn fast_udp_socket_recvfrom(socket: &FastUDPRawOsSocket, buf: &mut PacketBuffer,
 
 impl FastUDPSocket {
     pub fn new<F: Fn(&FastUDPRawOsSocket, &InetAddress, PacketBuffer) + Send + Sync + Clone + 'static>(device_name: &str, address: &InetAddress, packet_buffer_pool: &Arc<PacketBufferPool>, handler: F) -> Result<Self, String> {
-        let thread_count = num_cpus::get_physical().clamp(1, 4);
+        let thread_count = num_cpus::get_physical().clamp(1, FAST_UDP_SOCKET_MAX_THREADS);
 
         let mut s = Self {
             thread_run: Arc::new(AtomicBool::new(true)),
@@ -231,18 +244,15 @@ impl FastUDPSocket {
     }
 
     #[inline(always)]
-    pub fn all_sockets(&self) -> &[FastUDPRawOsSocket] {
-        self.sockets.as_slice()
-    }
-
-    #[inline(always)]
     pub fn send(&self, to_address: &InetAddress, data: &[u8], packet_ttl: i32) {
-        fast_udp_socket_sendto(self.sockets.get(0).unwrap(), to_address, data, packet_ttl);
+        debug_assert!(!self.sockets.is_empty());
+        fast_udp_socket_sendto(unsafe { self.sockets.get_unchecked(0) }, to_address, data, packet_ttl);
     }
 
     #[inline(always)]
-    pub fn raw_socket(&self) -> FastUDPRawOsSocket {
-        *self.sockets.get(0).unwrap()
+    pub fn raw_socket(&self) -> &FastUDPRawOsSocket {
+        debug_assert!(!self.sockets.is_empty());
+        unsafe { self.sockets.get_unchecked(0) }
     }
 }
 
@@ -258,17 +268,17 @@ impl Drop for FastUDPSocket {
         self.thread_run.store(false, Ordering::Relaxed);
         for s in self.sockets.iter() {
             unsafe {
-                libc::sendto(*s, tmp.as_ptr().cast(), 0, 0, (&self.bind_address as *const InetAddress).cast(), std::mem::size_of::<InetAddress>() as osdep::socklen_t);
+                libc::sendto(s.get().as_(), tmp.as_ptr().cast(), 0, 0, (&self.bind_address as *const InetAddress).cast(), std::mem::size_of::<InetAddress>() as osdep::socklen_t);
             }
         }
         for s in self.sockets.iter() {
             unsafe {
-                libc::shutdown(*s, libc::SHUT_RDWR.as_());
+                libc::shutdown(s.get().as_(), libc::SHUT_RDWR.as_());
             }
         }
         for s in self.sockets.iter() {
             unsafe {
-                libc::close(*s);
+                libc::close(s.get().as_());
             }
         }
         while !self.threads.is_empty() {

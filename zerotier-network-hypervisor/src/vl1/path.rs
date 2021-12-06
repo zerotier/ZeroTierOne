@@ -13,7 +13,7 @@ use std::sync::atomic::{AtomicI64, Ordering};
 use parking_lot::Mutex;
 
 use crate::PacketBuffer;
-use crate::util::U64PassThroughHasher;
+use crate::util::U64NoOpHasher;
 use crate::vl1::Endpoint;
 use crate::vl1::fragmentedpacket::FragmentedPacket;
 use crate::vl1::node::NodeInterface;
@@ -32,12 +32,10 @@ pub struct Path {
     local_interface: Option<NonZeroI64>,
     last_send_time_ticks: AtomicI64,
     last_receive_time_ticks: AtomicI64,
-    fragmented_packets: Mutex<HashMap<u64, FragmentedPacket, U64PassThroughHasher>>,
+    fragmented_packets: Mutex<HashMap<u64, FragmentedPacket, U64NoOpHasher>>,
 }
 
 impl Path {
-    pub(crate) const INTERVAL: i64 = PATH_KEEPALIVE_INTERVAL;
-
     #[inline(always)]
     pub fn new(endpoint: Endpoint, local_socket: Option<NonZeroI64>, local_interface: Option<NonZeroI64>) -> Self {
         Self {
@@ -46,7 +44,7 @@ impl Path {
             local_interface,
             last_send_time_ticks: AtomicI64::new(0),
             last_receive_time_ticks: AtomicI64::new(0),
-            fragmented_packets: Mutex::new(HashMap::with_capacity_and_hasher(4, U64PassThroughHasher::new())),
+            fragmented_packets: Mutex::new(HashMap::with_capacity_and_hasher(4, U64NoOpHasher::new())),
         }
     }
 
@@ -71,10 +69,10 @@ impl Path {
     pub(crate) fn receive_fragment(&self, packet_id: PacketID, fragment_no: u8, fragment_expecting_count: u8, packet: PacketBuffer, time_ticks: i64) -> Option<FragmentedPacket> {
         let mut fp = self.fragmented_packets.lock();
 
-        // This is mostly a defense against denial of service attacks or broken peers. It will
-        // trim off about 1/3 of waiting packets if the total is over the limit.
+        // Discard some old waiting packets if the total incoming fragments for a path exceeds a
+        // sanity limit. This is to prevent memory exhaustion DOS attacks.
         let fps = fp.len();
-        if fps > FRAGMENT_MAX_INBOUND_PACKETS_PER_PATH {
+        if fps > PACKET_FRAGMENT_MAX_INBOUND_PACKETS_PER_PATH {
             let mut entries: Vec<(i64, u64)> = Vec::new();
             entries.reserve(fps);
             for f in fp.iter() {
@@ -82,10 +80,11 @@ impl Path {
             }
             entries.sort_unstable_by(|a, b| (*a).0.cmp(&(*b).0));
             for i in 0..(fps / 3) {
-                let _ = fp.remove(&(*unsafe { entries.get_unchecked(i) }).1);
+                let _ = fp.remove(&(*entries.get(i).unwrap()).1);
             }
         }
 
+        // This is optimized for the fragmented case because that's the most common when transferring data.
         if fp.entry(packet_id).or_insert_with(|| FragmentedPacket::new(time_ticks)).add_fragment(packet, fragment_no, fragment_expecting_count) {
             fp.remove(&packet_id)
         } else {
@@ -103,9 +102,12 @@ impl Path {
         self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
     }
 
+    /// Desired period between calls to call_every_interval().
+    pub(crate) const CALL_EVERY_INTERVAL_INTERVAL: i64 = PATH_KEEPALIVE_INTERVAL;
+
     /// Called every INTERVAL during background tasks.
     #[inline(always)]
     pub(crate) fn call_every_interval<CI: NodeInterface>(&self, ct: &CI, time_ticks: i64) {
-        self.fragmented_packets.lock().retain(|packet_id, frag| (time_ticks - frag.ts_ticks) < FRAGMENT_EXPIRATION);
+        self.fragmented_packets.lock().retain(|packet_id, frag| (time_ticks - frag.ts_ticks) < PACKET_FRAGMENT_EXPIRATION);
     }
 }

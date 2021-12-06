@@ -21,7 +21,7 @@ use crate::error::InvalidParameterError;
 use crate::util::gate::IntervalGate;
 use crate::util::pool::{Pool, Pooled};
 use crate::util::buffer::Buffer;
-use crate::vl1::{Address, Endpoint, Identity};
+use crate::vl1::{Address, Endpoint, Identity, IdentityType};
 use crate::vl1::path::Path;
 use crate::vl1::peer::Peer;
 use crate::vl1::protocol::*;
@@ -46,7 +46,7 @@ pub trait NodeInterface {
     fn event_user_message(&self, source: &Identity, message_type: u64, message: &[u8]);
 
     /// Load this node's identity from the data store.
-    fn load_node_identity(&self) -> Option<&[u8]>;
+    fn load_node_identity(&self) -> Option<Vec<u8>>;
 
     /// Save this node's identity.
     /// Note that this is only called on first startup (after up) and after identity_changed.
@@ -115,7 +115,7 @@ pub trait VL1PacketHandler {
 #[derive(Default)]
 struct BackgroundTaskIntervals {
     whois: IntervalGate<{ WhoisQueue::INTERVAL }>,
-    paths: IntervalGate<{ Path::INTERVAL }>,
+    paths: IntervalGate<{ Path::CALL_EVERY_INTERVAL_INTERVAL }>,
     peers: IntervalGate<{ Peer::INTERVAL }>,
 }
 
@@ -137,7 +137,7 @@ impl Node {
     ///
     /// If the auto-generate identity type is not None, a new identity will be generated if
     /// no identity is currently stored in the data store.
-    pub fn new<I: NodeInterface>(ci: &I, auto_generate_identity_type: Option<crate::vl1::identity::Type>) -> Result<Self, InvalidParameterError> {
+    pub fn new<I: NodeInterface>(ci: &I, auto_generate_identity_type: Option<IdentityType>) -> Result<Self, InvalidParameterError> {
         let id = {
             let id_str = ci.load_node_identity();
             if id_str.is_none() {
@@ -149,7 +149,7 @@ impl Node {
                     id
                 }
             } else {
-                let id_str = String::from_utf8_lossy(id_str.unwrap());
+                let id_str = String::from_utf8_lossy(id_str.as_ref().unwrap().as_slice());
                 let id = Identity::from_str(id_str.as_ref());
                 if id.is_err() {
                     return Err(InvalidParameterError("invalid identity"));

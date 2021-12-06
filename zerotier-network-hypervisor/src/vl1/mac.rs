@@ -19,7 +19,7 @@ pub struct MAC(NonZeroU64);
 
 impl MAC {
     #[inline(always)]
-    pub fn from_u64(i: u64) -> Option<MAC> { NonZeroU64::new(i & 0xffffffffffff).map_or(None, |i| Some(MAC(i))) }
+    pub fn from_u64(i: u64) -> Option<MAC> { NonZeroU64::new(i & 0xffffffffffff).map(|i| MAC(i)) }
 
     #[inline(always)]
     pub fn from_bytes(b: &[u8]) -> Option<MAC> {

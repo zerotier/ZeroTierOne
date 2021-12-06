@@ -2236,6 +2236,7 @@ dependencies = [
  "digest_auth",
  "libc",
  "mach",
+ "num-traits",
  "num_cpus",
  "parking_lot",
  "serde",

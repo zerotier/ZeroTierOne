@@ -6,12 +6,12 @@
  * https://www.zerotier.com/
  */
 
-pub mod identity;
 pub mod inetaddress;
 pub mod endpoint;
 pub mod rootset;
 
 #[allow(unused)]
+pub(crate) mod identity;
 pub(crate) mod protocol;
 pub(crate) mod node;
 pub(crate) mod path;
@@ -26,10 +26,12 @@ pub(crate) mod symmetricsecret;
 
 pub use address::Address;
 pub use mac::MAC;
-pub use identity::Identity;
+pub use identity::{Identity, IdentityType, IDENTITY_TYPE_0_SIGNATURE_SIZE, IDENTITY_TYPE_1_SIGNATURE_SIZE};
 pub use endpoint::Endpoint;
 pub use dictionary::Dictionary;
 pub use inetaddress::InetAddress;
 pub use peer::Peer;
 pub use path::Path;
 pub use node::{Node, NodeInterface};
+
+pub use protocol::{PACKET_SIZE_MAX, PACKET_FRAGMENT_COUNT_MAX};

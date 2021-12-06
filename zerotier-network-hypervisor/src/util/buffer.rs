@@ -7,7 +7,7 @@
  */
 
 use std::io::Write;
-use std::mem::size_of;
+use std::mem::{MaybeUninit, size_of};
 
 use crate::util::pool::PoolFactory;
 
@@ -38,6 +38,10 @@ impl<const L: usize> Buffer<L> {
 
     #[inline(always)]
     pub fn new() -> Self { Self(0, [0_u8; L]) }
+
+    /// Create a zero size buffer without zeroing its actual memory.
+    #[inline(always)]
+    pub unsafe fn new_nozero() -> Self { Self(0, MaybeUninit::uninit().assume_init()) }
 
     /// Get a Buffer initialized with a copy of a byte slice.
     #[inline(always)]
@@ -82,6 +86,19 @@ impl<const L: usize> Buffer<L> {
         self.1[0..prev_len].fill(0);
     }
 
+    /// Load array into buffer.
+    /// This will panic if the array is larger than L.
+    #[inline(always)]
+    pub fn set_to(&mut self, b: &[u8]) {
+        let prev_len = self.0;
+        let len = b.len();
+        self.0 = len;
+        self.1[0..len].copy_from_slice(b);
+        if len < prev_len {
+            self.1[len..prev_len].fill(0);
+        }
+    }
+
     #[inline(always)]
     pub fn len(&self) -> usize { self.0 }
 
@@ -109,48 +126,39 @@ impl<const L: usize> Buffer<L> {
     #[inline(always)]
     pub unsafe fn get_unchecked(&self, i: usize) -> u8 { *self.1.get_unchecked(i) }
 
-    /// Append a packed structure and call a function to initialize it in place.
-    /// Anything not initialized will be zero.
+    /// Append a structure and return a mutable reference to its memory.
     #[inline(always)]
-    pub fn append_and_init_struct<T: RawObject, R, F: FnOnce(&mut T) -> R>(&mut self, initializer: F) -> std::io::Result<R> {
+    pub fn append_struct_get_mut<T: RawObject>(&mut self) -> std::io::Result<&mut T> {
         let ptr = self.0;
         let end = ptr + size_of::<T>();
         if end <= L {
             self.0 = end;
-            unsafe {
-                Ok(initializer(&mut *self.1.as_mut_ptr().cast::<u8>().offset(ptr as isize).cast::<T>()))
-            }
+            Ok(unsafe { &mut *self.1.as_mut_ptr().add(ptr).cast() })
         } else {
             Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
         }
     }
 
-    /// Append and initialize a byte array with a fixed size set at compile time.
-    /// This is more efficient than setting a size at runtime as it may allow the compiler to
-    /// skip some bounds checking. Any bytes not initialized will be zero.
+    /// Append a fixed size array and return a mutable reference to its memory.
     #[inline(always)]
-    pub fn append_and_init_bytes_fixed<R, F: FnOnce(&mut [u8; N]) -> R, const N: usize>(&mut self, initializer: F) -> std::io::Result<R> {
+    pub fn append_bytes_fixed_get_mut<const S: usize>(&mut self) -> std::io::Result<&mut [u8; S]> {
         let ptr = self.0;
-        let end = ptr + N;
+        let end = ptr + S;
         if end <= L {
             self.0 = end;
-            unsafe {
-                Ok(initializer(&mut *self.1.as_mut_ptr().cast::<u8>().offset(ptr as isize).cast::<[u8; N]>()))
-            }
+            Ok(unsafe { &mut *self.1.as_mut_ptr().add(ptr).cast() })
         } else {
             Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
         }
     }
 
-    /// Append and initialize a slice with a size that is set at runtime.
-    /// Any bytes not initialized will be zero.
-    #[inline(always)]
-    pub fn append_and_init_bytes<R, F: FnOnce(&mut [u8]) -> R>(&mut self, l: usize, initializer: F) -> std::io::Result<R> {
+    /// Append a runtime sized array and return a mutable reference to its memory.
+    pub fn append_bytes_get_mut(&mut self, s: usize) -> std::io::Result<&mut [u8]> {
         let ptr = self.0;
         let end = ptr + l;
         if end <= L {
             self.0 = end;
-            Ok(initializer(&mut self.1[ptr..end]))
+            Ok(&mut self.1[ptr..end])
         } else {
             Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
         }
@@ -171,7 +179,6 @@ impl<const L: usize> Buffer<L> {
     }
 
     /// Append a fixed length byte array (copy into buffer).
-    /// Use append_and_init_ functions if possible as these avoid extra copies.
     #[inline(always)]
     pub fn append_bytes_fixed<const S: usize>(&mut self, buf: &[u8; S]) -> std::io::Result<()> {
         let ptr = self.0;
@@ -364,7 +371,7 @@ impl<const L: usize> Buffer<L> {
         debug_assert!(end <= L);
         if end <= self.0 {
             *cursor = end;
-            Ok(crate::util::load_u16_be(&self.1[ptr..end]))
+            Ok(u16::from_be_bytes(unsafe { *self.1.as_ptr().add(ptr).cast() }))
         } else {
             Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
         }
@@ -378,7 +385,7 @@ impl<const L: usize> Buffer<L> {
         debug_assert!(end <= L);
         if end <= self.0 {
             *cursor = end;
-            Ok(crate::util::load_u32_be(&self.1[ptr..end]))
+            Ok(u32::from_be_bytes(unsafe { *self.1.as_ptr().add(ptr).cast() }))
         } else {
             Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
         }
@@ -392,7 +399,7 @@ impl<const L: usize> Buffer<L> {
         debug_assert!(end <= L);
         if end <= self.0 {
             *cursor = end;
-            Ok(crate::util::load_u64_be(&self.1[ptr..end]))
+            Ok(u64::from_be_bytes(unsafe { *self.1.as_ptr().add(ptr).cast() }))
         } else {
             Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
         }

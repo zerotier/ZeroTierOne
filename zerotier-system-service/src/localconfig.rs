@@ -151,10 +151,6 @@ impl Default for LocalConfigLogSettings {
 pub struct LocalConfigSettings {
     #[serde(rename = "primaryPort")]
     pub primary_port: u16,
-    #[serde(rename = "secondaryPort")]
-    pub secondary_port: Option<u16>,
-    #[serde(rename = "autoPortSearch")]
-    pub auto_port_search: bool,
     #[serde(rename = "portMapping")]
     pub port_mapping: bool,
     #[serde(rename = "log")]
@@ -175,8 +171,6 @@ impl Default for LocalConfigSettings {
 
         LocalConfigSettings {
             primary_port: zerotier_core::DEFAULT_PORT,
-            secondary_port: Some(zerotier_core::DEFAULT_SECONDARY_PORT),
-            auto_port_search: true,
             port_mapping: true,
             log: LocalConfigLogSettings::default(),
             interface_prefix_blacklist: bl,
@@ -187,7 +181,7 @@ impl Default for LocalConfigSettings {
 
 impl LocalConfigSettings {
     #[cfg(target_os = "macos")]
-    const DEFAULT_PREFIX_BLACKLIST: [&'static str; 8] = ["lo", "utun", "gif", "stf", "iptap", "pktap", "feth", "zt"];
+    const DEFAULT_PREFIX_BLACKLIST: [&'static str; 9] = ["lo", "utun", "gif", "stf", "iptap", "pktap", "feth", "zt", "llw"];
 
     #[cfg(target_os = "linux")]
     const DEFAULT_PREFIX_BLACKLIST: [&'static str; 5] = ["lo", "tun", "tap", "ipsec", "zt"];

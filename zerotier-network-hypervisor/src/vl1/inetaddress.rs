@@ -17,7 +17,6 @@ use std::str::FromStr;
 use winapi::um::winsock2 as winsock2;
 
 use crate::error::InvalidFormatError;
-use crate::util::equal_ptr;
 use crate::util::buffer::Buffer;
 
 #[allow(non_camel_case_types)]
@@ -463,7 +462,7 @@ impl PartialEq for InetAddress {
                     AF_INET => { self.sin.sin_port == other.sin.sin_port && self.sin.sin_addr.s_addr == other.sin.sin_addr.s_addr }
                     AF_INET6 => {
                         if self.sin6.sin6_port == other.sin6.sin6_port {
-                            equal_ptr((&(self.sin6.sin6_addr) as *const in6_addr).cast(), (&(other.sin6.sin6_addr) as *const in6_addr).cast(), 16)
+                            (*(&(self.sin6.sin6_addr) as *const in6_addr).cast::<[u8; 16]>()).eq(&*(&(other.sin6.sin6_addr) as *const in6_addr).cast::<[u8; 16]>())
                         } else {
                             false
                         }

@@ -23,7 +23,7 @@ pub struct NetworkHypervisor {
 }
 
 impl NetworkHypervisor {
-    pub fn new<CI: Interface>(ci: &CI, auto_generate_identity_type: Option<crate::vl1::identity::Type>) -> Result<NetworkHypervisor, InvalidParameterError> {
+    pub fn new<CI: Interface>(ci: &CI, auto_generate_identity_type: Option<crate::vl1::identity::IdentityType>) -> Result<NetworkHypervisor, InvalidParameterError> {
         Ok(NetworkHypervisor {
             vl1: Node::new(ci, auto_generate_identity_type)?,
             vl2: Switch::new(),

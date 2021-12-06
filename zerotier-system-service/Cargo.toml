@@ -12,6 +12,7 @@ codegen-units = 1
 panic = 'abort'
 
 [dependencies]
+num-traits = "^0"
 zerotier-network-hypervisor = { path = "../zerotier-network-hypervisor" }
 zerotier-core-crypto = { path = "../zerotier-core-crypto" }
 serde = { version = "^1", features = ["derive"], default-features = false }

@@ -8,20 +8,27 @@
 
 use std::num::NonZeroI64;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 use parking_lot::Mutex;
 
 use zerotier_network_hypervisor::{Interface, NetworkHypervisor};
-use zerotier_network_hypervisor::vl1::{Endpoint, Identity, NodeInterface};
+use zerotier_network_hypervisor::vl1::{Endpoint, Identity, IdentityType, Node, NodeInterface};
 use zerotier_network_hypervisor::vl2::SwitchInterface;
+use crate::fastudpsocket::{fast_udp_socket_sendto, FastUDPRawOsSocket};
 
+use crate::GlobalCommandLineFlags;
 use crate::log::Log;
 use crate::utils::{ms_monotonic, ms_since_epoch};
 use crate::localconfig::LocalConfig;
+use crate::store::{platform_default_home_path, StateObjectType, Store};
 
 struct ServiceInterface {
-    pub log: Arc<Mutex<Log>>,
-    pub config: Mutex<LocalConfig>
+    pub store: Store,
+    pub config: Arc<Mutex<LocalConfig>>,
+    pub online: AtomicBool,
+    pub all_sockets: Mutex<Vec<FastUDPRawOsSocket>>,
+    pub all_sockets_spin_ptr: AtomicUsize,
 }
 
 impl NodeInterface for ServiceInterface {
@@ -31,27 +38,55 @@ impl NodeInterface for ServiceInterface {
 
     fn event_identity_collision(&self) {}
 
-    fn event_online_status_change(&self, online: bool) {}
+    #[inline(always)]
+    fn event_online_status_change(&self, online: bool) {
+        self.online.store(online, Ordering::Relaxed);
+    }
 
     fn event_user_message(&self, source: &Identity, message_type: u64, message: &[u8]) {}
 
-    fn load_node_identity(&self) -> Option<&[u8]> {
-        todo!()
+    #[inline(always)]
+    fn load_node_identity(&self) -> Option<Vec<u8>> {
+        self.store.load_object(StateObjectType::IdentitySecret, &[]).map_or(None, |b| Some(b))
     }
 
-    fn save_node_identity(&self, id: &Identity, public: &[u8], secret: &[u8]) {}
+    fn save_node_identity(&self, _: &Identity, public: &[u8], secret: &[u8]) {
+        let _ = self.store.store_object(StateObjectType::IdentityPublic, &[], public);
+        let _ = self.store.store_object(StateObjectType::IdentitySecret, &[], secret);
+    }
 
     #[inline(always)]
     fn wire_send(&self, endpoint: &Endpoint, local_socket: Option<NonZeroI64>, local_interface: Option<NonZeroI64>, data: &[&[u8]], packet_ttl: u8) -> bool {
-        todo!()
+        match endpoint {
+            Endpoint::IpUdp(ip) => {
+                local_socket.map_or_else(|| {
+                    let ptr = self.all_sockets_spin_ptr.fetch_add(1, Ordering::Relaxed);
+                    let all_sockets = self.all_sockets.lock();
+                    if !all_sockets.is_empty() {
+                        let s = unsafe { all_sockets.get_unchecked(ptr % all_sockets.len()) }.clone();
+                        drop(all_sockets); // release mutex
+                        fast_udp_socket_sendto(&s, ip, data, packet_ttl);
+                        true
+                    } else {
+                        false
+                    }
+                }, |local_socket| {
+                    fast_udp_socket_sendto(&local_socket, ip, data, packet_ttl);
+                    true
+                })
+            }
+            _ => false
+        }
     }
 
     fn check_path(&self, id: &Identity, endpoint: &Endpoint, local_socket: Option<NonZeroI64>, local_interface: Option<NonZeroI64>) -> bool {
+        // TODO
         true
     }
 
     fn get_path_hints(&self, id: &Identity) -> Option<&[(&Endpoint, Option<NonZeroI64>, Option<NonZeroI64>)]> {
-        todo!()
+        // TODO
+        None
     }
 
     #[inline(always)]
@@ -65,7 +100,21 @@ impl SwitchInterface for ServiceInterface {}
 
 impl Interface for ServiceInterface {}
 
-pub fn run() -> i32 {
+pub fn run(global_cli_flags: &GlobalCommandLineFlags) -> i32 {
+    let store = Store::new(global_cli_flags.base_path.as_str(), &global_cli_flags.auth_token_path_override, &global_cli_flags.auth_token_override);
+    if store.is_err() {
+    }
+
+    let si = ServiceInterface {
+        store: store.unwrap(),
+        config: Arc::new(Mutex::new(LocalConfig::default())),
+        online: AtomicBool::new(false),
+        all_sockets: Mutex::new(Vec::new()),
+        all_sockets_spin_ptr: AtomicUsize::new(0),
+    };
+
+    let node = Node::new(&si, Some(IdentityType::C25519));
+
     0
 }
 

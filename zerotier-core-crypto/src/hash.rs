@@ -32,6 +32,17 @@ impl SHA512 {
         h
     }
 
+    pub fn hmac_multipart(key: &[u8], msg: &[&[u8]]) -> [u8; SHA512_HASH_SIZE] {
+        let mut m = gcrypt::mac::Mac::new(gcrypt::mac::Algorithm::HmacSha512).unwrap();
+        m.set_key(key).expect("FATAL: invalid HMAC-SHA512 key");
+        for msg_part in msg.iter() {
+            m.update(*msg_part).expect("FATAL: HMAC-SHA512 failed");
+        }
+        let mut h = [0_u8; SHA512_HASH_SIZE];
+        m.get_mac(&mut h).expect("FATAL: HMAC-SHA512 failed");
+        h
+    }
+
     #[inline(always)]
     pub fn new() -> Self { Self(gcrypt::digest::MessageDigest::new(gcrypt::digest::Algorithm::Sha512).unwrap()) }
 
@@ -81,6 +92,17 @@ impl SHA384 {
         m.update(msg).expect("FATAL: HMAC-SHA384 failed");
         let mut h = [0_u8; SHA384_HASH_SIZE];
         m.get_mac(&mut h).expect("FATAL: HMAC-SHA384 failed");
+        h
+    }
+
+    pub fn hmac_multipart(key: &[u8], msg: &[&[u8]]) -> [u8; SHA384_HASH_SIZE] {
+        let mut m = gcrypt::mac::Mac::new(gcrypt::mac::Algorithm::HmacSha384).unwrap();
+        m.set_key(key).expect("FATAL: invalid HMAC-SHA512 key");
+        for msg_part in msg.iter() {
+            m.update(*msg_part).expect("FATAL: HMAC-SHA512 failed");
+        }
+        let mut h = [0_u8; SHA384_HASH_SIZE];
+        m.get_mac(&mut h).expect("FATAL: HMAC-SHA512 failed");
         h
     }
 

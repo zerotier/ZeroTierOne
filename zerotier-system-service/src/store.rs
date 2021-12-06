@@ -22,11 +22,24 @@ const LOCAL_CONF: &'static str = "local.conf";
 const AUTHTOKEN_SECRET: &'static str = "authtoken.secret";
 const SERVICE_LOG: &'static str = "service.log";
 
+#[derive(Clone, Copy)]
+pub enum StateObjectType {
+    IdentityPublic,
+    IdentitySecret,
+    NetworkConfig,
+    Peer
+}
+
+#[cfg(any(target_os = "macos", target_os = "ios"))]
+pub fn platform_default_home_path() -> String {
+    "/Library/Application Support/ZeroTier".into_string()
+}
+
 /// In-filesystem data store for configuration and objects.
 pub(crate) struct Store {
     pub base_path: Box<Path>,
     pub default_log_path: Box<Path>,
-    prev_local_config: Mutex<String>,
+    previous_local_config_on_disk: Mutex<String>,
     peers_path: Box<Path>,
     controller_path: Box<Path>,
     networks_path: Box<Path>,
@@ -36,19 +49,13 @@ pub(crate) struct Store {
 
 /// Restrict file permissions using OS-specific code in osdep/OSUtils.cpp.
 pub fn lock_down_file(path: &str) {
-    let p = CString::new(path.as_bytes());
-    if p.is_ok() {
-        let p = p.unwrap();
-        unsafe {
-            crate::osdep::lockDownFile(p.as_ptr(), 0);
-        }
-    }
+    // TODO: need both Windows and Unix implementations
 }
 
 impl Store {
     const MAX_OBJECT_SIZE: usize = 262144; // sanity limit
 
-    pub fn new(base_path: &str, auth_token_path_override: Option<String>, auth_token_override: Option<String>) -> std::io::Result<Store> {
+    pub fn new(base_path: &str, auth_token_path_override: &Option<String>, auth_token_override: &Option<String>) -> std::io::Result<Store> {
         let bp = Path::new(base_path);
         let _ = std::fs::create_dir_all(bp);
         let md = bp.metadata()?;
@@ -59,7 +66,7 @@ impl Store {
         let s = Store {
             base_path: bp.to_path_buf().into_boxed_path(),
             default_log_path: bp.join(SERVICE_LOG).into_boxed_path(),
-            prev_local_config: Mutex::new(String::new()),
+            previous_local_config_on_disk: Mutex::new(String::new()),
             peers_path: bp.join("peers.d").into_boxed_path(),
             controller_path: bp.join("controller.d").into_boxed_path(),
             networks_path: bp.join("networks.d").into_boxed_path(),
@@ -82,12 +89,10 @@ impl Store {
         Ok(s)
     }
 
-    fn make_obj_path_internal(&self, obj_type: &StateObjectType, obj_id: &[u64]) -> Option<PathBuf> {
+    fn make_obj_path_internal(&self, obj_type: StateObjectType, obj_id: &[u64]) -> Option<PathBuf> {
         match obj_type {
             StateObjectType::IdentityPublic => Some(self.base_path.join("identity.public")),
             StateObjectType::IdentitySecret => Some(self.base_path.join("identity.secret")),
-            StateObjectType::TrustStore => Some(self.base_path.join("truststore")),
-            StateObjectType::Locator => Some(self.base_path.join("locator")),
             StateObjectType::NetworkConfig => {
                 if obj_id.len() < 1 {
                     None
@@ -204,13 +209,13 @@ impl Store {
         }
         let data = data.unwrap();
         if skip_if_unchanged {
-            let mut prev = self.prev_local_config.lock().unwrap();
+            let mut prev = self.previous_local_config_on_disk.lock().unwrap();
             if prev.eq(&data) {
                 return None;
             }
             *prev = data.clone();
         } else {
-            *(self.prev_local_config.lock().unwrap()) = data.clone();
+            *(self.previous_local_config_on_disk.lock().unwrap()) = data.clone();
         }
         let lc = serde_json::from_str::<LocalConfig>(data.as_str());
         if lc.is_err() {
@@ -244,40 +249,22 @@ impl Store {
         let _ = std::fs::remove_file(self.base_path.join(ZEROTIER_PID));
     }
 
-    pub fn write_uri(&self, uri: &str) -> std::io::Result<()> {
-        self.write_file(ZEROTIER_URI, uri.as_bytes())
-    }
-
-    pub fn load_uri(&self) -> std::io::Result<hyper::Uri> {
-        let uri = String::from_utf8(self.read_file(ZEROTIER_URI)?);
-        uri.map_or_else(|e| {
-            Err(std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string()))
-        }, |uri| {
-            let uri = hyper::Uri::from_str(uri.trim());
-            uri.map_or_else(|e| {
-                Err(std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string()))
-            }, |uri| {
-                Ok(uri)
-            })
-        })
-    }
-
-    pub fn load_object(&self, obj_type: &StateObjectType, obj_id: &[u64]) -> std::io::Result<Vec<u8>> {
-        let obj_path = self.make_obj_path_internal(&obj_type, obj_id);
+    pub fn load_object(&self, obj_type: StateObjectType, obj_id: &[u64]) -> std::io::Result<Vec<u8>> {
+        let obj_path = self.make_obj_path_internal(obj_type, obj_id);
         if obj_path.is_some() {
             return self.read_internal(obj_path.unwrap());
         }
         Err(std::io::Error::new(std::io::ErrorKind::NotFound, "does not exist or is not readable"))
     }
 
-    pub fn erase_object(&self, obj_type: &StateObjectType, obj_id: &[u64]) {
+    pub fn erase_object(&self, obj_type: StateObjectType, obj_id: &[u64]) {
         let obj_path = self.make_obj_path_internal(obj_type, obj_id);
         if obj_path.is_some() {
             let _ = std::fs::remove_file(obj_path.unwrap());
         }
     }
 
-    pub fn store_object(&self, obj_type: &StateObjectType, obj_id: &[u64], obj_data: &[u8]) -> std::io::Result<()> {
+    pub fn store_object(&self, obj_type: StateObjectType, obj_id: &[u64], obj_data: &[u8]) -> std::io::Result<()> {
         let obj_path = self.make_obj_path_internal(obj_type, obj_id);
         if obj_path.is_some() {
             let obj_path = obj_path.unwrap();

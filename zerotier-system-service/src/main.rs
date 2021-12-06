@@ -22,6 +22,7 @@ use std::str::FromStr;
 use clap::{App, Arg, ArgMatches, ErrorKind};
 
 use zerotier_network_hypervisor::{VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION};
+use crate::store::platform_default_home_path;
 
 pub const HTTP_API_OBJECT_SIZE_LIMIT: usize = 131072;
 
@@ -113,6 +114,9 @@ pub fn print_help(long_help: bool) {
 
 pub struct GlobalCommandLineFlags {
     pub json_output: bool,
+    pub base_path: String,
+    pub auth_token_path_override: Option<String>,
+    pub auth_token_override: Option<String>
 }
 
 fn main() {
@@ -207,7 +211,10 @@ fn main() {
     });
 
     let global_cli_flags = GlobalCommandLineFlags {
-        json_output: cli_args.is_present("json")
+        json_output: cli_args.is_present("json"),
+        base_path: cli_args.value_of("path").map_or_else(|| platform_default_home_path(), |p| p.into_string()),
+        auth_token_path_override: cli_args.value_of("token_path").map(|p| p.into_string()),
+        auth_token_override: cli_args.value_of("token").map(|t| t.into_string())
     };
 
     std::process::exit({
@@ -233,7 +240,7 @@ fn main() {
             ("leave", Some(sub_cli_args)) => todo!(),
             ("service", None) => {
                 drop(cli_args); // free no longer needed memory before entering service
-                service::run()
+                service::run(&global_cli_flags)
             }
             ("controller", Some(sub_cli_args)) => todo!(),
             ("identity", Some(sub_cli_args)) => todo!(),

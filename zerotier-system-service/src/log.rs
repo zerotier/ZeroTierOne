@@ -132,16 +132,24 @@ impl Log {
 }
 
 #[macro_export]
-macro_rules! l(
+macro_rules! log(
     ($logger:expr, $($arg:tt)*) => {
-        $logger.lock().log(format!($($arg)*))
+        $logger.lock().log(format!($($arg)*));
     }
 );
 
 #[macro_export]
-macro_rules! d(
+macro_rules! debug(
     ($logger:expr, $($arg:tt)*) => {
-        $logger.lock().debug(format!($($arg)*))
+        $logger.lock().debug(format!($($arg)*));
+    }
+);
+
+#[macro_export]
+macro_rules! fatal(
+    ($logger:expr, $($arg:tt)*) => {
+        $logger.lock().fatal(format!($($arg)*));
+        std::process::exit(-1);
     }
 );
 

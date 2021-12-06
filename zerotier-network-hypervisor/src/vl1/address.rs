@@ -24,22 +24,19 @@ impl Address {
     #[inline(always)]
     pub fn from_u64(mut i: u64) -> Option<Address> {
         i &= 0xffffffffff;
-        if i != 0 && (i >> 32) != ADDRESS_RESERVED_PREFIX as u64 {
-            Some(Address(unsafe { NonZeroU64::new_unchecked(i) }))
-        } else {
-            None
-        }
+        NonZeroU64::new(i).and_then(|ii| {
+            if (i >> 32) != ADDRESS_RESERVED_PREFIX as u64 {
+                Some(Address(ii))
+            } else {
+                None
+            }
+        })
     }
 
     #[inline(always)]
     pub fn from_bytes(b: &[u8]) -> Option<Address> {
         if b.len() >= ADDRESS_SIZE {
-            let i = (b[0] as u64) << 32 | (b[1] as u64) << 24 | (b[2] as u64) << 16 | (b[3] as u64) << 8 | b[4] as u64;
-            if i != 0 && (i >> 32) != ADDRESS_RESERVED_PREFIX as u64 {
-                Some(Address(unsafe { NonZeroU64::new_unchecked(i) }))
-            } else {
-                None
-            }
+            Self::from_u64((b[0] as u64) << 32 | (b[1] as u64) << 24 | (b[2] as u64) << 16 | (b[3] as u64) << 8 | b[4] as u64)
         } else {
             None
         }
@@ -47,12 +44,7 @@ impl Address {
 
     #[inline(always)]
     pub fn from_bytes_fixed(b: &[u8; ADDRESS_SIZE]) -> Option<Address> {
-        let i = (b[0] as u64) << 32 | (b[1] as u64) << 24 | (b[2] as u64) << 16 | (b[3] as u64) << 8 | b[4] as u64;
-        if i != 0 && (i >> 32) != ADDRESS_RESERVED_PREFIX as u64 {
-            Some(Address(unsafe { NonZeroU64::new_unchecked(i) }))
-        } else {
-            None
-        }
+        Self::from_u64((b[0] as u64) << 32 | (b[1] as u64) << 24 | (b[2] as u64) << 16 | (b[3] as u64) << 8 | b[4] as u64)
     }
 
     #[inline(always)]

@@ -147,7 +147,7 @@ impl Endpoint {
                 let b: &[u8; 18] = buf.read_bytes_fixed(cursor)?;
                 Ok(Endpoint::IpUdp(InetAddress::from_ip_port(&b[0..16], crate::util::load_u16_be(&b[16..18]))))
             } else {
-                Ok(Endpoint::Nil)
+                Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "unrecognized endpoint type in stream"))
             }
         } else {
             let read_mac = |buf: &Buffer<BL>, cursor: &mut usize| {
@@ -158,6 +158,7 @@ impl Endpoint {
                     Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid MAC address"))
                 }
             };
+
             match type_byte - 16 {
                 TYPE_NIL => Ok(Endpoint::Nil),
                 TYPE_ZEROTIER => {

@@ -16,6 +16,7 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 
 use zerotier_network_hypervisor::vl1::Identity;
+use zerotier_core_crypto::hex;
 
 use crate::osdep;
 
@@ -29,11 +30,16 @@ pub fn ms_monotonic() -> i64 {
         let mut tb: mach::mach_time::mach_timebase_info_data_t = std::mem::zeroed();
         if mach::mach_time::mach_timebase_info(&mut tb) == 0 {
             let mt = mach::mach_time::mach_continuous_approximate_time();
-            (((mt as u128) * tb.numer as u128 * 1000000_u128) / (tb.denom as u128)) as i64
+            (((mt as u128) * tb.numer as u128 * 1000000_u128) / (tb.denom as u128)) as i64 // milliseconds since X
         } else {
             panic!("FATAL: mach_timebase_info() failed");
         }
     }
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "ios")))]
+pub fn ms_monotonic() -> i64 {
+    std::time::Instant::now().elapsed().as_millis() as i64
 }
 
 pub fn parse_bool(v: &str) -> Result<bool, String> {
@@ -179,4 +185,19 @@ pub fn json_patch_object<O: Serialize + DeserializeOwned + Eq>(obj: O, patch: &s
             })
         })
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
+    use crate::utils::ms_monotonic;
+
+    #[test]
+    fn monotonic_clock_sanity_check() {
+        let start = ms_monotonic();
+        std::thread::sleep(Duration::from_millis(500));
+        let end = ms_monotonic();
+        assert!((end - start).abs() > 450);
+        assert!((end - start).abs() < 550);
+    }
 }

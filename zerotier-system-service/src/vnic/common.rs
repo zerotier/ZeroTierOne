@@ -7,13 +7,11 @@
  */
 
 use std::collections::HashSet;
-
-#[allow(unused_imports)]
-use num_traits::AsPrimitive;
-
 #[allow(unused_imports)]
 use std::os::raw::c_int;
 
+#[allow(unused_imports)]
+use num_traits::AsPrimitive;
 #[allow(unused_imports)]
 use zerotier_network_hypervisor::vl1::MAC;
 
@@ -35,7 +33,7 @@ extern "C" {
 
 #[cfg(any(target_os = "macos", target_os = "ios", target_os = "netbsd", target_os = "openbsd", target_os = "dragonfly", target_os = "freebsd", target_os = "darwin"))]
 pub fn get_l2_multicast_subscriptions(dev: &str) -> HashSet<MAC> {
-    let mut groups: HashSet<MulticastGroup> = HashSet::new();
+    let mut groups: HashSet<MAC> = HashSet::new();
     let dev = dev.as_bytes();
     unsafe {
         let mut maddrs: *mut ifmaddrs = std::ptr::null_mut();
@@ -47,7 +45,7 @@ pub fn get_l2_multicast_subscriptions(dev: &str) -> HashSet<MAC> {
                     let la: &libc::sockaddr_dl = &*((*i).ifma_addr.cast());
                     if la.sdl_alen == 6 && in_.sdl_nlen <= dev.len().as_() && crate::libc::memcmp(dev.as_ptr().cast(), in_.sdl_data.as_ptr().cast(), in_.sdl_nlen.as_()) == 0 {
                         let mi = la.sdl_nlen as usize;
-                        groups.insert(MAC::from_u64((la.sdl_data[mi] as u64) << 40 | (la.sdl_data[mi+1] as u64) << 32 | (la.sdl_data[mi+2] as u64) << 24 | (la.sdl_data[mi+3] as u64) << 16 | (la.sdl_data[mi+4] as u64) << 8 | la.sdl_data[mi+5] as u64));
+                        MAC::from_u64((la.sdl_data[mi] as u64) << 40 | (la.sdl_data[mi+1] as u64) << 32 | (la.sdl_data[mi+2] as u64) << 24 | (la.sdl_data[mi+3] as u64) << 16 | (la.sdl_data[mi+4] as u64) << 8 | la.sdl_data[mi+5] as u64).map(|mac| groups.insert(mac));
                     }
                 }
                 i = (*i).ifma_next;

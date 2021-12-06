@@ -85,7 +85,7 @@ fn concat_v1_secret_keys(c25519: &[u8], ed25519: &[u8], p521_ecdh: &[u8], p521_e
 
 #[derive(Copy, Clone)]
 #[repr(u8)]
-pub enum Type {
+pub enum IdentityType {
     /// Curve25519 / Ed25519 identity (type 0)
     C25519 = 0,
     /// Dual NIST P-521 ECDH / ECDSA + Curve25519 / Ed25519 (type 1)
@@ -220,10 +220,10 @@ impl Identity {
     /// take tens to hundreds of milliseconds on a typical 2020 system, while V1 identites
     /// take about 500ms. Generation can take a lot longer on low power devices, but only
     /// has to be done once.
-    pub fn generate(id_type: Type) -> Identity {
+    pub fn generate(id_type: IdentityType) -> Identity {
         match id_type {
-            Type::C25519 => Self::generate_c25519(),
-            Type::P521 => Self::generate_p521()
+            IdentityType::C25519 => Self::generate_c25519(),
+            IdentityType::P521 => Self::generate_p521()
         }
     }
 
@@ -330,7 +330,7 @@ impl Identity {
 
     /// Get this identity's type.
     #[inline(always)]
-    pub fn id_type(&self) -> Type { if self.v1.is_some() { Type::P521 } else { Type::C25519 } }
+    pub fn id_type(&self) -> IdentityType { if self.v1.is_some() { IdentityType::P521 } else { IdentityType::C25519 } }
 
     /// Returns true if this identity also holds its secret keys.
     #[inline(always)]
@@ -390,7 +390,7 @@ impl Identity {
         let addr = addr.unwrap();
 
         let id_type = buf.read_u8(cursor)?;
-        if id_type == Type::C25519 as u8 {
+        if id_type == IdentityType::C25519 as u8 {
 
             let c25519_public_bytes = buf.read_bytes_fixed::<{ C25519_PUBLIC_KEY_SIZE }>(cursor)?;
             let ed25519_public_bytes = buf.read_bytes_fixed::<{ ED25519_PUBLIC_KEY_SIZE }>(cursor)?;
@@ -421,7 +421,7 @@ impl Identity {
                 std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "unrecognized secret key length (type 0)"))
             }
 
-        } else if id_type == Type::P521 as u8 {
+        } else if id_type == IdentityType::P521 as u8 {
 
             let c25519_public_bytes = buf.read_bytes_fixed::<{ C25519_PUBLIC_KEY_SIZE }>(cursor)?;
             let ed25519_public_bytes = buf.read_bytes_fixed::<{ ED25519_PUBLIC_KEY_SIZE }>(cursor)?;
@@ -638,11 +638,11 @@ impl Hash for Identity {
 mod tests {
     use std::str::FromStr;
 
-    use crate::vl1::identity::{Identity, Type};
+    use crate::vl1::identity::{Identity, IdentityType};
 
     #[test]
     fn type0() {
-        let id = Identity::generate(Type::C25519);
+        let id = Identity::generate(IdentityType::C25519);
         //println!("V0: {}", id.to_string());
         if !id.locally_validate() {
             panic!("new V0 identity validation failed");
@@ -674,7 +674,7 @@ mod tests {
     #[test]
     fn type1() {
         let start = std::time::SystemTime::now();
-        let id = Identity::generate(Type::P521);
+        let id = Identity::generate(IdentityType::P521);
         let end = std::time::SystemTime::now();
         println!("V1 generate: {}ms {}", end.duration_since(start).unwrap().as_millis(), id.to_string());
         if !id.locally_validate() {

@@ -247,7 +247,7 @@ impl EphemeralKeyPairSet {
 
 /// Symmetric secret representing a step in the ephemeral keying ratchet.
 pub struct EphemeralSymmetricSecret {
-    secret: SymmetricSecret,
+    pub secret: SymmetricSecret,
     ratchet_state: [u8; 16],
     rekey_time: i64,
     expire_time: i64,
