@@ -115,8 +115,8 @@ pub trait VL1PacketHandler {
 #[derive(Default)]
 struct BackgroundTaskIntervals {
     whois: IntervalGate<{ WhoisQueue::INTERVAL }>,
-    paths: IntervalGate<{ Path::CALL_EVERY_INTERVAL_INTERVAL }>,
-    peers: IntervalGate<{ Peer::INTERVAL }>,
+    paths: IntervalGate<{ Path::CALL_EVERY_INTERVAL_MS }>,
+    peers: IntervalGate<{ Peer::CALL_EVERY_INTERVAL_MS }>,
 }
 
 pub struct Node {

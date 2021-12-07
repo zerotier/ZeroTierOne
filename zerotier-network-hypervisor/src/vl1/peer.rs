@@ -26,19 +26,15 @@ use zerotier_core_crypto::random::next_u64_secure;
 use zerotier_core_crypto::salsa::Salsa;
 use zerotier_core_crypto::secret::Secret;
 
-use crate::{VERSION_MAJOR, VERSION_MINOR, VERSION_PROTO, VERSION_REVISION, PacketBuffer};
-use crate::defaults::UDP_DEFAULT_MTU;
-use crate::util::pool::{Pool, PoolFactory};
-use crate::util::buffer::Buffer;
+use crate::{PacketBuffer, VERSION_MAJOR, VERSION_MINOR, VERSION_PROTO, VERSION_REVISION};
 use crate::util::{array_range, u64_as_bytes};
+use crate::util::buffer::Buffer;
+use crate::util::pool::{Pool, PoolFactory};
 use crate::vl1::{Dictionary, Endpoint, Identity, InetAddress, Path};
 use crate::vl1::ephemeral::EphemeralSymmetricSecret;
 use crate::vl1::node::*;
 use crate::vl1::protocol::*;
 use crate::vl1::symmetricsecret::SymmetricSecret;
-
-/// Interval for servicing and background operations on peers.
-pub(crate) const PEER_SERVICE_INTERVAL: i64 = 30000;
 
 struct AesGmacSivPoolFactory(Secret<48>, Secret<48>);
 
@@ -196,7 +192,7 @@ fn try_aead_decrypt(secret: &SymmetricSecret, packet_frag0_payload_bytes: &[u8],
                         })
                     });
                 }
-                aes.decrypt_finish().map_or_else(false, |tag| {
+                aes.decrypt_finish().map_or(false, |tag| {
                     // AES-GMAC-SIV encrypts the packet ID too as part of its computation of a single
                     // opaque 128-bit tag, so to get the original packet ID we have to grab it from the
                     // decrypted tag.
@@ -211,8 +207,6 @@ fn try_aead_decrypt(secret: &SymmetricSecret, packet_frag0_payload_bytes: &[u8],
 }
 
 impl Peer {
-    pub(crate) const INTERVAL: i64 = PEER_SERVICE_INTERVAL;
-
     /// Create a new peer.
     /// This only returns None if this_node_identity does not have its secrets or if some
     /// fatal error occurs performing key agreement between the two identities.
@@ -252,15 +246,16 @@ impl Peer {
         let _ = packet.as_bytes_starting_at(PACKET_VERB_INDEX).map(|packet_frag0_payload_bytes| {
             let mut payload: Buffer<PACKET_SIZE_MAX> = unsafe { Buffer::new_nozero() };
             let mut message_id = 0_u64;
-            let mut forward_secrecy = true;
             let ephemeral_secret: Option<Arc<EphemeralSymmetricSecret>> = self.ephemeral_secret.lock().clone();
-            if !ephemeral_secret.map_or(false, |ephemeral_secret| try_aead_decrypt(&ephemeral_secret.secret, packet_frag0_payload_bytes, header, fragments, &mut payload, &mut message_id)) {
+            let forward_secrecy = if !ephemeral_secret.map_or(false, |ephemeral_secret| try_aead_decrypt(&ephemeral_secret.secret, packet_frag0_payload_bytes, header, fragments, &mut payload, &mut message_id)) {
                 unsafe { payload.set_size_unchecked(0); }
                 if !try_aead_decrypt(&self.static_secret, packet_frag0_payload_bytes, header, fragments, &mut payload, &mut message_id) {
                     return;
                 }
-                forward_secrecy = false;
-            }
+                false
+            } else {
+                true
+            };
 
             self.last_receive_time_ticks.store(time_ticks, Ordering::Relaxed);
             self.total_bytes_received.fetch_add((payload.len() + PACKET_HEADER_SIZE) as u64, Ordering::Relaxed);
@@ -482,6 +477,8 @@ impl Peer {
             })
         })
     }
+
+    pub(crate) const CALL_EVERY_INTERVAL_MS: i64 = EPHEMERAL_SECRET_REKEY_AFTER_TIME / 10;
 
     /// Called every INTERVAL during background tasks.
     #[inline(always)]

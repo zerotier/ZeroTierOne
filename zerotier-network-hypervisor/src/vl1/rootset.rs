@@ -86,6 +86,11 @@ pub struct RootSet {
 }
 
 impl RootSet {
+    /// Create a new root set populated with compiled-in ZeroTier defaults.
+    pub fn zerotier_default() -> Self {
+        Self::from_bytes(include_bytes!("./rootset-default.bin")).unwrap()
+    }
+
     /// Create and sign a new root set.
     /// This cannot create legacy "planet" or "moon" type root sets. For those the old mkworld code must be used.
     pub fn create(roots: &[Root], timestamp: i64, oob_update_url: Option<&str>, name: Option<&str>, contact: Option<&str>, signing_key: &RootSetSecretSigningKey) -> Result<Self, InvalidParameterError> {
@@ -327,7 +332,7 @@ mod tests {
 
     #[test]
     fn default_root_set() {
-        let rs = RootSet::from_bytes(&crate::defaults::ROOT_SET).unwrap();
+        let rs = RootSet::zerotier_default();
         rs.roots.iter().for_each(|r| {
             println!("{}", r.identity.to_string());
             r.endpoints.iter().for_each(|ep| {

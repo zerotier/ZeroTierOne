@@ -29,7 +29,7 @@ fn hash_int_le(sha: &mut SHA512, i: u64) {
 /// used for the expand step and the final hash hashes the entire buffer. It
 /// also takes no salt since it's only used for one purpose here and that's
 /// not password hashing.
-pub fn hash<const SPACE_COST: usize, const TIME_COST: usize, const DELTA: usize>(password: &[u8]) -> [u8; crate::hash::SHA384_HASH_SIZE] {
+pub fn zt_variant_hash<const SPACE_COST: usize, const TIME_COST: usize, const DELTA: usize>(password: &[u8]) -> [u8; crate::hash::SHA384_HASH_SIZE] {
     debug_assert_ne!(SPACE_COST, 0);
     debug_assert_ne!(TIME_COST, 0);
     debug_assert_ne!(DELTA, 0);
@@ -117,9 +117,12 @@ pub fn hash<const SPACE_COST: usize, const TIME_COST: usize, const DELTA: usize>
         }
     }
 
-    // Standard balloon hashing just returns the last hash, but we want a 384-bit
-    // result. This just hashes the whole buffer including the last hash.
-    SHA384::hash(&buf)
+    // Standard balloon hashing just returns the last hash in the shuffled array.
+    // We use AES to init the array to make things more memory bound and less CPU
+    // bound and we want a 384-bit result, so use SHA384 over the whole array
+    // instead. We also use the FIPS/NIST HMAC(salt, key) construction in case
+    // someone complains about FIPS stuff even though this is not a KDF.
+    SHA384::hmac(&buf, password)
 }
 
 /*

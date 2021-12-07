@@ -103,7 +103,7 @@ impl Path {
     }
 
     /// Desired period between calls to call_every_interval().
-    pub(crate) const CALL_EVERY_INTERVAL_INTERVAL: i64 = PATH_KEEPALIVE_INTERVAL;
+    pub(crate) const CALL_EVERY_INTERVAL_MS: i64 = PATH_KEEPALIVE_INTERVAL;
 
     /// Called every INTERVAL during background tasks.
     #[inline(always)]

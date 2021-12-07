@@ -25,6 +25,13 @@ pub const VERB_VL1_USER_MESSAGE: u8 = 0x14;
 pub const HELLO_DICT_KEY_INSTANCE_ID: &'static str = "I";
 pub const HELLO_DICT_KEY_CLOCK: &'static str = "C";
 
+/// Default maximum payload size for UDP transport.
+///
+/// This is small enough to traverse numerous weird networks including PPPoE and Google Cloud's
+/// weird exit MTU restriction, but is large enough that a standard 2800 byte frame creates only
+/// two fragments.
+pub const UDP_DEFAULT_MTU: usize = 1432;
+
 /// KBKDF usage label indicating a key used to encrypt the dictionary inside HELLO.
 pub const KBKDF_KEY_USAGE_LABEL_HELLO_DICTIONARY_ENCRYPT: u8 = b'H';
 

@@ -10,7 +10,6 @@ pub mod util;
 pub mod error;
 pub mod vl1;
 pub mod vl2;
-pub mod defaults;
 
 mod networkhypervisor;
 pub use networkhypervisor::{Interface, NetworkHypervisor};

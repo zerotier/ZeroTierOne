@@ -6,6 +6,67 @@
  * https://www.zerotier.com/
  */
 
+use std::ptr::{slice_from_raw_parts, slice_from_raw_parts_mut};
+use zerotier_core_crypto::c25519::{C25519_PUBLIC_KEY_SIZE, C25519KeyPair, ED25519_PUBLIC_KEY_SIZE, Ed25519KeyPair};
+use zerotier_core_crypto::p521::{P521_ECDSA_SIGNATURE_SIZE, P521_PUBLIC_KEY_SIZE, P521KeyPair};
+use zerotier_core_crypto::salsa::Salsa;
+
+// Work function used to derive address from keys.
+fn zt_frankenhash(digest: &mut [u8; 64], genmem_ptr: *mut u8) {
+    let (genmem, genmem_alias_hack) = unsafe { (&mut *slice_from_raw_parts_mut(genmem_ptr, V0_POW_MEMORY), &*slice_from_raw_parts(genmem_ptr, V0_POW_MEMORY)) };
+    let genmem_u64_ptr = genmem_ptr.cast::<u64>();
+
+    let mut s20 = Salsa::new(&digest[0..32], &digest[32..40], false).unwrap();
+
+    s20.crypt(&crate::util::ZEROES[0..64], &mut genmem[0..64]);
+    let mut i: usize = 64;
+    while i < V0_POW_MEMORY {
+        let ii = i + 64;
+        s20.crypt(&genmem_alias_hack[(i - 64)..i], &mut genmem[i..ii]);
+        i = ii;
+    }
+
+    i = 0;
+    while i < (V0_POW_MEMORY / 8) {
+        unsafe {
+            let idx1 = (((*genmem_u64_ptr.offset(i as isize)).to_be() % 8) * 8) as usize;
+            let idx2 = ((*genmem_u64_ptr.offset((i + 1) as isize)).to_be() % (V0_POW_MEMORY as u64 / 8)) as usize;
+            let genmem_u64_at_idx2_ptr = genmem_u64_ptr.offset(idx2 as isize);
+            let tmp = *genmem_u64_at_idx2_ptr;
+            let digest_u64_ptr = digest.as_mut_ptr().offset(idx1 as isize).cast::<u64>();
+            *genmem_u64_at_idx2_ptr = *digest_u64_ptr;
+            *digest_u64_ptr = tmp;
+        }
+        s20.crypt_in_place(digest);
+        i += 2;
+    }
+}
+
+struct P521Secret {
+    ecdh: P521KeyPair,
+    ecdsa: P521KeyPair,
+}
+
+struct P521Public {
+    ecdh: [u8; P521_PUBLIC_KEY_SIZE],
+    ecdsa: [u8; P521_PUBLIC_KEY_SIZE],
+    self_signature: [u8; P521_ECDSA_SIGNATURE_SIZE]
+}
+
+pub struct IdentitySecrets {
+    c25519: C25519KeyPair,
+    ed25519: Ed25519KeyPair,
+    p521: Option<P521Secret>,
+}
+
+pub struct Identity {
+    c25519: [u8; C25519_PUBLIC_KEY_SIZE],
+    ed25519: [u8; ED25519_PUBLIC_KEY_SIZE],
+    p521: Option<P521Public>,
+}
+
+/*
+
 use std::alloc::{alloc, dealloc, Layout};
 use std::cmp::Ordering;
 use std::convert::TryInto;
@@ -191,7 +252,7 @@ impl Identity {
         loop {
             // ECDSA is a randomized signature algorithm, so each signature will be different.
             let sig = p521_ecdsa.sign(&signing_buf).unwrap();
-            let bh = balloon::hash::<{ V1_BALLOON_SPACE_COST }, { V1_BALLOON_TIME_COST }, { V1_BALLOON_DELTA }>(&sig);
+            let bh = balloon::zt_variant_hash::<{ V1_BALLOON_SPACE_COST }, { V1_BALLOON_TIME_COST }, { V1_BALLOON_DELTA }>(&sig);
             if bh[0] < V1_POW_THRESHOLD {
                 let addr = Address::from_bytes(&bh[43..48]);
                 if addr.is_some() {
@@ -254,7 +315,7 @@ impl Identity {
             let p521 = self.v1.as_ref().unwrap();
             let signing_buf = concat_v1_public_keys(&self.c25519, &self.ed25519, (*p521).0.public_key_bytes(), (*p521).1.public_key_bytes());
             if (*p521).1.verify(&signing_buf, &(*p521).2) {
-                let bh = balloon::hash::<{ V1_BALLOON_SPACE_COST }, { V1_BALLOON_TIME_COST }, { V1_BALLOON_DELTA }>(&(*p521).2);
+                let bh = balloon::zt_variant_hash::<{ V1_BALLOON_SPACE_COST }, { V1_BALLOON_TIME_COST }, { V1_BALLOON_DELTA }>(&(*p521).2);
                 (bh[0] < V1_POW_THRESHOLD) && bh.eq(&(*p521).3) && Address::from_bytes(&bh[43..48]).unwrap().eq(&self.address)
             } else {
                 false
@@ -704,3 +765,5 @@ mod tests {
         }
     }
 }
+
+ */
