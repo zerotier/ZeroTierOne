@@ -2,7 +2,7 @@
 name = "zerotier-system-service"
 version = "0.1.0"
 authors = ["ZeroTier, Inc. <contact@zerotier.com>", "Adam Ierymenko <adam.ierymenko@zerotier.com>"]
-edition = "2018"
+edition = "2021"
 license = "MPL-2.0"
 
 [profile.release]

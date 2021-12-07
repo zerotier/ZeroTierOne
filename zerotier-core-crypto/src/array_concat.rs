@@ -52,3 +52,21 @@ pub fn concat_4_slices<const S0: usize, const S1: usize, const S2: usize, const 
 pub fn concat_4_arrays<const S0: usize, const S1: usize, const S2: usize, const S3: usize, const S: usize>(s0: &[u8; S0], s1: &[u8; S1], s2: &[u8; S2], s3: &[u8; S3]) -> [u8; S] {
     concat_4_slices::<S0, S1, S2, S3, S>(s0, s1, s2, s3)
 }
+
+
+#[inline(always)]
+pub fn concat_5_slices<const S0: usize, const S1: usize, const S2: usize, const S3: usize, const S4: usize, const S: usize>(s0: &[u8], s1: &[u8], s2: &[u8], s3: &[u8], s4: &[u8]) -> [u8; S] {
+    debug_assert_eq!(S0 + S1 + S2 + S3 + S4, S);
+    let mut tmp: [u8; S] = unsafe { MaybeUninit::uninit().assume_init() };
+    tmp[..S0].copy_from_slice(s0);
+    tmp[S0..S1].copy_from_slice(s1);
+    tmp[(S0 + S1)..(S0 + S1 + S2)].copy_from_slice(s2);
+    tmp[(S0 + S1 + S2)..(S0 + S1 + S2 + S3)].copy_from_slice(s3);
+    tmp[(S0 + S1 + S2 + S3)..].copy_from_slice(s4);
+    tmp
+}
+
+#[inline(always)]
+pub fn concat_5_arrays<const S0: usize, const S1: usize, const S2: usize, const S3: usize, const S4: usize, const S: usize>(s0: &[u8; S0], s1: &[u8; S1], s2: &[u8; S2], s3: &[u8; S3], s4: &[u8; S4]) -> [u8; S] {
+    concat_5_slices::<S0, S1, S2, S3, S4, S>(s0, s1, s2, s3, s4)
+}
