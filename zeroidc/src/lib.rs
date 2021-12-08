@@ -152,7 +152,7 @@ impl ZeroIDC {
                     println!("refresh token thread tick, now: {}, exp: {}", systemtime_strftime(now, "[year]-[month]-[day] [hour]:[minute]:[second]"), systemtime_strftime(exp, "[year]-[month]-[day] [hour]:[minute]:[second]"));
                     let refresh_token = (*inner_local.lock().unwrap()).refresh_token.clone();
                     if let Some(refresh_token) =  refresh_token {
-                        if now >= (exp - Duration::from_secs(15)) {
+                        if now >= (exp - Duration::from_secs(30)) {
                             let token_response = (*inner_local.lock().unwrap()).oidc_client.as_ref().map(|c| {
                                 let res = c.exchange_refresh_token(&refresh_token)
                                     .request(http_client);
@@ -167,6 +167,7 @@ impl ZeroIDC {
                                             Some(id_token) => {
 
                                                 let params = [("id_token", id_token.to_string()),("state", "refresh".to_string())];
+                                                println!("New ID token: {}", id_token.to_string());
                                                 let client = reqwest::blocking::Client::new();
                                                 let r = client.post((*inner_local.lock().unwrap()).auth_endpoint.clone())
                                                     .form(&params)

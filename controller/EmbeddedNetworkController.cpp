@@ -1339,14 +1339,18 @@ void EmbeddedNetworkController::_request(
 	bool memberSSOExempt = OSUtils::jsonBool(member["ssoExempt"], false);
 	AuthInfo info;
 	if (networkSSOEnabled && !memberSSOExempt) {
+		// TODO:  Get expiry time if auth is still valid
+
+		// else get new auth info & stuff
 		info = _db.getSSOAuthInfo(member, _ssoRedirectURL);
 		assert(info.enabled == networkSSOEnabled);
 
 		std::string memberId = member["id"];
 		//fprintf(stderr, "ssoEnabled && !ssoExempt %s-%s\n", nwids, memberId.c_str());
 		uint64_t authenticationExpiryTime = (int64_t)OSUtils::jsonInt(member["authenticationExpiryTime"], 0);
-		//fprintf(stderr, "authExpiryTime: %lld\n", authenticationExpiryTime);
+		fprintf(stderr, "authExpiryTime: %lld\n", authenticationExpiryTime);
 		if (authenticationExpiryTime < now) {
+			fprintf(stderr, "Handling expired member\n");
 			if (info.version == 0) {
 				if (!info.authenticationURL.empty()) {
 					_db.networkMemberSSOHasExpired(nwid, now);
@@ -1363,7 +1367,8 @@ void EmbeddedNetworkController::_request(
 					_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_AUTHENTICATION_REQUIRED, authInfo.data(), authInfo.sizeBytes());
 					return;
 				}
-			} else if (info.version == 1) {
+			}
+			else if (info.version == 1) {
 				_db.networkMemberSSOHasExpired(nwid, now);
 				onNetworkMemberDeauthorize(&_db, nwid, identity.address().toInt());
 
@@ -1381,10 +1386,12 @@ void EmbeddedNetworkController::_request(
 				fprintf(stderr, "Sending NC_ERROR_AUTHENTICATION_REQUIRED\n");
 				_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_AUTHENTICATION_REQUIRED, authInfo.data(), authInfo.sizeBytes());
 				return;
-			} else {
+			}
+			else {
 				fprintf(stderr, "invalid sso info.version %llu\n", info.version);
 			}
 		} else if (authorized) {
+			fprintf(stderr, "Setting member will expire to: %lld\n", authenticationExpiryTime);
 			_db.memberWillExpire(authenticationExpiryTime, nwid, identity.address().toInt());
 		}
 	}

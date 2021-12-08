@@ -463,7 +463,7 @@ AuthInfo PostgreSQL::getSSOAuthInfo(const nlohmann::json &member, const std::str
 					info.centralAuthURL = redirectURL;
 					fprintf(
 						stderr,
-						"ssoClientID: %s\nissuerURL: %s\nssoNonce: %s\nssoState: %s\ncentralAuthURL: %s",
+						"ssoClientID: %s\nissuerURL: %s\nssoNonce: %s\nssoState: %s\ncentralAuthURL: %s\n",
 						info.ssoClientID.c_str(),
 						info.issuerURL.c_str(),
 						info.ssoNonce.c_str(),
