@@ -7,6 +7,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ZeroTierOne", "ZeroTierOne\
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TapDriver6", "TapDriver6\TapDriver6.vcxproj", "{43BA7584-D4DB-4F7C-90FC-E2B18A68A213}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "zeroidc", "..\zeroidc\zeroidc.vcxproj", "{175C340F-F5BA-4CB1-88AD-533B102E3799}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
