@@ -894,13 +894,13 @@ void Bond::curateBond(int64_t now, bool rebuildBond)
 			if (! currEligibility) {
 				_paths[i].adjustRefractoryPeriod(now, _defaultPathRefractoryPeriod, ! currEligibility);
 				if (_paths[i].bonded) {
-					_paths[i].bonded = false;
 					if (_allowFlowHashing) {
 						_paths[i].p->address().toString(pathStr);
 						log("link %s/%s was bonded, flow reallocation will occur soon", getLink(_paths[i].p)->ifname().c_str(), pathStr);
 						rebuildBond = true;
 						_paths[i].shouldReallocateFlows = _paths[i].bonded;
 					}
+					_paths[i].bonded = false;
 				}
 			}
 		}
@@ -979,7 +979,7 @@ void Bond::curateBond(int64_t now, bool rebuildBond)
 				if (ipvPref == 0) {
 					for (int j = 0; j < it->second.size(); j++) {
 						int idx = it->second.at(j);
-						if (! _paths[idx].p || ! _paths[idx].allowed()) {
+						if (! _paths[idx].p || ! _paths[idx].eligible || ! _paths[idx].allowed()) {
 							continue;
 						}
 						addPathToBond(idx, updatedBondedPathCount);
@@ -992,15 +992,12 @@ void Bond::curateBond(int64_t now, bool rebuildBond)
 				if (ipvPref == 4 || ipvPref == 6) {
 					for (int j = 0; j < it->second.size(); j++) {
 						int idx = it->second.at(j);
-						if (! _paths[idx].p) {
+						if (! _paths[idx].p || ! _paths[idx].eligible) {
 							continue;
 						}
 						if (! _paths[idx].allowed()) {
 							_paths[idx].p->address().toString(pathStr);
 							log("did not add %s/%s (user addr preference %d)", link->ifname().c_str(), pathStr, ipvPref);
-							continue;
-						}
-						if (! _paths[idx].eligible) {
 							continue;
 						}
 						addPathToBond(idx, updatedBondedPathCount);
@@ -1016,10 +1013,10 @@ void Bond::curateBond(int64_t now, bool rebuildBond)
 					// Search for preferred paths
 					for (int j = 0; j < it->second.size(); j++) {
 						int idx = it->second.at(j);
-						if (! _paths[idx].p || ! _paths[idx].eligible) {
+						if (! _paths[idx].p || ! _paths[idx].eligible || ! _paths[idx].allowed()) {
 							continue;
 						}
-						if (_paths[idx].preferred() && _paths[idx].allowed()) {
+						if (_paths[idx].preferred()) {
 							addPathToBond(idx, updatedBondedPathCount);
 							++updatedBondedPathCount;
 							_paths[idx].p->address().toString(pathStr);
