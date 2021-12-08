@@ -3334,7 +3334,7 @@ public:
 							return false;
 					}
 #ifdef _WIN32
-					if (n->second.tap->friendlyName() == ifname)
+					if (n->second.tap()->friendlyName() == ifname)
 						return false;
 #endif
 				}

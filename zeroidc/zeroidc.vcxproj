@@ -100,6 +100,9 @@
     <None Include="src\ext.rs" />
     <None Include="src\lib.rs" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="target\zeroidc.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

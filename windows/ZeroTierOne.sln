@@ -4,6 +4,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 16.0.30517.126
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ZeroTierOne", "ZeroTierOne\ZeroTierOne.vcxproj", "{B00A4957-5977-4AC1-9EF4-571DC27EADA2}"
+	ProjectSection(ProjectDependencies) = postProject
+		{175C340F-F5BA-4CB1-88AD-533B102E3799} = {175C340F-F5BA-4CB1-88AD-533B102E3799}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TapDriver6", "TapDriver6\TapDriver6.vcxproj", "{43BA7584-D4DB-4F7C-90FC-E2B18A68A213}"
 EndProject
