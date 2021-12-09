@@ -661,7 +661,7 @@ void Bond::processIncomingPathNegotiationRequest(uint64_t now, SharedPtr<Path>& 
 	if (remoteUtility > _localUtility) {
 		_paths[pathIdx].p->address().toString(pathStr);
 		log("peer suggests alternate link %s/%s, remote utility (%d) greater than local utility (%d), switching to suggested link\n", link->ifname().c_str(), pathStr, remoteUtility, _localUtility);
-		negotiatedPathIdx = pathIdx;
+		_negotiatedPathIdx = pathIdx;
 	}
 	if (remoteUtility < _localUtility) {
 		log("peer suggests alternate link %s/%s, remote utility (%d) less than local utility (%d), not switching\n", link->ifname().c_str(), pathStr, remoteUtility, _localUtility);
@@ -670,7 +670,7 @@ void Bond::processIncomingPathNegotiationRequest(uint64_t now, SharedPtr<Path>& 
 		log("peer suggests alternate link %s/%s, remote utility (%d) equal to local utility (%d)\n", link->ifname().c_str(), pathStr, remoteUtility, _localUtility);
 		if (_peer->_id.address().toInt() > RR->node->identity().address().toInt()) {
 			log("agree with peer to use alternate link %s/%s\n", link->ifname().c_str(), pathStr);
-			negotiatedPathIdx = pathIdx;
+			_negotiatedPathIdx = pathIdx;
 		}
 		else {
 			log("ignore petition from peer to use alternate link %s/%s\n", link->ifname().c_str(), pathStr);
@@ -730,7 +730,7 @@ void Bond::pathNegotiationCheck(void* tPtr, int64_t now)
 			if (_localUtility == 0) {
 				// There's no loss to us, just switch without sending a another request
 				// fprintf(stderr, "BT: (sync) giving up, switching to remote peer's path.\n");
-				negotiatedPathIdx = maxInPathIdx;
+				_negotiatedPathIdx = maxInPathIdx;
 			}
 		}
 	}
@@ -1478,13 +1478,15 @@ void Bond::processActiveBackupTasks(void* tPtr, int64_t now)
 				// If using "optimize" primary re-select mode, ignore user link designations
 				failoverScoreHandicap = ZT_BOND_FAILOVER_HANDICAP_PRIMARY;
 			}
-			if (_paths[i].p.ptr() == _paths[negotiatedPathIdx].p.ptr()) {
+			/*
+			if (_paths[i].p.ptr() == _paths[_negotiatedPathIdx].p.ptr()) {
 				_paths[i].negotiated = true;
 				failoverScoreHandicap = ZT_BOND_FAILOVER_HANDICAP_NEGOTIATED;
 			}
 			else {
 				_paths[i].negotiated = false;
 			}
+			*/
 			_paths[i].failoverScore = _paths[i].allocation + failoverScoreHandicap;
 			if (_paths[i].p.ptr() != _paths[_abPathIdx].p.ptr()) {
 				bool bFoundPathInQueue = false;
@@ -1622,6 +1624,7 @@ void Bond::setBondParameters(int policy, SharedPtr<Bond> templateBond, bool useT
 	_pathNegotiationCutoffCount = 0;
 	_lastPathNegotiationReceived = 0;
 	_localUtility = 0;
+	_negotiatedPathIdx = 0;
 
 	// QOS Verb (and related checks)
 

@@ -1428,7 +1428,7 @@ class Bond {
 
 	// path negotiation
 	int16_t _localUtility;
-	int negotiatedPathIdx;
+	int _negotiatedPathIdx;
 	uint8_t _numSentPathNegotiationRequests;
 	bool _allowPathNegotiation;
 
