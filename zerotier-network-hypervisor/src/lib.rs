@@ -6,6 +6,9 @@
  * https://www.zerotier.com/
  */
 
+#[macro_use]
+extern crate lazy_static;
+
 pub mod util;
 pub mod error;
 pub mod vl1;

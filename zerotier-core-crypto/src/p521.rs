@@ -70,6 +70,55 @@ pub struct P521PublicKey {
     public_key_bytes: [u8; P521_PUBLIC_KEY_SIZE],
 }
 
+impl P521PublicKey {
+    /// Construct a public key from a byte serialized representation.
+    /// None is returned if the input is not valid. No advanced checking such as
+    /// determining if this is a point on the curve is performed.
+    pub fn from_bytes(b: &[u8]) -> Option<P521PublicKey> {
+        if b.len() == P521_PUBLIC_KEY_SIZE {
+            Some(P521PublicKey {
+                public_key: SExpression::from_str(format!("(public-key(ecc(curve nistp521)(q #04{}#)))", crate::hex::to_string(b)).as_str()).unwrap(),
+                public_key_bytes: b.try_into().unwrap(),
+            })
+        } else {
+            None
+        }
+    }
+
+    /// Verify a signature.
+    /// Message data does not need to be pre-hashed.
+    pub fn verify(&self, msg: &[u8], signature: &[u8]) -> bool {
+        if signature.len() == P521_ECDSA_SIGNATURE_SIZE {
+            let data = SExpression::from_str(unsafe { std::str::from_utf8_unchecked(&hash_to_data_sexp(msg)) }).unwrap();
+            let sig = SExpression::from_str(format!("(sig-val(ecdsa(r #{}#)(s #{}#)))", crate::hex::to_string(&signature[0..66]), crate::hex::to_string(&signature[66..132])).as_str()).unwrap();
+            gcrypt::pkey::verify(&self.public_key, &data, &sig).is_ok()
+        } else {
+            false
+        }
+    }
+
+    #[inline(always)]
+    pub fn public_key_bytes(&self) -> &[u8; P521_PUBLIC_KEY_SIZE] {
+        &self.public_key_bytes
+    }
+}
+
+impl PartialEq for P521PublicKey {
+    #[inline(always)]
+    fn eq(&self, other: &Self) -> bool { self.public_key_bytes.eq(&other.public_key_bytes) }
+}
+
+impl Eq for P521PublicKey {}
+
+impl Clone for P521PublicKey {
+    fn clone(&self) -> Self {
+        Self {
+            public_key: SExpression::from_bytes(self.public_key.get_bytes(0).unwrap()).unwrap(),
+            public_key_bytes: self.public_key_bytes.clone()
+        }
+    }
+}
+
 /// NIST P-521 elliptic curve key pair.
 /// This supports both ECDSA signing and ECDH key agreement. In practice the same key pair
 /// is not used for both functions as this is considred bad practice.
@@ -181,48 +230,21 @@ impl P521KeyPair {
     }
 }
 
-impl P521PublicKey {
-    /// Construct a public key from a byte serialized representation.
-    /// None is returned if the input is not valid. No advanced checking such as
-    /// determining if this is a point on the curve is performed.
-    pub fn from_bytes(b: &[u8]) -> Option<P521PublicKey> {
-        if b.len() == P521_PUBLIC_KEY_SIZE {
-            Some(P521PublicKey {
-                public_key: SExpression::from_str(format!("(public-key(ecc(curve nistp521)(q #04{}#)))", crate::hex::to_string(b)).as_str()).unwrap(),
-                public_key_bytes: b.try_into().unwrap(),
-            })
-        } else {
-            None
-        }
-    }
-
-    /// Verify a signature.
-    /// Message data does not need to be pre-hashed.
-    pub fn verify(&self, msg: &[u8], signature: &[u8]) -> bool {
-        if signature.len() == P521_ECDSA_SIGNATURE_SIZE {
-            let data = SExpression::from_str(unsafe { std::str::from_utf8_unchecked(&hash_to_data_sexp(msg)) }).unwrap();
-            let sig = SExpression::from_str(format!("(sig-val(ecdsa(r #{}#)(s #{}#)))", crate::hex::to_string(&signature[0..66]), crate::hex::to_string(&signature[66..132])).as_str()).unwrap();
-            gcrypt::pkey::verify(&self.public_key, &data, &sig).is_ok()
-        } else {
-            false
-        }
-    }
-
-    #[inline(always)]
-    pub fn public_key_bytes(&self) -> &[u8; P521_PUBLIC_KEY_SIZE] {
-        &self.public_key_bytes
-    }
+impl PartialEq for P521KeyPair {
+    fn eq(&self, other: &Self) -> bool { self.secret_key_bytes.0.eq(&other.secret_key_bytes.0) }
 }
 
-impl PartialEq for P521PublicKey {
-    #[inline(always)]
-    fn eq(&self, other: &Self) -> bool { self.public_key_bytes.eq(&other.public_key_bytes) }
-}
+impl Eq for P521KeyPair {}
 
-impl Eq for P521PublicKey {}
-
-impl Clone for P521PublicKey {
-    fn clone(&self) -> Self { P521PublicKey::from_bytes(&self.public_key_bytes).unwrap() }
+impl Clone for P521KeyPair {
+    fn clone(&self) -> Self {
+        Self {
+            public_key: self.public_key.clone(),
+            secret_key_for_ecdsa: SExpression::from_bytes(self.secret_key_for_ecdsa.get_bytes(0).unwrap()).unwrap(),
+            secret_key_for_ecdh: SExpression::from_bytes(self.secret_key_for_ecdh.get_bytes(0).unwrap()).unwrap(),
+            secret_key_bytes: self.secret_key_bytes.clone(),
+        }
+    }
 }
 
 #[cfg(test)]

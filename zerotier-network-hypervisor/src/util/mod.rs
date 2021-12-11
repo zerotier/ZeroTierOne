@@ -16,15 +16,12 @@ pub use zerotier_core_crypto::varint;
 pub(crate) const ZEROES: [u8; 64] = [0_u8; 64];
 
 /// Obtain a reference to a sub-array within an existing array.
-/// Attempts to violate array bounds will panic or fail to compile.
 #[inline(always)]
 pub(crate) fn array_range<T, const A: usize, const START: usize, const LEN: usize>(a: &[T; A]) -> &[T; LEN] {
     assert!((START + LEN) <= A);
-    unsafe { &*a.as_ptr().add(std::mem::size_of::<T>() * start_index).cast::<[T; LEN]>() }
+    unsafe { &*a.as_ptr().add(START).cast::<[T; LEN]>() }
 }
 
-/// Cast a u64 reference to a byte array in place.
-/// Going the other direction is not safe on some architectures, but this should be safe everywhere.
 #[inline(always)]
 pub(crate) fn u64_as_bytes(i: &u64) -> &[u8; 8] { unsafe { &*(i as *const u64).cast() } }
 

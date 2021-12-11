@@ -59,6 +59,10 @@ impl C25519KeyPair {
     }
 }
 
+impl Clone for C25519KeyPair {
+    fn clone(&self) -> Self { Self(x25519_dalek::StaticSecret::from(self.0.to_bytes()), x25519_dalek::PublicKey::from(self.1.to_bytes())) }
+}
+
 /// Ed25519 key pair for EDDSA signatures.
 pub struct Ed25519KeyPair(ed25519_dalek::Keypair);
 
@@ -111,6 +115,10 @@ impl Ed25519KeyPair {
         s2[64..96].copy_from_slice(&h.as_slice()[0..32]);
         s2
     }
+}
+
+impl Clone for Ed25519KeyPair {
+    fn clone(&self) -> Self { Self(ed25519_dalek::Keypair::from_bytes(&self.0.to_bytes()).unwrap()) }
 }
 
 pub fn ed25519_verify(public_key: &[u8], signature: &[u8], msg: &[u8]) -> bool {

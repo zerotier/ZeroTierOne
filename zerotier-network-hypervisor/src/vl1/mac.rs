@@ -46,15 +46,15 @@ impl MAC {
 
     #[inline(always)]
     pub(crate) fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> std::io::Result<()> {
-        buf.append_and_init_bytes_fixed(|b: &mut [u8; 6]| {
-            let i = self.0.get();
-            b[0] = (i >> 40) as u8;
-            b[1] = (i >> 32) as u8;
-            b[2] = (i >> 24) as u8;
-            b[3] = (i >> 16) as u8;
-            b[4] = (i >> 8) as u8;
-            b[5] = i as u8;
-        })
+        let b = buf.append_bytes_fixed_get_mut::<6>()?;
+        let i = self.0.get();
+        (*b)[0] = (i >> 40) as u8;
+        (*b)[1] = (i >> 32) as u8;
+        (*b)[2] = (i >> 24) as u8;
+        (*b)[3] = (i >> 16) as u8;
+        (*b)[4] = (i >> 8) as u8;
+        (*b)[5] = i as u8;
+        Ok(())
     }
 
     #[inline(always)]

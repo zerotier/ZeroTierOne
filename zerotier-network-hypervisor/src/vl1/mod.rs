@@ -9,9 +9,9 @@
 pub mod inetaddress;
 pub mod endpoint;
 pub mod rootset;
+pub mod identity;
 
 #[allow(unused)]
-pub(crate) mod identity;
 pub(crate) mod protocol;
 pub(crate) mod node;
 pub(crate) mod path;
@@ -26,7 +26,7 @@ pub(crate) mod symmetricsecret;
 
 pub use address::Address;
 pub use mac::MAC;
-pub use identity::{Identity, IdentityType, IDENTITY_TYPE_0_SIGNATURE_SIZE, IDENTITY_TYPE_1_SIGNATURE_SIZE};
+pub use identity::Identity;
 pub use endpoint::Endpoint;
 pub use dictionary::Dictionary;
 pub use inetaddress::InetAddress;

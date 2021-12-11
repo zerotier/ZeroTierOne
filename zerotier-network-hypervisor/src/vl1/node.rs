@@ -21,7 +21,7 @@ use crate::error::InvalidParameterError;
 use crate::util::gate::IntervalGate;
 use crate::util::pool::{Pool, Pooled};
 use crate::util::buffer::Buffer;
-use crate::vl1::{Address, Endpoint, Identity, IdentityType};
+use crate::vl1::{Address, Endpoint, Identity};
 use crate::vl1::path::Path;
 use crate::vl1::peer::Peer;
 use crate::vl1::protocol::*;
@@ -106,10 +106,10 @@ pub trait VL1PacketHandler {
     fn handle_packet(&self, peer: &Peer, source_path: &Arc<Path>, forward_secrecy: bool, extended_authentication: bool, verb: u8, payload: &Buffer<{ PACKET_SIZE_MAX }>) -> bool;
 
     /// Handle errors, returning true if the error was recognized.
-    fn handle_error(&self, peer: &Peer, source_path: &Arc<Path>, forward_secrecy: bool, extended_authentication: bool, in_re_verb: u8, in_re_packet_id: PacketID, error_code: u8, payload: &Buffer<{ PACKET_SIZE_MAX }>, cursor: &mut usize) -> bool;
+    fn handle_error(&self, peer: &Peer, source_path: &Arc<Path>, forward_secrecy: bool, extended_authentication: bool, in_re_verb: u8, in_re_message_id: u64, error_code: u8, payload: &Buffer<{ PACKET_SIZE_MAX }>, cursor: &mut usize) -> bool;
 
     /// Handle an OK, returing true if the OK was recognized.
-    fn handle_ok(&self, peer: &Peer, source_path: &Arc<Path>, forward_secrecy: bool, extended_authentication: bool, in_re_verb: u8, in_re_packet_id: PacketID, payload: &Buffer<{ PACKET_SIZE_MAX }>, cursor: &mut usize) -> bool;
+    fn handle_ok(&self, peer: &Peer, source_path: &Arc<Path>, forward_secrecy: bool, extended_authentication: bool, in_re_verb: u8, in_re_message_id: u64, payload: &Buffer<{ PACKET_SIZE_MAX }>, cursor: &mut usize) -> bool;
 }
 
 #[derive(Default)]
@@ -134,17 +134,14 @@ pub struct Node {
 
 impl Node {
     /// Create a new Node.
-    ///
-    /// If the auto-generate identity type is not None, a new identity will be generated if
-    /// no identity is currently stored in the data store.
-    pub fn new<I: NodeInterface>(ci: &I, auto_generate_identity_type: Option<IdentityType>) -> Result<Self, InvalidParameterError> {
+    pub fn new<I: NodeInterface>(ci: &I, auto_generate_identity: bool) -> Result<Self, InvalidParameterError> {
         let id = {
             let id_str = ci.load_node_identity();
             if id_str.is_none() {
-                if auto_generate_identity_type.is_none() {
+                if !auto_generate_identity {
                     return Err(InvalidParameterError("no identity found and auto-generate not enabled"));
                 } else {
-                    let id = Identity::generate(auto_generate_identity_type.unwrap());
+                    let id = Identity::generate();
                     ci.save_node_identity(&id, id.to_string().as_bytes(), id.to_secret_string().as_bytes());
                     id
                 }
@@ -180,7 +177,7 @@ impl Node {
     pub fn packet_buffer_pool(&self) -> &Arc<PacketBufferPool> { &self.buffer_pool }
 
     #[inline(always)]
-    pub fn address(&self) -> Address { self.identity.address() }
+    pub fn address(&self) -> Address { self.identity.address }
 
     #[inline(always)]
     pub fn identity(&self) -> &Identity { &self.identity }
@@ -235,7 +232,7 @@ impl Node {
             if dest.is_some() {
                 let time_ticks = ci.time_ticks();
                 let dest = dest.unwrap();
-                if dest == self.identity.address() {
+                if dest == self.identity.address {
                     // Handle packets addressed to this node.
 
                     let path = self.path(source_endpoint, source_local_socket, source_local_interface);
@@ -243,7 +240,7 @@ impl Node {
 
                     if fragment_header.is_fragment() {
 
-                        let _ = path.receive_fragment(fragment_header.id, fragment_header.fragment_no(), fragment_header.total_fragments(), data, time_ticks).map(|assembled_packet| {
+                        let _ = path.receive_fragment(u64::from_ne_bytes(fragment_header.id), fragment_header.fragment_no(), fragment_header.total_fragments(), data, time_ticks).map(|assembled_packet| {
                             if assembled_packet.frags[0].is_some() {
                                 let frag0 = assembled_packet.frags[0].as_ref().unwrap();
                                 let packet_header = frag0.struct_at::<PacketHeader>(0);

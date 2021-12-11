@@ -142,10 +142,10 @@ impl Endpoint {
         if type_byte < 16 {
             if type_byte == 4 {
                 let b: &[u8; 6] = buf.read_bytes_fixed(cursor)?;
-                Ok(Endpoint::IpUdp(InetAddress::from_ip_port(&b[0..4], crate::util::load_u16_be(&b[4..6]))))
+                Ok(Endpoint::IpUdp(InetAddress::from_ip_port(&b[0..4], u16::from_be_bytes(b[4..6].try_into().unwrap()))))
             } else if type_byte == 6 {
                 let b: &[u8; 18] = buf.read_bytes_fixed(cursor)?;
-                Ok(Endpoint::IpUdp(InetAddress::from_ip_port(&b[0..16], crate::util::load_u16_be(&b[16..18]))))
+                Ok(Endpoint::IpUdp(InetAddress::from_ip_port(&b[0..16], u16::from_be_bytes(b[16..18].try_into().unwrap()))))
             } else {
                 Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "unrecognized endpoint type in stream"))
             }

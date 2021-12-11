@@ -6,561 +6,466 @@
  * https://www.zerotier.com/
  */
 
-use std::ptr::{slice_from_raw_parts, slice_from_raw_parts_mut};
-use zerotier_core_crypto::c25519::{C25519_PUBLIC_KEY_SIZE, C25519KeyPair, ED25519_PUBLIC_KEY_SIZE, Ed25519KeyPair};
-use zerotier_core_crypto::p521::{P521_ECDSA_SIGNATURE_SIZE, P521_PUBLIC_KEY_SIZE, P521KeyPair};
-use zerotier_core_crypto::salsa::Salsa;
-
-// Work function used to derive address from keys.
-fn zt_frankenhash(digest: &mut [u8; 64], genmem_ptr: *mut u8) {
-    let (genmem, genmem_alias_hack) = unsafe { (&mut *slice_from_raw_parts_mut(genmem_ptr, V0_POW_MEMORY), &*slice_from_raw_parts(genmem_ptr, V0_POW_MEMORY)) };
-    let genmem_u64_ptr = genmem_ptr.cast::<u64>();
-
-    let mut s20 = Salsa::new(&digest[0..32], &digest[32..40], false).unwrap();
-
-    s20.crypt(&crate::util::ZEROES[0..64], &mut genmem[0..64]);
-    let mut i: usize = 64;
-    while i < V0_POW_MEMORY {
-        let ii = i + 64;
-        s20.crypt(&genmem_alias_hack[(i - 64)..i], &mut genmem[i..ii]);
-        i = ii;
-    }
-
-    i = 0;
-    while i < (V0_POW_MEMORY / 8) {
-        unsafe {
-            let idx1 = (((*genmem_u64_ptr.offset(i as isize)).to_be() % 8) * 8) as usize;
-            let idx2 = ((*genmem_u64_ptr.offset((i + 1) as isize)).to_be() % (V0_POW_MEMORY as u64 / 8)) as usize;
-            let genmem_u64_at_idx2_ptr = genmem_u64_ptr.offset(idx2 as isize);
-            let tmp = *genmem_u64_at_idx2_ptr;
-            let digest_u64_ptr = digest.as_mut_ptr().offset(idx1 as isize).cast::<u64>();
-            *genmem_u64_at_idx2_ptr = *digest_u64_ptr;
-            *digest_u64_ptr = tmp;
-        }
-        s20.crypt_in_place(digest);
-        i += 2;
-    }
-}
-
-struct P521Secret {
-    ecdh: P521KeyPair,
-    ecdsa: P521KeyPair,
-}
-
-struct P521Public {
-    ecdh: [u8; P521_PUBLIC_KEY_SIZE],
-    ecdsa: [u8; P521_PUBLIC_KEY_SIZE],
-    self_signature: [u8; P521_ECDSA_SIGNATURE_SIZE]
-}
-
-pub struct IdentitySecrets {
-    c25519: C25519KeyPair,
-    ed25519: Ed25519KeyPair,
-    p521: Option<P521Secret>,
-}
-
-pub struct Identity {
-    c25519: [u8; C25519_PUBLIC_KEY_SIZE],
-    ed25519: [u8; ED25519_PUBLIC_KEY_SIZE],
-    p521: Option<P521Public>,
-}
-
-/*
-
 use std::alloc::{alloc, dealloc, Layout};
 use std::cmp::Ordering;
 use std::convert::TryInto;
-use std::hash::{Hash, Hasher};
 use std::io::Write;
+use std::mem::MaybeUninit;
 use std::ptr::{slice_from_raw_parts, slice_from_raw_parts_mut};
 use std::str::FromStr;
 
-use zerotier_core_crypto::balloon;
-use zerotier_core_crypto::c25519::*;
-use zerotier_core_crypto::hash::*;
-use zerotier_core_crypto::p521::*;
+use lazy_static::lazy_static;
+
+use zerotier_core_crypto::c25519::{C25519_PUBLIC_KEY_SIZE, C25519_SECRET_KEY_SIZE, C25519KeyPair, ED25519_PUBLIC_KEY_SIZE, ED25519_SECRET_KEY_SIZE, ED25519_SIGNATURE_SIZE, ed25519_verify, Ed25519KeyPair};
+use zerotier_core_crypto::hash::{SHA384, SHA384_HASH_SIZE, SHA512};
+use zerotier_core_crypto::hex;
+use zerotier_core_crypto::p521::{P521_ECDSA_SIGNATURE_SIZE, P521_PUBLIC_KEY_SIZE, P521_SECRET_KEY_SIZE, P521KeyPair, P521PublicKey};
 use zerotier_core_crypto::salsa::Salsa;
 use zerotier_core_crypto::secret::Secret;
 
 use crate::error::InvalidFormatError;
-use crate::vl1::Address;
-use crate::vl1::protocol::{PACKET_SIZE_MAX, ADDRESS_SIZE};
+use crate::util::array_range;
 use crate::util::buffer::Buffer;
+use crate::util::pool::{Pool, Pooled, PoolFactory};
+use crate::vl1::Address;
+use crate::vl1::protocol::{ADDRESS_SIZE, ADDRESS_SIZE_STRING, IDENTITY_V0_POW_THRESHOLD, IDENTITY_V1_POW_THRESHOLD};
 
-pub const IDENTITY_TYPE_0_SIGNATURE_SIZE: usize = 96;
-pub const IDENTITY_TYPE_1_SIGNATURE_SIZE: usize = P521_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE;
+/// X25519 cipher suite (present in all identities, so no actual flag).
+pub const IDENTITY_CIPHER_SUITE_X25519: u8 = 0x00;
 
-const V0_POW_MEMORY: usize = 2097152;
-const V0_POW_THRESHOLD: u8 = 17;
-const V1_POW_THRESHOLD: u8 = 5;
-const V1_BALLOON_SPACE_COST: usize = 262144;
-const V1_BALLOON_TIME_COST: usize = 3;
-const V1_BALLOON_DELTA: usize = 3;
+/// NIST P-521 ECDH/ECDSA cipher suite.
+///
+/// Sooo.... why 0x03 and not 0x01 or some other value? It's to compensate at the cost of
+/// one wasted bit for a short-sighted aspect of the old identity encoding and HELLO packet
+/// encoding.
+///
+/// The old identity encoding contains no provision for skipping data it doesn't understand
+/// nor any provision for an upgrade. That's dumb, but there it is on millions of nodes. The
+/// place where this matters in terms of identities the most is the HELLO packet.
+///
+/// In HELLO the identity is sent immediately followed by an endpoint, namely the InetAddress to
+/// which the packet was sent. The old InetAddress DOES have a provision for extension. The type
+/// byte 0x04 is followed by a 16-bit size for an "unknown address type" so it can be skipped if
+/// it is not understood.
+///
+/// If we preface the x25519 key with 0x00 as normal and then preface the next key with 0x04,
+/// we can follow that by what should have been there in the first place: a size for the remaining
+/// identity fields.
+///
+/// When old nodes parse a HELLO they will interpret this as an x25519 identity followed by an
+/// unrecognized InetAddress type that will be silently ignored.
+///
+/// The one wasted bit (0x02) is in a field with only one bit in use anyway. It means we can only
+/// add six more cipher suites in the future, and if we're adding that many something is wrong.
+/// There will probably only be one more ever, a post-quantum long term key.
+pub const IDENTITY_CIPHER_SUITE_EC_NIST_P521: u8 = 0x03;
 
-const V1_PUBLIC_KEYS_SIZE: usize = C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE;
-const V1_PUBLIC_KEYS_SIGNATURE_AND_POW_SIZE: usize = V1_PUBLIC_KEYS_SIZE + P521_ECDSA_SIGNATURE_SIZE + SHA384_HASH_SIZE;
-const V1_SECRET_KEYS_SIZE: usize = C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE + P521_SECRET_KEY_SIZE + P521_SECRET_KEY_SIZE;
+/// Mask for functions that take a cipher mask to use all available ciphers or the best available cipher.
+pub const IDENTITY_CIPHER_SUITE_INCLUDE_ALL: u8 = 0xff;
 
-fn concat_v1_public_keys(c25519: &[u8], ed25519: &[u8], p521_ecdh: &[u8], p521_ecdsa: &[u8]) -> [u8; V1_PUBLIC_KEYS_SIZE] {
-    let mut k = [0_u8; V1_PUBLIC_KEYS_SIZE];
-    debug_assert!(c25519.len() <= C25519_PUBLIC_KEY_SIZE);
-    debug_assert!(ed25519.len() <= ED25519_PUBLIC_KEY_SIZE);
-    debug_assert!(p521_ecdh.len() <= P521_PUBLIC_KEY_SIZE);
-    debug_assert!(p521_ecdsa.len() <= P521_PUBLIC_KEY_SIZE);
-    k[(C25519_PUBLIC_KEY_SIZE - c25519.len())..C25519_PUBLIC_KEY_SIZE].copy_from_slice(c25519);
-    k[(C25519_PUBLIC_KEY_SIZE + (ED25519_PUBLIC_KEY_SIZE - ed25519.len()))..(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE)].copy_from_slice(ed25519);
-    k[(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + (P521_PUBLIC_KEY_SIZE - p521_ecdh.len()))..(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE)].copy_from_slice(p521_ecdh);
-    k[(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + (P521_PUBLIC_KEY_SIZE - p521_ecdsa.len()))..(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE)].copy_from_slice(p521_ecdsa);
-    k
+#[derive(Clone)]
+pub struct IdentityP521Secret {
+    pub ecdh: P521KeyPair,
+    pub ecdsa: P521KeyPair,
 }
 
-fn concat_v1_public_all(c25519: &[u8], ed25519: &[u8], p521_ecdh: &[u8], p521_ecdsa: &[u8], signature: &[u8], balloon_hash_digest: &[u8]) -> [u8; V1_PUBLIC_KEYS_SIGNATURE_AND_POW_SIZE] {
-    let mut k = [0_u8; V1_PUBLIC_KEYS_SIGNATURE_AND_POW_SIZE];
-    debug_assert!(c25519.len() <= C25519_PUBLIC_KEY_SIZE);
-    debug_assert!(ed25519.len() <= ED25519_PUBLIC_KEY_SIZE);
-    debug_assert!(p521_ecdh.len() <= P521_PUBLIC_KEY_SIZE);
-    debug_assert!(p521_ecdsa.len() <= P521_PUBLIC_KEY_SIZE);
-    debug_assert!(signature.len() <= P521_ECDSA_SIGNATURE_SIZE);
-    debug_assert_eq!(balloon_hash_digest.len(), SHA384_HASH_SIZE);
-    k[(C25519_PUBLIC_KEY_SIZE - c25519.len())..C25519_PUBLIC_KEY_SIZE].copy_from_slice(c25519);
-    k[(C25519_PUBLIC_KEY_SIZE + (ED25519_PUBLIC_KEY_SIZE - ed25519.len()))..(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE)].copy_from_slice(ed25519);
-    k[(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + (P521_PUBLIC_KEY_SIZE - p521_ecdh.len()))..(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE)].copy_from_slice(p521_ecdh);
-    k[(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + (P521_PUBLIC_KEY_SIZE - p521_ecdsa.len()))..(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE)].copy_from_slice(p521_ecdsa);
-    k[(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + (P521_ECDSA_SIGNATURE_SIZE - signature.len()))..(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_ECDSA_SIGNATURE_SIZE)].copy_from_slice(signature);
-    k[(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_ECDSA_SIGNATURE_SIZE)..].copy_from_slice(balloon_hash_digest);
-    k
+#[derive(Clone)]
+pub struct IdentityP521Public {
+    pub ecdh: [u8; P521_PUBLIC_KEY_SIZE],
+    pub ecdsa: [u8; P521_PUBLIC_KEY_SIZE],
+    pub ecdsa_self_signature: [u8; P521_ECDSA_SIGNATURE_SIZE],
+    pub ed25519_self_signature: [u8; ED25519_SIGNATURE_SIZE],
 }
 
-fn concat_v1_secret_keys(c25519: &[u8], ed25519: &[u8], p521_ecdh: &[u8], p521_ecdsa: &[u8]) -> [u8; V1_SECRET_KEYS_SIZE] {
-    let mut k = [0_u8; V1_SECRET_KEYS_SIZE];
-    debug_assert!(c25519.len() <= C25519_SECRET_KEY_SIZE);
-    debug_assert!(ed25519.len() <= ED25519_SECRET_KEY_SIZE);
-    debug_assert!(p521_ecdh.len() <= P521_SECRET_KEY_SIZE);
-    debug_assert!(p521_ecdsa.len() <= P521_SECRET_KEY_SIZE);
-    k[(C25519_SECRET_KEY_SIZE - c25519.len())..C25519_SECRET_KEY_SIZE].copy_from_slice(c25519);
-    k[(C25519_SECRET_KEY_SIZE + (ED25519_SECRET_KEY_SIZE - ed25519.len()))..(C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE)].copy_from_slice(ed25519);
-    k[(C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE + (P521_SECRET_KEY_SIZE - p521_ecdh.len()))..(C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE + P521_SECRET_KEY_SIZE)].copy_from_slice(p521_ecdh);
-    k[(C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE + P521_SECRET_KEY_SIZE + (P521_SECRET_KEY_SIZE - p521_ecdsa.len()))..(C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE + P521_SECRET_KEY_SIZE + P521_SECRET_KEY_SIZE)].copy_from_slice(p521_ecdsa);
-    k
+#[derive(Clone)]
+pub struct IdentitySecret {
+    pub c25519: C25519KeyPair,
+    pub ed25519: Ed25519KeyPair,
+    pub p521: Option<IdentityP521Secret>,
 }
 
-#[derive(Copy, Clone)]
-#[repr(u8)]
-pub enum IdentityType {
-    /// Curve25519 / Ed25519 identity (type 0)
-    C25519 = 0,
-    /// Dual NIST P-521 ECDH / ECDSA + Curve25519 / Ed25519 (type 1)
-    P521 = 1,
-}
-
-struct IdentitySecrets {
-    c25519: C25519KeyPair,
-    ed25519: Ed25519KeyPair,
-    v1: Option<(P521KeyPair, P521KeyPair)>, // ecdh key, ecdsa key
-}
-
+#[derive(Clone)]
 pub struct Identity {
-    address: Address,
-    c25519: [u8; C25519_PUBLIC_KEY_SIZE],
-    ed25519: [u8; ED25519_PUBLIC_KEY_SIZE],
-    v1: Option<(P521PublicKey, P521PublicKey, [u8; P521_ECDSA_SIGNATURE_SIZE], [u8; SHA384_HASH_SIZE])>,
-    secrets: Option<IdentitySecrets>,
+    pub address: Address,
+    pub c25519: [u8; C25519_PUBLIC_KEY_SIZE],
+    pub ed25519: [u8; ED25519_PUBLIC_KEY_SIZE],
+    pub p521: Option<IdentityP521Public>,
+    pub secret: Option<IdentitySecret>,
 }
 
-/// Compute result from the bespoke "frankenhash" from the old V0 work function.
-/// The supplied genmem_ptr must be of size V0_IDENTITY_GEN_MEMORY and aligned to an 8-byte boundary.
-fn v0_frankenhash(digest: &mut [u8; 64], genmem_ptr: *mut u8) {
-    let (genmem, genmem_alias_hack) = unsafe { (&mut *slice_from_raw_parts_mut(genmem_ptr, V0_POW_MEMORY), &*slice_from_raw_parts(genmem_ptr, V0_POW_MEMORY)) };
-    let genmem_u64_ptr = genmem_ptr.cast::<u64>();
+#[inline(always)]
+fn concat_arrays_2<const A: usize, const B: usize, const S: usize>(a: &[u8; A], b: &[u8; B]) -> [u8; S] {
+    debug_assert_eq!(A + B, S);
+    let mut tmp: [u8; S] = unsafe { MaybeUninit::uninit().assume_init() };
+    tmp[..A].copy_from_slice(a);
+    tmp[A..].copy_from_slice(b);
+    tmp
+}
 
-    let mut s20 = Salsa::new(&digest[0..32], &digest[32..40], false).unwrap();
-
-    s20.crypt(&crate::util::ZEROES[0..64], &mut genmem[0..64]);
-    let mut i: usize = 64;
-    while i < V0_POW_MEMORY {
-        let ii = i + 64;
-        s20.crypt(&genmem_alias_hack[(i - 64)..i], &mut genmem[i..ii]);
-        i = ii;
-    }
-
-    i = 0;
-    while i < (V0_POW_MEMORY / 8) {
-        unsafe {
-            let idx1 = (((*genmem_u64_ptr.offset(i as isize)).to_be() % 8) * 8) as usize;
-            let idx2 = ((*genmem_u64_ptr.offset((i + 1) as isize)).to_be() % (V0_POW_MEMORY as u64 / 8)) as usize;
-            let genmem_u64_at_idx2_ptr = genmem_u64_ptr.offset(idx2 as isize);
-            let tmp = *genmem_u64_at_idx2_ptr;
-            let digest_u64_ptr = digest.as_mut_ptr().offset(idx1 as isize).cast::<u64>();
-            *genmem_u64_at_idx2_ptr = *digest_u64_ptr;
-            *digest_u64_ptr = tmp;
-        }
-        s20.crypt_in_place(digest);
-        i += 2;
-    }
+#[inline(always)]
+fn concat_arrays_4<const A: usize, const B: usize, const C: usize, const D: usize, const S: usize>(a: &[u8; A], b: &[u8; B], c: &[u8; C], d: &[u8; D]) -> [u8; S] {
+    debug_assert_eq!(A + B + C + D, S);
+    let mut tmp: [u8; S] = unsafe { MaybeUninit::uninit().assume_init() };
+    tmp[..A].copy_from_slice(a);
+    tmp[A..(A + B)].copy_from_slice(b);
+    tmp[(A + B)..(A + B + C)].copy_from_slice(c);
+    tmp[(A + B + C)..].copy_from_slice(d);
+    tmp
 }
 
 impl Identity {
-    fn generate_c25519() -> Identity {
-        let genmem_layout = Layout::from_size_align(V0_POW_MEMORY, 8).unwrap();
-        let genmem_ptr = unsafe { alloc(genmem_layout) };
-        if genmem_ptr.is_null() {
-            panic!("unable to allocate memory for V0 identity generation");
-        }
-
-        let ed25519 = Ed25519KeyPair::generate(false);
-        let ed25519_pub_bytes = ed25519.public_bytes();
+    /// Generate a new identity.
+    pub fn generate() -> Self {
         let mut sha = SHA512::new();
+        let ed25519 = Ed25519KeyPair::generate(false);
+        let ed25519_pub = ed25519.public_bytes();
+        let mut address;
+        let mut c25519;
+        let mut c25519_pub;
+        let mut genmem_pool_obj = unsafe { FRANKENHASH_POW_MEMORY_POOL.get() };
         loop {
-            let c25519 = C25519KeyPair::generate(false);
-            let c25519_pub_bytes = c25519.public_bytes();
+            c25519 = C25519KeyPair::generate(false);
+            c25519_pub = c25519.public_bytes();
 
-            sha.update(&c25519_pub_bytes);
-            sha.update(&ed25519_pub_bytes);
+            sha.update(&c25519_pub);
+            sha.update(&ed25519_pub);
             let mut digest = sha.finish();
+            zt_frankenhash(&mut digest, &mut genmem_pool_obj);
 
-            v0_frankenhash(&mut digest, genmem_ptr);
-            if digest[0] < V0_POW_THRESHOLD {
+            if digest[0] < IDENTITY_V1_POW_THRESHOLD {
                 let addr = Address::from_bytes(&digest[59..64]);
                 if addr.is_some() {
-                    unsafe { dealloc(genmem_ptr, genmem_layout) };
-                    return Identity {
-                        address: addr.unwrap(),
-                        c25519: c25519_pub_bytes,
-                        ed25519: ed25519_pub_bytes,
-                        v1: None,
-                        secrets: Some(IdentitySecrets {
-                            c25519,
-                            ed25519,
-                            v1: None,
-                        }),
-                    };
+                    address = addr.unwrap();
+                    break;
                 }
             }
 
             sha.reset();
         }
-    }
+        drop(genmem_pool_obj);
 
-    fn generate_p521() -> Identity {
-        let c25519 = C25519KeyPair::generate(false);
-        let ed25519 = Ed25519KeyPair::generate(false);
         let p521_ecdh = P521KeyPair::generate(false).unwrap();
         let p521_ecdsa = P521KeyPair::generate(false).unwrap();
-        let c25519_pub_bytes = c25519.public_bytes();
-        let ed25519_pub_bytes = ed25519.public_bytes();
-        let signing_buf = concat_v1_public_keys(&c25519_pub_bytes, &ed25519_pub_bytes, p521_ecdh.public_key_bytes(), p521_ecdsa.public_key_bytes());
-        loop {
-            // ECDSA is a randomized signature algorithm, so each signature will be different.
-            let sig = p521_ecdsa.sign(&signing_buf).unwrap();
-            let bh = balloon::zt_variant_hash::<{ V1_BALLOON_SPACE_COST }, { V1_BALLOON_TIME_COST }, { V1_BALLOON_DELTA }>(&sig);
-            if bh[0] < V1_POW_THRESHOLD {
-                let addr = Address::from_bytes(&bh[43..48]);
-                if addr.is_some() {
-                    let p521_ecdh_pub = p521_ecdh.public_key().clone();
-                    let p521_ecdsa_pub = p521_ecdsa.public_key().clone();
-                    return Identity {
-                        address: addr.unwrap(),
-                        c25519: c25519_pub_bytes,
-                        ed25519: ed25519_pub_bytes,
-                        v1: Some((p521_ecdh_pub, p521_ecdsa_pub, sig, bh)),
-                        secrets: Some(IdentitySecrets {
-                            c25519,
-                            ed25519,
-                            v1: Some((p521_ecdh, p521_ecdsa)),
-                        }),
-                    };
-                }
-            }
+        let p521_ecdh_pub = p521_ecdh.public_key_bytes().clone();
+        let p521_ecdsa_pub = p521_ecdsa.public_key_bytes().clone();
+
+        let mut self_sign_buf: Vec<u8> = Vec::with_capacity(ADDRESS_SIZE + 1 + C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + 1 + P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE);
+        let _ = self_sign_buf.write_all(&address.to_bytes());
+        self_sign_buf.push(IDENTITY_CIPHER_SUITE_X25519 | IDENTITY_CIPHER_SUITE_EC_NIST_P521);
+        let _ = self_sign_buf.write_all(&c25519_pub);
+        let _ = self_sign_buf.write_all(&ed25519_pub);
+        let _ = self_sign_buf.write_all(&p521_ecdh_pub);
+        let _ = self_sign_buf.write_all(&p521_ecdsa_pub);
+
+        Self {
+            address,
+            c25519: c25519_pub,
+            ed25519: ed25519_pub,
+            p521: Some(IdentityP521Public {
+                ecdh: p521_ecdh_pub,
+                ecdsa: p521_ecdsa_pub,
+                ecdsa_self_signature: p521_ecdsa.sign(self_sign_buf.as_slice()).expect("NIST P-521 signature failed in identity generation"),
+                ed25519_self_signature: ed25519.sign(self_sign_buf.as_slice())
+            }),
+            secret: Some(IdentitySecret {
+                c25519,
+                ed25519,
+                p521: Some(IdentityP521Secret {
+                    ecdh: p521_ecdh,
+                    ecdsa: p521_ecdsa,
+                }),
+            }),
         }
     }
 
-    /// Generate a new identity.
-    ///
-    /// This is time consuming due to the one-time anti-collision proof of work required
-    /// to generate an address corresponding with a set of identity keys. V0 identities
-    /// take tens to hundreds of milliseconds on a typical 2020 system, while V1 identites
-    /// take about 500ms. Generation can take a lot longer on low power devices, but only
-    /// has to be done once.
-    pub fn generate(id_type: IdentityType) -> Identity {
-        match id_type {
-            IdentityType::C25519 => Self::generate_c25519(),
-            IdentityType::P521 => Self::generate_p521()
-        }
-    }
-
-    /// Get this identity's 40-bit address.
+    /// Get a bit mask of this identity's available cipher suites.
     #[inline(always)]
-    pub fn address(&self) -> Address { self.address }
-
-    /// Locally validate this identity.
-    ///
-    /// This can take a few milliseconds, especially on slower systems. V0 identities are slower
-    /// to fully validate than V1 identities.
-    pub fn locally_validate(&self) -> bool {
-        if self.v1.is_none() {
-            let genmem_layout = Layout::from_size_align(V0_POW_MEMORY, 8).unwrap();
-            let genmem_ptr = unsafe { alloc(genmem_layout) };
-            if !genmem_ptr.is_null() {
-                let mut sha = SHA512::new();
-                sha.update(&self.c25519);
-                sha.update(&self.ed25519);
-                let mut digest = sha.finish();
-                v0_frankenhash(&mut digest, genmem_ptr);
-                unsafe { dealloc(genmem_ptr, genmem_layout) };
-                (digest[0] < V0_POW_THRESHOLD) && Address::from_bytes(&digest[59..64]).unwrap().eq(&self.address)
-            } else {
-                false
-            }
+    pub fn cipher_suites(&self) -> u8 {
+        if self.p521.is_some() {
+            IDENTITY_CIPHER_SUITE_X25519 | IDENTITY_CIPHER_SUITE_EC_NIST_P521
         } else {
-            let p521 = self.v1.as_ref().unwrap();
-            let signing_buf = concat_v1_public_keys(&self.c25519, &self.ed25519, (*p521).0.public_key_bytes(), (*p521).1.public_key_bytes());
-            if (*p521).1.verify(&signing_buf, &(*p521).2) {
-                let bh = balloon::zt_variant_hash::<{ V1_BALLOON_SPACE_COST }, { V1_BALLOON_TIME_COST }, { V1_BALLOON_DELTA }>(&(*p521).2);
-                (bh[0] < V1_POW_THRESHOLD) && bh.eq(&(*p521).3) && Address::from_bytes(&bh[43..48]).unwrap().eq(&self.address)
-            } else {
-                false
-            }
+            IDENTITY_CIPHER_SUITE_X25519
         }
     }
 
-    /// Execute ECDH key agreement and return SHA384(shared secret).
+    /// Get a SHA384 hash of this identity's address and public keys.
+    /// This provides a globally unique 384-bit fingerprint of this identity.
+    pub fn hash(&self) -> [u8; SHA384_HASH_SIZE] {
+        let mut sha = SHA384::new();
+        sha.update(&self.address.to_bytes());
+        // don't prefix x25519 with cipher suite 0 for backward compatibility
+        sha.update(&self.c25519);
+        sha.update(&self.ed25519);
+        let _ = self.p521.as_ref().map(|p521| {
+            sha.update(&[IDENTITY_CIPHER_SUITE_EC_NIST_P521]);
+            sha.update(&p521.ecdh);
+            sha.update(&p521.ecdsa);
+            sha.update(&p521.ecdsa_self_signature);
+        });
+        sha.finish()
+    }
+
+    /// Locally check the validity of this identity.
+    /// This is somewhat time consuming.
+    pub fn validate_identity(&self) -> bool {
+        let pow_threshold = if self.p521.is_some() {
+            let p521 = self.p521.as_ref().unwrap();
+            let mut self_sign_buf: Vec<u8> = Vec::with_capacity(ADDRESS_SIZE + 1 + C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE);
+            let _ = self_sign_buf.write_all(&self.address.to_bytes());
+            self_sign_buf.push(IDENTITY_CIPHER_SUITE_X25519 | IDENTITY_CIPHER_SUITE_EC_NIST_P521);
+            let _ = self_sign_buf.write_all(&self.c25519);
+            let _ = self_sign_buf.write_all(&self.ed25519);
+            let _ = self_sign_buf.write_all(&p521.ecdh);
+            let _ = self_sign_buf.write_all(&p521.ecdsa);
+
+            if !P521PublicKey::from_bytes(&p521.ecdsa).map_or(false, |ecdsa_pub| ecdsa_pub.verify(self_sign_buf.as_slice(), &p521.ecdsa_self_signature)) {
+                return false;
+            }
+            if !ed25519_verify(&self.ed25519, &p521.ed25519_self_signature, self_sign_buf.as_slice()) {
+                return false;
+            }
+
+            IDENTITY_V1_POW_THRESHOLD
+        } else {
+            IDENTITY_V0_POW_THRESHOLD
+        };
+
+        let mut sha = SHA512::new();
+        sha.update(&self.c25519);
+        sha.update(&self.ed25519);
+        let mut digest = sha.finish();
+        let mut genmem_pool_obj = unsafe { FRANKENHASH_POW_MEMORY_POOL.get() };
+        zt_frankenhash(&mut digest, &mut genmem_pool_obj);
+        drop(genmem_pool_obj);
+
+        return digest[0] < pow_threshold && Address::from_bytes(&digest[59..64]).map_or(false, |a| a == self.address);
+    }
+
+    /// Perform ECDH key agreement, returning a shared secret or None on error.
     ///
-    /// If both keys are type 1, key agreement is done with NIST P-521. Otherwise it's done
-    /// with Curve25519. None is returned if there is an error such as this identity missing
-    /// its secrets or a key being invalid.
-    pub fn agree(&self, other_identity: &Identity) -> Option<Secret<48>> {
-        self.secrets.as_ref().map_or(None, |secrets| {
-            let c25519_secret = || Secret::<48>(SHA384::hash(&secrets.c25519.agree(&other_identity.c25519).as_ref()));
-            secrets.v1.as_ref().map_or_else(|| Some(c25519_secret()), |p521_secret| {
-                other_identity.v1.as_ref().map_or_else(|| Some(c25519_secret()), |other_p521_public| {
-                    p521_secret.0.agree(&other_p521_public.0).map_or(None, |p521_secret| {
-                        //
-                        // For NIST P-521 key agreement, we use a single step key derivation function to derive
-                        // the final shared secret using the C25519 shared secret as a "salt." This should be
-                        // FIPS-compliant as per section 8.2 of:
-                        //
-                        // https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-56Cr2.pdf
-                        //
-                        // This is also stated in the following FAQ, which though it pertains to post-quantum
-                        // algorithms states that non-FIPS derived shared secrets can be used as salts in key
-                        // derivation from a FIPS-compliant algorithm derived shared secret:
-                        //
-                        // https://csrc.nist.gov/Projects/post-quantum-cryptography/faqs
-                        //
-                        // Hashing the C25519 secret with the P521 secret results in a secret that is as strong
-                        // as the stronger of the two algorithms. This should make the FIPS people happy and the
-                        // people who are paranoid about NIST curves happy.
-                        //
-                        Some(Secret(SHA384::hmac(c25519_secret().as_ref(), p521_secret.as_ref())))
-                    })
-                })
-            })
+    /// An error can occur if this identity does not hold its secret portion or if either key is invalid.
+    ///
+    /// If both sides have NIST P-521 keys then key agreement is performed using both Curve25519 and
+    /// NIST P-521 and the result is HMAC(Curve25519 secret, NIST P-521 secret).
+    pub fn agree(&self, other: &Identity) -> Option<Secret<48>> {
+        self.secret.as_ref().and_then(|secret| {
+            let c25519_secret = Secret(SHA512::hash(&secret.c25519.agree(&other.c25519).0));
+            // FIPS note: FIPS-compliant exchange algorithms must be the last algorithms in any HKDF chain
+            // for the final result to be technically FIPS compliant. Non-FIPS algorithm secrets are considered
+            // a salt in the HMAC(salt, key) HKDF construction.
+            if secret.p521.is_some() && other.p521.is_some() {
+                P521PublicKey::from_bytes(&other.p521.as_ref().unwrap().ecdh).and_then(|other_p521| secret.p521.as_ref().unwrap().ecdh.agree(&other_p521).map(|p521_secret| Secret(SHA384::hmac(&c25519_secret.0[0..48], &p521_secret.0))))
+            } else {
+                Some(Secret(array_range::<u8, 64, 0, 48>(&c25519_secret.0).clone()))
+            }
         })
     }
 
-    /// Sign this message with this identity.
-    pub fn sign(&self, msg: &[u8]) -> Option<Vec<u8>> {
-        self.secrets.as_ref().map_or(None, |secrets| {
-            let c25519_sig = secrets.ed25519.sign_zt(msg);
-            secrets.v1.as_ref().map_or_else(|| Some(c25519_sig.to_vec()), |p521_secret| p521_secret.1.sign(msg).map_or(None, |p521_sig| {
-                //
-                // For type 1 identity signatures we sign with both algorithms and append the Ed25519
-                // signature to the NIST P-521 signature. The Ed25519 signature is only checked if the
-                // P-521 signature validates. Note that we only append the first 64 bytes of sign_zt()
-                // output. For legacy reasons type 0 signatures include the first 32 bytes of the message
-                // hash after the signature, but this is not required and isn't included here.
-                //
-                // This should once again make both the FIPS people and the people paranoid about NIST
-                // curves happy.
-                //
-                let mut p521_sig = p521_sig.to_vec();
-                let _ = p521_sig.write_all(&c25519_sig[0..64]);
-                Some(p521_sig)
-            }))
+    /// Sign a message with this identity.
+    /// A return of None happens if we don't have our secret key(s) or some other error occurs.
+    pub fn sign(&self, msg: &[u8], use_cipher_suites: u8) -> Option<Vec<u8>> {
+        self.secret.as_ref().and_then(|secret| {
+            if (use_cipher_suites & IDENTITY_CIPHER_SUITE_EC_NIST_P521) != 0 && secret.p521.is_some() {
+                secret.p521.as_ref().unwrap().ecdsa.sign(msg).map(|sig| sig.to_vec())
+            } else {
+                Some(secret.ed25519.sign_zt(msg).to_vec())
+            }
         })
     }
 
-    /// Verify a signature.
+    /// Verify a signature against this identity.
     pub fn verify(&self, msg: &[u8], signature: &[u8]) -> bool {
-        self.v1.as_ref().map_or_else(|| {
-            zerotier_core_crypto::c25519::ed25519_verify(&self.ed25519, signature, msg)
-        }, |p521| {
-            signature.len() == IDENTITY_TYPE_1_SIGNATURE_SIZE && (*p521).1.verify(msg, &signature[0..P521_ECDSA_SIGNATURE_SIZE]) && zerotier_core_crypto::c25519::ed25519_verify(&self.ed25519, &signature[P521_ECDSA_SIGNATURE_SIZE..], msg)
-        })
+        if signature.len() == 64 || signature.len() == 96 {
+            ed25519_verify(&self.ed25519, signature, msg)
+        } else if signature.len() == P521_ECDSA_SIGNATURE_SIZE && self.p521.is_some() {
+            P521PublicKey::from_bytes(&self.p521.as_ref().unwrap().ecdsa).map_or(false, |p521_public| p521_public.verify(msg, signature))
+        } else {
+            false
+        }
     }
 
-    /// Get this identity's type.
-    #[inline(always)]
-    pub fn id_type(&self) -> IdentityType { if self.v1.is_some() { IdentityType::P521 } else { IdentityType::C25519 } }
+    pub fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>, include_cipher_suites: u8, include_private: bool) -> std::io::Result<()> {
+        let cipher_suites = self.cipher_suites() & include_cipher_suites;
 
-    /// Returns true if this identity also holds its secret keys.
-    #[inline(always)]
-    pub fn has_secrets(&self) -> bool { self.secrets.is_some() }
-
-    /// Erase secrets from this identity object, if present.
-    pub fn forget_secrets(&mut self) { let _ = self.secrets.take(); }
-
-    /// Append this in binary format to a buffer.
-    pub fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>, include_private: bool) -> std::io::Result<()> {
         buf.append_bytes_fixed(&self.address.to_bytes())?;
-        if self.v1.is_some() {
-            let p521 = self.v1.as_ref().unwrap();
-            buf.append_u8(1)?; // type 1
-            buf.append_bytes_fixed(&self.c25519)?;
-            buf.append_bytes_fixed(&self.ed25519)?;
-            buf.append_bytes_fixed((*p521).0.public_key_bytes())?;
-            buf.append_bytes_fixed((*p521).1.public_key_bytes())?;
-            buf.append_bytes_fixed(&(*p521).2)?;
-            buf.append_bytes_fixed(&(*p521).3)?;
-            if include_private && self.secrets.is_some() {
-                let secrets = self.secrets.as_ref().unwrap();
-                if secrets.v1.is_some() {
-                    let p521_secrets = secrets.v1.as_ref().unwrap();
-                    buf.append_u8(V1_SECRET_KEYS_SIZE as u8)?;
-                    buf.append_bytes_fixed(&secrets.c25519.secret_bytes().as_ref())?;
-                    buf.append_bytes_fixed(&secrets.ed25519.secret_bytes().as_ref())?;
-                    buf.append_bytes_fixed((*p521_secrets).0.secret_key_bytes().as_ref())?;
-                    buf.append_bytes_fixed((*p521_secrets).1.secret_key_bytes().as_ref())?;
-                }
-            } else {
-                buf.append_u8(0)?; // 0 secret bytes if not adding any
-            }
+        buf.append_u8(IDENTITY_CIPHER_SUITE_X25519)?;
+        buf.append_bytes_fixed(&self.c25519)?;
+        buf.append_bytes_fixed(&self.ed25519)?;
+        if include_private && self.secret.is_some() {
+            let secret = self.secret.as_ref().unwrap();
+            buf.append_u8((C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE) as u8)?;
+            buf.append_bytes_fixed(&secret.c25519.secret_bytes().0)?;
+            buf.append_bytes_fixed(&secret.ed25519.secret_bytes().0)?;
         } else {
-            buf.append_u8(0)?; // type 0
-            buf.append_bytes_fixed(&self.c25519)?;
-            buf.append_bytes_fixed(&self.ed25519)?;
-            if include_private && self.secrets.is_some() {
-                let secrets = self.secrets.as_ref().unwrap();
-                buf.append_u8((C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE) as u8)?;
-                buf.append_bytes_fixed(&secrets.c25519.secret_bytes().as_ref())?;
-                buf.append_bytes_fixed(&secrets.ed25519.secret_bytes().as_ref())?;
+            buf.append_u8(0)?;
+        }
+
+        if (cipher_suites & IDENTITY_CIPHER_SUITE_EC_NIST_P521) == IDENTITY_CIPHER_SUITE_EC_NIST_P521 && self.p521.is_some() {
+            let p521 = self.p521.as_ref().unwrap();
+            let size = if include_private && self.secret.map_or(false, |s| s.p521.is_some()) {
+                (P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE + P521_SECRET_KEY_SIZE + P521_SECRET_KEY_SIZE) as u16
             } else {
-                buf.append_u8(0)?; // 0 secret bytes if not adding any
+                (P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE) as u16
+            };
+            buf.append_u8(IDENTITY_CIPHER_SUITE_EC_NIST_P521)?;
+            buf.append_u16(size)?;
+            buf.append_bytes_fixed(&p521.ecdh)?;
+            buf.append_bytes_fixed(&p521.ecdsa)?;
+            buf.append_bytes_fixed(&p521.ecdsa_self_signature)?;
+            buf.append_bytes_fixed(&p521.ed25519_self_signature)?;
+            if size > (P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE) as u16 {
+                let p521s = self.secret.as_ref().unwrap().p521.as_ref().unwrap();
+                buf.append_bytes_fixed(&p521s.ecdh.secret_key_bytes().0)?;
+                buf.append_bytes_fixed(&p521s.ecdsa.secret_key_bytes().0)?;
             }
         }
+
         Ok(())
     }
 
-    /// Deserialize an Identity from a buffer.
-    /// The supplied cursor is advanced.
     pub fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> std::io::Result<Identity> {
-        let addr = Address::from_bytes(buf.read_bytes_fixed::<{ ADDRESS_SIZE }>(cursor)?);
-        if addr.is_none() {
+        let address = Address::from_bytes(buf.read_bytes_fixed::<ADDRESS_SIZE>(cursor)?);
+        if !address.is_some() {
             return std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid address"));
         }
-        let addr = addr.unwrap();
+        let address = address.unwrap();
 
-        let id_type = buf.read_u8(cursor)?;
-        if id_type == IdentityType::C25519 as u8 {
+        let mut x25519_public: Option<([u8; C25519_PUBLIC_KEY_SIZE], [u8; ED25519_PUBLIC_KEY_SIZE])> = None;
+        let mut x25519_secret: Option<([u8; C25519_SECRET_KEY_SIZE], [u8; ED25519_SECRET_KEY_SIZE])> = None;
+        let mut p521_ecdh_ecdsa_public: Option<([u8; P521_PUBLIC_KEY_SIZE], [u8; P521_PUBLIC_KEY_SIZE], [u8; P521_ECDSA_SIGNATURE_SIZE], [u8; ED25519_SIGNATURE_SIZE])> = None;
+        let mut p521_ecdh_ecdsa_secret: Option<([u8; P521_SECRET_KEY_SIZE], [u8; P521_SECRET_KEY_SIZE])> = None;
 
-            let c25519_public_bytes = buf.read_bytes_fixed::<{ C25519_PUBLIC_KEY_SIZE }>(cursor)?;
-            let ed25519_public_bytes = buf.read_bytes_fixed::<{ ED25519_PUBLIC_KEY_SIZE }>(cursor)?;
-            let secrets_len = buf.read_u8(cursor)?;
-            if secrets_len == (C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE) as u8 {
-                let c25519_secret_bytes = buf.read_bytes_fixed::<{ C25519_SECRET_KEY_SIZE }>(cursor)?;
-                let ed25519_secret_bytes = buf.read_bytes_fixed::<{ ED25519_SECRET_KEY_SIZE }>(cursor)?;
-                Ok(Identity {
-                    address: addr,
-                    c25519: c25519_public_bytes.clone(),
-                    ed25519: ed25519_public_bytes.clone(),
-                    v1: None,
-                    secrets: Some(IdentitySecrets {
-                        c25519: C25519KeyPair::from_bytes(c25519_public_bytes, c25519_secret_bytes).unwrap(),
-                        ed25519: Ed25519KeyPair::from_bytes(ed25519_public_bytes, ed25519_secret_bytes).unwrap(),
-                        v1: None,
-                    }),
-                })
-            } else if secrets_len == 0 {
-                Ok(Identity {
-                    address: addr,
-                    c25519: c25519_public_bytes.clone(),
-                    ed25519: ed25519_public_bytes.clone(),
-                    v1: None,
-                    secrets: None,
+        loop {
+            let cipher_suite = buf.read_u8(cursor);
+            if cipher_suite.is_err() {
+                break;
+            }
+            match cipher_suite.unwrap() {
+                IDENTITY_CIPHER_SUITE_X25519 => {
+                    let a = buf.read_bytes_fixed::<C25519_PUBLIC_KEY_SIZE>(cursor)?;
+                    let b = buf.read_bytes_fixed::<ED25519_PUBLIC_KEY_SIZE>(cursor)?;
+                    let _ = x25519_public.replace((a.clone(), b.clone()));
+                    let sec_size = buf.read_u8(cursor)?;
+                    if sec_size == (C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE) as u8 {
+                        let a = buf.read_bytes_fixed::<C25519_SECRET_KEY_SIZE>(cursor)?;
+                        let b = buf.read_bytes_fixed::<ED25519_SECRET_KEY_SIZE>(cursor)?;
+                        let _ = x25519_secret.replace((a.clone(), b.clone()));
+                    } else if sec_size != 0 {
+                        return std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid x25519 secret"));
+                    }
+                },
+                IDENTITY_CIPHER_SUITE_EC_NIST_P521 => {
+                    let size = buf.read_u16(cursor)?;
+                    if size < (P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE) as u16 {
+                        return std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid p521 key"));
+                    }
+                    let a = buf.read_bytes_fixed::<P521_PUBLIC_KEY_SIZE>(cursor)?;
+                    let b = buf.read_bytes_fixed::<P521_PUBLIC_KEY_SIZE>(cursor)?;
+                    let c = buf.read_bytes_fixed::<P521_ECDSA_SIGNATURE_SIZE>(cursor)?;
+                    let d = buf.read_bytes_fixed::<ED25519_SIGNATURE_SIZE>(cursor)?;
+                    let _ = p521_ecdh_ecdsa_public.replace((a.clone(), b.clone(), c.clone(), d.clone()));
+                    if size > (P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE) as u16 {
+                        if size != (P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE + P521_SECRET_KEY_SIZE + P521_SECRET_KEY_SIZE) as u16 {
+                            return std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid p521 key"));
+                        }
+                        let a = buf.read_bytes_fixed::<P521_SECRET_KEY_SIZE>(cursor)?;
+                        let b = buf.read_bytes_fixed::<P521_SECRET_KEY_SIZE>(cursor)?;
+                        let _ = p521_ecdh_ecdsa_secret.replace((a.clone(), b.clone()));
+                    }
+                },
+                _ => {
+                    // Skip any unrecognized cipher suites, all of which will be prefixed by a size.
+                    *cursor += buf.read_u16(cursor)? as usize;
+                    if *cursor > buf.len() {
+                        return std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid field length"));
+                    }
+                }
+            }
+        }
+
+        if x25519_public.is_none() {
+            return std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "x25519 key missing"));
+        }
+        let x25519_public = x25519_public.unwrap();
+        Ok(Identity {
+            address,
+            c25519: x25519_public.0.clone(),
+            ed25519: x25519_public.1.clone(),
+            p521: if p521_ecdh_ecdsa_public.is_some() {
+                let p521_ecdh_ecdsa_public = p521_ecdh_ecdsa_public.as_ref().unwrap();
+                Some(IdentityP521Public {
+                    ecdh: p521_ecdh_ecdsa_public.0.clone(),
+                    ecdsa: p521_ecdh_ecdsa_public.1.clone(),
+                    ecdsa_self_signature: p521_ecdh_ecdsa_public.2.clone(),
+                    ed25519_self_signature: p521_ecdh_ecdsa_public.3.clone()
                 })
             } else {
-                std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "unrecognized secret key length (type 0)"))
-            }
-
-        } else if id_type == IdentityType::P521 as u8 {
-
-            let c25519_public_bytes = buf.read_bytes_fixed::<{ C25519_PUBLIC_KEY_SIZE }>(cursor)?;
-            let ed25519_public_bytes = buf.read_bytes_fixed::<{ ED25519_PUBLIC_KEY_SIZE }>(cursor)?;
-            let p521_ecdh_public_bytes = buf.read_bytes_fixed::<{ P521_PUBLIC_KEY_SIZE }>(cursor)?;
-            let p521_ecdsa_public_bytes = buf.read_bytes_fixed::<{ P521_PUBLIC_KEY_SIZE }>(cursor)?;
-            let p521_signature = buf.read_bytes_fixed::<{ P521_ECDSA_SIGNATURE_SIZE }>(cursor)?;
-            let bh_digest = buf.read_bytes_fixed::<{ SHA384_HASH_SIZE }>(cursor)?;
-            let secrets_len = buf.read_u8(cursor)?;
-            if secrets_len == (C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE + P521_SECRET_KEY_SIZE + P521_SECRET_KEY_SIZE) as u8 {
-                let c25519_secret_bytes = buf.read_bytes_fixed::<{ C25519_SECRET_KEY_SIZE }>(cursor)?;
-                let ed25519_secret_bytes = buf.read_bytes_fixed::<{ ED25519_SECRET_KEY_SIZE }>(cursor)?;
-                let p521_ecdh_secret_bytes = buf.read_bytes_fixed::<{ P521_SECRET_KEY_SIZE }>(cursor)?;
-                let p521_ecdsa_secret_bytes = buf.read_bytes_fixed::<{ P521_SECRET_KEY_SIZE }>(cursor)?;
-                Ok(Identity {
-                    address: addr,
-                    c25519: c25519_public_bytes.clone(),
-                    ed25519: ed25519_public_bytes.clone(),
-                    v1: Some((P521PublicKey::from_bytes(p521_ecdh_public_bytes).unwrap(), P521PublicKey::from_bytes(p521_ecdsa_public_bytes).unwrap(), p521_signature.clone(), bh_digest.clone())),
-                    secrets: Some(IdentitySecrets {
-                        c25519: C25519KeyPair::from_bytes(c25519_public_bytes, c25519_secret_bytes).unwrap(),
-                        ed25519: Ed25519KeyPair::from_bytes(ed25519_public_bytes, ed25519_secret_bytes).unwrap(),
-                        v1: Some((P521KeyPair::from_bytes(p521_ecdh_public_bytes, p521_ecdh_secret_bytes).unwrap(), P521KeyPair::from_bytes(p521_ecdsa_public_bytes, p521_ecdsa_secret_bytes).unwrap())),
-                    }),
-                })
-            } else if secrets_len == 0 {
-                Ok(Identity {
-                    address: addr,
-                    c25519: c25519_public_bytes.clone(),
-                    ed25519: ed25519_public_bytes.clone(),
-                    v1: Some((P521PublicKey::from_bytes(p521_ecdh_public_bytes).unwrap(), P521PublicKey::from_bytes(p521_ecdsa_public_bytes).unwrap(), p521_signature.clone(), bh_digest.clone())),
-                    secrets: None,
+                None
+            },
+            secret: if x25519_secret.is_some() {
+                let x25519_secret = x25519_secret.unwrap();
+                let c25519_secret = C25519KeyPair::from_bytes(&x25519_public.0, &x25519_secret.0);
+                let ed25519_secret = Ed25519KeyPair::from_bytes(&x25519_public.1, &x25519_secret.1);
+                if c25519_secret.is_none() || ed25519_secret.is_none() {
+                    return std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "x25519 public key invalid"));
+                }
+                Some(IdentitySecret {
+                    c25519: c25519_secret.unwrap(),
+                    ed25519: ed25519_secret.unwrap(),
+                    p521: if p521_ecdh_ecdsa_secret.is_some() && p521_ecdh_ecdsa_public.is_some() {
+                        let p521_ecdh_ecdsa_public = p521_ecdh_ecdsa_public.as_ref().unwrap();
+                        let p521_ecdh_ecdsa_secret = p521_ecdh_ecdsa_secret.as_ref().unwrap();
+                        let p521_ecdh_secret = P521KeyPair::from_bytes(&p521_ecdh_ecdsa_public.0, &p521_ecdh_ecdsa_secret.0);
+                        let p521_ecdsa_secret = P521KeyPair::from_bytes(&p521_ecdh_ecdsa_public.1, &p521_ecdh_ecdsa_secret.1);
+                        if p521_ecdh_secret.is_none() || p521_ecdsa_secret.is_none() {
+                            return std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "p521 secret key invalid"));
+                        }
+                        Some(IdentityP521Secret {
+                            ecdh: p521_ecdh_secret.unwrap(),
+                            ecdsa: p521_ecdsa_secret.unwrap()
+                        })
+                    } else {
+                        None
+                    }
                 })
             } else {
-                std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid secret key length (type 1)"))
+                None
             }
+        })
+    }
 
+    /// Marshal this identity as a string with options to control which ciphers are included and whether private keys are included.
+    /// Note that x25519 ciphers are always included as they are required. Use IDENTITY_CIPHER_SUITE_INCLUDE_ALL for all.
+    pub fn to_string_with_options(&self, include_cipher_suites: u8, include_private: bool) -> String {
+        if include_private && self.secret.is_some() {
+            let secret = self.secret.as_ref().unwrap();
+            if (include_cipher_suites & IDENTITY_CIPHER_SUITE_EC_NIST_P521) == IDENTITY_CIPHER_SUITE_EC_NIST_P521 && secret.p521.is_some() && self.p521.is_some() {
+                let p521_secret = secret.p521.as_ref().unwrap();
+                let p521 = self.p521.as_ref().unwrap();
+                let p521_secret_joined: [u8; P521_SECRET_KEY_SIZE + P521_SECRET_KEY_SIZE] = concat_arrays_2(p521_secret.ecdh.public_key_bytes(), p521_secret.ecdsa.public_key_bytes());
+                let p521_joined: [u8; P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE] = concat_arrays_4(&p521.ecdh, &p521.ecdsa, &p521.ecdsa_self_signature, &p521.ed25519_self_signature);
+                format!("{}:0:{}{}:{}{}:1:{}:{}", self.address.to_string(), hex::to_string(&self.c25519), hex::to_string(&self.ed25519), hex::to_string(&secret.c25519.secret_bytes().0), hex::to_string(&secret.ed25519.secret_bytes().0), base64::encode_config(p521_joined, base64::URL_SAFE_NO_PAD), base64::encode_config(p521_secret_joined, base64::URL_SAFE_NO_PAD))
+            } else {
+                format!("{}:0:{}{}:{}{}", self.address.to_string(), hex::to_string(&self.c25519), hex::to_string(&self.ed25519), hex::to_string(&secret.c25519.secret_bytes().0), hex::to_string(&secret.ed25519.secret_bytes().0))
+            }
         } else {
-            std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "unrecognized identity type"))
+            self.p521.as_ref().map_or_else(|| {
+                format!("{}:0:{}{}", self.address.to_string(), hex::to_string(&self.c25519), hex::to_string(&self.ed25519))
+            }, |p521| {
+                let p521_joined: [u8; P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE] = concat_arrays_4(&p521.ecdh, &p521.ecdsa, &p521.ecdsa_self_signature, &p521.ed25519_self_signature);
+                format!("{}:0:{}{}::1:{}", self.address.to_string(), hex::to_string(&self.c25519), hex::to_string(&self.ed25519), base64::encode_config(p521_joined, base64::URL_SAFE_NO_PAD))
+            })
         }
     }
 
-    /// Get this identity in byte array format.
-    pub fn marshal_to_bytes(&self, include_private: bool) -> Vec<u8> {
-        let mut buf: Buffer<{ PACKET_SIZE_MAX }> = Buffer::new();
-        self.marshal(&mut buf, include_private).expect("overflow");
-        buf.as_bytes().to_vec()
-    }
-
-    /// Unmarshal an identity from a byte slice.
-    /// On success the identity and the number of bytes actually read from the slice are returned.
-    pub fn unmarshal_from_bytes(bytes: &[u8]) -> std::io::Result<(Identity, usize)> {
-        let mut cursor: usize = 0;
-        let id = Self::unmarshal(&Buffer::<2048>::from_bytes(bytes)?, &mut cursor)?;
-        Ok((id, cursor))
-    }
-
-    /// Get this identity in string format, including its secret keys.
-    pub fn to_secret_string(&self) -> String {
-        self.secrets.as_ref().map_or_else(|| self.to_string(), |secrets| {
-            secrets.v1.as_ref().map_or_else(|| {
-                format!("{}:{}{}", self.to_string(), crate::util::hex::to_string(secrets.c25519.public_bytes().as_ref()), crate::util::hex::to_string(secrets.ed25519.secret_bytes().as_ref()))
-            }, |p521_secret| {
-                let secrets_concat = concat_v1_secret_keys(&secrets.c25519.secret_bytes().0, &secrets.ed25519.secret_bytes().0, &p521_secret.0.secret_key_bytes().0, &p521_secret.1.secret_key_bytes().0);
-                format!("{}:{}", self.to_string(), base64::encode_config(secrets_concat, base64::URL_SAFE_NO_PAD))
-            })
-        })
-    }
+    /// Get this identity in string form with all ciphers and with secrets (if present)
+    pub fn to_secret_string(&self) -> String { self.to_string_with_options(IDENTITY_CIPHER_SUITE_INCLUDE_ALL, true) }
 }
 
 impl ToString for Identity {
-    fn to_string(&self) -> String {
-        self.v1.as_ref().map_or_else(|| {
-            format!("{:0>10x}:0:{}{}", self.address.to_u64(), crate::util::hex::to_string(&self.c25519), crate::util::hex::to_string(&self.ed25519))
-        }, |p521_public| {
-            let public_concat = concat_v1_public_all(&self.c25519, &self.ed25519, (*p521_public).0.public_key_bytes(), (*p521_public).1.public_key_bytes(), &(*p521_public).2, &(*p521_public).3);
-            format!("{:0>10x}:1:{}", self.address.to_u64(), base64::encode_config(public_concat, base64::URL_SAFE_NO_PAD))
-        })
-    }
+    /// Get only the public portion of this identity as a string, including all cipher suites.
+    #[inline(always)]
+    fn to_string(&self) -> String { self.to_string_with_options(IDENTITY_CIPHER_SUITE_INCLUDE_ALL, false) }
 }
 
 impl FromStr for Identity {
@@ -569,201 +474,206 @@ impl FromStr for Identity {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let fields_v: Vec<&str> = s.split(':').collect();
         let fields = fields_v.as_slice();
-        if fields.len() == 3 || fields.len() == 4 {
-            let addr = Address::from_str(fields[0])?;
-            if fields[1] == "0" {
-                let public_keys = crate::util::hex::from_string(fields[2]);
-                if public_keys.len() == (C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE) {
-                    let mut secrets: Option<IdentitySecrets> = None;
-                    if fields.len() == 4 {
-                        let secret_keys = crate::util::hex::from_string(fields[3]);
-                        if secret_keys.len() == (C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE) {
-                            let c25519_secret = C25519KeyPair::from_bytes(&public_keys.as_slice()[0..32], &secret_keys.as_slice()[0..32]);
-                            let ed25519_secret = Ed25519KeyPair::from_bytes(&public_keys.as_slice()[32..64], &secret_keys.as_slice()[32..64]);
-                            if c25519_secret.is_some() && ed25519_secret.is_some() {
-                                secrets = Some(IdentitySecrets {
-                                    c25519: c25519_secret.unwrap(),
-                                    ed25519: ed25519_secret.unwrap(),
-                                    v1: None,
-                                });
-                            } else {
-                                return Err(InvalidFormatError);
-                            }
-                        } else {
-                            return Err(InvalidFormatError);
-                        }
+
+        if fields.len() < 3 || fields[0].len() != ADDRESS_SIZE_STRING {
+            return Err(InvalidFormatError);
+        }
+        let address = Address::from_str(fields[0]).map_err(|_| InvalidFormatError)?;
+
+        // x25519 public, x25519 secret, p521 public, p521 secret
+        let mut keys: [Option<&str>; 4] = [None, None, None, None];
+
+        let mut ptr = 1;
+        let mut state = 0;
+        let mut key_ptr = 0;
+        while ptr < fields.len() {
+            match state {
+                0 => {
+                    if fields[ptr] == "0" {
+                        key_ptr = 0;
+                    } else if fields[ptr] == "1" {
+                        key_ptr = 2;
+                    } else {
+                        return Err(InvalidFormatError);
                     }
-                    return Ok(Identity {
-                        address: addr,
-                        c25519: public_keys.as_slice()[0..32].try_into().unwrap(),
-                        ed25519: public_keys.as_slice()[32..64].try_into().unwrap(),
-                        v1: None,
-                        secrets,
-                    });
-                }
-            } else if fields[1] == "1" {
-                let public_keys_and_sig = base64::decode_config(fields[2], base64::URL_SAFE_NO_PAD);
-                if public_keys_and_sig.is_ok() {
-                    let public_keys_and_sig = public_keys_and_sig.unwrap();
-                    if public_keys_and_sig.len() == V1_PUBLIC_KEYS_SIGNATURE_AND_POW_SIZE {
-                        let p521_ecdh_public = P521PublicKey::from_bytes(&public_keys_and_sig.as_slice()[(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE)..(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE)]);
-                        let p521_ecdsa_public = P521PublicKey::from_bytes(&public_keys_and_sig.as_slice()[(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE)..(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE)]);
-                        if p521_ecdh_public.is_some() && p521_ecdsa_public.is_some() {
-                            let p521_ecdh_public = p521_ecdh_public.unwrap();
-                            let p521_ecdsa_public = p521_ecdsa_public.unwrap();
-                            let mut secrets: Option<IdentitySecrets> = None;
-                            if fields.len() == 4 {
-                                let secret_keys = base64::decode_config(fields[3], base64::URL_SAFE_NO_PAD);
-                                if secret_keys.is_ok() {
-                                    let secret_keys = secret_keys.unwrap();
-                                    if secret_keys.len() == (C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE + P521_SECRET_KEY_SIZE + P521_SECRET_KEY_SIZE) {
-                                        let p521_ecdh_secret = P521KeyPair::from_bytes(p521_ecdh_public.public_key_bytes(), &secret_keys.as_slice()[(C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE)..(C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE + P521_SECRET_KEY_SIZE)]);
-                                        let p521_ecdsa_secret = P521KeyPair::from_bytes(p521_ecdsa_public.public_key_bytes(), &secret_keys.as_slice()[(C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE + P521_SECRET_KEY_SIZE)..(C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE + P521_SECRET_KEY_SIZE + P521_SECRET_KEY_SIZE)]);
-                                        if p521_ecdh_secret.is_some() && p521_ecdsa_secret.is_some() {
-                                            secrets = Some(IdentitySecrets {
-                                                c25519: C25519KeyPair::from_bytes(&public_keys_and_sig.as_slice()[0..32], &secret_keys.as_slice()[0..32]).unwrap(),
-                                                ed25519: Ed25519KeyPair::from_bytes(&public_keys_and_sig.as_slice()[32..64], &secret_keys.as_slice()[32..64]).unwrap(),
-                                                v1: Some((p521_ecdh_secret.unwrap(), p521_ecdsa_secret.unwrap())),
-                                            });
-                                        } else {
-                                            return Err(InvalidFormatError);
-                                        }
-                                    } else {
-                                        return Err(InvalidFormatError);
-                                    }
-                                } else {
-                                    return Err(InvalidFormatError);
-                                }
-                            }
-                            return Ok(Identity {
-                                address: addr,
-                                c25519: public_keys_and_sig.as_slice()[0..32].try_into().unwrap(),
-                                ed25519: public_keys_and_sig.as_slice()[32..64].try_into().unwrap(),
-                                v1: Some((
-                                    p521_ecdh_public,
-                                    p521_ecdsa_public,
-                                    public_keys_and_sig.as_slice()[(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE)..(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_ECDSA_SIGNATURE_SIZE)].try_into().unwrap(),
-                                    public_keys_and_sig.as_slice()[(C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_ECDSA_SIGNATURE_SIZE)..].try_into().unwrap()
-                                )),
-                                secrets,
-                            });
-                        }
-                    }
+                    state = 1;
+                },
+                1 | 2 => {
+                    let _ = keys[key_ptr].replace(fields[ptr]);
+                    key_ptr += 1;
+                    state = (state + 1) % 3;
+                },
+                _ => {
+                    return Err(InvalidFormatError);
                 }
             }
+            ptr += 1;
         }
-        Err(InvalidFormatError)
-    }
-}
 
-impl Clone for Identity {
-    fn clone(&self) -> Self {
-        let bytes = self.marshal_to_bytes(true);
-        Identity::unmarshal_from_bytes(bytes.as_slice()).unwrap().0
+        let keys = [hex::from_string(keys[0].unwrap_or("")), hex::from_string(keys[1].unwrap_or("")), base64::decode_config(keys[2].unwrap_or(""), base64::URL_SAFE_NO_PAD).unwrap_or_else(|_| Vec::new()), base64::decode_config(keys[3].unwrap_or(""), base64::URL_SAFE_NO_PAD).unwrap_or_else(|_| Vec::new())];
+        if keys[0].len() != C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE {
+            return Err(InvalidFormatError);
+        }
+        Ok(Identity {
+            address,
+            c25519: keys[0].as_slice()[0..32].try_into().unwrap(),
+            ed25519: keys[0].as_slice()[32..64].try_into().unwrap(),
+            p521: if keys[2].is_empty() {
+                None
+            } else {
+                if keys[2].len() != P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE {
+                    return Err(InvalidFormatError);
+                }
+                Some(IdentityP521Public {
+                    ecdh: keys[2].as_slice()[0..132].try_into().unwrap(),
+                    ecdsa: keys[2].as_slice()[132..264].try_into().unwrap(),
+                    ecdsa_self_signature: keys[2].as_slice()[264..396].try_into().unwrap(),
+                    ed25519_self_signature: keys[2].as_slice()[396..460].try_into().unwrap(),
+                })
+            },
+            secret: if keys[1].is_empty() {
+                None
+            } else {
+                if keys[1].len() != C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE {
+                    return Err(InvalidFormatError);
+                }
+                Some(IdentitySecret {
+                    c25519: {
+                        let tmp = C25519KeyPair::from_bytes(&keys[0].as_slice()[0..32], &keys[1].as_slice()[0..32]);
+                        if tmp.is_none() {
+                            return Err(InvalidFormatError);
+                        }
+                        tmp.unwrap()
+                    },
+                    ed25519: {
+                        let tmp = Ed25519KeyPair::from_bytes(&keys[0].as_slice()[32..64], &keys[1].as_slice()[32..64]);
+                        if tmp.is_none() {
+                            return Err(InvalidFormatError);
+                        }
+                        tmp.unwrap()
+                    },
+                    p521: if keys[3].is_empty() {
+                        None
+                    } else {
+                        if keys[2].len() != P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE {
+                            return Err(InvalidFormatError);
+                        }
+                        if keys[3].len() != P521_SECRET_KEY_SIZE + P521_SECRET_KEY_SIZE {
+                            return Err(InvalidFormatError);
+                        }
+                        Some(IdentityP521Secret {
+                            ecdh: {
+                                let tmp = P521KeyPair::from_bytes(&keys[2].as_slice()[0..132], &keys[3].as_slice()[..P521_SECRET_KEY_SIZE]);
+                                if tmp.is_none() {
+                                    return Err(InvalidFormatError);
+                                }
+                                tmp.unwrap()
+                            },
+                            ecdsa: {
+                                let tmp = P521KeyPair::from_bytes(&keys[2].as_slice()[132..264], &keys[3].as_slice()[P521_SECRET_KEY_SIZE..]);
+                                if tmp.is_none() {
+                                    return Err(InvalidFormatError);
+                                }
+                                tmp.unwrap()
+                            }
+                        })
+                    }
+                })
+            }
+        })
     }
 }
 
 impl PartialEq for Identity {
     fn eq(&self, other: &Self) -> bool {
-        self.address.eq(&other.address) && self.c25519.eq(&other.c25519) && self.ed25519.eq(&other.ed25519) && self.v1.as_ref().map_or_else(|| other.v1.is_none(), |v1| other.v1.as_ref().map_or(false, |other_v1| (*v1).0.eq(&(*other_v1).0) && (*v1).1.eq(&(*other_v1).1)))
+        self.address == other.address &&
+            self.c25519 == other.c25519 &&
+            self.ed25519 == other.ed25519 &&
+            self.p521.map_or(other.p521.is_none(), |p521| {
+                other.p521.map_or(false, |other_p521| {
+                    p521.ecdh == other_p521.ecdh && p521.ecdsa == other_p521.ecdsa
+                })
+            })
     }
 }
 
 impl Eq for Identity {}
+
+impl Ord for Identity {
+    fn cmp(&self, other: &Self) -> Ordering {
+        let addr_ord = self.address.cmp(&other.address);
+        match addr_ord {
+            Ordering::Equal => self.c25519.cmp(&other.c25519),
+            _ => addr_ord
+        }
+    }
+}
 
 impl PartialOrd for Identity {
     #[inline(always)]
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
 }
 
-impl Ord for Identity {
+const FRANKENHASH_POW_MEMORY_SIZE: usize = 2097152;
+
+/// This is a compound hasher used for the work function that derives an address.
+///
+/// FIPS note: addresses are just unique identifiers based on a hash. The actual key is
+/// what truly determines node identity. For FIPS purposes this can be considered a
+/// non-cryptographic hash. Its memory hardness and use in a work function is a defense
+/// in depth feature rather than a primary security feature.
+fn zt_frankenhash(digest: &mut [u8; 64], genmem_pool_obj: &mut Pooled<FrankenhashMemory, FrankenhashMemoryFactory>) {
+    let genmem_ptr = genmem_pool_obj.0.as_mut_ptr().cast::<u8>();
+    let (genmem, genmem_alias_hack) = unsafe { (&mut *slice_from_raw_parts_mut(genmem_ptr, FRANKENHASH_POW_MEMORY_SIZE), &*slice_from_raw_parts(genmem_ptr, FRANKENHASH_POW_MEMORY_SIZE)) };
+    let genmem_u64_ptr = genmem_ptr.cast::<u64>();
+
+    let mut s20 = Salsa::new(&digest[0..32], &digest[32..40], false).unwrap();
+
+    s20.crypt(&crate::util::ZEROES[0..64], &mut genmem[0..64]);
+    let mut i: usize = 64;
+    while i < FRANKENHASH_POW_MEMORY_SIZE {
+        let ii = i + 64;
+        s20.crypt(&genmem_alias_hack[(i - 64)..i], &mut genmem[i..ii]);
+        i = ii;
+    }
+
+    i = 0;
+    while i < (FRANKENHASH_POW_MEMORY_SIZE / 8) {
+        unsafe {
+            let idx1 = (((*genmem_u64_ptr.add(i)).to_be() & 7) * 8) as usize;
+            let idx2 = ((*genmem_u64_ptr.add(i + 1)).to_be() % (FRANKENHASH_POW_MEMORY_SIZE as u64 / 8)) as usize;
+            let genmem_u64_at_idx2_ptr = genmem_u64_ptr.add(idx2);
+            let tmp = *genmem_u64_at_idx2_ptr;
+            let digest_u64_ptr = digest.as_mut_ptr().add(idx1).cast::<u64>();
+            *genmem_u64_at_idx2_ptr = *digest_u64_ptr;
+            *digest_u64_ptr = tmp;
+        }
+        s20.crypt_in_place(digest);
+        i += 2;
+    }
+}
+
+#[repr(transparent)]
+struct FrankenhashMemory([u128; FRANKENHASH_POW_MEMORY_SIZE / 16]); // use u128 to align by 16 bytes
+
+struct FrankenhashMemoryFactory;
+
+impl PoolFactory<FrankenhashMemory> for FrankenhashMemoryFactory {
     #[inline(always)]
-    fn cmp(&self, other: &Self) -> Ordering {
-        let c = self.address.cmp(&other.address);
-        if c.is_eq() {
-            self.c25519.cmp(&other.c25519)
-        } else {
-            c
-        }
-    }
-}
+    fn create(&self) -> FrankenhashMemory { FrankenhashMemory([0_u128; FRANKENHASH_POW_MEMORY_SIZE / 16]) }
 
-impl Hash for Identity {
     #[inline(always)]
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        state.write_u64(self.address.to_u64());
-    }
+    fn reset(&self, _: &mut FrankenhashMemory) {}
 }
 
-#[cfg(test)]
-mod tests {
-    use std::str::FromStr;
-
-    use crate::vl1::identity::{Identity, IdentityType};
-
-    #[test]
-    fn type0() {
-        let id = Identity::generate(IdentityType::C25519);
-        //println!("V0: {}", id.to_string());
-        if !id.locally_validate() {
-            panic!("new V0 identity validation failed");
-        }
-        let sig = id.sign(&[1_u8]).unwrap();
-        //println!("sig: {}", crate::util::hex::to_string(sig.as_slice()));
-        if !id.verify(&[1_u8], sig.as_slice()) {
-            panic!("valid signature verification failed");
-        }
-        if id.verify(&[0_u8], sig.as_slice()) {
-            panic!("invalid signature verification succeeded");
-        }
-        for good_id in [
-            "7f3a8e50db:0:936b698c68f51508e9184f7510323a01da0e5778158244c83520614822e2352855ff4d82443823b866cdb553d02d8fa5da833fbee62472e666a60605b76194b9:0d46684e30d561c859bf7d530d2de0452605d8cf392db4beb2768ceda55e63673f11d84a9f31ce7504f0e3ce5dc9ab7ecf9662e555846d130422916482be5fbb",
-            "8bd225d6a9:0:08e7fc755ee0aa2e10bf37c0b8dd6f33b3164de04cf3f716584ee44df1fe9506ce1f3f2874c6d1450fc8fab339a95092ec7e628cddd26af93c4392e6564d9ee7:431bb44d22734d925538cbcdc7c2a80c0f71968041949f76ccb6f690f01b6cf45976071c86fcf2ddda2d463c8cfe6444b36c8ee0d057d665350acdcb86dff06f"
-        ] {
-            let id = Identity::from_str(good_id).unwrap();
-            if !id.locally_validate() {
-                panic!("known-good V0 identity failed local validation");
-            }
-            let id_bytes = id.marshal_to_bytes(true);
-            let id2 = Identity::unmarshal_from_bytes(id_bytes.as_slice()).unwrap().0;
-            if !id.eq(&id2) {
-                panic!("identity V0 marshal/unmarshal failed");
-            }
-        }
-    }
-
-    #[test]
-    fn type1() {
-        let start = std::time::SystemTime::now();
-        let id = Identity::generate(IdentityType::P521);
-        let end = std::time::SystemTime::now();
-        println!("V1 generate: {}ms {}", end.duration_since(start).unwrap().as_millis(), id.to_string());
-        if !id.locally_validate() {
-            panic!("new V1 identity validation failed");
-        }
-        let sig = id.sign(&[1_u8]).unwrap();
-        //println!("sig: {}", crate::util::hex::to_string(sig.as_slice()));
-        if !id.verify(&[1_u8], sig.as_slice()) {
-            panic!("valid signature verification failed");
-        }
-        if id.verify(&[0_u8], sig.as_slice()) {
-            panic!("invalid signature verification succeeded");
-        }
-        for good_id in [
-            "39ac93e603:1:kbBpk8QuSmNuSJFMLLXLbXcQMLXTMQOfGB8phFansHwxFrXO0RLNJB4HX4bHwq1UScYv2gVlwqmluH1J9_zp2gDaXD1c4jS17Zfdwz672wvkEMIRLUMxxxS4Cc4G7Xfhwpeot2qsslOTVw6h0FTM5izdH6ddnMmJGEg-84a_eQwSQgCNAYvczolmQg9D_MRp6wPdJdBFsnUMmj4F73jro4EGSAhE39AE8hPSxnLNOdhyRHriV5kMkIMsukJrQ09ZxKTmrQCvPzrzUrugkSu6BAqrXSm-h8S9tJo1TVIG0cSbBOK1nJsAoYhOq-T-hBvyqvKsFi9Wkz5bnG6NiYN95Yd38d2VRQBm4Xx7MPQDH0Yk10A1hc_dgyHtFGKjyTrpkKIBHICx_ijg3iS8Uut0aZpIb6pnOs1mZyjSCDLkSKJoNkxE8btHOwHzDIY0utnmsh6sCZ8wWUzYyXKfA506o7z1x57U4qxSI8-_cqZg6DUEoLb0idYanObcN9YmXdUtacpRoLhJTMlowQHqJK3_i0xh5P4UoBHuK7xST1Yu411y9keyZAie771kJFttzR3AHP89IEn0rbfbUZmAL1icL2LxWIq6kIXF6vdfgAHngQ-C1kjC3pXoWyvglJ7B33AfejmktuytTdGxe0ve1MhsXk0J3WIgokQ5rJPmAw",
-            "953f45090f:1:Ghn8_lcEX4bovP90tjJQ4oTXoCf5muJYVaC599_5RW6BN7IgGCsxodiN9U1Pq1_IDYnuJ98KmlPXksE77kvGrQCWK1BnhUFVthtkk7CkEsLdtMu5NqNK_1SVuxnfVCNNELBBIZMIl22YVw8PLTwlPcWUn16m9sAD9jqptUrwAmGUcQANpUiED6k3heqszrR9IjGVVYAcIOOHYJrVz13dv0-Ty6iyoNYG12AuSPd-7suG1Ztgt2Zll8c80BGUAib0-dgJBwF8fV8Bn_Sji6kz7qyp8566U6NkbAA4znM5UvrUPIw6O5016RuO8YzDLE_LKI_erwB2CjZsC0TDOFEppkPLSxDBWgBe1PRwnKTUhP9Bq7vYVbpBs_mEd4b7a-ilce8dX-dxJJwIXIioCdL6fZzA5KqfjW1pG-M72ct6iLCmq1R4b26eiwDG9z-HwX-fRVEkzDeE1rQ2bAEnqTNtzMTItAdzF62LiPOZlZ8LQ-fNTbdThphx58uKczo8Dl44R89d1l81yTKFbgGrUU6lw5qByH6VuLuprOn96sQLv4w6M8DPVnS_5E5AOIoXJ7KmEltIUz_B45ZzgDgPrBjE3-E2ipSSxQe72ADAkQL-D2uCtZVa-UhRFbjUqzBMoTu2NqHYotUoxCsbTVI1d3duD5NefnkjjmqVP0UJDw"
-        ] {
-            let id = Identity::from_str(good_id).unwrap();
-            if !id.locally_validate() {
-                panic!("known-good V1 identity failed local validation");
-            }
-            let id_bytes = id.marshal_to_bytes(true);
-            let id2 = Identity::unmarshal_from_bytes(id_bytes.as_slice()).unwrap().0;
-            if !id.eq(&id2) {
-                panic!("identity V1 marshal/unmarshal failed");
-            }
-        }
-    }
+lazy_static! {
+    static ref FRANKENHASH_POW_MEMORY_POOL: Pool<FrankenhashMemory, FrankenhashMemoryFactory> = Pool::new(0, FrankenhashMemoryFactory);
 }
 
- */
+/// Purge the memory pool used to verify identities. This can be called periodically
+/// from the maintenance function to prevent memory buildup from bursts of identity
+/// verification.
+#[inline(always)]
+pub(crate) fn purge_verification_memory_pool() {
+    unsafe { FRANKENHASH_POW_MEMORY_POOL.purge() };
+}

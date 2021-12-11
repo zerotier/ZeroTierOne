@@ -7,12 +7,12 @@
  */
 
 use std::convert::TryInto;
-use std::intrinsics::try;
 use std::mem::MaybeUninit;
 use std::num::NonZeroI64;
 use std::ptr::copy_nonoverlapping;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, AtomicU64, AtomicU8, Ordering};
+use libc::uname;
 
 use parking_lot::Mutex;
 
@@ -32,6 +32,7 @@ use crate::util::buffer::Buffer;
 use crate::util::pool::{Pool, PoolFactory};
 use crate::vl1::{Dictionary, Endpoint, Identity, InetAddress, Path};
 use crate::vl1::ephemeral::EphemeralSymmetricSecret;
+use crate::vl1::identity::{IDENTITY_CIPHER_SUITE_INCLUDE_ALL, IDENTITY_CIPHER_SUITE_X25519};
 use crate::vl1::node::*;
 use crate::vl1::protocol::*;
 use crate::vl1::symmetricsecret::SymmetricSecret;
@@ -71,12 +72,6 @@ pub struct Peer {
 
     // Static shared secret computed from agreement with identity.
     static_secret: SymmetricSecret,
-
-    // Derived static secret (in initialized cipher) used to encrypt the dictionary part of HELLO.
-    static_secret_hello_dictionary: Mutex<AesCtr>,
-
-    // Derived static secret used to add full HMAC-SHA384 to packets, currently just HELLO.
-    static_secret_packet_hmac: Secret<48>,
 
     // Latest ephemeral secret acknowledged with OK(HELLO).
     ephemeral_secret: Mutex<Option<Arc<EphemeralSymmetricSecret>>>,
@@ -130,7 +125,7 @@ fn salsa_derive_per_packet_key(key: &Secret<48>, header: &PacketHeader, packet_s
 #[inline(always)]
 fn salsa_poly_create(secret: &SymmetricSecret, header: &PacketHeader, packet_size: usize) -> (Salsa, Poly1305) {
     let key = salsa_derive_per_packet_key(&secret.key, header, packet_size);
-    let mut salsa = Salsa::new(&key.0[0..32], header.id_bytes(), true).unwrap();
+    let mut salsa = Salsa::new(&key.0[0..32], &header.id, true).unwrap();
     let mut poly1305_key = [0_u8; 32];
     salsa.crypt_in_place(&mut poly1305_key);
     (salsa, Poly1305::new(&poly1305_key).unwrap())
@@ -142,11 +137,15 @@ fn try_aead_decrypt(secret: &SymmetricSecret, packet_frag0_payload_bytes: &[u8],
         match header.cipher() {
             CIPHER_NOCRYPT_POLY1305 => {
                 if (verb & VERB_MASK) == VERB_VL1_HELLO {
+                    let mut total_packet_len = packet_frag0_payload_bytes.len() + PACKET_HEADER_SIZE;
+                    for f in fragments.iter() {
+                        total_packet_len += f.as_ref().map_or(0, |f| f.len());
+                    }
                     let _ = payload.append_bytes(packet_frag0_payload_bytes);
                     for f in fragments.iter() {
                         let _ = f.as_ref().map(|f| f.as_bytes_starting_at(FRAGMENT_HEADER_SIZE).map(|f| payload.append_bytes(f)));
                     }
-                    let (_, mut poly) = salsa_poly_create(secret, header, packet.len());
+                    let (_, mut poly) = salsa_poly_create(secret, header, total_packet_len);
                     poly.update(payload.as_bytes());
                     if poly.finish()[0..8].eq(&header.mac) {
                         *message_id = u64::from_ne_bytes(header.id);
@@ -161,7 +160,11 @@ fn try_aead_decrypt(secret: &SymmetricSecret, packet_frag0_payload_bytes: &[u8],
             }
 
             CIPHER_SALSA2012_POLY1305 => {
-                let (mut salsa, mut poly) = salsa_poly_create(secret, header, packet.len());
+                let mut total_packet_len = packet_frag0_payload_bytes.len() + PACKET_HEADER_SIZE;
+                for f in fragments.iter() {
+                    total_packet_len += f.as_ref().map_or(0, |f| f.len());
+                }
+                let (mut salsa, mut poly) = salsa_poly_create(secret, header, total_packet_len);
                 poly.update(packet_frag0_payload_bytes);
                 let _ = payload.append_bytes_get_mut(packet_frag0_payload_bytes.len()).map(|b| salsa.crypt(packet_frag0_payload_bytes, b));
                 for f in fragments.iter() {
@@ -196,7 +199,7 @@ fn try_aead_decrypt(secret: &SymmetricSecret, packet_frag0_payload_bytes: &[u8],
                     // AES-GMAC-SIV encrypts the packet ID too as part of its computation of a single
                     // opaque 128-bit tag, so to get the original packet ID we have to grab it from the
                     // decrypted tag.
-                    *mesasge_id = u64::from_ne_bytes(*array_range::<u8, 16, 0, 8>(tag));
+                    *message_id = u64::from_ne_bytes(*array_range::<u8, 16, 0, 8>(tag));
                     true
                 })
             }
@@ -215,8 +218,6 @@ impl Peer {
             Peer {
                 identity: id,
                 static_secret: SymmetricSecret::new(static_secret),
-                static_secret_hello_dictionary: Mutex::new(AesCtr::new(&static_secret_hello_dictionary.0[0..32])),
-                static_secret_packet_hmac,
                 ephemeral_secret: Mutex::new(None),
                 paths: Mutex::new(Vec::new()),
                 reported_local_ip: Mutex::new(None),
@@ -244,7 +245,7 @@ impl Peer {
     /// those fragments after the main packet header and first chunk.
     pub(crate) fn receive<CI: NodeInterface, PH: VL1PacketHandler>(&self, node: &Node, ci: &CI, ph: &PH, time_ticks: i64, source_path: &Arc<Path>, header: &PacketHeader, packet: &Buffer<{ PACKET_SIZE_MAX }>, fragments: &[Option<PacketBuffer>]) {
         let _ = packet.as_bytes_starting_at(PACKET_VERB_INDEX).map(|packet_frag0_payload_bytes| {
-            let mut payload: Buffer<PACKET_SIZE_MAX> = unsafe { Buffer::new_nozero() };
+            let mut payload: Buffer<PACKET_SIZE_MAX> = unsafe { Buffer::new_without_memzero() };
             let mut message_id = 0_u64;
             let ephemeral_secret: Option<Arc<EphemeralSymmetricSecret>> = self.ephemeral_secret.lock().clone();
             let forward_secrecy = if !ephemeral_secret.map_or(false, |ephemeral_secret| try_aead_decrypt(&ephemeral_secret.secret, packet_frag0_payload_bytes, header, fragments, &mut payload, &mut message_id)) {
@@ -269,7 +270,7 @@ impl Peer {
             if extended_authentication {
                 if payload.len() >= (1 + SHA384_HASH_SIZE) {
                     let actual_end_of_payload = payload.len() - SHA384_HASH_SIZE;
-                    let hmac = SHA384::hmac_multipart(self.static_secret_packet_hmac.as_ref(), &[u64_as_bytes(&message_id), payload.as_bytes()]);
+                    let hmac = SHA384::hmac_multipart(self.static_secret.packet_hmac_key.as_ref(), &[u64_as_bytes(&message_id), payload.as_bytes()]);
                     if !hmac.eq(&(payload.as_bytes()[actual_end_of_payload..])) {
                         return;
                     }
@@ -399,82 +400,78 @@ impl Peer {
 
     /// Send a HELLO to this peer.
     ///
-    /// If try_new_endpoint is not None the packet will be sent directly to this endpoint.
-    /// Otherwise it will be sent via the best direct or indirect path.
-    ///
-    /// This has its own send logic so it can handle either an explicit endpoint or a
-    /// known one.
-    pub(crate) fn send_hello<CI: NodeInterface>(&self, ci: &CI, node: &Node, explicit_endpoint: Option<Endpoint>) -> bool {
-        let path = if explicit_endpoint.is_none() { self.path(node) } else { None };
-        explicit_endpoint.as_ref().map_or_else(|| Some(path.as_ref().unwrap().endpoint()), |ep| Some(ep)).map_or(false, |endpoint| {
-            let mut packet: Buffer<{ PACKET_SIZE_MAX }> = Buffer::new();
-            let time_ticks = ci.time_ticks();
+    /// If explicit_endpoint is not None the packet will be sent directly to this endpoint.
+    /// Otherwise it will be sent via the best direct or indirect path known.
+    pub(crate) fn send_hello<CI: NodeInterface>(&self, ci: &CI, node: &Node, explicit_endpoint: Option<&Endpoint>) -> bool {
+        let (path, endpoint) = if explicit_endpoint.is_some() {
+            (None, explicit_endpoint.unwrap())
+        } else {
+            let p = self.path(node);
+            if p.is_none() {
+                return false;
+            }
+            (p, p.as_ref().unwrap().endpoint())
+        };
 
-            let message_id = self.next_message_id();
-            let packet_header: &mut PacketHeader = packet.append_struct_get_mut().unwrap();
-            let hello_fixed_headers: &mut message_component_structs::HelloFixedHeaderFields = packet.append_struct_get_mut().unwrap();
-            packet_header.id = message_id.to_ne_bytes(); // packet ID and message ID are the same when Poly1305 MAC is used
-            packet_header.dest = self.identity.address().to_bytes();
-            packet_header.src = node.address().to_bytes();
-            packet_header.flags_cipher_hops = CIPHER_NOCRYPT_POLY1305;
-            hello_fixed_headers.verb = VERB_VL1_HELLO | VERB_FLAG_EXTENDED_AUTHENTICATION;
-            hello_fixed_headers.version_proto = VERSION_PROTO;
-            hello_fixed_headers.version_major = VERSION_MAJOR;
-            hello_fixed_headers.version_minor = VERSION_MINOR;
-            hello_fixed_headers.version_revision = (VERSION_REVISION as u16).to_be();
-            hello_fixed_headers.timestamp = (time_ticks as u64).to_be();
+        let mut packet: Buffer<{ PACKET_SIZE_MAX }> = Buffer::new();
+        let time_ticks = ci.time_ticks();
 
-            debug_assert!(self.identity.marshal(&mut packet, false).is_ok());
-            debug_assert!(endpoint.marshal(&mut packet).is_ok());
+        let message_id = self.next_message_id();
+        let packet_header: &mut PacketHeader = packet.append_struct_get_mut().unwrap();
+        let hello_fixed_headers: &mut message_component_structs::HelloFixedHeaderFields = packet.append_struct_get_mut().unwrap();
 
-            // Write an IV for AES-CTR encryption of the dictionary and allocate two more
-            // bytes for reserved legacy use below.
-            let aes_ctr_iv_position = packet.len();
-            let aes_ctr_iv: &mut [u8; 18] = packet.append_bytes_fixed_get_mut().unwrap();
-            zerotier_core_crypto::random::fill_bytes_secure(&mut aes_ctr_iv[0..16]);
-            aes_ctr_iv[12] &= 0x7f; // mask off MSB of counter in iv to play nice with some AES-CTR implementations
+        packet_header.id = message_id.to_ne_bytes(); // packet ID and message ID are the same when Poly1305 MAC is used
+        packet_header.dest = self.identity.address.to_bytes();
+        packet_header.src = node.address().to_bytes();
+        packet_header.flags_cipher_hops = CIPHER_NOCRYPT_POLY1305;
 
-            // LEGACY: create a 16-bit encrypted field that specifies zero "moons." This is ignored now
-            // but causes old nodes to be able to parse this packet properly. This is not significant in
-            // terms of encryption or authentication and can disappear once old versions are dead. Newer
-            // versions ignore these bytes.
-            let mut salsa_iv = message_id.to_ne_bytes();
-            salsa_iv[7] &= 0xf8;
-            Salsa::new(&self.static_secret.secret.0[0..32], &salsa_iv, true).unwrap().crypt(&[0_u8, 0_u8], &mut aes_ctr_iv[16..18]);
+        hello_fixed_headers.verb = VERB_VL1_HELLO | VERB_FLAG_EXTENDED_AUTHENTICATION;
+        hello_fixed_headers.version_proto = VERSION_PROTO;
+        hello_fixed_headers.version_major = VERSION_MAJOR;
+        hello_fixed_headers.version_minor = VERSION_MINOR;
+        hello_fixed_headers.version_revision = (VERSION_REVISION as u16).to_be_bytes();
+        hello_fixed_headers.timestamp = (time_ticks as u64).to_be_bytes();
 
-            // Create dictionary that contains extended HELLO fields.
-            let dict_start_position = packet.len();
-            let mut dict = Dictionary::new();
-            dict.set_u64(HELLO_DICT_KEY_INSTANCE_ID, node.instance_id);
-            dict.set_u64(HELLO_DICT_KEY_CLOCK, ci.time_clock() as u64);
-            debug_assert!(dict.write_to(&mut packet).is_ok());
+        assert!(self.identity.marshal(&mut packet, IDENTITY_CIPHER_SUITE_INCLUDE_ALL, false).is_ok());
+        if self.identity.cipher_suites() == IDENTITY_CIPHER_SUITE_X25519 {
+            // LEGACY: append an extra zero when marshaling identities containing only
+            // x25519 keys. This is interpreted as an empty InetAddress by old nodes.
+            // This isn't needed if a NIST P-521 key or other new key types are present.
+            // See comments before IDENTITY_CIPHER_SUITE_EC_NIST_P521 in identity.rs.
+            assert!(packet.append_u8(0).is_ok());
+        }
 
-            // Encrypt extended fields with AES-CTR.
-            let mut dict_aes = self.static_secret_hello_dictionary.lock();
-            dict_aes.init(&packet.as_bytes()[aes_ctr_iv_position..aes_ctr_iv_position + 16]);
-            dict_aes.crypt_in_place(&mut packet.as_bytes_mut()[dict_start_position..]);
-            drop(dict_aes);
+        assert!(packet.append_u64(0).is_ok()); // reserved, must be zero for legacy compatibility
+        assert!(packet.append_u64(node.instance_id).is_ok());
 
-            // Append extended authentication HMAC.
-            debug_assert!(packet.append_bytes_fixed(&SHA384::hmac_multipart(self.static_secret_packet_hmac.as_ref(), &[u64_as_bytes(&message_id), &packet.as_bytes()[PACKET_HEADER_SIZE..]])).is_ok());
+        // LEGACY: create a 16-bit encrypted field that specifies zero "moons." This is ignored now
+        // but causes old nodes to be able to parse this packet properly. This is not significant in
+        // terms of encryption or authentication and can disappear once old versions are dead. Newer
+        // versions ignore these bytes.
+        let zero_moon_count = packet.append_bytes_fixed_get_mut::<2>().unwrap();
+        let mut salsa_iv = message_id.to_ne_bytes();
+        salsa_iv[7] &= 0xf8;
+        Salsa::new(&self.static_secret.key.0[0..32], &salsa_iv, true).unwrap().crypt(&[0_u8, 0_u8], zero_moon_count);
 
-            // Set outer packet MAC. We use legacy poly1305 for HELLO for backward
-            // compatibility, but note that newer nodes and roots will check the full
-            // HMAC-SHA384 above.
-            let (_, mut poly) = salsa_poly_create(&self.static_secret, packet.struct_at::<PacketHeader>(0).unwrap(), packet.len());
-            poly.update(packet.as_bytes_starting_at(PACKET_HEADER_SIZE).unwrap());
-            packet_header.mac.copy_from_slice(&poly.finish()[0..8]);
+        // Size of dictionary with optional fields, currently none. For future use.
+        assert!(packet.append_u16(0).is_ok());
 
-            self.static_secret.encrypt_count.fetch_add(1, Ordering::Relaxed);
-            self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
-            self.total_bytes_sent.fetch_add(packet.len() as u64, Ordering::Relaxed);
+        // Add full HMAC for strong authentication with newer nodes.
+        assert!(packet.append_bytes_fixed(&SHA384::hmac_multipart(&self.static_secret.packet_hmac_key.0, &[u64_as_bytes(&message_id), &packet.as_bytes()[PACKET_HEADER_SIZE..]])).is_ok());
 
-            path.as_ref().map_or_else(|| {
-                self.send_to_endpoint(ci, endpoint, None, None, &packet)
-            }, |path| {
-                path.log_send(time_ticks);
-                self.send_to_endpoint(ci, endpoint, path.local_socket(), path.local_interface(), &packet)
-            })
+        // LEGACY: set MAC field in header to poly1305 for older nodes.
+        let (_, mut poly) = salsa_poly_create(&self.static_secret, packet.struct_at::<PacketHeader>(0).unwrap(), packet.len());
+        poly.update(packet.as_bytes_starting_at(PACKET_HEADER_SIZE).unwrap());
+        packet_header.mac.copy_from_slice(&poly.finish()[0..8]);
+
+        self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
+        self.total_bytes_sent.fetch_add(packet.len() as u64, Ordering::Relaxed);
+
+        path.as_ref().map_or_else(|| {
+            self.send_to_endpoint(ci, endpoint, None, None, &packet)
+        }, |path| {
+            path.log_send(time_ticks);
+            self.send_to_endpoint(ci, endpoint, path.local_socket(), path.local_interface(), &packet)
         })
     }
 
@@ -491,16 +488,12 @@ impl Peer {
     fn receive_error<CI: NodeInterface, PH: VL1PacketHandler>(&self, ci: &CI, ph: &PH, node: &Node, time_ticks: i64, source_path: &Arc<Path>, forward_secrecy: bool, extended_authentication: bool, payload: &Buffer<{ PACKET_SIZE_MAX }>) {
         let mut cursor: usize = 0;
         let _ = payload.read_struct::<message_component_structs::ErrorHeader>(&mut cursor).map(|error_header| {
-            let in_re_packet_id = error_header.in_re_packet_id;
+            let in_re_message_id = u64::from_ne_bytes(error_header.in_re_message_id);
             let current_packet_id_counter = self.message_id_counter.load(Ordering::Relaxed);
-            if current_packet_id_counter.checked_sub(in_re_packet_id).map_or_else(|| {
-                (!in_re_packet_id).wrapping_add(current_packet_id_counter) < PACKET_RESPONSE_COUNTER_DELTA_MAX
-            }, |packets_ago| {
-                packets_ago <= PACKET_RESPONSE_COUNTER_DELTA_MAX
-            }) {
+            if current_packet_id_counter.wrapping_sub(in_re_message_id) <= PACKET_RESPONSE_COUNTER_DELTA_MAX {
                 match error_header.in_re_verb {
                     _ => {
-                        ph.handle_error(self, source_path, forward_secrecy, extended_authentication, error_header.in_re_verb, in_re_packet_id, error_header.error_code, payload, &mut cursor);
+                        ph.handle_error(self, source_path, forward_secrecy, extended_authentication, error_header.in_re_verb, in_re_message_id, error_header.error_code, payload, &mut cursor);
                     }
                 }
             }
@@ -511,20 +504,16 @@ impl Peer {
     fn receive_ok<CI: NodeInterface, PH: VL1PacketHandler>(&self, ci: &CI, ph: &PH, node: &Node, time_ticks: i64, source_path: &Arc<Path>, forward_secrecy: bool, extended_authentication: bool, payload: &Buffer<{ PACKET_SIZE_MAX }>) {
         let mut cursor: usize = 0;
         let _ = payload.read_struct::<message_component_structs::OkHeader>(&mut cursor).map(|ok_header| {
-            let in_re_packet_id = ok_header.in_re_packet_id;
+            let in_re_message_id = u64::from_ne_bytes(ok_header.in_re_message_id);
             let current_packet_id_counter = self.message_id_counter.load(Ordering::Relaxed);
-            if current_packet_id_counter.checked_sub(in_re_packet_id).map_or_else(|| {
-                (!in_re_packet_id).wrapping_add(current_packet_id_counter) < PACKET_RESPONSE_COUNTER_DELTA_MAX
-            }, |packets_ago| {
-                packets_ago <= PACKET_RESPONSE_COUNTER_DELTA_MAX
-            }) {
+            if current_packet_id_counter.wrapping_sub(in_re_message_id) <= PACKET_RESPONSE_COUNTER_DELTA_MAX {
                 match ok_header.in_re_verb {
                     VERB_VL1_HELLO => {
                     }
                     VERB_VL1_WHOIS => {
                     }
                     _ => {
-                        ph.handle_ok(self, source_path, forward_secrecy, extended_authentication, ok_header.in_re_verb, in_re_packet_id, payload, &mut cursor);
+                        ph.handle_ok(self, source_path, forward_secrecy, extended_authentication, ok_header.in_re_verb, in_re_message_id, payload, &mut cursor);
                     }
                 }
             }

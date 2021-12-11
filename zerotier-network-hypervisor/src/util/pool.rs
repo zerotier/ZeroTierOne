@@ -8,6 +8,7 @@
 
 use std::ptr::NonNull;
 use std::sync::{Arc, Weak};
+use std::sync::atomic::{AtomicIsize, Ordering};
 
 use parking_lot::Mutex;
 
@@ -22,7 +23,11 @@ struct PoolEntry<O, F: PoolFactory<O>> {
     return_pool: Weak<PoolInner<O, F>>,
 }
 
-struct PoolInner<O, F: PoolFactory<O>>(F, Mutex<Vec<NonNull<PoolEntry<O, F>>>>);
+struct PoolInner<O, F: PoolFactory<O>> {
+    factory: F,
+    pool: Mutex<Vec<NonNull<PoolEntry<O, F>>>>,
+    //outstanding_count: AtomicIsize
+}
 
 /// Container for pooled objects that have been checked out of the pool.
 ///
@@ -100,9 +105,9 @@ impl<O, F: PoolFactory<O>> Drop for Pooled<O, F> {
             let p = Weak::upgrade(&self.0.as_ref().return_pool);
             if p.is_some() {
                 let p = p.unwrap();
-                p.0.reset(&mut self.0.as_mut().obj);
-                let mut q = p.1.lock();
-                q.push(self.0.clone())
+                p.factory.reset(&mut self.0.as_mut().obj);
+                p.pool.lock().push(self.0);
+                //let _ = p.outstanding_count.fetch_sub(1, Ordering::Release);
             } else {
                 drop(Box::from_raw(self.0.as_ptr()))
             }
@@ -117,21 +122,52 @@ pub struct Pool<O, F: PoolFactory<O>>(Arc<PoolInner<O, F>>);
 
 impl<O, F: PoolFactory<O>> Pool<O, F> {
     pub fn new(initial_stack_capacity: usize, factory: F) -> Self {
-        Self(Arc::new(PoolInner::<O, F>(factory, Mutex::new(Vec::with_capacity(initial_stack_capacity)))))
+        Self(Arc::new(PoolInner::<O, F> {
+            factory,
+            pool: Mutex::new(Vec::with_capacity(initial_stack_capacity)),
+            //outstanding_count: AtomicIsize::new(0)
+        }))
     }
 
     /// Get a pooled object, or allocate one if the pool is empty.
     #[inline(always)]
     pub fn get(&self) -> Pooled<O, F> {
-        unsafe {
-            Pooled::<O, F>(self.0.1.lock().pop().unwrap_or_else(|| {
+        //let _ = self.0.outstanding_count.fetch_add(1, Ordering::Acquire);
+        Pooled::<O, F>(self.0.pool.lock().pop().unwrap_or_else(|| {
+            unsafe {
                 NonNull::new_unchecked(Box::into_raw(Box::new(PoolEntry::<O, F> {
-                    obj: self.0.0.create(),
+                    obj: self.0.factory.create(),
                     return_pool: Arc::downgrade(&self.0),
                 })))
-            }))
+            }
+        }))
+    }
+
+    /*
+    /// Get a pooled object, or allocate one if the pool is empty.
+    /// This will return None if there are more outstanding pooled objects than the limit.
+    /// The limit is exclusive, so a value of 0 will mean that only one outstanding
+    /// object will be permitted as in this case there were zero outstanding at time
+    /// of checkout.
+    #[inline(always)]
+    pub fn try_get(&self, outstanding_pooled_object_limit: usize) -> Option<Pooled<O, F>> {
+        let outstanding = self.0.outstanding_count.fetch_add(1, Ordering::Acquire);
+        debug_assert!(outstanding >= 0);
+        if outstanding as usize > outstanding_pooled_object_limit {
+            let _ = self.0.outstanding_count.fetch_sub(1, Ordering::Release);
+            None
+        } else {
+            Some(Pooled::<O, F>(self.0.pool.lock().pop().unwrap_or_else(|| {
+                unsafe {
+                    NonNull::new_unchecked(Box::into_raw(Box::new(PoolEntry::<O, F> {
+                        obj: self.0.pool.create(),
+                        return_pool: Arc::downgrade(&self.0),
+                    })))
+                }
+            })))
         }
     }
+    */
 
     /// Dispose of all pooled objects, freeing any memory they use.
     ///
@@ -139,7 +175,7 @@ impl<O, F: PoolFactory<O>> Pool<O, F> {
     /// objects will still be returned on drop unless the pool itself is dropped. This can
     /// be done to free some memory if there has been a spike in memory use.
     pub fn purge(&self) {
-        let mut p = self.0.1.lock();
+        let mut p = self.0.pool.lock();
         loop {
             let o = p.pop();
             if o.is_some() {

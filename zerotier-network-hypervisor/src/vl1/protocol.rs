@@ -22,9 +22,6 @@ pub const VERB_VL1_ECHO: u8 = 0x08;
 pub const VERB_VL1_PUSH_DIRECT_PATHS: u8 = 0x10;
 pub const VERB_VL1_USER_MESSAGE: u8 = 0x14;
 
-pub const HELLO_DICT_KEY_INSTANCE_ID: &'static str = "I";
-pub const HELLO_DICT_KEY_CLOCK: &'static str = "C";
-
 /// Default maximum payload size for UDP transport.
 ///
 /// This is small enough to traverse numerous weird networks including PPPoE and Google Cloud's
@@ -32,10 +29,7 @@ pub const HELLO_DICT_KEY_CLOCK: &'static str = "C";
 /// two fragments.
 pub const UDP_DEFAULT_MTU: usize = 1432;
 
-/// KBKDF usage label indicating a key used to encrypt the dictionary inside HELLO.
-pub const KBKDF_KEY_USAGE_LABEL_HELLO_DICTIONARY_ENCRYPT: u8 = b'H';
-
-/// KBKDF usage label indicating a key used to HMAC packets, which is currently only used for HELLO.
+/// KBKDF usage label indicating a key used to HMAC packets for extended authentication.
 pub const KBKDF_KEY_USAGE_LABEL_PACKET_HMAC: u8 = b'M';
 
 /// KBKDF usage label for the first AES-GMAC-SIV key.
@@ -61,6 +55,9 @@ pub const EPHEMERAL_SECRET_REJECT_AFTER_USES: u32 = 2147483648; // NIST/FIPS sec
 
 /// Length of an address in bytes.
 pub const ADDRESS_SIZE: usize = 5;
+
+/// Length of an address in string format.
+pub const ADDRESS_SIZE_STRING: usize = 10;
 
 /// Prefix indicating reserved addresses (that can't actually be addresses).
 pub const ADDRESS_RESERVED_PREFIX: u8 = 0xff;
@@ -174,6 +171,14 @@ pub const WHOIS_RETRY_MAX: u16 = 3;
 /// Maximum number of packets to queue up behind a WHOIS.
 pub const WHOIS_MAX_WAITING_PACKETS: usize = 64;
 
+/// Proof of work difficulty (threshold) for old v0 identities.
+pub const IDENTITY_V0_POW_THRESHOLD: u8 = 17;
+
+/// Proof of work difficulty (threshold) for new v1 identities.
+/// This is lower than the V0 threshold, causing the V0 part of V1 identities to
+/// verify on old nodes.
+pub const IDENTITY_V1_POW_THRESHOLD: u8 = 5;
+
 #[derive(Clone, Copy)]
 #[repr(u8)]
 pub enum EphemeralKeyAgreementAlgorithm {
@@ -277,7 +282,7 @@ impl PacketHeader {
     #[inline(always)]
     pub fn aes_gmac_siv_tag(&self) -> [u8; 16] {
         let mut id = unsafe { MaybeUninit::<[u8; 16]>::uninit().assume_init() };
-        id[0..8].copy_from_slice(self.id_bytes());
+        id[0..8].copy_from_slice(&self.id);
         id[8..16].copy_from_slice(&self.mac);
         id
     }
@@ -327,12 +332,11 @@ impl FragmentHeader {
 
 pub(crate) mod message_component_structs {
     use crate::util::buffer::RawObject;
-    use crate::vl1::protocol::PacketID;
 
     #[repr(packed)]
     pub struct OkHeader {
         pub in_re_verb: u8,
-        pub in_re_packet_id: PacketID,
+        pub in_re_message_id: [u8; 8],
     }
 
     unsafe impl RawObject for OkHeader {}
@@ -340,7 +344,7 @@ pub(crate) mod message_component_structs {
     #[repr(packed)]
     pub struct ErrorHeader {
         pub in_re_verb: u8,
-        pub in_re_packet_id: PacketID,
+        pub in_re_message_id: [u8; 8],
         pub error_code: u8,
     }
 
@@ -352,19 +356,19 @@ pub(crate) mod message_component_structs {
         pub version_proto: u8,
         pub version_major: u8,
         pub version_minor: u8,
-        pub version_revision: u16,
-        pub timestamp: u64,
+        pub version_revision: [u8; 2], // u16
+        pub timestamp: [u8; 8], // u64
     }
 
     unsafe impl RawObject for HelloFixedHeaderFields {}
 
     #[repr(packed)]
     pub struct OkHelloFixedHeaderFields {
-        pub timestamp_echo: u64,
+        pub timestamp_echo: [u8; 8], // u64
         pub version_proto: u8,
         pub version_major: u8,
         pub version_minor: u8,
-        pub version_revision: u16,
+        pub version_revision: [u8; 2], // u16
     }
 
     unsafe impl RawObject for OkHelloFixedHeaderFields {}
@@ -388,14 +392,5 @@ mod tests {
             (*foo.as_mut_ptr().cast::<PacketHeader>()).src[0] = 0xff;
             assert_eq!((*foo.as_ptr().cast::<FragmentHeader>()).fragment_indicator, 0xff);
         }
-
-        let bar = PacketHeader{
-            id: [1_u8, 2, 3, 4, 5, 6, 7, 8],
-            dest: [0_u8; 5],
-            src: [0_u8; 5],
-            flags_cipher_hops: 0,
-            mac: [0_u8; 8],
-        };
-        assert_eq!(bar.id_bytes().clone(), [1_u8, 2, 3, 4, 5, 6, 7, 8]);
     }
 }

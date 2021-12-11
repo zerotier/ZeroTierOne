@@ -39,11 +39,10 @@ impl<const L: usize> Buffer<L> {
     #[inline(always)]
     pub fn new() -> Self { Self(0, [0_u8; L]) }
 
-    /// Create a zero size buffer without zeroing its actual memory.
+    /// Create an empty buffer without zeroing its memory (saving a bit of CPU).
     #[inline(always)]
-    pub unsafe fn new_nozero() -> Self { Self(0, MaybeUninit::uninit().assume_init()) }
+    pub unsafe fn new_without_memzero() -> Self { Self(0, MaybeUninit::uninit().assume_init()) }
 
-    /// Get a Buffer initialized with a copy of a byte slice.
     #[inline(always)]
     pub fn from_bytes(b: &[u8]) -> std::io::Result<Self> {
         let l = b.len();
@@ -155,7 +154,7 @@ impl<const L: usize> Buffer<L> {
     /// Append a runtime sized array and return a mutable reference to its memory.
     pub fn append_bytes_get_mut(&mut self, s: usize) -> std::io::Result<&mut [u8]> {
         let ptr = self.0;
-        let end = ptr + l;
+        let end = ptr + s;
         if end <= L {
             self.0 = end;
             Ok(&mut self.1[ptr..end])
@@ -164,7 +163,6 @@ impl<const L: usize> Buffer<L> {
         }
     }
 
-    /// Append a dynamic byte slice (copy into buffer).
     #[inline(always)]
     pub fn append_bytes(&mut self, buf: &[u8]) -> std::io::Result<()> {
         let ptr = self.0;
@@ -178,7 +176,6 @@ impl<const L: usize> Buffer<L> {
         }
     }
 
-    /// Append a fixed length byte array (copy into buffer).
     #[inline(always)]
     pub fn append_bytes_fixed<const S: usize>(&mut self, buf: &[u8; S]) -> std::io::Result<()> {
         let ptr = self.0;
@@ -192,13 +189,11 @@ impl<const L: usize> Buffer<L> {
         }
     }
 
-    /// Append a variable length integer to this buffer.
     #[inline(always)]
     pub fn append_varint(&mut self, mut i: u64) -> std::io::Result<()> {
         crate::util::varint::write(self, i)
     }
 
-    /// Append a byte
     #[inline(always)]
     pub fn append_u8(&mut self, i: u8) -> std::io::Result<()> {
         let ptr = self.0;
@@ -211,42 +206,84 @@ impl<const L: usize> Buffer<L> {
         }
     }
 
-    /// Append a 16-bit integer (in big-endian form)
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))]
     #[inline(always)]
     pub fn append_u16(&mut self, i: u16) -> std::io::Result<()> {
         let ptr = self.0;
         let end = ptr + 2;
         if end <= L {
             self.0 = end;
-            crate::util::store_u16_be(i, &mut self.1[ptr..end]);
+            unsafe { *self.1.as_mut_ptr().add(ptr).cast::<u16>() = i };
             Ok(())
         } else {
             Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
         }
     }
 
-    /// Append a 32-bit integer (in big-endian form)
+    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64")))]
+    #[inline(always)]
+    pub fn append_u16(&mut self, i: u16) -> std::io::Result<()> {
+        let ptr = self.0;
+        let end = ptr + 2;
+        if end <= L {
+            self.0 = end;
+            self.1[ptr..end].copy_from_slice(&i.to_be_bytes());
+            Ok(())
+        } else {
+            Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
+        }
+    }
+
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))]
     #[inline(always)]
     pub fn append_u32(&mut self, i: u32) -> std::io::Result<()> {
         let ptr = self.0;
         let end = ptr + 4;
         if end <= L {
             self.0 = end;
-            crate::util::store_u32_be(i, &mut self.1[ptr..end]);
+            unsafe { *self.1.as_mut_ptr().add(ptr).cast::<u32>() = i };
             Ok(())
         } else {
             Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
         }
     }
 
-    /// Append a 64-bit integer (in big-endian form)
+    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64")))]
+    #[inline(always)]
+    pub fn append_u32(&mut self, i: u32) -> std::io::Result<()> {
+        let ptr = self.0;
+        let end = ptr + 4;
+        if end <= L {
+            self.0 = end;
+            self.1[ptr..end].copy_from_slice(&i.to_be_bytes());
+            Ok(())
+        } else {
+            Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
+        }
+    }
+
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))]
     #[inline(always)]
     pub fn append_u64(&mut self, i: u64) -> std::io::Result<()> {
         let ptr = self.0;
         let end = ptr + 8;
         if end <= L {
             self.0 = end;
-            crate::util::store_u64_be(i, &mut self.1[ptr..end]);
+            unsafe { *self.1.as_mut_ptr().add(ptr).cast::<u64>() = i };
+            Ok(())
+        } else {
+            Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
+        }
+    }
+
+    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64")))]
+    #[inline(always)]
+    pub fn append_u64(&mut self, i: u64) -> std::io::Result<()> {
+        let ptr = self.0;
+        let end = ptr + 8;
+        if end <= L {
+            self.0 = end;
+            self.1[ptr..end].copy_from_slice(&i.to_be_bytes());
             Ok(())
         } else {
             Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
@@ -277,7 +314,6 @@ impl<const L: usize> Buffer<L> {
         }
     }
 
-    /// Get a byte at a fixed position.
     #[inline(always)]
     pub fn u8_at(&self, ptr: usize) -> std::io::Result<u8> {
         if ptr < self.0 {
@@ -303,8 +339,6 @@ impl<const L: usize> Buffer<L> {
         }
     }
 
-    /// Get a fixed length byte array and advance the cursor.
-    /// This is slightly more efficient than reading a runtime sized byte slice.
     #[inline(always)]
     pub fn read_bytes_fixed<const S: usize>(&self, cursor: &mut usize) -> std::io::Result<&[u8; S]> {
         let ptr = *cursor;
@@ -320,7 +354,6 @@ impl<const L: usize> Buffer<L> {
         }
     }
 
-    /// Get a runtime specified length byte slice and advance the cursor.
     #[inline(always)]
     pub fn read_bytes(&self, l: usize, cursor: &mut usize) -> std::io::Result<&[u8]> {
         let ptr = *cursor;
@@ -334,7 +367,6 @@ impl<const L: usize> Buffer<L> {
         }
     }
 
-    /// Get the next variable length integer and advance the cursor by its length in bytes.
     #[inline(always)]
     pub fn read_varint(&self, cursor: &mut usize) -> std::io::Result<u64> {
         let c = *cursor;
@@ -350,7 +382,6 @@ impl<const L: usize> Buffer<L> {
         }
     }
 
-    /// Get the next u8 and advance the cursor.
     #[inline(always)]
     pub fn read_u8(&self, cursor: &mut usize) -> std::io::Result<u8> {
         let ptr = *cursor;
@@ -363,7 +394,7 @@ impl<const L: usize> Buffer<L> {
         }
     }
 
-    /// Get the next u16 and advance the cursor.
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))]
     #[inline(always)]
     pub fn read_u16(&self, cursor: &mut usize) -> std::io::Result<u16> {
         let ptr = *cursor;
@@ -371,13 +402,27 @@ impl<const L: usize> Buffer<L> {
         debug_assert!(end <= L);
         if end <= self.0 {
             *cursor = end;
-            Ok(u16::from_be_bytes(unsafe { *self.1.as_ptr().add(ptr).cast() }))
+            Ok((unsafe { *self.1.as_ptr().add(ptr).cast::<u16>() }).to_be())
         } else {
             Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
         }
     }
 
-    /// Get the next u32 and advance the cursor.
+    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64")))]
+    #[inline(always)]
+    pub fn read_u16(&self, cursor: &mut usize) -> std::io::Result<u16> {
+        let ptr = *cursor;
+        let end = ptr + 2;
+        debug_assert!(end <= L);
+        if end <= self.0 {
+            *cursor = end;
+            Ok(u16::from_be_bytes(*self.1[ptr..end]))
+        } else {
+            Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
+        }
+    }
+
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))]
     #[inline(always)]
     pub fn read_u32(&self, cursor: &mut usize) -> std::io::Result<u32> {
         let ptr = *cursor;
@@ -385,13 +430,27 @@ impl<const L: usize> Buffer<L> {
         debug_assert!(end <= L);
         if end <= self.0 {
             *cursor = end;
-            Ok(u32::from_be_bytes(unsafe { *self.1.as_ptr().add(ptr).cast() }))
+            Ok((unsafe { *self.1.as_ptr().add(ptr).cast::<u32>() }).to_be())
         } else {
             Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
         }
     }
 
-    /// Get the next u64 and advance the cursor.
+    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64")))]
+    #[inline(always)]
+    pub fn read_u32(&self, cursor: &mut usize) -> std::io::Result<u16> {
+        let ptr = *cursor;
+        let end = ptr + 4;
+        debug_assert!(end <= L);
+        if end <= self.0 {
+            *cursor = end;
+            Ok(u32::from_be_bytes(*self.1[ptr..end]))
+        } else {
+            Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
+        }
+    }
+
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))]
     #[inline(always)]
     pub fn read_u64(&self, cursor: &mut usize) -> std::io::Result<u64> {
         let ptr = *cursor;
@@ -399,7 +458,21 @@ impl<const L: usize> Buffer<L> {
         debug_assert!(end <= L);
         if end <= self.0 {
             *cursor = end;
-            Ok(u64::from_be_bytes(unsafe { *self.1.as_ptr().add(ptr).cast() }))
+            Ok((unsafe { *self.1.as_ptr().add(ptr).cast::<u64>() }).to_be())
+        } else {
+            Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
+        }
+    }
+
+    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64")))]
+    #[inline(always)]
+    pub fn read_u64(&self, cursor: &mut usize) -> std::io::Result<u16> {
+        let ptr = *cursor;
+        let end = ptr + 8;
+        debug_assert!(end <= L);
+        if end <= self.0 {
+            *cursor = end;
+            Ok(u64::from_be_bytes(*self.1[ptr..end]))
         } else {
             Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
         }

@@ -17,6 +17,7 @@ use zerotier_core_crypto::secret::Secret;
 use zerotier_core_crypto::hash::SHA384;
 
 use std::cmp::Ordering;
+use crate::vl1::identity::IDENTITY_CIPHER_SUITE_INCLUDE_ALL;
 
 /// Old "planet" type with Ed25519 authenticated updates from ZeroTier v1.
 const ROOT_SET_TYPE_LEGACY_PLANET: u8 = 1;
@@ -174,7 +175,7 @@ impl RootSet {
 
         buf.append_varint(self.roots.len() as u64)?;
         for root in self.roots.iter() {
-            root.identity.marshal(buf, false)?;
+            root.identity.marshal(buf, IDENTITY_CIPHER_SUITE_INCLUDE_ALL, false)?;
             if (self.type_ == ROOT_SET_TYPE_LEGACY_PLANET || self.type_ == ROOT_SET_TYPE_LEGACY_MOON) && root.endpoints.len() > 127 {
                 return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid legacy type root set"));
             }

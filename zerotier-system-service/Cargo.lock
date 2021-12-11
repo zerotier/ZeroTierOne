@@ -2219,6 +2219,7 @@ version = "2.0.0"
 dependencies = [
  "base64",
  "dashmap",
+ "lazy_static",
  "libc",
  "lz4_flex",
  "parking_lot",

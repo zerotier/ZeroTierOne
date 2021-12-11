@@ -365,20 +365,20 @@ impl InetAddress {
         unsafe {
             match self.sa.sa_family as u8 {
                 AF_INET => {
-                    buf.append_and_init_bytes_fixed(|b: &mut [u8; 7]| {
-                        b[0] = 4;
-                        copy_nonoverlapping((&self.sin.sin_addr.s_addr as *const u32).cast::<u8>(), b.as_mut_ptr().offset(1), 4);
-                        b[5] = *(&self.sin.sin_port as *const u16).cast::<u8>();
-                        b[6] = *(&self.sin.sin_port as *const u16).cast::<u8>().offset(1);
-                    })
+                    let b = buf.append_bytes_fixed_get_mut::<7>()?;
+                    b[0] = 4;
+                    copy_nonoverlapping((&self.sin.sin_addr.s_addr as *const u32).cast::<u8>(), b.as_mut_ptr().offset(1), 4);
+                    b[5] = *(&self.sin.sin_port as *const u16).cast::<u8>();
+                    b[6] = *(&self.sin.sin_port as *const u16).cast::<u8>().offset(1);
+                    Ok(())
                 }
                 AF_INET6 => {
-                    buf.append_and_init_bytes_fixed(|b: &mut [u8; 19]| {
-                        b[0] = 6;
-                        copy_nonoverlapping((&(self.sin6.sin6_addr) as *const in6_addr).cast::<u8>(), b.as_mut_ptr().offset(1), 16);
-                        b[17] = *(&self.sin6.sin6_port as *const u16).cast::<u8>();
-                        b[18] = *(&self.sin6.sin6_port as *const u16).cast::<u8>().offset(1);
-                    })
+                    let b = buf.append_bytes_fixed_get_mut::<19>()?;
+                    b[0] = 6;
+                    copy_nonoverlapping((&(self.sin6.sin6_addr) as *const in6_addr).cast::<u8>(), b.as_mut_ptr().offset(1), 16);
+                    b[17] = *(&self.sin6.sin6_port as *const u16).cast::<u8>();
+                    b[18] = *(&self.sin6.sin6_port as *const u16).cast::<u8>().offset(1);
+                    Ok(())
                 }
                 _ => buf.append_u8(0)
             }
@@ -389,10 +389,10 @@ impl InetAddress {
         let t = buf.read_u8(cursor)?;
         if t == 4 {
             let b: &[u8; 6] = buf.read_bytes_fixed(cursor)?;
-            Ok(InetAddress::from_ip_port(&b[0..4], crate::util::load_u16_be(&b[4..6])))
+            Ok(InetAddress::from_ip_port(&b[0..4], u16::from_be_bytes(b[4..6].try_into().unwrap())))
         } else if t == 6 {
             let b: &[u8; 18] = buf.read_bytes_fixed(cursor)?;
-            Ok(InetAddress::from_ip_port(&b[0..16], crate::util::load_u16_be(&b[16..18])))
+            Ok(InetAddress::from_ip_port(&b[0..16], u16::from_be_bytes(b[16..18].try_into().unwrap())))
         } else {
             Ok(InetAddress::new())
         }

@@ -36,8 +36,10 @@ impl EphemeralKeyPairSet {
     /// This contains key pairs for the asymmetric key agreement algorithms used and a
     /// timestamp used to enforce TTL.
     ///
-    /// SIDH is only used the first time and then 1/255 of remaining ratchet clicks because
-    /// it's slower than the others.
+    /// SIDH is only used once per ratchet sequence because it's much more CPU intensive
+    /// than ECDH. The threat model for SIDH is forward secrecy on the order of 5-15 years
+    /// from now when a quantum computer capable of attacking elliptic curve may exist,
+    /// it's incredibly unlikely that a p2p link would ever persist that long.
     pub fn new(local_address: Address, remote_address: Address, previous_ephemeral_secret: Option<&EphemeralSymmetricSecret>) -> Self {
         let (sidhp751, previous_ratchet_state) = previous_ephemeral_secret.map_or_else(|| {
             (
@@ -46,7 +48,7 @@ impl EphemeralKeyPairSet {
             )
         }, |previous_ephemeral_secret| {
             (
-                if previous_ephemeral_secret.ratchet_state[0] == 0 { Some(SIDHEphemeralKeyPair::generate(local_address, remote_address)) } else { None },
+                None,
                 Some(previous_ephemeral_secret.ratchet_state.clone())
             )
         });
