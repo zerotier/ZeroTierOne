@@ -122,7 +122,7 @@ impl Identity {
         let mut address;
         let mut c25519;
         let mut c25519_pub;
-        let mut genmem_pool_obj = unsafe { FRANKENHASH_POW_MEMORY_POOL.get() };
+        let mut genmem_pool_obj = unsafe { ADDRESS_DERVIATION_MEMORY_POOL.get() };
         loop {
             c25519 = C25519KeyPair::generate(false);
             c25519_pub = c25519.public_bytes();
@@ -130,7 +130,7 @@ impl Identity {
             sha.update(&c25519_pub);
             sha.update(&ed25519_pub);
             let mut digest = sha.finish();
-            zt_frankenhash(&mut digest, &mut genmem_pool_obj);
+            zt_address_derivation_memory_intensive_hash(&mut digest, &mut genmem_pool_obj);
 
             if digest[0] < IDENTITY_V1_POW_THRESHOLD {
                 let addr = Address::from_bytes(&digest[59..64]);
@@ -234,8 +234,8 @@ impl Identity {
         sha.update(&self.c25519);
         sha.update(&self.ed25519);
         let mut digest = sha.finish();
-        let mut genmem_pool_obj = unsafe { FRANKENHASH_POW_MEMORY_POOL.get() };
-        zt_frankenhash(&mut digest, &mut genmem_pool_obj);
+        let mut genmem_pool_obj = unsafe { ADDRESS_DERVIATION_MEMORY_POOL.get() };
+        zt_address_derivation_memory_intensive_hash(&mut digest, &mut genmem_pool_obj);
         drop(genmem_pool_obj);
 
         return digest[0] < pow_threshold && Address::from_bytes(&digest[59..64]).map_or(false, |a| a == self.address);
@@ -286,13 +286,14 @@ impl Identity {
 
     pub fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>, include_cipher_suites: u8, include_private: bool) -> std::io::Result<()> {
         let cipher_suites = self.cipher_suites() & include_cipher_suites;
+        let secret = self.secret.as_ref();
 
         buf.append_bytes_fixed(&self.address.to_bytes())?;
         buf.append_u8(IDENTITY_CIPHER_SUITE_X25519)?;
         buf.append_bytes_fixed(&self.c25519)?;
         buf.append_bytes_fixed(&self.ed25519)?;
-        if include_private && self.secret.is_some() {
-            let secret = self.secret.as_ref().unwrap();
+        if include_private && secret.is_some() {
+            let secret = secret.unwrap();
             buf.append_u8((C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE) as u8)?;
             buf.append_bytes_fixed(&secret.c25519.secret_bytes().0)?;
             buf.append_bytes_fixed(&secret.ed25519.secret_bytes().0)?;
@@ -302,7 +303,7 @@ impl Identity {
 
         if (cipher_suites & IDENTITY_CIPHER_SUITE_EC_NIST_P521) == IDENTITY_CIPHER_SUITE_EC_NIST_P521 && self.p521.is_some() {
             let p521 = self.p521.as_ref().unwrap();
-            let size = if include_private && self.secret.map_or(false, |s| s.p521.is_some()) {
+            let size = if include_private && secret.map_or(false, |s| s.p521.is_some()) {
                 (P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE + P521_SECRET_KEY_SIZE + P521_SECRET_KEY_SIZE) as u16
             } else {
                 (P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE) as u16
@@ -314,7 +315,7 @@ impl Identity {
             buf.append_bytes_fixed(&p521.ecdsa_self_signature)?;
             buf.append_bytes_fixed(&p521.ed25519_self_signature)?;
             if size > (P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE) as u16 {
-                let p521s = self.secret.as_ref().unwrap().p521.as_ref().unwrap();
+                let p521s = secret.unwrap().p521.as_ref().unwrap();
                 buf.append_bytes_fixed(&p521s.ecdh.secret_key_bytes().0)?;
                 buf.append_bytes_fixed(&p521s.ecdsa.secret_key_bytes().0)?;
             }
@@ -589,8 +590,8 @@ impl PartialEq for Identity {
         self.address == other.address &&
             self.c25519 == other.c25519 &&
             self.ed25519 == other.ed25519 &&
-            self.p521.map_or(other.p521.is_none(), |p521| {
-                other.p521.map_or(false, |other_p521| {
+            self.p521.as_ref().map_or(other.p521.is_none(), |p521| {
+                other.p521.as_ref().map_or(false, |other_p521| {
                     p521.ecdh == other_p521.ecdh && p521.ecdsa == other_p521.ecdsa
                 })
             })
@@ -614,7 +615,7 @@ impl PartialOrd for Identity {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
 }
 
-const FRANKENHASH_POW_MEMORY_SIZE: usize = 2097152;
+const ADDRESS_DERIVATION_HASH_MEMORY_SIZE: usize = 2097152;
 
 /// This is a compound hasher used for the work function that derives an address.
 ///
@@ -622,26 +623,26 @@ const FRANKENHASH_POW_MEMORY_SIZE: usize = 2097152;
 /// what truly determines node identity. For FIPS purposes this can be considered a
 /// non-cryptographic hash. Its memory hardness and use in a work function is a defense
 /// in depth feature rather than a primary security feature.
-fn zt_frankenhash(digest: &mut [u8; 64], genmem_pool_obj: &mut Pooled<FrankenhashMemory, FrankenhashMemoryFactory>) {
+fn zt_address_derivation_memory_intensive_hash(digest: &mut [u8; 64], genmem_pool_obj: &mut Pooled<AddressDerivationMemory, AddressDerivationMemoryFactory>) {
     let genmem_ptr = genmem_pool_obj.0.as_mut_ptr().cast::<u8>();
-    let (genmem, genmem_alias_hack) = unsafe { (&mut *slice_from_raw_parts_mut(genmem_ptr, FRANKENHASH_POW_MEMORY_SIZE), &*slice_from_raw_parts(genmem_ptr, FRANKENHASH_POW_MEMORY_SIZE)) };
+    let (genmem, genmem_alias_hack) = unsafe { (&mut *slice_from_raw_parts_mut(genmem_ptr, ADDRESS_DERIVATION_HASH_MEMORY_SIZE), &*slice_from_raw_parts(genmem_ptr, ADDRESS_DERIVATION_HASH_MEMORY_SIZE)) };
     let genmem_u64_ptr = genmem_ptr.cast::<u64>();
 
     let mut s20 = Salsa::new(&digest[0..32], &digest[32..40], false).unwrap();
 
     s20.crypt(&crate::util::ZEROES[0..64], &mut genmem[0..64]);
     let mut i: usize = 64;
-    while i < FRANKENHASH_POW_MEMORY_SIZE {
+    while i < ADDRESS_DERIVATION_HASH_MEMORY_SIZE {
         let ii = i + 64;
         s20.crypt(&genmem_alias_hack[(i - 64)..i], &mut genmem[i..ii]);
         i = ii;
     }
 
     i = 0;
-    while i < (FRANKENHASH_POW_MEMORY_SIZE / 8) {
+    while i < (ADDRESS_DERIVATION_HASH_MEMORY_SIZE / 8) {
         unsafe {
             let idx1 = (((*genmem_u64_ptr.add(i)).to_be() & 7) * 8) as usize;
-            let idx2 = ((*genmem_u64_ptr.add(i + 1)).to_be() % (FRANKENHASH_POW_MEMORY_SIZE as u64 / 8)) as usize;
+            let idx2 = ((*genmem_u64_ptr.add(i + 1)).to_be() % (ADDRESS_DERIVATION_HASH_MEMORY_SIZE as u64 / 8)) as usize;
             let genmem_u64_at_idx2_ptr = genmem_u64_ptr.add(idx2);
             let tmp = *genmem_u64_at_idx2_ptr;
             let digest_u64_ptr = digest.as_mut_ptr().add(idx1).cast::<u64>();
@@ -654,20 +655,20 @@ fn zt_frankenhash(digest: &mut [u8; 64], genmem_pool_obj: &mut Pooled<Frankenhas
 }
 
 #[repr(transparent)]
-struct FrankenhashMemory([u128; FRANKENHASH_POW_MEMORY_SIZE / 16]); // use u128 to align by 16 bytes
+struct AddressDerivationMemory([u128; ADDRESS_DERIVATION_HASH_MEMORY_SIZE / 16]); // use u128 to align by 16 bytes
 
-struct FrankenhashMemoryFactory;
+struct AddressDerivationMemoryFactory;
 
-impl PoolFactory<FrankenhashMemory> for FrankenhashMemoryFactory {
+impl PoolFactory<AddressDerivationMemory> for AddressDerivationMemoryFactory {
     #[inline(always)]
-    fn create(&self) -> FrankenhashMemory { FrankenhashMemory([0_u128; FRANKENHASH_POW_MEMORY_SIZE / 16]) }
+    fn create(&self) -> AddressDerivationMemory { AddressDerivationMemory([0_u128; ADDRESS_DERIVATION_HASH_MEMORY_SIZE / 16]) }
 
     #[inline(always)]
-    fn reset(&self, _: &mut FrankenhashMemory) {}
+    fn reset(&self, _: &mut AddressDerivationMemory) {}
 }
 
 lazy_static! {
-    static ref FRANKENHASH_POW_MEMORY_POOL: Pool<FrankenhashMemory, FrankenhashMemoryFactory> = Pool::new(0, FrankenhashMemoryFactory);
+    static ref ADDRESS_DERVIATION_MEMORY_POOL: Pool<AddressDerivationMemory, AddressDerivationMemoryFactory> = Pool::new(0, AddressDerivationMemoryFactory);
 }
 
 /// Purge the memory pool used to verify identities. This can be called periodically
@@ -675,5 +676,5 @@ lazy_static! {
 /// verification.
 #[inline(always)]
 pub(crate) fn purge_verification_memory_pool() {
-    unsafe { FRANKENHASH_POW_MEMORY_POOL.purge() };
+    unsafe { ADDRESS_DERVIATION_MEMORY_POOL.purge() };
 }

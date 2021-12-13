@@ -29,7 +29,7 @@ pub fn ms_monotonic() -> i64 {
     unsafe {
         let mut tb: mach::mach_time::mach_timebase_info_data_t = std::mem::zeroed();
         if mach::mach_time::mach_timebase_info(&mut tb) == 0 {
-            let mt = mach::mach_time::mach_continuous_approximate_time();
+            let mt = mach::mach_time::mach_continuous_approximate_time(); // ZT doesn't need it to be *that* exact, and this is faster
             (((mt as u128) * tb.numer as u128 * 1000000_u128) / (tb.denom as u128)) as i64 // milliseconds since X
         } else {
             panic!("FATAL: mach_timebase_info() failed");

@@ -22,6 +22,13 @@ pub(crate) fn array_range<T, const A: usize, const START: usize, const LEN: usiz
     unsafe { &*a.as_ptr().add(START).cast::<[T; LEN]>() }
 }
 
+/// Obtain a reference to a sub-array within an existing array.
+#[inline(always)]
+pub(crate) fn array_range_mut<T, const A: usize, const START: usize, const LEN: usize>(a: &mut [T; A]) -> &mut [T; LEN] {
+    assert!((START + LEN) <= A);
+    unsafe { &mut *a.as_mut_ptr().add(START).cast::<[T; LEN]>() }
+}
+
 #[inline(always)]
 pub(crate) fn u64_as_bytes(i: &u64) -> &[u8; 8] { unsafe { &*(i as *const u64).cast() } }
 

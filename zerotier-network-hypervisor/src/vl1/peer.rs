@@ -403,34 +403,26 @@ impl Peer {
     /// If explicit_endpoint is not None the packet will be sent directly to this endpoint.
     /// Otherwise it will be sent via the best direct or indirect path known.
     pub(crate) fn send_hello<CI: NodeInterface>(&self, ci: &CI, node: &Node, explicit_endpoint: Option<&Endpoint>) -> bool {
-        let (path, endpoint) = if explicit_endpoint.is_some() {
-            (None, explicit_endpoint.unwrap())
-        } else {
-            let p = self.path(node);
-            if p.is_none() {
-                return false;
-            }
-            (p, p.as_ref().unwrap().endpoint())
-        };
-
         let mut packet: Buffer<{ PACKET_SIZE_MAX }> = Buffer::new();
         let time_ticks = ci.time_ticks();
 
         let message_id = self.next_message_id();
-        let packet_header: &mut PacketHeader = packet.append_struct_get_mut().unwrap();
-        let hello_fixed_headers: &mut message_component_structs::HelloFixedHeaderFields = packet.append_struct_get_mut().unwrap();
-
-        packet_header.id = message_id.to_ne_bytes(); // packet ID and message ID are the same when Poly1305 MAC is used
-        packet_header.dest = self.identity.address.to_bytes();
-        packet_header.src = node.address().to_bytes();
-        packet_header.flags_cipher_hops = CIPHER_NOCRYPT_POLY1305;
-
-        hello_fixed_headers.verb = VERB_VL1_HELLO | VERB_FLAG_EXTENDED_AUTHENTICATION;
-        hello_fixed_headers.version_proto = VERSION_PROTO;
-        hello_fixed_headers.version_major = VERSION_MAJOR;
-        hello_fixed_headers.version_minor = VERSION_MINOR;
-        hello_fixed_headers.version_revision = (VERSION_REVISION as u16).to_be_bytes();
-        hello_fixed_headers.timestamp = (time_ticks as u64).to_be_bytes();
+        {
+            let packet_header: &mut PacketHeader = packet.append_struct_get_mut().unwrap();
+            packet_header.id = message_id.to_ne_bytes(); // packet ID and message ID are the same when Poly1305 MAC is used
+            packet_header.dest = self.identity.address.to_bytes();
+            packet_header.src = node.address().to_bytes();
+            packet_header.flags_cipher_hops = CIPHER_NOCRYPT_POLY1305;
+        }
+        {
+            let hello_fixed_headers: &mut message_component_structs::HelloFixedHeaderFields = packet.append_struct_get_mut().unwrap();
+            hello_fixed_headers.verb = VERB_VL1_HELLO | VERB_FLAG_EXTENDED_AUTHENTICATION;
+            hello_fixed_headers.version_proto = VERSION_PROTO;
+            hello_fixed_headers.version_major = VERSION_MAJOR;
+            hello_fixed_headers.version_minor = VERSION_MINOR;
+            hello_fixed_headers.version_revision = (VERSION_REVISION as u16).to_be_bytes();
+            hello_fixed_headers.timestamp = (time_ticks as u64).to_be_bytes();
+        }
 
         assert!(self.identity.marshal(&mut packet, IDENTITY_CIPHER_SUITE_INCLUDE_ALL, false).is_ok());
         if self.identity.cipher_suites() == IDENTITY_CIPHER_SUITE_X25519 {
@@ -462,16 +454,18 @@ impl Peer {
         // LEGACY: set MAC field in header to poly1305 for older nodes.
         let (_, mut poly) = salsa_poly_create(&self.static_secret, packet.struct_at::<PacketHeader>(0).unwrap(), packet.len());
         poly.update(packet.as_bytes_starting_at(PACKET_HEADER_SIZE).unwrap());
-        packet_header.mac.copy_from_slice(&poly.finish()[0..8]);
+        packet.as_mut_range_fixed::<HEADER_MAC_FIELD_INDEX, { HEADER_MAC_FIELD_INDEX + 8 }>().copy_from_slice(&poly.finish()[0..8]);
 
         self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
         self.total_bytes_sent.fetch_add(packet.len() as u64, Ordering::Relaxed);
 
-        path.as_ref().map_or_else(|| {
+        explicit_endpoint.map_or_else(|| {
+            self.path(node).map_or(false, |path| {
+                path.log_send(time_ticks);
+                self.send_to_endpoint(ci, path.endpoint(), path.local_socket(), path.local_interface(), &packet)
+            })
+        }, |endpoint| {
             self.send_to_endpoint(ci, endpoint, None, None, &packet)
-        }, |path| {
-            path.log_send(time_ticks);
-            self.send_to_endpoint(ci, endpoint, path.local_socket(), path.local_interface(), &packet)
         })
     }
 
