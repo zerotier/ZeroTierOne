@@ -292,14 +292,17 @@ static void _routeCmd(const char *op,const InetAddress &target,const InetAddress
 static bool _winRoute(bool del,const NET_LUID &interfaceLuid,const NET_IFINDEX &interfaceIndex,const InetAddress &target,const InetAddress &via)
 {
 	MIB_IPFORWARD_ROW2 rtrow;
+	const int ROUTE_METRIC = 5000;
 	InitializeIpForwardEntry(&rtrow);
 	rtrow.InterfaceLuid.Value = interfaceLuid.Value;
 	rtrow.InterfaceIndex = interfaceIndex;
+	rtrow.Metric = -1;
 	if (target.ss_family == AF_INET) {
 		rtrow.DestinationPrefix.Prefix.si_family = AF_INET;
 		rtrow.DestinationPrefix.Prefix.Ipv4.sin_family = AF_INET;
 		rtrow.DestinationPrefix.Prefix.Ipv4.sin_addr.S_un.S_addr = reinterpret_cast<const struct sockaddr_in *>(&target)->sin_addr.S_un.S_addr;
 		if (via.ss_family == AF_INET) {
+			rtrow.Metric = ROUTE_METRIC;
 			rtrow.NextHop.si_family = AF_INET;
 			rtrow.NextHop.Ipv4.sin_family = AF_INET;
 			rtrow.NextHop.Ipv4.sin_addr.S_un.S_addr = reinterpret_cast<const struct sockaddr_in *>(&via)->sin_addr.S_un.S_addr;
@@ -309,6 +312,7 @@ static bool _winRoute(bool del,const NET_LUID &interfaceLuid,const NET_IFINDEX &
 		rtrow.DestinationPrefix.Prefix.Ipv6.sin6_family = AF_INET6;
 		memcpy(rtrow.DestinationPrefix.Prefix.Ipv6.sin6_addr.u.Byte,reinterpret_cast<const struct sockaddr_in6 *>(&target)->sin6_addr.u.Byte,16);
 		if (via.ss_family == AF_INET6) {
+			rtrow.Metric = ROUTE_METRIC;
 			rtrow.NextHop.si_family = AF_INET6;
 			rtrow.NextHop.Ipv6.sin6_family = AF_INET6;
 			memcpy(rtrow.NextHop.Ipv6.sin6_addr.u.Byte,reinterpret_cast<const struct sockaddr_in6 *>(&via)->sin6_addr.u.Byte,16);
@@ -320,7 +324,7 @@ static bool _winRoute(bool del,const NET_LUID &interfaceLuid,const NET_IFINDEX &
 	rtrow.SitePrefixLength = rtrow.DestinationPrefix.PrefixLength;
 	rtrow.ValidLifetime = 0xffffffff;
 	rtrow.PreferredLifetime = 0xffffffff;
-	rtrow.Metric = -1;
+	
 	rtrow.Protocol = MIB_IPPROTO_NETMGMT;
 	rtrow.Loopback = FALSE;
 	rtrow.AutoconfigureAddress = FALSE;

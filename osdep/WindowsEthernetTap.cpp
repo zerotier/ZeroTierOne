@@ -568,6 +568,10 @@ WindowsEthernetTap::WindowsEthernetTap(
 									if (RegOpenKeyExA(HKEY_LOCAL_MACHINE,"SYSTEM\\CurrentControlSet\\services\\Tcpip\\Parameters\\Interfaces",0,KEY_READ|KEY_WRITE,&tcpIpInterfaces) == ERROR_SUCCESS) {
 										DWORD enable = 0;
 										RegSetKeyValueA(tcpIpInterfaces,_netCfgInstanceId.c_str(),"EnableDHCP",REG_DWORD,&enable,sizeof(enable));
+
+										DWORD metric = 3;
+										RegSetKeyValueA(tcpIpInterfaces, _netCfgInstanceId.c_str(), "InterfaceMetric", REG_DWORD, &metric, sizeof(metric));
+
 										RegCloseKey(tcpIpInterfaces);
 									}
 
