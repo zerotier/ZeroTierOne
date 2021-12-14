@@ -1769,7 +1769,8 @@ public:
 				if (basePolicyStr.empty()) {
 					fprintf(stderr, "error: no base policy was specified for custom policy (%s)\n", customPolicyStr.c_str());
 				}
-				if (_node->bondController()->getPolicyCodeByStr(basePolicyStr) == ZT_BOND_POLICY_NONE) {
+				int basePolicyCode = _node->bondController()->getPolicyCodeByStr(basePolicyStr);
+				if (basePolicyCode == ZT_BOND_POLICY_NONE) {
 					fprintf(stderr, "error: custom policy (%s) is invalid, unknown base policy (%s).\n",
 						customPolicyStr.c_str(), basePolicyStr.c_str());
 					continue;
@@ -1781,6 +1782,7 @@ public:
 				// New bond, used as a copy template for new instances
 				SharedPtr<Bond> newTemplateBond = new Bond(NULL, basePolicyStr, customPolicyStr, SharedPtr<Peer>());
 				// Acceptable ranges
+				newTemplateBond->setPolicy(basePolicyCode);
 				newTemplateBond->setMaxAcceptableLatency(OSUtils::jsonInt(customPolicy["maxAcceptableLatency"],-1));
 				newTemplateBond->setMaxAcceptableMeanLatency(OSUtils::jsonInt(customPolicy["maxAcceptableMeanLatency"],-1));
 				newTemplateBond->setMaxAcceptablePacketDelayVariance(OSUtils::jsonInt(customPolicy["maxAcceptablePacketDelayVariance"],-1));
@@ -1805,7 +1807,7 @@ public:
 				newTemplateBond->setUpDelay(OSUtils::jsonInt(customPolicy["upDelay"],-1));
 				newTemplateBond->setDownDelay(OSUtils::jsonInt(customPolicy["downDelay"],-1));
 				newTemplateBond->setFlowRebalanceStrategy(OSUtils::jsonInt(customPolicy["flowRebalanceStrategy"],(uint64_t)0));
-				newTemplateBond->setFailoverInterval(OSUtils::jsonInt(customPolicy["failoverInterval"],(uint64_t)0));
+				newTemplateBond->setFailoverInterval(OSUtils::jsonInt(customPolicy["failoverInterval"],ZT_BOND_FAILOVER_DEFAULT_INTERVAL));
 				newTemplateBond->setPacketsPerLink(OSUtils::jsonInt(customPolicy["packetsPerLink"],-1));
 
 				// Policy-Specific link set

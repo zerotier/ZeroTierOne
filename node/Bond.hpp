@@ -1000,12 +1000,12 @@ class Bond {
 	/**
 	 * @param policy Bonding policy for this bond
 	 */
-	/*
+
 	inline void setPolicy(uint8_t policy)
 	{
 		_policy = policy;
 	}
-*/
+
 	/**
 	 * @return the current bonding policy
 	 */

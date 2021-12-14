@@ -95,7 +95,6 @@ SharedPtr<Bond> Bond::createTransportTriggeredBond(const RuntimeEnvironment* ren
 	int64_t identity = peer->identity().address().toInt();
 	Bond* bond = nullptr;
 	if (! _bonds.count(identity)) {
-		std::string policyAlias;
 		if (! _policyTemplateAssignments.count(identity)) {
 			if (_defaultPolicy) {
 				bond = new Bond(renv, _defaultPolicy, peer);
@@ -1717,6 +1716,7 @@ void Bond::setBondParameters(int policy, SharedPtr<Bond> templateBond, bool useT
 	/* If a user has specified custom parameters for this bonding policy, overlay them onto the defaults */
 	if (useTemplate) {
 		_policyAlias = templateBond->_policyAlias;
+		_policy = templateBond->policy();
 		_failoverInterval = templateBond->_failoverInterval >= ZT_BOND_FAILOVER_MIN_INTERVAL ? templateBond->_failoverInterval : ZT_BOND_FAILOVER_MIN_INTERVAL;
 		_downDelay = templateBond->_downDelay;
 		_upDelay = templateBond->_upDelay;
