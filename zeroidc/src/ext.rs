@@ -2,7 +2,7 @@ use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use url::{Url};
 
-use crate::{AuthInfo, ZeroIDC};
+use crate::ZeroIDC;
 
 #[no_mangle]
 pub extern "C" fn zeroidc_new(
@@ -120,11 +120,10 @@ pub extern "C" fn zeroidc_get_exp_time(ptr: *mut ZeroIDC) -> u64 {
 // }
 
 #[no_mangle]
-pub extern "C" fn zeroidc_get_auth_info(
+pub extern "C" fn zeroidc_set_nonce_and_csrf(
     ptr: *mut ZeroIDC,
     csrf_token: *const c_char,
-    nonce: *const c_char,
-) -> *mut AuthInfo {
+    nonce: *const c_char) {
     let idc = unsafe {
         assert!(!ptr.is_null());
         &mut *ptr
@@ -132,12 +131,12 @@ pub extern "C" fn zeroidc_get_auth_info(
 
     if csrf_token.is_null() {
         println!("csrf_token is null");
-        return std::ptr::null_mut();
+        return;
     }
 
     if nonce.is_null() {
         println!("nonce is null");
-        return std::ptr::null_mut();
+        return;
     }
 
     let csrf_token = unsafe { CStr::from_ptr(csrf_token) }
@@ -148,47 +147,31 @@ pub extern "C" fn zeroidc_get_auth_info(
         .to_str()
         .unwrap()
         .to_string();
-
-    match idc.get_auth_info(csrf_token, nonce) {
-        Some(a) => Box::into_raw(Box::new(a)),
-        None => std::ptr::null_mut(),
-    }
+     
+    idc.set_nonce_and_csrf(csrf_token, nonce);
 }
 
 #[no_mangle]
-pub extern "C" fn zeroidc_auth_info_delete(ptr: *mut AuthInfo) {
-    if ptr.is_null() {
-        return;
-    }
-    unsafe {
-        Box::from_raw(ptr);
-    }
-}
-
-#[no_mangle]
-pub extern "C" fn zeroidc_get_auth_url(ptr: *mut AuthInfo) -> *const c_char {
+pub extern "C" fn zeroidc_get_auth_url(ptr: *mut ZeroIDC) -> *const c_char {
     if ptr.is_null() {
         println!("passed a null object");
         return std::ptr::null_mut();
     }
-    let ai = unsafe {
+    let idc = unsafe {
         &mut *ptr
     };
     
-    let s = CString::new(ai.url.to_string()).unwrap();
+    let s = CString::new(idc.auth_url()).unwrap();
     return s.into_raw();
 }
 
 #[no_mangle]
-pub extern "C" fn zeroidc_token_exchange(idc: *mut ZeroIDC, ai: *mut AuthInfo, code: *const c_char ) {
+pub extern "C" fn zeroidc_token_exchange(idc: *mut ZeroIDC, code: *const c_char ) {
     if idc.is_null() {
         println!("idc is null");
         return
     }
-    if ai.is_null() {
-        println!("ai is null");
-        return
-    }
+
     if code.is_null() {
         println!("code is null");
         return
@@ -196,12 +179,10 @@ pub extern "C" fn zeroidc_token_exchange(idc: *mut ZeroIDC, ai: *mut AuthInfo, c
     let idc = unsafe {
         &mut *idc
     };
-    let ai = unsafe {
-        &mut *ai
-    };
+
     let code = unsafe{CStr::from_ptr(code)}.to_str().unwrap();
 
-    idc.do_token_exchange(ai, code);
+    idc.do_token_exchange( code);
 }
 
 #[no_mangle]

@@ -30,6 +30,18 @@ struct Inner {
     access_token: Option<AccessToken>,
     refresh_token: Option<RefreshToken>,
     exp_time: u64,
+
+    url: Option<Url>,
+    csrf_token: Option<CsrfToken>,
+    nonce: Option<Nonce>,
+    pkce_verifier: Option<PkceCodeVerifier>,
+}
+
+impl Inner {
+    #[inline]
+    fn as_opt(&mut self) -> Option<&mut Inner> {
+        Some(self)
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -43,13 +55,6 @@ fn csrf_func(csrf_token: String) -> Box<dyn Fn() -> CsrfToken> {
 
 fn nonce_func(nonce: String) -> Box<dyn Fn() -> Nonce> {
     return Box::new(move || Nonce::new(nonce.to_string()));
-}
-
-pub struct AuthInfo {
-    url: Url,
-    csrf_token: CsrfToken,
-    nonce: Nonce,
-    pkce_verifier: Option<PkceCodeVerifier>,
 }
 
 fn systemtime_strftime<T>(dt: T, format: &str) -> String
@@ -87,6 +92,11 @@ impl ZeroIDC {
                 access_token: None,
                 refresh_token: None,
                 exp_time: 0,
+
+                url: None,
+                csrf_token: None,
+                nonce: None,
+                pkce_verifier: None, 
             })),
         };
 
@@ -264,102 +274,150 @@ impl ZeroIDC {
         return (*self.inner.lock().unwrap()).exp_time;
     }
 
-    fn do_token_exchange(&mut self, auth_info: &mut AuthInfo, code: &str) {
-        if let Some(verifier) = auth_info.pkce_verifier.take() {
-            let token_response = (*self.inner.lock().unwrap()).oidc_client.as_ref().map(|c| {
-                let r = c.exchange_code(AuthorizationCode::new(code.to_string()))
-                    .set_pkce_verifier(verifier)
-                    .request(http_client);
-                match r {
-                    Ok(res) =>{
-                         return Some(res);
-                    },
-                    Err(e) => {
-                        println!("token response error: {}", e.to_string());
-                        
-                        return None;
-                    },
-                }
-            });
-            // TODO: do stuff with token response
-            if let Some(Some(tok)) = token_response {
-                let id_token = tok.id_token().unwrap();
-                println!("ID token: {}", id_token.to_string());
-
-                let split = auth_info.csrf_token.secret().split("_");
-                let split = split.collect::<Vec<&str>>();
-                
-                let params = [("id_token", id_token.to_string()),("state", split[0].to_string())];
-                let client = reqwest::blocking::Client::new();
-                let res = client.post((*self.inner.lock().unwrap()).auth_endpoint.clone())
-                    .form(&params)
-                    .send();
-
-                match res {
-                    Ok(res) => {
-                        println!("hit url: {}", res.url().as_str());
-                        println!("Status: {}", res.status());
-
-                        let at = tok.access_token().secret();
-                        let exp = dangerous_insecure_decode::<Exp>(&at);
-                        if let Ok(e) = exp {
-                            (*self.inner.lock().unwrap()).exp_time = e.claims.exp
-                        }
-
-                        (*self.inner.lock().unwrap()).access_token = Some(tok.access_token().clone());
-                        if let Some(t) = tok.refresh_token() {
-                            (*self.inner.lock().unwrap()).refresh_token = Some(t.clone());
-                            self.start();
-                        }
-                    },
-                    Err(res) => {
-                        println!("hit url: {}", res.url().unwrap().as_str());
-                        println!("Status: {}", res.status().unwrap());
-                        println!("Post error: {}", res.to_string());
-                        (*self.inner.lock().unwrap()).exp_time = 0;
-                    }
-                }
-
-                let access_token = tok.access_token();
-                println!("Access Token: {}", access_token.secret());
-
-                let refresh_token = tok.refresh_token();
-                println!("Refresh Token: {}", refresh_token.unwrap().secret());
+    fn set_nonce_and_csrf(&mut self, csrf_token: String, nonce: String) {
+        let local = Arc::clone(&self.inner);
+        (*local.lock().expect("can't lock inner")).as_opt().map(|i| {
+            let mut csrf_diff = false;
+            let mut nonce_diff = false;
+            let mut need_verifier = false;
+        
+            match i.pkce_verifier {
+                None => {
+                    need_verifier = true;
+                },
+                _ => (),
             }
-        } else {
-            println!("No pkce verifier!  Can't exchange tokens!!!");
+            if let Some(csrf) = i.csrf_token.clone() {
+                if *csrf.secret() != csrf_token {
+                    csrf_diff = true;
+                }
+            }
+            if let Some(n) = i.nonce.clone() {
+                if *n.secret() != nonce {
+                    nonce_diff = true;
+                }
+            }
+
+            if need_verifier || csrf_diff || nonce_diff {
+                let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
+                let r = i.oidc_client.as_ref().map(|c| {
+                    let (auth_url, csrf_token, nonce) = c
+                    .authorize_url(
+                        AuthenticationFlow::<CoreResponseType>::AuthorizationCode,
+                        csrf_func(csrf_token),
+                        nonce_func(nonce),
+                    )
+                    .add_scope(Scope::new("profile".to_string()))
+                    .add_scope(Scope::new("email".to_string()))
+                    .add_scope(Scope::new("offline_access".to_string()))
+                    .add_scope(Scope::new("openid".to_string()))
+                    .set_pkce_challenge(pkce_challenge)
+                    .url();
+
+                    (auth_url, csrf_token, nonce)
+                });
+
+                if let Some(r) = r {
+                    i.url = Some(r.0);
+                    i.csrf_token = Some(r.1);
+                    i.nonce = Some(r.2);
+                    i.pkce_verifier = Some(pkce_verifier);
+                }
+            }
+        });
+    }
+
+    fn auth_url(&self) -> String {
+        let url = (*self.inner.lock().expect("can't lock inner")).as_opt().map(|i| {
+            match i.url.clone() {
+                Some(u) => u.to_string(),
+                _ => "".to_string(),
+            }
+        });
+
+        match url {
+            Some(url) => url.to_string(),
+            None => "".to_string(),
         }
     }
 
-    fn get_auth_info(&mut self, csrf_token: String, nonce: String) -> Option<AuthInfo> {
-        let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
-        let network_id = self.get_network_id();
+    fn do_token_exchange(&mut self, code: &str) {
+        let local = Arc::clone(&self.inner);
+        (*local.lock().unwrap()).as_opt().map(|i| {
+            if let Some(verifier) = i.pkce_verifier.take() {
+                let token_response = i.oidc_client.as_ref().map(|c| {
+                    let r = c.exchange_code(AuthorizationCode::new(code.to_string()))
+                        .set_pkce_verifier(verifier)
+                        .request(http_client);
+                    match r {
+                        Ok(res) =>{
+                            return Some(res);
+                        },
+                        Err(e) => {
+                            println!("token response error: {}", e.to_string());
+                            
+                            return None;
+                        },
+                    }
+                });
+                // TODO: do stuff with token response
+                if let Some(Some(tok)) = token_response {
+                    let id_token = tok.id_token().unwrap();
+                    println!("ID token: {}", id_token.to_string());
 
-        let r = (*self.inner.lock().unwrap()).oidc_client.as_ref().map(|c| {
-            let (auth_url, csrf_token, nonce) = c
-                .authorize_url(
-                    AuthenticationFlow::<CoreResponseType>::AuthorizationCode,
-                    csrf_func(csrf_token),
-                    nonce_func(nonce),
-                )
-                .add_scope(Scope::new("profile".to_string()))
-                .add_scope(Scope::new("email".to_string()))
-                .add_scope(Scope::new("offline_access".to_string()))
-                .add_scope(Scope::new("openid".to_string()))
-                .set_pkce_challenge(pkce_challenge)
-                .add_extra_param("network_id", network_id)
-                .url();
+                    let mut split = "".to_string();
+                    match i.csrf_token.clone() {
+                        Some(csrf_token) => {
+                            split = csrf_token.secret().to_owned();
+                        },
+                        _ => (),
+                    }
 
-            // println!("URL: {}", auth_url);
+                    let split = split.split("_").collect::<Vec<&str>>();
+                    
+                    if split.len() == 2 {
+                        let params = [("id_token", id_token.to_string()),("state", split[0].to_string())];
+                        let client = reqwest::blocking::Client::new();
+                        let res = client.post((*self.inner.lock().unwrap()).auth_endpoint.clone())
+                            .form(&params)
+                            .send();
 
-            return AuthInfo {
-                url: auth_url,
-                pkce_verifier: Some(pkce_verifier),
-                csrf_token,
-                nonce,
-            };
+                        match res {
+                            Ok(res) => {
+                                println!("hit url: {}", res.url().as_str());
+                                println!("Status: {}", res.status());
+
+                                let at = tok.access_token().secret();
+                                let exp = dangerous_insecure_decode::<Exp>(&at);
+                                if let Ok(e) = exp {
+                                    (*self.inner.lock().unwrap()).exp_time = e.claims.exp
+                                }
+
+                                (*self.inner.lock().unwrap()).access_token = Some(tok.access_token().clone());
+                                if let Some(t) = tok.refresh_token() {
+                                    (*self.inner.lock().unwrap()).refresh_token = Some(t.clone());
+                                    self.start();
+                                }
+                            },
+                            Err(res) => {
+                                println!("hit url: {}", res.url().unwrap().as_str());
+                                println!("Status: {}", res.status().unwrap());
+                                println!("Post error: {}", res.to_string());
+                                (*self.inner.lock().unwrap()).exp_time = 0;
+                            }
+                        }
+
+                        let access_token = tok.access_token();
+                        println!("Access Token: {}", access_token.secret());
+
+                        let refresh_token = tok.refresh_token();
+                        println!("Refresh Token: {}", refresh_token.unwrap().secret());
+                    } else {
+                        println!("invalid split length?!?");
+                    }
+                }
+            }
         });
-
-        r
     }
 }
+

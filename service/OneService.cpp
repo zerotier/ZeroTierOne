@@ -155,7 +155,6 @@ public:
 		: _webPort(9993)
 		, _tap((EthernetTap *)0)
 		, _idc(nullptr)
-		, _ainfo(nullptr)
 	{
 		// Real defaults are in network 'up' code in network event handler
 		_settings.allowManaged = true;
@@ -169,11 +168,6 @@ public:
 	{
 		this->_managedRoutes.clear();
 		this->_tap.reset();
-
-		if (_ainfo) {
-			zeroidc::zeroidc_auth_info_delete(_ainfo);
-			_ainfo = nullptr;
-		}
 
 		if (_idc) {
 			zeroidc::zeroidc_stop(_idc);
@@ -284,18 +278,13 @@ public:
 				// fprintf(stderr, "idc created (%s, %s, %s)\n", _config.issuerURL, _config.ssoClientID, _config.centralAuthURL);
 			}
 
-			if (_ainfo != nullptr) {
-				zeroidc::zeroidc_auth_info_delete(_ainfo);
-				_ainfo = nullptr;
-			}
-
-			_ainfo = zeroidc::zeroidc_get_auth_info(
+			zeroidc::zeroidc_set_nonce_and_csrf(
 				_idc,
 				_config.ssoState,
 				_config.ssoNonce
 			);
 
-			const char* url = zeroidc::zeroidc_get_auth_url(_ainfo);
+			const char* url = zeroidc::zeroidc_get_auth_url(_idc);
 			memcpy(_config.authenticationURL, url, strlen(url));
 			_config.authenticationURL[strlen(url)] = 0;
 		}
@@ -314,28 +303,27 @@ public:
 	}
 
 	const char* getAuthURL() {
-		if (_ainfo != nullptr) {
-			return zeroidc::zeroidc_get_auth_url(_ainfo);
+		if (_idc != nullptr) {
+			return zeroidc::zeroidc_get_auth_url(_idc);
 		}
-		fprintf(stderr, "_ainfo is null\n");
+		fprintf(stderr, "_idc is null\n");
 		return "";
 	}
 
 	void doTokenExchange(const char *code) {
-		if (_ainfo == nullptr || _idc == nullptr) {
+		if (_idc == nullptr) {
 			fprintf(stderr, "ainfo or idc null\n");
 			return;
 		}
 
-		zeroidc::zeroidc_token_exchange(_idc, _ainfo, code);
-		zeroidc::zeroidc_auth_info_delete(_ainfo);
-		_ainfo = zeroidc::zeroidc_get_auth_info(
+		zeroidc::zeroidc_token_exchange(_idc, code);
+		zeroidc::zeroidc_set_nonce_and_csrf(
 			_idc,
 			_config.ssoState,
 			_config.ssoNonce
 		);
 
-		const char* url = zeroidc::zeroidc_get_auth_url(_ainfo);
+		const char* url = zeroidc::zeroidc_get_auth_url(_idc);
 		memcpy(_config.authenticationURL, url, strlen(url));
 		_config.authenticationURL[strlen(url)] = 0;
 	}
@@ -357,7 +345,6 @@ private:
 	std::map< InetAddress, SharedPtr<ManagedRoute> > _managedRoutes;
 	OneService::NetworkSettings _settings;
 	zeroidc::ZeroIDC *_idc;
-	zeroidc::AuthInfo *_ainfo;
 };
 
 namespace {
