@@ -2249,7 +2249,7 @@ public:
 			}
 
 #ifdef __APPLE__
-			if (!MacDNSHelper::addIps(n.config.nwid, n.config.mac, n.tap->deviceName().c_str(), newManagedIps))
+			if (!MacDNSHelper::addIps(n.config().nwid, n.config().mac, n.tap()->deviceName().c_str(), newManagedIps))
 				fprintf(stderr, "ERROR: unable to add v6 addresses to system configuration" ZT_EOL_S);
 #endif
 #endif
