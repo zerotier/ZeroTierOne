@@ -409,7 +409,7 @@ void Peer::introduce(void *const tPtr,const int64_t now,const SharedPtr<Peer> &o
 					outp.append((uint8_t)4);
 					outp.append(_paths[mine].p->address().rawIpData(),4);
 				}
-				outp.armor(other->_key,true,aesKeysIfSupported());
+				outp.armor(other->_key,true,other->aesKeysIfSupported());
 				other->_paths[theirs].p->send(RR,tPtr,outp.data(),outp.size(),now);
 			}
 			++alt;
