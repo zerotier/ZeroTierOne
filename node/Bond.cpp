@@ -488,6 +488,10 @@ int32_t Bond::generateQoSPacket(int pathIdx, int64_t now, char* qosBuffer)
 
 bool Bond::assignFlowToBondedPath(SharedPtr<Flow>& flow, int64_t now)
 {
+        if (! _numBondedPaths) {
+                log("unable to assign flow %x (bond has no links)\n", flow->id);
+                return false;
+        }
 	unsigned int idx = ZT_MAX_PEER_NETWORK_PATHS;
 	if (_policy == ZT_BOND_POLICY_BALANCE_XOR) {
 		idx = abs((int)(flow->id % (_numBondedPaths)));
@@ -499,10 +503,6 @@ bool Bond::assignFlowToBondedPath(SharedPtr<Flow>& flow, int64_t now)
 		Utils::getSecureRandom(&entropy, 1);
 		if (_totalBondUnderload) {
 			entropy %= _totalBondUnderload;
-		}
-		if (! _numBondedPaths) {
-			log("unable to assign flow %x (bond has no links)\n", flow->id);
-			return false;
 		}
 		/* Since there may be scenarios where a path is removed before we can re-estimate
 		relative qualities (and thus allocations) we need to down-modulate the entropy
