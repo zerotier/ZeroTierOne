@@ -1,6 +1,11 @@
 ZeroTier Release Notes
 ======
 
+# 2021-12-15 -- Version 1.8.5
+
+ * Fix an issue that could cause self-hosted roots ("moons") to fail to assist peers in making direct links. (GitHub issue #1512)
+ * Merge a series of changes by Joseph Henry (of ZeroTier) that should fix some edge cases where ZeroTier would "forget" valid paths.
+
 # 2021-11-30 -- Version 1.8.4
 
  * Fixed an ugly font problem on some older macOS versions.

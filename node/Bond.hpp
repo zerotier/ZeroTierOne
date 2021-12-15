@@ -518,6 +518,7 @@ class Bond {
 
   public:
 	void dumpInfo(int64_t now, bool force);
+	std::string pathToStr(const SharedPtr<Path>& path);
 	void dumpPathStatus(int64_t now, int pathIdx);
 
 	SharedPtr<Link> getLink(const SharedPtr<Path>& path);
@@ -1000,12 +1001,12 @@ class Bond {
 	/**
 	 * @param policy Bonding policy for this bond
 	 */
-	/*
+
 	inline void setPolicy(uint8_t policy)
 	{
 		_policy = policy;
 	}
-*/
+
 	/**
 	 * @return the current bonding policy
 	 */
@@ -1138,6 +1139,7 @@ class Bond {
 	 */
 	void log(const char* fmt, ...)
 	{
+#ifdef ZT_TRACE
 		time_t rawtime;
 		struct tm* timeinfo;
 		char timestamp[80];
@@ -1157,6 +1159,7 @@ class Bond {
 		va_end(args);
 		RR->t->bondStateMessage(NULL, traceMsg);
 #undef MAX_MSG_LEN
+#endif
 	}
 
   private:
@@ -1428,7 +1431,7 @@ class Bond {
 
 	// path negotiation
 	int16_t _localUtility;
-	int negotiatedPathIdx;
+	int _negotiatedPathIdx;
 	uint8_t _numSentPathNegotiationRequests;
 	bool _allowPathNegotiation;
 
