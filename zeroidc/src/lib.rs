@@ -343,6 +343,7 @@ impl ZeroIDC {
 
     fn do_token_exchange(&mut self, code: &str) {
         let local = Arc::clone(&self.inner);
+        let mut should_start = false;
         (*local.lock().unwrap()).as_opt().map(|i| {
             if let Some(verifier) = i.pkce_verifier.take() {
                 let token_response = i.oidc_client.as_ref().map(|c| {
@@ -378,7 +379,7 @@ impl ZeroIDC {
                     if split.len() == 2 {
                         let params = [("id_token", id_token.to_string()),("state", split[0].to_string())];
                         let client = reqwest::blocking::Client::new();
-                        let res = client.post((*self.inner.lock().unwrap()).auth_endpoint.clone())
+                        let res = client.post(i.auth_endpoint.clone())
                             .form(&params)
                             .send();
 
@@ -390,20 +391,20 @@ impl ZeroIDC {
                                 let at = tok.access_token().secret();
                                 let exp = dangerous_insecure_decode::<Exp>(&at);
                                 if let Ok(e) = exp {
-                                    (*self.inner.lock().unwrap()).exp_time = e.claims.exp
+                                    i.exp_time = e.claims.exp
                                 }
 
-                                (*self.inner.lock().unwrap()).access_token = Some(tok.access_token().clone());
+                                i.access_token = Some(tok.access_token().clone());
                                 if let Some(t) = tok.refresh_token() {
-                                    (*self.inner.lock().unwrap()).refresh_token = Some(t.clone());
-                                    self.start();
+                                    i.refresh_token = Some(t.clone());
+                                    should_start = true;
                                 }
                             },
                             Err(res) => {
                                 println!("hit url: {}", res.url().unwrap().as_str());
                                 println!("Status: {}", res.status().unwrap());
                                 println!("Post error: {}", res.to_string());
-                                (*self.inner.lock().unwrap()).exp_time = 0;
+                                i.exp_time = 0;
                             }
                         }
 
@@ -418,6 +419,9 @@ impl ZeroIDC {
                 }
             }
         });
+        if should_start {
+            self.start();
+        }
     }
 }
 
