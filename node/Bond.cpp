@@ -762,6 +762,7 @@ void Bond::processBackgroundBondTasks(void* tPtr, int64_t now)
 					outp.armor(_peer->key(), true, _peer->aesKeysIfSupported());
 					RR->node->expectReplyTo(outp.packetId());
 					RR->node->putPacket(tPtr, _paths[i].p->localSocket(), _paths[i].p->address(), outp.data(), outp.size());
+					 _paths[i].p->_lastOut = now;
 					_overheadBytes += outp.size();
 					log("sent ECHO via link %s", pathToStr(_paths[i].p).c_str());
 				}
@@ -1708,7 +1709,14 @@ void Bond::dumpInfo(int64_t now, bool force)
 	_lastSummaryDump = now;
 	float overhead = (_overheadBytes / (timeSinceLastDump / 1000.0f) / 1000.0f);
 	_overheadBytes = 0;
-	log("bond: bp=%d, fi=%d, mi=%d, ud=%d, dd=%d, flows=%lu, overhead=%f KB/s", _policy, _failoverInterval, _monitorInterval, _upDelay, _downDelay, (unsigned long)_flows.size(), overhead);
+	log("bond: bp=%d, fi=%d, mi=%d, ud=%d, dd=%d, flows=%lu, overhead=%f KB/s",
+		_policy,
+		_failoverInterval,
+		_monitorInterval,
+		_upDelay,
+		_downDelay,
+		(unsigned long)_flows.size(),
+		overhead);
 	for (int i = 0; i < ZT_MAX_PEER_NETWORK_PATHS; ++i) {
 		if (_paths[i].p) {
 			dumpPathStatus(now, i);
