@@ -11,14 +11,14 @@ endif
 
 INCLUDES?=-Izeroidc/target
 DEFS?=
-LDLIBS?=zeroidc/target/release/libzeroidc.a -ldl
+LDLIBS?=
 DESTDIR?=
 
 include objects.mk
 ONE_OBJS+=osdep/LinuxEthernetTap.o
 ONE_OBJS+=osdep/LinuxNetLink.o
 
-# for central controller builds
+# for central controller buildsk
 TIMESTAMP=$(shell date +"%Y%m%d%H%M")
 
 # Auto-detect miniupnpc and nat-pmp as well and use system libs if present,
@@ -39,6 +39,12 @@ ifeq ($(wildcard /usr/include/natpmp.h),)
 else
 	LDLIBS+=-lnatpmp
 	override DEFS+=-DZT_USE_SYSTEM_NATPMP
+endif
+
+ifeq ($(ZT_DEBUG),1)
+	LDLIBS+=zeroidc/target/debug/libzeroidc.a -ldl
+else
+	LDLIBS+=zeroidc/target/release/libzeroidc.a -ldl
 endif
 
 # Use bundled http-parser since distribution versions are NOT API-stable or compatible!
@@ -64,6 +70,7 @@ ifeq ($(ZT_DEBUG),1)
 	override CFLAGS+=-Wall -Wno-deprecated -g -O -pthread $(INCLUDES) $(DEFS)
 	override CXXFLAGS+=-Wall -Wno-deprecated -g -O -std=c++11 -pthread $(INCLUDES) $(DEFS)
 	ZT_TRACE=1
+	RUSTFLAGS=
 	# The following line enables optimization for the crypto code, since
 	# C25519 in particular is almost UNUSABLE in -O0 even on a 3ghz box!
 node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CXXFLAGS=-Wall -O2 -g -pthread $(INCLUDES) $(DEFS)
@@ -73,6 +80,7 @@ else
 	CXXFLAGS?=-O3 -fstack-protector -fPIE
 	override CXXFLAGS+=-Wall -Wno-deprecated -std=c++11 -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 	LDFLAGS=-pie -Wl,-z,relro,-z,now
+	RUSTFLAGS=--release
 endif
 
 ifeq ($(ZT_QNAP), 1)
@@ -364,7 +372,7 @@ debug:	FORCE
 	make ZT_DEBUG=1 selftest
 
 zeroidc:	FORCE
-	cd zeroidc && cargo build --release
+	cd zeroidc && cargo build $(RUSTFLAGS)
 
 # Note: keep the symlinks in /var/lib/zerotier-one to the binaries since these
 # provide backward compatibility with old releases where the binaries actually
