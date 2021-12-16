@@ -458,7 +458,7 @@ static void _networkToJson(nlohmann::json &nj,NetworkState &ns)
 	nj["dns"] = m;
 	if (ns.config().ssoEnabled) {
 		const char* authURL = ns.getAuthURL();
-		fprintf(stderr, "Auth URL: %s\n", authURL);
+		//fprintf(stderr, "Auth URL: %s\n", authURL);
 		nj["authenticationURL"] = authURL;
 		nj["authenticationExpiryTime"] = (ns.getExpiryTime()*1000);
 		nj["ssoEnabled"] = ns.config().ssoEnabled;

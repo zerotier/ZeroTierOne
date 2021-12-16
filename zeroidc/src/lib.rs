@@ -7,7 +7,7 @@ extern crate time;
 extern crate url;
 
 use bytes::Bytes;
-use openidconnect::core::{CoreClient, CoreProviderMetadata, CoreResponseType};
+use jsonwebtoken::{dangerous_insecure_decode};use openidconnect::core::{CoreClient, CoreProviderMetadata, CoreResponseType};
 use openidconnect::reqwest::http_client;
 use openidconnect::{AccessToken, AuthorizationCode, AuthenticationFlow, ClientId, CsrfToken, IssuerUrl, Nonce, OAuth2TokenResponse, PkceCodeChallenge, PkceCodeVerifier, RedirectUrl, RefreshToken, Scope, TokenResponse};
 use serde::{Deserialize, Serialize};
@@ -17,10 +17,8 @@ use std::thread::{sleep, spawn, JoinHandle};
 use std::time::{SystemTime, UNIX_EPOCH, Duration};
 use time::{OffsetDateTime, format_description};
 
-use jsonwebtoken::{dangerous_insecure_decode};
 
 use url::Url;
-use time::ext::NumericalDuration;
 
 pub struct ZeroIDC {
     inner: Arc<Mutex<Inner>>,
@@ -164,7 +162,9 @@ impl ZeroIDC {
                     let exp = UNIX_EPOCH + Duration::from_secs((*inner_local.lock().unwrap()).exp_time);
                     let now = SystemTime::now();
 
-                    println!("refresh token thread tick, now: {}, exp: {}", systemtime_strftime(now, "[year]-[month]-[day] [hour]:[minute]:[second]"), systemtime_strftime(exp, "[year]-[month]-[day] [hour]:[minute]:[second]"));
+                    #[cfg(debug_assertions)] {
+                        println!("refresh token thread tick, now: {}, exp: {}", systemtime_strftime(now, "[year]-[month]-[day] [hour]:[minute]:[second]"), systemtime_strftime(exp, "[year]-[month]-[day] [hour]:[minute]:[second]"));
+                    }
                     let refresh_token = (*inner_local.lock().unwrap()).refresh_token.clone();
                     if let Some(refresh_token) =  refresh_token {
                         if now >= (exp - Duration::from_secs(30)) {
@@ -182,7 +182,9 @@ impl ZeroIDC {
                                             Some(id_token) => {
 
                                                 let params = [("id_token", id_token.to_string()),("state", "refresh".to_string())];
-                                                println!("New ID token: {}", id_token.to_string());
+                                                #[cfg(debug_assertions)] {
+                                                    println!("New ID token: {}", id_token.to_string());
+                                                }
                                                 let client = reqwest::blocking::Client::new();
                                                 let r = client.post((*inner_local.lock().unwrap()).auth_endpoint.clone())
                                                     .form(&params)
@@ -191,9 +193,10 @@ impl ZeroIDC {
                                                 match r {
                                                     Ok(r) => {
                                                         if r.status().is_success() {
-                                                            println!("hit url: {}", r.url().as_str());
-                                                            println!("status: {}", r.status());
-
+                                                            #[cfg(debug_assertions)] {
+                                                                println!("hit url: {}", r.url().as_str());
+                                                                println!("status: {}", r.status());
+                                                            }
 
                                                             let access_token = res.access_token();
                                                             let at = access_token.secret();
@@ -205,10 +208,12 @@ impl ZeroIDC {
 
                                                             (*inner_local.lock().unwrap()).access_token = Some(access_token.clone());
                                                             if let Some(t) = res.refresh_token() {
-                                                                println!("New Refresh Token: {}", t.secret());
+                                                                // println!("New Refresh Token: {}", t.secret());
                                                                 (*inner_local.lock().unwrap()).refresh_token = Some(t.clone());
                                                             }
-                                                            println!("Central post succeeded");
+                                                            #[cfg(debug_assertions)] {
+                                                                println!("Central post succeeded");
+                                                            }
                                                         } else {
                                                             println!("Central post failed: {}", r.status().to_string());
                                                             println!("hit url: {}", r.url().as_str());
@@ -218,10 +223,11 @@ impl ZeroIDC {
                                                         }
                                                     },
                                                     Err(e) => {
+                                                        
                                                         println!("Central post failed: {}", e.to_string());
                                                         println!("hit url: {}", e.url().unwrap().as_str());
                                                         println!("Status: {}", e.status().unwrap());
-                                                        // (*inner_local.lock().unwrap()).exp_time = 0;
+                                                        (*inner_local.lock().unwrap()).exp_time = 0;
                                                         (*inner_local.lock().unwrap()).running = false;
                                                     }
                                                 }
@@ -363,9 +369,11 @@ impl ZeroIDC {
                         Ok(res) =>{
                             return Some(res);
                         },
-                        Err(e) => {
-                            println!("token response error: {}", e.to_string());
-                            
+                        Err(_e) => {
+                            #[cfg(debug_assertions)] {
+                                println!("token response error: {}", _e.to_string());
+                            }
+
                             return None;
                         },
                     }
@@ -373,7 +381,9 @@ impl ZeroIDC {
                 
                 if let Some(Some(tok)) = token_response {
                     let id_token = tok.id_token().unwrap();
-                    println!("ID token: {}", id_token.to_string());
+                    #[cfg(debug_assertions)] {
+                        println!("ID token: {}", id_token.to_string());
+                    }
 
                     let mut split = "".to_string();
                     match i.csrf_token.clone() {
@@ -394,8 +404,10 @@ impl ZeroIDC {
 
                         match res {
                             Ok(res) => {
-                                println!("hit url: {}", res.url().as_str());
-                                println!("Status: {}", res.status());
+                                #[cfg(debug_assertions)] {
+                                    println!("hit url: {}", res.url().as_str());
+                                    println!("Status: {}", res.status());
+                                }
 
                                 let at = tok.access_token().secret();
                                 let exp = dangerous_insecure_decode::<Exp>(&at);
@@ -408,11 +420,13 @@ impl ZeroIDC {
                                     i.refresh_token = Some(t.clone());
                                     should_start = true;
                                 }
-                                let access_token = tok.access_token();
-                                println!("Access Token: {}", access_token.secret());
+                                #[cfg(debug_assertions)] {
+                                    let access_token = tok.access_token();
+                                    println!("Access Token: {}", access_token.secret());
 
-                                let refresh_token = tok.refresh_token();
-                                println!("Refresh Token: {}", refresh_token.unwrap().secret());
+                                    let refresh_token = tok.refresh_token();
+                                    println!("Refresh Token: {}", refresh_token.unwrap().secret());
+                                }
                         
                                 let bytes = match res.bytes() {
                                     Ok(bytes) => bytes,
