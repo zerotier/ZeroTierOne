@@ -1710,7 +1710,7 @@ div.icon {\
 <br><br><br><br><br><br>\
 <center>\
 <div class=\"icon\">&#x23c1;</div>\
-<div class=\"text\">Authentication Successful</div>\
+<div class=\"text\">Authentication Successful. You may now access the network.</div>\
 </center>\
 </body>\
 </html>";
