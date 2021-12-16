@@ -1675,8 +1675,47 @@ public:
 				if (_nets.find(id) != _nets.end()) {
 					NetworkState& ns = _nets[id];
 					const char* code = zeroidc::zeroidc_get_url_param_value("code", path.c_str());
-					res = json::parse(ns.doTokenExchange(code));
+					ns.doTokenExchange(code);
 					scode = 200;
+					responseBody = "<html>\
+<head>\
+<style type=\"text/css\">\
+html,body {\
+	background: #eeeeee;\
+	margin: 0;\
+	padding: 0;\
+	font-family: \"Helvetica\";\
+	font-weight: bold;\
+	font-size: 12pt;\
+	height: 100%;\
+	width: 100%;\
+}\
+div.icon {\
+	background: #ffb354;\
+	color: #000000;\
+	font-size: 120pt;\
+	border-radius: 2.5rem;\
+	display: inline-block;\
+	width: 1.3em;\
+	height: 1.3em;\
+	padding: 0;\
+	margin: 15;\
+	line-height: 1.4em;\
+	vertical-align: middle;\
+	text-align: center;\
+}\
+</style>\
+</head>\
+<body>\
+<br><br><br><br><br><br>\
+<center>\
+<div class=\"icon\">&#x23c1;</div>\
+<div class=\"text\">Authentication Successful</div>\
+</center>\
+</body>\
+</html>";
+					responseContentType = "text/html";
+					return scode;
 				} else {
 					scode = 404;
 				}
