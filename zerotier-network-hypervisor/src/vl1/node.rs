@@ -123,7 +123,7 @@ pub struct Node {
     pub(crate) instance_id: u64,
     identity: Identity,
     intervals: Mutex<BackgroundTaskIntervals>,
-    paths: DashMap<Endpoint, Arc<Path>>,
+    paths: DashMap<u128, Arc<Path>>,
     peers: DashMap<Address, Arc<Peer>>,
     roots: Mutex<Vec<Arc<Peer>>>,
     root_sets: Mutex<Vec<RootSet>>,
@@ -236,7 +236,7 @@ impl Node {
                     // Handle packets addressed to this node.
 
                     let path = self.path(source_endpoint, source_local_socket, source_local_interface);
-                    path.log_receive(time_ticks);
+                    path.log_receive_anything(time_ticks);
 
                     if fragment_header.is_fragment() {
 
@@ -251,7 +251,7 @@ impl Node {
                                         let source = source.unwrap();
                                         let peer = self.peer(source);
                                         if peer.is_some() {
-                                            peer.unwrap().receive(self, ci, ph, time_ticks, &path, &packet_header, frag0, &assembled_packet.frags[1..(assembled_packet.have as usize)]);
+                                            peer.unwrap().receive(self, ci, ph, time_ticks, source_endpoint, &path, &packet_header, frag0, &assembled_packet.frags[1..(assembled_packet.have as usize)]);
                                         } else {
                                             self.whois.query(self, ci, source, Some(QueuedPacket::Fragmented(assembled_packet)));
                                         }
@@ -270,7 +270,7 @@ impl Node {
                                 let source = source.unwrap();
                                 let peer = self.peer(source);
                                 if peer.is_some() {
-                                    peer.unwrap().receive(self, ci, ph, time_ticks, &path, &packet_header, data.as_ref(), &[]);
+                                    peer.unwrap().receive(self, ci, ph, time_ticks, source_endpoint, &path, &packet_header, data.as_ref(), &[]);
                                 } else {
                                     self.whois.query(self, ci, source, Some(QueuedPacket::Unfragmented(data)));
                                 }
@@ -315,9 +315,10 @@ impl Node {
     /// This is a canonicalizing function that returns a unique path object for every tuple
     /// of endpoint, local socket, and local interface.
     pub fn path(&self, ep: &Endpoint, local_socket: Option<NonZeroI64>, local_interface: Option<NonZeroI64>) -> Arc<Path> {
-        self.paths.get(ep).map_or_else(|| {
+        let key = Path::local_lookup_key(ep);
+        self.paths.get(&key).map_or_else(|| {
             let p = Arc::new(Path::new(ep.clone(), local_socket, local_interface));
-            self.paths.insert(ep.clone(), p.clone()).unwrap_or(p) // if another thread added one, return that instead
+            self.paths.insert(key, p.clone()).unwrap_or(p) // if another thread added one, return that instead
         }, |path| path.value().clone())
     }
 }

@@ -7,13 +7,18 @@
  */
 
 use std::collections::HashMap;
+use std::hash::Hasher;
+use std::io::Write;
 use std::num::NonZeroI64;
+use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, Ordering};
 
+use arc_swap::ArcSwap;
+use highway::HighwayHash;
 use parking_lot::Mutex;
 
 use crate::PacketBuffer;
-use crate::util::U64NoOpHasher;
+use crate::util::{highwayhasher, U64NoOpHasher};
 use crate::vl1::Endpoint;
 use crate::vl1::fragmentedpacket::FragmentedPacket;
 use crate::vl1::node::NodeInterface;
@@ -22,12 +27,18 @@ use crate::vl1::protocol::*;
 /// Keepalive interval for paths in milliseconds.
 pub(crate) const PATH_KEEPALIVE_INTERVAL: i64 = 20000;
 
+lazy_static! {
+    static mut RANDOM_64BIT_SALT_0: u64 = zerotier_core_crypto::random::next_u64_secure();
+    static mut RANDOM_64BIT_SALT_1: u64 = zerotier_core_crypto::random::next_u64_secure();
+    static mut RANDOM_64BIT_SALT_2: u64 = zerotier_core_crypto::random::next_u64_secure();
+}
+
 /// A remote endpoint paired with a local socket and a local interface.
 /// These are maintained in Node and canonicalized so that all unique paths have
 /// one and only one unique path object. That enables statistics to be tracked
 /// for them and uniform application of things like keepalives.
 pub struct Path {
-    endpoint: Endpoint,
+    endpoint: ArcSwap<Endpoint>,
     local_socket: Option<NonZeroI64>,
     local_interface: Option<NonZeroI64>,
     last_send_time_ticks: AtomicI64,
@@ -36,10 +47,42 @@ pub struct Path {
 }
 
 impl Path {
+    /// Get a 128-bit key to look up this endpoint in the local node path map.
+    #[inline(always)]
+    pub(crate) fn local_lookup_key(endpoint: &Endpoint, local_socket: Option<NonZeroI64>, local_interface: Option<NonZeroI64>) -> u128 {
+        let local_socket = local_socket.map_or(0, |s| crate::util::hash64_noncrypt(RANDOM_64BIT_SALT_0 + s.get() as u64));
+        let local_interface = local_interface.map_or(0, |s| crate::util::hash64_noncrypt(RANDOM_64BIT_SALT_1 + s.get() as u64));
+        let lsi = (local_socket as u128).wrapping_shl(64) | (local_interface as u128);
+        match endpoint {
+            Endpoint::Nil => 0,
+            Endpoint::ZeroTier(a) => a.to_u64() as u128,
+            Endpoint::Ethernet(m) => (m.to_u64() | 0x0100000000000000) as u128 ^ lsi,
+            Endpoint::WifiDirect(m) => (m.to_u64() | 0x0200000000000000) as u128 ^ lsi,
+            Endpoint::Bluetooth(m) => (m.to_u64() | 0x0400000000000000) as u128 ^ lsi,
+            Endpoint::Ip(ip) => ip.ip_as_native_u128().wrapping_sub(lsi), // naked IP has no port
+            Endpoint::IpUdp(ip) => ip.ip_as_native_u128().wrapping_add(lsi), // UDP maintains one path per IP but merely learns the most recent port
+            Endpoint::IpTcp(ip) => ip.ip_as_native_u128().wrapping_sub(crate::util::hash64_noncrypt((ip.port() as u64).wrapping_add(RANDOM_64BIT_SALT_2)) as u128).wrapping_sub(lsi),
+            Endpoint::Http(s) => {
+                let mut hh = highwayhasher();
+                let _ = hh.write_all(s.as_bytes());
+                let _ = hh.write_u64(local_socket);
+                let _ = hh.write_u64(local_interface);
+                u128::from_ne_bytes(unsafe { *hh.finalize128().as_ptr().cast() })
+            }
+            Endpoint::WebRTC(b) => {
+                let mut hh = highwayhasher();
+                let _ = hh.write_u64(local_socket);
+                let _ = hh.write_u64(local_interface);
+                let _ = hh.write_all(b.as_slice());
+                u128::from_ne_bytes(unsafe { *hh.finalize128().as_ptr().cast() })
+            }
+        }
+    }
+
     #[inline(always)]
     pub fn new(endpoint: Endpoint, local_socket: Option<NonZeroI64>, local_interface: Option<NonZeroI64>) -> Self {
         Self {
-            endpoint,
+            endpoint: ArcSwap::new(Arc::new(endpoint)),
             local_socket,
             local_interface,
             last_send_time_ticks: AtomicI64::new(0),
@@ -49,7 +92,7 @@ impl Path {
     }
 
     #[inline(always)]
-    pub fn endpoint(&self) -> &Endpoint { &self.endpoint }
+    pub fn endpoint(&self) -> Arc<Endpoint> { self.endpoint.load_full() }
 
     #[inline(always)]
     pub fn local_socket(&self) -> Option<NonZeroI64> { self.local_socket }
@@ -93,19 +136,40 @@ impl Path {
     }
 
     #[inline(always)]
-    pub(crate) fn log_receive(&self, time_ticks: i64) {
+    pub(crate) fn log_receive_anything(&self, time_ticks: i64) {
         self.last_receive_time_ticks.store(time_ticks, Ordering::Relaxed);
     }
 
     #[inline(always)]
-    pub(crate) fn log_send(&self, time_ticks: i64) {
+    pub(crate) fn log_receive_authenticated_packet(&self, _bytes: usize, source_endpoint: &Endpoint) {
+        let mut replace = false;
+        match source_endpoint {
+            Endpoint::IpUdp(ip) => {
+                let ep = self.endpoint.load();
+                match ep.as_ref() {
+                    Endpoint::IpUdp(ip_orig) => {
+                        debug_assert!(ip_orig.ip_bytes().eq(ip.ip_bytes()));
+                        if ip_orig.port() != ip.port() {
+                            replace = true;
+                        }
+                    },
+                    _ => {}
+                }
+            },
+            _ => {}
+        }
+        if replace {
+            self.endpoint.swap(Arc::new(source_endpoint.clone()));
+        }
+    }
+
+    #[inline(always)]
+    pub(crate) fn log_send_anything(&self, time_ticks: i64) {
         self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
     }
 
-    /// Desired period between calls to call_every_interval().
     pub(crate) const CALL_EVERY_INTERVAL_MS: i64 = PATH_KEEPALIVE_INTERVAL;
 
-    /// Called every INTERVAL during background tasks.
     #[inline(always)]
     pub(crate) fn call_every_interval<CI: NodeInterface>(&self, ct: &CI, time_ticks: i64) {
         self.fragmented_packets.lock().retain(|packet_id, frag| (time_ticks - frag.ts_ticks) < PACKET_FRAGMENT_EXPIRATION);

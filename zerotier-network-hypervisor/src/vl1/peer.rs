@@ -243,29 +243,37 @@ impl Peer {
     /// Receive, decrypt, authenticate, and process an incoming packet from this peer.
     /// If the packet comes in multiple fragments, the fragments slice should contain all
     /// those fragments after the main packet header and first chunk.
-    pub(crate) fn receive<CI: NodeInterface, PH: VL1PacketHandler>(&self, node: &Node, ci: &CI, ph: &PH, time_ticks: i64, source_path: &Arc<Path>, header: &PacketHeader, packet: &Buffer<{ PACKET_SIZE_MAX }>, fragments: &[Option<PacketBuffer>]) {
+    pub(crate) fn receive<CI: NodeInterface, PH: VL1PacketHandler>(&self, node: &Node, ci: &CI, ph: &PH, time_ticks: i64, source_endpoint: &Endpoint, source_path: &Arc<Path>, header: &PacketHeader, packet: &Buffer<{ PACKET_SIZE_MAX }>, fragments: &[Option<PacketBuffer>]) {
         let _ = packet.as_bytes_starting_at(PACKET_VERB_INDEX).map(|packet_frag0_payload_bytes| {
             let mut payload: Buffer<PACKET_SIZE_MAX> = unsafe { Buffer::new_without_memzero() };
             let mut message_id = 0_u64;
             let ephemeral_secret: Option<Arc<EphemeralSymmetricSecret>> = self.ephemeral_secret.lock().clone();
-            let forward_secrecy = if !ephemeral_secret.map_or(false, |ephemeral_secret| try_aead_decrypt(&ephemeral_secret.secret, packet_frag0_payload_bytes, header, fragments, &mut payload, &mut message_id)) {
+            let forward_secrecy = if ephemeral_secret.map_or(false, |ephemeral_secret| try_aead_decrypt(&ephemeral_secret.secret, packet_frag0_payload_bytes, header, fragments, &mut payload, &mut message_id)) {
+                // Decrypted and authenticated by the ephemeral secret.
+                true
+            } else {
+                // There is no ephemeral secret, or authentication with it failed.
                 unsafe { payload.set_size_unchecked(0); }
                 if !try_aead_decrypt(&self.static_secret, packet_frag0_payload_bytes, header, fragments, &mut payload, &mut message_id) {
+                    // Static secret also failed, reject packet.
                     return;
                 }
                 false
-            } else {
-                true
             };
+
+            // ---------------------------------------------------------------
+            // If we made it here it decrypted and passed authentication.
+            // ---------------------------------------------------------------
 
             self.last_receive_time_ticks.store(time_ticks, Ordering::Relaxed);
             self.total_bytes_received.fetch_add((payload.len() + PACKET_HEADER_SIZE) as u64, Ordering::Relaxed);
+            source_path.log_receive_authenticated_packet(payload.len() + PACKET_HEADER_SIZE, source_endpoint);
 
             debug_assert!(!payload.is_empty()); // should be impossible since this fails in try_aead_decrypt()
             let mut verb = payload.as_bytes()[0];
 
             // If this flag is set, the end of the payload is a full HMAC-SHA384 authentication
-            // tag for much stronger authentication.
+            // tag for much stronger authentication than is offered by the packet MAC.
             let extended_authentication = (verb & VERB_FLAG_EXTENDED_AUTHENTICATION) != 0;
             if extended_authentication {
                 if payload.len() >= (1 + SHA384_HASH_SIZE) {
@@ -295,7 +303,7 @@ impl Peer {
             // if it didn't handle the packet, in which case it's handled at VL1. This is
             // because the most performance critical path is the handling of the ???_FRAME
             // verbs, which are in VL2.
-            verb &= VERB_MASK;
+            verb &= VERB_MASK; // mask off flags
             if !ph.handle_packet(self, source_path, forward_secrecy, extended_authentication, verb, &payload) {
                 match verb {
                     //VERB_VL1_NOP => {}
@@ -461,7 +469,7 @@ impl Peer {
 
         explicit_endpoint.map_or_else(|| {
             self.path(node).map_or(false, |path| {
-                path.log_send(time_ticks);
+                path.log_send_anything(time_ticks);
                 self.send_to_endpoint(ci, path.endpoint(), path.local_socket(), path.local_interface(), &packet)
             })
         }, |endpoint| {
