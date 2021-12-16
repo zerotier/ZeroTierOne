@@ -166,15 +166,15 @@ pub extern "C" fn zeroidc_get_auth_url(ptr: *mut ZeroIDC) -> *const c_char {
 }
 
 #[no_mangle]
-pub extern "C" fn zeroidc_token_exchange(idc: *mut ZeroIDC, code: *const c_char ) {
+pub extern "C" fn zeroidc_token_exchange(idc: *mut ZeroIDC, code: *const c_char ) -> *const c_char {
     if idc.is_null() {
         println!("idc is null");
-        return
+        return std::ptr::null();
     }
 
     if code.is_null() {
         println!("code is null");
-        return
+        return std::ptr::null();
     }
     let idc = unsafe {
         &mut *idc
@@ -182,7 +182,9 @@ pub extern "C" fn zeroidc_token_exchange(idc: *mut ZeroIDC, code: *const c_char 
 
     let code = unsafe{CStr::from_ptr(code)}.to_str().unwrap();
 
-    idc.do_token_exchange( code);
+    let ret = idc.do_token_exchange( code);
+    let ret = CString::new(ret).unwrap();
+    return ret.into_raw();
 }
 
 #[no_mangle]

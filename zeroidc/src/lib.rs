@@ -1,21 +1,26 @@
 pub mod ext;
 
 extern crate base64;
+extern crate bytes;
 extern crate openidconnect;
 extern crate time;
 extern crate url;
 
-use std::time::{SystemTime, UNIX_EPOCH, Duration};
-use time::{OffsetDateTime, format_description};
-use std::sync::{Arc, Mutex};
-use std::thread::{sleep, spawn, JoinHandle};
-use serde::{Deserialize, Serialize};
+use bytes::Bytes;
 use openidconnect::core::{CoreClient, CoreProviderMetadata, CoreResponseType};
 use openidconnect::reqwest::http_client;
 use openidconnect::{AccessToken, AuthorizationCode, AuthenticationFlow, ClientId, CsrfToken, IssuerUrl, Nonce, OAuth2TokenResponse, PkceCodeChallenge, PkceCodeVerifier, RedirectUrl, RefreshToken, Scope, TokenResponse};
+use serde::{Deserialize, Serialize};
+use std::str::from_utf8;
+use std::sync::{Arc, Mutex};
+use std::thread::{sleep, spawn, JoinHandle};
+use std::time::{SystemTime, UNIX_EPOCH, Duration};
+use time::{OffsetDateTime, format_description};
+
 use jsonwebtoken::{dangerous_insecure_decode};
 
 use url::Url;
+use time::ext::NumericalDuration;
 
 pub struct ZeroIDC {
     inner: Arc<Mutex<Inner>>,
@@ -277,26 +282,30 @@ impl ZeroIDC {
     fn set_nonce_and_csrf(&mut self, csrf_token: String, nonce: String) {
         let local = Arc::clone(&self.inner);
         (*local.lock().expect("can't lock inner")).as_opt().map(|i| {
-            let mut csrf_diff = false;
-            let mut nonce_diff = false;
-            let mut need_verifier = false;
-        
-            match i.pkce_verifier {
-                None => {
-                    need_verifier = true;
-                },
-                _ => (),
-            }
-            if let Some(csrf) = i.csrf_token.clone() {
+            let need_verifier = match i.pkce_verifier {
+                None => true,
+                _ => false,
+            };
+
+            let csrf_diff = if let Some(csrf) = i.csrf_token.clone() {
                 if *csrf.secret() != csrf_token {
-                    csrf_diff = true;
+                    true    
+                } else {
+                    false
                 }
-            }
-            if let Some(n) = i.nonce.clone() {
+            } else {
+                false
+            };
+
+            let nonce_diff = if let Some(n) = i.nonce.clone() {
                 if *n.secret() != nonce {
-                    nonce_diff = true;
+                    true
+                } else {
+                    false
                 }
-            }
+            } else {
+                false
+            };
 
             if need_verifier || csrf_diff || nonce_diff {
                 let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
@@ -341,10 +350,10 @@ impl ZeroIDC {
         }
     }
 
-    fn do_token_exchange(&mut self, code: &str) {
+    fn do_token_exchange(&mut self, code: &str) -> String {
         let local = Arc::clone(&self.inner);
         let mut should_start = false;
-        (*local.lock().unwrap()).as_opt().map(|i| {
+        let res = (*local.lock().unwrap()).as_opt().map(|i| {
             if let Some(verifier) = i.pkce_verifier.take() {
                 let token_response = i.oidc_client.as_ref().map(|c| {
                     let r = c.exchange_code(AuthorizationCode::new(code.to_string()))
@@ -361,7 +370,7 @@ impl ZeroIDC {
                         },
                     }
                 });
-                // TODO: do stuff with token response
+                
                 if let Some(Some(tok)) = token_response {
                     let id_token = tok.id_token().unwrap();
                     println!("ID token: {}", id_token.to_string());
@@ -399,6 +408,23 @@ impl ZeroIDC {
                                     i.refresh_token = Some(t.clone());
                                     should_start = true;
                                 }
+                                let access_token = tok.access_token();
+                                println!("Access Token: {}", access_token.secret());
+
+                                let refresh_token = tok.refresh_token();
+                                println!("Refresh Token: {}", refresh_token.unwrap().secret());
+                        
+                                let bytes = match res.bytes() {
+                                    Ok(bytes) => bytes,
+                                    Err(_) => Bytes::from(""),
+                                };
+
+                                let bytes = match from_utf8(bytes.as_ref()) {
+                                    Ok(bytes) => bytes.to_string(),
+                                    Err(_) => "".to_string(),
+                                };
+
+                                return bytes;
                             },
                             Err(res) => {
                                 println!("hit url: {}", res.url().unwrap().as_str());
@@ -408,20 +434,21 @@ impl ZeroIDC {
                             }
                         }
 
-                        let access_token = tok.access_token();
-                        println!("Access Token: {}", access_token.secret());
-
-                        let refresh_token = tok.refresh_token();
-                        println!("Refresh Token: {}", refresh_token.unwrap().secret());
+                        
                     } else {
                         println!("invalid split length?!?");
                     }
                 }
             }
+            "".to_string()
         });
         if should_start {
             self.start();
         }
+        return match res {
+            Some(res) => res,
+            _ => "".to_string(),
+        };
     }
 }
 

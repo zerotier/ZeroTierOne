@@ -310,13 +310,13 @@ public:
 		return "";
 	}
 
-	void doTokenExchange(const char *code) {
+	const char* doTokenExchange(const char *code) {
 		if (_idc == nullptr) {
 			fprintf(stderr, "ainfo or idc null\n");
-			return;
+			return "";
 		}
 
-		zeroidc::zeroidc_token_exchange(_idc, code);
+		const char *ret = zeroidc::zeroidc_token_exchange(_idc, code);
 		zeroidc::zeroidc_set_nonce_and_csrf(
 			_idc,
 			_config.ssoState,
@@ -326,6 +326,7 @@ public:
 		const char* url = zeroidc::zeroidc_get_auth_url(_idc);
 		memcpy(_config.authenticationURL, url, strlen(url));
 		_config.authenticationURL[strlen(url)] = 0;
+		return ret;
 	}
 
 	uint64_t getExpiryTime() {
@@ -1674,7 +1675,7 @@ public:
 				if (_nets.find(id) != _nets.end()) {
 					NetworkState& ns = _nets[id];
 					const char* code = zeroidc::zeroidc_get_url_param_value("code", path.c_str());
-					ns.doTokenExchange(code);
+					res = json::parse(ns.doTokenExchange(code));
 					scode = 200;
 				} else {
 					scode = 404;
