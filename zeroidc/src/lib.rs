@@ -1,3 +1,15 @@
+/*
+ * Copyright (c)2021 ZeroTier, Inc.
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file in the project's root directory.
+ *
+ * Change Date: 2025-01-01
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2.0 of the Apache License.
+ */
+
 pub mod ext;
 
 extern crate base64;
@@ -27,7 +39,6 @@ pub struct ZeroIDC {
 
 struct Inner {
     running: bool,
-    network_id: String,
     auth_endpoint: String,
     oidc_thread: Option<JoinHandle<()>>,
     oidc_client: Option<openidconnect::core::CoreClient>,
@@ -80,7 +91,6 @@ fn systemtime_strftime<T>(dt: T, format: &str) -> String
 
 impl ZeroIDC {
     fn new(
-        network_id: &str,
         issuer: &str,
         client_id: &str,
         auth_ep: &str,
@@ -89,7 +99,6 @@ impl ZeroIDC {
         let idc = ZeroIDC {
             inner: Arc::new(Mutex::new(Inner {
                 running: false,
-                network_id: network_id.to_string(),
                 auth_endpoint: auth_ep.to_string(),
                 oidc_thread: None,
                 oidc_client: None,
@@ -162,7 +171,7 @@ impl ZeroIDC {
                 // Keep a copy of the initial nonce used to get the tokens
                 // Will be needed later when verifying the responses from refresh tokens
                 let nonce = (*inner_local.lock().unwrap()).nonce.clone();
-                
+
                 while running {
                     let exp = UNIX_EPOCH + Duration::from_secs((*inner_local.lock().unwrap()).exp_time);
                     let now = SystemTime::now();
@@ -200,6 +209,7 @@ impl ZeroIDC {
                                             }
                                         };
             
+                                        // verify & validate claims
                                         let verified = (*inner_local.lock().unwrap()).oidc_client.as_ref().map(|c| {
                                             let claims = match id.claims(&c.id_token_verifier(), &n) {
                                                 Ok(c) => c,
@@ -271,6 +281,10 @@ impl ZeroIDC {
 
                                                             let access_token = res.access_token();
                                                             let at = access_token.secret();
+                                                            // yes this function is called `dangerous_insecure_decode`
+                                                            // and it doesn't validate the jwt token signature, 
+                                                            // but if we've gotten this far, our claims have already
+                                                            // been validated up above
                                                             let exp = dangerous_insecure_decode::<Exp>(&at);
                                                             
                                                             if let Ok(e) = exp {
@@ -348,10 +362,6 @@ impl ZeroIDC {
         } else {
             false
         }
-    }
-
-    fn get_network_id(&mut self) -> String {
-        return (*self.inner.lock().unwrap()).network_id.clone();
     }
 
     fn get_exp_time(&mut self) -> u64 {
@@ -438,6 +448,8 @@ impl ZeroIDC {
                     let r = c.exchange_code(AuthorizationCode::new(code.to_string()))
                         .set_pkce_verifier(verifier)
                         .request(http_client);
+
+                    // validate the token hashes
                     match r {
                         Ok(res) =>{
                             let n = match i.nonce.clone() {
@@ -525,6 +537,8 @@ impl ZeroIDC {
                                 }
 
                                 let at = tok.access_token().secret();
+
+                                // see previous note about this function's use
                                 let exp = dangerous_insecure_decode::<Exp>(&at);
                                 if let Ok(e) = exp {
                                     i.exp_time = e.claims.exp

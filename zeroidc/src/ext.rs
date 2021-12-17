@@ -1,3 +1,15 @@
+/*
+ * Copyright (c)2021 ZeroTier, Inc.
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file in the project's root directory.
+ *
+ * Change Date: 2025-01-01
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2.0 of the Apache License.
+ */
+
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use url::{Url};
@@ -6,17 +18,11 @@ use crate::ZeroIDC;
 
 #[no_mangle]
 pub extern "C" fn zeroidc_new(
-    network_id: *const c_char,
     issuer: *const c_char,
     client_id: *const c_char,
     auth_endpoint: *const c_char,
     web_listen_port: u16,
 ) -> *mut ZeroIDC {
-    if network_id.is_null() {
-        println!("network_id is null");
-        return std::ptr::null_mut();
-
-    }
     if issuer.is_null() {
         println!("issuer is null");
         return std::ptr::null_mut();
@@ -32,12 +38,10 @@ pub extern "C" fn zeroidc_new(
         return std::ptr::null_mut();
     }
 
-    let network_id = unsafe {CStr::from_ptr(network_id) };
     let issuer = unsafe { CStr::from_ptr(issuer) };
     let client_id = unsafe { CStr::from_ptr(client_id) };
     let auth_endpoint = unsafe { CStr::from_ptr(auth_endpoint) };
     match ZeroIDC::new(
-        network_id.to_str().unwrap(),
         issuer.to_str().unwrap(),
         client_id.to_str().unwrap(),
         auth_endpoint.to_str().unwrap(),
@@ -100,24 +104,6 @@ pub extern "C" fn zeroidc_get_exp_time(ptr: *mut ZeroIDC) -> u64 {
 
     id.get_exp_time()
 }
-
-// #[no_mangle]
-// pub extern "C" fn zeroidc_process_form_post(ptr: *mut ZeroIDC, body: *const c_char) -> bool {
-//     let idc = unsafe {
-//         assert!(!ptr.is_null());
-//         &mut *ptr
-//     };
-
-//     if body.is_null() {
-//         println!("body is null");
-//         return false
-//     }
-
-//     let body = unsafe { CStr::from_ptr(body) }
-//         .to_str().unwrap().to_string();
-
-//     false
-// }
 
 #[no_mangle]
 pub extern "C" fn zeroidc_set_nonce_and_csrf(

@@ -261,9 +261,7 @@ public:
 				// fprintf(stderr, "Client ID: %s\n", _config.ssoClientID);
 				// fprintf(stderr, "Central Auth URL: %s\n", _config.centralAuthURL);
 				
-				char buf[17] = {};
 				_idc = zeroidc::zeroidc_new(
-					Utils::hex(_config.nwid, buf),
 					_config.issuerURL,
 					_config.ssoClientID,
 					_config.centralAuthURL,
