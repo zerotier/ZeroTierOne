@@ -159,6 +159,10 @@ impl ZeroIDC {
                 (*inner_local.lock().unwrap()).running = true;
                 let mut running = true;
 
+                // Keep a copy of the initial nonce used to get the tokens
+                // Will be needed later when verifying the responses from refresh tokens
+                let nonce = (*inner_local.lock().unwrap()).nonce.clone();
+                
                 while running {
                     let exp = UNIX_EPOCH + Duration::from_secs((*inner_local.lock().unwrap()).exp_time);
                     let now = SystemTime::now();
@@ -169,121 +173,147 @@ impl ZeroIDC {
                     let refresh_token = (*inner_local.lock().unwrap()).refresh_token.clone();
                     if let Some(refresh_token) =  refresh_token {
                         if now >= (exp - Duration::from_secs(30)) {
-                            let nonce = (*inner_local.lock().unwrap()).nonce.clone();
                             let token_response = (*inner_local.lock().unwrap()).oidc_client.as_ref().map(|c| {
                                 let res = c.exchange_refresh_token(&refresh_token)
                                     .request(http_client);
                                 
+                                res
+                            });
+                            
+                            if let Some(res) = token_response {
                                 match res {
                                     Ok(res) => {
-                                        let n = match nonce {
+
+                                        let n = match nonce.clone() {
                                             Some(n) => n,
                                             None => {
-                                                return None;
+                                                println!("err: no nonce");
+                                                continue;
                                             }
                                         };
                                         
                                         let id = match res.id_token() {
                                             Some(t) => t,
                                             None => {
-                                                return None;
+                                                println!("err: no id_token");
+                                                continue;
                                             }
                                         };
             
-                                        let claims = match id.claims(&c.id_token_verifier(), &n) {
-                                            Ok(c) => c,
-                                            Err(_e) => {
-                                                return None;
-                                            }
-                                        };
-            
-                                        let signing_algo = match id.signing_alg() {
-                                            Ok(s) => s,
-                                            Err(_) => {
-                                                return None;
-                                            }
-                                        };
-            
-                                        if let Some(expected_hash) = claims.access_token_hash() {
-                                            let actual_hash = match AccessTokenHash::from_token(res.access_token(), &signing_algo) {
-                                                Ok(h) => h,
+                                        let verified = (*inner_local.lock().unwrap()).oidc_client.as_ref().map(|c| {
+                                            let claims = match id.claims(&c.id_token_verifier(), &n) {
+                                                Ok(c) => c,
                                                 Err(e) => {
-                                                    println!("Error hashing access token: {}", e);
-                                                    return None;
+                                                    println!("claims err: {}", e);
+                                                    return false;
                                                 }
                                             };
-            
-                                            if actual_hash != *expected_hash {
-                                                println!("token hash error");
-                                                return None;
+                
+                                            let signing_algo = match id.signing_alg() {
+                                                Ok(s) => s,
+                                                Err(e) => {
+                                                    println!("alg err: {}", e);
+                                                    return false;
+                                                }
+                                            };
+                
+                                            if let Some(expected_hash) = claims.access_token_hash() {
+                                                let actual_hash = match AccessTokenHash::from_token(res.access_token(), &signing_algo) {
+                                                    Ok(h) => h,
+                                                    Err(e) => {
+                                                        println!("Error hashing access token: {}", e);
+                                                        return false;
+                                                    }
+                                                };
+                
+                                                if actual_hash != *expected_hash {
+                                                    println!("token hash error");
+                                                    return false;
+                                                }
                                             }
-                                        }
-                                        return Some(res);
-                                    },
-                                    Err(_e) => {
-                                        return None;
-                                    }
-                                };
-                            });
-
-                            if let Some(Some(res)) = token_response{
-                                match res.id_token() {
-                                    Some(id_token) => {
-                                        let params = [("id_token", id_token.to_string()),("state", "refresh".to_string())];
-                                        #[cfg(debug_assertions)] {
-                                            println!("New ID token: {}", id_token.to_string());
-                                        }
-                                        let client = reqwest::blocking::Client::new();
-                                        let r = client.post((*inner_local.lock().unwrap()).auth_endpoint.clone())
-                                            .form(&params)
-                                            .send();
-
-                                        match r {
-                                            Ok(r) => {
-                                                if r.status().is_success() {
-                                                    #[cfg(debug_assertions)] {
-                                                        println!("hit url: {}", r.url().as_str());
-                                                        println!("status: {}", r.status());
-                                                    }
-
-                                                    let access_token = res.access_token();
-                                                    let at = access_token.secret();
-                                                    let exp = dangerous_insecure_decode::<Exp>(&at);
-                                                    
-                                                    if let Ok(e) = exp {
-                                                        (*inner_local.lock().unwrap()).exp_time = e.claims.exp
-                                                    }
-
-                                                    (*inner_local.lock().unwrap()).access_token = Some(access_token.clone());
-                                                    if let Some(t) = res.refresh_token() {
-                                                        // println!("New Refresh Token: {}", t.secret());
-                                                        (*inner_local.lock().unwrap()).refresh_token = Some(t.clone());
-                                                    }
-                                                    #[cfg(debug_assertions)] {
-                                                        println!("Central post succeeded");
-                                                    }
-                                                } else {
-                                                    println!("Central post failed: {}", r.status().to_string());
-                                                    println!("hit url: {}", r.url().as_str());
-                                                    println!("Status: {}", r.status());
-                                                    (*inner_local.lock().unwrap()).exp_time = 0;
+                                            return true;
+                                        });
+                                        
+                                        match verified {
+                                            Some(verified) => {
+                                                if !verified {
+                                                    println!("not verified.");
                                                     (*inner_local.lock().unwrap()).running = false;
+                                                    break;
                                                 }
                                             },
-                                            Err(e) => {
-                                                
-                                                println!("Central post failed: {}", e.to_string());
-                                                println!("hit url: {}", e.url().unwrap().as_str());
-                                                println!("Status: {}", e.status().unwrap());
-                                                (*inner_local.lock().unwrap()).exp_time = 0;
+                                            None => {
+                                                println!("no verification performed?");
                                                 (*inner_local.lock().unwrap()).running = false;
+                                                break;
+                                            }
+                                        }
+                                        
+
+                                        match res.id_token() {
+                                            Some(id_token) => {
+                                                let params = [("id_token", id_token.to_string()),("state", "refresh".to_string())];
+                                                #[cfg(debug_assertions)] {
+                                                    println!("New ID token: {}", id_token.to_string());
+                                                }
+                                                let client = reqwest::blocking::Client::new();
+                                                let r = client.post((*inner_local.lock().unwrap()).auth_endpoint.clone())
+                                                    .form(&params)
+                                                    .send();
+
+                                                match r {
+                                                    Ok(r) => {
+                                                        if r.status().is_success() {
+                                                            #[cfg(debug_assertions)] {
+                                                                println!("hit url: {}", r.url().as_str());
+                                                                println!("status: {}", r.status());
+                                                            }
+
+                                                            let access_token = res.access_token();
+                                                            let at = access_token.secret();
+                                                            let exp = dangerous_insecure_decode::<Exp>(&at);
+                                                            
+                                                            if let Ok(e) = exp {
+                                                                (*inner_local.lock().unwrap()).exp_time = e.claims.exp
+                                                            }
+
+                                                            (*inner_local.lock().unwrap()).access_token = Some(access_token.clone());
+                                                            if let Some(t) = res.refresh_token() {
+                                                                // println!("New Refresh Token: {}", t.secret());
+                                                                (*inner_local.lock().unwrap()).refresh_token = Some(t.clone());
+                                                            }
+                                                            #[cfg(debug_assertions)] {
+                                                                println!("Central post succeeded");
+                                                            }
+                                                        } else {
+                                                            println!("Central post failed: {}", r.status().to_string());
+                                                            println!("hit url: {}", r.url().as_str());
+                                                            println!("Status: {}", r.status());
+                                                            (*inner_local.lock().unwrap()).exp_time = 0;
+                                                            (*inner_local.lock().unwrap()).running = false;
+                                                        }
+                                                    },
+                                                    Err(e) => {
+                                                        
+                                                        println!("Central post failed: {}", e.to_string());
+                                                        println!("hit url: {}", e.url().unwrap().as_str());
+                                                        println!("Status: {}", e.status().unwrap());
+                                                        (*inner_local.lock().unwrap()).exp_time = 0;
+                                                        (*inner_local.lock().unwrap()).running = false;
+                                                    }
+                                                }
+                                            },
+                                            None => {
+                                                println!("no id token?!?");
                                             }
                                         }
                                     },
-                                    None => {
-                                        println!("no id token?!?");
+                                    Err(e) => {
+                                        println!("token error: {}", e);
                                     }
                                 }
+                            } else {
+                                println!("token response??");
                             }
                         } else {
                             println!("waiting to refresh");
