@@ -4,6 +4,5 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-sha2 = { version = "^0", features = ["asm"] }
 smol = { version = "^1", features = [] }
-getrandom = "^0"
+zerotier-core-crypto = { path = "../zerotier-core-crypto" }

@@ -59,3 +59,18 @@ pub fn next_u64_secure() -> u64 {
 
 #[inline(always)]
 pub fn fill_bytes_secure(dest: &mut [u8]) { randomize(Level::Strong, dest); }
+
+static mut XORSHIFT64_STATE: u64 = 0;
+
+/// Get a non-cryptographic random number.
+pub fn xorshift64_random() -> u64 {
+    let mut x = unsafe { XORSHIFT64_STATE };
+    while x == 0 {
+        x = next_u64_secure();
+    }
+    x ^= x.wrapping_shl(13);
+    x ^= x.wrapping_shr(7);
+    x ^= x.wrapping_shl(17);
+    unsafe { XORSHIFT64_STATE = x };
+    x
+}

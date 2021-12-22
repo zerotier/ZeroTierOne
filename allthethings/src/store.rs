@@ -10,8 +10,10 @@ use smol::net::SocketAddr;
 
 use crate::IDENTITY_HASH_SIZE;
 
-/// Result code from the put() method in Database.
-pub enum StoreObjectResult {
+pub const MIN_IDENTITY_HASH: [u8; 48] = [0_u8; 48];
+pub const MAX_IDENTITY_HASH: [u8; 48] = [0xff_u8; 48];
+
+pub enum StorePutResult {
     /// Datum stored successfully.
     Ok,
     /// Datum is one we already have.
@@ -22,23 +24,28 @@ pub enum StoreObjectResult {
     Ignored,
 }
 
-/// Trait that must be implemented for the data store that is to be replicated.
+/// Trait that must be implemented by the data store that is to be replicated.
 pub trait Store: Sync + Send {
-    /// Get the total size of this data set in objects.
-    fn total_size(&self) -> u64;
-
-    /// Get an object from the database.
-    fn get(&self, identity_hash: &[u8; IDENTITY_HASH_SIZE]) -> Option<Vec<u8>>;
+    /// Get an object from the database, storing it in the supplied buffer.
+    /// A return of 'false' leaves the buffer state undefined. If the return is true any previous
+    /// data in the supplied buffer will have been cleared and replaced with the retrieved object.
+    fn get(&self, reference_time: u64, identity_hash: &[u8; IDENTITY_HASH_SIZE], buffer: &mut Vec<u8>) -> bool;
 
     /// Store an entry in the database.
-    fn put(&self, identity_hash: &[u8; IDENTITY_HASH_SIZE], object: &[u8]) -> StoreObjectResult;
+    fn put(&self, reference_time: u64, identity_hash: &[u8; IDENTITY_HASH_SIZE], object: &[u8]) -> StorePutResult;
 
     /// Check if we have an object by its identity hash.
-    fn have(&self, identity_hash: &[u8; IDENTITY_HASH_SIZE]) -> bool;
+    fn have(&self, reference_time: u64, identity_hash: &[u8; IDENTITY_HASH_SIZE]) -> bool;
+
+    /// Get the total count of objects.
+    fn total_count(&self, reference_time: u64) -> Option<u64>;
+
+    /// Get the time the last object was received in milliseconds since epoch.
+    fn last_object_receive_time(&self) -> Option<u64>;
 
     /// Count the number of identity hash keys in this range (inclusive) of identity hashes.
     /// This may return None if an error occurs, but should return 0 if the set is empty.
-    fn count(&self, start: &[u8; IDENTITY_HASH_SIZE], end: &[u8; IDENTITY_HASH_SIZE]) -> Option<u64>;
+    fn count(&self, reference_time: u64, start: &[u8; IDENTITY_HASH_SIZE], end: &[u8; IDENTITY_HASH_SIZE]) -> Option<u64>;
 
     /// Called when a connection to a remote node was successful.
     /// This is always called on successful outbound connect.
