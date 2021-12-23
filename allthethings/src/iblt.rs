@@ -6,12 +6,13 @@
  * https://www.zerotier.com/
  */
 
-use std::mem::zeroed;
+use std::mem::size_of;
+use std::ptr::{slice_from_raw_parts, write_bytes, copy_nonoverlapping};
 
 use crate::IDENTITY_HASH_SIZE;
 
 // The number of indexing sub-hashes to use, must be <= IDENTITY_HASH_SIZE / 8
-const KEY_MAPPING_ITERATIONS: usize = IDENTITY_HASH_SIZE / 8;
+const KEY_MAPPING_ITERATIONS: usize = 3;
 
 #[inline(always)]
 fn xorshift64(mut x: u64) -> u64 {
@@ -28,15 +29,11 @@ struct IBLTEntry {
     count: i64,
 }
 
-impl Default for IBLTEntry {
-    fn default() -> Self { unsafe { zeroed() } }
-}
-
 /// An IBLT (invertible bloom lookup table) specialized for reconciling sets of identity hashes.
 /// This skips some extra hashing that would be necessary in a universal implementation since identity
 /// hashes are already randomly distributed strong hashes.
 pub struct IBLT {
-    map: Box<[IBLTEntry]>,
+    map: Vec<IBLTEntry>,
 }
 
 impl IBLTEntry {
@@ -53,21 +50,49 @@ impl IBLTEntry {
 impl IBLT {
     /// Construct a new IBLT with a given capacity.
     pub fn new(buckets: usize) -> Self {
-        assert!(KEY_MAPPING_ITERATIONS <= (IDENTITY_HASH_SIZE / 8) && (IDENTITY_HASH_SIZE % 8) == 0);
         assert!(buckets > 0);
         Self {
             map: {
-                let mut tmp = Vec::new();
-                tmp.resize_with(buckets, IBLTEntry::default);
-                tmp.into_boxed_slice()
+                let mut tmp: Vec<IBLTEntry> = Vec::with_capacity(buckets);
+                unsafe {
+                    tmp.set_len(buckets);
+                    write_bytes(tmp.as_mut_ptr().cast::<u8>(), 0, buckets * size_of::<IBLTEntry>());
+                }
+                tmp
             }
         }
     }
 
+    /// Obtain IBLT from a byte array.
+    /// This returns None if the supplied bytes are not a valid IBLT.
+    pub fn from_bytes(b: &[u8]) -> Option<Self> {
+        if b.len() >= size_of::<IBLTEntry>() && (b.len() % size_of::<IBLTEntry>()) == 0 {
+            let buckets = b.len() / size_of::<IBLTEntry>();
+            Some(Self {
+                map: {
+                    let mut tmp: Vec<IBLTEntry> = Vec::with_capacity(buckets);
+                    unsafe {
+                        tmp.set_len(buckets);
+                        copy_nonoverlapping(b.as_ptr(), tmp.as_mut_ptr().cast::<u8>(), buckets * size_of::<IBLTEntry>());
+                    }
+                    tmp
+                }
+            })
+        } else {
+            None
+        }
+    }
+
+    /// Get this IBLT as a byte array that is ready to be sent over the wire.
+    pub fn as_bytes(&self) -> &[u8] {
+        unsafe { &*slice_from_raw_parts(self.map.as_ptr().cast(), size_of::<IBLTEntry>() * self.map.len()) }
+    }
+
     fn ins_rem(&mut self, key: &[u64; IDENTITY_HASH_SIZE / 8], delta: i64) {
         let check_hash = u64::from_le(key[0]).wrapping_add(xorshift64(u64::from_le(key[1]))).to_le();
+        let buckets = self.map.len();
         for mapping_sub_hash in 0..KEY_MAPPING_ITERATIONS {
-            let b = unsafe { self.map.get_unchecked_mut((u64::from_le(key[mapping_sub_hash]) as usize) % self.map.len()) };
+            let b = unsafe { self.map.get_unchecked_mut((u64::from_le(key[mapping_sub_hash]) as usize) % buckets) };
             for j in 0..(IDENTITY_HASH_SIZE / 8) {
                 b.key_sum[j] ^= key[j];
             }
@@ -130,18 +155,18 @@ impl IBLT {
     /// bucket with only one entry (1 or -1). It can be obtained from the return
     /// values of either subtract() or singular_bucket().
     pub fn list<F: FnMut(&[u8; IDENTITY_HASH_SIZE], bool) -> bool>(&mut self, mut f: F) {
-        let mut singular_buckets: Vec<usize> = Vec::with_capacity(1024);
         let buckets = self.map.len();
+        let mut singular_buckets: Vec<u32> = Vec::with_capacity(buckets);
 
         for i in 0..buckets {
             if unsafe { self.map.get_unchecked(i) }.is_singular() {
-                singular_buckets.push(i);
+                singular_buckets.push(i as u32);
             };
         }
 
         let mut key = [0_u64; IDENTITY_HASH_SIZE / 8];
         while !singular_buckets.is_empty() {
-            let b = unsafe { self.map.get_unchecked_mut(singular_buckets.pop().unwrap()) };
+            let b = unsafe { self.map.get_unchecked_mut(singular_buckets.pop().unwrap() as usize) };
             if b.is_singular() {
                 for j in 0..(IDENTITY_HASH_SIZE / 8) {
                     key[j] = b.key_sum[j];
@@ -149,7 +174,7 @@ impl IBLT {
                 if f(unsafe { &*key.as_ptr().cast::<[u8; IDENTITY_HASH_SIZE]>() }, b.count == 1) {
                     let check_hash = u64::from_le(key[0]).wrapping_add(xorshift64(u64::from_le(key[1]))).to_le();
                     for mapping_sub_hash in 0..KEY_MAPPING_ITERATIONS {
-                        let bi = (u64::from_le(key[mapping_sub_hash]) as usize) % buckets;
+                        let bi = (u64::from_le(unsafe { *key.get_unchecked(mapping_sub_hash) }) as usize) % buckets;
                         let b = unsafe { self.map.get_unchecked_mut(bi) };
                         for j in 0..(IDENTITY_HASH_SIZE / 8) {
                             b.key_sum[j] ^= key[j];
@@ -157,7 +182,7 @@ impl IBLT {
                         b.check_hash_sum ^= check_hash;
                         b.count = i64::from_le(b.count).wrapping_sub(1).to_le();
                         if b.is_singular() {
-                            singular_buckets.push(bi);
+                            singular_buckets.push(bi as u32);
                         }
                     }
                 } else {
@@ -171,25 +196,29 @@ impl IBLT {
 #[cfg(test)]
 mod tests {
     use zerotier_core_crypto::hash::SHA384;
-    use crate::iblt::IBLT;
+    use crate::iblt::*;
 
     #[allow(unused_variables)]
     #[test]
     fn insert_and_list() {
-        let mut t = IBLT::new(1024);
-        let expected_cnt = 512;
-        for i in 0..expected_cnt {
-            let k = SHA384::hash(&(i as u64).to_le_bytes());
-            t.insert(&k);
+        assert_eq!(size_of::<IBLTEntry>(), IDENTITY_HASH_SIZE + 8 + 8);
+        assert!(KEY_MAPPING_ITERATIONS <= (IDENTITY_HASH_SIZE / 8) && (IDENTITY_HASH_SIZE % 8) == 0);
+
+        for expected_cnt in 0..800 {
+            let mut t = IBLT::new(1000);
+            for i in 0..expected_cnt {
+                let k = SHA384::hash(&((i + expected_cnt) as u32).to_le_bytes());
+                t.insert(&k);
+            }
+            let mut cnt = 0;
+            t.list(|k, d| {
+                cnt += 1;
+                //println!("{} {}", zerotier_core_crypto::hex::to_string(k), d);
+                true
+            });
+            //println!("retrieved {} keys", cnt);
+            assert_eq!(cnt, expected_cnt);
         }
-        let mut cnt = 0;
-        t.list(|k, d| {
-            cnt += 1;
-            //println!("{} {}", zerotier_core_crypto::hex::to_string(k), d);
-            true
-        });
-        println!("retrieved {} keys", cnt);
-        assert_eq!(cnt, expected_cnt);
     }
 
     #[test]
