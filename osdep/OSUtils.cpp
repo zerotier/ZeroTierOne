@@ -36,7 +36,7 @@
 #ifdef __WINDOWS__
 #include <windows.h>
 #include <wincrypt.h>
-#include <ShlObj.h>
+#include <shlobj.h>
 #include <netioapi.h>
 #include <iphlpapi.h>
 #endif

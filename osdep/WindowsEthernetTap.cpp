@@ -15,14 +15,14 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-#include <WinSock2.h>
-#include <Windows.h>
+#include <winsock2.h>
+#include <windows.h>
 #include <tchar.h>
 #include <malloc.h>
 #include <winreg.h>
 #include <wchar.h>
 #include <ws2ipdef.h>
-#include <WS2tcpip.h>
+#include <ws2tcpip.h>
 #include <IPHlpApi.h>
 #include <nldef.h>
 #include <netioapi.h>

@@ -28,9 +28,9 @@
 #include "../node/InetAddress.hpp"
 
 #ifdef __WINDOWS__
-#include <WinSock2.h>
-#include <Windows.h>
-#include <Shlwapi.h>
+#include <winsock2.h>
+#include <windows.h>
+#include <shlwapi.h>
 #else
 #include <unistd.h>
 #include <errno.h>

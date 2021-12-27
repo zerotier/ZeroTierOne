@@ -22,9 +22,9 @@
 #include <string.h>
 
 #ifdef __WINDOWS__
-#include <ShlObj.h>
-#include <WinSock2.h>
-#include <Windows.h>
+#include <shlobj.h>
+#include <winsock2.h>
+#include <windows.h>
 #include <iphlpapi.h>
 #include <netioapi.h>
 #else
