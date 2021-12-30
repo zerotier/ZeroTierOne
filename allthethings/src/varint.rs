@@ -8,13 +8,7 @@
 
 use smol::io::{AsyncReadExt, AsyncWrite, AsyncRead, AsyncWriteExt};
 
-/// Byte that can be written for a zero varint.
-pub const ZERO: u8 = 0x80;
-
-/// Byte that can be written for a varint of 1.
-pub const ONE: u8 = 0x81;
-
-pub async fn async_write<W: AsyncWrite + Unpin>(w: &mut W, mut v: u64) -> std::io::Result<()> {
+pub async fn async_write<W: AsyncWrite + Unpin>(w: &mut W, mut v: u64) -> smol::io::Result<()> {
     let mut b = [0_u8; 10];
     let mut i = 0;
     loop {
@@ -31,7 +25,7 @@ pub async fn async_write<W: AsyncWrite + Unpin>(w: &mut W, mut v: u64) -> std::i
     w.write_all(&b[0..i]).await
 }
 
-pub async fn async_read<R: AsyncRead + Unpin>(r: &mut R) -> std::io::Result<u64> {
+pub async fn async_read<R: AsyncRead + Unpin>(r: &mut R) -> smol::io::Result<u64> {
     let mut v = 0_u64;
     let mut buf = [0_u8; 1];
     let mut pos = 0;

@@ -6,38 +6,138 @@
  * https://www.zerotier.com/
  */
 
-pub const PROTOCOL_VERSION: u8 = 1;
-pub const HASH_ALGORITHM_SHA384: u8 = 1;
+/*
+ * Wire protocol notes:
+ *
+ * Messages are prefixed by a type byte followed by a message size in the form
+ * of a variable length integer (varint). Each message is followed by a
+ * 16-byte GMAC message authentication code.
+ *
+ * HELLO is an exception. It's sent on connect, is prefixed only by a varint
+ * size, and is not followed by a MAC. Instead HelloAck is sent after it
+ * containing a full HMAC ACK for key negotiation.
+ *
+ * GMAC is keyed using a KBKDF-derived key from a shared key currently made
+ * with HKDF as HMAC(SHA384(ephemeral key), node key). The first 32 bytes of
+ * the key are the GMAC key while the nonce is the first 96 bytes of
+ * the nonce where this 96-bit integer is incremented (as little-endian)
+ * for each message sent. Increment should wrap at 2^96. The connection should
+ * close after no more than 2^96 messages, but that's a crazy long session
+ * anyway.
+ *
+ * The wire protocol is only authenticated to prevent network level attacks.
+ * Data is not encrypted since this is typically used to replicate a public
+ * "well known" data set and encryption would add needless overhead.
+ */
 
-pub const MESSAGE_TYPE_NOP: u8 = 0;
-pub const MESSAGE_TYPE_HAVE_NEW_OBJECT: u8 = 1;
-pub const MESSAGE_TYPE_OBJECT: u8 = 2;
-pub const MESSAGE_TYPE_GET_OBJECTS: u8 = 3;
+use serde::{Deserialize, Serialize};
 
-/// HELLO message, which is all u8's and is packed and so can be parsed directly in place.
-/// This message is sent at the start of any connection by both sides.
-#[repr(packed)]
-pub struct Hello {
-    pub hello_size: u8, // technically a varint but below 0x80
-    pub protocol_version: u8,
-    pub hash_algorithm: u8,
-    pub flags: [u8; 4], // u32, little endian
-    pub clock: [u8; 8], // u64, little endian
-    pub last_object_receive_time: [u8; 8], // u64, little endian, u64::MAX if unspecified
-    pub domain_hash: [u8; 48],
-    pub instance_id: [u8; 16],
-    pub loopback_check_code_salt: [u8; 16],
-    pub loopback_check_code: [u8; 16],
+/// KBKDF label for the HMAC in HelloAck.
+pub const KBKDF_LABEL_HELLO_ACK_HMAC: u8 = b'A';
+
+/// KBKDF label for GMAC key derived from main key.
+pub const KBKDF_LABEL_GMAC: u8 = b'G';
+
+/// Sanity limit on the size of HELLO.
+pub const HELLO_SIZE_MAX: usize = 4096;
+
+/// Overall protocol version.
+pub const PROTOCOL_VERSION: u16 = 1;
+
+/// No operation, no payload, sent without size or MAC.
+/// This is a special single byte message used for connection keepalive.
+pub const MESSAGE_TYPE_KEEPALIVE: u8 = 0;
+
+/// Acknowledgement of HELLO.
+pub const MESSAGE_TYPE_HELLO_ACK: u8 = 1;
+
+/// A series of objects with each prefixed by a varint size.
+pub const MESSAGE_TYPE_OBJECTS: u8 = 2;
+
+/// A series of identity hashes concatenated together advertising objects we have.
+pub const MESSAGE_TYPE_HAVE_OBJECTS: u8 = 3;
+
+/// A series of identity hashes concatenated together of objects being requested.
+pub const MESSAGE_TYPE_WANT_OBJECTS: u8 = 4;
+
+/// Request IBLT synchronization, payload is IBLTSyncRequest.
+pub const MESSAGE_TYPE_IBLT_SYNC_REQUEST: u8 = 5;
+
+/// IBLT sync digest, payload is IBLTSyncDigest.
+pub const MESSAGE_TYPE_IBLT_SYNC_DIGEST: u8 = 6;
+
+/// Initial message sent by both sides on TCP connection establishment.
+/// This is sent with no type or message authentication code and is only
+/// sent on connect. It is prefixed by a varint size.
+#[derive(Deserialize, Serialize)]
+pub struct Hello<'a> {
+    /// Local value of PROTOCOL_VERSION.
+    pub protocol_version: u16,
+    /// Flags, currently unused and always zero.
+    pub flags: u64,
+    /// Local clock in milliseconds since Unix epoch.
+    pub clock: u64,
+    /// The data set name ("domain") to which this node belongs.
+    pub domain: &'a str,
+    /// Random nonce, must be at least 16 bytes in length.
+    pub nonce: &'a [u8],
+    /// Random ephemeral ECDH session key.
+    pub p521_ecdh_ephemeral_key: &'a [u8],
+    /// Long-lived node-identifying ECDH public key.
+    pub p521_ecdh_node_key: &'a [u8],
 }
 
-#[cfg(test)]
-mod tests {
-    use std::mem::size_of;
-    use crate::protocol::*;
+/// Sent in response to Hello.
+#[derive(Deserialize, Serialize)]
+pub struct HelloAck<'a> {
+    /// HMAC-SHA384(KBKDF(key, KBKDF_LABEL_HELLO_ACK_HMAC), SHA384(original raw Hello))
+    pub ack: &'a [u8],
+    /// Value of clock in original hello, for measuring latency.
+    pub clock_echo: u64,
+}
 
-    #[test]
-    fn check_sizing() {
-        // Make sure packed structures are really packed.
-        assert_eq!(size_of::<Hello>(), 1 + 1 + 1 + 4 + 8 + 8 + 48 + 16 + 16 + 16);
-    }
+/// Request an IBLT set digest to assist with synchronization.
+///
+/// The peer may respond in one of three ways:
+///
+/// (1) It may send an IBLTSyncDigest over a range of identity hashes of its
+/// choice so that the requesting node may compute a difference and request
+/// objects it does not have.
+///
+/// (2) It may send HAVE_OBJECTS with a simple list of objects.
+///
+/// (3) It may simply send a batch of objects.
+///
+/// (4) It may not respond at all.
+///
+/// Which option is chosen is up to the responding node and should be chosen
+/// via a heuristic to maximize sync efficiency and minimize sync time.
+///
+/// A central assumption is that identity hashes are uniformly distributed
+/// since they are cryptographic hashes (currently SHA-384). This allows a
+/// simple calculation to be made with the sending node's total count to
+/// estimate set difference density across the entire hash range.
+#[derive(Deserialize, Serialize)]
+pub struct IBLTSyncRequest {
+    /// Total number of hashes in entire data set (on our side).
+    pub total_count: u64,
+    /// Our clock to use as a reference time for filtering the data set (if applicable).
+    pub reference_time: u64,
+}
+
+/// An IBLT digest of identity hashes over a range.
+#[derive(Deserialize, Serialize)]
+pub struct IBLTSyncDigest<'a> {
+    /// Start of range. Right-pad with zeroes if too short.
+    pub range_start: &'a [u8],
+    /// End of range. Right-pad with zeroes if too short.
+    pub range_end: &'a [u8],
+    /// IBLT digest of hashes in this range.
+    pub iblt: &'a [u8],
+    /// Number of hashes in this range.
+    pub count: u64,
+    /// Total number of hashes in entire data set.
+    pub total_count: u64,
+    /// Reference time from IBLTSyncRequest or 0 if this is being sent synthetically.
+    pub reference_time: u64,
 }

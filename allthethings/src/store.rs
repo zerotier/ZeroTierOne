@@ -6,13 +6,9 @@
  * https://www.zerotier.com/
  */
 
-use smol::net::SocketAddr;
-
 use crate::IDENTITY_HASH_SIZE;
 
-pub const MIN_IDENTITY_HASH: [u8; 48] = [0_u8; 48];
-pub const MAX_IDENTITY_HASH: [u8; 48] = [0xff_u8; 48];
-
+/// Result returned by Store::put().
 pub enum StorePutResult {
     /// Datum stored successfully.
     Ok,
@@ -26,10 +22,14 @@ pub enum StorePutResult {
 
 /// Trait that must be implemented by the data store that is to be replicated.
 pub trait Store: Sync + Send {
-    /// Get an object from the database, storing it in the supplied buffer.
-    /// A return of 'false' leaves the buffer state undefined. If the return is true any previous
-    /// data in the supplied buffer will have been cleared and replaced with the retrieved object.
-    fn get(&self, reference_time: u64, identity_hash: &[u8; IDENTITY_HASH_SIZE], buffer: &mut Vec<u8>) -> bool;
+    /// Type returned by get(), which can be anything that contains a byte slice.
+    type Object: AsRef<[u8]>;
+
+    /// Get the local time in milliseconds since Unix epoch.
+    fn local_time(&self) -> u64;
+
+    /// Get an object from the database.
+    fn get(&self, reference_time: u64, identity_hash: &[u8; IDENTITY_HASH_SIZE]) -> Option<Self::Object>;
 
     /// Store an entry in the database.
     fn put(&self, reference_time: u64, identity_hash: &[u8; IDENTITY_HASH_SIZE], object: &[u8]) -> StorePutResult;
@@ -40,18 +40,15 @@ pub trait Store: Sync + Send {
     /// Get the total count of objects.
     fn total_count(&self, reference_time: u64) -> Option<u64>;
 
-    /// Get the time the last object was received in milliseconds since epoch.
-    fn last_object_receive_time(&self) -> Option<u64>;
+    /// Iterate over a range of identity hashes and values.
+    /// This calls the supplied function for each object. If the function returns false iteration stops.
+    fn for_each<F: FnMut(&[u8], &Self::Object) -> bool>(&self, reference_time: u64, start: &[u8; IDENTITY_HASH_SIZE], end: &[u8; IDENTITY_HASH_SIZE], f: F);
+
+    /// Iterate over a range of identity hashes.
+    /// This calls the supplied function for each hash. If the function returns false iteration stops.
+    fn for_each_identity_hash<F: FnMut(&[u8]) -> bool>(&self, reference_time: u64, start: &[u8; IDENTITY_HASH_SIZE], end: &[u8; IDENTITY_HASH_SIZE], f: F);
 
     /// Count the number of identity hash keys in this range (inclusive) of identity hashes.
     /// This may return None if an error occurs, but should return 0 if the set is empty.
     fn count(&self, reference_time: u64, start: &[u8; IDENTITY_HASH_SIZE], end: &[u8; IDENTITY_HASH_SIZE]) -> Option<u64>;
-
-    /// Called when a connection to a remote node was successful.
-    /// This is always called on successful outbound connect.
-    fn save_remote_endpoint(&self, to_address: &SocketAddr);
-
-    /// Get a remote endpoint to try.
-    /// This can return endpoints in any order and is used to try to establish outbound links.
-    fn get_remote_endpoint(&self) -> Option<SocketAddr>;
 }

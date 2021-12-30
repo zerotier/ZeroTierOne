@@ -6,6 +6,9 @@
  * https://www.zerotier.com/
  */
 
+
+
+/*
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::error::Error;
@@ -18,7 +21,7 @@ use std::time::Duration;
 use smol::{Executor, Task, Timer};
 use smol::io::{AsyncReadExt, AsyncWriteExt, BufReader};
 use smol::lock::Mutex;
-use smol::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6, TcpListener, TcpStream};
+use smol::net::*;
 use smol::stream::StreamExt;
 
 use zerotier_core_crypto::hash::SHA384;
@@ -51,36 +54,47 @@ struct Connection {
     task: Task<()>,
 }
 
-struct ReplicatorImpl<'ex> {
+struct ReplicatorImpl<'ex, S: 'static + Store> {
     executor: Arc<Executor<'ex>>,
     instance_id: [u8; 16],
     loopback_check_code_secret: [u8; 48],
     domain_hash: [u8; 48],
-    store: Arc<dyn Store>,
+    store: Arc<S>,
     config: Config,
     connections: Mutex<HashMap<ConnectionKey, Connection>>,
     connections_in_progress: Mutex<HashMap<SocketAddr, Task<()>>>,
     announced_objects_requested: Mutex<HashMap<[u8; IDENTITY_HASH_SIZE], u64>>,
 }
 
-pub struct Replicator<'ex> {
+pub struct Replicator<'ex, S: 'static + Store> {
     v4_listener_task: Option<Task<()>>,
     v6_listener_task: Option<Task<()>>,
     background_cleanup_task: Task<()>,
-    _impl: Arc<ReplicatorImpl<'ex>>
+    _impl: Arc<ReplicatorImpl<'ex, S>>,
 }
 
-impl<'ex> Replicator<'ex> {
+impl<'ex, S: 'static + Store> Replicator<'ex, S> {
     /// Create a new replicator to replicate the contents of the provided store.
     /// All async tasks, sockets, and connections will be dropped if the replicator is dropped.
-    pub async fn start(executor: &Arc<Executor<'ex>>, store: Arc<dyn Store>, config: Config) -> Result<Replicator<'ex>, Box<dyn Error>> {
-        let listener_v4 = TcpListener::bind(SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, config.tcp_port)).await;
-        let listener_v6 = TcpListener::bind(SocketAddrV6::new(Ipv6Addr::UNSPECIFIED, config.tcp_port, 0, 0)).await;
+    pub async fn start(executor: &Arc<Executor<'ex>>, store: Arc<S>, config: Config) -> Result<Replicator<'ex, S>, Box<dyn Error>> {
+        let listener_v4 = socket2::Socket::new(socket2::Domain::IPV4, socket2::Type::STREAM, Some(socket2::Protocol::TCP)).and_then(|v4| {
+            let _ = v4.set_reuse_address(true);
+            let _ = v4.bind(&socket2::SockAddr::from(std::net::SocketAddrV4::new(std::net::Ipv4Addr::UNSPECIFIED, config.tcp_port)))?;
+            let _ = v4.listen(64);
+            Ok(v4)
+        });
+        let listener_v6 = socket2::Socket::new(socket2::Domain::IPV6, socket2::Type::STREAM, Some(socket2::Protocol::TCP)).and_then(|v6| {
+            let _ = v6.set_only_v6(true);
+            let _ = v6.set_reuse_address(true);
+            let _ = v6.bind(&socket2::SockAddr::from(std::net::SocketAddrV6::new(std::net::Ipv6Addr::UNSPECIFIED, config.tcp_port, 0, 0)))?;
+            let _ = v6.listen(64);
+            Ok(v6)
+        });
         if listener_v4.is_err() && listener_v6.is_err() {
             return Err(Box::new(listener_v4.unwrap_err()));
         }
 
-        let r = Arc::new(ReplicatorImpl::<'ex> {
+        let r = Arc::new(ReplicatorImpl::<'ex, S> {
             executor: executor.clone(),
             instance_id: {
                 let mut tmp = [0_u8; 16];
@@ -101,20 +115,24 @@ impl<'ex> Replicator<'ex> {
         });
 
         Ok(Self {
-            v4_listener_task: listener_v4.map_or(None, |listener_v4| Some(executor.spawn(r.clone().tcp_listener_task(listener_v4)))),
-            v6_listener_task: listener_v6.map_or(None, |listener_v6| Some(executor.spawn(r.clone().tcp_listener_task(listener_v6)))),
+            v4_listener_task: listener_v4.map_or(None, |listener_v4| {
+                Some(executor.spawn(r.clone().tcp_listener_task(smol::net::TcpListener::try_from(std::net::TcpListener::from(listener_v4)).unwrap())))
+            }),
+            v6_listener_task: listener_v6.map_or(None, |listener_v6| {
+                Some(executor.spawn(r.clone().tcp_listener_task(smol::net::TcpListener::try_from(std::net::TcpListener::from(listener_v6)).unwrap())))
+            }),
             background_cleanup_task: executor.spawn(r.clone().background_cleanup_task()),
-            _impl: r
+            _impl: r,
         })
     }
 }
 
-unsafe impl<'ex> Send for Replicator<'ex> {}
+unsafe impl<'ex, S: 'static + Store> Send for Replicator<'ex, S> {}
 
-unsafe impl<'ex> Sync for Replicator<'ex> {}
+unsafe impl<'ex, S: 'static + Store> Sync for Replicator<'ex, S> {}
 
-impl<'ex> ReplicatorImpl<'ex> {
-    async fn background_cleanup_task(self: Arc<ReplicatorImpl<'ex>>) {
+impl<'ex, S: 'static + Store> ReplicatorImpl<'ex, S> {
+    async fn background_cleanup_task(self: Arc<ReplicatorImpl<'ex, S>>) {
         let mut timer = smol::Timer::interval(Duration::from_secs(CONNECTION_TIMEOUT_SECONDS / 10));
         loop {
             timer.next().await;
@@ -152,7 +170,7 @@ impl<'ex> ReplicatorImpl<'ex> {
         }
     }
 
-    async fn tcp_listener_task(self: Arc<ReplicatorImpl<'ex>>, listener: TcpListener) {
+    async fn tcp_listener_task(self: Arc<ReplicatorImpl<'ex, S>>, listener: TcpListener) {
         loop {
             let stream = listener.accept().await;
             if stream.is_ok() {
@@ -166,7 +184,7 @@ impl<'ex> ReplicatorImpl<'ex> {
         }
     }
 
-    async fn handle_new_connection(self: Arc<ReplicatorImpl<'ex>>, mut stream: TcpStream, remote_address: SocketAddr, outgoing: bool) {
+    async fn handle_new_connection(self: Arc<ReplicatorImpl<'ex, S>>, mut stream: TcpStream, remote_address: SocketAddr, outgoing: bool) {
         let _ = stream.set_nodelay(true);
 
         let mut loopback_check_code_salt = [0_u8; 16];
@@ -175,9 +193,8 @@ impl<'ex> ReplicatorImpl<'ex> {
             hello_size: size_of::<protocol::Hello>() as u8,
             protocol_version: protocol::PROTOCOL_VERSION,
             hash_algorithm: protocol::HASH_ALGORITHM_SHA384,
-            flags: [0_u8; 4],
+            flags: if outgoing { protocol::HELLO_FLAG_OUTGOING } else { 0 },
             clock: ms_since_epoch().to_le_bytes(),
-            last_object_receive_time: self.store.last_object_receive_time().unwrap_or(u64::MAX).to_le_bytes(),
             domain_hash: self.domain_hash.clone(),
             instance_id: self.instance_id.clone(),
             loopback_check_code_salt,
@@ -201,11 +218,6 @@ impl<'ex> ReplicatorImpl<'ex> {
                         let s2 = self.clone();
                         let _ = connections.entry(k).or_insert_with(move || {
                             let _ = stream.set_nodelay(false);
-
-                            if outgoing {
-                                s2.store.save_remote_endpoint(&remote_address);
-                            }
-
                             let last_receive = Arc::new(AtomicU64::new(ms_monotonic()));
                             Connection {
                                 remote_address,
@@ -221,7 +233,7 @@ impl<'ex> ReplicatorImpl<'ex> {
         let _task = self.connections_in_progress.lock().await.remove(&remote_address);
     }
 
-    async fn connection_io_task(self: Arc<ReplicatorImpl<'ex>>, stream: TcpStream, remote_instance_id: [u8; 16], last_receive: Arc<AtomicU64>) {
+    async fn connection_io_task(self: Arc<ReplicatorImpl<'ex, S>>, stream: TcpStream, remote_instance_id: [u8; 16], last_receive: Arc<AtomicU64>) {
         let mut reader = BufReader::with_capacity(65536, stream.clone());
         let writer = Arc::new(Mutex::new(stream));
 
@@ -354,6 +366,7 @@ impl<'ex> ReplicatorImpl<'ex> {
     }
 }
 
-unsafe impl<'ex> Send for ReplicatorImpl<'ex> {}
+unsafe impl<'ex, S: 'static + Store> Send for ReplicatorImpl<'ex, S> {}
 
-unsafe impl<'ex> Sync for ReplicatorImpl<'ex> {}
+unsafe impl<'ex, S: 'static + Store> Sync for ReplicatorImpl<'ex, S> {}
+ */

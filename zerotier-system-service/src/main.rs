@@ -6,6 +6,15 @@
  * https://www.zerotier.com/
  */
 
+use std::io::Write;
+use std::str::FromStr;
+
+use clap::{App, Arg, ArgMatches, ErrorKind};
+
+use zerotier_network_hypervisor::{VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION};
+
+use crate::store::platform_default_home_path;
+
 mod fastudpsocket;
 mod localconfig;
 mod getifaddrs;
@@ -15,14 +24,6 @@ mod store;
 mod vnic;
 mod service;
 mod utils;
-
-use std::io::Write;
-use std::str::FromStr;
-
-use clap::{App, Arg, ArgMatches, ErrorKind};
-
-use zerotier_network_hypervisor::{VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION};
-use crate::store::platform_default_home_path;
 
 pub const HTTP_API_OBJECT_SIZE_LIMIT: usize = 131072;
 

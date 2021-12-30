@@ -18,6 +18,7 @@ pub mod secret;
 pub mod hex;
 pub mod varint;
 pub mod sidhp751;
+pub mod gmac;
 
 pub use aes_gmac_siv;
 pub use rand_core;

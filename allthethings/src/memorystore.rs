@@ -1,79 +1,98 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ *
+ * (c)2021 ZeroTier, Inc.
+ * https://www.zerotier.com/
+ */
+
 use std::collections::Bound::Included;
 use std::collections::BTreeMap;
-use std::io::Write;
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Mutex;
+use std::sync::Arc;
 
-use smol::net::SocketAddr;
-
-use zerotier_core_crypto::random::xorshift64_random;
+use parking_lot::Mutex;
 
 use crate::{IDENTITY_HASH_SIZE, ms_since_epoch, Store, StorePutResult};
 
 /// A Store that stores all objects in memory, mostly for testing.
-pub struct MemoryStore(Mutex<BTreeMap<[u8; IDENTITY_HASH_SIZE], Vec<u8>>>, Mutex<Vec<SocketAddr>>, AtomicU64);
+pub struct MemoryStore(Mutex<BTreeMap<[u8; IDENTITY_HASH_SIZE], (Arc<[u8]>, u64)>>);
 
 impl MemoryStore {
-    pub fn new() -> Self { Self(Mutex::new(BTreeMap::new()), Mutex::new(Vec::new()), AtomicU64::new(u64::MAX)) }
+    pub fn new() -> Self { Self(Mutex::new(BTreeMap::new())) }
 }
 
 impl Store for MemoryStore {
-    fn get(&self, _reference_time: u64, identity_hash: &[u8; IDENTITY_HASH_SIZE], buffer: &mut Vec<u8>) -> bool {
-        buffer.clear();
-        self.0.lock().unwrap().get(identity_hash).map_or(false, |value| {
-            let _ = buffer.write_all(value.as_slice());
-            true
+    type Object = Arc<[u8]>;
+
+    #[inline(always)]
+    fn local_time(&self) -> u64 {
+        ms_since_epoch()
+    }
+
+    fn get(&self, reference_time: u64, identity_hash: &[u8; IDENTITY_HASH_SIZE]) -> Option<Self::Object> {
+        self.0.lock().get(identity_hash).and_then(|o| {
+            if (*o).1 <= reference_time {
+                Some((*o).0.clone())
+            } else {
+                None
+            }
         })
     }
 
-    fn put(&self, _reference_time: u64, identity_hash: &[u8; IDENTITY_HASH_SIZE], object: &[u8]) -> StorePutResult {
+    fn put(&self, reference_time: u64, identity_hash: &[u8; IDENTITY_HASH_SIZE], object: &[u8]) -> StorePutResult {
         let mut result = StorePutResult::Duplicate;
-        let _ = self.0.lock().unwrap().entry(identity_hash.clone()).or_insert_with(|| {
-            self.2.store(ms_since_epoch(), Ordering::Relaxed);
+        let _ = self.0.lock().entry(identity_hash.clone()).or_insert_with(|| {
             result = StorePutResult::Ok;
-            object.to_vec()
+            (object.to_vec().into(), reference_time)
         });
         result
     }
 
-    fn have(&self, _reference_time: u64, identity_hash: &[u8; IDENTITY_HASH_SIZE]) -> bool {
-        self.0.lock().unwrap().contains_key(identity_hash)
+    fn have(&self, reference_time: u64, identity_hash: &[u8; IDENTITY_HASH_SIZE]) -> bool {
+        self.0.lock().get(identity_hash).map_or(false, |o| (*o).1 <= reference_time)
     }
 
-    fn total_count(&self, _reference_time: u64) -> Option<u64> {
-        Some(self.0.lock().unwrap().len() as u64)
+    fn total_count(&self, reference_time: u64) -> Option<u64> {
+        let mut tc = 0_u64;
+        for e in self.0.lock().iter() {
+            tc += ((*e.1).1 <= reference_time) as u64;
+        }
+        Some(tc)
     }
 
-    fn last_object_receive_time(&self) -> Option<u64> {
-        let rt = self.2.load(Ordering::Relaxed);
-        if rt == u64::MAX {
-            None
-        } else {
-            Some(rt)
+    fn for_each<F: FnMut(&[u8], &Arc<[u8]>) -> bool>(&self, reference_time: u64, start: &[u8; IDENTITY_HASH_SIZE], end: &[u8; IDENTITY_HASH_SIZE], mut f: F) {
+        let mut tmp: Vec<([u8; IDENTITY_HASH_SIZE], Arc<[u8]>)> = Vec::with_capacity(1024);
+        for e in self.0.lock().range((Included(*start), Included(*end))).into_iter() {
+            if (*e.1).1 <= reference_time {
+                tmp.push((e.0.clone(), (*e.1).0.clone()));
+            }
+        }
+        for e in tmp.iter() {
+            if !f(&(*e).0, &(*e).1) {
+                break;
+            }
         }
     }
 
-    fn count(&self, _reference_time: u64, start: &[u8; IDENTITY_HASH_SIZE], end: &[u8; IDENTITY_HASH_SIZE]) -> Option<u64> {
-        if start.le(end) {
-            Some(self.0.lock().unwrap().range((Included(*start), Included(*end))).count() as u64)
-        } else {
-            None
+    fn for_each_identity_hash<F: FnMut(&[u8]) -> bool>(&self, reference_time: u64, start: &[u8; IDENTITY_HASH_SIZE], end: &[u8; IDENTITY_HASH_SIZE], mut f: F) {
+        let mut tmp: Vec<[u8; IDENTITY_HASH_SIZE]> = Vec::with_capacity(1024);
+        for e in self.0.lock().range((Included(*start), Included(*end))).into_iter() {
+            if (*e.1).1 <= reference_time {
+                tmp.push(e.0.clone());
+            }
+        }
+        for e in tmp.iter() {
+            if !f(e) {
+                break;
+            }
         }
     }
 
-    fn save_remote_endpoint(&self, to_address: &SocketAddr) {
-        let mut sv = self.1.lock().unwrap();
-        if !sv.contains(to_address) {
-            sv.push(to_address.clone());
+    fn count(&self, reference_time: u64, start: &[u8; IDENTITY_HASH_SIZE], end: &[u8; IDENTITY_HASH_SIZE]) -> Option<u64> {
+        let mut tc = 0_u64;
+        for e in self.0.lock().range((Included(*start), Included(*end))).into_iter() {
+            tc += ((*e.1).1 <= reference_time) as u64;
         }
-    }
-
-    fn get_remote_endpoint(&self) -> Option<SocketAddr> {
-        let sv = self.1.lock().unwrap();
-        if sv.is_empty() {
-            None
-        } else {
-            sv.get((xorshift64_random() as usize) % sv.len()).cloned()
-        }
+        Some(tc)
     }
 }
