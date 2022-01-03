@@ -22,7 +22,7 @@ use bytes::Bytes;
 use jsonwebtoken::{dangerous_insecure_decode};
 use openidconnect::core::{CoreClient, CoreProviderMetadata, CoreResponseType};
 use openidconnect::reqwest::http_client;
-use openidconnect::{AccessToken, AccessTokenHash, AuthorizationCode, AuthenticationFlow, ClientId, CsrfToken, IssuerUrl, Nonce, NonceVerifier, OAuth2TokenResponse, PkceCodeChallenge, PkceCodeVerifier, RedirectUrl, RefreshToken, Scope, TokenResponse};
+use openidconnect::{AccessToken, AccessTokenHash, AuthorizationCode, AuthenticationFlow, ClientId, CsrfToken, IssuerUrl, Nonce, OAuth2TokenResponse, PkceCodeChallenge, PkceCodeVerifier, RedirectUrl, RefreshToken, Scope, TokenResponse};
 use serde::{Deserialize, Serialize};
 use std::str::from_utf8;
 use std::sync::{Arc, Mutex};
@@ -72,6 +72,7 @@ fn nonce_func(nonce: String) -> Box<dyn Fn() -> Nonce> {
     return Box::new(move || Nonce::new(nonce.to_string()));
 }
 
+#[cfg(debug_assertions)]
 fn systemtime_strftime<T>(dt: T, format: &str) -> String
    where T: Into<OffsetDateTime>
 {
@@ -244,82 +245,87 @@ impl ZeroIDC {
                                             return true;
                                         });
                                         
-                                        match verified {
+                                        let v = match verified {
                                             Some(verified) => {
                                                 if !verified {
                                                     println!("not verified.");
                                                     (*inner_local.lock().unwrap()).running = false;
-                                                    break;
+                                                    false
+                                                } else {
+                                                    true
                                                 }
                                             },
                                             None => {
                                                 println!("no verification performed?");
                                                 (*inner_local.lock().unwrap()).running = false;
-                                                break;
+                                                false
                                             }
-                                        }
+                                        };
                                         
+                                        if v {
+                                            match res.id_token() {
+                                                Some(id_token) => {
+                                                    let params = [("id_token", id_token.to_string()),("state", "refresh".to_string())];
+                                                    #[cfg(debug_assertions)] {
+                                                        println!("New ID token: {}", id_token.to_string());
+                                                    }
+                                                    let client = reqwest::blocking::Client::new();
+                                                    let r = client.post((*inner_local.lock().unwrap()).auth_endpoint.clone())
+                                                        .form(&params)
+                                                        .send();
 
-                                        match res.id_token() {
-                                            Some(id_token) => {
-                                                let params = [("id_token", id_token.to_string()),("state", "refresh".to_string())];
-                                                #[cfg(debug_assertions)] {
-                                                    println!("New ID token: {}", id_token.to_string());
-                                                }
-                                                let client = reqwest::blocking::Client::new();
-                                                let r = client.post((*inner_local.lock().unwrap()).auth_endpoint.clone())
-                                                    .form(&params)
-                                                    .send();
+                                                    match r {
+                                                        Ok(r) => {
+                                                            if r.status().is_success() {
+                                                                #[cfg(debug_assertions)] {
+                                                                    println!("hit url: {}", r.url().as_str());
+                                                                    println!("status: {}", r.status());
+                                                                }
 
-                                                match r {
-                                                    Ok(r) => {
-                                                        if r.status().is_success() {
-                                                            #[cfg(debug_assertions)] {
+                                                                let access_token = res.access_token();
+                                                                let at = access_token.secret();
+                                                                // yes this function is called `dangerous_insecure_decode`
+                                                                // and it doesn't validate the jwt token signature, 
+                                                                // but if we've gotten this far, our claims have already
+                                                                // been validated up above
+                                                                let exp = dangerous_insecure_decode::<Exp>(&at);
+                                                                
+                                                                if let Ok(e) = exp {
+                                                                    (*inner_local.lock().unwrap()).exp_time = e.claims.exp
+                                                                }
+
+                                                                (*inner_local.lock().unwrap()).access_token = Some(access_token.clone());
+                                                                if let Some(t) = res.refresh_token() {
+                                                                    // println!("New Refresh Token: {}", t.secret());
+                                                                    (*inner_local.lock().unwrap()).refresh_token = Some(t.clone());
+                                                                }
+                                                                #[cfg(debug_assertions)] {
+                                                                    println!("Central post succeeded");
+                                                                }
+                                                            } else {
+                                                                println!("Central post failed: {}", r.status().to_string());
                                                                 println!("hit url: {}", r.url().as_str());
-                                                                println!("status: {}", r.status());
+                                                                println!("Status: {}", r.status());
+                                                                (*inner_local.lock().unwrap()).exp_time = 0;
+                                                                (*inner_local.lock().unwrap()).running = false;
                                                             }
-
-                                                            let access_token = res.access_token();
-                                                            let at = access_token.secret();
-                                                            // yes this function is called `dangerous_insecure_decode`
-                                                            // and it doesn't validate the jwt token signature, 
-                                                            // but if we've gotten this far, our claims have already
-                                                            // been validated up above
-                                                            let exp = dangerous_insecure_decode::<Exp>(&at);
+                                                        },
+                                                        Err(e) => {
                                                             
-                                                            if let Ok(e) = exp {
-                                                                (*inner_local.lock().unwrap()).exp_time = e.claims.exp
-                                                            }
-
-                                                            (*inner_local.lock().unwrap()).access_token = Some(access_token.clone());
-                                                            if let Some(t) = res.refresh_token() {
-                                                                // println!("New Refresh Token: {}", t.secret());
-                                                                (*inner_local.lock().unwrap()).refresh_token = Some(t.clone());
-                                                            }
-                                                            #[cfg(debug_assertions)] {
-                                                                println!("Central post succeeded");
-                                                            }
-                                                        } else {
-                                                            println!("Central post failed: {}", r.status().to_string());
-                                                            println!("hit url: {}", r.url().as_str());
-                                                            println!("Status: {}", r.status());
+                                                            println!("Central post failed: {}", e.to_string());
+                                                            println!("hit url: {}", e.url().unwrap().as_str());
+                                                            println!("Status: {}", e.status().unwrap());
                                                             (*inner_local.lock().unwrap()).exp_time = 0;
                                                             (*inner_local.lock().unwrap()).running = false;
                                                         }
-                                                    },
-                                                    Err(e) => {
-                                                        
-                                                        println!("Central post failed: {}", e.to_string());
-                                                        println!("hit url: {}", e.url().unwrap().as_str());
-                                                        println!("Status: {}", e.status().unwrap());
-                                                        (*inner_local.lock().unwrap()).exp_time = 0;
-                                                        (*inner_local.lock().unwrap()).running = false;
                                                     }
+                                                },
+                                                None => {
+                                                    println!("no id token?!?");
                                                 }
-                                            },
-                                            None => {
-                                                println!("no id token?!?");
                                             }
+                                        } else {
+                                            println!("claims not verified");
                                         }
                                     },
                                     Err(e) => {
