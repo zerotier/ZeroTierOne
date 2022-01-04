@@ -10,6 +10,7 @@
  * of this software will be governed by version 2.0 of the Apache License.
  */
 
+pub mod error;
 pub mod ext;
 
 extern crate base64;
@@ -17,6 +18,8 @@ extern crate bytes;
 extern crate openidconnect;
 extern crate time;
 extern crate url;
+
+use crate::error::ZeroIDCError;
 
 use bytes::Bytes;
 use jsonwebtoken::{dangerous_insecure_decode};
@@ -96,7 +99,7 @@ impl ZeroIDC {
         client_id: &str,
         auth_ep: &str,
         local_web_port: u16,
-    ) -> Result<ZeroIDC, String> {
+    ) -> Result<ZeroIDC, ZeroIDCError> {
         let idc = ZeroIDC {
             inner: Arc::new(Mutex::new(Inner {
                 running: false,
@@ -114,39 +117,14 @@ impl ZeroIDC {
             })),
         };
 
-        let iss = match IssuerUrl::new(issuer.to_string()) {
-            Ok(i) => i,
-            Err(e) => {
-                println!("Error generating Issuer URL");
-                return Err(e.to_string());
-            }
+        let iss = IssuerUrl::new(issuer.to_string())?;
 
-        };
-
-        let provider_meta = match CoreProviderMetadata::discover(&iss, http_client) {
-            Ok(m) => m,
-            Err(e) => {
-                println!("Error discovering provider metadata");
-                return Err(e.to_string());
-            },
-        };
+        let provider_meta = CoreProviderMetadata::discover(&iss, http_client)?;
 
         let r = format!("http://localhost:{}/sso", local_web_port);
-        let redir_url = match Url::parse(&r) {
-            Ok(s) => s,
-            Err(e) => {
-                println!("Error generating redirect URL");
-                return Err(e.to_string());
-            }
-        };
+        let redir_url = Url::parse(&r)?;
 
-        let redirect = match RedirectUrl::new(redir_url.to_string()) {
-            Ok(s) => s,
-            Err(e) => {
-                println!("Error generating RedirectURL instance from string: {}", redir_url.to_string());
-                return Err(e.to_string());
-            }
-        };
+        let redirect = RedirectUrl::new(redir_url.to_string())?;
 
         (*idc.inner.lock().unwrap()).oidc_client = Some(
             CoreClient::from_provider_metadata(

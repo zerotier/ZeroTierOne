@@ -1500,6 +1500,7 @@ dependencies = [
  "openidconnect",
  "reqwest",
  "serde",
+ "thiserror",
  "time 0.3.5",
  "url",
 ]
