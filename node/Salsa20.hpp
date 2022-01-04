@@ -19,6 +19,10 @@
 #define ZT_SALSA20_SSE 1
 #endif
 
+#if defined(ZT_SALSA20_SSE) && !ZT_SALSA20_SSE
+#undef ZT_SALSA20_SSE
+#endif
+
 #ifdef ZT_SALSA20_SSE
 #include <emmintrin.h>
 #endif // ZT_SALSA20_SSE
