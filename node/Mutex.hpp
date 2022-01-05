@@ -86,7 +86,7 @@ private:
 #ifdef __WINDOWS__
 
 #include <stdlib.h>
-#include <Windows.h>
+#include <windows.h>
 
 namespace ZeroTier {
 
