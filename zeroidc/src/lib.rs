@@ -94,7 +94,7 @@ fn systemtime_strftime<T>(dt: T, format: &str) -> String
 }
 
 impl ZeroIDC {
-    fn new(
+    pub fn new(
         issuer: &str,
         client_id: &str,
         auth_ep: &str,
@@ -330,7 +330,7 @@ impl ZeroIDC {
         }
     }
 
-    fn stop(&mut self) {
+    pub fn stop(&mut self) {
         let local = self.inner.clone();
         if (*local.lock().unwrap()).running {
             if let Some(u) = (*local.lock().unwrap()).oidc_thread.take() {
@@ -339,7 +339,7 @@ impl ZeroIDC {
         }
     }
 
-    fn is_running(&mut self) -> bool {
+    pub fn is_running(&mut self) -> bool {
         let local = Arc::clone(&self.inner);
 
         if (*local.lock().unwrap()).running {
@@ -349,11 +349,11 @@ impl ZeroIDC {
         }
     }
 
-    fn get_exp_time(&mut self) -> u64 {
+    pub fn get_exp_time(&mut self) -> u64 {
         return (*self.inner.lock().unwrap()).exp_time;
     }
 
-    fn set_nonce_and_csrf(&mut self, csrf_token: String, nonce: String) {
+    pub fn set_nonce_and_csrf(&mut self, csrf_token: String, nonce: String) {
         let local = Arc::clone(&self.inner);
         (*local.lock().expect("can't lock inner")).as_opt().map(|i| {
             let need_verifier = match i.pkce_verifier {
@@ -410,7 +410,7 @@ impl ZeroIDC {
         });
     }
 
-    fn auth_url(&self) -> String {
+    pub fn auth_url(&self) -> String {
         let url = (*self.inner.lock().expect("can't lock inner")).as_opt().map(|i| {
             match i.url.clone() {
                 Some(u) => u.to_string(),
@@ -424,7 +424,7 @@ impl ZeroIDC {
         }
     }
 
-    fn do_token_exchange(&mut self, code: &str) -> String {
+    pub fn do_token_exchange(&mut self, code: &str) -> String {
         let local = Arc::clone(&self.inner);
         let mut should_start = false;
         let res = (*local.lock().unwrap()).as_opt().map(|i| {
