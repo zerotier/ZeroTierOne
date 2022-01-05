@@ -56,9 +56,9 @@
 #include <zeroidc.h>
 
 #ifdef __WINDOWS__
-#include <WinSock2.h>
-#include <Windows.h>
-#include <ShlObj.h>
+#include <winsock2.h>
+#include <windows.h>
+#include <shlobj.h>
 #include <netioapi.h>
 #include <iphlpapi.h>
 //#include <unistd.h>
