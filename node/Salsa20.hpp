@@ -15,7 +15,7 @@
 #include "Constants.hpp"
 #include "Utils.hpp"
 
-#if (!defined(ZT_SALSA20_SSE)) && (defined(__SSE2__) || defined(__WINDOWS__))
+#if (!defined(ZT_SALSA20_SSE)) && (defined(__SSE2__) || (defined(__WINDOWS__) && !defined(__MINGW32__)))
 #define ZT_SALSA20_SSE 1
 #endif
 
