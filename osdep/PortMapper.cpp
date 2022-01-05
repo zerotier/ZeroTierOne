@@ -47,13 +47,8 @@
 #include <miniupnpc/miniupnpc.h>
 #include <miniupnpc/upnpcommands.h>
 #else
-#ifdef __ANDROID__
-#include "miniupnpc.h"
-#include "upnpcommands.h"
-#else
 #include "../ext/miniupnpc/miniupnpc.h"
 #include "../ext/miniupnpc/upnpcommands.h"
-#endif
 #endif
 
 #ifdef ZT_USE_SYSTEM_NATPMP
