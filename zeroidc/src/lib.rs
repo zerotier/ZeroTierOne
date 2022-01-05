@@ -314,6 +314,7 @@ impl ZeroIDC {
                                 println!("token response??");
                             }
                         } else {
+                            #[cfg(debug_assertions)]
                             println!("waiting to refresh");
                         }
                     } else {

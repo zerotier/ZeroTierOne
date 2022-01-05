@@ -1659,15 +1659,9 @@ public:
 
 			} else if (ps[0] == "sso") {
 				// SSO redirect handling
-				fprintf(stderr, "sso get\n");
-				fprintf(stderr, "path: %s\n", path.c_str());
-				fprintf(stderr, "body: %s\n", body.c_str());
-
 				const char* state = zeroidc::zeroidc_get_url_param_value("state", path.c_str());
 				const char* nwid = zeroidc::zeroidc_network_id_from_state(state);
-				fprintf(stderr, "state: %s\n", state);
-				fprintf(stderr, "nwid: %s\n", nwid);
-
+				
 				const uint64_t id = Utils::hexStrToU64(nwid);
 				Mutex::Lock l(_nets_m);
 				if (_nets.find(id) != _nets.end()) {
