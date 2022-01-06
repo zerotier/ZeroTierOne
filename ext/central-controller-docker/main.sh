@@ -79,6 +79,11 @@ echo "{
 }    
 " > /var/lib/zerotier-one/local.conf
 
+until /usr/pgsql-10/bin/pg_isready -h ${ZTC_DB_HOST} -p ${ZTC_DB_PORT}; do
+	echo "Waiting for PostgreSQL...";
+	sleep 2;
+done
+
 export GLIBCXX_FORCE_NEW=1
 export GLIBCPP_FORCE_NEW=1
 export LD_PRELOAD="/usr/lib64/libjemalloc.so"
