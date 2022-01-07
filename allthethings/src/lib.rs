@@ -15,11 +15,11 @@ mod iblt;
 mod config;
 mod link;
 
-pub(crate) fn ms_since_epoch() -> u64 {
+pub fn ms_since_epoch() -> u64 {
     std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as u64
 }
 
-pub(crate) fn ms_monotonic() -> u64 {
+pub fn ms_monotonic() -> u64 {
     std::time::Instant::now().elapsed().as_millis() as u64
 }
 
@@ -38,4 +38,5 @@ pub const IDENTITY_HASH_SIZE: usize = 48;
 
 pub use config::Config;
 pub use store::{Store, StorePutResult};
+pub use memorystore::MemoryStore;
 //pub use replicator::Replicator;

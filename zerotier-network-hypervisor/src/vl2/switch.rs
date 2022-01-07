@@ -9,8 +9,8 @@
 use std::sync::Arc;
 
 use crate::util::buffer::Buffer;
-use crate::vl1::node::VL1PacketHandler;
-use crate::vl1::{Peer, Path};
+use crate::vl1::node::VL1VirtualInterface;
+use crate::vl1::{Peer, Path, Identity};
 use crate::vl1::protocol::*;
 
 pub trait SwitchInterface {
@@ -19,7 +19,7 @@ pub trait SwitchInterface {
 pub struct Switch {
 }
 
-impl VL1PacketHandler for Switch {
+impl VL1VirtualInterface for Switch {
     fn handle_packet(&self, peer: &Peer, source_path: &Arc<Path>, forward_secrecy: bool, extended_authentication: bool, verb: u8, payload: &Buffer<{ PACKET_SIZE_MAX }>) -> bool {
         false
     }
@@ -30,6 +30,10 @@ impl VL1PacketHandler for Switch {
 
     fn handle_ok(&self, peer: &Peer, source_path: &Arc<Path>, forward_secrecy: bool, extended_authentication: bool, in_re_verb: u8, in_re_message_id: u64, payload: &Buffer<{ PACKET_SIZE_MAX }>, cursor: &mut usize) -> bool {
         false
+    }
+
+    fn has_trust_relationship(&self, id: &Identity) -> bool {
+        true
     }
 }
 

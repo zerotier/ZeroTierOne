@@ -12,7 +12,7 @@ use std::sync::Arc;
 
 use parking_lot::Mutex;
 
-use crate::{IDENTITY_HASH_SIZE, ms_since_epoch, Store, StorePutResult};
+use crate::{IDENTITY_HASH_SIZE, ms_monotonic, ms_since_epoch, Store, StorePutResult};
 
 /// A Store that stores all objects in memory, mostly for testing.
 pub struct MemoryStore(Mutex<BTreeMap<[u8; IDENTITY_HASH_SIZE], (Arc<[u8]>, u64)>>);
@@ -25,9 +25,10 @@ impl Store for MemoryStore {
     type Object = Arc<[u8]>;
 
     #[inline(always)]
-    fn local_time(&self) -> u64 {
-        ms_since_epoch()
-    }
+    fn clock(&self) -> u64 { ms_since_epoch() }
+
+    #[inline(always)]
+    fn monotonic_clock(&self) -> u64 { ms_monotonic() }
 
     fn get(&self, reference_time: u64, identity_hash: &[u8; IDENTITY_HASH_SIZE]) -> Option<Self::Object> {
         self.0.lock().get(identity_hash).and_then(|o| {
@@ -39,17 +40,17 @@ impl Store for MemoryStore {
         })
     }
 
-    fn put(&self, reference_time: u64, identity_hash: &[u8; IDENTITY_HASH_SIZE], object: &[u8]) -> StorePutResult {
+    fn put(&self, identity_hash: &[u8; IDENTITY_HASH_SIZE], object: &[u8]) -> StorePutResult {
         let mut result = StorePutResult::Duplicate;
         let _ = self.0.lock().entry(identity_hash.clone()).or_insert_with(|| {
             result = StorePutResult::Ok;
-            (object.to_vec().into(), reference_time)
+            (object.to_vec().into(), ms_since_epoch())
         });
         result
     }
 
-    fn have(&self, reference_time: u64, identity_hash: &[u8; IDENTITY_HASH_SIZE]) -> bool {
-        self.0.lock().get(identity_hash).map_or(false, |o| (*o).1 <= reference_time)
+    fn have(&self, identity_hash: &[u8; IDENTITY_HASH_SIZE]) -> bool {
+        self.0.lock().contains_key(identity_hash)
     }
 
     fn total_count(&self, reference_time: u64) -> Option<u64> {

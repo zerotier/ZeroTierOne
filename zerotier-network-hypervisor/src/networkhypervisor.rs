@@ -11,11 +11,11 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use crate::error::InvalidParameterError;
-use crate::vl1::{Address, Identity, Endpoint, NodeInterface, Node};
+use crate::vl1::{Address, Identity, Endpoint, VL1SystemInterface, Node};
 use crate::vl2::{Switch, SwitchInterface};
 use crate::{PacketBuffer, PacketBufferPool};
 
-pub trait Interface: NodeInterface + SwitchInterface {}
+pub trait Interface: VL1SystemInterface + SwitchInterface {}
 
 pub struct NetworkHypervisor {
     vl1: Node,
@@ -51,7 +51,7 @@ impl NetworkHypervisor {
     }
 
     #[inline(always)]
-    pub fn wire_receive<CI: NodeInterface>(&self, ci: &CI, source_endpoint: &Endpoint, source_local_socket: Option<NonZeroI64>, source_local_interface: Option<NonZeroI64>, mut data: PacketBuffer) {
+    pub fn wire_receive<CI: VL1SystemInterface>(&self, ci: &CI, source_endpoint: &Endpoint, source_local_socket: Option<NonZeroI64>, source_local_interface: Option<NonZeroI64>, mut data: PacketBuffer) {
         self.vl1.wire_receive(ci, &self.vl2, source_endpoint, source_local_socket, source_local_interface, data)
     }
 }

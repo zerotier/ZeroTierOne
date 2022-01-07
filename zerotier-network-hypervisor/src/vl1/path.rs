@@ -21,7 +21,7 @@ use crate::PacketBuffer;
 use crate::util::{highwayhasher, U64NoOpHasher};
 use crate::vl1::Endpoint;
 use crate::vl1::fragmentedpacket::FragmentedPacket;
-use crate::vl1::node::NodeInterface;
+use crate::vl1::node::VL1SystemInterface;
 use crate::vl1::protocol::*;
 
 /// Keepalive interval for paths in milliseconds.
@@ -171,7 +171,7 @@ impl Path {
     pub(crate) const CALL_EVERY_INTERVAL_MS: i64 = PATH_KEEPALIVE_INTERVAL;
 
     #[inline(always)]
-    pub(crate) fn call_every_interval<CI: NodeInterface>(&self, ct: &CI, time_ticks: i64) {
+    pub(crate) fn call_every_interval<CI: VL1SystemInterface>(&self, ct: &CI, time_ticks: i64) {
         self.fragmented_packets.lock().retain(|packet_id, frag| (time_ticks - frag.ts_ticks) < PACKET_FRAGMENT_EXPIRATION);
     }
 }

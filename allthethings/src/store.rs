@@ -25,17 +25,20 @@ pub trait Store: Sync + Send {
     /// Type returned by get(), which can be anything that contains a byte slice.
     type Object: AsRef<[u8]>;
 
-    /// Get the local time in milliseconds since Unix epoch.
-    fn local_time(&self) -> u64;
+    /// Get the current wall time in milliseconds since Unix epoch.
+    fn clock(&self) -> u64;
+
+    /// Get the number of milliseconds that have elapsed since some arbitrary event in the past (like system boot).
+    fn monotonic_clock(&self) -> u64;
 
     /// Get an object from the database.
     fn get(&self, reference_time: u64, identity_hash: &[u8; IDENTITY_HASH_SIZE]) -> Option<Self::Object>;
 
     /// Store an entry in the database.
-    fn put(&self, reference_time: u64, identity_hash: &[u8; IDENTITY_HASH_SIZE], object: &[u8]) -> StorePutResult;
+    fn put(&self, identity_hash: &[u8; IDENTITY_HASH_SIZE], object: &[u8]) -> StorePutResult;
 
     /// Check if we have an object by its identity hash.
-    fn have(&self, reference_time: u64, identity_hash: &[u8; IDENTITY_HASH_SIZE]) -> bool;
+    fn have(&self, identity_hash: &[u8; IDENTITY_HASH_SIZE]) -> bool;
 
     /// Get the total count of objects.
     fn total_count(&self, reference_time: u64) -> Option<u64>;

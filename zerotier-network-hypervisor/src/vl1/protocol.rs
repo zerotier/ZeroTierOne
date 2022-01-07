@@ -39,7 +39,10 @@ pub const KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K0: u8 = b'0';
 pub const KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K1: u8 = b'1';
 
 /// KBKDF usage label for acknowledgement of a shared secret.
-pub const KBKDF_KEY_USAGE_LABEL_EPHEMERAL_RATCHET: u8 = b'E';
+pub const KBKDF_KEY_USAGE_LABEL_EPHEMERAL_RATCHET: u8 = b'e';
+
+/// KBKDF usage label for generating the ratchet state ID (which is not actually a key).
+pub const KBKDF_KEY_USAGE_LABEL_EPHEMERAL_RATCHET_STATE_ID: u8 = b'E';
 
 /// Try to re-key ephemeral keys after this time.
 pub const EPHEMERAL_SECRET_REKEY_AFTER_TIME: i64 = 300000; // 5 minutes

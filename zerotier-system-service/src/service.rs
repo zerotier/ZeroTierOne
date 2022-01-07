@@ -13,7 +13,7 @@ use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use parking_lot::Mutex;
 
 use zerotier_network_hypervisor::{Interface, NetworkHypervisor};
-use zerotier_network_hypervisor::vl1::{Endpoint, Identity, IdentityType, Node, NodeInterface};
+use zerotier_network_hypervisor::vl1::{Endpoint, Identity, IdentityType, Node, VL1SystemInterface};
 use zerotier_network_hypervisor::vl2::SwitchInterface;
 use crate::fastudpsocket::{fast_udp_socket_sendto, FastUDPRawOsSocket};
 
@@ -31,7 +31,7 @@ struct ServiceInterface {
     pub all_sockets_spin_ptr: AtomicUsize,
 }
 
-impl NodeInterface for ServiceInterface {
+impl VL1SystemInterface for ServiceInterface {
     fn event_node_is_up(&self) {}
 
     fn event_node_is_down(&self) {}

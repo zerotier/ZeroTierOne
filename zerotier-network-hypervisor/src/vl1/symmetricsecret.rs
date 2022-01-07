@@ -16,7 +16,8 @@ use zerotier_core_crypto::secret::Secret;
 use crate::util::pool::{Pool, PoolFactory};
 use crate::vl1::protocol::*;
 
-pub struct AesGmacSivPoolFactory(Secret<SHA384_HASH_SIZE>, Secret<SHA384_HASH_SIZE>);
+/// Pool of reusable AES-GMAC-SIV instances.
+pub(crate) struct AesGmacSivPoolFactory(Secret<SHA384_HASH_SIZE>, Secret<SHA384_HASH_SIZE>);
 
 impl PoolFactory<AesGmacSiv> for AesGmacSivPoolFactory {
     #[inline(always)]
@@ -29,7 +30,7 @@ impl PoolFactory<AesGmacSiv> for AesGmacSivPoolFactory {
 /// A symmetric secret key negotiated between peers.
 ///
 /// This contains the key and several sub-keys and ciphers keyed with sub-keys.
-pub struct SymmetricSecret {
+pub(crate) struct SymmetricSecret {
     /// The root shared symmetric secret from which other keys are derived.
     pub key: Secret<SHA384_HASH_SIZE>,
 

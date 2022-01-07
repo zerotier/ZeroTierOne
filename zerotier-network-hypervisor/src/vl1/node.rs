@@ -18,9 +18,9 @@ use zerotier_core_crypto::random::{next_u64_secure, SecureRandom};
 
 use crate::{PacketBuffer, PacketBufferFactory, PacketBufferPool};
 use crate::error::InvalidParameterError;
+use crate::util::buffer::Buffer;
 use crate::util::gate::IntervalGate;
 use crate::util::pool::{Pool, Pooled};
-use crate::util::buffer::Buffer;
 use crate::vl1::{Address, Endpoint, Identity};
 use crate::vl1::path::Path;
 use crate::vl1::peer::Peer;
@@ -28,7 +28,8 @@ use crate::vl1::protocol::*;
 use crate::vl1::rootset::RootSet;
 use crate::vl1::whoisqueue::{QueuedPacket, WhoisQueue};
 
-pub trait NodeInterface {
+/// Trait implemented by external code to handle events and provide an interface to the system or application.
+pub trait VL1SystemInterface {
     /// Node is up and ready for operation.
     fn event_node_is_up(&self);
 
@@ -88,7 +89,7 @@ pub trait NodeInterface {
 ///
 /// This normally isn't used from outside this crate except for testing or if you want to harness VL1
 /// for some entirely unrelated purpose.
-pub trait VL1PacketHandler {
+pub trait VL1VirtualInterface {
     /// Handle a packet, returning true if it belonged to VL2.
     ///
     /// If this is a VL2 packet, this must return true. True must be returned even if subsequent
@@ -110,6 +111,12 @@ pub trait VL1PacketHandler {
 
     /// Handle an OK, returing true if the OK was recognized.
     fn handle_ok(&self, peer: &Peer, source_path: &Arc<Path>, forward_secrecy: bool, extended_authentication: bool, in_re_verb: u8, in_re_message_id: u64, payload: &Buffer<{ PACKET_SIZE_MAX }>, cursor: &mut usize) -> bool;
+
+    /// Check if this remote peer has a trust relationship with this node.
+    ///
+    /// This is checked to determine if we should do things like make direct links ore respond to
+    /// various other VL1 messages.
+    fn has_trust_relationship(&self, id: &Identity) -> bool;
 }
 
 #[derive(Default)]
@@ -120,7 +127,6 @@ struct BackgroundTaskIntervals {
 }
 
 pub struct Node {
-    pub(crate) instance_id: u64,
     identity: Identity,
     intervals: Mutex<BackgroundTaskIntervals>,
     paths: DashMap<u128, Arc<Path>>,
@@ -134,7 +140,7 @@ pub struct Node {
 
 impl Node {
     /// Create a new Node.
-    pub fn new<I: NodeInterface>(ci: &I, auto_generate_identity: bool) -> Result<Self, InvalidParameterError> {
+    pub fn new<I: VL1SystemInterface>(ci: &I, auto_generate_identity: bool) -> Result<Self, InvalidParameterError> {
         let id = {
             let id_str = ci.load_node_identity();
             if id_str.is_none() {
@@ -157,7 +163,6 @@ impl Node {
         };
 
         Ok(Self {
-            instance_id: next_u64_secure(),
             identity: id,
             intervals: Mutex::new(BackgroundTaskIntervals::default()),
             paths: DashMap::new(),
@@ -196,7 +201,7 @@ impl Node {
     }
 
     /// Run background tasks and return desired delay until next call in milliseconds.
-    pub fn do_background_tasks<I: NodeInterface>(&self, ci: &I) -> Duration {
+    pub fn do_background_tasks<I: VL1SystemInterface>(&self, ci: &I) -> Duration {
         let mut intervals = self.intervals.lock();
         let tt = ci.time_ticks();
 
@@ -224,7 +229,7 @@ impl Node {
     }
 
     /// Called when a packet is received on the physical wire.
-    pub fn wire_receive<I: NodeInterface, PH: VL1PacketHandler>(&self, ci: &I, ph: &PH, source_endpoint: &Endpoint, source_local_socket: Option<NonZeroI64>, source_local_interface: Option<NonZeroI64>, mut data: PacketBuffer) {
+    pub fn wire_receive<I: VL1SystemInterface, PH: VL1VirtualInterface>(&self, ci: &I, ph: &PH, source_endpoint: &Endpoint, source_local_socket: Option<NonZeroI64>, source_local_interface: Option<NonZeroI64>, mut data: PacketBuffer) {
         let fragment_header = data.struct_mut_at::<FragmentHeader>(0);
         if fragment_header.is_ok() {
             let fragment_header = fragment_header.unwrap();
@@ -315,7 +320,7 @@ impl Node {
     /// This is a canonicalizing function that returns a unique path object for every tuple
     /// of endpoint, local socket, and local interface.
     pub fn path(&self, ep: &Endpoint, local_socket: Option<NonZeroI64>, local_interface: Option<NonZeroI64>) -> Arc<Path> {
-        let key = Path::local_lookup_key(ep);
+        let key = Path::local_lookup_key(ep, local_socket, local_interface);
         self.paths.get(&key).map_or_else(|| {
             let p = Arc::new(Path::new(ep.clone(), local_socket, local_interface));
             self.paths.insert(key, p.clone()).unwrap_or(p) // if another thread added one, return that instead

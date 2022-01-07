@@ -12,6 +12,7 @@ use std::convert::TryInto;
 
 use zerotier_core_crypto::c25519::{C25519KeyPair, C25519_PUBLIC_KEY_SIZE};
 use zerotier_core_crypto::hash::{SHA384_HASH_SIZE, SHA384};
+use zerotier_core_crypto::kbkdf::zt_kbkdf_hmac_sha384;
 use zerotier_core_crypto::p521::{P521KeyPair, P521_PUBLIC_KEY_SIZE, P521PublicKey};
 use zerotier_core_crypto::random::SecureRandom;
 use zerotier_core_crypto::secret::Secret;
@@ -22,12 +23,14 @@ use crate::vl1::Address;
 use crate::vl1::protocol::*;
 use crate::vl1::symmetricsecret::SymmetricSecret;
 
+const EPHEMERAL_PUBLIC_FLAG_HAVE_RATCHET_STATE: u8 = 0x01;
+
 /// A set of ephemeral secret key pairs. Multiple algorithms are used.
-pub struct EphemeralKeyPairSet {
-    previous_ratchet_state: Option<[u8; 16]>, // First 128 bits of SHA384(previous ratchet secret)
+pub(crate) struct EphemeralKeyPairSet {
+    previous_ratchet_state: Option<[u8; 16]>, // Previous state of ratchet on which this agreement should build
     c25519: C25519KeyPair,                    // Hipster DJB cryptography
-    p521: P521KeyPair,                        // US federal government cryptography
-    sidhp751: Option<SIDHEphemeralKeyPair>,   // Post-quantum moon math cryptography
+    p521: P521KeyPair,                        // US Federal Government cryptography
+    sidhp751: Option<SIDHEphemeralKeyPair>,   // Post-quantum moon math cryptography (not used in every ratchet tick)
 }
 
 impl EphemeralKeyPairSet {
@@ -35,11 +38,6 @@ impl EphemeralKeyPairSet {
     ///
     /// This contains key pairs for the asymmetric key agreement algorithms used and a
     /// timestamp used to enforce TTL.
-    ///
-    /// SIDH is only used once per ratchet sequence because it's much more CPU intensive
-    /// than ECDH. The threat model for SIDH is forward secrecy on the order of 5-15 years
-    /// from now when a quantum computer capable of attacking elliptic curve may exist,
-    /// it's incredibly unlikely that a p2p link would ever persist that long.
     pub fn new(local_address: Address, remote_address: Address, previous_ephemeral_secret: Option<&EphemeralSymmetricSecret>) -> Self {
         let (sidhp751, previous_ratchet_state) = previous_ephemeral_secret.map_or_else(|| {
             (
@@ -48,7 +46,15 @@ impl EphemeralKeyPairSet {
             )
         }, |previous_ephemeral_secret| {
             (
-                None,
+                if previous_ephemeral_secret.ratchet_state[0] == 0 {
+                    // We include SIDH with a probability of 1/256, which for a 5 minute re-key interval
+                    // means SIDH will be included about every 24 hours. SIDH is slower and is intended
+                    // to guard against long term warehousing for eventual cracking with a QC, so this
+                    // should be good enough for that threat model.
+                    Some(SIDHEphemeralKeyPair::generate(local_address, remote_address))
+                } else {
+                    None
+                },
                 Some(previous_ephemeral_secret.ratchet_state.clone())
             )
         });
@@ -67,11 +73,11 @@ impl EphemeralKeyPairSet {
     pub fn public_bytes(&self) -> Vec<u8> {
         let mut b: Vec<u8> = Vec::with_capacity(SHA384_HASH_SIZE + 8 + C25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + SIDH_P751_PUBLIC_KEY_SIZE);
 
-        if self.previous_ratchet_state.is_none() {
-            b.push(0); // no flags
-        } else {
-            b.push(1); // flag 0x01: previous ephemeral secret hash included
+        if self.previous_ratchet_state.is_some() {
+            b.push(EPHEMERAL_PUBLIC_FLAG_HAVE_RATCHET_STATE);
             let _ = b.write_all(self.previous_ratchet_state.as_ref().unwrap());
+        } else {
+            b.push(0);
         }
 
         b.push(EphemeralKeyAgreementAlgorithm::C25519 as u8);
@@ -130,17 +136,17 @@ impl EphemeralKeyPairSet {
         let mut fips_compliant_exchange = false; // ends up true if last algorithm was FIPS compliant
         let mut other_public_bytes = other_public_bytes;
 
-        // Make sure the state of the ratchet matches on both ends. Otherwise it must restart.
+        // Check that the other side's ratchet state matches ours. If not the ratchet must restart.
         if other_public_bytes.is_empty() {
             return None;
         }
-        if (other_public_bytes[0] & 1) == 0 {
+        if (other_public_bytes[0] & EPHEMERAL_PUBLIC_FLAG_HAVE_RATCHET_STATE) == 0 {
             if previous_ephemeral_secret.is_some() {
                 return None;
             }
             other_public_bytes = &other_public_bytes[1..];
         } else {
-            if other_public_bytes.len() < 17 || previous_ephemeral_secret.map_or(false, |previous_ephemeral_secret| other_public_bytes[1..17].ne(&previous_ephemeral_secret.ratchet_state)) {
+            if other_public_bytes.len() < 17 || previous_ephemeral_secret.map_or(false, |previous_ephemeral_secret| other_public_bytes[1..17] != previous_ephemeral_secret.ratchet_state) {
                 return None;
             }
             other_public_bytes = &other_public_bytes[17..];
@@ -228,10 +234,9 @@ impl EphemeralKeyPairSet {
         }
 
         return if it_happened {
-            let ratchet_state = SHA384::hash(&key.0)[0..16].try_into().unwrap();
             Some(EphemeralSymmetricSecret {
                 secret: SymmetricSecret::new(key),
-                ratchet_state,
+                ratchet_state: (&zt_kbkdf_hmac_sha384(&key.0, KBKDF_KEY_USAGE_LABEL_EPHEMERAL_RATCHET_STATE_ID, 0, 0).0[0..16]).try_into().unwrap(),
                 rekey_time: time_ticks + EPHEMERAL_SECRET_REKEY_AFTER_TIME,
                 expire_time: time_ticks + EPHEMERAL_SECRET_REJECT_AFTER_TIME,
                 c25519_ratchet_count,
@@ -248,16 +253,26 @@ impl EphemeralKeyPairSet {
 }
 
 /// Symmetric secret representing a step in the ephemeral keying ratchet.
-pub struct EphemeralSymmetricSecret {
+pub(crate) struct EphemeralSymmetricSecret {
+    /// Current ephemeral secret key.
     pub secret: SymmetricSecret,
+    /// First 16 bytes of SHA384(current ephemeral secret).
     ratchet_state: [u8; 16],
+    /// Time at or after which we should start trying to re-key.
     rekey_time: i64,
+    /// Time after which this key is no longer valid.
     expire_time: i64,
+    /// Number of C25519 agreements so far in ratchet.
     c25519_ratchet_count: u64,
+    /// Number of SIDH P-751 agreements so far in ratchet.
     sidhp751_ratchet_count: u64,
+    /// Number of NIST P-521 ECDH agreements so far in ratchet.
     nistp521_ratchet_count: u64,
+    /// Number of times this secret has been used to encrypt.
     encrypt_uses: AtomicU32,
+    /// Number of times this secret has been used to decrypt.
     decrypt_uses: AtomicU32,
+    /// True if most recent key exchange was NIST/FIPS compliant.
     fips_compliant_exchange: bool,
 }
 

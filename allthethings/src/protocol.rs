@@ -41,6 +41,9 @@ pub const KBKDF_LABEL_GMAC: u8 = b'G';
 /// Sanity limit on the size of HELLO.
 pub const HELLO_SIZE_MAX: usize = 4096;
 
+/// Size of nonce sent with HELLO.
+pub const HELLO_NONCE_SIZE: usize = 64;
+
 /// Overall protocol version.
 pub const PROTOCOL_VERSION: u16 = 1;
 
@@ -61,7 +64,7 @@ pub const MESSAGE_TYPE_HAVE_OBJECTS: u8 = 3;
 pub const MESSAGE_TYPE_WANT_OBJECTS: u8 = 4;
 
 /// Request IBLT synchronization, payload is IBLTSyncRequest.
-pub const MESSAGE_TYPE_IBLT_SYNC_REQUEST: u8 = 5;
+pub const MESSAGE_TYPE_SYNC_REQUEST: u8 = 5;
 
 /// IBLT sync digest, payload is IBLTSyncDigest.
 pub const MESSAGE_TYPE_IBLT_SYNC_DIGEST: u8 = 6;
@@ -79,7 +82,7 @@ pub struct Hello<'a> {
     pub clock: u64,
     /// The data set name ("domain") to which this node belongs.
     pub domain: &'a str,
-    /// Random nonce, must be at least 16 bytes in length.
+    /// Random nonce, must be at least 64 bytes in length.
     pub nonce: &'a [u8],
     /// Random ephemeral ECDH session key.
     pub p521_ecdh_ephemeral_key: &'a [u8],
@@ -87,7 +90,7 @@ pub struct Hello<'a> {
     pub p521_ecdh_node_key: &'a [u8],
 }
 
-/// Sent in response to Hello.
+/// Sent in response to Hello and contains an acknowledgement HMAC for the shared key.
 #[derive(Deserialize, Serialize)]
 pub struct HelloAck<'a> {
     /// HMAC-SHA384(KBKDF(key, KBKDF_LABEL_HELLO_ACK_HMAC), SHA384(original raw Hello))
@@ -118,8 +121,14 @@ pub struct HelloAck<'a> {
 /// simple calculation to be made with the sending node's total count to
 /// estimate set difference density across the entire hash range.
 #[derive(Deserialize, Serialize)]
-pub struct IBLTSyncRequest {
-    /// Total number of hashes in entire data set (on our side).
+pub struct SyncRequest<'a> {
+    /// Start of range. Right-pad with zeroes if too short.
+    pub range_start: &'a [u8],
+    /// End of range. Right-pad with zeroes if too short.
+    pub range_end: &'a [u8],
+    /// Total number of hashes in range.
+    pub count: u64,
+    /// Total number of hashes in entire data set.
     pub total_count: u64,
     /// Our clock to use as a reference time for filtering the data set (if applicable).
     pub reference_time: u64,
@@ -138,6 +147,6 @@ pub struct IBLTSyncDigest<'a> {
     pub count: u64,
     /// Total number of hashes in entire data set.
     pub total_count: u64,
-    /// Reference time from IBLTSyncRequest or 0 if this is being sent synthetically.
+    /// Reference time from SyncRequest or 0 if this is being sent synthetically.
     pub reference_time: u64,
 }

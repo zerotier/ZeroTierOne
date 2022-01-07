@@ -38,13 +38,18 @@ impl GMAC {
 }
 
 /// A wrapper for GMAC with an incrementing 96-bit nonce.
-/// The nonce here is incremented as a little-endian value.
-/// This is for use with TCP streams. A maximum of 2^96 messages
-/// should be sent or received with this, which is probably a large
-/// enough limit to be safely ignored.
-pub struct SequentialNonceGMAC(GMAC, u128);
+///
+/// This is designed for use to authenticate messages on an otherwise unencrypted
+/// TCP connection. The nonce is treated as a 96-bit little-endian integer that
+/// is incremented for each message. It should not be used beyond 2^96 messages
+/// but that's a ludicrously large message count.
+pub struct GMACStream(GMAC, u128);
 
-impl SequentialNonceGMAC {
+impl GMACStream {
+    /// Create a new streaming GMAC instance.
+    /// Key must be 16, 24, or 32 bytes in length. Initial nonce must be 16 bytes
+    /// in length, though only the first 12 are used. If either of these are not
+    /// sized properly this will panic.
     #[inline(always)]
     pub fn new(key: &[u8], initial_nonce: &[u8]) -> Self {
         assert_eq!(initial_nonce.len(), 16);

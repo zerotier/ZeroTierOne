@@ -8,6 +8,8 @@
 
 use smol::io::{AsyncReadExt, AsyncWrite, AsyncRead, AsyncWriteExt};
 
+pub use zerotier_core_crypto::varint::*;
+
 pub async fn async_write<W: AsyncWrite + Unpin>(w: &mut W, mut v: u64) -> smol::io::Result<()> {
     let mut b = [0_u8; 10];
     let mut i = 0;
