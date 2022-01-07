@@ -44,7 +44,7 @@ fn decode_msgpack<'de, T: Deserialize<'de>>(data: &'de [u8]) -> smol::io::Result
 }
 
 #[inline(always)]
-fn read_id_hash(bytes: &[u8]) -> smol::io::Result<&[u8; IDENTITY_HASH_SIZE]> {
+fn next_id_hash_in_slice(bytes: &[u8]) -> smol::io::Result<&[u8; IDENTITY_HASH_SIZE]> {
     if bytes.len() >= IDENTITY_HASH_SIZE {
         Ok(unsafe { &*bytes.as_ptr().cast::<[u8; IDENTITY_HASH_SIZE]>() })
     } else {
@@ -286,11 +286,11 @@ impl<'a, 'b, 'c, S: Store> Link<'a, 'b, 'c, S> {
         let empty_tmp_buf_size = tmp_buf.len();
 
         while !msg.is_empty() {
-            let id_hash = read_id_hash(msg)?;
+            let id_hash = next_id_hash_in_slice(msg)?;
+            msg = &msg[IDENTITY_HASH_SIZE..];
             if !self.store.have(id_hash) {
                 let _ = tmp_buf.write_all(id_hash);
             }
-            msg = &msg[IDENTITY_HASH_SIZE..];
         }
 
         if tmp_buf.len() != empty_tmp_buf_size {
@@ -307,12 +307,11 @@ impl<'a, 'b, 'c, S: Store> Link<'a, 'b, 'c, S> {
         }
         let ref_time = ref_time.unwrap().0;
 
-        let cap = (msg.len() / IDENTITY_HASH_SIZE) + 1;
-        let mut objects: Vec<S::Object> = Vec::with_capacity(cap);
+        let mut objects: Vec<S::Object> = Vec::with_capacity((msg.len() / IDENTITY_HASH_SIZE) + 1);
         while !msg.is_empty() {
-            let id_hash = read_id_hash(msg)?;
-            let _ = self.store.get(ref_time, id_hash).map(|obj| objects.push(obj));
+            let id_hash = next_id_hash_in_slice(msg)?;
             msg = &msg[IDENTITY_HASH_SIZE..];
+            let _ = self.store.get(ref_time, id_hash).map(|obj| objects.push(obj));
         }
 
         if !objects.is_empty() {
