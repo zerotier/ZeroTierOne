@@ -28,9 +28,9 @@ use crate::vl1::protocol::*;
 pub(crate) const PATH_KEEPALIVE_INTERVAL: i64 = 20000;
 
 lazy_static! {
-    static mut RANDOM_64BIT_SALT_0: u64 = zerotier_core_crypto::random::next_u64_secure();
-    static mut RANDOM_64BIT_SALT_1: u64 = zerotier_core_crypto::random::next_u64_secure();
-    static mut RANDOM_64BIT_SALT_2: u64 = zerotier_core_crypto::random::next_u64_secure();
+    static ref RANDOM_64BIT_SALT_0: u64 = zerotier_core_crypto::random::next_u64_secure();
+    static ref RANDOM_64BIT_SALT_1: u64 = zerotier_core_crypto::random::next_u64_secure();
+    static ref RANDOM_64BIT_SALT_2: u64 = zerotier_core_crypto::random::next_u64_secure();
 }
 
 /// A remote endpoint paired with a local socket and a local interface.
@@ -50,8 +50,8 @@ impl Path {
     /// Get a 128-bit key to look up this endpoint in the local node path map.
     #[inline(always)]
     pub(crate) fn local_lookup_key(endpoint: &Endpoint, local_socket: Option<NonZeroI64>, local_interface: Option<NonZeroI64>) -> u128 {
-        let local_socket = local_socket.map_or(0, |s| crate::util::hash64_noncrypt(RANDOM_64BIT_SALT_0 + s.get() as u64));
-        let local_interface = local_interface.map_or(0, |s| crate::util::hash64_noncrypt(RANDOM_64BIT_SALT_1 + s.get() as u64));
+        let local_socket = local_socket.map_or(0, |s| crate::util::hash64_noncrypt(*RANDOM_64BIT_SALT_0 + s.get() as u64));
+        let local_interface = local_interface.map_or(0, |s| crate::util::hash64_noncrypt(*RANDOM_64BIT_SALT_1 + s.get() as u64));
         let lsi = (local_socket as u128).wrapping_shl(64) | (local_interface as u128);
         match endpoint {
             Endpoint::Nil => 0,
@@ -61,7 +61,7 @@ impl Path {
             Endpoint::Bluetooth(m) => (m.to_u64() | 0x0400000000000000) as u128 ^ lsi,
             Endpoint::Ip(ip) => ip.ip_as_native_u128().wrapping_sub(lsi), // naked IP has no port
             Endpoint::IpUdp(ip) => ip.ip_as_native_u128().wrapping_add(lsi), // UDP maintains one path per IP but merely learns the most recent port
-            Endpoint::IpTcp(ip) => ip.ip_as_native_u128().wrapping_sub(crate::util::hash64_noncrypt((ip.port() as u64).wrapping_add(RANDOM_64BIT_SALT_2)) as u128).wrapping_sub(lsi),
+            Endpoint::IpTcp(ip) => ip.ip_as_native_u128().wrapping_sub(crate::util::hash64_noncrypt((ip.port() as u64).wrapping_add(*RANDOM_64BIT_SALT_2)) as u128).wrapping_sub(lsi),
             Endpoint::Http(s) => {
                 let mut hh = highwayhasher();
                 let _ = hh.write_all(s.as_bytes());

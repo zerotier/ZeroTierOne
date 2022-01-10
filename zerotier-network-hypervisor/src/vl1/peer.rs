@@ -377,7 +377,7 @@ impl Peer {
     /// via a root or some other route.
     pub(crate) fn send<CI: VL1SystemInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, packet: &Buffer<{ PACKET_SIZE_MAX }>) -> bool {
         self.path(node).map_or(false, |path| {
-            if self.send_to_endpoint(ci, path.endpoint(), path.local_socket(), path.local_interface(), packet) {
+            if self.send_to_endpoint(ci, path.endpoint().as_ref(), path.local_socket(), path.local_interface(), packet) {
                 self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
                 self.total_bytes_sent.fetch_add(packet.len() as u64, Ordering::Relaxed);
                 true
@@ -396,7 +396,7 @@ impl Peer {
     /// Intermediates don't need to adjust fragmentation.
     pub(crate) fn forward<CI: VL1SystemInterface>(&self, ci: &CI, time_ticks: i64, packet: &Buffer<{ PACKET_SIZE_MAX }>) -> bool {
         self.direct_path().map_or(false, |path| {
-            if ci.wire_send(path.endpoint(), path.local_socket(), path.local_interface(), &[packet.as_bytes()], 0) {
+            if ci.wire_send(path.endpoint().as_ref(), path.local_socket(), path.local_interface(), &[packet.as_bytes()], 0) {
                 self.last_forward_time_ticks.store(time_ticks, Ordering::Relaxed);
                 self.total_bytes_forwarded.fetch_add(packet.len() as u64, Ordering::Relaxed);
                 true
@@ -470,7 +470,7 @@ impl Peer {
         explicit_endpoint.map_or_else(|| {
             self.path(node).map_or(false, |path| {
                 path.log_send_anything(time_ticks);
-                self.send_to_endpoint(ci, path.endpoint(), path.local_socket(), path.local_interface(), &packet)
+                self.send_to_endpoint(ci, path.endpoint().as_ref(), path.local_socket(), path.local_interface(), &packet)
             })
         }, |endpoint| {
             self.send_to_endpoint(ci, endpoint, None, None, &packet)

@@ -1,12 +1,20 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ *
+ * (c)2021 ZeroTier, Inc.
+ * https://www.zerotier.com/
+ */
+
 use std::mem::MaybeUninit;
+use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::task::Poll;
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use smol::io::{AsyncReadExt, AsyncWriteExt, BufReader, BufWriter};
 use smol::lock::Mutex;
-use smol::net::{SocketAddr, TcpStream};
+use smol::net::TcpStream;
 
 use zerotier_core_crypto::gmac::GMACStream;
 use zerotier_core_crypto::hash::SHA384;
@@ -22,13 +30,12 @@ struct Output {
     gmac: Option<GMACStream>,
 }
 
-pub(crate) struct Link<'a, 'b, 'c, S: Store> {
-    pub remote_addr: SocketAddr,
+pub(crate) struct Link<'e, S: Store + 'static> {
     pub connect_time: u64,
     io_timeout: Duration,
-    node_secret: &'a P521KeyPair,
-    config: &'b Config,
-    store: &'c S,
+    node_secret: &'e P521KeyPair,
+    config: &'e Config,
+    store: &'e S,
     remote_node_id: parking_lot::Mutex<Option<[u8; 48]>>,
     reader: Mutex<BufReader<TcpStream>>,
     writer: Mutex<Output>,
@@ -52,14 +59,13 @@ fn next_id_hash_in_slice(bytes: &[u8]) -> smol::io::Result<&[u8; IDENTITY_HASH_S
     }
 }
 
-impl<'a, 'b, 'c, S: Store> Link<'a, 'b, 'c, S> {
-    pub fn new(stream: TcpStream, remote_addr: SocketAddr, connect_time: u64, node_secret: &'a P521KeyPair, config: &'b Config, store: &'c S) -> Self {
+impl<'e, S: Store + 'static> Link<'e, S> {
+    pub fn new(stream: TcpStream, node_secret: &'e P521KeyPair, config: &'e Config, store: &'e S) -> Self {
         let _ = stream.set_nodelay(false);
         let max_message_size = HELLO_SIZE_MAX.max(config.max_message_size);
         let now_monotonic = store.monotonic_clock();
         Self {
-            remote_addr,
-            connect_time,
+            connect_time: now_monotonic,
             io_timeout: Duration::from_secs(config.io_timeout),
             node_secret,
             config,
@@ -81,15 +87,15 @@ impl<'a, 'b, 'c, S: Store> Link<'a, 'b, 'c, S> {
     /// Returns None if the remote node has not yet responded with HelloAck and been verified.
     pub fn remote_node_id(&self) -> Option<[u8; 48]> { self.remote_node_id.lock().clone() }
 
-    /// Send a keepalive if necessary.
-    pub async fn send_keepalive_if_needed(&self, now_monotonic: u64) {
+    pub(crate) async fn do_periodic_tasks(&self, now_monotonic: u64) -> smol::io::Result<()> {
         if now_monotonic.saturating_sub(self.last_send_time.load(Ordering::Relaxed)) >= self.keepalive_period && self.authenticated.load(Ordering::Relaxed) {
-            self.last_send_time.store(now_monotonic, Ordering::Relaxed);
             let timeout = Duration::from_secs(1);
             let mut writer = self.writer.lock().await;
-            io_timeout(timeout, writer.stream.write_all(&[MESSAGE_TYPE_KEEPALIVE])).await;
-            io_timeout(timeout, writer.stream.flush()).await;
+            io_timeout(timeout, writer.stream.write_all(&[MESSAGE_TYPE_KEEPALIVE])).await?;
+            io_timeout(timeout, writer.stream.flush()).await?;
+            self.last_send_time.store(now_monotonic, Ordering::Relaxed);
         }
+        Ok(())
     }
 
     async fn write_message(&self, message_type: u8, message: &[&[u8]]) -> smol::io::Result<()> {

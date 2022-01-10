@@ -234,9 +234,10 @@ impl EphemeralKeyPairSet {
         }
 
         return if it_happened {
+            let rs = zt_kbkdf_hmac_sha384(&key.0, KBKDF_KEY_USAGE_LABEL_EPHEMERAL_RATCHET_STATE_ID, 0, 0);
             Some(EphemeralSymmetricSecret {
                 secret: SymmetricSecret::new(key),
-                ratchet_state: (&zt_kbkdf_hmac_sha384(&key.0, KBKDF_KEY_USAGE_LABEL_EPHEMERAL_RATCHET_STATE_ID, 0, 0).0[0..16]).try_into().unwrap(),
+                ratchet_state: (&rs.0[0..16]).try_into().unwrap(),
                 rekey_time: time_ticks + EPHEMERAL_SECRET_REKEY_AFTER_TIME,
                 expire_time: time_ticks + EPHEMERAL_SECRET_REJECT_AFTER_TIME,
                 c25519_ratchet_count,

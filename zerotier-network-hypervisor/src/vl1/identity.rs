@@ -11,6 +11,7 @@ use std::cmp::Ordering;
 use std::convert::TryInto;
 use std::io::Write;
 use std::mem::MaybeUninit;
+use std::ops::Deref;
 use std::ptr::{slice_from_raw_parts, slice_from_raw_parts_mut};
 use std::str::FromStr;
 
@@ -36,8 +37,8 @@ pub const IDENTITY_CIPHER_SUITE_X25519: u8 = 0x00;
 /// NIST P-521 ECDH/ECDSA cipher suite.
 ///
 /// Sooo.... why 0x03 and not 0x01 or some other value? It's to compensate at the cost of
-/// one wasted bit for a short-sighted aspect of the old identity encoding and HELLO packet
-/// encoding.
+/// one wasted bit in our bit mask for a short-sighted aspect of the old identity encoding
+/// and HELLO packet encoding.
 ///
 /// The old identity encoding contains no provision for skipping data it doesn't understand
 /// nor any provision for an upgrade. That's dumb, but there it is on millions of nodes. The
@@ -206,7 +207,8 @@ impl Identity {
     }
 
     /// Locally check the validity of this identity.
-    /// This is somewhat time consuming.
+    ///
+    /// This is somewhat time consuming due to the memory-intensive work algorithm.
     pub fn validate_identity(&self) -> bool {
         let pow_threshold = if self.p521.is_some() {
             let p521 = self.p521.as_ref().unwrap();
@@ -250,11 +252,16 @@ impl Identity {
     pub fn agree(&self, other: &Identity) -> Option<Secret<48>> {
         self.secret.as_ref().and_then(|secret| {
             let c25519_secret = Secret(SHA512::hash(&secret.c25519.agree(&other.c25519).0));
+
             // FIPS note: FIPS-compliant exchange algorithms must be the last algorithms in any HKDF chain
             // for the final result to be technically FIPS compliant. Non-FIPS algorithm secrets are considered
             // a salt in the HMAC(salt, key) HKDF construction.
             if secret.p521.is_some() && other.p521.is_some() {
-                P521PublicKey::from_bytes(&other.p521.as_ref().unwrap().ecdh).and_then(|other_p521| secret.p521.as_ref().unwrap().ecdh.agree(&other_p521).map(|p521_secret| Secret(SHA384::hmac(&c25519_secret.0[0..48], &p521_secret.0))))
+                P521PublicKey::from_bytes(&other.p521.as_ref().unwrap().ecdh).and_then(|other_p521| {
+                    secret.p521.as_ref().unwrap().ecdh.agree(&other_p521).map(|p521_secret| {
+                        Secret(SHA384::hmac(&c25519_secret.0[0..48], &p521_secret.0))
+                    })
+                })
             } else {
                 Some(Secret(array_range::<u8, 64, 0, 48>(&c25519_secret.0).clone()))
             }
@@ -262,6 +269,7 @@ impl Identity {
     }
 
     /// Sign a message with this identity.
+    ///
     /// A return of None happens if we don't have our secret key(s) or some other error occurs.
     pub fn sign(&self, msg: &[u8], use_cipher_suites: u8) -> Option<Vec<u8>> {
         self.secret.as_ref().and_then(|secret| {
@@ -443,7 +451,7 @@ impl Identity {
             if (include_cipher_suites & IDENTITY_CIPHER_SUITE_EC_NIST_P521) == IDENTITY_CIPHER_SUITE_EC_NIST_P521 && secret.p521.is_some() && self.p521.is_some() {
                 let p521_secret = secret.p521.as_ref().unwrap();
                 let p521 = self.p521.as_ref().unwrap();
-                let p521_secret_joined: [u8; P521_SECRET_KEY_SIZE + P521_SECRET_KEY_SIZE] = concat_arrays_2(p521_secret.ecdh.public_key_bytes(), p521_secret.ecdsa.public_key_bytes());
+                let p521_secret_joined: [u8; P521_SECRET_KEY_SIZE + P521_SECRET_KEY_SIZE] = concat_arrays_2(p521_secret.ecdh.secret_key_bytes().as_bytes(), p521_secret.ecdsa.secret_key_bytes().as_bytes());
                 let p521_joined: [u8; P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE] = concat_arrays_4(&p521.ecdh, &p521.ecdsa, &p521.ecdsa_self_signature, &p521.ed25519_self_signature);
                 format!("{}:0:{}{}:{}{}:1:{}:{}", self.address.to_string(), hex::to_string(&self.c25519), hex::to_string(&self.ed25519), hex::to_string(&secret.c25519.secret_bytes().0), hex::to_string(&secret.ed25519.secret_bytes().0), base64::encode_config(p521_joined, base64::URL_SAFE_NO_PAD), base64::encode_config(p521_secret_joined, base64::URL_SAFE_NO_PAD))
             } else {
@@ -624,7 +632,7 @@ const ADDRESS_DERIVATION_HASH_MEMORY_SIZE: usize = 2097152;
 /// non-cryptographic hash. Its memory hardness and use in a work function is a defense
 /// in depth feature rather than a primary security feature.
 fn zt_address_derivation_memory_intensive_hash(digest: &mut [u8; 64], genmem_pool_obj: &mut Pooled<AddressDerivationMemory, AddressDerivationMemoryFactory>) {
-    let genmem_ptr = genmem_pool_obj.0.as_mut_ptr().cast::<u8>();
+    let genmem_ptr: *mut u8 = genmem_pool_obj.get_memory();
     let (genmem, genmem_alias_hack) = unsafe { (&mut *slice_from_raw_parts_mut(genmem_ptr, ADDRESS_DERIVATION_HASH_MEMORY_SIZE), &*slice_from_raw_parts(genmem_ptr, ADDRESS_DERIVATION_HASH_MEMORY_SIZE)) };
     let genmem_u64_ptr = genmem_ptr.cast::<u64>();
 
@@ -655,13 +663,23 @@ fn zt_address_derivation_memory_intensive_hash(digest: &mut [u8; 64], genmem_poo
 }
 
 #[repr(transparent)]
-struct AddressDerivationMemory([u128; ADDRESS_DERIVATION_HASH_MEMORY_SIZE / 16]); // use u128 to align by 16 bytes
+struct AddressDerivationMemory(*mut u8);
 
 struct AddressDerivationMemoryFactory;
 
+impl AddressDerivationMemory {
+    #[inline(always)]
+    fn get_memory(&mut self) -> *mut u8 { self.0 }
+}
+
+impl Drop for AddressDerivationMemory {
+    #[inline(always)]
+    fn drop(&mut self) { unsafe { dealloc(self.0, Layout::from_size_align(ADDRESS_DERIVATION_HASH_MEMORY_SIZE, 8).unwrap()) }; }
+}
+
 impl PoolFactory<AddressDerivationMemory> for AddressDerivationMemoryFactory {
     #[inline(always)]
-    fn create(&self) -> AddressDerivationMemory { AddressDerivationMemory([0_u128; ADDRESS_DERIVATION_HASH_MEMORY_SIZE / 16]) }
+    fn create(&self) -> AddressDerivationMemory { AddressDerivationMemory(unsafe { alloc(Layout::from_size_align(ADDRESS_DERIVATION_HASH_MEMORY_SIZE, 8).unwrap()) }) }
 
     #[inline(always)]
     fn reset(&self, _: &mut AddressDerivationMemory) {}
@@ -677,4 +695,26 @@ lazy_static! {
 #[inline(always)]
 pub(crate) fn purge_verification_memory_pool() {
     unsafe { ADDRESS_DERVIATION_MEMORY_POOL.purge() };
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::vl1::Identity;
+
+    #[test]
+    fn v0() {
+    }
+
+    #[test]
+    fn v1() {
+    }
+
+    #[test]
+    fn generate() {
+        let count = 64;
+        for _ in 0..count {
+            let id = Identity::generate();
+            println!("{}", id.to_secret_string());
+        }
+    }
 }

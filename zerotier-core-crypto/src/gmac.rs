@@ -37,6 +37,8 @@ impl GMAC {
     }
 }
 
+unsafe impl Send for GMAC {}
+
 /// A wrapper for GMAC with an incrementing 96-bit nonce.
 ///
 /// This is designed for use to authenticate messages on an otherwise unencrypted
@@ -68,3 +70,5 @@ impl GMACStream {
     #[inline(always)]
     pub fn finish(&mut self, mac: &mut [u8; 16]) { self.0.finish(mac); }
 }
+
+unsafe impl Send for GMACStream {}

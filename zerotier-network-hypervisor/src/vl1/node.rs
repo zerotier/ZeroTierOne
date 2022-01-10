@@ -127,6 +127,7 @@ struct BackgroundTaskIntervals {
 }
 
 pub struct Node {
+    pub(crate) instance_id: u64,
     identity: Identity,
     intervals: Mutex<BackgroundTaskIntervals>,
     paths: DashMap<u128, Arc<Path>>,
@@ -163,6 +164,7 @@ impl Node {
         };
 
         Ok(Self {
+            instance_id: next_u64_secure(),
             identity: id,
             intervals: Mutex::new(BackgroundTaskIntervals::default()),
             paths: DashMap::new(),

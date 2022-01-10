@@ -8,7 +8,7 @@
 
 use parking_lot::Mutex;
 
-use zerotier_core_crypto::aes_gmac_siv::{AesCtr, AesGmacSiv};
+use zerotier_core_crypto::aes_gmac_siv::AesGmacSiv;
 use zerotier_core_crypto::hash::SHA384_HASH_SIZE;
 use zerotier_core_crypto::kbkdf::zt_kbkdf_hmac_sha384;
 use zerotier_core_crypto::secret::Secret;

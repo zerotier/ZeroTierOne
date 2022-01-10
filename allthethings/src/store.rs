@@ -23,7 +23,7 @@ pub enum StorePutResult {
 /// Trait that must be implemented by the data store that is to be replicated.
 pub trait Store: Sync + Send {
     /// Type returned by get(), which can be anything that contains a byte slice.
-    type Object: AsRef<[u8]>;
+    type Object: AsRef<[u8]> + Send;
 
     /// Get the current wall time in milliseconds since Unix epoch.
     fn clock(&self) -> u64;

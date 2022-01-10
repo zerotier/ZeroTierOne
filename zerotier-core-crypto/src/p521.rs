@@ -119,6 +119,10 @@ impl Clone for P521PublicKey {
     }
 }
 
+unsafe impl Send for P521PublicKey {}
+
+unsafe impl Sync for P521PublicKey {}
+
 /// NIST P-521 elliptic curve key pair.
 /// This supports both ECDSA signing and ECDH key agreement. In practice the same key pair
 /// is not used for both functions as this is considred bad practice.
@@ -246,6 +250,10 @@ impl Clone for P521KeyPair {
         }
     }
 }
+
+unsafe impl Send for P521KeyPair {}
+
+unsafe impl Sync for P521KeyPair {}
 
 #[cfg(test)]
 mod tests {

@@ -124,7 +124,7 @@ impl InetAddress {
         addr.sin6.sin6_family = AF_INET6.into();
         addr.sin6.sin6_port = port.to_be().into();
         unsafe {
-            *((&mut (addr.sin6.sin6_addr) as *mut _).cast::<u8>().offset(15)) = 1;
+            *((&mut (addr.sin6.sin6_addr) as *mut in6_addr).cast::<u8>().offset(15)) = 1;
         }
         addr
     }
@@ -177,12 +177,12 @@ impl InetAddress {
             if ip.len() == 4 {
                 self.sin.sin_family = AF_INET.into();
                 self.sin.sin_port = port.into();
-                copy_nonoverlapping(ip.as_ptr(), (&mut self.sin.sin_addr.s_addr as *mut _).cast::<u8>(), 4);
+                copy_nonoverlapping(ip.as_ptr(), (&mut self.sin.sin_addr.s_addr as *mut u32).cast::<u8>(), 4);
                 AF_INET
             } else if ip.len() == 16 {
                 self.sin6.sin6_family = AF_INET6.into();
                 self.sin6.sin6_port = port.into();
-                copy_nonoverlapping(ip.as_ptr(), (&mut self.sin6.sin6_addr as *mut _).cast::<u8>(), 16);
+                copy_nonoverlapping(ip.as_ptr(), (&mut self.sin6.sin6_addr as *mut in6_addr).cast::<u8>(), 16);
                 AF_INET6
             } else {
                 0
@@ -195,8 +195,8 @@ impl InetAddress {
     pub fn ip_bytes(&self) -> &[u8] {
         unsafe {
             match self.sa.sa_family as u8 {
-                AF_INET => &*(&self.sin.sin_addr.s_addr as *const _).cast::<[u8; 4]>(),
-                AF_INET6 => &*(&self.sin6.sin6_addr as *const _).cast::<[u8; 16]>(),
+                AF_INET => &*(&self.sin.sin_addr.s_addr as *const u32).cast::<[u8; 4]>(),
+                AF_INET6 => &*(&self.sin6.sin6_addr as *const in6_addr).cast::<[u8; 16]>(),
                 _ => &[],
             }
         }
@@ -210,7 +210,7 @@ impl InetAddress {
         unsafe {
             match self.sa.sa_family as u8 {
                 AF_INET => self.sin.sin_addr.s_addr as u128,
-                AF_INET6 => u128::from_ne_bytes(*(&self.sin6.sin6_addr as *const _).cast::<[u8; 16]>()),
+                AF_INET6 => u128::from_ne_bytes(*(&self.sin6.sin6_addr as *const in6_addr).cast::<[u8; 16]>()),
                 _ => 0,
             }
         }
@@ -323,7 +323,7 @@ impl InetAddress {
                     }
                 }
                 AF_INET6 => {
-                    let ip = &*(&(self.sin6.sin6_addr) as *const _).cast::<[u8; 16]>();
+                    let ip = &*(&(self.sin6.sin6_addr) as *const in6_addr).cast::<[u8; 16]>();
                     if (ip[0] & 0xf0) == 0xf0 {
                         if ip[0] == 0xff {
                             return IpScope::Multicast; // ff00::/8
@@ -366,10 +366,10 @@ impl InetAddress {
         unsafe {
             match self.sa.sa_family as u8 {
                 AF_INET => {
-                    let ip = &*(&self.sin.sin_addr.s_addr as *const _).cast::<[u8; 4]>();
+                    let ip = &*(&self.sin.sin_addr.s_addr as *const u32).cast::<[u8; 4]>();
                     format!("{}.{}.{}.{}", ip[0], ip[1], ip[2], ip[3])
                 }
-                AF_INET6 => Ipv6Addr::from(*(&(self.sin6.sin6_addr) as *const _).cast::<[u8; 16]>()).to_string(),
+                AF_INET6 => Ipv6Addr::from(*(&(self.sin6.sin6_addr) as *const in6_addr).cast::<[u8; 16]>()).to_string(),
                 _ => String::from("(null)")
             }
         }
@@ -381,17 +381,17 @@ impl InetAddress {
                 AF_INET => {
                     let b = buf.append_bytes_fixed_get_mut::<7>()?;
                     b[0] = 4;
-                    copy_nonoverlapping((&self.sin.sin_addr.s_addr as *const _).cast::<u8>(), b.as_mut_ptr().offset(1), 4);
-                    b[5] = *(&self.sin.sin_port as *const _).cast::<u8>();
-                    b[6] = *(&self.sin.sin_port as *const _).cast::<u8>().offset(1);
+                    copy_nonoverlapping((&self.sin.sin_addr.s_addr as *const u32).cast::<u8>(), b.as_mut_ptr().offset(1), 4);
+                    b[5] = *(&self.sin.sin_port as *const u16).cast::<u8>();
+                    b[6] = *(&self.sin.sin_port as *const u16).cast::<u8>().offset(1);
                     Ok(())
                 }
                 AF_INET6 => {
                     let b = buf.append_bytes_fixed_get_mut::<19>()?;
                     b[0] = 6;
-                    copy_nonoverlapping((&(self.sin6.sin6_addr) as *const _).cast::<u8>(), b.as_mut_ptr().offset(1), 16);
-                    b[17] = *(&self.sin6.sin6_port as *const _).cast::<u8>();
-                    b[18] = *(&self.sin6.sin6_port as *const _).cast::<u8>().offset(1);
+                    copy_nonoverlapping((&(self.sin6.sin6_addr) as *const in6_addr).cast::<u8>(), b.as_mut_ptr().offset(1), 16);
+                    b[17] = *(&self.sin6.sin6_port as *const u16).cast::<u8>();
+                    b[18] = *(&self.sin6.sin6_port as *const u16).cast::<u8>().offset(1);
                     Ok(())
                 }
                 _ => buf.append_u8(0)

@@ -26,7 +26,6 @@ struct PoolEntry<O, F: PoolFactory<O>> {
 struct PoolInner<O, F: PoolFactory<O>> {
     factory: F,
     pool: Mutex<Vec<NonNull<PoolEntry<O, F>>>>,
-    //outstanding_count: AtomicIsize
 }
 
 /// Container for pooled objects that have been checked out of the pool.
@@ -107,7 +106,6 @@ impl<O, F: PoolFactory<O>> Drop for Pooled<O, F> {
                 let p = p.unwrap();
                 p.factory.reset(&mut self.0.as_mut().obj);
                 p.pool.lock().push(self.0);
-                //let _ = p.outstanding_count.fetch_sub(1, Ordering::Release);
             } else {
                 drop(Box::from_raw(self.0.as_ptr()))
             }
@@ -125,7 +123,6 @@ impl<O, F: PoolFactory<O>> Pool<O, F> {
         Self(Arc::new(PoolInner::<O, F> {
             factory,
             pool: Mutex::new(Vec::with_capacity(initial_stack_capacity)),
-            //outstanding_count: AtomicIsize::new(0)
         }))
     }
 
@@ -142,32 +139,6 @@ impl<O, F: PoolFactory<O>> Pool<O, F> {
             }
         }))
     }
-
-    /*
-    /// Get a pooled object, or allocate one if the pool is empty.
-    /// This will return None if there are more outstanding pooled objects than the limit.
-    /// The limit is exclusive, so a value of 0 will mean that only one outstanding
-    /// object will be permitted as in this case there were zero outstanding at time
-    /// of checkout.
-    #[inline(always)]
-    pub fn try_get(&self, outstanding_pooled_object_limit: usize) -> Option<Pooled<O, F>> {
-        let outstanding = self.0.outstanding_count.fetch_add(1, Ordering::Acquire);
-        debug_assert!(outstanding >= 0);
-        if outstanding as usize > outstanding_pooled_object_limit {
-            let _ = self.0.outstanding_count.fetch_sub(1, Ordering::Release);
-            None
-        } else {
-            Some(Pooled::<O, F>(self.0.pool.lock().pop().unwrap_or_else(|| {
-                unsafe {
-                    NonNull::new_unchecked(Box::into_raw(Box::new(PoolEntry::<O, F> {
-                        obj: self.0.pool.create(),
-                        return_pool: Arc::downgrade(&self.0),
-                    })))
-                }
-            })))
-        }
-    }
-    */
 
     /// Dispose of all pooled objects, freeing any memory they use.
     ///

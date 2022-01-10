@@ -7,13 +7,13 @@
  */
 
 mod store;
-mod replicator;
 mod protocol;
 mod varint;
 mod memorystore;
 mod iblt;
 mod config;
 mod link;
+mod node;
 
 pub fn ms_since_epoch() -> u64 {
     std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as u64
@@ -39,4 +39,4 @@ pub const IDENTITY_HASH_SIZE: usize = 48;
 pub use config::Config;
 pub use store::{Store, StorePutResult};
 pub use memorystore::MemoryStore;
-//pub use replicator::Replicator;
+pub use node::Node;
