@@ -19,8 +19,8 @@
 #include <string.h>
 
 #ifdef __WINDOWS__
-#include <WinSock2.h>
-#include <Windows.h>
+#include <winsock2.h>
+#include <windows.h>
 #include <netioapi.h>
 #include <IPHlpApi.h>
 #endif
@@ -405,7 +405,9 @@ ManagedRoute::ManagedRoute(const InetAddress &target,const InetAddress &via,cons
 }
 
 ManagedRoute::~ManagedRoute()
-{}
+{
+	this->remove();
+}
 
 /* Linux NOTE: for default route override, some Linux distributions will
  * require a change to the rp_filter parameter. A value of '1' will prevent
@@ -507,15 +509,15 @@ bool ManagedRoute::sync()
 		}
 	}
 
-	if (!_applied.count(leftt)) {
+	//if (!_applied.count(leftt)) {
 		_applied[leftt] = !_via;
-		_routeCmd("delete",leftt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
+		//_routeCmd("delete",leftt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
 		_routeCmd("add",leftt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
 		//_routeCmd("change",leftt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
-	}
-	if ((rightt)&&(!_applied.count(rightt))) {
+	//}
+	if (rightt) {
 		_applied[rightt] = !_via;
-		_routeCmd("delete",rightt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
+		//_routeCmd("delete",rightt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
 		_routeCmd("add",rightt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
 		//_routeCmd("change",rightt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
 	}

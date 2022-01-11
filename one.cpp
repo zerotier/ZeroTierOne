@@ -25,8 +25,8 @@
 #include "node/Constants.hpp"
 
 #ifdef __WINDOWS__
-#include <WinSock2.h>
-#include <Windows.h>
+#include <winsock2.h>
+#include <windows.h>
 #include <tchar.h>
 #include <wchar.h>
 #include <lmcons.h>

@@ -40,6 +40,32 @@
 namespace ZeroTier
 {
 
+struct AuthInfo
+{
+public:
+	AuthInfo() 
+	: enabled(false)
+	, version(0)
+	, authenticationURL()
+	, authenticationExpiryTime(0)
+	, issuerURL()
+	, centralAuthURL()
+	, ssoNonce()
+	, ssoState()
+	, ssoClientID()
+	{}
+
+	bool enabled;
+	uint64_t version;
+	std::string authenticationURL;
+	uint64_t authenticationExpiryTime;
+	std::string issuerURL;
+	std::string centralAuthURL;
+	std::string ssoNonce;
+	std::string ssoState;
+	std::string ssoClientID;
+};
+
 /**
  * Base class with common infrastructure for all controller DB implementations
  */
@@ -108,7 +134,7 @@ public:
 	virtual void eraseMember(const uint64_t networkId,const uint64_t memberId) = 0;
 	virtual void nodeIsOnline(const uint64_t networkId,const uint64_t memberId,const InetAddress &physicalAddress) = 0;
 
-	virtual std::string getSSOAuthURL(const nlohmann::json &member, const std::string &redirectURL) { return ""; }
+	virtual AuthInfo getSSOAuthInfo(const nlohmann::json &member, const std::string &redirectURL) { return AuthInfo(); }
 	virtual void networkMemberSSOHasExpired(uint64_t nwid, int64_t ts);
 
 	inline void addListener(DB::ChangeListener *const listener)

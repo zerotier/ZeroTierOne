@@ -1,0 +1,26 @@
+[package]
+name = "zeroidc"
+version = "0.1.0"
+edition = "2018"
+build = "build.rs"
+publish = false
+
+[lib]
+crate-type = ["staticlib","rlib"]
+
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+openidconnect = "2.1"
+base64 = "0.13"
+url = "2.2"
+reqwest = "0.11"
+jsonwebtoken = "7.2"
+serde = "1.0"
+time = { version = "0.3", features = ["formatting"] }
+bytes = "1.1"
+thiserror = "1"
+
+[build-dependencies]
+cbindgen = "0.20"

@@ -1,15 +1,45 @@
 ZeroTier Release Notes
 ======
 
-# -- Version 1.8.1
+# 2021-12-15 -- Version 1.8.5
 
- * Fix UI issues on MacOS Mojave
- * Fix icon not showing on Windows
- * Re-eneable installation on Windows 7, 8, etc., but without any guarantee that it will work there! (7 is not supported)
- * Add an extended hash verification to certificates of network membership to further harden against impersonation attacks
- * Remove support for REALLY ancient 1.1.6 or earlier network controllers
+ * Fix an issue that could cause self-hosted roots ("moons") to fail to assist peers in making direct links. (GitHub issue #1512)
+ * Merge a series of changes by Joseph Henry (of ZeroTier) that should fix some edge cases where ZeroTier would "forget" valid paths.
 
-# 2021-09-15 -- Version 1.8.0
+# 2021-11-30 -- Version 1.8.4
+
+ * Fixed an ugly font problem on some older macOS versions.
+ * Fixed a bug that could cause the desktop tray app control panel to stop opening after a while on Windows.
+ * Fixed a possible double "release" in macOS tray app code that crashed on older macOS versions.
+ * Fixed installation on 32-bit Windows 10.
+ * Fixed a build flags issue that could cause ZeroTier to crash on older ARM32 CPUs.
+
+# 2021-11-15 -- Version 1.8.3
+
+ * Remove problematic spinlock, which was only used on x86_64 anyway. Just use pthread always.
+ * Fix fd leak on MacOS that caused non-responsiveness after some time.
+ * Fix Debian install scripts to set /usr/sbin/nologin as shell on service user.
+ * Fix regression that could prevent managed routes from being deleted.
+ * DesktopUI: Remove NSDate:now() call, now works on MacOS 10.13 or newer!
+
+# 2021-11-08 -- Version 1.8.2
+
+ * Fix multicast on linux.
+ * Fix a bug that could cause the tap adapter to have the wrong MAC on Linux.
+ * Update build flags to possibly support MacOS older than 10.14, but more work needs to be done. It may not work yet.
+ * Fix path variable setting on Windows.
+
+# 2021-10-28 -- Version 1.8.1
+
+ * Fix numerous UI issues from 1.8.0 (never fully released).
+ * Remove support for REALLY ancient 1.1.6 or earlier network controllers.
+ * MacOS IPv6 no longer binds to temporary addresses as these can cause interruptions if they expire.
+ * Added additional hardening against address impersonation on networks (also in 1.6.6).
+ * Fix an issue that could cause clobbering of MacOS IP route settings on restart.
+
+ * NOTE: Windows 7 is no longer supported! Windows 7 users will have to use version 1.6.5 or earlier.
+
+# 2021-09-15 -- Version 1.8.0 (preview release only)
 
  * A *completely* rewritten desktop UI for Mac and Windows!
  * Implement a workaround for one potential source of a "coma" bug, which can occur if buggy NATs/routers stop allowing the service to communicate on a given port. ZeroTier now reassigns a new secondary port if it's offline for a while unless a secondary port is manually specified in local.conf. Working around crummy buggy routers is an ongoing effort.
@@ -19,6 +49,10 @@ ZeroTier Release Notes
  * Set MAC address before bringing up Linux TAP link
  * Check if DNS servers need to be applied on macOS
  * Upgrade json.hpp dependency to version 3.10.2
+
+# 2021-09-21 -- Version 1.6.6
+
+ * Backport COM hash check mitigation against network member impersonation.
 
 # 2021-04-13 -- Version 1.6.5
 

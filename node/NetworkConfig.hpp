@@ -94,7 +94,7 @@
 namespace ZeroTier {
 
 // Dictionary capacity needed for max size network config
-#define ZT_NETWORKCONFIG_DICT_CAPACITY (4096 + (sizeof(ZT_VirtualNetworkRule) * ZT_MAX_NETWORK_RULES) + (sizeof(Capability) * ZT_MAX_NETWORK_CAPABILITIES) + (sizeof(Tag) * ZT_MAX_NETWORK_TAGS) + (sizeof(CertificateOfOwnership) * ZT_MAX_CERTIFICATES_OF_OWNERSHIP))
+#define ZT_NETWORKCONFIG_DICT_CAPACITY (4096 + (sizeof(ZT_VirtualNetworkConfig)) + (sizeof(ZT_VirtualNetworkRule) * ZT_MAX_NETWORK_RULES) + (sizeof(Capability) * ZT_MAX_NETWORK_CAPABILITIES) + (sizeof(Tag) * ZT_MAX_NETWORK_TAGS) + (sizeof(CertificateOfOwnership) * ZT_MAX_CERTIFICATES_OF_OWNERSHIP))
 
 // Dictionary capacity needed for max size network meta-data
 #define ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY 1024
@@ -180,12 +180,39 @@ namespace ZeroTier {
 #define ZT_NETWORKCONFIG_DICT_KEY_DNS "DNS"
 // sso enabld
 #define ZT_NETWORKCONFIG_DICT_KEY_SSO_ENABLED "ssoe"
+// so version
+#define ZT_NETWORKCONFIG_DICT_KEY_SSO_VERSION "ssov"
 // authentication URL
 #define ZT_NETWORKCONFIG_DICT_KEY_AUTHENTICATION_URL "aurl"
 // authentication expiry
 #define ZT_NETWORKCONFIG_DICT_KEY_AUTHENTICATION_EXPIRY_TIME "aexpt"
-// sso impl. version
-#define ZT_NETWORKCONFIG_DICT_KEY_SSO_VERSION "ssov"
+// oidc issuer URL
+#define ZT_NETWORKCONFIG_DICT_KEY_ISSUER_URL "iurl"
+// central endpoint
+#define ZT_NETWORKCONFIG_DICT_KEY_CENTRAL_ENDPOINT_URL "ssoce"
+// nonce
+#define ZT_NETWORKCONFIG_DICT_KEY_NONCE "sson"
+// state
+#define ZT_NETWORKCONFIG_DICT_KEY_STATE "ssos"
+// client ID
+#define ZT_NETWORKCONFIG_DICT_KEY_CLIENT_ID "ssocid"
+
+// AuthInfo fields -- used by ncSendError for sso
+
+// AuthInfo Version
+#define ZT_AUTHINFO_DICT_KEY_VERSION "aV"
+// authenticaiton URL
+#define ZT_AUTHINFO_DICT_KEY_AUTHENTICATION_URL "aU"
+// issuer URL
+#define ZT_AUTHINFO_DICT_KEY_ISSUER_URL "iU"
+// Central endpoint URL
+#define ZT_AUTHINFO_DICT_KEY_CENTRAL_ENDPOINT_URL "aCU"
+// Nonce
+#define ZT_AUTHINFO_DICT_KEY_NONCE "aN"
+// State
+#define ZT_AUTHINFO_DICT_KEY_STATE "aS"
+// Client ID
+#define ZT_AUTHINFO_DICT_KEY_CLIENT_ID "aCID"
 
 // Legacy fields -- these are obsoleted but are included when older clients query
 
@@ -245,7 +272,11 @@ public:
 		ssoEnabled(false),
 		authenticationURL(),
 		authenticationExpiryTime(0),
-		ssoVersion(0)
+		issuerURL(),
+		centralAuthURL(),
+		ssoNonce(),
+		ssoState(),
+		ssoClientID()
 	{
 		name[0] = 0;
 		memset(specialists, 0, sizeof(uint64_t)*ZT_MAX_NETWORK_SPECIALISTS);
@@ -253,6 +284,12 @@ public:
 		memset(staticIps, 0, sizeof(InetAddress)*ZT_MAX_ZT_ASSIGNED_ADDRESSES);
 		memset(rules, 0, sizeof(ZT_VirtualNetworkRule)*ZT_MAX_NETWORK_RULES);
 		memset(&dns, 0, sizeof(ZT_VirtualNetworkDNS));
+		memset(authenticationURL, 0, sizeof(authenticationURL));
+		memset(issuerURL, 0, sizeof(issuerURL));
+		memset(centralAuthURL, 0, sizeof(centralAuthURL));
+		memset(ssoNonce, 0, sizeof(ssoNonce));
+		memset(ssoState, 0, sizeof(ssoState));
+		memset(ssoClientID, 0, sizeof(ssoClientID));
 	}
 
 	/**
@@ -623,19 +660,46 @@ public:
 	bool ssoEnabled;
 
 	/**
+	 * SSO verison
+	 */
+	uint64_t ssoVersion;
+
+	/**
 	 * Authentication URL if authentication is required
 	 */
 	char authenticationURL[2048];
 
 	/**
 	 * Time current authentication expires or 0 if external authentication is disabled
+	 * 
+	 * Not used if authVersion >= 1
 	 */
 	uint64_t authenticationExpiryTime;
 
 	/**
-	 * SSO implementaiton version
+	 * OIDC issuer URL
 	 */
-	uint64_t ssoVersion;
+	char issuerURL[2048];
+
+	/**
+	 * central base URL.
+	 */
+	char centralAuthURL[2048];
+
+	/**
+	 * sso nonce
+	 */
+	char ssoNonce[128];
+
+	/**
+	 * sso state
+	 */
+	char ssoState[256];
+
+	/**
+	 * oidc client id
+	 */
+	char ssoClientID[256];
 };
 
 } // namespace ZeroTier

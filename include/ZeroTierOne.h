@@ -23,9 +23,9 @@
 
 // For the struct sockaddr_storage structure
 #if defined(_WIN32) || defined(_WIN64)
-#include <WinSock2.h>
-#include <WS2tcpip.h>
-#include <Windows.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <windows.h>
 #else /* not Windows */
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -163,7 +163,7 @@ extern "C" {
 /**
  * Maximum number of direct network paths to a given peer
  */
-#define ZT_MAX_PEER_NETWORK_PATHS 16
+#define ZT_MAX_PEER_NETWORK_PATHS 64
 
 /**
  * Maximum number of path configurations that can be set
@@ -1194,10 +1194,17 @@ typedef struct
 	 */
 	ZT_VirtualNetworkDNS dns;
 
+
+
 	/**
 	 * sso enabled
 	 */
 	bool ssoEnabled;
+
+	/**
+	 * SSO verison
+	 */
+	uint64_t ssoVersion;
 
 	/**
 	 * If the status us AUTHENTICATION_REQUIRED, this may contain a URL for authentication.
@@ -1208,6 +1215,31 @@ typedef struct
 	 * Time that current authentication expires. only valid if ssoEnabled is true
 	 */
 	uint64_t authenticationExpiryTime;
+
+	/**
+	 * OIDC issuer URL.
+	 */
+	char issuerURL[2048];
+
+	/**
+	 * central base URL.
+	 */
+	char centralAuthURL[2048];
+
+	/**
+	 * sso nonce
+	 */
+	char ssoNonce[128];
+
+	/**
+	 * sso state
+	 */
+	char ssoState[256];
+
+	/**
+	 * oidc client id
+	 */
+	char ssoClientID[256];
 } ZT_VirtualNetworkConfig;
 
 /**

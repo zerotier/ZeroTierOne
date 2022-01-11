@@ -118,26 +118,66 @@ void Peer::received(
 		}
 
 		if ( (!havePath) && RR->node->shouldUsePathForZeroTierTraffic(tPtr,_id.address(),path->localSocket(),path->address()) ) {
+
+			/**
+			 * First, fill all free slots before attempting to replace a path
+			 *  - If the above fails, attempt to replace the path that has been dead the longest
+			 *  - If there are no free slots, and no dead paths (unlikely), then replace old path most similar to new path
+			 *  - If all of the above fails to yield a suitable replacement. Replace first path found to have lower `(quality / priority)`
+			 */
+
 			if (verb == Packet::VERB_OK) {
 				Mutex::Lock _l(_paths_m);
-
 				unsigned int replacePath = ZT_MAX_PEER_NETWORK_PATHS;
+				uint64_t maxScore = 0;
+				uint64_t currScore;
 				long replacePathQuality = 0;
+				bool foundFreeSlot = false;
+
 				for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
+					currScore = 0;
 					if (_paths[i].p) {
-						if ( (!_paths[i].p->alive(now)) || _paths[i].p->address().ipsEqual(path->address()) ) {
-							replacePath = i;
-							break;
-						} else {
-							const long q = _paths[i].p->quality(now) / _paths[i].priority;
-							if (q > replacePathQuality) {
-								replacePathQuality = q;
-								replacePath = i;
+						// Reward dead paths
+						if (!_paths[i].p->alive(now)) {
+							currScore = _paths[i].p->age(now) / 1000;
+						}
+						// Reward as similarity increases
+						if (_paths[i].p->address().ipsEqual(path->address())) {
+							currScore++;
+							if (_paths[i].p->address().port() == path->address().port()) {
+								currScore++;
+								if (_paths[i].p->localSocket() == path->localSocket()) {
+									currScore++; // max score (3)
+								}
 							}
 						}
-					} else {
+						// If best so far, mark for replacement
+						if (currScore > maxScore) {
+							maxScore = currScore;
+							replacePath = i;
+						}
+					}
+					else {
+						foundFreeSlot = true;
 						replacePath = i;
 						break;
+					}
+				}
+				if (!foundFreeSlot) {
+					if (maxScore > 3) {
+						// Do nothing. We found a dead path and have already marked it as a candidate
+					}
+					// If we couldn't find a replacement by matching, replacing a dead path, or taking a free slot, then replace by quality
+					else if (maxScore == 0) {
+						for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
+							if (_paths[i].p) {
+								const long q = _paths[i].p->quality(now) / _paths[i].priority;
+								if (q > replacePathQuality) {
+									replacePathQuality = q;
+									replacePath = i;
+								}
+							}
+						}
 					}
 				}
 
@@ -369,7 +409,7 @@ void Peer::introduce(void *const tPtr,const int64_t now,const SharedPtr<Peer> &o
 					outp.append((uint8_t)4);
 					outp.append(_paths[mine].p->address().rawIpData(),4);
 				}
-				outp.armor(other->_key,true,aesKeysIfSupported());
+				outp.armor(other->_key,true,other->aesKeysIfSupported());
 				other->_paths[theirs].p->send(RR,tPtr,outp.data(),outp.size(),now);
 			}
 			++alt;

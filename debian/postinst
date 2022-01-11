@@ -3,7 +3,7 @@
 case "$1" in
   configure)
       if ! id zerotier-one >>/dev/null 2>&1; then
-        useradd --system --user-group --home-dir /var/lib/zerotier-one --no-create-home zerotier-one
+        useradd --system --user-group --home-dir /var/lib/zerotier-one --shell /usr/sbin/nologin --no-create-home zerotier-one
       fi
       ;;
 esac

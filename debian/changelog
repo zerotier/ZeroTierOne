@@ -1,8 +1,44 @@
+zerotier-one (1.8.5) unstable; urgency=medium
+
+  * See RELEASE-NOTES.md for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Fri, 17 Dec 2021 01:00:00 -0700
+
+zerotier-one (1.8.4) unstable; urgency=medium
+
+  * See RELEASE-NOTES.md for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Mon, 23 Nov 2021 01:00:00 -0700
+
+zerotier-one (1.8.3) unstable; urgency=medium
+
+  * See RELEASE-NOTES.md for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Mon, 15 Nov 2021 01:00:00 -0700
+
+zerotier-one (1.8.2) unstable; urgency=medium
+
+  * See RELEASE-NOTES.md for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Mon, 08 Nov 2021 01:00:00 -0700
+
+zerotier-one (1.8.1) unstable; urgency=medium
+
+  * See RELEASE-NOTES.md for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Wed, 20 Oct 2021 01:00:00 -0700
+
 zerotier-one (1.8.0) unstable; urgency=medium
 
   * See RELEASE-NOTES.md for release notes.
 
  -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Wed, 15 Sep 2021 01:00:00 -0700
+
+zerotier-one (1.6.6) unstable; urgency=medium
+
+  * Backport endpoint mitigation against address collision attack.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Tue, 21 Sep 2021 01:00:00 -0700
 
 zerotier-one (1.6.5) unstable; urgency=medium
 

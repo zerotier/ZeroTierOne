@@ -1,5 +1,6 @@
 ZeroTier - Global Area Networking
 ======
+This document is written for a software developer audience. For information on using ZeroTier, see the: [Website](https://www.zerotier.com), [Documentation Site](https://docs.zerotier.com), and [Discussion Forum](https://discuss.zerotier.com)
 
 ZeroTier is a smart programmable Ethernet switch for planet Earth. It allows all networked devices, VMs, containers, and applications to communicate as if they all reside in the same physical data center or cloud region.
 
@@ -66,9 +67,11 @@ Typing `make selftest` will build a *zerotier-selftest* binary which unit tests 
 
 Running *zerotier-one* with `-h` option will show help.
 
-On Linux and BSD you can start the service with:
+On Linux and BSD, if you built from source, you can start the service with:
 
     sudo ./zerotier-one -d
+
+On most distributions, macOS, and Windows, the installer will start the service and set it up to start on boot.
 
 A home folder for your system will automatically be created.
 
@@ -81,21 +84,15 @@ Here's where home folders live (by default) on each OS:
  * **Mac**: `/Library/Application Support/ZeroTier/One`
  * **Windows**: `\ProgramData\ZeroTier\One` (That's for Windows 7. The base 'shared app data' folder might be different on different Windows versions.)
 
-Running ZeroTier One on a Mac is the same, but OSX requires a kernel extension. We ship a signed binary build of the ZeroTier tap device driver, which can be installed on Mac with:
-
-    sudo make install-mac-tap
-
-This will create the home folder for Mac, place *tap.kext* there, and set its modes correctly to enable ZeroTier One to manage it with *kextload* and *kextunload*.
-
 ### Basic Troubleshooting
 
 For most users, it just works.
 
-If you are running a local system firewall, we recommend adding a rule permitting UDP port 9993 inbound and outbound. If you installed binaries for Windows this should be done automatically. Other platforms might require manual editing of local firewall rules depending on your configuration.
+If you are running a local system firewall, we recommend adding a rules permitting zerotier. If you installed binaries for Windows this should be done automatically. Other platforms might require manual editing of local firewall rules depending on your configuration.
 
-The Mac firewall can be found under "Security" in System Preferences. Linux has a variety of firewall configuration systems and tools. If you're using Ubuntu's *ufw*, you can do this:
+See the [documentation site](https://docs.zerotier.com/zerotier/troubleshooting) for more information.
 
-    sudo ufw allow 9993/udp
+The Mac firewall can be found under "Security" in System Preferences. Linux has a variety of firewall configuration systems and tools.
 
 On CentOS check `/etc/sysconfig/iptables` for IPTables rules. For other distributions consult your distribution's documentation. You'll also have to check the UIs or documentation for commercial third party firewall applications like Little Snitch (Mac), McAfee Firewall Enterprise (Windows), etc. if you are running any of those. Some corporate environments might have centrally managed firewall software, so you might also have to contact IT.
 

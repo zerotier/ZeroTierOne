@@ -330,7 +330,7 @@ MacKextEthernetTap::MacKextEthernetTap(
 	Mutex::Lock _gl(globalTapCreateLock);
 
 	if (::stat("/dev/zt0",&stattmp)) {
-		long kextpid = (long)vfork();
+		long kextpid = (long)fork();
 		if (kextpid == 0) {
 			::chdir(homePath);
 			OSUtils::redirectUnixOutputs("/dev/null",(const char *)0);
@@ -405,7 +405,7 @@ MacKextEthernetTap::MacKextEthernetTap(
 	OSUtils::ztsnprintf(ethaddr,sizeof(ethaddr),"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",(int)mac[0],(int)mac[1],(int)mac[2],(int)mac[3],(int)mac[4],(int)mac[5]);
 	OSUtils::ztsnprintf(mtustr,sizeof(mtustr),"%u",_mtu);
 	OSUtils::ztsnprintf(metstr,sizeof(metstr),"%u",_metric);
-	long cpid = (long)vfork();
+	long cpid = (long)fork();
 	if (cpid == 0) {
 		::execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),"lladdr",ethaddr,"mtu",mtustr,"metric",metstr,"up",(const char *)0);
 		::_exit(-1);
@@ -459,7 +459,7 @@ MacKextEthernetTap::~MacKextEthernetTap()
 
 			char tmp[16384];
 			sprintf(tmp,"%s/%s",_homePath.c_str(),"tap.kext");
-			long kextpid = (long)vfork();
+			long kextpid = (long)fork();
 			if (kextpid == 0) {
 				OSUtils::redirectUnixOutputs("/dev/null",(const char *)0);
 				::execl("/sbin/kextunload","/sbin/kextunload",tmp,(const char *)0);
@@ -488,7 +488,7 @@ bool MacKextEthernetTap::addIp(const InetAddress &ip)
 	if (!ip)
 		return false;
 
-	long cpid = (long)vfork();
+	long cpid = (long)fork();
 	if (cpid == 0) {
 		char tmp[128];
 		::execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),(ip.ss_family == AF_INET6) ? "inet6" : "inet",ip.toString(tmp),"alias",(const char *)0);
@@ -509,7 +509,7 @@ bool MacKextEthernetTap::removeIp(const InetAddress &ip)
 	std::vector<InetAddress> allIps(ips());
 	for(std::vector<InetAddress>::iterator i(allIps.begin());i!=allIps.end();++i) {
 		if (*i == ip) {
-			long cpid = (long)vfork();
+			long cpid = (long)fork();
 			if (cpid == 0) {
 				char tmp[128];
 				execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),(ip.ss_family == AF_INET6) ? "inet6" : "inet",ip.toIpString(tmp),"-alias",(const char *)0);
@@ -626,7 +626,7 @@ void MacKextEthernetTap::setMtu(unsigned int mtu)
 {
 	if (mtu != _mtu) {
 		_mtu = mtu;
-		long cpid = (long)vfork();
+		long cpid = (long)fork();
 		if (cpid == 0) {
 			char tmp[64];
 			OSUtils::ztsnprintf(tmp,sizeof(tmp),"%u",mtu);

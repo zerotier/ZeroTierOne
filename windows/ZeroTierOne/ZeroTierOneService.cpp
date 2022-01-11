@@ -15,8 +15,8 @@
 
 #if defined(_WIN32) || defined(_WIN64)
 
-#include <WinSock2.h>
-#include <Windows.h>
+#include <winsock2.h>
+#include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
 

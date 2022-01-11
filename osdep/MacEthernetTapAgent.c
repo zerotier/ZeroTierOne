@@ -157,7 +157,7 @@ static int run(const char *path,...)
 	args[argNo++] = (char *)0;
 	va_end(ap);
 
-	pid_t pid = vfork();
+	pid_t pid = fork();
 	if (pid < 0) {
 		return -1;
 	} else if (pid == 0) {

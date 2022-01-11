@@ -125,16 +125,16 @@ bool DBMirrorSet::get(const uint64_t networkId,nlohmann::json &network,std::vect
 	return false;
 }
 
-std::string DBMirrorSet::getSSOAuthURL(const nlohmann::json &member, const std::string &redirectURL) 
+AuthInfo DBMirrorSet::getSSOAuthInfo(const nlohmann::json &member, const std::string &redirectURL) 
 {
 	std::lock_guard<std::mutex> l(_dbs_l);
 	for(auto d=_dbs.begin();d!=_dbs.end();++d) { 
-		std::string url = (*d)->getSSOAuthURL(member, redirectURL);
-		if (!url.empty()) {
-			return url;
+		AuthInfo info = (*d)->getSSOAuthInfo(member, redirectURL);
+		if (info.enabled) {
+			return info;
 		}
 	}
-	return "";
+	return AuthInfo();
 }
 
 void DBMirrorSet::networkMemberSSOHasExpired(uint64_t nwid, int64_t ts)
